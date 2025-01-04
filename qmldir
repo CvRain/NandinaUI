@@ -1,0 +1,4 @@
+model NandinaUI
+plugin NandinaUI
+
+NandinaControls 1.0 NandinaControls.qml
