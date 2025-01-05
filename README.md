@@ -1,4 +1,4 @@
-![](Image/NandinaUI.jpg)
+![](Image/placeholder.jpg)
 <br>
 # NandinaUI
 **南天竹： 一套使用 Catppuccin 主题的扁平设计 QML 组件库。**
