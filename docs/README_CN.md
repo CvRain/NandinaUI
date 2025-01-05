@@ -1,53 +1,51 @@
-![](Image/NandinaUI.jpg)
+![](../Image/NandinaUI.jpg)
 <br>
 # NandinaUI
 **南天竹： 一套使用 Catppuccin 主题的扁平设计 QML 组件库。**
-[简体中文](./docs/README_CN.md)
+[English](../README.md)
 
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/Nandina/NandinaUI?style=flat-square)](https://github.com/Nandina/NandinaUI/releases/latest) 
 [![GitHub](https://img.shields.io/github/license/Nandina/NandinaUI?style=flat-square)](https://github.com/Nandina/NandinaUI/blob/main/LICENSE)
 [![GitHub all releases](https://img.shields.io/github/downloads/Nandina/NandinaUI/total?style=flat-square)](https://github.com/Nandina/NandinaUI/releases)
 [![GitHub issues](https://img.shields.io/github/issues/Nandina/NandinaUI?style=flat-square)](https://github.com/Nandina/NandinaUI/issues)
 
-## preview
+## 组件预览
 ***正在努力更新中***
 
-## Quick start
-1. **clone this repo**
+## 快速开始
+1. **克隆当前项目**
    ``` bash
     git clone https://github.com/CvRain/NandinaUI.git
    ```
 
-2. **build the project**
-
-    Compile this project any way you like, but make sure the following files exist
-
-    1. Library (in order to use c++ qml components):
-       * In Linux：`libNandinaUI.a` or `libNandinaUI.so`
-       * In Windows：`NandinaUI.lib` or `NandinaUI.dll`
-       * In MacOS：`libNandinaUI.a` or `libNandinaUI.dylib` (Probably. Sorry I never used MacOS)
+2. **对项目进行编译**
+    
+    使用任何你喜欢的方式编译本项目，但是需要确保存在如下文件：
+    1. 库文件（以使用C++构建的QML组件）：
+       * 在Linux上：`libNandinaUI.a`或`libNandinaUI.so`
+       * 在Windows上：`NandinaUI.lib`或`NandinaUI.dll`
+       * 在MacOS上：`libNandinaUI.a`或`libNandinaUI.dylib` （没用用过MacOS，不确定是否是这个文件）
   
-    * Use cmake to build the project  
+    * 使用cmake命令行直接编译
        ``` bash
         cd NandinaUI
         mkdir build && cd build
         cmake ..
         make
         ```
-    * Or use QtCreator to build the project  
-        the build project will generate in `build/compile_kit/`  
-        such as: `NandinaUI/build/Qt_6_8_1_gcc_64-Debug/NandinaUI`
+    * 使用QtCreator编译
+        如果使用QtCreator进行编译，项目将生成在`build/编译工具/`  
+        例如这样：`NandinaUI/build/Qt_6_8_1_gcc_64-Debug/NandinaUI`
 
-3. **how to use**
-
-   1. Copy the 'NandinaUI' folder from your project to your project
-   2. Copy the compiled lib file to the 'NandinaUI' folder
-   3. Add the following content to the 'CMakeLists.txt' of the project:
+3. **如何使用**
+   1. 将项目中`NandinaUI`文件夹复制到你的项目中
+   2. 将编译出的lib文件复制到`NandinaUI`文件夹下
+   3. 在项目的`CMakeLists.txt`中添加如下内容：
        ```cmake
        add_subdirectory(NandinaUI)
        target_link_libraries(<your_target> PRIVATE NandinaUI)
        ```
-   4. If you are using Qt 6.8.1 or later, add the following in 'CMakeLists.txt' :
+   4. 如果使用的是Qt 6.8.1及以上版本，在`CMakeLists.txt`中添加如下内容：
       ```cmake
       if (QT_KNOWN_POLICY_QTP0001)
          qt_policy(SET QTP0001 NEW)
@@ -58,13 +56,12 @@
       endif ()
       ```
 
-4. **notice**
-    * Make sure you build the same version as you use
-    * Do not mix Realse and Debug versions
+4. **注意**
+   * 确保构建的版本和使用的版本一致
+   * 不要混用Realse 和 Debug 版本
 
-5. **tips**
-**exaple: use NandinaUI in project**
-
+5. **附录**
+**项目中使用NandinaUI的CMakeLists.txt示例**
 ```cmake
 cmake_minimum_required(VERSION 3.16)
 

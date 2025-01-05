@@ -21,23 +21,23 @@ if (QT_KNOWN_POLICY_QTP0004)
 endif ()
 
 
-set(QML_BUTTON Button/NanDefaultButton.qml)
+set(QML_BUTTON 
+    NandinaUI/Button/NanDefaultButton.qml)
 
 set(QML_COLOR
-    Color/CatppuccinLatte.qml
-    Color/CatppuccinFrappe.qml
-    Color/CatppuccinMacchiato.qml
-    Color/CatppuccinMocha.qml)
+    NandinaUI/Color/CatppuccinLatte.qml
+    NandinaUI/Color/CatppuccinFrappe.qml
+    NandinaUI/Color/CatppuccinMacchiato.qml
+    NandinaUI/Color/CatppuccinMocha.qml)
 
 
-qt_add_library(NandinaUI SHARED
-    ${QML_BUTTON}
-    ${QML_COLOR})
+qt_add_library(NandinaUI SHARED STATIC)
 
 qt_add_qml_module(NandinaUI
     URI NandinaUI
     VERSION 1.0
-    QML_FILES NandinaControls.qml ${QML_BUTTON} ${QML_COLOR}
+    QML_FILES ${QML_BUTTON} ${QML_COLOR}
+    SOURCES NandinaUI/CMakeLists.txt
 )
 
 set_target_properties(NandinaUI PROPERTIES
