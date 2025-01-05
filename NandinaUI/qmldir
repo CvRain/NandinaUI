@@ -1,6 +1,0 @@
-module NandinaUI
-CatppuccinFrappe            1.0 Color/CatppuccinFrappe.qml
-CatppuccinLatte             1.0 Color/CatppuccinLatte.qml
-CatppuccinMacchiato         1.0 Color/CatppuccinMacchiato.qml
-CatppuccinMocha             1.0 Color/CatppuccinMocha.qml
-plugin NandinaUI
