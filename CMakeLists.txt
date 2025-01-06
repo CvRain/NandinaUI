@@ -37,6 +37,12 @@ endif ()
 
 add_subdirectory(NandinaUI)
 
+target_include_directories(NandinaUI 
+    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} 
+)
+
+target_include_directories(NandinaUI PUBLIC NandinaUI/Color)
+target_include_directories(NandinaUI PUBLIC NandinaUI/Widget)
 
 
 set_target_properties(NandinaUI PROPERTIES

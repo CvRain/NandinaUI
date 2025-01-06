@@ -1,18 +1,28 @@
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
+set(CMAKE_AUTOUIC ON)
+
 qt_add_library(NandinaUI STATIC)
 
+set_target_properties(NandinaUI PROPERTIES AUTORCC ON)
+set_target_properties(NandinaUI PROPERTIES AUTOUIC ON)
 set_target_properties(NandinaUI PROPERTIES AUTOMOC ON)
-target_link_libraries(NandinaUI PUBLIC Qt6::Quick)
+#target_link_libraries(NandinaUI PUBLIC Qt6::Quick)
+
 
 list(APPEND COLOR_QML_FILES
-        Color/CatppuccinFrappe.qml
-        Color/CatppuccinLatte.qml
-        Color/CatppuccinMacchiato.qml
-        Color/CatppuccinMocha.qml
-        Color/NandinaTheme.qml
 )
 
 list(APPEND MODULE_QML_SINGLETON_FILE
-        Color/NandinaThemeType.qml
+)
+
+set(COLOR_CPP_FILES
+        Color/CatppuccinFrappe.hpp
+        #        Color/CatppuccinLatte.hpp
+        #        Color/CatppuccinMacchiato.hpp
+        #        Color/CatppuccinMocha.hpp
+        Color/CatppuccinTheme.hpp
+        Color/NandinaStyle.hpp
 )
 
 set_source_files_properties(${MODULE_QML_SINGLETON_FILE} PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
@@ -21,6 +31,7 @@ qt_add_qml_module(NandinaUIColor
         URI NandinaUI.Color
         VERSION 1.0
         QML_FILES ${COLOR_QML_FILES} ${MODULE_QML_SINGLETON_FILE}
+        SOURCES ${COLOR_CPP_FILES}
 )
 
 list(APPEND WIDGET_QML_FILES
@@ -37,9 +48,13 @@ qt_add_qml_module(NandinaUIWidget
 target_link_libraries(NandinaUI
         PUBLIC
         Qt6::Quick
+        Qt6::Qml
+        Qt6::Core
+        NandinaUI
         NandinaUIColor
         NandinaUIWidget
 )
+
 
 # 确保模块可见性
 set_target_properties(NandinaUIColor PROPERTIES
@@ -51,3 +66,15 @@ set_target_properties(NandinaUIWidget PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/qml/NandinaUI/Widget
         LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/qml/NandinaUI/Widget
 )
+
+if (WIN32)
+    set_target_properties(NandinaUIColor PROPERTIES
+            RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
+            LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
+    )
+
+    set_target_properties(NandinaUIWidget PROPERTIES
+            RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
+            LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
+    )
+endif ()

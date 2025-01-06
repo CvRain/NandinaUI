@@ -6,7 +6,7 @@ ApplicationWindow {
     width: 640
     height: 420
 
-    NandinaTheme {
-        id: mainTheme
+    NandinaStyle {
+        id: style
     }
 }

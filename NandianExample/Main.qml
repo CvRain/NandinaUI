@@ -7,9 +7,5 @@ NandinaWindow {
     height: 480
     visible: true
     title: qsTr("Hello World")
-    color: catppuccinFrappe.base
 
-    CatppuccinFrappe {
-        id: catppuccinFrappe
-    }
 }
