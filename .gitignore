@@ -2,6 +2,7 @@ build
 .idea
 .vscode
 CMakeLists.txt.*
+CMakeLists.txt.user
 cmakeLists.txt.*
 cmake-*
 cmake_install.cmake
@@ -35,3 +36,4 @@ Makefile
 *.lib.*
 *.pdb
 *.pdb.*
+.cache

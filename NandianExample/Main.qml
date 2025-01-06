@@ -1,13 +1,15 @@
 import QtQuick
 import NandinaUI.Color
+import NandinaUI.Widget
 
-Window {
+NandinaWindow {
     width: 640
     height: 480
     visible: true
     title: qsTr("Hello World")
+    color: catppuccinFrappe.base
 
-    Component.onCompleted: function () {
-        NandinanTheme.printTheme()
+    CatppuccinFrappe {
+        id: catppuccinFrappe
     }
 }

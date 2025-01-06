@@ -17,10 +17,14 @@ int main(int argc, char *argv[])
 
     engine.load(QUrl(QStringLiteral("qrc:/ExampleProjectApp/NandianExample/Main.qml")));
 
-    // QDirIterator it(":/", QDirIterator::Subdirectories);
-    // while (it.hasNext()) {
-    //     qDebug() << it.next();
-    // }
+    QDirIterator it(":/", QDirIterator::Subdirectories);
+    while (it.hasNext()) {
+        const auto &filePath = it.next();
+        if(filePath.contains("qt-project.org")){
+            continue;
+        }
+        qDebug() << filePath;
+    }
 
     return QGuiApplication::exec();
 }

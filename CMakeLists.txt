@@ -19,28 +19,25 @@ if (QT_KNOWN_POLICY_QTP0004)
     qt_policy(SET QTP0004 NEW)
 endif ()
 
-# set(QML_BUTTON
-#         NandinaUI/Button/NanDefaultButton.qml)
 
-# set(QML_COLOR
-#         NandinaUI/Color/CatppuccinLatte.qml
+# list(APPEND MODULE_QML_FILES
 #         NandinaUI/Color/CatppuccinFrappe.qml
+#         NandinaUI/Color/CatppuccinLatte.qml
 #         NandinaUI/Color/CatppuccinMacchiato.qml
 #         NandinaUI/Color/CatppuccinMocha.qml
 #         NandinaUI/Color/NandianPalette.qml
-#         NandinaUI/Color/NandinanTheme.qml
-#     )
-
-# qt_add_library(NandinaUI SHARED STATIC)
-
-# qt_add_qml_module(NandinaUI
-#         URI NandinaUI
-#         RESOURCE_PREFIX /
-#         VERSION 1.0
-#         QML_FILES ${QML_BUTTON} ${QML_COLOR}
+#         NandinaUI/Button/NanDefaultButton.qml
 # )
 
+# list(APPEND MODULE_QML_SINGLETON_FILE
+#     NandinaUI/Color/NandinanTheme.qml
+# )
+
+# set_source_files_properties(${MODULE_QML_SINGLETON_FILE} PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
+
 add_subdirectory(NandinaUI)
+
+
 
 set_target_properties(NandinaUI PROPERTIES
         MACOSX_BUNDLE_GUI_IDENTIFIER nandinaui.cvrain.com
@@ -60,10 +57,19 @@ target_include_directories(NandinaUI PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 qt_add_executable(ExampleProject NandianExample/main.cpp)
 qt_add_qml_module(ExampleProject
         URI ExampleProjectApp
-        RESOURCE_PREFIX /
         VERSION 1.0
+        RESOURCE_PREFIX /
         QML_FILES NandianExample/Main.qml
+        IMPORT_PATH ${CMAKE_BINARY_DIR}
 )
 target_link_libraries(ExampleProject PUBLIC Qt6::Quick)
-target_link_libraries(ExampleProject PRIVATE NandinaUI)
+target_link_libraries(ExampleProject PRIVATE
+        NandinaUI
+        NandinaUIColor
+        NandinaUIWidget
+)
+
 target_compile_definitions(ExampleProject PRIVATE $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:QT_QML_DEBUG>)
+
+set(QML_IMPORT_PATH ${CMAKE_BINARY_DIR} CACHE STRING "" FORCE)
+set(QML_IMPORT_PATH ${QML_IMPORT_PATH} ${CMAKE_BINARY_DIR}/qml CACHE STRING "" FORCE)
