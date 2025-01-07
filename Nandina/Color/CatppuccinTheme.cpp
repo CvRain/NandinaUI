@@ -1,7 +1,17 @@
 #include "CatppuccinTheme.hpp"
+#include <QDebug>
+#include <qobject.h>
 
-CatppuccinTheme::CatppuccinTheme(CatppuccinPalette palette, QObject *parent)
-    : QObject(parent), palette(std::move(palette)) {}
+CatppuccinTheme::CatppuccinTheme(QObject* parent)
+  :QObject(parent){
+  qDebug() << "CatppuccinPalette::CatppuccinPalette";
+}
+
+CatppuccinTheme::CatppuccinTheme(const CatppuccinPalette& palette, QObject *parent)
+  : QObject(parent), palette(palette) {
+  qDebug() << "CatppuccinTheme::CatppuccinTheme";
+  qDebug() << "CatppuccinTheme::CatppuccinTheme::base" << palette.base;
+}
 
 [[nodiscard]] QString CatppuccinTheme::getRosewater() const {
   return palette.rosewater;
@@ -11,13 +21,17 @@ CatppuccinTheme::CatppuccinTheme(CatppuccinPalette palette, QObject *parent)
   return palette.flamingo;
 }
 
-[[nodiscard]] QString CatppuccinTheme::getPink() const { return palette.pink; }
+[[nodiscard]] QString CatppuccinTheme::getPink() const {
+  return palette.pink;
+}
 
 [[nodiscard]] QString CatppuccinTheme::getMauve() const {
   return palette.mauve;
 }
 
-[[nodiscard]] QString CatppuccinTheme::getRed() const { return palette.red; }
+[[nodiscard]] QString CatppuccinTheme::getRed() const {
+  return palette.red;
+}
 
 [[nodiscard]] QString CatppuccinTheme::getMaroon() const {
   return palette.maroon;
@@ -35,21 +49,29 @@ CatppuccinTheme::CatppuccinTheme(CatppuccinPalette palette, QObject *parent)
   return palette.green;
 }
 
-[[nodiscard]] QString CatppuccinTheme::getTeal() const { return palette.teal; }
+[[nodiscard]] QString CatppuccinTheme::getTeal() const {
+  return palette.teal;
+}
 
-[[nodiscard]] QString CatppuccinTheme::getSky() const { return palette.sky; }
+[[nodiscard]] QString CatppuccinTheme::getSky() const {
+  return palette.sky;
+}
 
 [[nodiscard]] QString CatppuccinTheme::getSapphire() const {
   return palette.sapphire;
 }
 
-[[nodiscard]] QString CatppuccinTheme::getBlue() const { return palette.blue; }
+[[nodiscard]] QString CatppuccinTheme::getBlue() const {
+  return palette.blue;
+}
 
 [[nodiscard]] QString CatppuccinTheme::getLavender() const {
   return palette.lavender;
 }
 
-[[nodiscard]] QString CatppuccinTheme::getText() const { return palette.text; }
+[[nodiscard]] QString CatppuccinTheme::getText() const {
+  return palette.text;
+}
 
 [[nodiscard]] QString CatppuccinTheme::getSubtext1() const {
   return palette.subtext1;
@@ -83,7 +105,9 @@ CatppuccinTheme::CatppuccinTheme(CatppuccinPalette palette, QObject *parent)
   return palette.surface0;
 }
 
-[[nodiscard]] QString CatppuccinTheme::getBase() const { return palette.base; }
+[[nodiscard]] QString CatppuccinTheme::getBase() const {
+  return palette.base;
+}
 
 [[nodiscard]] QString CatppuccinTheme::getMantle() const {
   return palette.mantle;

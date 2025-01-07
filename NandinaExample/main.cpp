@@ -1,7 +1,7 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QDirIterator>
-#include <qstringliteral.h>
+#include <QString>
 
 int main(int argc, char *argv[])
 {
@@ -18,14 +18,14 @@ int main(int argc, char *argv[])
     }, Qt::QueuedConnection);
     engine.load(url);
 
-    QDirIterator it(":/", QDirIterator::Subdirectories);
-    while (it.hasNext()) {
-        const auto &filePath = it.next();
-        if(filePath.contains("qt-project.org")){
-            continue;
-        }
-        qDebug() << filePath;
-    }
+    // QDirIterator it(":/", QDirIterator::Subdirectories);
+    // while (it.hasNext()) {
+    //     const auto &filePath = it.next();
+    //     if(filePath.contains("qt-project.org")){
+    //         continue;
+    //     }
+    //     qDebug() << filePath;
+    // }
 
     return app.exec();
 }

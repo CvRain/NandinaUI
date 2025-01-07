@@ -1,16 +1,117 @@
 #ifndef NANDINA_STYLE_HPP
 #define NANDINA_STYLE_HPP
 
+#include <CatppuccinTheme.hpp>
 #include <QObject>
-#include <QtQml/qqmlregistration.h>
-#include <qtmetamacros.h>
+
+#include "CatppuccinTheme.hpp"
+
+
+#include <memory>
 
 class NandinaStyle : public QObject {
     Q_OBJECT
     QML_ELEMENT
-    QML_ADDED_IN_VERSION(1, 0)
+    Q_PROPERTY(QString rosewater READ getRosewater CONSTANT NOTIFY themeChanged)
+    Q_PROPERTY(QString flamingo READ getFlamingo CONSTANT NOTIFY themeChanged)
+    Q_PROPERTY(QString pink READ getPink CONSTANT NOTIFY themeChanged)
+    Q_PROPERTY(QString mauve READ getMauve CONSTANT NOTIFY themeChanged)
+    Q_PROPERTY(QString red READ getRed CONSTANT NOTIFY themeChanged)
+    Q_PROPERTY(QString maroon READ getMaroon CONSTANT NOTIFY themeChanged)
+    Q_PROPERTY(QString peach READ getPeach CONSTANT NOTIFY themeChanged)
+    Q_PROPERTY(QString yellow READ getYellow CONSTANT NOTIFY themeChanged)
+    Q_PROPERTY(QString green READ getGreen CONSTANT NOTIFY themeChanged)
+    Q_PROPERTY(QString teal READ getTeal CONSTANT NOTIFY themeChanged)
+    Q_PROPERTY(QString sky READ getSky CONSTANT NOTIFY themeChanged)
+    Q_PROPERTY(QString sapphire READ getSapphire CONSTANT NOTIFY themeChanged)
+    Q_PROPERTY(QString blue READ getBlue CONSTANT NOTIFY themeChanged)
+    Q_PROPERTY(QString lavender READ getLavender CONSTANT NOTIFY themeChanged)
+    Q_PROPERTY(QString text READ getText CONSTANT NOTIFY themeChanged)
+    Q_PROPERTY(QString subtext1 READ getSubtext1 CONSTANT NOTIFY themeChanged)
+    Q_PROPERTY(QString subtext0 READ getSubtext0 CONSTANT NOTIFY themeChanged)
+    Q_PROPERTY(QString overlay2 READ getOverlay2 CONSTANT NOTIFY themeChanged)
+    Q_PROPERTY(QString overlay1 READ getOverlay1 CONSTANT NOTIFY themeChanged)
+    Q_PROPERTY(QString overlay0 READ getOverlay0 CONSTANT NOTIFY themeChanged)
+    Q_PROPERTY(QString surface2 READ getSurface0 CONSTANT NOTIFY themeChanged)
+    Q_PROPERTY(QString surface1 READ getSurface0 CONSTANT NOTIFY themeChanged)
+    Q_PROPERTY(QString surface0 READ getSurface0 CONSTANT NOTIFY themeChanged)
+    Q_PROPERTY(QString base READ getBase CONSTANT NOTIFY themeChanged)
+    Q_PROPERTY(QString mantle READ getMantle CONSTANT NOTIFY themeChanged)
+    Q_PROPERTY(QString crust READ getCrust CONSTANT NOTIFY themeChanged)
+    Q_PROPERTY(
+        NandinaType::CatppuccinThemeType currentTheme
+        READ getCurrentThemeType
+        WRITE setCurrentThemeType
+        NOTIFY currentThemeTypeChanged)
 
 public:
+    explicit NandinaStyle(QObject *parent = nullptr);
+
+    [[nodiscard]] QString getRosewater() const;
+
+    [[nodiscard]] QString getFlamingo() const;
+
+    [[nodiscard]] QString getPink() const;
+
+    [[nodiscard]] QString getMauve() const;
+
+    [[nodiscard]] QString getRed() const;
+
+    [[nodiscard]] QString getMaroon() const;
+
+    [[nodiscard]] QString getPeach() const;
+
+    [[nodiscard]] QString getYellow() const;
+
+    [[nodiscard]] QString getGreen() const;
+
+    [[nodiscard]] QString getTeal() const;
+
+    [[nodiscard]] QString getSky() const;
+
+    [[nodiscard]] QString getSapphire() const;
+
+    [[nodiscard]] QString getBlue() const;
+
+    [[nodiscard]] QString getLavender() const;
+
+    [[nodiscard]] QString getText() const;
+
+    [[nodiscard]] QString getSubtext1() const;
+
+    [[nodiscard]] QString getSubtext0() const;
+
+    [[nodiscard]] QString getOverlay2() const;
+
+    [[nodiscard]] QString getOverlay1() const;
+
+    [[nodiscard]] QString getOverlay0() const;
+
+    [[nodiscard]] QString getSurface2() const;
+
+    [[nodiscard]] QString getSurface1() const;
+
+    [[nodiscard]] QString getSurface0() const;
+
+    [[nodiscard]] QString getBase() const;
+
+    [[nodiscard]] QString getMantle() const;
+
+    [[nodiscard]] QString getCrust() const;
+
+    [[nodiscard]] NandinaType::CatppuccinThemeType getCurrentThemeType() const;
+
+    void setCurrentThemeType(NandinaType::CatppuccinThemeType newCurrentThemeType);
+
+    void updateCurrentTheme();
+    
+signals:
+    void currentThemeTypeChanged();
+    void themeChanged();
+
+private:
+    std::shared_ptr<CatppuccinTheme> currentTheme;
+    NandinaType::CatppuccinThemeType currentThemeType;
 };
 
 #endif
