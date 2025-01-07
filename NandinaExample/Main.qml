@@ -1,5 +1,6 @@
 import QtQuick
 import Nandina
+import Nandina.Color
 
 Window {
     width: 640
@@ -7,5 +8,7 @@ Window {
     visible: true
     title: qsTr("Hello World")
 
-    TestRectangle {}
+    TestRectangle {
+        color: "red"
+    }
 }
