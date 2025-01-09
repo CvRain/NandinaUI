@@ -1,0 +1,40 @@
+<RCC>
+    <qresource prefix="/fonts">
+        <file>CascadiaMono/CaskaydiaMonoNerdFont-Bold.ttf</file>
+        <file>CascadiaMono/CaskaydiaMonoNerdFont-BoldItalic.ttf</file>
+        <file>CascadiaMono/CaskaydiaMonoNerdFont-ExtraLight.ttf</file>
+        <file>CascadiaMono/CaskaydiaMonoNerdFont-ExtraLightItalic.ttf</file>
+        <file>CascadiaMono/CaskaydiaMonoNerdFont-Italic.ttf</file>
+        <file>CascadiaMono/CaskaydiaMonoNerdFont-Light.ttf</file>
+        <file>CascadiaMono/CaskaydiaMonoNerdFont-LightItalic.ttf</file>
+        <file>CascadiaMono/CaskaydiaMonoNerdFont-Regular.ttf</file>
+        <file>CascadiaMono/CaskaydiaMonoNerdFont-SemiBold.ttf</file>
+        <file>CascadiaMono/CaskaydiaMonoNerdFont-SemiBoldItalic.ttf</file>
+        <file>CascadiaMono/CaskaydiaMonoNerdFont-SemiLight.ttf</file>
+        <file>CascadiaMono/CaskaydiaMonoNerdFont-SemiLightItalic.ttf</file>
+        <file>CascadiaMono/CaskaydiaMonoNerdFontMono-Bold.ttf</file>
+        <file>CascadiaMono/CaskaydiaMonoNerdFontMono-BoldItalic.ttf</file>
+        <file>CascadiaMono/CaskaydiaMonoNerdFontMono-ExtraLight.ttf</file>
+        <file>CascadiaMono/CaskaydiaMonoNerdFontMono-ExtraLightItalic.ttf</file>
+        <file>CascadiaMono/CaskaydiaMonoNerdFontMono-Italic.ttf</file>
+        <file>CascadiaMono/CaskaydiaMonoNerdFontMono-Light.ttf</file>
+        <file>CascadiaMono/CaskaydiaMonoNerdFontMono-LightItalic.ttf</file>
+        <file>CascadiaMono/CaskaydiaMonoNerdFontMono-Regular.ttf</file>
+        <file>CascadiaMono/CaskaydiaMonoNerdFontMono-SemiBold.ttf</file>
+        <file>CascadiaMono/CaskaydiaMonoNerdFontMono-SemiBoldItalic.ttf</file>
+        <file>CascadiaMono/CaskaydiaMonoNerdFontMono-SemiLight.ttf</file>
+        <file>CascadiaMono/CaskaydiaMonoNerdFontMono-SemiLightItalic.ttf</file>
+        <file>CascadiaMono/CaskaydiaMonoNerdFontPropo-Bold.ttf</file>
+        <file>CascadiaMono/CaskaydiaMonoNerdFontPropo-BoldItalic.ttf</file>
+        <file>CascadiaMono/CaskaydiaMonoNerdFontPropo-ExtraLight.ttf</file>
+        <file>CascadiaMono/CaskaydiaMonoNerdFontPropo-ExtraLightItalic.ttf</file>
+        <file>CascadiaMono/CaskaydiaMonoNerdFontPropo-Italic.ttf</file>
+        <file>CascadiaMono/CaskaydiaMonoNerdFontPropo-Light.ttf</file>
+        <file>CascadiaMono/CaskaydiaMonoNerdFontPropo-LightItalic.ttf</file>
+        <file>CascadiaMono/CaskaydiaMonoNerdFontPropo-Regular.ttf</file>
+        <file>CascadiaMono/CaskaydiaMonoNerdFontPropo-SemiBold.ttf</file>
+        <file>CascadiaMono/CaskaydiaMonoNerdFontPropo-SemiBoldItalic.ttf</file>
+        <file>CascadiaMono/CaskaydiaMonoNerdFontPropo-SemiLight.ttf</file>
+        <file>CascadiaMono/CaskaydiaMonoNerdFontPropo-SemiLightItalic.ttf</file>
+    </qresource>
+</RCC>

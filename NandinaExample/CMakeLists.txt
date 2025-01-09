@@ -41,6 +41,9 @@ set_target_properties(appNandinaExample PROPERTIES
 target_link_libraries(appNandinaExample
     PUBLIC
         Nandina
+        NandinaButton
+        NandinaWidget
+        NandinaColor
         Qt6::Quick
 )
 

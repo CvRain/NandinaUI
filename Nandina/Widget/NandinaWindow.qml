@@ -3,6 +3,12 @@ import QtQuick
 import Nandina.Color
 
 ApplicationWindow {
+    readonly property alias style: globalStyle
+    property NandinaStyle nandinaStyle: globalStyle 
+    
+    signal themeChanged(int theme)
+    
+    
     id: root
     width: 800
     height: 600
@@ -19,8 +25,9 @@ ApplicationWindow {
     
     NandinaStyle {
         id: globalStyle
+        currentTheme: NandinaType.CatppuccinThemeType.Latte
         onThemeChanged: {
-            console.log("theme changed new base color", globalStyle.base);
+            root.themeChanged(globalStyle.currentTheme)
         }
     }
 }

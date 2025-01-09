@@ -6,8 +6,6 @@
 
 CatppuccinLatte::CatppuccinLatte(QObject *parent)
     : CatppuccinTheme(createPalette(), parent) {
-    qDebug() << "CatppuccinLatte::CatppuccinLatte";
-    qDebug() << "CatppuccinLatte::CatppuccinLatte::base" << this->palette.base;
 }
 
 CatppuccinPalette CatppuccinLatte::createPalette() {

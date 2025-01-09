@@ -96,7 +96,6 @@ void NandinaStyle::setCurrentThemeType(
   if (currentThemeType == newCurrentThemeType) {
     return;
   }
-  qDebug() << "newCurrentThemeType: " << newCurrentThemeType;
   currentThemeType = newCurrentThemeType;
   updateCurrentTheme();
 }

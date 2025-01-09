@@ -9,8 +9,6 @@ CatppuccinTheme::CatppuccinTheme(QObject* parent)
 
 CatppuccinTheme::CatppuccinTheme(const CatppuccinPalette& palette, QObject *parent)
   : QObject(parent), palette(palette) {
-  qDebug() << "CatppuccinTheme::CatppuccinTheme";
-  qDebug() << "CatppuccinTheme::CatppuccinTheme::base" << palette.base;
 }
 
 [[nodiscard]] QString CatppuccinTheme::getRosewater() const {

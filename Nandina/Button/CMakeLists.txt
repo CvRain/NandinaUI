@@ -20,6 +20,11 @@ if(QT_KNOWN_POLICY_QTP0004)
 endif()
 
 list(APPEND WIDGET_QML_FILES
+    PrimaryButton.qml
+    TextButton.qml
+    DashedButton.qml
+    DefaultButton.qml
+    LinkButton.qml
     )
 
 qt_add_qml_module(NandinaButton
@@ -29,6 +34,7 @@ qt_add_qml_module(NandinaButton
         ${WIDGET_QML_FILES}
     SOURCES
     IMPORT_PATH ${CMAKE_BINARY_DIR}
+    RESOURCES ../Res/resources.qrc
 )
 
 target_link_libraries(NandinaButton
