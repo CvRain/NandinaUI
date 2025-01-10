@@ -25,6 +25,7 @@ list(APPEND WIDGET_QML_FILES
     DashedButton.qml
     DefaultButton.qml
     LinkButton.qml
+    AbstractButton.qml
     )
 
 qt_add_qml_module(NandinaButton

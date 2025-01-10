@@ -55,4 +55,16 @@ Button {
         }
         isClicked = !isClicked        
     }
+
+    Connections{
+        target: root.style
+
+        function onThemeChanged(){
+            if(root.isClicked){
+                buttonBackground.color = root.style.overlay2
+            }else{
+                buttonBackground.color = root.style.surface1
+            }
+        }
+    }
 }
