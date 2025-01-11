@@ -1,5 +1,6 @@
 import QtQuick.Controls
 import Nandina.Color
+import Nandina.Utils
 import QtQuick
 
 Button {
@@ -24,18 +25,13 @@ Button {
         }
     }
 
-    FontLoader{
-        id: tempLoader
-        source: "qrc:/fonts/CascadiaMono/CaskaydiaMonoNerdFont-Regular.ttf"
-    }
-
     Text{
         id: buttonText
         anchors.centerIn: parent
         text: "Primary button"
         color: root.style.text
         font.pixelSize: Math.min(root.width, root.height) * 0.35
-        font.family: tempLoader.name
+        font.family: NandinaFont.getFontFamily(NandinaFont.FontMono_Bold)
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
         

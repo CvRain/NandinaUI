@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(NandinaButton VERSION 0.1 LANGUAGES CXX)
+project(NandinaUtils VERSION 0.1 LANGUAGES CXX)
 
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
@@ -19,30 +19,29 @@ if(QT_KNOWN_POLICY_QTP0004)
     qt_policy(SET QTP0004 NEW)
 endif()
 
-list(APPEND WIDGET_QML_FILES
-    PrimaryButton.qml
-    TextButton.qml
-    DashedButton.qml
-    DefaultButton.qml
-    LinkButton.qml
-    AbstractButton.qml
-    )
+list(APPEND NANDINA_QML_FILES
 
-qt_add_qml_module(NandinaButton
-    URI Nandina.Button
+)
+
+list(APPEND NANDINA_CPP_FILES
+    NandinaFont.hpp
+    NandinaFont.cpp
+)
+
+qt_add_qml_module(NandinaUtils
+    URI Nandina.Utils
     VERSION 1.0
     QML_FILES
-        ${WIDGET_QML_FILES}
-    SOURCES
+    ${NANDINA_QML_FILES}
+    SOURCES ${NANDINA_CPP_FILES}
     IMPORT_PATH ${CMAKE_BINARY_DIR}
 )
 
-target_link_libraries(NandinaButton
-    PRIVATE 
-        Qt6::Quick
-        NandinaUtils)
-        
-set_target_properties(NandinaButton PROPERTIES
+target_link_libraries(NandinaUtils
+    PRIVATE
+    Qt6::Quick)
+
+set_target_properties(NandinaUtils PROPERTIES
     MACOSX_BUNDLE_GUI_IDENTIFIER nandina.cvrain.com
     MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
     MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
@@ -50,7 +49,7 @@ set_target_properties(NandinaButton PROPERTIES
     WIN32_EXECUTABLE TRUE
 )
 
-target_compile_definitions(NandinaButton
+target_compile_definitions(NandinaUtils
     PRIVATE $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:QT_QML_DEBUG>)
 
 

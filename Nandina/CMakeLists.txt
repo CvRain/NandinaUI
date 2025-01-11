@@ -5,6 +5,7 @@ project(Nandina VERSION 0.1 LANGUAGES CXX)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
+set(CMAKE_CXX_STANDARD  20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(QT_QML_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 
@@ -19,6 +20,13 @@ if (QT_KNOWN_POLICY_QTP0004)
     qt_policy(SET QTP0004 NEW)
 endif ()
 
+#set(RESOURCES_FILE "${CMAKE_CURRENT_SOURCE_DIR}/resources.qrc")
+#qt_add_resources(RESOURCE_TARGETS ${RESOURCES_FILE})
+
+add_subdirectory(Color)
+add_subdirectory(Widget)
+add_subdirectory(Button)
+add_subdirectory(Utils)
 
 qt_add_library(Nandina STATIC)
 qt_add_qml_module(Nandina
@@ -29,12 +37,15 @@ qt_add_qml_module(Nandina
         SOURCES 
             nandinaui.cpp 
             nandinaui.h
+        RESOURCES
+            ./resources.qrc
         IMPORT_PATH ${CMAKE_BINARY_DIR}
 )
 
-add_subdirectory(Color)
-add_subdirectory(Widget)
-add_subdirectory(Button)
+# add_dependencies(NandinaUtils ${RESOURCE_TARGETS})
+# add_dependencies(NandinaButton ${RESOURCE_TARGETS})
+
+# target_sources(NandinaUtils PRIVATE ${RESOURCES_FILE})
 
 set_target_properties(Nandina PROPERTIES
         MACOSX_BUNDLE_GUI_IDENTIFIER nandina.cvrain.com
@@ -52,6 +63,7 @@ target_link_libraries(Nandina
         Qt6::Quick
         NandinaColor
         NandinaWidget
-        NandinaButton)
+        NandinaButton
+        NandinaUtils)
 
 target_include_directories(Nandina PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
