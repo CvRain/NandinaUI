@@ -39,7 +39,7 @@ qt_add_qml_module(NandinaUtils
 
 target_link_libraries(NandinaUtils
     PRIVATE
-    Qt6::Quick)
+    Qt6::Quick NandinaResource)
 
 set_target_properties(NandinaUtils PROPERTIES
     MACOSX_BUNDLE_GUI_IDENTIFIER nandina.cvrain.com

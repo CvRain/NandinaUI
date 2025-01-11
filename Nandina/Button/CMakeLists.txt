@@ -33,7 +33,6 @@ qt_add_qml_module(NandinaButton
     VERSION 1.0
     QML_FILES
         ${WIDGET_QML_FILES}
-    SOURCES
     IMPORT_PATH ${CMAKE_BINARY_DIR}
 )
 
