@@ -11,7 +11,7 @@ class NandinaFont : public QObject {
     QML_SINGLETON
 
 public:
-    enum class FontType: int {
+    enum class FontType : int {
         Font_BoldItalic,
         Font_Bold,
         Font_ExtraLightItalic,
@@ -49,16 +49,19 @@ public:
         Font_SemiLightItalic,
         Font_SemiLight,
     };
-
     Q_ENUM(FontType)
 
     explicit NandinaFont(QObject *parent = nullptr);
 
     [[nodiscard]] Q_INVOKABLE QString getFontSource(const FontType &fontType);
+
     [[nodiscard]] Q_INVOKABLE QString getFontFamily(const FontType &fontType);
+
+signals:
+    void fontLoaded(const FontType &fontType);
+
 private:
     std::unordered_map<FontType, QString> fontSourceMap;
     std::unordered_map<FontType, QString> fontFamilyMap;
-
     void loadFonts();
 };

@@ -11,6 +11,7 @@ QString NandinaFont::getFontSource(const FontType &fontType) {
         qDebug() << "Font source not found";
         return {};
     }
+    emit fontLoaded(fontType);
     return fontSourceMap.at(fontType);
 }
 
@@ -19,6 +20,7 @@ QString NandinaFont::getFontFamily(const FontType &fontType) {
         qDebug() << "Font family not found";
         return QFontDatabase::systemFont(QFontDatabase::FixedFont).family();
     }
+    emit fontLoaded(fontType);
     return fontFamilyMap.at(fontType);
 }
 
@@ -111,7 +113,7 @@ void NandinaFont::loadFonts() {
             return;
         }
 
-        const auto family = families.at(0);
+        const auto& family = families.at(0);
         qDebug() << "Loaded font family:" << family << "for font:" << oneFont.second;
         fontFamilyMap.insert(std::make_pair(oneFont.first, family));
     });

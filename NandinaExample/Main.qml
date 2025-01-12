@@ -1,6 +1,7 @@
 import Nandina.Widget
 import Nandina.Button
 import Nandina.Color
+import Nandina.Feedback
 import QtQuick
 
 NandinaWindow {
@@ -46,5 +47,14 @@ NandinaWindow {
                 console.log("Button2 color: ", button2.background.color)
             }
         }
+    }
+
+    Alert{
+        id: alert
+        anchors.top: parent.top
+        anchors.topMargin: 10
+        anchors.horizontalCenter: parent.horizontalCenter
+        
+        style: window.style
     }
 }
