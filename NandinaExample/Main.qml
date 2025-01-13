@@ -54,6 +54,7 @@ NandinaWindow {
         anchors.top: parent.top
         anchors.topMargin: 10
         anchors.horizontalCenter: parent.horizontalCenter
+        level: Alert.AlertType.Success
         
         style: window.style
     }
