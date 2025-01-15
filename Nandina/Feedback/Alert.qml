@@ -11,7 +11,7 @@ Rectangle {
     }
     
     required property NandinaStyle style 
-    property int level: Alert.AlertType.Info
+    property real level: Alert.AlertType.Info
     property string message: "default alert messages"
     property Image icon: null
     property real duration: 3000
@@ -36,9 +36,9 @@ Rectangle {
     implicitWidth: 300
     implicitHeight: 35
     radius: 5
-    color: {
-        alertBgColor()
-    }
+    color: root.infoColor
+    border.color: root.infoBorderColor
+    visible: false
     
     Row{
         id: row
@@ -57,10 +57,33 @@ Rectangle {
         Text{
             width: row.width - icon.width
             text: root.message
+            font.family: NandinaFont.getFontFamily(NandinaFont.FontMono_Bold)
+            font.pixelSize: Math.min(root.width, root.height) * 0.35
             color: root.style.text
             horizontalAlignment: Text.AlignLeft
             verticalAlignment: Text.AlignVCenter
             anchors.verticalCenter: parent.verticalCenter
+        }
+    }
+
+    onLevelChanged: {
+        upateColor()
+        console.debug("Alert level changed to " + level)
+    }
+
+    Component.onCompleted: {
+        upateColor()
+    }
+    
+    function upateColor() {
+        let backgroundColor = alertBgColor()
+        let borderColor = alertBorderColor()
+        if(style.currentTheme === NandinaType.CatppuccinThemeType.Latte){
+            root.color = Qt.darker(backgroundColor, 1.09)
+            root.border.color = Qt.darker(borderColor, 1.09)
+        }else{
+            root.color = Qt.darker(backgroundColor, 0.94)
+            root.border.color = Qt.darker(borderColor, 0.94)
         }
     }
 
@@ -86,4 +109,25 @@ Rectangle {
         return color
     }
 
+    
+    function alertBorderColor() {
+        var color = "transparent"
+        switch(level){
+            case Alert.AlertType.Success:
+                color = root.successBorderColor
+            case Alert.AlertType.Error:
+                color =  root.errorBorderColor
+            case Alert.AlertType.Warning:
+                color =  root.warningBorderColor
+            case Alert.AlertType.Info:
+                color = root.infoBorderColor
+        }
+        return color
+    }
+
+    
+    function show(duration, autoClose = true) {
+        root.visible = true
+        
+    }
 }

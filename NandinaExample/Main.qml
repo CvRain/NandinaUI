@@ -45,6 +45,8 @@ NandinaWindow {
             style: window.style
             onClicked: {
                 console.log("Button2 color: ", button2.background.color)
+                alert.level = Alert.AlertType.Warning
+                alert.show()
             }
         }
     }
