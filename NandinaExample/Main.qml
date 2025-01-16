@@ -2,6 +2,7 @@ import Nandina.Widget
 import Nandina.Button
 import Nandina.Color
 import Nandina.Feedback
+import Nandina.Utils
 import QtQuick
 
 NandinaWindow {
@@ -36,7 +37,9 @@ NandinaWindow {
                     window.style.currentTheme = NandinaType.CatppuccinThemeType.Latte;
                 }
                 isLight = !isLight;
-                console.log("Button1 color: ", button2.background.color)
+                alert.level = NandinaType.AlertType.Info;
+                alert.message = "Theme changed to " + (isLight ? "Latte" : "Mocha");
+                alert.show();
             }
         }
 
@@ -44,20 +47,17 @@ NandinaWindow {
             id: button2
             style: window.style
             onClicked: {
-                console.log("Button2 color: ", button2.background.color)
-                alert.level = Alert.AlertType.Warning
-                alert.show()
+                console.log("Button2 color: ", button2.background.color);
+                alert.show();
             }
         }
     }
 
-    Alert{
+    Alert {
         id: alert
         anchors.top: parent.top
         anchors.topMargin: 10
         anchors.horizontalCenter: parent.horizontalCenter
-        level: Alert.AlertType.Success
-        
-        style: window.style
+        level: NandinaType.AlertType.Success
     }
 }

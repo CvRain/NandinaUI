@@ -6,7 +6,7 @@
 
 #include "CatppuccinTheme.hpp"
 
-
+#include <NandinaType.hpp>
 #include <memory>
 
 class NandinaStyle : public QObject {

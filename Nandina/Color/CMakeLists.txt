@@ -36,6 +36,8 @@ set(CPP_SOURCES
     CatppuccinTheme.cpp
     NandinaStyle.cpp)
 
+include_directories(../Utils)
+
 qt_add_qml_module(NandinaColor
     URI Nandina.Color
     VERSION 1.0
@@ -49,7 +51,8 @@ qt_add_qml_module(NandinaColor
 
 target_link_libraries(NandinaColor
     PRIVATE 
-        Qt6::Quick)
+        Qt6::Quick
+        NandinaUtils)
         
 set_target_properties(NandinaColor PROPERTIES
     MACOSX_BUNDLE_GUI_IDENTIFIER nandina.cvrain.com

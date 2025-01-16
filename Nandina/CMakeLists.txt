@@ -27,6 +27,9 @@ add_subdirectory(Button)
 add_subdirectory(Widget)
 add_subdirectory(Feedback)
 
+include_directories(Utils)
+include_directories(Color)
+
 qt_add_library(Nandina STATIC)
 qt_add_qml_module(Nandina
     URI Nandina

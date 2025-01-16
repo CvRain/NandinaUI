@@ -26,6 +26,8 @@ list(APPEND NANDINA_QML_FILES
 list(APPEND NANDINA_CPP_FILES
     NandinaFont.hpp
     NandinaFont.cpp
+    NandinaType.hpp
+    NandinaType.cpp
 )
 
 qt_add_qml_module(NandinaUtils

@@ -32,20 +32,6 @@ struct CatppuccinPalette {
     QString crust;
 };
 
-class NandinaType : public QObject {
-    Q_OBJECT
-    QML_ELEMENT
-public:
-    enum class CatppuccinThemeType: int{
-        Latte,
-        Frappe,
-        Macchiato,
-        Mocha
-    };
-
-    Q_ENUM(CatppuccinThemeType)
-};
-
 class CatppuccinTheme : public QObject {
     Q_OBJECT
 

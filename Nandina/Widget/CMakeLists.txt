@@ -33,7 +33,8 @@ qt_add_qml_module(NandinaWidget
 
 target_link_libraries(NandinaWidget
     PRIVATE 
-        Qt6::Quick)
+        Qt6::Quick
+        NandinaUtils)
         
 set_target_properties(NandinaWidget PROPERTIES
     MACOSX_BUNDLE_GUI_IDENTIFIER nandina.cvrain.com

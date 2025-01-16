@@ -1,6 +1,7 @@
 import QtQuick.Controls
 import QtQuick
 import Nandina.Color
+import Nandina.Utils
 
 ApplicationWindow {
     readonly property alias style: globalStyle
