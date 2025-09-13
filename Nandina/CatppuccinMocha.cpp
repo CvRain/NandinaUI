@@ -4,11 +4,11 @@
 #include "CatppuccinMocha.hpp"
 
 CatppuccinMocha::CatppuccinMocha(QObject *parent)
-    : CatppuccinTheme(createPalette(), parent) {
+    : Theme(createPalette(), parent) {
 }
 
-CatppuccinPalette CatppuccinMocha::createPalette() {
-    return CatppuccinPalette{
+Palette CatppuccinMocha::createPalette() {
+    return Palette{
         .rosewater = "#f5e0dc",
         .flamingo = "#f2cdcd",
         .pink = "#f5c2e7",

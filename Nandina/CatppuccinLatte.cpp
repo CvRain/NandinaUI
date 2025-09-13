@@ -5,11 +5,11 @@
 #include "CatppuccinLatte.hpp"
 
 CatppuccinLatte::CatppuccinLatte(QObject *parent)
-    : CatppuccinTheme(createPalette(), parent) {
+    : Theme(createPalette(), parent) {
 }
 
-CatppuccinPalette CatppuccinLatte::createPalette() {
-  return CatppuccinPalette{
+Palette CatppuccinLatte::createPalette() {
+  return Palette{
         .rosewater = "#dc8a78",
         .flamingo = "#dd7878",
         .pink = "#ea76cb",

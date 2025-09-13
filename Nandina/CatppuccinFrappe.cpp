@@ -5,11 +5,11 @@
 #include "CatppuccinFrappe.hpp"
 
 CatppuccinFrappe::CatppuccinFrappe(QObject *parent)
-    : CatppuccinTheme(createPalette(), parent) {
+    : Theme(createPalette(), parent) {
 }
 
-CatppuccinPalette CatppuccinFrappe::createPalette() {
-    return CatppuccinPalette{
+Palette CatppuccinFrappe::createPalette() {
+    return Palette{
         .rosewater = "#f2d5cf",
         .flamingo = "#eebebe",
         .pink = "#f4b8e4",

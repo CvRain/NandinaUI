@@ -1,5 +1,6 @@
 #ifndef NANDINAUI_H
 #define NANDINAUI_H
+#include <QtQml/qqml.h>
 
 #include <QtQuick/QQuickPaintedItem>
 

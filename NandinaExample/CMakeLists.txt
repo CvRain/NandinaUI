@@ -20,6 +20,8 @@ qt_add_executable(appNandinaExample
     main.cpp
 )
 
+configure_file(qtquickcontrols2.conf ${CMAKE_BINARY_DIR}/qtquickcontrols2.conf COPYONLY)
+
 set(QML_IMPORT_PATH ${CMAKE_BINARY_DIR} CACHE STRING "" FORCE)
 
 qt_add_qml_module(appNandinaExample
@@ -40,7 +42,7 @@ set_target_properties(appNandinaExample PROPERTIES
 
 target_link_libraries(appNandinaExample
     PUBLIC
-        Nandina
+        NandinaLib
         NandinaButton
         NandinaWidget
         NandinaColor
