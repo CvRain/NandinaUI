@@ -3,31 +3,70 @@ cmake_minimum_required(VERSION 3.16)
 project(NandinaUI VERSION 0.1 LANGUAGES CXX)
 
 set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTOUIC ON)
+set(CMAKE_AUTORCC ON)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(QT_QML_OUTPUT_DIRECTORY  ${CMAKE_BINARY_DIR})
+set(QT_QML_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+set(QT_QML_GENERATE_QMLLS_INI ON)
+
+set(PROJECT_NAME "NandinaUI")
+set(QML_PLUGIN_DESTDIR "${CMAKE_CURRENT_SOURCE_DIR}/Release")
 
 find_package(Qt6 6.2 COMPONENTS Quick REQUIRED)
 
-qt_add_library(NandinaUI STATIC)
+if (QT_KNOWN_POLICY_QTP0001)
+    qt_policy(SET QTP0001 NEW)
+endif ()
+
+if (QT_KNOWN_POLICY_QTP0004)
+    qt_policy(SET QTP0004 NEW)
+endif ()
+
+if (QT_KNOWN_POLICY_QTP0005)
+    qt_policy(SET QTP0005 NEW)
+endif ()
+
+set(CPP_FILES Theme/themeManager.cpp
+        Theme/themeManager.hpp
+        Theme/palette.cpp
+        Theme/palette.hpp)
+
+include_directories(Theme)
+
+qt_add_library(NandinaUI STATIC
+        ${CPP_FILES})
+
 qt_add_qml_module(NandinaUI
-    URI NandinaUI
-    VERSION 1.0
-    QML_FILES NandinaControls.qml
-    SOURCES nandina.cpp nandina.h
+        URI NandinaUI
+        VERSION 1.0
+        QML_FILES Controls/NandinaWindow.qml
+        SOURCES ${CPP_FILES}
 )
 
 set_target_properties(NandinaUI PROPERTIES
-    MACOSX_BUNDLE_GUI_IDENTIFIER my.example.com
-    MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
-    MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
-    MACOSX_BUNDLE TRUE
-    WIN32_EXECUTABLE TRUE
+        MACOSX_BUNDLE_GUI_IDENTIFIER my.example.com
+        MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
+        MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
+        MACOSX_BUNDLE TRUE
+        WIN32_EXECUTABLE TRUE
 )
 
 target_compile_definitions(NandinaUI
-    PRIVATE $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:QT_QML_DEBUG>)
+        PRIVATE $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:QT_QML_DEBUG>)
 target_link_libraries(NandinaUI
-    PRIVATE Qt6::Quick)
+        PRIVATE Qt6::Quick)
 
 target_include_directories(NandinaUI PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+
+install(DIRECTORY "${CMAKE_BINARY_DIR}/${PROJECT_NAME}" DESTINATION ${QML_PLUGIN_DESTDIR}
+        FILE_PERMISSIONS
+        OWNER_READ OWNER_EXECUTE OWNER_WRITE
+        GROUP_READ GROUP_EXECUTE
+        WORLD_READ WORLD_EXECUTE
+        DIRECTORY_PERMISSIONS
+        OWNER_READ OWNER_EXECUTE OWNER_WRITE
+        GROUP_READ GROUP_EXECUTE GROUP_WRITE
+        WORLD_READ WORLD_EXECUTE
+        FILES_MATCHING PATTERN "*")
 

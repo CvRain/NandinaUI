@@ -64,6 +64,8 @@ CMakeLists.txt.user*
 # MinGW generated files
 *.Debug
 *.Release
+Debug
+Release
 
 # Python byte code
 *.pyc
@@ -80,3 +82,9 @@ CMakeLists.txt.user*
 .rcc/
 .uic/
 /build*/
+
+.idea
+.vscode
+build
+cmake-build-*
+.qmlls.ini
