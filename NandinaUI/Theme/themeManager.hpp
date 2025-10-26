@@ -21,7 +21,7 @@ namespace NandinaUI {
 
         //Q_PROPERTY(type name READ name WRITE setName NOTIFY nameChanged FINAL)
 
-        Q_PROPERTY(QColor backgroundPane READ getColorBackgroundPane);
+        Q_PROPERTY(QColor backgroundPane READ getColorBackgroundPane NOTIFY paletteChanged)
         // Q_PROPERTY(QString secondaryPane);
         // Q_PROPERTY(QString surfaceElements);
         // Q_PROPERTY(QString overlays);
@@ -33,9 +33,9 @@ namespace NandinaUI {
         // Q_PROPERTY(QString onAccent);
         // Q_PROPERTY(QString links);
         // Q_PROPERTY(QString urls);
-         Q_PROPERTY(QColor success READ getColorSuccess);
-         Q_PROPERTY(QColor warning READ getColorWarning);
-         Q_PROPERTY(QColor error READ getColorError);
+         Q_PROPERTY(QColor success READ getColorSuccess NOTIFY paletteChanged)
+         Q_PROPERTY(QColor warning READ getColorWarning NOTIFY paletteChanged)
+         Q_PROPERTY(QColor error READ getColorError NOTIFY paletteChanged)
         // Q_PROPERTY(QString tags);
         // Q_PROPERTY(QString pills);
         // Q_PROPERTY(QString selectionBackground);
@@ -71,7 +71,7 @@ namespace NandinaUI {
         Q_INVOKABLE QColor getColorError() const;
 
     signals:
-        void paletteChanged(const PaletteType  type);
+        void paletteChanged(PaletteType type);
 
     private:
         explicit ThemeManager(QObject *parent = nullptr);

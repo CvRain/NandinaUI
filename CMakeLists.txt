@@ -7,7 +7,6 @@ set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(QT_QML_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set(QT_QML_GENERATE_QMLLS_INI ON)
 
 set(PROJECT_NAME "NandinaUI")
@@ -27,20 +26,24 @@ if (QT_KNOWN_POLICY_QTP0005)
     qt_policy(SET QTP0005 NEW)
 endif ()
 
-set(CPP_FILES Theme/themeManager.cpp
-        Theme/themeManager.hpp
-        Theme/palette.cpp
-        Theme/palette.hpp)
+set(CPP_FILES
+        NandinaUI/Theme/themeManager.hpp
+        NandinaUI/Theme/themeManager.cpp
+        NandinaUI/Theme/palette.hpp
+        NandinaUI/Theme/palette.cpp
+    )
 
-include_directories(Theme)
+include_directories(
+    NandianUI
+    NandinaUI/Theme
+)
 
-qt_add_library(NandinaUI STATIC
-        ${CPP_FILES})
+qt_add_library(NandinaUI STATIC)
 
 qt_add_qml_module(NandinaUI
         URI NandinaUI
         VERSION 1.0
-        QML_FILES Controls/NandinaWindow.qml
+        QML_FILES NandinaUI/Controls/NandinaWindow.qml
         SOURCES ${CPP_FILES}
 )
 
@@ -55,9 +58,12 @@ set_target_properties(NandinaUI PROPERTIES
 target_compile_definitions(NandinaUI
         PRIVATE $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:QT_QML_DEBUG>)
 target_link_libraries(NandinaUI
-        PRIVATE Qt6::Quick)
+        PRIVATE Qt6::Quick Qt6::Core)
 
-target_include_directories(NandinaUI PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(NandinaUI PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/NandinaUI
+    ${CMAKE_CURRENT_SOURCE_DIR}/NandinaUI/Theme)
 
 install(DIRECTORY "${CMAKE_BINARY_DIR}/${PROJECT_NAME}" DESTINATION ${QML_PLUGIN_DESTDIR}
         FILE_PERMISSIONS
@@ -70,3 +76,14 @@ install(DIRECTORY "${CMAKE_BINARY_DIR}/${PROJECT_NAME}" DESTINATION ${QML_PLUGIN
         WORLD_READ WORLD_EXECUTE
         FILES_MATCHING PATTERN "*")
 
+# example project
+qt_add_executable(NandinaExample Example/example.cpp)
+qt_add_qml_module(NandinaExample
+    URI NandinaExampleApp
+    VERSION 1.0
+    QML_FILES Example/Main.qml
+)
+target_link_libraries(NandinaExample
+        PRIVATE Qt6::Quick Qt6::Core NandinaUIplugin)
+
+target_compile_definitions(NandinaExample PRIVATE $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:QT_QML_DEBUG>)
