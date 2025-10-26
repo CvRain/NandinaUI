@@ -40,10 +40,16 @@ include_directories(
 
 qt_add_library(NandinaUI STATIC)
 
+set(QML_CONTROLS_FILES
+    NandinaUI/Controls/NandinaWindow.qml
+    NandinaUI/Controls/TitleBarButton.qml
+    NandinaUI/Controls/ResizeHandle.qml
+)
+
 qt_add_qml_module(NandinaUI
         URI NandinaUI
         VERSION 1.0
-        QML_FILES NandinaUI/Controls/NandinaWindow.qml
+        QML_FILES ${QML_CONTROLS_FILES}
         SOURCES ${CPP_FILES}
 )
 

@@ -3,7 +3,10 @@ import NandinaUI
 
 NandinaWindow{
     id: window
-    width: 640
-    height: 480
-    visible: true
+
+    Rectangle{
+        width: 200
+        height: 200
+        color: "red"
+    }
 }
