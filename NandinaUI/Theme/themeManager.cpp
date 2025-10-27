@@ -35,20 +35,120 @@ void ThemeManager::setCurrentPaletteType(const PaletteType type) {
     emit paletteChanged(type);
 }
 
-QColor ThemeManager::getColorBackgroundPane() const{
-    return QColor(this->palettes.at(currentPaletteType).backgroundPane);
+QString ThemeManager::getColorBackgroundPane() const{
+    return this->palettes.at(currentPaletteType).backgroundPane;
 }
 
-QColor ThemeManager::getColorWarning() const{
-    return QColor(this->palettes.at(currentPaletteType).warning);
+QString ThemeManager::getColorSecondaryPane() {
+    return this->palettes.at(currentPaletteType).secondaryPane;
 }
 
-QColor ThemeManager::getColorSuccess() const{
-    return QColor(this->palettes.at(currentPaletteType).success);
+QString ThemeManager::getColorSurfaceElements() {
+    return this->palettes.at(currentPaletteType).surfaceElements;
 }
 
-QColor ThemeManager::getColorError() const{
-    return QColor(this->palettes.at(currentPaletteType).error);
+QString ThemeManager::getColorOverlays() {
+    return this->palettes.at(currentPaletteType).overlays;
+}
+
+QString ThemeManager::getColorBodyCopy() {
+    return this->palettes.at(currentPaletteType).bodyCopy;
+}
+
+QString ThemeManager::getColorMainHeadline() {
+    return this->palettes.at(currentPaletteType).mainHeadline;
+}
+
+QString ThemeManager::getColorSubHeadline() {
+    return this->palettes.at(currentPaletteType).subHeadline;
+}
+
+QString ThemeManager::getColorLabel() {
+    return this->palettes.at(currentPaletteType).label;
+}
+
+QString ThemeManager::getColorSubtle() {
+    return this->palettes.at(currentPaletteType).subtle;
+}
+
+QString ThemeManager::getColorOnAccent() {
+    return this->palettes.at(currentPaletteType).onAccent;
+}
+
+QString ThemeManager::getColorLinks() {
+    return this->palettes.at(currentPaletteType).links;
+}
+
+QString ThemeManager::getColorUrls() {
+    return this->palettes.at(currentPaletteType).urls;
+}
+
+QString ThemeManager::getColorTags() {
+    return this->palettes.at(currentPaletteType).tags;
+}
+
+QString ThemeManager::getColorPills() {
+    return this->palettes.at(currentPaletteType).pills;
+}
+
+QString ThemeManager::getColorSelectionBackground() {
+    return this->palettes.at(currentPaletteType).selectionBackground;
+}
+
+QString ThemeManager::getColorCursor() {
+    return this->palettes.at(currentPaletteType).cursor;
+}
+
+QString ThemeManager::getColorCursorText() {
+    return this->palettes.at(currentPaletteType).cursorText;
+}
+
+QString ThemeManager::getColorActiveBorder() {
+    return this->palettes.at(currentPaletteType).activeBorder;
+}
+
+QString ThemeManager::getColorInactiveBorder() {
+    return this->palettes.at(currentPaletteType).inactiveBorder;
+}
+
+QString ThemeManager::getColorNellBorder() {
+    return this->palettes.at(currentPaletteType).bellBorder;
+}
+
+QString ThemeManager::getColorMark1() {
+    return this->palettes.at(currentPaletteType).mark1;
+}
+
+QString ThemeManager::getColorMark2() {
+    return this->palettes.at(currentPaletteType).mark2;
+}
+
+QString ThemeManager::getColorMark3() {
+    return this->palettes.at(currentPaletteType).mark3;
+}
+
+QString ThemeManager::getColorMark1Text() {
+    return this->palettes.at(currentPaletteType).mark1Text;
+}
+
+QString ThemeManager::getColorMark2Text() {
+    return this->palettes.at(currentPaletteType).mark2Text;
+}
+
+QString ThemeManager::getColorMark3Text() {
+    return this->palettes.at(currentPaletteType).mark3Text;
+}
+
+QString ThemeManager::getColorWarning(){
+    return this->palettes.at(currentPaletteType).warning;
+}
+
+QString ThemeManager::getColorSuccess(){
+    return this->palettes.at(currentPaletteType).success;
+}
+
+QString ThemeManager::getColorError(){
+    return this->palettes.at(currentPaletteType).error;
 }
 
 ThemeManager::ThemeManager(QObject *parent)

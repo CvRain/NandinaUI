@@ -21,54 +21,76 @@ namespace NandinaUI {
 
         //Q_PROPERTY(type name READ name WRITE setName NOTIFY nameChanged FINAL)
 
-        Q_PROPERTY(QColor backgroundPane READ getColorBackgroundPane NOTIFY paletteChanged)
-        // Q_PROPERTY(QString secondaryPane);
-        // Q_PROPERTY(QString surfaceElements);
-        // Q_PROPERTY(QString overlays);
-        // Q_PROPERTY(QString bodyCopy);
-        // Q_PROPERTY(QString mainHeadline);
-        // Q_PROPERTY(QString subHeadline);
-        // Q_PROPERTY(QString label);
-        // Q_PROPERTY(QString subtle);
-        // Q_PROPERTY(QString onAccent);
-        // Q_PROPERTY(QString links);
-        // Q_PROPERTY(QString urls);
-         Q_PROPERTY(QColor success READ getColorSuccess NOTIFY paletteChanged)
-         Q_PROPERTY(QColor warning READ getColorWarning NOTIFY paletteChanged)
-         Q_PROPERTY(QColor error READ getColorError NOTIFY paletteChanged)
-        // Q_PROPERTY(QString tags);
-        // Q_PROPERTY(QString pills);
-        // Q_PROPERTY(QString selectionBackground);
-        // Q_PROPERTY(QString cursor);
-        // Q_PROPERTY(QString cursorText);
-        // Q_PROPERTY(QString activeBorder);
-        // Q_PROPERTY(QString inactiveBorder);
-        // Q_PROPERTY(QString bellBorder);
-        // Q_PROPERTY(QString mark1);
-        // Q_PROPERTY(QString mark2);
-        // Q_PROPERTY(QString mark3);
-        // Q_PROPERTY(QString mark1Text);
-        // Q_PROPERTY(QString mark2Text);
-        // Q_PROPERTY(QString mark3Text);
+        Q_PROPERTY(QString backgroundPane READ getColorBackgroundPane NOTIFY paletteChanged)
+        Q_PROPERTY(QString secondaryPane READ getColorSecondaryPane NOTIFY paletteChanged)
+        Q_PROPERTY(QString surfaceElements READ getColorSurfaceElements NOTIFY paletteChanged)
+        Q_PROPERTY(QString overlays READ getColorOverlays NOTIFY paletteChanged)
+        Q_PROPERTY(QString bodyCopy READ getColorBodyCopy NOTIFY paletteChanged)
+        Q_PROPERTY(QString mainHeadline READ getColorMainHeadline NOTIFY paletteChanged)
+        Q_PROPERTY(QString subHeadline READ getColorSubHeadline NOTIFY paletteChanged)
+        Q_PROPERTY(QString label READ getColorLabel NOTIFY paletteChanged)
+        Q_PROPERTY(QString subtle READ getColorSubtle NOTIFY paletteChanged)
+        Q_PROPERTY(QString onAccent READ getColorOnAccent NOTIFY paletteChanged)
+        Q_PROPERTY(QString links READ getColorLinks NOTIFY paletteChanged)
+        Q_PROPERTY(QString urls READ getColorUrls NOTIFY paletteChanged)
+        Q_PROPERTY(QString success READ getColorSuccess NOTIFY paletteChanged)
+        Q_PROPERTY(QString warning READ getColorWarning NOTIFY paletteChanged)
+        Q_PROPERTY(QString error READ getColorError NOTIFY paletteChanged)
+        Q_PROPERTY(QString tags READ getColorTags NOTIFY paletteChanged)
+        Q_PROPERTY(QString pills READ getColorPills NOTIFY paletteChanged)
+        Q_PROPERTY(QString selectionBackground READ getColorSelectionBackground NOTIFY paletteChanged)
+        Q_PROPERTY(QString cursor READ getColorCursor NOTIFY paletteChanged)
+        Q_PROPERTY(QString cursorText READ getColorCursorText NOTIFY paletteChanged)
+        Q_PROPERTY(QString activeBorder READ getColorActiveBorder NOTIFY paletteChanged)
+        Q_PROPERTY(QString inactiveBorder READ getColorInactiveBorder NOTIFY paletteChanged)
+        Q_PROPERTY(QString bellBorder READ getColorNellBorder NOTIFY paletteChanged)
+        Q_PROPERTY(QString mark1 READ getColorMark1 NOTIFY paletteChanged)
+        Q_PROPERTY(QString mark2 READ getColorMark2 NOTIFY paletteChanged)
+        Q_PROPERTY(QString mark3 READ getColorMark3 NOTIFY paletteChanged)
+        Q_PROPERTY(QString mark1Text READ getColorMark1Text NOTIFY paletteChanged)
+        Q_PROPERTY(QString mark2Text READ getColorMark2Text NOTIFY paletteChanged)
+        Q_PROPERTY(QString mark3Text READ getColorMark3Text NOTIFY paletteChanged)
 
     public:
         static ThemeManager* create(const QQmlEngine *qmlEngine, const QJSEngine *jsEngine);
 
         static ThemeManager* getInstance();
 
-        const Palette& getCurrentPalette();
+        Q_INVOKABLE const Palette& getCurrentPalette();
 
         Q_INVOKABLE PaletteType getCurrentPaletteType() const;
 
         Q_INVOKABLE void setCurrentPaletteType(PaletteType type);
 
-        Q_INVOKABLE QColor getColorBackgroundPane() const;
-
-        Q_INVOKABLE QColor getColorSuccess() const;
-
-        Q_INVOKABLE QColor getColorWarning() const;
-
-        Q_INVOKABLE QColor getColorError() const;
+        Q_INVOKABLE QString getColorBackgroundPane() const;
+        Q_INVOKABLE QString getColorSecondaryPane();
+        Q_INVOKABLE QString getColorSurfaceElements();
+        Q_INVOKABLE QString getColorOverlays();
+        Q_INVOKABLE QString getColorBodyCopy();
+        Q_INVOKABLE QString getColorMainHeadline();
+        Q_INVOKABLE QString getColorSubHeadline();
+        Q_INVOKABLE QString getColorLabel();
+        Q_INVOKABLE QString getColorSubtle();
+        Q_INVOKABLE QString getColorOnAccent();
+        Q_INVOKABLE QString getColorLinks();
+        Q_INVOKABLE QString getColorUrls();
+        Q_INVOKABLE QString getColorTags();
+        Q_INVOKABLE QString getColorPills();
+        Q_INVOKABLE QString getColorSelectionBackground();
+        Q_INVOKABLE QString getColorCursor();
+        Q_INVOKABLE QString getColorCursorText();
+        Q_INVOKABLE QString getColorActiveBorder();
+        Q_INVOKABLE QString getColorInactiveBorder();
+        Q_INVOKABLE QString getColorNellBorder();
+        Q_INVOKABLE QString getColorMark1();
+        Q_INVOKABLE QString getColorMark2();
+        Q_INVOKABLE QString getColorMark3();
+        Q_INVOKABLE QString getColorMark1Text();
+        Q_INVOKABLE QString getColorMark2Text();
+        Q_INVOKABLE QString getColorMark3Text();
+        Q_INVOKABLE QString getColorSuccess();
+        Q_INVOKABLE QString getColorWarning();
+        Q_INVOKABLE QString getColorError();
 
     signals:
         void paletteChanged(PaletteType type);

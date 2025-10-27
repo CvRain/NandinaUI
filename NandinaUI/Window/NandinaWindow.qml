@@ -1,7 +1,5 @@
 import QtQuick
 import QtQuick.Controls.Basic
-import QtQuick.Layouts
-import QtQuick.Shapes
 
 ApplicationWindow {
     id: rootWindow
@@ -17,11 +15,11 @@ ApplicationWindow {
     property bool isAlwaysOnTop: false
     property int titleBarHeight: 40
     property bool isFrameVisible: true
-    property int resizeMargin: 8 // 增加边缘区域宽度以获得更好的体验
+    property int resizeMargin: 6
 
     default property alias content: contentArea.data
 
-    color: "#f0f0f0"
+    color: ThemeManager.backgroundPane
 
     // 切换全屏/最大化
     function toggleMaximize() {
@@ -50,7 +48,7 @@ ApplicationWindow {
         Rectangle {
             id: titleBar
             width: parent.width
-            height: titleBarHeight
+            height: rootWindow.titleBarHeight
             color: "#2c3e50"
             z: 1 // 确保标题栏在其他元素之上
 
@@ -58,7 +56,8 @@ ApplicationWindow {
             DragHandler {
                 target: null
                 grabPermissions: PointerHandler.CanTakeOverFromAnything
-                onActiveChanged: if (active) rootWindow.startSystemMove()
+                onActiveChanged: if (active)
+                                     rootWindow.startSystemMove()
             }
 
             // 应用图标和标题
@@ -97,9 +96,9 @@ ApplicationWindow {
                 TitleBarButton {
                     id: btnPin
                     iconText: "📌"
-                    tooltip: isAlwaysOnTop ? "取消置顶" : "窗口置顶"
-                    onClicked: toggleAlwaysOnTop()
-                    isChecked: isAlwaysOnTop
+                    tooltip: rootWindow.isAlwaysOnTop ? "取消置顶" : "窗口置顶"
+                    onClicked: rootWindow.toggleAlwaysOnTop()
+                    isChecked: rootWindow.isAlwaysOnTop
                 }
 
                 // 最小化按钮
@@ -113,9 +112,9 @@ ApplicationWindow {
                 // 最大化/还原按钮
                 TitleBarButton {
                     id: btnMaximize
-                    iconText: isMaximized ? "⧉" : "□"
-                    tooltip: isMaximized ? "还原" : "最大化"
-                    onClicked: toggleMaximize()
+                    iconText: rootWindow.isMaximized ? "⧉" : "□"
+                    tooltip: rootWindow.isMaximized ? "还原" : "最大化"
+                    onClicked: rootWindow.toggleMaximize()
                 }
 
                 // 关闭按钮
@@ -144,7 +143,7 @@ ApplicationWindow {
             color: "transparent"
             border.width: 1
             border.color: "#bdc3c7"
-            visible: isFrameVisible
+            visible: rootWindow.isFrameVisible
         }
 
         // 使用 DragHandler 进行系统级调整大小
@@ -154,7 +153,9 @@ ApplicationWindow {
             target: null
             acceptedDevices: PointerDevice.Mouse
             grabPermissions: PointerHandler.CanTakeOverFromAnything
-            onActiveChanged: if (active) rootWindow.startSystemResize(Qt.LeftEdge | Qt.TopEdge)
+            onActiveChanged: if (active)
+                                 rootWindow.startSystemResize(
+                                             Qt.LeftEdge | Qt.TopEdge)
         }
 
         Rectangle {
@@ -162,20 +163,20 @@ ApplicationWindow {
                 left: parent.left
                 top: parent.top
             }
-            width: resizeMargin
-            height: resizeMargin
+            width: rootWindow.resizeMargin
+            height: rootWindow.resizeMargin
             color: "transparent"
-            MouseArea{
+            MouseArea {
                 anchors.fill: parent
                 cursorShape: Qt.SizeFDiagCursor
             }
-            HoverHandler {
-                cursorShape: parent.cursorShape
-            }
+
             DragHandler {
                 target: null
                 grabPermissions: PointerHandler.CanTakeOverFromAnything
-                onActiveChanged: if (active) rootWindow.startSystemResize(Qt.LeftEdge | Qt.TopEdge)
+                onActiveChanged: if (active)
+                                     rootWindow.startSystemResize(
+                                                 Qt.LeftEdge | Qt.TopEdge)
             }
         }
 
@@ -185,7 +186,8 @@ ApplicationWindow {
             target: null
             acceptedDevices: PointerDevice.Mouse
             grabPermissions: PointerHandler.CanTakeOverFromAnything
-            onActiveChanged: if (active) rootWindow.startSystemResize(Qt.TopEdge)
+            onActiveChanged: if (active)
+                                 rootWindow.startSystemResize(Qt.TopEdge)
         }
 
         Rectangle {
@@ -194,19 +196,17 @@ ApplicationWindow {
                 right: parent.right
                 top: parent.top
             }
-            height: resizeMargin
+            height: rootWindow.resizeMargin
             color: "transparent"
-            MouseArea{
+            MouseArea {
                 anchors.fill: parent
                 cursorShape: Qt.SizeVerCursor
-            }
-            HoverHandler {
-                cursorShape: parent.cursorShape
             }
             DragHandler {
                 target: null
                 grabPermissions: PointerHandler.CanTakeOverFromAnything
-                onActiveChanged: if (active) rootWindow.startSystemResize(Qt.TopEdge)
+                onActiveChanged: if (active)
+                                     rootWindow.startSystemResize(Qt.TopEdge)
             }
         }
 
@@ -216,7 +216,9 @@ ApplicationWindow {
             target: null
             acceptedDevices: PointerDevice.Mouse
             grabPermissions: PointerHandler.CanTakeOverFromAnything
-            onActiveChanged: if (active) rootWindow.startSystemResize(Qt.RightEdge | Qt.TopEdge)
+            onActiveChanged: if (active)
+                                 rootWindow.startSystemResize(
+                                             Qt.RightEdge | Qt.TopEdge)
         }
 
         Rectangle {
@@ -224,20 +226,22 @@ ApplicationWindow {
                 right: parent.right
                 top: parent.top
             }
-            width: resizeMargin
-            height: resizeMargin
+            width: rootWindow.resizeMargin
+            height: rootWindow.resizeMargin
             color: "transparent"
-            MouseArea{
+            MouseArea {
                 anchors.fill: parent
                 cursorShape: Qt.SizeBDiagCursor
             }
-            HoverHandler {
-                cursorShape: parent.cursorShape
-            }
+            // HoverHandler {
+            //     cursorShape: parent.cursorShape
+            // }
             DragHandler {
                 target: null
                 grabPermissions: PointerHandler.CanTakeOverFromAnything
-                onActiveChanged: if (active) rootWindow.startSystemResize(Qt.RightEdge | Qt.TopEdge)
+                onActiveChanged: if (active)
+                                     rootWindow.startSystemResize(
+                                                 Qt.RightEdge | Qt.TopEdge)
             }
         }
 
@@ -247,7 +251,8 @@ ApplicationWindow {
             target: null
             acceptedDevices: PointerDevice.Mouse
             grabPermissions: PointerHandler.CanTakeOverFromAnything
-            onActiveChanged: if (active) rootWindow.startSystemResize(Qt.RightEdge)
+            onActiveChanged: if (active)
+                                 rootWindow.startSystemResize(Qt.RightEdge)
         }
 
         Rectangle {
@@ -256,19 +261,20 @@ ApplicationWindow {
                 top: parent.top
                 bottom: parent.bottom
             }
-            width: resizeMargin
+            width: rootWindow.resizeMargin
             color: "transparent"
-            MouseArea{
+            MouseArea {
                 anchors.fill: parent
                 cursorShape: Qt.SizeHorCursor
             }
-            HoverHandler {
-                cursorShape: parent.cursorShape
-            }
+            // HoverHandler {
+            //     cursorShape: parent.cursorShape
+            // }
             DragHandler {
                 target: null
                 grabPermissions: PointerHandler.CanTakeOverFromAnything
-                onActiveChanged: if (active) rootWindow.startSystemResize(Qt.RightEdge)
+                onActiveChanged: if (active)
+                                     rootWindow.startSystemResize(Qt.RightEdge)
             }
         }
 
@@ -278,7 +284,9 @@ ApplicationWindow {
             target: null
             acceptedDevices: PointerDevice.Mouse
             grabPermissions: PointerHandler.CanTakeOverFromAnything
-            onActiveChanged: if (active) rootWindow.startSystemResize(Qt.RightEdge | Qt.BottomEdge)
+            onActiveChanged: if (active)
+                                 rootWindow.startSystemResize(
+                                             Qt.RightEdge | Qt.BottomEdge)
         }
 
         Rectangle {
@@ -286,20 +294,22 @@ ApplicationWindow {
                 right: parent.right
                 bottom: parent.bottom
             }
-            width: resizeMargin
-            height: resizeMargin
+            width: rootWindow.resizeMargin
+            height: rootWindow.resizeMargin
             color: "transparent"
-            MouseArea{
+            MouseArea {
                 anchors.fill: parent
                 cursorShape: Qt.SizeFDiagCursor
             }
-            HoverHandler {
-                cursorShape: parent.cursorShape
-            }
+            // HoverHandler {
+            //     cursorShape: parent.cursorShape
+            // }
             DragHandler {
                 target: null
                 grabPermissions: PointerHandler.CanTakeOverFromAnything
-                onActiveChanged: if (active) rootWindow.startSystemResize(Qt.RightEdge | Qt.BottomEdge)
+                onActiveChanged: if (active)
+                                     rootWindow.startSystemResize(
+                                                 Qt.RightEdge | Qt.BottomEdge)
             }
         }
 
@@ -309,7 +319,8 @@ ApplicationWindow {
             target: null
             acceptedDevices: PointerDevice.Mouse
             grabPermissions: PointerHandler.CanTakeOverFromAnything
-            onActiveChanged: if (active) rootWindow.startSystemResize(Qt.BottomEdge)
+            onActiveChanged: if (active)
+                                 rootWindow.startSystemResize(Qt.BottomEdge)
         }
 
         Rectangle {
@@ -318,19 +329,20 @@ ApplicationWindow {
                 right: parent.right
                 bottom: parent.bottom
             }
-            height: resizeMargin
+            height: rootWindow.resizeMargin
             color: "transparent"
-            MouseArea{
+            MouseArea {
                 anchors.fill: parent
                 cursorShape: Qt.SizeVerCursor
             }
-            HoverHandler {
-                cursorShape: parent.cursorShape
-            }
+            // HoverHandler {
+            //     cursorShape: parent.cursorShape
+            // }
             DragHandler {
                 target: null
                 grabPermissions: PointerHandler.CanTakeOverFromAnything
-                onActiveChanged: if (active) rootWindow.startSystemResize(Qt.BottomEdge)
+                onActiveChanged: if (active)
+                                     rootWindow.startSystemResize(Qt.BottomEdge)
             }
         }
 
@@ -340,7 +352,9 @@ ApplicationWindow {
             target: null
             acceptedDevices: PointerDevice.Mouse
             grabPermissions: PointerHandler.CanTakeOverFromAnything
-            onActiveChanged: if (active) rootWindow.startSystemResize(Qt.LeftEdge | Qt.BottomEdge)
+            onActiveChanged: if (active)
+                                 rootWindow.startSystemResize(
+                                             Qt.LeftEdge | Qt.BottomEdge)
         }
 
         Rectangle {
@@ -348,20 +362,22 @@ ApplicationWindow {
                 left: parent.left
                 bottom: parent.bottom
             }
-            width: resizeMargin
-            height: resizeMargin
+            width: rootWindow.resizeMargin
+            height: rootWindow.resizeMargin
             color: "transparent"
-            MouseArea{
+            MouseArea {
                 anchors.fill: parent
                 cursorShape: Qt.SizeBDiagCursor
             }
-            HoverHandler {
-                cursorShape: parent.cursorShape
-            }
+            // HoverHandler {
+            //     cursorShape: parent.cursorShape
+            // }
             DragHandler {
                 target: null
                 grabPermissions: PointerHandler.CanTakeOverFromAnything
-                onActiveChanged: if (active) rootWindow.startSystemResize(Qt.LeftEdge | Qt.BottomEdge)
+                onActiveChanged: if (active)
+                                     rootWindow.startSystemResize(
+                                                 Qt.LeftEdge | Qt.BottomEdge)
             }
         }
 
@@ -371,7 +387,8 @@ ApplicationWindow {
             target: null
             acceptedDevices: PointerDevice.Mouse
             grabPermissions: PointerHandler.CanTakeOverFromAnything
-            onActiveChanged: if (active) rootWindow.startSystemResize(Qt.LeftEdge)
+            onActiveChanged: if (active)
+                                 rootWindow.startSystemResize(Qt.LeftEdge)
         }
 
         Rectangle {
@@ -380,20 +397,21 @@ ApplicationWindow {
                 top: parent.top
                 bottom: parent.bottom
             }
-            width: resizeMargin
+            width: rootWindow.resizeMargin
             color: "transparent"
-            MouseArea{
+            MouseArea {
                 anchors.fill: parent
                 cursorShape: Qt.SizeHorCursor
             }
 
-            HoverHandler {
-                cursorShape: parent.cursorShape
-            }
+            // HoverHandler {
+            //     cursorShape: parent.cursorShape
+            // }
             DragHandler {
                 target: null
                 grabPermissions: PointerHandler.CanTakeOverFromAnything
-                onActiveChanged: if (active) rootWindow.startSystemResize(Qt.LeftEdge)
+                onActiveChanged: if (active)
+                                     rootWindow.startSystemResize(Qt.LeftEdge)
             }
         }
     }
