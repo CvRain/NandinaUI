@@ -1,1 +1,2 @@
-module NandinaUI
+module com.cvrain.nandina
+plugin Nandina

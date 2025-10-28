@@ -19,11 +19,11 @@ Rectangle {
         height: 20
         radius: 3
         color: {
-            if (isCloseButton && mouseArea.containsPress)
+            if (button.isCloseButton && mouseArea.containsPress)
                 return "#e74c3c"
             else if (mouseArea.containsPress)
                 return "rgba(255,255,255,0.3)"
-            else if (isChecked)
+            else if (button.isChecked)
                 return "rgba(52, 152, 219, 0.5)"
             else
                 return "transparent"
@@ -38,9 +38,9 @@ Rectangle {
         Text {
             anchors.centerIn: parent
             text: button.iconText
-            color: isCloseButton ? "white" : "white"
+            color: button.isCloseButton ? "white" : "white"
             font.pixelSize: 12
-            font.bold: isCloseButton
+            font.bold: button.isCloseButton
         }
     }
 
