@@ -10,9 +10,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(QT_QML_GENERATE_QMLLS_INI ON)
 set(QT_QML_OUTPUT_DIRECTORY  ${CMAKE_BINARY_DIR})
 
-set(PROJECT_NAME "Nandina")
-set(QML_PLUGIN_DESTDIR "${CMAKE_CURRENT_SOURCE_DIR}/../Release")
-
 find_package(Qt6 6.2 COMPONENTS Quick REQUIRED)
 
 if (QT_KNOWN_POLICY_QTP0001)
@@ -32,6 +29,8 @@ list(APPEND MODULE_CPP_FILES
     Nandina/Theme/palette.cpp
     Nandina/Theme/themeManager.hpp
     Nandina/Theme/themeManager.cpp
+    Nandina/Theme/baseColors.hpp
+    Nandina/Theme/baseColors.cpp
 )
 
 list(APPEND MODULE_WINDOW_QML_FILE
@@ -73,14 +72,3 @@ target_include_directories(Nandina PUBLIC
     Nandina
     Nandina/Theme
 )
-
-install(DIRECTORY "${CMAKE_BINARY_DIR}/${PROJECT_NAME}" DESTINATION ${QML_PLUGIN_DESTDIR}
-        FILE_PERMISSIONS
-            OWNER_READ OWNER_EXECUTE OWNER_WRITE
-            GROUP_READ GROUP_EXECUTE
-            WORLD_READ WORLD_EXECUTE
-        DIRECTORY_PERMISSIONS
-            OWNER_READ OWNER_EXECUTE OWNER_WRITE
-            GROUP_READ GROUP_EXECUTE GROUP_WRITE
-            WORLD_READ WORLD_EXECUTE
-        FILES_MATCHING PATTERN "*")

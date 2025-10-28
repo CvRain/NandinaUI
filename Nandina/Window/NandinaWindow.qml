@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls.Basic
+import Nandina
 
 ApplicationWindow {
     id: rootWindow
@@ -19,7 +20,7 @@ ApplicationWindow {
 
     default property alias content: contentArea.data
 
-    color: ThemeManager.backgroundPane
+    color: ThemeManager.palette.backgroundPane
 
     // 切换全屏/最大化
     function toggleMaximize() {

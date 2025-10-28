@@ -126,6 +126,8 @@ namespace NandinaUI::Color::Mocha {
 }
 
 namespace NandinaUI {
+    Q_NAMESPACE
+
     enum class PaletteType {
         Latte,
         Frappe,
@@ -133,14 +135,55 @@ namespace NandinaUI {
         Mocha
     };
 
+    Q_ENUM_NS(PaletteType)
+
     class Palette : public QObject {
         Q_OBJECT
         QML_ELEMENT
+        
+        //Background Colors
+        Q_PROPERTY(QString backgroundPane MEMBER backgroundPane CONSTANT)
+        Q_PROPERTY(QString secondaryPane MEMBER secondaryPane CONSTANT)
+        Q_PROPERTY(QString surfaceElements MEMBER surfaceElements CONSTANT)
+        Q_PROPERTY(QString overlays MEMBER overlays CONSTANT)
+        
+        // Typography
+        Q_PROPERTY(QString bodyCopy MEMBER bodyCopy CONSTANT)
+        Q_PROPERTY(QString mainHeadline MEMBER mainHeadline CONSTANT)
+        Q_PROPERTY(QString subHeadline MEMBER subHeadline CONSTANT)
+        Q_PROPERTY(QString label MEMBER label CONSTANT)
+        Q_PROPERTY(QString subtle MEMBER subtle CONSTANT)
+        Q_PROPERTY(QString onAccent MEMBER onAccent CONSTANT)
+        Q_PROPERTY(QString links MEMBER links CONSTANT)
+        Q_PROPERTY(QString urls MEMBER urls CONSTANT)
+        Q_PROPERTY(QString success MEMBER success CONSTANT)
+        Q_PROPERTY(QString warning MEMBER warning CONSTANT)
+        Q_PROPERTY(QString error MEMBER error CONSTANT)
+        Q_PROPERTY(QString tags MEMBER tags CONSTANT)
+        Q_PROPERTY(QString pills MEMBER pills CONSTANT)
+        Q_PROPERTY(QString selectionBackground MEMBER selectionBackground CONSTANT)
+        Q_PROPERTY(QString cursor MEMBER cursor CONSTANT)
+        
+        //Window Colors
+        Q_PROPERTY(QString cursorText MEMBER cursorText CONSTANT)
+        Q_PROPERTY(QString activeBorder MEMBER activeBorder CONSTANT)
+        Q_PROPERTY(QString inactiveBorder MEMBER inactiveBorder CONSTANT)
+        Q_PROPERTY(QString bellBorder MEMBER bellBorder CONSTANT)
+        
+        //Syntax Colors
+        Q_PROPERTY(QString mark1 MEMBER mark1 CONSTANT)
+        Q_PROPERTY(QString mark2 MEMBER mark2 CONSTANT)
+        Q_PROPERTY(QString mark3 MEMBER mark3 CONSTANT)
+        Q_PROPERTY(QString mark1Text MEMBER mark1Text CONSTANT)
+        Q_PROPERTY(QString mark2Text MEMBER mark2Text CONSTANT)
+        Q_PROPERTY(QString mark3Text MEMBER mark3Text CONSTANT)
 
     public:
         explicit Palette(QObject *parent = nullptr);
+
         Palette(const Palette &);
-        Palette &operator=(const Palette &);
+
+        Palette& operator=(const Palette &);
 
         //Background Colors
         QString backgroundPane;
@@ -177,14 +220,20 @@ namespace NandinaUI {
         QString mark3Text;
     };
 
-    class Tools: public QObject{
+    class Tools : public QObject {
         Q_OBJECT
+
     public:
-        explicit Tools(QObject* parent = nullptr);
+        explicit Tools(QObject *parent = nullptr);
+
         static Palette generatePalette(PaletteType type);
+
         static Palette generateLattePalette();
+
         static Palette generateFrappePalette();
+
         static Palette generateMacchiatoPalette();
+
         static Palette generateMochaPalette();
     };
 }
