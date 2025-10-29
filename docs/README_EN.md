@@ -1,151 +1,56 @@
-# README.md
-
-![](./Image/placeholder.jpg)
+![](Image/placeholder.jpg)
 <br>
 # NandinaUI
-**南天竹： 一套使用`Catppuccin`配色方案的扁平设计QML组件库。**  
-**NandinaUI** A flat design QML component library based on `Catppuccin` scheme.
+**NandinaUI**: A flat design QML component library using the `Catppuccin` color scheme.
 
-[English](docs/README_EN.md)
+[中文](../README.md)
 
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/Nandina/NandinaUI?style=flat-square)](https://github.com/Nandina/NandinaUI/releases/latest)
 [![GitHub](https://img.shields.io/github/license/Nandina/NandinaUI?style=flat-square)](https://github.com/Nandina/NandinaUI/blob/main/LICENSE)
 [![GitHub all releases](https://img.shields.io/github/downloads/Nandina/NandinaUI/total?style=flat-square)](https://github.com/Nandina/NandinaUI/releases)
 [![GitHub issues](https://img.shields.io/github/issues/Nandina/NandinaUI?style=flat-square)](https://github.com/Nandina/NandinaUI/issues)
 
-## ✨ 特性
-- 🎨 基于 Catppuccin 配色方案的现代化设计
-- 📱 响应式设计，支持多种屏幕尺寸
-- 🎯 容易上手的 QML 组件
-- 🌙 内置四色主题切换
-- 🔧 高度可定制化
+## Component Preview
+***Working hard to update***
 
-## 🚧 开发状态
-NandinaUI 目前处于 **早期开发阶段**。“我们”（嗯，其实就我一个）正在积极构建核心组件。
+## Quick Start
 
-### 开发路线图
-
-#### 🟢 已完成
-- [x] 基础窗口组件 (NandinaWindow)
-- [x] 主题配色管理器 (ThemeManager)
-- [x] 标题栏组件 (TitleBar)
-
-#### 🔄 进行中
-- [ ] 按钮组件 (Button)
-
-#### 📋 计划中 (按优先级排序)
-
-**阶段 1: 基础组件 (v0.1.0)**
-- [ ] 图标系统 (Icon)
-- [ ] 输入框 (Input)
-- [ ] 复选框 (Checkbox)
-- [ ] 单选框 (Radio Group)
-- [ ] 开关 (Switch)
-- [ ] 标签 (Label)
-- [ ] 文本区域 (Textarea)
-
-**阶段 2: 布局组件 (v0.2.0)**
-- [ ] 卡片 (Card)
-- [ ] 分隔符 (Separator)
-- [ ] 滚动区域 (Scroll Area)
-- [ ] 选项卡 (Tabs)
-- [ ] 侧边栏 (Sidebar)
-- [ ] 抽屉 (Drawer)
-- [ ] 可调整大小组件 (Resizable)
-
-**阶段 3: 数据展示 (v0.3.0)**
-- [ ] 表格 (Table/Data Table)
-- [ ] 列表 (List)
-- [ ] 分页 (Pagination)
-- [ ] 树形视图 (Tree View)
-- [ ] 图表 (Chart)
-
-**阶段 4: 反馈组件 (v0.4.0)**
-- [ ] 加载指示器 (Spinner/Progress)
-- [ ] 对话框 (Dialog/Alert Dialog)
-- [ ] 提示框 (Toast/Sonner)
-- [ ] 工具提示 (Tooltip)
-- [ ] 骨架屏 (Skeleton)
-- [ ] 空状态 (Empty)
-
-**阶段 5: 高级组件 (v0.5.0)**
-- [ ] 日期选择器 (Date Picker)
-- [ ] 颜色选择器 (Color Picker)
-- [ ] 滑块 (Slider)
-- [ ] 下拉菜单 (Dropdown Menu)
-- [ ] 组合框 (Combobox)
-- [ ] 导航菜单 (Navigation Menu)
-
-**阶段 6: 工具组件 (v0.6.0)**
-- [ ] 头像 (Avatar)
-- [ ] 徽章 (Badge)
-- [ ] 面包屑 (Breadcrumb)
-- [ ] 步骤条 (Steps)
-- [ ] 时间轴 (Timeline)
-
-**未来计划**
-- [ ] 手风琴 (Accordion)
-- [ ] 轮播图 (Carousel)
-- [ ] 日历 (Calendar)
-- [ ] 命令面板 (Command)
-- [ ] 上下文菜单 (Context Menu)
-- [ ] 悬浮卡片 (Hover Card)
-- [ ] 输入组 (Input Group)
-- [ ] 键盘按键显示 (Kbd)
-- [ ] 菜单栏 (Menubar)
-- [ ] 原生选择器 (Native Select)
-- [ ] 弹出框 (Popover)
-- [ ] 表单 (Form/Field)
-- [ ] 输入OTP (Input OTP)
-- [ ] 宽高比 (Aspect Ratio)
-- [ ] 按钮组 (Button Group)
-- [ ] 折叠面板 (Collapsible)
-- [ ] 项目容器 (Item)
-- [ ] 表格 (Table)
-- [ ] 切换组 (Toggle Group)
-- [ ] 排版工具 (Typography)
-
-## 组件预览
-***正在努力更新中***
-
-## 快速开始
-
-### 方式一：作为子项目引入
-A. 非git项目，假设新建的项目名为`TryNandina`
-1. 在您的项目下将本项目clone到本地。
+### Method 1: Import as a subproject
+A. For non-git projects, assume the new project name is `TryNandina`
+1. Clone this project locally under your project.
 ```bash
 cd TryNandina
 git clone https://github.com/CvRain/NandinaUI.git
 ```
-2. 后续步骤跳转到`C. 配置CMakeLists.txt`
+2. Subsequent steps jump to `C. Configure CMakeLists.txt`
 
 
-B. git项目，假设项目名为`TryNandina`
-1. 创建一个子项目，并启用git
+B. For git projects, assume the project name is `TryNandina`
+1. Create a subproject and enable git
 ```bash
 cd TryNandina
 git init
 ```
-2. 将项目作为子项目添加到您的项目中
+2. Add the project as a submodule to your project
 ```bash
 git submodule add https://github.com/CvRain/NandinaUI.git
 ```
-3. 后续步骤跳转到`C. 配置CMakeLists.txt`
+3. Subsequent steps jump to `C. Configure CMakeLists.txt`
 
-C. 配置CMakeLists.txt
-1. 添加子项目
+C. Configure CMakeLists.txt
+1. Add subproject
 ```cmake
 add_subdirectory(Nandina)
 ```
 
-2. 添加依赖项
+2. Add dependencies
 ```cmake
 target_link_libraries(appTryNandina
     PRIVATE Qt6::Quick Qt6::Core Nandinaplugin
 )
 ```
 
-3. 完整配置参考
+3. Complete configuration reference
 ```cmake
 cmake_minimum_required(VERSION 3.16)
 
@@ -210,24 +115,24 @@ install(TARGETS appTryNandina
 )
 ```
 
-### 方式二：将项目作为库使用
-1. 获取项目
+### Method 2: Use the project as a library
+1. Get the project
 ```bash
 git clone https://github.com/CvRain/NandinaUI.git
 ```
 
-2. 编译项目
-编译后输出文件在本项目同级目录下
+2. Compile the project
+The output files after compilation are in the same directory as this project
 ```bash
 cmake . -B build -DCMAKE_PREFIX_PATH=/path/to/qt/install/dir
 cd build
 make install
 ```
 
-3. 添加依赖项
-将输出的文件夹(Release/Nandina)拖入待使用的项目中，假设项目名称为`TryNandina`并在CMakeLists.txt中添加如下内容
+3. Add dependencies
+Drag the output folder (Release/Nandina) into the project to be used, assuming the project name is `TryNandina` and add the following content to CMakeLists.txt
 ```cmake
-#加入你需要的组件
+#Add the components you need
 set(NANDINA_QML_FILES
     Nandina/Window/NandinaWindow.qml
 )
@@ -236,7 +141,7 @@ qt_add_library(Nandina STATIC)
 qt_add_qml_module(Nandina
     URI MyPlugin
     QML_FILES
-        ${NANDINA_QML_FILES}/
+        ${NANDINA_QML_FILES}
 )
 
 target_link_libraries(appTryNandina
@@ -244,7 +149,7 @@ target_link_libraries(appTryNandina
 )
 ```
 
-完整配置
+Complete configuration
 ```cmake
 cmake_minimum_required(VERSION 3.16)
 
@@ -297,7 +202,7 @@ install(TARGETS appMyPluginTest
 )
 ```
 
-4. 编辑`main.cpp`，添加如下内容
+4. Edit `main.cpp` and add the following content
 ```cpp
 #include <QtQml/qqmlextensionplugin.h>
 

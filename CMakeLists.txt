@@ -35,7 +35,10 @@ list(APPEND MODULE_CPP_FILES
 
 list(APPEND MODULE_WINDOW_QML_FILE
     Nandina/Window/NandinaWindow.qml
+    Nandina/Window/TitleBar.qml
     Nandina/Window/TitleBarButton.qml
+    Nandina/Window/WindowResizer.qml
+    Nandina/Window/ResizeHandler.qml
 )
 
 list(APPEND MODULE_CONTROLS_QML_FILE
