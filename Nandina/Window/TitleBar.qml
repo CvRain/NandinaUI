@@ -1,16 +1,25 @@
 import QtQuick
+import QtQuick.Controls
 import Nandina
-
-import QtQuick
-import Nandina
+import Nandina.Theme
 
 Rectangle {
     id: titleBar
     implicitWidth: 640
     implicitHeight: 40
 
-    color: "#2c3e50"
+    color: ThemeManager.color.crust
     z: 1 // 确保标题栏在其他元素之上
+
+    Behavior on color {
+
+        ColorAnimation {
+            duration: 200
+            easing.type: Easing.InOutQuad
+        }
+    }
+
+    required property ApplicationWindow targetWindow
 
     property string title: "Nandina"
     property bool isMaximized: false
@@ -32,13 +41,13 @@ Rectangle {
             width: 20
             height: 20
             radius: 4
-            color: "#3498db"
+            color: ThemeManager.color.surface0
             anchors.verticalCenter: parent.verticalCenter
         }
 
         Text {
-            text: titleBar.title
-            color: "white"
+            text: titleBar.targetWindow.title
+            color: ThemeManager.color.text
             font.pixelSize: 14
             font.bold: true
             anchors.verticalCenter: parent.verticalCenter

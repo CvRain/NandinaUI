@@ -1,6 +1,5 @@
 import QtQuick
-import QtQuick.Controls.Basic
-import Nandina
+import QtQuick.Controls
 
 Rectangle {
     id: button

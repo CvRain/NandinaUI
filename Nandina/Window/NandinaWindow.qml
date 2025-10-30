@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls.Basic
 import Nandina
+import Nandina.Theme
 
 ApplicationWindow {
     id: rootWindow
@@ -31,11 +32,22 @@ ApplicationWindow {
         radius: rootWindow.windowRadius // 设置圆角半径
         clip: true // 确保内容不会超出圆角边界
 
+        Behavior on color {
+
+            ColorAnimation {
+                duration: 200
+                easing.type: Easing.InOutQuad
+            }
+        }
+
         // 自定义标题栏
         TitleBar {
             id: titleBar
             width: parent.width
             height: rootWindow.titleBarHeight
+
+            targetWindow: rootWindow
+
             title: rootWindow.title
             radius: rootWindow.windowRadius
 
