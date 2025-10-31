@@ -14,16 +14,16 @@
 #include "palette.hpp"
 #include "baseColors.hpp"
 
-namespace NandinaUI {
+namespace Nandina {
     class ThemeManager : public QObject {
         Q_OBJECT
         QML_ELEMENT
         QML_SINGLETON
 
         //Expose the palette as a property
-        Q_PROPERTY(NandinaUI::Palette* palette READ getPalette NOTIFY paletteChanged)
+        Q_PROPERTY(Nandina::Palette* palette READ getPalette NOTIFY paletteChanged)
         //Expose base colors
-        Q_PROPERTY(NandinaUI::BaseColors* color READ getColor NOTIFY paletteChanged)
+        Q_PROPERTY(Nandina::BaseColors* color READ getColor NOTIFY paletteChanged)
 
     public:
         static ThemeManager* create(const QQmlEngine *qmlEngine, const QJSEngine *jsEngine);
@@ -34,9 +34,9 @@ namespace NandinaUI {
 
         Q_INVOKABLE void setCurrentPaletteType(PaletteType type);
 
-        Q_INVOKABLE NandinaUI::Palette* getPalette();
+        Q_INVOKABLE Nandina::Palette* getPalette();
         
-        Q_INVOKABLE NandinaUI::BaseColors* getColor();
+        Q_INVOKABLE Nandina::BaseColors* getColor();
 
     signals:
         void paletteChanged(PaletteType type);

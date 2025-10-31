@@ -4,7 +4,7 @@
 
 #include "themeManager.hpp"
 
-using namespace NandinaUI;
+using namespace Nandina;
 
 ThemeManager *ThemeManager::instance = nullptr;
 
@@ -42,15 +42,15 @@ BaseColors* ThemeManager::getColor() {
 
 ThemeManager::ThemeManager(QObject *parent)
     : QObject(parent), currentPaletteType(PaletteType::Latte) {
-    palettes.insert(std::make_pair(PaletteType::Frappe, NandinaUI::Tools::generateFrappePalette()));
-    palettes.insert(std::make_pair(PaletteType::Latte, NandinaUI::Tools::generateLattePalette()));
-    palettes.insert(std::make_pair(PaletteType::Macchiato, NandinaUI::Tools::generateMacchiatoPalette()));
-    palettes.insert(std::make_pair(PaletteType::Mocha, NandinaUI::Tools::generateMochaPalette()));
+    palettes.insert(std::make_pair(PaletteType::Frappe, Nandina::Tools::generateFrappePalette()));
+    palettes.insert(std::make_pair(PaletteType::Latte, Nandina::Tools::generateLattePalette()));
+    palettes.insert(std::make_pair(PaletteType::Macchiato, Nandina::Tools::generateMacchiatoPalette()));
+    palettes.insert(std::make_pair(PaletteType::Mocha, Nandina::Tools::generateMochaPalette()));
     
-    baseColors.insert(std::make_pair(PaletteType::Frappe, NandinaUI::BaseColorTools::generateFrappeBaseColors()));
-    baseColors.insert(std::make_pair(PaletteType::Latte, NandinaUI::BaseColorTools::generateLatteBaseColors()));
-    baseColors.insert(std::make_pair(PaletteType::Macchiato, NandinaUI::BaseColorTools::generateMacchiatoBaseColors()));
-    baseColors.insert(std::make_pair(PaletteType::Mocha, NandinaUI::BaseColorTools::generateMochaBaseColors()));
+    baseColors.insert(std::make_pair(PaletteType::Frappe, Nandina::BaseColorTools::generateFrappeBaseColors()));
+    baseColors.insert(std::make_pair(PaletteType::Latte, Nandina::BaseColorTools::generateLatteBaseColors()));
+    baseColors.insert(std::make_pair(PaletteType::Macchiato, Nandina::BaseColorTools::generateMacchiatoBaseColors()));
+    baseColors.insert(std::make_pair(PaletteType::Mocha, Nandina::BaseColorTools::generateMochaBaseColors()));
     
     this->currentBaseColors = &this->baseColors.at(currentPaletteType);
 }

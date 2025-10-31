@@ -19,8 +19,6 @@ Rectangle {
         }
     }
 
-    required property ApplicationWindow targetWindow
-
     property string title: "Nandina"
     property bool isMaximized: false
     property bool isAlwaysOnTop: false
@@ -46,7 +44,7 @@ Rectangle {
         }
 
         Text {
-            text: titleBar.targetWindow.title
+            text: titleBar.title
             color: ThemeManager.color.text
             font.pixelSize: 14
             font.bold: true
@@ -66,7 +64,6 @@ Rectangle {
         TitleBarButton {
             id: btnPin
             iconText: "📌"
-            tooltip: titleBar.isAlwaysOnTop ? "取消置顶" : "窗口置顶"
             onClicked: titleBar.toggleAlwaysOnTop()
             isChecked: titleBar.isAlwaysOnTop
         }
@@ -75,7 +72,6 @@ Rectangle {
         TitleBarButton {
             id: btnMinimize
             iconText: "—"
-            tooltip: "最小化"
             onClicked: invokeShowMinimized()
         }
 
@@ -83,7 +79,6 @@ Rectangle {
         TitleBarButton {
             id: btnMaximize
             iconText: titleBar.isMaximized ? "⧉" : "□"
-            tooltip: titleBar.isMaximized ? "还原" : "最大化"
             onClicked: invokeToggleMaximize()
         }
 
@@ -91,7 +86,6 @@ Rectangle {
         TitleBarButton {
             id: btnClose
             iconText: "×"
-            tooltip: "关闭"
             isCloseButton: true
             onClicked: invokeClose()
         }

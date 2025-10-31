@@ -1,6 +1,5 @@
 import QtQuick
 import QtQuick.Controls.Basic
-import Nandina
 import Nandina.Theme
 
 ApplicationWindow {
@@ -45,8 +44,6 @@ ApplicationWindow {
             id: titleBar
             width: parent.width
             height: rootWindow.titleBarHeight
-
-            targetWindow: rootWindow
 
             title: rootWindow.title
             radius: rootWindow.windowRadius

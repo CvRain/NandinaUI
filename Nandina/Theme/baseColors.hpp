@@ -10,7 +10,7 @@
 #include <QString>
 #include "palette.hpp"
 
-namespace NandinaUI {
+namespace Nandina {
     class BaseColors : public QObject {
         Q_OBJECT
         QML_ELEMENT

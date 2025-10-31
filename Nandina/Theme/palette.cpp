@@ -4,7 +4,7 @@
 
 #include "palette.hpp"
 
-namespace NandinaUI {
+namespace Nandina {
     Palette::Palette(QObject *parent)
         : QObject(parent) {
     }

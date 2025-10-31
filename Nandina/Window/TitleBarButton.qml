@@ -8,7 +8,6 @@ Rectangle {
     color: "transparent"
 
     property string iconText: ""
-    property string tooltip: ""
     property bool isCloseButton: false
     property bool isChecked: false
     signal clicked
@@ -51,10 +50,5 @@ Rectangle {
         cursorShape: Qt.PointingHandCursor
 
         onClicked: button.clicked()
-    }
-
-    ToolTip {
-        visible: mouseArea.containsMouse && button.tooltip
-        text: button.tooltip
     }
 }

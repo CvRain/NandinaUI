@@ -9,7 +9,7 @@
 #include <qqmlintegration.h>
 #include <QString>
 
-namespace NandinaUI::Color::Latte {
+namespace Nandina::Color::Latte {
     inline QString Rosewater = "#dc8a78";
     inline QString Flamingo = "#dd7878";
     inline QString Pink = "#ea76cb";
@@ -38,7 +38,7 @@ namespace NandinaUI::Color::Latte {
     inline QString Crust = "#dce0e8";
 }
 
-namespace NandinaUI::Color::Frappe {
+namespace Nandina::Color::Frappe {
     inline QString Rosewater = "#f2d5cf";
     inline QString Flamingo = "#eebebe";
     inline QString Pink = "#f4b8e4";
@@ -67,7 +67,7 @@ namespace NandinaUI::Color::Frappe {
     inline QString Crust = "#232634";
 }
 
-namespace NandinaUI::Color::Macchiato {
+namespace Nandina::Color::Macchiato {
     inline QString Rosewater = "#f4dbd6";
     inline QString Flamingo = "#f0c6c6";
     inline QString Pink = "#f5bde6";
@@ -96,7 +96,7 @@ namespace NandinaUI::Color::Macchiato {
     inline QString Crust = "#181926";
 }
 
-namespace NandinaUI::Color::Mocha {
+namespace Nandina::Color::Mocha {
     inline QString Rosewater = "#f5e0dc";
     inline QString Flamingo = "#f2cdcd";
     inline QString Pink = "#f5c2e7";
@@ -125,7 +125,7 @@ namespace NandinaUI::Color::Mocha {
     inline QString Crust = "#11111b";
 }
 
-namespace NandinaUI {
+namespace Nandina {
     Q_NAMESPACE
 
     enum class PaletteType {

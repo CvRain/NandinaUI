@@ -4,7 +4,7 @@
 
 #include "baseColors.hpp"
 
-namespace NandinaUI {
+namespace Nandina {
     BaseColors::BaseColors(QObject *parent)
         : QObject(parent) {
     }
