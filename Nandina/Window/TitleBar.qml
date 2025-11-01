@@ -8,7 +8,7 @@ Rectangle {
     implicitWidth: 640
     implicitHeight: 40
 
-    color: ThemeManager.color.crust
+    color: ThemeManager.color.text
     z: 1 // 确保标题栏在其他元素之上
 
     Behavior on color {
@@ -45,7 +45,7 @@ Rectangle {
 
         Text {
             text: titleBar.title
-            color: ThemeManager.color.text
+            color: ThemeManager.color.crust
             font.pixelSize: 14
             font.bold: true
             anchors.verticalCenter: parent.verticalCenter

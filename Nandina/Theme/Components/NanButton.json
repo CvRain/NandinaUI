@@ -1,0 +1,116 @@
+{
+  "type": "Component",
+  "target": "NanButton",
+  "colors": {
+    "default": {
+      "backgroundColor": "text",
+      "foregroundColor": "base",
+      "borderColor": "text"
+    },
+    "filledPrimary": {
+      "backgroundColor": "lavender",
+      "foregroundColor": "base",
+      "borderColor": "lavender"
+    },
+    "filledSecondary": {
+      "backgroundColor": "flamingo",
+      "foregroundColor": "base",
+      "borderColor": "flamingo"
+    },
+    "filledTertiary": {
+      "backgroundColor": "teal",
+      "foregroundColor": "base",
+      "borderColor": "teal"
+    },
+    "filledSuccess": {
+      "backgroundColor": "green",
+      "foregroundColor": "base",
+      "borderColor": "green"
+    },
+    "filledWarning": {
+      "backgroundColor": "yellow",
+      "foregroundColor": "base",
+      "borderColor": "yellow"
+    },
+    "filledError": {
+      "backgroundColor": "red",
+      "foregroundColor": "base",
+      "borderColor": "red"
+    },
+    "filledSurface": {
+      "backgroundColor": "surface1",
+      "foregroundColor": "base",
+      "borderColor": "surface1"
+    },
+    "tonalPrimary": {
+      "backgroundColor": "base",
+      "foregroundColor": "lavender",
+      "borderColor": "base"
+    },
+    "tonalSecondary": {
+      "backgroundColor": "rosewater",
+      "foregroundColor": "subtext1",
+      "borderColor": "rosewater"
+    },
+    "tonalTertiary": {
+      "backgroundColor": "sapphire",
+      "foregroundColor": "text",
+      "borderColor": "sapphire"
+    },
+    "tonalSuccess": {
+      "backgroundColor": "#A2DD9D",
+      "foregroundColor": "text",
+      "borderColor": "#A2DD9D"
+    },
+    "tonalWarning": {
+      "backgroundColor": "#F3DCAA",
+      "foregroundColor": "text",
+      "borderColor": "#F3DCAA"
+    },
+    "tonalError": {
+      "backgroundColor": "#ED87A4",
+      "foregroundColor": "text",
+      "borderColor": "#ED87A4"
+    },
+    "tonalSurface": {
+      "backgroundColor": "surface1",
+      "foregroundColor": "text",
+      "borderColor": "surface1"
+    },
+    "outlinedPrimary": {
+      "backgroundColor": "transparent",
+      "foregroundColor": "lavender",
+      "borderColor": "lavender"
+    },
+    "outlinedSecondary": {
+      "backgroundColor": "transparent",
+      "foregroundColor": "rosewater",
+      "borderColor": "rosewater"
+    },
+    "outlinedTertiary": {
+      "backgroundColor": "transparent",
+      "foregroundColor": "sapphire",
+      "borderColor": "sapphire"
+    },
+    "outlinedSuccess": {
+      "backgroundColor": "transparent",
+      "foregroundColor": "green",
+      "borderColor": "green"
+    },
+    "outlinedWarning": {
+      "backgroundColor": "transparent",
+      "foregroundColor": "yellow",
+      "borderColor": "yellow"
+    },
+    "outlinedError": {
+      "backgroundColor": "transparent",
+      "foregroundColor": "red",
+      "borderColor": "red"
+    },
+    "outlinedSurface": {
+      "backgroundColor": "transparent",
+      "foregroundColor": "surface1",
+      "borderColor": "surface1"
+    }
+  }
+}

@@ -43,28 +43,7 @@ namespace Nandina {
     public:
         explicit NanButtonProperty(QObject *parent = nullptr);
 
-        enum class Type {
-            Default,
-            FilledPrimary,
-            FilledSecondary,
-            FilledTertiary,
-            FilledSuccess,
-            FilledWarning,
-            FilledError,
-            FilledSurface,
-            TonalPrimary,
-            TonalSecondary,
-            TonalTertiary,
-            TonalSurface,
-            OutlinedPrimary,
-            OutlinedSecondary,
-            OutlinedTertiary,
-            OutlinedSurface,
-        };
-
-        Q_ENUM(Type)
-
-        Q_INVOKABLE ButtonPalette* getButtonPalette(Type type);
+        Q_INVOKABLE Nandina::ButtonPalette* getButtonPalette(const QString& type);
         Q_INVOKABLE QString test();
     };
 }

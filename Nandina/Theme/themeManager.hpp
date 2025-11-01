@@ -10,8 +10,10 @@
 #include <qqmlintegration.h>
 
 #include <map>
+#include <QJsonObject>
 
-#include "palette.hpp"
+
+#include "Core/Types/colorSet.hpp"
 #include "baseColors.hpp"
 
 namespace Nandina {
@@ -20,8 +22,6 @@ namespace Nandina {
         QML_ELEMENT
         QML_SINGLETON
 
-        //Expose the palette as a property
-        Q_PROPERTY(Nandina::Palette* palette READ getPalette NOTIFY paletteChanged)
         //Expose base colors
         Q_PROPERTY(Nandina::BaseColors* color READ getColor NOTIFY paletteChanged)
 
@@ -30,25 +30,26 @@ namespace Nandina {
 
         static ThemeManager* getInstance();
 
-        Q_INVOKABLE PaletteType getCurrentPaletteType() const;
+        Q_INVOKABLE [[nodiscard]] ColorSet::CatppuccinType getCurrentPaletteType() const;
 
-        Q_INVOKABLE void setCurrentPaletteType(PaletteType type);
+        Q_INVOKABLE void setCurrentPaletteType(ColorSet::CatppuccinType type);
 
-        Q_INVOKABLE Nandina::Palette* getPalette();
-        
-        Q_INVOKABLE Nandina::BaseColors* getColor();
+        Q_INVOKABLE [[nodiscard]] Nandina::BaseColors* getColor() const;
+
+        Q_INVOKABLE [[nodiscard]] QVariant getComponentStyle(const QString& stylePath) const;
 
     signals:
-        void paletteChanged(PaletteType type);
+        void paletteChanged(ColorSet::CatppuccinType type);
 
     private:
         explicit ThemeManager(QObject *parent = nullptr);
+        void loadComponentStyles();
 
         static ThemeManager *instance;
-        PaletteType currentPaletteType;
-        std::map<PaletteType, Palette> palettes;
-        std::map<PaletteType, BaseColors> baseColors;
+        ColorSet::CatppuccinType currentPaletteType;
+        std::map<ColorSet::CatppuccinType, BaseColors> baseColors;
         BaseColors* currentBaseColors;
+        QJsonObject componentStyles;
     };
 }
 

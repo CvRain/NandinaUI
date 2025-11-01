@@ -1,6 +1,7 @@
 #include "nanButton.hpp"
 
 #include <Theme/themeManager.hpp>
+#include <QMetaProperty>
 
 namespace Nandina {
     ButtonPalette::ButtonPalette(QObject *parent)
@@ -35,92 +36,42 @@ namespace Nandina {
     NanButtonProperty::NanButtonProperty(QObject *parent) : QObject(parent) {
     }
 
-    ButtonPalette* NanButtonProperty::getButtonPalette(const Type type) {
-        auto* palette = new ButtonPalette();
-        switch (type) {
-            case Type::Default:
-                palette->setBackgroundColor("#7186ff")
-                        ->setForegroundColor(ThemeManager::getInstance()->getColor()->base)
-                        ->setBorderColor(ThemeManager::getInstance()->getColor()->text);
-                break;
-            case Type::FilledPrimary:
-                palette->setBackgroundColor("#e977ca")
-                        ->setForegroundColor(ThemeManager::getInstance()->getColor()->base)
-                        ->setBorderColor(ThemeManager::getInstance()->getColor()->lavender);
-                break;
-            case Type::FilledSecondary:
-                palette->setBackgroundColor("#0f9299")
-                        ->setForegroundColor(ThemeManager::getInstance()->getColor()->base)
-                        ->setBorderColor(ThemeManager::getInstance()->getColor()->flamingo);
-                break;
-            case Type::FilledTertiary:
-                palette->setBackgroundColor("#3ea028")
-                        ->setForegroundColor(ThemeManager::getInstance()->getColor()->base)
-                        ->setBorderColor(ThemeManager::getInstance()->getColor()->sapphire);
-                break;
-            case Type::FilledSuccess:
-                palette->setBackgroundColor("#df8e1c")
-                    ->setForegroundColor(ThemeManager::getInstance()->getColor()->base)
-                    ->setBorderColor(ThemeManager::getInstance()->getColor()->green);
-                break;
-            case Type::FilledWarning:
-                palette->setBackgroundColor("#d40338")
-                    ->setForegroundColor(ThemeManager::getInstance()->getColor()->base)
-                    ->setBorderColor(ThemeManager::getInstance()->getColor()->yellow);
-                break;
-            case Type::FilledError:
-                palette->setBackgroundColor("#8c8fa3")
-                    ->setForegroundColor(ThemeManager::getInstance()->getColor()->base)
-                    ->setBorderColor(ThemeManager::getInstance()->getColor()->red);
-                break;
-            case Type::FilledSurface:
-                palette->setBackgroundColor("#e9fbff")
-                    ->setForegroundColor(ThemeManager::getInstance()->getColor()->base)
-                    ->setBorderColor(ThemeManager::getInstance()->getColor()->surface2);
-                break;
-            case Type::TonalPrimary:
-                palette->setBackgroundColor("#f7c1e8")
-                        ->setForegroundColor(ThemeManager::getInstance()->getColor()->lavender)
-                        ->setBorderColor(ThemeManager::getInstance()->getColor()->lavender);
-                break;
-            case Type::TonalSecondary:
-                    palette->setBackgroundColor("#93e2d5")
-                        ->setForegroundColor(ThemeManager::getInstance()->getColor()->teal)
-                        ->setBorderColor("#93e2d5");
-                break;
-            case Type::TonalTertiary:
-            palette->setBackgroundColor("#a6e3a1")
-                        ->setForegroundColor(ThemeManager::getInstance()->getColor()->green)
-                        ->setBorderColor("#a6e3a1");
-                break;
-            case Type::TonalSurface:
-            palette->setBackgroundColor("#f9e2af")
-                        ->setForegroundColor(ThemeManager::getInstance()->getColor()->text)
-                        ->setBorderColor("#f9e2af");
-                break;
-            case Type::OutlinedPrimary:
-            palette->setBackgroundColor("transparent")
-                        ->setForegroundColor(ThemeManager::getInstance()->getColor()->text)
-                        ->setBorderColor("#f38ba8");
-            
-                break;
-            case Type::OutlinedSecondary:
-            palette->setBackgroundColor("transparent")
-                        ->setForegroundColor(ThemeManager::getInstance()->getColor()->text)
-                        ->setBorderColor("#f38ba8");
-                break;
-            case Type::OutlinedTertiary:
-            palette->setBackgroundColor("transparent")
-                        ->setForegroundColor(ThemeManager::getInstance()->getColor()->text)
-                        ->setBorderColor("#dcdfe6");
-            
-                break;
-            case Type::OutlinedSurface:
-            palette->setBackgroundColor("transparent")
-                    ->setForegroundColor(ThemeManager::getInstance()->getColor()->text)
-                    ->setBorderColor("#8c8fa3");
-                break;
+    namespace {
+        QString resolveColor(const QString& colorName) {
+            if (colorName.startsWith("#") || colorName == "transparent") {
+                return colorName;
+            }
+
+            auto* baseColors = ThemeManager::getInstance()->getColor();
+            if (!baseColors) return {};
+
+            const auto* metaObject = baseColors->metaObject();
+            for (int i = metaObject->propertyOffset(); i < metaObject->propertyCount(); ++i) {
+                QMetaProperty property = metaObject->property(i);
+                if (strcmp(property.name(), colorName.toStdString().c_str()) == 0) {
+                    return property.read(baseColors).toString();
+                }
+            }
+            return colorName; // Fallback
         }
+    } 
+
+    ButtonPalette* NanButtonProperty::getButtonPalette(const QString& type) {
+        auto* palette = new ButtonPalette();
+        auto* themeManager = ThemeManager::getInstance();
+
+        QString bgPath = QString("NanButton.colors.%1.backgroundColor").arg(type);
+        QString fgPath = QString("NanButton.colors.%1.foregroundColor").arg(type);
+        QString borderPath = QString("NanButton.colors.%1.borderColor").arg(type);
+
+        QString bgColorName = themeManager->getComponentStyle(bgPath).toString();
+        QString fgColorName = themeManager->getComponentStyle(fgPath).toString();
+        QString borderColorName = themeManager->getComponentStyle(borderPath).toString();
+
+        palette->setBackgroundColor(resolveColor(bgColorName))
+               ->setForegroundColor(resolveColor(fgColorName))
+               ->setBorderColor(resolveColor(borderColorName));
+
         return palette;
     }
 
@@ -128,3 +79,4 @@ namespace Nandina {
         return "Hello world!";
     }
 }
+

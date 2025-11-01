@@ -27,7 +27,7 @@ ApplicationWindow {
     Rectangle {
         id: contentRoot
         anchors.fill: parent
-        color: ThemeManager.palette.backgroundPane
+        color: ThemeManager.color.base
         radius: rootWindow.windowRadius // 设置圆角半径
         clip: true // 确保内容不会超出圆角边界
 
@@ -87,7 +87,7 @@ ApplicationWindow {
             anchors.fill: parent
             color: "transparent"
             border.width: 1
-            border.color: ThemeManager.palette.surfaceElements
+            border.color: ThemeManager.color.surface0
             visible: rootWindow.isFrameVisible
             radius: rootWindow.windowRadius // 边框也要圆角
         }

@@ -8,7 +8,6 @@
 #include <QObject>
 #include <qqmlintegration.h>
 #include <QString>
-#include "palette.hpp"
 
 namespace Nandina {
     class BaseColors : public QObject {
@@ -76,19 +75,6 @@ namespace Nandina {
         QString base;
         QString mantle;
         QString crust;
-    };
-
-    class BaseColorTools : public QObject {
-        Q_OBJECT
-
-    public:
-        explicit BaseColorTools(QObject *parent = nullptr);
-
-        static BaseColors generateLatteBaseColors();
-        static BaseColors generateFrappeBaseColors();
-        static BaseColors generateMacchiatoBaseColors();
-        static BaseColors generateMochaBaseColors();
-        static BaseColors generateBaseColors(PaletteType type);
     };
 }
 
