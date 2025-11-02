@@ -50,22 +50,22 @@ BaseColors* ThemeManager::getColor() const {
     return this->currentBaseColors;
 }
 
-QVariant ThemeManager::getComponentStyle(const QString &stylePath) const {
-    QStringList path = stylePath.split('.');
-    if (path.isEmpty()) {
-        return {};
-    }
-
-    QJsonValue currentValue = componentStyles.value(path.first());
-    for (int i = 1; i < path.size(); ++i) {
-        if (!currentValue.isObject()) {
-            return {};
-        }
-        currentValue = currentValue.toObject().value(path[i]);
-    }
-
-    return currentValue.toVariant();
-}
+// QVariant ThemeManager::getComponentStyle(const QString &stylePath) const {
+//     QStringList path = stylePath.split('.');
+//     if (path.isEmpty()) {
+//         return {};
+//     }
+//
+//     QJsonValue currentValue = componentStyles.value(path.first());
+//     for (int i = 1; i < path.size(); ++i) {
+//         if (!currentValue.isObject()) {
+//             return {};
+//         }
+//         currentValue = currentValue.toObject().value(path[i]);
+//     }
+//
+//     return currentValue.toVariant();
+// }
 
 ThemeManager::ThemeManager(QObject *parent)
     : QObject(parent), currentPaletteType(ColorSet::CatppuccinType::Latte) {

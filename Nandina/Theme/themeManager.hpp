@@ -30,13 +30,15 @@ namespace Nandina {
 
         static ThemeManager* getInstance();
 
-        Q_INVOKABLE [[nodiscard]] ColorSet::CatppuccinType getCurrentPaletteType() const;
+        Q_INVOKABLE ColorSet::CatppuccinType getCurrentPaletteType() const;
 
         Q_INVOKABLE void setCurrentPaletteType(ColorSet::CatppuccinType type);
 
-        Q_INVOKABLE [[nodiscard]] Nandina::BaseColors* getColor() const;
+        Q_INVOKABLE Nandina::BaseColors* getColor() const;
 
-        Q_INVOKABLE [[nodiscard]] QVariant getComponentStyle(const QString& stylePath) const;
+        //Q_INVOKABLE QVariant getComponentStyle(const QString& stylePath) const;
+        template <typename T>
+        T getComponentStyle() const;
 
     signals:
         void paletteChanged(ColorSet::CatppuccinType type);
