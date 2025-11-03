@@ -1,0 +1,75 @@
+{
+  "target": "NanButton",
+  "variants": {
+    "default": {
+      "background": "${color.text}",
+      "foreground": "${color.base}",
+      "border": "${color.text}"
+    },
+    "filledPrimary": {
+      "background": "${color.lavender}",
+      "foreground": "${color.base}",
+      "border": "${color.lavender}"
+    },
+    "filledSecondary": {
+      "background": "${color.flamingo}",
+      "foreground": "${color.base}",
+      "border": "${color.flamingo}"
+    },
+    "filledTertiary": {
+      "background": "${color.teal}",
+      "foreground": "${color.base}",
+      "border": "${color.teal}"
+    },
+    "filledSuccess": {
+      "background": "${color.green}",
+      "foreground": "${color.base}",
+      "border": "${color.green}"
+    },
+    "filledWarning": {
+      "background": "${color.yellow}",
+      "foreground": "${color.base}",
+      "border": "${color.yellow}"
+    },
+    "filledError": {
+      "background": "${color.red}",
+      "foreground": "${color.base}",
+      "border": "${color.red}"
+    },
+    "filledSurface": {
+      "background": "${color.surface1}",
+      "foreground": "${color.base}",
+      "border": "${color.surface1}"
+    },
+    "tonalPrimary": {
+      "background": "${color.base}",
+      "foreground": "${color.lavender}",
+      "border": "${color.base}"
+    },
+    "tonalSecondary": {
+      "background": "${color.rosewater}",
+      "foreground": "${color.subtext1}",
+      "border": "${color.rosewater}"
+    },
+    "tonalTertiary": {
+      "background": "${color.sapphire}",
+      "foreground": "${color.text}",
+      "border": "${color.sapphire}"
+    },
+    "outlinedPrimary": {
+      "background": "transparent",
+      "foreground": "${color.lavender}",
+      "border": "${color.lavender}"
+    },
+    "outlinedSecondary": {
+      "background": "transparent",
+      "foreground": "${color.rosewater}",
+      "border": "${color.rosewater}"
+    },
+    "outlinedTertiary": {
+      "background": "transparent",
+      "foreground": "${color.sapphire}",
+      "border": "${color.sapphire}"
+    }
+  }
+}

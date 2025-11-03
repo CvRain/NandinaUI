@@ -7,19 +7,11 @@
 #include <QDebug>
 #include <QFileInfo>
 
+#include "Utils/file_operator.hpp"
+
 using namespace Nandina;
 
 ThemeManager *ThemeManager::instance = nullptr;
-
-namespace {
-    ColorSet::CatppuccinType paletteTypeFromString(const QString& name) {
-        if (name.compare("latte", Qt::CaseInsensitive) == 0) return ColorSet::CatppuccinType::Latte;
-        if (name.compare("frappe", Qt::CaseInsensitive) == 0) return ColorSet::CatppuccinType::Frappe;
-        if (name.compare("macchiato", Qt::CaseInsensitive) == 0) return ColorSet::CatppuccinType::Macchiato;
-        if (name.compare("mocha", Qt::CaseInsensitive) == 0) return ColorSet::CatppuccinType::Mocha;
-        return ColorSet::CatppuccinType::Latte; // Default
-    }
-}
 
 ThemeManager* ThemeManager::create(const QQmlEngine *qmlEngine, const QJSEngine *jsEngine) {
     Q_UNUSED(qmlEngine);
@@ -34,12 +26,12 @@ ThemeManager* ThemeManager::getInstance() {
     return instance;
 }
 
-ColorSet::CatppuccinType ThemeManager::getCurrentPaletteType() const {
+Core::Types::CatppuccinSetting::CatppuccinType ThemeManager::getCurrentPaletteType() const {
     return currentPaletteType;
 }
 
-void ThemeManager::setCurrentPaletteType(const ColorSet::CatppuccinType type) {
-    if (baseColors.count(type)) {
+void ThemeManager::setCurrentPaletteType(const Core::Types::CatppuccinSetting::CatppuccinType type) {
+    if (baseColors.contains(type)) {
         this->currentPaletteType = type;
         this->currentBaseColors = &this->baseColors.at(type);
         emit paletteChanged(type);
@@ -50,46 +42,131 @@ BaseColors* ThemeManager::getColor() const {
     return this->currentBaseColors;
 }
 
-// QVariant ThemeManager::getComponentStyle(const QString &stylePath) const {
-//     QStringList path = stylePath.split('.');
-//     if (path.isEmpty()) {
-//         return {};
-//     }
-//
-//     QJsonValue currentValue = componentStyles.value(path.first());
-//     for (int i = 1; i < path.size(); ++i) {
-//         if (!currentValue.isObject()) {
-//             return {};
-//         }
-//         currentValue = currentValue.toObject().value(path[i]);
-//     }
-//
-//     return currentValue.toVariant();
-// }
+Theme::Components::NanButtonStyle * ThemeManager::getButtonStyle(const QString &type) {
+    if (buttonStyles.empty()) {
+        qWarning() << "No button styles loaded!";
+        return nullptr;
+    }
+
+    if (not buttonStyles.contains(type)) {
+        qWarning() << "Button style not found for type:" << type;
+        // 如果找不到指定类型，返回默认类型
+        if (buttonStyles.contains("default")) {
+            return &buttonStyles.at("default");
+        }
+        return nullptr;
+    }
+
+    qDebug() << "Load type: " << type << " background: " << buttonStyles.at(type).getBackground() ;
+
+    return &buttonStyles.at(type);
+}
+
+QString ThemeManager::resolveColorVariable(const QString &value) const {
+    if (value.startsWith("${color.") && value.endsWith("}")) {
+        QString colorProperty = value.mid(8, value.length() - 9); // 去除 "${color." 和 "}"
+        if (currentBaseColors != nullptr) {
+            // 使用元对象系统动态获取属性值
+            QVariant propertyValue = currentBaseColors->property(colorProperty.toUtf8().constData());
+            if (propertyValue.isValid()) {
+                return propertyValue.toString();
+            }
+        }
+        qWarning() << "Failed to resolve color variable:" << value;
+        return "#808080"; // 返回一个默认颜色
+    }
+    return value; // 如果不是变量引用，直接返回原值
+}
+
+QJsonObject ThemeManager::resolveStyleColors(const QJsonObject &styleObject) const {
+    QJsonObject resolved;
+    for (auto it = styleObject.begin(); it != styleObject.end(); ++it) {
+        if (it.value().isString()) {
+            // 解析颜色变量
+            QString resolvedValue = resolveColorVariable(it.value().toString());
+            resolved.insert(it.key(), resolvedValue);
+        } else if (it.value().isObject()) {
+            // 递归处理嵌套对象
+            resolved.insert(it.key(), resolveStyleColors(it.value().toObject()));
+        } else {
+            // 保持其他类型的值不变
+            resolved.insert(it.key(), it.value());
+        }
+    }
+    return resolved;
+}
 
 ThemeManager::ThemeManager(QObject *parent)
-    : QObject(parent), currentPaletteType(ColorSet::CatppuccinType::Latte) {
+    : QObject(parent), currentPaletteType(Core::Types::CatppuccinSetting::CatppuccinType::Latte) {
+    loadBaseColor();
+    currentBaseColors = &baseColors.at(currentPaletteType);
 
-    QDirIterator it(":/qt/qml/Nandina/Theme/Palettes", QDir::Files | QDir::NoDotAndDotDot, QDirIterator::NoIteratorFlags);
+    loadComponentStyles();
+}
+
+void ThemeManager::loadComponentStyles() {
+    const QString componentStyleDirPath = ":/qt/qml/Nandina/Theme/Resources/Styles";
+    qDebug() << "Loading component styles from:" << componentStyleDirPath;
+    //遍历组件样式目录，读取组件样式json
+    QDirIterator it(componentStyleDirPath, QStringList() << "*.json", QDir::Files);
     while (it.hasNext()) {
-        QString filePath = it.next();
+        const auto filePath = it.next();
+        const auto result = Core::Utils::FileOperator::readJsonFile(filePath);
+        if (not result.has_value()) {
+            qWarning() << "Failed to load component style:" << filePath;
+            continue;
+        }
+
+        const auto& jsonObj = result.value();
+        const QString target = jsonObj["target"].toString();
+
+        // 处理NanButton的样式
+        if (target == "NanButton") {
+            const auto variants = jsonObj["variants"].toObject();
+            for (auto it = variants.begin(); it != variants.end(); ++it) {
+                const QString variantName = it.key();
+                // 解析颜色变量，替换为实际的颜色值
+                const QJsonObject resolvedStyle = resolveStyleColors(it.value().toObject());
+                qDebug() << "Load type: " << variantName << " background: " << resolvedStyle["background"].toString();
+
+                // 创建新的按钮样式
+                Theme::Components::NanButtonStyle style;
+                if (style.loadFromJson(resolvedStyle)) {
+                    buttonStyles.insert(std::make_pair(variantName, style));
+                } else {
+                    qWarning() << "Failed to load button style for variant:" << variantName;
+                }
+            }
+        }
+        // 在这里可以添加其他组件样式的处理
+    }
+    emit stylesLoaded();
+}
+
+void ThemeManager::loadBaseColor() {
+    using namespace Nandina::Core::Types;
+    const std::map<CatppuccinSetting::CatppuccinType, QString> baseColorUrl{
+        {CatppuccinSetting::CatppuccinType::Latte, ":/qt/qml/Nandina/Theme/Resources/Palettes/Latte.json"},
+        {CatppuccinSetting::CatppuccinType::Frappe, ":/qt/qml/Nandina/Theme/Resources/Palettes/Frappe.json"},
+        {CatppuccinSetting::CatppuccinType::Macchiato, ":/qt/qml/Nandina/Theme/Resources/Palettes/Macchiato.json"},
+        {CatppuccinSetting::CatppuccinType::Mocha, ":/qt/qml/Nandina/Theme/Resources/Palettes/Mocha.json"}
+    };
+
+    const auto instantiatePalette = [&](const CatppuccinSetting::CatppuccinType type, const QString &filePath) {
         QFile file(filePath);
         if (!file.open(QIODevice::ReadOnly)) {
             qWarning() << "Couldn't open palette file:" << filePath;
-            continue;
+            throw std::runtime_error("Couldn't open palette file");
         }
 
         QJsonParseError error{};
-        QJsonDocument jsonDoc = QJsonDocument::fromJson(file.readAll(), &error);
+        const auto jsonDoc = QJsonDocument::fromJson(file.readAll(), &error);
         if (jsonDoc.isNull()) {
             qWarning() << "Failed to parse palette file:" << filePath << "Error:" << error.errorString();
-            continue;
+            throw std::runtime_error("Failed to parse palette file");
         }
 
         QJsonObject p = jsonDoc.object();
-        QFileInfo fileInfo(filePath);
-        QString paletteName = fileInfo.baseName();
-        ColorSet::CatppuccinType type = paletteTypeFromString(paletteName);
 
         // Manual population for BaseColors
         BaseColors newBaseColors;
@@ -119,40 +196,11 @@ ThemeManager::ThemeManager(QObject *parent)
         newBaseColors.base = p["base"].toString();
         newBaseColors.mantle = p["mantle"].toString();
         newBaseColors.crust = p["crust"].toString();
+
         baseColors.insert(std::make_pair(type, newBaseColors));
-    }
+    };
 
-    if (!baseColors.empty()) {
-        this->currentBaseColors = &this->baseColors.at(currentPaletteType);
-    } else {
-        qWarning() << "No palettes were loaded. ThemeManager will not function correctly.";
-        this->currentBaseColors = nullptr;
-    }
-
-    loadComponentStyles();
-}
-
-void ThemeManager::loadComponentStyles() {
-    QDirIterator it(":/qt/qml/Nandina/Theme/Components", QDir::Files | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
-    while(it.hasNext()){
-        QString filePath = it.next();
-        QFile file(filePath);
-        if (!file.open(QIODevice::ReadOnly)) {
-            qWarning() << "Couldn't open component style file:" << filePath;
-            continue;
-        }
-
-        QJsonParseError error{};
-        QJsonDocument jsonDoc = QJsonDocument::fromJson(file.readAll(), &error);
-        if (jsonDoc.isNull() || !jsonDoc.isObject()) {
-            qWarning() << "Failed to parse component style file:" << filePath << "Error:" << error.errorString();
-            continue;
-        }
-
-        QJsonObject styleObj = jsonDoc.object();
-        QString target = styleObj.value("target").toString();
-        if (!target.isEmpty()) {
-            componentStyles[target] = styleObj;
-        }
+    for (const auto &[fst, snd]: baseColorUrl) {
+        instantiatePalette(fst, snd);
     }
 }

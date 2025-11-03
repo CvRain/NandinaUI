@@ -8,7 +8,7 @@
 #include <QObject>
 #include <qqmlintegration.h>
 
-namespace Nandina {
+namespace Nandina::Core::Types {
     class NanButtonTypes : public QObject {
         Q_OBJECT
         QML_ELEMENT

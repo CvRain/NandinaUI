@@ -12,9 +12,9 @@
 #include <map>
 #include <QJsonObject>
 
-
-#include "Core/Types/colorSet.hpp"
 #include "baseColors.hpp"
+#include "button_style.hpp"
+#include "colorCollection.hpp"
 
 namespace Nandina {
     class ThemeManager : public QObject {
@@ -30,28 +30,38 @@ namespace Nandina {
 
         static ThemeManager* getInstance();
 
-        Q_INVOKABLE ColorSet::CatppuccinType getCurrentPaletteType() const;
+        Q_INVOKABLE Core::Types::CatppuccinSetting::CatppuccinType getCurrentPaletteType() const;
 
-        Q_INVOKABLE void setCurrentPaletteType(ColorSet::CatppuccinType type);
+        Q_INVOKABLE void setCurrentPaletteType(Core::Types::CatppuccinSetting::CatppuccinType type);
 
         Q_INVOKABLE Nandina::BaseColors* getColor() const;
 
-        //Q_INVOKABLE QVariant getComponentStyle(const QString& stylePath) const;
-        template <typename T>
-        T getComponentStyle() const;
+        Q_INVOKABLE Nandina::Theme::Components::NanButtonStyle* getButtonStyle(const QString &type);
 
     signals:
-        void paletteChanged(ColorSet::CatppuccinType type);
+        void paletteChanged(Core::Types::CatppuccinSetting::CatppuccinType type);
+        void stylesLoaded();
 
     private:
         explicit ThemeManager(QObject *parent = nullptr);
+
         void loadComponentStyles();
+        void loadBaseColor();
+
+        // 解析样式中的颜色变量
+        QString resolveColorVariable(const QString &value) const;
+        
+        // 递归解析JSON对象中的所有颜色变量
+        QJsonObject resolveStyleColors(const QJsonObject &styleObject) const;
 
         static ThemeManager *instance;
-        ColorSet::CatppuccinType currentPaletteType;
-        std::map<ColorSet::CatppuccinType, BaseColors> baseColors;
-        BaseColors* currentBaseColors;
-        QJsonObject componentStyles;
+        Core::Types::CatppuccinSetting::CatppuccinType currentPaletteType;
+
+        std::map<Core::Types::CatppuccinSetting::CatppuccinType, BaseColors> baseColors;
+        std::map<QString, Theme::Components::NanButtonStyle> buttonStyles;
+
+
+        BaseColors *currentBaseColors;
     };
 }
 

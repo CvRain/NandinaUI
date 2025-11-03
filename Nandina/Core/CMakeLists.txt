@@ -3,13 +3,12 @@ set(CORE_QML_FILES
 
 )
 
-list(APPEND MODULE_TYPES_CPP_FILES
-        Types/nanButtonTypes.hpp
-        Types/colorSet.hpp
-        Types/colorSet.cpp
-)
+aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR}/Types/. MODULE_TYPES_CPP_FILES)
+aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR}/Utils/. MODULE_UTILS_CPP_FILES)
+aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR}/. MODULE_CORE_FILES)
 
 include_directories(Types)
+include_directories(Utils)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/..)
 
 qt_add_library(NandinaCore STATIC)
@@ -18,7 +17,7 @@ qt_add_qml_module(NandinaCore
         URI Nandina.Core
         VERSION 1.0
         QML_FILES ${CORE_QML_FILES}
-        SOURCES ${MODULE_TYPES_CPP_FILES}
+        SOURCES ${MODULE_TYPES_CPP_FILES} ${MODULE_UTILS_CPP_FILES}
 )
 
 target_link_libraries(NandinaCore
@@ -28,6 +27,8 @@ target_link_libraries(NandinaCore
 
 target_include_directories(NandinaCore PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}
+        ${CMAKE_CURRENT_SOURCE_DIR}/.
         ${CMAKE_CURRENT_SOURCE_DIR}/..
         ${CMAKE_CURRENT_SOURCE_DIR}/Types
+        ${CMAKE_CURRENT_SOURCE_DIR}/Utils
 )
