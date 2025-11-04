@@ -40,17 +40,19 @@ namespace Nandina {
 
     signals:
         void paletteChanged(Core::Types::CatppuccinSetting::CatppuccinType type);
+
         void stylesLoaded();
 
     private:
         explicit ThemeManager(QObject *parent = nullptr);
 
         void loadComponentStyles();
+
         void loadBaseColor();
 
         // 解析样式中的颜色变量
         QString resolveColorVariable(const QString &value) const;
-        
+
         // 递归解析JSON对象中的所有颜色变量
         QJsonObject resolveStyleColors(const QJsonObject &styleObject) const;
 
