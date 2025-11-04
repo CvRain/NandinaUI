@@ -43,63 +43,6 @@ void ThemeManager::setCurrentPaletteType(
 
 BaseColors* ThemeManager::getColor() const { return this->currentBaseColors; }
 
-Theme::Components::NanButtonStyle*
-ThemeManager::getButtonStyle(const QString &type) {
-    if (buttonStyles.empty()) {
-        qWarning() << "No button styles loaded!";
-        return nullptr;
-    }
-
-    if (not buttonStyles.contains(type)) {
-        qWarning() << "Button style not found for type:" << type;
-        // 如果找不到指定类型，返回默认类型
-        if (buttonStyles.contains("default")) {
-            return &buttonStyles.at("default");
-        }
-        return nullptr;
-    }
-
-    return &buttonStyles.at(type);
-}
-
-QString ThemeManager::resolveColorVariable(const QString &value) const {
-    if (value.startsWith("${color.") && value.endsWith("}")) {
-        QString colorProperty =
-                value.mid(8, value.length() - 9); // 去除 "${color." 和 "}"
-        if (currentBaseColors != nullptr) {
-            // 使用元对象系统动态获取属性值
-            QVariant propertyValue =
-                    currentBaseColors->property(colorProperty.toUtf8().constData());
-            if (propertyValue.isValid()) {
-                return propertyValue.toString();
-            }
-        }
-        qWarning() << "Failed to resolve color variable:" << value;
-        return "#808080"; // 返回一个默认颜色
-    }
-    return value; // 如果不是变量引用，直接返回原值
-}
-
-QJsonObject
-ThemeManager::resolveStyleColors(const QJsonObject &styleObject) const {
-    QJsonObject resolved;
-    for (auto it = styleObject.begin(); it != styleObject.end(); ++it) {
-        if (it.value().isString()) {
-            // 解析颜色变量
-            QString resolvedValue = resolveColorVariable(it.value().toString());
-            resolved.insert(it.key(), resolvedValue);
-        }
-        else if (it.value().isObject()) {
-            // 递归处理嵌套对象
-            resolved.insert(it.key(), resolveStyleColors(it.value().toObject()));
-        }
-        else {
-            // 保持其他类型的值不变
-            resolved.insert(it.key(), it.value());
-        }
-    }
-    return resolved;
-}
 
 ThemeManager::ThemeManager(QObject *parent)
     : QObject(parent),
@@ -107,52 +50,6 @@ ThemeManager::ThemeManager(QObject *parent)
           Core::Types::CatppuccinSetting::CatppuccinType::Latte) {
     loadBaseColor();
     currentBaseColors = &baseColors.at(currentPaletteType);
-
-    loadComponentStyles();
-}
-
-void ThemeManager::loadComponentStyles() {
-    const QString componentStyleDirPath =
-            ":/qt/qml/Nandina/Theme/Resources/Styles";
-    qDebug() << "Loading component styles from:" << componentStyleDirPath;
-    // 遍历组件样式目录，读取组件样式json
-    QDirIterator it(componentStyleDirPath, QStringList(), QDir::Files);
-    while (it.hasNext()) {
-        const auto filePath = it.next();
-        const auto result = Core::Utils::FileOperator::readJsonFile(filePath);
-        if (not result.has_value()) {
-            qWarning() << "Failed to load component style:" << filePath;
-            continue;
-        }
-
-        const auto &jsonObj = result.value();
-        const QString target = jsonObj["target"].toString();
-
-        // 处理NanButton的样式
-        if (target == "NanButton") {
-            const auto variants = jsonObj["variants"].toObject();
-            for (auto it = variants.begin(); it != variants.end(); ++it) {
-                const QString variantName = it.key();
-                // 解析颜色变量，替换为实际的颜色值
-                const QJsonObject resolvedStyle =
-                        resolveStyleColors(it.value().toObject());
-                qDebug() << "Load type: " << variantName
-                        << " background: " << resolvedStyle["background"].toString();
-
-                // 创建新的按钮样式
-                Theme::Components::NanButtonStyle style;
-                if (style.loadFromJson(resolvedStyle)) {
-                    buttonStyles.insert(std::make_pair(variantName, style));
-                }
-                else {
-                    qWarning() << "Failed to load button style for variant:"
-                            << variantName;
-                }
-            }
-        }
-        // 在这里可以添加其他组件样式的处理
-    }
-    emit stylesLoaded();
 }
 
 void ThemeManager::loadBaseColor() {
