@@ -1,0 +1,95 @@
+{
+  "target": "NanButton",
+  "styles": [
+    {
+      "type": "default",
+      "background": "@text",
+      "foreground": "@base",
+      "border": "@text"
+    },
+    {
+      "type": "filledPrimary",
+      "background": "@lavender",
+      "foreground": "@base",
+      "border": "@lavender"
+    },
+    {
+      "type": "filledSecondary",
+      "background": "@flamingo",
+      "foreground": "@base",
+      "border": "@flamingo"
+    },
+    {
+      "type": "filledTertiary",
+      "background": "@teal",
+      "foreground": "@base",
+      "border": "@teal"
+    },
+    {
+      "type": "filledSuccess",
+      "background": "@green",
+      "foreground": "@base",
+      "border": "@green"
+    },
+    {
+      "type": "filledWarning",
+      "background": "@yellow",
+      "foreground": "@base",
+      "border": "@yellow"
+    },
+    {
+      "type": "filledError",
+      "background": "@red",
+      "foreground": "@base",
+      "border": "@red"
+    },
+    {
+      "type": "filledSurface",
+      "background": "@surface1",
+      "foreground": "@base",
+      "border": "@surface1"
+    },
+    {
+      "type": "outlinedPrimary",
+      "background": "transparent",
+      "foreground": "@lavender",
+      "border": "@lavender"
+    },
+    {
+      "type": "outlinedSecondary",
+      "background": "transparent",
+      "foreground": "@flamingo",
+      "border": "@flamingo"
+    },
+    {
+      "type": "outlinedTertiary",
+      "background": "transparent",
+      "foreground": "@teal",
+      "border": "@teal"
+    },
+    {
+      "type": "outlinedSuccess",
+      "background": "transparent",
+      "foreground": "@green",
+      "border": "@green"
+    },
+    {
+      "type": "outlinedWarning",
+      "background": "transparent",
+      "foreground": "@yellow",
+      "border": "@yellow"
+    },
+    {
+      "type": "outlinedError",
+      "background": "transparent",
+      "foreground": "@red",
+      "border": "@red"
+    },
+    {
+      "type": "outlinedSurface",
+      "background": "transparent",
+      "foreground": "@surface1",
+      "border": "@surface1"
+    }
+  ]
+}

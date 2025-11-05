@@ -7,6 +7,7 @@
 #include <QJsonObject>
 #include <QJsonValue>
 
+#include "json_parser.hpp"
 #include "Utils/file_operator.hpp"
 
 using namespace Nandina;
@@ -90,37 +91,7 @@ void ThemeManager::loadBaseColor() {
             throw std::runtime_error("Failed to parse palette file");
         }
 
-        QJsonObject p = jsonDoc.object();
-
-        // Manual population for BaseColors
-        BaseColors newBaseColors;
-        newBaseColors.rosewater = p["rosewater"].toString();
-        newBaseColors.flamingo = p["flamingo"].toString();
-        newBaseColors.pink = p["pink"].toString();
-        newBaseColors.mauve = p["mauve"].toString();
-        newBaseColors.red = p["red"].toString();
-        newBaseColors.maroon = p["maroon"].toString();
-        newBaseColors.peach = p["peach"].toString();
-        newBaseColors.yellow = p["yellow"].toString();
-        newBaseColors.green = p["green"].toString();
-        newBaseColors.teal = p["teal"].toString();
-        newBaseColors.sky = p["sky"].toString();
-        newBaseColors.sapphire = p["sapphire"].toString();
-        newBaseColors.blue = p["blue"].toString();
-        newBaseColors.lavender = p["lavender"].toString();
-        newBaseColors.text = p["text"].toString();
-        newBaseColors.subtext1 = p["subtext1"].toString();
-        newBaseColors.subtext0 = p["subtext0"].toString();
-        newBaseColors.overlay2 = p["overlay2"].toString();
-        newBaseColors.overlay1 = p["overlay1"].toString();
-        newBaseColors.overlay0 = p["overlay0"].toString();
-        newBaseColors.surface2 = p["surface2"].toString();
-        newBaseColors.surface1 = p["surface1"].toString();
-        newBaseColors.surface0 = p["surface0"].toString();
-        newBaseColors.base = p["base"].toString();
-        newBaseColors.mantle = p["mantle"].toString();
-        newBaseColors.crust = p["crust"].toString();
-
+        const auto newBaseColors = Core::Utils::JsonParser::parser<BaseColors>(jsonDoc.object());
         baseColors.insert(std::make_pair(type, newBaseColors));
     };
 

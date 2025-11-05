@@ -16,11 +16,7 @@ namespace Nandina::Core::Types {
             NanButton,
         };
 
-        // 保存组件类型对应的样式文件路径
-        static std::map<ComponentCollection::ComponentType, QString> componentStylePath;
-
-        // 保存组件类型对应的字符串名字
-        static std::map<ComponentCollection::ComponentType, QString> componentName;
+    private:
     };
 }
 
