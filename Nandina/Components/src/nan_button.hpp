@@ -6,6 +6,8 @@
 #define TRYNANDINA_NAN_BUTTON_HPP
 
 #include <qqmlintegration.h>
+#include <QJsonArray>
+#include <QJsonObject>
 
 #include "base_component.hpp"
 
@@ -34,6 +36,14 @@ namespace Nandina::Components {
 
         [[nodiscard]] QString getForegroundColor() const;
 
+        NanButtonStyle& setStyleName(const QString &s);
+
+        NanButtonStyle& setBackgroundColor(const QString &s);
+
+        NanButtonStyle& setBorderColor(const QString &s);
+
+        NanButtonStyle& setForegroundColor(const QString &s);
+
     signals:
         void styleChanged(const QString &style);
 
@@ -47,10 +57,58 @@ namespace Nandina::Components {
 
 namespace Nandina::Core::Utils::JsonParser {
     template<>
-    inline Components::NanButtonStyle parser<Components::NanButtonStyle>(const QJsonObject &json) {
-        Nandina::Components::NanButtonStyle style;
+    inline std::vector<Components::NanButtonStyle> parser<std::vector<Components::NanButtonStyle>>(const QJsonObject &json) {
+        std::vector<Components::NanButtonStyle> out;
 
-        return style;
+        auto readStyleObj = [&](const QJsonObject &obj) {
+            Components::NanButtonStyle style;
+
+            auto getString = [&](std::initializer_list<QString> keys) -> QString {
+                for (const auto &k : keys) {
+                    if (obj.contains(k) && obj.value(k).isString()) return obj.value(k).toString();
+                }
+                return {};
+            };
+
+            QString sname = getString({"style", "styleName", "name"});
+            QString bg = getString({"background", "backgroundColor", "bg"});
+            QString br = getString({"border", "borderColor", "br"});
+            QString fg = getString({"foreground", "foregroundColor", "color"});
+
+            if (!sname.isEmpty()) style.setStyleName(sname);
+            if (!bg.isEmpty()) style.setBackgroundColor(bg);
+            if (!br.isEmpty()) style.setBorderColor(br);
+            if (!fg.isEmpty()) style.setForegroundColor(fg);
+
+            out.push_back(style);
+        };
+
+        // If there is a top-level "styles" array
+        if (json.contains("styles") && json.value("styles").isArray()) {
+            QJsonArray arr = json.value("styles").toArray();
+            for (const QJsonValue &v : arr) {
+                if (v.isObject()) readStyleObj(v.toObject());
+            }
+            return out;
+        }
+
+        // Support nested { "NanButton": { ... } } structure
+        if (json.contains("NanButton") && json.value("NanButton").isObject()) {
+            QJsonObject nb = json.value("NanButton").toObject();
+            if (nb.contains("styles") && nb.value("styles").isArray()) {
+                for (const QJsonValue &v : nb.value("styles").toArray()) {
+                    if (v.isObject()) readStyleObj(v.toObject());
+                }
+            } else {
+                // Treat the NanButton object itself as a style object
+                readStyleObj(nb);
+            }
+            return out;
+        }
+
+        // Otherwise treat the entire object as a single style
+        readStyleObj(json);
+        return out;
     }
 }
 

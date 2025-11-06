@@ -6,6 +6,8 @@ set(COMPONENTS_QML_FILES
 set(COMPONENT_CPP_FILES
         component_manager.hpp
         component_manager.cpp
+        component_collection.hpp
+        component_collection.cpp
         base_component.hpp
         base_component.cpp
 )

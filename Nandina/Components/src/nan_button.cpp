@@ -41,4 +41,28 @@ namespace Nandina::Components {
     QString NanButtonStyle::getForegroundColor() const {
         return this->foregroundColor;
     }
+
+    NanButtonStyle& NanButtonStyle::setStyleName(const QString &s) {
+        styleName = s;
+        emit styleChanged(s);
+        return *this;
+    }
+
+    NanButtonStyle& NanButtonStyle::setBackgroundColor(const QString &s) {
+        backgroundColor = s;
+        emit styleChanged(styleName);
+        return *this;
+    }
+
+    NanButtonStyle& NanButtonStyle::setBorderColor(const QString &s) {
+        borderColor = s;
+        emit styleChanged(styleName);
+        return *this;
+    }
+
+    NanButtonStyle& NanButtonStyle::setForegroundColor(const QString &s) {
+        foregroundColor = s;
+        emit styleChanged(styleName);
+        return *this;
+    }
 }

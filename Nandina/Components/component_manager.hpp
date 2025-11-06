@@ -9,6 +9,7 @@
 #include <QQmlEngine>
 
 #include "base_component.hpp"
+#include "component_collection.hpp"
 #include "nan_button.hpp"
 
 namespace Nandina::Components {
@@ -25,12 +26,16 @@ namespace Nandina::Components {
 
         static ComponentManager* create(const QQmlEngine *qmlEngine, const QJSEngine *jsEngine);
 
+        Q_INVOKABLE QStringList getComponentStyleNames();
+
     private:
         explicit ComponentManager(QObject *parent = nullptr);
 
+        void loadComponentStyles(const QString& fileName, const QString& filePath) const;
+
         static ComponentManager *instance;
 
-        std::map<QString, NanButtonStyle> buttonStyles;
+        std::shared_ptr<ComponentCollection> componentCollection;
     };
 }
 
