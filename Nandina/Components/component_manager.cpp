@@ -32,6 +32,15 @@ namespace Nandina::Components {
         };
     }
 
+    NanButtonStyle* ComponentManager::getButtonStyle(const QString &name) const {
+        //检查样式是否存在，如果不存在发出警告且返回第一个样式
+        if (not componentCollection->buttonStyles.contains(name)) {
+            qWarning() << "Component style directory does not exist:" << name;
+            return &componentCollection->buttonStyles.begin()->second;
+        }
+        return &componentCollection->buttonStyles.at(name);
+    }
+
     ComponentManager::ComponentManager(QObject *parent)
         : QObject(parent), componentCollection(std::make_shared<ComponentCollection>()) {
         const QString component_style_directory = ":/qt/qml/Nandina/Components/styles";
@@ -48,7 +57,7 @@ namespace Nandina::Components {
             const auto filePath = it.next();
             const auto fileInfo = it.fileInfo();
 
-            loadComponentStyles(fileInfo.fileName(), filePath);
+            loadComponentStyles(fileInfo.baseName(), filePath);
         }
     }
 
@@ -60,6 +69,7 @@ namespace Nandina::Components {
             throw std::runtime_error("Failed to read component style file: " + filePath.toStdString());
         }
 
+        //todo 临时编写，亟待改进，修改jsonDocument加载方式
         if (fileName == "NanButton") {
             const auto component = JsonParser::parser<std::vector<NanButtonStyle>>(
                 jsonDocument.value().object());

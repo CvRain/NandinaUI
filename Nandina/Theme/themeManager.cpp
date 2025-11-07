@@ -28,6 +28,36 @@ ThemeManager* ThemeManager::getInstance() {
     return instance;
 }
 
+QString ThemeManager::getColorByString(const QString &string) const {
+    if (string == "rosewater") { return getColor()->rosewater; }
+    if (string == "flamingo") { return getColor()->flamingo; }
+    if (string == "pink") { return getColor()->pink; }
+    if (string == "mauve") { return getColor()->mauve; }
+    if (string == "red") { return getColor()->red; }
+    if (string == "maroon") { return getColor()->maroon; }
+    if (string == "peach") { return getColor()->peach; }
+    if (string == "yellow") { return getColor()->yellow; }
+    if (string == "green") { return getColor()->green; }
+    if (string == "teal") { return getColor()->teal; }
+    if (string == "sky") { return getColor()->sky; }
+    if (string == "sapphire") { return getColor()->sapphire; }
+    if (string == "blue") { return getColor()->blue; }
+    if (string == "lavender") { return getColor()->lavender; }
+    if (string == "text") { return getColor()->text; }
+    if (string == "subtext1") { return getColor()->subtext1; }
+    if (string == "subtext0") { return getColor()->subtext0; }
+    if (string == "overlay2") { return getColor()->overlay2; }
+    if (string == "overlay1") { return getColor()->overlay1; }
+    if (string == "overlay0") { return getColor()->overlay0; }
+    if (string == "surface2") { return getColor()->surface2; }
+    if (string == "surface1") { return getColor()->surface1; }
+    if (string == "surface0") { return getColor()->surface0; }
+    if (string == "base") { return getColor()->base; }
+    if (string == "mantle") { return getColor()->mantle; }
+    if (string == "crust") { return getColor()->crust; }
+    return getColor()->base;
+}
+
 Core::Types::CatppuccinSetting::CatppuccinType
 ThemeManager::getCurrentPaletteType() const {
     return currentPaletteType;

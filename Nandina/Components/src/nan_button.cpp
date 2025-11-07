@@ -7,6 +7,8 @@
 namespace Nandina::Components {
     NanButtonStyle::NanButtonStyle(QObject *parent)
         : BaseComponent(parent) {
+        connect(ThemeManager::getInstance(), &Nandina::ThemeManager::paletteChanged,
+                this, &NanButtonStyle::updateColor);
     }
 
     NanButtonStyle::NanButtonStyle(NanButtonStyle const &style) {
@@ -44,25 +46,24 @@ namespace Nandina::Components {
 
     NanButtonStyle& NanButtonStyle::setStyleName(const QString &s) {
         styleName = s;
-        emit styleChanged(s);
         return *this;
     }
 
     NanButtonStyle& NanButtonStyle::setBackgroundColor(const QString &s) {
         backgroundColor = s;
-        emit styleChanged(styleName);
         return *this;
     }
 
     NanButtonStyle& NanButtonStyle::setBorderColor(const QString &s) {
         borderColor = s;
-        emit styleChanged(styleName);
         return *this;
     }
 
     NanButtonStyle& NanButtonStyle::setForegroundColor(const QString &s) {
         foregroundColor = s;
-        emit styleChanged(styleName);
         return *this;
+    }
+
+    void NanButtonStyle::updateColor() {
     }
 }

@@ -29,6 +29,8 @@ namespace Nandina {
 
         static ThemeManager* getInstance();
 
+        QString getColorByString(const QString &string) const;
+
         Q_INVOKABLE [[nodiscard]] Core::Types::CatppuccinSetting::CatppuccinType getCurrentPaletteType() const;
 
         Q_INVOKABLE void setCurrentPaletteType(Core::Types::CatppuccinSetting::CatppuccinType type);

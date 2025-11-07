@@ -28,6 +28,8 @@ namespace Nandina::Components {
 
         Q_INVOKABLE QStringList getComponentStyleNames();
 
+        Q_INVOKABLE [[nodiscard]] NanButtonStyle* getButtonStyle(const QString& name) const;
+
     private:
         explicit ComponentManager(QObject *parent = nullptr);
 

@@ -10,6 +10,7 @@
 #include <QJsonObject>
 
 #include "base_component.hpp"
+#include "themeManager.hpp"
 
 namespace Nandina::Components {
     class NanButtonStyle : public BaseComponent {
@@ -17,9 +18,9 @@ namespace Nandina::Components {
         QML_ELEMENT
 
         Q_PROPERTY(QString style READ getStyleName NOTIFY styleChanged)
-        Q_PROPERTY(QString background READ getForegroundColor NOTIFY styleChanged)
-        Q_PROPERTY(QString border READ getBackgroundColor NOTIFY styleChanged)
-        Q_PROPERTY(QString foreground READ getBorderColor NOTIFY styleChanged)
+        Q_PROPERTY(QString background READ getBackgroundColor NOTIFY styleChanged)
+        Q_PROPERTY(QString border READ getBorderColor NOTIFY styleChanged)
+        Q_PROPERTY(QString foreground READ getForegroundColor NOTIFY styleChanged)
 
     public:
         explicit NanButtonStyle(QObject *parent = nullptr);
@@ -44,8 +45,11 @@ namespace Nandina::Components {
 
         NanButtonStyle& setForegroundColor(const QString &s);
 
+        //todo
+        void updateColor() override;
+
     signals:
-        void styleChanged(const QString &style);
+        void styleChanged();
 
     private:
         QString styleName;
@@ -57,58 +61,49 @@ namespace Nandina::Components {
 
 namespace Nandina::Core::Utils::JsonParser {
     template<>
-    inline std::vector<Components::NanButtonStyle> parser<std::vector<Components::NanButtonStyle>>(const QJsonObject &json) {
-        std::vector<Components::NanButtonStyle> out;
+    inline auto parser<std::vector<Components::NanButtonStyle>>(const QJsonObject &json)
+        -> std::vector<Components::NanButtonStyle> {
+        std::vector<Components::NanButtonStyle> styles{};
 
-        auto readStyleObj = [&](const QJsonObject &obj) {
-            Components::NanButtonStyle style;
+        if (const auto target = json.value("target").toString(); target != "NanButton") {
+            throw std::runtime_error("JSON object is not for NanButtonStyle");
+        }
 
-            auto getString = [&](std::initializer_list<QString> keys) -> QString {
-                for (const auto &k : keys) {
-                    if (obj.contains(k) && obj.value(k).isString()) return obj.value(k).toString();
-                }
-                return {};
-            };
-
-            QString sname = getString({"style", "styleName", "name"});
-            QString bg = getString({"background", "backgroundColor", "bg"});
-            QString br = getString({"border", "borderColor", "br"});
-            QString fg = getString({"foreground", "foregroundColor", "color"});
-
-            if (!sname.isEmpty()) style.setStyleName(sname);
-            if (!bg.isEmpty()) style.setBackgroundColor(bg);
-            if (!br.isEmpty()) style.setBorderColor(br);
-            if (!fg.isEmpty()) style.setForegroundColor(fg);
-
-            out.push_back(style);
+        //todo util function will move to Core::Utils namespace
+        const auto obtainRealColor = [](const QString& color) {
+            // 如果颜色字符串中出现了@,则表示是引用主题颜色，需要进行转换
+            if (not color.startsWith("@") || color == "transparent") {
+                return color;
+            }
+            const auto colorName = color.mid(1); // 去掉@符号
+            return ThemeManager::getInstance()->getColorByString(colorName);
         };
 
-        // If there is a top-level "styles" array
-        if (json.contains("styles") && json.value("styles").isArray()) {
-            QJsonArray arr = json.value("styles").toArray();
-            for (const QJsonValue &v : arr) {
-                if (v.isObject()) readStyleObj(v.toObject());
-            }
-            return out;
+        for (const auto &item: json.value("styles").toArray()) {
+            const auto styleObject = item.toObject();
+            const auto type = styleObject.value("type").toString();
+            const auto background = styleObject.value("background").toString();
+            const auto border = styleObject.value("border").toString();
+            const auto foreground = styleObject.value("foreground").toString();
+
+            const auto realBackground = obtainRealColor(background);
+            const auto realBorder = obtainRealColor(border);
+            const auto realForeground = obtainRealColor(foreground);
+
+            qDebug() << "[" << type << "]"
+                    << "background:" << realBackground
+                    << "border:" << realBorder
+                    << "foreground:" << realForeground;
+
+            Components::NanButtonStyle style;
+            style.setStyleName(type)
+                    .setBackgroundColor(realBackground)
+                    .setBorderColor(realBorder)
+                    .setForegroundColor(realForeground);
+            styles.push_back(style);
         }
 
-        // Support nested { "NanButton": { ... } } structure
-        if (json.contains("NanButton") && json.value("NanButton").isObject()) {
-            QJsonObject nb = json.value("NanButton").toObject();
-            if (nb.contains("styles") && nb.value("styles").isArray()) {
-                for (const QJsonValue &v : nb.value("styles").toArray()) {
-                    if (v.isObject()) readStyleObj(v.toObject());
-                }
-            } else {
-                // Treat the NanButton object itself as a style object
-                readStyleObj(nb);
-            }
-            return out;
-        }
-
-        // Otherwise treat the entire object as a single style
-        readStyleObj(json);
-        return out;
+        return styles;
     }
 }
 

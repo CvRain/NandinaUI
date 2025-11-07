@@ -1,12 +1,13 @@
 import Nandina.Core
 import Nandina.Theme
+import Nandina.Components
 import QtQuick
 import QtQuick.Controls.Basic
 
 Button {
     id: control
 
-    property string type: "FilledPrimary"
+    property string type: "filledPrimary"
     property real minimumFontSize: 8
     property real maximumFontSize: 72
     property bool autoFitText: true
@@ -23,21 +24,24 @@ Button {
     // 使用更安全的方式计算字体大小
     property real calculatedFontSize: {
         if (!autoFitText)
-            return 18;
+            return 18
 
         // 默认字体大小
-        var availableWidth = Math.max(0, control.width - padding * 2);
-        var availableHeight = Math.max(0, control.height - padding * 2);
+        var availableWidth = Math.max(0, control.width - padding * 2)
+        var availableHeight = Math.max(0, control.height - padding * 2)
         // 避免除零和负数情况
         if (availableWidth <= 0 || availableHeight <= 0 || !control.text)
-            return minimumFontSize;
+            return minimumFontSize
 
         // 基于按钮高度确定字体大小
-        var sizeBasedOnHeight = availableHeight * 0.4;
+        var sizeBasedOnHeight = availableHeight * 0.4
         // 基于按钮宽度和文本长度确定字体大小
-        var sizeBasedOnWidth = control.text ? availableWidth / (control.text.length * 0.8) : sizeBasedOnHeight;
+        var sizeBasedOnWidth = control.text ? availableWidth / (control.text.length
+                                                                * 0.8) : sizeBasedOnHeight
         // 取两者中的较小值，并限制在最小和最大字体大小之间
-        return Math.max(minimumFontSize, Math.min(maximumFontSize, Math.min(sizeBasedOnHeight, sizeBasedOnWidth)));
+        return Math.max(minimumFontSize, Math.min(maximumFontSize,
+                                                  Math.min(sizeBasedOnHeight,
+                                                           sizeBasedOnWidth)))
     }
 
     // 交互动画相关
@@ -46,8 +50,7 @@ Button {
     // 在目标缩放变化时，如果未处于点击动画中，则使用行为动画过渡
     onTargetScaleChanged: {
         if (!isBouncing)
-            currentScale = targetScale;
-
+            currentScale = targetScale
     }
     // 将控件整体缩放绑定到 currentScale
     scale: currentScale
@@ -58,8 +61,8 @@ Button {
     // 点击时触发果冻动画
     onClicked: {
         if (!isBouncing) {
-            isBouncing = true;
-            clickBounce.restart();
+            isBouncing = true
+            clickBounce.restart()
         }
     }
 
@@ -69,9 +72,9 @@ Button {
 
         running: false
         onStopped: {
-            control.isBouncing = false;
+            control.isBouncing = false
             // 动画结束后与当前交互状态对齐（悬停时停在放大状态）
-            control.currentScale = control.targetScale;
+            control.currentScale = control.targetScale
         }
 
         // 先轻微压缩
@@ -100,7 +103,6 @@ Button {
             duration: 120
             easing.type: Easing.OutCubic
         }
-
     }
 
     // 常规缩放过渡动画（避免与点击动画冲突）
@@ -111,14 +113,13 @@ Button {
             duration: 120
             easing.type: Easing.OutCubic
         }
-
     }
 
     contentItem: Text {
         text: control.text
         font: control.font
         opacity: enabled ? 1 : 0.3
-        color: ThemeManager.getButtonStyle(control.type).foreground
+        color: ComponentManager.getButtonStyle(control.type).foreground
         horizontalAlignment: Text.AlignHCenter
         verticalAlignment: Text.AlignVCenter
         elide: Text.ElideRight
@@ -134,10 +135,9 @@ Button {
         implicitHeight: 40
         opacity: enabled ? 1 : 0.3
         //border.color: control.down ? "#17a81a" : "#21be2b"
-        border.color: ThemeManager.getButtonStyle(control.type).border
-        color: ThemeManager.getButtonStyle(control.type).background
+        border.color: ComponentManager.getButtonStyle(control.type).border
+        color: ComponentManager.getButtonStyle(control.type).background
         border.width: 1
         radius: 6
     }
-
 }

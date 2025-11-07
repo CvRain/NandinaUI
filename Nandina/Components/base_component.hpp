@@ -16,6 +16,7 @@ namespace Nandina::Components {
 
     public:
         explicit BaseComponent(QObject *parent = nullptr);
+        virtual void updateColor() = 0;
     };
 }
 
