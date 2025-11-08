@@ -10,6 +10,7 @@
 #include <QJsonObject>
 
 #include "base_component.hpp"
+#include "component_factory.hpp"
 #include "themeManager.hpp"
 
 namespace Nandina::Components {
@@ -61,50 +62,12 @@ namespace Nandina::Components {
 
 namespace Nandina::Core::Utils::JsonParser {
     template<>
-    inline auto parser<std::vector<Components::NanButtonStyle>>(const QJsonObject &json)
-        -> std::vector<Components::NanButtonStyle> {
-        std::vector<Components::NanButtonStyle> styles{};
+    auto parser<std::vector<Components::NanButtonStyle>>(const QJsonObject &json)
+        -> std::vector<Components::NanButtonStyle> ;
+}
 
-        if (const auto target = json.value("target").toString(); target != "NanButton") {
-            throw std::runtime_error("JSON object is not for NanButtonStyle");
-        }
-
-        //todo util function will move to Core::Utils namespace
-        const auto obtainRealColor = [](const QString& color) {
-            // 如果颜色字符串中出现了@,则表示是引用主题颜色，需要进行转换
-            if (not color.startsWith("@") || color == "transparent") {
-                return color;
-            }
-            const auto colorName = color.mid(1); // 去掉@符号
-            return ThemeManager::getInstance()->getColorByString(colorName);
-        };
-
-        for (const auto &item: json.value("styles").toArray()) {
-            const auto styleObject = item.toObject();
-            const auto type = styleObject.value("type").toString();
-            const auto background = styleObject.value("background").toString();
-            const auto border = styleObject.value("border").toString();
-            const auto foreground = styleObject.value("foreground").toString();
-
-            const auto realBackground = obtainRealColor(background);
-            const auto realBorder = obtainRealColor(border);
-            const auto realForeground = obtainRealColor(foreground);
-
-            qDebug() << "[" << type << "]"
-                    << "background:" << realBackground
-                    << "border:" << realBorder
-                    << "foreground:" << realForeground;
-
-            Components::NanButtonStyle style;
-            style.setStyleName(type)
-                    .setBackgroundColor(realBackground)
-                    .setBorderColor(realBorder)
-                    .setForegroundColor(realForeground);
-            styles.push_back(style);
-        }
-
-        return styles;
-    }
+namespace Nandina::Components {
+    static ComponentRegistrar<NanButtonStyle> registerNanButtonStyle(QStringLiteral("NanButton"));
 }
 
 #endif //TRYNANDINA_NAN_BUTTON_HPP

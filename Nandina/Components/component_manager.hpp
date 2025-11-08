@@ -28,12 +28,14 @@ namespace Nandina::Components {
 
         Q_INVOKABLE QStringList getComponentStyleNames();
 
-        Q_INVOKABLE [[nodiscard]] NanButtonStyle* getButtonStyle(const QString& name) const;
+        Q_INVOKABLE [[nodiscard]] Nandina::Components::NanButtonStyle* getButtonStyle(const QString &name) const;
+
+        void addButtonStyle(const NanButtonStyle &style) const;
 
     private:
         explicit ComponentManager(QObject *parent = nullptr);
 
-        void loadComponentStyles(const QString& fileName, const QString& filePath) const;
+        void loadComponentStyles(const QString &fileName, const QString &filePath);
 
         static ComponentManager *instance;
 

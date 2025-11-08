@@ -10,6 +10,12 @@ set(COMPONENT_CPP_FILES
         component_collection.cpp
         base_component.hpp
         base_component.cpp
+        component_factory.hpp
+        component_factory.cpp
+        style_loader.hpp
+        style_loader.cpp
+        component_registrar.hpp
+        component_registrar.cpp
 )
 
 set(COMPONENT_STYLES_FILES
@@ -17,6 +23,9 @@ set(COMPONENT_STYLES_FILES
 )
 
 aux_source_directory(src/. SUB_COMPONENT_CPP_FILES)
+
+# ensure generated registrar is included (it lives under src/)
+# SUB_COMPONENT_CPP_FILES already collects src/*.cpp including src/nan_button_registrar.cpp
 
 qt_add_library(NandinaComponents STATIC)
 qt_add_qml_module(NandinaComponents

@@ -7,6 +7,7 @@
 #include <QDir>
 #include <QDirIterator>
 
+#include "component_factory.hpp"
 #include "Core/Utils/file_operator.hpp"
 #include "Core/Utils/json_parser.hpp"
 
@@ -26,6 +27,10 @@ namespace Nandina::Components {
         return ComponentManager::getInstance();
     }
 
+    /**
+     * 一个测试函数，返回当前实现的组件样式名称列表
+     * @return 包含当前实现的组件样式名称的字符串列表
+     */
     QStringList ComponentManager::getComponentStyleNames() {
         return {
             "NanButton",
@@ -41,10 +46,14 @@ namespace Nandina::Components {
         return &componentCollection->buttonStyles.at(name);
     }
 
+
+    void ComponentManager::addButtonStyle(const NanButtonStyle &style) const {
+        this->componentCollection->buttonStyles.insert({style.getStyleName(), style});
+    }
+
     ComponentManager::ComponentManager(QObject *parent)
         : QObject(parent), componentCollection(std::make_shared<ComponentCollection>()) {
         const QString component_style_directory = ":/qt/qml/Nandina/Components/styles";
-        // 遍历目录，加载样式文件 *.json
 
         if (QDir dir(component_style_directory); not dir.exists()) {
             throw std::runtime_error(
@@ -61,7 +70,7 @@ namespace Nandina::Components {
         }
     }
 
-    void ComponentManager::loadComponentStyles(const QString &fileName, const QString &filePath) const {
+    void ComponentManager::loadComponentStyles(const QString &fileName, const QString &filePath) {
         using namespace Core::Utils;
 
         const auto jsonDocument = FileOperator::readJsonFile(filePath);
@@ -69,14 +78,12 @@ namespace Nandina::Components {
             throw std::runtime_error("Failed to read component style file: " + filePath.toStdString());
         }
 
-        //todo 临时编写，亟待改进，修改jsonDocument加载方式
-        if (fileName == "NanButton") {
-            const auto component = JsonParser::parser<std::vector<NanButtonStyle>>(
-                jsonDocument.value().object());
-            std::ranges::for_each(component, [this](const NanButtonStyle &style) {
-                qDebug() << "Loaded NanButton style:" << style.getStyleName();
-                this->componentCollection->buttonStyles.insert({style.getStyleName(), style});
-            });
+        // 使用工厂注册表来处理不同组件类型的样式加载
+        const QString typeName = fileName; // 文件名即类型名的约定
+        using namespace Nandina::Components;
+
+        if (not ComponentFactoryRegistry::instance().invoke(typeName, this, jsonDocument.value())) {
+            qWarning() << "loadComponentStyles: no registered handler for type" << typeName << "- skipping";
         }
     }
 }

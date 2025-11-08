@@ -12,7 +12,6 @@
 namespace Nandina::Components {
     class BaseComponent : public QObject {
         Q_OBJECT
-        QML_ELEMENT
 
     public:
         explicit BaseComponent(QObject *parent = nullptr);
