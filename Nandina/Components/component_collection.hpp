@@ -16,7 +16,7 @@ namespace Nandina::Components {
 
         std::map<QString, NanButtonStyle> buttonStyles{};
     };
-}
+} // namespace Nandina::Components
 
 
-#endif //TRYNANDINA_COMPONENT_COLLECTION_HPP
+#endif // TRYNANDINA_COMPONENT_COLLECTION_HPP

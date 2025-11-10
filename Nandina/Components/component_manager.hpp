@@ -26,9 +26,7 @@ namespace Nandina::Components {
 
         static ComponentManager* create(const QQmlEngine *qmlEngine, const QJSEngine *jsEngine);
 
-        Q_INVOKABLE QStringList getComponentStyleNames();
-
-        Q_INVOKABLE [[nodiscard]] Nandina::Components::NanButtonStyle* getButtonStyle(const QString &name) const;
+        Q_INVOKABLE [[nodiscard]] QVariant getStyle(const QString &component, const QString &name) const;
 
         void addButtonStyle(const NanButtonStyle &style) const;
 
@@ -41,7 +39,7 @@ namespace Nandina::Components {
 
         std::shared_ptr<ComponentCollection> componentCollection;
     };
-}
+} // namespace Nandina::Components
 
 
-#endif //TRYNANDINA_COMPONENT_MANAGER_HPP
+#endif // TRYNANDINA_COMPONENT_MANAGER_HPP

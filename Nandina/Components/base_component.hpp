@@ -15,8 +15,11 @@ namespace Nandina::Components {
 
     public:
         explicit BaseComponent(QObject *parent = nullptr);
-        virtual void updateColor() = 0;
-    };
-}
 
-#endif //TRYNANDINA_BASE_COMPONENT_HPP
+        virtual void updateColor() = 0;
+
+        virtual QVariant toVariant() = 0;
+    };
+} // namespace Nandina::Components
+
+#endif // TRYNANDINA_BASE_COMPONENT_HPP

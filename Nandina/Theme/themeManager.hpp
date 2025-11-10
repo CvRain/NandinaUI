@@ -5,8 +5,8 @@
 #ifndef NANDINAUI_THEMEMANAGER_HPP
 #define NANDINAUI_THEMEMANAGER_HPP
 
-#include <QQmlEngine>
 #include <QColor>
+#include <QQmlEngine>
 #include <qqmlintegration.h>
 
 #include <map>
@@ -21,13 +21,13 @@ namespace Nandina {
         QML_ELEMENT
         QML_SINGLETON
 
-        //Expose base colors
-        Q_PROPERTY(Nandina::BaseColors* color READ getColor NOTIFY paletteChanged)
+        // Expose base colors
+        Q_PROPERTY(Nandina::BaseColors *color READ getColor NOTIFY paletteChanged)
 
     public:
-        static ThemeManager* create(const QQmlEngine *qmlEngine, const QJSEngine *jsEngine);
+        static ThemeManager *create(const QQmlEngine *qmlEngine, const QJSEngine *jsEngine);
 
-        static ThemeManager* getInstance();
+        static ThemeManager *getInstance();
 
         QString getColorByString(const QString &string) const;
 
@@ -35,7 +35,7 @@ namespace Nandina {
 
         Q_INVOKABLE void setCurrentPaletteType(Core::Types::CatppuccinSetting::CatppuccinType type);
 
-        Q_INVOKABLE [[nodiscard]] Nandina::BaseColors* getColor() const;
+        Q_INVOKABLE [[nodiscard]] Nandina::BaseColors *getColor() const;
 
     signals:
         void paletteChanged(Core::Types::CatppuccinSetting::CatppuccinType type);
@@ -54,7 +54,7 @@ namespace Nandina {
 
         BaseColors *currentBaseColors;
     };
-}
+} // namespace Nandina
 
 
-#endif //NANDINAUI_THEMEMANAGER_HPP
+#endif // NANDINAUI_THEMEMANAGER_HPP

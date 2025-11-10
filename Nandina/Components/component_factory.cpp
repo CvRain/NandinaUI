@@ -4,7 +4,7 @@
 #include <QDebug>
 
 namespace Nandina::Components {
-    ComponentFactoryRegistry& ComponentFactoryRegistry::instance() {
+    ComponentFactoryRegistry &ComponentFactoryRegistry::instance() {
         static ComponentFactoryRegistry inst;
         return inst;
     }

@@ -5,7 +5,5 @@
 #include "base_component.hpp"
 
 namespace Nandina::Components {
-    BaseComponent::BaseComponent(QObject *parent)
-        : QObject(parent) {
-    }
-}
+    BaseComponent::BaseComponent(QObject *parent) : QObject(parent) {}
+} // namespace Nandina::Components

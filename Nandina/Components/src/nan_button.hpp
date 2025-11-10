@@ -5,9 +5,9 @@
 #ifndef TRYNANDINA_NAN_BUTTON_HPP
 #define TRYNANDINA_NAN_BUTTON_HPP
 
-#include <qqmlintegration.h>
 #include <QJsonArray>
 #include <QJsonObject>
+#include <qqmlintegration.h>
 
 #include "base_component.hpp"
 #include "component_factory.hpp"
@@ -46,7 +46,15 @@ namespace Nandina::Components {
 
         NanButtonStyle& setForegroundColor(const QString &s);
 
-        //todo
+        // 设置原始颜色引用（如 @lavender）
+        NanButtonStyle& setBackgroundColorRef(const QString &s);
+
+        NanButtonStyle& setBorderColorRef(const QString &s);
+
+        NanButtonStyle& setForegroundColorRef(const QString &s);
+
+        QVariant toVariant() override;
+
         void updateColor() override;
 
     signals:
@@ -57,17 +65,22 @@ namespace Nandina::Components {
         QString backgroundColor;
         QString borderColor;
         QString foregroundColor;
+
+        // 保存原始颜色引用，用于主题切换时重新解析
+        QString backgroundColorRef;
+        QString borderColorRef;
+        QString foregroundColorRef;
     };
-}
+} // namespace Nandina::Components
 
 namespace Nandina::Core::Utils::JsonParser {
     template<>
     auto parser<std::vector<Components::NanButtonStyle>>(const QJsonObject &json)
-        -> std::vector<Components::NanButtonStyle> ;
+        -> std::vector<Components::NanButtonStyle>;
 }
 
 namespace Nandina::Components {
     static ComponentRegistrar<NanButtonStyle> registerNanButtonStyle(QStringLiteral("NanButton"));
 }
 
-#endif //TRYNANDINA_NAN_BUTTON_HPP
+#endif // TRYNANDINA_NAN_BUTTON_HPP

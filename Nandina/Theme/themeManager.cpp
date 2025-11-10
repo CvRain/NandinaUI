@@ -7,21 +7,20 @@
 #include <QJsonObject>
 #include <QJsonValue>
 
-#include "json_parser.hpp"
 #include "Utils/file_operator.hpp"
+#include "json_parser.hpp"
 
 using namespace Nandina;
 
 ThemeManager *ThemeManager::instance = nullptr;
 
-ThemeManager* ThemeManager::create(const QQmlEngine *qmlEngine,
-                                   const QJSEngine *jsEngine) {
+ThemeManager *ThemeManager::create(const QQmlEngine *qmlEngine, const QJSEngine *jsEngine) {
     Q_UNUSED(qmlEngine);
     Q_UNUSED(jsEngine);
     return getInstance();
 }
 
-ThemeManager* ThemeManager::getInstance() {
+ThemeManager *ThemeManager::getInstance() {
     if (instance == nullptr) {
         instance = new ThemeManager();
     }
@@ -29,42 +28,92 @@ ThemeManager* ThemeManager::getInstance() {
 }
 
 QString ThemeManager::getColorByString(const QString &string) const {
-    if (string == "rosewater") { return getColor()->rosewater; }
-    if (string == "flamingo") { return getColor()->flamingo; }
-    if (string == "pink") { return getColor()->pink; }
-    if (string == "mauve") { return getColor()->mauve; }
-    if (string == "red") { return getColor()->red; }
-    if (string == "maroon") { return getColor()->maroon; }
-    if (string == "peach") { return getColor()->peach; }
-    if (string == "yellow") { return getColor()->yellow; }
-    if (string == "green") { return getColor()->green; }
-    if (string == "teal") { return getColor()->teal; }
-    if (string == "sky") { return getColor()->sky; }
-    if (string == "sapphire") { return getColor()->sapphire; }
-    if (string == "blue") { return getColor()->blue; }
-    if (string == "lavender") { return getColor()->lavender; }
-    if (string == "text") { return getColor()->text; }
-    if (string == "subtext1") { return getColor()->subtext1; }
-    if (string == "subtext0") { return getColor()->subtext0; }
-    if (string == "overlay2") { return getColor()->overlay2; }
-    if (string == "overlay1") { return getColor()->overlay1; }
-    if (string == "overlay0") { return getColor()->overlay0; }
-    if (string == "surface2") { return getColor()->surface2; }
-    if (string == "surface1") { return getColor()->surface1; }
-    if (string == "surface0") { return getColor()->surface0; }
-    if (string == "base") { return getColor()->base; }
-    if (string == "mantle") { return getColor()->mantle; }
-    if (string == "crust") { return getColor()->crust; }
+    if (string == "rosewater") {
+        return getColor()->rosewater;
+    }
+    if (string == "flamingo") {
+        return getColor()->flamingo;
+    }
+    if (string == "pink") {
+        return getColor()->pink;
+    }
+    if (string == "mauve") {
+        return getColor()->mauve;
+    }
+    if (string == "red") {
+        return getColor()->red;
+    }
+    if (string == "maroon") {
+        return getColor()->maroon;
+    }
+    if (string == "peach") {
+        return getColor()->peach;
+    }
+    if (string == "yellow") {
+        return getColor()->yellow;
+    }
+    if (string == "green") {
+        return getColor()->green;
+    }
+    if (string == "teal") {
+        return getColor()->teal;
+    }
+    if (string == "sky") {
+        return getColor()->sky;
+    }
+    if (string == "sapphire") {
+        return getColor()->sapphire;
+    }
+    if (string == "blue") {
+        return getColor()->blue;
+    }
+    if (string == "lavender") {
+        return getColor()->lavender;
+    }
+    if (string == "text") {
+        return getColor()->text;
+    }
+    if (string == "subtext1") {
+        return getColor()->subtext1;
+    }
+    if (string == "subtext0") {
+        return getColor()->subtext0;
+    }
+    if (string == "overlay2") {
+        return getColor()->overlay2;
+    }
+    if (string == "overlay1") {
+        return getColor()->overlay1;
+    }
+    if (string == "overlay0") {
+        return getColor()->overlay0;
+    }
+    if (string == "surface2") {
+        return getColor()->surface2;
+    }
+    if (string == "surface1") {
+        return getColor()->surface1;
+    }
+    if (string == "surface0") {
+        return getColor()->surface0;
+    }
+    if (string == "base") {
+        return getColor()->base;
+    }
+    if (string == "mantle") {
+        return getColor()->mantle;
+    }
+    if (string == "crust") {
+        return getColor()->crust;
+    }
     return getColor()->base;
 }
 
-Core::Types::CatppuccinSetting::CatppuccinType
-ThemeManager::getCurrentPaletteType() const {
+Core::Types::CatppuccinSetting::CatppuccinType ThemeManager::getCurrentPaletteType() const {
     return currentPaletteType;
 }
 
-void ThemeManager::setCurrentPaletteType(
-    const Core::Types::CatppuccinSetting::CatppuccinType type) {
+void ThemeManager::setCurrentPaletteType(const Core::Types::CatppuccinSetting::CatppuccinType type) {
     if (baseColors.contains(type)) {
         this->currentPaletteType = type;
         this->currentBaseColors = &this->baseColors.at(type);
@@ -72,13 +121,11 @@ void ThemeManager::setCurrentPaletteType(
     }
 }
 
-BaseColors* ThemeManager::getColor() const { return this->currentBaseColors; }
+BaseColors *ThemeManager::getColor() const { return this->currentBaseColors; }
 
 
-ThemeManager::ThemeManager(QObject *parent)
-    : QObject(parent),
-      currentPaletteType(
-          Core::Types::CatppuccinSetting::CatppuccinType::Latte) {
+ThemeManager::ThemeManager(QObject *parent) :
+    QObject(parent), currentPaletteType(Core::Types::CatppuccinSetting::CatppuccinType::Latte) {
     loadBaseColor();
     currentBaseColors = &baseColors.at(currentPaletteType);
 }
@@ -86,27 +133,12 @@ ThemeManager::ThemeManager(QObject *parent)
 void ThemeManager::loadBaseColor() {
     using namespace Nandina::Core::Types;
     const std::map<CatppuccinSetting::CatppuccinType, QString> baseColorUrl{
-        {
-            CatppuccinSetting::CatppuccinType::Latte,
-            ":/qt/qml/Nandina/Theme/Resources/Palettes/Latte.json"
-        },
-        {
-            CatppuccinSetting::CatppuccinType::Frappe,
-            ":/qt/qml/Nandina/Theme/Resources/Palettes/Frappe.json"
-        },
-        {
-            CatppuccinSetting::CatppuccinType::Macchiato,
-            ":/qt/qml/Nandina/Theme/Resources/Palettes/Macchiato.json"
-        },
-        {
-            CatppuccinSetting::CatppuccinType::Mocha,
-            ":/qt/qml/Nandina/Theme/Resources/Palettes/Mocha.json"
-        }
-    };
+            {CatppuccinSetting::CatppuccinType::Latte, ":/qt/qml/Nandina/Theme/Resources/Palettes/Latte.json"},
+            {CatppuccinSetting::CatppuccinType::Frappe, ":/qt/qml/Nandina/Theme/Resources/Palettes/Frappe.json"},
+            {CatppuccinSetting::CatppuccinType::Macchiato, ":/qt/qml/Nandina/Theme/Resources/Palettes/Macchiato.json"},
+            {CatppuccinSetting::CatppuccinType::Mocha, ":/qt/qml/Nandina/Theme/Resources/Palettes/Mocha.json"}};
 
-    const auto instantiatePalette =
-            [&](const CatppuccinSetting::CatppuccinType type,
-                const QString &filePath) {
+    const auto instantiatePalette = [&](const CatppuccinSetting::CatppuccinType type, const QString &filePath) {
         QFile file(filePath);
         if (!file.open(QIODevice::ReadOnly)) {
             qWarning() << "Couldn't open palette file:" << filePath;
@@ -116,8 +148,7 @@ void ThemeManager::loadBaseColor() {
         QJsonParseError error{};
         const auto jsonDoc = QJsonDocument::fromJson(file.readAll(), &error);
         if (jsonDoc.isNull()) {
-            qWarning() << "Failed to parse palette file:" << filePath
-                    << "Error:" << error.errorString();
+            qWarning() << "Failed to parse palette file:" << filePath << "Error:" << error.errorString();
             throw std::runtime_error("Failed to parse palette file");
         }
 

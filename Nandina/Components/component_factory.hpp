@@ -14,7 +14,7 @@ namespace Nandina::Components {
         // Factory now represents a loader: given the manager and the JSON document, register styles/etc.
         using Factory = std::function<void(ComponentManager *manager, const QJsonDocument &doc)>;
 
-        static ComponentFactoryRegistry& instance();
+        static ComponentFactoryRegistry &instance();
 
         void registerFactory(const QString &typeName, Factory factory);
         bool invoke(const QString &typeName, ComponentManager *manager, const QJsonDocument &doc) const;
@@ -26,8 +26,6 @@ namespace Nandina::Components {
     // Optional helper registrar left for future use (no-op here)
     template<typename T>
     struct ComponentRegistrar {
-        explicit ComponentRegistrar(const QString& typeName) {
-            Q_UNUSED(typeName)
-        }
+        explicit ComponentRegistrar(const QString &typeName) { Q_UNUSED(typeName) }
     };
 } // namespace Nandina::Components
