@@ -4,6 +4,7 @@
 
 #include "component_manager.hpp"
 
+#include <QCoreApplication>
 #include <QDir>
 #include <QDirIterator>
 
@@ -14,17 +15,21 @@
 namespace Nandina::Components {
     ComponentManager *ComponentManager::instance = nullptr;
 
-    ComponentManager* ComponentManager::getInstance() {
+    ComponentManager *ComponentManager::getInstance(QObject *parent) {
         if (instance == nullptr) {
-            instance = new ComponentManager();
+            // 如果没有提供 parent，使用 QCoreApplication 实例作为父对象
+            // 这样程序退出时会自动清理
+            QObject *parentObj = parent ? parent : QCoreApplication::instance();
+            instance = new ComponentManager(parentObj);
         }
         return instance;
     }
 
-    ComponentManager* ComponentManager::create(const QQmlEngine *qmlEngine, const QJSEngine *jsEngine) {
+    ComponentManager *ComponentManager::create(const QQmlEngine *qmlEngine, const QJSEngine *jsEngine) {
         Q_UNUSED(qmlEngine)
         Q_UNUSED(jsEngine)
-        return ComponentManager::getInstance();
+        // QML 单例创建时，QQmlEngine 会负责管理其生命周期
+        return getInstance(nullptr);
     }
 
     // NanButtonStyle* ComponentManager::getButtonStyle(const QString &name) const {
@@ -49,8 +54,8 @@ namespace Nandina::Components {
         this->componentCollection->buttonStyles.insert({style.getStyleName(), style});
     }
 
-    ComponentManager::ComponentManager(QObject *parent) : QObject(parent),
-                                                          componentCollection(std::make_shared<ComponentCollection>()) {
+    ComponentManager::ComponentManager(QObject *parent) :
+        QObject(parent), componentCollection(std::make_shared<ComponentCollection>()) {
         const QString component_style_directory = ":/qt/qml/Nandina/Components/styles";
 
         if (QDir dir(component_style_directory); not dir.exists()) {

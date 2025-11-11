@@ -27,7 +27,7 @@ namespace Nandina {
     public:
         static ThemeManager *create(const QQmlEngine *qmlEngine, const QJSEngine *jsEngine);
 
-        static ThemeManager *getInstance();
+        static ThemeManager *getInstance(QObject *parent = nullptr);
 
         QString getColorByString(const QString &string) const;
 

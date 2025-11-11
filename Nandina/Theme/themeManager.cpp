@@ -1,4 +1,5 @@
 #include "themeManager.hpp"
+#include <QCoreApplication>
 #include <QDebug>
 #include <QDirIterator>
 #include <QFile>
@@ -17,12 +18,17 @@ ThemeManager *ThemeManager::instance = nullptr;
 ThemeManager *ThemeManager::create(const QQmlEngine *qmlEngine, const QJSEngine *jsEngine) {
     Q_UNUSED(qmlEngine);
     Q_UNUSED(jsEngine);
-    return getInstance();
+    // QML 单例创建时，QQmlEngine 会负责管理其生命周期
+    // 不需要指定 parent，QML 引擎会自动管理
+    return getInstance(nullptr);
 }
 
-ThemeManager *ThemeManager::getInstance() {
+ThemeManager *ThemeManager::getInstance(QObject *parent) {
     if (instance == nullptr) {
-        instance = new ThemeManager();
+        // 如果没有提供 parent，使用 QCoreApplication 实例作为父对象
+        // 这样程序退出时会自动清理
+        QObject *parentObj = parent ? parent : QCoreApplication::instance();
+        instance = new ThemeManager(parentObj);
     }
     return instance;
 }

@@ -22,9 +22,9 @@ namespace Nandina::Components {
         QML_SINGLETON
 
     public:
-        static ComponentManager* getInstance();
+        static ComponentManager *getInstance(QObject *parent = nullptr);
 
-        static ComponentManager* create(const QQmlEngine *qmlEngine, const QJSEngine *jsEngine);
+        static ComponentManager *create(const QQmlEngine *qmlEngine, const QJSEngine *jsEngine);
 
         Q_INVOKABLE [[nodiscard]] QVariant getStyle(const QString &component, const QString &name) const;
 
