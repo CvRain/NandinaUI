@@ -34,84 +34,41 @@ ThemeManager *ThemeManager::getInstance(QObject *parent) {
 }
 
 QString ThemeManager::getColorByString(const QString &string) const {
-    if (string == "rosewater") {
-        return getColor()->rosewater;
+    // 使用静态 QHash 实现 O(1) 查找，只初始化一次
+    static const QHash<QString, std::function<QString(const BaseColors *)>> colorGetters = {
+            {"rosewater", [](const BaseColors *c) { return c->rosewater; }},
+            {"flamingo", [](const BaseColors *c) { return c->flamingo; }},
+            {"pink", [](const BaseColors *c) { return c->pink; }},
+            {"mauve", [](const BaseColors *c) { return c->mauve; }},
+            {"red", [](const BaseColors *c) { return c->red; }},
+            {"maroon", [](const BaseColors *c) { return c->maroon; }},
+            {"peach", [](const BaseColors *c) { return c->peach; }},
+            {"yellow", [](const BaseColors *c) { return c->yellow; }},
+            {"green", [](const BaseColors *c) { return c->green; }},
+            {"teal", [](const BaseColors *c) { return c->teal; }},
+            {"sky", [](const BaseColors *c) { return c->sky; }},
+            {"sapphire", [](const BaseColors *c) { return c->sapphire; }},
+            {"blue", [](const BaseColors *c) { return c->blue; }},
+            {"lavender", [](const BaseColors *c) { return c->lavender; }},
+            {"text", [](const BaseColors *c) { return c->text; }},
+            {"subtext1", [](const BaseColors *c) { return c->subtext1; }},
+            {"subtext0", [](const BaseColors *c) { return c->subtext0; }},
+            {"overlay2", [](const BaseColors *c) { return c->overlay2; }},
+            {"overlay1", [](const BaseColors *c) { return c->overlay1; }},
+            {"overlay0", [](const BaseColors *c) { return c->overlay0; }},
+            {"surface2", [](const BaseColors *c) { return c->surface2; }},
+            {"surface1", [](const BaseColors *c) { return c->surface1; }},
+            {"surface0", [](const BaseColors *c) { return c->surface0; }},
+            {"base", [](const BaseColors *c) { return c->base; }},
+            {"mantle", [](const BaseColors *c) { return c->mantle; }},
+            {"crust", [](const BaseColors *c) { return c->crust; }}};
+
+    auto it = colorGetters.find(string);
+    if (it != colorGetters.end()) {
+        return it.value()(getColor());
     }
-    if (string == "flamingo") {
-        return getColor()->flamingo;
-    }
-    if (string == "pink") {
-        return getColor()->pink;
-    }
-    if (string == "mauve") {
-        return getColor()->mauve;
-    }
-    if (string == "red") {
-        return getColor()->red;
-    }
-    if (string == "maroon") {
-        return getColor()->maroon;
-    }
-    if (string == "peach") {
-        return getColor()->peach;
-    }
-    if (string == "yellow") {
-        return getColor()->yellow;
-    }
-    if (string == "green") {
-        return getColor()->green;
-    }
-    if (string == "teal") {
-        return getColor()->teal;
-    }
-    if (string == "sky") {
-        return getColor()->sky;
-    }
-    if (string == "sapphire") {
-        return getColor()->sapphire;
-    }
-    if (string == "blue") {
-        return getColor()->blue;
-    }
-    if (string == "lavender") {
-        return getColor()->lavender;
-    }
-    if (string == "text") {
-        return getColor()->text;
-    }
-    if (string == "subtext1") {
-        return getColor()->subtext1;
-    }
-    if (string == "subtext0") {
-        return getColor()->subtext0;
-    }
-    if (string == "overlay2") {
-        return getColor()->overlay2;
-    }
-    if (string == "overlay1") {
-        return getColor()->overlay1;
-    }
-    if (string == "overlay0") {
-        return getColor()->overlay0;
-    }
-    if (string == "surface2") {
-        return getColor()->surface2;
-    }
-    if (string == "surface1") {
-        return getColor()->surface1;
-    }
-    if (string == "surface0") {
-        return getColor()->surface0;
-    }
-    if (string == "base") {
-        return getColor()->base;
-    }
-    if (string == "mantle") {
-        return getColor()->mantle;
-    }
-    if (string == "crust") {
-        return getColor()->crust;
-    }
+
+    // 默认返回 base 颜色
     return getColor()->base;
 }
 

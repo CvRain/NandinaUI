@@ -1,6 +1,7 @@
 # Theme 模块 - 主题和配色
 aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR}/. THEME_CPP_FILES)
 aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR}/Components/. COMPONENT_STYLE_FILES)
+aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR}/Utils/. THEME_UTILS_FILES)
 
 set(PALETTE_COLOR_FILES
         Resources/Palettes/Frappe.json
@@ -11,12 +12,13 @@ set(PALETTE_COLOR_FILES
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/..)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/Components)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/Utils)
 
 qt_add_library(NandinaTheme STATIC)
 qt_add_qml_module(NandinaTheme
         URI Nandina.Theme
         VERSION 1.0
-        SOURCES ${THEME_CPP_FILES} ${COMPONENT_STYLE_FILES}
+        SOURCES ${THEME_CPP_FILES} ${COMPONENT_STYLE_FILES} ${THEME_UTILS_FILES}
         QML_FILES ${THEME_QML_FILES}
         RESOURCES ${PALETTE_COLOR_FILES}
 )
@@ -25,6 +27,7 @@ target_include_directories(NandinaTheme PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}
         ${CMAKE_CURRENT_SOURCE_DIR}/..
         ${CMAKE_CURRENT_SOURCE_DIR}/Components
+        ${CMAKE_CURRENT_SOURCE_DIR}/Utils
 )
 
 target_link_libraries(NandinaTheme
