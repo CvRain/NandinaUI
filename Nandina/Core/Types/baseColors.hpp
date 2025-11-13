@@ -6,8 +6,8 @@
 #define NANDINAUI_BASECOLORS_HPP
 
 #include <QObject>
-#include <qqmlintegration.h>
 #include <QString>
+#include <qqmlintegration.h>
 
 namespace Nandina {
     class BaseColors : public QObject {
@@ -45,8 +45,11 @@ namespace Nandina {
     public:
         explicit BaseColors(QObject *parent = nullptr);
 
+        // 拷贝构造函数：不复制父对象，避免对象树混乱
         BaseColors(const BaseColors &other);
-        BaseColors& operator=(const BaseColors &other);
+
+        // 赋值运算符：只复制数据成员
+        BaseColors &operator=(const BaseColors &other);
 
         // Color values
         QString rosewater;
@@ -76,6 +79,6 @@ namespace Nandina {
         QString mantle;
         QString crust;
     };
-}
+} // namespace Nandina
 
-#endif //NANDINAUI_BASECOLORS_HPP
+#endif // NANDINAUI_BASECOLORS_HPP

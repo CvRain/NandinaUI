@@ -5,12 +5,11 @@
 #include "baseColors.hpp"
 
 namespace Nandina {
-    BaseColors::BaseColors(QObject *parent)
-        : QObject(parent) {
-    }
+    BaseColors::BaseColors(QObject *parent) : QObject(parent) {}
 
-    BaseColors::BaseColors(const BaseColors &other) 
-        : QObject(other.parent()) {
+    // 拷贝构造函数：不复制父对象，避免 Qt 对象树混乱
+    // 新对象的父对象设置为 nullptr，由调用者决定其归属
+    BaseColors::BaseColors(const BaseColors &other) : QObject(nullptr) { // 重要：使用 nullptr 而不是 other.parent()
         rosewater = other.rosewater;
         flamingo = other.flamingo;
         pink = other.pink;
@@ -39,8 +38,10 @@ namespace Nandina {
         crust = other.crust;
     }
 
-    BaseColors& BaseColors::operator=(const BaseColors &other) {
+    // 赋值运算符：只复制数据成员，不修改对象树关系
+    BaseColors &BaseColors::operator=(const BaseColors &other) {
         if (this != &other) {
+            // 注意：不复制父对象，保持现有的对象树关系
             rosewater = other.rosewater;
             flamingo = other.flamingo;
             pink = other.pink;
@@ -70,4 +71,4 @@ namespace Nandina {
         }
         return *this;
     }
-}
+} // namespace Nandina

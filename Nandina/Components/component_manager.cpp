@@ -7,6 +7,7 @@
 #include <QCoreApplication>
 #include <QDir>
 #include <QDirIterator>
+#include <QMutex>
 
 #include "Core/Utils/file_operator.hpp"
 #include "Core/Utils/json_parser.hpp"
@@ -16,10 +17,17 @@ namespace Nandina::Components {
     ComponentManager *ComponentManager::instance = nullptr;
 
     ComponentManager *ComponentManager::getInstance(QObject *parent) {
+        // 使用静态互斥锁保护单例创建过程，确保线程安全
+        static QMutex mutex;
+        QMutexLocker locker(&mutex);
+
         if (instance == nullptr) {
-            // 如果没有提供 parent，使用 QCoreApplication 实例作为父对象
-            // 这样程序退出时会自动清理
+            // 检查 QCoreApplication 是否已初始化
             QObject *parentObj = parent ? parent : QCoreApplication::instance();
+            if (!parentObj && !parent) {
+                qWarning() << "ComponentManager::getInstance: QCoreApplication not initialized!";
+                return nullptr;
+            }
             instance = new ComponentManager(parentObj);
         }
         return instance;

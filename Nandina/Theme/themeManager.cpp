@@ -7,6 +7,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonValue>
+#include <QMutex>
 
 #include "Utils/file_operator.hpp"
 #include "json_parser.hpp"
@@ -24,10 +25,17 @@ ThemeManager *ThemeManager::create(const QQmlEngine *qmlEngine, const QJSEngine 
 }
 
 ThemeManager *ThemeManager::getInstance(QObject *parent) {
+    // 使用静态互斥锁保护单例创建过程，确保线程安全
+    static QMutex mutex;
+    QMutexLocker locker(&mutex);
+
     if (instance == nullptr) {
-        // 如果没有提供 parent，使用 QCoreApplication 实例作为父对象
-        // 这样程序退出时会自动清理
+        // 检查 QCoreApplication 是否已初始化
         QObject *parentObj = parent ? parent : QCoreApplication::instance();
+        if (!parentObj && !parent) {
+            qWarning() << "ThemeManager::getInstance: QCoreApplication not initialized!";
+            return nullptr;
+        }
         instance = new ThemeManager(parentObj);
     }
     return instance;

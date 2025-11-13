@@ -16,6 +16,9 @@ namespace Nandina::Components {
     public:
         explicit BaseComponent(QObject *parent = nullptr);
 
+        // 虚析构函数：确保派生类对象通过基类指针删除时能正确调用派生类的析构函数
+        ~BaseComponent() override = default;
+
         virtual void updateColor() = 0;
 
         virtual QVariant toVariant() = 0;
