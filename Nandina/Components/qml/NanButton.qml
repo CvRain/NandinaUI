@@ -1,57 +1,70 @@
 import Nandina.Components
 import Nandina.Core
 import Nandina.Theme
+import Qt5Compat.GraphicalEffects
 import QtQuick
 import QtQuick.Controls.Basic
 
 Button {
+    // 图标与文本间距
+
     id: control
+
+    // 图标位置枚举
+    enum IconPosition {
+        Left,
+        Right,
+        IconOnly
+    }
 
     readonly property string componentName: "NanButton"
     property string type: "filledPrimary"
+    // 字体自动适应属性
+    property bool autoFitText: true
     property real minimumFontSize: 8
     property real maximumFontSize: 72
-    property bool autoFitText: true
-    // 基础缩放参数
+    property real manualFontSize: 18 // 当 autoFitText 为 false 时使用
+    // 图标/图片属性
+    property url iconSource: ""
+    // 图标路径
+    property int iconPosition: NanButton.IconPosition.Left
+    // 图标位置: Left, Right, IconOnly
+    property real iconSize: 24
+    // 图标大小
+    property int iconSpacing: 8
+    // 缩放动画参数
     property real baseScale: 1
     property real hoverScale: 1.04
     property real pressScale: 0.96
-    // 当前缩放值（用于绑定到 control.scale）
     property real currentScale: baseScale
-    // 是否处于点击"果冻"动画中
     property bool isBouncing: false
-    // 根据交互状态计算目标缩放值
     property real targetScale: control.down ? pressScale : (control.hovered ? hoverScale : baseScale)
     // 颜色动画相关属性
     property color currentBackgroundColor: buttonStyle().background
     property color currentBorderColor: buttonStyle().border
     property color currentForegroundColor: buttonStyle().foreground
-    // 悬浮和按下时的颜色调整因子
-    property real hoverBrightness: 1.15
-    // 悬浮时颜色变亮 15%
-    property real pressBrightness: 0.85
-    // 按下时颜色变暗 15%
-    // 使用更安全的方式计算字体大小
+    property real hoverBrightness: 1.15 // 悬浮时颜色变亮 15%
+    property real pressBrightness: 0.85 // 按下时颜色变暗 15%
+    // 计算字体大小
     property real calculatedFontSize: {
         if (!autoFitText)
-            return 18;
+            return manualFontSize;
 
-        // 默认字体大小
         var availableWidth = Math.max(0, control.width - padding * 2);
         var availableHeight = Math.max(0, control.height - padding * 2);
-        // 避免除零和负数情况
+        // 如果有图标,减去图标占用的空间
+        if (iconSource != "" && iconPosition !== NanButton.IconPosition.IconOnly)
+            availableWidth -= (iconSize + iconSpacing);
+
         if (availableWidth <= 0 || availableHeight <= 0 || !control.text)
             return minimumFontSize;
 
-        // 基于按钮高度确定字体大小
         var sizeBasedOnHeight = availableHeight * 0.4;
-        // 基于按钮宽度和文本长度确定字体大小
         var sizeBasedOnWidth = control.text ? availableWidth / (control.text.length * 0.8) : sizeBasedOnHeight;
-        // 取两者中的较小值，并限制在最小和最大字体大小之间
         return Math.max(minimumFontSize, Math.min(maximumFontSize, Math.min(sizeBasedOnHeight, sizeBasedOnWidth)));
     }
 
-    // 辅助函数：调整颜色亮度
+    // 辅助函数:调整颜色亮度
     function adjustColorBrightness(color, factor) {
         var r = Math.min(255, Math.max(0, color.r * 255 * factor));
         var g = Math.min(255, Math.max(0, color.g * 255 * factor));
@@ -59,25 +72,34 @@ Button {
         return Qt.rgba(r / 255, g / 255, b / 255, color.a);
     }
 
+    // 获取按钮样式
     function buttonStyle() {
         return ComponentManager.getStyle(control.componentName, control.type);
+    }
+
+    // 获取内容颜色(根据交互状态)
+    function getInteractiveColor(baseColor) {
+        if (control.down)
+            return adjustColorBrightness(baseColor, pressBrightness);
+        else if (control.hovered)
+            return adjustColorBrightness(baseColor, hoverBrightness);
+        return baseColor;
     }
 
     // 交互动画相关
     hoverEnabled: true
     transformOrigin: Item.Center
-    // 在目标缩放变化时，如果未处于点击动画中，则使用行为动画过渡
-    onTargetScaleChanged: {
-        if (!isBouncing)
-            currentScale = targetScale;
-
-    }
-    // 将控件整体缩放绑定到 currentScale
     scale: currentScale
     text: "Button"
     implicitWidth: 120
     implicitHeight: 60
     font.pointSize: calculatedFontSize
+    // 在目标缩放变化时,如果未处于点击动画中,则使用行为动画过渡
+    onTargetScaleChanged: {
+        if (!isBouncing)
+            currentScale = targetScale;
+
+    }
     // 点击时触发果冻动画
     onClicked: {
         if (!isBouncing) {
@@ -86,7 +108,7 @@ Button {
         }
     }
 
-    // 监听主题变化，更新当前颜色
+    // 监听主题变化,更新当前颜色
     Connections {
         function onPaletteChanged() {
             control.currentBackgroundColor = control.buttonStyle().background;
@@ -97,18 +119,16 @@ Button {
         target: ThemeManager
     }
 
-    // 点击后的“果冻”回弹动画
+    // 点击后的"果冻"回弹动画
     SequentialAnimation {
         id: clickBounce
 
         running: false
         onStopped: {
             control.isBouncing = false;
-            // 动画结束后与当前交互状态对齐（悬停时停在放大状态）
             control.currentScale = control.targetScale;
         }
 
-        // 先轻微压缩
         NumberAnimation {
             target: control
             property: "currentScale"
@@ -117,7 +137,6 @@ Button {
             easing.type: Easing.InQuad
         }
 
-        // 再略微超过目标值（产生果冻感）
         NumberAnimation {
             target: control
             property: "currentScale"
@@ -126,7 +145,6 @@ Button {
             easing.type: Easing.OutBack
         }
 
-        // 最后回到目标（悬停或基础）
         NumberAnimation {
             target: control
             property: "currentScale"
@@ -137,7 +155,7 @@ Button {
 
     }
 
-    // 常规缩放过渡动画（避免与点击动画冲突）
+    // 常规缩放过渡动画(避免与点击动画冲突)
     Behavior on currentScale {
         enabled: !control.isBouncing
 
@@ -148,33 +166,119 @@ Button {
 
     }
 
-    contentItem: Text {
-        text: control.text
-        font: control.font
-        opacity: enabled ? 1 : 0.3
-        // 使用动画颜色，并根据交互状态调整
-        color: {
-            var baseColor = control.currentForegroundColor;
-            if (control.down)
-                return control.adjustColorBrightness(baseColor, control.pressBrightness);
-            else if (control.hovered)
-                return control.adjustColorBrightness(baseColor, control.hoverBrightness);
-            return baseColor;
-        }
-        horizontalAlignment: Text.AlignHCenter
-        verticalAlignment: Text.AlignVCenter
-        elide: Text.ElideRight
-        // 文本在按钮内居中
+    // 内容项:包含图标和文本的布局
+    contentItem: Row {
+        spacing: control.iconSpacing
         anchors.centerIn: parent
-        anchors.margins: control.padding
-        // 当文本过大时显示省略号
-        wrapMode: Text.NoWrap
 
-        // 文本颜色过渡动画
-        Behavior on color {
-            ColorAnimation {
-                duration: 200
-                easing.type: Easing.OutCubic
+        // 左侧图标
+        Image {
+            id: leftIcon
+
+            visible: control.iconSource != "" && control.iconPosition === NanButton.IconPosition.Left
+            source: control.iconSource
+            width: control.iconSize
+            height: control.iconSize
+            fillMode: Image.PreserveAspectFit
+            anchors.verticalCenter: parent.verticalCenter
+            opacity: control.enabled ? 1 : 0.3
+
+            ColorOverlay {
+                anchors.fill: parent
+                source: parent
+                color: control.getInteractiveColor(control.currentForegroundColor)
+
+                Behavior on color {
+                    ColorAnimation {
+                        duration: 200
+                        easing.type: Easing.OutCubic
+                    }
+
+                }
+
+            }
+
+        }
+
+        // 居中图标(仅图标模式)
+        Image {
+            id: centerIcon
+
+            visible: control.iconSource != "" && control.iconPosition === NanButton.IconPosition.IconOnly
+            source: control.iconSource
+            width: control.iconSize
+            height: control.iconSize
+            fillMode: Image.PreserveAspectFit
+            anchors.verticalCenter: parent.verticalCenter
+            opacity: control.enabled ? 1 : 0.3
+
+            ColorOverlay {
+                anchors.fill: parent
+                source: parent
+                color: control.getInteractiveColor(control.currentForegroundColor)
+
+                Behavior on color {
+                    ColorAnimation {
+                        duration: 200
+                        easing.type: Easing.OutCubic
+                    }
+
+                }
+
+            }
+
+        }
+
+        // 文本
+        Text {
+            id: buttonText
+
+            visible: control.iconPosition !== NanButton.IconPosition.IconOnly
+            text: control.text
+            font: control.font
+            opacity: control.enabled ? 1 : 0.3
+            color: control.getInteractiveColor(control.currentForegroundColor)
+            horizontalAlignment: Text.AlignHCenter
+            verticalAlignment: Text.AlignVCenter
+            elide: Text.ElideRight
+            wrapMode: Text.NoWrap
+            anchors.verticalCenter: parent.verticalCenter
+
+            Behavior on color {
+                ColorAnimation {
+                    duration: 200
+                    easing.type: Easing.OutCubic
+                }
+
+            }
+
+        }
+
+        // 右侧图标
+        Image {
+            id: rightIcon
+
+            visible: control.iconSource != "" && control.iconPosition === NanButton.IconPosition.Right
+            source: control.iconSource
+            width: control.iconSize
+            height: control.iconSize
+            fillMode: Image.PreserveAspectFit
+            anchors.verticalCenter: parent.verticalCenter
+            opacity: control.enabled ? 1 : 0.3
+
+            ColorOverlay {
+                anchors.fill: parent
+                source: parent
+                color: control.getInteractiveColor(control.currentForegroundColor)
+
+                Behavior on color {
+                    ColorAnimation {
+                        duration: 200
+                        easing.type: Easing.OutCubic
+                    }
+
+                }
+
             }
 
         }
@@ -184,28 +288,12 @@ Button {
     background: Rectangle {
         implicitWidth: 100
         implicitHeight: 40
-        opacity: enabled ? 1 : 0.3
+        opacity: control.enabled ? 1 : 0.3
         radius: 6
         border.width: 1
-        // 使用动画颜色，并根据交互状态调整
-        border.color: {
-            var baseColor = control.currentBorderColor;
-            if (control.down)
-                return control.adjustColorBrightness(baseColor, control.pressBrightness);
-            else if (control.hovered)
-                return control.adjustColorBrightness(baseColor, control.hoverBrightness);
-            return baseColor;
-        }
-        color: {
-            var baseColor = control.currentBackgroundColor;
-            if (control.down)
-                return control.adjustColorBrightness(baseColor, control.pressBrightness);
-            else if (control.hovered)
-                return control.adjustColorBrightness(baseColor, control.hoverBrightness);
-            return baseColor;
-        }
+        border.color: control.getInteractiveColor(control.currentBorderColor)
+        color: control.getInteractiveColor(control.currentBackgroundColor)
 
-        // 背景颜色过渡动画
         Behavior on color {
             ColorAnimation {
                 duration: 200
@@ -214,7 +302,6 @@ Button {
 
         }
 
-        // 边框颜色过渡动画
         Behavior on border.color {
             ColorAnimation {
                 duration: 200
