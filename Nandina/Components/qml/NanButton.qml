@@ -94,6 +94,7 @@ Button {
     implicitWidth: 120
     implicitHeight: 60
     font.pointSize: calculatedFontSize
+    clip: true // 裁剪超出边界的内容
     // 在目标缩放变化时,如果未处于点击动画中,则使用行为动画过渡
     onTargetScaleChanged: {
         if (!isBouncing)
@@ -167,26 +168,94 @@ Button {
     }
 
     // 内容项:包含图标和文本的布局
-    contentItem: Row {
-        spacing: control.iconSpacing
-        anchors.centerIn: parent
+    contentItem: Item {
+        clip: true // 确保内容不会超出按钮边界
 
-        // 左侧图标
-        Image {
-            id: leftIcon
+        Row {
+            spacing: control.iconSpacing
+            anchors.centerIn: parent
+            width: Math.min(implicitWidth, parent.width)
 
-            visible: control.iconSource != "" && control.iconPosition === NanButton.IconPosition.Left
-            source: control.iconSource
-            width: control.iconSize
-            height: control.iconSize
-            fillMode: Image.PreserveAspectFit
-            anchors.verticalCenter: parent.verticalCenter
-            opacity: control.enabled ? 1 : 0.3
+            // 左侧图标
+            Image {
+                id: leftIcon
 
-            ColorOverlay {
-                anchors.fill: parent
-                source: parent
+                visible: control.iconSource != "" && control.iconPosition === NanButton.IconPosition.Left
+                source: control.iconSource
+                width: control.iconSize
+                height: control.iconSize
+                fillMode: Image.PreserveAspectFit
+                anchors.verticalCenter: parent.verticalCenter
+                opacity: control.enabled ? 1 : 0.3
+
+                ColorOverlay {
+                    anchors.fill: parent
+                    source: parent
+                    color: control.getInteractiveColor(control.currentForegroundColor)
+
+                    Behavior on color {
+                        ColorAnimation {
+                            duration: 200
+                            easing.type: Easing.OutCubic
+                        }
+
+                    }
+
+                }
+
+            }
+
+            // 居中图标(仅图标模式)
+            Image {
+                id: centerIcon
+
+                visible: control.iconSource != "" && control.iconPosition === NanButton.IconPosition.IconOnly
+                source: control.iconSource
+                width: control.iconSize
+                height: control.iconSize
+                fillMode: Image.PreserveAspectFit
+                anchors.verticalCenter: parent.verticalCenter
+                opacity: control.enabled ? 1 : 0.3
+
+                ColorOverlay {
+                    anchors.fill: parent
+                    source: parent
+                    color: control.getInteractiveColor(control.currentForegroundColor)
+
+                    Behavior on color {
+                        ColorAnimation {
+                            duration: 200
+                            easing.type: Easing.OutCubic
+                        }
+
+                    }
+
+                }
+
+            }
+
+            // 文本
+            Text {
+                id: buttonText
+
+                visible: control.iconPosition !== NanButton.IconPosition.IconOnly
+                text: control.text
+                font: control.font
+                opacity: control.enabled ? 1 : 0.3
                 color: control.getInteractiveColor(control.currentForegroundColor)
+                horizontalAlignment: Text.AlignHCenter
+                verticalAlignment: Text.AlignVCenter
+                elide: Text.ElideRight
+                wrapMode: Text.NoWrap
+                anchors.verticalCenter: parent.verticalCenter
+                // 限制文本宽度,避免超出按钮
+                width: {
+                    var availableWidth = control.width - control.padding * 2;
+                    if (control.iconSource != "" && control.iconPosition !== NanButton.IconPosition.IconOnly)
+                        availableWidth -= (control.iconSize + control.iconSpacing);
+
+                    return Math.max(0, availableWidth);
+                }
 
                 Behavior on color {
                     ColorAnimation {
@@ -198,83 +267,29 @@ Button {
 
             }
 
-        }
+            // 右侧图标
+            Image {
+                id: rightIcon
 
-        // 居中图标(仅图标模式)
-        Image {
-            id: centerIcon
+                visible: control.iconSource != "" && control.iconPosition === NanButton.IconPosition.Right
+                source: control.iconSource
+                width: control.iconSize
+                height: control.iconSize
+                fillMode: Image.PreserveAspectFit
+                anchors.verticalCenter: parent.verticalCenter
+                opacity: control.enabled ? 1 : 0.3
 
-            visible: control.iconSource != "" && control.iconPosition === NanButton.IconPosition.IconOnly
-            source: control.iconSource
-            width: control.iconSize
-            height: control.iconSize
-            fillMode: Image.PreserveAspectFit
-            anchors.verticalCenter: parent.verticalCenter
-            opacity: control.enabled ? 1 : 0.3
+                ColorOverlay {
+                    anchors.fill: parent
+                    source: parent
+                    color: control.getInteractiveColor(control.currentForegroundColor)
 
-            ColorOverlay {
-                anchors.fill: parent
-                source: parent
-                color: control.getInteractiveColor(control.currentForegroundColor)
+                    Behavior on color {
+                        ColorAnimation {
+                            duration: 200
+                            easing.type: Easing.OutCubic
+                        }
 
-                Behavior on color {
-                    ColorAnimation {
-                        duration: 200
-                        easing.type: Easing.OutCubic
-                    }
-
-                }
-
-            }
-
-        }
-
-        // 文本
-        Text {
-            id: buttonText
-
-            visible: control.iconPosition !== NanButton.IconPosition.IconOnly
-            text: control.text
-            font: control.font
-            opacity: control.enabled ? 1 : 0.3
-            color: control.getInteractiveColor(control.currentForegroundColor)
-            horizontalAlignment: Text.AlignHCenter
-            verticalAlignment: Text.AlignVCenter
-            elide: Text.ElideRight
-            wrapMode: Text.NoWrap
-            anchors.verticalCenter: parent.verticalCenter
-
-            Behavior on color {
-                ColorAnimation {
-                    duration: 200
-                    easing.type: Easing.OutCubic
-                }
-
-            }
-
-        }
-
-        // 右侧图标
-        Image {
-            id: rightIcon
-
-            visible: control.iconSource != "" && control.iconPosition === NanButton.IconPosition.Right
-            source: control.iconSource
-            width: control.iconSize
-            height: control.iconSize
-            fillMode: Image.PreserveAspectFit
-            anchors.verticalCenter: parent.verticalCenter
-            opacity: control.enabled ? 1 : 0.3
-
-            ColorOverlay {
-                anchors.fill: parent
-                source: parent
-                color: control.getInteractiveColor(control.currentForegroundColor)
-
-                Behavior on color {
-                    ColorAnimation {
-                        duration: 200
-                        easing.type: Easing.OutCubic
                     }
 
                 }
