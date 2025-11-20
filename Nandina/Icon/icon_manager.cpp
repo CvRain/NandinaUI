@@ -5,6 +5,4 @@
 #include "icon_manager.hpp"
 
 namespace Nandina::Icon {
-    IconManager::IconManager(QObject *parent) {
-    }
 }

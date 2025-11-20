@@ -1,4 +1,3 @@
-# Core 模块 - 枚举、常量、类型定义
 set(CORE_QML_FILES
 
 )

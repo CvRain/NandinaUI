@@ -16,7 +16,7 @@ using namespace Nandina;
 
 ThemeManager *ThemeManager::instance = nullptr;
 
-ThemeManager *ThemeManager::create(const QQmlEngine *qmlEngine, const QJSEngine *jsEngine) {
+ThemeManager* ThemeManager::create(const QQmlEngine *qmlEngine, const QJSEngine *jsEngine) {
     Q_UNUSED(qmlEngine);
     Q_UNUSED(jsEngine);
     // QML 单例创建时，QQmlEngine 会负责管理其生命周期
@@ -24,7 +24,7 @@ ThemeManager *ThemeManager::create(const QQmlEngine *qmlEngine, const QJSEngine 
     return getInstance(nullptr);
 }
 
-ThemeManager *ThemeManager::getInstance(QObject *parent) {
+ThemeManager* ThemeManager::getInstance(QObject *parent) {
     // 使用静态互斥锁保护单例创建过程，确保线程安全
     static QMutex mutex;
     QMutexLocker locker(&mutex);
@@ -44,35 +44,35 @@ ThemeManager *ThemeManager::getInstance(QObject *parent) {
 QString ThemeManager::getColorByString(const QString &string) const {
     // 使用静态 QHash 实现 O(1) 查找，只初始化一次
     static const QHash<QString, std::function<QString(const BaseColors *)>> colorGetters = {
-            {"rosewater", [](const BaseColors *c) { return c->rosewater; }},
-            {"flamingo", [](const BaseColors *c) { return c->flamingo; }},
-            {"pink", [](const BaseColors *c) { return c->pink; }},
-            {"mauve", [](const BaseColors *c) { return c->mauve; }},
-            {"red", [](const BaseColors *c) { return c->red; }},
-            {"maroon", [](const BaseColors *c) { return c->maroon; }},
-            {"peach", [](const BaseColors *c) { return c->peach; }},
-            {"yellow", [](const BaseColors *c) { return c->yellow; }},
-            {"green", [](const BaseColors *c) { return c->green; }},
-            {"teal", [](const BaseColors *c) { return c->teal; }},
-            {"sky", [](const BaseColors *c) { return c->sky; }},
-            {"sapphire", [](const BaseColors *c) { return c->sapphire; }},
-            {"blue", [](const BaseColors *c) { return c->blue; }},
-            {"lavender", [](const BaseColors *c) { return c->lavender; }},
-            {"text", [](const BaseColors *c) { return c->text; }},
-            {"subtext1", [](const BaseColors *c) { return c->subtext1; }},
-            {"subtext0", [](const BaseColors *c) { return c->subtext0; }},
-            {"overlay2", [](const BaseColors *c) { return c->overlay2; }},
-            {"overlay1", [](const BaseColors *c) { return c->overlay1; }},
-            {"overlay0", [](const BaseColors *c) { return c->overlay0; }},
-            {"surface2", [](const BaseColors *c) { return c->surface2; }},
-            {"surface1", [](const BaseColors *c) { return c->surface1; }},
-            {"surface0", [](const BaseColors *c) { return c->surface0; }},
-            {"base", [](const BaseColors *c) { return c->base; }},
-            {"mantle", [](const BaseColors *c) { return c->mantle; }},
-            {"crust", [](const BaseColors *c) { return c->crust; }}};
+        {"rosewater", [](const BaseColors *c) { return c->rosewater; }},
+        {"flamingo", [](const BaseColors *c) { return c->flamingo; }},
+        {"pink", [](const BaseColors *c) { return c->pink; }},
+        {"mauve", [](const BaseColors *c) { return c->mauve; }},
+        {"red", [](const BaseColors *c) { return c->red; }},
+        {"maroon", [](const BaseColors *c) { return c->maroon; }},
+        {"peach", [](const BaseColors *c) { return c->peach; }},
+        {"yellow", [](const BaseColors *c) { return c->yellow; }},
+        {"green", [](const BaseColors *c) { return c->green; }},
+        {"teal", [](const BaseColors *c) { return c->teal; }},
+        {"sky", [](const BaseColors *c) { return c->sky; }},
+        {"sapphire", [](const BaseColors *c) { return c->sapphire; }},
+        {"blue", [](const BaseColors *c) { return c->blue; }},
+        {"lavender", [](const BaseColors *c) { return c->lavender; }},
+        {"text", [](const BaseColors *c) { return c->text; }},
+        {"subtext1", [](const BaseColors *c) { return c->subtext1; }},
+        {"subtext0", [](const BaseColors *c) { return c->subtext0; }},
+        {"overlay2", [](const BaseColors *c) { return c->overlay2; }},
+        {"overlay1", [](const BaseColors *c) { return c->overlay1; }},
+        {"overlay0", [](const BaseColors *c) { return c->overlay0; }},
+        {"surface2", [](const BaseColors *c) { return c->surface2; }},
+        {"surface1", [](const BaseColors *c) { return c->surface1; }},
+        {"surface0", [](const BaseColors *c) { return c->surface0; }},
+        {"base", [](const BaseColors *c) { return c->base; }},
+        {"mantle", [](const BaseColors *c) { return c->mantle; }},
+        {"crust", [](const BaseColors *c) { return c->crust; }}
+    };
 
-    auto it = colorGetters.find(string);
-    if (it != colorGetters.end()) {
+    if (const auto it = colorGetters.find(string); it != colorGetters.end()) {
         return it.value()(getColor());
     }
 
@@ -92,11 +92,12 @@ void ThemeManager::setCurrentPaletteType(const Core::Types::CatppuccinSetting::C
     }
 }
 
-BaseColors *ThemeManager::getColor() const { return this->currentBaseColors; }
+BaseColors* ThemeManager::getColor() const { return this->currentBaseColors; }
 
 
-ThemeManager::ThemeManager(QObject *parent) :
-    QObject(parent), currentPaletteType(Core::Types::CatppuccinSetting::CatppuccinType::Latte) {
+ThemeManager::ThemeManager(QObject *parent) : QObject(parent),
+                                              currentPaletteType(
+                                                  Core::Types::CatppuccinSetting::CatppuccinType::Latte) {
     loadBaseColor();
     currentBaseColors = &baseColors.at(currentPaletteType);
 }
@@ -104,10 +105,11 @@ ThemeManager::ThemeManager(QObject *parent) :
 void ThemeManager::loadBaseColor() {
     using namespace Nandina::Core::Types;
     const std::map<CatppuccinSetting::CatppuccinType, QString> baseColorUrl{
-            {CatppuccinSetting::CatppuccinType::Latte, ":/qt/qml/Nandina/Theme/Resources/Palettes/Latte.json"},
-            {CatppuccinSetting::CatppuccinType::Frappe, ":/qt/qml/Nandina/Theme/Resources/Palettes/Frappe.json"},
-            {CatppuccinSetting::CatppuccinType::Macchiato, ":/qt/qml/Nandina/Theme/Resources/Palettes/Macchiato.json"},
-            {CatppuccinSetting::CatppuccinType::Mocha, ":/qt/qml/Nandina/Theme/Resources/Palettes/Mocha.json"}};
+        {CatppuccinSetting::CatppuccinType::Latte, ":/qt/qml/Nandina/Theme/Resources/Palettes/Latte.json"},
+        {CatppuccinSetting::CatppuccinType::Frappe, ":/qt/qml/Nandina/Theme/Resources/Palettes/Frappe.json"},
+        {CatppuccinSetting::CatppuccinType::Macchiato, ":/qt/qml/Nandina/Theme/Resources/Palettes/Macchiato.json"},
+        {CatppuccinSetting::CatppuccinType::Mocha, ":/qt/qml/Nandina/Theme/Resources/Palettes/Mocha.json"}
+    };
 
     const auto instantiatePalette = [&](const CatppuccinSetting::CatppuccinType type, const QString &filePath) {
         QFile file(filePath);
