@@ -6,6 +6,7 @@ add_subdirectory(Core)
 add_subdirectory(Theme)
 add_subdirectory(Window)
 add_subdirectory(Components)
+add_subdirectory(Icon)
 
 qt_add_library(Nandina STATIC)
 qt_add_qml_module(Nandina
@@ -16,6 +17,7 @@ qt_add_qml_module(Nandina
         NandinaTheme
         NandinaWindow
         NandinaComponents
+        NandinaIcon
 )
 
 target_link_libraries(Nandina
@@ -24,5 +26,6 @@ target_link_libraries(Nandina
         NandinaTheme
         NandinaWindow
         NandinaComponents
+        NandinaIcon
         Qt6::Quick
 )
