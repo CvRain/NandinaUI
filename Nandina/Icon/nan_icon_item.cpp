@@ -9,27 +9,22 @@ namespace Nandina::Icon {
     }
 
     void NanIconItem::paint(QPainter *painter) {
-        auto icon = IconManager::instance().getIcon(m_iconName);
-        if (icon) {
+        auto iconInstance = IconManager::instance().getIcon(m_icon);
+        if (iconInstance) {
             painter->setRenderHint(QPainter::Antialiasing);
-            icon->paint(painter, boundingRect(), m_color);
+            iconInstance->paint(painter, boundingRect(), m_color);
         }
     }
 
-    QString NanIconItem::iconName() const { return m_iconName; }
+    IconManager::Icons NanIconItem::icon() const { return m_icon; }
 
-    void setIconName(const QString &name) {
-        // ...
-    }
-
-    void NanIconItem::setIconName(const QString &name) {
-        if (m_iconName == name)
+    void NanIconItem::setIcon(IconManager::Icons icon) {
+        if (m_icon == icon)
             return;
-        m_iconName = name;
-        emit iconNameChanged();
+        m_icon = icon;
+        emit iconChanged();
         update(); // 触发重绘
     }
-
     QColor NanIconItem::color() const { return m_color; }
 
     void NanIconItem::setColor(const QColor &color) {

@@ -9,7 +9,7 @@ namespace Nandina::Icon {
 
     class NanIconItem : public QQuickPaintedItem {
         Q_OBJECT
-        Q_PROPERTY(QString iconName READ iconName WRITE setIconName NOTIFY iconNameChanged)
+        Q_PROPERTY(Nandina::Icon::IconManager::Icons icon READ icon WRITE setIcon NOTIFY iconChanged)
         Q_PROPERTY(QColor color READ color WRITE setColor NOTIFY colorChanged)
         QML_ELEMENT
 
@@ -18,18 +18,18 @@ namespace Nandina::Icon {
 
         void paint(QPainter *painter) override;
 
-        QString iconName() const;
-        void setIconName(const QString &name);
+        Nandina::Icon::IconManager::Icons icon() const;
+        void setIcon(Nandina::Icon::IconManager::Icons icon);
 
         QColor color() const;
         void setColor(const QColor &color);
 
     signals:
-        void iconNameChanged();
+        void iconChanged();
         void colorChanged();
 
     private:
-        QString m_iconName;
+        Nandina::Icon::IconManager::Icons m_icon = Nandina::Icon::IconManager::Icons::ICON_CLOSE;
         QColor m_color = Qt::black;
     };
 

@@ -4,35 +4,44 @@
 
 #include "icon_manager.hpp"
 #include <QDebug>
+#include "Impl/icon_close.hpp"
+#include "Impl/icon_expand.hpp"
+#include "Impl/icon_maximize.hpp"
+#include "Impl/icon_minimize.hpp"
 
 namespace Nandina::Icon {
-    IconManager::IconManager(QObject *parent) : NanSingleton(parent) {
-        // 可以在这里注册默认图标，或者通过静态初始化注册
-    }
+    IconManager::IconManager(QObject *parent) : NanSingleton(parent) {}
 
     IconManager::~IconManager() { m_icons.clear(); }
 
-    void IconManager::registerIcon(const QString &name, BaseIcon *icon) {
-        if (!icon)
-            return;
-        if (m_icons.contains(name)) {
-            qWarning() << "IconManager: Icon" << name << "already registered, overwriting.";
+    BaseIcon *IconManager::getIcon(Icons icon) {
+        if (m_icons.contains(icon)) {
+            return m_icons.value(icon).get();
         }
-        m_icons.insert(name, std::shared_ptr<BaseIcon>(icon));
-    }
 
-    BaseIcon *IconManager::getIcon(const QString &name) const { return m_icons.value(name, nullptr).get(); }
-
-    QString IconManager::getIconName(Icons icon) const {
+        BaseIcon *newIcon = nullptr;
         switch (icon) {
-            case Icons::ICON_MAX:
-                return "maximize";
-            case Icons::ICON_MIN:
-                return "minimize";
             case Icons::ICON_CLOSE:
-                return "close";
+                newIcon = new Impl::IconClose();
+                break;
+            case Icons::ICON_MAX:
+                newIcon = new Impl::IconMaximize();
+                break;
+            case Icons::ICON_MIN:
+                newIcon = new Impl::IconMinimize();
+                break;
+            case Icons::ICON_EXPAND:
+                newIcon = new Impl::IconExpand();
+                break;
             default:
-                return "";
+                qWarning() << "IconManager: Unknown icon type requested";
+                break;
         }
+
+        if (newIcon) {
+            m_icons.insert(icon, std::shared_ptr<BaseIcon>(newIcon));
+        }
+
+        return newIcon;
     }
 } // namespace Nandina::Icon
