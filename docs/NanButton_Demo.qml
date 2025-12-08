@@ -1,4 +1,5 @@
 import Nandina.Components
+import Nandina.Icon
 import QtQuick
 import QtQuick.Layouts
 
@@ -15,6 +16,49 @@ Item {
             text: "NanButton 功能演示"
             font.pixelSize: 24
             font.bold: true
+        }
+
+        // 自绘图标演示
+        GroupBox {
+            title: "自绘图标 (Vector Icons)"
+            Layout.fillWidth: true
+
+            RowLayout {
+                spacing: 16
+
+                NanButton {
+                    text: "Close"
+                    vectorIcon: IconManager.ICON_CLOSE
+                    width: 120
+                    height: 40
+                }
+
+                NanButton {
+                    text: "Bird"
+                    vectorIcon: IconManager.ICON_BIRD
+                    type: "filledSecondary"
+                    width: 120
+                    height: 40
+                }
+
+                NanButton {
+                    text: "Bone"
+                    vectorIcon: IconManager.ICON_BONE
+                    type: "ghost"
+                    width: 120
+                    height: 40
+                }
+
+                NanButton {
+                    vectorIcon: IconManager.ICON_BIRDHOUSE
+                    iconPosition: NanButton.IconPosition.IconOnly
+                    width: 40
+                    height: 40
+                    type: "outlined"
+                }
+
+            }
+
         }
 
         // 第一行: 自动字体 vs 手动字体

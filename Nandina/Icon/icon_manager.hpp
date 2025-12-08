@@ -21,10 +21,14 @@ namespace Nandina::Icon {
         QML_SINGLETON
     public:
         enum class Icons {
-            ICON_MAX,
-            ICON_MIN,
-            ICON_CLOSE,
-            ICON_EXPAND,
+            ICON_NONE = -1, // sentinel for "no icon"
+            ICON_MAX = 0,
+            ICON_MIN = 1,
+            ICON_CLOSE = 2,
+            ICON_EXPAND = 3,
+            ICON_BIRD = 4,
+            ICON_BIRDHOUSE = 5,
+            ICON_BONE = 6,
         };
         Q_ENUM(Icons)
 
@@ -41,7 +45,7 @@ namespace Nandina::Icon {
     private:
         QMap<Icons, std::shared_ptr<BaseIcon>> m_icons;
     };
-}
+
 } // namespace Nandina::Icon
 
 #endif // TRYNANDINA_ICON_MANAGER_HPP

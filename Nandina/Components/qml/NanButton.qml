@@ -1,5 +1,6 @@
 import Nandina.Components
 import Nandina.Core
+import Nandina.Icon
 import Nandina.Theme
 import Qt5Compat.GraphicalEffects
 import QtQuick
@@ -26,6 +27,8 @@ Button {
     property real manualFontSize: 18 // 当 autoFitText 为 false 时使用
     // 图标/图片属性
     property url iconSource: ""
+    // 自绘图标枚举，使用 int 以避免自定义类型未注册时的类型错误
+    property int vectorIcon: IconManager.ICON_NONE
     // 图标路径
     property int iconPosition: NanButton.IconPosition.Left
     // 图标位置: Left, Right, IconOnly
@@ -53,7 +56,8 @@ Button {
         var availableWidth = Math.max(0, control.width - padding * 2);
         var availableHeight = Math.max(0, control.height - padding * 2);
         // 如果有图标,减去图标占用的空间
-        if (iconSource != "" && iconPosition !== NanButton.IconPosition.IconOnly)
+        var hasIcon = (iconSource !== "" || vectorIcon !== IconManager.ICON_NONE);
+        if (hasIcon && iconPosition !== NanButton.IconPosition.IconOnly)
             availableWidth -= (iconSize + iconSpacing);
 
         if (availableWidth <= 0 || availableHeight <= 0 || !control.text)
@@ -176,11 +180,11 @@ Button {
             anchors.centerIn: parent
             width: Math.min(implicitWidth, parent.width)
 
-            // 左侧图标
+            // 左侧图标 (图片)
             Image {
-                id: leftIcon
+                id: leftIconImage
 
-                visible: control.iconSource != "" && control.iconPosition === NanButton.IconPosition.Left
+                visible: control.iconSource !== "" && control.vectorIcon === IconManager.ICON_NONE && control.iconPosition === NanButton.IconPosition.Left
                 source: control.iconSource
                 width: control.iconSize
                 height: control.iconSize
@@ -205,11 +209,33 @@ Button {
 
             }
 
-            // 居中图标(仅图标模式)
-            Image {
-                id: centerIcon
+            // 左侧图标 (自绘)
+            NanIconItem {
+                id: leftIconItem
 
-                visible: control.iconSource != "" && control.iconPosition === NanButton.IconPosition.IconOnly
+                visible: control.vectorIcon !== IconManager.ICON_NONE && control.iconSource === "" && control.iconPosition === NanButton.IconPosition.Left
+                icon: control.vectorIcon
+                width: control.iconSize
+                height: control.iconSize
+                color: control.getInteractiveColor(control.currentForegroundColor)
+                anchors.verticalCenter: parent.verticalCenter
+                opacity: control.enabled ? 1 : 0.3
+
+                Behavior on color {
+                    ColorAnimation {
+                        duration: 200
+                        easing.type: Easing.OutCubic
+                    }
+
+                }
+
+            }
+
+            // 居中图标 (图片)
+            Image {
+                id: centerIconImage
+
+                visible: control.iconSource !== "" && control.vectorIcon === IconManager.ICON_NONE && control.iconPosition === NanButton.IconPosition.IconOnly
                 source: control.iconSource
                 width: control.iconSize
                 height: control.iconSize
@@ -228,6 +254,28 @@ Button {
                             easing.type: Easing.OutCubic
                         }
 
+                    }
+
+                }
+
+            }
+
+            // 居中图标 (自绘)
+            NanIconItem {
+                id: centerIconItem
+
+                visible: control.vectorIcon !== IconManager.ICON_NONE && control.iconSource === "" && control.iconPosition === NanButton.IconPosition.IconOnly
+                icon: control.vectorIcon
+                width: control.iconSize
+                height: control.iconSize
+                color: control.getInteractiveColor(control.currentForegroundColor)
+                anchors.verticalCenter: parent.verticalCenter
+                opacity: control.enabled ? 1 : 0.3
+
+                Behavior on color {
+                    ColorAnimation {
+                        duration: 200
+                        easing.type: Easing.OutCubic
                     }
 
                 }
@@ -251,7 +299,8 @@ Button {
                 // 限制文本宽度,避免超出按钮
                 width: {
                     var availableWidth = control.width - control.padding * 2;
-                    if (control.iconSource != "" && control.iconPosition !== NanButton.IconPosition.IconOnly)
+                    var hasIcon = (control.iconSource !== "" || control.vectorIcon !== IconManager.ICON_NONE);
+                    if (hasIcon && control.iconPosition !== NanButton.IconPosition.IconOnly)
                         availableWidth -= (control.iconSize + control.iconSpacing);
 
                     return Math.max(0, availableWidth);
@@ -267,11 +316,11 @@ Button {
 
             }
 
-            // 右侧图标
+            // 右侧图标 (图片)
             Image {
-                id: rightIcon
+                id: rightIconImage
 
-                visible: control.iconSource != "" && control.iconPosition === NanButton.IconPosition.Right
+                visible: control.iconSource !== "" && control.vectorIcon === IconManager.ICON_NONE && control.iconPosition === NanButton.IconPosition.Right
                 source: control.iconSource
                 width: control.iconSize
                 height: control.iconSize
@@ -290,6 +339,28 @@ Button {
                             easing.type: Easing.OutCubic
                         }
 
+                    }
+
+                }
+
+            }
+
+            // 右侧图标 (自绘)
+            NanIconItem {
+                id: rightIconItem
+
+                visible: control.vectorIcon !== IconManager.ICON_NONE && control.iconSource === "" && control.iconPosition === NanButton.IconPosition.Right
+                icon: control.vectorIcon
+                width: control.iconSize
+                height: control.iconSize
+                color: control.getInteractiveColor(control.currentForegroundColor)
+                anchors.verticalCenter: parent.verticalCenter
+                opacity: control.enabled ? 1 : 0.3
+
+                Behavior on color {
+                    ColorAnimation {
+                        duration: 200
+                        easing.type: Easing.OutCubic
                     }
 
                 }

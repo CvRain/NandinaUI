@@ -29,7 +29,7 @@ namespace Nandina::Icon {
         void colorChanged();
 
     private:
-        Nandina::Icon::IconManager::Icons m_icon = Nandina::Icon::IconManager::Icons::ICON_CLOSE;
+        Nandina::Icon::IconManager::Icons m_icon = Nandina::Icon::IconManager::Icons::ICON_NONE;
         QColor m_color = Qt::black;
     };
 

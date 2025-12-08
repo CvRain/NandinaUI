@@ -9,7 +9,7 @@ namespace Nandina::Icon {
     }
 
     void NanIconItem::paint(QPainter *painter) {
-        auto iconInstance = IconManager::instance().getIcon(m_icon);
+        const auto iconInstance = IconManager::getInstance()->getIcon(m_icon);
         if (iconInstance) {
             painter->setRenderHint(QPainter::Antialiasing);
             iconInstance->paint(painter, boundingRect(), m_color);

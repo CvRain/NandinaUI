@@ -4,6 +4,7 @@
 #include <QColor>
 #include <QPainter>
 #include <QRectF>
+#include <QPainterPath>
 
 namespace Nandina::Icon {
 

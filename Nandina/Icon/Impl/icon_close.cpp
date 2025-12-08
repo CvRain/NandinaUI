@@ -29,5 +29,4 @@ namespace Nandina::Icon::Impl {
 
         painter->restore();
     }
-}
 } // namespace Nandina::Icon::Impl
