@@ -174,11 +174,17 @@ Button {
     // 内容项:包含图标和文本的布局
     contentItem: Item {
         clip: true // 确保内容不会超出按钮边界
+        // 让 Control 能正确测量内容尺寸
+        implicitWidth: row.implicitWidth
+        implicitHeight: row.implicitHeight
 
         Row {
+            id: row
+
             spacing: control.iconSpacing
             anchors.centerIn: parent
-            width: Math.min(implicitWidth, parent.width)
+            // ensure row accounts for all children (icons + text) to avoid clipping
+            width: Math.min(childrenRect.width, parent.width)
 
             // 左侧图标 (图片)
             Image {
@@ -217,6 +223,8 @@ Button {
                 icon: control.vectorIcon
                 width: control.iconSize
                 height: control.iconSize
+                implicitWidth: width
+                implicitHeight: height
                 color: control.getInteractiveColor(control.currentForegroundColor)
                 anchors.verticalCenter: parent.verticalCenter
                 opacity: control.enabled ? 1 : 0.3
@@ -268,6 +276,8 @@ Button {
                 icon: control.vectorIcon
                 width: control.iconSize
                 height: control.iconSize
+                implicitWidth: width
+                implicitHeight: height
                 color: control.getInteractiveColor(control.currentForegroundColor)
                 anchors.verticalCenter: parent.verticalCenter
                 opacity: control.enabled ? 1 : 0.3
@@ -353,6 +363,8 @@ Button {
                 icon: control.vectorIcon
                 width: control.iconSize
                 height: control.iconSize
+                implicitWidth: width
+                implicitHeight: height
                 color: control.getInteractiveColor(control.currentForegroundColor)
                 anchors.verticalCenter: parent.verticalCenter
                 opacity: control.enabled ? 1 : 0.3
