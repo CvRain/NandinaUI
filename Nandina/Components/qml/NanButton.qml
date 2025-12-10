@@ -223,8 +223,6 @@ Button {
                 icon: control.vectorIcon
                 width: control.iconSize
                 height: control.iconSize
-                implicitWidth: width
-                implicitHeight: height
                 color: control.getInteractiveColor(control.currentForegroundColor)
                 anchors.verticalCenter: parent.verticalCenter
                 opacity: control.enabled ? 1 : 0.3
@@ -276,8 +274,6 @@ Button {
                 icon: control.vectorIcon
                 width: control.iconSize
                 height: control.iconSize
-                implicitWidth: width
-                implicitHeight: height
                 color: control.getInteractiveColor(control.currentForegroundColor)
                 anchors.verticalCenter: parent.verticalCenter
                 opacity: control.enabled ? 1 : 0.3
@@ -363,8 +359,6 @@ Button {
                 icon: control.vectorIcon
                 width: control.iconSize
                 height: control.iconSize
-                implicitWidth: width
-                implicitHeight: height
                 color: control.getInteractiveColor(control.currentForegroundColor)
                 anchors.verticalCenter: parent.verticalCenter
                 opacity: control.enabled ? 1 : 0.3

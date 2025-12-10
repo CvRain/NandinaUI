@@ -6,6 +6,14 @@ namespace Nandina::Icon {
     NanIconItem::NanIconItem(QQuickItem *parent) : QQuickPaintedItem(parent) {
         // 启用抗锯齿
         setAntialiasing(true);
+
+        // 设置默认尺寸
+        setImplicitWidth(24);
+        setImplicitHeight(24);
+
+        // 监听尺寸变化以触发重绘
+        connect(this, &QQuickItem::widthChanged, this, [this]() { update(); });
+        connect(this, &QQuickItem::heightChanged, this, [this]() { update(); });
     }
 
     void NanIconItem::paint(QPainter *painter) {
