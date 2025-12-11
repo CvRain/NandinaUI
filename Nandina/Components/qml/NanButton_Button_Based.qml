@@ -4,9 +4,11 @@ import Nandina.Icon
 import Nandina.Theme
 import Qt5Compat.GraphicalEffects
 import QtQuick
-import QtQuick.Controls
+import QtQuick.Controls.Basic
 
-NanButtonBase {
+Button {
+    // 图标与文本间距
+
     id: control
 
     // 图标位置枚举
@@ -92,6 +94,7 @@ NanButtonBase {
     hoverEnabled: true
     transformOrigin: Item.Center
     scale: currentScale
+    text: "Button"
     implicitWidth: 120
     implicitHeight: 60
     font.pointSize: calculatedFontSize

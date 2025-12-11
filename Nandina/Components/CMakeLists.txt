@@ -1,6 +1,8 @@
 # Components 模块 - 各种 UI 组件
 set(COMPONENTS_QML_FILES
+        qml/NanButtonBase.qml
         qml/NanButton.qml
+        qml/NanButton_Button_Based.qml
         qml/NanIcon.qml
 )
 
