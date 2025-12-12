@@ -51,6 +51,17 @@ namespace Nandina::Components {
 
     QVariant ComponentManager::getStyle(const QString &component, const QString &name) const {
         if (component == "NanButton") {
+            // 检查样式是否存在
+            if (!componentCollection->buttonStyles.contains(name)) {
+                qWarning() << "Button style not found:" << name << "- using default";
+                // 返回第一个可用样式或创建默认样式
+                if (!componentCollection->buttonStyles.empty()) {
+                    return componentCollection->buttonStyles.begin()->second.toVariant();
+                }
+                // 如果连默认样式都没有，返回空
+                qCritical() << "No button styles available at all!";
+                return {};
+            }
             const auto result = this->componentCollection->buttonStyles.at(name).toVariant();
             return result;
         }

@@ -29,6 +29,7 @@ namespace Nandina::Icon {
     void NanIconItem::setIcon(IconManager::Icons icon) {
         if (m_icon == icon)
             return;
+
         m_icon = icon;
         emit iconChanged();
         update(); // 触发重绘

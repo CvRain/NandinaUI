@@ -187,7 +187,7 @@ NanButtonBase {
             Image {
                 id: leftIconImage
 
-                visible: control.iconSource !== "" && control.vectorIcon === IconManager.ICON_NONE && control.iconPosition === NanButton.IconPosition.Left
+                visible: control.iconSource.toString() !== "" && control.vectorIcon === IconManager.ICON_NONE && control.iconPosition === NanButton.IconPosition.Left
                 source: control.iconSource
                 width: control.iconSize
                 height: control.iconSize
@@ -216,13 +216,26 @@ NanButtonBase {
             NanIconItem {
                 id: leftIconItem
 
-                visible: control.vectorIcon !== IconManager.ICON_NONE && control.iconSource === "" && control.iconPosition === NanButton.IconPosition.Left
+                visible: control.vectorIcon !== IconManager.ICON_NONE && control.iconSource.toString() === "" && control.iconPosition === NanButton.IconPosition.Left
                 icon: control.vectorIcon
                 width: control.iconSize
                 height: control.iconSize
                 color: control.getInteractiveColor(control.currentForegroundColor)
                 anchors.verticalCenter: parent.verticalCenter
                 opacity: control.enabled ? 1 : 0.3
+                Component.onCompleted: {
+                    console.log("leftIconItem completed:");
+                    console.log("  visible:", visible);
+                    console.log("  vectorIcon:", control.vectorIcon, "(ICON_NONE=" + IconManager.ICON_NONE + ")");
+                    console.log("  iconSource:", control.iconSource);
+                    console.log("  iconPosition:", control.iconPosition, "(Left=" + NanButton.IconPosition.Left + ")");
+                    console.log("  Check1 (vectorIcon != NONE):", (control.vectorIcon !== IconManager.ICON_NONE));
+                    console.log("  Check2 (iconSource empty):", (control.iconSource === ""));
+                    console.log("  Check3 (position == Left):", (control.iconPosition === NanButton.IconPosition.Left));
+                }
+                onVisibleChanged: {
+                    console.log("leftIconItem visibility changed to:", visible, "vIcon:", control.vectorIcon, "pos:", control.iconPosition);
+                }
 
                 Behavior on color {
                     ColorAnimation {
@@ -238,7 +251,7 @@ NanButtonBase {
             Image {
                 id: centerIconImage
 
-                visible: control.iconSource !== "" && control.vectorIcon === IconManager.ICON_NONE && control.iconPosition === NanButton.IconPosition.IconOnly
+                visible: control.iconSource.toString() !== "" && control.vectorIcon === IconManager.ICON_NONE && control.iconPosition === NanButton.IconPosition.IconOnly
                 source: control.iconSource
                 width: control.iconSize
                 height: control.iconSize
@@ -267,7 +280,7 @@ NanButtonBase {
             NanIconItem {
                 id: centerIconItem
 
-                visible: control.vectorIcon !== IconManager.ICON_NONE && control.iconSource === "" && control.iconPosition === NanButton.IconPosition.IconOnly
+                visible: control.vectorIcon !== IconManager.ICON_NONE && control.iconSource.toString() === "" && control.iconPosition === NanButton.IconPosition.IconOnly
                 icon: control.vectorIcon
                 width: control.iconSize
                 height: control.iconSize
@@ -323,7 +336,7 @@ NanButtonBase {
             Image {
                 id: rightIconImage
 
-                visible: control.iconSource !== "" && control.vectorIcon === IconManager.ICON_NONE && control.iconPosition === NanButton.IconPosition.Right
+                visible: control.iconSource.toString() !== "" && control.vectorIcon === IconManager.ICON_NONE && control.iconPosition === NanButton.IconPosition.Right
                 source: control.iconSource
                 width: control.iconSize
                 height: control.iconSize
@@ -352,7 +365,7 @@ NanButtonBase {
             NanIconItem {
                 id: rightIconItem
 
-                visible: control.vectorIcon !== IconManager.ICON_NONE && control.iconSource === "" && control.iconPosition === NanButton.IconPosition.Right
+                visible: control.vectorIcon !== IconManager.ICON_NONE && control.iconSource.toString() === "" && control.iconPosition === NanButton.IconPosition.Right
                 icon: control.vectorIcon
                 width: control.iconSize
                 height: control.iconSize

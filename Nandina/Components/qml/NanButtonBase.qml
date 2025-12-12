@@ -35,7 +35,7 @@ Control {
     property alias containsPress: mouseArea.containsPress
     // 文本属性（兼容 Button API）
     property string text: ""
-    property font font
+    // font 属性继承自 Control，无需重新声明
     // 交互行为配置
     property bool autoRepeat: false
     property int autoRepeatDelay: 300
@@ -97,12 +97,17 @@ Control {
     ]
 
     MouseArea {
+        // 将 MouseArea 放到后层
+
         id: mouseArea
 
         anchors.fill: parent
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
         acceptedButtons: Qt.LeftButton
+        // 重要：让鼠标事件穿透到子元素，但仍然捕获点击
+        // 这样 contentItem 中的内容可以正常显示
+        z: -1
         onClicked: {
             control.forceActiveFocus(Qt.MouseFocusReason);
             control.clicked();
@@ -133,9 +138,6 @@ Control {
                 autoRepeatTimer.stop();
                 control.__autoRepeatActive = false;
             }
-        }
-        onContainsMouseChanged: {
-            control.hovered = containsMouse;
         }
     }
 
