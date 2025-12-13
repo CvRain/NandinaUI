@@ -3,6 +3,7 @@
 
 #include <QColor>
 #include <QQuickPaintedItem>
+#include <QSvgRenderer>
 #include "icon_manager.hpp"
 
 namespace Nandina::Icon {
@@ -11,6 +12,9 @@ namespace Nandina::Icon {
         Q_OBJECT
         Q_PROPERTY(Nandina::Icon::IconManager::Icons icon READ icon WRITE setIcon NOTIFY iconChanged)
         Q_PROPERTY(QColor color READ color WRITE setColor NOTIFY colorChanged)
+        Q_PROPERTY(QString pathData READ pathData WRITE setPathData NOTIFY pathDataChanged)
+        Q_PROPERTY(qreal lineWidth READ lineWidth WRITE setLineWidth NOTIFY lineWidthChanged)
+        Q_PROPERTY(QColor fillColor READ fillColor WRITE setFillColor NOTIFY fillColorChanged)
         QML_ELEMENT
 
     public:
@@ -24,13 +28,31 @@ namespace Nandina::Icon {
         QColor color() const;
         void setColor(const QColor &color);
 
+        QString pathData() const;
+        void setPathData(const QString &pathData);
+
+        qreal lineWidth() const;
+        void setLineWidth(qreal lineWidth);
+
+        QColor fillColor() const;
+        void setFillColor(const QColor &fillColor);
+
     signals:
         void iconChanged();
         void colorChanged();
+        void pathDataChanged();
+        void lineWidthChanged();
+        void fillColorChanged();
 
     private:
+        void updateRenderer();
+
         Nandina::Icon::IconManager::Icons m_icon = Nandina::Icon::IconManager::Icons::ICON_NONE;
         QColor m_color = Qt::black;
+        QString m_pathData;
+        qreal m_lineWidth = 1.0;
+        QColor m_fillColor = Qt::transparent;
+        QSvgRenderer m_renderer;
     };
 
 } // namespace Nandina::Icon
