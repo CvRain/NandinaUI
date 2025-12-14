@@ -6,7 +6,8 @@ qt_add_library(NandinaIcon STATIC)
 qt_add_qml_module(NandinaIcon
         URI Nandina.Icon
         VERSION 1.0
-        SOURCES ${ICON_CPP_FILES} icon_manager.hpp
+        SOURCES ${ICON_CPP_FILES} icon_manager.hpp icon_manager.cpp
+        RESOURCES icons.json
 )
 
 target_include_directories(NandinaIcon PUBLIC
@@ -15,5 +16,5 @@ target_include_directories(NandinaIcon PUBLIC
 )
 
 target_link_libraries(NandinaIcon
-        PRIVATE Qt6::Quick Qt6::Svg NandinaCore
+        PRIVATE Qt6::Quick Qt6::Svg NandinaCore NandinaTheme
 )

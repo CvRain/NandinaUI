@@ -5,11 +5,14 @@
 #ifndef TRYNANDINA_ICON_MANAGER_HPP
 #define TRYNANDINA_ICON_MANAGER_HPP
 
+#include <QHash>
 #include <QObject>
+#include <QString>
 #include <qqmlintegration.h>
+#include "Core/Types/nan_singleton.hpp"
 
 namespace Nandina::Icon {
-    class IconManager : public QObject {
+    class IconManager : public Nandina::Core::Types::NanSingleton<IconManager> {
         Q_OBJECT
         QML_ELEMENT
         QML_SINGLETON
@@ -26,7 +29,14 @@ namespace Nandina::Icon {
         };
         Q_ENUM(Icons)
 
-        explicit IconManager(QObject *parent = nullptr) : QObject(parent) {}
+        explicit IconManager(QObject *parent = nullptr);
+
+        Q_INVOKABLE QString getPath(const QString &name) const;
+        Q_INVOKABLE QString getPathByEnum(Icons icon) const;
+
+    private:
+        void loadIcons();
+        QHash<QString, QString> m_iconPaths;
     };
 
 } // namespace Nandina::Icon
