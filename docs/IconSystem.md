@@ -1,17 +1,18 @@
 # Nandina Icon System 使用指南
 
-Nandina UI 的图标系统经过重构，现在基于 SVG 路径数据进行渲染。这种方式轻量、高效，并且支持动态修改颜色、线条粗细和填充色。
+Nandina UI 的图标系统经过重构，现在基于 SVG 路径数据进行渲染，支持通过 JSON 配置文件管理图标，并与主题系统深度集成。
 
 ## 核心组件
 
 *   **NanIconItem**: QML 组件，用于显示图标。
-*   **IconManager**: 单例类，提供图标枚举定义 (`IconManager.Icons`)。
+*   **IconManager**: 单例类，负责加载和管理 `icons.json` 中的图标数据。
+*   **icons.json**: 存储 SVG 路径数据的配置文件。
 
 ## 快速开始
 
-### 1. 使用预定义图标
+### 1. 通过名称使用图标 (推荐)
 
-使用 `icon` 属性指定 `IconManager` 中的枚举值即可显示预定义图标。
+使用 `iconName` 属性指定 `icons.json` 中定义的键名即可显示图标。
 
 ```qml
 import Nandina.Icon 1.0
@@ -19,26 +20,41 @@ import Nandina.Icon 1.0
 NanIconItem {
     width: 24
     height: 24
-    icon: IconManager.ICON_CLOSE
-    color: "red" // 设置图标颜色
+    iconName: "close" // 对应 icons.json 中的 key
+    color: "red"
 }
 ```
 
-### 2. 使用自定义 SVG 路径
+### 2. 使用主题颜色
 
-如果需要显示未注册的图标，可以直接通过 `pathData` 属性传入 SVG 路径字符串。
+使用 `colorRole` 属性可以将图标颜色绑定到当前主题。当主题切换时，图标颜色会自动更新。
 
 ```qml
-import Nandina.Icon 1.0
-
 NanIconItem {
-    width: 32
-    height: 32
-    // 传入 SVG path 的 d 属性值
+    iconName: "home"
+    colorRole: "primary" // 使用主题中的 primary 颜色
+    // colorRole: "text" // 或者使用 text 颜色
+}
+```
+
+### 3. 使用预定义枚举 (旧版兼容)
+
+仍然支持使用 `IconManager` 枚举，但建议迁移到字符串名称方式。
+
+```qml
+NanIconItem {
+    icon: IconManager.ICON_CLOSE
+}
+```
+
+### 4. 使用自定义 SVG 路径
+
+直接通过 `pathData` 属性传入 SVG 路径字符串。
+
+```qml
+NanIconItem {
     pathData: "M12 2L2 22h20L12 2z" 
     color: "blue"
-    lineWidth: 2
-    fillColor: "yellow"
 }
 ```
 
@@ -46,50 +62,60 @@ NanIconItem {
 
 | 属性名 | 类型 | 默认值 | 说明 |
 | :--- | :--- | :--- | :--- |
-| `icon` | `enum` | `IconManager.ICON_NONE` | 预定义图标枚举。设置此属性会自动更新 `pathData`。 |
-| `pathData` | `string` | `""` | SVG 路径数据（即 `<path d="...">` 中的内容）。 |
-| `color` | `color` | `Qt.black` | 线条颜色（Stroke Color）。 |
-| `lineWidth` | `real` | `1.0` | 线条粗细（Stroke Width）。 |
-| `fillColor` | `color` | `Qt.transparent` | 填充颜色（Fill Color）。 |
+| `iconName` | `string` | `""` | 图标名称，对应 `icons.json` 中的键。 |
+| `colorRole` | `string` | `""` | 主题颜色角色（如 "primary", "blue", "text"）。设置后会自动更新 `color`。 |
+| `icon` | `enum` | `IconManager.ICON_NONE` | (旧版) 预定义图标枚举。 |
+| `pathData` | `string` | `""` | SVG 路径数据。 |
+| `color` | `color` | `Qt.black` | 线条颜色。如果设置了 `colorRole`，此属性会被覆盖。 |
+| `lineWidth` | `real` | `1.0` | 线条粗细。 |
+| `fillColor` | `color` | `Qt.transparent` | 填充颜色。 |
 
 ## 如何添加新图标
 
-如果您需要将一个图标添加到系统的预定义列表中（即通过 `IconManager` 枚举使用），请按照以下步骤操作：
+现在添加新图标无需修改 C++ 代码，只需编辑配置文件。
 
-### 步骤 1: 定义枚举
+### 步骤 1: 编辑配置文件
 
-在 `NandinaUI/Nandina/Icon/icon_manager.hpp` 中，向 `Icons` 枚举添加新的成员。
+打开 `NandinaUI/Nandina/Icon/icons.json` 文件。
 
-```cpp
-// icon_manager.hpp
-enum class Icons {
-    // ... 现有图标
-    ICON_MY_NEW_ICON = 7, // 新增图标
-};
-```
+### 步骤 2: 添加路径数据
 
-### 步骤 2: 注册路径数据
+在 JSON 对象中添加新的键值对。键为图标名称，值为 SVG 的 `d` 属性内容。
 
-在 `NandinaUI/Nandina/Icon/nan_icon_item.cpp` 的 `getPathForIcon` 函数中，添加对应的 `case` 分支并返回 SVG 路径字符串。
-
-```cpp
-// nan_icon_item.cpp
-static QString getPathForIcon(IconManager::Icons icon) {
-    switch (icon) {
-        // ... 现有 case
-        case IconManager::Icons::ICON_MY_NEW_ICON:
-            return "M10 10 H 90 V 90 H 10 Z"; // 您的 SVG 路径
-        default:
-            return "";
-    }
+```json
+{
+    "existing_icon": "...",
+    "my_new_icon": "M10 10 H 90 V 90 H 10 Z"
 }
 ```
 
-### 步骤 3: 重新编译
+### 步骤 3: 重新编译资源
 
-完成上述修改后，重新编译项目即可在 QML 中使用 `IconManager.ICON_MY_NEW_ICON`。
+由于 JSON 文件包含在 Qt 资源系统 (`.qrc`) 中，修改后需要重新编译项目以更新资源文件。
+
+```bash
+cmake --build build
+```
+
+### 步骤 4: 在 QML 中使用
+
+```qml
+NanIconItem {
+    iconName: "my_new_icon"
+}
+```
+
+## 主题集成
+
+`NanIconItem` 通过 `colorRole` 属性与 `NandinaTheme` 模块集成。支持的颜色角色包括 Catppuccin 主题的所有标准颜色，例如：
+- `rosewater`, `flamingo`, `pink`, `mauve`, `red`, `maroon`, `peach`, `yellow`, `green`, `teal`, `sky`, `sapphire`, `blue`, `lavender`
+- `text`, `subtext1`, `subtext0`
+- `overlay2`, `overlay1`, `overlay0`
+- `surface2`, `surface1`, `surface0`
+- `base`, `mantle`, `crust`
 
 ## 最佳实践
 
-1.  **图标尺寸**: 默认 `NanIconItem` 的 `implicitWidth` 和 `implicitHeight` 为 24。建议 SVG 路径基于 24x24 的视口（viewBox）设计，以保证最佳显示效果。
-2.  **性能**: `NanIconItem` 内部使用 `QSvgRenderer` 缓存渲染结果。频繁修改 `pathData` 会触发 SVG 解析，但修改颜色 (`color`, `fillColor`) 或线宽 (`lineWidth`) 只会触发重新渲染，开销较小。
+1.  **图标尺寸**: 建议 SVG 路径基于 24x24 的视口（viewBox）设计。
+2.  **优先使用 iconName**: 相比于枚举，字符串名称更灵活，且无需修改 C++ 头文件。
+3.  **使用 colorRole**: 尽量使用 `colorRole` 而不是硬编码颜色值，以确保应用支持深色/浅色模式切换。
