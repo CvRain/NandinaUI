@@ -10,7 +10,7 @@
     {
       "type": "filledPrimary",
       "background": "@lavender",
-      "foreground": "@base",
+      "foreground": "@text",
       "border": "@lavender"
     },
     {

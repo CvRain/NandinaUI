@@ -60,9 +60,10 @@ namespace Nandina::Icon {
 
         Nandina::Icon::IconManager::Icons m_icon = Nandina::Icon::IconManager::Icons::ICON_NONE;
         QString m_iconName;
-        QColor m_color = Qt::black;
-        QString m_colorRole;
+        QColor m_color = Qt::black; // 默认黑色，会被 colorRole 覆盖
+        QString m_colorRole = "text"; // 默认使用主题文本颜色
         QString m_pathData;
+        bool m_colorInitialized = false; // 标记颜色是否已从主题初始化
         qreal m_lineWidth = 1.0;
         QColor m_fillColor = Qt::transparent;
         QSvgRenderer m_renderer;

@@ -16,11 +16,14 @@ namespace Nandina::Icon {
         connect(this, &QQuickItem::widthChanged, this, [this]() { update(); });
         connect(this, &QQuickItem::heightChanged, this, [this]() { update(); });
 
-        // 监听主题变化
+        // 监听主题变化，当主题切换时自动更新颜色
         auto themeManager = Nandina::ThemeManager::getInstance();
         if (themeManager) {
             connect(themeManager, &Nandina::ThemeManager::paletteChanged, this, [this]() { updateColorFromRole(); });
         }
+
+        // 立即初始化颜色（从主题获取默认的 "text" 颜色）
+        updateColorFromRole();
     }
 
     void NanIconItem::paint(QPainter *painter) {
@@ -76,6 +79,7 @@ namespace Nandina::Icon {
         if (m_color == color)
             return;
         m_color = color;
+        m_colorInitialized = true; // 用户手动设置颜色，标记为已初始化
         emit colorChanged();
         updateRenderer();
         update();
@@ -98,7 +102,15 @@ namespace Nandina::Icon {
             return;
         m_pathData = pathData;
         emit pathDataChanged();
-        updateRenderer();
+
+        // 如果 pathData 刚设置，并且有 colorRole，且颜色还未从主题初始化，则立即初始化
+        // 这处理了构造函数中 updateColorFromRole() 时 pathData 还是空的情况
+        if (!m_pathData.isEmpty() && !m_colorRole.isEmpty() && !m_colorInitialized) {
+            updateColorFromRole();
+        }
+        else {
+            updateRenderer();
+        }
     }
 
     qreal NanIconItem::lineWidth() const { return m_lineWidth; }
@@ -127,19 +139,22 @@ namespace Nandina::Icon {
 
         // Construct SVG XML
         // Using 24x24 viewBox as standard for icons
+        // 如果 fillColor 是透明的，使用 "none"，否则使用颜色值
+        QString fillValue = (m_fillColor.alpha() == 0) ? "none" : m_fillColor.name(QColor::HexArgb);
+
         QString svg = QString(R"(
             <svg viewBox="0 0 24 24" version="1.1" xmlns="http://www.w3.org/2000/svg">
                 <path d="%1" stroke="%2" stroke-width="%3" fill="%4" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
         )")
-                              .arg(m_pathData, m_color.name(QColor::HexArgb), QString::number(m_lineWidth),
-                                   m_fillColor.name(QColor::HexArgb));
+                              .arg(m_pathData, m_color.name(QColor::HexArgb), QString::number(m_lineWidth), fillValue);
 
         m_renderer.load(svg.toUtf8());
         update();
     }
 
     void NanIconItem::updateColorFromRole() {
+        // 如果 colorRole 为空字符串，表示用户想要手动控制颜色，不使用主题
         if (m_colorRole.isEmpty())
             return;
 
@@ -147,7 +162,18 @@ namespace Nandina::Icon {
         if (themeManager) {
             QString colorStr = themeManager->getColorByString(m_colorRole);
             if (!colorStr.isEmpty()) {
-                setColor(QColor(colorStr));
+                // 使用主题颜色更新图标颜色
+                QColor newColor = QColor(colorStr);
+                if (m_color != newColor) {
+                    m_color = newColor;
+                    m_colorInitialized = true; // 标记颜色已初始化
+                    emit colorChanged();
+                    updateRenderer();
+                    update();
+                }
+            }
+            else {
+                qWarning() << "NanIconItem: colorRole" << m_colorRole << "not found in theme";
             }
         }
     }

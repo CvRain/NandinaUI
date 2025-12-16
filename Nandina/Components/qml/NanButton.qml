@@ -30,7 +30,7 @@ NanButtonBase {
     // 图标路径
     property int iconPosition: NanButton.IconPosition.Left
     // 图标位置: Left, Right, IconOnly
-    property real iconSize: 24
+    property real iconSize: control.height > 0 ? control.height * 0.4 : 24
     // 图标大小
     property int iconSpacing: 8
     // 缩放动画参数
@@ -216,6 +216,8 @@ NanButtonBase {
             NanIconItem {
                 id: leftIconItem
 
+                // 设置为空字符串以禁用自动主题颜色，改用按钮的 foreground 颜色
+                colorRole: ""
                 visible: control.vectorIcon !== IconManager.ICON_NONE && control.iconSource.toString() === "" && control.iconPosition === NanButton.IconPosition.Left
                 icon: control.vectorIcon
                 width: control.iconSize
@@ -223,16 +225,6 @@ NanButtonBase {
                 color: control.getInteractiveColor(control.currentForegroundColor)
                 anchors.verticalCenter: parent.verticalCenter
                 opacity: control.enabled ? 1 : 0.3
-                Component.onCompleted: {
-                    console.log("leftIconItem completed:");
-                    console.log("  visible:", visible);
-                    console.log("  vectorIcon:", control.vectorIcon, "(ICON_NONE=" + IconManager.ICON_NONE + ")");
-                    console.log("  iconSource:", control.iconSource);
-                    console.log("  iconPosition:", control.iconPosition, "(Left=" + NanButton.IconPosition.Left + ")");
-                    console.log("  Check1 (vectorIcon != NONE):", (control.vectorIcon !== IconManager.ICON_NONE));
-                    console.log("  Check2 (iconSource empty):", (control.iconSource === ""));
-                    console.log("  Check3 (position == Left):", (control.iconPosition === NanButton.IconPosition.Left));
-                }
                 onVisibleChanged: {
                     console.log("leftIconItem visibility changed to:", visible, "vIcon:", control.vectorIcon, "pos:", control.iconPosition);
                 }
@@ -280,6 +272,8 @@ NanButtonBase {
             NanIconItem {
                 id: centerIconItem
 
+                // 设置为空字符串以禁用自动主题颜色，改用按钮的 foreground 颜色
+                colorRole: ""
                 visible: control.vectorIcon !== IconManager.ICON_NONE && control.iconSource.toString() === "" && control.iconPosition === NanButton.IconPosition.IconOnly
                 icon: control.vectorIcon
                 width: control.iconSize
@@ -365,6 +359,8 @@ NanButtonBase {
             NanIconItem {
                 id: rightIconItem
 
+                // 设置为空字符串以禁用自动主题颜色，改用按钮的 foreground 颜色
+                colorRole: ""
                 visible: control.vectorIcon !== IconManager.ICON_NONE && control.iconSource.toString() === "" && control.iconPosition === NanButton.IconPosition.Right
                 icon: control.vectorIcon
                 width: control.iconSize

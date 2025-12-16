@@ -9,7 +9,7 @@ namespace Nandina::Icon {
     IconManager::IconManager(QObject *parent) : NanSingleton(parent) { loadIcons(); }
 
     void IconManager::loadIcons() {
-        QFile file(":/Nandina/Icon/icons.json");
+        QFile file(":/qt/qml/Nandina/Icon/icons.json");
         if (!file.open(QIODevice::ReadOnly)) {
             qWarning() << "Failed to open icons.json";
             return;
