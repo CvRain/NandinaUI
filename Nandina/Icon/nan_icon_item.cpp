@@ -140,14 +140,14 @@ namespace Nandina::Icon {
         // Construct SVG XML
         // Using 24x24 viewBox as standard for icons
         // 如果 fillColor 是透明的，使用 "none"，否则使用颜色值
-        QString fillValue = (m_fillColor.alpha() == 0) ? "none" : m_fillColor.name(QColor::HexArgb);
+        QString fillValue = (m_fillColor.alpha() == 0) ? "none" : m_fillColor.name(QColor::HexRgb);
 
         QString svg = QString(R"(
             <svg viewBox="0 0 24 24" version="1.1" xmlns="http://www.w3.org/2000/svg">
                 <path d="%1" stroke="%2" stroke-width="%3" fill="%4" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
         )")
-                              .arg(m_pathData, m_color.name(QColor::HexArgb), QString::number(m_lineWidth), fillValue);
+                              .arg(m_pathData, m_color.name(QColor::HexRgb), QString::number(m_lineWidth), fillValue);
 
         m_renderer.load(svg.toUtf8());
         update();

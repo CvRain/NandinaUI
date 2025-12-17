@@ -30,9 +30,13 @@ NanButtonBase {
     // 图标路径
     property int iconPosition: NanButton.IconPosition.Left
     // 图标位置: Left, Right, IconOnly
-    property real iconSize: control.height > 0 ? control.height * 0.4 : 24
-    // 图标大小
-    property int iconSpacing: 8
+    property real iconSize: control.height > 0 ? control.height * 0.5 : 20
+    // 图标大小（调整为高度的 50%，更舒适的比例）
+    property int iconSpacing: 6
+    // 图标与文字间距（减小间距使其更紧凑）
+    // 文字悬浮提示
+    property bool showTooltip: true
+    // 是否在文字被截断时显示悬浮提示
     // 缩放动画参数
     property real baseScale: 1
     property real hoverScale: 1.04
@@ -51,8 +55,8 @@ NanButtonBase {
         if (!autoFitText)
             return manualFontSize;
 
-        var availableWidth = Math.max(0, control.width - padding * 2);
-        var availableHeight = Math.max(0, control.height - padding * 2);
+        var availableWidth = Math.max(0, control.width - control.leftPadding - control.rightPadding);
+        var availableHeight = Math.max(0, control.height - control.topPadding - control.bottomPadding);
         // 如果有图标,减去图标占用的空间
         var hasIcon = (iconSource !== "" || vectorIcon !== IconManager.ICON_NONE);
         if (hasIcon && iconPosition !== NanButton.IconPosition.IconOnly)
@@ -61,8 +65,9 @@ NanButtonBase {
         if (availableWidth <= 0 || availableHeight <= 0 || !control.text)
             return minimumFontSize;
 
-        var sizeBasedOnHeight = availableHeight * 0.4;
-        var sizeBasedOnWidth = control.text ? availableWidth / (control.text.length * 0.8) : sizeBasedOnHeight;
+        var sizeBasedOnHeight = availableHeight * 0.5;
+        // 调整为 50% 以获得更好的视觉效果
+        var sizeBasedOnWidth = control.text ? availableWidth / (control.text.length * 0.6) : sizeBasedOnHeight;
         return Math.max(minimumFontSize, Math.min(maximumFontSize, Math.min(sizeBasedOnHeight, sizeBasedOnWidth)));
     }
 
@@ -92,8 +97,16 @@ NanButtonBase {
     hoverEnabled: true
     transformOrigin: Item.Center
     scale: currentScale
-    implicitWidth: 120
-    implicitHeight: 60
+    implicitWidth: 100
+    implicitHeight: 40
+    // 调整默认尺寸，参考 shadcn-ui 的 default 按钮尺寸
+    padding: 12
+    // 增加内边距，让内容与边缘有更舒适的距离
+    leftPadding: padding
+    rightPadding: padding
+    topPadding: padding * 0.6
+    // 上下 padding 略小，因为文字和图标通常不需要太多垂直空间
+    bottomPadding: padding * 0.6
     font.pointSize: calculatedFontSize
     clip: true // 裁剪超出边界的内容
     // 在目标缩放变化时,如果未处于点击动画中,则使用行为动画过渡
@@ -157,6 +170,20 @@ NanButtonBase {
 
     }
 
+    // 悬浮提示 - 当文字被截断时显示完整内容
+    ToolTip {
+        // 3秒后自动隐藏
+
+        id: tooltip
+
+        // 只有当文字被截断且启用了 tooltip 时才显示
+        visible: control.showTooltip && control.hovered && control.text !== "" && buttonText.truncated && control.iconPosition !== NanButton.IconPosition.IconOnly
+        text: control.text
+        delay: 500
+        // 延迟 500ms 显示，避免鼠标快速划过时频繁弹出
+        timeout: 3000
+    }
+
     // 常规缩放过渡动画(避免与点击动画冲突)
     Behavior on currentScale {
         enabled: !control.isBouncing
@@ -179,9 +206,15 @@ NanButtonBase {
             id: row
 
             spacing: control.iconSpacing
-            anchors.centerIn: parent
+            // IconOnly 模式下居中显示，否则根据内容宽度调整
+            anchors.centerIn: control.iconPosition === NanButton.IconPosition.IconOnly ? parent : undefined
+            anchors.verticalCenter: control.iconPosition !== NanButton.IconPosition.IconOnly ? parent.verticalCenter : undefined
+            anchors.left: control.iconPosition !== NanButton.IconPosition.IconOnly ? parent.left : undefined
+            anchors.right: control.iconPosition !== NanButton.IconPosition.IconOnly ? parent.right : undefined
+            anchors.leftMargin: control.iconPosition !== NanButton.IconPosition.IconOnly ? 0 : undefined
+            anchors.rightMargin: control.iconPosition !== NanButton.IconPosition.IconOnly ? 0 : undefined
             // ensure row accounts for all children (icons + text) to avoid clipping
-            width: Math.min(childrenRect.width, parent.width)
+            width: control.iconPosition !== NanButton.IconPosition.IconOnly ? Math.min(childrenRect.width, parent.width) : undefined
 
             // 左侧图标 (图片)
             Image {
@@ -225,9 +258,6 @@ NanButtonBase {
                 color: control.getInteractiveColor(control.currentForegroundColor)
                 anchors.verticalCenter: parent.verticalCenter
                 opacity: control.enabled ? 1 : 0.3
-                onVisibleChanged: {
-                    console.log("leftIconItem visibility changed to:", visible, "vIcon:", control.vectorIcon, "pos:", control.iconPosition);
-                }
 
                 Behavior on color {
                     ColorAnimation {
@@ -308,7 +338,7 @@ NanButtonBase {
                 anchors.verticalCenter: parent.verticalCenter
                 // 限制文本宽度,避免超出按钮
                 width: {
-                    var availableWidth = control.width - control.padding * 2;
+                    var availableWidth = control.width - control.leftPadding - control.rightPadding;
                     var hasIcon = (control.iconSource !== "" || control.vectorIcon !== IconManager.ICON_NONE);
                     if (hasIcon && control.iconPosition !== NanButton.IconPosition.IconOnly)
                         availableWidth -= (control.iconSize + control.iconSpacing);
