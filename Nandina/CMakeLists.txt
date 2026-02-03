@@ -7,6 +7,7 @@ add_subdirectory(Theme)
 add_subdirectory(Window)
 add_subdirectory(Components)
 add_subdirectory(Icon)
+add_subdirectory(Fonts)
 
 qt_add_library(Nandina STATIC)
 qt_add_qml_module(Nandina
@@ -18,6 +19,7 @@ qt_add_qml_module(Nandina
         NandinaWindow
         NandinaComponents
         NandinaIcon
+        NandinaFontCollection
 )
 
 target_link_libraries(Nandina
@@ -27,5 +29,6 @@ target_link_libraries(Nandina
         NandinaWindow
         NandinaComponents
         NandinaIcon
+        NandinaFontCollection
         Qt6::Quick
 )
