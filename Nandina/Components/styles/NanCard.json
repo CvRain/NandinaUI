@@ -1,0 +1,23 @@
+{
+  "target": "NanCard",
+  "styles": [
+    {
+      "type": "default",
+      "background": "@base",
+      "foreground": "@text",
+      "border": "@surface1"
+    },
+    {
+      "type": "outlined",
+      "background": "@base",
+      "foreground": "@text",
+      "border": "@overlay0"
+    },
+    {
+      "type": "soft",
+      "background": "@surface0",
+      "foreground": "@text",
+      "border": "@surface1"
+    }
+  ]
+}

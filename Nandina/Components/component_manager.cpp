@@ -12,6 +12,7 @@
 #include "Core/Utils/file_operator.hpp"
 #include "Core/Utils/json_parser.hpp"
 #include "component_factory.hpp"
+#include "component_registrar.hpp"
 
 namespace Nandina::Components {
     ComponentManager *ComponentManager::instance = nullptr;
@@ -65,6 +66,18 @@ namespace Nandina::Components {
             const auto result = this->componentCollection->buttonStyles.at(name).toVariant();
             return result;
         }
+        if (component == "NanCard") {
+            if (!componentCollection->cardStyles.contains(name)) {
+                qWarning() << "Card style not found:" << name << "- using default";
+                if (!componentCollection->cardStyles.empty()) {
+                    return componentCollection->cardStyles.begin()->second.toVariant();
+                }
+                qCritical() << "No card styles available at all!";
+                return {};
+            }
+            const auto result = this->componentCollection->cardStyles.at(name).toVariant();
+            return result;
+        }
         return {};
     }
 
@@ -73,8 +86,13 @@ namespace Nandina::Components {
         this->componentCollection->buttonStyles.insert({style.getStyleName(), style});
     }
 
+    void ComponentManager::addCardStyle(const NanCardStyle &style) const {
+        this->componentCollection->cardStyles.insert({style.getStyleName(), style});
+    }
+
     ComponentManager::ComponentManager(QObject *parent) :
         QObject(parent), componentCollection(std::make_shared<ComponentCollection>()) {
+        registerAllComponents();
         const QString component_style_directory = ":/qt/qml/Nandina/Components/styles";
 
         if (QDir dir(component_style_directory); not dir.exists()) {

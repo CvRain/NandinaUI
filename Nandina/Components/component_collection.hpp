@@ -8,6 +8,7 @@
 #include <QObject>
 
 #include "nan_button.hpp"
+#include "nan_card.hpp"
 
 namespace Nandina::Components {
     class ComponentCollection {
@@ -15,6 +16,7 @@ namespace Nandina::Components {
         explicit ComponentCollection();
 
         std::map<QString, NanButtonStyle> buttonStyles{};
+        std::map<QString, NanCardStyle> cardStyles{};
     };
 } // namespace Nandina::Components
 

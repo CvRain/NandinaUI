@@ -4,6 +4,7 @@ set(COMPONENTS_QML_FILES
         qml/NanButton.qml
         qml/NanButton_Button_Based.qml
         qml/NanIcon.qml
+        qml/NanCard.qml
 )
 
 set(COMPONENT_CPP_FILES
@@ -23,6 +24,7 @@ set(COMPONENT_CPP_FILES
 
 set(COMPONENT_STYLES_FILES
         styles/NanButton.json
+        styles/NanCard.json
 )
 
 aux_source_directory(src/. SUB_COMPONENT_CPP_FILES)

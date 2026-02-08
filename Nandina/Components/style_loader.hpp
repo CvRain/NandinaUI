@@ -8,6 +8,7 @@
 #include "Core/Utils/json_parser.hpp"
 #include "component_manager.hpp"
 #include "src/nan_button.hpp"
+#include "src/nan_card.hpp"
 
 namespace Nandina::Components {
     class ComponentManager;
@@ -20,6 +21,12 @@ namespace Nandina::Components {
 
     template<>
     class StyleLoader<NanButtonStyle> {
+    public:
+        static void load(const ComponentManager *manager, const QJsonDocument &document);
+    };
+
+    template<>
+    class StyleLoader<NanCardStyle> {
     public:
         static void load(const ComponentManager *manager, const QJsonDocument &document);
     };

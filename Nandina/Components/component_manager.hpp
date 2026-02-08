@@ -11,6 +11,7 @@
 #include "base_component.hpp"
 #include "component_collection.hpp"
 #include "nan_button.hpp"
+#include "nan_card.hpp"
 
 namespace Nandina::Components {
     template<typename T>
@@ -29,6 +30,7 @@ namespace Nandina::Components {
         Q_INVOKABLE [[nodiscard]] QVariant getStyle(const QString &component, const QString &name) const;
 
         void addButtonStyle(const NanButtonStyle &style) const;
+        void addCardStyle(const NanCardStyle &style) const;
 
     private:
         explicit ComponentManager(QObject *parent = nullptr);

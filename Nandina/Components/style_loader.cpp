@@ -12,4 +12,12 @@ namespace Nandina::Components {
             manager->addButtonStyle(style);
         }
     }
+
+    void StyleLoader<NanCardStyle>::load(const ComponentManager *manager, const QJsonDocument &document) {
+        using namespace Core::Utils;
+        for (const auto styles = JsonParser::parser<std::vector<NanCardStyle>>(document.object());
+             const auto &style: styles) {
+            manager->addCardStyle(style);
+        }
+    }
 } // namespace Nandina::Components
