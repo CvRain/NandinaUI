@@ -1,7 +1,7 @@
 import Nandina.Components
-import Nandina.Icon
 import Nandina.Theme
 import Nandina.Window
+import Nandina.Core
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
@@ -50,7 +50,6 @@ NandinaWindow {
                 width: 44
                 height: 44
             }
-
         }
 
         RowLayout {
@@ -72,7 +71,6 @@ NandinaWindow {
                 width: 140
                 height: 44
             }
-
         }
 
         GroupBox {
@@ -100,9 +98,7 @@ NandinaWindow {
                     width: 28
                     height: 28
                 }
-
             }
-
         }
 
         GroupBox {
@@ -140,15 +136,11 @@ NandinaWindow {
                     radius: 6
                     color: ThemeManager.color.blue
                 }
-
             }
-
         }
 
         Item {
             Layout.fillHeight: true
         }
-
     }
-
 }
