@@ -9,19 +9,20 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(QT_QML_GENERATE_QMLLS_INI ON)
 
-find_package(Qt6 6.2 COMPONENTS Quick REQUIRED)
+find_package(Qt6 6.2 COMPONENTS Quick Svg REQUIRED)
 
-if (QT_KNOWN_POLICY_QTP0001)
+if(QT_KNOWN_POLICY_QTP0001)
     qt_policy(SET QTP0001 NEW)
-endif ()
+endif()
 
-if (QT_KNOWN_POLICY_QTP0004)
+if(QT_KNOWN_POLICY_QTP0004)
     qt_policy(SET QTP0004 NEW)
-endif ()
+endif()
 
-if (QT_KNOWN_POLICY_QTP0005)
+if(QT_KNOWN_POLICY_QTP0005)
     qt_policy(SET QTP0005 NEW)
-endif ()
+endif()
 
 # 添加子目录
 add_subdirectory(Nandina)
+add_subdirectory(example)
