@@ -13,5 +13,4 @@ qt_add_qml_module(NandinaExampleApp
 target_link_libraries(NandinaExampleApp
     PRIVATE
     Qt6::Quick
-    Nandina
 )
