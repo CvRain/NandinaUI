@@ -14,4 +14,5 @@ target_link_libraries(NandinaExampleApp
         PRIVATE
         Qt6::Quick
         Nandina
+        NandinaColor NandinaCore
 )

@@ -1,5 +1,5 @@
-set(SUBPROJECT_NAME NandinaColor)
-set(SUBPROJECT_URI Nandina.Color)
+set(SUBPROJECT_NAME NandinaCore)
+set(SUBPROJECT_URI Nandina.Core)
 
 set(SUBPROJECT_QML_FILES
 
@@ -9,9 +9,7 @@ set(SUBPROJECT_QML_SINGLETON_FILES
 )
 
 set(SUBPROJECT_CPP_FILES
-        color_schema.hpp
-        color_atla.hpp
-        color_atla.cpp
+    nan_singleton.hpp
 )
 
 qt_add_qml_module(${SUBPROJECT_NAME}
@@ -22,9 +20,7 @@ qt_add_qml_module(${SUBPROJECT_NAME}
 )
 
 target_link_libraries(${SUBPROJECT_NAME} PUBLIC
-        Qt6::Gui
-        Qt6::Quick
-        NandinaCore
+        Qt6::Quick Qt6::Gui
 )
 
 target_include_directories(${SUBPROJECT_NAME} PUBLIC
