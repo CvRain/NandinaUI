@@ -2,8 +2,12 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 
+#include <color_schema.hpp>
+
 int main(int argc, char *argv[]) {
     QGuiApplication app(argc, argv);
+
+    qDebug() << Nandina::Color::function() ;
 
     QQmlApplicationEngine engine;
     const QUrl url("qrc:/qt/qml/NandinaExample/Main.qml");
