@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 qt_add_executable(NandinaExampleApp
+        MANUAL_FINALIZATION
         main.cpp
 )
 
@@ -14,5 +15,10 @@ target_link_libraries(NandinaExampleApp
         PRIVATE
         Qt6::Quick
         Nandina
-        NandinaColor NandinaCore
+        NandinaColor
+        NandinaCore
+        NandinaTheme
 )
+
+qt_import_qml_plugins(NandinaExampleApp)
+qt_finalize_executable(NandinaExampleApp)

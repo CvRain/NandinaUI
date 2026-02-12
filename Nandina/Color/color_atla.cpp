@@ -7,131 +7,131 @@
 namespace Nandina::NandinaColor {
 
     ColorCollection generateMochaColor() {
-        return ColorCollection{
-                .type = PaletteType::Mocha,
-                .rosewater = 0xf5e0dc,
-                .flamingo = 0xf2cdcd,
-                .pink = 0xf5c2e7,
-                .mauve = 0xcba6f7,
-                .red = 0xf38ba8,
-                .maroon = 0xeba0ac,
-                .peach = 0xfab387,
-                .yellow = 0xf9e2af,
-                .green = 0xa6e3a1,
-                .teal = 0x94e2d5,
-                .sky = 0x89dceb,
-                .sapphire = 0x74c7ec,
-                .blue = 0x89b4fa,
-                .lavender = 0xb4befe,
-                .text = 0xcdd6f4,
-                .subtext1 = 0xbac2de,
-                .subtext0 = 0xa6adc8,
-                .overlay2 = 0x9399b2,
-                .overlay1 = 0x7f849c,
-                .overlay0 = 0x6c7086,
-                .surface2 = 0x585b70,
-                .surface1 = 0x45475a,
-                .surface0 = 0x313244,
-                .base = 0x1e1e2e,
-                .mantle = 0x181825,
-                .crust = 0x11111b,
-        };
+        auto collection = ColorCollection{};
+        collection.type = PaletteType::Mocha;
+        collection.rosewater = 0xf5e0dc;
+        collection.flamingo = 0xf2cdcd;
+        collection.pink = 0xf5c2e7;
+        collection.mauve = 0xcba6f7;
+        collection.red = 0xf38ba8;
+        collection.maroon = 0xeba0ac;
+        collection.peach = 0xfab387;
+        collection.yellow = 0xf9e2af;
+        collection.green = 0xa6e3a1;
+        collection.teal = 0x94e2d5;
+        collection.sky = 0x89dceb;
+        collection.sapphire = 0x74c7ec;
+        collection.blue = 0x89b4fa;
+        collection.lavender = 0xb4befe;
+        collection.text = 0xcdd6f4;
+        collection.subtext1 = 0xbac2de;
+        collection.subtext0 = 0xa6adc8;
+        collection.overlay2 = 0x9399b2;
+        collection.overlay1 = 0x7f849c;
+        collection.overlay0 = 0x6c7086;
+        collection.surface2 = 0x585b70;
+        collection.surface1 = 0x45475a;
+        collection.surface0 = 0x313244;
+        collection.base = 0x1e1e2e;
+        collection.mantle = 0x181825;
+        collection.crust = 0x11111b;
+        return collection;
     }
 
     ColorCollection generateFrappeColor() {
-        return ColorCollection{
-                .type = PaletteType::Frappe,
-                .rosewater = 0xf2d5cf,
-                .flamingo = 0xeebebe,
-                .pink = 0xf4b8e4,
-                .mauve = 0xca9ee6,
-                .red = 0xe78284,
-                .maroon = 0xea999c,
-                .peach = 0xef9f76,
-                .yellow = 0xe5c890,
-                .green = 0xa6d189,
-                .teal = 0x81c8be,
-                .sky = 0x99d1db,
-                .sapphire = 0x85c1dc,
-                .blue = 0x8caaee,
-                .lavender = 0xbabbf1,
-                .text = 0xc6d0f5,
-                .subtext1 = 0xb5bfe2,
-                .subtext0 = 0xa5adce,
-                .overlay2 = 0x949cbb,
-                .overlay1 = 0x838ba7,
-                .overlay0 = 0x737994,
-                .surface2 = 0x626880,
-                .surface1 = 0x51576d,
-                .surface0 = 0x414559,
-                .base = 0x303446,
-                .mantle = 0x292c3c,
-                .crust = 0x232634,
-        };
+        auto collection = ColorCollection{};
+        collection.type = PaletteType::Frappe;
+        collection.rosewater = 0xf2d5cf;
+        collection.flamingo = 0xeebebe;
+        collection.pink = 0xf4b8e4;
+        collection.mauve = 0xca9ee6;
+        collection.red = 0xe78284;
+        collection.maroon = 0xea999c;
+        collection.peach = 0xef9f76;
+        collection.yellow = 0xe5c890;
+        collection.green = 0xa6d189;
+        collection.teal = 0x81c8be;
+        collection.sky = 0x99d1db;
+        collection.sapphire = 0x85c1dc;
+        collection.blue = 0x8caaee;
+        collection.lavender = 0xbabbf1;
+        collection.text = 0xc6d0f5;
+        collection.subtext1 = 0xb5bfe2;
+        collection.subtext0 = 0xa5adce;
+        collection.overlay2 = 0x949cbb;
+        collection.overlay1 = 0x838ba7;
+        collection.overlay0 = 0x737994;
+        collection.surface2 = 0x626880;
+        collection.surface1 = 0x51576d;
+        collection.surface0 = 0x414559;
+        collection.base = 0x303446;
+        collection.mantle = 0x292c3c;
+        collection.crust = 0x232634;
+        return collection;
     }
 
     ColorCollection generateMacchiatoColor() {
-        return ColorCollection{
-                .type = PaletteType::Macchiato,
-                .rosewater = 0xf4dbd6,
-                .flamingo = 0xf0c6c6,
-                .pink = 0xf5bde6,
-                .mauve = 0xc6a0f6,
-                .red = 0xed8796,
-                .maroon = 0xee99a0,
-                .peach = 0xf5a97f,
-                .yellow = 0xeed49f,
-                .green = 0xa6da95,
-                .teal = 0x8bd5ca,
-                .sky = 0x91d7e3,
-                .sapphire = 0x7dc4e4,
-                .blue = 0x8aadf4,
-                .lavender = 0xb7bdf8,
-                .text = 0xcad3f5,
-                .subtext1 = 0xb8c0e0,
-                .subtext0 = 0xa5adcb,
-                .overlay2 = 0x939ab7,
-                .overlay1 = 0x8087a2,
-                .overlay0 = 0x6e738d,
-                .surface2 = 0x5b6078,
-                .surface1 = 0x494d64,
-                .surface0 = 0x363a4f,
-                .base = 0x24273a,
-                .mantle = 0x1e2030,
-                .crust = 0x181926,
-        };
+        auto collection = ColorCollection{};
+        collection.type = PaletteType::Macchiato;
+        collection.rosewater = 0xf4dbd6;
+        collection.flamingo = 0xf0c6c6;
+        collection.pink = 0xf5bde6;
+        collection.mauve = 0xc6a0f6;
+        collection.red = 0xed8796;
+        collection.maroon = 0xee99a0;
+        collection.peach = 0xf5a97f;
+        collection.yellow = 0xeed49f;
+        collection.green = 0xa6da95;
+        collection.teal = 0x8bd5ca;
+        collection.sky = 0x91d7e3;
+        collection.sapphire = 0x7dc4e4;
+        collection.blue = 0x8aadf4;
+        collection.lavender = 0xb7bdf8;
+        collection.text = 0xcad3f5;
+        collection.subtext1 = 0xb8c0e0;
+        collection.subtext0 = 0xa5adcb;
+        collection.overlay2 = 0x939ab7;
+        collection.overlay1 = 0x8087a2;
+        collection.overlay0 = 0x6e738d;
+        collection.surface2 = 0x5b6078;
+        collection.surface1 = 0x494d64;
+        collection.surface0 = 0x363a4f;
+        collection.base = 0x24273a;
+        collection.mantle = 0x1e2030;
+        collection.crust = 0x181926;
+        return collection;
     }
 
     ColorCollection generateLatteColor() {
-        return ColorCollection{
-                .type = PaletteType::Latte,
-                .rosewater = 0xdc8a78,
-                .flamingo = 0xdd7878,
-                .pink = 0xea76cb,
-                .mauve = 0x8839ef,
-                .red = 0xd20f39,
-                .maroon = 0xe64553,
-                .peach = 0xfe640b,
-                .yellow = 0xdf8e1d,
-                .green = 0x40a02b,
-                .teal = 0x179299,
-                .sky = 0x04a5e5,
-                .sapphire = 0x209fb5,
-                .blue = 0x1e66f5,
-                .lavender = 0x7287fd,
-                .text = 0x4c4f69,
-                .subtext1 = 0x5c5f77,
-                .subtext0 = 0x6c6f85,
-                .overlay2 = 0x7c7f93,
-                .overlay1 = 0x8c8fa1,
-                .overlay0 = 0x9ca0b0,
-                .surface2 = 0xacb0be,
-                .surface1 = 0xbcc0cc,
-                .surface0 = 0xccd0da,
-                .base = 0xeff1f5,
-                .mantle = 0xe6e9ef,
-                .crust = 0xdce0e8,
-        };
+        auto collection = ColorCollection{};
+        collection.type = PaletteType::Latte;
+        collection.rosewater = 0xdc8a78;
+        collection.flamingo = 0xdd7878;
+        collection.pink = 0xea76cb;
+        collection.mauve = 0x8839ef;
+        collection.red = 0xd20f39;
+        collection.maroon = 0xe64553;
+        collection.peach = 0xfe640b;
+        collection.yellow = 0xdf8e1d;
+        collection.green = 0x40a02b;
+        collection.teal = 0x179299;
+        collection.sky = 0x04a5e5;
+        collection.sapphire = 0x209fb5;
+        collection.blue = 0x1e66f5;
+        collection.lavender = 0x7287fd;
+        collection.text = 0x4c4f69;
+        collection.subtext1 = 0x5c5f77;
+        collection.subtext0 = 0x6c6f85;
+        collection.overlay2 = 0x7c7f93;
+        collection.overlay1 = 0x8c8fa1;
+        collection.overlay0 = 0x9ca0b0;
+        collection.surface2 = 0xacb0be;
+        collection.surface1 = 0xbcc0cc;
+        collection.surface0 = 0xccd0da;
+        collection.base = 0xeff1f5;
+        collection.mantle = 0xe6e9ef;
+        collection.crust = 0xdce0e8;
+        return collection;
     }
 
     QColor brightColor(const QColor &sourceColor, PaletteType type) {
@@ -181,57 +181,58 @@ namespace Nandina::NandinaColor {
     }
 
     PaletteCollection generatePaletteCollection(const PaletteType &type, const auto &color) {
-        return PaletteCollection{
-                .backgroundPane = color.base,
-                .secondaryPane = color.crust,
-                .surfaceElement0 = color.surface0,
-                .surfaceElement2 = color.surface1,
-                .surfaceElement1 = color.surface2,
-                .overlay0 = color.overlay0,
-                .overlay1 = color.overlay1,
-                .overlay2 = color.overlay2,
-                .bodyCopy = color.text,
-                .mainHeadline = color.text,
-                .subHeadlines0 = color.subtext0,
-                .subHeadlines1 = color.subtext1,
-                .subtle = color.overlay1,
-                .onAccent = color.base,
-                .links = color.blue,
-                .success = color.green,
-                .warning = color.yellow,
-                .error = color.red,
-                .tags = color.blue,
-                .selectionBackground = QColor{color.overlay0.red(), color.overlay0.green(), color.overlay0.blue(), 64},
-                .cursor = color.rosewater,
-                .cursorText = color.base,
-                .activeBorder = color.lavender,
-                .inactiveBorder = color.overlay0,
-                .bellBorder = color.yellow,
-                .color0 = color.subtext1,
-                .color1 = color.red,
-                .color2 = color.green,
-                .color3 = color.yellow,
-                .color4 = color.blue,
-                .color5 = color.pink,
-                .color6 = color.teal,
-                .color7 = color.surface2,
-                .color8 = color.subtext0,
-                .color9 = brightColor(color.red, type),
-                .color10 = brightColor(color.green, type),
-                .color11 = brightColor(color.yellow, type),
-                .color12 = brightColor(color.blue, type),
-                .color13 = brightColor(color.pink, type),
-                .color14 = brightColor(color.teal, type),
-                .color15 = color.surface1,
-                .color16 = color.peach,
-                .color17 = color.rosewater,
-                .mark1 = color.lavender,
-                .mark2 = color.mauve,
-                .mark3 = color.sapphire,
-                .mark1Text = color.base,
-                .mark2Text = color.base,
-                .mark3Text = color.base,
-        };
+        auto collection = PaletteCollection{};
+        collection.backgroundPane = color.base;
+        collection.secondaryPane = color.crust;
+        collection.surfaceElement0 = color.surface0;
+        collection.surfaceElement2 = color.surface1;
+        collection.surfaceElement1 = color.surface2;
+        collection.overlay0 = color.overlay0;
+        collection.overlay1 = color.overlay1;
+        collection.overlay2 = color.overlay2;
+        collection.bodyCopy = color.text;
+        collection.mainHeadline = color.text;
+        collection.subHeadlines0 = color.subtext0;
+        collection.subHeadlines1 = color.subtext1;
+        collection.subtle = color.overlay1;
+        collection.onAccent = color.base;
+        collection.links = color.blue;
+        collection.success = color.green;
+        collection.warning = color.yellow;
+        collection.error = color.red;
+        collection.tags = color.blue;
+        collection.selectionBackground =
+                QColor{color.overlay0.red(), color.overlay0.green(), color.overlay0.blue(), 64};
+        collection.cursor = color.rosewater;
+        collection.cursorText = color.base;
+        collection.activeBorder = color.lavender;
+        collection.inactiveBorder = color.overlay0;
+        collection.bellBorder = color.yellow;
+        collection.color0 = color.subtext1;
+        collection.color1 = color.red;
+        collection.color2 = color.green;
+        collection.color3 = color.yellow;
+        collection.color4 = color.blue;
+        collection.color5 = color.pink;
+        collection.color6 = color.teal;
+        collection.color7 = color.surface2;
+        collection.color8 = color.subtext0;
+        collection.color9 = brightColor(color.red, type);
+        collection.color10 = brightColor(color.green, type);
+        collection.color11 = brightColor(color.yellow, type);
+        collection.color12 = brightColor(color.blue, type);
+        collection.color13 = brightColor(color.pink, type);
+        collection.color14 = brightColor(color.teal, type);
+        collection.color15 = color.surface1;
+        collection.color16 = color.peach;
+        collection.color17 = color.rosewater;
+        collection.mark1 = color.lavender;
+        collection.mark2 = color.mauve;
+        collection.mark3 = color.sapphire;
+        collection.mark1Text = color.base;
+        collection.mark2Text = color.base;
+        collection.mark3Text = color.base;
+        return collection;
     }
 
     NanColorAtla::NanColorAtla(QObject *parent) : QObject(parent) {

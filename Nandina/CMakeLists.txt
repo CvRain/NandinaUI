@@ -1,5 +1,3 @@
-set(QT_QML_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
-
 add_subdirectory(Color)
 add_subdirectory(Core)
 add_subdirectory(Theme)
@@ -10,7 +8,11 @@ set(NANDINA_MODULES
         NandinaTheme
 )
 
-qt_add_library(Nandina STATIC)
+if(NANDINA_BUILD_SHARED)
+        qt_add_library(Nandina SHARED)
+else()
+        qt_add_library(Nandina STATIC)
+endif()
 qt_add_qml_module(Nandina
         URI Nandina
         VERSION 1.0
