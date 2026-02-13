@@ -74,6 +74,10 @@ CornerRectangle {
             pressedColor: root.themeManager.currentPaletteCollection
                           ? root.themeManager.currentPaletteCollection.overlay1
                           : "#5a5a5a"
+            useAccentForHover: true
+            accentColor: root.themeManager.currentPaletteCollection
+                         ? root.themeManager.currentPaletteCollection.activeBorder
+                         : "#4f8cff"
             onClicked: root.targetWindow.showMinimized()
         }
 
@@ -90,6 +94,10 @@ CornerRectangle {
             pressedColor: root.themeManager.currentPaletteCollection
                           ? root.themeManager.currentPaletteCollection.overlay1
                           : "#5a5a5a"
+            useAccentForHover: true
+            accentColor: root.themeManager.currentPaletteCollection
+                         ? root.themeManager.currentPaletteCollection.activeBorder
+                         : "#4f8cff"
             onClicked: {
                 if (root.targetWindow.visibility === Window.Maximized)
                     root.targetWindow.showNormal()

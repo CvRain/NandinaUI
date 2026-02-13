@@ -27,11 +27,26 @@ ApplicationWindow {
     property bool customTitleBarInjectSystemControls: false
     property int customTitleBarControlsRightMargin: 8
     property int customTitleBarControlsSpacing: 6
+    property bool enableThemeGradient: true
+    property bool autoAdjustThemeTransitionDuration: true
+    property int themeTransitionDuration: 240
+    property int lightThemeTransitionDuration: 180
+    property int darkThemeTransitionDuration: 260
+    property real themeGradientOverlayOpacity: 0.18
 
     readonly property bool isMaximized: visibility === Window.Maximized
     readonly property bool isFramelessMode: titleBarMode !== NanWindow.DefaultTitleBar
     readonly property int effectiveWindowRadius: isMaximized || visibility
                                                  === Window.FullScreen ? 0 : windowRadius
+     readonly property real currentThemeLuminance: internalThemeManager.currentPaletteCollection
+                                                                  ? (0.2126 * internalThemeManager.currentPaletteCollection.backgroundPane.r
+                                                                      + 0.7152 * internalThemeManager.currentPaletteCollection.backgroundPane.g
+                                                                      + 0.0722 * internalThemeManager.currentPaletteCollection.backgroundPane.b)
+                                                                  : 0.5
+     readonly property bool isLightTheme: currentThemeLuminance >= 0.55
+     readonly property int effectiveThemeTransitionDuration: autoAdjustThemeTransitionDuration
+                                                                                ? (isLightTheme ? lightThemeTransitionDuration : darkThemeTransitionDuration)
+                                                                                : themeTransitionDuration
 
     readonly property alias themeManager: internalThemeManager
     default property alias content: contentRoot.data
@@ -59,7 +74,55 @@ ApplicationWindow {
         anchors.fill: parent
         radius: root.effectiveWindowRadius
         clip: true
-        color: internalThemeManager.currentPaletteCollection ? internalThemeManager.currentPaletteCollection.backgroundPane : "transparent"
+        color: "transparent"
+        gradient: Gradient {
+            GradientStop {
+                id: gradientTopStop
+                position: 0.0
+                color: internalThemeManager.currentPaletteCollection
+                       ? internalThemeManager.currentPaletteCollection.backgroundPane
+                       : "transparent"
+                Behavior on color {
+                    enabled: root.enableThemeGradient
+                    ColorAnimation {
+                        duration: root.effectiveThemeTransitionDuration
+                    }
+                }
+            }
+            GradientStop {
+                id: gradientBottomStop
+                position: 1.0
+                color: internalThemeManager.currentPaletteCollection
+                       ? internalThemeManager.currentPaletteCollection.secondaryPane
+                       : "transparent"
+                Behavior on color {
+                    enabled: root.enableThemeGradient
+                    ColorAnimation {
+                        duration: root.effectiveThemeTransitionDuration
+                    }
+                }
+            }
+        }
+
+        Rectangle {
+            anchors.fill: parent
+            radius: parent.radius
+            color: internalThemeManager.currentPaletteCollection
+                   ? internalThemeManager.currentPaletteCollection.secondaryPane
+                   : "transparent"
+            opacity: root.enableThemeGradient ? root.themeGradientOverlayOpacity : 0
+            Behavior on color {
+                enabled: root.enableThemeGradient
+                ColorAnimation {
+                    duration: root.effectiveThemeTransitionDuration
+                }
+            }
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: root.effectiveThemeTransitionDuration
+                }
+            }
+        }
 
         border.width: root.isFramelessMode ? 1 : 0
         border.color: internalThemeManager.currentPaletteCollection ? internalThemeManager.currentPaletteCollection.surfaceElement0 : "transparent"
@@ -88,6 +151,8 @@ ApplicationWindow {
                 textColor: internalThemeManager.currentPaletteCollection ? internalThemeManager.currentPaletteCollection.bodyCopy : "white"
                 hoverColor: internalThemeManager.currentPaletteCollection ? internalThemeManager.currentPaletteCollection.overlay0 : "#4a4a4a"
                 pressedColor: internalThemeManager.currentPaletteCollection ? internalThemeManager.currentPaletteCollection.overlay1 : "#5a5a5a"
+                useAccentForHover: true
+                accentColor: internalThemeManager.currentPaletteCollection ? internalThemeManager.currentPaletteCollection.activeBorder : "#4f8cff"
                 onClicked: root.showMinimized()
             }
 
@@ -96,6 +161,8 @@ ApplicationWindow {
                 textColor: internalThemeManager.currentPaletteCollection ? internalThemeManager.currentPaletteCollection.bodyCopy : "white"
                 hoverColor: internalThemeManager.currentPaletteCollection ? internalThemeManager.currentPaletteCollection.overlay0 : "#4a4a4a"
                 pressedColor: internalThemeManager.currentPaletteCollection ? internalThemeManager.currentPaletteCollection.overlay1 : "#5a5a5a"
+                useAccentForHover: true
+                accentColor: internalThemeManager.currentPaletteCollection ? internalThemeManager.currentPaletteCollection.activeBorder : "#4f8cff"
                 onClicked: {
                     if (root.visibility === Window.Maximized)
                     root.showNormal()

@@ -15,7 +15,27 @@ Rectangle {
     property color pressedColor: "transparent"
     property color closeHoverColor: "#d9534f"
     property color closePressedColor: "#c64541"
+    property bool useAccentForHover: false
+    property color accentColor: "#4f8cff"
+    property real accentHoverAlpha: 0.28
+    property real accentPressedAlpha: 0.40
     property real iconLineWidth: 1.4
+
+    readonly property color resolvedHoverColor: {
+        if (isCloseButton)
+            return closeHoverColor
+        if (!useAccentForHover)
+            return hoverColor
+        return Qt.rgba(accentColor.r, accentColor.g, accentColor.b, accentHoverAlpha)
+    }
+
+    readonly property color resolvedPressedColor: {
+        if (isCloseButton)
+            return closePressedColor
+        if (!useAccentForHover)
+            return pressedColor
+        return Qt.rgba(accentColor.r, accentColor.g, accentColor.b, accentPressedAlpha)
+    }
 
     readonly property string iconType: {
         if (isCloseButton)
@@ -36,9 +56,9 @@ Rectangle {
         radius: root.radius
         color: {
             if (mouseArea.pressed)
-                return root.isCloseButton ? root.closePressedColor : root.pressedColor
+                return root.resolvedPressedColor
             if (mouseArea.containsMouse)
-                return root.isCloseButton ? root.closeHoverColor : root.hoverColor
+                return root.resolvedHoverColor
             return "transparent"
         }
 

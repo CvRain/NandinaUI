@@ -56,6 +56,8 @@ NanWindow {
                     textColor: demoWindow.themeManager.currentPaletteCollection.bodyCopy
                     hoverColor: demoWindow.themeManager.currentPaletteCollection.overlay0
                     pressedColor: demoWindow.themeManager.currentPaletteCollection.overlay1
+                    useAccentForHover: true
+                    accentColor: demoWindow.themeManager.currentPaletteCollection.activeBorder
                     onClicked: demoWindow.showMinimized()
                 }
 
@@ -64,6 +66,8 @@ NanWindow {
                     textColor: demoWindow.themeManager.currentPaletteCollection.bodyCopy
                     hoverColor: demoWindow.themeManager.currentPaletteCollection.overlay0
                     pressedColor: demoWindow.themeManager.currentPaletteCollection.overlay1
+                    useAccentForHover: true
+                    accentColor: demoWindow.themeManager.currentPaletteCollection.activeBorder
                     onClicked: {
                         if (demoWindow.visibility === Window.Maximized)
                             demoWindow.showNormal();
