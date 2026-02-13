@@ -2,11 +2,12 @@ set(SUBPROJECT_NAME NandinaControls)
 set(SUBPROJECT_URI Nandina.Controls)
 
 set(SUBPROJECT_QML_FILES
-    Button.qml
-    Input.qml
-    Label.qml
-    Switch.qml
-    Checkbox.qml
+    NanButton.qml
+    NanInput.qml
+    NanLabel.qml
+    NanSwitch.qml
+    NanCheckbox.qml
+    theme_utils.js
 )
 
 set(SUBPROJECT_QML_SINGLETON_FILES

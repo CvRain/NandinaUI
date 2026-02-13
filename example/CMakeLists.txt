@@ -11,7 +11,11 @@ qt_add_qml_module(NandinaExampleApp
         QML_FILES
         Main.qml
         WindowDemoPage.qml
-        ControlsDemoPage.qml
+        ButtonDemoPage.qml
+        InputDemoPage.qml
+        LabelDemoPage.qml
+        SwitchDemoPage.qml
+        CheckboxDemoPage.qml
 )
 
 target_link_libraries(NandinaExampleApp

@@ -1,4 +1,6 @@
 import QtQuick
+import Nandina.Theme
+import "theme_utils.js" as ThemeUtils
 
 Item {
     id: root
@@ -12,8 +14,14 @@ Item {
     property bool required: false
     property var themeManager: null
 
-    readonly property var themePalette: themeManager && themeManager.currentPaletteCollection
-                                      ? themeManager.currentPaletteCollection : null
+    ThemeManager {
+        id: fallbackThemeManager
+    }
+
+    readonly property var resolvedThemeManager: ThemeUtils.resolveThemeManager(root, root.themeManager, fallbackThemeManager)
+
+    readonly property var themePalette: root.resolvedThemeManager && root.resolvedThemeManager.currentPaletteCollection
+                                      ? root.resolvedThemeManager.currentPaletteCollection : null
 
     Text {
         id: labelText

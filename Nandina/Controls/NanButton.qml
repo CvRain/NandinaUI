@@ -1,4 +1,6 @@
 import QtQuick
+import Nandina.Theme
+import "theme_utils.js" as ThemeUtils
 
 FocusScope {
     id: root
@@ -20,9 +22,9 @@ FocusScope {
 
     implicitWidth: Math.max(96, contentRow.implicitWidth + horizontalPadding * 2)
     implicitHeight: {
-        if (size === Button.Size.Sm)
+        if (size === NanButton.Size.Sm)
             return 30
-        if (size === Button.Size.Lg)
+        if (size === NanButton.Size.Lg)
             return 42
         return 36
     }
@@ -31,8 +33,8 @@ FocusScope {
 
     property string text: ""
     property bool disabled: false
-    property int variant: Button.Variant.Default
-    property int size: Button.Size.Md
+    property int variant: NanButton.Variant.Default
+    property int size: NanButton.Size.Md
     property Component leftIcon: null
     property Component rightIcon: null
     property var themeManager: null
@@ -43,59 +45,64 @@ FocusScope {
     readonly property bool entered: hovered
     readonly property bool exited: !hovered
 
-    readonly property var themePalette: themeManager && themeManager.currentPaletteCollection
-                                      ? themeManager.currentPaletteCollection : null
+    ThemeManager {
+        id: fallbackThemeManager
+    }
+
+    readonly property var resolvedThemeManager: ThemeUtils.resolveThemeManager(root, root.themeManager, fallbackThemeManager)
+
+    readonly property var themePalette: root.resolvedThemeManager && root.resolvedThemeManager.currentPaletteCollection
+                                      ? root.resolvedThemeManager.currentPaletteCollection : null
 
     readonly property color foregroundColor: {
-        if (variant === Button.Variant.Link)
-            return themePalette ? themePalette.links : "#6c8cff"
-        if (variant === Button.Variant.Outline || variant === Button.Variant.Ghost)
-            return themePalette ? themePalette.bodyCopy : "#f5f5f5"
-        if (variant === Button.Variant.Destructive)
-            return themePalette ? themePalette.onAccent : "white"
-        return themePalette ? themePalette.onAccent : "white"
+        if (root.variant === NanButton.Variant.Link)
+            return root.themePalette ? root.themePalette.links : "#6c8cff"
+        if (root.variant === NanButton.Variant.Outline || root.variant === NanButton.Variant.Ghost)
+            return root.themePalette ? root.themePalette.bodyCopy : "#f5f5f5"
+        if (root.variant === NanButton.Variant.Destructive)
+            return root.themePalette ? root.themePalette.onAccent : "white"
+        return root.themePalette ? root.themePalette.onAccent : "white"
     }
 
     readonly property color backgroundColor: {
-        if (variant === Button.Variant.Outline || variant === Button.Variant.Ghost || variant === Button.Variant.Link)
+        if (root.variant === NanButton.Variant.Outline || root.variant === NanButton.Variant.Ghost || root.variant === NanButton.Variant.Link)
             return "transparent"
-        if (variant === Button.Variant.Destructive)
-            return themePalette ? themePalette.error : "#d9534f"
-        if (variant === Button.Variant.Secondary)
-            return themePalette ? themePalette.secondaryPane : "#3b3b46"
-        return themePalette ? themePalette.activeBorder : "#4f8cff"
+        if (root.variant === NanButton.Variant.Destructive)
+            return root.themePalette ? root.themePalette.error : "#d9534f"
+        if (root.variant === NanButton.Variant.Secondary)
+            return root.themePalette ? root.themePalette.secondaryPane : "#3b3b46"
+        return root.themePalette ? root.themePalette.activeBorder : "#4f8cff"
     }
 
     readonly property color hoverColor: {
-        if (variant === Button.Variant.Outline || variant === Button.Variant.Ghost || variant === Button.Variant.Link)
-            return themePalette ? themePalette.overlay0 : "#2f2f37"
-        return themePalette ? themePalette.overlay1 : "#4066bf"
+        if (root.variant === NanButton.Variant.Outline || root.variant === NanButton.Variant.Ghost || root.variant === NanButton.Variant.Link)
+            return root.themePalette ? root.themePalette.overlay0 : "#2f2f37"
+        return root.themePalette ? root.themePalette.overlay1 : "#4066bf"
     }
 
     readonly property color pressedColor: {
-        if (variant === Button.Variant.Outline || variant === Button.Variant.Ghost || variant === Button.Variant.Link)
-            return themePalette ? themePalette.overlay1 : "#383844"
-        return themePalette ? themePalette.overlay2 : "#3557a8"
+        if (root.variant === NanButton.Variant.Outline || root.variant === NanButton.Variant.Ghost || root.variant === NanButton.Variant.Link)
+            return root.themePalette ? root.themePalette.overlay1 : "#383844"
+        return root.themePalette ? root.themePalette.overlay2 : "#3557a8"
     }
 
     readonly property color borderColor: {
-        if (variant === Button.Variant.Outline)
-            return themePalette ? themePalette.inactiveBorder : "#666"
-        if (focused)
-            return themePalette ? themePalette.activeBorder : "#4f8cff"
+        if (root.variant === NanButton.Variant.Outline)
+            return root.themePalette ? root.themePalette.inactiveBorder : "#666"
+        if (root.focused)
+            return root.themePalette ? root.themePalette.activeBorder : "#4f8cff"
         return "transparent"
     }
 
-    property int horizontalPadding: size === Button.Size.Sm ? 10 : (size === Button.Size.Lg ? 16 : 12)
+    property int horizontalPadding: root.size === NanButton.Size.Sm ? 10 : (root.size === NanButton.Size.Lg ? 16 : 12)
 
     signal clicked()
     signal released()
 
     Rectangle {
-        id: backgroundRect
         anchors.fill: parent
         radius: 8
-        border.width: root.variant === Button.Variant.Outline || root.focused ? 1 : 0
+        border.width: root.variant === NanButton.Variant.Outline || root.focused ? 1 : 0
         border.color: root.borderColor
         color: {
             if (root.disabled)
@@ -126,7 +133,7 @@ FocusScope {
         Text {
             text: root.text
             color: root.disabled && root.themePalette ? root.themePalette.subHeadlines0 : root.foregroundColor
-            font.pixelSize: root.size === Button.Size.Sm ? 12 : 13
+            font.pixelSize: root.size === NanButton.Size.Sm ? 12 : 13
             font.weight: Font.Medium
         }
 

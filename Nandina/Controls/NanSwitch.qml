@@ -1,5 +1,7 @@
 import QtQuick
 import QtQuick.Controls as QQC
+import Nandina.Theme
+import "theme_utils.js" as ThemeUtils
 
 Item {
     id: root
@@ -17,8 +19,14 @@ Item {
     readonly property bool entered: hovered
     readonly property bool exited: !hovered
 
-    readonly property var themePalette: themeManager && themeManager.currentPaletteCollection
-                                      ? themeManager.currentPaletteCollection : null
+    ThemeManager {
+        id: fallbackThemeManager
+    }
+
+    readonly property var resolvedThemeManager: ThemeUtils.resolveThemeManager(root, root.themeManager, fallbackThemeManager)
+
+    readonly property var themePalette: root.resolvedThemeManager && root.resolvedThemeManager.currentPaletteCollection
+                                      ? root.resolvedThemeManager.currentPaletteCollection : null
 
     signal toggled(bool checked)
 

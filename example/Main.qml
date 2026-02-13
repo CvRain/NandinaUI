@@ -19,8 +19,21 @@ NanWindow {
     property int currentDemoPage: 0
     property var demoPages: [
         { title: "Window Demo", source: "WindowDemoPage.qml" },
-        { title: "Controls Demo", source: "ControlsDemoPage.qml" }
+        { title: "Button", source: "ButtonDemoPage.qml" },
+        { title: "Input", source: "InputDemoPage.qml" },
+        { title: "Label", source: "LabelDemoPage.qml" },
+        { title: "Switch", source: "SwitchDemoPage.qml" },
+        { title: "Checkbox", source: "CheckboxDemoPage.qml" }
     ]
+
+    function pageProperties(index) {
+        const props = {
+            themeManager: demoWindow.themeManager
+        }
+        if (index === 0)
+            props.hostWindow = demoWindow
+        return props
+    }
 
     customTitleBar: Component {
         CornerRectangle {
@@ -178,25 +191,26 @@ NanWindow {
                 }
             }
 
-            Loader {
-                id: pageLoader
+            StackView {
+                id: pageStack
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.top: globalPaletteBox.bottom
                 anchors.bottom: parent.bottom
                 anchors.topMargin: 10
-                source: demoWindow.demoPages[demoWindow.currentDemoPage].source
-
-                onLoaded: {
-                    if (!item)
-                        return
-
-                    if ("themeManager" in item)
-                        item.themeManager = demoWindow.themeManager
-                    if ("hostWindow" in item)
-                        item.hostWindow = demoWindow
-                }
             }
         }
+    }
+
+    Component.onCompleted: {
+        pageStack.push(Qt.resolvedUrl(demoWindow.demoPages[demoWindow.currentDemoPage].source),
+                       demoWindow.pageProperties(demoWindow.currentDemoPage))
+    }
+
+    onCurrentDemoPageChanged: {
+        if (pageStack.depth === 0)
+            return
+        pageStack.replace(Qt.resolvedUrl(demoWindow.demoPages[demoWindow.currentDemoPage].source),
+                          demoWindow.pageProperties(demoWindow.currentDemoPage))
     }
 }
