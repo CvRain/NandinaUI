@@ -1,35 +1,32 @@
-# Theme 模块 - 主题和配色
-aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR}/. THEME_CPP_FILES)
-aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR}/Components/. COMPONENT_STYLE_FILES)
-aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR}/Utils/. THEME_UTILS_FILES)
+set(SUBPROJECT_NAME NandinaTheme)
+set(SUBPROJECT_URI Nandina.Theme)
 
-set(PALETTE_COLOR_FILES
-        Resources/Palettes/Frappe.json
-        Resources/Palettes/Latte.json
-        Resources/Palettes/Macchiato.json
-        Resources/Palettes/Mocha.json
+set(SUBPROJECT_QML_FILES
+
 )
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/..)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/Components)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/Utils)
+set(SUBPROJECT_QML_SINGLETON_FILES
+)
 
-qt_add_library(NandinaTheme STATIC)
-qt_add_qml_module(NandinaTheme
-        URI Nandina.Theme
+set(SUBPROJECT_CPP_FILES
+        theme_manager.hpp
+        theme_manager.cpp
+)
+
+qt_add_qml_module(${SUBPROJECT_NAME}
+        URI ${SUBPROJECT_URI}
         VERSION 1.0
-        SOURCES ${THEME_CPP_FILES} ${COMPONENT_STYLE_FILES} ${THEME_UTILS_FILES}
-        QML_FILES ${THEME_QML_FILES}
-        RESOURCES ${PALETTE_COLOR_FILES}
+        DEPENDENCIES Nandina.Color Nandina.Core
+        QML_FILES ${SUBPROJECT_QML_FILES} ${SUBPROJECT_QML_SINGLETON_FILES}
+        SOURCES ${SUBPROJECT_CPP_FILES}
 )
 
-target_include_directories(NandinaTheme PUBLIC
+target_link_libraries(${SUBPROJECT_NAME} PUBLIC
+        Qt6::Quick Qt6::Gui
+        NandinaCore
+        NandinaColor
+)
+
+target_include_directories(${SUBPROJECT_NAME} PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}
-        ${CMAKE_CURRENT_SOURCE_DIR}/..
-        ${CMAKE_CURRENT_SOURCE_DIR}/Components
-        ${CMAKE_CURRENT_SOURCE_DIR}/Utils
-)
-
-target_link_libraries(NandinaTheme
-        PRIVATE Qt6::Quick NandinaCore
 )

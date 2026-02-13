@@ -1,16 +1,17 @@
 #include <QCoreApplication>
+#include <QDir>
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
-#include "../Nandina/Components/component_registrar.hpp"
-
 
 int main(int argc, char *argv[]) {
     QGuiApplication app(argc, argv);
 
-    Nandina::Components::registerAllComponents();
-
     QQmlApplicationEngine engine;
-    const QUrl url(u"qrc:/qt/qml/NandinaExample/Main.qml"_qs);
+    const QString appDir = QCoreApplication::applicationDirPath();
+    engine.addImportPath("qrc:/qt/qml");
+    engine.addImportPath(appDir);
+    engine.addImportPath(QDir(appDir).absoluteFilePath(".."));
+    const QUrl url("qrc:/qt/qml/NandinaExample/Main.qml");
 
     QObject::connect(
             &engine, &QQmlApplicationEngine::objectCreated, &app,

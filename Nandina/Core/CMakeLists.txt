@@ -1,33 +1,28 @@
-set(CORE_QML_FILES
+set(SUBPROJECT_NAME NandinaCore)
+set(SUBPROJECT_URI Nandina.Core)
+
+set(SUBPROJECT_QML_FILES
 
 )
 
-aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR}/Types/. MODULE_TYPES_CPP_FILES)
-aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR}/Utils/. MODULE_UTILS_CPP_FILES)
-aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR}/. MODULE_CORE_FILES)
+set(SUBPROJECT_QML_SINGLETON_FILES
+)
 
-include_directories(Types)
-include_directories(Utils)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/..)
+set(SUBPROJECT_CPP_FILES
+    nan_singleton.hpp
+)
 
-qt_add_library(NandinaCore STATIC)
-
-qt_add_qml_module(NandinaCore
-        URI Nandina.Core
+qt_add_qml_module(${SUBPROJECT_NAME}
+        URI ${SUBPROJECT_URI}
         VERSION 1.0
-        QML_FILES ${CORE_QML_FILES}
-        SOURCES ${MODULE_TYPES_CPP_FILES} ${MODULE_UTILS_CPP_FILES}
+        QML_FILES ${SUBPROJECT_QML_FILES} ${SUBPROJECT_QML_SINGLETON_FILES}
+        SOURCES ${SUBPROJECT_CPP_FILES}
 )
 
-target_link_libraries(NandinaCore
-        PRIVATE Qt6::Quick
-
+target_link_libraries(${SUBPROJECT_NAME} PUBLIC
+        Qt6::Quick Qt6::Gui
 )
 
-target_include_directories(NandinaCore PUBLIC
+target_include_directories(${SUBPROJECT_NAME} PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}
-        ${CMAKE_CURRENT_SOURCE_DIR}/.
-        ${CMAKE_CURRENT_SOURCE_DIR}/..
-        ${CMAKE_CURRENT_SOURCE_DIR}/Types
-        ${CMAKE_CURRENT_SOURCE_DIR}/Utils
 )
