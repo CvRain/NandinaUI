@@ -1,145 +1,194 @@
-import Nandina.Color
-import Nandina.Theme
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import QtQuick.Controls
+import Nandina.Color
+import Nandina.Window
 
-Window {
+NanWindow {
+    id: demoWindow
+
+    width: 900
+    height: 600
     visible: true
-    width: 640
-    height: 480
-    title: qsTr("Hello World")
+    windowTitle: "NanWindow Demo"
+    titleBarMode: NanWindow.CustomTitleBar
+    windowRadius: 12
+    customTitleBarInjectSystemControls: false
 
+    customTitleBar: Component {
+        CornerRectangle {
+            fillColor: demoWindow.themeManager.currentPaletteCollection.secondaryPane
+            topLeftRadius: demoWindow.effectiveWindowRadius
+            topRightRadius: demoWindow.effectiveWindowRadius
+            bottomLeftRadius: 0
+            bottomRightRadius: 0
 
-    ThemeManager {
-        id: themeManager
+            Row {
+                anchors.verticalCenter: parent.verticalCenter
+                anchors.left: parent.left
+                anchors.leftMargin: 12
+                spacing: 10
 
-        property ColorCollection legacyColorCollection
-        property PaletteCollection legacyPaletteCollection
+                Rectangle {
+                    width: 10
+                    height: 10
+                    radius: 5
+                    color: demoWindow.themeManager.currentPaletteCollection.success
+                }
 
-        customColorCollection: legacyColorCollection
-        customPaletteCollection: legacyPaletteCollection
+                Text {
+                    text: demoWindow.windowTitle
+                    color: demoWindow.themeManager.currentPaletteCollection.bodyCopy
+                    font.pixelSize: 14
+                }
+            }
 
-        legacyColorCollection: ColorCollection {
-            rosewater: "#c9f6e8"
-            flamingo: "#a9e8d3"
-            pink: "#80ddbf"
-            mauve: "#5ed1aa"
-            red: "#d31b76"
-            maroon: "#a80a5c"
-            peach: "#eab312"
-            yellow: "#f0ca55"
-            green: "#85cc21"
-            teal: "#4f46e5"
-            sky: "#54c1f1"
-            sapphire: "#01a5ea"
-            blue: "#00a470"
-            lavender: "#8a84ec"
-            text: "#1f2741"
-            subtext1: "#303b62"
-            subtext0: "#39466e"
-            overlay2: "#41507f"
-            overlay1: "#495a90"
-            overlay0: "#6876a2"
-            surface2: "#8892b3"
-            surface1: "#a6adc8"
-            surface0: "#c6c9d7"
-            base: "#e4e5ec"
-            mantle: "#c6c9d7"
-            crust: "#a6adc8"
-        }
+            Row {
+                visible: !demoWindow.customTitleBarInjectSystemControls
+                anchors.verticalCenter: parent.verticalCenter
+                anchors.right: parent.right
+                anchors.rightMargin: 10
+                spacing: 2
 
-        legacyPaletteCollection: PaletteCollection {
-            backgroundPane: "#e4e5ec"
-            secondaryPane: "#c6c9d7"
-            surfaceElement0: "#a6adc8"
-            surfaceElement1: "#8892b3"
-            surfaceElement2: "#6876a2"
-            overlay0: "#495a90"
-            overlay1: "#41507f"
-            overlay2: "#39466e"
-            bodyCopy: "#1f2741"
-            mainHeadline: "#1f2741"
-            subHeadlines0: "#303b62"
-            subHeadlines1: "#39466e"
-            subtle: "#41507f"
-            onAccent: "#e4e5ec"
-            links: "#11ba81"
-            success: "#85cc21"
-            warning: "#eab312"
-            error: "#d31b76"
-            tags: "#01a5ea"
-            selectionBackground: "#a6adc8"
-            cursor: "#11ba81"
-            cursorText: "#e4e5ec"
-            activeBorder: "#11ba81"
-            inactiveBorder: "#6876a2"
-            bellBorder: "#eab312"
-            color0: "#39466e"
-            color1: "#d31b76"
-            color2: "#85cc21"
-            color3: "#eab312"
-            color4: "#11ba81"
-            color5: "#4f46e5"
-            color6: "#01a5ea"
-            color7: "#a6adc8"
-            color8: "#495a90"
-            color9: "#a80a5c"
-            color10: "#85cc21"
-            color11: "#f0ca55"
-            color12: "#5ed1aa"
-            color13: "#8a84ec"
-            color14: "#54c1f1"
-            color15: "#8892b3"
-            color16: "#a9e8d3"
-            color17: "#c9f6e8"
-            mark1: "#11ba81"
-            mark2: "#4f46e5"
-            mark3: "#01a5ea"
-            mark1Text: "#e4e5ec"
-            mark2Text: "#e4e5ec"
-            mark3Text: "#e4e5ec"
-        }
+                TitleBarButton {
+                    text: "—"
+                    textColor: demoWindow.themeManager.currentPaletteCollection.bodyCopy
+                    hoverColor: demoWindow.themeManager.currentPaletteCollection.overlay0
+                    pressedColor: demoWindow.themeManager.currentPaletteCollection.overlay1
+                    onClicked: demoWindow.showMinimized()
+                }
 
-    }
+                TitleBarButton {
+                    text: demoWindow.visibility === Window.Maximized ? "❐" : "□"
+                    textColor: demoWindow.themeManager.currentPaletteCollection.bodyCopy
+                    hoverColor: demoWindow.themeManager.currentPaletteCollection.overlay0
+                    pressedColor: demoWindow.themeManager.currentPaletteCollection.overlay1
+                    onClicked: {
+                        if (demoWindow.visibility === Window.Maximized)
+                            demoWindow.showNormal();
+                        else
+                            demoWindow.showMaximized();
+                    }
+                }
 
-    Button {
-        id: button
+                TitleBarButton {
+                    text: "✕"
+                    isCloseButton: true
+                    onClicked: demoWindow.close()
+                }
+            }
 
-        property int paletteIndex: 0
-
-        width: 140
-        height: 55
-        anchors.top: parent.top
-        anchors.topMargin: 15
-        anchors.right: parent.right
-        anchors.rightMargin: 15
-        onClicked: {
-            paletteIndex = (paletteIndex + 1) % 5;
-            const paletteTypes = [NandinaColor.PaletteType.Latte, NandinaColor.PaletteType.Frappe, NandinaColor.PaletteType.Macchiato, NandinaColor.PaletteType.Mocha, NandinaColor.PaletteType.Custom];
-            themeManager.currentPaletteType = paletteTypes[paletteIndex];
+            MouseArea {
+                anchors.fill: parent
+                acceptedButtons: Qt.LeftButton
+                z: -1
+                onPressed: {
+                    if (demoWindow.visibility !== Window.FullScreen && demoWindow.visibility !== Window.Maximized)
+                        demoWindow.startSystemMove();
+                }
+                onDoubleClicked: {
+                    if (demoWindow.visibility === Window.Maximized)
+                        demoWindow.showNormal();
+                    else
+                        demoWindow.showMaximized();
+                }
+            }
         }
     }
 
-    Rectangle {
-        id: rectangle
-
-        width: 200
-        height: 60
+    Column {
         anchors.centerIn: parent
-        radius: 15
-        color: themeManager.currentPaletteCollection.backgroundPane
+        spacing: 16
 
-        Text {
-            id: someText
-
-            text: themeManager.currentPaletteType
-            width: 120
-            height: 45
-            anchors.centerIn: parent
-            font.pixelSize: 28
-            color: themeManager.currentPaletteCollection.bodyCopy
+        Label {
+            text: "NanWindow 标题栏模式演示"
+            color: demoWindow.themeManager.currentPaletteCollection.mainHeadline
+            font.pixelSize: 24
+            horizontalAlignment: Text.AlignHCenter
+            width: 320
         }
 
-    }
+        ComboBox {
+            id: modeBox
+            width: 320
+            model: ["DefaultTitleBar", "Frameless", "CustomTitleBar"]
+            currentIndex: demoWindow.titleBarMode
+            onActivated: demoWindow.titleBarMode = currentIndex
+        }
 
+        ComboBox {
+            id: paletteBox
+            width: 320
+            model: ["Latte", "Frappe", "Macchiato", "Mocha"]
+            currentIndex: 0
+            onActivated: {
+                const values = [NandinaColor.Latte, NandinaColor.Frappe, NandinaColor.Macchiato, NandinaColor.Mocha];
+                demoWindow.themeManager.currentPaletteType = values[currentIndex];
+            }
+        }
+
+        Row {
+            spacing: 16
+
+            CheckBox {
+                text: "Always On Top"
+                checked: demoWindow.alwaysOnTop
+                onToggled: demoWindow.alwaysOnTop = checked
+            }
+
+            CheckBox {
+                text: "System Resize"
+                checked: demoWindow.useSystemResize
+                onToggled: demoWindow.useSystemResize = checked
+            }
+        }
+
+        CheckBox {
+            text: "Inject system controls in CustomTitleBar"
+            checked: demoWindow.customTitleBarInjectSystemControls
+            onToggled: demoWindow.customTitleBarInjectSystemControls = checked
+        }
+
+        Row {
+            spacing: 8
+            width: 320
+
+            Label {
+                text: "Radius"
+                color: demoWindow.themeManager.currentPaletteCollection.bodyCopy
+                width: 56
+            }
+
+            Slider {
+                id: radiusSlider
+                from: 0
+                to: 24
+                stepSize: 1
+                value: demoWindow.windowRadius
+                width: 210
+                onMoved: demoWindow.windowRadius = value
+            }
+
+            Label {
+                text: Math.round(radiusSlider.value).toString()
+                color: demoWindow.themeManager.currentPaletteCollection.bodyCopy
+                width: 30
+            }
+        }
+
+        Rectangle {
+            width: 320
+            height: 120
+            radius: 10
+            color: demoWindow.themeManager.currentPaletteCollection.secondaryPane
+
+            Text {
+                anchors.centerIn: parent
+                text: "当前模式: " + modeBox.currentText + "\n当前主题: " + paletteBox.currentText
+                color: demoWindow.themeManager.currentPaletteCollection.bodyCopy
+                horizontalAlignment: Text.AlignHCenter
+            }
+        }
+    }
 }

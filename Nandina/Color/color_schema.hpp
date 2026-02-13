@@ -4,15 +4,32 @@
 #include <QColor>
 #include <QObject>
 #include <QQmlEngine>
+#include <QtGlobal>
+
+#if defined(_WIN32)
+#if defined(NandinaColor_EXPORTS)
+#define NANDINA_COLOR_EXPORT Q_DECL_EXPORT
+#else
+#define NANDINA_COLOR_EXPORT Q_DECL_IMPORT
+#endif
+#else
+#define NANDINA_COLOR_EXPORT
+#endif
 
 namespace Nandina::NandinaColor {
-    Q_NAMESPACE
-    QML_ELEMENT
+    class NANDINA_COLOR_EXPORT PaletteEnum : public QObject {
+        Q_OBJECT
+        QML_NAMED_ELEMENT(NandinaColor)
+        QML_UNCREATABLE("NandinaColor is an enum container")
 
-    enum class PaletteType { Latte, Frappe, Macchiato, Mocha, Custom };
-    Q_ENUM_NS(PaletteType)
+    public:
+        enum PaletteType { Latte, Frappe, Macchiato, Mocha, Custom };
+        Q_ENUM(PaletteType)
+    };
 
-    class ColorCollection : public QObject {
+    using PaletteType = PaletteEnum::PaletteType;
+
+    class NANDINA_COLOR_EXPORT ColorCollection : public QObject {
         Q_OBJECT
         QML_ELEMENT
 
@@ -65,9 +82,7 @@ namespace Nandina::NandinaColor {
             mantle(collection.mantle), crust(collection.crust) {
         }
 
-        ColorCollection operator=(const ColorCollection &collection) const {
-            return ColorCollection(collection);
-        }
+        ColorCollection &operator=(const ColorCollection &) = delete;
 
         PaletteType type{PaletteType::Custom};
         QColor rosewater;
@@ -98,7 +113,7 @@ namespace Nandina::NandinaColor {
         QColor crust;
     };
 
-    class PaletteCollection : public QObject {
+    class NANDINA_COLOR_EXPORT PaletteCollection : public QObject {
         Q_OBJECT
         QML_ELEMENT
 
@@ -182,9 +197,7 @@ namespace Nandina::NandinaColor {
             mark2Text(collection.mark2Text), mark3Text(collection.mark3Text) {
         }
 
-        PaletteCollection operator=(const PaletteCollection &collection) const {
-            return PaletteCollection(collection);
-        }
+        PaletteCollection &operator=(const PaletteCollection &) = delete;
 
         QColor backgroundPane;
         QColor secondaryPane;

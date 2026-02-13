@@ -19,7 +19,7 @@ namespace Nandina::NandinaTheme {
 
     NandinaColor::ColorCollection *ThemeManager::getCurrentColorCollection() {
         if (currentColorCollection == nullptr) {
-            currentColorCollection = &colorAtla.colorCollections[currentPaletteType];
+            currentColorCollection = colorAtla.colorCollections.value(currentPaletteType, nullptr);
         }
 
         return currentColorCollection;
@@ -27,7 +27,7 @@ namespace Nandina::NandinaTheme {
 
     NandinaColor::PaletteCollection *ThemeManager::getCurrentPaletteCollection() {
         if (currentPaletteCollection == nullptr) {
-            currentPaletteCollection = &colorAtla.paletteCollections[currentPaletteType];
+            currentPaletteCollection = colorAtla.paletteCollections.value(currentPaletteType, nullptr);
         }
         return currentPaletteCollection;
     }
@@ -75,7 +75,6 @@ namespace Nandina::NandinaTheme {
 
     void ThemeManager::setCurrentPaletteType(const NandinaColor::PaletteType type) {
         if (this->currentPaletteType == type) {
-            emit paletteTypeChanged(currentPaletteType);
             return;
         }
 
@@ -92,7 +91,7 @@ namespace Nandina::NandinaTheme {
             return;
         }
 
-        currentColorCollection = &colorAtla.colorCollections[currentPaletteType];
-        currentPaletteCollection = &colorAtla.paletteCollections[currentPaletteType];
+        currentColorCollection = colorAtla.colorCollections.value(currentPaletteType, nullptr);
+        currentPaletteCollection = colorAtla.paletteCollections.value(currentPaletteType, nullptr);
     }
 } // namespace Nandina::NandinaTheme

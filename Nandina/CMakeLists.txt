@@ -1,11 +1,13 @@
 add_subdirectory(Color)
 add_subdirectory(Core)
 add_subdirectory(Theme)
+add_subdirectory(Window)
 
 set(NANDINA_MODULES
         NandinaColor
         NandinaCore
         NandinaTheme
+        NandinaWindow
 )
 
 if(NANDINA_BUILD_SHARED)

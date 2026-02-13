@@ -1,4 +1,5 @@
 #include <QCoreApplication>
+#include <QDir>
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 
@@ -6,6 +7,10 @@ int main(int argc, char *argv[]) {
     QGuiApplication app(argc, argv);
 
     QQmlApplicationEngine engine;
+    const QString appDir = QCoreApplication::applicationDirPath();
+    engine.addImportPath("qrc:/qt/qml");
+    engine.addImportPath(appDir);
+    engine.addImportPath(QDir(appDir).absoluteFilePath(".."));
     const QUrl url("qrc:/qt/qml/NandinaExample/Main.qml");
 
     QObject::connect(

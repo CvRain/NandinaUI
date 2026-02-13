@@ -7,30 +7,41 @@
 
 #include <QObject>
 #include <QQmlEngine>
+#include <QtGlobal>
 
 #include "color_atla.hpp"
+
+#if defined(_WIN32)
+#if defined(NandinaTheme_EXPORTS)
+#define NANDINA_THEME_EXPORT Q_DECL_EXPORT
+#else
+#define NANDINA_THEME_EXPORT Q_DECL_IMPORT
+#endif
+#else
+#define NANDINA_THEME_EXPORT
+#endif
 
 namespace Nandina::NandinaTheme {
     Q_NAMESPACE
     QML_ELEMENT
 
-    class ThemeManager : public QObject {
+    class NANDINA_THEME_EXPORT ThemeManager : public QObject {
         Q_OBJECT
         QML_ELEMENT
 
-        Q_PROPERTY(NandinaColor::PaletteType currentPaletteType READ getCurrentPaletteType WRITE setCurrentPaletteType
+        Q_PROPERTY(Nandina::NandinaColor::PaletteType currentPaletteType READ getCurrentPaletteType WRITE setCurrentPaletteType
                            NOTIFY paletteTypeChanged)
 
-        Q_PROPERTY(NandinaColor::ColorCollection *currentColorCollection READ getCurrentColorCollection NOTIFY
+        Q_PROPERTY(Nandina::NandinaColor::ColorCollection *currentColorCollection READ getCurrentColorCollection NOTIFY
                            paletteTypeChanged)
 
-        Q_PROPERTY(NandinaColor::PaletteCollection *currentPaletteCollection READ getCurrentPaletteCollection NOTIFY
+        Q_PROPERTY(Nandina::NandinaColor::PaletteCollection *currentPaletteCollection READ getCurrentPaletteCollection NOTIFY
                            paletteTypeChanged)
 
-        Q_PROPERTY(NandinaColor::ColorCollection *customColorCollection READ getCustomColorCollection WRITE
+        Q_PROPERTY(Nandina::NandinaColor::ColorCollection *customColorCollection READ getCustomColorCollection WRITE
                            setCustomColorCollection NOTIFY customThemeChanged)
 
-        Q_PROPERTY(NandinaColor::PaletteCollection *customPaletteCollection READ getCustomPaletteCollection WRITE
+        Q_PROPERTY(Nandina::NandinaColor::PaletteCollection *customPaletteCollection READ getCustomPaletteCollection WRITE
                            setCustomPaletteCollection NOTIFY customThemeChanged)
 
 
