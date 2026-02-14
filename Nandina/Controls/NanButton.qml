@@ -1,17 +1,32 @@
 import QtQuick
 import Nandina.Theme
 import "theme_utils.js" as ThemeUtils
+import "button_style_utils.js" as ButtonStyleUtils
 
 FocusScope {
     id: root
 
     enum Variant {
-        Default,
-        Outline,
+        Primary,
         Ghost,
-        Destructive,
         Secondary,
-        Link
+        Tertiary,
+        Destructive,
+        Link,
+        Custom
+    }
+
+    enum Accent {
+        Filled,
+        Tonal,
+        Outlined
+    }
+
+    enum LinkTone {
+        Neutral,
+        Success,
+        Warn,
+        Error
     }
 
     enum Size {
@@ -23,21 +38,69 @@ FocusScope {
     implicitWidth: Math.max(96, contentRow.implicitWidth + horizontalPadding * 2)
     implicitHeight: {
         if (size === NanButton.Size.Sm)
-            return 30
+            return 30;
         if (size === NanButton.Size.Lg)
-            return 42
-        return 36
+            return 42;
+        return 36;
     }
 
     activeFocusOnTab: true
 
     property string text: ""
     property bool disabled: false
-    property int variant: NanButton.Variant.Default
+    property int variant: NanButton.Variant.Primary
+    property int accent: NanButton.Accent.Filled
+    property int linkTone: NanButton.LinkTone.Neutral
     property int size: NanButton.Size.Md
     property Component leftIcon: null
     property Component rightIcon: null
     property var themeManager: null
+
+    readonly property int primary: NanButton.Variant.Primary
+    readonly property int secondary: NanButton.Variant.Secondary
+    readonly property int tertiary: NanButton.Variant.Tertiary
+    readonly property int ghost: NanButton.Variant.Ghost
+    readonly property int destructive: NanButton.Variant.Destructive
+    readonly property int link: NanButton.Variant.Link
+    readonly property int custom: NanButton.Variant.Custom
+
+    readonly property int filled: NanButton.Accent.Filled
+    readonly property int tonal: NanButton.Accent.Tonal
+    readonly property int outlined: NanButton.Accent.Outlined
+
+    readonly property int neutral: NanButton.LinkTone.Neutral
+    readonly property int success: NanButton.LinkTone.Success
+    readonly property int warn: NanButton.LinkTone.Warn
+    readonly property int error: NanButton.LinkTone.Error
+
+    property color customBackgroundColor: "transparent"
+    property color customForegroundColor: "transparent"
+    property color customBorderColor: "transparent"
+    property color customHoverColor: "transparent"
+    property color customPressedColor: "transparent"
+
+    property bool enableHoverAnimation: true
+    property bool enableClickBounce: true
+    property bool enableHoverHighlight: true
+    property real baseScale: 1.0
+    property real hoverScale: 1.03
+    property real pressScale: 0.97
+    property int hoverTransitionDuration: 120
+    property int clickBounceInDuration: 70
+    property int clickBounceOutDuration: 140
+    property real hoverHighlightOpacity: 0.06
+
+    property real currentScale: baseScale
+    property bool isBouncing: false
+    readonly property real targetScale: {
+        if (root.disabled)
+            return root.baseScale;
+        if (root.pressed)
+            return root.pressScale;
+        if (root.hovered)
+            return root.hoverScale;
+        return root.baseScale;
+    }
 
     readonly property bool hovered: interactionArea.containsMouse
     readonly property bool pressed: interactionArea.pressed
@@ -51,72 +114,144 @@ FocusScope {
 
     readonly property var resolvedThemeManager: ThemeUtils.resolveThemeManager(root, root.themeManager, fallbackThemeManager)
 
-    readonly property var themePalette: root.resolvedThemeManager && root.resolvedThemeManager.currentPaletteCollection
-                                      ? root.resolvedThemeManager.currentPaletteCollection : null
+    readonly property var themePalette: root.resolvedThemeManager && root.resolvedThemeManager.currentPaletteCollection ? root.resolvedThemeManager.currentPaletteCollection : null
 
-    readonly property color foregroundColor: {
-        if (root.variant === NanButton.Variant.Link)
-            return root.themePalette ? root.themePalette.links : "#6c8cff"
-        if (root.variant === NanButton.Variant.Outline || root.variant === NanButton.Variant.Ghost)
-            return root.themePalette ? root.themePalette.bodyCopy : "#f5f5f5"
-        if (root.variant === NanButton.Variant.Destructive)
-            return root.themePalette ? root.themePalette.onAccent : "white"
-        return root.themePalette ? root.themePalette.onAccent : "white"
-    }
+    readonly property var styleConstants: ({
+            variantPrimary: NanButton.Variant.Primary,
+            variantSecondary: NanButton.Variant.Secondary,
+            variantTertiary: NanButton.Variant.Tertiary,
+            variantGhost: NanButton.Variant.Ghost,
+            variantDestructive: NanButton.Variant.Destructive,
+            variantLink: NanButton.Variant.Link,
+            variantCustom: NanButton.Variant.Custom,
+            accentFilled: NanButton.Accent.Filled,
+            accentTonal: NanButton.Accent.Tonal,
+            accentOutlined: NanButton.Accent.Outlined,
+            toneSuccess: NanButton.LinkTone.Success,
+            toneWarn: NanButton.LinkTone.Warn,
+            toneError: NanButton.LinkTone.Error
+        })
 
-    readonly property color backgroundColor: {
-        if (root.variant === NanButton.Variant.Outline || root.variant === NanButton.Variant.Ghost || root.variant === NanButton.Variant.Link)
-            return "transparent"
-        if (root.variant === NanButton.Variant.Destructive)
-            return root.themePalette ? root.themePalette.error : "#d9534f"
-        if (root.variant === NanButton.Variant.Secondary)
-            return root.themePalette ? root.themePalette.secondaryPane : "#3b3b46"
-        return root.themePalette ? root.themePalette.activeBorder : "#4f8cff"
-    }
+    readonly property var resolvedColors: ButtonStyleUtils.resolveColors({
+        palette: root.themePalette,
+        variant: root.variant,
+        accent: root.accent,
+        linkTone: root.linkTone,
+        focused: root.focused,
+        customBackgroundColor: root.customBackgroundColor,
+        customForegroundColor: root.customForegroundColor,
+        customBorderColor: root.customBorderColor,
+        customHoverColor: root.customHoverColor,
+        customPressedColor: root.customPressedColor,
+        constants: root.styleConstants
+    })
 
-    readonly property color hoverColor: {
-        if (root.variant === NanButton.Variant.Outline || root.variant === NanButton.Variant.Ghost || root.variant === NanButton.Variant.Link)
-            return root.themePalette ? root.themePalette.overlay0 : "#2f2f37"
-        return root.themePalette ? root.themePalette.overlay1 : "#4066bf"
-    }
-
-    readonly property color pressedColor: {
-        if (root.variant === NanButton.Variant.Outline || root.variant === NanButton.Variant.Ghost || root.variant === NanButton.Variant.Link)
-            return root.themePalette ? root.themePalette.overlay1 : "#383844"
-        return root.themePalette ? root.themePalette.overlay2 : "#3557a8"
-    }
-
-    readonly property color borderColor: {
-        if (root.variant === NanButton.Variant.Outline)
-            return root.themePalette ? root.themePalette.inactiveBorder : "#666"
-        if (root.focused)
-            return root.themePalette ? root.themePalette.activeBorder : "#4f8cff"
-        return "transparent"
-    }
+    readonly property color variantBaseColor: resolvedColors.variantBaseColor
+    readonly property color foregroundColor: resolvedColors.foregroundColor
+    readonly property color backgroundColor: resolvedColors.backgroundColor
+    readonly property color hoverColor: resolvedColors.hoverColor
+    readonly property color pressedColor: resolvedColors.pressedColor
+    readonly property color borderColor: resolvedColors.borderColor
 
     property int horizontalPadding: root.size === NanButton.Size.Sm ? 10 : (root.size === NanButton.Size.Lg ? 16 : 12)
 
-    signal clicked()
-    signal released()
+    signal clicked
+    signal released
+
+    transformOrigin: Item.Center
+    scale: currentScale
+
+    function triggerClickFeedback() {
+        if (!root.enableClickBounce || root.disabled)
+            return;
+        clickBounce.restart();
+    }
+
+    onTargetScaleChanged: {
+        if (!root.enableHoverAnimation || root.isBouncing)
+            return;
+        root.currentScale = root.targetScale;
+    }
+
+    Behavior on currentScale {
+        enabled: root.enableHoverAnimation && !root.isBouncing
+
+        NumberAnimation {
+            duration: root.hoverTransitionDuration
+            easing.type: Easing.OutCubic
+        }
+    }
+
+    SequentialAnimation {
+        id: clickBounce
+        running: false
+
+        onStarted: root.isBouncing = true
+        onStopped: {
+            root.isBouncing = false;
+            root.currentScale = root.targetScale;
+        }
+
+        NumberAnimation {
+            target: root
+            property: "currentScale"
+            to: root.pressScale
+            duration: root.clickBounceInDuration
+            easing.type: Easing.InQuad
+        }
+
+        NumberAnimation {
+            target: root
+            property: "currentScale"
+            to: root.hovered ? root.hoverScale : root.baseScale
+            duration: root.clickBounceOutDuration
+            easing.type: Easing.OutBack
+        }
+    }
 
     Rectangle {
+        id: backgroundRect
         anchors.fill: parent
         radius: 8
-        border.width: root.variant === NanButton.Variant.Outline || root.focused ? 1 : 0
+        border.width: root.accent === NanButton.Accent.Outlined || root.focused ? 1 : 0
         border.color: root.borderColor
         color: {
             if (root.disabled)
-                return root.themePalette ? root.themePalette.surfaceElement1 : "#3a3a42"
+                return root.themePalette ? root.themePalette.surfaceElement1 : "#3a3a42";
             if (interactionArea.pressed)
-                return root.pressedColor
+                return root.pressedColor;
             if (interactionArea.containsMouse)
-                return root.hoverColor
-            return root.backgroundColor
+                return root.hoverColor;
+            return root.backgroundColor;
         }
         opacity: root.disabled ? 0.6 : 1.0
 
         Behavior on color {
-            ColorAnimation { duration: 120 }
+            ColorAnimation {
+                duration: 120
+            }
+        }
+
+        Rectangle {
+            anchors.fill: parent
+            radius: parent.radius
+            color: root.foregroundColor
+            opacity: {
+                if (!root.enableHoverHighlight || root.disabled)
+                    return 0;
+                if (root.pressed)
+                    return root.hoverHighlightOpacity * 1.8;
+                if (root.hovered)
+                    return root.hoverHighlightOpacity;
+                return 0;
+            }
+
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: root.hoverTransitionDuration
+                    easing.type: Easing.OutCubic
+                }
+            }
         }
     }
 
@@ -143,14 +278,14 @@ FocusScope {
         }
     }
 
-    Keys.onPressed: function(event) {
+    Keys.onPressed: function (event) {
         if (root.disabled)
-            return
-
+            return;
         if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space) {
-            root.clicked()
-            root.released()
-            event.accepted = true
+            root.triggerClickFeedback();
+            root.clicked();
+            root.released();
+            event.accepted = true;
         }
     }
 
@@ -160,7 +295,10 @@ FocusScope {
         enabled: !root.disabled
         hoverEnabled: true
         cursorShape: root.disabled ? Qt.ArrowCursor : Qt.PointingHandCursor
-        onClicked: root.clicked()
+        onClicked: {
+            root.triggerClickFeedback();
+            root.clicked();
+        }
         onReleased: root.released()
     }
 }

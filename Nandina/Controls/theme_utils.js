@@ -1,5 +1,3 @@
-.pragma library
-
 function findParentThemeManager(item) {
     var themeManagerKey = "theme" + "Manager"
     var current = item ? item.parent : null

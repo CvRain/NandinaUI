@@ -8,6 +8,7 @@ set(SUBPROJECT_QML_FILES
     NanSwitch.qml
     NanCheckbox.qml
     theme_utils.js
+    button_style_utils.js
 )
 
 set(SUBPROJECT_QML_SINGLETON_FILES

@@ -9,6 +9,7 @@ Item {
 
     property var hostWindow: null
     property var themeManager: null
+    property var paletteValues: [NandinaColor.Latte, NandinaColor.Frappe, NandinaColor.Macchiato, NandinaColor.Mocha, NandinaColor.Custom]
 
     Column {
         anchors.centerIn: parent
@@ -33,11 +34,10 @@ Item {
         ComboBox {
             id: paletteBox
             width: 320
-            model: ["Latte", "Frappe", "Macchiato", "Mocha"]
+            model: ["Latte", "Frappe", "Macchiato", "Mocha", "Custom"]
             currentIndex: 0
             onActivated: {
-                const values = [NandinaColor.Latte, NandinaColor.Frappe, NandinaColor.Macchiato, NandinaColor.Mocha]
-                root.themeManager.currentPaletteType = values[currentIndex]
+                root.themeManager.currentPaletteType = root.paletteValues[currentIndex];
             }
         }
 
@@ -102,6 +102,24 @@ Item {
                 color: root.themeManager.currentPaletteCollection.bodyCopy
                 horizontalAlignment: Text.AlignHCenter
             }
+        }
+    }
+
+    Component.onCompleted: {
+        if (!root.themeManager)
+            return;
+        const idx = root.paletteValues.indexOf(root.themeManager.currentPaletteType);
+        if (idx >= 0)
+            paletteBox.currentIndex = idx;
+    }
+
+    Connections {
+        target: root.themeManager
+
+        function onPaletteTypeChanged(type) {
+            const idx = root.paletteValues.indexOf(type);
+            if (idx >= 0)
+                paletteBox.currentIndex = idx;
         }
     }
 }

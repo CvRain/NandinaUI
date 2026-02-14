@@ -17,22 +17,41 @@ NanWindow {
     customTitleBarInjectSystemControls: false
 
     property int currentDemoPage: 0
+    property var paletteValues: [NandinaColor.Latte, NandinaColor.Frappe, NandinaColor.Macchiato, NandinaColor.Mocha, NandinaColor.Custom]
     property var demoPages: [
-        { title: "Window Demo", source: "WindowDemoPage.qml" },
-        { title: "Button", source: "ButtonDemoPage.qml" },
-        { title: "Input", source: "InputDemoPage.qml" },
-        { title: "Label", source: "LabelDemoPage.qml" },
-        { title: "Switch", source: "SwitchDemoPage.qml" },
-        { title: "Checkbox", source: "CheckboxDemoPage.qml" }
+        {
+            title: "Window Demo",
+            source: "WindowDemoPage.qml"
+        },
+        {
+            title: "Button",
+            source: "ButtonDemoPage.qml"
+        },
+        {
+            title: "Input",
+            source: "InputDemoPage.qml"
+        },
+        {
+            title: "Label",
+            source: "LabelDemoPage.qml"
+        },
+        {
+            title: "Switch",
+            source: "SwitchDemoPage.qml"
+        },
+        {
+            title: "Checkbox",
+            source: "CheckboxDemoPage.qml"
+        }
     ]
 
     function pageProperties(index) {
         const props = {
             themeManager: demoWindow.themeManager
-        }
+        };
         if (index === 0)
-            props.hostWindow = demoWindow
-        return props
+            props.hostWindow = demoWindow;
+        return props;
     }
 
     customTitleBar: Component {
@@ -151,9 +170,7 @@ NanWindow {
                     width: menuList.width
                     height: 36
                     radius: 8
-                    color: index === demoWindow.currentDemoPage
-                           ? demoWindow.themeManager.currentPaletteCollection.overlay1
-                           : "transparent"
+                    color: index === demoWindow.currentDemoPage ? demoWindow.themeManager.currentPaletteCollection.overlay1 : "transparent"
 
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
@@ -183,11 +200,10 @@ NanWindow {
             ComboBox {
                 id: globalPaletteBox
                 width: 220
-                model: ["Latte", "Frappe", "Macchiato", "Mocha"]
+                model: ["Latte", "Frappe", "Macchiato", "Mocha", "Custom"]
                 currentIndex: 0
                 onActivated: {
-                    const values = [NandinaColor.Latte, NandinaColor.Frappe, NandinaColor.Macchiato, NandinaColor.Mocha]
-                    demoWindow.themeManager.currentPaletteType = values[currentIndex]
+                    demoWindow.themeManager.currentPaletteType = demoWindow.paletteValues[currentIndex];
                 }
             }
 
@@ -203,14 +219,107 @@ NanWindow {
     }
 
     Component.onCompleted: {
-        pageStack.push(Qt.resolvedUrl(demoWindow.demoPages[demoWindow.currentDemoPage].source),
-                       demoWindow.pageProperties(demoWindow.currentDemoPage))
+        demoWindow.themeManager.setCustomColorCollection(legacyColorCollection);
+        demoWindow.themeManager.setCustomPaletteCollection(legacyPaletteCollection);
+        pageStack.push(Qt.resolvedUrl(demoWindow.demoPages[demoWindow.currentDemoPage].source), demoWindow.pageProperties(demoWindow.currentDemoPage));
     }
 
     onCurrentDemoPageChanged: {
         if (pageStack.depth === 0)
-            return
-        pageStack.replace(Qt.resolvedUrl(demoWindow.demoPages[demoWindow.currentDemoPage].source),
-                          demoWindow.pageProperties(demoWindow.currentDemoPage))
+            return;
+        pageStack.replace(Qt.resolvedUrl(demoWindow.demoPages[demoWindow.currentDemoPage].source), demoWindow.pageProperties(demoWindow.currentDemoPage));
+    }
+
+    Connections {
+        target: demoWindow.themeManager
+
+        function onPaletteTypeChanged(type) {
+            const idx = demoWindow.paletteValues.indexOf(type);
+            if (idx >= 0)
+                globalPaletteBox.currentIndex = idx;
+        }
+    }
+
+    ColorCollection {
+        id: legacyColorCollection
+        rosewater: "#c9f6e8"
+        flamingo: "#a9e8d3"
+        pink: "#80ddbf"
+        mauve: "#5ed1aa"
+        red: "#d31b76"
+        maroon: "#a80a5c"
+        peach: "#eab312"
+        yellow: "#f0ca55"
+        green: "#85cc21"
+        teal: "#4f46e5"
+        sky: "#54c1f1"
+        sapphire: "#01a5ea"
+        blue: "#00a470"
+        lavender: "#8a84ec"
+        text: "#1f2741"
+        subtext1: "#303b62"
+        subtext0: "#39466e"
+        overlay2: "#41507f"
+        overlay1: "#495a90"
+        overlay0: "#6876a2"
+        surface2: "#8892b3"
+        surface1: "#a6adc8"
+        surface0: "#c6c9d7"
+        base: "#e4e5ec"
+        mantle: "#c6c9d7"
+        crust: "#a6adc8"
+    }
+
+    PaletteCollection {
+        id: legacyPaletteCollection
+        backgroundPane: "#e4e5ec"
+        secondaryPane: "#c6c9d7"
+        surfaceElement0: "#a6adc8"
+        surfaceElement1: "#8892b3"
+        surfaceElement2: "#6876a2"
+        overlay0: "#495a90"
+        overlay1: "#41507f"
+        overlay2: "#39466e"
+        bodyCopy: "#1f2741"
+        mainHeadline: "#1f2741"
+        subHeadlines0: "#303b62"
+        subHeadlines1: "#39466e"
+        subtle: "#41507f"
+        onAccent: "#e4e5ec"
+        links: "#11ba81"
+        success: "#85cc21"
+        warning: "#eab312"
+        error: "#d31b76"
+        tags: "#01a5ea"
+        selectionBackground: "#a6adc8"
+        cursor: "#11ba81"
+        cursorText: "#e4e5ec"
+        activeBorder: "#11ba81"
+        inactiveBorder: "#6876a2"
+        bellBorder: "#eab312"
+        color0: "#39466e"
+        color1: "#d31b76"
+        color2: "#85cc21"
+        color3: "#eab312"
+        color4: "#11ba81"
+        color5: "#4f46e5"
+        color6: "#01a5ea"
+        color7: "#a6adc8"
+        color8: "#495a90"
+        color9: "#a80a5c"
+        color10: "#85cc21"
+        color11: "#f0ca55"
+        color12: "#5ed1aa"
+        color13: "#8a84ec"
+        color14: "#54c1f1"
+        color15: "#8892b3"
+        color16: "#a9e8d3"
+        color17: "#c9f6e8"
+        mark1: "#11ba81"
+        mark2: "#4f46e5"
+        mark3: "#01a5ea"
+        mark1Text: "#e4e5ec"
+        mark2Text: "#e4e5ec"
+        mark3Text: "#e4e5ec"
     }
 }
