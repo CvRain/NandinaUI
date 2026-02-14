@@ -44,7 +44,7 @@ FocusScope {
         return 36;
     }
 
-    activeFocusOnTab: true
+    activeFocusOnTab: !root.disabled
 
     property string text: ""
     property bool disabled: false
@@ -79,6 +79,12 @@ FocusScope {
     property color customHoverColor: "transparent"
     property color customPressedColor: "transparent"
 
+    property bool useCustomBackgroundColor: false
+    property bool useCustomForegroundColor: false
+    property bool useCustomBorderColor: false
+    property bool useCustomHoverColor: false
+    property bool useCustomPressedColor: false
+
     property bool enableHoverAnimation: true
     property bool enableClickBounce: true
     property bool enableHoverHighlight: true
@@ -92,6 +98,8 @@ FocusScope {
 
     property real currentScale: baseScale
     property bool isBouncing: false
+    property bool wasPressedInside: false
+    property bool keyboardPressActive: false
     readonly property real targetScale: {
         if (root.disabled)
             return root.baseScale;
@@ -103,7 +111,7 @@ FocusScope {
     }
 
     readonly property bool hovered: interactionArea.containsMouse
-    readonly property bool pressed: interactionArea.pressed
+    readonly property bool pressed: interactionArea.pressed || root.keyboardPressActive
     readonly property bool focused: root.activeFocus
     readonly property bool entered: hovered
     readonly property bool exited: !hovered
@@ -143,6 +151,11 @@ FocusScope {
         customBorderColor: root.customBorderColor,
         customHoverColor: root.customHoverColor,
         customPressedColor: root.customPressedColor,
+        useCustomBackgroundColor: root.useCustomBackgroundColor,
+        useCustomForegroundColor: root.useCustomForegroundColor,
+        useCustomBorderColor: root.useCustomBorderColor,
+        useCustomHoverColor: root.useCustomHoverColor,
+        useCustomPressedColor: root.useCustomPressedColor,
         constants: root.styleConstants
     })
 
@@ -157,6 +170,18 @@ FocusScope {
 
     signal clicked
     signal released
+    signal pressStarted
+    signal canceled
+
+    Accessible.role: Accessible.Button
+    Accessible.name: root.text
+    Accessible.focusable: !root.disabled
+
+    function emitClickSequence() {
+        root.triggerClickFeedback();
+        root.clicked();
+        root.released();
+    }
 
     transformOrigin: Item.Center
     scale: currentScale
@@ -218,7 +243,7 @@ FocusScope {
         color: {
             if (root.disabled)
                 return root.themePalette ? root.themePalette.surfaceElement1 : "#3a3a42";
-            if (interactionArea.pressed)
+            if (root.pressed)
                 return root.pressedColor;
             if (interactionArea.containsMouse)
                 return root.hoverColor;
@@ -281,11 +306,46 @@ FocusScope {
     Keys.onPressed: function (event) {
         if (root.disabled)
             return;
-        if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space) {
-            root.triggerClickFeedback();
-            root.clicked();
-            root.released();
+        if (event.isAutoRepeat)
+            return;
+        if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+            root.pressStarted();
+            root.emitClickSequence();
             event.accepted = true;
+            return;
+        }
+        if (event.key === Qt.Key_Space) {
+            if (!root.keyboardPressActive) {
+                root.keyboardPressActive = true;
+                root.pressStarted();
+            }
+            event.accepted = true;
+        }
+    }
+
+    Keys.onReleased: function (event) {
+        if (root.disabled)
+            return;
+        if (event.isAutoRepeat)
+            return;
+        if (event.key === Qt.Key_Space && root.keyboardPressActive) {
+            root.keyboardPressActive = false;
+            root.emitClickSequence();
+            event.accepted = true;
+        }
+    }
+
+    onActiveFocusChanged: {
+        if (!root.activeFocus && root.keyboardPressActive) {
+            root.keyboardPressActive = false;
+            root.canceled();
+        }
+    }
+
+    onDisabledChanged: {
+        if (root.disabled && root.keyboardPressActive) {
+            root.keyboardPressActive = false;
+            root.canceled();
         }
     }
 
@@ -295,10 +355,24 @@ FocusScope {
         enabled: !root.disabled
         hoverEnabled: true
         cursorShape: root.disabled ? Qt.ArrowCursor : Qt.PointingHandCursor
+        onPressed: {
+            root.wasPressedInside = true;
+            root.pressStarted();
+        }
         onClicked: {
             root.triggerClickFeedback();
             root.clicked();
         }
-        onReleased: root.released()
+        onCanceled: {
+            root.wasPressedInside = false;
+            root.canceled();
+        }
+        onReleased: {
+            if (root.wasPressedInside && containsMouse)
+                root.released();
+            else if (root.wasPressedInside)
+                root.canceled();
+            root.wasPressedInside = false;
+        }
     }
 }

@@ -32,7 +32,7 @@ function resolveColors(args) {
     var foregroundColor = args.accent === args.constants.accentFilled
         ? (args.palette ? args.palette.onAccent : "white")
         : variantBaseColor
-    if (args.variant === args.constants.variantCustom && args.customForegroundColor !== "transparent")
+    if (args.variant === args.constants.variantCustom && args.useCustomForegroundColor)
         foregroundColor = args.customForegroundColor
 
     var backgroundColor = "transparent"
@@ -40,7 +40,7 @@ function resolveColors(args) {
         backgroundColor = variantBaseColor
     else if (args.accent === args.constants.accentTonal)
         backgroundColor = withAlpha(variantBaseColor, 0.22)
-    if (args.variant === args.constants.variantCustom && args.customBackgroundColor !== "transparent")
+    if (args.variant === args.constants.variantCustom && args.useCustomBackgroundColor)
         backgroundColor = args.customBackgroundColor
 
     var hoverColor = withAlpha(variantBaseColor, 0.12)
@@ -48,7 +48,7 @@ function resolveColors(args) {
         hoverColor = withAlpha(variantBaseColor, 0.86)
     else if (args.accent === args.constants.accentTonal)
         hoverColor = withAlpha(variantBaseColor, 0.30)
-    if (args.variant === args.constants.variantCustom && args.customHoverColor !== "transparent")
+    if (args.variant === args.constants.variantCustom && args.useCustomHoverColor)
         hoverColor = args.customHoverColor
 
     var pressedColor = withAlpha(variantBaseColor, 0.20)
@@ -56,7 +56,7 @@ function resolveColors(args) {
         pressedColor = withAlpha(variantBaseColor, 0.72)
     else if (args.accent === args.constants.accentTonal)
         pressedColor = withAlpha(variantBaseColor, 0.38)
-    if (args.variant === args.constants.variantCustom && args.customPressedColor !== "transparent")
+    if (args.variant === args.constants.variantCustom && args.useCustomPressedColor)
         pressedColor = args.customPressedColor
 
     var borderColor = "transparent"
@@ -64,7 +64,7 @@ function resolveColors(args) {
         borderColor = variantBaseColor
     else if (args.focused)
         borderColor = args.palette ? args.palette.activeBorder : "#4f8cff"
-    if (args.variant === args.constants.variantCustom && args.customBorderColor !== "transparent")
+    if (args.variant === args.constants.variantCustom && args.useCustomBorderColor)
         borderColor = args.customBorderColor
 
     return {

@@ -33,6 +33,14 @@ Item {
     property int demoHoverDuration: 120
     property int demoBounceInDuration: 70
     property int demoBounceOutDuration: 140
+    property string demoEventLog: "等待交互..."
+    readonly property string basicUsageCode: "NanButton {\n    text: \"Primary 操作\"\n    variant: NanButton.Primary\n    accent: NanButton.Filled\n    onClicked: doAction()\n}\n\nNanButton {\n    text: \"Disabled\"\n    disabled: true\n}"
+    readonly property string semanticEventCode: "NanButton {\n    text: \"提交\"\n\n    onPressStarted: console.log(\"pressStarted\")\n    onClicked: console.log(\"clicked\")\n    onReleased: console.log(\"released\")\n    onCanceled: console.log(\"canceled\")\n}"
+    readonly property string customThemeCode: "NanButton {\n    variant: NanButton.Custom\n    accent: NanButton.Filled\n\n    useCustomBackgroundColor: true\n    useCustomForegroundColor: true\n    useCustomHoverColor: true\n    useCustomPressedColor: true\n\n    customBackgroundColor: \"#7c3aed\"\n    customForegroundColor: \"#f8f7ff\"\n    customHoverColor: \"#6d28d9\"\n    customPressedColor: \"#5b21b6\"\n}"
+
+    function appendDemoEvent(message) {
+        demoEventLog = message;
+    }
 
     readonly property var variantOptions: [
         {
@@ -94,6 +102,80 @@ Item {
             }
         }
         return entries;
+    }
+
+    component DocsShowcaseCard: Rectangle {
+        id: docsCard
+
+        property string title: ""
+        property string description: ""
+        property string codeSnippet: ""
+        property Component preview: null
+
+        width: parent ? parent.width : implicitWidth
+        radius: 10
+        color: root.themeManager.currentPaletteCollection.secondaryPane
+        border.width: 1
+        border.color: root.themeManager.currentPaletteCollection.surfaceElement0
+        implicitHeight: contentColumn.implicitHeight + 16
+
+        Column {
+            id: contentColumn
+            anchors.fill: parent
+            anchors.margins: 8
+            spacing: 8
+
+            Text {
+                text: docsCard.title
+                color: root.themeManager.currentPaletteCollection.mainHeadline
+                font.pixelSize: 15
+                font.weight: Font.Medium
+            }
+
+            Text {
+                visible: docsCard.description.length > 0
+                text: docsCard.description
+                color: root.themeManager.currentPaletteCollection.subHeadlines0
+                font.pixelSize: 12
+                wrapMode: Text.Wrap
+            }
+
+            Rectangle {
+                width: parent.width
+                radius: 8
+                color: root.themeManager.currentPaletteCollection.backgroundPane
+                border.width: 1
+                border.color: root.themeManager.currentPaletteCollection.surfaceElement0
+                implicitHeight: previewLoader.active ? previewLoader.implicitHeight + 20 : 56
+
+                Loader {
+                    id: previewLoader
+                    active: docsCard.preview !== null
+                    sourceComponent: docsCard.preview
+                    anchors.centerIn: parent
+                }
+            }
+
+            Rectangle {
+                width: parent.width
+                radius: 8
+                color: root.themeManager.currentPaletteCollection.backgroundPane
+                border.width: 1
+                border.color: root.themeManager.currentPaletteCollection.surfaceElement0
+                implicitHeight: codeText.implicitHeight + 18
+
+                Text {
+                    id: codeText
+                    anchors.fill: parent
+                    anchors.margins: 9
+                    text: docsCard.codeSnippet
+                    color: root.themeManager.currentPaletteCollection.bodyCopy
+                    font.pixelSize: 12
+                    wrapMode: Text.NoWrap
+                    textFormat: Text.PlainText
+                }
+            }
+        }
     }
 
     Flickable {
@@ -271,10 +353,160 @@ Item {
             }
 
             Text {
+                text: "文档式展示"
+                color: root.themeManager.currentPaletteCollection.mainHeadline
+                font.pixelSize: 16
+                font.weight: Font.Medium
+            }
+
+            DocsShowcaseCard {
+                title: "基础用法"
+                description: "和前端组件库类似：先看可交互预览，再看对应最小代码。"
+                codeSnippet: root.basicUsageCode
+                preview: Component {
+                    Row {
+                        spacing: 10
+
+                        NanButton {
+                            text: "Primary 操作"
+                            variant: root.primary
+                            accent: root.filled
+                            themeManager: root.themeManager
+                            onClicked: root.appendDemoEvent("Primary: clicked")
+                        }
+
+                        NanButton {
+                            text: "Secondary"
+                            variant: root.secondary
+                            accent: root.outlined
+                            themeManager: root.themeManager
+                            onClicked: root.appendDemoEvent("Secondary: clicked")
+                        }
+
+                        NanButton {
+                            text: "Disabled"
+                            disabled: true
+                            themeManager: root.themeManager
+                        }
+                    }
+                }
+            }
+
+            DocsShowcaseCard {
+                title: "语义事件"
+                description: "展示 `pressStarted/clicked/released/canceled` 的触发顺序。"
+                codeSnippet: root.semanticEventCode
+                preview: Component {
+                    Column {
+                        spacing: 8
+
+                        NanButton {
+                            text: "事件按钮"
+                            variant: root.primary
+                            accent: root.filled
+                            themeManager: root.themeManager
+                            onPressStarted: root.appendDemoEvent("事件按钮: pressStarted")
+                            onClicked: root.appendDemoEvent("事件按钮: clicked")
+                            onReleased: root.appendDemoEvent("事件按钮: released")
+                            onCanceled: root.appendDemoEvent("事件按钮: canceled")
+                        }
+
+                        Text {
+                            text: "事件日志: " + root.demoEventLog
+                            color: root.themeManager.currentPaletteCollection.subHeadlines0
+                            font.pixelSize: 12
+                        }
+                    }
+                }
+            }
+
+            DocsShowcaseCard {
+                title: "自定义配色"
+                description: "`variant: Custom` 时通过显式开关启用颜色覆盖。"
+                codeSnippet: root.customThemeCode
+                preview: Component {
+                    NanButton {
+                        text: "Custom"
+                        variant: root.custom
+                        accent: root.filled
+                        useCustomBackgroundColor: true
+                        useCustomForegroundColor: true
+                        useCustomHoverColor: true
+                        useCustomPressedColor: true
+                        customBackgroundColor: "#7c3aed"
+                        customForegroundColor: "#f8f7ff"
+                        customHoverColor: "#6d28d9"
+                        customPressedColor: "#5b21b6"
+                        themeManager: root.themeManager
+                    }
+                }
+            }
+
+            Text {
                 text: "Variant × Accent 全组合"
                 color: root.themeManager.currentPaletteCollection.mainHeadline
                 font.pixelSize: 16
                 font.weight: Font.Medium
+            }
+
+            Text {
+                text: "Button 基础使用示例"
+                color: root.themeManager.currentPaletteCollection.mainHeadline
+                font.pixelSize: 16
+                font.weight: Font.Medium
+            }
+
+            Rectangle {
+                width: parent.width
+                radius: 10
+                color: root.themeManager.currentPaletteCollection.secondaryPane
+                border.width: 1
+                border.color: root.themeManager.currentPaletteCollection.surfaceElement0
+                implicitHeight: usageColumn.implicitHeight + 16
+
+                Column {
+                    id: usageColumn
+                    anchors.fill: parent
+                    anchors.margins: 8
+                    spacing: 8
+
+                    Row {
+                        spacing: 10
+
+                        NanButton {
+                            text: "Primary 操作"
+                            variant: root.primary
+                            accent: root.filled
+                            themeManager: root.themeManager
+                            onPressStarted: root.appendDemoEvent("Primary: pressStarted")
+                            onClicked: root.appendDemoEvent("Primary: clicked")
+                            onReleased: root.appendDemoEvent("Primary: released")
+                            onCanceled: root.appendDemoEvent("Primary: canceled")
+                        }
+
+                        NanButton {
+                            text: "Secondary Outlined"
+                            variant: root.secondary
+                            accent: root.outlined
+                            themeManager: root.themeManager
+                            onClicked: root.appendDemoEvent("Secondary Outlined: clicked")
+                        }
+
+                        NanButton {
+                            text: "Disabled"
+                            variant: root.primary
+                            accent: root.filled
+                            disabled: true
+                            themeManager: root.themeManager
+                        }
+                    }
+
+                    Text {
+                        text: "事件日志: " + root.demoEventLog
+                        color: root.themeManager.currentPaletteCollection.subHeadlines0
+                        font.pixelSize: 12
+                    }
+                }
             }
 
             GridLayout {
@@ -393,6 +625,11 @@ Item {
                 text: "Custom"
                 variant: root.custom
                 accent: root.filled
+                useCustomBackgroundColor: true
+                useCustomForegroundColor: true
+                useCustomHoverColor: true
+                useCustomPressedColor: true
+                useCustomBorderColor: true
                 customBackgroundColor: "#7c3aed"
                 customForegroundColor: "#f8f7ff"
                 customHoverColor: "#6d28d9"
