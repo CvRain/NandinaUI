@@ -1,6 +1,6 @@
 import QtQuick
 import Nandina.Theme
-import "theme_utils.js" as ThemeUtils
+import "../theme_utils.js" as ThemeUtils
 import "button_style_utils.js" as ButtonStyleUtils
 
 FocusScope {
