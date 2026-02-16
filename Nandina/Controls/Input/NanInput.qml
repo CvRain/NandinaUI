@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls as QQC
 import Nandina.Theme
+import Nandina.Color
 import "../theme_utils.js" as ThemeUtils
 import "input_validation_utils.js" as InputValidationUtils
 
@@ -31,30 +32,32 @@ Item {
     implicitWidth: 260
     implicitHeight: textField.implicitHeight + (hintText.visible ? hintText.implicitHeight + 6 : 0)
 
-    property alias text: textField.text
-    property alias placeholderText: textField.placeholderText
-    property int maxLength: textField.maximumLength
-    property int inputType: NanInput.InputType.Text
-    property int style: NanInput.Style.Outlined
-    property int validateTrigger: NanInput.ValidateTrigger.OnInput
-    property bool disabled: false
-    property bool readOnly: false
-    property bool invalid: false
-    property bool success: false
-    property bool clearable: false
-    property bool showPasswordToggle: true
-    property bool passwordVisible: false
-    property string errorText: ""
-    property string helperText: ""
-    property bool enableAutoValidation: true
-    property bool skipEmptyValidation: true
-    property string defaultValidationErrorText: "输入格式不正确"
-    property string defaultCustomValidationErrorText: "输入不符合要求"
-    property bool useCustomValidator: false
+    property alias text: textField.text // 直接暴露 text 属性，方便使用
+    property alias placeholderText: textField.placeholderText // 直接暴露 placeholderText 属性，方便使用
+    property int maxLength: textField.maximumLength //输入框最大长度，默认为 32767
+    property int inputType: NanInput.InputType.Text // 输入框类型，默认为普通文本输入
+    property int style: NanInput.Style.Outlined // 输入框样式，默认为 Outlined
+    property int validateTrigger: NanInput.ValidateTrigger.OnInput // 校验触发时机，默认为输入时校验
+    property bool disabled: false // 是否禁用输入框，默认为 false
+    property bool readOnly: false // 是否只读，默认为 false
+    property bool invalid: false // 是否显示为无效状态，默认为 false
+    property bool success: false // 是否显示为成功状态，默认为 false
+    property bool clearable: false // 是否显示清除按钮，默认为 false
+    property bool showPasswordToggle: true // 密码输入时是否显示切换明文按钮，默认为 true
+    property bool passwordVisible: false // 密码输入时是否显示明文，默认为 false
+    property string errorText: "" // 错误提示文本
+    property string helperText: "" // 帮助文本
+    property bool enableAutoValidation: true // 是否自动触发校验，默认为 true
+    property bool skipEmptyValidation: true // 是否跳过空文本的校验，默认为 true
+    property string defaultValidationErrorText: "输入格式不正确" // 默认的内置校验错误提示文本
+    property string defaultCustomValidationErrorText: "输入不符合要求" // 默认的自定义校验错误提示文本
+    property bool useCustomValidator: false // 是否使用自定义校验函数，默认为 false
+
+    // 自定义校验函数，接受当前输入值和输入组件实例作为参数，返回一个对象 { valid: bool, message: string }
     property var validatorFn: function (_value, _input) {
         return true;
     }
-    property var themeManager: null
+    property var themeManager: null // 允许外部传入 ThemeManager 实例以使用主题色，默认为 null 将自动查找父级 ThemeManager
 
     readonly property int textType: NanInput.InputType.Text
     readonly property int passwordType: NanInput.InputType.Password
@@ -198,7 +201,7 @@ Item {
                 return Qt.ImhSensitiveData | Qt.ImhNoPredictiveText;
             return Qt.ImhNone;
         }
-        color: root.themePalette ? root.themePalette.mainHeadline : "#f5f5f5"
+        color: root.themePalette ? root.themePalette.color0 : root.themePalette.onAccent
         placeholderTextColor: root.themePalette ? root.themePalette.subHeadlines1 : "#a3a3b2"
         selectByMouse: true
 

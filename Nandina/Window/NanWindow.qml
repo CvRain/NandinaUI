@@ -13,14 +13,14 @@ ApplicationWindow {
         CustomTitleBar //自定义标题栏，允许注入系统控件（最小化、最大化、关闭按钮）
     }
 
-    property int titleBarMode: NanWindow.DefaultTitleBar //标题栏模式
+    property int titleBarMode: NanWindow.CustomTitleBar //标题栏模式，默认开箱即用自定义标题栏
     property string windowTitle: "Nandina" //窗口标题，CustomTitleBar 模式下会传递给自定义标题栏组件
     property int titleBarHeight: 40 //标题栏高度
     property Component customTitleBar: null //自定义标题栏组件
     property bool useSystemResize: true //是否使用系统调整大小
     property bool alwaysOnTop: false //是否总在最前
     property int resizeMargin: 6 //调整大小边距
-    property int windowRadius: 10 //窗口圆角半径
+    property int windowRadius: 12 //窗口圆角半径
     property bool defaultTitleBarDraggable: true //默认标题栏是否可拖动
     property bool defaultTitleBarShowControls: true //默认标题栏是否显示控件
     property bool defaultTitleBarDoubleClickMaximize: true //默认标题栏双击是否最大化
@@ -121,11 +121,26 @@ ApplicationWindow {
             anchors.top: parent.top
             height: root.titleBarMode === NanWindow.CustomTitleBar ? root.titleBarHeight : 0
             active: root.titleBarMode === NanWindow.CustomTitleBar
-            sourceComponent: root.customTitleBar ? root.customTitleBar : InnerDefaultTitleBar
+            sourceComponent: root.customTitleBar ? root.customTitleBar : innerDefaultTitleBarComponent
+
+            function syncLoadedItemSize() {
+                if (!item)
+                    return;
+                item.width = Qt.binding(function () {
+                    return titleBarLoader.width;
+                });
+                item.height = Qt.binding(function () {
+                    return titleBarLoader.height;
+                });
+            }
+
+            onLoaded: syncLoadedItemSize()
+            onWidthChanged: syncLoadedItemSize()
+            onHeightChanged: syncLoadedItemSize()
         }
 
         Row {
-            visible: root.titleBarMode === NanWindow.CustomTitleBar && root.customTitleBarInjectSystemControls
+            visible: root.titleBarMode === NanWindow.CustomTitleBar && root.customTitleBar && root.customTitleBarInjectSystemControls
             anchors.verticalCenter: titleBarLoader.verticalCenter
             anchors.right: parent.right
             anchors.rightMargin: root.customTitleBarControlsRightMargin
@@ -182,14 +197,18 @@ ApplicationWindow {
         }
     }
 
-    component InnerDefaultTitleBar: DefaultTitleBar {
-        titleText: root.windowTitle
-        targetWindow: root
-        themeManager: internalThemeManager
-        draggable: root.defaultTitleBarDraggable
-        showWindowControls: root.defaultTitleBarShowControls
-        enableDoubleClickToggleMaximize: root.defaultTitleBarDoubleClickMaximize
-        topLeftRadius: root.effectiveWindowRadius
-        topRightRadius: root.effectiveWindowRadius
+    Component {
+        id: innerDefaultTitleBarComponent
+
+        DefaultTitleBar {
+            titleText: root.windowTitle
+            targetWindow: root
+            themeManager: internalThemeManager
+            draggable: root.defaultTitleBarDraggable
+            showWindowControls: root.defaultTitleBarShowControls
+            enableDoubleClickToggleMaximize: root.defaultTitleBarDoubleClickMaximize
+            topLeftRadius: root.effectiveWindowRadius
+            topRightRadius: root.effectiveWindowRadius
+        }
     }
 }

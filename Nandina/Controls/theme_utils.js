@@ -12,6 +12,12 @@ function findParentThemeManager(item) {
     return null
 }
 
+/**
+ * @param {Item} item
+ * @param {ThemeManager} explicitThemeManager
+ * @param {ThemeManager} fallbackThemeManager
+ * @return {ThemeManager}
+ */
 function resolveThemeManager(item, explicitThemeManager, fallbackThemeManager) {
     if (explicitThemeManager)
         return explicitThemeManager
