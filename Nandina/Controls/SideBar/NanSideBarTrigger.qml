@@ -9,8 +9,10 @@ Rectangle {
 
     implicitWidth: 32
     implicitHeight: 32
-    radius: 8
-    color: triggerArea.pressed ? (themePalette ? themePalette.overlay1 : "#4c4c58") : (triggerArea.containsMouse ? (themePalette ? themePalette.surfaceElement0 : "#3b3b46") : "transparent")
+    radius: 9
+    color: triggerArea.pressed ? (themePalette ? themePalette.overlay2 : "#4c4c58") : (triggerArea.containsMouse ? (themePalette ? themePalette.overlay1 : "#3b3b46") : "transparent")
+    border.width: triggerArea.containsMouse ? 1 : 0
+    border.color: themePalette ? themePalette.activeBorder : "#6b6b78"
 
     property var sidebar: null
     property var themeManager: null
@@ -48,9 +50,18 @@ Rectangle {
         }
         color: root.themePalette ? root.themePalette.mainHeadline : "#f5f5f5"
         font.pixelSize: 12
-        scale: root.resolvedSidebar && root.resolvedSidebar.open ? 1.0 : 0.9
+        font.weight: Font.DemiBold
+        scale: root.resolvedSidebar && root.resolvedSidebar.open ? 1.0 : 0.92
+        opacity: triggerArea.containsMouse ? 1 : 0.9
 
         Behavior on scale {
+            NumberAnimation {
+                duration: 120
+                easing.type: Easing.OutCubic
+            }
+        }
+
+        Behavior on opacity {
             NumberAnimation {
                 duration: 120
                 easing.type: Easing.OutCubic
@@ -73,6 +84,13 @@ Rectangle {
     Behavior on color {
         ColorAnimation {
             duration: 120
+        }
+    }
+
+    Behavior on border.width {
+        NumberAnimation {
+            duration: 120
+            easing.type: Easing.OutCubic
         }
     }
 }

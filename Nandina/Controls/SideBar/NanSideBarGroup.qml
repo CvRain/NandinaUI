@@ -11,13 +11,14 @@ Item {
 
     implicitWidth: 200
     implicitHeight: groupColumn.implicitHeight
+    width: parent ? parent.width : implicitWidth
 
     property var sidebar: null
     property var themeManager: null
     property string title: ""
     property bool collapsible: false
     property bool expanded: true
-    property int spacing: 6
+    property int spacing: 8
 
     readonly property var resolvedSidebar: root.sidebar
 
@@ -41,21 +42,37 @@ Item {
         Item {
             id: headerRow
             width: parent.width
-            height: root.collapsed || root.title.length === 0 ? 0 : 22
+            height: root.collapsed || root.title.length === 0 ? 0 : 26
             visible: height > 0
+
+            Rectangle {
+                anchors.fill: parent
+                radius: 8
+                color: headerArea.pressed ? (root.themePalette ? root.themePalette.overlay1 : "#4a4a56") : (headerArea.containsMouse ? (root.themePalette ? root.themePalette.overlay0 : "#343440") : "transparent")
+                visible: root.collapsible
+
+                Behavior on color {
+                    ColorAnimation {
+                        duration: 120
+                    }
+                }
+            }
 
             Text {
                 anchors.left: parent.left
+                anchors.leftMargin: 8
                 anchors.verticalCenter: parent.verticalCenter
                 text: root.title
                 color: root.themePalette ? root.themePalette.subHeadlines0 : "#b6b6c4"
                 font.pixelSize: 11
-                font.weight: Font.Medium
+                font.weight: Font.DemiBold
+                font.letterSpacing: 0.4
                 elide: Text.ElideRight
             }
 
             Text {
                 anchors.right: parent.right
+                anchors.rightMargin: 8
                 anchors.verticalCenter: parent.verticalCenter
                 visible: root.collapsible
                 text: root.expanded ? "▾" : "▸"
@@ -64,6 +81,7 @@ Item {
             }
 
             MouseArea {
+                id: headerArea
                 anchors.fill: parent
                 enabled: root.collapsible
                 onClicked: root.expanded = !root.expanded

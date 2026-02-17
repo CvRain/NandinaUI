@@ -16,26 +16,30 @@ NanWindow {
     titleBarMode: NanWindow.CustomTitleBar
     themeManager.customColorCollection: customTheme.colorCollection
     themeManager.customPaletteCollection: customTheme.paletteCollection
-    property int currentSide: NanSideBar.Left
+    property int currentSide: NanSideBar.Side.Left
 
     Button {
         text: "Switch Theme"
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
         anchors.bottomMargin: 20
+
+        property var colors: [NandinaColor.Mocha, NandinaColor.Macchiato, NandinaColor.Frappe, NandinaColor.Latte, NandinaColor.Custom]
+        property int colorIndex: 0
+
         onClicked: {
-            demoWindow.themeManager.setCurrentPaletteType(NandinaColor.Mocha);
-            demoWindow.titleBarMode = NanWindow.DefaultTitleBar;
+            colorIndex = (colorIndex + 1) % colors.length;
+            demoWindow.themeManager.setCurrentPaletteType(colors[colorIndex]);
         }
     }
 
     Button {
-        text: demoWindow.currentSide === NanSideBar.Left ? "Dock Right" : "Dock Left"
+        text: demoWindow.currentSide === NanSideBar.Side.Left ? "Dock Right" : "Dock Left"
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
         anchors.bottomMargin: 60
         onClicked: {
-            demoWindow.currentSide = demoWindow.currentSide === NanSideBar.Left ? NanSideBar.Right : NanSideBar.Left;
+            demoWindow.currentSide = demoWindow.currentSide === NanSideBar.Side.Left ? NanSideBar.Side.Right : NanSideBar.Side.Left;
         }
     }
 
@@ -49,19 +53,22 @@ NanWindow {
 
     NanSideBar {
         id: appSidebar
-        anchors.top: parent.top
-        anchors.bottom: parent.bottom
-        x: demoWindow.currentSide === NanSideBar.Left ? 0 : parent.width - width
+        dockingParent: parent
         side: demoWindow.currentSide
         collapsible: NanSideBar.Icon
         open: true
+        expandedWidth: 200
+        collapsedWidth: 72
+        borderRadius: 16
+        sectionPadding: 10
+        contentSpacing: 8
         showDefaultTrigger: false
         themeManager: demoWindow.themeManager
 
         header: Component {
             Row {
                 width: parent ? parent.width : 220
-                height: 38
+                height: 34
                 spacing: 8
 
                 NanSideBarTrigger {
@@ -72,18 +79,18 @@ NanWindow {
                 Rectangle {
                     width: appSidebar.collapsed ? 0 : (parent.width - 40)
                     height: 32
-                    radius: 8
+                    radius: 9
                     color: demoWindow.themeManager.currentPaletteCollection.surfaceElement0
                     clip: true
 
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
                         anchors.left: parent.left
-                        anchors.leftMargin: 10
+                        anchors.leftMargin: 12
                         text: "Nandina UI"
                         color: demoWindow.themeManager.currentPaletteCollection.mainHeadline
-                        font.pixelSize: 26
-                        font.weight: Font.Medium
+                        font.pixelSize: 14
+                        font.weight: Font.DemiBold
                     }
 
                     Behavior on width {

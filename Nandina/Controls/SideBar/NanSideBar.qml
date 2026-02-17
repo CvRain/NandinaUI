@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Layouts
+import QtQml
 import Nandina.Theme
 import "../theme_utils.js" as ThemeUtils
 
@@ -23,37 +24,42 @@ Item {
     property alias headerData: headerSlot.data
     property alias footerData: footerSlot.data
 
-    implicitWidth: width
-    implicitHeight: 520
-    clip: false
+    implicitWidth: width    // 隐式宽度由当前状态决定
+    implicitHeight: 520     // 隐式高度由当前状态决定
+    clip: false // 禁用裁剪，以允许边缘切换指示器在外部显示
 
-    property bool open: true
-    property int side: NanSideBar.Side.Left
-    property int collapsible: NanSideBar.Collapsible.Icon
-    property int collapsedWidth: 68
-    property int expandedWidth: 270
-    property int railWidth: 8
-    property int railHitPadding: 8
-    property int animationDuration: 220
-    property int borderRadius: 12
-    property int sectionPadding: 12
-    property int contentSpacing: 8
-    property bool showDefaultTrigger: true
-    property bool showRail: true
-    property bool showEdgeToggleIndicator: true
-    property int edgeToggleSize: 30
-    property bool showSectionDivider: true
-    property bool autoDockToParent: false
-    property Component header
-    property Component footer
-    property var themeManager: null
+    property bool open: true    // 默认打开
+    property int side: NanSideBar.Side.Left // 默认停靠在左侧
+    property int collapsible: NanSideBar.Collapsible.Icon // 默认使用图标折叠
+    property int collapsedWidth: 68 // 默认折叠宽度
+    property int expandedWidth: 270 // 默认展开宽度
+    property int railWidth: 8 // 默认轨道宽度
+    property int railHitPadding: 8 // 鼠标点击轨道的额外范围
+    property int animationDuration: 220 // 默认动画持续时间
+    property int borderRadius: 14 // 默认边框圆角
+    property int sectionPadding: 12 // 默认部分内边距
+    property int contentSpacing: 10 // 默认内容间距
+    property bool showDefaultTrigger: true // 默认显示内置触发器
+    property bool showRail: true    // 默认显示轨道
+    property bool showEdgeToggleIndicator: true // 默认显示边缘切换指示器
+    property int edgeToggleSize: 30 // 默认边缘切换指示器大小
+    property bool showSectionDivider: true // 默认显示部分分割线
+    property var dockingParent: parent // 默认停靠父项
+    property Component header // 头部标题组件
+    property Component footer // 底部组件
+    property var themeManager: null // 主题管理器
 
-    readonly property bool isOffcanvas: sideBar.collapsible === NanSideBar.Collapsible.Offcanvas
-    readonly property bool isIconCollapsible: sideBar.collapsible === NanSideBar.Collapsible.Icon
-    readonly property bool collapsed: sideBar.isIconCollapsible && !sideBar.open
-    readonly property bool hiddenOffcanvas: sideBar.isOffcanvas && !sideBar.open
-    readonly property real panelWidth: sideBar.collapsible === NanSideBar.Collapsible.None ? sideBar.expandedWidth : (sideBar.isIconCollapsible ? (sideBar.open ? sideBar.expandedWidth : sideBar.collapsedWidth) : sideBar.expandedWidth)
-    readonly property real hostWidth: sideBar.hiddenOffcanvas ? sideBar.railWidth : sideBar.panelWidth
+    readonly property bool isOffcanvas: sideBar.collapsible === NanSideBar.Collapsible.Offcanvas    // 默认为Offcanvas
+    readonly property bool isIconCollapsible: sideBar.collapsible === NanSideBar.Collapsible.Icon // 默认为Icon折叠
+    readonly property bool collapsed: sideBar.isIconCollapsible && !sideBar.open // 是否折叠
+    readonly property bool hiddenOffcanvas: sideBar.isOffcanvas && !sideBar.open // 是否隐藏Offcanvas
+    readonly property real panelWidth: sideBar.calcPanelWidth() // 计算当前面板宽度
+    readonly property real hostWidth: sideBar.hiddenOffcanvas ? sideBar.railWidth : sideBar.panelWidth // 主机宽度（考虑Offcanvas隐藏时的轨道宽度）
+    readonly property var resolvedDockingParent: sideBar.dockingParent // 父级停靠项
+    readonly property bool autoDockEnabled: !!sideBar.resolvedDockingParent // 是否启用自动停靠
+    readonly property color panelBaseColor: sideBar.themePalette ? sideBar.themePalette.secondaryPane : '#595979' // 面板基础颜色
+    readonly property color panelBorderColor: sideBar.themePalette ? sideBar.themePalette.inactiveBorder : "#434350" // 面板边框颜色
+    readonly property color panelOverlayColor: sideBar.themePalette ? sideBar.themePalette.overlay0 : "#3d3d49" // 面板叠加颜色
 
     signal toggled(bool open)
 
@@ -63,6 +69,25 @@ Item {
 
     readonly property var resolvedThemeManager: ThemeUtils.resolveThemeManager(sideBar, sideBar.themeManager, fallbackThemeManager)
     readonly property var themePalette: sideBar.resolvedThemeManager && sideBar.resolvedThemeManager.currentPaletteCollection ? sideBar.resolvedThemeManager.currentPaletteCollection : null
+
+    function calcPanelWidth() {
+        //sideBar.collapsible === NanSideBar.Collapsible.None ? sideBar.expandedWidth : (sideBar.isIconCollapsible ? (sideBar.open ? sideBar.expandedWidth : sideBar.collapsedWidth) : sideBar.expandedWidth);
+        let width;
+        if (sideBar.collapsible === NanSideBar.Collapsible.None) {
+            width = sideBar.expandedWidth;
+        } else {
+            if (sideBar.isIconCollapsible) {
+                if (sideBar.open) {
+                    width = sideBar.expandedWidth;
+                } else {
+                    width = sideBar.collapsedWidth;
+                }
+            } else {
+                width = sideBar.expandedWidth;
+            }
+        }
+        return width;
+    }
 
     function toggle() {
         if (sideBar.collapsible === NanSideBar.Collapsible.None)
@@ -82,12 +107,44 @@ Item {
 
     onOpenChanged: sideBar.toggled(sideBar.open)
 
-    anchors.left: sideBar.autoDockToParent && parent && sideBar.side === NanSideBar.Side.Left ? parent.left : undefined
-    anchors.right: sideBar.autoDockToParent && parent && sideBar.side === NanSideBar.Side.Right ? parent.right : undefined
+    anchors.top: undefined
+    anchors.bottom: undefined
+    anchors.left: undefined
+    anchors.right: undefined
+
+    Binding {
+        target: sideBar
+        property: "x"
+        when: sideBar.autoDockEnabled && sideBar.resolvedDockingParent
+        value: sideBar.side === NanSideBar.Side.Left ? 0 : Math.max(0, sideBar.resolvedDockingParent.width - sideBar.width)
+    }
+
+    Binding {
+        target: sideBar
+        property: "y"
+        when: sideBar.autoDockEnabled
+        value: 0
+    }
+
+    Binding {
+        target: sideBar
+        property: "height"
+        when: sideBar.autoDockEnabled && sideBar.resolvedDockingParent && sideBar.resolvedDockingParent.height !== undefined
+        value: sideBar.resolvedDockingParent.height
+    }
 
     width: sideBar.hostWidth
 
     Behavior on width {
+        NumberAnimation {
+            duration: sideBar.animationDuration
+            easing.type: Easing.OutCubic
+        }
+    }
+
+    Behavior on x {
+        enabled: sideBar.autoDockEnabled
+
         NumberAnimation {
             duration: sideBar.animationDuration
             easing.type: Easing.OutCubic
@@ -109,10 +166,43 @@ Item {
             return sideBar.railWidth;
         }
         radius: sideBar.borderRadius
-        color: sideBar.themePalette ? sideBar.themePalette.secondaryPane : "#2b2b33"
+        clip: true
+        color: sideBar.panelBaseColor
         border.width: 1
-        border.color: sideBar.themePalette ? sideBar.themePalette.surfaceElement0 : "#434350"
+        border.color: sideBar.panelBorderColor
         opacity: sideBar.hiddenOffcanvas ? 0 : 1
+
+        Rectangle {
+            anchors {
+                top: parent.top
+                left: parent.left
+                right: parent.right
+                topMargin: 1
+                leftMargin: 1
+                rightMargin: 1
+            }
+            height: 48
+            radius: sideBar.borderRadius - 1
+            color: sideBar.panelOverlayColor
+            opacity: 0.18
+            clip: true
+        }
+
+        Rectangle {
+            anchors {
+                bottom: parent.bottom
+                left: parent.left
+                right: parent.right
+                bottomMargin: 1
+                leftMargin: 1
+                rightMargin: 1
+            }
+            height: 32
+            radius: sideBar.borderRadius - 1
+            color: sideBar.panelOverlayColor
+            opacity: 0.1
+            clip: true
+        }
 
         Behavior on width {
             NumberAnimation {
@@ -211,6 +301,42 @@ Item {
                     width: contentFlickable.width
                     spacing: sideBar.contentSpacing
                 }
+
+                Rectangle {
+                    anchors {
+                        top: parent.top
+                        left: parent.left
+                        right: parent.right
+                    }
+                    height: 14
+                    color: sideBar.panelBaseColor
+                    opacity: contentFlickable.contentY > 1 ? 0.9 : 0
+
+                    Behavior on opacity {
+                        NumberAnimation {
+                            duration: 120
+                            easing.type: Easing.OutCubic
+                        }
+                    }
+                }
+
+                Rectangle {
+                    anchors {
+                        bottom: parent.bottom
+                        left: parent.left
+                        right: parent.right
+                    }
+                    height: 14
+                    color: sideBar.panelBaseColor
+                    opacity: contentFlickable.contentY + contentFlickable.height < contentFlickable.contentHeight - 1 ? 0.9 : 0
+
+                    Behavior on opacity {
+                        NumberAnimation {
+                            duration: 120
+                            easing.type: Easing.OutCubic
+                        }
+                    }
+                }
             }
 
             Rectangle {
@@ -254,13 +380,16 @@ Item {
         visible: sideBar.showRail && sideBar.collapsible !== NanSideBar.Collapsible.None
         width: sideBar.railWidth
         height: sideBar.height
+        x: sideBar.side === NanSideBar.Side.Left ? 0 : Math.max(0, sideBar.width - width)
+        y: 0
         radius: sideBar.railWidth / 2
-        color: railArea.containsMouse ? (sideBar.themePalette ? sideBar.themePalette.surfaceElement0 : "#3c3c48") : "transparent"
-        anchors {
-            top: parent.top
-            bottom: parent.bottom
-            left: sideBar.side === NanSideBar.Side.Left ? parent.left : undefined
-            right: sideBar.side === NanSideBar.Side.Right ? parent.right : undefined
+        color: railArea.containsMouse ? (sideBar.themePalette ? sideBar.themePalette.overlay1 : "#3c3c48") : "transparent"
+
+        Behavior on x {
+            NumberAnimation {
+                duration: sideBar.animationDuration
+                easing.type: Easing.OutCubic
+            }
         }
 
         Behavior on color {
@@ -296,9 +425,9 @@ Item {
             return panel.x - Math.floor(width / 2);
         }
         z: 20
-        color: edgeArea.pressed ? (sideBar.themePalette ? sideBar.themePalette.overlay1 : "#4c4c58") : (edgeArea.containsMouse ? (sideBar.themePalette ? sideBar.themePalette.surfaceElement0 : "#3b3b46") : (sideBar.themePalette ? sideBar.themePalette.secondaryPane : "#2b2b33"))
+        color: edgeArea.pressed ? (sideBar.themePalette ? sideBar.themePalette.overlay2 : "#4c4c58") : (edgeArea.containsMouse ? (sideBar.themePalette ? sideBar.themePalette.overlay1 : "#3b3b46") : sideBar.panelBaseColor)
         border.width: 1
-        border.color: sideBar.themePalette ? sideBar.themePalette.activeBorder : "#6b6b78"
+        border.color: edgeArea.containsMouse ? (sideBar.themePalette ? sideBar.themePalette.activeBorder : "#6b6b78") : sideBar.panelBorderColor
         opacity: sideBar.hiddenOffcanvas ? 0.9 : 1.0
 
         Behavior on x {
@@ -323,6 +452,7 @@ Item {
             }
             color: sideBar.themePalette ? sideBar.themePalette.mainHeadline : "#f5f5f5"
             font.pixelSize: 12
+            font.weight: Font.DemiBold
         }
 
         MouseArea {
