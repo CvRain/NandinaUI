@@ -71,10 +71,7 @@ NanWindow {
                 height: 34
                 spacing: 8
 
-                NanSideBarTrigger {
-                    sidebar: appSidebar
-                    themeManager: demoWindow.themeManager
-                }
+                NanSideBarTrigger {}
 
                 Rectangle {
                     width: appSidebar.collapsed ? 0 : (parent.width - 40)
@@ -89,7 +86,7 @@ NanWindow {
                         anchors.leftMargin: 12
                         text: "Nandina UI"
                         color: demoWindow.themeManager.currentPaletteCollection.mainHeadline
-                        font.pixelSize: 14
+                        font.pixelSize: 18
                         font.weight: Font.DemiBold
                     }
 
@@ -104,59 +101,45 @@ NanWindow {
         }
 
         footer: Component {
-            NanSideBarItem {
-                sidebar: appSidebar
-                themeManager: demoWindow.themeManager
-                text: "User Profile"
-                fallbackGlyph: "U"
+            Rectangle {
+                width: parent ? parent.width : 160
+                height: 50
+                radius: 8
+                color: "red"
             }
         }
 
         NanSideBarGroup {
-            sidebar: appSidebar
-            themeManager: demoWindow.themeManager
-            title: "Platform"
+            title: "Controls"
 
             NanSideBarItem {
-                sidebar: appSidebar
-                themeManager: demoWindow.themeManager
                 text: "Dashboard"
                 fallbackGlyph: "D"
                 active: true
             }
 
             NanSideBarItem {
-                sidebar: appSidebar
-                themeManager: demoWindow.themeManager
                 text: "Inbox"
                 fallbackGlyph: "I"
             }
 
             NanSideBarItem {
-                sidebar: appSidebar
-                themeManager: demoWindow.themeManager
                 text: "Calendar"
                 fallbackGlyph: "C"
             }
         }
 
         NanSideBarGroup {
-            sidebar: appSidebar
-            themeManager: demoWindow.themeManager
             title: "Projects"
             collapsible: true
             expanded: true
 
             NanSideBarItem {
-                sidebar: appSidebar
-                themeManager: demoWindow.themeManager
                 text: "Nandina Core"
                 fallbackGlyph: "N"
             }
 
             NanSideBarItem {
-                sidebar: appSidebar
-                themeManager: demoWindow.themeManager
                 text: "Design System"
                 fallbackGlyph: "D"
             }

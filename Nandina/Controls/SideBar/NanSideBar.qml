@@ -243,12 +243,13 @@ Item {
             Item {
                 id: headerContainer
                 Layout.fillWidth: true
-                Layout.preferredHeight: headerContent.implicitHeight
-                visible: headerContent.implicitHeight > 0
+                Layout.preferredHeight: headerContent.height
+                visible: headerContent.height > 0
 
                 Column {
                     id: headerContent
                     width: parent.width
+                    height: childrenRect.height
                     spacing: sideBar.contentSpacing
 
                     NanSideBarTrigger {
@@ -258,9 +259,16 @@ Item {
                     }
 
                     Loader {
+                        id: headerLoader
                         width: parent.width
                         active: sideBar.header !== null
                         sourceComponent: sideBar.header
+                        readonly property var loadedItem: item
+                        readonly property real loadedImplicitHeight: loadedItem ? Number(loadedItem.implicitHeight || 0) : 0
+                        readonly property real loadedExplicitHeight: loadedItem ? Number(loadedItem.height || 0) : 0
+                        readonly property real loadedHeight: Math.max(loadedImplicitHeight, loadedExplicitHeight)
+                        height: loadedHeight
+                        visible: active
                     }
 
                     Column {
@@ -350,18 +358,26 @@ Item {
             Item {
                 id: footerContainer
                 Layout.fillWidth: true
-                Layout.preferredHeight: footerContent.implicitHeight
-                visible: footerContent.implicitHeight > 0
+                Layout.preferredHeight: footerContent.height
+                visible: footerContent.height > 0
 
                 Column {
                     id: footerContent
                     width: parent.width
+                    height: childrenRect.height
                     spacing: sideBar.contentSpacing
 
                     Loader {
+                        id: footerLoader
                         width: parent.width
                         active: sideBar.footer !== null
                         sourceComponent: sideBar.footer
+                        readonly property var loadedItem: item
+                        readonly property real loadedImplicitHeight: loadedItem ? Number(loadedItem.implicitHeight || 0) : 0
+                        readonly property real loadedExplicitHeight: loadedItem ? Number(loadedItem.height || 0) : 0
+                        readonly property real loadedHeight: Math.max(loadedImplicitHeight, loadedExplicitHeight)
+                        height: loadedHeight
+                        visible: active
                     }
 
                     Column {

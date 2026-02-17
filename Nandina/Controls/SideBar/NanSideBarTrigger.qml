@@ -21,7 +21,7 @@ Rectangle {
     property string rightExpandedText: "▶"
     property string rightCollapsedText: "◀"
 
-    readonly property var resolvedSidebar: root.sidebar
+    readonly property var resolvedSidebar: root.sidebar ? root.sidebar : ThemeUtils.resolveSidebar(root)
 
     readonly property var resolvedThemeManager: ThemeUtils.resolveThemeManager(root, root.themeManager, fallbackThemeManager)
     readonly property var themePalette: {

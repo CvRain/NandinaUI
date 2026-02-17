@@ -20,7 +20,7 @@ Item {
     property bool expanded: true
     property int spacing: 8
 
-    readonly property var resolvedSidebar: root.sidebar
+    readonly property var resolvedSidebar: root.sidebar ? root.sidebar : ThemeUtils.resolveSidebar(root)
 
     readonly property bool collapsed: root.resolvedSidebar ? root.resolvedSidebar.collapsed : false
     readonly property var resolvedThemeManager: ThemeUtils.resolveThemeManager(root, root.themeManager, fallbackThemeManager)

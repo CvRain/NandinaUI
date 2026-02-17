@@ -27,16 +27,26 @@ Rectangle {
 
     property var sidebar: null
     property var themeManager: null
-    property string text: ""
+    property alias text: label.text
+    property alias textFont: label.font
     property string iconSource: ""
+    property url fallbackIconSource: ""
     property string fallbackGlyph: "•"
+    property font fallbackGlyphFont: Qt.font({
+        pixelSize: 10,
+        weight: Font.DemiBold
+    })
+    readonly property alias textItem: label
+    readonly property alias fallbackGlyphItem: fallbackGlyphText
+
     property bool active: false
 
-    readonly property var resolvedSidebar: root.sidebar
+    readonly property var resolvedSidebar: root.sidebar ? root.sidebar : ThemeUtils.resolveSidebar(root)
 
     readonly property bool collapsed: root.resolvedSidebar ? root.resolvedSidebar.collapsed : false
     readonly property bool rightSided: root.resolvedSidebar ? root.resolvedSidebar.side === NanSideBar.Side.Right : false
     readonly property bool hasIcon: root.iconSource.length > 0
+    readonly property bool hasFallbackIcon: root.fallbackIconSource.toString().length > 0
     readonly property int horizontalInset: 8
     readonly property var resolvedThemeManager: ThemeUtils.resolveThemeManager(root, root.themeManager, fallbackThemeManager)
     readonly property var themePalette: {
@@ -111,25 +121,36 @@ Rectangle {
             fillMode: Image.PreserveAspectFit
         }
 
-        Text {
+        Image {
             anchors.centerIn: parent
-            visible: !root.hasIcon
-            text: root.fallbackGlyph.length > 0 ? root.fallbackGlyph.charAt(0).toUpperCase() : "•"
+            width: 14
+            height: 14
+            source: root.fallbackIconSource
+            visible: !root.hasIcon && root.hasFallbackIcon
+            fillMode: Image.PreserveAspectFit
+        }
+
+        Text {
+            id: fallbackGlyphText
+            anchors.centerIn: parent
+            visible: !root.hasIcon && !root.hasFallbackIcon
+            text: root.fallbackGlyph.length > 0 ? root.fallbackGlyph : "•"
             color: root.themePalette ? root.themePalette.mainHeadline : "#f0f0f5"
-            font.pixelSize: 10
-            font.weight: root.active ? Font.Bold : Font.DemiBold
+            font.family: root.fallbackGlyphFont.family
+            font.pixelSize: root.fallbackGlyphFont.pixelSize > 0 ? root.fallbackGlyphFont.pixelSize : 10
+            font.weight: root.active ? Font.Bold : root.fallbackGlyphFont.weight
+            font.italic: root.fallbackGlyphFont.italic
         }
     }
 
     Text {
         id: label
-        text: root.text
         color: root.active ? (root.themePalette ? root.themePalette.mainHeadline : "#f2f2f8") : (root.themePalette ? root.themePalette.bodyCopy : "#dbdbe5")
         anchors.verticalCenter: parent.verticalCenter
         x: root.rightSided ? 10 : iconHolder.x + iconHolder.width + 10
         width: root.rightSided ? Math.max(0, iconHolder.x - 20) : Math.max(0, root.width - x - root.horizontalInset)
         elide: Text.ElideRight
-        font.pixelSize: 12
+        font.pixelSize: 16
         font.weight: root.active ? Font.DemiBold : Font.Medium
         horizontalAlignment: root.rightSided ? Text.AlignRight : Text.AlignLeft
         opacity: root.collapsed ? 0 : 1
