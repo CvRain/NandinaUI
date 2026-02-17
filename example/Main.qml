@@ -4,6 +4,7 @@ import QtQuick
 import QtQuick.Controls
 import Nandina.Color
 import Nandina.Window
+import Nandina.Controls
 
 NanWindow {
     id: demoWindow
@@ -13,186 +14,156 @@ NanWindow {
     visible: true
     windowTitle: "NanWindow Demo"
     titleBarMode: NanWindow.CustomTitleBar
-    windowRadius: 12
-    customTitleBarInjectSystemControls: false
+    themeManager.customColorCollection: customTheme.colorCollection
+    themeManager.customPaletteCollection: customTheme.paletteCollection
+    property int currentSide: NanSideBar.Side.Left
 
-    customTitleBar: Component {
-        CornerRectangle {
-            fillColor: demoWindow.themeManager.currentPaletteCollection.secondaryPane
-            topLeftRadius: demoWindow.effectiveWindowRadius
-            topRightRadius: demoWindow.effectiveWindowRadius
-            bottomLeftRadius: 0
-            bottomRightRadius: 0
+    Button {
+        text: "Switch Theme"
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: 20
 
+        property var colors: [NandinaColor.Mocha, NandinaColor.Macchiato, NandinaColor.Frappe, NandinaColor.Latte, NandinaColor.Custom]
+        property int colorIndex: 0
+
+        onClicked: {
+            colorIndex = (colorIndex + 1) % colors.length;
+            demoWindow.themeManager.setCurrentPaletteType(colors[colorIndex]);
+        }
+    }
+
+    Button {
+        text: demoWindow.currentSide === NanSideBar.Side.Left ? "Dock Right" : "Dock Left"
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: 60
+        onClicked: {
+            demoWindow.currentSide = demoWindow.currentSide === NanSideBar.Side.Left ? NanSideBar.Side.Right : NanSideBar.Side.Left;
+        }
+    }
+
+    Text {
+        anchors.centerIn: parent
+        text: "NanWindow Demo"
+        font.pointSize: 20
+        font.bold: true
+        color: demoWindow.themeManager.currentColorCollection.rosewater
+    }
+
+    NanSideBar {
+        id: appSidebar
+        dockingParent: parent
+        side: demoWindow.currentSide
+        collapsible: NanSideBar.Icon
+        open: true
+        expandedWidth: 200
+        collapsedWidth: 72
+        borderRadius: 16
+        sectionPadding: 10
+        contentSpacing: 8
+        showDefaultTrigger: false
+        themeManager: demoWindow.themeManager
+
+        header: Component {
             Row {
-                anchors.verticalCenter: parent.verticalCenter
-                anchors.left: parent.left
-                anchors.leftMargin: 12
-                spacing: 10
+                width: parent ? parent.width : 220
+                height: 34
+                spacing: 8
+
+                NanSideBarTrigger {
+                    sidebar: appSidebar
+                    themeManager: demoWindow.themeManager
+                }
 
                 Rectangle {
-                    width: 10
-                    height: 10
-                    radius: 5
-                    color: demoWindow.themeManager.currentPaletteCollection.success
-                }
+                    width: appSidebar.collapsed ? 0 : (parent.width - 40)
+                    height: 32
+                    radius: 9
+                    color: demoWindow.themeManager.currentPaletteCollection.surfaceElement0
+                    clip: true
 
-                Text {
-                    text: demoWindow.windowTitle
-                    color: demoWindow.themeManager.currentPaletteCollection.bodyCopy
-                    font.pixelSize: 14
-                }
-            }
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        anchors.left: parent.left
+                        anchors.leftMargin: 12
+                        text: "Nandina UI"
+                        color: demoWindow.themeManager.currentPaletteCollection.mainHeadline
+                        font.pixelSize: 14
+                        font.weight: Font.DemiBold
+                    }
 
-            Row {
-                visible: !demoWindow.customTitleBarInjectSystemControls
-                anchors.verticalCenter: parent.verticalCenter
-                anchors.right: parent.right
-                anchors.rightMargin: 10
-                spacing: 2
-
-                TitleBarButton {
-                    text: "—"
-                    textColor: demoWindow.themeManager.currentPaletteCollection.bodyCopy
-                    hoverColor: demoWindow.themeManager.currentPaletteCollection.overlay0
-                    pressedColor: demoWindow.themeManager.currentPaletteCollection.overlay1
-                    useAccentForHover: true
-                    accentColor: demoWindow.themeManager.currentPaletteCollection.activeBorder
-                    onClicked: demoWindow.showMinimized()
-                }
-
-                TitleBarButton {
-                    text: demoWindow.visibility === Window.Maximized ? "❐" : "□"
-                    textColor: demoWindow.themeManager.currentPaletteCollection.bodyCopy
-                    hoverColor: demoWindow.themeManager.currentPaletteCollection.overlay0
-                    pressedColor: demoWindow.themeManager.currentPaletteCollection.overlay1
-                    useAccentForHover: true
-                    accentColor: demoWindow.themeManager.currentPaletteCollection.activeBorder
-                    onClicked: {
-                        if (demoWindow.visibility === Window.Maximized)
-                            demoWindow.showNormal();
-                        else
-                            demoWindow.showMaximized();
+                    Behavior on width {
+                        NumberAnimation {
+                            duration: 180
+                            easing.type: Easing.OutCubic
+                        }
                     }
                 }
+            }
+        }
 
-                TitleBarButton {
-                    text: "✕"
-                    isCloseButton: true
-                    onClicked: demoWindow.close()
-                }
+        footer: Component {
+            NanSideBarItem {
+                sidebar: appSidebar
+                themeManager: demoWindow.themeManager
+                text: "User Profile"
+                fallbackGlyph: "U"
+            }
+        }
+
+        NanSideBarGroup {
+            sidebar: appSidebar
+            themeManager: demoWindow.themeManager
+            title: "Platform"
+
+            NanSideBarItem {
+                sidebar: appSidebar
+                themeManager: demoWindow.themeManager
+                text: "Dashboard"
+                fallbackGlyph: "D"
+                active: true
             }
 
-            MouseArea {
-                anchors.fill: parent
-                acceptedButtons: Qt.LeftButton
-                z: -1
-                onPressed: {
-                    if (demoWindow.visibility !== Window.FullScreen && demoWindow.visibility !== Window.Maximized)
-                        demoWindow.startSystemMove();
-                }
-                onDoubleClicked: {
-                    if (demoWindow.visibility === Window.Maximized)
-                        demoWindow.showNormal();
-                    else
-                        demoWindow.showMaximized();
-                }
+            NanSideBarItem {
+                sidebar: appSidebar
+                themeManager: demoWindow.themeManager
+                text: "Inbox"
+                fallbackGlyph: "I"
+            }
+
+            NanSideBarItem {
+                sidebar: appSidebar
+                themeManager: demoWindow.themeManager
+                text: "Calendar"
+                fallbackGlyph: "C"
+            }
+        }
+
+        NanSideBarGroup {
+            sidebar: appSidebar
+            themeManager: demoWindow.themeManager
+            title: "Projects"
+            collapsible: true
+            expanded: true
+
+            NanSideBarItem {
+                sidebar: appSidebar
+                themeManager: demoWindow.themeManager
+                text: "Nandina Core"
+                fallbackGlyph: "N"
+            }
+
+            NanSideBarItem {
+                sidebar: appSidebar
+                themeManager: demoWindow.themeManager
+                text: "Design System"
+                fallbackGlyph: "D"
             }
         }
     }
 
-    Column {
-        anchors.centerIn: parent
-        spacing: 16
-
-        Label {
-            text: "NanWindow 标题栏模式演示"
-            color: demoWindow.themeManager.currentPaletteCollection.mainHeadline
-            font.pixelSize: 24
-            horizontalAlignment: Text.AlignHCenter
-            width: 320
-        }
-
-        ComboBox {
-            id: modeBox
-            width: 320
-            model: ["DefaultTitleBar", "Frameless", "CustomTitleBar"]
-            currentIndex: demoWindow.titleBarMode
-            onActivated: demoWindow.titleBarMode = currentIndex
-        }
-
-        ComboBox {
-            id: paletteBox
-            width: 320
-            model: ["Latte", "Frappe", "Macchiato", "Mocha"]
-            currentIndex: 0
-            onActivated: {
-                const values = [NandinaColor.Latte, NandinaColor.Frappe, NandinaColor.Macchiato, NandinaColor.Mocha];
-                demoWindow.themeManager.currentPaletteType = values[currentIndex];
-            }
-        }
-
-        Row {
-            spacing: 16
-
-            CheckBox {
-                text: "Always On Top"
-                checked: demoWindow.alwaysOnTop
-                onToggled: demoWindow.alwaysOnTop = checked
-            }
-
-            CheckBox {
-                text: "System Resize"
-                checked: demoWindow.useSystemResize
-                onToggled: demoWindow.useSystemResize = checked
-            }
-        }
-
-        CheckBox {
-            text: "Inject system controls in CustomTitleBar"
-            checked: demoWindow.customTitleBarInjectSystemControls
-            onToggled: demoWindow.customTitleBarInjectSystemControls = checked
-        }
-
-        Row {
-            spacing: 8
-            width: 320
-
-            Label {
-                text: "Radius"
-                color: demoWindow.themeManager.currentPaletteCollection.bodyCopy
-                width: 56
-            }
-
-            Slider {
-                id: radiusSlider
-                from: 0
-                to: 24
-                stepSize: 1
-                value: demoWindow.windowRadius
-                width: 210
-                onMoved: demoWindow.windowRadius = value
-            }
-
-            Label {
-                text: Math.round(radiusSlider.value).toString()
-                color: demoWindow.themeManager.currentPaletteCollection.bodyCopy
-                width: 30
-            }
-        }
-
-        Rectangle {
-            width: 320
-            height: 120
-            radius: 10
-            color: demoWindow.themeManager.currentPaletteCollection.secondaryPane
-
-            Text {
-                anchors.centerIn: parent
-                text: "当前模式: " + modeBox.currentText + "\n当前主题: " + paletteBox.currentText
-                color: demoWindow.themeManager.currentPaletteCollection.bodyCopy
-                horizontalAlignment: Text.AlignHCenter
-            }
-        }
+    CustomTheme {
+        id: customTheme
     }
 }

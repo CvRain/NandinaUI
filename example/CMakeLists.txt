@@ -8,7 +8,15 @@ qt_add_executable(NandinaExampleApp
 qt_add_qml_module(NandinaExampleApp
         URI NandinaExample
         VERSION 1.0
-        QML_FILES Main.qml
+        QML_FILES
+        Main.qml
+        CustomTheme.qml
+        WindowDemoPage.qml
+        ButtonDemoPage.qml
+        InputDemoPage.qml
+        LabelDemoPage.qml
+        SwitchDemoPage.qml
+        CheckboxDemoPage.qml
 )
 
 target_link_libraries(NandinaExampleApp

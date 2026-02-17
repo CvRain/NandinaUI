@@ -1,10 +1,12 @@
 add_subdirectory(Color)
+add_subdirectory(Controls)
 add_subdirectory(Core)
 add_subdirectory(Theme)
 add_subdirectory(Window)
 
 set(NANDINA_MODULES
         NandinaColor
+        NandinaControls
         NandinaCore
         NandinaTheme
         NandinaWindow
