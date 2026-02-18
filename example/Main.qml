@@ -5,6 +5,7 @@ import QtQuick.Controls
 import Nandina.Color
 import Nandina.Window
 import Nandina.Controls
+import Nandina.Theme
 
 NanWindow {
     id: demoWindow
@@ -133,10 +134,24 @@ NanWindow {
             }
         }
 
-        NanSideBarGroup {
-            title: "Components"
-            collapsible: true
-            expanded: true
+        NanThemeScope {
+            ThemeManager {
+                id: componentScopeTheme
+                Component.onCompleted: setCurrentPaletteType(NandinaColor.Frappe)
+            }
+
+            themeManager: componentScopeTheme
+
+            NanSideBarGroup {
+                title: "Components"
+                collapsible: true
+                expanded: true
+
+                NanSideBarItem {
+                    text: "Scoped Theme"
+                    fallbackGlyph: "T"
+                }
+            }
         }
     }
 

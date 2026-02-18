@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls as QQC
 import Nandina.Theme
 import Nandina.Color
+import Nandina.Tokens
 import "../theme_utils.js" as ThemeUtils
 import "input_validation_utils.js" as InputValidationUtils
 
@@ -30,7 +31,7 @@ Item {
     }
 
     implicitWidth: 260
-    implicitHeight: textField.implicitHeight + (hintText.visible ? hintText.implicitHeight + 6 : 0)
+    implicitHeight: textField.implicitHeight + (hintText.visible ? hintText.implicitHeight + root.verticalSpacing : 0)
 
     property alias text: textField.text // 直接暴露 text 属性，方便使用
     property alias placeholderText: textField.placeholderText // 直接暴露 placeholderText 属性，方便使用
@@ -52,6 +53,10 @@ Item {
     property string defaultValidationErrorText: "输入格式不正确" // 默认的内置校验错误提示文本
     property string defaultCustomValidationErrorText: "输入不符合要求" // 默认的自定义校验错误提示文本
     property bool useCustomValidator: false // 是否使用自定义校验函数，默认为 false
+    property font textFont: typographyTokens.body
+    property font helperFont: typographyTokens.caption
+    property int verticalSpacing: spacingTokens.sm
+    property int horizontalPadding: spacingTokens.sm
 
     // 自定义校验函数，接受当前输入值和输入组件实例作为参数，返回一个对象 { valid: bool, message: string }
     property var validatorFn: function (_value, _input) {
@@ -144,6 +149,14 @@ Item {
 
     readonly property var themePalette: root.resolvedThemeManager && root.resolvedThemeManager.currentPaletteCollection ? root.resolvedThemeManager.currentPaletteCollection : null
 
+    NanTypography {
+        id: typographyTokens
+    }
+
+    NanSpacing {
+        id: spacingTokens
+    }
+
     signal accepted
     signal validationChanged(bool valid, string message)
 
@@ -182,7 +195,8 @@ Item {
         activeFocusOnTab: !root.disabled
         enabled: !root.disabled
         readOnly: root.readOnly
-        rightPadding: root.hasTrailingAction ? trailingActions.implicitWidth + 10 : 8
+        rightPadding: root.hasTrailingAction ? trailingActions.implicitWidth + root.horizontalPadding + 2 : root.horizontalPadding
+        font: root.textFont
         echoMode: {
             if (root.inputType !== NanInput.InputType.Password)
                 return TextInput.Normal;
@@ -281,7 +295,7 @@ Item {
     Item {
         id: trailingActions
         anchors.right: textField.right
-        anchors.rightMargin: 6
+        anchors.rightMargin: root.verticalSpacing
         anchors.verticalCenter: textField.verticalCenter
         implicitWidth: actionRow.implicitWidth
         implicitHeight: actionRow.implicitHeight
@@ -290,7 +304,7 @@ Item {
 
         Row {
             id: actionRow
-            spacing: 4
+            spacing: spacingTokens.xs
 
             Rectangle {
                 width: 20
@@ -304,7 +318,7 @@ Item {
                     anchors.centerIn: parent
                     text: "×"
                     color: root.themePalette ? root.themePalette.mainHeadline : "#f5f5f5"
-                    font.pixelSize: 13
+                    font: typographyTokens.body
                 }
 
                 MouseArea {
@@ -330,7 +344,7 @@ Item {
                     anchors.centerIn: parent
                     text: root.passwordVisible ? "隐藏" : "显示"
                     color: root.themePalette ? root.themePalette.mainHeadline : "#f5f5f5"
-                    font.pixelSize: 10
+                    font: typographyTokens.caption
                 }
 
                 MouseArea {
@@ -358,11 +372,11 @@ Item {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.top: textField.bottom
-        anchors.topMargin: 6
+        anchors.topMargin: root.verticalSpacing
         visible: root.resolvedErrorText.length > 0 || root.helperText.length > 0
         text: root.resolvedErrorText.length > 0 ? root.resolvedErrorText : root.helperText
         color: root.resolvedErrorText.length > 0 ? (root.themePalette ? root.themePalette.error : "#d9534f") : (root.themePalette ? root.themePalette.subHeadlines1 : "#a3a3b2")
-        font.pixelSize: 13
+        font: root.helperFont
         wrapMode: Text.Wrap
     }
 
