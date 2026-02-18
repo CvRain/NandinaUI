@@ -27,6 +27,7 @@ target_link_libraries(NandinaExampleApp
         NandinaColor
         NandinaCore
         NandinaTheme
+        NandinaControls
 )
 
 qt_import_qml_plugins(NandinaExampleApp)

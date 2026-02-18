@@ -101,48 +101,42 @@ NanWindow {
         }
 
         footer: Component {
-            Rectangle {
-                width: parent ? parent.width : 160
-                height: 50
-                radius: 8
-                color: "red"
+            NanSideBarItem {
+                text: "Settings"
+                fallbackGlyph: "S"
             }
         }
 
         NanSideBarGroup {
             title: "Controls"
+            collapsible: true
+            expanded: true
+            font {
+                family: "Sans Serif"
+                pixelSize: 13
+                bold: true
+            }
 
             NanSideBarItem {
-                text: "Dashboard"
-                fallbackGlyph: "D"
+                text: "NanButton"
+                fallbackGlyph: "B"
                 active: true
+                font: Qt.font({
+                    family: "Sans Serif",
+                    pixelSize: 15
+                })
             }
 
             NanSideBarItem {
-                text: "Inbox"
+                text: "NanInput"
                 fallbackGlyph: "I"
-            }
-
-            NanSideBarItem {
-                text: "Calendar"
-                fallbackGlyph: "C"
             }
         }
 
         NanSideBarGroup {
-            title: "Projects"
+            title: "Components"
             collapsible: true
             expanded: true
-
-            NanSideBarItem {
-                text: "Nandina Core"
-                fallbackGlyph: "N"
-            }
-
-            NanSideBarItem {
-                text: "Design System"
-                fallbackGlyph: "D"
-            }
         }
     }
 

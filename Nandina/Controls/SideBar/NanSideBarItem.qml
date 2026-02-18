@@ -28,6 +28,7 @@ Rectangle {
     property var sidebar: null
     property var themeManager: null
     property alias text: label.text
+    property alias font: label.font
     property alias textFont: label.font
     property string iconSource: ""
     property url fallbackIconSource: ""
