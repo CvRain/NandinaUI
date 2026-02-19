@@ -24,16 +24,12 @@ Item {
 
     readonly property var themePalette: root.resolvedThemeManager && root.resolvedThemeManager.currentPaletteCollection ? root.resolvedThemeManager.currentPaletteCollection : null
 
-    NanTypography {
-        id: typographyTokens
-    }
-
     Text {
         id: labelText
         anchors.fill: parent
         text: root.required ? (root.text + " *") : root.text
         color: root.disabled ? (root.themePalette ? root.themePalette.subHeadlines0 : "#9d9dac") : (root.themePalette ? root.themePalette.bodyCopy : "#efefef")
-        font: typographyTokens.body
+        font: NanTypography.body
         verticalAlignment: Text.AlignVCenter
     }
 

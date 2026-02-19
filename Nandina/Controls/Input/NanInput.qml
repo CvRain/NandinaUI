@@ -53,10 +53,10 @@ Item {
     property string defaultValidationErrorText: "输入格式不正确" // 默认的内置校验错误提示文本
     property string defaultCustomValidationErrorText: "输入不符合要求" // 默认的自定义校验错误提示文本
     property bool useCustomValidator: false // 是否使用自定义校验函数，默认为 false
-    property font textFont: typographyTokens.body
-    property font helperFont: typographyTokens.caption
-    property int verticalSpacing: spacingTokens.sm
-    property int horizontalPadding: spacingTokens.sm
+    property font textFont: NanTypography.body
+    property font helperFont: NanTypography.caption
+    property int verticalSpacing: NanSpacing.sm
+    property int horizontalPadding: NanSpacing.sm
 
     // 自定义校验函数，接受当前输入值和输入组件实例作为参数，返回一个对象 { valid: bool, message: string }
     property var validatorFn: function (_value, _input) {
@@ -148,14 +148,6 @@ Item {
     readonly property var resolvedThemeManager: ThemeUtils.resolveThemeManager(root, root.themeManager, fallbackThemeManager)
 
     readonly property var themePalette: root.resolvedThemeManager && root.resolvedThemeManager.currentPaletteCollection ? root.resolvedThemeManager.currentPaletteCollection : null
-
-    NanTypography {
-        id: typographyTokens
-    }
-
-    NanSpacing {
-        id: spacingTokens
-    }
 
     signal accepted
     signal validationChanged(bool valid, string message)
@@ -304,7 +296,7 @@ Item {
 
         Row {
             id: actionRow
-            spacing: spacingTokens.xs
+            spacing: NanSpacing.xs
 
             Rectangle {
                 width: 20
@@ -318,7 +310,7 @@ Item {
                     anchors.centerIn: parent
                     text: "×"
                     color: root.themePalette ? root.themePalette.mainHeadline : "#f5f5f5"
-                    font: typographyTokens.body
+                    font: NanTypography.body
                 }
 
                 MouseArea {
@@ -344,7 +336,7 @@ Item {
                     anchors.centerIn: parent
                     text: root.passwordVisible ? "隐藏" : "显示"
                     color: root.themePalette ? root.themePalette.mainHeadline : "#f5f5f5"
-                    font: typographyTokens.caption
+                    font: NanTypography.caption
                 }
 
                 MouseArea {

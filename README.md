@@ -112,6 +112,10 @@ NanWindow {
 ### Nandina.Core
 - 当前作为基础支撑模块，持续演进中。
 
+### Nandina.Tokens
+- NanTypography（字体等级 token）
+- NanSpacing（间距等级 token）
+
 ## 计划中
 
 > 版本策略：先补“设计系统底座”，再做基础控件，最后扩展复杂场景，减少后续 API 返工。

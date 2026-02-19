@@ -1,5 +1,6 @@
 import QtQuick
 import Nandina.Theme
+import Nandina.Tokens
 import "../theme_utils.js" as ThemeUtils
 import "button_style_utils.js" as ButtonStyleUtils
 
@@ -166,7 +167,9 @@ FocusScope {
     readonly property color pressedColor: resolvedColors.pressedColor
     readonly property color borderColor: resolvedColors.borderColor
 
-    property int horizontalPadding: root.size === NanButton.Size.Sm ? 10 : (root.size === NanButton.Size.Lg ? 16 : 12)
+    property int horizontalPadding: root.size === NanButton.Size.Sm ? NanSpacing.sm : (root.size === NanButton.Size.Lg ? NanSpacing.lg : NanSpacing.md)
+    property int contentSpacing: NanSpacing.sm
+    property font textFont: root.size === NanButton.Size.Sm ? NanTypography.caption : NanTypography.body
 
     signal clicked
     signal released
@@ -283,7 +286,7 @@ FocusScope {
     Row {
         id: contentRow
         anchors.centerIn: parent
-        spacing: 8
+        spacing: root.contentSpacing
 
         Loader {
             active: root.leftIcon !== null
@@ -293,8 +296,7 @@ FocusScope {
         Text {
             text: root.text
             color: root.disabled && root.themePalette ? root.themePalette.subHeadlines0 : root.foregroundColor
-            font.pixelSize: root.size === NanButton.Size.Sm ? 12 : 13
-            font.weight: Font.Medium
+            font: root.textFont
         }
 
         Loader {
