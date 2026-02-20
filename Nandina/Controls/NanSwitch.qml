@@ -17,6 +17,8 @@ Item {
     property int trackHeight: NanSpacing.lg + NanSpacing.sm
     property int thumbSize: NanSpacing.lg + 2
     property int thumbInset: NanSpacing.xs
+    readonly property var motionTokens: NanMotion
+    property int thumbSlideDuration: root.motionTokens.fast
 
     readonly property bool hovered: control.hovered
     readonly property bool pressed: control.pressed
@@ -59,7 +61,7 @@ Item {
 
                 Behavior on x {
                     NumberAnimation {
-                        duration: 120
+                        duration: root.thumbSlideDuration
                     }
                 }
             }

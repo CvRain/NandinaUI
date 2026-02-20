@@ -10,6 +10,8 @@ set(SUBPROJECT_QML_SINGLETON_FILES
 
 set(SUBPROJECT_CPP_FILES
     nan_spacing.hpp
+    nan_radius.hpp
+    nan_motion.hpp
     nan_typography.hpp
     nan_typography.cpp
 )

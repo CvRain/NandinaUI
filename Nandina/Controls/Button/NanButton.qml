@@ -92,9 +92,9 @@ FocusScope {
     property real baseScale: 1.0
     property real hoverScale: 1.03
     property real pressScale: 0.97
-    property int hoverTransitionDuration: 120
-    property int clickBounceInDuration: 70
-    property int clickBounceOutDuration: 140
+    property int hoverTransitionDuration: root.motionTokens.fast
+    property int clickBounceInDuration: root.motionTokens.bounceIn
+    property int clickBounceOutDuration: root.motionTokens.bounceOut
     property real hoverHighlightOpacity: 0.06
 
     property real currentScale: baseScale
@@ -116,6 +116,8 @@ FocusScope {
     readonly property bool focused: root.activeFocus
     readonly property bool entered: hovered
     readonly property bool exited: !hovered
+    readonly property var motionTokens: NanMotion
+    readonly property var radiusTokens: NanRadius
 
     ThemeManager {
         id: fallbackThemeManager
@@ -170,6 +172,7 @@ FocusScope {
     property int horizontalPadding: root.size === NanButton.Size.Sm ? NanSpacing.sm : (root.size === NanButton.Size.Lg ? NanSpacing.lg : NanSpacing.md)
     property int contentSpacing: NanSpacing.sm
     property font textFont: root.size === NanButton.Size.Sm ? NanTypography.caption : NanTypography.body
+    property int cornerRadius: root.radiusTokens.md
 
     signal clicked
     signal released
@@ -240,7 +243,7 @@ FocusScope {
     Rectangle {
         id: backgroundRect
         anchors.fill: parent
-        radius: 8
+        radius: root.cornerRadius
         border.width: root.accent === NanButton.Accent.Outlined || root.focused ? 1 : 0
         border.color: root.borderColor
         color: {
@@ -256,7 +259,7 @@ FocusScope {
 
         Behavior on color {
             ColorAnimation {
-                duration: 120
+                duration: root.motionTokens.fast
             }
         }
 

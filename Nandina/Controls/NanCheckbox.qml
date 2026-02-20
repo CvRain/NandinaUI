@@ -15,8 +15,9 @@ Item {
     property bool disabled: false
     property string text: ""
     property var themeManager: null
+    readonly property var radiusTokens: NanRadius
     property int indicatorSize: NanSpacing.lg + 2
-    property int indicatorRadius: NanSpacing.xs
+    property int indicatorRadius: root.radiusTokens.sm
     property font textFont: NanTypography.body
     property font markFont: Qt.font({
         pixelSize: NanTypography.caption.pixelSize,

@@ -115,6 +115,8 @@ NanWindow {
 ### Nandina.Tokens
 - NanTypography（字体等级 token）
 - NanSpacing（间距等级 token）
+- NanRadius（圆角等级 token）
+- NanMotion（动效时长 token）
 
 ## 计划中
 

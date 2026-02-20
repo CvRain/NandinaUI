@@ -57,6 +57,12 @@ Item {
     property font helperFont: NanTypography.caption
     property int verticalSpacing: NanSpacing.sm
     property int horizontalPadding: NanSpacing.sm
+    readonly property var radiusTokens: NanRadius
+    readonly property var motionTokens: NanMotion
+    property int outlinedCornerRadius: root.radiusTokens.md
+    property int underlineCornerRadius: root.radiusTokens.xs
+    property int actionCornerRadius: root.radiusTokens.full
+    property int stateTransitionDuration: root.motionTokens.fast
 
     // 自定义校验函数，接受当前输入值和输入组件实例作为参数，返回一个对象 { valid: bool, message: string }
     property var validatorFn: function (_value, _input) {
@@ -215,7 +221,7 @@ Item {
             Rectangle {
                 anchors.fill: parent
                 visible: root.style === NanInput.Style.Outlined
-                radius: 8
+                radius: root.outlinedCornerRadius
                 border.width: textField.activeFocus ? 2 : 1
                 border.color: {
                     if (root.effectiveInvalid)
@@ -231,7 +237,7 @@ Item {
 
                 Behavior on border.color {
                     ColorAnimation {
-                        duration: 120
+                        duration: root.stateTransitionDuration
                     }
                 }
             }
@@ -242,7 +248,7 @@ Item {
                 anchors.bottom: parent.bottom
                 visible: root.style === NanInput.Style.Underline
                 height: textField.activeFocus ? 2 : 1
-                radius: 1
+                radius: root.underlineCornerRadius
                 color: {
                     if (root.effectiveInvalid)
                         return root.themePalette ? root.themePalette.error : "#d9534f";
@@ -256,7 +262,7 @@ Item {
 
                 Behavior on color {
                     ColorAnimation {
-                        duration: 120
+                        duration: root.stateTransitionDuration
                     }
                 }
             }
@@ -301,7 +307,7 @@ Item {
             Rectangle {
                 width: 20
                 height: 20
-                radius: 10
+                radius: root.actionCornerRadius
                 visible: root.showClearAction
                 color: root.themePalette ? root.themePalette.overlay0 : "#666"
                 opacity: 0.32
@@ -327,7 +333,7 @@ Item {
             Rectangle {
                 width: 26
                 height: 20
-                radius: 10
+                radius: root.actionCornerRadius
                 visible: root.showRevealAction
                 color: root.themePalette ? root.themePalette.overlay0 : "#666"
                 opacity: 0.28
