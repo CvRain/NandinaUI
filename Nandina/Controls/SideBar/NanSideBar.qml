@@ -4,6 +4,7 @@ import QtQuick
 import QtQuick.Layouts
 import QtQml
 import Nandina.Theme
+import Nandina.Tokens
 import "../theme_utils.js" as ThemeUtils
 
 Item {
@@ -28,21 +29,32 @@ Item {
     implicitHeight: 520     // 隐式高度由当前状态决定
     clip: false // 禁用裁剪，以允许边缘切换指示器在外部显示
 
+    readonly property var spacingTokens: NanSpacing
+    readonly property var radiusTokens: NanRadius
+    readonly property var typographyTokens: NanTypography
+    readonly property var motionTokens: NanMotion
+
     property bool open: true    // 默认打开
     property int side: NanSideBar.Side.Left // 默认停靠在左侧
     property int collapsible: NanSideBar.Collapsible.Icon // 默认使用图标折叠
     property int collapsedWidth: 68 // 默认折叠宽度
     property int expandedWidth: 270 // 默认展开宽度
-    property int railWidth: 8 // 默认轨道宽度
-    property int railHitPadding: 8 // 鼠标点击轨道的额外范围
-    property int animationDuration: 220 // 默认动画持续时间
-    property int borderRadius: 14 // 默认边框圆角
-    property int sectionPadding: 12 // 默认部分内边距
-    property int contentSpacing: 10 // 默认内容间距
+    property int railWidth: spacingTokens.sm // 默认轨道宽度
+    property int railHitPadding: spacingTokens.sm // 鼠标点击轨道的额外范围
+    property int animationDuration: motionTokens.normal // 默认动画持续时间
+    property int borderRadius: radiusTokens.lg // 默认边框圆角
+    property int sectionPadding: spacingTokens.md // 默认部分内边距
+    property int contentSpacing: spacingTokens.sm // 默认内容间距
     property bool showDefaultTrigger: true // 默认显示内置触发器
     property bool showRail: true    // 默认显示轨道
     property bool showEdgeToggleIndicator: true // 默认显示边缘切换指示器
-    property int edgeToggleSize: 30 // 默认边缘切换指示器大小
+    property int edgeToggleSize: spacingTokens.xxl - (spacingTokens.xs / 2) // 默认边缘切换指示器大小
+    property int stateTransitionDuration: motionTokens.fast // 交互状态过渡时长
+    property int panelFadeDuration: motionTokens.bounceOut // 面板显隐过渡时长
+    property int topOverlayHeight: spacingTokens.xxl + spacingTokens.lg // 顶部叠加高度
+    property int bottomOverlayHeight: spacingTokens.xxl // 底部叠加高度
+    property int scrollFadeHeight: borderRadius + radiusTokens.xs // 滚动阴影高度
+    property int edgeGlyphPixelSize: typographyTokens.caption.pixelSize // 边缘指示符字号
     property bool showSectionDivider: true // 默认显示部分分割线
     property var dockingParent: parent // 默认停靠父项
     property Component header // 头部标题组件
@@ -181,7 +193,7 @@ Item {
                 leftMargin: 1
                 rightMargin: 1
             }
-            height: 48
+            height: sideBar.topOverlayHeight
             radius: sideBar.borderRadius - 1
             color: sideBar.panelOverlayColor
             opacity: 0.18
@@ -197,7 +209,7 @@ Item {
                 leftMargin: 1
                 rightMargin: 1
             }
-            height: 32
+            height: sideBar.bottomOverlayHeight
             radius: sideBar.borderRadius - 1
             color: sideBar.panelOverlayColor
             opacity: 0.1
@@ -213,7 +225,7 @@ Item {
 
         Behavior on opacity {
             NumberAnimation {
-                duration: 140
+                duration: sideBar.panelFadeDuration
                 easing.type: Easing.OutCubic
             }
         }
@@ -299,7 +311,7 @@ Item {
 
                 Behavior on opacity {
                     NumberAnimation {
-                        duration: 120
+                        duration: sideBar.stateTransitionDuration
                         easing.type: Easing.OutCubic
                     }
                 }
@@ -316,13 +328,13 @@ Item {
                         left: parent.left
                         right: parent.right
                     }
-                    height: 14
+                    height: sideBar.scrollFadeHeight
                     color: sideBar.panelBaseColor
                     opacity: contentFlickable.contentY > 1 ? 0.9 : 0
 
                     Behavior on opacity {
                         NumberAnimation {
-                            duration: 120
+                            duration: sideBar.stateTransitionDuration
                             easing.type: Easing.OutCubic
                         }
                     }
@@ -334,13 +346,13 @@ Item {
                         left: parent.left
                         right: parent.right
                     }
-                    height: 14
+                    height: sideBar.scrollFadeHeight
                     color: sideBar.panelBaseColor
                     opacity: contentFlickable.contentY + contentFlickable.height < contentFlickable.contentHeight - 1 ? 0.9 : 0
 
                     Behavior on opacity {
                         NumberAnimation {
-                            duration: 120
+                            duration: sideBar.stateTransitionDuration
                             easing.type: Easing.OutCubic
                         }
                     }
@@ -410,7 +422,7 @@ Item {
 
         Behavior on color {
             ColorAnimation {
-                duration: 120
+                duration: sideBar.stateTransitionDuration
             }
         }
 
@@ -455,7 +467,7 @@ Item {
 
         Behavior on color {
             ColorAnimation {
-                duration: 120
+                duration: sideBar.stateTransitionDuration
             }
         }
 
@@ -467,7 +479,7 @@ Item {
                 return sideBar.open ? "◀" : "▶";
             }
             color: sideBar.themePalette ? sideBar.themePalette.mainHeadline : "#f5f5f5"
-            font.pixelSize: 12
+            font.pixelSize: sideBar.edgeGlyphPixelSize
             font.weight: Font.DemiBold
         }
 

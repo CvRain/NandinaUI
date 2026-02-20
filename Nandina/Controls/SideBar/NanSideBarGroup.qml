@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import Nandina.Theme
+import Nandina.Tokens
 import "../theme_utils.js" as ThemeUtils
 
 Item {
@@ -19,7 +20,19 @@ Item {
     property alias font: titleText.font
     property bool collapsible: false
     property bool expanded: true
-    property int spacing: 8
+    property int spacing: spacingTokens.sm
+    property int headerHeight: spacingTokens.xl + (spacingTokens.xs / 2)
+    property int headerCornerRadius: radiusTokens.md
+    property int titleHorizontalInset: spacingTokens.sm
+    property int titlePixelSize: typographyTokens.caption.pixelSize - 1
+    property int headerStateDuration: motionTokens.fast
+    property int headerExpandDuration: motionTokens.bounceOut
+    property int contentExpandDuration: motionTokens.normal
+
+    readonly property var spacingTokens: NanSpacing
+    readonly property var radiusTokens: NanRadius
+    readonly property var typographyTokens: NanTypography
+    readonly property var motionTokens: NanMotion
 
     readonly property var resolvedSidebar: root.sidebar ? root.sidebar : ThemeUtils.resolveSidebar(root)
 
@@ -43,18 +56,18 @@ Item {
         Item {
             id: headerRow
             width: parent.width
-            height: root.collapsed || root.title.length === 0 ? 0 : 26
+            height: root.collapsed || root.title.length === 0 ? 0 : root.headerHeight
             visible: height > 0
 
             Rectangle {
                 anchors.fill: parent
-                radius: 8
+                radius: root.headerCornerRadius
                 color: headerArea.pressed ? (root.themePalette ? root.themePalette.overlay1 : "#4a4a56") : (headerArea.containsMouse ? (root.themePalette ? root.themePalette.overlay0 : "#343440") : "transparent")
                 visible: root.collapsible
 
                 Behavior on color {
                     ColorAnimation {
-                        duration: 120
+                        duration: root.headerStateDuration
                     }
                 }
             }
@@ -62,10 +75,10 @@ Item {
             Text {
                 id: titleText
                 anchors.left: parent.left
-                anchors.leftMargin: 8
+                anchors.leftMargin: root.titleHorizontalInset
                 anchors.verticalCenter: parent.verticalCenter
                 color: root.themePalette ? root.themePalette.subHeadlines0 : "#b6b6c4"
-                font.pixelSize: 11
+                font.pixelSize: root.titlePixelSize
                 font.weight: Font.DemiBold
                 font.letterSpacing: 0.4
                 elide: Text.ElideRight
@@ -73,12 +86,12 @@ Item {
 
             Text {
                 anchors.right: parent.right
-                anchors.rightMargin: 8
+                anchors.rightMargin: root.titleHorizontalInset
                 anchors.verticalCenter: parent.verticalCenter
                 visible: root.collapsible
                 text: root.expanded ? "▾" : "▸"
                 color: root.themePalette ? root.themePalette.subHeadlines1 : "#9a9aaa"
-                font.pixelSize: 11
+                font.pixelSize: root.titlePixelSize
             }
 
             MouseArea {
@@ -90,7 +103,7 @@ Item {
 
             Behavior on height {
                 NumberAnimation {
-                    duration: 140
+                    duration: root.headerExpandDuration
                     easing.type: Easing.OutCubic
                 }
             }
@@ -110,7 +123,7 @@ Item {
 
             Behavior on height {
                 NumberAnimation {
-                    duration: 180
+                    duration: root.contentExpandDuration
                     easing.type: Easing.OutCubic
                 }
             }

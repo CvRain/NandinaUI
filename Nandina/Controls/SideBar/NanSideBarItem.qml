@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import Nandina.Theme
+import Nandina.Tokens
 import "../theme_utils.js" as ThemeUtils
 
 Rectangle {
@@ -12,7 +13,7 @@ Rectangle {
     width: parent ? parent.width : implicitWidth
     height: implicitHeight
     clip: true
-    radius: 10
+    radius: root.itemCornerRadius
     color: {
         if (itemArea.pressed)
             return root.themePalette ? root.themePalette.overlay2 : "#4a4a56";
@@ -41,6 +42,16 @@ Rectangle {
     readonly property alias fallbackGlyphItem: fallbackGlyphText
 
     property bool active: false
+    property int itemCornerRadius: radiusTokens.md
+    property int horizontalInset: spacingTokens.sm
+    property int stateTransitionDuration: motionTokens.fast
+    property int layoutTransitionDuration: motionTokens.normal
+    property int labelPixelSize: typographyTokens.bodyLarge.pixelSize
+
+    readonly property var spacingTokens: NanSpacing
+    readonly property var radiusTokens: NanRadius
+    readonly property var typographyTokens: NanTypography
+    readonly property var motionTokens: NanMotion
 
     readonly property var resolvedSidebar: root.sidebar ? root.sidebar : ThemeUtils.resolveSidebar(root)
 
@@ -48,7 +59,6 @@ Rectangle {
     readonly property bool rightSided: root.resolvedSidebar ? root.resolvedSidebar.side === NanSideBar.Side.Right : false
     readonly property bool hasIcon: root.iconSource.length > 0
     readonly property bool hasFallbackIcon: root.fallbackIconSource.toString().length > 0
-    readonly property int horizontalInset: 8
     readonly property var resolvedThemeManager: ThemeUtils.resolveThemeManager(root, root.themeManager, fallbackThemeManager)
     readonly property var themePalette: {
         if (root.resolvedSidebar && root.resolvedSidebar.themePalette)
@@ -73,21 +83,21 @@ Rectangle {
 
         Behavior on x {
             NumberAnimation {
-                duration: 160
+                duration: root.layoutTransitionDuration
                 easing.type: Easing.OutCubic
             }
         }
 
         Behavior on opacity {
             NumberAnimation {
-                duration: 120
+                duration: root.stateTransitionDuration
                 easing.type: Easing.OutCubic
             }
         }
 
         Behavior on height {
             NumberAnimation {
-                duration: 140
+                duration: root.stateTransitionDuration
                 easing.type: Easing.OutCubic
             }
         }
@@ -108,7 +118,7 @@ Rectangle {
 
         Behavior on x {
             NumberAnimation {
-                duration: 180
+                duration: root.layoutTransitionDuration
                 easing.type: Easing.InOutSine
             }
         }
@@ -151,28 +161,28 @@ Rectangle {
         x: root.rightSided ? 10 : iconHolder.x + iconHolder.width + 10
         width: root.rightSided ? Math.max(0, iconHolder.x - 20) : Math.max(0, root.width - x - root.horizontalInset)
         elide: Text.ElideRight
-        font.pixelSize: 16
+        font.pixelSize: root.labelPixelSize
         font.weight: root.active ? Font.DemiBold : Font.Medium
         horizontalAlignment: root.rightSided ? Text.AlignRight : Text.AlignLeft
         opacity: root.collapsed ? 0 : 1
 
         Behavior on x {
             NumberAnimation {
-                duration: 180
+                duration: root.layoutTransitionDuration
                 easing.type: Easing.InOutSine
             }
         }
 
         Behavior on width {
             NumberAnimation {
-                duration: 180
+                duration: root.layoutTransitionDuration
                 easing.type: Easing.InOutSine
             }
         }
 
         Behavior on opacity {
             NumberAnimation {
-                duration: 140
+                duration: root.stateTransitionDuration
                 easing.type: Easing.InOutSine
             }
         }
@@ -187,14 +197,14 @@ Rectangle {
 
     Behavior on border.width {
         NumberAnimation {
-            duration: 120
+            duration: root.stateTransitionDuration
             easing.type: Easing.OutCubic
         }
     }
 
     Behavior on color {
         ColorAnimation {
-            duration: 120
+            duration: root.stateTransitionDuration
         }
     }
 }

@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 import Nandina.Theme
+import Nandina.Tokens
 
 ApplicationWindow {
     id: root
@@ -15,24 +16,28 @@ ApplicationWindow {
 
     property int titleBarMode: NanWindow.CustomTitleBar //标题栏模式，默认开箱即用自定义标题栏
     property string windowTitle: "Nandina" //窗口标题，CustomTitleBar 模式下会传递给自定义标题栏组件
-    property int titleBarHeight: 40 //标题栏高度
+    property int titleBarHeight: spacingTokens.xxl + spacingTokens.sm //标题栏高度
     property Component customTitleBar: null //自定义标题栏组件
     property bool useSystemResize: true //是否使用系统调整大小
     property bool alwaysOnTop: false //是否总在最前
-    property int resizeMargin: 6 //调整大小边距
-    property int windowRadius: 12 //窗口圆角半径
+    property int resizeMargin: spacingTokens.sm //调整大小边距
+    property int windowRadius: radiusTokens.lg //窗口圆角半径
     property bool defaultTitleBarDraggable: true //默认标题栏是否可拖动
     property bool defaultTitleBarShowControls: true //默认标题栏是否显示控件
     property bool defaultTitleBarDoubleClickMaximize: true //默认标题栏双击是否最大化
     property bool customTitleBarInjectSystemControls: false //自定义标题栏是否注入系统控件
-    property int customTitleBarControlsRightMargin: 8 //自定义标题栏系统控件右边距
-    property int customTitleBarControlsSpacing: 6 //自定义标题栏系统控件间距
+    property int customTitleBarControlsRightMargin: spacingTokens.sm //自定义标题栏系统控件右边距
+    property int customTitleBarControlsSpacing: spacingTokens.sm //自定义标题栏系统控件间距
     property bool enableThemeGradient: true //是否启用主题渐变背景
     property bool autoAdjustThemeTransitionDuration: true //是否自动调整主题过渡动画时长（根据当前主题亮度调整，亮色主题使用 lightThemeTransitionDuration，暗色主题使用 darkThemeTransitionDuration）
-    property int themeTransitionDuration: 240 //主题过渡动画时长
-    property int lightThemeTransitionDuration: 180 //亮色主题过渡动画时长
-    property int darkThemeTransitionDuration: 260 //暗色主题过渡动画时长
+    property int themeTransitionDuration: motionTokens.normal //主题过渡动画时长
+    property int lightThemeTransitionDuration: motionTokens.normal //亮色主题过渡动画时长
+    property int darkThemeTransitionDuration: motionTokens.slow //暗色主题过渡动画时长
     property real themeGradientOverlayOpacity: 0.18 //主题渐变覆盖层不透明度
+
+    readonly property var spacingTokens: NanSpacing
+    readonly property var radiusTokens: NanRadius
+    readonly property var motionTokens: NanMotion
 
     readonly property bool isMaximized: visibility === Window.Maximized //是否最大化
     readonly property bool isFramelessMode: titleBarMode !== NanWindow.DefaultTitleBar //是否无边框模式
