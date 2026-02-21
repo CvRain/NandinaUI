@@ -12,12 +12,45 @@ function findParentThemeManager(item) {
     return null
 }
 
+function findParentProperty(item, keys) {
+    var current = item ? item.parent : null
+
+    while (current) {
+        for (var i = 0; i < keys.length; ++i) {
+            var key = keys[i]
+            var candidate = current[key]
+            if (candidate !== undefined && candidate !== null)
+                return candidate
+        }
+        current = current.parent
+    }
+
+    return null
+}
+
+function looksLikeFont(candidate) {
+    if (candidate === undefined || candidate === null)
+        return false
+
+    return candidate.pixelSize !== undefined
+        || candidate.pointSize !== undefined
+        || candidate.family !== undefined
+}
+
 /**
  * @param {Item} item
  * @return {ThemeManager|null}
  */
 function resolveInheritedThemeManager(item) {
-    return findParentThemeManager(item)
+    var inheritedThemeManager = findParentThemeManager(item)
+    if (inheritedThemeManager)
+        return inheritedThemeManager
+
+    var resolvedThemeManager = findParentProperty(item, ["resolvedThemeManager"])
+    if (resolvedThemeManager)
+        return resolvedThemeManager
+
+    return null
 }
 
 /**
@@ -35,6 +68,21 @@ function resolveThemeManager(item, explicitThemeManager, fallbackThemeManager) {
         return inheritedThemeManager
 
     return fallbackThemeManager
+}
+
+function resolveInheritedFont(item) {
+    return findParentProperty(item, ["font", "textFont", "titleFont"])
+}
+
+function resolveFont(item, explicitFont, fallbackFont) {
+    if (looksLikeFont(explicitFont))
+        return explicitFont
+
+    var inheritedFont = resolveInheritedFont(item)
+    if (looksLikeFont(inheritedFont))
+        return inheritedFont
+
+    return fallbackFont
 }
 
 function looksLikeSideBar(candidate) {

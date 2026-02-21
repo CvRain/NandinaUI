@@ -10,21 +10,24 @@ Item {
 
     default property alias contentData: contentColumn.data
 
-    implicitWidth: 200
+    implicitWidth: root.defaultGroupWidth
     implicitHeight: groupColumn.implicitHeight
     width: parent ? parent.width : implicitWidth
 
     property var sidebar: null
-    property var themeManager: null
+    property var themeManager: NanStyle.themeManager
     property alias title: titleText.text
-    property alias font: titleText.font
+    property font font: ThemeUtils.resolveFont(root, NanStyle.font, Qt.font({
+        pixelSize: typographyTokens.caption.pixelSize - 1,
+        weight: Font.DemiBold
+    }))
+    property font textFont: root.font
     property bool collapsible: false
     property bool expanded: true
     property int spacing: spacingTokens.sm
     property int headerHeight: spacingTokens.xl + (spacingTokens.xs / 2)
     property int headerCornerRadius: radiusTokens.md
     property int titleHorizontalInset: spacingTokens.sm
-    property int titlePixelSize: typographyTokens.caption.pixelSize - 1
     property int headerStateDuration: motionTokens.fast
     property int headerExpandDuration: motionTokens.bounceOut
     property int contentExpandDuration: motionTokens.normal
@@ -33,6 +36,7 @@ Item {
     readonly property var radiusTokens: NanRadius
     readonly property var typographyTokens: NanTypography
     readonly property var motionTokens: NanMotion
+    readonly property int defaultGroupWidth: (spacingTokens.xxl * 6) + spacingTokens.sm
 
     readonly property var resolvedSidebar: root.sidebar ? root.sidebar : ThemeUtils.resolveSidebar(root)
 
@@ -78,9 +82,7 @@ Item {
                 anchors.leftMargin: root.titleHorizontalInset
                 anchors.verticalCenter: parent.verticalCenter
                 color: root.themePalette ? root.themePalette.subHeadlines0 : "#b6b6c4"
-                font.pixelSize: root.titlePixelSize
-                font.weight: Font.DemiBold
-                font.letterSpacing: 0.4
+                font: root.textFont
                 elide: Text.ElideRight
             }
 
@@ -91,7 +93,7 @@ Item {
                 visible: root.collapsible
                 text: root.expanded ? "▾" : "▸"
                 color: root.themePalette ? root.themePalette.subHeadlines1 : "#9a9aaa"
-                font.pixelSize: root.titlePixelSize
+                font: root.textFont
             }
 
             MouseArea {

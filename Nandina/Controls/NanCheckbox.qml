@@ -14,11 +14,12 @@ Item {
     property bool partiallyChecked: false
     property bool disabled: false
     property string text: ""
-    property var themeManager: null
+    property var themeManager: NanStyle.themeManager
+    property font font: ThemeUtils.resolveFont(root, NanStyle.font, NanTypography.body)
     readonly property var radiusTokens: NanRadius
     property int indicatorSize: NanSpacing.lg + 2
     property int indicatorRadius: root.radiusTokens.sm
-    property font textFont: NanTypography.body
+    property font textFont: root.font
     property font markFont: Qt.font({
         pixelSize: NanTypography.caption.pixelSize,
         weight: Font.Bold

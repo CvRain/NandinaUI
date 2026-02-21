@@ -1,11 +1,11 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import QtQuick.Controls
 import Nandina.Color
 import Nandina.Window
 import Nandina.Controls
 import Nandina.Theme
+import Nandina.Tokens
 
 NanWindow {
     id: demoWindow
@@ -17,9 +17,16 @@ NanWindow {
     titleBarMode: NanWindow.CustomTitleBar
     themeManager.customColorCollection: customTheme.colorCollection
     themeManager.customPaletteCollection: customTheme.paletteCollection
+    font: Qt.font({
+        family: "Sans Serif",
+        pixelSize: NanTypography.body.pixelSize,
+        weight: Font.Normal
+    })
+    NanStyle.themeManager: demoWindow.themeManager
+    NanStyle.font: demoWindow.font
     property int currentSide: NanSideBar.Side.Left
 
-    Button {
+    NanButton {
         text: "Switch Theme"
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
@@ -34,7 +41,7 @@ NanWindow {
         }
     }
 
-    Button {
+    NanButton {
         text: demoWindow.currentSide === NanSideBar.Side.Left ? "Dock Right" : "Dock Left"
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
@@ -64,8 +71,6 @@ NanWindow {
         sectionPadding: 10
         contentSpacing: 8
         showDefaultTrigger: false
-        themeManager: demoWindow.themeManager
-
         header: Component {
             Row {
                 width: parent ? parent.width : 220
@@ -87,8 +92,11 @@ NanWindow {
                         anchors.leftMargin: 12
                         text: "Nandina UI"
                         color: demoWindow.themeManager.currentPaletteCollection.mainHeadline
-                        font.pixelSize: 18
-                        font.weight: Font.DemiBold
+                        font: Qt.font({
+                            family: demoWindow.font.family,
+                            pixelSize: NanTypography.subtitle.pixelSize,
+                            weight: Font.DemiBold
+                        })
                     }
 
                     Behavior on width {
@@ -112,19 +120,20 @@ NanWindow {
             title: "Controls"
             collapsible: true
             expanded: true
-            font {
-                family: "Sans Serif"
-                pixelSize: 13
-                bold: true
-            }
+            font: Qt.font({
+                family: demoWindow.font.family,
+                pixelSize: NanTypography.caption.pixelSize,
+                weight: Font.DemiBold
+            })
 
             NanSideBarItem {
                 text: "NanButton"
                 fallbackGlyph: "B"
                 active: true
                 font: Qt.font({
-                    family: "Sans Serif",
-                    pixelSize: 15
+                    family: demoWindow.font.family,
+                    pixelSize: NanTypography.bodyLarge.pixelSize,
+                    weight: Font.Medium
                 })
             }
 
@@ -134,13 +143,18 @@ NanWindow {
             }
         }
 
-        NanThemeScope {
+        NanStyleScope {
             ThemeManager {
                 id: componentScopeTheme
                 Component.onCompleted: setCurrentPaletteType(NandinaColor.Frappe)
             }
 
-            themeManager: componentScopeTheme
+            NanStyle.themeManager: componentScopeTheme
+            NanStyle.font: Qt.font({
+                family: demoWindow.font.family,
+                pixelSize: NanTypography.caption.pixelSize,
+                weight: Font.Medium
+            })
 
             NanSideBarGroup {
                 title: "Components"

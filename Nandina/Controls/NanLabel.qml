@@ -13,8 +13,8 @@ Item {
     property var forControl: null
     property bool disabled: false
     property bool required: false
-    property var themeManager: null
-    property alias font: labelText.font
+    property var themeManager: NanStyle.themeManager
+    property font font: ThemeUtils.resolveFont(root, NanStyle.font, NanTypography.body)
 
     ThemeManager {
         id: fallbackThemeManager
@@ -29,7 +29,7 @@ Item {
         anchors.fill: parent
         text: root.required ? (root.text + " *") : root.text
         color: root.disabled ? (root.themePalette ? root.themePalette.subHeadlines0 : "#9d9dac") : (root.themePalette ? root.themePalette.bodyCopy : "#efefef")
-        font: NanTypography.body
+        font: root.font
         verticalAlignment: Text.AlignVCenter
     }
 

@@ -55,7 +55,7 @@ FocusScope {
     property int size: NanButton.Size.Md
     property Component leftIcon: null
     property Component rightIcon: null
-    property var themeManager: null
+    property var themeManager: NanStyle.themeManager
 
     readonly property int primary: NanButton.Variant.Primary
     readonly property int secondary: NanButton.Variant.Secondary
@@ -171,7 +171,8 @@ FocusScope {
 
     property int horizontalPadding: root.size === NanButton.Size.Sm ? NanSpacing.sm : (root.size === NanButton.Size.Lg ? NanSpacing.lg : NanSpacing.md)
     property int contentSpacing: NanSpacing.sm
-    property font textFont: root.size === NanButton.Size.Sm ? NanTypography.caption : NanTypography.body
+    property font font: ThemeUtils.resolveFont(root, NanStyle.font, root.size === NanButton.Size.Sm ? NanTypography.caption : NanTypography.body)
+    property font textFont: root.font
     property int cornerRadius: root.radiusTokens.md
 
     signal clicked

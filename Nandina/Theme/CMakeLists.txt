@@ -3,6 +3,7 @@ set(SUBPROJECT_URI Nandina.Theme)
 
 set(SUBPROJECT_QML_FILES
         NanThemeScope.qml
+        NanStyleScope.qml
 )
 
 set(SUBPROJECT_QML_SINGLETON_FILES
@@ -11,6 +12,8 @@ set(SUBPROJECT_QML_SINGLETON_FILES
 set(SUBPROJECT_CPP_FILES
         theme_manager.hpp
         theme_manager.cpp
+        nan_style.hpp
+        nan_style.cpp
 )
 
 qt_add_qml_module(${SUBPROJECT_NAME}

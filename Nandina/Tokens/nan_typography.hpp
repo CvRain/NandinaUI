@@ -1,10 +1,10 @@
 #ifndef NAN_TYPOGRAPHY_HPP
 #define NAN_TYPOGRAPHY_HPP
 
-#include <QObject>
 #include <QFont>
-#include <QQmlEngine>
 #include <QJSEngine>
+#include <QObject>
+#include <QQmlEngine>
 
 #include "nan_singleton.hpp"
 
@@ -43,6 +43,6 @@ namespace Nandina::NandinaTokens {
 
         static QFont makeFont(int pixelSize, QFont::Weight weight);
     };
-}
+} // namespace Nandina::NandinaTokens
 
 #endif // NAN_TYPOGRAPHY_HPP

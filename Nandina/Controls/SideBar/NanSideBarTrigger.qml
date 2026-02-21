@@ -16,10 +16,13 @@ Rectangle {
     border.color: themePalette ? themePalette.activeBorder : "#6b6b78"
 
     property var sidebar: null
-    property var themeManager: null
+    property var themeManager: NanStyle.themeManager
     property int triggerSize: spacingTokens.xxl
     property int triggerCornerRadius: radiusTokens.md
-    property int glyphPixelSize: typographyTokens.caption.pixelSize
+    property font font: ThemeUtils.resolveFont(root, NanStyle.font, Qt.font({
+        pixelSize: typographyTokens.caption.pixelSize,
+        weight: Font.DemiBold
+    }))
     property int transitionDuration: motionTokens.fast
     property string leftExpandedText: "◀"
     property string leftCollapsedText: "▶"
@@ -59,8 +62,10 @@ Rectangle {
             return root.resolvedSidebar.open ? root.leftExpandedText : root.leftCollapsedText;
         }
         color: root.themePalette ? root.themePalette.mainHeadline : "#f5f5f5"
-        font.pixelSize: root.glyphPixelSize
-        font.weight: Font.DemiBold
+        font.family: root.font.family
+        font.pixelSize: root.font.pixelSize > 0 ? root.font.pixelSize : root.typographyTokens.caption.pixelSize
+        font.weight: root.font.weight > 0 ? root.font.weight : Font.DemiBold
+        font.italic: root.font.italic
         scale: root.resolvedSidebar && root.resolvedSidebar.open ? 1.0 : 0.92
         opacity: triggerArea.containsMouse ? 1 : 0.9
 

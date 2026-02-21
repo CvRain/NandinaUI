@@ -26,19 +26,22 @@ Item {
     property alias footerData: footerSlot.data
 
     implicitWidth: width    // 隐式宽度由当前状态决定
-    implicitHeight: 520     // 隐式高度由当前状态决定
+    implicitHeight: sideBar.defaultSidebarHeight     // 隐式高度由当前状态决定
     clip: false // 禁用裁剪，以允许边缘切换指示器在外部显示
 
     readonly property var spacingTokens: NanSpacing
     readonly property var radiusTokens: NanRadius
     readonly property var typographyTokens: NanTypography
     readonly property var motionTokens: NanMotion
+    readonly property int defaultCollapsedWidth: (spacingTokens.xxl * 2) + spacingTokens.sm + spacingTokens.xs
+    readonly property int defaultExpandedWidth: (spacingTokens.xxl * 8) + spacingTokens.lg - (spacingTokens.xs / 2)
+    readonly property int defaultSidebarHeight: (spacingTokens.xxl * 16) + spacingTokens.sm
 
     property bool open: true    // 默认打开
     property int side: NanSideBar.Side.Left // 默认停靠在左侧
     property int collapsible: NanSideBar.Collapsible.Icon // 默认使用图标折叠
-    property int collapsedWidth: 68 // 默认折叠宽度
-    property int expandedWidth: 270 // 默认展开宽度
+    property int collapsedWidth: defaultCollapsedWidth // 默认折叠宽度
+    property int expandedWidth: defaultExpandedWidth // 默认展开宽度
     property int railWidth: spacingTokens.sm // 默认轨道宽度
     property int railHitPadding: spacingTokens.sm // 鼠标点击轨道的额外范围
     property int animationDuration: motionTokens.normal // 默认动画持续时间
@@ -59,7 +62,8 @@ Item {
     property var dockingParent: parent // 默认停靠父项
     property Component header // 头部标题组件
     property Component footer // 底部组件
-    property var themeManager: null // 主题管理器
+    property var themeManager: NanStyle.themeManager // 主题管理器
+    property font font: ThemeUtils.resolveFont(sideBar, NanStyle.font, typographyTokens.body)
 
     readonly property bool isOffcanvas: sideBar.collapsible === NanSideBar.Collapsible.Offcanvas    // 默认为Offcanvas
     readonly property bool isIconCollapsible: sideBar.collapsible === NanSideBar.Collapsible.Icon // 默认为Icon折叠

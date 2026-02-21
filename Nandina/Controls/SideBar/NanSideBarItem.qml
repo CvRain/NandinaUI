@@ -27,10 +27,10 @@ Rectangle {
     border.color: root.themePalette ? root.themePalette.activeBorder : "#6b6b78"
 
     property var sidebar: null
-    property var themeManager: null
+    property var themeManager: NanStyle.themeManager
     property alias text: label.text
-    property alias font: label.font
-    property alias textFont: label.font
+    property font font: ThemeUtils.resolveFont(root, NanStyle.font, typographyTokens.bodyLarge)
+    property font textFont: root.font
     property string iconSource: ""
     property url fallbackIconSource: ""
     property string fallbackGlyph: "•"
@@ -46,7 +46,6 @@ Rectangle {
     property int horizontalInset: spacingTokens.sm
     property int stateTransitionDuration: motionTokens.fast
     property int layoutTransitionDuration: motionTokens.normal
-    property int labelPixelSize: typographyTokens.bodyLarge.pixelSize
 
     readonly property var spacingTokens: NanSpacing
     readonly property var radiusTokens: NanRadius
@@ -161,8 +160,10 @@ Rectangle {
         x: root.rightSided ? 10 : iconHolder.x + iconHolder.width + 10
         width: root.rightSided ? Math.max(0, iconHolder.x - 20) : Math.max(0, root.width - x - root.horizontalInset)
         elide: Text.ElideRight
-        font.pixelSize: root.labelPixelSize
-        font.weight: root.active ? Font.DemiBold : Font.Medium
+        font.family: root.textFont.family
+        font.pixelSize: root.textFont.pixelSize > 0 ? root.textFont.pixelSize : root.typographyTokens.bodyLarge.pixelSize
+        font.weight: root.active ? Font.DemiBold : (root.textFont.weight > 0 ? root.textFont.weight : Font.Medium)
+        font.italic: root.textFont.italic
         horizontalAlignment: root.rightSided ? Text.AlignRight : Text.AlignLeft
         opacity: root.collapsed ? 0 : 1
 

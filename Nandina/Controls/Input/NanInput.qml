@@ -53,8 +53,13 @@ Item {
     property string defaultValidationErrorText: "输入格式不正确" // 默认的内置校验错误提示文本
     property string defaultCustomValidationErrorText: "输入不符合要求" // 默认的自定义校验错误提示文本
     property bool useCustomValidator: false // 是否使用自定义校验函数，默认为 false
-    property font textFont: NanTypography.body
-    property font helperFont: NanTypography.caption
+    property font font: ThemeUtils.resolveFont(root, NanStyle.font, NanTypography.body)
+    property font textFont: root.font
+    property font helperFont: Qt.font({
+        family: root.textFont.family,
+        pixelSize: NanTypography.caption.pixelSize,
+        weight: root.textFont.weight
+    })
     property int verticalSpacing: NanSpacing.sm
     property int horizontalPadding: NanSpacing.sm
     readonly property var radiusTokens: NanRadius
@@ -68,7 +73,7 @@ Item {
     property var validatorFn: function (_value, _input) {
         return true;
     }
-    property var themeManager: null // 允许外部传入 ThemeManager 实例以使用主题色，默认为 null 将自动查找父级 ThemeManager
+    property var themeManager: NanStyle.themeManager // 允许外部传入 ThemeManager 实例以使用主题色，默认继承 NanStyle.themeManager
 
     readonly property int textType: NanInput.InputType.Text
     readonly property int passwordType: NanInput.InputType.Password
@@ -316,7 +321,7 @@ Item {
                     anchors.centerIn: parent
                     text: "×"
                     color: root.themePalette ? root.themePalette.mainHeadline : "#f5f5f5"
-                    font: NanTypography.body
+                    font: root.textFont
                 }
 
                 MouseArea {
@@ -342,7 +347,7 @@ Item {
                     anchors.centerIn: parent
                     text: root.passwordVisible ? "隐藏" : "显示"
                     color: root.themePalette ? root.themePalette.mainHeadline : "#f5f5f5"
-                    font: NanTypography.caption
+                    font: root.helperFont
                 }
 
                 MouseArea {
