@@ -1,5 +1,6 @@
 import QtQuick
 import Nandina.Theme
+import Nandina.Tokens
 import "../theme_utils.js" as ThemeUtils
 import "button_style_utils.js" as ButtonStyleUtils
 
@@ -91,9 +92,9 @@ FocusScope {
     property real baseScale: 1.0
     property real hoverScale: 1.03
     property real pressScale: 0.97
-    property int hoverTransitionDuration: 120
-    property int clickBounceInDuration: 70
-    property int clickBounceOutDuration: 140
+    property int hoverTransitionDuration: root.motionTokens.fast
+    property int clickBounceInDuration: root.motionTokens.bounceIn
+    property int clickBounceOutDuration: root.motionTokens.bounceOut
     property real hoverHighlightOpacity: 0.06
 
     property real currentScale: baseScale
@@ -115,6 +116,8 @@ FocusScope {
     readonly property bool focused: root.activeFocus
     readonly property bool entered: hovered
     readonly property bool exited: !hovered
+    readonly property var motionTokens: NanMotion
+    readonly property var radiusTokens: NanRadius
 
     ThemeManager {
         id: fallbackThemeManager
@@ -166,7 +169,10 @@ FocusScope {
     readonly property color pressedColor: resolvedColors.pressedColor
     readonly property color borderColor: resolvedColors.borderColor
 
-    property int horizontalPadding: root.size === NanButton.Size.Sm ? 10 : (root.size === NanButton.Size.Lg ? 16 : 12)
+    property int horizontalPadding: root.size === NanButton.Size.Sm ? NanSpacing.sm : (root.size === NanButton.Size.Lg ? NanSpacing.lg : NanSpacing.md)
+    property int contentSpacing: NanSpacing.sm
+    property font textFont: root.size === NanButton.Size.Sm ? NanTypography.caption : NanTypography.body
+    property int cornerRadius: root.radiusTokens.md
 
     signal clicked
     signal released
@@ -237,7 +243,7 @@ FocusScope {
     Rectangle {
         id: backgroundRect
         anchors.fill: parent
-        radius: 8
+        radius: root.cornerRadius
         border.width: root.accent === NanButton.Accent.Outlined || root.focused ? 1 : 0
         border.color: root.borderColor
         color: {
@@ -253,7 +259,7 @@ FocusScope {
 
         Behavior on color {
             ColorAnimation {
-                duration: 120
+                duration: root.motionTokens.fast
             }
         }
 
@@ -283,7 +289,7 @@ FocusScope {
     Row {
         id: contentRow
         anchors.centerIn: parent
-        spacing: 8
+        spacing: root.contentSpacing
 
         Loader {
             active: root.leftIcon !== null
@@ -293,8 +299,7 @@ FocusScope {
         Text {
             text: root.text
             color: root.disabled && root.themePalette ? root.themePalette.subHeadlines0 : root.foregroundColor
-            font.pixelSize: root.size === NanButton.Size.Sm ? 12 : 13
-            font.weight: Font.Medium
+            font: root.textFont
         }
 
         Loader {

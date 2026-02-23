@@ -2,7 +2,7 @@ set(SUBPROJECT_NAME NandinaTheme)
 set(SUBPROJECT_URI Nandina.Theme)
 
 set(SUBPROJECT_QML_FILES
-
+        NanThemeScope.qml
 )
 
 set(SUBPROJECT_QML_SINGLETON_FILES

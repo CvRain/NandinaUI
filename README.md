@@ -112,11 +112,28 @@ NanWindow {
 ### Nandina.Core
 - 当前作为基础支撑模块，持续演进中。
 
+### Nandina.Tokens
+- NanTypography（字体等级 token）
+- NanSpacing（间距等级 token）
+- NanRadius（圆角等级 token）
+- NanMotion（动效时长 token）
+
 ## 计划中
 
 > 版本策略：先补“设计系统底座”，再做基础控件，最后扩展复杂场景，减少后续 API 返工。
 
 详细规范见：[`docs/v0.2-component-spec.md`](docs/v0.2-component-spec.md)
+
+### 开发路线摘要（公开）
+- 架构分层：`Nandina.Color` / `Nandina.Theme` / `Nandina.Tokens` / `Nandina.Controls` / `Nandina.Window`
+- 主题策略：组件主题解析优先级为「显式 themeManager > 父级/ThemeScope 继承 > 组件 fallback」
+- Token 策略：逐步将字体、间距、圆角、动效抽离为 Design Tokens，避免组件内硬编码
+- API 策略：采用语义化版本，新增能力走 `MINOR`，破坏性改动仅在 `MAJOR`
+- 组件演进：先完成基础表单控件一致性（状态机/键盘/主题），再扩展复杂导航与数据组件
+
+### 文档说明
+- `docs/` 目录保留对外公开规范（当前为 v0.2 组件规范）
+- 内部分析与设计草案迁移至私有目录，不作为对外稳定文档承诺
 
 **阶段 0: 设计系统底座 (v0.1.x)**
 - [ ] Design Tokens（spacing / radius / typography / motion）

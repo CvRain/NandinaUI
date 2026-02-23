@@ -89,3 +89,4 @@ build
 cmake-build-*
 .qmlls.ini
 temp
+.internal-docs/

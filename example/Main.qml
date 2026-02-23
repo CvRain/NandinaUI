@@ -5,6 +5,7 @@ import QtQuick.Controls
 import Nandina.Color
 import Nandina.Window
 import Nandina.Controls
+import Nandina.Theme
 
 NanWindow {
     id: demoWindow
@@ -71,10 +72,7 @@ NanWindow {
                 height: 34
                 spacing: 8
 
-                NanSideBarTrigger {
-                    sidebar: appSidebar
-                    themeManager: demoWindow.themeManager
-                }
+                NanSideBarTrigger {}
 
                 Rectangle {
                     width: appSidebar.collapsed ? 0 : (parent.width - 40)
@@ -89,7 +87,7 @@ NanWindow {
                         anchors.leftMargin: 12
                         text: "Nandina UI"
                         color: demoWindow.themeManager.currentPaletteCollection.mainHeadline
-                        font.pixelSize: 14
+                        font.pixelSize: 18
                         font.weight: Font.DemiBold
                     }
 
@@ -105,60 +103,54 @@ NanWindow {
 
         footer: Component {
             NanSideBarItem {
-                sidebar: appSidebar
-                themeManager: demoWindow.themeManager
-                text: "User Profile"
-                fallbackGlyph: "U"
+                text: "Settings"
+                fallbackGlyph: "S"
             }
         }
 
         NanSideBarGroup {
-            sidebar: appSidebar
-            themeManager: demoWindow.themeManager
-            title: "Platform"
-
-            NanSideBarItem {
-                sidebar: appSidebar
-                themeManager: demoWindow.themeManager
-                text: "Dashboard"
-                fallbackGlyph: "D"
-                active: true
-            }
-
-            NanSideBarItem {
-                sidebar: appSidebar
-                themeManager: demoWindow.themeManager
-                text: "Inbox"
-                fallbackGlyph: "I"
-            }
-
-            NanSideBarItem {
-                sidebar: appSidebar
-                themeManager: demoWindow.themeManager
-                text: "Calendar"
-                fallbackGlyph: "C"
-            }
-        }
-
-        NanSideBarGroup {
-            sidebar: appSidebar
-            themeManager: demoWindow.themeManager
-            title: "Projects"
+            title: "Controls"
             collapsible: true
             expanded: true
-
-            NanSideBarItem {
-                sidebar: appSidebar
-                themeManager: demoWindow.themeManager
-                text: "Nandina Core"
-                fallbackGlyph: "N"
+            font {
+                family: "Sans Serif"
+                pixelSize: 13
+                bold: true
             }
 
             NanSideBarItem {
-                sidebar: appSidebar
-                themeManager: demoWindow.themeManager
-                text: "Design System"
-                fallbackGlyph: "D"
+                text: "NanButton"
+                fallbackGlyph: "B"
+                active: true
+                font: Qt.font({
+                    family: "Sans Serif",
+                    pixelSize: 15
+                })
+            }
+
+            NanSideBarItem {
+                text: "NanInput"
+                fallbackGlyph: "I"
+            }
+        }
+
+        NanThemeScope {
+            ThemeManager {
+                id: componentScopeTheme
+                Component.onCompleted: setCurrentPaletteType(NandinaColor.Frappe)
+            }
+
+            themeManager: componentScopeTheme
+
+            NanSideBarGroup {
+                title: "Components"
+                collapsible: true
+                expanded: true
+
+                NanSideBarItem {
+                    text: "Scoped Theme"
+                    fallbackGlyph: "T"
+                }
             }
         }
     }

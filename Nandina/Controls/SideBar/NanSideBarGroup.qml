@@ -15,12 +15,13 @@ Item {
 
     property var sidebar: null
     property var themeManager: null
-    property string title: ""
+    property alias title: titleText.text
+    property alias font: titleText.font
     property bool collapsible: false
     property bool expanded: true
     property int spacing: 8
 
-    readonly property var resolvedSidebar: root.sidebar
+    readonly property var resolvedSidebar: root.sidebar ? root.sidebar : ThemeUtils.resolveSidebar(root)
 
     readonly property bool collapsed: root.resolvedSidebar ? root.resolvedSidebar.collapsed : false
     readonly property var resolvedThemeManager: ThemeUtils.resolveThemeManager(root, root.themeManager, fallbackThemeManager)
@@ -59,10 +60,10 @@ Item {
             }
 
             Text {
+                id: titleText
                 anchors.left: parent.left
                 anchors.leftMargin: 8
                 anchors.verticalCenter: parent.verticalCenter
-                text: root.title
                 color: root.themePalette ? root.themePalette.subHeadlines0 : "#b6b6c4"
                 font.pixelSize: 11
                 font.weight: Font.DemiBold
