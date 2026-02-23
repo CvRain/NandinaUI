@@ -1,33 +1,3 @@
-function findParentThemeManager(item) {
-    var themeManagerKey = "theme" + "Manager"
-    var current = item ? item.parent : null
-
-    while (current) {
-        var candidate = current[themeManagerKey]
-        if (candidate !== undefined && candidate !== null)
-            return candidate
-        current = current.parent
-    }
-
-    return null
-}
-
-function findParentProperty(item, keys) {
-    var current = item ? item.parent : null
-
-    while (current) {
-        for (var i = 0; i < keys.length; ++i) {
-            var key = keys[i]
-            var candidate = current[key]
-            if (candidate !== undefined && candidate !== null)
-                return candidate
-        }
-        current = current.parent
-    }
-
-    return null
-}
-
 function looksLikeFont(candidate) {
     if (candidate === undefined || candidate === null)
         return false
@@ -39,48 +9,29 @@ function looksLikeFont(candidate) {
 
 /**
  * @param {Item} item
- * @return {ThemeManager|null}
- */
-function resolveInheritedThemeManager(item) {
-    var inheritedThemeManager = findParentThemeManager(item)
-    if (inheritedThemeManager)
-        return inheritedThemeManager
-
-    var resolvedThemeManager = findParentProperty(item, ["resolvedThemeManager"])
-    if (resolvedThemeManager)
-        return resolvedThemeManager
-
-    return null
-}
-
-/**
- * @param {Item} item
  * @param {ThemeManager} explicitThemeManager
  * @param {ThemeManager} fallbackThemeManager
  * @return {ThemeManager}
  */
-function resolveThemeManager(item, explicitThemeManager, fallbackThemeManager) {
+function resolveThemeManager(item, explicitThemeManager, _fallbackThemeManager) {
     if (explicitThemeManager)
         return explicitThemeManager
 
-    var inheritedThemeManager = resolveInheritedThemeManager(item)
-    if (inheritedThemeManager)
-        return inheritedThemeManager
+    if (NanStyle.themeManager)
+        return NanStyle.themeManager
 
-    return fallbackThemeManager
-}
-
-function resolveInheritedFont(item) {
-    return findParentProperty(item, ["font", "textFont", "titleFont"])
+    return NanTheme.themeManager
 }
 
 function resolveFont(item, explicitFont, fallbackFont) {
     if (looksLikeFont(explicitFont))
         return explicitFont
 
-    var inheritedFont = resolveInheritedFont(item)
-    if (looksLikeFont(inheritedFont))
-        return inheritedFont
+    if (looksLikeFont(NanStyle.font))
+        return NanStyle.font
+
+    if (looksLikeFont(NanTheme.font))
+        return NanTheme.font
 
     return fallbackFont
 }

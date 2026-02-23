@@ -1,5 +1,7 @@
 #include "nan_style.hpp"
 
+#include "nan_theme.hpp"
+
 #include <QQmlEngine>
 #include <QVariant>
 
@@ -15,7 +17,11 @@ namespace Nandina::NandinaTheme {
         if (explicitThemeManager)
             return explicitThemeManager;
 
-        return resolveFromParents();
+        ThemeManager *inheritedThemeManager = resolveFromParents();
+        if (inheritedThemeManager)
+            return inheritedThemeManager;
+
+        return NanTheme::instance()->themeManager();
     }
 
     void NanStyle::setThemeManager(ThemeManager *themeManager) {
@@ -30,7 +36,11 @@ namespace Nandina::NandinaTheme {
         if (hasExplicitFont)
             return explicitFont;
 
-        return resolveFontFromParents();
+        const QFont inheritedFont = resolveFontFromParents();
+        if (!inheritedFont.family().isEmpty() || inheritedFont.pixelSize() > 0 || inheritedFont.pointSizeF() > 0)
+            return inheritedFont;
+
+        return NanTheme::instance()->font();
     }
 
     void NanStyle::setFont(const QFont &font) {
