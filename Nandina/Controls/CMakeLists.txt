@@ -25,13 +25,14 @@ set(SUBPROJECT_QML_SINGLETON_FILES
 qt_add_qml_module(${SUBPROJECT_NAME}
     URI ${SUBPROJECT_URI}
     VERSION 1.0
-    DEPENDENCIES Nandina.Theme Nandina.Tokens
+    DEPENDENCIES Nandina.Theme Nandina.Tokens Nandina.Primitives
     QML_FILES ${SUBPROJECT_QML_FILES} ${SUBPROJECT_QML_SINGLETON_FILES} ${SUBPROJECT_JS_FILES}
 )
 
 target_link_libraries(${SUBPROJECT_NAME} PUBLIC
     Qt6::Quick
     Qt6::Gui
+    NandinaPrimitives
     NandinaTokens
 )
 

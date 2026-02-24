@@ -6,6 +6,7 @@ import Nandina.Window
 import Nandina.Controls
 import Nandina.Theme
 import Nandina.Tokens
+import Nandina.Experimental
 
 NanWindow {
     id: demoWindow

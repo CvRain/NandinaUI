@@ -2,9 +2,10 @@ import QtQuick
 import QtQuick.Controls as QQC
 import Nandina.Theme
 import Nandina.Tokens
+import Nandina.Primitives
 import "theme_utils.js" as ThemeUtils
 
-Item {
+BaseControl {
     id: root
 
     implicitWidth: control.implicitWidth
@@ -24,18 +25,15 @@ Item {
         pixelSize: NanTypography.caption.pixelSize,
         weight: Font.Bold
     })
+    enabled: !root.disabled
 
-    readonly property bool hovered: control.hovered
-    readonly property bool pressed: control.pressed
-    readonly property bool focused: control.visualFocus
+    hovered: control.hovered
+    pressed: control.pressed
     readonly property bool entered: hovered
     readonly property bool exited: !hovered
+    readonly property bool focused: control.visualFocus
 
-    ThemeManager {
-        id: fallbackThemeManager
-    }
-
-    readonly property var resolvedThemeManager: ThemeUtils.resolveThemeManager(root, root.themeManager, fallbackThemeManager)
+    readonly property var resolvedThemeManager: root.themeManager ? root.themeManager : NanTheme.themeManager
 
     readonly property var themePalette: root.resolvedThemeManager && root.resolvedThemeManager.currentPaletteCollection ? root.resolvedThemeManager.currentPaletteCollection : null
 
