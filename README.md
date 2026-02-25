@@ -124,6 +124,8 @@ NanWindow {
 
 详细规范见：[`docs/v0.2-component-spec.md`](docs/v0.2-component-spec.md)
 
+当前重构蓝图（Task/Action）：[`docs/primitive-first-blueprint.md`](docs/primitive-first-blueprint.md)
+
 ### 开发路线摘要（公开）
 - 架构分层：`Nandina.Color` / `Nandina.Theme` / `Nandina.Tokens` / `Nandina.Controls` / `Nandina.Window`
 - 主题策略：组件主题解析优先级为「显式 themeManager > 父级/ThemeScope 继承 > 组件 fallback」

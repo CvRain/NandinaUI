@@ -1,5 +1,7 @@
 # Primitive-first M0 契约（v0.x）
 
+> M0 之后的完整执行蓝图与 Task/Action 见：`docs/primitive-first-blueprint.md`
+
 ## 1. 目标
 
 在 v0.x 阶段将 Nandina 收敛为：
@@ -44,3 +46,8 @@
 - `Nandina.Experimental.Controls.NanItem` 基于 `BaseControl`
 - 文档明确“单一主题真源 + 组合优先”约束
 - 不修改现有示例功能行为
+
+## 6. 下一步入口
+
+- 从 `docs/primitive-first-blueprint.md` 的模块 B 开始推进组件重建。
+- 所有新增/重构组件必须遵守其中的“新组件开发模板”与 DoD。
