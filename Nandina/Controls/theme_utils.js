@@ -1,40 +1,23 @@
-function findParentThemeManager(item) {
-    var themeManagerKey = "theme" + "Manager"
-    var current = item ? item.parent : null
+function looksLikeFont(candidate) {
+    if (candidate === undefined || candidate === null)
+        return false
 
-    while (current) {
-        var candidate = current[themeManagerKey]
-        if (candidate !== undefined && candidate !== null)
-            return candidate
-        current = current.parent
-    }
-
-    return null
+    return candidate.pixelSize !== undefined
+        || candidate.pointSize !== undefined
+        || candidate.family !== undefined
 }
 
-/**
- * @param {Item} item
- * @return {ThemeManager|null}
- */
-function resolveInheritedThemeManager(item) {
-    return findParentThemeManager(item)
-}
+function resolveFont(_item, explicitFont, fallbackFont) {
+    if (looksLikeFont(explicitFont))
+        return explicitFont
 
-/**
- * @param {Item} item
- * @param {ThemeManager} explicitThemeManager
- * @param {ThemeManager} fallbackThemeManager
- * @return {ThemeManager}
- */
-function resolveThemeManager(item, explicitThemeManager, fallbackThemeManager) {
-    if (explicitThemeManager)
-        return explicitThemeManager
+    if (looksLikeFont(NanStyle.font))
+        return NanStyle.font
 
-    var inheritedThemeManager = resolveInheritedThemeManager(item)
-    if (inheritedThemeManager)
-        return inheritedThemeManager
+    if (looksLikeFont(NanTheme.font))
+        return NanTheme.font
 
-    return fallbackThemeManager
+    return fallbackFont
 }
 
 function looksLikeSideBar(candidate) {

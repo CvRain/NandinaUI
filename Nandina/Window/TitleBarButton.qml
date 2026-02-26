@@ -1,14 +1,25 @@
 import QtQuick
+import Nandina.Tokens
 
 Rectangle {
     id: root
 
-    width: 42
-    height: 30
-    radius: 4
+    width: root.buttonWidth
+    height: root.buttonHeight
+    radius: root.cornerRadius
     color: "transparent"
 
+    readonly property var spacingTokens: NanSpacing
+    readonly property var radiusTokens: NanRadius
+    readonly property var typographyTokens: NanTypography
+    readonly property var motionTokens: NanMotion
+
     property string text: ""
+    property int buttonWidth: spacingTokens.xxl + spacingTokens.sm + 2
+    property int buttonHeight: spacingTokens.xl + spacingTokens.sm - 2
+    property int cornerRadius: radiusTokens.sm
+    property int iconSize: typographyTokens.caption.pixelSize
+    property int iconTransitionDuration: motionTokens.fast
     property bool isCloseButton: false
     property color textColor: "white"
     property color hoverColor: "transparent"
@@ -23,30 +34,30 @@ Rectangle {
 
     readonly property color resolvedHoverColor: {
         if (isCloseButton)
-            return closeHoverColor
+            return closeHoverColor;
         if (!useAccentForHover)
-            return hoverColor
-        return Qt.rgba(accentColor.r, accentColor.g, accentColor.b, accentHoverAlpha)
+            return hoverColor;
+        return Qt.rgba(accentColor.r, accentColor.g, accentColor.b, accentHoverAlpha);
     }
 
     readonly property color resolvedPressedColor: {
         if (isCloseButton)
-            return closePressedColor
+            return closePressedColor;
         if (!useAccentForHover)
-            return pressedColor
-        return Qt.rgba(accentColor.r, accentColor.g, accentColor.b, accentPressedAlpha)
+            return pressedColor;
+        return Qt.rgba(accentColor.r, accentColor.g, accentColor.b, accentPressedAlpha);
     }
 
     readonly property string iconType: {
         if (isCloseButton)
-            return "close"
+            return "close";
         if (text === "—" || text === "-")
-            return "minimize"
+            return "minimize";
         if (text === "□")
-            return "maximize"
+            return "maximize";
         if (text === "❐")
-            return "restore"
-        return "text"
+            return "restore";
+        return "text";
     }
 
     signal clicked
@@ -56,15 +67,15 @@ Rectangle {
         radius: root.radius
         color: {
             if (mouseArea.pressed)
-                return root.resolvedPressedColor
+                return root.resolvedPressedColor;
             if (mouseArea.containsMouse)
-                return root.resolvedHoverColor
-            return "transparent"
+                return root.resolvedHoverColor;
+            return "transparent";
         }
 
         Behavior on color {
             ColorAnimation {
-                duration: 120
+                duration: root.iconTransitionDuration
             }
         }
     }
@@ -74,7 +85,7 @@ Rectangle {
         anchors.centerIn: parent
         text: root.text
         color: root.textColor
-        font.pixelSize: 12
+        font.pixelSize: root.typographyTokens.caption.pixelSize
         font.bold: root.isCloseButton
     }
 
@@ -82,50 +93,50 @@ Rectangle {
         id: iconCanvas
         visible: root.iconType !== "text"
         anchors.centerIn: parent
-        width: 12
-        height: 12
+        width: root.iconSize
+        height: root.iconSize
         antialiasing: true
 
         onPaint: {
-            const ctx = getContext("2d")
-            ctx.reset()
+            const ctx = getContext("2d");
+            ctx.reset();
 
-            const w = width
-            const h = height
-            const stroke = root.isCloseButton ? "white" : root.textColor
+            const w = width;
+            const h = height;
+            const stroke = root.isCloseButton ? "white" : root.textColor;
 
-            ctx.strokeStyle = stroke
-            ctx.fillStyle = stroke
-            ctx.lineWidth = root.iconLineWidth
-            ctx.lineCap = "round"
-            ctx.lineJoin = "round"
+            ctx.strokeStyle = stroke;
+            ctx.fillStyle = stroke;
+            ctx.lineWidth = root.iconLineWidth;
+            ctx.lineCap = "round";
+            ctx.lineJoin = "round";
 
             if (root.iconType === "close") {
-                ctx.beginPath()
-                ctx.moveTo(2, 2)
-                ctx.lineTo(w - 2, h - 2)
-                ctx.moveTo(w - 2, 2)
-                ctx.lineTo(2, h - 2)
-                ctx.stroke()
-                return
+                ctx.beginPath();
+                ctx.moveTo(2, 2);
+                ctx.lineTo(w - 2, h - 2);
+                ctx.moveTo(w - 2, 2);
+                ctx.lineTo(2, h - 2);
+                ctx.stroke();
+                return;
             }
 
             if (root.iconType === "minimize") {
-                ctx.beginPath()
-                ctx.moveTo(2, h - 3)
-                ctx.lineTo(w - 2, h - 3)
-                ctx.stroke()
-                return
+                ctx.beginPath();
+                ctx.moveTo(2, h - 3);
+                ctx.lineTo(w - 2, h - 3);
+                ctx.stroke();
+                return;
             }
 
             if (root.iconType === "maximize") {
-                ctx.strokeRect(2, 2, w - 4, h - 4)
-                return
+                ctx.strokeRect(2, 2, w - 4, h - 4);
+                return;
             }
 
             if (root.iconType === "restore") {
-                ctx.strokeRect(4, 2, w - 6, h - 6)
-                ctx.strokeRect(2, 4, w - 6, h - 6)
+                ctx.strokeRect(4, 2, w - 6, h - 6);
+                ctx.strokeRect(2, 4, w - 6, h - 6);
             }
         }
     }

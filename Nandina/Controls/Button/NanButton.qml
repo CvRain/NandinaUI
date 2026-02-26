@@ -1,10 +1,11 @@
 import QtQuick
 import Nandina.Theme
 import Nandina.Tokens
+import Nandina.Primitives
 import "../theme_utils.js" as ThemeUtils
 import "button_style_utils.js" as ButtonStyleUtils
 
-FocusScope {
+BaseControl {
     id: root
 
     enum Variant {
@@ -55,7 +56,6 @@ FocusScope {
     property int size: NanButton.Size.Md
     property Component leftIcon: null
     property Component rightIcon: null
-    property var themeManager: null
 
     readonly property int primary: NanButton.Variant.Primary
     readonly property int secondary: NanButton.Variant.Secondary
@@ -99,7 +99,6 @@ FocusScope {
 
     property real currentScale: baseScale
     property bool isBouncing: false
-    property bool wasPressedInside: false
     property bool keyboardPressActive: false
     readonly property real targetScale: {
         if (root.disabled)
@@ -111,19 +110,14 @@ FocusScope {
         return root.baseScale;
     }
 
-    readonly property bool hovered: interactionArea.containsMouse
-    readonly property bool pressed: interactionArea.pressed || root.keyboardPressActive
-    readonly property bool focused: root.activeFocus
+    hovered: interactionArea.hovered
+    pressed: interactionArea.pressed || root.keyboardPressActive
     readonly property bool entered: hovered
     readonly property bool exited: !hovered
     readonly property var motionTokens: NanMotion
     readonly property var radiusTokens: NanRadius
 
-    ThemeManager {
-        id: fallbackThemeManager
-    }
-
-    readonly property var resolvedThemeManager: ThemeUtils.resolveThemeManager(root, root.themeManager, fallbackThemeManager)
+    readonly property var resolvedThemeManager: root.themeManager ? root.themeManager : NanTheme.themeManager
 
     readonly property var themePalette: root.resolvedThemeManager && root.resolvedThemeManager.currentPaletteCollection ? root.resolvedThemeManager.currentPaletteCollection : null
 
@@ -171,7 +165,8 @@ FocusScope {
 
     property int horizontalPadding: root.size === NanButton.Size.Sm ? NanSpacing.sm : (root.size === NanButton.Size.Lg ? NanSpacing.lg : NanSpacing.md)
     property int contentSpacing: NanSpacing.sm
-    property font textFont: root.size === NanButton.Size.Sm ? NanTypography.caption : NanTypography.body
+    property font font: ThemeUtils.resolveFont(root, NanStyle.font, root.size === NanButton.Size.Sm ? NanTypography.caption : NanTypography.body)
+    property font textFont: root.font
     property int cornerRadius: root.radiusTokens.md
 
     signal clicked
@@ -240,24 +235,24 @@ FocusScope {
         }
     }
 
-    Rectangle {
-        id: backgroundRect
+    Surface {
+        id: backgroundSurface
         anchors.fill: parent
-        radius: root.cornerRadius
-        border.width: root.accent === NanButton.Accent.Outlined || root.focused ? 1 : 0
-        border.color: root.borderColor
-        color: {
+        cornerRadius: root.cornerRadius
+        borderWidth: root.accent === NanButton.Accent.Outlined || root.focused ? 1 : 0
+        borderColor: root.borderColor
+        backgroundColor: {
             if (root.disabled)
                 return root.themePalette ? root.themePalette.surfaceElement1 : "#3a3a42";
             if (root.pressed)
                 return root.pressedColor;
-            if (interactionArea.containsMouse)
+            if (interactionArea.hovered)
                 return root.hoverColor;
             return root.backgroundColor;
         }
         opacity: root.disabled ? 0.6 : 1.0
 
-        Behavior on color {
+        Behavior on backgroundColor {
             ColorAnimation {
                 duration: root.motionTokens.fast
             }
@@ -354,30 +349,17 @@ FocusScope {
         }
     }
 
-    MouseArea {
+    Pressable {
         id: interactionArea
         anchors.fill: parent
         enabled: !root.disabled
-        hoverEnabled: true
-        cursorShape: root.disabled ? Qt.ArrowCursor : Qt.PointingHandCursor
-        onPressed: {
-            root.wasPressedInside = true;
-            root.pressStarted();
-        }
+        cursorShape: Qt.PointingHandCursor
+        onPressStarted: root.pressStarted()
         onClicked: {
             root.triggerClickFeedback();
             root.clicked();
         }
-        onCanceled: {
-            root.wasPressedInside = false;
-            root.canceled();
-        }
-        onReleased: {
-            if (root.wasPressedInside && containsMouse)
-                root.released();
-            else if (root.wasPressedInside)
-                root.canceled();
-            root.wasPressedInside = false;
-        }
+        onCanceled: root.canceled()
+        onReleased: root.released()
     }
 }

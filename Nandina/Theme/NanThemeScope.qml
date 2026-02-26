@@ -7,7 +7,7 @@ Item {
     default property alias contentData: contentItem.data
 
     property var parentThemeManager: themeUtilsBridge.resolveParentThemeManager(root)
-    property var themeManager: parentThemeManager ? parentThemeManager : fallbackThemeManager
+    property var themeManager: root.parentThemeManager ? root.parentThemeManager : NanTheme.themeManager
 
     readonly property bool inheritsParentTheme: parentThemeManager !== null
 
@@ -17,10 +17,6 @@ Item {
     Item {
         id: contentItem
         anchors.fill: parent
-    }
-
-    ThemeManager {
-        id: fallbackThemeManager
     }
 
     QtObject {

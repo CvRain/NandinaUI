@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import Nandina.Theme
+import Nandina.Tokens
 import "../theme_utils.js" as ThemeUtils
 
 Rectangle {
@@ -12,7 +13,7 @@ Rectangle {
     width: parent ? parent.width : implicitWidth
     height: implicitHeight
     clip: true
-    radius: 10
+    radius: root.itemCornerRadius
     color: {
         if (itemArea.pressed)
             return root.themePalette ? root.themePalette.overlay2 : "#4a4a56";
@@ -26,10 +27,10 @@ Rectangle {
     border.color: root.themePalette ? root.themePalette.activeBorder : "#6b6b78"
 
     property var sidebar: null
-    property var themeManager: null
+    property var themeManager: NanStyle.themeManager
     property alias text: label.text
-    property alias font: label.font
-    property alias textFont: label.font
+    property font font: ThemeUtils.resolveFont(root, NanStyle.font, typographyTokens.bodyLarge)
+    property font textFont: root.font
     property string iconSource: ""
     property url fallbackIconSource: ""
     property string fallbackGlyph: "•"
@@ -41,6 +42,15 @@ Rectangle {
     readonly property alias fallbackGlyphItem: fallbackGlyphText
 
     property bool active: false
+    property int itemCornerRadius: radiusTokens.md
+    property int horizontalInset: spacingTokens.sm
+    property int stateTransitionDuration: motionTokens.fast
+    property int layoutTransitionDuration: motionTokens.normal
+
+    readonly property var spacingTokens: NanSpacing
+    readonly property var radiusTokens: NanRadius
+    readonly property var typographyTokens: NanTypography
+    readonly property var motionTokens: NanMotion
 
     readonly property var resolvedSidebar: root.sidebar ? root.sidebar : ThemeUtils.resolveSidebar(root)
 
@@ -48,16 +58,11 @@ Rectangle {
     readonly property bool rightSided: root.resolvedSidebar ? root.resolvedSidebar.side === NanSideBar.Side.Right : false
     readonly property bool hasIcon: root.iconSource.length > 0
     readonly property bool hasFallbackIcon: root.fallbackIconSource.toString().length > 0
-    readonly property int horizontalInset: 8
-    readonly property var resolvedThemeManager: ThemeUtils.resolveThemeManager(root, root.themeManager, fallbackThemeManager)
+    readonly property var resolvedThemeManager: root.themeManager ? root.themeManager : NanTheme.themeManager
     readonly property var themePalette: {
         if (root.resolvedSidebar && root.resolvedSidebar.themePalette)
             return root.resolvedSidebar.themePalette;
         return root.resolvedThemeManager && root.resolvedThemeManager.currentPaletteCollection ? root.resolvedThemeManager.currentPaletteCollection : null;
-    }
-
-    ThemeManager {
-        id: fallbackThemeManager
     }
 
     signal clicked
@@ -73,21 +78,21 @@ Rectangle {
 
         Behavior on x {
             NumberAnimation {
-                duration: 160
+                duration: root.layoutTransitionDuration
                 easing.type: Easing.OutCubic
             }
         }
 
         Behavior on opacity {
             NumberAnimation {
-                duration: 120
+                duration: root.stateTransitionDuration
                 easing.type: Easing.OutCubic
             }
         }
 
         Behavior on height {
             NumberAnimation {
-                duration: 140
+                duration: root.stateTransitionDuration
                 easing.type: Easing.OutCubic
             }
         }
@@ -108,7 +113,7 @@ Rectangle {
 
         Behavior on x {
             NumberAnimation {
-                duration: 180
+                duration: root.layoutTransitionDuration
                 easing.type: Easing.InOutSine
             }
         }
@@ -151,28 +156,30 @@ Rectangle {
         x: root.rightSided ? 10 : iconHolder.x + iconHolder.width + 10
         width: root.rightSided ? Math.max(0, iconHolder.x - 20) : Math.max(0, root.width - x - root.horizontalInset)
         elide: Text.ElideRight
-        font.pixelSize: 16
-        font.weight: root.active ? Font.DemiBold : Font.Medium
+        font.family: root.textFont.family
+        font.pixelSize: root.textFont.pixelSize > 0 ? root.textFont.pixelSize : root.typographyTokens.bodyLarge.pixelSize
+        font.weight: root.active ? Font.DemiBold : (root.textFont.weight > 0 ? root.textFont.weight : Font.Medium)
+        font.italic: root.textFont.italic
         horizontalAlignment: root.rightSided ? Text.AlignRight : Text.AlignLeft
         opacity: root.collapsed ? 0 : 1
 
         Behavior on x {
             NumberAnimation {
-                duration: 180
+                duration: root.layoutTransitionDuration
                 easing.type: Easing.InOutSine
             }
         }
 
         Behavior on width {
             NumberAnimation {
-                duration: 180
+                duration: root.layoutTransitionDuration
                 easing.type: Easing.InOutSine
             }
         }
 
         Behavior on opacity {
             NumberAnimation {
-                duration: 140
+                duration: root.stateTransitionDuration
                 easing.type: Easing.InOutSine
             }
         }
@@ -187,14 +194,14 @@ Rectangle {
 
     Behavior on border.width {
         NumberAnimation {
-            duration: 120
+            duration: root.stateTransitionDuration
             easing.type: Easing.OutCubic
         }
     }
 
     Behavior on color {
         ColorAnimation {
-            duration: 120
+            duration: root.stateTransitionDuration
         }
     }
 }
