@@ -12,7 +12,6 @@ Item {
     signal released
     signal pressStarted
     signal canceled
-    signal pressedChanged(bool pressed)
 
     HoverHandler {
         id: hoverHandler
@@ -24,7 +23,6 @@ Item {
         id: tapHandler
         enabled: root.enabled
         onPressedChanged: {
-            root.pressedChanged(pressed);
             if (pressed)
                 root.pressStarted();
         }

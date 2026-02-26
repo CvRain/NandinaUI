@@ -1,5 +1,6 @@
 import QtQuick
 import Nandina.Theme
+import Nandina.Color
 import Nandina.Tokens
 
 Rectangle {

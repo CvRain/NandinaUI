@@ -3,10 +3,11 @@ import QtQuick.Controls as QQC
 import Nandina.Theme
 import Nandina.Color
 import Nandina.Tokens
+import Nandina.Primitives
 import "../theme_utils.js" as ThemeUtils
 import "input_validation_utils.js" as InputValidationUtils
 
-Item {
+BaseControl {
     id: root
 
     enum InputType {
@@ -73,7 +74,6 @@ Item {
     property var validatorFn: function (_value, _input) {
         return true;
     }
-    property var themeManager: NanStyle.themeManager // 允许外部传入 ThemeManager 实例以使用主题色，默认继承 NanStyle.themeManager
 
     readonly property int textType: NanInput.InputType.Text
     readonly property int passwordType: NanInput.InputType.Password
@@ -89,9 +89,8 @@ Item {
     readonly property int validateOnBlur: NanInput.ValidateTrigger.OnBlur
     readonly property int validateOnSubmit: NanInput.ValidateTrigger.OnSubmit
 
-    readonly property bool hovered: hoverArea.containsMouse
-    readonly property bool pressed: hoverArea.pressed
-    readonly property bool focused: textField.activeFocus
+    hovered: hoverHandler.hovered
+    pressed: false
     readonly property bool entered: hovered
     readonly property bool exited: !hovered
     readonly property bool hasText: root.text.length > 0
@@ -152,13 +151,13 @@ Item {
 
     readonly property bool effectiveSuccess: root.success && !root.effectiveInvalid
 
-    ThemeManager {
-        id: fallbackThemeManager
+    FormFieldBehavior {
+        id: formFieldState
+        focused: textField.activeFocus
+        disabled: root.disabled
+        hasError: root.effectiveInvalid
+        hasSuccess: root.effectiveSuccess
     }
-
-    readonly property var resolvedThemeManager: ThemeUtils.resolveThemeManager(root, root.themeManager, fallbackThemeManager)
-
-    readonly property var themePalette: root.resolvedThemeManager && root.resolvedThemeManager.currentPaletteCollection ? root.resolvedThemeManager.currentPaletteCollection : null
 
     signal accepted
     signal validationChanged(bool valid, string message)
@@ -218,7 +217,7 @@ Item {
                 return Qt.ImhSensitiveData | Qt.ImhNoPredictiveText;
             return Qt.ImhNone;
         }
-        color: root.themePalette ? root.themePalette.color0 : root.themePalette.onAccent
+        color: root.themePalette ? root.themePalette.color0 : "#f5f5f5"
         placeholderTextColor: root.themePalette ? root.themePalette.subHeadlines1 : "#a3a3b2"
         selectByMouse: true
 
@@ -227,13 +226,13 @@ Item {
                 anchors.fill: parent
                 visible: root.style === NanInput.Style.Outlined
                 radius: root.outlinedCornerRadius
-                border.width: textField.activeFocus ? 2 : 1
+                border.width: formFieldState.focused ? 2 : 1
                 border.color: {
-                    if (root.effectiveInvalid)
+                    if (formFieldState.hasError)
                         return root.themePalette ? root.themePalette.error : "#d9534f";
-                    if (root.effectiveSuccess)
+                    if (formFieldState.hasSuccess)
                         return root.themePalette ? root.themePalette.success : "#55b16c";
-                    if (textField.activeFocus)
+                    if (formFieldState.focused)
                         return root.themePalette ? root.themePalette.activeBorder : "#4f8cff";
                     return root.themePalette ? root.themePalette.inactiveBorder : "#666";
                 }
@@ -252,14 +251,14 @@ Item {
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
                 visible: root.style === NanInput.Style.Underline
-                height: textField.activeFocus ? 2 : 1
+                height: formFieldState.focused ? 2 : 1
                 radius: root.underlineCornerRadius
                 color: {
-                    if (root.effectiveInvalid)
+                    if (formFieldState.hasError)
                         return root.themePalette ? root.themePalette.error : "#d9534f";
-                    if (root.effectiveSuccess)
+                    if (formFieldState.hasSuccess)
                         return root.themePalette ? root.themePalette.success : "#55b16c";
-                    if (textField.activeFocus)
+                    if (formFieldState.focused)
                         return root.themePalette ? root.themePalette.activeBorder : "#4f8cff";
                     return root.themePalette ? root.themePalette.inactiveBorder : "#666";
                 }
@@ -362,12 +361,9 @@ Item {
         }
     }
 
-    MouseArea {
-        id: hoverArea
-        anchors.fill: textField
+    HoverHandler {
+        id: hoverHandler
         enabled: !root.disabled
-        hoverEnabled: true
-        acceptedButtons: Qt.NoButton
     }
 
     Text {

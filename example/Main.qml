@@ -53,11 +53,25 @@ NanWindow {
     }
 
     Text {
+        id: titleText
         anchors.centerIn: parent
         text: "NanWindow Demo"
         font.pointSize: 20
         font.bold: true
         color: demoWindow.themeManager.currentColorCollection.rosewater
+    }
+
+    NanButton {
+        id: testButton1
+        text: "Test Button 1"
+        font.bold: true
+
+        variant: NanButton.Primary
+        accent: NanButton.Tonal
+
+        anchors.top: titleText.bottom
+        anchors.topMargin: 60
+        anchors.horizontalCenter: parent.horizontalCenter
     }
 
     NanSideBar {
