@@ -128,7 +128,7 @@ NanWindow {
 
 ### 开发路线摘要（公开）
 - 架构分层：`Nandina.Color` / `Nandina.Theme` / `Nandina.Tokens` / `Nandina.Controls` / `Nandina.Window`
-- 主题策略：组件主题解析优先级为「显式 themeManager > 父级/ThemeScope 继承 > 组件 fallback」
+- 主题策略：组件主题解析优先级为「显式 themeManager > NanStyle/NanTheme 默认主题」
 - Token 策略：逐步将字体、间距、圆角、动效抽离为 Design Tokens，避免组件内硬编码
 - SideBar 进展：`NanSideBar` / `NanSideBarGroup` / `NanSideBarItem` / `NanSideBarTrigger` 已接入 token 默认值，结构尺寸默认值已改为语义预设（可覆写）
 - 固定 API 目标：默认零配置可用（如 `NanButton {}`），按需再覆写 `themeManager` / `font` / `size` 等属性做高级定制

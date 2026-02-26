@@ -58,15 +58,11 @@ Rectangle {
     readonly property bool rightSided: root.resolvedSidebar ? root.resolvedSidebar.side === NanSideBar.Side.Right : false
     readonly property bool hasIcon: root.iconSource.length > 0
     readonly property bool hasFallbackIcon: root.fallbackIconSource.toString().length > 0
-    readonly property var resolvedThemeManager: ThemeUtils.resolveThemeManager(root, root.themeManager, fallbackThemeManager)
+    readonly property var resolvedThemeManager: root.themeManager ? root.themeManager : NanTheme.themeManager
     readonly property var themePalette: {
         if (root.resolvedSidebar && root.resolvedSidebar.themePalette)
             return root.resolvedSidebar.themePalette;
         return root.resolvedThemeManager && root.resolvedThemeManager.currentPaletteCollection ? root.resolvedThemeManager.currentPaletteCollection : null;
-    }
-
-    ThemeManager {
-        id: fallbackThemeManager
     }
 
     signal clicked

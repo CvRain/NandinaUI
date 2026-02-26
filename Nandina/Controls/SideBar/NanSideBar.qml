@@ -79,11 +79,7 @@ Item {
 
     signal toggled(bool open)
 
-    ThemeManager {
-        id: fallbackThemeManager
-    }
-
-    readonly property var resolvedThemeManager: ThemeUtils.resolveThemeManager(sideBar, sideBar.themeManager, fallbackThemeManager)
+    readonly property var resolvedThemeManager: sideBar.themeManager ? sideBar.themeManager : NanTheme.themeManager
     readonly property var themePalette: sideBar.resolvedThemeManager && sideBar.resolvedThemeManager.currentPaletteCollection ? sideBar.resolvedThemeManager.currentPaletteCollection : null
 
     function calcPanelWidth() {

@@ -11,15 +11,15 @@ Item {
 
     property bool checked: false
     property bool mixed: false
-    property color activeColor: themePalette ? themePalette.accent : "#89b4fa"
+    property color activeColor: themePalette ? themePalette.activeBorder : "#89b4fa"
     property color inactiveColor: themePalette ? themePalette.overlay0 : "#45475a"
 
-    implicitWidth: NanSpacing.Spacing5
-    implicitHeight: NanSpacing.Spacing5
+    implicitWidth: NanSpacing.lg
+    implicitHeight: NanSpacing.lg
 
     Rectangle {
         anchors.fill: parent
-        radius: NanRadius.Small
+        radius: NanRadius.sm
         color: root.checked ? root.activeColor : "transparent"
         border.color: root.checked ? root.activeColor : root.inactiveColor
         border.width: 1

@@ -36,15 +36,11 @@ Rectangle {
 
     readonly property var resolvedSidebar: root.sidebar ? root.sidebar : ThemeUtils.resolveSidebar(root)
 
-    readonly property var resolvedThemeManager: ThemeUtils.resolveThemeManager(root, root.themeManager, fallbackThemeManager)
+    readonly property var resolvedThemeManager: root.themeManager ? root.themeManager : NanTheme.themeManager
     readonly property var themePalette: {
         if (root.resolvedSidebar && root.resolvedSidebar.themePalette)
             return root.resolvedSidebar.themePalette;
         return root.resolvedThemeManager && root.resolvedThemeManager.currentPaletteCollection ? root.resolvedThemeManager.currentPaletteCollection : null;
-    }
-
-    ThemeManager {
-        id: fallbackThemeManager
     }
 
     signal clicked

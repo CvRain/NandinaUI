@@ -7,23 +7,7 @@ function looksLikeFont(candidate) {
         || candidate.family !== undefined
 }
 
-/**
- * @param {Item} item
- * @param {ThemeManager} explicitThemeManager
- * @param {ThemeManager} fallbackThemeManager
- * @return {ThemeManager}
- */
-function resolveThemeManager(item, explicitThemeManager, _fallbackThemeManager) {
-    if (explicitThemeManager)
-        return explicitThemeManager
-
-    if (NanStyle.themeManager)
-        return NanStyle.themeManager
-
-    return NanTheme.themeManager
-}
-
-function resolveFont(item, explicitFont, fallbackFont) {
+function resolveFont(_item, explicitFont, fallbackFont) {
     if (looksLikeFont(explicitFont))
         return explicitFont
 

@@ -16,11 +16,7 @@ Item {
     property var themeManager: NanStyle.themeManager
     property font font: ThemeUtils.resolveFont(root, NanStyle.font, NanTypography.body)
 
-    ThemeManager {
-        id: fallbackThemeManager
-    }
-
-    readonly property var resolvedThemeManager: ThemeUtils.resolveThemeManager(root, root.themeManager, fallbackThemeManager)
+    readonly property var resolvedThemeManager: root.themeManager ? root.themeManager : NanTheme.themeManager
 
     readonly property var themePalette: root.resolvedThemeManager && root.resolvedThemeManager.currentPaletteCollection ? root.resolvedThemeManager.currentPaletteCollection : null
 
