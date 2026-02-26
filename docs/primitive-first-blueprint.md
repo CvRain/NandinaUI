@@ -125,6 +125,30 @@
 - Action D1.2：减少 SideBar 家族内部重复逻辑。
 - 验收：折叠、焦点、激活态在左右 dock 都一致。
 
+#### SideBar 交互事件流约定（D1 增补）
+
+`NanSideBar` 对外暴露统一信号：
+
+- `sideBarInteraction(string type, var payload)`
+
+`type` 必须遵循命名空间格式：
+
+- `sidebar.item.pressStarted|clicked|released|canceled`
+- `sidebar.group.pressStarted|clicked|released|canceled`
+- `sidebar.trigger.pressStarted|clicked|released|canceled`
+- `sidebar.rail.pressStarted|clicked|released|canceled`
+- `sidebar.edge.pressStarted|clicked|released|canceled`
+
+`payload` 结构约定：
+
+- 顶层基础字段：`side`、`open`、`collapsed`
+- 业务扩展字段：`payload`（各子组件可附加 `text/title/active/expanded` 等）
+
+约束：
+
+- 新增交互事件必须使用 `sidebar.<scope>.<event>` 前缀。
+- 示例层仅监听 `sideBarInteraction`，不再依赖子组件私有信号。
+
 ### Task D2：文档与示例收口
 - Action D2.1：更新对外用法文档。
 - Action D2.2：清理过期文档、无效示例和遗留说明。

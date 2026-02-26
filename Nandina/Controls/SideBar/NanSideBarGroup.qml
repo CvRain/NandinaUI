@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import Nandina.Theme
 import Nandina.Tokens
+import Nandina.Primitives
 import "../theme_utils.js" as ThemeUtils
 
 Item {
@@ -48,6 +49,20 @@ Item {
         return root.resolvedThemeManager && root.resolvedThemeManager.currentPaletteCollection ? root.resolvedThemeManager.currentPaletteCollection : null;
     }
 
+    signal pressStarted
+    signal clicked
+    signal released
+    signal canceled
+
+    function reportInteraction(type) {
+        if (root.resolvedSidebar && root.resolvedSidebar.reportInteraction)
+            root.resolvedSidebar.reportInteraction(type, {
+                title: root.title,
+                expanded: root.expanded,
+                collapsed: root.collapsed
+            });
+    }
+
     Column {
         id: groupColumn
         width: parent.width
@@ -62,7 +77,7 @@ Item {
             Rectangle {
                 anchors.fill: parent
                 radius: root.headerCornerRadius
-                color: headerArea.pressed ? (root.themePalette ? root.themePalette.overlay1 : "#4a4a56") : (headerArea.containsMouse ? (root.themePalette ? root.themePalette.overlay0 : "#343440") : "transparent")
+                color: interactionArea.pressed ? (root.themePalette ? root.themePalette.overlay1 : "#4a4a56") : (interactionArea.hovered ? (root.themePalette ? root.themePalette.overlay0 : "#343440") : "transparent")
                 visible: root.collapsible
 
                 Behavior on color {
@@ -92,11 +107,28 @@ Item {
                 font: root.textFont
             }
 
-            MouseArea {
-                id: headerArea
+            Pressable {
+                id: interactionArea
                 anchors.fill: parent
                 enabled: root.collapsible
-                onClicked: root.expanded = !root.expanded
+                cursorShape: Qt.PointingHandCursor
+                onPressStarted: {
+                    root.pressStarted();
+                    root.reportInteraction("sidebar.group.pressStarted");
+                }
+                onClicked: {
+                    root.expanded = !root.expanded;
+                    root.clicked();
+                    root.reportInteraction("sidebar.group.clicked");
+                }
+                onReleased: {
+                    root.released();
+                    root.reportInteraction("sidebar.group.released");
+                }
+                onCanceled: {
+                    root.canceled();
+                    root.reportInteraction("sidebar.group.canceled");
+                }
             }
 
             Behavior on height {

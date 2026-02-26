@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import Nandina.Theme
 import Nandina.Tokens
+import Nandina.Primitives
 import "../theme_utils.js" as ThemeUtils
 
 Rectangle {
@@ -15,11 +16,11 @@ Rectangle {
     clip: true
     radius: root.itemCornerRadius
     color: {
-        if (itemArea.pressed)
+        if (interactionArea.pressed)
             return root.themePalette ? root.themePalette.overlay2 : "#4a4a56";
         if (root.active)
             return root.themePalette ? root.themePalette.surfaceElement1 : "#3a3a45";
-        if (itemArea.containsMouse)
+        if (interactionArea.hovered)
             return root.themePalette ? root.themePalette.overlay0 : "#343440";
         return "transparent";
     }
@@ -65,7 +66,19 @@ Rectangle {
         return root.resolvedThemeManager && root.resolvedThemeManager.currentPaletteCollection ? root.resolvedThemeManager.currentPaletteCollection : null;
     }
 
+    signal pressStarted
     signal clicked
+    signal released
+    signal canceled
+
+    function reportInteraction(type) {
+        if (root.resolvedSidebar && root.resolvedSidebar.reportInteraction)
+            root.resolvedSidebar.reportInteraction(type, {
+                text: root.text,
+                active: root.active,
+                collapsed: root.collapsed
+            });
+    }
 
     Rectangle {
         width: 3
@@ -185,11 +198,26 @@ Rectangle {
         }
     }
 
-    MouseArea {
-        id: itemArea
+    Pressable {
+        id: interactionArea
         anchors.fill: parent
-        hoverEnabled: true
-        onClicked: root.clicked()
+        cursorShape: Qt.PointingHandCursor
+        onPressStarted: {
+            root.pressStarted();
+            root.reportInteraction("sidebar.item.pressStarted");
+        }
+        onClicked: {
+            root.clicked();
+            root.reportInteraction("sidebar.item.clicked");
+        }
+        onReleased: {
+            root.released();
+            root.reportInteraction("sidebar.item.released");
+        }
+        onCanceled: {
+            root.canceled();
+            root.reportInteraction("sidebar.item.canceled");
+        }
     }
 
     Behavior on border.width {

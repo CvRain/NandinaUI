@@ -26,6 +26,17 @@ NanWindow {
     NanStyle.themeManager: demoWindow.themeManager
     NanStyle.font: demoWindow.font
     property int currentSide: NanSideBar.Side.Left
+    property var sidebarInteractionLogs: []
+
+    function appendSidebarInteractionLog(type, eventPayload) {
+        var next = sidebarInteractionLogs.slice(0);
+        var sideLabel = eventPayload && eventPayload.side === NanSideBar.Side.Right ? "Right" : "Left";
+        var openLabel = eventPayload && eventPayload.open ? "open" : "closed";
+        next.unshift(type + " [" + sideLabel + ", " + openLabel + "]");
+        if (next.length > 8)
+            next = next.slice(0, 8);
+        sidebarInteractionLogs = next;
+    }
 
     NanButton {
         text: "Switch Theme"
@@ -72,6 +83,45 @@ NanWindow {
         anchors.top: titleText.bottom
         anchors.topMargin: 60
         anchors.horizontalCenter: parent.horizontalCenter
+    }
+
+    Rectangle {
+        id: sidebarEventLogPanel
+        width: 280
+        height: 210
+        anchors.top: parent.top
+        anchors.right: parent.right
+        anchors.topMargin: 18
+        anchors.rightMargin: 18
+        radius: 10
+        color: demoWindow.themeManager.currentPaletteCollection.secondaryPane
+        border.width: 1
+        border.color: demoWindow.themeManager.currentPaletteCollection.surfaceElement0
+
+        Column {
+            anchors.fill: parent
+            anchors.margins: 10
+            spacing: 6
+
+            Text {
+                text: "Sidebar Events"
+                color: demoWindow.themeManager.currentPaletteCollection.mainHeadline
+                font.bold: true
+            }
+
+            Repeater {
+                model: demoWindow.sidebarInteractionLogs
+
+                delegate: Text {
+                    required property var modelData
+                    text: modelData
+                    color: demoWindow.themeManager.currentPaletteCollection.bodyCopy
+                    font.pixelSize: NanTypography.caption.pixelSize
+                    elide: Text.ElideRight
+                    width: parent ? parent.width : 240
+                }
+            }
+        }
     }
 
     NanSideBar {
@@ -181,6 +231,14 @@ NanWindow {
                     fallbackGlyph: "T"
                 }
             }
+        }
+    }
+
+    Connections {
+        target: appSidebar
+
+        function onSideBarInteraction(type, payload) {
+            demoWindow.appendSidebarInteractionLog(type, payload);
         }
     }
 

@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import Nandina.Theme
 import Nandina.Tokens
+import Nandina.Primitives
 import "../theme_utils.js" as ThemeUtils
 
 Rectangle {
@@ -11,8 +12,8 @@ Rectangle {
     implicitWidth: root.triggerSize
     implicitHeight: root.triggerSize
     radius: root.triggerCornerRadius
-    color: triggerArea.pressed ? (themePalette ? themePalette.overlay2 : "#4c4c58") : (triggerArea.containsMouse ? (themePalette ? themePalette.overlay1 : "#3b3b46") : "transparent")
-    border.width: triggerArea.containsMouse ? 1 : 0
+    color: interactionArea.pressed ? (themePalette ? themePalette.overlay2 : "#4c4c58") : (interactionArea.hovered ? (themePalette ? themePalette.overlay1 : "#3b3b46") : "transparent")
+    border.width: interactionArea.hovered ? 1 : 0
     border.color: themePalette ? themePalette.activeBorder : "#6b6b78"
 
     property var sidebar: null
@@ -43,7 +44,17 @@ Rectangle {
         return root.resolvedThemeManager && root.resolvedThemeManager.currentPaletteCollection ? root.resolvedThemeManager.currentPaletteCollection : null;
     }
 
+    signal pressStarted
     signal clicked
+    signal released
+    signal canceled
+
+    function reportInteraction(type) {
+        if (root.resolvedSidebar && root.resolvedSidebar.reportInteraction)
+            root.resolvedSidebar.reportInteraction(type, {
+                open: root.resolvedSidebar ? root.resolvedSidebar.open : false
+            });
+    }
 
     Text {
         id: glyph
@@ -63,7 +74,7 @@ Rectangle {
         font.weight: root.font.weight > 0 ? root.font.weight : Font.DemiBold
         font.italic: root.font.italic
         scale: root.resolvedSidebar && root.resolvedSidebar.open ? 1.0 : 0.92
-        opacity: triggerArea.containsMouse ? 1 : 0.9
+        opacity: interactionArea.hovered ? 1 : 0.9
 
         Behavior on scale {
             NumberAnimation {
@@ -80,15 +91,30 @@ Rectangle {
         }
     }
 
-    MouseArea {
-        id: triggerArea
+    Pressable {
+        id: interactionArea
         anchors.fill: parent
-        hoverEnabled: true
+        cursorShape: Qt.PointingHandCursor
+
+        onPressStarted: {
+            root.pressStarted();
+            root.reportInteraction("sidebar.trigger.pressStarted");
+        }
 
         onClicked: {
             if (root.resolvedSidebar && root.resolvedSidebar.toggle)
                 root.resolvedSidebar.toggle();
             root.clicked();
+            root.reportInteraction("sidebar.trigger.clicked");
+        }
+
+        onReleased: {
+            root.released();
+            root.reportInteraction("sidebar.trigger.released");
+        }
+        onCanceled: {
+            root.canceled();
+            root.reportInteraction("sidebar.trigger.canceled");
         }
     }
 

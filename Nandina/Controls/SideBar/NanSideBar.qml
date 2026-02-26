@@ -5,6 +5,7 @@ import QtQuick.Layouts
 import QtQml
 import Nandina.Theme
 import Nandina.Tokens
+import Nandina.Primitives
 import "../theme_utils.js" as ThemeUtils
 
 Item {
@@ -78,6 +79,15 @@ Item {
     readonly property color panelOverlayColor: sideBar.themePalette ? sideBar.themePalette.overlay0 : "#3d3d49" // 面板叠加颜色
 
     signal toggled(bool open)
+    signal railPressStarted
+    signal railClicked
+    signal railReleased
+    signal railCanceled
+    signal edgePressStarted
+    signal edgeClicked
+    signal edgeReleased
+    signal edgeCanceled
+    signal sideBarInteraction(string type, var payload)
 
     readonly property var resolvedThemeManager: sideBar.themeManager ? sideBar.themeManager : NanTheme.themeManager
     readonly property var themePalette: sideBar.resolvedThemeManager && sideBar.resolvedThemeManager.currentPaletteCollection ? sideBar.resolvedThemeManager.currentPaletteCollection : null
@@ -115,6 +125,15 @@ Item {
         if (sideBar.collapsible === NanSideBar.Collapsible.None)
             return;
         sideBar.open = false;
+    }
+
+    function reportInteraction(type, payload) {
+        sideBar.sideBarInteraction(type, {
+            side: sideBar.side,
+            open: sideBar.open,
+            collapsed: sideBar.collapsed,
+            payload: payload ? payload : ({})
+        });
     }
 
     onOpenChanged: sideBar.toggled(sideBar.open)
@@ -163,7 +182,7 @@ Item {
         }
     }
 
-    Rectangle {
+    Surface {
         id: panel
 
         width: sideBar.panelWidth
@@ -177,11 +196,11 @@ Item {
                 return -sideBar.panelWidth + sideBar.railWidth;
             return sideBar.railWidth;
         }
-        radius: sideBar.borderRadius
+        cornerRadius: sideBar.borderRadius
         clip: true
-        color: sideBar.panelBaseColor
-        border.width: 1
-        border.color: sideBar.panelBorderColor
+        backgroundColor: sideBar.panelBaseColor
+        borderWidth: 1
+        borderColor: sideBar.panelBorderColor
         opacity: sideBar.hiddenOffcanvas ? 0 : 1
 
         Rectangle {
@@ -402,7 +421,7 @@ Item {
         }
     }
 
-    Rectangle {
+    Surface {
         id: rail
 
         visible: sideBar.showRail && sideBar.collapsible !== NanSideBar.Collapsible.None
@@ -410,8 +429,9 @@ Item {
         height: sideBar.height
         x: sideBar.side === NanSideBar.Side.Left ? 0 : Math.max(0, sideBar.width - width)
         y: 0
-        radius: sideBar.railWidth / 2
-        color: railArea.containsMouse ? (sideBar.themePalette ? sideBar.themePalette.overlay1 : "#3c3c48") : "transparent"
+        cornerRadius: sideBar.railWidth / 2
+        backgroundColor: railInteraction.hovered ? (sideBar.themePalette ? sideBar.themePalette.overlay1 : "#3c3c48") : "transparent"
+        borderWidth: 0
 
         Behavior on x {
             NumberAnimation {
@@ -420,32 +440,48 @@ Item {
             }
         }
 
-        Behavior on color {
+        Behavior on backgroundColor {
             ColorAnimation {
                 duration: sideBar.stateTransitionDuration
             }
         }
 
-        MouseArea {
-            id: railArea
+        Pressable {
+            id: railInteraction
             anchors.top: parent.top
             anchors.bottom: parent.bottom
             anchors.left: parent.left
             anchors.right: parent.right
             anchors.leftMargin: -sideBar.railHitPadding
             anchors.rightMargin: -sideBar.railHitPadding
-            hoverEnabled: true
-            onClicked: sideBar.toggle()
+            cursorShape: Qt.PointingHandCursor
+            onPressStarted: {
+                sideBar.railPressStarted();
+                sideBar.reportInteraction("sidebar.rail.pressStarted", {});
+            }
+            onClicked: {
+                sideBar.toggle();
+                sideBar.railClicked();
+                sideBar.reportInteraction("sidebar.rail.clicked", {});
+            }
+            onReleased: {
+                sideBar.railReleased();
+                sideBar.reportInteraction("sidebar.rail.released", {});
+            }
+            onCanceled: {
+                sideBar.railCanceled();
+                sideBar.reportInteraction("sidebar.rail.canceled", {});
+            }
         }
     }
 
-    Rectangle {
+    Surface {
         id: edgeToggle
 
         visible: sideBar.showEdgeToggleIndicator && sideBar.collapsible !== NanSideBar.Collapsible.None
         width: sideBar.edgeToggleSize
         height: sideBar.edgeToggleSize
-        radius: Math.floor(sideBar.edgeToggleSize / 2)
+        cornerRadius: Math.floor(sideBar.edgeToggleSize / 2)
         y: Math.floor((sideBar.height - height) / 2)
         x: {
             if (sideBar.side === NanSideBar.Side.Left)
@@ -453,9 +489,9 @@ Item {
             return panel.x - Math.floor(width / 2);
         }
         z: 20
-        color: edgeArea.pressed ? (sideBar.themePalette ? sideBar.themePalette.overlay2 : "#4c4c58") : (edgeArea.containsMouse ? (sideBar.themePalette ? sideBar.themePalette.overlay1 : "#3b3b46") : sideBar.panelBaseColor)
-        border.width: 1
-        border.color: edgeArea.containsMouse ? (sideBar.themePalette ? sideBar.themePalette.activeBorder : "#6b6b78") : sideBar.panelBorderColor
+        backgroundColor: edgeInteraction.pressed ? (sideBar.themePalette ? sideBar.themePalette.overlay2 : "#4c4c58") : (edgeInteraction.hovered ? (sideBar.themePalette ? sideBar.themePalette.overlay1 : "#3b3b46") : sideBar.panelBaseColor)
+        borderWidth: 1
+        borderColor: edgeInteraction.hovered ? (sideBar.themePalette ? sideBar.themePalette.activeBorder : "#6b6b78") : sideBar.panelBorderColor
         opacity: sideBar.hiddenOffcanvas ? 0.9 : 1.0
 
         Behavior on x {
@@ -465,7 +501,7 @@ Item {
             }
         }
 
-        Behavior on color {
+        Behavior on backgroundColor {
             ColorAnimation {
                 duration: sideBar.stateTransitionDuration
             }
@@ -483,11 +519,27 @@ Item {
             font.weight: Font.DemiBold
         }
 
-        MouseArea {
-            id: edgeArea
+        Pressable {
+            id: edgeInteraction
             anchors.fill: parent
-            hoverEnabled: true
-            onClicked: sideBar.toggle()
+            cursorShape: Qt.PointingHandCursor
+            onPressStarted: {
+                sideBar.edgePressStarted();
+                sideBar.reportInteraction("sidebar.edge.pressStarted", {});
+            }
+            onClicked: {
+                sideBar.toggle();
+                sideBar.edgeClicked();
+                sideBar.reportInteraction("sidebar.edge.clicked", {});
+            }
+            onReleased: {
+                sideBar.edgeReleased();
+                sideBar.reportInteraction("sidebar.edge.released", {});
+            }
+            onCanceled: {
+                sideBar.edgeCanceled();
+                sideBar.reportInteraction("sidebar.edge.canceled", {});
+            }
         }
     }
 }
