@@ -1,3 +1,7 @@
+add_subdirectory(Color)
+add_subdirectory(Primitives)
+add_subdirectory(Tokens)
+
 set(SUBPROJECT_NAME NandinaCore)
 set(SUBPROJECT_URI Nandina.Core)
 
@@ -9,7 +13,6 @@ set(SUBPROJECT_QML_SINGLETON_FILES
 )
 
 set(SUBPROJECT_CPP_FILES
-    nan_singleton.hpp
 )
 
 qt_add_qml_module(${SUBPROJECT_NAME}
@@ -20,7 +23,8 @@ qt_add_qml_module(${SUBPROJECT_NAME}
 )
 
 target_link_libraries(${SUBPROJECT_NAME} PUBLIC
-        Qt6::Quick Qt6::Gui
+        Qt6::Gui
+        Qt6::Quick
 )
 
 target_include_directories(${SUBPROJECT_NAME} PUBLIC

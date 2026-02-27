@@ -1,5 +1,5 @@
-set(SUBPROJECT_NAME NandinaControls)
-set(SUBPROJECT_URI Nandina.Controls)
+set(SUBPROJECT_NAME NandinaTokens)
+set(SUBPROJECT_URI Nandina.Tokens)
 
 set(SUBPROJECT_QML_FILES
 

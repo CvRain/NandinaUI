@@ -1,27 +1,34 @@
-set(SUBPROJECT_NAME NandinaControls)
-set(SUBPROJECT_URI Nandina.Controls)
+set(SUBPROJECT_NAME NandinaTheme)
+set(SUBPROJECT_URI Nandina.Theme)
 
 set(SUBPROJECT_QML_FILES
-
+        NanStyleScope.qml
 )
 
 set(SUBPROJECT_QML_SINGLETON_FILES
 )
 
 set(SUBPROJECT_CPP_FILES
+        theme_manager.hpp
+        theme_manager.cpp
+        nan_style.hpp
+        nan_style.cpp
+        nan_theme.hpp
+        nan_theme.cpp
 )
 
 qt_add_qml_module(${SUBPROJECT_NAME}
         URI ${SUBPROJECT_URI}
         VERSION 1.0
-        DEPENDENCIES Nandina.Core
+        DEPENDENCIES Nandina.Color Nandina.Core
         QML_FILES ${SUBPROJECT_QML_FILES} ${SUBPROJECT_QML_SINGLETON_FILES}
         SOURCES ${SUBPROJECT_CPP_FILES}
 )
 
 target_link_libraries(${SUBPROJECT_NAME} PUBLIC
-        Qt6::Gui
-        Qt6::Quick
+        Qt6::Quick Qt6::Gui
+        NandinaCore
+        NandinaColor
 )
 
 target_include_directories(${SUBPROJECT_NAME} PUBLIC

@@ -10,19 +10,12 @@ qt_add_qml_module(NandinaExampleApp
         VERSION 1.0
         QML_FILES
         Main.qml
-        CustomTheme.qml
-
 )
 
 target_link_libraries(NandinaExampleApp
         PRIVATE
         Qt6::Quick
         Nandina
-        NandinaWindow
-        NandinaColor
-        NandinaCore
-        NandinaTheme
-        NandinaControls
 )
 
 qt_import_qml_plugins(NandinaExampleApp)
