@@ -9,6 +9,8 @@ set(SUBPROJECT_QML_SINGLETON_FILES
 )
 
 set(SUBPROJECT_CPP_FILES
+        color_palette.hpp
+        color_schema.hpp
 )
 
 qt_add_qml_module(${SUBPROJECT_NAME}
@@ -22,8 +24,12 @@ qt_add_qml_module(${SUBPROJECT_NAME}
 target_link_libraries(${SUBPROJECT_NAME} PUBLIC
         Qt6::Gui
         Qt6::Quick
+        NandinaCore
 )
 
 target_include_directories(${SUBPROJECT_NAME} PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}
+)
+target_include_directories(${SUBPROJECT_NAME} PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/..
 )

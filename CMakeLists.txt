@@ -8,6 +8,7 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(QT_QML_GENERATE_QMLLS_INI ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 option(NANDINA_BUILD_SHARED "Build Nandina as shared library" OFF)
 option(NANDINA_DEV_IMPORT_PATH "Set QML import paths to build dir (dev only)" ON)

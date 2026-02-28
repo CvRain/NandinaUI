@@ -2,14 +2,14 @@
 
 ![](./Image/placeholder.jpg)
 
-**南天竹： 一套使用 Catppuccin 配色方案的扁平设计 QML 组件库**  
-**NandinaUI: A flat design QML component library based on Catppuccin scheme**
+**南天竹： 一套现代化漂亮的Qt Quick2 组件库**  
 
-- 🎨 基于 Catppuccin 配色方案的现代化设计
+- 🎨 参考前端组件库的现代设计
 - 📱 响应式设计，支持多种屏幕尺寸
 - 🎯 容易上手的 QML 组件
 - 🌙 内置四色主题切换并支持自定义主题
 - 🔧 参考Shadcn的模块化设计
+- 📦 模块化设计，可独立使用
 - 🚀 流畅的动画效果
 
 [English](docs/README_EN.md) 

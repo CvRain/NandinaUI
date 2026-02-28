@@ -13,6 +13,7 @@ set(SUBPROJECT_QML_SINGLETON_FILES
 )
 
 set(SUBPROJECT_CPP_FILES
+        nandina_types.hpp
 )
 
 qt_add_qml_module(${SUBPROJECT_NAME}

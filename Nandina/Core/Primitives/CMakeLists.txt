@@ -9,6 +9,8 @@ set(SUBPROJECT_QML_SINGLETON_FILES
 )
 
 set(SUBPROJECT_CPP_FILES
+        typography_schema.hpp
+        primitive_schema.hpp
 )
 
 qt_add_qml_module(${SUBPROJECT_NAME}
