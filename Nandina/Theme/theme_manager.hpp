@@ -11,16 +11,16 @@
 #include <QStringList>
 
 #include "color_factory.hpp"
-#include "color_shema.hpp"
+#include "color_schema.hpp"
 #include "primitive_factory.hpp"
 #include "primitive_schema.hpp"
 #include "theme_type.hpp"
 
 namespace Nandina::Theme {
 
-    using ThemeTypes       = Core::Types::ThemeVariant::ThemeTypes;
+    using ThemeTypes = Core::Types::ThemeVariant::ThemeTypes;
     using ColorVariantTypes = Core::Types::ThemeVariant::ColorVariantTypes;
-    using ColorAccentTypes  = Core::Types::ThemeVariant::ColorAccentTypes;
+    using ColorAccentTypes = Core::Types::ThemeVariant::ColorAccentTypes;
 
     class ThemeManager : public QObject {
         Q_OBJECT
@@ -28,18 +28,13 @@ namespace Nandina::Theme {
         QML_SINGLETON
 
         // ── Properties ─────────────────────────────────────────────
-        Q_PROPERTY(Nandina::Core::Types::ThemeVariant::ThemeTypes currentTheme
-                       READ currentTheme WRITE setCurrentTheme NOTIFY currentThemeChanged)
-        Q_PROPERTY(QString currentThemeName
-                       READ currentThemeName NOTIFY currentThemeChanged)
-        Q_PROPERTY(bool darkMode
-                       READ darkMode WRITE setDarkMode NOTIFY darkModeChanged)
-        Q_PROPERTY(Nandina::Core::Color::ColorSchema *colors
-                       READ colors CONSTANT)
-        Q_PROPERTY(Nandina::Core::Primitives::PrimitiveSchema *primitives
-                       READ primitives CONSTANT)
-        Q_PROPERTY(QStringList availableThemes
-                       READ availableThemes CONSTANT)
+        Q_PROPERTY(Nandina::Core::Types::ThemeVariant::ThemeTypes currentTheme READ currentTheme WRITE setCurrentTheme
+                           NOTIFY currentThemeChanged)
+        Q_PROPERTY(QString currentThemeName READ currentThemeName NOTIFY currentThemeChanged)
+        Q_PROPERTY(bool darkMode READ darkMode WRITE setDarkMode NOTIFY darkModeChanged)
+        Q_PROPERTY(Nandina::Core::Color::ColorSchema *colors READ colors CONSTANT)
+        Q_PROPERTY(Nandina::Core::Primitives::PrimitiveSchema *primitives READ primitives CONSTANT)
+        Q_PROPERTY(QStringList availableThemes READ availableThemes CONSTANT)
 
     public:
         explicit ThemeManager(QObject *parent = nullptr);

@@ -17,7 +17,8 @@ ApplicationWindow {
 
         ColumnLayout {
             anchors {
-                left: parent.left; right: parent.right
+                left: parent.left
+                right: parent.right
                 margins: 24
             }
             spacing: 20
@@ -32,8 +33,7 @@ ApplicationWindow {
             }
 
             Text {
-                text: "Current theme: " + ThemeManager.currentThemeName
-                      + (ThemeManager.darkMode ? " (dark)" : " (light)")
+                text: "Current theme: " + ThemeManager.currentThemeName + (ThemeManager.darkMode ? " (dark)" : " (light)")
                 font.pixelSize: 14
                 color: ThemeManager.colors.surface.shade700
             }
@@ -60,11 +60,7 @@ ApplicationWindow {
 
                         background: Rectangle {
                             radius: 6
-                            color: parent.highlighted
-                                   ? ThemeManager.colors.primary.shade500
-                                   : (parent.hovered
-                                      ? ThemeManager.colors.surface.shade200
-                                      : ThemeManager.colors.surface.shade100)
+                            color: parent.highlighted ? ThemeManager.colors.primary.shade500 : (parent.hovered ? ThemeManager.colors.surface.shade200 : ThemeManager.colors.surface.shade100)
                             border.color: ThemeManager.colors.primary.shade300
                             border.width: parent.highlighted ? 0 : 1
                         }
@@ -74,9 +70,7 @@ ApplicationWindow {
                             font.capitalization: Font.Capitalize
                             horizontalAlignment: Text.AlignHCenter
                             verticalAlignment: Text.AlignVCenter
-                            color: parent.highlighted
-                                   ? "#ffffff"
-                                   : ThemeManager.colors.surface.shade800
+                            color: parent.highlighted ? "#ffffff" : ThemeManager.colors.surface.shade800
                         }
                     }
                 }
@@ -87,9 +81,7 @@ ApplicationWindow {
 
                     background: Rectangle {
                         radius: 6
-                        color: parent.hovered
-                               ? ThemeManager.colors.tertiary.shade200
-                               : ThemeManager.colors.tertiary.shade100
+                        color: parent.hovered ? ThemeManager.colors.tertiary.shade200 : ThemeManager.colors.tertiary.shade100
                         border.color: ThemeManager.colors.tertiary.shade400
                         border.width: 1
                     }
@@ -112,59 +104,34 @@ ApplicationWindow {
                 color: ThemeManager.colors.primary.shade600
             }
 
-            // Helper component for each color row
-            component ColorRow: ColumnLayout {
-                property string label
-                property var colorPalette
-                spacing: 4
-
-                Text {
-                    text: label
-                    font.pixelSize: 13
-                    font.bold: true
-                    color: ThemeManager.colors.surface.shade700
-                }
-
-                Row {
-                    spacing: 2
-                    Repeater {
-                        model: [
-                            { idx: 0, name: "50"  }, { idx: 1, name: "100" },
-                            { idx: 2, name: "200" }, { idx: 3, name: "300" },
-                            { idx: 4, name: "400" }, { idx: 5, name: "500" },
-                            { idx: 6, name: "600" }, { idx: 7, name: "700" },
-                            { idx: 8, name: "800" }, { idx: 9, name: "900" },
-                            { idx: 10, name: "950" }
-                        ]
-                        delegate: Rectangle {
-                            required property var modelData
-                            required property int index
-                            readonly property color shadeColor: colorPalette ? colorPalette.shade(modelData.idx) : "transparent"
-
-                            width: 56; height: 40
-                            radius: 4
-                            color: shadeColor
-                            border.color: Qt.darker(shadeColor, 1.15)
-                            border.width: 0.5
-
-                            Text {
-                                anchors.centerIn: parent
-                                text: parent.modelData.name
-                                font.pixelSize: 9
-                                color: parent.index < 5 ? "#333333" : "#ffffff"
-                            }
-                        }
-                    }
-                }
+            ColorRow {
+                label: "Primary"
+                colorPalette: ThemeManager.colors.primary
             }
-
-            ColorRow { label: "Primary";   colorPalette: ThemeManager.colors.primary }
-            ColorRow { label: "Secondary"; colorPalette: ThemeManager.colors.secondary }
-            ColorRow { label: "Tertiary";  colorPalette: ThemeManager.colors.tertiary }
-            ColorRow { label: "Success";   colorPalette: ThemeManager.colors.success }
-            ColorRow { label: "Warning";   colorPalette: ThemeManager.colors.warning }
-            ColorRow { label: "Error";     colorPalette: ThemeManager.colors.error }
-            ColorRow { label: "Surface";   colorPalette: ThemeManager.colors.surface }
+            ColorRow {
+                label: "Secondary"
+                colorPalette: ThemeManager.colors.secondary
+            }
+            ColorRow {
+                label: "Tertiary"
+                colorPalette: ThemeManager.colors.tertiary
+            }
+            ColorRow {
+                label: "Success"
+                colorPalette: ThemeManager.colors.success
+            }
+            ColorRow {
+                label: "Warning"
+                colorPalette: ThemeManager.colors.warning
+            }
+            ColorRow {
+                label: "Error"
+                colorPalette: ThemeManager.colors.error
+            }
+            ColorRow {
+                label: "Surface"
+                colorPalette: ThemeManager.colors.surface
+            }
 
             // ── Sample UI elements ─────────────────────────────
             Text {
@@ -179,7 +146,8 @@ ApplicationWindow {
                 spacing: 12
 
                 Rectangle {
-                    width: 120; height: 80
+                    width: 120
+                    height: 80
                     radius: 8
                     color: ThemeManager.colors.primary.shade500
                     Text {
@@ -190,7 +158,8 @@ ApplicationWindow {
                     }
                 }
                 Rectangle {
-                    width: 120; height: 80
+                    width: 120
+                    height: 80
                     radius: 8
                     color: ThemeManager.colors.success.shade500
                     Text {
@@ -201,7 +170,8 @@ ApplicationWindow {
                     }
                 }
                 Rectangle {
-                    width: 120; height: 80
+                    width: 120
+                    height: 80
                     radius: 8
                     color: ThemeManager.colors.warning.shade500
                     Text {
@@ -212,7 +182,8 @@ ApplicationWindow {
                     }
                 }
                 Rectangle {
-                    width: 120; height: 80
+                    width: 120
+                    height: 80
                     radius: 8
                     color: ThemeManager.colors.error.shade500
                     Text {
@@ -224,7 +195,95 @@ ApplicationWindow {
                 }
             }
 
-            Item { Layout.fillHeight: true; Layout.bottomMargin: 24 }
+            Item {
+                Layout.fillHeight: true
+                Layout.bottomMargin: 24
+            }
+        }
+    }
+
+    // Helper component for each color row
+    component ColorRow: ColumnLayout {
+        property string label
+        property var colorPalette
+        spacing: 4
+
+        Text {
+            text: label
+            font.pixelSize: 13
+            font.bold: true
+            color: ThemeManager.colors.surface.shade700
+        }
+
+        Row {
+            spacing: 2
+            Repeater {
+                model: [
+                    {
+                        idx: 0,
+                        name: "50"
+                    },
+                    {
+                        idx: 1,
+                        name: "100"
+                    },
+                    {
+                        idx: 2,
+                        name: "200"
+                    },
+                    {
+                        idx: 3,
+                        name: "300"
+                    },
+                    {
+                        idx: 4,
+                        name: "400"
+                    },
+                    {
+                        idx: 5,
+                        name: "500"
+                    },
+                    {
+                        idx: 6,
+                        name: "600"
+                    },
+                    {
+                        idx: 7,
+                        name: "700"
+                    },
+                    {
+                        idx: 8,
+                        name: "800"
+                    },
+                    {
+                        idx: 9,
+                        name: "900"
+                    },
+                    {
+                        idx: 10,
+                        name: "950"
+                    }
+                ]
+                delegate: Rectangle {
+                    required property var modelData
+                    required property int index
+                    readonly property color shadeColor: colorPalette ? colorPalette.shade(modelData.idx) : "transparent"
+
+                    width: 56
+                    height: 40
+                    radius: 4
+                    color: shadeColor
+                    border.color: Qt.darker(shadeColor, 1.15)
+                    border.width: 0.5
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: parent.modelData.name
+                        font.pixelSize: 9
+                        color: parent.index < 5 ? "#333333" : "#ffffff"
+                    }
+                }
+            }
         }
     }
 }

@@ -10,6 +10,7 @@ set(SUBPROJECT_QML_SINGLETON_FILES
 
 set(SUBPROJECT_CPP_FILES
         theme_type.hpp
+        color_utils.hpp
 )
 
 qt_add_qml_module(${SUBPROJECT_NAME}

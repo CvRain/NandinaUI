@@ -538,7 +538,7 @@ namespace Nandina::Core::Color {
         for (int i = 0; i < AccentCount; ++i) {
             // Dark mode reverses the shade order (50↔950, 100↔900, …)
             const int src = isDark ? (AccentCount - 1 - i) : i;
-            shades[i] = QColor::fromRgba(rgbaToArgb(hexColors[src]));
+            shades[i] = Core::rgbaToQColor(hexColors[src]);
         }
         palette->setAllShades(shades);
     }

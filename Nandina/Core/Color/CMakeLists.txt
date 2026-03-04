@@ -9,8 +9,8 @@ set(SUBPROJECT_QML_SINGLETON_FILES
 )
 
 set(SUBPROJECT_CPP_FILES
-        color_shema.cpp
-        color_shema.hpp
+        color_schema.cpp
+        color_schema.hpp
         color_factory.cpp
         color_factory.hpp
 )

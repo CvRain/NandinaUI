@@ -2,13 +2,16 @@
 // Created by cvrain on 2026/3/1.
 //
 
-#include "color_shema.hpp"
+#include "color_schema.hpp"
+
+#include <utility>
 
 namespace Nandina::Core::Color {
 
     // ─── ColorPalette ──────────────────────────────────────────────
 
-    ColorPalette::ColorPalette(QObject *parent) : QObject(parent) {}
+    ColorPalette::ColorPalette(QObject *parent) : QObject(parent) {
+    }
 
     QColor ColorPalette::shade(const int accentType) const {
         if (accentType >= 0 && accentType < AccentCount) {
@@ -18,7 +21,7 @@ namespace Nandina::Core::Color {
     }
 
     void ColorPalette::setShade(const ThemeVariant::ColorAccentTypes accent, const QColor &color) {
-        const int idx = static_cast<int>(accent);
+        const auto idx = std::to_underlying(accent);
         if (idx >= 0 && idx < AccentCount && m_shades[idx] != color) {
             m_shades[idx] = color;
             emit changed();
@@ -35,7 +38,7 @@ namespace Nandina::Core::Color {
     // ─── ColorSchema ───────────────────────────────────────────────
 
     ColorSchema::ColorSchema(QObject *parent) : QObject(parent) {
-        for (auto &p : m_palettes) {
+        for (auto &p: m_palettes) {
             p = new ColorPalette(this);
             connect(p, &ColorPalette::changed, this, &ColorSchema::changed);
         }

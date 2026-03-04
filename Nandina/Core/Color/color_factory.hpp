@@ -6,9 +6,9 @@
 #define NANDINA_COLOR_FACTORY_HPP
 
 #include <array>
-#include <cstdint>
 
-#include "color_shema.hpp"
+#include "color_schema.hpp"
+#include "color_utils.hpp"
 #include "theme_type.hpp"
 
 namespace Nandina::Core::Color {
@@ -27,16 +27,24 @@ namespace Nandina::Core::Color {
         AccentHexArray surface;
 
         // Array-style access by variant index
-        [[nodiscard]] const AccentHexArray &operator[](int variantIndex) const {
+        [[nodiscard]] const AccentHexArray &operator[](int variantIndex) const noexcept {
             switch (variantIndex) {
-                case 0: return primary;
-                case 1: return secondary;
-                case 2: return tertiary;
-                case 3: return success;
-                case 4: return warning;
-                case 5: return error;
-                case 6: return surface;
-                default: return primary;
+                case 0:
+                    return primary;
+                case 1:
+                    return secondary;
+                case 2:
+                    return tertiary;
+                case 3:
+                    return success;
+                case 4:
+                    return warning;
+                case 5:
+                    return error;
+                case 6:
+                    return surface;
+                default:
+                    return primary;
             }
         }
     };
@@ -50,11 +58,6 @@ namespace Nandina::Core::Color {
     private:
         static const ThemeColorData &getThemeData(Types::ThemeVariant::ThemeTypes theme);
         static void applyVariant(const AccentHexArray &hexColors, bool isDark, ColorPalette *palette);
-
-        /// Convert stored RGBA hex (0xRRGGBBAA) to QRgb ARGB format (0xAARRGGBB).
-        static constexpr uint32_t rgbaToArgb(uint32_t rgba) {
-            return ((rgba >> 8) & 0x00FFFFFFu) | ((rgba & 0xFFu) << 24);
-        }
     };
 
 } // namespace Nandina::Core::Color
