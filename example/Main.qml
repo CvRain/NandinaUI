@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import Nandina.Theme
+import Nandina.Controls
 
 ApplicationWindow {
     id: root
@@ -131,6 +132,146 @@ ApplicationWindow {
             ColorRow {
                 label: "Surface"
                 colorPalette: ThemeManager.colors.surface
+            }
+
+            // ── NanSurface 演示 ───────────────────────────────
+            Text {
+                Layout.topMargin: 16
+                text: "NanSurface — 主题感知容器"
+                font.pixelSize: 18
+                font.bold: true
+                color: ThemeManager.colors.primary.shade600
+            }
+            Text {
+                text: "colorVariant 与 shade 自动跟随主题，无需手动切换"
+                font.pixelSize: 13
+                color: ThemeManager.colors.surface.shade600
+                Layout.bottomMargin: 4
+            }
+
+            Flow {
+                Layout.fillWidth: true
+                spacing: 12
+
+                Repeater {
+                    model: ["surface", "primary", "secondary", "tertiary", "success", "warning", "error"]
+                    delegate: NanSurface {
+                        required property string modelData
+                        width: 110
+                        height: 72
+                        colorVariant: modelData
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: parent.modelData
+                            font.pixelSize: 12
+                            font.capitalization: Font.Capitalize
+                            color: ThemeManager.darkMode ? ThemeManager.colors.surface.shade200 : ThemeManager.colors.surface.shade800
+                        }
+                    }
+                }
+            }
+
+            // ── NanPressable 演示 ─────────────────────────────
+            Text {
+                Layout.topMargin: 16
+                text: "NanPressable — 纯交互原语"
+                font.pixelSize: 18
+                font.bold: true
+                color: ThemeManager.colors.primary.shade600
+            }
+            Text {
+                text: "NanSurface + NanPressable 组合：hover / press / click 状态可观察"
+                font.pixelSize: 13
+                color: ThemeManager.colors.surface.shade600
+                Layout.bottomMargin: 4
+            }
+
+            Row {
+                spacing: 16
+                Layout.bottomMargin: 32
+
+                // 普通点击卡片
+                NanSurface {
+                    id: _pressDemo
+                    width: 160
+                    height: 80
+                    colorVariant: "primary"
+                    backgroundShade: _pressable.pressed ? 400 : _pressable.hovered ? 100 : -1
+                    borderShade: _pressable.hovered ? 400 : -1
+
+                    Behavior on backgroundShade {
+                        NumberAnimation {
+                            duration: 80
+                        }
+                    }
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: _pressable.pressed ? "▼ Pressed" : _pressable.hovered ? "▲ Hovered" : "👆 Click me"
+                        font.pixelSize: 13
+                        color: ThemeManager.darkMode ? ThemeManager.colors.primary.shade200 : ThemeManager.colors.primary.shade700
+                    }
+
+                    NanPressable {
+                        id: _pressable
+                        anchors.fill: parent
+                        onClicked: _clickCount.count++
+                    }
+                }
+
+                // 禁用状态卡片
+                NanSurface {
+                    width: 160
+                    height: 80
+                    colorVariant: "surface"
+                    opacity: 0.45
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "🚫 Disabled"
+                        font.pixelSize: 13
+                        color: ThemeManager.colors.surface.shade500
+                    }
+
+                    NanPressable {
+                        anchors.fill: parent
+                        enabled: false
+                    }
+                }
+
+                // 长按卡片
+                NanSurface {
+                    id: _longPressCard
+                    width: 160
+                    height: 80
+                    colorVariant: "tertiary"
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: _longPressCard._triggered ? "✔ Long pressed!" : "⏳ Hold me"
+                        font.pixelSize: 13
+                        color: ThemeManager.darkMode ? ThemeManager.colors.tertiary.shade200 : ThemeManager.colors.tertiary.shade700
+                    }
+
+                    property bool _triggered: false
+
+                    NanPressable {
+                        anchors.fill: parent
+                        longPressInterval: 800
+                        onLongPressed: _longPressCard._triggered = !_longPressCard._triggered
+                    }
+                }
+            }
+
+            // 点击计数器
+            Text {
+                id: _clickCount
+                property int count: 0
+                text: "Click count: " + count
+                font.pixelSize: 14
+                color: ThemeManager.colors.primary.shade500
+                Layout.bottomMargin: 24
             }
 
             // ── Sample UI elements ─────────────────────────────
