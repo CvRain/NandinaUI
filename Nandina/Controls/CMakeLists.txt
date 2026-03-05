@@ -3,8 +3,10 @@ set(SUBPROJECT_URI Nandina.Controls)
 
 set(SUBPROJECT_QML_FILES
         # ── Primitives ──────────────────────────────────────────────
-        NanPressable.qml # Pure interaction: hover/press/click, no visuals
-        NanSurface.qml # Theme-aware Rectangle (color variant + shade system)
+        NanPressable/NanPressable.qml # Pure interaction: hover/press/click, no visuals
+        NanSurface/NanSurface.qml # Theme-aware Rectangle (color variant + shade system)
+        # ── Containers ─────────────────────────────────────────────
+        NanPanel/NanPanel.qml # Titled, padded panel container
 )
 
 set(SUBPROJECT_QML_SINGLETON_FILES
