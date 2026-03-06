@@ -7,19 +7,23 @@ set(SUBPROJECT_QML_FILES
         NanSurface/NanSurface.qml # Theme-aware Rectangle (color variant + shade system)
         # ── Containers ─────────────────────────────────────────────
         NanPanel/NanPanel.qml # Titled, padded panel container
+        NanCard/NanCard.qml # Structured card: image / header / content / footer + presets
 )
 
 set(SUBPROJECT_QML_SINGLETON_FILES
 )
 
 set(SUBPROJECT_CPP_FILES
+        nandina_controls_module.cpp
 )
 
 qt_add_qml_module(${SUBPROJECT_NAME}
         URI ${SUBPROJECT_URI}
         VERSION 1.0
         DEPENDENCIES
-        Nandina.Core
+        Nandina.Color
+        Nandina.Primitives
+        Nandina.Types
         Nandina.Theme
         QML_FILES ${SUBPROJECT_QML_FILES} ${SUBPROJECT_QML_SINGLETON_FILES}
         SOURCES ${SUBPROJECT_CPP_FILES}

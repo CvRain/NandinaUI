@@ -27,3 +27,9 @@ target_link_libraries(Nandina PUBLIC
         Qt6::Quick Qt6::Gui
         ${NANDINA_MODULES}
 )
+
+# Propagate runtime rpath so executables linking against Nandina can resolve
+# all sibling shared libraries at run-time without extra install steps.
+set_target_properties(Nandina PROPERTIES
+        INSTALL_RPATH_USE_LINK_PATH TRUE
+)
