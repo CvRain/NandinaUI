@@ -10,6 +10,11 @@ qt_add_qml_module(NandinaExampleApp
         VERSION 1.0
         QML_FILES
         Main.qml
+        pages/ThemePage.qml
+        pages/ColorPalettePage.qml
+        pages/SurfacePressablePanelPage.qml
+        pages/CardPage.qml
+        pages/SideBarPage.qml
 )
 
 target_link_libraries(NandinaExampleApp

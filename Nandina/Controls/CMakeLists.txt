@@ -8,6 +8,11 @@ set(SUBPROJECT_QML_FILES
         # ── Containers ─────────────────────────────────────────────
         NanPanel/NanPanel.qml # Titled, padded panel container
         NanCard/NanCard.qml # Structured card: image / header / content / footer + presets
+        # ── Navigation ─────────────────────────────────────────────
+        NanSideBar/NanSideBar.qml # Main sidebar container (icon/offcanvas/none collapsible)
+        NanSideBar/NanSideBarGroup.qml # Labelled, optionally collapsible section
+        NanSideBar/NanSideBarItem.qml # Navigation item with icon, badge, sub-items
+        NanSideBar/NanSideBarTrigger.qml # Toggle button for collapsing / expanding
 )
 
 set(SUBPROJECT_QML_SINGLETON_FILES

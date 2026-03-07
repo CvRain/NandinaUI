@@ -3,6 +3,190 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import Nandina.Theme
 import Nandina.Controls
+import NandinaExample
+
+ApplicationWindow {
+    id: root
+    visible: true
+    width: 1200
+    height: 760
+    title: "Nandina Example — " + ThemeManager.currentThemeName
+    color: ThemeManager.colors.surface.shade50
+
+    property string currentPage: "theme"
+
+    RowLayout {
+        anchors.fill: parent
+        spacing: 0
+
+        NanSideBar {
+            id: nav
+            Layout.fillHeight: true
+            collapsible: "icon"
+            expandedWidth: 238
+
+            header: Item {
+                implicitHeight: 52
+                Row {
+                    anchors {
+                        verticalCenter: parent.verticalCenter
+                        left: parent.left
+                        leftMargin: 14
+                    }
+                    spacing: 8
+
+                    Text {
+                        text: "❀"
+                        font.pixelSize: 16
+                        color: ThemeManager.colors.primary.shade600
+                    }
+                    Text {
+                        visible: !nav.collapsed
+                        text: "Nandina Example"
+                        font.pixelSize: 13
+                        font.bold: true
+                        color: ThemeManager.colors.surface.shade700
+                    }
+                }
+            }
+
+            NanSideBarGroup {
+                title: "Pages"
+
+                NanSideBarItem {
+                    text: "Theme"
+                    iconText: "◐"
+                    active: root.currentPage === "theme"
+                    onClicked: root.currentPage = "theme"
+                }
+                NanSideBarItem {
+                    text: "Color Palettes"
+                    iconText: "◍"
+                    active: root.currentPage === "palette"
+                    onClicked: root.currentPage = "palette"
+                }
+                NanSideBarItem {
+                    text: "Primitives"
+                    iconText: "◧"
+                    active: root.currentPage === "primitives"
+                    onClicked: root.currentPage = "primitives"
+                }
+                NanSideBarItem {
+                    text: "Cards"
+                    iconText: "▤"
+                    active: root.currentPage === "cards"
+                    onClicked: root.currentPage = "cards"
+                }
+                NanSideBarItem {
+                    text: "SideBar Demo"
+                    iconText: "☰"
+                    active: root.currentPage === "sidebar"
+                    onClicked: root.currentPage = "sidebar"
+                }
+            }
+        }
+
+        Rectangle {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            color: "transparent"
+
+            ColumnLayout {
+                anchors.fill: parent
+                spacing: 0
+
+                Rectangle {
+                    Layout.fillWidth: true
+                    implicitHeight: 52
+                    color: ThemeManager.colors.surface.shade100
+                    border.color: ThemeManager.colors.surface.shade200
+                    border.width: 1
+
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.leftMargin: 16
+                        anchors.rightMargin: 16
+                        spacing: 12
+
+                        Text {
+                            text: root.pageTitle(root.currentPage)
+                            font.pixelSize: 15
+                            font.bold: true
+                            color: ThemeManager.colors.surface.shade700
+                        }
+
+                        Item {
+                            Layout.fillWidth: true
+                        }
+
+                        Button {
+                            id: _darkModeBtn
+                            text: ThemeManager.darkMode ? "☀ Light" : "🌙 Dark"
+                            onClicked: ThemeManager.darkMode = !ThemeManager.darkMode
+                        }
+                    }
+                }
+
+                Item {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+
+                    StackLayout {
+                        anchors.fill: parent
+                        anchors.margins: 24
+                        currentIndex: root.pageIndex(root.currentPage)
+
+                        ThemePage {}
+                        ColorPalettePage {}
+                        SurfacePressablePanelPage {}
+                        CardPage {}
+                        SideBarPage {}
+                    }
+                }
+            }
+        }
+    }
+
+    function pageIndex(key) {
+        switch (key) {
+        case "theme":
+            return 0;
+        case "palette":
+            return 1;
+        case "primitives":
+            return 2;
+        case "cards":
+            return 3;
+        case "sidebar":
+            return 4;
+        default:
+            return 0;
+        }
+    }
+
+    function pageTitle(key) {
+        switch (key) {
+        case "theme":
+            return "Theme";
+        case "palette":
+            return "Color Palettes";
+        case "primitives":
+            return "Surface / Pressable / Panel";
+        case "cards":
+            return "Card";
+        case "sidebar":
+            return "SideBar Demo";
+        default:
+            return "Theme";
+        }
+    }
+}
+/*
+import QtQuick
+import QtQuick.Controls
+import QtQuick.Layouts
+import Nandina.Theme
+import Nandina.Controls
 
 ApplicationWindow {
     id: root
@@ -682,6 +866,143 @@ ApplicationWindow {
                     }
                 }
             }
+
+            // ── NanSideBar ────────────────────────────────────────────────
+            Text {
+                Layout.topMargin: 8
+                text: "SideBar"
+                font.pixelSize: 18
+                font.bold: true
+                color: ThemeManager.colors.primary.shade600
+            }
+
+            // Mode selector
+            Row {
+                spacing: 8
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "Collapsible:"
+                    font.pixelSize: 13
+                    color: ThemeManager.colors.surface.shade700
+                }
+                Repeater {
+                    model: ["icon", "offcanvas", "none"]
+                    delegate: Button {
+                        id: _modeBtn
+                        required property string modelData
+                        required property int index
+                        text: modelData
+                        highlighted: _sidebarDemo.collapsible === modelData
+                        onClicked: _sidebarDemo.collapsible = modelData
+                    }
+                }
+            }
+
+            // Demo frame  (mini-window)
+            Rectangle {
+                Layout.fillWidth: true
+                height: 380
+                radius: ThemeManager.primitives.radiusContainer
+                clip: true
+                color: ThemeManager.colors.surface.shade100
+                border.color: ThemeManager.colors.surface.shade300
+                border.width: 1
+
+                RowLayout {
+                    anchors.fill: parent
+                    spacing: 0
+
+                    NanSideBar {
+                        id: _sidebarDemo
+                        Layout.fillHeight: true
+                        collapsible: "icon"
+                        expandedWidth: 210
+
+                        NanSideBarGroup {
+                            title: "Main"
+
+                            NanSideBarItem {
+                                text: "Dashboard"
+                                iconText: "⌂"
+                                active: true
+                            }
+                            NanSideBarItem {
+                                text: "Inbox"
+                                iconText: "✉"
+                                badge: "9"
+                            }
+                            NanSideBarItem {
+                                text: "Calendar"
+                                iconText: "◻"
+                                badge: "3"
+                            }
+                        }
+
+                        NanSideBarGroup {
+                            title: "Projects"
+                            collapsible: true
+
+                            NanSideBarItem {
+                                text: "Alpha"
+                                iconText: "α"
+                                NanSideBarItem {
+                                    isSubItem: true
+                                    text: "Overview"
+                                }
+                                NanSideBarItem {
+                                    isSubItem: true
+                                    text: "Issues"
+                                }
+                            }
+                            NanSideBarItem {
+                                text: "Beta"
+                                iconText: "β"
+                            }
+                        }
+
+                        NanSideBarGroup {
+                            title: "Settings"
+
+                            NanSideBarItem {
+                                text: "Preferences"
+                                iconText: "⚙"
+                            }
+                            NanSideBarItem {
+                                text: "Members"
+                                iconText: "◉"
+                                badge: "12"
+                            }
+                        }
+                    }
+
+                    // Main content pane
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        color: "transparent"
+
+                        Column {
+                            anchors.centerIn: parent
+                            spacing: 12
+
+                            Text {
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                text: "Main content"
+                                font.pixelSize: 18
+                                font.bold: true
+                                color: ThemeManager.colors.surface.shade600
+                            }
+                            Text {
+                                anchors.horizontalCenter: parent.horizontalCenter
+                                text: "Sidebar is " + (_sidebarDemo.open ? "open" : "closed") + " · mode: " + _sidebarDemo.collapsible
+                                font.pixelSize: 13
+                                color: ThemeManager.colors.surface.shade500
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
+*/
