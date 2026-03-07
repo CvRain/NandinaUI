@@ -24,6 +24,12 @@ Item {
             }
 
             Text {
+                text: "聚焦 Card 的结构分区、视觉预设与交互状态。"
+                font.pixelSize: 13
+                color: ThemeManager.colors.surface.shade600
+            }
+
+            Text {
                 text: "支持 outlined / tonal / filled 三种预设，header / content / footer 分区，可选图片横幅与交互状态"
                 font.pixelSize: 13
                 color: ThemeManager.colors.surface.shade600

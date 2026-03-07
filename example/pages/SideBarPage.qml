@@ -24,6 +24,12 @@ Item {
                 color: ThemeManager.colors.primary.shade700
             }
 
+            Text {
+                text: "用于演示分组导航、折叠模式与侧边栏布局行为。"
+                font.pixelSize: 13
+                color: ThemeManager.colors.surface.shade600
+            }
+
             Row {
                 spacing: 8
 

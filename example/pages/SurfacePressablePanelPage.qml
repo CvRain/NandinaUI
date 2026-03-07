@@ -24,6 +24,12 @@ Item {
             }
 
             Text {
+                text: "聚合展示基础容器与交互原语，便于观察状态反馈与组合方式。"
+                font.pixelSize: 13
+                color: ThemeManager.colors.surface.shade600
+            }
+
+            Text {
                 text: "NanSurface — 主题感知容器"
                 font.pixelSize: 18
                 font.bold: true

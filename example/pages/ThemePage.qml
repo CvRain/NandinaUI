@@ -23,6 +23,12 @@ Item {
             }
 
             Text {
+                text: "用于验证主题切换、暗色模式与全局主题状态。"
+                font.pixelSize: 13
+                color: ThemeManager.colors.surface.shade600
+            }
+
+            Text {
                 text: "Current theme: " + ThemeManager.currentThemeName + (ThemeManager.darkMode ? " (dark)" : " (light)")
                 font.pixelSize: 14
                 color: ThemeManager.colors.surface.shade700
