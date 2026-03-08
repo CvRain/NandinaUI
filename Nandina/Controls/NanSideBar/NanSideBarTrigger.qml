@@ -42,6 +42,8 @@ Item {
     readonly property bool _open: _resolvedSidebar ? _resolvedSidebar.open : true
     readonly property bool _leftSided: _resolvedSidebar ? _resolvedSidebar.side !== "right" : true
     readonly property bool _isDark: ThemeManager.darkMode
+    readonly property int _backgroundShade: _pressable.pressed ? (_isDark ? 700 : 300) : _pressable.hovered ? (_isDark ? 800 : 200) : (_isDark ? 900 : 100)
+    readonly property int _borderShade: _isDark ? 650 : 260
 
     // Glyph: points inward (towards sidebar content) when open, outward when closed.
     //   left sidebar open  → ◀   (collapse leftward)
@@ -62,8 +64,8 @@ Item {
         id: _bg
         anchors.fill: parent
         colorVariant: "surface"
-        backgroundShade: _pressable.pressed ? (root._isDark ? 600 : 300) : _pressable.hovered ? (root._isDark ? 700 : 200) : (root._isDark ? 800 : 100)
-        borderShade: root._isDark ? 600 : 300
+        backgroundShade: root._backgroundShade
+        borderShade: root._borderShade
         cornerRadius: ThemeManager.primitives.radiusBase
 
         Behavior on backgroundShade {
@@ -74,22 +76,23 @@ Item {
 
         // Glyph label
         Text {
+            id: _glyphText
             anchors.centerIn: parent
             text: root._glyph
             font.pixelSize: 11
-            color: root._isDark ? ThemeManager.colors.surface.shade300 : ThemeManager.colors.surface.shade600
+            color: root._isDark ? ThemeManager.colors.surface.shade200 : ThemeManager.colors.surface.shade600
 
             Behavior on text {
                 // smooth glyph swap via quick opacity flicker
                 SequentialAnimation {
                     NumberAnimation {
-                        target: parent
+                        target: _glyphText
                         property: "opacity"
                         to: 0
                         duration: 60
                     }
                     NumberAnimation {
-                        target: parent
+                        target: _glyphText
                         property: "opacity"
                         to: 1.0
                         duration: 60

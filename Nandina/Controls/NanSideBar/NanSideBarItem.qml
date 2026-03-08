@@ -78,6 +78,7 @@ Item {
     readonly property bool _hasIcon: root.iconSource.toString().length > 0 || root.iconText.length > 0
     readonly property bool _hasSubItems: _subColumn.children.length > 0
     readonly property bool _hasBadge: root.badge.length > 0
+    readonly property color _activeBarColor: root._isDark ? ThemeManager.colors.primary.shade300 : ThemeManager.colors.primary.shade500
 
     // Signals
     signal clicked
@@ -95,7 +96,7 @@ Item {
         if (_pressable.pressed)
             return root._isDark ? ThemeManager.colors.surface.shade700 : ThemeManager.colors.surface.shade200;
         if (root.active)
-            return root._isDark ? ThemeManager.colors.primary.shade900 : ThemeManager.colors.primary.shade100;
+            return root._isDark ? ThemeManager.colors.surface.shade900 : ThemeManager.colors.primary.shade100;
         if (_pressable.hovered)
             return root._isDark ? ThemeManager.colors.surface.shade800 : ThemeManager.colors.surface.shade100;
         return "transparent";
@@ -111,8 +112,14 @@ Item {
 
     readonly property color _iconBgColor: {
         if (root.active)
-            return root._isDark ? ThemeManager.colors.primary.shade700 : ThemeManager.colors.primary.shade200;
-        return root._isDark ? ThemeManager.colors.surface.shade700 : ThemeManager.colors.surface.shade200;
+            return root._isDark ? ThemeManager.colors.primary.shade800 : ThemeManager.colors.primary.shade100;
+        return root._isDark ? ThemeManager.colors.surface.shade700 : ThemeManager.colors.surface.shade100;
+    }
+
+    readonly property color _badgeBgColor: {
+        if (root.active)
+            return root._isDark ? ThemeManager.colors.primary.shade600 : ThemeManager.colors.primary.shade500;
+        return root._isDark ? ThemeManager.colors.surface.shade600 : ThemeManager.colors.surface.shade200;
     }
 
     // ── Main row ──────────────────────────────────────────────────────────
@@ -134,7 +141,7 @@ Item {
             id: _activeBar
             width: 3
             radius: 2
-            color: root._isDark ? ThemeManager.colors.primary.shade400 : ThemeManager.colors.primary.shade500
+            color: root._activeBarColor
             anchors.verticalCenter: parent.verticalCenter
             // stick to the inner edge of the sidebar
             x: root._rightSided ? parent.width - width - 2 : 2
@@ -210,8 +217,8 @@ Item {
             // Sub-item dot indicator ───────────────────────────────────────
             Rectangle {
                 visible: root.isSubItem
-                width: 6
-                height: 6
+                implicitWidth: 6
+                implicitHeight: 6
                 radius: 3
                 color: root.active ? (root._isDark ? ThemeManager.colors.primary.shade400 : ThemeManager.colors.primary.shade500) : (root._isDark ? ThemeManager.colors.surface.shade600 : ThemeManager.colors.surface.shade400)
                 Layout.alignment: Qt.AlignVCenter
@@ -251,7 +258,7 @@ Item {
                 implicitWidth: Math.max(_badgeLabel.implicitWidth + 8, 20)
                 implicitHeight: 18
                 radius: 9
-                color: root.active ? (root._isDark ? ThemeManager.colors.primary.shade600 : ThemeManager.colors.primary.shade500) : (root._isDark ? ThemeManager.colors.surface.shade600 : ThemeManager.colors.surface.shade200)
+                color: root._badgeBgColor
                 Layout.alignment: Qt.AlignVCenter
 
                 Text {

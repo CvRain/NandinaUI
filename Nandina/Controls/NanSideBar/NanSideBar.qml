@@ -93,6 +93,9 @@ Item {
 
     // ── Private helpers ───────────────────────────────────────────────────
     readonly property bool _isDark: ThemeManager.darkMode
+    readonly property int _panelBackgroundShade: _isDark ? 950 : 50
+    readonly property int _panelBorderShade: _isDark ? 850 : 200
+    readonly property color _dividerColor: _isDark ? ThemeManager.colors.surface.shade800 : ThemeManager.colors.surface.shade200
 
     // Width of the icon-only strip: big enough for the 32 px icon circle + padding
     readonly property real _iconColW: Math.round(ThemeManager.primitives.spacing * 4   // padding each side
@@ -138,8 +141,8 @@ Item {
         }
 
         colorVariant: "surface"
-        backgroundShade: root._isDark ? 900 : 50
-        borderShade: root._isDark ? 800 : 200
+        backgroundShade: root._panelBackgroundShade
+        borderShade: root._panelBorderShade
         bordered: true
         cornerRadius: 0
 
@@ -154,14 +157,14 @@ Item {
             Item {
                 id: _headerSlot
                 Layout.fillWidth: true
-                implicitHeight: _headerChild.implicitHeight + _headerDivider.implicitHeight
+                implicitHeight: _triggerRow.height + _headerChild.implicitHeight + _headerDivider.implicitHeight
 
                 // Built-in trigger row (always present; shows trigger if enabled,
                 // or just a small top-margin spacer otherwise)
                 RowLayout {
                     id: _triggerRow
                     width: parent.width
-                    height: 44
+                    height: visible ? 44 : 0
                     visible: root.showTrigger || (root.header !== null)
 
                     // Trigger button (NanSideBarTrigger)
@@ -209,7 +212,7 @@ Item {
                     }
                     height: ThemeManager.primitives.divideWidth
                     visible: root.header !== null || root.showTrigger
-                    color: root._isDark ? ThemeManager.colors.surface.shade800 : ThemeManager.colors.surface.shade200
+                    color: root._dividerColor
                 }
             }
 
@@ -255,7 +258,7 @@ Item {
                         top: parent.top
                     }
                     height: ThemeManager.primitives.divideWidth
-                    color: root._isDark ? ThemeManager.colors.surface.shade800 : ThemeManager.colors.surface.shade200
+                    color: root._dividerColor
                 }
 
                 Item {

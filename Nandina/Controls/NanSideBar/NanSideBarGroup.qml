@@ -61,6 +61,8 @@ Item {
 
     readonly property bool _sidebarCollapsed: _resolvedSidebar ? _resolvedSidebar.collapsed : false
     readonly property bool _isDark: ThemeManager.darkMode
+    readonly property color _groupDividerColor: _isDark ? ThemeManager.colors.surface.shade700 : ThemeManager.colors.surface.shade200
+    readonly property color _groupLabelColor: _isDark ? ThemeManager.colors.surface.shade400 : ThemeManager.colors.surface.shade600
 
     // ── Geometry ──────────────────────────────────────────────────────────
     implicitWidth: parent ? parent.width : 240
@@ -97,8 +99,8 @@ Item {
                     bottom: parent.bottom
                 }
                 height: 1
-                opacity: 0.5
-                color: root._isDark ? ThemeManager.colors.surface.shade700 : ThemeManager.colors.surface.shade200
+                opacity: 0.38
+                color: root._groupDividerColor
             }
 
             // Label text
@@ -115,7 +117,7 @@ Item {
                 font.family: ThemeManager.primitives.baseFont.fontFamily
                 font.pixelSize: Math.round(11 * ThemeManager.primitives.textScaling)
                 font.weight: Font.Medium
-                color: root._isDark ? ThemeManager.colors.surface.shade400 : ThemeManager.colors.surface.shade500
+                color: root._groupLabelColor
                 elide: Text.ElideRight
                 font.capitalization: Font.AllUppercase
                 font.letterSpacing: 0.6
