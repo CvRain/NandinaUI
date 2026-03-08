@@ -57,13 +57,13 @@ ApplicationWindow {
                     text: "Theme"
                     iconText: "◐"
                     active: root.currentPage === "theme"
-                    onClicked: root.currentPage = "theme"
+                    onClicked: root.openPage("theme")
                 }
                 NanSideBarItem {
                     text: "Color Palettes"
                     iconText: "◍"
                     active: root.currentPage === "palette"
-                    onClicked: root.currentPage = "palette"
+                    onClicked: root.openPage("palette")
                 }
             }
 
@@ -74,19 +74,19 @@ ApplicationWindow {
                     text: "Primitives"
                     iconText: "◧"
                     active: root.currentPage === "primitives"
-                    onClicked: root.currentPage = "primitives"
+                    onClicked: root.openPage("primitives")
                 }
                 NanSideBarItem {
                     text: "Cards"
                     iconText: "▤"
                     active: root.currentPage === "cards"
-                    onClicked: root.currentPage = "cards"
+                    onClicked: root.openPage("cards")
                 }
                 NanSideBarItem {
                     text: "SideBar"
                     iconText: "☰"
                     active: root.currentPage === "sidebar"
-                    onClicked: root.currentPage = "sidebar"
+                    onClicked: root.openPage("sidebar")
                 }
             }
         }
@@ -146,36 +146,79 @@ ApplicationWindow {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
 
-                    StackLayout {
+                    StackView {
+                        id: pageStack
                         anchors.fill: parent
                         anchors.margins: 24
-                        currentIndex: root.pageIndex(root.currentPage)
+                        initialItem: root.pageComponent(root.currentPage)
 
-                        ThemePage {}
-                        ColorPalettePage {}
-                        SurfacePressablePanelPage {}
-                        CardPage {}
-                        SideBarPage {}
+                        replaceEnter: Transition {
+                            ParallelAnimation {
+                                NumberAnimation {
+                                    property: "x"
+                                    from: 18
+                                    to: 0
+                                    duration: 140
+                                    easing.type: Easing.OutCubic
+                                }
+                                NumberAnimation {
+                                    property: "opacity"
+                                    from: 0
+                                    to: 1
+                                    duration: 120
+                                }
+                            }
+                        }
+
+                        replaceExit: Transition {
+                            NumberAnimation {
+                                property: "opacity"
+                                from: 1
+                                to: 0
+                                duration: 90
+                            }
+                        }
                     }
                 }
             }
         }
     }
 
-    function pageIndex(key) {
+    function openPage(key) {
+        if (root.currentPage === key)
+            return;
+
+        var targetComponent = root.pageComponent(key);
+        if (!targetComponent)
+            return;
+
+        root.currentPage = key;
+
+        if (pageStack.depth > 1)
+            pageStack.clear(StackView.Immediate);
+
+        if (pageStack.depth === 0) {
+            pageStack.push(targetComponent, {}, StackView.Immediate);
+            return;
+        }
+
+        pageStack.replace(targetComponent, {}, StackView.ReplaceTransition);
+    }
+
+    function pageComponent(key) {
         switch (key) {
         case "theme":
-            return 0;
+            return themePageComponent;
         case "palette":
-            return 1;
+            return palettePageComponent;
         case "primitives":
-            return 2;
+            return primitivesPageComponent;
         case "cards":
-            return 3;
+            return cardsPageComponent;
         case "sidebar":
-            return 4;
+            return sidebarPageComponent;
         default:
-            return 0;
+            return themePageComponent;
         }
     }
 
@@ -211,5 +254,30 @@ ApplicationWindow {
         default:
             return "主题切换与暗色模式控制";
         }
+    }
+
+    Component {
+        id: themePageComponent
+        ThemePage {}
+    }
+
+    Component {
+        id: palettePageComponent
+        ColorPalettePage {}
+    }
+
+    Component {
+        id: primitivesPageComponent
+        SurfacePressablePanelPage {}
+    }
+
+    Component {
+        id: cardsPageComponent
+        CardPage {}
+    }
+
+    Component {
+        id: sidebarPageComponent
+        SideBarPage {}
     }
 }
