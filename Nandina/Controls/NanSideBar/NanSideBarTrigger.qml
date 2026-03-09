@@ -12,7 +12,6 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Controls
-import QtQuick.Layouts
 import Nandina.Theme
 import Nandina.Controls
 
@@ -41,9 +40,8 @@ Item {
 
     readonly property bool _open: _resolvedSidebar ? _resolvedSidebar.open : true
     readonly property bool _leftSided: _resolvedSidebar ? _resolvedSidebar.side !== "right" : true
-    readonly property bool _isDark: ThemeManager.darkMode
-    readonly property int _backgroundShade: _pressable.pressed ? (_isDark ? 700 : 300) : _pressable.hovered ? (_isDark ? 800 : 200) : (_isDark ? 900 : 100)
-    readonly property int _borderShade: _isDark ? 650 : 260
+    readonly property int _backgroundShade: _pressable.pressed ? 300 : _pressable.hovered ? 200 : 100
+    readonly property int _borderShade: 300
 
     // Glyph: points inward (towards sidebar content) when open, outward when closed.
     //   left sidebar open  → ◀   (collapse leftward)
@@ -80,7 +78,7 @@ Item {
             anchors.centerIn: parent
             text: root._glyph
             font.pixelSize: 11
-            color: root._isDark ? ThemeManager.colors.surface.shade200 : ThemeManager.colors.surface.shade600
+            color: ThemeManager.colors.surface.shade600
 
             Behavior on text {
                 // smooth glyph swap via quick opacity flicker

@@ -67,7 +67,8 @@ Item {
     property bool showRail: true
 
     // ── Animation ─────────────────────────────────────────────────────────
-    property int animationDuration: 200
+    property int animationDuration: 280
+    property int contentAnimationDuration: 220
 
     // ── Signals ───────────────────────────────────────────────────────────
     signal toggled(bool open)
@@ -92,10 +93,11 @@ Item {
     onOpenChanged: root.toggled(root.open)
 
     // ── Private helpers ───────────────────────────────────────────────────
-    readonly property bool _isDark: ThemeManager.darkMode
-    readonly property int _panelBackgroundShade: _isDark ? 950 : 50
-    readonly property int _panelBorderShade: _isDark ? 850 : 200
-    readonly property color _dividerColor: _isDark ? ThemeManager.colors.surface.shade800 : ThemeManager.colors.surface.shade200
+    // ColorFactory already reverses palette shades in dark mode.
+    // Keep semantic shade numbers stable here to avoid double inversion.
+    readonly property int _panelBackgroundShade: 100
+    readonly property int _panelBorderShade: 300
+    readonly property color _dividerColor: ThemeManager.colors.surface.shade300
 
     // Width of the icon-only strip: big enough for the 32 px icon circle + padding
     readonly property real _iconColW: Math.round(ThemeManager.primitives.spacing * 4   // padding each side
@@ -116,7 +118,7 @@ Item {
     Behavior on width {
         NumberAnimation {
             duration: root.animationDuration
-            easing.type: Easing.OutCubic
+            easing.type: Easing.InOutCubic
         }
     }
     implicitHeight: parent ? parent.height : 600
@@ -136,7 +138,14 @@ Item {
         Behavior on x {
             NumberAnimation {
                 duration: root.animationDuration
-                easing.type: Easing.OutCubic
+                easing.type: Easing.InOutCubic
+            }
+        }
+
+        Behavior on opacity {
+            NumberAnimation {
+                duration: root.contentAnimationDuration
+                easing.type: Easing.InOutCubic
             }
         }
 
@@ -166,6 +175,14 @@ Item {
                     width: parent.width
                     height: visible ? 44 : 0
                     visible: root.showTrigger || (root.header !== null)
+                    opacity: root.offcanvasHidden ? 0 : 1
+
+                    Behavior on opacity {
+                        NumberAnimation {
+                            duration: root.contentAnimationDuration
+                            easing.type: Easing.InOutCubic
+                        }
+                    }
 
                     // Trigger button (NanSideBarTrigger)
                     NanSideBarTrigger {
@@ -190,6 +207,14 @@ Item {
                         top: _triggerRow.bottom
                     }
                     implicitHeight: root.header ? root.header.implicitHeight : 0
+                    opacity: root.collapsed ? 0 : 1
+
+                    Behavior on opacity {
+                        NumberAnimation {
+                            duration: root.contentAnimationDuration
+                            easing.type: Easing.InOutCubic
+                        }
+                    }
 
                     Component.onCompleted: _reparentHeader()
                     onVisibleChanged: _reparentHeader()
@@ -228,6 +253,14 @@ Item {
                 ScrollBar.vertical: ScrollBar {
                     policy: ScrollBar.AsNeeded
                     visible: !root.collapsed
+                }
+                opacity: root.offcanvasHidden ? 0 : 1
+
+                Behavior on opacity {
+                    NumberAnimation {
+                        duration: root.contentAnimationDuration
+                        easing.type: Easing.InOutCubic
+                    }
                 }
 
                 Column {
@@ -270,6 +303,14 @@ Item {
                         bottom: parent.bottom
                     }
                     implicitHeight: root.footer ? root.footer.implicitHeight : 0
+                    opacity: root.collapsed ? 0 : 1
+
+                    Behavior on opacity {
+                        NumberAnimation {
+                            duration: root.contentAnimationDuration
+                            easing.type: Easing.InOutCubic
+                        }
+                    }
 
                     Component.onCompleted: _reparentFooter()
                     onVisibleChanged: _reparentFooter()
@@ -295,11 +336,11 @@ Item {
             top: parent.top
         }
         x: root.side === "left" ? 0 : parent.width - width
-        color: _railHover.hovered ? (root._isDark ? ThemeManager.colors.surface.shade700 : ThemeManager.colors.surface.shade300) : "transparent"
+        color: _railHover.hovered ? ThemeManager.colors.surface.shade400 : "transparent"
 
         Behavior on color {
             ColorAnimation {
-                duration: 120
+                duration: 180
             }
         }
 

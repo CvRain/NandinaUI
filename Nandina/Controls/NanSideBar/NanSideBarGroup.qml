@@ -19,7 +19,6 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import QtQuick.Layouts
 import Nandina.Theme
 import Nandina.Controls
 
@@ -118,9 +117,17 @@ Item {
                 font.pixelSize: Math.round(11 * ThemeManager.primitives.textScaling)
                 font.weight: Font.Medium
                 color: root._groupLabelColor
+                opacity: root._sidebarCollapsed ? 0 : 1
                 elide: Text.ElideRight
                 font.capitalization: Font.AllUppercase
                 font.letterSpacing: 0.6
+
+                Behavior on opacity {
+                    NumberAnimation {
+                        duration: 180
+                        easing.type: Easing.InOutCubic
+                    }
+                }
             }
 
             // Chevron for collapsible
@@ -135,6 +142,14 @@ Item {
                 text: root.expanded ? "▾" : "▸"
                 font.pixelSize: 10
                 color: root._isDark ? ThemeManager.colors.surface.shade500 : ThemeManager.colors.surface.shade400
+                opacity: root._sidebarCollapsed ? 0 : 1
+
+                Behavior on opacity {
+                    NumberAnimation {
+                        duration: 180
+                        easing.type: Easing.InOutCubic
+                    }
+                }
 
                 Behavior on rotation {
                     NumberAnimation {

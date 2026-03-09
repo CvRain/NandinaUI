@@ -46,8 +46,11 @@ Rectangle {
     property real cornerRadius: -1
 
     // ── Resolved colours (readonly, useful for child items) ────────
-    readonly property color resolvedBackgroundColor: ThemeManager.colors.color(_variantIdx, _resolveShadeIndex(backgroundShade >= 0 ? backgroundShade : (ThemeManager.darkMode ? 800 : 50)))
-    readonly property color resolvedBorderColor: ThemeManager.colors.color(_variantIdx, _resolveShadeIndex(borderShade >= 0 ? borderShade : (ThemeManager.darkMode ? 700 : 200)))
+    readonly property var _palette: _resolvePalette(_variantIdx)
+    readonly property int _resolvedBackgroundShade: backgroundShade >= 0 ? backgroundShade : (ThemeManager.darkMode ? 800 : 50)
+    readonly property int _resolvedBorderShade: borderShade >= 0 ? borderShade : (ThemeManager.darkMode ? 700 : 200)
+    readonly property color resolvedBackgroundColor: _shadeColor(_palette, _resolvedBackgroundShade)
+    readonly property color resolvedBorderColor: _shadeColor(_palette, _resolvedBorderShade)
 
     // ── Rectangle bindings ─────────────────────────────────────────
     color: resolvedBackgroundColor
@@ -57,6 +60,57 @@ Rectangle {
 
     // ── Private helpers ────────────────────────────────────────────
     readonly property int _variantIdx: _resolveVariant(colorVariant)
+
+    function _resolvePalette(index) {
+        switch (index) {
+        case 0:
+            return ThemeManager.colors.primary;
+        case 1:
+            return ThemeManager.colors.secondary;
+        case 2:
+            return ThemeManager.colors.tertiary;
+        case 3:
+            return ThemeManager.colors.success;
+        case 4:
+            return ThemeManager.colors.warning;
+        case 5:
+            return ThemeManager.colors.error;
+        default:
+            return ThemeManager.colors.surface;
+        }
+    }
+
+    function _shadeColor(palette, shade) {
+        if (!palette)
+            return "transparent";
+
+        switch (shade) {
+        case 50:
+            return palette.shade50;
+        case 100:
+            return palette.shade100;
+        case 200:
+            return palette.shade200;
+        case 300:
+            return palette.shade300;
+        case 400:
+            return palette.shade400;
+        case 500:
+            return palette.shade500;
+        case 600:
+            return palette.shade600;
+        case 700:
+            return palette.shade700;
+        case 800:
+            return palette.shade800;
+        case 900:
+            return palette.shade900;
+        case 950:
+            return palette.shade950;
+        default:
+            return palette.shade500;
+        }
+    }
 
     function _resolveVariant(name) {
         switch (name) {
@@ -74,35 +128,6 @@ Rectangle {
             return 5;
         default:
             return 6;  // "surface"
-        }
-    }
-
-    function _resolveShadeIndex(shade) {
-        switch (shade) {
-        case 50:
-            return 0;
-        case 100:
-            return 1;
-        case 200:
-            return 2;
-        case 300:
-            return 3;
-        case 400:
-            return 4;
-        case 500:
-            return 5;
-        case 600:
-            return 6;
-        case 700:
-            return 7;
-        case 800:
-            return 8;
-        case 900:
-            return 9;
-        case 950:
-            return 10;
-        default:
-            return 5;   // fallback → shade500
         }
     }
 }
