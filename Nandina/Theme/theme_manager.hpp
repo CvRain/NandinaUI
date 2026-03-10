@@ -68,7 +68,7 @@ namespace Nandina::Theme {
     private:
         void applyCurrentTheme();
 
-        ThemeTypes m_currentTheme{ThemeTypes::cerberus};
+        ThemeTypes m_currentTheme{ThemeTypes::aurora};
         bool m_darkMode{false};
         Core::Color::ColorSchema *m_colors{nullptr};
         Core::Primitives::PrimitiveSchema *m_primitives{nullptr};

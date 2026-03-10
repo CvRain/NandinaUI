@@ -19,7 +19,7 @@ namespace Nandina::Core::Types {
         explicit ThemeVariant(QObject *parent = nullptr) : QObject(parent) {}
 
         // ── Theme presets ──────────────────────────────────────────
-        enum class ThemeTypes { catppuccin, cerberus, concord, crimson, fennec, legacy };
+        enum class ThemeTypes { aurora, catppuccin, cerberus, concord, crimson, fennec, legacy };
         Q_ENUM(ThemeTypes)
 
         // ── Color variant (7 semantic families) ────────────────────
@@ -51,13 +51,14 @@ namespace Nandina::Core::Types {
         Q_ENUM(ColorAccentTypes)
 
         // ── Constexpr iteration helpers ────────────────────────────
-        static constexpr int ThemeCount   = 6;
+        static constexpr int ThemeCount   = 7;
         static constexpr int VariantCount = 7;
         static constexpr int AccentCount  = 11;
 
         static constexpr std::array<ThemeTypes, ThemeCount> AllThemes = {
-            ThemeTypes::catppuccin, ThemeTypes::cerberus, ThemeTypes::concord,
-            ThemeTypes::crimson,    ThemeTypes::fennec,   ThemeTypes::legacy,
+            ThemeTypes::aurora,     ThemeTypes::catppuccin, ThemeTypes::cerberus,
+            ThemeTypes::concord,    ThemeTypes::crimson,    ThemeTypes::fennec,
+            ThemeTypes::legacy,
         };
 
         static constexpr std::array<ColorVariantTypes, VariantCount> AllVariants = {
@@ -79,6 +80,7 @@ namespace Nandina::Core::Types {
         // ── Name ↔ enum helpers ────────────────────────────────────
         static QString themeTypeName(ThemeTypes type) {
             switch (type) {
+                case ThemeTypes::aurora:     return QStringLiteral("aurora");
                 case ThemeTypes::catppuccin: return QStringLiteral("catppuccin");
                 case ThemeTypes::cerberus:   return QStringLiteral("cerberus");
                 case ThemeTypes::concord:    return QStringLiteral("concord");
@@ -86,18 +88,19 @@ namespace Nandina::Core::Types {
                 case ThemeTypes::fennec:     return QStringLiteral("fennec");
                 case ThemeTypes::legacy:     return QStringLiteral("legacy");
             }
-            return QStringLiteral("cerberus");
+            return QStringLiteral("aurora");
         }
 
         static ThemeTypes themeTypeFromName(const QString &name) {
             const auto lower = name.toLower();
+            if (lower == u"aurora")     return ThemeTypes::aurora;
             if (lower == u"catppuccin") return ThemeTypes::catppuccin;
             if (lower == u"cerberus")   return ThemeTypes::cerberus;
             if (lower == u"concord")    return ThemeTypes::concord;
             if (lower == u"crimson")    return ThemeTypes::crimson;
             if (lower == u"fennec")     return ThemeTypes::fennec;
             if (lower == u"legacy")     return ThemeTypes::legacy;
-            return ThemeTypes::cerberus; // default fallback
+            return ThemeTypes::aurora; // default fallback
         }
 
         static QStringList allThemeTypeNames() {

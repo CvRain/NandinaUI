@@ -49,7 +49,24 @@ namespace Nandina::Core::Primitives {
     // ═══════════════════════════════════════════════════════════════
     //  Static theme primitive data (derived from CSS source files)
     // ═══════════════════════════════════════════════════════════════
-
+    // ── Aurora ────────────────────────────────────────────
+    // base    → surface-900 (0x221D42FF) / surface-100 (0xEDEAFFFF)
+    // heading → primary-600  (0x7C3AEDFF) / primary-300  (0xC084FCFF)
+    // anchor  → secondary-600 (0xDB2777FF) / secondary-300 (0xF9A8D4FF)
+    static const ThemePrimitiveData s_aurora = {
+            4.0,    // spacing
+            1.067,  // text-scaling
+            8.0,    // radius-base: rounder corners = more playful
+            16.0,   // radius-container: pill-ish
+            1.0,
+            1.0,
+            2.0,    // ring-width: thicker focus ring for visual pop
+            0xF8F7FFFF, // body-background: surface-50 (ice lavender)
+            0x0E0A1FFF, // body-background-dark: surface-950 (deep space purple)
+            {400, false, 0.0,  0x221D42FF, 0xEDEAFFFF},
+            {700, false, 0.3,  0x7C3AEDFF, 0xC084FCFF},
+            {400, false, 0.0,  0xDB2777FF, 0xF9A8D4FF},
+    };
     // ── Catppuccin ─────────────────────────────────────────────────
     // Font colors: base → surface-700 (0x606275FF) / surface-50 (0xDDE0E7FF)
     //              heading → tertiary-500 (0x0F9299FF) / secondary-200 (0xF3A3DDFF)
@@ -226,6 +243,8 @@ namespace Nandina::Core::Primitives {
 
     static const ThemePrimitiveData &getThemePrimitiveData(Types::ThemeVariant::ThemeTypes theme) {
         switch (theme) {
+            case Types::ThemeVariant::ThemeTypes::aurora:
+                return s_aurora;
             case Types::ThemeVariant::ThemeTypes::catppuccin:
                 return s_catppuccin;
             case Types::ThemeVariant::ThemeTypes::cerberus:
@@ -239,7 +258,7 @@ namespace Nandina::Core::Primitives {
             case Types::ThemeVariant::ThemeTypes::legacy:
                 return s_legacy;
         }
-        return s_cerberus;
+        return s_aurora;
     }
 
     static void applyTypography(const TypographyData &data, TypographySchema *schema,

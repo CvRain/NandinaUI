@@ -12,6 +12,99 @@ namespace Nandina::Core::Color {
     //  Hex format: 0xRRGGBBAA (RGBA), converted to ARGB at apply time.
     // ═══════════════════════════════════════════════════════════════
 
+    // ── Aurora ─────────────────────────────────────────────────────────
+    // Modern, vivid, Discord/neon-shell inspired.
+    // primary   = Electric Violet  (9333EA family)
+    // secondary = Neon Fuchsia     (EC4899 family)
+    // tertiary  = Electric Cyan    (06B6D4 family)
+    // surface   = Deep Space Purple (0E0A1F → F8F7FF)
+    static const ThemeColorData s_auroraData = {
+            // primary — Electric Violet
+            {0xF3E8FFFF,
+             0xE9D5FFFF,
+             0xD8B4FEFF,
+             0xC084FCFF,
+             0xA855F7FF,
+             0x9333EAFF,
+             0x7C3AEDFF,
+             0x6D28D9FF,
+             0x5B21B6FF,
+             0x4C1D95FF,
+             0x2E1065FF},
+            // secondary — Neon Fuchsia
+            {0xFDF2F8FF,
+             0xFCE7F3FF,
+             0xFBCFE8FF,
+             0xF9A8D4FF,
+             0xF472B6FF,
+             0xEC4899FF,
+             0xDB2777FF,
+             0xBE185DFF,
+             0x9D174DFF,
+             0x831843FF,
+             0x500724FF},
+            // tertiary — Electric Cyan
+            {0xECFEFFFF,
+             0xCFFAFEFF,
+             0xA5F3FCFF,
+             0x67E8F9FF,
+             0x22D3EEFF,
+             0x06B6D4FF,
+             0x0891B2FF,
+             0x0E7490FF,
+             0x155E75FF,
+             0x164E63FF,
+             0x083344FF},
+            // success — Neon Lime Green
+            {0xF0FDF4FF,
+             0xDCFCE7FF,
+             0xBBF7D0FF,
+             0x86EFACFF,
+             0x4ADE80FF,
+             0x22C55EFF,
+             0x16A34AFF,
+             0x15803DFF,
+             0x166534FF,
+             0x14532DFF,
+             0x052E16FF},
+            // warning — Amber
+            {0xFFFBEBFF,
+             0xFEF3C7FF,
+             0xFDE68AFF,
+             0xFCD34DFF,
+             0xFBBF24FF,
+             0xF59E0BFF,
+             0xD97706FF,
+             0xB45309FF,
+             0x92400EFF,
+             0x78350FFF,
+             0x451A03FF},
+            // error — Rose Red
+            {0xFFF1F2FF,
+             0xFFE4E6FF,
+             0xFECDD3FF,
+             0xFDA4AFFF,
+             0xFB7185FF,
+             0xF43F5EFF,
+             0xE11D48FF,
+             0xBE123CFF,
+             0x9F1239FF,
+             0x881337FF,
+             0x4C0519FF},
+            // surface — Deep Space Purple (light lavender → deep navy-purple)
+            {0xF8F7FFFF,
+             0xEDEAFFFF,
+             0xDDD8FFFF,
+             0xC4BCFAFF,
+             0xA89BE8FF,
+             0x887AD0FF,
+             0x6B60B3FF,
+             0x52498EFF,
+             0x3A3368FF,
+             0x221D42FF,
+             0x0E0A1FFF},
+    };
+
     static const ThemeColorData s_catppuccinData = {
             // primary
             {0xE9FBFFFF,
@@ -517,6 +610,8 @@ namespace Nandina::Core::Color {
 
     const ThemeColorData &ColorFactory::getThemeData(const Types::ThemeVariant::ThemeTypes theme) {
         switch (theme) {
+            case Types::ThemeVariant::ThemeTypes::aurora:
+                return s_auroraData;
             case Types::ThemeVariant::ThemeTypes::catppuccin:
                 return s_catppuccinData;
             case Types::ThemeVariant::ThemeTypes::cerberus:
@@ -530,7 +625,7 @@ namespace Nandina::Core::Color {
             case Types::ThemeVariant::ThemeTypes::legacy:
                 return s_legacyData;
         }
-        return s_catppuccinData;
+        return s_auroraData;
     }
 
     void ColorFactory::applyVariant(const AccentHexArray &hexColors, const bool isDark, ColorPalette *palette) {
