@@ -7,6 +7,10 @@
 namespace Nandina::Theme {
 
     ThemeManager::ThemeManager(QObject *parent) : QObject(parent) {
+        // Load bundled fonts before applying any theme, so TypographySchema
+        // font family names (e.g. "LXGW WenKai") resolve correctly.
+        Core::Fonts::FontManager::loadBundledFonts();
+
         // Create the CONSTANT schema objects — pointers never change,
         // only internal values are updated via applyCurrentTheme().
         m_colors     = new Core::Color::ColorSchema(this);

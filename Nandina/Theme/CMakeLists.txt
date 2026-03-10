@@ -28,6 +28,7 @@ target_link_libraries(${SUBPROJECT_NAME} PUBLIC
         Qt6::Gui
         Qt6::Quick
         NandinaColor
+        NandinaFonts
         NandinaPrimitives
         NandinaTokens
         NandinaTypes

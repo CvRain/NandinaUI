@@ -7,6 +7,7 @@
 #include <QString>
 #include <string_view>
 #include "color_utils.hpp"
+#include "font_manager.hpp"
 
 namespace Nandina::Core::Primitives {
 
@@ -16,12 +17,14 @@ namespace Nandina::Core::Primitives {
     //  Conversion: 1rem = 16px (standard browser default).
     // ═══════════════════════════════════════════════════════════════
 
+    // Font family is resolved at runtime from FontManager (not stored in
+    // per-theme data) because family names depend on what QFontDatabase
+    // actually registered — not on a hardcoded string.
     struct TypographyData {
-        std::string_view fontFamily;
-        int fontWeight; // QFont::Weight compatible
-        bool italic;
-        qreal letterSpacing;
-        uint32_t fontColorRgba; // 0xRRGGBBFF
+        int      fontWeight; // QFont::Weight compatible
+        bool     italic;
+        qreal    letterSpacing;
+        uint32_t fontColorRgba;     // 0xRRGGBBFF
         uint32_t fontColorDarkRgba; // 0xRRGGBBFF
     };
 
@@ -61,20 +64,17 @@ namespace Nandina::Core::Primitives {
             1.0,
             0xDDE0E7FF, // body-background: surface-50
             0x1E1E2EFF, // body-background-dark: surface-950
-            {"ui-rounded, Hiragino Maru Gothic ProN, Quicksand, Comfortaa, sans-serif",
-             400,
+            {400,
              false,
              0.0,
              0x606275FF,
              0xDDE0E7FF},
-            {"Seravek, Gill Sans Nova, Ubuntu, Calibri, DejaVu Sans, sans-serif",
-             800,
+            {800,
              false,
              0.0, // bolder ≈ 800
              0x0F9299FF,
              0xF3A3DDFF},
-            {"ui-rounded, Hiragino Maru Gothic ProN, Quicksand, Comfortaa, sans-serif",
-             400,
+            {400,
              false,
              0.0,
              0xD067B3FF,
@@ -95,14 +95,13 @@ namespace Nandina::Core::Primitives {
             1.0,
             0xFCFCFCFF, // surface-50
             0x121212FF, // surface-950
-            {"system-ui", 400, false, 0.0, 0x121212FF, 0xFCFCFCFF},
-            {"system-ui",
-             700,
+            {400, false, 0.0, 0x121212FF, 0xFCFCFCFF},
+            {700,
              false,
              0.0, // bold = 700
              0x121212FF,
              0xFCFCFCFF},
-            {"system-ui", 400, false, 0.0, 0x0770EFFF, 0x57A1F9FF},
+            {400, false, 0.0, 0x0770EFFF, 0x57A1F9FF},
     };
 
     // ── Concord ────────────────────────────────────────────────────
@@ -119,14 +118,13 @@ namespace Nandina::Core::Primitives {
             1.0,
             0xFFFFFFFF, // oklch(1 0 0) = white
             0x2B2B30FF, // surface-900
-            {"system-ui, sans-serif", 400, false, 0.0, 0x1E1E23FF, 0xF5F5F5FF},
-            {"Seravek, Gill Sans Nova, Ubuntu, Calibri, DejaVu Sans, sans-serif",
-             700,
+            {400, false, 0.0, 0x1E1E23FF, 0xF5F5F5FF},
+            {700,
              false,
              0.4, // letter-spacing: 0.025em ≈ 0.4px at 16px
              0x1E1E23FF,
              0xF5F5F5FF},
-            {"system-ui, sans-serif", 400, false, 0.0, 0x3F93DFFF, 0x44A3F5FF},
+            {400, false, 0.0, 0x3F93DFFF, 0x44A3F5FF},
     };
 
     // ── Crimson ────────────────────────────────────────────────────
@@ -143,20 +141,17 @@ namespace Nandina::Core::Primitives {
             1.0,
             0xFFFFFFFF, // oklch(1 0 0) = white
             0x0C0E17FF, // surface-950
-            {"Avenir, Montserrat, Corbel, URW Gothic, source-sans-pro, sans-serif",
-             400,
+            {400,
              false,
              0.0,
              0x0C0E17FF,
              0xE0E0E0FF},
-            {"Avenir, Montserrat, Corbel, URW Gothic, source-sans-pro, sans-serif",
-             400,
+            {400,
              false,
              0.0,
              0x0C0E17FF,
              0xE0E0E0FF},
-            {"Avenir, Montserrat, Corbel, URW Gothic, source-sans-pro, sans-serif",
-             400,
+            {400,
              false,
              0.0,
              0xD21D3DFF,
@@ -177,20 +172,17 @@ namespace Nandina::Core::Primitives {
             1.0,
             0xB9C0BCFF, // surface-50
             0x212227FF, // surface-950
-            {"Bahnschrift, DIN Alternate, Franklin Gothic Medium, sans-serif-condensed, sans-serif",
-             400,
+            {400,
              false,
              0.0,
              0x000000FF,
              0xFFFFFFFF},
-            {"Bahnschrift, DIN Alternate, Franklin Gothic Medium, sans-serif-condensed, sans-serif",
-             400,
+            {400,
              false,
              0.0,
              0x000000FF,
              0xFEF2DDFF},
-            {"Bahnschrift, DIN Alternate, Franklin Gothic Medium, sans-serif-condensed, sans-serif",
-             400,
+            {400,
              false,
              0.0,
              0xDE4403FF,
@@ -211,20 +203,17 @@ namespace Nandina::Core::Primitives {
             1.0,
             0xFFFFFFFF, // oklch(1 0 0) = white
             0x1F2741FF, // surface-950
-            {"Inter, Roboto, Helvetica Neue, Arial Nova, Nimbus Sans, Arial, sans-serif",
-             400,
+            {400,
              false,
              0.0,
              0x1F2741FF,
              0xE4E5ECFF},
-            {"Inter, Roboto, Helvetica Neue, Arial Nova, Nimbus Sans, Arial, sans-serif",
-             700,
+            {700,
              false,
              0.0,
              0x1F2741FF,
              0xE4E5ECFF},
-            {"Inter, Roboto, Helvetica Neue, Arial Nova, Nimbus Sans, Arial, sans-serif",
-             400,
+            {400,
              false,
              0.0,
              0x11BA81FF,
@@ -253,8 +242,9 @@ namespace Nandina::Core::Primitives {
         return s_cerberus;
     }
 
-    static void applyTypography(const TypographyData &data, TypographySchema *schema) {
-        schema->setFontFamily(QString::fromUtf8(data.fontFamily));
+    static void applyTypography(const TypographyData &data, TypographySchema *schema,
+                                 const QString &fontFamily) {
+        schema->setFontFamily(fontFamily);
         schema->setFontWeight(data.fontWeight);
         schema->setItalic(data.italic);
         schema->setLetterSpacing(data.letterSpacing);
@@ -286,10 +276,11 @@ namespace Nandina::Core::Primitives {
         primitives->setBodyBackgroundColor(rgbaToQColor(d.bodyBackgroundColorRgba));
         primitives->setBodyBackgroundColorDark(rgbaToQColor(d.bodyBackgroundColorDarkRgba));
 
-        // Typography
-        applyTypography(d.baseFont, primitives->baseFont());
-        applyTypography(d.headingFont, primitives->headingFont());
-        applyTypography(d.anchorFont, primitives->anchorFont());
+        // Typography — font family resolved from FontManager at runtime
+        const QString defaultFamily = Fonts::FontManager::resolvedDefaultFamily();
+        applyTypography(d.baseFont,    primitives->baseFont(),    defaultFamily);
+        applyTypography(d.headingFont, primitives->headingFont(), defaultFamily);
+        applyTypography(d.anchorFont,  primitives->anchorFont(),  defaultFamily);
     }
 
 } // namespace Nandina::Core::Primitives

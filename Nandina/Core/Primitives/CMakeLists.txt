@@ -26,6 +26,7 @@ target_link_libraries(${SUBPROJECT_NAME} PUBLIC
         Qt6::Gui
         Qt6::Quick
         NandinaTypes
+        NandinaFonts
 )
 
 target_include_directories(${SUBPROJECT_NAME} PUBLIC

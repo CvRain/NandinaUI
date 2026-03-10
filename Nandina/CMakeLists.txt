@@ -6,6 +6,7 @@ add_subdirectory(Window)
 set(NANDINA_MODULES
         NandinaColor
         NandinaControls
+        NandinaFonts
         NandinaPrimitives
         NandinaTokens
         NandinaTheme

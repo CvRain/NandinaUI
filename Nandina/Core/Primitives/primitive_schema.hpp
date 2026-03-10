@@ -50,7 +50,7 @@ namespace Nandina::Core::Primitives {
         void changed();
 
     private:
-        QString m_fontFamily{QStringLiteral("system-ui")};
+        QString m_fontFamily{QStringLiteral("LXGW WenKai")};
         int     m_fontWeight{400};      // QFont::Normal
         bool    m_italic{false};
         qreal   m_letterSpacing{0.0};

@@ -12,6 +12,7 @@
 
 #include "color_factory.hpp"
 #include "color_schema.hpp"
+#include "font_manager.hpp"
 #include "primitive_factory.hpp"
 #include "primitive_schema.hpp"
 #include "theme_type.hpp"
