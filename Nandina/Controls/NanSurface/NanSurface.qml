@@ -47,8 +47,11 @@ Rectangle {
 
     // ── Resolved colours (readonly, useful for child items) ────────
     readonly property var _palette: _resolvePalette(_variantIdx)
-    readonly property int _resolvedBackgroundShade: backgroundShade >= 0 ? backgroundShade : (ThemeManager.darkMode ? 800 : 50)
-    readonly property int _resolvedBorderShade: borderShade >= 0 ? borderShade : (ThemeManager.darkMode ? 700 : 200)
+    // Dark mode: palette is reversed (shade50=darkest, shade950=lightest).
+    // Use low shade numbers for dark containers so they appear near-dark,
+    // and moderate numbers for borders to remain visible but not dazzling.
+    readonly property int _resolvedBackgroundShade: backgroundShade >= 0 ? backgroundShade : (ThemeManager.darkMode ? 100 : 50)
+    readonly property int _resolvedBorderShade: borderShade >= 0 ? borderShade : (ThemeManager.darkMode ? 300 : 200)
     readonly property color resolvedBackgroundColor: _shadeColor(_palette, _resolvedBackgroundShade)
     readonly property color resolvedBorderColor: _shadeColor(_palette, _resolvedBorderShade)
 

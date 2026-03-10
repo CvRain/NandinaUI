@@ -134,7 +134,8 @@ Item {
             visible: _header.visible
             Layout.fillWidth: true
             height: ThemeManager.primitives.divideWidth
-            color: ThemeManager.darkMode ? ThemeManager.colors.surface.shade700 : ThemeManager.colors.surface.shade200
+            // shade300 in dark = original shade700 = visible but not glaring divider line
+            color: ThemeManager.darkMode ? ThemeManager.colors.surface.shade300 : ThemeManager.colors.surface.shade200
         }
 
         // ── Content area ───────────────────────────────────────────

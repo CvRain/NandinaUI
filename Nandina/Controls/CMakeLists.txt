@@ -5,6 +5,8 @@ set(SUBPROJECT_QML_FILES
         # ── Primitives ──────────────────────────────────────────────
         NanPressable/NanPressable.qml # Pure interaction: hover/press/click, no visuals
         NanSurface/NanSurface.qml # Theme-aware Rectangle (color variant + shade system)
+        # ── Controls ───────────────────────────────────────────────
+        NanButton/NanButton.qml # Clickable button: filled/tonal/outlined/ghost/link + sizes
         # ── Containers ─────────────────────────────────────────────
         NanPanel/NanPanel.qml # Titled, padded panel container
         NanCard/NanCard.qml # Structured card: image / header / content / footer + presets

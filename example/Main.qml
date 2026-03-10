@@ -83,6 +83,12 @@ ApplicationWindow {
                     onClicked: root.openPage("cards")
                 }
                 NanSideBarItem {
+                    text: "Button"
+                    iconText: "⬡"
+                    active: root.currentPage === "button"
+                    onClicked: root.openPage("button")
+                }
+                NanSideBarItem {
                     text: "SideBar"
                     iconText: "☰"
                     active: root.currentPage === "sidebar"
@@ -215,6 +221,8 @@ ApplicationWindow {
             return primitivesPageComponent;
         case "cards":
             return cardsPageComponent;
+        case "button":
+            return buttonPageComponent;
         case "sidebar":
             return sidebarPageComponent;
         default:
@@ -232,6 +240,8 @@ ApplicationWindow {
             return "Interaction Primitives";
         case "cards":
             return "Card Presets";
+        case "button":
+            return "NanButton";
         case "sidebar":
             return "SideBar Component";
         default:
@@ -249,6 +259,8 @@ ApplicationWindow {
             return "Surface / Pressable / Panel 组合行为";
         case "cards":
             return "Card 结构与 preset 交互状态";
+        case "button":
+            return "preset / variant / size / icon / keyboard";
         case "sidebar":
             return "侧边栏模式与分组导航演示";
         default:
@@ -274,6 +286,11 @@ ApplicationWindow {
     Component {
         id: cardsPageComponent
         CardPage {}
+    }
+
+    Component {
+        id: buttonPageComponent
+        ButtonPage {}
     }
 
     Component {

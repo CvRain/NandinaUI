@@ -53,7 +53,8 @@ Item {
                             text: parent.modelData
                             font.pixelSize: 12
                             font.capitalization: Font.Capitalize
-                            color: ThemeManager.darkMode ? ThemeManager.colors.surface.shade200 : ThemeManager.colors.surface.shade800
+                            // dark: shade700 = original shade300 = bright, high contrast on dark container bg
+                            color: ThemeManager.darkMode ? ThemeManager.colors.surface.shade700 : ThemeManager.colors.surface.shade800
                         }
                     }
                 }
@@ -87,7 +88,7 @@ Item {
                         anchors.centerIn: parent
                         text: _pressable.pressed ? "▼ Pressed" : _pressable.hovered ? "▲ Hovered" : "👆 Click me"
                         font.pixelSize: 13
-                        color: ThemeManager.darkMode ? ThemeManager.colors.primary.shade200 : ThemeManager.colors.primary.shade700
+                        color: ThemeManager.darkMode ? ThemeManager.colors.primary.shade700 : ThemeManager.colors.primary.shade700
                     }
 
                     NanPressable {
@@ -127,7 +128,7 @@ Item {
                         anchors.centerIn: parent
                         text: _longPressCard._triggered ? "✔ Long pressed!" : "⏳ Hold me"
                         font.pixelSize: 13
-                        color: ThemeManager.darkMode ? ThemeManager.colors.tertiary.shade200 : ThemeManager.colors.tertiary.shade700
+                        color: ThemeManager.darkMode ? ThemeManager.colors.tertiary.shade700 : ThemeManager.colors.tertiary.shade700
                     }
 
                     NanPressable {
@@ -158,7 +159,7 @@ Item {
                 Text {
                     text: "无标题 Panel — 只有内容区，无分割线"
                     font.pixelSize: 13
-                    color: ThemeManager.darkMode ? ThemeManager.colors.surface.shade200 : ThemeManager.colors.surface.shade700
+                    color: ThemeManager.darkMode ? ThemeManager.colors.surface.shade700 : ThemeManager.colors.surface.shade700
                 }
             }
 
@@ -168,7 +169,7 @@ Item {
                 Text {
                     text: "带标题 Panel — 自动显示分割线，手动指定标题"
                     font.pixelSize: 13
-                    color: ThemeManager.darkMode ? ThemeManager.colors.surface.shade200 : ThemeManager.colors.surface.shade700
+                    color: ThemeManager.darkMode ? ThemeManager.colors.surface.shade700 : ThemeManager.colors.surface.shade700
                 }
             }
 
@@ -182,14 +183,14 @@ Item {
                         required property string modelData
                         width: 220
                         colorVariant: modelData
-                        backgroundShade: ThemeManager.darkMode ? 900 : 50
-                        borderShade: ThemeManager.darkMode ? 700 : 200
+                        backgroundShade: ThemeManager.darkMode ? 100 : 50
+                        borderShade: ThemeManager.darkMode ? 300 : 200
                         title: modelData.charAt(0).toUpperCase() + modelData.slice(1) + " Panel"
 
                         Text {
                             text: "colorVariant: \"" + parent.colorVariant + "\""
                             font.pixelSize: 12
-                            color: ThemeManager.darkMode ? ThemeManager.colors.surface.shade300 : ThemeManager.colors.surface.shade600
+                            color: ThemeManager.darkMode ? ThemeManager.colors.surface.shade700 : ThemeManager.colors.surface.shade600
                         }
                     }
                 }

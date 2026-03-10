@@ -125,24 +125,26 @@ Item {
     readonly property bool _isFilled: preset === "filled"
 
     /// Background shade derived from preset + dark-mode + interaction state.
+    // Dark mode: palette is reversed — shade50=darkest, shade950=lightest.
+    // Use low shade numbers so containers stay dark and non-glaring.
     readonly property int _bgShade: {
         if (interactive && _pressable.pressed) {
             switch (preset) {
             case "filled":
                 return 700;
             case "tonal":
-                return _isDark ? 700 : 200;
+                return _isDark ? 100 : 200;  // pressed = recedes slightly
             case "outlined":
-                return _isDark ? 900 : 100;
+                return _isDark ? 50 : 100;   // pressed = sinks to body level
             }
         }
         switch (preset) {
         case "filled":
             return 500;
         case "tonal":
-            return _isDark ? 800 : 100;
+            return _isDark ? 200 : 100;  // subtle elevated dark surface
         case "outlined":
-            return _isDark ? 950 : 50;
+            return _isDark ? 100 : 50;   // minimal elevation above body
         default:
             return -1;
         }
@@ -164,9 +166,9 @@ Item {
         case "filled":
             return 400;
         case "tonal":
-            return _isDark ? 600 : 200;
+            return _isDark ? 300 : 200;  // subtle dark border
         case "outlined":
-            return _isDark ? 700 : 200;
+            return _isDark ? 300 : 200;  // subtle dark border
         default:
             return -1;
         }
@@ -182,13 +184,15 @@ Item {
     readonly property color _descriptionColor: {
         if (_isFilled)
             return Qt.rgba(1, 1, 1, 0.65);
-        return _isDark ? ThemeManager.colors.surface.shade400 : ThemeManager.colors.surface.shade500;
+        // shade600 in dark mode gives adequate contrast against the dark container bg
+        return _isDark ? ThemeManager.colors.surface.shade600 : ThemeManager.colors.surface.shade500;
     }
 
     readonly property color _dividerColor: {
         if (_isFilled)
             return Qt.rgba(1, 1, 1, 0.20);
-        return _isDark ? ThemeManager.colors.surface.shade700 : ThemeManager.colors.surface.shade200;
+        // shade300 in dark = original shade700 = visible but not glaring divider line
+        return _isDark ? ThemeManager.colors.surface.shade300 : ThemeManager.colors.surface.shade200;
     }
 
     // ── Press-scale animation ──────────────────────────────────────
@@ -272,7 +276,7 @@ Item {
                     visible: root.title !== ""
                     text: root.title
                     font.family: ThemeManager.primitives.headingFont.fontFamily
-                    font.weight: Font.SemiBold
+                    font.weight: Font.Medium
                     font.pixelSize: Math.round(16 * ThemeManager.primitives.textScaling)
                     color: root._titleColor
                     elide: Text.ElideRight

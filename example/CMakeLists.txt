@@ -14,6 +14,7 @@ qt_add_qml_module(NandinaExampleApp
         pages/ColorPalettePage.qml
         pages/SurfacePressablePanelPage.qml
         pages/CardPage.qml
+        pages/ButtonPage.qml
         pages/SideBarPage.qml
 )
 
