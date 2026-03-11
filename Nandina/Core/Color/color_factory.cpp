@@ -610,19 +610,19 @@ namespace Nandina::Core::Color {
 
     const ThemeColorData &ColorFactory::getThemeData(const Types::ThemeVariant::ThemeTypes theme) {
         switch (theme) {
-            case Types::ThemeVariant::ThemeTypes::aurora:
+            case Types::ThemeVariant::ThemeTypes::Aurora:
                 return s_auroraData;
-            case Types::ThemeVariant::ThemeTypes::catppuccin:
+            case Types::ThemeVariant::ThemeTypes::Catppuccin:
                 return s_catppuccinData;
-            case Types::ThemeVariant::ThemeTypes::cerberus:
+            case Types::ThemeVariant::ThemeTypes::Cerberus:
                 return s_cerberusData;
-            case Types::ThemeVariant::ThemeTypes::concord:
+            case Types::ThemeVariant::ThemeTypes::Concord:
                 return s_concordData;
-            case Types::ThemeVariant::ThemeTypes::crimson:
+            case Types::ThemeVariant::ThemeTypes::Crimson:
                 return s_crimsonData;
-            case Types::ThemeVariant::ThemeTypes::fennec:
+            case Types::ThemeVariant::ThemeTypes::Fennec:
                 return s_fennecData;
-            case Types::ThemeVariant::ThemeTypes::legacy:
+            case Types::ThemeVariant::ThemeTypes::Legacy:
                 return s_legacyData;
         }
         return s_auroraData;

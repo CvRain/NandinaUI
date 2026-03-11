@@ -17,7 +17,7 @@
 //
 // Custom padding / variant:
 //   NanPanel {
-//       colorVariant: "primary"
+//       colorVariant: ThemeVariant.ColorVariantTypes.Primary
 //       backgroundShade: 100
 //       contentPadding: 24
 //       title: "Info"

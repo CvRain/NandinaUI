@@ -16,6 +16,7 @@ qt_add_qml_module(NandinaExampleApp
         pages/CardPage.qml
         pages/ButtonPage.qml
         pages/SideBarPage.qml
+        pages/BadgePage.qml
 )
 
 target_link_libraries(NandinaExampleApp

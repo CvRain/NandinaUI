@@ -3,12 +3,12 @@
 //
 // Follows the shadcn/Skeleton dual philosophy:
 //   ─ shadcn anatomy : header (title + description + action) → content → footer
-//   ─ Skeleton presets: "outlined" | "tonal" | "filled"
+//   ─ Skeleton presets: ThemeVariant.PresetTypes.Outlined | ThemeVariant.PresetTypes.Tonal | ThemeVariant.PresetTypes.Filled
 //
 // Preset semantics (mirrors Skeleton preset-filled / preset-tonal / preset-outlined):
-//   "outlined"  — near-transparent surface bg + subtle border   [default]
-//   "tonal"     — lightly tinted bg (shade 100/800) + border
-//   "filled"    — solid 500-shade fill, white text, no border
+//   ThemeVariant.PresetTypes.Outlined  — near-transparent surface bg + subtle border   [default]
+//   ThemeVariant.PresetTypes.Tonal     — lightly tinted bg (shade 100/800) + border
+//   ThemeVariant.PresetTypes.Filled    — solid 500-shade fill, white text, no border
 //
 // ── Minimal usage ────────────────────────────────────────────────────
 //   NanCard {
@@ -29,8 +29,8 @@
 // ── Interactive / clickable ──────────────────────────────────────────
 //   NanCard {
 //       interactive: true
-//       preset: "tonal"
-//       colorVariant: "primary"
+//       preset: ThemeVariant.PresetTypes.Tonal
+//       colorVariant: ThemeVariant.ColorVariantTypes.Primary
 //       onClicked: console.log("card tapped")
 //       Text { text: "Click me" }
 //   }
@@ -49,9 +49,18 @@ import QtQuick
 import QtQuick.Layouts
 import Nandina.Theme
 import Nandina.Controls
+import Nandina.Types
 
 Item {
     id: root
+
+    readonly property var _colorVariantTypes: ThemeVariant.ColorVariantTypes || ({})
+    readonly property var _presetTypes: ThemeVariant.PresetTypes || ({})
+
+    readonly property int _colorSurface: _colorVariantTypes.Surface ?? 6
+    readonly property int _presetFilled: _presetTypes.Filled ?? 0
+    readonly property int _presetTonal: _presetTypes.Tonal ?? 1
+    readonly property int _presetOutlined: _presetTypes.Outlined ?? 2
 
     // ── Geometry ───────────────────────────────────────────────────
     implicitWidth: 300
@@ -59,13 +68,11 @@ Item {
 
     // ── Color ──────────────────────────────────────────────────────
     /// Semantic colour family — forwards to NanSurface.
-    /// "surface" | "primary" | "secondary" | "tertiary" |
-    /// "success" | "warning" | "error"
-    property string colorVariant: "surface"
+    property int colorVariant: root._colorSurface
 
     // ── Preset ─────────────────────────────────────────────────────
-    /// Visual fill style.  "outlined" | "tonal" | "filled"
-    property string preset: "outlined"
+    /// Visual fill style.
+    property int preset: root._presetOutlined
 
     // ── Media ──────────────────────────────────────────────────────
     /// Optional banner image displayed above the header (edge-to-edge).
@@ -122,7 +129,7 @@ Item {
 
     // ── Private: preset → shade mapping ────────────────────────────
     readonly property bool _isDark: ThemeManager.darkMode
-    readonly property bool _isFilled: preset === "filled"
+    readonly property bool _isFilled: preset === root._presetFilled
 
     /// Background shade derived from preset + dark-mode + interaction state.
     // Dark mode: palette is reversed — shade50=darkest, shade950=lightest.
@@ -130,20 +137,20 @@ Item {
     readonly property int _bgShade: {
         if (interactive && _pressable.pressed) {
             switch (preset) {
-            case "filled":
+            case root._presetFilled:
                 return 700;
-            case "tonal":
+            case root._presetTonal:
                 return _isDark ? 100 : 200;  // pressed = recedes slightly
-            case "outlined":
+            case root._presetOutlined:
                 return _isDark ? 50 : 100;   // pressed = sinks to body level
             }
         }
         switch (preset) {
-        case "filled":
+        case root._presetFilled:
             return 500;
-        case "tonal":
+        case root._presetTonal:
             return _isDark ? 200 : 100;  // subtle elevated dark surface
-        case "outlined":
+        case root._presetOutlined:
             return _isDark ? 100 : 50;   // minimal elevation above body
         default:
             return -1;
@@ -154,20 +161,20 @@ Item {
     readonly property int _borderShade: {
         if (interactive && (_pressable.hovered || _pressable.pressed)) {
             switch (preset) {
-            case "tonal":
+            case root._presetTonal:
                 return _isDark ? 400 : 300;
-            case "outlined":
+            case root._presetOutlined:
                 return _isDark ? 500 : 400;
             default:
                 return 300;
             }
         }
         switch (preset) {
-        case "filled":
+        case root._presetFilled:
             return 400;
-        case "tonal":
+        case root._presetTonal:
             return _isDark ? 300 : 200;  // subtle dark border
-        case "outlined":
+        case root._presetOutlined:
             return _isDark ? 300 : 200;  // subtle dark border
         default:
             return -1;
@@ -211,7 +218,7 @@ Item {
         colorVariant: root.colorVariant
         backgroundShade: root._bgShade
         borderShade: root._borderShade
-        bordered: root.preset !== "filled"
+        bordered: root.preset !== root._presetFilled
         cornerRadius: ThemeManager.primitives.radiusContainer
     }
 
@@ -228,7 +235,7 @@ Item {
         // ── Media / image (edge-to-edge, clips to card top radius) ──
         Rectangle {
             id: _imageContainer
-            visible: root.imageSource != ""
+            visible: root.imageSource !== ""
             Layout.fillWidth: true
             implicitHeight: visible ? Math.round(width / root.imageAspectRatio) : 0
             // Round only the top two corners so they follow the card outline.
@@ -236,7 +243,7 @@ Item {
             topRightRadius: _surface.radius
             clip: true
             // Placeholder colour while the image loads or if URL is invalid.
-            color: _isDark ? ThemeManager.colors.surface.shade800 : ThemeManager.colors.surface.shade200
+            color: root._isDark ? ThemeManager.colors.surface.shade800 : ThemeManager.colors.surface.shade200
 
             Image {
                 anchors.fill: parent

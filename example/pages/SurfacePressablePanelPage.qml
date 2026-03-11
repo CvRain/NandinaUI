@@ -4,6 +4,7 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import Nandina.Theme
 import Nandina.Controls
+import Nandina.Types
 
 Item {
     id: root
@@ -41,18 +42,46 @@ Item {
                 spacing: 12
 
                 Repeater {
-                    model: ["surface", "primary", "secondary", "tertiary", "success", "warning", "error"]
+                    model: [
+                        {
+                            label: "Surface",
+                            value: ThemeVariant.ColorVariantTypes.Surface
+                        },
+                        {
+                            label: "Primary",
+                            value: ThemeVariant.ColorVariantTypes.Primary
+                        },
+                        {
+                            label: "Secondary",
+                            value: ThemeVariant.ColorVariantTypes.Secondary
+                        },
+                        {
+                            label: "Tertiary",
+                            value: ThemeVariant.ColorVariantTypes.Tertiary
+                        },
+                        {
+                            label: "Success",
+                            value: ThemeVariant.ColorVariantTypes.Success
+                        },
+                        {
+                            label: "Warning",
+                            value: ThemeVariant.ColorVariantTypes.Warning
+                        },
+                        {
+                            label: "Error",
+                            value: ThemeVariant.ColorVariantTypes.Error
+                        }
+                    ]
                     delegate: NanSurface {
-                        required property string modelData
+                        required property var modelData
                         width: 110
                         height: 72
-                        colorVariant: modelData
+                        colorVariant: modelData.value
 
                         Text {
                             anchors.centerIn: parent
-                            text: parent.modelData
+                            text: parent.modelData.label
                             font.pixelSize: 12
-                            font.capitalization: Font.Capitalize
                             // dark: shade700 = original shade300 = bright, high contrast on dark container bg
                             color: ThemeManager.darkMode ? ThemeManager.colors.surface.shade700 : ThemeManager.colors.surface.shade800
                         }
@@ -74,7 +103,7 @@ Item {
                     id: _pressDemo
                     width: 160
                     height: 80
-                    colorVariant: "primary"
+                    colorVariant: ThemeVariant.ColorVariantTypes.Primary
                     backgroundShade: _pressable.pressed ? 400 : _pressable.hovered ? 100 : -1
                     borderShade: _pressable.hovered ? 400 : -1
 
@@ -101,7 +130,7 @@ Item {
                 NanSurface {
                     width: 160
                     height: 80
-                    colorVariant: "surface"
+                    colorVariant: ThemeVariant.ColorVariantTypes.Surface
                     opacity: 0.45
 
                     Text {
@@ -121,7 +150,7 @@ Item {
                     id: _longPressCard
                     width: 160
                     height: 80
-                    colorVariant: "tertiary"
+                    colorVariant: ThemeVariant.ColorVariantTypes.Tertiary
                     property bool _triggered: false
 
                     Text {
@@ -178,17 +207,34 @@ Item {
                 spacing: 12
 
                 Repeater {
-                    model: ["primary", "success", "warning", "error"]
+                    model: [
+                        {
+                            label: "Primary",
+                            value: ThemeVariant.ColorVariantTypes.Primary
+                        },
+                        {
+                            label: "Success",
+                            value: ThemeVariant.ColorVariantTypes.Success
+                        },
+                        {
+                            label: "Warning",
+                            value: ThemeVariant.ColorVariantTypes.Warning
+                        },
+                        {
+                            label: "Error",
+                            value: ThemeVariant.ColorVariantTypes.Error
+                        }
+                    ]
                     delegate: NanPanel {
-                        required property string modelData
+                        required property var modelData
                         width: 220
-                        colorVariant: modelData
+                        colorVariant: modelData.value
                         backgroundShade: ThemeManager.darkMode ? 100 : 50
                         borderShade: ThemeManager.darkMode ? 300 : 200
-                        title: modelData.charAt(0).toUpperCase() + modelData.slice(1) + " Panel"
+                        title: modelData.label + " Panel"
 
                         Text {
-                            text: "colorVariant: \"" + parent.colorVariant + "\""
+                            text: "colorVariant: " + parent.modelData.label
                             font.pixelSize: 12
                             color: ThemeManager.darkMode ? ThemeManager.colors.surface.shade700 : ThemeManager.colors.surface.shade600
                         }

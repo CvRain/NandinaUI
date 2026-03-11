@@ -29,6 +29,7 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import Nandina.Theme
 import Nandina.Controls
+import Nandina.Types
 
 Item {
     id: root
@@ -149,7 +150,7 @@ Item {
             }
         }
 
-        colorVariant: "surface"
+        colorVariant: ThemeVariant.ColorVariantTypes.Surface
         backgroundShade: root._panelBackgroundShade
         borderShade: root._panelBorderShade
         bordered: true

@@ -54,7 +54,7 @@ namespace Nandina::Theme {
 
         // ── QML convenience methods ────────────────────────────────
 
-        /// Switch theme by name string (e.g. "catppuccin"). Case-insensitive.
+        /// Switch theme by name string (e.g. "Catppuccin"). Case-insensitive.
         Q_INVOKABLE void setThemeByName(const QString &name);
 
         /// Get the display name of a theme enum value.
@@ -68,7 +68,7 @@ namespace Nandina::Theme {
     private:
         void applyCurrentTheme();
 
-        ThemeTypes m_currentTheme{ThemeTypes::aurora};
+        ThemeTypes m_currentTheme{ThemeTypes::Aurora};
         bool m_darkMode{false};
         Core::Color::ColorSchema *m_colors{nullptr};
         Core::Primitives::PrimitiveSchema *m_primitives{nullptr};

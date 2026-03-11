@@ -2,27 +2,27 @@
 // Theme-aware clickable button built on NanPressable.
 //
 // Preset semantics (mirrors NanCard preset philosophy):
-//   "filled"   — solid shade-500 fill, white text, high emphasis   [default]
-//   "tonal"    — lightly tinted bg (shade 100 / 200), variant-coloured text
-//   "outlined" — transparent bg, coloured border, no fill
-//   "ghost"    — no bg, no border, hover-only tint; minimal visual footprint
-//   "link"     — text-only with underline, for inline / semantic anchors
+//   ThemeVariant.PresetTypes.Filled   — solid shade-500 fill, white text, high emphasis   [default]
+//   ThemeVariant.PresetTypes.Tonal    — lightly tinted bg (shade 100 / 200), variant-coloured text
+//   ThemeVariant.PresetTypes.Outlined — transparent bg, coloured border, no fill
+//   ThemeVariant.PresetTypes.Ghost    — no bg, no border, hover-only tint; minimal visual footprint
+//   ThemeVariant.PresetTypes.Link     — text-only with underline, for inline / semantic anchors
 //
 // ── Minimal usage ──────────────────────────────────────────────────────────
 //   NanButton { text: "Save" }
 //
 // ── Preset + variant ───────────────────────────────────────────────────────
-//   NanButton { text: "Delete"; preset: "outlined"; colorVariant: "error" }
-//   NanButton { text: "Subscribe"; preset: "tonal";    colorVariant: "success" }
+//   NanButton { text: "Delete"; preset: ThemeVariant.PresetTypes.Outlined; colorVariant: ThemeVariant.ColorVariantTypes.Error }
+//   NanButton { text: "Subscribe"; preset: ThemeVariant.PresetTypes.Tonal;  colorVariant: ThemeVariant.ColorVariantTypes.Success }
 //
 // ── Sizes ──────────────────────────────────────────────────────────────────
-//   NanButton { text: "Compact"; size: "sm" }
-//   NanButton { text: "Submit";  size: "lg" }
+//   NanButton { text: "Compact"; size: ThemeVariant.SizeTypes.Sm }
+//   NanButton { text: "Submit";  size: ThemeVariant.SizeTypes.Lg }
 //
 // ── With left icon ─────────────────────────────────────────────────────────
 //   NanButton {
 //       text: "Upload"
-//       colorVariant: "primary"
+//       colorVariant: ThemeVariant.ColorVariantTypes.Primary
 //       leftIcon: Component {
 //           Text {
 //               text: "↑"
@@ -38,10 +38,33 @@
 
 import QtQuick
 import Nandina.Theme
+import Nandina.Types
 import Nandina.Controls
 
 Item {
     id: root
+
+    readonly property var _colorVariantTypes: ThemeVariant.ColorVariantTypes || ({})
+    readonly property var _presetTypes: ThemeVariant.PresetTypes || ({})
+    readonly property var _sizeTypes: ThemeVariant.SizeTypes || ({})
+
+    readonly property int _colorPrimary: _colorVariantTypes.Primary ?? 0
+    readonly property int _colorSecondary: _colorVariantTypes.Secondary ?? 1
+    readonly property int _colorTertiary: _colorVariantTypes.Tertiary ?? 2
+    readonly property int _colorSuccess: _colorVariantTypes.Success ?? 3
+    readonly property int _colorWarning: _colorVariantTypes.Warning ?? 4
+    readonly property int _colorError: _colorVariantTypes.Error ?? 5
+    readonly property int _colorSurface: _colorVariantTypes.Surface ?? 6
+
+    readonly property int _presetFilled: _presetTypes.Filled ?? 0
+    readonly property int _presetTonal: _presetTypes.Tonal ?? 1
+    readonly property int _presetOutlined: _presetTypes.Outlined ?? 2
+    readonly property int _presetGhost: _presetTypes.Ghost ?? 3
+    readonly property int _presetLink: _presetTypes.Link ?? 4
+
+    readonly property int _sizeSm: _sizeTypes.Sm ?? 0
+    readonly property int _sizeMd: _sizeTypes.Md ?? 1
+    readonly property int _sizeLg: _sizeTypes.Lg ?? 2
 
     // ── Geometry ───────────────────────────────────────────────────
     implicitWidth: Math.max(_minWidth, _contentRow.implicitWidth + _hPadding * 2)
@@ -49,14 +72,13 @@ Item {
 
     // ── Color ──────────────────────────────────────────────────────
     /// Semantic colour family.
-    /// "surface" | "primary" | "secondary" | "tertiary" |
-    /// "success" | "warning" | "error"
-    property string colorVariant: "primary"
+    /// Use ThemeVariant.ColorVariantTypes.Surface … ThemeVariant.ColorVariantTypes.Error.
+    property int colorVariant: root._colorPrimary
 
     // ── Preset ─────────────────────────────────────────────────────
     /// Visual fill style.
-    /// "filled" | "tonal" | "outlined" | "ghost" | "link"
-    property string preset: "filled"
+    /// Use ThemeVariant.PresetTypes.Filled … ThemeVariant.PresetTypes.Link.
+    property int preset: root._presetFilled
 
     // ── Label ──────────────────────────────────────────────────────
     property string text: ""
@@ -70,8 +92,8 @@ Item {
     property Component rightIcon: null
 
     // ── Size ───────────────────────────────────────────────────────
-    /// "sm" | "md" | "lg"
-    property string size: "md"
+    /// Use ThemeVariant.SizeTypes.Sm / Md / Lg.
+    property int size: root._sizeMd
 
     // ── State ──────────────────────────────────────────────────────
     property bool enabled: true
@@ -104,31 +126,13 @@ Item {
     readonly property bool _isDark: ThemeManager.darkMode
     readonly property real _sp: ThemeManager.primitives.spacing
 
-    readonly property int _height: size === "sm" ? 30 : (size === "lg" ? 42 : 36)
-    readonly property int _minWidth: size === "sm" ? 64 : (size === "lg" ? 96 : 80)
-    readonly property real _hPadding: size === "sm" ? _sp * 3 : (size === "lg" ? _sp * 5 : _sp * 4)
+    readonly property int _height: [30, 36, 42][size] ?? 36
+    readonly property int _minWidth: [64, 80, 96][size] ?? 80
+    readonly property real _hPadding: [_sp * 3, _sp * 4, _sp * 5][size] ?? (_sp * 4)
     readonly property real _iconSpacing: _sp * 2
-    readonly property real _fontSize: size === "sm" ? Math.round(12 * ThemeManager.primitives.textScaling) : (size === "lg" ? Math.round(15 * ThemeManager.primitives.textScaling) : Math.round(13 * ThemeManager.primitives.textScaling))
-
+    readonly property real _fontSize: [Math.round(12 * ThemeManager.primitives.textScaling), Math.round(13 * ThemeManager.primitives.textScaling), Math.round(15 * ThemeManager.primitives.textScaling)][size] ?? Math.round(13 * ThemeManager.primitives.textScaling)
     // ── Private: palette ──────────────────────────────────────────
-    readonly property var _palette: {
-        switch (colorVariant) {
-        case "primary":
-            return ThemeManager.colors.primary;
-        case "secondary":
-            return ThemeManager.colors.secondary;
-        case "tertiary":
-            return ThemeManager.colors.tertiary;
-        case "success":
-            return ThemeManager.colors.success;
-        case "warning":
-            return ThemeManager.colors.warning;
-        case "error":
-            return ThemeManager.colors.error;
-        default:
-            return ThemeManager.colors.surface;
-        }
-    }
+    readonly property var _palette: [ThemeManager.colors.primary, ThemeManager.colors.secondary, ThemeManager.colors.tertiary, ThemeManager.colors.success, ThemeManager.colors.warning, ThemeManager.colors.error, ThemeManager.colors.surface][colorVariant] ?? ThemeManager.colors.surface
 
     // ── Private: shade helpers ─────────────────────────────────────
     function _shade(s) {
@@ -178,21 +182,21 @@ Item {
         const isPr = _pressable.pressed || _keyPressed;
         const isHv = _pressable.hovered && !isPr;
         switch (preset) {
-        case "filled":
+        case root._presetFilled:
             if (isPr)
                 return _shade(_isDark ? 400 : 600);
             if (isHv)
                 return _shade(_isDark ? 600 : 400);
             return _shade(500);
-        case "tonal":
+        case root._presetTonal:
             if (isPr)
                 return _shade(_isDark ? 400 : 300);
             if (isHv)
                 return _shade(_isDark ? 300 : 200);
             return _shade(_isDark ? 200 : 100);
-        case "outlined":
-        case "ghost":
-        case "link":
+        case root._presetOutlined:
+        case root._presetGhost:
+        case root._presetLink:
             if (isPr)
                 return _shadeA(500, 0.16);
             if (isHv)
@@ -204,9 +208,9 @@ Item {
     }
 
     // ── Private: border ────────────────────────────────────────────
-    readonly property bool _hasBorder: preset === "outlined"
+    readonly property bool _hasBorder: preset === root._presetOutlined
     readonly property color _borderColor: {
-        if (preset !== "outlined")
+        if (preset !== root._presetOutlined)
             return "transparent";
         if (_pressable.hovered || _pressable.pressed || _keyPressed)
             return _shade(_isDark ? 600 : 600);
@@ -216,14 +220,14 @@ Item {
     // ── Private: text colour ───────────────────────────────────────
     readonly property color _textColor: {
         switch (preset) {
-        case "filled":
+        case root._presetFilled:
             return "#ffffff";
-        case "tonal":
+        case root._presetTonal:
             // dark shade700 = original shade300 = bright; light shade700 = dark
             return _shade(700);
-        case "outlined":
-        case "ghost":
-        case "link":
+        case root._presetOutlined:
+        case root._presetGhost:
+        case root._presetLink:
             return _shade(_isDark ? 700 : 600);
         default:
             return _shade(600);
@@ -273,7 +277,7 @@ Item {
         NumberAnimation {
             target: root
             property: "_currentScale"
-            to: root._pressable.hovered ? 1.02 : 1.0
+            to: root.hovered ? 1.02 : 1.0
             duration: 180
             easing.type: Easing.OutBack
         }
@@ -379,7 +383,7 @@ Item {
             font.family: ThemeManager.primitives.baseFont.fontFamily
             font.weight: Font.Medium
             font.pixelSize: root._fontSize
-            font.underline: root.preset === "link"
+            font.underline: root.preset === root._presetLink
             color: root._textColor
         }
 

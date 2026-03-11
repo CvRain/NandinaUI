@@ -16,7 +16,7 @@ namespace Nandina::Theme {
         m_colors     = new Core::Color::ColorSchema(this);
         m_primitives = new Core::Primitives::PrimitiveSchema(this);
 
-        // Apply default theme (cerberus, light mode)
+        // Apply default theme (Aurora, light mode)
         applyCurrentTheme();
     }
 

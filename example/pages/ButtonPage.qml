@@ -4,6 +4,7 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import Nandina.Theme
 import Nandina.Controls
+import Nandina.Types
 
 Item {
     id: root
@@ -33,7 +34,7 @@ Item {
 
             // ── Preset 对比 (primary variant) ─────────────────────
             Text {
-                text: "Preset 对比（colorVariant: \"primary\"）"
+                text: "Preset 对比（colorVariant: ThemeVariant.ColorVariantTypes.Primary）"
                 font.pixelSize: 14
                 font.bold: true
                 color: ThemeManager.darkMode ? ThemeManager.colors.surface.shade700 : ThemeManager.colors.surface.shade700
@@ -45,34 +46,34 @@ Item {
 
                 NanButton {
                     text: "Filled"
-                    preset: "filled"
-                    colorVariant: "primary"
+                    preset: ThemeVariant.PresetTypes.Filled
+                    colorVariant: ThemeVariant.ColorVariantTypes.Primary
                 }
                 NanButton {
                     text: "Tonal"
-                    preset: "tonal"
-                    colorVariant: "primary"
+                    preset: ThemeVariant.PresetTypes.Tonal
+                    colorVariant: ThemeVariant.ColorVariantTypes.Primary
                 }
                 NanButton {
                     text: "Outlined"
-                    preset: "outlined"
-                    colorVariant: "primary"
+                    preset: ThemeVariant.PresetTypes.Outlined
+                    colorVariant: ThemeVariant.ColorVariantTypes.Primary
                 }
                 NanButton {
                     text: "Ghost"
-                    preset: "ghost"
-                    colorVariant: "primary"
+                    preset: ThemeVariant.PresetTypes.Ghost
+                    colorVariant: ThemeVariant.ColorVariantTypes.Primary
                 }
                 NanButton {
                     text: "Link"
-                    preset: "link"
-                    colorVariant: "primary"
+                    preset: ThemeVariant.PresetTypes.Link
+                    colorVariant: ThemeVariant.ColorVariantTypes.Primary
                 }
             }
 
             // ── Color variant 对比 (filled preset) ────────────────
             Text {
-                text: "Color Variant 对比（preset: \"filled\"）"
+                text: "Color Variant 对比（preset: ThemeVariant.PresetTypes.Filled）"
                 font.pixelSize: 14
                 font.bold: true
                 color: ThemeManager.darkMode ? ThemeManager.colors.surface.shade700 : ThemeManager.colors.surface.shade700
@@ -83,19 +84,48 @@ Item {
                 spacing: 12
 
                 Repeater {
-                    model: ["surface", "primary", "secondary", "tertiary", "success", "warning", "error"]
+                    model: [
+                        {
+                            label: "Surface",
+                            value: ThemeVariant.ColorVariantTypes.Surface
+                        },
+                        {
+                            label: "Primary",
+                            value: ThemeVariant.ColorVariantTypes.Primary
+                        },
+                        {
+                            label: "Secondary",
+                            value: ThemeVariant.ColorVariantTypes.Secondary
+                        },
+                        {
+                            label: "Tertiary",
+                            value: ThemeVariant.ColorVariantTypes.Tertiary
+                        },
+                        {
+                            label: "Success",
+                            value: ThemeVariant.ColorVariantTypes.Success
+                        },
+                        {
+                            label: "Warning",
+                            value: ThemeVariant.ColorVariantTypes.Warning
+                        },
+                        {
+                            label: "Error",
+                            value: ThemeVariant.ColorVariantTypes.Error
+                        }
+                    ]
                     delegate: NanButton {
-                        required property string modelData
-                        preset: "filled"
-                        colorVariant: modelData
-                        text: modelData.charAt(0).toUpperCase() + modelData.slice(1)
+                        required property var modelData
+                        preset: ThemeVariant.PresetTypes.Filled
+                        colorVariant: modelData.value
+                        text: modelData.label
                     }
                 }
             }
 
             // ── Outlined across all variants ───────────────────────
             Text {
-                text: "Color Variant 对比（preset: \"outlined\"）"
+                text: "Color Variant 对比（preset: ThemeVariant.PresetTypes.Outlined）"
                 font.pixelSize: 14
                 font.bold: true
                 color: ThemeManager.darkMode ? ThemeManager.colors.surface.shade700 : ThemeManager.colors.surface.shade700
@@ -106,12 +136,41 @@ Item {
                 spacing: 12
 
                 Repeater {
-                    model: ["surface", "primary", "secondary", "tertiary", "success", "warning", "error"]
+                    model: [
+                        {
+                            label: "Surface",
+                            value: ThemeVariant.ColorVariantTypes.Surface
+                        },
+                        {
+                            label: "Primary",
+                            value: ThemeVariant.ColorVariantTypes.Primary
+                        },
+                        {
+                            label: "Secondary",
+                            value: ThemeVariant.ColorVariantTypes.Secondary
+                        },
+                        {
+                            label: "Tertiary",
+                            value: ThemeVariant.ColorVariantTypes.Tertiary
+                        },
+                        {
+                            label: "Success",
+                            value: ThemeVariant.ColorVariantTypes.Success
+                        },
+                        {
+                            label: "Warning",
+                            value: ThemeVariant.ColorVariantTypes.Warning
+                        },
+                        {
+                            label: "Error",
+                            value: ThemeVariant.ColorVariantTypes.Error
+                        }
+                    ]
                     delegate: NanButton {
-                        required property string modelData
-                        preset: "outlined"
-                        colorVariant: modelData
-                        text: modelData.charAt(0).toUpperCase() + modelData.slice(1)
+                        required property var modelData
+                        preset: ThemeVariant.PresetTypes.Outlined
+                        colorVariant: modelData.value
+                        text: modelData.label
                     }
                 }
             }
@@ -129,21 +188,21 @@ Item {
 
                 NanButton {
                     text: "Small"
-                    size: "sm"
-                    preset: "filled"
-                    colorVariant: "primary"
+                    size: ThemeVariant.SizeTypes.Sm
+                    preset: ThemeVariant.PresetTypes.Filled
+                    colorVariant: ThemeVariant.ColorVariantTypes.Primary
                 }
                 NanButton {
                     text: "Medium"
-                    size: "md"
-                    preset: "filled"
-                    colorVariant: "primary"
+                    size: ThemeVariant.SizeTypes.Md
+                    preset: ThemeVariant.PresetTypes.Filled
+                    colorVariant: ThemeVariant.ColorVariantTypes.Primary
                 }
                 NanButton {
                     text: "Large"
-                    size: "lg"
-                    preset: "filled"
-                    colorVariant: "primary"
+                    size: ThemeVariant.SizeTypes.Lg
+                    preset: ThemeVariant.PresetTypes.Filled
+                    colorVariant: ThemeVariant.ColorVariantTypes.Primary
                 }
             }
 
@@ -152,21 +211,21 @@ Item {
 
                 NanButton {
                     text: "Small"
-                    size: "sm"
-                    preset: "outlined"
-                    colorVariant: "secondary"
+                    size: ThemeVariant.SizeTypes.Sm
+                    preset: ThemeVariant.PresetTypes.Outlined
+                    colorVariant: ThemeVariant.ColorVariantTypes.Secondary
                 }
                 NanButton {
                     text: "Medium"
-                    size: "md"
-                    preset: "outlined"
-                    colorVariant: "secondary"
+                    size: ThemeVariant.SizeTypes.Md
+                    preset: ThemeVariant.PresetTypes.Outlined
+                    colorVariant: ThemeVariant.ColorVariantTypes.Secondary
                 }
                 NanButton {
                     text: "Large"
-                    size: "lg"
-                    preset: "outlined"
-                    colorVariant: "secondary"
+                    size: ThemeVariant.SizeTypes.Lg
+                    preset: ThemeVariant.PresetTypes.Outlined
+                    colorVariant: ThemeVariant.ColorVariantTypes.Secondary
                 }
             }
 
@@ -185,8 +244,8 @@ Item {
                 NanButton {
                     id: _uploadBtn
                     text: "Upload"
-                    preset: "filled"
-                    colorVariant: "primary"
+                    preset: ThemeVariant.PresetTypes.Filled
+                    colorVariant: ThemeVariant.ColorVariantTypes.Primary
                     leftIcon: Component {
                         Text {
                             text: "↑"
@@ -200,8 +259,8 @@ Item {
                 NanButton {
                     id: _deleteBtn
                     text: "Delete"
-                    preset: "outlined"
-                    colorVariant: "error"
+                    preset: ThemeVariant.PresetTypes.Outlined
+                    colorVariant: ThemeVariant.ColorVariantTypes.Error
                     leftIcon: Component {
                         Text {
                             text: "✕"
@@ -214,8 +273,8 @@ Item {
                 NanButton {
                     id: _nextBtn
                     text: "Next"
-                    preset: "tonal"
-                    colorVariant: "tertiary"
+                    preset: ThemeVariant.PresetTypes.Tonal
+                    colorVariant: ThemeVariant.ColorVariantTypes.Tertiary
                     rightIcon: Component {
                         Text {
                             text: "→"
@@ -228,8 +287,8 @@ Item {
                 NanButton {
                     id: _settingsBtn
                     text: "Settings"
-                    preset: "ghost"
-                    colorVariant: "surface"
+                    preset: ThemeVariant.PresetTypes.Ghost
+                    colorVariant: ThemeVariant.ColorVariantTypes.Surface
                     leftIcon: Component {
                         Text {
                             text: "⚙"
@@ -258,14 +317,31 @@ Item {
                 spacing: 12
 
                 Repeater {
-                    model: ["filled", "tonal", "outlined", "ghost"]
+                    model: [
+                        {
+                            label: "Filled",
+                            value: ThemeVariant.PresetTypes.Filled
+                        },
+                        {
+                            label: "Tonal",
+                            value: ThemeVariant.PresetTypes.Tonal
+                        },
+                        {
+                            label: "Outlined",
+                            value: ThemeVariant.PresetTypes.Outlined
+                        },
+                        {
+                            label: "Ghost",
+                            value: ThemeVariant.PresetTypes.Ghost
+                        }
+                    ]
                     delegate: NanButton {
                         id: _interactiveBtn
-                        required property string modelData
-                        preset: modelData
-                        colorVariant: "primary"
-                        text: modelData.charAt(0).toUpperCase() + modelData.slice(1)
-                        onClicked: _clickLog.lastPreset = modelData
+                        required property var modelData
+                        preset: modelData.value
+                        colorVariant: ThemeVariant.ColorVariantTypes.Primary
+                        text: modelData.label
+                        onClicked: _clickLog.lastPreset = modelData.label
                     }
                 }
             }
@@ -292,26 +368,26 @@ Item {
 
                 NanButton {
                     text: "Filled"
-                    preset: "filled"
-                    colorVariant: "primary"
+                    preset: ThemeVariant.PresetTypes.Filled
+                    colorVariant: ThemeVariant.ColorVariantTypes.Primary
                     enabled: false
                 }
                 NanButton {
                     text: "Tonal"
-                    preset: "tonal"
-                    colorVariant: "primary"
+                    preset: ThemeVariant.PresetTypes.Tonal
+                    colorVariant: ThemeVariant.ColorVariantTypes.Primary
                     enabled: false
                 }
                 NanButton {
                     text: "Outlined"
-                    preset: "outlined"
-                    colorVariant: "primary"
+                    preset: ThemeVariant.PresetTypes.Outlined
+                    colorVariant: ThemeVariant.ColorVariantTypes.Primary
                     enabled: false
                 }
                 NanButton {
                     text: "Ghost"
-                    preset: "ghost"
-                    colorVariant: "surface"
+                    preset: ThemeVariant.PresetTypes.Ghost
+                    colorVariant: ThemeVariant.ColorVariantTypes.Surface
                     enabled: false
                 }
             }

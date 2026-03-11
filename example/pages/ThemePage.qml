@@ -3,6 +3,8 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import Nandina.Theme
+import Nandina.Controls
+import Nandina.Types
 
 Item {
     id: root
@@ -47,49 +49,40 @@ Item {
 
                 Repeater {
                     model: ThemeManager.availableThemes
-                    delegate: Button {
-                        id: _themeBtn
+                    delegate: NanButton {
                         required property string modelData
                         text: modelData
-                        highlighted: ThemeManager.currentThemeName === modelData
+                        preset: ThemeManager.currentThemeName === modelData ? ThemeVariant.PresetTypes.Filled : ThemeVariant.PresetTypes.Outlined
+                        colorVariant: ThemeVariant.ColorVariantTypes.Primary
                         onClicked: ThemeManager.setThemeByName(modelData)
-
-                        background: Rectangle {
-                            radius: 6
-                            color: _themeBtn.highlighted ? ThemeManager.colors.primary.shade500 : (_themeBtn.hovered ? ThemeManager.colors.surface.shade200 : ThemeManager.colors.surface.shade100)
-                            border.color: ThemeManager.colors.primary.shade300
-                            border.width: _themeBtn.highlighted ? 0 : 1
-                        }
-
-                        contentItem: Text {
-                            text: _themeBtn.text
-                            font.pixelSize: 13
-                            font.capitalization: Font.Capitalize
-                            horizontalAlignment: Text.AlignHCenter
-                            verticalAlignment: Text.AlignVCenter
-                            color: _themeBtn.highlighted ? "#ffffff" : ThemeManager.colors.surface.shade800
-                        }
                     }
                 }
 
-                Button {
+                NanButton {
                     id: _darkModeBtn
-                    text: ThemeManager.darkMode ? "☀ Light" : "🌙 Dark"
+                    text: ThemeManager.darkMode ? "Light" : "Dark"
+                    leftIcon: ThemeManager.darkMode ? _darkLeftIconComponent : _lightModeBtnBackground
                     onClicked: ThemeManager.darkMode = !ThemeManager.darkMode
+                    enabled: true
 
-                    background: Rectangle {
-                        radius: 6
-                        color: _darkModeBtn.hovered ? ThemeManager.colors.tertiary.shade200 : ThemeManager.colors.tertiary.shade100
-                        border.color: ThemeManager.colors.tertiary.shade400
-                        border.width: 1
+                    Component {
+                        id: _darkLeftIconComponent
+                        // ☀️
+                        Text {
+                            text: "☀️"
+                            font.pixelSize: 12
+                            color: ThemeManager.darkMode ? "#ffffff" : ThemeManager.colors.surface.shade800
+                        }
                     }
 
-                    contentItem: Text {
-                        text: _darkModeBtn.text
-                        font.pixelSize: 13
-                        horizontalAlignment: Text.AlignHCenter
-                        verticalAlignment: Text.AlignVCenter
-                        color: ThemeManager.colors.tertiary.shade800
+                    Component {
+                        id: _lightModeBtnBackground
+                        // 🌙
+                        Text {
+                            text: "🌙"
+                            font.pixelSize: 12
+                            color: ThemeManager.darkMode ? "#ffffff" : ThemeManager.colors.surface.shade800
+                        }
                     }
                 }
             }

@@ -94,6 +94,12 @@ NanWindow {
                     active: root.currentPage === "sidebar"
                     onClicked: root.openPage("sidebar")
                 }
+                NanSideBarItem {
+                    text: "Badge"
+                    iconText: "◉"
+                    active: root.currentPage === "badge"
+                    onClicked: root.openPage("badge")
+                }
             }
         }
 
@@ -140,7 +146,7 @@ NanWindow {
                             Layout.fillWidth: true
                         }
 
-                        Button {
+                        NanButton {
                             id: _darkModeBtn
                             text: ThemeManager.darkMode ? "☀ Light" : "🌙 Dark"
                             onClicked: ThemeManager.darkMode = !ThemeManager.darkMode
@@ -225,6 +231,8 @@ NanWindow {
             return buttonPageComponent;
         case "sidebar":
             return sidebarPageComponent;
+        case "badge":
+            return badgePageComponent;
         default:
             return themePageComponent;
         }
@@ -244,6 +252,8 @@ NanWindow {
             return "NanButton";
         case "sidebar":
             return "SideBar Component";
+        case "badge":
+            return "NanBadge";
         default:
             return "Theme System";
         }
@@ -263,6 +273,8 @@ NanWindow {
             return "preset / variant / size / icon / keyboard";
         case "sidebar":
             return "侧边栏模式与分组导航演示";
+        case "badge":
+            return "标签 / 状态指示 / 分类标注";
         default:
             return "主题切换与暗色模式控制";
         }
@@ -296,5 +308,10 @@ NanWindow {
     Component {
         id: sidebarPageComponent
         SideBarPage {}
+    }
+
+    Component {
+        id: badgePageComponent
+        BadgePage {}
     }
 }

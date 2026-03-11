@@ -7,6 +7,7 @@ set(SUBPROJECT_QML_FILES
         NanSurface/NanSurface.qml # Theme-aware Rectangle (color variant + shade system)
         # ── Controls ───────────────────────────────────────────────
         NanButton/NanButton.qml # Clickable button: filled/tonal/outlined/ghost/link + sizes
+        NanBadge/NanBadge.qml  # Inline status/tag label: filled/tonal/outlined/ghost + dot mode
         # ── Containers ─────────────────────────────────────────────
         NanPanel/NanPanel.qml # Titled, padded panel container
         NanCard/NanCard.qml # Structured card: image / header / content / footer + presets

@@ -1,6 +1,6 @@
 // NanSurface.qml
 // Theme-aware visual container. Maps design tokens from ThemeManager to
-// Rectangle properties.  Compose with NanPressable to add interactivity.
+// Rectangle properties. Compose with NanPressable to add interactivity.
 //
 // Shade numbers follow Tailwind/Skeleton convention:
 //   50 (lightest) → 100 → 200 → … → 900 → 950 (darkest)
@@ -8,27 +8,30 @@
 // Usage:
 //   NanSurface {
 //       width: 200; height: 100
-//       colorVariant: "primary"
+//       colorVariant: ThemeVariant.ColorVariantTypes.Primary
 //       // Defaults auto-adapt to light/dark mode
 //   }
 //
 //   NanSurface {
-//       colorVariant: "error"
-//       backgroundShade: 100   // tinted badge background
-//       borderShade:     300
+//       colorVariant: ThemeVariant.ColorVariantTypes.Error
+//       backgroundShade: 100
+//       borderShade: 300
 //   }
 
 import QtQuick
 import Nandina.Theme
+import Nandina.Types
 
 Rectangle {
     id: root
 
+    readonly property var _colorVariantTypes: ThemeVariant.ColorVariantTypes || ({})
+    readonly property int _colorSurface: _colorVariantTypes.Surface ?? 6
+
     // ── Color variant ──────────────────────────────────────────────
     /// Semantic color family.
-    /// One of: "surface" | "primary" | "secondary" | "tertiary" |
-    ///         "success" | "warning" | "error"
-    property string colorVariant: "surface"
+    /// Use ThemeVariant.ColorVariantTypes.Surface … ThemeVariant.ColorVariantTypes.Error.
+    property int colorVariant: root._colorSurface
 
     // ── Shade hints ────────────────────────────────────────────────
     /// Background shade level. -1 = auto (theme-appropriate default).
@@ -46,7 +49,7 @@ Rectangle {
     property real cornerRadius: -1
 
     // ── Resolved colours (readonly, useful for child items) ────────
-    readonly property var _palette: _resolvePalette(_variantIdx)
+    readonly property var _palette: _resolvePalette(colorVariant)
     // Dark mode: palette is reversed (shade50=darkest, shade950=lightest).
     // Use low shade numbers for dark containers so they appear near-dark,
     // and moderate numbers for borders to remain visible but not dazzling.
@@ -62,25 +65,8 @@ Rectangle {
     radius: cornerRadius >= 0 ? cornerRadius : ThemeManager.primitives.radiusBase
 
     // ── Private helpers ────────────────────────────────────────────
-    readonly property int _variantIdx: _resolveVariant(colorVariant)
-
     function _resolvePalette(index) {
-        switch (index) {
-        case 0:
-            return ThemeManager.colors.primary;
-        case 1:
-            return ThemeManager.colors.secondary;
-        case 2:
-            return ThemeManager.colors.tertiary;
-        case 3:
-            return ThemeManager.colors.success;
-        case 4:
-            return ThemeManager.colors.warning;
-        case 5:
-            return ThemeManager.colors.error;
-        default:
-            return ThemeManager.colors.surface;
-        }
+        return [ThemeManager.colors.primary, ThemeManager.colors.secondary, ThemeManager.colors.tertiary, ThemeManager.colors.success, ThemeManager.colors.warning, ThemeManager.colors.error, ThemeManager.colors.surface][index] ?? ThemeManager.colors.surface;
     }
 
     function _shadeColor(palette, shade) {
@@ -112,25 +98,6 @@ Rectangle {
             return palette.shade950;
         default:
             return palette.shade500;
-        }
-    }
-
-    function _resolveVariant(name) {
-        switch (name) {
-        case "primary":
-            return 0;
-        case "secondary":
-            return 1;
-        case "tertiary":
-            return 2;
-        case "success":
-            return 3;
-        case "warning":
-            return 4;
-        case "error":
-            return 5;
-        default:
-            return 6;  // "surface"
         }
     }
 }

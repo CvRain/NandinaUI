@@ -243,19 +243,19 @@ namespace Nandina::Core::Primitives {
 
     static const ThemePrimitiveData &getThemePrimitiveData(Types::ThemeVariant::ThemeTypes theme) {
         switch (theme) {
-            case Types::ThemeVariant::ThemeTypes::aurora:
+            case Types::ThemeVariant::ThemeTypes::Aurora:
                 return s_aurora;
-            case Types::ThemeVariant::ThemeTypes::catppuccin:
+            case Types::ThemeVariant::ThemeTypes::Catppuccin:
                 return s_catppuccin;
-            case Types::ThemeVariant::ThemeTypes::cerberus:
+            case Types::ThemeVariant::ThemeTypes::Cerberus:
                 return s_cerberus;
-            case Types::ThemeVariant::ThemeTypes::concord:
+            case Types::ThemeVariant::ThemeTypes::Concord:
                 return s_concord;
-            case Types::ThemeVariant::ThemeTypes::crimson:
+            case Types::ThemeVariant::ThemeTypes::Crimson:
                 return s_crimson;
-            case Types::ThemeVariant::ThemeTypes::fennec:
+            case Types::ThemeVariant::ThemeTypes::Fennec:
                 return s_fennec;
-            case Types::ThemeVariant::ThemeTypes::legacy:
+            case Types::ThemeVariant::ThemeTypes::Legacy:
                 return s_legacy;
         }
         return s_aurora;

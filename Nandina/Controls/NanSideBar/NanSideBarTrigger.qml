@@ -14,6 +14,7 @@ import QtQuick
 import QtQuick.Controls
 import Nandina.Theme
 import Nandina.Controls
+import Nandina.Types
 
 Item {
     id: root
@@ -61,7 +62,7 @@ Item {
     NanSurface {
         id: _bg
         anchors.fill: parent
-        colorVariant: "surface"
+        colorVariant: ThemeVariant.ColorVariantTypes.Surface
         backgroundShade: root._backgroundShade
         borderShade: root._borderShade
         cornerRadius: ThemeManager.primitives.radiusBase

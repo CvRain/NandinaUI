@@ -4,6 +4,7 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import Nandina.Theme
 import Nandina.Controls
+import Nandina.Types
 
 Item {
     id: root
@@ -50,7 +51,7 @@ Item {
 
                 NanCard {
                     width: 240
-                    preset: "outlined"
+                    preset: ThemeVariant.PresetTypes.Outlined
                     title: "Outlined Card"
                     description: "Near-transparent bg with subtle border — default preset"
 
@@ -66,8 +67,8 @@ Item {
 
                 NanCard {
                     width: 240
-                    preset: "tonal"
-                    colorVariant: "primary"
+                    preset: ThemeVariant.PresetTypes.Tonal
+                    colorVariant: ThemeVariant.ColorVariantTypes.Primary
                     title: "Tonal Card"
                     description: "Lightly tinted background that adapts to dark mode"
 
@@ -82,8 +83,8 @@ Item {
 
                 NanCard {
                     width: 240
-                    preset: "filled"
-                    colorVariant: "primary"
+                    preset: ThemeVariant.PresetTypes.Filled
+                    colorVariant: ThemeVariant.ColorVariantTypes.Primary
                     title: "Filled Card"
                     description: "Solid colour fill — white text for strong visual weight"
 
@@ -112,16 +113,22 @@ Item {
                 Repeater {
                     model: [
                         {
-                            preset: "outlined",
-                            variant: "surface"
+                            label: "Outlined",
+                            preset: ThemeVariant.PresetTypes.Outlined,
+                            variant: ThemeVariant.ColorVariantTypes.Surface,
+                            variantLabel: "Surface"
                         },
                         {
-                            preset: "tonal",
-                            variant: "primary"
+                            label: "Tonal",
+                            preset: ThemeVariant.PresetTypes.Tonal,
+                            variant: ThemeVariant.ColorVariantTypes.Primary,
+                            variantLabel: "Primary"
                         },
                         {
-                            preset: "filled",
-                            variant: "secondary"
+                            label: "Filled",
+                            preset: ThemeVariant.PresetTypes.Filled,
+                            variant: ThemeVariant.ColorVariantTypes.Secondary,
+                            variantLabel: "Secondary"
                         }
                     ]
                     delegate: NanCard {
@@ -130,13 +137,13 @@ Item {
                         interactive: true
                         preset: modelData.preset
                         colorVariant: modelData.variant
-                        title: modelData.preset.charAt(0).toUpperCase() + modelData.preset.slice(1)
-                        description: "variant: " + modelData.variant
+                        title: modelData.label
+                        description: "variant: " + modelData.variantLabel
 
                         Text {
                             text: parent.pressed ? "▼ Pressed" : parent.hovered ? "▲ Hovered" : "👆 Click me"
                             font.pixelSize: 13
-                            color: parent.preset === "filled" ? "#ffffff" : (ThemeManager.darkMode ? ThemeManager.colors.surface.shade300 : ThemeManager.colors.surface.shade600)
+                            color: parent.preset === ThemeVariant.PresetTypes.Filled ? "#ffffff" : (ThemeManager.darkMode ? ThemeManager.colors.surface.shade300 : ThemeManager.colors.surface.shade600)
                             width: parent.width
                             wrapMode: Text.WordWrap
                         }
