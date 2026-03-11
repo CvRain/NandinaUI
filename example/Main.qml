@@ -3,15 +3,15 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import Nandina.Theme
 import Nandina.Controls
+import Nandina.Window
 import NandinaExample
 
-ApplicationWindow {
+NanWindow {
     id: root
-    visible: true
     width: 1200
     height: 760
-    title: "Nandina Example — " + ThemeManager.currentThemeName
-    color: ThemeManager.colors.surface.shade50
+    windowTitle: "Nandina Example — " + ThemeManager.currentThemeName
+    titleBarMode: "frameless"
 
     property string currentPage: "theme"
 
