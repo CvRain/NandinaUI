@@ -9,6 +9,16 @@ import Nandina.Types
 Item {
     id: root
 
+    readonly property var _colorVariantTypes: ThemeVariant.ColorVariantTypes || ({})
+
+    readonly property int _colorSurface: _colorVariantTypes.Surface ?? 6
+    readonly property int _colorPrimary: _colorVariantTypes.Primary ?? 0
+    readonly property int _colorSecondary: _colorVariantTypes.Secondary ?? 1
+    readonly property int _colorTertiary: _colorVariantTypes.Tertiary ?? 2
+    readonly property int _colorSuccess: _colorVariantTypes.Success ?? 3
+    readonly property int _colorWarning: _colorVariantTypes.Warning ?? 4
+    readonly property int _colorError: _colorVariantTypes.Error ?? 5
+
     ScrollView {
         anchors.fill: parent
         contentWidth: availableWidth
@@ -45,31 +55,31 @@ Item {
                     model: [
                         {
                             label: "Surface",
-                            value: ThemeVariant.ColorVariantTypes.Surface
+                            value: root._colorSurface
                         },
                         {
                             label: "Primary",
-                            value: ThemeVariant.ColorVariantTypes.Primary
+                            value: root._colorPrimary
                         },
                         {
                             label: "Secondary",
-                            value: ThemeVariant.ColorVariantTypes.Secondary
+                            value: root._colorSecondary
                         },
                         {
                             label: "Tertiary",
-                            value: ThemeVariant.ColorVariantTypes.Tertiary
+                            value: root._colorTertiary
                         },
                         {
                             label: "Success",
-                            value: ThemeVariant.ColorVariantTypes.Success
+                            value: root._colorSuccess
                         },
                         {
                             label: "Warning",
-                            value: ThemeVariant.ColorVariantTypes.Warning
+                            value: root._colorWarning
                         },
                         {
                             label: "Error",
-                            value: ThemeVariant.ColorVariantTypes.Error
+                            value: root._colorError
                         }
                     ]
                     delegate: NanSurface {
@@ -103,7 +113,7 @@ Item {
                     id: _pressDemo
                     width: 160
                     height: 80
-                    colorVariant: ThemeVariant.ColorVariantTypes.Primary
+                    colorVariant: root._colorPrimary
                     backgroundShade: _pressable.pressed ? 400 : _pressable.hovered ? 100 : -1
                     borderShade: _pressable.hovered ? 400 : -1
 
@@ -130,7 +140,7 @@ Item {
                 NanSurface {
                     width: 160
                     height: 80
-                    colorVariant: ThemeVariant.ColorVariantTypes.Surface
+                    colorVariant: root._colorSurface
                     opacity: 0.45
 
                     Text {
@@ -150,7 +160,7 @@ Item {
                     id: _longPressCard
                     width: 160
                     height: 80
-                    colorVariant: ThemeVariant.ColorVariantTypes.Tertiary
+                    colorVariant: root._colorTertiary
                     property bool _triggered: false
 
                     Text {
@@ -210,19 +220,19 @@ Item {
                     model: [
                         {
                             label: "Primary",
-                            value: ThemeVariant.ColorVariantTypes.Primary
+                            value: root._colorPrimary
                         },
                         {
                             label: "Success",
-                            value: ThemeVariant.ColorVariantTypes.Success
+                            value: root._colorSuccess
                         },
                         {
                             label: "Warning",
-                            value: ThemeVariant.ColorVariantTypes.Warning
+                            value: root._colorWarning
                         },
                         {
                             label: "Error",
-                            value: ThemeVariant.ColorVariantTypes.Error
+                            value: root._colorError
                         }
                     ]
                     delegate: NanPanel {

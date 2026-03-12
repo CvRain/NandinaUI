@@ -6,34 +6,33 @@ pragma ComponentBehavior: Bound
 // display a short status string.  Unlike NanButton there is no press state or
 // click signal; it is purely a display element.
 //
-// ── ColorVariant  (ThemeVariant.ColorVariantTypes — import Nandina.Types) ──
-//   ThemeVariant.ColorVariantTypes.Primary | Secondary | Tertiary | Success | Warning | Error | Surface
+// ── ColorVariant ─────────────────────────────────────────────────────────
+//   Primary | Secondary | Tertiary | Success | Warning | Error | Surface
 //
-// ── Preset  (ThemeVariant.PresetTypes — import Nandina.Types) ─────────────
-//   ThemeVariant.PresetTypes.Filled   — solid shade-500 background, white/dark text  [default]
-//   ThemeVariant.PresetTypes.Tonal    — shade-100/200 tinted background, shade-700 text
-//   ThemeVariant.PresetTypes.Outlined — transparent bg, coloured border, shade-600 text
-//   ThemeVariant.PresetTypes.Ghost    — very pale shade-50 bg, shade-500 text; minimal footprint
+// ── Preset ───────────────────────────────────────────────────────────────
+//   Filled   — solid shade-500 background, white/dark text  [default]
+//   Tonal    — shade-100/200 tinted background, shade-700 text
+//   Outlined — transparent bg, coloured border, shade-600 text
+//   Ghost    — very pale shade-50 bg, shade-500 text; minimal footprint
 //
-// ── Size  (ThemeVariant.SizeTypes — import Nandina.Types) ─────────────────
-//   ThemeVariant.SizeTypes.Sm | Md | Lg
+// ── Size ─────────────────────────────────────────────────────────────────
+//   Sm | Md | Lg
 //
 // ── Minimal usage ──────────────────────────────────────────────────────────
 //   NanBadge { text: "New" }
 //
 // ── Variant + preset ───────────────────────────────────────────────────────
-//   NanBadge { text: "Beta";   colorVariant: ThemeVariant.ColorVariantTypes.Secondary; preset: ThemeVariant.PresetTypes.Tonal }
-//   NanBadge { text: "Error";  colorVariant: ThemeVariant.ColorVariantTypes.Error;     preset: ThemeVariant.PresetTypes.Outlined }
-//   NanBadge { text: "Active"; colorVariant: ThemeVariant.ColorVariantTypes.Success }
+//   NanBadge { text: "Beta" }
+//   NanBadge { text: "Error" }
+//   NanBadge { text: "Active" }
 //
 // ── Dot indicator (no label) ───────────────────────────────────────────────
-//   NanBadge { dot: true; colorVariant: ThemeVariant.ColorVariantTypes.Success }
+//   NanBadge { dot: true }
 //
 // ── With icon ──────────────────────────────────────────────────────────────
 //   NanBadge {
 //       id: _badge
 //       text: "Admin"
-//       colorVariant: ThemeVariant.ColorVariantTypes.Primary
 //       leftIcon: Component { Text { text: "★"; color: _badge.resolvedTextColor } }
 //   }
 
@@ -57,11 +56,11 @@ Item {
     // ── API ────────────────────────────────────────────────────────
 
     /// Semantic colour family.
-    /// Use ThemeVariant.ColorVariantTypes.Primary … ThemeVariant.ColorVariantTypes.Surface  (Nandina.Types).
+    /// Use the shared ColorVariantTypes enum exposed by Nandina.Types.
     property int colorVariant: root._colorPrimary
 
     /// Visual fill style.
-    /// Use ThemeVariant.PresetTypes.Filled … ThemeVariant.PresetTypes.Ghost  (Nandina.Types).
+    /// Use the shared PresetTypes enum exposed by Nandina.Types.
     property int preset: root._presetFilled
 
     /// Label text. Leave empty when using dot mode.
@@ -77,7 +76,7 @@ Item {
     /// Optional icon Component shown right of the label.
     property Component rightIcon: null
 
-    /// Badge size.  Use ThemeVariant.SizeTypes.Sm / Md / Lg  (Nandina.Types).
+    /// Badge size.  Use the shared SizeTypes enum exposed by Nandina.Types.
     property int size: root._sizeMd
 
     // ── Read-only helpers (bind from icon components) ──────────────
@@ -113,8 +112,7 @@ Item {
         , ThemeManager.colors.surface     // Surface   = 6
     ][colorVariant] ?? ThemeManager.colors.surface
 
-    // ── Private: shade helper — maps shade number → ColorPalette.shade(index)
-    // Uses a static lookup object instead of a 12-case switch.
+    // ── Private: shade helper — maps shade number → palette shade property.
     readonly property var _shadeIdx: ({
             50: 0,
             100: 1,
@@ -128,11 +126,12 @@ Item {
             900: 9,
             950: 10
         })
+    readonly property var _paletteShades: _palette ? [_palette.shade50, _palette.shade100, _palette.shade200, _palette.shade300, _palette.shade400, _palette.shade500, _palette.shade600, _palette.shade700, _palette.shade800, _palette.shade900, _palette.shade950] : []
 
     function _shade(s) {
-        if (!_palette)
+        if (!_paletteShades.length)
             return "transparent";
-        return _palette.shade(_shadeIdx[s] ?? 5);
+        return _paletteShades[_shadeIdx[s] ?? 5] ?? _paletteShades[5] ?? "transparent";
     }
 
     // ── Private: colours (indexed by PresetTypes: filled=0, tonal=1, outlined=2, ghost=3) ─

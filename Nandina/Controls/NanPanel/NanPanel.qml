@@ -17,7 +17,6 @@
 //
 // Custom padding / variant:
 //   NanPanel {
-//       colorVariant: ThemeVariant.ColorVariantTypes.Primary
 //       backgroundShade: 100
 //       contentPadding: 24
 //       title: "Info"
@@ -133,7 +132,7 @@ Item {
             id: _divider
             visible: _header.visible
             Layout.fillWidth: true
-            height: ThemeManager.primitives.divideWidth
+            implicitHeight: ThemeManager.primitives.divideWidth
             // shade300 in dark = original shade700 = visible but not glaring divider line
             color: ThemeManager.darkMode ? ThemeManager.colors.surface.shade300 : ThemeManager.colors.surface.shade200
         }

@@ -42,10 +42,9 @@ Item {
 
                 Repeater {
                     model: ["icon", "offcanvas", "none"]
-                    delegate: Button {
+                    delegate: NanButton {
                         required property string modelData
                         text: modelData
-                        highlighted: root.sidebarMode === modelData
                         onClicked: root.sidebarMode = modelData
                     }
                 }

@@ -19,6 +19,9 @@ import Nandina.Types
 Item {
     id: root
 
+    readonly property var _colorVariantTypes: ThemeVariant.ColorVariantTypes || ({})
+    readonly property int _colorSurface: _colorVariantTypes.Surface ?? 6
+
     // Reference to the NanSideBar this trigger controls.
     // If null, the component walks the parent chain automatically.
     property var sidebar: null
@@ -62,7 +65,7 @@ Item {
     NanSurface {
         id: _bg
         anchors.fill: parent
-        colorVariant: ThemeVariant.ColorVariantTypes.Surface
+        colorVariant: root._colorSurface
         backgroundShade: root._backgroundShade
         borderShade: root._borderShade
         cornerRadius: ThemeManager.primitives.radiusBase

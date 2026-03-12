@@ -2,27 +2,26 @@
 // Theme-aware clickable button built on NanPressable.
 //
 // Preset semantics (mirrors NanCard preset philosophy):
-//   ThemeVariant.PresetTypes.Filled   — solid shade-500 fill, white text, high emphasis   [default]
-//   ThemeVariant.PresetTypes.Tonal    — lightly tinted bg (shade 100 / 200), variant-coloured text
-//   ThemeVariant.PresetTypes.Outlined — transparent bg, coloured border, no fill
-//   ThemeVariant.PresetTypes.Ghost    — no bg, no border, hover-only tint; minimal visual footprint
-//   ThemeVariant.PresetTypes.Link     — text-only with underline, for inline / semantic anchors
+//   Filled   — solid shade-500 fill, white text, high emphasis   [default]
+//   Tonal    — lightly tinted bg (shade 100 / 200), variant-coloured text
+//   Outlined — transparent bg, coloured border, no fill
+//   Ghost    — no bg, no border, hover-only tint; minimal visual footprint
+//   Link     — text-only with underline, for inline / semantic anchors
 //
 // ── Minimal usage ──────────────────────────────────────────────────────────
 //   NanButton { text: "Save" }
 //
 // ── Preset + variant ───────────────────────────────────────────────────────
-//   NanButton { text: "Delete"; preset: ThemeVariant.PresetTypes.Outlined; colorVariant: ThemeVariant.ColorVariantTypes.Error }
-//   NanButton { text: "Subscribe"; preset: ThemeVariant.PresetTypes.Tonal;  colorVariant: ThemeVariant.ColorVariantTypes.Success }
+//   NanButton { text: "Delete" }
+//   NanButton { text: "Subscribe" }
 //
 // ── Sizes ──────────────────────────────────────────────────────────────────
-//   NanButton { text: "Compact"; size: ThemeVariant.SizeTypes.Sm }
-//   NanButton { text: "Submit";  size: ThemeVariant.SizeTypes.Lg }
+//   NanButton { text: "Compact" }
+//   NanButton { text: "Submit" }
 //
 // ── With left icon ─────────────────────────────────────────────────────────
 //   NanButton {
 //       text: "Upload"
-//       colorVariant: ThemeVariant.ColorVariantTypes.Primary
 //       leftIcon: Component {
 //           Text {
 //               text: "↑"
@@ -72,12 +71,12 @@ Item {
 
     // ── Color ──────────────────────────────────────────────────────
     /// Semantic colour family.
-    /// Use ThemeVariant.ColorVariantTypes.Surface … ThemeVariant.ColorVariantTypes.Error.
+    /// Use the shared ColorVariantTypes enum exposed by Nandina.Types.
     property int colorVariant: root._colorPrimary
 
     // ── Preset ─────────────────────────────────────────────────────
     /// Visual fill style.
-    /// Use ThemeVariant.PresetTypes.Filled … ThemeVariant.PresetTypes.Link.
+    /// Use the shared PresetTypes enum exposed by Nandina.Types.
     property int preset: root._presetFilled
 
     // ── Label ──────────────────────────────────────────────────────
@@ -92,7 +91,7 @@ Item {
     property Component rightIcon: null
 
     // ── Size ───────────────────────────────────────────────────────
-    /// Use ThemeVariant.SizeTypes.Sm / Md / Lg.
+    /// Use the shared SizeTypes enum exposed by Nandina.Types.
     property int size: root._sizeMd
 
     // ── State ──────────────────────────────────────────────────────
@@ -133,37 +132,59 @@ Item {
     readonly property real _fontSize: [Math.round(12 * ThemeManager.primitives.textScaling), Math.round(13 * ThemeManager.primitives.textScaling), Math.round(15 * ThemeManager.primitives.textScaling)][size] ?? Math.round(13 * ThemeManager.primitives.textScaling)
     // ── Private: palette ──────────────────────────────────────────
     readonly property var _palette: [ThemeManager.colors.primary, ThemeManager.colors.secondary, ThemeManager.colors.tertiary, ThemeManager.colors.success, ThemeManager.colors.warning, ThemeManager.colors.error, ThemeManager.colors.surface][colorVariant] ?? ThemeManager.colors.surface
+    readonly property var _shadeIdx: ({
+            50: 0,
+            100: 1,
+            200: 2,
+            300: 3,
+            400: 4,
+            500: 5,
+            600: 6,
+            700: 7,
+            800: 8,
+            900: 9,
+            950: 10
+        })
+    readonly property var _paletteShades: _palette ? [_palette.shade50, _palette.shade100, _palette.shade200, _palette.shade300, _palette.shade400, _palette.shade500, _palette.shade600, _palette.shade700, _palette.shade800, _palette.shade900, _palette.shade950] : []
+    readonly property string _interactionState: pressed ? "press" : (hovered ? "hover" : "idle")
+    readonly property var _bgConfigs: [
+        {
+            idle: 500,
+            hover: _isDark ? 600 : 400,
+            press: _isDark ? 400 : 600,
+            alpha: false
+        },
+        {
+            idle: _isDark ? 200 : 100,
+            hover: _isDark ? 300 : 200,
+            press: _isDark ? 400 : 300,
+            alpha: false
+        },
+        {
+            idle: 0,
+            hover: 0.08,
+            press: 0.16,
+            alpha: true
+        },
+        {
+            idle: 0,
+            hover: 0.08,
+            press: 0.16,
+            alpha: true
+        },
+        {
+            idle: 0,
+            hover: 0.08,
+            press: 0.16,
+            alpha: true
+        }
+    ]
 
     // ── Private: shade helpers ─────────────────────────────────────
     function _shade(s) {
-        if (!_palette)
+        if (!_paletteShades.length)
             return "transparent";
-        switch (s) {
-        case 50:
-            return _palette.shade50;
-        case 100:
-            return _palette.shade100;
-        case 200:
-            return _palette.shade200;
-        case 300:
-            return _palette.shade300;
-        case 400:
-            return _palette.shade400;
-        case 500:
-            return _palette.shade500;
-        case 600:
-            return _palette.shade600;
-        case 700:
-            return _palette.shade700;
-        case 800:
-            return _palette.shade800;
-        case 900:
-            return _palette.shade900;
-        case 950:
-            return _palette.shade950;
-        default:
-            return _palette.shade500;
-        }
+        return _paletteShades[_shadeIdx[s] ?? 5] ?? _paletteShades[5] ?? "transparent";
     }
 
     function _shadeA(s, alpha) {
@@ -179,32 +200,11 @@ Item {
     //   light  — hover=shade400 (lighter)  / press=shade600 (darker)
     //   dark   — hover=shade600 (=orig400, lighter) / press=shade400 (=orig600, darker)
     readonly property color _bgColor: {
-        const isPr = _pressable.pressed || _keyPressed;
-        const isHv = _pressable.hovered && !isPr;
-        switch (preset) {
-        case root._presetFilled:
-            if (isPr)
-                return _shade(_isDark ? 400 : 600);
-            if (isHv)
-                return _shade(_isDark ? 600 : 400);
-            return _shade(500);
-        case root._presetTonal:
-            if (isPr)
-                return _shade(_isDark ? 400 : 300);
-            if (isHv)
-                return _shade(_isDark ? 300 : 200);
-            return _shade(_isDark ? 200 : 100);
-        case root._presetOutlined:
-        case root._presetGhost:
-        case root._presetLink:
-            if (isPr)
-                return _shadeA(500, 0.16);
-            if (isHv)
-                return _shadeA(500, 0.08);
+        const config = _bgConfigs[preset];
+        if (!config)
             return "transparent";
-        default:
-            return "transparent";
-        }
+        const value = config[_interactionState] ?? config.idle;
+        return config.alpha ? _shadeA(500, value) : _shade(value);
     }
 
     // ── Private: border ────────────────────────────────────────────
@@ -218,21 +218,7 @@ Item {
     }
 
     // ── Private: text colour ───────────────────────────────────────
-    readonly property color _textColor: {
-        switch (preset) {
-        case root._presetFilled:
-            return "#ffffff";
-        case root._presetTonal:
-            // dark shade700 = original shade300 = bright; light shade700 = dark
-            return _shade(700);
-        case root._presetOutlined:
-        case root._presetGhost:
-        case root._presetLink:
-            return _shade(_isDark ? 700 : 600);
-        default:
-            return _shade(600);
-        }
-    }
+    readonly property color _textColor: ["#ffffff", _shade(700), _shade(_isDark ? 700 : 600), _shade(_isDark ? 700 : 600), _shade(_isDark ? 700 : 600)][preset] ?? _shade(600)
 
     // ── Private: scale / bounce animation ─────────────────────────
     property real _currentScale: 1.0

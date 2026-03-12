@@ -9,6 +9,13 @@ import Nandina.Types
 Item {
     id: root
 
+    readonly property var _colorVariantTypes: ThemeVariant.ColorVariantTypes || ({})
+    readonly property var _presetTypes: ThemeVariant.PresetTypes || ({})
+
+    readonly property int _colorPrimary: _colorVariantTypes.Primary ?? 0
+    readonly property int _presetFilled: _presetTypes.Filled ?? 0
+    readonly property int _presetOutlined: _presetTypes.Outlined ?? 2
+
     ScrollView {
         anchors.fill: parent
         contentWidth: availableWidth
@@ -52,8 +59,8 @@ Item {
                     delegate: NanButton {
                         required property string modelData
                         text: modelData
-                        preset: ThemeManager.currentThemeName === modelData ? ThemeVariant.PresetTypes.Filled : ThemeVariant.PresetTypes.Outlined
-                        colorVariant: ThemeVariant.ColorVariantTypes.Primary
+                        preset: ThemeManager.currentThemeName === modelData ? root._presetFilled : root._presetOutlined
+                        colorVariant: root._colorPrimary
                         onClicked: ThemeManager.setThemeByName(modelData)
                     }
                 }

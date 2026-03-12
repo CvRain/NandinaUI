@@ -9,6 +9,27 @@ import Nandina.Types
 Item {
     id: root
 
+    readonly property var _colorVariantTypes: ThemeVariant.ColorVariantTypes || ({})
+    readonly property var _presetTypes: ThemeVariant.PresetTypes || ({})
+    readonly property var _sizeTypes: ThemeVariant.SizeTypes || ({})
+
+    readonly property int _colorPrimary: _colorVariantTypes.Primary ?? 0
+    readonly property int _colorSecondary: _colorVariantTypes.Secondary ?? 1
+    readonly property int _colorTertiary: _colorVariantTypes.Tertiary ?? 2
+    readonly property int _colorSuccess: _colorVariantTypes.Success ?? 3
+    readonly property int _colorWarning: _colorVariantTypes.Warning ?? 4
+    readonly property int _colorError: _colorVariantTypes.Error ?? 5
+    readonly property int _colorSurface: _colorVariantTypes.Surface ?? 6
+
+    readonly property int _presetFilled: _presetTypes.Filled ?? 0
+    readonly property int _presetTonal: _presetTypes.Tonal ?? 1
+    readonly property int _presetOutlined: _presetTypes.Outlined ?? 2
+    readonly property int _presetGhost: _presetTypes.Ghost ?? 3
+
+    readonly property int _sizeSm: _sizeTypes.Sm ?? 0
+    readonly property int _sizeMd: _sizeTypes.Md ?? 1
+    readonly property int _sizeLg: _sizeTypes.Lg ?? 2
+
     ScrollView {
         anchors.fill: parent
         contentWidth: availableWidth
@@ -54,23 +75,23 @@ Item {
                 spacing: 8
                 NanBadge {
                     text: "filled"
-                    preset: ThemeVariant.PresetTypes.Filled
-                    colorVariant: ThemeVariant.ColorVariantTypes.Primary
+                    preset: root._presetFilled
+                    colorVariant: root._colorPrimary
                 }
                 NanBadge {
                     text: "tonal"
-                    preset: ThemeVariant.PresetTypes.Tonal
-                    colorVariant: ThemeVariant.ColorVariantTypes.Primary
+                    preset: root._presetTonal
+                    colorVariant: root._colorPrimary
                 }
                 NanBadge {
                     text: "outlined"
-                    preset: ThemeVariant.PresetTypes.Outlined
-                    colorVariant: ThemeVariant.ColorVariantTypes.Primary
+                    preset: root._presetOutlined
+                    colorVariant: root._colorPrimary
                 }
                 NanBadge {
                     text: "ghost"
-                    preset: ThemeVariant.PresetTypes.Ghost
-                    colorVariant: ThemeVariant.ColorVariantTypes.Primary
+                    preset: root._presetGhost
+                    colorVariant: root._colorPrimary
                 }
             }
 
@@ -91,32 +112,32 @@ Item {
                 spacing: 8
                 NanBadge {
                     text: "primary"
-                    colorVariant: ThemeVariant.ColorVariantTypes.Primary
+                    colorVariant: root._colorPrimary
                 }
                 NanBadge {
                     text: "secondary"
-                    colorVariant: ThemeVariant.ColorVariantTypes.Secondary
+                    colorVariant: root._colorSecondary
                 }
                 NanBadge {
                     text: "tertiary"
-                    colorVariant: ThemeVariant.ColorVariantTypes.Tertiary
+                    colorVariant: root._colorTertiary
                 }
                 NanBadge {
                     text: "success"
-                    colorVariant: ThemeVariant.ColorVariantTypes.Success
+                    colorVariant: root._colorSuccess
                 }
                 NanBadge {
                     text: "warning"
-                    colorVariant: ThemeVariant.ColorVariantTypes.Warning
+                    colorVariant: root._colorWarning
                 }
                 NanBadge {
                     text: "error"
-                    colorVariant: ThemeVariant.ColorVariantTypes.Error
+                    colorVariant: root._colorError
                 }
                 NanBadge {
                     text: "surface"
-                    colorVariant: ThemeVariant.ColorVariantTypes.Surface
-                    preset: ThemeVariant.PresetTypes.Tonal
+                    colorVariant: root._colorSurface
+                    preset: root._presetTonal
                 }
             }
 
@@ -133,18 +154,18 @@ Item {
                 layoutDirection: Qt.LeftToRight
                 NanBadge {
                     text: "sm"
-                    size: ThemeVariant.SizeTypes.Sm
-                    colorVariant: ThemeVariant.ColorVariantTypes.Secondary
+                    size: root._sizeSm
+                    colorVariant: root._colorSecondary
                 }
                 NanBadge {
                     text: "md"
-                    size: ThemeVariant.SizeTypes.Md
-                    colorVariant: ThemeVariant.ColorVariantTypes.Secondary
+                    size: root._sizeMd
+                    colorVariant: root._colorSecondary
                 }
                 NanBadge {
                     text: "lg"
-                    size: ThemeVariant.SizeTypes.Lg
-                    colorVariant: ThemeVariant.ColorVariantTypes.Secondary
+                    size: root._sizeLg
+                    colorVariant: root._colorSecondary
                 }
             }
 
@@ -166,19 +187,19 @@ Item {
                     model: [
                         {
                             label: "Online",
-                            variant: ThemeVariant.ColorVariantTypes.Success
+                            variant: root._colorSuccess
                         },
                         {
                             label: "Idle",
-                            variant: ThemeVariant.ColorVariantTypes.Warning
+                            variant: root._colorWarning
                         },
                         {
                             label: "Busy",
-                            variant: ThemeVariant.ColorVariantTypes.Error
+                            variant: root._colorError
                         },
                         {
                             label: "Offline",
-                            variant: ThemeVariant.ColorVariantTypes.Surface
+                            variant: root._colorSurface
                         },
                     ]
                     delegate: Row {
@@ -189,7 +210,7 @@ Item {
                             anchors.verticalCenter: parent.verticalCenter
                             dot: true
                             colorVariant: statusRow.modelData.variant
-                            size: ThemeVariant.SizeTypes.Md
+                            size: root._sizeMd
                         }
                         Text {
                             anchors.verticalCenter: parent.verticalCenter
@@ -215,8 +236,8 @@ Item {
                 NanBadge {
                     id: _adminBadge
                     text: "Admin"
-                    colorVariant: ThemeVariant.ColorVariantTypes.Primary
-                    preset: ThemeVariant.PresetTypes.Filled
+                    colorVariant: root._colorPrimary
+                    preset: root._presetFilled
                     leftIcon: _starIconComponent
                     Component {
                         id: _starIconComponent
@@ -231,8 +252,8 @@ Item {
                 NanBadge {
                     id: _newBadge
                     text: "New"
-                    colorVariant: ThemeVariant.ColorVariantTypes.Secondary
-                    preset: ThemeVariant.PresetTypes.Tonal
+                    colorVariant: root._colorSecondary
+                    preset: root._presetTonal
                     leftIcon: _sparkleComponent
                     Component {
                         id: _sparkleComponent
@@ -247,8 +268,8 @@ Item {
                 NanBadge {
                     id: _betaBadge
                     text: "Beta"
-                    colorVariant: ThemeVariant.ColorVariantTypes.Tertiary
-                    preset: ThemeVariant.PresetTypes.Outlined
+                    colorVariant: root._colorTertiary
+                    preset: root._presetOutlined
                     rightIcon: _betaIconComponent
                     Component {
                         id: _betaIconComponent
@@ -278,32 +299,32 @@ Item {
                 spacing: 8
                 NanBadge {
                     text: "Stable"
-                    colorVariant: ThemeVariant.ColorVariantTypes.Success
-                    preset: ThemeVariant.PresetTypes.Tonal
+                    colorVariant: root._colorSuccess
+                    preset: root._presetTonal
                 }
                 NanBadge {
                     text: "Deprecated"
-                    colorVariant: ThemeVariant.ColorVariantTypes.Warning
-                    preset: ThemeVariant.PresetTypes.Tonal
+                    colorVariant: root._colorWarning
+                    preset: root._presetTonal
                 }
                 NanBadge {
                     text: "Removed"
-                    colorVariant: ThemeVariant.ColorVariantTypes.Error
-                    preset: ThemeVariant.PresetTypes.Tonal
+                    colorVariant: root._colorError
+                    preset: root._presetTonal
                 }
                 NanBadge {
                     text: "v2.0"
-                    colorVariant: ThemeVariant.ColorVariantTypes.Tertiary
-                    preset: ThemeVariant.PresetTypes.Outlined
+                    colorVariant: root._colorTertiary
+                    preset: root._presetOutlined
                 }
                 NanBadge {
                     text: "Community"
-                    colorVariant: ThemeVariant.ColorVariantTypes.Secondary
-                    preset: ThemeVariant.PresetTypes.Ghost
+                    colorVariant: root._colorSecondary
+                    preset: root._presetGhost
                 }
                 NanBadge {
                     text: "Pro"
-                    colorVariant: ThemeVariant.ColorVariantTypes.Primary
+                    colorVariant: root._colorPrimary
                 }
             }
 

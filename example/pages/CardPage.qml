@@ -9,6 +9,17 @@ import Nandina.Types
 Item {
     id: root
 
+    readonly property var _colorVariantTypes: ThemeVariant.ColorVariantTypes || ({})
+    readonly property var _presetTypes: ThemeVariant.PresetTypes || ({})
+
+    readonly property int _colorSurface: _colorVariantTypes.Surface ?? 6
+    readonly property int _colorPrimary: _colorVariantTypes.Primary ?? 0
+    readonly property int _colorSecondary: _colorVariantTypes.Secondary ?? 1
+
+    readonly property int _presetFilled: _presetTypes.Filled ?? 0
+    readonly property int _presetTonal: _presetTypes.Tonal ?? 1
+    readonly property int _presetOutlined: _presetTypes.Outlined ?? 2
+
     ScrollView {
         anchors.fill: parent
         contentWidth: availableWidth
@@ -51,7 +62,7 @@ Item {
 
                 NanCard {
                     width: 240
-                    preset: ThemeVariant.PresetTypes.Outlined
+                    preset: root._presetOutlined
                     title: "Outlined Card"
                     description: "Near-transparent bg with subtle border — default preset"
 
@@ -67,8 +78,8 @@ Item {
 
                 NanCard {
                     width: 240
-                    preset: ThemeVariant.PresetTypes.Tonal
-                    colorVariant: ThemeVariant.ColorVariantTypes.Primary
+                    preset: root._presetTonal
+                    colorVariant: root._colorPrimary
                     title: "Tonal Card"
                     description: "Lightly tinted background that adapts to dark mode"
 
@@ -83,8 +94,8 @@ Item {
 
                 NanCard {
                     width: 240
-                    preset: ThemeVariant.PresetTypes.Filled
-                    colorVariant: ThemeVariant.ColorVariantTypes.Primary
+                    preset: root._presetFilled
+                    colorVariant: root._colorPrimary
                     title: "Filled Card"
                     description: "Solid colour fill — white text for strong visual weight"
 
@@ -114,20 +125,20 @@ Item {
                     model: [
                         {
                             label: "Outlined",
-                            preset: ThemeVariant.PresetTypes.Outlined,
-                            variant: ThemeVariant.ColorVariantTypes.Surface,
+                            preset: root._presetOutlined,
+                            variant: root._colorSurface,
                             variantLabel: "Surface"
                         },
                         {
                             label: "Tonal",
-                            preset: ThemeVariant.PresetTypes.Tonal,
-                            variant: ThemeVariant.ColorVariantTypes.Primary,
+                            preset: root._presetTonal,
+                            variant: root._colorPrimary,
                             variantLabel: "Primary"
                         },
                         {
                             label: "Filled",
-                            preset: ThemeVariant.PresetTypes.Filled,
-                            variant: ThemeVariant.ColorVariantTypes.Secondary,
+                            preset: root._presetFilled,
+                            variant: root._colorSecondary,
                             variantLabel: "Secondary"
                         }
                     ]
@@ -143,7 +154,7 @@ Item {
                         Text {
                             text: parent.pressed ? "▼ Pressed" : parent.hovered ? "▲ Hovered" : "👆 Click me"
                             font.pixelSize: 13
-                            color: parent.preset === ThemeVariant.PresetTypes.Filled ? "#ffffff" : (ThemeManager.darkMode ? ThemeManager.colors.surface.shade300 : ThemeManager.colors.surface.shade600)
+                            color: parent.preset === root._presetFilled ? "#ffffff" : (ThemeManager.darkMode ? ThemeManager.colors.surface.shade300 : ThemeManager.colors.surface.shade600)
                             width: parent.width
                             wrapMode: Text.WordWrap
                         }

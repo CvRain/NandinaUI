@@ -3,12 +3,12 @@
 //
 // Follows the shadcn/Skeleton dual philosophy:
 //   ─ shadcn anatomy : header (title + description + action) → content → footer
-//   ─ Skeleton presets: ThemeVariant.PresetTypes.Outlined | ThemeVariant.PresetTypes.Tonal | ThemeVariant.PresetTypes.Filled
+//   ─ Skeleton presets: Outlined | Tonal | Filled
 //
 // Preset semantics (mirrors Skeleton preset-filled / preset-tonal / preset-outlined):
-//   ThemeVariant.PresetTypes.Outlined  — near-transparent surface bg + subtle border   [default]
-//   ThemeVariant.PresetTypes.Tonal     — lightly tinted bg (shade 100/800) + border
-//   ThemeVariant.PresetTypes.Filled    — solid 500-shade fill, white text, no border
+//   Outlined — near-transparent surface bg + subtle border   [default]
+//   Tonal    — lightly tinted bg (shade 100/800) + border
+//   Filled   — solid 500-shade fill, white text, no border
 //
 // ── Minimal usage ────────────────────────────────────────────────────
 //   NanCard {
@@ -29,8 +29,6 @@
 // ── Interactive / clickable ──────────────────────────────────────────
 //   NanCard {
 //       interactive: true
-//       preset: ThemeVariant.PresetTypes.Tonal
-//       colorVariant: ThemeVariant.ColorVariantTypes.Primary
 //       onClicked: console.log("card tapped")
 //       Text { text: "Click me" }
 //   }
@@ -130,55 +128,51 @@ Item {
     // ── Private: preset → shade mapping ────────────────────────────
     readonly property bool _isDark: ThemeManager.darkMode
     readonly property bool _isFilled: preset === root._presetFilled
+    readonly property var _bgShadeConfigs: [
+        {
+            idle: 500,
+            press: 700
+        },
+        {
+            idle: _isDark ? 200 : 100,
+            press: _isDark ? 100 : 200
+        },
+        {
+            idle: _isDark ? 100 : 50,
+            press: _isDark ? 50 : 100
+        }
+    ]
+    readonly property var _borderShadeConfigs: [
+        {
+            idle: 400,
+            active: 300
+        },
+        {
+            idle: _isDark ? 300 : 200,
+            active: _isDark ? 400 : 300
+        },
+        {
+            idle: _isDark ? 300 : 200,
+            active: _isDark ? 500 : 400
+        }
+    ]
 
     /// Background shade derived from preset + dark-mode + interaction state.
     // Dark mode: palette is reversed — shade50=darkest, shade950=lightest.
     // Use low shade numbers so containers stay dark and non-glaring.
     readonly property int _bgShade: {
-        if (interactive && _pressable.pressed) {
-            switch (preset) {
-            case root._presetFilled:
-                return 700;
-            case root._presetTonal:
-                return _isDark ? 100 : 200;  // pressed = recedes slightly
-            case root._presetOutlined:
-                return _isDark ? 50 : 100;   // pressed = sinks to body level
-            }
-        }
-        switch (preset) {
-        case root._presetFilled:
-            return 500;
-        case root._presetTonal:
-            return _isDark ? 200 : 100;  // subtle elevated dark surface
-        case root._presetOutlined:
-            return _isDark ? 100 : 50;   // minimal elevation above body
-        default:
+        const config = _bgShadeConfigs[preset];
+        if (!config)
             return -1;
-        }
+        return interactive && _pressable.pressed ? (config.press ?? config.idle) : config.idle;
     }
 
     /// Border shade — brightens on hover in interactive mode.
     readonly property int _borderShade: {
-        if (interactive && (_pressable.hovered || _pressable.pressed)) {
-            switch (preset) {
-            case root._presetTonal:
-                return _isDark ? 400 : 300;
-            case root._presetOutlined:
-                return _isDark ? 500 : 400;
-            default:
-                return 300;
-            }
-        }
-        switch (preset) {
-        case root._presetFilled:
-            return 400;
-        case root._presetTonal:
-            return _isDark ? 300 : 200;  // subtle dark border
-        case root._presetOutlined:
-            return _isDark ? 300 : 200;  // subtle dark border
-        default:
+        const config = _borderShadeConfigs[preset];
+        if (!config)
             return -1;
-        }
+        return interactive && (_pressable.hovered || _pressable.pressed) ? (config.active ?? config.idle) : config.idle;
     }
 
     // ── Private: text colour helpers ───────────────────────────────

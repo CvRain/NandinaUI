@@ -34,6 +34,9 @@ import Nandina.Types
 Item {
     id: root
 
+    readonly property var _colorVariantTypes: ThemeVariant.ColorVariantTypes || ({})
+    readonly property int _colorSurface: _colorVariantTypes.Surface ?? 6
+
     // ── Public API ────────────────────────────────────────────────────────
     /// Which side of the parent the sidebar is docked to.
     /// "left" | "right"
@@ -150,7 +153,7 @@ Item {
             }
         }
 
-        colorVariant: ThemeVariant.ColorVariantTypes.Surface
+        colorVariant: root._colorSurface
         backgroundShade: root._panelBackgroundShade
         borderShade: root._panelBorderShade
         bordered: true
