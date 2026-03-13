@@ -136,10 +136,30 @@ namespace Nandina::Core::Primitives {
         }
     }
 
+    // ── Focus ring setters ─────────────────────────────────────────
+
+    void PrimitiveSchema::setFocusRingColor(const QColor &color) {
+        if (m_focusRingColor != color) {
+            m_focusRingColor = color;
+            emit changed();
+        }
+    }
+
+    void PrimitiveSchema::setFocusRingColorDark(const QColor &color) {
+        if (m_focusRingColorDark != color) {
+            m_focusRingColorDark = color;
+            emit changed();
+        }
+    }
+
     // ── QML convenience ────────────────────────────────────────────
 
     QColor PrimitiveSchema::resolveBodyBackground(bool isDark) const {
         return isDark ? m_bodyBackgroundColorDark : m_bodyBackgroundColor;
+    }
+
+    QColor PrimitiveSchema::resolveFocusRingColor(bool isDark) const {
+        return isDark ? m_focusRingColorDark : m_focusRingColor;
     }
 
 } // namespace Nandina::Core::Primitives

@@ -80,6 +80,10 @@ namespace Nandina::Core::Primitives {
         Q_PROPERTY(qreal divideWidth READ divideWidth WRITE setDivideWidth NOTIFY changed)
         Q_PROPERTY(qreal ringWidth   READ ringWidth   WRITE setRingWidth   NOTIFY changed)
 
+        // ── Focus ring colors ───────────────────────────────────────
+        Q_PROPERTY(QColor focusRingColor     READ focusRingColor     WRITE setFocusRingColor     NOTIFY changed)
+        Q_PROPERTY(QColor focusRingColorDark READ focusRingColorDark WRITE setFocusRingColorDark NOTIFY changed)
+
         // ── Background colors ──────────────────────────────────────
         Q_PROPERTY(QColor bodyBackgroundColor     READ bodyBackgroundColor     WRITE setBodyBackgroundColor     NOTIFY changed)
         Q_PROPERTY(QColor bodyBackgroundColorDark READ bodyBackgroundColorDark WRITE setBodyBackgroundColorDark NOTIFY changed)
@@ -105,6 +109,10 @@ namespace Nandina::Core::Primitives {
         [[nodiscard]] qreal divideWidth() const { return m_divideWidth; }
         [[nodiscard]] qreal ringWidth()   const { return m_ringWidth; }
 
+        // ── Focus ring getters ───────────────────────────────────
+        [[nodiscard]] QColor focusRingColor()     const { return m_focusRingColor; }
+        [[nodiscard]] QColor focusRingColorDark() const { return m_focusRingColorDark; }
+
         // ── Background getters ─────────────────────────────────────
         [[nodiscard]] QColor bodyBackgroundColor()     const { return m_bodyBackgroundColor; }
         [[nodiscard]] QColor bodyBackgroundColorDark() const { return m_bodyBackgroundColorDark; }
@@ -126,6 +134,13 @@ namespace Nandina::Core::Primitives {
         void setBorderWidth(qreal width);
         void setDivideWidth(qreal width);
         void setRingWidth(qreal width);
+
+        // ── Focus ring setters ───────────────────────────────────
+        void setFocusRingColor(const QColor &color);
+        void setFocusRingColorDark(const QColor &color);
+
+        // ── QML convenience: resolve focus ring color by dark mode ───
+        Q_INVOKABLE QColor resolveFocusRingColor(bool isDark) const;
 
         // ── Background setters ─────────────────────────────────────
         void setBodyBackgroundColor(const QColor &color);
@@ -150,6 +165,10 @@ namespace Nandina::Core::Primitives {
         qreal m_borderWidth{1.0};
         qreal m_divideWidth{1.0};
         qreal m_ringWidth{1.0};
+
+        // Focus ring colors
+        QColor m_focusRingColor{QColor(0x3B, 0x82, 0xF6)};      // blue-500 — accessible default
+        QColor m_focusRingColorDark{QColor(0x60, 0xA5, 0xFA)};   // blue-400 for dark mode
 
         // Background
         QColor m_bodyBackgroundColor{Qt::white};

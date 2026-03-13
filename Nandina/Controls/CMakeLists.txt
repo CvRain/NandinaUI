@@ -31,6 +31,7 @@ qt_add_qml_module(${SUBPROJECT_NAME}
         DEPENDENCIES
         Nandina.Color
         Nandina.Primitives
+        Nandina.Tokens
         Nandina.Types
         Nandina.Theme
         QML_FILES ${SUBPROJECT_QML_FILES} ${SUBPROJECT_QML_SINGLETON_FILES}
@@ -41,6 +42,7 @@ target_link_libraries(${SUBPROJECT_NAME} PUBLIC
         Qt6::Gui
         Qt6::Quick
         NandinaTheme
+        NandinaTokens
 )
 
 target_include_directories(${SUBPROJECT_NAME} PUBLIC

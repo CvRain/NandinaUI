@@ -28,14 +28,13 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import Nandina.Theme
+import Nandina.Tokens
 import Nandina.Controls
-import Nandina.Types
 
 Item {
     id: root
 
-    readonly property var _colorVariantTypes: ThemeVariant.ColorVariantTypes || ({})
-    readonly property int _colorSurface: _colorVariantTypes.Surface ?? 6
+    readonly property int _colorSurface: NanTokens.colorSurface
 
     // ── Public API ────────────────────────────────────────────────────────
     /// Which side of the parent the sidebar is docked to.

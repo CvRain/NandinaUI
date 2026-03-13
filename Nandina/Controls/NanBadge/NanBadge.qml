@@ -38,20 +38,16 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import Nandina.Theme
-import Nandina.Types
+import Nandina.Tokens
 
 Item {
     id: root
 
-    readonly property var _colorVariantTypes: ThemeVariant.ColorVariantTypes || ({})
-    readonly property var _presetTypes: ThemeVariant.PresetTypes || ({})
-    readonly property var _sizeTypes: ThemeVariant.SizeTypes || ({})
-
-    readonly property int _colorPrimary: _colorVariantTypes.Primary ?? 0
-    readonly property int _colorSurface: _colorVariantTypes.Surface ?? 6
-    readonly property int _presetFilled: _presetTypes.Filled ?? 0
-    readonly property int _presetOutlined: _presetTypes.Outlined ?? 2
-    readonly property int _sizeMd: _sizeTypes.Md ?? 1
+    readonly property int _colorPrimary: NanTokens.colorPrimary
+    readonly property int _colorSurface: NanTokens.colorSurface
+    readonly property int _presetFilled: NanTokens.presetFilled
+    readonly property int _presetOutlined: NanTokens.presetOutlined
+    readonly property int _sizeMd: NanTokens.sizeMd
 
     // ── API ────────────────────────────────────────────────────────
 
@@ -102,36 +98,15 @@ Item {
     readonly property real _iconGap: _sp * 1.5
     readonly property real _fontSize: [10, 11, 13][size]
 
-    // ── Private: palette (indexed by ColorVariantTypes: primary=0 … surface=6) ─
-    readonly property var _palette: [ThemeManager.colors.primary    // Primary   = 0
-        , ThemeManager.colors.secondary  // Secondary = 1
-        , ThemeManager.colors.tertiary   // Tertiary  = 2
-        , ThemeManager.colors.success    // Success   = 3
-        , ThemeManager.colors.warning    // Warning   = 4
-        , ThemeManager.colors.error      // Error     = 5
-        , ThemeManager.colors.surface     // Surface   = 6
-    ][colorVariant] ?? ThemeManager.colors.surface
-
-    // ── Private: shade helper — maps shade number → palette shade property.
-    readonly property var _shadeIdx: ({
-            50: 0,
-            100: 1,
-            200: 2,
-            300: 3,
-            400: 4,
-            500: 5,
-            600: 6,
-            700: 7,
-            800: 8,
-            900: 9,
-            950: 10
-        })
-    readonly property var _paletteShades: _palette ? [_palette.shade50, _palette.shade100, _palette.shade200, _palette.shade300, _palette.shade400, _palette.shade500, _palette.shade600, _palette.shade700, _palette.shade800, _palette.shade900, _palette.shade950] : []
+    // ── Private: palette (via ColorSchema.palette) ─────────────────
+    readonly property var _palette: ThemeManager.colors.palette(colorVariant)
 
     function _shade(s) {
-        if (!_paletteShades.length)
+        if (!_palette)
             return "transparent";
-        return _paletteShades[_shadeIdx[s] ?? 5] ?? _paletteShades[5] ?? "transparent";
+        // Dummy-read a named shade property so QML tracks _palette.changed.
+        const _ = _palette.shade500;
+        return _palette.shade(NanTokens.shadeIndex(s));
     }
 
     // ── Private: colours (indexed by PresetTypes: filled=0, tonal=1, outlined=2, ghost=3) ─

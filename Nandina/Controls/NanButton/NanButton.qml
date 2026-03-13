@@ -37,33 +37,30 @@
 
 import QtQuick
 import Nandina.Theme
-import Nandina.Types
+import Nandina.Tokens
 import Nandina.Controls
 
 Item {
     id: root
 
-    readonly property var _colorVariantTypes: ThemeVariant.ColorVariantTypes || ({})
-    readonly property var _presetTypes: ThemeVariant.PresetTypes || ({})
-    readonly property var _sizeTypes: ThemeVariant.SizeTypes || ({})
+    // ── Token aliases (from NanTokens singleton) ──────────────────
+    readonly property int _colorPrimary: NanTokens.colorPrimary
+    readonly property int _colorSecondary: NanTokens.colorSecondary
+    readonly property int _colorTertiary: NanTokens.colorTertiary
+    readonly property int _colorSuccess: NanTokens.colorSuccess
+    readonly property int _colorWarning: NanTokens.colorWarning
+    readonly property int _colorError: NanTokens.colorError
+    readonly property int _colorSurface: NanTokens.colorSurface
 
-    readonly property int _colorPrimary: _colorVariantTypes.Primary ?? 0
-    readonly property int _colorSecondary: _colorVariantTypes.Secondary ?? 1
-    readonly property int _colorTertiary: _colorVariantTypes.Tertiary ?? 2
-    readonly property int _colorSuccess: _colorVariantTypes.Success ?? 3
-    readonly property int _colorWarning: _colorVariantTypes.Warning ?? 4
-    readonly property int _colorError: _colorVariantTypes.Error ?? 5
-    readonly property int _colorSurface: _colorVariantTypes.Surface ?? 6
+    readonly property int _presetFilled: NanTokens.presetFilled
+    readonly property int _presetTonal: NanTokens.presetTonal
+    readonly property int _presetOutlined: NanTokens.presetOutlined
+    readonly property int _presetGhost: NanTokens.presetGhost
+    readonly property int _presetLink: NanTokens.presetLink
 
-    readonly property int _presetFilled: _presetTypes.Filled ?? 0
-    readonly property int _presetTonal: _presetTypes.Tonal ?? 1
-    readonly property int _presetOutlined: _presetTypes.Outlined ?? 2
-    readonly property int _presetGhost: _presetTypes.Ghost ?? 3
-    readonly property int _presetLink: _presetTypes.Link ?? 4
-
-    readonly property int _sizeSm: _sizeTypes.Sm ?? 0
-    readonly property int _sizeMd: _sizeTypes.Md ?? 1
-    readonly property int _sizeLg: _sizeTypes.Lg ?? 2
+    readonly property int _sizeSm: NanTokens.sizeSm
+    readonly property int _sizeMd: NanTokens.sizeMd
+    readonly property int _sizeLg: NanTokens.sizeLg
 
     // ── Geometry ───────────────────────────────────────────────────
     implicitWidth: Math.max(_minWidth, _contentRow.implicitWidth + _hPadding * 2)
@@ -130,22 +127,8 @@ Item {
     readonly property real _hPadding: [_sp * 3, _sp * 4, _sp * 5][size] ?? (_sp * 4)
     readonly property real _iconSpacing: _sp * 2
     readonly property real _fontSize: [Math.round(12 * ThemeManager.primitives.textScaling), Math.round(13 * ThemeManager.primitives.textScaling), Math.round(15 * ThemeManager.primitives.textScaling)][size] ?? Math.round(13 * ThemeManager.primitives.textScaling)
-    // ── Private: palette ──────────────────────────────────────────
-    readonly property var _palette: [ThemeManager.colors.primary, ThemeManager.colors.secondary, ThemeManager.colors.tertiary, ThemeManager.colors.success, ThemeManager.colors.warning, ThemeManager.colors.error, ThemeManager.colors.surface][colorVariant] ?? ThemeManager.colors.surface
-    readonly property var _shadeIdx: ({
-            50: 0,
-            100: 1,
-            200: 2,
-            300: 3,
-            400: 4,
-            500: 5,
-            600: 6,
-            700: 7,
-            800: 8,
-            900: 9,
-            950: 10
-        })
-    readonly property var _paletteShades: _palette ? [_palette.shade50, _palette.shade100, _palette.shade200, _palette.shade300, _palette.shade400, _palette.shade500, _palette.shade600, _palette.shade700, _palette.shade800, _palette.shade900, _palette.shade950] : []
+    // ── Private: palette (via ColorSchema.palette) ────────────────
+    readonly property var _palette: ThemeManager.colors.palette(colorVariant)
     readonly property string _interactionState: pressed ? "press" : (hovered ? "hover" : "idle")
     readonly property var _bgConfigs: [
         {
@@ -180,11 +163,14 @@ Item {
         }
     ]
 
-    // ── Private: shade helpers ─────────────────────────────────────
+    // ── Private: shade helpers ─────────────────────────────────────────
     function _shade(s) {
-        if (!_paletteShades.length)
+        if (!_palette)
             return "transparent";
-        return _paletteShades[_shadeIdx[s] ?? 5] ?? _paletteShades[5] ?? "transparent";
+        // Dummy-read a named shade property so QML tracks _palette.changed.
+        // Q_INVOKABLE shade() calls are not auto-tracked by the binding engine.
+        const _ = _palette.shade500;
+        return _palette.shade(NanTokens.shadeIndex(s));
     }
 
     function _shadeA(s, alpha) {
@@ -213,12 +199,17 @@ Item {
         if (preset !== root._presetOutlined)
             return "transparent";
         if (_pressable.hovered || _pressable.pressed || _keyPressed)
-            return _shade(_isDark ? 600 : 600);
+            return _shade(_isDark ? 400 : 600);   // FIX: was (_isDark ? 600 : 600)
         return _shade(500);
     }
 
     // ── Private: text colour ───────────────────────────────────────
-    readonly property color _textColor: ["#ffffff", _shade(700), _shade(_isDark ? 700 : 600), _shade(_isDark ? 700 : 600), _shade(_isDark ? 700 : 600)][preset] ?? _shade(600)
+    // FIX: Filled + Surface variant → dark text for contrast (was always "#ffffff")
+    readonly property color _textColor: {
+        if (preset === root._presetFilled)
+            return colorVariant === root._colorSurface ? _shade(950) : "#ffffff";
+        return ["#ffffff", _shade(700), _shade(_isDark ? 300 : 600), _shade(_isDark ? 300 : 600), _shade(_isDark ? 300 : 600)][preset] ?? _shade(600);
+    }
 
     // ── Private: scale / bounce animation ─────────────────────────
     property real _currentScale: 1.0
@@ -343,10 +334,9 @@ Item {
         anchors.fill: _bg
         radius: _bg.radius
         color: "transparent"
-        border.width: 2
-        border.color: root._shade(500)
+        border.width: ThemeManager.primitives.ringWidth
+        border.color: ThemeManager.primitives.resolveFocusRingColor(ThemeManager.darkMode)
         visible: root.activeFocus
-        opacity: 0.65
     }
 
     // ── Content row ────────────────────────────────────────────────

@@ -46,19 +46,16 @@
 import QtQuick
 import QtQuick.Layouts
 import Nandina.Theme
+import Nandina.Tokens
 import Nandina.Controls
-import Nandina.Types
 
 Item {
     id: root
 
-    readonly property var _colorVariantTypes: ThemeVariant.ColorVariantTypes || ({})
-    readonly property var _presetTypes: ThemeVariant.PresetTypes || ({})
-
-    readonly property int _colorSurface: _colorVariantTypes.Surface ?? 6
-    readonly property int _presetFilled: _presetTypes.Filled ?? 0
-    readonly property int _presetTonal: _presetTypes.Tonal ?? 1
-    readonly property int _presetOutlined: _presetTypes.Outlined ?? 2
+    readonly property int _colorSurface: NanTokens.colorSurface
+    readonly property int _presetFilled: NanTokens.presetFilled
+    readonly property int _presetTonal: NanTokens.presetTonal
+    readonly property int _presetOutlined: NanTokens.presetOutlined
 
     // ── Geometry ───────────────────────────────────────────────────
     implicitWidth: 300
@@ -89,17 +86,16 @@ Item {
     property string description: ""
 
     /// Optional widget anchored to the top-right of the header (CardAction).
-    /// Assign any Item — it will be reparented into the header action slot.
-    property Item headerAction: null
+    /// Pass a Component — it will be instantiated into the header action slot.
+    property Component headerAction: null
 
-    // ── Content (default slot) ──────────────────────────────────────
+    // ── Content (default slot) ──────────────────────────────────────────
     /// All direct children flow into the card body.
     default property alias content: _contentArea.data
 
-    // ── Footer ─────────────────────────────────────────────────────
-    /// Optional item placed in the footer area (e.g. a Row of buttons).
-    /// The item is automatically stretched to the card width.
-    property Item footer: null
+    // ── Footer ────────────────────────────────────────────────────
+    /// Optional Component placed in the footer area (e.g. a Row of buttons).
+    property Component footer: null
 
     // ── Layout ─────────────────────────────────────────────────────
     /// Inner padding applied to the header / content / footer sections.
@@ -296,22 +292,12 @@ Item {
                 }
             }
 
-            // Header action slot (CardAction — top-right widget)
-            Item {
+            // Header action slot (CardAction — 用 Loader 加载，避免手动 reparent)
+            Loader {
                 id: _headerActionSlot
                 visible: root.headerAction !== null
-                implicitWidth: root.headerAction ? root.headerAction.implicitWidth : 0
-                implicitHeight: root.headerAction ? root.headerAction.implicitHeight : 0
-
-                Component.onCompleted: _reparentAction()
-                onVisibleChanged: _reparentAction()
-
-                function _reparentAction() {
-                    if (root.headerAction && root.headerAction.parent !== _headerActionSlot) {
-                        root.headerAction.parent = _headerActionSlot;
-                        root.headerAction.anchors.fill = _headerActionSlot;
-                    }
-                }
+                active: root.headerAction !== null
+                sourceComponent: root.headerAction
             }
         }
 
@@ -343,25 +329,16 @@ Item {
         }
 
         // ── Footer ─────────────────────────────────────────────────
-        Item {
+        Loader {
             id: _footerSlot
             visible: root.footer !== null
+            active: root.footer !== null
             Layout.fillWidth: true
             Layout.leftMargin: root.cardPadding
             Layout.rightMargin: root.cardPadding
             Layout.topMargin: root.showDividers ? root.cardPadding * 0.75 : 0
             Layout.bottomMargin: root.cardPadding
-            implicitHeight: root.footer ? root.footer.implicitHeight : 0
-
-            Component.onCompleted: _reparentFooter()
-            onVisibleChanged: _reparentFooter()
-
-            function _reparentFooter() {
-                if (root.footer && root.footer.parent !== _footerSlot) {
-                    root.footer.parent = _footerSlot;
-                    root.footer.width = Qt.binding(() => _footerSlot.width);
-                }
-            }
+            sourceComponent: root.footer
         }
     }
 

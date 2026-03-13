@@ -43,9 +43,9 @@ Item {
     /// Optional title string.  Leave empty ("") to hide the header.
     property string title: ""
 
-    /// Override to place custom widgets in the header right-side slot.
+    /// Optional Component placed in the header right-side slot.
     /// e.g.:  headerAction: NanButton { text: "Edit" }
-    property Item headerAction: null
+    property Component headerAction: null
 
     // ── Appearance ────────────────────────────────────────────────
     /// Forwarded to NanSurface.
@@ -104,26 +104,12 @@ Item {
                 elide: Text.ElideRight
             }
 
-            // Header action slot ────────────────────────────────────
-            Item {
+            // Header action slot (用 Loader 加载 — 避免手动 reparent)
+            Loader {
                 id: _headerActionSlot
                 visible: root.headerAction !== null
-                implicitWidth: root.headerAction ? root.headerAction.implicitWidth : 0
-                implicitHeight: root.headerAction ? root.headerAction.implicitHeight : 0
-
-                // Re-parent the supplied action item into this slot
-                onVisibleChanged: {
-                    if (root.headerAction && root.headerAction.parent !== _headerActionSlot) {
-                        root.headerAction.parent = _headerActionSlot;
-                        root.headerAction.anchors.fill = _headerActionSlot;
-                    }
-                }
-                Component.onCompleted: {
-                    if (root.headerAction) {
-                        root.headerAction.parent = _headerActionSlot;
-                        root.headerAction.anchors.fill = _headerActionSlot;
-                    }
-                }
+                active: root.headerAction !== null
+                sourceComponent: root.headerAction
             }
         }
 

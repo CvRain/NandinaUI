@@ -44,7 +44,9 @@ Item {
         id: _tapHandler
         enabled: root.enabled
 
-        longPressThreshold: root.longPressInterval > 0 ? (root.longPressInterval / 1000.0) : 0.8     // Qt default, signal only emitted if connected
+        // When longPressInterval is 0 (disabled), set an absurdly large threshold
+        // so TapHandler never enters the long-press path and suppresses tapped().
+        longPressThreshold: root.longPressInterval > 0 ? (root.longPressInterval / 1000.0) : 86400
 
         onPressedChanged: {
             if (pressed)

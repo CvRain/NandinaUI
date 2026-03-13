@@ -236,6 +236,7 @@ Item {
                         }
                     ]
                     delegate: NanPanel {
+                        id: _panelDelegate
                         required property var modelData
                         width: 220
                         colorVariant: modelData.value
@@ -244,7 +245,7 @@ Item {
                         title: modelData.label + " Panel"
 
                         Text {
-                            text: "colorVariant: " + parent.modelData.label
+                            text: "colorVariant: " + _panelDelegate.modelData.label
                             font.pixelSize: 12
                             color: ThemeManager.darkMode ? ThemeManager.colors.surface.shade700 : ThemeManager.colors.surface.shade600
                         }
