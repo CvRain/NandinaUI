@@ -10,6 +10,7 @@ set(SUBPROJECT_QML_SINGLETON_FILES
 
 set(SUBPROJECT_CPP_FILES
         theme_type.hpp
+        theme_registry.hpp
         color_utils.hpp
 )
 

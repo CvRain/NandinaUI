@@ -15,6 +15,13 @@ set(SUBPROJECT_CPP_FILES
         color_factory.hpp
 )
 
+file(GLOB SUBPROJECT_RESOURCE_FILES CONFIGURE_DEPENDS
+        RELATIVE ${CMAKE_CURRENT_SOURCE_DIR}
+        themes/*.json
+)
+
+list(SORT SUBPROJECT_RESOURCE_FILES)
+
 qt_add_qml_module(${SUBPROJECT_NAME}
         URI ${SUBPROJECT_URI}
         VERSION 1.0
@@ -22,7 +29,13 @@ qt_add_qml_module(${SUBPROJECT_NAME}
         SOURCES ${SUBPROJECT_CPP_FILES}
 )
 
+qt_add_resources(${SUBPROJECT_NAME} ${SUBPROJECT_NAME}Resources
+        PREFIX /Nandina/Color
+        FILES ${SUBPROJECT_RESOURCE_FILES}
+)
+
 target_link_libraries(${SUBPROJECT_NAME} PUBLIC
+        Qt6::Core
         Qt6::Gui
         Qt6::Quick
         NandinaTypes

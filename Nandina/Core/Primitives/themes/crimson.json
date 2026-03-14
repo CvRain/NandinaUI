@@ -1,0 +1,31 @@
+{
+  "theme": "Crimson",
+  "primitives": {
+    "--spacing": 4.0,
+    "--text-scaling": 1.067,
+    "--radius-base": 6.0,
+    "--radius-container": 12.0,
+    "--border-width": 1.0,
+    "--divide-width": 1.0,
+    "--ring-width": 1.0,
+    "--focus-ring-color": "#3B82F6",
+    "--focus-ring-color-dark": "#60A5FA",
+    "--body-background-color": "#FFFFFF",
+    "--body-background-color-dark": "#0C0E17",
+    "--base-font-weight": 400,
+    "--base-font-italic": false,
+    "--base-font-letter-spacing": 0.0,
+    "--base-font-color": "#0C0E17",
+    "--base-font-color-dark": "#E0E0E0",
+    "--heading-font-weight": 400,
+    "--heading-font-italic": false,
+    "--heading-font-letter-spacing": 0.0,
+    "--heading-font-color": "#0C0E17",
+    "--heading-font-color-dark": "#E0E0E0",
+    "--anchor-font-weight": 400,
+    "--anchor-font-italic": false,
+    "--anchor-font-letter-spacing": 0.0,
+    "--anchor-font-color": "#D21D3D",
+    "--anchor-font-color-dark": "#D21D3D"
+  }
+}

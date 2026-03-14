@@ -28,6 +28,13 @@ namespace Nandina::Core {
         return QColor::fromRgba(rgbaToArgb(rgba));
     }
 
+    /// Convert QColor → RGBA hex (0xRRGGBBAA).
+    [[nodiscard("discard means the conversion was pointless")]]
+    constexpr uint32_t qColorToRgba(const QColor &color) noexcept {
+        return (static_cast<uint32_t>(color.red()) << 24u) | (static_cast<uint32_t>(color.green()) << 16u) |
+               (static_cast<uint32_t>(color.blue()) << 8u) | static_cast<uint32_t>(color.alpha());
+    }
+
 } // namespace Nandina::Core
 
 #endif // NANDINA_COLOR_UTILS_HPP

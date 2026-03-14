@@ -1,0 +1,31 @@
+{
+  "theme": "Concord",
+  "primitives": {
+    "--spacing": 4.0,
+    "--text-scaling": 1.067,
+    "--radius-base": 6.0,
+    "--radius-container": 12.0,
+    "--border-width": 1.0,
+    "--divide-width": 1.0,
+    "--ring-width": 1.0,
+    "--focus-ring-color": "#3B82F6",
+    "--focus-ring-color-dark": "#60A5FA",
+    "--body-background-color": "#FFFFFF",
+    "--body-background-color-dark": "#2B2B30",
+    "--base-font-weight": 400,
+    "--base-font-italic": false,
+    "--base-font-letter-spacing": 0.0,
+    "--base-font-color": "#1E1E23",
+    "--base-font-color-dark": "#F5F5F5",
+    "--heading-font-weight": 700,
+    "--heading-font-italic": false,
+    "--heading-font-letter-spacing": 0.4,
+    "--heading-font-color": "#1E1E23",
+    "--heading-font-color-dark": "#F5F5F5",
+    "--anchor-font-weight": 400,
+    "--anchor-font-italic": false,
+    "--anchor-font-letter-spacing": 0.0,
+    "--anchor-font-color": "#3F93DF",
+    "--anchor-font-color-dark": "#44A3F5"
+  }
+}

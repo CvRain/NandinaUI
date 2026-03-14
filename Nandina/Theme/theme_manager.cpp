@@ -4,6 +4,8 @@
 
 #include "theme_manager.hpp"
 
+#include "theme_registry.hpp"
+
 namespace Nandina::Theme {
 
     ThemeManager::ThemeManager(QObject *parent) : QObject(parent) {
@@ -13,7 +15,7 @@ namespace Nandina::Theme {
 
         // Create the CONSTANT schema objects — pointers never change,
         // only internal values are updated via applyCurrentTheme().
-        m_colors     = new Core::Color::ColorSchema(this);
+        m_colors = new Core::Color::ColorSchema(this);
         m_primitives = new Core::Primitives::PrimitiveSchema(this);
 
         // Apply default theme (Aurora, light mode)
@@ -27,7 +29,7 @@ namespace Nandina::Theme {
     }
 
     QString ThemeManager::currentThemeName() const {
-        return Core::Types::ThemeVariant::themeTypeName(m_currentTheme);
+        return Core::Types::ThemeRegistry::themeName(m_currentTheme);
     }
 
     bool ThemeManager::darkMode() const {
@@ -43,7 +45,7 @@ namespace Nandina::Theme {
     }
 
     QStringList ThemeManager::availableThemes() const {
-        return Core::Types::ThemeVariant::allThemeTypeNames();
+        return Core::Types::ThemeRegistry::availableThemeNames();
     }
 
     // ─── Setters ───────────────────────────────────────────────────
@@ -69,11 +71,11 @@ namespace Nandina::Theme {
     // ─── QML convenience methods ───────────────────────────────────
 
     void ThemeManager::setThemeByName(const QString &name) {
-        setCurrentTheme(Core::Types::ThemeVariant::themeTypeFromName(name));
+        setCurrentTheme(Core::Types::ThemeRegistry::themeFromName(name));
     }
 
     QString ThemeManager::themeName(const Core::Types::ThemeVariant::ThemeTypes theme) {
-        return Core::Types::ThemeVariant::themeTypeName(theme);
+        return Core::Types::ThemeRegistry::themeName(theme);
     }
 
     // ─── Internal ──────────────────────────────────────────────────

@@ -5,29 +5,28 @@
 #ifndef NANDINA_COLOR_FACTORY_HPP
 #define NANDINA_COLOR_FACTORY_HPP
 
+#include <QColor>
 #include <array>
 
 #include "color_schema.hpp"
-#include "color_utils.hpp"
 #include "theme_type.hpp"
 
 namespace Nandina::Core::Color {
 
-    // 11 accent hex values per variant (RGBA format: 0xRRGGBBFF)
-    using AccentHexArray = std::array<uint32_t, AccentCount>;
+    using ThemeShadeArray = std::array<QColor, AccentCount>;
 
     // Complete color data for one theme (7 variants × 11 shades)
     struct ThemeColorData {
-        AccentHexArray primary;
-        AccentHexArray secondary;
-        AccentHexArray tertiary;
-        AccentHexArray success;
-        AccentHexArray warning;
-        AccentHexArray error;
-        AccentHexArray surface;
+        ThemeShadeArray primary;
+        ThemeShadeArray secondary;
+        ThemeShadeArray tertiary;
+        ThemeShadeArray success;
+        ThemeShadeArray warning;
+        ThemeShadeArray error;
+        ThemeShadeArray surface;
 
         // Array-style access by variant index
-        [[nodiscard]] const AccentHexArray &operator[](int variantIndex) const noexcept {
+        [[nodiscard]] const ThemeShadeArray &operator[](int variantIndex) const noexcept {
             switch (variantIndex) {
                 case 0:
                     return primary;
@@ -57,7 +56,7 @@ namespace Nandina::Core::Color {
 
     private:
         static const ThemeColorData &getThemeData(Types::ThemeVariant::ThemeTypes theme);
-        static void applyVariant(const AccentHexArray &hexColors, bool isDark, ColorPalette *palette);
+        static void applyVariant(const ThemeShadeArray &colors, bool isDark, ColorPalette *palette);
     };
 
 } // namespace Nandina::Core::Color

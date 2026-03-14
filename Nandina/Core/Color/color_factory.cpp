@@ -4,597 +4,130 @@
 
 #include "color_factory.hpp"
 
+#include <QFile>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonParseError>
+
+#include <array>
+
+#include "theme_registry.hpp"
+
 namespace Nandina::Core::Color {
 
-    // ═══════════════════════════════════════════════════════════════
-    //  Static theme color data (light-mode ordering)
-    //  For dark mode the shade array is reversed by applyVariant().
-    //  Hex format: 0xRRGGBBAA (RGBA), converted to ARGB at apply time.
-    // ═══════════════════════════════════════════════════════════════
+    namespace {
 
-    // ── Aurora ─────────────────────────────────────────────────────────
-    // Modern, vivid, Discord/neon-shell inspired.
-    // primary   = Electric Violet  (9333EA family)
-    // secondary = Neon Fuchsia     (EC4899 family)
-    // tertiary  = Electric Cyan    (06B6D4 family)
-    // surface   = Deep Space Purple (0E0A1F → F8F7FF)
-    static const ThemeColorData s_auroraData = {
-            // primary — Electric Violet
-            {0xF3E8FFFF,
-             0xE9D5FFFF,
-             0xD8B4FEFF,
-             0xC084FCFF,
-             0xA855F7FF,
-             0x9333EAFF,
-             0x7C3AEDFF,
-             0x6D28D9FF,
-             0x5B21B6FF,
-             0x4C1D95FF,
-             0x2E1065FF},
-            // secondary — Neon Fuchsia
-            {0xFDF2F8FF,
-             0xFCE7F3FF,
-             0xFBCFE8FF,
-             0xF9A8D4FF,
-             0xF472B6FF,
-             0xEC4899FF,
-             0xDB2777FF,
-             0xBE185DFF,
-             0x9D174DFF,
-             0x831843FF,
-             0x500724FF},
-            // tertiary — Electric Cyan
-            {0xECFEFFFF,
-             0xCFFAFEFF,
-             0xA5F3FCFF,
-             0x67E8F9FF,
-             0x22D3EEFF,
-             0x06B6D4FF,
-             0x0891B2FF,
-             0x0E7490FF,
-             0x155E75FF,
-             0x164E63FF,
-             0x083344FF},
-            // success — Neon Lime Green
-            {0xF0FDF4FF,
-             0xDCFCE7FF,
-             0xBBF7D0FF,
-             0x86EFACFF,
-             0x4ADE80FF,
-             0x22C55EFF,
-             0x16A34AFF,
-             0x15803DFF,
-             0x166534FF,
-             0x14532DFF,
-             0x052E16FF},
-            // warning — Amber
-            {0xFFFBEBFF,
-             0xFEF3C7FF,
-             0xFDE68AFF,
-             0xFCD34DFF,
-             0xFBBF24FF,
-             0xF59E0BFF,
-             0xD97706FF,
-             0xB45309FF,
-             0x92400EFF,
-             0x78350FFF,
-             0x451A03FF},
-            // error — Rose Red
-            {0xFFF1F2FF,
-             0xFFE4E6FF,
-             0xFECDD3FF,
-             0xFDA4AFFF,
-             0xFB7185FF,
-             0xF43F5EFF,
-             0xE11D48FF,
-             0xBE123CFF,
-             0x9F1239FF,
-             0x881337FF,
-             0x4C0519FF},
-            // surface — Deep Space Purple (light lavender → deep navy-purple)
-            {0xF8F7FFFF,
-             0xEDEAFFFF,
-             0xDDD8FFFF,
-             0xC4BCFAFF,
-             0xA89BE8FF,
-             0x887AD0FF,
-             0x6B60B3FF,
-             0x52498EFF,
-             0x3A3368FF,
-             0x221D42FF,
-             0x0E0A1FFF},
-    };
+        constexpr std::array<const char *, VariantCount> kVariantNames = {
+                "primary",
+                "secondary",
+                "tertiary",
+                "success",
+                "warning",
+                "error",
+                "surface",
+        };
 
-    static const ThemeColorData s_catppuccinData = {
-            // primary
-            {0xE9FBFFFF,
-             0xD3E4FEFF,
-             0xBBCDFDFF,
-             0xA1B5FFFF,
-             0x8A9EFDFF,
-             0x7186FFFF,
-             0x6F81ECFF,
-             0x6A7BDEFF,
-             0x6476D1FF,
-             0x6270BEFF,
-             0x5D6AB0FF},
-            // secondary
-            {0xF7C1E8FF,
-             0xF1B4E0FF,
-             0xF3A3DDFF,
-             0xF093D7FF,
-             0xEE83D2FF,
-             0xE977CAFF,
-             0xD067B3FF,
-             0xB25A9BFF,
-             0x994A85FF,
-             0x7C3C6DFF,
-             0x612E55FF},
-            // tertiary
-            {0x93E2D5FF,
-             0x76D3C9FF,
-             0x64C2BDFF,
-             0x42B3B2FF,
-             0x2CA2A5FF,
-             0x0F9299FF,
-             0x148287FF,
-             0x167276FF,
-             0x166264FF,
-             0x155253FF,
-             0x124241FF},
-            // success
-            {0xA6E3A1FF,
-             0x90D787FF,
-             0x7DC872FF,
-             0x67BC57FF,
-             0x52AD41FF,
-             0x3EA028FF,
-             0x39902BFF,
-             0x337F2CFF,
-             0x2D6F2CFF,
-             0x265E2BFF,
-             0x1E4E2AFF},
-            // warning
-            {0xF9E2AFFF,
-             0xF4D191FF,
-             0xF0C073FF,
-             0xE7B15CFF,
-             0xE49F39FF,
-             0xDF8E1CFF,
-             0xC87F11FF,
-             0xAE731DFF,
-             0x976414FF,
-             0x7D581AFF,
-             0x644A1EFF},
-            // error
-            {0xF38BA8FF,
-             0xEB7392FF,
-             0xE7577CFF,
-             0xDD4466FF,
-             0xD9274FFF,
-             0xD40338FF,
-             0xBD0A36FF,
-             0xA80F34FF,
-             0x921132FF,
-             0x7D122FFF,
-             0x65172DFF},
-            // surface
-            {0xDDE0E7FF,
-             0xCDD0D7FF,
-             0xBBC0CEFF,
-             0xACAFBDFF,
-             0x9D9FADFF,
-             0x8C8FA3FF,
-             0x76788BFF,
-             0x606275FF,
-             0x4A4B5DFF,
-             0x343546FF,
-             0x1E1E2EFF},
-    };
+        constexpr std::array<int, AccentCount> kShadeOrder = {
+                50,
+                100,
+                200,
+                300,
+                400,
+                500,
+                600,
+                700,
+                800,
+                900,
+                950,
+        };
 
-    static const ThemeColorData s_cerberusData = {
-            {0xD4E6FFFF,
-             0xA7CEFEFF,
-             0x83B8F9FF,
-             0x57A1F9FF,
-             0x2787F8FF,
-             0x0770EFFF,
-             0x0662D3FF,
-             0x0052B4FF,
-             0x064491FF,
-             0x09366FFF,
-             0x0B284FFF},
-            {0xD9CDF1FF,
-             0xC6ADEAFF,
-             0xB189DFFF,
-             0xA06ADBFF,
-             0x8A48CFFF,
-             0x7926CBFF,
-             0x6A22B5FF,
-             0x5E23A4FF,
-             0x4E1F90FF,
-             0x401C7CFF,
-             0x321868FF},
-            {0xFFCFFCFF,
-             0xFFA5E2FF,
-             0xFF7CCAFF,
-             0xFF4EB0FF,
-             0xFC2A97FF,
-             0xFF0881FF,
-             0xE30073FF,
-             0xC90068FF,
-             0xAD005AFF,
-             0x910950FF,
-             0x760243FF},
-            {0xA7FFECFF,
-             0x96FBE5FF,
-             0x83F3DAFF,
-             0x70EED3FF,
-             0x5DE9CAFF,
-             0x56E3C2FF,
-             0x3CC0A4FF,
-             0x319A84FF,
-             0x257566FF,
-             0x1B5249FF,
-             0x0A2D29FF},
-            {0xFFF0CCFF,
-             0xFCE5BBFF,
-             0xFAD9A2FF,
-             0xFAD18AFF,
-             0xF9C46EFF,
-             0xF7B74EFF,
-             0xE3A349FF,
-             0xD38D37FF,
-             0xC37827FF,
-             0xB26417FF,
-             0xA14E0BFF},
-            {0xF7D4D6FF,
-             0xF2B6B5FF,
-             0xF29795FF,
-             0xF47B74FF,
-             0xF45A52FF,
-             0xF53F33FF,
-             0xDF3229FF,
-             0xCC2921FF,
-             0xBA2019FF,
-             0xA5100CFF,
-             0x940402FF},
-            {0xFCFCFCFF,
-             0xE1E1E1FF,
-             0xC1C1C1FF,
-             0xA4A4A4FF,
-             0x868686FF,
-             0x666666FF,
-             0x555555FF,
-             0x454545FF,
-             0x333333FF,
-             0x222222FF,
-             0x121212FF},
-    };
+        QString cssColorTokenName(const char *variantName, const int shade) {
+            return QStringLiteral("--color-%1-%2").arg(QLatin1StringView(variantName)).arg(shade);
+        }
 
-    static const ThemeColorData s_concordData = {
-            {0xE5EAFFFF,
-             0xC9CFFAFF,
-             0xADB5FBFF,
-             0x8F99FAFF,
-             0x7480F3FF,
-             0x5865F2FF,
-             0x4E5AE7FF,
-             0x444EDAFF,
-             0x3B44CFFF,
-             0x3138C3FF,
-             0x272DB8FF},
-            {0xFFCAFFFF,
-             0xFB9CD1FF,
-             0xF588C3FF,
-             0xF470B8FF,
-             0xF05AABFF,
-             0xEC439EFF,
-             0xCE428CFF,
-             0xB4397AFF,
-             0x9A3168FF,
-             0x7D2D56FF,
-             0x592741FF},
-            {0xCBE6FBFF,
-             0xB2D9F8FF,
-             0x99CBF5FF,
-             0x7FBEF3FF,
-             0x5FB0F6FF,
-             0x44A3F5FF,
-             0x3F93DFFF,
-             0x3382CFFF,
-             0x2D72B9FF,
-             0x2261A8FF,
-             0x1D5192FF},
-            {0xE6FFF3FF,
-             0xC7FDDCFF,
-             0xAEF9C9FF,
-             0x8DF8B1FF,
-             0x72F59CFF,
-             0x53F286FF,
-             0x48D971FF,
-             0x2EC157FF,
-             0x21A640FF,
-             0x118D2AFF,
-             0x007411FF},
-            {0xFFF7C9FF,
-             0xFFF4B6FF,
-             0xFFF1A2FF,
-             0xFEED8BFF,
-             0xFEEA74FF,
-             0xFFE758FF,
-             0xE8D14DFF,
-             0xD3BB30FF,
-             0xBCA523FF,
-             0xA68F13FF,
-             0x907900FF},
-            {0xFFD5CCFF,
-             0xFCB8B1FF,
-             0xF69B97FF,
-             0xF67C7AFF,
-             0xF15F60FF,
-             0xEE4044FF,
-             0xDA373AFF,
-             0xC72D30FF,
-             0xAF2A2AFF,
-             0x9C2020FF,
-             0x891515FF},
-            {0xF5F5F5FF,
-             0xD7D7D7FF,
-             0xB9B9C0FF,
-             0x999CA2FF,
-             0x7C7E84FF,
-             0x5F6066FF,
-             0x515359FF,
-             0x44464CFF,
-             0x38383EFF,
-             0x2B2B30FF,
-             0x1E1E23FF},
-    };
+        [[noreturn]] void failThemeLoad(const QString &message) {
+            qFatal("%s", qPrintable(QStringLiteral("ColorFactory theme loading failed: %1").arg(message)));
+        }
 
-    static const ThemeColorData s_crimsonData = {
-            {0xF8CDD6FF,
-             0xF3A8B7FF,
-             0xEC8398FF,
-             0xE55D79FF,
-             0xDD385AFF,
-             0xD21D3DFF,
-             0xBD0B33FF,
-             0xA50B2DFF,
-             0x8D0825FF,
-             0x76061EFF,
-             0x5D0217FF},
-            {0xD3EBF7FF,
-             0xB8D6E8FF,
-             0x9DC2D8FF,
-             0x7DADCEFF,
-             0x6299BEFF,
-             0x4785AEFF,
-             0x407699FF,
-             0x31678AFF,
-             0x2A5775FF,
-             0x234861FF,
-             0x1A394CFF},
-            {0xF5F5F5FF,
-             0xF1F1F1FF,
-             0xEDEDEDFF,
-             0xE3E3E3FF,
-             0xD4CCCAFF,
-             0xBFB6B5FF,
-             0xACA4A2FF,
-             0x918987FF,
-             0x746D6BFF,
-             0x605857FF,
-             0x574F4EFF},
-            {0xF5FBECFF,
-             0xF3F8EAFF,
-             0xF1F6E8FF,
-             0xE6F1D4FF,
-             0xD4E7B5FF,
-             0xC1DD95FF,
-             0xAEC787FF,
-             0x91A66FFF,
-             0x75855DFF,
-             0x5F6C4CFF,
-             0x566344FF},
-            {0xFBF6E7FF,
-             0xFBF3DDFF,
-             0xF7F0DAFF,
-             0xF3E7C2FF,
-             0xEBD490FF,
-             0xE5C258FF,
-             0xCCAF5AFF,
-             0xAB9246FF,
-             0x88743BFF,
-             0x705F2FFF,
-             0x675626FF},
-            {0xF6EDEDFF,
-             0xF7E5E6FF,
-             0xF2E0E1FF,
-             0xEFCBCCFF,
-             0xE0A5A7FF,
-             0xD08082FF,
-             0xBF7073FF,
-             0x9D6062FF,
-             0x7F4B4DFF,
-             0x683D3FFF,
-             0x5F3536FF},
-            {0xE0E0E0FF,
-             0xBCBFC6FF,
-             0x9C9EA5FF,
-             0x7A7C89FF,
-             0x585B6DFF,
-             0x353A50FF,
-             0x2E3142FF,
-             0x252838FF,
-             0x1D202FFF,
-             0x151721FF,
-             0x0C0E17FF},
-    };
+        ThemeShadeArray
+        parseVariantColors(const QJsonObject &colorsObject, const QString &themeName, const char *variantName) {
+            ThemeShadeArray shades;
+            for (int index = 0; index < AccentCount; ++index) {
+                const auto tokenName = cssColorTokenName(variantName, kShadeOrder[index]);
+                const auto colorValue = colorsObject.value(tokenName);
+                if (!colorValue.isString()) {
+                    failThemeLoad(QStringLiteral("theme '%1' is missing string token '%2'").arg(themeName, tokenName));
+                }
 
-    static const ThemeColorData s_fennecData = {
-            {0xFAE2B9FF,
-             0xFBC592FF,
-             0xF9A86FFF,
-             0xF78C50FF,
-             0xFA6C23FF,
-             0xF6530DFF,
-             0xDE4403FF,
-             0xC33A12FF,
-             0xA9311BFF,
-             0x8E2722FF,
-             0x771726FF},
-            {0xFEF2DDFF,
-             0xFFEBC9FF,
-             0xFEE3BBFF,
-             0xFDDCAEFF,
-             0xFBD4A0FF,
-             0xFECD8AFF,
-             0xE0B87CFF,
-             0xC7A265FF,
-             0xAD8D4EFF,
-             0x947737FF,
-             0x7A621EFF},
-            {0xEBFEFEFF,
-             0xCAE6E5FF,
-             0xB0CCCAFF,
-             0x90B4B0FF,
-             0x769A96FF,
-             0x55827CFF,
-             0x477471FF,
-             0x396767FF,
-             0x35575BFF,
-             0x294950FF,
-             0x1D3B45FF},
-            {0xD2FFCFFF,
-             0xCAF4C2FF,
-             0xBDEAB1FF,
-             0xB0DF9FFF,
-             0xA4D68EFF,
-             0x98CC7DFF,
-             0x80B466FF,
-             0x699D50FF,
-             0x51853AFF,
-             0x3A6E23FF,
-             0x205608FF},
-            {0xF8FBDDFF,
-             0xF0F1CBFF,
-             0xE9E7B1FF,
-             0xE1DE98FF,
-             0xDAD485FF,
-             0xD2CA72FF,
-             0xB9B35CFF,
-             0xA19C44FF,
-             0x88842AFF,
-             0x706D1CFF,
-             0x575600FF},
-            {0xFFFFFFFF,
-             0xF5EDF0FF,
-             0xF1D8E1FF,
-             0xE7C6D2FF,
-             0xE3B2C3FF,
-             0xD8A1B4FF,
-             0xC08A9DFF,
-             0xA87487FF,
-             0x8F5D70FF,
-             0x77475AFF,
-             0x5F3143FF},
-            {0xB9C0BCFF,
-             0xA4ABA8FF,
-             0x8F9795FF,
-             0x7A8381FF,
-             0x666E6EFF,
-             0x52595BFF,
-             0x484E51FF,
-             0x3E4347FF,
-             0x35383DFF,
-             0x2B2D32FF,
-             0x212227FF},
-    };
+                const auto colorName = colorValue.toString();
+                const QColor color(colorName);
+                if (!color.isValid()) {
+                    failThemeLoad(QStringLiteral("theme '%1' token '%2' has invalid color '%3'")
+                                          .arg(themeName, tokenName, colorName));
+                }
+                shades[index] = color;
+            }
 
-    static const ThemeColorData s_legacyData = {
-            {0xC9F6E8FF,
-             0xA9E8D3FF,
-             0x80DDBFFF,
-             0x5ED1AAFF,
-             0x34C696FF,
-             0x11BA81FF,
-             0x00A470FF,
-             0x168D62FF,
-             0x007752FF,
-             0x0D6143FF,
-             0x004B32FF},
-            {0xE3E1F7FF,
-             0xC5C2F4FF,
-             0xA8A3F0FF,
-             0x8A84ECFF,
-             0x6D66E7FF,
-             0x4F46E5FF,
-             0x443BC9FF,
-             0x3933A8FF,
-             0x2E288DFF,
-             0x23206EFF,
-             0x18174FFF},
-            {0xC9EAF8FF,
-             0xA2DCF7FF,
-             0x81CEF0FF,
-             0x54C1F1FF,
-             0x3BB3EAFF,
-             0x01A5EAFF,
-             0x1B93CDFF,
-             0x0E81B5FF,
-             0x036E9DFF,
-             0x105C80FF,
-             0x034A68FF},
-            {0xE9F4D7FF,
-             0xD5ECB2FF,
-             0xC1E48BFF,
-             0xACDC62FF,
-             0x97D439FF,
-             0x85CC21FF,
-             0x74B506FF,
-             0x669E0BFF,
-             0x58880DFF,
-             0x49710BFF,
-             0x3A5A08FF},
-            {0xF9EDC8FF,
-             0xF5E1A5FF,
-             0xF4D677FF,
-             0xF0CA55FF,
-             0xEEBF26FF,
-             0xEAB312FF,
-             0xD4A207FF,
-             0xBE9100FF,
-             0xA88100FF,
-             0x8F7010FF,
-             0x7A5F06FF},
-            {0xFBDBEAFF,
-             0xF2B5D3FF,
-             0xE88FBCFF,
-             0xE466A4FF,
-             0xDA418DFF,
-             0xD31B76FF,
-             0xBC1A69FF,
-             0xA80A5CFF,
-             0x910950FF,
-             0x7A0743FF,
-             0x630436FF},
-            {0xE4E5ECFF,
-             0xC6C9D7FF,
-             0xA6ADC8FF,
-             0x8892B3FF,
-             0x6876A2FF,
-             0x495A90FF,
-             0x41507FFF,
-             0x39466EFF,
-             0x303B62FF,
-             0x273152FF,
-             0x1F2741FF},
-    };
+            return shades;
+        }
 
-    // ═══════════════════════════════════════════════════════════════
-    //  Public API
-    // ═══════════════════════════════════════════════════════════════
+        ThemeColorData parseThemeData(const Types::ThemeVariant::ThemeTypes theme) {
+            const auto &registration = Types::ThemeRegistry::registration(theme);
+            const auto themeName = QString::fromLatin1(registration.name);
+            const auto resourcePath = Types::ThemeRegistry::colorResourcePath(theme);
+
+            QFile themeFile(resourcePath);
+            if (!themeFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
+                failThemeLoad(QStringLiteral("cannot open %1 for theme '%2'").arg(resourcePath, themeName));
+            }
+
+            QJsonParseError parseError;
+            const auto document = QJsonDocument::fromJson(themeFile.readAll(), &parseError);
+            if (parseError.error != QJsonParseError::NoError || !document.isObject()) {
+                failThemeLoad(QStringLiteral("invalid JSON in %1: %2 at offset %3")
+                                      .arg(resourcePath, parseError.errorString())
+                                      .arg(parseError.offset));
+            }
+
+            const auto rootObject = document.object();
+            const auto themeField = rootObject.value(QStringLiteral("theme"));
+            if (!themeField.isString() || themeField.toString() != themeName) {
+                failThemeLoad(QStringLiteral("resource %1 must declare theme '%2'").arg(resourcePath, themeName));
+            }
+
+            const auto colorsValue = rootObject.value(QStringLiteral("colors"));
+            if (!colorsValue.isObject()) {
+                failThemeLoad(
+                        QStringLiteral("resource %1 must contain an object field named 'colors'").arg(resourcePath));
+            }
+
+            const auto colorsObject = colorsValue.toObject();
+            return {
+                    parseVariantColors(colorsObject, themeName, kVariantNames[0]),
+                    parseVariantColors(colorsObject, themeName, kVariantNames[1]),
+                    parseVariantColors(colorsObject, themeName, kVariantNames[2]),
+                    parseVariantColors(colorsObject, themeName, kVariantNames[3]),
+                    parseVariantColors(colorsObject, themeName, kVariantNames[4]),
+                    parseVariantColors(colorsObject, themeName, kVariantNames[5]),
+                    parseVariantColors(colorsObject, themeName, kVariantNames[6]),
+            };
+        }
+
+        std::array<ThemeColorData, Types::ThemeVariant::ThemeCount> loadThemeDataStore() {
+            std::array<ThemeColorData, Types::ThemeVariant::ThemeCount> themeData;
+            for (const auto &entry: Types::ThemeRegistry::Registrations) {
+                const auto theme = entry.type;
+                themeData[static_cast<int>(theme)] = parseThemeData(theme);
+            }
+            return themeData;
+        }
+
+        const std::array<ThemeColorData, Types::ThemeVariant::ThemeCount> &themeDataStore() {
+            static const auto s_themeData = loadThemeDataStore();
+            return s_themeData;
+        }
+
+    } // namespace
 
     void ColorFactory::applyTheme(const Types::ThemeVariant::ThemeTypes theme, const bool isDark, ColorSchema *schema) {
         const auto &data = getThemeData(theme);
@@ -604,36 +137,16 @@ namespace Nandina::Core::Color {
         }
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    //  Private helpers
-    // ═══════════════════════════════════════════════════════════════
-
     const ThemeColorData &ColorFactory::getThemeData(const Types::ThemeVariant::ThemeTypes theme) {
-        switch (theme) {
-            case Types::ThemeVariant::ThemeTypes::Aurora:
-                return s_auroraData;
-            case Types::ThemeVariant::ThemeTypes::Catppuccin:
-                return s_catppuccinData;
-            case Types::ThemeVariant::ThemeTypes::Cerberus:
-                return s_cerberusData;
-            case Types::ThemeVariant::ThemeTypes::Concord:
-                return s_concordData;
-            case Types::ThemeVariant::ThemeTypes::Crimson:
-                return s_crimsonData;
-            case Types::ThemeVariant::ThemeTypes::Fennec:
-                return s_fennecData;
-            case Types::ThemeVariant::ThemeTypes::Legacy:
-                return s_legacyData;
-        }
-        return s_auroraData;
+        return themeDataStore()[static_cast<int>(theme)];
     }
 
-    void ColorFactory::applyVariant(const AccentHexArray &hexColors, const bool isDark, ColorPalette *palette) {
+    void ColorFactory::applyVariant(const ThemeShadeArray &colors, const bool isDark, ColorPalette *palette) {
         std::array<QColor, AccentCount> shades;
         for (int i = 0; i < AccentCount; ++i) {
             // Dark mode reverses the shade order (50↔950, 100↔900, …)
             const int src = isDark ? (AccentCount - 1 - i) : i;
-            shades[i] = Core::rgbaToQColor(hexColors[src]);
+            shades[i] = colors[src];
         }
         palette->setAllShades(shades);
     }
