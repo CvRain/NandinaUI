@@ -12,12 +12,32 @@
 
 namespace Nandina::Core::Fonts {
 
-    // ─── Static storage ────────────────────────────────────────────
-    QString FontManager::s_lxgwFamily;
-    QString FontManager::s_lxgwMonoFamily;
-    QString FontManager::s_sarasaFamily;
-    QString FontManager::s_cascadiaFamily;
-    bool    FontManager::s_fontsLoaded = false;
+    namespace {
+        QString &lxgwFamilyStorage() {
+            static QString value;
+            return value;
+        }
+
+        QString &lxgwMonoFamilyStorage() {
+            static QString value;
+            return value;
+        }
+
+        QString &sarasaFamilyStorage() {
+            static QString value;
+            return value;
+        }
+
+        QString &cascadiaFamilyStorage() {
+            static QString value;
+            return value;
+        }
+
+        bool &fontsLoadedStorage() {
+            static bool value = false;
+            return value;
+        }
+    }
 
     // ─── Constructor ───────────────────────────────────────────────
 
@@ -30,15 +50,15 @@ namespace Nandina::Core::Fonts {
     QString FontManager::lxgwMonoFamily() const { return resolvedLxgwMonoFamily(); }
     QString FontManager::sarasaFamily()   const { return resolvedSarasaFamily(); }
     QString FontManager::cascadiaFamily() const { return resolvedCascadiaFamily(); }
-    bool    FontManager::fontsLoaded()    const { return s_fontsLoaded; }
+    bool    FontManager::fontsLoaded()    const { return fontsLoadedStorage(); }
 
     // ─── Static accessors (C++-facing, usable after loadBundledFonts) ─
 
     QString FontManager::resolvedDefaultFamily()  { return resolvedLxgwFamily(); }
-    QString FontManager::resolvedLxgwFamily()     { return s_lxgwFamily.isEmpty()     ? QStringLiteral("LXGW WenKai")           : s_lxgwFamily; }
-    QString FontManager::resolvedLxgwMonoFamily() { return s_lxgwMonoFamily.isEmpty() ? QStringLiteral("LXGW WenKai Mono")      : s_lxgwMonoFamily; }
-    QString FontManager::resolvedSarasaFamily()   { return s_sarasaFamily.isEmpty()   ? QStringLiteral("Sarasa UI SC")           : s_sarasaFamily; }
-    QString FontManager::resolvedCascadiaFamily() { return s_cascadiaFamily.isEmpty() ? QStringLiteral("CaskaydiaCove Nerd Font") : s_cascadiaFamily; }
+    QString FontManager::resolvedLxgwFamily()     { return lxgwFamilyStorage().isEmpty()     ? QStringLiteral("LXGW WenKai")            : lxgwFamilyStorage(); }
+    QString FontManager::resolvedLxgwMonoFamily() { return lxgwMonoFamilyStorage().isEmpty() ? QStringLiteral("LXGW WenKai Mono")       : lxgwMonoFamilyStorage(); }
+    QString FontManager::resolvedSarasaFamily()   { return sarasaFamilyStorage().isEmpty()   ? QStringLiteral("Sarasa UI SC")            : sarasaFamilyStorage(); }
+    QString FontManager::resolvedCascadiaFamily() { return cascadiaFamilyStorage().isEmpty() ? QStringLiteral("CaskaydiaCove Nerd Font") : cascadiaFamilyStorage(); }
 
     // ─── Private helpers ───────────────────────────────────────────
 
@@ -91,7 +111,7 @@ namespace Nandina::Core::Fonts {
     }
 
     bool FontManager::loadBundledFonts(const QString &fontsDir) {
-        if (s_fontsLoaded)
+        if (fontsLoadedStorage())
             return true;
 
         const QString baseDir = resolveSearchDir(fontsDir);
@@ -108,8 +128,8 @@ namespace Nandina::Core::Fonts {
         const QString lxgwDir = baseDir + QStringLiteral("/LxgwWenkai");
         if (QDir(lxgwDir).exists()) {
             // Capture family name from the Regular variant first
-            s_lxgwFamily = firstFamilyFromFile(lxgwDir + QStringLiteral("/LXGWWenKai-Regular.ttf"));
-            s_lxgwMonoFamily = firstFamilyFromFile(lxgwDir + QStringLiteral("/LXGWWenKaiMono-Regular.ttf"));
+            lxgwFamilyStorage() = firstFamilyFromFile(lxgwDir + QStringLiteral("/LXGWWenKai-Regular.ttf"));
+            lxgwMonoFamilyStorage() = firstFamilyFromFile(lxgwDir + QStringLiteral("/LXGWWenKaiMono-Regular.ttf"));
             // Load the remaining weights
             loadAllFontsInDir(lxgwDir);
         } else {
@@ -126,12 +146,12 @@ namespace Nandina::Core::Fonts {
                 // Prefer "Sarasa UI SC" for proportional CJK body text
                 for (const QString &f : families) {
                     if (f.contains(QStringLiteral("UI"), Qt::CaseInsensitive)) {
-                        s_sarasaFamily = f;
+                        sarasaFamilyStorage() = f;
                         break;
                     }
                 }
-                if (s_sarasaFamily.isEmpty() && !families.isEmpty())
-                    s_sarasaFamily = families.first();
+                if (sarasaFamilyStorage().isEmpty() && !families.isEmpty())
+                    sarasaFamilyStorage() = families.first();
             }
             loadAllFontsInDir(sarasaDir);
         } else {
@@ -141,20 +161,20 @@ namespace Nandina::Core::Fonts {
         // ── CascadiaMono (Caskaydia Nerd Font) ─────────────────────
         const QString cascadiaDir = baseDir + QStringLiteral("/CascadiaMono");
         if (QDir(cascadiaDir).exists()) {
-            s_cascadiaFamily = firstFamilyFromFile(
+            cascadiaFamilyStorage() = firstFamilyFromFile(
                 cascadiaDir + QStringLiteral("/CaskaydiaMonoNerdFont-Regular.ttf"));
             loadAllFontsInDir(cascadiaDir);
         } else {
             qWarning() << "[Nandina/FontManager] CascadiaMono directory not found:" << cascadiaDir;
         }
 
-        s_fontsLoaded = true;
+        fontsLoadedStorage() = true;
 
         qDebug() << "[Nandina/FontManager] Loaded families:"
-                 << "LXGW WenKai =" << s_lxgwFamily
-                 << "| LXGW WenKai Mono =" << s_lxgwMonoFamily
-                 << "| Sarasa =" << s_sarasaFamily
-                 << "| Cascadia =" << s_cascadiaFamily;
+                 << "LXGW WenKai =" << lxgwFamilyStorage()
+                 << "| LXGW WenKai Mono =" << lxgwMonoFamilyStorage()
+                 << "| Sarasa =" << sarasaFamilyStorage()
+                 << "| Cascadia =" << cascadiaFamilyStorage();
 
         return true;
     }

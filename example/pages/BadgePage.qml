@@ -6,7 +6,7 @@ import Nandina.Theme
 import Nandina.Controls
 import Nandina.Types
 
-Item {
+NanPage {
     id: root
 
     readonly property var _colorVariantTypes: ThemeVariant.ColorVariantTypes || ({})
@@ -40,13 +40,13 @@ Item {
 
             // ── Title ─────────────────────────────────────────────
             Text {
-                text: "Badge"
+                text: root.routeSpec?.navTitle ?? ""
                 font.pixelSize: 28
                 font.bold: true
                 color: ThemeManager.colors.primary.shade700
             }
             Text {
-                text: "小型内联标签，用于分类、状态标注或数字计数。无交互行为。"
+                text: root.routeSpec?.summary ?? ""
                 font.pixelSize: 13
                 color: ThemeManager.colors.surface.shade600
             }

@@ -10,10 +10,11 @@
 #include <array>
 
 #include "theme_type.hpp"
+#include "color_export.hpp"
 
 namespace Nandina::Core::Color {
 
-    using ThemeVariant = Types::ThemeVariant;
+    namespace ThemeVariant = Types::ThemeVariant;
     inline constexpr int AccentCount = ThemeVariant::AccentCount; // 11
     inline constexpr int VariantCount = ThemeVariant::VariantCount; // 7
 
@@ -22,7 +23,7 @@ namespace Nandina::Core::Color {
     //  Stores 11 shades in a flat std::array, indexed by ColorAccentTypes.
     // ═══════════════════════════════════════════════════════════════
 
-    class ColorPalette : public QObject {
+    class NANDINA_COLOR_EXPORT ColorPalette : public QObject {
         Q_OBJECT
         QML_ELEMENT
 
@@ -97,7 +98,7 @@ namespace Nandina::Core::Color {
     //  Internal changed() signals bubble up for QML binding.
     // ═══════════════════════════════════════════════════════════════
 
-    class ColorSchema : public QObject {
+    class NANDINA_COLOR_EXPORT ColorSchema : public QObject {
         Q_OBJECT
         QML_ELEMENT
 

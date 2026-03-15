@@ -10,6 +10,7 @@
 #include <QString>
 #include <QStringList>
 
+#include "theme_export.hpp"
 #include "color_factory.hpp"
 #include "color_schema.hpp"
 #include "font_manager.hpp"
@@ -23,7 +24,7 @@ namespace Nandina::Theme {
     using ColorVariantTypes = Core::Types::ThemeVariant::ColorVariantTypes;
     using ColorAccentTypes = Core::Types::ThemeVariant::ColorAccentTypes;
 
-    class ThemeManager : public QObject {
+    class NANDINA_THEME_EXPORT ThemeManager : public QObject {
         Q_OBJECT
         QML_ELEMENT
         QML_SINGLETON

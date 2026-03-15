@@ -1,0 +1,13 @@
+#ifndef NANDINA_THEME_EXPORT_HPP
+#define NANDINA_THEME_EXPORT_HPP
+
+#include <QtGlobal>
+
+#if defined(NandinaTheme_EXPORTS)
+#define NANDINA_THEME_EXPORT Q_DECL_EXPORT
+#else
+#define NANDINA_THEME_EXPORT Q_DECL_IMPORT
+#endif
+
+#endif // NANDINA_THEME_EXPORT_HPP
+

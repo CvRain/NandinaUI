@@ -6,7 +6,7 @@ import Nandina.Theme
 import Nandina.Controls
 import Nandina.Types
 
-Item {
+NanPage {
     id: root
 
     readonly property var _colorVariantTypes: ThemeVariant.ColorVariantTypes || ({})
@@ -17,7 +17,7 @@ Item {
     readonly property int _colorTertiary: _colorVariantTypes.Tertiary ?? 2
     readonly property int _colorSuccess: _colorVariantTypes.Success ?? 3
     readonly property int _colorWarning: _colorVariantTypes.Warning ?? 4
-    readonly property int _colorError: _colorVariantTypes.Error ?? 5
+    readonly property int _colorError: _colorVariantTypes.Error ?? 53
 
     ScrollView {
         anchors.fill: parent
@@ -28,14 +28,14 @@ Item {
             spacing: 16
 
             Text {
-                text: "Surface / Pressable / Panel"
+                text: root.routeSpec?.navTitle ?? ""
                 font.pixelSize: 28
                 font.bold: true
                 color: ThemeManager.colors.primary.shade700
             }
 
             Text {
-                text: "聚合展示基础容器与交互原语，便于观察状态反馈与组合方式。"
+                text: root.routeSpec?.summary ?? ""
                 font.pixelSize: 13
                 color: ThemeManager.colors.surface.shade600
             }

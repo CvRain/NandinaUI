@@ -2,12 +2,13 @@
 // Main sidebar container.  Compose with NanSideBarGroup / NanSideBarItem.
 //
 // ── Collapsible modes ──────────────────────────────────────────────────────
-//   "icon"      — panel stays visible but shrinks to icon-only width
-//   "offcanvas" — panel slides fully off-screen; thin rail remains clickable
-//   "none"      — always expanded, no toggle
+//   CollapsibleMode.Icon      — panel stays visible but shrinks to icon-only width
+//   CollapsibleMode.Offcanvas — panel slides fully off-screen; thin rail remains clickable
+//   CollapsibleMode.None      — always expanded, no toggle
 //
 // ── Basic usage ───────────────────────────────────────────────────────────
 //   NanSideBar {
+//       collapsible: NanSideBar.Icon
 //       NanSideBarGroup {
 //           title: "Navigation"
 //           NanSideBarItem { text: "Home";     iconText: "⌂"; active: true }
@@ -17,6 +18,7 @@
 //
 // ── With header / footer ──────────────────────────────────────────────────
 //   NanSideBar {
+//       collapsible: NanSideBar.Offcanvas
 //       header: Item { ... }
 //       footer: Item { ... }
 //       NanSideBarGroup { ... }
@@ -41,8 +43,14 @@ Item {
     /// "left" | "right"
     property string side: "left"
 
-    /// Collapse behaviour.  "icon" | "offcanvas" | "none"
-    property string collapsible: "icon"
+    /// Collapse behaviour.  CollapsibleMode.Icon | CollapsibleMode.Offcanvas | CollapsibleMode.None
+    enum CollapsibleMode {
+        Icon,
+        Offcanvas,
+        None
+    }
+
+    property int collapsible: NanSideBar.Icon
 
     /// Whether the sidebar is currently open/expanded.
     property bool open: true
@@ -77,19 +85,19 @@ Item {
     signal toggled(bool open)
 
     // ── Convenience ───────────────────────────────────────────────────────
-    readonly property bool collapsed: collapsible === "icon" && !open
-    readonly property bool offcanvasHidden: collapsible === "offcanvas" && !open
+    readonly property bool collapsed: collapsible === NanSideBar.Icon && !open
+    readonly property bool offcanvasHidden: collapsible === NanSideBar.Offcanvas && !open
 
     // ── Public methods ────────────────────────────────────────────────────
     function toggle() {
-        if (collapsible !== "none")
+        if (collapsible !== NanSideBar.None)
             root.open = !root.open;
     }
     function expand() {
         root.open = true;
     }
     function collapse() {
-        if (collapsible !== "none")
+        if (collapsible !== NanSideBar.None)
             root.open = false;
     }
 
@@ -109,9 +117,9 @@ Item {
 
     // Current panel width (the visual rectangle, may be wider than host item)
     readonly property real _panelWidth: {
-        if (collapsible === "none")
+        if (collapsible === NanSideBar.None)
             return expandedWidth;
-        if (collapsible === "icon")
+        if (collapsible === NanSideBar.Icon)
             return open ? expandedWidth : collapsedWidth;
         return expandedWidth;   // offcanvas: panel always full width, slides via x
     }

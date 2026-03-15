@@ -12,7 +12,7 @@
 #include <QString>
 #include <array>
 
-#include "color_utils.hpp"
+#include "../Utils/color_utils.hpp"
 #include "font_manager.hpp"
 #include "theme_registry.hpp"
 

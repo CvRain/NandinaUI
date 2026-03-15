@@ -11,6 +11,7 @@ set(SUBPROJECT_QML_SINGLETON_FILES
 set(SUBPROJECT_CPP_FILES
         theme_manager.cpp
         theme_manager.hpp
+        theme_export.hpp
 )
 
 qt_add_qml_module(${SUBPROJECT_NAME}

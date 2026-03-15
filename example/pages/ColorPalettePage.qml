@@ -3,10 +3,10 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import Nandina.Theme
+import Nandina.Controls
 
-Item {
+NanPage {
     id: root
-
     ScrollView {
         anchors.fill: parent
         contentWidth: availableWidth
@@ -16,14 +16,14 @@ Item {
             spacing: 14
 
             Text {
-                text: "Color Palettes"
+                text: root.routeSpec?.navTitle ?? ""
                 font.pixelSize: 28
                 font.bold: true
                 color: ThemeManager.colors.primary.shade700
             }
 
             Text {
-                text: "展示语义色板在 50~950 各色阶的实际视觉效果。"
+                text: root.routeSpec?.summary ?? ""
                 font.pixelSize: 13
                 color: ThemeManager.colors.surface.shade600
             }

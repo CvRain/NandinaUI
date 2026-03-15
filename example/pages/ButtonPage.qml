@@ -6,7 +6,7 @@ import Nandina.Theme
 import Nandina.Controls
 import Nandina.Types
 
-Item {
+NanPage {
     id: root
 
     readonly property var _colorVariantTypes: ThemeVariant.ColorVariantTypes || ({})
@@ -47,7 +47,7 @@ Item {
                 color: ThemeManager.colors.primary.shade700
             }
             Text {
-                text: "五种预设 × 七种色彩变体 × 三种尺寸，支持左右图标与键盘交互。"
+                text: root.routeSpec?.summary ?? ""
                 font.pixelSize: 13
                 color: ThemeManager.colors.surface.shade600
                 wrapMode: Text.WordWrap

@@ -59,4 +59,11 @@ Rectangle {
     border.color: bordered ? resolvedBorderColor : "transparent"
     border.width: bordered ? ThemeManager.primitives.borderWidth : 0
     radius: cornerRadius >= 0 ? cornerRadius : ThemeManager.primitives.radiusBase
+
+    Behavior on color {
+        ColorAnimation {
+            duration: 150
+            easing.type: Easing.InOutQuad
+        }
+    }
 }

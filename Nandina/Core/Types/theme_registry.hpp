@@ -10,6 +10,7 @@
 #include <array>
 
 #include "theme_type.hpp"
+#include "global_export.hpp"
 
 namespace Nandina::Core::Types {
 

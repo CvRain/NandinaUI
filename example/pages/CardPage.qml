@@ -6,7 +6,7 @@ import Nandina.Theme
 import Nandina.Controls
 import Nandina.Types
 
-Item {
+NanPage {
     id: root
 
     readonly property var _colorVariantTypes: ThemeVariant.ColorVariantTypes || ({})
@@ -36,7 +36,7 @@ Item {
             }
 
             Text {
-                text: "聚焦 Card 的结构分区、视觉预设与交互状态。"
+                text: root.routeSpec?.summary ?? ""
                 font.pixelSize: 13
                 color: ThemeManager.colors.surface.shade600
             }

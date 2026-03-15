@@ -23,9 +23,12 @@ qt_add_qml_module(${SUBPROJECT_NAME}
         SOURCES ${SUBPROJECT_CPP_FILES}
 )
 
+target_compile_definitions(${SUBPROJECT_NAME} PRIVATE NANDINA_LIBRARY)
+
 target_link_libraries(${SUBPROJECT_NAME} PUBLIC
         Qt6::Gui
         Qt6::Quick
+        NandinaUtils
         NandinaColor
         NandinaPrimitives
         NandinaTypes

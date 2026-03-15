@@ -1,0 +1,13 @@
+#ifndef NANDINA_COLOR_EXPORT_HPP
+#define NANDINA_COLOR_EXPORT_HPP
+
+#include <QtGlobal>
+
+#if defined(NandinaColor_EXPORTS)
+#define NANDINA_COLOR_EXPORT Q_DECL_EXPORT
+#else
+#define NANDINA_COLOR_EXPORT Q_DECL_IMPORT
+#endif
+
+#endif // NANDINA_COLOR_EXPORT_HPP
+

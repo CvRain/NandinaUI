@@ -1,5 +1,5 @@
-set(SUBPROJECT_NAME NandinaTypes)
-set(SUBPROJECT_URI Nandina.Types)
+set(SUBPROJECT_NAME NandinaUtils)
+set(SUBPROJECT_URI Nandina.Utils)
 
 set(SUBPROJECT_QML_FILES
 
@@ -9,8 +9,8 @@ set(SUBPROJECT_QML_SINGLETON_FILES
 )
 
 set(SUBPROJECT_CPP_FILES
-        theme_type.hpp
-        theme_registry.hpp
+        global_export.hpp
+        color_utils.hpp
 )
 
 qt_add_qml_module(${SUBPROJECT_NAME}
@@ -20,12 +20,9 @@ qt_add_qml_module(${SUBPROJECT_NAME}
         SOURCES ${SUBPROJECT_CPP_FILES}
 )
 
-target_compile_definitions(${SUBPROJECT_NAME} PRIVATE NANDINA_LIBRARY)
-
 target_link_libraries(${SUBPROJECT_NAME} PUBLIC
         Qt6::Gui
         Qt6::Quick
-        NandinaUtils
 )
 
 target_include_directories(${SUBPROJECT_NAME} PUBLIC

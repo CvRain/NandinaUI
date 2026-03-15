@@ -8,6 +8,8 @@
 #include <QObject>
 #include <QQmlEngine>
 #include <QString>
+#include "fonts_export.hpp"
+
 
 namespace Nandina::Core::Fonts {
 
@@ -24,7 +26,7 @@ namespace Nandina::Core::Fonts {
     //  available afterwards.
     // ═══════════════════════════════════════════════════════════════
 
-    class FontManager : public QObject {
+    class NANDINA_FONTS_EXPORT FontManager : public QObject {
         Q_OBJECT
         QML_ELEMENT
         QML_SINGLETON
@@ -67,12 +69,6 @@ namespace Nandina::Core::Fonts {
 
     private:
         static QString resolveSearchDir(const QString &override);
-
-        static QString s_lxgwFamily;
-        static QString s_lxgwMonoFamily;
-        static QString s_sarasaFamily;
-        static QString s_cascadiaFamily;
-        static bool    s_fontsLoaded;
     };
 
 } // namespace Nandina::Core::Fonts

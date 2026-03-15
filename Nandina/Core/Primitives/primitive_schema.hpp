@@ -9,6 +9,7 @@
 #include <QObject>
 #include <QQmlEngine>
 #include <QString>
+#include "primitives_export.hpp"
 
 namespace Nandina::Core::Primitives {
 
@@ -16,7 +17,7 @@ namespace Nandina::Core::Primitives {
     //  TypographySchema — one font category (base / heading / anchor)
     // ═══════════════════════════════════════════════════════════════
 
-    class TypographySchema : public QObject {
+    class NANDINA_PRIMITIVES_EXPORT TypographySchema : public QObject {
         Q_OBJECT
         QML_ELEMENT
 
@@ -63,7 +64,7 @@ namespace Nandina::Core::Primitives {
     //  Pointers to TypographySchema sub-objects are CONSTANT.
     // ═══════════════════════════════════════════════════════════════
 
-    class PrimitiveSchema : public QObject {
+    class NANDINA_PRIMITIVES_EXPORT PrimitiveSchema : public QObject {
         Q_OBJECT
         QML_ELEMENT
 
@@ -109,7 +110,7 @@ namespace Nandina::Core::Primitives {
         [[nodiscard]] qreal divideWidth() const { return m_divideWidth; }
         [[nodiscard]] qreal ringWidth()   const { return m_ringWidth; }
 
-        // ── Focus ring getters ───────────────────────────────────
+        // ── Focus ring getters ──────���────────────────────────────
         [[nodiscard]] QColor focusRingColor()     const { return m_focusRingColor; }
         [[nodiscard]] QColor focusRingColorDark() const { return m_focusRingColorDark; }
 

@@ -5,9 +5,37 @@ import QtQuick.Layouts
 import Nandina.Theme
 import Nandina.Controls
 
-Item {
+NanPage {
     id: root
-    property string sidebarMode: "icon"
+    property int sidebarMode: NanSideBar.Icon
+
+    readonly property var sidebarModes: [
+        {
+            text: "NanSideBar.Icon",
+            value: NanSideBar.Icon
+        },
+        {
+            text: "NanSideBar.Offcanvas",
+            value: NanSideBar.Offcanvas
+        },
+        {
+            text: "NanSideBar.None",
+            value: NanSideBar.None
+        }
+    ]
+
+    function sidebarModeLabel(mode) {
+        switch (mode) {
+        case NanSideBar.Icon:
+            return "NanSideBar.Icon";
+        case NanSideBar.Offcanvas:
+            return "NanSideBar.Offcanvas";
+        case NanSideBar.None:
+            return "NanSideBar.None";
+        default:
+            return "unknown";
+        }
+    }
 
     ScrollView {
         anchors.fill: parent
@@ -18,14 +46,14 @@ Item {
             spacing: 12
 
             Text {
-                text: "SideBar"
+                text: root.routeSpec?.navTitle ?? ""
                 font.pixelSize: 28
                 font.bold: true
                 color: ThemeManager.colors.primary.shade700
             }
 
             Text {
-                text: "用于演示分组导航、折叠模式与侧边栏布局行为。"
+                text: root.routeSpec?.summary ?? ""
                 font.pixelSize: 13
                 color: ThemeManager.colors.surface.shade600
             }
@@ -41,11 +69,11 @@ Item {
                 }
 
                 Repeater {
-                    model: ["icon", "offcanvas", "none"]
+                    model: root.sidebarModes
                     delegate: NanButton {
-                        required property string modelData
-                        text: modelData
-                        onClicked: root.sidebarMode = modelData
+                        required property var modelData
+                        text: modelData.text
+                        onClicked: root.sidebarMode = modelData.value
                     }
                 }
             }
@@ -144,7 +172,7 @@ Item {
                             }
                             Text {
                                 anchors.horizontalCenter: parent.horizontalCenter
-                                text: "Sidebar is " + (_sidebarDemo.open ? "open" : "closed") + " · mode: " + _sidebarDemo.collapsible
+                                text: "Sidebar is " + (_sidebarDemo.open ? "open" : "closed") + " · mode: " + root.sidebarModeLabel(_sidebarDemo.collapsible)
                                 font.pixelSize: 13
                                 color: ThemeManager.colors.surface.shade500
                             }

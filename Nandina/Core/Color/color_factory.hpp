@@ -9,6 +9,7 @@
 #include <array>
 
 #include "color_schema.hpp"
+#include "color_export.hpp"
 #include "theme_type.hpp"
 
 namespace Nandina::Core::Color {
@@ -52,7 +53,7 @@ namespace Nandina::Core::Color {
     public:
         /// Apply a theme's color data to an existing ColorSchema (in-place, no allocation).
         /// For dark mode the shade palette is reversed (50↔950, 100↔900, …).
-        static void applyTheme(Types::ThemeVariant::ThemeTypes theme, bool isDark, ColorSchema *schema);
+        static NANDINA_COLOR_EXPORT void applyTheme(Types::ThemeVariant::ThemeTypes theme, bool isDark, ColorSchema *schema);
 
     private:
         static const ThemeColorData &getThemeData(Types::ThemeVariant::ThemeTypes theme);
