@@ -74,6 +74,9 @@ Item {
     /// Pass a local resource path or a URL string.
     property url imageSource: ""
 
+    /// Enable banner image display above the header
+    property bool enableBanner: true
+
     /// Aspect ratio (width ÷ height) of the media area. Default 21 : 9
     /// (Skeleton's wide-card convention). Use 16/9 for standard video.
     property real imageAspectRatio: 21 / 9
@@ -225,7 +228,7 @@ Item {
         // ── Media / image (edge-to-edge, clips to card top radius) ──
         Rectangle {
             id: _imageContainer
-            visible: root.imageSource !== ""
+            visible: root.enableBanner
             Layout.fillWidth: true
             implicitHeight: visible ? Math.round(width / root.imageAspectRatio) : 0
             // Round only the top two corners so they follow the card outline.

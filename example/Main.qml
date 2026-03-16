@@ -3,6 +3,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import QtQuick.Window
 import Nandina.Theme
 import Nandina.Controls
 import Nandina.Window
@@ -14,6 +15,107 @@ NanWindow {
     height: 760
     windowTitle: "Nandina Example — " + ThemeManager.currentThemeName
     titleBarMode: "frameless"
+    injectControls: titleBarMode === "custom"
+
+    titleBar: Component {
+        Item {
+            Rectangle {
+                anchors.fill: parent
+                color: ThemeManager.darkMode ? ThemeManager.colors.surface.shade50 : ThemeManager.colors.primary.shade50
+                topLeftRadius: root._effectiveRadius
+                topRightRadius: root._effectiveRadius
+            }
+
+            Rectangle {
+                anchors {
+                    left: parent.left
+                    right: parent.right
+                    bottom: parent.bottom
+                }
+                height: ThemeManager.primitives.borderWidth
+                color: ThemeManager.darkMode ? ThemeManager.colors.surface.shade300 : ThemeManager.colors.primary.shade100
+            }
+
+            RowLayout {
+                anchors.fill: parent
+                anchors.leftMargin: 18
+                anchors.rightMargin: 120
+                spacing: 12
+
+                Rectangle {
+                    Layout.preferredWidth: 28
+                    Layout.preferredHeight: 28
+                    radius: 14
+                    color: ThemeManager.colors.primary.shade500
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "N"
+                        font.pixelSize: 13
+                        font.bold: true
+                        color: "white"
+                    }
+                }
+
+                ColumnLayout {
+                    spacing: 0
+
+                    Text {
+                        text: root.windowTitle
+                        font.pixelSize: 13
+                        font.bold: true
+                        color: ThemeManager.colors.surface.shade700
+                    }
+
+                    Text {
+                        text: root.currentPageSpec ? root.currentPageSpec.navTitle + " / custom title bar" : "custom title bar"
+                        font.pixelSize: 11
+                        color: ThemeManager.colors.surface.shade500
+                    }
+                }
+
+                Item {
+                    Layout.fillWidth: true
+                }
+
+                Rectangle {
+                    radius: 999
+                    color: ThemeManager.darkMode ? ThemeManager.colors.surface.shade200 : ThemeManager.colors.primary.shade100
+                    Layout.alignment: Qt.AlignVCenter
+                    implicitWidth: _customModeLabel.implicitWidth + 16
+                    implicitHeight: 24
+
+                    Text {
+                        id: _customModeLabel
+                        anchors.centerIn: parent
+                        text: "Custom"
+                        font.pixelSize: 11
+                        font.bold: true
+                        color: ThemeManager.darkMode ? ThemeManager.colors.surface.shade700 : ThemeManager.colors.primary.shade700
+                    }
+                }
+            }
+
+            DragHandler {
+                target: null
+                grabPermissions: PointerHandler.CanTakeOverFromAnything
+                onActiveChanged: {
+                    if (active)
+                        root.startSystemMove();
+                }
+            }
+
+            TapHandler {
+                gesturePolicy: TapHandler.DragThreshold
+                onDoubleTapped: {
+                    if (root.visibility === Window.Maximized)
+                        root.showNormal();
+                    else
+                        root.showMaximized();
+                }
+            }
+        }
+    }
 
     property int navSidebarMode: NanSideBar.Icon
 
