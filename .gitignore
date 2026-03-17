@@ -90,3 +90,5 @@ cmake-build-*
 .qmlls.ini
 temp
 .internal-docs/
+.lsp
+.clj-kondo

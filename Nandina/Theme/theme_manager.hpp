@@ -1,5 +1,5 @@
 //
-// Created by cvrain on 2026/2/11.
+// Created by cvrain on 2026/3/1.
 //
 
 #ifndef NANDINA_THEME_MANAGER_HPP
@@ -7,71 +7,74 @@
 
 #include <QObject>
 #include <QQmlEngine>
-#include <QtGlobal>
+#include <QString>
+#include <QStringList>
 
-#include "color_atla.hpp"
+#include "theme_export.hpp"
+#include "color_factory.hpp"
+#include "color_schema.hpp"
+#include "font_manager.hpp"
+#include "primitive_factory.hpp"
+#include "primitive_schema.hpp"
+#include "theme_type.hpp"
 
-#if defined(_WIN32)
-#if defined(NandinaTheme_EXPORTS)
-#define NANDINA_THEME_EXPORT Q_DECL_EXPORT
-#else
-#define NANDINA_THEME_EXPORT Q_DECL_IMPORT
-#endif
-#else
-#define NANDINA_THEME_EXPORT
-#endif
+namespace Nandina::Theme {
 
-namespace Nandina::NandinaTheme {
-    Q_NAMESPACE
-    QML_ELEMENT
+    using ThemeTypes = Core::Types::ThemeVariant::ThemeTypes;
+    using ColorVariantTypes = Core::Types::ThemeVariant::ColorVariantTypes;
+    using ColorAccentTypes = Core::Types::ThemeVariant::ColorAccentTypes;
 
     class NANDINA_THEME_EXPORT ThemeManager : public QObject {
         Q_OBJECT
         QML_ELEMENT
+        QML_SINGLETON
 
-        Q_PROPERTY(Nandina::NandinaColor::PaletteType currentPaletteType READ getCurrentPaletteType WRITE setCurrentPaletteType
-                           NOTIFY paletteTypeChanged)
-
-        Q_PROPERTY(Nandina::NandinaColor::ColorCollection *currentColorCollection READ getCurrentColorCollection NOTIFY
-                           paletteTypeChanged)
-
-        Q_PROPERTY(Nandina::NandinaColor::PaletteCollection *currentPaletteCollection READ getCurrentPaletteCollection NOTIFY
-                           paletteTypeChanged)
-
-        Q_PROPERTY(Nandina::NandinaColor::ColorCollection *customColorCollection READ getCustomColorCollection WRITE
-                           setCustomColorCollection NOTIFY customThemeChanged)
-
-        Q_PROPERTY(Nandina::NandinaColor::PaletteCollection *customPaletteCollection READ getCustomPaletteCollection WRITE
-                           setCustomPaletteCollection NOTIFY customThemeChanged)
-
+        // ── Properties ─────────────────────────────────────────────
+        Q_PROPERTY(Nandina::Core::Types::ThemeVariant::ThemeTypes currentTheme READ currentTheme WRITE setCurrentTheme
+                           NOTIFY currentThemeChanged)
+        Q_PROPERTY(QString currentThemeName READ currentThemeName NOTIFY currentThemeChanged)
+        Q_PROPERTY(bool darkMode READ darkMode WRITE setDarkMode NOTIFY darkModeChanged)
+        Q_PROPERTY(Nandina::Core::Color::ColorSchema *colors READ colors CONSTANT)
+        Q_PROPERTY(Nandina::Core::Primitives::PrimitiveSchema *primitives READ primitives CONSTANT)
+        Q_PROPERTY(QStringList availableThemes READ availableThemes CONSTANT)
 
     public:
         explicit ThemeManager(QObject *parent = nullptr);
-        Q_INVOKABLE NandinaColor::PaletteType getCurrentPaletteType() const;
-        Q_INVOKABLE void setCurrentPaletteType(NandinaColor::PaletteType type);
-        Q_INVOKABLE Nandina::NandinaColor::ColorCollection *getCurrentColorCollection();
-        Q_INVOKABLE Nandina::NandinaColor::PaletteCollection *getCurrentPaletteCollection();
-        Q_INVOKABLE Nandina::NandinaColor::ColorCollection *getCustomColorCollection();
-        Q_INVOKABLE void setCustomColorCollection(Nandina::NandinaColor::ColorCollection *collection);
-        Q_INVOKABLE Nandina::NandinaColor::PaletteCollection *getCustomPaletteCollection() const;
-        Q_INVOKABLE void setCustomPaletteCollection(Nandina::NandinaColor::PaletteCollection *collection);
+
+        // ── Getters ────────────────────────────────────────────────
+        [[nodiscard]] ThemeTypes currentTheme() const;
+        [[nodiscard]] QString currentThemeName() const;
+        [[nodiscard]] bool darkMode() const;
+        [[nodiscard]] Core::Color::ColorSchema *colors() const;
+        [[nodiscard]] Core::Primitives::PrimitiveSchema *primitives() const;
+        [[nodiscard]] QStringList availableThemes() const;
+
+        // ── Setters ────────────────────────────────────────────────
+        void setCurrentTheme(ThemeTypes theme);
+        void setDarkMode(bool dark);
+
+        // ── QML convenience methods ────────────────────────────────
+
+        /// Switch theme by name string (e.g. "Catppuccin"). Case-insensitive.
+        Q_INVOKABLE void setThemeByName(const QString &name);
+
+        /// Get the display name of a theme enum value.
+        Q_INVOKABLE static QString themeName(Nandina::Core::Types::ThemeVariant::ThemeTypes theme);
 
     signals:
-        void paletteTypeChanged(NandinaColor::PaletteType type);
-        void customThemeChanged();
+        void currentThemeChanged();
+        void darkModeChanged();
+        void themeApplied();
 
     private:
-        NandinaColor::NanColorAtla colorAtla{};
-        NandinaColor::PaletteType currentPaletteType;
+        void applyCurrentTheme();
 
-        NandinaColor::ColorCollection *currentColorCollection{nullptr};
-        NandinaColor::PaletteCollection *currentPaletteCollection{nullptr};
-        NandinaColor::ColorCollection *customColorCollection{nullptr};
-        NandinaColor::PaletteCollection *customPaletteCollection{nullptr};
-
-        void updateCurrentCollections();
+        ThemeTypes m_currentTheme{ThemeTypes::Aurora};
+        bool m_darkMode{false};
+        Core::Color::ColorSchema *m_colors{nullptr};
+        Core::Primitives::PrimitiveSchema *m_primitives{nullptr};
     };
 
-} // namespace Nandina::NandinaTheme
+} // namespace Nandina::Theme
 
 #endif // NANDINA_THEME_MANAGER_HPP

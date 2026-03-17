@@ -1,219 +1,238 @@
+// NanWindow.qml
+// Theme-aware ApplicationWindow with three title-bar modes.
+//
+// ── Title bar modes ───────────────────────────────────────────────────────
+//   "system"    — OS-native decoration; no custom title bar shown.
+//                 Background = theme body-background color.
+//   "frameless" — Qt.FramelessWindowHint. Uses the built-in NanTitleBar
+//                 (icon, title, minimize/maximize/close).
+//                 Rounded corners, thin border, 8-direction system resize.
+//   "custom"    — Same as "frameless" but you supply your own title-bar
+//                 via the titleBar property.  Optionally inject the OS
+//                 window-control buttons by setting injectControls: true.
+//
+// ── Minimal usage ─────────────────────────────────────────────────────────
+//   NanWindow {
+//       width: 1024; height: 720
+//       windowTitle: "My App"
+//       Text { text: "Hello!"; anchors.centerIn: parent }
+//   }
+//
+// ── Custom title bar (frameless) ──────────────────────────────────────────
+//   NanWindow {
+//       titleBarMode: "custom"
+//       titleBar: Item {
+//           // your layout here; use DragHandler { onActiveChanged: … startSystemMove() }
+//       }
+//   }
+//
+// ── Inject OS controls into a custom title bar ────────────────────────────
+//   NanWindow {
+//       titleBarMode: "custom"
+//       injectControls: true         // adds ─ □ ✕ at the right of the title bar
+//       titleBar: MyTitleBarComponent { }
+//   }
+
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import QtQuick.Window
 import QtQuick.Controls
 import Nandina.Theme
-import Nandina.Tokens
+import Nandina.Controls
 
 ApplicationWindow {
     id: root
 
-    enum TitleBarMode {
-        DefaultTitleBar, //默认使用系统标题栏，Windows 上为标准窗口，macOS 上为隐藏标题栏的窗口，Linux 上表现依平台和窗口管理器而异
-        Frameless, //无边框窗口，完全自定义标题栏和边框
-        CustomTitleBar //自定义标题栏，允许注入系统控件（最小化、最大化、关闭按钮）
-    }
-
-    property int titleBarMode: NanWindow.CustomTitleBar //标题栏模式，默认开箱即用自定义标题栏
-    property string windowTitle: "Nandina" //窗口标题，CustomTitleBar 模式下会传递给自定义标题栏组件
-    property int titleBarHeight: spacingTokens.xxl + spacingTokens.sm //标题栏高度
-    property Component customTitleBar: null //自定义标题栏组件
-    property bool useSystemResize: true //是否使用系统调整大小
-    property bool alwaysOnTop: false //是否总在最前
-    property int resizeMargin: spacingTokens.sm //调整大小边距
-    property int windowRadius: radiusTokens.lg //窗口圆角半径
-    property bool defaultTitleBarDraggable: true //默认标题栏是否可拖动
-    property bool defaultTitleBarShowControls: true //默认标题栏是否显示控件
-    property bool defaultTitleBarDoubleClickMaximize: true //默认标题栏双击是否最大化
-    property bool customTitleBarInjectSystemControls: false //自定义标题栏是否注入系统控件
-    property int customTitleBarControlsRightMargin: spacingTokens.sm //自定义标题栏系统控件右边距
-    property int customTitleBarControlsSpacing: spacingTokens.sm //自定义标题栏系统控件间距
-    property bool enableThemeGradient: true //是否启用主题渐变背景
-    property bool autoAdjustThemeTransitionDuration: true //是否自动调整主题过渡动画时长（根据当前主题亮度调整，亮色主题使用 lightThemeTransitionDuration，暗色主题使用 darkThemeTransitionDuration）
-    property int themeTransitionDuration: motionTokens.normal //主题过渡动画时长
-    property int lightThemeTransitionDuration: motionTokens.normal //亮色主题过渡动画时长
-    property int darkThemeTransitionDuration: motionTokens.slow //暗色主题过渡动画时长
-    property real themeGradientOverlayOpacity: 0.18 //主题渐变覆盖层不透明度
-
-    readonly property var spacingTokens: NanSpacing
-    readonly property var radiusTokens: NanRadius
-    readonly property var motionTokens: NanMotion
-
-    readonly property bool isMaximized: visibility === Window.Maximized //是否最大化
-    readonly property bool isFramelessMode: titleBarMode !== NanWindow.DefaultTitleBar //是否无边框模式
-    readonly property int effectiveWindowRadius: isMaximized || visibility === Window.FullScreen ? 0 : windowRadius //有效的窗口圆角半径
-    readonly property real currentThemeLuminance: internalThemeManager.currentPaletteCollection ? (0.2126 * internalThemeManager.currentPaletteCollection.backgroundPane.r + 0.7152 * internalThemeManager.currentPaletteCollection.backgroundPane.g + 0.0722 * internalThemeManager.currentPaletteCollection.backgroundPane.b) : 0.5 //当前主题亮度
-    readonly property bool isLightTheme: currentThemeLuminance >= 0.55 //是否为亮色主题
-    readonly property int effectiveThemeTransitionDuration: autoAdjustThemeTransitionDuration ? (isLightTheme ? lightThemeTransitionDuration : darkThemeTransitionDuration) : themeTransitionDuration //有效的主题过渡动画时长
-
-    readonly property alias themeManager: internalThemeManager //主题管理器，优先使用内部的 ThemeManager，外部也可以通过这个属性访问和设置
-    default property alias content: contentRoot.data //窗口内容，直接添加到 contentRoot 中
-
+    // ── Window identity ────────────────────────────────────────────
+    property string windowTitle: "Nandina"
     title: windowTitle
+
     visible: true
 
+    // ── Title bar mode ─────────────────────────────────────────────
+    /// "system" | "frameless" | "custom"
+    property string titleBarMode: "frameless"
+
+    /// Height of the title bar in frameless / custom modes.
+    property int titleBarHeight: 40
+
+    // ── Custom title bar (used when titleBarMode === "custom") ─────
+    /// Assign any Item/Component as the title bar (fills titleBarHeight).
+    property Component titleBar: null
+
+    /// When titleBarMode === "custom", overlay the built-in minimize /
+    /// maximize / close buttons at the right edge of the title bar area.
+    property bool injectControls: false
+
+    /// Right margin for the injected controls row.
+    property int injectControlsRightMargin: ThemeManager.primitives.spacing
+
+    // ── Default title bar configuration ───────────────────────────
+    property url windowIconSource: ""
+    property bool showWindowIcon: true
+    property bool titleBarDraggable: true
+    property bool titleBarShowControls: true
+    property bool titleBarDoubleClickMaximize: true
+
+    // ── Window geometry ────────────────────────────────────────────
+    /// Corner radius when frameless and not maximised / fullscreen.
+    property real windowRadius: ThemeManager.primitives.radiusContainer + 4
+
+    /// Pixel width of each resize hot zone (frameless only).
+    property int resizeMargin: 6
+
+    /// Use Qt's native startSystemResize (recommended true).
+    property bool systemResize: true
+
+    /// Pin window above all others.
+    property bool alwaysOnTop: false
+
+    // ── Content slot ───────────────────────────────────────────────
+    /// All direct children land here (below the title bar).
+    default property alias content: _contentArea.data
+
+    // ── Derived read-only helpers ──────────────────────────────────
+    readonly property bool _isFrameless: titleBarMode !== "system"
+    readonly property bool _isMaximized: root.visibility === Window.Maximized
+    readonly property bool _isFullscreen: root.visibility === Window.FullScreen
+    readonly property real _effectiveRadius: (_isMaximized || _isFullscreen) ? 0 : windowRadius
+
+    // ── Qt window flags ────────────────────────────────────────────
     flags: {
-        let value = Qt.Window;
-        if (isFramelessMode)
-            value |= Qt.FramelessWindowHint;
+        let f = Qt.Window;
+        if (_isFrameless)
+            f |= Qt.FramelessWindowHint;
         if (alwaysOnTop)
-            value |= Qt.WindowStaysOnTopHint;
-        return value;
+            f |= Qt.WindowStaysOnTopHint;
+        return f;
     }
 
-    color: isFramelessMode ? "transparent" : (themeManager.currentPaletteCollection ? themeManager.getCurrentPaletteCollection().backgroundPane : "transparent")
+    // In frameless mode the ApplicationWindow shell must be transparent
+    // so the inner Rectangle's rounded corners are visible against the desktop.
+    color: _isFrameless ? "transparent" : (ThemeManager.darkMode ? ThemeManager.primitives.bodyBackgroundColorDark : ThemeManager.primitives.bodyBackgroundColor)
 
-    ThemeManager {
-        id: internalThemeManager
-    }
+    // ── Private colours ────────────────────────────────────────────
+    readonly property bool _isDark: ThemeManager.darkMode
 
+    readonly property color _bodyBg: _isDark ? ThemeManager.primitives.bodyBackgroundColorDark : ThemeManager.primitives.bodyBackgroundColor
+
+    readonly property color _borderColor: _isDark ? ThemeManager.colors.surface.shade300 : ThemeManager.colors.surface.shade200
+
+    // ── Inner root rectangle (frameless only) ─────────────────────
+    // Provides rounded corners, background fill and the thin border.
     Rectangle {
-        id: layoutRoot
+        id: _frame
         anchors.fill: parent
-        radius: root.effectiveWindowRadius
+        visible: root._isFrameless
+
+        radius: root._effectiveRadius
+        color: root._bodyBg
+        border.color: root._borderColor
+        border.width: 1
         clip: true
-        color: "transparent"
-        gradient: Gradient {
-            GradientStop {
-                id: gradientTopStop
-                position: 0.0
-                color: internalThemeManager.currentPaletteCollection ? internalThemeManager.currentPaletteCollection.backgroundPane : "transparent"
-                Behavior on color {
-                    enabled: root.enableThemeGradient
-                    ColorAnimation {
-                        duration: root.effectiveThemeTransitionDuration
-                    }
-                }
-            }
-            GradientStop {
-                id: gradientBottomStop
-                position: 1.0
-                color: internalThemeManager.currentPaletteCollection ? internalThemeManager.currentPaletteCollection.secondaryPane : "transparent"
-                Behavior on color {
-                    enabled: root.enableThemeGradient
-                    ColorAnimation {
-                        duration: root.effectiveThemeTransitionDuration
-                    }
-                }
+
+        Behavior on color {
+            ColorAnimation {
+                duration: 120
             }
         }
-
-        Rectangle {
-            anchors.fill: parent
-            radius: parent.radius
-            color: internalThemeManager.currentPaletteCollection ? internalThemeManager.currentPaletteCollection.secondaryPane : "transparent"
-            opacity: root.enableThemeGradient ? root.themeGradientOverlayOpacity : 0
-            Behavior on color {
-                enabled: root.enableThemeGradient
-                ColorAnimation {
-                    duration: root.effectiveThemeTransitionDuration
-                }
+        Behavior on border.color {
+            ColorAnimation {
+                duration: 120
             }
-            Behavior on opacity {
-                NumberAnimation {
-                    duration: root.effectiveThemeTransitionDuration
-                }
-            }
-        }
-
-        border.width: root.isFramelessMode ? 1 : 0
-        border.color: internalThemeManager.currentPaletteCollection ? internalThemeManager.currentPaletteCollection.surfaceElement0 : "transparent"
-
-        Loader {
-            id: titleBarLoader
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.top: parent.top
-            height: root.titleBarMode === NanWindow.CustomTitleBar ? root.titleBarHeight : 0
-            active: root.titleBarMode === NanWindow.CustomTitleBar
-            sourceComponent: root.customTitleBar ? root.customTitleBar : innerDefaultTitleBarComponent
-
-            function syncLoadedItemSize() {
-                if (!item)
-                    return;
-                item.width = Qt.binding(function () {
-                    return titleBarLoader.width;
-                });
-                item.height = Qt.binding(function () {
-                    return titleBarLoader.height;
-                });
-            }
-
-            onLoaded: syncLoadedItemSize()
-            onWidthChanged: syncLoadedItemSize()
-            onHeightChanged: syncLoadedItemSize()
-        }
-
-        Row {
-            visible: root.titleBarMode === NanWindow.CustomTitleBar && root.customTitleBar && root.customTitleBarInjectSystemControls
-            anchors.verticalCenter: titleBarLoader.verticalCenter
-            anchors.right: parent.right
-            anchors.rightMargin: root.customTitleBarControlsRightMargin
-            spacing: root.customTitleBarControlsSpacing
-            z: 5
-
-            TitleBarButton {
-                text: "—"
-                textColor: internalThemeManager.currentPaletteCollection ? internalThemeManager.currentPaletteCollection.bodyCopy : "white"
-                hoverColor: internalThemeManager.currentPaletteCollection ? internalThemeManager.currentPaletteCollection.overlay0 : "#4a4a4a"
-                pressedColor: internalThemeManager.currentPaletteCollection ? internalThemeManager.currentPaletteCollection.overlay1 : "#5a5a5a"
-                useAccentForHover: true
-                accentColor: internalThemeManager.currentPaletteCollection ? internalThemeManager.currentPaletteCollection.activeBorder : "#4f8cff"
-                onClicked: root.showMinimized()
-            }
-
-            TitleBarButton {
-                text: root.visibility === Window.Maximized ? "❐" : "□"
-                textColor: internalThemeManager.currentPaletteCollection ? internalThemeManager.currentPaletteCollection.bodyCopy : "white"
-                hoverColor: internalThemeManager.currentPaletteCollection ? internalThemeManager.currentPaletteCollection.overlay0 : "#4a4a4a"
-                pressedColor: internalThemeManager.currentPaletteCollection ? internalThemeManager.currentPaletteCollection.overlay1 : "#5a5a5a"
-                useAccentForHover: true
-                accentColor: internalThemeManager.currentPaletteCollection ? internalThemeManager.currentPaletteCollection.activeBorder : "#4f8cff"
-                onClicked: {
-                    if (root.visibility === Window.Maximized)
-                        root.showNormal();
-                    else
-                        root.showMaximized();
-                }
-            }
-
-            TitleBarButton {
-                text: "✕"
-                isCloseButton: true
-                textColor: "white"
-                onClicked: root.close()
-            }
-        }
-
-        Item {
-            id: contentRoot
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.top: titleBarLoader.bottom
-            anchors.bottom: parent.bottom
-        }
-
-        WindowResizer {
-            anchors.fill: parent
-            targetWindow: root
-            resizeMargin: root.resizeMargin
-            topIgnoreArea: root.titleBarMode === NanWindow.CustomTitleBar ? root.titleBarHeight : 0
-            visible: root.isFramelessMode && root.useSystemResize && !root.isMaximized
         }
     }
 
-    Component {
-        id: innerDefaultTitleBarComponent
+    // ── Title bar loader ───────────────────────────────────────────
+    Loader {
+        id: _titleBarLoader
+        visible: root._isFrameless
+        anchors {
+            left: parent.left
+            right: parent.right
+            top: parent.top
+        }
+        height: root._isFrameless ? root.titleBarHeight : 0
 
-        DefaultTitleBar {
-            titleText: root.windowTitle
+        // "custom" mode uses the user-supplied Component; else use built-in.
+        sourceComponent: root._isFrameless ? (root.titleBarMode === "custom" && root.titleBar ? root.titleBar : _defaultTitleBarComponent) : null
+    }
+
+    // ── Injected OS controls (custom mode only) ────────────────────
+    Row {
+        id: _injectedControls
+        visible: root.titleBarMode === "custom" && root.injectControls && root._isFrameless
+        anchors {
+            verticalCenter: _titleBarLoader.verticalCenter
+            right: parent.right
+            rightMargin: root.injectControlsRightMargin
+        }
+        spacing: 2
+        z: 10
+
+        NanTitleBarButton {
+            iconText: "−"
+            implicitHeight: root.titleBarHeight - 8
+            onClicked: root.showMinimized()
+        }
+        NanTitleBarButton {
+            iconText: root.visibility === Window.Maximized ? "❐" : "□"
+            implicitHeight: root.titleBarHeight - 8
+            onClicked: {
+                if (root.visibility === Window.Maximized)
+                    root.showNormal();
+                else
+                    root.showMaximized();
+            }
+        }
+        NanTitleBarButton {
+            isClose: true
+            iconText: "✕"
+            implicitHeight: root.titleBarHeight - 8
+            onClicked: root.close()
+        }
+    }
+
+    // ── Content area ───────────────────────────────────────────────
+    Item {
+        id: _contentArea
+        anchors {
+            left: parent.left
+            right: parent.right
+            top: root._isFrameless ? _titleBarLoader.bottom : parent.top
+            bottom: parent.bottom
+            // Keep content away from the rounded corners when frameless
+            leftMargin: root._isFrameless && !root._isMaximized ? 1 : 0
+            rightMargin: root._isFrameless && !root._isMaximized ? 1 : 0
+            bottomMargin: root._isFrameless && !root._isMaximized ? 1 : 0
+        }
+    }
+
+    // ── Resize handlers (frameless only) ──────────────────────────
+    NanWindowResizer {
+        anchors.fill: parent
+        visible: root._isFrameless && root.systemResize && !root._isMaximized && !root._isFullscreen
+        targetWindow: root
+        resizeMargin: root.resizeMargin
+        topIgnoreHeight: root.titleBarHeight
+    }
+
+    // ── Default title bar component ────────────────────────────────
+    Component {
+        id: _defaultTitleBarComponent
+
+        NanTitleBar {
+            width: _titleBarLoader.width
+            height: _titleBarLoader.height
+            title: root.windowTitle
+            iconSource: root.windowIconSource
+            showIcon: root.showWindowIcon
+            draggable: root.titleBarDraggable
+            showControls: root.titleBarShowControls
+            doubleClickMaximize: root.titleBarDoubleClickMaximize
+            topRadius: root._effectiveRadius
             targetWindow: root
-            themeManager: internalThemeManager
-            draggable: root.defaultTitleBarDraggable
-            showWindowControls: root.defaultTitleBarShowControls
-            enableDoubleClickToggleMaximize: root.defaultTitleBarDoubleClickMaximize
-            topLeftRadius: root.effectiveWindowRadius
-            topRightRadius: root.effectiveWindowRadius
         }
     }
 }

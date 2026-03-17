@@ -11,10 +11,15 @@ int main(int argc, char *argv[]) {
     engine.addImportPath("qrc:/qt/qml");
     engine.addImportPath(appDir);
     engine.addImportPath(QDir(appDir).absoluteFilePath(".."));
+    // windeployqt deploys Qt's QML modules (QtQuick.Controls, etc.) into
+    // <app_dir>/qml/, which is not searched by default.
+    engine.addImportPath(appDir + "/qml");
     const QUrl url("qrc:/qt/qml/NandinaExample/Main.qml");
 
     QObject::connect(
-            &engine, &QQmlApplicationEngine::objectCreated, &app,
+            &engine,
+            &QQmlApplicationEngine::objectCreated,
+            &app,
             [url](QObject *obj, const QUrl &objUrl) {
                 if (!obj && url == objUrl) {
                     QCoreApplication::exit(-1);

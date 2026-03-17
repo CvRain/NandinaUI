@@ -1,97 +1,89 @@
 //
-// Created by cvrain on 2026/2/11.
+// Created by cvrain on 2026/3/1.
 //
 
 #include "theme_manager.hpp"
 
-namespace Nandina::NandinaTheme {
-    ThemeManager::ThemeManager(QObject *parent) :
-        QObject(parent), currentPaletteType(NandinaColor::PaletteType::Latte) {
-        customColorCollection = new NandinaColor::ColorCollection(this);
-        customPaletteCollection = new NandinaColor::PaletteCollection(this);
-        customColorCollection->type = NandinaColor::PaletteType::Custom;
-        updateCurrentCollections();
+#include "theme_registry.hpp"
+
+namespace Nandina::Theme {
+
+    ThemeManager::ThemeManager(QObject *parent) : QObject(parent) {
+        // Load bundled fonts before applying any theme, so TypographySchema
+        // font family names (e.g. "LXGW WenKai") resolve correctly.
+        Core::Fonts::FontManager::loadBundledFonts();
+
+        // Create the CONSTANT schema objects — pointers never change,
+        // only internal values are updated via applyCurrentTheme().
+        m_colors = new Core::Color::ColorSchema(this);
+        m_primitives = new Core::Primitives::PrimitiveSchema(this);
+
+        // Apply default theme (Aurora, light mode)
+        applyCurrentTheme();
     }
 
-    NandinaColor::PaletteType ThemeManager::getCurrentPaletteType() const {
-        return currentPaletteType;
+    // ─── Getters ───────────────────────────────────────────────────
+
+    ThemeTypes ThemeManager::currentTheme() const {
+        return m_currentTheme;
     }
 
-    NandinaColor::ColorCollection *ThemeManager::getCurrentColorCollection() {
-        if (currentColorCollection == nullptr) {
-            currentColorCollection = colorAtla.colorCollections.value(currentPaletteType, nullptr);
-        }
-
-        return currentColorCollection;
+    QString ThemeManager::currentThemeName() const {
+        return Core::Types::ThemeRegistry::themeName(m_currentTheme);
     }
 
-    NandinaColor::PaletteCollection *ThemeManager::getCurrentPaletteCollection() {
-        if (currentPaletteCollection == nullptr) {
-            currentPaletteCollection = colorAtla.paletteCollections.value(currentPaletteType, nullptr);
-        }
-        return currentPaletteCollection;
+    bool ThemeManager::darkMode() const {
+        return m_darkMode;
     }
 
-    NandinaColor::ColorCollection *ThemeManager::getCustomColorCollection() {
-        return customColorCollection;
+    Core::Color::ColorSchema *ThemeManager::colors() const {
+        return m_colors;
     }
 
-    void ThemeManager::setCustomColorCollection(NandinaColor::ColorCollection *collection) {
-        if (collection == nullptr || collection == customColorCollection) {
+    Core::Primitives::PrimitiveSchema *ThemeManager::primitives() const {
+        return m_primitives;
+    }
+
+    QStringList ThemeManager::availableThemes() const {
+        return Core::Types::ThemeRegistry::availableThemeNames();
+    }
+
+    // ─── Setters ───────────────────────────────────────────────────
+
+    void ThemeManager::setCurrentTheme(const ThemeTypes theme) {
+        if (m_currentTheme == theme) {
             return;
         }
-
-        delete customColorCollection;
-        customColorCollection = new NandinaColor::ColorCollection(*collection, this);
-        customColorCollection->type = NandinaColor::PaletteType::Custom;
-
-        if (currentPaletteType == NandinaColor::PaletteType::Custom) {
-            updateCurrentCollections();
-            emit paletteTypeChanged(currentPaletteType);
-        }
-
-        emit customThemeChanged();
+        m_currentTheme = theme;
+        applyCurrentTheme();
+        emit currentThemeChanged();
     }
 
-    NandinaColor::PaletteCollection *ThemeManager::getCustomPaletteCollection() const {
-        return customPaletteCollection;
-    }
-
-    void ThemeManager::setCustomPaletteCollection(NandinaColor::PaletteCollection *collection) {
-        if (collection == nullptr || collection == customPaletteCollection) {
+    void ThemeManager::setDarkMode(const bool dark) {
+        if (m_darkMode == dark) {
             return;
         }
-
-        delete customPaletteCollection;
-        customPaletteCollection = new NandinaColor::PaletteCollection(*collection, this);
-
-        if (currentPaletteType == NandinaColor::PaletteType::Custom) {
-            updateCurrentCollections();
-            emit paletteTypeChanged(currentPaletteType);
-        }
-
-        emit customThemeChanged();
+        m_darkMode = dark;
+        applyCurrentTheme();
+        emit darkModeChanged();
     }
 
-    void ThemeManager::setCurrentPaletteType(const NandinaColor::PaletteType type) {
-        if (this->currentPaletteType == type) {
-            return;
-        }
+    // ─── QML convenience methods ───────────────────────────────────
 
-        currentPaletteType = type;
-        updateCurrentCollections();
-
-        emit paletteTypeChanged(currentPaletteType);
+    void ThemeManager::setThemeByName(const QString &name) {
+        setCurrentTheme(Core::Types::ThemeRegistry::themeFromName(name));
     }
 
-    void ThemeManager::updateCurrentCollections() {
-        if (currentPaletteType == NandinaColor::PaletteType::Custom) {
-            currentColorCollection = customColorCollection;
-            currentPaletteCollection = customPaletteCollection;
-            return;
-        }
-
-        currentColorCollection = colorAtla.colorCollections.value(currentPaletteType, nullptr);
-        currentPaletteCollection = colorAtla.paletteCollections.value(currentPaletteType, nullptr);
+    QString ThemeManager::themeName(const Core::Types::ThemeVariant::ThemeTypes theme) {
+        return Core::Types::ThemeRegistry::themeName(theme);
     }
-} // namespace Nandina::NandinaTheme
+
+    // ─── Internal ──────────────────────────────────────────────────
+
+    void ThemeManager::applyCurrentTheme() {
+        Core::Color::ColorFactory::applyTheme(m_currentTheme, m_darkMode, m_colors);
+        Core::Primitives::PrimitiveFactory::applyTheme(m_currentTheme, m_primitives);
+        emit themeApplied();
+    }
+
+} // namespace Nandina::Theme

@@ -1,190 +1,312 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
-import Nandina.Color
-import Nandina.Window
-import Nandina.Controls
+import QtQuick.Controls
+import QtQuick.Layouts
+import QtQuick.Window
 import Nandina.Theme
-import Nandina.Tokens
-import Nandina.Experimental
+import Nandina.Controls
+import Nandina.Window
+import NandinaExample
 
 NanWindow {
-    id: demoWindow
+    id: root
+    width: 1200
+    height: 760
+    windowTitle: "Nandina Example — " + ThemeManager.currentThemeName
+    titleBarMode: "frameless"
+    injectControls: titleBarMode === "custom"
 
-    width: 900
-    height: 600
-    visible: true
-    windowTitle: "NanWindow Demo"
-    titleBarMode: NanWindow.CustomTitleBar
-    themeManager.customColorCollection: customTheme.colorCollection
-    themeManager.customPaletteCollection: customTheme.paletteCollection
-    font: Qt.font({
-        family: "Sans Serif",
-        pixelSize: NanTypography.body.pixelSize,
-        weight: Font.Normal
-    })
-    NanStyle.themeManager: demoWindow.themeManager
-    NanStyle.font: demoWindow.font
-    property int currentSide: NanSideBar.Side.Left
+    titleBar: Component {
+        Item {
+            Rectangle {
+                anchors.fill: parent
+                color: ThemeManager.darkMode ? ThemeManager.colors.surface.shade50 : ThemeManager.colors.primary.shade50
+                topLeftRadius: root._effectiveRadius
+                topRightRadius: root._effectiveRadius
+            }
 
-    NanButton {
-        text: "Switch Theme"
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.bottom: parent.bottom
-        anchors.bottomMargin: 20
+            Rectangle {
+                anchors {
+                    left: parent.left
+                    right: parent.right
+                    bottom: parent.bottom
+                }
+                height: ThemeManager.primitives.borderWidth
+                color: ThemeManager.darkMode ? ThemeManager.colors.surface.shade300 : ThemeManager.colors.primary.shade100
+            }
 
-        property var colors: [NandinaColor.Mocha, NandinaColor.Macchiato, NandinaColor.Frappe, NandinaColor.Latte, NandinaColor.Custom]
-        property int colorIndex: 0
-
-        onClicked: {
-            colorIndex = (colorIndex + 1) % colors.length;
-            demoWindow.themeManager.setCurrentPaletteType(colors[colorIndex]);
-        }
-    }
-
-    NanButton {
-        text: demoWindow.currentSide === NanSideBar.Side.Left ? "Dock Right" : "Dock Left"
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.bottom: parent.bottom
-        anchors.bottomMargin: 60
-        onClicked: {
-            demoWindow.currentSide = demoWindow.currentSide === NanSideBar.Side.Left ? NanSideBar.Side.Right : NanSideBar.Side.Left;
-        }
-    }
-
-    Text {
-        id: titleText
-        anchors.centerIn: parent
-        text: "NanWindow Demo"
-        font.pointSize: 20
-        font.bold: true
-        color: demoWindow.themeManager.currentColorCollection.rosewater
-    }
-
-    NanButton {
-        id: testButton1
-        text: "Test Button 1"
-        font.bold: true
-
-        variant: NanButton.Primary
-        accent: NanButton.Tonal
-
-        anchors.top: titleText.bottom
-        anchors.topMargin: 60
-        anchors.horizontalCenter: parent.horizontalCenter
-    }
-
-    NanSideBar {
-        id: appSidebar
-        dockingParent: parent
-        side: demoWindow.currentSide
-        collapsible: NanSideBar.Icon
-        open: true
-        expandedWidth: 200
-        collapsedWidth: 72
-        borderRadius: 16
-        sectionPadding: 10
-        contentSpacing: 8
-        showDefaultTrigger: false
-        header: Component {
-            Row {
-                width: parent ? parent.width : 220
-                height: 34
-                spacing: 8
-
-                NanSideBarTrigger {}
+            RowLayout {
+                anchors.fill: parent
+                anchors.leftMargin: 18
+                anchors.rightMargin: 120
+                spacing: 12
 
                 Rectangle {
-                    width: appSidebar.collapsed ? 0 : (parent.width - 40)
-                    height: 32
-                    radius: 9
-                    color: demoWindow.themeManager.currentPaletteCollection.surfaceElement0
-                    clip: true
+                    Layout.preferredWidth: 28
+                    Layout.preferredHeight: 28
+                    radius: 14
+                    color: ThemeManager.colors.primary.shade500
 
                     Text {
-                        anchors.verticalCenter: parent.verticalCenter
-                        anchors.left: parent.left
-                        anchors.leftMargin: 12
-                        text: "Nandina UI"
-                        color: demoWindow.themeManager.currentPaletteCollection.mainHeadline
-                        font: Qt.font({
-                            family: demoWindow.font.family,
-                            pixelSize: NanTypography.subtitle.pixelSize,
-                            weight: Font.DemiBold
-                        })
+                        anchors.centerIn: parent
+                        text: "N"
+                        font.pixelSize: 13
+                        font.bold: true
+                        color: "white"
+                    }
+                }
+
+                ColumnLayout {
+                    spacing: 0
+
+                    Text {
+                        text: root.windowTitle
+                        font.pixelSize: 13
+                        font.bold: true
+                        color: ThemeManager.colors.surface.shade700
                     }
 
-                    Behavior on width {
-                        NumberAnimation {
-                            duration: 180
-                            easing.type: Easing.OutCubic
+                    Text {
+                        text: root.currentPageSpec ? root.currentPageSpec.navTitle + " / custom title bar" : "custom title bar"
+                        font.pixelSize: 11
+                        color: ThemeManager.colors.surface.shade500
+                    }
+                }
+
+                Item {
+                    Layout.fillWidth: true
+                }
+
+                Rectangle {
+                    radius: 999
+                    color: ThemeManager.darkMode ? ThemeManager.colors.surface.shade200 : ThemeManager.colors.primary.shade100
+                    Layout.alignment: Qt.AlignVCenter
+                    implicitWidth: _customModeLabel.implicitWidth + 16
+                    implicitHeight: 24
+
+                    Text {
+                        id: _customModeLabel
+                        anchors.centerIn: parent
+                        text: "Custom"
+                        font.pixelSize: 11
+                        font.bold: true
+                        color: ThemeManager.darkMode ? ThemeManager.colors.surface.shade700 : ThemeManager.colors.primary.shade700
+                    }
+                }
+            }
+
+            DragHandler {
+                target: null
+                grabPermissions: PointerHandler.CanTakeOverFromAnything
+                onActiveChanged: {
+                    if (active)
+                        root.startSystemMove();
+                }
+            }
+
+            TapHandler {
+                gesturePolicy: TapHandler.DragThreshold
+                onDoubleTapped: {
+                    if (root.visibility === Window.Maximized)
+                        root.showNormal();
+                    else
+                        root.showMaximized();
+                }
+            }
+        }
+    }
+
+    property int navSidebarMode: NanSideBar.Icon
+
+    NanRouter {
+        id: router
+        stackView: pageStack
+        routes: PageRegistration.pageRegistry
+        currentRouteId: PageRegistration.firstKey()
+    }
+
+    readonly property var foundationPages: router.routesForSection("Foundation")
+    readonly property var componentPages: router.routesForSection("Components")
+    readonly property var footerPages: router.routesForSection("Footer")
+    readonly property var currentPageSpec: router.currentRoute
+
+    RowLayout {
+        anchors.fill: parent
+        spacing: 0
+
+        NanSideBar {
+            id: nav
+            Layout.fillHeight: true
+            collapsible: root.navSidebarMode
+            expandedWidth: 238
+
+            header: Item {
+                implicitHeight: 52
+                Row {
+                    anchors {
+                        verticalCenter: parent.verticalCenter
+                        left: parent.left
+                        leftMargin: 14
+                    }
+                    spacing: 8
+
+                    Text {
+                        text: "❀"
+                        font.pixelSize: 16
+                        color: ThemeManager.colors.primary.shade600
+                    }
+                    Text {
+                        visible: !nav.collapsed
+                        text: "Nandina Example"
+                        font.pixelSize: 13
+                        font.bold: true
+                        color: ThemeManager.colors.surface.shade700
+                    }
+                }
+            }
+
+            NanSideBarGroup {
+                title: "Foundation"
+
+                Repeater {
+                    model: root.foundationPages
+                    delegate: NanSideBarItem {
+                        required property var modelData
+                        text: modelData.navTitle
+                        iconText: modelData.iconText
+                        active: router.currentRouteId === modelData.key
+                        onClicked: router.replace(modelData.key)
+                    }
+                }
+            }
+
+            NanSideBarGroup {
+                title: "Components"
+
+                Repeater {
+                    model: root.componentPages
+                    delegate: NanSideBarItem {
+                        required property var modelData
+                        text: modelData.navTitle
+                        iconText: modelData.iconText
+                        active: router.currentRouteId === modelData.key
+                        onClicked: router.replace(modelData.key)
+                    }
+                }
+            }
+
+            footer: Item {
+                implicitHeight: _footerColumn.implicitHeight
+
+                Column {
+                    id: _footerColumn
+                    width: parent.width
+
+                    Repeater {
+                        model: root.footerPages
+                        delegate: NanSideBarItem {
+                            required property var modelData
+                            width: parent ? parent.width : implicitWidth
+                            text: modelData.navTitle
+                            iconText: modelData.iconText
+                            active: router.currentRouteId === modelData.key
+                            onClicked: router.replace(modelData.key)
                         }
                     }
                 }
             }
         }
 
-        footer: Component {
-            NanSideBarItem {
-                text: "Settings"
-                fallbackGlyph: "S"
-            }
-        }
+        Rectangle {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            color: "transparent"
 
-        NanSideBarGroup {
-            title: "Controls"
-            collapsible: true
-            expanded: true
-            font: Qt.font({
-                family: demoWindow.font.family,
-                pixelSize: NanTypography.caption.pixelSize,
-                weight: Font.DemiBold
-            })
+            ColumnLayout {
+                anchors.fill: parent
+                spacing: 0
 
-            NanSideBarItem {
-                text: "NanButton"
-                fallbackGlyph: "B"
-                active: true
-                font: Qt.font({
-                    family: demoWindow.font.family,
-                    pixelSize: NanTypography.bodyLarge.pixelSize,
-                    weight: Font.Medium
-                })
-            }
+                Rectangle {
+                    Layout.fillWidth: true
+                    implicitHeight: 52
+                    color: ThemeManager.colors.surface.shade100
+                    border.color: ThemeManager.colors.surface.shade200
+                    border.width: 1
 
-            NanSideBarItem {
-                text: "NanInput"
-                fallbackGlyph: "I"
-            }
-        }
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.leftMargin: 16
+                        anchors.rightMargin: 16
+                        spacing: 12
 
-        NanStyleScope {
-            ThemeManager {
-                id: componentScopeTheme
-                Component.onCompleted: setCurrentPaletteType(NandinaColor.Frappe)
-            }
+                        ColumnLayout {
+                            spacing: 1
 
-            NanStyle.themeManager: componentScopeTheme
-            NanStyle.font: Qt.font({
-                family: demoWindow.font.family,
-                pixelSize: NanTypography.caption.pixelSize,
-                weight: Font.Medium
-            })
+                            Text {
+                                text: root.currentPageSpec ? root.currentPageSpec.title : ""
+                                font.pixelSize: 15
+                                font.bold: true
+                                color: ThemeManager.colors.surface.shade700
+                            }
 
-            NanSideBarGroup {
-                title: "Components"
-                collapsible: true
-                expanded: true
+                            Text {
+                                text: root.currentPageSpec ? root.currentPageSpec.summary : ""
+                                font.pixelSize: 11
+                                color: ThemeManager.colors.surface.shade500
+                            }
+                        }
 
-                NanSideBarItem {
-                    text: "Scoped Theme"
-                    fallbackGlyph: "T"
+                        Item {
+                            Layout.fillWidth: true
+                        }
+
+                        NanButton {
+                            id: _darkModeBtn
+                            text: ThemeManager.darkMode ? "☀ Light" : "🌙 Dark"
+                            onClicked: ThemeManager.darkMode = !ThemeManager.darkMode
+                        }
+                    }
+                }
+
+                Item {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+
+                    StackView {
+                        id: pageStack
+                        anchors.fill: parent
+                        anchors.margins: 24
+
+                        replaceEnter: Transition {
+                            ParallelAnimation {
+                                NumberAnimation {
+                                    property: "x"
+                                    from: 18
+                                    to: 0
+                                    duration: 140
+                                    easing.type: Easing.OutCubic
+                                }
+                                NumberAnimation {
+                                    property: "opacity"
+                                    from: 0
+                                    to: 1
+                                    duration: 120
+                                }
+                            }
+                        }
+
+                        replaceExit: Transition {
+                            NumberAnimation {
+                                property: "opacity"
+                                from: 1
+                                to: 0
+                                duration: 90
+                            }
+                        }
+                    }
                 }
             }
         }
-    }
-
-    CustomTheme {
-        id: customTheme
     }
 }

@@ -1,0 +1,31 @@
+{
+  "theme": "Orchis",
+  "primitives": {
+    "--spacing": 4.0,
+    "--text-scaling": 1.03,
+    "--radius-base": 12.0,
+    "--radius-container": 18.0,
+    "--border-width": 1.0,
+    "--divide-width": 1.0,
+    "--ring-width": 2.0,
+    "--focus-ring-color": "#1A73E8",
+    "--focus-ring-color-dark": "#669DF6",
+    "--body-background-color": "#FAFAFA",
+    "--body-background-color-dark": "#242424",
+    "--base-font-weight": 400,
+    "--base-font-italic": false,
+    "--base-font-letter-spacing": 0.0,
+    "--base-font-color": "#2C2C2C",
+    "--base-font-color-dark": "#F2F2F2",
+    "--heading-font-weight": 650,
+    "--heading-font-italic": false,
+    "--heading-font-letter-spacing": 0.1,
+    "--heading-font-color": "#185ABC",
+    "--heading-font-color-dark": "#8AB4F8",
+    "--anchor-font-weight": 450,
+    "--anchor-font-italic": false,
+    "--anchor-font-letter-spacing": 0.0,
+    "--anchor-font-color": "#00897B",
+    "--anchor-font-color-dark": "#4DB6AC"
+  }
+}

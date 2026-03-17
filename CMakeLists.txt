@@ -5,9 +5,10 @@ project(Nandina VERSION 0.1 LANGUAGES CXX)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
-set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD 26)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(QT_QML_GENERATE_QMLLS_INI ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 option(NANDINA_BUILD_SHARED "Build Nandina as shared library" OFF)
 option(NANDINA_DEV_IMPORT_PATH "Set QML import paths to build dir (dev only)" ON)
@@ -18,6 +19,17 @@ if(PROJECT_IS_TOP_LEVEL AND NANDINA_DEV_IMPORT_PATH)
     set(QT_QML_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
     set(QML_IMPORT_PATH "${QT_QML_OUTPUT_DIRECTORY}" CACHE PATH "QML import path" FORCE)
     set(QML2_IMPORT_PATH "${QT_QML_OUTPUT_DIRECTORY}" CACHE PATH "QML2 import path" FORCE)
+endif()
+
+# ── Windows DLL resolution ──────────────────────────────────────────────────
+# On Windows there is no RPATH; DLLs are resolved from the executable's
+# directory.  Place every DLL and EXE in the build root so that backing
+# libraries (NandinaColor.dll, NandinaTheme.dll …) sit next to the
+# executable and can be found at load time.  Qt's qt_add_qml_module
+# overrides the output directory for plugin targets, so QML plugins still
+# land in the correct module sub-directories (e.g. Nandina/Theme/).
+if(WIN32)
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
 endif()
 
 if(QT_KNOWN_POLICY_QTP0001)
