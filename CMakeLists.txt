@@ -29,6 +29,7 @@ endif()
 # overrides the output directory for plugin targets, so QML plugins still
 # land in the correct module sub-directories (e.g. Nandina/Theme/).
 if(WIN32)
+    set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
 endif()
 
