@@ -11,11 +11,15 @@ import NandinaExample
 
 NanWindow {
     id: root
+    readonly property int _modeSystem: 0
+    readonly property int _modeFrameless: 1
+    readonly property int _modeCustom: 2
+
     width: 1200
     height: 760
     windowTitle: "Nandina Example — " + ThemeManager.currentThemeName
-    titleBarMode: "frameless"
-    injectControls: titleBarMode === "custom"
+    titleBarMode: root._modeCustom
+    injectControls: titleBarMode === root._modeCustom
 
     titleBar: Component {
         Item {

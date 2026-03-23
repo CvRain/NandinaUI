@@ -50,9 +50,15 @@ ApplicationWindow {
 
     visible: true
 
+    enum TitleBarModes {
+        System,
+        Frameless,
+        Custom
+    }
+
     // ── Title bar mode ─────────────────────────────────────────────
     /// "system" | "frameless" | "custom"
-    property string titleBarMode: "frameless"
+    property int titleBarMode: NanWindow.TitleBarModes.Frameless
 
     /// Height of the title bar in frameless / custom modes.
     property int titleBarHeight: 40
@@ -93,7 +99,7 @@ ApplicationWindow {
     default property alias content: _contentArea.data
 
     // ── Derived read-only helpers ──────────────────────────────────
-    readonly property bool _isFrameless: titleBarMode !== "system"
+    readonly property bool _isFrameless: titleBarMode !== NanWindow.TitleBarModes.System
     readonly property bool _isMaximized: root.visibility === Window.Maximized
     readonly property bool _isFullscreen: root.visibility === Window.FullScreen
     readonly property real _effectiveRadius: (_isMaximized || _isFullscreen) ? 0 : windowRadius
@@ -156,13 +162,13 @@ ApplicationWindow {
         height: root._isFrameless ? root.titleBarHeight : 0
 
         // "custom" mode uses the user-supplied Component; else use built-in.
-        sourceComponent: root._isFrameless ? (root.titleBarMode === "custom" && root.titleBar ? root.titleBar : _defaultTitleBarComponent) : null
+        sourceComponent: root._isFrameless ? (root.titleBarMode === NanWindow.TitleBarModes.Custom && root.titleBar ? root.titleBar : _defaultTitleBarComponent) : null
     }
 
     // ── Injected OS controls (custom mode only) ────────────────────
     Row {
         id: _injectedControls
-        visible: root.titleBarMode === "custom" && root.injectControls && root._isFrameless
+        visible: root.titleBarMode === NanWindow.TitleBarModes.Custom && root.injectControls && root._isFrameless
         anchors {
             verticalCenter: _titleBarLoader.verticalCenter
             right: parent.right
