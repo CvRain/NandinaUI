@@ -4,13 +4,12 @@ set(SUBPROJECT_QML_FILES
         Main.qml
         pages/PageSpec.qml
         pages/SettingPage.qml
-        pages/ThemePage.qml
-        pages/ColorPalettePage.qml
         pages/SurfacePressablePanelPage.qml
         pages/CardPage.qml
         pages/ButtonPage.qml
         pages/SideBarPage.qml
         pages/BadgePage.qml
+        pages/LabelPage.qml
 )
 
 set(SUBPROJECT_QML_SINGLETON_FILES
