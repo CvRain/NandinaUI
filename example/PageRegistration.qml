@@ -12,24 +12,6 @@ QtObject {
 
     readonly property list<QtObject> pageRegistry: [
         NanRoute {
-            key: "ThemePage"
-            section: "Foundation"
-            navTitle: "Theme"
-            title: "Theme 主题页"
-            summary: "用于验证主题切换、暗色模式与全局主题状态。"
-            iconText: "\uE3D0"
-            pageSource: Qt.resolvedUrl("pages/ThemePage.qml")
-        },
-        NanRoute {
-            key: "ColorPalettePage"
-            section: "Foundation"
-            navTitle: "Color Palettes"
-            title: "Color Palettes 颜色语义色板"
-            summary: "展示语义色板在 50~950 各色阶的实际视觉效果。"
-            iconText: "\uE3B9"
-            pageSource: Qt.resolvedUrl("pages/ColorPalettePage.qml")
-        },
-        NanRoute {
             key: "SurfacePressablePanelPage"
             section: "Components"
             navTitle: "Surface / Pressable / Panel"
@@ -37,6 +19,15 @@ QtObject {
             summary: "聚合展示基础容器与交互原语，便于观察状态反馈与组合方式。"
             iconText: "\uE3D0"
             pageSource: Qt.resolvedUrl("pages/SurfacePressablePanelPage.qml")
+        },
+        NanRoute {
+            key: "LabelPage"
+            section: "Components"
+            navTitle: "Label"
+            title: "Label 标签组件"
+            summary: "可访问的表单标签，支持必填/错误/禁用状态，主题感知颜色适配。"
+            iconText: "\uE893"
+            pageSource: Qt.resolvedUrl("pages/LabelPage.qml")
         },
         NanRoute {
             key: "CardPage"

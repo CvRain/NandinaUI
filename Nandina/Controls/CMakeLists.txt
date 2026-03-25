@@ -5,6 +5,8 @@ set(SUBPROJECT_QML_FILES
         # ── Primitives ──────────────────────────────────────────────
         NanPressable/NanPressable.qml # Pure interaction: hover/press/click, no visuals
         NanSurface/NanSurface.qml # Theme-aware Rectangle (color variant + shade system)
+        # ── Form Controls ──────────────────────────────────────────
+        NanLabel/NanLabel.qml # Accessible form label with required/error states
         # ── Controls ───────────────────────────────────────────────
         NanButton/NanButton.qml # Clickable button: filled/tonal/outlined/ghost/link + sizes
         NanBadge/NanBadge.qml # Inline status/tag label: filled/tonal/outlined/ghost + dot mode
