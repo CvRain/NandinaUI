@@ -1,6 +1,0 @@
-add_subdirectory(Color)
-add_subdirectory(Fonts)
-add_subdirectory(Primitives)
-add_subdirectory(Tokens)
-add_subdirectory(Types)
-add_subdirectory(Utils)

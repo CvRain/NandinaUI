@@ -7,71 +7,21 @@
   },
   "configurePresets": [
     {
-      "name": "qt-debug",
-      "displayName": "Qt Debug",
-      "description": "Debug build with Qt toolchain for local development",
+      "name": "default",
+      "displayName": "Default",
+      "description": "Minimal configure preset for the planning scaffold",
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/build",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
-        "CMAKE_TOOLCHAIN_FILE": "/home/cvrain/Qt/6.10.2/gcc_64/lib/cmake/Qt6/qt.toolchain.cmake",
-        "QT_QML_GENERATE_QMLLS_INI": "ON",
-        "CMAKE_CXX_FLAGS_DEBUG_INIT": "-DQT_QML_DEBUG -DQT_DECLARATIVE_DEBUG",
-        "CMAKE_CXX_FLAGS_RELWITHDEBINFO_INIT": "-DQT_QML_DEBUG -DQT_DECLARATIVE_DEBUG"
-      }
-    },
-    {
-      "name": "qt-debug-windows",
-      "displayName": "Qt Debug Windows",
-      "description": "Debug build with Qt toolchain for local development",
-      "generator": "Ninja",
-      "binaryDir": "${sourceDir}/build",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
-        "CMAKE_TOOLCHAIN_FILE": "D:/Project/Qt/6.9.0/mingw_64/lib/cmake/Qt6/qt.toolchain.cmake",
-        "CMAKE_PREFIX_PATH": "D:/Project/Qt/6.9.0/mingw_64",
-        "QT_QML_GENERATE_QMLLS_INI": "ON",
-        "CMAKE_CXX_FLAGS_DEBUG_INIT": "-DQT_QML_DEBUG -DQT_DECLARATIVE_DEBUG",
-        "CMAKE_CXX_FLAGS_RELWITHDEBINFO_INIT": "-DQT_QML_DEBUG -DQT_DECLARATIVE_DEBUG"
-      }
-    },
-    {
-      "name": "qt-relwithdebinfo",
-      "displayName": "Qt RelWithDebInfo",
-      "description": "RelWithDebInfo build with Qt toolchain",
-      "inherits": "qt-debug",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+        "CMAKE_BUILD_TYPE": "Debug"
       }
     }
   ],
   "buildPresets": [
     {
-      "name": "qt-debug",
-      "displayName": "Build Qt Debug",
-      "configurePreset": "qt-debug"
-    },
-    {
-      "name": "qt-debug-windows",
-      "displayName": "Build Qt Debug in windows",
-      "configurePreset": "qt-debug-windows"
-    },
-    {
-      "name": "qt-relwithdebinfo",
-      "displayName": "Build Qt RelWithDebInfo",
-      "configurePreset": "qt-relwithdebinfo"
-    }
-  ],
-  "testPresets": [
-    {
-      "name": "qt-debug",
-      "displayName": "Test Qt Debug",
-      "configurePreset": "qt-debug",
-      "output": {
-        "outputOnFailure": true
-      }
+      "name": "default",
+      "displayName": "Build default",
+      "configurePreset": "default"
     }
   ]
 }
