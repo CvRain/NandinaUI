@@ -1,0 +1,40 @@
+# clangd 配置
+# 默认对应 cmake --preset default（binaryDir: build/）
+# 若使用 cmake --preset debug，请将 CompilationDatabase 改为 build/debug
+
+CompileFlags:
+    CompilationDatabase: build
+    # 移除 GCC 专有的 C++ 模块扫描参数。
+    # CMake 在 CMAKE_CXX_SCAN_FOR_MODULES ON 时将这些 flag 写入 compile_commands.json，
+    # 但 clangd 使用 Clang driver，不识别 GCC 的模块扫描标志，会报 unknown argument 错误。
+    Remove:
+        - -fmodules-ts
+        - -fmodule-mapper=*
+        - -fdeps-format=*
+        - -fdeps-file=*
+        - -fmodule-output=*
+    Add:
+        - -std=c++26
+        - -Wall
+        - -Wextra
+        - -Wpedantic
+
+Diagnostics:
+    ClangTidy:
+        Add:
+            - bugprone-*
+            - modernize-*
+            - performance-*
+            - readability-*
+        Remove:
+            - modernize-use-trailing-return-type
+    UnusedIncludes: Strict
+
+Index:
+    Background: Build
+
+InlayHints:
+    Enabled: Yes
+    ParameterNames: Yes
+    DeducedTypes: Yes
+    BlockEnd: No

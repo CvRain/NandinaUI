@@ -1,27 +1,116 @@
 {
-  "version": 6,
-  "cmakeMinimumRequired": {
-    "major": 3,
-    "minor": 16,
-    "patch": 0
-  },
-  "configurePresets": [
-    {
-      "name": "default",
-      "displayName": "Default",
-      "description": "Minimal configure preset for the planning scaffold",
-      "generator": "Ninja",
-      "binaryDir": "${sourceDir}/build",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug"
-      }
-    }
-  ],
-  "buildPresets": [
-    {
-      "name": "default",
-      "displayName": "Build default",
-      "configurePreset": "default"
-    }
-  ]
+    "version": 6,
+    "cmakeMinimumRequired": {
+        "major": 4,
+        "minor": 0,
+        "patch": 0
+    },
+    "configurePresets": [
+        {
+            "name": "base",
+            "hidden": true,
+            "generator": "Ninja",
+            "toolchainFile": "${sourceDir}/vcpkg/scripts/buildsystems/vcpkg.cmake",
+            "cacheVariables": {
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+            }
+        },
+        {
+            "name": "default",
+            "displayName": "Default (Debug)",
+            "description": "向后兼容的默认配置，输出至 build/，clangd 默认指向此目录。VCPKG_MANIFEST_INSTALL=OFF：在 GitHub TLS 受限的沙箱环境中跳过 vcpkg 安装，回退到系统已安装的包。在网络正常的机器上请使用 debug / release 预设。",
+            "inherits": "base",
+            "binaryDir": "${sourceDir}/build",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "NANDINA_BUILD_TESTS": "ON",
+                "VCPKG_MANIFEST_INSTALL": "OFF"
+            }
+        },
+        {
+            "name": "debug",
+            "displayName": "Debug",
+            "description": "Debug 构建，启用全部警告与单元测试，输出至 build/debug",
+            "inherits": "base",
+            "binaryDir": "${sourceDir}/build/debug",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "NANDINA_BUILD_TESTS": "ON"
+            }
+        },
+        {
+            "name": "release",
+            "displayName": "Release",
+            "description": "优化发布构建，禁用测试，输出至 build/release",
+            "inherits": "base",
+            "binaryDir": "${sourceDir}/build/release",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "NANDINA_BUILD_TESTS": "OFF"
+            }
+        },
+        {
+            "name": "debug-asan",
+            "displayName": "Debug (AddressSanitizer)",
+            "description": "Debug 构建，启用 AddressSanitizer + UndefinedBehaviorSanitizer，输出至 build/debug-asan",
+            "inherits": "base",
+            "binaryDir": "${sourceDir}/build/debug-asan",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "NANDINA_BUILD_TESTS": "ON",
+                "CMAKE_CXX_FLAGS": "-fsanitize=address,undefined -fno-omit-frame-pointer",
+                "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=address,undefined"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "default",
+            "displayName": "Build (default)",
+            "configurePreset": "default"
+        },
+        {
+            "name": "debug",
+            "displayName": "Build (debug)",
+            "configurePreset": "debug"
+        },
+        {
+            "name": "release",
+            "displayName": "Build (release)",
+            "configurePreset": "release"
+        },
+        {
+            "name": "debug-asan",
+            "displayName": "Build (debug-asan)",
+            "configurePreset": "debug-asan"
+        }
+    ],
+    "testPresets": [
+        {
+            "name": "default",
+            "displayName": "Test (default)",
+            "configurePreset": "default",
+            "output": {
+                "outputOnFailure": true
+            }
+        },
+        {
+            "name": "debug",
+            "displayName": "Test (debug)",
+            "configurePreset": "debug",
+            "output": {
+                "outputOnFailure": true,
+                "verbosity": "default"
+            }
+        },
+        {
+            "name": "debug-asan",
+            "displayName": "Test (debug-asan)",
+            "configurePreset": "debug-asan",
+            "output": {
+                "outputOnFailure": true,
+                "verbosity": "default"
+            }
+        }
+    ]
 }

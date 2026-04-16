@@ -1,4 +1,7 @@
 # This file is used to ignore files which are generated
+
+# vcpkg manifest mode — 安装产物
+vcpkg_installed/
 # ----------------------------------------------------------------------------
 
 *~
@@ -85,6 +88,7 @@ Release
 
 .idea
 .vscode
+.zed
 build
 cmake-build-*
 .qmlls.ini
@@ -92,3 +96,4 @@ temp
 .internal-docs/
 .lsp
 .clj-kondo
+vcpkg_installed
