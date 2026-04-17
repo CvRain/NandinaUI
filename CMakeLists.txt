@@ -40,6 +40,10 @@ find_package(Freetype REQUIRED)
 # vcpkg port: harfbuzz  cmake target: harfbuzz::harfbuzz
 find_package(harfbuzz CONFIG REQUIRED)
 
+# Spdlog - 日志库
+# vcpkg port: spdlog cmake target: spdlog::spdlog
+find_package(spdlog CONFIG REQUIRED)
+
 # GoogleTest — 单元测试框架（tests）
 # vcpkg port: gtest   cmake targets: GTest::gtest  GTest::gtest_main
 if(NANDINA_BUILD_TESTS)

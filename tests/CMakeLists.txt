@@ -42,7 +42,7 @@ endfunction()
 # 随各模块实现进度逐步解注释并落地。
 # ---------------------------------------------------------------------------
 
-# add_subdirectory(foundation)   # Issue 005–007 — Point / Size / Rect / Constraints
+add_subdirectory(foundation)     # nandina.log 日志服务 + Issue 005–007 — Point / Size / Rect / Constraints
 # add_subdirectory(reactive)     # Issue 028    — State / Effect / Prop / batch
 # add_subdirectory(runtime)      # Issue 076    — Application / Window / Widget / Event
 # add_subdirectory(layout)       # Issue 036    — Row / Column / Stack / Flex

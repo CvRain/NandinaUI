@@ -17,13 +17,12 @@ target_compile_features(nandina_app PUBLIC cxx_std_26)
 target_sources(nandina_app
     PUBLIC
         FILE_SET CXX_MODULES FILES
-            nan_application.ixx
+        src/nan_application.ixx
 )
 
-# PUBLIC 传递性链接：nandina_app 是静态库，消费者（showcase）在最终链接时
-# 同样需要 SDL3 和 ThorVG 的符号，因此用 PUBLIC 而非 PRIVATE。
 target_link_libraries(nandina_app
     PUBLIC
+        nandina::foundation
         SDL3::SDL3
         PkgConfig::THORVG
 )
