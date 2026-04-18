@@ -14,21 +14,21 @@ add_library(nandina::foundation ALIAS nandina_foundation)
 target_compile_features(nandina_foundation PUBLIC cxx_std_26)
 
 target_sources(nandina_foundation
-    PUBLIC
+        PUBLIC
         FILE_SET CXX_MODULES FILES
-            src/log.cppm        # nandina.log 模块接口单元（零 spdlog 依赖）
-    PRIVATE
+        src/log.cppm        # nandina.log 模块接口单元（零 spdlog 依赖）
+        PRIVATE
         src/log.cpp             # nandina.log 模块实现单元（spdlog 隔离于此）
-    # 几何类型将在实现阶段逐步添加，例如：
-    #     src/enums.cppm          # 通用枚举（Axis / Alignment / ...）（Issue 005）
-    #     src/point.cppm          # Point<T>（Issue 006）
-    #     src/size.cppm           # Size<T>（Issue 006）
-    #     src/rect.cppm           # Rect<T>（Issue 006）
-    #     src/insets.cppm         # Insets<T>（Issue 006）
-    #     src/constraints.cppm    # Constraints 与测量语义（Issue 007）
+        # 几何类型将在实现阶段逐步添加，例如：
+        #     src/enums.cppm          # 通用枚举（Axis / Alignment / ...）（Issue 005）
+        #     src/point.cppm          # Point<T>（Issue 006）
+        #     src/size.cppm           # Size<T>（Issue 006）
+        #     src/rect.cppm           # Rect<T>（Issue 006）
+        #     src/insets.cppm         # Insets<T>（Issue 006）
+        #     src/constraints.cppm    # Constraints 与测量语义（Issue 007）
 )
 
 target_link_libraries(nandina_foundation
-    PUBLIC
+        PUBLIC
         spdlog::spdlog
 )

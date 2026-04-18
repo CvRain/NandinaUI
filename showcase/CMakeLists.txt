@@ -6,15 +6,25 @@ project(nandina_showcase LANGUAGES CXX)
 # 依赖：nandina::app（待实现后解注释）
 
 set(PROJECT_CPP_FILES
-    application.cpp
+        main.cpp
+)
+
+set(PROJECT_CPP_MODULE_FILES
+        application.cppm
 )
 
 add_executable(${PROJECT_NAME} ${PROJECT_CPP_FILES})
 
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_26)
 
+target_sources(${PROJECT_NAME}
+        PUBLIC
+        FILE_SET CXX_MODULES FILES ${PROJECT_CPP_MODULE_FILES}
+)
+
+
 # 待 nandina::app 实现后启用：
 target_link_libraries(${PROJECT_NAME}
-    PRIVATE
+        PRIVATE
         nandina::app
 )
