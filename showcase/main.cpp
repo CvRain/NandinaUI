@@ -1,7 +1,13 @@
+#include <memory>
+
+import nandina.app.application;
 import nandina.showcase;
 
 auto main() -> int {
-    ShowcaseApp app;
-    app.run();
+    nandina::NanApplication app;
+
+    // 运行主窗口
+    app.run(std::make_unique<MainWindow>());
+
     return 0;
 }

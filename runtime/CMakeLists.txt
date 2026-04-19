@@ -16,6 +16,7 @@ target_sources(nandina_runtime
     PUBLIC
         FILE_SET CXX_MODULES FILES
             src/nan_window.cppm         # nandina.runtime.nan_window（Issue 009/010/017）
+            src/nan_widget.cppm         # nandina.runtime.nan_widget（Issue 012）
     # 后续实现阶段逐步添加：
     #     src/application.cppm          # Application 生命周期（Issue 008）
     #     src/event_loop.cppm           # 事件循环调度（Issue 010）

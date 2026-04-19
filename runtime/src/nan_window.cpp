@@ -21,8 +21,7 @@ module nandina.runtime.nan_window;
 
 import nandina.log;
 
-namespace nandina::runtime { 
-
+namespace nandina::runtime {
     namespace {
         [[nodiscard]] auto to_pointer_button(Uint8 button) noexcept -> PointerButton {
             switch (button) {
@@ -75,11 +74,10 @@ namespace nandina::runtime {
             int ref_count{0};
         };
 
-        auto runtime_bootstrap() -> RuntimeBootstrap & {
+        auto runtime_bootstrap() -> RuntimeBootstrap& {
             static RuntimeBootstrap bootstrap;
             return bootstrap;
         }
-
     } // namespace
 
     // ============================================================
@@ -135,7 +133,7 @@ namespace nandina::runtime {
 
             // 重建 SDL 流式纹理
             auto *raw = SDL_CreateTexture(
-                    renderer.get(), SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, new_w, new_h);
+                renderer.get(), SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, new_w, new_h);
             if (!raw) {
                 throw std::runtime_error(std::format("SDL_CreateTexture failed: {}", SDL_GetError()));
             }
@@ -163,11 +161,12 @@ namespace nandina::runtime {
     // ============================================================
     // NanWindow 构造（私有，仅由 Builder::build() 调用）
     // ============================================================
-    NanWindow::NanWindow(const Config &config) :
-        NanWindow(config.title, config.width, config.height, config.resizable, config.high_dpi) {}
+    NanWindow::NanWindow(const Config &config) : NanWindow(config.title, config.width, config.height, config.resizable,
+                                                           config.high_dpi) {
+    }
 
-    NanWindow::NanWindow(std::string_view title, int width, int height, bool resizable, bool high_dpi) :
-        m_impl(std::make_unique<Impl>()) {
+    NanWindow::NanWindow(std::string_view title, int width, int height, bool resizable, bool high_dpi) : m_impl(
+        std::make_unique<Impl>()) {
         auto log = nandina::log::get("runtime.nan_window");
         log.debug("Creating window \"{}\" {}x{}", title, width, height);
 
@@ -243,7 +242,8 @@ namespace nandina::runtime {
     // 移动语义
     // ============================================================
     NanWindow::NanWindow(NanWindow &&) noexcept = default;
-    NanWindow &NanWindow::operator=(NanWindow &&) noexcept = default;
+
+    NanWindow& NanWindow::operator=(NanWindow &&) noexcept = default;
 
     // ============================================================
     // 属性访问
@@ -286,7 +286,6 @@ namespace nandina::runtime {
         SDL_Event ev;
         while (SDL_PollEvent(&ev)) {
             switch (ev.type) {
-
                 case SDL_EVENT_QUIT:
                 case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
                     m_impl->should_close = true;
@@ -447,60 +446,72 @@ namespace nandina::runtime {
         }
     }
 
-    auto NanWindow::on_ready() -> void {}
+    auto NanWindow::on_ready() -> void {
+    }
 
-    auto NanWindow::on_update(double) -> void {}
+    auto NanWindow::on_update(double) -> void {
+    }
 
-    auto NanWindow::on_draw(tvg::SwCanvas &) -> void {}
+    auto NanWindow::on_draw(tvg::SwCanvas &) -> void {
+    }
 
-    auto NanWindow::on_resize(int, int) -> void {}
+    auto NanWindow::on_resize(int, int) -> void {
+    }
 
-    auto NanWindow::on_close_requested() -> void {}
+    auto NanWindow::on_close_requested() -> void {
+    }
 
-    auto NanWindow::on_pointer_move(const PointerMoveEvent &) -> void {}
+    auto NanWindow::on_pointer_move(const PointerMoveEvent &) -> void {
+    }
 
-    auto NanWindow::on_pointer_down(const PointerButtonEvent &) -> void {}
+    auto NanWindow::on_pointer_down(const PointerButtonEvent &) -> void {
+    }
 
-    auto NanWindow::on_pointer_up(const PointerButtonEvent &) -> void {}
+    auto NanWindow::on_pointer_up(const PointerButtonEvent &) -> void {
+    }
 
-    auto NanWindow::on_pointer_wheel(const PointerWheelEvent &) -> void {}
+    auto NanWindow::on_pointer_wheel(const PointerWheelEvent &) -> void {
+    }
 
-    auto NanWindow::on_key_down(const KeyEvent &) -> void {}
+    auto NanWindow::on_key_down(const KeyEvent &) -> void {
+    }
 
-    auto NanWindow::on_key_up(const KeyEvent &) -> void {}
+    auto NanWindow::on_key_up(const KeyEvent &) -> void {
+    }
 
-    auto NanWindow::on_text_input(std::string_view) -> void {}
+    auto NanWindow::on_text_input(std::string_view) -> void {
+    }
 
     // ============================================================
     // Builder 实现
     // ============================================================
-    auto NanWindow::Builder::set_title(std::string_view title) noexcept -> Builder & {
+    auto NanWindow::Builder::set_title(std::string_view title) noexcept -> Builder& {
         m_title = std::string(title);
         return *this;
     }
 
-    auto NanWindow::Builder::set_width(int width) noexcept -> Builder & {
+    auto NanWindow::Builder::set_width(int width) noexcept -> Builder& {
         m_width = width;
         return *this;
     }
 
-    auto NanWindow::Builder::set_height(int height) noexcept -> Builder & {
+    auto NanWindow::Builder::set_height(int height) noexcept -> Builder& {
         m_height = height;
         return *this;
     }
 
-    auto NanWindow::Builder::set_size(int width, int height) noexcept -> Builder & {
+    auto NanWindow::Builder::set_size(int width, int height) noexcept -> Builder& {
         m_width = width;
         m_height = height;
         return *this;
     }
 
-    auto NanWindow::Builder::set_resizable(bool resizable) noexcept -> Builder & {
+    auto NanWindow::Builder::set_resizable(bool resizable) noexcept -> Builder& {
         m_resizable = resizable;
         return *this;
     }
 
-    auto NanWindow::Builder::set_high_dpi(bool high_dpi) noexcept -> Builder & {
+    auto NanWindow::Builder::set_high_dpi(bool high_dpi) noexcept -> Builder& {
         m_high_dpi = high_dpi;
         return *this;
     }
@@ -530,5 +541,4 @@ namespace nandina::runtime {
     auto NanWindow::Builder::build() -> NanWindow {
         return NanWindow{to_config()};
     }
-
 } // namespace nandina::runtime

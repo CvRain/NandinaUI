@@ -102,18 +102,18 @@ export namespace nandina::runtime {
         // 链式参数配置，可转为 Config 或直接 build()。
         class Builder {
         public:
-            [[nodiscard]] auto set_title(std::string_view title) noexcept -> Builder &;
+            [[nodiscard]] auto set_title(std::string_view title) noexcept -> Builder&;
 
-            [[nodiscard]] auto set_width(int width) noexcept -> Builder &;
+            [[nodiscard]] auto set_width(int width) noexcept -> Builder&;
 
-            [[nodiscard]] auto set_height(int height) noexcept -> Builder &;
+            [[nodiscard]] auto set_height(int height) noexcept -> Builder&;
 
             // 同时设置宽高的便捷方法
-            [[nodiscard]] auto set_size(int width, int height) noexcept -> Builder &;
+            [[nodiscard]] auto set_size(int width, int height) noexcept -> Builder&;
 
-            [[nodiscard]] auto set_resizable(bool resizable) noexcept -> Builder &;
+            [[nodiscard]] auto set_resizable(bool resizable) noexcept -> Builder&;
 
-            [[nodiscard]] auto set_high_dpi(bool high_dpi) noexcept -> Builder &;
+            [[nodiscard]] auto set_high_dpi(bool high_dpi) noexcept -> Builder&;
 
             // Getters（供调试或测试读取配置）
             [[nodiscard]] auto get_title() const noexcept -> std::string_view;
@@ -137,15 +137,22 @@ export namespace nandina::runtime {
 
         // ── 拷贝/移动语义 ─────────────────────────────────────
         NanWindow(const NanWindow &) = delete;
-        NanWindow &operator=(const NanWindow &) = delete;
+
+        NanWindow& operator=(const NanWindow &) = delete;
+
         NanWindow(NanWindow &&) noexcept;
-        NanWindow &operator=(NanWindow &&) noexcept;
+
+        NanWindow& operator=(NanWindow &&) noexcept;
+
         virtual ~NanWindow();
 
         // ── 属性访问 ──────────────────────────────────────────
         [[nodiscard]] auto title() const noexcept -> std::string_view;
+
         [[nodiscard]] auto width() const noexcept -> int;
+
         [[nodiscard]] auto height() const noexcept -> int;
+
         [[nodiscard]] auto dpi_scale() const noexcept -> float;
 
         // ── 生命周期状态 ──────────────────────────────────────
@@ -180,26 +187,37 @@ export namespace nandina::runtime {
         // 生命周期钩子（Godot-like）
         // 仅在 run() 内首次循环前调用一次。
         virtual auto on_ready() -> void;
+
         // 每帧调用一次，delta_seconds 为上一帧耗时。
         virtual auto on_update(double delta_seconds) -> void;
+
         // 每帧绘制调用，canvas 已清空。
         virtual auto on_draw(tvg::SwCanvas &canvas) -> void;
+
         // 窗口逻辑尺寸变化后调用。
         virtual auto on_resize(int new_width, int new_height) -> void;
+
         // 收到关闭请求时调用。
         virtual auto on_close_requested() -> void;
+
         // 鼠标移动事件。
         virtual auto on_pointer_move(const PointerMoveEvent &event) -> void;
+
         // 鼠标按下事件。
         virtual auto on_pointer_down(const PointerButtonEvent &event) -> void;
+
         // 鼠标抬起事件。
         virtual auto on_pointer_up(const PointerButtonEvent &event) -> void;
+
         // 鼠标滚轮事件。
         virtual auto on_pointer_wheel(const PointerWheelEvent &event) -> void;
+
         // 键盘按下事件。
         virtual auto on_key_down(const KeyEvent &event) -> void;
+
         // 键盘抬起事件。
         virtual auto on_key_up(const KeyEvent &event) -> void;
+
         // 文本输入事件（IME 结果文本）。
         virtual auto on_text_input(std::string_view text) -> void;
 
@@ -210,5 +228,4 @@ export namespace nandina::runtime {
         struct Impl;
         std::unique_ptr<Impl> m_impl;
     };
-
 } // namespace nandina::runtime
