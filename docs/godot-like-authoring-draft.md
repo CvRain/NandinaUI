@@ -1,4 +1,4 @@
-# NandinaUI Godot-like 开发范式（草案）
+.# NandinaUI Godot-like 开发范式（草案）
 
 > 状态：**草案（Draft）**  
 > 目的：定义当前阶段的应用/窗口继承式开发体验，后续会随着 runtime、widget、event 系统演进持续修订。
