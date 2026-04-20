@@ -1,10 +1,5 @@
 module;
 
-// ============================================================
-// 全局模块片段：第三方与标准库头文件
-// 所有 spdlog / fmtlib 的使用被隔离在此实现单元，
-// 不会通过模块接口泄漏给消费方。
-// ============================================================
 #include <spdlog/sinks/rotating_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/spdlog.h>
@@ -12,6 +7,7 @@ module;
 #include <algorithm>
 #include <memory>
 #include <mutex>
+#include <ranges>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -81,14 +77,14 @@ namespace nandina::log::detail {
 // ============================================================
 namespace nandina::log {
 
-    void Logger::set_level(Level level) noexcept {
+    void Logger::set_level(Level level) const noexcept {
         if (!m_impl)
             return;
         auto *lg = static_cast<spdlog::logger *>(m_impl.get());
         lg->set_level(detail::to_spd(static_cast<int>(level)));
     }
 
-    void Logger::flush() {
+    auto Logger::flush() const -> void {
         if (!m_impl)
             return;
         static_cast<spdlog::logger *>(m_impl.get())->flush();
@@ -152,7 +148,7 @@ namespace nandina::log {
 
         auto &s = detail::global();
         std::scoped_lock lk(s.mtx);
-        for (auto &[_, lg]: s.named_loggers)
+        for (const auto &lg: s.named_loggers | std::views::values)
             lg->set_level(spd);
     }
 
@@ -160,8 +156,8 @@ namespace nandina::log {
         spdlog::apply_all([](const std::shared_ptr<spdlog::logger> &lg) { lg->flush(); });
     }
 
-    Logger get(std::string_view name) {
-        auto spdlog_ptr = detail::ensure_named(name);
+    Logger get(const std::string_view name) {
+        const auto spdlog_ptr = detail::ensure_named(name);
         // aliasing 构造：shared_ptr<void> 与 shared_ptr<logger> 共享引用计数，
         // 但对外暴露 void*，消费方无需感知 spdlog 类型
         std::shared_ptr<void> erased{spdlog_ptr, spdlog_ptr.get()};

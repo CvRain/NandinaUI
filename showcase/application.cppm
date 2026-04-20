@@ -6,16 +6,34 @@ export module nandina.showcase;
 
 import nandina.app.application;
 import nandina.log;
+import nandina.foundation.color;
 
 export class MainComponent final : public nandina::NanComponent {
 protected:
     void on_draw(tvg::SwCanvas &canvas) override {
+        logger.debug("MainComponent draw");
+
         const auto w = width();
         const auto h = height();
 
+        constexpr auto crust_rgb = nandina::NanRgb{35u, 38u, 52u};
+        const auto crust_from_rgb = nandina::NanColor::from(crust_rgb);
+        const auto crust_oklch = crust_from_rgb.to<nandina::NanOklch>();
+        const auto bg_color_rgb = crust_from_rgb.to<nandina::NanRgb>();
+
         auto *bg = tvg::Shape::gen();
         bg->appendRect(0, 0, w, h, 0, 0);
-        bg->fill(18, 18, 22, 255);
+        bg->fill(bg_color_rgb.red(), bg_color_rgb.green(), bg_color_rgb.blue(), bg_color_rgb.alpha());
+        logger.debug("MainComponent background color rgb={}, {}, {}",
+                     bg_color_rgb.red(), bg_color_rgb.green(), bg_color_rgb.blue());
+        logger.debug("MainComponent crust oklch raw=L:{} C:{} H:{}",
+                     crust_oklch.lightness(), crust_oklch.chroma(), crust_oklch.hue());
+        logger.debug("MainComponent crust oklch css-ish sample=L:{}% C:{}% H:{}deg (rounded page label)",
+                     crust_oklch.lightness() * 100.0f,
+                     crust_oklch.chroma() * 100.0f,
+                     crust_oklch.hue());
+        logger.flush();
+
         canvas.add(bg);
 
         auto *circle_l = tvg::Shape::gen();
@@ -37,6 +55,9 @@ protected:
         card->fill(30, 30, 38, 255);
         canvas.add(card);
     }
+
+private:
+    nandina::log::Logger logger = nandina::log::get("MainComponent");
 };
 
 export class MainWindow final : public nandina::NanAppWindow {

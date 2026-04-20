@@ -7,3 +7,9 @@ nandina_add_test(
     SOURCES test_log.cpp
     DEPS    nandina::foundation
 )
+
+nandina_add_test(
+    NAME    test_foundation_color
+    SOURCES test_color.cpp
+    DEPS    nandina::foundation
+)

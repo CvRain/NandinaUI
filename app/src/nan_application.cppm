@@ -3,7 +3,6 @@ module;
 #include <memory>
 #include <string>
 #include <thorvg-1/thorvg.h>
-#include <vector>
 
 export module nandina.app.application;
 
@@ -12,12 +11,11 @@ import nandina.runtime.nan_window;
 import nandina.runtime.nan_widget;
 
 export namespace nandina {
-
-    class NanComponent : public nandina::runtime::NanWidget {
+    class NanComponent : public nandina::NanWidget {
     public:
         using Ptr = std::unique_ptr<NanComponent>;
-        ~NanComponent() override {
-        }
+
+        ~NanComponent() override = default;
     };
 
     struct AppConfig {
@@ -32,6 +30,7 @@ export namespace nandina {
     public:
         explicit NanAppWindow(const AppConfig &config) : m_config(config) {
         }
+
         virtual ~NanAppWindow() {
         }
 
@@ -56,9 +55,11 @@ export namespace nandina {
     protected:
         virtual void on_ready() {
         }
+
         virtual void on_update(double delta_seconds) {
             (void)delta_seconds;
         }
+
         virtual void on_draw(tvg::SwCanvas &canvas) {
             if (m_root_component) {
                 m_root_component->draw(canvas);
@@ -67,25 +68,29 @@ export namespace nandina {
 
     private:
         AppConfig m_config;
-        nandina::runtime::NanWindow *m_active_runtime_window{nullptr};
+        nandina::NanWindow *m_active_runtime_window{nullptr};
         NanComponent::Ptr m_root_component{nullptr};
 
-        class BridgeWindow final : public nandina::runtime::NanWindow {
+        class BridgeWindow final : public nandina::NanWindow {
         public:
-            BridgeWindow(NanAppWindow &owner, const nandina::runtime::NanWindow::Config &config) :
-                nandina::runtime::NanWindow(config), m_owner(owner) {
+            BridgeWindow(NanAppWindow &owner,
+                         const nandina::NanWindow::Config &config) : nandina::NanWindow(config),
+                                                                     m_owner(owner) {
             }
 
         protected:
             void on_ready() override {
                 m_owner.on_ready();
             }
+
             void on_update(double delta) override {
                 m_owner.on_update(delta);
             }
+
             void on_draw(tvg::SwCanvas &canvas) override {
                 m_owner.on_draw(canvas);
             }
+
             void on_resize(int w, int h) override {
                 if (m_owner.m_root_component) {
                     m_owner.m_root_component->set_size(static_cast<float>(w), static_cast<float>(h));
@@ -101,6 +106,7 @@ export namespace nandina {
     public:
         NanApplication() {
         }
+
         virtual ~NanApplication() {
         }
 
@@ -120,11 +126,13 @@ export namespace nandina {
     inline auto NanAppWindow::run() -> void {
         auto log = nandina::log::get("app.window");
 
-        nandina::runtime::NanWindow::Config runtime_config{.title = m_config.title,
-                                                           .width = m_config.width,
-                                                           .height = m_config.height,
-                                                           .resizable = m_config.resizable,
-                                                           .high_dpi = m_config.high_dpi};
+        nandina::NanWindow::Config runtime_config{
+            .title = m_config.title,
+            .width = m_config.width,
+            .height = m_config.height,
+            .resizable = m_config.resizable,
+            .high_dpi = m_config.high_dpi
+        };
 
         BridgeWindow window{*this, runtime_config};
         m_active_runtime_window = &window;
@@ -139,5 +147,4 @@ export namespace nandina {
 
         m_active_runtime_window = nullptr;
     }
-
 } // namespace nandina

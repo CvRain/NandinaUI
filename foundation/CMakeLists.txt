@@ -11,12 +11,18 @@ project(nandina_foundation LANGUAGES CXX)
 add_library(nandina_foundation STATIC)
 add_library(nandina::foundation ALIAS nandina_foundation)
 
+set(PROJECT_MODULE_FILES
+        src/log.cppm
+        src/nan_color_schema.cppm
+        src/nan_color_converter.cppm
+        src/nan_color.cppm
+)
+
 target_compile_features(nandina_foundation PUBLIC cxx_std_26)
 
 target_sources(nandina_foundation
         PUBLIC
-        FILE_SET CXX_MODULES FILES
-        src/log.cppm        # nandina.log 模块接口单元（零 spdlog 依赖）
+        FILE_SET CXX_MODULES FILES ${PROJECT_MODULE_FILES}
         PRIVATE
         src/log.cpp             # nandina.log 模块实现单元（spdlog 隔离于此）
         # 几何类型将在实现阶段逐步添加，例如：

@@ -21,7 +21,7 @@ module nandina.runtime.nan_window;
 
 import nandina.log;
 
-namespace nandina::runtime {
+namespace nandina {
     namespace {
         [[nodiscard]] auto to_pointer_button(Uint8 button) noexcept -> PointerButton {
             switch (button) {

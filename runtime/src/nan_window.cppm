@@ -18,7 +18,7 @@ export module nandina.runtime.nan_window;
 // ============================================================
 // 导出接口
 // ============================================================
-export namespace nandina::runtime {
+export namespace nandina {
     enum class PointerButton : std::uint8_t {
         Unknown = 0,
         Left = 1,
