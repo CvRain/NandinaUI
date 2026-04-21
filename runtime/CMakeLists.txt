@@ -30,5 +30,5 @@ target_link_libraries(nandina_runtime
     PUBLIC
         nandina::foundation             # nandina.log 及后续几何基础类型
         SDL3::SDL3                      # 窗口系统与平台事件
-        PkgConfig::THORVG               # 矢量图形渲染后端
+        nandina::thorvg                # 矢量图形渲染后端
 )

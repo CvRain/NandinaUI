@@ -3,6 +3,11 @@
 //
 module;
 
+#include <concepts>
+#include <functional>
+#include <type_traits>
+#include <utility>
+
 export module nandina.foundation.color;
 
 export import nandina.foundation.nan_color_schema;
@@ -64,6 +69,29 @@ export namespace nandina {
         auto assign(const T &color) -> NanColor & {
             oklab_color_ = color::ColorSpaceTraits<T>::to_oklab(color);
             return *this;
+        }
+
+        /**
+         * 按指定颜色空间变换当前颜色，并写回容器。
+         *
+         * Example:
+         *   color.transform<nandina::NanRgb>([](auto rgb) {
+         *       return nandina::NanRgb{rgb.red(), rgb.green(), 255u, rgb.alpha()};
+         *   });
+         */
+        template<color::ColorSpace T, typename Fn>
+            requires std::invocable<Fn &, T> &&
+                     std::same_as<std::invoke_result_t<Fn &, T>, T>
+        auto transform(Fn &&fn) -> NanColor & {
+            return assign(std::invoke(std::forward<Fn>(fn), to<T>()));
+        }
+
+        /// 与 `transform()` 相同，但返回变换后的副本，不修改当前对象。
+        template<color::ColorSpace T, typename Fn>
+            requires std::invocable<Fn &, T> &&
+                     std::same_as<std::invoke_result_t<Fn &, T>, T>
+        [[nodiscard]] auto transformed(Fn &&fn) const -> NanColor {
+            return NanColor::from(std::invoke(std::forward<Fn>(fn), to<T>()));
         }
 
         /**

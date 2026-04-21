@@ -8,6 +8,7 @@ module;
 #include <memory>
 #include <mutex>
 #include <ranges>
+#include <utility>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -15,10 +16,7 @@ module;
 
 module nandina.log;
 
-// ============================================================
-// 模块内部状态（对外完全不可见）
-// ============================================================
-namespace nandina::log::detail {
+namespace nandina::log {
 
     struct State {
         std::vector<spdlog::sink_ptr> sinks;
@@ -27,18 +25,18 @@ namespace nandina::log::detail {
         bool ready{false};
     };
 
-    [[nodiscard]] inline State &global() noexcept {
+    [[nodiscard]] auto global_state() noexcept -> State & {
         static State s;
         return s;
     }
 
-    [[nodiscard]] inline auto to_spd(int lvl) noexcept -> spdlog::level::level_enum {
-        const int clamped = std::clamp(lvl, 0, static_cast<int>(spdlog::level::off));
+    [[nodiscard]] auto to_spd(const Level level) noexcept -> spdlog::level::level_enum {
+        const int clamped = std::clamp(static_cast<int>(level), 0, static_cast<int>(spdlog::level::off));
         return static_cast<spdlog::level::level_enum>(clamped);
     }
 
-    [[nodiscard]] inline std::shared_ptr<spdlog::logger> ensure_named(std::string_view name) {
-        auto &s = global();
+    [[nodiscard]] auto ensure_named_logger(std::string_view name) -> std::shared_ptr<spdlog::logger> {
+        auto &s = global_state();
         auto key = std::string(name);
 
         std::scoped_lock lk(s.mtx);
@@ -52,36 +50,23 @@ namespace nandina::log::detail {
         s.named_loggers.emplace(key, lg);
         return lg;
     }
-
-    // ── 实现 log.cppm 中声明的 detail 非模板函数 ──────────────
-
-    // 向指定 logger（void* 类型擦除）写入一条已格式化消息
-    void write(void *logger_ptr, int level, std::string msg) {
-        if (!logger_ptr)
+    
+    void write(void *logger_ptr, const Level level, std::string msg) {
+        if (logger_ptr == nullptr)
             return;
-        auto *lg = static_cast<spdlog::logger *>(logger_ptr);
-        lg->log(spdlog::source_loc{}, to_spd(level), msg.c_str());
+        static_cast<spdlog::logger *>(logger_ptr)->log(spdlog::source_loc{}, to_spd(level), msg.c_str());
     }
 
-    // 向全局根 logger 写入一条已格式化消息
-    void write_default(int level, std::string msg) {
-        auto *lg = spdlog::default_logger_raw();
-        if (lg)
-            lg->log(spdlog::source_loc{}, to_spd(level), msg.c_str());
+    void write_default(const Level level, std::string msg) {
+        if (auto *logger = spdlog::default_logger_raw(); logger != nullptr)
+            logger->log(spdlog::source_loc{}, to_spd(level), msg.c_str());
     }
-
-} // namespace nandina::log::detail
-
-// ============================================================
-// Logger 成员函数实现
-// ============================================================
-namespace nandina::log {
 
     void Logger::set_level(Level level) const noexcept {
         if (!m_impl)
             return;
         auto *lg = static_cast<spdlog::logger *>(m_impl.get());
-        lg->set_level(detail::to_spd(static_cast<int>(level)));
+        lg->set_level(to_spd(level));
     }
 
     auto Logger::flush() const -> void {
@@ -98,14 +83,14 @@ namespace nandina::log {
 namespace nandina::log {
 
     void init(std::string_view app_name, Level console_level, bool enable_file, std::string_view log_file) {
-        auto &s = detail::global();
+        auto &s = global_state();
         std::scoped_lock lk(s.mtx);
         if (s.ready)
             return;
 
         // 控制台 sink — 带 ANSI 色彩，输出到 stdout
         auto console = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
-        console->set_level(detail::to_spd(static_cast<int>(console_level)));
+        console->set_level(to_spd(console_level));
         console->set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%^%n%$] [%^%l%$] %v");
         s.sinks.push_back(console);
 
@@ -125,7 +110,7 @@ namespace nandina::log {
         auto root = std::make_shared<spdlog::logger>(std::string(app_name), s.sinks.begin(), s.sinks.end());
         root->set_level(spdlog::level::trace);
         spdlog::set_default_logger(root);
-        spdlog::set_level(detail::to_spd(static_cast<int>(console_level)));
+        spdlog::set_level(to_spd(console_level));
 
         s.ready = true;
     }
@@ -133,7 +118,7 @@ namespace nandina::log {
     void shutdown() {
         // 先释放我们持有的引用，再让 spdlog 做最终清理，避免 use-after-free
         {
-            auto &s = detail::global();
+            auto &s = global_state();
             std::scoped_lock lk(s.mtx);
             s.named_loggers.clear();
             s.sinks.clear();
@@ -143,10 +128,10 @@ namespace nandina::log {
     }
 
     void set_level(Level level) noexcept {
-        const auto spd = detail::to_spd(static_cast<int>(level));
+        const auto spd = to_spd(level);
         spdlog::set_level(spd);
 
-        auto &s = detail::global();
+        auto &s = global_state();
         std::scoped_lock lk(s.mtx);
         for (const auto &lg: s.named_loggers | std::views::values)
             lg->set_level(spd);
@@ -157,7 +142,7 @@ namespace nandina::log {
     }
 
     Logger get(const std::string_view name) {
-        const auto spdlog_ptr = detail::ensure_named(name);
+        const auto spdlog_ptr = ensure_named_logger(name);
         // aliasing 构造：shared_ptr<void> 与 shared_ptr<logger> 共享引用计数，
         // 但对外暴露 void*，消费方无需感知 spdlog 类型
         std::shared_ptr<void> erased{spdlog_ptr, spdlog_ptr.get()};

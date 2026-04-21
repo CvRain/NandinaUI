@@ -4,25 +4,17 @@ module;
 #include <memory>
 #include <string>
 #include <string_view>
+#include <utility>
 
 export module nandina.log;
 
-// ============================================================
-// 模块内部辅助接口（不导出，由 log.cpp 实现单元提供定义）
-// ============================================================
-namespace nandina::log::detail {
-    // 向任意 spdlog::logger（以 void* 型参传递）写入一条已格式化日志
-    void write(void *logger_ptr, int level, std::string msg);
-
-    // 向全局根 logger 写入一条已格式化日志（供自由函数快捷接口使用）
-    void write_default(int level, std::string msg);
-} // namespace nandina::log::detail
-
-// ============================================================
-// 签名中只使用标准 C++ 类型，确保消费方 TU 实例化模板时
-// 公开导出接口
-// ============================================================
 export namespace nandina::log {
+    /**
+     * nandina.log
+     *
+     * 面向框架与应用的统一日志入口。
+     * 对外只暴露标准 C++ 类型，spdlog 细节全部隔离在实现单元中。
+     */
     // ──────────────────────────────────────────────────────────
     // 日志级别枚举
     // 数值与 spdlog::level::level_enum 一一对应，但对外不暴露 spdlog 类型。
@@ -37,6 +29,10 @@ export namespace nandina::log {
         Off = 6,
     };
 
+    // 低层写入接口：模板成员与自由函数最终都汇聚到这里。
+    // 使用 void* 做类型擦除，避免在模块接口里泄漏 spdlog 类型。
+    void write(void *logger_ptr, Level level, std::string msg);
+    void write_default(Level level, std::string msg);
 
     /// Logger — 具名子模块日志句柄
     ///
@@ -55,39 +51,6 @@ export namespace nandina::log {
                                                                         m_name(std::move(name)) {
         }
 
-        // ── 各级别日志输出（std::format 风格，编译期格式串检查）──
-
-        template<typename... Args>
-        void trace(std::format_string<Args...> fmt, Args &&... args) {
-            detail::write(m_impl.get(), static_cast<int>(Level::Trace), std::format(fmt, std::forward<Args>(args)...));
-        }
-
-        template<typename... Args>
-        void debug(std::format_string<Args...> fmt, Args &&... args) {
-            detail::write(m_impl.get(), static_cast<int>(Level::Debug), std::format(fmt, std::forward<Args>(args)...));
-        }
-
-        template<typename... Args>
-        void info(std::format_string<Args...> fmt, Args &&... args) {
-            detail::write(m_impl.get(), static_cast<int>(Level::Info), std::format(fmt, std::forward<Args>(args)...));
-        }
-
-        template<typename... Args>
-        void warn(std::format_string<Args...> fmt, Args &&... args) {
-            detail::write(m_impl.get(), static_cast<int>(Level::Warn), std::format(fmt, std::forward<Args>(args)...));
-        }
-
-        template<typename... Args>
-        void error(std::format_string<Args...> fmt, Args &&... args) {
-            detail::write(m_impl.get(), static_cast<int>(Level::Error), std::format(fmt, std::forward<Args>(args)...));
-        }
-
-        template<typename... Args>
-        void critical(std::format_string<Args...> fmt, Args &&... args) {
-            detail::write(
-                m_impl.get(), static_cast<int>(Level::Critical), std::format(fmt, std::forward<Args>(args)...));
-        }
-
         // ── 运行时配置（非模板，定义在 log.cpp 实现单元中）──
 
         void set_level(Level level) const noexcept;
@@ -98,7 +61,42 @@ export namespace nandina::log {
             return m_name;
         }
 
+        template<typename... Args>
+        void trace(std::format_string<Args...> fmt, Args &&... args) {
+            log(Level::Trace, fmt, std::forward<Args>(args)...);
+        }
+
+        template<typename... Args>
+        void debug(std::format_string<Args...> fmt, Args &&... args) {
+            log(Level::Debug, fmt, std::forward<Args>(args)...);
+        }
+
+        template<typename... Args>
+        void info(std::format_string<Args...> fmt, Args &&... args) {
+            log(Level::Info, fmt, std::forward<Args>(args)...);
+        }
+
+        template<typename... Args>
+        void warn(std::format_string<Args...> fmt, Args &&... args) {
+            log(Level::Warn, fmt, std::forward<Args>(args)...);
+        }
+
+        template<typename... Args>
+        void error(std::format_string<Args...> fmt, Args &&... args) {
+            log(Level::Error, fmt, std::forward<Args>(args)...);
+        }
+
+        template<typename... Args>
+        void critical(std::format_string<Args...> fmt, Args &&... args) {
+            log(Level::Critical, fmt, std::forward<Args>(args)...);
+        }
+
     private:
+        template<typename... Args>
+        void log(const Level level, std::format_string<Args...> fmt, Args &&... args) {
+            write(m_impl.get(), level, std::format(fmt, std::forward<Args>(args)...));
+        }
+
         std::shared_ptr<void> m_impl; // 实际持有 spdlog::logger（类型擦除）
         std::string m_name; // 缓存名称，避免跨模块边界解引用 spdlog 类型
     };
@@ -147,31 +145,31 @@ export namespace nandina::log {
 
     template<typename... Args>
     void trace(std::format_string<Args...> fmt, Args &&... args) {
-        detail::write_default(static_cast<int>(Level::Trace), std::format(fmt, std::forward<Args>(args)...));
+        write_default(Level::Trace, std::format(fmt, std::forward<Args>(args)...));
     }
 
     template<typename... Args>
     void debug(std::format_string<Args...> fmt, Args &&... args) {
-        detail::write_default(static_cast<int>(Level::Debug), std::format(fmt, std::forward<Args>(args)...));
+        write_default(Level::Debug, std::format(fmt, std::forward<Args>(args)...));
     }
 
     template<typename... Args>
     void info(std::format_string<Args...> fmt, Args &&... args) {
-        detail::write_default(static_cast<int>(Level::Info), std::format(fmt, std::forward<Args>(args)...));
+        write_default(Level::Info, std::format(fmt, std::forward<Args>(args)...));
     }
 
     template<typename... Args>
     void warn(std::format_string<Args...> fmt, Args &&... args) {
-        detail::write_default(static_cast<int>(Level::Warn), std::format(fmt, std::forward<Args>(args)...));
+        write_default(Level::Warn, std::format(fmt, std::forward<Args>(args)...));
     }
 
     template<typename... Args>
     void error(std::format_string<Args...> fmt, Args &&... args) {
-        detail::write_default(static_cast<int>(Level::Error), std::format(fmt, std::forward<Args>(args)...));
+        write_default(Level::Error, std::format(fmt, std::forward<Args>(args)...));
     }
 
     template<typename... Args>
     void critical(std::format_string<Args...> fmt, Args &&... args) {
-        detail::write_default(static_cast<int>(Level::Critical), std::format(fmt, std::forward<Args>(args)...));
+        write_default(Level::Critical, std::format(fmt, std::forward<Args>(args)...));
     }
 } // namespace nandina::log

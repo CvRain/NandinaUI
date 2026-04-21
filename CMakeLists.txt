@@ -27,6 +27,41 @@ find_package(SDL3 CONFIG REQUIRED)
 # 使用 pkg_check_modules 查找，imported target: PkgConfig::THORVG
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(THORVG REQUIRED IMPORTED_TARGET thorvg-1)
+find_package(Threads REQUIRED)
+
+add_library(nandina_thorvg INTERFACE)
+add_library(nandina::thorvg ALIAS nandina_thorvg)
+
+set(NANDINA_VCPKG_TRIPLET "${VCPKG_TARGET_TRIPLET}")
+if(NOT NANDINA_VCPKG_TRIPLET)
+    if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|amd64)$")
+        set(NANDINA_VCPKG_TRIPLET "x64-linux")
+    endif()
+endif()
+
+set(NANDINA_THORVG_RELEASE_LIB
+    "${CMAKE_SOURCE_DIR}/vcpkg_installed/${NANDINA_VCPKG_TRIPLET}/lib/libthorvg-1.a")
+set(NANDINA_THORVG_INCLUDE_DIR
+    "${CMAKE_SOURCE_DIR}/vcpkg_installed/${NANDINA_VCPKG_TRIPLET}/include")
+
+if(EXISTS "${NANDINA_THORVG_RELEASE_LIB}" AND EXISTS "${NANDINA_THORVG_INCLUDE_DIR}")
+    target_include_directories(nandina_thorvg
+        SYSTEM
+        INTERFACE
+            "${NANDINA_THORVG_INCLUDE_DIR}"
+    )
+
+    target_link_libraries(nandina_thorvg
+        INTERFACE
+            "${NANDINA_THORVG_RELEASE_LIB}"
+            Threads::Threads
+    )
+else()
+    target_link_libraries(nandina_thorvg
+        INTERFACE
+            PkgConfig::THORVG
+    )
+endif()
 
 # Yoga — 弹性布局引擎（layout 层）
 # vcpkg port: yoga   cmake target: yoga::yogacore

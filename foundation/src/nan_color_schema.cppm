@@ -3,9 +3,12 @@
 //
 module;
 
+#include <concepts>
+#include <cstddef>
 #include <cstdint>
 #include <stdexcept>
 #include <string_view>
+#include <tuple>
 
 export module nandina.foundation.nan_color_schema;
 
@@ -88,6 +91,8 @@ export namespace nandina::color {
 export namespace nandina {
     /// 所有内置颜色值对象的共同基类，用于 traits / concept 约束。
     class NanBaseColor {
+    public:
+        [[nodiscard]] constexpr auto operator==(const NanBaseColor &) const noexcept -> bool = default;
     };
 
     /**
@@ -112,6 +117,8 @@ export namespace nandina {
 
         constexpr auto operator=(NanOklab &&) noexcept -> NanOklab& = default;
 
+        [[nodiscard]] constexpr auto operator==(const NanOklab &) const noexcept -> bool = default;
+
         [[nodiscard]] constexpr auto lightness() const noexcept -> float { return lightness_; }
         [[nodiscard]] constexpr auto a_axis() const noexcept -> float { return a_axis_; }
         [[nodiscard]] constexpr auto b_axis() const noexcept -> float { return b_axis_; }
@@ -133,6 +140,8 @@ export namespace nandina {
         }
 
         constexpr NanLab() noexcept = default;
+
+        [[nodiscard]] constexpr auto operator==(const NanLab &) const noexcept -> bool = default;
 
         [[nodiscard]] constexpr auto lightness() const noexcept -> float { return lightness_; }
         [[nodiscard]] constexpr auto a_axis() const noexcept -> float { return a_axis_; }
@@ -165,6 +174,8 @@ export namespace nandina {
         }
 
         constexpr NanOklch() noexcept = default;
+
+        [[nodiscard]] constexpr auto operator==(const NanOklch &) const noexcept -> bool = default;
 
         [[nodiscard]] static constexpr auto from_raw(float lightness,
                                                      float chroma,
@@ -207,6 +218,8 @@ export namespace nandina {
 
         constexpr NanLch() noexcept = default;
 
+        [[nodiscard]] constexpr auto operator==(const NanLch &) const noexcept -> bool = default;
+
         [[nodiscard]] constexpr auto lightness() const noexcept -> float { return lightness_; }
         [[nodiscard]] constexpr auto chroma() const noexcept -> float { return chroma_; }
         [[nodiscard]] constexpr auto hue() const noexcept -> float { return hue_; }
@@ -228,16 +241,20 @@ export namespace nandina {
      */
     class NanRgb final : public NanBaseColor {
     public:
-        constexpr NanRgb(std::uint8_t red, std::uint8_t green, std::uint8_t blue,
-                         std::uint8_t alpha = 255u) noexcept : red_(red), green_(green), blue_(blue), alpha_(alpha) {
+        constexpr NanRgb(const std::uint8_t red, const std::uint8_t green, const std::uint8_t blue,
+                         const std::uint8_t alpha = 255u) noexcept
+            : red_(red), green_(green), blue_(blue), alpha_(alpha) {
         }
 
         constexpr NanRgb() noexcept = default;
 
-        explicit constexpr NanRgb(const std::string_view text) : NanRgb([](const std::string_view source) constexpr {
-            return color::parse_hash_rgb(source);
-        }(text)) {
+        explicit constexpr NanRgb(const std::string_view text)
+            : NanRgb([](const std::string_view source) constexpr {
+                return color::parse_hash_rgb(source);
+            }(text)) {
         }
+
+        [[nodiscard]] constexpr auto operator==(const NanRgb &) const noexcept -> bool = default;
 
         [[nodiscard]] constexpr auto red() const noexcept -> std::uint8_t { return red_; }
         [[nodiscard]] constexpr auto green() const noexcept -> std::uint8_t { return green_; }
@@ -264,6 +281,8 @@ export namespace nandina {
 
         constexpr NanHsl() noexcept = default;
 
+        [[nodiscard]] constexpr auto operator==(const NanHsl &) const noexcept -> bool = default;
+
         [[nodiscard]] constexpr auto hue() const noexcept -> float { return hue_; }
         [[nodiscard]] constexpr auto saturation() const noexcept -> float { return saturation_; }
         [[nodiscard]] constexpr auto lightness() const noexcept -> float { return lightness_; }
@@ -279,11 +298,13 @@ export namespace nandina {
     /// HSV 颜色空间，`saturation` / `value` / `alpha` 范围通常为 `0..1`。
     class NanHsv final : public NanBaseColor {
     public:
-        constexpr NanHsv(float hue, float saturation, float value, float alpha = 1.0f) noexcept : hue_(hue),
-            saturation_(saturation), value_(value), alpha_(alpha) {
+        constexpr NanHsv(const float hue, const float saturation, const float value, const float alpha = 1.0f) noexcept
+            : hue_(hue), saturation_(saturation), value_(value), alpha_(alpha) {
         }
 
         constexpr NanHsv() noexcept = default;
+
+        [[nodiscard]] constexpr auto operator==(const NanHsv &) const noexcept -> bool = default;
 
         [[nodiscard]] constexpr auto hue() const noexcept -> float { return hue_; }
         [[nodiscard]] constexpr auto saturation() const noexcept -> float { return saturation_; }
@@ -306,6 +327,8 @@ export namespace nandina {
         }
 
         constexpr NanCymk() noexcept = default;
+
+        [[nodiscard]] constexpr auto operator==(const NanCymk &) const noexcept -> bool = default;
 
         [[nodiscard]] constexpr auto cyan() const noexcept -> float { return cyan_; }
         [[nodiscard]] constexpr auto magenta() const noexcept -> float { return magenta_; }
@@ -351,6 +374,8 @@ export namespace nandina {
 
         constexpr NanHex() noexcept = default;
 
+        [[nodiscard]] constexpr auto operator==(const NanHex &) const noexcept -> bool = default;
+
         [[nodiscard]] constexpr auto red() const noexcept -> std::uint8_t { return red_; }
         [[nodiscard]] constexpr auto green() const noexcept -> std::uint8_t { return green_; }
         [[nodiscard]] constexpr auto blue() const noexcept -> std::uint8_t { return blue_; }
@@ -379,5 +404,236 @@ export namespace nandina {
         std::uint8_t blue_{0u};
         std::uint8_t alpha_{255u};
         bool has_alpha_{false};
+    };
+}
+
+export namespace nandina::color {
+    template<typename T>
+    struct ColorTupleTraits;
+
+    template<>
+    struct ColorTupleTraits<nandina::NanOklab> {
+        using element_type = float;
+
+        template<std::size_t Index>
+        [[nodiscard]] static constexpr auto get(const nandina::NanOklab &color) noexcept -> element_type {
+            static_assert(Index < 4);
+            if constexpr (Index == 0) return color.lightness();
+            else if constexpr (Index == 1) return color.a_axis();
+            else if constexpr (Index == 2) return color.b_axis();
+            else return color.alpha();
+        }
+    };
+
+    template<>
+    struct ColorTupleTraits<nandina::NanLab> {
+        using element_type = float;
+
+        template<std::size_t Index>
+        [[nodiscard]] static constexpr auto get(const nandina::NanLab &color) noexcept -> element_type {
+            static_assert(Index < 4);
+            if constexpr (Index == 0) return color.lightness();
+            else if constexpr (Index == 1) return color.a_axis();
+            else if constexpr (Index == 2) return color.b_axis();
+            else return color.alpha();
+        }
+    };
+
+    template<>
+    struct ColorTupleTraits<nandina::NanOklch> {
+        using element_type = float;
+
+        template<std::size_t Index>
+        [[nodiscard]] static constexpr auto get(const nandina::NanOklch &color) noexcept -> element_type {
+            static_assert(Index < 4);
+            if constexpr (Index == 0) return color.lightness();
+            else if constexpr (Index == 1) return color.chroma();
+            else if constexpr (Index == 2) return color.hue();
+            else return color.alpha();
+        }
+    };
+
+    template<>
+    struct ColorTupleTraits<nandina::NanLch> {
+        using element_type = float;
+
+        template<std::size_t Index>
+        [[nodiscard]] static constexpr auto get(const nandina::NanLch &color) noexcept -> element_type {
+            static_assert(Index < 4);
+            if constexpr (Index == 0) return color.lightness();
+            else if constexpr (Index == 1) return color.chroma();
+            else if constexpr (Index == 2) return color.hue();
+            else return color.alpha();
+        }
+    };
+
+    template<>
+    struct ColorTupleTraits<nandina::NanRgb> {
+        using element_type = std::uint8_t;
+
+        template<std::size_t Index>
+        [[nodiscard]] static constexpr auto get(const nandina::NanRgb &color) noexcept -> element_type {
+            static_assert(Index < 4);
+            if constexpr (Index == 0) return color.red();
+            else if constexpr (Index == 1) return color.green();
+            else if constexpr (Index == 2) return color.blue();
+            else return color.alpha();
+        }
+    };
+
+    template<>
+    struct ColorTupleTraits<nandina::NanHsl> {
+        using element_type = float;
+
+        template<std::size_t Index>
+        [[nodiscard]] static constexpr auto get(const nandina::NanHsl &color) noexcept -> element_type {
+            static_assert(Index < 4);
+            if constexpr (Index == 0) return color.hue();
+            else if constexpr (Index == 1) return color.saturation();
+            else if constexpr (Index == 2) return color.lightness();
+            else return color.alpha();
+        }
+    };
+
+    template<>
+    struct ColorTupleTraits<nandina::NanHsv> {
+        using element_type = float;
+
+        template<std::size_t Index>
+        [[nodiscard]] static constexpr auto get(const nandina::NanHsv &color) noexcept -> element_type {
+            static_assert(Index < 4);
+            if constexpr (Index == 0) return color.hue();
+            else if constexpr (Index == 1) return color.saturation();
+            else if constexpr (Index == 2) return color.value();
+            else return color.alpha();
+        }
+    };
+
+    template<>
+    struct ColorTupleTraits<nandina::NanCymk> {
+        using element_type = float;
+
+        template<std::size_t Index>
+        [[nodiscard]] static constexpr auto get(const nandina::NanCymk &color) noexcept -> element_type {
+            static_assert(Index < 4);
+            if constexpr (Index == 0) return color.cyan();
+            else if constexpr (Index == 1) return color.magenta();
+            else if constexpr (Index == 2) return color.yellow();
+            else return color.alpha();
+        }
+    };
+
+    template<>
+    struct ColorTupleTraits<nandina::NanHex> {
+        using element_type = std::uint8_t;
+
+        template<std::size_t Index>
+        [[nodiscard]] static constexpr auto get(const nandina::NanHex &color) noexcept -> element_type {
+            static_assert(Index < 4);
+            if constexpr (Index == 0) return color.red();
+            else if constexpr (Index == 1) return color.green();
+            else if constexpr (Index == 2) return color.blue();
+            else return color.alpha();
+        }
+    };
+
+    template<typename T>
+    concept TupleLikeColor = requires(const T &color)
+    {
+        typename ColorTupleTraits<T>::element_type;
+        { ColorTupleTraits<T>::template get<0>(color) } -> std::same_as<typename ColorTupleTraits<T>::element_type>;
+        { ColorTupleTraits<T>::template get<1>(color) } -> std::same_as<typename ColorTupleTraits<T>::element_type>;
+        { ColorTupleTraits<T>::template get<2>(color) } -> std::same_as<typename ColorTupleTraits<T>::element_type>;
+        { ColorTupleTraits<T>::template get<3>(color) } -> std::same_as<typename ColorTupleTraits<T>::element_type>;
+    };
+}
+
+export namespace nandina {
+    template<std::size_t Index, color::TupleLikeColor T>
+    [[nodiscard]] constexpr auto get(const T &color) noexcept -> typename color::ColorTupleTraits<T>::element_type {
+        return color::ColorTupleTraits<T>::template get<Index>(color);
+    }
+}
+
+export namespace std {
+    template<>
+    struct tuple_size<nandina::NanOklab> : integral_constant<size_t, 4> {
+    };
+
+    template<>
+    struct tuple_size<nandina::NanLab> : integral_constant<size_t, 4> {
+    };
+
+    template<>
+    struct tuple_size<nandina::NanOklch> : integral_constant<size_t, 4> {
+    };
+
+    template<>
+    struct tuple_size<nandina::NanLch> : integral_constant<size_t, 4> {
+    };
+
+    template<>
+    struct tuple_size<nandina::NanRgb> : integral_constant<size_t, 4> {
+    };
+
+    template<>
+    struct tuple_size<nandina::NanHsl> : integral_constant<size_t, 4> {
+    };
+
+    template<>
+    struct tuple_size<nandina::NanHsv> : integral_constant<size_t, 4> {
+    };
+
+    template<>
+    struct tuple_size<nandina::NanCymk> : integral_constant<size_t, 4> {
+    };
+
+    template<>
+    struct tuple_size<nandina::NanHex> : integral_constant<size_t, 4> {
+    };
+
+    template<size_t Index>
+    struct tuple_element<Index, nandina::NanOklab> {
+        using type = float;
+    };
+
+    template<size_t Index>
+    struct tuple_element<Index, nandina::NanLab> {
+        using type = float;
+    };
+
+    template<size_t Index>
+    struct tuple_element<Index, nandina::NanOklch> {
+        using type = float;
+    };
+
+    template<size_t Index>
+    struct tuple_element<Index, nandina::NanLch> {
+        using type = float;
+    };
+
+    template<size_t Index>
+    struct tuple_element<Index, nandina::NanRgb> {
+        using type = std::uint8_t;
+    };
+
+    template<size_t Index>
+    struct tuple_element<Index, nandina::NanHsl> {
+        using type = float;
+    };
+
+    template<size_t Index>
+    struct tuple_element<Index, nandina::NanHsv> {
+        using type = float;
+    };
+
+    template<size_t Index>
+    struct tuple_element<Index, nandina::NanCymk> {
+        using type = float;
+    };
+
+    template<size_t Index>
+    struct tuple_element<Index, nandina::NanHex> {
+        using type = std::uint8_t;
     };
 }

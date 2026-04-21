@@ -105,9 +105,11 @@ export namespace nandina {
     class NanApplication {
     public:
         NanApplication() {
+            nandina::log::init("nandina", nandina::log::Level::Debug);
         }
 
         virtual ~NanApplication() {
+            nandina::log::shutdown();
         }
 
         // Take ownership via unique_ptr in implementation but maybe GCC dislikes it in header?

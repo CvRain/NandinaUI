@@ -20,6 +20,23 @@ TEST(NandinaColor, FromRgbRoundTripsToRgb) {
     EXPECT_NEAR(rgb.alpha(), 200u, kChannelTolerance);
 }
 
+TEST(NandinaColor, ColorValueTypesSupportEquality) {
+    EXPECT_EQ((nandina::NanRgb{35u, 38u, 52u}), (nandina::NanRgb{35u, 38u, 52u}));
+    EXPECT_NE((nandina::NanRgb{35u, 38u, 52u}), (nandina::NanRgb{35u, 38u, 53u}));
+    EXPECT_EQ((nandina::NanHex{0x232634u}), (nandina::NanHex{0x232634u}));
+    EXPECT_NE((nandina::NanHex{0x232634u}), (nandina::NanHex{0x232634FFu}));
+}
+
+TEST(NandinaColor, ColorValueTypesSupportStructuredBinding) {
+    const auto rgb = nandina::NanRgb{170u, 173u, 111u, 200u};
+    const auto [red, green, blue, alpha] = rgb;
+
+    EXPECT_EQ(red, static_cast<std::uint8_t>(170u));
+    EXPECT_EQ(green, static_cast<std::uint8_t>(173u));
+    EXPECT_EQ(blue, static_cast<std::uint8_t>(111u));
+    EXPECT_EQ(alpha, static_cast<std::uint8_t>(200u));
+}
+
 TEST(NandinaColor, PublicConvertApiConvertsBetweenColorSpaces) {
     const auto rgb = nandina::NanRgb{35u, 38u, 52u};
     const auto oklch = nandina::color::convert<nandina::NanRgb, nandina::NanOklch>(rgb);
@@ -33,6 +50,14 @@ TEST(NandinaColor, PublicConvertApiConvertsBetweenColorSpaces) {
     EXPECT_NEAR(round_trip.blue(), 52u, kChannelTolerance);
 }
 
+TEST(NandinaColor, AlmostEqualSupportsFloatColorTypes) {
+    const auto lhs = nandina::NanOklch::from_raw(0.2720f, 0.0264f, 275.1f, 1.0f);
+    const auto rhs = nandina::NanOklch::from_raw(0.27205f, 0.02635f, 275.10005f, 1.0f);
+
+    EXPECT_TRUE(nandina::color::almost_equal(lhs, rhs, 1.0e-3f));
+    EXPECT_FALSE(nandina::color::almost_equal(lhs, rhs, 1.0e-6f));
+}
+
 TEST(NandinaColor, SetProxyAcceptsRgbAssignment) {
     auto color = nandina::NanColor{};
     color.set<nandina::NanRgb>() = nandina::NanRgb{170u, 173u, 111u, 200u};
@@ -42,6 +67,24 @@ TEST(NandinaColor, SetProxyAcceptsRgbAssignment) {
     EXPECT_NEAR(rgb.green(), 173u, kChannelTolerance);
     EXPECT_NEAR(rgb.blue(), 111u, kChannelTolerance);
     EXPECT_NEAR(rgb.alpha(), 200u, kChannelTolerance);
+}
+
+TEST(NandinaColor, TransformSupportsTypedColorEdits) {
+    auto color = nandina::NanColor::from(nandina::NanRgb{10u, 20u, 30u, 40u});
+    color.transform<nandina::NanRgb>([](const auto rgb) {
+        return nandina::NanRgb{
+            static_cast<std::uint8_t>(rgb.red() + 5u),
+            rgb.green(),
+            rgb.blue(),
+            rgb.alpha()
+        };
+    });
+
+    const auto transformed = color.to<nandina::NanRgb>();
+    EXPECT_EQ(transformed.red(), static_cast<std::uint8_t>(15u));
+    EXPECT_EQ(transformed.green(), static_cast<std::uint8_t>(20u));
+    EXPECT_EQ(transformed.blue(), static_cast<std::uint8_t>(30u));
+    EXPECT_EQ(transformed.alpha(), static_cast<std::uint8_t>(40u));
 }
 
 TEST(NandinaColor, ConvertsToOklch) {

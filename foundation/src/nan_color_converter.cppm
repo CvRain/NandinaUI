@@ -463,6 +463,26 @@ export namespace nandina::color {
             { ColorSpaceTraits<T>::from_oklab(oklab) } -> std::same_as<T>;
         };
 
+    template<typename T>
+    concept ApproxComparableColor = TupleLikeColor<T> &&
+        std::floating_point<typename ColorTupleTraits<T>::element_type>;
+
+    [[nodiscard]] inline auto almost_equal(const float lhs,
+                                           const float rhs,
+                                           const float epsilon = 1.0e-4f) noexcept -> bool {
+        return std::abs(lhs - rhs) <= epsilon;
+    }
+
+    template<ApproxComparableColor T>
+    [[nodiscard]] inline auto almost_equal(const T &lhs,
+                                           const T &rhs,
+                                           const float epsilon = 1.0e-4f) noexcept -> bool {
+        return almost_equal(get<0>(lhs), get<0>(rhs), epsilon) &&
+               almost_equal(get<1>(lhs), get<1>(rhs), epsilon) &&
+               almost_equal(get<2>(lhs), get<2>(rhs), epsilon) &&
+               almost_equal(get<3>(lhs), get<3>(rhs), epsilon);
+    }
+
     /**
      * 在任意两个已注册的颜色值对象之间做转换。
      *

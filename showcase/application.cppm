@@ -1,6 +1,9 @@
 module;
 #include <memory>
 #include <thorvg-1/thorvg.h>
+#include <cmath>
+#include <chrono>
+#include <thread>
 
 export module nandina.showcase;
 
@@ -9,31 +12,21 @@ import nandina.log;
 import nandina.foundation.color;
 
 export class MainComponent final : public nandina::NanComponent {
-protected:
-    void on_draw(tvg::SwCanvas &canvas) override {
-        logger.debug("MainComponent draw");
+public:
+    explicit MainComponent()
+        : background_color(nandina::NanColor::from(nandina::NanRgb{35, 38, 52})),
+          circle_color(nandina::NanColor::from(nandina::NanRgb{210, 130, 132})) {
+    }
 
+protected:
+    auto on_draw(tvg::SwCanvas &canvas) -> void override {
         const auto w = width();
         const auto h = height();
-
-        constexpr auto crust_rgb = nandina::NanRgb{35u, 38u, 52u};
-        const auto crust_from_rgb = nandina::NanColor::from(crust_rgb);
-        const auto crust_oklch = crust_from_rgb.to<nandina::NanOklch>();
-        const auto bg_color_rgb = crust_from_rgb.to<nandina::NanRgb>();
+        const auto &bg_color = background_color.to<nandina::NanRgb>();
 
         auto *bg = tvg::Shape::gen();
         bg->appendRect(0, 0, w, h, 0, 0);
-        bg->fill(bg_color_rgb.red(), bg_color_rgb.green(), bg_color_rgb.blue(), bg_color_rgb.alpha());
-        logger.debug("MainComponent background color rgb={}, {}, {}",
-                     bg_color_rgb.red(), bg_color_rgb.green(), bg_color_rgb.blue());
-        logger.debug("MainComponent crust oklch raw=L:{} C:{} H:{}",
-                     crust_oklch.lightness(), crust_oklch.chroma(), crust_oklch.hue());
-        logger.debug("MainComponent crust oklch css-ish sample=L:{}% C:{}% H:{}deg (rounded page label)",
-                     crust_oklch.lightness() * 100.0f,
-                     crust_oklch.chroma() * 100.0f,
-                     crust_oklch.hue());
-        logger.flush();
-
+        bg->fill(bg_color.red(), bg_color.green(), bg_color.blue(), bg_color.alpha());
         canvas.add(bg);
 
         auto *circle_l = tvg::Shape::gen();
@@ -43,7 +36,18 @@ protected:
 
         auto *circle_r = tvg::Shape::gen();
         circle_r->appendCircle(w * 0.86f, h * 0.73f, 90, 90);
-        circle_r->fill(236, 72, 153, 140);
+
+        circle_color.transform<nandina::NanHsv>([&](auto hsv) {
+            return nandina::NanHsv{
+                hsv.hue() + 1,
+                hsv.saturation(),
+                hsv.value(),
+                hsv.alpha()
+            };
+        });
+        const auto circle_rgb = circle_color.to<nandina::NanRgb>();
+
+        circle_r->fill(circle_rgb.red(), circle_rgb.green(), circle_rgb.blue(), circle_rgb.alpha());
         canvas.add(circle_r);
 
         const float card_w = w * 0.39f;
@@ -54,10 +58,14 @@ protected:
         card->appendRect(card_x, card_y, card_w, card_h, 16, 16);
         card->fill(30, 30, 38, 255);
         canvas.add(card);
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
     }
 
 private:
     nandina::log::Logger logger = nandina::log::get("MainComponent");
+    nandina::NanColor background_color;
+    nandina::NanColor circle_color;
 };
 
 export class MainWindow final : public nandina::NanAppWindow {
