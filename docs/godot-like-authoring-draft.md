@@ -1,4 +1,4 @@
-.# NandinaUI Godot-like 开发范式（草案）
+# NandinaUI Godot-like 开发范式（草案）
 
 > 状态：**草案（Draft）**  
 > 目的：定义当前阶段的应用/窗口继承式开发体验，后续会随着 runtime、widget、event 系统演进持续修订。
@@ -40,7 +40,7 @@
 ### Application 层
 
 - `configure()`：返回 `AppConfig`（窗口标题、尺寸、DPI 等）。
-- `on_ready/on_update/on_draw/on_resize/on_close_requested`：由桥接窗口转发。
+- `on_ready/on_update/on_draw/on_resize/on_close_requested`：由桥接窗口转发。main
 - `on_shutdown()`：run 退出后调用（包括异常路径）。
 
 ## 推荐用法

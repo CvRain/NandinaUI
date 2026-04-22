@@ -10,6 +10,7 @@ export module nandina.showcase;
 import nandina.app.application;
 import nandina.log;
 import nandina.foundation.color;
+import nandina.foundation.nan_point;
 
 export class MainComponent final : public nandina::NanComponent {
 public:
@@ -52,10 +53,13 @@ protected:
 
         const float card_w = w * 0.39f;
         const float card_h = h * 0.39f;
-        const float card_x = (w - card_w) * 0.5f;
-        const float card_y = (h - card_h) * 0.5f;
+
+        const auto card_position = nandina::NanPoint{
+            (w - card_w) * 0.5f, (h - card_h) * 0.5f
+        };
+
         auto *card = tvg::Shape::gen();
-        card->appendRect(card_x, card_y, card_w, card_h, 16, 16);
+        card->appendRect(card_position.x(), card_position.y(), card_w, card_h, 16, 16);
         card->fill(30, 30, 38, 255);
         canvas.add(card);
 
