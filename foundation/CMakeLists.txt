@@ -17,6 +17,8 @@ set(PROJECT_MODULE_FILES
         src/nan_color_converter.cppm
         src/nan_color.cppm
         src/nan_point.cppm
+        src/nan_size.cppm
+        src/nan_rect.cppm
 )
 
 target_compile_features(nandina_foundation PUBLIC cxx_std_26)

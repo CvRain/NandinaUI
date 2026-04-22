@@ -6,7 +6,7 @@ module;
 
 export module nandina.runtime.nan_widget;
 
-export namespace nandina {
+export namespace nandina::runtime {
     /**
      * @brief NanWidget — 所有 UI 元素的基类 (M1)
      */

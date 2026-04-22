@@ -19,7 +19,7 @@ module;
 
 export module nandina.foundation.nan_point;
 
-export namespace nandina {
+export namespace nandina::geometry {
     // ──────────────────────────────────────────────────────────
     // 概念定义
     // ──────────────────────────────────────────────────────────
@@ -366,21 +366,23 @@ export namespace nandina {
             return seed;
         }
     };
-} // namespace nandina
+} // namespace nandina::geometry
 
 // ──────────────────────────────────────────────────────────
-// fmt::formatter 特化
+// fmt::formatter 特化（放在全局命名空间）
 // ──────────────────────────────────────────────────────────
 
-template<nandina::SatisfiedPoint T, std::size_t N>
-struct fmt::formatter<nandina::BasePoint<T, N>> {
+using namespace nandina::geometry;
+
+template<SatisfiedPoint T, std::size_t N>
+struct fmt::formatter<BasePoint<T, N>, void> {
     template<typename ParseContext>
     static constexpr auto parse(ParseContext &ctx) -> ParseContext::iterator {
         return ctx.begin();
     }
 
     template<typename FormatContext>
-    auto format(const nandina::BasePoint<T, N> &pt, FormatContext &ctx) -> FormatContext::iterator {
+    auto format(const BasePoint<T, N> &pt, FormatContext &ctx) -> FormatContext::iterator {
         std::ostringstream oss;
         oss << "(";
         for (std::size_t i = 0; i < N; ++i) {
@@ -393,14 +395,14 @@ struct fmt::formatter<nandina::BasePoint<T, N>> {
 };
 
 template<>
-struct fmt::formatter<nandina::NanPoint> {
+struct fmt::formatter<NanPoint> {
     template<typename ParseContext>
     static constexpr auto parse(ParseContext &ctx) -> ParseContext::iterator {
         return ctx.begin();
     }
 
     template<typename FormatContext>
-    auto format(const nandina::NanPoint &pt, FormatContext &ctx) -> FormatContext::iterator {
+    auto format(const NanPoint &pt, FormatContext &ctx) -> FormatContext::iterator {
         return fmt::format_to(ctx.out(), "{}", pt.toString());
     }
 };
@@ -411,16 +413,16 @@ struct fmt::formatter<nandina::NanPoint> {
 
 namespace std {
     template<>
-    struct tuple_size<nandina::NanPoint> : integral_constant<size_t, 2> {
+    struct tuple_size<NanPoint> : integral_constant<size_t, 2> {
     };
 
     template<size_t Index>
-    struct tuple_element<Index, nandina::NanPoint> {
+    struct tuple_element<Index, NanPoint> {
         using type = float;
     };
 }
 
-namespace nandina {
+namespace nandina::geometry {
     template<size_t Index>
     [[nodiscard]] constexpr auto get(const NanPoint &pt) noexcept -> float {
         static_assert(Index < 2);

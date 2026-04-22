@@ -12,7 +12,7 @@ import nandina.log;
 import nandina.foundation.color;
 import nandina.foundation.nan_point;
 
-export class MainComponent final : public nandina::NanComponent {
+export class MainComponent final : public nandina::app::NanComponent {
 public:
     explicit MainComponent()
         : background_color(nandina::NanColor::from(nandina::NanRgb{35, 38, 52})),
@@ -54,7 +54,7 @@ protected:
         const float card_w = w * 0.39f;
         const float card_h = h * 0.39f;
 
-        const auto card_position = nandina::NanPoint{
+        const auto card_position = nandina::geometry::NanPoint{
             (w - card_w) * 0.5f, (h - card_h) * 0.5f
         };
 
@@ -72,9 +72,9 @@ private:
     nandina::NanColor circle_color;
 };
 
-export class MainWindow final : public nandina::NanAppWindow {
+export class MainWindow final : public nandina::app::NanAppWindow {
 public:
-    MainWindow() : NanAppWindow({
+    MainWindow() : nandina::app::NanAppWindow({
         .title = "NandinaUI — Component Showcase",
         .width = 1280,
         .height = 720,

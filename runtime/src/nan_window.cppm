@@ -18,7 +18,7 @@ export module nandina.runtime.nan_window;
 // ============================================================
 // 导出接口
 // ============================================================
-export namespace nandina {
+export namespace nandina::runtime {
     enum class PointerButton : std::uint8_t {
         Unknown = 0,
         Left = 1,
@@ -175,7 +175,7 @@ export namespace nandina {
         //   4. 上传 SDL_Texture → SDL_RenderPresent
         auto present_frame() -> void;
 
-        // ── 主循环阻塞接口 ────────────────────────────────────
+        // ── 主循环阻塞接口 ───────────────────────────────────
         // 等价于：while (!poll_events()) { present_frame(); }
         // 推荐在不需要自定义调度时使用。
         auto run() -> void;

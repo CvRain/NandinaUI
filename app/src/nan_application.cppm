@@ -10,8 +10,8 @@ import nandina.log;
 import nandina.runtime.nan_window;
 import nandina.runtime.nan_widget;
 
-export namespace nandina {
-    class NanComponent : public nandina::NanWidget {
+export namespace nandina::app {
+    class NanComponent : public runtime::NanWidget {
     public:
         using Ptr = std::unique_ptr<NanComponent>;
 
@@ -68,13 +68,13 @@ export namespace nandina {
 
     private:
         AppConfig m_config;
-        nandina::NanWindow *m_active_runtime_window{nullptr};
+        runtime::NanWindow *m_active_runtime_window{nullptr};
         NanComponent::Ptr m_root_component{nullptr};
 
-        class BridgeWindow final : public nandina::NanWindow {
+        class BridgeWindow final : public runtime::NanWindow {
         public:
             BridgeWindow(NanAppWindow &owner,
-                         const nandina::NanWindow::Config &config) : nandina::NanWindow(config),
+                         const runtime::NanWindow::Config &config) : runtime::NanWindow(config),
                                                                      m_owner(owner) {
             }
 
@@ -105,11 +105,11 @@ export namespace nandina {
     class NanApplication {
     public:
         NanApplication() {
-            nandina::log::init("nandina", nandina::log::Level::Debug);
+            log::init("nandina", log::Level::Debug);
         }
 
         virtual ~NanApplication() {
-            nandina::log::shutdown();
+            log::shutdown();
         }
 
         // Take ownership via unique_ptr in implementation but maybe GCC dislikes it in header?
@@ -126,9 +126,9 @@ export namespace nandina {
     };
 
     inline auto NanAppWindow::run() -> void {
-        auto log = nandina::log::get("app.window");
+        auto logger = log::get("app.window");
 
-        nandina::NanWindow::Config runtime_config{
+        runtime::NanWindow::Config runtime_config{
             .title = m_config.title,
             .width = m_config.width,
             .height = m_config.height,
@@ -143,10 +143,10 @@ export namespace nandina {
             m_root_component->set_size(static_cast<float>(window.width()), static_cast<float>(window.height()));
         }
 
-        log.info("Window starting: {} ({}x{})", m_config.title, m_config.width, m_config.height);
+        logger.info("Window starting: {} ({}x{})", m_config.title, m_config.width, m_config.height);
         window.run();
-        log.info("Window stopped");
+        logger.info("Window stopped");
 
         m_active_runtime_window = nullptr;
     }
-} // namespace nandina
+} // namespace nandina::app
