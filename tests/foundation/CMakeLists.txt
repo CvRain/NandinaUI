@@ -13,3 +13,9 @@ nandina_add_test(
     SOURCES test_color.cpp
     DEPS    nandina::foundation
 )
+
+nandina_add_test(
+    NAME    test_foundation_geometry
+    SOURCES test_geometry.cpp
+    DEPS    nandina::foundation
+)
