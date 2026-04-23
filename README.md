@@ -32,6 +32,7 @@ NandinaUI 的旧版 Qt/QML 组件库实现已归档到分支 `archive-0.0.1-qml`
 
 ## 文档导航
 
+- [开发文档导航页](docs/index.md) — 统一入口，按主题分类所有技术文档
 - [项目方向](docs/project-direction.md)
 - [架构规划](docs/architecture-plan.md)
 - [从 QML 迁移策略](docs/migration-from-qml.md)

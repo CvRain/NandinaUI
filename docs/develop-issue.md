@@ -32,7 +32,7 @@
 
 # Milestone M0 — 文档与工程基线
 
-## Issue 001 — 建立正式项目目录骨架
+## Issue 001 — 建立正式项目目录骨架 ✅ 已完成
 **Labels:** `area:docs`, `kind:architecture`, `priority:p0`
 
 ### 目标
@@ -60,6 +60,10 @@
 ### 完成定义
 - 仓库顶层结构与文档中规划一致
 - 后续代码模块可直接落位，不再临时决定目录
+
+### 完成记录
+- 所有顶层目录已创建
+- 提交: `adbc185 feat(framework): complete the establishment of the basic structure of the project and the basic configuration.`
 
 ---
 
@@ -1803,7 +1807,7 @@
     - Out of Scope
     - Definition of Done
 
-2. **按“可并行开发”重新分组的 issue board 版本**  
+2. **按"可并行开发"重新分组的 issue board 版本**  
    比如分成：
     - Runtime Lane
     - Reactive Lane
@@ -1811,3 +1815,33 @@
     - Theme Lane
     - Widgets Lane
     - Showcase Lane
+
+---
+
+# 已完成 Issue 记录
+
+> 本章节记录已完成的 issue，作为项目进度的快速参考。
+
+## M0 — 文档与工程基线
+
+| Issue | 标题 | 完成日期 | 提交记录 |
+|-------|------|----------|----------|
+| 001 | 建立正式项目目录骨架 | 2026-04-22 | `adbc185` |
+| 002 | 编写模块依赖方向约束文档 | 2026-04-22 | `ac9d31f` |
+| 003 | 定义命名规范与 public/internal API 约定 | 2026-04-22 | `c13c529` |
+| 004 | 建立初始开发文档导航页 | 2026-04-23 | 本次提交 |
+
+## M1 — Foundation 与 Runtime MVP
+
+| Issue | 标题 | 完成日期 | 提交记录 |
+|-------|------|----------|----------|
+| 006 | 实现基础几何类型 Point / Size / Rect | 2026-04-22 | `3b26ebf`, `1ad8630` |
+
+## 额外完成（未列入 Issue 清单）
+
+| 功能 | 描述 | 完成日期 | 提交记录 |
+|------|------|----------|----------|
+| Log 服务 | 基于 spdlog 的日志框架 | 2026-04-22 | `ef0a191` |
+| Color 模块 | NanColor 及颜色转换 | 2026-04-22 | `f282373`, `81b6adb` |
+| Window 基础 | NanWindow 窗口基类 | 2026-04-22 | `c8742aa` |
+| Godot-like Authoring | 继承式生命周期与输入钩子 | 2026-04-22 | `8b1fcb9` |
