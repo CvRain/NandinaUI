@@ -19,3 +19,9 @@ nandina_add_test(
     SOURCES test_geometry.cpp
     DEPS    nandina::foundation
 )
+
+nandina_add_test(
+    NAME    test_foundation_constraints
+    SOURCES test_constraints.cpp
+    DEPS    nandina::foundation
+)
