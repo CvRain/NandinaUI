@@ -12,27 +12,34 @@
 | [从 QML 迁移说明](migration-from-qml.md) | 历史背景、迁移原则、归档分支说明 |
 | [仓库结构草案](repository-structure.md) | 顶层目录规划与职责划分 |
 
+### 模块设计文档
+
+| 文档 | 说明 |
+|------|------|
+| [NanPoint 设计文档](../foundation/design-nan_point.md) | 基础点类型接口设计 `[已定稿]` |
+| [NanRect 设计文档](../foundation/design-nan_rect.md) | 矩形类型接口设计 `[已定稿]` |
+
 ### 架构与设计
 
 | 文档 | 说明 |
 |------|------|
-| [架构规划](architecture-plan.md) | 顶层分层、依赖方向、稳定边界 |
-| [模块依赖规则](module-dependency-rules.md) | 模块间依赖方向约束，避免循环依赖 |
-| [响应式策略](reactive-strategy.md) | State/Effect/Prop 等响应式抽象设计说明 |
-| [Godot 式 Authoring 草案](godot-like-authoring-draft.md) | 组件化创作模式设计草案 |
+| [架构规划](architecture-plan.md) | 顶层分层、依赖方向、稳定边界 `[已定稿]` |
+| [模块依赖规则](module-dependency-rules.md) | 模块间依赖方向约束，避免循环依赖 `[已定稿]` |
+| [响应式策略](reactive-strategy.md) | State/Effect/Prop 等响应式抽象设计说明 `[草案]` |
+| [Godot 式 Authoring 草案](godot-like-authoring-draft.md) | 组件化创作模式设计草案 `[草案]` |
 
 ### 开发规范
 
 | 文档 | 说明 |
 |------|------|
-| [编码与 API 规范](coding-and-api-conventions.md) | 命名风格、命名空间、public/internal API 约定 |
-| [开发 Issue 清单](develop-issue.md) | 按模块拆分的细颗粒度开发任务清单 |
+| [编码与 API 规范](coding-and-api-conventions.md) | 命名风格、命名空间、public/internal API 约定 `[已定稿]` |
+| [开发 Issue 清单](develop-issue.md) | 按模块拆分的细颗粒度开发任务清单 `[已定稿]` |
 
 ### 路线图
 
 | 文档 | 说明 |
 |------|------|
-| [阶段路线图](roadmap.md) | M0-M5 各阶段目标与依赖关系 |
+| [阶段路线图](roadmap.md) | M0-M5 各阶段目标与依赖关系 `[草案]` |
 
 ## 快速链接
 
@@ -53,12 +60,14 @@
 | Log 服务 | ✅ 完成 | 基于 spdlog 的日志框架 |
 | Color 模块 | ✅ 完成 | `NanColor` 及颜色转换 |
 | Window 基础 | ✅ 完成 | `NanWindow` 窗口基类 |
+| App 层抽象 | ✅ 完成 | `NanAppWindow`、`NanComponent` 应用层生命周期封装 |
+| Showcase 验证应用 | ✅ 完成 | 基于 ThorVG 的组件展示窗口，含 MainComponent/MainWindow |
 
 ### 进行中
 
 | 模块 | 状态 | 说明 |
 |------|------|------|
-| 几何类型设计文档 | 🔄 进行中 | `foundation/design-*.md` 详细接口文档 |
+| 当前暂无进行中的模块 | — | — |
 
 ### 待开发
 
@@ -68,7 +77,7 @@
 
 | 里程碑 | 状态 | 关键 Issue |
 |--------|------|------------|
-| M0: 文档与工程基线 | 🔄 进行中 | Issue 001-004 |
+| M0: 文档与工程基线 | ✅ 已完成 | Issue 001-004 |
 | M1: Foundation 与 Runtime MVP | 📋 规划中 | Issue 005-017 |
 | M2: Reactive 模块 | 📋 规划中 | Issue 018-028 |
 | M3: Layout 模块 | 📋 规划中 | Issue 029-036 |
@@ -91,4 +100,6 @@
 ## 外部链接
 
 - [GitHub 仓库](https://github.com/CvRain/NandinaUI)
+- [文档源码目录](https://github.com/CvRain/NandinaUI/tree/main/docs)
 - [QML 历史分支](https://github.com/CvRain/NandinaUI/tree/archive-0.0.1-qml)
+- [实验代码目录](temp/) — 包含 Reactive/Layout/Core 等模块的实验实现

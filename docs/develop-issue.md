@@ -67,7 +67,7 @@
 
 ---
 
-## Issue 002 — 编写模块依赖方向约束文档
+## Issue 002 — 编写模块依赖方向约束文档 ✅ 已完成
 **Labels:** `area:docs`, `kind:docs`, `priority:p0`
 
 ### 目标
@@ -87,9 +87,13 @@
 ### 完成定义
 - 所有后续 issue 可依据该文档判断“是否放错层”
 
+### 完成记录
+- 文档 `docs/module-dependency-rules.md` 已编写完成
+- 提交: `ac9d31f`
+
 ---
 
-## Issue 003 — 定义命名规范与 public/internal API 约定
+## Issue 003 — 定义命名规范与 public/internal API 约定 ✅ 已完成
 **Labels:** `area:docs`, `kind:docs`, `priority:p0`
 
 ### 目标
@@ -110,9 +114,13 @@
 ### 完成定义
 - 团队/个人后续实现不再靠临时习惯决定命名
 
+### 完成记录
+- 文档 `docs/coding-and-api-conventions.md` 已编写完成
+- 提交: `c13c529`
+
 ---
 
-## Issue 004 — 建立初始开发文档导航页
+## Issue 004 — 建立初始开发文档导航页 ✅ 已完成
 **Labels:** `area:docs`, `kind:docs`, `priority:p1`
 
 ### 目标
@@ -131,6 +139,12 @@
 
 ### 完成定义
 - README 能通过 docs 导航快速跳转到关键文档
+
+### 完成记录
+- `docs/index.md` 已创建，按主题分类整理所有技术文档
+- 更新 `README.md` 添加导航页链接
+- 更新 `develop-issue.md` 添加已完成 Issue 记录章节
+- 提交: `abe263e`
 
 ---
 
@@ -1829,13 +1843,13 @@
 | 001 | 建立正式项目目录骨架 | 2026-04-22 | `adbc185` |
 | 002 | 编写模块依赖方向约束文档 | 2026-04-22 | `ac9d31f` |
 | 003 | 定义命名规范与 public/internal API 约定 | 2026-04-22 | `c13c529` |
-| 004 | 建立初始开发文档导航页 | 2026-04-23 | 本次提交 |
+| 004 | 建立初始开发文档导航页 | 2026-04-23 | `abe263e` |
 
 ## M1 — Foundation 与 Runtime MVP
 
 | Issue | 标题 | 完成日期 | 提交记录 |
 |-------|------|----------|----------|
-| 006 | 实现基础几何类型 Point / Size / Rect | 2026-04-22 | `3b26ebf`, `1ad8630` |
+| 006 | 实现基础几何类型 Point / Size / Rect（Insets 待完成） | 2026-04-22 | `3b26ebf`, `1ad8630` |
 
 ## 额外完成（未列入 Issue 清单）
 
@@ -1845,3 +1859,5 @@
 | Color 模块 | NanColor 及颜色转换 | 2026-04-22 | `f282373`, `81b6adb` |
 | Window 基础 | NanWindow 窗口基类 | 2026-04-22 | `c8742aa` |
 | Godot-like Authoring | 继承式生命周期与输入钩子 | 2026-04-22 | `8b1fcb9` |
+| App 层抽象 | NanAppWindow / NanComponent 应用层封装 | 2026-04-23 | `8b1fcb9` |
+| Showcase 展示应用 | 基于 ThorVG 的组件展示窗口 | 2026-04-23 | `abe263e` |

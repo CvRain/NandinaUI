@@ -32,12 +32,9 @@ NandinaUI 的旧版 Qt/QML 组件库实现已归档到分支 `archive-0.0.1-qml`
 
 ## 文档导航
 
-- [开发文档导航页](docs/index.md) — 统一入口，按主题分类所有技术文档
-- [项目方向](docs/project-direction.md)
-- [架构规划](docs/architecture-plan.md)
-- [从 QML 迁移策略](docs/migration-from-qml.md)
-- [阶段路线图](docs/roadmap.md)
-- [仓库结构草案](docs/repository-structure.md)
+- **[开发文档导航页](docs/index.md)** — 所有开发文档的统一入口，按主题分类
+- [开发 Issue 清单](docs/develop-issue.md) — 任务追踪
+- [实验代码目录](temp/) — Reactive/Layout/Core 等模块实验实现
 
 ## 历史说明
 
