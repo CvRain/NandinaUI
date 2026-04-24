@@ -1,12 +1,16 @@
 # clangd 配置
 # 默认对应 cmake --preset default（binaryDir: build/）
 # 若使用 cmake --preset debug，请将 CompilationDatabase 改为 build/debug
+#
+# C++20 Modules 支持说明：
+# - 该项目使用 C++20 Modules（.cppm 文件）
+# - CMake GCC 生成的 compile_commands.json 中包含 GCC 专用模块扫描参数
+#   （如 -fmodules-ts, -fmodule-mapper=* 等），clangd 使用 Clang 驱动不识别这些参数
+# - 以下配置移除 GCC 专用标志，替换为 Clang 兼容的标志
 
 CompileFlags:
     CompilationDatabase: build
-    # 移除 GCC 专有的 C++ 模块扫描参数。
-    # CMake 在 CMAKE_CXX_SCAN_FOR_MODULES ON 时将这些 flag 写入 compile_commands.json，
-    # 但 clangd 使用 Clang driver，不识别 GCC 的模块扫描标志，会报 unknown argument 错误。
+    # 移除 GCC 专有的 C++ 模块扫描参数
     Remove:
         - -fmodules-ts
         - -fmodule-mapper=*
@@ -15,6 +19,8 @@ CompileFlags:
         - -fmodule-output=*
     Add:
         - -std=c++26
+        # Clang 的 C++20 Modules 支持标志（与 GCC 的 -fmodules-ts 等价）
+        - -fmodules
         - -Wall
         - -Wextra
         - -Wpedantic

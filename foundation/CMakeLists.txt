@@ -20,6 +20,7 @@ set(PROJECT_MODULE_FILES
         src/nan_point.cppm
         src/nan_size.cppm
         src/nan_rect.cppm
+        src/nan_insets.cppm
 )
 
 target_compile_features(nandina_foundation PUBLIC cxx_std_26)
