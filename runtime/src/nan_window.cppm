@@ -15,18 +15,15 @@ module;
 
 export module nandina.runtime.nan_window;
 
+export import nandina.foundation.nan_types;
+
 // ============================================================
 // 导出接口
 // ============================================================
 export namespace nandina::runtime {
-    enum class PointerButton : std::uint8_t {
-        Unknown = 0,
-        Left = 1,
-        Middle = 2,
-        Right = 3,
-        X1 = 4,
-        X2 = 5,
-    };
+    // PointerButton 已迁移至 foundation/types（Issue 005）。
+    // 此处为兼容别名，后续消费者切换至 nandina::types::PointerButton 后删除。
+    using nandina::types::PointerButton;
 
     struct PointerMoveEvent {
         double x{0.0};

@@ -13,6 +13,7 @@ add_library(nandina::foundation ALIAS nandina_foundation)
 
 set(PROJECT_MODULE_FILES
         src/log.cppm
+        src/nan_types.cppm
         src/nan_color_schema.cppm
         src/nan_color_converter.cppm
         src/nan_color.cppm
