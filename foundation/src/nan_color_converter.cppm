@@ -29,34 +29,34 @@ export import nandina.foundation.nan_color_schema;
  */
 export namespace nandina::color {
     /// 将浮点通道约束到 `0..1`。
-    [[nodiscard]] inline auto clamp_unit(float value) noexcept -> float {
+    [[nodiscard]] auto clamp_unit(float value) noexcept -> float {
         return std::clamp(value, 0.0f, 1.0f);
     }
 
     /// 将色相角归一化到 `[0, 360)`。
-    [[nodiscard]] inline auto normalize_hue(float hue) noexcept -> float {
+    [[nodiscard]] auto normalize_hue(const float hue) noexcept -> float {
         auto normalized = std::fmod(hue, 360.0f);
         if (normalized < 0.0f)
             normalized += 360.0f;
         return normalized;
     }
 
-    [[nodiscard]] inline auto byte_to_unit(std::uint8_t value) noexcept -> float {
+    [[nodiscard]] auto byte_to_unit(const std::uint8_t value) noexcept -> float {
         return static_cast<float>(value) / 255.0f;
     }
 
-    [[nodiscard]] inline auto unit_to_byte(float value) noexcept -> std::uint8_t {
+    [[nodiscard]] auto unit_to_byte(const float value) noexcept -> std::uint8_t {
         return static_cast<std::uint8_t>(std::lround(clamp_unit(value) * 255.0f));
     }
 
-    [[nodiscard]] inline auto srgb_to_linear(float value) noexcept -> float {
+    [[nodiscard]] auto srgb_to_linear(const float value) noexcept -> float {
         const auto clamped = clamp_unit(value);
         if (clamped <= 0.04045f)
             return clamped / 12.92f;
         return std::pow((clamped + 0.055f) / 1.055f, 2.4f);
     }
 
-    [[nodiscard]] inline auto linear_to_srgb(float value) noexcept -> float {
+    [[nodiscard]] auto linear_to_srgb(const float value) noexcept -> float {
         const auto clamped = std::max(value, 0.0f);
         if (clamped <= 0.0031308f)
             return 12.92f * clamped;
@@ -77,7 +77,7 @@ export namespace nandina::color {
         float z;
     };
 
-    [[nodiscard]] inline auto rgb_to_linear(const NanRgb &color) noexcept -> LinearRgb {
+    [[nodiscard]] auto rgb_to_linear(const NanRgb& color) noexcept -> LinearRgb {
         return {
             .red = srgb_to_linear(byte_to_unit(color.red())),
             .green = srgb_to_linear(byte_to_unit(color.green())),
@@ -85,8 +85,8 @@ export namespace nandina::color {
         };
     }
 
-    [[nodiscard]] inline auto linear_to_rgb(const LinearRgb &color, float alpha = 1.0f) noexcept -> NanRgb {
-        return {
+    [[nodiscard]] auto linear_to_rgb(const LinearRgb& color, float alpha = 1.0f) noexcept -> NanRgb {
+        return NanRgb{
             unit_to_byte(linear_to_srgb(color.red)),
             unit_to_byte(linear_to_srgb(color.green)),
             unit_to_byte(linear_to_srgb(color.blue)),
@@ -94,7 +94,7 @@ export namespace nandina::color {
         };
     }
 
-    [[nodiscard]] inline auto linear_rgb_to_xyz(const LinearRgb &color) noexcept -> Xyz {
+    [[nodiscard]] auto linear_rgb_to_xyz(const LinearRgb& color) noexcept -> Xyz {
         return {
             .x = 0.4124564f * color.red + 0.3575761f * color.green + 0.1804375f * color.blue,
             .y = 0.2126729f * color.red + 0.7151522f * color.green + 0.0721750f * color.blue,
@@ -102,7 +102,7 @@ export namespace nandina::color {
         };
     }
 
-    [[nodiscard]] inline auto xyz_to_linear_rgb(const Xyz &color) noexcept -> LinearRgb {
+    [[nodiscard]] auto xyz_to_linear_rgb(const Xyz& color) noexcept -> LinearRgb {
         return {
             .red = 3.2404542f * color.x - 1.5371385f * color.y - 0.4985314f * color.z,
             .green = -0.9692660f * color.x + 1.8760108f * color.y + 0.0415560f * color.z,
@@ -110,14 +110,17 @@ export namespace nandina::color {
         };
     }
 
-    [[nodiscard]] inline auto rgb_to_oklab(const NanRgb &color) noexcept -> NanOklab {
-        const auto linear = rgb_to_linear(color);
+    [[nodiscard]] auto rgb_to_oklab(const NanRgb& color) noexcept -> NanOklab {
+        const auto [red, green, blue] = rgb_to_linear(color);
 
-        const auto l = std::cbrt(0.4122214708f * linear.red + 0.5363325363f * linear.green + 0.0514459929f * linear.blue);
-        const auto m = std::cbrt(0.2119034982f * linear.red + 0.6806995451f * linear.green + 0.1073969566f * linear.blue);
-        const auto s = std::cbrt(0.0883024619f * linear.red + 0.2817188376f * linear.green + 0.6299787005f * linear.blue);
+        const auto l = std::cbrt(
+            0.4122214708f * red + 0.5363325363f * green + 0.0514459929f * blue);
+        const auto m = std::cbrt(
+            0.2119034982f * red + 0.6806995451f * green + 0.1073969566f * blue);
+        const auto s = std::cbrt(
+            0.0883024619f * red + 0.2817188376f * green + 0.6299787005f * blue);
 
-        return {
+        return NanOklab{
             0.2104542553f * l + 0.7936177850f * m - 0.0040720468f * s,
             1.9779984951f * l - 2.4285922050f * m + 0.4505937099f * s,
             0.0259040371f * l + 0.7827717662f * m - 0.8086757660f * s,
@@ -125,7 +128,7 @@ export namespace nandina::color {
         };
     }
 
-    [[nodiscard]] inline auto oklab_to_rgb(const NanOklab &color) noexcept -> NanRgb {
+    [[nodiscard]] auto oklab_to_rgb(const NanOklab& color) noexcept -> NanRgb {
         const auto l = color.lightness() + 0.3963377774f * color.a_axis() + 0.2158037573f * color.b_axis();
         const auto m = color.lightness() - 0.1055613458f * color.a_axis() - 0.0638541728f * color.b_axis();
         const auto s = color.lightness() - 0.0894841775f * color.a_axis() - 1.2914855480f * color.b_axis();
@@ -143,9 +146,9 @@ export namespace nandina::color {
             color.alpha());
     }
 
-    [[nodiscard]] inline auto oklch_to_oklab(const NanOklch &color) noexcept -> NanOklab {
+    [[nodiscard]] auto oklch_to_oklab(const NanOklch& color) noexcept -> NanOklab {
         const auto hue_rad = normalize_hue(color.hue()) * std::numbers::pi_v<float> / 180.0f;
-        return {
+        return NanOklab{
             color.lightness(),
             color.chroma() * std::cos(hue_rad),
             color.chroma() * std::sin(hue_rad),
@@ -153,23 +156,23 @@ export namespace nandina::color {
         };
     }
 
-    [[nodiscard]] inline auto oklab_to_oklch(const NanOklab &color) noexcept -> NanOklch {
+    [[nodiscard]] auto oklab_to_oklch(const NanOklab& color) noexcept -> NanOklch {
         const auto chroma = std::hypot(color.a_axis(), color.b_axis());
         const auto hue = normalize_hue(std::atan2(color.b_axis(), color.a_axis()) * 180.0f / std::numbers::pi_v<float>);
-        return {color.lightness(), chroma, hue, color.alpha()};
+        return NanOklch{color.lightness(), chroma, hue, color.alpha()};
     }
 
-    [[nodiscard]] inline auto rgb_to_hsl(const NanRgb &color) noexcept -> NanHsl {
-        const auto red = byte_to_unit(color.red());
+    [[nodiscard]] auto rgb_to_hsl(const NanRgb& color) noexcept -> NanHsl {
+        const auto red   = byte_to_unit(color.red());
         const auto green = byte_to_unit(color.green());
-        const auto blue = byte_to_unit(color.blue());
+        const auto blue  = byte_to_unit(color.blue());
 
         const auto max_value = std::max({red, green, blue});
         const auto min_value = std::min({red, green, blue});
-        const auto delta = max_value - min_value;
+        const auto delta     = max_value - min_value;
         const auto lightness = (max_value + min_value) * 0.5f;
 
-        float hue = 0.0f;
+        float hue        = 0.0f;
         float saturation = 0.0f;
 
         if (delta > 0.0f) {
@@ -183,44 +186,44 @@ export namespace nandina::color {
                 hue = 60.0f * (((red - green) / delta) + 4.0f);
         }
 
-        return {normalize_hue(hue), saturation, lightness, byte_to_unit(color.alpha())};
+        return NanHsl{normalize_hue(hue), saturation, lightness, byte_to_unit(color.alpha())};
     }
 
-    [[nodiscard]] inline auto hsl_to_rgb(const NanHsl &color) noexcept -> NanRgb {
-        const auto hue = normalize_hue(color.hue());
+    [[nodiscard]] auto hsl_to_rgb(const NanHsl& color) noexcept -> NanRgb {
+        const auto hue        = normalize_hue(color.hue());
         const auto saturation = clamp_unit(color.saturation());
-        const auto lightness = clamp_unit(color.lightness());
+        const auto lightness  = clamp_unit(color.lightness());
 
-        const auto chroma = (1.0f - std::abs(2.0f * lightness - 1.0f)) * saturation;
+        const auto chroma      = (1.0f - std::abs(2.0f * lightness - 1.0f)) * saturation;
         const auto hue_section = hue / 60.0f;
-        const auto x = chroma * (1.0f - std::abs(std::fmod(hue_section, 2.0f) - 1.0f));
-        const auto match = lightness - chroma * 0.5f;
+        const auto x           = chroma * (1.0f - std::abs(std::fmod(hue_section, 2.0f) - 1.0f));
+        const auto match       = lightness - chroma * 0.5f;
 
-        float red = 0.0f;
+        float red   = 0.0f;
         float green = 0.0f;
-        float blue = 0.0f;
+        float blue  = 0.0f;
 
         if (hue_section < 1.0f) {
-            red = chroma;
+            red   = chroma;
             green = x;
         } else if (hue_section < 2.0f) {
-            red = x;
+            red   = x;
             green = chroma;
         } else if (hue_section < 3.0f) {
             green = chroma;
-            blue = x;
+            blue  = x;
         } else if (hue_section < 4.0f) {
             green = x;
-            blue = chroma;
+            blue  = chroma;
         } else if (hue_section < 5.0f) {
-            red = x;
+            red  = x;
             blue = chroma;
         } else {
-            red = chroma;
+            red  = chroma;
             blue = x;
         }
 
-        return {
+        return NanRgb{
             unit_to_byte(red + match),
             unit_to_byte(green + match),
             unit_to_byte(blue + match),
@@ -228,14 +231,14 @@ export namespace nandina::color {
         };
     }
 
-    [[nodiscard]] inline auto rgb_to_hsv(const NanRgb &color) noexcept -> NanHsv {
-        const auto red = byte_to_unit(color.red());
+    [[nodiscard]] auto rgb_to_hsv(const NanRgb& color) noexcept -> NanHsv {
+        const auto red   = byte_to_unit(color.red());
         const auto green = byte_to_unit(color.green());
-        const auto blue = byte_to_unit(color.blue());
+        const auto blue  = byte_to_unit(color.blue());
 
         const auto max_value = std::max({red, green, blue});
         const auto min_value = std::min({red, green, blue});
-        const auto delta = max_value - min_value;
+        const auto delta     = max_value - min_value;
 
         float hue = 0.0f;
         if (delta > 0.0f) {
@@ -251,41 +254,41 @@ export namespace nandina::color {
         return {normalize_hue(hue), saturation, max_value, byte_to_unit(color.alpha())};
     }
 
-    [[nodiscard]] inline auto hsv_to_rgb(const NanHsv &color) noexcept -> NanRgb {
-        const auto hue = normalize_hue(color.hue());
+    [[nodiscard]] auto hsv_to_rgb(const NanHsv& color) noexcept -> NanRgb {
+        const auto hue        = normalize_hue(color.hue());
         const auto saturation = clamp_unit(color.saturation());
-        const auto value = clamp_unit(color.value());
+        const auto value      = clamp_unit(color.value());
 
-        const auto chroma = value * saturation;
+        const auto chroma      = value * saturation;
         const auto hue_section = hue / 60.0f;
-        const auto x = chroma * (1.0f - std::abs(std::fmod(hue_section, 2.0f) - 1.0f));
-        const auto match = value - chroma;
+        const auto x           = chroma * (1.0f - std::abs(std::fmod(hue_section, 2.0f) - 1.0f));
+        const auto match       = value - chroma;
 
-        float red = 0.0f;
+        float red   = 0.0f;
         float green = 0.0f;
-        float blue = 0.0f;
+        float blue  = 0.0f;
 
         if (hue_section < 1.0f) {
-            red = chroma;
+            red   = chroma;
             green = x;
         } else if (hue_section < 2.0f) {
-            red = x;
+            red   = x;
             green = chroma;
         } else if (hue_section < 3.0f) {
             green = chroma;
-            blue = x;
+            blue  = x;
         } else if (hue_section < 4.0f) {
             green = x;
-            blue = chroma;
+            blue  = chroma;
         } else if (hue_section < 5.0f) {
-            red = x;
+            red  = x;
             blue = chroma;
         } else {
-            red = chroma;
+            red  = chroma;
             blue = x;
         }
 
-        return {
+        return NanRgb{
             unit_to_byte(red + match),
             unit_to_byte(green + match),
             unit_to_byte(blue + match),
@@ -293,25 +296,26 @@ export namespace nandina::color {
         };
     }
 
-    [[nodiscard]] inline auto hex_to_rgb(const NanHex &color) noexcept -> NanRgb {
-        return {color.red(), color.green(), color.blue(), color.alpha()};
+    [[nodiscard]] auto hex_to_rgb(const NanHex& color) noexcept -> NanRgb {
+        return NanRgb{color.red(), color.green(), color.blue(), color.alpha()};
     }
 
-    [[nodiscard]] inline auto rgb_to_hex(const NanRgb &color) noexcept -> NanHex {
-        return {color.red(), color.green(), color.blue(), color.alpha(), color.alpha() != static_cast<std::uint8_t>(255u)};
+    [[nodiscard]] auto rgb_to_hex(const NanRgb& color) noexcept -> NanHex {
+        return NanHex{color.red(), color.green(), color.blue(), color.alpha(),
+                      color.alpha() != static_cast<std::uint8_t>(255u)};
     }
 
-    [[nodiscard]] inline auto rgb_to_cymk(const NanRgb &color) noexcept -> NanCymk {
-        const auto red = byte_to_unit(color.red());
-        const auto green = byte_to_unit(color.green());
-        const auto blue = byte_to_unit(color.blue());
+    [[nodiscard]] auto rgb_to_cymk(const NanRgb& color) noexcept -> NanCymk {
+        const auto red       = byte_to_unit(color.red());
+        const auto green     = byte_to_unit(color.green());
+        const auto blue      = byte_to_unit(color.blue());
         const auto key_black = 1.0f - std::max({red, green, blue});
 
         if (key_black >= 1.0f)
-            return {0.0f, 0.0f, 0.0f, 1.0f, byte_to_unit(color.alpha())};
+            return NanCymk{0.0f, 0.0f, 0.0f, 1.0f, byte_to_unit(color.alpha())};
 
         const auto denominator = 1.0f - key_black;
-        return {
+        return NanCymk{
             (1.0f - red - key_black) / denominator,
             (1.0f - green - key_black) / denominator,
             (1.0f - blue - key_black) / denominator,
@@ -320,8 +324,8 @@ export namespace nandina::color {
         };
     }
 
-    [[nodiscard]] inline auto cymk_to_rgb(const NanCymk &color) noexcept -> NanRgb {
-        return {
+    [[nodiscard]] auto cymk_to_rgb(const NanCymk& color) noexcept -> NanRgb {
+        return NanRgb{
             unit_to_byte((1.0f - clamp_unit(color.cyan())) * (1.0f - clamp_unit(color.key_black()))),
             unit_to_byte((1.0f - clamp_unit(color.magenta())) * (1.0f - clamp_unit(color.key_black()))),
             unit_to_byte((1.0f - clamp_unit(color.yellow())) * (1.0f - clamp_unit(color.key_black()))),
@@ -329,30 +333,30 @@ export namespace nandina::color {
         };
     }
 
-    [[nodiscard]] inline auto lab_f(float value) noexcept -> float {
+    [[nodiscard]] auto lab_f(const float value) noexcept -> float {
         constexpr auto epsilon = 216.0f / 24389.0f;
-        constexpr auto kappa = 24389.0f / 27.0f;
+        constexpr auto kappa   = 24389.0f / 27.0f;
         if (value > epsilon)
             return std::cbrt(value);
         return (kappa * value + 16.0f) / 116.0f;
     }
 
-    [[nodiscard]] inline auto lab_f_inverse(float value) noexcept -> float {
+    [[nodiscard]] auto lab_f_inverse(const float value) noexcept -> float {
         constexpr auto delta = 6.0f / 29.0f;
         if (value > delta)
             return value * value * value;
         return 3.0f * delta * delta * (value - 4.0f / 29.0f);
     }
 
-    [[nodiscard]] inline auto rgb_to_lab(const NanRgb &color) noexcept -> NanLab {
+    [[nodiscard]] auto rgb_to_lab(const NanRgb& color) noexcept -> NanLab {
         constexpr auto white_x = 0.95047f;
         constexpr auto white_y = 1.0f;
         constexpr auto white_z = 1.08883f;
 
-        const auto xyz = linear_rgb_to_xyz(rgb_to_linear(color));
-        const auto fx = lab_f(xyz.x / white_x);
-        const auto fy = lab_f(xyz.y / white_y);
-        const auto fz = lab_f(xyz.z / white_z);
+        const auto [x, y, z] = linear_rgb_to_xyz(rgb_to_linear(color));
+        const auto fx        = lab_f(x / white_x);
+        const auto fy        = lab_f(y / white_y);
+        const auto fz        = lab_f(z / white_z);
 
         return {
             116.0f * fy - 16.0f,
@@ -362,7 +366,7 @@ export namespace nandina::color {
         };
     }
 
-    [[nodiscard]] inline auto lab_to_rgb(const NanLab &color) noexcept -> NanRgb {
+    [[nodiscard]] auto lab_to_rgb(const NanLab& color) noexcept -> NanRgb {
         constexpr auto white_x = 0.95047f;
         constexpr auto white_y = 1.0f;
         constexpr auto white_z = 1.08883f;
@@ -381,57 +385,93 @@ export namespace nandina::color {
     }
 
     /// 为颜色值对象注册“进 / 出 canonical color space”的适配规则。
-    template<typename T>
+    template <typename T>
     struct ColorSpaceTraits {
-        static auto to_oklab(const T &) -> NanOklab = delete;
-        static auto from_oklab(const NanOklab &) -> T = delete;
+        static auto to_oklab(const T&) -> NanOklab = delete;
+
+        static auto from_oklab(const NanOklab&) -> T = delete;
     };
 
-    template<>
+    template <>
     struct ColorSpaceTraits<NanOklab> {
-        [[nodiscard]] static auto to_oklab(const NanOklab &color) noexcept -> NanOklab { return color; }
-        [[nodiscard]] static auto from_oklab(const NanOklab &color) noexcept -> NanOklab { return color; }
+        [[nodiscard]] static auto to_oklab(const NanOklab& color) noexcept -> NanOklab {
+            return color;
+        }
+
+        [[nodiscard]] static auto from_oklab(const NanOklab& color) noexcept -> NanOklab {
+            return color;
+        }
     };
 
-    template<>
+    template <>
     struct ColorSpaceTraits<NanOklch> {
-        [[nodiscard]] static auto to_oklab(const NanOklch &color) noexcept -> NanOklab { return oklch_to_oklab(color); }
-        [[nodiscard]] static auto from_oklab(const NanOklab &color) noexcept -> NanOklch { return oklab_to_oklch(color); }
+        [[nodiscard]] static auto to_oklab(const NanOklch& color) noexcept -> NanOklab {
+            return oklch_to_oklab(color);
+        }
+
+        [[nodiscard]] static auto from_oklab(const NanOklab& color) noexcept -> NanOklch {
+            return oklab_to_oklch(color);
+        }
     };
 
-    template<>
+    template <>
     struct ColorSpaceTraits<NanRgb> {
-        [[nodiscard]] static auto to_oklab(const NanRgb &color) noexcept -> NanOklab { return rgb_to_oklab(color); }
-        [[nodiscard]] static auto from_oklab(const NanOklab &color) noexcept -> NanRgb { return oklab_to_rgb(color); }
+        [[nodiscard]] static auto to_oklab(const NanRgb& color) noexcept -> NanOklab {
+            return rgb_to_oklab(color);
+        }
+
+        [[nodiscard]] static auto from_oklab(const NanOklab& color) noexcept -> NanRgb {
+            return oklab_to_rgb(color);
+        }
     };
 
-    template<>
+    template <>
     struct ColorSpaceTraits<NanHsl> {
-        [[nodiscard]] static auto to_oklab(const NanHsl &color) noexcept -> NanOklab { return rgb_to_oklab(hsl_to_rgb(color)); }
-        [[nodiscard]] static auto from_oklab(const NanOklab &color) noexcept -> NanHsl { return rgb_to_hsl(oklab_to_rgb(color)); }
+        [[nodiscard]] static auto to_oklab(const NanHsl& color) noexcept -> NanOklab {
+            return rgb_to_oklab(hsl_to_rgb(color));
+        }
+
+        [[nodiscard]] static auto from_oklab(const NanOklab& color) noexcept -> NanHsl {
+            return rgb_to_hsl(oklab_to_rgb(color));
+        }
     };
 
-    template<>
+    template <>
     struct ColorSpaceTraits<NanHsv> {
-        [[nodiscard]] static auto to_oklab(const NanHsv &color) noexcept -> NanOklab { return rgb_to_oklab(hsv_to_rgb(color)); }
-        [[nodiscard]] static auto from_oklab(const NanOklab &color) noexcept -> NanHsv { return rgb_to_hsv(oklab_to_rgb(color)); }
+        [[nodiscard]] static auto to_oklab(const NanHsv& color) noexcept -> NanOklab {
+            return rgb_to_oklab(hsv_to_rgb(color));
+        }
+
+        [[nodiscard]] static auto from_oklab(const NanOklab& color) noexcept -> NanHsv {
+            return rgb_to_hsv(oklab_to_rgb(color));
+        }
     };
 
-    template<>
+    template <>
     struct ColorSpaceTraits<NanCymk> {
-        [[nodiscard]] static auto to_oklab(const NanCymk &color) noexcept -> NanOklab { return rgb_to_oklab(cymk_to_rgb(color)); }
-        [[nodiscard]] static auto from_oklab(const NanOklab &color) noexcept -> NanCymk { return rgb_to_cymk(oklab_to_rgb(color)); }
+        [[nodiscard]] static auto to_oklab(const NanCymk& color) noexcept -> NanOklab {
+            return rgb_to_oklab(cymk_to_rgb(color));
+        }
+
+        [[nodiscard]] static auto from_oklab(const NanOklab& color) noexcept -> NanCymk {
+            return rgb_to_cymk(oklab_to_rgb(color));
+        }
     };
 
-    template<>
+    template <>
     struct ColorSpaceTraits<NanLab> {
-        [[nodiscard]] static auto to_oklab(const NanLab &color) noexcept -> NanOklab { return rgb_to_oklab(lab_to_rgb(color)); }
-        [[nodiscard]] static auto from_oklab(const NanOklab &color) noexcept -> NanLab { return rgb_to_lab(oklab_to_rgb(color)); }
+        [[nodiscard]] static auto to_oklab(const NanLab& color) noexcept -> NanOklab {
+            return rgb_to_oklab(lab_to_rgb(color));
+        }
+
+        [[nodiscard]] static auto from_oklab(const NanOklab& color) noexcept -> NanLab {
+            return rgb_to_lab(oklab_to_rgb(color));
+        }
     };
 
-    template<>
+    template <>
     struct ColorSpaceTraits<NanLch> {
-        [[nodiscard]] static auto to_oklab(const NanLch &color) noexcept -> NanOklab {
+        [[nodiscard]] static auto to_oklab(const NanLch& color) noexcept -> NanOklab {
             const auto hue_rad = normalize_hue(color.hue()) * std::numbers::pi_v<float> / 180.0f;
             return ColorSpaceTraits<NanLab>::to_oklab({
                 color.lightness(),
@@ -441,42 +481,48 @@ export namespace nandina::color {
             });
         }
 
-        [[nodiscard]] static auto from_oklab(const NanOklab &color) noexcept -> NanLch {
+        [[nodiscard]] static auto from_oklab(const NanOklab& color) noexcept -> NanLch {
             const auto lab = ColorSpaceTraits<NanLab>::from_oklab(color);
             const auto chroma = std::hypot(lab.a_axis(), lab.b_axis());
             const auto hue = normalize_hue(std::atan2(lab.b_axis(), lab.a_axis()) * 180.0f / std::numbers::pi_v<float>);
-            return {lab.lightness(), chroma, hue, lab.alpha()};
+            return NanLch{lab.lightness(), chroma, hue, lab.alpha()};
         }
     };
 
-    template<>
+    template <>
     struct ColorSpaceTraits<NanHex> {
-        [[nodiscard]] static auto to_oklab(const NanHex &color) noexcept -> NanOklab { return rgb_to_oklab(hex_to_rgb(color)); }
-        [[nodiscard]] static auto from_oklab(const NanOklab &color) noexcept -> NanHex { return rgb_to_hex(oklab_to_rgb(color)); }
+        [[nodiscard]] static auto to_oklab(const NanHex& color) noexcept -> NanOklab {
+            return rgb_to_oklab(hex_to_rgb(color));
+        }
+
+        [[nodiscard]] static auto from_oklab(const NanOklab& color) noexcept -> NanHex {
+            return rgb_to_hex(oklab_to_rgb(color));
+        }
     };
 
     /// 可参与统一转换链的颜色值对象。
-    template<typename T>
+    template <typename T>
     concept ColorSpace = std::derived_from<T, nandina::NanBaseColor> &&
-        requires(const T &color, const NanOklab &oklab) {
-            { ColorSpaceTraits<T>::to_oklab(color) } -> std::same_as<NanOklab>;
-            { ColorSpaceTraits<T>::from_oklab(oklab) } -> std::same_as<T>;
-        };
+                         requires(const T& color, const NanOklab& oklab)
+                         {
+                             { ColorSpaceTraits<T>::to_oklab(color) } -> std::same_as<NanOklab>;
+                             { ColorSpaceTraits<T>::from_oklab(oklab) } -> std::same_as<T>;
+                         };
 
-    template<typename T>
+    template <typename T>
     concept ApproxComparableColor = TupleLikeColor<T> &&
-        std::floating_point<typename ColorTupleTraits<T>::element_type>;
+                                    std::floating_point<typename ColorTupleTraits<T>::element_type>;
 
-    [[nodiscard]] inline auto almost_equal(const float lhs,
-                                           const float rhs,
-                                           const float epsilon = 1.0e-4f) noexcept -> bool {
+    [[nodiscard]] auto almost_equal(const float lhs,
+        const float rhs,
+        const float epsilon = 1.0e-4f) noexcept -> bool {
         return std::abs(lhs - rhs) <= epsilon;
     }
 
-    template<ApproxComparableColor T>
-    [[nodiscard]] inline auto almost_equal(const T &lhs,
-                                           const T &rhs,
-                                           const float epsilon = 1.0e-4f) noexcept -> bool {
+    template <ApproxComparableColor T>
+    [[nodiscard]] auto almost_equal(const T& lhs,
+        const T& rhs,
+        const float epsilon = 1.0e-4f) noexcept -> bool {
         return almost_equal(get<0>(lhs), get<0>(rhs), epsilon) &&
                almost_equal(get<1>(lhs), get<1>(rhs), epsilon) &&
                almost_equal(get<2>(lhs), get<2>(rhs), epsilon) &&
@@ -490,8 +536,8 @@ export namespace nandina::color {
      *   auto rgb = nandina::NanRgb{35, 38, 52};
      *   auto hex = nandina::color::convert<nandina::NanRgb, nandina::NanHex>(rgb);
      */
-    template<ColorSpace From, ColorSpace To>
-    [[nodiscard]] inline auto convert(const From &color) -> To {
+    template <ColorSpace From, ColorSpace To>
+    [[nodiscard]] auto convert(const From& color) -> To {
         return ColorSpaceTraits<To>::from_oklab(ColorSpaceTraits<From>::to_oklab(color));
     }
 }

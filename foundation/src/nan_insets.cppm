@@ -36,7 +36,7 @@ export namespace nandina::geometry {
      * 与 NanRect 的关系：
      * - NanRect 定义矩形边界本身。
      * - NanInsets 定义边界如何"扩展"或"收缩"。
-     * - 通过 applyToRect() 将 inset 应用到矩形上获得新的矩形。
+     * - 通过 apply_to_rect() 将 inset 应用到矩形上获得新的矩形。
      *
      * 设计思路：
      * - 使用 float 类型，与 NanPoint/NanSize/NanRect 一致。
@@ -75,37 +75,37 @@ export namespace nandina::geometry {
         }
 
         /// 仅设置水平方向
-        [[nodiscard]] static constexpr auto symmetricH(const float value) noexcept -> NanInsets {
+        [[nodiscard]] static constexpr auto symmetric_h(const float value) noexcept -> NanInsets {
             return NanInsets{value, 0.0f};
         }
 
         /// 仅设置垂直方向
-        [[nodiscard]] static constexpr auto symmetricV(const float value) noexcept -> NanInsets {
+        [[nodiscard]] static constexpr auto symmetric_v(const float value) noexcept -> NanInsets {
             return NanInsets{0.0f, value};
         }
 
         /// 从单个值创建（同 all）
-        [[nodiscard]] static constexpr auto fromAll(const float value) noexcept -> NanInsets {
+        [[nodiscard]] static constexpr auto from_all(const float value) noexcept -> NanInsets {
             return NanInsets{value};
         }
 
         /// 仅左
-        [[nodiscard]] static constexpr auto fromLeft(const float value) noexcept -> NanInsets {
+        [[nodiscard]] static constexpr auto from_left(const float value) noexcept -> NanInsets {
             return NanInsets{value, 0.0f, 0.0f, 0.0f};
         }
 
         /// 仅上
-        [[nodiscard]] static constexpr auto fromTop(const float value) noexcept -> NanInsets {
+        [[nodiscard]] static constexpr auto from_top(const float value) noexcept -> NanInsets {
             return NanInsets{0.0f, value, 0.0f, 0.0f};
         }
 
         /// 仅右
-        [[nodiscard]] static constexpr auto fromRight(const float value) noexcept -> NanInsets {
+        [[nodiscard]] static constexpr auto from_right(const float value) noexcept -> NanInsets {
             return NanInsets{0.0f, 0.0f, value, 0.0f};
         }
 
         /// 仅下
-        [[nodiscard]] static constexpr auto fromBottom(const float value) noexcept -> NanInsets {
+        [[nodiscard]] static constexpr auto from_bottom(const float value) noexcept -> NanInsets {
             return NanInsets{0.0f, 0.0f, 0.0f, value};
         }
 
@@ -125,24 +125,24 @@ export namespace nandina::geometry {
         }
 
         /// 左上角视为一个点
-        [[nodiscard]] constexpr auto topLeft() const noexcept -> NanPoint {
+        [[nodiscard]] constexpr auto top_left() const noexcept -> NanPoint {
             return NanPoint{values_[0], values_[1]};
         }
 
         /// 右下角视为一个点
-        [[nodiscard]] constexpr auto bottomRight() const noexcept -> NanPoint {
+        [[nodiscard]] constexpr auto bottom_right() const noexcept -> NanPoint {
             return NanPoint{values_[2], values_[3]};
         }
 
         // ── 设置器 ──
 
-        constexpr auto setLeft(const float value) noexcept -> void { values_[0] = value; }
-        constexpr auto setTop(const float value) noexcept -> void { values_[1] = value; }
-        constexpr auto setRight(const float value) noexcept -> void { values_[2] = value; }
-        constexpr auto setBottom(const float value) noexcept -> void { values_[3] = value; }
+        constexpr auto set_left(const float value) noexcept -> void { values_[0] = value; }
+        constexpr auto set_top(const float value) noexcept -> void { values_[1] = value; }
+        constexpr auto set_right(const float value) noexcept -> void { values_[2] = value; }
+        constexpr auto set_bottom(const float value) noexcept -> void { values_[3] = value; }
 
         /// 统一设置所有边
-        constexpr auto setAll(const float value) noexcept -> void {
+        constexpr auto set_all(const float value) noexcept -> void {
             values_[0] = values_[1] = values_[2] = values_[3] = value;
         }
 
@@ -157,50 +157,50 @@ export namespace nandina::geometry {
         // ── 属性方法 ──
 
         /// 是否所有缩进为零
-        [[nodiscard]] constexpr auto isZero() const noexcept -> bool {
+        [[nodiscard]] constexpr auto is_zero() const noexcept -> bool {
             return values_[0] == 0.0f && values_[1] == 0.0f &&
                    values_[2] == 0.0f && values_[3] == 0.0f;
         }
 
         /// 缩进是否为空（所有边 <= 0？实际上 Insets 的"空"通常指零值）
         /// 此方法检查是否所有边都为零或负值（即无正向内缩）
-        [[nodiscard]] constexpr auto isEmpty() const noexcept -> bool {
+        [[nodiscard]] constexpr auto is_empty() const noexcept -> bool {
             return values_[0] <= 0.0f && values_[1] <= 0.0f &&
                    values_[2] <= 0.0f && values_[3] <= 0.0f;
         }
 
         /// 是否有任何正缩进
-        [[nodiscard]] constexpr auto hasPositive() const noexcept -> bool {
+        [[nodiscard]] constexpr auto has_positive() const noexcept -> bool {
             return values_[0] > 0.0f || values_[1] > 0.0f ||
                    values_[2] > 0.0f || values_[3] > 0.0f;
         }
 
         /// 是否有任何负缩进（扩张）
-        [[nodiscard]] constexpr auto hasNegative() const noexcept -> bool {
+        [[nodiscard]] constexpr auto has_negative() const noexcept -> bool {
             return values_[0] < 0.0f || values_[1] < 0.0f ||
                    values_[2] < 0.0f || values_[3] < 0.0f;
         }
 
         /// 水平方向是否对称（left == right）
-        [[nodiscard]] constexpr auto isHorizontalSymmetric() const noexcept -> bool {
+        [[nodiscard]] constexpr auto is_horizontal_symmetric() const noexcept -> bool {
             return std::abs(values_[0] - values_[2]) < 1.0e-6f;
         }
 
         /// 垂直方向是否对称（top == bottom）
-        [[nodiscard]] constexpr auto isVerticalSymmetric() const noexcept -> bool {
+        [[nodiscard]] constexpr auto is_vertical_symmetric() const noexcept -> bool {
             return std::abs(values_[1] - values_[3]) < 1.0e-6f;
         }
 
         /// 是否完全对称（所有边相等）
-        [[nodiscard]] constexpr auto isUniform() const noexcept -> bool {
-            return isHorizontalSymmetric() && isVerticalSymmetric() &&
+        [[nodiscard]] constexpr auto is_uniform() const noexcept -> bool {
+            return is_horizontal_symmetric() && is_vertical_symmetric() &&
                    std::abs(values_[0] - values_[1]) < 1.0e-6f;
         }
 
         // ── 与 NanRect 交互 ──
 
         /// 将缩进应用到矩形上（正值缩小，负值扩大）
-        [[nodiscard]] constexpr auto applyToRect(const NanRect &rect) const noexcept -> NanRect {
+        [[nodiscard]] constexpr auto apply_to_rect(const NanRect &rect) const noexcept -> NanRect {
             return NanRect{
                 rect.left() + values_[0],
                 rect.top() + values_[1],
@@ -210,7 +210,7 @@ export namespace nandina::geometry {
         }
 
         /// 将缩进反向应用到矩形上（正值扩大，负值缩小）
-        [[nodiscard]] constexpr auto inflateRect(const NanRect &rect) const noexcept -> NanRect {
+        [[nodiscard]] constexpr auto inflate_rect(const NanRect &rect) const noexcept -> NanRect {
             return NanRect{
                 rect.left() - values_[0],
                 rect.top() - values_[1],
@@ -220,7 +220,7 @@ export namespace nandina::geometry {
         }
 
         /// 缩进总和作为矩形尺寸偏移量
-        [[nodiscard]] constexpr auto toSize() const noexcept -> NanSize {
+        [[nodiscard]] constexpr auto to_size() const noexcept -> NanSize {
             return NanSize{horizontal(), vertical()};
         }
 
@@ -316,7 +316,7 @@ export namespace nandina::geometry {
         // ── 辅助函数 ──
 
         /// 返回形如 "(L=x, T=x, R=x, B=x)" 的字符串
-        [[nodiscard]] auto toString() const -> std::string {
+        [[nodiscard]] auto to_string() const -> std::string {
             std::ostringstream oss;
             oss << "(L=" << values_[0] << ", T=" << values_[1]
                 << ", R=" << values_[2] << ", B=" << values_[3] << ")";
@@ -343,17 +343,17 @@ export namespace nandina::geometry {
 
     /// 流输出
     [[nodiscard]] auto operator<<(std::ostream &os, const NanInsets &insets) -> std::ostream& {
-        return os << insets.toString();
+        return os << insets.to_string();
     }
 
     /// 将 insets 应用于 rect（等同 rect + insets 的语义）
     [[nodiscard]] constexpr auto operator+(const NanRect &rect, const NanInsets &insets) noexcept -> NanRect {
-        return insets.applyToRect(rect);
+        return insets.apply_to_rect(rect);
     }
 
     /// 从 rect 中减去 insets（等同 rect - insets 的语义：反向应用）
     [[nodiscard]] constexpr auto operator-(const NanRect &rect, const NanInsets &insets) noexcept -> NanRect {
-        return insets.inflateRect(rect);
+        return insets.inflate_rect(rect);
     }
 
     // ──────────────────────────────────────────────────────────
@@ -387,6 +387,6 @@ struct fmt::formatter<NanInsets> {
 
     template<typename FormatContext>
     auto format(const NanInsets &insets, FormatContext &ctx) -> FormatContext::iterator {
-        return fmt::format_to(ctx.out(), "{}", insets.toString());
+        return fmt::format_to(ctx.out(), "{}", insets.to_string());
     }
 };

@@ -27,8 +27,8 @@
 |---------|------|
 | `constexpr T x() const` | 返回 x 坐标（const 版本）。 |
 | `constexpr T y() const` | 返回 y 坐标（const 版本）。 |
-| `void setX(T value)` | 设置 x 坐标。 |
-| `void setY(T value)` | 设置 y 坐标。 |
+| `void set_x(T value)` | 设置 x 坐标。 |
+| `void set_y(T value)` | 设置 y 坐标。 |
 | `void set(T x, T y)` | 同时设置两个坐标。 |
 | `T& operator[](std::size_t index)` | 下标访问（非 const，用于修改）。 |
 | `const T& operator[](std::size_t index) const` | 下标访问（const 版本）。 |
@@ -74,24 +74,24 @@
 | `float dot(const NanPoint& rhs) const` | 点积（内积）。 |
 | `float cross(const NanPoint& rhs) const` | 二维叉积（标量值）。 |
 | `float length() const` | 向量长度（模）。 |
-| `float lengthSquared() const` | 长度平方（避免开方，用于比较）。 |
-| `float distanceTo(const NanPoint& other) const` | 两点欧氏距离。 |
-| `float distanceSquaredTo(const NanPoint& other) const` | 距离平方。 |
+| `float length_squared() const` | 长度平方（避免开方，用于比较）。 |
+| `float distance_to(const NanPoint& other) const` | 两点欧氏距离。 |
+| `float distance_squared_to(const NanPoint& other) const` | 距离平方。 |
 | `NanPoint normalized() const` | 返回单位向量（若零向量则抛异常）。 |
 | `NanPoint& normalize()` | 原地归一化。 |
 
 #### 3.4 类型转换
 | 函数签名 | 说明 |
 |---------|------|
-| `template<typename U> NanPoint<U> cast() const` | 转换为另一种数值类型的点。 |
+| `template<typename U> NanPoint cast() const` | 转换为另一种数值类型的点。 |
 | `template<typename U> explicit operator NanPoint<U>() const` | 显式转换运算符。 |
 
 #### 3.5 其他工具函数
 | 函数签名 | 说明 |
 |---------|------|
 | `void swap(NanPoint& other) noexcept` | 与另一个点交换内容。 |
-| `bool isZero() const` | 检查是否为零向量。 |
-| `std::string toString() const` | 返回形如 `"(x, y)"` 的字符串。 |
+| `bool is_zero() const` | 检查是否为零向量。 |
+| `std::string to_string() const` | 返回形如 `"(x, y)"` 的字符串。 |
 
 ---
 
@@ -124,7 +124,7 @@ NanPoint p2{30.0f, 40.0f};
 
 auto p3 = p1 + p2;          // (40, 60) float 运算无溢出
 auto dot = p1.dot(p2);      // 10*30 + 20*40 = 1100
-auto dist = p1.distanceTo(p2);
+auto dist = p1.distance_to(p2);
 auto normalized = p1.normalized();
 
 if (p1 < p2) { /* 字典序比较 */ }
@@ -166,4 +166,3 @@ export namespace nandina {
 // fmt 格式化支持（在命名空间外特化）
 template<typename T, std::size_t N>
 struct fmt::formatter<nandina::BasePoint<T, N>>;
-```

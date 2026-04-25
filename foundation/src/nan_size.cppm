@@ -69,12 +69,12 @@ export namespace nandina::geometry {
         }
 
         /// 设置宽度
-        constexpr auto setWidth(const float w) noexcept -> void {
+        constexpr auto set_width(const float w) noexcept -> void {
             (*this)[0] = w;
         }
 
         /// 设置高度
-        constexpr auto setHeight(const float h) noexcept -> void {
+        constexpr auto set_height(const float h) noexcept -> void {
             (*this)[1] = h;
         }
 
@@ -139,7 +139,7 @@ export namespace nandina::geometry {
         }
 
         /// 宽高比
-        [[nodiscard]] auto aspectRatio() const noexcept -> float {
+        [[nodiscard]] auto aspect_ratio() const noexcept -> float {
             if ((*this)[1] == 0.0f) {
                 return 0.0f;
             }
@@ -147,12 +147,12 @@ export namespace nandina::geometry {
         }
 
         /// 是否为空
-        [[nodiscard]] constexpr auto isEmpty() const noexcept -> bool {
+        [[nodiscard]] constexpr auto is_empty() const noexcept -> bool {
             return (*this)[0] <= 0.0f || (*this)[1] <= 0.0f;
         }
 
         /// 是否为正尺寸
-        [[nodiscard]] constexpr auto isValid() const noexcept -> bool {
+        [[nodiscard]] constexpr auto is_valid() const noexcept -> bool {
             return (*this)[0] >= 0.0f && (*this)[1] >= 0.0f;
         }
 
@@ -189,7 +189,7 @@ export namespace nandina::geometry {
 
     /// 流输出
     [[nodiscard]] auto operator<<(std::ostream &os, const NanSize &sz) -> std::ostream& {
-        os << sz.toString();
+        os << sz.to_string();
         return os;
     }
 } // namespace nandina::geometry
@@ -209,7 +209,7 @@ struct fmt::formatter<NanSize> {
 
     template<typename FormatContext>
     auto format(const NanSize &sz, FormatContext &ctx) -> FormatContext::iterator {
-        return fmt::format_to(ctx.out(), "{}", sz.toString());
+        return fmt::format_to(ctx.out(), "{}", sz.to_string());
     }
 };
 

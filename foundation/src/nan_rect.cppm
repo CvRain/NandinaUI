@@ -56,12 +56,12 @@ export namespace nandina::geometry {
         // ── 静态工厂方法 ──
 
         /// 从 LTRB 创建
-        [[nodiscard]] static constexpr auto fromLTRB(const T l, const T t, const T r, const T b) noexcept -> BaseRect {
+        [[nodiscard]] static constexpr auto from_ltrb(const T l, const T t, const T r, const T b) noexcept -> BaseRect {
             return BaseRect{l, t, r, b};
         }
 
         /// 从 XYWH 创建
-        [[nodiscard]] static constexpr auto fromXYWH(const T x, const T y, const T w, const T h) noexcept -> BaseRect {
+        [[nodiscard]] static constexpr auto from_xywh(const T x, const T y, const T w, const T h) noexcept -> BaseRect {
             return BaseRect{x, y, x + w, y + h};
         }
 
@@ -85,39 +85,39 @@ export namespace nandina::geometry {
 
         // ── 设置边界 ──
 
-        constexpr auto setLeft(const T value) noexcept -> void { bounds_[0] = value; }
-        constexpr auto setTop(const T value) noexcept -> void { bounds_[1] = value; }
-        constexpr auto setRight(const T value) noexcept -> void { bounds_[2] = value; }
-        constexpr auto setBottom(const T value) noexcept -> void { bounds_[3] = value; }
-        constexpr auto setX(const T value) noexcept -> void { setLeft(value); }
-        constexpr auto setY(const T value) noexcept -> void { setTop(value); }
+        constexpr auto set_left(const T value) noexcept -> void { bounds_[0] = value; }
+        constexpr auto set_top(const T value) noexcept -> void { bounds_[1] = value; }
+        constexpr auto set_right(const T value) noexcept -> void { bounds_[2] = value; }
+        constexpr auto set_bottom(const T value) noexcept -> void { bounds_[3] = value; }
+        constexpr auto set_x(const T value) noexcept -> void { set_left(value); }
+        constexpr auto set_y(const T value) noexcept -> void { set_top(value); }
 
-        constexpr auto setWidth(const T w) noexcept -> void {
+        constexpr auto set_width(const T w) noexcept -> void {
             if (w >= T{}) bounds_[2] = bounds_[0] + w;
         }
 
-        constexpr auto setHeight(const T h) noexcept -> void {
+        constexpr auto set_height(const T h) noexcept -> void {
             if (h >= T{}) bounds_[3] = bounds_[1] + h;
         }
 
-        constexpr auto setRect(const T l, const T t, const T r, const T b) noexcept -> void {
+        constexpr auto set_rect(const T l, const T t, const T r, const T b) noexcept -> void {
             bounds_[0] = l;
             bounds_[1] = t;
             bounds_[2] = r;
             bounds_[3] = b;
         }
 
-        constexpr auto setEmpty() noexcept -> void {
+        constexpr auto set_empty() noexcept -> void {
             bounds_[0] = bounds_[1] = bounds_[2] = bounds_[3] = T{};
         }
 
         // ── 属性方法 ──
 
-        [[nodiscard]] auto topLeft() const noexcept -> NanPoint {
+        [[nodiscard]] auto top_left() const noexcept -> NanPoint {
             return NanPoint{left(), top()};
         }
 
-        [[nodiscard]] auto bottomRight() const noexcept -> NanPoint {
+        [[nodiscard]] auto bottom_right() const noexcept -> NanPoint {
             return NanPoint{right(), bottom()};
         }
 
@@ -129,22 +129,22 @@ export namespace nandina::geometry {
             return NanSize{width(), height()};
         }
 
-        [[nodiscard]] constexpr auto isEmpty() const noexcept -> bool {
+        [[nodiscard]] constexpr auto is_empty() const noexcept -> bool {
             return width() <= T{} || height() <= T{};
         }
 
-        [[nodiscard]] constexpr auto isValid() const noexcept -> bool {
+        [[nodiscard]] constexpr auto is_valid() const noexcept -> bool {
             return bounds_[0] <= bounds_[2] && bounds_[1] <= bounds_[3];
         }
 
         // ── 修改器 ──
 
-        constexpr auto setTopLeft(const NanPoint &pt) noexcept -> void {
+        constexpr auto set_top_left(const NanPoint &pt) noexcept -> void {
             bounds_[0] = pt.x();
             bounds_[1] = pt.y();
         }
 
-        constexpr auto setBottomRight(const NanPoint &pt) noexcept -> void {
+        constexpr auto set_bottom_right(const NanPoint &pt) noexcept -> void {
             bounds_[2] = pt.x();
             bounds_[3] = pt.y();
         }
@@ -157,7 +157,7 @@ export namespace nandina::geometry {
 
         // ── 辅助函数 ──
 
-        [[nodiscard]] auto toString() const -> std::string {
+        [[nodiscard]] auto to_string() const -> std::string {
             std::ostringstream oss;
             oss << "(L=" << left() << ", T=" << top() << ", R=" << right() << ", B=" << bottom() << ")";
             return oss.str();
@@ -189,13 +189,13 @@ export namespace nandina::geometry {
         }
 
         // 从两个点构造
-        constexpr NanRect(const NanPoint &topLeft, const NanPoint &bottomRight) noexcept
-            : BaseRect{topLeft.x(), topLeft.y(), bottomRight.x(), bottomRight.y()} {
+        constexpr NanRect(const NanPoint &top_left, const NanPoint &bottom_right) noexcept
+            : BaseRect{top_left.x(), top_left.y(), bottom_right.x(), bottom_right.y()} {
         }
 
         // 从点和尺寸构造
-        constexpr NanRect(const NanPoint &topLeft, const NanSize &sz) noexcept
-            : BaseRect{topLeft.x(), topLeft.y(), topLeft.x() + sz.width(), topLeft.y() + sz.height()} {
+        constexpr NanRect(const NanPoint &top_left, const NanSize &sz) noexcept
+            : BaseRect{top_left.x(), top_left.y(), top_left.x() + sz.width(), top_left.y() + sz.height()} {
         }
 
         // ── 几何运算（变换） ──
@@ -205,7 +205,7 @@ export namespace nandina::geometry {
         }
 
         constexpr auto translate(const float dx, const float dy) noexcept -> NanRect& {
-            setRect(left() + dx, top() + dy, right() + dx, bottom() + dy);
+            set_rect(left() + dx, top() + dy, right() + dx, bottom() + dy);
             return *this;
         }
 
@@ -222,7 +222,7 @@ export namespace nandina::geometry {
         }
 
         constexpr auto scale(const float sx, const float sy) noexcept -> NanRect& {
-            setRect(left() * sx, top() * sy, right() * sx, bottom() * sy);
+            set_rect(left() * sx, top() * sy, right() * sx, bottom() * sy);
             return *this;
         }
 
@@ -231,7 +231,7 @@ export namespace nandina::geometry {
         }
 
         constexpr auto expand(const float amount) noexcept -> NanRect& {
-            setRect(left() - amount, top() - amount, right() + amount, bottom() + amount);
+            set_rect(left() - amount, top() - amount, right() + amount, bottom() + amount);
             return *this;
         }
 
@@ -280,7 +280,7 @@ export namespace nandina::geometry {
 
         // ── 布局辅助 ──
 
-        [[nodiscard]] auto alignedInside(const NanRect &container, const Alignment align) const noexcept -> NanRect {
+        [[nodiscard]] auto aligned_inside(const NanRect &container, const Alignment align) const noexcept -> NanRect {
             const auto w = width();
             const auto h = height();
             auto result = *this;
@@ -289,17 +289,17 @@ export namespace nandina::geometry {
                 case Alignment::TopLeft:
                 case Alignment::CenterLeft:
                 case Alignment::BottomLeft:
-                    result.setX(container.left());
+                    result.set_x(container.left());
                     break;
                 case Alignment::TopCenter:
                 case Alignment::Center:
                 case Alignment::BottomCenter:
-                    result.setX((container.left() + container.right()) / 2.0f - w / 2.0f);
+                    result.set_x((container.left() + container.right()) / 2.0f - w / 2.0f);
                     break;
                 case Alignment::TopRight:
                 case Alignment::CenterRight:
                 case Alignment::BottomRight:
-                    result.setX(container.right() - w);
+                    result.set_x(container.right() - w);
                     break;
             }
 
@@ -307,28 +307,28 @@ export namespace nandina::geometry {
                 case Alignment::TopLeft:
                 case Alignment::TopCenter:
                 case Alignment::TopRight:
-                    result.setY(container.top());
+                    result.set_y(container.top());
                     break;
                 case Alignment::CenterLeft:
                 case Alignment::Center:
                 case Alignment::CenterRight:
-                    result.setY((container.top() + container.bottom()) / 2.0f - h / 2.0f);
+                    result.set_y((container.top() + container.bottom()) / 2.0f - h / 2.0f);
                     break;
                 case Alignment::BottomLeft:
                 case Alignment::BottomCenter:
                 case Alignment::BottomRight:
-                    result.setY(container.bottom() - h);
+                    result.set_y(container.bottom() - h);
                     break;
             }
 
             return result;
         }
 
-        [[nodiscard]] constexpr auto withMargin(const float margin) const noexcept -> NanRect {
+        [[nodiscard]] constexpr auto with_margin(const float margin) const noexcept -> NanRect {
             return shrinked(margin * 2.0f);
         }
 
-        [[nodiscard]] constexpr auto withPadding(const float padding) const noexcept -> NanRect {
+        [[nodiscard]] constexpr auto with_padding(const float padding) const noexcept -> NanRect {
             return shrinked(padding * 2.0f);
         }
 
@@ -336,7 +336,7 @@ export namespace nandina::geometry {
             return NanRect{left() + dx, top() + dy, right() - dx, bottom() - dy};
         }
 
-        [[nodiscard]] auto centeredIn(const NanRect &outer) const noexcept -> NanRect {
+        [[nodiscard]] auto centered_in(const NanRect &outer) const noexcept -> NanRect {
             const auto w = width();
             const auto h = height();
             return NanRect{
@@ -347,7 +347,7 @@ export namespace nandina::geometry {
             };
         }
 
-        [[nodiscard]] auto boundedTo(const NanRect &boundary) const noexcept -> NanRect {
+        [[nodiscard]] auto bounded_to(const NanRect &boundary) const noexcept -> NanRect {
             return intersected(boundary);
         }
     };
@@ -373,7 +373,7 @@ export namespace nandina::geometry {
     }
 
     [[nodiscard]] auto operator<<(std::ostream &os, const NanRect &rect) -> std::ostream& {
-        return os << rect.toString();
+        return os << rect.to_string();
     }
 } // namespace nandina::geometry
 
@@ -392,7 +392,7 @@ struct fmt::formatter<BaseRect<T>> {
 
     template<typename FormatContext>
     auto format(const BaseRect<T> &rect, FormatContext &ctx) -> FormatContext::iterator {
-        return fmt::format_to(ctx.out(), "{}", rect.toString());
+        return fmt::format_to(ctx.out(), "{}", rect.to_string());
     }
 };
 
@@ -405,7 +405,7 @@ struct fmt::formatter<NanRect> {
 
     template<typename FormatContext>
     auto format(const NanRect &rect, FormatContext &ctx) -> FormatContext::iterator {
-        return fmt::format_to(ctx.out(), "{}", rect.toString());
+        return fmt::format_to(ctx.out(), "{}", rect.to_string());
     }
 };
 

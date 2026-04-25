@@ -25,12 +25,12 @@ namespace nandina::geometry {
 class NanConstraints {
 public:
     // 特殊值：表示无界限
-    static constexpr float kInfinity = std::numeric_limits<float>::infinity();
+    static constexpr float k_infinity = std::numeric_limits<float>::infinity();
 
     // ── 构造函数 ──
     constexpr NanConstraints() noexcept;                                     // 默认：tight(0,0)
-    constexpr NanConstraints(float minWidth, float maxWidth,
-                             float minHeight, float maxHeight) noexcept;     // 全字段构造
+    constexpr NanConstraints(float min_width, float max_width,
+                             float min_height, float max_height) noexcept;     // 全字段构造
     constexpr explicit NanConstraints(NanSize size) noexcept;                // 从 Size 构造 tight 约束
     constexpr NanConstraints(float width, float height) noexcept;            // tight(width, height)
 
@@ -42,20 +42,20 @@ public:
     [[nodiscard]] static constexpr auto expand() noexcept -> NanConstraints; // 全部 unbounded
 
     // ── 访问器 ──
-    [[nodiscard]] constexpr auto minWidth() const noexcept -> float;
-    [[nodiscard]] constexpr auto maxWidth() const noexcept -> float;
-    [[nodiscard]] constexpr auto minHeight() const noexcept -> float;
-    [[nodiscard]] constexpr auto maxHeight() const noexcept -> float;
+    [[nodiscard]] constexpr auto min_width() const noexcept -> float;
+    [[nodiscard]] constexpr auto max_width() const noexcept -> float;
+    [[nodiscard]] constexpr auto min_height() const noexcept -> float;
+    [[nodiscard]] constexpr auto max_height() const noexcept -> float;
 
     // ── 查询 ──
-    [[nodiscard]] constexpr auto isTight() const noexcept -> bool;       // min == max 在宽高上
-    [[nodiscard]] constexpr auto isTightWidth() const noexcept -> bool;
-    [[nodiscard]] constexpr auto isTightHeight() const noexcept -> bool;
-    [[nodiscard]] constexpr auto isLoose() const noexcept -> bool;       // 宽高皆 loose
-    [[nodiscard]] constexpr auto isBounded() const noexcept -> bool;     // 非 unbounded
-    [[nodiscard]] constexpr auto hasUnboundedWidth() const noexcept -> bool;
-    [[nodiscard]] constexpr auto hasUnboundedHeight() const noexcept -> bool;
-    [[nodiscard]] constexpr auto isValid() const noexcept -> bool;       // min <= max
+    [[nodiscard]] constexpr auto is_tight() const noexcept -> bool;       // min == max 在宽高上
+    [[nodiscard]] constexpr auto is_tight_width() const noexcept -> bool;
+    [[nodiscard]] constexpr auto is_tight_height() const noexcept -> bool;
+    [[nodiscard]] constexpr auto is_loose() const noexcept -> bool;       // 宽高皆 loose
+    [[nodiscard]] constexpr auto is_bounded() const noexcept -> bool;     // 非 unbounded
+    [[nodiscard]] constexpr auto has_unbounded_width() const noexcept -> bool;
+    [[nodiscard]] constexpr auto has_unbounded_height() const noexcept -> bool;
+    [[nodiscard]] constexpr auto is_valid() const noexcept -> bool;       // min <= max
 
     // ── 约束变换 ──
     [[nodiscard]] constexpr auto tighten(NanSize size) const noexcept -> NanConstraints;  // 收紧到给定 size
@@ -64,20 +64,20 @@ public:
 
     // ── 尺寸适配 ──
     [[nodiscard]] constexpr auto constrain(NanSize size) const noexcept -> NanSize;       // 将尺寸限制在约束内
-    [[nodiscard]] constexpr auto constrainWidth(float width) const noexcept -> float;
-    [[nodiscard]] constexpr auto constrainHeight(float height) const noexcept -> float;
+    [[nodiscard]] constexpr auto constrain_width(float width) const noexcept -> float;
+    [[nodiscard]] constexpr auto constrain_height(float height) const noexcept -> float;
     [[nodiscard]] constexpr auto constrain(NanPoint point) const noexcept -> NanPoint;    // 将点限制在约束范围内
 
     // ── 最佳尺寸 ──
-    [[nodiscard]] constexpr auto minSize() const noexcept -> NanSize;     // (minWidth, minHeight)
-    [[nodiscard]] constexpr auto maxSize() const noexcept -> NanSize;     // (maxWidth, maxHeight)
+    [[nodiscard]] constexpr auto min_size() const noexcept -> NanSize;     // (min_width, min_height)
+    [[nodiscard]] constexpr auto max_size() const noexcept -> NanSize;     // (max_width, max_height)
     [[nodiscard]] constexpr auto middle() const noexcept -> NanSize;      // 中间值（用于宽松布局）
 
     // ── 运算符 ──
     [[nodiscard]] constexpr auto operator==(const NanConstraints &rhs) const noexcept -> bool = default;
     [[nodiscard]] constexpr auto operator!=(const NanConstraints &rhs) const noexcept -> bool = default;
 
-    [[nodiscard]] auto toString() const -> std::string;
+    [[nodiscard]] auto to_string() const -> std::string;
 };
 } // namespace nandina::geometry
 ```
@@ -93,7 +93,7 @@ public:
 
 ### 3.2 unbounded 语义
 
-- `hasUnboundedWidth()` 返回 `true` 当 `maxWidth` 为 `kInfinity`
+- `has_unbounded_width()` 返回 `true` 当 `max_width` 为 `k_infinity`
 - 表示该方向上 widget 可以无限制扩展
 - `expand()` 工厂方法创建全部 unbounded 的约束
 

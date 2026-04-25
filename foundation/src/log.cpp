@@ -1,17 +1,17 @@
 module;
 
+#include <spdlog/spdlog.h>
 #include <spdlog/sinks/rotating_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
-#include <spdlog/spdlog.h>
 
 #include <algorithm>
 #include <memory>
 #include <mutex>
 #include <ranges>
-#include <utility>
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 module nandina.log;
@@ -35,7 +35,7 @@ namespace nandina::log {
         return static_cast<spdlog::level::level_enum>(clamped);
     }
 
-    [[nodiscard]] auto ensure_named_logger(std::string_view name) -> std::shared_ptr<spdlog::logger> {
+    [[nodiscard]] auto ensure_named_logger(const std::string_view name) -> std::shared_ptr<spdlog::logger> {
         auto &s = global_state();
         auto key = std::string(name);
 
@@ -50,19 +50,19 @@ namespace nandina::log {
         s.named_loggers.emplace(key, lg);
         return lg;
     }
-    
-    void write(void *logger_ptr, const Level level, std::string msg) {
+
+    void write(void *logger_ptr, const Level level, const std::string &msg) {
         if (logger_ptr == nullptr)
             return;
-        static_cast<spdlog::logger *>(logger_ptr)->log(spdlog::source_loc{}, to_spd(level), msg.c_str());
+        static_cast<spdlog::logger *>(logger_ptr)->log(spdlog::source_loc{}, to_spd(level), msg);
     }
 
-    void write_default(const Level level, std::string msg) {
+    void write_default(const Level level, const std::string &msg) {
         if (auto *logger = spdlog::default_logger_raw(); logger != nullptr)
-            logger->log(spdlog::source_loc{}, to_spd(level), msg.c_str());
+            logger->log(spdlog::source_loc{}, to_spd(level), msg);
     }
 
-    void Logger::set_level(Level level) const noexcept {
+    void Logger::set_level(const Level level) const noexcept {
         if (!m_impl)
             return;
         auto *lg = static_cast<spdlog::logger *>(m_impl.get());
@@ -82,14 +82,15 @@ namespace nandina::log {
 // ============================================================
 namespace nandina::log {
 
-    void init(std::string_view app_name, Level console_level, bool enable_file, std::string_view log_file) {
+    void init(const std::string_view app_name, const Level console_level, const bool enable_file,
+              const std::string_view log_file) {
         auto &s = global_state();
         std::scoped_lock lk(s.mtx);
         if (s.ready)
             return;
 
         // 控制台 sink — 带 ANSI 色彩，输出到 stdout
-        auto console = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
+        const auto console = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
         console->set_level(to_spd(console_level));
         console->set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%^%n%$] [%^%l%$] %v");
         s.sinks.push_back(console);
@@ -118,16 +119,16 @@ namespace nandina::log {
     void shutdown() {
         // 先释放我们持有的引用，再让 spdlog 做最终清理，避免 use-after-free
         {
-            auto &s = global_state();
-            std::scoped_lock lk(s.mtx);
-            s.named_loggers.clear();
-            s.sinks.clear();
-            s.ready = false;
+            auto &[sinks, named_loggers, mtx, ready] = global_state();
+            std::scoped_lock lk(mtx);
+            named_loggers.clear();
+            sinks.clear();
+            ready = false;
         }
         spdlog::shutdown();
     }
 
-    void set_level(Level level) noexcept {
+    void set_level(const Level level) noexcept {
         const auto spd = to_spd(level);
         spdlog::set_level(spd);
 
@@ -138,7 +139,9 @@ namespace nandina::log {
     }
 
     void flush() {
-        spdlog::apply_all([](const std::shared_ptr<spdlog::logger> &lg) { lg->flush(); });
+        spdlog::apply_all([](const std::shared_ptr<spdlog::logger> &lg) {
+            lg->flush();
+        });
     }
 
     Logger get(const std::string_view name) {

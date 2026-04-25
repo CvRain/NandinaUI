@@ -34,7 +34,8 @@ export namespace nandina {
         template<color::ColorSpace T>
         class SetProxy {
         public:
-            explicit SetProxy(NanColor &owner) noexcept : owner_(owner) {
+            explicit SetProxy(NanColor &owner) noexcept :
+                owner_(owner) {
             }
 
             auto operator=(const T &color) -> SetProxy & {
@@ -49,7 +50,8 @@ export namespace nandina {
     public:
         constexpr NanColor() noexcept = default;
 
-        explicit constexpr NanColor(const NanOklab &color) noexcept : oklab_color_(color) {
+        explicit constexpr NanColor(const NanOklab &color) noexcept :
+            oklab_color_(color) {
         }
 
         /// 从任意已注册颜色值对象构造统一颜色容器。

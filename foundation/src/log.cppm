@@ -31,8 +31,8 @@ export namespace nandina::log {
 
     // 低层写入接口：模板成员与自由函数最终都汇聚到这里。
     // 使用 void* 做类型擦除，避免在模块接口里泄漏 spdlog 类型。
-    void write(void *logger_ptr, Level level, std::string msg);
-    void write_default(Level level, std::string msg);
+    void write(void *logger_ptr, Level level, const std::string &msg);
+    void write_default(Level level, const std::string &msg);
 
     /// Logger — 具名子模块日志句柄
     ///

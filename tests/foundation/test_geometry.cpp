@@ -20,7 +20,7 @@ TEST(NandinaPoint, DefaultConstructCreatesZeroPoint) {
     const nandina::geometry::NanPoint pt;
     EXPECT_EQ(pt.x(), 0.0f);
     EXPECT_EQ(pt.y(), 0.0f);
-    EXPECT_TRUE(pt.isZero());
+    EXPECT_TRUE(pt.is_zero());
 }
 
 TEST(NandinaPoint, ConstructWithCoordinates) {
@@ -34,8 +34,8 @@ TEST(NandinaPoint, SetCoordinates) {
     pt.set(5.0f, 6.0f);
     EXPECT_EQ(pt.x(), 5.0f);
     EXPECT_EQ(pt.y(), 6.0f);
-    pt.setX(7.0f);
-    pt.setY(8.0f);
+    pt.set_x(7.0f);
+    pt.set_y(8.0f);
     EXPECT_EQ(pt.x(), 7.0f);
     EXPECT_EQ(pt.y(), 8.0f);
 }
@@ -110,14 +110,14 @@ TEST(NandinaPoint, CrossProduct) {
 TEST(NandinaPoint, LengthAndDistance) {
     const nandina::geometry::NanPoint pt{3.0f, 4.0f};
     EXPECT_NEAR(pt.length(), 5.0f, kFloatTolerance);
-    EXPECT_EQ(pt.lengthSquared(), 25.0f);
+    EXPECT_EQ(pt.length_squared(), 25.0f);
 }
 
 TEST(NandinaPoint, DistanceTo) {
     const nandina::geometry::NanPoint a{0.0f, 0.0f};
     const nandina::geometry::NanPoint b{3.0f, 4.0f};
-    EXPECT_NEAR(a.distanceTo(b), 5.0f, kFloatTolerance);
-    EXPECT_EQ(a.distanceSquaredTo(b), 25.0f);
+    EXPECT_NEAR(a.distance_to(b), 5.0f, kFloatTolerance);
+    EXPECT_EQ(a.distance_squared_to(b), 25.0f);
 }
 
 TEST(NandinaPoint, Normalize) {
@@ -177,7 +177,7 @@ TEST(NandinaSize, DefaultConstructCreatesZeroSize) {
     const nandina::geometry::NanSize sz;
     EXPECT_EQ(sz.width(), 0.0f);
     EXPECT_EQ(sz.height(), 0.0f);
-    EXPECT_TRUE(sz.isEmpty());
+    EXPECT_TRUE(sz.is_empty());
 }
 
 TEST(NandinaSize, ConstructWithDimensions) {
@@ -191,8 +191,8 @@ TEST(NandinaSize, SetDimensions) {
     sz.set(50.0f, 60.0f);
     EXPECT_EQ(sz.width(), 50.0f);
     EXPECT_EQ(sz.height(), 60.0f);
-    sz.setWidth(75.0f);
-    sz.setHeight(85.0f);
+    sz.set_width(75.0f);
+    sz.set_height(85.0f);
     EXPECT_EQ(sz.width(), 75.0f);
     EXPECT_EQ(sz.height(), 85.0f);
 }
@@ -225,23 +225,23 @@ TEST(NandinaSize, Area) {
 
 TEST(NandinaSize, AspectRatio) {
     const nandina::geometry::NanSize sz{16.0f, 9.0f};
-    EXPECT_NEAR(sz.aspectRatio(), 16.0f / 9.0f, kFloatTolerance);
+    EXPECT_NEAR(sz.aspect_ratio(), 16.0f / 9.0f, kFloatTolerance);
 
     // Zero height should return 0
     const nandina::geometry::NanSize zero_h{10.0f, 0.0f};
-    EXPECT_EQ(zero_h.aspectRatio(), 0.0f);
+    EXPECT_EQ(zero_h.aspect_ratio(), 0.0f);
 }
 
 TEST(NandinaSize, IsEmptyAndIsValid) {
     const nandina::geometry::NanSize valid{10.0f, 20.0f};
-    EXPECT_FALSE(valid.isEmpty());
-    EXPECT_TRUE(valid.isValid());
+    EXPECT_FALSE(valid.is_empty());
+    EXPECT_TRUE(valid.is_valid());
 
     const nandina::geometry::NanSize empty{0.0f, 20.0f};
-    EXPECT_TRUE(empty.isEmpty());
+    EXPECT_TRUE(empty.is_empty());
 
     const nandina::geometry::NanSize negative{-1.0f, 10.0f};
-    EXPECT_FALSE(negative.isValid());
+    EXPECT_FALSE(negative.is_valid());
 }
 
 TEST(NandinaSize, ConversionToNanPoint) {
@@ -257,7 +257,7 @@ TEST(NandinaSize, ConversionToNanPoint) {
 
 TEST(NandinaRect, DefaultConstructCreatesEmptyRect) {
     const nandina::geometry::NanRect rect;
-    EXPECT_TRUE(rect.isEmpty());
+    EXPECT_TRUE(rect.is_empty());
     EXPECT_EQ(rect.width(), 0.0f);
     EXPECT_EQ(rect.height(), 0.0f);
 }
@@ -273,7 +273,7 @@ TEST(NandinaRect, ConstructWithBounds) {
 }
 
 TEST(NandinaRect, FromXYWH) {
-    const auto rect = nandina::geometry::BaseRect<float>::fromXYWH(10.0f, 20.0f, 100.0f, 50.0f);
+    const auto rect = nandina::geometry::BaseRect<float>::from_xywh(10.0f, 20.0f, 100.0f, 50.0f);
     EXPECT_EQ(rect.left(), 10.0f);
     EXPECT_EQ(rect.top(), 20.0f);
     EXPECT_EQ(rect.width(), 100.0f);
@@ -281,9 +281,9 @@ TEST(NandinaRect, FromXYWH) {
 }
 
 TEST(NandinaRect, ConstructWithPoints) {
-    const nandina::geometry::NanPoint topLeft{10.0f, 20.0f};
-    const nandina::geometry::NanPoint bottomRight{110.0f, 120.0f};
-    const nandina::geometry::NanRect rect{topLeft, bottomRight};
+    const nandina::geometry::NanPoint top_left{10.0f, 20.0f};
+    const nandina::geometry::NanPoint bottom_right{110.0f, 120.0f};
+    const nandina::geometry::NanRect rect{top_left, bottom_right};
 
     EXPECT_EQ(rect.left(), 10.0f);
     EXPECT_EQ(rect.top(), 20.0f);
@@ -304,7 +304,7 @@ TEST(NandinaRect, ConstructWithPointAndSize) {
 
 TEST(NandinaRect, SetBounds) {
     nandina::geometry::NanRect rect;
-    rect.setRect(5.0f, 10.0f, 105.0f, 60.0f);
+    rect.set_rect(5.0f, 10.0f, 105.0f, 60.0f);
     EXPECT_EQ(rect.left(), 5.0f);
     EXPECT_EQ(rect.top(), 10.0f);
     EXPECT_EQ(rect.right(), 105.0f);
@@ -315,8 +315,8 @@ TEST(NandinaRect, SetBounds) {
 
 TEST(NandinaRect, SetWidthAndHeight) {
     nandina::geometry::NanRect rect{0.0f, 0.0f, 100.0f, 100.0f};
-    rect.setWidth(200.0f);
-    rect.setHeight(150.0f);
+    rect.set_width(200.0f);
+    rect.set_height(150.0f);
     EXPECT_EQ(rect.width(), 200.0f);
     EXPECT_EQ(rect.height(), 150.0f);
     EXPECT_EQ(rect.right(), 200.0f);
@@ -329,13 +329,13 @@ TEST(NandinaRect, PropertyAccessors) {
     EXPECT_EQ(rect.x(), 10.0f);
     EXPECT_EQ(rect.y(), 20.0f);
 
-    const auto topLeft = rect.topLeft();
-    EXPECT_EQ(topLeft.x(), 10.0f);
-    EXPECT_EQ(topLeft.y(), 20.0f);
+    const auto top_left = rect.top_left();
+    EXPECT_EQ(top_left.x(), 10.0f);
+    EXPECT_EQ(top_left.y(), 20.0f);
 
-    const auto botRight = rect.bottomRight();
-    EXPECT_EQ(botRight.x(), 110.0f);
-    EXPECT_EQ(botRight.y(), 120.0f);
+    const auto bot_right = rect.bottom_right();
+    EXPECT_EQ(bot_right.x(), 110.0f);
+    EXPECT_EQ(bot_right.y(), 120.0f);
 
     const auto center = rect.center();
     EXPECT_NEAR(center.x(), 60.0f, kFloatTolerance);
@@ -449,7 +449,7 @@ TEST(NandinaRect, IntersectedNonOverlappingReturnsEmpty) {
     const nandina::geometry::NanRect b{200.0f, 200.0f, 300.0f, 300.0f};
     const auto intersection = a.intersected(b);
 
-    EXPECT_TRUE(intersection.isEmpty());
+    EXPECT_TRUE(intersection.is_empty());
 }
 
 TEST(NandinaRect, AlignedInside) {
@@ -457,19 +457,19 @@ TEST(NandinaRect, AlignedInside) {
     const nandina::geometry::NanRect small{0.0f, 0.0f, 20.0f, 20.0f};
 
     // Test all 9 alignments
-    const auto topLeft = small.alignedInside(container, nandina::geometry::Alignment::TopLeft);
+    const auto topLeft = small.aligned_inside(container, nandina::geometry::Alignment::TopLeft);
     EXPECT_EQ(topLeft.x(), 0.0f);
     EXPECT_EQ(topLeft.y(), 0.0f);
 
-    const auto topRight = small.alignedInside(container, nandina::geometry::Alignment::TopRight);
+    const auto topRight = small.aligned_inside(container, nandina::geometry::Alignment::TopRight);
     EXPECT_EQ(topRight.x(), 80.0f);
     EXPECT_EQ(topRight.y(), 0.0f);
 
-    const auto center = small.alignedInside(container, nandina::geometry::Alignment::Center);
+    const auto center = small.aligned_inside(container, nandina::geometry::Alignment::Center);
     EXPECT_EQ(center.x(), 40.0f);
     EXPECT_EQ(center.y(), 40.0f);
 
-    const auto bottomCenter = small.alignedInside(container, nandina::geometry::Alignment::BottomCenter);
+    const auto bottomCenter = small.aligned_inside(container, nandina::geometry::Alignment::BottomCenter);
     EXPECT_EQ(bottomCenter.x(), 40.0f);
     EXPECT_EQ(bottomCenter.y(), 80.0f);
 }
@@ -479,14 +479,14 @@ TEST(NandinaRect, WithMarginAndPadding) {
 
     // withMargin: shrink by margin * 2 (shrinks width/height by 2*margin)
     // left/right move inward by margin*2, top/bottom move inward by margin*2
-    const auto withMargin = rect.withMargin(10.0f);
+    const auto withMargin = rect.with_margin(10.0f);
     EXPECT_EQ(withMargin.left(), 20.0f);
     EXPECT_EQ(withMargin.top(), 20.0f);
     EXPECT_EQ(withMargin.right(), 80.0f);
     EXPECT_EQ(withMargin.bottom(), 80.0f);
 
     // withPadding: same as margin
-    const auto withPadding = rect.withPadding(5.0f);
+    const auto withPadding = rect.with_padding(5.0f);
     EXPECT_EQ(withPadding.left(), 10.0f);
     EXPECT_EQ(withPadding.top(), 10.0f);
     EXPECT_EQ(withPadding.right(), 90.0f);
@@ -506,7 +506,7 @@ TEST(NandinaRect, Inset) {
 TEST(NandinaRect, CenteredIn) {
     const nandina::geometry::NanRect rect{40.0f, 40.0f, 60.0f, 60.0f};  // 20x20 centered in 100x100
     const nandina::geometry::NanRect container{0.0f, 0.0f, 100.0f, 100.0f};
-    const auto centered = rect.centeredIn(container);
+    const auto centered = rect.centered_in(container);
 
     EXPECT_NEAR(centered.x(), 40.0f, kFloatTolerance);
     EXPECT_NEAR(centered.y(), 40.0f, kFloatTolerance);
@@ -515,7 +515,7 @@ TEST(NandinaRect, CenteredIn) {
 TEST(NandinaRect, BoundedTo) {
     const nandina::geometry::NanRect rect{50.0f, 50.0f, 150.0f, 150.0f};
     const nandina::geometry::NanRect boundary{0.0f, 0.0f, 100.0f, 100.0f};
-    const auto bounded = rect.boundedTo(boundary);
+    const auto bounded = rect.bounded_to(boundary);
 
     EXPECT_EQ(bounded.left(), 50.0f);
     EXPECT_EQ(bounded.top(), 50.0f);
@@ -535,11 +535,11 @@ TEST(NandinaRect, EqualityOperators) {
 
 TEST(NandinaRect, IsValid) {
     const nandina::geometry::NanRect valid{0.0f, 0.0f, 100.0f, 100.0f};
-    EXPECT_TRUE(valid.isValid());
+    EXPECT_TRUE(valid.is_valid());
 
     // Invalid: right < left
     const nandina::geometry::NanRect invalid{100.0f, 0.0f, 50.0f, 100.0f};
-    EXPECT_FALSE(invalid.isValid());
+    EXPECT_FALSE(invalid.is_valid());
 }
 
 TEST(NandinaRect, Operators) {
@@ -580,8 +580,8 @@ TEST(NandinaInsets, DefaultConstructCreatesZeroInsets) {
     EXPECT_EQ(insets.top(), 0.0f);
     EXPECT_EQ(insets.right(), 0.0f);
     EXPECT_EQ(insets.bottom(), 0.0f);
-    EXPECT_TRUE(insets.isZero());
-    EXPECT_TRUE(insets.isEmpty());
+    EXPECT_TRUE(insets.is_zero());
+    EXPECT_TRUE(insets.is_empty());
 }
 
 TEST(NandinaInsets, ConstructWithUniformValue) {
@@ -590,7 +590,7 @@ TEST(NandinaInsets, ConstructWithUniformValue) {
     EXPECT_EQ(insets.top(), 10.0f);
     EXPECT_EQ(insets.right(), 10.0f);
     EXPECT_EQ(insets.bottom(), 10.0f);
-    EXPECT_TRUE(insets.isUniform());
+    EXPECT_TRUE(insets.is_uniform());
 }
 
 TEST(NandinaInsets, ConstructWithHorizontalVertical) {
@@ -614,35 +614,35 @@ TEST(NandinaInsets, StaticFactoryMethods) {
     EXPECT_EQ(all.left(), 10.0f);
     EXPECT_EQ(all.top(), 10.0f);
 
-    const auto symmetricH = nandina::geometry::NanInsets::symmetricH(5.0f);
-    EXPECT_EQ(symmetricH.left(), 5.0f);
-    EXPECT_EQ(symmetricH.right(), 5.0f);
-    EXPECT_EQ(symmetricH.top(), 0.0f);
-    EXPECT_EQ(symmetricH.bottom(), 0.0f);
+    const auto symmetric_h = nandina::geometry::NanInsets::symmetric_h(5.0f);
+    EXPECT_EQ(symmetric_h.left(), 5.0f);
+    EXPECT_EQ(symmetric_h.right(), 5.0f);
+    EXPECT_EQ(symmetric_h.top(), 0.0f);
+    EXPECT_EQ(symmetric_h.bottom(), 0.0f);
 
-    const auto symmetricV = nandina::geometry::NanInsets::symmetricV(8.0f);
-    EXPECT_EQ(symmetricV.top(), 8.0f);
-    EXPECT_EQ(symmetricV.bottom(), 8.0f);
-    EXPECT_EQ(symmetricV.left(), 0.0f);
-    EXPECT_EQ(symmetricV.right(), 0.0f);
+    const auto symmetric_v = nandina::geometry::NanInsets::symmetric_v(8.0f);
+    EXPECT_EQ(symmetric_v.top(), 8.0f);
+    EXPECT_EQ(symmetric_v.bottom(), 8.0f);
+    EXPECT_EQ(symmetric_v.left(), 0.0f);
+    EXPECT_EQ(symmetric_v.right(), 0.0f);
 
-    const auto fromLeft = nandina::geometry::NanInsets::fromLeft(3.0f);
-    EXPECT_EQ(fromLeft.left(), 3.0f);
-    EXPECT_EQ(fromLeft.top(), 0.0f);
-    EXPECT_EQ(fromLeft.right(), 0.0f);
-    EXPECT_EQ(fromLeft.bottom(), 0.0f);
+    const auto from_left = nandina::geometry::NanInsets::from_left(3.0f);
+    EXPECT_EQ(from_left.left(), 3.0f);
+    EXPECT_EQ(from_left.top(), 0.0f);
+    EXPECT_EQ(from_left.right(), 0.0f);
+    EXPECT_EQ(from_left.bottom(), 0.0f);
 
-    const auto fromTop = nandina::geometry::NanInsets::fromTop(4.0f);
-    EXPECT_EQ(fromTop.top(), 4.0f);
-    EXPECT_EQ(fromTop.left(), 0.0f);
+    const auto from_top = nandina::geometry::NanInsets::from_top(4.0f);
+    EXPECT_EQ(from_top.top(), 4.0f);
+    EXPECT_EQ(from_top.left(), 0.0f);
 
-    const auto fromRight = nandina::geometry::NanInsets::fromRight(5.0f);
-    EXPECT_EQ(fromRight.right(), 5.0f);
-    EXPECT_EQ(fromRight.left(), 0.0f);
+    const auto from_right = nandina::geometry::NanInsets::from_right(5.0f);
+    EXPECT_EQ(from_right.right(), 5.0f);
+    EXPECT_EQ(from_right.left(), 0.0f);
 
-    const auto fromBottom = nandina::geometry::NanInsets::fromBottom(6.0f);
-    EXPECT_EQ(fromBottom.bottom(), 6.0f);
-    EXPECT_EQ(fromBottom.top(), 0.0f);
+    const auto from_bottom = nandina::geometry::NanInsets::from_bottom(6.0f);
+    EXPECT_EQ(from_bottom.bottom(), 6.0f);
+    EXPECT_EQ(from_bottom.top(), 0.0f);
 }
 
 TEST(NandinaInsets, AccessorsAndProperties) {
@@ -651,11 +651,11 @@ TEST(NandinaInsets, AccessorsAndProperties) {
     EXPECT_EQ(insets.horizontal(), 40.0f);   // 10 + 30
     EXPECT_EQ(insets.vertical(), 60.0f);      // 20 + 40
 
-    const auto tl = insets.topLeft();
+    const auto tl = insets.top_left();
     EXPECT_EQ(tl.x(), 10.0f);
     EXPECT_EQ(tl.y(), 20.0f);
 
-    const auto br = insets.bottomRight();
+    const auto br = insets.bottom_right();
     EXPECT_EQ(br.x(), 30.0f);
     EXPECT_EQ(br.y(), 40.0f);
 }
@@ -663,17 +663,17 @@ TEST(NandinaInsets, AccessorsAndProperties) {
 TEST(NandinaInsets, SetMethods) {
     nandina::geometry::NanInsets insets;
 
-    insets.setLeft(1.0f);
-    insets.setTop(2.0f);
-    insets.setRight(3.0f);
-    insets.setBottom(4.0f);
+    insets.set_left(1.0f);
+    insets.set_top(2.0f);
+    insets.set_right(3.0f);
+    insets.set_bottom(4.0f);
     EXPECT_EQ(insets.left(), 1.0f);
     EXPECT_EQ(insets.top(), 2.0f);
     EXPECT_EQ(insets.right(), 3.0f);
     EXPECT_EQ(insets.bottom(), 4.0f);
 
-    insets.setAll(10.0f);
-    EXPECT_TRUE(insets.isUniform());
+    insets.set_all(10.0f);
+    EXPECT_TRUE(insets.is_uniform());
     EXPECT_EQ(insets.left(), 10.0f);
 
     insets.set(1.0f, 2.0f, 3.0f, 4.0f);
@@ -683,33 +683,33 @@ TEST(NandinaInsets, SetMethods) {
 
 TEST(NandinaInsets, PropertyChecks) {
     const nandina::geometry::NanInsets zero;
-    EXPECT_TRUE(zero.isZero());
-    EXPECT_TRUE(zero.isEmpty());
-    EXPECT_FALSE(zero.hasPositive());
-    EXPECT_FALSE(zero.hasNegative());
+    EXPECT_TRUE(zero.is_zero());
+    EXPECT_TRUE(zero.is_empty());
+    EXPECT_FALSE(zero.has_positive());
+    EXPECT_FALSE(zero.has_negative());
 
     const nandina::geometry::NanInsets positive{5.0f};
-    EXPECT_TRUE(positive.hasPositive());
-    EXPECT_FALSE(positive.hasNegative());
-    EXPECT_TRUE(positive.isUniform());
-    EXPECT_TRUE(positive.isHorizontalSymmetric());
-    EXPECT_TRUE(positive.isVerticalSymmetric());
+    EXPECT_TRUE(positive.has_positive());
+    EXPECT_FALSE(positive.has_negative());
+    EXPECT_TRUE(positive.is_uniform());
+    EXPECT_TRUE(positive.is_horizontal_symmetric());
+    EXPECT_TRUE(positive.is_vertical_symmetric());
 
     const nandina::geometry::NanInsets asymmetric{1.0f, 2.0f, 3.0f, 4.0f};
-    EXPECT_FALSE(asymmetric.isUniform());
-    EXPECT_FALSE(asymmetric.isHorizontalSymmetric());
-    EXPECT_FALSE(asymmetric.isVerticalSymmetric());
+    EXPECT_FALSE(asymmetric.is_uniform());
+    EXPECT_FALSE(asymmetric.is_horizontal_symmetric());
+    EXPECT_FALSE(asymmetric.is_vertical_symmetric());
 
     const nandina::geometry::NanInsets negative{-5.0f};
-    EXPECT_TRUE(negative.hasNegative());
-    EXPECT_FALSE(negative.hasPositive());
+    EXPECT_TRUE(negative.has_negative());
+    EXPECT_FALSE(negative.has_positive());
 }
 
 TEST(NandinaInsets, ApplyToRect) {
     const nandina::geometry::NanRect rect{0.0f, 0.0f, 100.0f, 100.0f};
     const nandina::geometry::NanInsets insets{10.0f, 20.0f, 30.0f, 40.0f};
 
-    const auto applied = insets.applyToRect(rect);
+    const auto applied = insets.apply_to_rect(rect);
     EXPECT_EQ(applied.left(), 10.0f);
     EXPECT_EQ(applied.top(), 20.0f);
     EXPECT_EQ(applied.right(), 70.0f);   // 100 - 30
@@ -720,7 +720,7 @@ TEST(NandinaInsets, InflateRect) {
     const nandina::geometry::NanRect rect{10.0f, 20.0f, 90.0f, 80.0f};
     const nandina::geometry::NanInsets insets{5.0f};
 
-    const auto inflated = insets.inflateRect(rect);
+    const auto inflated = insets.inflate_rect(rect);
     EXPECT_EQ(inflated.left(), 5.0f);     // 10 - 5
     EXPECT_EQ(inflated.top(), 15.0f);     // 20 - 5
     EXPECT_EQ(inflated.right(), 95.0f);   // 90 + 5
@@ -729,7 +729,7 @@ TEST(NandinaInsets, InflateRect) {
 
 TEST(NandinaInsets, ToSize) {
     const nandina::geometry::NanInsets insets{10.0f, 20.0f, 30.0f, 40.0f};
-    const auto size = insets.toSize();
+    const auto size = insets.to_size();
     EXPECT_EQ(size.width(), 40.0f);   // 10 + 30
     EXPECT_EQ(size.height(), 60.0f);  // 20 + 40
 }
@@ -843,7 +843,7 @@ TEST(NandinaInsets, Swap) {
 
 TEST(NandinaInsets, ToString) {
     const nandina::geometry::NanInsets insets{10.0f, 20.0f, 30.0f, 40.0f};
-    const auto str = insets.toString();
+    const auto str = insets.to_string();
     EXPECT_NE(str.find("L=10"), std::string::npos);
     EXPECT_NE(str.find("T=20"), std::string::npos);
     EXPECT_NE(str.find("R=30"), std::string::npos);

@@ -15,7 +15,7 @@
 | **边界坐标 (LTRB)** | `left, top, right, bottom` | 几何运算（相交、合并、包含）直接高效。 | 修改大小时需要同时调整 `right`/`bottom`。 |
 | **位置尺寸 (XYWH)** | `x, y, width, height` | 直观符合 UI 习惯，调整尺寸简单。 | 几何运算需转换，且 `width`/`height` 可能为负。 |
 
-**建议方案**：**内部存储采用 LTRB（边界坐标）**，但对外提供 `x()`, `y()`, `width()`, `height()` 便捷访问，以及 `setX()`, `setY()`, `setWidth()`, `setHeight()` 修改函数。这样既保证了运算效率，又保持了接口的直观性。
+**建议方案**：**内部存储采用 LTRB（边界坐标）**，但对外提供 `x()`, `y()`, `width()`, `height()` 便捷访问，以及 `set_x()`, `set_y()`, `set_width()`, `set_height()` 修改函数。这样既保证了运算效率，又保持了接口的直观性。
 
 ---
 
@@ -27,14 +27,14 @@
 | :--- | :--- |
 | `NanRect()` | 默认构造，矩形退化为空 `(0,0,0,0)`。 |
 | `NanRect(T left, T top, T right, T bottom)` | 通过边界坐标构造。 |
-| `NanRect(const NanPoint& topLeft, const NanPoint& bottomRight)` | 通过两个对角点构造。 |
-| `NanRect(const NanPoint& topLeft, const NanSize& size)` | 通过左上角位置与大小构造（需引入 `NanSize` 类）。 |
+| `NanRect(const NanPoint& top_left, const NanPoint& bottom_right)` | 通过两个对角点构造。 |
+| `NanRect(const NanPoint& top_left, const NanSize& size)` | 通过左上角位置与大小构造（需引入 `NanSize` 类）。 |
 | `NanRect(const NanRect&)` | 拷贝构造（默认生成）。 |
 | `NanRect(NanRect&&)` | 移动构造（默认生成）。 |
 | `NanRect& operator=(const NanRect&)` | 拷贝赋值（默认生成）。 |
 | `NanRect& operator=(NanRect&&)` | 移动赋值（默认生成）。 |
-| `static NanRect fromLTRB(T l, T t, T r, T b)` | 静态工厂，明确使用边界坐标。 |
-| `static NanRect fromXYWH(T x, T y, T w, T h)` | 静态工厂，使用位置与尺寸。 |
+| `static NanRect from_ltrb(T l, T t, T r, T b)` | 静态工厂，明确使用边界坐标。 |
+| `static NanRect from_xywh(T x, T y, T w, T h)` | 静态工厂，使用位置与尺寸。 |
 
 #### 3.2 属性访问
 
@@ -48,29 +48,29 @@
 | `T y() const` | 同 `top()`。 |
 | `T width() const` | 宽度，保证非负 `right() >= left() ? right() - left() : 0`。 |
 | `T height() const` | 高度，保证非负。 |
-| `NanPoint topLeft() const` | 返回左上角点。 |
-| `NanPoint bottomRight() const` | 返回右下角点。 |
+| `NanPoint top_left() const` | 返回左上角点。 |
+| `NanPoint bottom_right() const` | 返回右下角点。 |
 | `NanPoint center() const` | 返回中心点坐标。 |
 | `NanSize size() const` | 返回尺寸对象（若引入 `NanSize`）。 |
-| `bool isEmpty() const` | 是否为空矩形（`width() <= 0` 或 `height() <= 0`）。 |
-| `bool isValid() const` | 是否为规范矩形（`left <= right && top <= bottom`）。 |
+| `bool is_empty() const` | 是否为空矩形（`width() <= 0` 或 `height() <= 0`）。 |
+| `bool is_valid() const` | 是否为规范矩形（`left <= right && top <= bottom`）。 |
 
 #### 3.3 修改器
 
 | 函数签名 | 说明 |
 | :--- | :--- |
-| `void setLeft(T value)` | 设置左边界（可能需调整右边界以保证有效）。 |
-| `void setTop(T value)` | 设置上边界。 |
-| `void setRight(T value)` | 设置右边界。 |
-| `void setBottom(T value)` | 设置下边界。 |
-| `void setX(T value)` | 同 `setLeft()`。 |
-| `void setY(T value)` | 同 `setTop()`。 |
-| `void setWidth(T value)` | 设置宽度，保持 `left` 不变，调整 `right`。 |
-| `void setHeight(T value)` | 设置高度，保持 `top` 不变，调整 `bottom`。 |
-| `void setTopLeft(const NanPoint& pt)` | 设置左上角位置。 |
-| `void setBottomRight(const NanPoint& pt)` | 设置右下角位置。 |
-| `void setRect(T l, T t, T r, T b)` | 一次性设置所有边界。 |
-| `void setEmpty()` | 清空矩形。 |
+| `void set_left(T value)` | 设置左边界（可能需调整右边界以保证有效）。 |
+| `void set_top(T value)` | 设置上边界。 |
+| `void set_right(T value)` | 设置右边界。 |
+| `void set_bottom(T value)` | 设置下边界。 |
+| `void set_x(T value)` | 同 `set_left()`。 |
+| `void set_y(T value)` | 同 `set_top()`。 |
+| `void set_width(T value)` | 设置宽度，保持 `left` 不变，调整 `right`。 |
+| `void set_height(T value)` | 设置高度，保持 `top` 不变，调整 `bottom`。 |
+| `void set_top_left(const NanPoint& pt)` | 设置左上角位置。 |
+| `void set_bottom_right(const NanPoint& pt)` | 设置右下角位置。 |
+| `void set_rect(T l, T t, T r, T b)` | 一次性设置所有边界。 |
+| `void set_empty()` | 清空矩形。 |
 
 #### 3.4 比较运算符
 
@@ -113,19 +113,19 @@
 
 | 函数签名 | 说明 |
 | :--- | :--- |
-| `NanRect alignedInside(const NanRect& container, Alignment align) const` | 将当前矩形按指定对齐方式放置在容器内（返回新矩形）。 |
-| `NanRect withMargin(T margin) const` | 返回收缩了 `margin` 的矩形（用于内边距）。 |
-| `NanRect withPadding(T padding) const` | 同 `withMargin`，语义不同。 |
+| `NanRect aligned_inside(const NanRect& container, Alignment align) const` | 将当前矩形按指定对齐方式放置在容器内（返回新矩形）。 |
+| `NanRect with_margin(T margin) const` | 返回收缩了 `margin` 的矩形（用于内边距）。 |
+| `NanRect with_padding(T padding) const` | 同 `with_margin`，语义不同。 |
 | `NanRect inset(T dx, T dy) const` | 边缘缩进，四边独立调整。 |
-| `NanRect centeredIn(const NanRect& outer) const` | 返回在 `outer` 中居中的矩形（尺寸不变）。 |
-| `NanRect boundedTo(const NanRect& boundary) const` | 将矩形裁剪到边界内。 |
+| `NanRect centered_in(const NanRect& outer) const` | 返回在 `outer` 中居中的矩形（尺寸不变）。 |
+| `NanRect bounded_to(const NanRect& boundary) const` | 将矩形裁剪到边界内。 |
 
 #### 4.4 类型转换与工具
 
 | 函数签名 | 说明 |
 | :--- | :--- |
-| `template<typename U> NanRect<U> cast() const` | 转换为另一种数值类型的矩形。 |
-| `std::string toString() const` | 返回形如 `"(l,t,r,b)"` 或 `"(x,y,w,h)"` 的字符串。 |
+| `template<typename U> NanRect cast() const` | 转换为另一种数值类型的矩形。 |
+| `std::string to_string() const` | 返回形如 `"(l,t,r,b)"` 或 `"(x,y,w,h)"` 的字符串。 |
 | `void swap(NanRect& other) noexcept` | 交换内容。 |
 
 ---
@@ -148,7 +148,7 @@
 
 ```cpp
 // 构造
-auto rect1 = NanRect::fromXYWH(10, 20, 100, 80);
+auto rect1 = NanRect::from_xywh(10, 20, 100, 80);
 auto rect2 = NanRect(30, 40, 120, 90);
 
 // 访问
@@ -165,8 +165,8 @@ auto moved = rect1.translated(5, 10);
 auto grown = rect1.expanded(2);
 
 // 布局
-auto container = NanRect::fromXYWH(0, 0, 800, 600);
-auto centered = rect1.centeredIn(container);
+auto container = NanRect::from_xywh(0, 0, 800, 600);
+auto centered = rect1.centered_in(container);
 ```
 
 ---
@@ -184,9 +184,9 @@ auto centered = rect1.centeredIn(container);
     - `NanSize`：尺寸
     - `NanRect`：位置 + 尺寸（或边界）
 
-   `NanSize` 可提供类似 `width()`, `height()`, `area()`, `isEmpty()` 等方法，并能与 `Point` 和 `Rect` 进行运算符重载（如 `NanRect = NanPoint + NanSize`）。
+   `NanSize` 可提供类似 `width()`, `height()`, `area()`, `is_empty()` 等方法，并能与 `Point` 和 `Rect` 进行运算符重载（如 `NanRect = NanPoint + NanSize`）。
 
-3. **对齐枚举**：定义 `enum class Alignment` 用于 `alignedInside` 等函数。
+3. **对齐枚举**：定义 `enum class Alignment` 用于 `aligned_inside` 等函数。
    ```cpp
    enum class Alignment {
        TopLeft, TopCenter, TopRight,
@@ -232,4 +232,3 @@ private:
 using NanRect = BaseRect<float>;
 using IntRect = BaseRect<int>;
 using DoubleRect = BaseRect<double>;
-```

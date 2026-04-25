@@ -123,7 +123,7 @@ export namespace nandina::geometry {
         }
 
         /// 返回形如 "(x, y, ...)" 的字符串
-        [[nodiscard]] auto toString() const -> std::string {
+        [[nodiscard]] auto to_string() const -> std::string {
             std::ostringstream oss;
             oss << "(";
             for (std::size_t i = 0; i < N; ++i) {
@@ -197,12 +197,12 @@ export namespace nandina::geometry {
         }
 
         /// 设置 x 坐标
-        constexpr auto setX(const float value) noexcept -> void {
+        constexpr auto set_x(const float value) noexcept -> void {
             (*this)[0] = value;
         }
 
         /// 设置 y 坐标
-        constexpr auto setY(const float value) noexcept -> void {
+        constexpr auto set_y(const float value) noexcept -> void {
             (*this)[1] = value;
         }
 
@@ -282,19 +282,19 @@ export namespace nandina::geometry {
         }
 
         /// 长度平方
-        [[nodiscard]] constexpr auto lengthSquared() const noexcept -> float {
+        [[nodiscard]] constexpr auto length_squared() const noexcept -> float {
             return (*this)[0] * (*this)[0] + (*this)[1] * (*this)[1];
         }
 
         /// 两点欧氏距离
-        [[nodiscard]] auto distanceTo(const NanPoint &other) const noexcept -> float {
+        [[nodiscard]] auto distance_to(const NanPoint &other) const noexcept -> float {
             const auto dx = (*this)[0] - other[0];
             const auto dy = (*this)[1] - other[1];
             return std::hypot(dx, dy);
         }
 
         /// 距离平方
-        [[nodiscard]] constexpr auto distanceSquaredTo(const NanPoint &other) const noexcept -> float {
+        [[nodiscard]] constexpr auto distance_squared_to(const NanPoint &other) const noexcept -> float {
             const auto dx = (*this)[0] - other[0];
             const auto dy = (*this)[1] - other[1];
             return dx * dx + dy * dy;
@@ -332,7 +332,7 @@ export namespace nandina::geometry {
         // ── 其他工具函数 ──
 
         /// 检查是否为零向量
-        [[nodiscard]] constexpr auto isZero() const noexcept -> bool {
+        [[nodiscard]] constexpr auto is_zero() const noexcept -> bool {
             return (*this)[0] == 0.0f && (*this)[1] == 0.0f;
         }
     };
@@ -348,7 +348,7 @@ export namespace nandina::geometry {
 
     /// 流输出
     [[nodiscard]] auto operator<<(std::ostream &os, const NanPoint &pt) -> std::ostream& {
-        os << pt.toString();
+        os << pt.to_string();
         return os;
     }
 
@@ -403,7 +403,7 @@ struct fmt::formatter<NanPoint> {
 
     template<typename FormatContext>
     auto format(const NanPoint &pt, FormatContext &ctx) -> FormatContext::iterator {
-        return fmt::format_to(ctx.out(), "{}", pt.toString());
+        return fmt::format_to(ctx.out(), "{}", pt.to_string());
     }
 };
 
