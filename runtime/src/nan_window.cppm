@@ -6,51 +6,20 @@ module;
 // 消费者如需在回调中调用 ThorVG API，须在其 GMF 中 include ThorVG。
 // SDL 类型完全隐藏在实现单元 nan_window.cpp 中。
 // ============================================================
-#include <thorvg-1/thorvg.h>
-
-#include <cstdint>
 #include <memory>
 #include <string>
 #include <string_view>
+#include <thorvg-1/thorvg.h>
 
 export module nandina.runtime.nan_window;
 
-export import nandina.foundation.nan_types;
+export import nandina.runtime.nan_event;
 
 // ============================================================
 // 导出接口
 // ============================================================
 export namespace nandina::runtime {
-    // PointerButton 已迁移至 foundation/types（Issue 005）。
-    // 此处为兼容别名，后续消费者切换至 nandina::types::PointerButton 后删除。
-    using nandina::types::PointerButton;
-
-    struct PointerMoveEvent {
-        double x{0.0};
-        double y{0.0};
-        double delta_x{0.0};
-        double delta_y{0.0};
-    };
-
-    struct PointerButtonEvent {
-        PointerButton button{PointerButton::Unknown};
-        double x{0.0};
-        double y{0.0};
-        bool is_repeat{false};
-    };
-
-    struct PointerWheelEvent {
-        double x{0.0};
-        double y{0.0};
-    };
-
-    struct KeyEvent {
-        std::int32_t key_code{0};
-        bool is_repeat{false};
-    };
-
-
-    inline constexpr int kDefaultWindowWidth = 1280;
+    inline constexpr int kDefaultWindowWidth  = 1280;
     inline constexpr int kDefaultWindowHeight = 720;
 
     // ──────────────────────────────────────────────────────────
@@ -89,10 +58,10 @@ export namespace nandina::runtime {
     public:
         struct Config {
             std::string title = "NandinaUI";
-            int width = kDefaultWindowWidth;
-            int height = kDefaultWindowHeight;
-            bool resizable = true;
-            bool high_dpi = true;
+            int width         = kDefaultWindowWidth;
+            int height        = kDefaultWindowHeight;
+            bool resizable    = true;
+            bool high_dpi     = true;
         };
 
         // ── Builder ───────────────────────────────────────────
@@ -122,24 +91,24 @@ export namespace nandina::runtime {
             [[nodiscard]] auto to_config() const -> Config;
 
             // 消费 Builder 并构造 NanWindow，可能抛出 std::runtime_error
-            [[nodiscard]] auto build() -> NanWindow;
+            [[nodiscard]] auto build() const -> NanWindow;
 
         private:
             std::string m_title = "NandinaUI";
-            int m_width = kDefaultWindowWidth;
-            int m_height = kDefaultWindowHeight;
-            bool m_resizable = true;
-            bool m_high_dpi = true;
+            int m_width         = kDefaultWindowWidth;
+            int m_height        = kDefaultWindowHeight;
+            bool m_resizable    = true;
+            bool m_high_dpi     = true;
         };
 
         // ── 拷贝/移动语义 ─────────────────────────────────────
-        NanWindow(const NanWindow &) = delete;
+        NanWindow(const NanWindow&) = delete;
 
-        NanWindow& operator=(const NanWindow &) = delete;
+        NanWindow& operator=(const NanWindow&) = delete;
 
-        NanWindow(NanWindow &&) noexcept;
+        NanWindow(NanWindow&&) noexcept;
 
-        NanWindow& operator=(NanWindow &&) noexcept;
+        NanWindow& operator=(NanWindow&&) noexcept;
 
         virtual ~NanWindow();
 
@@ -156,7 +125,7 @@ export namespace nandina::runtime {
         [[nodiscard]] auto should_close() const noexcept -> bool;
 
         // 主动请求关闭（下一次 poll_events / run 检查时生效）
-        auto request_close() noexcept -> void;
+        auto request_close() const noexcept -> void;
 
         // ── 事件处理（Issue 010 基础通路）────────────────────
         // 消费平台事件队列，翻译并触发对应回调。
@@ -179,7 +148,7 @@ export namespace nandina::runtime {
 
     protected:
         // 继承类使用该构造函数进行初始化
-        explicit NanWindow(const Config &config);
+        explicit NanWindow(const Config& config);
 
         // 生命周期钩子（Godot-like）
         // 仅在 run() 内首次循环前调用一次。
@@ -189,7 +158,7 @@ export namespace nandina::runtime {
         virtual auto on_update(double delta_seconds) -> void;
 
         // 每帧绘制调用，canvas 已清空。
-        virtual auto on_draw(tvg::SwCanvas &canvas) -> void;
+        virtual auto on_draw(tvg::SwCanvas& canvas) -> void;
 
         // 窗口逻辑尺寸变化后调用。
         virtual auto on_resize(int new_width, int new_height) -> void;
@@ -198,24 +167,24 @@ export namespace nandina::runtime {
         virtual auto on_close_requested() -> void;
 
         // 鼠标移动事件。
-        virtual auto on_pointer_move(const PointerMoveEvent &event) -> void;
+        virtual auto on_pointer_move(const PointerMoveEvent& event) -> void;
 
         // 鼠标按下事件。
-        virtual auto on_pointer_down(const PointerButtonEvent &event) -> void;
+        virtual auto on_pointer_down(const PointerButtonEvent& event) -> void;
 
         // 鼠标抬起事件。
-        virtual auto on_pointer_up(const PointerButtonEvent &event) -> void;
+        virtual auto on_pointer_up(const PointerButtonEvent& event) -> void;
 
         // 鼠标滚轮事件。
-        virtual auto on_pointer_wheel(const PointerWheelEvent &event) -> void;
+        virtual auto on_pointer_wheel(const PointerWheelEvent& event) -> void;
 
         // 键盘按下事件。
-        virtual auto on_key_down(const KeyEvent &event) -> void;
+        virtual auto on_key_down(const KeyEvent& event) -> void;
 
         // 键盘抬起事件。
-        virtual auto on_key_up(const KeyEvent &event) -> void;
+        virtual auto on_key_up(const KeyEvent& event) -> void;
 
-        // 文本输入事件（IME 结果文本）。
+        // 文本输入事件。
         virtual auto on_text_input(std::string_view text) -> void;
 
     private:

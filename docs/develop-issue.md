@@ -286,31 +286,32 @@
 
 ---
 
-## Issue 011 — 定义统一 Event 类型体系
+## Issue 011 — 定义统一 Event 类型体系 ✅
 **Labels:** `area:runtime`, `kind:architecture`, `priority:p0`
+**Status:** ✅ 已完成 — 提交 `a0e78c7`
 
 ### 目标
 统一描述鼠标、键盘、文本、窗口等事件。
 
 ### 范围
-建议覆盖：
-- PointerMove
-- PointerDown
-- PointerUp
-- Click
-- Wheel
-- KeyDown
-- KeyUp
-- TextInput
-- FocusIn/FocusOut
-- WindowResize
-- WindowClose
+覆盖：
+- PointerMove / PointerDown / PointerUp / Click / Wheel
+- KeyDown / KeyUp / TextInput
+- FocusIn / FocusOut
+- WindowResize / WindowClose
 
 ### 产出
-- `runtime/event`
+- `runtime/src/nan_event.cppm` — 统一 Event 类型体系（EventType 枚举、事件结构体、Event 变体、event_type() 提取函数、to_string()）
+- `runtime/src/nan_widget.cppm` — 增加 Widget 级事件处理接口（dispatch_event/bubble_event + on_xxx 虚方法）
+- `runtime/src/nan_window.cppm` — 迁移至新 Event 类型，移除重复定义
+- `docs/event-system.md` — 事件系统设计文档
+- `tests/runtime/test_event.cpp` — 单元测试（枚举/结构体/变体/round-trip）
 
 ### 完成定义
-- Widget 与 app 层可以围绕同一套事件类型工作
+- ✅ 事件类型统一，Widget 可用同一套事件类型
+- ✅ Widget 支持事件分发（dispatch → handle → on_xxx）
+- ✅ Window 消费同一套事件类型
+- ✅ 文档与单元测试完备
 
 ---
 
@@ -1850,6 +1851,11 @@
 | Issue | 标题 | 完成日期 | 提交记录 |
 |-------|------|----------|----------|
 | 006 | 实现基础几何类型 Point / Size / Rect（Insets 待完成） | 2026-04-22 | `3b26ebf`, `1ad8630` |
+| 007 | 增加 Constraints 类型并定义测量语义 | 2026-04-24 | 当前 HEAD |
+| 008 | 设计并实现 Application 生命周期最小接口 | 2026-04-23 | `8b1fcb9`, `abe263e` |
+| 009 | 设计 Window 最小接口 | 2026-04-22 | `c8742aa`（后续迭代） |
+| 010 | 打通窗口事件循环到 runtime 事件队列 | 2026-04-22 | `c8742aa`（后续迭代） |
+| 011 | 定义统一 Event 类型体系 | 2026-04-26 | `a0e78c7` |
 
 ## 额外完成（未列入 Issue 清单）
 
@@ -1857,7 +1863,7 @@
 |------|------|----------|----------|
 | Log 服务 | 基于 spdlog 的日志框架 | 2026-04-22 | `ef0a191` |
 | Color 模块 | NanColor 及颜色转换 | 2026-04-22 | `f282373`, `81b6adb` |
-| Window 基础 | NanWindow 窗口基类 | 2026-04-22 | `c8742aa` |
+| Widget 树基础 | NanWidget 基类（parent/child/draw） | 2026-04-22 | `8b1fcb9`（与 Issue 012 对应） |
 | Godot-like Authoring | 继承式生命周期与输入钩子 | 2026-04-22 | `8b1fcb9` |
 | App 层抽象 | NanAppWindow / NanComponent 应用层封装 | 2026-04-23 | `8b1fcb9` |
 | Showcase 展示应用 | 基于 ThorVG 的组件展示窗口 | 2026-04-23 | `abe263e` |

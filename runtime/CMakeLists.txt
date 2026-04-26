@@ -13,21 +13,21 @@ add_library(nandina::runtime ALIAS nandina_runtime)
 target_compile_features(nandina_runtime PUBLIC cxx_std_26)
 
 target_sources(nandina_runtime
-    PUBLIC
+        PUBLIC
         FILE_SET CXX_MODULES FILES
-            src/nan_window.cppm         # nandina.runtime.nan_window（Issue 009/010/017）
-            src/nan_widget.cppm         # nandina.runtime.nan_widget（Issue 012）
-    # 后续实现阶段逐步添加：
-    #     src/application.cppm          # Application 生命周期（Issue 008）
-    #     src/event_loop.cppm           # 事件循环调度（Issue 010）
-    #     src/event.cppm                # 统一 Event 类型体系（Issue 011）
-    #     src/widget.cppm               # Widget 树基础结构（Issue 012–015）
-    PRIVATE
+        src/nan_window.cppm         # nandina.runtime.nan_window（Issue 009/010/017）
+        src/nan_widget.cppm         # nandina.runtime.nan_widget（Issue 012）
+        src/nan_event.cppm          # nandina.runtime.nan_event（Issue 011）
+        # 后续实现阶段逐步添加：
+        #     src/application.cppm          # Application 生命周期（Issue 008）
+        #     src/event_loop.cppm           # 事件循环调度（Issue 010）
+        #     src/widget.cppm               # Widget 树基础结构（Issue 012–015）
+        PRIVATE
         src/nan_window.cpp              # SDL + ThorVG 实现单元（隔离平台类型）
 )
 
 target_link_libraries(nandina_runtime
-    PUBLIC
+        PUBLIC
         nandina::foundation             # nandina.log 及后续几何基础类型
         SDL3::SDL3                      # 窗口系统与平台事件
         nandina::thorvg                # 矢量图形渲染后端
