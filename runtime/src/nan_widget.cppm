@@ -9,6 +9,7 @@ export module nandina.runtime.nan_widget;
 
 export import nandina.runtime.nan_event;
 export import nandina.foundation.nan_rect;
+export import nandina.foundation.nan_size;
 
 export namespace nandina::runtime {
     /**
@@ -21,6 +22,7 @@ export namespace nandina::runtime {
      * - 事件分发（dispatch_event / bubble_event）
      * - 可见性与命中测试（Issue 013 / 014）
      * - Dirty 状态传播（Issue 013）
+     * - 布局协议（preferred_size / set_bounds / flex_factor / for_each_child）
      */
     class NanWidget {
     public:
@@ -61,6 +63,21 @@ export namespace nandina::runtime {
             m_width  = w;
             m_height = h;
             mark_dirty();
+        }
+
+        /**
+         * @brief 设置位置和大小（布局系统入口）
+         *
+         * 由父布局容器调用，为 widget 分配最终的位置和尺寸。
+         * 子类可覆盖此方法以实现自定义布局行为（如 Padding 对 child 进行收缩）。
+         */
+        virtual auto set_bounds(const float x, const float y, const float w, const float h) noexcept -> NanWidget& {
+            m_x = x;
+            m_y = y;
+            m_width  = w;
+            m_height = h;
+            mark_dirty();
+            return *this;
         }
 
         // ── 可见性（Issue 013）────────────────────────────────
@@ -228,7 +245,55 @@ export namespace nandina::runtime {
             return m_children;
         }
 
+    public:
+        // ── 布局协议（子类可覆盖）────────────────────────────
+
+        /**
+         * @brief 返回 widget 的自然（首选）尺寸
+         *
+         * 布局系统在分配空间时会参考此值。默认实现返回当前 size（如果 > 0）
+         * 或零。子类（如 SizedBox）应覆盖以报告正确尺寸。
+         */
+        [[nodiscard]] virtual auto preferred_size() const noexcept -> geometry::NanSize {
+            return geometry::NanSize{m_width, m_height};
+        }
+
+        /**
+         * @brief 弹性因子，供 Row/Column 等的 flex 布局使用
+         *
+         * 返回 0 表示不具有弹性（固定尺寸），> 0 表示扩展因子。
+         * Spacer 和 Expanded 覆盖此方法返回各自的 flex 值。
+         */
+        [[nodiscard]] virtual auto flex_factor() const noexcept -> int {
+            return 0;
+        }
+
+        /**
+         * @brief 遍历所有直接子节点（只读）
+         */
+        template<typename F>
+        auto for_each_child(F&& fn) -> void {
+            for (auto& child : m_children) {
+                if (child) {
+                    std::forward<F>(fn)(*child);
+                }
+            }
+        }
+
+        /**
+         * @brief 遍历所有直接子节点（const 版本）
+         */
+        template<typename F>
+        auto for_each_child(F&& fn) const -> void {
+            for (const auto& child : m_children) {
+                if (child) {
+                    std::forward<F>(fn)(*child);
+                }
+            }
+        }
+
     protected:
+        // ── 自定义绘制（子类覆盖）────────────────────────────
         // ── 自定义绘制（子类覆盖）────────────────────────────
         virtual void on_draw(tvg::SwCanvas& /*canvas*/) {
         }

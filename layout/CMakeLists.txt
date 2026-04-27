@@ -6,26 +6,22 @@ project(nandina_layout LANGUAGES CXX)
 # 依赖：nandina::foundation, nandina::runtime
 # 对应 Issue：029–036
 
-add_library(nandina_layout INTERFACE)
+add_library(nandina_layout STATIC)
 add_library(nandina::layout ALIAS nandina_layout)
 
-target_compile_features(nandina_layout INTERFACE cxx_std_26)
+target_compile_features(nandina_layout PUBLIC cxx_std_26)
 
-target_link_libraries(nandina_layout
-    INTERFACE
-        nandina::foundation
-        nandina::runtime
-        yoga::yogacore
+target_sources(nandina_layout
+    PUBLIC
+        FILE_SET CXX_MODULES FILES
+            src/layout_core.cppm
+            src/flex_widgets.cppm
+            src/layout_container.cppm
+            src/nan_layout.cppm
 )
 
-# 源文件将在实现阶段逐步添加，例如：
-# target_sources(nandina_layout
-#     PUBLIC
-#         FILE_SET CXX_MODULES FILES
-#             src/layout_node.cppm
-#             src/row.cppm
-#             src/column.cppm
-#             src/stack.cppm
-#             src/spacer.cppm
-#             src/flex.cppm
-# )
+target_link_libraries(nandina_layout
+    PUBLIC
+        nandina::foundation
+        nandina::runtime
+)

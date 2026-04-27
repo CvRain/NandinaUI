@@ -23,8 +23,8 @@ target_sources(${PROJECT_NAME}
 )
 
 
-# 待 nandina::app 实现后启用：
 target_link_libraries(${PROJECT_NAME}
         PRIVATE
         nandina::app
+        nandina::layout
 )
