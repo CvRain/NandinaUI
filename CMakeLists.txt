@@ -33,35 +33,35 @@ add_library(nandina_thorvg INTERFACE)
 add_library(nandina::thorvg ALIAS nandina_thorvg)
 
 set(NANDINA_VCPKG_TRIPLET "${VCPKG_TARGET_TRIPLET}")
-if(NOT NANDINA_VCPKG_TRIPLET)
-    if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|amd64)$")
+if (NOT NANDINA_VCPKG_TRIPLET)
+    if (CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|amd64)$")
         set(NANDINA_VCPKG_TRIPLET "x64-linux")
-    endif()
-endif()
+    endif ()
+endif ()
 
 set(NANDINA_THORVG_RELEASE_LIB
-    "${CMAKE_SOURCE_DIR}/vcpkg_installed/${NANDINA_VCPKG_TRIPLET}/lib/libthorvg-1.a")
+        "${CMAKE_SOURCE_DIR}/vcpkg_installed/${NANDINA_VCPKG_TRIPLET}/lib/libthorvg-1.a")
 set(NANDINA_THORVG_INCLUDE_DIR
-    "${CMAKE_SOURCE_DIR}/vcpkg_installed/${NANDINA_VCPKG_TRIPLET}/include")
+        "${CMAKE_SOURCE_DIR}/vcpkg_installed/${NANDINA_VCPKG_TRIPLET}/include")
 
-if(EXISTS "${NANDINA_THORVG_RELEASE_LIB}" AND EXISTS "${NANDINA_THORVG_INCLUDE_DIR}")
+if (EXISTS "${NANDINA_THORVG_RELEASE_LIB}" AND EXISTS "${NANDINA_THORVG_INCLUDE_DIR}")
     target_include_directories(nandina_thorvg
-        SYSTEM
-        INTERFACE
+            SYSTEM
+            INTERFACE
             "${NANDINA_THORVG_INCLUDE_DIR}"
     )
 
     target_link_libraries(nandina_thorvg
-        INTERFACE
+            INTERFACE
             "${NANDINA_THORVG_RELEASE_LIB}"
             Threads::Threads
     )
-else()
+else ()
     target_link_libraries(nandina_thorvg
-        INTERFACE
+            INTERFACE
             PkgConfig::THORVG
     )
-endif()
+endif ()
 
 # Yoga — 弹性布局引擎（layout 层）
 # vcpkg port: yoga   cmake target: yoga::yogacore
@@ -81,9 +81,9 @@ find_package(spdlog CONFIG REQUIRED)
 
 # GoogleTest — 单元测试框架（tests）
 # vcpkg port: gtest   cmake targets: GTest::gtest  GTest::gtest_main
-if(NANDINA_BUILD_TESTS)
+if (NANDINA_BUILD_TESTS)
     find_package(GTest CONFIG REQUIRED)
-endif()
+endif ()
 
 # ============================================================
 # 模块层（按依赖顺序：底层 → 高层）
@@ -102,10 +102,10 @@ add_subdirectory(bindings)     # 多语言绑定与脚本宿主接口
 # ============================================================
 # 测试
 # ============================================================
-if(NANDINA_BUILD_TESTS)
+if (NANDINA_BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests)
-endif()
+endif ()
 
 # ============================================================
 # Showcase — 验证层，不作为框架核心依赖

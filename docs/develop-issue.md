@@ -337,7 +337,7 @@
 
 ---
 
-## Issue 013 — 为 Widget 增加 bounds、hit-test-visible、dirty 状态
+## Issue 013 — 为 Widget 增加 bounds、hit-test-visible、dirty 状态 ✅ 已完成
 **Labels:** `area:runtime`, `kind:implementation`, `priority:p0`
 
 ### 目标
@@ -354,11 +354,12 @@
 - Widget 核心状态字段和最小行为
 
 ### 完成定义
-- 修改 widget 状态可触发脏标记传播
+- ✅ 修改 widget 状态可触发脏标记传播
+- ✅ 测试: `test_bounds_hit_test.cpp` — 24 个测试全部通过
 
 ---
 
-## Issue 014 — 实现基础 hit test 机制
+## Issue 014 — 实现基础 hit test 机制 ✅ 已完成
 **Labels:** `area:runtime`, `kind:implementation`, `priority:p1`
 
 ### 目标
@@ -373,7 +374,8 @@
 - runtime hit test 基础逻辑
 
 ### 完成定义
-- 点击时能够定位一个目标 widget
+- ✅ 点击时能够定位一个目标 widget
+- ✅ 测试: `test_bounds_hit_test.cpp` — 9 个 HitTest 测试全部通过
 
 ---
 

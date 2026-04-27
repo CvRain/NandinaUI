@@ -6,3 +6,10 @@ nandina_add_test(
         SOURCES test_event.cpp
         DEPS nandina::runtime
 )
+
+# ── Issue 013/014: Widget Bounds + Dirty + Hit Test ────────────
+nandina_add_test(
+        NAME test_runtime_bounds_hit_test
+        SOURCES test_bounds_hit_test.cpp
+        DEPS nandina::runtime
+)

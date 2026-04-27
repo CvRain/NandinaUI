@@ -7,27 +7,26 @@ project(nandina_reactive LANGUAGES CXX)
 # 依赖：nandina::foundation
 # 实现阶段：Issue 018–028（Milestone M2）
 
-add_library(nandina_reactive INTERFACE)
+add_library(nandina_reactive)
 add_library(nandina::reactive ALIAS nandina_reactive)
 
-target_compile_features(nandina_reactive INTERFACE cxx_std_26)
+target_compile_features(nandina_reactive PUBLIC cxx_std_26)
 
 target_link_libraries(nandina_reactive
-    INTERFACE
+    PUBLIC
         nandina::foundation
 )
 
-# 源文件将在实现阶段逐步添加，预期结构：
-#
-# target_sources(nandina_reactive
-#     PUBLIC
-#         FILE_SET CXX_MODULES FILES
-#             src/state.cppm          # State<T> / ReadState<T>
-#             src/computed.cppm       # Computed<R>
-#             src/effect.cppm         # Effect / EffectScope
-#             src/prop.cppm           # Prop<T>
-#             src/state_list.cppm     # StateList<T>
-#             src/event_signal.cppm   # EventSignal<Args...> / Connection
-#             src/batch.cppm          # batch(fn) 批处理调度
-#             src/tracking.cppm       # thread-local 依赖追踪上下文
-# )
+target_sources(nandina_reactive
+    PUBLIC
+        FILE_SET CXX_MODULES FILES
+            src/nan_reactive.cppm       # 聚合模块 nandina.reactive
+            src/tracking.cppm           # 依赖追踪上下文 / 批处理基础设施
+            src/event_signal.cppm       # Connection / ScopedConnection / EventSignal<Args...>
+            src/state.cppm              # State<T> / ReadState<T>
+            src/computed.cppm           # Computed<F>
+            src/effect.cppm             # Effect / EffectScope
+            src/prop.cppm               # Prop<T>
+            src/state_list.cppm         # StateList<T> / ListChange / ListChangeKind
+            src/batch.cppm              # batch(fn)
+)
