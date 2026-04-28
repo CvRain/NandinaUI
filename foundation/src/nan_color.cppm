@@ -48,7 +48,7 @@ export namespace nandina {
         };
 
     public:
-        constexpr NanColor() noexcept = default;
+        constexpr NanColor() noexcept : oklab_color_() {}
 
         explicit constexpr NanColor(const NanOklab &color) noexcept :
             oklab_color_(color) {

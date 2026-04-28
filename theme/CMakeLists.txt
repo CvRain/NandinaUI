@@ -6,14 +6,22 @@ project(nandina_theme LANGUAGES CXX)
 # 依赖：nandina::foundation
 # 相关 Issue：037–042（Milestone M4）
 
-add_library(nandina_theme INTERFACE)
+add_library(nandina_theme)
 add_library(nandina::theme ALIAS nandina_theme)
 
-target_compile_features(nandina_theme INTERFACE cxx_std_26)
+target_compile_features(nandina_theme PUBLIC cxx_std_26)
 
 target_link_libraries(nandina_theme
-    INTERFACE
+    PUBLIC
         nandina::foundation
 )
 
-# 源文件将在实现阶段添加（Issue 037–042）
+target_sources(nandina_theme
+    PUBLIC
+        FILE_SET CXX_MODULES FILES
+            src/nan_theme_root.cppm        # 聚合模块 nandina.theme
+            src/nan_theme_types.cppm        # NanColorRole / NanColorScheme / NanPrimitiveToken 枚举与类型
+            src/nan_primitive_tokens.cppm   # NanPrimitiveTokens 结构体
+            src/nan_color_palette.cppm      # NanRoleColorPair / NanColorPalette
+            src/nan_theme.cppm              # NanTheme / ThemeManager
+)

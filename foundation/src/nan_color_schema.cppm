@@ -123,7 +123,7 @@ export namespace nandina {
                     color_elements.at(2), color_elements.at(3)) {
         }
 
-        constexpr NanOklab() noexcept = default;
+        constexpr NanOklab() noexcept : lightness_(0.0f), a_axis_(0.0f), b_axis_(0.0f), alpha_(1.0f) {}
 
         constexpr NanOklab(const NanOklab&) noexcept = default;
 
