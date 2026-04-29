@@ -28,7 +28,7 @@ export namespace nandina::runtime {
     public:
         using Ptr = std::unique_ptr<NanWidget>;
 
-        NanWidget()          = default;
+        NanWidget()          {}
         virtual ~NanWidget() = default;
 
         // ── 空间属性 ──────────────────────────────────────────

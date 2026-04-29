@@ -113,6 +113,10 @@ export namespace nandina {
             return oklab_color_;
         }
 
+        [[nodiscard]] constexpr auto operator==(const NanColor &rhs) const noexcept -> bool {
+            return oklab_color_ == rhs.oklab_color_;
+        }
+
     private:
         NanOklab oklab_color_;
     };
