@@ -30,6 +30,9 @@ target_sources(nandina_widgets
             src/nan_pressable.cppm   # Pressable 交互状态机
             src/nan_label.cppm       # Label 文本显示组件
             src/nan_button.cppm      # Button 按钮组件（仅接口）
+            src/nan_panel.cppm       # Panel 带标题栏容器组件
+            src/nan_card.cppm        # Card 卡片组件（阴影/描边）
+            src/nan_spacer.cppm      # Spacer 弹性空白组件
     PRIVATE
         src/nan_button.cpp           # Button 组件实现（含 Pressable/Label 完整类型）
 )

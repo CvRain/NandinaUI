@@ -8,3 +8,6 @@ export import nandina.widgets.surface;
 export import nandina.widgets.pressable;
 export import nandina.widgets.label;
 export import nandina.widgets.button;
+export import nandina.widgets.panel;
+export import nandina.widgets.card;
+export import nandina.widgets.spacer;
