@@ -11,3 +11,4 @@ export import nandina.reactive.effect;
 export import nandina.reactive.prop;
 export import nandina.reactive.state_list;
 export import nandina.reactive.batch;
+export import nandina.reactive.animation;

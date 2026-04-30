@@ -97,6 +97,36 @@ export namespace nandina::app {
                 }
             }
 
+            void on_pointer_move(const runtime::PointerMoveEvent& event) override {
+                if (m_owner.m_root_component) {
+                    auto* hit = m_owner.m_root_component->hit_test(
+                        static_cast<float>(event.x), static_cast<float>(event.y));
+                    if (hit) {
+                        hit->dispatch_event(runtime::Event{event});
+                    }
+                }
+            }
+
+            void on_pointer_down(const runtime::PointerButtonEvent& event) override {
+                if (m_owner.m_root_component) {
+                    auto* hit = m_owner.m_root_component->hit_test(
+                        static_cast<float>(event.x), static_cast<float>(event.y));
+                    if (hit) {
+                        hit->dispatch_event(runtime::Event{event});
+                    }
+                }
+            }
+
+            void on_pointer_up(const runtime::PointerButtonEvent& event) override {
+                if (m_owner.m_root_component) {
+                    auto* hit = m_owner.m_root_component->hit_test(
+                        static_cast<float>(event.x), static_cast<float>(event.y));
+                    if (hit) {
+                        hit->dispatch_event(runtime::Event{event});
+                    }
+                }
+            }
+
         private:
             NanAppWindow &m_owner;
         };

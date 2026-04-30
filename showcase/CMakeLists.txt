@@ -27,4 +27,5 @@ target_link_libraries(${PROJECT_NAME}
         PRIVATE
         nandina::app
         nandina::layout
+        nandina::widgets
 )

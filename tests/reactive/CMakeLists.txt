@@ -6,3 +6,9 @@ nandina_add_test(
     SOURCES test_reactive.cpp
     DEPS nandina::reactive
 )
+
+nandina_add_test(
+    NAME test_animation
+    SOURCES test_animation.cpp
+    DEPS nandina::reactive
+)

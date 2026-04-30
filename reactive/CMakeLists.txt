@@ -29,4 +29,5 @@ target_sources(nandina_reactive
             src/prop.cppm               # Prop<T>
             src/state_list.cppm         # StateList<T> / ListChange / ListChangeKind
             src/batch.cppm              # batch(fn)
+            src/nan_animation.cppm      # Easing / NanAnimation / AnimationManager
 )
