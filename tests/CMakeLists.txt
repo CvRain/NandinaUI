@@ -47,4 +47,5 @@ add_subdirectory(reactive)       # Issue 018–028 — State / Effect / Prop / S
 add_subdirectory(runtime)       # Issue 076    — Application / Window / Widget / Event
 add_subdirectory(layout)        # Issue 036    — Row / Column / Stack / Flex
 add_subdirectory(theme)        # Issue 037–042 — token / ThemeManager
+add_subdirectory(text)         # Issue 046–048 — NanFont / shaping / paint
 # add_subdirectory(widgets)      # Issue 078    — Label / Button / Panel

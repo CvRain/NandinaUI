@@ -328,6 +328,119 @@ private:
                 });
             m_anim_manager.add(std::move(pulse_anim));
         }
+
+        // ── Sidebar 文本 Label 子节点（替换 draw_text_dots） ──
+        {
+            using namespace nandina::widgets;
+
+            auto hdr = Label::create();
+            hdr->set_text("Nandina Studio")
+                .set_font_size(11.0f)
+                .set_color(color4_to_nancolor(text_primary.r, text_primary.g, text_primary.b));
+            m_sidebar_header_title = add_child(std::move(hdr));
+
+            auto nav = Label::create();
+            nav->set_text("Navigation")
+                .set_font_size(9.0f)
+                .set_color(color4_to_nancolor(text_secondary.r, text_secondary.g, text_secondary.b));
+            m_sidebar_nav_title = add_child(std::move(nav));
+
+            const auto nav_texts = std::to_array<std::string_view>(
+                {"Dashboard", "Projects", "Analytics", "Settings"});
+            for (size_t i = 0; i < 4; ++i) {
+                auto item = Label::create();
+                const auto& tc = (i == 0) ? text_primary : text_secondary;
+                item->set_text(nav_texts[i])
+                    .set_font_size(9.0f)
+                    .set_color(color4_to_nancolor(tc.r, tc.g, tc.b));
+                m_sidebar_nav_items[i] = add_child(std::move(item));
+            }
+
+            auto proj = Label::create();
+            proj->set_text("Recent Projects")
+                .set_font_size(9.0f)
+                .set_color(color4_to_nancolor(text_secondary.r, text_secondary.g, text_secondary.b));
+            m_sidebar_proj_title = add_child(std::move(proj));
+
+            const auto proj_texts = std::to_array<std::string_view>(
+                {"nandina-ui", "layout-core", "flex-box", "render-test"});
+            for (size_t i = 0; i < 4; ++i) {
+                auto item = Label::create();
+                item->set_text(proj_texts[i])
+                    .set_font_size(9.0f)
+                    .set_color(color4_to_nancolor(text_secondary.r, text_secondary.g, text_secondary.b));
+                m_sidebar_proj_items[i] = add_child(std::move(item));
+            }
+
+            auto un = Label::create();
+            un->set_text("CvRain")
+                .set_font_size(9.0f)
+                .set_color(color4_to_nancolor(text_primary.r, text_primary.g, text_primary.b));
+            m_sidebar_user_name = add_child(std::move(un));
+
+            auto ur = Label::create();
+            ur->set_text("Developer")
+                .set_font_size(7.0f)
+                .set_color(color4_to_nancolor(text_dim.r, text_dim.g, text_dim.b));
+            m_sidebar_user_role = add_child(std::move(ur));
+        }
+
+        // ── 内容区域文本 Label（替换 draw_text_dots） ──
+        {
+            using namespace nandina::widgets;
+
+            // "Weekly Activity"（图表卡片标题）
+            auto wa = Label::create();
+            wa->set_text("Weekly Activity")
+                .set_font_size(10.0f)
+                .set_color(color4_to_nancolor(text_primary.r, text_primary.g, text_primary.b));
+            m_chart_title = add_child(std::move(wa));
+
+            // X 轴日期标签
+            const auto days = std::to_array<std::string_view>(
+                {"Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"});
+            for (size_t i = 0; i < 7; ++i) {
+                auto d = Label::create();
+                d->set_text(days[i])
+                    .set_font_size(7.0f)
+                    .set_color(color4_to_nancolor(text_dim.r, text_dim.g, text_dim.b));
+                m_chart_day_labels[i] = add_child(std::move(d));
+            }
+
+            // "Recent Activity"（活动列表卡片标题）
+            auto ra = Label::create();
+            ra->set_text("Recent Activity")
+                .set_font_size(10.0f)
+                .set_color(color4_to_nancolor(text_primary.r, text_primary.g, text_primary.b));
+            m_activity_title = add_child(std::move(ra));
+
+            // 活动项文本
+            const auto act_texts = std::to_array<std::string_view>({
+                "Updated layout-core", "Merged PR #42", "Fixed flex alignment",
+                "Added Stack support", "Refactored backend"});
+            const auto act_times = std::to_array<std::string_view>({
+                "2 min ago", "15 min ago", "1 hr ago", "3 hr ago", "6 hr ago"});
+            for (size_t i = 0; i < 5; ++i) {
+                auto at = Label::create();
+                at->set_text(act_texts[i])
+                    .set_font_size(8.0f)
+                    .set_color(color4_to_nancolor(text_secondary.r, text_secondary.g, text_secondary.b));
+                m_activity_texts[i] = add_child(std::move(at));
+
+                auto atm = Label::create();
+                atm->set_text(act_times[i])
+                    .set_font_size(6.0f)
+                    .set_color(color4_to_nancolor(text_dim.r, text_dim.g, text_dim.b));
+                m_activity_times[i] = add_child(std::move(atm));
+            }
+
+            // "Project Progress"（进度卡片标题）
+            auto pp = Label::create();
+            pp->set_text("Project Progress")
+                .set_font_size(9.0f)
+                .set_color(color4_to_nancolor(text_primary.r, text_primary.g, text_primary.b));
+            m_progress_title = add_child(std::move(pp));
+        }
     }
 
     // ── 布局计算 ──────────────────────────────────────
@@ -561,6 +674,138 @@ private:
                 const auto& f = frames[i];
                 if (m_stat_card_pressables[i]) {
                     m_stat_card_pressables[i]->set_bounds(f.x(), f.y(), f.width(), f.height());
+                }
+            }
+        }
+
+        // ── Sidebar Label 定位 ──────────────────────────
+        {
+
+            // "Nandina Studio"
+            if (m_sidebar_header_title) {
+                m_sidebar_header_title->set_bounds(55.0f, 18.0f, 160.0f, 20.0f);
+            }
+
+            // "Navigation" section title
+            if (m_sidebar_nav_title) {
+                m_sidebar_nav_title->set_bounds(26.0f, 60.0f, 100.0f, 16.0f);
+            }
+
+            // 4 nav items
+            const auto nav_y_positions = {85.0f, 123.0f, 161.0f, 199.0f};
+            size_t ni = 0;
+            for (auto ny : nav_y_positions) {
+                if (ni < m_sidebar_nav_items.size() && m_sidebar_nav_items[ni]) {
+                    m_sidebar_nav_items[ni]->set_bounds(42.0f, ny + 5.0f, 160.0f, 18.0f);
+                }
+                ++ni;
+            }
+
+            // "Recent Projects" section title
+            const float proj_title_y = 199.0f + 36.0f + 2.0f + 20.0f;
+            if (m_sidebar_proj_title) {
+                m_sidebar_proj_title->set_bounds(26.0f, proj_title_y, 120.0f, 16.0f);
+            }
+
+            // 4 project items
+            const float proj_start_y = proj_title_y + 25.0f;
+            for (size_t pi = 0; pi < 4; ++pi) {
+                if (m_sidebar_proj_items[pi]) {
+                    m_sidebar_proj_items[pi]->set_bounds(36.0f, proj_start_y + static_cast<float>(pi) * 24.0f + 2.0f, 160.0f, 18.0f);
+                }
+            }
+
+            // User name & role
+            const float user_y = h - 60.0f;
+            if (m_sidebar_user_name) {
+                m_sidebar_user_name->set_bounds(52.0f, user_y + 6.0f, 160.0f, 18.0f);
+            }
+            if (m_sidebar_user_role) {
+                m_sidebar_user_role->set_bounds(52.0f, user_y + 22.0f, 160.0f, 14.0f);
+            }
+        }
+
+        // ── 内容区域文本 Label 定位 ─────────────────────
+        {
+            constexpr float header_h  = 44.0f;
+            constexpr float card_gap  = 16.0f;
+
+            const float content_x   = sidebar_w;
+            const float content_w   = w - sidebar_w;
+            const float content_top = header_h + 20.0f;
+
+            // 第二行
+            const float row2_y = content_top + 116.0f;
+            const float row2_h = 200.0f;
+            const float chart_w = (content_w - 20.0f - 20.0f - card_gap) * 0.6f;
+            const float chart_x = content_x + 20.0f;
+
+            // "Weekly Activity" title
+            if (m_chart_title) {
+                m_chart_title->set_bounds(chart_x + 16.0f, row2_y + 8.0f, 160.0f, 18.0f);
+            }
+
+            // X axis day labels
+            const float plot_x = chart_x + 20.0f;
+            const float plot_y = row2_y + 36.0f;
+            const float plot_w = chart_w - 40.0f;
+            const float plot_h = row2_h - 56.0f;
+            const float plot_step = plot_w / 6.0f;
+
+            for (size_t di = 0; di < 7; ++di) {
+                const float lx = plot_x + static_cast<float>(di) * plot_step;
+                if (m_chart_day_labels[di]) {
+                    m_chart_day_labels[di]->set_bounds(lx - 10.0f, plot_y + plot_h + 4.0f, 24.0f, 14.0f);
+                }
+            }
+
+            // "Recent Activity" title
+            const float list_x = chart_x + chart_w + card_gap;
+            if (m_activity_title) {
+                m_activity_title->set_bounds(list_x + 16.0f, row2_y + 8.0f, 160.0f, 18.0f);
+            }
+
+            // Activity items
+            for (size_t ai = 0; ai < 5; ++ai) {
+                const float ai_y = row2_y + 36.0f + static_cast<float>(ai) * 30.0f;
+                if (m_activity_texts[ai]) {
+                    m_activity_texts[ai]->set_bounds(list_x + 36.0f, ai_y + 2.0f, 200.0f, 16.0f);
+                }
+                if (m_activity_times[ai]) {
+                    m_activity_times[ai]->set_bounds(list_x + 36.0f, ai_y + 16.0f, 120.0f, 12.0f);
+                }
+            }
+
+            // "Project Progress" title (right side of third row)
+            const float stack_y     = content_top + 116.0f + 200.0f + 20.0f;
+            const float stack_box_h = 110.0f;
+
+            BasicLayoutBackend backend;
+            LayoutRequest req;
+            req.axis             = LayoutAxis::row;
+            req.container_bounds = {content_x + 20, stack_y, content_x + content_w - 20, stack_y + stack_box_h};
+            req.gap              = card_gap;
+            req.cross_alignment  = LayoutAlignment::stretch;
+
+            const float item_w = (content_w - 20.0f - 20.0f - card_gap) * 0.5f;
+            {
+                LayoutChildSpec child;
+                child.preferred_size = {item_w, 0.0f};
+                child.flex_factor    = 1;
+                req.children.push_back(child);
+            }
+            {
+                LayoutChildSpec child;
+                child.preferred_size = {item_w, 0.0f};
+                child.flex_factor    = 1;
+                req.children.push_back(child);
+            }
+
+            auto frames = backend.compute(req);
+            if (frames.size() >= 2) {
+                const auto& f = frames[1];
+                if (m_progress_title) {
+                    m_progress_title->set_bounds(f.x() + 14.0f, f.y() + 8.0f, 160.0f, 16.0f);
                 }
             }
         }
@@ -937,6 +1182,23 @@ private:
 
     // 统计卡片的 Pressable 交互层
     std::array<nandina::runtime::NanWidget*, 4> m_stat_card_pressables{};
+
+    // ── Sidebar 文本 Label ────────────────────────────
+    nandina::runtime::NanWidget* m_sidebar_header_title{nullptr};
+    nandina::runtime::NanWidget* m_sidebar_nav_title{nullptr};
+    std::array<nandina::runtime::NanWidget*, 4> m_sidebar_nav_items{};
+    nandina::runtime::NanWidget* m_sidebar_proj_title{nullptr};
+    std::array<nandina::runtime::NanWidget*, 4> m_sidebar_proj_items{};
+    nandina::runtime::NanWidget* m_sidebar_user_name{nullptr};
+    nandina::runtime::NanWidget* m_sidebar_user_role{nullptr};
+
+    // ── 内容区域文本 Label ────────────────────────────
+    nandina::runtime::NanWidget* m_chart_title{nullptr};
+    std::array<nandina::runtime::NanWidget*, 7> m_chart_day_labels{};
+    nandina::runtime::NanWidget* m_activity_title{nullptr};
+    std::array<nandina::runtime::NanWidget*, 5> m_activity_texts{};
+    std::array<nandina::runtime::NanWidget*, 5> m_activity_times{};
+    nandina::runtime::NanWidget* m_progress_title{nullptr};
 
     // 日志
     decltype(nandina::log::get("")) m_log{nandina::log::get("showcase")};

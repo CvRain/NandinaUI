@@ -18,6 +18,7 @@ import nandina.foundation.nan_size;
 import nandina.foundation.nan_rect;
 import nandina.foundation.color;
 import nandina.reactive.prop;
+import nandina.widgets.label;
 
 /**
  * nandina.widgets.card
@@ -106,12 +107,28 @@ export namespace nandina::widgets {
         // ── 可选标题 ──────────────────────────────────────
         auto set_title(std::string title) -> Card& {
             m_title = std::move(title);
+            // 如果已创建标题 Label，更新其文本
+            if (m_title_label) {
+                m_title_label->set_text(m_title);
+            }
             mark_dirty();
             return *this;
         }
 
         auto set_title_color(const nandina::NanColor& color) -> Card& {
             m_title_color.set(color);
+            if (m_title_label) {
+                m_title_label->set_color(color);
+            }
+            mark_dirty();
+            return *this;
+        }
+
+        auto set_title_font_size(float size) -> Card& {
+            m_title_font_size.set(size);
+            if (m_title_label) {
+                m_title_label->set_font_size(size);
+            }
             mark_dirty();
             return *this;
         }
@@ -154,6 +171,22 @@ export namespace nandina::widgets {
         auto set_bounds(float x, float y, float w, float h) noexcept -> NanWidget& override {
             NanWidget::set_bounds(x, y, w, h);
 
+            // 确保标题 Label 存在
+            if (!m_title.empty() && !m_title_label) {
+                ensure_title_label();
+            }
+
+            // 标题 Label 定位在头部区域
+            if (m_title_label) {
+                const auto b = bounds();
+                const float header_off = title_header_height();
+                const float text_start_x = b.x() + (m_show_accent ? 12.0f : 8.0f);
+                const float text_y = b.y() + header_off * 0.15f;
+                const float text_w = b.width() - 24.0f;
+                const float text_h = header_off * 0.7f;
+                m_title_label->set_bounds(text_start_x, text_y, text_w, text_h);
+            }
+
             const auto& pad = m_padding.get();
             const float header_offset = title_header_height();
 
@@ -164,6 +197,8 @@ export namespace nandina::widgets {
             const float child_h = h - header_offset - pad.top() - pad.bottom();
 
             for_each_child([&](runtime::NanWidget& child) {
+                // 跳过标题 Label（它由 Card 自身管理）
+                if (&child == m_title_label) return;
                 child.set_bounds(child_x, child_y, child_w, child_h);
             });
 
@@ -248,30 +283,7 @@ export namespace nandina::widgets {
                     accent_bar->fill(acc_rgb.red(), acc_rgb.green(), acc_rgb.blue(), acc_rgb.alpha());
                     canvas.add(accent_bar);
                 }
-
-                // 标题文字（点阵模拟）
-                if (!m_title.empty()) {
-                    const float fs = m_title_font_size.get();
-                    const float spacing = fs * 0.8f;
-                    const float dot_r = fs * 0.25f;
-
-                    // 标题起始 X：根据装饰色条调整
-                    const float text_start_x = rect.x() + (m_show_accent ? 10.0f : 8.0f) + dot_r;
-                    const float text_y = rect.y() + header_off * 0.5f + dot_r;
-
-                    const auto& tclr = m_title_color.get();
-                    const auto trgb = tclr.to<nandina::NanRgb>();
-
-                    for (size_t i = 0; i < m_title.size(); ++i) {
-                        if (m_title[i] == ' ') continue;
-                        auto* dot = tvg::Shape::gen();
-                        const float cx = text_start_x + static_cast<float>(i) * spacing;
-                        const float cy = text_y;
-                        dot->appendCircle(cx, cy, dot_r, dot_r);
-                        dot->fill(trgb.red(), trgb.green(), trgb.blue(), trgb.alpha());
-                        canvas.add(dot);
-                    }
-                }
+                // 标题文字由 m_title_label 子节点绘制
             }
 
             // ── 4. 标题栏与内容区分隔线（如果有标题） ──
@@ -299,6 +311,17 @@ export namespace nandina::widgets {
     private:
         Card() = default;
 
+        /** 确保标题 Label 子节点存在 */
+        auto ensure_title_label() -> void {
+            if (m_title_label || m_title.empty()) return;
+            auto label = Label::create();
+            label->set_text(m_title)
+                .set_font_size(m_title_font_size.get())
+                .set_color(m_title_color.get());
+            m_title_label = label.get();
+            add_child(std::move(label));
+        }
+
         /** 计算标题区域高度 */
         [[nodiscard]] auto title_header_height() const noexcept -> float {
             if (m_title.empty()) return 0.0f;
@@ -318,6 +341,9 @@ export namespace nandina::widgets {
 
         std::string m_title;
         bool m_show_accent{false};
+
+        // 标题 Label 子节点（由 Card 自身管理定位）
+        Label* m_title_label{nullptr};
     };
 
 } // namespace nandina::widgets
