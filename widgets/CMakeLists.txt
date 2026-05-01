@@ -25,15 +25,19 @@ target_link_libraries(nandina_widgets
 target_sources(nandina_widgets
     PUBLIC
         FILE_SET CXX_MODULES FILES
-            src/nan_widgets.cppm     # 聚合模块 nandina.widgets
-            src/nan_surface.cppm     # Surface 容器组件
-            src/nan_pressable.cppm   # Pressable 交互状态机
-            src/nan_label.cppm       # Label 文本显示组件
-            src/nan_button.cppm      # Button 按钮组件（仅接口）
-            src/nan_panel.cppm       # Panel 带标题栏容器组件
-            src/nan_card.cppm        # Card 卡片组件（阴影/描边）
-            src/nan_spacer.cppm      # Spacer 弹性空白组件
-            src/nan_progressbar.cppm # ProgressBar 进度条组件
+            src/nan_widgets.cppm         # 聚合模块 nandina.widgets
+            src/nan_surface.cppm         # Surface 容器组件
+            src/nan_pressable.cppm       # Pressable 交互状态机
+            src/nan_label.cppm           # Label 文本显示组件
+            src/nan_button.cppm          # Button 按钮组件（仅接口）
+            src/nan_panel.cppm           # Panel 带标题栏容器组件
+            src/nan_card.cppm            # Card 卡片组件（阴影/描边）
+            src/nan_spacer.cppm          # Spacer 弹性空白组件
+            src/nan_progressbar.cppm     # ProgressBar 进度条组件
+            src/nan_icon.cppm            # Icon 几何图标组件
+            src/nan_sidebar_menu_button.cppm # SidebarMenuButton 菜单项
+            src/nan_sidebar_group.cppm   # SidebarGroup 分组组件
+            src/nan_sidebar.cppm         # Sidebar 侧边栏主组件
     PRIVATE
-        src/nan_button.cpp           # Button 组件实现（含 Pressable/Label 完整类型）
+        src/nan_button.cpp               # Button 组件实现（含 Pressable/Label 完整类型）
 )

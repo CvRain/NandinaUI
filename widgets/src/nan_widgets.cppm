@@ -12,3 +12,7 @@ export import nandina.widgets.panel;
 export import nandina.widgets.card;
 export import nandina.widgets.spacer;
 export import nandina.widgets.progressbar;
+export import nandina.widgets.icon;
+export import nandina.widgets.sidebar_menu_button;
+export import nandina.widgets.sidebar_group;
+export import nandina.widgets.sidebar;
