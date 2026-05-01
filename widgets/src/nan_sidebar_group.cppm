@@ -100,7 +100,7 @@ export namespace nandina::widgets {
             const float label_height = 16.0f;
             const float accent_offset = 14.0f;
 
-            // 装饰色标（小方块）
+            // 装饰色标
             if (m_accent_icon && m_show_accent) {
                 const float dot_size = 10.0f;
                 const float dot_y = y + 10.0f;
@@ -114,19 +114,25 @@ export namespace nandina::widgets {
                 m_label->set_bounds(lx, ly, w - 40.0f, label_height);
             }
 
-            // 子节点在标签下方排列（由 for_each_child 的 Surface 逻辑处理）
+            // 子节点（SidebarMenuButton）在标签下方排列
+            const float item_start_y = y + (m_label_text.empty() ? 6.0f : 28.0f);
+            float item_y = item_start_y;
+
+            for_each_child([&](runtime::NanWidget& child) {
+                if (&child == m_label || &child == m_accent_icon) return;
+                const float ch = 36.0f;  // 固定项高度
+                child.set_bounds(x, item_y, w, ch);
+                item_y += ch + 2.0f;
+            });
+
             return *this;
         }
 
         [[nodiscard]] auto preferred_size() const noexcept -> geometry::NanSize override {
             // 子节点累加 + 标签高度
-            float child_h = 0.0f;
-            for_each_child([&](const runtime::NanWidget& child) {
-                const auto cp = child.preferred_size();
-                child_h += cp.height();
-            });
+            const float total_child = 38.0f * count_menu_items();  // 36 + 2 padding
             const float header_h = m_label_text.empty() ? 10.0f : 28.0f;
-            return {240.0f, header_h + child_h};
+            return {240.0f, header_h + total_child};
         }
 
         // ── 绘制 ──────────────────────────────────────────
@@ -165,6 +171,17 @@ export namespace nandina::widgets {
                 .set_color(nandina::NanColor::from(nandina::NanRgb{99, 102, 241}));
             m_accent_icon = accent.get();
             add_child(std::move(accent));
+        }
+
+        /// 统计菜单项数量（排除内部管理的 label 和 accent icon）
+        [[nodiscard]] auto count_menu_items() const noexcept -> size_t {
+            size_t cnt = 0;
+            for_each_child([&](const runtime::NanWidget& child) {
+                if (&child != m_label && &child != m_accent_icon) {
+                    ++cnt;
+                }
+            });
+            return cnt;
         }
 
         std::string m_label_text;
