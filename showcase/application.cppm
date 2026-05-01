@@ -73,12 +73,6 @@ static void draw_text_dots(tvg::SwCanvas& canvas,
 }
 
 // ── 辅助: 绘制图标（小方块图标）────────────────────────
-static void draw_icon_rect(tvg::SwCanvas& canvas,
-    const float cx, const float cy, const float size,
-    const uint8_t r, const uint8_t g, const uint8_t b, const uint8_t a) {
-    draw_rect(canvas, cx - size * 0.5f, cy - size * 0.5f, size, size, r, g, b, a, 2);
-}
-
 static auto color4_to_nancolor(const uint8_t r, const uint8_t g, const uint8_t b,
     const uint8_t a = 255) -> nandina::NanColor {
     return nandina::NanColor::from(nandina::NanRgb{r, g, b, a});
@@ -128,9 +122,8 @@ protected:
         const auto& _bg = bg_color.to<nandina::NanRgb>();
         draw_rect(canvas, 0, 0, w, h, _bg.red(), _bg.green(), _bg.blue(), 255);
 
-        // ─ 2. 侧边栏 — 左侧导航 + 项目列表 ──────────
+        // ─ 2. 侧边栏 — 由 Sidebar widget 树自动绘制（在 draw() 中）──
         constexpr float sidebar_w = 240.0f;
-        draw_sidebar(canvas, sidebar_w, h);
 
         // ─ 3. 底部 Dock 栏 ────────────────────────────
         constexpr float dock_h = 56.0f;
@@ -329,60 +322,64 @@ private:
             m_anim_manager.add(std::move(pulse_anim));
         }
 
-        // ── Sidebar 文本 Label 子节点（替换 draw_text_dots） ──
+        // ── Sidebar 组件（替代所有 sidebar Label + draw_sidebar） ──
         {
             using namespace nandina::widgets;
 
-            auto hdr = Label::create();
-            hdr->set_text("Nandina Studio")
-                .set_font_size(11.0f)
-                .set_color(color4_to_nancolor(text_primary.r, text_primary.g, text_primary.b));
-            m_sidebar_header_title = add_child(std::move(hdr));
+            auto sidebar = Sidebar::create();
 
-            auto nav = Label::create();
-            nav->set_text("Navigation")
-                .set_font_size(9.0f)
-                .set_color(color4_to_nancolor(text_secondary.r, text_secondary.g, text_secondary.b));
-            m_sidebar_nav_title = add_child(std::move(nav));
-
-            const auto nav_texts = std::to_array<std::string_view>(
-                {"Dashboard", "Projects", "Analytics", "Settings"});
-            for (size_t i = 0; i < 4; ++i) {
-                auto item = Label::create();
-                const auto& tc = (i == 0) ? text_primary : text_secondary;
-                item->set_text(nav_texts[i])
-                    .set_font_size(9.0f)
-                    .set_color(color4_to_nancolor(tc.r, tc.g, tc.b));
-                m_sidebar_nav_items[i] = add_child(std::move(item));
+            // 导航项
+            {
+                auto dash = SidebarMenuButton::create();
+                dash->set_label("Dashboard")
+                    .set_icon_type(IconType::Square)
+                    .set_active(true)
+                    .set_accent_color(color4_to_nancolor(accent.r, accent.g, accent.b));
+                sidebar->add_menu_item(std::move(dash));
+            }
+            {
+                auto proj = SidebarMenuButton::create();
+                proj->set_label("Projects")
+                    .set_icon_type(IconType::Square);
+                sidebar->add_menu_item(std::move(proj));
+            }
+            {
+                auto anal = SidebarMenuButton::create();
+                anal->set_label("Analytics")
+                    .set_icon_type(IconType::Square);
+                sidebar->add_menu_item(std::move(anal));
+            }
+            {
+                auto sett = SidebarMenuButton::create();
+                sett->set_label("Settings")
+                    .set_icon_type(IconType::Square);
+                sidebar->add_menu_item(std::move(sett));
             }
 
-            auto proj = Label::create();
-            proj->set_text("Recent Projects")
-                .set_font_size(9.0f)
-                .set_color(color4_to_nancolor(text_secondary.r, text_secondary.g, text_secondary.b));
-            m_sidebar_proj_title = add_child(std::move(proj));
-
-            const auto proj_texts = std::to_array<std::string_view>(
+            // 项目列表
+            const auto project_colors = std::to_array<std::tuple<uint8_t, uint8_t, uint8_t>>({
+                {99, 102, 241},
+                {95, 200, 130},
+                {245, 158, 60},
+                {236, 110, 130},
+            });
+            const auto project_names = std::to_array<std::string_view>(
                 {"nandina-ui", "layout-core", "flex-box", "render-test"});
+
             for (size_t i = 0; i < 4; ++i) {
-                auto item = Label::create();
-                item->set_text(proj_texts[i])
-                    .set_font_size(9.0f)
-                    .set_color(color4_to_nancolor(text_secondary.r, text_secondary.g, text_secondary.b));
-                m_sidebar_proj_items[i] = add_child(std::move(item));
+                auto item = SidebarMenuButton::create();
+                item->set_label(project_names[i])
+                    .set_icon_type(IconType::Dot);
+                const auto& [pr, pg, pb] = project_colors[i];
+                item->set_accent_color(color4_to_nancolor(pr, pg, pb));
+                sidebar->add_project_item(std::move(item));
             }
 
-            auto un = Label::create();
-            un->set_text("CvRain")
-                .set_font_size(9.0f)
-                .set_color(color4_to_nancolor(text_primary.r, text_primary.g, text_primary.b));
-            m_sidebar_user_name = add_child(std::move(un));
+            // 用户信息（由 Sidebar 自动创建）
+            sidebar->set_user_name("CvRain")
+                   .set_user_role("Developer");
 
-            auto ur = Label::create();
-            ur->set_text("Developer")
-                .set_font_size(7.0f)
-                .set_color(color4_to_nancolor(text_dim.r, text_dim.g, text_dim.b));
-            m_sidebar_user_role = add_child(std::move(ur));
+            m_sidebar = add_child(std::move(sidebar));
         }
 
         // ── 内容区域文本 Label（替换 draw_text_dots） ──
@@ -678,51 +675,9 @@ private:
             }
         }
 
-        // ── Sidebar Label 定位 ──────────────────────────
-        {
-
-            // "Nandina Studio"
-            if (m_sidebar_header_title) {
-                m_sidebar_header_title->set_bounds(55.0f, 18.0f, 160.0f, 20.0f);
-            }
-
-            // "Navigation" section title
-            if (m_sidebar_nav_title) {
-                m_sidebar_nav_title->set_bounds(26.0f, 60.0f, 100.0f, 16.0f);
-            }
-
-            // 4 nav items
-            const auto nav_y_positions = {85.0f, 123.0f, 161.0f, 199.0f};
-            size_t ni = 0;
-            for (auto ny : nav_y_positions) {
-                if (ni < m_sidebar_nav_items.size() && m_sidebar_nav_items[ni]) {
-                    m_sidebar_nav_items[ni]->set_bounds(42.0f, ny + 5.0f, 160.0f, 18.0f);
-                }
-                ++ni;
-            }
-
-            // "Recent Projects" section title
-            const float proj_title_y = 199.0f + 36.0f + 2.0f + 20.0f;
-            if (m_sidebar_proj_title) {
-                m_sidebar_proj_title->set_bounds(26.0f, proj_title_y, 120.0f, 16.0f);
-            }
-
-            // 4 project items
-            const float proj_start_y = proj_title_y + 25.0f;
-            for (size_t pi = 0; pi < 4; ++pi) {
-                if (m_sidebar_proj_items[pi]) {
-                    m_sidebar_proj_items[pi]->set_bounds(36.0f, proj_start_y + static_cast<float>(pi) * 24.0f + 2.0f, 160.0f, 18.0f);
-                }
-            }
-
-            // User name & role
-            const float user_y = h - 60.0f;
-            if (m_sidebar_user_name) {
-                m_sidebar_user_name->set_bounds(52.0f, user_y + 6.0f, 160.0f, 18.0f);
-            }
-            if (m_sidebar_user_role) {
-                m_sidebar_user_role->set_bounds(52.0f, user_y + 22.0f, 160.0f, 14.0f);
-            }
+        // ── Sidebar 组件定位 ──────────────────────────
+        if (m_sidebar) {
+            m_sidebar->set_bounds(0.0f, 0.0f, sidebar_w, h);
         }
 
         // ── 内容区域文本 Label 定位 ─────────────────────
@@ -809,82 +764,6 @@ private:
                 }
             }
         }
-    }
-
-    // ── 侧边栏 ──────────────────────────────────────
-    void draw_sidebar(tvg::SwCanvas& canvas, float w, float h) const {
-        draw_rect(canvas, 0, 0, w, h, sidebar_bg.r, sidebar_bg.g, sidebar_bg.b, sidebar_bg.a);
-
-        // Logo 区域
-        const float logo_y = 20.0f;
-        draw_circle(canvas, 32, logo_y + 14, 14, accent.r, accent.g, accent.b, 230);
-        draw_circle(canvas, 32, logo_y + 14, 6, 255, 255, 255, 200);
-        draw_text_dots(canvas, 55, logo_y + 8, "Nandina Studio", text_primary.r, text_primary.g, text_primary.b, 200,
-            11);
-        draw_line(canvas, 20, logo_y + 34, w - 20, logo_y + 34, 55, 57, 75, 150);
-
-        // 导航分组
-        draw_rect(canvas, 14, 60, 4, 14, accent.r, accent.g, accent.b, 220, 2);
-        draw_text_dots(canvas, 26, 63, "Navigation", text_secondary.r, text_secondary.g, text_secondary.b, 180, 9);
-
-        const auto nav_items = std::to_array<std::pair<std::string_view, bool>>({
-            {"Dashboard", true},
-            {"Projects", false},
-            {"Analytics", false},
-            {"Settings", false},
-        });
-
-        float nav_y = 85.0f;
-        for (size_t i = 0; i < nav_items.size(); ++i) {
-            const auto& [label, active] = nav_items[i];
-            const float item_h          = 36.0f;
-
-            if (active) {
-                draw_rect(canvas, 0, nav_y - 2, w, item_h + 4, 40, 42, 60, 200);
-                draw_rect(canvas, 0, nav_y - 2, 3, item_h + 4, accent.r, accent.g, accent.b, 255);
-            }
-
-            const auto& icon_c = active ? accent : text_dim;
-            draw_icon_rect(canvas, 22, nav_y + item_h * 0.5f, 10, icon_c.r, icon_c.g, icon_c.b, icon_c.a);
-
-            const auto& tc = active ? text_primary : text_secondary;
-            draw_text_dots(canvas, 42, nav_y + 13, label, tc.r, tc.g, tc.b, tc.a, 9);
-            nav_y += item_h + 2;
-        }
-
-        // 项目列表
-        const float proj_y = nav_y + 20.0f;
-        draw_rect(canvas, 14, proj_y, 4, 14, green.r, green.g, green.b, 220, 2);
-        draw_text_dots(canvas, 26, proj_y + 3, "Recent Projects", text_secondary.r, text_secondary.g, text_secondary.b,
-            180, 9);
-
-        struct Project {
-            std::string_view name;
-            uint8_t pr, pg, pb;
-        };
-        const auto projects = std::to_array<Project>({
-            {"nandina-ui", 99, 102, 241},
-            {"layout-core", 95, 200, 130},
-            {"flex-box", 245, 158, 60},
-            {"render-test", 236, 110, 130},
-        });
-
-        float proj_item_y = proj_y + 25.0f;
-        for (const auto& proj : projects) {
-            draw_circle(canvas, 22, proj_item_y + 9, 5, proj.pr, proj.pg, proj.pb, 220);
-            draw_text_dots(canvas, 36, proj_item_y + 3, proj.name,
-                text_secondary.r, text_secondary.g, text_secondary.b, 200, 9);
-            proj_item_y += 24.0f;
-        }
-
-        // 底部用户信息
-        const float user_y = h - 60.0f;
-        draw_line(canvas, 12, user_y - 8, w - 12, user_y - 8, 55, 57, 75, 150);
-        draw_circle(canvas, 28, user_y + 22, 16, accent2.r, accent2.g, accent2.b, 220);
-        draw_circle(canvas, 28, user_y + 18, 6, 255, 255, 255, 200);
-        draw_circle(canvas, 28, user_y + 30, 8, 255, 255, 255, 100);
-        draw_text_dots(canvas, 52, user_y + 14, "CvRain", text_primary.r, text_primary.g, text_primary.b, 200, 9);
-        draw_text_dots(canvas, 52, user_y + 28, "Developer", text_dim.r, text_dim.g, text_dim.b, 160, 7);
     }
 
     // ── Dock 栏 ──────────────────────────────────────
@@ -1183,14 +1062,8 @@ private:
     // 统计卡片的 Pressable 交互层
     std::array<nandina::runtime::NanWidget*, 4> m_stat_card_pressables{};
 
-    // ── Sidebar 文本 Label ────────────────────────────
-    nandina::runtime::NanWidget* m_sidebar_header_title{nullptr};
-    nandina::runtime::NanWidget* m_sidebar_nav_title{nullptr};
-    std::array<nandina::runtime::NanWidget*, 4> m_sidebar_nav_items{};
-    nandina::runtime::NanWidget* m_sidebar_proj_title{nullptr};
-    std::array<nandina::runtime::NanWidget*, 4> m_sidebar_proj_items{};
-    nandina::runtime::NanWidget* m_sidebar_user_name{nullptr};
-    nandina::runtime::NanWidget* m_sidebar_user_role{nullptr};
+    // ── Sidebar 组件 ────────────────────────────────
+    nandina::runtime::NanWidget* m_sidebar{nullptr};
 
     // ── 内容区域文本 Label ────────────────────────────
     nandina::runtime::NanWidget* m_chart_title{nullptr};
