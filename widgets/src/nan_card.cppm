@@ -18,6 +18,7 @@ import nandina.foundation.nan_size;
 import nandina.foundation.nan_rect;
 import nandina.foundation.color;
 import nandina.reactive.prop;
+import nandina.widgets.surface;
 import nandina.widgets.label;
 
 /**
@@ -26,31 +27,25 @@ import nandina.widgets.label;
  * Card — 卡片组件。
  *
  * 职责：
- * - 背景色 / 圆角 / 可选描边
- * - 阴影效果（通过多层半透明矩形模拟）
- * - 可选头部图标（小方块）和标题文本
- * - 内边距控制子节点位置
+ * - 继承 Surface，复用背景色/圆角/描边/内边距
+ * - 阴影效果（Material Design elevation，多层半透明矩形模拟）
+ * - 可选头部标题（Label 组件）+ 左侧装饰色条
+ * - 标题栏与内容区分隔线
  *
- * 设计：
- * - Card 继承 NanWidget，不继承 Surface（因为需要独立的阴影计算逻辑）
- * - 阴影使用多层偏移的半透明矩形模拟（类似 Material Design 的 elevation）
- * - 标题和图标在标题区域渲染，子节点在内容区渲染
- * - 链式 API：Card::create().set_title("Stats").set_elevation(4.0f)
+ * 继承链：NanWidget → Surface → Card
+ *
+ * 用法：
+ *   auto card = Card::create()
+ *       .set_bg_color(NanColor::from(NanRgb{50, 52, 72}))
+ *       .set_corner_radius(8.0f)
+ *       .set_elevation(4.0f)
+ *       .set_title("Statistics")
+ *       .set_show_accent(true);
+ *   card->add_child(std::move(content));
  */
 export namespace nandina::widgets {
 
-    /**
-     * Card — 展示内容的卡片容器。
-     *
-     * 用法：
-     *   auto card = Card::create()
-     *       .set_bg_color(NanColor::from(NanRgb{50, 52, 72}))
-     *       .set_corner_radius(8.0f)
-     *       .set_elevation(4.0f)
-     *       .set_padding(geometry::NanInsets{12.0f});
-     *   card->add_child(std::move(content));
-     */
-    class Card : public runtime::NanWidget {
+    class Card : public Surface {
     public:
         using Ptr = std::unique_ptr<Card>;
 
@@ -58,28 +53,6 @@ export namespace nandina::widgets {
 
         static auto create() -> Ptr {
             return Ptr{new Card()};
-        }
-
-        // ── 背景色 ────────────────────────────────────────
-        auto set_bg_color(const nandina::NanColor& color) -> Card& {
-            m_bg_color.set(color);
-            mark_dirty();
-            return *this;
-        }
-
-        [[nodiscard]] auto bg_color() const noexcept -> const nandina::NanColor& {
-            return m_bg_color.get();
-        }
-
-        // ── 圆角 ──────────────────────────────────────────
-        auto set_corner_radius(float radius) -> Card& {
-            m_corner_radius.set(radius);
-            mark_dirty();
-            return *this;
-        }
-
-        [[nodiscard]] auto corner_radius() const noexcept -> float {
-            return m_corner_radius.get();
         }
 
         // ── 阴影高度（elevation） ──────────────────────────
@@ -93,15 +66,30 @@ export namespace nandina::widgets {
             return m_elevation.get();
         }
 
-        // ── 内边距 ────────────────────────────────────────
-        auto set_padding(const geometry::NanInsets& insets) -> Card& {
-            m_padding.set(insets);
-            mark_dirty();
+        // ── 从 Surface override 方法（返回 Card& 以保持链式） ──
+        auto set_bg_color(const nandina::NanColor& color) -> Card& {
+            Surface::set_bg_color(color);
             return *this;
         }
 
-        [[nodiscard]] auto padding() const noexcept -> const geometry::NanInsets& {
-            return m_padding.get();
+        auto set_corner_radius(float radius) -> Card& {
+            Surface::set_corner_radius(radius);
+            return *this;
+        }
+
+        auto set_padding(const geometry::NanInsets& insets) -> Card& {
+            Surface::set_padding(insets);
+            return *this;
+        }
+
+        auto set_border_color(const nandina::NanColor& color) -> Card& {
+            Surface::set_border_color(color);
+            return *this;
+        }
+
+        auto set_border_width(float width) -> Card& {
+            Surface::set_border_width(width);
+            return *this;
         }
 
         // ── 可选标题 ──────────────────────────────────────
@@ -154,22 +142,10 @@ export namespace nandina::widgets {
             return *this;
         }
 
-        // ── 描边 ──────────────────────────────────────────
-        auto set_border_color(const nandina::NanColor& color) -> Card& {
-            m_border_color = color;
-            mark_dirty();
-            return *this;
-        }
-
-        auto set_border_width(float width) -> Card& {
-            m_border_width = width;
-            mark_dirty();
-            return *this;
-        }
-
         // ── 布局 ──────────────────────────────────────────
         auto set_bounds(float x, float y, float w, float h) noexcept -> NanWidget& override {
-            NanWidget::set_bounds(x, y, w, h);
+            // 先调用 Surface 的 set_bounds 进行基本定位和 padding 收缩
+            Surface::set_bounds(x, y, w, h);
 
             // 确保标题 Label 存在
             if (!m_title.empty() && !m_title_label) {
@@ -187,17 +163,15 @@ export namespace nandina::widgets {
                 m_title_label->set_bounds(text_start_x, text_y, text_w, text_h);
             }
 
+            // 子节点定位在标题区域下方 + padding 内
             const auto& pad = m_padding.get();
             const float header_offset = title_header_height();
-
-            // 子节点定位在标题区域下方 + padding 内
             const float child_x = x + pad.left();
             const float child_y = y + header_offset + pad.top();
             const float child_w = w - pad.left() - pad.right();
             const float child_h = h - header_offset - pad.top() - pad.bottom();
 
             for_each_child([&](runtime::NanWidget& child) {
-                // 跳过标题 Label（它由 Card 自身管理）
                 if (&child == m_title_label) return;
                 child.set_bounds(child_x, child_y, child_w, child_h);
             });
@@ -233,13 +207,12 @@ export namespace nandina::widgets {
             const float elev = m_elevation.get();
             const float header_off = title_header_height();
 
-            // ── 1. 阴影绘制（多层半透明矩形模拟 elevation） ──
+            // ── 1. 阴影绘制（在背景之前） ──────────────────
             if (elev > 0.0f) {
                 const int shadow_layers = std::min(4, static_cast<int>(elev / 2.0f + 1.0f));
-                for (int i = 0; i < shadow_layers; ++i) {
+                for (int i = shadow_layers - 1; i >= 0; --i) {
                     const float offset = 1.0f + static_cast<float>(i) * 0.5f;
                     const float blur = 2.0f + static_cast<float>(i) * 1.5f;
-                    // 阴影 alpha 从外到内衰减
                     const uint8_t alpha = static_cast<uint8_t>(30.0f * (1.0f - static_cast<float>(i) / static_cast<float>(shadow_layers)));
 
                     auto* shadow = tvg::Shape::gen();
@@ -255,19 +228,11 @@ export namespace nandina::widgets {
                 }
             }
 
-            // ── 2. 背景填充 ──────────────────────────────
-            {
-                const auto& bg = m_bg_color.get();
-                const auto bg_rgb = bg.to<nandina::NanRgb>();
-                auto* shape = tvg::Shape::gen();
-                shape->appendRect(rect.x(), rect.y(), rect.width(), rect.height(), radius, radius);
-                shape->fill(bg_rgb.red(), bg_rgb.green(), bg_rgb.blue(), bg_rgb.alpha());
-                canvas.add(shape);
-            }
+            // ── 2. 背景（复用 Surface 的 draw_background） ──
+            draw_background(canvas);
 
-            // ── 3. 头部区域（标题 + 装饰色条） ──────────
+            // ── 3. 头部装饰色条 ──────────────────────────
             if (!m_title.empty() || m_show_accent) {
-                // 装饰色条（左侧竖线）
                 if (m_show_accent) {
                     const auto& acc = m_accent_color.get();
                     const auto acc_rgb = acc.to<nandina::NanRgb>();
@@ -283,10 +248,9 @@ export namespace nandina::widgets {
                     accent_bar->fill(acc_rgb.red(), acc_rgb.green(), acc_rgb.blue(), acc_rgb.alpha());
                     canvas.add(accent_bar);
                 }
-                // 标题文字由 m_title_label 子节点绘制
             }
 
-            // ── 4. 标题栏与内容区分隔线（如果有标题） ──
+            // ── 4. 标题栏与内容区分隔线 ──────────────────
             if (!m_title.empty() && header_off > 0.0f) {
                 auto* divider = tvg::Shape::gen();
                 const float div_y = rect.y() + header_off;
@@ -297,21 +261,16 @@ export namespace nandina::widgets {
                 canvas.add(divider);
             }
 
-            // ── 5. 描边（如果有） ──────────────────────────
-            if (m_border_width > 0.0f) {
-                const auto bc_rgb = m_border_color.to<nandina::NanRgb>();
-                auto* border = tvg::Shape::gen();
-                border->appendRect(rect.x(), rect.y(), rect.width(), rect.height(), radius, radius);
-                border->strokeWidth(m_border_width);
-                border->strokeFill(bc_rgb.red(), bc_rgb.green(), bc_rgb.blue(), bc_rgb.alpha());
-                canvas.add(border);
-            }
+            // 描边已由 draw_background() 处理
         }
 
     private:
-        Card() = default;
+        Card() : Surface() {
+            // Card 默认值（覆盖 Surface 的默认白色背景）
+            m_bg_color.set(nandina::NanColor::from(nandina::NanRgb{50, 52, 72}));
+            m_corner_radius.set(8.0f);
+        }
 
-        /** 确保标题 Label 子节点存在 */
         auto ensure_title_label() -> void {
             if (m_title_label || m_title.empty()) return;
             auto label = Label::create();
@@ -322,27 +281,21 @@ export namespace nandina::widgets {
             add_child(std::move(label));
         }
 
-        /** 计算标题区域高度 */
         [[nodiscard]] auto title_header_height() const noexcept -> float {
             if (m_title.empty()) return 0.0f;
             return m_title_font_size.get() * 1.6f;
         }
 
-        reactive::Prop<nandina::NanColor> m_bg_color{nandina::NanColor::from(nandina::NanRgb{50, 52, 72})};
-        reactive::Prop<nandina::NanColor> m_title_color{nandina::NanColor::from(nandina::NanRgb{220, 220, 240})};
-        reactive::Prop<nandina::NanColor> m_accent_color{nandina::NanColor::from(nandina::NanRgb{99, 102, 241})};
-        reactive::Prop<float> m_corner_radius{8.0f};
+        // Card 独有的成员（bg_color, corner_radius, padding, border 从 Surface 继承）
+        reactive::Prop<nandina::NanColor> m_title_color{
+            nandina::NanColor::from(nandina::NanRgb{220, 220, 240})};
+        reactive::Prop<nandina::NanColor> m_accent_color{
+            nandina::NanColor::from(nandina::NanRgb{99, 102, 241})};
         reactive::Prop<float> m_elevation{0.0f};
         reactive::Prop<float> m_title_font_size{12.0f};
-        reactive::Prop<geometry::NanInsets> m_padding{geometry::NanInsets{}};
-
-        nandina::NanColor m_border_color{nandina::NanColor::from(nandina::NanRgb{0, 0, 0})};
-        float m_border_width{0.0f};
 
         std::string m_title;
         bool m_show_accent{false};
-
-        // 标题 Label 子节点（由 Card 自身管理定位）
         Label* m_title_label{nullptr};
     };
 

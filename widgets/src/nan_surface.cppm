@@ -55,30 +55,30 @@ export namespace nandina::widgets {
         }
 
         // ── 属性设置（返回引用支持链式）────────────────────
-        auto set_bg_color(const nandina::NanColor& color) -> Surface& {
+        virtual auto set_bg_color(const nandina::NanColor& color) -> Surface& {
             m_bg_color.set(color);
             return *this;
         }
 
-        auto set_corner_radius(float radius) -> Surface& {
+        virtual auto set_corner_radius(float radius) -> Surface& {
             m_corner_radius.set(radius);
             mark_dirty();
             return *this;
         }
 
-        auto set_padding(const geometry::NanInsets& insets) -> Surface& {
+        virtual auto set_padding(const geometry::NanInsets& insets) -> Surface& {
             m_padding.set(insets);
             mark_dirty();
             return *this;
         }
 
-        auto set_border_color(const nandina::NanColor& color) -> Surface& {
+        virtual auto set_border_color(const nandina::NanColor& color) -> Surface& {
             m_border_color = color;
             mark_dirty();
             return *this;
         }
 
-        auto set_border_width(float width) -> Surface& {
+        virtual auto set_border_width(float width) -> Surface& {
             m_border_width = width;
             mark_dirty();
             return *this;
@@ -119,6 +119,11 @@ export namespace nandina::widgets {
         // ── 绘制 ────────────────────────────────────────────
     protected:
         void on_draw(tvg::SwCanvas& canvas) override {
+            draw_background(canvas);
+        }
+
+        /** 绘制背景与描边 — 子类可扩展 */
+        virtual void draw_background(tvg::SwCanvas& canvas) {
             const auto rect = bounds();
             const auto& bg = m_bg_color.get();
             const auto bg_rgb = bg.to<nandina::NanRgb>();
