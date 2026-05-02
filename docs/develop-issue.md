@@ -1507,8 +1507,9 @@
 
 # Milestone M9 — Showcase 驱动开发
 
-## Issue 069 — 建立 showcase 应用基础入口
+## Issue 069 — 建立 showcase 应用基础入口 ✅ 已完成
 **Labels:** `area:showcase`, `kind:implementation`, `priority:p0`
+**Status:** ✅ 已完成 — 提交 `abe263e`, `45e18d2`
 
 ### 目标
 让组件开发从第一批控件起就有真实运行环境。
@@ -1523,6 +1524,11 @@
 
 ### 完成定义
 - 可以启动一个组件展示应用
+
+### 完成记录
+- `showcase/main.cpp` 与 `showcase/application.cppm` 已形成可启动的 showcase 应用入口与主窗口装配
+- 当前 showcase 目录已具备应用壳层与页面骨架拆分：header / stats / middle / bottom / footer / sidebar / dock
+- 提交: `abe263e`, `45e18d2`
 
 ---
 
@@ -1868,4 +1874,9 @@
 | Widget 树基础 | NanWidget 基类（parent/child/draw） | 2026-04-22 | `8b1fcb9`（与 Issue 012 对应） |
 | Godot-like Authoring | 继承式生命周期与输入钩子 | 2026-04-22 | `8b1fcb9` |
 | App 层抽象 | NanAppWindow / NanComponent 应用层封装 | 2026-04-23 | `8b1fcb9` |
-| Showcase 展示应用 | 基于 ThorVG 的组件展示窗口 | 2026-04-23 | `abe263e` |
+
+## M9 — Showcase 驱动开发
+
+| Issue | 标题 | 完成日期 | 提交记录 |
+|-------|------|----------|----------|
+| 069 | 建立 showcase 应用基础入口 | 2026-05-02 | `abe263e`, `45e18d2` |
