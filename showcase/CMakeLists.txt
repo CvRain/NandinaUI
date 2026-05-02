@@ -11,6 +11,17 @@ set(PROJECT_CPP_FILES
 
 set(PROJECT_CPP_MODULE_FILES
         application.cppm
+        bottom_content_section.cppm
+        chart_card.cppm
+        dock_bar.cppm
+        footer_section.cppm
+        header_bar.cppm
+        middle_content_section.cppm
+        project_progress_card.cppm
+        recent_activity_card.cppm
+        sidebar_section.cppm
+        stats_section.cppm
+        stack_demo_card.cppm
 )
 
 add_executable(${PROJECT_NAME} ${PROJECT_CPP_FILES})

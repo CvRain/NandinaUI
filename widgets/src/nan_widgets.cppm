@@ -10,6 +10,7 @@ export import nandina.widgets.label;
 export import nandina.widgets.button;
 export import nandina.widgets.panel;
 export import nandina.widgets.card;
+export import nandina.widgets.split_row;
 export import nandina.widgets.spacer;
 export import nandina.widgets.progressbar;
 export import nandina.widgets.icon;

@@ -32,6 +32,7 @@ target_sources(nandina_widgets
             src/nan_button.cppm          # Button 按钮组件（仅接口）
             src/nan_panel.cppm           # Panel 带标题栏容器组件
             src/nan_card.cppm            # Card 卡片组件（阴影/描边）
+            src/nan_split_row.cppm       # SplitRow 双栏比例容器组件
             src/nan_spacer.cppm          # Spacer 弹性空白组件
             src/nan_progressbar.cppm     # ProgressBar 进度条组件
             src/nan_icon.cppm            # Icon 几何图标组件
