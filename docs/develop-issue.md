@@ -150,8 +150,9 @@
 
 # Milestone M1 — Foundation 与 Runtime MVP
 
-## Issue 005 — 定义 foundation 层基础枚举与通用类型
+## Issue 005 — 定义 foundation 层基础枚举与通用类型 ✅ 已完成
 **Labels:** `area:foundation`, `kind:implementation`, `priority:p0`
+**Status:** ✅ 已完成 — 基础枚举已落地于 `foundation/src/nan_types.cppm`
 
 ### 目标
 实现跨模块共享的基础类型与枚举，避免各层重复定义。
@@ -173,10 +174,16 @@
 ### 完成定义
 - layout/runtime/widgets 不再自行定义重复枚举
 
+### 完成记录
+- 已实现 `Axis`、`Align`、`Justify`、`Visibility`、`PointerButton`、`KeyCode`、`MouseCursor`、`Direction`
+- 落地文件：`foundation/src/nan_types.cppm`
+- 当前 runtime / widgets 已通过导入该模块复用基础枚举
+
 ---
 
-## Issue 006 — 实现基础几何类型 Point / Size / Rect / Insets
+## Issue 006 — 实现基础几何类型 Point / Size / Rect / Insets ✅ 已完成
 **Labels:** `area:foundation`, `kind:implementation`, `priority:p0`
+**Status:** ✅ 已完成 — 几何类型与测试均已落地
 
 ### 目标
 建立 UI 系统统一的几何基础类型。
@@ -200,10 +207,17 @@
 ### 完成定义
 - Widget bounds 与 Layout request 均可基于该几何层表达
 
+### 完成记录
+- 已实现 `NanPoint`、`NanSize`、`NanRect`、`NanInsets`
+- 支持 `contains`、`intersects`、`inflate/deflate` 等基础几何能力
+- 落地文件：`foundation/src/nan_point.cppm`、`foundation/src/nan_size.cppm`、`foundation/src/nan_rect.cppm`、`foundation/src/nan_insets.cppm`
+- 测试：`tests/foundation/test_geometry.cpp`
+
 ---
 
-## Issue 007 — 增加 Constraints 类型并定义测量语义
+## Issue 007 — 增加 Constraints 类型并定义测量语义 ✅ 已完成
 **Labels:** `area:foundation`, `area:layout`, `kind:architecture`, `priority:p0`
+**Status:** ✅ 已完成 — `NanConstraints` 与测试已落地
 
 ### 目标
 为后续布局与 widget 测量机制建立统一约束模型。
@@ -221,10 +235,16 @@
 ### 完成定义
 - 后续 layout/core 可直接依赖，无需返工抽象
 
+### 完成记录
+- 已实现 tight / loose / unbounded / constrain / intersect 等约束语义
+- 落地文件：`foundation/src/nan_constraints.cppm`
+- 测试：`tests/foundation/test_constraints.cpp`
+
 ---
 
-## Issue 008 — 设计并实现 Application 生命周期最小接口
+## Issue 008 — 设计并实现 Application 生命周期最小接口 ✅ 已完成
 **Labels:** `area:runtime`, `kind:implementation`, `priority:p0`
+**Status:** ✅ 已完成 — `NanApplication` 与 `NanAppWindow` 已形成最小应用入口
 
 ### 目标
 建立统一应用入口与生命周期管理。
@@ -242,10 +262,17 @@
 ### 完成定义
 - 可以创建 Application 并驱动窗口/帧循环
 
+### 完成记录
+- 已提供 `NanApplication`、`NanAppWindow`、`NanComponent`
+- `NanApplication::run()` 可持有并驱动应用窗口
+- `NanAppWindow::BridgeWindow` 已接通 ready / update / draw / resize 与基础指针事件桥接
+- 落地文件：`app/src/nan_application.cppm`
+
 ---
 
-## Issue 009 — 设计 Window 最小接口
+## Issue 009 — 设计 Window 最小接口 ✅ 已完成
 **Labels:** `area:runtime`, `kind:implementation`, `priority:p0`
+**Status:** ✅ 已完成 — `NanWindow` 已提供平台无关窗口接口与 Builder
 
 ### 目标
 建立平台无关的 Window 抽象基础。
@@ -265,10 +292,17 @@
 ### 完成定义
 - 上层不直接耦合底层平台窗口实现细节
 
+### 完成记录
+- 已提供 `NanWindow::Config`、`NanWindow::Builder`、PIMPL 隔离的窗口接口
+- 已覆盖 title / width / height / dpi_scale / resize / close 生命周期钩子
+- SDL 类型已隐藏在 `runtime/src/nan_window.cpp` 实现单元中
+- 导出接口：`runtime/src/nan_window.cppm`
+
 ---
 
-## Issue 010 — 打通窗口事件循环到 runtime 事件队列
+## Issue 010 — 打通窗口事件循环到 runtime 事件队列 ✅ 已完成
 **Labels:** `area:runtime`, `kind:implementation`, `priority:p0`
+**Status:** ✅ 已完成 — SDL 事件已翻译并进入 runtime 窗口事件回调
 
 ### 目标
 让平台事件可以统一进入 runtime 内部事件系统。
@@ -283,6 +317,11 @@
 
 ### 完成定义
 - 可以从窗口收到用户输入和关闭事件
+
+### 完成记录
+- `NanWindow::poll_events()` 已翻译 SDL 的 close / resize / pointer / wheel / key / text input 事件
+- 关闭与 resize 已接入 `should_close`、`on_close_requested()`、`on_resize()`
+- 落地文件：`runtime/src/nan_window.cpp`
 
 ---
 
@@ -315,8 +354,9 @@
 
 ---
 
-## Issue 012 — 实现 Widget 树基础结构
+## Issue 012 — 实现 Widget 树基础结构 ✅ 已完成
 **Labels:** `area:runtime`, `kind:implementation`, `priority:p0`
+**Status:** ✅ 已完成 — `NanWidget` 已具备树结构、遍历与基础生命周期语义
 
 ### 目标
 实现最基础的 widget tree 结构。
@@ -334,6 +374,11 @@
 
 ### 完成定义
 - 可以构建一棵 UI 树并遍历
+
+### 完成记录
+- 已实现 parent / child / `add_child()` / `clear_children()` / `for_each_child()` / `child_count()`
+- `draw()` 已递归遍历子树，`preferred_size()` / `set_bounds()` 已提供基础布局协议
+- 落地文件：`runtime/src/nan_widget.cppm`
 
 ---
 
@@ -379,8 +424,9 @@
 
 ---
 
-## Issue 015 — 建立 Widget 事件分发最小通路
+## Issue 015 — 建立 Widget 事件分发最小通路 ✅ 已完成
 **Labels:** `area:runtime`, `kind:implementation`, `priority:p1`
+**Status:** ✅ 已完成 — Widget 命中测试与事件投递已形成最小闭环
 
 ### 目标
 让命中测试结果可以驱动 widget 收到事件。
@@ -395,6 +441,11 @@
 
 ### 完成定义
 - 某个 widget 能响应点击等基础事件
+
+### 完成记录
+- `NanWidget` 已实现 `dispatch_event()` 与 `bubble_event()`，并暴露 `on_pointer_xxx` / `on_key_xxx` 等虚方法
+- `NanAppWindow::BridgeWindow` 已通过 `hit_test()` 将指针事件投递到命中节点
+- `Pressable`、`Button`、`SidebarMenuButton` 等组件已消费该事件通路
 
 ---
 
@@ -420,8 +471,9 @@
 
 ---
 
-## Issue 017 — 实现首个固定节点渲染闭环
+## Issue 017 — 实现首个固定节点渲染闭环 ✅ 已完成
 **Labels:** `area:runtime`, `area:render`, `kind:implementation`, `priority:p1`
+**Status:** ✅ 已完成 — 已打通 window -> widget draw -> ThorVG/SDL 呈现闭环
 
 ### 目标
 从 window -> widget tree -> scene -> render backend 打通第一条可视化路径。
@@ -436,6 +488,11 @@
 
 ### 完成定义
 - 可以显示基础图形，不只是窗口空白
+
+### 完成记录
+- `NanWindow::present_frame()` 已完成 ThorVG `SwCanvas` 绘制、光栅化、SDL 纹理上传与 present
+- `NanWindow::run()` 已将事件轮询、update 与 present 串为主循环
+- showcase 已作为真实运行环境验证该闭环
 
 ---
 
@@ -580,8 +637,9 @@
 
 ---
 
-## Issue 025 — 实现 Prop<T> 统一属性输入模型
+## Issue 025 — 实现 Prop<T> 统一属性输入模型 ✅ 已完成
 **Labels:** `area:reactive`, `area:widgets`, `kind:implementation`, `priority:p0`
+**Status:** ✅ 已完成 — `Prop<T>` 已实现并被 widgets 广泛消费
 
 ### 目标
 统一静态值与响应式输入值，减少组件 API 分裂。
@@ -598,6 +656,11 @@
 
 ### 完成定义
 - 组件输入可以优先围绕 Prop 建模
+
+### 完成记录
+- 已实现静态值、`ReadState<T>` 绑定、`get()`、`set()`、`on_change()`、`is_reactive()`
+- 落地文件：`reactive/src/prop.cppm`
+- `Surface`、`Panel`、`Label`、`Card` 等组件已使用 `Prop<T>` 管理输入属性
 
 ---
 
@@ -1100,8 +1163,9 @@
 
 # Milestone M6 — Widgets: Primitives
 
-## Issue 050 — 实现 Surface primitive
+## Issue 050 — 实现 Surface primitive ✅ 已完成
 **Labels:** `area:widgets`, `kind:implementation`, `priority:p0`
+**Status:** ✅ 已完成 — `Surface` 已作为基础视觉容器供多个控件复用
 
 ### 目标
 建立最基础的视觉表面组件。
@@ -1119,10 +1183,16 @@
 ### 完成定义
 - 可作为 Panel/Card/Button 等的底层视觉积木
 
+### 完成记录
+- 已支持 background / border / radius / padding
+- `Panel`、`Card`、`Button`、`Sidebar`、`SidebarMenuButton` 已直接复用 `Surface`
+- 落地文件：`widgets/src/nan_surface.cppm`
+
 ---
 
-## Issue 051 — 实现 Pressable primitive
+## Issue 051 — 实现 Pressable primitive ✅ 已完成
 **Labels:** `area:widgets`, `area:runtime`, `kind:implementation`, `priority:p0`
+**Status:** ✅ 已完成 — `Pressable` 已提供统一交互状态机
 
 ### 目标
 建立纯交互 primitive，不直接绑定视觉表现。
@@ -1141,10 +1211,17 @@
 ### 完成定义
 - Button/Card 等交互组件可复用统一行为逻辑
 
+### 完成记录
+- 已支持 hover / press / click / disabled / focus 状态
+- 已提供 `on_click` / `on_press` / `on_release` / `on_hover` / `on_leave` 与 signal 接口
+- `Button` 与 showcase 的 `StatsSection` 已复用 `Pressable`
+- 落地文件：`widgets/src/nan_pressable.cppm`
+
 ---
 
-## Issue 052 — 实现 Text primitive
+## Issue 052 — 实现 Text primitive ⚠️ 部分完成
 **Labels:** `area:widgets`, `area:text`, `kind:implementation`, `priority:p0`
+**Status:** ⚠️ 部分完成 — 文本能力已被 `Label` 吸收，但尚未形成独立 Text primitive
 
 ### 目标
 建立 widgets 层统一的文本节点封装。
@@ -1161,10 +1238,20 @@
 ### 完成定义
 - Label/Button 不必各自重新封装底层 text 逻辑
 
+### 当前进展
+- `Label` 已封装文本内容、颜色、基础对齐、字体加载、shaping 与绘制能力
+- 文本底层能力由 `text/nan_font` 提供，已可支撑 widgets 层文本显示
+- 落地文件：`widgets/src/nan_label.cppm`、`text/src/nan_font.cppm`
+
+### 未完成部分
+- 当前没有独立的 `widgets/primitives/text` 模块或控件
+- `style role` 尚未形成独立语义 API，Button 也仍然通过嵌入 `Label` 间接复用文本能力
+
 ---
 
-## Issue 053 — 实现 FocusRing primitive
+## Issue 053 — 实现 FocusRing primitive ❌ 未完成
 **Labels:** `area:widgets`, `kind:implementation`, `priority:p1`
+**Status:** ❌ 未完成 — 未见独立 FocusRing primitive 或统一焦点可视化实现
 
 ### 目标
 为交互组件提供统一焦点可视化 primitive。
@@ -1180,10 +1267,16 @@
 ### 完成定��
 - Button/Input 等未来可复用统一焦点反馈
 
+### 当前判断
+- 当前 `Pressable` 虽有 `focused` 状态，但 widgets 层没有独立 `FocusRing` 组件或 outline 渲染积木
+- 仓库中也未见 `focus visible state` 到 `ring color / border / outline` 的复用实现
+- theme 规划里能看到 focus ring token 需求，但主线 widgets 尚未消费它
+
 ---
 
-## Issue 054 — 编写 primitive 设计文档
+## Issue 054 — 编写 primitive 设计文档 ❌ 未完成
 **Labels:** `area:widgets`, `area:docs`, `kind:docs`, `priority:p1`
+**Status:** ❌ 未完成 — `docs/widget-primitives.md` 尚未落位
 
 ### 目标
 明确 primitive 与 control 的边界，避免组件体系重新混乱。
@@ -1202,12 +1295,17 @@
 ### 完成定义
 - 后续控件开发有统一积木思维
 
+### 当前判断
+- 主线 docs 中不存在 `docs/widget-primitives.md`
+- 目前只有 `develop-issue.md` 中的问题拆分，没有一份专门解释 Surface / Pressable / Text / FocusRing 边界的文档
+
 ---
 
 # Milestone M7 — Widgets: First Controls
 
-## Issue 055 — 实现 Label 控件
+## Issue 055 — 实现 Label 控件 ⚠️ 部分完成
 **Labels:** `area:widgets`, `kind:implementation`, `priority:p0`
+**Status:** ⚠️ 部分完成 — 基础 Label 已可用，但状态语义与 typography role 仍未补齐
 
 ### 目标
 实现第一个主题感知的基础文本控件。
@@ -1227,10 +1325,19 @@
 ### 完成定义
 - Label 可在页面中作为真实控件使用
 
+### 当前进展
+- 已实现文本、字体大小、颜色、对齐、preferred size 与真实字体绘制
+- 落地文件：`widgets/src/nan_label.cppm`
+
+### 未完成部分
+- `disabled` / `error` / `required` 语义状态尚未建模
+- typography role 尚未形成独立语义 API
+
 ---
 
-## Issue 056 — 为 Label 实现状态驱动样式映射
+## Issue 056 — 为 Label 实现状态驱动样式映射 ❌ 未完成
 **Labels:** `area:widgets`, `area:theme`, `kind:implementation`, `priority:p1`
+**Status:** ❌ 未完成 — 未见独立的 Label 语义状态到样式解析层
 
 ### 目标
 让 Label 的视觉状态来自语义状态而不是散乱条件判断。
@@ -1247,10 +1354,15 @@
 ### 完成定义
 - Label 的状态表现统一并可扩展
 
+### 当前判断
+- 当前 `Label` 只暴露文本、颜色、字号和对齐，没有 `normal / disabled / error / required` 的语义状态输入
+- 也未见从 theme 解析状态样式的 resolver 或 mapping 层
+
 ---
 
-## Issue 057 — 实现 Button 控件最小版本
+## Issue 057 — 实现 Button 控件最小版本 ⚠️ 部分完成
 **Labels:** `area:widgets`, `kind:implementation`, `priority:p0`
+**Status:** ⚠️ 部分完成 — Button 已可点击使用，但 preset / size / colorVariant 仍未成型
 
 ### 目标
 实现第一个完整的交互式核心控件。
@@ -1271,10 +1383,19 @@
 ### 完成定义
 - 可稳定用于 showcase 与页面导航
 
+### 当前进展
+- 已实现 text / on_click / disabled / hover / press 基础状态
+- 通过 `Surface + Pressable + Label` 组合完成最小 Button
+- 落地文件：`widgets/src/nan_button.cppm`、`widgets/src/nan_button.cpp`
+
+### 未完成部分
+- `preset`、`size`、`colorVariant` 仍未形成明确公开 API
+
 ---
 
-## Issue 058 — 为 Button 加入 icon slot / 左右图标支持
+## Issue 058 — 为 Button 加入 icon slot / 左右图标支持 ❌ 未完成
 **Labels:** `area:widgets`, `kind:implementation`, `priority:p1`
+**Status:** ❌ 未完成 — Button 尚未暴露 icon slot 或左右图标 API
 
 ### 目标
 让 Button API 更接近真实应用需求。
@@ -1290,10 +1411,16 @@
 ### 完成定义
 - Button 可以表达更真实的 UI 场景
 
+### 当前判断
+- `Button` 当前只组合了 `Pressable + Label`
+- widgets 层虽已有 `Icon` 组件，但未接入 `Button` 的公开接口与布局逻辑
+- 未见 `left icon` / `right icon` / icon-text 排布 API
+
 ---
 
-## Issue 059 — 实现 Button 的 preset 视觉映射
+## Issue 059 — 实现 Button 的 preset 视觉映射 ❌ 未完成
 **Labels:** `area:widgets`, `area:theme`, `kind:implementation`, `priority:p1`
+**Status:** ❌ 未完成 — Button 目前只有一组直接颜色配置，未形成 preset 视觉语义
 
 ### 目标
 建立统一按钮视觉语义。
@@ -1312,10 +1439,15 @@
 ### 完成定义
 - preset 不是仅有属性名，而有真实一致的样式差异
 
+### 当前判断
+- 目前 `ButtonColors` 只是单一颜色集，未见 `filled / tonal / outlined / ghost / link` 等 preset API
+- 也未见从 theme 或 preset 枚举解析到样式的 resolver
+
 ---
 
-## Issue 060 — 实现 Panel 容器控件
+## Issue 060 — 实现 Panel 容器控件 ⚠️ 部分完成
 **Labels:** `area:widgets`, `kind:implementation`, `priority:p1`
+**Status:** ⚠️ 部分完成 — Panel 基础容器已可用，但 header action 尚未支持
 
 ### 目标
 提供带标题与内边距的基础容器。
@@ -1333,10 +1465,19 @@
 ### 完成定义
 - 可用于 showcase 页面中的内容分区
 
+### 当前进展
+- 已支持 title / header_color / header_height / padding / 内容区布局
+- 落地文件：`widgets/src/nan_panel.cppm`
+
+### 未完成部分
+- optional header action 仍未实现
+- 目前未见主线 showcase 或测试对 `Panel` 的实际消费，完成定义里的“内容分区验证”证据还不够
+
 ---
 
-## Issue 061 — 实现 Card 容器控件
+## Issue 061 — 实现 Card 容器控件 ⚠️ 部分完成
 **Labels:** `area:widgets`, `kind:implementation`, `priority:p2`
+**Status:** ⚠️ 部分完成 — Card 已具备标题与内容容器能力，但结构化 slot 仍不完整
 
 ### 目标
 提供结构化内容展示容器。
@@ -1354,10 +1495,19 @@
 ### 完成定义
 - Card 可承载业务展示块
 
+### 当前进展
+- 已支持 title / accent / content / elevation，且已在 showcase 统计卡片中使用
+- 落地文件：`widgets/src/nan_card.cppm`
+
+### 未完成部分
+- `description` / `footer` / media/image slot 仍未形成组件级 API
+- 目前 `Card` 的真实消费集中在标题 + 内容 + accent 用例，尚未覆盖更完整的结构化展示块语义
+
 ---
 
-## Issue 062 — 编写 Label/Button/Panel 组件规格文档
+## Issue 062 — 编写 Label/Button/Panel 组件规格文档 ❌ 未完成
 **Labels:** `area:widgets`, `area:docs`, `kind:docs`, `priority:p1`
+**Status:** ❌ 未完成 — 目标文档尚未落位
 
 ### 目标
 让基础控件从一开始就有文档，不靠未来补票。
@@ -1378,6 +1528,10 @@
 
 ### 完成定义
 - showcase 与组件文档能互相对应
+
+### 当前判断
+- 仓库中不存在 `docs/components/label.md`、`docs/components/button.md`、`docs/components/panel.md`
+- 当前只有代码实现与 showcase 验证，尚未建立组件规格文档面
 
 ---
 
