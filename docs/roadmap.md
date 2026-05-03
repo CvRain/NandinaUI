@@ -26,19 +26,26 @@
 
 **目标**
 - 提供基础布局模型（Row/Column/Stack）
+- 稳定 constraints / preferred size / 自动布局的核心协议
 - 建立 token/theme schema 与应用机制
 
 **DoD**
 - 可在 runtime 中稳定执行基础布局与主题切换
+- 上层装配代码不再大量手工计算几何结果
 
 **依赖**
 - M1
+
+**说明**
+- 当前阶段采用“自有布局协议优先，Yoga 接入位预留”的策略。
+- Yoga 不作为当前 layout 核心，但应在后续复杂 flex 容器中作为可评估的求解后端进入主线。
 
 ## M3：first widgets
 
 **目标**
 - 落地第一批基础组件（如 Label/Button/Input 的最小集合）
 - 验证语义 API 与 theme 解耦
+- 让基础控件内部具备自动布局能力，而不是依赖页面层手工摆放
 
 **DoD**
 - 组件可在统一状态与主题体系下运行

@@ -24,6 +24,7 @@
 | 文档 | 说明 |
 |------|------|
 | [架构规划](architecture-plan.md) | 顶层分层、依赖方向、稳定边界 `[已定稿]` |
+| [布局策略](layout-strategy.md) | 当前布局阶段策略、自动布局目标与 Yoga 接入时机 `[草案]` |
 | [模块依赖规则](module-dependency-rules.md) | 模块间依赖方向约束，避免循环依赖 `[已定稿]` |
 | [响应式策略](reactive-strategy.md) | State/Effect/Prop 等响应式抽象设计说明 `[草案]` |
 | [Godot 式 Authoring 草案](godot-like-authoring-draft.md) | 组件化创作模式设计草案 `[草案]` |
