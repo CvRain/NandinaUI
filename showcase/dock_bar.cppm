@@ -8,9 +8,12 @@ module;
 export module nandina.showcase.dock_bar;
 
 import nandina.foundation.color;
-import nandina.layout.core;
+import nandina.layout.container;
+import nandina.layout.flex_widgets;
 import nandina.runtime.nan_widget;
+import nandina.widgets.icon;
 import nandina.widgets.label;
+import nandina.widgets.surface;
 
 namespace {
 static void draw_rect(tvg::SwCanvas& canvas,
@@ -52,22 +55,88 @@ static auto color4_to_nancolor(const uint8_t r, const uint8_t g, const uint8_t b
 
 export namespace nandina::showcase {
 
-class DockBar final : public runtime::NanWidget {
+class DockThumbnail final : public widgets::Surface {
+public:
+    using Ptr = std::unique_ptr<DockThumbnail>;
+
+    static auto create() -> Ptr {
+        return Ptr{new DockThumbnail()};
+    }
+
+    [[nodiscard]] auto preferred_size() const noexcept -> geometry::NanSize override {
+        return {120.0f, 44.0f};
+    }
+
+protected:
+    void on_draw(tvg::SwCanvas& canvas) override {
+        Surface::on_draw(canvas);
+
+        const auto rect = bounds();
+        draw_rect(canvas, rect.x() + 6.0f, rect.y() + 6.0f, rect.width() - 12.0f, 6.0f, 70, 72, 92, 200, 2);
+        draw_rect(canvas, rect.x() + 6.0f, rect.y() + 16.0f, rect.width() - 12.0f, 4.0f, 65, 67, 85, 180, 2);
+        draw_rect(canvas, rect.x() + 6.0f, rect.y() + 24.0f, rect.width() - 12.0f, rect.height() - 30.0f, 60, 62, 80, 150, 2);
+    }
+
+private:
+    DockThumbnail() {
+        set_bg_color(color4_to_nancolor(55, 57, 75, 200))
+            .set_corner_radius(4.0f);
+    }
+};
+
+class DockIconItem final : public widgets::Surface {
+public:
+    using Ptr = std::unique_ptr<DockIconItem>;
+
+    static auto create(const nandina::NanColor& bg_color,
+        const nandina::widgets::IconType icon_type,
+        const bool show_active_dot = false) -> Ptr {
+        return Ptr{new DockIconItem(bg_color, icon_type, show_active_dot)};
+    }
+
+    [[nodiscard]] auto preferred_size() const noexcept -> geometry::NanSize override {
+        return {32.0f, 32.0f};
+    }
+
+protected:
+    void on_draw(tvg::SwCanvas& canvas) override {
+        Surface::on_draw(canvas);
+
+        if (!m_show_active_dot) {
+            return;
+        }
+
+        const auto rect = bounds();
+        const auto rgb = bg_color().to<nandina::NanRgb>();
+        draw_circle(canvas, rect.center().x(), rect.y() + rect.height() + 4.0f, 2.0f, rgb.red(), rgb.green(), rgb.blue(), 220);
+    }
+
+private:
+    DockIconItem(const nandina::NanColor& bg_color,
+        const nandina::widgets::IconType icon_type,
+        const bool show_active_dot)
+        : m_show_active_dot(show_active_dot) {
+        set_bg_color(bg_color)
+            .set_corner_radius(7.0f);
+
+        auto center = nandina::layout::Center::Create();
+        auto icon = nandina::widgets::Icon::create();
+        icon->set_type(icon_type)
+            .set_size(16.0f)
+            .set_color(color4_to_nancolor(255, 255, 255, 200));
+        center->child(std::move(icon));
+        add_child(std::move(center));
+    }
+
+    bool m_show_active_dot{false};
+};
+
+class DockBar final : public widgets::Surface {
 public:
     using Ptr = std::unique_ptr<DockBar>;
 
     static auto create() -> Ptr {
         return Ptr{new DockBar()};
-    }
-
-    auto set_bounds(const float x, const float y, const float w, const float h) noexcept -> NanWidget& override {
-        NanWidget::set_bounds(x, y, w, h);
-
-        if (m_clock_label) {
-            m_clock_label->set_bounds(x + w - 60.0f, y + (h * 0.5f - 4.0f), 50.0f, 14.0f);
-        }
-
-        return *this;
     }
 
     [[nodiscard]] auto preferred_size() const noexcept -> geometry::NanSize override {
@@ -76,107 +145,44 @@ public:
 
 protected:
     void on_draw(tvg::SwCanvas& canvas) override {
+        Surface::on_draw(canvas);
         const auto rect = bounds();
-        draw_rect(canvas, rect.x(), rect.y(), rect.width(), rect.height(), 38, 40, 56, 255);
         draw_line(canvas, rect.x(), rect.y(), rect.x() + rect.width(), rect.y(), 55, 57, 75, 120);
-
-        using namespace nandina::layout;
-
-        BasicLayoutBackend backend;
-        LayoutRequest req;
-        req.axis             = LayoutAxis::row;
-        req.container_bounds = {rect.x() + 16.0f, rect.y(), rect.x() + rect.width() - 16.0f, rect.y() + rect.height()};
-        req.cross_alignment  = LayoutAlignment::center;
-        req.main_alignment   = LayoutAlignment::center;
-        req.gap              = 12.0f;
-
-        constexpr size_t dock_count = 7;
-        const float icon_size = 32.0f;
-        for (size_t i = 0; i < dock_count; ++i) {
-            LayoutChildSpec child;
-            child.preferred_size = {icon_size, icon_size};
-            child.flex_factor    = 0;
-            req.children.push_back(child);
-        }
-
-        const auto frames = backend.compute(req);
-        constexpr auto dock_colors = std::to_array<std::tuple<uint8_t, uint8_t, uint8_t>>({
-            {99, 102, 241},
-            {95, 200, 130},
-            {245, 158, 60},
-            {236, 110, 130},
-            {80, 200, 220},
-            {180, 140, 240},
-            {160, 162, 180},
-        });
-
-        for (size_t i = 0; i < frames.size() && i < dock_colors.size(); ++i) {
-            const auto frame = frames[i];
-            const auto& [cr, cg, cb] = dock_colors[i];
-
-            draw_rect(canvas, frame.x(), frame.y(), frame.width(), frame.height(), cr, cg, cb, 200, 7);
-
-            if (i == 0) {
-                draw_circle(canvas, frame.center().x(), frame.center().y() - 3.0f, 5.0f, 255, 255, 255, 200);
-                draw_circle(canvas, frame.center().x() - 4.0f, frame.center().y() - 5.0f, 1.5f, 255, 255, 255, 200);
-                draw_circle(canvas, frame.center().x() + 4.0f, frame.center().y() - 5.0f, 1.5f, 255, 255, 255, 200);
-            } else if (i == 2) {
-                auto* icon = tvg::Shape::gen();
-                const float cx = frame.center().x();
-                const float cy = frame.center().y();
-                const float s = 6.0f;
-                icon->moveTo(cx - s * 0.6f, cy - s);
-                icon->lineTo(cx + s * 0.6f, cy);
-                icon->lineTo(cx - s * 0.6f, cy + s);
-                icon->close();
-                icon->fill(255, 255, 255, 200);
-                canvas.add(icon);
-            } else if (i == 3) {
-                draw_rect(canvas, frame.center().x() - 7.0f, frame.center().y() - 5.0f, 14.0f, 10.0f, 255, 255, 255, 200, 2.0f);
-            } else if (i == 4) {
-                auto* check = tvg::Shape::gen();
-                check->moveTo(frame.center().x() - 6.0f, frame.center().y());
-                check->lineTo(frame.center().x() - 2.0f, frame.center().y() + 5.0f);
-                check->lineTo(frame.center().x() + 6.0f, frame.center().y() - 4.0f);
-                check->strokeWidth(2.5f);
-                check->strokeFill(255, 255, 255, 200);
-                canvas.add(check);
-            } else if (i == 5) {
-                auto* arrow = tvg::Shape::gen();
-                const float cx = frame.center().x();
-                const float cy = frame.center().y();
-                arrow->moveTo(cx, cy - 6.0f);
-                arrow->lineTo(cx, cy + 6.0f);
-                arrow->moveTo(cx - 5.0f, cy - 1.0f);
-                arrow->lineTo(cx, cy - 6.0f);
-                arrow->lineTo(cx + 5.0f, cy - 1.0f);
-                arrow->strokeWidth(2.5f);
-                arrow->strokeFill(255, 255, 255, 200);
-                canvas.add(arrow);
-            }
-
-            if (i < 3) {
-                draw_circle(canvas, frame.center().x(), frame.y() + frame.height() + 4.0f, 2.0f, cr, cg, cb, 220);
-            }
-        }
-
-        const float thumb_w = 120.0f;
-        const float thumb_h = rect.height() - 12.0f;
-        const float thumb_x = rect.x() + 12.0f;
-        const float thumb_y = rect.y() + 6.0f;
-        draw_rect(canvas, thumb_x, thumb_y, thumb_w, thumb_h, 55, 57, 75, 200, 4);
-        draw_rect(canvas, thumb_x + 6.0f, thumb_y + 6.0f, thumb_w - 12.0f, 6.0f, 70, 72, 92, 200, 2);
-        draw_rect(canvas, thumb_x + 6.0f, thumb_y + 16.0f, thumb_w - 12.0f, 4.0f, 65, 67, 85, 180, 2);
-        draw_rect(canvas, thumb_x + 6.0f, thumb_y + 24.0f, thumb_w - 12.0f, thumb_h - 30.0f, 60, 62, 80, 150, 2);
     }
 
 private:
     DockBar() {
+        set_bg_color(color4_to_nancolor(38, 40, 56, 255));
+
+        auto overlay_row = nandina::layout::Row::Create();
+        overlay_row->padding(12.0f, 6.0f, 12.0f, 6.0f)
+            .align_items(nandina::layout::LayoutAlignment::center);
+        overlay_row->add(DockThumbnail::create());
+        overlay_row->add(nandina::layout::Spacer::Create());
+
         auto clock = nandina::widgets::Label::create();
         clock->set_text("10:42")
             .set_font_size(9.0f)
             .set_color(color4_to_nancolor(160, 162, 180));
-        m_clock_label = static_cast<nandina::widgets::Label*>(add_child(std::move(clock)));
+        m_clock_label = static_cast<nandina::widgets::Label*>(clock.get());
+        overlay_row->add(std::move(clock));
+
+        auto icon_row = nandina::layout::Row::Create();
+        icon_row->padding(16.0f, 0.0f, 16.0f, 0.0f)
+            .align_items(nandina::layout::LayoutAlignment::center)
+            .justify_content(nandina::layout::LayoutAlignment::center)
+            .gap(12.0f);
+
+        icon_row->add(DockIconItem::create(color4_to_nancolor(99, 102, 241), nandina::widgets::IconType::Circle, true));
+        icon_row->add(DockIconItem::create(color4_to_nancolor(95, 200, 130), nandina::widgets::IconType::Dots, true));
+        icon_row->add(DockIconItem::create(color4_to_nancolor(245, 158, 60), nandina::widgets::IconType::Triangle, true));
+        icon_row->add(DockIconItem::create(color4_to_nancolor(236, 110, 130), nandina::widgets::IconType::Square));
+        icon_row->add(DockIconItem::create(color4_to_nancolor(80, 200, 220), nandina::widgets::IconType::Check));
+        icon_row->add(DockIconItem::create(color4_to_nancolor(180, 140, 240), nandina::widgets::IconType::ArrowUp));
+        icon_row->add(DockIconItem::create(color4_to_nancolor(160, 162, 180), nandina::widgets::IconType::Dot));
+
+        add_child(std::move(icon_row));
+        add_child(std::move(overlay_row));
     }
 
     nandina::widgets::Label* m_clock_label{nullptr};

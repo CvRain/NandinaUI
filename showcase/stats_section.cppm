@@ -8,7 +8,8 @@ module;
 export module nandina.showcase.stats_section;
 
 import nandina.foundation.color;
-import nandina.layout.core;
+import nandina.layout.container;
+import nandina.layout.flex_widgets;
 import nandina.log;
 import nandina.runtime.nan_widget;
 import nandina.widgets.card;
@@ -35,32 +36,8 @@ public:
     auto set_bounds(const float x, const float y, const float w, const float h) noexcept -> NanWidget& override {
         NanWidget::set_bounds(x, y, w, h);
 
-        using namespace nandina::layout;
-
-        BasicLayoutBackend backend;
-        LayoutRequest row;
-        row.axis             = LayoutAxis::row;
-        row.container_bounds = {x, y, x + w, y + h};
-        row.gap              = 16.0f;
-        row.cross_alignment  = LayoutAlignment::stretch;
-
-        const float card_width = (w - row.gap * 3.0f) / 4.0f;
-        for (size_t i = 0; i < 4; ++i) {
-            LayoutChildSpec child;
-            child.preferred_size = {card_width, h};
-            child.flex_factor    = 1;
-            row.children.push_back(child);
-        }
-
-        const auto frames = backend.compute(row);
-        for (size_t i = 0; i < frames.size() && i < m_cards.size(); ++i) {
-            const auto& frame = frames[i];
-            if (m_cards[i]) {
-                m_cards[i]->set_bounds(frame.x(), frame.y(), frame.width(), frame.height());
-            }
-            if (m_pressables[i]) {
-                m_pressables[i]->set_bounds(frame.x(), frame.y(), frame.width(), frame.height());
-            }
+        if (m_row) {
+            m_row->set_bounds(x, y, w, h);
         }
 
         return *this;
@@ -73,6 +50,13 @@ public:
 private:
     StatsSection() {
         using namespace nandina::widgets;
+        using namespace nandina::layout;
+
+        auto row = Row::Create();
+        row->gap(16.0f)
+            .align_items(LayoutAlignment::stretch);
+        m_row = row.get();
+        add_child(std::move(row));
 
         const auto card_title_texts = std::to_array<std::string_view>({"Total Users", "Active Now", "Revenue", "Tasks"});
         const auto card_value_texts = std::to_array<std::string_view>({"2,847", "143", "$12.4k", "18/24"});
@@ -100,8 +84,6 @@ private:
                 .set_color(color4_to_nancolor(220, 220, 240));
             card->add_child(std::move(value));
 
-            m_cards[i] = add_child(std::move(card));
-
             auto pressable = Pressable::create();
             pressable->on_click([this, i]() {
                 m_log.info("Card {} clicked", i);
@@ -109,12 +91,23 @@ private:
             pressable->on_hover([this, i]() {
                 m_log.debug("Card {} hovered", i);
             });
-            m_pressables[i] = add_child(std::move(pressable));
+
+            auto stack = Stack::Create();
+            stack->align_items(LayoutAlignment::stretch)
+                .justify_content(LayoutAlignment::stretch)
+                .add(std::move(card))
+                .add(std::move(pressable));
+
+            auto expanded = Expanded::Create();
+            expanded->child(std::move(stack));
+
+            if (m_row) {
+                m_row->add(std::move(expanded));
+            }
         }
     }
 
-    std::array<runtime::NanWidget*, 4> m_cards{};
-    std::array<runtime::NanWidget*, 4> m_pressables{};
+    nandina::layout::Row* m_row{nullptr};
     decltype(nandina::log::get("")) m_log{nandina::log::get("showcase.stats")};
 };
 

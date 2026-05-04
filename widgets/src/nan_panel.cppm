@@ -16,6 +16,7 @@ import nandina.foundation.nan_insets;
 import nandina.foundation.nan_size;
 import nandina.foundation.color;
 import nandina.reactive.prop;
+import nandina.widgets.surface;
 
 /**
  * nandina.widgets.panel
@@ -48,7 +49,7 @@ export namespace nandina::widgets {
      *       .set_padding(geometry::NanInsets{12.0f});
      *   panel->add_child(std::move(content));
      */
-    class Panel : public runtime::NanWidget {
+    class Panel : public Surface {
     public:
         using Ptr = std::unique_ptr<Panel>;
 
@@ -93,81 +94,56 @@ export namespace nandina::widgets {
 
         // ── 背景色 ────────────────────────────────────────
         auto set_bg_color(const nandina::NanColor& color) -> Panel& {
-            m_bg_color.set(color);
-            mark_dirty();
+            Surface::set_bg_color(color);
             return *this;
         }
 
         [[nodiscard]] auto bg_color() const noexcept -> const nandina::NanColor& {
-            return m_bg_color.get();
+            return Surface::bg_color();
         }
 
         // ── 圆角 ──────────────────────────────────────────
         auto set_corner_radius(float radius) -> Panel& {
-            m_corner_radius.set(radius);
-            mark_dirty();
+            Surface::set_corner_radius(radius);
             return *this;
         }
 
         [[nodiscard]] auto corner_radius() const noexcept -> float {
-            return m_corner_radius.get();
+            return Surface::corner_radius();
         }
 
         // ── 内边距 ────────────────────────────────────────
         auto set_padding(const geometry::NanInsets& insets) -> Panel& {
-            m_padding.set(insets);
-            mark_dirty();
+            Surface::set_padding(insets);
             return *this;
         }
 
         [[nodiscard]] auto padding() const noexcept -> const geometry::NanInsets& {
-            return m_padding.get();
+            return Surface::padding();
         }
 
         // ── 描边 ──────────────────────────────────────────
         auto set_border_color(const nandina::NanColor& color) -> Panel& {
-            m_border_color = color;
-            mark_dirty();
+            Surface::set_border_color(color);
             return *this;
         }
 
         auto set_border_width(float width) -> Panel& {
-            m_border_width = width;
-            mark_dirty();
+            Surface::set_border_width(width);
             return *this;
         }
 
         // ── 布局 ──────────────────────────────────────────
         auto set_bounds(float x, float y, float w, float h) noexcept -> NanWidget& override {
-            NanWidget::set_bounds(x, y, w, h);
-
-            // 定位子节点至标题栏下方 + padding 区域内
-            const auto& pad = m_padding.get();
-            const float header_h = m_header_height.get();
-            const float child_x = x + pad.left();
-            const float child_y = y + header_h + pad.top();
-            const float child_w = w - pad.left() - pad.right();
-            const float child_h = h - header_h - pad.top() - pad.bottom();
-
-            for_each_child([&](runtime::NanWidget& child) {
-                child.set_bounds(child_x, child_y, child_w, child_h);
-            });
+            runtime::NanWidget::set_bounds(x, y, w, h);
+            layout_content_children(m_header_height.get());
 
             return *this;
         }
 
         [[nodiscard]] auto preferred_size() const noexcept -> geometry::NanSize override {
-            geometry::NanSize child_pref{0.0f, 0.0f};
-
-            for_each_child([&](const runtime::NanWidget& child) {
-                const auto cp = child.preferred_size();
-                child_pref = geometry::NanSize{
-                    std::max(child_pref.width(), cp.width()),
-                    std::max(child_pref.height(), cp.height())
-                };
-            });
-
-            const auto& pad = m_padding.get();
+            const auto child_pref = measure_content_preferred_size();
+            const auto& pad = padding();
             const float header_h = m_header_height.get();
             return geometry::NanSize{
                 child_pref.width() + pad.left() + pad.right(),
@@ -178,18 +154,11 @@ export namespace nandina::widgets {
     protected:
         void on_draw(tvg::SwCanvas& canvas) override {
             const auto rect = bounds();
-            const float radius = m_corner_radius.get();
+            const float radius = corner_radius();
             const float header_h = m_header_height.get();
 
             // ── 1. 背景填充 ──────────────────────────────
-            {
-                const auto& bg = m_bg_color.get();
-                const auto bg_rgb = bg.to<nandina::NanRgb>();
-                auto* shape = tvg::Shape::gen();
-                shape->appendRect(rect.x(), rect.y(), rect.width(), rect.height(), radius, radius);
-                shape->fill(bg_rgb.red(), bg_rgb.green(), bg_rgb.blue(), bg_rgb.alpha());
-                canvas.add(shape);
-            }
+            draw_background(canvas);
 
             // ── 2. 标题栏背景 ────────────────────────────
             {
@@ -249,30 +218,19 @@ export namespace nandina::widgets {
             }
 
             // ── 4. 描边（如果有） ──────────────────────────
-            if (m_border_width > 0.0f) {
-                const auto bc_rgb = m_border_color.to<nandina::NanRgb>();
-                auto* border = tvg::Shape::gen();
-                border->appendRect(rect.x(), rect.y(), rect.width(), rect.height(), radius, radius);
-                border->strokeWidth(m_border_width);
-                border->strokeFill(bc_rgb.red(), bc_rgb.green(), bc_rgb.blue(), bc_rgb.alpha());
-                canvas.add(border);
-            }
         }
 
     private:
-        Panel() = default;
+        Panel() {
+            set_bg_color(nandina::NanColor::from(nandina::NanRgb{30, 30, 46}));
+            set_corner_radius(8.0f);
+        }
 
         reactive::Prop<std::string> m_title{""};
-        reactive::Prop<nandina::NanColor> m_bg_color{nandina::NanColor::from(nandina::NanRgb{30, 30, 46})};
         reactive::Prop<nandina::NanColor> m_header_color{nandina::NanColor::from(nandina::NanRgb{38, 40, 56})};
         reactive::Prop<nandina::NanColor> m_title_color{nandina::NanColor::from(nandina::NanRgb{220, 220, 240})};
-        reactive::Prop<float> m_corner_radius{8.0f};
         reactive::Prop<float> m_header_height{28.0f};
         reactive::Prop<float> m_title_font_size{13.0f};
-        reactive::Prop<geometry::NanInsets> m_padding{geometry::NanInsets{}};
-
-        nandina::NanColor m_border_color{nandina::NanColor::from(nandina::NanRgb{0, 0, 0})};
-        float m_border_width{0.0f};
     };
 
 } // namespace nandina::widgets

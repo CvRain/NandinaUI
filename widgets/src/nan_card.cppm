@@ -144,8 +144,7 @@ export namespace nandina::widgets {
 
         // ── 布局 ──────────────────────────────────────────
         auto set_bounds(float x, float y, float w, float h) noexcept -> NanWidget& override {
-            // 先调用 Surface 的 set_bounds 进行基本定位和 padding 收缩
-            Surface::set_bounds(x, y, w, h);
+            runtime::NanWidget::set_bounds(x, y, w, h);
 
             // 确保标题 Label 存在
             if (!m_title.empty() && !m_title_label) {
@@ -164,33 +163,16 @@ export namespace nandina::widgets {
             }
 
             // 子节点定位在标题区域下方 + padding 内
-            const auto& pad = m_padding.get();
             const float header_offset = title_header_height();
-            const float child_x = x + pad.left();
-            const float child_y = y + header_offset + pad.top();
-            const float child_w = w - pad.left() - pad.right();
-            const float child_h = h - header_offset - pad.top() - pad.bottom();
-
-            for_each_child([&](runtime::NanWidget& child) {
-                if (&child == m_title_label) return;
-                child.set_bounds(child_x, child_y, child_w, child_h);
-            });
+            layout_content_children(header_offset, m_title_label);
 
             return *this;
         }
 
         [[nodiscard]] auto preferred_size() const noexcept -> geometry::NanSize override {
-            geometry::NanSize child_pref{0.0f, 0.0f};
+            const auto child_pref = measure_content_preferred_size(m_title_label);
 
-            for_each_child([&](const runtime::NanWidget& child) {
-                const auto cp = child.preferred_size();
-                child_pref = geometry::NanSize{
-                    std::max(child_pref.width(), cp.width()),
-                    std::max(child_pref.height(), cp.height())
-                };
-            });
-
-            const auto& pad = m_padding.get();
+            const auto& pad = padding();
             const float header_h = title_header_height();
             const float min_h = header_h + pad.top() + pad.bottom();
 

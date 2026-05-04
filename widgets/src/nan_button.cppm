@@ -16,6 +16,7 @@ export module nandina.widgets.button;
 import nandina.widgets.surface;
 import nandina.widgets.pressable;
 import nandina.widgets.label;
+import nandina.layout.flex_widgets;
 import nandina.foundation.nan_insets;
 import nandina.foundation.color;
 import nandina.reactive.event_signal;
@@ -100,6 +101,7 @@ export namespace nandina::widgets {
 
         ButtonColors m_colors;
         Pressable* m_pressable{nullptr};
+        layout::Center* m_center{nullptr};
         Label* m_label{nullptr};
     };
 } // namespace nandina::widgets

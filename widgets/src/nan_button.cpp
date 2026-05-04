@@ -16,6 +16,7 @@ module nandina.widgets.button;
 
 import nandina.widgets.pressable;
 import nandina.widgets.label;
+import nandina.layout.flex_widgets;
 
 namespace nandina::widgets {
 
@@ -36,10 +37,14 @@ namespace nandina::widgets {
         m_pressable = pressable.get();
         add_child(std::move(pressable));
 
-        // 创建 Label（文本显示）作为 pressable 的子节点
+        auto center = layout::Center::Create();
+        m_center = center.get();
+        m_pressable->add_child(std::move(center));
+
+        // 创建 Label（文本显示）作为居中布局节点的子节点
         auto label = Label::create();
         m_label = label.get();
-        m_pressable->add_child(std::move(label));
+        m_center->add_child(std::move(label));
     }
 
     // ── 文本 ────────────────────────────────────────────────

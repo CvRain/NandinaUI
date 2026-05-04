@@ -65,7 +65,7 @@ export namespace nandina::layout {
         auto set_bounds(const float x, const float y, const float w, const float h) noexcept -> runtime::NanWidget& override {
             NanWidget::set_bounds(x, y, w, h);
             for_each_child([&](runtime::NanWidget& c) {
-                c.set_bounds(0.0f, 0.0f, w, h);
+                c.set_bounds(x, y, w, h);
             });
             return *this;
         }
@@ -123,7 +123,7 @@ export namespace nandina::layout {
             const float actual_h = fixed_h_ > 0.0f ? fixed_h_ : h;
             NanWidget::set_bounds(x, y, actual_w, actual_h);
             for_each_child([&](runtime::NanWidget& c) {
-                c.set_bounds(0.0f, 0.0f, actual_w, actual_h);
+                c.set_bounds(x, y, actual_w, actual_h);
             });
             return *this;
         }

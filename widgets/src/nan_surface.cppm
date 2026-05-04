@@ -100,18 +100,7 @@ export namespace nandina::widgets {
         // ── 布局覆盖 ────────────────────────────────────────
         auto set_bounds(float x, float y, float w, float h) noexcept -> NanWidget& override {
             NanWidget::set_bounds(x, y, w, h);
-
-            // 根据 padding 收缩子节点空间
-            const auto& pad = m_padding.get();
-            const float child_x = x + pad.left();
-            const float child_y = y + pad.top();
-            const float child_w = (w - pad.left() - pad.right());
-            const float child_h = (h - pad.top() - pad.bottom());
-
-            // 更新子节点 bounds（如果有）
-            for_each_child([&](runtime::NanWidget& child) {
-                child.set_bounds(child_x, child_y, child_w, child_h);
-            });
+            layout_content_children();
 
             return *this;
         }
@@ -120,6 +109,53 @@ export namespace nandina::widgets {
     protected:
         void on_draw(tvg::SwCanvas& canvas) override {
             draw_background(canvas);
+        }
+
+        [[nodiscard]] auto content_bounds(const float top_offset = 0.0f) const noexcept -> geometry::NanRect {
+            const auto rect = bounds();
+            const auto& pad = m_padding.get();
+            return geometry::NanRect{
+                geometry::NanPoint{
+                    rect.x() + pad.left(),
+                    rect.y() + pad.top() + top_offset,
+                },
+                geometry::NanSize{
+                    std::max(0.0f, rect.width() - pad.left() - pad.right()),
+                    std::max(0.0f, rect.height() - pad.top() - pad.bottom() - top_offset),
+                }
+            };
+        }
+
+        auto layout_content_children(const float top_offset = 0.0f, runtime::NanWidget* skip = nullptr) -> void {
+            const auto content = content_bounds(top_offset);
+            for_each_child([&](runtime::NanWidget& child) {
+                if (&child == skip) {
+                    return;
+                }
+                child.set_bounds(
+                    content.x(),
+                    content.y(),
+                    content.width(),
+                    content.height());
+            });
+        }
+
+        [[nodiscard]] auto measure_content_preferred_size(const runtime::NanWidget* skip = nullptr) const noexcept -> geometry::NanSize {
+            geometry::NanSize child_pref{0.0f, 0.0f};
+
+            for_each_child([&](const runtime::NanWidget& child) {
+                if (&child == skip) {
+                    return;
+                }
+
+                const auto cp = child.preferred_size();
+                child_pref = geometry::NanSize{
+                    std::max(child_pref.width(), cp.width()),
+                    std::max(child_pref.height(), cp.height())
+                };
+            });
+
+            return child_pref;
         }
 
         /** 绘制背景与描边 — 子类可扩展 */
@@ -151,16 +187,7 @@ export namespace nandina::widgets {
 
         // ── 首选尺寸（考虑 padding + 子节点） ──────────────
         [[nodiscard]] auto preferred_size() const noexcept -> geometry::NanSize override {
-            geometry::NanSize child_pref{0.0f, 0.0f};
-
-            for_each_child([&](const runtime::NanWidget& child) {
-                const auto cp = child.preferred_size();
-                child_pref = geometry::NanSize{
-                    std::max(child_pref.width(), cp.width()),
-                    std::max(child_pref.height(), cp.height())
-                };
-            });
-
+            const auto child_pref = measure_content_preferred_size();
             const auto& pad = m_padding.get();
             return geometry::NanSize{
                 child_pref.width() + pad.left() + pad.right(),

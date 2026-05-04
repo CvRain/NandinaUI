@@ -21,9 +21,18 @@ include(GoogleTest)
 #   )
 # ---------------------------------------------------------------------------
 function(nandina_add_test)
-    cmake_parse_arguments(ARG "" "NAME" "SOURCES;DEPS" ${ARGN})
+    cmake_parse_arguments(ARG "" "NAME" "SOURCES;DEPS;MODULES" ${ARGN})
 
     add_executable(${ARG_NAME} ${ARG_SOURCES})
+
+    if (ARG_MODULES)
+        target_sources(${ARG_NAME}
+            PRIVATE
+            FILE_SET CXX_MODULES
+            BASE_DIRS ${CMAKE_SOURCE_DIR}
+            FILES ${ARG_MODULES}
+        )
+    endif ()
 
     target_link_libraries(${ARG_NAME}
         PRIVATE
@@ -48,4 +57,5 @@ add_subdirectory(runtime)       # Issue 076    — Application / Window / Widget
 add_subdirectory(layout)        # Issue 036    — Row / Column / Stack / Flex
 add_subdirectory(theme)        # Issue 037–042 — token / ThemeManager
 add_subdirectory(text)         # Issue 046–048 — NanFont / shaping / paint
+add_subdirectory(showcase)     # showcase 布局组合最小验证用例
 # add_subdirectory(widgets)      # Issue 078    — Label / Button / Panel

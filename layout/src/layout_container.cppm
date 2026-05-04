@@ -158,7 +158,7 @@ export namespace nandina::layout {
         [[nodiscard]] auto build_layout_request(const LayoutAxis axis) const -> LayoutRequest {
             LayoutRequest request;
             request.axis              = axis;
-            request.container_bounds  = {x(), y(), width(), height()};
+            request.container_bounds  = {x(), y(), x() + width(), y() + height()};
             request.padding           = {padding_left_, padding_top_, padding_right_, padding_bottom_};
             request.gap               = gap_;
             request.cross_alignment   = align_items_;

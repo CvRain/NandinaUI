@@ -122,6 +122,14 @@ export namespace nandina::widgets {
             return m_clicked_signal;
         }
 
+        auto set_bounds(const float x, const float y, const float w, const float h) noexcept -> NanWidget& override {
+            NanWidget::set_bounds(x, y, w, h);
+            for_each_child([&](runtime::NanWidget& child) {
+                child.set_bounds(x, y, w, h);
+            });
+            return *this;
+        }
+
     protected:
         // ── 事件处理 ──────────────────────────────────
         auto on_pointer_move(const nandina::runtime::PointerMoveEvent& /*event*/) -> bool override {
