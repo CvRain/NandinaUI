@@ -23,6 +23,118 @@ static auto color4_to_nancolor(const uint8_t r, const uint8_t g, const uint8_t b
 
 export namespace nandina::showcase {
 
+class ProjectProgressRow final : public nandina::runtime::NanWidget {
+public:
+    using Ptr = std::unique_ptr<ProjectProgressRow>;
+
+    static auto create(std::string_view label_text, std::string_view pct_text, float progress,
+        nandina::NanColor label_color, nandina::NanColor pct_color, nandina::NanColor bar_color,
+        nandina::NanColor track_color) -> Ptr {
+        return Ptr{new ProjectProgressRow(label_text, pct_text, progress, label_color, pct_color, bar_color, track_color)};
+    }
+
+    auto set_bounds(const float x, const float y, const float w, const float h) noexcept -> NanWidget& override {
+        NanWidget::set_bounds(x, y, w, h);
+
+        const float bar_x = x + w * 0.5f;
+        const float bar_w = w * 0.42f;
+
+        if (m_label) {
+            m_label->set_bounds(x + 16.0f, y, 100.0f, h);
+        }
+        if (m_bar) {
+            m_bar->set_bounds(bar_x, y + 1.0f, bar_w, 6.0f);
+        }
+        if (m_pct) {
+            m_pct->set_bounds(bar_x + bar_w + 8.0f, y, 36.0f, h);
+        }
+
+        return *this;
+    }
+
+    [[nodiscard]] auto preferred_size() const noexcept -> geometry::NanSize override {
+        return {0.0f, 10.0f};
+    }
+
+private:
+    ProjectProgressRow(std::string_view label_text, std::string_view pct_text, float progress,
+        nandina::NanColor label_color, nandina::NanColor pct_color, nandina::NanColor bar_color,
+        nandina::NanColor track_color) {
+        using namespace nandina::widgets;
+
+        auto label = Label::create();
+        label->set_text(label_text)
+            .set_font_size(7.0f)
+            .set_color(label_color);
+        m_label = add_child(std::move(label));
+
+        auto bar = ProgressBar::create();
+        bar->set_progress(progress)
+            .set_bar_color(bar_color)
+            .set_track_color(track_color)
+            .set_bar_height(6.0f)
+            .set_corner_radius(3.0f);
+        m_bar = add_child(std::move(bar));
+
+        auto pct = Label::create();
+        pct->set_text(pct_text)
+            .set_font_size(7.0f)
+            .set_color(pct_color);
+        m_pct = add_child(std::move(pct));
+    }
+
+    runtime::NanWidget* m_label{nullptr};
+    runtime::NanWidget* m_bar{nullptr};
+    runtime::NanWidget* m_pct{nullptr};
+};
+
+class ProjectProgressRows final : public nandina::runtime::NanWidget {
+public:
+    using Ptr = std::unique_ptr<ProjectProgressRows>;
+
+    static auto create() -> Ptr {
+        return Ptr{new ProjectProgressRows()};
+    }
+
+    auto set_bounds(const float x, const float y, const float w, const float h) noexcept -> NanWidget& override {
+        NanWidget::set_bounds(x, y, w, h);
+
+        for (size_t i = 0; i < m_rows.size(); ++i) {
+            if (m_rows[i]) {
+                m_rows[i]->set_bounds(x, y + static_cast<float>(i) * 18.0f, w, 10.0f);
+            }
+        }
+
+        return *this;
+    }
+
+private:
+    ProjectProgressRows() {
+        const auto progress_data = std::to_array<std::tuple<std::string_view, float, uint8_t, uint8_t, uint8_t>>({
+            {"Layout Engine", 0.85f, 99, 102, 241},
+            {"Testing", 0.65f, 95, 200, 130},
+            {"Documentation", 0.40f, 245, 158, 60},
+            {"Performance", 0.30f, 236, 110, 130},
+        });
+
+        for (size_t i = 0; i < m_rows.size(); ++i) {
+            const auto& [label_text, progress, r, g, b] = progress_data[i];
+            char pct_buf[8];
+            const int len = std::snprintf(pct_buf, sizeof(pct_buf), "%d%%", static_cast<int>(progress * 100.0f));
+            m_rows[i] = add_child(ProjectProgressRow::create(
+                label_text,
+                std::string_view{pct_buf, static_cast<size_t>(len)},
+                progress,
+                color4_to_nancolor(160, 162, 180),
+                color4_to_nancolor(110, 112, 130),
+                color4_to_nancolor(r, g, b),
+                color4_to_nancolor(42, 44, 62)));
+        }
+    }
+
+    std::array<nandina::runtime::NanWidget*, 4> m_rows{};
+};
+
 class ProjectProgressCard final : public runtime::NanWidget {
 public:
     using Ptr = std::unique_ptr<ProjectProgressCard>;
@@ -41,21 +153,8 @@ public:
             m_title->set_bounds(x + 14.0f, y + 8.0f, 160.0f, 16.0f);
         }
 
-        const float label_x = x + 16.0f;
-        const float bar_x = x + w * 0.5f;
-        const float bar_w = w * 0.42f;
-
-        for (size_t i = 0; i < m_rows.size(); ++i) {
-            const float row_y = y + 34.0f + static_cast<float>(i) * 18.0f;
-            if (m_rows[i].label) {
-                m_rows[i].label->set_bounds(label_x, row_y, 100.0f, 10.0f);
-            }
-            if (m_rows[i].bar) {
-                m_rows[i].bar->set_bounds(bar_x, row_y + 1.0f, bar_w, 6.0f);
-            }
-            if (m_rows[i].pct) {
-                m_rows[i].pct->set_bounds(bar_x + bar_w + 8.0f, row_y, 36.0f, 10.0f);
-            }
+        if (m_rows) {
+            m_rows->set_bounds(x, y + 34.0f, w, h - 34.0f);
         }
 
         return *this;
@@ -66,12 +165,6 @@ public:
     }
 
 private:
-    struct ProgressRow {
-        runtime::NanWidget* label{nullptr};
-        runtime::NanWidget* bar{nullptr};
-        runtime::NanWidget* pct{nullptr};
-    };
-
     ProjectProgressCard() {
         using namespace nandina::widgets;
 
@@ -86,43 +179,12 @@ private:
             .set_color(color4_to_nancolor(220, 220, 240));
         m_title = add_child(std::move(title));
 
-        const auto progress_data = std::to_array<std::tuple<std::string_view, float, uint8_t, uint8_t, uint8_t>>({
-            {"Layout Engine", 0.85f, 99, 102, 241},
-            {"Testing", 0.65f, 95, 200, 130},
-            {"Documentation", 0.40f, 245, 158, 60},
-            {"Performance", 0.30f, 236, 110, 130},
-        });
-
-        for (size_t i = 0; i < m_rows.size(); ++i) {
-            const auto& [label_text, progress, r, g, b] = progress_data[i];
-
-            auto label = Label::create();
-            label->set_text(label_text)
-                .set_font_size(7.0f)
-                .set_color(color4_to_nancolor(160, 162, 180));
-            m_rows[i].label = add_child(std::move(label));
-
-            auto bar = ProgressBar::create();
-            bar->set_progress(progress)
-                .set_bar_color(color4_to_nancolor(r, g, b))
-                .set_track_color(color4_to_nancolor(42, 44, 62))
-                .set_bar_height(6.0f)
-                .set_corner_radius(3.0f);
-            m_rows[i].bar = add_child(std::move(bar));
-
-            char pct_buf[8];
-            const int len = std::snprintf(pct_buf, sizeof(pct_buf), "%d%%", static_cast<int>(progress * 100.0f));
-            auto pct = Label::create();
-            pct->set_text(std::string_view{pct_buf, static_cast<size_t>(len)})
-                .set_font_size(7.0f)
-                .set_color(color4_to_nancolor(110, 112, 130));
-            m_rows[i].pct = add_child(std::move(pct));
-        }
+        m_rows = add_child(ProjectProgressRows::create());
     }
 
     runtime::NanWidget* m_container{nullptr};
     runtime::NanWidget* m_title{nullptr};
-    std::array<ProgressRow, 4> m_rows{};
+    runtime::NanWidget* m_rows{nullptr};
 };
 
 } // namespace nandina::showcase

@@ -1,10 +1,14 @@
 #include <gtest/gtest.h>
 
 import nandina.runtime.nan_widget;
+import nandina.showcase.project_progress_card;
+import nandina.showcase.stack_demo_card;
 import nandina.showcase.chart_card;
 import nandina.showcase.header_bar;
 import nandina.showcase.dock_bar;
+import nandina.showcase.middle_content_section;
 import nandina.showcase.recent_activity_card;
+import nandina.showcase.bottom_content_section;
 import nandina.showcase.stats_section;
 
 namespace {
@@ -101,7 +105,7 @@ TEST(ShowcaseLayoutTest, ChartCard_KeepsTitleAndDayLabelsInExpectedSlots) {
     auto chart = nandina::showcase::ChartCard::create();
     chart->set_bounds(260.0f, 180.0f, 342.0f, 200.0f);
 
-    ASSERT_EQ(chart->child_count(), 8u);
+    ASSERT_EQ(chart->child_count(), 2u);
 
     const auto title_bounds = child_at(*chart, 0).bounds();
     EXPECT_FLOAT_EQ(title_bounds.x(), 276.0f);
@@ -109,8 +113,11 @@ TEST(ShowcaseLayoutTest, ChartCard_KeepsTitleAndDayLabelsInExpectedSlots) {
     EXPECT_FLOAT_EQ(title_bounds.width(), 160.0f);
     EXPECT_FLOAT_EQ(title_bounds.height(), 18.0f);
 
-    const auto first_day_bounds = child_at(*chart, 1).bounds();
-    const auto last_day_bounds = child_at(*chart, 7).bounds();
+    auto& day_strip = child_at(*chart, 1);
+    ASSERT_EQ(day_strip.child_count(), 7u);
+
+    const auto first_day_bounds = child_at(day_strip, 0).bounds();
+    const auto last_day_bounds = child_at(day_strip, 6).bounds();
 
     EXPECT_FLOAT_EQ(first_day_bounds.x(), 270.0f);
     EXPECT_FLOAT_EQ(first_day_bounds.y(), 364.0f);
@@ -127,7 +134,7 @@ TEST(ShowcaseLayoutTest, RecentActivityCard_KeepsTitleAndRowsAligned) {
     auto activity = nandina::showcase::RecentActivityCard::create();
     activity->set_bounds(618.0f, 180.0f, 342.0f, 200.0f);
 
-    ASSERT_EQ(activity->child_count(), 11u);
+    ASSERT_EQ(activity->child_count(), 2u);
 
     const auto title_bounds = child_at(*activity, 0).bounds();
     EXPECT_FLOAT_EQ(title_bounds.x(), 634.0f);
@@ -135,10 +142,18 @@ TEST(ShowcaseLayoutTest, RecentActivityCard_KeepsTitleAndRowsAligned) {
     EXPECT_FLOAT_EQ(title_bounds.width(), 160.0f);
     EXPECT_FLOAT_EQ(title_bounds.height(), 18.0f);
 
-    const auto first_text_bounds = child_at(*activity, 1).bounds();
-    const auto first_time_bounds = child_at(*activity, 2).bounds();
-    const auto last_text_bounds = child_at(*activity, 9).bounds();
-    const auto last_time_bounds = child_at(*activity, 10).bounds();
+    auto& list = child_at(*activity, 1);
+    ASSERT_EQ(list.child_count(), 5u);
+
+    auto& first_row = child_at(list, 0);
+    auto& last_row = child_at(list, 4);
+    ASSERT_EQ(first_row.child_count(), 2u);
+    ASSERT_EQ(last_row.child_count(), 2u);
+
+    const auto first_text_bounds = child_at(first_row, 0).bounds();
+    const auto first_time_bounds = child_at(first_row, 1).bounds();
+    const auto last_text_bounds = child_at(last_row, 0).bounds();
+    const auto last_time_bounds = child_at(last_row, 1).bounds();
 
     EXPECT_FLOAT_EQ(first_text_bounds.x(), 654.0f);
     EXPECT_FLOAT_EQ(first_text_bounds.y(), 218.0f);
@@ -159,4 +174,104 @@ TEST(ShowcaseLayoutTest, RecentActivityCard_KeepsTitleAndRowsAligned) {
     EXPECT_FLOAT_EQ(last_time_bounds.y(), 352.0f);
     EXPECT_FLOAT_EQ(last_time_bounds.width(), 120.0f);
     EXPECT_FLOAT_EQ(last_time_bounds.height(), 12.0f);
+}
+
+TEST(ShowcaseLayoutTest, StackDemoCard_UsesInternalLayerNode) {
+    auto stack_demo = nandina::showcase::StackDemoCard::create();
+    stack_demo->set_bounds(260.0f, 400.0f, 342.0f, 110.0f);
+
+    ASSERT_EQ(stack_demo->child_count(), 4u);
+
+    const auto title_bounds = child_at(*stack_demo, 1).bounds();
+    const auto layers_bounds = child_at(*stack_demo, 2).bounds();
+    const auto footer_bounds = child_at(*stack_demo, 3).bounds();
+
+    EXPECT_FLOAT_EQ(title_bounds.x(), 274.0f);
+    EXPECT_FLOAT_EQ(title_bounds.y(), 414.0f);
+    EXPECT_FLOAT_EQ(layers_bounds.x(), 280.0f);
+    EXPECT_FLOAT_EQ(layers_bounds.y(), 430.0f);
+    EXPECT_FLOAT_EQ(layers_bounds.width(), 302.0f);
+    EXPECT_FLOAT_EQ(layers_bounds.height(), 64.0f);
+    EXPECT_FLOAT_EQ(footer_bounds.x(), 274.0f);
+    EXPECT_FLOAT_EQ(footer_bounds.y(), 496.0f);
+}
+
+TEST(ShowcaseLayoutTest, ProjectProgressCard_UsesInternalRowsNode) {
+    auto progress = nandina::showcase::ProjectProgressCard::create();
+    progress->set_bounds(618.0f, 400.0f, 342.0f, 110.0f);
+
+    ASSERT_EQ(progress->child_count(), 3u);
+
+    const auto title_bounds = child_at(*progress, 1).bounds();
+    auto& rows = child_at(*progress, 2);
+    ASSERT_EQ(rows.child_count(), 4u);
+
+    EXPECT_FLOAT_EQ(title_bounds.x(), 632.0f);
+    EXPECT_FLOAT_EQ(title_bounds.y(), 408.0f);
+
+    auto& first_row = child_at(rows, 0);
+    auto& last_row = child_at(rows, 3);
+    ASSERT_EQ(first_row.child_count(), 3u);
+    ASSERT_EQ(last_row.child_count(), 3u);
+
+    const auto first_label_bounds = child_at(first_row, 0).bounds();
+    const auto first_bar_bounds = child_at(first_row, 1).bounds();
+    const auto first_pct_bounds = child_at(first_row, 2).bounds();
+    const auto last_label_bounds = child_at(last_row, 0).bounds();
+
+    EXPECT_FLOAT_EQ(first_label_bounds.x(), 634.0f);
+    EXPECT_FLOAT_EQ(first_label_bounds.y(), 434.0f);
+    EXPECT_FLOAT_EQ(first_bar_bounds.x(), 789.0f);
+    EXPECT_FLOAT_EQ(first_bar_bounds.y(), 435.0f);
+    EXPECT_NEAR(first_bar_bounds.width(), 143.64f, 1e-3f);
+    EXPECT_FLOAT_EQ(first_pct_bounds.y(), 434.0f);
+    EXPECT_FLOAT_EQ(last_label_bounds.y(), 488.0f);
+}
+
+TEST(ShowcaseLayoutTest, MiddleContentSection_UsesSplitRowContract) {
+    auto middle = nandina::showcase::MiddleContentSection::create();
+
+    const auto preferred = middle->preferred_size();
+    EXPECT_FLOAT_EQ(preferred.height(), 200.0f);
+
+    middle->set_bounds(260.0f, 180.0f, 700.0f, 200.0f);
+
+    ASSERT_EQ(middle->child_count(), 2u);
+
+    const auto leading_bounds = child_at(*middle, 0).bounds();
+    const auto trailing_bounds = child_at(*middle, 1).bounds();
+
+    EXPECT_FLOAT_EQ(leading_bounds.x(), 260.0f);
+    EXPECT_FLOAT_EQ(leading_bounds.y(), 180.0f);
+    EXPECT_NEAR(leading_bounds.width(), 410.4f, 1e-4f);
+    EXPECT_FLOAT_EQ(leading_bounds.height(), 200.0f);
+
+    EXPECT_NEAR(trailing_bounds.x(), 686.4f, 1e-4f);
+    EXPECT_FLOAT_EQ(trailing_bounds.y(), 180.0f);
+    EXPECT_NEAR(trailing_bounds.width(), 273.6f, 1e-4f);
+    EXPECT_FLOAT_EQ(trailing_bounds.height(), 200.0f);
+}
+
+TEST(ShowcaseLayoutTest, BottomContentSection_UsesSplitRowContract) {
+    auto bottom = nandina::showcase::BottomContentSection::create();
+
+    const auto preferred = bottom->preferred_size();
+    EXPECT_FLOAT_EQ(preferred.height(), 110.0f);
+
+    bottom->set_bounds(260.0f, 400.0f, 700.0f, 110.0f);
+
+    ASSERT_EQ(bottom->child_count(), 2u);
+
+    const auto leading_bounds = child_at(*bottom, 0).bounds();
+    const auto trailing_bounds = child_at(*bottom, 1).bounds();
+
+    EXPECT_FLOAT_EQ(leading_bounds.x(), 260.0f);
+    EXPECT_FLOAT_EQ(leading_bounds.y(), 400.0f);
+    EXPECT_FLOAT_EQ(leading_bounds.width(), 342.0f);
+    EXPECT_FLOAT_EQ(leading_bounds.height(), 110.0f);
+
+    EXPECT_FLOAT_EQ(trailing_bounds.x(), 618.0f);
+    EXPECT_FLOAT_EQ(trailing_bounds.y(), 400.0f);
+    EXPECT_FLOAT_EQ(trailing_bounds.width(), 342.0f);
+    EXPECT_FLOAT_EQ(trailing_bounds.height(), 110.0f);
 }

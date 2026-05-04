@@ -51,6 +51,43 @@ static auto color4_to_nancolor(const uint8_t r, const uint8_t g, const uint8_t b
 
 export namespace nandina::showcase {
 
+class ChartDayStrip final : public nandina::runtime::NanWidget {
+public:
+    using Ptr = std::unique_ptr<ChartDayStrip>;
+
+    static auto create() -> Ptr {
+        return Ptr{new ChartDayStrip()};
+    }
+
+    auto set_bounds(const float x, const float y, const float w, const float h) noexcept -> NanWidget& override {
+        NanWidget::set_bounds(x, y, w, h);
+
+        const float step = w / 6.0f;
+        for (size_t i = 0; i < m_day_labels.size(); ++i) {
+            if (m_day_labels[i]) {
+                const float label_x = x + static_cast<float>(i) * step - 10.0f;
+                m_day_labels[i]->set_bounds(label_x, y, 24.0f, h);
+            }
+        }
+
+        return *this;
+    }
+
+private:
+    ChartDayStrip() {
+        constexpr auto days = std::to_array<std::string_view>({"Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"});
+        for (size_t i = 0; i < m_day_labels.size(); ++i) {
+            auto label = nandina::widgets::Label::create();
+            label->set_text(days[i])
+                .set_font_size(7.0f)
+                .set_color(color4_to_nancolor(110, 112, 130));
+            m_day_labels[i] = add_child(std::move(label));
+        }
+    }
+
+    std::array<nandina::runtime::NanWidget*, 7> m_day_labels{};
+};
+
 class ChartCard final : public nandina::runtime::NanWidget {
 public:
     using Ptr = std::unique_ptr<ChartCard>;
@@ -66,17 +103,11 @@ public:
             m_title->set_bounds(x + 16.0f, y + 8.0f, 160.0f, 18.0f);
         }
 
-        const float plot_x = x + 20.0f;
-        const float plot_y = y + 36.0f;
         const float plot_w = w - 40.0f;
         const float plot_h = h - 56.0f;
-        const float plot_step = plot_w / 6.0f;
 
-        for (size_t i = 0; i < m_day_labels.size(); ++i) {
-            const float lx = plot_x + static_cast<float>(i) * plot_step;
-            if (m_day_labels[i]) {
-                m_day_labels[i]->set_bounds(lx - 10.0f, plot_y + plot_h + 4.0f, 24.0f, 14.0f);
-            }
+        if (m_day_strip) {
+            m_day_strip->set_bounds(x + 20.0f, y + 40.0f + plot_h, plot_w, 14.0f);
         }
 
         return *this;
@@ -146,18 +177,11 @@ private:
             .set_color(color4_to_nancolor(220, 220, 240));
         m_title = add_child(std::move(title));
 
-        constexpr auto days = std::to_array<std::string_view>({"Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"});
-        for (size_t i = 0; i < m_day_labels.size(); ++i) {
-            auto label = nandina::widgets::Label::create();
-            label->set_text(days[i])
-                .set_font_size(7.0f)
-                .set_color(color4_to_nancolor(110, 112, 130));
-            m_day_labels[i] = add_child(std::move(label));
-        }
+        m_day_strip = add_child(ChartDayStrip::create());
     }
 
     nandina::runtime::NanWidget* m_title{nullptr};
-    std::array<nandina::runtime::NanWidget*, 7> m_day_labels{};
+    nandina::runtime::NanWidget* m_day_strip{nullptr};
 };
 
 } // namespace nandina::showcase
