@@ -11,6 +11,8 @@ export module nandina.showcase;
 import nandina.app.application;
 import nandina.log;
 import nandina.foundation.color;
+import nandina.layout.container;
+import nandina.layout.flex_widgets;
 import nandina.runtime.nan_widget;
 import nandina.reactive.animation;
 import nandina.showcase.bottom_content_section;
@@ -42,70 +44,73 @@ public:
 
     auto set_top_gap(const float gap) noexcept -> ShowcaseContentColumn& {
         m_top_gap = std::max(0.0f, gap);
+        if (m_column) {
+            m_column->padding_top(m_top_gap);
+        }
         return *this;
     }
 
     auto set_section_gap(const float gap) noexcept -> ShowcaseContentColumn& {
         m_section_gap = std::max(0.0f, gap);
+        if (m_column) {
+            m_column->gap(m_section_gap);
+        }
         return *this;
     }
 
     auto set_stats_section(std::unique_ptr<nandina::runtime::NanWidget> child) -> nandina::runtime::NanWidget* {
         m_stats_section = child.get();
-        add_child(std::move(child));
+        if (m_column) {
+            m_column->add(std::move(child));
+        }
         return m_stats_section;
     }
 
     auto set_middle_section(std::unique_ptr<nandina::runtime::NanWidget> child) -> nandina::runtime::NanWidget* {
         m_middle_section = child.get();
-        add_child(std::move(child));
+        if (m_column) {
+            m_column->add(std::move(child));
+        }
         return m_middle_section;
     }
 
     auto set_bottom_section(std::unique_ptr<nandina::runtime::NanWidget> child) -> nandina::runtime::NanWidget* {
         m_bottom_section = child.get();
-        add_child(std::move(child));
+        if (m_column) {
+            m_column->add(std::move(child));
+        }
         return m_bottom_section;
     }
 
     auto set_footer_section(std::unique_ptr<nandina::runtime::NanWidget> child) -> nandina::runtime::NanWidget* {
         m_footer_section = child.get();
-        add_child(std::move(child));
+        if (m_column) {
+            m_column->add(std::move(child));
+        }
         return m_footer_section;
     }
 
     auto set_bounds(const float x, const float y, const float w, const float h) noexcept -> NanWidget& override {
         NanWidget::set_bounds(x, y, w, h);
 
-        float cursor_y = y + m_top_gap;
-        layout_section(m_stats_section, x, cursor_y, w);
-        cursor_y += preferred_height(m_stats_section) + m_top_gap;
-
-        layout_section(m_middle_section, x, cursor_y, w);
-        cursor_y += preferred_height(m_middle_section) + m_section_gap;
-
-        layout_section(m_bottom_section, x, cursor_y, w);
-        cursor_y += preferred_height(m_bottom_section) + m_section_gap;
-
-        layout_section(m_footer_section, x, cursor_y, w);
+        if (m_column) {
+            m_column->set_bounds(x, y, w, h);
+        }
 
         return *this;
     }
 
 private:
-    ShowcaseContentColumn() = default;
-
-    [[nodiscard]] static auto preferred_height(const nandina::runtime::NanWidget* widget) noexcept -> float {
-        return widget ? widget->preferred_size().height() : 0.0f;
+    ShowcaseContentColumn() {
+        auto column = nandina::layout::Column::Create();
+        column->align_items(nandina::layout::LayoutAlignment::stretch)
+            .padding_top(m_top_gap)
+            .gap(m_section_gap);
+        m_column = column.get();
+        add_child(std::move(column));
     }
 
-    static auto layout_section(nandina::runtime::NanWidget* widget, const float x, const float y, const float w) -> void {
-        if (!widget) {
-            return;
-        }
-        widget->set_bounds(x, y, w, widget->preferred_size().height());
-    }
-
+    nandina::layout::Column* m_column{nullptr};
     nandina::runtime::NanWidget* m_stats_section{nullptr};
     nandina::runtime::NanWidget* m_middle_section{nullptr};
     nandina::runtime::NanWidget* m_bottom_section{nullptr};
@@ -124,81 +129,105 @@ public:
 
     auto set_content_padding(const float padding) noexcept -> ShowcaseShell& {
         m_content_padding = std::max(0.0f, padding);
+        if (m_content_padding_node) {
+            m_content_padding_node->padding(m_content_padding, 0.0f);
+        }
         return *this;
     }
 
     auto set_sidebar(std::unique_ptr<nandina::runtime::NanWidget> child) -> nandina::runtime::NanWidget* {
         m_sidebar = child.get();
-        add_child(std::move(child));
+        if (m_sidebar_slot) {
+            m_sidebar_slot->child(std::move(child));
+        }
         return m_sidebar;
     }
 
     auto set_header(std::unique_ptr<nandina::runtime::NanWidget> child) -> nandina::runtime::NanWidget* {
         m_header = child.get();
-        add_child(std::move(child));
+        if (m_header_slot) {
+            m_header_slot->child(std::move(child));
+        }
         return m_header;
     }
 
     auto set_content(std::unique_ptr<nandina::runtime::NanWidget> child) -> nandina::runtime::NanWidget* {
         m_content = child.get();
-        add_child(std::move(child));
+        if (m_content_padding_node) {
+            m_content_padding_node->child(std::move(child));
+        }
         return m_content;
     }
 
     auto set_dock(std::unique_ptr<nandina::runtime::NanWidget> child) -> nandina::runtime::NanWidget* {
         m_dock = child.get();
-        add_child(std::move(child));
+        if (m_dock_slot) {
+            m_dock_slot->child(std::move(child));
+        }
         return m_dock;
     }
 
     auto set_bounds(const float x, const float y, const float w, const float h) noexcept -> NanWidget& override {
         NanWidget::set_bounds(x, y, w, h);
 
-        const float sidebar_w = preferred_width(m_sidebar);
-        const float header_h = preferred_height(m_header);
-        const float dock_h = preferred_height(m_dock);
-
-        if (m_sidebar) {
-            m_sidebar->set_bounds(x, y, sidebar_w, h);
-        }
-
-        const float main_x = x + sidebar_w;
-        const float main_w = std::max(0.0f, w - sidebar_w);
-
-        if (m_header) {
-            m_header->set_bounds(main_x, y, main_w, header_h);
-        }
-
-        if (m_dock) {
-            m_dock->set_bounds(main_x, y + h - dock_h, main_w, dock_h);
-        }
-
-        if (m_content) {
-            m_content->set_bounds(
-                main_x + m_content_padding,
-                y + header_h,
-                std::max(0.0f, main_w - m_content_padding * 2.0f),
-                std::max(0.0f, h - header_h - dock_h));
+        if (m_root_row) {
+            m_root_row->set_bounds(x, y, w, h);
         }
 
         return *this;
     }
 
 private:
-    ShowcaseShell() = default;
+    ShowcaseShell() {
+        auto root_row = nandina::layout::Row::Create();
+        root_row->align_items(nandina::layout::LayoutAlignment::stretch);
 
-    [[nodiscard]] static auto preferred_width(const nandina::runtime::NanWidget* widget) noexcept -> float {
-        return widget ? widget->preferred_size().width() : 0.0f;
-    }
+        auto sidebar_slot = nandina::layout::SizedBox::Create();
+        m_sidebar_slot = sidebar_slot.get();
+        root_row->add(std::move(sidebar_slot));
 
-    [[nodiscard]] static auto preferred_height(const nandina::runtime::NanWidget* widget) noexcept -> float {
-        return widget ? widget->preferred_size().height() : 0.0f;
+        auto main_column = nandina::layout::Column::Create();
+        main_column->align_items(nandina::layout::LayoutAlignment::stretch);
+
+        auto header_slot = nandina::layout::SizedBox::Create();
+        m_header_slot = header_slot.get();
+        main_column->add(std::move(header_slot));
+
+        auto content_padding = nandina::layout::Padding::Create();
+        content_padding->padding(m_content_padding, 0.0f);
+        m_content_padding_node = content_padding.get();
+
+        auto content_slot = nandina::layout::Expanded::Create();
+        m_content_slot = content_slot.get();
+        content_slot->child(std::move(content_padding));
+        main_column->add(std::move(content_slot));
+
+        auto dock_slot = nandina::layout::SizedBox::Create();
+        m_dock_slot = dock_slot.get();
+        main_column->add(std::move(dock_slot));
+
+        auto main_expanded = nandina::layout::Expanded::Create();
+        m_main_expanded = main_expanded.get();
+        m_main_column = main_column.get();
+        main_expanded->child(std::move(main_column));
+        root_row->add(std::move(main_expanded));
+
+        m_root_row = root_row.get();
+        add_child(std::move(root_row));
     }
 
     nandina::runtime::NanWidget* m_sidebar{nullptr};
     nandina::runtime::NanWidget* m_header{nullptr};
     nandina::runtime::NanWidget* m_content{nullptr};
     nandina::runtime::NanWidget* m_dock{nullptr};
+    nandina::layout::Row* m_root_row{nullptr};
+    nandina::layout::SizedBox* m_sidebar_slot{nullptr};
+    nandina::layout::Expanded* m_main_expanded{nullptr};
+    nandina::layout::Column* m_main_column{nullptr};
+    nandina::layout::SizedBox* m_header_slot{nullptr};
+    nandina::layout::Expanded* m_content_slot{nullptr};
+    nandina::layout::Padding* m_content_padding_node{nullptr};
+    nandina::layout::SizedBox* m_dock_slot{nullptr};
     float m_content_padding{20.0f};
 };
 
@@ -280,12 +309,6 @@ private:
             m_stats_section = m_content_column->set_stats_section(nandina::showcase::StatsSection::create());
         }
 
-        auto footer_section = nandina::showcase::FooterSection::create();
-        m_footer_section = footer_section.get();
-        if (m_content_column) {
-            m_content_column->set_footer_section(std::move(footer_section));
-        }
-
         auto middle_section = nandina::showcase::MiddleContentSection::create();
         m_middle_section = middle_section.get();
         if (m_content_column) {
@@ -296,6 +319,12 @@ private:
         m_bottom_section = bottom_section.get();
         if (m_content_column) {
             m_content_column->set_bottom_section(std::move(bottom_section));
+        }
+
+        auto footer_section = nandina::showcase::FooterSection::create();
+        m_footer_section = footer_section.get();
+        if (m_content_column) {
+            m_content_column->set_footer_section(std::move(footer_section));
         }
 
         // ─ 活动列表脉冲动画 ──
@@ -372,7 +401,7 @@ public:
         .resizable = true,
         .high_dpi = true
     }) {
-        set_root_component(std::make_unique<MainComponent>());
+        set_root(nandina::app::adopt(std::make_unique<MainComponent>()));
     }
 
 protected:

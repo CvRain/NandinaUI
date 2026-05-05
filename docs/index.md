@@ -24,6 +24,8 @@
 | 文档 | 说明 |
 |------|------|
 | [架构规划](architecture-plan.md) | 顶层分层、依赖方向、稳定边界 `[已定稿]` |
+| [组件 Authoring 与挂载 API 设计](component-authoring-and-mounting.md) | 面向使用者的组件组合、挂载、引用与无显式 `move` 方向 `[草案]` |
+| [无显式 move 的组件组合 API（V1 草案）](component-composition-api-v1.md) | 第一版具体接口签名与使用示例，覆盖 `Node` / `Ref<T>` / `mount(...)` `[草案]` |
 | [布局策略](layout-strategy.md) | 当前布局阶段策略、自动布局目标与 Yoga 接入时机 `[草案]` |
 | [模块依赖规则](module-dependency-rules.md) | 模块间依赖方向约束，避免循环依赖 `[已定稿]` |
 | [响应式策略](reactive-strategy.md) | State/Effect/Prop 等响应式抽象设计说明 `[草案]` |

@@ -1,13 +1,16 @@
 #include <gtest/gtest.h>
 
 import nandina.runtime.nan_widget;
+import nandina.showcase;
 import nandina.showcase.project_progress_card;
 import nandina.showcase.stack_demo_card;
 import nandina.showcase.chart_card;
+import nandina.showcase.footer_section;
 import nandina.showcase.header_bar;
 import nandina.showcase.dock_bar;
 import nandina.showcase.middle_content_section;
 import nandina.showcase.recent_activity_card;
+import nandina.showcase.sidebar_section;
 import nandina.showcase.bottom_content_section;
 import nandina.showcase.stats_section;
 
@@ -143,10 +146,13 @@ TEST(ShowcaseLayoutTest, RecentActivityCard_KeepsTitleAndRowsAligned) {
     EXPECT_FLOAT_EQ(title_bounds.height(), 18.0f);
 
     auto& list = child_at(*activity, 1);
-    ASSERT_EQ(list.child_count(), 5u);
+    ASSERT_EQ(list.child_count(), 1u);
 
-    auto& first_row = child_at(list, 0);
-    auto& last_row = child_at(list, 4);
+    auto& column = child_at(list, 0);
+    ASSERT_EQ(column.child_count(), 5u);
+
+    auto& first_row = child_at(column, 0);
+    auto& last_row = child_at(column, 4);
     ASSERT_EQ(first_row.child_count(), 2u);
     ASSERT_EQ(last_row.child_count(), 2u);
 
@@ -204,13 +210,16 @@ TEST(ShowcaseLayoutTest, ProjectProgressCard_UsesInternalRowsNode) {
 
     const auto title_bounds = child_at(*progress, 1).bounds();
     auto& rows = child_at(*progress, 2);
-    ASSERT_EQ(rows.child_count(), 4u);
+    ASSERT_EQ(rows.child_count(), 1u);
+
+    auto& column = child_at(rows, 0);
+    ASSERT_EQ(column.child_count(), 4u);
 
     EXPECT_FLOAT_EQ(title_bounds.x(), 632.0f);
     EXPECT_FLOAT_EQ(title_bounds.y(), 408.0f);
 
-    auto& first_row = child_at(rows, 0);
-    auto& last_row = child_at(rows, 3);
+    auto& first_row = child_at(column, 0);
+    auto& last_row = child_at(column, 3);
     ASSERT_EQ(first_row.child_count(), 3u);
     ASSERT_EQ(last_row.child_count(), 3u);
 
@@ -226,6 +235,91 @@ TEST(ShowcaseLayoutTest, ProjectProgressCard_UsesInternalRowsNode) {
     EXPECT_NEAR(first_bar_bounds.width(), 143.64f, 1e-3f);
     EXPECT_FLOAT_EQ(first_pct_bounds.y(), 434.0f);
     EXPECT_FLOAT_EQ(last_label_bounds.y(), 488.0f);
+}
+
+TEST(ShowcaseLayoutTest, FooterSection_UsesPaddingNodeForLabelPlacement) {
+    auto footer = nandina::showcase::FooterSection::create();
+    footer->set_bounds(260.0f, 530.0f, 700.0f, 26.0f);
+
+    ASSERT_EQ(footer->child_count(), 1u);
+
+    auto& padding = child_at(*footer, 0);
+    ASSERT_EQ(padding.child_count(), 1u);
+
+    const auto padding_bounds = padding.bounds();
+    const auto label_bounds = child_at(padding, 0).bounds();
+
+    EXPECT_FLOAT_EQ(padding_bounds.x(), 260.0f);
+    EXPECT_FLOAT_EQ(padding_bounds.y(), 530.0f);
+    EXPECT_FLOAT_EQ(padding_bounds.width(), 700.0f);
+    EXPECT_FLOAT_EQ(padding_bounds.height(), 26.0f);
+
+    EXPECT_FLOAT_EQ(label_bounds.x(), 260.0f);
+    EXPECT_FLOAT_EQ(label_bounds.y(), 542.0f);
+    EXPECT_FLOAT_EQ(label_bounds.width(), 700.0f);
+    EXPECT_FLOAT_EQ(label_bounds.height(), 14.0f);
+}
+
+TEST(ShowcaseLayoutTest, SidebarSection_IsConcreteSidebarWithoutWrapperNode) {
+    auto sidebar = nandina::showcase::SidebarSection::create();
+
+    EXPECT_FLOAT_EQ(sidebar->preferred_size().width(), 240.0f);
+    ASSERT_EQ(sidebar->child_count(), 1u);
+
+    auto& root_column = child_at(*sidebar, 0);
+    ASSERT_EQ(root_column.child_count(), 3u);
+
+    auto& content_expanded = child_at(root_column, 1);
+    ASSERT_EQ(content_expanded.child_count(), 1u);
+
+    auto& content_padding = child_at(content_expanded, 0);
+    ASSERT_EQ(content_padding.child_count(), 1u);
+
+    auto& content_column = child_at(content_padding, 0);
+    ASSERT_EQ(content_column.child_count(), 2u);
+}
+
+TEST(ShowcaseLayoutTest, MainComponent_NestsContentSectionsInsideColumnNode) {
+    MainComponent component;
+
+    ASSERT_EQ(component.child_count(), 1u);
+
+    auto& shell = child_at(component, 0);
+    ASSERT_EQ(shell.child_count(), 1u);
+
+    auto& shell_row = child_at(shell, 0);
+    ASSERT_EQ(shell_row.child_count(), 2u);
+
+    auto& sidebar_slot = child_at(shell_row, 0);
+    auto& main_expanded = child_at(shell_row, 1);
+    ASSERT_EQ(sidebar_slot.child_count(), 1u);
+    ASSERT_EQ(main_expanded.child_count(), 1u);
+
+    auto& sidebar = child_at(sidebar_slot, 0);
+    ASSERT_EQ(sidebar.child_count(), 1u);
+
+    auto& sidebar_column = child_at(sidebar, 0);
+    ASSERT_EQ(sidebar_column.child_count(), 3u);
+
+    auto& main_column = child_at(main_expanded, 0);
+    ASSERT_EQ(main_column.child_count(), 3u);
+
+    auto& content_expanded = child_at(main_column, 1);
+    ASSERT_EQ(content_expanded.child_count(), 1u);
+
+    auto& content_padding = child_at(content_expanded, 0);
+    ASSERT_EQ(content_padding.child_count(), 1u);
+
+    auto& content = child_at(content_padding, 0);
+    ASSERT_EQ(content.child_count(), 1u);
+
+    auto& column = child_at(content, 0);
+    ASSERT_EQ(column.child_count(), 4u);
+
+    EXPECT_FLOAT_EQ(child_at(column, 0).preferred_size().height(), 100.0f);
+    EXPECT_FLOAT_EQ(child_at(column, 1).preferred_size().height(), 200.0f);
+    EXPECT_FLOAT_EQ(child_at(column, 2).preferred_size().height(), 110.0f);
+    EXPECT_FLOAT_EQ(child_at(column, 3).preferred_size().height(), 26.0f);
 }
 
 TEST(ShowcaseLayoutTest, MiddleContentSection_UsesSplitRowContract) {

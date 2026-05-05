@@ -57,5 +57,6 @@ add_subdirectory(runtime)       # Issue 076    — Application / Window / Widget
 add_subdirectory(layout)        # Issue 036    — Row / Column / Stack / Flex
 add_subdirectory(theme)        # Issue 037–042 — token / ThemeManager
 add_subdirectory(text)         # Issue 046–048 — NanFont / shaping / paint
+add_subdirectory(app)          # app authoring 第一轮落地：Node / Ref / mount
 add_subdirectory(showcase)     # showcase 布局组合最小验证用例
 # add_subdirectory(widgets)      # Issue 078    — Label / Button / Panel

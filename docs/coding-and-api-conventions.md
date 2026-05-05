@@ -172,6 +172,19 @@ namespace nandina::example {
 
 ## 4. API 设计原则
 
+### 4.0 Authoring API 约束（新增方向）
+
+对于面向业务开发者的公共组件组合 API，建议逐步遵循以下约束：
+
+- 使用者应描述组件树与布局意图，而不是手写几何公式
+- 使用者不应高频接触 `add_child(std::unique_ptr<...>)` 这类所有权接口
+- 公共组合 API 不应要求业务层显式写 `std::move(component)`
+- 挂载后的组件访问应通过 `Ref / Handle / Key` 等句柄机制完成，而不是依赖局部变量持有所有权
+
+也就是说，`unique_ptr` 可以继续作为 runtime 内部实现细节存在，但不应成为长期对外 authoring API 的主心智模型。
+
+详见 [组件 Authoring 与挂载 API 设计](component-authoring-and-mounting.md)。
+
 ### 4.1 Godot-like 生命周期钩子
 
 ```cpp

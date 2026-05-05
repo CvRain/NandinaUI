@@ -8,7 +8,7 @@ module;
 export module nandina.showcase.project_progress_card;
 
 import nandina.foundation.color;
-import nandina.layout.core;
+import nandina.layout.container;
 import nandina.runtime.nan_widget;
 import nandina.widgets.label;
 import nandina.widgets.progressbar;
@@ -99,10 +99,8 @@ public:
     auto set_bounds(const float x, const float y, const float w, const float h) noexcept -> NanWidget& override {
         NanWidget::set_bounds(x, y, w, h);
 
-        for (size_t i = 0; i < m_rows.size(); ++i) {
-            if (m_rows[i]) {
-                m_rows[i]->set_bounds(x, y + static_cast<float>(i) * 18.0f, w, 10.0f);
-            }
+        if (m_column) {
+            m_column->set_bounds(x, y, w, h);
         }
 
         return *this;
@@ -110,6 +108,10 @@ public:
 
 private:
     ProjectProgressRows() {
+        auto column = nandina::layout::Column::Create();
+        column->gap(8.0f)
+            .align_items(nandina::layout::LayoutAlignment::stretch);
+
         const auto progress_data = std::to_array<std::tuple<std::string_view, float, uint8_t, uint8_t, uint8_t>>({
             {"Layout Engine", 0.85f, 99, 102, 241},
             {"Testing", 0.65f, 95, 200, 130},
@@ -121,17 +123,23 @@ private:
             const auto& [label_text, progress, r, g, b] = progress_data[i];
             char pct_buf[8];
             const int len = std::snprintf(pct_buf, sizeof(pct_buf), "%d%%", static_cast<int>(progress * 100.0f));
-            m_rows[i] = add_child(ProjectProgressRow::create(
+            auto row = ProjectProgressRow::create(
                 label_text,
                 std::string_view{pct_buf, static_cast<size_t>(len)},
                 progress,
                 color4_to_nancolor(160, 162, 180),
                 color4_to_nancolor(110, 112, 130),
                 color4_to_nancolor(r, g, b),
-                color4_to_nancolor(42, 44, 62)));
+                color4_to_nancolor(42, 44, 62));
+            m_rows[i] = row.get();
+            column->add(std::move(row));
         }
+
+        m_column = column.get();
+        add_child(std::move(column));
     }
 
+    nandina::layout::Column* m_column{nullptr};
     std::array<nandina::runtime::NanWidget*, 4> m_rows{};
 };
 

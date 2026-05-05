@@ -10,6 +10,7 @@ module;
 export module nandina.showcase.recent_activity_card;
 
 import nandina.foundation.color;
+import nandina.layout.container;
 import nandina.runtime.nan_widget;
 import nandina.widgets.label;
 
@@ -119,20 +120,18 @@ public:
     }
 
     auto set_pulse(float pulse) noexcept -> void {
-        for_each_child([pulse](nandina::runtime::NanWidget& child) {
-            if (auto* row = dynamic_cast<ActivityRow*>(&child)) {
+        for (auto* child : m_rows) {
+            if (auto* row = dynamic_cast<ActivityRow*>(child)) {
                 row->set_pulse(pulse);
             }
-        });
+        }
     }
 
     auto set_bounds(const float x, const float y, const float w, const float h) noexcept -> NanWidget& override {
         NanWidget::set_bounds(x, y, w, h);
 
-        for (size_t i = 0; i < m_rows.size(); ++i) {
-            if (m_rows[i]) {
-                m_rows[i]->set_bounds(x, y + static_cast<float>(i) * 30.0f, w, 28.0f);
-            }
+        if (m_column) {
+            m_column->set_bounds(x, y, w, h);
         }
 
         return *this;
@@ -140,6 +139,10 @@ public:
 
 private:
     ActivityList() {
+        auto column = nandina::layout::Column::Create();
+        column->gap(2.0f)
+            .align_items(nandina::layout::LayoutAlignment::stretch);
+
         constexpr auto texts = std::to_array<std::string_view>({
             "Updated layout-core", "Merged PR #42", "Fixed flex alignment", "Added Stack support", "Refactored backend"});
         constexpr auto times = std::to_array<std::string_view>({"2 min ago", "15 min ago", "1 hr ago", "3 hr ago", "6 hr ago"});
@@ -160,10 +163,15 @@ private:
                 color4_to_nancolor(110, 112, 130),
                 color4_to_nancolor(r, g, b));
             row->set_pulse_phase(static_cast<float>(i) * 0.15f);
-            m_rows[i] = add_child(std::move(row));
+            m_rows[i] = row.get();
+            column->add(std::move(row));
         }
+
+        m_column = column.get();
+        add_child(std::move(column));
     }
 
+    nandina::layout::Column* m_column{nullptr};
     std::array<nandina::runtime::NanWidget*, 5> m_rows{};
 };
 

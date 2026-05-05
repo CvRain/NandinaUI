@@ -17,10 +17,12 @@ target_compile_features(nandina_app PUBLIC cxx_std_26)
 target_sources(nandina_app
     PUBLIC
         FILE_SET CXX_MODULES FILES
+            src/nan_authoring.cppm
             src/nan_application.cppm
 )
 
 target_link_libraries(nandina_app
     PUBLIC
-        nandina::runtime    # 传递 SDL3::SDL3 / PkgConfig::THORVG / nandina::foundation
+    nandina::runtime    # 传递 SDL3::SDL3 / PkgConfig::THORVG / nandina::foundation
+    nandina::layout
 )

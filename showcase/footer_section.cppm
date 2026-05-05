@@ -6,6 +6,7 @@ module;
 export module nandina.showcase.footer_section;
 
 import nandina.foundation.color;
+import nandina.layout.flex_widgets;
 import nandina.runtime.nan_widget;
 import nandina.widgets.label;
 
@@ -41,8 +42,8 @@ public:
     auto set_bounds(const float x, const float y, const float w, const float h) noexcept -> NanWidget& override {
         NanWidget::set_bounds(x, y, w, h);
 
-        if (m_footer_label) {
-            m_footer_label->set_bounds(x, y + 12.0f, w, 14.0f);
+        if (m_content_padding) {
+            m_content_padding->set_bounds(x, y, w, h);
         }
 
         return *this;
@@ -60,14 +61,19 @@ protected:
 
 private:
     FooterSection() {
+        auto padding = nandina::layout::Padding::Create();
+        padding->padding(0.0f, 12.0f, 0.0f, 0.0f);
+
         auto footer = nandina::widgets::Label::create();
         footer->set_text("Built with NandinaUI · ThorVG rendering · C++26 modules")
             .set_font_size(7.0f)
             .set_color(color4_to_nancolor(110, 112, 130));
-        m_footer_label = static_cast<nandina::widgets::Label*>(add_child(std::move(footer)));
+
+        padding->child(std::move(footer));
+        m_content_padding = static_cast<nandina::layout::Padding*>(add_child(std::move(padding)));
     }
 
-    nandina::widgets::Label* m_footer_label{nullptr};
+    nandina::layout::Padding* m_content_padding{nullptr};
 };
 
 } // namespace nandina::showcase

@@ -8,6 +8,7 @@
 - 让开发者像 Godot 一样，通过继承基类并重写生命周期方法构建 UI。
 - 保持平台层细节（SDL）隐藏在 runtime，实现 API 简洁与后端可替换。
 - 为后续 Widget 树与统一 Event 系统预留稳定钩子，不在 M1 过早绑定具体控件实现。
+- 逐步把“组件组合、挂载、后续访问”从 `std::move + add_child` 风格收口为更接近声明式的 authoring API。
 
 ## 核心模型
 
@@ -62,3 +63,17 @@
 - 将输入钩子接入 `runtime/event` 统一事件体系。
 - 在 `NanApplication` 增加页面/场景管理协作接口。
 - 引入 Widget 树后，on_draw 逐步转向 scene/draw command 提交。
+- 将根组件挂载入口收敛成统一 mount 模型，并引入 `Ref / Handle / Key` 风格的子组件引用能力。
+
+## 与组件挂载 API 的关系
+
+本草案关注的是应用/窗口 authoring 体验。
+
+但当前已确认，后续要让这套体验真正可用，还必须同时解决两件事：
+
+- 业务层不再手写坐标与 child 遍历
+- 业务层不再显式处理组件所有权与 `std::move`
+
+因此，组件组合、根节点挂载以及挂载后的引用模型，需要单独作为 authoring API 主题来推进。
+
+详见 [组件 Authoring 与挂载 API 设计](component-authoring-and-mounting.md)。

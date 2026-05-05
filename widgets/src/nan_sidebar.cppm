@@ -11,6 +11,8 @@ module;
 
 export module nandina.widgets.sidebar;
 
+import nandina.layout.container;
+import nandina.layout.flex_widgets;
 import nandina.runtime.nan_widget;
 import nandina.foundation.nan_insets;
 import nandina.foundation.nan_rect;
@@ -66,7 +68,9 @@ export namespace nandina::widgets {
 
         /// 添加一个分组到导航区域
         auto add_group(SidebarGroup::Ptr group) -> Sidebar& {
-            add_child(std::move(group));
+            if (m_content_layout) {
+                m_content_layout->add(std::move(group));
+            }
             mark_dirty();
             return *this;
         }
@@ -78,7 +82,7 @@ export namespace nandina::widgets {
                 group->set_label("Navigation")
                       .set_show_accent(true);
                 m_content_group = group.get();
-                add_child(std::move(group));
+                    add_group(std::move(group));
             }
             m_content_group->add_child(std::move(item));
             mark_dirty();
@@ -91,7 +95,7 @@ export namespace nandina::widgets {
                 auto group = SidebarGroup::create();
                 group->set_label("Recent Projects");
                 m_project_group = group.get();
-                add_child(std::move(group));
+                add_group(std::move(group));
             }
             m_project_group->add_child(std::move(item));
             mark_dirty();
@@ -141,48 +145,8 @@ export namespace nandina::widgets {
         auto set_bounds(float x, float y, float w, float h) noexcept -> NanWidget& override {
             Surface::set_bounds(x, y, w, h);
 
-            // Header：Logo + 标题（固定顶部）
-            const float header_h = 50.0f;
-            if (m_header_logo) {
-                m_header_logo->set_bounds(x + 18.0f, y + 16.0f, 28.0f, 28.0f);
-            }
-            if (m_header_label) {
-                m_header_label->set_bounds(x + 55.0f, y + 18.0f, w - 70.0f, 22.0f);
-            }
-
-            // Footer：用户信息（固定底部）
-            const float footer_h = 70.0f;
-            const float footer_y = y + h - footer_h;
-            if (m_user_avatar) {
-                m_user_avatar->set_bounds(x + 16.0f, footer_y + 12.0f, 28.0f, 28.0f);
-            }
-            if (m_user_name_label) {
-                m_user_name_label->set_bounds(x + 52.0f, footer_y + 12.0f, w - 64.0f, 18.0f);
-            }
-            if (m_user_role_label) {
-                m_user_role_label->set_bounds(x + 52.0f, footer_y + 28.0f, w - 64.0f, 14.0f);
-            }
-
-            // 分割线位置
-            m_divider_header_y = y + header_h;
-            m_divider_footer_y = footer_y;
-
-            // 内容区子节点（SidebarGroup）自动分布在中间区域
-            // 由 Surface 的 for_each_child 定位，但我们需要手动管理
-            // 让每个 group 的 bounds 从 header 下方到 footer 上方
-            const float content_y = y + header_h + 4.0f;
-            float cur_y = content_y;
-
-            for_each_child([&](runtime::NanWidget& child) {
-                if (&child == m_header_logo || &child == m_header_label
-                    || &child == m_user_avatar || &child == m_user_name_label
-                    || &child == m_user_role_label) {
-                    return;
-                }
-                const float child_h = child.preferred_size().height();
-                child.set_bounds(x, cur_y, w, child_h);
-                cur_y += child_h + 2.0f;
-            });
+            m_divider_header_y = m_header_slot ? m_header_slot->bounds().bottom() : 0.0f;
+            m_divider_footer_y = m_footer_slot ? m_footer_slot->bounds().y() : 0.0f;
 
             return *this;
         }
@@ -212,11 +176,14 @@ export namespace nandina::widgets {
             }
         }
 
-    private:
+    protected:
         Sidebar() : Surface() {
             m_bg_color.set(nandina::NanColor::from(nandina::NanRgb{42, 44, 62}));
             m_corner_radius.set(0.0f);
             m_padding.set(geometry::NanInsets{});
+
+            auto root_column = layout::Column::Create();
+            root_column->align_items(layout::LayoutAlignment::stretch);
 
             // Logo（双圆：外环 + 内点）
             auto logo = Icon::create();
@@ -224,7 +191,6 @@ export namespace nandina::widgets {
                 .set_size(28.0f)
                 .set_color(nandina::NanColor::from(nandina::NanRgb{99, 102, 241}));
             m_header_logo = logo.get();
-            add_child(std::move(logo));
 
             // Header 标题
             auto hdr = Label::create();
@@ -232,7 +198,48 @@ export namespace nandina::widgets {
                 .set_font_size(11.0f)
                 .set_color(nandina::NanColor::from(nandina::NanRgb{220, 220, 240}));
             m_header_label = hdr.get();
-            add_child(std::move(hdr));
+
+            auto header_label_padding = layout::Padding::Create();
+            header_label_padding->padding(0.0f, 2.0f, 0.0f, 4.0f)
+                .child(std::move(hdr));
+
+            auto header_row = layout::Row::Create();
+            header_row->align_items(layout::LayoutAlignment::center)
+                .gap(9.0f);
+
+            auto logo_box = layout::SizedBox::Create();
+            logo_box->width(28.0f)
+                .height(28.0f)
+                .child(std::move(logo));
+            header_row->add(std::move(logo_box));
+
+            auto header_label_expanded = layout::Expanded::Create();
+            header_label_expanded->child(std::move(header_label_padding));
+            header_row->add(std::move(header_label_expanded));
+
+            auto header_padding = layout::Padding::Create();
+            header_padding->padding(18.0f, 16.0f, 15.0f, 6.0f)
+                .child(std::move(header_row));
+
+            auto header_slot = layout::SizedBox::Create();
+            header_slot->height(50.0f)
+                .child(std::move(header_padding));
+            m_header_slot = header_slot.get();
+            root_column->add(std::move(header_slot));
+
+            auto content_layout = layout::Column::Create();
+            content_layout->align_items(layout::LayoutAlignment::stretch)
+                .gap(2.0f);
+            m_content_layout = content_layout.get();
+
+            auto content_padding = layout::Padding::Create();
+            content_padding->padding(0.0f, 4.0f, 0.0f, 0.0f)
+                .child(std::move(content_layout));
+
+            auto content_expanded = layout::Expanded::Create();
+            content_expanded->child(std::move(content_padding));
+            m_content_slot = content_expanded.get();
+            root_column->add(std::move(content_expanded));
 
             // 用户头像
             auto avatar = Icon::create();
@@ -240,7 +247,6 @@ export namespace nandina::widgets {
                 .set_size(28.0f)
                 .set_color(nandina::NanColor::from(nandina::NanRgb{147, 150, 255}));
             m_user_avatar = avatar.get();
-            add_child(std::move(avatar));
 
             // 用户名
             auto un = Label::create();
@@ -248,7 +254,6 @@ export namespace nandina::widgets {
                 .set_font_size(9.0f)
                 .set_color(nandina::NanColor::from(nandina::NanRgb{220, 220, 240}));
             m_user_name_label = un.get();
-            add_child(std::move(un));
 
             // 用户角色
             auto ur = Label::create();
@@ -256,7 +261,45 @@ export namespace nandina::widgets {
                 .set_font_size(7.0f)
                 .set_color(nandina::NanColor::from(nandina::NanRgb{110, 112, 130}));
             m_user_role_label = ur.get();
-            add_child(std::move(ur));
+
+            auto avatar_box = layout::SizedBox::Create();
+            avatar_box->width(28.0f)
+                .height(28.0f)
+                .child(std::move(avatar));
+
+            auto name_box = layout::SizedBox::Create();
+            name_box->height(16.0f)
+                .child(std::move(un));
+
+            auto role_box = layout::SizedBox::Create();
+            role_box->height(14.0f)
+                .child(std::move(ur));
+
+            auto info_column = layout::Column::Create();
+            info_column->align_items(layout::LayoutAlignment::stretch);
+            info_column->add(std::move(name_box));
+            info_column->add(std::move(role_box));
+
+            auto info_expanded = layout::Expanded::Create();
+            info_expanded->child(std::move(info_column));
+
+            auto footer_row = layout::Row::Create();
+            footer_row->align_items(layout::LayoutAlignment::start)
+                .gap(8.0f);
+            footer_row->add(std::move(avatar_box));
+            footer_row->add(std::move(info_expanded));
+
+            auto footer_padding = layout::Padding::Create();
+            footer_padding->padding(16.0f, 12.0f, 12.0f, 28.0f)
+                .child(std::move(footer_row));
+
+            auto footer_slot = layout::SizedBox::Create();
+            footer_slot->height(70.0f)
+                .child(std::move(footer_padding));
+            m_footer_slot = footer_slot.get();
+            root_column->add(std::move(footer_slot));
+
+            add_child(std::move(root_column));
         }
 
         std::string m_header_title_text{"Nandina Studio"};
@@ -266,6 +309,11 @@ export namespace nandina::widgets {
         // Header 子节点
         Icon*  m_header_logo{nullptr};
         Label* m_header_label{nullptr};
+
+        layout::SizedBox* m_header_slot{nullptr};
+        layout::Expanded* m_content_slot{nullptr};
+        layout::Column* m_content_layout{nullptr};
+        layout::SizedBox* m_footer_slot{nullptr};
 
         // 分组指针（内部自动管理）
         SidebarGroup* m_content_group{nullptr};
