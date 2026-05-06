@@ -7,6 +7,7 @@ module;
 
 export module nandina.showcase.dock_bar;
 
+import nandina.app.authoring;
 import nandina.foundation.color;
 import nandina.layout.container;
 import nandina.layout.flex_widgets;
@@ -152,40 +153,38 @@ protected:
 
 private:
     DockBar() {
+        using namespace nandina::app;
+
         set_bg_color(color4_to_nancolor(38, 40, 56, 255));
 
-        auto overlay_row = nandina::layout::Row::Create();
-        overlay_row->padding(12.0f, 6.0f, 12.0f, 6.0f)
-            .align_items(nandina::layout::LayoutAlignment::center);
-        overlay_row->add(DockThumbnail::create());
-        overlay_row->add(nandina::layout::Spacer::Create());
-
-        auto clock = nandina::widgets::Label::create();
-        clock->set_text("10:42")
-            .set_font_size(9.0f)
-            .set_color(color4_to_nancolor(160, 162, 180));
-        m_clock_label = static_cast<nandina::widgets::Label*>(clock.get());
-        overlay_row->add(std::move(clock));
-
-        auto icon_row = nandina::layout::Row::Create();
-        icon_row->padding(16.0f, 0.0f, 16.0f, 0.0f)
+        auto icon_row = row(nandina::app::children(
+            adopt(DockIconItem::create(color4_to_nancolor(99, 102, 241), nandina::widgets::IconType::Circle, true)),
+            adopt(DockIconItem::create(color4_to_nancolor(95, 200, 130), nandina::widgets::IconType::Dots, true)),
+            adopt(DockIconItem::create(color4_to_nancolor(245, 158, 60), nandina::widgets::IconType::Triangle, true)),
+            adopt(DockIconItem::create(color4_to_nancolor(236, 110, 130), nandina::widgets::IconType::Square)),
+            adopt(DockIconItem::create(color4_to_nancolor(80, 200, 220), nandina::widgets::IconType::Check)),
+            adopt(DockIconItem::create(color4_to_nancolor(180, 140, 240), nandina::widgets::IconType::ArrowUp)),
+            adopt(DockIconItem::create(color4_to_nancolor(160, 162, 180), nandina::widgets::IconType::Dot))))
+            .padding(16.0f, 0.0f, 16.0f, 0.0f)
             .align_items(nandina::layout::LayoutAlignment::center)
             .justify_content(nandina::layout::LayoutAlignment::center)
             .gap(12.0f);
 
-        icon_row->add(DockIconItem::create(color4_to_nancolor(99, 102, 241), nandina::widgets::IconType::Circle, true));
-        icon_row->add(DockIconItem::create(color4_to_nancolor(95, 200, 130), nandina::widgets::IconType::Dots, true));
-        icon_row->add(DockIconItem::create(color4_to_nancolor(245, 158, 60), nandina::widgets::IconType::Triangle, true));
-        icon_row->add(DockIconItem::create(color4_to_nancolor(236, 110, 130), nandina::widgets::IconType::Square));
-        icon_row->add(DockIconItem::create(color4_to_nancolor(80, 200, 220), nandina::widgets::IconType::Check));
-        icon_row->add(DockIconItem::create(color4_to_nancolor(180, 140, 240), nandina::widgets::IconType::ArrowUp));
-        icon_row->add(DockIconItem::create(color4_to_nancolor(160, 162, 180), nandina::widgets::IconType::Dot));
+        auto overlay_row = row(nandina::app::children(
+            adopt(DockThumbnail::create()),
+            spacer(),
+            label("10:42")
+                .font_size(9.0f)
+                .color(color4_to_nancolor(160, 162, 180))
+                .bind(m_clock_label)))
+            .padding(12.0f, 6.0f, 12.0f, 6.0f)
+            .align_items(nandina::layout::LayoutAlignment::center);
 
-        add_child(std::move(icon_row));
-        add_child(std::move(overlay_row));
+        add_child(mount(std::move(icon_row)));
+        add_child(mount(std::move(overlay_row)));
     }
 
-    nandina::widgets::Label* m_clock_label{nullptr};
+    nandina::app::Ref<nandina::widgets::Label> m_clock_label;
 };
 
 } // namespace nandina::showcase

@@ -6,10 +6,10 @@ module;
 
 export module nandina.showcase.header_bar;
 
+import nandina.app.authoring;
 import nandina.foundation.color;
 import nandina.foundation.nan_insets;
 import nandina.layout.container;
-import nandina.layout.flex_widgets;
 import nandina.runtime.nan_widget;
 import nandina.widgets.button;
 import nandina.widgets.label;
@@ -76,23 +76,9 @@ protected:
 
 private:
     HeaderBar() {
+        using namespace nandina::app;
+
         set_bg_color(color4_to_nancolor(35, 37, 54, 240));
-
-        auto row = nandina::layout::Row::Create();
-        row->padding(20.0f, 0.0f, 6.0f, 0.0f)
-            .align_items(nandina::layout::LayoutAlignment::center)
-            .gap(10.0f);
-
-        auto title = nandina::widgets::Label::create();
-        title->set_text("Dashboard / Overview")
-            .set_font_size(10.0f)
-            .set_color(color4_to_nancolor(160, 162, 180));
-        m_title_label = static_cast<nandina::widgets::Label*>(title.get());
-        row->add(std::move(title));
-
-        row->add(nandina::layout::Spacer::Create());
-        row->add(HeaderActionBlock::create(color4_to_nancolor(55, 57, 75, 200)));
-        row->add(HeaderActionBlock::create(color4_to_nancolor(55, 57, 75, 200)));
 
         nandina::widgets::ButtonColors btn_colors;
         btn_colors.bg            = color4_to_nancolor(99, 102, 241);
@@ -101,26 +87,35 @@ private:
         btn_colors.corner_radius = 6.0f;
         btn_colors.padding       = nandina::geometry::NanInsets{10.0f, 6.0f, 10.0f, 6.0f};
 
-        auto button = nandina::widgets::Button::create();
-        button->set_text("+")
-            .set_colors(btn_colors);
-        m_add_button = button.get();
-        m_add_button->on_click([this]() {
-            ++m_click_count;
-            m_add_button->set_text("+" + std::to_string(m_click_count));
-        });
+        auto content = row(nandina::app::children(
+            label("Dashboard / Overview")
+                .font_size(10.0f)
+                .color(color4_to_nancolor(160, 162, 180))
+                .bind(m_title_label),
+            spacer(),
+            adopt(HeaderActionBlock::create(color4_to_nancolor(55, 57, 75, 200))),
+            adopt(HeaderActionBlock::create(color4_to_nancolor(55, 57, 75, 200))),
+            sized_box(
+                button("+")
+                    .colors(btn_colors)
+                    .on_click([this]() {
+                        ++m_click_count;
+                        if (m_add_button) {
+                            m_add_button->set_text("+" + std::to_string(m_click_count));
+                        }
+                    })
+                    .bind(m_add_button))
+                .width(32.0f)
+                .height(32.0f)))
+            .padding(20.0f, 0.0f, 6.0f, 0.0f)
+            .align_items(nandina::layout::LayoutAlignment::center)
+            .gap(10.0f);
 
-        auto button_box = nandina::layout::SizedBox::Create();
-        button_box->width(32.0f)
-            .height(32.0f)
-            .child(std::move(button));
-        row->add(std::move(button_box));
-
-        add_child(std::move(row));
+        add_child(mount(std::move(content)));
     }
 
-    nandina::widgets::Label* m_title_label{nullptr};
-    nandina::widgets::Button* m_add_button{nullptr};
+    nandina::app::Ref<nandina::widgets::Label> m_title_label;
+    nandina::app::Ref<nandina::widgets::Button> m_add_button;
     int m_click_count{0};
 };
 

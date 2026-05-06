@@ -9,6 +9,7 @@ module;
 
 export module nandina.showcase.recent_activity_card;
 
+import nandina.app.authoring;
 import nandina.foundation.color;
 import nandina.layout.container;
 import nandina.runtime.nan_widget;
@@ -130,8 +131,8 @@ public:
     auto set_bounds(const float x, const float y, const float w, const float h) noexcept -> NanWidget& override {
         NanWidget::set_bounds(x, y, w, h);
 
-        if (m_column) {
-            m_column->set_bounds(x, y, w, h);
+        if (m_mounted_column) {
+            m_mounted_column->set_bounds(x, y, w, h);
         }
 
         return *this;
@@ -139,9 +140,7 @@ public:
 
 private:
     ActivityList() {
-        auto column = nandina::layout::Column::Create();
-        column->gap(2.0f)
-            .align_items(nandina::layout::LayoutAlignment::stretch);
+        auto nodes = nandina::app::children();
 
         constexpr auto texts = std::to_array<std::string_view>({
             "Updated layout-core", "Merged PR #42", "Fixed flex alignment", "Added Stack support", "Refactored backend"});
@@ -164,14 +163,20 @@ private:
                 color4_to_nancolor(r, g, b));
             row->set_pulse_phase(static_cast<float>(i) * 0.15f);
             m_rows[i] = row.get();
-            column->add(std::move(row));
+            nodes.append(nandina::app::adopt(std::move(row)));
         }
 
-        m_column = column.get();
-        add_child(std::move(column));
+        auto mounted = nandina::app::mount(
+            nandina::app::column(std::move(nodes))
+                .gap(2.0f)
+                .align_items(nandina::layout::LayoutAlignment::stretch)
+                .bind(m_column));
+        m_mounted_column = mounted.get();
+        add_child(std::move(mounted));
     }
 
-    nandina::layout::Column* m_column{nullptr};
+    nandina::app::NanComponent* m_mounted_column{nullptr};
+    nandina::app::Ref<nandina::layout::Column> m_column;
     std::array<nandina::runtime::NanWidget*, 5> m_rows{};
 };
 
@@ -191,12 +196,8 @@ public:
     auto set_bounds(const float x, const float y, const float w, const float h) noexcept -> NanWidget& override {
         NanWidget::set_bounds(x, y, w, h);
 
-        if (m_title) {
-            m_title->set_bounds(x + 16.0f, y + 8.0f, 160.0f, 18.0f);
-        }
-
-        if (m_activity_list) {
-            m_activity_list->set_bounds(x + 16.0f, y + 36.0f, w - 32.0f, h - 36.0f);
+        if (m_mounted_content) {
+            m_mounted_content->set_bounds(x, y, w, h);
         }
 
         return *this;
@@ -214,17 +215,30 @@ protected:
 
 private:
     RecentActivityCard() {
-        auto title = nandina::widgets::Label::create();
-        title->set_text("Recent Activity")
-            .set_font_size(10.0f)
-            .set_color(color4_to_nancolor(220, 220, 240));
-        m_title = add_child(std::move(title));
+        auto activity_list = ActivityList::create();
+        m_activity_list = activity_list.get();
 
-        m_activity_list = add_child(ActivityList::create());
+        auto mounted = nandina::app::mount(
+            nandina::app::column(nandina::app::children(
+                nandina::app::sized_box(
+                    nandina::app::label("Recent Activity")
+                        .font_size(10.0f)
+                        .color(color4_to_nancolor(220, 220, 240))
+                        .bind(m_title))
+                    .width(160.0f)
+                    .height(18.0f),
+                nandina::app::expanded(
+                    nandina::app::adopt(std::move(activity_list)))))
+                .padding(16.0f, 8.0f, 16.0f, 0.0f)
+                .gap(10.0f)
+                .align_items(nandina::layout::LayoutAlignment::stretch));
+        m_mounted_content = mounted.get();
+        add_child(std::move(mounted));
     }
 
-    nandina::runtime::NanWidget* m_title{nullptr};
-    nandina::runtime::NanWidget* m_activity_list{nullptr};
+    nandina::app::NanComponent* m_mounted_content{nullptr};
+    nandina::app::Ref<nandina::widgets::Label> m_title;
+    ActivityList* m_activity_list{nullptr};
     float m_pulse{0.0f};
 };
 

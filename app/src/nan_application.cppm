@@ -13,8 +13,14 @@ export module nandina.app.application;
 import nandina.layout.container;
 import nandina.layout.flex_widgets;
 import nandina.log;
+import nandina.foundation.color;
 import nandina.runtime.nan_window;
 import nandina.runtime.nan_widget;
+import nandina.widgets.button;
+import nandina.widgets.card;
+import nandina.widgets.label;
+import nandina.widgets.panel;
+import nandina.widgets.surface;
 
 export namespace nandina::app {
     class NanComponent : public runtime::NanWidget {
@@ -28,6 +34,10 @@ export namespace nandina::app {
     class Children;
 
     [[nodiscard]] inline auto adopt(runtime::NanWidget::Ptr widget) -> Node;
+    [[nodiscard]] inline auto label(std::string_view text = {}) -> Node;
+    [[nodiscard]] inline auto button(std::string_view text = {}) -> Node;
+    [[nodiscard]] inline auto card(Children children) -> Node;
+    [[nodiscard]] inline auto panel(Children children) -> Node;
 
     template<typename T>
     class Ref {
@@ -94,6 +104,156 @@ export namespace nandina::app {
             return std::move(*this);
         }
 
+        auto title(std::string_view value) && -> Node {
+            if (auto* widget = dynamic_cast<nandina::widgets::Card*>(m_widget.get())) {
+                widget->set_title(std::string{value});
+            } else if (auto* widget = dynamic_cast<nandina::widgets::Panel*>(m_widget.get())) {
+                widget->set_title(value);
+            }
+            return std::move(*this);
+        }
+
+        auto bg_color(const nandina::NanColor& value) && -> Node {
+            if (auto* widget = dynamic_cast<nandina::widgets::Surface*>(m_widget.get())) {
+                widget->set_bg_color(value);
+            }
+            return std::move(*this);
+        }
+
+        auto corner_radius(const float value) && -> Node {
+            if (auto* widget = dynamic_cast<nandina::widgets::Surface*>(m_widget.get())) {
+                widget->set_corner_radius(value);
+            }
+            return std::move(*this);
+        }
+
+        auto text(std::string_view value) && -> Node {
+            if (auto* widget = dynamic_cast<nandina::widgets::Label*>(m_widget.get())) {
+                widget->set_text(value);
+            } else if (auto* widget = dynamic_cast<nandina::widgets::Button*>(m_widget.get())) {
+                widget->set_text(value);
+            }
+            return std::move(*this);
+        }
+
+        auto font_size(const float value) && -> Node {
+            if (auto* widget = dynamic_cast<nandina::widgets::Label*>(m_widget.get())) {
+                widget->set_font_size(value);
+            }
+            return std::move(*this);
+        }
+
+        auto color(const nandina::NanColor& value) && -> Node {
+            if (auto* widget = dynamic_cast<nandina::widgets::Label*>(m_widget.get())) {
+                widget->set_color(value);
+            }
+            return std::move(*this);
+        }
+
+        auto align(const nandina::widgets::TextAlign value) && -> Node {
+            if (auto* widget = dynamic_cast<nandina::widgets::Label*>(m_widget.get())) {
+                widget->set_align(value);
+            }
+            return std::move(*this);
+        }
+
+        auto vertical_align(const nandina::widgets::TextVerticalAlign value) && -> Node {
+            if (auto* widget = dynamic_cast<nandina::widgets::Label*>(m_widget.get())) {
+                widget->set_vertical_align(value);
+            }
+            return std::move(*this);
+        }
+
+        auto colors(const nandina::widgets::ButtonColors& value) && -> Node {
+            if (auto* widget = dynamic_cast<nandina::widgets::Button*>(m_widget.get())) {
+                widget->set_colors(value);
+            }
+            return std::move(*this);
+        }
+
+        auto on_click(std::function<void()> handler) && -> Node {
+            if (auto* widget = dynamic_cast<nandina::widgets::Button*>(m_widget.get())) {
+                widget->on_click(std::move(handler));
+            }
+            return std::move(*this);
+        }
+
+        auto padding(const float value) && -> Node {
+            if (auto* widget = dynamic_cast<nandina::layout::Padding*>(m_widget.get())) {
+                widget->padding(value);
+            } else if (auto* widget = dynamic_cast<nandina::layout::LayoutContainer*>(m_widget.get())) {
+                widget->padding(value);
+            }
+            return std::move(*this);
+        }
+
+        auto padding(const float horizontal, const float vertical) && -> Node {
+            if (auto* widget = dynamic_cast<nandina::layout::Padding*>(m_widget.get())) {
+                widget->padding(horizontal, vertical);
+            } else if (auto* widget = dynamic_cast<nandina::layout::LayoutContainer*>(m_widget.get())) {
+                widget->padding(horizontal, vertical);
+            }
+            return std::move(*this);
+        }
+
+        auto padding(const float left, const float top, const float right, const float bottom) && -> Node {
+            if (auto* widget = dynamic_cast<nandina::layout::Padding*>(m_widget.get())) {
+                widget->padding(left, top, right, bottom);
+            } else if (auto* widget = dynamic_cast<nandina::layout::LayoutContainer*>(m_widget.get())) {
+                widget->padding(left, top, right, bottom);
+            }
+            return std::move(*this);
+        }
+
+        auto padding_top(const float value) && -> Node {
+            if (auto* widget = dynamic_cast<nandina::layout::LayoutContainer*>(m_widget.get())) {
+                widget->padding_top(value);
+            }
+            return std::move(*this);
+        }
+
+        auto gap(const float value) && -> Node {
+            if (auto* widget = dynamic_cast<nandina::layout::LayoutContainer*>(m_widget.get())) {
+                widget->gap(value);
+            }
+            return std::move(*this);
+        }
+
+        auto align_items(const nandina::layout::LayoutAlignment value) && -> Node {
+            if (auto* widget = dynamic_cast<nandina::layout::LayoutContainer*>(m_widget.get())) {
+                widget->align_items(value);
+            }
+            return std::move(*this);
+        }
+
+        auto justify_content(const nandina::layout::LayoutAlignment value) && -> Node {
+            if (auto* widget = dynamic_cast<nandina::layout::LayoutContainer*>(m_widget.get())) {
+                widget->justify_content(value);
+            }
+            return std::move(*this);
+        }
+
+        auto width(const float value) && -> Node {
+            if (auto* widget = dynamic_cast<nandina::layout::SizedBox*>(m_widget.get())) {
+                widget->width(value);
+            }
+            return std::move(*this);
+        }
+
+        auto height(const float value) && -> Node {
+            if (auto* widget = dynamic_cast<nandina::layout::SizedBox*>(m_widget.get())) {
+                widget->height(value);
+            }
+            return std::move(*this);
+        }
+
+        auto size(const geometry::NanSize& value) && -> Node {
+            if (auto* widget = dynamic_cast<nandina::layout::SizedBox*>(m_widget.get())) {
+                widget->size(value);
+            }
+            return std::move(*this);
+        }
+
     private:
         using RefBinder = std::move_only_function<void()>;
         using RefResetter = std::move_only_function<void()>;
@@ -111,6 +271,10 @@ export namespace nandina::app {
         friend auto center(Node child) -> Node;
         friend auto sized_box(Node child) -> Node;
         friend auto adopt(runtime::NanWidget::Ptr widget) -> Node;
+        friend auto label(std::string_view text) -> Node;
+        friend auto button(std::string_view text) -> Node;
+        friend auto card(Children children) -> Node;
+        friend auto panel(Children children) -> Node;
 
         explicit Node(std::unique_ptr<runtime::NanWidget> widget)
             : m_widget(std::move(widget)) {
@@ -225,6 +389,48 @@ export namespace nandina::app {
         return Node{std::move(widget)};
     }
 
+    [[nodiscard]] inline auto label(std::string_view text) -> Node {
+        auto widget = nandina::widgets::Label::create();
+        if (!text.empty()) {
+            widget->set_text(text);
+        }
+        return adopt(std::move(widget));
+    }
+
+    [[nodiscard]] inline auto button(std::string_view text) -> Node {
+        auto widget = nandina::widgets::Button::create();
+        if (!text.empty()) {
+            widget->set_text(text);
+        }
+        return adopt(std::move(widget));
+    }
+
+    [[nodiscard]] inline auto card(Children children) -> Node {
+        auto widget = nandina::widgets::Card::create();
+        Node result{std::move(widget)};
+        for (auto& child : std::move(children).take()) {
+            auto child_widget = std::move(child).take_widget();
+            if (child_widget) {
+                result.m_widget->add_child(std::move(child_widget));
+            }
+            result.absorb(std::move(child));
+        }
+        return result;
+    }
+
+    [[nodiscard]] inline auto panel(Children children) -> Node {
+        auto widget = nandina::widgets::Panel::create();
+        Node result{std::move(widget)};
+        for (auto& child : std::move(children).take()) {
+            auto child_widget = std::move(child).take_widget();
+            if (child_widget) {
+                result.m_widget->add_child(std::move(child_widget));
+            }
+            result.absorb(std::move(child));
+        }
+        return result;
+    }
+
     [[nodiscard]] inline auto row(Children children = {}) -> Node {
         auto widget = nandina::layout::Row::Create();
         Node result{std::move(widget)};
@@ -330,10 +536,7 @@ export namespace nandina::app {
 
         auto set_root_component(NanComponent::Ptr component) -> void {
             m_root_component = std::move(component);
-            if (m_root_component && m_active_runtime_window) {
-                m_root_component->set_size(static_cast<float>(m_active_runtime_window->width()),
-                                           static_cast<float>(m_active_runtime_window->height()));
-            }
+            sync_root_component_bounds();
         }
 
         auto set_root(Node root) -> void {
@@ -369,6 +572,16 @@ export namespace nandina::app {
         }
 
     private:
+        auto sync_root_component_bounds() -> void {
+            if (!m_root_component) {
+                return;
+            }
+
+            const float width = static_cast<float>(m_active_runtime_window ? m_active_runtime_window->width() : m_config.width);
+            const float height = static_cast<float>(m_active_runtime_window ? m_active_runtime_window->height() : m_config.height);
+            m_root_component->set_bounds(0.0f, 0.0f, width, height);
+        }
+
         AppConfig m_config;
         runtime::NanWindow *m_active_runtime_window{nullptr};
         NanComponent::Ptr m_root_component{nullptr};
@@ -393,10 +606,8 @@ export namespace nandina::app {
                 m_owner.on_draw(canvas);
             }
 
-            void on_resize(int w, int h) override {
-                if (m_owner.m_root_component) {
-                    m_owner.m_root_component->set_size(static_cast<float>(w), static_cast<float>(h));
-                }
+            void on_resize(int, int) override {
+                m_owner.sync_root_component_bounds();
             }
 
             void on_pointer_move(const runtime::PointerMoveEvent& event) override {
@@ -471,9 +682,7 @@ export namespace nandina::app {
         BridgeWindow window{*this, runtime_config};
         m_active_runtime_window = &window;
 
-        if (m_root_component) {
-            m_root_component->set_size(static_cast<float>(window.width()), static_cast<float>(window.height()));
-        }
+        sync_root_component_bounds();
 
         logger.info("Window starting: {} ({}x{})", m_config.title, m_config.width, m_config.height);
         window.run();

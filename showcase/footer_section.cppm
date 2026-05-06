@@ -5,10 +5,9 @@ module;
 
 export module nandina.showcase.footer_section;
 
+import nandina.app.authoring;
 import nandina.foundation.color;
-import nandina.layout.flex_widgets;
 import nandina.runtime.nan_widget;
-import nandina.widgets.label;
 
 namespace {
 static void draw_line(tvg::SwCanvas& canvas,
@@ -42,8 +41,8 @@ public:
     auto set_bounds(const float x, const float y, const float w, const float h) noexcept -> NanWidget& override {
         NanWidget::set_bounds(x, y, w, h);
 
-        if (m_content_padding) {
-            m_content_padding->set_bounds(x, y, w, h);
+        if (m_content_root) {
+            m_content_root->set_bounds(x, y, w, h);
         }
 
         return *this;
@@ -61,19 +60,18 @@ protected:
 
 private:
     FooterSection() {
-        auto padding = nandina::layout::Padding::Create();
-        padding->padding(0.0f, 12.0f, 0.0f, 0.0f);
+        using namespace nandina::app;
 
-        auto footer = nandina::widgets::Label::create();
-        footer->set_text("Built with NandinaUI · ThorVG rendering · C++26 modules")
-            .set_font_size(7.0f)
-            .set_color(color4_to_nancolor(110, 112, 130));
+        auto content = padding(
+            label("Built with NandinaUI · ThorVG rendering · C++26 modules")
+                .font_size(7.0f)
+                .color(color4_to_nancolor(110, 112, 130)))
+            .padding(0.0f, 12.0f, 0.0f, 0.0f);
 
-        padding->child(std::move(footer));
-        m_content_padding = static_cast<nandina::layout::Padding*>(add_child(std::move(padding)));
+        m_content_root = add_child(mount(std::move(content)));
     }
 
-    nandina::layout::Padding* m_content_padding{nullptr};
+    nandina::runtime::NanWidget* m_content_root{nullptr};
 };
 
 } // namespace nandina::showcase

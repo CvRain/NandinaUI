@@ -1,5 +1,11 @@
 #include <gtest/gtest.h>
 
+#include <memory>
+#include <stdexcept>
+#include <vector>
+
+#include <thorvg-1/thorvg.h>
+
 import nandina.runtime.nan_widget;
 import nandina.showcase;
 import nandina.showcase.project_progress_card;
@@ -22,6 +28,70 @@ auto child_at(nandina::runtime::NanWidget& widget, const std::size_t index) -> n
     return *children.at(index);
 }
 
+class ThorvgCanvasScope {
+public:
+    ThorvgCanvasScope(const std::uint32_t width, const std::uint32_t height)
+        : pixels_(width * height, 0u), width_(width) {
+        if (tvg::Initializer::init(0u) != tvg::Result::Success) {
+            throw std::runtime_error("tvg::Initializer::init failed");
+        }
+        canvas_.reset(tvg::SwCanvas::gen());
+        if (!canvas_) {
+            tvg::Initializer::term();
+            throw std::runtime_error("tvg::SwCanvas::gen() returned nullptr");
+        }
+        if (canvas_->target(
+                pixels_.data(),
+                width,
+                width,
+                height,
+                tvg::ColorSpace::ARGB8888) != tvg::Result::Success) {
+            canvas_.reset();
+            tvg::Initializer::term();
+            throw std::runtime_error("tvg::SwCanvas::target failed");
+        }
+    }
+
+    ~ThorvgCanvasScope() {
+        canvas_.reset();
+        tvg::Initializer::term();
+    }
+
+    auto canvas() const noexcept -> tvg::SwCanvas& {
+        return *canvas_;
+    }
+
+    auto render() const -> void {
+        ASSERT_EQ(canvas_->draw(true), tvg::Result::Success);
+        ASSERT_EQ(canvas_->sync(), tvg::Result::Success);
+    }
+
+    [[nodiscard]] auto pixel_at(const std::uint32_t x, const std::uint32_t y) const noexcept -> std::uint32_t {
+        return pixels_.at(static_cast<std::size_t>(y) * width_ + x);
+    }
+
+private:
+    std::vector<std::uint32_t> pixels_;
+    std::unique_ptr<tvg::SwCanvas> canvas_;
+    std::uint32_t width_;
+};
+
+[[nodiscard]] auto alpha_of(const std::uint32_t pixel) noexcept -> std::uint8_t {
+    return static_cast<std::uint8_t>((pixel >> 24u) & 0xffu);
+}
+
+[[nodiscard]] auto red_of(const std::uint32_t pixel) noexcept -> std::uint8_t {
+    return static_cast<std::uint8_t>((pixel >> 16u) & 0xffu);
+}
+
+[[nodiscard]] auto green_of(const std::uint32_t pixel) noexcept -> std::uint8_t {
+    return static_cast<std::uint8_t>((pixel >> 8u) & 0xffu);
+}
+
+[[nodiscard]] auto blue_of(const std::uint32_t pixel) noexcept -> std::uint8_t {
+    return static_cast<std::uint8_t>(pixel & 0xffu);
+}
+
 } // namespace
 
 TEST(ShowcaseLayoutTest, HeaderBar_UsesSingleRowAssembly) {
@@ -30,7 +100,10 @@ TEST(ShowcaseLayoutTest, HeaderBar_UsesSingleRowAssembly) {
 
     ASSERT_EQ(header->child_count(), 1u);
 
-    auto& row = child_at(*header, 0);
+    auto& mounted = child_at(*header, 0);
+    ASSERT_EQ(mounted.child_count(), 1u);
+
+    auto& row = child_at(mounted, 0);
     EXPECT_EQ(row.child_count(), 5u);
 
     const auto title_bounds = child_at(row, 0).bounds();
@@ -50,8 +123,13 @@ TEST(ShowcaseLayoutTest, DockBar_ComposesRowsInsteadOfManualFrames) {
 
     ASSERT_EQ(dock->child_count(), 2u);
 
-    auto& icon_row = child_at(*dock, 0);
-    auto& overlay_row = child_at(*dock, 1);
+    auto& icon_mounted = child_at(*dock, 0);
+    auto& overlay_mounted = child_at(*dock, 1);
+    ASSERT_EQ(icon_mounted.child_count(), 1u);
+    ASSERT_EQ(overlay_mounted.child_count(), 1u);
+
+    auto& icon_row = child_at(icon_mounted, 0);
+    auto& overlay_row = child_at(overlay_mounted, 0);
 
     EXPECT_EQ(icon_row.child_count(), 7u);
     EXPECT_EQ(overlay_row.child_count(), 3u);
@@ -137,18 +215,33 @@ TEST(ShowcaseLayoutTest, RecentActivityCard_KeepsTitleAndRowsAligned) {
     auto activity = nandina::showcase::RecentActivityCard::create();
     activity->set_bounds(618.0f, 180.0f, 342.0f, 200.0f);
 
-    ASSERT_EQ(activity->child_count(), 2u);
+    ASSERT_EQ(activity->child_count(), 1u);
 
-    const auto title_bounds = child_at(*activity, 0).bounds();
+    auto& mounted = child_at(*activity, 0);
+    ASSERT_EQ(mounted.child_count(), 1u);
+
+    auto& content_column = child_at(mounted, 0);
+    ASSERT_EQ(content_column.child_count(), 2u);
+
+    auto& title_slot = child_at(content_column, 0);
+    ASSERT_EQ(title_slot.child_count(), 1u);
+
+    const auto title_bounds = child_at(title_slot, 0).bounds();
     EXPECT_FLOAT_EQ(title_bounds.x(), 634.0f);
     EXPECT_FLOAT_EQ(title_bounds.y(), 188.0f);
     EXPECT_FLOAT_EQ(title_bounds.width(), 160.0f);
     EXPECT_FLOAT_EQ(title_bounds.height(), 18.0f);
 
-    auto& list = child_at(*activity, 1);
+    auto& list = child_at(content_column, 1);
     ASSERT_EQ(list.child_count(), 1u);
 
-    auto& column = child_at(list, 0);
+    auto& activity_list = child_at(list, 0);
+    ASSERT_EQ(activity_list.child_count(), 1u);
+
+    auto& list_mounted = child_at(activity_list, 0);
+    ASSERT_EQ(list_mounted.child_count(), 1u);
+
+    auto& column = child_at(list_mounted, 0);
     ASSERT_EQ(column.child_count(), 5u);
 
     auto& first_row = child_at(column, 0);
@@ -243,7 +336,10 @@ TEST(ShowcaseLayoutTest, FooterSection_UsesPaddingNodeForLabelPlacement) {
 
     ASSERT_EQ(footer->child_count(), 1u);
 
-    auto& padding = child_at(*footer, 0);
+    auto& mounted = child_at(*footer, 0);
+    ASSERT_EQ(mounted.child_count(), 1u);
+
+    auto& padding = child_at(mounted, 0);
     ASSERT_EQ(padding.child_count(), 1u);
 
     const auto padding_bounds = padding.bounds();
@@ -279,6 +375,74 @@ TEST(ShowcaseLayoutTest, SidebarSection_IsConcreteSidebarWithoutWrapperNode) {
     ASSERT_EQ(content_column.child_count(), 2u);
 }
 
+TEST(ShowcaseLayoutTest, SidebarSection_LaysOutGroupsAndItemsVertically) {
+    auto sidebar = nandina::showcase::SidebarSection::create();
+    sidebar->set_bounds(0.0f, 0.0f, 240.0f, 720.0f);
+
+    auto& root_column = child_at(*sidebar, 0);
+    auto& header_slot = child_at(root_column, 0);
+    auto& content_expanded = child_at(root_column, 1);
+    auto& footer_slot = child_at(root_column, 2);
+    auto& content_padding = child_at(content_expanded, 0);
+    auto& content_column = child_at(content_padding, 0);
+
+    const auto header_bounds = header_slot.bounds();
+    const auto content_bounds = content_expanded.bounds();
+    const auto footer_bounds = footer_slot.bounds();
+    EXPECT_FLOAT_EQ(header_bounds.x(), 0.0f);
+    EXPECT_FLOAT_EQ(header_bounds.y(), 0.0f);
+    EXPECT_FLOAT_EQ(header_bounds.width(), 240.0f);
+    EXPECT_FLOAT_EQ(header_bounds.height(), 50.0f);
+
+    EXPECT_FLOAT_EQ(content_bounds.x(), 0.0f);
+    EXPECT_FLOAT_EQ(content_bounds.y(), 50.0f);
+    EXPECT_FLOAT_EQ(content_bounds.width(), 240.0f);
+    EXPECT_FLOAT_EQ(content_bounds.height(), 600.0f);
+
+    EXPECT_FLOAT_EQ(footer_bounds.x(), 0.0f);
+    EXPECT_FLOAT_EQ(footer_bounds.y(), 650.0f);
+    EXPECT_FLOAT_EQ(footer_bounds.width(), 240.0f);
+    EXPECT_FLOAT_EQ(footer_bounds.height(), 70.0f);
+
+    ASSERT_EQ(content_column.child_count(), 2u);
+    auto& nav_group = child_at(content_column, 0);
+    auto& projects_group = child_at(content_column, 1);
+
+    const auto nav_bounds = nav_group.bounds();
+    const auto projects_bounds = projects_group.bounds();
+    EXPECT_FLOAT_EQ(nav_bounds.x(), 0.0f);
+    EXPECT_FLOAT_EQ(nav_bounds.y(), 54.0f);
+    EXPECT_FLOAT_EQ(nav_bounds.width(), 240.0f);
+    EXPECT_FLOAT_EQ(nav_bounds.height(), 180.0f);
+
+    EXPECT_FLOAT_EQ(projects_bounds.x(), 0.0f);
+    EXPECT_FLOAT_EQ(projects_bounds.y(), 236.0f);
+    EXPECT_FLOAT_EQ(projects_bounds.width(), 240.0f);
+    EXPECT_FLOAT_EQ(projects_bounds.height(), 180.0f);
+
+    ASSERT_EQ(nav_group.child_count(), 6u);
+    ASSERT_EQ(projects_group.child_count(), 6u);
+
+    const auto first_nav_item_bounds = child_at(nav_group, 2).bounds();
+    const auto last_nav_item_bounds = child_at(nav_group, 5).bounds();
+    const auto first_project_item_bounds = child_at(projects_group, 2).bounds();
+
+    EXPECT_FLOAT_EQ(first_nav_item_bounds.x(), 0.0f);
+    EXPECT_FLOAT_EQ(first_nav_item_bounds.y(), 82.0f);
+    EXPECT_FLOAT_EQ(first_nav_item_bounds.width(), 240.0f);
+    EXPECT_FLOAT_EQ(first_nav_item_bounds.height(), 36.0f);
+
+    EXPECT_FLOAT_EQ(last_nav_item_bounds.x(), 0.0f);
+    EXPECT_FLOAT_EQ(last_nav_item_bounds.y(), 196.0f);
+    EXPECT_FLOAT_EQ(last_nav_item_bounds.width(), 240.0f);
+    EXPECT_FLOAT_EQ(last_nav_item_bounds.height(), 36.0f);
+
+    EXPECT_FLOAT_EQ(first_project_item_bounds.x(), 0.0f);
+    EXPECT_FLOAT_EQ(first_project_item_bounds.y(), 264.0f);
+    EXPECT_FLOAT_EQ(first_project_item_bounds.width(), 240.0f);
+    EXPECT_FLOAT_EQ(first_project_item_bounds.height(), 36.0f);
+}
+
 TEST(ShowcaseLayoutTest, MainComponent_NestsContentSectionsInsideColumnNode) {
     MainComponent component;
 
@@ -287,7 +451,10 @@ TEST(ShowcaseLayoutTest, MainComponent_NestsContentSectionsInsideColumnNode) {
     auto& shell = child_at(component, 0);
     ASSERT_EQ(shell.child_count(), 1u);
 
-    auto& shell_row = child_at(shell, 0);
+    auto& shell_mounted = child_at(shell, 0);
+    ASSERT_EQ(shell_mounted.child_count(), 1u);
+
+    auto& shell_row = child_at(shell_mounted, 0);
     ASSERT_EQ(shell_row.child_count(), 2u);
 
     auto& sidebar_slot = child_at(shell_row, 0);
@@ -313,13 +480,131 @@ TEST(ShowcaseLayoutTest, MainComponent_NestsContentSectionsInsideColumnNode) {
     auto& content = child_at(content_padding, 0);
     ASSERT_EQ(content.child_count(), 1u);
 
-    auto& column = child_at(content, 0);
+    auto& content_mounted = child_at(content, 0);
+    ASSERT_EQ(content_mounted.child_count(), 1u);
+
+    auto& column = child_at(content_mounted, 0);
     ASSERT_EQ(column.child_count(), 4u);
 
     EXPECT_FLOAT_EQ(child_at(column, 0).preferred_size().height(), 100.0f);
     EXPECT_FLOAT_EQ(child_at(column, 1).preferred_size().height(), 200.0f);
     EXPECT_FLOAT_EQ(child_at(column, 2).preferred_size().height(), 110.0f);
     EXPECT_FLOAT_EQ(child_at(column, 3).preferred_size().height(), 26.0f);
+}
+
+TEST(ShowcaseLayoutTest, MainComponent_DrawPassLaysOutShellSlots) {
+    MainComponent component;
+    static_cast<nandina::runtime::NanWidget&>(component).set_bounds(0.0f, 0.0f, 1280.0f, 720.0f);
+
+    ThorvgCanvasScope canvas_scope{1280u, 720u};
+    component.draw(canvas_scope.canvas());
+
+    auto& shell = child_at(component, 0);
+    auto& shell_mounted = child_at(shell, 0);
+    auto& shell_row = child_at(shell_mounted, 0);
+    auto& sidebar_slot = child_at(shell_row, 0);
+    auto& main_expanded = child_at(shell_row, 1);
+    auto& main_column = child_at(main_expanded, 0);
+    auto& header_slot = child_at(main_column, 0);
+    auto& content_expanded = child_at(main_column, 1);
+    auto& dock_slot = child_at(main_column, 2);
+    auto& content_padding = child_at(content_expanded, 0);
+    auto& content = child_at(content_padding, 0);
+    auto& content_mounted = child_at(content, 0);
+    auto& section_column = child_at(content_mounted, 0);
+
+    const auto sidebar_bounds = sidebar_slot.bounds();
+    EXPECT_FLOAT_EQ(sidebar_bounds.x(), 0.0f);
+    EXPECT_FLOAT_EQ(sidebar_bounds.y(), 0.0f);
+    EXPECT_FLOAT_EQ(sidebar_bounds.width(), 240.0f);
+    EXPECT_FLOAT_EQ(sidebar_bounds.height(), 720.0f);
+
+    const auto main_bounds = main_expanded.bounds();
+    EXPECT_FLOAT_EQ(main_bounds.x(), 240.0f);
+    EXPECT_FLOAT_EQ(main_bounds.y(), 0.0f);
+    EXPECT_FLOAT_EQ(main_bounds.width(), 1040.0f);
+    EXPECT_FLOAT_EQ(main_bounds.height(), 720.0f);
+
+    const auto header_bounds = header_slot.bounds();
+    EXPECT_FLOAT_EQ(header_bounds.x(), 240.0f);
+    EXPECT_FLOAT_EQ(header_bounds.y(), 0.0f);
+    EXPECT_FLOAT_EQ(header_bounds.width(), 1040.0f);
+    EXPECT_FLOAT_EQ(header_bounds.height(), 44.0f);
+
+    const auto content_bounds = content_expanded.bounds();
+    EXPECT_FLOAT_EQ(content_bounds.x(), 240.0f);
+    EXPECT_FLOAT_EQ(content_bounds.y(), 44.0f);
+    EXPECT_FLOAT_EQ(content_bounds.width(), 1040.0f);
+    EXPECT_FLOAT_EQ(content_bounds.height(), 620.0f);
+
+    const auto dock_bounds = dock_slot.bounds();
+    EXPECT_FLOAT_EQ(dock_bounds.x(), 240.0f);
+    EXPECT_FLOAT_EQ(dock_bounds.y(), 664.0f);
+    EXPECT_FLOAT_EQ(dock_bounds.width(), 1040.0f);
+    EXPECT_FLOAT_EQ(dock_bounds.height(), 56.0f);
+
+    const auto padded_content_bounds = content.bounds();
+    EXPECT_FLOAT_EQ(padded_content_bounds.x(), 260.0f);
+    EXPECT_FLOAT_EQ(padded_content_bounds.y(), 44.0f);
+    EXPECT_FLOAT_EQ(padded_content_bounds.width(), 1000.0f);
+    EXPECT_FLOAT_EQ(padded_content_bounds.height(), 620.0f);
+
+    const auto stats_bounds = child_at(section_column, 0).bounds();
+    const auto middle_bounds = child_at(section_column, 1).bounds();
+    const auto bottom_bounds = child_at(section_column, 2).bounds();
+    const auto footer_bounds = child_at(section_column, 3).bounds();
+
+    EXPECT_FLOAT_EQ(stats_bounds.x(), 260.0f);
+    EXPECT_FLOAT_EQ(stats_bounds.y(), 64.0f);
+    EXPECT_FLOAT_EQ(stats_bounds.width(), 1000.0f);
+    EXPECT_FLOAT_EQ(stats_bounds.height(), 100.0f);
+
+    EXPECT_FLOAT_EQ(middle_bounds.x(), 260.0f);
+    EXPECT_FLOAT_EQ(middle_bounds.y(), 184.0f);
+    EXPECT_FLOAT_EQ(middle_bounds.width(), 1000.0f);
+    EXPECT_FLOAT_EQ(middle_bounds.height(), 200.0f);
+
+    EXPECT_FLOAT_EQ(bottom_bounds.x(), 260.0f);
+    EXPECT_FLOAT_EQ(bottom_bounds.y(), 404.0f);
+    EXPECT_FLOAT_EQ(bottom_bounds.width(), 1000.0f);
+    EXPECT_FLOAT_EQ(bottom_bounds.height(), 110.0f);
+
+    EXPECT_FLOAT_EQ(footer_bounds.x(), 260.0f);
+    EXPECT_FLOAT_EQ(footer_bounds.y(), 534.0f);
+    EXPECT_FLOAT_EQ(footer_bounds.width(), 1000.0f);
+    EXPECT_FLOAT_EQ(footer_bounds.height(), 26.0f);
+}
+
+TEST(ShowcaseLayoutTest, MainComponent_DrawPassProducesDistinctSurfaceColors) {
+    MainComponent component;
+    static_cast<nandina::runtime::NanWidget&>(component).set_bounds(0.0f, 0.0f, 1280.0f, 720.0f);
+
+    ThorvgCanvasScope canvas_scope{1280u, 720u};
+    component.draw(canvas_scope.canvas());
+    canvas_scope.render();
+
+    const auto sidebar_pixel = canvas_scope.pixel_at(10u, 10u);
+    const auto stats_pixel = canvas_scope.pixel_at(280u, 80u);
+    const auto dock_pixel = canvas_scope.pixel_at(500u, 690u);
+
+    EXPECT_GT(alpha_of(sidebar_pixel), 0u);
+    EXPECT_GT(alpha_of(stats_pixel), 0u);
+    EXPECT_GT(alpha_of(dock_pixel), 0u);
+
+    EXPECT_NE(sidebar_pixel, stats_pixel);
+    EXPECT_NE(stats_pixel, dock_pixel);
+
+    EXPECT_NEAR(static_cast<float>(red_of(sidebar_pixel)), 42.0f, 8.0f);
+    EXPECT_NEAR(static_cast<float>(green_of(sidebar_pixel)), 44.0f, 8.0f);
+    EXPECT_NEAR(static_cast<float>(blue_of(sidebar_pixel)), 62.0f, 8.0f);
+
+    EXPECT_NEAR(static_cast<float>(red_of(stats_pixel)), 50.0f, 10.0f);
+    EXPECT_NEAR(static_cast<float>(green_of(stats_pixel)), 52.0f, 10.0f);
+    EXPECT_NEAR(static_cast<float>(blue_of(stats_pixel)), 72.0f, 10.0f);
+
+    EXPECT_NEAR(static_cast<float>(red_of(dock_pixel)), 38.0f, 12.0f);
+    EXPECT_NEAR(static_cast<float>(green_of(dock_pixel)), 40.0f, 12.0f);
+    EXPECT_NEAR(static_cast<float>(blue_of(dock_pixel)), 56.0f, 12.0f);
 }
 
 TEST(ShowcaseLayoutTest, MiddleContentSection_UsesSplitRowContract) {

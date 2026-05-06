@@ -8,7 +8,7 @@ module;
 
 export module nandina.showcase;
 
-import nandina.app.application;
+import nandina.app.authoring;
 import nandina.log;
 import nandina.foundation.color;
 import nandina.layout.container;
@@ -93,8 +93,8 @@ public:
     auto set_bounds(const float x, const float y, const float w, const float h) noexcept -> NanWidget& override {
         NanWidget::set_bounds(x, y, w, h);
 
-        if (m_column) {
-            m_column->set_bounds(x, y, w, h);
+        if (m_mounted_column) {
+            m_mounted_column->set_bounds(x, y, w, h);
         }
 
         return *this;
@@ -102,15 +102,18 @@ public:
 
 private:
     ShowcaseContentColumn() {
-        auto column = nandina::layout::Column::Create();
-        column->align_items(nandina::layout::LayoutAlignment::stretch)
-            .padding_top(m_top_gap)
-            .gap(m_section_gap);
-        m_column = column.get();
-        add_child(std::move(column));
+        auto mounted = nandina::app::mount(
+            nandina::app::column()
+                .align_items(nandina::layout::LayoutAlignment::stretch)
+                .padding_top(m_top_gap)
+                .gap(m_section_gap)
+                .bind(m_column));
+        m_mounted_column = mounted.get();
+        add_child(std::move(mounted));
     }
 
-    nandina::layout::Column* m_column{nullptr};
+    nandina::app::NanComponent* m_mounted_column{nullptr};
+    nandina::app::Ref<nandina::layout::Column> m_column;
     nandina::runtime::NanWidget* m_stats_section{nullptr};
     nandina::runtime::NanWidget* m_middle_section{nullptr};
     nandina::runtime::NanWidget* m_bottom_section{nullptr};
@@ -170,8 +173,8 @@ public:
     auto set_bounds(const float x, const float y, const float w, const float h) noexcept -> NanWidget& override {
         NanWidget::set_bounds(x, y, w, h);
 
-        if (m_root_row) {
-            m_root_row->set_bounds(x, y, w, h);
+        if (m_mounted_root) {
+            m_mounted_root->set_bounds(x, y, w, h);
         }
 
         return *this;
@@ -179,55 +182,43 @@ public:
 
 private:
     ShowcaseShell() {
-        auto root_row = nandina::layout::Row::Create();
-        root_row->align_items(nandina::layout::LayoutAlignment::stretch);
-
-        auto sidebar_slot = nandina::layout::SizedBox::Create();
-        m_sidebar_slot = sidebar_slot.get();
-        root_row->add(std::move(sidebar_slot));
-
-        auto main_column = nandina::layout::Column::Create();
-        main_column->align_items(nandina::layout::LayoutAlignment::stretch);
-
-        auto header_slot = nandina::layout::SizedBox::Create();
-        m_header_slot = header_slot.get();
-        main_column->add(std::move(header_slot));
-
-        auto content_padding = nandina::layout::Padding::Create();
-        content_padding->padding(m_content_padding, 0.0f);
-        m_content_padding_node = content_padding.get();
-
-        auto content_slot = nandina::layout::Expanded::Create();
-        m_content_slot = content_slot.get();
-        content_slot->child(std::move(content_padding));
-        main_column->add(std::move(content_slot));
-
-        auto dock_slot = nandina::layout::SizedBox::Create();
-        m_dock_slot = dock_slot.get();
-        main_column->add(std::move(dock_slot));
-
-        auto main_expanded = nandina::layout::Expanded::Create();
-        m_main_expanded = main_expanded.get();
-        m_main_column = main_column.get();
-        main_expanded->child(std::move(main_column));
-        root_row->add(std::move(main_expanded));
-
-        m_root_row = root_row.get();
-        add_child(std::move(root_row));
+        auto mounted = nandina::app::mount(
+            nandina::app::row(nandina::app::children(
+                nandina::app::sized_box(nandina::app::Node{})
+                    .bind(m_sidebar_slot),
+                nandina::app::expanded(
+                    nandina::app::column(nandina::app::children(
+                        nandina::app::sized_box(nandina::app::Node{})
+                            .bind(m_header_slot),
+                        nandina::app::expanded(
+                            nandina::app::padding(nandina::app::Node{})
+                                .padding(m_content_padding, 0.0f)
+                                .bind(m_content_padding_node))
+                            .bind(m_content_slot),
+                        nandina::app::sized_box(nandina::app::Node{})
+                            .bind(m_dock_slot)))
+                        .align_items(nandina::layout::LayoutAlignment::stretch)
+                        .bind(m_main_column))
+                    .bind(m_main_expanded)))
+                .align_items(nandina::layout::LayoutAlignment::stretch)
+                .bind(m_root_row));
+        m_mounted_root = mounted.get();
+        add_child(std::move(mounted));
     }
 
     nandina::runtime::NanWidget* m_sidebar{nullptr};
     nandina::runtime::NanWidget* m_header{nullptr};
     nandina::runtime::NanWidget* m_content{nullptr};
     nandina::runtime::NanWidget* m_dock{nullptr};
-    nandina::layout::Row* m_root_row{nullptr};
-    nandina::layout::SizedBox* m_sidebar_slot{nullptr};
-    nandina::layout::Expanded* m_main_expanded{nullptr};
-    nandina::layout::Column* m_main_column{nullptr};
-    nandina::layout::SizedBox* m_header_slot{nullptr};
-    nandina::layout::Expanded* m_content_slot{nullptr};
-    nandina::layout::Padding* m_content_padding_node{nullptr};
-    nandina::layout::SizedBox* m_dock_slot{nullptr};
+    nandina::app::NanComponent* m_mounted_root{nullptr};
+    nandina::app::Ref<nandina::layout::Row> m_root_row;
+    nandina::app::Ref<nandina::layout::SizedBox> m_sidebar_slot;
+    nandina::app::Ref<nandina::layout::Expanded> m_main_expanded;
+    nandina::app::Ref<nandina::layout::Column> m_main_column;
+    nandina::app::Ref<nandina::layout::SizedBox> m_header_slot;
+    nandina::app::Ref<nandina::layout::Expanded> m_content_slot;
+    nandina::app::Ref<nandina::layout::Padding> m_content_padding_node;
+    nandina::app::Ref<nandina::layout::SizedBox> m_dock_slot;
     float m_content_padding{20.0f};
 };
 
