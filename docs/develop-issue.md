@@ -449,8 +449,9 @@
 
 ---
 
-## Issue 016 — 设计 Scene/DrawCommand 中间层
+## Issue 016 — 设计 Scene/DrawCommand 中间层 ❌ 未完成
 **Labels:** `area:runtime`, `area:render`, `kind:architecture`, `priority:p0`
+**Status:** ❌ 未完成 — 主线仍未建立 Scene/DrawCommand 中间层
 
 ### 目标
 建立 widget 到 renderer 之间的中间表示，避免 widget 直接耦合具体后端。
@@ -468,6 +469,11 @@
 
 ### 完成定义
 - render backend 只消费 draw commands，不理解 widget 高层语义
+
+### 当前判断
+- `NanWidget` 仍直接面向 `tvg::SwCanvas` 绘制
+- `NanWindow` 的绘制回调也仍直接暴露 ThorVG canvas
+- `render/` 模块尚未落地 commands / adapter 的真实实现
 
 ---
 
@@ -498,8 +504,9 @@
 
 # Milestone M2 — Reactive 模块
 
-## Issue 018 — 定义 reactive 模块设计说明
+## Issue 018 — 定义 reactive 模块设计说明 ✅ 已完成
 **Labels:** `area:reactive`, `kind:docs`, `priority:p0`
+**Status:** ✅ 已完成 — reactive 模块设计说明已落地
 
 ### 目标
 在实现前明确 reactive 设计边界，避免后续反复改概念。
@@ -521,10 +528,15 @@
 ### 完成定义
 - reactive 实现时有统一设计依据
 
+### 完成记录
+- `docs/reactive-strategy.md` 已覆盖 State / ReadState / Computed / Effect / EffectScope / Prop / StateList / batch 的整体语义
+- 文档已纳入 docs 导航，可作为主线设计说明入口
+
 ---
 
-## Issue 019 — 实现 State<T> 最小版本
+## Issue 019 — 实现 State<T> 最小版本 ✅ 已完成
 **Labels:** `area:reactive`, `kind:implementation`, `priority:p0`
+**Status:** ✅ 已完成 — `State<T>` 与基础订阅能力已落地
 
 ### 目标
 实现可读写的单值响应式状态容器。
@@ -541,10 +553,15 @@
 ### 完成定义
 - 可通过 State 保存并更新单值状态
 
+### 完成记录
+- `reactive/src/state.cppm` 已实现 `State<T>`
+- 已支持 `get()`、`set()`、`on_change()` 与只读视图导出
+
 ---
 
-## Issue 020 — 实现 ReadState<T> 只读视图
+## Issue 020 — 实现 ReadState<T> 只读视图 ✅ 已完成
 **Labels:** `area:reactive`, `kind:implementation`, `priority:p1`
+**Status:** ✅ 已完成 — `ReadState<T>` 已形成只读订阅视图
 
 ### 目标
 区分拥有可写状态与对外暴露只读状态。
@@ -560,10 +577,15 @@
 ### 完成定义
 - 父组件可向子组件传递只读状态
 
+### 完成记录
+- `reactive/src/state.cppm` 已实现 `ReadState<T>`
+- `tests/reactive/test_reactive.cpp` 已覆盖只读视图复制与追踪行为
+
 ---
 
-## Issue 021 — 实现 Effect 自动依赖追踪
+## Issue 021 — 实现 Effect 自动依赖追踪 ✅ 已完成
 **Labels:** `area:reactive`, `kind:implementation`, `priority:p0`
+**Status:** ✅ 已完成 — Effect 自动依赖追踪已落地
 
 ### 目标
 实现“读取哪些 State，就对哪些 State 建依赖”的 effect 机制。
@@ -579,10 +601,16 @@
 ### 完成定义
 - UI 属性可通过 effect 自动同步状态变化
 
+### 完成记录
+- `reactive/src/effect.cppm` 已实现 `Effect`
+- `reactive/src/tracking.cppm` 已提供依赖追踪上下文与自动恢复
+- `tests/reactive/test_reactive.cpp` 已覆盖自动依赖追踪
+
 ---
 
-## Issue 022 — 实现 EffectScope 生命周期管理
+## Issue 022 — 实现 EffectScope 生命周期管理 ✅ 已完成
 **Labels:** `area:reactive`, `kind:implementation`, `priority:p0`
+**Status:** ✅ 已完成 — `EffectScope` 已具备生命周期管理能力
 
 ### 目标
 解决组件销毁时 reactive 订阅自动清理的问题。
@@ -598,10 +626,16 @@
 ### 完成定义
 - effect 生命周期可被宿主对象安全管理
 
+### 完成记录
+- `reactive/src/effect.cppm` 已实现 `EffectScope`
+- 已提供作用域清理与 effect 挂载能力
+- `docs/reactive-strategy.md` 已说明其与组件生命周期的集成方向
+
 ---
 
-## Issue 023 — 实现 Computed 基础能力
+## Issue 023 — 实现 Computed 基础能力 ✅ 已完成
 **Labels:** `area:reactive`, `kind:implementation`, `priority:p1`
+**Status:** ✅ 已完成 — `Computed` 已支持依赖追踪与惰性重算
 
 ### 目标
 支持派生值计算，减少手动同步逻辑。
@@ -616,10 +650,15 @@
 ### 完成定义
 - 可以从多个状态派生出一个只读值
 
+### 完成记录
+- `reactive/src/computed.cppm` 已实现 `Computed`
+- `tests/reactive/test_reactive.cpp` 已覆盖派生值与惰性重算
+
 ---
 
-## Issue 024 — 为 reactive 增加异常安全与 tracking context 恢复
+## Issue 024 — 为 reactive 增加异常安全与 tracking context 恢复 ✅ 已完成
 **Labels:** `area:reactive`, `kind:implementation`, `priority:p1`
+**Status:** ✅ 已完成 — tracking context 恢复与异常安全已补齐
 
 ### 目标
 防止 effect/computed 中出现异常后破坏线程局部追踪状态。
@@ -634,6 +673,11 @@
 
 ### 完成定义
 - 出错后不会让后续 effect 全部异常行为
+
+### 完成记录
+- `reactive/src/tracking.cppm` 已通过 RAII 恢复 tracking context
+- 已实现异常路径下的 pending observer 恢复
+- `tests/reactive/test_reactive.cpp` 已覆盖异常后继续通知的行为
 
 ---
 
@@ -664,8 +708,9 @@
 
 ---
 
-## Issue 026 — 实现 StateList<T> 结构化集合响应式模型
+## Issue 026 — 实现 StateList<T> 结构化集合响应式模型 ⚠️ 部分完成
 **Labels:** `area:reactive`, `kind:implementation`, `priority:p1`
+**Status:** ⚠️ 部分完成 — `StateList<T>` 已存在，但细粒度变化对外语义仍不完整
 
 ### 目标
 支持列表、树等结构化数据的细粒度变更通知。
@@ -683,10 +728,19 @@
 ### 完成定义
 - 未来 list/tree/router registry 有统一数据基础
 
+### 当前进展
+- `reactive/src/state_list.cppm` 已实现 `StateList<T>` 与 `ListChangeKind`
+- 已支持集合存取与变更通知
+
+### 未完成部分
+- 公开 `on_change` 仍主要暴露整体列表视角，细粒度 `ListChange` 语义没有完整对外开放
+- 还不足以证明后续 list/tree/router registry 会直接复用这套结构化差量事件
+
 ---
 
-## Issue 027 — 实现 batch(...) 最小批处理能力
+## Issue 027 — 实现 batch(...) 最小批处理能力 ✅ 已完成
 **Labels:** `area:reactive`, `kind:implementation`, `priority:p1`
+**Status:** ✅ 已完成 — `batch(...)` 与批量失效刷新已落地
 
 ### 目标
 合并多个连续状态更新，避免重复触发 effect。
@@ -702,10 +756,16 @@
 ### 完成定义
 - 连续 set 多个 state 时不会产生多次无意义刷新
 
+### 完成记录
+- `reactive/src/batch.cppm` 已实现 `batch(...)`
+- `reactive/src/tracking.cppm` 已支持 pending invalidation flush
+- `tests/reactive/test_reactive.cpp` 已覆盖批处理去重刷新
+
 ---
 
-## Issue 028 — 编写 reactive 模块单元测试集合
+## Issue 028 — 编写 reactive 模块单元测试集合 ⚠️ 部分完成
 **Labels:** `area:reactive`, `area:tests`, `kind:test`, `priority:p0`
+**Status:** ⚠️ 部分完成 — reactive 主体能力已有测试，但部分边界场景仍未覆盖
 
 ### 目标
 为 reactive 核心打下稳定测试基础。
@@ -726,12 +786,21 @@
 ### 完成定义
 - reactive 成为最先有较完整测试覆盖的模块
 
+### 当前进展
+- `tests/reactive/test_reactive.cpp` 已覆盖 effect / computed / prop / batch / StateList 主体能力
+- reactive 测试已接入主测试构建
+
+### 未完成部分
+- `EffectScope::clear()` 这类生命周期清理边界仍缺少直接测试
+- `StateList` 细粒度事件顺序与语义也未见专门用例
+
 ---
 
 # Milestone M3 — Layout 模块
 
-## Issue 029 — 定义 layout 协议与测量/布局职责边界
+## Issue 029 — 定义 layout 协议与测量/布局职责边界 ⚠️ 部分完成
 **Labels:** `area:layout`, `kind:architecture`, `priority:p0`
+**Status:** ⚠️ 部分完成 — layout 协议已在代码中固化，但独立策略文档尚未落位
 
 ### 目标
 在实现前明确 layout 的输入输出模型。
@@ -750,10 +819,17 @@
 ### 完成定义
 - 基础容器实现时不再反复改协议
 
+### 当前进展
+- `layout/core` 与 `layout_container` 已固化 measure/layout、preferred size、padding/gap/align/justify 等协议
+
+### 未完成部分
+- `docs/layout-strategy.md` 尚未落位，职责边界仍主要散落在实现代码里
+
 ---
 
-## Issue 030 — 实现 LayoutNode / LayoutRequest / LayoutResult 基础模型
+## Issue 030 — 实现 LayoutNode / LayoutRequest / LayoutResult 基础模型 ⚠️ 部分完成
 **Labels:** `area:layout`, `kind:implementation`, `priority:p0`
+**Status:** ⚠️ 部分完成 — 已有 `LayoutRequest` 与 backend，但目标模型未完全齐备
 
 ### 目标
 建立布局系统的统一数据结构。
@@ -770,10 +846,19 @@
 ### 完成定义
 - Row/Column/Stack 可以共享同一协议
 
+### 当前进展
+- `layout/src/layout_core.cppm` 已提供 `LayoutRequest`、`LayoutChildSpec` 与 `BasicLayoutBackend`
+- Row / Column / Stack 已共享这套基础布局协议
+
+### 未完成部分
+- 主线未见独立 `LayoutNode` / `LayoutResult` 模型
+- content bounds 等结果对象仍未以显式统一结构对外表达
+
 ---
 
-## Issue 031 — 实现 Row 容器
+## Issue 031 — 实现 Row 容器 ✅ 已完成
 **Labels:** `area:layout`, `kind:implementation`, `priority:p0`
+**Status:** ✅ 已完成 — Row 容器已落地并有测试覆盖
 
 ### 目标
 实现最基础的水平容器布局。
@@ -792,10 +877,15 @@
 ### 完成定义
 - 可用于排列按钮、标题栏内容等
 
+### 完成记录
+- `layout/src/layout_container.cppm` 已实现 Row
+- `tests/layout/test_layout_core.cpp` 已覆盖 Row 布局行为
+
 ---
 
-## Issue 032 — 实现 Column 容器
+## Issue 032 — 实现 Column 容器 ✅ 已完成
 **Labels:** `area:layout`, `kind:implementation`, `priority:p0`
+**Status:** ✅ 已完成 — Column 容器已落地并有测试覆盖
 
 ### 目标
 实现最基础的垂直容器布局。
@@ -813,10 +903,15 @@
 ### 完成定义
 - 可用于页面主结构、表单结构
 
+### 完成记录
+- `layout/src/layout_container.cppm` 已实现 Column
+- `tests/layout/test_layout_core.cpp` 已覆盖 Column 基础布局与 flex 分配行为
+
 ---
 
-## Issue 033 — 实现 Stack 容器
+## Issue 033 — 实现 Stack 容器 ✅ 已完成
 **Labels:** `area:layout`, `kind:implementation`, `priority:p1`
+**Status:** ✅ 已完成 — Stack 容器已落地并有测试覆盖
 
 ### 目标
 支持 overlay/重叠子节点布局。
@@ -832,10 +927,15 @@
 ### 完成定义
 - 能承载背景层 + 内容层 + 覆盖层等结构
 
+### 完成记录
+- `layout/src/layout_container.cppm` 已实现 Stack
+- `tests/layout/test_layout_core.cpp` 已覆盖 overlay / alignment 语义
+
 ---
 
-## Issue 034 — 实现 Spacer 与 SizedBox
+## Issue 034 — 实现 Spacer 与 SizedBox ✅ 已完成
 **Labels:** `area:layout`, `kind:implementation`, `priority:p1`
+**Status:** ✅ 已完成 — 布局辅助组件已落地
 
 ### 目标
 提供常见布局辅助元素。
@@ -850,10 +950,15 @@
 ### 完成定义
 - 页面结构不必靠空 widget 硬编码
 
+### 完成记录
+- `layout/src/flex_widgets.cppm` 已实现 `Spacer` 与 `SizedBox`
+- `layout/src/nan_layout.cppm` 已作为公共入口导出
+
 ---
 
-## Issue 035 — 实现轻量 Flex 能力（grow/shrink/basis）
+## Issue 035 — 实现轻量 Flex 能力（grow/shrink/basis） ⚠️ 部分完成
 **Labels:** `area:layout`, `kind:implementation`, `priority:p1`
+**Status:** ⚠️ 部分完成 — 轻量 grow 已有，但 shrink / basis 语义仍未补齐
 
 ### 目标
 补足基础容器在常见自适应布局中的能力。
@@ -869,10 +974,19 @@
 ### 完成定义
 - 基础页面不必过早引入 Yoga 才能自适应
 
+### 当前进展
+- 当前 backend 已支持基于 flex factor 的轻量空间分配
+- `Expanded` / `Spacer` 已能表达基础 grow 行为
+
+### 未完成部分
+- shrink / basis 尚未形成明确语义与公开模型
+- 当前能力还不能完全覆盖 issue 定义中的 flex 三元组
+
 ---
 
-## Issue 036 — 为布局系统编写单元测试
+## Issue 036 — 为布局系统编写单元测试 ⚠️ 部分完成
 **Labels:** `area:layout`, `area:tests`, `kind:test`, `priority:p0`
+**Status:** ⚠️ 部分完成 — 基础容器测试已存在，但边界场景覆盖仍不完整
 
 ### 目标
 验证基础布局算法在边界条件下的稳定性。
@@ -892,12 +1006,21 @@
 ### 完成定义
 - 布局成为可安全迭代的模块，而非全靠手工跑 UI 看
 
+### 当前进展
+- `tests/layout/test_layout_core.cpp` 已覆盖 Row / Column / Stack、gap / padding、align / justify 等核心行为
+- 布局测试已接入主测试构建
+
+### 未完成部分
+- zero-size / constrained-size 这类边界场景仍缺少专门测试
+- 还不能算达到“边界条件下稳定性”这一完整目标
+
 ---
 
 # Milestone M4 — Theme 与 Design System Foundation
 
-## Issue 037 — 定义主题系统核心语义枚举
+## Issue 037 — 定义主题系统核心语义枚举 ⚠️ 部分完成
 **Labels:** `area:theme`, `kind:architecture`, `priority:p0`
+**Status:** ⚠️ 部分完成 — theme 类型基础已存在，但控件层语义枚举仍未统一消费
 
 ### 目标
 统一 design system 的语义基础。
@@ -915,10 +1038,18 @@
 ### 完成定义
 - widgets 不再各自发明 variant/preset/size 概念
 
+### 当前进展
+- `theme/types` 已提供颜色、组件状态、字重等主题基础枚举与类型
+
+### 未完成部分
+- `ColorVariant` / `Preset` / `SizeVariant` / `TypographyRole` 这类面向 widgets API 的核心语义仍未完整成型
+- widgets 侧仍普遍直接使用局部颜色和尺寸配置，没有统一收敛到语义枚举
+
 ---
 
-## Issue 038 — 定义 spacing/radius/border 等 primitive tokens
+## Issue 038 — 定义 spacing/radius/border 等 primitive tokens ⚠️ 部分完成
 **Labels:** `area:theme`, `kind:implementation`, `priority:p0`
+**Status:** ⚠️ 部分完成 — spacing/radius 等 token 已有，但 border/divider/focus ring 仍不完整
 
 ### 目标
 建立基础视觉 token。
@@ -936,10 +1067,18 @@
 ### 完成定义
 - widgets 可以共享结构性视觉参数
 
+### 当前进展
+- `theme/tokens/primitives` 已聚合 spacing / radius / elevation / opacity / typography
+- `tests/theme/test_theme_types.cpp` 已覆盖这些默认 token 值
+
+### 未完成部分
+- issue 范围中的 border width、divider width、focus ring width 尚未形成独立 primitive token
+
 ---
 
-## Issue 039 — 定义 palette 结构与语义色映射
+## Issue 039 — 定义 palette 结构与语义色映射 ⚠️ 部分完成
 **Labels:** `area:theme`, `kind:implementation`, `priority:p0`
+**Status:** ⚠️ 部分完成 — palette 与 light/dark 映射已存在，但控件消费侧仍大量硬编码颜色
 
 ### 目标
 建立统一颜色系统，而不是零散 RGB 常量。
@@ -955,10 +1094,18 @@
 ### 完成定义
 - Surface/Button/Label 等可通过语义色而非硬编码色工作
 
+### 当前进展
+- `theme/palette` 已提供语义色与 light/dark 映射策略
+- `tests/theme/test_theme_manager.cpp` 已覆盖 scheme 切换取色
+
+### 未完成部分
+- `Surface` / `Button` / `Label` / `Panel` 等控件尚未系统接入语义色解析，主线仍有大量 `NanRgb` 常量写死
+
 ---
 
-## Issue 040 — 定义 typography token 与文字角色
+## Issue 040 — 定义 typography token 与文字角色 ⚠️ 部分完成
 **Labels:** `area:theme`, `area:text`, `kind:implementation`, `priority:p1`
+**Status:** ⚠️ 部分完成 — typography tokens 已存在，但文字角色尚未接入控件 API
 
 ### 目标
 建立统一文字层级与字体语义。
@@ -977,10 +1124,18 @@
 ### 完成定义
 - 文本控件不再各自硬编码字体大小/粗细
 
+### 当前进展
+- `theme/typography` 已提供默认字号、字重等排版 token
+
+### 未完成部分
+- `Label` 等文本控件仍直接使用 raw font size，而不是 `TypographyRole`
+- 文字角色尚未形成 widgets 层公开语义 API
+
 ---
 
-## Issue 041 — 实现 ThemeManager 最小版本
+## Issue 041 — 实现 ThemeManager 最小版本 ⚠️ 部分完成
 **Labels:** `area:theme`, `kind:implementation`, `priority:p0`
+**Status:** ⚠️ 部分完成 — ThemeManager 已实现，但主题入口尚未真正驱动主线控件
 
 ### 目标
 建立统一主题切换入口。
@@ -997,10 +1152,18 @@
 ### 完成定义
 - widgets 可以从统一主题入口读取当前主题信息
 
+### 当前进展
+- `theme/manager` 已支持当前主题、light/dark 切换、主题注册与监听
+- `tests/theme/test_theme_manager.cpp` 已覆盖注册、激活、切换与监听
+
+### 未完成部分
+- 主线 widgets 仍大量直接使用局部样式常量，尚未系统从统一主题入口解析当前主题
+
 ---
 
-## Issue 042 — 编写 design token 文档
+## Issue 042 — 编写 design token 文档 ⚠️ 部分完成
 **Labels:** `area:theme`, `area:docs`, `kind:docs`, `priority:p1`
+**Status:** ⚠️ 部分完成 — token 体系已有代码与测试，但独立文档尚未落位
 
 ### 目标
 把 token 体系写清楚，避免后续扩展控件时语义漂移。
@@ -1018,12 +1181,20 @@
 ### 完成定义
 - 未来控件作者知道应该复用哪些 token，而不是临时创造属性
 
+### 当前进展
+- token 结构与默认值已存在于 theme 模块实现与测试中
+
+### 未完成部分
+- `docs/design-tokens.md` 尚未落位
+- 当前缺少面向控件作者的 token 选型说明文档
+
 ---
 
 # Milestone M5 — Render 与 Text 基础能力
 
-## Issue 043 — 定义 RenderBackend 抽象接口
+## Issue 043 — 定义 RenderBackend 抽象接口 ❌ 未完成
 **Labels:** `area:render`, `kind:architecture`, `priority:p0`
+**Status:** ❌ 未完成 — RenderBackend 抽象接口尚未落地
 
 ### 目标
 抽象渲染后端，避免未来具体实现反向污染 runtime/widgets。
@@ -1040,10 +1211,15 @@
 ### 完成定义
 - runtime/scene 与具体 renderer 解耦
 
+### 当前判断
+- `render/` 当前仍主要是占位结构，未见真实 backend 接口实现
+- runtime 仍直接暴露 ThorVG/SDL 绘制路径，未与渲染后端抽象解耦
+
 ---
 
-## Issue 044 — 定义 DrawCommand 到 RenderBackend 的适配层
+## Issue 044 — 定义 DrawCommand 到 RenderBackend 的适配层 ❌ 未完成
 **Labels:** `area:render`, `kind:implementation`, `priority:p0`
+**Status:** ❌ 未完成 — 主线未见 DrawCommand encoder / adapter
 
 ### 目标
 将 Scene/DrawCommand 层稳定映射到渲染后端。
@@ -1060,10 +1236,15 @@
 ### 完成定义
 - widget 不再需要知道具体绘制 API
 
+### 当前判断
+- `NanWidget` 仍直接绘制到 `SwCanvas`
+- `NanWindow::present_frame()` 也仍直接调用 widget 的 ThorVG 绘制路径
+
 ---
 
-## Issue 045 — 实现 ThorVG 软件后端适配器
+## Issue 045 — 实现 ThorVG 软件后端适配器 ⚠️ 部分完成
 **Labels:** `area:render`, `kind:implementation`, `priority:p1`
+**Status:** ⚠️ 部分完成 — ThorVG 软件渲染闭环已存在，但尚未以独立 render 适配器形态落地
 
 ### 目标
 使用当前最现实的后端打通第一版绘制。
@@ -1079,10 +1260,19 @@
 ### 完成定义
 - 第一版运行时可稳定绘制基础 UI
 
+### 当前进展
+- runtime 已通过 ThorVG `SwCanvas` + SDL 打通稳定的软件渲染闭环
+- `runtime/docs/runtime-design.md` 已描述当前渲染管线
+
+### 未完成部分
+- `render/thorvg` 仍未作为独立 adapter 模块落位
+- 当前实现仍耦合在 runtime 窗口实现中
+
 ---
 
-## Issue 046 — 定义 text 模块的最小接口
+## Issue 046 — 定义 text 模块的最小接口 ⚠️ 部分完成
 **Labels:** `area:text`, `kind:architecture`, `priority:p0`
+**Status:** ⚠️ 部分完成 — 已有 NanFont 与文本布局能力，但 text/core 分层接口仍不完整
 
 ### 目标
 建立文字渲染与测量的统一入口，避免文本逻辑散落在 widgets/render 中。
@@ -1099,10 +1289,18 @@
 ### 完成定义
 - Label/Button 等可以依赖统一 text 接口
 
+### 当前进展
+- `NanFont` 已提供文本布局、测量与绘制相关能力
+
+### 未完成部分
+- 主线仍缺少独立的 text style / layout input / render 分层接口
+- `text/core` 目前更像 `NanFont` 聚合入口，而不是清晰的最小接口层
+
 ---
 
-## Issue 047 — 实现基础文本测量能力
+## Issue 047 — 实现基础文本测量能力 ✅ 已完成
 **Labels:** `area:text`, `kind:implementation`, `priority:p0`
+**Status:** ✅ 已完成 — 文本测量能力已落地并有测试覆盖
 
 ### 目标
 支持组件进行最基本的文本尺寸计算。
@@ -1119,10 +1317,15 @@
 ### 完成定义
 - Label/Button 的隐式尺寸可被文本驱动
 
+### 完成记录
+- `text/measure` 已支持文本测量与 shaping
+- `tests/text/test_nan_font.cpp` 已覆盖测量与基础 shaping 行为
+
 ---
 
-## Issue 048 — 实现基础文本绘制能力
+## Issue 048 — 实现基础文本绘制能力 ⚠️ 部分完成
 **Labels:** `area:text`, `kind:implementation`, `priority:p0`
+**Status:** ⚠️ 部分完成 — 文本已能稳定绘制到 UI，但仍未进入目标中的抽象渲染路径
 
 ### 目标
 让文本可以进入 draw command/render backend 路径。
@@ -1138,10 +1341,18 @@
 ### 完成定义
 - 可以在 UI 中稳定显示文本节点
 
+### 当前进展
+- `NanFont` 已支持基础文本绘制
+- `Label` 已能在真实 UI 中显示文本节点
+
+### 未完成部分
+- 当前文本仍直接走 ThorVG 绘制路径，没有接入 DrawCommand / RenderBackend 抽象链路
+
 ---
 
-## Issue 049 — 编写渲染策略文档
+## Issue 049 — 编写渲染策略文档 ⚠️ 部分完成
 **Labels:** `area:render`, `area:docs`, `kind:docs`, `priority:p1`
+**Status:** ⚠️ 部分完成 — 已有渲染路线说明，但独立策略文档尚未落位
 
 ### 目标
 明确当前不自研渲染器、先做抽象和适配器的路线。
@@ -1158,6 +1369,14 @@
 
 ### 完成定义
 - 后续讨论 render 方向时有明确依据
+
+### 当前进展
+- `runtime/docs/runtime-design.md` 已说明当前 ThorVG/SDL 渲染管线与阶段性路线
+- 仓库中也已有对 backend 抽象方向的若干说明
+
+### 未完成部分
+- `docs/rendering-strategy.md` 尚未落位
+- 当前缺少一份独立、面向项目决策的渲染策略文档
 
 ---
 
@@ -1537,8 +1756,9 @@
 
 # Milestone M8 — App Shell 与 Navigation
 
-## Issue 063 — 定义 Page 抽象与页面元数据模型
+## Issue 063 — 定义 Page 抽象与页面元数据模型 ❌ 未完成
 **Labels:** `area:app`, `kind:architecture`, `priority:p0`
+**Status:** ❌ 未完成 — 主线 app 层尚未出现 `Page` 抽象或页面元数据模型
 
 ### 目标
 建立页面层抽象，而不是直接用普通 widget 拼页面。
@@ -1557,10 +1777,15 @@
 ### 完成定义
 - 页面在框架中成为第一等公民
 
+### 当前判断
+- `app/src` 当前只有 `nan_application.cppm`，未见 `Page` 基类、route key、title、summary 或 lifecycle hook 约定
+- showcase 仍直接挂载单个 `MainComponent`，不是围绕 page object 组织
+
 ---
 
-## Issue 064 — 定义 Router 核心接口
+## Issue 064 — 定义 Router 核心接口 ❌ 未完成
 **Labels:** `area:app`, `kind:architecture`, `priority:p0`
+**Status:** ❌ 未完成 — 主线未见 router 接口草案或导航抽象
 
 ### 目标
 建立应用级导航系统的基础模型。
@@ -1579,10 +1804,15 @@
 ### 完成定义
 - 可以围绕它实现页面切换，而不是临时写 showcase 切页逻辑
 
+### 当前判断
+- `app/src` 未见 `Router`、route registry、history stack 或 params 相关接口
+- 当前 showcase 也没有多页面切换入口，无法证明路由模型已经建立
+
 ---
 
-## Issue 065 — 实现 Router 最小版本
+## Issue 065 — 实现 Router 最小版本 ❌ 未完成
 **Labels:** `area:app`, `kind:implementation`, `priority:p1`
+**Status:** ❌ 未完成 — 尚未打通从 route 到 page 实例切换的运行链路
 
 ### 目标
 打通从 route 到 page 实例的切换能力。
@@ -1598,10 +1828,15 @@
 ### 完成定义
 - showcase 可以在多个页面间切换
 
+### 当前判断
+- 主线没有 route lookup、route stack/history 或 page host integration 的实现文件
+- 现有 showcase 仍是单个 dashboard 页面，未形成页面切换能力
+
 ---
 
-## Issue 066 — 实现 PageHost / 内容区域承载容器
+## Issue 066 — 实现 PageHost / 内容区域承载容器 ❌ 未完成
 **Labels:** `area:app`, `kind:implementation`, `priority:p1`
+**Status:** ❌ 未完成 — 主线未见承载当前页面与 mount/unmount 的 PageHost 对象
 
 ### 目标
 提供页面显示区域与页面生命周期承载对象。
@@ -1617,10 +1852,15 @@
 ### 完成定义
 - Router 可以驱动实际页面显示
 
+### 当前判断
+- `app/src` 未见 `page_host` 或等价承载容器
+- 当前内容区域由 showcase 自己直接布局，不是由可替换 page root 承载
+
 ---
 
-## Issue 067 — 实现基础应用壳结构（导航 + 内容区）
+## Issue 067 — 实现基础应用壳结构（导航 + 内容区） ⚠️ 部分完成
 **Labels:** `area:app`, `kind:implementation`, `priority:p1`
+**Status:** ⚠️ 部分完成 — showcase 已形成应用壳雏形，但尚未抽象为通用 `app/shell`
 
 ### 目标
 形成一个能支撑 showcase 的最小应用壳。
@@ -1637,10 +1877,19 @@
 ### 完成定义
 - showcase 不再只是“一个页面显示一个组件”，而是真正的应用结构
 
+### 当前进展
+- `showcase/application.cppm` 已形成 sidebar / header / stats / middle / bottom / footer / dock 的完整应用壳结构
+- 现有 showcase 已不是单一控件裸展示，而是有导航区和内容区的 dashboard 形态
+
+### 未完成部分
+- 主线仍未提供独立 `app/shell` 抽象，当前壳层逻辑主要固化在 showcase 层
+- 还没有与 `Page` / `Router` / `PageHost` 形成可复用的应用级装配关系
+
 ---
 
-## Issue 068 — 设计 WindowShell 抽象（标题栏/边框/区域保留）
+## Issue 068 — 设计 WindowShell 抽象（标题栏/边框/区域保留） ❌ 未完成
 **Labels:** `area:app`, `area:runtime`, `kind:architecture`, `priority:p2`
+**Status:** ❌ 未完成 — `docs/window-shell-strategy.md` 尚未落位
 
 ### 目标
 为未来桌面应用体验预留窗口壳层。
@@ -1656,6 +1905,10 @@
 
 ### 完成定义
 - 后续自定义桌面窗口能力有规划可循
+
+### 当前判断
+- 主线 docs 中不存在 `docs/window-shell-strategy.md`
+- runtime 当前只提供基础窗口封装，未见 title bar role、draggable region、window control slots 的设计说明
 
 ---
 
@@ -1686,8 +1939,9 @@
 
 ---
 
-## Issue 070 — 实现 showcase 页面注册机制
+## Issue 070 — 实现 showcase 页面注册机制 ❌ 未完成
 **Labels:** `area:showcase`, `area:app`, `kind:implementation`, `priority:p1`
+**Status:** ❌ 未完成 — showcase 仍未形成集中式页面注册与 route binding 机制
 
 ### 目标
 提供集中式页面注册，便于组件文档化展示。
@@ -1703,10 +1957,15 @@
 ### 完成定义
 - 新增一个组件展示页不需要改很多散乱代码
 
+### 当前判断
+- `showcase/` 目录当前只有单个 dashboard 入口与若干 section/card 组件，未见 `registry` 模块
+- 也未见页面分组、类别管理或 route binding 相关实现
+
 ---
 
-## Issue 071 — 创建 Label showcase 页面
+## Issue 071 — 创建 Label showcase 页面 ❌ 未完成
 **Labels:** `area:showcase`, `area:widgets`, `kind:implementation`, `priority:p1`
+**Status:** ❌ 未完成 — 尚未存在独立 LabelPage 或状态矩阵展示页
 
 ### 目标
 用页面形式验证 Label 的真实 API 与状态矩阵。
@@ -1725,10 +1984,15 @@
 ### 完成定义
 - Label 的使用方式清晰可见
 
+### 当前判断
+- 当前 showcase 仍是综合 dashboard，没有单独的 Label showcase page
+- `disabled / error / required / typography variants` 也没有成页展示面
+
 ---
 
-## Issue 072 — 创建 Button showcase 页面
+## Issue 072 — 创建 Button showcase 页面 ❌ 未完成
 **Labels:** `area:showcase`, `area:widgets`, `kind:implementation`, `priority:p1`
+**Status:** ❌ 未完成 — 尚未存在独立 ButtonPage 或按钮变体展示页
 
 ### 目标
 系统展示 Button 的状态和变体。
@@ -1747,10 +2011,15 @@
 ### 完成定义
 - Button 的 API 和视觉系统有统一展示面
 
+### 当前判断
+- 当前 showcase 没有 `ButtonPage` 或专门的按钮状态/变体页
+- 现有代码也尚未具备 issue 范围里要求的 presets / color variants / size variants / icon buttons 完整矩阵
+
 ---
 
-## Issue 073 — 创建 Panel/Card showcase 页面
+## Issue 073 — 创建 Panel/Card showcase 页面 ❌ 未完成
 **Labels:** `area:showcase`, `area:widgets`, `kind:implementation`, `priority:p2`
+**Status:** ❌ 未完成 — 尚未存在独立 Panel/Card 展示页
 
 ### 目标
 验证容器型组件的结构表达能力。
@@ -1767,10 +2036,15 @@
 ### 完成定义
 - 容器组件的用途和限制清晰可见
 
+### 当前判断
+- 当前 showcase 只有 dashboard 内部对 `Card` 的局部消费，没有 `PanelCardPage`
+- `panel with actions`、`card with footer` 这些目标场景也尚未具体验证
+
 ---
 
-## Issue 074 — 在 showcase 中加入主题切换能力
+## Issue 074 — 在 showcase 中加入主题切换能力 ❌ 未完成
 **Labels:** `area:showcase`, `area:theme`, `kind:implementation`, `priority:p1`
+**Status:** ❌ 未完成 — showcase 未见 theme selector、light/dark toggle 或 live rerender 控件
 
 ### 目标
 让组件在真实环境中验证 light/dark/theme 切换。
@@ -1786,10 +2060,15 @@
 ### 完成定义
 - 所有基础组件可在不同主题下观察效果
 
+### 当前判断
+- `showcase/application.cppm` 当前未接入主题切换控制逻辑
+- 现有运行面仍是固定配色 dashboard，不能验证跨主题效果
+
 ---
 
-## Issue 075 — 编写 showcase 开发策略文档
+## Issue 075 — 编写 showcase 开发策略文档 ❌ 未完成
 **Labels:** `area:showcase`, `area:docs`, `kind:docs`, `priority:p1`
+**Status:** ❌ 未完成 — `docs/showcase-strategy.md` 尚未落位
 
 ### 目标
 明确 showcase 不是 demo 附属品，而是开发期验证基础设施。
@@ -1806,12 +2085,17 @@
 ### 完成定义
 - 后续不会把 showcase 当作“有空再做”的部分
 
+### 当前判断
+- 主线 docs 中不存在 `docs/showcase-strategy.md`
+- 当前只有 showcase 代码与 issue 拆分，没有专门沉淀“showcase 作为开发验证基础设施”的策略文档
+
 ---
 
 # Milestone M10 — 稳定性、测试与后续扩展准备
 
-## Issue 076 — 为 runtime/widget/event 增加单元测试
+## Issue 076 — 为 runtime/widget/event 增加单元测试 ✅ 已完成
 **Labels:** `area:runtime`, `area:tests`, `kind:test`, `priority:p1`
+**Status:** ✅ 已完成 — `tests/runtime/*` 已覆盖 widget/event 基础行为
 
 ### 目标
 验证 Widget tree 和事件分发基础行为。
@@ -1828,10 +2112,16 @@
 ### 完成定义
 - runtime 基础行为有回归保护
 
+### 完成记录
+- `tests/runtime/test_bounds_hit_test.cpp` 已覆盖 bounds、dirty propagation、child/hit test 等 widget tree 基础行为
+- `tests/runtime/test_event.cpp` 已覆盖 EventType、事件结构体与基础 variant/event_type 行为
+- `tests/runtime/CMakeLists.txt` 已接入主测试构建
+
 ---
 
-## Issue 077 — 为 theme 模块增加测试
+## Issue 077 — 为 theme 模块增加测试 ✅ 已完成
 **Labels:** `area:theme`, `area:tests`, `kind:test`, `priority:p1`
+**Status:** ✅ 已完成 — `tests/theme/*` 已覆盖 ThemeManager 与 token/type 基础行为
 
 ### 目标
 验证 token/palette/theme 切换逻辑。
@@ -1848,10 +2138,16 @@
 ### 完成定义
 - theme 逻辑不再只能靠肉眼看 UI 判断
 
+### 完成记录
+- `tests/theme/test_theme_manager.cpp` 已覆盖主题注册、激活、light/dark 切换、颜色取值、token 访问与变更监听
+- `tests/theme/test_theme_types.cpp` 已覆盖 color role、scheme、component state、primitive tokens 等基础类型与默认值
+- `tests/theme/CMakeLists.txt` 已接入主测试构建
+
 ---
 
-## Issue 078 — 为 widgets 基础控件增加测试
+## Issue 078 — 为 widgets 基础控件增加测试 ❌ 未完成
 **Labels:** `area:widgets`, `area:tests`, `kind:test`, `priority:p1`
+**Status:** ❌ 未完成 — widgets 测试子目录尚未接入，基础控件缺少独立回归测试
 
 ### 目标
 验证基础控件的状态与交互逻辑。
@@ -1867,10 +2163,15 @@
 ### 完成定义
 - 基础控件可以稳定迭代而不轻易退化
 
+### 当前判断
+- `tests/CMakeLists.txt` 中 `add_subdirectory(widgets)` 仍处于注释状态
+- 主线也未见 `tests/widgets/*` 目录与 Label / Button / Panel 的专门测试文件
+
 ---
 
-## Issue 079 — 建立 API 冻结策略文档
+## Issue 079 — 建立 API 冻结策略文档 ❌ 未完成
 **Labels:** `area:docs`, `kind:docs`, `priority:p2`
+**Status:** ❌ 未完成 — `docs/api-stability-policy.md` 尚未落位
 
 ### 目标
 明确哪些模块在什么阶段可以视为“相对稳定”。
@@ -1889,10 +2190,15 @@
 ### 完成定义
 - 项目不会长期处于“所有东西都不稳定”的状态
 
+### 当前判断
+- 主线 docs 中不存在 `docs/api-stability-policy.md`
+- 现有文档虽有 roadmap 与模块规划，但没有一份明确定义 API 冻结阶段与稳定边界的策略文档
+
 ---
 
-## Issue 080 — 调研脚本/DSL authoring 边界需求
+## Issue 080 — 调研脚本/DSL authoring 边界需求 ⚠️ 部分完成
 **Labels:** `area:app`, `area:docs`, `kind:architecture`, `priority:p2`
+**Status:** ⚠️ 部分完成 — 已有 authoring 草案，但脚本宿主边界尚未单独整理
 
 ### 目标
 为未来 TypeScript/Lua 等 authoring 方向做边界准备，但不立即实现。
@@ -1909,10 +2215,19 @@
 ### 完成定义
 - 后续做脚本层时有文档基础，不会从零重新想
 
+### 当前进展
+- `docs/godot-like-authoring-draft.md` 已讨论应用层开发范式、生命周期与 API 边界的初步方向
+- 多份架构文档也已将 app 视为 authoring layer 的承载层
+
+### 未完成部分
+- 主线 docs 中不存在 `docs/bindings-and-authoring-notes.md`
+- 目前还没有专门回答“哪些对象不能直接暴露给脚本”以及 `Prop` / `State` / Widget tree 如何映射为脚本友好模型
+
 ---
 
-## Issue 081 — 调研 render backend 扩展路线（OpenGL/WebGPU/Vulkan）
+## Issue 081 — 调研 render backend 扩展路线（OpenGL/WebGPU/Vulkan） ⚠️ 部分完成
 **Labels:** `area:render`, `area:docs`, `kind:architecture`, `priority:p2`
+**Status:** ⚠️ 部分完成 — 已有后端比较与方向讨论，但独立路线文档尚未落位
 
 ### 目标
 为未来渲染扩展建立理性路线，而不是立刻自研。
@@ -1928,6 +2243,14 @@
 
 ### 完成定义
 - 渲染方向讨论不再每次回到“要不要马上写 Vulkan”
+
+### 当前进展
+- `runtime/docs/runtime-design.md` 已记录当前 ThorVG/SDL 路线以及与其他框架的后端比较
+- 主线与 archive 文档中已有对 OpenGL / WebGPU / Vulkan 的零散方向讨论
+
+### 未完成部分
+- 主线 docs 中不存在 `docs/render-backend-roadmap.md`
+- 目前还没有一份专门梳理“何时值得扩展新 backend、scene/render 抽象如何承载新后端”的路线文档
 
 ---
 

@@ -186,15 +186,36 @@ TEST(ShowcaseLayoutTest, ChartCard_KeepsTitleAndDayLabelsInExpectedSlots) {
     auto chart = nandina::showcase::ChartCard::create();
     chart->set_bounds(260.0f, 180.0f, 342.0f, 200.0f);
 
-    ASSERT_EQ(chart->child_count(), 2u);
+    ASSERT_EQ(chart->child_count(), 1u);
 
-    const auto title_bounds = child_at(*chart, 0).bounds();
+    auto& mounted = child_at(*chart, 0);
+    ASSERT_EQ(mounted.child_count(), 1u);
+
+    auto& stack = child_at(mounted, 0);
+    ASSERT_EQ(stack.child_count(), 2u);
+
+    auto& title_padding = child_at(stack, 0);
+    ASSERT_EQ(title_padding.child_count(), 1u);
+
+    auto& title_slot = child_at(title_padding, 0);
+    ASSERT_EQ(title_slot.child_count(), 1u);
+
+    const auto title_bounds = child_at(title_slot, 0).bounds();
     EXPECT_FLOAT_EQ(title_bounds.x(), 276.0f);
     EXPECT_FLOAT_EQ(title_bounds.y(), 188.0f);
     EXPECT_FLOAT_EQ(title_bounds.width(), 160.0f);
     EXPECT_FLOAT_EQ(title_bounds.height(), 18.0f);
 
-    auto& day_strip = child_at(*chart, 1);
+    auto& strip_padding = child_at(stack, 1);
+    ASSERT_EQ(strip_padding.child_count(), 1u);
+
+    auto& strip_column = child_at(strip_padding, 0);
+    ASSERT_EQ(strip_column.child_count(), 2u);
+
+    auto& strip_slot = child_at(strip_column, 1);
+    ASSERT_EQ(strip_slot.child_count(), 1u);
+
+    auto& day_strip = child_at(strip_slot, 0);
     ASSERT_EQ(day_strip.child_count(), 7u);
 
     const auto first_day_bounds = child_at(day_strip, 0).bounds();
@@ -299,13 +320,34 @@ TEST(ShowcaseLayoutTest, ProjectProgressCard_UsesInternalRowsNode) {
     auto progress = nandina::showcase::ProjectProgressCard::create();
     progress->set_bounds(618.0f, 400.0f, 342.0f, 110.0f);
 
-    ASSERT_EQ(progress->child_count(), 3u);
+    ASSERT_EQ(progress->child_count(), 1u);
 
-    const auto title_bounds = child_at(*progress, 1).bounds();
-    auto& rows = child_at(*progress, 2);
+    auto& mounted = child_at(*progress, 0);
+    ASSERT_EQ(mounted.child_count(), 1u);
+
+    auto& stack = child_at(mounted, 0);
+    ASSERT_EQ(stack.child_count(), 2u);
+
+    auto& content_column = child_at(stack, 1);
+    ASSERT_EQ(content_column.child_count(), 2u);
+
+    auto& title_padding = child_at(content_column, 0);
+    ASSERT_EQ(title_padding.child_count(), 1u);
+
+    auto& title_slot = child_at(title_padding, 0);
+    ASSERT_EQ(title_slot.child_count(), 1u);
+
+    const auto title_bounds = child_at(title_slot, 0).bounds();
+    auto& rows = child_at(content_column, 1);
     ASSERT_EQ(rows.child_count(), 1u);
 
-    auto& column = child_at(rows, 0);
+    auto& progress_rows = child_at(rows, 0);
+    ASSERT_EQ(progress_rows.child_count(), 1u);
+
+    auto& rows_mounted = child_at(progress_rows, 0);
+    ASSERT_EQ(rows_mounted.child_count(), 1u);
+
+    auto& column = child_at(rows_mounted, 0);
     ASSERT_EQ(column.child_count(), 4u);
 
     EXPECT_FLOAT_EQ(title_bounds.x(), 632.0f);

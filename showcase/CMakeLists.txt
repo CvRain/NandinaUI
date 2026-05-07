@@ -10,18 +10,18 @@ set(PROJECT_CPP_FILES
 )
 
 set(PROJECT_CPP_MODULE_FILES
-        application.cppm
-        bottom_content_section.cppm
-        chart_card.cppm
-        dock_bar.cppm
-        footer_section.cppm
-        header_bar.cppm
-        middle_content_section.cppm
-        project_progress_card.cppm
-        recent_activity_card.cppm
-        sidebar_section.cppm
-        stats_section.cppm
-        stack_demo_card.cppm
+        pages/dashboard_page.cppm
+        components/sections/bottom_content_section.cppm
+        components/cards/chart_card.cppm
+        components/sections/dock_bar.cppm
+        components/sections/footer_section.cppm
+        components/sections/header_bar.cppm
+        components/sections/middle_content_section.cppm
+        components/cards/project_progress_card.cppm
+        components/cards/recent_activity_card.cppm
+        components/sections/sidebar_section.cppm
+        components/sections/stats_section.cppm
+        components/cards/stack_demo_card.cppm
 )
 
 add_executable(${PROJECT_NAME} ${PROJECT_CPP_FILES})

@@ -7,7 +7,9 @@ module;
 
 export module nandina.showcase.chart_card;
 
+import nandina.app.authoring;
 import nandina.foundation.color;
+import nandina.layout.container;
 import nandina.runtime.nan_widget;
 import nandina.widgets.label;
 
@@ -99,15 +101,8 @@ public:
     auto set_bounds(const float x, const float y, const float w, const float h) noexcept -> NanWidget& override {
         NanWidget::set_bounds(x, y, w, h);
 
-        if (m_title) {
-            m_title->set_bounds(x + 16.0f, y + 8.0f, 160.0f, 18.0f);
-        }
-
-        const float plot_w = w - 40.0f;
-        const float plot_h = h - 56.0f;
-
-        if (m_day_strip) {
-            m_day_strip->set_bounds(x + 20.0f, y + 40.0f + plot_h, plot_w, 14.0f);
+        if (m_mounted_content) {
+            m_mounted_content->set_bounds(x, y, w, h);
         }
 
         return *this;
@@ -171,17 +166,37 @@ protected:
 
 private:
     ChartCard() {
-        auto title = nandina::widgets::Label::create();
-        title->set_text("Weekly Activity")
-            .set_font_size(10.0f)
-            .set_color(color4_to_nancolor(220, 220, 240));
-        m_title = add_child(std::move(title));
+        auto day_strip = ChartDayStrip::create();
+        m_day_strip = day_strip.get();
 
-        m_day_strip = add_child(ChartDayStrip::create());
+        auto mounted = nandina::app::mount(
+            nandina::app::stack(nandina::app::children(
+                nandina::app::padding(
+                    nandina::app::sized_box(
+                        nandina::app::label("Weekly Activity")
+                            .font_size(10.0f)
+                            .color(color4_to_nancolor(220, 220, 240))
+                            .bind(m_title))
+                        .width(160.0f)
+                        .height(18.0f))
+                    .padding(16.0f, 8.0f, 16.0f, 0.0f),
+                nandina::app::padding(
+                    nandina::app::column(nandina::app::children(
+                        nandina::app::spacer(),
+                        nandina::app::sized_box(
+                            nandina::app::adopt(std::move(day_strip)))
+                            .height(14.0f)))
+                        .align_items(nandina::layout::LayoutAlignment::stretch))
+                    .padding(20.0f, 0.0f, 20.0f, 2.0f)))
+                .align_items(nandina::layout::LayoutAlignment::stretch)
+                .justify_content(nandina::layout::LayoutAlignment::stretch));
+        m_mounted_content = mounted.get();
+        add_child(std::move(mounted));
     }
 
-    nandina::runtime::NanWidget* m_title{nullptr};
-    nandina::runtime::NanWidget* m_day_strip{nullptr};
+    nandina::app::NanComponent* m_mounted_content{nullptr};
+    nandina::app::Ref<nandina::widgets::Label> m_title;
+    ChartDayStrip* m_day_strip{nullptr};
 };
 
 } // namespace nandina::showcase

@@ -7,6 +7,7 @@ module;
 
 export module nandina.showcase.project_progress_card;
 
+import nandina.app.authoring;
 import nandina.foundation.color;
 import nandina.layout.container;
 import nandina.runtime.nan_widget;
@@ -99,8 +100,8 @@ public:
     auto set_bounds(const float x, const float y, const float w, const float h) noexcept -> NanWidget& override {
         NanWidget::set_bounds(x, y, w, h);
 
-        if (m_column) {
-            m_column->set_bounds(x, y, w, h);
+        if (m_mounted_column) {
+            m_mounted_column->set_bounds(x, y, w, h);
         }
 
         return *this;
@@ -108,9 +109,7 @@ public:
 
 private:
     ProjectProgressRows() {
-        auto column = nandina::layout::Column::Create();
-        column->gap(8.0f)
-            .align_items(nandina::layout::LayoutAlignment::stretch);
+        auto nodes = nandina::app::children();
 
         const auto progress_data = std::to_array<std::tuple<std::string_view, float, uint8_t, uint8_t, uint8_t>>({
             {"Layout Engine", 0.85f, 99, 102, 241},
@@ -132,14 +131,20 @@ private:
                 color4_to_nancolor(r, g, b),
                 color4_to_nancolor(42, 44, 62));
             m_rows[i] = row.get();
-            column->add(std::move(row));
+            nodes.append(nandina::app::adopt(std::move(row)));
         }
 
-        m_column = column.get();
-        add_child(std::move(column));
+        auto mounted = nandina::app::mount(
+            nandina::app::column(std::move(nodes))
+                .gap(8.0f)
+                .align_items(nandina::layout::LayoutAlignment::stretch)
+                .bind(m_column));
+        m_mounted_column = mounted.get();
+        add_child(std::move(mounted));
     }
 
-    nandina::layout::Column* m_column{nullptr};
+    nandina::app::NanComponent* m_mounted_column{nullptr};
+    nandina::app::Ref<nandina::layout::Column> m_column;
     std::array<nandina::runtime::NanWidget*, 4> m_rows{};
 };
 
@@ -154,15 +159,8 @@ public:
     auto set_bounds(const float x, const float y, const float w, const float h) noexcept -> NanWidget& override {
         NanWidget::set_bounds(x, y, w, h);
 
-        if (m_container) {
-            m_container->set_bounds(x, y, w, h);
-        }
-        if (m_title) {
-            m_title->set_bounds(x + 14.0f, y + 8.0f, 160.0f, 16.0f);
-        }
-
-        if (m_rows) {
-            m_rows->set_bounds(x, y + 34.0f, w, h - 34.0f);
+        if (m_mounted_content) {
+            m_mounted_content->set_bounds(x, y, w, h);
         }
 
         return *this;
@@ -174,25 +172,37 @@ public:
 
 private:
     ProjectProgressCard() {
-        using namespace nandina::widgets;
+        auto rows = ProjectProgressRows::create();
+        m_rows = rows.get();
 
-        auto container = Surface::create();
-        container->set_bg_color(color4_to_nancolor(50, 52, 72))
-            .set_corner_radius(8.0f);
-        m_container = add_child(std::move(container));
-
-        auto title = Label::create();
-        title->set_text("Project Progress")
-            .set_font_size(9.0f)
-            .set_color(color4_to_nancolor(220, 220, 240));
-        m_title = add_child(std::move(title));
-
-        m_rows = add_child(ProjectProgressRows::create());
+        auto mounted = nandina::app::mount(
+            nandina::app::stack(nandina::app::children(
+                nandina::app::adopt(nandina::widgets::Surface::create())
+                    .bg_color(color4_to_nancolor(50, 52, 72))
+                    .corner_radius(8.0f),
+                nandina::app::column(nandina::app::children(
+                    nandina::app::padding(
+                        nandina::app::sized_box(
+                            nandina::app::label("Project Progress")
+                                .font_size(9.0f)
+                                .color(color4_to_nancolor(220, 220, 240))
+                                .bind(m_title))
+                            .width(160.0f)
+                            .height(16.0f))
+                        .padding(14.0f, 8.0f, 14.0f, 0.0f),
+                    nandina::app::expanded(
+                        nandina::app::adopt(std::move(rows)))))
+                    .gap(10.0f)
+                    .align_items(nandina::layout::LayoutAlignment::stretch)))
+                .align_items(nandina::layout::LayoutAlignment::stretch)
+                .justify_content(nandina::layout::LayoutAlignment::stretch));
+        m_mounted_content = mounted.get();
+        add_child(std::move(mounted));
     }
 
-    runtime::NanWidget* m_container{nullptr};
-    runtime::NanWidget* m_title{nullptr};
-    runtime::NanWidget* m_rows{nullptr};
+    nandina::app::NanComponent* m_mounted_content{nullptr};
+    nandina::app::Ref<nandina::widgets::Label> m_title;
+    ProjectProgressRows* m_rows{nullptr};
 };
 
 } // namespace nandina::showcase

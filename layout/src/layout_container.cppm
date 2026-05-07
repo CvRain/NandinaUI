@@ -118,6 +118,52 @@ export namespace nandina::layout {
         // 子类必须实现此方法
         virtual auto layout() -> void = 0;
 
+        /// 子类返回自身布局轴，用于 preferred_size 计算
+        [[nodiscard]] virtual auto layout_axis() const noexcept -> LayoutAxis = 0;
+
+        [[nodiscard]] auto preferred_size() const noexcept -> geometry::NanSize override {
+            float total_main = 0.0f;
+            float max_cross  = 0.0f;
+            int child_count  = 0;
+
+            for_each_child([&](const runtime::NanWidget& child) {
+                const auto pref = child.preferred_size();
+                const float pw  = pref.width();
+                const float ph  = pref.height();
+
+                if (layout_axis() == LayoutAxis::column) {
+                    total_main += ph;
+                    max_cross   = std::max(max_cross, pw);
+                } else if (layout_axis() == LayoutAxis::row) {
+                    total_main += pw;
+                    max_cross   = std::max(max_cross, ph);
+                } else { // stack
+                    max_cross   = std::max(max_cross, pw);
+                    total_main  = std::max(total_main, ph);
+                }
+                ++child_count;
+            });
+
+            const float gap_total = child_count > 1 ? gap_ * static_cast<float>(child_count - 1) : 0.0f;
+
+            if (layout_axis() == LayoutAxis::column) {
+                return {
+                    max_cross + padding_left_ + padding_right_,
+                    total_main + gap_total + padding_top_ + padding_bottom_
+                };
+            } else if (layout_axis() == LayoutAxis::row) {
+                return {
+                    total_main + gap_total + padding_left_ + padding_right_,
+                    max_cross + padding_top_ + padding_bottom_
+                };
+            } else { // stack
+                return {
+                    max_cross + padding_left_ + padding_right_,
+                    total_main + padding_top_ + padding_bottom_
+                };
+            }
+        }
+
         auto set_bounds(const float x, const float y, const float w, const float h) noexcept -> runtime::NanWidget& override {
             NanWidget::set_bounds(x, y, w, h);
             layout();
@@ -258,6 +304,10 @@ export namespace nandina::layout {
             apply_backend(LayoutAxis::column);
         }
 
+        [[nodiscard]] auto layout_axis() const noexcept -> LayoutAxis override {
+            return LayoutAxis::column;
+        }
+
     private:
         Column() noexcept = default;
     };
@@ -329,6 +379,10 @@ export namespace nandina::layout {
             apply_backend(LayoutAxis::row);
         }
 
+        [[nodiscard]] auto layout_axis() const noexcept -> LayoutAxis override {
+            return LayoutAxis::row;
+        }
+
     private:
         Row() noexcept = default;
     };
@@ -378,6 +432,10 @@ export namespace nandina::layout {
 
         auto layout() -> void override {
             apply_backend(LayoutAxis::stack);
+        }
+
+        [[nodiscard]] auto layout_axis() const noexcept -> LayoutAxis override {
+            return LayoutAxis::stack;
         }
 
     private:

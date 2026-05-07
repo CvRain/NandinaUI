@@ -46,6 +46,8 @@ export namespace nandina::widgets {
         ArrowDown,  // 下箭头
         Dots,       // 小圆点（活动列表脉冲用）
         Dot,        // 单圆点（项目列表装饰用）
+        Monitor,    // 显示器屏幕（dock 用）
+        Window,     // 小窗口（dock 用）
     };
 
     class Icon : public runtime::NanWidget {
