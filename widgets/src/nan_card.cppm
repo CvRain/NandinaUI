@@ -146,6 +146,13 @@ export namespace nandina::widgets {
         auto set_bounds(float x, float y, float w, float h) noexcept -> NanWidget& override {
             runtime::NanWidget::set_bounds(x, y, w, h);
 
+            layout();
+
+            return *this;
+        }
+
+        auto layout() -> void override {
+
             // 确保标题 Label 存在
             if (!m_title.empty() && !m_title_label) {
                 ensure_title_label();
@@ -166,7 +173,7 @@ export namespace nandina::widgets {
             const float header_offset = title_header_height();
             layout_content_children(header_offset, m_title_label);
 
-            return *this;
+            NanWidget::layout();
         }
 
         [[nodiscard]] auto preferred_size() const noexcept -> geometry::NanSize override {

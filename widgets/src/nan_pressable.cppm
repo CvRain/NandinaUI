@@ -122,11 +122,26 @@ export namespace nandina::widgets {
             return m_clicked_signal;
         }
 
+        auto measure(const geometry::NanConstraints& constraints) -> void override {
+            geometry::NanSize measured{};
+            for_each_child([&](runtime::NanWidget& child) {
+                child.measure(constraints);
+                measured = child.measured_size();
+            });
+
+            set_measured_layout_state(constraints, constraints.constrain(measured));
+        }
+
+        auto layout() -> void override {
+            for_each_child([&](runtime::NanWidget& child) {
+                child.set_bounds(x(), y(), width(), height());
+            });
+            NanWidget::layout();
+        }
+
         auto set_bounds(const float x, const float y, const float w, const float h) noexcept -> NanWidget& override {
             NanWidget::set_bounds(x, y, w, h);
-            for_each_child([&](runtime::NanWidget& child) {
-                child.set_bounds(x, y, w, h);
-            });
+            layout();
             return *this;
         }
 

@@ -7,9 +7,9 @@ module;
 
 export module nandina.showcase.chart_card;
 
-import nandina.app.authoring;
 import nandina.foundation.color;
 import nandina.layout.container;
+import nandina.layout.flex_widgets;
 import nandina.runtime.nan_widget;
 import nandina.widgets.label;
 
@@ -101,8 +101,8 @@ export namespace nandina::showcase {
         auto set_bounds(const float x, const float y, const float w, const float h) noexcept -> NanWidget& override {
             NanWidget::set_bounds(x, y, w, h);
 
-            if (m_mounted_content) {
-                m_mounted_content->set_bounds(x, y, w, h);
+            if (m_content_stack) {
+                m_content_stack->set_bounds(x, y, w, h);
             }
 
             return *this;
@@ -169,33 +169,58 @@ export namespace nandina::showcase {
             auto day_strip = ChartDayStrip::create();
             m_day_strip    = day_strip.get();
 
-            auto mounted = nandina::app::mount(
-                nandina::app::stack(nandina::app::children(
-                    nandina::app::padding(
-                        nandina::app::sized_box(
-                            nandina::app::label("Weekly Activity")
-                            .font_size(10.0f)
-                            .color(color4_to_nancolor(220, 220, 240))
-                            .bind(m_title))
-                        .width(160.0f)
-                        .height(18.0f))
-                    .padding(16.0f, 8.0f, 16.0f, 0.0f),
-                    nandina::app::padding(
-                        nandina::app::column(nandina::app::children(
-                            nandina::app::spacer(),
-                            nandina::app::sized_box(
-                                nandina::app::adopt(std::move(day_strip)))
-                            .height(14.0f)))
-                        .align_items(nandina::layout::LayoutAlignment::stretch))
-                    .padding(20.0f, 0.0f, 20.0f, 2.0f)))
-                .align_items(nandina::layout::LayoutAlignment::stretch)
-                .justify_content(nandina::layout::LayoutAlignment::stretch));
-            m_mounted_content = mounted.get();
-            add_child(std::move(mounted));
+            auto content_stack = nandina::layout::Stack::Create();
+            content_stack->align_items(nandina::layout::LayoutAlignment::stretch)
+                .justify_content(nandina::layout::LayoutAlignment::stretch);
+            m_content_stack = content_stack.get();
+            add_child(std::move(content_stack));
+
+            auto title_padding = nandina::layout::Padding::Create();
+            title_padding->padding(16.0f, 8.0f, 16.0f, 0.0f);
+            m_title_padding = title_padding.get();
+
+            auto title_slot = nandina::layout::SizedBox::Create();
+            title_slot->width(160.0f)
+                .height(18.0f);
+            m_title_slot = title_slot.get();
+
+            auto title = nandina::widgets::Label::create();
+            title->set_text("Weekly Activity")
+                .set_font_size(10.0f)
+                .set_color(color4_to_nancolor(220, 220, 240));
+            m_title = title.get();
+            m_title_slot->child(std::move(title));
+            m_title_padding->child(std::move(title_slot));
+            m_content_stack->add(std::move(title_padding));
+
+            auto strip_padding = nandina::layout::Padding::Create();
+            strip_padding->padding(20.0f, 0.0f, 20.0f, 2.0f);
+            m_strip_padding = strip_padding.get();
+
+            auto strip_column = nandina::layout::Column::Create();
+            strip_column->align_items(nandina::layout::LayoutAlignment::stretch);
+            m_strip_column = strip_column.get();
+
+            auto spacer = nandina::layout::Spacer::Create();
+            m_strip_column->add(std::move(spacer));
+
+            auto strip_slot = nandina::layout::SizedBox::Create();
+            strip_slot->height(14.0f);
+            m_strip_slot = strip_slot.get();
+            m_strip_slot->child(std::move(day_strip));
+            m_strip_column->add(std::move(strip_slot));
+
+            m_strip_padding->child(std::move(strip_column));
+            m_content_stack->add(std::move(strip_padding));
         }
 
-        nandina::app::NanComponent* m_mounted_content{nullptr};
-        nandina::app::Ref<nandina::widgets::Label> m_title;
+        nandina::layout::Stack* m_content_stack{nullptr};
+        nandina::layout::Padding* m_title_padding{nullptr};
+        nandina::layout::SizedBox* m_title_slot{nullptr};
+        nandina::layout::Padding* m_strip_padding{nullptr};
+        nandina::layout::Column* m_strip_column{nullptr};
+        nandina::layout::SizedBox* m_strip_slot{nullptr};
+        nandina::widgets::Label* m_title{nullptr};
         ChartDayStrip* m_day_strip{nullptr};
     };
 

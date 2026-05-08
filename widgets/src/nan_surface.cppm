@@ -98,10 +98,34 @@ export namespace nandina::widgets {
         }
 
         // ── 布局覆盖 ────────────────────────────────────────
+        auto measure(const geometry::NanConstraints& constraints) -> void override {
+            const auto& pad = m_padding.get();
+            const geometry::NanConstraints child_constraints{
+                std::max(0.0f, constraints.min_width() - pad.left() - pad.right()),
+                constraints.max_width() == geometry::NanConstraints::k_infinity
+                    ? geometry::NanConstraints::k_infinity
+                    : std::max(0.0f, constraints.max_width() - pad.left() - pad.right()),
+                std::max(0.0f, constraints.min_height() - pad.top() - pad.bottom()),
+                constraints.max_height() == geometry::NanConstraints::k_infinity
+                    ? geometry::NanConstraints::k_infinity
+                    : std::max(0.0f, constraints.max_height() - pad.top() - pad.bottom()),
+            };
+
+            for_each_child([&](runtime::NanWidget& child) {
+                child.measure(child_constraints.loosen());
+            });
+
+            set_measured_layout_state(constraints, preferred_size());
+        }
+
+        auto layout() -> void override {
+            layout_content_children();
+            NanWidget::layout();
+        }
+
         auto set_bounds(float x, float y, float w, float h) noexcept -> NanWidget& override {
             NanWidget::set_bounds(x, y, w, h);
-            layout_content_children();
-
+            layout();
             return *this;
         }
 

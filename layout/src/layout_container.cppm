@@ -191,18 +191,13 @@ export namespace nandina::layout {
 
         auto set_bounds(const float x, const float y, const float w, const float h) noexcept -> runtime::NanWidget& override {
             NanWidget::set_bounds(x, y, w, h);
-            measure(geometry::NanConstraints::tight(w, h));
             layout();
             return *this;
         }
 
     protected:
         auto request_layout() -> void {
-            mark_dirty();
-            if (width() > 0.0f || height() > 0.0f) {
-                measure(geometry::NanConstraints::tight(width(), height()));
-                layout();
-            }
+            mark_layout_dirty();
         }
 
         // ── 子类辅助方法（通过 this 访问 NanWidget 的 protected 成员）────
@@ -502,6 +497,13 @@ export namespace nandina::layout {
 
         auto add(std::unique_ptr<runtime::NanWidget> child) -> Stack& {
             LayoutContainer::add(std::move(child));
+            return *this;
+        }
+
+        auto set_bounds(const float x, const float y, const float w, const float h) noexcept -> runtime::NanWidget& override {
+            NanWidget::set_bounds(x, y, w, h);
+            measure(geometry::NanConstraints::tight(w, h));
+            layout();
             return *this;
         }
 

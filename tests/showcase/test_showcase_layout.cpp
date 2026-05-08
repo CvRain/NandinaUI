@@ -200,10 +200,7 @@ TEST(ShowcaseLayoutTest, ChartCard_KeepsTitleAndDayLabelsInExpectedSlots) {
 
     ASSERT_EQ(chart->child_count(), 1u);
 
-    auto& mounted = child_at(*chart, 0);
-    ASSERT_EQ(mounted.child_count(), 1u);
-
-    auto& stack = child_at(mounted, 0);
+    auto& stack = child_at(*chart, 0);
     ASSERT_EQ(stack.child_count(), 2u);
 
     auto& title_padding = child_at(stack, 0);
@@ -250,10 +247,7 @@ TEST(ShowcaseLayoutTest, RecentActivityCard_KeepsTitleAndRowsAligned) {
 
     ASSERT_EQ(activity->child_count(), 1u);
 
-    auto& mounted = child_at(*activity, 0);
-    ASSERT_EQ(mounted.child_count(), 1u);
-
-    auto& content_column = child_at(mounted, 0);
+    auto& content_column = child_at(*activity, 0);
     ASSERT_EQ(content_column.child_count(), 2u);
 
     auto& title_slot = child_at(content_column, 0);
@@ -271,10 +265,7 @@ TEST(ShowcaseLayoutTest, RecentActivityCard_KeepsTitleAndRowsAligned) {
     auto& activity_list = child_at(list, 0);
     ASSERT_EQ(activity_list.child_count(), 1u);
 
-    auto& list_mounted = child_at(activity_list, 0);
-    ASSERT_EQ(list_mounted.child_count(), 1u);
-
-    auto& column = child_at(list_mounted, 0);
+    auto& column = child_at(activity_list, 0);
     ASSERT_EQ(column.child_count(), 5u);
 
     auto& first_row = child_at(column, 0);
@@ -334,10 +325,7 @@ TEST(ShowcaseLayoutTest, ProjectProgressCard_UsesInternalRowsNode) {
 
     ASSERT_EQ(progress->child_count(), 1u);
 
-    auto& mounted = child_at(*progress, 0);
-    ASSERT_EQ(mounted.child_count(), 1u);
-
-    auto& stack = child_at(mounted, 0);
+    auto& stack = child_at(*progress, 0);
     ASSERT_EQ(stack.child_count(), 2u);
 
     auto& content_column = child_at(stack, 1);
@@ -356,10 +344,7 @@ TEST(ShowcaseLayoutTest, ProjectProgressCard_UsesInternalRowsNode) {
     auto& progress_rows = child_at(rows, 0);
     ASSERT_EQ(progress_rows.child_count(), 1u);
 
-    auto& rows_mounted = child_at(progress_rows, 0);
-    ASSERT_EQ(rows_mounted.child_count(), 1u);
-
-    auto& column = child_at(rows_mounted, 0);
+    auto& column = child_at(progress_rows, 0);
     ASSERT_EQ(column.child_count(), 4u);
 
     EXPECT_FLOAT_EQ(title_bounds.x(), 632.0f);
@@ -554,8 +539,7 @@ TEST(ShowcaseLayoutTest, MainComponent_DrawPassLaysOutShellSlots) {
     component.draw(canvas_scope.canvas());
 
     auto& shell = child_at(component, 0);
-    auto& shell_mounted = child_at(shell, 0);
-    auto& shell_row = child_at(shell_mounted, 0);
+    auto& shell_row = child_at(shell, 0);
     auto& sidebar_slot = child_at(shell_row, 0);
     auto& main_expanded = child_at(shell_row, 1);
     auto& main_column = child_at(main_expanded, 0);
@@ -564,8 +548,7 @@ TEST(ShowcaseLayoutTest, MainComponent_DrawPassLaysOutShellSlots) {
     auto& dock_slot = child_at(main_column, 2);
     auto& content_padding = child_at(content_expanded, 0);
     auto& content = child_at(content_padding, 0);
-    auto& content_mounted = child_at(content, 0);
-    auto& section_column = child_at(content_mounted, 0);
+    auto& section_column = child_at(content, 0);
 
     const auto sidebar_bounds = sidebar_slot.bounds();
     EXPECT_FLOAT_EQ(sidebar_bounds.x(), 0.0f);

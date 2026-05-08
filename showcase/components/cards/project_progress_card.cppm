@@ -7,9 +7,9 @@ module;
 
 export module nandina.showcase.project_progress_card;
 
-import nandina.app.authoring;
 import nandina.foundation.color;
 import nandina.layout.container;
+import nandina.layout.flex_widgets;
 import nandina.runtime.nan_widget;
 import nandina.widgets.label;
 import nandina.widgets.progressbar;
@@ -101,8 +101,8 @@ export namespace nandina::showcase {
         auto set_bounds(const float x, const float y, const float w, const float h) noexcept -> NanWidget& override {
             NanWidget::set_bounds(x, y, w, h);
 
-            if (m_mounted_column) {
-                m_mounted_column->set_bounds(x, y, w, h);
+            if (m_column) {
+                m_column->set_bounds(x, y, w, h);
             }
 
             return *this;
@@ -110,7 +110,11 @@ export namespace nandina::showcase {
 
     private:
         ProjectProgressRows() {
-            auto nodes = nandina::app::children();
+            auto column = nandina::layout::Column::Create();
+            column->gap(8.0f)
+                .align_items(nandina::layout::LayoutAlignment::stretch);
+            m_column = column.get();
+            add_child(std::move(column));
 
             const auto progress_data = std::to_array<std::tuple<std::string_view, float, uint8_t, uint8_t, uint8_t>>({
                 {"Layout Engine", 0.85f, 99, 102, 241},
@@ -132,20 +136,13 @@ export namespace nandina::showcase {
                     color4_to_nancolor(r, g, b),
                     color4_to_nancolor(42, 44, 62));
                 m_rows[i] = row.get();
-                nodes.append(nandina::app::adopt(std::move(row)));
+                if (m_column) {
+                    m_column->add(std::move(row));
+                }
             }
-
-            auto mounted = nandina::app::mount(
-                nandina::app::column(std::move(nodes))
-                .gap(8.0f)
-                .align_items(nandina::layout::LayoutAlignment::stretch)
-                .bind(m_column));
-            m_mounted_column = mounted.get();
-            add_child(std::move(mounted));
         }
 
-        nandina::app::NanComponent* m_mounted_column{nullptr};
-        nandina::app::Ref<nandina::layout::Column> m_column;
+        nandina::layout::Column* m_column{nullptr};
         std::array<nandina::runtime::NanWidget*, 4> m_rows{};
     };
 
@@ -160,8 +157,8 @@ export namespace nandina::showcase {
         auto set_bounds(const float x, const float y, const float w, const float h) noexcept -> NanWidget& override {
             NanWidget::set_bounds(x, y, w, h);
 
-            if (m_mounted_content) {
-                m_mounted_content->set_bounds(x, y, w, h);
+            if (m_content_stack) {
+                m_content_stack->set_bounds(x, y, w, h);
             }
 
             return *this;
@@ -176,33 +173,54 @@ export namespace nandina::showcase {
             auto rows = ProjectProgressRows::create();
             m_rows    = rows.get();
 
-            auto mounted = nandina::app::mount(
-                nandina::app::stack(nandina::app::children(
-                    nandina::app::adopt(nandina::widgets::Surface::create())
-                    .bg_color(color4_to_nancolor(50, 52, 72))
-                    .corner_radius(8.0f),
-                    nandina::app::column(nandina::app::children(
-                        nandina::app::padding(
-                            nandina::app::sized_box(
-                                nandina::app::label("Project Progress")
-                                .font_size(9.0f)
-                                .color(color4_to_nancolor(220, 220, 240))
-                                .bind(m_title))
-                            .width(160.0f)
-                            .height(16.0f))
-                        .padding(14.0f, 8.0f, 14.0f, 0.0f),
-                        nandina::app::expanded(
-                            nandina::app::adopt(std::move(rows)))))
-                    .gap(10.0f)
-                    .align_items(nandina::layout::LayoutAlignment::stretch)))
-                .align_items(nandina::layout::LayoutAlignment::stretch)
-                .justify_content(nandina::layout::LayoutAlignment::stretch));
-            m_mounted_content = mounted.get();
-            add_child(std::move(mounted));
+            auto content_stack = nandina::layout::Stack::Create();
+            content_stack->align_items(nandina::layout::LayoutAlignment::stretch)
+                .justify_content(nandina::layout::LayoutAlignment::stretch);
+            m_content_stack = content_stack.get();
+            add_child(std::move(content_stack));
+
+            auto background = nandina::widgets::Surface::create();
+            background->set_bg_color(color4_to_nancolor(50, 52, 72))
+                .set_corner_radius(8.0f);
+            m_content_stack->add(std::move(background));
+
+            auto content_column = nandina::layout::Column::Create();
+            content_column->gap(10.0f)
+                .align_items(nandina::layout::LayoutAlignment::stretch);
+            m_content_column = content_column.get();
+
+            auto title_padding = nandina::layout::Padding::Create();
+            title_padding->padding(14.0f, 8.0f, 14.0f, 0.0f);
+            m_title_padding = title_padding.get();
+
+            auto title_slot = nandina::layout::SizedBox::Create();
+            title_slot->width(160.0f)
+                .height(16.0f);
+            m_title_slot = title_slot.get();
+
+            auto title = nandina::widgets::Label::create();
+            title->set_text("Project Progress")
+                .set_font_size(9.0f)
+                .set_color(color4_to_nancolor(220, 220, 240));
+            m_title = title.get();
+            m_title_slot->child(std::move(title));
+            m_title_padding->child(std::move(title_slot));
+            m_content_column->add(std::move(title_padding));
+
+            auto rows_slot = nandina::layout::Expanded::Create();
+            m_rows_slot = rows_slot.get();
+            m_rows_slot->child(std::move(rows));
+            m_content_column->add(std::move(rows_slot));
+
+            m_content_stack->add(std::move(content_column));
         }
 
-        nandina::app::NanComponent* m_mounted_content{nullptr};
-        nandina::app::Ref<nandina::widgets::Label> m_title;
+        nandina::layout::Stack* m_content_stack{nullptr};
+        nandina::layout::Column* m_content_column{nullptr};
+        nandina::layout::Padding* m_title_padding{nullptr};
+        nandina::layout::SizedBox* m_title_slot{nullptr};
+        nandina::layout::Expanded* m_rows_slot{nullptr};
+        nandina::widgets::Label* m_title{nullptr};
         ProjectProgressRows* m_rows{nullptr};
     };
 

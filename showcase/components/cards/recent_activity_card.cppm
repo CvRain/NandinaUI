@@ -9,9 +9,9 @@ module;
 
 export module nandina.showcase.recent_activity_card;
 
-import nandina.app.authoring;
 import nandina.foundation.color;
 import nandina.layout.container;
+import nandina.layout.flex_widgets;
 import nandina.runtime.nan_widget;
 import nandina.widgets.label;
 
@@ -131,8 +131,8 @@ export namespace nandina::showcase {
         auto set_bounds(const float x, const float y, const float w, const float h) noexcept -> NanWidget& override {
             NanWidget::set_bounds(x, y, w, h);
 
-            if (m_mounted_column) {
-                m_mounted_column->set_bounds(x, y, w, h);
+            if (m_column) {
+                m_column->set_bounds(x, y, w, h);
             }
 
             return *this;
@@ -140,7 +140,11 @@ export namespace nandina::showcase {
 
     private:
         ActivityList() {
-            auto nodes = nandina::app::children();
+            auto column = nandina::layout::Column::Create();
+            column->gap(2.0f)
+                .align_items(nandina::layout::LayoutAlignment::stretch);
+            m_column = column.get();
+            add_child(std::move(column));
 
             constexpr auto texts = std::to_array<std::string_view>({
                 "Updated layout-core", "Merged PR #42", "Fixed flex alignment", "Added Stack support",
@@ -165,20 +169,13 @@ export namespace nandina::showcase {
                     color4_to_nancolor(r, g, b));
                 row->set_pulse_phase(static_cast<float>(i) * 0.15f);
                 m_rows[i] = row.get();
-                nodes.append(nandina::app::adopt(std::move(row)));
+                if (m_column) {
+                    m_column->add(std::move(row));
+                }
             }
-
-            auto mounted = nandina::app::mount(
-                nandina::app::column(std::move(nodes))
-                .gap(2.0f)
-                .align_items(nandina::layout::LayoutAlignment::stretch)
-                .bind(m_column));
-            m_mounted_column = mounted.get();
-            add_child(std::move(mounted));
         }
 
-        nandina::app::NanComponent* m_mounted_column{nullptr};
-        nandina::app::Ref<nandina::layout::Column> m_column;
+        nandina::layout::Column* m_column{nullptr};
         std::array<nandina::runtime::NanWidget*, 5> m_rows{};
     };
 
@@ -198,8 +195,8 @@ export namespace nandina::showcase {
         auto set_bounds(const float x, const float y, const float w, const float h) noexcept -> NanWidget& override {
             NanWidget::set_bounds(x, y, w, h);
 
-            if (m_mounted_content) {
-                m_mounted_content->set_bounds(x, y, w, h);
+            if (m_content_column) {
+                m_content_column->set_bounds(x, y, w, h);
             }
 
             return *this;
@@ -220,26 +217,36 @@ export namespace nandina::showcase {
             auto activity_list = ActivityList::create();
             m_activity_list    = activity_list.get();
 
-            auto mounted = nandina::app::mount(
-                nandina::app::column(nandina::app::children(
-                    nandina::app::sized_box(
-                        nandina::app::label("Recent Activity")
-                        .font_size(10.0f)
-                        .color(color4_to_nancolor(220, 220, 240))
-                        .bind(m_title))
-                    .width(160.0f)
-                    .height(18.0f),
-                    nandina::app::expanded(
-                        nandina::app::adopt(std::move(activity_list)))))
-                .padding(16.0f, 8.0f, 16.0f, 0.0f)
+            auto content_column = nandina::layout::Column::Create();
+            content_column->padding(16.0f, 8.0f, 16.0f, 0.0f)
                 .gap(10.0f)
-                .align_items(nandina::layout::LayoutAlignment::stretch));
-            m_mounted_content = mounted.get();
-            add_child(std::move(mounted));
+                .align_items(nandina::layout::LayoutAlignment::stretch);
+            m_content_column = content_column.get();
+            add_child(std::move(content_column));
+
+            auto title_slot = nandina::layout::SizedBox::Create();
+            title_slot->width(160.0f)
+                .height(18.0f);
+            m_title_slot = title_slot.get();
+
+            auto title = nandina::widgets::Label::create();
+            title->set_text("Recent Activity")
+                .set_font_size(10.0f)
+                .set_color(color4_to_nancolor(220, 220, 240));
+            m_title = title.get();
+            m_title_slot->child(std::move(title));
+            m_content_column->add(std::move(title_slot));
+
+            auto rows_slot = nandina::layout::Expanded::Create();
+            m_rows_slot = rows_slot.get();
+            m_rows_slot->child(std::move(activity_list));
+            m_content_column->add(std::move(rows_slot));
         }
 
-        nandina::app::NanComponent* m_mounted_content{nullptr};
-        nandina::app::Ref<nandina::widgets::Label> m_title;
+        nandina::layout::Column* m_content_column{nullptr};
+        nandina::layout::SizedBox* m_title_slot{nullptr};
+        nandina::layout::Expanded* m_rows_slot{nullptr};
+        nandina::widgets::Label* m_title{nullptr};
         ActivityList* m_activity_list{nullptr};
         float m_pulse{0.0f};
     };

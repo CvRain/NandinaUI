@@ -5,6 +5,7 @@ module;
 
 export module nandina.widgets.split_row;
 
+import nandina.foundation.nan_constraints;
 import nandina.foundation.nan_size;
 import nandina.runtime.nan_widget;
 
@@ -22,16 +23,19 @@ export namespace nandina::widgets {
 
         auto set_gap(const float gap) noexcept -> SplitRow& {
             m_gap = std::max(0.0f, gap);
+            mark_layout_dirty();
             return *this;
         }
 
         auto set_split_ratio(const float ratio) noexcept -> SplitRow& {
             m_split_ratio = std::clamp(ratio, 0.0f, 1.0f);
+            mark_layout_dirty();
             return *this;
         }
 
         auto set_preferred_height(const float height) noexcept -> SplitRow& {
             m_preferred_height = std::max(0.0f, height);
+            mark_layout_dirty();
             return *this;
         }
 
@@ -55,20 +59,61 @@ export namespace nandina::widgets {
             return m_trailing;
         }
 
+        auto measure(const geometry::NanConstraints& constraints) -> void override {
+            const float content_w = std::max(0.0f, constraints.max_width() == geometry::NanConstraints::k_infinity
+                ? 0.0f
+                : constraints.max_width() - m_gap);
+            const float leading_w = content_w * m_split_ratio;
+            const float trailing_w = std::max(0.0f, content_w - leading_w);
+
+            float resolved_h = m_preferred_height;
+
+            if (m_leading) {
+                m_leading->measure(geometry::NanConstraints{
+                    0.0f,
+                    constraints.max_width() == geometry::NanConstraints::k_infinity
+                        ? geometry::NanConstraints::k_infinity
+                        : leading_w,
+                    0.0f,
+                    constraints.max_height()});
+                resolved_h = std::max(resolved_h, m_leading->measured_size().height());
+            }
+
+            if (m_trailing) {
+                m_trailing->measure(geometry::NanConstraints{
+                    0.0f,
+                    constraints.max_width() == geometry::NanConstraints::k_infinity
+                        ? geometry::NanConstraints::k_infinity
+                        : trailing_w,
+                    0.0f,
+                    constraints.max_height()});
+                resolved_h = std::max(resolved_h, m_trailing->measured_size().height());
+            }
+
+            set_measured_layout_state(
+                constraints,
+                constraints.constrain(geometry::NanSize{0.0f, resolved_h}));
+        }
+
+        auto layout() -> void override {
+            const float content_w  = std::max(0.0f, width() - m_gap);
+            const float leading_w  = content_w * m_split_ratio;
+            const float trailing_w = std::max(0.0f, width() - m_gap - leading_w);
+
+            if (m_leading) {
+                m_leading->set_bounds(x(), y(), leading_w, height());
+            }
+            if (m_trailing) {
+                m_trailing->set_bounds(x() + leading_w + m_gap, y(), trailing_w, height());
+            }
+
+            NanWidget::layout();
+        }
+
         auto set_bounds(const float x, const float y, const float w, const float h) noexcept -> NanWidget& override {
             NanWidget::set_bounds(x, y, w, h);
 
-            const float content_w  = std::max(0.0f, w - m_gap);
-            const float leading_w  = content_w * m_split_ratio;
-            const float trailing_w = std::max(0.0f, w - m_gap - leading_w);
-
-            if (m_leading) {
-                m_leading->set_bounds(x, y, leading_w, h);
-            }
-            if (m_trailing) {
-                m_trailing->set_bounds(x + leading_w + m_gap, y, trailing_w, h);
-            }
-
+            layout();
             return *this;
         }
 

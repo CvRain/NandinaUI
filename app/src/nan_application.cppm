@@ -364,14 +364,16 @@ export namespace nandina::app {
         auto set_bounds(const float x, const float y, const float w, const float h) noexcept -> NanWidget& override {
             NanWidget::set_bounds(x, y, w, h);
             if (m_root_widget) {
-                m_root_widget->set_bounds(x, y, w, h);
+                m_root_widget->runtime::NanWidget::set_bounds(x, y, w, h);
                 flush_root_layout();
             }
             return *this;
         }
 
         void draw(tvg::SwCanvas& canvas) override {
-            flush_root_layout();
+            if (m_root_widget && m_root_widget->is_layout_dirty()) {
+                flush_root_layout();
+            }
             NanComponent::draw(canvas);
         }
 
@@ -611,8 +613,6 @@ export namespace nandina::app {
             const float width = static_cast<float>(m_active_runtime_window ? m_active_runtime_window->width() : m_config.width);
             const float height = static_cast<float>(m_active_runtime_window ? m_active_runtime_window->height() : m_config.height);
             m_root_component->set_bounds(0.0f, 0.0f, width, height);
-            m_root_component->mark_layout_dirty();
-            ensure_root_component_layout();
         }
 
         AppConfig m_config;
