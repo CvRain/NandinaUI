@@ -116,9 +116,9 @@ export namespace nandina::widgets {
 
             // 定位 Icon 子节点在中央
             if (m_icon) {
-                const float icon_size = std::min(w, h) * 0.5f;  // 图标占控件一半大小
-                const float icon_x = x + (w - icon_size) * 0.5f;
-                const float icon_y = y + (h - icon_size) * 0.5f - (m_show_active_dot ? 3.0f : 0.0f);
+                const float icon_size = std::min(w, h) * 0.5f; // 图标占控件一半大小
+                const float icon_x    = x + (w - icon_size) * 0.5f;
+                const float icon_y    = y + (h - icon_size) * 0.5f - (m_show_active_dot ? 3.0f : 0.0f);
                 m_icon->set_bounds(icon_x, icon_y, icon_size, icon_size);
             }
 
@@ -131,7 +131,7 @@ export namespace nandina::widgets {
 
     protected:
         void on_draw(tvg::SwCanvas& canvas) override {
-            const auto rect = bounds();
+            const auto rect   = bounds();
             const auto bg_rgb = m_bg_color.to<nandina::NanRgb>();
 
             // ── 1. 绘制圆形背景 ──────────────────────────
@@ -143,7 +143,7 @@ export namespace nandina::widgets {
             // ── 2. 活动指示圆点（在底边下方） ────────────
             if (m_show_active_dot) {
                 const auto dot_rgb = m_active_dot_color.to<nandina::NanRgb>();
-                auto* dot = tvg::Shape::gen();
+                auto* dot          = tvg::Shape::gen();
                 dot->appendCircle(rect.center().x(), rect.y() + rect.height() + 4.0f, 2.0f, 2.0f);
                 dot->fill(dot_rgb.red(), dot_rgb.green(), dot_rgb.blue(), dot_rgb.alpha());
                 canvas.add(dot);

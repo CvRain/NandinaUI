@@ -16,7 +16,7 @@ TEST(LayoutCoreTest, Column_SingleChild_FillsAvailable) {
     req.axis = LayoutAxis::column;
     req.container_bounds = {0.0f, 0.0f, 200.0f, 400.0f};
     req.children = {
-        {NanSize{100.0f, 50.0f}, 0}
+        LayoutChildSpec{.preferred_size = NanSize{100.0f, 50.0f}, .flex_factor = 0}
     };
 
     auto frames = backend.compute(req);
@@ -35,8 +35,8 @@ TEST(LayoutCoreTest, Column_TwoChildren_StackedVertically) {
     req.container_bounds = {0.0f, 0.0f, 200.0f, 400.0f};
     req.gap = 10.0f;
     req.children = {
-        {NanSize{100.0f, 50.0f}, 0},
-        {NanSize{80.0f, 80.0f}, 0},
+        LayoutChildSpec{.preferred_size = NanSize{100.0f, 50.0f}, .flex_factor = 0},
+        LayoutChildSpec{.preferred_size = NanSize{80.0f, 80.0f}, .flex_factor = 0},
     };
 
     auto frames = backend.compute(req);
@@ -57,9 +57,9 @@ TEST(LayoutCoreTest, Column_WithFlexDistributesRemaining) {
     req.container_bounds = {0.0f, 0.0f, 200.0f, 400.0f};
     req.gap = 0.0f;
     req.children = {
-        {NanSize{100.0f, 50.0f}, 0},  // fixed 50
-        {NanSize{80.0f, 0.0f}, 1},    // flex 1
-        {NanSize{80.0f, 0.0f}, 2},    // flex 2 (占 2/3 剩余空间)
+        LayoutChildSpec{.preferred_size = NanSize{100.0f, 50.0f}, .flex_factor = 0},  // fixed 50
+        LayoutChildSpec{.preferred_size = NanSize{80.0f, 0.0f}, .flex_factor = 1},    // flex 1
+        LayoutChildSpec{.preferred_size = NanSize{80.0f, 0.0f}, .flex_factor = 2},    // flex 2 (占 2/3 剩余空间)
     };
 
     auto frames = backend.compute(req);
@@ -87,8 +87,8 @@ TEST(LayoutCoreTest, Row_TwoChildren_ArrangedHorizontally) {
     req.container_bounds = {0.0f, 0.0f, 300.0f, 100.0f};
     req.gap = 5.0f;
     req.children = {
-        {NanSize{100.0f, 50.0f}, 0},
-        {NanSize{150.0f, 60.0f}, 0},
+        LayoutChildSpec{.preferred_size = NanSize{100.0f, 50.0f}, .flex_factor = 0},
+        LayoutChildSpec{.preferred_size = NanSize{150.0f, 60.0f}, .flex_factor = 0},
     };
 
     auto frames = backend.compute(req);
@@ -108,7 +108,7 @@ TEST(LayoutCoreTest, Row_StretchAlign_FillsHeight) {
     req.container_bounds = {0.0f, 0.0f, 200.0f, 100.0f};
     req.cross_alignment = LayoutAlignment::stretch;
     req.children = {
-        {NanSize{50.0f, 20.0f}, 0},
+        LayoutChildSpec{.preferred_size = NanSize{50.0f, 20.0f}, .flex_factor = 0},
     };
 
     auto frames = backend.compute(req);
@@ -125,7 +125,7 @@ TEST(LayoutCoreTest, Row_CenterAlign_MainAxis) {
     req.container_bounds = {0.0f, 0.0f, 200.0f, 100.0f};
     req.main_alignment = LayoutAlignment::center;
     req.children = {
-        {NanSize{50.0f, 50.0f}, 0},
+        LayoutChildSpec{.preferred_size = NanSize{50.0f, 50.0f}, .flex_factor = 0},
     };
 
     auto frames = backend.compute(req);
@@ -143,8 +143,8 @@ TEST(LayoutCoreTest, Row_SpaceBetween) {
     req.container_bounds = {0.0f, 0.0f, 200.0f, 100.0f};
     req.main_alignment = LayoutAlignment::space_between;
     req.children = {
-        {NanSize{40.0f, 50.0f}, 0},
-        {NanSize{40.0f, 50.0f}, 0},
+        LayoutChildSpec{.preferred_size = NanSize{40.0f, 50.0f}, .flex_factor = 0},
+        LayoutChildSpec{.preferred_size = NanSize{40.0f, 50.0f}, .flex_factor = 0},
     };
 
     auto frames = backend.compute(req);
@@ -163,8 +163,8 @@ TEST(LayoutCoreTest, Stack_ChildrenOverlap) {
     req.axis = LayoutAxis::stack;
     req.container_bounds = {0.0f, 0.0f, 200.0f, 200.0f};
     req.children = {
-        {NanSize{200.0f, 200.0f}, 0},
-        {NanSize{100.0f, 100.0f}, 0},
+        LayoutChildSpec{.preferred_size = NanSize{200.0f, 200.0f}, .flex_factor = 0},
+        LayoutChildSpec{.preferred_size = NanSize{100.0f, 100.0f}, .flex_factor = 0},
     };
 
     auto frames = backend.compute(req);
@@ -209,4 +209,51 @@ TEST(LayoutCoreTest, LayoutRequest_ContentBounds_ZeroPadding) {
     EXPECT_FLOAT_EQ(cb.y(), 0.0f);
     EXPECT_FLOAT_EQ(cb.width(), 100.0f);
     EXPECT_FLOAT_EQ(cb.height(), 100.0f);
+}
+
+TEST(LayoutCoreTest, Row_StretchAlignmentRespectsChildMaxHeight) {
+    BasicLayoutBackend backend;
+
+    LayoutRequest req;
+    req.axis = LayoutAxis::row;
+    req.container_bounds = {0.0f, 0.0f, 200.0f, 100.0f};
+    req.cross_alignment = LayoutAlignment::stretch;
+    req.children = {
+        LayoutChildSpec{
+            .preferred_size = NanSize{50.0f, 20.0f},
+            .min_size = NanSize{0.0f, 0.0f},
+            .max_size = NanSize{NanConstraints::k_infinity, 40.0f},
+        },
+    };
+
+    auto frames = backend.compute(req);
+    ASSERT_EQ(frames.size(), 1);
+    EXPECT_FLOAT_EQ(frames[0].height(), 40.0f);
+}
+
+TEST(LayoutCoreTest, Column_FlexChildRespectsMinAndMaxHeight) {
+    BasicLayoutBackend backend;
+
+    LayoutRequest req;
+    req.axis = LayoutAxis::column;
+    req.container_bounds = {0.0f, 0.0f, 200.0f, 300.0f};
+    req.children = {
+        LayoutChildSpec{
+            .preferred_size = NanSize{100.0f, 0.0f},
+            .min_size = NanSize{0.0f, 80.0f},
+            .max_size = NanSize{NanConstraints::k_infinity, 120.0f},
+            .flex_factor = 1,
+        },
+        LayoutChildSpec{
+            .preferred_size = NanSize{100.0f, 0.0f},
+            .min_size = NanSize{0.0f, 80.0f},
+            .max_size = NanSize{NanConstraints::k_infinity, 120.0f},
+            .flex_factor = 1,
+        },
+    };
+
+    auto frames = backend.compute(req);
+    ASSERT_EQ(frames.size(), 2);
+    EXPECT_FLOAT_EQ(frames[0].height(), 120.0f);
+    EXPECT_FLOAT_EQ(frames[1].height(), 120.0f);
 }

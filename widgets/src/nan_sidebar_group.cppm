@@ -97,13 +97,13 @@ export namespace nandina::widgets {
         auto set_bounds(float x, float y, float w, float h) noexcept -> NanWidget& override {
             Surface::set_bounds(x, y, w, h);
 
-            const float label_height = 16.0f;
+            const float label_height  = 16.0f;
             const float accent_offset = 14.0f;
 
             // 装饰色标
             if (m_accent_icon && m_show_accent) {
                 const float dot_size = 10.0f;
-                const float dot_y = y + 10.0f;
+                const float dot_y    = y + 10.0f;
                 m_accent_icon->set_bounds(x + accent_offset, dot_y, dot_size, dot_size);
             }
 
@@ -116,11 +116,12 @@ export namespace nandina::widgets {
 
             // 子节点（SidebarMenuButton）在标签下方排列
             const float item_start_y = y + (m_label_text.empty() ? 6.0f : 28.0f);
-            float item_y = item_start_y;
+            float item_y             = item_start_y;
 
             for_each_child([&](runtime::NanWidget& child) {
-                if (&child == m_label || &child == m_accent_icon) return;
-                const float ch = 36.0f;  // 固定项高度
+                if (&child == m_label || &child == m_accent_icon)
+                    return;
+                const float ch = 36.0f; // 固定项高度
                 child.set_bounds(x, item_y, w, ch);
                 item_y += ch + 2.0f;
             });
@@ -130,8 +131,8 @@ export namespace nandina::widgets {
 
         [[nodiscard]] auto preferred_size() const noexcept -> geometry::NanSize override {
             // 子节点累加 + 标签高度
-            const float total_child = 38.0f * count_menu_items();  // 36 + 2 padding
-            const float header_h = m_label_text.empty() ? 10.0f : 28.0f;
+            const float total_child = 38.0f * count_menu_items(); // 36 + 2 padding
+            const float header_h    = m_label_text.empty() ? 10.0f : 28.0f;
             return {240.0f, header_h + total_child};
         }
 
@@ -141,9 +142,9 @@ export namespace nandina::widgets {
             // 装饰色条（左侧竖线）
             const auto rect = bounds();
             if (m_show_accent) {
-                const auto& acc = m_accent_color.get();
+                const auto& acc    = m_accent_color.get();
                 const auto acc_rgb = acc.to<nandina::NanRgb>();
-                auto* bar = tvg::Shape::gen();
+                auto* bar          = tvg::Shape::gen();
                 bar->appendRect(rect.x() + 14.0f, rect.y() + 6.0f, 4.0f, 14.0f, 2.0f, 2.0f);
                 bar->fill(acc_rgb.red(), acc_rgb.green(), acc_rgb.blue(), acc_rgb.alpha());
                 canvas.add(bar);
@@ -188,7 +189,7 @@ export namespace nandina::widgets {
         bool m_show_accent{false};
 
         Label* m_label{nullptr};
-        Icon*  m_accent_icon{nullptr};
+        Icon* m_accent_icon{nullptr};
 
         reactive::Prop<nandina::NanColor> m_accent_color{
             nandina::NanColor::from(nandina::NanRgb{99, 102, 241})};

@@ -63,7 +63,7 @@ export namespace nandina::widgets {
      */
     class Pressable : public runtime::NanWidget {
     public:
-        using Ptr = std::unique_ptr<Pressable>;
+        using Ptr      = std::unique_ptr<Pressable>;
         using Callback = std::function<void()>;
 
         ~Pressable() override = default;
@@ -133,10 +133,11 @@ export namespace nandina::widgets {
     protected:
         // ── 事件处理 ──────────────────────────────────
         auto on_pointer_move(const nandina::runtime::PointerMoveEvent& /*event*/) -> bool override {
-            if (m_disabled.get()) return false;
+            if (m_disabled.get())
+                return false;
 
             const bool was_hovered = m_hovered;
-            m_hovered = true;
+            m_hovered              = true;
             mark_dirty();
 
             if (!was_hovered && m_on_hover) {
@@ -146,8 +147,10 @@ export namespace nandina::widgets {
         }
 
         auto on_pointer_down(const nandina::runtime::PointerButtonEvent& event) -> bool override {
-            if (m_disabled.get()) return false;
-            if (event.button != nandina::types::PointerButton::Left) return false;
+            if (m_disabled.get())
+                return false;
+            if (event.button != nandina::types::PointerButton::Left)
+                return false;
 
             m_pressed_inside = true;
             mark_dirty();
@@ -159,11 +162,13 @@ export namespace nandina::widgets {
         }
 
         auto on_pointer_up(const nandina::runtime::PointerButtonEvent& event) -> bool override {
-            if (m_disabled.get()) return false;
-            if (event.button != nandina::types::PointerButton::Left) return false;
+            if (m_disabled.get())
+                return false;
+            if (event.button != nandina::types::PointerButton::Left)
+                return false;
 
             const bool was_pressed = m_pressed_inside;
-            m_pressed_inside = false;
+            m_pressed_inside       = false;
             mark_dirty();
 
             if (was_pressed && m_on_release) {
@@ -188,8 +193,8 @@ export namespace nandina::widgets {
         }
 
         auto on_focus_out() -> bool override {
-            m_focused = false;
-            m_hovered = false;
+            m_focused        = false;
+            m_hovered        = false;
             m_pressed_inside = false;
             mark_dirty();
 

@@ -63,6 +63,8 @@
 | Log 服务 | ✅ 完成 | 基于 spdlog 的日志框架 |
 | Color 模块 | ✅ 完成 | `NanColor` 及颜色转换 |
 | Window 基础 | ✅ 完成 | `NanWindow` 窗口基类 |
+| Reactive 核心 | ✅ 主体完成 | `State`、`Effect`、`Computed`、`Prop`、`batch` 已实现并测试 |
+| Layout 基础容器 | ✅ 基础完成 | `Row`、`Column`、`Stack`、`Spacer`、`SizedBox` 已实现 |
 | App 层抽象 | ✅ 完成 | `NanAppWindow`、`NanComponent` 应用层生命周期封装 |
 | Showcase 验证应用 | ✅ 完成 | 基于 ThorVG 的组件展示窗口，含 MainComponent/MainWindow |
 
@@ -70,22 +72,26 @@
 
 | 模块 | 状态 | 说明 |
 |------|------|------|
-| 当前暂无进行中的模块 | — | — |
+| Layout 主线收口 | 🚧 进行中 | 当前重点是 `constraints -> measure/layout -> reflow -> widgets/showcase` 全链路收口 |
+| Widgets 自动布局收口 | 🚧 进行中 | Card、Panel、Button、Sidebar 系列等仍有手工布局逻辑待回收 |
+| Theme / Design System | 🚧 早期 | 基础类型已存在，但 token 到 widgets 的统一消费仍未完成 |
 
 ### 待开发
 
-详见 [开发 Issue 清单](develop-issue.md)，按 Milestone M1-M10 规划。
+详见 [开发 Issue 清单](develop-issue.md)。当前建议优先关注 Layout 主线收口 Lane（Issue 082-089）。
 
 ## 里程碑进度
 
 | 里程碑 | 状态 | 关键 Issue |
 |--------|------|------------|
 | M0: 文档与工程基线 | ✅ 已完成 | Issue 001-004 |
-| M1: Foundation 与 Runtime MVP | 📋 规划中 | Issue 005-017 |
-| M2: Reactive 模块 | 📋 规划中 | Issue 018-028 |
-| M3: Layout 模块 | 📋 规划中 | Issue 029-036 |
-| M4: Theme 与 Design System | 📋 规划中 | Issue 037-042 |
-| M5-M10 | 📋 规划中 | 渲染、组件、应用层等 |
+| M1: runtime + reactive | ⚠️ 核心闭环完成 | Issue 005-028 |
+| M2: layout + theme | 🚧 进行中 | Issue 029-042, Issue 082-089 |
+| M3: first widgets | ⚠️ 已有可运行实现，待收口 | Widgets / Showcase 相关章节 |
+| M4: app shell + router/page | ⚠️ 部分完成 | App / Showcase 相关章节 |
+| M5: render abstraction / text / scriptability | 🚧 早期 | Render / Text / Docs 相关章节 |
+
+> 注：这里的里程碑口径与 [阶段路线图](roadmap.md) 保持一致；[开发 Issue 清单](develop-issue.md) 中的 Milestone 划分更细，用于跟踪模块级实现进度。
 
 ## 文档状态说明
 

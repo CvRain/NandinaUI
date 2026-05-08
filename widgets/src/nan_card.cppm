@@ -153,12 +153,12 @@ export namespace nandina::widgets {
 
             // 标题 Label 定位在头部区域
             if (m_title_label) {
-                const auto b = bounds();
-                const float header_off = title_header_height();
+                const auto b             = bounds();
+                const float header_off   = title_header_height();
                 const float text_start_x = b.x() + (m_show_accent ? 12.0f : 8.0f);
-                const float text_y = b.y() + header_off * 0.15f;
-                const float text_w = b.width() - 24.0f;
-                const float text_h = header_off * 0.7f;
+                const float text_y       = b.y() + header_off * 0.15f;
+                const float text_w       = b.width() - 24.0f;
+                const float text_h       = header_off * 0.7f;
                 m_title_label->set_bounds(text_start_x, text_y, text_w, text_h);
             }
 
@@ -172,9 +172,9 @@ export namespace nandina::widgets {
         [[nodiscard]] auto preferred_size() const noexcept -> geometry::NanSize override {
             const auto child_pref = measure_content_preferred_size(m_title_label);
 
-            const auto& pad = padding();
+            const auto& pad      = padding();
             const float header_h = title_header_height();
-            const float min_h = header_h + pad.top() + pad.bottom();
+            const float min_h    = header_h + pad.top() + pad.bottom();
 
             return geometry::NanSize{
                 child_pref.width() + pad.left() + pad.right(),
@@ -184,18 +184,19 @@ export namespace nandina::widgets {
 
     protected:
         void on_draw(tvg::SwCanvas& canvas) override {
-            const auto rect = bounds();
-            const float radius = m_corner_radius.get();
-            const float elev = m_elevation.get();
+            const auto rect        = bounds();
+            const float radius     = m_corner_radius.get();
+            const float elev       = m_elevation.get();
             const float header_off = title_header_height();
 
             // ── 1. 阴影绘制（在背景之前） ──────────────────
             if (elev > 0.0f) {
                 const int shadow_layers = std::min(4, static_cast<int>(elev / 2.0f + 1.0f));
                 for (int i = shadow_layers - 1; i >= 0; --i) {
-                    const float offset = 1.0f + static_cast<float>(i) * 0.5f;
-                    const float blur = 2.0f + static_cast<float>(i) * 1.5f;
-                    const uint8_t alpha = static_cast<uint8_t>(30.0f * (1.0f - static_cast<float>(i) / static_cast<float>(shadow_layers)));
+                    const float offset  = 1.0f + static_cast<float>(i) * 0.5f;
+                    const float blur    = 2.0f + static_cast<float>(i) * 1.5f;
+                    const uint8_t alpha = static_cast<uint8_t>(
+                        30.0f * (1.0f - static_cast<float>(i) / static_cast<float>(shadow_layers)));
 
                     auto* shadow = tvg::Shape::gen();
                     shadow->appendRect(
@@ -204,7 +205,7 @@ export namespace nandina::widgets {
                         rect.width() - offset * 2.0f,
                         rect.height() - offset * 2.0f - blur * 0.3f,
                         radius, radius
-                    );
+                        );
                     shadow->fill(0, 0, 0, alpha);
                     canvas.add(shadow);
                 }
@@ -216,17 +217,17 @@ export namespace nandina::widgets {
             // ── 3. 头部装饰色条 ──────────────────────────
             if (!m_title.empty() || m_show_accent) {
                 if (m_show_accent) {
-                    const auto& acc = m_accent_color.get();
+                    const auto& acc    = m_accent_color.get();
                     const auto acc_rgb = acc.to<nandina::NanRgb>();
-                    const float bar_w = 3.0f;
-                    auto* accent_bar = tvg::Shape::gen();
+                    const float bar_w  = 3.0f;
+                    auto* accent_bar   = tvg::Shape::gen();
                     accent_bar->appendRect(
                         rect.x() + 1.0f,
                         rect.y() + header_off * 0.15f,
                         bar_w,
                         header_off * 0.7f,
                         1.5f, 1.5f
-                    );
+                        );
                     accent_bar->fill(acc_rgb.red(), acc_rgb.green(), acc_rgb.blue(), acc_rgb.alpha());
                     canvas.add(accent_bar);
                 }
@@ -234,7 +235,7 @@ export namespace nandina::widgets {
 
             // ── 4. 标题栏与内容区分隔线 ──────────────────
             if (!m_title.empty() && header_off > 0.0f) {
-                auto* divider = tvg::Shape::gen();
+                auto* divider     = tvg::Shape::gen();
                 const float div_y = rect.y() + header_off;
                 divider->moveTo(rect.x() + 4.0f, div_y);
                 divider->lineTo(rect.x() + rect.width() - 4.0f, div_y);
@@ -254,7 +255,8 @@ export namespace nandina::widgets {
         }
 
         auto ensure_title_label() -> void {
-            if (m_title_label || m_title.empty()) return;
+            if (m_title_label || m_title.empty())
+                return;
             auto label = Label::create();
             label->set_text(m_title)
                 .set_font_size(m_title_font_size.get())
@@ -264,7 +266,8 @@ export namespace nandina::widgets {
         }
 
         [[nodiscard]] auto title_header_height() const noexcept -> float {
-            if (m_title.empty()) return 0.0f;
+            if (m_title.empty())
+                return 0.0f;
             return m_title_font_size.get() * 1.6f;
         }
 

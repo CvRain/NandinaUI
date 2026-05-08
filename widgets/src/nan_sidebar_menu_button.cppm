@@ -92,7 +92,7 @@ export namespace nandina::widgets {
             Surface::set_bounds(x, y, w, h);
 
             const float icon_size = h * 0.48f;
-            const float icon_y = y + (h - icon_size) * 0.5f;
+            const float icon_y    = y + (h - icon_size) * 0.5f;
 
             if (m_icon) {
                 m_icon->set_bounds(x + 14.0f, icon_y, icon_size, icon_size);
@@ -113,9 +113,9 @@ export namespace nandina::widgets {
 
     protected:
         void on_draw(tvg::SwCanvas& canvas) override {
-            const auto rect = bounds();
+            const auto rect    = bounds();
             const float radius = m_corner_radius.get();
-            const auto& acc = m_accent_color.get();
+            const auto& acc    = m_accent_color.get();
             const auto acc_rgb = acc.to<nandina::NanRgb>();
 
             if (m_active) {
@@ -155,20 +155,21 @@ export namespace nandina::widgets {
         void update_colors() {
             if (m_label) {
                 const auto& c = m_active
-                    ? nandina::NanColor::from(nandina::NanRgb{220, 220, 240})
-                    : nandina::NanColor::from(nandina::NanRgb{160, 162, 180});
+                                    ? nandina::NanColor::from(nandina::NanRgb{220, 220, 240})
+                                    : nandina::NanColor::from(nandina::NanRgb{160, 162, 180});
                 m_label->set_color(c);
             }
             if (m_icon) {
                 const auto& c = m_active
-                    ? nandina::NanColor::from(nandina::NanRgb{220, 220, 240})
-                    : nandina::NanColor::from(nandina::NanRgb{110, 112, 130});
+                                    ? nandina::NanColor::from(nandina::NanRgb{220, 220, 240})
+                                    : nandina::NanColor::from(nandina::NanRgb{110, 112, 130});
                 m_icon->set_color(c);
             }
         }
 
         auto on_pointer_down(const runtime::PointerButtonEvent&) -> bool override {
-            if (m_on_click) m_on_click();
+            if (m_on_click)
+                m_on_click();
             return true;
         }
 
@@ -177,13 +178,13 @@ export namespace nandina::widgets {
         std::string m_label_text;
         std::optional<IconType> m_icon_type;
 
-        Icon*  m_icon{nullptr};
+        Icon* m_icon{nullptr};
         Label* m_label{nullptr};
 
         reactive::Prop<nandina::NanColor> m_accent_color{
             nandina::NanColor::from(nandina::NanRgb{99, 102, 241})};
 
-        std::function<void()>       m_on_click;
+        std::function<void()> m_on_click;
     };
 
 } // namespace nandina::widgets

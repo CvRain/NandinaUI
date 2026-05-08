@@ -1,13 +1,48 @@
 module;
 
+#include <algorithm>
 #include <memory>
 
 export module nandina.layout.flex_widgets;
 
+export import nandina.foundation.nan_constraints;
 export import nandina.foundation.nan_size;
 export import nandina.runtime.nan_widget;
 
 export namespace nandina::layout {
+
+    namespace detail {
+        [[nodiscard]] inline auto measured_or_preferred_size(const runtime::NanWidget& child) noexcept -> geometry::NanSize {
+            const auto measured = child.measured_size();
+            const auto preferred = child.preferred_size();
+            return {
+                measured.width() > 0.0f ? measured.width() : preferred.width(),
+                measured.height() > 0.0f ? measured.height() : preferred.height(),
+            };
+        }
+
+        [[nodiscard]] inline auto deflate_constraints(
+            const geometry::NanConstraints& constraints,
+            const float horizontal,
+            const float vertical) noexcept -> geometry::NanConstraints {
+            const auto deflate_min = [](const float value, const float delta) {
+                return std::max(0.0f, value - delta);
+            };
+            const auto deflate_max = [](const float value, const float delta) {
+                if (value == geometry::NanConstraints::k_infinity) {
+                    return value;
+                }
+                return std::max(0.0f, value - delta);
+            };
+
+            return geometry::NanConstraints{
+                deflate_min(constraints.min_width(), horizontal),
+                deflate_max(constraints.max_width(), horizontal),
+                deflate_min(constraints.min_height(), vertical),
+                deflate_max(constraints.max_height(), vertical),
+            };
+        }
+    }
 
     // ── Spacer ───────────────────────────────────────────────
     // 弹性空白，在 Row/Column 中占据剩余空间。
@@ -24,6 +59,12 @@ export namespace nandina::layout {
 
         [[nodiscard]] auto preferred_size() const noexcept -> geometry::NanSize override {
             return geometry::NanSize{0.0f, 0.0f};
+        }
+
+        auto measure(const geometry::NanConstraints& constraints) -> void override {
+            set_measured_layout_state(
+                constraints,
+                constraints.constrain(geometry::NanSize{0.0f, 0.0f}));
         }
 
     private:
@@ -62,11 +103,30 @@ export namespace nandina::layout {
             return preferred;
         }
 
+        auto measure(const geometry::NanConstraints& constraints) -> void override {
+            geometry::NanSize measured{};
+            for_each_child([&](runtime::NanWidget& child_widget) {
+                child_widget.measure(constraints);
+                measured = detail::measured_or_preferred_size(child_widget);
+            });
+            set_measured_layout_state(constraints, constraints.constrain(measured));
+        }
+
+        auto layout() -> void override {
+            for_each_child([&](runtime::NanWidget& child_widget) {
+                child_widget.set_bounds(
+                    x(),
+                    y(),
+                    runtime::NanWidget::width(),
+                    runtime::NanWidget::height());
+                child_widget.layout();
+            });
+            NanWidget::layout();
+        }
+
         auto set_bounds(const float x, const float y, const float w, const float h) noexcept -> runtime::NanWidget& override {
             NanWidget::set_bounds(x, y, w, h);
-            for_each_child([&](runtime::NanWidget& c) {
-                c.set_bounds(x, y, w, h);
-            });
+            layout();
             return *this;
         }
 
@@ -88,17 +148,20 @@ export namespace nandina::layout {
 
         auto width(const float w) -> SizedBox& {
             fixed_w_ = w;
+            mark_layout_dirty();
             return *this;
         }
 
         auto height(const float h) -> SizedBox& {
             fixed_h_ = h;
+            mark_layout_dirty();
             return *this;
         }
 
         auto size(const geometry::NanSize& s) -> SizedBox& {
             fixed_w_ = s.width();
             fixed_h_ = s.height();
+            mark_layout_dirty();
             return *this;
         }
 
@@ -118,13 +181,50 @@ export namespace nandina::layout {
             };
         }
 
+        auto measure(const geometry::NanConstraints& constraints) -> void override {
+            const float min_width = fixed_w_ > 0.0f ? fixed_w_ : constraints.min_width();
+            const float max_width = fixed_w_ > 0.0f ? fixed_w_ : constraints.max_width();
+            const float min_height = fixed_h_ > 0.0f ? fixed_h_ : constraints.min_height();
+            const float max_height = fixed_h_ > 0.0f ? fixed_h_ : constraints.max_height();
+
+            const geometry::NanConstraints child_constraints{min_width, max_width, min_height, max_height};
+
+            geometry::NanSize measured{
+                fixed_w_ > 0.0f ? fixed_w_ : 0.0f,
+                fixed_h_ > 0.0f ? fixed_h_ : 0.0f,
+            };
+
+            for_each_child([&](runtime::NanWidget& child_widget) {
+                child_widget.measure(child_constraints);
+                const auto child_size = detail::measured_or_preferred_size(child_widget);
+                if (fixed_w_ <= 0.0f) {
+                    measured = {child_size.width(), measured.height()};
+                }
+                if (fixed_h_ <= 0.0f) {
+                    measured = {measured.width(), child_size.height()};
+                }
+            });
+
+            set_measured_layout_state(constraints, constraints.constrain(measured));
+        }
+
+        auto layout() -> void override {
+            for_each_child([&](runtime::NanWidget& child_widget) {
+                child_widget.set_bounds(
+                    x(),
+                    y(),
+                    runtime::NanWidget::width(),
+                    runtime::NanWidget::height());
+                child_widget.layout();
+            });
+            NanWidget::layout();
+        }
+
         auto set_bounds(const float x, const float y, const float w, const float h) noexcept -> runtime::NanWidget& override {
             const float actual_w = fixed_w_ > 0.0f ? fixed_w_ : w;
             const float actual_h = fixed_h_ > 0.0f ? fixed_h_ : h;
             NanWidget::set_bounds(x, y, actual_w, actual_h);
-            for_each_child([&](runtime::NanWidget& c) {
-                c.set_bounds(x, y, actual_w, actual_h);
-            });
+            layout();
             return *this;
         }
 
@@ -156,16 +256,32 @@ export namespace nandina::layout {
             return preferred;
         }
 
+        auto measure(const geometry::NanConstraints& constraints) -> void override {
+            const auto child_constraints = constraints.loosen();
+            geometry::NanSize measured{};
+            for_each_child([&](runtime::NanWidget& child_widget) {
+                child_widget.measure(child_constraints);
+                measured = detail::measured_or_preferred_size(child_widget);
+            });
+            set_measured_layout_state(constraints, constraints.constrain(measured));
+        }
+
+        auto layout() -> void override {
+            for_each_child([&](runtime::NanWidget& child_widget) {
+                const auto child_size = detail::measured_or_preferred_size(child_widget);
+                const float child_w = std::min(child_size.width(), width());
+                const float child_h = std::min(child_size.height(), height());
+                const float cx = x() + (width() - child_w) * 0.5f;
+                const float cy = y() + (height() - child_h) * 0.5f;
+                child_widget.set_bounds(cx, cy, child_w, child_h);
+                child_widget.layout();
+            });
+            NanWidget::layout();
+        }
+
         auto set_bounds(const float x, const float y, const float w, const float h) noexcept -> runtime::NanWidget& override {
             NanWidget::set_bounds(x, y, w, h);
-            for_each_child([&](runtime::NanWidget& c) {
-                const auto pref     = c.preferred_size();
-                const float child_w = pref.width();
-                const float child_h = pref.height();
-                const float cx      = x + (w - child_w) * 0.5f;
-                const float cy      = y + (h - child_h) * 0.5f;
-                c.set_bounds(cx, cy, child_w, child_h);
-            });
+            layout();
             return *this;
         }
 
@@ -183,36 +299,43 @@ export namespace nandina::layout {
 
         auto all(const float v) -> Padding& {
             top_ = right_ = bottom_ = left_ = v;
+            mark_layout_dirty();
             return *this;
         }
 
         auto horizontal(const float v) -> Padding& {
             left_ = right_ = v;
+            mark_layout_dirty();
             return *this;
         }
 
         auto vertical(const float v) -> Padding& {
             top_ = bottom_ = v;
+            mark_layout_dirty();
             return *this;
         }
 
         auto top(const float v) -> Padding& {
             top_ = v;
+            mark_layout_dirty();
             return *this;
         }
 
         auto right(const float v) -> Padding& {
             right_ = v;
+            mark_layout_dirty();
             return *this;
         }
 
         auto bottom(const float v) -> Padding& {
             bottom_ = v;
+            mark_layout_dirty();
             return *this;
         }
 
         auto left(const float v) -> Padding& {
             left_ = v;
+            mark_layout_dirty();
             return *this;
         }
 
@@ -250,15 +373,39 @@ export namespace nandina::layout {
             };
         }
 
+        auto measure(const geometry::NanConstraints& constraints) -> void override {
+            const auto child_constraints = detail::deflate_constraints(constraints, left_ + right_, top_ + bottom_);
+            geometry::NanSize child_size{};
+            for_each_child([&](runtime::NanWidget& child_widget) {
+                child_widget.measure(child_constraints);
+                child_size = detail::measured_or_preferred_size(child_widget);
+            });
+
+            set_measured_layout_state(
+                constraints,
+                constraints.constrain(geometry::NanSize{
+                    child_size.width() + left_ + right_,
+                    child_size.height() + top_ + bottom_,
+                }));
+        }
+
+        auto layout() -> void override {
+            const float child_w = std::max(0.0f, width() - left_ - right_);
+            const float child_h = std::max(0.0f, height() - top_ - bottom_);
+            for_each_child([&](runtime::NanWidget& child_widget) {
+                child_widget.set_bounds(
+                    x() + left_,
+                    y() + top_,
+                    child_w,
+                    child_h);
+                child_widget.layout();
+            });
+            NanWidget::layout();
+        }
+
         auto set_bounds(const float x, const float y, const float w, const float h) noexcept -> runtime::NanWidget& override {
             NanWidget::set_bounds(x, y, w, h);
-            for_each_child([&](runtime::NanWidget& c) {
-                c.set_bounds(
-                    x + left_,
-                    y + top_,
-                    w - left_ - right_,
-                    h - top_ - bottom_);
-            });
+            layout();
             return *this;
         }
 

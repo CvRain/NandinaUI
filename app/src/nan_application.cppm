@@ -365,8 +365,14 @@ export namespace nandina::app {
             NanWidget::set_bounds(x, y, w, h);
             if (m_root_widget) {
                 m_root_widget->set_bounds(x, y, w, h);
+                flush_root_layout();
             }
             return *this;
+        }
+
+        void draw(tvg::SwCanvas& canvas) override {
+            flush_root_layout();
+            NanComponent::draw(canvas);
         }
 
         [[nodiscard]] auto preferred_size() const noexcept -> geometry::NanSize override {
@@ -374,6 +380,15 @@ export namespace nandina::app {
         }
 
     private:
+        auto flush_root_layout() -> void {
+            if (!m_root_widget) {
+                return;
+            }
+
+            m_root_widget->measure(geometry::NanConstraints::tight(width(), height()));
+            m_root_widget->layout();
+        }
+
         Node m_root_node;
         runtime::NanWidget* m_root_widget{nullptr};
     };
@@ -567,11 +582,27 @@ export namespace nandina::app {
 
         virtual void on_draw(tvg::SwCanvas &canvas) {
             if (m_root_component) {
+                ensure_root_component_layout();
                 m_root_component->draw(canvas);
             }
         }
 
     private:
+        auto ensure_root_component_layout() -> void {
+            if (!m_root_component) {
+                return;
+            }
+
+            if (!m_root_component->is_layout_dirty()) {
+                return;
+            }
+
+            const float width = static_cast<float>(m_active_runtime_window ? m_active_runtime_window->width() : m_config.width);
+            const float height = static_cast<float>(m_active_runtime_window ? m_active_runtime_window->height() : m_config.height);
+            m_root_component->measure(geometry::NanConstraints::tight(width, height));
+            m_root_component->layout();
+        }
+
         auto sync_root_component_bounds() -> void {
             if (!m_root_component) {
                 return;
@@ -580,6 +611,8 @@ export namespace nandina::app {
             const float width = static_cast<float>(m_active_runtime_window ? m_active_runtime_window->width() : m_config.width);
             const float height = static_cast<float>(m_active_runtime_window ? m_active_runtime_window->height() : m_config.height);
             m_root_component->set_bounds(0.0f, 0.0f, width, height);
+            m_root_component->mark_layout_dirty();
+            ensure_root_component_layout();
         }
 
         AppConfig m_config;

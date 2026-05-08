@@ -80,9 +80,9 @@ export namespace nandina::widgets {
             if (!m_content_group) {
                 auto group = SidebarGroup::create();
                 group->set_label("Navigation")
-                      .set_show_accent(true);
+                    .set_show_accent(true);
                 m_content_group = group.get();
-                    add_group(std::move(group));
+                add_group(std::move(group));
             }
             m_content_group->add_child(std::move(item));
             mark_dirty();
@@ -307,7 +307,7 @@ export namespace nandina::widgets {
         std::string m_user_role_text{"Developer"};
 
         // Header 子节点
-        Icon*  m_header_logo{nullptr};
+        Icon* m_header_logo{nullptr};
         Label* m_header_label{nullptr};
 
         layout::SizedBox* m_header_slot{nullptr};
@@ -320,7 +320,7 @@ export namespace nandina::widgets {
         SidebarGroup* m_project_group{nullptr};
 
         // Footer 子节点
-        Icon*  m_user_avatar{nullptr};
+        Icon* m_user_avatar{nullptr};
         Label* m_user_name_label{nullptr};
         Label* m_user_role_label{nullptr};
 

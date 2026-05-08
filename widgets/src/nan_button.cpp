@@ -34,16 +34,16 @@ namespace nandina::widgets {
 
         // 创建 Pressable（交互状态机）作为 direct child
         auto pressable = Pressable::create();
-        m_pressable = pressable.get();
+        m_pressable    = pressable.get();
         add_child(std::move(pressable));
 
         auto center = layout::Center::Create();
-        m_center = center.get();
+        m_center    = center.get();
         m_pressable->add_child(std::move(center));
 
         // 创建 Label（文本显示）作为居中布局节点的子节点
         auto label = Label::create();
-        m_label = label.get();
+        m_label    = label.get();
         m_center->add_child(std::move(label));
     }
 
@@ -105,7 +105,7 @@ namespace nandina::widgets {
     // ── 首选尺寸 ────────────────────────────────────────────
     auto Button::preferred_size() const noexcept -> geometry::NanSize {
         const auto label_pref = m_label->preferred_size();
-        const auto& pad = padding();
+        const auto& pad       = padding();
         return geometry::NanSize{
             label_pref.width() + pad.left() + pad.right(),
             label_pref.height() + pad.top() + pad.bottom()

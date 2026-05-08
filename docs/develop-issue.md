@@ -5,6 +5,7 @@
 > - 默认假设当前阶段以 **C++ authoring + 文档驱动开发 + showcase 驱动验证** 为主。
 > - 不要求一次性全部完成，建议按优先级和依赖顺序逐步创建。
 > - 每个 issue 都尽量包含：目标、范围、产出、完成定义。
+> - 本文档的 Milestone 拆分比 `roadmap.md` 更细；`roadmap.md` 用于表达聚合阶段顺序，本清单用于表达可执行 issue 与模块收口顺序。
 > - 推荐使用标签：
     >   - `area:foundation`
 >   - `area:runtime`
@@ -800,7 +801,7 @@
 
 ## Issue 029 — 定义 layout 协议与测量/布局职责边界 ⚠️ 部分完成
 **Labels:** `area:layout`, `kind:architecture`, `priority:p0`
-**Status:** ⚠️ 部分完成 — layout 协议已在代码中固化，但独立策略文档尚未落位
+**Status:** ⚠️ 部分完成 — 文档与基础协议均已存在，但尚未成为全项目唯一布局入口
 
 ### 目标
 在实现前明确 layout 的输入输出模型。
@@ -820,10 +821,13 @@
 - 基础容器实现时不再反复改协议
 
 ### 当前进展
-- `layout/core` 与 `layout_container` 已固化 measure/layout、preferred size、padding/gap/align/justify 等协议
+- `docs/layout-strategy.md` 与 `docs/layout-refactor-plan.md` 已落位
+- `runtime/src/nan_widget.cppm` 已提供 `measure()` / `layout()` / `measured_size()` / `mark_layout_dirty()` 的基础协议
+- `layout/src/layout_core.cppm` 与 `layout/src/layout_container.cppm` 已固化 padding/gap/align/justify 与基础容器协议
 
 ### 未完成部分
-- `docs/layout-strategy.md` 尚未落位，职责边界仍主要散落在实现代码里
+- `LayoutContainer` 仍主要走 `preferred_size() + set_bounds() -> layout()` 的即时路径
+- widgets 与 showcase 中仍存在较多手工 `set_bounds()` 分发布局，协议尚未真正收口到全链路
 
 ---
 
@@ -851,8 +855,9 @@
 - Row / Column / Stack 已共享这套基础布局协议
 
 ### 未完成部分
-- 主线未见独立 `LayoutNode` / `LayoutResult` 模型
-- content bounds 等结果对象仍未以显式统一结构对外表达
+- `LayoutChildSpec` 仍未完整覆盖 `min/max`、`can_shrink` 等约束信息
+- `LayoutRequest` 尚未显式携带 `NanConstraints`
+- backend 当前主要返回 frames 向量，缺少统一 `LayoutResult` / 调试信息表达
 
 ---
 
@@ -1012,7 +1017,206 @@
 
 ### 未完成部分
 - zero-size / constrained-size 这类边界场景仍缺少专门测试
+- `measure -> layout -> reflow` 两阶段链路、layout dirty 传播、resize 后重排等场景仍缺少测试
 - 还不能算达到“边界条件下稳定性”这一完整目标
+
+---
+
+## Layout 主线收口 Lane（2026-05 建议按此顺序推进）
+
+> 说明：Issue 029-036 记录的是 Layout 基础能力的建设情况；下面这一组 issue 面向下一轮主线收口，目标是让 measure/layout 协议真正接管 widgets 与 showcase，而不是继续停留在“协议存在、调用分散”的状态。
+
+## Issue 082 — 让 LayoutCore 接入 NanConstraints 并扩展 LayoutChildSpec ❌ 未完成
+**Labels:** `area:layout`, `kind:implementation`, `priority:p0`
+**Status:** ❌ 未完成 — 当前 backend 仍以 `preferred_size` 为主，约束语义尚未完整进入布局求解
+
+### 目标
+让 `layout/core` 的输入模型显式感知约束、最小/最大尺寸与 shrink 能力，为后续两阶段布局提供统一底座。
+
+### 范围
+- 为 `LayoutRequest` 增加 `NanConstraints`
+- 为 `LayoutChildSpec` 增加 `min_size` / `max_size` / `can_shrink`
+- 更新 row/column backend 的 cross/main-axis 计算，使其对约束与 clamp 语义敏感
+
+### 涉及文件
+- `layout/src/layout_core.cppm`
+- `foundation/src/nan_constraints.cppm`
+- `tests/layout/test_layout_core.cpp`
+
+### 完成定义
+- layout backend 不再只依赖 `preferred_size`
+- row/column 的 frames 分配能正确响应约束、min/max 与 shrink 语义
+
+---
+
+## Issue 083 — 让 LayoutContainer 切换到 measure/layout 两阶段驱动 ❌ 未完成
+**Labels:** `area:layout`, `area:runtime`, `kind:refactor`, `priority:p0`
+**Status:** ❌ 未完成 — `LayoutContainer` 仍在 `set_bounds()` 中直接触发布局
+
+### 目标
+把容器从“赋 bounds 即立即分发布局”的旧路径，切到“measure 收集、layout 应用”的两阶段协议。
+
+### 范围
+- 为 `LayoutContainer` 实现 `measure()`，缓存 child specs
+- 让 `layout()` 消费 measured child specs，而不是重新临时读取 `preferred_size()`
+- 精简 `set_bounds()`，去掉对 `layout()` 的隐式调用
+
+### 涉及文件
+- `layout/src/layout_container.cppm`
+- `runtime/src/nan_widget.cppm`
+- `tests/layout/test_layout_core.cpp`
+
+### 完成定义
+- `LayoutContainer` 的主路径明确为 `measure() -> set_bounds() -> layout()`
+- `set_bounds()` 不再承担容器级布局求解职责
+
+---
+
+## Issue 084 — 为根节点建立统一 reflow 入口与 layout dirty 闭环 ❌ 未完成
+**Labels:** `area:app`, `area:runtime`, `area:layout`, `kind:implementation`, `priority:p0`
+**Status:** ❌ 未完成 — 根节点 resize 与 subtree dirty 尚未统一触发完整 reflow
+
+### 目标
+建立从 window/app 根节点发起的统一重排入口，使 layout dirty 能真正驱动全树 measure/layout，而不是仅靠局部 `set_bounds()` 副作用维持。
+
+### 范围
+- 在 app/window 根组件尺寸变化时触发 measure + layout
+- 明确 `mark_layout_dirty()` 的上行传播与根级消费时机
+- 补齐 resize 后 root bounds 与真实 reflow 的协同语义
+
+### 涉及文件
+- `app/src/nan_application.cppm`
+- `runtime/src/nan_widget.cppm`
+- `tests/showcase/test_showcase_layout.cpp`
+- `tests/runtime/*`
+
+### 完成定义
+- root resize、child 结构变化、布局属性变化都能通过统一入口触发 reflow
+- 不再依赖局部容器的即时 layout 副作用来维持整棵树一致性
+
+---
+
+## Issue 085 — 适配 FlexWidgets 到新布局协议 ❌ 未完成
+**Labels:** `area:layout`, `kind:refactor`, `priority:p1`
+**Status:** ❌ 未完成 — `Spacer` / `Expanded` / `Padding` / `Center` / `SizedBox` 仍偏向旧式 `set_bounds()` 行为
+
+### 目标
+让布局辅助组件全面兼容两阶段布局协议，成为 widgets 和 authoring API 的稳定基础设施。
+
+### 范围
+- 让 `Padding` / `Center` / `SizedBox` / `Expanded` 在 `measure()` 中表达真实尺寸语义
+- 减少这些辅助组件对即时 `set_bounds()` 传播的依赖
+- 明确各类 helper 的 `preferred_size()` 与 `measured_size()` 关系
+
+### 涉及文件
+- `layout/src/flex_widgets.cppm`
+- `tests/layout/test_layout_core.cpp`
+- `tests/showcase/test_showcase_layout.cpp`
+
+### 完成定义
+- 布局辅助组件在新协议下行为稳定
+- authoring API 可以继续直接复用这批 helper，而不引入额外手算逻辑
+
+---
+
+## Issue 086 — 清理 widgets 中的手工布局分发 ❌ 未完成
+**Labels:** `area:widgets`, `area:layout`, `kind:refactor`, `priority:p0`
+**Status:** ❌ 未完成 — 多个 widgets 仍在 `set_bounds()` 中直接计算并分发子节点 frame
+
+### 目标
+把 widgets 收口到“组合布局原语或极少量叶子级几何”的模式，减少控件内部重复实现布局逻辑。
+
+### 范围
+- 优先重构 `Pressable` / `Button` / `Card` / `Panel`
+- 继续收敛 `SplitRow`、`SidebarGroup`、`SidebarMenuButton` 等仍含手算布局的控件
+- 形成一套可复用的 widgets 收口模板
+
+### 涉及文件
+- `widgets/src/nan_pressable.cppm`
+- `widgets/src/nan_button.cppm`
+- `widgets/src/nan_card.cppm`
+- `widgets/src/nan_panel.cppm`
+- `widgets/src/nan_split_row.cppm`
+- `widgets/src/nan_sidebar_group.cppm`
+- `widgets/src/nan_sidebar_menu_button.cppm`
+- `tests/widgets/*`
+
+### 完成定义
+- widgets 内部的大多数布局不再依赖手工 frame 计算
+- 基础控件可作为 showcase 与后续页面 authoring 的稳定积木
+
+---
+
+## Issue 087 — 清理 showcase 中的手工 frame 计算并回归 authoring/layout 原语 ❌ 未完成
+**Labels:** `area:showcase`, `area:layout`, `area:app`, `kind:refactor`, `priority:p0`
+**Status:** ❌ 未完成 — showcase 虽已部分迁到 authoring API，但仍有代表性组件保留手工布局代码
+
+### 目标
+让 showcase 真正成为 layout 协议与 widgets 组合模式的验证场，而不是继续承载补丁式布局样例。
+
+### 范围
+- 优先清理 cards / sections 中仍保留的手工 `set_bounds()` 逻辑
+- 让页面结构更多回归 `row/column/stack/padding/expanded/sized_box`
+- 保持现有 showcase 布局测试可读且稳定
+
+### 涉及文件
+- `showcase/pages/dashboard_page.cppm`
+- `showcase/components/cards/project_progress_card.cppm`
+- `showcase/components/cards/*.cppm`
+- `showcase/components/sections/*.cppm`
+- `tests/showcase/test_showcase_layout.cpp`
+
+### 完成定义
+- showcase 主页面中的手工几何计算显著减少
+- showcase 布局测试主要验证结构和协议，而不是为补丁式手算背书
+
+---
+
+## Issue 088 — 补齐 layout 回归测试矩阵 ❌ 未完成
+**Labels:** `area:layout`, `area:tests`, `kind:test`, `priority:p0`
+**Status:** ❌ 未完成 — 现有测试覆盖基础容器，但尚不足以保护下一轮收口重构
+
+### 目标
+为 layout 主线收口建立可回归的测试矩阵，避免后续每次改布局都只能靠肉眼检查 showcase。
+
+### 范围
+- 增加 constraints/min/max/shrink 的 backend 测试
+- 增加 `measure/layout/reflow` 链路测试
+- 增加 resize / dirty propagation / helper widgets / showcase 结构测试
+
+### 涉及文件
+- `tests/layout/test_layout_core.cpp`
+- `tests/showcase/test_showcase_layout.cpp`
+- `tests/widgets/*`
+- `tests/runtime/*`
+
+### 完成定义
+- layout 主线收口涉及的核心路径均有自动化测试保护
+- 后续继续演进 Yoga 接入位或 widgets 组合方式时，能快速识别回归
+
+---
+
+## Issue 089 — 以当前实现为准重写 Layout 里程碑验收标准 ❌ 未完成
+**Labels:** `area:docs`, `area:layout`, `kind:docs`, `priority:p1`
+**Status:** ❌ 未完成 — 当前 DoD 仍偏向基础能力建设，未体现“主线收口”这一实际目标
+
+### 目标
+把 Layout 里程碑从“是否已有 Row/Column/Stack”升级为“是否已接管 widgets/showcase 布局”的验收口径。
+
+### 范围
+- 同步 `develop-issue.md` 中 M3 的完成定义
+- 同步 `roadmap.md` 与 `index.md` 的里程碑状态
+- 明确 Yoga 接入位的前置完成条件
+
+### 涉及文件
+- `docs/develop-issue.md`
+- `docs/roadmap.md`
+- `docs/index.md`
+- `docs/layout-strategy.md`
+
+### 完成定义
+- 文档中的 layout 里程碑表述与代码现实一致
+- 后续开发能直接按“协议收口 -> widgets 收口 -> showcase 回归 -> Yoga 评估”的顺序推进
 
 ---
 
@@ -2291,6 +2495,16 @@
 28. Issue 069 — 建立 showcase 应用基础入口
 29. Issue 071 — 创建 Label showcase 页面
 30. Issue 072 — 创建 Button showcase 页面
+
+## 2026-05 Layout 主线追加批次（建议优先于新增 widgets/router 工作）
+31. Issue 082 — 让 LayoutCore 接入 NanConstraints 并扩展 LayoutChildSpec
+32. Issue 083 — 让 LayoutContainer 切换到 measure/layout 两阶段驱动
+33. Issue 084 — 为根节点建立统一 reflow 入口与 layout dirty 闭环
+34. Issue 085 — 适配 FlexWidgets 到新布局协议
+35. Issue 086 — 清理 widgets 中的手工布局分发
+36. Issue 087 — 清理 showcase 中的手工 frame 计算并回归 authoring/layout 原语
+37. Issue 088 — 补齐 layout 回归测试矩阵
+38. Issue 089 — 以当前实现为准重写 Layout 里程碑验收标准
 
 ---
 

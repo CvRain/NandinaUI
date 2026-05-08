@@ -8,6 +8,7 @@ export module nandina.layout.core;
 
 export import nandina.foundation.nan_rect;
 export import nandina.foundation.nan_size;
+export import nandina.foundation.nan_constraints;
 
 export namespace nandina::layout {
 
@@ -31,7 +32,11 @@ export namespace nandina::layout {
     // ── 子节点规格 ──────────────────────────────────────────
     struct LayoutChildSpec {
         geometry::NanSize preferred_size{};
+        geometry::NanSize min_size{};   ///< 最小尺寸约束
+        geometry::NanSize max_size{geometry::NanConstraints::k_infinity, geometry::NanConstraints::k_infinity};
+                                     ///< 最大尺寸约束
         int flex_factor = 0;
+        bool can_shrink = true;         ///< 空间不足时是否允许压缩
     };
 
     // ── 内边距 ──────────────────────────────────────────────
@@ -54,6 +59,7 @@ export namespace nandina::layout {
     struct LayoutRequest {
         LayoutAxis axis = LayoutAxis::column;
         geometry::NanRect container_bounds{};
+        geometry::NanConstraints constraints = geometry::NanConstraints::expand();
         LayoutInsets padding{};
         float gap = 0.0f;
         LayoutAlignment cross_alignment = LayoutAlignment::start;
@@ -77,11 +83,22 @@ export namespace nandina::layout {
         }
 
         [[nodiscard]] inline auto resolve_cross_extent(
-            const LayoutAlignment align, const float available, const float desired) noexcept -> float {
-            if (align == LayoutAlignment::stretch) {
-                return clamp_non_negative(available);
-            }
-            return std::min(clamp_non_negative(desired), clamp_non_negative(available));
+            const LayoutAlignment align,
+            const float available,
+            const float desired,
+            const float min_extent,
+            const float max_extent) noexcept -> float {
+            const float unclamped = align == LayoutAlignment::stretch
+                ? clamp_non_negative(available)
+                : std::min(clamp_non_negative(desired), clamp_non_negative(available));
+            return std::clamp(unclamped, clamp_non_negative(min_extent), max_extent);
+        }
+
+        [[nodiscard]] inline auto resolve_main_extent(
+            const float desired,
+            const float min_extent,
+            const float max_extent) noexcept -> float {
+            return std::clamp(clamp_non_negative(desired), clamp_non_negative(min_extent), max_extent);
         }
 
         [[nodiscard]] inline auto resolve_cross_position(
@@ -168,15 +185,36 @@ export namespace nandina::layout {
                 if (child.flex_factor > 0) {
                     flex_total += child.flex_factor;
                 } else {
-                    fixed_total += clamp_non_negative(child.preferred_size.height());
+                    fixed_total += resolve_main_extent(
+                        child.preferred_size.height(),
+                        child.min_size.height(),
+                        child.max_size.height());
                 }
             }
 
             const int child_count  = static_cast<int>(request.children.size());
             const float gap_total  = child_count > 1 ? request.gap * static_cast<float>(child_count - 1) : 0.0f;
-            const float remaining  = clamp_non_negative(avail_h - fixed_total - gap_total);
+            const float remaining  = avail_h - fixed_total - gap_total;
             const float flex_inv   = flex_total > 0 ? 1.0f / static_cast<float>(flex_total) : 0.0f;
-            const float used_h     = fixed_total + gap_total + (flex_total > 0 ? remaining : 0.0f);
+            std::vector<float> child_heights;
+            child_heights.reserve(request.children.size());
+
+            float used_children_h = 0.0f;
+            for (const auto& child : request.children) {
+                const float desired_height = (child.flex_factor > 0 && flex_total > 0)
+                    ? (remaining > 0.0f
+                        ? remaining * (static_cast<float>(child.flex_factor) * flex_inv)
+                        : (child.can_shrink ? 0.0f : clamp_non_negative(child.preferred_size.height())))
+                    : clamp_non_negative(child.preferred_size.height());
+                const float child_height = resolve_main_extent(
+                    desired_height,
+                    child.min_size.height(),
+                    child.max_size.height());
+                child_heights.push_back(child_height);
+                used_children_h += child_height;
+            }
+
+            const float used_h = used_children_h + gap_total;
             const auto placement   = resolve_main_axis_placement(
                 request.main_alignment, child_count, used_h, avail_h, request.gap);
 
@@ -186,17 +224,20 @@ export namespace nandina::layout {
             float cursor_y = content_bounds.y() + placement.start_offset;
             bool first     = true;
 
-            for (const auto& child : request.children) {
+            for (std::size_t index = 0; index < request.children.size(); ++index) {
+                const auto& child = request.children[index];
                 if (!first) {
                     cursor_y += placement.gap;
                 }
                 first = false;
 
-                const float child_h = (child.flex_factor > 0 && flex_total > 0)
-                    ? remaining * (static_cast<float>(child.flex_factor) * flex_inv)
-                    : clamp_non_negative(child.preferred_size.height());
+                const float child_h = child_heights[index];
                 const float child_w = resolve_cross_extent(
-                    request.cross_alignment, avail_w, clamp_non_negative(child.preferred_size.width()));
+                    request.cross_alignment,
+                    avail_w,
+                    clamp_non_negative(child.preferred_size.width()),
+                    child.min_size.width(),
+                    child.max_size.width());
                 const float child_x = resolve_cross_position(
                     content_bounds.x(), avail_w, child_w, request.cross_alignment);
 
@@ -221,15 +262,36 @@ export namespace nandina::layout {
                 if (child.flex_factor > 0) {
                     flex_total += child.flex_factor;
                 } else {
-                    fixed_total += clamp_non_negative(child.preferred_size.width());
+                    fixed_total += resolve_main_extent(
+                        child.preferred_size.width(),
+                        child.min_size.width(),
+                        child.max_size.width());
                 }
             }
 
             const int child_count  = static_cast<int>(request.children.size());
             const float gap_total  = child_count > 1 ? request.gap * static_cast<float>(child_count - 1) : 0.0f;
-            const float remaining  = clamp_non_negative(avail_w - fixed_total - gap_total);
+            const float remaining  = avail_w - fixed_total - gap_total;
             const float flex_inv   = flex_total > 0 ? 1.0f / static_cast<float>(flex_total) : 0.0f;
-            const float used_w     = fixed_total + gap_total + (flex_total > 0 ? remaining : 0.0f);
+            std::vector<float> child_widths;
+            child_widths.reserve(request.children.size());
+
+            float used_children_w = 0.0f;
+            for (const auto& child : request.children) {
+                const float desired_width = (child.flex_factor > 0 && flex_total > 0)
+                    ? (remaining > 0.0f
+                        ? remaining * (static_cast<float>(child.flex_factor) * flex_inv)
+                        : (child.can_shrink ? 0.0f : clamp_non_negative(child.preferred_size.width())))
+                    : clamp_non_negative(child.preferred_size.width());
+                const float child_width = resolve_main_extent(
+                    desired_width,
+                    child.min_size.width(),
+                    child.max_size.width());
+                child_widths.push_back(child_width);
+                used_children_w += child_width;
+            }
+
+            const float used_w = used_children_w + gap_total;
             const auto placement   = resolve_main_axis_placement(
                 request.main_alignment, child_count, used_w, avail_w, request.gap);
 
@@ -239,17 +301,20 @@ export namespace nandina::layout {
             float cursor_x = content_bounds.x() + placement.start_offset;
             bool first     = true;
 
-            for (const auto& child : request.children) {
+            for (std::size_t index = 0; index < request.children.size(); ++index) {
+                const auto& child = request.children[index];
                 if (!first) {
                     cursor_x += placement.gap;
                 }
                 first = false;
 
-                const float child_w = (child.flex_factor > 0 && flex_total > 0)
-                    ? remaining * (static_cast<float>(child.flex_factor) * flex_inv)
-                    : clamp_non_negative(child.preferred_size.width());
+                const float child_w = child_widths[index];
                 const float child_h = resolve_cross_extent(
-                    request.cross_alignment, avail_h, clamp_non_negative(child.preferred_size.height()));
+                    request.cross_alignment,
+                    avail_h,
+                    clamp_non_negative(child.preferred_size.height()),
+                    child.min_size.height(),
+                    child.max_size.height());
                 const float child_y = resolve_cross_position(
                     content_bounds.y(), avail_h, child_h, request.cross_alignment);
 
@@ -272,9 +337,17 @@ export namespace nandina::layout {
 
             for (const auto& child : request.children) {
                 const float child_w = resolve_cross_extent(
-                    request.cross_alignment, avail_w, clamp_non_negative(child.preferred_size.width()));
+                    request.cross_alignment,
+                    avail_w,
+                    clamp_non_negative(child.preferred_size.width()),
+                    child.min_size.width(),
+                    child.max_size.width());
                 const float child_h = resolve_cross_extent(
-                    request.main_alignment, avail_h, clamp_non_negative(child.preferred_size.height()));
+                    request.main_alignment,
+                    avail_h,
+                    clamp_non_negative(child.preferred_size.height()),
+                    child.min_size.height(),
+                    child.max_size.height());
                 const float child_x = resolve_cross_position(
                     content_bounds.x(), avail_w, child_w, request.cross_alignment);
                 const float child_y = resolve_cross_position(

@@ -34,9 +34,9 @@ export namespace nandina::widgets {
 
     // ── 对齐枚举 ──────────────────────────────────────
     enum class TextAlign {
-        Start,   // 左对齐
-        Center,  // 居中对齐
-        End      // 右对齐
+        Start, // 左对齐
+        Center, // 居中对齐
+        End // 右对齐
     };
 
     enum class TextVerticalAlign {
@@ -74,7 +74,7 @@ export namespace nandina::widgets {
 
         auto set_font_size(float size) -> Label& {
             m_font_size.set(size);
-            m_font.reset();  // 字号变化 → 重置字体（下次懒加载新字号）
+            m_font.reset(); // 字号变化 → 重置字体（下次懒加载新字号）
             mark_dirty();
             return *this;
         }
@@ -138,7 +138,7 @@ export namespace nandina::widgets {
             }
 
             // 没有字体时的回退估算（首次 set_text 后可能还没有 font）
-            const float fs = m_font_size.get();
+            const float fs     = m_font_size.get();
             const float text_w = static_cast<float>(txt.size()) * fs * 0.6f;
             return {text_w, fs * 1.4f};
         }
@@ -146,13 +146,14 @@ export namespace nandina::widgets {
     protected:
         void on_draw(tvg::SwCanvas& canvas) override {
             const auto& txt = m_text.get();
-            if (txt.empty()) return;
+            if (txt.empty())
+                return;
 
             // 懒加载字体
             ensure_font();
 
             if (!m_font) {
-                return;  // 字体加载失败时放弃绘制
+                return; // 字体加载失败时放弃绘制
             }
 
             const auto bnds = bounds();
@@ -160,13 +161,14 @@ export namespace nandina::widgets {
 
             // 使用 NanFont::shape() 布局文本（限制宽度 = bounds_width，支持自动换行）
             const float max_width = bnds.width();
-            auto layout = m_font->shape(txt, max_width > 0.0f ? max_width : 0.0f, 0);
+            auto layout           = m_font->shape(txt, max_width > 0.0f ? max_width : 0.0f, 0);
 
-            if (layout.empty()) return;
+            if (layout.empty())
+                return;
 
             // 计算水平对齐偏移
             const float block_width = layout.total_width;
-            float offset_x = bnds.x();
+            float offset_x          = bnds.x();
 
             switch (m_align) {
             case TextAlign::Start:
@@ -182,7 +184,7 @@ export namespace nandina::widgets {
 
             // 计算垂直对齐偏移
             const float block_height = layout.total_height;
-            float offset_y = bnds.y();
+            float offset_y           = bnds.y();
 
             switch (m_valign) {
             case TextVerticalAlign::Top:
@@ -204,7 +206,8 @@ export namespace nandina::widgets {
 
         /// 懒加载字体：如果 m_font 为空，尝试加载系统默认字体。
         auto ensure_font() -> void {
-            if (m_font) return;
+            if (m_font)
+                return;
             try {
                 m_font = text::NanFont::load_system_default(m_font_size.get());
             } catch (const std::exception&) {
@@ -213,14 +216,14 @@ export namespace nandina::widgets {
             }
         }
 
-        reactive::Prop<std::string>          m_text{""};
-        reactive::Prop<float>                m_font_size{14.0f};
-        reactive::Prop<nandina::NanColor>    m_color{nandina::NanColor::from(nandina::NanRgb{220, 220, 240})};
+        reactive::Prop<std::string> m_text{""};
+        reactive::Prop<float> m_font_size{14.0f};
+        reactive::Prop<nandina::NanColor> m_color{nandina::NanColor::from(nandina::NanRgb{220, 220, 240})};
 
-        text::NanFont::Ptr                   m_font;  // 懒加载
+        text::NanFont::Ptr m_font; // 懒加载
 
-        TextAlign                            m_align{TextAlign::Start};
-        TextVerticalAlign                    m_valign{TextVerticalAlign::Top};
+        TextAlign m_align{TextAlign::Start};
+        TextVerticalAlign m_valign{TextVerticalAlign::Top};
     };
 
 } // namespace nandina::widgets

@@ -140,7 +140,8 @@ export namespace nandina::widgets {
             });
         }
 
-        [[nodiscard]] auto measure_content_preferred_size(const runtime::NanWidget* skip = nullptr) const noexcept -> geometry::NanSize {
+        [[nodiscard]] auto measure_content_preferred_size(
+            const runtime::NanWidget* skip = nullptr) const noexcept -> geometry::NanSize {
             geometry::NanSize child_pref{0.0f, 0.0f};
 
             for_each_child([&](const runtime::NanWidget& child) {
@@ -149,7 +150,7 @@ export namespace nandina::widgets {
                 }
 
                 const auto cp = child.preferred_size();
-                child_pref = geometry::NanSize{
+                child_pref    = geometry::NanSize{
                     std::max(child_pref.width(), cp.width()),
                     std::max(child_pref.height(), cp.height())
                 };
@@ -160,9 +161,9 @@ export namespace nandina::widgets {
 
         /** 绘制背景与描边 — 子类可扩展 */
         virtual void draw_background(tvg::SwCanvas& canvas) {
-            const auto rect = bounds();
-            const auto& bg = m_bg_color.get();
-            const auto bg_rgb = bg.to<nandina::NanRgb>();
+            const auto rect    = bounds();
+            const auto& bg     = m_bg_color.get();
+            const auto bg_rgb  = bg.to<nandina::NanRgb>();
             const float radius = m_corner_radius.get();
 
             // 背景填充
@@ -173,9 +174,9 @@ export namespace nandina::widgets {
 
             // 描边（如果有）
             if (m_border_width > 0.0f) {
-                const auto& bc = m_border_color;
+                const auto& bc    = m_border_color;
                 const auto bc_rgb = bc.to<nandina::NanRgb>();
-                auto* border = tvg::Shape::gen();
+                auto* border      = tvg::Shape::gen();
                 border->appendRect(rect.x(), rect.y(), rect.width(), rect.height(), radius, radius);
                 border->strokeWidth(m_border_width);
                 border->strokeFill(bc_rgb.red(), bc_rgb.green(), bc_rgb.blue(), bc_rgb.alpha());
@@ -188,7 +189,7 @@ export namespace nandina::widgets {
         // ── 首选尺寸（考虑 padding + 子节点） ──────────────
         [[nodiscard]] auto preferred_size() const noexcept -> geometry::NanSize override {
             const auto child_pref = measure_content_preferred_size();
-            const auto& pad = m_padding.get();
+            const auto& pad       = m_padding.get();
             return geometry::NanSize{
                 child_pref.width() + pad.left() + pad.right(),
                 child_pref.height() + pad.top() + pad.bottom()

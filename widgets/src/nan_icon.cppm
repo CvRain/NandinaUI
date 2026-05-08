@@ -38,16 +38,16 @@ export namespace nandina::widgets {
 
     /// 图标形状枚举
     enum class IconType : uint8_t {
-        Square,     // 小方块（导航图标用）
-        Circle,     // 圆形（Logo 用）
-        Triangle,   // 三角形（播放/装饰用）
-        Check,      // 对勾
-        ArrowUp,    // 上箭头
-        ArrowDown,  // 下箭头
-        Dots,       // 小圆点（活动列表脉冲用）
-        Dot,        // 单圆点（项目列表装饰用）
-        Monitor,    // 显示器屏幕（dock 用）
-        Window,     // 小窗口（dock 用）
+        Square, // 小方块（导航图标用）
+        Circle, // 圆形（Logo 用）
+        Triangle, // 三角形（播放/装饰用）
+        Check, // 对勾
+        ArrowUp, // 上箭头
+        ArrowDown, // 下箭头
+        Dots, // 小圆点（活动列表脉冲用）
+        Dot, // 单圆点（项目列表装饰用）
+        Monitor, // 显示器屏幕（dock 用）
+        Window, // 小窗口（dock 用）
     };
 
     class Icon : public runtime::NanWidget {
@@ -109,11 +109,11 @@ export namespace nandina::widgets {
     protected:
         void on_draw(tvg::SwCanvas& canvas) override {
             const auto bnds = bounds();
-            const float cx = bnds.center().x();
-            const float cy = bnds.center().y();
-            const float s = m_size.get();
+            const float cx  = bnds.center().x();
+            const float cy  = bnds.center().y();
+            const float s   = m_size.get();
             const auto& clr = m_color.get();
-            const auto rgb = clr.to<nandina::NanRgb>();
+            const auto rgb  = clr.to<nandina::NanRgb>();
 
             switch (m_type) {
             case IconType::Square:
@@ -150,7 +150,7 @@ export namespace nandina::widgets {
             float cx, float cy, float size,
             const nandina::NanRgb& rgb) {
             const float half = size * 0.4f;
-            auto* shape = tvg::Shape::gen();
+            auto* shape      = tvg::Shape::gen();
             shape->appendRect(cx - half, cy - half, half * 2.0f, half * 2.0f, 2, 2);
             shape->fill(rgb.red(), rgb.green(), rgb.blue(), rgb.alpha());
             canvas.add(shape);
@@ -169,7 +169,7 @@ export namespace nandina::widgets {
             float cx, float cy, float size,
             const nandina::NanRgb& rgb) {
             const float s = size * 0.4f;
-            auto* shape = tvg::Shape::gen();
+            auto* shape   = tvg::Shape::gen();
             shape->moveTo(cx, cy - s);
             shape->lineTo(cx + s * 0.866f, cy + s * 0.5f);
             shape->lineTo(cx - s * 0.866f, cy + s * 0.5f);
@@ -183,7 +183,7 @@ export namespace nandina::widgets {
             const nandina::NanRgb& rgb,
             float stroke_width = 2.0f) {
             const float s = size * 0.3f;
-            auto* shape = tvg::Shape::gen();
+            auto* shape   = tvg::Shape::gen();
             shape->moveTo(cx - s * 0.7f, cy);
             shape->lineTo(cx - s * 0.2f, cy + s * 0.6f);
             shape->lineTo(cx + s * 0.8f, cy - s * 0.5f);
@@ -197,9 +197,9 @@ export namespace nandina::widgets {
             const nandina::NanRgb& rgb,
             bool up,
             float stroke_width = 2.5f) {
-            const float s = size * 0.3f;
+            const float s   = size * 0.3f;
             const float dir = up ? -1.0f : 1.0f;
-            auto* shape = tvg::Shape::gen();
+            auto* shape     = tvg::Shape::gen();
             // 竖线
             shape->moveTo(cx, cy + dir * s * 1.0f);
             shape->lineTo(cx, cy - dir * s * 1.0f);
@@ -215,7 +215,7 @@ export namespace nandina::widgets {
         static void draw_dots(tvg::SwCanvas& canvas,
             float cx, float cy, float size,
             const nandina::NanRgb& rgb) {
-            const float dot_r = size * 0.1f;
+            const float dot_r   = size * 0.1f;
             const float spacing = size * 0.25f;
             for (int i = -1; i <= 1; ++i) {
                 auto* shape = tvg::Shape::gen();
@@ -229,7 +229,7 @@ export namespace nandina::widgets {
             float cx, float cy, float size,
             const nandina::NanRgb& rgb) {
             const float dot_r = size * 0.15f;
-            auto* shape = tvg::Shape::gen();
+            auto* shape       = tvg::Shape::gen();
             shape->appendCircle(cx, cy, dot_r, dot_r);
             shape->fill(rgb.red(), rgb.green(), rgb.blue(), rgb.alpha());
             canvas.add(shape);

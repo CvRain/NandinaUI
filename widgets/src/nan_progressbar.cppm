@@ -65,25 +65,25 @@ export namespace nandina::widgets {
 
     protected:
         void on_draw(tvg::SwCanvas& canvas) override {
-            const auto rect = bounds();
-            const float bar_h = m_bar_height.get();
+            const auto rect    = bounds();
+            const float bar_h  = m_bar_height.get();
             const float radius = m_corner_radius.get();
-            const float pct = m_progress.get();
+            const float pct    = m_progress.get();
 
             const float bar_y = rect.y() + (rect.height() - bar_h) * 0.5f;
 
-            const auto& track = m_track_color.get();
+            const auto& track    = m_track_color.get();
             const auto track_rgb = track.to<nandina::NanRgb>();
-            auto* bg = tvg::Shape::gen();
+            auto* bg             = tvg::Shape::gen();
             bg->appendRect(rect.x(), bar_y, rect.width(), bar_h, radius, radius);
             bg->fill(track_rgb.red(), track_rgb.green(), track_rgb.blue(), track_rgb.alpha());
             canvas.add(bg);
 
             if (pct > 0.0f) {
                 const float fill_w = rect.width() * pct;
-                const auto& bar = m_bar_color.get();
+                const auto& bar    = m_bar_color.get();
                 const auto bar_rgb = bar.to<nandina::NanRgb>();
-                auto* fill = tvg::Shape::gen();
+                auto* fill         = tvg::Shape::gen();
                 fill->appendRect(rect.x(), bar_y, fill_w, bar_h, radius, radius);
                 fill->fill(bar_rgb.red(), bar_rgb.green(), bar_rgb.blue(), bar_rgb.alpha());
                 canvas.add(fill);

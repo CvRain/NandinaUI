@@ -61,7 +61,7 @@ export namespace nandina::widgets {
      */
     class Button : public Surface {
     public:
-        using Ptr = std::unique_ptr<Button>;
+        using Ptr      = std::unique_ptr<Button>;
         using Callback = std::function<void()>;
 
         ~Button() override = default;
@@ -70,11 +70,14 @@ export namespace nandina::widgets {
 
         // ── 文本 ──────────────────────────────────────────
         auto set_text(std::string_view text) -> Button&;
+
         [[nodiscard]] auto text() const noexcept -> const std::string&;
 
         // ── 回调注册 ──────────────────────────────────────
         auto on_click(Callback cb) -> Button&;
+
         auto on_press(Callback cb) -> Button&;
+
         auto on_release(Callback cb) -> Button&;
 
         // ── 信号 ──────────────────────────────────────────
@@ -82,10 +85,12 @@ export namespace nandina::widgets {
 
         // ── 禁用状态 ──────────────────────────────────────
         auto set_disabled(bool disabled) -> Button&;
+
         [[nodiscard]] auto is_disabled() const noexcept -> bool;
 
         // ── 样式 ──────────────────────────────────────────
         auto set_colors(const ButtonColors& colors) -> Button&;
+
         [[nodiscard]] auto colors() const noexcept -> const ButtonColors&;
 
         // ── 布局协议 ──────────────────────────────────────

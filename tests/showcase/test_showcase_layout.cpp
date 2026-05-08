@@ -6,6 +6,7 @@
 
 #include <thorvg-1/thorvg.h>
 
+import nandina.app.authoring;
 import nandina.runtime.nan_widget;
 import nandina.showcase;
 import nandina.showcase.project_progress_card;
@@ -74,6 +75,17 @@ private:
     std::vector<std::uint32_t> pixels_;
     std::unique_ptr<tvg::SwCanvas> canvas_;
     std::uint32_t width_;
+};
+
+class TestShowcaseWindow final : public nandina::app::NanAppWindow {
+public:
+    explicit TestShowcaseWindow(const nandina::app::AppConfig& config)
+        : nandina::app::NanAppWindow(config) {
+    }
+
+    auto draw_once(tvg::SwCanvas& canvas) -> void {
+        on_draw(canvas);
+    }
 };
 
 [[nodiscard]] auto alpha_of(const std::uint32_t pixel) noexcept -> std::uint8_t {
@@ -647,6 +659,25 @@ TEST(ShowcaseLayoutTest, MainComponent_DrawPassProducesDistinctSurfaceColors) {
     EXPECT_NEAR(static_cast<float>(red_of(dock_pixel)), 38.0f, 12.0f);
     EXPECT_NEAR(static_cast<float>(green_of(dock_pixel)), 40.0f, 12.0f);
     EXPECT_NEAR(static_cast<float>(blue_of(dock_pixel)), 56.0f, 12.0f);
+}
+
+TEST(ShowcaseLayoutTest, AppWindowWrappedMainComponentStillDrawsShowcaseRegions) {
+    TestShowcaseWindow window({
+        .title = "Showcase Test",
+        .width = 1280,
+        .height = 720,
+        .resizable = false,
+        .high_dpi = false,
+    });
+    window.set_root(nandina::app::adopt(std::make_unique<MainComponent>()));
+
+    ThorvgCanvasScope canvas_scope{1280u, 720u};
+    window.draw_once(canvas_scope.canvas());
+    canvas_scope.render();
+
+    EXPECT_GT(alpha_of(canvas_scope.pixel_at(10u, 10u)), 0u);
+    EXPECT_GT(alpha_of(canvas_scope.pixel_at(280u, 80u)), 0u);
+    EXPECT_GT(alpha_of(canvas_scope.pixel_at(500u, 690u)), 0u);
 }
 
 TEST(ShowcaseLayoutTest, MiddleContentSection_UsesSplitRowContract) {

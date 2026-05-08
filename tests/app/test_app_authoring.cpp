@@ -1,5 +1,11 @@
 #include <gtest/gtest.h>
 
+#include <memory>
+#include <stdexcept>
+#include <vector>
+
+#include <thorvg-1/thorvg.h>
+
 import nandina.app.authoring;
 import nandina.runtime.nan_widget;
 import nandina.layout.core;
@@ -19,6 +25,84 @@ public:
         return {24.0f, 12.0f};
     }
 };
+
+namespace {
+
+class ProbeWidget final : public nandina::runtime::NanWidget {
+public:
+    static auto create() -> std::unique_ptr<ProbeWidget> {
+        return std::make_unique<ProbeWidget>();
+    }
+
+    auto measure(const nandina::geometry::NanConstraints& constraints) -> void override {
+        ++measure_count;
+        nandina::runtime::NanWidget::measure(constraints);
+    }
+
+    auto layout() -> void override {
+        ++layout_count;
+        nandina::runtime::NanWidget::layout();
+    }
+
+    [[nodiscard]] auto preferred_size() const noexcept -> nandina::geometry::NanSize override {
+        return {24.0f, 12.0f};
+    }
+
+    int measure_count{0};
+    int layout_count{0};
+};
+
+class ThorvgCanvasScope {
+public:
+    ThorvgCanvasScope(const std::uint32_t width, const std::uint32_t height)
+        : pixels_(width * height, 0u), width_(width) {
+        if (tvg::Initializer::init(0u) != tvg::Result::Success) {
+            throw std::runtime_error("tvg::Initializer::init failed");
+        }
+        canvas_.reset(tvg::SwCanvas::gen());
+        if (!canvas_) {
+            tvg::Initializer::term();
+            throw std::runtime_error("tvg::SwCanvas::gen() returned nullptr");
+        }
+        if (canvas_->target(
+                pixels_.data(),
+                width,
+                width,
+                height,
+                tvg::ColorSpace::ARGB8888) != tvg::Result::Success) {
+            canvas_.reset();
+            tvg::Initializer::term();
+            throw std::runtime_error("tvg::SwCanvas::target failed");
+        }
+    }
+
+    ~ThorvgCanvasScope() {
+        canvas_.reset();
+        tvg::Initializer::term();
+    }
+
+    auto canvas() const noexcept -> tvg::SwCanvas& {
+        return *canvas_;
+    }
+
+private:
+    std::vector<std::uint32_t> pixels_;
+    std::unique_ptr<tvg::SwCanvas> canvas_;
+    std::uint32_t width_;
+};
+
+class TestAppWindow final : public nandina::app::NanAppWindow {
+public:
+    explicit TestAppWindow(const nandina::app::AppConfig& config)
+        : nandina::app::NanAppWindow(config) {
+    }
+
+    auto draw_once(tvg::SwCanvas& canvas) -> void {
+        on_draw(canvas);
+    }
+};
+
+} // namespace
 
 TEST(AppAuthoringTest, MountBindsAndResetsRootRef) {
     nandina::app::Ref<TestWidget> widget_ref;
@@ -72,6 +156,21 @@ TEST(AppAuthoringTest, MountedNodeComponentPropagatesBoundsToRootWidget) {
     EXPECT_FLOAT_EQ(bounds.y(), 20.0f);
     EXPECT_FLOAT_EQ(bounds.width(), 200.0f);
     EXPECT_FLOAT_EQ(bounds.height(), 80.0f);
+}
+
+TEST(AppAuthoringTest, MountedNodeComponentSetBoundsTriggersRootMeasureAndLayout) {
+    nandina::app::Ref<ProbeWidget> probe_ref;
+
+    auto mounted = nandina::app::mount(
+        nandina::app::adopt(ProbeWidget::create()).bind(probe_ref));
+
+    ASSERT_NE(mounted, nullptr);
+    ASSERT_TRUE(probe_ref);
+
+    mounted->set_bounds(0.0f, 0.0f, 120.0f, 40.0f);
+
+    EXPECT_GE(probe_ref->measure_count, 1);
+    EXPECT_GE(probe_ref->layout_count, 1);
 }
 
 TEST(AppAuthoringTest, PaddingWrapsSingleChildAndPreservesRefBinding) {
@@ -157,6 +256,7 @@ TEST(AppAuthoringTest, StackMountsMultipleChildrenAndPropagatesRefs) {
     mounted.reset();
     EXPECT_FALSE(front_ref);
     EXPECT_FALSE(back_ref);
+
 }
 
 TEST(AppAuthoringTest, PaddingNodeSupportsChainedInsetsConfiguration) {
@@ -366,4 +466,51 @@ TEST(AppAuthoringTest, PanelFactorySupportsTitleStylingAndChildRefs) {
     EXPECT_EQ(bg.red(), 42u);
     EXPECT_EQ(bg.green(), 44u);
     EXPECT_EQ(bg.blue(), 62u);
+}
+
+TEST(AppAuthoringTest, AppWindowDrawConsumesRootLayoutDirtyAndReflowsTree) {
+    nandina::app::Ref<nandina::runtime::NanWidget> root_ref;
+    nandina::app::Ref<TestWidget> first_ref;
+    nandina::app::Ref<TestWidget> second_ref;
+
+    TestAppWindow window({
+        .title = "Test",
+        .width = 80,
+        .height = 60,
+        .resizable = false,
+        .high_dpi = false,
+    });
+
+    window.set_root(
+        nandina::app::column(nandina::app::children(
+            nandina::app::adopt(TestWidget::create()).bind(first_ref),
+            nandina::app::adopt(TestWidget::create()).bind(second_ref)))
+            .padding(4.0f, 6.0f, 8.0f, 10.0f)
+            .gap(5.0f)
+            .align_items(nandina::layout::LayoutAlignment::stretch)
+            .bind(root_ref));
+
+    ASSERT_TRUE(root_ref);
+    ASSERT_TRUE(first_ref);
+    ASSERT_TRUE(second_ref);
+
+    first_ref->set_bounds(55.0f, 44.0f, 1.0f, 1.0f);
+    second_ref->set_bounds(66.0f, 33.0f, 2.0f, 2.0f);
+    root_ref->mark_layout_dirty();
+
+    ThorvgCanvasScope canvas_scope{80u, 60u};
+    window.draw_once(canvas_scope.canvas());
+
+    const auto first_bounds = first_ref->bounds();
+    const auto second_bounds = second_ref->bounds();
+
+    EXPECT_FLOAT_EQ(first_bounds.x(), 4.0f);
+    EXPECT_FLOAT_EQ(first_bounds.y(), 6.0f);
+    EXPECT_FLOAT_EQ(first_bounds.width(), 68.0f);
+    EXPECT_FLOAT_EQ(first_bounds.height(), 12.0f);
+
+    EXPECT_FLOAT_EQ(second_bounds.x(), 4.0f);
+    EXPECT_FLOAT_EQ(second_bounds.y(), 23.0f);
+    EXPECT_FLOAT_EQ(second_bounds.width(), 68.0f);
+    EXPECT_FLOAT_EQ(second_bounds.height(), 12.0f);
 }

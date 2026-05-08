@@ -143,8 +143,8 @@ export namespace nandina::widgets {
 
         [[nodiscard]] auto preferred_size() const noexcept -> geometry::NanSize override {
             const auto child_pref = measure_content_preferred_size();
-            const auto& pad = padding();
-            const float header_h = m_header_height.get();
+            const auto& pad       = padding();
+            const float header_h  = m_header_height.get();
             return geometry::NanSize{
                 child_pref.width() + pad.left() + pad.right(),
                 header_h + child_pref.height() + pad.top() + pad.bottom()
@@ -153,8 +153,8 @@ export namespace nandina::widgets {
 
     protected:
         void on_draw(tvg::SwCanvas& canvas) override {
-            const auto rect = bounds();
-            const float radius = corner_radius();
+            const auto rect      = bounds();
+            const float radius   = corner_radius();
             const float header_h = m_header_height.get();
 
             // ── 1. 背景填充 ──────────────────────────────
@@ -162,7 +162,7 @@ export namespace nandina::widgets {
 
             // ── 2. 标题栏背景 ────────────────────────────
             {
-                const auto& hdr = m_header_color.get();
+                const auto& hdr    = m_header_color.get();
                 const auto hdr_rgb = hdr.to<nandina::NanRgb>();
 
                 // 主体（无圆角矩形）
@@ -185,7 +185,7 @@ export namespace nandina::widgets {
                 divider->lineTo(rect.x() + rect.width(), rect.y() + header_h);
                 divider->strokeWidth(1.0f);
                 divider->strokeFill(hdr_rgb.red(), hdr_rgb.green(), hdr_rgb.blue(),
-                                    static_cast<uint8_t>(hdr_rgb.alpha() * 0.8f));
+                    static_cast<uint8_t>(hdr_rgb.alpha() * 0.8f));
                 canvas.add(divider);
             }
 
@@ -193,9 +193,9 @@ export namespace nandina::widgets {
             {
                 const auto& title = m_title.get();
                 if (!title.empty()) {
-                    const float fs = m_title_font_size.get();
-                    const float spacing = fs * 0.8f;
-                    const float dot_r = fs * 0.25f;
+                    const float fs         = m_title_font_size.get();
+                    const float spacing    = fs * 0.8f;
+                    const float dot_r      = fs * 0.25f;
                     const float text_width = static_cast<float>(title.size()) * spacing;
 
                     // 水平居中（在 header 区域内）
@@ -203,11 +203,12 @@ export namespace nandina::widgets {
                     const float title_y = rect.y() + header_h * 0.5f + dot_r;
 
                     const auto& text_clr = m_title_color.get();
-                    const auto text_rgb = text_clr.to<nandina::NanRgb>();
+                    const auto text_rgb  = text_clr.to<nandina::NanRgb>();
 
                     for (size_t i = 0; i < title.size(); ++i) {
-                        if (title[i] == ' ') continue;
-                        auto* dot = tvg::Shape::gen();
+                        if (title[i] == ' ')
+                            continue;
+                        auto* dot      = tvg::Shape::gen();
                         const float cx = title_x + static_cast<float>(i) * spacing;
                         const float cy = title_y;
                         dot->appendCircle(cx, cy, dot_r, dot_r);
