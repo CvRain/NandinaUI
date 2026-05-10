@@ -100,7 +100,19 @@ export namespace nandina::widgets {
 
         // ── 属性 ────────────────────────────────────────
         auto set_disabled(bool disabled) -> void {
+            if (m_disabled.get() == disabled) {
+                return;
+            }
+
             m_disabled.set(disabled);
+
+            if (disabled) {
+                m_hovered = false;
+                m_pressed_inside = false;
+                m_focused = false;
+            }
+
+            mark_dirty();
         }
 
         [[nodiscard]] auto is_disabled() const noexcept -> bool {

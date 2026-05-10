@@ -7,13 +7,18 @@
 #include <thorvg-1/thorvg.h>
 
 import nandina.app.authoring;
+import nandina.foundation.nan_insets;
 import nandina.runtime.nan_widget;
 import nandina.layout.core;
 import nandina.foundation.color;
 import nandina.widgets.button;
 import nandina.widgets.card;
+import nandina.widgets.icon;
 import nandina.widgets.label;
 import nandina.widgets.panel;
+import nandina.widgets.pressable;
+import nandina.widgets.progressbar;
+import nandina.widgets.surface;
 
 class TestWidget final : public nandina::runtime::NanWidget {
 public:
@@ -401,6 +406,8 @@ TEST(AppAuthoringTest, ButtonFactorySupportsTextColorsAndRefBinding) {
     nandina::widgets::ButtonColors colors;
     colors.bg = nandina::NanColor::from(nandina::NanRgb{9, 8, 7});
     colors.text = nandina::NanColor::from(nandina::NanRgb{6, 5, 4});
+    colors.corner_radius = 11.0f;
+    colors.padding = nandina::geometry::NanInsets{20.0f, 9.0f, 18.0f, 7.0f};
 
     auto mounted = nandina::app::mount(
         nandina::app::button("Run")
@@ -418,6 +425,30 @@ TEST(AppAuthoringTest, ButtonFactorySupportsTextColorsAndRefBinding) {
     EXPECT_EQ(text.red(), 6u);
     EXPECT_EQ(text.green(), 5u);
     EXPECT_EQ(text.blue(), 4u);
+    EXPECT_FLOAT_EQ(button_ref->corner_radius(), 11.0f);
+    EXPECT_FLOAT_EQ(button_ref->padding().left(), 20.0f);
+    EXPECT_FLOAT_EQ(button_ref->padding().top(), 9.0f);
+    EXPECT_FLOAT_EQ(button_ref->padding().right(), 18.0f);
+    EXPECT_FLOAT_EQ(button_ref->padding().bottom(), 7.0f);
+}
+
+TEST(AppAuthoringTest, ButtonSetColorsAppliesLayoutAffectingStyle) {
+    auto button = nandina::widgets::Button::create();
+    button->set_bounds(0.0f, 0.0f, 120.0f, 36.0f);
+    EXPECT_FALSE(button->is_layout_dirty());
+
+    nandina::widgets::ButtonColors colors;
+    colors.corner_radius = 10.0f;
+    colors.padding = nandina::geometry::NanInsets{16.0f, 6.0f, 14.0f, 8.0f};
+
+    button->set_colors(colors);
+
+    EXPECT_TRUE(button->is_layout_dirty());
+    EXPECT_FLOAT_EQ(button->corner_radius(), 10.0f);
+    EXPECT_FLOAT_EQ(button->padding().left(), 16.0f);
+    EXPECT_FLOAT_EQ(button->padding().top(), 6.0f);
+    EXPECT_FLOAT_EQ(button->padding().right(), 14.0f);
+    EXPECT_FLOAT_EQ(button->padding().bottom(), 8.0f);
 }
 
 TEST(AppAuthoringTest, CardFactorySupportsTitleStylingAndChildRefs) {
@@ -466,6 +497,118 @@ TEST(AppAuthoringTest, PanelFactorySupportsTitleStylingAndChildRefs) {
     EXPECT_EQ(bg.red(), 42u);
     EXPECT_EQ(bg.green(), 44u);
     EXPECT_EQ(bg.blue(), 62u);
+}
+
+TEST(AppAuthoringTest, CardLayoutAffectingSettersMarkLayoutDirty) {
+    auto card = nandina::widgets::Card::create();
+
+    card->set_bounds(0.0f, 0.0f, 160.0f, 96.0f);
+    EXPECT_FALSE(card->is_layout_dirty());
+
+    card->set_title("Stats");
+    EXPECT_TRUE(card->is_layout_dirty());
+
+    card->set_bounds(0.0f, 0.0f, 160.0f, 96.0f);
+    EXPECT_FALSE(card->is_layout_dirty());
+
+    card->set_title_font_size(14.0f);
+    EXPECT_TRUE(card->is_layout_dirty());
+
+    card->set_bounds(0.0f, 0.0f, 160.0f, 96.0f);
+    EXPECT_FALSE(card->is_layout_dirty());
+
+    card->set_show_accent(true);
+    EXPECT_TRUE(card->is_layout_dirty());
+}
+
+TEST(AppAuthoringTest, PanelHeaderHeightMarksLayoutDirty) {
+    auto panel = nandina::widgets::Panel::create();
+
+    panel->set_bounds(0.0f, 0.0f, 160.0f, 96.0f);
+    EXPECT_FALSE(panel->is_layout_dirty());
+
+    panel->set_header_height(36.0f);
+    EXPECT_TRUE(panel->is_layout_dirty());
+}
+
+TEST(AppAuthoringTest, LabelLayoutAffectingSettersMarkLayoutDirty) {
+    auto label = nandina::widgets::Label::create();
+
+    label->set_bounds(0.0f, 0.0f, 120.0f, 32.0f);
+    EXPECT_FALSE(label->is_layout_dirty());
+
+    label->set_text("Hello");
+    EXPECT_TRUE(label->is_layout_dirty());
+
+    label->set_bounds(0.0f, 0.0f, 120.0f, 32.0f);
+    EXPECT_FALSE(label->is_layout_dirty());
+
+    label->set_font_size(18.0f);
+    EXPECT_TRUE(label->is_layout_dirty());
+}
+
+TEST(AppAuthoringTest, SurfacePaddingMarksLayoutDirty) {
+    auto surface = nandina::widgets::Surface::create();
+
+    surface->set_bounds(0.0f, 0.0f, 160.0f, 96.0f);
+    EXPECT_FALSE(surface->is_layout_dirty());
+
+    surface->set_padding(nandina::geometry::NanInsets{12.0f});
+    EXPECT_TRUE(surface->is_layout_dirty());
+}
+
+TEST(AppAuthoringTest, SurfaceBackgroundColorMarksDirty) {
+    auto surface = nandina::widgets::Surface::create();
+    surface->clear_dirty();
+
+    surface->set_bg_color(nandina::NanColor::from(nandina::NanRgb{10, 20, 30}));
+
+    EXPECT_TRUE(surface->dirty());
+}
+
+TEST(AppAuthoringTest, IconAndProgressBarSizeSettersMarkLayoutDirty) {
+    auto icon = nandina::widgets::Icon::create();
+    icon->set_bounds(0.0f, 0.0f, 24.0f, 24.0f);
+    EXPECT_FALSE(icon->is_layout_dirty());
+
+    icon->set_size(20.0f);
+    EXPECT_TRUE(icon->is_layout_dirty());
+
+    auto progress = nandina::widgets::ProgressBar::create();
+    progress->set_bounds(0.0f, 0.0f, 160.0f, 12.0f);
+    EXPECT_FALSE(progress->is_layout_dirty());
+
+    progress->set_bar_height(8.0f);
+    EXPECT_TRUE(progress->is_layout_dirty());
+}
+
+TEST(AppAuthoringTest, ButtonTextSetterMarksLayoutDirty) {
+    auto button = nandina::widgets::Button::create();
+
+    button->set_bounds(0.0f, 0.0f, 120.0f, 36.0f);
+    EXPECT_FALSE(button->is_layout_dirty());
+
+    button->set_text("Run");
+    EXPECT_TRUE(button->is_layout_dirty());
+}
+
+TEST(AppAuthoringTest, PressableDisableClearsInteractiveStateAndMarksDirty) {
+    auto pressable = nandina::widgets::Pressable::create();
+    pressable->clear_dirty();
+
+    nandina::runtime::Event move_event = nandina::runtime::PointerMoveEvent{.x = 8.0, .y = 6.0, .delta_x = 0.0, .delta_y = 0.0};
+    EXPECT_TRUE(pressable->dispatch_event(move_event));
+    EXPECT_TRUE(pressable->state().hovered);
+
+    pressable->clear_dirty();
+    pressable->set_disabled(true);
+
+    const auto state = pressable->state();
+    EXPECT_TRUE(state.disabled);
+    EXPECT_FALSE(state.hovered);
+    EXPECT_FALSE(state.pressed);
+    EXPECT_FALSE(state.focused);
+    EXPECT_TRUE(pressable->dirty());
 }
 
 TEST(AppAuthoringTest, AppWindowDrawConsumesRootLayoutDirtyAndReflowsTree) {

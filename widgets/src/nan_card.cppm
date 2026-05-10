@@ -99,7 +99,7 @@ export namespace nandina::widgets {
             if (m_title_label) {
                 m_title_label->set_text(m_title);
             }
-            mark_dirty();
+            mark_layout_dirty();
             return *this;
         }
 
@@ -117,7 +117,7 @@ export namespace nandina::widgets {
             if (m_title_label) {
                 m_title_label->set_font_size(size);
             }
-            mark_dirty();
+            mark_layout_dirty();
             return *this;
         }
 
@@ -138,7 +138,7 @@ export namespace nandina::widgets {
 
         auto set_show_accent(bool show) -> Card& {
             m_show_accent = show;
-            mark_dirty();
+            mark_layout_dirty();
             return *this;
         }
 

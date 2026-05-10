@@ -41,7 +41,7 @@ export namespace nandina::widgets {
             if (m_label) {
                 m_label->set_text(text);
             }
-            mark_dirty();
+            mark_layout_dirty();
             return *this;
         }
 
@@ -50,7 +50,7 @@ export namespace nandina::widgets {
             if (m_icon) {
                 m_icon->set_type(type);
             }
-            mark_dirty();
+            mark_layout_dirty();
             return *this;
         }
 
@@ -91,20 +91,26 @@ export namespace nandina::widgets {
         auto set_bounds(float x, float y, float w, float h) noexcept -> NanWidget& override {
             Surface::set_bounds(x, y, w, h);
 
-            const float icon_size = h * 0.48f;
-            const float icon_y    = y + (h - icon_size) * 0.5f;
+            return *this;
+        }
+
+        auto layout() -> void override {
+            runtime::NanWidget::set_bounds(x(), y(), width(), height());
+
+            const float icon_size = height() * 0.48f;
+            const float icon_y    = y() + (height() - icon_size) * 0.5f;
 
             if (m_icon) {
-                m_icon->set_bounds(x + 14.0f, icon_y, icon_size, icon_size);
+                m_icon->set_bounds(x() + 14.0f, icon_y, icon_size, icon_size);
             }
 
             if (m_label) {
-                const float lx = x + 42.0f;
-                const float lw = w - 52.0f;
-                m_label->set_bounds(lx, y + 2.0f, lw, h - 4.0f);
+                const float lx = x() + 42.0f;
+                const float lw = width() - 52.0f;
+                m_label->set_bounds(lx, y() + 2.0f, lw, height() - 4.0f);
             }
 
-            return *this;
+            NanWidget::layout();
         }
 
         [[nodiscard]] auto preferred_size() const noexcept -> geometry::NanSize override {

@@ -71,7 +71,7 @@ export namespace nandina::widgets {
             if (m_content_layout) {
                 m_content_layout->add(std::move(group));
             }
-            mark_dirty();
+            mark_layout_dirty();
             return *this;
         }
 
@@ -85,7 +85,7 @@ export namespace nandina::widgets {
                 add_group(std::move(group));
             }
             m_content_group->add_child(std::move(item));
-            mark_dirty();
+            mark_layout_dirty();
             return *this;
         }
 
@@ -98,7 +98,7 @@ export namespace nandina::widgets {
                 add_group(std::move(group));
             }
             m_project_group->add_child(std::move(item));
-            mark_dirty();
+            mark_layout_dirty();
             return *this;
         }
 
@@ -108,7 +108,7 @@ export namespace nandina::widgets {
             if (m_header_label) {
                 m_header_label->set_text(text);
             }
-            mark_dirty();
+            mark_layout_dirty();
             return *this;
         }
 
@@ -117,7 +117,7 @@ export namespace nandina::widgets {
             if (m_user_name_label) {
                 m_user_name_label->set_text(text);
             }
-            mark_dirty();
+            mark_layout_dirty();
             return *this;
         }
 
@@ -126,7 +126,7 @@ export namespace nandina::widgets {
             if (m_user_role_label) {
                 m_user_role_label->set_text(text);
             }
-            mark_dirty();
+            mark_layout_dirty();
             return *this;
         }
 
@@ -145,10 +145,14 @@ export namespace nandina::widgets {
         auto set_bounds(float x, float y, float w, float h) noexcept -> NanWidget& override {
             Surface::set_bounds(x, y, w, h);
 
+            return *this;
+        }
+
+        auto layout() -> void override {
+            Surface::layout();
+
             m_divider_header_y = m_header_slot ? m_header_slot->bounds().bottom() : 0.0f;
             m_divider_footer_y = m_footer_slot ? m_footer_slot->bounds().y() : 0.0f;
-
-            return *this;
         }
 
     protected:

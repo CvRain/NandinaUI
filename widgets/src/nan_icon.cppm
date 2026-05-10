@@ -70,7 +70,7 @@ export namespace nandina::widgets {
         /// 图标绘制区域大小（永远是正方形）
         auto set_size(float size) -> Icon& {
             m_size.set(size);
-            mark_dirty();
+            mark_layout_dirty();
             return *this;
         }
 

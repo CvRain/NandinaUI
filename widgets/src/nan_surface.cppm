@@ -57,6 +57,7 @@ export namespace nandina::widgets {
         // ── 属性设置（返回引用支持链式）────────────────────
         virtual auto set_bg_color(const nandina::NanColor& color) -> Surface& {
             m_bg_color.set(color);
+            mark_dirty();
             return *this;
         }
 
@@ -68,7 +69,7 @@ export namespace nandina::widgets {
 
         virtual auto set_padding(const geometry::NanInsets& insets) -> Surface& {
             m_padding.set(insets);
-            mark_dirty();
+            mark_layout_dirty();
             return *this;
         }
 

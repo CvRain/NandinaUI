@@ -50,7 +50,7 @@ namespace nandina::widgets {
     // ── 文本 ────────────────────────────────────────────────
     auto Button::set_text(std::string_view text) -> Button& {
         m_label->set_text(text);
-        mark_dirty();
+        mark_layout_dirty();
         return *this;
     }
 
@@ -94,6 +94,8 @@ namespace nandina::widgets {
     // ── 样式 ────────────────────────────────────────────────
     auto Button::set_colors(const ButtonColors& colors) -> Button& {
         m_colors = colors;
+        set_corner_radius(m_colors.corner_radius);
+        set_padding(m_colors.padding);
         update_visual_state();
         return *this;
     }

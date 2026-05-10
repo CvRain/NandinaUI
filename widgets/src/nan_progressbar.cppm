@@ -45,7 +45,7 @@ export namespace nandina::widgets {
 
         auto set_bar_height(float h) -> ProgressBar& {
             m_bar_height.set(h);
-            mark_dirty();
+            mark_layout_dirty();
             return *this;
         }
 

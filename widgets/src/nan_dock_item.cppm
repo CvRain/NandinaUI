@@ -89,7 +89,7 @@ export namespace nandina::widgets {
         // ── 活动指示圆点 ────────────────────────────────────
         auto set_show_active_dot(bool show) -> DockItem& {
             m_show_active_dot = show;
-            mark_dirty();
+            mark_layout_dirty();
             return *this;
         }
 
@@ -114,15 +114,21 @@ export namespace nandina::widgets {
         auto set_bounds(float x, float y, float w, float h) noexcept -> NanWidget& override {
             NanWidget::set_bounds(x, y, w, h);
 
+            return *this;
+        }
+
+        auto layout() -> void override {
+            runtime::NanWidget::set_bounds(x(), y(), width(), height());
+
             // 定位 Icon 子节点在中央
             if (m_icon) {
-                const float icon_size = std::min(w, h) * 0.5f; // 图标占控件一半大小
-                const float icon_x    = x + (w - icon_size) * 0.5f;
-                const float icon_y    = y + (h - icon_size) * 0.5f - (m_show_active_dot ? 3.0f : 0.0f);
+                const float icon_size = std::min(width(), height()) * 0.5f;
+                const float icon_x    = x() + (width() - icon_size) * 0.5f;
+                const float icon_y    = y() + (height() - icon_size) * 0.5f - (m_show_active_dot ? 3.0f : 0.0f);
                 m_icon->set_bounds(icon_x, icon_y, icon_size, icon_size);
             }
 
-            return *this;
+            NanWidget::layout();
         }
 
         [[nodiscard]] auto preferred_size() const noexcept -> geometry::NanSize override {

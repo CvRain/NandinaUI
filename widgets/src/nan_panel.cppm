@@ -84,7 +84,7 @@ export namespace nandina::widgets {
         // ── 标题栏高度 ────────────────────────────────────
         auto set_header_height(float height) -> Panel& {
             m_header_height.set(height);
-            mark_dirty();
+            mark_layout_dirty();
             return *this;
         }
 

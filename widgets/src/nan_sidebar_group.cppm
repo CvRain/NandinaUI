@@ -54,13 +54,13 @@ export namespace nandina::widgets {
             if (m_label) {
                 m_label->set_text(text);
             }
-            mark_dirty();
+            mark_layout_dirty();
             return *this;
         }
 
         auto set_show_accent(bool show) -> SidebarGroup& {
             m_show_accent = show;
-            mark_dirty();
+            mark_layout_dirty();
             return *this;
         }
 
@@ -69,7 +69,7 @@ export namespace nandina::widgets {
             if (m_accent_icon) {
                 m_accent_icon->set_color(color);
             }
-            mark_dirty();
+            mark_layout_dirty();
             return *this;
         }
 
@@ -78,7 +78,7 @@ export namespace nandina::widgets {
             if (m_label) {
                 m_label->set_color(color);
             }
-            mark_dirty();
+            mark_layout_dirty();
             return *this;
         }
 
@@ -97,36 +97,42 @@ export namespace nandina::widgets {
         auto set_bounds(float x, float y, float w, float h) noexcept -> NanWidget& override {
             Surface::set_bounds(x, y, w, h);
 
+            return *this;
+        }
+
+        auto layout() -> void override {
+            runtime::NanWidget::set_bounds(x(), y(), width(), height());
+
             const float label_height  = 16.0f;
             const float accent_offset = 14.0f;
 
             // 装饰色标
             if (m_accent_icon && m_show_accent) {
                 const float dot_size = 10.0f;
-                const float dot_y    = y + 10.0f;
-                m_accent_icon->set_bounds(x + accent_offset, dot_y, dot_size, dot_size);
+                const float dot_y    = y() + 10.0f;
+                m_accent_icon->set_bounds(x() + accent_offset, dot_y, dot_size, dot_size);
             }
 
             // 分组标签
             if (m_label) {
-                const float lx = x + (m_show_accent ? 30.0f : 14.0f);
-                const float ly = y + 6.0f;
-                m_label->set_bounds(lx, ly, w - 40.0f, label_height);
+                const float lx = x() + (m_show_accent ? 30.0f : 14.0f);
+                const float ly = y() + 6.0f;
+                m_label->set_bounds(lx, ly, width() - 40.0f, label_height);
             }
 
             // 子节点（SidebarMenuButton）在标签下方排列
-            const float item_start_y = y + (m_label_text.empty() ? 6.0f : 28.0f);
+            const float item_start_y = y() + (m_label_text.empty() ? 6.0f : 28.0f);
             float item_y             = item_start_y;
 
             for_each_child([&](runtime::NanWidget& child) {
                 if (&child == m_label || &child == m_accent_icon)
                     return;
                 const float ch = 36.0f; // 固定项高度
-                child.set_bounds(x, item_y, w, ch);
+                child.set_bounds(x(), item_y, width(), ch);
                 item_y += ch + 2.0f;
             });
 
-            return *this;
+            NanWidget::layout();
         }
 
         [[nodiscard]] auto preferred_size() const noexcept -> geometry::NanSize override {

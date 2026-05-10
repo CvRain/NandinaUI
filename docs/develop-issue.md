@@ -1119,9 +1119,9 @@
 
 ---
 
-## Issue 086 — 清理 widgets 中的手工布局分发 ❌ 未完成
+## Issue 086 — 清理 widgets 中的手工布局分发 🟡 进行中
 **Labels:** `area:widgets`, `area:layout`, `kind:refactor`, `priority:p0`
-**Status:** ❌ 未完成 — 多个 widgets 仍在 `set_bounds()` 中直接计算并分发子节点 frame
+**Status:** 🟡 进行中 — `Pressable` / `Card` / `Panel` / `SplitRow` / `SidebarMenuButton` / `SidebarGroup` / `Sidebar` 已回到两阶段布局主链，剩余工作集中在其他 legacy widgets 与未接入主编译面的遗留控件清理
 
 ### 目标
 把 widgets 收口到“组合布局原语或极少量叶子级几何”的模式，减少控件内部重复实现布局逻辑。
@@ -1129,6 +1129,7 @@
 ### 范围
 - 优先重构 `Pressable` / `Button` / `Card` / `Panel`
 - 继续收敛 `SplitRow`、`SidebarGroup`、`SidebarMenuButton` 等仍含手算布局的控件
+- 修正 widgets 运行时 setter 的 `mark_dirty()` / `mark_layout_dirty()` 语义，避免属性更新绕过根布局回流
 - 形成一套可复用的 widgets 收口模板
 
 ### 涉及文件

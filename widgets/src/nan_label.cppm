@@ -68,14 +68,14 @@ export namespace nandina::widgets {
         // ── 属性设置 ──────────────────────────────────────
         auto set_text(std::string_view text) -> Label& {
             m_text.set(std::string{text});
-            mark_dirty();
+            mark_layout_dirty();
             return *this;
         }
 
         auto set_font_size(float size) -> Label& {
             m_font_size.set(size);
             m_font.reset(); // 字号变化 → 重置字体（下次懒加载新字号）
-            mark_dirty();
+            mark_layout_dirty();
             return *this;
         }
 
@@ -85,7 +85,7 @@ export namespace nandina::widgets {
             if (m_font) {
                 m_font_size.set(m_font->size_pt());
             }
-            mark_dirty();
+            mark_layout_dirty();
             return *this;
         }
 
