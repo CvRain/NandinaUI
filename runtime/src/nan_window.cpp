@@ -7,6 +7,7 @@ module;
 #include <SDL3/SDL.h>
 #include <thorvg-1/thorvg.h>
 
+#include <chrono>
 #include <cstdint>
 #include <format>
 #include <memory>
@@ -23,6 +24,26 @@ import nandina.log;
 namespace nandina::runtime {
     namespace {
         using nandina::types::PointerButton;
+        using SteadyClock = std::chrono::steady_clock;
+
+        constexpr double slow_resize_threshold_ms = 4.0;
+        constexpr double slow_frame_threshold_ms  = 8.0;
+        constexpr double slow_stage_threshold_ms  = 4.0;
+        constexpr std::uint64_t slow_log_interval_ms = 250;
+        constexpr std::uint64_t interactive_resize_window_ms = 120;
+
+        [[nodiscard]] auto elapsed_ms(SteadyClock::time_point start, SteadyClock::time_point end) noexcept -> double {
+            return std::chrono::duration<double, std::milli>(end - start).count();
+        }
+
+        [[nodiscard]] auto should_emit_slow_log(std::uint64_t& last_tick_ms) noexcept -> bool {
+            const auto now_tick_ms = static_cast<std::uint64_t>(SDL_GetTicks());
+            if (last_tick_ms == 0 || now_tick_ms < last_tick_ms || now_tick_ms - last_tick_ms >= slow_log_interval_ms) {
+                last_tick_ms = now_tick_ms;
+                return true;
+            }
+            return false;
+        }
 
         [[nodiscard]] auto to_pointer_button(Uint8 button) noexcept -> PointerButton {
             switch (button) {
@@ -125,12 +146,17 @@ namespace nandina::runtime {
         bool runtime_acquired{false};
         float dpi_scale{1.0f};
         bool should_close{false};
+        std::uint64_t last_slow_resize_log_ms{0};
+        std::uint64_t last_slow_frame_log_ms{0};
+        std::uint64_t last_resize_event_ms{0};
 
         // ── 辅助：重建 SDL 纹理 + ThorVG 画布（供 resize 复用）─
         auto rebuild_surface(int new_w, int new_h) -> void {
             if (new_w <= 0 || new_h <= 0) {
                 return;
             }
+
+            const auto rebuild_start = SteadyClock::now();
 
             // 重建 SDL 流式纹理
             auto* raw = SDL_CreateTexture(
@@ -139,9 +165,12 @@ namespace nandina::runtime {
                 throw std::runtime_error(std::format("SDL_CreateTexture failed: {}", SDL_GetError()));
             }
             texture.reset(raw);
+            const auto texture_ready = SteadyClock::now();
 
-            // 重建像素缓冲区
-            pixel_buffer.assign((new_w * new_h), 0u);
+            // 复用既有容量，避免 resize 期间每次都整块清零整帧缓冲区。
+            // ThorVG 在 draw(true) 阶段会刷新当前目标内容，这里只需要保证容量足够。
+            pixel_buffer.resize(static_cast<std::size_t>(new_w) * static_cast<std::size_t>(new_h));
+            const auto buffer_ready = SteadyClock::now();
 
             // 重绑 ThorVG 画布到新缓冲区
             const auto result = canvas->target(pixel_buffer.data(),
@@ -153,9 +182,27 @@ namespace nandina::runtime {
             if (result != tvg::Result::Success) {
                 throw std::runtime_error("ThorVG SwCanvas::target rebind failed");
             }
+            const auto target_ready = SteadyClock::now();
 
             width  = new_w;
             height = new_h;
+
+            const auto texture_ms = elapsed_ms(rebuild_start, texture_ready);
+            const auto buffer_ms  = elapsed_ms(texture_ready, buffer_ready);
+            const auto target_ms  = elapsed_ms(buffer_ready, target_ready);
+            const auto total_ms   = elapsed_ms(rebuild_start, target_ready);
+
+            if (total_ms >= slow_resize_threshold_ms && should_emit_slow_log(last_slow_resize_log_ms)) {
+                auto log = nandina::log::get("runtime.nan_window");
+                log.warn(
+                    "Slow resize rebuild: total={:.2f}ms texture={:.2f}ms buffer={:.2f}ms target={:.2f}ms size={}x{}",
+                    total_ms,
+                    texture_ms,
+                    buffer_ms,
+                    target_ms,
+                    new_w,
+                    new_h);
+            }
         }
     };
 
@@ -200,6 +247,10 @@ namespace nandina::runtime {
         m_impl->window.reset(raw_window);
         m_impl->renderer.reset(raw_renderer);
 
+        if (!SDL_SetRenderVSync(m_impl->renderer.get(), 1)) {
+            log.warn("Failed to enable renderer vsync: {}", SDL_GetError());
+        }
+
         m_impl->dpi_scale = SDL_GetWindowDisplayScale(raw_window);
 
         // ── ThorVG SwCanvas 初始化 ───────────────────────────────
@@ -219,7 +270,18 @@ namespace nandina::runtime {
         // ── 显示窗口（创建完成后再 show，避免白屏闪烁）──────────
         SDL_ShowWindow(raw_window);
 
-        log.info("Window ready: \"{}\" {}x{} (DPI={:.2f})", title, width, height, m_impl->dpi_scale);
+        int renderer_vsync = 0;
+        if (!SDL_GetRenderVSync(m_impl->renderer.get(), &renderer_vsync)) {
+            renderer_vsync = 0;
+        }
+
+        log.info("Window ready: \"{}\" {}x{} (DPI={:.2f}, renderer={}, vsync={})",
+            title,
+            width,
+            height,
+            m_impl->dpi_scale,
+            SDL_GetRendererName(m_impl->renderer.get()),
+            renderer_vsync);
     }
 
     // ============================================================
@@ -288,6 +350,10 @@ namespace nandina::runtime {
         if (!m_impl)
             return true;
 
+        bool has_pending_resize = false;
+        int pending_logical_w   = 0;
+        int pending_logical_h   = 0;
+
         SDL_Event ev;
         while (SDL_PollEvent(&ev)) {
             switch (ev.type) {
@@ -298,23 +364,9 @@ namespace nandina::runtime {
                 break;
 
             case SDL_EVENT_WINDOW_RESIZED: {
-                auto log            = nandina::log::get("runtime.nan_window");
-                const int logical_w = ev.window.data1;
-                const int logical_h = ev.window.data2;
-                int pixel_w         = 0;
-                int pixel_h         = 0;
-                SDL_GetWindowSizeInPixels(m_impl->window.get(), &pixel_w, &pixel_h);
-                log.debug("Window resized: logical={}x{}, pixel={}x{}", logical_w, logical_h, pixel_w, pixel_h);
-
-                // 纹理 + ThorVG 画布按新尺寸重建
-                try {
-                    m_impl->rebuild_surface(pixel_w, pixel_h);
-                } catch (const std::exception& e) {
-                    log.error("rebuild_surface failed on resize: {}", e.what());
-                }
-
-                m_impl->dpi_scale = SDL_GetWindowDisplayScale(m_impl->window.get());
-                on_resize(logical_w, logical_h);
+                has_pending_resize = true;
+                pending_logical_w  = ev.window.data1;
+                pending_logical_h  = ev.window.data2;
                 break;
             }
 
@@ -381,6 +433,26 @@ namespace nandina::runtime {
             }
         }
 
+        if (has_pending_resize) {
+            auto log = nandina::log::get("runtime.nan_window");
+            m_impl->last_resize_event_ms = static_cast<std::uint64_t>(SDL_GetTicks());
+            int pixel_w = 0;
+            int pixel_h = 0;
+            SDL_GetWindowSizeInPixels(m_impl->window.get(), &pixel_w, &pixel_h);
+            log.debug("Window resized: logical={}x{}, pixel={}x{}", pending_logical_w, pending_logical_h, pixel_w, pixel_h);
+
+            if (pixel_w != m_impl->width || pixel_h != m_impl->height) {
+                try {
+                    m_impl->rebuild_surface(pixel_w, pixel_h);
+                } catch (const std::exception& e) {
+                    log.error("rebuild_surface failed on resize: {}", e.what());
+                }
+            }
+
+            m_impl->dpi_scale = SDL_GetWindowDisplayScale(m_impl->window.get());
+            on_resize(pending_logical_w, pending_logical_h);
+        }
+
         return m_impl->should_close;
     }
 
@@ -394,20 +466,25 @@ namespace nandina::runtime {
             return;
 
         auto& canvas = *m_impl->canvas;
+        const auto frame_start = SteadyClock::now();
 
         // 1. 清空上一帧所有 ThorVG 绘制指令
         canvas.remove(nullptr);
+        const auto remove_done = SteadyClock::now();
 
         // 2. 用户回调：向 canvas 添加本帧 ThorVG 图元
         on_draw(canvas);
+        const auto build_done = SteadyClock::now();
 
         // 3. ThorVG 光栅化到 pixel_buffer（clear=true 每帧刷新背景）
         if (canvas.draw(true) != tvg::Result::Success) {
             return;
         }
+        const auto draw_done = SteadyClock::now();
         if (canvas.sync() != tvg::Result::Success) {
             return;
         }
+        const auto sync_done = SteadyClock::now();
 
         // 4. pixel_buffer → SDL 流式纹理（CPU → GPU 上传）
         if (!SDL_UpdateTexture(m_impl->texture.get(),
@@ -416,15 +493,50 @@ namespace nandina::runtime {
             m_impl->width * static_cast<int>(sizeof(std::uint32_t)))) {
             return;
         }
+        const auto upload_done = SteadyClock::now();
 
         // 5. SDL 渲染器：清空 → 贴纹理 → 呈现
         if (!SDL_RenderClear(m_impl->renderer.get())) {
             return;
         }
+        const auto clear_done = SteadyClock::now();
         if (!SDL_RenderTexture(m_impl->renderer.get(), m_impl->texture.get(), nullptr, nullptr)) {
             return;
         }
+        const auto texture_done = SteadyClock::now();
         SDL_RenderPresent(m_impl->renderer.get());
+        const auto present_done = SteadyClock::now();
+
+        const auto remove_ms  = elapsed_ms(frame_start, remove_done);
+        const auto build_ms   = elapsed_ms(remove_done, build_done);
+        const auto draw_ms    = elapsed_ms(build_done, draw_done);
+        const auto sync_ms    = elapsed_ms(draw_done, sync_done);
+        const auto upload_ms  = elapsed_ms(sync_done, upload_done);
+        const auto clear_ms   = elapsed_ms(upload_done, clear_done);
+        const auto texture_ms = elapsed_ms(clear_done, texture_done);
+        const auto present_ms = elapsed_ms(texture_done, present_done);
+        const auto total_ms   = elapsed_ms(frame_start, present_done);
+
+        const bool slow_frame = total_ms >= slow_frame_threshold_ms || build_ms >= slow_stage_threshold_ms
+            || draw_ms >= slow_stage_threshold_ms || sync_ms >= slow_stage_threshold_ms
+            || upload_ms >= slow_stage_threshold_ms || present_ms >= slow_stage_threshold_ms;
+
+        if (slow_frame && should_emit_slow_log(m_impl->last_slow_frame_log_ms)) {
+            auto log = nandina::log::get("runtime.nan_window");
+            log.warn(
+                "Slow present_frame: total={:.2f}ms remove={:.2f}ms build={:.2f}ms draw={:.2f}ms sync={:.2f}ms upload={:.2f}ms clear={:.2f}ms copy={:.2f}ms present={:.2f}ms size={}x{}",
+                total_ms,
+                remove_ms,
+                build_ms,
+                draw_ms,
+                sync_ms,
+                upload_ms,
+                clear_ms,
+                texture_ms,
+                present_ms,
+                m_impl->width,
+                m_impl->height);
+        }
     }
 
     // ============================================================
@@ -433,6 +545,7 @@ namespace nandina::runtime {
     auto NanWindow::run() -> void {
         auto last_counter = SDL_GetPerformanceCounter();
         bool ready_called = false;
+        constexpr double target_frame_seconds = 1.0 / 60.0;
 
         while (!poll_events()) {
             if (!ready_called) {
@@ -446,7 +559,28 @@ namespace nandina::runtime {
             last_counter               = current_counter;
 
             on_update(delta_seconds);
-            present_frame();
+
+            if (should_present_frame()) {
+                present_frame();
+            }
+
+            const auto frame_end_counter = SDL_GetPerformanceCounter();
+            const auto frame_freq        = static_cast<double>(SDL_GetPerformanceFrequency());
+            const double frame_seconds   = frame_freq > 0.0
+                ? static_cast<double>(frame_end_counter - current_counter) / frame_freq
+                : 0.0;
+
+            const auto now_tick_ms = static_cast<std::uint64_t>(SDL_GetTicks());
+            const bool recent_resize = m_impl && m_impl->last_resize_event_ms != 0
+                && now_tick_ms >= m_impl->last_resize_event_ms
+                && now_tick_ms - m_impl->last_resize_event_ms <= interactive_resize_window_ms;
+
+            if (!recent_resize && frame_seconds < target_frame_seconds) {
+                const auto delay_ms = static_cast<Uint32>((target_frame_seconds - frame_seconds) * 1000.0);
+                if (delay_ms > 0) {
+                    SDL_Delay(delay_ms);
+                }
+            }
         }
     }
 
@@ -457,6 +591,10 @@ namespace nandina::runtime {
     }
 
     auto NanWindow::on_draw(tvg::SwCanvas&) -> void {
+    }
+
+    auto NanWindow::should_present_frame() const noexcept -> bool {
+        return true;
     }
 
     auto NanWindow::on_resize(int, int) -> void {

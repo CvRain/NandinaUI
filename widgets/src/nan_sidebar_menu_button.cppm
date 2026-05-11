@@ -19,6 +19,9 @@ import nandina.foundation.nan_insets;
 import nandina.foundation.nan_rect;
 import nandina.foundation.nan_size;
 import nandina.foundation.color;
+import nandina.layout.core;
+import nandina.layout.container;
+import nandina.layout.flex_widgets;
 import nandina.reactive.prop;
 import nandina.widgets.surface;
 import nandina.widgets.label;
@@ -87,32 +90,6 @@ export namespace nandina::widgets {
             return *this;
         }
 
-        // -- Layout --
-        auto set_bounds(float x, float y, float w, float h) noexcept -> NanWidget& override {
-            Surface::set_bounds(x, y, w, h);
-
-            return *this;
-        }
-
-        auto layout() -> void override {
-            runtime::NanWidget::set_bounds(x(), y(), width(), height());
-
-            const float icon_size = height() * 0.48f;
-            const float icon_y    = y() + (height() - icon_size) * 0.5f;
-
-            if (m_icon) {
-                m_icon->set_bounds(x() + 14.0f, icon_y, icon_size, icon_size);
-            }
-
-            if (m_label) {
-                const float lx = x() + 42.0f;
-                const float lw = width() - 52.0f;
-                m_label->set_bounds(lx, y() + 2.0f, lw, height() - 4.0f);
-            }
-
-            NanWidget::layout();
-        }
-
         [[nodiscard]] auto preferred_size() const noexcept -> geometry::NanSize override {
             return {200.0f, 36.0f};
         }
@@ -143,19 +120,36 @@ export namespace nandina::widgets {
             m_corner_radius.set(0.0f);
             m_padding.set(geometry::NanInsets{});
 
+            auto row = layout::Row::Create();
+            row->padding(14.0f, 2.0f, 10.0f, 2.0f)
+                .gap(12.0f)
+                .align_items(nandina::layout::LayoutAlignment::stretch);
+
             auto icon = Icon::create();
             icon->set_type(IconType::Square)
                 .set_size(16.0f)
                 .set_color(nandina::NanColor::from(nandina::NanRgb{160, 162, 180}));
             m_icon = icon.get();
-            add_child(std::move(icon));
+
+            auto icon_center = layout::Center::Create();
+            icon_center->child(std::move(icon));
+
+            auto icon_slot = layout::SizedBox::Create();
+            icon_slot->width(16.0f)
+                .child(std::move(icon_center));
+            row->add(std::move(icon_slot));
 
             auto label = Label::create();
             label->set_text("")
                 .set_font_size(9.0f)
                 .set_color(nandina::NanColor::from(nandina::NanRgb{160, 162, 180}));
             m_label = label.get();
-            add_child(std::move(label));
+
+            auto label_slot = layout::Expanded::Create();
+            label_slot->child(std::move(label));
+            row->add(std::move(label_slot));
+
+            add_child(std::move(row));
         }
 
         void update_colors() {

@@ -17,6 +17,7 @@ import nandina.foundation.nan_insets;
 import nandina.foundation.nan_size;
 import nandina.foundation.nan_rect;
 import nandina.foundation.color;
+import nandina.layout.flex_widgets;
 import nandina.reactive.prop;
 import nandina.widgets.surface;
 import nandina.widgets.label;
@@ -95,7 +96,9 @@ export namespace nandina::widgets {
         // ── 可选标题 ──────────────────────────────────────
         auto set_title(std::string title) -> Card& {
             m_title = std::move(title);
-            // 如果已创建标题 Label，更新其文本
+            if (!m_title.empty() && !m_title_host) {
+                ensure_title_label();
+            }
             if (m_title_label) {
                 m_title_label->set_text(m_title);
             }
@@ -117,6 +120,7 @@ export namespace nandina::widgets {
             if (m_title_label) {
                 m_title_label->set_font_size(size);
             }
+            sync_title_host_style();
             mark_layout_dirty();
             return *this;
         }
@@ -138,6 +142,7 @@ export namespace nandina::widgets {
 
         auto set_show_accent(bool show) -> Card& {
             m_show_accent = show;
+            sync_title_host_style();
             mark_layout_dirty();
             return *this;
         }
@@ -152,32 +157,19 @@ export namespace nandina::widgets {
         }
 
         auto layout() -> void override {
-
-            // 确保标题 Label 存在
-            if (!m_title.empty() && !m_title_label) {
-                ensure_title_label();
-            }
-
-            // 标题 Label 定位在头部区域
-            if (m_title_label) {
-                const auto b             = bounds();
-                const float header_off   = title_header_height();
-                const float text_start_x = b.x() + (m_show_accent ? 12.0f : 8.0f);
-                const float text_y       = b.y() + header_off * 0.15f;
-                const float text_w       = b.width() - 24.0f;
-                const float text_h       = header_off * 0.7f;
-                m_title_label->set_bounds(text_start_x, text_y, text_w, text_h);
+            if (m_title_host) {
+                m_title_host->set_bounds(x(), y(), width(), title_header_height());
             }
 
             // 子节点定位在标题区域下方 + padding 内
             const float header_offset = title_header_height();
-            layout_content_children(header_offset, m_title_label);
+            layout_content_children(header_offset, m_title_host);
 
             NanWidget::layout();
         }
 
         [[nodiscard]] auto preferred_size() const noexcept -> geometry::NanSize override {
-            const auto child_pref = measure_content_preferred_size(m_title_label);
+            const auto child_pref = measure_content_preferred_size(m_title_host);
 
             const auto& pad      = padding();
             const float header_h = title_header_height();
@@ -262,14 +254,32 @@ export namespace nandina::widgets {
         }
 
         auto ensure_title_label() -> void {
-            if (m_title_label || m_title.empty())
+            if (m_title_host || m_title.empty())
                 return;
+
+            auto title_host = layout::Padding::Create();
+            m_title_host    = title_host.get();
+
             auto label = Label::create();
             label->set_text(m_title)
                 .set_font_size(m_title_font_size.get())
                 .set_color(m_title_color.get());
             m_title_label = label.get();
-            add_child(std::move(label));
+            title_host->child(std::move(label));
+            sync_title_host_style();
+            add_child(std::move(title_host));
+        }
+
+        auto sync_title_host_style() -> void {
+            if (!m_title_host) {
+                return;
+            }
+
+            const float header_off = title_header_height();
+            const float left = m_show_accent ? 12.0f : 8.0f;
+            const float right = m_show_accent ? 12.0f : 16.0f;
+            const float vertical = header_off * 0.15f;
+            m_title_host->padding(left, vertical, right, vertical);
         }
 
         [[nodiscard]] auto title_header_height() const noexcept -> float {
@@ -288,6 +298,7 @@ export namespace nandina::widgets {
 
         std::string m_title;
         bool m_show_accent{false};
+        layout::Padding* m_title_host{nullptr};
         Label* m_title_label{nullptr};
     };
 

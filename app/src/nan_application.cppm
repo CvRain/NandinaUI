@@ -586,10 +586,15 @@ export namespace nandina::app {
             if (m_root_component) {
                 ensure_root_component_layout();
                 m_root_component->draw(canvas);
+                m_root_component->clear_dirty_recursive();
             }
         }
 
     private:
+        [[nodiscard]] auto needs_redraw() const noexcept -> bool {
+            return m_root_component && m_root_component->dirty();
+        }
+
         auto ensure_root_component_layout() -> void {
             if (!m_root_component) {
                 return;
@@ -637,6 +642,10 @@ export namespace nandina::app {
 
             void on_draw(tvg::SwCanvas &canvas) override {
                 m_owner.on_draw(canvas);
+            }
+
+            [[nodiscard]] auto should_present_frame() const noexcept -> bool override {
+                return m_owner.needs_redraw();
             }
 
             void on_resize(int, int) override {

@@ -644,6 +644,10 @@ TEST(AppAuthoringTest, AppWindowDrawConsumesRootLayoutDirtyAndReflowsTree) {
     ThorvgCanvasScope canvas_scope{80u, 60u};
     window.draw_once(canvas_scope.canvas());
 
+    EXPECT_FALSE(root_ref->dirty());
+    EXPECT_FALSE(first_ref->dirty());
+    EXPECT_FALSE(second_ref->dirty());
+
     const auto first_bounds = first_ref->bounds();
     const auto second_bounds = second_ref->bounds();
 

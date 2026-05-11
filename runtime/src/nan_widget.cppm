@@ -115,6 +115,13 @@ export namespace nandina::runtime {
             m_dirty = false;
         }
 
+        auto clear_dirty_recursive() noexcept -> void {
+            m_dirty = false;
+            for (auto& child : m_children) {
+                child->clear_dirty_recursive();
+            }
+        }
+
         auto mark_dirty() noexcept -> void {
             m_dirty = true;
             if (m_parent) {

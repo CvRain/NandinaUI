@@ -160,6 +160,9 @@ export namespace nandina::runtime {
         // 每帧绘制调用，canvas 已清空。
         virtual auto on_draw(tvg::SwCanvas& canvas) -> void;
 
+        // 返回 true 表示当前帧应继续执行完整渲染与 present。
+        virtual auto should_present_frame() const noexcept -> bool;
+
         // 窗口逻辑尺寸变化后调用。
         virtual auto on_resize(int new_width, int new_height) -> void;
 
