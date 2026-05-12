@@ -547,6 +547,39 @@ TEST(AppAuthoringTest, LabelLayoutAffectingSettersMarkLayoutDirty) {
     EXPECT_TRUE(label->is_layout_dirty());
 }
 
+TEST(AppAuthoringTest, LabelLazyFontLoadRequestsRelayoutForNextFrame) {
+    auto label = nandina::widgets::Label::create();
+    label->set_text("Hello, Nandina");
+    label->set_bounds(0.0f, 0.0f, 160.0f, 32.0f);
+    EXPECT_FALSE(label->is_layout_dirty());
+
+    ThorvgCanvasScope canvas_scope{160u, 32u};
+    label->draw(canvas_scope.canvas());
+
+    EXPECT_TRUE(label->font() != nullptr);
+    EXPECT_TRUE(label->is_layout_dirty());
+    EXPECT_TRUE(label->dirty());
+
+    label->clear_dirty_recursive();
+    EXPECT_TRUE(label->dirty());
+}
+
+TEST(AppAuthoringTest, LabelMeasureUsesConstraintWidthForWrappedHeight) {
+    auto label = nandina::widgets::Label::create();
+    label->set_text("Nandina UI layout wrapping verifies measured height");
+    label->set_font_size(9.0f);
+
+    label->measure(nandina::geometry::NanConstraints{0.0f, 240.0f, 0.0f, nandina::geometry::NanConstraints::k_infinity});
+    const auto wide_size = label->measured_size();
+
+    label->measure(nandina::geometry::NanConstraints{0.0f, 72.0f, 0.0f, nandina::geometry::NanConstraints::k_infinity});
+    const auto narrow_size = label->measured_size();
+
+    EXPECT_GT(wide_size.width(), 0.0f);
+    EXPECT_GT(wide_size.height(), 0.0f);
+    EXPECT_GT(narrow_size.height(), wide_size.height());
+}
+
 TEST(AppAuthoringTest, SurfacePaddingMarksLayoutDirty) {
     auto surface = nandina::widgets::Surface::create();
 

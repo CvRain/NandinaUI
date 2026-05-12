@@ -116,7 +116,7 @@ export namespace nandina::runtime {
         }
 
         auto clear_dirty_recursive() noexcept -> void {
-            m_dirty = false;
+            m_dirty = m_layout_dirty;
             for (auto& child : m_children) {
                 child->clear_dirty_recursive();
             }
@@ -416,6 +416,13 @@ export namespace nandina::runtime {
             const geometry::NanSize& size) noexcept -> void {
             m_measured_constraints = constraints;
             m_measured_size = size;
+            m_layout_dirty = false;
+        }
+
+        /// 仅清除 layout dirty 标志，不触发子节点 layout 递归。
+        /// 在自定义 layout() 实现中，子节点已通过 set_bounds 链完成布局后，
+        /// 用此方法代替 NanWidget::layout() 避免重复递归。
+        auto clear_layout_dirty() noexcept -> void {
             m_layout_dirty = false;
         }
 

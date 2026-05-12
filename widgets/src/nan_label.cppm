@@ -4,6 +4,7 @@
 
 module;
 
+#include <cmath>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -68,6 +69,7 @@ export namespace nandina::widgets {
         // ── 属性设置 ──────────────────────────────────────
         auto set_text(std::string_view text) -> Label& {
             m_text.set(std::string{text});
+            m_shape_cache_valid = false;
             mark_layout_dirty();
             return *this;
         }
@@ -75,6 +77,7 @@ export namespace nandina::widgets {
         auto set_font_size(float size) -> Label& {
             m_font_size.set(size);
             m_font.reset(); // 字号变化 → 重置字体（下次懒加载新字号）
+            m_shape_cache_valid = false;
             mark_layout_dirty();
             return *this;
         }
@@ -85,6 +88,7 @@ export namespace nandina::widgets {
             if (m_font) {
                 m_font_size.set(m_font->size_pt());
             }
+            m_shape_cache_valid = false;
             mark_layout_dirty();
             return *this;
         }
@@ -143,6 +147,33 @@ export namespace nandina::widgets {
             return {text_w, fs * 1.4f};
         }
 
+        auto measure(const geometry::NanConstraints& constraints) -> void override {
+            const auto& txt = m_text.get();
+            if (txt.empty()) {
+                set_measured_layout_state(constraints, geometry::NanSize{});
+                return;
+            }
+
+            static_cast<void>(ensure_font(false));
+
+            geometry::NanSize measured{};
+            if (m_font) {
+                const float max_width = constraints.max_width() != geometry::NanConstraints::k_infinity
+                    ? constraints.max_width()
+                    : 0.0f;
+                const auto& layout = cached_shape(txt, max_width > 0.0f ? max_width : 0.0f);
+                if (!layout.empty()) {
+                    measured = geometry::NanSize{layout.total_width, layout.total_height};
+                }
+            }
+
+            if (measured.width() <= 0.0f && measured.height() <= 0.0f) {
+                measured = preferred_size();
+            }
+
+            set_measured_layout_state(constraints, constraints.constrain(measured));
+        }
+
     protected:
         void on_draw(tvg::SwCanvas& canvas) override {
             const auto& txt = m_text.get();
@@ -150,7 +181,9 @@ export namespace nandina::widgets {
                 return;
 
             // 懒加载字体
-            ensure_font();
+            if (ensure_font(true)) {
+                return;
+            }
 
             if (!m_font) {
                 return; // 字体加载失败时放弃绘制
@@ -161,7 +194,7 @@ export namespace nandina::widgets {
 
             // 使用 NanFont::shape() 布局文本（限制宽度 = bounds_width，支持自动换行）
             const float max_width = bnds.width();
-            auto layout           = m_font->shape(txt, max_width > 0.0f ? max_width : 0.0f, 0);
+            const auto& layout    = cached_shape(txt, max_width > 0.0f ? max_width : 0.0f);
 
             if (layout.empty())
                 return;
@@ -204,15 +237,39 @@ export namespace nandina::widgets {
     private:
         Label() = default;
 
+        /// 带缓存的 shape 调用。
+        /// 缓存 key：(text, max_width)——字体固定在 m_font 中，text/font 变化时
+        /// set_text/set_font/set_font_size 已置 m_shape_cache_valid = false。
+        /// max_width 按 0.5px 粒度对齐，消除亚像素抖动导致的缓存穿透。
+        [[nodiscard]] auto cached_shape(const std::string& txt, float max_width) const -> const text::TextLayout& {
+            const float quantized = std::round(max_width * 2.0f) * 0.5f;
+            if (m_shape_cache_valid &&
+                m_cached_shape_text == txt &&
+                m_cached_shape_max_width == quantized) {
+                return m_cached_shape_result;
+            }
+            m_cached_shape_result     = m_font->shape(txt, quantized > 0.0f ? quantized : 0.0f, 0);
+            m_cached_shape_text       = txt;
+            m_cached_shape_max_width  = quantized;
+            m_shape_cache_valid       = true;
+            return m_cached_shape_result;
+        }
+
         /// 懒加载字体：如果 m_font 为空，尝试加载系统默认字体。
-        auto ensure_font() -> void {
+        [[nodiscard]] auto ensure_font(const bool invalidate_layout) -> bool {
             if (m_font)
-                return;
+                return false;
             try {
                 m_font = text::NanFont::load_system_default(m_font_size.get());
+                if (invalidate_layout) {
+                    // 首次在绘制路径拿到真实字体度量后，需要先触发布局再进入下一帧绘制。
+                    mark_layout_dirty();
+                }
+                return true;
             } catch (const std::exception&) {
                 // 字体加载失败——静默跳过绘制
                 // 错误已由 NanFont 内部日志记录
+                return false;
             }
         }
 
@@ -224,6 +281,12 @@ export namespace nandina::widgets {
 
         TextAlign m_align{TextAlign::Start};
         TextVerticalAlign m_valign{TextVerticalAlign::Top};
+
+        // ── shape 结果缓存 ────────────────────────────────────────
+        mutable text::TextLayout m_cached_shape_result{};
+        mutable std::string      m_cached_shape_text{};
+        mutable float            m_cached_shape_max_width{-1.0f};
+        mutable bool             m_shape_cache_valid{false};
     };
 
 } // namespace nandina::widgets

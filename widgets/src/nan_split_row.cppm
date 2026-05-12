@@ -107,7 +107,7 @@ export namespace nandina::widgets {
                 m_trailing->set_bounds(x() + leading_w + m_gap, y(), trailing_w, height());
             }
 
-            NanWidget::layout();
+            clear_layout_dirty();
         }
 
         auto set_bounds(const float x, const float y, const float w, const float h) noexcept -> NanWidget& override {

@@ -144,7 +144,7 @@ export namespace nandina::widgets {
 
         auto layout() -> void override {
             layout_content_children(m_header_height.get());
-            NanWidget::layout();
+            clear_layout_dirty();
         }
 
         [[nodiscard]] auto preferred_size() const noexcept -> geometry::NanSize override {

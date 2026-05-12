@@ -101,8 +101,6 @@ export namespace nandina::widgets {
         }
 
         auto layout() -> void override {
-            runtime::NanWidget::set_bounds(x(), y(), width(), height());
-
             const float label_height  = 16.0f;
             const float accent_offset = 14.0f;
 
@@ -132,7 +130,7 @@ export namespace nandina::widgets {
                 item_y += ch + 2.0f;
             });
 
-            NanWidget::layout();
+            clear_layout_dirty();
         }
 
         [[nodiscard]] auto preferred_size() const noexcept -> geometry::NanSize override {

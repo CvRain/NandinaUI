@@ -341,17 +341,14 @@ public:
     }
 
 protected:
-    auto set_bounds(const float x, const float y, const float w, const float h) noexcept -> NanWidget& override {
-        NanWidget::set_bounds(x, y, w, h);
-        m_layout_valid = false;
-        return *this;
+    auto layout() -> void override {
+        if (m_root_row) {
+            m_root_row->set_bounds(x(), y(), width(), height());
+        }
+        clear_layout_dirty();
     }
 
     auto on_draw(tvg::SwCanvas& canvas) -> void override {
-        if (!m_layout_valid) {
-            flush_layout();
-        }
-
         draw_rect(canvas, 0.0f, 0.0f, width(), height(), 21, 24, 32, 255);
     }
 
@@ -405,16 +402,6 @@ private:
         m_main_column->add(std::move(bottom_slot));
     }
 
-    auto flush_layout() -> void {
-        if (!m_root_row) {
-            return;
-        }
-
-        m_root_row->measure(nandina::geometry::NanConstraints::tight(width(), height()));
-        m_root_row->set_bounds(0.0f, 0.0f, width(), height());
-        m_layout_valid = true;
-    }
-
 private:
     nandina::layout::Row* m_root_row{nullptr};
     nandina::layout::SizedBox* m_sidebar_slot{nullptr};
@@ -424,7 +411,6 @@ private:
     nandina::layout::SizedBox* m_hero_slot{nullptr};
     nandina::widgets::SplitRow* m_split_row{nullptr};
     nandina::layout::SizedBox* m_bottom_slot{nullptr};
-    bool m_layout_valid{false};
 };
 
 export class MainWindow final : public nandina::app::NanAppWindow {

@@ -165,7 +165,7 @@ export namespace nandina::widgets {
             const float header_offset = title_header_height();
             layout_content_children(header_offset, m_title_host);
 
-            NanWidget::layout();
+            clear_layout_dirty();
         }
 
         [[nodiscard]] auto preferred_size() const noexcept -> geometry::NanSize override {

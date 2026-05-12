@@ -121,7 +121,7 @@ export namespace nandina::widgets {
 
         auto layout() -> void override {
             layout_content_children();
-            NanWidget::layout();
+            clear_layout_dirty();
         }
 
         auto set_bounds(float x, float y, float w, float h) noexcept -> NanWidget& override {

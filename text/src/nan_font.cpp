@@ -29,6 +29,7 @@ module;
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 #include <vector>
 
 module nandina.text.nan_font;
@@ -39,6 +40,38 @@ import nandina.foundation.color;  // for NanColor / NanRgb in paint
 namespace nandina::text {
 
 namespace {
+    struct FontCacheKey {
+        std::string path;
+        int size_centipt{0};
+
+        [[nodiscard]] auto operator==(const FontCacheKey&) const noexcept -> bool = default;
+    };
+
+    struct FontCacheKeyHash {
+        [[nodiscard]] auto operator()(const FontCacheKey& key) const noexcept -> std::size_t {
+            const auto path_hash = std::hash<std::string>{}(key.path);
+            const auto size_hash = std::hash<int>{}(key.size_centipt);
+            return path_hash ^ (size_hash + 0x9e3779b9u + (path_hash << 6u) + (path_hash >> 2u));
+        }
+    };
+
+    struct FontCache {
+        std::mutex mutex;
+        std::unordered_map<FontCacheKey, std::weak_ptr<NanFont>, FontCacheKeyHash> entries;
+    };
+
+    [[nodiscard]] auto font_cache_key(std::string_view path, float size_pt) -> FontCacheKey {
+        return FontCacheKey{
+            .path = std::string{path},
+            .size_centipt = static_cast<int>(size_pt * 100.0f + (size_pt >= 0.0f ? 0.5f : -0.5f)),
+        };
+    }
+
+    auto font_cache() -> FontCache& {
+        static FontCache cache;
+        return cache;
+    }
+
     // ═══════════════════════════════════════════════════════════════════════
     // FreeType 全局库句柄（懒加载，线程安全）
     // ═══════════════════════════════════════════════════════════════════════
@@ -196,7 +229,6 @@ NanFont::~NanFont() = default;
 
 auto NanFont::load_from_path(std::string_view file_path, float size_pt) -> Ptr {
     auto log = nandina::log::get("text.nan_font");
-    log.debug("Loading font from \"{}\" size={:.1f}pt", file_path, size_pt);
 
     if (size_pt <= 0.0f) {
         throw std::runtime_error(std::format("Invalid font size: {}", size_pt));
@@ -207,6 +239,20 @@ auto NanFont::load_from_path(std::string_view file_path, float size_pt) -> Ptr {
     if (!std::filesystem::exists(path_str, ec) || ec) {
         throw std::runtime_error(std::format("Font file not found: {}", path_str));
     }
+
+    const auto cache_key = font_cache_key(path_str, size_pt);
+    {
+        auto& cache = font_cache();
+        std::scoped_lock lock{cache.mutex};
+        if (const auto it = cache.entries.find(cache_key); it != cache.entries.end()) {
+            if (auto cached = it->second.lock()) {
+                return cached;
+            }
+            cache.entries.erase(it);
+        }
+    }
+
+    log.debug("Loading font from \"{}\" size={:.1f}pt", path_str, size_pt);
 
     // 获取全局 FreeType 句柄
     global_ft().acquire();
@@ -229,6 +275,13 @@ auto NanFont::load_from_path(std::string_view file_path, float size_pt) -> Ptr {
     }
 
     log.info("Font loaded: \"{}\" {:.1f}pt (pixel={:.2f})", path_str, size_pt, font->m_impl->pixel_height);
+
+    {
+        auto& cache = font_cache();
+        std::scoped_lock lock{cache.mutex};
+        cache.entries[cache_key] = font;
+    }
+
     return font;
 }
 

@@ -148,7 +148,7 @@ export namespace nandina::widgets {
             for_each_child([&](runtime::NanWidget& child) {
                 child.set_bounds(x(), y(), width(), height());
             });
-            NanWidget::layout();
+            clear_layout_dirty();
         }
 
         auto set_bounds(const float x, const float y, const float w, const float h) noexcept -> NanWidget& override {

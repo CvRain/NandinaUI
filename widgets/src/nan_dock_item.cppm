@@ -118,8 +118,6 @@ export namespace nandina::widgets {
         }
 
         auto layout() -> void override {
-            runtime::NanWidget::set_bounds(x(), y(), width(), height());
-
             // 定位 Icon 子节点在中央
             if (m_icon) {
                 const float icon_size = std::min(width(), height()) * 0.5f;
@@ -128,7 +126,7 @@ export namespace nandina::widgets {
                 m_icon->set_bounds(icon_x, icon_y, icon_size, icon_size);
             }
 
-            NanWidget::layout();
+            clear_layout_dirty();
         }
 
         [[nodiscard]] auto preferred_size() const noexcept -> geometry::NanSize override {

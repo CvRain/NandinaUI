@@ -97,3 +97,4 @@ temp
 .lsp
 .clj-kondo
 vcpkg_installed
+.kilo
