@@ -3,14 +3,18 @@ project(nandina_showcase LANGUAGES CXX)
 
 # Showcase — 展示与验证应用
 # 职责：以可运行应用验证组件、布局与主题能力，不作为框架核心依赖。
-# 依赖：nandina::app（待实现后解注释）
+# 依赖：nandina::app（含 Router / PageHost / Page 抽象）
 
 set(PROJECT_CPP_FILES
         main.cpp
 )
 
 set(PROJECT_CPP_MODULE_FILES
+        nan_showcase.cppm
         pages/dashboard_page.cppm
+        pages/layout_page.cppm
+        pages/widgets_page.cppm
+        pages/authoring_page.cppm
 )
 
 add_executable(${PROJECT_NAME} ${PROJECT_CPP_FILES})

@@ -19,6 +19,9 @@ target_sources(nandina_app
         FILE_SET CXX_MODULES FILES
             src/nan_authoring.cppm
             src/nan_application.cppm
+            src/nan_page.cppm
+            src/nan_router.cppm
+            src/nan_page_host.cppm
 )
 
 target_link_libraries(nandina_app

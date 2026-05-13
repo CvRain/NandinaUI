@@ -1961,9 +1961,9 @@
 
 # Milestone M8 — App Shell 与 Navigation
 
-## Issue 063 — 定义 Page 抽象与页面元数据模型 ❌ 未完成
+## Issue 063 — 定义 Page 抽象与页面元数据模型 ✅ 已完成
 **Labels:** `area:app`, `kind:architecture`, `priority:p0`
-**Status:** ❌ 未完成 — 主线 app 层尚未出现 `Page` 抽象或页面元数据模型
+**Status:** ✅ 已完成 — `NanPage` 抽象已落地于 `app/src/nan_page.cppm`
 
 ### 目标
 建立页面层抽象，而不是直接用普通 widget 拼页面。
@@ -1988,9 +1988,9 @@
 
 ---
 
-## Issue 064 — 定义 Router 核心接口 ❌ 未完成
+## Issue 064 — 定义 Router 核心接口 ✅ 已完成
 **Labels:** `area:app`, `kind:architecture`, `priority:p0`
-**Status:** ❌ 未完成 — 主线未见 router 接口草案或导航抽象
+**Status:** ✅ 已完成 — `NanRouter` 接口与实现均已落地于 `app/src/nan_router.cppm`
 
 ### 目标
 建立应用级导航系统的基础模型。
@@ -2015,9 +2015,9 @@
 
 ---
 
-## Issue 065 — 实现 Router 最小版本 ❌ 未完成
+## Issue 065 — 实现 Router 最小版本 ✅ 已完成
 **Labels:** `area:app`, `kind:implementation`, `priority:p1`
-**Status:** ❌ 未完成 — 尚未打通从 route 到 page 实例切换的运行链路
+**Status:** ✅ 已完成 — `NanRouter`（register_page / navigate_to / on_navigate / build_current）已与 showcase 路由打通
 
 ### 目标
 打通从 route 到 page 实例的切换能力。
@@ -2039,9 +2039,9 @@
 
 ---
 
-## Issue 066 — 实现 PageHost / 内容区域承载容器 ❌ 未完成
+## Issue 066 — 实现 PageHost / 内容区域承载容器 ✅ 已完成
 **Labels:** `area:app`, `kind:implementation`, `priority:p1`
-**Status:** ❌ 未完成 — 主线未见承载当前页面与 mount/unmount 的 PageHost 对象
+**Status:** ✅ 已完成 — `NanPageHost` 已落地于 `app/src/nan_page_host.cppm`，支持延迟换页、bounds 传播与 layout 刷新
 
 ### 目标
 提供页面显示区域与页面生命周期承载对象。
@@ -2063,9 +2063,9 @@
 
 ---
 
-## Issue 067 — 实现基础应用壳结构（导航 + 内容区） ⚠️ 部分完成
+## Issue 067 — 实现基础应用壳结构（导航 + 内容区） ✅ 已完成
 **Labels:** `area:app`, `kind:implementation`, `priority:p1`
-**Status:** ⚠️ 部分完成 — showcase 已形成应用壳雏形，但尚未抽象为通用 `app/shell`
+**Status:** ✅ 已完成 — `nan_showcase.cppm` 中 `MainShell` 形成 sidebar（含路由导航）+ `NanPageHost`（内容区）的完整应用壳结构
 
 ### 目标
 形成一个能支撑 showcase 的最小应用壳。
@@ -2144,9 +2144,9 @@
 
 ---
 
-## Issue 070 — 实现 showcase 页面注册机制 ❌ 未完成
+## Issue 070 — 实现 showcase 页面注册机制 ✅ 已完成
 **Labels:** `area:showcase`, `area:app`, `kind:implementation`, `priority:p1`
-**Status:** ❌ 未完成 — showcase 仍未形成集中式页面注册与 route binding 机制
+**Status:** ✅ 已完成 — showcase 已通过 `NanRouter::register_page()` 实现集中式页面注册；`nan_showcase.cppm` 注册 Overview/Layout/Widgets/Authoring 四个页面
 
 ### 目标
 提供集中式页面注册，便于组件文档化展示。
@@ -2572,3 +2572,9 @@
 | Issue | 标题 | 完成日期 | 提交记录 |
 |-------|------|----------|----------|
 | 069 | 建立 showcase 应用基础入口 | 2026-05-02 | `abe263e`, `45e18d2` |
+| 063 | 定义 Page 抽象与页面元数据模型 | 2026-05-13 | 待提交 |
+| 064 | 定义 Router 核心接口 | 2026-05-13 | 待提交 |
+| 065 | 实现 Router 最小版本 | 2026-05-13 | 待提交 |
+| 066 | 实现 PageHost 内容区域承载容器 | 2026-05-13 | 待提交 |
+| 067 | 实现基础应用壳结构（sidebar + PageHost） | 2026-05-13 | 待提交 |
+| 070 | 实现 showcase 页面注册机制 | 2026-05-13 | 待提交 |
