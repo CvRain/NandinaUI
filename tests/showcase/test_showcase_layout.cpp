@@ -8,7 +8,7 @@
 
 import nandina.app.authoring;
 import nandina.runtime.nan_widget;
-import nandina.showcase;
+import nandina.showcase.overview_page;
 
 namespace {
 
@@ -83,98 +83,87 @@ public:
 
 } // namespace
 
-TEST(ShowcaseLayoutTest, MainComponent_UsesSidebarAndCapabilityBoard) {
-    MainComponent component;
+TEST(ShowcaseLayoutTest, OverviewContent_HasPaddingRootAndThreeContentSections) {
+    OverviewContent component;
 
+    // OverviewContent 结构：root_padding → main_column(3子)
     ASSERT_EQ(component.child_count(), 1u);
 
-    auto& root_row = child_at(component, 0);
-    ASSERT_EQ(root_row.child_count(), 2u);
+    auto& root_padding = child_at(component, 0);
+    ASSERT_EQ(root_padding.child_count(), 1u);
 
-    auto& sidebar_slot = child_at(root_row, 0);
-    auto& main_expanded = child_at(root_row, 1);
-    ASSERT_EQ(sidebar_slot.child_count(), 1u);
-    ASSERT_EQ(main_expanded.child_count(), 1u);
-
-    auto& main_padding = child_at(main_expanded, 0);
-    ASSERT_EQ(main_padding.child_count(), 1u);
-
-    auto& main_column = child_at(main_padding, 0);
+    auto& main_column = child_at(root_padding, 0);
+    // hero_slot / split / bottom_slot
     ASSERT_EQ(main_column.child_count(), 3u);
 }
 
-TEST(ShowcaseLayoutTest, MainComponent_DrawPassLaysOutPrimaryRegions) {
-    MainComponent component;
+TEST(ShowcaseLayoutTest, OverviewContent_DrawPassLaysOutContentRegions) {
+    OverviewContent component;
     static_cast<nandina::runtime::NanWidget&>(component).set_bounds(0.0f, 0.0f, 1280.0f, 720.0f);
 
     ThorvgCanvasScope canvas_scope{1280u, 720u};
     component.draw(canvas_scope.canvas());
 
-    auto& root_row = child_at(component, 0);
-    auto& sidebar_slot = child_at(root_row, 0);
-    auto& main_expanded = child_at(root_row, 1);
-    auto& main_padding = child_at(main_expanded, 0);
-    auto& main_column = child_at(main_padding, 0);
+    // root_padding fills entire bounds
+    auto& root_padding = child_at(component, 0);
+    EXPECT_FLOAT_EQ(root_padding.bounds().x(), 0.0f);
+    EXPECT_FLOAT_EQ(root_padding.bounds().y(), 0.0f);
+    EXPECT_FLOAT_EQ(root_padding.bounds().width(), 1280.0f);
+    EXPECT_FLOAT_EQ(root_padding.bounds().height(), 720.0f);
 
-    const auto sidebar_bounds = sidebar_slot.bounds();
-    EXPECT_FLOAT_EQ(sidebar_bounds.x(), 0.0f);
-    EXPECT_FLOAT_EQ(sidebar_bounds.y(), 0.0f);
-    EXPECT_FLOAT_EQ(sidebar_bounds.width(), 260.0f);
-    EXPECT_FLOAT_EQ(sidebar_bounds.height(), 720.0f);
+    // main_column inset by padding=20 on all sides
+    auto& main_column = child_at(root_padding, 0);
+    EXPECT_FLOAT_EQ(main_column.bounds().x(), 20.0f);
+    EXPECT_FLOAT_EQ(main_column.bounds().y(), 20.0f);
+    EXPECT_FLOAT_EQ(main_column.bounds().width(), 1240.0f);
+    EXPECT_FLOAT_EQ(main_column.bounds().height(), 680.0f);
 
-    const auto main_bounds = main_expanded.bounds();
-    EXPECT_FLOAT_EQ(main_bounds.x(), 260.0f);
-    EXPECT_FLOAT_EQ(main_bounds.y(), 0.0f);
-    EXPECT_FLOAT_EQ(main_bounds.width(), 1020.0f);
-    EXPECT_FLOAT_EQ(main_bounds.height(), 720.0f);
-
-    const auto content_bounds = main_column.bounds();
-    EXPECT_FLOAT_EQ(content_bounds.x(), 280.0f);
-    EXPECT_FLOAT_EQ(content_bounds.y(), 20.0f);
-    EXPECT_FLOAT_EQ(content_bounds.width(), 980.0f);
-    EXPECT_FLOAT_EQ(content_bounds.height(), 680.0f);
-
-    auto& hero_slot = child_at(main_column, 0);
-    auto& split_row = child_at(main_column, 1);
+    // hero_slot: height=136, starts at column top
+    auto& hero_slot   = child_at(main_column, 0);
+    auto& split_row   = child_at(main_column, 1);
     auto& bottom_slot = child_at(main_column, 2);
 
-    EXPECT_FLOAT_EQ(hero_slot.bounds().x(), 280.0f);
+    EXPECT_FLOAT_EQ(hero_slot.bounds().x(), 20.0f);
     EXPECT_FLOAT_EQ(hero_slot.bounds().y(), 20.0f);
-    EXPECT_FLOAT_EQ(hero_slot.bounds().width(), 980.0f);
+    EXPECT_FLOAT_EQ(hero_slot.bounds().width(), 1240.0f);
     EXPECT_FLOAT_EQ(hero_slot.bounds().height(), 136.0f);
 
-    EXPECT_FLOAT_EQ(split_row.bounds().x(), 280.0f);
-    EXPECT_FLOAT_EQ(split_row.bounds().y(), 176.0f);
-    EXPECT_FLOAT_EQ(split_row.bounds().width(), 980.0f);
+    // split_row: height=280, gap=20 after hero
+    EXPECT_FLOAT_EQ(split_row.bounds().x(), 20.0f);
+    EXPECT_FLOAT_EQ(split_row.bounds().y(), 176.0f); // 20+136+20
+    EXPECT_FLOAT_EQ(split_row.bounds().width(), 1240.0f);
     EXPECT_FLOAT_EQ(split_row.bounds().height(), 280.0f);
 
-    EXPECT_FLOAT_EQ(bottom_slot.bounds().x(), 280.0f);
-    EXPECT_FLOAT_EQ(bottom_slot.bounds().y(), 476.0f);
-    EXPECT_FLOAT_EQ(bottom_slot.bounds().width(), 980.0f);
+    // bottom_slot: height=224, gap=20 after split
+    EXPECT_FLOAT_EQ(bottom_slot.bounds().x(), 20.0f);
+    EXPECT_FLOAT_EQ(bottom_slot.bounds().y(), 476.0f); // 176+280+20
+    EXPECT_FLOAT_EQ(bottom_slot.bounds().width(), 1240.0f);
     EXPECT_FLOAT_EQ(bottom_slot.bounds().height(), 224.0f);
 }
 
-TEST(ShowcaseLayoutTest, MainComponent_DrawPassProducesDistinctRegions) {
-    MainComponent component;
+TEST(ShowcaseLayoutTest, OverviewContent_DrawPassProducesVisiblePixels) {
+    OverviewContent component;
     static_cast<nandina::runtime::NanWidget&>(component).set_bounds(0.0f, 0.0f, 1280.0f, 720.0f);
 
     ThorvgCanvasScope canvas_scope{1280u, 720u};
     component.draw(canvas_scope.canvas());
     canvas_scope.render();
 
-    const auto sidebar_pixel = canvas_scope.pixel_at(40u, 40u);
-    const auto hero_pixel = canvas_scope.pixel_at(320u, 60u);
+    // hero 区域内的像素（位于 padding=20 内的英雄卡片）
+    const auto hero_pixel       = canvas_scope.pixel_at(320u, 60u);
+    // split 区域（y≈200）
+    const auto split_pixel      = canvas_scope.pixel_at(320u, 200u);
+    // bottom 卡片区域（y≈520）
     const auto lower_card_pixel = canvas_scope.pixel_at(980u, 520u);
 
-    EXPECT_GT(alpha_of(sidebar_pixel), 0u);
     EXPECT_GT(alpha_of(hero_pixel), 0u);
+    EXPECT_GT(alpha_of(split_pixel), 0u);
     EXPECT_GT(alpha_of(lower_card_pixel), 0u);
 
-    EXPECT_NE(sidebar_pixel, hero_pixel);
     EXPECT_NE(hero_pixel, lower_card_pixel);
 }
 
-TEST(ShowcaseLayoutTest, AppWindowWrappedMainComponentStillDrawsShowcaseRegions) {
+TEST(ShowcaseLayoutTest, AppWindowWrappedOverviewContentDrawsVisiblePixels) {
     TestShowcaseWindow window({
         .title = "Showcase Test",
         .width = 1280,
@@ -182,16 +171,16 @@ TEST(ShowcaseLayoutTest, AppWindowWrappedMainComponentStillDrawsShowcaseRegions)
         .resizable = false,
         .high_dpi = false,
     });
-    window.set_root(nandina::app::adopt(std::make_unique<MainComponent>()));
+    window.set_root(nandina::app::adopt(std::make_unique<OverviewContent>()));
 
     ThorvgCanvasScope canvas_scope{1280u, 720u};
     window.draw_once(canvas_scope.canvas());
     canvas_scope.render();
 
-    const auto sidebar_pixel = canvas_scope.pixel_at(40u, 40u);
-    const auto hero_pixel = canvas_scope.pixel_at(320u, 60u);
+    const auto hero_pixel    = canvas_scope.pixel_at(320u, 60u);
+    const auto content_pixel = canvas_scope.pixel_at(320u, 200u);
 
-    EXPECT_GT(alpha_of(sidebar_pixel), 0u);
     EXPECT_GT(alpha_of(hero_pixel), 0u);
-    EXPECT_NE(sidebar_pixel, hero_pixel);
+    EXPECT_GT(alpha_of(content_pixel), 0u);
+    EXPECT_NE(hero_pixel, content_pixel);
 }

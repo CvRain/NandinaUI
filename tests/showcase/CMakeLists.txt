@@ -10,4 +10,5 @@ nandina_add_test(
         nandina::app
         nandina::layout
         nandina::widgets
+        nandina::text
 )

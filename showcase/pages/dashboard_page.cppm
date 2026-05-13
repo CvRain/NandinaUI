@@ -311,8 +311,8 @@ namespace {
 
 } // namespace
 
-// ── OverviewContent — 页面内容组件（私有，不对外导出） ─────────────────────
-class OverviewContent final : public nandina::app::NanComponent {
+// ── OverviewContent — 页面内容组件 ─────────────────────────────────────────
+export class OverviewContent final : public nandina::app::NanComponent {
 public:
     OverviewContent() {
         build_content();
@@ -324,6 +324,14 @@ protected:
             m_root_padding->set_bounds(x(), y(), width(), height());
         }
         clear_layout_dirty();
+    }
+
+    auto set_bounds(const float x, const float y, const float w, const float h) noexcept
+        -> nandina::runtime::NanWidget& override {
+        nandina::runtime::NanWidget::set_bounds(x, y, w, h);
+        measure(nandina::geometry::NanConstraints::tight(w, h));
+        layout();
+        return *this;
     }
 
 private:
