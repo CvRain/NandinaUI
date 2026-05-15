@@ -126,18 +126,28 @@ namespace nandina::widgets {
     auto Button::update_visual_state() -> void {
         const auto state = m_pressable->state();
 
+        nandina::NanColor target_bg;
+        nandina::NanColor target_text;
+
         if (state.disabled) {
-            set_bg_color(m_colors.bg_disabled);
-            m_label->set_color(m_colors.text_disabled);
+            target_bg = m_colors.bg_disabled;
+            target_text = m_colors.text_disabled;
         } else if (state.pressed) {
-            set_bg_color(m_colors.bg_pressed);
-            m_label->set_color(m_colors.text);
+            target_bg = m_colors.bg_pressed;
+            target_text = m_colors.text;
         } else if (state.hovered) {
-            set_bg_color(m_colors.bg_hover);
-            m_label->set_color(m_colors.text);
+            target_bg = m_colors.bg_hover;
+            target_text = m_colors.text;
         } else {
-            set_bg_color(m_colors.bg);
-            m_label->set_color(m_colors.text);
+            target_bg = m_colors.bg;
+            target_text = m_colors.text;
+        }
+
+        if (bg_color() != target_bg) {
+            set_bg_color(target_bg);
+        }
+        if (m_label->color() != target_text) {
+            m_label->set_color(target_text);
         }
     }
 

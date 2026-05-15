@@ -24,6 +24,7 @@
 | 文档 | 说明 |
 |------|------|
 | [架构规划](architecture-plan.md) | 顶层分层、依赖方向、稳定边界 `[已定稿]` |
+| [Page / Router 合约（MVP）](page-contract.md) | 固定 `NanPage` / `NanRouter` / `NanPageHost` 当前职责边界与后续演进顺序 `[已定稿]` |
 | [组件 Authoring 与挂载 API 设计](component-authoring-and-mounting.md) | 面向使用者的组件组合、挂载、引用与无显式 `move` 方向 `[草案]` |
 | [无显式 move 的组件组合 API（V1 草案）](component-composition-api-v1.md) | 第一版具体接口签名与使用示例，覆盖 `Node` / `Ref<T>` / `mount(...)` `[草案]` |
 | [布局策略](layout-strategy.md) | 当前布局阶段策略、自动布局目标与 Yoga 接入时机 `[草案]` |
@@ -88,10 +89,11 @@
 | M1: runtime + reactive | ⚠️ 核心闭环完成 | Issue 005-028 |
 | M2: layout + theme | 🚧 进行中 | Issue 029-042, Issue 082-089 |
 | M3: first widgets | ⚠️ 已有可运行实现，待收口 | Widgets / Showcase 相关章节 |
-| M4: app shell + router/page | ⚠️ 部分完成 | App / Showcase 相关章节 |
+| M4: app shell + router/page | ⚠️ 核心骨架已落地，待收口 | App / Showcase 相关章节 |
 | M5: render abstraction / text / scriptability | 🚧 早期 | Render / Text / Docs 相关章节 |
 
 > 注：这里的里程碑口径与 [阶段路线图](roadmap.md) 保持一致；[开发 Issue 清单](develop-issue.md) 中的 Milestone 划分更细，用于跟踪模块级实现进度。
+> 其中 M4 当前应理解为：Page / Router / PageHost 与 showcase shell 已经接通，但 registry、测试覆盖与更通用的 app 收口工作仍在后续范围内。
 
 ## 文档状态说明
 

@@ -7,8 +7,11 @@
 #include <thorvg-1/thorvg.h>
 
 import nandina.app.authoring;
+import nandina.runtime.nan_event;
 import nandina.runtime.nan_widget;
+import nandina.showcase;
 import nandina.showcase.overview_page;
+import nandina.widgets.sidebar_menu_button;
 
 namespace {
 
@@ -16,6 +19,18 @@ auto child_at(nandina::runtime::NanWidget& widget, const std::size_t index) -> n
     auto& children = widget.children();
     EXPECT_LT(index, children.size());
     return *children.at(index);
+}
+
+auto collect_sidebar_buttons(
+    nandina::runtime::NanWidget& widget,
+    std::vector<nandina::widgets::SidebarMenuButton*>& out) -> void {
+    if (auto* button = dynamic_cast<nandina::widgets::SidebarMenuButton*>(&widget)) {
+        out.push_back(button);
+    }
+
+    for (auto& child : widget.children()) {
+        collect_sidebar_buttons(*child, out);
+    }
 }
 
 class ThorvgCanvasScope {
@@ -81,15 +96,21 @@ public:
     return static_cast<std::uint8_t>((pixel >> 24u) & 0xffu);
 }
 
+auto make_overview_root() -> nandina::app::NanComponent::Ptr {
+    OverviewPage page;
+    return page.build();
+}
+
 } // namespace
 
-TEST(ShowcaseLayoutTest, OverviewContent_HasPaddingRootAndThreeContentSections) {
-    OverviewContent component;
+TEST(ShowcaseLayoutTest, OverviewPageBuild_HasPaddingRootAndThreeContentSections) {
+    auto component = make_overview_root();
+    ASSERT_NE(component, nullptr);
 
-    // OverviewContent 结构：root_padding → main_column(3子)
-    ASSERT_EQ(component.child_count(), 1u);
+    // OverviewPage::build() 返回 mounted component，其直接子节点就是 root_padding。
+    ASSERT_EQ(component->child_count(), 1u);
 
-    auto& root_padding = child_at(component, 0);
+    auto& root_padding = child_at(*component, 0);
     ASSERT_EQ(root_padding.child_count(), 1u);
 
     auto& main_column = child_at(root_padding, 0);
@@ -97,15 +118,16 @@ TEST(ShowcaseLayoutTest, OverviewContent_HasPaddingRootAndThreeContentSections) 
     ASSERT_EQ(main_column.child_count(), 3u);
 }
 
-TEST(ShowcaseLayoutTest, OverviewContent_DrawPassLaysOutContentRegions) {
-    OverviewContent component;
-    static_cast<nandina::runtime::NanWidget&>(component).set_bounds(0.0f, 0.0f, 1280.0f, 720.0f);
+TEST(ShowcaseLayoutTest, OverviewPageBuild_DrawPassLaysOutContentRegions) {
+    auto component = make_overview_root();
+    ASSERT_NE(component, nullptr);
+    static_cast<nandina::runtime::NanWidget&>(*component).set_bounds(0.0f, 0.0f, 1280.0f, 720.0f);
 
     ThorvgCanvasScope canvas_scope{1280u, 720u};
-    component.draw(canvas_scope.canvas());
+    component->draw(canvas_scope.canvas());
 
     // root_padding fills entire bounds
-    auto& root_padding = child_at(component, 0);
+    auto& root_padding = child_at(*component, 0);
     EXPECT_FLOAT_EQ(root_padding.bounds().x(), 0.0f);
     EXPECT_FLOAT_EQ(root_padding.bounds().y(), 0.0f);
     EXPECT_FLOAT_EQ(root_padding.bounds().width(), 1280.0f);
@@ -141,12 +163,13 @@ TEST(ShowcaseLayoutTest, OverviewContent_DrawPassLaysOutContentRegions) {
     EXPECT_FLOAT_EQ(bottom_slot.bounds().height(), 224.0f);
 }
 
-TEST(ShowcaseLayoutTest, OverviewContent_DrawPassProducesVisiblePixels) {
-    OverviewContent component;
-    static_cast<nandina::runtime::NanWidget&>(component).set_bounds(0.0f, 0.0f, 1280.0f, 720.0f);
+TEST(ShowcaseLayoutTest, OverviewPageBuild_DrawPassProducesVisiblePixels) {
+    auto component = make_overview_root();
+    ASSERT_NE(component, nullptr);
+    static_cast<nandina::runtime::NanWidget&>(*component).set_bounds(0.0f, 0.0f, 1280.0f, 720.0f);
 
     ThorvgCanvasScope canvas_scope{1280u, 720u};
-    component.draw(canvas_scope.canvas());
+    component->draw(canvas_scope.canvas());
     canvas_scope.render();
 
     // hero 区域内的像素（位于 padding=20 内的英雄卡片）
@@ -163,7 +186,7 @@ TEST(ShowcaseLayoutTest, OverviewContent_DrawPassProducesVisiblePixels) {
     EXPECT_NE(hero_pixel, lower_card_pixel);
 }
 
-TEST(ShowcaseLayoutTest, AppWindowWrappedOverviewContentDrawsVisiblePixels) {
+TEST(ShowcaseLayoutTest, AppWindowWrappedOverviewPageDrawsVisiblePixels) {
     TestShowcaseWindow window({
         .title = "Showcase Test",
         .width = 1280,
@@ -171,7 +194,7 @@ TEST(ShowcaseLayoutTest, AppWindowWrappedOverviewContentDrawsVisiblePixels) {
         .resizable = false,
         .high_dpi = false,
     });
-    window.set_root(nandina::app::adopt(std::make_unique<OverviewContent>()));
+    window.set_root_component(make_overview_root());
 
     ThorvgCanvasScope canvas_scope{1280u, 720u};
     window.draw_once(canvas_scope.canvas());
@@ -183,4 +206,35 @@ TEST(ShowcaseLayoutTest, AppWindowWrappedOverviewContentDrawsVisiblePixels) {
     EXPECT_GT(alpha_of(hero_pixel), 0u);
     EXPECT_GT(alpha_of(content_pixel), 0u);
     EXPECT_NE(hero_pixel, content_pixel);
+}
+
+TEST(ShowcaseLayoutTest, ShowcaseShellSidebarActiveStateTracksNavigation) {
+    auto mounted = nandina::app::mount(nandina::showcase::create_showcase_shell_content());
+    ASSERT_NE(mounted, nullptr);
+
+    mounted->set_bounds(0.0f, 0.0f, 1280.0f, 720.0f);
+
+    auto& root_row = child_at(*mounted, 0);
+    std::vector<nandina::widgets::SidebarMenuButton*> buttons;
+    collect_sidebar_buttons(root_row, buttons);
+
+    ASSERT_GE(buttons.size(), 4u);
+    EXPECT_TRUE(buttons[0]->is_active());
+    EXPECT_FALSE(buttons[1]->is_active());
+    EXPECT_FALSE(buttons[2]->is_active());
+    EXPECT_FALSE(buttons[3]->is_active());
+
+    const auto click_event = nandina::runtime::Event{nandina::runtime::PointerButtonEvent{
+        .button = nandina::types::PointerButton::Left,
+        .x = 0.0,
+        .y = 0.0,
+        .is_repeat = false,
+    }};
+
+    EXPECT_TRUE(buttons[1]->dispatch_event(click_event));
+
+    EXPECT_FALSE(buttons[0]->is_active());
+    EXPECT_TRUE(buttons[1]->is_active());
+    EXPECT_FALSE(buttons[2]->is_active());
+    EXPECT_FALSE(buttons[3]->is_active());
 }

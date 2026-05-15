@@ -4,3 +4,10 @@ nandina_add_test(
     DEPS
         nandina::app
 )
+
+nandina_add_test(
+    NAME    test_app_navigation
+    SOURCES test_app_navigation.cpp
+    DEPS
+        nandina::app
+)

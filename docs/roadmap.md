@@ -89,8 +89,8 @@
 
 **当前判断**
 - app 层已有 `NanAppWindow`、`NanComponent`、`Node/Ref/mount` 第一版 authoring API
-- showcase 已具备 shell 与 dashboard 验证结构
-- router / page / page host 仍未真正落地，因此这一阶段仍未完成
+- `NanPage` / `NanRouter` / `NanPageHost` 已落地，showcase 已打通 sidebar 导航 + PageHost 内容区的最小多页面骨架
+- 当前未完成项主要转为“收口型”工作：showcase registry 单一数据源、app 导航测试覆盖、更通用的 shell / route 能力与 authoring 体验验证
 
 ## M5：render abstraction / text / scriptability 🚧 早期
 

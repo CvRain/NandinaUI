@@ -27,6 +27,7 @@ target_sources(nandina_reactive
             src/computed.cppm           # Computed<F>
             src/effect.cppm             # Effect / EffectScope
             src/prop.cppm               # Prop<T>
+            src/bindable_prop.cppm      # BindableProp<T> — 可绑定到 State 的属性包装器
             src/state_list.cppm         # StateList<T> / ListChange / ListChangeKind
             src/batch.cppm              # batch(fn)
             src/nan_animation.cppm      # Easing / NanAnimation / AnimationManager

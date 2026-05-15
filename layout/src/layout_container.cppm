@@ -54,6 +54,9 @@ export namespace nandina::layout {
     // Column/Row/Stack 继承此类并重写 layout() 方法。
     class LayoutContainer : public runtime::NanWidget {
     public:
+        // ── 诊断计数器 ──
+        inline static thread_local int s_measure_count{0};
+
         auto gap(const float value) -> LayoutContainer& {
             gap_ = value;
             request_layout();
@@ -176,7 +179,12 @@ export namespace nandina::layout {
                 });
             });
 
+            // 缓存 preferred_size（用 expand 无约束计算），避免后续 derive_child_max_size 重算
+            m_cached_preferred_size = compute_container_size(m_child_specs, geometry::NanConstraints::expand());
+            m_pref_size_valid = true;
             set_measured_layout_state(constraints, compute_container_size(m_child_specs, constraints));
+
+            s_measure_count += 1;
         }
 
         // 子类必须实现此方法
@@ -186,6 +194,9 @@ export namespace nandina::layout {
         [[nodiscard]] virtual auto layout_axis() const noexcept -> LayoutAxis = 0;
 
         [[nodiscard]] auto preferred_size() const noexcept -> geometry::NanSize override {
+            if (m_pref_size_valid && !is_layout_dirty()) {
+                return m_cached_preferred_size;
+            }
             return compute_container_size(collect_child_specs(), geometry::NanConstraints::expand());
         }
 
@@ -305,6 +316,10 @@ export namespace nandina::layout {
         LayoutAlignment align_items_     = LayoutAlignment::start;
         LayoutAlignment justify_content_ = LayoutAlignment::start;
         std::vector<LayoutChildSpec> m_child_specs;
+
+        // ── preferred_size 缓存 ──────────────────────────────
+        mutable geometry::NanSize m_cached_preferred_size{};
+        mutable bool              m_pref_size_valid{false};
     };
 
     // ── Column ───────────────────────────────────────────────

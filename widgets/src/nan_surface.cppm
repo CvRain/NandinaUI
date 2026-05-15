@@ -49,6 +49,9 @@ export namespace nandina::widgets {
 
         ~Surface() override = default;
 
+        // ── 诊断计数器（每帧由 flush_root_layout 读取并重置） ──
+        inline static thread_local int s_measure_count{0};
+
         // ── 建造者模式 ──────────────────────────────────────
         static auto create() -> Ptr {
             return Ptr{new Surface()};
@@ -113,10 +116,17 @@ export namespace nandina::widgets {
             };
 
             for_each_child([&](runtime::NanWidget& child) {
-                child.measure(child_constraints.loosen());
+                child.measure(child_constraints.is_tight()
+                    ? child_constraints
+                    : child_constraints.loosen());
             });
 
-            set_measured_layout_state(constraints, preferred_size());
+            // 计算 preferred_size 并缓存，避免后续 derive_child_max_size 等路径重复遍历子树
+            m_cached_preferred_size = compute_preferred_size();
+            m_pref_size_valid = true;
+            set_measured_layout_state(constraints, m_cached_preferred_size);
+
+            s_measure_count += 1;
         }
 
         auto layout() -> void override {
@@ -213,12 +223,11 @@ export namespace nandina::widgets {
 
         // ── 首选尺寸（考虑 padding + 子节点） ──────────────
         [[nodiscard]] auto preferred_size() const noexcept -> geometry::NanSize override {
-            const auto child_pref = measure_content_preferred_size();
-            const auto& pad       = m_padding.get();
-            return geometry::NanSize{
-                child_pref.width() + pad.left() + pad.right(),
-                child_pref.height() + pad.top() + pad.bottom()
-            };
+            // layout_dirty 时缓存失效（内容可能已变化），需要重算
+            if (m_pref_size_valid && !is_layout_dirty()) {
+                return m_cached_preferred_size;
+            }
+            return compute_preferred_size();
         }
 
     protected:
@@ -230,6 +239,20 @@ export namespace nandina::widgets {
 
         nandina::NanColor m_border_color{nandina::NanColor::from(nandina::NanRgb{0, 0, 0})};
         float m_border_width{0.0f};
+
+        // ── preferred_size 缓存（resize 时避免重复遍历子树） ──
+        mutable geometry::NanSize m_cached_preferred_size{};
+        mutable bool              m_pref_size_valid{false};
+
+    private:
+        [[nodiscard]] auto compute_preferred_size() const noexcept -> geometry::NanSize {
+            const auto child_pref = measure_content_preferred_size();
+            const auto& pad = m_padding.get();
+            return geometry::NanSize{
+                child_pref.width() + pad.left() + pad.right(),
+                child_pref.height() + pad.top() + pad.bottom()
+            };
+        }
     };
 
 } // namespace nandina::widgets

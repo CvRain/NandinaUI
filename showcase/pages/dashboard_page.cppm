@@ -311,46 +311,10 @@ namespace {
 
 } // namespace
 
-// ── OverviewContent — 页面内容组件 ─────────────────────────────────────────
-export class OverviewContent final : public nandina::app::NanComponent {
-public:
-    OverviewContent() {
-        build_content();
-    }
+export namespace nandina::showcase {
 
-protected:
-    auto layout() -> void override {
-        if (m_root_padding) {
-            m_root_padding->set_bounds(x(), y(), width(), height());
-        }
-        clear_layout_dirty();
-    }
-
-    auto set_bounds(const float x, const float y, const float w, const float h) noexcept
-        -> nandina::runtime::NanWidget& override {
-        nandina::runtime::NanWidget::set_bounds(x, y, w, h);
-        measure(nandina::geometry::NanConstraints::tight(w, h));
-        layout();
-        return *this;
-    }
-
-private:
-    auto build_content() -> void {
-        auto root_padding = nandina::layout::Padding::Create();
-        root_padding->padding(20.0f);
-        m_root_padding = root_padding.get();
-        add_child(std::move(root_padding));
-
-        auto main_column = nandina::layout::Column::Create();
-        main_column->align_items(LayoutAlignment::stretch)
-            .gap(20.0f);
-        m_main_column = main_column.get();
-        m_root_padding->child(std::move(main_column));
-
-        auto hero_slot = nandina::layout::SizedBox::Create();
-        hero_slot->height(136.0f)
-            .child(build_hero_surface());
-        m_main_column->add(std::move(hero_slot));
+    auto create_overview_content() -> app::Node {
+        using namespace nandina::app;
 
         auto split = nandina::widgets::SplitRow::create();
         split->set_gap(20.0f)
@@ -358,17 +322,21 @@ private:
             .set_preferred_height(280.0f);
         split->set_leading(build_scope_panel());
         split->set_trailing(build_layers_panel());
-        m_main_column->add(std::move(split));
 
-        auto bottom_slot = nandina::layout::SizedBox::Create();
-        bottom_slot->height(224.0f)
-            .child(build_bottom_row());
-        m_main_column->add(std::move(bottom_slot));
+        return padding(
+            column(children(
+                sized_box(adopt(build_hero_surface()))
+                    .height(136.0f),
+                sized_box(adopt(std::move(split)))
+                    .height(280.0f),
+                sized_box(adopt(build_bottom_row()))
+                    .height(224.0f)
+            )).align_items(LayoutAlignment::stretch)
+              .gap(20.0f)
+        ).padding(20.0f);
     }
 
-    nandina::layout::Padding* m_root_padding{nullptr};
-    nandina::layout::Column*  m_main_column{nullptr};
-};
+} // namespace nandina::showcase
 
 // ── OverviewPage — 导出给 Router 注册的 NanPage ────────────────────────────
 export class OverviewPage final : public nandina::app::NanPage {
@@ -379,6 +347,6 @@ public:
         return nandina::widgets::IconType::Circle;
     }
     [[nodiscard]] auto build() -> nandina::app::NanComponent::Ptr override {
-        return std::make_unique<OverviewContent>();
+        return nandina::app::mount(nandina::showcase::create_overview_content());
     }
 };

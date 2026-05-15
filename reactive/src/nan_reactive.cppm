@@ -9,6 +9,7 @@ export import nandina.reactive.state;
 export import nandina.reactive.computed;
 export import nandina.reactive.effect;
 export import nandina.reactive.prop;
+export import nandina.reactive.bindable_prop;
 export import nandina.reactive.state_list;
 export import nandina.reactive.batch;
 export import nandina.reactive.animation;

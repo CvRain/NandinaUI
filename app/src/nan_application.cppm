@@ -1,10 +1,12 @@
 module;
 
+#include <chrono>
+#include <functional>
 #include <memory>
 #include <string>
 #include <string_view>
-#include <functional>
 #include <thorvg-1/thorvg.h>
+#include <typeinfo>
 #include <utility>
 #include <vector>
 
@@ -23,6 +25,18 @@ import nandina.widgets.panel;
 import nandina.widgets.surface;
 
 export namespace nandina::app {
+    namespace detail {
+        using SteadyClock = std::chrono::steady_clock;
+
+        [[nodiscard]] inline auto elapsed_ms(
+            const SteadyClock::time_point start,
+            const SteadyClock::time_point end) noexcept -> double {
+            return std::chrono::duration<double, std::milli>(end - start).count();
+        }
+
+        inline constexpr double k_slow_layout_threshold_ms = 4.0;
+    }
+
     class NanComponent : public runtime::NanWidget {
     public:
         using Ptr = std::unique_ptr<NanComponent>;
@@ -365,14 +379,45 @@ export namespace nandina::app {
             NanWidget::set_bounds(x, y, w, h);
             if (m_root_widget) {
                 m_root_widget->runtime::NanWidget::set_bounds(x, y, w, h);
-                flush_root_layout();
+                m_pending_root_layout = true;
             }
             return *this;
         }
 
+        auto measure(const geometry::NanConstraints& constraints) -> void override {
+            if (!m_root_widget) {
+                const geometry::NanSize empty_size{};
+                set_measured_layout_state(constraints, constraints.constrain(empty_size));
+                return;
+            }
+
+            if (constraints.is_tight()) {
+                set_measured_layout_state(
+                    constraints,
+                    geometry::NanSize{constraints.max_width(), constraints.max_height()});
+                return;
+            }
+
+            m_root_widget->measure(constraints);
+            auto measured = m_root_widget->measured_size();
+            if (measured.width() <= 0.0f && measured.height() <= 0.0f) {
+                measured = m_root_widget->preferred_size();
+            }
+            set_measured_layout_state(constraints, constraints.constrain(measured));
+        }
+
+        auto layout() -> void override {
+            if (m_root_widget) {
+                m_root_widget->runtime::NanWidget::set_bounds(x(), y(), width(), height());
+                m_pending_root_layout = true;
+                flush_root_layout("component-layout");
+            }
+            clear_layout_dirty();
+        }
+
         void draw(tvg::SwCanvas& canvas) override {
-            if (m_root_widget && m_root_widget->is_layout_dirty()) {
-                flush_root_layout();
+            if (m_root_widget && (m_pending_root_layout || m_root_widget->is_layout_dirty())) {
+                flush_root_layout(m_pending_root_layout ? "draw-pending" : "draw-child-dirty");
             }
             NanComponent::draw(canvas);
         }
@@ -382,17 +427,67 @@ export namespace nandina::app {
         }
 
     private:
-        auto flush_root_layout() -> void {
+        auto flush_root_layout(std::string_view cause) -> void {
             if (!m_root_widget) {
                 return;
             }
 
+            auto log = nandina::log::get("app.mounted");
+            const auto start = detail::SteadyClock::now();
             m_root_widget->measure(geometry::NanConstraints::tight(width(), height()));
+            const auto measure_done = detail::SteadyClock::now();
             m_root_widget->layout();
+            const auto layout_done = detail::SteadyClock::now();
+            m_pending_root_layout = false;
+
+            // 递归 flush 子树中所有嵌套的 MountedNodeComponent，
+            // 避免在后续 draw() 遍历中再次触发重复的 measure+layout
+            flush_nested_mounted(*m_root_widget);
+
+            const auto measure_ms = detail::elapsed_ms(start, measure_done);
+            const auto layout_ms = detail::elapsed_ms(measure_done, layout_done);
+            const auto total_ms = detail::elapsed_ms(start, layout_done);
+
+            if (total_ms >= detail::k_slow_layout_threshold_ms) {
+                auto [fast_cnt, slow_cnt] = nandina::widgets::Label::measure_diag();
+
+                auto surf_n = nandina::widgets::Surface::s_measure_count;
+                nandina::widgets::Surface::s_measure_count = 0;
+
+                auto lc_n = nandina::layout::LayoutContainer::s_measure_count;
+                nandina::layout::LayoutContainer::s_measure_count = 0;
+
+                log.warn(
+                    "Slow mounted flush: total={:.2f}ms measure={:.2f}ms layout={:.2f}ms cause={} root_type={} size={:.0f}x{:.0f} label_fast={} label_slow={} surf_n={} lc_n={}",
+                    total_ms,
+                    measure_ms,
+                    layout_ms,
+                    cause,
+                    typeid(*m_root_widget).name(),
+                    width(),
+                    height(),
+                    fast_cnt,
+                    slow_cnt,
+                    surf_n,
+                    lc_n);
+            }
+        }
+
+        /// 递归遍历子树，立即 flush 所有嵌套 MountedNodeComponent
+        static auto flush_nested_mounted(runtime::NanWidget& root) -> void {
+            root.for_each_child([](runtime::NanWidget& child) {
+                if (auto* nested = dynamic_cast<MountedNodeComponent*>(&child)) {
+                    if (nested->m_pending_root_layout) {
+                        nested->flush_root_layout("draw-pending");
+                    }
+                }
+                MountedNodeComponent::flush_nested_mounted(child);
+            });
         }
 
         Node m_root_node;
         runtime::NanWidget* m_root_widget{nullptr};
+        bool m_pending_root_layout{false};
     };
 
     [[nodiscard]] inline auto mount(Node root) -> NanComponent::Ptr {
@@ -578,15 +673,36 @@ export namespace nandina::app {
         virtual void on_ready() {
         }
 
+        /// 子类可重写 on_update。基类在此处以节流方式处理 resize。
         virtual void on_update(double delta_seconds) {
             (void)delta_seconds;
+            apply_throttled_resize();
         }
 
         virtual void on_draw(tvg::SwCanvas &canvas) {
             if (m_root_component) {
+                auto log = nandina::log::get("app.window");
+                const auto start = detail::SteadyClock::now();
                 ensure_root_component_layout();
+                const auto layout_done = detail::SteadyClock::now();
                 m_root_component->draw(canvas);
+                const auto draw_done = detail::SteadyClock::now();
                 m_root_component->clear_dirty_recursive();
+
+                const auto layout_ms = detail::elapsed_ms(start, layout_done);
+                const auto draw_ms = detail::elapsed_ms(layout_done, draw_done);
+                const auto total_ms = detail::elapsed_ms(start, draw_done);
+
+                if (total_ms >= detail::k_slow_layout_threshold_ms) {
+                    log.warn(
+                        "Slow app on_draw: total={:.2f}ms root_layout={:.2f}ms root_draw={:.2f}ms root_type={} size={}x{}",
+                        total_ms,
+                        layout_ms,
+                        draw_ms,
+                        typeid(*m_root_component).name(),
+                        width(),
+                        height());
+                }
             }
         }
 
@@ -604,25 +720,75 @@ export namespace nandina::app {
                 return;
             }
 
+            auto log = nandina::log::get("app.window");
             const float width = static_cast<float>(m_active_runtime_window ? m_active_runtime_window->width() : m_config.width);
             const float height = static_cast<float>(m_active_runtime_window ? m_active_runtime_window->height() : m_config.height);
+            const auto start = detail::SteadyClock::now();
             m_root_component->measure(geometry::NanConstraints::tight(width, height));
+            const auto measure_done = detail::SteadyClock::now();
             m_root_component->layout();
+            const auto layout_done = detail::SteadyClock::now();
+
+            const auto measure_ms = detail::elapsed_ms(start, measure_done);
+            const auto layout_ms = detail::elapsed_ms(measure_done, layout_done);
+            const auto total_ms = detail::elapsed_ms(start, layout_done);
+
+            if (total_ms >= detail::k_slow_layout_threshold_ms) {
+                log.warn(
+                    "Slow root layout: total={:.2f}ms measure={:.2f}ms layout={:.2f}ms root_type={} size={:.0f}x{:.0f}",
+                    total_ms,
+                    measure_ms,
+                    layout_ms,
+                    typeid(*m_root_component).name(),
+                    width,
+                    height);
+            }
         }
 
-        auto sync_root_component_bounds() -> void {
+        auto sync_root_component_bounds(const bool immediate = true) -> void {
             if (!m_root_component) {
                 return;
             }
 
             const float width = static_cast<float>(m_active_runtime_window ? m_active_runtime_window->width() : m_config.width);
             const float height = static_cast<float>(m_active_runtime_window ? m_active_runtime_window->height() : m_config.height);
-            m_root_component->set_bounds(0.0f, 0.0f, width, height);
+
+            if (immediate) {
+                m_root_component->set_bounds(0.0f, 0.0f, width, height);
+                return;
+            }
+
+            m_root_component->runtime::NanWidget::set_bounds(0.0f, 0.0f, width, height);
+            m_root_component->mark_layout_dirty();
+        }
+
+        /// resize 节流：以最小间隔（~16ms）应用最新窗口尺寸，
+        /// 避免拖拽时每个 SDL resize 事件都触发完整 measure→layout→draw
+        auto apply_throttled_resize() -> void {
+            if (!m_pending_resize) return;
+
+            const auto now = detail::SteadyClock::now();
+            const auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                now - m_last_resize_apply_time).count();
+            if (elapsed_ms < static_cast<long long>(k_resize_throttle_ms)) return;
+
+            m_last_resize_apply_time = now;
+            m_pending_resize = false;
+            sync_root_component_bounds(false);
+        }
+
+        auto on_resize_pending() -> void {
+            m_pending_resize = true;
         }
 
         AppConfig m_config;
         runtime::NanWindow *m_active_runtime_window{nullptr};
         NanComponent::Ptr m_root_component{nullptr};
+
+        // ── resize 节流状态 ─────────────────────────────────
+        bool m_pending_resize{false};
+        detail::SteadyClock::time_point m_last_resize_apply_time{};
+        static constexpr std::uint64_t k_resize_throttle_ms = 16;  // ~60fps 间隔
 
         class BridgeWindow final : public runtime::NanWindow {
         public:
@@ -638,6 +804,8 @@ export namespace nandina::app {
 
             void on_update(double delta) override {
                 m_owner.on_update(delta);
+                // 确保 resize 节流在每一帧都会检查，即使用户重写 on_update 时未调用基类
+                m_owner.apply_throttled_resize();
             }
 
             void on_draw(tvg::SwCanvas &canvas) override {
@@ -649,7 +817,9 @@ export namespace nandina::app {
             }
 
             void on_resize(int, int) override {
-                m_owner.sync_root_component_bounds();
+                // 不立即 sync_root_component_bounds，改为标记 pending，
+                // 由 on_update → apply_throttled_resize 以 16ms 间隔节流应用
+                m_owner.on_resize_pending();
             }
 
             void on_pointer_move(const runtime::PointerMoveEvent& event) override {

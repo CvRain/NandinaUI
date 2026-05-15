@@ -1,8 +1,10 @@
 module;
 
+#include <chrono>
 #include <memory>
 #include <string_view>
 #include <thorvg-1/thorvg.h>
+#include <typeinfo>
 
 export module nandina.app.page_host;
 
@@ -10,9 +12,21 @@ import nandina.app.application;
 import nandina.app.router;
 import nandina.foundation.nan_constraints;
 import nandina.foundation.nan_size;
+import nandina.log;
 import nandina.runtime.nan_widget;
 
 export namespace nandina::app {
+    namespace page_host_detail {
+        using SteadyClock = std::chrono::steady_clock;
+
+        [[nodiscard]] inline auto elapsed_ms(
+            const SteadyClock::time_point start,
+            const SteadyClock::time_point end) noexcept -> double {
+            return std::chrono::duration<double, std::milli>(end - start).count();
+        }
+
+        inline constexpr double k_slow_layout_threshold_ms = 4.0;
+    }
 
     /**
      * NanPageHost — 页面宿主容器（Issue 066）
@@ -47,10 +61,29 @@ export namespace nandina::app {
         auto set_bounds(const float x, const float y, const float w, const float h) noexcept -> NanWidget& override {
             NanWidget::set_bounds(x, y, w, h);
             if (m_current) {
-                m_current->runtime::NanWidget::set_bounds(x, y, w, h);
-                flush_layout();
+                // Use the page component's virtual set_bounds so mounted authoring
+                // roots can propagate bounds into their internal root widget.
+                m_current->set_bounds(x, y, w, h);
             }
             return *this;
+        }
+
+        auto measure(const geometry::NanConstraints& constraints) -> void override {
+            if (!m_current) {
+                const geometry::NanSize empty_size{};
+                set_measured_layout_state(constraints, constraints.constrain(empty_size));
+                return;
+            }
+
+            if (constraints.is_tight()) {
+                set_measured_layout_state(
+                    constraints,
+                    geometry::NanSize{constraints.max_width(), constraints.max_height()});
+                return;
+            }
+
+            auto measured = m_current->preferred_size();
+            set_measured_layout_state(constraints, constraints.constrain(measured));
         }
 
         void draw(tvg::SwCanvas& canvas) override {
@@ -60,7 +93,7 @@ export namespace nandina::app {
                 m_pending_swap = false;
             }
             if (m_current && m_current->is_layout_dirty()) {
-                flush_layout();
+                flush_layout("draw-current-dirty");
             }
             NanComponent::draw(canvas);
         }
@@ -90,16 +123,36 @@ export namespace nandina::app {
                 m_current = static_cast<NanComponent*>(add_child(std::move(component)));
                 // 立即分配当前 bounds 给新页面
                 if (m_current) {
-                    m_current->runtime::NanWidget::set_bounds(x(), y(), width(), height());
-                    flush_layout();
+                    m_current->set_bounds(x(), y(), width(), height());
                 }
             }
         }
 
-        auto flush_layout() -> void {
+        auto flush_layout(std::string_view cause) -> void {
             if (!m_current) return;
+
+            auto log = nandina::log::get("app.page_host");
+            const auto start = page_host_detail::SteadyClock::now();
             m_current->measure(geometry::NanConstraints::tight(width(), height()));
+            const auto measure_done = page_host_detail::SteadyClock::now();
             m_current->layout();
+            const auto layout_done = page_host_detail::SteadyClock::now();
+
+            const auto measure_ms = page_host_detail::elapsed_ms(start, measure_done);
+            const auto layout_ms = page_host_detail::elapsed_ms(measure_done, layout_done);
+            const auto total_ms = page_host_detail::elapsed_ms(start, layout_done);
+
+            if (total_ms >= page_host_detail::k_slow_layout_threshold_ms) {
+                log.warn(
+                    "Slow page host flush: total={:.2f}ms measure={:.2f}ms layout={:.2f}ms cause={} page_type={} size={:.0f}x{:.0f}",
+                    total_ms,
+                    measure_ms,
+                    layout_ms,
+                    cause,
+                    typeid(*m_current).name(),
+                    width(),
+                    height());
+            }
         }
 
         NanRouter::Ptr  m_router;

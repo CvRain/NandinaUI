@@ -6,6 +6,9 @@
 
 #include <gtest/gtest.h>
 
+#include <algorithm>
+#include <filesystem>
+
 import nandina.text.nan_font;
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -186,6 +189,32 @@ TEST(NanFontTest, ShapeUnicodeText) {
     auto mixed = font->shape("你好 World", 0.0f, 0);
     EXPECT_FALSE(mixed.empty());
     EXPECT_GT(mixed.total_width, 0.0f);
+}
+
+TEST(NanFontTest, LoadSystemDefaultPrefersCjkCapableFontWhenAvailable) {
+    constexpr std::string_view cjk_candidates[] = {
+        "/usr/share/fonts/noto-cjk/NotoSansCJK-Regular.ttc",
+        "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+        "/usr/share/fonts/opentype/noto/NotoSansCJKsc-Regular.otf",
+        "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
+        "/usr/share/fonts/TTF/LXGWWenKai-Regular.ttf",
+        "/usr/share/fonts/wenquanyi/wqy-zenhei/wqy-zenhei.ttc",
+        "/usr/share/fonts/sarasa-gothic/Sarasa-Regular.ttc",
+        "/usr/share/fonts/ttf-sarasa_ui/SarasaUiSC-Regular.ttf",
+    };
+
+    const bool has_cjk_font = std::any_of(std::begin(cjk_candidates), std::end(cjk_candidates), [](std::string_view path) {
+        std::error_code ec;
+        return std::filesystem::exists(path, ec) && !ec;
+    });
+
+    if (!has_cjk_font) {
+        GTEST_SKIP() << "No known CJK system font found on this environment.";
+    }
+
+    auto font = nandina::text::NanFont::load_system_default(18.0f);
+    ASSERT_NE(font, nullptr);
+    EXPECT_GT(font->glyph_advance(0x4F60u), 0.0f);
 }
 
 TEST(NanFontTest, PreferredSize) {

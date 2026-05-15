@@ -1,9 +1,10 @@
 module;
 
-#include <array>
 #include <functional>
 #include <memory>
+#include <string>
 #include <string_view>
+#include <vector>
 #include <thorvg-1/thorvg.h>
 #include <tuple>
 
@@ -15,10 +16,7 @@ import nandina.layout.container;
 import nandina.layout.flex_widgets;
 import nandina.widgets;
 
-import nandina.showcase.overview_page;
-import nandina.showcase.layout_page;
-import nandina.showcase.widgets_page;
-import nandina.showcase.authoring_page;
+import nandina.showcase.registry;
 
 // ── 辅助函数 ────────────────────────────────────────────────────────────────
 namespace {
@@ -35,95 +33,37 @@ namespace {
         canvas.add(shape);
     }
 
-    struct NavEntry {
-        std::string_view   key;
-        std::string_view   label;
-        nandina::widgets::IconType icon;
-    };
-
-    constexpr auto k_nav_entries = std::array<NavEntry, 4>{{
-        {"overview",  "Overview",  nandina::widgets::IconType::Circle},
-        {"layout",    "Layout",    nandina::widgets::IconType::Square},
-        {"widgets",   "Widgets",   nandina::widgets::IconType::Triangle},
-        {"authoring", "Authoring", nandina::widgets::IconType::Dots},
-    }};
-
-} // namespace
-
-// ── MainShell — 应用 Shell 组件（sidebar + 内容区） ─────────────────────────
-class MainShell final : public nandina::app::NanComponent {
-public:
-    explicit MainShell() {
-        build_shell();
-    }
-
-protected:
-    auto layout() -> void override {
-        if (m_root_row) {
-            m_root_row->set_bounds(x(), y(), width(), height());
-        }
-        clear_layout_dirty();
-    }
-
-    auto on_draw(tvg::SwCanvas& canvas) -> void override {
-        draw_rect(canvas, x(), y(), width(), height(), 21, 24, 32, 255);
-    }
-
-private:
-    auto build_shell() -> void {
-        // ── 创建路由器并注册页面 ──────────────────────────────
-        m_router = nandina::app::NanRouter::create();
-        m_router->register_page(std::make_unique<OverviewPage>());
-        m_router->register_page(std::make_unique<LayoutPage>());
-        m_router->register_page(std::make_unique<WidgetsPage>());
-        m_router->register_page(std::make_unique<AuthoringPage>());
-
-        // ── 根行布局 ─────────────────────────────────────────
-        auto root_row = nandina::layout::Row::Create();
-        root_row->align_items(nandina::layout::LayoutAlignment::stretch);
-        m_root_row = root_row.get();
-        add_child(std::move(root_row));
-
-        // ── 侧边栏（固定宽度 260） ────────────────────────────
-        auto sidebar_slot = nandina::layout::SizedBox::Create();
-        sidebar_slot->width(260.0f).child(build_sidebar());
-        m_root_row->add(std::move(sidebar_slot));
-
-        // ── 内容区（Expanded → NanPageHost） ─────────────────
-        auto page_host = std::make_unique<nandina::app::NanPageHost>(m_router);
-        auto content_expanded = nandina::layout::Expanded::Create();
-        content_expanded->child(std::move(page_host));
-        m_root_row->add(std::move(content_expanded));
-    }
-
-    auto build_sidebar() -> nandina::widgets::Sidebar::Ptr {
+    auto build_sidebar(const nandina::app::NanRouter::Ptr& router) -> nandina::widgets::Sidebar::Ptr {
         auto sidebar = nandina::widgets::Sidebar::create();
         sidebar->set_header_title("NandinaUI")
             .set_user_name("dev")
             .set_user_role("showcase");
 
-        // 为每个导航项创建按钮，捕获原始指针以便后续更新 active 状态
-        for (const auto& entry : k_nav_entries) {
+        std::vector<nandina::widgets::SidebarMenuButton*> nav_buttons;
+        std::vector<std::string> nav_keys;
+
+        for (const auto& page : router->pages()) {
             auto btn = nandina::widgets::SidebarMenuButton::create();
-            btn->set_label(entry.label)
-                .set_icon_type(entry.icon)
-                .set_active(entry.key == m_router->current_key());
+            btn->set_label(page->title())
+                .set_icon_type(page->icon_type())
+                .set_active(page->route_key() == router->current_key());
 
-            // 保存原始指针
-            m_nav_buttons.push_back(btn.get());
+            nav_buttons.push_back(btn.get());
+            nav_keys.emplace_back(page->route_key());
 
-            // 绑定点击 → router 导航
-            btn->on_click([router = m_router, key = std::string{entry.key}] {
+            btn->on_click([router, key = std::string{page->route_key()}] {
                 router->navigate_to(key);
             });
 
             sidebar->add_menu_item(std::move(btn));
         }
 
-        // 订阅导航事件 → 更新 active 状态
-        m_router->on_navigate([this](std::string_view new_key) {
-            for (std::size_t i = 0; i < m_nav_buttons.size(); ++i) {
-                m_nav_buttons[i]->set_active(k_nav_entries[i].key == new_key);
+        router->on_navigate([
+            nav_buttons = std::move(nav_buttons),
+            nav_keys = std::move(nav_keys)
+        ](std::string_view new_key) {
+            for (std::size_t i = 0; i < nav_buttons.size(); ++i) {
+                nav_buttons[i]->set_active(nav_keys[i] == new_key);
             }
         });
 
@@ -141,9 +81,69 @@ private:
         return sidebar;
     }
 
-    nandina::app::NanRouter::Ptr                       m_router;
-    nandina::layout::Row*                              m_root_row{nullptr};
-    std::vector<nandina::widgets::SidebarMenuButton*>  m_nav_buttons;
+} // namespace
+
+export namespace nandina::showcase {
+
+    auto create_showcase_shell_content() -> app::Node {
+        using namespace nandina::app;
+
+        auto router = nandina::app::NanRouter::create();
+        nandina::showcase::register_default_pages(*router);
+
+        return row(children(
+            sized_box(adopt(build_sidebar(router)))
+                .width(260.0f),
+            expanded(adopt(std::make_unique<nandina::app::NanPageHost>(router)))
+        )).align_items(nandina::layout::LayoutAlignment::stretch);
+    }
+
+} // namespace nandina::showcase
+
+// ── MainShell — 应用 Shell 组件（sidebar + 内容区） ─────────────────────────
+class MainShell final : public nandina::app::NanComponent {
+public:
+    explicit MainShell() {
+        auto content = nandina::app::mount(nandina::showcase::create_showcase_shell_content());
+        m_content = static_cast<nandina::app::NanComponent*>(add_child(std::move(content)));
+    }
+
+protected:
+    auto measure(const nandina::geometry::NanConstraints& constraints) -> void override {
+        if (!m_content) {
+            const nandina::geometry::NanSize empty_size{};
+            set_measured_layout_state(constraints, constraints.constrain(empty_size));
+            return;
+        }
+
+        if (constraints.is_tight()) {
+            set_measured_layout_state(
+                constraints,
+                nandina::geometry::NanSize{constraints.max_width(), constraints.max_height()});
+            return;
+        }
+
+        m_content->measure(constraints);
+        auto measured = m_content->measured_size();
+        if (measured.width() <= 0.0f && measured.height() <= 0.0f) {
+            measured = m_content->preferred_size();
+        }
+        set_measured_layout_state(constraints, constraints.constrain(measured));
+    }
+
+    auto layout() -> void override {
+        if (m_content) {
+            m_content->set_bounds(x(), y(), width(), height());
+        }
+        clear_layout_dirty();
+    }
+
+    auto on_draw(tvg::SwCanvas& canvas) -> void override {
+        draw_rect(canvas, x(), y(), width(), height(), 21, 24, 32, 255);
+    }
+
+private:
+    nandina::app::NanComponent* m_content{nullptr};
 };
 
 // ── MainWindow — 导出给 main.cpp ─────────────────────────────────────────────

@@ -118,12 +118,68 @@ namespace {
         return static_cast<int>(pixel * 64.0f + 0.5f);
     }
 
+    [[nodiscard]] auto path_exists(std::string_view path) -> bool {
+        std::error_code ec;
+        return std::filesystem::exists(path, ec) && !ec;
+    }
+
+    [[nodiscard]] auto font_supports_codepoint(std::string_view path, const std::uint32_t codepoint) -> bool {
+        if (!path_exists(path)) {
+            return false;
+        }
+
+        global_ft().acquire();
+
+        FT_Face face = nullptr;
+        const FT_Error error = FT_New_Face(global_ft().library, std::string{path}.c_str(), 0, &face);
+        if (error != FT_Err_Ok || !face) {
+            global_ft().release();
+            return false;
+        }
+
+        const bool supported = FT_Get_Char_Index(face, codepoint) != 0;
+        FT_Done_Face(face);
+        global_ft().release();
+        return supported;
+    }
+
+    [[nodiscard]] auto font_supports_basic_ui_text(std::string_view path) -> bool {
+        return font_supports_codepoint(path, static_cast<std::uint32_t>('A'))
+            && font_supports_codepoint(path, 0x4F60u); // 你
+    }
+
     // ═══════════════════════════════════════════════════════════════════════
     // 辅助：系统字体查找
     // ═══════════════════════════════════════════════════════════════════════
     [[nodiscard]] auto find_system_font_impl() -> std::string {
-        // 候选路径列表（按优先级排序）
-        constexpr auto candidates = std::to_array<std::string_view>({
+        // 先找能同时覆盖拉丁与中文的 UI 字体，避免 DejaVu 等仅拉丁字体把
+        // CJK 文本渲染成 .notdef 方块。
+        constexpr auto cjk_candidates = std::to_array<std::string_view>({
+            // Linux
+            "/usr/share/fonts/noto-cjk/NotoSansCJK-Regular.ttc",
+            "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+            "/usr/share/fonts/opentype/noto/NotoSansCJKsc-Regular.otf",
+            "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
+            "/usr/share/fonts/TTF/LXGWWenKai-Regular.ttf",
+            "/usr/share/fonts/wenquanyi/wqy-zenhei/wqy-zenhei.ttc",
+            "/usr/share/fonts/sarasa-gothic/Sarasa-Regular.ttc",
+            "/usr/share/fonts/ttf-sarasa_ui/SarasaUiSC-Regular.ttf",
+            // macOS
+            "/System/Library/Fonts/PingFang.ttc",
+            "/System/Library/Fonts/Hiragino Sans GB.ttc",
+            // Windows
+            "C:/Windows/Fonts/msyh.ttc",
+            "C:/Windows/Fonts/msyh.ttf",
+            "C:/Windows/Fonts/simsun.ttc",
+        });
+
+        for (const auto path : cjk_candidates) {
+            if (font_supports_basic_ui_text(path)) {
+                return std::string{path};
+            }
+        }
+
+        constexpr auto fallback_candidates = std::to_array<std::string_view>({
             // Linux — 常见无衬线字体
             "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
             "/usr/share/fonts/dejavu/DejaVuSans.ttf",
@@ -144,9 +200,8 @@ namespace {
             "C:/Windows/Fonts/segoeui.ttf",
         });
 
-        for (const auto path : candidates) {
-            std::error_code ec;
-            if (std::filesystem::exists(path, ec) && !ec) {
+        for (const auto path : fallback_candidates) {
+            if (path_exists(path)) {
                 return std::string{path};
             }
         }

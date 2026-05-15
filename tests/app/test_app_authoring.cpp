@@ -163,7 +163,7 @@ TEST(AppAuthoringTest, MountedNodeComponentPropagatesBoundsToRootWidget) {
     EXPECT_FLOAT_EQ(bounds.height(), 80.0f);
 }
 
-TEST(AppAuthoringTest, MountedNodeComponentSetBoundsTriggersRootMeasureAndLayout) {
+TEST(AppAuthoringTest, MountedNodeComponentSetBoundsDefersRootMeasureAndLayoutUntilDraw) {
     nandina::app::Ref<ProbeWidget> probe_ref;
 
     auto mounted = nandina::app::mount(
@@ -174,8 +174,33 @@ TEST(AppAuthoringTest, MountedNodeComponentSetBoundsTriggersRootMeasureAndLayout
 
     mounted->set_bounds(0.0f, 0.0f, 120.0f, 40.0f);
 
+    EXPECT_EQ(probe_ref->measure_count, 0);
+    EXPECT_EQ(probe_ref->layout_count, 0);
+
+    ThorvgCanvasScope canvas_scope{160u, 80u};
+    mounted->draw(canvas_scope.canvas());
+
     EXPECT_GE(probe_ref->measure_count, 1);
     EXPECT_GE(probe_ref->layout_count, 1);
+}
+
+TEST(AppAuthoringTest, MountedNodeComponentDeferredLayoutStillPropagatesBoundsToRootWidget) {
+    auto mounted = nandina::app::mount(nandina::app::adopt(TestWidget::create()));
+
+    ASSERT_NE(mounted, nullptr);
+
+    mounted->nandina::runtime::NanWidget::set_bounds(3.0f, 4.0f, 180.0f, 90.0f);
+    mounted->mark_layout_dirty();
+    mounted->measure(nandina::geometry::NanConstraints::tight(180.0f, 90.0f));
+    mounted->layout();
+
+    ASSERT_EQ(mounted->child_count(), 1u);
+    const auto bounds = mounted->children().front()->bounds();
+
+    EXPECT_FLOAT_EQ(bounds.x(), 3.0f);
+    EXPECT_FLOAT_EQ(bounds.y(), 4.0f);
+    EXPECT_FLOAT_EQ(bounds.width(), 180.0f);
+    EXPECT_FLOAT_EQ(bounds.height(), 90.0f);
 }
 
 TEST(AppAuthoringTest, PaddingWrapsSingleChildAndPreservesRefBinding) {
@@ -251,12 +276,12 @@ TEST(AppAuthoringTest, StackMountsMultipleChildrenAndPropagatesRefs) {
 
     EXPECT_FLOAT_EQ(first_bounds.x(), 5.0f);
     EXPECT_FLOAT_EQ(first_bounds.y(), 8.0f);
-    EXPECT_FLOAT_EQ(first_bounds.width(), 90.0f);
-    EXPECT_FLOAT_EQ(first_bounds.height(), 40.0f);
+    EXPECT_FLOAT_EQ(first_bounds.width(), 24.0f);
+    EXPECT_FLOAT_EQ(first_bounds.height(), 12.0f);
     EXPECT_FLOAT_EQ(second_bounds.x(), 5.0f);
     EXPECT_FLOAT_EQ(second_bounds.y(), 8.0f);
-    EXPECT_FLOAT_EQ(second_bounds.width(), 90.0f);
-    EXPECT_FLOAT_EQ(second_bounds.height(), 40.0f);
+    EXPECT_FLOAT_EQ(second_bounds.width(), 24.0f);
+    EXPECT_FLOAT_EQ(second_bounds.height(), 12.0f);
 
     mounted.reset();
     EXPECT_FALSE(front_ref);
@@ -623,6 +648,22 @@ TEST(AppAuthoringTest, ButtonTextSetterMarksLayoutDirty) {
 
     button->set_text("Run");
     EXPECT_TRUE(button->is_layout_dirty());
+}
+
+TEST(AppAuthoringTest, ButtonDrawDoesNotKeepMarkingItselfDirtyAfterStateSettles) {
+    auto button = nandina::widgets::Button::create();
+    button->set_bounds(0.0f, 0.0f, 120.0f, 36.0f);
+
+    ThorvgCanvasScope canvas_scope{160u, 80u};
+
+    // 第一帧允许把默认 label 颜色同步到按钮当前视觉状态。
+    button->draw(canvas_scope.canvas());
+    button->clear_dirty_recursive();
+    EXPECT_FALSE(button->dirty());
+
+    // 状态未变化时，后续 draw 不应再次把自身标脏。
+    button->draw(canvas_scope.canvas());
+    EXPECT_FALSE(button->dirty());
 }
 
 TEST(AppAuthoringTest, PressableDisableClearsInteractiveStateAndMarksDirty) {

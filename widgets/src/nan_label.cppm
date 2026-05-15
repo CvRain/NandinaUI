@@ -4,6 +4,7 @@
 
 module;
 
+#include <atomic>
 #include <cmath>
 #include <memory>
 #include <string>
@@ -17,7 +18,7 @@ import nandina.foundation.nan_rect;
 import nandina.foundation.nan_size;
 import nandina.foundation.color;
 import nandina.reactive.state;
-import nandina.reactive.prop;
+import nandina.reactive.bindable_prop;
 import nandina.text.nan_font;
 
 /**
@@ -63,7 +64,7 @@ export namespace nandina::widgets {
         ~Label() override = default;
 
         static auto create() -> Ptr {
-            return Ptr{new Label()};
+            return Ptr(new Label());
         }
 
         // ── 属性设置 ──────────────────────────────────────
@@ -161,9 +162,21 @@ export namespace nandina::widgets {
                 const float max_width = constraints.max_width() != geometry::NanConstraints::k_infinity
                     ? constraints.max_width()
                     : 0.0f;
-                const auto& layout = cached_shape(txt, max_width > 0.0f ? max_width : 0.0f);
-                if (!layout.empty()) {
-                    measured = geometry::NanSize{layout.total_width, layout.total_height};
+
+                // 快速路径：用 estimate_text_width（仅累加 advance，不做 HarfBuzz shaping）
+                // 判断文本是否能单行排下，避免 resize 时反复触发昂贵的 shape() 调用
+                const float estimated_w = m_font->estimate_text_width(txt);
+                if (max_width <= 0.0f || estimated_w <= max_width) {
+                    // 文本在当前宽度下单行即可容纳，直接使用估值
+                    measured = geometry::NanSize{estimated_w, m_font->line_height()};
+                    s_measure_fast_count.fetch_add(1, std::memory_order_relaxed);
+                } else {
+                    // 宽度不足，需要断行 → 走完整的 HarfBuzz shaping
+                    const auto& layout = cached_shape(txt, max_width);
+                    if (!layout.empty()) {
+                        measured = geometry::NanSize(layout.total_width, layout.total_height);
+                    }
+                    s_measure_slow_count.fetch_add(1, std::memory_order_relaxed);
                 }
             }
 
@@ -172,6 +185,14 @@ export namespace nandina::widgets {
             }
 
             set_measured_layout_state(constraints, constraints.constrain(measured));
+        }
+
+        /// 获取并重置 measure 路径统计（用于性能诊断）
+        [[nodiscard]] static auto measure_diag() -> std::pair<int, int> {
+            return {
+                s_measure_fast_count.exchange(0, std::memory_order_relaxed),
+                s_measure_slow_count.exchange(0, std::memory_order_relaxed)
+            };
         }
 
     protected:
@@ -273,9 +294,9 @@ export namespace nandina::widgets {
             }
         }
 
-        reactive::Prop<std::string> m_text{""};
-        reactive::Prop<float> m_font_size{14.0f};
-        reactive::Prop<nandina::NanColor> m_color{nandina::NanColor::from(nandina::NanRgb{220, 220, 240})};
+        reactive::BindableProp<std::string> m_text{""};
+        reactive::BindableProp<float> m_font_size{14.0f};
+        reactive::BindableProp<nandina::NanColor> m_color{nandina::NanColor::from(nandina::NanRgb{220, 220, 240})};
 
         text::NanFont::Ptr m_font; // 懒加载
 
@@ -287,6 +308,10 @@ export namespace nandina::widgets {
         mutable std::string      m_cached_shape_text{};
         mutable float            m_cached_shape_max_width{-1.0f};
         mutable bool             m_shape_cache_valid{false};
+
+        // ── measure 路径诊断计数器 ─────────────────────────────────
+        inline static std::atomic<int> s_measure_fast_count{0};
+        inline static std::atomic<int> s_measure_slow_count{0};
     };
 
 } // namespace nandina::widgets
