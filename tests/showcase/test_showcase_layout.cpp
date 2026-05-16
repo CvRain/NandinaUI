@@ -10,7 +10,7 @@ import nandina.app.authoring;
 import nandina.runtime.nan_event;
 import nandina.runtime.nan_widget;
 import nandina.showcase;
-import nandina.showcase.overview_page;
+import nandina.showcase.sandbox_page;
 import nandina.widgets.sidebar_menu_button;
 
 namespace {
@@ -96,75 +96,22 @@ public:
     return static_cast<std::uint8_t>((pixel >> 24u) & 0xffu);
 }
 
-auto make_overview_root() -> nandina::app::NanComponent::Ptr {
-    OverviewPage page;
+auto make_sandbox_root() -> nandina::app::NanComponent::Ptr {
+    nandina::showcase::SandboxPage page;
     return page.build();
 }
 
 } // namespace
 
-TEST(ShowcaseLayoutTest, OverviewPageBuild_HasPaddingRootAndThreeContentSections) {
-    auto component = make_overview_root();
+TEST(ShowcaseLayoutTest, SandboxPageBuild_ProducesMountedComponent) {
+    auto component = make_sandbox_root();
     ASSERT_NE(component, nullptr);
-
-    // OverviewPage::build() 返回 mounted component，其直接子节点就是 root_padding。
-    ASSERT_EQ(component->child_count(), 1u);
-
-    auto& root_padding = child_at(*component, 0);
-    ASSERT_EQ(root_padding.child_count(), 1u);
-
-    auto& main_column = child_at(root_padding, 0);
-    // hero_slot / split / bottom_slot
-    ASSERT_EQ(main_column.child_count(), 3u);
+    // Sandbox 目前只有一个 Center → Label 结构
+    ASSERT_GE(component->child_count(), 1u);
 }
 
-TEST(ShowcaseLayoutTest, OverviewPageBuild_DrawPassLaysOutContentRegions) {
-    auto component = make_overview_root();
-    ASSERT_NE(component, nullptr);
-    static_cast<nandina::runtime::NanWidget&>(*component).set_bounds(0.0f, 0.0f, 1280.0f, 720.0f);
-
-    ThorvgCanvasScope canvas_scope{1280u, 720u};
-    component->draw(canvas_scope.canvas());
-
-    // root_padding fills entire bounds
-    auto& root_padding = child_at(*component, 0);
-    EXPECT_FLOAT_EQ(root_padding.bounds().x(), 0.0f);
-    EXPECT_FLOAT_EQ(root_padding.bounds().y(), 0.0f);
-    EXPECT_FLOAT_EQ(root_padding.bounds().width(), 1280.0f);
-    EXPECT_FLOAT_EQ(root_padding.bounds().height(), 720.0f);
-
-    // main_column inset by padding=20 on all sides
-    auto& main_column = child_at(root_padding, 0);
-    EXPECT_FLOAT_EQ(main_column.bounds().x(), 20.0f);
-    EXPECT_FLOAT_EQ(main_column.bounds().y(), 20.0f);
-    EXPECT_FLOAT_EQ(main_column.bounds().width(), 1240.0f);
-    EXPECT_FLOAT_EQ(main_column.bounds().height(), 680.0f);
-
-    // hero_slot: height=136, starts at column top
-    auto& hero_slot   = child_at(main_column, 0);
-    auto& split_row   = child_at(main_column, 1);
-    auto& bottom_slot = child_at(main_column, 2);
-
-    EXPECT_FLOAT_EQ(hero_slot.bounds().x(), 20.0f);
-    EXPECT_FLOAT_EQ(hero_slot.bounds().y(), 20.0f);
-    EXPECT_FLOAT_EQ(hero_slot.bounds().width(), 1240.0f);
-    EXPECT_FLOAT_EQ(hero_slot.bounds().height(), 136.0f);
-
-    // split_row: height=280, gap=20 after hero
-    EXPECT_FLOAT_EQ(split_row.bounds().x(), 20.0f);
-    EXPECT_FLOAT_EQ(split_row.bounds().y(), 176.0f); // 20+136+20
-    EXPECT_FLOAT_EQ(split_row.bounds().width(), 1240.0f);
-    EXPECT_FLOAT_EQ(split_row.bounds().height(), 280.0f);
-
-    // bottom_slot: height=224, gap=20 after split
-    EXPECT_FLOAT_EQ(bottom_slot.bounds().x(), 20.0f);
-    EXPECT_FLOAT_EQ(bottom_slot.bounds().y(), 476.0f); // 176+280+20
-    EXPECT_FLOAT_EQ(bottom_slot.bounds().width(), 1240.0f);
-    EXPECT_FLOAT_EQ(bottom_slot.bounds().height(), 224.0f);
-}
-
-TEST(ShowcaseLayoutTest, OverviewPageBuild_DrawPassProducesVisiblePixels) {
-    auto component = make_overview_root();
+TEST(ShowcaseLayoutTest, SandboxPageDraw_ProducesVisiblePixels) {
+    auto component = make_sandbox_root();
     ASSERT_NE(component, nullptr);
     static_cast<nandina::runtime::NanWidget&>(*component).set_bounds(0.0f, 0.0f, 1280.0f, 720.0f);
 
@@ -172,21 +119,12 @@ TEST(ShowcaseLayoutTest, OverviewPageBuild_DrawPassProducesVisiblePixels) {
     component->draw(canvas_scope.canvas());
     canvas_scope.render();
 
-    // hero 区域内的像素（位于 padding=20 内的英雄卡片）
-    const auto hero_pixel       = canvas_scope.pixel_at(320u, 60u);
-    // split 区域（y≈200）
-    const auto split_pixel      = canvas_scope.pixel_at(320u, 200u);
-    // bottom 卡片区域（y≈520）
-    const auto lower_card_pixel = canvas_scope.pixel_at(980u, 520u);
-
-    EXPECT_GT(alpha_of(hero_pixel), 0u);
-    EXPECT_GT(alpha_of(split_pixel), 0u);
-    EXPECT_GT(alpha_of(lower_card_pixel), 0u);
-
-    EXPECT_NE(hero_pixel, lower_card_pixel);
+    // 中心区域应有 Label 文字像素
+    const auto center_pixel = canvas_scope.pixel_at(640u, 360u);
+    EXPECT_GT(alpha_of(center_pixel), 0u);
 }
 
-TEST(ShowcaseLayoutTest, AppWindowWrappedOverviewPageDrawsVisiblePixels) {
+TEST(ShowcaseLayoutTest, AppWindowWrappedSandboxPageDrawsVisiblePixels) {
     TestShowcaseWindow window({
         .title = "Showcase Test",
         .width = 1280,
@@ -194,7 +132,7 @@ TEST(ShowcaseLayoutTest, AppWindowWrappedOverviewPageDrawsVisiblePixels) {
         .resizable = false,
         .high_dpi = false,
     });
-    window.set_root_component(make_overview_root());
+    window.set_root_component(make_sandbox_root());
 
     ThorvgCanvasScope canvas_scope{1280u, 720u};
     window.draw_once(canvas_scope.canvas());
@@ -209,7 +147,11 @@ TEST(ShowcaseLayoutTest, AppWindowWrappedOverviewPageDrawsVisiblePixels) {
 }
 
 TEST(ShowcaseLayoutTest, ShowcaseShellSidebarActiveStateTracksNavigation) {
-    auto mounted = nandina::app::mount(nandina::showcase::create_showcase_shell_content());
+    auto router = nandina::app::NanRouter::create();
+    router->register_page(std::make_unique<nandina::showcase::SandboxPage>());
+
+    auto shell_node = nandina::app::create_shell(std::move(router));
+    auto mounted = nandina::app::mount(std::move(shell_node));
     ASSERT_NE(mounted, nullptr);
 
     mounted->set_bounds(0.0f, 0.0f, 1280.0f, 720.0f);
@@ -218,23 +160,7 @@ TEST(ShowcaseLayoutTest, ShowcaseShellSidebarActiveStateTracksNavigation) {
     std::vector<nandina::widgets::SidebarMenuButton*> buttons;
     collect_sidebar_buttons(root_row, buttons);
 
-    ASSERT_GE(buttons.size(), 4u);
+    // 当前只有 Sandbox 一个页面，sidebar 应有至少 1 个导航按钮
+    ASSERT_GE(buttons.size(), 1u);
     EXPECT_TRUE(buttons[0]->is_active());
-    EXPECT_FALSE(buttons[1]->is_active());
-    EXPECT_FALSE(buttons[2]->is_active());
-    EXPECT_FALSE(buttons[3]->is_active());
-
-    const auto click_event = nandina::runtime::Event{nandina::runtime::PointerButtonEvent{
-        .button = nandina::types::PointerButton::Left,
-        .x = 0.0,
-        .y = 0.0,
-        .is_repeat = false,
-    }};
-
-    EXPECT_TRUE(buttons[1]->dispatch_event(click_event));
-
-    EXPECT_FALSE(buttons[0]->is_active());
-    EXPECT_TRUE(buttons[1]->is_active());
-    EXPECT_FALSE(buttons[2]->is_active());
-    EXPECT_FALSE(buttons[3]->is_active());
 }

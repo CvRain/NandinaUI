@@ -6,11 +6,7 @@ nandina_add_test(
     SOURCES test_showcase_layout.cpp
     MODULES
         ${CMAKE_SOURCE_DIR}/showcase/nan_showcase.cppm
-        ${CMAKE_SOURCE_DIR}/showcase/showcase_registry.cppm
-        ${CMAKE_SOURCE_DIR}/showcase/pages/dashboard_page.cppm
-        ${CMAKE_SOURCE_DIR}/showcase/pages/layout_page.cppm
-        ${CMAKE_SOURCE_DIR}/showcase/pages/widgets_page.cppm
-        ${CMAKE_SOURCE_DIR}/showcase/pages/authoring_page.cppm
+        ${CMAKE_SOURCE_DIR}/showcase/pages/sandbox_page.cppm
     DEPS
         nandina::app
         nandina::layout

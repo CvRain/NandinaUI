@@ -11,11 +11,7 @@ set(PROJECT_CPP_FILES
 
 set(PROJECT_CPP_MODULE_FILES
         nan_showcase.cppm
-        showcase_registry.cppm
-        pages/dashboard_page.cppm
-        pages/layout_page.cppm
-        pages/widgets_page.cppm
-        pages/authoring_page.cppm
+        pages/sandbox_page.cppm
 )
 
 add_executable(${PROJECT_NAME} ${PROJECT_CPP_FILES})
