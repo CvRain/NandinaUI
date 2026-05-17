@@ -58,6 +58,56 @@ namespace nandina::widgets {
         return m_label->text();
     }
 
+    // ── 字体（委托给内部 Label）─────────────────────────────
+    auto Button::set_font_size(float size) -> Button& {
+        m_label->set_font_size(size);
+        mark_layout_dirty();
+        return *this;
+    }
+
+    auto Button::font_size() const noexcept -> float {
+        return m_label->font_size();
+    }
+
+    auto Button::set_font_color(const nandina::NanColor& color) -> Button& {
+        m_label->set_color(color);
+        return *this;
+    }
+
+    auto Button::font_color() const noexcept -> const nandina::NanColor& {
+        return m_label->color();
+    }
+
+    auto Button::set_font_weight(text::NanFontWeight weight) -> Button& {
+        m_label->set_font_weight(weight);
+        mark_layout_dirty();
+        return *this;
+    }
+
+    auto Button::font_weight() const noexcept -> text::NanFontWeight {
+        return m_label->font_weight();
+    }
+
+    auto Button::set_font_family(std::string family) -> Button& {
+        m_label->set_font_family(std::move(family));
+        mark_layout_dirty();
+        return *this;
+    }
+
+    auto Button::font_family() const noexcept -> const std::string& {
+        return m_label->font_family();
+    }
+
+    auto Button::set_font(text::NanFont font) -> Button& {
+        m_label->set_font(std::move(font));
+        mark_layout_dirty();
+        return *this;
+    }
+
+    auto Button::font() const noexcept -> const text::NanFont& {
+        return m_label->font();
+    }
+
     // ── 回调 ────────────────────────────────────────────────
     auto Button::on_click(Callback cb) -> Button& {
         m_pressable->on_click(std::move(cb));

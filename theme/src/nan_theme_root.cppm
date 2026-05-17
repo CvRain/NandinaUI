@@ -14,9 +14,12 @@ export module nandina.theme;
  *   - nandina.theme.nan_primitive_tokens — NanPrimitiveTokens 结构体
  *   - nandina.theme.nan_color_palette — NanRoleColorPair / NanColorPalette
  *   - nandina.theme.nan_theme — NanTheme / ThemeManager
+ *   - nandina.theme.nan_font_config — NanFontConfig 字体配置
+ *   - nandina.theme.nan_style — NanStylePrimitives 组件样式原语
  */
 
 export import nandina.theme.nan_theme_types;
 export import nandina.theme.nan_primitive_tokens;
 export import nandina.theme.nan_color_palette;
 export import nandina.theme.nan_theme;
+export import nandina.theme.nan_style;

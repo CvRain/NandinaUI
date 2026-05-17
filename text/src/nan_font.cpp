@@ -1,7 +1,5 @@
 //
-// Created by cvrain on 2026/5/6.
-//
-// nan_font.cpp — NanFont 实现（PIMPL）
+// nan_font.cpp — NanFont 实现
 //
 // 所有 FreeType + HarfBuzz 类型隔离于此，不泄漏至模块接口。
 //
@@ -35,46 +33,33 @@ module;
 module nandina.text.nan_font;
 
 import nandina.log;
-import nandina.foundation.color;  // for NanColor / NanRgb in paint
+import nandina.foundation.color;
 
 namespace nandina::text {
 
 namespace {
-    struct FontCacheKey {
-        std::string path;
-        int size_centipt{0};
 
-        [[nodiscard]] auto operator==(const FontCacheKey&) const noexcept -> bool = default;
-    };
+    // ═══════════════════════════════════════════════════════════════
+    // 工具函数
+    // ═══════════════════════════════════════════════════════════════
 
-    struct FontCacheKeyHash {
-        [[nodiscard]] auto operator()(const FontCacheKey& key) const noexcept -> std::size_t {
-            const auto path_hash = std::hash<std::string>{}(key.path);
-            const auto size_hash = std::hash<int>{}(key.size_centipt);
-            return path_hash ^ (size_hash + 0x9e3779b9u + (path_hash << 6u) + (path_hash >> 2u));
-        }
-    };
-
-    struct FontCache {
-        std::mutex mutex;
-        std::unordered_map<FontCacheKey, std::weak_ptr<NanFont>, FontCacheKeyHash> entries;
-    };
-
-    [[nodiscard]] auto font_cache_key(std::string_view path, float size_pt) -> FontCacheKey {
-        return FontCacheKey{
-            .path = std::string{path},
-            .size_centipt = static_cast<int>(size_pt * 100.0f + (size_pt >= 0.0f ? 0.5f : -0.5f)),
-        };
+    inline auto pt_to_pixel(float pt) noexcept -> float {
+        return pt * 96.0f / 72.0f;
     }
 
-    auto font_cache() -> FontCache& {
-        static FontCache cache;
-        return cache;
+    inline auto pixel_to_ft_26_6(float px) noexcept -> int {
+        return static_cast<int>(px * 64.0f + 0.5f);
     }
 
-    // ═══════════════════════════════════════════════════════════════════════
+    inline auto path_exists(std::string_view path) -> bool {
+        std::error_code ec;
+        return std::filesystem::exists(path, ec) && !ec;
+    }
+
+    // ═══════════════════════════════════════════════════════════════
     // FreeType 全局库句柄（懒加载，线程安全）
-    // ═══════════════════════════════════════════════════════════════════════
+    // ═══════════════════════════════════════════════════════════════
+
     struct GlobalFT {
         FT_Library library{nullptr};
         std::mutex mutex;
@@ -101,106 +86,69 @@ namespace {
     };
 
     auto global_ft() -> GlobalFT& {
-        static GlobalFT s;
-        return s;
+        static GlobalFT instance;
+        return instance;
     }
 
-    // ═══════════════════════════════════════════════════════════════════════
-    // 辅助：将 size_pt 转换为 FreeType 的 26.6 定点像素高度
-    // ═══════════════════════════════════════════════════════════════════════
-    [[nodiscard]] constexpr auto pt_to_pixel(float size_pt) noexcept -> float {
-        // 1pt = 1/72 inch。DPI 固定为 96（后续可配置）。
-        constexpr float dpi = 96.0f;
-        return size_pt * dpi / 72.0f;
-    }
+    // ═══════════════════════════════════════════════════════════════
+    // 字体缓存
+    // ═══════════════════════════════════════════════════════════════
 
-    [[nodiscard]] constexpr auto pixel_to_ft_26_6(float pixel) noexcept -> int {
-        return static_cast<int>(pixel * 64.0f + 0.5f);
-    }
+    struct FontCacheKey {
+        std::string path;
+        int size_centipt{0};
 
-    [[nodiscard]] auto path_exists(std::string_view path) -> bool {
-        std::error_code ec;
-        return std::filesystem::exists(path, ec) && !ec;
-    }
+        auto operator==(const FontCacheKey&) const noexcept -> bool = default;
+    };
 
-    [[nodiscard]] auto font_supports_codepoint(std::string_view path, const std::uint32_t codepoint) -> bool {
-        if (!path_exists(path)) {
-            return false;
+    struct FontCacheKeyHash {
+        auto operator()(const FontCacheKey& key) const noexcept -> std::size_t {
+            auto path_hash = std::hash<std::string>{}(key.path);
+            auto size_hash = std::hash<int>{}(key.size_centipt);
+            return path_hash ^ (size_hash + 0x9e3779b9u + (path_hash << 6u) + (path_hash >> 2u));
         }
+    };
 
-        global_ft().acquire();
+    struct FontCache {
+        std::mutex mutex;
+        std::unordered_map<FontCacheKey, std::weak_ptr<NanFont>, FontCacheKeyHash> entries;
+    };
 
-        FT_Face face = nullptr;
-        const FT_Error error = FT_New_Face(global_ft().library, std::string{path}.c_str(), 0, &face);
-        if (error != FT_Err_Ok || !face) {
-            global_ft().release();
-            return false;
-        }
-
-        const bool supported = FT_Get_Char_Index(face, codepoint) != 0;
-        FT_Done_Face(face);
-        global_ft().release();
-        return supported;
+    auto font_cache() -> FontCache& {
+        static FontCache cache;
+        return cache;
     }
 
-    [[nodiscard]] auto font_supports_basic_ui_text(std::string_view path) -> bool {
-        return font_supports_codepoint(path, static_cast<std::uint32_t>('A'))
-            && font_supports_codepoint(path, 0x4F60u); // 你
+    auto font_cache_key(std::string_view path, float size_pt) -> FontCacheKey {
+        return FontCacheKey{
+            .path = std::string{path},
+            .size_centipt = static_cast<int>(size_pt * 100.0f + (size_pt >= 0.0f ? 0.5f : -0.5f)),
+        };
     }
 
-    // ═══════════════════════════════════════════════════════════════════════
-    // 辅助：系统字体查找
-    // ═══════════════════════════════════════════════════════════════════════
-    [[nodiscard]] auto find_system_font_impl() -> std::string {
-        // 先找能同时覆盖拉丁与中文的 UI 字体，避免 DejaVu 等仅拉丁字体把
-        // CJK 文本渲染成 .notdef 方块。
-        constexpr auto cjk_candidates = std::to_array<std::string_view>({
-            // Linux
-            "/usr/share/fonts/noto-cjk/NotoSansCJK-Regular.ttc",
+    // ═══════════════════════════════════════════════════════════════
+    // 系统字体查找
+    // ═══════════════════════════════════════════════════════════════
+
+    auto find_system_font_impl() -> std::string {
+        static constexpr std::array<const char*, 14> preferred_fonts = {{
             "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
-            "/usr/share/fonts/opentype/noto/NotoSansCJKsc-Regular.otf",
+            "/usr/share/fonts/noto-cjk/NotoSansCJK-Regular.ttc",
+            "/usr/share/fonts/google-noto-cjk/NotoSansCJK-Regular.ttc",
             "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
-            "/usr/share/fonts/TTF/LXGWWenKai-Regular.ttf",
-            "/usr/share/fonts/wenquanyi/wqy-zenhei/wqy-zenhei.ttc",
-            "/usr/share/fonts/sarasa-gothic/Sarasa-Regular.ttc",
-            "/usr/share/fonts/ttf-sarasa_ui/SarasaUiSC-Regular.ttf",
-            // macOS
-            "/System/Library/Fonts/PingFang.ttc",
-            "/System/Library/Fonts/Hiragino Sans GB.ttc",
-            // Windows
-            "C:/Windows/Fonts/msyh.ttc",
-            "C:/Windows/Fonts/msyh.ttf",
-            "C:/Windows/Fonts/simsun.ttc",
-        });
-
-        for (const auto path : cjk_candidates) {
-            if (font_supports_basic_ui_text(path)) {
-                return std::string{path};
-            }
-        }
-
-        constexpr auto fallback_candidates = std::to_array<std::string_view>({
-            // Linux — 常见无衬线字体
             "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-            "/usr/share/fonts/dejavu/DejaVuSans.ttf",
             "/usr/share/fonts/TTF/DejaVuSans.ttf",
-            "/usr/share/fonts/truetype/liberation2/LiberationSans-Regular.ttf",
+            "/usr/share/fonts/dejavu/DejaVuSans.ttf",
+            "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
             "/usr/share/fonts/liberation/LiberationSans-Regular.ttf",
             "/usr/share/fonts/truetype/ubuntu/Ubuntu-R.ttf",
             "/usr/share/fonts/ubuntu/Ubuntu-R.ttf",
-            "/usr/share/fonts/noto/NotoSans-Regular.ttf",
-            "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf",
-            "/usr/share/fonts/opentype/noto/NotoSans-Regular.otf",
-            // macOS
             "/System/Library/Fonts/Helvetica.ttc",
-            "/System/Library/Fonts/SFNSText.ttf",
-            "/Library/Fonts/Arial.ttf",
-            // Windows（通常通过 %WINDIR% 定位）
-            "C:/Windows/Fonts/arial.ttf",
+            "/System/Library/Fonts/PingFang.ttc",
             "C:/Windows/Fonts/segoeui.ttf",
-        });
+        }};
 
-        for (const auto path : fallback_candidates) {
+        for (const auto* path : preferred_fonts) {
             if (path_exists(path)) {
                 return std::string{path};
             }
@@ -208,11 +156,14 @@ namespace {
         return {};
     }
 
+    constexpr std::string_view k_ellipsis = "...";
+
 } // namespace
 
-// ═══════════════════════════════════════════════════════════════════════════
-// NanFont::Impl — 内部实现
-// ═══════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
+// NanFont::Impl
+// ═══════════════════════════════════════════════════════════════
+
 struct NanFont::Impl {
     FT_Face      ft_face{nullptr};
     hb_font_t*   hb_font{nullptr};
@@ -220,10 +171,12 @@ struct NanFont::Impl {
     float        pixel_height{0.0f};
     bool         ft_acquired{false};
 
-    // 缓存：FreeType 度量
     float ascent_cache{0.0f};
     float descent_cache{0.0f};
     float line_gap_cache{0.0f};
+
+    mutable std::mutex load_mutex;
+    bool loaded{false};
 
     ~Impl() {
         if (hb_font) {
@@ -240,49 +193,72 @@ struct NanFont::Impl {
         }
     }
 
-    // ── 加载字体（从 FT_Face）──────────────────────────────────
     auto init_from_face(FT_Face face, float size_pt_val) -> void {
         ft_face      = face;
         size_pt      = size_pt_val;
         pixel_height = pt_to_pixel(size_pt_val);
 
-        // 设置字符大小
-        FT_Set_Char_Size(ft_face,
-                         0,
-                         pixel_to_ft_26_6(pixel_height),
-                         0,  // 水平 DPI（0=默认 72）
-                         96  // 垂直 DPI = 96
-        );
+        FT_Set_Char_Size(ft_face, 0, pixel_to_ft_26_6(pixel_height), 0, 96);
 
-        // 创建 HarfBuzz font（基于 FreeType face）
         hb_font = hb_ft_font_create_referenced(ft_face);
         if (!hb_font) {
             throw std::runtime_error("hb_ft_font_create_referenced returned nullptr");
         }
-        // 设置缩放以确保 hb 与 FT 的字号一致
         hb_font_set_scale(hb_font,
                           static_cast<int>(pixel_height * 64.0f),
                           static_cast<int>(pixel_height * 64.0f));
 
-        // 缓存度量
         const auto& metrics = ft_face->size->metrics;
-        ascent_cache   = static_cast<float>(metrics.ascender)  / 64.0f;
-        descent_cache  = static_cast<float>(-metrics.descender) / 64.0f;  // 转为正值
-        // line_gap = height - ascender + descender（FT 中 descender 为负）
-        // 需要保证非负
+        ascent_cache  = static_cast<float>(metrics.ascender)  / 64.0f;
+        descent_cache = static_cast<float>(-metrics.descender) / 64.0f;
         const float raw_gap = static_cast<float>(metrics.height - metrics.ascender + metrics.descender) / 64.0f;
         line_gap_cache = (raw_gap > 0.0f) ? raw_gap : 0.0f;
     }
 };
 
-// ═══════════════════════════════════════════════════════════════════════════
-// NanFont 静态工厂方法
-// ═══════════════════════════════════════════════════════════════════════════
-NanFont::NanFont() : m_impl(std::make_unique<Impl>()) {}
+// ═══════════════════════════════════════════════════════════════
+// NanFont — 构造 / 拷贝
+// ═══════════════════════════════════════════════════════════════
 
+NanFont::NanFont() : m_impl(std::make_shared<Impl>()) {}
 NanFont::~NanFont() = default;
 
-auto NanFont::load_from_path(std::string_view file_path, float size_pt) -> Ptr {
+NanFont::NanFont(const NanFont& other)
+    : m_impl(other.m_impl)
+    , m_family(other.m_family)
+    , m_size_pt(other.m_size_pt)
+    , m_weight(other.m_weight)
+    , m_color(other.m_color)
+    , m_line_height_override(other.m_line_height_override)
+    , m_letter_spacing(other.m_letter_spacing)
+    , m_overflow(other.m_overflow)
+    , m_max_lines(other.m_max_lines)
+    , m_single_line(other.m_single_line) {}
+
+auto NanFont::operator=(const NanFont& other) -> NanFont& {
+    if (this != &other) {
+        m_impl                 = other.m_impl;
+        m_family               = other.m_family;
+        m_size_pt              = other.m_size_pt;
+        m_weight               = other.m_weight;
+        m_color                = other.m_color;
+        m_line_height_override = other.m_line_height_override;
+        m_letter_spacing       = other.m_letter_spacing;
+        m_overflow             = other.m_overflow;
+        m_max_lines            = other.m_max_lines;
+        m_single_line          = other.m_single_line;
+    }
+    return *this;
+}
+
+NanFont::NanFont(NanFont&&) noexcept = default;
+auto NanFont::operator=(NanFont&&) noexcept -> NanFont& = default;
+
+// ═══════════════════════════════════════════════════════════════
+// NanFont — 工厂
+// ═══════════════════════════════════════════════════════════════
+
+auto NanFont::load_from_path(std::string_view file_path, float size_pt) -> NanFont {
     auto log = nandina::log::get("text.nan_font");
 
     if (size_pt <= 0.0f) {
@@ -301,7 +277,10 @@ auto NanFont::load_from_path(std::string_view file_path, float size_pt) -> Ptr {
         std::scoped_lock lock{cache.mutex};
         if (const auto it = cache.entries.find(cache_key); it != cache.entries.end()) {
             if (auto cached = it->second.lock()) {
-                return cached;
+                NanFont font;
+                font.m_impl    = cached->m_impl;  // share Impl from cached font
+                font.m_size_pt = size_pt;
+                return font;
             }
             cache.entries.erase(it);
         }
@@ -309,7 +288,6 @@ auto NanFont::load_from_path(std::string_view file_path, float size_pt) -> Ptr {
 
     log.debug("Loading font from \"{}\" size={:.1f}pt", path_str, size_pt);
 
-    // 获取全局 FreeType 句柄
     global_ft().acquire();
 
     FT_Face face = nullptr;
@@ -319,28 +297,30 @@ auto NanFont::load_from_path(std::string_view file_path, float size_pt) -> Ptr {
         throw std::runtime_error(std::format("FT_New_Face failed for \"{}\": error={}", path_str, error));
     }
 
-    auto font  = Ptr{new NanFont()};
-    font->m_impl->ft_acquired = true;
+    NanFont font;
+    font.m_size_pt = size_pt;
+    font.m_impl->ft_acquired = true;
 
     try {
-        font->m_impl->init_from_face(face, size_pt);
+        font.m_impl->init_from_face(face, size_pt);
+        font.m_impl->loaded = true;
     } catch (...) {
         FT_Done_Face(face);
         throw;
     }
 
-    log.info("Font loaded: \"{}\" {:.1f}pt (pixel={:.2f})", path_str, size_pt, font->m_impl->pixel_height);
+    log.info("Font loaded: \"{}\" {:.1f}pt (pixel={:.2f})", path_str, size_pt, font.m_impl->pixel_height);
 
     {
+        auto font_ptr = std::make_shared<NanFont>(std::move(font));
         auto& cache = font_cache();
         std::scoped_lock lock{cache.mutex};
-        cache.entries[cache_key] = font;
+        cache.entries[cache_key] = font_ptr;
+        return *font_ptr;
     }
-
-    return font;
 }
 
-auto NanFont::load_from_memory(std::span<const std::byte> data, float size_pt) -> Ptr {
+auto NanFont::load_from_memory(std::span<const std::byte> data, float size_pt) -> NanFont {
     auto log = nandina::log::get("text.nan_font");
     log.debug("Loading font from memory ({} bytes, {:.1f}pt)", data.size(), size_pt);
 
@@ -358,18 +338,19 @@ auto NanFont::load_from_memory(std::span<const std::byte> data, float size_pt) -
         global_ft().library,
         reinterpret_cast<const FT_Byte*>(data.data()),
         static_cast<FT_Long>(data.size()),
-        0,
-        &face);
+        0, &face);
     if (error != FT_Err_Ok || !face) {
         global_ft().release();
         throw std::runtime_error(std::format("FT_New_Memory_Face failed: error={}", error));
     }
 
-    auto font  = Ptr{new NanFont()};
-    font->m_impl->ft_acquired = true;
+    NanFont font;
+    font.m_size_pt = size_pt;
+    font.m_impl->ft_acquired = true;
 
     try {
-        font->m_impl->init_from_face(face, size_pt);
+        font.m_impl->init_from_face(face, size_pt);
+        font.m_impl->loaded = true;
     } catch (...) {
         FT_Done_Face(face);
         throw;
@@ -384,102 +365,154 @@ auto NanFont::load_system_default(float size_pt) -> Ptr {
     if (path.empty()) {
         throw std::runtime_error("No system font found");
     }
-    return load_from_path(path, size_pt);
+    auto font = load_from_path(path, size_pt);
+    return std::make_shared<NanFont>(std::move(font));
 }
 
-auto NanFont::find_system_font_path() -> std::string {
-    return find_system_font_impl();
+auto NanFont::ensure_loaded() const -> void {
+    if (m_impl->loaded) return;
+
+    std::scoped_lock lock{m_impl->load_mutex};
+    if (m_impl->loaded) return;
+
+    auto default_font = load_system_default(m_size_pt);
+    const_cast<NanFont*>(this)->m_impl = default_font->m_impl;
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// 字体度量
-// ═══════════════════════════════════════════════════════════════════════════
+auto NanFont::is_loaded() const noexcept -> bool {
+    return m_impl && m_impl->loaded;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// NanFont — 链式配置
+// ═══════════════════════════════════════════════════════════════
+
+auto NanFont::family(std::string name) -> NanFont& {
+    m_family = std::move(name);
+    return *this;
+}
+
+auto NanFont::size(float pt) -> NanFont& {
+    m_size_pt = pt;
+    return *this;
+}
+
+auto NanFont::weight(NanFontWeight w) -> NanFont& {
+    m_weight = w;
+    return *this;
+}
+
+auto NanFont::color(NanColor c) -> NanFont& {
+    m_color = std::move(c);
+    return *this;
+}
+
+auto NanFont::line_height(float lh) -> NanFont& {
+    m_line_height_override = lh;
+    return *this;
+}
+
+auto NanFont::letter_spacing(float ls) -> NanFont& {
+    m_letter_spacing = ls;
+    return *this;
+}
+
+auto NanFont::overflow(TextOverflow o) -> NanFont& {
+    m_overflow = o;
+    return *this;
+}
+
+auto NanFont::max_lines(int n) -> NanFont& {
+    m_max_lines = n;
+    return *this;
+}
+
+auto NanFont::single_line(bool s) -> NanFont& {
+    m_single_line = s;
+    return *this;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// NanFont — 访问器
+// ═══════════════════════════════════════════════════════════════
+
+auto NanFont::family() const noexcept -> const std::string& { return m_family; }
+auto NanFont::size() const noexcept -> float { return m_size_pt; }
+auto NanFont::weight() const noexcept -> NanFontWeight { return m_weight; }
+auto NanFont::color() const noexcept -> const NanColor& { return m_color; }
+auto NanFont::letter_spacing() const noexcept -> float { return m_letter_spacing; }
+auto NanFont::overflow() const noexcept -> TextOverflow { return m_overflow; }
+auto NanFont::max_lines() const noexcept -> int { return m_max_lines; }
+auto NanFont::single_line() const noexcept -> bool { return m_single_line; }
+
+auto NanFont::line_height() const noexcept -> float {
+    if (m_line_height_override > 0.0f) return m_line_height_override;
+    if (m_impl && m_impl->loaded) {
+        return m_impl->ascent_cache + m_impl->descent_cache + m_impl->line_gap_cache;
+    }
+    return m_size_pt * 1.4f;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// NanFont — 度量
+// ═══════════════════════════════════════════════════════════════
 
 auto NanFont::ascent() const noexcept -> float {
+    ensure_loaded();
     return m_impl ? m_impl->ascent_cache : 0.0f;
 }
 
 auto NanFont::descent() const noexcept -> float {
+    ensure_loaded();
     return m_impl ? m_impl->descent_cache : 0.0f;
 }
 
-auto NanFont::line_height() const noexcept -> float {
-    return m_impl
-        ? m_impl->ascent_cache + m_impl->descent_cache + m_impl->line_gap_cache
-        : 0.0f;
-}
-
-auto NanFont::line_gap() const noexcept -> float {
-    return m_impl ? m_impl->line_gap_cache : 0.0f;
-}
-
 auto NanFont::em_size() const noexcept -> float {
+    ensure_loaded();
     return m_impl ? m_impl->pixel_height : 0.0f;
 }
 
-auto NanFont::size_pt() const noexcept -> float {
-    return m_impl ? m_impl->size_pt : 0.0f;
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// Glyph 度量查询
-// ═══════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
+// NanFont — Glyph 度量
+// ═══════════════════════════════════════════════════════════════
 
 auto NanFont::glyph_advance(std::uint32_t codepoint) const noexcept -> float {
-    if (!m_impl || !m_impl->ft_face) {
-        return 0.0f;
-    }
+    ensure_loaded();
+    if (!m_impl || !m_impl->ft_face) return 0.0f;
 
     const auto glyph_index = FT_Get_Char_Index(m_impl->ft_face, codepoint);
-    if (glyph_index == 0) {
-        return 0.0f;
-    }
-
-    if (FT_Load_Glyph(m_impl->ft_face, glyph_index, FT_LOAD_DEFAULT) != FT_Err_Ok) {
-        return 0.0f;
-    }
+    if (glyph_index == 0) return 0.0f;
+    if (FT_Load_Glyph(m_impl->ft_face, glyph_index, FT_LOAD_DEFAULT) != FT_Err_Ok) return 0.0f;
 
     return static_cast<float>(m_impl->ft_face->glyph->advance.x) / 64.0f;
 }
 
 auto NanFont::estimate_text_width(std::string_view text) const noexcept -> float {
-    if (!m_impl || !m_impl->ft_face || text.empty()) {
-        return 0.0f;
-    }
+    ensure_loaded();
+    if (!m_impl || !m_impl->ft_face || text.empty()) return 0.0f;
 
     float total = 0.0f;
-    // 简单逐字符累加 advance（不含 kerning 和 shaping）
     for (std::size_t i = 0; i < text.size(); ) {
-        // 解码 UTF-8 码点
         std::uint32_t cp = 0;
         unsigned char lead = static_cast<unsigned char>(text[i]);
         int bytes = 0;
 
         if (lead < 0x80) {
-            cp = lead;
-            bytes = 1;
+            cp = lead; bytes = 1;
         } else if ((lead & 0xE0) == 0xC0) {
             if (i + 1 >= text.size()) break;
-            cp = ((lead & 0x1Fu) << 6u) |
-                 (static_cast<unsigned char>(text[i + 1]) & 0x3Fu);
+            cp = ((lead & 0x1Fu) << 6u) | (static_cast<unsigned char>(text[i + 1]) & 0x3Fu);
             bytes = 2;
         } else if ((lead & 0xF0) == 0xE0) {
             if (i + 2 >= text.size()) break;
-            cp = ((lead & 0x0Fu) << 12u) |
-                 ((static_cast<unsigned char>(text[i + 1]) & 0x3Fu) << 6u) |
-                 (static_cast<unsigned char>(text[i + 2]) & 0x3Fu);
+            cp = ((lead & 0x0Fu) << 12u) | ((static_cast<unsigned char>(text[i + 1]) & 0x3Fu) << 6u) | (static_cast<unsigned char>(text[i + 2]) & 0x3Fu);
             bytes = 3;
         } else if ((lead & 0xF8) == 0xF0) {
             if (i + 3 >= text.size()) break;
-            cp = ((lead & 0x07u) << 18u) |
-                 ((static_cast<unsigned char>(text[i + 1]) & 0x3Fu) << 12u) |
-                 ((static_cast<unsigned char>(text[i + 2]) & 0x3Fu) << 6u) |
-                 (static_cast<unsigned char>(text[i + 3]) & 0x3Fu);
+            cp = ((lead & 0x07u) << 18u) | ((static_cast<unsigned char>(text[i + 1]) & 0x3Fu) << 12u) | ((static_cast<unsigned char>(text[i + 2]) & 0x3Fu) << 6u) | (static_cast<unsigned char>(text[i + 3]) & 0x3Fu);
             bytes = 4;
         } else {
-            // 无效 UTF-8 字节，跳过
-            ++i;
-            continue;
+            ++i; continue;
         }
 
         total += glyph_advance(cp);
@@ -488,326 +521,370 @@ auto NanFont::estimate_text_width(std::string_view text) const noexcept -> float
     return total;
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// HarfBuzz Shaping
-// ═══════════════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════
+// Shaping helpers
+// ═══════════════════════════════════════════════════════════════
 
-auto NanFont::shape(std::string_view text,
-                     float max_width,
-                     int max_lines) const -> TextLayout {
-    TextLayout result;
+namespace {
 
-    if (text.empty() || !m_impl || !m_impl->hb_font) {
-        return result;
-    }
+auto shape_single_segment(hb_font_t* hb_font,
+                          std::string_view segment) -> std::vector<GlyphInfo> {
+    std::vector<GlyphInfo> result;
+    if (segment.empty() || !hb_font) return result;
 
-    if (max_lines < 0) {
-        max_lines = 0;
-    }
-    if (max_width < 0.0f) {
-        max_width = 0.0f;
-    }
-
-    // ── 1. 创建 HarfBuzz buffer 并 shaping ──
     auto* buffer = hb_buffer_create();
-    if (!buffer) {
-        return result;
-    }
+    if (!buffer) return result;
 
-    hb_buffer_add_utf8(buffer,
-                       text.data(),
-                       static_cast<int>(text.size()),
-                       0,  // 起始偏移
-                       static_cast<int>(text.size()));  // 长度
+    hb_buffer_add_utf8(buffer, segment.data(), static_cast<int>(segment.size()), 0,
+                       static_cast<int>(segment.size()));
     hb_buffer_guess_segment_properties(buffer);
     hb_buffer_set_direction(buffer, HB_DIRECTION_LTR);
     hb_buffer_set_script(buffer, HB_SCRIPT_COMMON);
     hb_buffer_set_language(buffer, hb_language_from_string("en", -1));
 
-    hb_shape(m_impl->hb_font, buffer, nullptr, 0);
+    hb_shape(hb_font, buffer, nullptr, 0);
 
-    // ── 2. 提取 glyph 信息 ──
     unsigned int glyph_count = 0;
-    auto* glyph_info  = hb_buffer_get_glyph_infos(buffer, &glyph_count);
-    auto* glyph_pos   = hb_buffer_get_glyph_positions(buffer, &glyph_count);
+    auto* glyph_info = hb_buffer_get_glyph_infos(buffer, &glyph_count);
+    auto* glyph_pos  = hb_buffer_get_glyph_positions(buffer, &glyph_count);
 
-    std::vector<GlyphInfo> all_glyphs;
-    all_glyphs.reserve(glyph_count);
-
+    result.reserve(glyph_count);
     for (unsigned int i = 0; i < glyph_count; ++i) {
-        all_glyphs.push_back(GlyphInfo{
-            .glyph_index = glyph_info[i].codepoint,  // hb 用 codepoint 字段存 glyph index
-            .codepoint   = glyph_info[i].codepoint,  // 此即为 FT glyph index
-            .advance_x   = static_cast<float>(glyph_pos[i].x_advance) / 64.0f,
-            .advance_y   = static_cast<float>(glyph_pos[i].y_advance) / 64.0f,
-            .offset_x    = static_cast<float>(glyph_pos[i].x_offset)  / 64.0f,
-            .offset_y    = static_cast<float>(glyph_pos[i].y_offset)  / 64.0f,
-        });
-    }
-
-    // ── 3. 换行处理 ──
-    const float line_h = line_height();
-
-    if (max_width > 0.0f) {
-        // 按最大宽度折行
-        TextLine current_line;
-        current_line.height   = line_h;
-        current_line.baseline = ascent();
-        float cursor_x = 0.0f;
-
-        for (auto& g : all_glyphs) {
-            // 检查是否需要换行
-            if (!current_line.glyphs.empty() && cursor_x + g.advance_x > max_width) {
-                // 当前行结束，提交
-                current_line.width = cursor_x;
-                result.lines.push_back(std::move(current_line));
-
-                current_line = TextLine{};
-                current_line.height   = line_h;
-                current_line.baseline = ascent();
-                cursor_x = 0.0f;
-
-                // 检查行数限制
-                if (max_lines > 0 && result.lines.size() >= static_cast<std::size_t>(max_lines)) {
-                    break;
-                }
+        // HarfBuzz cluster 值 = 原始 UTF-8 字节偏移
+        const auto cluster = glyph_info[i].cluster;
+        std::uint32_t original_cp = 0;
+        if (cluster < segment.size()) {
+            // 从原始文本解码该位置的 Unicode 码点
+            auto lead = static_cast<unsigned char>(segment[cluster]);
+            if (lead < 0x80) {
+                original_cp = lead;
+            } else if ((lead & 0xE0) == 0xC0 && cluster + 1 < segment.size()) {
+                original_cp = ((lead & 0x1Fu) << 6u) |
+                              (static_cast<unsigned char>(segment[cluster + 1]) & 0x3Fu);
+            } else if ((lead & 0xF0) == 0xE0 && cluster + 2 < segment.size()) {
+                original_cp = ((lead & 0x0Fu) << 12u) |
+                              ((static_cast<unsigned char>(segment[cluster + 1]) & 0x3Fu) << 6u) |
+                              (static_cast<unsigned char>(segment[cluster + 2]) & 0x3Fu);
+            } else if ((lead & 0xF8) == 0xF0 && cluster + 3 < segment.size()) {
+                original_cp = ((lead & 0x07u) << 18u) |
+                              ((static_cast<unsigned char>(segment[cluster + 1]) & 0x3Fu) << 12u) |
+                              ((static_cast<unsigned char>(segment[cluster + 2]) & 0x3Fu) << 6u) |
+                              (static_cast<unsigned char>(segment[cluster + 3]) & 0x3Fu);
             }
-
-            current_line.glyphs.push_back(std::move(g));
-            cursor_x += g.advance_x;
         }
 
-        // 最后一行
-        if (!current_line.glyphs.empty()) {
-            current_line.width = cursor_x;
-            result.lines.push_back(std::move(current_line));
-        }
-    } else {
-        // 不换行 — 所有 glyph 放在一行
-        TextLine line;
-        line.height   = line_h;
-        line.baseline = ascent();
-        line.glyphs   = std::move(all_glyphs);
-
-        float total_w = 0.0f;
-        for (const auto& g : line.glyphs) {
-            total_w += g.advance_x;
-        }
-        line.width = total_w;
-        result.lines.push_back(std::move(line));
-    }
-
-    // ── 4. 计算总尺寸 ──
-    result.total_height = 0.0f;
-    result.total_width  = 0.0f;
-    for (const auto& line : result.lines) {
-        result.total_height += line.height;
-        result.total_width   = std::max(result.total_width, line.width);
+        result.push_back(GlyphInfo{
+            .glyph_index  = glyph_info[i].codepoint,
+            .original_cp  = original_cp,
+            .advance_x    = static_cast<float>(glyph_pos[i].x_advance) / 64.0f,
+            .advance_y    = static_cast<float>(glyph_pos[i].y_advance) / 64.0f,
+            .offset_x     = static_cast<float>(glyph_pos[i].x_offset)  / 64.0f,
+            .offset_y     = static_cast<float>(glyph_pos[i].y_offset)  / 64.0f,
+        });
     }
 
     hb_buffer_destroy(buffer);
     return result;
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// ThorVG 绘制
-// ═══════════════════════════════════════════════════════════════════════════
+auto wrap_lines(std::vector<GlyphInfo>& glyphs,
+                float max_width, float line_height,
+                float ascent, int max_lines) -> std::vector<TextLine> {
+    std::vector<TextLine> lines;
 
-void NanFont::paint(tvg::SwCanvas& canvas,
-                    const TextLayout& layout,
-                    float origin_x,
-                    float origin_y,
-                    const nandina::NanColor& color) const {
-    if (!m_impl || !m_impl->ft_face || layout.empty()) {
-        return;
-    }
+    std::size_t i = 0;
+    while (i < glyphs.size()) {
+        if (max_lines > 0 && static_cast<int>(lines.size()) >= max_lines) break;
 
-    const auto rgb = color.to<nandina::NanRgb>();
-    const auto paint_r = rgb.red();
-    const auto paint_g = rgb.green();
-    const auto paint_b = rgb.blue();
-    const auto paint_a = rgb.alpha();
+        float line_w = 0.0f;
+        std::size_t line_end = i;       // 本行结束位置（不含）
+        std::size_t last_space = i;     // 最后一个空格之后的 glyph 索引
+        float space_line_w = 0.0f;      // 到 last_space 为止的行宽
 
-    float cursor_y = origin_y;
+        // 扫描本行能容纳的 glyph
+        for (std::size_t j = i; j < glyphs.size(); ++j) {
+            float adv = glyphs[j].advance_x;
 
-    for (const auto& line : layout.lines) {
-        // 光标 X 从行左边开始
-        float cursor_x = origin_x;
-
-        for (const auto& glyph : line.glyphs) {
-            // 通过 FreeType 加载 glyph 轮廓
-            if (FT_Load_Glyph(m_impl->ft_face,
-                              glyph.glyph_index,
-                              FT_LOAD_NO_BITMAP) != FT_Err_Ok) {
-                // 跳过无法加载的 glyph
-                cursor_x += glyph.advance_x;
-                continue;
-            }
-
-            // 获取 glyph 轮廓
-            FT_Glyph ft_glyph = nullptr;
-            if (FT_Get_Glyph(m_impl->ft_face->glyph, &ft_glyph) != FT_Err_Ok) {
-                cursor_x += glyph.advance_x;
-                continue;
-            }
-
-            // 检查是否有轮廓（某些空格字符可能没有轮廓）
-            if (ft_glyph->format == FT_GLYPH_FORMAT_OUTLINE) {
-                auto* outline_glyph = reinterpret_cast<FT_OutlineGlyph>(ft_glyph);
-                const FT_Outline& outline = outline_glyph->outline;
-
-                // 计算渲染位置（基线对齐 + HarfBuzz offset）
-                const float render_x = cursor_x + glyph.offset_x;
-                // baseline_y = cursor_y + line.baseline 将基线对齐到正确行位置
-                const float render_y = (cursor_y + line.baseline) + glyph.offset_y;
-
-                // 将 FreeType 26.6 定点坐标转换为浮点像素，并加入 raw_points
-                std::vector<geometry::NanPoint> raw_points;
-                raw_points.reserve(outline.n_points);
-
-                for (short pi = 0; pi < outline.n_points; ++pi) {
-                    raw_points.emplace_back(
-                        render_x + static_cast<float>(outline.points[pi].x) / 64.0f,
-                        render_y - static_cast<float>(outline.points[pi].y) / 64.0f
-                    );
+            if (j > i && line_w + adv > max_width) {
+                // 溢出：在最后一个空格处断行（如果存在）
+                if (last_space > i) {
+                    line_end = last_space;
+                    line_w   = space_line_w;
+                } else {
+                    // 无断词点，硬断在当前位置
+                    line_end = j;
                 }
-
-                // 遍历轮廓的每个 contour，用 ThorVG Shape 路径构建 glyph 形状
-                auto* shape = tvg::Shape::gen();
-
-                for (short ci = 0; ci < outline.n_contours; ++ci) {
-                    const short contour_start = (ci == 0) ? 0 : (outline.contours[ci - 1] + 1);
-                    const short contour_end   = outline.contours[ci];
-                    const short point_count   = contour_end - contour_start + 1;
-
-                    if (point_count < 1) {
-                        continue;
-                    }
-
-                    // ── 第一阶段：找到第一个 on-curve 点 ──
-                    // 如果 contour 以 off-curve 开头，则需要找到第一个 on-curve 点。
-                    // 如果整个 contour 都没有 on-curve 点，将第一个点视为隐含 on-curve。
-                    int first_on_idx = -1;
-                    for (short pi = contour_start; pi <= contour_end; ++pi) {
-                        if (FT_CURVE_TAG(outline.tags[pi]) == FT_CURVE_TAG_ON) {
-                            first_on_idx = pi;
-                            break;
-                        }
-                    }
-
-                    // 如果没有 on-curve 点，将轮廓起点视为隐含 on-curve 点
-                    if (first_on_idx == -1) {
-                        first_on_idx = contour_start;
-                    }
-
-                    // 从第一个 on-curve 点开始路径
-                    const auto& start_pt = raw_points[static_cast<std::size_t>(first_on_idx)];
-                    shape->moveTo(start_pt.x(), start_pt.y());
-
-                    // ── 第二阶段：遍历所有点并构建路径 ──
-                    // 使用环形遍历：从 first_on_idx 之后开始，绕回 contour_start，直到回到 first_on_idx
-                    // prev_on_x, prev_on_y 追踪上一个 on-curve（或等效）点的位置
-                    float prev_on_x = start_pt.x();
-                    float prev_on_y = start_pt.y();
-
-                    // 顺序遍历：从 first_on_idx + 1 开始，到 contour_end，再从 contour_start 到 first_on_idx
-                    const int total = contour_end - contour_start + 1;
-                    for (int step = 1; step <= total; ) {
-                        const int abs_idx = (first_on_idx - contour_start + step) % total + contour_start;
-                        const std::uint8_t tag = FT_CURVE_TAG(outline.tags[abs_idx]);
-                        const auto& pt = raw_points[static_cast<std::size_t>(abs_idx)];
-
-                        if (tag == FT_CURVE_TAG_ON) {
-                            // on-curve 点：直接 lineTo
-                            shape->lineTo(pt.x(), pt.y());
-                            prev_on_x = pt.x();
-                            prev_on_y = pt.y();
-                            ++step;
-                        } else if (tag == FT_CURVE_TAG_CONIC) {
-                            // 二次贝塞尔（TrueType conic）
-                            // 当前是 conic 控制点，需要看下一个点
-                            const int next_idx = (abs_idx == contour_end) ? contour_start : (abs_idx + 1);
-                            const std::uint8_t next_tag = FT_CURVE_TAG(outline.tags[next_idx]);
-                            const auto& next_pt = raw_points[static_cast<std::size_t>(next_idx)];
-
-                            if (next_tag == FT_CURVE_TAG_ON) {
-                                // conic → on：标准二次贝塞尔
-                                // 转换为三次贝塞尔：C₀ = P₀ + 2/3*(P₁ - P₀), C₁ = P₂ + 2/3*(P₁ - P₂)
-                                const float cx1 = prev_on_x + 2.0f/3.0f * (pt.x() - prev_on_x);
-                                const float cy1 = prev_on_y + 2.0f/3.0f * (pt.y() - prev_on_y);
-                                const float cx2 = next_pt.x() + 2.0f/3.0f * (pt.x() - next_pt.x());
-                                const float cy2 = next_pt.y() + 2.0f/3.0f * (pt.y() - next_pt.y());
-                                shape->cubicTo(cx1, cy1, cx2, cy2, next_pt.x(), next_pt.y());
-                                prev_on_x = next_pt.x();
-                                prev_on_y = next_pt.y();
-                                step += 2;  // 跳过 conic 控制点和 on 终点
-                            } else {
-                                // conic → conic：两个连续 conic 点，隐含中点
-                                const float mx = (pt.x() + next_pt.x()) * 0.5f;
-                                const float my = (pt.y() + next_pt.y()) * 0.5f;
-                                // 从 prev_on 经 pt 到隐含中点的三次贝塞尔等效
-                                const float cx1 = prev_on_x + 2.0f/3.0f * (pt.x() - prev_on_x);
-                                const float cy1 = prev_on_y + 2.0f/3.0f * (pt.y() - prev_on_y);
-                                const float cx2 = mx + 2.0f/3.0f * (pt.x() - mx);
-                                const float cy2 = my + 2.0f/3.0f * (pt.y() - my);
-                                shape->cubicTo(cx1, cy1, cx2, cy2, mx, my);
-                                prev_on_x = mx;
-                                prev_on_y = my;
-                                step += 2;  // 跳过两个 conic 控制点
-                            }
-                        } else if (tag == FT_CURVE_TAG_CUBIC) {
-                            // 三次贝塞尔（PostScript cubic）
-                            // 需要连续两个控制点，然后一个 on-curve 终点
-                            if (step + 2 > total) {
-                                ++step;
-                                break;  // 数据不足
-                            }
-                            const int next1_idx = (abs_idx == contour_end) ? contour_start : (abs_idx + 1);
-                            const int next2_idx = (next1_idx == contour_end) ? contour_start : (next1_idx + 1);
-                            const auto& c1 = pt;
-                            const auto& c2 = raw_points[static_cast<std::size_t>(next1_idx)];
-                            const auto& end = raw_points[static_cast<std::size_t>(next2_idx)];
-                            shape->cubicTo(c1.x(), c1.y(),
-                                           c2.x(), c2.y(),
-                                           end.x(), end.y());
-                            prev_on_x = end.x();
-                            prev_on_y = end.y();
-                            step += 3;  // 跳过两个控制点 + 一个终点
-                        } else {
-                            // 未知标签，跳过
-                            ++step;
-                        }
-                    }
-
-                    // 闭合 contour
-                    shape->close();
-                }
-
-                // 设置填充颜色
-                shape->fill(paint_r, paint_g, paint_b, paint_a);
-                canvas.add(shape);
+                break;
             }
 
-            // 释放 FT glyph
-            FT_Done_Glyph(ft_glyph);
-
-            // 前进光标
-            cursor_x += glyph.advance_x;
+            line_w += adv;
+            if (glyphs[j].original_cp == 0x0020) {
+                // 空格后面的位置是下一个词的开始
+                last_space   = j + 1;
+                space_line_w = line_w;
+            }
+            line_end = j + 1;
         }
 
-        // 移动到下一行
-        cursor_y += line.height;
+        // 提交当前行
+        TextLine line;
+        line.height   = line_height;
+        line.baseline = ascent;
+        for (std::size_t j = i; j < line_end && j < glyphs.size(); ++j) {
+            line.glyphs.push_back(std::move(glyphs[j]));
+        }
+        line.width = line_w;
+        lines.push_back(std::move(line));
+
+        i = line_end;
     }
+
+    return lines;
 }
 
-void NanFont::paint_text(tvg::SwCanvas& canvas,
-                         std::string_view text,
-                         float origin_x,
-                         float origin_y,
-                         const nandina::NanColor& color) const {
-    // 先 shape，再 paint
-    auto layout = shape(text, 0.0f, 0);
-    paint(canvas, layout, origin_x, origin_y, color);
+auto clip_glyphs(std::vector<GlyphInfo>& glyphs, float max_width) -> std::vector<GlyphInfo> {
+    std::vector<GlyphInfo> result;
+    float cursor_x = 0.0f;
+    for (auto& g : glyphs) {
+        if (cursor_x + g.advance_x > max_width) break;
+        result.push_back(std::move(g));
+        cursor_x += result.back().advance_x;
+    }
+    return result;
+}
+
+auto ellipsis_glyphs(std::vector<GlyphInfo>& glyphs,
+                     float max_width, float line_height,
+                     float ascent, hb_font_t* hb_font) -> TextLine {
+    auto ellipsis_g = shape_single_segment(hb_font, k_ellipsis);
+    float ellipsis_w = 0.0f;
+    for (auto& g : ellipsis_g) ellipsis_w += g.advance_x;
+
+    TextLine result;
+    result.height   = line_height;
+    result.baseline = ascent;
+    float cursor_x = 0.0f;
+
+    for (auto& g : glyphs) {
+        if (cursor_x + g.advance_x + ellipsis_w > max_width) break;
+        result.glyphs.push_back(std::move(g));
+        cursor_x += result.glyphs.back().advance_x;
+    }
+
+    for (auto& g : ellipsis_g) {
+        result.glyphs.push_back(std::move(g));
+        cursor_x += result.glyphs.back().advance_x;
+    }
+    result.width = cursor_x;
+    return result;
+}
+
+} // namespace
+
+// ═══════════════════════════════════════════════════════════════
+// NanFont — Unified Shaping
+// ═══════════════════════════════════════════════════════════════
+
+auto NanFont::shape(std::string_view text, float max_width) const -> TextLayout {
+    ensure_loaded();
+
+    TextLayout result;
+    if (text.empty() || !m_impl || !m_impl->hb_font) return result;
+    if (max_width < 0.0f) max_width = 0.0f;
+
+    const float lh     = line_height();
+    const float asc    = ascent();
+    const int   ml     = m_max_lines;
+    const bool  single = m_single_line;
+
+    // ── 按 \n 分割 ──────────────────────────────────
+    std::vector<std::string_view> segments;
+    if (single) {
+        segments.push_back(text);
+    } else {
+        std::size_t start = 0;
+        for (std::size_t i = 0; i < text.size(); ++i) {
+            if (text[i] == '\n') {
+                segments.push_back(text.substr(start, i - start));
+                start = i + 1;
+            }
+        }
+        segments.push_back(text.substr(start));
+    }
+
+    // ── 逐段 shaping ────────────────────────────────
+    for (auto segment : segments) {
+        if (segment.empty()) {
+            TextLine empty_line;
+            empty_line.height   = lh;
+            empty_line.baseline = asc;
+            empty_line.width    = 0.0f;
+            result.lines.push_back(std::move(empty_line));
+            if (ml > 0 && static_cast<int>(result.lines.size()) >= ml) goto done;
+            continue;
+        }
+
+        auto glyphs = shape_single_segment(m_impl->hb_font, segment);
+
+        // 应用 letter_spacing
+        if (m_letter_spacing != 0.0f) {
+            for (auto& g : glyphs) {
+                g.advance_x += m_letter_spacing;
+            }
+        }
+
+        // 计算整段总宽度（用于 single_line 判断）
+        float segment_total_w = 0.0f;
+        for (auto& g : glyphs) segment_total_w += g.advance_x;
+
+        if (single && max_width > 0.0f && segment_total_w > max_width) {
+            // single_line 模式：永远只有一行，溢出时始终显示省略号
+            // （clip 静默删除字符是糟糕的 UX，wrap 在这里无意义）
+            TextLine line;
+            line.height   = lh;
+            line.baseline = asc;
+            line = ellipsis_glyphs(glyphs, max_width, lh, asc, m_impl->hb_font);
+            result.lines.push_back(std::move(line));
+            if (ml > 0 && static_cast<int>(result.lines.size()) >= ml) goto done;
+        } else if (max_width > 0.0f) {
+            switch (m_overflow) {
+            case TextOverflow::wrap: {
+                auto wrapped = wrap_lines(glyphs, max_width, lh, asc, ml);
+                for (auto& line : wrapped) {
+                    result.lines.push_back(std::move(line));
+                    if (ml > 0 && static_cast<int>(result.lines.size()) >= ml) goto done;
+                }
+                break;
+            }
+            case TextOverflow::clip: {
+                auto clipped = clip_glyphs(glyphs, max_width);
+                float w = 0.0f;
+                for (auto& g : clipped) w += g.advance_x;
+                TextLine line;
+                line.glyphs   = std::move(clipped);
+                line.width    = w;
+                line.height   = lh;
+                line.baseline = asc;
+                result.lines.push_back(std::move(line));
+                if (ml > 0 && static_cast<int>(result.lines.size()) >= ml) goto done;
+                break;
+            }
+            case TextOverflow::ellipsis: {
+                float total_w = 0.0f;
+                for (auto& g : glyphs) total_w += g.advance_x;
+                if (total_w <= max_width) {
+                    TextLine line;
+                    line.glyphs   = std::move(glyphs);
+                    line.width    = total_w;
+                    line.height   = lh;
+                    line.baseline = asc;
+                    result.lines.push_back(std::move(line));
+                } else {
+                    result.lines.push_back(ellipsis_glyphs(glyphs, max_width, lh, asc, m_impl->hb_font));
+                }
+                if (ml > 0 && static_cast<int>(result.lines.size()) >= ml) goto done;
+                break;
+            }
+            case TextOverflow::scale: {
+                // TODO: binary-search font size
+                auto clipped = clip_glyphs(glyphs, max_width);
+                float w = 0.0f;
+                for (auto& g : clipped) w += g.advance_x;
+                TextLine line;
+                line.glyphs   = std::move(clipped);
+                line.width    = w;
+                line.height   = lh;
+                line.baseline = asc;
+                result.lines.push_back(std::move(line));
+                if (ml > 0 && static_cast<int>(result.lines.size()) >= ml) goto done;
+                break;
+            }
+            }
+        } else {
+            float total_w = 0.0f;
+            for (auto& g : glyphs) total_w += g.advance_x;
+            TextLine line;
+            line.glyphs   = std::move(glyphs);
+            line.width    = total_w;
+            line.height   = lh;
+            line.baseline = asc;
+            result.lines.push_back(std::move(line));
+            if (ml > 0 && static_cast<int>(result.lines.size()) >= ml) break;
+        }
+    }
+
+done:
+    for (const auto& line : result.lines) {
+        result.total_height += line.height;
+        result.total_width   = std::max(result.total_width, line.width);
+    }
+    return result;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// NanFont — 绘制
+// ═══════════════════════════════════════════════════════════════
+
+auto NanFont::paint(tvg::SwCanvas& canvas,
+                    const TextLayout& layout,
+                    float origin_x,
+                    float origin_y) const -> void {
+    ensure_loaded();
+    if (!m_impl || !m_impl->ft_face || layout.empty()) return;
+
+    const auto rgb = m_color.to<nandina::NanRgb>();
+    const auto r = rgb.red();
+    const auto g = rgb.green();
+    const auto b = rgb.blue();
+    const auto a = rgb.alpha();
+
+    float line_y = origin_y;
+    for (const auto& line : layout.lines) {
+        float cursor_x = origin_x;
+        for (const auto& glyph : line.glyphs) {
+            if (FT_Load_Glyph(m_impl->ft_face, glyph.glyph_index, FT_LOAD_DEFAULT) != FT_Err_Ok) {
+                cursor_x += glyph.advance_x; continue;
+            }
+            if (FT_Render_Glyph(m_impl->ft_face->glyph, FT_RENDER_MODE_NORMAL) != FT_Err_Ok) {
+                cursor_x += glyph.advance_x; continue;
+            }
+
+            const auto* bitmap = &m_impl->ft_face->glyph->bitmap;
+            if (bitmap->buffer && bitmap->width > 0 && bitmap->rows > 0) {
+                const float pen_x = cursor_x + static_cast<float>(m_impl->ft_face->glyph->bitmap_left);
+                const float pen_y = line_y + line.baseline - static_cast<float>(m_impl->ft_face->glyph->bitmap_top);
+
+                // ARGB 预乘像素数据
+                std::vector<uint32_t> pixels(bitmap->width * bitmap->rows);
+                for (unsigned int row = 0; row < bitmap->rows; ++row) {
+                    for (unsigned int col = 0; col < bitmap->width; ++col) {
+                        const auto alpha = bitmap->buffer[row * bitmap->pitch + col];
+                        if (alpha == 0) {
+                            pixels[row * bitmap->width + col] = 0;
+                        } else {
+                            uint32_t pr = static_cast<uint32_t>(r) * alpha / 255;
+                            uint32_t pg = static_cast<uint32_t>(g) * alpha / 255;
+                            uint32_t pb = static_cast<uint32_t>(b) * alpha / 255;
+                            uint32_t pa = static_cast<uint32_t>(a) * alpha / 255;
+                            pixels[row * bitmap->width + col] =
+                                (pa << 24) | (pr << 16) | (pg << 8) | pb;
+                        }
+                    }
+                }
+
+                auto picture = tvg::Picture::gen();
+                if (picture &&
+                    picture->load(pixels.data(),
+                                  bitmap->width, bitmap->rows,
+                                  tvg::ColorSpace::ARGB8888, true) == tvg::Result::Success) {
+                    picture->translate(pen_x, pen_y);
+                    canvas.add(std::move(picture));
+                }
+            }
+            cursor_x += glyph.advance_x;
+        }
+        line_y += line.height;
+    }
 }
 
 } // namespace nandina::text

@@ -28,5 +28,6 @@ target_link_libraries(nandina_app
     PUBLIC
     nandina::runtime    # 传递 SDL3::SDL3 / PkgConfig::THORVG / nandina::foundation
     nandina::layout
+    nandina::theme
     nandina::widgets
 )

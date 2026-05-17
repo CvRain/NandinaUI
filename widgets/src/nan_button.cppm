@@ -20,6 +20,7 @@ import nandina.layout.flex_widgets;
 import nandina.foundation.nan_insets;
 import nandina.foundation.color;
 import nandina.reactive.event_signal;
+import nandina.text.nan_font;
 
 /**
  * nandina.widgets.button
@@ -72,6 +73,27 @@ export namespace nandina::widgets {
         auto set_text(std::string_view text) -> Button&;
 
         [[nodiscard]] auto text() const noexcept -> const std::string&;
+
+        // ── 字体（委托给内部 Label）───────────────────────
+        auto set_font_size(float size) -> Button&;
+
+        [[nodiscard]] auto font_size() const noexcept -> float;
+
+        auto set_font_color(const nandina::NanColor& color) -> Button&;
+
+        [[nodiscard]] auto font_color() const noexcept -> const nandina::NanColor&;
+
+        auto set_font_weight(text::NanFontWeight weight) -> Button&;
+
+        [[nodiscard]] auto font_weight() const noexcept -> text::NanFontWeight;
+
+        auto set_font_family(std::string family) -> Button&;
+
+        [[nodiscard]] auto font_family() const noexcept -> const std::string&;
+
+        auto set_font(text::NanFont font) -> Button&;
+
+        [[nodiscard]] auto font() const noexcept -> const text::NanFont&;
 
         // ── 回调注册 ──────────────────────────────────────
         auto on_click(Callback cb) -> Button&;

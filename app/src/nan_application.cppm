@@ -23,6 +23,7 @@ import nandina.widgets.card;
 import nandina.widgets.label;
 import nandina.widgets.panel;
 import nandina.widgets.surface;
+import nandina.theme;
 
 export namespace nandina::app {
     namespace detail {
@@ -160,6 +161,8 @@ export namespace nandina::app {
         auto font_size(const float value) && -> Node {
             if (auto* widget = dynamic_cast<nandina::widgets::Label*>(m_widget.get())) {
                 widget->set_font_size(value);
+            } else if (auto* widget = dynamic_cast<nandina::widgets::Button*>(m_widget.get())) {
+                widget->set_font_size(value);
             }
             return std::move(*this);
         }
@@ -167,6 +170,73 @@ export namespace nandina::app {
         auto color(const nandina::NanColor& value) && -> Node {
             if (auto* widget = dynamic_cast<nandina::widgets::Label*>(m_widget.get())) {
                 widget->set_color(value);
+            }
+            return std::move(*this);
+        }
+
+        // ── 字体链式配置 ───────────────────────────────────
+
+        /// 设置字体颜色（Label / Button）
+        auto font_color(const nandina::NanColor& value) && -> Node {
+            if (auto* widget = dynamic_cast<nandina::widgets::Label*>(m_widget.get())) {
+                widget->set_color(value);
+            } else if (auto* widget = dynamic_cast<nandina::widgets::Button*>(m_widget.get())) {
+                widget->set_font_color(value);
+            }
+            return std::move(*this);
+        }
+
+        /// 设置字体粗细（Label / Button）
+        auto font_weight(nandina::text::NanFontWeight value) && -> Node {
+            if (auto* widget = dynamic_cast<nandina::widgets::Label*>(m_widget.get())) {
+                widget->set_font_weight(value);
+            } else if (auto* widget = dynamic_cast<nandina::widgets::Button*>(m_widget.get())) {
+                widget->set_font_weight(value);
+            }
+            return std::move(*this);
+        }
+
+        /// 设置字体族名（Label / Button）
+        auto font_family(std::string_view value) && -> Node {
+            if (auto* widget = dynamic_cast<nandina::widgets::Label*>(m_widget.get())) {
+                widget->set_font_family(std::string{value});
+            } else if (auto* widget = dynamic_cast<nandina::widgets::Button*>(m_widget.get())) {
+                widget->set_font_family(std::string{value});
+            }
+            return std::move(*this);
+        }
+
+        /// 通过 NanFont 一次性应用字体配置（Label / Button）
+        auto font(nandina::text::NanFont font_config) && -> Node {
+            if (auto* widget = dynamic_cast<nandina::widgets::Label*>(m_widget.get())) {
+                widget->set_font(std::move(font_config));
+            } else if (auto* widget = dynamic_cast<nandina::widgets::Button*>(m_widget.get())) {
+                widget->set_font(std::move(font_config));
+            }
+            return std::move(*this);
+        }
+
+        /// 通过 button_style 应用预设样式（Button）
+        auto button_style(const theme::NanButtonStyle& style) && -> Node {
+            if (auto* widget = dynamic_cast<nandina::widgets::Button*>(m_widget.get())) {
+                auto font = nandina::text::NanFont{}
+                    .size(style.font_size)
+                    .weight(style.font_weight)
+                    .color(style.font_color)
+                    .overflow(style.overflow)
+                    .single_line(style.single_line);
+                widget->set_font(std::move(font));
+
+                nandina::widgets::ButtonColors colors;
+                colors.bg = style.bg;
+                colors.bg_hover = style.bg_hover;
+                colors.bg_pressed = style.bg_pressed;
+                colors.bg_disabled = style.bg_disabled;
+                colors.text = style.text;
+                colors.text_disabled = style.text_disabled;
+                colors.corner_radius = style.corner_radius;
+                colors.padding = style.padding;
+                widget->set_colors(colors);
             }
             return std::move(*this);
         }
@@ -258,6 +328,8 @@ export namespace nandina::app {
             if (auto* widget = dynamic_cast<nandina::layout::SizedBox*>(m_widget.get())) {
                 widget->width(value);
             }
+            // 注：对非 SizedBox 的组件（如 Label），width 是空操作。
+            // 应使用 sized_box(label(...)).width(value) 来约束宽度。
             return std::move(*this);
         }
 

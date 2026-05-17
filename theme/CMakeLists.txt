@@ -14,6 +14,7 @@ target_compile_features(nandina_theme PUBLIC cxx_std_26)
 target_link_libraries(nandina_theme
     PUBLIC
         nandina::foundation
+        nandina::text
 )
 
 target_sources(nandina_theme
@@ -24,4 +25,5 @@ target_sources(nandina_theme
             src/nan_primitive_tokens.cppm   # NanPrimitiveTokens 结构体
             src/nan_color_palette.cppm      # NanRoleColorPair / NanColorPalette
             src/nan_theme.cppm              # NanTheme / ThemeManager
+            src/nan_style.cppm              # NanStylePrimitives 组件样式原语
 )
