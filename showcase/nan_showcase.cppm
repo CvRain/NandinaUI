@@ -20,7 +20,7 @@ public:
             .height = 720,
             .resizable = true,
             .high_dpi = true,
-            .bg_color = nandina::NanColor::from(nandina::NanRgb{"#303446"})
+            .bg_color = nandina::NanColor::from(nandina::NanRgb{"#eff1f5"})
         }) {
         // 直接挂载页面内容，暂不走 Sidebar + PageHost 壳
         auto page = nandina::showcase::SandboxPage{};

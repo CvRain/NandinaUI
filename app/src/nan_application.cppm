@@ -325,24 +325,38 @@ export namespace nandina::app {
         }
 
         auto width(const float value) && -> Node {
-            if (auto* widget = dynamic_cast<nandina::layout::SizedBox*>(m_widget.get())) {
-                widget->width(value);
+            if (auto* sb = dynamic_cast<nandina::layout::SizedBox*>(m_widget.get())) {
+                sb->width(value);
+            } else {
+                // 自动包裹到 SizedBox：label("X").width(200) 等价于 sized_box(label("X")).width(200)
+                auto wrapper = nandina::layout::SizedBox::Create();
+                wrapper->width(value);
+                wrapper->add_child(std::move(m_widget));
+                m_widget = std::move(wrapper);
             }
-            // 注：对非 SizedBox 的组件（如 Label），width 是空操作。
-            // 应使用 sized_box(label(...)).width(value) 来约束宽度。
             return std::move(*this);
         }
 
         auto height(const float value) && -> Node {
-            if (auto* widget = dynamic_cast<nandina::layout::SizedBox*>(m_widget.get())) {
-                widget->height(value);
+            if (auto* sb = dynamic_cast<nandina::layout::SizedBox*>(m_widget.get())) {
+                sb->height(value);
+            } else {
+                auto wrapper = nandina::layout::SizedBox::Create();
+                wrapper->height(value);
+                wrapper->add_child(std::move(m_widget));
+                m_widget = std::move(wrapper);
             }
             return std::move(*this);
         }
 
         auto size(const geometry::NanSize& value) && -> Node {
-            if (auto* widget = dynamic_cast<nandina::layout::SizedBox*>(m_widget.get())) {
-                widget->size(value);
+            if (auto* sb = dynamic_cast<nandina::layout::SizedBox*>(m_widget.get())) {
+                sb->size(value);
+            } else {
+                auto wrapper = nandina::layout::SizedBox::Create();
+                wrapper->size(value);
+                wrapper->add_child(std::move(m_widget));
+                m_widget = std::move(wrapper);
             }
             return std::move(*this);
         }
@@ -449,8 +463,10 @@ export namespace nandina::app {
         return {};
     }
 
+    /// 变参模板：接受任意多个 Node（lvalue 或 rvalue），内部统一移动
     template <typename... Nodes>
-    inline auto children(Nodes... nodes) -> Children {
+        requires (std::same_as<std::decay_t<Nodes>, Node> && ...)
+    inline auto children(Nodes&&... nodes) -> Children {
         Children result;
         (result.append(std::move(nodes)), ...);
         return result;

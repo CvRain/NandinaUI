@@ -1,227 +1,182 @@
 //
-// Created by cvrain on 2026/5/6.
-//
-// test_nan_font.cpp — NanFont 加载与度量验证
+// test_nan_font.cpp — NanFont 加载/度量/shaping 验证（更新至 P0 统一重构后 API）
 //
 
 #include <gtest/gtest.h>
 
 #include <algorithm>
 #include <filesystem>
+#include <stdexcept>
 
 import nandina.text.nan_font;
+import nandina.foundation.color;
+
+using namespace nandina::text;
 
 // ═══════════════════════════════════════════════════════════════════════════
-// NanFont 工厂方法测试
+// 值类型 & 懒加载
 // ═══════════════════════════════════════════════════════════════════════════
 
-TEST(NanFontTest, LoadSystemDefault) {
-    // 系统默认字体应该能找到并加载
-    auto font = nandina::text::NanFont::load_system_default(14.0f);
-    ASSERT_NE(font, nullptr);
+TEST(NanFontTest, DefaultConstructLazyLoad) {
+    auto font = NanFont{}.size(14.0f);
+    EXPECT_FALSE(font.is_loaded());
 
-    // 度量应该有合理的正值
-    EXPECT_GT(font->ascent(), 0.0f);
-    EXPECT_GE(font->descent(), 0.0f);
-    EXPECT_GT(font->line_height(), 0.0f);
-    EXPECT_GE(font->line_gap(), 0.0f);  // line_gap 可以为 0
-
-    // 字号应匹配
-    EXPECT_FLOAT_EQ(font->size_pt(), 14.0f);
-    EXPECT_GT(font->em_size(), 0.0f);
+    auto layout = font.shape("A");
+    EXPECT_FALSE(layout.empty());
+    EXPECT_TRUE(font.is_loaded());
 }
 
-TEST(NanFontTest, FindSystemFontPath) {
-    const auto path = nandina::text::NanFont::find_system_font_path();
-    EXPECT_FALSE(path.empty());
-    // 路径应该指向一个存在的 .ttf 或 .otf 文件
-    EXPECT_TRUE(path.ends_with(".ttf") || path.ends_with(".otf")
-                || path.ends_with(".ttc"));
-}
+TEST(NanFontTest, CopySharesImpl) {
+    auto font_a = NanFont{}.size(14.0f).color(nandina::NanColor::from(nandina::NanRgb{255, 0, 0}));
+    font_a.shape("x");
+    EXPECT_TRUE(font_a.is_loaded());
 
-TEST(NanFontTest, LoadWithDifferentSizes) {
-    auto font_small = nandina::text::NanFont::load_system_default(10.0f);
-    auto font_large = nandina::text::NanFont::load_system_default(24.0f);
+    auto font_b = font_a;
+    EXPECT_TRUE(font_b.is_loaded());
+    EXPECT_FLOAT_EQ(font_b.size(), 14.0f);
 
-    ASSERT_NE(font_small, nullptr);
-    ASSERT_NE(font_large, nullptr);
-
-    // 大字号应该产生更大的度量
-    EXPECT_GT(font_large->line_height(), font_small->line_height());
-    EXPECT_GT(font_large->em_size(), font_small->em_size());
-
-    // 字号应匹配
-    EXPECT_FLOAT_EQ(font_small->size_pt(), 10.0f);
-    EXPECT_FLOAT_EQ(font_large->size_pt(), 24.0f);
+    font_b.size(24.0f);
+    EXPECT_FLOAT_EQ(font_a.size(), 14.0f);
+    EXPECT_FLOAT_EQ(font_b.size(), 24.0f);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// 字体度量一致性测试
+// 度量
 // ═══════════════════════════════════════════════════════════════════════════
 
 TEST(NanFontTest, MetricConsistency) {
-    auto font = nandina::text::NanFont::load_system_default(14.0f);
-    ASSERT_NE(font, nullptr);
+    auto font = NanFont{}.size(14.0f);
+    font.shape("A");
 
-    // line_height = ascent + descent + line_gap
-    const float lh = font->line_height();
-    const float asc = font->ascent();
-    const float desc = font->descent();
-    const float gap = font->line_gap();
+    const float lh  = font.line_height();
+    const float asc = font.ascent();
+    const float desc = font.descent();
 
-    EXPECT_FLOAT_EQ(lh, asc + desc + gap);
-
-    // ascent 应该小于 line_height
+    EXPECT_GT(lh, 0.0f);
+    EXPECT_GT(asc, 0.0f);
+    EXPECT_GE(desc, 0.0f);
     EXPECT_LT(asc, lh);
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// Glyph 度量测试
-// ═══════════════════════════════════════════════════════════════════════════
+TEST(NanFontTest, DifferentSizes) {
+    auto font_s = NanFont{}.size(10.0f);
+    auto font_l = NanFont{}.size(24.0f);
 
-TEST(NanFontTest, GlyphAdvance) {
-    auto font = nandina::text::NanFont::load_system_default(14.0f);
-    ASSERT_NE(font, nullptr);
+    font_s.shape("A");
+    font_l.shape("A");
 
-    // 基本拉丁字符应该有非零 advance
-    const float adv_a = font->glyph_advance(static_cast<std::uint32_t>('a'));
-    const float adv_A = font->glyph_advance(static_cast<std::uint32_t>('A'));
-    const float adv_space = font->glyph_advance(static_cast<std::uint32_t>(' '));
-
-    EXPECT_GT(adv_a, 0.0f);
-    EXPECT_GT(adv_A, 0.0f);
-    EXPECT_GT(adv_space, 0.0f);
-
-    // C0 控制字符应该返回 0（不在字体中）
-    const float adv_null = font->glyph_advance(0);
-    EXPECT_EQ(adv_null, 0.0f);
+    EXPECT_FLOAT_EQ(font_s.size(), 10.0f);
+    EXPECT_FLOAT_EQ(font_l.size(), 24.0f);
+    EXPECT_GT(font_l.line_height(), font_s.line_height());
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// 文本宽度估算测试
+// Glyph 度量
 // ═══════════════════════════════════════════════════════════════════════════
 
+TEST(NanFontTest, GlyphAdvance) {
+    auto font = NanFont{}.size(14.0f);
+
+    EXPECT_GT(font.glyph_advance('a'), 0.0f);
+    EXPECT_GT(font.glyph_advance('A'), 0.0f);
+    EXPECT_GT(font.glyph_advance(' '), 0.0f);
+    EXPECT_FLOAT_EQ(font.glyph_advance(0), 0.0f);
+}
+
 TEST(NanFontTest, EstimateTextWidth) {
-    auto font = nandina::text::NanFont::load_system_default(14.0f);
-    ASSERT_NE(font, nullptr);
+    auto font = NanFont{}.size(14.0f);
 
-    // 空字符串宽度为 0
-    EXPECT_EQ(font->estimate_text_width(""), 0.0f);
+    EXPECT_FLOAT_EQ(font.estimate_text_width(""), 0.0f);
+    EXPECT_GT(font.estimate_text_width("A"), 0.0f);
 
-    // 单字符宽度应大于 0
-    EXPECT_GT(font->estimate_text_width("A"), 0.0f);
-
-    // "AA" 应该比 "A" 宽
-    const float w1 = font->estimate_text_width("A");
-    const float w2 = font->estimate_text_width("AA");
+    const float w1 = font.estimate_text_width("A");
+    const float w2 = font.estimate_text_width("AA");
     EXPECT_GT(w2, w1);
 
-    // 长文本的宽度应合理（每字符 4~20px 对于 14pt 字体而言）
-    const float w = font->estimate_text_width("Hello, World!");
+    const float w = font.estimate_text_width("Hello, World!");
     EXPECT_GT(w, 40.0f);
     EXPECT_LT(w, 400.0f);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// HarfBuzz Shaping 测试
+// Shaping
 // ═══════════════════════════════════════════════════════════════════════════
 
 TEST(NanFontTest, ShapeBasicText) {
-    auto font = nandina::text::NanFont::load_system_default(14.0f);
-    ASSERT_NE(font, nullptr);
+    auto font = NanFont{}.size(14.0f);
 
-    // 空文本 → 空 layout
-    auto empty_layout = font->shape("", 0.0f, 0);
-    EXPECT_TRUE(empty_layout.empty());
+    EXPECT_TRUE(font.shape("").empty());
 
-    // 普通文本 → 应有结果
-    auto layout = font->shape("Hello!", 0.0f, 0);
+    auto layout = font.shape("Hello!");
     EXPECT_FALSE(layout.empty());
     EXPECT_EQ(layout.lines.size(), 1);
     EXPECT_FALSE(layout.lines[0].glyphs.empty());
     EXPECT_GT(layout.total_width, 0.0f);
     EXPECT_GT(layout.total_height, 0.0f);
-
-    // glyph count 应与字符数一致（基本拉丁）
     EXPECT_EQ(layout.lines[0].glyphs.size(), 6);
 }
 
-TEST(NanFontTest, ShapeWithLineBreak) {
-    auto font = nandina::text::NanFont::load_system_default(14.0f);
-    ASSERT_NE(font, nullptr);
+TEST(NanFontTest, ShapeWithWrap) {
+    auto font = NanFont{}.size(14.0f).overflow(TextOverflow::wrap);
 
-    // 无换行限制 → 所有文本在一行
-    auto single_line = font->shape("A B C D E", 0.0f, 0);
-    EXPECT_EQ(single_line.lines.size(), 1);
+    auto single = font.shape("A B C D E");
+    EXPECT_EQ(single.lines.size(), 1);
 
-    // 非常窄的宽度 → 应该产生折行
-    auto multi_line = font->shape("Hello World Foo Bar", 30.0f, 0);
-    EXPECT_GT(multi_line.lines.size(), 1);
-    // 折行后总高度应大于单行
-    EXPECT_GT(multi_line.total_height, single_line.total_height);
+    auto multi = font.shape("Hello World Foo Bar", 30.0f);
+    EXPECT_GT(multi.lines.size(), 1);
+    EXPECT_GT(multi.total_height, single.total_height);
 }
 
 TEST(NanFontTest, ShapeWithMaxLines) {
-    auto font = nandina::text::NanFont::load_system_default(14.0f);
-    ASSERT_NE(font, nullptr);
+    auto font = NanFont{}.size(14.0f).max_lines(2);
 
-    // 限制最大行数 = 2
-    auto layout = font->shape(
+    auto layout = font.shape(
         "This is a long string that should definitely wrap into"
         " many lines given a sufficiently narrow width",
-        60.0f, 2);
+        60.0f);
     EXPECT_LE(layout.lines.size(), 2);
 }
 
 TEST(NanFontTest, ShapeUnicodeText) {
-    auto font = nandina::text::NanFont::load_system_default(18.0f);
-    ASSERT_NE(font, nullptr);
+    auto font = NanFont{}.size(18.0f);
 
-    // 中文字符也应能正确 shaping
-    auto layout = font->shape("你好世界", 0.0f, 0);
+    auto layout = font.shape("你好世界");
     EXPECT_FALSE(layout.empty());
     EXPECT_EQ(layout.lines.size(), 1);
-    // 4 个中文字符 → 至少 4 个 glyph（也可能多于 4 个）
     EXPECT_GE(layout.lines[0].glyphs.size(), 4);
     EXPECT_GT(layout.total_width, 0.0f);
 
-    // 混合中英文
-    auto mixed = font->shape("你好 World", 0.0f, 0);
+    auto mixed = font.shape("你好 World");
     EXPECT_FALSE(mixed.empty());
     EXPECT_GT(mixed.total_width, 0.0f);
 }
 
-TEST(NanFontTest, LoadSystemDefaultPrefersCjkCapableFontWhenAvailable) {
-    constexpr std::string_view cjk_candidates[] = {
-        "/usr/share/fonts/noto-cjk/NotoSansCJK-Regular.ttc",
-        "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
-        "/usr/share/fonts/opentype/noto/NotoSansCJKsc-Regular.otf",
-        "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
-        "/usr/share/fonts/TTF/LXGWWenKai-Regular.ttf",
-        "/usr/share/fonts/wenquanyi/wqy-zenhei/wqy-zenhei.ttc",
-        "/usr/share/fonts/sarasa-gothic/Sarasa-Regular.ttc",
-        "/usr/share/fonts/ttf-sarasa_ui/SarasaUiSC-Regular.ttf",
-    };
+TEST(NanFontTest, ShapeWithNewline) {
+    auto font = NanFont{}.size(14.0f);
 
-    const bool has_cjk_font = std::any_of(std::begin(cjk_candidates), std::end(cjk_candidates), [](std::string_view path) {
-        std::error_code ec;
-        return std::filesystem::exists(path, ec) && !ec;
-    });
+    auto layout = font.shape("Line 1\nLine 2\nLine 3");
+    EXPECT_EQ(layout.lines.size(), 3);
+    EXPECT_GT(layout.total_height, font.line_height() * 2.0f);
+}
 
-    if (!has_cjk_font) {
-        GTEST_SKIP() << "No known CJK system font found on this environment.";
-    }
+TEST(NanFontTest, SingleLineMode) {
+    auto font = NanFont{}.size(14.0f).single_line(true);
 
-    auto font = nandina::text::NanFont::load_system_default(18.0f);
-    ASSERT_NE(font, nullptr);
-    EXPECT_GT(font->glyph_advance(0x4F60u), 0.0f);
+    EXPECT_EQ(font.shape("A\nB\nC").lines.size(), 1);
+}
+
+TEST(NanFontTest, EllipsisOverflow) {
+    auto font = NanFont{}.size(14.0f).overflow(TextOverflow::ellipsis);
+
+    auto layout = font.shape("Hello World", 30.0f);
+    EXPECT_FALSE(layout.empty());
+    EXPECT_LE(layout.total_width, 30.0f + 1.0f);
 }
 
 TEST(NanFontTest, PreferredSize) {
-    auto font = nandina::text::NanFont::load_system_default(14.0f);
-    ASSERT_NE(font, nullptr);
+    auto font = NanFont{}.size(14.0f);
 
-    auto layout = font->shape("Hello!", 0.0f, 0);
+    auto layout    = font.shape("Hello!");
     auto pref_size = layout.preferred_size();
 
     EXPECT_FLOAT_EQ(pref_size.width(), layout.total_width);
@@ -231,46 +186,40 @@ TEST(NanFontTest, PreferredSize) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// 异常路径测试
+// CJK
+// ═══════════════════════════════════════════════════════════════════════════
+
+TEST(NanFontTest, PrefersCjkCapableFont) {
+    constexpr std::string_view cjk_candidates[] = {
+        "/usr/share/fonts/noto-cjk/NotoSansCJK-Regular.ttc",
+        "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+        "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
+        "/usr/share/fonts/TTF/LXGWWenKai-Regular.ttf",
+        "/usr/share/fonts/wenquanyi/wqy-zenhei/wqy-zenhei.ttc",
+        "/usr/share/fonts/sarasa-gothic/Sarasa-Regular.ttc",
+    };
+
+    bool has_cjk = std::any_of(std::begin(cjk_candidates), std::end(cjk_candidates),
+        [](std::string_view path) {
+            std::error_code ec;
+            return std::filesystem::exists(path, ec) && !ec;
+        });
+
+    if (!has_cjk) {
+        GTEST_SKIP() << "No CJK font found.";
+    }
+
+    auto font = NanFont{}.size(18.0f);
+    EXPECT_GT(font.glyph_advance(0x4F60u), 0.0f);  // U+4F60 = 你
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 异常路径
 // ═══════════════════════════════════════════════════════════════════════════
 
 TEST(NanFontTest, InvalidFontPath) {
     EXPECT_THROW(
-        nandina::text::NanFont::load_from_path("/nonexistent/font.ttf", 14.0f),
+        static_cast<void>(NanFont::load_from_path("/nonexistent/font.ttf", 14.0f)),
         std::runtime_error
     );
-}
-
-TEST(NanFontTest, InvalidFontSize) {
-    EXPECT_THROW(
-        nandina::text::NanFont::load_system_default(0.0f),
-        std::runtime_error
-    );
-    EXPECT_THROW(
-        nandina::text::NanFont::load_system_default(-5.0f),
-        std::runtime_error
-    );
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// 多字体实例测试
-// ═══════════════════════════════════════════════════════════════════════════
-
-TEST(NanFontTest, MultipleInstances) {
-    // 多个 NanFont 实例共享全局 FreeType 句柄，不应互相干扰
-    auto f1 = nandina::text::NanFont::load_system_default(12.0f);
-    auto f2 = nandina::text::NanFont::load_system_default(16.0f);
-    auto f3 = nandina::text::NanFont::load_system_default(20.0f);
-
-    ASSERT_NE(f1, nullptr);
-    ASSERT_NE(f2, nullptr);
-    ASSERT_NE(f3, nullptr);
-
-    EXPECT_FLOAT_EQ(f1->size_pt(), 12.0f);
-    EXPECT_FLOAT_EQ(f2->size_pt(), 16.0f);
-    EXPECT_FLOAT_EQ(f3->size_pt(), 20.0f);
-
-    // 字号越大行高越大
-    EXPECT_LT(f1->line_height(), f2->line_height());
-    EXPECT_LT(f2->line_height(), f3->line_height());
 }

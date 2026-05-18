@@ -230,6 +230,7 @@ TEST(AppAuthoringTest, CenterAndSizedBoxPropagateNestedBounds) {
 
     ASSERT_NE(mounted, nullptr);
     mounted->set_bounds(0.0f, 0.0f, 100.0f, 60.0f);
+    mounted->layout();
 
     ASSERT_EQ(mounted->child_count(), 1u);
     auto* center = mounted->children().front().get();
@@ -271,6 +272,7 @@ TEST(AppAuthoringTest, StackMountsMultipleChildrenAndPropagatesRefs) {
     EXPECT_EQ(front_ref.get(), stack->children()[1].get());
 
     mounted->set_bounds(5.0f, 8.0f, 90.0f, 40.0f);
+    mounted->layout();
     const auto first_bounds = stack->children()[0]->bounds();
     const auto second_bounds = stack->children()[1]->bounds();
 
@@ -297,6 +299,7 @@ TEST(AppAuthoringTest, PaddingNodeSupportsChainedInsetsConfiguration) {
 
     ASSERT_NE(mounted, nullptr);
     mounted->set_bounds(10.0f, 20.0f, 100.0f, 60.0f);
+    mounted->layout();
 
     ASSERT_EQ(mounted->child_count(), 1u);
     auto* padding = mounted->children().front().get();
@@ -320,6 +323,7 @@ TEST(AppAuthoringTest, SizedBoxNodeSupportsChainedFixedDimensions) {
 
     ASSERT_NE(mounted, nullptr);
     mounted->set_bounds(0.0f, 0.0f, 100.0f, 60.0f);
+    mounted->layout();
 
     ASSERT_EQ(mounted->child_count(), 1u);
     auto* center = mounted->children().front().get();
@@ -354,6 +358,7 @@ TEST(AppAuthoringTest, ColumnNodeSupportsChainedLayoutContainerConfiguration) {
 
     ASSERT_NE(mounted, nullptr);
     mounted->set_bounds(0.0f, 0.0f, 80.0f, 60.0f);
+    mounted->layout();
 
     ASSERT_EQ(mounted->child_count(), 1u);
     auto* column = mounted->children().front().get();
@@ -384,6 +389,7 @@ TEST(AppAuthoringTest, StackNodeSupportsChainedAlignmentConfiguration) {
 
     ASSERT_NE(mounted, nullptr);
     mounted->set_bounds(0.0f, 0.0f, 100.0f, 60.0f);
+    mounted->layout();
 
     ASSERT_EQ(mounted->child_count(), 1u);
     auto* stack = mounted->children().front().get();
@@ -581,12 +587,10 @@ TEST(AppAuthoringTest, LabelLazyFontLoadRequestsRelayoutForNextFrame) {
     ThorvgCanvasScope canvas_scope{160u, 32u};
     label->draw(canvas_scope.canvas());
 
-    EXPECT_TRUE(label->font() != nullptr);
-    EXPECT_TRUE(label->is_layout_dirty());
-    EXPECT_TRUE(label->dirty());
-
-    label->clear_dirty_recursive();
-    EXPECT_TRUE(label->dirty());
+    // Font is auto-loaded during shape() in on_draw — check it's loaded
+    EXPECT_TRUE(label->font().is_loaded());
+    // P0 refactor: draw() no longer marks layout_dirty for the initial font load
+    // because shape() handles it transparently
 }
 
 TEST(AppAuthoringTest, LabelMeasureUsesConstraintWidthForWrappedHeight) {
