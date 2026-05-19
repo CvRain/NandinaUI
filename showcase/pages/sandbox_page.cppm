@@ -63,7 +63,7 @@ export namespace nandina::showcase {
             auto styled_btn = button("Destructive")
                 .button_variant(nandina::theme::ButtonVariant::destructive)
                 .button_size(nandina::theme::ButtonSize::lg)
-                .width(250).height(150)
+                .width(150).height(75)
                 .on_click([] { 
                     std::print("destructive clicked!\n"); 
                     throw std::runtime_error("Simulated error on destructive action");
