@@ -434,52 +434,39 @@ TEST(AppAuthoringTest, LabelFactorySupportsChainedTextStylingAndRefBinding) {
 TEST(AppAuthoringTest, ButtonFactorySupportsTextColorsAndRefBinding) {
     nandina::app::Ref<nandina::widgets::Button> button_ref;
 
-    nandina::widgets::ButtonColors colors;
-    colors.bg = nandina::NanColor::from(nandina::NanRgb{9, 8, 7});
-    colors.text = nandina::NanColor::from(nandina::NanRgb{6, 5, 4});
-    colors.corner_radius = 11.0f;
-    colors.padding = nandina::geometry::NanInsets{20.0f, 9.0f, 18.0f, 7.0f};
-
     auto mounted = nandina::app::mount(
         nandina::app::button("Run")
-            .colors(colors)
             .bind(button_ref));
 
     ASSERT_NE(mounted, nullptr);
     ASSERT_TRUE(button_ref);
     EXPECT_EQ(button_ref->text(), "Run");
-    const auto bg = button_ref->colors().bg.to<nandina::NanRgb>();
-    const auto text = button_ref->colors().text.to<nandina::NanRgb>();
-    EXPECT_EQ(bg.red(), 9u);
-    EXPECT_EQ(bg.green(), 8u);
-    EXPECT_EQ(bg.blue(), 7u);
-    EXPECT_EQ(text.red(), 6u);
-    EXPECT_EQ(text.green(), 5u);
-    EXPECT_EQ(text.blue(), 4u);
-    EXPECT_FLOAT_EQ(button_ref->corner_radius(), 11.0f);
-    EXPECT_FLOAT_EQ(button_ref->padding().left(), 20.0f);
-    EXPECT_FLOAT_EQ(button_ref->padding().top(), 9.0f);
-    EXPECT_FLOAT_EQ(button_ref->padding().right(), 18.0f);
-    EXPECT_FLOAT_EQ(button_ref->padding().bottom(), 7.0f);
+    // Button defaults to ButtonVariant::default_variant with correct colors
+    EXPECT_FLOAT_EQ(button_ref->corner_radius(), 6.0f);  // shadcn default rounding
 }
 
-TEST(AppAuthoringTest, ButtonSetColorsAppliesLayoutAffectingStyle) {
+TEST(AppAuthoringTest, ButtonSizeMarksLayoutDirty) {
     auto button = nandina::widgets::Button::create();
     button->set_bounds(0.0f, 0.0f, 120.0f, 36.0f);
     EXPECT_FALSE(button->is_layout_dirty());
 
-    nandina::widgets::ButtonColors colors;
-    colors.corner_radius = 10.0f;
-    colors.padding = nandina::geometry::NanInsets{16.0f, 6.0f, 14.0f, 8.0f};
-
-    button->set_colors(colors);
-
+    button->size(nandina::widgets::ButtonSize::lg);
     EXPECT_TRUE(button->is_layout_dirty());
-    EXPECT_FLOAT_EQ(button->corner_radius(), 10.0f);
-    EXPECT_FLOAT_EQ(button->padding().left(), 16.0f);
-    EXPECT_FLOAT_EQ(button->padding().top(), 6.0f);
-    EXPECT_FLOAT_EQ(button->padding().right(), 14.0f);
-    EXPECT_FLOAT_EQ(button->padding().bottom(), 8.0f);
+}
+
+TEST(AppAuthoringTest, ButtonVariantSwitchesVisualStyle) {
+    auto button = nandina::widgets::Button::create();
+    EXPECT_EQ(button->variant(), nandina::widgets::ButtonVariant::default_variant);
+
+    button->variant(nandina::widgets::ButtonVariant::outline);
+    EXPECT_EQ(button->variant(), nandina::widgets::ButtonVariant::outline);
+
+    button->variant(nandina::widgets::ButtonVariant::ghost);
+    EXPECT_EQ(button->variant(), nandina::widgets::ButtonVariant::ghost);
+
+    // destructive is a valid red variant
+    button->variant(nandina::widgets::ButtonVariant::destructive);
+    EXPECT_EQ(button->variant(), nandina::widgets::ButtonVariant::destructive);
 }
 
 TEST(AppAuthoringTest, CardFactorySupportsTitleStylingAndChildRefs) {

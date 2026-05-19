@@ -229,12 +229,15 @@ export namespace nandina::runtime {
 
         // ── 命中测试（Issue 014）──────────────────────────────
         // 递归查找最上层（Z-order 最高）的命中子节点。
+        // 然后向上冒泡，返回最近的 is_interactive() 祖先。
+        // 这样点击穿透到 Label/Row 等非交互节点时会自动
+        // 解析到 Button/Pressable 等交互祖先。
         //
         // 判定规则：
         //   1. 不可见 或 hit_test_visible=false → 不参与
         //   2. 坐标不在 bounds 内 → 不参与
         //   3. 逆序遍历子节点（后添加的在上层优先）
-        //   4. 没有子节点命中时返回自身
+        //   4. 找到最深命中节点后，向上冒泡查找 is_interactive()=true 的祖先
         //
         // 返回 nullptr 表示未命中任何节点。
         [[nodiscard]] virtual auto hit_test(const float px, const float py) noexcept -> NanWidget* {
@@ -248,15 +251,32 @@ export namespace nandina::runtime {
             }
 
             // 逆序遍历子节点（Z-order：后添加的在上层）
+            NanWidget* deepest = this;
             for (auto it = m_children.rbegin(); it != m_children.rend(); ++it) {
                 auto* result = (*it)->hit_test(px, py);
                 if (result) {
-                    return result;
+                    deepest = result;
+                    break;
                 }
             }
 
-            // 没有子节点命中，返回自身
-            return this;
+            // 从最深命中节点向上冒泡，返回最近的可交互祖先
+            if (deepest->is_interactive()) {
+                return deepest;
+            }
+            auto* cursor = deepest;
+            while (cursor && !cursor->is_interactive()) {
+                cursor = cursor->parent();
+            }
+            // 如果冒泡到根都没有可交互节点，返回最深命中节点（回退兼容）
+            return cursor ? cursor : deepest;
+        }
+
+        // ── 交互标识 ───────────────────────────────────────────
+        // 返回 true 表示此组件应作为事件目标（而非其子节点）。
+        // Button、Pressable 等覆盖此方法返回 true。
+        [[nodiscard]] virtual auto is_interactive() const noexcept -> bool {
+            return false;
         }
 
         // ── 子节点列表访问 ──

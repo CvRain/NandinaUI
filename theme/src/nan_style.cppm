@@ -31,6 +31,27 @@ export import nandina.text.nan_font;
 export namespace nandina::theme {
 
     // ═══════════════════════════════════════════════════════════════
+    // § ButtonVariant / ButtonSize — theme 层定义，widgets 导入复用
+    // ═══════════════════════════════════════════════════════════════
+
+    enum class ButtonVariant : std::uint8_t {
+        default_variant,
+        secondary,
+        outline,
+        ghost,
+        destructive,
+        link,
+    };
+
+    enum class ButtonSize : std::uint8_t {
+        xs,
+        sm,
+        md,
+        lg,
+        icon,
+    };
+
+    // ═══════════════════════════════════════════════════════════════
     // § NanLabelStyle — Label 组件样式
     // ═══════════════════════════════════════════════════════════════
 
@@ -54,15 +75,8 @@ export namespace nandina::theme {
         text::TextOverflow overflow{text::TextOverflow::ellipsis};
         bool            single_line{true};
 
-        NanColor bg{NanColor::from(NanRgb{99, 102, 241})};
-        NanColor bg_hover{NanColor::from(NanRgb{120, 123, 255})};
-        NanColor bg_pressed{NanColor::from(NanRgb{80, 82, 200})};
-        NanColor bg_disabled{NanColor::from(NanRgb{60, 62, 80})};
-        NanColor text{NanColor::from(NanRgb{255, 255, 255})};
-        NanColor text_disabled{NanColor::from(NanRgb{110, 112, 130})};
-
-        float corner_radius{6.0f};
-        geometry::NanInsets padding{12.0f, 8.0f, 12.0f, 8.0f};
+        ButtonVariant   variant{ButtonVariant::default_variant};
+        ButtonSize      size{ButtonSize::md};
     };
 
     // ═══════════════════════════════════════════════════════════════

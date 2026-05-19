@@ -58,26 +58,31 @@ export namespace nandina::showcase {
                 .letter_spacing(1.0f)
                 .single_line(true);
 
-            // ── 演示 3: button_style 应用全局样式 ──────────
-            auto style                 = nandina::theme::NanStylePrimitives::default_style();
-            style.button.corner_radius = 12.0f;
-            style.button.padding       = nandina::geometry::NanInsets{16.0f, 10.0f, 16.0f, 10.0f};
-            style.button.bg            = nandina::NanColor::from(nandina::NanRgb{230, 69, 83});
-
-            auto styled_btn = button("Styled Button")
-                .button_style(style.button)
-                .width(250)
-                .height(100)
-                .on_click([] {
-                    std::print("styled button clicked!\n");
+            // ── 演示 3: variant + size 样式 ───────────────
+            // destructive 变体 = 红底白字（shadcn 风格）
+            auto styled_btn = button("Destructive")
+                .button_variant(nandina::theme::ButtonVariant::destructive)
+                .button_size(nandina::theme::ButtonSize::lg)
+                .width(250).height(150)
+                .on_click([] { 
+                    std::print("destructive clicked!\n"); 
+                    throw std::runtime_error("Simulated error on destructive action");
                 });
+
+            // ── 演示 4: outline 变体 ──────────────────────
+            auto outline_btn = button("Outline")
+                .button_variant(nandina::theme::ButtonVariant::outline)
+                .button_size(nandina::theme::ButtonSize::md)
+                .on_click([] { std::print("outline clicked!\n"); });
 
             // ── 布局（children 无需 std::move；.width() 自动包裹为 SizedBox）──
             auto btn_row = row(children(
                 primary_btn,
                 sized_box(spacer()).width(20),
-                styled_btn
-                )).gap(12);
+                styled_btn,
+                sized_box(spacer()).width(20),
+                outline_btn
+            )).gap(12);
 
             return mount(
                 column(children(

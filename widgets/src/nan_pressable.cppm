@@ -119,6 +119,10 @@ export namespace nandina::widgets {
             return m_disabled.get();
         }
 
+        [[nodiscard]] auto is_interactive() const noexcept -> bool override {
+            return true;
+        }
+
         [[nodiscard]] auto state() const noexcept -> PressableState {
             return PressableState{
                 .hovered = m_hovered,

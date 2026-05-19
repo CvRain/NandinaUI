@@ -1,11 +1,26 @@
 //
-// Created by cvrain on 2026/4/28.
+// nan_button.cppm — Button 组件接口
+//
+// shadcn/ui 风格按钮：variant + size + icon + event 全覆盖。
+//
+// 内部结构：
+//   Button (Surface)      ← bg/corner/padding, 直接处理 hover/click
+//     └── Row (align_items=center)
+//           ├── Icon (optional, left)
+//           ├── Label (text)
+//           └── Icon (optional, right)
+//
+// 使用示例：
+//   button("OK").variant(ButtonVariant::default).size(ButtonSize::lg)
+//   button("Save").icon_left(IconType::Check).on_click([] { ... })
+//   button().icon(IconType::ArrowUp).size(ButtonSize::icon)
 //
 
 module;
 
 #include <functional>
 #include <memory>
+#include <optional>
 #include <string>
 #include <string_view>
 
@@ -14,52 +29,29 @@ module;
 export module nandina.widgets.button;
 
 import nandina.widgets.surface;
-import nandina.widgets.pressable;
 import nandina.widgets.label;
+import nandina.widgets.icon;
 import nandina.layout.flex_widgets;
+import nandina.layout.container;
 import nandina.foundation.nan_insets;
 import nandina.foundation.color;
 import nandina.reactive.event_signal;
+import nandina.runtime.nan_event;
+import nandina.runtime.nan_widget;
 import nandina.text.nan_font;
+import nandina.foundation.nan_types;
+import nandina.theme.nan_style;  // for ButtonVariant / ButtonSize
 
-/**
- * nandina.widgets.button
- *
- * Button — 按钮组件（组合 Surface + Pressable + Label）。
- *
- * 设计：
- * - Button 继承自 Surface（获得背景/圆角/padding/描边能力）
- * - Button 包含一个 Pressable 子节点（获得交互状态机）
- * - Label 作为文本显示子节点
- * - 交互状态变化时自动更新视觉呈现（通过每帧 update_visual_state）
- * - 链式 API：Button::create().set_text("Click").on_click([] { ... })
- *
- * 视觉状态映射：
- *   normal   → bg: accent色(99,102,241) / text: white
- *   hover    → bg: 略亮(120,123,255)
- *   pressed  → bg: 略暗(80,82,200)
- *   disabled → bg: 灰(60,62,80) / text: dim(110,112,130)
- */
 export namespace nandina::widgets {
-    // ── 按钮样式 ──────────────────────────────────────────────
-    struct ButtonColors {
-        nandina::NanColor bg{nandina::NanColor::from(nandina::NanRgb{99, 102, 241})};
-        nandina::NanColor bg_hover{nandina::NanColor::from(nandina::NanRgb{120, 123, 255})};
-        nandina::NanColor bg_pressed{nandina::NanColor::from(nandina::NanRgb{80, 82, 200})};
-        nandina::NanColor bg_disabled{nandina::NanColor::from(nandina::NanRgb{60, 62, 80})};
-        nandina::NanColor text{nandina::NanColor::from(nandina::NanRgb{255, 255, 255})};
-        nandina::NanColor text_disabled{nandina::NanColor::from(nandina::NanRgb{110, 112, 130})};
-        float corner_radius{6.0f};
-        geometry::NanInsets padding{12.0f, 8.0f, 12.0f, 8.0f};
-    };
 
-    /**
-     * Button — 按钮组件
-     *
-     * 组合 Surface（背景绘制）+ Pressable（交互状态）+ Label（文本）。
-     *
-     * 实现位于 nan_button.cpp。
-     */
+    // ── 导入 theme 层的类型别名 ──────────────────────────
+    using ButtonVariant = nandina::theme::ButtonVariant;
+    using ButtonSize    = nandina::theme::ButtonSize;
+
+    // ═══════════════════════════════════════════════════════════
+    // § Button — 完整按钮组件
+    // ═══════════════════════════════════════════════════════════
+
     class Button : public Surface {
     public:
         using Ptr      = std::unique_ptr<Button>;
@@ -74,20 +66,38 @@ export namespace nandina::widgets {
 
         [[nodiscard]] auto text() const noexcept -> const std::string&;
 
+        // ── 变体 / 尺寸 ──────────────────────────────────
+        auto variant(ButtonVariant v) -> Button&;
+
+        [[nodiscard]] auto variant() const noexcept -> ButtonVariant;
+
+        auto size(ButtonSize s) -> Button&;
+
+        [[nodiscard]] auto size() const noexcept -> ButtonSize;
+
+        // ── 图标 ──────────────────────────────────────────
+        auto icon(IconType type) -> Button&;
+
+        auto icon_left(IconType type) -> Button&;
+
+        auto icon_right(IconType type) -> Button&;
+
+        [[nodiscard]] auto icon_type() const noexcept -> std::optional<IconType>;
+
         // ── 字体（委托给内部 Label）───────────────────────
-        auto set_font_size(float size) -> Button&;
+        auto font_size(float pt) -> Button&;
 
         [[nodiscard]] auto font_size() const noexcept -> float;
 
-        auto set_font_color(const nandina::NanColor& color) -> Button&;
+        auto font_color(const nandina::NanColor& color) -> Button&;
 
         [[nodiscard]] auto font_color() const noexcept -> const nandina::NanColor&;
 
-        auto set_font_weight(text::NanFontWeight weight) -> Button&;
+        auto font_weight(text::NanFontWeight w) -> Button&;
 
         [[nodiscard]] auto font_weight() const noexcept -> text::NanFontWeight;
 
-        auto set_font_family(std::string family) -> Button&;
+        auto font_family(std::string family) -> Button&;
 
         [[nodiscard]] auto font_family() const noexcept -> const std::string&;
 
@@ -95,40 +105,88 @@ export namespace nandina::widgets {
 
         [[nodiscard]] auto font() const noexcept -> const text::NanFont&;
 
-        // ── 回调注册 ──────────────────────────────────────
+        // ── 回调 ──────────────────────────────────────────
         auto on_click(Callback cb) -> Button&;
 
         auto on_press(Callback cb) -> Button&;
 
         auto on_release(Callback cb) -> Button&;
 
+        auto on_hover(Callback cb) -> Button&;
+
+        auto on_leave(Callback cb) -> Button&;
+
         // ── 信号 ──────────────────────────────────────────
         [[nodiscard]] auto clicked() -> reactive::EventSignal<>&;
 
-        // ── 禁用状态 ──────────────────────────────────────
+        // ── 禁用 / 加载 ───────────────────────────────────
         auto set_disabled(bool disabled) -> Button&;
 
         [[nodiscard]] auto is_disabled() const noexcept -> bool;
 
-        // ── 样式 ──────────────────────────────────────────
-        auto set_colors(const ButtonColors& colors) -> Button&;
+        auto set_loading(bool loading) -> Button&;
 
-        [[nodiscard]] auto colors() const noexcept -> const ButtonColors&;
+        [[nodiscard]] auto is_loading() const noexcept -> bool;
 
         // ── 布局协议 ──────────────────────────────────────
         [[nodiscard]] auto preferred_size() const noexcept -> geometry::NanSize override;
 
+        // ── 交互标识 ─────────────────────────────────────
+        [[nodiscard]] auto is_interactive() const noexcept -> bool override {
+            return true;
+        }
+
+        /// 访问内部 Label，供开发者自定义文本属性
+        [[nodiscard]] auto label() noexcept -> Label& {
+            return *m_label;
+        }
+
+        [[nodiscard]] auto label() const noexcept -> const Label& {
+            return *m_label;
+        }
+
     protected:
+        // ── 事件（直接处理，不依赖 Pressable 子节点）─────
+        auto on_pointer_move(const runtime::PointerMoveEvent& event) -> bool override;
+
+        auto on_pointer_down(const runtime::PointerButtonEvent& event) -> bool override;
+
+        auto on_pointer_up(const runtime::PointerButtonEvent& event) -> bool override;
+
         void on_draw(tvg::SwCanvas& canvas) override;
 
     private:
         Button();
 
+        auto apply_variant() -> void;
+
+        auto apply_size() -> void;
+
         auto update_visual_state() -> void;
 
-        ButtonColors m_colors;
-        Pressable* m_pressable{nullptr};
-        layout::Center* m_center{nullptr};
-        Label* m_label{nullptr};
+        // ── 状态 ──────────────────────────────────────
+        ButtonVariant m_variant{ButtonVariant::default_variant};
+        ButtonSize    m_size{ButtonSize::md};
+        std::optional<IconType> m_icon_type;
+
+        bool m_hovered{false};
+        bool m_pressed{false};
+        bool m_disabled{false};
+        bool m_loading{false};
+
+        // ── 回调 ──────────────────────────────────────
+        Callback m_on_click;
+        Callback m_on_press;
+        Callback m_on_release;
+        Callback m_on_hover;
+        Callback m_on_leave;
+
+        // ── 信号 ──────────────────────────────────────
+        reactive::EventSignal<> m_clicked_signal;
+
+        // ── 子节点 ────────────────────────────────────
+        layout::Row*   m_content_row{nullptr};
+        Icon*           m_icon_left{nullptr};
+        Label*          m_label{nullptr};
     };
 } // namespace nandina::widgets

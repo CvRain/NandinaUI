@@ -162,7 +162,7 @@ export namespace nandina::app {
             if (auto* widget = dynamic_cast<nandina::widgets::Label*>(m_widget.get())) {
                 widget->set_font_size(value);
             } else if (auto* widget = dynamic_cast<nandina::widgets::Button*>(m_widget.get())) {
-                widget->set_font_size(value);
+                widget->font_size(value);
             }
             return std::move(*this);
         }
@@ -181,7 +181,7 @@ export namespace nandina::app {
             if (auto* widget = dynamic_cast<nandina::widgets::Label*>(m_widget.get())) {
                 widget->set_color(value);
             } else if (auto* widget = dynamic_cast<nandina::widgets::Button*>(m_widget.get())) {
-                widget->set_font_color(value);
+                widget->font_color(value);
             }
             return std::move(*this);
         }
@@ -191,7 +191,7 @@ export namespace nandina::app {
             if (auto* widget = dynamic_cast<nandina::widgets::Label*>(m_widget.get())) {
                 widget->set_font_weight(value);
             } else if (auto* widget = dynamic_cast<nandina::widgets::Button*>(m_widget.get())) {
-                widget->set_font_weight(value);
+                widget->font_weight(value);
             }
             return std::move(*this);
         }
@@ -201,7 +201,7 @@ export namespace nandina::app {
             if (auto* widget = dynamic_cast<nandina::widgets::Label*>(m_widget.get())) {
                 widget->set_font_family(std::string{value});
             } else if (auto* widget = dynamic_cast<nandina::widgets::Button*>(m_widget.get())) {
-                widget->set_font_family(std::string{value});
+                widget->font_family(std::string{value});
             }
             return std::move(*this);
         }
@@ -219,6 +219,9 @@ export namespace nandina::app {
         /// 通过 button_style 应用预设样式（Button）
         auto button_style(const theme::NanButtonStyle& style) && -> Node {
             if (auto* widget = dynamic_cast<nandina::widgets::Button*>(m_widget.get())) {
+                widget->variant(style.variant);
+                widget->size(style.size);
+
                 auto font = nandina::text::NanFont{}
                     .size(style.font_size)
                     .weight(style.font_weight)
@@ -226,17 +229,6 @@ export namespace nandina::app {
                     .overflow(style.overflow)
                     .single_line(style.single_line);
                 widget->set_font(std::move(font));
-
-                nandina::widgets::ButtonColors colors;
-                colors.bg = style.bg;
-                colors.bg_hover = style.bg_hover;
-                colors.bg_pressed = style.bg_pressed;
-                colors.bg_disabled = style.bg_disabled;
-                colors.text = style.text;
-                colors.text_disabled = style.text_disabled;
-                colors.corner_radius = style.corner_radius;
-                colors.padding = style.padding;
-                widget->set_colors(colors);
             }
             return std::move(*this);
         }
@@ -255,9 +247,18 @@ export namespace nandina::app {
             return std::move(*this);
         }
 
-        auto colors(const nandina::widgets::ButtonColors& value) && -> Node {
+        /// 设置 Button 变体（default/secondary/outline/ghost/destructive/link）
+        auto button_variant(nandina::widgets::ButtonVariant value) && -> Node {
             if (auto* widget = dynamic_cast<nandina::widgets::Button*>(m_widget.get())) {
-                widget->set_colors(value);
+                widget->variant(value);
+            }
+            return std::move(*this);
+        }
+
+        /// 设置 Button 尺寸预设（xs/sm/md/lg/icon）
+        auto button_size(nandina::widgets::ButtonSize value) && -> Node {
+            if (auto* widget = dynamic_cast<nandina::widgets::Button*>(m_widget.get())) {
+                widget->size(value);
             }
             return std::move(*this);
         }
