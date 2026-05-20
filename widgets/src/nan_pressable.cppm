@@ -177,6 +177,25 @@ export namespace nandina::widgets {
             return true;
         }
 
+        auto on_pointer_enter(const nandina::runtime::PointerMoveEvent& event) -> bool override {
+            return on_pointer_move(event);
+        }
+
+        auto on_pointer_leave(const nandina::runtime::PointerMoveEvent& /*event*/) -> bool override {
+            if (!m_hovered && !m_pressed_inside) {
+                return false;
+            }
+
+            m_hovered = false;
+            m_pressed_inside = false;
+            mark_dirty();
+
+            if (m_on_leave) {
+                m_on_leave();
+            }
+            return true;
+        }
+
         auto on_pointer_down(const nandina::runtime::PointerButtonEvent& event) -> bool override {
             if (m_disabled.get())
                 return false;

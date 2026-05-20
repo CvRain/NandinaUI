@@ -773,6 +773,7 @@ export namespace nandina::app {
         }
 
         auto set_root_component(NanComponent::Ptr component) -> void {
+            m_hovered_widget = nullptr;
             m_root_component = std::move(component);
             sync_root_component_bounds();
         }
@@ -840,6 +841,51 @@ export namespace nandina::app {
     private:
         [[nodiscard]] auto needs_redraw() const noexcept -> bool {
             return m_root_component && m_root_component->dirty();
+        }
+
+        [[nodiscard]] auto resolve_interactive_hit(const float x, const float y) -> runtime::NanWidget* {
+            if (!m_root_component) {
+                return nullptr;
+            }
+
+            auto* hit = m_root_component->hit_test(x, y);
+            return hit && hit->is_interactive() ? hit : nullptr;
+        }
+
+        static auto pointer_move_from_button(const runtime::PointerButtonEvent& event) noexcept
+            -> runtime::PointerMoveEvent {
+            return runtime::PointerMoveEvent{
+                .x = event.x,
+                .y = event.y,
+                .delta_x = 0.0,
+                .delta_y = 0.0,
+            };
+        }
+
+        auto sync_hover_target(runtime::NanWidget* next, const runtime::PointerMoveEvent& event) -> bool {
+            if (m_hovered_widget == next) {
+                return false;
+            }
+
+            if (m_hovered_widget) {
+                m_hovered_widget->dispatch_pointer_leave(event);
+            }
+
+            m_hovered_widget = next;
+
+            if (m_hovered_widget) {
+                m_hovered_widget->dispatch_pointer_enter(event);
+            }
+
+            return true;
+        }
+
+        auto clear_hover_target(const runtime::PointerMoveEvent& event) -> void {
+            sync_hover_target(nullptr, event);
+        }
+
+        auto on_window_focus_lost() -> void {
+            clear_hover_target(runtime::PointerMoveEvent{});
         }
 
         auto ensure_root_component_layout() -> void {
@@ -940,6 +986,7 @@ export namespace nandina::app {
         AppConfig m_config;
         runtime::NanWindow* m_active_runtime_window{nullptr};
         NanComponent::Ptr m_root_component{nullptr};
+        runtime::NanWidget* m_hovered_widget{nullptr};
 
         // ── 背景层（Surface 组件，非 widget 树成员） ──────
         widgets::Surface::Ptr m_background{nullptr};
@@ -981,33 +1028,44 @@ export namespace nandina::app {
                 m_owner.on_resize_pending();
             }
 
+            void on_focus_lost() override {
+                m_owner.on_window_focus_lost();
+            }
+
             void on_pointer_move(const runtime::PointerMoveEvent& event) override {
-                if (m_owner.m_root_component) {
-                    auto* hit = m_owner.m_root_component->hit_test(
-                        static_cast<float>(event.x), static_cast<float>(event.y));
-                    if (hit) {
-                        hit->dispatch_event(runtime::Event{event});
-                    }
+                auto* hit = m_owner.resolve_interactive_hit(
+                    static_cast<float>(event.x), static_cast<float>(event.y));
+                const bool changed = m_owner.sync_hover_target(hit, event);
+                if (hit && !changed) {
+                    hit->dispatch_event(event);
                 }
             }
 
+            void on_pointer_enter(const runtime::PointerMoveEvent& event) override {
+                auto* hit = m_owner.resolve_interactive_hit(
+                    static_cast<float>(event.x), static_cast<float>(event.y));
+                m_owner.sync_hover_target(hit, event);
+            }
+
+            void on_pointer_leave(const runtime::PointerMoveEvent& event) override {
+                m_owner.clear_hover_target(event);
+            }
+
             void on_pointer_down(const runtime::PointerButtonEvent& event) override {
-                if (m_owner.m_root_component) {
-                    auto* hit = m_owner.m_root_component->hit_test(
-                        static_cast<float>(event.x), static_cast<float>(event.y));
-                    if (hit) {
-                        hit->dispatch_event(runtime::Event{event});
-                    }
+                auto* hit = m_owner.resolve_interactive_hit(
+                    static_cast<float>(event.x), static_cast<float>(event.y));
+                m_owner.sync_hover_target(hit, pointer_move_from_button(event));
+                if (hit) {
+                    hit->dispatch_event(event, runtime::EventType::PointerDown);
                 }
             }
 
             void on_pointer_up(const runtime::PointerButtonEvent& event) override {
-                if (m_owner.m_root_component) {
-                    auto* hit = m_owner.m_root_component->hit_test(
-                        static_cast<float>(event.x), static_cast<float>(event.y));
-                    if (hit) {
-                        hit->dispatch_event(runtime::Event{event});
-                    }
+                auto* hit = m_owner.resolve_interactive_hit(
+                    static_cast<float>(event.x), static_cast<float>(event.y));
+                m_owner.sync_hover_target(hit, pointer_move_from_button(event));
+                if (hit) {
+                    hit->dispatch_event(event, runtime::EventType::PointerUp);
                 }
             }
 

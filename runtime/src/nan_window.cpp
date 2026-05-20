@@ -128,10 +128,18 @@ namespace nandina::runtime {
             }
         };
 
+        struct CursorDeleter {
+            auto operator()(SDL_Cursor* c) const noexcept -> void {
+                if (c)
+                    SDL_DestroyCursor(c);
+            }
+        };
+
         // ── SDL 资源 ─────────────────────────────────────────────
         std::unique_ptr<SDL_Window, WindowDeleter> window;
         std::unique_ptr<SDL_Renderer, RendererDeleter> renderer;
         std::unique_ptr<SDL_Texture, TextureDeleter> texture;
+        std::unique_ptr<SDL_Cursor, CursorDeleter> default_cursor;
 
         // ── ThorVG 软件渲染管线 ──────────────────────────────────
         // pixel_buffer: ThorVG 的 CPU 端光栅化目标（ARGB8888）
@@ -149,6 +157,25 @@ namespace nandina::runtime {
         std::uint64_t last_slow_resize_log_ms{0};
         std::uint64_t last_slow_frame_log_ms{0};
         std::uint64_t last_resize_event_ms{0};
+
+        auto reset_cursor() const noexcept -> void {
+            if (default_cursor) {
+                SDL_SetCursor(default_cursor.get());
+            } else {
+                SDL_SetCursor(nullptr);
+            }
+        }
+
+        [[nodiscard]] auto has_input_focus() const noexcept -> bool {
+            return window && (SDL_GetWindowFlags(window.get()) & SDL_WINDOW_INPUT_FOCUS) != 0;
+        }
+
+        auto ensure_input_focus() const noexcept -> void {
+            if (!window || has_input_focus()) {
+                return;
+            }
+            SDL_RaiseWindow(window.get());
+        }
 
         // ── 辅助：重建 SDL 纹理 + ThorVG 画布（供 resize 复用）─
         auto rebuild_surface(int new_w, int new_h) -> void {
@@ -236,6 +263,9 @@ namespace nandina::runtime {
         m_impl->width  = width;
         m_impl->height = height;
 
+        // 允许点击聚焦时同时触发鼠标按键事件（修复首次进入窗口无法点击按钮的问题）
+        SDL_SetHint(SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, "1");
+
         SDL_Window* raw_window     = nullptr;
         SDL_Renderer* raw_renderer = nullptr;
 
@@ -246,6 +276,13 @@ namespace nandina::runtime {
         }
         m_impl->window.reset(raw_window);
         m_impl->renderer.reset(raw_renderer);
+
+        if (auto* cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_DEFAULT)) {
+            m_impl->default_cursor.reset(cursor);
+            m_impl->reset_cursor();
+        } else {
+            log.warn("Failed to create default cursor: {}", SDL_GetError());
+        }
 
         if (!SDL_SetRenderVSync(m_impl->renderer.get(), 1)) {
             log.warn("Failed to enable renderer vsync: {}", SDL_GetError());
@@ -370,6 +407,15 @@ namespace nandina::runtime {
                 break;
             }
 
+            case SDL_EVENT_WINDOW_FOCUS_GAINED:
+                m_impl->reset_cursor();
+                on_focus_gained();
+                break;
+
+            case SDL_EVENT_WINDOW_FOCUS_LOST:
+                on_focus_lost();
+                break;
+
             case SDL_EVENT_MOUSE_MOTION: {
                 on_pointer_move(PointerMoveEvent{
                     .x = static_cast<double>(ev.motion.x),
@@ -380,7 +426,37 @@ namespace nandina::runtime {
                 break;
             }
 
+            case SDL_EVENT_WINDOW_MOUSE_ENTER: {
+                float mouse_x = 0.0f;
+                float mouse_y = 0.0f;
+                SDL_GetMouseState(&mouse_x, &mouse_y);
+                m_impl->ensure_input_focus();
+                m_impl->reset_cursor();
+                on_pointer_enter(PointerMoveEvent{
+                    .x = static_cast<double>(mouse_x),
+                    .y = static_cast<double>(mouse_y),
+                    .delta_x = 0.0,
+                    .delta_y = 0.0,
+                });
+                break;
+            }
+
+            case SDL_EVENT_WINDOW_MOUSE_LEAVE: {
+                float mouse_x = 0.0f;
+                float mouse_y = 0.0f;
+                SDL_GetMouseState(&mouse_x, &mouse_y);
+                m_impl->reset_cursor();
+                on_pointer_leave(PointerMoveEvent{
+                    .x = static_cast<double>(mouse_x),
+                    .y = static_cast<double>(mouse_y),
+                    .delta_x = 0.0,
+                    .delta_y = 0.0,
+                });
+                break;
+            }
+
             case SDL_EVENT_MOUSE_BUTTON_DOWN: {
+                m_impl->ensure_input_focus();
                 on_pointer_down(PointerButtonEvent{
                     .button = to_pointer_button(ev.button.button),
                     .x = static_cast<double>(ev.button.x),
@@ -600,10 +676,22 @@ namespace nandina::runtime {
     auto NanWindow::on_resize(int, int) -> void {
     }
 
+    auto NanWindow::on_focus_gained() -> void {
+    }
+
+    auto NanWindow::on_focus_lost() -> void {
+    }
+
     auto NanWindow::on_close_requested() -> void {
     }
 
     auto NanWindow::on_pointer_move(const PointerMoveEvent&) -> void {
+    }
+
+    auto NanWindow::on_pointer_enter(const PointerMoveEvent&) -> void {
+    }
+
+    auto NanWindow::on_pointer_leave(const PointerMoveEvent&) -> void {
     }
 
     auto NanWindow::on_pointer_down(const PointerButtonEvent&) -> void {

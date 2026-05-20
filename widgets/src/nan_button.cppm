@@ -149,6 +149,10 @@ export namespace nandina::widgets {
         // ── 事件（直接处理，不依赖 Pressable 子节点）─────
         auto on_pointer_move(const runtime::PointerMoveEvent& event) -> bool override;
 
+        auto on_pointer_enter(const runtime::PointerMoveEvent& event) -> bool override;
+
+        auto on_pointer_leave(const runtime::PointerMoveEvent& event) -> bool override;
+
         auto on_pointer_down(const runtime::PointerButtonEvent& event) -> bool override;
 
         auto on_pointer_up(const runtime::PointerButtonEvent& event) -> bool override;

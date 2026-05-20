@@ -17,6 +17,7 @@ module;
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
@@ -198,15 +199,18 @@ struct NanFont::Impl {
         size_pt      = size_pt_val;
         pixel_height = pt_to_pixel(size_pt_val);
 
-        FT_Set_Char_Size(ft_face, 0, pixel_to_ft_26_6(pixel_height), 0, 96);
+        // FT_Set_Char_Size 第二参数须为 pt 的 26.6 定点值（FreeType 内部再乘以 dpi/72 换算为像素）。
+        // 此前错误地传入了 pixel_to_ft_26_6(pixel_height)，相当于把像素值当 pt 传入，
+        // 导致实际渲染尺寸 = size_pt * (96/72)^2 ≈ 1.78x，现修正为直接传 size_pt 的 26.6 值。
+        FT_Set_Char_Size(ft_face, 0, static_cast<FT_F26Dot6>(size_pt_val * 64.0f + 0.5f), 0, 96);
 
         hb_font = hb_ft_font_create_referenced(ft_face);
         if (!hb_font) {
             throw std::runtime_error("hb_ft_font_create_referenced returned nullptr");
         }
         hb_font_set_scale(hb_font,
-                          static_cast<int>(pixel_height * 64.0f),
-                          static_cast<int>(pixel_height * 64.0f));
+                          pixel_to_ft_26_6(pixel_height),
+                          pixel_to_ft_26_6(pixel_height));
 
         const auto& metrics = ft_face->size->metrics;
         ascent_cache  = static_cast<float>(metrics.ascender)  / 64.0f;
@@ -679,6 +683,72 @@ auto ellipsis_glyphs(std::vector<GlyphInfo>& glyphs,
     return result;
 }
 
+auto populate_line_ink_bounds(TextLine& line, FT_Face ft_face) -> void {
+    if (!ft_face) {
+        line.ink_left = 0.0f;
+        line.ink_top = 0.0f;
+        line.ink_right = line.width;
+        line.ink_bottom = line.height;
+        return;
+    }
+
+    float cursor_x = 0.0f;
+    bool has_ink = false;
+    float min_left = 0.0f;
+    float min_top = 0.0f;
+    float max_right = 0.0f;
+    float max_bottom = 0.0f;
+
+    for (const auto& glyph : line.glyphs) {
+        if (FT_Load_Glyph(ft_face, glyph.glyph_index, FT_LOAD_DEFAULT) != FT_Err_Ok) {
+            cursor_x += glyph.advance_x;
+            continue;
+        }
+        if (FT_Render_Glyph(ft_face->glyph, FT_RENDER_MODE_NORMAL) != FT_Err_Ok) {
+            cursor_x += glyph.advance_x;
+            continue;
+        }
+
+        const auto* bitmap = &ft_face->glyph->bitmap;
+        if (bitmap->buffer && bitmap->width > 0 && bitmap->rows > 0) {
+            const float pen_x = cursor_x + glyph.offset_x + static_cast<float>(ft_face->glyph->bitmap_left);
+            const float pen_y = line.baseline - glyph.offset_y - static_cast<float>(ft_face->glyph->bitmap_top);
+            const float left = pen_x;
+            const float top = pen_y;
+            const float right = pen_x + static_cast<float>(bitmap->width);
+            const float bottom = pen_y + static_cast<float>(bitmap->rows);
+
+            if (!has_ink) {
+                min_left = left;
+                min_top = top;
+                max_right = right;
+                max_bottom = bottom;
+                has_ink = true;
+            } else {
+                min_left = std::min(min_left, left);
+                min_top = std::min(min_top, top);
+                max_right = std::max(max_right, right);
+                max_bottom = std::max(max_bottom, bottom);
+            }
+        }
+
+        cursor_x += glyph.advance_x;
+    }
+
+    if (!has_ink) {
+        line.ink_left = 0.0f;
+        line.ink_top = 0.0f;
+        line.ink_right = line.width;
+        line.ink_bottom = line.height;
+        return;
+    }
+
+    line.ink_left = min_left;
+    line.ink_top = min_top;
+    line.ink_right = max_right;
+    line.ink_bottom = max_bottom;
+}
+
 } // namespace
 
 // ═══════════════════════════════════════════════════════════════
@@ -814,9 +884,42 @@ auto NanFont::shape(std::string_view text, float max_width) const -> TextLayout 
     }
 
 done:
+    float line_origin_y = 0.0f;
+    bool has_ink = false;
     for (const auto& line : result.lines) {
         result.total_height += line.height;
         result.total_width   = std::max(result.total_width, line.width);
+    }
+
+    for (auto& line : result.lines) {
+        populate_line_ink_bounds(line, m_impl->ft_face);
+
+        const float line_left = line.ink_left;
+        const float line_top = line_origin_y + line.ink_top;
+        const float line_right = line.ink_right;
+        const float line_bottom = line_origin_y + line.ink_bottom;
+
+        if (!has_ink) {
+            result.ink_left = line_left;
+            result.ink_top = line_top;
+            result.ink_right = line_right;
+            result.ink_bottom = line_bottom;
+            has_ink = true;
+        } else {
+            result.ink_left = std::min(result.ink_left, line_left);
+            result.ink_top = std::min(result.ink_top, line_top);
+            result.ink_right = std::max(result.ink_right, line_right);
+            result.ink_bottom = std::max(result.ink_bottom, line_bottom);
+        }
+
+        line_origin_y += line.height;
+    }
+
+    if (!has_ink) {
+        result.ink_left = 0.0f;
+        result.ink_top = 0.0f;
+        result.ink_right = result.total_width;
+        result.ink_bottom = result.total_height;
     }
     return result;
 }
@@ -851,8 +954,11 @@ auto NanFont::paint(tvg::SwCanvas& canvas,
 
             const auto* bitmap = &m_impl->ft_face->glyph->bitmap;
             if (bitmap->buffer && bitmap->width > 0 && bitmap->rows > 0) {
-                const float pen_x = cursor_x + static_cast<float>(m_impl->ft_face->glyph->bitmap_left);
-                const float pen_y = line_y + line.baseline - static_cast<float>(m_impl->ft_face->glyph->bitmap_top);
+                const float pen_x = cursor_x + glyph.offset_x + static_cast<float>(m_impl->ft_face->glyph->bitmap_left);
+                // 取整到像素边界：ThorVG 对 Picture 默认使用双线性过滤，
+                // 非整数 pen_y 会将字形顶行混合到 50% 透明，视觉上顶部像素被削掉。
+                // 只对垂直方向取整，保留水平方向的子像素精度。
+                const float pen_y = std::round(line_y + line.baseline - glyph.offset_y - static_cast<float>(m_impl->ft_face->glyph->bitmap_top));
 
                 // ARGB 预乘像素数据
                 std::vector<uint32_t> pixels(bitmap->width * bitmap->rows);

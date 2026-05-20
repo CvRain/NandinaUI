@@ -166,11 +166,23 @@ export namespace nandina::runtime {
         // 窗口逻辑尺寸变化后调用。
         virtual auto on_resize(int new_width, int new_height) -> void;
 
+        // 窗口获得输入焦点。
+        virtual auto on_focus_gained() -> void;
+
+        // 窗口失去输入焦点。
+        virtual auto on_focus_lost() -> void;
+
         // 收到关闭请求时调用。
         virtual auto on_close_requested() -> void;
 
         // 鼠标移动事件。
         virtual auto on_pointer_move(const PointerMoveEvent& event) -> void;
+
+        // 鼠标进入窗口事件。
+        virtual auto on_pointer_enter(const PointerMoveEvent& event) -> void;
+
+        // 鼠标离开窗口事件。
+        virtual auto on_pointer_leave(const PointerMoveEvent& event) -> void;
 
         // 鼠标按下事件。
         virtual auto on_pointer_down(const PointerButtonEvent& event) -> void;

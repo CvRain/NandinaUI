@@ -36,7 +36,7 @@ export namespace nandina::showcase {
             using namespace nandina::app;
 
             // ── 演示 1: 直接用链式 API 配置按钮字体 ──────────
-            auto primary_btn = button("Primary Action")
+            auto primary_btn = button("测试按钮")
                 .font(
                     nandina::text::NanFont{}
                     .color(NanColor::from(NanRgb{"#e64553"}))
@@ -64,25 +64,39 @@ export namespace nandina::showcase {
                 .button_variant(nandina::theme::ButtonVariant::destructive)
                 .button_size(nandina::theme::ButtonSize::lg)
                 .width(150).height(75)
-                .on_click([] { 
-                    std::print("destructive clicked!\n"); 
-                    throw std::runtime_error("Simulated error on destructive action");
+                .on_click([] {
+                    std::print("destructive clicked!\n");
                 });
+
 
             // ── 演示 4: outline 变体 ──────────────────────
             auto outline_btn = button("Outline")
                 .button_variant(nandina::theme::ButtonVariant::outline)
                 .button_size(nandina::theme::ButtonSize::md)
-                .on_click([] { std::print("outline clicked!\n"); });
+                .on_click([] {
+                    std::print("outline clicked!\n");
+                });
+
+            auto test_button = nandina::widgets::Button::create();
+            test_button->set_text("test button")
+                .on_click([]() {
+                    std::print("test button clicked!\n");
+                })
+                .on_hover([]() {
+                    std::print("test button hovered!\n");
+                })
+                .on_leave([]() {
+                    std::print("test button leave!\n");
+                });
 
             // ── 布局（children 无需 std::move；.width() 自动包裹为 SizedBox）──
             auto btn_row = row(children(
-                primary_btn,
-                sized_box(spacer()).width(20),
-                styled_btn,
-                sized_box(spacer()).width(20),
-                outline_btn
-            )).gap(12);
+                    primary_btn,
+                    sized_box(spacer()).width(20),
+                    styled_btn,
+                    sized_box(spacer()).width(20),
+                    outline_btn))
+                .gap(12);
 
             return mount(
                 column(children(

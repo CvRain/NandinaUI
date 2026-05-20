@@ -185,32 +185,88 @@ export namespace nandina::runtime {
         // ── 事件分发（Issue 011/015）─────────────────────────
         // 将 Event 分发给对应的 on_xxx 虚方法。
         // 返回 true 表示事件已被消费。
+        virtual auto dispatch_event(const PointerMoveEvent& ev) -> bool {
+            return on_pointer_move(ev);
+        }
+
+        virtual auto dispatch_pointer_enter(const PointerMoveEvent& ev) -> bool {
+            return on_pointer_enter(ev);
+        }
+
+        virtual auto dispatch_pointer_leave(const PointerMoveEvent& ev) -> bool {
+            return on_pointer_leave(ev);
+        }
+
+        virtual auto dispatch_event(const PointerButtonEvent& ev, const EventType type) -> bool {
+            switch (type) {
+            case EventType::PointerDown:
+                return on_pointer_down(ev);
+            case EventType::PointerUp:
+                return on_pointer_up(ev);
+            case EventType::PointerClick:
+                return on_pointer_click(ev);
+            default:
+                return false;
+            }
+        }
+
+        virtual auto dispatch_event(const PointerWheelEvent& ev) -> bool {
+            return on_pointer_wheel(ev);
+        }
+
+        virtual auto dispatch_event(const KeyEvent& ev, const EventType type) -> bool {
+            switch (type) {
+            case EventType::KeyDown:
+                return on_key_down(ev);
+            case EventType::KeyUp:
+                return on_key_up(ev);
+            default:
+                return false;
+            }
+        }
+
+        virtual auto dispatch_event(const TextInputEvent& ev) -> bool {
+            return on_text_input(ev);
+        }
+
+        virtual auto dispatch_event(const FocusEvent& ev) -> bool {
+            return ev.got_focus ? on_focus_in() : on_focus_out();
+        }
+
+        virtual auto dispatch_event(const WindowResizeEvent& ev) -> bool {
+            return on_window_resize(ev);
+        }
+
+        virtual auto dispatch_event(const WindowCloseEvent&) -> bool {
+            return on_window_close();
+        }
+
         virtual auto dispatch_event(const Event& ev) -> bool {
             switch (event_type(ev)) {
             case EventType::PointerMove:
-                return on_pointer_move(std::get<PointerMoveEvent>(ev));
+                return dispatch_event(std::get<PointerMoveEvent>(ev));
             case EventType::PointerDown:
-                return on_pointer_down(std::get<PointerButtonEvent>(ev));
+                return dispatch_event(std::get<PointerButtonEvent>(ev), EventType::PointerDown);
             case EventType::PointerUp:
-                return on_pointer_up(std::get<PointerButtonEvent>(ev));
+                return dispatch_event(std::get<PointerButtonEvent>(ev), EventType::PointerUp);
             case EventType::PointerClick:
-                return on_pointer_click(std::get<PointerButtonEvent>(ev));
+                return dispatch_event(std::get<PointerButtonEvent>(ev), EventType::PointerClick);
             case EventType::PointerWheel:
-                return on_pointer_wheel(std::get<PointerWheelEvent>(ev));
+                return dispatch_event(std::get<PointerWheelEvent>(ev));
             case EventType::KeyDown:
-                return on_key_down(std::get<KeyEvent>(ev));
+                return dispatch_event(std::get<KeyEvent>(ev), EventType::KeyDown);
             case EventType::KeyUp:
-                return on_key_up(std::get<KeyEvent>(ev));
+                return dispatch_event(std::get<KeyEvent>(ev), EventType::KeyUp);
             case EventType::TextInput:
-                return on_text_input(std::get<TextInputEvent>(ev));
+                return dispatch_event(std::get<TextInputEvent>(ev));
             case EventType::FocusIn:
-                return on_focus_in();
+                return dispatch_event(FocusEvent{.got_focus = true});
             case EventType::FocusOut:
-                return on_focus_out();
+                return dispatch_event(FocusEvent{.got_focus = false});
             case EventType::WindowResize:
-                return on_window_resize(std::get<WindowResizeEvent>(ev));
+                return dispatch_event(std::get<WindowResizeEvent>(ev));
             case EventType::WindowClose:
-                return on_window_close();
+                return dispatch_event(WindowCloseEvent{});
             }
             return false;
         }
@@ -452,6 +508,14 @@ export namespace nandina::runtime {
 
         // ── 事件处理虚方法（默认不做响应）────────────────────
         virtual auto on_pointer_move(const PointerMoveEvent& /*event*/) -> bool {
+            return false;
+        }
+
+        virtual auto on_pointer_enter(const PointerMoveEvent& /*event*/) -> bool {
+            return false;
+        }
+
+        virtual auto on_pointer_leave(const PointerMoveEvent& /*event*/) -> bool {
             return false;
         }
 

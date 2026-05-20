@@ -98,6 +98,7 @@ export namespace nandina::widgets {
 
         auto set_font(text::NanFont font) -> Label& {
             m_font = std::move(font);
+            m_color.set(m_font.color());
             m_shape_cache_valid = false;
             mark_layout_dirty();
             return *this;
@@ -110,6 +111,7 @@ export namespace nandina::widgets {
 
         auto set_color(const nandina::NanColor& color) -> Label& {
             m_color.set(color);
+            m_font.color(color);
             mark_dirty();
             return *this;
         }
@@ -208,29 +210,33 @@ export namespace nandina::widgets {
             if (layout.empty()) return;
 
             // 计算水平对齐偏移
-            const float block_width = layout.total_width;
+            const float block_width = std::max(0.0f, layout.ink_right - layout.ink_left);
             float offset_x          = bnds.x();
             switch (m_align) {
             case TextAlign::Start:  break;
             case TextAlign::Center: offset_x += (bnds.width() - block_width) * 0.5f; break;
             case TextAlign::End:    offset_x += bnds.width() - block_width;           break;
             }
+            offset_x -= layout.ink_left;
 
             // 计算垂直对齐偏移
-            const float block_height = layout.total_height;
+            const float block_height = std::max(0.0f, layout.ink_bottom - layout.ink_top);
             float offset_y           = bnds.y();
             switch (m_valign) {
             case TextVerticalAlign::Top:    break;
             case TextVerticalAlign::Center: offset_y += (bnds.height() - block_height) * 0.5f; break;
             case TextVerticalAlign::Bottom: offset_y += bnds.height() - block_height;           break;
             }
+            offset_y -= layout.ink_top;
 
             // 颜色已在 NanFont 内部，直接 paint
             m_font.paint(canvas, layout, offset_x, offset_y);
         }
 
     private:
-        Label() = default;
+        Label() {
+            m_font.color(m_color.get());
+        }
 
         [[nodiscard]] auto cached_shape(const std::string& txt, float max_width) const -> const text::TextLayout& {
             const float quantized = std::round(max_width * 2.0f) * 0.5f;

@@ -173,6 +173,7 @@ namespace nandina::widgets {
         m_label->set_font(text::NanFont{}
             .single_line(true)
             .overflow(text::TextOverflow::ellipsis));
+        m_label->set_vertical_align(TextVerticalAlign::Center);
         m_content_row->add(std::move(label));
 
         // 应用默认 variant + size
@@ -453,6 +454,24 @@ namespace nandina::widgets {
         if (!was_hovered) {
             update_visual_state();
             if (m_on_hover) m_on_hover();
+        }
+        return true;
+    }
+
+    auto Button::on_pointer_enter(const runtime::PointerMoveEvent& event) -> bool {
+        return on_pointer_move(event);
+    }
+
+    auto Button::on_pointer_leave(const runtime::PointerMoveEvent& /*event*/) -> bool {
+        if (!m_hovered && !m_pressed) {
+            return false;
+        }
+
+        m_hovered = false;
+        m_pressed = false;
+        update_visual_state();
+        if (m_on_leave) {
+            m_on_leave();
         }
         return true;
     }

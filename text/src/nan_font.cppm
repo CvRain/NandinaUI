@@ -77,6 +77,10 @@ export namespace nandina::text {
         float width{0.0f};
         float height{0.0f};
         float baseline{0.0f};
+        float ink_left{0.0f};
+        float ink_top{0.0f};
+        float ink_right{0.0f};
+        float ink_bottom{0.0f};
 
         [[nodiscard]] auto empty() const noexcept -> bool { return glyphs.empty(); }
     };
@@ -85,6 +89,10 @@ export namespace nandina::text {
         std::vector<TextLine> lines;
         float total_width{0.0f};
         float total_height{0.0f};
+        float ink_left{0.0f};
+        float ink_top{0.0f};
+        float ink_right{0.0f};
+        float ink_bottom{0.0f};
 
         [[nodiscard]] auto empty() const noexcept -> bool { return lines.empty(); }
 
