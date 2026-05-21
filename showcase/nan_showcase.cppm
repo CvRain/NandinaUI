@@ -22,9 +22,12 @@ public:
             .high_dpi = true,
             .bg_color = nandina::NanColor::from(nandina::NanRgb{"#eff1f5"})
         }) {
-        // 直接挂载页面内容，暂不走 Sidebar + PageHost 壳
-        auto page = nandina::showcase::SandboxPage{};
-        set_root(nandina::app::adopt(page.build()));
+        // m_sandbox_page 作为成员，生命周期与 MainWindow 绑定；
+        // build() 内的 [this]（SandboxPage*）和 Ref<Button> 引用因此保持有效
+        set_root(nandina::app::adopt(m_sandbox_page.build()));
 
     }
+
+private:
+    nandina::showcase::SandboxPage m_sandbox_page;
 };

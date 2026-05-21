@@ -16,7 +16,12 @@ import nandina.theme;
 export namespace nandina::showcase {
 
     /**
-     * SandboxPage — 组件验证沙盒（P0: 字体 + 样式链式 API 演示）
+     * SandboxPage — 组件验证沙盒（typed builder 演示）
+     *
+     * 演示三种用法：
+     *   A. 一口气链式配置（rvalue chain）
+     *   B. 分段 lvalue 配置（先 auto btn = ...; 再 btn.on_click(...);）
+     *   C. 跨 widget 回调引用（Ref<Button> 类成员 + bind()）
      */
     class SandboxPage final : public nandina::app::NanPage {
     public:
@@ -35,8 +40,11 @@ export namespace nandina::showcase {
         [[nodiscard]] auto build() -> nandina::app::NanComponent::Ptr override {
             using namespace nandina::app;
 
-            // ── 演示 1: 直接用链式 API 配置按钮字体 ──────────
+            // ── 演示 A+C: 链式配置 + bind 成员 Ref ──────────
+            // primary_btn 本身用一口气 rvalue 链构建；
+            // .bind(m_primary_ref) 注册绑定，mount 后可从其他回调访问底层 Button
             auto primary_btn = button("测试按钮")
+                .bind(m_primary_ref)
                 .font(
                     nandina::text::NanFont{}
                     .color(NanColor::from(NanRgb{"#e64553"}))
@@ -45,10 +53,19 @@ export namespace nandina::showcase {
                     .size(18)
                     )
                 .width(300)
-                .height(150)
-                .on_click([] {
-                    std::print("primary clicked!\n");
-                });
+                .height(150);
+
+            // ── 演示 B: lvalue 分段配置 ───────────────────
+            // 现在 primary_btn 是 lvalue ButtonNode，可以继续调用任意方法
+            primary_btn.on_click([] {
+                std::print("primary clicked!\n");
+            });
+            primary_btn.on_hover([] {
+                std::print("primary hovered!\n");
+            });
+            primary_btn.on_leave([] {
+                std::print("primary leave!\n");
+            });
 
             // ── 演示 2: NanFont 统一配置 ──────────────────
             auto heading_font = nandina::text::NanFont{}
@@ -58,27 +75,29 @@ export namespace nandina::showcase {
                 .letter_spacing(1.0f)
                 .single_line(true);
 
-            // ── 演示 3: variant + size 样式 ───────────────
-            // destructive 变体 = 红底白字（shadcn 风格）
+            // ── 演示 C: 跨 widget 引用 ────────────────────
+            // destructive 按钮点击时，通过 m_primary_ref 直接修改 primary_btn 的底层 Label
+            // m_primary_ref 在 mount() 之后由 MountedNodeComponent::bind_refs() 设置好
             auto styled_btn = button("Destructive")
-                .button_variant(nandina::theme::ButtonVariant::destructive)
-                .button_size(nandina::theme::ButtonSize::lg)
+                .variant(nandina::theme::ButtonVariant::destructive)
+                .size(nandina::theme::ButtonSize::lg)
                 .width(150).height(75)
-                .on_click([] {
+                .on_click([this] {
                     std::print("destructive clicked!\n");
+                    if (m_primary_ref) {
+                        m_primary_ref->set_text("被改了!");
+                    }
                 });
-
 
             // ── 演示 4: outline 变体 ──────────────────────
             auto outline_btn = button("Outline")
-                .button_variant(nandina::theme::ButtonVariant::outline)
-                .button_size(nandina::theme::ButtonSize::md)
+                .variant(nandina::theme::ButtonVariant::outline)
+                .size(nandina::theme::ButtonSize::md)
                 .on_click([] {
                     std::print("outline clicked!\n");
                 });
 
-            auto test_button = nandina::widgets::Button::create();
-            test_button->set_text("test button")
+            auto interactive_btn = button("Hover me")
                 .on_click([]() {
                     std::print("test button clicked!\n");
                 })
@@ -87,6 +106,9 @@ export namespace nandina::showcase {
                 })
                 .on_leave([]() {
                     std::print("test button leave!\n");
+                })
+                .on_release([]() {
+                    std::print("test button released!\n");
                 });
 
             // ── 布局（children 无需 std::move；.width() 自动包裹为 SizedBox）──
@@ -95,7 +117,9 @@ export namespace nandina::showcase {
                     sized_box(spacer()).width(20),
                     styled_btn,
                     sized_box(spacer()).width(20),
-                    outline_btn))
+                    outline_btn,
+                    sized_box(spacer()).width(20),
+                    interactive_btn))
                 .gap(12);
 
             return mount(
@@ -110,6 +134,11 @@ export namespace nandina::showcase {
                 .padding(24)
                 );
         }
+
+    private:
+        // 演示 C: 跨 widget 回调引用——必须作为类成员而非 build() 局部变量
+        // mount() 时 MountedNodeComponent::bind_refs() 会将底层 Button* 填入
+        nandina::app::Ref<nandina::widgets::Button> m_primary_ref;
     };
 
 } // namespace nandina::showcase
