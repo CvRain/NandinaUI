@@ -418,10 +418,10 @@ namespace nandina::runtime {
 
             case SDL_EVENT_MOUSE_MOTION: {
                 on_pointer_move(PointerMoveEvent{
-                    .x = static_cast<double>(ev.motion.x),
-                    .y = static_cast<double>(ev.motion.y),
-                    .delta_x = static_cast<double>(ev.motion.xrel),
-                    .delta_y = static_cast<double>(ev.motion.yrel),
+                    .x = static_cast<double>(ev.motion.x) * m_impl->dpi_scale,
+                    .y = static_cast<double>(ev.motion.y) * m_impl->dpi_scale,
+                    .delta_x = static_cast<double>(ev.motion.xrel) * m_impl->dpi_scale,
+                    .delta_y = static_cast<double>(ev.motion.yrel) * m_impl->dpi_scale,
                 });
                 break;
             }
@@ -433,8 +433,8 @@ namespace nandina::runtime {
                 m_impl->ensure_input_focus();
                 m_impl->reset_cursor();
                 on_pointer_enter(PointerMoveEvent{
-                    .x = static_cast<double>(mouse_x),
-                    .y = static_cast<double>(mouse_y),
+                    .x = static_cast<double>(mouse_x) * m_impl->dpi_scale,
+                    .y = static_cast<double>(mouse_y) * m_impl->dpi_scale,
                     .delta_x = 0.0,
                     .delta_y = 0.0,
                 });
@@ -447,8 +447,8 @@ namespace nandina::runtime {
                 SDL_GetMouseState(&mouse_x, &mouse_y);
                 m_impl->reset_cursor();
                 on_pointer_leave(PointerMoveEvent{
-                    .x = static_cast<double>(mouse_x),
-                    .y = static_cast<double>(mouse_y),
+                    .x = static_cast<double>(mouse_x) * m_impl->dpi_scale,
+                    .y = static_cast<double>(mouse_y) * m_impl->dpi_scale,
                     .delta_x = 0.0,
                     .delta_y = 0.0,
                 });
@@ -459,8 +459,8 @@ namespace nandina::runtime {
                 m_impl->ensure_input_focus();
                 on_pointer_down(PointerButtonEvent{
                     .button = to_pointer_button(ev.button.button),
-                    .x = static_cast<double>(ev.button.x),
-                    .y = static_cast<double>(ev.button.y),
+                    .x = static_cast<double>(ev.button.x) * m_impl->dpi_scale,
+                    .y = static_cast<double>(ev.button.y) * m_impl->dpi_scale,
                     .is_repeat = false,
                 });
                 break;
@@ -469,8 +469,8 @@ namespace nandina::runtime {
             case SDL_EVENT_MOUSE_BUTTON_UP: {
                 on_pointer_up(PointerButtonEvent{
                     .button = to_pointer_button(ev.button.button),
-                    .x = static_cast<double>(ev.button.x),
-                    .y = static_cast<double>(ev.button.y),
+                    .x = static_cast<double>(ev.button.x) * m_impl->dpi_scale,
+                    .y = static_cast<double>(ev.button.y) * m_impl->dpi_scale,
                     .is_repeat = false,
                 });
                 break;

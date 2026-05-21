@@ -60,11 +60,23 @@ export namespace nandina::showcase {
             primary_btn.on_click([] {
                 std::print("primary clicked!\n");
             });
-            primary_btn.on_hover([] {
-                std::print("primary hovered!\n");
+
+            primary_btn.on_click([]() {
+                std::print("primary clicked! -- 2\n");
             });
-            primary_btn.on_leave([] {
+
+            primary_btn.on_hover([this] {
+                std::print("primary hovered!\n");
+                if (m_primary_ref) {
+                    m_primary_ref->font_color(NanColor::from(NanRgb{"#eff1f5"}));
+                    m_primary_ref->set_bg_color(nandina::NanColor::from(NanRgb{"#dc8a7a"}));
+                }
+            });
+            primary_btn.on_leave([this] {
                 std::print("primary leave!\n");
+                if (m_primary_ref) {
+                    m_primary_ref->font_color(NanColor::from(NanRgb{"#e64553"}));
+                }
             });
 
             // ── 演示 2: NanFont 统一配置 ──────────────────
