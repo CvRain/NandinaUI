@@ -359,27 +359,27 @@ namespace nandina::widgets {
     // ═══════════════════════════════════════════════════════════
 
     auto Button::on_click(Callback cb) -> Button& {
-        m_on_click = std::move(cb);
+        m_clicked_signal.connect(std::move(cb));
         return *this;
     }
 
     auto Button::on_press(Callback cb) -> Button& {
-        m_on_press = std::move(cb);
+        m_pressed_signal.connect(std::move(cb));
         return *this;
     }
 
     auto Button::on_release(Callback cb) -> Button& {
-        m_on_release = std::move(cb);
+        m_released_signal.connect(std::move(cb));
         return *this;
     }
 
     auto Button::on_hover(Callback cb) -> Button& {
-        m_on_hover = std::move(cb);
+        m_hovered_signal.connect(std::move(cb));
         return *this;
     }
 
     auto Button::on_leave(Callback cb) -> Button& {
-        m_on_leave = std::move(cb);
+        m_left_signal.connect(std::move(cb));
         return *this;
     }
 
@@ -389,6 +389,22 @@ namespace nandina::widgets {
 
     auto Button::clicked() -> reactive::EventSignal<>& {
         return m_clicked_signal;
+    }
+
+    auto Button::hovered() -> reactive::EventSignal<>& {
+        return m_hovered_signal;
+    }
+
+    auto Button::left() -> reactive::EventSignal<>& {
+        return m_left_signal;
+    }
+
+    auto Button::pressed() -> reactive::EventSignal<>& {
+        return m_pressed_signal;
+    }
+
+    auto Button::released() -> reactive::EventSignal<>& {
+        return m_released_signal;
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -453,7 +469,7 @@ namespace nandina::widgets {
         m_hovered             = true;
         if (!was_hovered) {
             update_visual_state();
-            if (m_on_hover) m_on_hover();
+            m_hovered_signal.emit();
         }
         return true;
     }
@@ -470,9 +486,7 @@ namespace nandina::widgets {
         m_hovered = false;
         m_pressed = false;
         update_visual_state();
-        if (m_on_leave) {
-            m_on_leave();
-        }
+        m_left_signal.emit();
         return true;
     }
 
@@ -482,7 +496,7 @@ namespace nandina::widgets {
 
         m_pressed = true;
         update_visual_state();
-        if (m_on_press) m_on_press();
+        m_pressed_signal.emit();
         return true;
     }
 
@@ -495,9 +509,8 @@ namespace nandina::widgets {
         update_visual_state();
 
         if (was_pressed) {
-            if (m_on_release) m_on_release();
+            m_released_signal.emit();
             if (m_hovered) {
-                if (m_on_click) m_on_click();
                 m_clicked_signal.emit();
             }
         }

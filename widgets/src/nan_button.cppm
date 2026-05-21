@@ -118,6 +118,10 @@ export namespace nandina::widgets {
 
         // ── 信号 ──────────────────────────────────────────
         [[nodiscard]] auto clicked() -> reactive::EventSignal<>&;
+        [[nodiscard]] auto hovered() -> reactive::EventSignal<>&;
+        [[nodiscard]] auto left() -> reactive::EventSignal<>&;
+        [[nodiscard]] auto pressed() -> reactive::EventSignal<>&;
+        [[nodiscard]] auto released() -> reactive::EventSignal<>&;
 
         // ── 禁用 / 加载 ───────────────────────────────────
         auto set_disabled(bool disabled) -> Button&;
@@ -178,15 +182,12 @@ export namespace nandina::widgets {
         bool m_disabled{false};
         bool m_loading{false};
 
-        // ── 回调 ──────────────────────────────────────
-        Callback m_on_click;
-        Callback m_on_press;
-        Callback m_on_release;
-        Callback m_on_hover;
-        Callback m_on_leave;
-
-        // ── 信号 ──────────────────────────────────────
+        // ── 信号 ──────────────────────────────────────────
         reactive::EventSignal<> m_clicked_signal;
+        reactive::EventSignal<> m_hovered_signal;
+        reactive::EventSignal<> m_left_signal;
+        reactive::EventSignal<> m_pressed_signal;
+        reactive::EventSignal<> m_released_signal;
 
         // ── 子节点 ────────────────────────────────────
         layout::Row*   m_content_row{nullptr};
