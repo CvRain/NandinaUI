@@ -12,16 +12,29 @@ import nandina.layout.container;
 import nandina.layout.flex_widgets;
 import nandina.widgets;
 import nandina.theme;
+export import nandina.reactive;
+
+// ── 模块私有：响应式数据（不导出，GCC 不序列化这些类型）────────────────────────
+// 含 std::mutex / deleted-move 的类型（State, EventSignal, ScopedConnection）
+// 放在匿名 namespace，通过 shared_ptr<void> 类型擦除，消费方只看到两个指针。
+namespace {
+    struct SandboxReactive {
+        nandina::reactive::State<int> number{1};
+        nandina::reactive::ScopedConnection number_conn;
+    };
+} // namespace
 
 export namespace nandina::showcase {
 
     /**
      * SandboxPage — 组件验证沙盒（typed builder 演示）
      *
-     * 演示三种用法：
-     *   A. 一口气链式配置（rvalue chain）
-     *   B. 分段 lvalue 配置（先 auto btn = ...; 再 btn.on_click(...);）
-     *   C. 跨 widget 回调引用（Ref<Button> 类成员 + bind()）
+     * 演示三种 authoring 模式：
+     *   A. 纯 rvalue 链式配置（所有属性和回调在单个表达式内完成，无中间变量）
+     *   B. lvalue 分段配置（先构建节点，再对 lvalue 补充 on_click/on_hover/on_leave）
+     *   C. 跨 widget 回调引用（Ref<Button> 类成员 + .bind()，在别处回调中访问节点）
+     *
+     * 同时演示响应式数据驱动 UI 更新（State<int> + ScopedConnection）。
      */
     class SandboxPage final : public nandina::app::NanPage {
     public:
@@ -39,118 +52,108 @@ export namespace nandina::showcase {
 
         [[nodiscard]] auto build() -> nandina::app::NanComponent::Ptr override {
             using namespace nandina::app;
+            using nandina::theme::ButtonVariant;
+            using nandina::theme::ButtonSize;
 
-            // ── 演示 A+C: 链式配置 + bind 成员 Ref ──────────
-            // primary_btn 本身用一口气 rvalue 链构建；
-            // .bind(m_primary_ref) 注册绑定，mount 后可从其他回调访问底层 Button
-            auto primary_btn = button("测试按钮")
-                .bind(m_primary_ref)
-                .font(
-                    nandina::text::NanFont{}
-                    .color(NanColor::from(NanRgb{"#e64553"}))
-                    .weight(text::NanFontWeight::black)
-                    .letter_spacing(1.0f)
-                    .size(18)
-                    )
-                .width(300)
-                .height(150);
+            // 懒初始化响应式数据（build() 可能被多次调用，只创建一次）
+            if (!m_reactive) {
+                m_reactive = std::make_shared<SandboxReactive>();
+            }
+            auto* r = static_cast<SandboxReactive*>(m_reactive.get());
 
-            // ── 演示 B: lvalue 分段配置 ───────────────────
-            // 现在 primary_btn 是 lvalue ButtonNode，可以继续调用任意方法
-            primary_btn.on_click([] {
-                std::print("primary clicked!\n");
-            });
-
-            primary_btn.on_click([]() {
-                std::print("primary clicked! -- 2\n");
-            });
-
-            primary_btn.on_hover([this] {
-                std::print("primary hovered!\n");
-                if (m_primary_ref) {
-                    m_primary_ref->font_color(NanColor::from(NanRgb{"#eff1f5"}));
-                    m_primary_ref->set_bg_color(nandina::NanColor::from(NanRgb{"#dc8a7a"}));
-                }
-            });
-            primary_btn.on_leave([this] {
-                std::print("primary leave!\n");
-                if (m_primary_ref) {
-                    m_primary_ref->font_color(NanColor::from(NanRgb{"#e64553"}));
-                }
-            });
-
-            // ── 演示 2: NanFont 统一配置 ──────────────────
-            auto heading_font = nandina::text::NanFont{}
-                .size(24)
-                .weight(nandina::text::NanFontWeight::extraBold)
-                .color(NanColor::from(NanRgb{"#e64553"}))
-                .letter_spacing(1.0f)
-                .single_line(true);
-
-            // ── 演示 C: 跨 widget 引用 ────────────────────
-            // destructive 按钮点击时，通过 m_primary_ref 直接修改 primary_btn 的底层 Label
-            // m_primary_ref 在 mount() 之后由 MountedNodeComponent::bind_refs() 设置好
-            auto styled_btn = button("Destructive")
-                .variant(nandina::theme::ButtonVariant::destructive)
-                .size(nandina::theme::ButtonSize::lg)
-                .width(150).height(75)
-                .on_click([this] {
-                    std::print("destructive clicked!\n");
-                    if (m_primary_ref) {
-                        m_primary_ref->set_text("被改了!");
+            // 重新注册 on_change 订阅（每次 build() 刷新绑定，防止悬空）
+            r->number_conn = nandina::reactive::ScopedConnection{
+                r->number.on_change([this, r](const int& value) {
+                    std::printf("number changed: %d\n", value);
+                    if (label_button_ref) {
+                        label_button_ref->set_text(std::to_string(value));
                     }
+                })
+            };
+
+            // ── Pattern C：Ref<Button> 成员 + .bind() ─────────────────────────
+            // label_button 绑定到成员 Ref；on_change 回调可通过 Ref 直接更新文本，
+            // 不需要持有节点变量本身。
+            auto label_button = button()
+                .bind(label_button_ref)
+                .size({240, 60})
+                .variant(ButtonVariant::outline)
+                .text(std::to_string(r->number()));
+
+            // ── Pattern B：lvalue 分段配置 ────────────────────────────────────
+            // 先用链式配置锁定布局与外观，再对同一 lvalue 逐步挂载事件回调。
+            // on_hover / on_leave 通过 Ref 访问节点，在悬停时临时改变文字。
+            auto increase_button = button()
+                .bind(increase_button_ref)
+                .size({120, 60})
+                .text("+");
+
+            increase_button.on_click([r]() {
+                std::print("increase clicked!\n");
+                r->number.set(r->number() + 1);
+            });
+            increase_button.on_hover([this]() {
+                if (increase_button_ref)
+                    increase_button_ref->set_text("▲");
+            });
+            increase_button.on_leave([this]() {
+                if (increase_button_ref)
+                    increase_button_ref->set_text("+");
+            });
+
+            auto decrease_button = button()
+                .bind(decrease_button_ref)
+                .size({120, 60})
+                .text("-");
+
+            decrease_button.on_click([r]() {
+                std::print("decrease clicked!\n");
+                r->number.set(r->number() - 1);
+            });
+            decrease_button.on_hover([this]() {
+                if (decrease_button_ref)
+                    decrease_button_ref->set_text("▼");
+            });
+            decrease_button.on_leave([this]() {
+                if (decrease_button_ref)
+                    decrease_button_ref->set_text("-");
+            });
+
+            // ── Pattern A：纯 rvalue 链式配置（一口气构建完毕）──────────────────
+            // 所有属性与回调在单个链式表达式内完成，无任何中间变量。
+            auto reset_button = button("Reset")
+                .size(ButtonSize::sm)
+                .font(nandina::text::NanFont{}
+                    .weight(text::NanFontWeight::black)
+                    .single_line(true)
+                    .overflow(text::TextOverflow::scale)
+                    )
+                .variant(ButtonVariant::ghost)
+                .on_click([r]() {
+                    std::print("reset clicked!\n");
+                    r->number.set(1);
                 });
 
-            // ── 演示 4: outline 变体 ──────────────────────
-            auto outline_btn = button("Outline")
-                .variant(nandina::theme::ButtonVariant::outline)
-                .size(nandina::theme::ButtonSize::md)
-                .on_click([] {
-                    std::print("outline clicked!\n");
-                });
+            auto page = center(column(children(
+                label_button,
+                row(children(
+                    increase_button,
+                    decrease_button
+                    )).gap(15),
+                reset_button
+                )).gap(10));
 
-            auto interactive_btn = button("Hover me")
-                .on_click([]() {
-                    std::print("test button clicked!\n");
-                })
-                .on_hover([]() {
-                    std::print("test button hovered!\n");
-                })
-                .on_leave([]() {
-                    std::print("test button leave!\n");
-                })
-                .on_release([]() {
-                    std::print("test button released!\n");
-                });
-
-            // ── 布局（children 无需 std::move；.width() 自动包裹为 SizedBox）──
-            auto btn_row = row(children(
-                    primary_btn,
-                    sized_box(spacer()).width(20),
-                    styled_btn,
-                    sized_box(spacer()).width(20),
-                    outline_btn,
-                    sized_box(spacer()).width(20),
-                    interactive_btn))
-                .gap(12);
-
-            return mount(
-                column(children(
-                    label("NandinaUI Sandbox")
-                    .font(std::move(heading_font))
-                    .align(widgets::TextAlign::Start)
-                    .width(320),
-                    btn_row
-                    ))
-                .gap(16)
-                .padding(24)
-                );
+            return mount(std::move(page));
         }
 
     private:
-        // 演示 C: 跨 widget 回调引用——必须作为类成员而非 build() 局部变量
-        // mount() 时 MountedNodeComponent::bind_refs() 会将底层 Button* 填入
-        nandina::app::Ref<nandina::widgets::Button> m_primary_ref;
+        nandina::app::Ref<nandina::widgets::Button> label_button_ref;
+        nandina::app::Ref<nandina::widgets::Button> increase_button_ref;
+        nandina::app::Ref<nandina::widgets::Button> decrease_button_ref;
+
+        // Pimpl：State/ScopedConnection 含 mutex，GCC C++ 模块无法序列化，
+        // 用 shared_ptr<void> 类型擦除（仅两个指针，无序列化问题）
+        std::shared_ptr<void> m_reactive;
     };
 
 } // namespace nandina::showcase

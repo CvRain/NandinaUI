@@ -522,7 +522,6 @@ namespace nandina::widgets {
     // ═══════════════════════════════════════════════════════════
 
     void Button::on_draw(tvg::SwCanvas& canvas) {
-        update_visual_state();
         Surface::on_draw(canvas);
         // 子节点由基类 draw() 遍历
     }

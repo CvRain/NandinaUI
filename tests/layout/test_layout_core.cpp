@@ -257,3 +257,389 @@ TEST(LayoutCoreTest, Column_FlexChildRespectsMinAndMaxHeight) {
     EXPECT_FLOAT_EQ(frames[0].height(), 120.0f);
     EXPECT_FLOAT_EQ(frames[1].height(), 120.0f);
 }
+
+// ─── 回归矩阵：Padding 行为 ──────────────────────────────────
+
+TEST(LayoutCoreTest, Column_WithPadding_ReducesAvailableSpace) {
+    BasicLayoutBackend backend;
+
+    LayoutRequest req;
+    req.axis = LayoutAxis::column;
+    req.container_bounds = {0.0f, 0.0f, 200.0f, 400.0f};
+    req.padding = {20.0f, 20.0f, 20.0f, 20.0f};  // 均匀 20px
+    req.children = {
+        LayoutChildSpec{.preferred_size = NanSize{80.0f, 50.0f}, .flex_factor = 0},
+    };
+
+    auto frames = backend.compute(req);
+    ASSERT_EQ(frames.size(), 1);
+    // padding 使子节点起始偏移 (20, 20)
+    EXPECT_FLOAT_EQ(frames[0].x(), 20.0f);
+    EXPECT_FLOAT_EQ(frames[0].y(), 20.0f);
+    EXPECT_FLOAT_EQ(frames[0].width(), 80.0f);   // preferred，未 stretch
+    EXPECT_FLOAT_EQ(frames[0].height(), 50.0f);
+}
+
+TEST(LayoutCoreTest, Row_WithPadding_ReducesAvailableSpace) {
+    BasicLayoutBackend backend;
+
+    LayoutRequest req;
+    req.axis = LayoutAxis::row;
+    req.container_bounds = {0.0f, 0.0f, 300.0f, 100.0f};
+    req.padding = {10.0f, 5.0f, 10.0f, 5.0f};  // left=10, top=5, right=10, bottom=5
+    req.children = {
+        LayoutChildSpec{.preferred_size = NanSize{60.0f, 40.0f}, .flex_factor = 0},
+        LayoutChildSpec{.preferred_size = NanSize{80.0f, 40.0f}, .flex_factor = 0},
+    };
+
+    auto frames = backend.compute(req);
+    ASSERT_EQ(frames.size(), 2);
+    // 第一个子节点从 x=10 开始（左 padding）
+    EXPECT_FLOAT_EQ(frames[0].x(), 10.0f);
+    EXPECT_FLOAT_EQ(frames[0].y(), 5.0f);   // 顶部 padding
+    // 第二个子节点紧跟第一个（无 gap）
+    EXPECT_FLOAT_EQ(frames[1].x(), 70.0f);  // 10 + 60
+}
+
+TEST(LayoutCoreTest, Column_PaddingAndGap_Combined) {
+    BasicLayoutBackend backend;
+
+    LayoutRequest req;
+    req.axis = LayoutAxis::column;
+    req.container_bounds = {0.0f, 0.0f, 200.0f, 400.0f};
+    req.padding = {10.0f, 10.0f, 10.0f, 10.0f};
+    req.gap = 15.0f;
+    req.children = {
+        LayoutChildSpec{.preferred_size = NanSize{80.0f, 50.0f}, .flex_factor = 0},
+        LayoutChildSpec{.preferred_size = NanSize{80.0f, 80.0f}, .flex_factor = 0},
+    };
+
+    auto frames = backend.compute(req);
+    ASSERT_EQ(frames.size(), 2);
+    EXPECT_FLOAT_EQ(frames[0].y(), 10.0f);           // 顶部 padding
+    EXPECT_FLOAT_EQ(frames[0].height(), 50.0f);
+    EXPECT_FLOAT_EQ(frames[1].y(), 75.0f);           // 10 + 50 + 15
+    EXPECT_FLOAT_EQ(frames[1].height(), 80.0f);
+}
+
+TEST(LayoutCoreTest, Column_PaddingWithFlexChild) {
+    BasicLayoutBackend backend;
+
+    LayoutRequest req;
+    req.axis = LayoutAxis::column;
+    req.container_bounds = {0.0f, 0.0f, 200.0f, 400.0f};
+    req.padding = {20.0f, 20.0f, 20.0f, 20.0f};  // 上下各 20
+    req.gap = 10.0f;
+    req.children = {
+        LayoutChildSpec{.preferred_size = NanSize{80.0f, 60.0f}, .flex_factor = 0},
+        LayoutChildSpec{.preferred_size = NanSize{80.0f, 0.0f},  .flex_factor = 1},
+    };
+
+    // available_height = 400 - 40 = 360
+    // fixed child: 60, gap: 10, flex remaining: 360 - 60 - 10 = 290
+    auto frames = backend.compute(req);
+    ASSERT_EQ(frames.size(), 2);
+    EXPECT_FLOAT_EQ(frames[0].y(), 20.0f);           // 顶部 padding
+    EXPECT_FLOAT_EQ(frames[0].height(), 60.0f);
+    EXPECT_FLOAT_EQ(frames[1].y(), 90.0f);           // 20 + 60 + 10
+    EXPECT_NEAR(frames[1].height(), 290.0f, 1e-4f);  // 剩余空间
+}
+
+// ─── 回归矩阵：对齐行为 ──────────────────────────────────────
+
+TEST(LayoutCoreTest, Column_JustifyContent_End) {
+    BasicLayoutBackend backend;
+
+    LayoutRequest req;
+    req.axis = LayoutAxis::column;
+    req.container_bounds = {0.0f, 0.0f, 200.0f, 400.0f};
+    req.main_alignment = LayoutAlignment::end;
+    req.children = {
+        LayoutChildSpec{.preferred_size = NanSize{100.0f, 50.0f}, .flex_factor = 0},
+    };
+
+    auto frames = backend.compute(req);
+    ASSERT_EQ(frames.size(), 1);
+    EXPECT_FLOAT_EQ(frames[0].y(), 350.0f);  // 400 - 50
+    EXPECT_FLOAT_EQ(frames[0].height(), 50.0f);
+}
+
+TEST(LayoutCoreTest, Column_JustifyContent_Center) {
+    BasicLayoutBackend backend;
+
+    LayoutRequest req;
+    req.axis = LayoutAxis::column;
+    req.container_bounds = {0.0f, 0.0f, 200.0f, 400.0f};
+    req.main_alignment = LayoutAlignment::center;
+    req.children = {
+        LayoutChildSpec{.preferred_size = NanSize{100.0f, 50.0f}, .flex_factor = 0},
+    };
+
+    auto frames = backend.compute(req);
+    ASSERT_EQ(frames.size(), 1);
+    EXPECT_FLOAT_EQ(frames[0].y(), 175.0f);  // (400 - 50) / 2
+}
+
+TEST(LayoutCoreTest, Column_CrossAlignment_Center) {
+    BasicLayoutBackend backend;
+
+    LayoutRequest req;
+    req.axis = LayoutAxis::column;
+    req.container_bounds = {0.0f, 0.0f, 200.0f, 400.0f};
+    req.cross_alignment = LayoutAlignment::center;
+    req.children = {
+        LayoutChildSpec{.preferred_size = NanSize{80.0f, 50.0f}, .flex_factor = 0},
+    };
+
+    auto frames = backend.compute(req);
+    ASSERT_EQ(frames.size(), 1);
+    EXPECT_FLOAT_EQ(frames[0].x(), 60.0f);   // (200 - 80) / 2
+    EXPECT_FLOAT_EQ(frames[0].width(), 80.0f);
+}
+
+TEST(LayoutCoreTest, Column_CrossAlignment_End) {
+    BasicLayoutBackend backend;
+
+    LayoutRequest req;
+    req.axis = LayoutAxis::column;
+    req.container_bounds = {0.0f, 0.0f, 200.0f, 400.0f};
+    req.cross_alignment = LayoutAlignment::end;
+    req.children = {
+        LayoutChildSpec{.preferred_size = NanSize{80.0f, 50.0f}, .flex_factor = 0},
+    };
+
+    auto frames = backend.compute(req);
+    ASSERT_EQ(frames.size(), 1);
+    EXPECT_FLOAT_EQ(frames[0].x(), 120.0f);  // 200 - 80
+}
+
+TEST(LayoutCoreTest, Row_JustifyContent_End) {
+    BasicLayoutBackend backend;
+
+    LayoutRequest req;
+    req.axis = LayoutAxis::row;
+    req.container_bounds = {0.0f, 0.0f, 300.0f, 100.0f};
+    req.main_alignment = LayoutAlignment::end;
+    req.children = {
+        LayoutChildSpec{.preferred_size = NanSize{50.0f, 50.0f}, .flex_factor = 0},
+    };
+
+    auto frames = backend.compute(req);
+    ASSERT_EQ(frames.size(), 1);
+    EXPECT_FLOAT_EQ(frames[0].x(), 250.0f);  // 300 - 50
+}
+
+TEST(LayoutCoreTest, Row_CrossAlignment_Center) {
+    BasicLayoutBackend backend;
+
+    LayoutRequest req;
+    req.axis = LayoutAxis::row;
+    req.container_bounds = {0.0f, 0.0f, 200.0f, 100.0f};
+    req.cross_alignment = LayoutAlignment::center;
+    req.children = {
+        LayoutChildSpec{.preferred_size = NanSize{50.0f, 30.0f}, .flex_factor = 0},
+    };
+
+    auto frames = backend.compute(req);
+    ASSERT_EQ(frames.size(), 1);
+    EXPECT_FLOAT_EQ(frames[0].y(), 35.0f);   // (100 - 30) / 2
+    EXPECT_FLOAT_EQ(frames[0].height(), 30.0f);
+}
+
+TEST(LayoutCoreTest, Row_CrossAlignment_End) {
+    BasicLayoutBackend backend;
+
+    LayoutRequest req;
+    req.axis = LayoutAxis::row;
+    req.container_bounds = {0.0f, 0.0f, 200.0f, 100.0f};
+    req.cross_alignment = LayoutAlignment::end;
+    req.children = {
+        LayoutChildSpec{.preferred_size = NanSize{50.0f, 30.0f}, .flex_factor = 0},
+    };
+
+    auto frames = backend.compute(req);
+    ASSERT_EQ(frames.size(), 1);
+    EXPECT_FLOAT_EQ(frames[0].y(), 70.0f);   // 100 - 30
+}
+
+// ─── 回归矩阵：Flex + Gap 组合 ───────────────────────────────
+
+TEST(LayoutCoreTest, Row_FlexWithGap_AccountsForGap) {
+    BasicLayoutBackend backend;
+
+    LayoutRequest req;
+    req.axis = LayoutAxis::row;
+    req.container_bounds = {0.0f, 0.0f, 300.0f, 100.0f};
+    req.gap = 10.0f;
+    req.children = {
+        LayoutChildSpec{.preferred_size = NanSize{50.0f, 50.0f}, .flex_factor = 0},
+        LayoutChildSpec{.preferred_size = NanSize{0.0f,  50.0f}, .flex_factor = 1},
+        LayoutChildSpec{.preferred_size = NanSize{50.0f, 50.0f}, .flex_factor = 0},
+    };
+
+    // 固定: 50+50=100, gap: 2×10=20, flex 可用: 300-100-20=180
+    auto frames = backend.compute(req);
+    ASSERT_EQ(frames.size(), 3);
+    EXPECT_FLOAT_EQ(frames[0].x(), 0.0f);
+    EXPECT_FLOAT_EQ(frames[0].width(), 50.0f);
+    EXPECT_FLOAT_EQ(frames[1].x(), 60.0f);          // 50 + 10
+    EXPECT_NEAR(frames[1].width(), 180.0f, 1e-4f);
+    EXPECT_NEAR(frames[2].x(), 60.0f + 180.0f + 10.0f, 1e-4f);  // flex_end + gap
+    EXPECT_FLOAT_EQ(frames[2].width(), 50.0f);
+}
+
+TEST(LayoutCoreTest, Column_FlexWithGap_AccountsForGap) {
+    BasicLayoutBackend backend;
+
+    LayoutRequest req;
+    req.axis = LayoutAxis::column;
+    req.container_bounds = {0.0f, 0.0f, 200.0f, 400.0f};
+    req.gap = 20.0f;
+    req.children = {
+        LayoutChildSpec{.preferred_size = NanSize{80.0f, 60.0f}, .flex_factor = 0},
+        LayoutChildSpec{.preferred_size = NanSize{80.0f, 0.0f},  .flex_factor = 1},
+    };
+
+    // fixed: 60, gap: 20, flex: 400-60-20=320
+    auto frames = backend.compute(req);
+    ASSERT_EQ(frames.size(), 2);
+    EXPECT_FLOAT_EQ(frames[0].height(), 60.0f);
+    EXPECT_FLOAT_EQ(frames[1].y(), 80.0f);           // 60 + 20
+    EXPECT_NEAR(frames[1].height(), 320.0f, 1e-4f);
+}
+
+TEST(LayoutCoreTest, Row_ThreeEqualFlexChildren) {
+    BasicLayoutBackend backend;
+
+    LayoutRequest req;
+    req.axis = LayoutAxis::row;
+    req.container_bounds = {0.0f, 0.0f, 300.0f, 100.0f};
+    req.gap = 0.0f;
+    req.children = {
+        LayoutChildSpec{.preferred_size = NanSize{0.0f, 50.0f}, .flex_factor = 1},
+        LayoutChildSpec{.preferred_size = NanSize{0.0f, 50.0f}, .flex_factor = 1},
+        LayoutChildSpec{.preferred_size = NanSize{0.0f, 50.0f}, .flex_factor = 1},
+    };
+
+    auto frames = backend.compute(req);
+    ASSERT_EQ(frames.size(), 3);
+    EXPECT_NEAR(frames[0].width(), 100.0f, 1e-4f);
+    EXPECT_NEAR(frames[1].width(), 100.0f, 1e-4f);
+    EXPECT_NEAR(frames[2].width(), 100.0f, 1e-4f);
+    EXPECT_NEAR(frames[0].x(), 0.0f,   1e-4f);
+    EXPECT_NEAR(frames[1].x(), 100.0f, 1e-4f);
+    EXPECT_NEAR(frames[2].x(), 200.0f, 1e-4f);
+}
+
+TEST(LayoutCoreTest, Column_SingleFlexFillsContainer) {
+    BasicLayoutBackend backend;
+
+    LayoutRequest req;
+    req.axis = LayoutAxis::column;
+    req.container_bounds = {0.0f, 0.0f, 200.0f, 400.0f};
+    req.children = {
+        LayoutChildSpec{.preferred_size = NanSize{80.0f, 0.0f}, .flex_factor = 1},
+    };
+
+    auto frames = backend.compute(req);
+    ASSERT_EQ(frames.size(), 1);
+    EXPECT_FLOAT_EQ(frames[0].y(), 0.0f);
+    EXPECT_NEAR(frames[0].height(), 400.0f, 1e-4f);
+}
+
+// ─── 回归矩阵：边界条件 ──────────────────────────────────────
+
+TEST(LayoutCoreTest, Column_Empty_ReturnsEmptyFrames) {
+    BasicLayoutBackend backend;
+
+    LayoutRequest req;
+    req.axis = LayoutAxis::column;
+    req.container_bounds = {0.0f, 0.0f, 200.0f, 400.0f};
+    req.children = {};
+
+    auto frames = backend.compute(req);
+    EXPECT_TRUE(frames.empty());
+}
+
+TEST(LayoutCoreTest, Row_Empty_ReturnsEmptyFrames) {
+    BasicLayoutBackend backend;
+
+    LayoutRequest req;
+    req.axis = LayoutAxis::row;
+    req.container_bounds = {0.0f, 0.0f, 300.0f, 100.0f};
+    req.children = {};
+
+    auto frames = backend.compute(req);
+    EXPECT_TRUE(frames.empty());
+}
+
+TEST(LayoutCoreTest, Stack_Empty_ReturnsEmptyFrames) {
+    BasicLayoutBackend backend;
+
+    LayoutRequest req;
+    req.axis = LayoutAxis::stack;
+    req.container_bounds = {0.0f, 0.0f, 200.0f, 200.0f};
+    req.children = {};
+
+    auto frames = backend.compute(req);
+    EXPECT_TRUE(frames.empty());
+}
+
+TEST(LayoutCoreTest, Row_SpaceAround_TwoChildren) {
+    BasicLayoutBackend backend;
+
+    LayoutRequest req;
+    req.axis = LayoutAxis::row;
+    req.container_bounds = {0.0f, 0.0f, 200.0f, 100.0f};
+    req.main_alignment = LayoutAlignment::space_around;
+    req.children = {
+        LayoutChildSpec{.preferred_size = NanSize{40.0f, 50.0f}, .flex_factor = 0},
+        LayoutChildSpec{.preferred_size = NanSize{40.0f, 50.0f}, .flex_factor = 0},
+    };
+
+    // space_around: 总空白=120, 每侧1份，中间2份 → 每份=30
+    // child0.x=30, child1.x=30+40+60=130
+    auto frames = backend.compute(req);
+    ASSERT_EQ(frames.size(), 2);
+    EXPECT_FLOAT_EQ(frames[0].x(), 30.0f);
+    EXPECT_FLOAT_EQ(frames[1].x(), 130.0f);
+}
+
+TEST(LayoutCoreTest, Column_SpaceBetween_TwoChildren) {
+    BasicLayoutBackend backend;
+
+    LayoutRequest req;
+    req.axis = LayoutAxis::column;
+    req.container_bounds = {0.0f, 0.0f, 200.0f, 300.0f};
+    req.main_alignment = LayoutAlignment::space_between;
+    req.children = {
+        LayoutChildSpec{.preferred_size = NanSize{80.0f, 50.0f}, .flex_factor = 0},
+        LayoutChildSpec{.preferred_size = NanSize{80.0f, 50.0f}, .flex_factor = 0},
+    };
+
+    // 总高 300, 两子各 50, 剩余 200 分布在中间
+    auto frames = backend.compute(req);
+    ASSERT_EQ(frames.size(), 2);
+    EXPECT_FLOAT_EQ(frames[0].y(), 0.0f);
+    EXPECT_FLOAT_EQ(frames[1].y(), 250.0f);  // 300 - 50
+}
+
+TEST(LayoutCoreTest, Stack_FillsContainerBounds) {
+    BasicLayoutBackend backend;
+
+    LayoutRequest req;
+    req.axis = LayoutAxis::stack;
+    req.container_bounds = {5.0f, 10.0f, 200.0f, 300.0f};
+    req.children = {
+        LayoutChildSpec{.preferred_size = NanSize{200.0f, 300.0f}, .flex_factor = 0},
+        LayoutChildSpec{.preferred_size = NanSize{50.0f,  50.0f},  .flex_factor = 0},
+    };
+
+    // Stack 所有子节点均从容器左上角开始
+    auto frames = backend.compute(req);
+    ASSERT_EQ(frames.size(), 2);
+    EXPECT_FLOAT_EQ(frames[0].x(), 5.0f);
+    EXPECT_FLOAT_EQ(frames[0].y(), 10.0f);
+    EXPECT_FLOAT_EQ(frames[1].x(), 5.0f);
+    EXPECT_FLOAT_EQ(frames[1].y(), 10.0f);
+}

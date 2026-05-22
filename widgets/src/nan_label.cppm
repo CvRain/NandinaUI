@@ -204,7 +204,13 @@ export namespace nandina::widgets {
             const auto bnds = bounds();
 
             // 使用 NanFont::shape() 布局文本
-            const float max_width = bnds.width();
+            // 优先使用 measure 阶段记录的可用宽度（measured_constraints().max_width()），
+            // 与 measure() 共享同一份 shape 缓存，且避免在 relayout 前因 bnds.width()
+            // 仅等于旧内容宽度而触发误溢出（例如 set_text 改成更宽字符时显示 "..."）。
+            const float avail_w = measured_constraints().max_width();
+            const float max_width = (avail_w > 0.0f && avail_w < geometry::NanConstraints::k_infinity)
+                ? avail_w
+                : bnds.width();
             const auto& layout    = cached_shape(txt, max_width > 0.0f ? max_width : 0.0f);
 
             if (layout.empty()) return;
