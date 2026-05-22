@@ -6,6 +6,7 @@ module;
 
 #include <cstddef>
 #include <functional>
+#include <memory>
 #include <utility>
 #include <vector>
 #include <type_traits>
@@ -185,5 +186,72 @@ private:
 
 template<typename T>
 auto State<T>::as_read_only() const -> ReadState<T> { return ReadState<T>{this}; }
+
+// ═════════════════════════════════════════════════════════════════════════════
+// § StateSlot<T> — 可作为导出类成员的响应式状态槽
+// ═════════════════════════════════════════════════════════════════════════════
+
+/**
+ * @brief 对 State<T> 的可移动包装，可直接声明为导出模块类的成员变量。
+ *
+ * 动机：State<T> 的 move constructor 被显式 delete，GCC 模块序列化
+ * 无法处理含有 deleted-move 成员的导出类，必须借助 Pimpl 绕行。
+ * StateSlot<T> 用 std::unique_ptr<State<T>> 封装，本身是可移动的，
+ * 对外暴露与 State<T> 完全相同的读写和订阅 API。
+ *
+ * 初始化是懒惰的（首次访问时才构造 State<T>），因此 StateSlot 本身
+ * 可以在类构造阶段安全初始化，不依赖任何运行时前提条件。
+ *
+ * @code
+ * // 在导出类的 private 成员中：
+ * StateSlot<int> m_count{0};          // 直接声明，无需匿名 namespace
+ * ScopedConnection m_count_conn;      // 同样可直接声明
+ *
+ * // 在 build() / 初始化函数中：
+ * m_count_conn = ScopedConnection{
+ *     m_count.on_change([this](const int& v) { update_label(v); })
+ * };
+ * m_count.set(m_count() + 1);         // 写值
+ * @endcode
+ */
+template<typename T>
+class StateSlot {
+public:
+    explicit StateSlot(T initial) : m_initial(std::move(initial)) {}
+
+    // 可移动（通过 unique_ptr 转移所有权），不可复制
+    StateSlot(StateSlot&&) noexcept            = default;
+    auto operator=(StateSlot&&) noexcept -> StateSlot& = default;
+    StateSlot(const StateSlot&)                = delete;
+    auto operator=(const StateSlot&)           = delete;
+
+    /// 读取当前值（同时在 Effect/Computed 中注册依赖追踪）
+    [[nodiscard]] auto operator()() const -> const T& { return impl()(); }
+
+    /// 读取当前值的别名
+    [[nodiscard]] auto get() const -> const T& { return impl().get(); }
+
+    /// 写入新值，仅在值实际变化时通知订阅者
+    auto set(T new_value) -> void { impl().set(std::move(new_value)); }
+
+    /// 注册值变化回调，返回 Connection（可包装为 ScopedConnection）
+    auto on_change(std::function<void(const T&)> cb) const -> Connection {
+        return impl().on_change(std::move(cb));
+    }
+
+    /// 返回对内部 State<T> 的只读视图
+    [[nodiscard]] auto as_read_only() const -> ReadState<T> {
+        return impl().as_read_only();
+    }
+
+private:
+    auto impl() const -> State<T>& {
+        if (!m_impl) m_impl = std::make_unique<State<T>>(m_initial);
+        return *m_impl;
+    }
+
+    T                              m_initial;
+    mutable std::unique_ptr<State<T>> m_impl;
+};
 
 } // namespace nandina::reactive

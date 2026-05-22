@@ -1,5 +1,6 @@
 module;
 
+#include <functional>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -11,6 +12,7 @@ export import nandina.app.application;
 export import nandina.app.page;
 export import nandina.app.router;
 export import nandina.app.page_host;
+export import nandina.reactive;
 
 import nandina.layout.container;
 import nandina.layout.flex_widgets;
@@ -110,6 +112,48 @@ export namespace nandina::app {
         auto router = NanRouter::create();
         (router->register_page(std::move(pages)), ...);
         window.set_root(create_shell(std::move(router), config));
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // Reactive 绑定工具（层叠在 authoring 层，可同时访问 reactive + Ref<T>）
+    // ──────────────────────────────────────────────────────────────────────
+
+    /**
+     * bind_text — 将 StateSlot<T> 的变化连接到 Ref<Widget> 的文本属性。
+     *
+     * 等价于手写：
+     *   ScopedConnection{ slot.on_change([&ref, fn](const T& v) {
+     *       if (ref) ref->set_text(fn(v));
+     *   }) }
+     * 但只需一行。
+     *
+     * 典型用法（在 build() 中）：
+     * @code
+     *   m_count_conn = bind_text(m_count, label_ref,
+     *       [](int v){ return std::to_string(v); });
+     * @endcode
+     *
+     * @tparam T        StateSlot 的元素类型
+     * @tparam Widget   目标 widget 类型（需要实现 set_text(std::string_view)）
+     * @tparam Fn       T const& → std::string 的可调用对象
+     * @param  slot     响应式状态槽
+     * @param  ref      目标 widget 引用
+     * @param  fn       标准化函数（将元素値转换为显示字符串）
+     * @return ScopedConnection — RAII 连接句柄，存储为成员即可自动管理生命周期
+     */
+    template<template<typename> class StateSource, typename T, typename Widget, typename Fn>
+        requires std::invocable<Fn, const T&> &&
+                 std::convertible_to<std::invoke_result_t<Fn, const T&>, std::string>
+    [[nodiscard]] auto bind_text(
+        StateSource<T>& source,
+        Ref<Widget>&    ref,
+        Fn&&            fn
+    ) -> nandina::reactive::ScopedConnection {
+        return nandina::reactive::ScopedConnection{
+            source.on_change([&ref, fn = std::forward<Fn>(fn)](const T& v) {
+                if (ref) ref->set_text(fn(v));
+            })
+        };
     }
 
 } // namespace nandina::app

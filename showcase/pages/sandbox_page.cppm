@@ -6,17 +6,14 @@ module;
 
 export module nandina.showcase.sandbox_page;
 
-import nandina.app.authoring;
+import nandina.app.authoring;   // re-exports nandina.reactive
 import nandina.foundation.color;
 import nandina.layout.container;
 import nandina.layout.flex_widgets;
 import nandina.widgets;
 import nandina.theme;
-export import nandina.reactive;
 
-// ── 模块私有：响应式数据（不导出，GCC 不序列化这些类型）────────────────────────
-// 含 std::mutex / deleted-move 的类型（State, EventSignal, ScopedConnection）
-// 放在匿名 namespace，通过 shared_ptr<void> 类型擦除，消费方只看到两个指针。
+// ── 模块私有：响应式数据（GCC 无法序列化 State/ScopedConnection，放匿名 namespace）──
 namespace {
     struct SandboxReactive {
         nandina::reactive::State<int> number{1};
@@ -34,7 +31,7 @@ export namespace nandina::showcase {
      *   B. lvalue 分段配置（先构建节点，再对 lvalue 补充 on_click/on_hover/on_leave）
      *   C. 跨 widget 回调引用（Ref<Button> 类成员 + .bind()，在别处回调中访问节点）
      *
-     * 同时演示响应式数据驱动 UI 更新（State<int> + ScopedConnection）。
+     * 同时演示 StateSlot<T> + bind_text() 响应式绑定（无需 Pimpl / anonymous namespace）。
      */
     class SandboxPage final : public nandina::app::NanPage {
     public:
@@ -61,18 +58,14 @@ export namespace nandina::showcase {
             }
             auto* r = static_cast<SandboxReactive*>(m_reactive.get());
 
-            // 重新注册 on_change 订阅（每次 build() 刷新绑定，防止悬空）
-            r->number_conn = nandina::reactive::ScopedConnection{
-                r->number.on_change([this, r](const int& value) {
-                    std::printf("number changed: %d\n", value);
-                    if (label_button_ref) {
-                        label_button_ref->set_text(std::to_string(value));
-                    }
-                })
-            };
+            // ── 响应式绑定：bind_text 一行代替手写 ScopedConnection + on_change lambda ──
+            // bind_text 在 number 变化时自动调用 label_button_ref->set_text(...)，
+            // ScopedConnection 存储在 Pimpl struct 中，随 SandboxReactive 自动销毁。
+            r->number_conn = bind_text(r->number, label_button_ref,
+                [](int v) { return std::to_string(v); });
 
             // ── Pattern C：Ref<Button> 成员 + .bind() ─────────────────────────
-            // label_button 绑定到成员 Ref；on_change 回调可通过 Ref 直接更新文本，
+            // label_button 绑定到成员 Ref；bind_text 回调可通过 Ref 直接更新文本，
             // 不需要持有节点变量本身。
             auto label_button = button()
                 .bind(label_button_ref)
@@ -151,8 +144,7 @@ export namespace nandina::showcase {
         nandina::app::Ref<nandina::widgets::Button> increase_button_ref;
         nandina::app::Ref<nandina::widgets::Button> decrease_button_ref;
 
-        // Pimpl：State/ScopedConnection 含 mutex，GCC C++ 模块无法序列化，
-        // 用 shared_ptr<void> 类型擦除（仅两个指针，无序列化问题）
+        // Pimpl：State/ScopedConnection 含不可序列化类型，GCC 模块需用 shared_ptr<void> 类型擦除
         std::shared_ptr<void> m_reactive;
     };
 
