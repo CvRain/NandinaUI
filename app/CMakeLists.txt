@@ -17,11 +17,14 @@ target_compile_features(nandina_app PUBLIC cxx_std_26)
 target_sources(nandina_app
     PUBLIC
         FILE_SET CXX_MODULES FILES
+            src/nan_var.cppm
             src/nan_authoring.cppm
             src/nan_application.cppm
             src/nan_page.cppm
             src/nan_router.cppm
             src/nan_page_host.cppm
+    PRIVATE
+        src/nan_var_impl.cpp
 )
 
 target_link_libraries(nandina_app
