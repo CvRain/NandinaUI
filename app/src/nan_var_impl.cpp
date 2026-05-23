@@ -17,7 +17,7 @@ module nandina.app.var;
 import nandina.reactive;
 
 // ── 模块私有实现（不进入 .gcm，GCC 不序列化）────────────────────────────────────
-namespace {
+namespace nandina::app::impl {
 
 template<typename T>
 struct VarImpl {
@@ -28,33 +28,33 @@ struct VarImpl {
     explicit VarImpl(T v) : state(std::move(v)) {}
 };
 
-} // anonymous namespace
+} // namespace nandina::app::impl
 
 // ── Var<T> 方法实现 ────────────────────────────────────────────────────────────
 namespace nandina::app {
 
 template<typename T>
 Var<T>::Var(T initial)
-    : m_impl(std::make_shared<VarImpl<T>>(std::move(initial))) {}
+    : m_impl(std::make_shared<impl::VarImpl<T>>(std::move(initial))) {}
 
 template<typename T>
 auto Var<T>::operator()() const -> const T& {
-    return static_cast<VarImpl<T>*>(m_impl.get())->state();
+    return static_cast<impl::VarImpl<T>*>(m_impl.get())->state();
 }
 
 template<typename T>
 auto Var<T>::get() const -> const T& {
-    return static_cast<VarImpl<T>*>(m_impl.get())->state.get();
+    return static_cast<impl::VarImpl<T>*>(m_impl.get())->state.get();
 }
 
 template<typename T>
 auto Var<T>::set(T val) -> void {
-    static_cast<VarImpl<T>*>(m_impl.get())->state.set(std::move(val));
+    static_cast<impl::VarImpl<T>*>(m_impl.get())->state.set(std::move(val));
 }
 
 template<typename T>
 auto Var<T>::bind_text_impl(std::function<void(const T&)> update_fn) -> void {
-    auto* d = static_cast<VarImpl<T>*>(m_impl.get());
+    auto* d = static_cast<impl::VarImpl<T>*>(m_impl.get());
     d->text_conn = nandina::reactive::ScopedConnection{
         d->state.on_change(std::move(update_fn))
     };
@@ -62,10 +62,24 @@ auto Var<T>::bind_text_impl(std::function<void(const T&)> update_fn) -> void {
 
 template<typename T>
 auto Var<T>::watch(std::function<void(const T&)> cb) -> void {
-    auto* d = static_cast<VarImpl<T>*>(m_impl.get());
+    auto* d = static_cast<impl::VarImpl<T>*>(m_impl.get());
     d->watch_conn = nandina::reactive::ScopedConnection{
         d->state.on_change(std::move(cb))
     };
+}
+
+template<typename T>
+auto Var<T>::update_inplace_impl(std::function<void(T&)> fn) -> void {
+    auto* d = static_cast<impl::VarImpl<T>*>(m_impl.get());
+    T new_value = d->state.get();
+    fn(new_value);
+    d->state.set(std::move(new_value));
+}
+
+template<typename T>
+auto Var<T>::update_value_impl(std::function<T(const T&)> fn) -> void {
+    auto* d = static_cast<impl::VarImpl<T>*>(m_impl.get());
+    d->state.set(fn(d->state.get()));
 }
 
 // ── 显式实例化 ─────────────────────────────────────────────────────────────────

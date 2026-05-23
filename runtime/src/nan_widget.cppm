@@ -54,6 +54,19 @@ export namespace nandina::runtime {
             return geometry::NanRect{geometry::NanPoint{m_x, m_y}, geometry::NanSize{m_width, m_height}};
         }
 
+        // ── 响应式资源清理（类型擦除）──────────────────────
+        /**
+         * @brief 将一个类型擦除资源绑定到 widget 生命周期。
+         *
+         * 用于将响应式 Effect 等堆分配资源存储到 widget 中，
+         * widget 析构时自动释放。
+         *
+         * runtime 不直接依赖 reactive，由 app 层传入已构造好的对象。
+         */
+        auto add_opaque_cleanup(std::shared_ptr<void> resource) -> void {
+            m_cleanup_resources_.push_back(std::move(resource));
+        }
+
         auto set_position(const float x, const float y) noexcept -> void {
             m_x = x;
             m_y = y;
@@ -573,7 +586,8 @@ export namespace nandina::runtime {
         bool m_visible{true};
         bool m_hit_test_visible{true};
         bool m_dirty{true}; // 初始为脏，首次绘制前需要 layout
-
+        // ── 响应式资源（小 list）──
+        std::vector<std::shared_ptr<void>> m_cleanup_resources_;
         // ── 两阶段布局状态 ──
         geometry::NanConstraints m_measured_constraints{};
         geometry::NanSize m_measured_size{};

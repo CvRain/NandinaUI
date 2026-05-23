@@ -67,7 +67,20 @@ public:
 
     /// 赋值语法糖：`m_count = m_count() + 1;`
     auto operator=(T val) -> Var& { set(std::move(val)); return *this; }
+    /// 原地修改：fn(T&) -> void（高效，避免拷贝）
+    template<typename Fn>
+        requires std::invocable<Fn, T&> && std::is_void_v<std::invoke_result_t<Fn, T&>>
+    auto update(Fn fn) -> void {
+        update_inplace_impl(std::move(fn));
+    }
 
+    /// 值语义修改：fn(const T&) -> T（Angular 风格，返回新值）
+    template<typename Fn>
+        requires std::invocable<Fn, const T&> &&
+                 (!std::is_void_v<std::invoke_result_t<Fn, const T&>>)
+    auto update(Fn fn) -> void {
+        update_value_impl(std::function<T(const T&)>{std::move(fn)});
+    }
     // ── 绑定 ──────────────────────────────────────────────────────────────────
 
     /**
@@ -98,7 +111,11 @@ public:
 
     /// 内部实现（供 bind_text 调用，也可直接使用）
     auto bind_text_impl(std::function<void(const T&)> update_fn) -> void;
+    /// 原地修改内部实现
+    auto update_inplace_impl(std::function<void(T&)> fn) -> void;
 
+    /// 值语义修改内部实现
+    auto update_value_impl(std::function<T(const T&)> fn) -> void;
 private:
     // 唯一成员：shared_ptr<void> 类型擦除，GCC 模块序列化无需追踪 VarImpl<T>
     std::shared_ptr<void> m_impl;

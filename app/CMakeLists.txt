@@ -18,6 +18,7 @@ target_sources(nandina_app
     PUBLIC
         FILE_SET CXX_MODULES FILES
             src/nan_var.cppm
+            src/nan_computed_var.cppm
             src/nan_authoring.cppm
             src/nan_application.cppm
             src/nan_page.cppm
@@ -25,6 +26,7 @@ target_sources(nandina_app
             src/nan_page_host.cppm
     PRIVATE
         src/nan_var_impl.cpp
+        src/nan_computed_var_impl.cpp
 )
 
 target_link_libraries(nandina_app

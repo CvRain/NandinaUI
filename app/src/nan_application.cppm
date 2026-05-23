@@ -18,6 +18,7 @@ import nandina.layout.container;
 import nandina.layout.flex_widgets;
 import nandina.log;
 import nandina.foundation.color;
+import nandina.reactive.effect;
 import nandina.runtime.nan_window;
 import nandina.runtime.nan_widget;
 import nandina.widgets.button;
@@ -429,6 +430,21 @@ export namespace nandina::app {
             return std::forward<Self>(self);
         }
 
+        template <typename Self, typename F>
+            requires std::derived_from<std::remove_cvref_t<Self>, LabelNode> &&
+                     std::invocable<F> &&
+                     std::convertible_to<std::invoke_result_t<F>, std::string_view> &&
+                     (!std::convertible_to<F, std::string_view>)
+        auto text(this Self&& self, F fn) -> Self&& {
+            auto* w = self.m_typed;
+            w->add_opaque_cleanup(
+                std::make_shared<nandina::reactive::Effect>(
+                    [w, fn = std::move(fn)]{ w->set_text(fn()); }
+                )
+            );
+            return std::forward<Self>(self);
+        }
+
         template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, LabelNode>
         auto font_size(this Self&& self, const float value) -> Self&& {
@@ -499,6 +515,21 @@ export namespace nandina::app {
             requires std::derived_from<std::remove_cvref_t<Self>, ButtonNode>
         auto text(this Self&& self, std::string_view value) -> Self&& {
             self.m_typed->set_text(value);
+            return std::forward<Self>(self);
+        }
+
+        template <typename Self, typename F>
+            requires std::derived_from<std::remove_cvref_t<Self>, ButtonNode> &&
+                     std::invocable<F> &&
+                     std::convertible_to<std::invoke_result_t<F>, std::string_view> &&
+                     (!std::convertible_to<F, std::string_view>)
+        auto text(this Self&& self, F fn) -> Self&& {
+            auto* w = self.m_typed;
+            w->add_opaque_cleanup(
+                std::make_shared<nandina::reactive::Effect>(
+                    [w, fn = std::move(fn)]{ w->set_text(fn()); }
+                )
+            );
             return std::forward<Self>(self);
         }
 

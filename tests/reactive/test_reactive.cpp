@@ -357,4 +357,89 @@ TEST(ReactiveTest, StateListEmitsChangeNotifications) {
     EXPECT_EQ(watch_hits, 3);
 }
 
+// ── State::update() ─────────────────────────────────────────────────────────
+
+TEST(ReactiveTest, StateUpdateInPlaceModifiesValue) {
+    nandina::reactive::State<int> value{5};
+    int runs = 0;
+    int snapshot = 0;
+
+    nandina::reactive::Effect effect{[&] {
+        ++runs;
+        snapshot = value();
+    }};
+
+    EXPECT_EQ(runs, 1);
+    EXPECT_EQ(snapshot, 5);
+
+    value.update([](int& v){ v += 3; });
+
+    EXPECT_EQ(runs, 2);
+    EXPECT_EQ(snapshot, 8);
+    EXPECT_EQ(value.get(), 8);
+}
+
+TEST(ReactiveTest, StateUpdateValueSemanticReplacesValue) {
+    nandina::reactive::State<int> value{10};
+    int runs = 0;
+
+    nandina::reactive::Effect effect{[&] {
+        ++runs;
+        (void)value();
+    }};
+
+    EXPECT_EQ(runs, 1);
+
+    value.update([](const int& v){ return v * 2; });
+
+    EXPECT_EQ(runs, 2);
+    EXPECT_EQ(value.get(), 20);
+}
+
+TEST(ReactiveTest, StateUpdateInPlaceNoChangeDoesNotNotify) {
+    nandina::reactive::State<int> value{7};
+    int runs = 0;
+
+    nandina::reactive::Effect effect{[&] {
+        ++runs;
+        (void)value();
+    }};
+
+    EXPECT_EQ(runs, 1);
+
+    // 写入相同值不触发通知
+    value.update([](int& v){ (void)v; }); // 不改变 v
+
+    EXPECT_EQ(runs, 1);
+    EXPECT_EQ(value.get(), 7);
+}
+
+// ── Computed 移动语义 ────────────────────────────────────────────────────────
+
+TEST(ReactiveTest, ComputedIsMoveConstructible) {
+    nandina::reactive::State<int> value{3};
+
+    auto make_computed = [&] {
+        return nandina::reactive::Computed{[&]{ return value() * 2; }};
+    };
+
+    // 从工厂函数获取（NRVO/移动构造）
+    auto c = make_computed();
+
+    EXPECT_EQ(c(), 6);
+    value.set(5);
+    EXPECT_EQ(c(), 10);
+}
+
+TEST(ReactiveTest, ComputedFactoryFunctionWorks) {
+    nandina::reactive::State<int> a{4};
+    nandina::reactive::State<int> b{6};
+
+    auto sum = nandina::reactive::computed([&]{ return a() + b(); });
+
+    EXPECT_EQ(sum(), 10);
+    a.set(10);
+    EXPECT_EQ(sum(), 16);
+}
+
 } // namespace

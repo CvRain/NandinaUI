@@ -1,11 +1,11 @@
 module;
 
-#include <string_view>
-#include <print>
+#include <format>
+#include <string>
 
 export module nandina.showcase.sandbox_page;
 
-import nandina.app.authoring;   // re-exports: nandina.app.var, nandina.reactive
+import nandina.app.authoring;   // re-exports: nandina.app.var, nandina.app.computed_var, nandina.reactive
 import nandina.foundation.color;
 import nandina.layout.container;
 import nandina.layout.flex_widgets;
@@ -15,14 +15,12 @@ import nandina.theme;
 export namespace nandina::showcase {
 
     /**
-     * SandboxPage — 组件验证沙盒（typed builder 演示）
+     * SandboxPage — 组件验证沙盒（新响应式 API 演示）
      *
-     * 演示三种 authoring 模式：
-     *   A. 纯 rvalue 链式配置（所有属性和回调在单个表达式内完成，无中间变量）
-     *   B. lvalue 分段配置（先构建节点，再对 lvalue 补充 on_click/on_hover/on_leave）
-     *   C. 跨 widget 回调引用（Ref<Button> 类成员 + .bind()，在别处回调中访问节点）
-     *
-     * 同时演示 Var<T>：声明即用，无需 Pimpl / 匿名 namespace / 手动连接管理。
+     * 演示新响应式 API：
+     *   A. text(fn)        — 自动 Effect 追踪，替代 bind_text 两步绑定
+     *   B. update(fn)      — 原地修改 [](int& v){ v++; } 与值语义 [](int){ return 1; }
+     *   C. ComputedVar<T>  — 页面成员级只读派生 signal（完整参与 Effect 依赖图）
      */
     class SandboxPage final : public nandina::app::NanPage {
     public:
@@ -43,25 +41,27 @@ export namespace nandina::showcase {
             using nandina::theme::ButtonVariant;
             using nandina::theme::ButtonSize;
 
-            // ── 响应式绑定（一行，替代旧的匿名 namespace + Pimpl + on_change）──
-            m_count.bind_text(label_button_ref,
-                [](int v) { return std::to_string(v); });
-
-            // ── Pattern C：Ref<Button> 成员 + .bind() ─────────────────────────
+            // ── Pattern A：text(fn) 自动 Effect 追踪 ─────────────────────────
             auto label_button = button()
                 .bind(label_button_ref)
                 .size({240, 60})
                 .variant(ButtonVariant::outline)
-                .text(std::to_string(m_count()));
+                .text([this]{ return std::to_string(m_count()); });
 
-            // ── Pattern B：lvalue 分段配置 ────────────────────────────────────
+            // ── Pattern C：ComputedVar<T> 派生 signal 参与追踪图 ─────────────
+            auto double_label = button()
+                .size({240, 60})
+                .variant(ButtonVariant::outline)
+                .text([this]{ return std::format("x2 = {}", m_double()); });
+
+            // ── Pattern B：update() 原地修改 ─────────────────────────────────
             auto increase_button = button()
                 .bind(increase_button_ref)
                 .size({120, 60})
                 .text("+");
 
             increase_button.on_click([this]() {
-                m_count = m_count() + 1;
+                m_count.update([](int& v){ v++; });
             });
             increase_button.on_hover([this]() {
                 if (increase_button_ref)
@@ -78,7 +78,7 @@ export namespace nandina::showcase {
                 .text("-");
 
             decrease_button.on_click([this]() {
-                m_count = m_count() - 1;
+                m_count.update([](int& v){ v--; });
             });
             decrease_button.on_hover([this]() {
                 if (decrease_button_ref)
@@ -89,21 +89,18 @@ export namespace nandina::showcase {
                     decrease_button_ref->set_text("-");
             });
 
-            // ── Pattern A：纯 rvalue 链式配置 ────────────────────────────────
-            auto reset_button = button("Reset")
+            // ── Pattern B：update() 值语义重置 ──────────────────────────────
+            auto reset_button = button()
                 .size(ButtonSize::sm)
-                .font(nandina::text::NanFont{}
-                    .weight(text::NanFontWeight::black)
-                    .single_line(true)
-                    .overflow(text::TextOverflow::scale)
-                    )
                 .variant(ButtonVariant::ghost)
+                .text("reset")
                 .on_click([this]() {
-                    m_count = 1;
+                    m_count.update([](int){ return 1; });
                 });
 
             return mount(center(column(children(
                 label_button,
+                double_label,
                 row(children(
                     increase_button,
                     decrease_button
@@ -117,8 +114,11 @@ export namespace nandina::showcase {
         nandina::app::Ref<nandina::widgets::Button> increase_button_ref;
         nandina::app::Ref<nandina::widgets::Button> decrease_button_ref;
 
-        // Var<T>：声明即用，内部管理 State + ScopedConnection，无需 Pimpl 样板
+        // Var<T>：可变 signal，update() 支持原地修改与值语义两种风格
         nandina::app::Var<int> m_count{1};
+
+        // ComputedVar<T>：只读派生 signal，依赖图自动建立
+        nandina::app::ComputedVar<int> m_double{[this]{ return m_count() * 2; }};
     };
 
 } // namespace nandina::showcase

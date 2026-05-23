@@ -6,6 +6,7 @@ module;
 
 #include <cstddef>
 #include <functional>
+#include <memory>
 #include <type_traits>
 #include <utility>
 
@@ -49,17 +50,18 @@ public:
     using ValueType = std::invoke_result_t<F>;
 
     explicit Computed(F compute_fn)
-        : compute_fn_(std::move(compute_fn)), stale_(true),
+        : compute_fn_(std::move(compute_fn)),
+          stale_(std::make_shared<bool>(true)),
           observer_id_(detail::next_tracking_id()) {}
 
     Computed(const Computed&)          = delete;
     auto operator=(const Computed&)    = delete;
-    Computed(Computed&&)               = delete;
-    auto operator=(Computed&&)         = delete;
+    Computed(Computed&&)               = default;
+    auto operator=(Computed&&)         = delete; // lambda 类型不可移动赋值
 
     /// 获取计算值。如果脏了则重新求值。
     [[nodiscard]] auto operator()() const -> const ValueType& {
-        if (stale_) { recompute(); }
+        if (*stale_) { recompute(); }
         return cached_;
     }
 
@@ -69,23 +71,30 @@ public:
 private:
     /// 在依赖追踪上下文中重算
     auto recompute() const -> void {
-        auto invalidator = std::function<void()>{ [this]{ stale_ = true; } };
+        auto invalidator = std::function<void()>{ [s = stale_]{ *s = true; } };
         detail::TrackingContext context{observer_id_, &invalidator};
         detail::TrackingContextGuard guard{context};
 
         auto recomputed_value = compute_fn_();
         cached_ = std::move(recomputed_value);
-        stale_ = false;
+        *stale_ = false;
     }
 
-    F                  compute_fn_;
-    mutable ValueType  cached_{};
-    mutable bool       stale_;
-    std::size_t        observer_id_;
+    F                               compute_fn_;
+    mutable ValueType               cached_{};
+    mutable std::shared_ptr<bool>   stale_;
+    std::size_t                     observer_id_;
 };
 
 /// CTAD 推导指引
 template<typename F>
 Computed(F) -> Computed<F>;
+
+/// 工厂函数：从 lambda 创建 Computed，返回类型由 lambda 返回值自动推导
+template<typename F>
+    requires std::invocable<F>
+[[nodiscard]] auto computed(F fn) -> Computed<F> {
+    return Computed<F>(std::move(fn));
+}
 
 } // namespace nandina::reactive

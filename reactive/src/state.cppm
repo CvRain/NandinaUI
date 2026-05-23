@@ -75,6 +75,23 @@ public:
         }
     }
 
+    /// 原地修改：fn(T&) -> void，避免拷贝（适合 ++/-- 等操作）
+    template<typename Fn>
+        requires std::invocable<Fn, T&> && std::is_void_v<std::invoke_result_t<Fn, T&>>
+    auto update(Fn fn) -> void {
+        T new_value = value_;
+        fn(new_value);
+        set(std::move(new_value));
+    }
+
+    /// 值语义修改：fn(const T&) -> T（Angular 风格，返回新值）
+    template<typename Fn>
+        requires std::invocable<Fn, const T&> &&
+                 (!std::is_void_v<std::invoke_result_t<Fn, const T&>>)
+    auto update(Fn fn) -> void {
+        set(T{fn(value_)});
+    }
+
     // ── 外部订阅（脱离 Effect 追踪系统） ──
 
     /**

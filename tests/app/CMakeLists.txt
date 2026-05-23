@@ -18,3 +18,10 @@ nandina_add_test(
     DEPS
         nandina::app
 )
+
+nandina_add_test(
+    NAME    test_app_var
+    SOURCES test_app_var.cpp
+    DEPS
+        nandina::app
+)
