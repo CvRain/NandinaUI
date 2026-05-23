@@ -7,3 +7,9 @@ nandina_add_test(
     SOURCES test_layout_core.cpp
     DEPS    nandina::layout
 )
+
+nandina_add_test(
+    NAME    test_positioned
+    SOURCES test_positioned.cpp
+    DEPS    nandina::layout
+)

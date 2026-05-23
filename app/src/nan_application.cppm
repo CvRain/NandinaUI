@@ -10,12 +10,14 @@ module;
 #include <type_traits>
 #include <typeinfo>
 #include <utility>
+#include <variant>
 #include <vector>
 
 export module nandina.app.application;
 
 import nandina.layout.container;
 import nandina.layout.flex_widgets;
+export import nandina.layout.positioned;
 import nandina.log;
 import nandina.foundation.color;
 import nandina.reactive.effect;
@@ -64,6 +66,8 @@ export namespace nandina::app {
     [[nodiscard]] inline auto card(Children children) -> Node;
 
     [[nodiscard]] inline auto panel(Children children) -> Node;
+
+    [[nodiscard]] inline auto positioned(Children children) -> Node;
 
     template <typename T>
     class Ref {
@@ -220,7 +224,7 @@ export namespace nandina::app {
         template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, Node>
         auto gap(this Self&& self, const float value) -> Self&& {
-            auto& node = static_cast<Node&>(self);
+            const auto& node = static_cast<Node&>(self);
             if (auto* widget = dynamic_cast<nandina::layout::LayoutContainer*>(node.m_widget.get())) {
                 widget->gap(value);
             }
@@ -230,7 +234,7 @@ export namespace nandina::app {
         template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, Node>
         auto align_items(this Self&& self, const nandina::layout::LayoutAlignment value) -> Self&& {
-            auto& node = static_cast<Node&>(self);
+            const auto& node = static_cast<Node&>(self);
             if (auto* widget = dynamic_cast<nandina::layout::LayoutContainer*>(node.m_widget.get())) {
                 widget->align_items(value);
             }
@@ -241,7 +245,7 @@ export namespace nandina::app {
             requires std::derived_from<std::remove_cvref_t<Self>, Node>
         auto justify_content(this Self&& self, const nandina::layout::LayoutAlignment value)
             -> Self&& {
-            auto& node = static_cast<Node&>(self);
+            const auto& node = static_cast<Node&>(self);
             if (auto* widget = dynamic_cast<nandina::layout::LayoutContainer*>(node.m_widget.get())) {
                 widget->justify_content(value);
             }
@@ -294,17 +298,171 @@ export namespace nandina::app {
             return std::forward<Self>(self);
         }
 
+        // ── Anchor 定位属性（用于 positioned() 容器内）─────────────────────────
+        // 这些方法设置子组件在 Positioned 容器中的 anchor 约束。
+        // 在 Row/Column/Stack 容器内这些属性无效（被忽略）。
+
+        template <typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, Node>
+        auto anchor_left(this Self&& self, float v) -> Self&& {
+            static_cast<Node&>(self).m_positioned_props.left = v;
+            return std::forward<Self>(self);
+        }
+
+        template <typename Self, typename Fn>
+            requires std::derived_from<std::remove_cvref_t<Self>, Node>
+                  && std::invocable<Fn>
+                  && std::convertible_to<std::invoke_result_t<Fn>, float>
+                  && (!std::convertible_to<std::remove_cvref_t<Fn>, float>)
+        auto anchor_left(this Self&& self, Fn fn) -> Self&& {
+            static_cast<Node&>(self).m_positioned_props.left =
+                std::function<float()>{std::move(fn)};
+            return std::forward<Self>(self);
+        }
+
+        template <typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, Node>
+        auto anchor_top(this Self&& self, float v) -> Self&& {
+            static_cast<Node&>(self).m_positioned_props.top = v;
+            return std::forward<Self>(self);
+        }
+
+        template <typename Self, typename Fn>
+            requires std::derived_from<std::remove_cvref_t<Self>, Node>
+                  && std::invocable<Fn>
+                  && std::convertible_to<std::invoke_result_t<Fn>, float>
+                  && (!std::convertible_to<std::remove_cvref_t<Fn>, float>)
+        auto anchor_top(this Self&& self, Fn fn) -> Self&& {
+            static_cast<Node&>(self).m_positioned_props.top =
+                std::function<float()>{std::move(fn)};
+            return std::forward<Self>(self);
+        }
+
+        template <typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, Node>
+        auto anchor_right(this Self&& self, float v) -> Self&& {
+            static_cast<Node&>(self).m_positioned_props.right = v;
+            return std::forward<Self>(self);
+        }
+
+        template <typename Self, typename Fn>
+            requires std::derived_from<std::remove_cvref_t<Self>, Node>
+                  && std::invocable<Fn>
+                  && std::convertible_to<std::invoke_result_t<Fn>, float>
+                  && (!std::convertible_to<std::remove_cvref_t<Fn>, float>)
+        auto anchor_right(this Self&& self, Fn fn) -> Self&& {
+            static_cast<Node&>(self).m_positioned_props.right =
+                std::function<float()>{std::move(fn)};
+            return std::forward<Self>(self);
+        }
+
+        template <typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, Node>
+        auto anchor_bottom(this Self&& self, float v) -> Self&& {
+            static_cast<Node&>(self).m_positioned_props.bottom = v;
+            return std::forward<Self>(self);
+        }
+
+        template <typename Self, typename Fn>
+            requires std::derived_from<std::remove_cvref_t<Self>, Node>
+                  && std::invocable<Fn>
+                  && std::convertible_to<std::invoke_result_t<Fn>, float>
+                  && (!std::convertible_to<std::remove_cvref_t<Fn>, float>)
+        auto anchor_bottom(this Self&& self, Fn fn) -> Self&& {
+            static_cast<Node&>(self).m_positioned_props.bottom =
+                std::function<float()>{std::move(fn)};
+            return std::forward<Self>(self);
+        }
+
+        template <typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, Node>
+        auto anchor_width(this Self&& self, float v) -> Self&& {
+            static_cast<Node&>(self).m_positioned_props.width = v;
+            return std::forward<Self>(self);
+        }
+
+        template <typename Self, typename Fn>
+            requires std::derived_from<std::remove_cvref_t<Self>, Node>
+                  && std::invocable<Fn>
+                  && std::convertible_to<std::invoke_result_t<Fn>, float>
+                  && (!std::convertible_to<std::remove_cvref_t<Fn>, float>)
+        auto anchor_width(this Self&& self, Fn fn) -> Self&& {
+            static_cast<Node&>(self).m_positioned_props.width =
+                std::function<float()>{std::move(fn)};
+            return std::forward<Self>(self);
+        }
+
+        template <typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, Node>
+        auto anchor_height(this Self&& self, float v) -> Self&& {
+            static_cast<Node&>(self).m_positioned_props.height = v;
+            return std::forward<Self>(self);
+        }
+
+        template <typename Self, typename Fn>
+            requires std::derived_from<std::remove_cvref_t<Self>, Node>
+                  && std::invocable<Fn>
+                  && std::convertible_to<std::invoke_result_t<Fn>, float>
+                  && (!std::convertible_to<std::remove_cvref_t<Fn>, float>)
+        auto anchor_height(this Self&& self, Fn fn) -> Self&& {
+            static_cast<Node&>(self).m_positioned_props.height =
+                std::function<float()>{std::move(fn)};
+            return std::forward<Self>(self);
+        }
+
+        /// 填满父容器宽度（左右锚点均为 0）
+        template <typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, Node>
+        auto fill_width(this Self&& self) -> Self&& {
+            auto& node = static_cast<Node&>(self);
+            node.m_positioned_props.left  = 0.0f;
+            node.m_positioned_props.right = 0.0f;
+            return std::forward<Self>(self);
+        }
+
+        /// 填满父容器高度（上下锚点均为 0）
+        template <typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, Node>
+        auto fill_height(this Self&& self) -> Self&& {
+            auto& node = static_cast<Node&>(self);
+            node.m_positioned_props.top    = 0.0f;
+            node.m_positioned_props.bottom = 0.0f;
+            return std::forward<Self>(self);
+        }
+
+        /// 填满父容器（左右上下锚点均为 0）
+        template <typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, Node>
+        auto fill(this Self&& self) -> Self&& {
+            auto& node = static_cast<Node&>(self);
+            node.m_positioned_props.left   = 0.0f;
+            node.m_positioned_props.right  = 0.0f;
+            node.m_positioned_props.top    = 0.0f;
+            node.m_positioned_props.bottom = 0.0f;
+            return std::forward<Self>(self);
+        }
+
+        /// 将此子组件的布置结果写入 GeomRef（供后续兄弟节点 anchor lambda 引用）
+        template <typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, Node>
+        auto bind_geom(this Self&& self, nandina::layout::GeomRef& ref) -> Self&& {
+            static_cast<Node&>(self).m_positioned_props.geom_ref = &ref;
+            return std::forward<Self>(self);
+        }
+
     private:
         using RefBinder   = std::move_only_function<void()>;
         using RefResetter = std::move_only_function<void()>;
 
         /// 穿透 SizedBox 包裹层找到真实组件
-        [[nodiscard]] auto unwrapped() -> runtime::NanWidget* {
-            if (!m_widget) return nullptr;
+        [[nodiscard]] auto unwrapped() const -> runtime::NanWidget* {
+            if (!m_widget)
+                return nullptr;
             if (auto* sb = dynamic_cast<nandina::layout::SizedBox*>(m_widget.get())) {
                 runtime::NanWidget* result = nullptr;
                 sb->for_each_child([&](runtime::NanWidget& c) {
-                    if (!result) result = &c;
+                    if (!result)
+                        result = &c;
                 });
                 return result ? result : m_widget.get();
             }
@@ -348,12 +506,18 @@ export namespace nandina::app {
 
         friend auto panel(Children children) -> Node;
 
+        friend auto positioned(Children children) -> Node;
+
         explicit Node(std::unique_ptr<runtime::NanWidget> widget)
             : m_widget(std::move(widget)) {
         }
 
         [[nodiscard]] auto take_widget() && -> std::unique_ptr<runtime::NanWidget> {
             return std::move(m_widget);
+        }
+
+        [[nodiscard]] auto take_positioned_props() && -> nandina::layout::PositionedProps {
+            return std::move(m_positioned_props);
         }
 
         auto append_ref_binder(RefBinder binder, RefResetter resetter) -> void {
@@ -382,10 +546,11 @@ export namespace nandina::app {
             }
         }
 
-        std::unique_ptr<runtime::NanWidget> m_widget;
-        std::string m_key;
-        std::vector<RefBinder> m_ref_binders;
-        std::vector<RefResetter> m_ref_resetters;
+        std::unique_ptr<runtime::NanWidget>  m_widget;
+        std::string                          m_key;
+        std::vector<RefBinder>               m_ref_binders;
+        std::vector<RefResetter>             m_ref_resetters;
+        nandina::layout::PositionedProps     m_positioned_props;
     };
 
     // ── WidgetNode<W> — 类型安全组件节点基类 ───────────────────────────
@@ -395,24 +560,30 @@ export namespace nandina::app {
     class WidgetNode : public Node {
     public:
         // 类型安全访问器
-        [[nodiscard]] auto widget() & noexcept -> W& { return *m_typed; }
-        [[nodiscard]] auto widget() const& noexcept -> const W& { return *m_typed; }
+        [[nodiscard]] auto widget() & noexcept -> W& {
+            return *m_typed;
+        }
+
+        [[nodiscard]] auto widget() const & noexcept -> const W& {
+            return *m_typed;
+        }
 
         // 逃生口：直接操作底层 widget，保持链式返回
         // 适用于 builder 方法未覆盖的属性读/写：
         //   button("OK").configure([](Button& b) { b.set_bg_color(...); })
         template <typename Self, typename Fn>
             requires std::derived_from<std::remove_cvref_t<Self>, WidgetNode<W>>
-                  && std::invocable<Fn, W&>
+                     && std::invocable<Fn, W&>
         auto configure(this Self&& self, Fn&& fn) -> Self&& {
             std::invoke(std::forward<Fn>(fn), *static_cast<WidgetNode<W>&>(self).m_typed);
             return std::forward<Self>(self);
         }
 
     protected:
-        explicit WidgetNode(typename W::Ptr w)
+        explicit WidgetNode(W::Ptr w)
             : Node(std::move(w))
-            , m_typed(static_cast<W*>(Node::unwrapped())) {}
+              , m_typed(static_cast<W*>(Node::unwrapped())) {
+        }
 
         W* m_typed{nullptr};
     };
@@ -439,9 +610,11 @@ export namespace nandina::app {
             auto* w = self.m_typed;
             w->add_opaque_cleanup(
                 std::make_shared<nandina::reactive::Effect>(
-                    [w, fn = std::move(fn)]{ w->set_text(fn()); }
-                )
-            );
+                    [w, fn = std::move(fn)] {
+                        w->set_text(fn());
+                    }
+                    )
+                );
             return std::forward<Self>(self);
         }
 
@@ -527,9 +700,11 @@ export namespace nandina::app {
             auto* w = self.m_typed;
             w->add_opaque_cleanup(
                 std::make_shared<nandina::reactive::Effect>(
-                    [w, fn = std::move(fn)]{ w->set_text(fn()); }
-                )
-            );
+                    [w, fn = std::move(fn)] {
+                        w->set_text(fn());
+                    }
+                    )
+                );
             return std::forward<Self>(self);
         }
 
@@ -764,7 +939,8 @@ export namespace nandina::app {
                 nandina::layout::LayoutContainer::s_measure_count = 0;
 
                 log.warn(
-                    "Slow mounted flush: total={:.2f}ms measure={:.2f}ms layout={:.2f}ms cause={} root_type={} size={:.0f}x{:.0f} label_fast={} label_slow={} surf_n={} lc_n={}",
+                    "Slow mounted flush: total={:.2f}ms measure={:.2f}ms layout={:.2f}ms cause={} root_type={} "
+                    "size={:.0f}x{:.0f} label_fast={} label_slow={} surf_n={} lc_n={}",
                     total_ms,
                     measure_ms,
                     layout_ms,
@@ -843,6 +1019,30 @@ export namespace nandina::app {
             auto child_widget = std::move(child).take_widget();
             if (child_widget) {
                 result.m_widget->add_child(std::move(child_widget));
+            }
+            result.absorb(std::move(child));
+        }
+        return result;
+    }
+
+    // ── positioned() ────────────────────────────────────────────────────────
+    // 自由定位容器：每个子节点通过 anchor_* 方法声明其相对于父容器（或先声明的兄弟节点）的位置。
+    //
+    // 示例：
+    //   positioned(children(
+    //       label("背景").fill(),                              // 填满父容器
+    //       button("确认").anchor_right(16).anchor_bottom(16)  // 固定到右下角
+    //           .anchor_width(80).anchor_height(36)
+    //   ))
+    [[nodiscard]] inline auto positioned(Children children) -> Node {
+        auto widget = nandina::layout::Positioned::Create();
+        Node result{std::move(widget)};
+        for (auto& child : std::move(children).take()) {
+            auto props        = std::move(child.m_positioned_props);    // move before take_widget()
+            auto child_widget = std::move(child).take_widget();
+            if (child_widget) {
+                static_cast<nandina::layout::Positioned*>(result.m_widget.get())
+                    ->add_positioned_child(std::move(child_widget), std::move(props));
             }
             result.absorb(std::move(child));
         }
@@ -1009,7 +1209,8 @@ export namespace nandina::app {
 
                 if (total_ms >= detail::k_slow_layout_threshold_ms) {
                     log.warn(
-                        "Slow app on_draw: total={:.2f}ms root_layout={:.2f}ms root_draw={:.2f}ms root_type={} size={}x{}",
+                        "Slow app on_draw: "
+                        "total={:.2f}ms root_layout={:.2f}ms root_draw={:.2f}ms root_type={} size={}x{}",
                         total_ms,
                         layout_ms,
                         draw_ms,
@@ -1025,7 +1226,7 @@ export namespace nandina::app {
             return m_root_component && m_root_component->dirty();
         }
 
-        [[nodiscard]] auto resolve_interactive_hit(const float x, const float y) -> runtime::NanWidget* {
+        [[nodiscard]] auto resolve_interactive_hit(const float x, const float y) const -> runtime::NanWidget* {
             if (!m_root_component) {
                 return nullptr;
             }
@@ -1079,13 +1280,13 @@ export namespace nandina::app {
                 return;
             }
 
-            auto log          = nandina::log::get("app.window");
-            const float width = static_cast<float>(m_active_runtime_window
-                                                       ? m_active_runtime_window->width()
-                                                       : m_config.width);
-            const float height = static_cast<float>(m_active_runtime_window
-                                                        ? m_active_runtime_window->height()
-                                                        : m_config.height);
+            auto log         = nandina::log::get("app.window");
+            const auto width = static_cast<float>(m_active_runtime_window
+                                                      ? m_active_runtime_window->width()
+                                                      : m_config.width);
+            const auto height = static_cast<float>(m_active_runtime_window
+                                                       ? m_active_runtime_window->height()
+                                                       : m_config.height);
             const auto start = detail::SteadyClock::now();
             m_root_component->measure(geometry::NanConstraints::tight(width, height));
             const auto measure_done = detail::SteadyClock::now();
@@ -1116,12 +1317,12 @@ export namespace nandina::app {
                 return;
             }
 
-            const float width = static_cast<float>(m_active_runtime_window
-                                                       ? m_active_runtime_window->width()
-                                                       : m_config.width);
-            const float height = static_cast<float>(m_active_runtime_window
-                                                        ? m_active_runtime_window->height()
-                                                        : m_config.height);
+            const auto width = static_cast<float>(m_active_runtime_window
+                                                      ? m_active_runtime_window->width()
+                                                      : m_config.width);
+            const auto height = static_cast<float>(m_active_runtime_window
+                                                       ? m_active_runtime_window->height()
+                                                       : m_config.height);
 
             if (immediate) {
                 m_root_component->set_bounds(0.0f, 0.0f, width, height);
@@ -1136,12 +1337,12 @@ export namespace nandina::app {
         auto sync_background_bounds() -> void {
             if (!m_background)
                 return;
-            const float w = static_cast<float>(m_active_runtime_window
-                                                   ? m_active_runtime_window->width()
-                                                   : m_config.width);
-            const float h = static_cast<float>(m_active_runtime_window
-                                                   ? m_active_runtime_window->height()
-                                                   : m_config.height);
+            const auto w = static_cast<float>(m_active_runtime_window
+                                                  ? m_active_runtime_window->width()
+                                                  : m_config.width);
+            const auto h = static_cast<float>(m_active_runtime_window
+                                                  ? m_active_runtime_window->height()
+                                                  : m_config.height);
             m_background->set_bounds(0.0f, 0.0f, w, h);
         }
 

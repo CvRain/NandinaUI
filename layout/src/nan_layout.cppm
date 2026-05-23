@@ -3,6 +3,7 @@ export module nandina.layout;
 export import nandina.layout.core;
 export import nandina.layout.flex_widgets;
 export import nandina.layout.container;
+export import nandina.layout.positioned;
 
 // 本模块作为公共入口，简化为：
 //   import nandina.layout;

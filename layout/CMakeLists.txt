@@ -17,6 +17,7 @@ target_sources(nandina_layout
             src/layout_core.cppm
             src/flex_widgets.cppm
             src/layout_container.cppm
+            src/positioned.cppm
             src/nan_layout.cppm
 )
 
