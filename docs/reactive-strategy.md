@@ -1,10 +1,19 @@
 # Reactive Strategy
 
-Status: Draft — intended as the canonical design for the project's reactive core.
+> 状态：已校正（2026-05，当前 reactive 主线规范）
+>
+> 当前判断：`State`、`ReadState`、`Computed`、`Effect`、`EffectScope`、`Prop`、`batch` 已有实际实现，并且已有测试覆盖；`StateList` 仍属部分完成。本文应理解为“语义规范 + 当前进度说明”，而不是开工前的纯草案。
 
 Purpose
 -------
 定义正式项目的响应式子系统设计与行为语义，作为实现与后续扩展（components / widgets / bindings / tests）的规范基础。目标是保留 nandina_experiment 已验证的关键思想，同时把语义、生命周期与边界写清楚，避免“实验性实现语义模糊”带来的后续成本。
+
+Current status
+--------------
+- 已落地：`State`、`ReadState`、`Computed`、`Effect`、`EffectScope`、`Prop`、`batch`
+- 已有 app 层桥接：`Var<T>`、`ComputedVar<T>`
+- 已有测试覆盖：`tests/reactive/test_reactive.cpp`、`tests/app/test_app_var.cpp`
+- 仍未完全收口：`StateList<T>` 的细粒度事件语义、少量 reactive 边界测试、与脚本宿主的边界说明
 
 Scope
 -----
@@ -89,7 +98,7 @@ Batch semantics
 ---------------
 - batch(f):
     - 在 batch 块中，所有 set() 操作只做标记，不立即触发 effect。
-    - batch 结束后统一 flush：对所有 invalidators ���重并按依赖顺序执行。
+    - batch 结束后统一 flush：对所有 invalidators 去重并按依赖顺序执行。
     - 设计原则：保持最低惊讶原则（single flush -> consistent final state seen by effects）。
 - 用例：
     - 界面状态更新时将相关状态写在同一 batch 内，避免短暂不一致或多次重绘。
@@ -111,9 +120,9 @@ Threading model
     - Reactive core 需要在设计上保留将追踪上下文与调度器分离的可能性（即：追踪逻辑与调度执行分层），以便未来做线程调度或 worker offload。
 - Implementation note: 即使当前单线程，也要用线程安全的数据结构或明确注释扩展边界，防止日后误用。
 
-API sketches (pseudo-C++)
--------------------------
-下面为常见原语的示意 API（非最终实现签名，仅为便于实现和讨论）：
+Conceptual API sketches
+-----------------------
+下面为常见原语的概念示意 API。它们用于说明语义，不应被误读为当前仓库中必须逐字符匹配的最终公开签名：
 
 ```cpp
 // State
@@ -195,27 +204,25 @@ Testing & validation
 - Exception safety: effect throws -> tracking context restored, other effects still run
 - EventSignal: multiple subscribers, exception handling as designed
 
-Deliverables / Definition of Done (DoD) for reactive core MVP
--------------------------------------------------------------
-- Implementations for State, ReadState, Prop, Effect, EffectScope, StateList, batch available and unit-tested.
-- Tracking context infrastructure with automatic dependency registration on State::get().
-- batch semantics implemented and covered by tests.
-- EffectScope integration with a mock component demonstrating automatic cleanup.
-- Example small app: counter component using State + Effect + Prop demonstrating consistent behavior.
+Current completion judgment
+---------------------------
+- 已达到：`State` / `ReadState` / `Computed` / `Effect` / `EffectScope` / `Prop` / `batch` 的主线 MVP 已实现
+- 已达到：tracking context、异常恢复、batch 语义均已有实现与测试覆盖
+- 已达到：app 层已有 `Var<T>` / `ComputedVar<T>` 作为更贴近页面 authoring 的桥接包装
+- 未完全达到：`StateList<T>` 仍未形成完整的细粒度公开语义与充分测试面
+- 未完全达到：脚本宿主、跨线程与更复杂 owner/binding 边界仍未定稿
 
 Migration notes (from nandina_experiment)
 -----------------------------------------
 - nandina_experiment 的实现已经验证了大量核心思想（State/Effect/Prop/StateList/batch）。正式项目应吸收成熟语义（尤其是 batch 与 EffectScope 的行为边界），但把 API 签名与 ownership 约定写清楚并纳入测试体系。
 - 将实验性文件（分散的 .ixx 草稿）整合为单一、被测试并导出的模块是关键；历史副本可保留在 docs/archive，但不作为主实现依据。
 
-Next steps (implementer guidance)
----------------------------------
-1. 在 `reactive/` 下建立模块骨架与最小 public header/module（State/ReadState/Effect/Prop/StateList/Connection）。
-2. 实现 tracking context（thread-local）及 State::get 注册逻辑。
-3. 实现 batch 与 flush 调度（queue + visited 去重策略）。
-4. 实现 Effect + EffectScope 与 basic Connection/ScopedConnection。
-5. 编写单元测试覆盖前述行为（包括异常安全与 batch 场景）。
-6. 编写一个小的 example（counter）集成验证：State -> Effect -> mark_dirty -> render loop。
+Current follow-up
+-----------------
+1. 继续补齐 `StateList<T>` 的细粒度事件语义与测试覆盖。
+2. 继续用 app 层 `Var<T>` / `ComputedVar<T>` 和真实页面 authoring 验证 reactive 体验，而不是只停留在模块内测试。
+3. 在 forms / Input 等后续控件落地时，验证 `Prop`、`EffectScope`、事件信号与组件生命周期的协作边界。
+4. 等脚本宿主方向更明确后，再单独整理 reactive 对 bindings / script host 的映射文档。
 
 Notes / open questions
 ----------------------

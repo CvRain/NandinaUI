@@ -28,6 +28,8 @@
 >   - `kind:refactor`
 >   - `kind:docs`
 >   - `kind:test`
+>
+> 状态校正（2026-05）：本清单是持续更新的活文档，不再代表“从零创建项目”的原始开工顺序。历史 issue 与已完成记录保留用于追踪演进；当前实际优先级应以下文的收口型 issue 和源码/测试状态为准。
 
 ---
 
@@ -852,11 +854,11 @@
 
 ### 当前进展
 - `layout/src/layout_core.cppm` 已提供 `LayoutRequest`、`LayoutChildSpec` 与 `BasicLayoutBackend`
+- `LayoutRequest` 已显式携带 `NanConstraints`
+- `LayoutChildSpec` 已覆盖 `preferred_size`、`min_size`、`max_size`、`flex_factor`、`can_shrink`
 - Row / Column / Stack 已共享这套基础布局协议
 
 ### 未完成部分
-- `LayoutChildSpec` 仍未完整覆盖 `min/max`、`can_shrink` 等约束信息
-- `LayoutRequest` 尚未显式携带 `NanConstraints`
 - backend 当前主要返回 frames 向量，缺少统一 `LayoutResult` / 调试信息表达
 
 ---
@@ -1638,7 +1640,7 @@
 ### 完成记录
 - 已支持 hover / press / click / disabled / focus 状态
 - 已提供 `on_click` / `on_press` / `on_release` / `on_hover` / `on_leave` 与 signal 接口
-- `Button` 与 showcase 的 `StatsSection` 已复用 `Pressable`
+- 已有 app / widgets 测试覆盖其禁用态与状态清理语义
 - 落地文件：`widgets/src/nan_pressable.cppm`
 
 ---
@@ -1688,7 +1690,7 @@
 ### 产出
 - `widgets/primitives/focus_ring`
 
-### 完成定��
+### 完成定义
 - Button/Input 等未来可复用统一焦点反馈
 
 ### 当前判断
@@ -1729,7 +1731,7 @@
 
 ## Issue 055 — 实现 Label 控件 ⚠️ 部分完成
 **Labels:** `area:widgets`, `kind:implementation`, `priority:p0`
-**Status:** ⚠️ 部分完成 — 基础 Label 已可用，但状态语义与 typography role 仍未补齐
+**Status:** ⚠️ 部分完成 — 基础 Label 已可用，并已具备 `disabled`；`error` / `required` / typography role 仍未补齐
 
 ### 目标
 实现第一个主题感知的基础文本控件。
@@ -1750,11 +1752,11 @@
 - Label 可在页面中作为真实控件使用
 
 ### 当前进展
-- 已实现文本、字体大小、颜色、对齐、preferred size 与真实字体绘制
+- 已实现文本、字体大小、颜色、对齐、`disabled`、preferred size 与真实字体绘制
 - 落地文件：`widgets/src/nan_label.cppm`
 
 ### 未完成部分
-- `disabled` / `error` / `required` 语义状态尚未建模
+- `error` / `required` 语义状态尚未建模
 - typography role 尚未形成独立语义 API
 
 ---
@@ -1786,7 +1788,7 @@
 
 ## Issue 057 — 实现 Button 控件最小版本 ⚠️ 部分完成
 **Labels:** `area:widgets`, `kind:implementation`, `priority:p0`
-**Status:** ⚠️ 部分完成 — Button 已可点击使用，但 preset / size / colorVariant 仍未成型
+**Status:** ⚠️ 部分完成 — Button 已具备 text / variant / size / disabled / loading / icon 基础能力，但 theme preset 与上层收口仍未完成
 
 ### 目标
 实现第一个完整的交互式核心控件。
@@ -1808,18 +1810,21 @@
 - 可稳定用于 showcase 与页面导航
 
 ### 当前进展
-- 已实现 text / on_click / disabled / hover / press 基础状态
-- 通过 `Surface + Pressable + Label` 组合完成最小 Button
+- 已实现 text / on_click / disabled / hover / press / loading 基础状态
+- 已提供 `variant(...)`、`size(...)`、`icon(...)` / `icon_left(...)` / `icon_right(...)` 等公开 API
+- 当前实现采用 `Surface + Row + Label + optional Icon` 组合，并直接在 Button 内处理交互事件
 - 落地文件：`widgets/src/nan_button.cppm`、`widgets/src/nan_button.cpp`
 
 ### 未完成部分
-- `preset`、`size`、`colorVariant` 仍未形成明确公开 API
+- `colorVariant` 尚未形成独立语义 API
+- authoring DSL、showcase 与测试对 icon / loading 等能力的消费仍不充分
+- 更完整的 preset / resolver 文档化与 theme 层统一消费仍待收口
 
 ---
 
-## Issue 058 — 为 Button 加入 icon slot / 左右图标支持 ❌ 未完成
+## Issue 058 — 为 Button 加入 icon slot / 左右图标支持 ⚠️ 部分完成
 **Labels:** `area:widgets`, `kind:implementation`, `priority:p1`
-**Status:** ❌ 未完成 — Button 尚未暴露 icon slot 或左右图标 API
+**Status:** ⚠️ 部分完成 — widgets 层已有 `icon / icon_left / icon_right` API，但 authoring / 测试 / 语义收口仍未完成
 
 ### 目标
 让 Button API 更接近真实应用需求。
@@ -1835,16 +1840,21 @@
 ### 完成定义
 - Button 可以表达更真实的 UI 场景
 
-### 当前判断
-- `Button` 当前只组合了 `Pressable + Label`
-- widgets 层虽已有 `Icon` 组件，但未接入 `Button` 的公开接口与布局逻辑
-- 未见 `left icon` / `right icon` / icon-text 排布 API
+### 当前进展
+- `Button` 已提供 `icon(...)`、`icon_left(...)`、`icon_right(...)` 公开接口
+- widgets 层已将 `Icon` 接入 `Button` 的内部内容排布
+- 模块接口注释已包含 `button("Save").icon_left(...).on_click(...)` 这类使用示例
+
+### 未完成部分
+- app authoring 层尚未暴露对应的链式 icon API
+- tests / showcase 尚未把 icon button 作为稳定回归面
+- `icon_right` 的更完整独立 slot 语义仍值得继续收口
 
 ---
 
-## Issue 059 — 实现 Button 的 preset 视觉映射 ❌ 未完成
+## Issue 059 — 实现 Button 的 preset 视觉映射 ⚠️ 部分完成
 **Labels:** `area:widgets`, `area:theme`, `kind:implementation`, `priority:p1`
-**Status:** ❌ 未完成 — Button 目前只有一组直接颜色配置，未形成 preset 视觉语义
+**Status:** ⚠️ 部分完成 — Button 已有 `ButtonVariant` 与基础视觉切换，但 preset 体系与 theme resolver 仍未完全收口
 
 ### 目标
 建立统一按钮视觉语义。
@@ -1863,9 +1873,14 @@
 ### 完成定义
 - preset 不是仅有属性名，而有真实一致的样式差异
 
-### 当前判断
-- 目前 `ButtonColors` 只是单一颜色集，未见 `filled / tonal / outlined / ghost / link` 等 preset API
-- 也未见从 theme 或 preset 枚举解析到样式的 resolver
+### 当前进展
+- `Button` 已提供 `ButtonVariant` 枚举与 `variant(...)` API
+- app 测试已覆盖 `default_variant`、`outline`、`ghost`、`destructive` 等基础视觉切换
+
+### 未完成部分
+- preset 体系仍未以组件规格文档与 theme resolver 的形式单独收口
+- `tonal` / `link` 等更完整语义集合仍未稳定
+- 变体到 token/resolver 的统一映射仍未脱离组件内部实现细节
 
 ---
 
@@ -1891,11 +1906,12 @@
 
 ### 当前进展
 - 已支持 title / header_color / header_height / padding / 内容区布局
+- app authoring 测试已覆盖 `panel(...).title(...).bg_color(...).corner_radius(...).bind(...)` 基本链路
 - 落地文件：`widgets/src/nan_panel.cppm`
 
 ### 未完成部分
 - optional header action 仍未实现
-- 目前未见主线 showcase 或测试对 `Panel` 的实际消费，完成定义里的“内容分区验证”证据还不够
+- showcase 中作为内容分区的系统性验证仍不足，完成定义里的“页面级内容分区验证”证据还不够
 
 ---
 
@@ -2370,7 +2386,7 @@
 
 ### 当前判断
 - `tests/CMakeLists.txt` 中 `add_subdirectory(widgets)` 仍处于注释状态
-- 主线也未见 `tests/widgets/*` 目录与 Label / Button / Panel 的专门测试文件
+- 虽然 `tests/app/test_app_authoring.cpp` 已覆盖 Label / Button / Card / Panel 的部分工厂与状态语义，但主线仍未见 `tests/widgets/*` 目录与更聚焦的控件专门测试文件
 
 ---
 
@@ -2421,7 +2437,7 @@
 - 后续做脚本层时有文档基础，不会从零重新想
 
 ### 当前进展
-- `docs/godot-like-authoring-draft.md` 已讨论应用层开发范式、生命周期与 API 边界的初步方向
+- `docs/godot-like-authoring-draft.md` 已保留为应用层宿主边界的历史参考
 - 多份架构文档也已将 app 视为 authoring layer 的承载层
 
 ### 未完成部分
@@ -2459,77 +2475,281 @@
 
 ---
 
-# 推荐创建顺序
+# 2026-05 下一阶段推荐 Issue 序列
 
-## 第一批（必须先开）
-1. Issue 001 — 建立正式项目目录骨架
-2. Issue 005 — 定义 foundation 层基础枚举与通用类型
-3. Issue 006 — 实现基础几何类型
-4. Issue 008 — 设计并实现 Application 生命周期最小接口
-5. Issue 009 — 设计 Window 最小接口
-6. Issue 011 — 定义统一 Event 类型体系
-7. Issue 012 — 实现 Widget 树基础结构
-8. Issue 016 — 设计 Scene/DrawCommand 中间层
-9. Issue 018 — 定义 reactive 模块设计说明
-10. Issue 019 — 实现 State<T> 最小版本
+> 本节不是从零规划全仓库，而是基于当前主线真实完成度，对“接下来最值得做什么”给出的排序结果。
+> 排序原则：优先收口 layout 主线，其次收口 primitive / control 契约，最后再扩大 showcase 与新增控件表面积。
 
-## 第二批（尽快跟进）
-11. Issue 021 — 实现 Effect 自动依赖追踪
-12. Issue 022 — 实现 EffectScope 生命周期管理
-13. Issue 025 — 实现 Prop<T>
-14. Issue 029 — 定义 layout 协议
-15. Issue 031 — 实现 Row 容器
-16. Issue 032 — 实现 Column 容器
-17. Issue 037 — 定义主题系统核心语义枚举
-18. Issue 038 — 定义 primitive tokens
-19. Issue 041 — 实现 ThemeManager 最小版本
-20. Issue 046 — 定义 text 模块最小接口
+## Phase A — Layout 主线收口（P0，必须先做）
 
-## 第三批（形成最小可用 UI）
-21. Issue 047 — 实现基础文本测量能力
-22. Issue 048 — 实现基础文本绘制能力
-23. Issue 050 — 实现 Surface primitive
-24. Issue 051 — 实现 Pressable primitive
-25. Issue 052 — 实现 Text primitive
-26. Issue 055 — 实现 Label 控件
-27. Issue 057 — 实现 Button 控件最小版本
-28. Issue 069 — 建立 showcase 应用基础入口
-29. Issue 071 — 创建 Label showcase 页面
-30. Issue 072 — 创建 Button showcase 页面
+1. **Issue 082 — 让 LayoutCore 接入 NanConstraints 并扩展 LayoutChildSpec**  
+    依赖：无  
+    原因：这是约束语义的基础，不先固定 child spec 和 constraints，后续 container / widgets / showcase 都会继续补丁化。
 
-## 2026-05 Layout 主线追加批次（建议优先于新增 widgets/router 工作）
-31. Issue 082 — 让 LayoutCore 接入 NanConstraints 并扩展 LayoutChildSpec
-32. Issue 083 — 让 LayoutContainer 切换到 measure/layout 两阶段驱动
-33. Issue 084 — 为根节点建立统一 reflow 入口与 layout dirty 闭环
-34. Issue 085 — 适配 FlexWidgets 到新布局协议
-35. Issue 086 — 清理 widgets 中的手工布局分发
-36. Issue 087 — 清理 showcase 中的手工 frame 计算并回归 authoring/layout 原语
-37. Issue 088 — 补齐 layout 回归测试矩阵
-38. Issue 089 — 以当前实现为准重写 Layout 里程碑验收标准
+2. **Issue 083 — 让 LayoutContainer 切换到 measure/layout 两阶段驱动**  
+    依赖：Issue 082  
+    原因：只有容器主线切到两阶段，Row / Column / Stack 才能真正成为上层 authoring 的稳定基础。
+
+3. **Issue 084 — 为根节点建立统一 reflow 入口与 layout dirty 闭环**  
+    依赖：Issue 083  
+    原因：这是把 layout 从“局部可用”变成“整棵树稳定可推理”的关键一步。
+
+4. **Issue 085 — 适配 FlexWidgets 到新布局协议**  
+    依赖：Issue 083, Issue 084  
+    原因：Expanded / SizedBox / Center / Padding 是当前 authoring DSL 的高频积木，不尽快适配会长期拖住上层 API。
+
+5. **Issue 086 — 清理 widgets 中的手工布局分发**  
+    依赖：Issue 085  
+    原因：Button / Panel / Card / Sidebar 等控件要真正消费 layout 主线，而不是继续在控件内部保留特殊布局分支。
+
+6. **Issue 088 — 补齐 layout 回归测试矩阵**  
+    依赖：Issue 082, Issue 083, Issue 085  
+    原因：layout 收口如果没有回归矩阵，后面每做一个控件都会反复踩回归。
+
+7. **Issue 087 — 清理 showcase 中的手工 frame 计算并回归 authoring/layout 原语**  
+    依赖：Issue 085, Issue 086  
+    原因：showcase 应该是 layout 的回归面，而不是布局补丁层。
+
+8. **Issue 089 — 以当前实现为准重写 Layout 里程碑验收标准**  
+    依赖：Issue 082-088 基本完成  
+    原因：当前 layout 已经不处于“从零设计”阶段，需要把 DoD 改写成收口后的真实验收标准。
+
+## Phase B — Primitive / Control 收口（P1，依赖 Phase A）
+
+9. **Issue 053 — 实现 FocusRing primitive**  
+    依赖：Issue 086，建议与 Issue 038 / Issue 041 联动  
+    原因：不把 focus ring 做成 primitive，后续 Input、Button、可聚焦控件都会各写各的焦点表现。
+
+10. **Issue 054 — 编写 primitive 设计文档**  
+    依赖：Issue 053 启动后即可推进  
+    原因：Surface / Pressable / Text / FocusRing 的边界需要在新增更多控件前先文档化。
+
+11. **Issue 056 — 为 Label 实现状态驱动样式映射**  
+    依赖：Issue 054，建议与 Issue 040 / Issue 041 联动  
+    原因：Label 现在能显示文本，但还没有真正形成语义状态到样式的映射层。
+
+12. **Issue 059 — 实现 Button 的 preset 视觉映射**  
+    依赖：Issue 054，建议与 Issue 037-041 联动  
+    原因：Button 已能工作，但 variant / size / 视觉语义还需要进一步从 theme 层收口。
+
+13. **Issue 078 — 为 widgets 基础控件增加测试**  
+    依赖：Issue 056, Issue 059 至少完成一部分  
+    原因：当前 widgets 缺独立测试目录，继续做控件而没有专门回归面，风险会快速累积。
+
+## Phase C — 表单垂直切片（P1，依赖 Phase A；建议在 Phase B 启动后推进）
+
+14. **Issue 090 — 定义 Input / Field 的 authoring 与状态契约**  
+    依赖：Issue 054，建议参考 Issue 053 方向  
+    原因：Input 是下一批最有价值的控件，但必须先把 authoring API、受控/非受控边界、状态语义固定下来。
+
+15. **Issue 091 — 实现 TextField 最小版本**  
+    依赖：Issue 090  
+    原因：单行文本输入会同时压测 focus、键盘事件、文本渲染、光标、placeholder、disabled/read_only 等多个底层能力。
+
+16. **Issue 095 — 为 TextField 接入 authoring 工厂与 signals 绑定模式**  
+    依赖：Issue 091  
+    原因：项目的核心竞争力之一就是 authoring 体验，Input 不能只在 widgets 层存在，必须尽快接入 app DSL。
+
+17. **Issue 092 — 实现 Field 容器与 label/helper/error 组合**  
+    依赖：Issue 090, Issue 091  
+    原因：Field 是把 shadcn / primitives 思路转化成 NandinaUI 语义 API 的关键容器，能显著减少表单页面装配成本。
+
+18. **Issue 093 — 为表单控件补齐交互与回归测试**  
+    依赖：Issue 091, Issue 092, Issue 095  
+    原因：输入控件是最容易积累边界 bug 的一类，没有测试很难继续往 Select、Checkbox、Dialog 走。
+
+19. **Issue 094 — 创建 Forms showcase 页面并纳入导航验证**  
+    依赖：Issue 091, Issue 092, Issue 095  
+    原因：forms 页面既是展示面，也是对 page/router/component authoring 组合能力的真实验收。
+
+## Phase D — Showcase 扩面与系统验证（P2，依赖 Phase A / B / C 的关键项）
+
+20. **Issue 071 — 创建 Label showcase 页面**  
+    依赖：Issue 056  
+    原因：Label 页面更适合作为 typography / semantic text role 的验证面，而不是单独优先于 layout 收口。
+
+21. **Issue 072 — 创建 Button showcase 页面**  
+    依赖：Issue 059  
+    原因：Button 页面应在 variant / preset 基本稳定后再做，否则容易变成临时样式陈列。
+
+22. **Issue 073 — 创建 Panel/Card showcase 页面**  
+    依赖：Issue 086, Issue 087  
+    原因：容器类 showcase 应建立在 layout 收口后，才能真正验证组合与插槽能力。
+
+23. **Issue 074 — 在 showcase 中加入主题切换能力**  
+    依赖：Issue 041，建议在 Issue 071-073 至少完成两页后推进  
+    原因：主题切换需要有足够多的组件消费面，否则很难看出 token / resolver 的真实问题。
 
 ---
 
-# 后续建议
+# Milestone M11 — Forms / Authoring 垂直切片
 
-如果需要，我下一步还可以继续帮你生成两种内容中的任意一种：
+## Issue 090 — 定义 Input / Field 的 authoring 与状态契约 ❌ 未完成
+**Labels:** `area:widgets`, `area:app`, `area:docs`, `kind:architecture`, `priority:p1`
+**Status:** ❌ 未完成 — 当前主线尚无输入控件契约，缺少下一批 primitives / controls 的共同落点
 
-1. **每个 issue 的标准 GitHub issue 模板版**  
-   也就是每条都改写成：
-    - Title
-    - Summary
-    - Motivation
-    - Scope
-    - Out of Scope
-    - Definition of Done
+### 目标
+为输入类控件建立统一的状态模型、authoring 语法和组合边界。
 
-2. **按"可并行开发"重新分组的 issue board 版本**  
-   比如分成：
-    - Runtime Lane
-    - Reactive Lane
-    - Layout Lane
-    - Theme Lane
-    - Widgets Lane
-    - Showcase Lane
+### 范围
+建议明确：
+- `value` / `placeholder`
+- `disabled` / `read_only`
+- `focused` / `invalid` / `required`
+- `on_change` / `on_submit`
+- `Ref<TextField>` 与 signals/Var 的推荐绑定方式
+- Input 与 Field 的职责分层
+
+### 产出
+- `docs/input-and-field-api.md`
+
+### 完成定义
+- TextField / Field 的实现不再需要一边写一边临时定 API
+- app 层可以围绕统一 authoring 模式继续扩表单类控件
+
+### 当前判断
+- runtime 已有 pointer / key / text input 基础通道
+- widgets / app 层尚未形成输入控件的公开契约
+- 若直接开始写 Input，实现很容易反向塑形 authoring API
+
+---
+
+## Issue 091 — 实现 TextField 最小版本 ❌ 未完成
+**Labels:** `area:widgets`, `area:text`, `area:runtime`, `kind:implementation`, `priority:p1`
+**Status:** ❌ 未完成 — 当前主线没有可编辑的文本输入控件
+
+### 目标
+实现第一版单行文本输入控件，验证输入交互链路。
+
+### 范围
+建议先覆盖：
+- 单行文本显示与编辑
+- focus / blur
+- caret 可视化
+- placeholder
+- backspace / delete / text input
+- disabled / read_only
+
+### 产出
+- `widgets/src/nan_text_field.cppm`
+- 对应导出与最小工厂接口
+
+### 完成定义
+- 可在 showcase 页面中实际输入、编辑和读取文本
+- 输入行为不依赖页面层手工处理键盘事件
+
+### 当前判断
+- text 渲染与基础键盘事件已经具备落地条件
+- 还缺一个真正把 runtime 事件、text 能力和 widgets 状态机串起来的控件
+
+---
+
+## Issue 092 — 实现 Field 容器与 label/helper/error 组合 ❌ 未完成
+**Labels:** `area:widgets`, `area:theme`, `kind:implementation`, `priority:p1`
+**Status:** ❌ 未完成 — 当前主线缺少表单语义容器，label / helper / error 仍需页面层手工拼装
+
+### 目标
+提供围绕输入控件的语义容器，承接 shadcn / primitives 风格的组合思路。
+
+### 范围
+建议覆盖：
+- label slot
+- control slot
+- helper text
+- error text
+- required / invalid 状态展示
+
+### 产出
+- `widgets/src/nan_field.cppm`
+
+### 完成定义
+- 页面层不再为最常见的表单行手工拼装 label + input + helper + error
+- 表单语义状态可以通过统一容器消费 theme
+
+### 当前判断
+- Button / Label 已经证明“组合优于继承”的方向可行
+- Field 是把这一套思路扩到表单系统的最佳下一步
+
+---
+
+## Issue 093 — 为表单控件补齐交互与回归测试 ❌ 未完成
+**Labels:** `area:widgets`, `area:app`, `area:tests`, `kind:test`, `priority:p1`
+**Status:** ❌ 未完成 — 输入控件一旦落地，需要独立测试面锁住焦点、键盘和绑定语义
+
+### 目标
+为 TextField / Field 建立稳定回归测试面。
+
+### 范围
+建议覆盖：
+- focus / blur / caret
+- text input / backspace / delete
+- disabled / read_only
+- value 变更与 signals 绑定
+- helper / error 状态展示
+
+### 产出
+- `tests/widgets/test_text_field.cpp`
+- `tests/app/test_form_authoring.cpp`
+
+### 完成定义
+- 输入相关迭代不再主要依赖人工点击验证
+
+### 当前判断
+- 表单控件的边界比 Button 更复杂，没有独立测试很难稳定扩展
+
+---
+
+## Issue 094 — 创建 Forms showcase 页面并纳入导航验证 ❌ 未完成
+**Labels:** `area:showcase`, `area:widgets`, `area:app`, `kind:implementation`, `priority:p1`
+**Status:** ❌ 未完成 — 当前 showcase 只有 sandbox，尚不足以承担表单类控件的验证职责
+
+### 目标
+建立第一个围绕表单 authoring 的 showcase 页面。
+
+### 范围
+建议展示：
+- 基础 TextField
+- Field + helper/error
+- disabled / invalid / required
+- signals 驱动的实时表单反馈
+
+### 产出
+- `showcase/pages/forms_page.cppm`
+
+### 完成定义
+- forms 页面可作为后续更多控件的验证样板
+- showcase 导航与 page 元数据可承载真实业务形态页面，而不只是 sandbox
+
+### 当前判断
+- 仅靠 sandbox 难以覆盖输入控件的真实组合场景
+
+---
+
+## Issue 095 — 为 TextField 接入 authoring 工厂与 signals 绑定模式 ❌ 未完成
+**Labels:** `area:app`, `area:widgets`, `kind:implementation`, `priority:p1`
+**Status:** ❌ 未完成 — Input 若不接入 app authoring，将无法验证项目当前最重要的开发体验方向
+
+### 目标
+让 TextField 与现有 `label()` / `button()` 一样进入 authoring DSL，并验证与 signals 的协作方式。
+
+### 范围
+建议覆盖：
+- `input()` 或 `text_field()` 工厂
+- `bind(ref)`
+- `value(...)` / `placeholder(...)`
+- `on_change(...)`
+- `Var<std::string>` 或等价模式的推荐接法
+
+### 产出
+- `app/src/nan_authoring.cppm` 扩展
+- 对应 app 层测试
+
+### 完成定义
+- 页面层可以用与现有 button/label 一致的风格声明输入控件
+- 输入类控件不会退回到“只有底层 widget API 可用”的双轨状态
+
+### 当前判断
+- 当前项目的 authoring 体验已经开始形成特色，Input 不应成为例外
 
 ---
 
@@ -2550,7 +2770,7 @@
 
 | Issue | 标题 | 完成日期 | 提交记录 |
 |-------|------|----------|----------|
-| 006 | 实现基础几何类型 Point / Size / Rect（Insets 待完成） | 2026-04-22 | `3b26ebf`, `1ad8630` |
+| 006 | 实现基础几何类型 Point / Size / Rect / Insets | 2026-04-22 | `3b26ebf`, `1ad8630` |
 | 007 | 增加 Constraints 类型并定义测量语义 | 2026-04-24 | 当前 HEAD |
 | 008 | 设计并实现 Application 生命周期最小接口 | 2026-04-23 | `8b1fcb9`, `abe263e` |
 | 009 | 设计 Window 最小接口 | 2026-04-22 | `c8742aa`（后续迭代） |

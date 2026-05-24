@@ -1,79 +1,90 @@
-# NandinaUI Godot-like 开发范式（草案）
+# NandinaUI Godot-like 开发范式（历史参考）
 
-> 状态：**草案（Draft）**  
-> 目的：定义当前阶段的应用/窗口继承式开发体验，后续会随着 runtime、widget、event 系统演进持续修订。
+> 状态：历史参考（2026-05）  
+> 当前判断：本文件记录项目早期受 Godot 影响的应用/窗口继承式设计思路。它仍可作为理解 `NanWindow` / `NanApplication` 生命周期边界的背景材料，但已经不是主线推荐的 authoring 路径。
 
-## 目标
+## 1. 文档定位
 
-- 让开发者像 Godot 一样，通过继承基类并重写生命周期方法构建 UI。
-- 保持平台层细节（SDL）隐藏在 runtime，实现 API 简洁与后端可替换。
-- 为后续 Widget 树与统一 Event 系统预留稳定钩子，不在 M1 过早绑定具体控件实现。
-- 逐步把“组件组合、挂载、后续访问”从 `std::move + add_child` 风格收口为更接近声明式的 authoring API。
+这份文档当前主要回答两件事：
 
-## 核心模型
+- 为什么 runtime / app 层会保留一组类似引擎生命周期的钩子
+- 为什么项目早期会强调“继承基类 + 重写回调”的开发体验
 
-- `nandina::runtime::NanWindow`：窗口与帧循环基类，负责平台事件轮询与绘制闭环。
-- `nandina::NanApplication`：应用层基类，内部桥接 `NanWindow`，提供更高层的生命周期编排入口。
-- `NanWindow::Builder` + `NanWindow::Config`：配置窗口参数；继承类通过 `Config` 构造。
+它**不再**用于指导当前页面、组件、showcase 的主线写法。
 
-## 生命周期（当前草案）
+当前主线推荐路径已经转向：
 
-### Window 层
+- `NanPage::build() -> mount(Node)`
+- `Node` / `Ref<T>` / `children(...)`
+- `row / column / stack / label / button` 等 authoring DSL
 
-- `on_ready()`：主循环第一次迭代前调用一次。
-- `on_update(double delta_seconds)`：每帧逻辑更新。
-- `on_draw(tvg::SwCanvas&)`：每帧绘制回调，canvas 在回调前已清空。
-- `on_resize(int, int)`：逻辑尺寸变化后触发。
-- `on_close_requested()`：收到关闭请求时触发。
+详见 [组件 Authoring 与挂载 API 设计](component-authoring-and-mounting.md) 与 [无显式 move 的组件组合 API（V1）](component-composition-api-v1.md)。
 
-### Input 层（预留统一事件入口）
+## 2. 仍然保留的 Godot 式影响
 
-- `on_pointer_move(const PointerMoveEvent&)`
-- `on_pointer_down(const PointerButtonEvent&)`
-- `on_pointer_up(const PointerButtonEvent&)`
-- `on_pointer_wheel(const PointerWheelEvent&)`
-- `on_key_down(const KeyEvent&)`
-- `on_key_up(const KeyEvent&)`
-- `on_text_input(std::string_view)`
+虽然主线 authoring 已经转向组合式 DSL，但下面这些设计影响仍然存在：
 
-这些钩子当前由 SDL 事件翻译得到，后续将接入 runtime 统一 Event 类型体系。
+- `nandina::runtime::NanWindow` 仍承担窗口、事件轮询、帧循环与绘制闭环
+- `nandina::app::NanApplication` / `NanAppWindow` 仍保留应用级生命周期组织能力
+- 平台层细节（SDL）仍被隐藏在 runtime / app 实现后面
+- `on_ready` / `on_update` / `on_draw` / `on_resize` / `on_close_requested` 这类钩子仍是底层主循环的组织方式
 
-### Application 层
+换句话说，Godot 的影响更多保留在“应用/窗口生命周期建模”上，而不是保留在“业务层如何写组件”上。
 
-- `configure()`：返回 `AppConfig`（窗口标题、尺寸、DPI 等）。
-- `on_ready/on_update/on_draw/on_resize/on_close_requested`：由桥接窗口转发。main
-- `on_shutdown()`：run 退出后调用（包括异常路径）。
+## 3. 不再作为主线推荐的部分
 
-## 推荐用法
+以下做法当前不应再被视为推荐开发路径：
 
-1. 继承 `NanApplication`。
-2. 覆写 `configure()` 指定窗口参数。
-3. 按需覆写 `on_ready/on_update/on_draw`。
-4. 在 `on_draw()` 内添加 ThorVG 图元。
-5. 在输入钩子中处理交互逻辑（当前阶段建议记录状态，不直接耦合平台）。
+- 主要通过继承 `NanApplication` / `NanWindow` 来组织页面 UI
+- 在 `on_draw()` 中直接手工堆 ThorVG 图元作为常规页面 authoring 方式
+- 把窗口生命周期钩子当成组件组合的主要入口
+- 把“继承式应用壳”视为替代 `mount(Node)` / `set_root(Node)` 的常规方案
 
-## 设计边界（草案约束）
+这些模式今天更适合：
 
-- 不暴露 SDL 类型到模块接口。
-- 输入事件先走轻量结构体，避免与后续 Widget Event 冲突。
-- 应用层不直接操作窗口底层资源，只通过生命周期与 `request_quit()` 协作。
+- 底层 runtime 验证
+- 很薄的应用壳或平台桥接层
+- 少量不适合直接走 widget tree 的特殊宿主场景
 
-## 后续迭代方向
+## 4. 当前推荐替代路径
 
-- 将输入钩子接入 `runtime/event` 统一事件体系。
-- 在 `NanApplication` 增加页面/场景管理协作接口。
-- 引入 Widget 树后，on_draw 逐步转向 scene/draw command 提交。
-- 将根组件挂载入口收敛成统一 mount 模型，并引入 `Ref / Handle / Key` 风格的子组件引用能力。
+当前页面和组件 authoring 更推荐：
 
-## 与组件挂载 API 的关系
+```cpp
+auto page = column(children(
+	label("Overview"),
+	row(children(
+		button("Run"),
+		spacer(),
+		label("Ready")
+	)).gap(12)
+));
 
-本草案关注的是应用/窗口 authoring 体验。
+return mount(std::move(page));
+```
 
-但当前已确认，后续要让这套体验真正可用，还必须同时解决两件事：
+应用壳层则更推荐：
 
-- 业务层不再手写坐标与 child 遍历
-- 业务层不再显式处理组件所有权与 `std::move`
+```cpp
+window.set_root(create_shell(std::move(router), {.header_title = "My App"}));
+```
 
-因此，组件组合、根节点挂载以及挂载后的引用模型，需要单独作为 authoring API 主题来推进。
+这条路线的重点是：
 
-详见 [组件 Authoring 与挂载 API 设计](component-authoring-and-mounting.md)。
+- 业务层优先描述结构，而不是重写窗口生命周期来直接绘制
+- UI 组合优先通过 widget tree / authoring tree 完成
+- 挂载后访问子组件优先通过 `Ref<T>`，而不是把局部变量当成所有权容器
+
+## 5. 这份文档仍然适合用于什么场景
+
+当前仍然可以参考本文件的场景包括：
+
+- 理解 `NanWindow` / `NanApplication` 为什么存在这些生命周期钩子
+- 讨论未来 bindings / script host 时，应用层宿主应保留哪些引擎式边界
+- 分析 runtime / app 与上层 authoring DSL 的职责分层
+
+## 6. 相关文档
+
+- [组件 Authoring 与挂载 API 设计](component-authoring-and-mounting.md)
+- [无显式 move 的组件组合 API（V1）](component-composition-api-v1.md)
+- [Page / Router 合约（MVP）](page-contract.md)

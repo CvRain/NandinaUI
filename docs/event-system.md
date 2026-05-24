@@ -1,14 +1,16 @@
 # Event System Design (Issue 011)
 
+> 状态校正（2026-05）：事件类型模块与 Widget 分发接口已经落地，但本文的部分早期描述仍带有“只靠 `std::variant` 索引恢复完整事件语义”的假设。当前实现应以 `runtime/src/nan_event.cppm` 与 `runtime/src/nan_widget.cppm` 为准。
+
 ## 概述
 
 NandinaUI 统一事件类型体系，定义框架内所有 UI 事件的数据结构与类型标签，供 Widget 事件分发与 Window 事件翻译共用。
 
 ## 设计原则
 
-1. **类型安全**：所有事件类型通过 C++ 强类型结构体表达，使用 `std::variant` 作为统一容器。
+1. **类型安全**：所有事件类型通过 C++ 强类型结构体表达；当前主线同时保留 `EventType` 标签与 `Event` 变体容器。
 2. **向后兼容**：NanWindow 保留原有的 `on_pointer_xxx`/`on_key_xxx` 签名，仅将事件结构体定义从 `nan_window.cppm` 迁移至 `nan_event.cppm`。
-3. **静态分发**：Widget 的 `dispatchEvent()` 通过 `EventType` 枚举做静态分发，避免 `std::variant::visit` 的模板膨胀开销。
+3. **静态分发**：Widget 的分发主路径通过显式 `EventType` 做静态分发，避免 `std::variant::visit` 的模板膨胀开销。
 
 ## 模块结构
 
@@ -74,7 +76,13 @@ using Event = std::variant<
 auto event_type(const Event &ev) noexcept -> EventType;
 ```
 
-通过 `variant::index()` 映射为 `EventType` 枚举值，零开销。
+当前实现只能从 `Event` 变体恢复“基础种类”；对于 `PointerButtonEvent`、`KeyEvent`、`FocusEvent` 这类复用同一 payload 结构的事件，不能仅靠 `variant::index()` 无损区分 `PointerDown/PointerUp/PointerClick`、`KeyDown/KeyUp`、`FocusIn/FocusOut`。
+
+因此当前安全语义是：
+
+- `Event` 适合统一传递、排队和日志场景
+- 具体分发点仍应显式提供 `EventType`
+- `NanWidget` 已提供 `dispatch_event(payload, EventType)` 这类重载用于 button/key 等共享 payload 的事件
 
 ## Widget 事件分发
 
@@ -82,7 +90,7 @@ auto event_type(const Event &ev) noexcept -> EventType;
 
 ### dispatch_event
 
-接收 `Event` 变体，通过 `EventType` switch 分派到对应的 `on_xxx()` 虚方法。
+接收 `Event` 变体，并在需要时结合显式 `EventType` 分派到对应的 `on_xxx()` 虚方法。
 
 ```cpp
 virtual auto dispatch_event(const Event &ev) -> bool;
@@ -123,4 +131,10 @@ virtual auto on_window_close() -> bool;
     → [v4.0] Widget 启用 dispatch_event/bubble_event
 ```
 
-当前阶段（Issue 011）已完成迁移步骤 1→2，事件定义集中到 `nan_event.cppm`，`nan_window.cppm` 移除重复定义。Widget 的事件分发接口已就绪，后续 Widget 子类可通过重写 `on_xxx()` 方法响应事件。
+当前阶段（Issue 011）已完成以下主线能力：
+
+- 事件定义集中到 `runtime/src/nan_event.cppm`
+- `NanWindow` 已按 SDL 事件类型分别调用 `on_pointer_down()` / `on_pointer_up()` / `on_key_down()` 等接口
+- `NanWidget` 已提供 `dispatch_event(payload, EventType)` 重载以保留 down/up 等语义
+
+当前仍需注意的边界：如果后续要把 `Event` 作为统一事件队列长期使用，仍应补足独立的显式事件标签承载方式，避免把 `PointerButtonEvent` 等事件重新退化成“只能猜测具体类型”。

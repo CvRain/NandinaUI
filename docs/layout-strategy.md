@@ -1,7 +1,9 @@
 # Layout Strategy
 
-> 状态：草案（Draft）
+> 状态：已校正（2026-05，当前主线指导文档）
 > 目的：明确 NandinaUI 当前阶段的布局开发策略，以及 Yoga 的接入时机与边界。
+>
+> 阅读方式：本文件主要回答“当前为什么先收口 layout 主线、为什么不是现在就 Yoga-first”；具体执行顺序与 issue 拆分请结合 [开发 Issue 清单](develop-issue.md) 中的 Issue 082-089 阅读。
 
 ## 背景
 

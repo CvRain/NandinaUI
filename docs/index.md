@@ -1,6 +1,8 @@
 # NandinaUI 开发文档导航
 
 > 本文档为开发文档的入口索引，提供按主题分类的文档导航。README 主要承担项目概述职责，详细技术文档统一在此导航。
+>
+> 状态校正（2026-05）：主线代码已超出“纯规划阶段”。阅读文档时，优先参考带有“状态校正 / 当前判断 / 当前进展”字段的文档；对明显仍停留在占位口径的文档，应以源码、测试和 issue 清单为准。
 
 ## 目录
 
@@ -10,14 +12,14 @@
 |------|------|
 | [项目方向](project-direction.md) | 项目定位、设计哲学、演进原因 |
 | [从 QML 迁移说明](migration-from-qml.md) | 历史背景、迁移原则、归档分支说明 |
-| [仓库结构草案](repository-structure.md) | 顶层目录规划与职责划分 |
+| [仓库结构与模块边界](repository-structure.md) | 当前目录现状、保留的规划边界与实现状态 |
 
 ### 模块设计文档
 
 | 文档 | 说明 |
 |------|------|
-| [NanPoint 设计文档](../foundation/design-nan_point.md) | 基础点类型接口设计 `[已定稿]` |
-| [NanRect 设计文档](../foundation/design-nan_rect.md) | 矩形类型接口设计 `[已定稿]` |
+| [NanPoint 设计文档](../foundation/docs/design-nan_point.md) | 基础点类型接口设计 `[已定稿]` |
+| [NanRect 设计文档](../foundation/docs/design-nan_rect.md) | 矩形类型接口设计 `[已定稿]` |
 
 ### 架构与设计
 
@@ -25,25 +27,25 @@
 |------|------|
 | [架构规划](architecture-plan.md) | 顶层分层、依赖方向、稳定边界 `[已定稿]` |
 | [Page / Router 合约（MVP）](page-contract.md) | 固定 `NanPage` / `NanRouter` / `NanPageHost` 当前职责边界与后续演进顺序 `[已定稿]` |
-| [组件 Authoring 与挂载 API 设计](component-authoring-and-mounting.md) | 面向使用者的组件组合、挂载、引用与无显式 `move` 方向 `[草案]` |
-| [无显式 move 的组件组合 API（V1 草案）](component-composition-api-v1.md) | 第一版具体接口签名与使用示例，覆盖 `Node` / `Ref<T>` / `mount(...)` `[草案]` |
-| [布局策略](layout-strategy.md) | 当前布局阶段策略、自动布局目标与 Yoga 接入时机 `[草案]` |
+| [组件 Authoring 与挂载 API 设计](component-authoring-and-mounting.md) | 面向使用者的组件组合、挂载、引用与无显式 `move` 方向 `[已校正]` |
+| [无显式 move 的组件组合 API（V1）](component-composition-api-v1.md) | 当前 V1 authoring API 的已落地子集、差异说明与未收口边界 `[已校正]` |
+| [布局策略](layout-strategy.md) | 当前布局阶段策略、自动布局目标与 Yoga 接入时机 `[已校正]` |
 | [模块依赖规则](module-dependency-rules.md) | 模块间依赖方向约束，避免循环依赖 `[已定稿]` |
-| [响应式策略](reactive-strategy.md) | State/Effect/Prop 等响应式抽象设计说明 `[草案]` |
-| [Godot 式 Authoring 草案](godot-like-authoring-draft.md) | 组件化创作模式设计草案 `[草案]` |
+| [响应式策略](reactive-strategy.md) | 当前 reactive 主线的语义规范、实现进度与未收口边界 `[已校正]` |
+| [Godot-like 开发范式（历史参考）](godot-like-authoring-draft.md) | 早期受 Godot 影响的应用/窗口继承式设计背景，非当前主线 authoring 路径 `[历史参考]` |
 
 ### 开发规范
 
 | 文档 | 说明 |
 |------|------|
 | [编码与 API 规范](coding-and-api-conventions.md) | 命名风格、命名空间、public/internal API 约定 `[已定稿]` |
-| [开发 Issue 清单](develop-issue.md) | 按模块拆分的细颗粒度开发任务清单 `[已定稿]` |
+| [开发 Issue 清单](develop-issue.md) | 按模块拆分的细颗粒度开发任务清单 `[持续更新]` |
 
 ### 路线图
 
 | 文档 | 说明 |
 |------|------|
-| [阶段路线图](roadmap.md) | M0-M5 各阶段目标与依赖关系 `[草案]` |
+| [阶段路线图](roadmap.md) | 当前收口重点与后续阶段顺序 `[已按现状校正]` |
 
 ## 快速链接
 
@@ -67,7 +69,7 @@
 | Reactive 核心 | ✅ 主体完成 | `State`、`Effect`、`Computed`、`Prop`、`batch` 已实现并测试 |
 | Layout 基础容器 | ✅ 基础完成 | `Row`、`Column`、`Stack`、`Spacer`、`SizedBox` 已实现 |
 | App 层抽象 | ✅ 完成 | `NanAppWindow`、`NanComponent` 应用层生命周期封装 |
-| Showcase 验证应用 | ✅ 完成 | 基于 ThorVG 的组件展示窗口，含 MainComponent/MainWindow |
+| Showcase 验证应用 | ✅ 可运行 | 基于 ThorVG/SDL 的验证应用，当前主要承担 shell + page + layout 回归面 |
 
 ### 进行中
 
@@ -75,11 +77,11 @@
 |------|------|------|
 | Layout 主线收口 | 🚧 进行中 | 当前重点是 `constraints -> measure/layout -> reflow -> widgets/showcase` 全链路收口 |
 | Widgets 自动布局收口 | 🚧 进行中 | Card、Panel、Button、Sidebar 系列等仍有手工布局逻辑待回收 |
-| Theme / Design System | 🚧 早期 | 基础类型已存在，但 token 到 widgets 的统一消费仍未完成 |
+| Theme / Design System | 🚧 早期 | 基础类型已存在，但 token/resolver 到 widgets 的统一消费仍未完成 |
 
 ### 待开发
 
-详见 [开发 Issue 清单](develop-issue.md)。当前建议优先关注 Layout 主线收口 Lane（Issue 082-089）。
+详见 [开发 Issue 清单](develop-issue.md)。当前建议优先关注 Layout 主线收口与其后的 primitive/control 收口序列。
 
 ## 里程碑进度
 
@@ -99,6 +101,8 @@
 
 - **已定稿**：已通过评审，可作为实现依据
 - **草案**：待进一步讨论或验证
+- **持续更新**：以当前源码与测试为准持续修订的活文档
+- **历史参考**：保留背景与设计来源，但不是当前主线推荐路径
 - **待撰写**：计划中但尚未完成
 
 ## 贡献指南
@@ -113,4 +117,3 @@
 - [GitHub 仓库](https://github.com/CvRain/NandinaUI)
 - [文档源码目录](https://github.com/CvRain/NandinaUI/tree/main/docs)
 - [QML 历史分支](https://github.com/CvRain/NandinaUI/tree/archive-0.0.1-qml)
-- [实验代码目录](temp/) — 包含 Reactive/Layout/Core 等模块的实验实现

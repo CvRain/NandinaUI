@@ -1,5 +1,9 @@
 # Layout 系统重构方案
 
+> 状态校正（2026-05）：本文件保留了 layout 主线重构的拆解顺序与设计动机，但其中部分伪代码和命名来自较早阶段，不能再直接当作当前接口说明。
+>
+> 当前应结合 `docs/layout-strategy.md`、`docs/develop-issue.md`、`runtime/src/nan_widget.cppm` 与 `layout/src/layout_core.cppm` 一起阅读：`NanConstraints`、`measure/layout`、`LayoutRequest`、`LayoutChildSpec` 已部分落地，当前重点是全链路收口，而不是再次从零定义协议。
+
 > 基于项目当前的 Layout 架构分析，提出具体可执行的重构方案。
 > 目标：消除手动布局计算，引入 measure/layout 两阶段协议，统一组件布局行为。
 

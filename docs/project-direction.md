@@ -1,8 +1,10 @@
 # Project Direction
 
+> 状态校正（2026-05）：项目已经进入“实现主线 + 收口主线”阶段。本文应作为方向与设计参照阅读，而不是把 NandinaUI 理解为尚未开始编码的立项草案。
+
 ## 项目定位
 
-NandinaUI 将从“Qt/QML 组件库”演进为“可扩展 UI runtime + design-system-driven widgets”的正式项目。
+NandinaUI 已从“Qt/QML 组件库”演进为“可扩展 UI runtime + design-system-driven widgets + app authoring layer”的正式项目。
 
 ## 从 NandinaUI(QML) 到正式项目的演进原因
 
@@ -25,9 +27,15 @@ NandinaUI 将从“Qt/QML 组件库”演进为“可扩展 UI runtime + design-
 - **现代响应式**：围绕 State/Effect/Prop 等抽象建设数据驱动更新。
 - **脚本层可扩展**：将脚本支持视为架构能力，而非后期补丁。
 
+## 当前设计参照系
+
+- 架构与页面/组件生命周期主要参考 Angular 的 page / component / signal 思路
+- authoring 使用体验优先吸收 Flutter 式组合与链式构建方式
+- widgets 与样式体系参考 shadcn 与 primitives 的收口方式
+
 ## 决策状态
 
 - **已决定**：QML 旧主线归档，不再作为 `main` 的开发基底。
-- **建议方向**：吸收 `nandina_experiment` 中分层与响应式设计思路。
+- **已进入实现主线**：`foundation/runtime/reactive/layout/theme/text/widgets/app/showcase` 已有实际代码与测试/验证面。
 - **待验证**：具体脚本方案、渲染后端组合、语言绑定策略。
 

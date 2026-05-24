@@ -1,7 +1,21 @@
-# 组件 Authoring 与挂载 API 设计（草案）
+# 组件 Authoring 与挂载 API 设计
 
-> 状态：草案（Draft）
+> 状态：已校正（2026-05）  
+> 当前判断：本文应视为 authoring 方向的原则文档，而不是“尚未落地”的纯提案。`Node` / `Ref<T>` / `children(...)` / `mount(Node)` / 第一批 typed builder 已有实现；但接口边界仍在继续收口。
+
 > 目的：明确 NandinaUI 面向使用者的组件组合、挂载与引用模型，避免业务开发者显式处理坐标计算、子节点遍历与 `std::move` 所有权转移。
+
+## 当前落地状态
+
+当前主线已经具备：
+
+- `nandina.app.authoring` 统一入口
+- `Node` / `Ref<T>` / `Children` 与 `children(...)`
+- `mount(Node)` 与窗口侧 `set_root(Node)` 消费链路
+- `label()` / `button()` 等第一批 typed builder
+- `row/column/stack/...` 以及 `.width/.height/.size` 的链式 authoring 语义
+
+因此，本文更适合回答“为什么 authoring 要这样收口”，而不是重新发明具体签名；具体接口应参考 [无显式 move 的组件组合 API（V1）](component-composition-api-v1.md) 和现有测试。
 
 ## 背景
 
@@ -69,7 +83,22 @@ row->add(std::move(button));
 - 什么时候把它交给窗口
 - 什么时候同步尺寸
 
-理想目标是让使用者看到的是：
+当前第一版已经落地的根入口是：
+
+```cpp
+return mount(column(children(
+    label("Dashboard"),
+    button("Run")
+)));
+```
+
+以及：
+
+```cpp
+window.set_root(create_shell(std::move(router), {.header_title = "My App"}));
+```
+
+长期理想目标仍然可以继续收敛成更高层的表达，例如：
 
 ```cpp
 app.mount(DashboardPage());
@@ -145,19 +174,20 @@ NandinaUI 后续建议形成三层模型。
 - 组合方式接近声明式结构表达
 - 可以自然表达布局与挂载
 
-理想示例：
+当前更贴近主线的 authoring 形态示例：
 
 ```cpp
-auto page = Column(
-    HeaderBar(),
-    StatsSection(),
-    SplitRow(0.6f,
-        ChartCard(),
-        RecentActivityCard()),
-    FooterSection());
+auto page = column(children(
+    label("Overview"),
+    row(children(
+        button("Run"),
+        spacer(),
+        label("Ready")
+    )).gap(12)
+)).padding(16);
 ```
 
-这一层是长期目标中的“组件描述树”。
+这一层已经不只是长期目标，而是主线正在收口中的“第一版组件描述树”。
 
 ### 第二层：运行时 Widget Tree
 
@@ -334,7 +364,7 @@ activity_ref->set_pulse(t);
 
 在这份原则性文档之上，第一版更具体的接口签名与使用方式草案已整理为：
 
-- [无显式 move 的组件组合 API（V1 草案）](component-composition-api-v1.md)
+- [无显式 move 的组件组合 API（V1）](component-composition-api-v1.md)
 
 该文档重点回答：
 
@@ -345,9 +375,9 @@ activity_ref->set_pulse(t);
 
 ## 相关文档
 
-- [无显式 move 的组件组合 API（V1 草案）](component-composition-api-v1.md)
+- [无显式 move 的组件组合 API（V1）](component-composition-api-v1.md)
 - [架构规划](architecture-plan.md)
 - [布局策略](layout-strategy.md)
 - [编码与 API 规范](coding-and-api-conventions.md)
-- [Godot 式 Authoring 草案](godot-like-authoring-draft.md)
+- [Godot-like 开发范式（历史参考）](godot-like-authoring-draft.md)
 - [开发 Issue 清单](develop-issue.md)

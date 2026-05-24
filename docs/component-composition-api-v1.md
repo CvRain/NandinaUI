@@ -1,507 +1,215 @@
-# 无显式 move 的组件组合 API（V1 草案）
+# 无显式 move 的组件组合 API（V1）
 
-> 状态：草案（Draft）
-> 目的：在不推翻现有 `NanWidget + std::unique_ptr` 运行时模型的前提下，给出第一版面向使用者的组件组合 API 形态，减少手写坐标、手工 child 遍历与显式 `std::move`。
+> 状态：已校正（2026-05）  
+> 当前判断：V1 authoring API 已经部分落地，不再只是接口提案；但它仍处于“可用 + 持续收口”阶段，不应被误解为最终冻结形态。
 
-## 1. 适用范围
+## 1. 文档定位
 
-本草案关注的是第一版可落地 authoring API，而不是最终形态。
+本文件不再尝试逐条重新发明 `Node` / `Ref<T>` / builder 接口，而是记录两类信息：
 
-V1 的目标是：
+- 当前主线里已经可以直接依赖的 V1 authoring 能力
+- 仍未收口、因此不能提前假定稳定的差异点
 
-- 先把 `std::move + add_child` 从业务层高频代码里隐藏起来
-- 先把布局原语组合收口成统一的 authoring 入口
-- 先给出根节点挂载与子组件引用的统一模型
+阅读顺序建议是：
 
-V1 不要求一次性解决：
+1. 先把这里当作 authoring API 的现状说明
+2. 再结合 `app/src/nan_application.cppm` 与 `tests/app/test_app_authoring*.cpp` 看真实语义
+3. 如果文档与源码冲突，以源码与测试为准
 
-- 完整 diff / reconcile
-- 完整 Element 虚拟树
-- 所有 widgets 的声明式重写
+## 2. 当前已落地的 V1 子集
 
-## 2. 设计选择
+### 2.1 公共入口
 
-V1 建议采用“Builder / Node 包装层”路线，而不是直接要求业务层继续操作 `std::unique_ptr<NanWidget>`。
-
-也就是说：
-
-- 使用者看到的是 `Node`、`Ref<T>`、`mount(...)`
-- 框架内部仍然可以继续构建真实的 `NanWidget` 树
-
-这条路线的优点是：
-
-- 可以兼容当前 runtime 和 widgets 实现
-- 可以先改善 authoring 体验，再决定是否走向更完整的 `Element / Spec` 层
-
-## 3. 推荐模块位置
-
-V1 建议新增一个面向使用者的公共 authoring 入口模块：
+当前主线已经存在统一的 authoring 入口模块：
 
 ```cpp
 export module nandina.app.authoring;
 ```
 
-职责：
+该入口当前已承担：
 
-- 提供 `Node`
-- 提供 `Ref<T>`
-- 提供 `row(...)` / `column(...)` / `button(...)` 等工厂函数
-- 提供 `mount(...)` 或 `set_root(Node)` 这类统一挂载入口
+- `Node` / `Ref<T>` / `Children`
+- `mount(Node)` 与窗口侧 `set_root(Node)` 消费链路
+- `row / column / stack / positioned / padding / expanded / sized_box / center / spacer`
+- `label / button / card / panel` 等第一批工厂
+- `create_shell(...)` / `setup_shell(...)` 这类 app 层组合能力
 
-建议依赖方向：
+### 2.2 核心类型已经存在
 
-`layout + widgets + app` -> `nandina.app.authoring`
+当前不是“建议未来实现”，而是已经有以下一版实现：
 
-即 authoring 是 app 层的面向使用者封装，而不是 runtime 底层能力的一部分。
+- `Node`：可移动、可链式配置的 authoring 值对象
+- `Ref<T>`：挂载后访问句柄，root 替换或销毁时会回收
+- `Children`：通过 `children(...)` 聚合子节点，支持 lvalue / rvalue 混用
 
-## 4. 核心公共类型
+其中一个已经被测试锁住的关键语义是：
 
-### 4.1 `Node`
+- `children(a, b, c)` 可以接受局部变量，不要求业务层显式写 `std::move`
+- `.bind(ref)` 会在挂载时回填，在卸载时失效置空
 
-`Node` 是 V1 的核心 authoring 值对象。它不是直接暴露给业务层的 `std::unique_ptr<NanWidget>`，而是一个可移动、可链式配置的“组件描述包装”。
+### 2.3 V1 不是“通用 Builder 类”，而是 typed builder
 
-建议接口：
+当前实现不是文档早期草案里那种“`Node` + 一堆独立 `RowBuilder / LabelBuilder / ButtonBuilder` 名字”的拆法，而是：
 
-```cpp
-export namespace nandina::app {
+- `Node` 承载通用布局/挂载能力
+- `LabelNode` / `ButtonNode` 等派生 typed builder 承载组件专属链式 API
+- 通过 C++23 deducing this 保持链式调用后仍返回派生类型
 
-class Node {
-public:
-    Node();
-    Node(Node&&) noexcept;
-    auto operator=(Node&&) noexcept -> Node&;
+这意味着：
 
-    Node(const Node&) = delete;
-    auto operator=(const Node&) -> Node& = delete;
+- `label("Title")` 不只是返回一个抽象 `Node`
+- 它返回的是可继续 `.font(...)`、`.align(...)`、`.disabled(...)` 的 typed builder
+- `button("OK")` 同理，可继续 `.variant(...)`、`.size(...)`、`.on_click(...)`
 
-    [[nodiscard]] auto empty() const noexcept -> bool;
+### 2.4 已有的高频 authoring 语义
 
-    template<typename T>
-    auto bind(Ref<T>& ref) && -> Node;
+当前可以把下面这些能力视为 V1 已实现子集：
 
-    auto key(std::string_view value) && -> Node;
+- `mount(Node)`：把 authoring tree 挂成 `NanComponent::Ptr`
+- `adopt(std::unique_ptr<NanWidget>)`：把既有 runtime/widget 对象桥接回 authoring tree
+- `row(children(...))` / `column(children(...))` / `stack(children(...))`
+- `.gap(...)` / `.padding(...)` / `.align_items(...)` / `.justify_content(...)`
+- `.width(...)` / `.height(...)` / `.size(...)`
+- `label("...")` / `button("...")` / `card(children(...))` / `panel(children(...))`
+- `positioned(children(...))` 与 `anchor_*` 一组定位能力
 
-private:
-    friend class NodeFactory;
-    friend class MountBuilder;
+其中 `.width(...)` / `.height(...)` / `.size(...)` 还有一个已经被测试覆盖的重要语义：
 
-    explicit Node(std::unique_ptr<nandina::runtime::NanWidget> widget);
+- 若当前节点不是 `SizedBox`，会自动包裹一层 `SizedBox`
+- 连续调用不会重复双重包裹
 
-    std::unique_ptr<nandina::runtime::NanWidget> m_widget;
-    std::string m_key;
-    void* m_bound_ref_slot{nullptr};
-};
+## 3. 当前推荐写法
 
-} // namespace nandina::app
-```
-
-V1 要点：
-
-- `Node` 本身仍可移动，但业务层不需要显式写 `std::move`
-- 业务层看到的是组合值对象，而不是 child ownership
-- `Node` 内部最终仍可以持有真实 `unique_ptr<NanWidget>`
-
-### 4.2 `Ref<T>`
-
-`Ref<T>` 负责“挂载后访问”，与所有权解耦。
-
-建议接口：
-
-```cpp
-export namespace nandina::app {
-
-template<typename T>
-class Ref {
-public:
-    Ref() = default;
-
-    [[nodiscard]] auto get() const noexcept -> T*;
-    [[nodiscard]] auto operator->() const noexcept -> T*;
-    [[nodiscard]] auto operator*() const noexcept -> T&;
-    [[nodiscard]] explicit operator bool() const noexcept;
-
-private:
-    template<typename U>
-    friend class Binder;
-
-    T* m_ptr{nullptr};
-};
-
-} // namespace nandina::app
-```
-
-V1 不要求 `Ref<T>` 具备复杂生命周期语义；第一步只需要支持：
-
-- mount 后自动回填
-- root 销毁后失效置空
-
-### 4.3 `Children`
-
-为了避免 authoring API 出现大量模板歧义，建议提供轻量的 children 聚合类型。
-
-```cpp
-export namespace nandina::app {
-
-class Children {
-public:
-    Children() = default;
-    Children(std::initializer_list<Node> nodes);
-
-    auto append(Node node) -> Children&;
-    [[nodiscard]] auto take() && -> std::vector<Node>;
-
-private:
-    std::vector<Node> m_nodes;
-};
-
-} // namespace nandina::app
-```
-
-## 5. 布局原语 API 草案
-
-V1 建议优先提供与当前 layout 能力一致的一组 authoring 工厂函数。
-
-### 5.1 `row(...)`
-
-```cpp
-export namespace nandina::app {
-
-[[nodiscard]] auto row(Children children = {}) -> Node;
-
-class RowBuilder {
-public:
-    auto gap(float value) && -> Node;
-    auto padding(float all) && -> Node;
-    auto padding(float horizontal, float vertical) && -> Node;
-    auto padding(float left, float top, float right, float bottom) && -> Node;
-    auto align_items(nandina::layout::LayoutAlignment value) && -> Node;
-    auto justify_content(nandina::layout::LayoutAlignment value) && -> Node;
-};
-
-} // namespace nandina::app
-```
-
-建议使用方式：
+### 3.1 组合与布局
 
 ```cpp
 using namespace nandina::app;
 
-auto header = row({
-    label("Dashboard / Overview"),
-    spacer(),
-    button("+")
-})
-    .padding(20.0f, 0.0f, 6.0f, 0.0f)
-    .align_items(nandina::layout::LayoutAlignment::center)
-    .gap(10.0f);
+auto page = column(children(
+    label("Overview")
+        .font([](auto& f) {
+            f.size(20).weight(nandina::text::NanFontWeight::bold);
+        }),
+    row(children(
+        button("Run").variant(nandina::theme::ButtonVariant::outline),
+        spacer(),
+        label("Ready")
+    ))
+        .gap(12)
+        .align_items(nandina::layout::LayoutAlignment::center)
+))
+    .gap(16)
+    .padding(24)
+    .width(360);
 ```
 
-### 5.2 `column(...)`
+这类写法已经是主线推荐路线，而不是未来设想。
 
-```cpp
-export namespace nandina::app {
-
-[[nodiscard]] auto column(Children children = {}) -> Node;
-
-class ColumnBuilder {
-public:
-    auto gap(float value) && -> Node;
-    auto padding_top(float value) && -> Node;
-    auto padding(float all) && -> Node;
-    auto padding(float horizontal, float vertical) && -> Node;
-    auto padding(float left, float top, float right, float bottom) && -> Node;
-    auto align_items(nandina::layout::LayoutAlignment value) && -> Node;
-    auto justify_content(nandina::layout::LayoutAlignment value) && -> Node;
-};
-
-} // namespace nandina::app
-```
-
-建议使用方式：
-
-```cpp
-auto content = column({
-    stats_section(),
-    middle_content_section(),
-    bottom_content_section(),
-    footer_section(),
-})
-    .padding_top(20.0f)
-    .gap(20.0f)
-    .align_items(nandina::layout::LayoutAlignment::stretch);
-```
-
-### 5.3 其他基础原语
-
-```cpp
-export namespace nandina::app {
-
-[[nodiscard]] auto stack(Children children = {}) -> Node;
-[[nodiscard]] auto padding(Node child) -> Node;
-[[nodiscard]] auto expanded(Node child, int flex = 1) -> Node;
-[[nodiscard]] auto sized_box(Node child) -> Node;
-[[nodiscard]] auto center(Node child) -> Node;
-[[nodiscard]] auto spacer(int flex = 1) -> Node;
-
-} // namespace nandina::app
-```
-
-建议链式配置：
-
-```cpp
-auto action = sized_box(button("Run"))
-    .width(96.0f)
-    .height(32.0f);
-
-auto body = padding(column({
-    header,
-    content,
-}))
-    .padding(20.0f, 0.0f);
-```
-
-## 6. 基础组件 API 草案
-
-V1 不要求所有 widgets 都有完整 authoring DSL，但应先覆盖高频基础组件。
-
-### 6.1 `label(...)`
-
-```cpp
-export namespace nandina::app {
-
-[[nodiscard]] auto label(std::string_view text = {}) -> Node;
-
-class LabelBuilder {
-public:
-    auto text(std::string_view value) && -> Node;
-    auto font_size(float value) && -> Node;
-    auto color(const nandina::NanColor& value) && -> Node;
-    auto align(nandina::widgets::TextAlign value) && -> Node;
-    auto vertical_align(nandina::widgets::TextVerticalAlign value) && -> Node;
-};
-
-} // namespace nandina::app
-```
-
-### 6.2 `button(...)`
-
-```cpp
-export namespace nandina::app {
-
-[[nodiscard]] auto button(std::string_view text = {}) -> Node;
-
-class ButtonBuilder {
-public:
-    auto text(std::string_view value) && -> Node;
-    auto colors(const nandina::widgets::ButtonColors& value) && -> Node;
-    auto on_click(std::function<void()> handler) && -> Node;
-
-    template<typename T = nandina::widgets::Button>
-    auto bind(Ref<T>& ref) && -> Node;
-};
-
-} // namespace nandina::app
-```
-
-### 6.3 `card(...)` / `panel(...)`
-
-```cpp
-export namespace nandina::app {
-
-[[nodiscard]] auto card(Children children = {}) -> Node;
-[[nodiscard]] auto panel(Children children = {}) -> Node;
-
-class CardBuilder {
-public:
-    auto title(std::string_view value) && -> Node;
-    auto bg_color(const nandina::NanColor& value) && -> Node;
-    auto corner_radius(float value) && -> Node;
-};
-
-} // namespace nandina::app
-```
-
-## 7. 挂载 API 草案
-
-V1 建议同时保留低层 `set_root_component(unique_ptr<...>)`，并增加面向 authoring 的高层入口。
-
-### 7.1 `mount(...)`
-
-```cpp
-export namespace nandina::app {
-
-[[nodiscard]] auto mount(Node root) -> NanComponent::Ptr;
-
-} // namespace nandina::app
-```
-
-作用：
-
-- 将 authoring `Node` 构造成真实 root component
-- 完成 `Ref<T>` 绑定回填
-- 返回可交给现有 `NanAppWindow` 的 `NanComponent::Ptr`
-
-### 7.2 `NanAppWindow::set_root(Node)`
-
-```cpp
-export namespace nandina::app {
-
-class NanAppWindow {
-public:
-    auto set_root(Node root) -> void;
-    auto replace_root(Node root) -> void;
-};
-
-} // namespace nandina::app
-```
-
-建议使用方式：
-
-```cpp
-using namespace nandina::app;
-
-auto root = column({
-    header_bar(),
-    expanded(dashboard_page()),
-});
-
-window.set_root(std::move(root));
-```
-
-这里可以接受 `Node` 作为值参数，调用者不需要显式 `std::move(child_widget)`；唯一可能出现的 `std::move(root)` 只发生在根值对象层，而不是每一个组件节点层。
-
-如果后续要进一步消除这一层，也可以把 `set_root(Node)` 扩展为完全面向临时值的写法：
-
-```cpp
-window.set_root(column({ ... }));
-```
-
-## 8. `Ref<T>` 绑定语义草案
-
-V1 建议采用最直接的 `.bind(ref)` 形式。
-
-```cpp
-using namespace nandina::app;
-
-Ref<nandina::widgets::Button> add_button;
-Ref<nandina::showcase::RecentActivityCard> activity_card;
-
-auto header = row({
-    label("Overview"),
-    spacer(),
-    button("+").bind(add_button),
-});
-
-auto page = column({
-    header,
-    recent_activity_card().bind(activity_card),
-});
-```
-
-挂载完成后：
-
-```cpp
-if (add_button) {
-    add_button->set_text("Run");
-}
-
-if (activity_card) {
-    activity_card->set_pulse(0.5f);
-}
-```
-
-V1 约束：
-
-- `bind(ref)` 只能绑定到最终构造出的真实组件类型
-- 重复 mount 或 replace_root 时，旧 `Ref<T>` 应失效置空后再回填
-- `Ref<T>` 不是所有权容器，不负责生命周期延长
-
-## 9. V1 使用示例
-
-### 9.1 当前写法
-
-```cpp
-auto row = nandina::layout::Row::Create();
-
-auto title = nandina::widgets::Label::create();
-title->set_text("Overview")
-    .set_font_size(10.0f);
-row->add(std::move(title));
-
-auto run = nandina::widgets::Button::create();
-run->set_text("Run");
-row->add(std::move(run));
-```
-
-### 9.2 V1 目标写法
+### 3.2 引用绑定
 
 ```cpp
 using namespace nandina::app;
 
 Ref<nandina::widgets::Button> run_button;
 
-auto header = row({
-    label("Overview").font_size(10.0f),
+auto header = row(children(
+    label("Sandbox"),
     spacer(),
-    button("Run").bind(run_button),
-})
-    .align_items(nandina::layout::LayoutAlignment::center)
-    .gap(10.0f);
+    button("Run").bind(run_button)
+));
 ```
 
-### 9.3 根组件挂载
+挂载完成后，`run_button` 可直接访问真实组件；root 被替换或销毁后会失效。
+
+### 3.3 根节点挂载
+
+当前主线的两条典型路径是：
 
 ```cpp
-auto page = column({
-    header_bar(),
-    stats_section(),
-    middle_content_section(),
-    footer_section(),
-})
-    .padding_top(20.0f)
-    .gap(20.0f);
-
-window.set_root(page);
+auto component = mount(column(children(
+    label("Hello"),
+    button("OK")
+)));
 ```
 
-## 10. V1 非目标
+以及：
 
-### 10.1 不在 V1 暴露完整 reconciler
+```cpp
+window.set_root(create_shell(std::move(router), {.header_title = "My App"}));
+```
 
-V1 只是 authoring API 封装层，不强求虚拟树 diff。
+也就是说，V1 已经不只是 `mount(...)` 的实验接口，窗口侧 authoring root 消费链路也已经打通。
 
-### 10.2 不在 V1 改写全部 widgets 公共接口
+## 4. 与早期草案相比已经变化的点
 
-V1 应优先覆盖：
+### 4.1 `Children` 的主入口已经是 `children(...)`
 
-- 高层布局原语
-- 高频基础组件
-- 根组件挂载
-- `Ref<T>`
+早期草案更偏向手写 `Children{...}` 或单独描述聚合类接口；当前实际推荐入口是：
 
-其他控件可以逐步接入。
+```cpp
+children(a, b, c)
+```
 
-### 10.3 不在 V1 取消现有低层 API
+而且它已经明确支持：
 
-以下低层能力仍可保留给框架内部或高级用户：
+- 全 rvalue
+- lvalue + rvalue 混用
+- 空 children
 
-- `std::unique_ptr<NanWidget>`
-- `add_child(...)`
-- `set_root_component(...)`
+### 4.2 `adopt(...)` 已成为重要桥接能力
 
-但它们不应再作为“推荐 authoring 路径”。
+V1 当前不是“只能通过纯 authoring 工厂创建节点”。对于仍保留 runtime 形态的对象，可以直接：
 
-## 11. 建议的下一步实现顺序
+```cpp
+adopt(std::make_unique<MyWidget>())
+```
 
-1. 先实现 `Node`、`Children`、`Ref<T>` 三个核心类型
-2. 先为 `row / column / stack / padding / expanded / sized_box / spacer` 提供 authoring 包装
-3. 为 `label / button / card / panel` 提供第一批高频组件工厂
-4. 为 `NanAppWindow` 增加 `set_root(Node)`
-5. 用 showcase 页面先验证一版真实 authoring 体验
+这对壳层、路由宿主、渐进迁移中的 legacy widget 很关键。
 
-## 12. 相关文档
+### 4.3 shell 级组合已经进入 authoring 层
+
+`create_shell(...)` / `setup_shell(...)` 已经说明 authoring 不再只是一组“页面内部小工厂”，而是开始承担 app 级装配职责。
+
+### 4.4 文档早期提到的某些名字不再是准确抽象
+
+例如：
+
+- 独立的 `RowBuilder / ColumnBuilder / ButtonBuilder` 类型名不是当前对外主叙事
+- `Node` 的私有字段和内部绑定槽位也不适合再当作公共接口文档的一部分
+
+这些实现细节后续仍可能继续调整。
+
+## 5. 当前仍未收口的部分
+
+以下内容不应被提前视为 V1 已稳定能力：
+
+- `key(...)` 目前还没有形成 diff/reconcile 语义
+- `Node` 的内部结构与 mounted wrapper 细节仍可能调整
+- 并非所有 widgets 都已接入 typed builder authoring API
+- `Input / Field` 等下一批表单控件尚未落地
+- 完整 reconciler / virtual tree 仍然不是 V1 范围
+- app 层 authoring 与脚本层 authoring 的映射关系还没有定稿
+
+## 6. 对当前实现的直接指导
+
+如果现在继续推进页面、showcase 或高层控件，建议遵循下面的边界：
+
+1. 新页面优先写成 `build() -> mount(Node)`，而不是回退到手工 `add_child(std::move(...))`
+2. 需要桥接现有 runtime widget 时优先使用 `adopt(...)`
+3. 需要后续访问子组件时优先使用 `Ref<T>`，不要把局部变量当成所有权句柄
+4. 新的 authoring 语义若没有测试，至少要补到 `tests/app/test_app_authoring.cpp` 或 `tests/app/test_app_authoring_qol.cpp`
+
+## 7. 后续收口重点
+
+当前更合理的下一步不是重写整套 V2 语法，而是继续沿 V1 收口：
+
+1. 继续让更多控件消费 typed builder authoring
+2. 用 forms / Input 垂直切片验证 `Ref<T>`、signals 和控件交互语义
+3. 等 layout 主线稳定后，再决定哪些 authoring 语法应被视为可冻结接口
+
+## 8. 相关文档
 
 - [组件 Authoring 与挂载 API 设计](component-authoring-and-mounting.md)
-- [架构规划](architecture-plan.md)
-- [编码与 API 规范](coding-and-api-conventions.md)
-- [Godot 式 Authoring 草案](godot-like-authoring-draft.md)
+- [布局策略](layout-strategy.md)
+- [开发 Issue 清单](develop-issue.md)
+- [Godot-like 开发范式（历史参考）](godot-like-authoring-draft.md)
