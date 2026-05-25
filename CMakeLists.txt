@@ -23,10 +23,8 @@ add_compile_options(-Wall -Wextra -Wpedantic)
 find_package(SDL3 CONFIG REQUIRED)
 
 # ThorVG — 矢量图形渲染后端（render 层）
-# vcpkg port: thorvg  构建方式: Meson → 仅生成 pkg-config，无 CMake config
-# 使用 pkg_check_modules 查找，imported target: PkgConfig::THORVG
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(THORVG REQUIRED IMPORTED_TARGET thorvg-1)
+# vcpkg port: thorvg  构建方式: Meson → 默认仅生成 pkg-config
+# 在 vcpkg 预装产物存在时优先直接链接库文件；否则回退到 pkg-config
 find_package(Threads REQUIRED)
 
 add_library(nandina_thorvg INTERFACE)
@@ -36,11 +34,23 @@ set(NANDINA_VCPKG_TRIPLET "${VCPKG_TARGET_TRIPLET}")
 if (NOT NANDINA_VCPKG_TRIPLET)
     if (CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|amd64)$")
         set(NANDINA_VCPKG_TRIPLET "x64-linux")
+    elseif (WIN32 AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(AMD64|x86_64|amd64)$")
+    set(NANDINA_VCPKG_TRIPLET "x64-windows")
     endif ()
 endif ()
 
-set(NANDINA_THORVG_RELEASE_LIB
+if (WIN32)
+    set(NANDINA_THORVG_RELEASE_LIB
+        "${CMAKE_SOURCE_DIR}/vcpkg_installed/${NANDINA_VCPKG_TRIPLET}/lib/thorvg-1.lib")
+    set(NANDINA_THORVG_DEBUG_LIB
+        "${CMAKE_SOURCE_DIR}/vcpkg_installed/${NANDINA_VCPKG_TRIPLET}/debug/lib/thorvg-1.lib")
+else ()
+    set(NANDINA_THORVG_RELEASE_LIB
         "${CMAKE_SOURCE_DIR}/vcpkg_installed/${NANDINA_VCPKG_TRIPLET}/lib/libthorvg-1.a")
+    set(NANDINA_THORVG_DEBUG_LIB
+        "${CMAKE_SOURCE_DIR}/vcpkg_installed/${NANDINA_VCPKG_TRIPLET}/debug/lib/libthorvg-1.a")
+endif ()
+
 set(NANDINA_THORVG_INCLUDE_DIR
         "${CMAKE_SOURCE_DIR}/vcpkg_installed/${NANDINA_VCPKG_TRIPLET}/include")
 
@@ -53,10 +63,24 @@ if (EXISTS "${NANDINA_THORVG_RELEASE_LIB}" AND EXISTS "${NANDINA_THORVG_INCLUDE_
 
     target_link_libraries(nandina_thorvg
             INTERFACE
-            "${NANDINA_THORVG_RELEASE_LIB}"
-            Threads::Threads
+        optimized "${NANDINA_THORVG_RELEASE_LIB}"
     )
+    if (EXISTS "${NANDINA_THORVG_DEBUG_LIB}")
+    target_link_libraries(nandina_thorvg
+        INTERFACE
+        debug "${NANDINA_THORVG_DEBUG_LIB}"
+    )
+    endif ()
+
+    if (NOT WIN32)
+    target_link_libraries(nandina_thorvg
+        INTERFACE
+        Threads::Threads
+    )
+    endif ()
 else ()
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(THORVG REQUIRED IMPORTED_TARGET thorvg-1)
     target_link_libraries(nandina_thorvg
             INTERFACE
             PkgConfig::THORVG

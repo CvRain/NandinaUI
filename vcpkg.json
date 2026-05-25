@@ -5,19 +5,22 @@
   "dependencies": [
     {
       "name": "dbus",
-      "default-features": false
+      "default-features": false,
+      "platform": "linux"
     },
     "freetype",
     "gtest",
     "harfbuzz",
     {
       "name": "sdl3",
+      "platform": "linux",
       "features": [
-        "dbus",
-        "ibus",
-        "wayland",
-        "x11"
+        "dbus"
       ]
+    },
+    {
+      "name": "sdl3",
+      "platform": "!linux"
     },
     "thorvg",
     "yoga",
