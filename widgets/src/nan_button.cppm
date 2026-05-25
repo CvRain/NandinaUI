@@ -104,7 +104,17 @@ export namespace nandina::widgets {
         auto set_font(text::NanFont font) -> Button&;
 
         [[nodiscard]] auto font() const noexcept -> const text::NanFont&;
-
+        /// 局部更新字体属性；Fn: (NanFont&) -> void
+        ///
+        /// 示例：
+        ///   button_ref->update_font([](auto& f){ f.color(NanColor::white()); });
+        template <typename Fn>
+            requires std::invocable<Fn, text::NanFont&>
+        auto update_font(Fn&& fn) -> Button& {
+            auto updated = font();
+            std::invoke(std::forward<Fn>(fn), updated);
+            return set_font(std::move(updated));
+        }
         // ── 回调 ──────────────────────────────────────────
         auto on_click(Callback cb) -> Button&;
 

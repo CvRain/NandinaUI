@@ -119,6 +119,7 @@ export namespace nandina::layout {
                     y(),
                     runtime::NanWidget::width(),
                     runtime::NanWidget::height());
+                child_widget.layout();
             });
             clear_layout_dirty();
         }
@@ -214,6 +215,7 @@ export namespace nandina::layout {
                     y(),
                     runtime::NanWidget::width(),
                     runtime::NanWidget::height());
+                child_widget.layout();
             });
             clear_layout_dirty();
         }
@@ -272,6 +274,7 @@ export namespace nandina::layout {
                 const float cx = x() + (width() - child_w) * 0.5f;
                 const float cy = y() + (height() - child_h) * 0.5f;
                 child_widget.set_bounds(cx, cy, child_w, child_h);
+                child_widget.layout();
             });
             clear_layout_dirty();
         }
@@ -395,6 +398,7 @@ export namespace nandina::layout {
                     y() + top_,
                     child_w,
                     child_h);
+                child_widget.layout();
             });
             clear_layout_dirty();
         }

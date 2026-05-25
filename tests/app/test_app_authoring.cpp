@@ -105,6 +105,10 @@ public:
     auto draw_once(tvg::SwCanvas& canvas) -> void {
         on_draw(canvas);
     }
+
+    [[nodiscard]] auto hit_test_once(const float x, const float y) -> nandina::runtime::NanWidget* {
+        return hit_test_root_component(x, y);
+    }
 };
 
 } // namespace
@@ -415,7 +419,7 @@ TEST(AppAuthoringTest, LabelFactorySupportsChainedTextStylingAndRefBinding) {
 
     auto mounted = nandina::app::mount(
         nandina::app::label("Overview")
-            .font_size(10.0f)
+            .font([](auto& f){ f.size(10.0f); })
             .align(nandina::widgets::TextAlign::Center)
             .vertical_align(nandina::widgets::TextVerticalAlign::Center)
             .color(nandina::NanColor::from(nandina::NanRgb{1, 2, 3}))
@@ -725,4 +729,37 @@ TEST(AppAuthoringTest, AppWindowDrawConsumesRootLayoutDirtyAndReflowsTree) {
     EXPECT_FLOAT_EQ(second_bounds.y(), 23.0f);
     EXPECT_FLOAT_EQ(second_bounds.width(), 68.0f);
     EXPECT_FLOAT_EQ(second_bounds.height(), 12.0f);
+}
+
+TEST(AppAuthoringTest, AppWindowHitTestConsumesRootLayoutDirtyBeforeFirstDraw) {
+    nandina::app::Ref<nandina::widgets::Button> button_ref;
+    auto button = nandina::app::button("Run").bind(button_ref);
+
+    TestAppWindow window({
+        .title = "Test",
+        .width = 240,
+        .height = 120,
+        .resizable = false,
+        .high_dpi = false,
+    });
+
+    window.set_root(
+        nandina::app::center(
+            std::move(button)
+                .width(120.0f)
+                .height(36.0f)));
+
+    ASSERT_TRUE(button_ref);
+    EXPECT_TRUE(button_ref->is_layout_dirty());
+
+    auto* hit = window.hit_test_once(120.0f, 60.0f);
+
+    ASSERT_EQ(hit, button_ref.get());
+    EXPECT_FALSE(button_ref->is_layout_dirty());
+
+    const auto bounds = button_ref->bounds();
+    EXPECT_FLOAT_EQ(bounds.x(), 60.0f);
+    EXPECT_FLOAT_EQ(bounds.y(), 42.0f);
+    EXPECT_FLOAT_EQ(bounds.width(), 120.0f);
+    EXPECT_FLOAT_EQ(bounds.height(), 36.0f);
 }

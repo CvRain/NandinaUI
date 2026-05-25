@@ -127,6 +127,7 @@ export namespace nandina::widgets {
                     return;
                 const float ch = 36.0f; // 固定项高度
                 child.set_bounds(x(), item_y, width(), ch);
+                child.layout();
                 item_y += ch + 2.0f;
             });
 

@@ -57,6 +57,8 @@ export namespace nandina::app {
     template <typename W>
     class WidgetNode;
 
+    class NanAppWindow;
+
     [[nodiscard]] inline auto adopt(runtime::NanWidget::Ptr widget) -> Node;
 
     [[nodiscard]] inline auto label(std::string_view text = {}) -> LabelNode;
@@ -174,6 +176,16 @@ export namespace nandina::app {
             return std::forward<Self>(self);
         }
 
+        /// padding — 设置内边距（支持三种重载）。
+        ///
+        /// 重载：
+        ///   .padding(value)                     — 四边均等
+        ///   .padding(horizontal, vertical)      — 水平/垂直分别设置
+        ///   .padding(left, top, right, bottom)  — 四边独立设置
+        ///
+        /// 示例：
+        ///   column(children(...)).padding(16)        // 四边 16px
+        ///   column(children(...)).padding(24, 16)    // 左右 24px，上下 16px
         template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, Node>
         auto padding(this Self&& self, const float value) -> Self&& {
@@ -221,6 +233,12 @@ export namespace nandina::app {
             return std::forward<Self>(self);
         }
 
+        /// gap — 设置 Row / Column 中子组件之间的间距（像素）。
+        ///
+        /// @code
+        /// 示例：
+        /// row(children(...)).gap(12)
+        /// @endcode
         template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, Node>
         auto gap(this Self&& self, const float value) -> Self&& {
@@ -231,6 +249,22 @@ export namespace nandina::app {
             return std::forward<Self>(self);
         }
 
+        /// align_items — 设置交叉轴方向的子组件对齐方式。
+        ///
+        /// 对 Row 生效的是垂直对齐；对 Column 生效的是水平对齐。
+        ///
+        /// 常用值：
+        ///   LayoutAlignment::start    — 靠起始端（默认） <br>
+        ///   LayoutAlignment::center   — 居中 <br>
+        ///   LayoutAlignment::end      — 靠末端 <br>
+        ///   LayoutAlignment::stretch  — 拉伸填满交叉轴 <br>
+        ///
+        /// @code
+        /// // 子组件撑满列宽
+        /// column(children(...)).align_items(LayoutAlignment::stretch)
+        /// // 垂直居中
+        /// row(children(...)).align_items(LayoutAlignment::center)
+        /// @endcode
         template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, Node>
         auto align_items(this Self&& self, const nandina::layout::LayoutAlignment value) -> Self&& {
@@ -241,6 +275,19 @@ export namespace nandina::app {
             return std::forward<Self>(self);
         }
 
+        /// justify_content — 设置主轴方向的子组件分布方式。
+        ///
+        /// 对 Row 生效的是水平分布；对 Column 生效的是垂直分布。
+        ///
+        /// 常用值：
+        ///   LayoutAlignment::start         — 从起始端排列（默认）
+        ///   LayoutAlignment::center        — 居中排列
+        ///   LayoutAlignment::end           — 从末端排列
+        ///   LayoutAlignment::space_between — 两端对齐，子组件等间距
+        ///   LayoutAlignment::space_around  — 子组件两侧等间距
+        ///
+        /// 示例：
+        ///   row(children(btn_a, btn_b)).justify_content(LayoutAlignment::space_between)
         template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, Node>
         auto justify_content(this Self&& self, const nandina::layout::LayoutAlignment value)
@@ -252,6 +299,11 @@ export namespace nandina::app {
             return std::forward<Self>(self);
         }
 
+        /// width — 限定节点宽度（像素）；若当前节点不是 SizedBox，自动包裹一层。
+        ///
+        /// 示例：
+        ///   column(children(...)).width(360)   // 将列限宽为 360px
+        ///   label("文本").width(120)            // 限制标签最大宽度
         template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, Node>
         auto width(this Self&& self, const float value) -> Self&& {
@@ -268,6 +320,10 @@ export namespace nandina::app {
             return std::forward<Self>(self);
         }
 
+        /// height — 限定节点高度（像素）；若当前节点不是 SizedBox，自动包裹一层。
+        ///
+        /// 示例：
+        ///   button("OK").height(48)   // 固定按钮高度为 48px
         template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, Node>
         auto height(this Self&& self, const float value) -> Self&& {
@@ -283,6 +339,10 @@ export namespace nandina::app {
             return std::forward<Self>(self);
         }
 
+        /// size — 同时设置宽度和高度（像素）；等价于 .width(w).height(h)。
+        ///
+        /// 示例：
+        ///   button("提交").size({120, 40})
         template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, Node>
         auto size(this Self&& self, const geometry::NanSize& value) -> Self&& {
@@ -311,9 +371,9 @@ export namespace nandina::app {
 
         template <typename Self, typename Fn>
             requires std::derived_from<std::remove_cvref_t<Self>, Node>
-                  && std::invocable<Fn>
-                  && std::convertible_to<std::invoke_result_t<Fn>, float>
-                  && (!std::convertible_to<std::remove_cvref_t<Fn>, float>)
+                     && std::invocable<Fn>
+                     && std::convertible_to<std::invoke_result_t<Fn>, float>
+                     && (!std::convertible_to<std::remove_cvref_t<Fn>, float>)
         auto anchor_left(this Self&& self, Fn fn) -> Self&& {
             static_cast<Node&>(self).m_positioned_props.left =
                 std::function<float()>{std::move(fn)};
@@ -329,9 +389,9 @@ export namespace nandina::app {
 
         template <typename Self, typename Fn>
             requires std::derived_from<std::remove_cvref_t<Self>, Node>
-                  && std::invocable<Fn>
-                  && std::convertible_to<std::invoke_result_t<Fn>, float>
-                  && (!std::convertible_to<std::remove_cvref_t<Fn>, float>)
+                     && std::invocable<Fn>
+                     && std::convertible_to<std::invoke_result_t<Fn>, float>
+                     && (!std::convertible_to<std::remove_cvref_t<Fn>, float>)
         auto anchor_top(this Self&& self, Fn fn) -> Self&& {
             static_cast<Node&>(self).m_positioned_props.top =
                 std::function<float()>{std::move(fn)};
@@ -347,9 +407,9 @@ export namespace nandina::app {
 
         template <typename Self, typename Fn>
             requires std::derived_from<std::remove_cvref_t<Self>, Node>
-                  && std::invocable<Fn>
-                  && std::convertible_to<std::invoke_result_t<Fn>, float>
-                  && (!std::convertible_to<std::remove_cvref_t<Fn>, float>)
+                     && std::invocable<Fn>
+                     && std::convertible_to<std::invoke_result_t<Fn>, float>
+                     && (!std::convertible_to<std::remove_cvref_t<Fn>, float>)
         auto anchor_right(this Self&& self, Fn fn) -> Self&& {
             static_cast<Node&>(self).m_positioned_props.right =
                 std::function<float()>{std::move(fn)};
@@ -365,9 +425,9 @@ export namespace nandina::app {
 
         template <typename Self, typename Fn>
             requires std::derived_from<std::remove_cvref_t<Self>, Node>
-                  && std::invocable<Fn>
-                  && std::convertible_to<std::invoke_result_t<Fn>, float>
-                  && (!std::convertible_to<std::remove_cvref_t<Fn>, float>)
+                     && std::invocable<Fn>
+                     && std::convertible_to<std::invoke_result_t<Fn>, float>
+                     && (!std::convertible_to<std::remove_cvref_t<Fn>, float>)
         auto anchor_bottom(this Self&& self, Fn fn) -> Self&& {
             static_cast<Node&>(self).m_positioned_props.bottom =
                 std::function<float()>{std::move(fn)};
@@ -383,9 +443,9 @@ export namespace nandina::app {
 
         template <typename Self, typename Fn>
             requires std::derived_from<std::remove_cvref_t<Self>, Node>
-                  && std::invocable<Fn>
-                  && std::convertible_to<std::invoke_result_t<Fn>, float>
-                  && (!std::convertible_to<std::remove_cvref_t<Fn>, float>)
+                     && std::invocable<Fn>
+                     && std::convertible_to<std::invoke_result_t<Fn>, float>
+                     && (!std::convertible_to<std::remove_cvref_t<Fn>, float>)
         auto anchor_width(this Self&& self, Fn fn) -> Self&& {
             static_cast<Node&>(self).m_positioned_props.width =
                 std::function<float()>{std::move(fn)};
@@ -401,9 +461,9 @@ export namespace nandina::app {
 
         template <typename Self, typename Fn>
             requires std::derived_from<std::remove_cvref_t<Self>, Node>
-                  && std::invocable<Fn>
-                  && std::convertible_to<std::invoke_result_t<Fn>, float>
-                  && (!std::convertible_to<std::remove_cvref_t<Fn>, float>)
+                     && std::invocable<Fn>
+                     && std::convertible_to<std::invoke_result_t<Fn>, float>
+                     && (!std::convertible_to<std::remove_cvref_t<Fn>, float>)
         auto anchor_height(this Self&& self, Fn fn) -> Self&& {
             static_cast<Node&>(self).m_positioned_props.height =
                 std::function<float()>{std::move(fn)};
@@ -414,7 +474,7 @@ export namespace nandina::app {
         template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, Node>
         auto fill_width(this Self&& self) -> Self&& {
-            auto& node = static_cast<Node&>(self);
+            auto& node                    = static_cast<Node&>(self);
             node.m_positioned_props.left  = 0.0f;
             node.m_positioned_props.right = 0.0f;
             return std::forward<Self>(self);
@@ -424,7 +484,7 @@ export namespace nandina::app {
         template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, Node>
         auto fill_height(this Self&& self) -> Self&& {
-            auto& node = static_cast<Node&>(self);
+            auto& node                     = static_cast<Node&>(self);
             node.m_positioned_props.top    = 0.0f;
             node.m_positioned_props.bottom = 0.0f;
             return std::forward<Self>(self);
@@ -434,7 +494,7 @@ export namespace nandina::app {
         template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, Node>
         auto fill(this Self&& self) -> Self&& {
-            auto& node = static_cast<Node&>(self);
+            auto& node                     = static_cast<Node&>(self);
             node.m_positioned_props.left   = 0.0f;
             node.m_positioned_props.right  = 0.0f;
             node.m_positioned_props.top    = 0.0f;
@@ -488,7 +548,13 @@ export namespace nandina::app {
 
         friend auto spacer(int flex) -> Node;
 
-        friend auto expanded(Node child, int flex) -> Node;
+        template <typename N>
+            requires std::derived_from<std::decay_t<N>, Node>
+        friend auto expanded(N&& child) -> Node;
+
+        template <typename N>
+            requires std::derived_from<std::decay_t<N>, Node>
+        friend auto expanded(N&& child, int flex) -> Node;
 
         friend auto padding(Node child) -> Node;
 
@@ -546,11 +612,11 @@ export namespace nandina::app {
             }
         }
 
-        std::unique_ptr<runtime::NanWidget>  m_widget;
-        std::string                          m_key;
-        std::vector<RefBinder>               m_ref_binders;
-        std::vector<RefResetter>             m_ref_resetters;
-        nandina::layout::PositionedProps     m_positioned_props;
+        std::unique_ptr<runtime::NanWidget> m_widget;
+        std::string m_key;
+        std::vector<RefBinder> m_ref_binders;
+        std::vector<RefResetter> m_ref_resetters;
+        nandina::layout::PositionedProps m_positioned_props;
     };
 
     // ── WidgetNode<W> — 类型安全组件节点基类 ───────────────────────────
@@ -618,13 +684,23 @@ export namespace nandina::app {
             return std::forward<Self>(self);
         }
 
-        template <typename Self>
-            requires std::derived_from<std::remove_cvref_t<Self>, LabelNode>
-        auto font_size(this Self&& self, const float value) -> Self&& {
-            self.m_typed->set_font_size(value);
-            return std::forward<Self>(self);
+        // ── getter ──────────────────────────────────────────────────────────
+
+        [[nodiscard]] auto text() const -> const std::string& {
+            return m_typed->text();
         }
 
+        [[nodiscard]] auto font() const -> const nandina::text::NanFont& {
+            return m_typed->font();
+        }
+
+        [[nodiscard]] auto disabled() const -> bool {
+            return m_typed->disabled();
+        }
+
+        // ── setter ──────────────────────────────────────────────────────────
+
+        /// color — 快捷设置文本颜色；等价于 .font([](auto& f){ f.color(v); })
         template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, LabelNode>
         auto color(this Self&& self, const nandina::NanColor& value) -> Self&& {
@@ -632,31 +708,38 @@ export namespace nandina::app {
             return std::forward<Self>(self);
         }
 
+        /// font(NanFont) — 替换整个字体配置。
+        ///
+        /// 示例：label("标题").font(NanFont{}.size(20).weight(NanFontWeight::bold))
         template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, LabelNode>
-        auto font_color(this Self&& self, const nandina::NanColor& value) -> Self&& {
-            self.m_typed->set_color(value);
-            return std::forward<Self>(self);
-        }
-
-        template <typename Self>
-            requires std::derived_from<std::remove_cvref_t<Self>, LabelNode>
-        auto font_weight(this Self&& self, nandina::text::NanFontWeight value) -> Self&& {
-            self.m_typed->set_font_weight(value);
-            return std::forward<Self>(self);
-        }
-
-        template <typename Self>
-            requires std::derived_from<std::remove_cvref_t<Self>, LabelNode>
-        auto font_family(this Self&& self, std::string_view value) -> Self&& {
-            self.m_typed->set_font_family(std::string{value});
-            return std::forward<Self>(self);
-        }
-
-        template <typename Self>
-            requires std::derived_from<std::remove_cvref_t<Self>, LabelNode>
+                  && (!std::invocable<Self, nandina::text::NanFont&>)
         auto font(this Self&& self, nandina::text::NanFont font_config) -> Self&& {
             self.m_typed->set_font(std::move(font_config));
+            return std::forward<Self>(self);
+        }
+
+        /// font(Fn) — 局部更新字体属性；Fn: (NanFont&) -> void
+        ///
+        /// 示例：
+        ///   label("文本").font([](auto& f){ f.size(16).color(NanColor::white()); })
+        ///   label("文本").font([](auto& f){ f.size(f.size() + 2); })  // 在现有基础上调整
+        template <typename Self, typename Fn>
+            requires std::derived_from<std::remove_cvref_t<Self>, LabelNode>
+                  && std::invocable<Fn, nandina::text::NanFont&>
+                  && (!std::convertible_to<std::remove_cvref_t<Fn>, nandina::text::NanFont>)
+        auto font(this Self&& self, Fn&& fn) -> Self&& {
+            auto updated = self.m_typed->font();
+            std::invoke(std::forward<Fn>(fn), updated);
+            self.m_typed->set_font(std::move(updated));
+            return std::forward<Self>(self);
+        }
+
+        /// disabled — 禁用标签；对应 shadcn peer-disabled:opacity-70，文本渲染降至 70% 透明度
+        template <typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, LabelNode>
+        auto disabled(this Self&& self, const bool value) -> Self&& {
+            self.m_typed->set_disabled(value);
             return std::forward<Self>(self);
         }
 
@@ -708,38 +791,41 @@ export namespace nandina::app {
             return std::forward<Self>(self);
         }
 
-        template <typename Self>
-            requires std::derived_from<std::remove_cvref_t<Self>, ButtonNode>
-        auto font_size(this Self&& self, const float value) -> Self&& {
-            self.m_typed->font_size(value);
-            return std::forward<Self>(self);
+        // ── getter ──────────────────────────────────────────────────────────
+
+        [[nodiscard]] auto text() const -> const std::string& {
+            return m_typed->text();
         }
 
-        template <typename Self>
-            requires std::derived_from<std::remove_cvref_t<Self>, ButtonNode>
-        auto font_color(this Self&& self, const nandina::NanColor& value) -> Self&& {
-            self.m_typed->font_color(value);
-            return std::forward<Self>(self);
+        [[nodiscard]] auto font() const -> const nandina::text::NanFont& {
+            return m_typed->font();
         }
 
-        template <typename Self>
-            requires std::derived_from<std::remove_cvref_t<Self>, ButtonNode>
-        auto font_weight(this Self&& self, nandina::text::NanFontWeight value) -> Self&& {
-            self.m_typed->font_weight(value);
-            return std::forward<Self>(self);
-        }
+        // ── setter ──────────────────────────────────────────────────────────
 
-        template <typename Self>
-            requires std::derived_from<std::remove_cvref_t<Self>, ButtonNode>
-        auto font_family(this Self&& self, std::string_view value) -> Self&& {
-            self.m_typed->font_family(std::string{value});
-            return std::forward<Self>(self);
-        }
-
+        /// font(NanFont) — 替换整个字体配置。
+        ///
+        /// 示例：button("提交").font(NanFont{}.size(14).weight(NanFontWeight::medium))
         template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, ButtonNode>
         auto font(this Self&& self, nandina::text::NanFont font_config) -> Self&& {
             self.m_typed->set_font(std::move(font_config));
+            return std::forward<Self>(self);
+        }
+
+        /// font(Fn) — 局部更新字体属性；Fn: (NanFont&) -> void
+        ///
+        /// 示例：
+        ///   button("+").font([](auto& f){ f.size(18).weight(NanFontWeight::bold); })
+        ///   button("OK").font([](auto& f){ f.size(f.size() + 2); })  // 在现有基础上调整
+        template <typename Self, typename Fn>
+            requires std::derived_from<std::remove_cvref_t<Self>, ButtonNode>
+                  && std::invocable<Fn, nandina::text::NanFont&>
+                  && (!std::convertible_to<std::remove_cvref_t<Fn>, nandina::text::NanFont>)
+        auto font(this Self&& self, Fn&& fn) -> Self&& {
+            auto updated = self.m_typed->font();
+            std::invoke(std::forward<Fn>(fn), updated);
+            self.m_typed->set_font(std::move(updated));
             return std::forward<Self>(self);
         }
 
@@ -1038,7 +1124,7 @@ export namespace nandina::app {
         auto widget = nandina::layout::Positioned::Create();
         Node result{std::move(widget)};
         for (auto& child : std::move(children).take()) {
-            auto props        = std::move(child.m_positioned_props);    // move before take_widget()
+            auto props        = std::move(child.m_positioned_props); // move before take_widget()
             auto child_widget = std::move(child).take_widget();
             if (child_widget) {
                 static_cast<nandina::layout::Positioned*>(result.m_widget.get())
@@ -1049,6 +1135,16 @@ export namespace nandina::app {
         return result;
     }
 
+    /// row — 水平排列子组件（主轴：→，交叉轴：↓）。
+    ///
+    /// 常用链式方法：
+    ///   .gap(12)                                        — 子组件间距
+    ///   .align_items(LayoutAlignment::center)           — 交叉轴对齐（垂直居中）
+    ///   .justify_content(LayoutAlignment::space_between) — 主轴分布
+    ///   .padding(16)                                    — 内边距
+    ///
+    /// 示例：
+    ///   row(children(btn_a, btn_b)).gap(8).align_items(LayoutAlignment::center)
     [[nodiscard]] inline auto row(Children children = {}) -> Node {
         auto widget = nandina::layout::Row::Create();
         Node result{std::move(widget)};
@@ -1062,6 +1158,20 @@ export namespace nandina::app {
         return result;
     }
 
+    /// column — 垂直排列子组件（主轴：↓，交叉轴：→）。
+    ///
+    /// 常用链式方法：
+    ///   .gap(12)                               — 子组件间距
+    ///   .align_items(LayoutAlignment::stretch) — 子组件撑满列宽
+    ///   .justify_content(LayoutAlignment::center) — 主轴居中
+    ///   .padding(16, 24)                       — 水平/垂直内边距
+    ///   .width(360)                            — 限定列宽（自动包裹 SizedBox）
+    ///
+    /// 示例：
+    ///   column(children(header, body, footer))
+    ///     .gap(12)
+    ///     .align_items(LayoutAlignment::stretch)
+    ///     .width(360)
     [[nodiscard]] inline auto column(Children children = {}) -> Node {
         auto widget = nandina::layout::Column::Create();
         Node result{std::move(widget)};
@@ -1075,6 +1185,15 @@ export namespace nandina::app {
         return result;
     }
 
+    /// stack — Z 轴堆叠容器，子组件按声明顺序从下到上叠放，均相对容器左上角对齐。
+    ///
+    /// 常用于叠加背景层与前景层，如底图 + 浮动按钮。
+    ///
+    /// 示例：
+    ///   stack(children(
+    ///       surface().fill(),           // 底层背景色块
+    ///       label("覆盖文字")            // 前景文字
+    ///   ))
     [[nodiscard]] inline auto stack(Children children = {}) -> Node {
         auto widget = nandina::layout::Stack::Create();
         Node result{std::move(widget)};
@@ -1088,21 +1207,59 @@ export namespace nandina::app {
         return result;
     }
 
+    /// spacer — 弹性空白占位，在 Row / Column 中吸收剩余空间。
+    ///
+    /// @param flex  弹性系数，默认 1；与 expanded 共享剩余空间时按系数比例分配
+    ///
+    /// 示例：
+    ///   // 将 reset 按钮在 Row 中水平居中
+    ///   row(children(spacer(), reset_btn, spacer()))
+    ///
+    ///   // 将两个按钮推到 Row 的两端
+    ///   row(children(btn_left, spacer(), btn_right))
     [[nodiscard]] inline auto spacer(const int flex = 1) -> Node {
         return Node{nandina::layout::Spacer::Create(flex)};
     }
 
-    [[nodiscard]] inline auto expanded(Node child, const int flex = 1) -> Node {
+    /// expanded — 让子组件在 Row / Column 的主轴方向上弹性填充剩余空间。
+    ///
+    /// @param child  被包裹的子节点（可直接传命名变量，无需显式 std::move）
+    /// @param flex   弹性系数，默认 1；多个 expanded 按系数比例分配剩余空间
+    ///
+    /// @code
+    /// 示例：
+    ///   // Row 中两个按钮各占 50%
+    ///   row(children(expanded(btn_a), expanded(btn_b))).gap(8)
+    ///
+    ///   // Row 中左侧占 2/3、右侧占 1/3
+    ///   row(children(expanded(left_panel, 2), expanded(right_panel, 1)))
+    ///  @endcode
+    template <typename N>
+        requires std::derived_from<std::decay_t<N>, Node>
+    [[nodiscard]] inline auto expanded(N&& child) -> Node {
+        return expanded(std::forward<N>(child), 1);
+    }
+
+    template <typename N>
+        requires std::derived_from<std::decay_t<N>, Node>
+    [[nodiscard]] inline auto expanded(N&& child, const int flex) -> Node {
         auto widget = nandina::layout::Expanded::Create(flex);
         Node result{std::move(widget)};
-        auto child_widget = std::move(child).take_widget();
+        Node child_node   = std::move(child); // 无论传入左值还是右值，均安全移动
+        auto child_widget = std::move(child_node).take_widget();
         if (child_widget) {
             static_cast<nandina::layout::Expanded*>(result.m_widget.get())->child(std::move(child_widget));
         }
-        result.absorb(std::move(child));
+        result.absorb(std::move(child_node));
         return result;
     }
 
+    /// padding — 为子组件添加内边距包装层（Padding 容器）。
+    ///
+    /// 也可在 row / column 上直接调用 .padding() 方法，效果相同。
+    ///
+    /// 示例：
+    ///   padding(label("内容")).padding(16, 8)   // 水平 16px，垂直 8px
     [[nodiscard]] inline auto padding(Node child) -> Node {
         auto widget = nandina::layout::Padding::Create();
         Node result{std::move(widget)};
@@ -1114,6 +1271,12 @@ export namespace nandina::app {
         return result;
     }
 
+    /// center — 将子组件在可用空间内水平 + 垂直居中。
+    ///
+    /// 常用于页面根节点，使整体内容块居中显示。
+    ///
+    /// 示例：
+    ///   return mount(center(column(children(...)).width(360)));
     [[nodiscard]] inline auto center(Node child) -> Node {
         auto widget = nandina::layout::Center::Create();
         Node result{std::move(widget)};
@@ -1125,6 +1288,15 @@ export namespace nandina::app {
         return result;
     }
 
+    /// sized_box — 强制子组件具有指定的宽度和/或高度。
+    ///
+    /// 注意：直接在节点上调用 .width() / .height() / .size() 会自动包裹 SizedBox，
+    /// 无需手动调用此函数。
+    ///
+    /// 示例：
+    ///   // 以下两种写法等价：
+    ///   sized_box(label("文本")).width(200).height(48)
+    ///   label("文本").width(200).height(48)
     [[nodiscard]] inline auto sized_box(Node child) -> Node {
         auto widget = nandina::layout::SizedBox::Create();
         Node result{std::move(widget)};
@@ -1157,7 +1329,7 @@ export namespace nandina::app {
         auto set_root_component(NanComponent::Ptr component) -> void {
             m_hovered_widget = nullptr;
             m_root_component = std::move(component);
-            sync_root_component_bounds();
+            request_root_reflow(true);
         }
 
         auto set_root(Node root) -> void {
@@ -1197,7 +1369,7 @@ export namespace nandina::app {
             if (m_root_component) {
                 auto log         = nandina::log::get("app.window");
                 const auto start = detail::SteadyClock::now();
-                ensure_root_component_layout();
+                consume_root_reflow();
                 const auto layout_done = detail::SteadyClock::now();
                 m_root_component->draw(canvas);
                 const auto draw_done = detail::SteadyClock::now();
@@ -1221,18 +1393,20 @@ export namespace nandina::app {
             }
         }
 
-    private:
-        [[nodiscard]] auto needs_redraw() const noexcept -> bool {
-            return m_root_component && m_root_component->dirty();
-        }
-
-        [[nodiscard]] auto resolve_interactive_hit(const float x, const float y) const -> runtime::NanWidget* {
+        [[nodiscard]] auto hit_test_root_component(const float x, const float y) -> runtime::NanWidget* {
             if (!m_root_component) {
                 return nullptr;
             }
 
+            consume_root_reflow();
+
             auto* hit = m_root_component->hit_test(x, y);
             return hit && hit->is_interactive() ? hit : nullptr;
+        }
+
+    private:
+        [[nodiscard]] auto needs_redraw() const noexcept -> bool {
+            return m_root_component && m_root_component->dirty();
         }
 
         static auto pointer_move_from_button(const runtime::PointerButtonEvent& event) noexcept
@@ -1271,9 +1445,14 @@ export namespace nandina::app {
             clear_hover_target(runtime::PointerMoveEvent{});
         }
 
-        auto ensure_root_component_layout() -> void {
+        auto consume_root_reflow() -> void {
             if (!m_root_component) {
                 return;
+            }
+
+            if (m_pending_root_bounds_sync) {
+                apply_root_component_bounds();
+                m_pending_root_bounds_sync = false;
             }
 
             if (!m_root_component->is_layout_dirty()) {
@@ -1309,10 +1488,7 @@ export namespace nandina::app {
             }
         }
 
-        auto sync_root_component_bounds(const bool immediate = true) -> void {
-            // ── 同步背景层 bounds ──────────────────────────
-            sync_background_bounds();
-
+        auto apply_root_component_bounds() -> void {
             if (!m_root_component) {
                 return;
             }
@@ -1324,13 +1500,18 @@ export namespace nandina::app {
                                                        ? m_active_runtime_window->height()
                                                        : m_config.height);
 
-            if (immediate) {
-                m_root_component->set_bounds(0.0f, 0.0f, width, height);
-                m_root_component->mark_layout_dirty();
+            m_root_component->runtime::NanWidget::set_bounds(0.0f, 0.0f, width, height);
+            m_root_component->mark_layout_dirty();
+        }
+
+        auto request_root_reflow(const bool sync_bounds = false) -> void {
+            sync_background_bounds();
+
+            if (!m_root_component) {
                 return;
             }
 
-            m_root_component->runtime::NanWidget::set_bounds(0.0f, 0.0f, width, height);
+            m_pending_root_bounds_sync = m_pending_root_bounds_sync || sync_bounds;
             m_root_component->mark_layout_dirty();
         }
 
@@ -1360,7 +1541,7 @@ export namespace nandina::app {
 
             m_last_resize_apply_time = now;
             m_pending_resize         = false;
-            sync_root_component_bounds(false);
+            request_root_reflow(true);
         }
 
         auto on_resize_pending() -> void {
@@ -1371,6 +1552,7 @@ export namespace nandina::app {
         runtime::NanWindow* m_active_runtime_window{nullptr};
         NanComponent::Ptr m_root_component{nullptr};
         runtime::NanWidget* m_hovered_widget{nullptr};
+        bool m_pending_root_bounds_sync{false};
 
         // ── 背景层（Surface 组件，非 widget 树成员） ──────
         widgets::Surface::Ptr m_background{nullptr};
@@ -1417,7 +1599,7 @@ export namespace nandina::app {
             }
 
             void on_pointer_move(const runtime::PointerMoveEvent& event) override {
-                auto* hit = m_owner.resolve_interactive_hit(
+                auto* hit = m_owner.hit_test_root_component(
                     static_cast<float>(event.x), static_cast<float>(event.y));
                 const bool changed = m_owner.sync_hover_target(hit, event);
                 if (hit && !changed) {
@@ -1426,7 +1608,7 @@ export namespace nandina::app {
             }
 
             void on_pointer_enter(const runtime::PointerMoveEvent& event) override {
-                auto* hit = m_owner.resolve_interactive_hit(
+                auto* hit = m_owner.hit_test_root_component(
                     static_cast<float>(event.x), static_cast<float>(event.y));
                 m_owner.sync_hover_target(hit, event);
             }
@@ -1436,7 +1618,7 @@ export namespace nandina::app {
             }
 
             void on_pointer_down(const runtime::PointerButtonEvent& event) override {
-                auto* hit = m_owner.resolve_interactive_hit(
+                auto* hit = m_owner.hit_test_root_component(
                     static_cast<float>(event.x), static_cast<float>(event.y));
                 m_owner.sync_hover_target(hit, pointer_move_from_button(event));
                 if (hit) {
@@ -1445,7 +1627,7 @@ export namespace nandina::app {
             }
 
             void on_pointer_up(const runtime::PointerButtonEvent& event) override {
-                auto* hit = m_owner.resolve_interactive_hit(
+                auto* hit = m_owner.hit_test_root_component(
                     static_cast<float>(event.x), static_cast<float>(event.y));
                 m_owner.sync_hover_target(hit, pointer_move_from_button(event));
                 if (hit) {
@@ -1502,7 +1684,7 @@ export namespace nandina::app {
         BridgeWindow window{*this, runtime_config};
         m_active_runtime_window = &window;
 
-        sync_root_component_bounds();
+        request_root_reflow(true);
 
         logger.info("Window starting: {} ({}x{})", m_config.title, m_config.width, m_config.height);
         window.run();

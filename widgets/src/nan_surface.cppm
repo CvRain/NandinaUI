@@ -172,6 +172,7 @@ export namespace nandina::widgets {
                     content.y(),
                     content.width(),
                     content.height());
+                child.layout();
             });
         }
 

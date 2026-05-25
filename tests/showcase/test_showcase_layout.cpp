@@ -96,22 +96,33 @@ public:
     return static_cast<std::uint8_t>((pixel >> 24u) & 0xffu);
 }
 
-auto make_sandbox_root() -> nandina::app::NanComponent::Ptr {
-    nandina::showcase::SandboxPage page;
-    return page.build();
+struct SandboxRootFixture {
+    std::unique_ptr<nandina::showcase::SandboxPage> page;
+    nandina::app::NanComponent::Ptr component;
+};
+
+auto make_sandbox_root() -> SandboxRootFixture {
+    auto page = std::make_unique<nandina::showcase::SandboxPage>();
+    auto component = page->build();
+    return SandboxRootFixture{
+        .page = std::move(page),
+        .component = std::move(component),
+    };
 }
 
 } // namespace
 
 TEST(ShowcaseLayoutTest, SandboxPageBuild_ProducesMountedComponent) {
-    auto component = make_sandbox_root();
+    auto fixture = make_sandbox_root();
+    auto& component = fixture.component;
     ASSERT_NE(component, nullptr);
     // Sandbox 目前只有一个 Center → Label 结构
     ASSERT_GE(component->child_count(), 1u);
 }
 
 TEST(ShowcaseLayoutTest, SandboxPageDraw_ProducesVisiblePixels) {
-    auto component = make_sandbox_root();
+    auto fixture = make_sandbox_root();
+    auto& component = fixture.component;
     ASSERT_NE(component, nullptr);
     static_cast<nandina::runtime::NanWidget&>(*component).set_bounds(0.0f, 0.0f, 1280.0f, 720.0f);
     component->layout();
@@ -134,7 +145,8 @@ TEST(ShowcaseLayoutTest, AppWindowWrappedSandboxPageDrawsVisiblePixels) {
         .resizable = false,
         .high_dpi = false,
     });
-    window.set_root_component(make_sandbox_root());
+    auto fixture = make_sandbox_root();
+    window.set_root_component(std::move(fixture.component));
 
     ThorvgCanvasScope canvas_scope{1280u, 720u};
     window.draw_once(canvas_scope.canvas());
@@ -144,6 +156,29 @@ TEST(ShowcaseLayoutTest, AppWindowWrappedSandboxPageDrawsVisiblePixels) {
     // (Pixel-level verification of rendered text glyphs using ThorVG Picture
     //  + SwCanvas is deferred until render abstract layer is established.)
     SUCCEED();
+}
+
+TEST(ShowcaseLayoutTest, SandboxPageLayoutCentersContentInsteadOfStackingAtOrigin) {
+    auto fixture = make_sandbox_root();
+    auto& component = fixture.component;
+    ASSERT_NE(component, nullptr);
+
+    static_cast<nandina::runtime::NanWidget&>(*component).set_bounds(0.0f, 0.0f, 1280.0f, 720.0f);
+    component->layout();
+
+    auto& center = child_at(*component, 0);
+    auto& sized_box = child_at(center, 0);
+    auto& column = child_at(sized_box, 0);
+    auto& button_row = child_at(column, 2);
+    auto& left_expanded = child_at(button_row, 0);
+    auto& right_expanded = child_at(button_row, 1);
+
+    EXPECT_FLOAT_EQ(sized_box.x(), 460.0f);
+    EXPECT_FLOAT_EQ(sized_box.width(), 360.0f);
+    EXPECT_FLOAT_EQ(column.x(), 460.0f);
+    EXPECT_FLOAT_EQ(column.width(), 360.0f);
+    EXPECT_GT(left_expanded.width(), 0.0f);
+    EXPECT_GT(right_expanded.x(), left_expanded.x());
 }
 
 TEST(ShowcaseLayoutTest, ShowcaseShellSidebarActiveStateTracksNavigation) {

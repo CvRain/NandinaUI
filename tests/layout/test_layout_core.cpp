@@ -1,11 +1,36 @@
 #include <gtest/gtest.h>
 
+import nandina.layout.container;
 import nandina.layout.core;
+import nandina.runtime.nan_widget;
+import nandina.foundation.nan_constraints;
 import nandina.foundation.nan_point;
 import nandina.foundation.nan_size;
 
 using namespace nandina::layout;
 using namespace nandina::geometry;
+
+namespace {
+
+class FixedWidget final : public nandina::runtime::NanWidget {
+public:
+    explicit FixedWidget(const NanSize preferred)
+        : preferred_(preferred) {
+    }
+
+    [[nodiscard]] auto preferred_size() const noexcept -> NanSize override {
+        return preferred_;
+    }
+
+    auto measure(const NanConstraints& constraints) -> void override {
+        set_measured_layout_state(constraints, constraints.constrain(preferred_));
+    }
+
+private:
+    NanSize preferred_{};
+};
+
+} // namespace
 
 // ─── BasicLayoutBackend: Column ──────────────────────────────
 
@@ -256,6 +281,45 @@ TEST(LayoutCoreTest, Column_FlexChildRespectsMinAndMaxHeight) {
     ASSERT_EQ(frames.size(), 2);
     EXPECT_FLOAT_EQ(frames[0].height(), 120.0f);
     EXPECT_FLOAT_EQ(frames[1].height(), 120.0f);
+}
+
+TEST(LayoutCoreTest, Column_SetBoundsDoesNotAutoLayoutChildren) {
+    auto column = Column::Create();
+    auto* child = column->add(std::make_unique<FixedWidget>(NanSize{40.0f, 20.0f})).children().back().get();
+
+    column->measure(NanConstraints::tight(200.0f, 100.0f));
+    column->set_bounds(10.0f, 20.0f, 200.0f, 100.0f);
+
+    const auto child_bounds = child->bounds();
+    EXPECT_FLOAT_EQ(child_bounds.x(), 0.0f);
+    EXPECT_FLOAT_EQ(child_bounds.y(), 0.0f);
+    EXPECT_FLOAT_EQ(child_bounds.width(), 0.0f);
+    EXPECT_FLOAT_EQ(child_bounds.height(), 0.0f);
+
+    column->layout();
+
+    const auto laid_out_bounds = child->bounds();
+    EXPECT_FLOAT_EQ(laid_out_bounds.x(), 10.0f);
+    EXPECT_FLOAT_EQ(laid_out_bounds.y(), 20.0f);
+    EXPECT_FLOAT_EQ(laid_out_bounds.width(), 40.0f);
+    EXPECT_FLOAT_EQ(laid_out_bounds.height(), 20.0f);
+}
+
+TEST(LayoutCoreTest, Column_LayoutExplicitlyPropagatesToNestedContainers) {
+    auto parent = Column::Create();
+    auto nested = Column::Create();
+    auto* leaf = nested->add(std::make_unique<FixedWidget>(NanSize{60.0f, 30.0f})).children().back().get();
+    parent->add(std::move(nested));
+
+    parent->measure(NanConstraints::tight(240.0f, 160.0f));
+    parent->set_bounds(4.0f, 6.0f, 240.0f, 160.0f);
+    parent->layout();
+
+    const auto leaf_bounds = leaf->bounds();
+    EXPECT_FLOAT_EQ(leaf_bounds.x(), 4.0f);
+    EXPECT_FLOAT_EQ(leaf_bounds.y(), 6.0f);
+    EXPECT_FLOAT_EQ(leaf_bounds.width(), 60.0f);
+    EXPECT_FLOAT_EQ(leaf_bounds.height(), 30.0f);
 }
 
 // ─── 回归矩阵：Padding 行为 ──────────────────────────────────

@@ -109,6 +109,19 @@ export namespace nandina::widgets {
             return m_font;
         }
 
+        /// 局部更新字体属性；Fn: (NanFont&) -> void
+        ///
+        /// 示例：
+        ///   label_ref->update_font([](auto& f){ f.color(NanColor::red()); });
+        ///   label_ref->update_font([](auto& f){ f.size(f.size() + 2); });
+        template <typename Fn>
+            requires std::invocable<Fn, text::NanFont&>
+        auto update_font(Fn&& fn) -> Label& {
+            auto updated = m_font;
+            std::invoke(std::forward<Fn>(fn), updated);
+            return set_font(std::move(updated));
+        }
+
         auto set_color(const nandina::NanColor& color) -> Label& {
             m_color.set(color);
             m_font.color(color);
@@ -127,7 +140,12 @@ export namespace nandina::widgets {
             mark_dirty();
             return *this;
         }
-
+        /// 禁用状态——禁用时文本色降至 70% 透明度（对应 shadcn peer-disabled:opacity-70）。
+        auto set_disabled(const bool value) -> Label& {
+            m_disabled = value;
+            mark_dirty();
+            return *this;
+        }
         // ── 属性访问 ──────────────────────────────────────
         [[nodiscard]] auto text() const noexcept -> const std::string& {
             return m_text.get();
@@ -147,6 +165,10 @@ export namespace nandina::widgets {
 
         [[nodiscard]] auto color() const noexcept -> const nandina::NanColor& {
             return m_color.get();
+        }
+
+        [[nodiscard]] auto disabled() const noexcept -> bool {
+            return m_disabled;
         }
 
         // ── 首选尺寸 ──────────────────────────────────────
@@ -235,8 +257,17 @@ export namespace nandina::widgets {
             }
             offset_y -= layout.ink_top;
 
-            // 颜色已在 NanFont 内部，直接 paint
-            m_font.paint(canvas, layout, offset_x, offset_y);
+            // 颜色已在 NanFont 内部，直接 paint；disabled 时降至 70% 透明度
+            if (m_disabled) {
+                auto dim = m_font;
+                const auto base = m_color.get().to<nandina::NanRgb>();
+                dim.color(nandina::NanColor::from(
+                    nandina::NanRgb{base.red(), base.green(), base.blue(),
+                                    static_cast<uint8_t>(base.alpha() * 70u / 100u)}));
+                dim.paint(canvas, layout, offset_x, offset_y);
+            } else {
+                m_font.paint(canvas, layout, offset_x, offset_y);
+            }
         }
 
     private:
@@ -269,6 +300,7 @@ export namespace nandina::widgets {
 
         TextAlign m_align{TextAlign::Start};
         TextVerticalAlign m_valign{TextVerticalAlign::Top};
+        bool m_disabled{false};
 
         // ── shape 结果缓存 ────────────────────────────────────────
         mutable text::TextLayout m_cached_shape_result{};

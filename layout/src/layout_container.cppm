@@ -202,7 +202,6 @@ export namespace nandina::layout {
 
         auto set_bounds(const float x, const float y, const float w, const float h) noexcept -> runtime::NanWidget& override {
             NanWidget::set_bounds(x, y, w, h);
-            layout();
             return *this;
         }
 
@@ -259,8 +258,11 @@ export namespace nandina::layout {
                 const auto& frame = frames[index];
                 if (widget) {
                     widget->set_bounds(frame.x(), frame.y(), frame.width(), frame.height());
+                    widget->layout();
                 }
             }
+
+            clear_layout_dirty();
         }
 
         [[nodiscard]] auto compute_container_size(
@@ -516,10 +518,7 @@ export namespace nandina::layout {
         }
 
         auto set_bounds(const float x, const float y, const float w, const float h) noexcept -> runtime::NanWidget& override {
-            NanWidget::set_bounds(x, y, w, h);
-            measure(geometry::NanConstraints::tight(w, h));
-            layout();
-            return *this;
+            return LayoutContainer::set_bounds(x, y, w, h);
         }
 
         auto layout() -> void override {

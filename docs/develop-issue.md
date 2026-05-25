@@ -1028,9 +1028,9 @@
 
 > 说明：Issue 029-036 记录的是 Layout 基础能力的建设情况；下面这一组 issue 面向下一轮主线收口，目标是让 measure/layout 协议真正接管 widgets 与 showcase，而不是继续停留在“协议存在、调用分散”的状态。
 
-## Issue 082 — 让 LayoutCore 接入 NanConstraints 并扩展 LayoutChildSpec ❌ 未完成
+## Issue 082 — 让 LayoutCore 接入 NanConstraints 并扩展 LayoutChildSpec ✅ 已完成
 **Labels:** `area:layout`, `kind:implementation`, `priority:p0`
-**Status:** ❌ 未完成 — 当前 backend 仍以 `preferred_size` 为主，约束语义尚未完整进入布局求解
+**Status:** ✅ 已完成 — `LayoutRequest`、`LayoutChildSpec` 与 backend 已接入 `NanConstraints`、`min/max` 与 `can_shrink` 语义
 
 ### 目标
 让 `layout/core` 的输入模型显式感知约束、最小/最大尺寸与 shrink 能力，为后续两阶段布局提供统一底座。
@@ -1049,11 +1049,16 @@
 - layout backend 不再只依赖 `preferred_size`
 - row/column 的 frames 分配能正确响应约束、min/max 与 shrink 语义
 
+### 完成记录
+- `layout/src/layout_core.cppm` 已为 `LayoutRequest` 增加 `NanConstraints`
+- `LayoutChildSpec` 已包含 `min_size` / `max_size` / `can_shrink`
+- `tests/layout/test_layout_core.cpp` 已覆盖 stretch + max 限制、flex child min/max clamp 等回归面
+
 ---
 
-## Issue 083 — 让 LayoutContainer 切换到 measure/layout 两阶段驱动 ❌ 未完成
+## Issue 083 — 让 LayoutContainer 切换到 measure/layout 两阶段驱动 ✅ 已完成
 **Labels:** `area:layout`, `area:runtime`, `kind:refactor`, `priority:p0`
-**Status:** ❌ 未完成 — `LayoutContainer` 仍在 `set_bounds()` 中直接触发布局
+**Status:** ✅ 已完成 — `LayoutContainer` 主路径已明确为 `measure() -> set_bounds() -> layout()`，`set_bounds()` 不再隐式求解容器布局
 
 ### 目标
 把容器从“赋 bounds 即立即分发布局”的旧路径，切到“measure 收集、layout 应用”的两阶段协议。
@@ -1072,11 +1077,17 @@
 - `LayoutContainer` 的主路径明确为 `measure() -> set_bounds() -> layout()`
 - `set_bounds()` 不再承担容器级布局求解职责
 
+### 完成记录
+- `layout/src/layout_container.cppm` 已在 `measure()` 中缓存 child specs，并让 `layout()` 消费测量结果
+- `LayoutContainer::set_bounds()` 现仅负责 bounds 分配，不再隐式调用 `layout()`
+- backend 应用阶段会在 child `set_bounds(...)` 后显式递归 `child.layout()`，保证嵌套容器仍沿两阶段主链传播
+- `tests/layout/test_layout_core.cpp` 已新增“set_bounds 不自动 layout children”与“显式 layout 传播到嵌套容器”回归测试
+
 ---
 
-## Issue 084 — 为根节点建立统一 reflow 入口与 layout dirty 闭环 ❌ 未完成
+## Issue 084 — 为根节点建立统一 reflow 入口与 layout dirty 闭环 ✅ 已完成
 **Labels:** `area:app`, `area:runtime`, `area:layout`, `kind:implementation`, `priority:p0`
-**Status:** ❌ 未完成 — 根节点 resize 与 subtree dirty 尚未统一触发完整 reflow
+**Status:** ✅ 已完成 — `NanAppWindow` 已作为当前架构下的根宿主，统一收口 set_root、resize 节流、draw 前消费与 hit-test 前消费的 root reflow 语义
 
 ### 目标
 建立从 window/app 根节点发起的统一重排入口，使 layout dirty 能真正驱动全树 measure/layout，而不是仅靠局部 `set_bounds()` 副作用维持。
@@ -1085,16 +1096,22 @@
 - 在 app/window 根组件尺寸变化时触发 measure + layout
 - 明确 `mark_layout_dirty()` 的上行传播与根级消费时机
 - 补齐 resize 后 root bounds 与真实 reflow 的协同语义
+- 让当前架构下的 root reflow 责任明确收敛在 `app` 层窗口宿主，而不是继续散落在局部 `set_bounds()` 副作用中
 
 ### 涉及文件
 - `app/src/nan_application.cppm`
-- `runtime/src/nan_widget.cppm`
+- `tests/app/test_app_authoring.cpp`
 - `tests/showcase/test_showcase_layout.cpp`
-- `tests/runtime/*`
 
 ### 完成定义
 - root resize、child 结构变化、布局属性变化都能通过统一入口触发 reflow
 - 不再依赖局部容器的即时 layout 副作用来维持整棵树一致性
+
+### 当前结果
+- `NanAppWindow` 现已通过统一的 request / consume root reflow 入口收口 `set_root()`、启动初始同步、resize 节流、draw 前消费与 root hit-test 前消费
+- root bounds 同步与 measure / layout 消费已进入同一主链，不再区分旧的 immediate / deferred 分叉语义
+- `tests/app/test_app_authoring.cpp` 已覆盖 draw 前消费与 first draw 之前 hit-test 消费 root layout dirty 的回归场景
+- `tests/showcase/test_showcase_layout.cpp` 已验证 showcase 页面在该主链下保持正确布局与可绘制状态
 
 ---
 

@@ -1,7 +1,9 @@
 module;
 
 #include <format>
+#include <functional>
 #include <string>
+#include <random>
 
 export module nandina.showcase.sandbox_page;
 
@@ -40,28 +42,41 @@ export namespace nandina::showcase {
             using namespace nandina::app;
             using nandina::theme::ButtonVariant;
             using nandina::theme::ButtonSize;
+            using nandina::layout::LayoutAlignment;
 
             // ── Pattern A：text(fn) 自动 Effect 追踪 ─────────────────────────
-            auto label_button = button()
-                .bind(label_button_ref)
-                .size({240, 60})
-                .variant(ButtonVariant::outline)
-                .text([this]{ return std::to_string(m_count()); });
+            // 不设固定尺寸，由 column align_items(stretch) 撑满列宽
+            auto label = app::label()
+                .bind(label_ref)
+                .vertical_align(widgets::TextVerticalAlign::Center)
+                .align_items(LayoutAlignment::center)
+                .align(widgets::TextAlign::Center)
+                .font(text::NanFont{}
+                    .color(NanColor::from(NanRgb{"#dd7878"}))
+                    .overflow(text::TextOverflow::scale)
+                    .size(23)
+                    .weight(text::NanFontWeight::bold))
+                .text([this] {
+                    return std::to_string(m_count());
+                });
 
             // ── Pattern C：ComputedVar<T> 派生 signal 参与追踪图 ─────────────
             auto double_label = button()
-                .size({240, 60})
                 .variant(ButtonVariant::outline)
-                .text([this]{ return std::format("x2 = {}", m_double()); });
+                .text([this] {
+                    return std::format("x2 = {}", m_double());
+                });
 
             // ── Pattern B：update() 原地修改 ─────────────────────────────────
+            // expanded() 包裹后在 row 中各占 50% 宽度
             auto increase_button = button()
                 .bind(increase_button_ref)
-                .size({120, 60})
                 .text("+");
 
             increase_button.on_click([this]() {
-                m_count.update([](int& v){ v++; });
+                m_count.update([](int& v) {
+                    v++;
+                });
             });
             increase_button.on_hover([this]() {
                 if (increase_button_ref)
@@ -74,12 +89,28 @@ export namespace nandina::showcase {
 
             auto decrease_button = button()
                 .bind(decrease_button_ref)
-                .size({120, 60})
                 .text("-");
 
-            decrease_button.on_click([this]() {
-                m_count.update([](int& v){ v--; });
+            decrease_button.on_click([&]() {
+                m_count.update([](int& v) {
+                    v--;
+                });
+                label_ref->update_font([this](text::NanFont& font) {
+                    //generate random number 0 ~ 255
+                    std::random_device random_device;
+                    std::mt19937 generator(random_device());
+                    std::uniform_int_distribution<uint8_t> distribution(1, 255);
+
+                    // generate random green color
+                    const auto green = distribution(generator);
+                    const auto red   = distribution(generator);
+                    const auto blue  = distribution(generator);
+
+
+                    font.color(NanColor::from(NanRgb{red, green, blue}));
+                });
             });
+
             decrease_button.on_hover([this]() {
                 if (decrease_button_ref)
                     decrease_button_ref->set_text("▼");
@@ -90,35 +121,49 @@ export namespace nandina::showcase {
             });
 
             // ── Pattern B：update() 值语义重置 ──────────────────────────────
+            // ghost sm 按钮保持自然宽度，通过两侧 spacer() 居中
             auto reset_button = button()
                 .size(ButtonSize::sm)
                 .variant(ButtonVariant::ghost)
                 .text("reset")
                 .on_click([this]() {
-                    m_count.update([](int){ return 1; });
+                    m_count.update([](int) {
+                        return 1;
+                    });
                 });
 
-            return mount(center(column(children(
-                label_button,
-                double_label,
-                row(children(
-                    increase_button,
-                    decrease_button
-                    )).gap(15),
-                reset_button
-                )).gap(10)));
+            return mount(center(
+                column(children(
+                    label,
+                    double_label,
+                    row(children(
+                        expanded(increase_button),
+                        expanded(decrease_button)
+                        )).gap(12),
+                    row(children(
+                        spacer(),
+                        reset_button,
+                        spacer()
+                        ))
+                    ))
+                .gap(12)
+                .align_items(LayoutAlignment::stretch)
+                .width(360.0f)
+                ));
         }
 
     private:
-        nandina::app::Ref<nandina::widgets::Button> label_button_ref;
         nandina::app::Ref<nandina::widgets::Button> increase_button_ref;
         nandina::app::Ref<nandina::widgets::Button> decrease_button_ref;
+        nandina::app::Ref<widgets::Label> label_ref;
 
         // Var<T>：可变 signal，update() 支持原地修改与值语义两种风格
         nandina::app::Var<int> m_count{1};
 
         // ComputedVar<T>：只读派生 signal，依赖图自动建立
-        nandina::app::ComputedVar<int> m_double{[this]{ return m_count() * 2; }};
+        nandina::app::ComputedVar<int> m_double{[this] {
+            return m_count() * 2;
+        }};
     };
 
 } // namespace nandina::showcase
