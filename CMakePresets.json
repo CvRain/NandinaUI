@@ -1,199 +1,200 @@
 {
-    "version": 6,
-    "cmakeMinimumRequired": {
-        "major": 4,
-        "minor": 0,
-        "patch": 0
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 4,
+    "minor": 0,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "generator": "Ninja",
+      "toolchainFile": "${sourceDir}/vcpkg/scripts/buildsystems/vcpkg.cmake",
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
     },
-    "configurePresets": [
-        {
-            "name": "base",
-            "hidden": true,
-            "generator": "Ninja",
-            "toolchainFile": "${sourceDir}/vcpkg/scripts/buildsystems/vcpkg.cmake",
-            "cacheVariables": {
-                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
-            }
-        },
-        {
-            "name": "windows-base",
-            "hidden": true,
-            "inherits": "base",
-            "condition": {
-                "type": "equals",
-                "lhs": "${hostSystemName}",
-                "rhs": "Windows"
-            },
-            "architecture": {
-                "value": "x64",
-                "strategy": "external"
-            },
-            "cacheVariables": {
-                "VCPKG_TARGET_TRIPLET": "x64-windows"
-            }
-        },
-        {
-            "name": "default",
-            "displayName": "Default (Debug)",
-            "description": "向后兼容的默认配置，输出至 build/，clangd 默认指向此目录。VCPKG_MANIFEST_INSTALL=OFF：在 GitHub TLS 受限的沙箱环境中跳过 vcpkg 安装，回退到系统已安装的包。在网络正常的机器上请使用 debug / release 预设。",
-            "inherits": "base",
-            "binaryDir": "${sourceDir}/build",
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Debug",
-                "NANDINA_BUILD_TESTS": "ON",
-                "VCPKG_MANIFEST_INSTALL": "OFF"
-            }
-        },
-        {
-            "name": "debug",
-            "displayName": "Debug",
-            "description": "Debug 构建，启用全部警告与单元测试，输出至 build/debug",
-            "inherits": "base",
-            "binaryDir": "${sourceDir}/build/debug",
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Debug",
-                "NANDINA_BUILD_TESTS": "ON"
-            }
-        },
-        {
-            "name": "release",
-            "displayName": "Release",
-            "description": "优化发布构建，禁用测试，输出至 build/release",
-            "inherits": "base",
-            "binaryDir": "${sourceDir}/build/release",
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Release",
-                "NANDINA_BUILD_TESTS": "OFF"
-            }
-        },
-        {
-            "name": "debug-asan",
-            "displayName": "Debug (AddressSanitizer)",
-            "description": "Debug 构建，启用 AddressSanitizer + UndefinedBehaviorSanitizer，输出至 build/debug-asan",
-            "inherits": "base",
-            "binaryDir": "${sourceDir}/build/debug-asan",
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Debug",
-                "NANDINA_BUILD_TESTS": "ON",
-                "CMAKE_CXX_FLAGS": "-fsanitize=address,undefined -fno-omit-frame-pointer",
-                "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=address,undefined"
-            }
-        },
-        {
-            "name": "windows-debug",
-            "displayName": "Windows Debug",
-            "description": "Windows x64 Debug 构建，使用 vcpkg x64-windows triplet，启用测试，输出至 build/windows-debug",
-            "inherits": "windows-base",
-            "binaryDir": "${sourceDir}/build/windows-debug",
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Debug",
-                "NANDINA_BUILD_TESTS": "ON"
-            }
-        },
-        {
-            "name": "windows-relwithdebinfo",
-            "displayName": "Windows RelWithDebInfo",
-            "description": "Windows x64 RelWithDebInfo 构建，保留调试信息，输出至 build/windows-relwithdebinfo",
-            "inherits": "windows-base",
-            "binaryDir": "${sourceDir}/build/windows-relwithdebinfo",
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "RelWithDebInfo",
-                "NANDINA_BUILD_TESTS": "ON"
-            }
-        },
-        {
-            "name": "windows-release",
-            "displayName": "Windows Release",
-            "description": "Windows x64 Release 构建，输出至 build/windows-release",
-            "inherits": "windows-base",
-            "binaryDir": "${sourceDir}/build/windows-release",
-            "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Release",
-                "NANDINA_BUILD_TESTS": "OFF"
-            }
-        }
-    ],
-    "buildPresets": [
-        {
-            "name": "default",
-            "displayName": "Build (default)",
-            "configurePreset": "default"
-        },
-        {
-            "name": "debug",
-            "displayName": "Build (debug)",
-            "configurePreset": "debug"
-        },
-        {
-            "name": "release",
-            "displayName": "Build (release)",
-            "configurePreset": "release"
-        },
-        {
-            "name": "debug-asan",
-            "displayName": "Build (debug-asan)",
-            "configurePreset": "debug-asan"
-        },
-        {
-            "name": "windows-debug",
-            "displayName": "Build (windows-debug)",
-            "configurePreset": "windows-debug"
-        },
-        {
-            "name": "windows-relwithdebinfo",
-            "displayName": "Build (windows-relwithdebinfo)",
-            "configurePreset": "windows-relwithdebinfo"
-        },
-        {
-            "name": "windows-release",
-            "displayName": "Build (windows-release)",
-            "configurePreset": "windows-release"
-        }
-    ],
-    "testPresets": [
-        {
-            "name": "default",
-            "displayName": "Test (default)",
-            "configurePreset": "default",
-            "output": {
-                "outputOnFailure": true
-            }
-        },
-        {
-            "name": "debug",
-            "displayName": "Test (debug)",
-            "configurePreset": "debug",
-            "output": {
-                "outputOnFailure": true,
-                "verbosity": "default"
-            }
-        },
-        {
-            "name": "debug-asan",
-            "displayName": "Test (debug-asan)",
-            "configurePreset": "debug-asan",
-            "output": {
-                "outputOnFailure": true,
-                "verbosity": "default"
-            }
-        },
-        {
-            "name": "windows-debug",
-            "displayName": "Test (windows-debug)",
-            "configurePreset": "windows-debug",
-            "output": {
-                "outputOnFailure": true,
-                "verbosity": "default"
-            }
-        },
-        {
-            "name": "windows-relwithdebinfo",
-            "displayName": "Test (windows-relwithdebinfo)",
-            "configurePreset": "windows-relwithdebinfo",
-            "output": {
-                "outputOnFailure": true,
-                "verbosity": "default"
-            }
-        }
-    ]
+    {
+      "name": "windows-base",
+      "hidden": true,
+      "inherits": "base",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      },
+      "architecture": {
+        "value": "x64",
+        "strategy": "external"
+      },
+      "cacheVariables": {
+        "VCPKG_TARGET_TRIPLET": "x64-mingw-static",
+        "VCPKG_HOST_TRIPLET": "x64-mingw-static"
+      }
+    },
+    {
+      "name": "default",
+      "displayName": "Default (Debug)",
+      "description": "向后兼容的默认配置，输出至 build/，clangd 默认指向此目录。VCPKG_MANIFEST_INSTALL=OFF：在 GitHub TLS 受限的沙箱环境中跳过 vcpkg 安装，回退到系统已安装的包。在网络正常的机器上请使用 debug / release 预设。",
+      "inherits": "base",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "NANDINA_BUILD_TESTS": "ON",
+        "VCPKG_MANIFEST_INSTALL": "OFF"
+      }
+    },
+    {
+      "name": "debug",
+      "displayName": "Debug",
+      "description": "Debug 构建，启用全部警告与单元测试，输出至 build/debug",
+      "inherits": "base",
+      "binaryDir": "${sourceDir}/build/debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "NANDINA_BUILD_TESTS": "ON"
+      }
+    },
+    {
+      "name": "release",
+      "displayName": "Release",
+      "description": "优化发布构建，禁用测试，输出至 build/release",
+      "inherits": "base",
+      "binaryDir": "${sourceDir}/build/release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "NANDINA_BUILD_TESTS": "OFF"
+      }
+    },
+    {
+      "name": "debug-asan",
+      "displayName": "Debug (AddressSanitizer)",
+      "description": "Debug 构建，启用 AddressSanitizer + UndefinedBehaviorSanitizer，输出至 build/debug-asan",
+      "inherits": "base",
+      "binaryDir": "${sourceDir}/build/debug-asan",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "NANDINA_BUILD_TESTS": "ON",
+        "CMAKE_CXX_FLAGS": "-fsanitize=address,undefined -fno-omit-frame-pointer",
+        "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=address,undefined"
+      }
+    },
+    {
+      "name": "windows-debug",
+      "displayName": "Windows Debug",
+      "description": "Windows x64 Debug 构建（MinGW），使用 vcpkg x64-mingw-static triplet，启用测试，输出至 build/windows-debug",
+      "inherits": "windows-base",
+      "binaryDir": "${sourceDir}/build/windows-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "NANDINA_BUILD_TESTS": "ON"
+      }
+    },
+    {
+      "name": "windows-relwithdebinfo",
+      "displayName": "Windows RelWithDebInfo",
+      "description": "Windows x64 RelWithDebInfo 构建，保留调试信息，输出至 build/windows-relwithdebinfo",
+      "inherits": "windows-base",
+      "binaryDir": "${sourceDir}/build/windows-relwithdebinfo",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "NANDINA_BUILD_TESTS": "ON"
+      }
+    },
+    {
+      "name": "windows-release",
+      "displayName": "Windows Release",
+      "description": "Windows x64 Release 构建，输出至 build/windows-release",
+      "inherits": "windows-base",
+      "binaryDir": "${sourceDir}/build/windows-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "NANDINA_BUILD_TESTS": "OFF"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "default",
+      "displayName": "Build (default)",
+      "configurePreset": "default"
+    },
+    {
+      "name": "debug",
+      "displayName": "Build (debug)",
+      "configurePreset": "debug"
+    },
+    {
+      "name": "release",
+      "displayName": "Build (release)",
+      "configurePreset": "release"
+    },
+    {
+      "name": "debug-asan",
+      "displayName": "Build (debug-asan)",
+      "configurePreset": "debug-asan"
+    },
+    {
+      "name": "windows-debug",
+      "displayName": "Build (windows-debug)",
+      "configurePreset": "windows-debug"
+    },
+    {
+      "name": "windows-relwithdebinfo",
+      "displayName": "Build (windows-relwithdebinfo)",
+      "configurePreset": "windows-relwithdebinfo"
+    },
+    {
+      "name": "windows-release",
+      "displayName": "Build (windows-release)",
+      "configurePreset": "windows-release"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "default",
+      "displayName": "Test (default)",
+      "configurePreset": "default",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "debug",
+      "displayName": "Test (debug)",
+      "configurePreset": "debug",
+      "output": {
+        "outputOnFailure": true,
+        "verbosity": "default"
+      }
+    },
+    {
+      "name": "debug-asan",
+      "displayName": "Test (debug-asan)",
+      "configurePreset": "debug-asan",
+      "output": {
+        "outputOnFailure": true,
+        "verbosity": "default"
+      }
+    },
+    {
+      "name": "windows-debug",
+      "displayName": "Test (windows-debug)",
+      "configurePreset": "windows-debug",
+      "output": {
+        "outputOnFailure": true,
+        "verbosity": "default"
+      }
+    },
+    {
+      "name": "windows-relwithdebinfo",
+      "displayName": "Test (windows-relwithdebinfo)",
+      "configurePreset": "windows-relwithdebinfo",
+      "output": {
+        "outputOnFailure": true,
+        "verbosity": "default"
+      }
+    }
+  ]
 }

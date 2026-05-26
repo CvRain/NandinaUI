@@ -14,6 +14,16 @@ option(NANDINA_BUILD_TESTS "Build NandinaUI unit tests" ON)
 # --- 项目级编译警告（适用于所有模块目标）---
 add_compile_options(-Wall -Wextra -Wpedantic)
 
+# MinGW/PE-COFF 无法像 ELF 那样合并 inline 函数中的函数局部静态变量，
+# 导致 C++ 标准库头文件中的某些符号（如 std::_Sp_make_shared_tag::__tag、
+# std::__format::__replace_rep）在模块 + 静态库场景下出现多重定义。
+# --allow-multiple-definition 告知链接器取第一次出现的定义（语义上完全相同）。
+# -static-libgcc -static-libstdc++ 将 GCC/C++ 运行时静态链接，
+# 避免部署到其他机器时缺少 libstdc++-6.dll / libgcc_s_seh-1.dll。
+if (MINGW)
+    add_link_options(-Wl,--allow-multiple-definition -static)
+endif ()
+
 # ============================================================
 # 第三方依赖
 # ============================================================
@@ -35,21 +45,27 @@ if (NOT NANDINA_VCPKG_TRIPLET)
     if (CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|amd64)$")
         set(NANDINA_VCPKG_TRIPLET "x64-linux")
     elseif (WIN32 AND CMAKE_SYSTEM_PROCESSOR MATCHES "^(AMD64|x86_64|amd64)$")
-    set(NANDINA_VCPKG_TRIPLET "x64-windows")
+        if (MINGW)
+            set(NANDINA_VCPKG_TRIPLET "x64-mingw-static")
+        else ()
+            set(NANDINA_VCPKG_TRIPLET "x64-windows")
+        endif ()
     endif ()
 endif ()
 
-if (WIN32)
-    set(NANDINA_THORVG_RELEASE_LIB
-        "${CMAKE_SOURCE_DIR}/vcpkg_installed/${NANDINA_VCPKG_TRIPLET}/lib/thorvg-1.lib")
-    set(NANDINA_THORVG_DEBUG_LIB
-        "${CMAKE_SOURCE_DIR}/vcpkg_installed/${NANDINA_VCPKG_TRIPLET}/debug/lib/thorvg-1.lib")
+# ThorVG 库文件路径：MinGW triplet 使用 .a 静态库，MSVC triplet 使用 .lib
+if (NANDINA_VCPKG_TRIPLET MATCHES "mingw")
+    set(NANDINA_THORVG_LIB_NAME "libthorvg-1.a")
+elseif (WIN32)
+    set(NANDINA_THORVG_LIB_NAME "thorvg-1.lib")
 else ()
-    set(NANDINA_THORVG_RELEASE_LIB
-        "${CMAKE_SOURCE_DIR}/vcpkg_installed/${NANDINA_VCPKG_TRIPLET}/lib/libthorvg-1.a")
-    set(NANDINA_THORVG_DEBUG_LIB
-        "${CMAKE_SOURCE_DIR}/vcpkg_installed/${NANDINA_VCPKG_TRIPLET}/debug/lib/libthorvg-1.a")
+    set(NANDINA_THORVG_LIB_NAME "libthorvg-1.a")
 endif ()
+
+set(NANDINA_THORVG_RELEASE_LIB
+    "${CMAKE_SOURCE_DIR}/vcpkg_installed/${NANDINA_VCPKG_TRIPLET}/lib/${NANDINA_THORVG_LIB_NAME}")
+set(NANDINA_THORVG_DEBUG_LIB
+    "${CMAKE_SOURCE_DIR}/vcpkg_installed/${NANDINA_VCPKG_TRIPLET}/debug/lib/${NANDINA_THORVG_LIB_NAME}")
 
 set(NANDINA_THORVG_INCLUDE_DIR
         "${CMAKE_SOURCE_DIR}/vcpkg_installed/${NANDINA_VCPKG_TRIPLET}/include")
@@ -60,6 +76,12 @@ if (EXISTS "${NANDINA_THORVG_RELEASE_LIB}" AND EXISTS "${NANDINA_THORVG_INCLUDE_
             INTERFACE
             "${NANDINA_THORVG_INCLUDE_DIR}"
     )
+
+    # ThorVG C++ header (thorvg.h) uses `#if 1` which always enables
+    # __declspec(dllimport) on Windows.  Define TVG_BUILD so that the
+    # declspec becomes dllexport (no __imp_ prefix), allowing static
+    # linking to resolve symbols directly from the .a / .lib.
+    target_compile_definitions(nandina_thorvg INTERFACE TVG_BUILD=1)
 
     target_link_libraries(nandina_thorvg
             INTERFACE
@@ -72,12 +94,11 @@ if (EXISTS "${NANDINA_THORVG_RELEASE_LIB}" AND EXISTS "${NANDINA_THORVG_INCLUDE_
     )
     endif ()
 
-    if (NOT WIN32)
+    # ThorVG static library needs pthread on both Linux and MinGW
     target_link_libraries(nandina_thorvg
         INTERFACE
         Threads::Threads
     )
-    endif ()
 else ()
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(THORVG REQUIRED IMPORTED_TARGET thorvg-1)

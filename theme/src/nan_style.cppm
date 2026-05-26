@@ -20,6 +20,7 @@
 module;
 
 #include <memory>
+#include <cstdint>
 
 export module nandina.theme.nan_style;
 

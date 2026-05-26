@@ -59,9 +59,10 @@ private:
 };
 
 /// 生成全局唯一的追踪 ID
+inline std::atomic_size_t next_tracking_counter{1};
+
 inline auto next_tracking_id() -> std::size_t {
-    static std::atomic_size_t next_id{1};
-    return next_id.fetch_add(1, std::memory_order_relaxed);
+    return next_tracking_counter.fetch_add(1, std::memory_order_relaxed);
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
