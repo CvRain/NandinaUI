@@ -27,8 +27,8 @@ namespace nandina::runtime {
         using SteadyClock = std::chrono::steady_clock;
 
         constexpr double slow_resize_threshold_ms = 4.0;
-        constexpr double slow_frame_threshold_ms  = 8.0;
-        constexpr double slow_stage_threshold_ms  = 4.0;
+        constexpr double slow_frame_threshold_ms = 8.0;
+        constexpr double slow_stage_threshold_ms = 4.0;
         constexpr std::uint64_t slow_log_interval_ms = 250;
         constexpr std::uint64_t interactive_resize_window_ms = 120;
 
@@ -36,9 +36,8 @@ namespace nandina::runtime {
             return std::chrono::duration<double, std::milli>(end - start).count();
         }
 
-        [[nodiscard]] auto should_emit_slow_log(std::uint64_t& last_tick_ms) noexcept -> bool {
-            const auto now_tick_ms = static_cast<std::uint64_t>(SDL_GetTicks());
-            if (last_tick_ms == 0 || now_tick_ms < last_tick_ms || now_tick_ms - last_tick_ms >= slow_log_interval_ms) {
+        [[nodiscard]] auto should_emit_slow_log(std::uint64_t &last_tick_ms) noexcept -> bool {
+            if (const auto now_tick_ms = static_cast<std::uint64_t>(SDL_GetTicks()); last_tick_ms == 0 || now_tick_ms < last_tick_ms || now_tick_ms - last_tick_ms >= slow_log_interval_ms) {
                 last_tick_ms = now_tick_ms;
                 return true;
             }
@@ -47,18 +46,18 @@ namespace nandina::runtime {
 
         [[nodiscard]] auto to_pointer_button(Uint8 button) noexcept -> PointerButton {
             switch (button) {
-            case SDL_BUTTON_LEFT:
-                return PointerButton::Left;
-            case SDL_BUTTON_MIDDLE:
-                return PointerButton::Middle;
-            case SDL_BUTTON_RIGHT:
-                return PointerButton::Right;
-            case SDL_BUTTON_X1:
-                return PointerButton::X1;
-            case SDL_BUTTON_X2:
-                return PointerButton::X2;
-            default:
-                return PointerButton::Unknown;
+                case SDL_BUTTON_LEFT:
+                    return PointerButton::Left;
+                case SDL_BUTTON_MIDDLE:
+                    return PointerButton::Middle;
+                case SDL_BUTTON_RIGHT:
+                    return PointerButton::Right;
+                case SDL_BUTTON_X1:
+                    return PointerButton::X1;
+                case SDL_BUTTON_X2:
+                    return PointerButton::X2;
+                default:
+                    return PointerButton::Unknown;
             }
         }
 
@@ -108,28 +107,28 @@ namespace nandina::runtime {
     struct NanWindow::Impl {
         // ── SDL RAII 删除器（隐藏于实现单元）────────────────────
         struct WindowDeleter {
-            auto operator()(SDL_Window* w) const noexcept -> void {
+            auto operator()(SDL_Window *w) const noexcept -> void {
                 if (w)
                     SDL_DestroyWindow(w);
             }
         };
 
         struct RendererDeleter {
-            auto operator()(SDL_Renderer* r) const noexcept -> void {
+            auto operator()(SDL_Renderer *r) const noexcept -> void {
                 if (r)
                     SDL_DestroyRenderer(r);
             }
         };
 
         struct TextureDeleter {
-            auto operator()(SDL_Texture* t) const noexcept -> void {
+            auto operator()(SDL_Texture *t) const noexcept -> void {
                 if (t)
                     SDL_DestroyTexture(t);
             }
         };
 
         struct CursorDeleter {
-            auto operator()(SDL_Cursor* c) const noexcept -> void {
+            auto operator()(SDL_Cursor *c) const noexcept -> void {
                 if (c)
                     SDL_DestroyCursor(c);
             }
@@ -152,7 +151,8 @@ namespace nandina::runtime {
         int width{0};
         int height{0};
         bool runtime_acquired{false};
-        float dpi_scale{1.0f};
+        float pixel_logical_ratio_x{1.0f};
+        float pixel_logical_ratio_y{1.0f};
         bool should_close{false};
         std::uint64_t last_slow_resize_log_ms{0};
         std::uint64_t last_slow_frame_log_ms{0};
@@ -161,7 +161,8 @@ namespace nandina::runtime {
         auto reset_cursor() const noexcept -> void {
             if (default_cursor) {
                 SDL_SetCursor(default_cursor.get());
-            } else {
+            }
+            else {
                 SDL_SetCursor(nullptr);
             }
         }
@@ -177,6 +178,19 @@ namespace nandina::runtime {
             SDL_RaiseWindow(window.get());
         }
 
+        // ── 辅助：根据窗口几何计算 像素/逻辑 坐标比 ─────────
+        auto update_pixel_logical_ratio() -> void {
+            if (!window) return;
+            int logical_w = 0, logical_h = 0;
+            int pixel_w = 0, pixel_h = 0;
+            SDL_GetWindowSize(window.get(), &logical_w, &logical_h);
+            SDL_GetWindowSizeInPixels(window.get(), &pixel_w, &pixel_h);
+            if (logical_w > 0 && logical_h > 0) {
+                pixel_logical_ratio_x = static_cast<float>(pixel_w) / static_cast<float>(logical_w);
+                pixel_logical_ratio_y = static_cast<float>(pixel_h) / static_cast<float>(logical_h);
+            }
+        }
+
         // ── 辅助：重建 SDL 纹理 + ThorVG 画布（供 resize 复用）─
         auto rebuild_surface(int new_w, int new_h) -> void {
             if (new_w <= 0 || new_h <= 0) {
@@ -186,7 +200,7 @@ namespace nandina::runtime {
             const auto rebuild_start = SteadyClock::now();
 
             // 重建 SDL 流式纹理
-            auto* raw = SDL_CreateTexture(
+            auto *raw = SDL_CreateTexture(
                 renderer.get(), SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, new_w, new_h);
             if (!raw) {
                 throw std::runtime_error(std::format("SDL_CreateTexture failed: {}", SDL_GetError()));
@@ -201,23 +215,23 @@ namespace nandina::runtime {
 
             // 重绑 ThorVG 画布到新缓冲区
             const auto result = canvas->target(pixel_buffer.data(),
-                static_cast<std::uint32_t>(new_w), // stride（以像素计）
-                static_cast<std::uint32_t>(new_w),
-                static_cast<std::uint32_t>(new_h),
-                tvg::ColorSpace::ARGB8888);
+                                               static_cast<std::uint32_t>(new_w), // stride（以像素计）
+                                               static_cast<std::uint32_t>(new_w),
+                                               static_cast<std::uint32_t>(new_h),
+                                               tvg::ColorSpace::ARGB8888);
 
             if (result != tvg::Result::Success) {
                 throw std::runtime_error("ThorVG SwCanvas::target rebind failed");
             }
             const auto target_ready = SteadyClock::now();
 
-            width  = new_w;
+            width = new_w;
             height = new_h;
 
             const auto texture_ms = elapsed_ms(rebuild_start, texture_ready);
-            const auto buffer_ms  = elapsed_ms(texture_ready, buffer_ready);
-            const auto target_ms  = elapsed_ms(buffer_ready, target_ready);
-            const auto total_ms   = elapsed_ms(rebuild_start, target_ready);
+            const auto buffer_ms = elapsed_ms(texture_ready, buffer_ready);
+            const auto target_ms = elapsed_ms(buffer_ready, target_ready);
+            const auto total_ms = elapsed_ms(rebuild_start, target_ready);
 
             if (total_ms >= slow_resize_threshold_ms && should_emit_slow_log(last_slow_resize_log_ms)) {
                 auto log = nandina::log::get("runtime.nan_window");
@@ -236,8 +250,8 @@ namespace nandina::runtime {
     // ============================================================
     // NanWindow 构造（私有，仅由 Builder::build() 调用）
     // ============================================================
-    NanWindow::NanWindow(const Config& config) : NanWindow(config.title, config.width, config.height, config.resizable,
-        config.high_dpi) {
+    NanWindow::NanWindow(const Config &config) : NanWindow(config.title, config.width, config.height, config.resizable,
+                                                           config.high_dpi) {
     }
 
     NanWindow::NanWindow(std::string_view title, int width, int height, bool resizable, bool high_dpi) : m_impl(
@@ -259,15 +273,15 @@ namespace nandina::runtime {
         if (high_dpi)
             flags |= SDL_WINDOW_HIGH_PIXEL_DENSITY;
 
-        m_impl->title  = std::string(title);
-        m_impl->width  = width;
+        m_impl->title = std::string(title);
+        m_impl->width = width;
         m_impl->height = height;
 
         // 允许点击聚焦时同时触发鼠标按键事件（修复首次进入窗口无法点击按钮的问题）
         SDL_SetHint(SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, "1");
 
-        SDL_Window* raw_window     = nullptr;
-        SDL_Renderer* raw_renderer = nullptr;
+        SDL_Window *raw_window = nullptr;
+        SDL_Renderer *raw_renderer = nullptr;
 
         if (!SDL_CreateWindowAndRenderer(m_impl->title.c_str(), width, height, flags, &raw_window, &raw_renderer)) {
             runtime_bootstrap().release();
@@ -277,10 +291,11 @@ namespace nandina::runtime {
         m_impl->window.reset(raw_window);
         m_impl->renderer.reset(raw_renderer);
 
-        if (auto* cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_DEFAULT)) {
+        if (auto *cursor = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_DEFAULT)) {
             m_impl->default_cursor.reset(cursor);
             m_impl->reset_cursor();
-        } else {
+        }
+        else {
             log.warn("Failed to create default cursor: {}", SDL_GetError());
         }
 
@@ -288,7 +303,7 @@ namespace nandina::runtime {
             log.warn("Failed to enable renderer vsync: {}", SDL_GetError());
         }
 
-        m_impl->dpi_scale = SDL_GetWindowDisplayScale(raw_window);
+        m_impl->update_pixel_logical_ratio();
 
         // ── ThorVG SwCanvas 初始化 ───────────────────────────────
         // 先构造画布对象，再通过 rebuild_surface 统一创建纹理和绑定缓冲区
@@ -312,13 +327,14 @@ namespace nandina::runtime {
             renderer_vsync = 0;
         }
 
-        log.info("Window ready: \"{}\" {}x{} (DPI={:.2f}, renderer={}, vsync={})",
-            title,
-            width,
-            height,
-            m_impl->dpi_scale,
-            SDL_GetRendererName(m_impl->renderer.get()),
-            renderer_vsync);
+        log.info("Window ready: \"{}\" {}x{} (ratio=({:.2f},{:.2f}), renderer={}, vsync={})",
+                 title,
+                 width,
+                 height,
+                 m_impl->pixel_logical_ratio_x,
+                 m_impl->pixel_logical_ratio_y,
+                 SDL_GetRendererName(m_impl->renderer.get()),
+                 renderer_vsync);
     }
 
     // ============================================================
@@ -341,9 +357,9 @@ namespace nandina::runtime {
     // ============================================================
     // 移动语义
     // ============================================================
-    NanWindow::NanWindow(NanWindow&&) noexcept = default;
+    NanWindow::NanWindow(NanWindow &&) noexcept = default;
 
-    NanWindow& NanWindow::operator=(NanWindow&&) noexcept = default;
+    NanWindow& NanWindow::operator=(NanWindow &&) noexcept = default;
 
     // ============================================================
     // 属性访问
@@ -365,7 +381,7 @@ namespace nandina::runtime {
     }
 
     auto NanWindow::dpi_scale() const noexcept -> float {
-        return m_impl ? m_impl->dpi_scale : 1.0f;
+        return m_impl ? m_impl->pixel_logical_ratio_x : 1.0f;
     }
 
     // ============================================================
@@ -388,124 +404,124 @@ namespace nandina::runtime {
             return true;
 
         bool has_pending_resize = false;
-        int pending_logical_w   = 0;
-        int pending_logical_h   = 0;
+        int pending_logical_w = 0;
+        int pending_logical_h = 0;
 
         SDL_Event ev;
         while (SDL_PollEvent(&ev)) {
             switch (ev.type) {
-            case SDL_EVENT_QUIT:
-            case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
-                m_impl->should_close = true;
-                on_close_requested();
-                break;
+                case SDL_EVENT_QUIT:
+                case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
+                    m_impl->should_close = true;
+                    on_close_requested();
+                    break;
 
-            case SDL_EVENT_WINDOW_RESIZED: {
-                has_pending_resize = true;
-                pending_logical_w  = ev.window.data1;
-                pending_logical_h  = ev.window.data2;
-                break;
-            }
+                case SDL_EVENT_WINDOW_RESIZED: {
+                    has_pending_resize = true;
+                    pending_logical_w = ev.window.data1;
+                    pending_logical_h = ev.window.data2;
+                    break;
+                }
 
-            case SDL_EVENT_WINDOW_FOCUS_GAINED:
-                m_impl->reset_cursor();
-                on_focus_gained();
-                break;
+                case SDL_EVENT_WINDOW_FOCUS_GAINED:
+                    m_impl->reset_cursor();
+                    on_focus_gained();
+                    break;
 
-            case SDL_EVENT_WINDOW_FOCUS_LOST:
-                on_focus_lost();
-                break;
+                case SDL_EVENT_WINDOW_FOCUS_LOST:
+                    on_focus_lost();
+                    break;
 
-            case SDL_EVENT_MOUSE_MOTION: {
-                on_pointer_move(PointerMoveEvent{
-                    .x = static_cast<double>(ev.motion.x) * m_impl->dpi_scale,
-                    .y = static_cast<double>(ev.motion.y) * m_impl->dpi_scale,
-                    .delta_x = static_cast<double>(ev.motion.xrel) * m_impl->dpi_scale,
-                    .delta_y = static_cast<double>(ev.motion.yrel) * m_impl->dpi_scale,
-                });
-                break;
-            }
+                case SDL_EVENT_MOUSE_MOTION: {
+                    on_pointer_move(PointerMoveEvent{
+                        .x = static_cast<double>(ev.motion.x) * m_impl->pixel_logical_ratio_x,
+                        .y = static_cast<double>(ev.motion.y) * m_impl->pixel_logical_ratio_y,
+                        .delta_x = static_cast<double>(ev.motion.xrel) * m_impl->pixel_logical_ratio_x,
+                        .delta_y = static_cast<double>(ev.motion.yrel) * m_impl->pixel_logical_ratio_y,
+                    });
+                    break;
+                }
 
-            case SDL_EVENT_WINDOW_MOUSE_ENTER: {
-                float mouse_x = 0.0f;
-                float mouse_y = 0.0f;
-                SDL_GetMouseState(&mouse_x, &mouse_y);
-                m_impl->ensure_input_focus();
-                m_impl->reset_cursor();
-                on_pointer_enter(PointerMoveEvent{
-                    .x = static_cast<double>(mouse_x) * m_impl->dpi_scale,
-                    .y = static_cast<double>(mouse_y) * m_impl->dpi_scale,
-                    .delta_x = 0.0,
-                    .delta_y = 0.0,
-                });
-                break;
-            }
+                case SDL_EVENT_WINDOW_MOUSE_ENTER: {
+                    float mouse_x = 0.0f;
+                    float mouse_y = 0.0f;
+                    SDL_GetMouseState(&mouse_x, &mouse_y);
+                    m_impl->ensure_input_focus();
+                    m_impl->reset_cursor();
+                    on_pointer_enter(PointerMoveEvent{
+                        .x = static_cast<double>(mouse_x) * m_impl->pixel_logical_ratio_x,
+                        .y = static_cast<double>(mouse_y) * m_impl->pixel_logical_ratio_y,
+                        .delta_x = 0.0,
+                        .delta_y = 0.0,
+                    });
+                    break;
+                }
 
-            case SDL_EVENT_WINDOW_MOUSE_LEAVE: {
-                float mouse_x = 0.0f;
-                float mouse_y = 0.0f;
-                SDL_GetMouseState(&mouse_x, &mouse_y);
-                m_impl->reset_cursor();
-                on_pointer_leave(PointerMoveEvent{
-                    .x = static_cast<double>(mouse_x) * m_impl->dpi_scale,
-                    .y = static_cast<double>(mouse_y) * m_impl->dpi_scale,
-                    .delta_x = 0.0,
-                    .delta_y = 0.0,
-                });
-                break;
-            }
+                case SDL_EVENT_WINDOW_MOUSE_LEAVE: {
+                    float mouse_x = 0.0f;
+                    float mouse_y = 0.0f;
+                    SDL_GetMouseState(&mouse_x, &mouse_y);
+                    m_impl->reset_cursor();
+                    on_pointer_leave(PointerMoveEvent{
+                        .x = static_cast<double>(mouse_x) * m_impl->pixel_logical_ratio_x,
+                        .y = static_cast<double>(mouse_y) * m_impl->pixel_logical_ratio_y,
+                        .delta_x = 0.0,
+                        .delta_y = 0.0,
+                    });
+                    break;
+                }
 
-            case SDL_EVENT_MOUSE_BUTTON_DOWN: {
-                m_impl->ensure_input_focus();
-                on_pointer_down(PointerButtonEvent{
-                    .button = to_pointer_button(ev.button.button),
-                    .x = static_cast<double>(ev.button.x) * m_impl->dpi_scale,
-                    .y = static_cast<double>(ev.button.y) * m_impl->dpi_scale,
-                    .is_repeat = false,
-                });
-                break;
-            }
+                case SDL_EVENT_MOUSE_BUTTON_DOWN: {
+                    m_impl->ensure_input_focus();
+                    on_pointer_down(PointerButtonEvent{
+                        .button = to_pointer_button(ev.button.button),
+                        .x = static_cast<double>(ev.button.x) * m_impl->pixel_logical_ratio_x,
+                        .y = static_cast<double>(ev.button.y) * m_impl->pixel_logical_ratio_y,
+                        .is_repeat = false,
+                    });
+                    break;
+                }
 
-            case SDL_EVENT_MOUSE_BUTTON_UP: {
-                on_pointer_up(PointerButtonEvent{
-                    .button = to_pointer_button(ev.button.button),
-                    .x = static_cast<double>(ev.button.x) * m_impl->dpi_scale,
-                    .y = static_cast<double>(ev.button.y) * m_impl->dpi_scale,
-                    .is_repeat = false,
-                });
-                break;
-            }
+                case SDL_EVENT_MOUSE_BUTTON_UP: {
+                    on_pointer_up(PointerButtonEvent{
+                        .button = to_pointer_button(ev.button.button),
+                        .x = static_cast<double>(ev.button.x) * m_impl->pixel_logical_ratio_x,
+                        .y = static_cast<double>(ev.button.y) * m_impl->pixel_logical_ratio_y,
+                        .is_repeat = false,
+                    });
+                    break;
+                }
 
-            case SDL_EVENT_MOUSE_WHEEL: {
-                on_pointer_wheel(PointerWheelEvent{
-                    .x = static_cast<double>(ev.wheel.x),
-                    .y = static_cast<double>(ev.wheel.y),
-                });
-                break;
-            }
+                case SDL_EVENT_MOUSE_WHEEL: {
+                    on_pointer_wheel(PointerWheelEvent{
+                        .x = static_cast<double>(ev.wheel.x),
+                        .y = static_cast<double>(ev.wheel.y),
+                    });
+                    break;
+                }
 
-            case SDL_EVENT_KEY_DOWN: {
-                on_key_down(KeyEvent{
-                    .key_code = static_cast<std::int32_t>(ev.key.key),
-                    .is_repeat = ev.key.repeat,
-                });
-                break;
-            }
+                case SDL_EVENT_KEY_DOWN: {
+                    on_key_down(KeyEvent{
+                        .key_code = static_cast<std::int32_t>(ev.key.key),
+                        .is_repeat = ev.key.repeat,
+                    });
+                    break;
+                }
 
-            case SDL_EVENT_KEY_UP: {
-                on_key_up(KeyEvent{
-                    .key_code = static_cast<std::int32_t>(ev.key.key),
-                    .is_repeat = false,
-                });
-                break;
-            }
+                case SDL_EVENT_KEY_UP: {
+                    on_key_up(KeyEvent{
+                        .key_code = static_cast<std::int32_t>(ev.key.key),
+                        .is_repeat = false,
+                    });
+                    break;
+                }
 
-            case SDL_EVENT_TEXT_INPUT:
-                on_text_input(ev.text.text);
-                break;
+                case SDL_EVENT_TEXT_INPUT:
+                    on_text_input(ev.text.text);
+                    break;
 
-            default:
-                break;
+                default:
+                    break;
             }
         }
 
@@ -515,17 +531,19 @@ namespace nandina::runtime {
             int pixel_w = 0;
             int pixel_h = 0;
             SDL_GetWindowSizeInPixels(m_impl->window.get(), &pixel_w, &pixel_h);
-            log.debug("Window resized: logical={}x{}, pixel={}x{}", pending_logical_w, pending_logical_h, pixel_w, pixel_h);
+            log.debug("Window resized: logical={}x{}, pixel={}x{}", pending_logical_w, pending_logical_h, pixel_w,
+                      pixel_h);
 
             if (pixel_w != m_impl->width || pixel_h != m_impl->height) {
                 try {
                     m_impl->rebuild_surface(pixel_w, pixel_h);
-                } catch (const std::exception& e) {
+                }
+                catch (const std::exception &e) {
                     log.error("rebuild_surface failed on resize: {}", e.what());
                 }
             }
 
-            m_impl->dpi_scale = SDL_GetWindowDisplayScale(m_impl->window.get());
+            m_impl->update_pixel_logical_ratio();
             on_resize(pending_logical_w, pending_logical_h);
         }
 
@@ -541,7 +559,7 @@ namespace nandina::runtime {
         if (!m_impl->texture || m_impl->width <= 0 || m_impl->height <= 0)
             return;
 
-        auto& canvas = *m_impl->canvas;
+        auto &canvas = *m_impl->canvas;
         const auto frame_start = SteadyClock::now();
 
         // 1. 清空上一帧所有 ThorVG 绘制指令
@@ -564,9 +582,9 @@ namespace nandina::runtime {
 
         // 4. pixel_buffer → SDL 流式纹理（CPU → GPU 上传）
         if (!SDL_UpdateTexture(m_impl->texture.get(),
-            nullptr,
-            m_impl->pixel_buffer.data(),
-            m_impl->width * static_cast<int>(sizeof(std::uint32_t)))) {
+                               nullptr,
+                               m_impl->pixel_buffer.data(),
+                               m_impl->width * static_cast<int>(sizeof(std::uint32_t)))) {
             return;
         }
         const auto upload_done = SteadyClock::now();
@@ -583,19 +601,19 @@ namespace nandina::runtime {
         SDL_RenderPresent(m_impl->renderer.get());
         const auto present_done = SteadyClock::now();
 
-        const auto remove_ms  = elapsed_ms(frame_start, remove_done);
-        const auto build_ms   = elapsed_ms(remove_done, build_done);
-        const auto draw_ms    = elapsed_ms(build_done, draw_done);
-        const auto sync_ms    = elapsed_ms(draw_done, sync_done);
-        const auto upload_ms  = elapsed_ms(sync_done, upload_done);
-        const auto clear_ms   = elapsed_ms(upload_done, clear_done);
+        const auto remove_ms = elapsed_ms(frame_start, remove_done);
+        const auto build_ms = elapsed_ms(remove_done, build_done);
+        const auto draw_ms = elapsed_ms(build_done, draw_done);
+        const auto sync_ms = elapsed_ms(draw_done, sync_done);
+        const auto upload_ms = elapsed_ms(sync_done, upload_done);
+        const auto clear_ms = elapsed_ms(upload_done, clear_done);
         const auto texture_ms = elapsed_ms(clear_done, texture_done);
         const auto present_ms = elapsed_ms(texture_done, present_done);
-        const auto total_ms   = elapsed_ms(frame_start, present_done);
+        const auto total_ms = elapsed_ms(frame_start, present_done);
 
         const bool slow_frame = total_ms >= slow_frame_threshold_ms || build_ms >= slow_stage_threshold_ms
-            || draw_ms >= slow_stage_threshold_ms || sync_ms >= slow_stage_threshold_ms
-            || upload_ms >= slow_stage_threshold_ms || present_ms >= slow_stage_threshold_ms;
+                                || draw_ms >= slow_stage_threshold_ms || sync_ms >= slow_stage_threshold_ms
+                                || upload_ms >= slow_stage_threshold_ms || present_ms >= slow_stage_threshold_ms;
 
         if (slow_frame && should_emit_slow_log(m_impl->last_slow_frame_log_ms)) {
             auto log = nandina::log::get("runtime.nan_window");
@@ -630,9 +648,9 @@ namespace nandina::runtime {
             }
 
             const auto current_counter = SDL_GetPerformanceCounter();
-            const auto freq            = static_cast<double>(SDL_GetPerformanceFrequency());
+            const auto freq = static_cast<double>(SDL_GetPerformanceFrequency());
             const double delta_seconds = freq > 0.0 ? static_cast<double>(current_counter - last_counter) / freq : 0.0;
-            last_counter               = current_counter;
+            last_counter = current_counter;
 
             on_update(delta_seconds);
 
@@ -641,15 +659,15 @@ namespace nandina::runtime {
             }
 
             const auto frame_end_counter = SDL_GetPerformanceCounter();
-            const auto frame_freq        = static_cast<double>(SDL_GetPerformanceFrequency());
-            const double frame_seconds   = frame_freq > 0.0
-                ? static_cast<double>(frame_end_counter - current_counter) / frame_freq
-                : 0.0;
+            const auto frame_freq = static_cast<double>(SDL_GetPerformanceFrequency());
+            const double frame_seconds = frame_freq > 0.0
+                                             ? static_cast<double>(frame_end_counter - current_counter) / frame_freq
+                                             : 0.0;
 
             const auto now_tick_ms = static_cast<std::uint64_t>(SDL_GetTicks());
             const bool recent_resize = m_impl && m_impl->last_resize_event_ms != 0
-                && now_tick_ms >= m_impl->last_resize_event_ms
-                && now_tick_ms - m_impl->last_resize_event_ms <= interactive_resize_window_ms;
+                                       && now_tick_ms >= m_impl->last_resize_event_ms
+                                       && now_tick_ms - m_impl->last_resize_event_ms <= interactive_resize_window_ms;
 
             if (!recent_resize && frame_seconds < target_frame_seconds) {
                 const auto delay_ms = static_cast<Uint32>((target_frame_seconds - frame_seconds) * 1000.0);
@@ -666,7 +684,7 @@ namespace nandina::runtime {
     auto NanWindow::on_update(double) -> void {
     }
 
-    auto NanWindow::on_draw(tvg::SwCanvas&) -> void {
+    auto NanWindow::on_draw(tvg::SwCanvas &) -> void {
     }
 
     auto NanWindow::should_present_frame() const noexcept -> bool {
@@ -685,28 +703,28 @@ namespace nandina::runtime {
     auto NanWindow::on_close_requested() -> void {
     }
 
-    auto NanWindow::on_pointer_move(const PointerMoveEvent&) -> void {
+    auto NanWindow::on_pointer_move(const PointerMoveEvent &) -> void {
     }
 
-    auto NanWindow::on_pointer_enter(const PointerMoveEvent&) -> void {
+    auto NanWindow::on_pointer_enter(const PointerMoveEvent &) -> void {
     }
 
-    auto NanWindow::on_pointer_leave(const PointerMoveEvent&) -> void {
+    auto NanWindow::on_pointer_leave(const PointerMoveEvent &) -> void {
     }
 
-    auto NanWindow::on_pointer_down(const PointerButtonEvent&) -> void {
+    auto NanWindow::on_pointer_down(const PointerButtonEvent &) -> void {
     }
 
-    auto NanWindow::on_pointer_up(const PointerButtonEvent&) -> void {
+    auto NanWindow::on_pointer_up(const PointerButtonEvent &) -> void {
     }
 
-    auto NanWindow::on_pointer_wheel(const PointerWheelEvent&) -> void {
+    auto NanWindow::on_pointer_wheel(const PointerWheelEvent &) -> void {
     }
 
-    auto NanWindow::on_key_down(const KeyEvent&) -> void {
+    auto NanWindow::on_key_down(const KeyEvent &) -> void {
     }
 
-    auto NanWindow::on_key_up(const KeyEvent&) -> void {
+    auto NanWindow::on_key_up(const KeyEvent &) -> void {
     }
 
     auto NanWindow::on_text_input(std::string_view) -> void {
@@ -731,7 +749,7 @@ namespace nandina::runtime {
     }
 
     auto NanWindow::Builder::set_size(int width, int height) noexcept -> Builder& {
-        m_width  = width;
+        m_width = width;
         m_height = height;
         return *this;
     }
