@@ -34,6 +34,20 @@
       }
     },
     {
+      "name": "linux-base",
+      "hidden": true,
+      "inherits": "base",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      },
+      "cacheVariables": {
+        "VCPKG_TARGET_TRIPLET": "x64-linux",
+        "VCPKG_HOST_TRIPLET": "x64-linux"
+      }
+    },
+    {
       "name": "default",
       "displayName": "Default (Debug)",
       "description": "向后兼容的默认配置，输出至 build/，clangd 默认指向此目录。VCPKG_MANIFEST_INSTALL=OFF：在 GitHub TLS 受限的沙箱环境中跳过 vcpkg 安装，回退到系统已安装的包。在网络正常的机器上请使用 debug / release 预设。",
@@ -112,6 +126,28 @@
         "CMAKE_BUILD_TYPE": "Release",
         "NANDINA_BUILD_TESTS": "OFF"
       }
+    },
+    {
+      "name": "linux-debug",
+      "displayName": "Linux Debug",
+      "description": "Linux x64 Debug 构建，使用 vcpkg x64-linux triplet，启用测试，输出至 build/linux-debug",
+      "inherits": "linux-base",
+      "binaryDir": "${sourceDir}/build/linux-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "NANDINA_BUILD_TESTS": "ON"
+      }
+    },
+    {
+      "name": "linux-release",
+      "displayName": "Linux Release",
+      "description": "Linux x64 Release 构建，使用 vcpkg x64-linux triplet，禁用测试，输出至 build/linux-release",
+      "inherits": "linux-base",
+      "binaryDir": "${sourceDir}/build/linux-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "NANDINA_BUILD_TESTS": "OFF"
+      }
     }
   ],
   "buildPresets": [
@@ -149,6 +185,16 @@
       "name": "windows-release",
       "displayName": "Build (windows-release)",
       "configurePreset": "windows-release"
+    },
+    {
+      "name": "linux-debug",
+      "displayName": "Build (linux-debug)",
+      "configurePreset": "linux-debug"
+    },
+    {
+      "name": "linux-release",
+      "displayName": "Build (linux-release)",
+      "configurePreset": "linux-release"
     }
   ],
   "testPresets": [
@@ -191,6 +237,15 @@
       "name": "windows-relwithdebinfo",
       "displayName": "Test (windows-relwithdebinfo)",
       "configurePreset": "windows-relwithdebinfo",
+      "output": {
+        "outputOnFailure": true,
+        "verbosity": "default"
+      }
+    },
+    {
+      "name": "linux-debug",
+      "displayName": "Test (linux-debug)",
+      "configurePreset": "linux-debug",
       "output": {
         "outputOnFailure": true,
         "verbosity": "default"

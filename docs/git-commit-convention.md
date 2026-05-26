@@ -12,6 +12,7 @@
 ```
 
 **格式示例**：
+
 ```
 feat(runtime): 添加 NanWindow 窗口类
 docs(issue004): 优化开发文档导航页结构与内容
@@ -21,11 +22,11 @@ test(foundation): 为 geometry 模块添加单元测试 (issue003)
 
 ### 1.1 组成部分
 
-| 部分 | 说明 | 要求 |
-|------|------|------|
-| `<type>` | 提交类型（见 §2） | **必填**，小写字母 |
-| `<scope>` | 影响范围（见 §3） | **必填**，小写字母 + 下划线 |
-| `<subject>` | 提交描述 | **必填**，中文或英文，句尾不加句号 |
+| 部分          | 说明         | 要求                  |
+|-------------|------------|---------------------|
+| `<type>`    | 提交类型（见 §2） | **必填**，小写字母         |
+| `<scope>`   | 影响范围（见 §3） | **必填**，小写字母 + 下划线   |
+| `<subject>` | 提交描述       | **必填**，中文或英文，句尾不加句号 |
 
 ### 1.2 完整示例
 
@@ -41,16 +42,16 @@ style: 统一代码缩进为 4 空格
 
 ## 2. 提交类型（type）
 
-| 类型 | 说明 | 示例 |
-|------|------|------|
-| `feat` | 新功能（feature） | `feat(foundation): 创建 nan_types 基础枚举模块` |
-| `fix` | 修复 bug | `fix(window): 修复窗口关闭时内存泄漏` |
+| 类型         | 说明                  | 示例                                                 |
+|------------|---------------------|----------------------------------------------------|
+| `feat`     | 新功能（feature）        | `feat(foundation): 创建 nan_types 基础枚举模块`            |
+| `fix`      | 修复 bug              | `fix(window): 修复窗口关闭时内存泄漏`                         |
 | `refactor` | 重构（既不修复 bug 也不增加功能） | `refactor(runtime): 抽取 PointerButton 至 foundation` |
-| `docs` | 仅文档变更 | `docs(issue004): 优化开发文档导航页结构与内容` |
-| `test` | 添加或修改测试 | `test(foundation): 为 geometry 模块添加单元测试` |
-| `chore` | 构建/工具/依赖变更 | `chore(build): 启用 C++20 Modules 编译` |
-| `style` | 代码样式格式化（不影响逻辑） | `style: 统一缩进为 4 空格` |
-| `perf` | 性能优化 | `perf(render): 缓存 ThorVG 画布指针` |
+| `docs`     | 仅文档变更               | `docs(issue004): 优化开发文档导航页结构与内容`                   |
+| `test`     | 添加或修改测试             | `test(foundation): 为 geometry 模块添加单元测试`            |
+| `chore`    | 构建/工具/依赖变更          | `chore(build): 启用 C++20 Modules 编译`                |
+| `style`    | 代码样式格式化（不影响逻辑）      | `style: 统一缩进为 4 空格`                                |
+| `perf`     | 性能优化                | `perf(render): 缓存 ThorVG 画布指针`                     |
 
 ## 3. 影响范围（scope）
 
@@ -58,22 +59,22 @@ style: 统一代码缩进为 4 空格
 
 与项目文件系统路径对应：
 
-| scope 值 | 对应目录 | 说明 |
-|----------|---------|------|
-| `foundation` | `foundation/` | 基础类型模块 |
-| `runtime` | `runtime/` | 运行时核心模块 |
-| `app` | `app/` | 应用程序层模块 |
-| `reactive` | `reactive/` | 响应式系统模块 |
-| `layout` | `layout/` | 布局引擎模块 |
-| `render` | `render/` | 渲染后端模块 |
-| `widgets` | `widgets/` | 控件模块 |
-| `theme` | `theme/` | 主题系统模块 |
-| `text` | `text/` | 文字排版模块 |
-| `bindings` | `bindings/` | 脚本绑定模块 |
-| `showcase` | `showcase/` | 示例演示程序 |
-| `tests` | `tests/` | 测试套件 |
-| `build` | `CMakeLists.txt`、`CMakePresets.json` 等 | 构建系统配置 |
-| `docs` | `docs/` | 项目文档 |
+| scope 值      | 对应目录                                   | 说明      |
+|--------------|----------------------------------------|---------|
+| `foundation` | `foundation/`                          | 基础类型模块  |
+| `runtime`    | `runtime/`                             | 运行时核心模块 |
+| `app`        | `app/`                                 | 应用程序层模块 |
+| `reactive`   | `reactive/`                            | 响应式系统模块 |
+| `layout`     | `layout/`                              | 布局引擎模块  |
+| `render`     | `render/`                              | 渲染后端模块  |
+| `widgets`    | `widgets/`                             | 控件模块    |
+| `theme`      | `theme/`                               | 主题系统模块  |
+| `text`       | `text/`                                | 文字排版模块  |
+| `bindings`   | `bindings/`                            | 脚本绑定模块  |
+| `showcase`   | `showcase/`                            | 示例演示程序  |
+| `tests`      | `tests/`                               | 测试套件    |
+| `build`      | `CMakeLists.txt`、`CMakePresets.json` 等 | 构建系统配置  |
+| `docs`       | `docs/`                                | 项目文档    |
 
 ### 3.2 Issue 范围
 
@@ -85,6 +86,7 @@ refactor: 使用二级命名空间按模块分类 (issue003)
 ```
 
 **规则**：
+
 - 如果变更集中在 1-2 个模块，使用模块名作为 scope。
 - 如果变更涉及 3 个以上模块或重构/修复，使用 `issue<N>` 作为 scope。
 - `(issue<N>)` 也可在 subject 末尾附加，用于跟踪 Issue 编号。

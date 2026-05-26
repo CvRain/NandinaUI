@@ -11,10 +11,23 @@ set(PROJECT_CPP_FILES
 
 set(PROJECT_CPP_MODULE_FILES
         nan_showcase.cppm
+        main_page.cppm
         pages/sandbox_page.cppm
 )
 
-add_executable(${PROJECT_NAME} ${PROJECT_CPP_FILES})
+if (CMAKE_HOST_SYSTEM_NAME MATCHES "Linux")
+    message("current platform: Linux ")
+    add_executable(${PROJECT_NAME} ${PROJECT_CPP_FILES})
+
+elseif (CMAKE_HOST_SYSTEM_NAME MATCHES "Windows")
+    message("current platform: Windows ")
+    add_executable(${PROJECT_NAME} WIN32 ${PROJECT_CPP_FILES})
+    set_target_properties(${PROJECT_NAME} PROPERTIES WIN32_EXECUTABLE TRUE)
+else ()
+    message("current platform: unknown ")
+    add_executable(${PROJECT_NAME} ${PROJECT_CPP_FILES})
+endif ()
+
 
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_26)
 
