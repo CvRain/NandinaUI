@@ -40,8 +40,10 @@ namespace nandina::showcase {
         using namespace nandina::app;
 
         auto label = app::label()
-                .text("Hello, NandinaUI!");
+                .text("Hello, NandinaUI!")
+                .align(widgets::TextAlign::Center)
+                .color(NanColor::from(NanRgb{"#4c51bf"}));
 
-        return mount(column(children(label)));
+        return mount(center(label));
     }
 }

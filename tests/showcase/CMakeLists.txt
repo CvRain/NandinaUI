@@ -7,6 +7,7 @@ nandina_add_test(
     MODULES
         ${CMAKE_SOURCE_DIR}/showcase/nan_showcase.cppm
         ${CMAKE_SOURCE_DIR}/showcase/pages/sandbox_page.cppm
+        ${CMAKE_SOURCE_DIR}/showcase/main_page.cppm
     DEPS
         nandina::app
         nandina::layout

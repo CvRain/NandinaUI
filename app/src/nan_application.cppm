@@ -1,3 +1,31 @@
+/**
+ * @file nan_application.cppm
+ * @brief NandinaUI 应用开发层主模块 — Authoring DSL 与 App Shell
+ *
+ * 本模块是 nandina.app 层的聚合入口，提供：
+ *   - **Node 系统**  — 可组合节点（Widget 所有权 + Flutter 风格链式配置）
+ *   - **NodeFactory** — 通用节点工厂（消除逐组件手写样板，第三方 Widget 即插即用）
+ *   - **组件工厂**   — row / column / center / padding / button / label 等语法糖
+ *   - **挂载系统**   — MountedNodeComponent（将 authoring 树挂载到 Widget 树）
+ *   - **应用窗口**   — NanAppWindow + BridgeWindow（SDL 窗口封装 + resize 节流）
+ *
+ * ## 模块拆分计划（待 GCC 模块 bug 修复后执行）
+ *
+ * 当前因 GCC 16 已知问题保持单文件：
+ *   1. `export` 类型跨模块不可重声明（阻止 friend-free 后的模块分离）
+ *   2. thorvg + std::unique_ptr 组合在模块分区接口中触发 .gcm 序列化损坏
+ *
+ * 待编译器修复后拆分为 5 个模块分区：
+ *   :node              — Node / Ref / Children / NodeLike / NodeFactory
+ *   :widget_nodes      — WidgetNode / LabelNode / ButtonNode
+ *   :component         — NanComponent / MountedNodeComponent / mount()
+ *   :builtin_factories — row / column / center / padding 等语法糖工厂
+ *   :app_window        — NanAppWindow / BridgeWindow / NanApplication
+ *
+ * @see docs/component-authoring-and-mounting.md
+ * @see docs/component-composition-api-v1.md
+ */
+
 module;
 
 #include <chrono>
@@ -92,16 +120,10 @@ export namespace nandina::app {
             return m_ptr != nullptr;
         }
 
-    private:
-        friend class Node;
-
-        auto bind(runtime::NanWidget* widget) noexcept -> void {
-            m_ptr = dynamic_cast<T*>(widget);
-        }
-
-        auto reset() noexcept -> void {
-            m_ptr = nullptr;
-        }
+        /** @internal 绑定到真实 widget */
+        auto bind(runtime::NanWidget* widget) noexcept -> void { m_ptr = dynamic_cast<T*>(widget); }
+        /** @internal 重置引用 */
+        auto reset() noexcept -> void { m_ptr = nullptr; }
 
         T* m_ptr{nullptr};
     };
@@ -510,106 +532,50 @@ export namespace nandina::app {
             return std::forward<Self>(self);
         }
 
-    private:
-        using RefBinder   = std::move_only_function<void()>;
-        using RefResetter = std::move_only_function<void()>;
+        // ── 内部 API（框架层使用）─────────────────────────────────────────
 
-        /// 穿透 SizedBox 包裹层找到真实组件
+        /** @internal 从 widget 构造节点 */
+        explicit Node(std::unique_ptr<runtime::NanWidget> widget) : m_widget(std::move(widget)) {}
+
+        /** @internal 提取内部 widget 所有权（仅右值） */
+        [[nodiscard]] auto take_widget() && -> std::unique_ptr<runtime::NanWidget> { return std::move(m_widget); }
+
+        /** @internal 提取定位属性（仅右值） */
+        [[nodiscard]] auto take_positioned_props() && -> nandina::layout::PositionedProps { return std::move(m_positioned_props); }
+
+        /** @internal 吸收子节点的 Ref binder */
+        auto absorb(Node child) -> void {
+            for (auto& b : child.m_ref_binders) m_ref_binders.push_back(std::move(b));
+            for (auto& r : child.m_ref_resetters) m_ref_resetters.push_back(std::move(r));
+        }
+
+        /** @internal 绑定所有 Ref<T> */
+        auto bind_refs() -> void { for (auto& b : m_ref_binders) b(); }
+
+        /** @internal 重置所有 Ref<T> */
+        auto reset_refs() -> void { for (auto& r : m_ref_resetters) r(); }
+
+        /** 获取底层 widget 指针 */
+        [[nodiscard]] auto widget_ptr() -> runtime::NanWidget* { return m_widget.get(); }
+
+        /** @internal 穿透 SizedBox 找真实组件 */
         [[nodiscard]] auto unwrapped() const -> runtime::NanWidget* {
-            if (!m_widget)
-                return nullptr;
+            if (!m_widget) return nullptr;
             if (auto* sb = dynamic_cast<nandina::layout::SizedBox*>(m_widget.get())) {
                 runtime::NanWidget* result = nullptr;
-                sb->for_each_child([&](runtime::NanWidget& c) {
-                    if (!result)
-                        result = &c;
-                });
+                sb->for_each_child([&](runtime::NanWidget& c) { if (!result) result = &c; });
                 return result ? result : m_widget.get();
             }
             return m_widget.get();
         }
 
-        friend class MountedNodeComponent;
-        friend class LabelNode;
-        friend class ButtonNode;
-        template <typename W>
-        friend class WidgetNode;
+    private:
+        using RefBinder   = std::move_only_function<void()>;
+        using RefResetter = std::move_only_function<void()>;
 
-        friend auto mount(Node root) -> NanComponent::Ptr;
-
-        friend class NanAppWindow;
-        friend class Children;
-
-        friend auto row(Children children) -> Node;
-
-        friend auto column(Children children) -> Node;
-
-        friend auto stack(Children children) -> Node;
-
-        friend auto spacer(int flex) -> Node;
-
-        template <typename N>
-            requires std::derived_from<std::decay_t<N>, Node>
-        friend auto expanded(N&& child) -> Node;
-
-        template <typename N>
-            requires std::derived_from<std::decay_t<N>, Node>
-        friend auto expanded(N&& child, int flex) -> Node;
-
-        friend auto padding(Node child) -> Node;
-
-        friend auto center(Node child) -> Node;
-
-        friend auto sized_box(Node child) -> Node;
-
-        friend auto adopt(runtime::NanWidget::Ptr widget) -> Node;
-
-        friend auto label(std::string_view text) -> LabelNode;
-
-        friend auto button(std::string_view text) -> ButtonNode;
-
-        friend auto card(Children children) -> Node;
-
-        friend auto panel(Children children) -> Node;
-
-        friend auto positioned(Children children) -> Node;
-
-        explicit Node(std::unique_ptr<runtime::NanWidget> widget)
-            : m_widget(std::move(widget)) {
-        }
-
-        [[nodiscard]] auto take_widget() && -> std::unique_ptr<runtime::NanWidget> {
-            return std::move(m_widget);
-        }
-
-        [[nodiscard]] auto take_positioned_props() && -> nandina::layout::PositionedProps {
-            return std::move(m_positioned_props);
-        }
-
-        auto append_ref_binder(RefBinder binder, RefResetter resetter) -> void {
-            m_ref_binders.push_back(std::move(binder));
-            m_ref_resetters.push_back(std::move(resetter));
-        }
-
-        auto absorb(Node child) -> void {
-            for (auto& binder : child.m_ref_binders) {
-                m_ref_binders.push_back(std::move(binder));
-            }
-            for (auto& resetter : child.m_ref_resetters) {
-                m_ref_resetters.push_back(std::move(resetter));
-            }
-        }
-
-        auto bind_refs() -> void {
-            for (auto& binder : m_ref_binders) {
-                binder();
-            }
-        }
-
-        auto reset_refs() -> void {
-            for (auto& resetter : m_ref_resetters) {
-                resetter();
-            }
+        auto append_ref_binder(RefBinder b, RefResetter r) -> void {
+            m_ref_binders.push_back(std::move(b));
+            m_ref_resetters.push_back(std::move(r));
         }
 
         std::unique_ptr<runtime::NanWidget> m_widget;
@@ -929,6 +895,86 @@ export namespace nandina::app {
         return result;
     }
 
+    // ── NodeLike concept ──────────────────────────────────────────────────
+    /** @brief 可接受为 Node 的类型（含派生类） */
+    template <typename T>
+    concept NodeLike = std::derived_from<std::decay_t<T>, Node>;
+
+    // ── 工厂检测辅助 ────────────────────────────────────────────────────
+    namespace detail {
+        /** @brief 统一工厂调度：自动检测 Create() 或 create() */
+        template <typename W, typename... Args>
+        auto make_widget(Args&&... args) -> runtime::NanWidget::Ptr {
+            if constexpr (requires { { W::Create(std::forward<Args>(args)...) }; }) {
+                return W::Create(std::forward<Args>(args)...);
+            } else if constexpr (requires { { W::create(std::forward<Args>(args)...) }; }) {
+                return W::create(std::forward<Args>(args)...);
+            } else {
+                static_assert(sizeof(W) == 0,
+                    "Widget type must have a static factory: Create(...) or create(...)");
+            }
+        }
+    }
+
+    // ── NodeFactory — 通用节点工厂 ──────────────────────────────────────
+    /** @brief 通用节点工厂。第三方 Widget 可直接使用，无需修改框架文件。 */
+    class NodeFactory {
+    public:
+        [[nodiscard]] static auto from_widget(runtime::NanWidget::Ptr widget) -> Node {
+            return Node{std::move(widget)};
+        }
+        template <typename W> requires requires { { detail::make_widget<W>() }; }
+        [[nodiscard]] static auto container(Children children) -> Node {
+            Node result{detail::make_widget<W>()};
+            _populate_children<W>(result, std::move(children));
+            return result;
+        }
+        template <typename W> requires requires { { detail::make_widget<W>() }; }
+        [[nodiscard]] static auto positioned_container(Children children) -> Node {
+            Node result{detail::make_widget<W>()};
+            for (auto& child : std::move(children).take()) {
+                auto props = std::move(child).take_positioned_props();
+                if (auto cw = std::move(child).take_widget())
+                    static_cast<W*>(result.widget_ptr())->add_positioned_child(std::move(cw), std::move(props));
+                result.absorb(std::move(child));
+            }
+            return result;
+        }
+        template <typename W, typename N> requires NodeLike<N> && requires { { detail::make_widget<W>() }; }
+        [[nodiscard]] static auto wrapper(N&& child_node) -> Node {
+            Node result{detail::make_widget<W>()};
+            Node moved = std::move(child_node);
+            if (auto cw = std::move(moved).take_widget()) _set_child<W>(*result.widget_ptr(), std::move(cw));
+            result.absorb(std::move(moved));
+            return result;
+        }
+        template <typename W, typename N, typename... Args>
+            requires NodeLike<N> && requires(Args... args) { { detail::make_widget<W>(std::forward<Args>(args)...) }; }
+        [[nodiscard]] static auto wrapper_with(N&& child_node, Args&&... args) -> Node {
+            Node result{detail::make_widget<W>(std::forward<Args>(args)...)};
+            Node moved = std::move(child_node);
+            if (auto cw = std::move(moved).take_widget()) _set_child<W>(*result.widget_ptr(), std::move(cw));
+            result.absorb(std::move(moved));
+            return result;
+        }
+    private:
+        template <typename W> static auto _populate_children(Node& result, Children children) -> void {
+            for (auto& child : std::move(children).take()) {
+                if (auto cw = std::move(child).take_widget()) {
+                    if constexpr (requires(W& w, runtime::NanWidget::Ptr c) { w.add(std::move(c)); })
+                        static_cast<W*>(result.widget_ptr())->add(std::move(cw));
+                    else result.widget_ptr()->add_child(std::move(cw));
+                }
+                result.absorb(std::move(child));
+            }
+        }
+        template <typename W> static auto _set_child(runtime::NanWidget& w, runtime::NanWidget::Ptr cw) -> void {
+            if constexpr (requires(W& w2, runtime::NanWidget::Ptr c) { w2.child(std::move(c)); })
+                static_cast<W&>(w).child(std::move(cw));
+            else w.add_child(std::move(cw));
+        }
+    };
+
     class MountedNodeComponent final : public NanComponent {
     public:
         explicit MountedNodeComponent(Node root)
@@ -1058,255 +1104,90 @@ export namespace nandina::app {
         bool m_pending_root_layout{false};
     };
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // 组件工厂函数（薄包装 → NodeFactory）
+    // ═══════════════════════════════════════════════════════════════════════
+
+    /** @brief 将 authoring 节点树挂载为可运行的 NanComponent */
     [[nodiscard]] inline auto mount(Node root) -> NanComponent::Ptr {
-        if (root.empty()) {
-            return nullptr;
-        }
+        if (root.empty()) return nullptr;
         return std::make_unique<MountedNodeComponent>(std::move(root));
     }
 
+    /** @brief 将任意 NanWidget 子类包装为 Node */
     [[nodiscard]] inline auto adopt(runtime::NanWidget::Ptr widget) -> Node {
-        return Node{std::move(widget)};
+        return NodeFactory::from_widget(std::move(widget));
     }
 
+    // ── 叶子组件 ──────────────────────────────────────────────────────
+
+    /** @brief 创建 Label 节点 */
     [[nodiscard]] inline auto label(std::string_view text) -> LabelNode {
-        auto widget = nandina::widgets::Label::create();
-        if (!text.empty()) {
-            widget->set_text(text);
-        }
-        return LabelNode{std::move(widget)};
+        auto w = nandina::widgets::Label::create();
+        if (!text.empty()) w->set_text(text);
+        return LabelNode{std::move(w)};
     }
 
+    /** @brief 创建 Button 节点 */
     [[nodiscard]] inline auto button(std::string_view text) -> ButtonNode {
-        auto widget = nandina::widgets::Button::create();
-        if (!text.empty()) {
-            widget->set_text(text);
-        }
-        return ButtonNode{std::move(widget)};
+        auto w = nandina::widgets::Button::create();
+        if (!text.empty()) w->set_text(text);
+        return ButtonNode{std::move(w)};
     }
 
-    [[nodiscard]] inline auto card(Children children) -> Node {
-        auto widget = nandina::widgets::Card::create();
-        Node result{std::move(widget)};
-        for (auto& child : std::move(children).take()) {
-            auto child_widget = std::move(child).take_widget();
-            if (child_widget) {
-                result.m_widget->add_child(std::move(child_widget));
-            }
-            result.absorb(std::move(child));
-        }
-        return result;
-    }
+    // ── 容器组件 ──────────────────────────────────────────────────────
 
-    [[nodiscard]] inline auto panel(Children children) -> Node {
-        auto widget = nandina::widgets::Panel::create();
-        Node result{std::move(widget)};
-        for (auto& child : std::move(children).take()) {
-            auto child_widget = std::move(child).take_widget();
-            if (child_widget) {
-                result.m_widget->add_child(std::move(child_widget));
-            }
-            result.absorb(std::move(child));
-        }
-        return result;
-    }
+    /** @brief 水平排列容器 */
+    [[nodiscard]] inline auto row(Children children = {}) -> Node
+        { return NodeFactory::container<nandina::layout::Row>(std::move(children)); }
 
-    // ── positioned() ────────────────────────────────────────────────────────
-    // 自由定位容器：每个子节点通过 anchor_* 方法声明其相对于父容器（或先声明的兄弟节点）的位置。
-    //
-    // 示例：
-    //   positioned(children(
-    //       label("背景").fill(),                              // 填满父容器
-    //       button("确认").anchor_right(16).anchor_bottom(16)  // 固定到右下角
-    //           .anchor_width(80).anchor_height(36)
-    //   ))
-    [[nodiscard]] inline auto positioned(Children children) -> Node {
-        auto widget = nandina::layout::Positioned::Create();
-        Node result{std::move(widget)};
-        for (auto& child : std::move(children).take()) {
-            auto props        = std::move(child.m_positioned_props); // move before take_widget()
-            auto child_widget = std::move(child).take_widget();
-            if (child_widget) {
-                static_cast<nandina::layout::Positioned*>(result.m_widget.get())
-                    ->add_positioned_child(std::move(child_widget), std::move(props));
-            }
-            result.absorb(std::move(child));
-        }
-        return result;
-    }
+    /** @brief 垂直排列容器 */
+    [[nodiscard]] inline auto column(Children children = {}) -> Node
+        { return NodeFactory::container<nandina::layout::Column>(std::move(children)); }
 
-    /// row — 水平排列子组件（主轴：→，交叉轴：↓）。
-    ///
-    /// 常用链式方法：
-    ///   .gap(12)                                        — 子组件间距
-    ///   .align_items(LayoutAlignment::center)           — 交叉轴对齐（垂直居中）
-    ///   .justify_content(LayoutAlignment::space_between) — 主轴分布
-    ///   .padding(16)                                    — 内边距
-    ///
-    /// 示例：
-    ///   row(children(btn_a, btn_b)).gap(8).align_items(LayoutAlignment::center)
-    [[nodiscard]] inline auto row(Children children = {}) -> Node {
-        auto widget = nandina::layout::Row::Create();
-        Node result{std::move(widget)};
-        for (auto& child : std::move(children).take()) {
-            auto child_widget = std::move(child).take_widget();
-            if (child_widget) {
-                static_cast<nandina::layout::Row*>(result.m_widget.get())->add(std::move(child_widget));
-            }
-            result.absorb(std::move(child));
-        }
-        return result;
-    }
+    /** @brief Z 轴堆叠容器 */
+    [[nodiscard]] inline auto stack(Children children = {}) -> Node
+        { return NodeFactory::container<nandina::layout::Stack>(std::move(children)); }
 
-    /// column — 垂直排列子组件（主轴：↓，交叉轴：→）。
-    ///
-    /// 常用链式方法：
-    ///   .gap(12)                               — 子组件间距
-    ///   .align_items(LayoutAlignment::stretch) — 子组件撑满列宽
-    ///   .justify_content(LayoutAlignment::center) — 主轴居中
-    ///   .padding(16, 24)                       — 水平/垂直内边距
-    ///   .width(360)                            — 限定列宽（自动包裹 SizedBox）
-    ///
-    /// 示例：
-    ///   column(children(header, body, footer))
-    ///     .gap(12)
-    ///     .align_items(LayoutAlignment::stretch)
-    ///     .width(360)
-    [[nodiscard]] inline auto column(Children children = {}) -> Node {
-        auto widget = nandina::layout::Column::Create();
-        Node result{std::move(widget)};
-        for (auto& child : std::move(children).take()) {
-            auto child_widget = std::move(child).take_widget();
-            if (child_widget) {
-                static_cast<nandina::layout::Column*>(result.m_widget.get())->add(std::move(child_widget));
-            }
-            result.absorb(std::move(child));
-        }
-        return result;
-    }
+    /** @brief 卡片容器 */
+    [[nodiscard]] inline auto card(Children children) -> Node
+        { return NodeFactory::container<nandina::widgets::Card>(std::move(children)); }
 
-    /// stack — Z 轴堆叠容器，子组件按声明顺序从下到上叠放，均相对容器左上角对齐。
-    ///
-    /// 常用于叠加背景层与前景层，如底图 + 浮动按钮。
-    ///
-    /// 示例：
-    ///   stack(children(
-    ///       surface().fill(),           // 底层背景色块
-    ///       label("覆盖文字")            // 前景文字
-    ///   ))
-    [[nodiscard]] inline auto stack(Children children = {}) -> Node {
-        auto widget = nandina::layout::Stack::Create();
-        Node result{std::move(widget)};
-        for (auto& child : std::move(children).take()) {
-            auto child_widget = std::move(child).take_widget();
-            if (child_widget) {
-                static_cast<nandina::layout::Stack*>(result.m_widget.get())->add(std::move(child_widget));
-            }
-            result.absorb(std::move(child));
-        }
-        return result;
-    }
+    /** @brief 面板容器 */
+    [[nodiscard]] inline auto panel(Children children) -> Node
+        { return NodeFactory::container<nandina::widgets::Panel>(std::move(children)); }
 
-    /// spacer — 弹性空白占位，在 Row / Column 中吸收剩余空间。
-    ///
-    /// @param flex  弹性系数，默认 1；与 expanded 共享剩余空间时按系数比例分配
-    ///
-    /// 示例：
-    ///   // 将 reset 按钮在 Row 中水平居中
-    ///   row(children(spacer(), reset_btn, spacer()))
-    ///
-    ///   // 将两个按钮推到 Row 的两端
-    ///   row(children(btn_left, spacer(), btn_right))
-    [[nodiscard]] inline auto spacer(const int flex = 1) -> Node {
-        return Node{nandina::layout::Spacer::Create(flex)};
-    }
+    /** @brief 自由定位容器 */
+    [[nodiscard]] inline auto positioned(Children children) -> Node
+        { return NodeFactory::positioned_container<nandina::layout::Positioned>(std::move(children)); }
 
-    /// expanded — 让子组件在 Row / Column 的主轴方向上弹性填充剩余空间。
-    ///
-    /// @param child  被包裹的子节点（可直接传命名变量，无需显式 std::move）
-    /// @param flex   弹性系数，默认 1；多个 expanded 按系数比例分配剩余空间
-    ///
-    /// @code
-    /// 示例：
-    ///   // Row 中两个按钮各占 50%
-    ///   row(children(expanded(btn_a), expanded(btn_b))).gap(8)
-    ///
-    ///   // Row 中左侧占 2/3、右侧占 1/3
-    ///   row(children(expanded(left_panel, 2), expanded(right_panel, 1)))
-    ///  @endcode
-    template <typename N>
-        requires std::derived_from<std::decay_t<N>, Node>
-    [[nodiscard]] inline auto expanded(N&& child) -> Node {
-        return expanded(std::forward<N>(child), 1);
-    }
+    // ── 基础节点 ──────────────────────────────────────────────────────
 
-    template <typename N>
-        requires std::derived_from<std::decay_t<N>, Node>
-    [[nodiscard]] inline auto expanded(N&& child, const int flex) -> Node {
-        auto widget = nandina::layout::Expanded::Create(flex);
-        Node result{std::move(widget)};
-        Node child_node   = std::move(child); // 无论传入左值还是右值，均安全移动
-        auto child_widget = std::move(child_node).take_widget();
-        if (child_widget) {
-            static_cast<nandina::layout::Expanded*>(result.m_widget.get())->child(std::move(child_widget));
-        }
-        result.absorb(std::move(child_node));
-        return result;
-    }
+    /** @brief 弹性空白占位 */
+    [[nodiscard]] inline auto spacer(const int flex = 1) -> Node
+        { return NodeFactory::from_widget(nandina::layout::Spacer::Create(flex)); }
 
-    /// padding — 为子组件添加内边距包装层（Padding 容器）。
-    ///
-    /// 也可在 row / column 上直接调用 .padding() 方法，效果相同。
-    ///
-    /// 示例：
-    ///   padding(label("内容")).padding(16, 8)   // 水平 16px，垂直 8px
-    [[nodiscard]] inline auto padding(Node child) -> Node {
-        auto widget = nandina::layout::Padding::Create();
-        Node result{std::move(widget)};
-        auto child_widget = std::move(child).take_widget();
-        if (child_widget) {
-            static_cast<nandina::layout::Padding*>(result.m_widget.get())->child(std::move(child_widget));
-        }
-        result.absorb(std::move(child));
-        return result;
-    }
+    // ── 单子节点包装 ──────────────────────────────────────────────────
 
-    /// center — 将子组件在可用空间内水平 + 垂直居中。
-    ///
-    /// 常用于页面根节点，使整体内容块居中显示。
-    ///
-    /// 示例：
-    ///   return mount(center(column(children(...)).width(360)));
-    [[nodiscard]] inline auto center(Node child) -> Node {
-        auto widget = nandina::layout::Center::Create();
-        Node result{std::move(widget)};
-        auto child_widget = std::move(child).take_widget();
-        if (child_widget) {
-            static_cast<nandina::layout::Center*>(result.m_widget.get())->child(std::move(child_widget));
-        }
-        result.absorb(std::move(child));
-        return result;
-    }
+    /** @brief 水平+垂直居中 */
+    [[nodiscard]] inline auto center(NodeLike auto&& child) -> Node
+        { return NodeFactory::wrapper<nandina::layout::Center>(std::forward<decltype(child)>(child)); }
 
-    /// sized_box — 强制子组件具有指定的宽度和/或高度。
-    ///
-    /// 注意：直接在节点上调用 .width() / .height() / .size() 会自动包裹 SizedBox，
-    /// 无需手动调用此函数。
-    ///
-    /// 示例：
-    ///   // 以下两种写法等价：
-    ///   sized_box(label("文本")).width(200).height(48)
-    ///   label("文本").width(200).height(48)
-    [[nodiscard]] inline auto sized_box(Node child) -> Node {
-        auto widget = nandina::layout::SizedBox::Create();
-        Node result{std::move(widget)};
-        auto child_widget = std::move(child).take_widget();
-        if (child_widget) {
-            static_cast<nandina::layout::SizedBox*>(result.m_widget.get())->child(std::move(child_widget));
-        }
-        result.absorb(std::move(child));
-        return result;
-    }
+    /** @brief 内边距包装 */
+    [[nodiscard]] inline auto padding(NodeLike auto&& child) -> Node
+        { return NodeFactory::wrapper<nandina::layout::Padding>(std::forward<decltype(child)>(child)); }
+
+    /** @brief 固定尺寸包装 */
+    [[nodiscard]] inline auto sized_box(NodeLike auto&& child) -> Node
+        { return NodeFactory::wrapper<nandina::layout::SizedBox>(std::forward<decltype(child)>(child)); }
+
+    /** @brief 弹性填充包装 */
+    [[nodiscard]] inline auto expanded(NodeLike auto&& child) -> Node
+        { return NodeFactory::wrapper_with<nandina::layout::Expanded>(std::forward<decltype(child)>(child), 1); }
+
+    /** @brief 弹性填充包装（指定 flex 系数） */
+    [[nodiscard]] inline auto expanded(NodeLike auto&& child, const int flex) -> Node
+        { return NodeFactory::wrapper_with<nandina::layout::Expanded>(std::forward<decltype(child)>(child), flex); }
 
     struct AppConfig {
         std::string title = "NandinaUI";
