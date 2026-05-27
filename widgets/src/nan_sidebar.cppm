@@ -180,10 +180,12 @@ export namespace nandina::widgets {
                 canvas.add(line);
             };
 
-            if (m_divider_header_y > 0.0f) {
+            const bool header_visible = m_header_slot && m_header_slot->runtime::NanWidget::height() > 0.0f;
+            const bool footer_visible = m_footer_slot && m_footer_slot->runtime::NanWidget::height() > 0.0f;
+            if (m_divider_header_y > 0.0f && header_visible) {
                 draw_divider(m_divider_header_y);
             }
-            if (m_divider_footer_y > 0.0f) {
+            if (m_divider_footer_y > 0.0f && footer_visible) {
                 draw_divider(m_divider_footer_y);
             }
         }
@@ -197,15 +199,18 @@ export namespace nandina::widgets {
             auto root_column = layout::Column::Create();
             root_column->align_items(layout::LayoutAlignment::stretch);
 
-            // ── Header slot (隐藏) ──────────────────────
+            // ── Header slot（默认完全隐藏：不可见 + 零高度）───
             {
                 auto logo = Icon::create();
                 logo->set_type(IconType::Circle).set_size(28.0f)
                     .set_color(NanColor::from(NanRgb{99, 102, 241}));
+                logo->set_visible(false);
                 m_header_logo = logo.get();
 
                 auto hdr = Label::create();
-                hdr->set_text("").set_font_size(11.0f)
+                hdr->set_text("");
+                hdr->set_visible(false);
+                hdr->set_font_size(11.0f)
                     .set_color(NanColor::from(NanRgb{220, 220, 240}));
                 m_header_label = hdr.get();
 
@@ -227,7 +232,8 @@ export namespace nandina::widgets {
                 hdr_pad->padding(18, 16, 15, 6).child(std::move(hdr_row));
 
                 auto hdr_slot = layout::SizedBox::Create();
-                hdr_slot->height(0).child(std::move(hdr_pad));  // 0 height = hidden
+                hdr_slot->height(0).child(std::move(hdr_pad));
+                hdr_slot->set_visible(false);
                 m_header_slot = hdr_slot.get();
                 root_column->add(std::move(hdr_slot));
             }
@@ -245,20 +251,25 @@ export namespace nandina::widgets {
             m_content_slot = content_exp.get();
             root_column->add(std::move(content_exp));
 
-            // ── Footer slot (隐藏) ──────────────────────
+            // ── Footer slot（默认完全隐藏：不可见 + 零高度）───
             {
                 auto av = Icon::create();
-                av->set_type(IconType::Circle).set_size(28)
-                    .set_color(NanColor::from(NanRgb{147, 150, 255}));
+                av->set_type(IconType::Circle).set_size(28);
+                av->set_visible(false);
+                av->set_color(NanColor::from(NanRgb{147, 150, 255}));
                 m_user_avatar = av.get();
 
                 auto un = Label::create();
-                un->set_text("").set_font_size(9)
+                un->set_text("");
+                un->set_visible(false);
+                un->set_font_size(9)
                     .set_color(NanColor::from(NanRgb{220, 220, 240}));
                 m_user_name_label = un.get();
 
                 auto ur = Label::create();
-                ur->set_text("").set_font_size(7)
+                ur->set_text("");
+                ur->set_visible(false);
+                ur->set_font_size(7)
                     .set_color(NanColor::from(NanRgb{110, 112, 130}));
                 m_user_role_label = ur.get();
 
@@ -280,7 +291,8 @@ export namespace nandina::widgets {
                 ft_pad->padding(16, 12, 12, 28).child(std::move(ft_row));
 
                 auto ft_slot = layout::SizedBox::Create();
-                ft_slot->height(0).child(std::move(ft_pad));  // 0 height = hidden
+                ft_slot->height(0).child(std::move(ft_pad));
+                ft_slot->set_visible(false);
                 m_footer_slot = ft_slot.get();
                 root_column->add(std::move(ft_slot));
             }

@@ -67,9 +67,9 @@ export namespace nandina::widgets {
             return *this;
         }
 
-        // ── 添加子节点（菜单项进入内部 Column） ───────
+        // ── 添加子节点 ──────────────────────────────────
         auto add_child(std::unique_ptr<runtime::NanWidget> child) -> void {
-            if (m_item_column) m_item_column->add(std::move(child));
+            Surface::add_child(std::move(child));
             mark_layout_dirty();
         }
 
@@ -109,12 +109,22 @@ export namespace nandina::widgets {
         }
 
         auto layout() -> void override {
-            Surface::layout();
+            float item_y = 0;
+            for_each_child([&](runtime::NanWidget& child) {
+                if (&child == m_label || &child == m_accent_icon) return;
+                child.set_bounds(x(), item_y, width(), 36.0f);
+                child.layout();
+                item_y += 38.0f; // 36 height + 2 gap
+            });
             clear_layout_dirty();
         }
 
         [[nodiscard]] auto preferred_size() const noexcept -> geometry::NanSize override {
-            return Surface::preferred_size();
+            size_t n = 0;
+            for_each_child([&](const runtime::NanWidget& child) {
+                if (&child != m_label && &child != m_accent_icon) ++n;
+            });
+            return {240.0f, static_cast<float>(n) * 38.0f};
         }
 
         // ── 绘制 ──────────────────────────────────────────
@@ -139,29 +149,20 @@ export namespace nandina::widgets {
             m_corner_radius.set(0.0f);
             m_padding.set(geometry::NanInsets{});
 
-            auto col = layout::Column::Create();
-            col->align_items(layout::LayoutAlignment::stretch);
-            m_item_column = col.get();
-            Surface::add_child(std::move(col));
-
             auto accent = Icon::create();
-            accent->set_type(IconType::Square)
-                .set_size(10.0f)
+            accent->set_type(IconType::Square).set_size(10.0f)
                 .set_color(nandina::NanColor::from(nandina::NanRgb{99, 102, 241}));
             accent->set_visible(false);
             m_accent_icon = accent.get();
             Surface::add_child(std::move(accent));
 
             auto label = Label::create();
-            label->set_text("")
-                .set_font_size(9.0f)
+            label->set_text("").set_font_size(9.0f)
                 .set_color(nandina::NanColor::from(nandina::NanRgb{160, 162, 180}));
             label->set_visible(false);
             m_label = label.get();
             Surface::add_child(std::move(label));
         }
-
-        layout::Column* m_item_column{nullptr};
 
         /// 统计菜单项数量（排除内部管理的 label 和 accent icon）
         [[nodiscard]] auto count_menu_items() const noexcept -> size_t {
