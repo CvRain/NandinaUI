@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+import nandina.layout;
 import nandina.layout.container;
 import nandina.layout.core;
 import nandina.runtime.nan_widget;
@@ -28,6 +29,21 @@ public:
 
 private:
     NanSize preferred_{};
+};
+
+/** @brief 记录 layout() 调用次数的测试 widget */
+class LayoutTrackingWidget final : public nandina::runtime::NanWidget {
+public:
+    [[nodiscard]] auto layout_count() const noexcept -> int { return layout_count_; }
+    [[nodiscard]] auto preferred_size() const noexcept -> NanSize override { return NanSize{50, 50}; }
+
+    auto measure(const NanConstraints& constraints) -> void override {
+        set_measured_layout_state(constraints, constraints.constrain(NanSize{50, 50}));
+    }
+    auto layout() -> void override { ++layout_count_; clear_layout_dirty(); }
+
+private:
+    int layout_count_ = 0;
 };
 
 } // namespace
@@ -706,4 +722,127 @@ TEST(LayoutCoreTest, Stack_FillsContainerBounds) {
     EXPECT_FLOAT_EQ(frames[0].y(), 10.0f);
     EXPECT_FLOAT_EQ(frames[1].x(), 5.0f);
     EXPECT_FLOAT_EQ(frames[1].y(), 10.0f);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// FlexWidgets — 两阶段布局协议回归（Issue 085）
+// ═══════════════════════════════════════════════════════════════════════════
+
+TEST(FlexWidgetsTest, SetBoundsDoesNotAutoLayout) {
+    auto padding = Padding::Create();
+    auto child   = std::make_unique<LayoutTrackingWidget>();
+    auto* cp = child.get();
+    padding->child(std::move(child));
+
+    padding->set_bounds(0, 0, 200, 100);
+    EXPECT_EQ(cp->layout_count(), 0);
+}
+
+TEST(FlexWidgetsTest, ExplicitLayoutAfterSetBoundsWorks) {
+    auto center = Center::Create();
+    auto child  = std::make_unique<LayoutTrackingWidget>();
+    auto* cp = child.get();
+    center->child(std::move(child));
+
+    center->measure(NanConstraints::tight(200, 100));
+    center->set_bounds(0, 0, 200, 100);
+    center->layout();
+
+    EXPECT_EQ(cp->layout_count(), 1);
+}
+
+TEST(FlexWidgetsTest, PaddingInColumnLayoutCycle) {
+    auto col = Column::Create();
+    auto pad = Padding::Create();
+    pad->all(10);
+    pad->child(std::make_unique<FixedWidget>(NanSize{80, 40}));
+    col->add(std::move(pad));
+
+    col->measure(NanConstraints::tight(200, 200));
+    col->set_bounds(0, 0, 200, 200);
+    col->layout();
+
+    ASSERT_EQ(col->child_count(), 1);
+    col->for_each_child([](nandina::runtime::NanWidget& c) {
+        auto* pw = dynamic_cast<Padding*>(&c);
+        ASSERT_NE(pw, nullptr);
+        EXPECT_FLOAT_EQ(pw->x(), 0);
+        EXPECT_FLOAT_EQ(pw->y(), 0);
+    });
+}
+
+TEST(FlexWidgetsTest, CenterPositionsChildCorrectly) {
+    auto center = Center::Create();
+    center->child(std::make_unique<FixedWidget>(NanSize{50, 30}));
+
+    center->measure(NanConstraints::tight(200, 100));
+    center->set_bounds(0, 0, 200, 100);
+    center->layout();
+
+    ASSERT_EQ(center->child_count(), 1);
+    center->for_each_child([](nandina::runtime::NanWidget& c) {
+        EXPECT_FLOAT_EQ(c.x(), 75);
+        EXPECT_FLOAT_EQ(c.y(), 35);
+        EXPECT_FLOAT_EQ(c.width(), 50);
+        EXPECT_FLOAT_EQ(c.height(), 30);
+    });
+}
+
+TEST(FlexWidgetsTest, SizedBoxRespectsFixedDimensions) {
+    auto sb = SizedBox::Create();
+    sb->width(120);
+    sb->height(80);
+    sb->child(std::make_unique<FixedWidget>(NanSize{200, 200}));
+
+    sb->measure(NanConstraints::tight(300, 300));
+    sb->set_bounds(5, 5, 300, 300);
+    sb->layout();
+
+    EXPECT_FLOAT_EQ(sb->nandina::runtime::NanWidget::width(), 120);
+    EXPECT_FLOAT_EQ(sb->nandina::runtime::NanWidget::height(), 80);
+    ASSERT_EQ(sb->child_count(), 1);
+}
+
+TEST(FlexWidgetsTest, ExpandedPropagatesChildCorrectly) {
+    auto exp = Expanded::Create(2);
+    exp->child(std::make_unique<FixedWidget>(NanSize{50, 50}));
+
+    exp->measure(NanConstraints::tight(180, 100));
+    exp->set_bounds(10, 20, 180, 100);
+    exp->layout();
+
+    EXPECT_EQ(exp->flex_factor(), 2);
+    ASSERT_EQ(exp->child_count(), 1);
+    exp->for_each_child([](nandina::runtime::NanWidget& c) {
+        EXPECT_FLOAT_EQ(c.width(), 180);
+        EXPECT_FLOAT_EQ(c.height(), 100);
+    });
+}
+
+TEST(FlexWidgetsTest, NestedFlexWidgetsLayoutChain) {
+    auto center  = Center::Create();
+    auto padding = Padding::Create();
+    padding->all(20);
+    padding->child(std::make_unique<FixedWidget>(NanSize{60, 40}));
+    center->child(std::move(padding));
+
+    center->measure(NanConstraints::tight(300, 200));
+    center->set_bounds(0, 0, 300, 200);
+    center->layout();
+
+    ASSERT_EQ(center->child_count(), 1);
+    center->for_each_child([](nandina::runtime::NanWidget& pad) {
+        EXPECT_FLOAT_EQ(pad.x(), 100);
+        EXPECT_FLOAT_EQ(pad.y(), 60);
+        EXPECT_FLOAT_EQ(pad.width(), 100);
+        EXPECT_FLOAT_EQ(pad.height(), 80);
+
+        ASSERT_EQ(pad.child_count(), 1);
+        pad.for_each_child([&pad](nandina::runtime::NanWidget& inner) {
+            EXPECT_FLOAT_EQ(inner.x(), pad.x() + 20);
+            EXPECT_FLOAT_EQ(inner.y(), pad.y() + 20);
+            EXPECT_FLOAT_EQ(inner.width(), 60);
+            EXPECT_FLOAT_EQ(inner.height(), 40);
+        });
+    });
 }

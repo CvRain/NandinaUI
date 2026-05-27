@@ -39,10 +39,11 @@ namespace nandina::showcase {
     auto MainPage::build() -> nandina::app::NanComponent::Ptr {
         using namespace nandina::app;
 
+
         auto label = app::label()
                 .text("Hello, NandinaUI!")
                 .align(widgets::TextAlign::Center)
-                .color(NanColor::from(NanRgb{"#4c51bf"}));
+                .color(NanColor::from(NanRgb{"#24273a"}));
 
         return mount(center(label));
     }
