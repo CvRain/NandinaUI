@@ -43,7 +43,7 @@ namespace nandina::showcase {
         auto label = app::label()
                 .text("Hello, NandinaUI!")
                 .align(widgets::TextAlign::Center)
-                .color(NanColor::from(NanRgb{"#24273a"}));
+                .color(NanColor::from(NanRgb{"#cdd6f4"}));
 
         return mount(center(label));
     }

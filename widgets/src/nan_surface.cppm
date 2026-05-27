@@ -136,7 +136,6 @@ export namespace nandina::widgets {
 
         auto set_bounds(float x, float y, float w, float h) noexcept -> NanWidget& override {
             NanWidget::set_bounds(x, y, w, h);
-            layout();
             return *this;
         }
 

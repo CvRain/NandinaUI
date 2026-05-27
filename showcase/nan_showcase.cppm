@@ -21,7 +21,7 @@ public:
             .height = 720,
             .resizable = true,
             .high_dpi = true,
-            .bg_color = nandina::NanColor::from(nandina::NanRgb{"#eff1f5"})
+            .bg_color = nandina::NanColor::from(nandina::NanRgb{"#1e1e2e"})
         }) {
         // m_sandbox_page 作为成员，生命周期与 MainWindow 绑定；
         // build() 内的 [this]（SandboxPage*）和 Ref<Button> 引用因此保持有效
