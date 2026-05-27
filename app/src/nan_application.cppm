@@ -55,6 +55,9 @@ import nandina.widgets.button;
 import nandina.widgets.card;
 import nandina.widgets.label;
 import nandina.widgets.panel;
+import nandina.widgets.sidebar;
+import nandina.widgets.sidebar_group;
+import nandina.widgets.sidebar_menu_button;
 import nandina.widgets.surface;
 import nandina.theme;
 
@@ -1219,6 +1222,22 @@ export namespace nandina::app {
     /** @brief 弹性填充包装（指定 flex 系数） */
     [[nodiscard]] inline auto expanded(NodeLike auto &&child, const int flex) -> Node {
         return NodeFactory::wrapper_with<nandina::layout::Expanded>(std::forward<decltype(child)>(child), flex);
+    }
+
+    // ── Sidebar 组件 ──────────────────────────────────────────────────
+
+    /** @brief 创建侧边栏菜单按钮（返回 widget，通过 add_child 添加到分组） */
+    [[nodiscard]] inline auto sidebar_menu_button(std::string_view text) -> nandina::widgets::SidebarMenuButton::Ptr {
+        auto w = nandina::widgets::SidebarMenuButton::create();
+        if (!text.empty()) w->set_label(text);
+        return w;
+    }
+
+    /** @brief 创建侧边栏分组容器 */
+    [[nodiscard]] inline auto sidebar_group(std::string_view label_text) -> Node {
+        auto g = nandina::widgets::SidebarGroup::create();
+        if (!label_text.empty()) g->set_label(label_text);
+        return adopt(std::move(g));
     }
 
     struct AppConfig {

@@ -41,50 +41,25 @@ namespace nandina::showcase {
 
     auto MainPage::build() -> nandina::app::NanComponent::Ptr {
         using namespace nandina::app;
-        using nandina::widgets::IconType;
 
         // ═══════════════════════════════════════════════════════════
-        // 侧边栏
+        // 侧边栏（仅内容分组，无 header/footer）
         // ═══════════════════════════════════════════════════════════
         auto sidebar = nandina::widgets::Sidebar::create();
-        sidebar->set_header_title("NandinaUI");
 
-        // ── Get Started 分组 ──────────────────────────────────
+        // Get Started 分组
         auto get_started = nandina::widgets::SidebarGroup::create();
-        get_started->set_label("Get Started")
-            .set_show_accent(true);
-
-        auto intro_btn = nandina::widgets::SidebarMenuButton::create();
-        intro_btn->set_label("Introduction")
-            .set_icon_type(IconType::Dot);
-        get_started->add_child(std::move(intro_btn));
-
-        auto install_btn = nandina::widgets::SidebarMenuButton::create();
-        install_btn->set_label("Installation")
-            .set_icon_type(IconType::Dot);
-        get_started->add_child(std::move(install_btn));
-
-        auto fundamentals_btn = nandina::widgets::SidebarMenuButton::create();
-        fundamentals_btn->set_label("Fundamentals")
-            .set_icon_type(IconType::Dot);
-        get_started->add_child(std::move(fundamentals_btn));
-
+        get_started->set_label("Get Started").set_show_accent(true);
+        get_started->add_child(sidebar_menu_button("Introduction"));
+        get_started->add_child(sidebar_menu_button("Installation"));
+        get_started->add_child(sidebar_menu_button("Fundamentals"));
         sidebar->add_group(std::move(get_started));
 
-        // ── Components 分组 ──────────────────────────────────
+        // Components 分组
         auto components = nandina::widgets::SidebarGroup::create();
         components->set_label("Components");
-
-        auto label_btn = nandina::widgets::SidebarMenuButton::create();
-        label_btn->set_label("Label")
-            .set_icon_type(IconType::Square);
-        components->add_child(std::move(label_btn));
-
-        auto button_btn = nandina::widgets::SidebarMenuButton::create();
-        button_btn->set_label("Button")
-            .set_icon_type(IconType::Square);
-        components->add_child(std::move(button_btn));
-
+        components->add_child(sidebar_menu_button("Label"));
+        components->add_child(sidebar_menu_button("Button"));
         sidebar->add_group(std::move(components));
 
         // ═══════════════════════════════════════════════════════════
@@ -102,12 +77,8 @@ namespace nandina::showcase {
                 .color(NanColor::from(NanRgb{"#a6adc8"}))
         )).gap(12).padding(32);
 
-        // ═══════════════════════════════════════════════════════════
-        // 组合布局：侧边栏 | 内容
-        // ═══════════════════════════════════════════════════════════
         return mount(row(children(
-            sized_box(adopt(std::move(sidebar)))
-                .width(240),
+            sized_box(adopt(std::move(sidebar))).width(240),
             expanded(content)
         )).align_items(nandina::layout::LayoutAlignment::stretch));
     }

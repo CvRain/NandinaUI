@@ -125,20 +125,6 @@ export namespace nandina::widgets {
                 .gap(12.0f)
                 .align_items(nandina::layout::LayoutAlignment::stretch);
 
-            auto icon = Icon::create();
-            icon->set_type(IconType::Square)
-                .set_size(16.0f)
-                .set_color(nandina::NanColor::from(nandina::NanRgb{160, 162, 180}));
-            m_icon = icon.get();
-
-            auto icon_center = layout::Center::Create();
-            icon_center->child(std::move(icon));
-
-            auto icon_slot = layout::SizedBox::Create();
-            icon_slot->width(16.0f)
-                .child(std::move(icon_center));
-            row->add(std::move(icon_slot));
-
             auto label = Label::create();
             label->set_text("")
                 .set_font_size(9.0f)

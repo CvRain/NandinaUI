@@ -110,27 +110,24 @@ export namespace nandina::widgets {
         // ── 属性 ──────────────────────────────────────────
         auto set_header_title(std::string_view text) -> Sidebar& {
             m_header_title_text = text;
-            if (m_header_label) {
-                m_header_label->set_text(text);
-            }
+            if (m_header_slot) m_header_slot->set_visible(!text.empty());
+            if (m_header_label) m_header_label->set_text(text);
             mark_layout_dirty();
             return *this;
         }
 
         auto set_user_name(std::string_view text) -> Sidebar& {
             m_user_name_text = text;
-            if (m_user_name_label) {
-                m_user_name_label->set_text(text);
-            }
+            if (m_footer_slot) m_footer_slot->set_visible(!text.empty());
+            if (m_user_name_label) m_user_name_label->set_text(text);
             mark_layout_dirty();
             return *this;
         }
 
         auto set_user_role(std::string_view text) -> Sidebar& {
             m_user_role_text = text;
-            if (m_user_role_label) {
-                m_user_role_label->set_text(text);
-            }
+            if (m_footer_slot) m_footer_slot->set_visible(!text.empty());
+            if (m_user_role_label) m_user_role_label->set_text(text);
             mark_layout_dirty();
             return *this;
         }
@@ -194,119 +191,95 @@ export namespace nandina::widgets {
             auto root_column = layout::Column::Create();
             root_column->align_items(layout::LayoutAlignment::stretch);
 
-            // Logo（双圆：外环 + 内点）
-            auto logo = Icon::create();
-            logo->set_type(IconType::Circle)
-                .set_size(28.0f)
-                .set_color(nandina::NanColor::from(nandina::NanRgb{99, 102, 241}));
-            m_header_logo = logo.get();
+            // ── Header slot (隐藏) ──────────────────────
+            {
+                auto logo = Icon::create();
+                logo->set_type(IconType::Circle).set_size(28.0f)
+                    .set_color(NanColor::from(NanRgb{99, 102, 241}));
+                m_header_logo = logo.get();
 
-            // Header 标题
-            auto hdr = Label::create();
-            hdr->set_text("Nandina Studio")
-                .set_font_size(11.0f)
-                .set_color(nandina::NanColor::from(nandina::NanRgb{220, 220, 240}));
-            m_header_label = hdr.get();
+                auto hdr = Label::create();
+                hdr->set_text("").set_font_size(11.0f)
+                    .set_color(NanColor::from(NanRgb{220, 220, 240}));
+                m_header_label = hdr.get();
 
-            auto header_label_padding = layout::Padding::Create();
-            header_label_padding->padding(0.0f, 2.0f, 0.0f, 4.0f)
-                .child(std::move(hdr));
+                auto lbl_pad = layout::Padding::Create();
+                lbl_pad->padding(0, 2, 0, 4).child(std::move(hdr));
 
-            auto header_row = layout::Row::Create();
-            header_row->align_items(layout::LayoutAlignment::center)
-                .gap(9.0f);
+                auto hdr_row = layout::Row::Create();
+                hdr_row->align_items(layout::LayoutAlignment::center).gap(9);
 
-            auto logo_box = layout::SizedBox::Create();
-            logo_box->width(28.0f)
-                .height(28.0f)
-                .child(std::move(logo));
-            header_row->add(std::move(logo_box));
+                auto logo_box = layout::SizedBox::Create();
+                logo_box->width(28).height(28).child(std::move(logo));
+                hdr_row->add(std::move(logo_box));
 
-            auto header_label_expanded = layout::Expanded::Create();
-            header_label_expanded->child(std::move(header_label_padding));
-            header_row->add(std::move(header_label_expanded));
+                auto lbl_exp = layout::Expanded::Create();
+                lbl_exp->child(std::move(lbl_pad));
+                hdr_row->add(std::move(lbl_exp));
 
-            auto header_padding = layout::Padding::Create();
-            header_padding->padding(18.0f, 16.0f, 15.0f, 6.0f)
-                .child(std::move(header_row));
+                auto hdr_pad = layout::Padding::Create();
+                hdr_pad->padding(18, 16, 15, 6).child(std::move(hdr_row));
 
-            auto header_slot = layout::SizedBox::Create();
-            header_slot->height(50.0f)
-                .child(std::move(header_padding));
-            m_header_slot = header_slot.get();
-            root_column->add(std::move(header_slot));
+                auto hdr_slot = layout::SizedBox::Create();
+                hdr_slot->height(50).child(std::move(hdr_pad));
+                hdr_slot->set_visible(false);  // 默认隐藏
+                m_header_slot = hdr_slot.get();
+                root_column->add(std::move(hdr_slot));
+            }
 
+            // ── Content（Expanded） ──────────────────────
             auto content_layout = layout::Column::Create();
-            content_layout->align_items(layout::LayoutAlignment::stretch)
-                .gap(2.0f);
+            content_layout->align_items(layout::LayoutAlignment::stretch).gap(2);
             m_content_layout = content_layout.get();
 
-            auto content_padding = layout::Padding::Create();
-            content_padding->padding(0.0f, 4.0f, 0.0f, 0.0f)
-                .child(std::move(content_layout));
+            auto content_pad = layout::Padding::Create();
+            content_pad->padding(0, 4, 0, 0).child(std::move(content_layout));
 
-            auto content_expanded = layout::Expanded::Create();
-            content_expanded->child(std::move(content_padding));
-            m_content_slot = content_expanded.get();
-            root_column->add(std::move(content_expanded));
+            auto content_exp = layout::Expanded::Create();
+            content_exp->child(std::move(content_pad));
+            m_content_slot = content_exp.get();
+            root_column->add(std::move(content_exp));
 
-            // 用户头像
-            auto avatar = Icon::create();
-            avatar->set_type(IconType::Circle)
-                .set_size(28.0f)
-                .set_color(nandina::NanColor::from(nandina::NanRgb{147, 150, 255}));
-            m_user_avatar = avatar.get();
+            // ── Footer slot (隐藏) ──────────────────────
+            {
+                auto av = Icon::create();
+                av->set_type(IconType::Circle).set_size(28)
+                    .set_color(NanColor::from(NanRgb{147, 150, 255}));
+                m_user_avatar = av.get();
 
-            // 用户名
-            auto un = Label::create();
-            un->set_text("CvRain")
-                .set_font_size(9.0f)
-                .set_color(nandina::NanColor::from(nandina::NanRgb{220, 220, 240}));
-            m_user_name_label = un.get();
+                auto un = Label::create();
+                un->set_text("").set_font_size(9)
+                    .set_color(NanColor::from(NanRgb{220, 220, 240}));
+                m_user_name_label = un.get();
 
-            // 用户角色
-            auto ur = Label::create();
-            ur->set_text("Developer")
-                .set_font_size(7.0f)
-                .set_color(nandina::NanColor::from(nandina::NanRgb{110, 112, 130}));
-            m_user_role_label = ur.get();
+                auto ur = Label::create();
+                ur->set_text("").set_font_size(7)
+                    .set_color(NanColor::from(NanRgb{110, 112, 130}));
+                m_user_role_label = ur.get();
 
-            auto avatar_box = layout::SizedBox::Create();
-            avatar_box->width(28.0f)
-                .height(28.0f)
-                .child(std::move(avatar));
+                auto av_box = layout::SizedBox::Create(); av_box->width(28).height(28).child(std::move(av));
+                auto nm_box = layout::SizedBox::Create(); nm_box->height(16).child(std::move(un));
+                auto rl_box = layout::SizedBox::Create(); rl_box->height(14).child(std::move(ur));
 
-            auto name_box = layout::SizedBox::Create();
-            name_box->height(16.0f)
-                .child(std::move(un));
+                auto info_col = layout::Column::Create();
+                info_col->align_items(layout::LayoutAlignment::stretch);
+                info_col->add(std::move(nm_box)); info_col->add(std::move(rl_box));
 
-            auto role_box = layout::SizedBox::Create();
-            role_box->height(14.0f)
-                .child(std::move(ur));
+                auto info_exp = layout::Expanded::Create(); info_exp->child(std::move(info_col));
 
-            auto info_column = layout::Column::Create();
-            info_column->align_items(layout::LayoutAlignment::stretch);
-            info_column->add(std::move(name_box));
-            info_column->add(std::move(role_box));
+                auto ft_row = layout::Row::Create();
+                ft_row->align_items(layout::LayoutAlignment::start).gap(8);
+                ft_row->add(std::move(av_box)); ft_row->add(std::move(info_exp));
 
-            auto info_expanded = layout::Expanded::Create();
-            info_expanded->child(std::move(info_column));
+                auto ft_pad = layout::Padding::Create();
+                ft_pad->padding(16, 12, 12, 28).child(std::move(ft_row));
 
-            auto footer_row = layout::Row::Create();
-            footer_row->align_items(layout::LayoutAlignment::start)
-                .gap(8.0f);
-            footer_row->add(std::move(avatar_box));
-            footer_row->add(std::move(info_expanded));
-
-            auto footer_padding = layout::Padding::Create();
-            footer_padding->padding(16.0f, 12.0f, 12.0f, 28.0f)
-                .child(std::move(footer_row));
-
-            auto footer_slot = layout::SizedBox::Create();
-            footer_slot->height(70.0f)
-                .child(std::move(footer_padding));
-            m_footer_slot = footer_slot.get();
-            root_column->add(std::move(footer_slot));
+                auto ft_slot = layout::SizedBox::Create();
+                ft_slot->height(70).child(std::move(ft_pad));
+                ft_slot->set_visible(false);  // 默认隐藏
+                m_footer_slot = ft_slot.get();
+                root_column->add(std::move(ft_slot));
+            }
 
             add_child(std::move(root_column));
         }
