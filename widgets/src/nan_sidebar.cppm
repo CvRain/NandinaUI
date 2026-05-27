@@ -110,7 +110,7 @@ export namespace nandina::widgets {
         // ── 属性 ──────────────────────────────────────────
         auto set_header_title(std::string_view text) -> Sidebar& {
             m_header_title_text = text;
-            if (m_header_slot) m_header_slot->set_visible(!text.empty());
+            if (m_header_slot) m_header_slot->height(text.empty() ? 0.0f : 50.0f);
             if (m_header_label) m_header_label->set_text(text);
             mark_layout_dirty();
             return *this;
@@ -118,7 +118,7 @@ export namespace nandina::widgets {
 
         auto set_user_name(std::string_view text) -> Sidebar& {
             m_user_name_text = text;
-            if (m_footer_slot) m_footer_slot->set_visible(!text.empty());
+            _sync_footer_visibility();
             if (m_user_name_label) m_user_name_label->set_text(text);
             mark_layout_dirty();
             return *this;
@@ -126,10 +126,16 @@ export namespace nandina::widgets {
 
         auto set_user_role(std::string_view text) -> Sidebar& {
             m_user_role_text = text;
-            if (m_footer_slot) m_footer_slot->set_visible(!text.empty());
+            _sync_footer_visibility();
             if (m_user_role_label) m_user_role_label->set_text(text);
             mark_layout_dirty();
             return *this;
+        }
+
+    private:
+        auto _sync_footer_visibility() -> void {
+            if (!m_footer_slot) return;
+            m_footer_slot->height((m_user_name_text.empty() && m_user_role_text.empty()) ? 0.0f : 70.0f);
         }
 
         // ── Surface override ──────────────────────────────
@@ -221,8 +227,7 @@ export namespace nandina::widgets {
                 hdr_pad->padding(18, 16, 15, 6).child(std::move(hdr_row));
 
                 auto hdr_slot = layout::SizedBox::Create();
-                hdr_slot->height(50).child(std::move(hdr_pad));
-                hdr_slot->set_visible(false);  // 默认隐藏
+                hdr_slot->height(0).child(std::move(hdr_pad));  // 0 height = hidden
                 m_header_slot = hdr_slot.get();
                 root_column->add(std::move(hdr_slot));
             }
@@ -275,8 +280,7 @@ export namespace nandina::widgets {
                 ft_pad->padding(16, 12, 12, 28).child(std::move(ft_row));
 
                 auto ft_slot = layout::SizedBox::Create();
-                ft_slot->height(70).child(std::move(ft_pad));
-                ft_slot->set_visible(false);  // 默认隐藏
+                ft_slot->height(0).child(std::move(ft_pad));  // 0 height = hidden
                 m_footer_slot = ft_slot.get();
                 root_column->add(std::move(ft_slot));
             }
