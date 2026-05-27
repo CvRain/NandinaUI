@@ -39,12 +39,14 @@ namespace nandina::showcase {
     auto MainPage::build() -> nandina::app::NanComponent::Ptr {
         using namespace nandina::app;
 
-
         auto label = app::label()
                 .text("Hello, NandinaUI!")
                 .align(widgets::TextAlign::Center)
                 .color(NanColor::from(NanRgb{"#cdd6f4"}));
 
-        return mount(center(label));
+        auto left_sidebar = widgets::Sidebar::create();
+        left_sidebar->set_header_title("Menu");
+
+        return mount(center(adopt(std::move(left_sidebar))));
     }
 }

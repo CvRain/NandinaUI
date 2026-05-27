@@ -26,33 +26,38 @@ import nandina.widgets.sidebar_group;
 import nandina.widgets.sidebar_menu_button;
 
 /**
- * nandina.widgets.sidebar
+ * @file nan_sidebar.cppm
+ * @brief Sidebar — 应用侧边栏组件
  *
- * Sidebar — 侧边栏主组件。
+ * 内部使用 Row / Column / Padding / SizedBox / Expanded 布局原语组合，
+ * 不依赖手工坐标计算。通过 Surface 继承获得背景/圆角/内边距能力。
  *
- * 职责：
- * - 全高度容器，固定宽度
- * - 组合：Header（Logo + 标题） → Content（多个 SidebarGroup） → Footer（用户信息）
- * - 用户信息区域：头像（Icon Circle） + 用户名 + 角色
+ * ## 结构
+ *   ┌─────────────────┐
+ *   │  Header (Logo + 标题)        │ ← m_header_slot (SizedBox, h=50)
+ *   │  ─── divider ───             │
+ *   │  Content (SidebarGroup 列表) │ ← m_content_slot (Expanded)
+ *   │  ─── divider ───             │
+ *   │  Footer (头像 + 用户名 + 角色)│ ← m_footer_slot (SizedBox, h=56)
+ *   └─────────────────┘
  *
- * 用法：
+ * ## 创建方式
+ *
+ * Sidebar 是**有状态容器**，需要动态构建子组件（add_group / add_menu_item），
+ * 采用 `create() → 配置 → adopt()` 模式：
+ *
+ * @code
  *   auto sidebar = Sidebar::create();
+ *   sidebar->set_header_title("My App")
+ *           .set_user_name("Alice");
+ *   sidebar->add_menu_item(std::move(btn));
+ *   // 嵌入 authoring 树：
+ *   sized_box(adopt(std::move(sidebar))).width(260)
+ * @endcode
  *
- *   // Header 自动创建（Logo + "Nandina Studio"）
- *   // 导航组
- *   auto nav = SidebarGroup::create()
- *       .set_label("Navigation")
- *       .set_show_accent(true);
- *   nav->add_child(std::move(dash_btn));
- *   sidebar->add_group(std::move(nav));
+ * 或通过便捷入口 create_shell() / setup_shell() 自动构建。
  *
- *   // 项目组
- *   auto proj = SidebarGroup::create()
- *       .set_label("Recent Projects")
- *       .set_accent_color(NanColor::from(NanRgb{95, 200, 130}));
- *   sidebar->add_group(std::move(proj));
- *
- *   // Footer 自动创建
+ * @see create_shell() in nan_authoring.cppm
  */
 export namespace nandina::widgets {
 
