@@ -10,6 +10,8 @@ export module nandina.showcase.page.button;
 
 import nandina.app.application;
 import nandina.app.page;
+import nandina.foundation.color;
+import nandina.text;
 import nandina.widgets;
 
 export namespace nandina::showcase {
