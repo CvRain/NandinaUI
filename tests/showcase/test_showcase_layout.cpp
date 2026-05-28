@@ -197,5 +197,5 @@ TEST(ShowcaseLayoutTest, ShowcaseShellSidebarActiveStateTracksNavigation) {
 
     // 当前只有 Sandbox 一个页面，sidebar 应有至少 1 个导航按钮
     ASSERT_GE(buttons.size(), 1u);
-    EXPECT_TRUE(buttons[0]->is_active());
+    EXPECT_TRUE(buttons[0]->active());
 }

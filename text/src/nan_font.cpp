@@ -233,6 +233,7 @@ NanFont::NanFont(const NanFont& other)
     , m_size_pt(other.m_size_pt)
     , m_weight(other.m_weight)
     , m_color(other.m_color)
+    , m_has_explicit_color(other.m_has_explicit_color)
     , m_line_height_override(other.m_line_height_override)
     , m_letter_spacing(other.m_letter_spacing)
     , m_overflow(other.m_overflow)
@@ -246,6 +247,7 @@ auto NanFont::operator=(const NanFont& other) -> NanFont& {
         m_size_pt              = other.m_size_pt;
         m_weight               = other.m_weight;
         m_color                = other.m_color;
+        m_has_explicit_color   = other.m_has_explicit_color;
         m_line_height_override = other.m_line_height_override;
         m_letter_spacing       = other.m_letter_spacing;
         m_overflow             = other.m_overflow;
@@ -407,6 +409,7 @@ auto NanFont::weight(NanFontWeight w) -> NanFont& {
 }
 
 auto NanFont::color(NanColor c) -> NanFont& {
+    m_has_explicit_color = true;
     m_color = std::move(c);
     return *this;
 }
@@ -444,6 +447,7 @@ auto NanFont::family() const noexcept -> const std::string& { return m_family; }
 auto NanFont::size() const noexcept -> float { return m_size_pt; }
 auto NanFont::weight() const noexcept -> NanFontWeight { return m_weight; }
 auto NanFont::color() const noexcept -> const NanColor& { return m_color; }
+auto NanFont::has_explicit_color() const noexcept -> bool { return m_has_explicit_color; }
 auto NanFont::letter_spacing() const noexcept -> float { return m_letter_spacing; }
 auto NanFont::overflow() const noexcept -> TextOverflow { return m_overflow; }
 auto NanFont::max_lines() const noexcept -> int { return m_max_lines; }

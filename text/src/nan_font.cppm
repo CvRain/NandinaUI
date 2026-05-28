@@ -161,6 +161,8 @@ export namespace nandina::text {
         [[nodiscard]] auto size()        const noexcept -> float;
         [[nodiscard]] auto weight()      const noexcept -> NanFontWeight;
         [[nodiscard]] auto color()       const noexcept -> const NanColor&;
+        /// 是否通过 .color() 显式设置过颜色（用于区分「默认黑色」和「开发者有意设置的颜色」）
+        [[nodiscard]] auto has_explicit_color() const noexcept -> bool;
         [[nodiscard]] auto line_height() const noexcept -> float;
         [[nodiscard]] auto letter_spacing() const noexcept -> float;
         [[nodiscard]] auto overflow()    const noexcept -> TextOverflow;
@@ -204,6 +206,7 @@ export namespace nandina::text {
         float            m_size_pt{14.0f};
         NanFontWeight    m_weight{NanFontWeight::regular};
         NanColor         m_color{};
+        bool             m_has_explicit_color{false};
         float            m_line_height_override{0.0f};
         float            m_letter_spacing{0.0f};
         TextOverflow     m_overflow{TextOverflow::wrap};

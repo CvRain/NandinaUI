@@ -42,22 +42,34 @@ namespace nandina::showcase {
     auto MainPage::build() -> nandina::app::NanComponent::Ptr {
         using namespace nandina::app;
 
+
         // ═══════════════════════════════════════════════════════════
         // 侧边栏（仅内容分组，无 header/footer）
         // ═══════════════════════════════════════════════════════════
         auto sidebar = nandina::widgets::Sidebar::create();
 
         // Get Started 分组
+        auto test_group = nandina::widgets::SidebarGroup::create();
+        test_group->label("Test Group");
+        test_group->head().font(text::NanFont{}
+            .color(NanColor::from(NanRgb{"#f38ba8"}))
+            .size(22)
+        ).label().set_align(widgets::TextAlign::Start);
+
+        test_group->add_child(sidebar_menu_button("Test Item 1"));
+        test_group->add_child(sidebar_menu_button("Test Item 2"));
+        sidebar->add_group(std::move(test_group));
+
         auto get_started = nandina::widgets::SidebarGroup::create();
-        get_started->set_label("Get Started").set_show_accent(true);
-        get_started->add_child(sidebar_menu_button("Introduction"));
+        get_started->label("Get Started");
+        get_started->add_child(sidebar_menu_button("Introduction").active(true));
         get_started->add_child(sidebar_menu_button("Installation"));
         get_started->add_child(sidebar_menu_button("Fundamentals"));
         sidebar->add_group(std::move(get_started));
 
         // Components 分组
         auto components = nandina::widgets::SidebarGroup::create();
-        components->set_label("Components");
+        components->label("Components");
         components->add_child(sidebar_menu_button("Label"));
         components->add_child(sidebar_menu_button("Button"));
         sidebar->add_group(std::move(components));
@@ -67,14 +79,14 @@ namespace nandina::showcase {
         // ═══════════════════════════════════════════════════════════
         auto content = column(children(
             app::label()
-                .text("Welcome to NandinaUI")
-                .font(text::NanFont{}
-                    .size(24)
-                    .weight(text::NanFontWeight::bold))
-                .color(NanColor::from(NanRgb{"#cdd6f4"})),
+            .text("Welcome to NandinaUI")
+            .font(text::NanFont{}
+                .size(24)
+                .weight(text::NanFontWeight::bold))
+            .color(NanColor::from(NanRgb{"#cdd6f4"})),
             app::label()
-                .text("Select a topic from the sidebar to get started.")
-                .color(NanColor::from(NanRgb{"#a6adc8"}))
+            .text("Select a topic from the sidebar to get started.")
+            .color(NanColor::from(NanRgb{"#a6adc8"}))
         )).gap(12).padding(32);
 
         return mount(row(children(

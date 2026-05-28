@@ -63,9 +63,9 @@ export namespace nandina::app {
 
         for (const auto& page : router->pages()) {
             auto btn = nandina::widgets::SidebarMenuButton::create();
-            btn->set_label(page->title())
-                .set_icon_type(page->icon_type())
-                .set_active(page->route_key() == router->current_key());
+            btn->text(page->title());
+            btn->icon_left(page->icon_type());
+            btn->active(page->route_key() == router->current_key());
 
             nav_buttons.push_back(btn.get());
             nav_keys.emplace_back(page->route_key());
@@ -83,7 +83,7 @@ export namespace nandina::app {
             nav_keys = std::move(nav_keys)
         ](std::string_view new_key) {
             for (std::size_t i = 0; i < nav_buttons.size(); ++i) {
-                nav_buttons[i]->set_active(nav_keys[i] == new_key);
+                nav_buttons[i]->active(nav_keys[i] == new_key);
             }
         });
 
@@ -136,7 +136,7 @@ export namespace nandina::app {
      * @endcode
      *
      * @tparam T        StateSlot 的元素类型
-     * @tparam Widget   目标 widget 类型（需要实现 set_text(std::string_view)）
+     * @tparam Widget   目标 widget 类型（需要实现 set_text(std::string_view)，例如 Label）
      * @tparam Fn       T const& → std::string 的可调用对象
      * @param  slot     响应式状态槽
      * @param  ref      目标 widget 引用

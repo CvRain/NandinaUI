@@ -641,7 +641,7 @@ TEST(AppAuthoringTest, ButtonTextSetterMarksLayoutDirty) {
     button->set_bounds(0.0f, 0.0f, 120.0f, 36.0f);
     EXPECT_FALSE(button->is_layout_dirty());
 
-    button->set_text("Run");
+    button->text("Run");
     EXPECT_TRUE(button->is_layout_dirty());
 }
 

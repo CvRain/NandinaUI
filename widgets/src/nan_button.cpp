@@ -315,6 +315,7 @@ namespace nandina::widgets {
     }
 
     auto Button::font_color(const nandina::NanColor& color) -> Button& {
+        m_user_font_color = color;      // 持久化，hover/leave 后仍保持
         m_label->set_color(color);
         return *this;
     }
@@ -345,7 +346,15 @@ namespace nandina::widgets {
 
     auto Button::set_font(text::NanFont font) -> Button& {
         font.single_line(true).overflow(text::TextOverflow::ellipsis);
+        // 若 font 显式指定了颜色，同步到 m_user_font_color（update_visual_state 会以此为准）
+        if (font.has_explicit_color()) {
+            m_user_font_color = font.color();
+        }
         m_label->set_font(std::move(font));
+        // 重新应用 m_user_font_color，防止 font 携带的默认色覆盖开发者设置的颜色
+        if (m_user_font_color.has_value()) {
+            m_label->set_color(*m_user_font_color);
+        }
         mark_layout_dirty();
         return *this;
     }
@@ -541,13 +550,13 @@ namespace nandina::widgets {
             target_text = c.text_disabled;
         } else if (m_pressed) {
             target_bg   = c.has_bg ? c.bg_pressed : c.bg_hover;
-            target_text = c.text;
+            target_text = m_user_font_color.value_or(c.text);
         } else if (m_hovered) {
-            target_bg   = c.has_bg ? c.bg_hover : c.bg_hover;
-            target_text = c.text;
+            target_bg   = c.bg_hover;
+            target_text = m_user_font_color.value_or(c.text);
         } else {
             target_bg   = c.has_bg ? c.bg : c.bg;
-            target_text = c.text;
+            target_text = m_user_font_color.value_or(c.text);
         }
 
         if (m_loading) {

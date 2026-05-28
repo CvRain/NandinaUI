@@ -80,11 +80,11 @@ export namespace nandina::showcase {
             });
             increase_button.on_hover([this]() {
                 if (increase_button_ref)
-                    increase_button_ref->set_text("▲");
+                    increase_button_ref->text("▲");
             });
             increase_button.on_leave([this]() {
                 if (increase_button_ref)
-                    increase_button_ref->set_text("+");
+                    increase_button_ref->text("+");
             });
 
             auto decrease_button = button()
@@ -113,11 +113,11 @@ export namespace nandina::showcase {
 
             decrease_button.on_hover([this]() {
                 if (decrease_button_ref)
-                    decrease_button_ref->set_text("▼");
+                    decrease_button_ref->text("▼");
             });
             decrease_button.on_leave([this]() {
                 if (decrease_button_ref)
-                    decrease_button_ref->set_text("-");
+                    decrease_button_ref->text("-");
             });
 
             // ── Pattern B：update() 值语义重置 ──────────────────────────────

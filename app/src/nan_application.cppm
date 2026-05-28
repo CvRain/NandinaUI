@@ -53,6 +53,7 @@ import nandina.runtime.nan_window;
 import nandina.runtime.nan_widget;
 import nandina.widgets.button;
 import nandina.widgets.card;
+import nandina.widgets.icon;
 import nandina.widgets.label;
 import nandina.widgets.panel;
 import nandina.widgets.sidebar;
@@ -85,6 +86,7 @@ export namespace nandina::app {
     class Children;
     class LabelNode;
     class ButtonNode;
+    class SidebarMenuButtonNode;
     template<typename W>
     class WidgetNode;
 
@@ -95,6 +97,8 @@ export namespace nandina::app {
     [[nodiscard]] inline auto label(std::string_view text = {}) -> LabelNode;
 
     [[nodiscard]] inline auto button(std::string_view text = {}) -> ButtonNode;
+
+    [[nodiscard]] inline auto sidebar_menu_button(std::string_view text = {}) -> SidebarMenuButtonNode;
 
     [[nodiscard]] inline auto card(Children children) -> Node;
 
@@ -749,7 +753,7 @@ export namespace nandina::app {
         template<typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, ButtonNode>
         auto text(this Self &&self, std::string_view value) -> Self&& {
-            self.m_typed->set_text(value);
+            self.m_typed->text(value);
             return std::forward<Self>(self);
         }
 
@@ -763,7 +767,7 @@ export namespace nandina::app {
             w->add_opaque_cleanup(
                 std::make_shared<nandina::reactive::Effect>(
                     [w, fn = std::move(fn)] {
-                        w->set_text(fn());
+                        w->text(fn());
                     }
                 )
             );
@@ -788,7 +792,7 @@ export namespace nandina::app {
         template<typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, ButtonNode>
         auto font(this Self &&self, nandina::text::NanFont font_config) -> Self&& {
-            self.m_typed->set_font(std::move(font_config));
+            self.m_typed->font(std::move(font_config));
             return std::forward<Self>(self);
         }
 
@@ -804,7 +808,7 @@ export namespace nandina::app {
         auto font(this Self &&self, Fn &&fn) -> Self&& {
             auto updated = self.m_typed->font();
             std::invoke(std::forward<Fn>(fn), updated);
-            self.m_typed->set_font(std::move(updated));
+            self.m_typed->font(std::move(updated));
             return std::forward<Self>(self);
         }
 
@@ -820,7 +824,7 @@ export namespace nandina::app {
                     .color(style.font_color)
                     .overflow(style.overflow)
                     .single_line(style.single_line);
-            self.m_typed->set_font(std::move(font));
+            self.m_typed->font(std::move(font));
             return std::forward<Self>(self);
         }
 
@@ -871,6 +875,91 @@ export namespace nandina::app {
         auto on_leave(this Self &&self, std::function<void()> handler) -> Self&& {
             self.m_typed->on_leave(std::move(handler));
             return std::forward<Self>(self);
+        }
+    };
+
+    // ═══════════════════════════════════════════════════════════
+    // SidebarMenuButtonNode — 侧边栏菜单项链式配置节点
+    // ═══════════════════════════════════════════════════════════
+    //
+    // 用法：
+    //   group->add_child(
+    //       sidebar_menu_button("Introduction")
+    //           .active(true)
+    //           .font([](auto& f){ f.size(11.0f); })
+    //           .on_click([&]{ router->navigate("intro"); }));
+    //
+    // 隐式转换 operator NanWidget::Ptr() && 支持直接传入 SidebarGroup::add_child()。
+
+    class SidebarMenuButtonNode : public WidgetNode<nandina::widgets::SidebarMenuButton> {
+    public:
+        explicit SidebarMenuButtonNode(nandina::widgets::SidebarMenuButton::Ptr widget)
+            : WidgetNode<nandina::widgets::SidebarMenuButton>(std::move(widget)) {
+        }
+
+        // ── 文本（统一风格，转发 Button::set_text）────────────────────
+        template<typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, SidebarMenuButtonNode>
+        auto text(this Self &&self, std::string_view t) -> Self&& {
+            self.m_typed->text(t);
+            return std::forward<Self>(self);
+        }
+
+        // ── 激活状态（统一 getter/setter 风格）────────────────────────
+        template<typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, SidebarMenuButtonNode>
+        auto active(this Self &&self, bool value) -> Self&& {
+            self.m_typed->active(value);
+            return std::forward<Self>(self);
+        }
+
+        // ── accent 指示条颜色─────────────────────────────────────────
+        template<typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, SidebarMenuButtonNode>
+        auto accent_color(this Self &&self, const nandina::NanColor &color) -> Self&& {
+            self.m_typed->accent_color(color);
+            return std::forward<Self>(self);
+        }
+
+        // ── active_changed 回调───────────────────────────────────────
+        template<typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, SidebarMenuButtonNode>
+        auto on_active_changed(this Self &&self, std::function<void(bool)> cb) -> Self&& {
+            self.m_typed->on_active_changed(std::move(cb));
+            return std::forward<Self>(self);
+        }
+
+        // ── 点击回调─────────────────────────────────────────────────
+        template<typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, SidebarMenuButtonNode>
+        auto on_click(this Self &&self, std::function<void()> handler) -> Self&& {
+            self.m_typed->on_click(std::move(handler));
+            return std::forward<Self>(self);
+        }
+
+        // ── 字体（全量替换）──────────────────────────────────────────
+        template<typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, SidebarMenuButtonNode>
+        auto font(this Self &&self, nandina::text::NanFont font_config) -> Self&& {
+            self.m_typed->font(std::move(font_config));
+            return std::forward<Self>(self);
+        }
+
+        // ── 字体（局部更新）──────────────────────────────────────────
+        template<typename Self, typename Fn>
+            requires std::derived_from<std::remove_cvref_t<Self>, SidebarMenuButtonNode>
+                     && std::invocable<Fn, nandina::text::NanFont &>
+                     && (!std::convertible_to<std::remove_cvref_t<Fn>, nandina::text::NanFont>)
+        auto font(this Self &&self, Fn &&fn) -> Self&& {
+            auto updated = self.m_typed->font();
+            std::invoke(std::forward<Fn>(fn), updated);
+            self.m_typed->font(std::move(updated));
+            return std::forward<Self>(self);
+        }
+
+        // ── 隐式转换 — 支持直接传入 SidebarGroup::add_child(NanWidget::Ptr) ──
+        operator nandina::runtime::NanWidget::Ptr() && {
+            return static_cast<Node &&>(*this).take_widget();
         }
     };
 
@@ -1154,7 +1243,7 @@ export namespace nandina::app {
     /** @brief 创建 Button 节点 */
     [[nodiscard]] inline auto button(std::string_view text) -> ButtonNode {
         auto w = nandina::widgets::Button::create();
-        if (!text.empty()) w->set_text(text);
+        if (!text.empty()) w->text(text);
         return ButtonNode{std::move(w)};
     }
 
@@ -1226,17 +1315,24 @@ export namespace nandina::app {
 
     // ── Sidebar 组件 ──────────────────────────────────────────────────
 
-    /** @brief 创建侧边栏菜单按钮（返回 widget，通过 add_child 添加到分组） */
-    [[nodiscard]] inline auto sidebar_menu_button(std::string_view text) -> nandina::widgets::SidebarMenuButton::Ptr {
+    /** @brief 创建侧边栏菜单按钮（返回可链式配置的 SidebarMenuButtonNode）
+     *
+     *  链式用法：
+     *    group->add_child(sidebar_menu_button("Introduction").active(true).font(NanFont{}.size(11)));
+     *    group->add_child(sidebar_menu_button("Settings").on_click([&]{ ... }));
+     */
+    [[nodiscard]] inline auto sidebar_menu_button(std::string_view text) -> SidebarMenuButtonNode {
         auto w = nandina::widgets::SidebarMenuButton::create();
-        if (!text.empty()) w->set_label(text);
-        return w;
+        if (!text.empty()) {
+            w->text(text);
+        }
+        return SidebarMenuButtonNode{std::move(w)};
     }
 
     /** @brief 创建侧边栏分组容器 */
     [[nodiscard]] inline auto sidebar_group(std::string_view label_text) -> Node {
         auto g = nandina::widgets::SidebarGroup::create();
-        if (!label_text.empty()) g->set_label(label_text);
+        if (!label_text.empty()) g->label(label_text);
         return adopt(std::move(g));
     }
 

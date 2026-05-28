@@ -1,35 +1,33 @@
 //
 // Created by cvrain on 2026/4/29.
 //
+// SidebarMenuButton — 基于 Button(ghost variant) 构建的侧边栏导航项。
+// 预配置：ghost 样式、sidebar 尺寸和内边距、sidebar 文字颜色。
+// 扩展：active() — 绘制左侧 3px 指示条 + 高亮背景。
+//
+// 设计原则：
+//   - Button 能做的不重新封装：text()、icon_left()、font_*() 等直接使用 Button 的 API
+//   - 自身专属：active() 状态、accent_color()、active_changed 信号
+//
 
 module;
 
 #include <functional>
 #include <memory>
-#include <optional>
-#include <string>
-#include <string_view>
-#include <utility>
 #include <thorvg-1/thorvg.h>
 
 export module nandina.widgets.sidebar_menu_button;
 
-import nandina.runtime.nan_widget;
 import nandina.foundation.nan_insets;
-import nandina.foundation.nan_rect;
 import nandina.foundation.nan_size;
 import nandina.foundation.color;
-import nandina.layout.core;
 import nandina.layout.container;
-import nandina.layout.flex_widgets;
-import nandina.reactive.prop;
-import nandina.widgets.surface;
-import nandina.widgets.label;
+import nandina.reactive.event_signal;
+import nandina.widgets.button;
 import nandina.widgets.icon;
 
 export namespace nandina::widgets {
-
-    class SidebarMenuButton : public Surface {
+    class SidebarMenuButton : public Button {
     public:
         using Ptr = std::unique_ptr<SidebarMenuButton>;
 
@@ -39,56 +37,49 @@ export namespace nandina::widgets {
             return Ptr{new SidebarMenuButton()};
         }
 
-        auto set_label(std::string_view text) -> SidebarMenuButton& {
-            m_label_text = text;
-            if (m_label) {
-                m_label->set_text(text);
-            }
-            mark_layout_dirty();
+        // ── Active 状态（sidebar 导航高亮）─────────────────────────────
+
+        /// 无参：读取 active 状态
+        [[nodiscard]] auto active() const noexcept -> bool { return m_active; }
+
+        /// 有参：设置 active 状态，自动切换文字色并触发信号
+        auto active(bool v) -> SidebarMenuButton& {
+            if (m_active == v) return *this;
+            m_active = v;
+            // font_color() 同时写入 Button::m_user_font_color，
+            // 之后 hover/leave 触发的 update_visual_state() 会自动保持该色
+            font_color(v
+                ? nandina::NanColor::from(nandina::NanRgb{220, 220, 240})
+                : nandina::NanColor::from(nandina::NanRgb{160, 162, 180}));
+            mark_dirty();
+            m_active_changed_signal.emit(v);
             return *this;
         }
 
-        auto set_icon_type(IconType type) -> SidebarMenuButton& {
-            m_icon_type = type;
-            if (m_icon) {
-                m_icon->set_type(type);
-            }
-            mark_layout_dirty();
-            return *this;
+        // ── Accent 指示条颜色──────────────────────────────────────────
+
+        [[nodiscard]] auto accent_color() const noexcept -> const nandina::NanColor& {
+            return m_accent_color;
         }
 
-        auto set_active(bool active) -> SidebarMenuButton& {
-            m_active = active;
-            update_colors();
+        auto accent_color(nandina::NanColor color) -> SidebarMenuButton& {
+            m_accent_color = color;
             mark_dirty();
             return *this;
         }
 
-        [[nodiscard]] auto is_active() const noexcept -> bool {
-            return m_active;
-        }
+        // ── active_changed 回调 / 信号─────────────────────────────────
 
-        auto set_accent_color(const nandina::NanColor& color) -> SidebarMenuButton& {
-            m_accent_color.set(color);
-            mark_dirty();
+        auto on_active_changed(std::function<void(bool)> cb) -> SidebarMenuButton& {
+            m_active_changed_signal.connect(std::move(cb));
             return *this;
         }
 
-        auto on_click(std::function<void()> cb) -> SidebarMenuButton& {
-            m_on_click = std::move(cb);
-            return *this;
+        [[nodiscard]] auto active_changed() -> reactive::EventSignal<bool>& {
+            return m_active_changed_signal;
         }
 
-        // -- Surface override --
-        auto set_bg_color(const nandina::NanColor& color) -> SidebarMenuButton& {
-            Surface::set_bg_color(color);
-            return *this;
-        }
-
-        auto set_corner_radius(float radius) -> SidebarMenuButton& {
-            Surface::set_corner_radius(radius);
-            return *this;
-        }
+        // ── 首选尺寸──────────────────────────────────────────────────
 
         [[nodiscard]] auto preferred_size() const noexcept -> geometry::NanSize override {
             return {200.0f, 36.0f};
@@ -96,81 +87,40 @@ export namespace nandina::widgets {
 
     protected:
         void on_draw(tvg::SwCanvas& canvas) override {
-            const auto rect    = bounds();
-            const float radius = m_corner_radius.get();
-            const auto& acc    = m_accent_color.get();
-            const auto acc_rgb = acc.to<nandina::NanRgb>();
+            Button::on_draw(canvas);
 
             if (m_active) {
+                const auto rect    = bounds();
+                const auto acc_rgb = m_accent_color.to<nandina::NanRgb>();
+
+                // 左侧 3px 指示条
                 auto* bar = tvg::Shape::gen();
                 bar->appendRect(rect.x(), rect.y(), 3.0f, rect.height(), 0.0f, 0.0f);
                 bar->fill(acc_rgb.red(), acc_rgb.green(), acc_rgb.blue(), acc_rgb.alpha());
                 canvas.add(bar);
 
+                // active 高亮背景
                 auto* hl = tvg::Shape::gen();
-                hl->appendRect(rect.x(), rect.y(), rect.width(), rect.height(), radius, radius);
+                hl->appendRect(rect.x(), rect.y(), rect.width(), rect.height(), 6.0f, 6.0f);
                 hl->fill(40, 42, 60, 200);
                 canvas.add(hl);
             }
         }
 
     private:
-        SidebarMenuButton() : Surface() {
-            m_bg_color.set(nandina::NanColor::from(nandina::NanRgb{0, 0, 0, 0}));
-            m_corner_radius.set(0.0f);
-            m_padding.set(geometry::NanInsets{});
-
-            auto row = layout::Row::Create();
-            row->padding(14.0f, 2.0f, 10.0f, 2.0f)
-                .gap(12.0f)
-                .align_items(nandina::layout::LayoutAlignment::stretch);
-
-            auto label = Label::create();
-            label->set_text("")
-                .set_font_size(9.0f)
-                .set_color(nandina::NanColor::from(nandina::NanRgb{160, 162, 180}));
-            m_label = label.get();
-
-            auto label_slot = layout::Expanded::Create();
-            label_slot->child(std::move(label));
-            row->add(std::move(label_slot));
-
-            add_child(std::move(row));
-        }
-
-        void update_colors() {
-            if (m_label) {
-                const auto& c = m_active
-                                    ? nandina::NanColor::from(nandina::NanRgb{220, 220, 240})
-                                    : nandina::NanColor::from(nandina::NanRgb{160, 162, 180});
-                m_label->set_color(c);
-            }
-            if (m_icon) {
-                const auto& c = m_active
-                                    ? nandina::NanColor::from(nandina::NanRgb{220, 220, 240})
-                                    : nandina::NanColor::from(nandina::NanRgb{110, 112, 130});
-                m_icon->set_color(c);
-            }
-        }
-
-        auto on_pointer_down(const runtime::PointerButtonEvent&) -> bool override {
-            if (m_on_click)
-                m_on_click();
-            return true;
+        SidebarMenuButton() : Button() {
+            variant(ButtonVariant::ghost);
+            // font_color() 同时设置 m_user_font_color，hover/leave 后不会重置此色
+            font_color(nandina::NanColor::from(nandina::NanRgb{160, 162, 180}));
+            font_size(13.0f);
+            set_padding(geometry::NanInsets{14.0f, 4.0f, 12.0f, 4.0f});
+            set_corner_radius(6.0f);
+            // 内容左对齐（图标 + 文字靠左，而非居中）
+            content_row().justify_content(layout::LayoutAlignment::start);
         }
 
         bool m_active{false};
-        bool m_hovered{false};
-        std::string m_label_text;
-        std::optional<IconType> m_icon_type;
-
-        Icon* m_icon{nullptr};
-        Label* m_label{nullptr};
-
-        reactive::Prop<nandina::NanColor> m_accent_color{
-            nandina::NanColor::from(nandina::NanRgb{99, 102, 241})};
-
-        std::function<void()> m_on_click;
+        nandina::NanColor m_accent_color{nandina::NanColor::from(nandina::NanRgb{99, 102, 241})};
+        reactive::EventSignal<bool> m_active_changed_signal;
     };
-
 } // namespace nandina::widgets

@@ -2,6 +2,7 @@ module;
 
 #include <algorithm>
 #include <memory>
+#include <optional>
 
 export module nandina.layout.flex_widgets;
 
@@ -175,31 +176,31 @@ export namespace nandina::layout {
                 preferred = c.preferred_size();
             });
             return {
-                fixed_w_ > 0.0f ? fixed_w_ : preferred.width(),
-                fixed_h_ > 0.0f ? fixed_h_ : preferred.height(),
+                fixed_w_.has_value() ? fixed_w_.value() : preferred.width(),
+                fixed_h_.has_value() ? fixed_h_.value() : preferred.height(),
             };
         }
 
         auto measure(const geometry::NanConstraints& constraints) -> void override {
-            const float min_width = fixed_w_ > 0.0f ? fixed_w_ : constraints.min_width();
-            const float max_width = fixed_w_ > 0.0f ? fixed_w_ : constraints.max_width();
-            const float min_height = fixed_h_ > 0.0f ? fixed_h_ : constraints.min_height();
-            const float max_height = fixed_h_ > 0.0f ? fixed_h_ : constraints.max_height();
+            const float min_width  = fixed_w_.has_value() ? fixed_w_.value() : constraints.min_width();
+            const float max_width  = fixed_w_.has_value() ? fixed_w_.value() : constraints.max_width();
+            const float min_height = fixed_h_.has_value() ? fixed_h_.value() : constraints.min_height();
+            const float max_height = fixed_h_.has_value() ? fixed_h_.value() : constraints.max_height();
 
             const geometry::NanConstraints child_constraints{min_width, max_width, min_height, max_height};
 
             geometry::NanSize measured{
-                fixed_w_ > 0.0f ? fixed_w_ : 0.0f,
-                fixed_h_ > 0.0f ? fixed_h_ : 0.0f,
+                fixed_w_.has_value() ? fixed_w_.value() : 0.0f,
+                fixed_h_.has_value() ? fixed_h_.value() : 0.0f,
             };
 
             for_each_child([&](runtime::NanWidget& child_widget) {
                 child_widget.measure(child_constraints);
                 const auto child_size = detail::measured_or_preferred_size(child_widget);
-                if (fixed_w_ <= 0.0f) {
+                if (!fixed_w_.has_value()) {
                     measured = {child_size.width(), measured.height()};
                 }
-                if (fixed_h_ <= 0.0f) {
+                if (!fixed_h_.has_value()) {
                     measured = {measured.width(), child_size.height()};
                 }
             });
@@ -220,8 +221,8 @@ export namespace nandina::layout {
         }
 
         auto set_bounds(const float x, const float y, const float w, const float h) noexcept -> runtime::NanWidget& override {
-            const float actual_w = fixed_w_ > 0.0f ? fixed_w_ : w;
-            const float actual_h = fixed_h_ > 0.0f ? fixed_h_ : h;
+            const float actual_w = fixed_w_.has_value() ? fixed_w_.value() : w;
+            const float actual_h = fixed_h_.has_value() ? fixed_h_.value() : h;
             NanWidget::set_bounds(x, y, actual_w, actual_h);
             return *this;
         }
@@ -229,8 +230,8 @@ export namespace nandina::layout {
     private:
         SizedBox() noexcept = default;
 
-        float fixed_w_ = 0.0f;
-        float fixed_h_ = 0.0f;
+        std::optional<float> fixed_w_;
+        std::optional<float> fixed_h_;
     };
 
     // ── Center ───────────────────────────────────────────────

@@ -62,7 +62,8 @@ export namespace nandina::widgets {
         static auto create() -> Ptr;
 
         // ── 文本 ──────────────────────────────────────────
-        auto set_text(std::string_view text) -> Button&;
+        /// 统一 getter/setter 风格：text() 无参读取，text(sv) 设置
+        auto text(std::string_view t) -> Button& { return set_text(t); }
 
         [[nodiscard]] auto text() const noexcept -> const std::string&;
 
@@ -101,20 +102,19 @@ export namespace nandina::widgets {
 
         [[nodiscard]] auto font_family() const noexcept -> const std::string&;
 
-        auto set_font(text::NanFont font) -> Button&;
+        /// font(NanFont) — 替换整个字体；font(Fn) — 局部更新；font() — 读取
+        auto font(text::NanFont f) -> Button& { return set_font(std::move(f)); }
 
-        [[nodiscard]] auto font() const noexcept -> const text::NanFont&;
-        /// 局部更新字体属性；Fn: (NanFont&) -> void
-        ///
-        /// 示例：
-        ///   button_ref->update_font([](auto& f){ f.color(NanColor::white()); });
         template <typename Fn>
             requires std::invocable<Fn, text::NanFont&>
-        auto update_font(Fn&& fn) -> Button& {
+                     && (!std::convertible_to<std::remove_cvref_t<Fn>, text::NanFont>)
+        auto font(Fn&& fn) -> Button& {
             auto updated = font();
             std::invoke(std::forward<Fn>(fn), updated);
             return set_font(std::move(updated));
         }
+
+        [[nodiscard]] auto font() const noexcept -> const text::NanFont&;
         // ── 回调 ──────────────────────────────────────────
         auto on_click(Callback cb) -> Button&;
 
@@ -134,13 +134,13 @@ export namespace nandina::widgets {
         [[nodiscard]] auto released() -> reactive::EventSignal<>&;
 
         // ── 禁用 / 加载 ───────────────────────────────────
-        auto set_disabled(bool disabled) -> Button&;
+        /// disabled(bool) — 设置；disabled() — 读取
+        auto disabled(bool v) -> Button& { return set_disabled(v); }
+        [[nodiscard]] auto disabled() const noexcept -> bool { return is_disabled(); }
 
-        [[nodiscard]] auto is_disabled() const noexcept -> bool;
-
-        auto set_loading(bool loading) -> Button&;
-
-        [[nodiscard]] auto is_loading() const noexcept -> bool;
+        /// loading(bool) — 设置；loading() — 读取
+        auto loading(bool v) -> Button& { return set_loading(v); }
+        [[nodiscard]] auto loading() const noexcept -> bool { return is_loading(); }
 
         // ── 布局协议 ──────────────────────────────────────
         [[nodiscard]] auto preferred_size() const noexcept -> geometry::NanSize override;
@@ -173,14 +173,27 @@ export namespace nandina::widgets {
 
         void on_draw(tvg::SwCanvas& canvas) override;
 
-    private:
+    protected:
         Button();
 
-        auto apply_variant() -> void;
+        /// 访问内容行，供子类调整 justify_content / align_items 等布局属性
+        [[nodiscard]] auto content_row() noexcept -> layout::Row& { return *m_content_row; }
 
+        /// 更新视觉状态（hover/press/disabled/loading → 背景色 + 文字色）。
+        /// 子类可重写以使用自定义配色方案，需先调用 Button::update_visual_state() 处理背景。
+        virtual auto update_visual_state() -> void;
+
+    private:
+        auto apply_variant() -> void;
         auto apply_size() -> void;
 
-        auto update_visual_state() -> void;
+        // ── 私有实现（通过公有统一 API 调用）────────────
+        auto set_text(std::string_view text) -> Button&;
+        auto set_font(text::NanFont font) -> Button&;
+        auto set_disabled(bool v) -> Button&;
+        [[nodiscard]] auto is_disabled() const noexcept -> bool;
+        auto set_loading(bool v) -> Button&;
+        [[nodiscard]] auto is_loading() const noexcept -> bool;
 
         // ── 状态 ──────────────────────────────────────
         ButtonVariant m_variant{ButtonVariant::default_variant};
@@ -191,6 +204,9 @@ export namespace nandina::widgets {
         bool m_pressed{false};
         bool m_disabled{false};
         bool m_loading{false};
+
+        /// 开发者显式设置的字体颜色；有值时 update_visual_state() 将以此为准（禁用/加载状态除外）
+        std::optional<NanColor> m_user_font_color;
 
         // ── 信号 ──────────────────────────────────────────
         reactive::EventSignal<> m_clicked_signal;

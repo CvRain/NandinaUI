@@ -84,8 +84,7 @@ export namespace nandina::widgets {
         auto add_menu_item(SidebarMenuButton::Ptr item) -> Sidebar& {
             if (!m_content_group) {
                 auto group = SidebarGroup::create();
-                group->set_label("Navigation")
-                    .set_show_accent(true);
+                group->label("Navigation");
                 m_content_group = group.get();
                 add_group(std::move(group));
             }
@@ -98,7 +97,7 @@ export namespace nandina::widgets {
         auto add_project_item(SidebarMenuButton::Ptr item) -> Sidebar& {
             if (!m_project_group) {
                 auto group = SidebarGroup::create();
-                group->set_label("Recent Projects");
+                group->label("Recent Projects");
                 m_project_group = group.get();
                 add_group(std::move(group));
             }
@@ -110,8 +109,16 @@ export namespace nandina::widgets {
         // ── 属性 ──────────────────────────────────────────
         auto set_header_title(std::string_view text) -> Sidebar& {
             m_header_title_text = text;
-            if (m_header_slot) m_header_slot->height(text.empty() ? 0.0f : 50.0f);
-            if (m_header_label) m_header_label->set_text(text);
+            const bool visible = !text.empty();
+            if (m_header_slot) {
+                m_header_slot->height(visible ? 50.0f : 0.0f);
+                m_header_slot->set_visible(visible);
+            }
+            if (m_header_label) {
+                m_header_label->set_text(text);
+                m_header_label->set_visible(visible);
+            }
+            if (m_header_logo) m_header_logo->set_visible(visible);
             mark_layout_dirty();
             return *this;
         }
@@ -135,7 +142,12 @@ export namespace nandina::widgets {
     private:
         auto _sync_footer_visibility() -> void {
             if (!m_footer_slot) return;
-            m_footer_slot->height((m_user_name_text.empty() && m_user_role_text.empty()) ? 0.0f : 70.0f);
+            const bool visible = !(m_user_name_text.empty() && m_user_role_text.empty());
+            m_footer_slot->height(visible ? 70.0f : 0.0f);
+            m_footer_slot->set_visible(visible);
+            if (m_user_avatar)     m_user_avatar->set_visible(visible);
+            if (m_user_name_label) m_user_name_label->set_visible(!m_user_name_text.empty());
+            if (m_user_role_label) m_user_role_label->set_visible(!m_user_role_text.empty());
         }
 
         // ── Surface override ──────────────────────────────
@@ -300,9 +312,9 @@ export namespace nandina::widgets {
             add_child(std::move(root_column));
         }
 
-        std::string m_header_title_text{"Nandina Studio"};
-        std::string m_user_name_text{"CvRain"};
-        std::string m_user_role_text{"Developer"};
+        std::string m_header_title_text;
+        std::string m_user_name_text;
+        std::string m_user_role_text;
 
         // Header 子节点
         Icon* m_header_logo{nullptr};
