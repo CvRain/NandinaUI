@@ -8,6 +8,7 @@ nandina_add_test(
         ${CMAKE_SOURCE_DIR}/showcase/nan_showcase.cppm
         ${CMAKE_SOURCE_DIR}/showcase/pages/sandbox_page.cppm
         ${CMAKE_SOURCE_DIR}/showcase/main_page.cppm
+        ${CMAKE_SOURCE_DIR}/showcase/pages/button.cppm
     DEPS
         nandina::app
         nandina::layout

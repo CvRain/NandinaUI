@@ -10,6 +10,21 @@ import nandina.foundation.color;
 
 import nandina.showcase.sandbox_page;
 import nandina.showcase.main_page;
+import nandina.showcase.page.button;
+
+export namespace nandina::showcase {
+    [[nodiscard]] inline auto create_showcase_shell() -> nandina::app::Node {
+        auto router = nandina::app::NanRouter::create();
+        router->register_page(std::make_unique<nandina::showcase::MainPage>());
+        router->register_page(std::make_unique<nandina::showcase::ButtonPage>());
+        router->register_page(std::make_unique<nandina::showcase::SandboxPage>());
+
+        return nandina::app::create_shell(std::move(router), {
+            .sidebar_width = 260.0f,
+            .header_title = "NandinaUI Showcase",
+        });
+    }
+}
 
 // ── MainWindow — 唯一导出 ───────────────────────────────────────────────────
 export class MainWindow final : public nandina::app::NanAppWindow {
@@ -23,13 +38,6 @@ public:
             .high_dpi = true,
             .bg_color = nandina::NanColor::from(nandina::NanRgb{"#1e1e2e"})
         }) {
-        // m_sandbox_page 作为成员，生命周期与 MainWindow 绑定；
-        // build() 内的 [this]（SandboxPage*）和 Ref<Button> 引用因此保持有效
-        //set_root(nandina::app::adopt(m_sandbox_page.build()));
-        set_root(nandina::app::adopt(m_main_page.build()));
+        set_root(nandina::showcase::create_showcase_shell());
     }
-
-private:
-    //nandina::showcase::SandboxPage m_sandbox_page;
-    nandina::showcase::MainPage m_main_page;
 };

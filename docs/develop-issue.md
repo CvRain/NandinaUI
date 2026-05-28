@@ -1138,9 +1138,9 @@
 
 ---
 
-## Issue 086 — 清理 widgets 中的手工布局分发 🟡 进行中
+## Issue 086 — 清理 widgets 中的手工布局分发 ✅ 已完成
 **Labels:** `area:widgets`, `area:layout`, `kind:refactor`, `priority:p0`
-**Status:** 🟡 进行中 — `Pressable` / `Card` / `Panel` / `SplitRow` / `SidebarMenuButton` / `SidebarGroup` / `Sidebar` 已回到两阶段布局主链，剩余工作集中在其他 legacy widgets 与未接入主编译面的遗留控件清理
+**Status:** ✅ 已完成 — `Pressable` / `Button` / `Card` / `Panel` / `SplitRow` / `Sidebar` 系列已回到两阶段布局主链；其中 `SidebarGroup` 已从手工 item frame 计算收口到 `Surface + Column + Padding/SizedBox` 组合，现阶段后续工作转入 widgets 测试、primitive/theme 收口与更高层 Sidebar 结构化设计
 
 ### 目标
 把 widgets 收口到“组合布局原语或极少量叶子级几何”的模式，减少控件内部重复实现布局逻辑。
@@ -1159,17 +1159,23 @@
 - `widgets/src/nan_split_row.cppm`
 - `widgets/src/nan_sidebar_group.cppm`
 - `widgets/src/nan_sidebar_menu_button.cppm`
-- `tests/widgets/*`
+- `tests/app/test_app_authoring.cpp`
+- `tests/widgets/*`（后续由 Issue 078 独立补齐）
 
 ### 完成定义
 - widgets 内部的大多数布局不再依赖手工 frame 计算
 - 基础控件可作为 showcase 与后续页面 authoring 的稳定积木
 
+### 当前结果
+- `Surface` / `Button` / `Card` / `Panel` / `Sidebar` 系列已统一回到 measure/layout 主链
+- `SidebarGroup` 不再手工写死 label/item 的 y 偏移和 item 高度，改为内部组合布局
+- `tests/app/test_app_authoring.cpp` 已补回归，覆盖 `SidebarGroup` 的动态 label slot 与“按子项首选高度布局”行为
+
 ---
 
-## Issue 087 — 清理 showcase 中的手工 frame 计算并回归 authoring/layout 原语 ❌ 未完成
+## Issue 087 — 清理 showcase 中的手工 frame 计算并回归 authoring/layout 原语 ✅ 已完成
 **Labels:** `area:showcase`, `area:layout`, `area:app`, `kind:refactor`, `priority:p0`
-**Status:** ❌ 未完成 — showcase 虽已部分迁到 authoring API，但仍有代表性组件保留手工布局代码
+**Status:** ✅ 已完成 — 当前 showcase 入口已回到 `router + create_shell + page host` 主链；页面内容不再自带嵌套导航布局，showcase 测试也改为验证结构与路由语义而不是补丁式几何计算
 
 ### 目标
 让 showcase 真正成为 layout 协议与 widgets 组合模式的验证场，而不是继续承载补丁式布局样例。
@@ -1180,15 +1186,20 @@
 - 保持现有 showcase 布局测试可读且稳定
 
 ### 涉及文件
-- `showcase/pages/dashboard_page.cppm`
-- `showcase/components/cards/project_progress_card.cppm`
-- `showcase/components/cards/*.cppm`
-- `showcase/components/sections/*.cppm`
+- `showcase/nan_showcase.cppm`
+- `showcase/main_page.cppm`
+- `showcase/pages/sandbox_page.cppm`
+- `showcase/pages/button.cppm`
 - `tests/showcase/test_showcase_layout.cpp`
 
 ### 完成定义
 - showcase 主页面中的手工几何计算显著减少
 - showcase 布局测试主要验证结构和协议，而不是为补丁式手算背书
+
+### 当前结果
+- `MainWindow` 不再直接 mount 单页，而是通过 `create_showcase_shell()` 统一注册页面并交给 `create_shell()` 构建标准 Sidebar + PageHost 壳
+- `MainPage` 已收口为纯内容页，不再嵌入自己的 Sidebar，避免 showcase 可执行路径与 page/router/shell 主线分叉
+- `tests/showcase/test_showcase_layout.cpp` 已新增真实 showcase shell 回归，验证多页面注册后 Sidebar 按页面元数据生成导航按钮并保持初始激活态
 
 ---
 
@@ -2596,6 +2607,28 @@
 23. **Issue 074 — 在 showcase 中加入主题切换能力**  
     依赖：Issue 041，建议在 Issue 071-073 至少完成两页后推进  
     原因：主题切换需要有足够多的组件消费面，否则很难看出 token / resolver 的真实问题。
+
+## Phase E — Sidebar / Navigation 体系（P2，延后到 Primitive/Theme 初步稳定后）
+
+24. **Issue 096 — 定义 Sidebar 结构组件与插槽协议**  
+    依赖：Issue 054, Issue 059, Issue 086  
+    原因：Sidebar 需要先从“专用成品控件”收口成结构组件（Header/Content/Footer/Group/Menu/...）与默认 stock widgets，避免继续把扩展性压在 Button 继承链上。
+
+25. **Issue 097 — 重构 Sidebar 为可组合结构件**  
+    依赖：Issue 096, Issue 087  
+    原因：在 layout/showcase 主线稳定后，再把现有 Sidebar 拆成 `SidebarHeader` / `SidebarContent` / `SidebarFooter` / `SidebarGroup` / `SidebarMenu` 等结构件，风险更可控。
+
+26. **Issue 098 — 为 Sidebar 增加 submenu / hierarchical menu**  
+    依赖：Issue 096, Issue 097  
+    原因：当前更适合先做 Sidebar 专用分层菜单，而不是提前抽象完整 TreeView；先验证导航层级、激活态传播与缩进规则，再决定是否上提通用树模型。
+
+27. **Issue 099 — 为 Sidebar 体系补齐测试与 showcase 验证页**  
+    依赖：Issue 097, Issue 098, Issue 078  
+    原因：Sidebar 属于复杂复合控件，没有独立回归面和展示页，很难稳定推进折叠、submenu、badge、action 等后续能力。
+
+28. **Issue 100 — 评估是否从 Sidebar submenu 上提 ListView / TreeView primitive**  
+    依赖：Issue 098, Issue 099  
+    原因：只有在 Sidebar 的层级导航语义先稳定后，才适合判断仓库是否真的需要抽出通用 ListView / TreeView，而不是过早做大抽象。
 
 ---
 

@@ -18,6 +18,7 @@ import nandina.widgets.label;
 import nandina.widgets.panel;
 import nandina.widgets.pressable;
 import nandina.widgets.progressbar;
+import nandina.widgets.sidebar_group;
 import nandina.widgets.surface;
 
 class TestWidget final : public nandina::runtime::NanWidget {
@@ -433,6 +434,66 @@ TEST(AppAuthoringTest, LabelFactorySupportsChainedTextStylingAndRefBinding) {
     EXPECT_EQ(color.red(), 1u);
     EXPECT_EQ(color.green(), 2u);
     EXPECT_EQ(color.blue(), 3u);
+}
+
+TEST(AppAuthoringTest, SidebarGroupUsesChildPreferredHeightsInsteadOfFixedRows) {
+    auto group = nandina::widgets::SidebarGroup::create();
+    group->label("Navigation");
+    group->add_child(TestWidget::create());
+    group->add_child(TestWidget::create());
+
+    group->measure(nandina::geometry::NanConstraints::tight(200.0f, 96.0f));
+    group->set_bounds(10.0f, 20.0f, 200.0f, 96.0f);
+    group->layout();
+
+    ASSERT_EQ(group->child_count(), 1u);
+    auto* root_column = group->children()[0].get();
+    ASSERT_NE(root_column, nullptr);
+    ASSERT_EQ(root_column->child_count(), 2u);
+
+    auto* content_column = root_column->children()[1].get();
+    ASSERT_NE(content_column, nullptr);
+    ASSERT_EQ(content_column->child_count(), 2u);
+
+    const auto first_bounds = content_column->children()[0]->bounds();
+    const auto second_bounds = content_column->children()[1]->bounds();
+
+    EXPECT_FLOAT_EQ(first_bounds.x(), 10.0f);
+    EXPECT_FLOAT_EQ(first_bounds.width(), 200.0f);
+    EXPECT_FLOAT_EQ(first_bounds.height(), 12.0f);
+    EXPECT_FLOAT_EQ(second_bounds.y(), first_bounds.y() + first_bounds.height() + 2.0f);
+    EXPECT_FLOAT_EQ(second_bounds.height(), 12.0f);
+}
+
+TEST(AppAuthoringTest, SidebarGroupHeadTextSynchronizesLabelSlotVisibility) {
+    auto group = nandina::widgets::SidebarGroup::create();
+    group->add_child(TestWidget::create());
+
+    group->measure(nandina::geometry::NanConstraints::tight(200.0f, 64.0f));
+    group->set_bounds(0.0f, 0.0f, 200.0f, 64.0f);
+    group->layout();
+
+    ASSERT_EQ(group->child_count(), 1u);
+    auto* root_column = group->children()[0].get();
+    ASSERT_NE(root_column, nullptr);
+    ASSERT_EQ(root_column->child_count(), 2u);
+
+    auto* label_slot = root_column->children()[0].get();
+    auto* content_column = root_column->children()[1].get();
+    ASSERT_NE(label_slot, nullptr);
+    ASSERT_NE(content_column, nullptr);
+    ASSERT_EQ(content_column->child_count(), 1u);
+
+    EXPECT_FLOAT_EQ(label_slot->bounds().height(), 0.0f);
+    EXPECT_FLOAT_EQ(content_column->children()[0]->bounds().y(), 0.0f);
+
+    group->head().text("Navigation");
+    group->measure(nandina::geometry::NanConstraints::tight(200.0f, 96.0f));
+    group->set_bounds(0.0f, 0.0f, 200.0f, 96.0f);
+    group->layout();
+
+    EXPECT_GT(label_slot->bounds().height(), 0.0f);
+    EXPECT_GT(content_column->children()[0]->bounds().y(), 0.0f);
 }
 
 TEST(AppAuthoringTest, ButtonFactorySupportsTextColorsAndRefBinding) {

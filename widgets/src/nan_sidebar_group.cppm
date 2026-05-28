@@ -13,6 +13,7 @@ export module nandina.widgets.sidebar_group;
 
 import nandina.runtime.nan_widget;
 import nandina.layout.container;
+import nandina.layout.flex_widgets;
 import nandina.foundation.nan_insets;
 import nandina.foundation.nan_rect;
 import nandina.foundation.nan_size;
@@ -81,16 +82,26 @@ export namespace nandina::widgets {
             if (m_label) {
                 m_label->text(text);
             }
+            sync_label_slot_visibility();
             mark_layout_dirty();
             return *this;
         }
 
-        [[nodiscard]] auto label() const noexcept -> std::string_view { return m_label_text; }
+        [[nodiscard]] auto label() const noexcept -> std::string_view {
+            if (m_label) {
+                return m_label->text();
+            }
+            return m_label_text;
+        }
 
         // ── 添加子节点 ──────────────────────────────────
         auto add_child(std::unique_ptr<runtime::NanWidget> child) -> void {
+            if (m_content_layout) {
+                m_content_layout->add(std::move(child));
+                return;
+            }
+
             Surface::add_child(std::move(child));
-            mark_layout_dirty();
         }
 
         /// 返回头部按钮引用，开发者可直接配置样式 / 事件回调
@@ -109,61 +120,19 @@ export namespace nandina::widgets {
             return *this;
         }
 
-        // ── 布局 ──────────────────────────────────────────
-        /// measure() 必须重写：Surface::measure() 用 max(children) 计算高度（重叠语义），
-        /// 而 SidebarGroup 是堆叠布局，measured_size 应与 preferred_size() 一致。
         auto measure(const geometry::NanConstraints& constraints) -> void override {
-            // 先让子节点自行 measure（保证其状态正确）
-            for_each_child([&](runtime::NanWidget& child) {
-                child.measure(constraints.loosen());
-            });
-            // 以堆叠高度作为自身 measured_size
-            const auto pref = preferred_size();
-            set_measured_layout_state(constraints, constraints.constrain(pref));
-        }
-
-        auto set_bounds(float x, float y, float w, float h) noexcept -> NanWidget& override {
-            Surface::set_bounds(x, y, w, h);
-            return *this;
+            sync_label_slot_visibility();
+            Surface::measure(constraints);
         }
 
         auto layout() -> void override {
-            float item_y = y();
-
-            // 若有分组标签（有文本），先定位 label，再在其下方排列菜单项
-            // 用文本是否为空判断，而非 visible()，以兼容 head().label().set_text() 路径
-            constexpr float k_label_pad_top = 4.0f;
-            constexpr float k_label_h       = 24.0f;
-            constexpr float k_label_gap     = 4.0f;
-            if (m_label && !m_label->text().empty()) {
-                m_label->set_bounds(x() + 16.0f, item_y + k_label_pad_top,
-                                    width() - 32.0f, k_label_h);
-                m_label->layout();
-                item_y += k_label_pad_top + k_label_h + k_label_gap;
-            } else if (m_label) {
-                m_label->set_bounds(0.0f, 0.0f, 0.0f, 0.0f); // 无文本时清除 bounds，防止事件拦截
-            }
-
-            for_each_child([&](runtime::NanWidget& child) {
-                if (&child == m_label) return;
-                child.set_bounds(x(), item_y, width(), 36.0f);
-                child.layout();
-                item_y += 38.0f; // 36 height + 2 gap
-            });
-            clear_layout_dirty();
+            sync_label_slot_visibility();
+            Surface::layout();
         }
 
         [[nodiscard]] auto preferred_size() const noexcept -> geometry::NanSize override {
-            float total_h = 0.0f;
-            if (m_label && !m_label->text().empty()) {
-                total_h += 4.0f + 24.0f + 4.0f; // pad_top + label_h + gap
-            }
-            size_t n = 0;
-            for_each_child([&](const runtime::NanWidget& child) {
-                if (&child != m_label) ++n;
-            });
-            total_h += static_cast<float>(n) * 38.0f;
-            return {240.0f, total_h};
+            const auto pref = Surface::preferred_size();
+            return {std::max(k_min_preferred_width, pref.width()), pref.height()};
         }
 
     private:
@@ -172,13 +141,52 @@ export namespace nandina::widgets {
             m_corner_radius.set(0.0f);
             m_padding.set(geometry::NanInsets{});
 
+            auto root_column = layout::Column::Create();
+            root_column->align_items(layout::LayoutAlignment::stretch);
+
             auto label = SidebarGroupLabel::create();
             m_label = label.get();
-            Surface::add_child(std::move(label));
+
+            auto label_box = layout::SizedBox::Create();
+            label_box->height(k_label_height).child(std::move(label));
+
+            auto label_pad = layout::Padding::Create();
+            label_pad->padding(16.0f, 4.0f, 16.0f, 4.0f).child(std::move(label_box));
+
+            auto label_slot = layout::SizedBox::Create();
+            label_slot->height(0.0f).child(std::move(label_pad));
+            label_slot->set_visible(false);
+            m_label_slot = label_slot.get();
+            root_column->add(std::move(label_slot));
+
+            auto content_layout = layout::Column::Create();
+            content_layout->align_items(layout::LayoutAlignment::stretch).gap(k_item_gap);
+            m_content_layout = content_layout.get();
+            root_column->add(std::move(content_layout));
+
+            Surface::add_child(std::move(root_column));
         }
+
+        auto sync_label_slot_visibility() const -> void {
+            if (!m_label_slot || !m_label) {
+                return;
+            }
+
+            const bool visible = !m_label->text().empty();
+            m_label_slot->height(visible ? k_label_slot_height : 0.0f);
+            m_label_slot->set_visible(visible);
+            m_label->set_visible(visible);
+        }
+
+        static constexpr float k_label_height = 24.0f;
+        static constexpr float k_label_slot_height = 32.0f;
+        static constexpr float k_item_gap = 2.0f;
+        static constexpr float k_min_preferred_width = 240.0f;
 
         std::string m_label_text;
         SidebarGroupLabel* m_label{nullptr};
+        layout::SizedBox* m_label_slot{nullptr};
+        layout::Column* m_content_layout{nullptr};
     };
 
 } // namespace nandina::widgets

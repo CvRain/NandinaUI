@@ -199,3 +199,22 @@ TEST(ShowcaseLayoutTest, ShowcaseShellSidebarActiveStateTracksNavigation) {
     ASSERT_GE(buttons.size(), 1u);
     EXPECT_TRUE(buttons[0]->active());
 }
+
+TEST(ShowcaseLayoutTest, ExportedShowcaseShellRegistersMultiplePagesIntoSidebar) {
+    auto mounted = nandina::app::mount(nandina::showcase::create_showcase_shell());
+    ASSERT_NE(mounted, nullptr);
+
+    mounted->set_bounds(0.0f, 0.0f, 1280.0f, 720.0f);
+
+    auto& root_row = child_at(*mounted, 0);
+    std::vector<nandina::widgets::SidebarMenuButton*> buttons;
+    collect_sidebar_buttons(root_row, buttons);
+
+    ASSERT_GE(buttons.size(), 3u);
+    EXPECT_TRUE(buttons[0]->active());
+    EXPECT_FALSE(buttons[1]->active());
+    EXPECT_FALSE(buttons[2]->active());
+    EXPECT_EQ(buttons[0]->text(), "Main Page");
+    EXPECT_EQ(buttons[1]->text(), "Button Showcase");
+    EXPECT_EQ(buttons[2]->text(), "Sandbox");
+}

@@ -76,7 +76,7 @@
 | 模块 | 状态 | 说明 |
 |------|------|------|
 | Layout 主线收口 | 🚧 进行中 | 当前重点是 `constraints -> measure/layout -> reflow -> widgets/showcase` 全链路收口 |
-| Widgets 自动布局收口 | 🚧 进行中 | Card、Panel、Button、Sidebar 系列等仍有手工布局逻辑待回收 |
+| Widgets 自动布局收口 | ⚠️ 主体完成 | Issue 086 已完成；当前重点转入 widgets 专项测试、primitive/theme 收口，以及延后的 Sidebar 结构化演进 |
 | Theme / Design System | 🚧 早期 | 基础类型已存在，但 token/resolver 到 widgets 的统一消费仍未完成 |
 
 ### 待开发
