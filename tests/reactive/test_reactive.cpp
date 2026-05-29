@@ -231,6 +231,23 @@ TEST(ReactiveTest, ReadStateIsCopyableAndTracks) {
     EXPECT_EQ(runs, 2);
 }
 
+TEST(ReactiveTest, DestroyedEffectDoesNotLeaveStaleInvalidatorInStateObservers) {
+    nandina::reactive::State<int> value{1};
+    int runs = 0;
+
+    {
+        nandina::reactive::Effect effect{[&] {
+            ++runs;
+            (void)value();
+        }};
+
+        EXPECT_EQ(runs, 1);
+    }
+
+    EXPECT_NO_THROW(value.set(2));
+    EXPECT_EQ(runs, 1);
+}
+
 // ── Read-only input model semantics ────────────────────────────────────────
 
 TEST(ReactiveTest, PropSupportsStaticAndReadOnlySources) {

@@ -10,7 +10,6 @@ export module nandina.showcase.main_page;
 
 import nandina.app.authoring;
 import nandina.foundation.color;
-import nandina.foundation.nan_insets;
 import nandina.layout.container;
 import nandina.layout.flex_widgets;
 import nandina.text;
@@ -41,39 +40,48 @@ namespace nandina::showcase {
         using namespace nandina::app;
 
         return mount(column(children(
-            app::label()
-                .text("Welcome to NandinaUI")
-                .align(widgets::TextAlign::Start)
-                .font(text::NanFont{}
-                    .size(24)
-                    .weight(text::NanFontWeight::bold))
-                .color(NanColor::from(NanRgb{"#cdd6f4"})),
-            app::label()
-                .text("The showcase shell now routes pages through Sidebar + PageHost, so this page only describes content instead of embedding its own navigation layout.")
-                .align(widgets::TextAlign::Start)
-                .color(NanColor::from(NanRgb{"#a6adc8"})),
+            column(children(
+                app::label()
+                    .text("Welcome to NandinaUI")
+                    .align(widgets::TextAlign::Start)
+                    .font(text::NanFont{}
+                        .size(24)
+                        .weight(text::NanFontWeight::bold))
+                    .color(NanColor::from(NanRgb{"#cdd6f4"})),
+                app::label()
+                    .text(
+                        "The showcase shell now routes pages through Sidebar + PageHost, so this page only describes content instead of embedding its own navigation layout.")
+                    .align(widgets::TextAlign::Start)
+                    .color(NanColor::from(NanRgb{"#a6adc8"}))
+            )).gap(10),
             app::panel(children(
-                app::label()
-                    .text("Current validation focus")
-                    .align(widgets::TextAlign::Start)
-                    .font(text::NanFont{}.weight(text::NanFontWeight::semiBold))
-                    .color(NanColor::from(NanRgb{"#cdd6f4"})),
-                app::label()
-                    .text("Authoring/layout primitives, page hosting, router-driven sidebar generation, and component composition are all exercised from the same executable path.")
-                    .align(widgets::TextAlign::Start)
-                    .color(NanColor::from(NanRgb{"#a6adc8"}))
-            )).title("Showcase Shell").padding(16.0f),
+                column(children(
+                    app::label()
+                        .text("Current validation focus")
+                        .align(widgets::TextAlign::Start)
+                        .font(text::NanFont{}.weight(text::NanFontWeight::semiBold))
+                        .color(NanColor::from(NanRgb{"#cdd6f4"})),
+                    app::label()
+                        .text(
+                            "Authoring/layout primitives, page hosting, router-driven sidebar generation, and component composition are all exercised from the same executable path.")
+                        .align(widgets::TextAlign::Start)
+                        .color(NanColor::from(NanRgb{"#a6adc8"}))
+                )).gap(10)
+            )).title("Showcase Shell").padding(18.0f),
             app::card(children(
-                app::label()
-                    .text("Next steps")
-                    .align(widgets::TextAlign::Start)
-                    .font(text::NanFont{}.weight(text::NanFontWeight::semiBold))
-                    .color(NanColor::from(NanRgb{"#cdd6f4"})),
-                app::label()
-                    .text("Add more dedicated component pages and keep tests focused on structure and routing semantics rather than handwritten geometry.")
-                    .align(widgets::TextAlign::Start)
-                    .color(NanColor::from(NanRgb{"#a6adc8"}))
-            )).title("Roadmap").padding(16.0f)
-        )).gap(16).padding(32));
+                column(children(
+                    app::label()
+                        .text("Next steps")
+                        .align(widgets::TextAlign::Start)
+                        .font(text::NanFont{}.weight(text::NanFontWeight::semiBold))
+                        .color(NanColor::from(NanRgb{"#cdd6f4"})),
+                    app::label()
+                        .text(
+                            "Add more dedicated component pages and keep tests focused on structure and routing semantics rather than handwritten geometry.")
+                        .align(widgets::TextAlign::Start)
+                        .color(NanColor::from(NanRgb{"#a6adc8"}))
+                )).gap(10)
+            )).title("Roadmap").padding(18.0f)
+        )).gap(24).padding(32));
     }
 }

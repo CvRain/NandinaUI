@@ -33,8 +33,8 @@ export namespace nandina::app {
     struct ShellConfig {
         float sidebar_width = 260.0f;
         std::string_view header_title = "NandinaUI";
-        std::string_view user_name;
-        std::string_view user_role;
+        std::string_view user_name = "";
+        std::string_view user_role = "";
     };
 
     /**

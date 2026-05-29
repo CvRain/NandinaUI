@@ -1203,9 +1203,9 @@
 
 ---
 
-## Issue 088 — 补齐 layout 回归测试矩阵 ❌ 未完成
+## Issue 088 — 补齐 layout 回归测试矩阵 ✅ 已完成
 **Labels:** `area:layout`, `area:tests`, `kind:test`, `priority:p0`
-**Status:** ❌ 未完成 — 现有测试覆盖基础容器，但尚不足以保护下一轮收口重构
+**Status:** ✅ 已完成 — layout 主线的 backend / helper widgets / page host / showcase shell 关键回归面已形成稳定测试矩阵
 
 ### 目标
 为 layout 主线收口建立可回归的测试矩阵，避免后续每次改布局都只能靠肉眼检查 showcase。
@@ -1224,6 +1224,12 @@
 ### 完成定义
 - layout 主线收口涉及的核心路径均有自动化测试保护
 - 后续继续演进 Yoga 接入位或 widgets 组合方式时，能快速识别回归
+
+### 当前结果
+- `tests/layout/test_layout_core.cpp` 已覆盖基础 backend、padding/gap/alignment、min/max、overfull shrink、helper widgets 与显式 measure/layout 链路
+- `tests/layout/test_positioned.cpp` 已覆盖 anchor / fill / sibling ref / reactive relayout 等 positioned 语义
+- `tests/app/test_app_authoring.cpp` 与 `tests/app/test_app_navigation.cpp` 已覆盖 root reflow、hit-test 前布局收口、PageHost 延迟换页与 mounted page bounds 传播
+- `tests/showcase/test_showcase_layout.cpp` 已覆盖 showcase shell 的 sidebar 自动生成、左侧 sidebar / 右侧 page host 结构分配，以及 MainPage 内容区不重叠回归
 
 ---
 

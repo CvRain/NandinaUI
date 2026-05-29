@@ -7,6 +7,7 @@ module;
 #include <algorithm>
 #include <cstddef>
 #include <functional>
+#include <memory>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -174,7 +175,10 @@ private:
         observers_.push_back({
             detail::current_tracking_context->id,
             true,
-            *detail::current_tracking_context->invalidate
+            *detail::current_tracking_context->invalidate,
+            detail::current_tracking_context->alive
+                ? *detail::current_tracking_context->alive
+                : std::shared_ptr<bool>{}
         });
     }
 
@@ -186,7 +190,7 @@ private:
 
         for (; next_observer < snapshot.size(); ++next_observer) {
             const auto& entry = snapshot[next_observer];
-            if (!entry.active || !entry.invalidate) { continue; }
+            if (!entry.active || !detail::observer_is_live(entry) || !entry.invalidate) { continue; }
 
             if (detail::is_batching()) {
                 detail::queue_invalidation(entry.id, entry.invalidate);

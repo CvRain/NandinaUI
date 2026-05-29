@@ -299,6 +299,65 @@ TEST(LayoutCoreTest, Column_FlexChildRespectsMinAndMaxHeight) {
     EXPECT_FLOAT_EQ(frames[1].height(), 120.0f);
 }
 
+TEST(LayoutCoreTest, Row_FlexChildShrinksToZeroWhenContainerIsOverfull) {
+    BasicLayoutBackend backend;
+
+    LayoutRequest req;
+    req.axis = LayoutAxis::row;
+    req.container_bounds = {0.0f, 0.0f, 120.0f, 80.0f};
+    req.gap = 10.0f;
+    req.children = {
+        LayoutChildSpec{.preferred_size = NanSize{140.0f, 40.0f}, .flex_factor = 0},
+        LayoutChildSpec{.preferred_size = NanSize{60.0f, 40.0f}, .flex_factor = 1, .can_shrink = true},
+    };
+
+    auto frames = backend.compute(req);
+    ASSERT_EQ(frames.size(), 2);
+    EXPECT_FLOAT_EQ(frames[0].width(), 140.0f);
+    EXPECT_FLOAT_EQ(frames[1].width(), 0.0f);
+}
+
+TEST(LayoutCoreTest, Row_FlexChildKeepsPreferredWidthWhenShrinkDisabled) {
+    BasicLayoutBackend backend;
+
+    LayoutRequest req;
+    req.axis = LayoutAxis::row;
+    req.container_bounds = {0.0f, 0.0f, 120.0f, 80.0f};
+    req.gap = 10.0f;
+    req.children = {
+        LayoutChildSpec{.preferred_size = NanSize{140.0f, 40.0f}, .flex_factor = 0},
+        LayoutChildSpec{.preferred_size = NanSize{60.0f, 40.0f}, .flex_factor = 1, .can_shrink = false},
+    };
+
+    auto frames = backend.compute(req);
+    ASSERT_EQ(frames.size(), 2);
+    EXPECT_FLOAT_EQ(frames[0].width(), 140.0f);
+    EXPECT_FLOAT_EQ(frames[1].width(), 60.0f);
+}
+
+TEST(LayoutCoreTest, Column_ShrinkingFlexChildStillRespectsMinHeight) {
+    BasicLayoutBackend backend;
+
+    LayoutRequest req;
+    req.axis = LayoutAxis::column;
+    req.container_bounds = {0.0f, 0.0f, 160.0f, 100.0f};
+    req.gap = 8.0f;
+    req.children = {
+        LayoutChildSpec{.preferred_size = NanSize{80.0f, 96.0f}, .flex_factor = 0},
+        LayoutChildSpec{
+            .preferred_size = NanSize{80.0f, 48.0f},
+            .min_size = NanSize{0.0f, 24.0f},
+            .flex_factor = 1,
+            .can_shrink = true,
+        },
+    };
+
+    auto frames = backend.compute(req);
+    ASSERT_EQ(frames.size(), 2);
+    EXPECT_FLOAT_EQ(frames[0].height(), 96.0f);
+    EXPECT_FLOAT_EQ(frames[1].height(), 24.0f);
+}
+
 TEST(LayoutCoreTest, Column_SetBoundsDoesNotAutoLayoutChildren) {
     auto column = Column::Create();
     auto* child = column->add(std::make_unique<FixedWidget>(NanSize{40.0f, 20.0f})).children().back().get();

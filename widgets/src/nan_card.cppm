@@ -153,9 +153,49 @@ export namespace nandina::widgets {
             return *this;
         }
 
+        auto measure(const geometry::NanConstraints& constraints) -> void override {
+            const auto& pad = padding();
+            const float header_h = title_header_height();
+            const geometry::NanConstraints child_constraints{
+                std::max(0.0f, constraints.min_width() - pad.left() - pad.right()),
+                constraints.max_width() == geometry::NanConstraints::k_infinity
+                    ? geometry::NanConstraints::k_infinity
+                    : std::max(0.0f, constraints.max_width() - pad.left() - pad.right()),
+                std::max(0.0f, constraints.min_height() - pad.top() - pad.bottom() - header_h),
+                constraints.max_height() == geometry::NanConstraints::k_infinity
+                    ? geometry::NanConstraints::k_infinity
+                    : std::max(0.0f, constraints.max_height() - pad.top() - pad.bottom() - header_h),
+            };
+
+            geometry::NanSize child_measured{0.0f, 0.0f};
+            for_each_child([&](runtime::NanWidget& child) {
+                if (&child == m_title_host) {
+                    return;
+                }
+
+                child.measure(child_constraints.is_tight()
+                    ? child_constraints
+                    : child_constraints.loosen());
+                const auto measured = child.measured_size();
+                const auto preferred = child.preferred_size();
+                child_measured = geometry::NanSize{
+                    std::max(child_measured.width(), measured.width() > 0.0f ? measured.width() : preferred.width()),
+                    std::max(child_measured.height(), measured.height() > 0.0f ? measured.height() : preferred.height())
+                };
+            });
+
+            set_measured_layout_state(
+                constraints,
+                constraints.constrain(geometry::NanSize{
+                    child_measured.width() + pad.left() + pad.right(),
+                    child_measured.height() + header_h + pad.top() + pad.bottom()
+                }));
+        }
+
         auto layout() -> void override {
             if (m_title_host) {
                 m_title_host->set_bounds(x(), y(), width(), title_header_height());
+                m_title_host->layout();
             }
 
             // 子节点定位在标题区域下方 + padding 内

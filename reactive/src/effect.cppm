@@ -45,7 +45,9 @@ public:
     template<typename F>
         requires std::invocable<F>
     explicit Effect(F&& fn)
-        : fn_(std::forward<F>(fn)), observer_id_(detail::next_tracking_id()) {
+        : fn_(std::forward<F>(fn)),
+          alive_(std::make_shared<bool>(true)),
+          observer_id_(detail::next_tracking_id()) {
         run();
     }
 
@@ -55,14 +57,19 @@ public:
     auto operator=(Effect&&)      = delete;
 
     /// 析构时停止追踪
-    ~Effect() { active_ = false; }
+    ~Effect() {
+        active_ = false;
+        if (alive_) {
+            *alive_ = false;
+        }
+    }
 
 private:
     /// 在依赖追踪上下文中执行用户函数
     auto run() -> void {
         if (!active_) { return; }
         self_invalidator_ = [this]{ run(); };
-        detail::TrackingContext context{observer_id_, &self_invalidator_};
+        detail::TrackingContext context{observer_id_, &self_invalidator_, &alive_};
         detail::TrackingContextGuard guard{context};
         fn_();
     }
@@ -70,6 +77,7 @@ private:
     std::function<void()>  fn_;
     bool                   active_ = true;
     std::function<void()>  self_invalidator_;
+    std::shared_ptr<bool>  alive_;
     std::size_t            observer_id_;
 };
 

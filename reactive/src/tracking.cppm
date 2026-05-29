@@ -8,6 +8,7 @@ module;
 #include <cstddef>
 #include <exception>
 #include <functional>
+#include <memory>
 #include <utility>
 #include <vector>
 
@@ -29,6 +30,7 @@ export namespace nandina::reactive::detail {
 struct TrackingContext {
     std::size_t                      id = 0;
     std::function<void()>* invalidate = nullptr;
+    std::shared_ptr<bool>*           alive = nullptr;
 };
 
 /// 当前线程的活跃追踪上下文（nullptr 表示没有活跃的 Effect/Computed）
@@ -73,11 +75,16 @@ struct ObserverEntry {
     std::size_t            id = 0;
     bool                   active = true;
     std::function<void()>  invalidate;
+    std::shared_ptr<bool>  alive;
 };
+
+[[nodiscard]] inline auto observer_is_live(const ObserverEntry& observer) -> bool {
+    return !observer.alive || *observer.alive;
+}
 
 inline auto has_observer_id(const std::vector<ObserverEntry>& observers, std::size_t id) -> bool {
     for (const auto& observer : observers) {
-        if (observer.active && observer.id == id) {
+        if (observer.active && observer_is_live(observer) && observer.id == id) {
             return true;
         }
     }
@@ -108,7 +115,7 @@ public:
 
         for (std::size_t index = next_index_; index < snapshot_.size(); ++index) {
             const auto& observer = snapshot_[index];
-            if (!observer.active || has_observer_id(observers_, observer.id)) {
+            if (!observer.active || !observer_is_live(observer) || has_observer_id(observers_, observer.id)) {
                 continue;
             }
             observers_.push_back(observer);

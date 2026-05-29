@@ -10,6 +10,7 @@ import nandina.app.authoring;
 import nandina.runtime.nan_event;
 import nandina.runtime.nan_widget;
 import nandina.showcase;
+import nandina.showcase.main_page;
 import nandina.showcase.sandbox_page;
 import nandina.widgets.sidebar_menu_button;
 
@@ -217,4 +218,65 @@ TEST(ShowcaseLayoutTest, ExportedShowcaseShellRegistersMultiplePagesIntoSidebar)
     EXPECT_EQ(buttons[0]->text(), "Main Page");
     EXPECT_EQ(buttons[1]->text(), "Button Showcase");
     EXPECT_EQ(buttons[2]->text(), "Sandbox");
+}
+
+TEST(ShowcaseLayoutTest, ShowcaseShellPlacesSidebarOnLeftAndPageHostOnRight) {
+    auto mounted = nandina::app::mount(nandina::showcase::create_showcase_shell());
+    ASSERT_NE(mounted, nullptr);
+
+    static_cast<nandina::runtime::NanWidget&>(*mounted).set_bounds(0.0f, 0.0f, 1280.0f, 720.0f);
+    mounted->measure(nandina::geometry::NanConstraints::tight(1280.0f, 720.0f));
+    mounted->layout();
+
+    auto& root_row = child_at(*mounted, 0);
+    ASSERT_EQ(root_row.child_count(), 2u);
+
+    const auto sidebar_bounds = root_row.children()[0]->bounds();
+    const auto content_bounds = root_row.children()[1]->bounds();
+
+    EXPECT_FLOAT_EQ(sidebar_bounds.x(), 0.0f);
+    EXPECT_FLOAT_EQ(sidebar_bounds.y(), 0.0f);
+    EXPECT_FLOAT_EQ(sidebar_bounds.width(), 260.0f);
+    EXPECT_FLOAT_EQ(sidebar_bounds.height(), 720.0f);
+
+    EXPECT_FLOAT_EQ(content_bounds.x(), 260.0f);
+    EXPECT_FLOAT_EQ(content_bounds.y(), 0.0f);
+    EXPECT_FLOAT_EQ(content_bounds.width(), 1020.0f);
+    EXPECT_FLOAT_EQ(content_bounds.height(), 720.0f);
+}
+
+TEST(ShowcaseLayoutTest, MainPagePanelAndCardContentDoNotStackOnSameBounds) {
+    nandina::showcase::MainPage page;
+    auto component = page.build();
+    ASSERT_NE(component, nullptr);
+
+    static_cast<nandina::runtime::NanWidget&>(*component).set_bounds(0.0f, 0.0f, 1280.0f, 720.0f);
+    component->measure(nandina::geometry::NanConstraints::tight(1280.0f, 720.0f));
+    component->layout();
+
+    auto& root_column = child_at(*component, 0);
+    ASSERT_EQ(root_column.child_count(), 3u);
+
+    auto& panel = child_at(root_column, 1);
+    auto& card = child_at(root_column, 2);
+
+    auto& panel_content_column = child_at(panel, 0);
+    auto& card_content_column = child_at(card, 0);
+    ASSERT_EQ(panel_content_column.child_count(), 2u);
+    ASSERT_EQ(card_content_column.child_count(), 2u);
+
+    const auto panel_first = panel_content_column.children()[0]->bounds();
+    const auto panel_second = panel_content_column.children()[1]->bounds();
+    const auto card_first = card_content_column.children()[0]->bounds();
+    const auto card_second = card_content_column.children()[1]->bounds();
+    auto& card_title_host = child_at(card, 1);
+    auto& card_title_label = child_at(card_title_host, 0);
+
+    EXPECT_GT(panel_second.y(), panel_first.y());
+    EXPECT_GT(card_second.y(), card_first.y());
+    EXPECT_LE(panel_second.y() + panel_second.height(), panel.y() + panel.height());
+    EXPECT_LE(card_second.y() + card_second.height(), card.y() + card.height());
+    EXPECT_GE(card_title_label.x(), card.x());
+    EXPECT_GE(card_title_label.y(), card.y());
+    EXPECT_LT(card_title_label.y(), card_first.y());
 }
