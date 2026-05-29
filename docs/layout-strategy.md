@@ -17,6 +17,18 @@
 
 因此，layout 现在已经不是“以后再做”的模块，而是需要进入主线收口的基础能力。
 
+## 当前验收口径（2026-05 校正）
+
+当前阶段判断 layout 里程碑是否收口，不再看“是否已经有 Row / Column / Stack”，而看下面这条主线是否成立：
+
+- `LayoutCore` 已能表达 `constraints / min / max / can_shrink` 等基础求解语义
+- `LayoutContainer`、helper widgets 与 app root 已接到 `measure() -> set_bounds() -> layout()` / root reflow 主链
+- widgets 主路径已回到组合布局与 layout 原语，而不是继续保留大面积手工 frame 计算
+- showcase 主路径已经通过 `router + create_shell + page host + page content` 验证真实布局链路
+- layout / app / showcase 已形成自动化回归矩阵，而不是继续依赖肉眼检查
+
+按这个口径，当前主线的 layout 收口工作已经达到本阶段验收标准；后续工作不再属于“让 layout 先能工作”，而属于复杂 flex 语义、widgets 测试与 Yoga 评估的下一阶段。
+
 ## 已决定
 
 ### 1. 现在就继续推进 layout
@@ -120,6 +132,8 @@ NandinaUI 的 layout 建议按三层理解：
 - 特定 flex 容器接入 Yoga 的可行性验证
 - shrink / basis / min-max / wrap 等复杂语义的落点
 
+当前主线已经进入这一阶段的前半段：协议边界、root reflow 与 widgets/showcase 消费主链已稳定，接下来的重点是明确哪些复杂 flex 语义值得继续上提，以及哪些问题已经足以触发 Yoga 评估。
+
 ### 第三阶段：复杂布局需求成为常态时
 
 目标：将 Yoga 引入部分主线容器。
@@ -135,6 +149,17 @@ NandinaUI 的 layout 建议按三层理解：
 
 - 复杂 flex / flow 容器
 - 多约束自适应容器
+
+### Yoga 接入前置条件
+
+在当前代码现实下，只有同时满足下面这些条件，才值得把 Yoga 从“预留接入位”推进到“主线评估项”：
+
+- 当前自有布局在复杂 flex / flow 场景中开始频繁出现补丁式扩展
+- `basis` / `wrap` / 更高频 shrink / 更复杂 min-max 约束已经进入 widgets 与真实页面的高频需求
+- widgets 与 showcase 的结构语义已经稳定，不会再被底层求解模型反向塑形
+- 现有回归矩阵已经足够保护“替换求解层而不改变语义层”的重构风险
+
+换句话说，Yoga 的前置条件不是“现在已经能接”，而是“当前 layout 主线已经稳定到足以安全替换求解层”。
 
 而不是替换所有基础容器。
 
@@ -199,6 +224,12 @@ NandinaUI 的 layout 建议按三层理解：
 - 一边收口 Button / Label / Panel / Card 的语义 API
 - 一边补足这些控件内部的自动布局能力
 - 同时逐步减少 showcase 页面装配层中的手工几何计算
+
+而在当前这轮收口完成后，下一步的直接指导应调整为：
+
+- 继续把 layout 视为稳定底座，而不是反复回到“先把 layout 做出来”
+- 优先推进 primitive / control、widgets 测试与 theme 消费收口
+- 仅在复杂 flex 需求真正成为主线问题后，再把 Yoga 提升为实现优先级
 
 Page / Router / AppShell 等更高层抽象，建议放在这一轮“基础控件 + 内部布局”稳定之后推进。
 

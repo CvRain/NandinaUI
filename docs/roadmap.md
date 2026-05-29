@@ -29,16 +29,16 @@
 - reactive 主体能力已落地并有测试覆盖
 - 仍未完成的主要是 Scene/DrawCommand 中间层，以及少量 reactive 边界测试补齐
 
-## M2：layout + theme 🚧 进行中
+## M2：layout 协议收口 + theme foundation ⚠️ layout 主线已完成，theme 继续推进
 
 **目标**
-- 提供基础布局模型（Row/Column/Stack）
+- 完成 layout 主线从协议到底层消费面的收口
 - 稳定 constraints / preferred size / 自动布局的核心协议
 - 建立 token/theme schema 与应用机制
 
 **DoD**
-- 可在 runtime 中稳定执行基础布局与主题切换
-- 上层装配代码不再大量手工计算几何结果
+- layout 已接通 `constraints -> measure/layout -> root reflow -> widgets/showcase -> regression tests` 主线
+- theme 至少具备 token / palette / manager 到主线控件的稳定消费路径
 
 **依赖**
 - M1
@@ -48,16 +48,12 @@
 - Yoga 不作为当前 layout 核心，但应在后续复杂 flex 容器中作为可评估的求解后端进入主线。
 
 **当前判断**
-- Row / Column / Stack / Spacer / SizedBox 等基础能力已落地
-- `NanWidget` 已具备 measure/layout 协议雏形，但 layout 主线仍未完全收口
-- 当前最优先工作不是新增更高层抽象，而是先完成 Layout 主线收口：
-	- `LayoutCore` 接入 `NanConstraints`
-	- `LayoutContainer` 切到两阶段驱动
-	- 建立 root reflow 闭环
-	- 清理 widgets / showcase 中的手工布局
-- theme 仍处于早期，建议在 layout 收口稳定后继续推进 token 到 widgets 的统一消费
+- `LayoutCore`、`LayoutContainer`、root reflow、widgets 自动布局收口与 showcase 主路径回归已经接通，layout 当前阶段的主线目标已完成
+- 布局相关自动化回归面已覆盖 backend、helper widgets、PageHost、showcase shell 与主页面结构
+- 仍未进入本阶段完成态的部分主要来自 theme：token / palette / manager 到 widgets 的统一消费尚未收口
+- Yoga 仍不是当前核心任务；下一次评估应建立在复杂 flex / basis / wrap /更高频 min-max 约束需求真正出现之后
 
-## M3：first widgets ⚠️ 已有可运行实现，待收口
+## M3：first widgets ⚠️ 已有可运行实现，继续收口
 
 **目标**
 - 落地第一批基础组件（如 Label/Button/Input 的最小集合）
@@ -72,8 +68,8 @@
 
 **当前判断**
 - Surface / Pressable / Label / Button / Panel / Card 等已存在实际实现
-- 目前的主要问题不是“有没有控件”，而是部分控件内部仍保留手工 frame 计算
-- 因此 M3 的前置重点是消费 M2 的 layout 收口成果，而不是继续铺更多新控件
+- 目前的主要问题已经从“控件内部手工 frame 计算”转向 theme 语义消费、widgets 专项测试与更完整的控件契约
+- 因此 M3 的重点不再是等待 layout 主线成型，而是继续完成 primitive / control 收口，并在稳定测试面上扩展下一批控件
 
 ## M4：app shell + router/page ⚠️ 部分完成
 
@@ -112,7 +108,7 @@
 
 ## 当前建议顺序
 
-1. 先完成 layout 主线收口，再继续扩大 widgets、router/page、theme 的表面积。
-2. 以 showcase 和自动化测试作为 layout 重构的回归面，而不是继续把 showcase 当作临时布局补丁承载层。
-3. 等 constraints / measure / reflow / widgets 收口稳定后，再评估 Yoga 作为复杂求解后端的正式接入点。
+1. 以当前 layout 主线为稳定底座，优先推进 primitive / control 收口、widgets 专项测试与 theme 统一消费。
+2. 继续把 showcase 和自动化测试当作结构与协议回归面，而不是把 showcase 重新退回成临时布局补丁层。
+3. 只在复杂 flex / basis / wrap / 更高频 min-max 约束成为主线需求后，再正式评估 Yoga 作为复杂求解后端的接入点。
 

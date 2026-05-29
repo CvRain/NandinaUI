@@ -67,7 +67,7 @@
 | Color 模块 | ✅ 完成 | `NanColor` 及颜色转换 |
 | Window 基础 | ✅ 完成 | `NanWindow` 窗口基类 |
 | Reactive 核心 | ✅ 主体完成 | `State`、`Effect`、`Computed`、`Prop`、`batch` 已实现并测试 |
-| Layout 基础容器 | ✅ 基础完成 | `Row`、`Column`、`Stack`、`Spacer`、`SizedBox` 已实现 |
+| Layout 主线 | ✅ 当前阶段完成 | `constraints -> measure/layout -> root reflow -> widgets/showcase -> regression tests` 主线已接通 |
 | App 层抽象 | ✅ 完成 | `NanAppWindow`、`NanComponent` 应用层生命周期封装 |
 | Showcase 验证应用 | ✅ 可运行 | 基于 ThorVG/SDL 的验证应用，当前主要承担 shell + page + layout 回归面 |
 
@@ -75,13 +75,13 @@
 
 | 模块 | 状态 | 说明 |
 |------|------|------|
-| Layout 主线收口 | 🚧 进行中 | 当前重点是 `constraints -> measure/layout -> reflow -> widgets/showcase` 全链路收口 |
+| Layout 主线收口 | ✅ 已完成 | 当前阶段验收口径已达成；后续重点转入复杂 flex 语义、widgets 专项测试与 Yoga 评估前置条件 |
 | Widgets 自动布局收口 | ⚠️ 主体完成 | Issue 086 已完成；当前重点转入 widgets 专项测试、primitive/theme 收口，以及延后的 Sidebar 结构化演进 |
 | Theme / Design System | 🚧 早期 | 基础类型已存在，但 token/resolver 到 widgets 的统一消费仍未完成 |
 
 ### 待开发
 
-详见 [开发 Issue 清单](develop-issue.md)。当前建议优先关注 Layout 主线收口与其后的 primitive/control 收口序列。
+详见 [开发 Issue 清单](develop-issue.md)。当前建议优先关注 primitive/control 收口、widgets 专项测试、theme 统一消费与后续表单垂直切片。
 
 ## 里程碑进度
 
@@ -89,8 +89,8 @@
 |--------|------|------------|
 | M0: 文档与工程基线 | ✅ 已完成 | Issue 001-004 |
 | M1: runtime + reactive | ⚠️ 核心闭环完成 | Issue 005-028 |
-| M2: layout + theme | 🚧 进行中 | Issue 029-042, Issue 082-089 |
-| M3: first widgets | ⚠️ 已有可运行实现，待收口 | Widgets / Showcase 相关章节 |
+| M2: layout + theme | ⚠️ layout 主线完成，theme 继续推进 | Issue 029-042, Issue 082-089 |
+| M3: first widgets | ⚠️ 已有可运行实现，继续收口 | Widgets / Showcase 相关章节 |
 | M4: app shell + router/page | ⚠️ 核心骨架已落地，待收口 | App / Showcase 相关章节 |
 | M5: render abstraction / text / scriptability | 🚧 早期 | Render / Text / Docs 相关章节 |
 

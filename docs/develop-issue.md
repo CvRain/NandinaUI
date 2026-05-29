@@ -801,6 +801,19 @@
 
 # Milestone M3 — Layout 模块
 
+> 状态校正（2026-05）：M3 现在不再按“是否已经有 Row / Column / Stack”验收，而按“layout 协议是否已经接管 widgets / app root reflow / showcase 主线”验收。
+>
+> 当前 M3 核心验收口径：
+> - `constraints + LayoutChildSpec + backend` 已能表达 min/max/shrink 等基础求解语义
+> - `measure() -> set_bounds() -> layout()` 与 root reflow 已形成主链，不再依赖局部即时副作用维持整树一致性
+> - widgets 与 showcase 主路径已回到 layout 原语与组合布局，而不是继续保留大面积手工 frame 计算
+> - layout / app / showcase 已形成自动化回归面，可保护后续 widgets 组合调整与 Yoga 接入评估
+>
+> 不再作为本里程碑阻塞项的内容：
+> - Yoga 的正式主线接入
+> - `basis` / `wrap` / 更复杂 flex 模型的扩展
+> - widgets 独立测试目录与更高层控件规格文档
+
 ## Issue 029 — 定义 layout 协议与测量/布局职责边界 ⚠️ 部分完成
 **Labels:** `area:layout`, `kind:architecture`, `priority:p0`
 **Status:** ⚠️ 部分完成 — 文档与基础协议均已存在，但尚未成为全项目唯一布局入口
@@ -1233,9 +1246,9 @@
 
 ---
 
-## Issue 089 — 以当前实现为准重写 Layout 里程碑验收标准 ❌ 未完成
+## Issue 089 — 以当前实现为准重写 Layout 里程碑验收标准 ✅ 已完成
 **Labels:** `area:docs`, `area:layout`, `kind:docs`, `priority:p1`
-**Status:** ❌ 未完成 — 当前 DoD 仍偏向基础能力建设，未体现“主线收口”这一实际目标
+**Status:** ✅ 已完成 — M3 / roadmap / index / layout strategy 已统一按“协议收口 -> widgets 消费 -> showcase 回归 -> Yoga 评估”口径表述 layout 当前阶段
 
 ### 目标
 把 Layout 里程碑从“是否已有 Row/Column/Stack”升级为“是否已接管 widgets/showcase 布局”的验收口径。
@@ -1254,6 +1267,12 @@
 ### 完成定义
 - 文档中的 layout 里程碑表述与代码现实一致
 - 后续开发能直接按“协议收口 -> widgets 收口 -> showcase 回归 -> Yoga 评估”的顺序推进
+
+### 当前结果
+- `develop-issue.md` 已为 M3 增加当前验收口径说明，不再把 Row / Column / Stack 的存在本身视为里程碑完成标准
+- `roadmap.md` 已把 layout 从“仍在主线收口中”改写为“layout 主线已完成、theme 继续推进”的现实状态
+- `index.md` 已同步导航页中的项目现状与里程碑进度，明确 layout 主线已完成、后续重点转入 primitive/control、widgets 测试与 theme 收口
+- `layout-strategy.md` 已补充当前 layout 里程碑的验收条件与 Yoga 接入前置条件，避免后续再次回到“是否现在就 Yoga-first”的旧讨论口径
 
 ---
 
