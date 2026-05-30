@@ -101,6 +101,14 @@ export namespace nandina::widgets {
             return m_padding.get();
         }
 
+        [[nodiscard]] auto border_color() const noexcept -> const nandina::NanColor& {
+            return m_border_color;
+        }
+
+        [[nodiscard]] auto border_width() const noexcept -> float {
+            return m_border_width;
+        }
+
         // ── 布局覆盖 ────────────────────────────────────────
         auto measure(const geometry::NanConstraints& constraints) -> void override {
             const auto& pad = m_padding.get();

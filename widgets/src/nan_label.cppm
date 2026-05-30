@@ -7,6 +7,7 @@ module;
 #include <atomic>
 #include <cmath>
 #include <memory>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <thorvg-1/thorvg.h>
@@ -20,6 +21,7 @@ import nandina.foundation.color;
 import nandina.reactive.state;
 import nandina.reactive.bindable_prop;
 import nandina.text.nan_font;
+import nandina.theme.nan_style;
 
 /**
  * nandina.widgets.label
@@ -123,8 +125,8 @@ export namespace nandina::widgets {
         }
 
         auto set_color(const nandina::NanColor& color) -> Label& {
-            m_color.set(color);
-            m_font.color(color);
+            m_user_font_color = color;
+            sync_resolved_style();
             mark_dirty();
             return *this;
         }
@@ -142,8 +144,35 @@ export namespace nandina::widgets {
         }
         /// 禁用状态——禁用时文本色降至 70% 透明度（对应 shadcn peer-disabled:opacity-70）。
         auto set_disabled(const bool value) -> Label& {
+            if (m_disabled == value) {
+                return *this;
+            }
             m_disabled = value;
+            sync_resolved_style();
             mark_dirty();
+            return *this;
+        }
+
+        auto set_error(const bool value) -> Label& {
+            if (m_error == value) {
+                return *this;
+            }
+
+            m_error = value;
+            sync_resolved_style();
+            mark_dirty();
+            return *this;
+        }
+
+        auto set_required(const bool value) -> Label& {
+            if (m_required == value) {
+                return *this;
+            }
+
+            m_required = value;
+            m_shape_cache_valid = false;
+            mark_dirty();
+            mark_layout_dirty();
             return *this;
         }
         // ── 属性访问 ──────────────────────────────────────
@@ -171,9 +200,17 @@ export namespace nandina::widgets {
             return m_disabled;
         }
 
+        [[nodiscard]] auto error() const noexcept -> bool {
+            return m_error;
+        }
+
+        [[nodiscard]] auto required() const noexcept -> bool {
+            return m_required;
+        }
+
         // ── 首选尺寸 ──────────────────────────────────────
         [[nodiscard]] auto preferred_size() const noexcept -> geometry::NanSize override {
-            const auto& txt = m_text.get();
+            const auto txt = display_text();
             if (txt.empty()) return {0.0f, 0.0f};
 
             if (m_font.is_loaded()) {
@@ -187,7 +224,7 @@ export namespace nandina::widgets {
         }
 
         auto measure(const geometry::NanConstraints& constraints) -> void override {
-            const auto& txt = m_text.get();
+            const auto txt = display_text();
             if (txt.empty()) {
                 set_measured_layout_state(constraints, geometry::NanSize{});
                 return;
@@ -220,7 +257,7 @@ export namespace nandina::widgets {
 
     protected:
         void on_draw(tvg::SwCanvas& canvas) override {
-            const auto& txt = m_text.get();
+            const auto txt = display_text();
             if (txt.empty()) return;
 
             const auto bnds = bounds();
@@ -257,22 +294,71 @@ export namespace nandina::widgets {
             }
             offset_y -= layout.ink_top;
 
-            // 颜色已在 NanFont 内部，直接 paint；disabled 时降至 70% 透明度
-            if (m_disabled) {
-                auto dim = m_font;
-                const auto base = m_color.get().to<nandina::NanRgb>();
-                dim.color(nandina::NanColor::from(
-                    nandina::NanRgb{base.red(), base.green(), base.blue(),
-                                    static_cast<uint8_t>(base.alpha() * 70u / 100u)}));
-                dim.paint(canvas, layout, offset_x, offset_y);
-            } else {
-                m_font.paint(canvas, layout, offset_x, offset_y);
+            auto text_font = m_font;
+            text_font.color(m_color.get());
+            text_font.paint(canvas, layout, offset_x, offset_y);
+
+            if (m_required) {
+                auto suffix_font = m_font;
+                suffix_font.color(required_indicator_color());
+
+                const auto& raw_text = m_text.get();
+                const auto raw_layout = raw_text.empty()
+                    ? text::TextLayout{}
+                    : cached_shape(raw_text, max_width > 0.0f ? max_width : 0.0f);
+
+                const auto suffix = raw_text.empty() ? std::string{"*"} : std::string{" *"};
+                const auto suffix_layout = suffix_font.shape(suffix, 0.0f);
+                const float suffix_x = offset_x + raw_layout.total_width;
+                const float suffix_y = offset_y + std::max(0.0f, layout.total_height - suffix_layout.total_height);
+                suffix_font.paint(canvas, suffix_layout, suffix_x, suffix_y);
             }
         }
 
     private:
         Label() {
-            m_font.color(m_color.get());
+            const auto& style = theme::NanStylePrimitives::current().label;
+            m_font.size(style.font_size)
+                .weight(style.font_weight)
+                .overflow(style.overflow)
+                .single_line(style.single_line)
+                .max_lines(style.max_lines);
+            sync_resolved_style();
+        }
+
+        [[nodiscard]] auto display_text() const -> std::string {
+            if (!m_required) {
+                return m_text.get();
+            }
+
+            if (m_text.get().empty()) {
+                return "*";
+            }
+
+            return m_text.get() + " *";
+        }
+
+        [[nodiscard]] auto resolved_text_color() const -> nandina::NanColor {
+            const auto& style = theme::NanStylePrimitives::current().label;
+
+            if (m_error) {
+                return style.error_font_color;
+            }
+            if (m_disabled) {
+                return style.disabled_font_color;
+            }
+
+            return m_user_font_color.value_or(style.font_color);
+        }
+
+        [[nodiscard]] auto required_indicator_color() const -> nandina::NanColor {
+            return theme::NanStylePrimitives::current().label.required_indicator_color;
+        }
+
+        auto sync_resolved_style() -> void {
+            const auto resolved = resolved_text_color();
+            m_color.set(resolved);
+            m_font.color(resolved);
         }
 
         [[nodiscard]] auto cached_shape(const std::string& txt, float max_width) const -> const text::TextLayout& {
@@ -301,6 +387,9 @@ export namespace nandina::widgets {
         TextAlign m_align{TextAlign::Start};
         TextVerticalAlign m_valign{TextVerticalAlign::Top};
         bool m_disabled{false};
+        bool m_error{false};
+        bool m_required{false};
+        std::optional<nandina::NanColor> m_user_font_color;
 
         // ── shape 结果缓存 ────────────────────────────────────────
         mutable text::TextLayout m_cached_shape_result{};

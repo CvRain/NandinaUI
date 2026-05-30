@@ -29,6 +29,7 @@ module;
 export module nandina.widgets.button;
 
 import nandina.widgets.surface;
+import nandina.widgets.focus_ring;
 import nandina.widgets.label;
 import nandina.widgets.icon;
 import nandina.layout.flex_widgets;
@@ -145,6 +146,8 @@ export namespace nandina::widgets {
         // ── 布局协议 ──────────────────────────────────────
         [[nodiscard]] auto preferred_size() const noexcept -> geometry::NanSize override;
 
+        auto layout() -> void override;
+
         // ── 交互标识 ─────────────────────────────────────
         [[nodiscard]] auto is_interactive() const noexcept -> bool override {
             return true;
@@ -170,6 +173,10 @@ export namespace nandina::widgets {
         auto on_pointer_down(const runtime::PointerButtonEvent& event) -> bool override;
 
         auto on_pointer_up(const runtime::PointerButtonEvent& event) -> bool override;
+
+        auto on_focus_in() -> bool override;
+
+        auto on_focus_out() -> bool override;
 
         void on_draw(tvg::SwCanvas& canvas) override;
 
@@ -216,8 +223,11 @@ export namespace nandina::widgets {
         reactive::EventSignal<> m_released_signal;
 
         // ── 子节点 ────────────────────────────────────
-        layout::Row*   m_content_row{nullptr};
-        Icon*           m_icon_left{nullptr};
-        Label*          m_label{nullptr};
+        layout::Row* m_content_row{nullptr};
+        FocusRing*   m_focus_ring{nullptr};
+        Icon*        m_icon_left{nullptr};
+        Label*       m_label{nullptr};
+
+        bool m_focused{false};
     };
 } // namespace nandina::widgets

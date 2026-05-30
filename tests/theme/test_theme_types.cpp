@@ -165,3 +165,71 @@ TEST(NanPrimitiveTokensTest, DefaultValues) {
     EXPECT_FLOAT_EQ(tokens.typography.display_large.font_size, 57.0f);
     EXPECT_FLOAT_EQ(tokens.typography.label_small.font_size, 11.0f);
 }
+
+TEST(NanLabelStyleTest, Defaults) {
+    NanLabelStyle style;
+
+    EXPECT_FLOAT_EQ(style.font_size, 14.0f);
+    EXPECT_EQ(style.font_weight, nandina::text::NanFontWeight::regular);
+
+    const auto normal = style.font_color.to<nandina::NanRgb>();
+    EXPECT_EQ(normal.red(), 76u);
+    EXPECT_EQ(normal.green(), 79u);
+    EXPECT_EQ(normal.blue(), 105u);
+
+    const auto disabled = style.disabled_font_color.to<nandina::NanRgb>();
+    EXPECT_EQ(disabled.red(), 154u);
+    EXPECT_EQ(disabled.green(), 157u);
+    EXPECT_EQ(disabled.blue(), 180u);
+
+    const auto error = style.error_font_color.to<nandina::NanRgb>();
+    EXPECT_EQ(error.red(), 230u);
+    EXPECT_EQ(error.green(), 69u);
+    EXPECT_EQ(error.blue(), 83u);
+
+    const auto required = style.required_indicator_color.to<nandina::NanRgb>();
+    EXPECT_EQ(required.red(), 230u);
+    EXPECT_EQ(required.green(), 69u);
+    EXPECT_EQ(required.blue(), 83u);
+
+    EXPECT_FLOAT_EQ(style.required_indicator_gap, 4.0f);
+    EXPECT_EQ(style.overflow, nandina::text::TextOverflow::wrap);
+    EXPECT_FALSE(style.single_line);
+    EXPECT_EQ(style.max_lines, 0);
+}
+
+TEST(NanButtonStyleTest, Defaults) {
+    NanButtonStyle style;
+
+    EXPECT_FLOAT_EQ(style.corner_radius, 6.0f);
+    EXPECT_EQ(style.variant, ButtonVariant::default_variant);
+    EXPECT_EQ(style.size, ButtonSize::md);
+    EXPECT_EQ(style.font_weight, nandina::text::NanFontWeight::medium);
+    EXPECT_EQ(style.overflow, nandina::text::TextOverflow::ellipsis);
+    EXPECT_TRUE(style.single_line);
+
+    const auto filled_bg = style.filled.bg.to<nandina::NanRgb>();
+    EXPECT_EQ(filled_bg.red(), 99u);
+    EXPECT_EQ(filled_bg.green(), 102u);
+    EXPECT_EQ(filled_bg.blue(), 241u);
+
+    const auto tonal_text = style.tonal.text.to<nandina::NanRgb>();
+    EXPECT_EQ(tonal_text.red(), 69u);
+    EXPECT_EQ(tonal_text.green(), 72u);
+    EXPECT_EQ(tonal_text.blue(), 200u);
+
+    const auto outlined_border = style.outlined.border.to<nandina::NanRgb>();
+    EXPECT_EQ(outlined_border.red(), 180u);
+    EXPECT_EQ(outlined_border.green(), 183u);
+    EXPECT_EQ(outlined_border.blue(), 220u);
+    EXPECT_FLOAT_EQ(style.outlined.border_width, 1.0f);
+
+    EXPECT_FLOAT_EQ(style.md.font_size, 14.0f);
+    EXPECT_FLOAT_EQ(style.md.padding_h, 16.0f);
+    EXPECT_FLOAT_EQ(style.md.padding_v, 8.0f);
+    EXPECT_FLOAT_EQ(style.md.icon_size, 18.0f);
+    EXPECT_FALSE(style.md.square);
+
+    EXPECT_FLOAT_EQ(style.icon.height, 40.0f);
+    EXPECT_TRUE(style.icon.square);
+}

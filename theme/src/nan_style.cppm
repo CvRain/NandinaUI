@@ -60,9 +60,13 @@ export namespace nandina::theme {
         float           font_size{14.0f};
         text::NanFontWeight font_weight{text::NanFontWeight::regular};
         NanColor        font_color{NanColor::from(NanRgb{76, 79, 105})};
-        text::TextOverflow overflow{text::TextOverflow::ellipsis};
-        bool            single_line{true};
-        int             max_lines{1};
+        NanColor        disabled_font_color{NanColor::from(NanRgb{154, 157, 180})};
+        NanColor        error_font_color{NanColor::from(NanRgb{230, 69, 83})};
+        NanColor        required_indicator_color{NanColor::from(NanRgb{230, 69, 83})};
+        float           required_indicator_gap{4.0f};
+        text::TextOverflow overflow{text::TextOverflow::wrap};
+        bool            single_line{false};
+        int             max_lines{0};
     };
 
     // ═══════════════════════════════════════════════════════════════
@@ -70,14 +74,115 @@ export namespace nandina::theme {
     // ═══════════════════════════════════════════════════════════════
 
     struct NanButtonStyle {
+        struct PresetStyle {
+            NanColor bg{NanColor::from(NanRgb{99, 102, 241})};
+            NanColor bg_hover{NanColor::from(NanRgb{120, 123, 255})};
+            NanColor bg_pressed{NanColor::from(NanRgb{80, 82, 200})};
+            NanColor bg_disabled{NanColor::from(NanRgb{60, 62, 80})};
+            NanColor text{NanColor::from(NanRgb{255, 255, 255})};
+            NanColor text_disabled{NanColor::from(NanRgb{110, 112, 130})};
+            NanColor border{NanColor::from(NanRgb{0, 0, 0, 0})};
+            float border_width{0.0f};
+        };
+
+        struct SizeStyle {
+            float height{40.0f};
+            float font_size{14.0f};
+            float padding_h{16.0f};
+            float padding_v{8.0f};
+            float gap{8.0f};
+            float icon_size{18.0f};
+            bool square{false};
+        };
+
         float           font_size{14.0f};
         text::NanFontWeight font_weight{text::NanFontWeight::medium};
         NanColor        font_color{NanColor::from(NanRgb{255, 255, 255})};
         text::TextOverflow overflow{text::TextOverflow::ellipsis};
         bool            single_line{true};
+        float           corner_radius{6.0f};
 
         ButtonVariant   variant{ButtonVariant::default_variant};
         ButtonSize      size{ButtonSize::md};
+
+        PresetStyle filled{};
+        PresetStyle tonal{
+            .bg = NanColor::from(NanRgb{230, 232, 250}),
+            .bg_hover = NanColor::from(NanRgb{210, 213, 242}),
+            .bg_pressed = NanColor::from(NanRgb{190, 193, 230}),
+            .bg_disabled = NanColor::from(NanRgb{230, 232, 250}),
+            .text = NanColor::from(NanRgb{69, 72, 200}),
+            .text_disabled = NanColor::from(NanRgb{160, 163, 200}),
+        };
+        PresetStyle outlined{
+            .bg = NanColor::from(NanRgb{0, 0, 0, 0}),
+            .bg_hover = NanColor::from(NanRgb{230, 232, 250}),
+            .bg_pressed = NanColor::from(NanRgb{210, 213, 242}),
+            .bg_disabled = NanColor::from(NanRgb{0, 0, 0, 0}),
+            .text = NanColor::from(NanRgb{69, 72, 200}),
+            .text_disabled = NanColor::from(NanRgb{160, 163, 200}),
+            .border = NanColor::from(NanRgb{180, 183, 220}),
+            .border_width = 1.0f,
+        };
+        PresetStyle ghost{
+            .bg = NanColor::from(NanRgb{0, 0, 0, 0}),
+            .bg_hover = NanColor::from(NanRgb{230, 232, 250}),
+            .bg_pressed = NanColor::from(NanRgb{210, 213, 242}),
+            .bg_disabled = NanColor::from(NanRgb{0, 0, 0, 0}),
+            .text = NanColor::from(NanRgb{69, 72, 200}),
+            .text_disabled = NanColor::from(NanRgb{160, 163, 200}),
+        };
+        PresetStyle destructive{
+            .bg = NanColor::from(NanRgb{230, 69, 83}),
+            .bg_hover = NanColor::from(NanRgb{245, 90, 100}),
+            .bg_pressed = NanColor::from(NanRgb{200, 50, 65}),
+            .bg_disabled = NanColor::from(NanRgb{100, 60, 70}),
+            .text = NanColor::from(NanRgb{255, 255, 255}),
+            .text_disabled = NanColor::from(NanRgb{180, 160, 165}),
+        };
+        PresetStyle link{
+            .bg = NanColor::from(NanRgb{0, 0, 0, 0}),
+            .bg_hover = NanColor::from(NanRgb{0, 0, 0, 0}),
+            .bg_pressed = NanColor::from(NanRgb{0, 0, 0, 0}),
+            .bg_disabled = NanColor::from(NanRgb{0, 0, 0, 0}),
+            .text = NanColor::from(NanRgb{69, 72, 200}),
+            .text_disabled = NanColor::from(NanRgb{160, 163, 200}),
+        };
+
+        SizeStyle xs{
+            .height = 24.0f,
+            .font_size = 11.0f,
+            .padding_h = 8.0f,
+            .padding_v = 2.0f,
+            .gap = 4.0f,
+            .icon_size = 14.0f,
+        };
+        SizeStyle sm{
+            .height = 32.0f,
+            .font_size = 12.0f,
+            .padding_h = 12.0f,
+            .padding_v = 4.0f,
+            .gap = 6.0f,
+            .icon_size = 16.0f,
+        };
+        SizeStyle md{};
+        SizeStyle lg{
+            .height = 48.0f,
+            .font_size = 16.0f,
+            .padding_h = 24.0f,
+            .padding_v = 12.0f,
+            .gap = 10.0f,
+            .icon_size = 22.0f,
+        };
+        SizeStyle icon{
+            .height = 40.0f,
+            .font_size = 0.0f,
+            .padding_h = 0.0f,
+            .padding_v = 0.0f,
+            .gap = 0.0f,
+            .icon_size = 20.0f,
+            .square = true,
+        };
     };
 
     // ═══════════════════════════════════════════════════════════════
@@ -123,6 +228,12 @@ export namespace nandina::theme {
         geometry::NanInsets padding{12.0f, 10.0f, 12.0f, 10.0f};
     };
 
+    struct NanFocusRingStyle {
+        NanColor color{NanColor::from(NanRgb{99, 102, 241})};
+        float width{2.0f};
+        float offset{2.0f};
+    };
+
     // ═══════════════════════════════════════════════════════════════
     // § NanProgressStyle — ProgressBar 组件样式
     // ═══════════════════════════════════════════════════════════════
@@ -158,6 +269,7 @@ export namespace nandina::theme {
         NanCardStyle      card;
         NanPanelStyle     panel;
         NanInputStyle     input;
+        NanFocusRingStyle focus_ring;
         NanProgressStyle  progress;
 
         // ── 设计 Token ────────────────────────────────────

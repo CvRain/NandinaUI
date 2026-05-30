@@ -681,6 +681,14 @@ export namespace nandina::app {
             return m_typed->disabled();
         }
 
+        [[nodiscard]] auto error() const -> bool {
+            return m_typed->error();
+        }
+
+        [[nodiscard]] auto required() const -> bool {
+            return m_typed->required();
+        }
+
         // ── setter ──────────────────────────────────────────────────────────
 
         /// color — 快捷设置文本颜色；等价于 .font([](auto& f){ f.color(v); })
@@ -723,6 +731,20 @@ export namespace nandina::app {
             requires std::derived_from<std::remove_cvref_t<Self>, LabelNode>
         auto disabled(this Self &&self, const bool value) -> Self&& {
             self.m_typed->set_disabled(value);
+            return std::forward<Self>(self);
+        }
+
+        template<typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, LabelNode>
+        auto error(this Self &&self, const bool value) -> Self&& {
+            self.m_typed->set_error(value);
+            return std::forward<Self>(self);
+        }
+
+        template<typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, LabelNode>
+        auto required(this Self &&self, const bool value) -> Self&& {
+            self.m_typed->set_required(value);
             return std::forward<Self>(self);
         }
 

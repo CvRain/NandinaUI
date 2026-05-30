@@ -28,6 +28,7 @@ target_sources(nandina_widgets
             src/nan_widgets.cppm         # 聚合模块 nandina.widgets
             src/nan_surface.cppm         # Surface 容器组件
             src/nan_pressable.cppm       # Pressable 交互状态机
+            src/nan_focus_ring.cppm      # FocusRing 焦点可视化 primitive
             src/nan_label.cppm           # Label 文本显示组件
             src/nan_button.cppm          # Button 按钮组件（仅接口）
             src/nan_panel.cppm           # Panel 带标题栏容器组件

@@ -1728,9 +1728,9 @@
 
 ---
 
-## Issue 053 — 实现 FocusRing primitive ❌ 未完成
+## Issue 053 — 实现 FocusRing primitive ✅ 已完成
 **Labels:** `area:widgets`, `kind:implementation`, `priority:p1`
-**Status:** ❌ 未完成 — 未见独立 FocusRing primitive 或统一焦点可视化实现
+**Status:** ✅ 已完成 — widgets 层已提供独立 FocusRing primitive，Button 已作为第一处消费方接入统一焦点可视化
 
 ### 目标
 为交互组件提供统一焦点可视化 primitive。
@@ -1746,16 +1746,17 @@
 ### 完成定义
 - Button/Input 等未来可复用统一焦点反馈
 
-### 当前判断
-- 当前 `Pressable` 虽有 `focused` 状态，但 widgets 层没有独立 `FocusRing` 组件或 outline 渲染积木
-- 仓库中也未见 `focus visible state` 到 `ring color / border / outline` 的复用实现
-- theme 规划里能看到 focus ring token 需求，但主线 widgets 尚未消费它
+### 完成记录
+- 已新增 `widgets/src/nan_focus_ring.cppm`，提供统一的焦点描边 primitive，可配置 active/color/width/offset/corner_radius
+- `theme/src/nan_style.cppm` 已补 `NanFocusRingStyle`，作为后续 token / 样式层接入的第一版默认样式原语
+- `widgets/src/nan_button.cppm` / `widgets/src/nan_button.cpp` 已把 FocusRing 接入 Button，形成第一处真实消费面
+- `tests/app/test_app_authoring.cpp` 已新增 FocusRing 与 Button 焦点回归测试
 
 ---
 
-## Issue 054 — 编写 primitive 设计文档 ❌ 未完成
+## Issue 054 — 编写 primitive 设计文档 ✅ 已完成
 **Labels:** `area:widgets`, `area:docs`, `kind:docs`, `priority:p1`
-**Status:** ❌ 未完成 — `docs/widget-primitives.md` 尚未落位
+**Status:** ✅ 已完成 — `docs/widget-primitives.md` 已落位，并按当前真实实现固定 Surface / Pressable / Text / FocusRing 的职责边界
 
 ### 目标
 明确 primitive 与 control 的边界，避免组件体系重新混乱。
@@ -1774,9 +1775,10 @@
 ### 完成定义
 - 后续控件开发有统一积木思维
 
-### 当前判断
-- 主线 docs 中不存在 `docs/widget-primitives.md`
-- 目前只有 `develop-issue.md` 中的问题拆分，没有一份专门解释 Surface / Pressable / Text / FocusRing 边界的文档
+### 完成记录
+- 已新增 `docs/widget-primitives.md`，明确 primitive / control / token / 样式层四者的职责分层
+- 已按当前源码现实说明 `Surface`、`Pressable`、`FocusRing` 的边界，以及 Text primitive 仍主要由 `Label` 吸收的现状
+- 已补“何时应复用 primitive、何时不应继续新增 primitive”的判断规则，作为后续控件开发的统一口径
 
 ---
 
@@ -1814,9 +1816,9 @@
 
 ---
 
-## Issue 056 — 为 Label 实现状态驱动样式映射 ❌ 未完成
+## Issue 056 — 为 Label 实现状态驱动样式映射 ✅ 已完成
 **Labels:** `area:widgets`, `area:theme`, `kind:implementation`, `priority:p1`
-**Status:** ❌ 未完成 — 未见独立的 Label 语义状态到样式解析层
+**Status:** ✅ 已完成 — Label 已具备 error / required / disabled 语义输入，并通过 `NanLabelStyle` 统一解析状态样式
 
 ### 目标
 让 Label 的视觉状态来自语义状态而不是散乱条件判断。
@@ -1833,9 +1835,12 @@
 ### 完成定义
 - Label 的状态表现统一并可扩展
 
-### 当前判断
-- 当前 `Label` 只暴露文本、颜色、字号和对齐，没有 `normal / disabled / error / required` 的语义状态输入
-- 也未见从 theme 解析状态样式的 resolver 或 mapping 层
+### 完成记录
+- `theme/src/nan_style.cppm` 已扩展 `NanLabelStyle`，加入 `disabled_font_color`、`error_font_color`、`required_indicator_color` 与 required gap 默认值
+- `widgets/src/nan_label.cppm` 已新增 `set_error()` / `set_required()` 语义输入，并将 normal / disabled / error 三种文本颜色统一收口到内部 style resolution
+- required 语义已通过 label 文本尾部的 required indicator 落到测量与绘制链路，而不是继续由页面作者手工拼接
+- `app/src/nan_application.cppm` 的 `LabelNode` 已补 `error(...)` / `required(...)` authoring API
+- `tests/app/test_app_authoring.cpp` 与 `tests/theme/test_theme_types.cpp` 已补回归，覆盖 Label 语义状态输入、默认 style 与 required indicator 宽度变化
 
 ---
 
@@ -1905,9 +1910,9 @@
 
 ---
 
-## Issue 059 — 实现 Button 的 preset 视觉映射 ⚠️ 部分完成
+## Issue 059 — 实现 Button 的 preset 视觉映射 ✅ 已完成
 **Labels:** `area:widgets`, `area:theme`, `kind:implementation`, `priority:p1`
-**Status:** ⚠️ 部分完成 — Button 已有 `ButtonVariant` 与基础视觉切换，但 preset 体系与 theme resolver 仍未完全收口
+**Status:** ✅ 已完成 — Button 的 variant / size preset 已收口到 `NanButtonStyle`，并通过 theme 驱动解析真实视觉差异
 
 ### 目标
 建立统一按钮视觉语义。
@@ -1926,14 +1931,12 @@
 ### 完成定义
 - preset 不是仅有属性名，而有真实一致的样式差异
 
-### 当前进展
-- `Button` 已提供 `ButtonVariant` 枚举与 `variant(...)` API
-- app 测试已覆盖 `default_variant`、`outline`、`ghost`、`destructive` 等基础视觉切换
-
-### 未完成部分
-- preset 体系仍未以组件规格文档与 theme resolver 的形式单独收口
-- `tonal` / `link` 等更完整语义集合仍未稳定
-- 变体到 token/resolver 的统一映射仍未脱离组件内部实现细节
+### 完成记录
+- `theme/src/nan_style.cppm` 已扩展 `NanButtonStyle`，新增 preset style（filled / tonal / outlined / ghost / destructive / link）与 size style（xs / sm / md / lg / icon）
+- `widgets/src/nan_button.cpp` 已改为从 `NanStylePrimitives::current().button` 解析 variant 与 size，而不是继续依赖组件内部的私有硬编码表
+- `widgets/src/nan_surface.cppm` 已补 `border_color()` / `border_width()` 访问器，便于验证 outlined preset 的真实视觉差异
+- `tests/theme/test_theme_types.cpp` 已新增 `NanButtonStyle` 默认值测试，覆盖默认 preset / size token
+- `tests/app/test_app_authoring.cpp` 已新增 theme override 场景，验证 Button 会真实消费 filled / tonal / outlined preset 和 size override
 
 ---
 
@@ -2419,9 +2422,9 @@
 
 ---
 
-## Issue 078 — 为 widgets 基础控件增加测试 ❌ 未完成
+## Issue 078 — 为 widgets 基础控件增加测试 ✅ 已完成
 **Labels:** `area:widgets`, `area:tests`, `kind:test`, `priority:p1`
-**Status:** ❌ 未完成 — widgets 测试子目录尚未接入，基础控件缺少独立回归测试
+**Status:** ✅ 已完成 — `tests/widgets` 已接入主测试构建，并补齐 Button / Label / Panel 的独立回归测试
 
 ### 目标
 验证基础控件的状态与交互逻辑。
@@ -2437,9 +2440,11 @@
 ### 完成定义
 - 基础控件可以稳定迭代而不轻易退化
 
-### 当前判断
-- `tests/CMakeLists.txt` 中 `add_subdirectory(widgets)` 仍处于注释状态
-- 虽然 `tests/app/test_app_authoring.cpp` 已覆盖 Label / Button / Card / Panel 的部分工厂与状态语义，但主线仍未见 `tests/widgets/*` 目录与更聚焦的控件专门测试文件
+### 完成记录
+- `tests/CMakeLists.txt` 已启用 `add_subdirectory(widgets)`，widgets 测试目录正式接入顶层测试构建
+- `tests/widgets/test_widgets_button.cpp` 已覆盖 Button 的 click/press/release 生命周期、disabled 阻断语义，以及 preset / size theme override
+- `tests/widgets/test_widgets_label.cpp` 已覆盖 Label 的 normal/error/disabled/required 语义状态与 wrap measure 行为
+- `tests/widgets/test_widgets_panel.cpp` 已覆盖 Panel 的 header + padding 结构规则，包括首选尺寸与内容区布局偏移
 
 ---
 
@@ -2569,25 +2574,43 @@
 
 ## Phase B — Primitive / Control 收口（P1，依赖 Phase A）
 
+> Phase B 执行策略补充（2026-05-29）：
+> - 当前框架的目标不是只做“能跑的桌面控件”，而是让原生桌面软件达到接近前端框架的表现力与组件组织能力。
+> - 架构层继续参考 Angular 的 `signal / effect / component` 思路；UI 体系继续参考 shadcn 的 primitives 设计，而不是把视觉和交互状态长期写死在单个控件内部。
+> - 因此，Phase B 的重点不是继续快速铺更多控件，而是先稳定 `primitive 边界 -> token / 语义状态 -> 控件样式映射 -> widgets 专项测试` 这条主线。
+> - 本阶段不会直接实现 `style.cppm`，但所有收口工作都应为未来的样式层预留协议边界，使其可以像 `style.css` 一样，在不破坏组件语义的前提下统一组织 primitives、tokens 与样式解析。
+>
+> 当前建议执行顺序：
+> 1. 先落地 FocusRing primitive，建立统一焦点可视化积木。
+> 2. 再文档化 Surface / Pressable / Text / FocusRing 的职责边界，防止后续控件继续把结构、状态和视觉混写。
+> 3. 在此基础上收口 Label 的状态驱动样式映射。
+> 4. 再收口 Button 的 preset / variant 到 token / resolver 的映射。
+> 5. 最后建立 widgets 独立测试面，锁住上述语义与行为。
+>
+> 本阶段理想结果：
+> - widgets 开始具备接近前端 design system 的 primitive 组合思维；
+> - 控件样式逐步从局部硬编码转向语义状态 + token 解析；
+> - 后续 Input / Field / Sidebar 结构件与未来 `style.cppm` 均可直接建立在这套边界之上。
+
 9. **Issue 053 — 实现 FocusRing primitive**  
     依赖：Issue 086，建议与 Issue 038 / Issue 041 联动  
-    原因：不把 focus ring 做成 primitive，后续 Input、Button、可聚焦控件都会各写各的焦点表现。
+    原因：不把 focus ring 做成 primitive，后续 Input、Button、可聚焦控件都会各写各的焦点表现；同时也无法为未来 `style.cppm` 提供统一焦点语义入口。
 
 10. **Issue 054 — 编写 primitive 设计文档**  
     依赖：Issue 053 启动后即可推进  
-    原因：Surface / Pressable / Text / FocusRing 的边界需要在新增更多控件前先文档化。
+    原因：Surface / Pressable / Text / FocusRing 的边界需要在新增更多控件前先文档化；这份文档也应回答 primitives、tokens 与未来样式层分别负责什么。
 
 11. **Issue 056 — 为 Label 实现状态驱动样式映射**  
     依赖：Issue 054，建议与 Issue 040 / Issue 041 联动  
-    原因：Label 现在能显示文本，但还没有真正形成语义状态到样式的映射层。
+    原因：Label 现在能显示文本，但还没有真正形成语义状态到样式的映射层；它应成为 widgets 从“局部视觉硬编码”过渡到“token / resolver 驱动”的第一批样板之一。
 
 12. **Issue 059 — 实现 Button 的 preset 视觉映射**  
     依赖：Issue 054，建议与 Issue 037-041 联动  
-    原因：Button 已能工作，但 variant / size / 视觉语义还需要进一步从 theme 层收口。
+    原因：Button 已能工作，但 variant / size / 视觉语义还需要进一步从 theme 层收口；目标不是只补更多 if/else，而是建立面向未来 `style.cppm` 的 preset / token / resolver 结构。
 
 13. **Issue 078 — 为 widgets 基础控件增加测试**  
     依赖：Issue 056, Issue 059 至少完成一部分  
-    原因：当前 widgets 缺独立测试目录，继续做控件而没有专门回归面，风险会快速累积。
+    原因：当前 widgets 缺独立测试目录，继续做控件而没有专门回归面，风险会快速累积；Phase B 收口后的 primitive / token / 状态映射边界需要有独立测试锁住，才能继续推进表单和样式层。
 
 ## Phase C — 表单垂直切片（P1，依赖 Phase A；建议在 Phase B 启动后推进）
 

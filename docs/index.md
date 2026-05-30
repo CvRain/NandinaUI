@@ -29,6 +29,7 @@
 | [Page / Router 合约（MVP）](page-contract.md) | 固定 `NanPage` / `NanRouter` / `NanPageHost` 当前职责边界与后续演进顺序 `[已定稿]` |
 | [组件 Authoring 与挂载 API 设计](component-authoring-and-mounting.md) | 面向使用者的组件组合、挂载、引用与无显式 `move` 方向 `[已校正]` |
 | [无显式 move 的组件组合 API（V1）](component-composition-api-v1.md) | 当前 V1 authoring API 的已落地子集、差异说明与未收口边界 `[已校正]` |
+| [Widget Primitives 设计文档](widget-primitives.md) | 固定 Surface / Pressable / Text / FocusRing 的 primitive 边界与组合规则 `[已校正]` |
 | [布局策略](layout-strategy.md) | 当前布局阶段策略、自动布局目标与 Yoga 接入时机 `[已校正]` |
 | [模块依赖规则](module-dependency-rules.md) | 模块间依赖方向约束，避免循环依赖 `[已定稿]` |
 | [响应式策略](reactive-strategy.md) | 当前 reactive 主线的语义规范、实现进度与未收口边界 `[已校正]` |

@@ -13,6 +13,7 @@ module;
 
 module nandina.widgets.button;
 
+import nandina.widgets.focus_ring;
 import nandina.widgets.label;
 import nandina.widgets.icon;
 import nandina.widgets.surface;
@@ -30,119 +31,40 @@ import nandina.theme.nan_style;  // ButtonVariant/ButtonSize
 namespace nandina::widgets {
 
     namespace {
-        // ── Variant 颜色表 ────────────────────────────────
-        struct VariantColors {
-            NanColor bg;
-            NanColor bg_hover;
-            NanColor bg_pressed;
-            NanColor bg_disabled;
-            NanColor text;
-            NanColor text_disabled;
-            NanColor border;
-            bool     has_border{true};
-            bool     has_bg{true};
-        };
-
-        auto colors_for(ButtonVariant v) -> VariantColors {
+        auto preset_for(ButtonVariant v) -> const theme::NanButtonStyle::PresetStyle& {
+            const auto& style = theme::NanStylePrimitives::current().button;
             switch (v) {
             case ButtonVariant::default_variant:
-                return {
-                    .bg          = NanColor::from(NanRgb{99, 102, 241}),
-                    .bg_hover    = NanColor::from(NanRgb{120, 123, 255}),
-                    .bg_pressed  = NanColor::from(NanRgb{80, 82, 200}),
-                    .bg_disabled = NanColor::from(NanRgb{60, 62, 80}),
-                    .text        = NanColor::from(NanRgb{255, 255, 255}),
-                    .text_disabled = NanColor::from(NanRgb{110, 112, 130}),
-                    .border      = {},
-                    .has_border  = false,
-                };
+                return style.filled;
             case ButtonVariant::secondary:
-                return {
-                    .bg          = NanColor::from(NanRgb{230, 232, 250}),
-                    .bg_hover    = NanColor::from(NanRgb{210, 213, 242}),
-                    .bg_pressed  = NanColor::from(NanRgb{190, 193, 230}),
-                    .bg_disabled = NanColor::from(NanRgb{230, 232, 250}),
-                    .text        = NanColor::from(NanRgb{69, 72, 200}),
-                    .text_disabled = NanColor::from(NanRgb{160, 163, 200}),
-                    .border      = {},
-                    .has_border  = false,
-                };
+                return style.tonal;
             case ButtonVariant::outline:
-                return {
-                    .bg          = NanColor::from(NanRgb{0, 0, 0, 0}),  // transparent
-                    .bg_hover    = NanColor::from(NanRgb{230, 232, 250}),
-                    .bg_pressed  = NanColor::from(NanRgb{210, 213, 242}),
-                    .bg_disabled = NanColor::from(NanRgb{0, 0, 0, 0}),
-                    .text        = NanColor::from(NanRgb{69, 72, 200}),
-                    .text_disabled = NanColor::from(NanRgb{160, 163, 200}),
-                    .border      = NanColor::from(NanRgb{180, 183, 220}),
-                    .has_border  = true,
-                    .has_bg      = false,  // normal state = transparent
-                };
+                return style.outlined;
             case ButtonVariant::ghost:
-                return {
-                    .bg          = NanColor::from(NanRgb{0, 0, 0, 0}),
-                    .bg_hover    = NanColor::from(NanRgb{230, 232, 250}),
-                    .bg_pressed  = NanColor::from(NanRgb{210, 213, 242}),
-                    .bg_disabled = NanColor::from(NanRgb{0, 0, 0, 0}),
-                    .text        = NanColor::from(NanRgb{69, 72, 200}),
-                    .text_disabled = NanColor::from(NanRgb{160, 163, 200}),
-                    .border      = {},
-                    .has_border  = false,
-                    .has_bg      = false,
-                };
+                return style.ghost;
             case ButtonVariant::destructive:
-                return {
-                    .bg          = NanColor::from(NanRgb{230, 69, 83}),
-                    .bg_hover    = NanColor::from(NanRgb{245, 90, 100}),
-                    .bg_pressed  = NanColor::from(NanRgb{200, 50, 65}),
-                    .bg_disabled = NanColor::from(NanRgb{100, 60, 70}),
-                    .text        = NanColor::from(NanRgb{255, 255, 255}),
-                    .text_disabled = NanColor::from(NanRgb{180, 160, 165}),
-                    .border      = {},
-                    .has_border  = false,
-                };
+                return style.destructive;
             case ButtonVariant::link:
-                return {
-                    .bg          = NanColor::from(NanRgb{0, 0, 0, 0}),
-                    .bg_hover    = NanColor::from(NanRgb{0, 0, 0, 0}),
-                    .bg_pressed  = NanColor::from(NanRgb{0, 0, 0, 0}),
-                    .bg_disabled = NanColor::from(NanRgb{0, 0, 0, 0}),
-                    .text        = NanColor::from(NanRgb{69, 72, 200}),
-                    .text_disabled = NanColor::from(NanRgb{160, 163, 200}),
-                    .border      = {},
-                    .has_border  = false,
-                    .has_bg      = false,
-                };
+                return style.link;
             }
-            return {};
+            return style.filled;
         }
 
-        // ── Size 对照表 ───────────────────────────────────
-        struct SizeConfig {
-            float height;
-            float font_size;
-            float padding_h;   // horizontal
-            float padding_v;   // vertical
-            float gap;         // icon <-> text spacing
-            float icon_size;
-            bool  square;      // icon-only → width = height
-        };
-
-        auto config_for(ButtonSize s) -> SizeConfig {
+        auto size_style_for(ButtonSize s) -> const theme::NanButtonStyle::SizeStyle& {
+            const auto& style = theme::NanStylePrimitives::current().button;
             switch (s) {
             case ButtonSize::xs:
-                return {24.0f, 11.0f, 8.0f, 2.0f, 4.0f, 14.0f, false};
+                return style.xs;
             case ButtonSize::sm:
-                return {32.0f, 12.0f, 12.0f, 4.0f, 6.0f, 16.0f, false};
+                return style.sm;
             case ButtonSize::md:
-                return {40.0f, 14.0f, 16.0f, 8.0f, 8.0f, 18.0f, false};
+                return style.md;
             case ButtonSize::lg:
-                return {48.0f, 16.0f, 24.0f, 12.0f, 10.0f, 22.0f, false};
+                return style.lg;
             case ButtonSize::icon:
-                return {40.0f, 0.0f, 0.0f, 0.0f, 0.0f, 20.0f, true};
+                return style.icon;
             }
-            return {};
+            return style.md;
         }
     } // namespace
 
@@ -155,6 +77,10 @@ namespace nandina::widgets {
     }
 
     Button::Button() {
+        const auto& button_style = theme::NanStylePrimitives::current().button;
+        m_variant = button_style.variant;
+        m_size = button_style.size;
+
         // 默认：不设 bg（由 variant 控制），no border
         set_border_width(0.0f);
 
@@ -166,13 +92,19 @@ namespace nandina::widgets {
         m_content_row->gap(8.0f);
         add_child(std::move(row));
 
+        auto focus_ring = FocusRing::create();
+        m_focus_ring = focus_ring.get();
+        m_focus_ring->set_active(false);
+        add_child(std::move(focus_ring));
+
         // Label — 按钮文本应始终单行 + ellipsis
         auto label = Label::create();
         m_label    = label.get();
-        // 设置默认字体行为：单行 + 溢出省略号
         m_label->set_font(text::NanFont{}
-            .single_line(true)
-            .overflow(text::TextOverflow::ellipsis));
+            .weight(button_style.font_weight)
+            .color(button_style.font_color)
+            .single_line(button_style.single_line)
+            .overflow(button_style.overflow));
         m_label->set_vertical_align(TextVerticalAlign::Center);
         m_content_row->add(std::move(label));
 
@@ -223,27 +155,25 @@ namespace nandina::widgets {
     }
 
     auto Button::apply_variant() -> void {
-        const auto c = colors_for(m_variant);
-        if (c.has_border) {
-            set_border_color(c.border);
-            set_border_width(1.0f);
-        } else {
-            set_border_width(0.0f);
-        }
+        const auto& preset = preset_for(m_variant);
+        set_border_color(preset.border);
+        set_border_width(preset.border_width);
     }
 
     auto Button::apply_size() -> void {
-        const auto c = config_for(m_size);
-        set_padding(geometry::NanInsets{c.padding_h, c.padding_v, c.padding_h, c.padding_v});
-        set_corner_radius(6.0f);  // shadcn default rounding
+        const auto& button_style = theme::NanStylePrimitives::current().button;
+        const auto& size_style = size_style_for(m_size);
+        set_padding(geometry::NanInsets{size_style.padding_h, size_style.padding_v, size_style.padding_h, size_style.padding_v});
+        set_corner_radius(button_style.corner_radius);
+        m_content_row->gap(size_style.gap);
 
-        m_label->set_font_size(c.font_size);
+        m_label->set_font_size(size_style.font_size);
         // icon-only: hide text, set square
         if (m_icon_left) {
-            m_icon_left->set_size(c.icon_size);
+            m_icon_left->set_size(size_style.icon_size);
         }
 
-        if (c.square) {
+        if (size_style.square) {
             // square icon button — center the icon
             m_label->set_text("");
             m_content_row->justify_content(layout::LayoutAlignment::center);
@@ -264,8 +194,8 @@ namespace nandina::widgets {
         if (!m_icon_left) {
             auto icon_widget = Icon::create();
             m_icon_left = icon_widget.get();
-            const auto c = config_for(m_size);
-            m_icon_left->set_size(c.icon_size);
+            const auto& size_style = size_style_for(m_size);
+            m_icon_left->set_size(size_style.icon_size);
             // 插入到 row 的第一个位置
             auto& children = m_content_row->children();
             children.insert(children.begin(), std::move(icon_widget));
@@ -282,8 +212,8 @@ namespace nandina::widgets {
         // 在 label 之后添加 icon
         if (!m_icon_left) {
             auto icon_widget = Icon::create();
-            const auto c = config_for(m_size);
-            icon_widget->set_size(c.icon_size);
+            const auto& size_style = size_style_for(m_size);
+            icon_widget->set_size(size_style.icon_size);
             icon_widget->set_type(type);
             m_icon_left = icon_widget.get();  // reuse the left slot for simplicity
             m_content_row->add(std::move(icon_widget));
@@ -426,6 +356,10 @@ namespace nandina::widgets {
         if (disabled) {
             m_hovered = false;
             m_pressed = false;
+            m_focused = false;
+            if (m_focus_ring) {
+                m_focus_ring->set_active(false);
+            }
         }
         update_visual_state();
         return *this;
@@ -451,20 +385,37 @@ namespace nandina::widgets {
 
     auto Button::preferred_size() const noexcept -> geometry::NanSize {
         // Icon-only: square
-        const auto sc = config_for(m_size);
-        if (sc.square) {
+        const auto& size_style = size_style_for(m_size);
+        if (size_style.square) {
             const auto& pad = padding();
-            return {sc.height + pad.left() + pad.right(),
-                    sc.height + pad.top() + pad.bottom()};
+            return {size_style.height + pad.left() + pad.right(),
+                    size_style.height + pad.top() + pad.bottom()};
         }
         // Text + icon: height from size config, width from content
-        const float h = sc.height + padding().top() + padding().bottom();
+        const float h = size_style.height + padding().top() + padding().bottom();
         const auto label_pref = m_label->preferred_size();
         float w = label_pref.width() + padding().left() + padding().right();
         if (m_icon_left) {
-            w += sc.icon_size + sc.gap;
+            w += size_style.icon_size + size_style.gap;
         }
         return {w, h};
+    }
+
+    auto Button::layout() -> void {
+        const auto content = content_bounds();
+
+        if (m_content_row) {
+            m_content_row->set_bounds(content.x(), content.y(), content.width(), content.height());
+            m_content_row->layout();
+        }
+
+        if (m_focus_ring) {
+            m_focus_ring->set_bounds(x(), y(), width(), height());
+            m_focus_ring->set_corner_radius(corner_radius() + m_focus_ring->offset());
+            m_focus_ring->layout();
+        }
+
+        clear_layout_dirty();
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -526,6 +477,26 @@ namespace nandina::widgets {
         return true;
     }
 
+    auto Button::on_focus_in() -> bool {
+        if (m_disabled) {
+            return false;
+        }
+
+        m_focused = true;
+        if (m_focus_ring) {
+            m_focus_ring->set_active(true);
+        }
+        return true;
+    }
+
+    auto Button::on_focus_out() -> bool {
+        m_focused = false;
+        if (m_focus_ring) {
+            m_focus_ring->set_active(false);
+        }
+        return true;
+    }
+
     // ═══════════════════════════════════════════════════════════
     // 绘制
     // ═══════════════════════════════════════════════════════════
@@ -540,27 +511,27 @@ namespace nandina::widgets {
     // ═══════════════════════════════════════════════════════════
 
     auto Button::update_visual_state() -> void {
-        const auto c = colors_for(m_variant);
+        const auto& preset = preset_for(m_variant);
 
         NanColor target_bg;
         NanColor target_text;
 
         if (m_disabled) {
-            target_bg   = c.has_bg ? c.bg_disabled : c.bg;
-            target_text = c.text_disabled;
+            target_bg   = preset.bg_disabled;
+            target_text = preset.text_disabled;
         } else if (m_pressed) {
-            target_bg   = c.has_bg ? c.bg_pressed : c.bg_hover;
-            target_text = m_user_font_color.value_or(c.text);
+            target_bg   = preset.bg_pressed;
+            target_text = m_user_font_color.value_or(preset.text);
         } else if (m_hovered) {
-            target_bg   = c.bg_hover;
-            target_text = m_user_font_color.value_or(c.text);
+            target_bg   = preset.bg_hover;
+            target_text = m_user_font_color.value_or(preset.text);
         } else {
-            target_bg   = c.has_bg ? c.bg : c.bg;
-            target_text = m_user_font_color.value_or(c.text);
+            target_bg   = preset.bg;
+            target_text = m_user_font_color.value_or(preset.text);
         }
 
         if (m_loading) {
-            target_text = c.text_disabled;
+            target_text = preset.text_disabled;
         }
 
         bool changed = false;

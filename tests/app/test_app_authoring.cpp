@@ -11,8 +11,10 @@ import nandina.foundation.nan_insets;
 import nandina.runtime.nan_widget;
 import nandina.layout.core;
 import nandina.foundation.color;
+import nandina.theme;
 import nandina.widgets.button;
 import nandina.widgets.card;
+import nandina.widgets.focus_ring;
 import nandina.widgets.icon;
 import nandina.widgets.label;
 import nandina.widgets.panel;
@@ -110,6 +112,20 @@ public:
     [[nodiscard]] auto hit_test_once(const float x, const float y) -> nandina::runtime::NanWidget* {
         return hit_test_root_component(x, y);
     }
+};
+
+class ScopedStyleReset final {
+public:
+    ScopedStyleReset()
+        : saved_(nandina::theme::NanStylePrimitives::current()) {
+    }
+
+    ~ScopedStyleReset() {
+        nandina::theme::NanStylePrimitives::set_current(saved_);
+    }
+
+private:
+    nandina::theme::NanStylePrimitives saved_;
 };
 
 } // namespace
@@ -436,6 +452,23 @@ TEST(AppAuthoringTest, LabelFactorySupportsChainedTextStylingAndRefBinding) {
     EXPECT_EQ(color.blue(), 3u);
 }
 
+TEST(AppAuthoringTest, LabelSemanticStateInputsBindThroughAuthoringNode) {
+    nandina::app::Ref<nandina::widgets::Label> label_ref;
+
+    auto mounted = nandina::app::mount(
+        nandina::app::label("Email")
+            .disabled(false)
+            .error(true)
+            .required(true)
+            .bind(label_ref));
+
+    ASSERT_NE(mounted, nullptr);
+    ASSERT_TRUE(label_ref);
+    EXPECT_FALSE(label_ref->disabled());
+    EXPECT_TRUE(label_ref->error());
+    EXPECT_TRUE(label_ref->required());
+}
+
 TEST(AppAuthoringTest, SidebarGroupUsesChildPreferredHeightsInsteadOfFixedRows) {
     auto group = nandina::widgets::SidebarGroup::create();
     group->label("Navigation");
@@ -532,6 +565,76 @@ TEST(AppAuthoringTest, ButtonVariantSwitchesVisualStyle) {
     // destructive is a valid red variant
     button->variant(nandina::widgets::ButtonVariant::destructive);
     EXPECT_EQ(button->variant(), nandina::widgets::ButtonVariant::destructive);
+}
+
+TEST(AppAuthoringTest, ButtonPresetAndSizeStylesResolveFromThemeOverrides) {
+    ScopedStyleReset style_reset;
+
+    auto style = nandina::theme::NanStylePrimitives::default_style();
+    style.button.corner_radius = 11.0f;
+    style.button.md.font_size = 15.0f;
+    style.button.md.padding_h = 18.0f;
+    style.button.md.padding_v = 6.0f;
+    style.button.md.gap = 5.0f;
+
+    style.button.filled.bg = nandina::NanColor::from(nandina::NanRgb{10, 20, 30});
+    style.button.filled.text = nandina::NanColor::from(nandina::NanRgb{210, 220, 230});
+    style.button.tonal.bg = nandina::NanColor::from(nandina::NanRgb{40, 50, 60});
+    style.button.tonal.text = nandina::NanColor::from(nandina::NanRgb{130, 140, 150});
+    style.button.outlined.bg = nandina::NanColor::from(nandina::NanRgb{0, 0, 0, 0});
+    style.button.outlined.text = nandina::NanColor::from(nandina::NanRgb{1, 2, 3});
+    style.button.outlined.border = nandina::NanColor::from(nandina::NanRgb{4, 5, 6});
+    style.button.outlined.border_width = 2.0f;
+    style.button.outlined.bg_disabled = nandina::NanColor::from(nandina::NanRgb{7, 8, 9});
+    style.button.outlined.text_disabled = nandina::NanColor::from(nandina::NanRgb{11, 12, 13});
+    nandina::theme::NanStylePrimitives::set_current(style);
+
+    auto button = nandina::widgets::Button::create();
+
+    EXPECT_FLOAT_EQ(button->corner_radius(), 11.0f);
+    EXPECT_FLOAT_EQ(button->font_size(), 15.0f);
+    EXPECT_FLOAT_EQ(button->padding().left(), 18.0f);
+    EXPECT_FLOAT_EQ(button->padding().top(), 6.0f);
+
+    const auto filled_bg = button->bg_color().to<nandina::NanRgb>();
+    EXPECT_EQ(filled_bg.red(), 10u);
+    EXPECT_EQ(filled_bg.green(), 20u);
+    EXPECT_EQ(filled_bg.blue(), 30u);
+    const auto filled_text = button->font_color().to<nandina::NanRgb>();
+    EXPECT_EQ(filled_text.red(), 210u);
+    EXPECT_EQ(filled_text.green(), 220u);
+    EXPECT_EQ(filled_text.blue(), 230u);
+
+    button->variant(nandina::widgets::ButtonVariant::secondary);
+    const auto tonal_bg = button->bg_color().to<nandina::NanRgb>();
+    EXPECT_EQ(tonal_bg.red(), 40u);
+    EXPECT_EQ(tonal_bg.green(), 50u);
+    EXPECT_EQ(tonal_bg.blue(), 60u);
+    const auto tonal_text = button->font_color().to<nandina::NanRgb>();
+    EXPECT_EQ(tonal_text.red(), 130u);
+    EXPECT_EQ(tonal_text.green(), 140u);
+    EXPECT_EQ(tonal_text.blue(), 150u);
+
+    button->variant(nandina::widgets::ButtonVariant::outline);
+    EXPECT_FLOAT_EQ(button->border_width(), 2.0f);
+    const auto outline_border = button->border_color().to<nandina::NanRgb>();
+    EXPECT_EQ(outline_border.red(), 4u);
+    EXPECT_EQ(outline_border.green(), 5u);
+    EXPECT_EQ(outline_border.blue(), 6u);
+    const auto outline_text = button->font_color().to<nandina::NanRgb>();
+    EXPECT_EQ(outline_text.red(), 1u);
+    EXPECT_EQ(outline_text.green(), 2u);
+    EXPECT_EQ(outline_text.blue(), 3u);
+
+    button->disabled(true);
+    const auto outline_disabled_bg = button->bg_color().to<nandina::NanRgb>();
+    EXPECT_EQ(outline_disabled_bg.red(), 7u);
+    EXPECT_EQ(outline_disabled_bg.green(), 8u);
+    EXPECT_EQ(outline_disabled_bg.blue(), 9u);
+    const auto outline_disabled_text = button->font_color().to<nandina::NanRgb>();
+    EXPECT_EQ(outline_disabled_text.red(), 11u);
+    EXPECT_EQ(outline_disabled_text.green(), 12u);
+    EXPECT_EQ(outline_disabled_text.blue(), 13u);
 }
 
 TEST(AppAuthoringTest, CardFactorySupportsTitleStylingAndChildRefs) {
@@ -661,6 +764,34 @@ TEST(AppAuthoringTest, LabelMeasureUsesConstraintWidthForWrappedHeight) {
     EXPECT_GT(narrow_size.height(), wide_size.height());
 }
 
+TEST(AppAuthoringTest, LabelSemanticStatesResolveThemeColorsAndRequiredIndicatorWidth) {
+    auto label = nandina::widgets::Label::create();
+    label->set_text("Password");
+
+    const auto normal = label->color().to<nandina::NanRgb>();
+    EXPECT_EQ(normal.red(), 76u);
+    EXPECT_EQ(normal.green(), 79u);
+    EXPECT_EQ(normal.blue(), 105u);
+
+    const auto normal_width = label->preferred_size().width();
+
+    label->set_required(true);
+    EXPECT_GT(label->preferred_size().width(), normal_width);
+
+    label->set_error(true);
+    const auto error = label->color().to<nandina::NanRgb>();
+    EXPECT_EQ(error.red(), 230u);
+    EXPECT_EQ(error.green(), 69u);
+    EXPECT_EQ(error.blue(), 83u);
+
+    label->set_error(false);
+    label->set_disabled(true);
+    const auto disabled = label->color().to<nandina::NanRgb>();
+    EXPECT_EQ(disabled.red(), 154u);
+    EXPECT_EQ(disabled.green(), 157u);
+    EXPECT_EQ(disabled.blue(), 180u);
+}
+
 TEST(AppAuthoringTest, SurfacePaddingMarksLayoutDirty) {
     auto surface = nandina::widgets::Surface::create();
 
@@ -720,6 +851,55 @@ TEST(AppAuthoringTest, ButtonDrawDoesNotKeepMarkingItselfDirtyAfterStateSettles)
     // 状态未变化时，后续 draw 不应再次把自身标脏。
     button->draw(canvas_scope.canvas());
     EXPECT_FALSE(button->dirty());
+}
+
+TEST(AppAuthoringTest, FocusRingActiveSetterMarksDirtyAndStoresStyle) {
+    auto focus_ring = nandina::widgets::FocusRing::create();
+    focus_ring->clear_dirty();
+
+    focus_ring->set_color(nandina::NanColor::from(nandina::NanRgb{12, 34, 56}));
+    focus_ring->set_ring_width(3.0f);
+    focus_ring->set_offset(4.0f);
+    focus_ring->set_corner_radius(7.0f);
+    focus_ring->set_active(true);
+
+    const auto rgb = focus_ring->color().to<nandina::NanRgb>();
+    EXPECT_EQ(rgb.red(), 12u);
+    EXPECT_EQ(rgb.green(), 34u);
+    EXPECT_EQ(rgb.blue(), 56u);
+    EXPECT_FLOAT_EQ(focus_ring->ring_width(), 3.0f);
+    EXPECT_FLOAT_EQ(focus_ring->offset(), 4.0f);
+    EXPECT_FLOAT_EQ(focus_ring->corner_radius(), 7.0f);
+    EXPECT_TRUE(focus_ring->active());
+    EXPECT_TRUE(focus_ring->dirty());
+}
+
+TEST(AppAuthoringTest, ButtonFocusEventsToggleInternalFocusRingOverlay) {
+    auto button = nandina::widgets::Button::create();
+    button->measure(nandina::geometry::NanConstraints::tight(120.0f, 36.0f));
+    button->set_bounds(10.0f, 20.0f, 120.0f, 36.0f);
+    button->layout();
+
+    nandina::widgets::FocusRing* focus_ring = nullptr;
+    for (auto& child : button->children()) {
+        focus_ring = dynamic_cast<nandina::widgets::FocusRing*>(child.get());
+        if (focus_ring) {
+            break;
+        }
+    }
+
+    ASSERT_NE(focus_ring, nullptr);
+    EXPECT_FALSE(focus_ring->active());
+    EXPECT_FLOAT_EQ(focus_ring->bounds().x(), 10.0f);
+    EXPECT_FLOAT_EQ(focus_ring->bounds().y(), 20.0f);
+    EXPECT_FLOAT_EQ(focus_ring->bounds().width(), 120.0f);
+    EXPECT_FLOAT_EQ(focus_ring->bounds().height(), 36.0f);
+
+    EXPECT_TRUE(button->dispatch_event(nandina::runtime::FocusEvent{.got_focus = true}));
+    EXPECT_TRUE(focus_ring->active());
+
+    EXPECT_TRUE(button->dispatch_event(nandina::runtime::FocusEvent{.got_focus = false}));
+    EXPECT_FALSE(focus_ring->active());
 }
 
 TEST(AppAuthoringTest, PressableDisableClearsInteractiveStateAndMarksDirty) {
