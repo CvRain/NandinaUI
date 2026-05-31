@@ -27,15 +27,15 @@ function(nandina_add_test)
 
     if (ARG_MODULES)
         target_sources(${ARG_NAME}
-            PRIVATE
-            FILE_SET CXX_MODULES
-            BASE_DIRS ${CMAKE_SOURCE_DIR}
-            FILES ${ARG_MODULES}
+                PRIVATE
+                FILE_SET CXX_MODULES
+                BASE_DIRS ${CMAKE_SOURCE_DIR}
+                FILES ${ARG_MODULES}
         )
     endif ()
 
     target_link_libraries(${ARG_NAME}
-        PRIVATE
+            PRIVATE
             GTest::gtest
             GTest::gtest_main
             ${ARG_DEPS}

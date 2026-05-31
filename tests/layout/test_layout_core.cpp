@@ -810,6 +810,74 @@ TEST(FlexWidgetsTest, ExplicitLayoutAfterSetBoundsWorks) {
     EXPECT_EQ(cp->layout_count(), 1);
 }
 
+TEST(FlexWidgetsTest, PaddingPreferredSizeStaysIntrinsicWhileMeasureRespectsConstraints) {
+    auto padding = Padding::Create();
+    padding->all(10.0f);
+    padding->child(std::make_unique<FixedWidget>(NanSize{80.0f, 40.0f}));
+
+    const auto preferred = padding->preferred_size();
+    EXPECT_FLOAT_EQ(preferred.width(), 100.0f);
+    EXPECT_FLOAT_EQ(preferred.height(), 60.0f);
+
+    padding->measure(NanConstraints::tight(160.0f, 90.0f));
+
+    const auto measured = padding->measured_size();
+    EXPECT_FLOAT_EQ(measured.width(), 160.0f);
+    EXPECT_FLOAT_EQ(measured.height(), 90.0f);
+}
+
+TEST(FlexWidgetsTest, CenterMeasureTracksChildButDoesNotChangePreferredSize) {
+    auto center = Center::Create();
+    center->child(std::make_unique<FixedWidget>(NanSize{50.0f, 30.0f}));
+
+    const auto preferred = center->preferred_size();
+    EXPECT_FLOAT_EQ(preferred.width(), 50.0f);
+    EXPECT_FLOAT_EQ(preferred.height(), 30.0f);
+
+    center->measure(NanConstraints::tight(200.0f, 100.0f));
+
+    const auto measured = center->measured_size();
+    EXPECT_FLOAT_EQ(measured.width(), 50.0f);
+    EXPECT_FLOAT_EQ(measured.height(), 30.0f);
+}
+
+TEST(FlexWidgetsTest, ExpandedKeepsIntrinsicPreferredSizeButCanMeasureTight) {
+    auto expanded = Expanded::Create(1);
+    expanded->child(std::make_unique<FixedWidget>(NanSize{50.0f, 30.0f}));
+
+    const auto preferred = expanded->preferred_size();
+    EXPECT_FLOAT_EQ(preferred.width(), 50.0f);
+    EXPECT_FLOAT_EQ(preferred.height(), 30.0f);
+
+    expanded->measure(NanConstraints::tight(180.0f, 90.0f));
+
+    const auto measured = expanded->measured_size();
+    EXPECT_FLOAT_EQ(measured.width(), 180.0f);
+    EXPECT_FLOAT_EQ(measured.height(), 90.0f);
+}
+
+TEST(FlexWidgetsTest, SizedBoxUsesFixedSizeDuringMeasureButRespectsAssignedBounds) {
+    auto sized_box = SizedBox::Create();
+    sized_box->width(120.0f);
+    sized_box->height(80.0f);
+    sized_box->child(std::make_unique<FixedWidget>(NanSize{200.0f, 200.0f}));
+
+    const auto preferred = sized_box->preferred_size();
+    EXPECT_FLOAT_EQ(preferred.width(), 120.0f);
+    EXPECT_FLOAT_EQ(preferred.height(), 80.0f);
+
+    sized_box->measure(NanConstraints::tight(120.0f, 80.0f));
+    const auto measured = sized_box->measured_size();
+    EXPECT_FLOAT_EQ(measured.width(), 120.0f);
+    EXPECT_FLOAT_EQ(measured.height(), 80.0f);
+
+    sized_box->set_bounds(5.0f, 7.0f, 300.0f, 200.0f);
+    EXPECT_FLOAT_EQ(sized_box->x(), 5.0f);
+    EXPECT_FLOAT_EQ(sized_box->y(), 7.0f);
+    EXPECT_FLOAT_EQ(sized_box->nandina::runtime::NanWidget::width(), 300.0f);
+    EXPECT_FLOAT_EQ(sized_box->nandina::runtime::NanWidget::height(), 200.0f);
+}
+
 TEST(FlexWidgetsTest, PaddingInColumnLayoutCycle) {
     auto col = Column::Create();
     auto pad = Padding::Create();
@@ -857,8 +925,8 @@ TEST(FlexWidgetsTest, SizedBoxRespectsFixedDimensions) {
     sb->set_bounds(5, 5, 300, 300);
     sb->layout();
 
-    EXPECT_FLOAT_EQ(sb->nandina::runtime::NanWidget::width(), 120);
-    EXPECT_FLOAT_EQ(sb->nandina::runtime::NanWidget::height(), 80);
+    EXPECT_FLOAT_EQ(sb->nandina::runtime::NanWidget::width(), 300);
+    EXPECT_FLOAT_EQ(sb->nandina::runtime::NanWidget::height(), 300);
     ASSERT_EQ(sb->child_count(), 1);
 }
 

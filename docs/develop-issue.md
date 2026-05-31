@@ -1128,9 +1128,9 @@
 
 ---
 
-## Issue 085 — 适配 FlexWidgets 到新布局协议 ❌ 未完成
+## Issue 085 — 适配 FlexWidgets 到新布局协议 ✅ 已完成
 **Labels:** `area:layout`, `kind:refactor`, `priority:p1`
-**Status:** ❌ 未完成 — `Spacer` / `Expanded` / `Padding` / `Center` / `SizedBox` 仍偏向旧式 `set_bounds()` 行为
+**Status:** ✅ 已完成 — `Spacer` / `Expanded` / `Padding` / `Center` / `SizedBox` 已回到 `measure() -> set_bounds() -> layout()` 主链；其中 `SizedBox` 的固定尺寸语义已收口到 `measure()`，不再在 `set_bounds()` 阶段改写父分配 bounds
 
 ### 目标
 让布局辅助组件全面兼容两阶段布局协议，成为 widgets 和 authoring API 的稳定基础设施。
@@ -1147,7 +1147,8 @@
 
 ### 完成定义
 - 布局辅助组件在新协议下行为稳定
-- authoring API 可以继续直接复用这批 helper，而不引入额外手算逻辑
+- `tests/layout/test_layout_core.cpp` 已补 `preferred_size()` / `measured_size()` 语义回归，覆盖 `Padding` / `Center` / `Expanded` / `SizedBox`
+- `tests/showcase/test_showcase_layout.cpp` 已验证 showcase / authoring 仍能直接复用这批 helper，而不引入额外手算逻辑
 
 ---
 
@@ -2622,19 +2623,19 @@
     依赖：Issue 090  
     原因：单行文本输入会同时压测 focus、键盘事件、文本渲染、光标、placeholder、disabled/read_only 等多个底层能力。
 
-16. **Issue 095 — 为 TextField 接入 authoring 工厂与 signals 绑定模式**  
+16. **Issue 095 — 为 TextField 接入 authoring 工厂与 signals 绑定模式 ✅**  
     依赖：Issue 091  
     原因：项目的核心竞争力之一就是 authoring 体验，Input 不能只在 widgets 层存在，必须尽快接入 app DSL。
 
-17. **Issue 092 — 实现 Field 容器与 label/helper/error 组合**  
+17. **Issue 092 — 实现 Field 容器与 label/helper/error 组合 ✅**  
     依赖：Issue 090, Issue 091  
     原因：Field 是把 shadcn / primitives 思路转化成 NandinaUI 语义 API 的关键容器，能显著减少表单页面装配成本。
 
-18. **Issue 093 — 为表单控件补齐交互与回归测试**  
+18. **Issue 093 — 为表单控件补齐交互与回归测试 ✅**  
     依赖：Issue 091, Issue 092, Issue 095  
     原因：输入控件是最容易积累边界 bug 的一类，没有测试很难继续往 Select、Checkbox、Dialog 走。
 
-19. **Issue 094 — 创建 Forms showcase 页面并纳入导航验证**  
+19. **Issue 094 — 创建 Forms showcase 页面并纳入导航验证 ✅**  
     依赖：Issue 091, Issue 092, Issue 095  
     原因：forms 页面既是展示面，也是对 page/router/component authoring 组合能力的真实验收。
 
@@ -2682,9 +2683,9 @@
 
 # Milestone M11 — Forms / Authoring 垂直切片
 
-## Issue 090 — 定义 Input / Field 的 authoring 与状态契约 ❌ 未完成
+## Issue 090 — 定义 Input / Field 的 authoring 与状态契约 ✅ 已完成
 **Labels:** `area:widgets`, `area:app`, `area:docs`, `kind:architecture`, `priority:p1`
-**Status:** ❌ 未完成 — 当前主线尚无输入控件契约，缺少下一批 primitives / controls 的共同落点
+**Status:** ✅ 已完成 — `docs/input-and-field-api.md` 已固定 TextField / Field 的职责边界、authoring API 与绑定语义，后续 091 / 092 / 095 可直接按该契约推进
 
 ### 目标
 为输入类控件建立统一的状态模型、authoring 语法和组合边界。
@@ -2705,16 +2706,17 @@
 - TextField / Field 的实现不再需要一边写一边临时定 API
 - app 层可以围绕统一 authoring 模式继续扩表单类控件
 
-### 当前判断
-- runtime 已有 pointer / key / text input 基础通道
-- widgets / app 层尚未形成输入控件的公开契约
-- 若直接开始写 Input，实现很容易反向塑形 authoring API
+### 完成记录
+- 已新增 `docs/input-and-field-api.md`，明确 `TextField` 是单行输入 control，`Field` 是围绕 control slot 的语义容器
+- 文档已固定第一版 canonical authoring API：`text_field()` 与 `field(...)`，不把 `input()` 作为首选命名
+- 文档已固定输入绑定的单向数据流语义：`value` 快照输入、`on_change` / `on_submit` 事件输出、`Ref<TextField>` 用于 focus / reset / imperative sync
+- 文档已明确当前不把 `Var<std::string>` 双向绑定写成既成事实，避免 091 / 095 在实现期被隐式绑定语义反向塑形
 
 ---
 
-## Issue 091 — 实现 TextField 最小版本 ❌ 未完成
+## Issue 091 — 实现 TextField 最小版本 ✅ 已完成
 **Labels:** `area:widgets`, `area:text`, `area:runtime`, `kind:implementation`, `priority:p1`
-**Status:** ❌ 未完成 — 当前主线没有可编辑的文本输入控件
+**Status:** ✅ 已完成 — `TextField` 已接入 widgets 模块、showcase sandbox 与 app 焦点输入分发链路
 
 ### 目标
 实现第一版单行文本输入控件，验证输入交互链路。
@@ -2732,19 +2734,25 @@
 - `widgets/src/nan_text_field.cppm`
 - 对应导出与最小工厂接口
 
+### 完成记录
+- 已新增 `widgets/src/nan_text_field.cppm`，覆盖单行文本显示、placeholder、focus、caret、text input、backspace、delete、disabled、read_only
+- `widgets/src/nan_widgets.cppm` 与 `widgets/CMakeLists.txt` 已接入 TextField 模块导出与编译
+- `app/src/nan_application.cppm` 已补最小焦点目标记录与 key/text input 转发，输入行为不再依赖页面手工转发
+- `showcase/pages/sandbox_page.cppm` 已加入最小 TextField 示例，能够在 showcase 中直接输入与提交文本
+- `tests/widgets/test_widgets_text_field.cpp` 已新增控件级回归覆盖
+
 ### 完成定义
 - 可在 showcase 页面中实际输入、编辑和读取文本
 - 输入行为不依赖页面层手工处理键盘事件
 
 ### 当前判断
-- text 渲染与基础键盘事件已经具备落地条件
-- 还缺一个真正把 runtime 事件、text 能力和 widgets 状态机串起来的控件
+- 第一版输入链路已经闭环，后续应把 `Field` 容器、authoring `text_field()` DSL 与字符串绑定语义放到 092 / 095 继续收口
 
 ---
 
-## Issue 092 — 实现 Field 容器与 label/helper/error 组合 ❌ 未完成
+## Issue 092 — 实现 Field 容器与 label/helper/error 组合 ✅ 已完成
 **Labels:** `area:widgets`, `area:theme`, `kind:implementation`, `priority:p1`
-**Status:** ❌ 未完成 — 当前主线缺少表单语义容器，label / helper / error 仍需页面层手工拼装
+**Status:** ✅ 已完成 — Field 已作为围绕 control slot 的语义容器落地，label / helper / error / required / invalid / disabled 均已接入
 
 ### 目标
 提供围绕输入控件的语义容器，承接 shadcn / primitives 风格的组合思路。
@@ -2764,15 +2772,24 @@
 - 页面层不再为最常见的表单行手工拼装 label + input + helper + error
 - 表单语义状态可以通过统一容器消费 theme
 
+### 完成记录
+- 已新增 `widgets/src/nan_field.cppm`，提供 `Field` 作为围绕 control slot 的语义容器
+- 已覆盖 label / control slot / helper text / error text / required / invalid / disabled 状态
+- `invalid` 与 `disabled` 已通过 dynamic_cast 传播到内部 `TextField`
+- `invalid=true` 时自动隐藏 helper、显示 error
+- `required` 传播到内部 label Label
+- `widgets/CMakeLists.txt` 与 `widgets/src/nan_widgets.cppm` 已接入 Field 模块
+- `tests/widgets/test_widgets_field.cpp` 已新增 7 项控件级回归覆盖
+- 验证：test_widgets_field 7/7 通过，test_widgets_text_field 3/3 通过
+
 ### 当前判断
-- Button / Label 已经证明“组合优于继承”的方向可行
-- Field 是把这一套思路扩到表单系统的最佳下一步
+- Field 已完成 Issue 090 契约中的第一版结构约束，后续 authoring 工厂 `field(...)` 应归入 Issue 095
 
 ---
 
-## Issue 093 — 为表单控件补齐交互与回归测试 ❌ 未完成
+## Issue 093 — 为表单控件补齐交互与回归测试 ✅ 已完成
 **Labels:** `area:widgets`, `area:app`, `area:tests`, `kind:test`, `priority:p1`
-**Status:** ❌ 未完成 — 输入控件一旦落地，需要独立测试面锁住焦点、键盘和绑定语义
+**Status:** ✅ 已完成 — TextField / Field 的交互与回归测试已覆盖 focus/caret/read_only/disabled signals/helper-error 状态
 
 ### 目标
 为 TextField / Field 建立稳定回归测试面。
@@ -2786,20 +2803,22 @@
 - helper / error 状态展示
 
 ### 产出
-- `tests/widgets/test_text_field.cpp`
-- `tests/app/test_form_authoring.cpp`
+- `tests/widgets/test_widgets_text_field.cpp`（追加测试）
+- `tests/widgets/test_widgets_field.cpp`（追加测试）
+- `tests/app/test_app_authoring.cpp`（追加测试）
 
 ### 完成定义
 - 输入相关迭代不再主要依赖人工点击验证
 
-### 当前判断
-- 表单控件的边界比 Button 更复杂，没有独立测试很难稳定扩展
+### 完成记录
+- `test_widgets_text_field.cpp`：新增 setValue 不触发 on_change、caret 右移插值、read_only 焦点阻断、多段 text input 累积
+- `test_widgets_field.cpp`：新增 invalid 多轮切换、disabled 双向传播、空 control 不崩溃、仅 label 无 helper/error
+- `test_app_authoring.cpp`：新增挂载 TextField 输入信号验证、挂载 Field 布局与控制传播
+- 总计新增 10 项测试，全部通过
 
----
-
-## Issue 094 — 创建 Forms showcase 页面并纳入导航验证 ❌ 未完成
+## Issue 094 — 创建 Forms showcase 页面并纳入导航验证 ✅ 已完成
 **Labels:** `area:showcase`, `area:widgets`, `area:app`, `kind:implementation`, `priority:p1`
-**Status:** ❌ 未完成 — 当前 showcase 只有 sandbox，尚不足以承担表单类控件的验证职责
+**Status:** ✅ 已完成 — `FormsPage` 已注册到 showcase 导航，展示 TextField 状态矩阵与 Field 组合
 
 ### 目标
 建立第一个围绕表单 authoring 的 showcase 页面。
@@ -2818,14 +2837,16 @@
 - forms 页面可作为后续更多控件的验证样板
 - showcase 导航与 page 元数据可承载真实业务形态页面，而不只是 sandbox
 
-### 当前判断
-- 仅靠 sandbox 难以覆盖输入控件的真实组合场景
-
----
-
-## Issue 095 — 为 TextField 接入 authoring 工厂与 signals 绑定模式 ❌ 未完成
+### 完成记录
+- 已新增 `showcase/pages/forms_page.cppm`，包含：
+  - Section 1：TextField 状态矩阵（basic / placeholder+value / disabled / read_only）
+  - Section 2：Field label + helper/error 组合（email / required）
+  - Section 3：交互式 invalid toggle（按钮切换，label 自动追踪状态）
+- 已注册到 `showcase/nan_showcase.cppm`，通过 "Forms" 导航项可访问
+- `showcase/CMakeLists.txt` 已接入 forms_page.cppm
+- 构建验证：nandina_showcase 构建通过
 **Labels:** `area:app`, `area:widgets`, `kind:implementation`, `priority:p1`
-**Status:** ❌ 未完成 — Input 若不接入 app authoring，将无法验证项目当前最重要的开发体验方向
+**Status:** ✅ 已完成 — `text_field()` 与 `field()` 作者工厂已接入 `nandina.app.application`
 
 ### 目标
 让 TextField 与现有 `label()` / `button()` 一样进入 authoring DSL，并验证与 signals 的协作方式。
@@ -2839,18 +2860,22 @@
 - `Var<std::string>` 或等价模式的推荐接法
 
 ### 产出
-- `app/src/nan_authoring.cppm` 扩展
-- 对应 app 层测试
+  - `app/src/nan_application.cppm` 扩展（`TextFieldNode` / `FieldNode` 类 + 工厂函数）
 
 ### 完成定义
 - 页面层可以用与现有 button/label 一致的风格声明输入控件
-- 输入类控件不会退回到“只有底层 widget API 可用”的双轨状态
+- 输入类控件不会退回到"只有底层 widget API 可用"的双轨状态
+
+### 完成记录
+- 已新增 `TextFieldNode`，支持 `value(...)` / `placeholder(...)` / `disabled(...)` / `read_only(...)` / `invalid(...)` / `on_change(...)` / `on_submit(...)` 链式调用
+- 已新增 `FieldNode`，支持 `label(...)` / `helper_text(...)` / `error_text(...)` / `required(...)` / `invalid(...)` / `disabled(...)` / `control(NodeLike...)` 链式调用
+- 已新增 `text_field()` 与 `field()` 工厂函数
+- `showcase/pages/sandbox_page.cppm` 已改用 authoring API 重建 TextField 与 Field 示例
+- `tests/app/test_app_authoring.cpp` 已新增 7 项 authoring 回归测试
+- 验证：test_app_authoring 新增 7/7 通过，全部 app/widgets 测试回归通过
 
 ### 当前判断
-- 当前项目的 authoring 体验已经开始形成特色，Input 不应成为例外
-
----
-
+- 表单垂直切片（090 + 091 + 092 + 095）已完成闭环，后续应继续推进 093（表单交互回归）与 094（Forms showcase 页面）
 # 已完成 Issue 记录
 
 > 本章节记录已完成的 issue，作为项目进度的快速参考。

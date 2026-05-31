@@ -1,5 +1,7 @@
 #include <gtest/gtest.h>
 
+#include <SDL3/SDL.h>
+
 #include <memory>
 #include <stdexcept>
 #include <vector>
@@ -14,6 +16,7 @@ import nandina.foundation.color;
 import nandina.theme;
 import nandina.widgets.button;
 import nandina.widgets.card;
+import nandina.widgets.field;
 import nandina.widgets.focus_ring;
 import nandina.widgets.icon;
 import nandina.widgets.label;
@@ -22,6 +25,7 @@ import nandina.widgets.pressable;
 import nandina.widgets.progressbar;
 import nandina.widgets.sidebar_group;
 import nandina.widgets.surface;
+import nandina.widgets.text_field;
 
 class TestWidget final : public nandina::runtime::NanWidget {
 public:
@@ -1003,4 +1007,210 @@ TEST(AppAuthoringTest, AppWindowHitTestConsumesRootLayoutDirtyBeforeFirstDraw) {
     EXPECT_FLOAT_EQ(bounds.y(), 42.0f);
     EXPECT_FLOAT_EQ(bounds.width(), 120.0f);
     EXPECT_FLOAT_EQ(bounds.height(), 36.0f);
+}
+
+TEST(AppAuthoringTest, TextFieldFactoryCreatesNodeWithPlaceholder) {
+    auto tf = nandina::app::text_field()
+        .placeholder("Email")
+        .value("alice@example.com")
+        .disabled(false)
+        .read_only(true)
+        .invalid(false);
+
+    EXPECT_EQ(tf.widget().value(), "alice@example.com");
+    EXPECT_EQ(tf.widget().placeholder(), "Email");
+    EXPECT_TRUE(tf.widget().read_only());
+    EXPECT_FALSE(tf.widget().disabled());
+    EXPECT_FALSE(tf.widget().invalid());
+}
+
+TEST(AppAuthoringTest, TextFieldNodeBindRefWorks) {
+    nandina::app::Ref<nandina::widgets::TextField> ref;
+    nandina::app::Ref<nandina::runtime::NanWidget> root_ref;
+
+    TestAppWindow window({
+        .title = "Test",
+        .width = 240,
+        .height = 120,
+        .resizable = false,
+        .high_dpi = false,
+    });
+
+    window.set_root(
+        nandina::app::adopt(nandina::widgets::TextField::create())
+            .bind(ref)
+            .bind(root_ref));
+
+    ASSERT_TRUE(ref);
+    EXPECT_EQ(ref->placeholder(), "");
+}
+
+TEST(AppAuthoringTest, TextFieldNodeOnChangeAndOnSubmit) {
+    int change_count = 0;
+    int submit_count = 0;
+    std::string last_change;
+    std::string last_submit;
+
+    auto tf = nandina::app::text_field()
+        .placeholder("Test")
+        .on_change([&](std::string_view v) {
+            ++change_count;
+            last_change = std::string{v};
+        })
+        .on_submit([&](std::string_view v) {
+            ++submit_count;
+            last_submit = std::string{v};
+        });
+
+    // Simulate focus + input
+    EXPECT_TRUE(tf.widget().dispatch_event(nandina::runtime::FocusEvent{.got_focus = true}));
+    EXPECT_TRUE(tf.widget().dispatch_event(nandina::runtime::TextInputEvent{.text = "hello"}));
+    EXPECT_EQ(change_count, 1);
+    EXPECT_EQ(last_change, "hello");
+    EXPECT_EQ(tf.widget().value(), "hello");
+
+    EXPECT_TRUE(tf.widget().dispatch_event(
+        nandina::runtime::KeyEvent{.key_code = SDLK_RETURN, .is_repeat = false},
+        nandina::runtime::EventType::KeyDown));
+    EXPECT_EQ(submit_count, 1);
+    EXPECT_EQ(last_submit, "hello");
+}
+
+TEST(AppAuthoringTest, FieldFactoryCreatesNodeWithLabelAndControl) {
+    auto f = nandina::app::field()
+        .label("Email")
+        .helper_text("Enter your email")
+        .error_text("Invalid email")
+        .required(true)
+        .invalid(false)
+        .disabled(false);
+
+    EXPECT_EQ(f.widget().label_text(), "Email");
+    EXPECT_EQ(f.widget().helper_text(), "Enter your email");
+    EXPECT_EQ(f.widget().error_text(), "Invalid email");
+    EXPECT_TRUE(f.widget().required());
+    EXPECT_FALSE(f.widget().invalid());
+    EXPECT_FALSE(f.widget().disabled());
+    EXPECT_EQ(f.widget().control(), nullptr);
+}
+
+TEST(AppAuthoringTest, FieldFactoryWithControlAcceptsTextFieldNode) {
+    auto f = nandina::app::field()
+        .label("Name")
+        .control(nandina::app::text_field().placeholder("Your name"));
+
+    ASSERT_NE(f.widget().control(), nullptr);
+    auto* tf = dynamic_cast<nandina::widgets::TextField*>(f.widget().control());
+    ASSERT_NE(tf, nullptr);
+    EXPECT_EQ(tf->placeholder(), "Your name");
+}
+
+TEST(AppAuthoringTest, FieldNodeBindRefWorks) {
+    nandina::app::Ref<nandina::widgets::Field> ref;
+
+    TestAppWindow window({
+        .title = "Test",
+        .width = 240,
+        .height = 120,
+        .resizable = false,
+        .high_dpi = false,
+    });
+
+    auto control = nandina::widgets::TextField::create();
+    control->set_placeholder("you@example.com");
+    auto f = nandina::widgets::Field::create();
+    f->set_label("Email");
+    f->set_control(std::move(control));
+
+    window.set_root(nandina::app::adopt(std::move(f)).bind(ref));
+
+    ASSERT_TRUE(ref);
+    EXPECT_EQ(ref->label_text(), "Email");
+    ASSERT_NE(ref->control(), nullptr);
+}
+
+TEST(AppAuthoringTest, FieldNodeDisabledAndInvalidPropagation) {
+    auto control = nandina::app::text_field().placeholder("Test");
+    auto control_ptr = &control.widget();
+
+    auto f = nandina::app::field()
+        .label("Test")
+        .control(std::move(control));
+
+    EXPECT_FALSE(f.widget().disabled());
+    EXPECT_FALSE(control_ptr->disabled());
+
+    f.widget().set_disabled(true);
+    EXPECT_TRUE(control_ptr->disabled());
+
+    f.widget().set_invalid(true);
+    EXPECT_TRUE(control_ptr->invalid());
+}
+
+TEST(AppAuthoringTest, MountedTextFieldReceivesInputAndFiresSignal) {
+    nandina::app::Ref<nandina::widgets::TextField> ref;
+
+    TestAppWindow window({
+        .title = "Test",
+        .width = 240,
+        .height = 120,
+        .resizable = false,
+        .high_dpi = false,
+    });
+
+    int change_count = 0;
+    std::string last_value;
+
+    window.set_root(
+        nandina::app::adopt(nandina::widgets::TextField::create())
+            .bind(ref));
+    ASSERT_TRUE(ref);
+
+    ref->on_change([&](std::string_view v) {
+        ++change_count;
+        last_value = std::string{v};
+    });
+
+    // 模拟焦点链
+    ref->dispatch_event(nandina::runtime::FocusEvent{.got_focus = true});
+    EXPECT_TRUE(ref->focused());
+
+    // 模拟真实窗口链路：app 层通过 m_focused_widget 转发
+    ref->dispatch_event(nandina::runtime::TextInputEvent{.text = "typed text"});
+    EXPECT_EQ(ref->value(), "typed text");
+    EXPECT_EQ(change_count, 1);
+    EXPECT_EQ(last_value, "typed text");
+}
+
+TEST(AppAuthoringTest, MountedFieldWithControlLaysOutCorrectly) {
+    nandina::app::Ref<nandina::widgets::Field> field_ref;
+
+    TestAppWindow window({
+        .title = "Test",
+        .width = 300,
+        .height = 200,
+        .resizable = false,
+        .high_dpi = false,
+    });
+
+    auto control = nandina::widgets::TextField::create();
+    control->set_placeholder("Enter email");
+    auto control_ptr = control.get();
+
+    auto field = nandina::widgets::Field::create();
+    field->set_label("Email");
+    field->set_helper_text("We'll never share your email.");
+    field->set_control(std::move(control));
+
+    window.set_root(nandina::app::adopt(std::move(field)).bind(field_ref));
+    ASSERT_TRUE(field_ref);
+    ASSERT_NE(field_ref->control(), nullptr);
+    EXPECT_EQ(field_ref->control(), control_ptr);
+
+    // 验证 field 传播 disabled 到 control
+    field_ref->set_disabled(true);
+    EXPECT_TRUE(control_ptr->disabled());
+
+    field_ref->set_invalid(true);
+    EXPECT_TRUE(control_ptr->invalid());
 }

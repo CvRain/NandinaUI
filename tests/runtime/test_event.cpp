@@ -20,6 +20,7 @@ TEST(NanEvent, EventTypeToString) {
     EXPECT_EQ(to_string(EventType::KeyDown),       "KeyDown");
     EXPECT_EQ(to_string(EventType::KeyUp),         "KeyUp");
     EXPECT_EQ(to_string(EventType::TextInput),     "TextInput");
+    EXPECT_EQ(to_string(EventType::TextEditing),   "TextEditing");
     EXPECT_EQ(to_string(EventType::FocusIn),       "FocusIn");
     EXPECT_EQ(to_string(EventType::FocusOut),      "FocusOut");
     EXPECT_EQ(to_string(EventType::WindowResize),  "WindowResize");
@@ -59,6 +60,7 @@ TEST(NanEvent, PointerButtonEventDefaults) {
     EXPECT_EQ(ev.button, PointerButton::Unknown);
     EXPECT_DOUBLE_EQ(ev.x, 0.0);
     EXPECT_DOUBLE_EQ(ev.y, 0.0);
+    EXPECT_EQ(ev.click_count, 1);
     EXPECT_FALSE(ev.is_repeat);
 }
 
@@ -70,11 +72,13 @@ TEST(NanEvent, PointerButtonEventCustom) {
         .button = PointerButton::Left,
         .x = 50.0,
         .y = 75.0,
+        .click_count = 2,
         .is_repeat = false
     };
     EXPECT_EQ(ev.button, PointerButton::Left);
     EXPECT_DOUBLE_EQ(ev.x, 50.0);
     EXPECT_DOUBLE_EQ(ev.y, 75.0);
+    EXPECT_EQ(ev.click_count, 2);
 }
 
 TEST(NanEvent, KeyEventDefaults) {
@@ -97,6 +101,17 @@ TEST(NanEvent, TextInputEvent) {
         .text = "hello 世界"
     };
     EXPECT_EQ(ev.text, "hello 世界");
+}
+
+TEST(NanEvent, TextEditingEvent) {
+    nandina::runtime::TextEditingEvent ev{
+        .text = "zhong",
+        .start = 2,
+        .length = 1,
+    };
+    EXPECT_EQ(ev.text, "zhong");
+    EXPECT_EQ(ev.start, 2);
+    EXPECT_EQ(ev.length, 1);
 }
 
 TEST(NanEvent, FocusEventDefaults) {
@@ -150,6 +165,9 @@ TEST(NanEvent, EventVariantContainsTypeTag) {
     ev = nandina::runtime::TextInputEvent{};
     EXPECT_EQ(event_type(ev), EventType::TextInput);
 
+    ev = nandina::runtime::TextEditingEvent{};
+    EXPECT_EQ(event_type(ev), EventType::TextEditing);
+
     ev = nandina::runtime::FocusEvent{};
     EXPECT_EQ(event_type(ev), EventType::FocusIn);
 
@@ -188,4 +206,18 @@ TEST(NanEvent, EventVariantRoundTrip) {
     // WindowClose (empty struct)
     ev = nandina::runtime::WindowCloseEvent{};
     EXPECT_EQ(event_type(ev), EventType::WindowClose);
+}
+
+TEST(NanEvent, KeyEventModifierHelpersReportFlags) {
+    const auto event = nandina::runtime::KeyEvent{
+        .key_code = 65,
+        .modifiers = nandina::runtime::KeyModifiers::Shift | nandina::runtime::KeyModifiers::Ctrl,
+        .is_repeat = false,
+    };
+
+    EXPECT_TRUE(event.shift());
+    EXPECT_TRUE(event.ctrl());
+    EXPECT_FALSE(event.alt());
+    EXPECT_FALSE(event.super());
+    EXPECT_TRUE(event.shortcut_modifier());
 }

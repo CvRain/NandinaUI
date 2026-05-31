@@ -11,12 +11,14 @@ import nandina.foundation.color;
 import nandina.showcase.sandbox_page;
 import nandina.showcase.main_page;
 import nandina.showcase.page.button;
+import nandina.showcase.page.forms;
 
 export namespace nandina::showcase {
     [[nodiscard]] inline auto create_showcase_shell() -> nandina::app::Node {
         auto router = nandina::app::NanRouter::create();
         router->register_page(std::make_unique<nandina::showcase::MainPage>());
         router->register_page(std::make_unique<nandina::showcase::ButtonPage>());
+        router->register_page(std::make_unique<nandina::showcase::FormsPage>());
         router->register_page(std::make_unique<nandina::showcase::SandboxPage>());
 
         return nandina::app::create_shell(std::move(router), {

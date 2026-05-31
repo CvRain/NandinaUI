@@ -13,6 +13,7 @@ module;
 
 export module nandina.runtime.nan_window;
 
+export import nandina.foundation.nan_rect;
 export import nandina.runtime.nan_event;
 
 // ============================================================
@@ -127,6 +128,12 @@ export namespace nandina::runtime {
         // 主动请求关闭（下一次 poll_events / run 检查时生效）
         auto request_close() const noexcept -> void;
 
+        // 为平台 IME 设置当前文本输入区域与 caret 偏移。
+        auto set_text_input_area(const geometry::NanRect& rect, int cursor = 0) -> void;
+
+        // 清除平台 IME 的文本输入区域锚点。
+        auto clear_text_input_area() -> void;
+
         // ── 事件处理（Issue 010 基础通路）────────────────────
         // 消费平台事件队列，翻译并触发对应回调。
         // 返回 true 表示已收到退出信号（should_close 同步置 true）。
@@ -201,6 +208,9 @@ export namespace nandina::runtime {
 
         // 文本输入事件。
         virtual auto on_text_input(std::string_view text) -> void;
+
+        // 文本编辑事件（IME 预编辑 / composition）。
+        virtual auto on_text_editing(std::string_view text, std::int32_t start, std::int32_t length) -> void;
 
     private:
         explicit NanWindow(std::string_view title, int width, int height, bool resizable, bool high_dpi);

@@ -142,6 +142,16 @@ export namespace nandina::widgets {
             mark_dirty();
             return *this;
         }
+
+        auto set_align_to_ink_bounds(const bool value) -> Label& {
+            if (m_align_to_ink_bounds == value) {
+                return *this;
+            }
+
+            m_align_to_ink_bounds = value;
+            mark_dirty();
+            return *this;
+        }
         /// 禁用状态——禁用时文本色降至 70% 透明度（对应 shadcn peer-disabled:opacity-70）。
         auto set_disabled(const bool value) -> Label& {
             if (m_disabled == value) {
@@ -275,24 +285,32 @@ export namespace nandina::widgets {
             if (layout.empty()) return;
 
             // 计算水平对齐偏移
-            const float block_width = std::max(0.0f, layout.ink_right - layout.ink_left);
+            const float block_width = m_align_to_ink_bounds
+                ? std::max(0.0f, layout.ink_right - layout.ink_left)
+                : layout.total_width;
             float offset_x          = bnds.x();
             switch (m_align) {
             case TextAlign::Start:  break;
             case TextAlign::Center: offset_x += (bnds.width() - block_width) * 0.5f; break;
             case TextAlign::End:    offset_x += bnds.width() - block_width;           break;
             }
-            offset_x -= layout.ink_left;
+            if (m_align_to_ink_bounds) {
+                offset_x -= layout.ink_left;
+            }
 
             // 计算垂直对齐偏移
-            const float block_height = std::max(0.0f, layout.ink_bottom - layout.ink_top);
+            const float block_height = m_align_to_ink_bounds
+                ? std::max(0.0f, layout.ink_bottom - layout.ink_top)
+                : layout.total_height;
             float offset_y           = bnds.y();
             switch (m_valign) {
             case TextVerticalAlign::Top:    break;
             case TextVerticalAlign::Center: offset_y += (bnds.height() - block_height) * 0.5f; break;
             case TextVerticalAlign::Bottom: offset_y += bnds.height() - block_height;           break;
             }
-            offset_y -= layout.ink_top;
+            if (m_align_to_ink_bounds) {
+                offset_y -= layout.ink_top;
+            }
 
             auto text_font = m_font;
             text_font.color(m_color.get());
@@ -386,6 +404,7 @@ export namespace nandina::widgets {
 
         TextAlign m_align{TextAlign::Start};
         TextVerticalAlign m_valign{TextVerticalAlign::Top};
+        bool m_align_to_ink_bounds{true};
         bool m_disabled{false};
         bool m_error{false};
         bool m_required{false};

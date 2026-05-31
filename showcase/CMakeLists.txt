@@ -14,6 +14,7 @@ set(PROJECT_CPP_MODULE_FILES
         main_page.cppm
         pages/sandbox_page.cppm
         pages/button.cppm
+        pages/forms_page.cppm
 )
 
 if (CMAKE_HOST_SYSTEM_NAME MATCHES "Linux")

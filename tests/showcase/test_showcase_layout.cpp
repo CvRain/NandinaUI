@@ -170,7 +170,9 @@ TEST(ShowcaseLayoutTest, SandboxPageLayoutCentersContentInsteadOfStackingAtOrigi
     auto& center = child_at(*component, 0);
     auto& sized_box = child_at(center, 0);
     auto& column = child_at(sized_box, 0);
-    auto& button_row = child_at(column, 2);
+    ASSERT_GE(column.child_count(), 7u);
+
+    auto& button_row = child_at(column, 6);
     auto& left_expanded = child_at(button_row, 0);
     auto& right_expanded = child_at(button_row, 1);
 
@@ -211,13 +213,15 @@ TEST(ShowcaseLayoutTest, ExportedShowcaseShellRegistersMultiplePagesIntoSidebar)
     std::vector<nandina::widgets::SidebarMenuButton*> buttons;
     collect_sidebar_buttons(root_row, buttons);
 
-    ASSERT_GE(buttons.size(), 3u);
+    ASSERT_GE(buttons.size(), 4u);
     EXPECT_TRUE(buttons[0]->active());
     EXPECT_FALSE(buttons[1]->active());
     EXPECT_FALSE(buttons[2]->active());
+    EXPECT_FALSE(buttons[3]->active());
     EXPECT_EQ(buttons[0]->text(), "Main Page");
     EXPECT_EQ(buttons[1]->text(), "Button Showcase");
-    EXPECT_EQ(buttons[2]->text(), "Sandbox");
+    EXPECT_EQ(buttons[2]->text(), "Forms");
+    EXPECT_EQ(buttons[3]->text(), "Sandbox");
 }
 
 TEST(ShowcaseLayoutTest, ShowcaseShellPlacesSidebarOnLeftAndPageHostOnRight) {

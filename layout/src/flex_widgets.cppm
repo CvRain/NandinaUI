@@ -139,7 +139,7 @@ export namespace nandina::layout {
     };
 
     // ── SizedBox ─────────────────────────────────────────────
-    // 固定尺寸容器。如果 fixed_w_/fixed_h_ > 0 则覆盖父布局分配的尺寸。
+    // 固定尺寸容器。固定宽高只在 measure() 中表达，不在 set_bounds() 阶段改写父分配结果。
     class SizedBox final : public runtime::NanWidget {
     public:
         static auto Create() -> std::unique_ptr<SizedBox> {
@@ -221,9 +221,7 @@ export namespace nandina::layout {
         }
 
         auto set_bounds(const float x, const float y, const float w, const float h) noexcept -> runtime::NanWidget& override {
-            const float actual_w = fixed_w_.has_value() ? fixed_w_.value() : w;
-            const float actual_h = fixed_h_.has_value() ? fixed_h_.value() : h;
-            NanWidget::set_bounds(x, y, actual_w, actual_h);
+            NanWidget::set_bounds(x, y, w, h);
             return *this;
         }
 

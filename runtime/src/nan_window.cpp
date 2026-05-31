@@ -9,6 +9,7 @@ module;
 
 #include <chrono>
 #include <cstdint>
+#include <cmath>
 #include <format>
 #include <memory>
 #include <mutex>
@@ -59,6 +60,23 @@ namespace nandina::runtime {
                 default:
                     return PointerButton::Unknown;
             }
+        }
+
+        [[nodiscard]] auto to_key_modifiers(const SDL_Keymod modifiers) noexcept -> KeyModifiers {
+            auto result = KeyModifiers::None;
+            if ((modifiers & SDL_KMOD_SHIFT) != 0) {
+                result = result | KeyModifiers::Shift;
+            }
+            if ((modifiers & SDL_KMOD_CTRL) != 0) {
+                result = result | KeyModifiers::Ctrl;
+            }
+            if ((modifiers & SDL_KMOD_ALT) != 0) {
+                result = result | KeyModifiers::Alt;
+            }
+            if ((modifiers & SDL_KMOD_GUI) != 0) {
+                result = result | KeyModifiers::Super;
+            }
+            return result;
         }
 
         struct RuntimeBootstrap {
@@ -176,6 +194,20 @@ namespace nandina::runtime {
                 return;
             }
             SDL_RaiseWindow(window.get());
+        }
+
+        auto ensure_text_input() const noexcept -> void {
+            if (!window || SDL_TextInputActive(window.get())) {
+                return;
+            }
+            SDL_StartTextInput(window.get());
+        }
+
+        auto stop_text_input() const noexcept -> void {
+            if (!window || !SDL_TextInputActive(window.get())) {
+                return;
+            }
+            SDL_StopTextInput(window.get());
         }
 
         // ── 辅助：根据窗口几何计算 像素/逻辑 坐标比 ─────────
@@ -321,6 +353,7 @@ namespace nandina::runtime {
 
         // ── 显示窗口（创建完成后再 show，避免白屏闪烁）──────────
         SDL_ShowWindow(raw_window);
+        m_impl->ensure_text_input();
 
         int renderer_vsync = 0;
         if (!SDL_GetRenderVSync(m_impl->renderer.get(), &renderer_vsync)) {
@@ -344,6 +377,7 @@ namespace nandina::runtime {
         if (!m_impl)
             return;
         auto log = nandina::log::get("runtime.nan_window");
+        m_impl->stop_text_input();
         // canvas 先析构（解除对 pixel_buffer 的引用），再释放 SDL 资源
         m_impl->canvas.reset();
         if (m_impl->runtime_acquired) {
@@ -396,6 +430,27 @@ namespace nandina::runtime {
             m_impl->should_close = true;
     }
 
+    auto NanWindow::set_text_input_area(const geometry::NanRect& rect, const int cursor) -> void {
+        if (!m_impl || !m_impl->window) {
+            return;
+        }
+
+        const SDL_Rect sdl_rect{
+            .x = static_cast<int>(std::lround(rect.x())),
+            .y = static_cast<int>(std::lround(rect.y())),
+            .w = static_cast<int>(std::lround(rect.width())),
+            .h = static_cast<int>(std::lround(rect.height())),
+        };
+        SDL_SetTextInputArea(m_impl->window.get(), &sdl_rect, cursor);
+    }
+
+    auto NanWindow::clear_text_input_area() -> void {
+        if (!m_impl || !m_impl->window) {
+            return;
+        }
+        SDL_SetTextInputArea(m_impl->window.get(), nullptr, 0);
+    }
+
     // ============================================================
     // 事件处理（Issue 010 基础通路）
     // ============================================================
@@ -425,10 +480,12 @@ namespace nandina::runtime {
 
                 case SDL_EVENT_WINDOW_FOCUS_GAINED:
                     m_impl->reset_cursor();
+                    m_impl->ensure_text_input();
                     on_focus_gained();
                     break;
 
                 case SDL_EVENT_WINDOW_FOCUS_LOST:
+                    m_impl->stop_text_input();
                     on_focus_lost();
                     break;
 
@@ -477,6 +534,7 @@ namespace nandina::runtime {
                         .button = to_pointer_button(ev.button.button),
                         .x = static_cast<double>(ev.button.x) * m_impl->pixel_logical_ratio_x,
                         .y = static_cast<double>(ev.button.y) * m_impl->pixel_logical_ratio_y,
+                        .click_count = ev.button.clicks,
                         .is_repeat = false,
                     });
                     break;
@@ -487,6 +545,7 @@ namespace nandina::runtime {
                         .button = to_pointer_button(ev.button.button),
                         .x = static_cast<double>(ev.button.x) * m_impl->pixel_logical_ratio_x,
                         .y = static_cast<double>(ev.button.y) * m_impl->pixel_logical_ratio_y,
+                        .click_count = ev.button.clicks,
                         .is_repeat = false,
                     });
                     break;
@@ -503,6 +562,7 @@ namespace nandina::runtime {
                 case SDL_EVENT_KEY_DOWN: {
                     on_key_down(KeyEvent{
                         .key_code = static_cast<std::int32_t>(ev.key.key),
+                        .modifiers = to_key_modifiers(ev.key.mod),
                         .is_repeat = ev.key.repeat,
                     });
                     break;
@@ -511,6 +571,7 @@ namespace nandina::runtime {
                 case SDL_EVENT_KEY_UP: {
                     on_key_up(KeyEvent{
                         .key_code = static_cast<std::int32_t>(ev.key.key),
+                        .modifiers = to_key_modifiers(ev.key.mod),
                         .is_repeat = false,
                     });
                     break;
@@ -518,6 +579,10 @@ namespace nandina::runtime {
 
                 case SDL_EVENT_TEXT_INPUT:
                     on_text_input(ev.text.text);
+                    break;
+
+                case SDL_EVENT_TEXT_EDITING:
+                    on_text_editing(ev.edit.text, ev.edit.start, ev.edit.length);
                     break;
 
                 default:
@@ -728,6 +793,9 @@ namespace nandina::runtime {
     }
 
     auto NanWindow::on_text_input(std::string_view) -> void {
+    }
+
+    auto NanWindow::on_text_editing(std::string_view, std::int32_t, std::int32_t) -> void {
     }
 
     // ============================================================

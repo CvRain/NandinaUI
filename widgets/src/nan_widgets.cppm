@@ -8,6 +8,8 @@ export import nandina.widgets.surface;
 export import nandina.widgets.pressable;
 export import nandina.widgets.focus_ring;
 export import nandina.widgets.label;
+export import nandina.widgets.text_field;
+export import nandina.widgets.field;
 export import nandina.widgets.button;
 export import nandina.widgets.panel;
 export import nandina.widgets.card;

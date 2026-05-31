@@ -1,6 +1,7 @@
 module;
 
 #include <memory>
+#include <optional>
 #include <thorvg-1/thorvg.h>
 #include <variant>
 #include <vector>
@@ -13,6 +14,11 @@ export import nandina.foundation.nan_size;
 export import nandina.foundation.nan_constraints;
 
 export namespace nandina::runtime {
+    struct TextInputArea {
+        geometry::NanRect rect{};
+        int cursor{0};
+    };
+
     /**
      * @brief NanWidget — 所有 UI 元素的基类（M1）
      *
@@ -52,6 +58,10 @@ export namespace nandina::runtime {
         /** 返回当前 Widget 的包围盒（基于绝对坐标） */
         [[nodiscard]] auto bounds() const noexcept -> geometry::NanRect {
             return geometry::NanRect{geometry::NanPoint{m_x, m_y}, geometry::NanSize{m_width, m_height}};
+        }
+
+        [[nodiscard]] virtual auto text_input_area() const noexcept -> std::optional<TextInputArea> {
+            return std::nullopt;
         }
 
         // ── 响应式资源清理（类型擦除）──────────────────────
@@ -242,6 +252,10 @@ export namespace nandina::runtime {
             return on_text_input(ev);
         }
 
+        virtual auto dispatch_event(const TextEditingEvent& ev) -> bool {
+            return on_text_editing(ev);
+        }
+
         virtual auto dispatch_event(const FocusEvent& ev) -> bool {
             return ev.got_focus ? on_focus_in() : on_focus_out();
         }
@@ -272,6 +286,8 @@ export namespace nandina::runtime {
                 return dispatch_event(std::get<KeyEvent>(ev), EventType::KeyUp);
             case EventType::TextInput:
                 return dispatch_event(std::get<TextInputEvent>(ev));
+            case EventType::TextEditing:
+                return dispatch_event(std::get<TextEditingEvent>(ev));
             case EventType::FocusIn:
                 return dispatch_event(FocusEvent{.got_focus = true});
             case EventType::FocusOut:
@@ -557,6 +573,10 @@ export namespace nandina::runtime {
         }
 
         virtual auto on_text_input(const TextInputEvent& /*event*/) -> bool {
+            return false;
+        }
+
+        virtual auto on_text_editing(const TextEditingEvent& /*event*/) -> bool {
             return false;
         }
 

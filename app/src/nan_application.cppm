@@ -60,6 +60,8 @@ import nandina.widgets.sidebar;
 import nandina.widgets.sidebar_group;
 import nandina.widgets.sidebar_menu_button;
 import nandina.widgets.surface;
+import nandina.widgets.text_field;
+import nandina.widgets.field;
 import nandina.theme;
 
 export namespace nandina::app {
@@ -86,6 +88,8 @@ export namespace nandina::app {
     class Children;
     class LabelNode;
     class ButtonNode;
+    class TextFieldNode;
+    class FieldNode;
     class SidebarMenuButtonNode;
     template<typename W>
     class WidgetNode;
@@ -97,6 +101,10 @@ export namespace nandina::app {
     [[nodiscard]] inline auto label(std::string_view text = {}) -> LabelNode;
 
     [[nodiscard]] inline auto button(std::string_view text = {}) -> ButtonNode;
+
+    [[nodiscard]] inline auto text_field() -> TextFieldNode;
+
+    [[nodiscard]] inline auto field() -> FieldNode;
 
     [[nodiscard]] inline auto sidebar_menu_button(std::string_view text = {}) -> SidebarMenuButtonNode;
 
@@ -901,6 +909,178 @@ export namespace nandina::app {
     };
 
     // ═══════════════════════════════════════════════════════════
+    // TextFieldNode — 单行输入框链式配置节点
+    // ═══════════════════════════════════════════════════════════
+    //
+    // 用法：
+    //   text_field()
+    //       .value("alice@example.com")
+    //       .placeholder("Email")
+    //       .read_only(false)
+    //       .on_change([&](std::string_view v) { ... })
+    //       .on_submit([&](std::string_view v) { ... })
+    //       .bind(ref)
+
+    class TextFieldNode : public WidgetNode<nandina::widgets::TextField> {
+    public:
+        explicit TextFieldNode(nandina::widgets::TextField::Ptr widget)
+            : WidgetNode<nandina::widgets::TextField>(std::move(widget)) {
+        }
+
+        // ── value ──────────────────────────────────────────────────────────
+
+        template<typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, TextFieldNode>
+        auto value(this Self &&self, std::string_view v) -> Self&& {
+            self.m_typed->set_value(std::string{v});
+            return std::forward<Self>(self);
+        }
+
+        // ── placeholder ────────────────────────────────────────────────────
+
+        template<typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, TextFieldNode>
+        auto placeholder(this Self &&self, std::string_view v) -> Self&& {
+            self.m_typed->set_placeholder(std::string{v});
+            return std::forward<Self>(self);
+        }
+
+        // ── disabled ───────────────────────────────────────────────────────
+
+        template<typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, TextFieldNode>
+        auto disabled(this Self &&self, bool v) -> Self&& {
+            self.m_typed->set_disabled(v);
+            return std::forward<Self>(self);
+        }
+
+        // ── read_only ──────────────────────────────────────────────────────
+
+        template<typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, TextFieldNode>
+        auto read_only(this Self &&self, bool v) -> Self&& {
+            self.m_typed->set_read_only(v);
+            return std::forward<Self>(self);
+        }
+
+        // ── invalid ────────────────────────────────────────────────────────
+
+        template<typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, TextFieldNode>
+        auto invalid(this Self &&self, bool v) -> Self&& {
+            self.m_typed->set_invalid(v);
+            return std::forward<Self>(self);
+        }
+
+        // ── on_change ──────────────────────────────────────────────────────
+
+        template<typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, TextFieldNode>
+        auto on_change(this Self &&self, std::function<void(std::string_view)> cb) -> Self&& {
+            self.m_typed->on_change(std::move(cb));
+            return std::forward<Self>(self);
+        }
+
+        // ── on_submit ──────────────────────────────────────────────────────
+
+        template<typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, TextFieldNode>
+        auto on_submit(this Self &&self, std::function<void(std::string_view)> cb) -> Self&& {
+            self.m_typed->on_submit(std::move(cb));
+            return std::forward<Self>(self);
+        }
+    };
+
+    // ═══════════════════════════════════════════════════════════
+    // FieldNode — 表单语义容器链式配置节点
+    // ═══════════════════════════════════════════════════════════
+    //
+    // 用法：
+    //   field()
+    //       .label("Email")
+    //       .helper_text("We'll never share your email.")
+    //       .error_text("Invalid email address.")
+    //       .control(text_field().placeholder("you@example.com"))
+    //       .required(true)
+    //       .bind(ref)
+
+    class FieldNode : public WidgetNode<nandina::widgets::Field> {
+    public:
+        explicit FieldNode(nandina::widgets::Field::Ptr widget)
+            : WidgetNode<nandina::widgets::Field>(std::move(widget)) {
+        }
+
+        // ── label ──────────────────────────────────────────────────────────
+
+        template<typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, FieldNode>
+        auto label(this Self &&self, std::string_view v) -> Self&& {
+            self.m_typed->set_label(std::string{v});
+            return std::forward<Self>(self);
+        }
+
+        // ── helper_text ────────────────────────────────────────────────────
+
+        template<typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, FieldNode>
+        auto helper_text(this Self &&self, std::string_view v) -> Self&& {
+            self.m_typed->set_helper_text(std::string{v});
+            return std::forward<Self>(self);
+        }
+
+        // ── error_text ─────────────────────────────────────────────────────
+
+        template<typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, FieldNode>
+        auto error_text(this Self &&self, std::string_view v) -> Self&& {
+            self.m_typed->set_error_text(std::string{v});
+            return std::forward<Self>(self);
+        }
+
+        // ── required ───────────────────────────────────────────────────────
+
+        template<typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, FieldNode>
+        auto required(this Self &&self, bool v) -> Self&& {
+            self.m_typed->set_required(v);
+            return std::forward<Self>(self);
+        }
+
+        // ── invalid ────────────────────────────────────────────────────────
+
+        template<typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, FieldNode>
+        auto invalid(this Self &&self, bool v) -> Self&& {
+            self.m_typed->set_invalid(v);
+            return std::forward<Self>(self);
+        }
+
+        // ── disabled ───────────────────────────────────────────────────────
+
+        template<typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, FieldNode>
+        auto disabled(this Self &&self, bool v) -> Self&& {
+            self.m_typed->set_disabled(v);
+            return std::forward<Self>(self);
+        }
+
+        // ── control ────────────────────────────────────────────────────────
+        //
+        // 接收一个 NodeLike 作为输入控件，提取其底层 widget 所有权并注入 Field。
+        //
+        // 用法：
+        //   field().control(text_field().placeholder("Email"))
+
+        template<typename Self, typename NodeLike>
+            requires std::derived_from<std::remove_cvref_t<Self>, FieldNode>
+        auto control(this Self &&self, NodeLike &&child) -> Self&& {
+            auto node = Node(std::forward<NodeLike>(child));
+            self.m_typed->set_control(std::move(node).take_widget());
+            return std::forward<Self>(self);
+        }
+    };
+
+    // ═══════════════════════════════════════════════════════════
     // SidebarMenuButtonNode — 侧边栏菜单项链式配置节点
     // ═══════════════════════════════════════════════════════════
     //
@@ -1269,6 +1449,16 @@ export namespace nandina::app {
         return ButtonNode{std::move(w)};
     }
 
+    /** @brief 创建 TextField 节点 */
+    [[nodiscard]] inline auto text_field() -> TextFieldNode {
+        return TextFieldNode{nandina::widgets::TextField::create()};
+    }
+
+    /** @brief 创建 Field 节点 */
+    [[nodiscard]] inline auto field() -> FieldNode {
+        return FieldNode{nandina::widgets::Field::create()};
+    }
+
     // ── 容器组件 ──────────────────────────────────────────────────────
 
     /** @brief 水平排列容器 */
@@ -1420,6 +1610,7 @@ export namespace nandina::app {
                 const auto start = detail::SteadyClock::now();
                 consume_root_reflow();
                 const auto layout_done = detail::SteadyClock::now();
+                sync_focused_text_input_area();
                 m_root_component->draw(canvas);
                 const auto draw_done = detail::SteadyClock::now();
                 m_root_component->clear_dirty_recursive();
@@ -1490,8 +1681,48 @@ export namespace nandina::app {
             sync_hover_target(nullptr, event);
         }
 
+        auto sync_focus_target(runtime::NanWidget *next) -> bool {
+            if (m_focused_widget == next) {
+                return false;
+            }
+
+            if (m_focused_widget) {
+                m_focused_widget->dispatch_event(runtime::FocusEvent{.got_focus = false});
+            }
+
+            m_focused_widget = nullptr;
+            if (next && next->dispatch_event(runtime::FocusEvent{.got_focus = true})) {
+                m_focused_widget = next;
+            }
+
+            sync_focused_text_input_area();
+
+            return true;
+        }
+
+        auto clear_focus_target() -> void {
+            sync_focus_target(nullptr);
+        }
+
+        auto sync_focused_text_input_area() -> void {
+            if (!m_active_runtime_window) {
+                return;
+            }
+
+            if (m_focused_widget) {
+                if (const auto area = m_focused_widget->text_input_area(); area.has_value()) {
+                    m_active_runtime_window->set_text_input_area(area->rect, area->cursor);
+                    return;
+                }
+            }
+
+            m_active_runtime_window->clear_text_input_area();
+        }
+
         auto on_window_focus_lost() -> void {
             clear_hover_target(runtime::PointerMoveEvent{});
+            clear_focus_target();
+            sync_focused_text_input_area();
         }
 
         auto consume_root_reflow() -> void {
@@ -1520,6 +1751,8 @@ export namespace nandina::app {
             const auto measure_done = detail::SteadyClock::now();
             m_root_component->layout();
             const auto layout_done = detail::SteadyClock::now();
+
+            sync_focused_text_input_area();
 
             const auto measure_ms = detail::elapsed_ms(start, measure_done);
             const auto layout_ms = detail::elapsed_ms(measure_done, layout_done);
@@ -1601,6 +1834,7 @@ export namespace nandina::app {
         runtime::NanWindow *m_active_runtime_window{nullptr};
         NanComponent::Ptr m_root_component{nullptr};
         runtime::NanWidget *m_hovered_widget{nullptr};
+        runtime::NanWidget *m_focused_widget{nullptr};
         bool m_pending_root_bounds_sync{false};
 
         // ── 背景层（Surface 组件，非 widget 树成员） ──────
@@ -1671,6 +1905,11 @@ export namespace nandina::app {
                     static_cast<float>(event.x), static_cast<float>(event.y));
                 m_owner.sync_hover_target(hit, pointer_move_from_button(event));
                 if (hit) {
+                    m_owner.sync_focus_target(hit);
+                } else {
+                    m_owner.clear_focus_target();
+                }
+                if (hit) {
                     hit->dispatch_event(event, runtime::EventType::PointerDown);
                 }
             }
@@ -1681,6 +1920,34 @@ export namespace nandina::app {
                 m_owner.sync_hover_target(hit, pointer_move_from_button(event));
                 if (hit) {
                     hit->dispatch_event(event, runtime::EventType::PointerUp);
+                }
+            }
+
+            void on_key_down(const runtime::KeyEvent &event) override {
+                if (m_owner.m_focused_widget) {
+                    m_owner.m_focused_widget->dispatch_event(event, runtime::EventType::KeyDown);
+                }
+            }
+
+            void on_key_up(const runtime::KeyEvent &event) override {
+                if (m_owner.m_focused_widget) {
+                    m_owner.m_focused_widget->dispatch_event(event, runtime::EventType::KeyUp);
+                }
+            }
+
+            void on_text_input(std::string_view text) override {
+                if (m_owner.m_focused_widget && !text.empty()) {
+                    m_owner.m_focused_widget->dispatch_event(runtime::TextInputEvent{.text = std::string{text}});
+                }
+            }
+
+            void on_text_editing(std::string_view text, std::int32_t start, std::int32_t length) override {
+                if (m_owner.m_focused_widget) {
+                    m_owner.m_focused_widget->dispatch_event(runtime::TextEditingEvent{
+                        .text = std::string{text},
+                        .start = start,
+                        .length = length,
+                    });
                 }
             }
 

@@ -132,10 +132,68 @@ export namespace nandina::showcase {
                     });
                 });
 
+            auto text_field = app::text_field()
+                .placeholder("Type into TextField...")
+                .on_change([this](std::string_view value) {
+                    if (text_field_status_ref) {
+                        text_field_status_ref->set_text(value.empty()
+                            ? "Input = (empty)"
+                            : std::format("Input = {}", value));
+                    }
+                })
+                .on_submit([this](std::string_view value) {
+                    if (text_field_status_ref) {
+                        text_field_status_ref->set_text(value.empty()
+                            ? "Submitted empty input"
+                            : std::format("Submitted = {}", value));
+                    }
+                });
+
+            auto text_field_status = app::label("Input = (empty)")
+                .bind(text_field_status_ref)
+                .font(text::NanFont{}
+                    .size(13)
+                    .color(NanColor::from(NanRgb{"#7c7f93"}))
+                    .single_line(true)
+                    .overflow(text::TextOverflow::clip));
+
+            // ── Field 演示 ──────────────────────────────────
+            auto field = app::field()
+                .label("Email")
+                .helper_text("We'll never share your email.")
+                .error_text("Invalid email address.")
+                .control(app::text_field().placeholder("Enter email"))
+                .bind(field_ref);
+
+            auto toggle_invalid_btn = button()
+                .size(ButtonSize::sm)
+                .variant(ButtonVariant::outline)
+                .text([this] {
+                    return m_field_invalid ? "✓ Valid" : "✗ Invalid";
+                });
+
+            toggle_invalid_btn.on_click([this]() {
+                m_field_invalid = !m_field_invalid;
+                if (auto* f = field_ref.get()) {
+                    f->set_invalid(m_field_invalid);
+                    if (auto* ctrl = dynamic_cast<nandina::widgets::TextField*>(f->control())) {
+                        if (m_field_invalid) {
+                            ctrl->set_value("");
+                        } else {
+                            ctrl->set_value("user@example.com");
+                        }
+                    }
+                }
+            });
+
             return mount(center(
                 column(children(
                     label,
                     double_label,
+                    text_field.width(280.0f),
+                    text_field_status,
+                    field.width(280.0f),
+                    toggle_invalid_btn,
                     row(children(
                         expanded(increase_button),
                         expanded(decrease_button)
@@ -156,9 +214,13 @@ export namespace nandina::showcase {
         nandina::app::Ref<nandina::widgets::Button> increase_button_ref;
         nandina::app::Ref<nandina::widgets::Button> decrease_button_ref;
         nandina::app::Ref<widgets::Label> label_ref;
+        nandina::app::Ref<widgets::Label> text_field_status_ref;
+        nandina::app::Ref<nandina::widgets::Field> field_ref;
 
         // Var<T>：可变 signal，update() 支持原地修改与值语义两种风格
         nandina::app::Var<int> m_count{1};
+
+        bool m_field_invalid{false};
 
         // ComputedVar<T>：只读派生 signal，依赖图自动建立
         nandina::app::ComputedVar<int> m_double{[this] {

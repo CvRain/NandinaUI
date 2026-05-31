@@ -27,6 +27,28 @@ using nandina::types::PointerButton;
 //   - runtime/nan_widget、runtime/nan_window 均可导入本模块
 // ============================================================
 export namespace nandina::runtime {
+    enum class KeyModifiers : std::uint8_t {
+        None  = 0,
+        Shift = 1 << 0,
+        Ctrl  = 1 << 1,
+        Alt   = 1 << 2,
+        Super = 1 << 3,
+    };
+
+    [[nodiscard]] constexpr auto operator|(const KeyModifiers lhs, const KeyModifiers rhs) noexcept -> KeyModifiers {
+        return static_cast<KeyModifiers>(
+            static_cast<std::uint8_t>(lhs) | static_cast<std::uint8_t>(rhs));
+    }
+
+    [[nodiscard]] constexpr auto operator&(const KeyModifiers lhs, const KeyModifiers rhs) noexcept -> KeyModifiers {
+        return static_cast<KeyModifiers>(
+            static_cast<std::uint8_t>(lhs) & static_cast<std::uint8_t>(rhs));
+    }
+
+    [[nodiscard]] constexpr auto has_key_modifier(const KeyModifiers value, const KeyModifiers flag) noexcept -> bool {
+        return static_cast<std::uint8_t>(value & flag) != 0;
+    }
+
     // ── 事件类型标签 ──────────────────────────────────────────
     enum class EventType : std::uint8_t {
         PointerMove,
@@ -37,6 +59,7 @@ export namespace nandina::runtime {
         KeyDown,
         KeyUp,
         TextInput,
+        TextEditing,
         FocusIn,
         FocusOut,
         WindowResize,
@@ -54,6 +77,7 @@ export namespace nandina::runtime {
         case EventType::KeyDown:       return "KeyDown";
         case EventType::KeyUp:         return "KeyUp";
         case EventType::TextInput:     return "TextInput";
+        case EventType::TextEditing:   return "TextEditing";
         case EventType::FocusIn:       return "FocusIn";
         case EventType::FocusOut:      return "FocusOut";
         case EventType::WindowResize:  return "WindowResize";
@@ -77,6 +101,7 @@ export namespace nandina::runtime {
         PointerButton button{PointerButton::Unknown};
         double x{0.0};
         double y{0.0};
+        std::uint8_t click_count{1};
         bool is_repeat{false};
     };
 
@@ -89,12 +114,40 @@ export namespace nandina::runtime {
     /// 键盘按键事件
     struct KeyEvent {
         std::int32_t key_code{0};
+        KeyModifiers modifiers{KeyModifiers::None};
         bool is_repeat{false};
+
+        [[nodiscard]] auto shift() const noexcept -> bool {
+            return has_key_modifier(modifiers, KeyModifiers::Shift);
+        }
+
+        [[nodiscard]] auto ctrl() const noexcept -> bool {
+            return has_key_modifier(modifiers, KeyModifiers::Ctrl);
+        }
+
+        [[nodiscard]] auto alt() const noexcept -> bool {
+            return has_key_modifier(modifiers, KeyModifiers::Alt);
+        }
+
+        [[nodiscard]] auto super() const noexcept -> bool {
+            return has_key_modifier(modifiers, KeyModifiers::Super);
+        }
+
+        [[nodiscard]] auto shortcut_modifier() const noexcept -> bool {
+            return ctrl() || super();
+        }
     };
 
     /// 文本输入事件（IME 最终结果）
     struct TextInputEvent {
         std::string text;
+    };
+
+    /// 文本编辑事件（IME 预编辑/组合中间态）
+    struct TextEditingEvent {
+        std::string text;
+        std::int32_t start{0};
+        std::int32_t length{0};
     };
 
     /// 焦点变化事件
@@ -119,6 +172,7 @@ export namespace nandina::runtime {
         PointerWheelEvent,
         KeyEvent,
         TextInputEvent,
+        TextEditingEvent,
         FocusEvent,
         WindowResizeEvent,
         WindowCloseEvent
@@ -136,9 +190,10 @@ export namespace nandina::runtime {
         case 2:  return EventType::PointerWheel;
         case 3:  return EventType::KeyDown;
         case 4:  return EventType::TextInput;
-        case 5:  return EventType::FocusIn;
-        case 6:  return EventType::WindowResize;
-        case 7:  return EventType::WindowClose;
+        case 5:  return EventType::TextEditing;
+        case 6:  return EventType::FocusIn;
+        case 7:  return EventType::WindowResize;
+        case 8:  return EventType::WindowClose;
         default: return EventType::PointerMove;    // should never reach
         }
     }
