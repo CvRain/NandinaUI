@@ -1768,6 +1768,9 @@ export namespace nandina::app {
 
         auto set_root_component(NanComponent::Ptr component) -> void {
             m_hovered_widget = nullptr;
+            m_focused_widget = nullptr;
+            m_pointer_capture_widget = nullptr;
+            sync_focused_text_input_area();
             m_root_component = std::move(component);
             request_root_reflow(true);
         }

@@ -118,12 +118,12 @@ TEST(ThemeManagerTest, DefaultThemeHasColors) {
     ASSERT_NE(theme, nullptr);
     EXPECT_EQ(theme->name(), "default");
 
-    // 默认 light scheme 下 primary 应有色值
+    // 默认 light scheme 下 primary 应有色值 (shadcn neutral gray)
     const auto& primary = theme->color(NanColorRole::primary);
     const auto rgb = primary.to<nandina::NanRgb>();
-    EXPECT_EQ(rgb.red(), 103);
-    EXPECT_EQ(rgb.green(), 80);
-    EXPECT_EQ(rgb.blue(), 217);
+    EXPECT_EQ(rgb.red(), 23);
+    EXPECT_EQ(rgb.green(), 23);
+    EXPECT_EQ(rgb.blue(), 23);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -306,9 +306,9 @@ TEST(ThemeManagerTest, ColorAccess) {
     // 验证可以通过 manager 直接获取颜色
     const auto& primary = mgr.color(NanColorRole::primary);
     const auto rgb = primary.to<nandina::NanRgb>();
-    EXPECT_EQ(rgb.red(), 103);
-    EXPECT_EQ(rgb.green(), 80);
-    EXPECT_EQ(rgb.blue(), 217);
+    EXPECT_EQ(rgb.red(), 23);
+    EXPECT_EQ(rgb.green(), 23);
+    EXPECT_EQ(rgb.blue(), 23);
 }
 
 TEST(ThemeManagerTest, ResolvedStyleUsesActiveThemePaletteAndTokens) {

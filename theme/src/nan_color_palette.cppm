@@ -110,50 +110,42 @@ inline auto make_default_light_palette() -> std::array<NanColor, static_cast<std
     using detail::rgb;
     std::array<NanColor, static_cast<std::size_t>(NanColorRole::_count)> colors{};
 
-    // Primary: 靛蓝色系
-    colors[static_cast<std::size_t>(NanColorRole::primary)]              = rgb(103, 80, 217);    // Indigo 400
-    colors[static_cast<std::size_t>(NanColorRole::onPrimary)]            = rgb(255, 255, 255);
-    colors[static_cast<std::size_t>(NanColorRole::primaryContainer)]     = rgb(234, 221, 255);   // Indigo 100
-    colors[static_cast<std::size_t>(NanColorRole::onPrimaryContainer)]   = rgb(33, 0, 93);
+    // shadcn default light — neutral grayscale
+    colors[static_cast<std::size_t>(NanColorRole::primary)]              = rgb(23, 23, 23);
+    colors[static_cast<std::size_t>(NanColorRole::onPrimary)]            = rgb(250, 250, 250);
+    colors[static_cast<std::size_t>(NanColorRole::primaryContainer)]     = rgb(245, 245, 245);
+    colors[static_cast<std::size_t>(NanColorRole::onPrimaryContainer)]   = rgb(23, 23, 23);
 
-    // Secondary
-    colors[static_cast<std::size_t>(NanColorRole::secondary)]            = rgb(98, 91, 113);
-    colors[static_cast<std::size_t>(NanColorRole::onSecondary)]          = rgb(255, 255, 255);
-    colors[static_cast<std::size_t>(NanColorRole::secondaryContainer)]   = rgb(232, 222, 248);
-    colors[static_cast<std::size_t>(NanColorRole::onSecondaryContainer)] = rgb(30, 25, 43);
+    colors[static_cast<std::size_t>(NanColorRole::secondary)]            = rgb(245, 245, 245);
+    colors[static_cast<std::size_t>(NanColorRole::onSecondary)]          = rgb(23, 23, 23);
+    colors[static_cast<std::size_t>(NanColorRole::secondaryContainer)]   = rgb(245, 245, 245);
+    colors[static_cast<std::size_t>(NanColorRole::onSecondaryContainer)] = rgb(23, 23, 23);
 
-    // Tertiary
-    colors[static_cast<std::size_t>(NanColorRole::tertiary)]             = rgb(125, 82, 96);
+    colors[static_cast<std::size_t>(NanColorRole::tertiary)]             = rgb(115, 115, 115);
     colors[static_cast<std::size_t>(NanColorRole::onTertiary)]           = rgb(255, 255, 255);
-    colors[static_cast<std::size_t>(NanColorRole::tertiaryContainer)]    = rgb(255, 216, 228);
-    colors[static_cast<std::size_t>(NanColorRole::onTertiaryContainer)]  = rgb(49, 17, 29);
+    colors[static_cast<std::size_t>(NanColorRole::tertiaryContainer)]    = rgb(229, 229, 229);
+    colors[static_cast<std::size_t>(NanColorRole::onTertiaryContainer)]  = rgb(64, 64, 64);
 
-    // Error
-    colors[static_cast<std::size_t>(NanColorRole::error)]                = rgb(179, 38, 30);
+    colors[static_cast<std::size_t>(NanColorRole::error)]                = rgb(239, 68, 68);
     colors[static_cast<std::size_t>(NanColorRole::onError)]              = rgb(255, 255, 255);
-    colors[static_cast<std::size_t>(NanColorRole::errorContainer)]       = rgb(249, 222, 220);
-    colors[static_cast<std::size_t>(NanColorRole::onErrorContainer)]     = rgb(65, 14, 11);
+    colors[static_cast<std::size_t>(NanColorRole::errorContainer)]       = rgb(254, 226, 226);
+    colors[static_cast<std::size_t>(NanColorRole::onErrorContainer)]     = rgb(153, 27, 27);
 
-    // Surface
-    colors[static_cast<std::size_t>(NanColorRole::surface)]              = rgb(255, 251, 254);
-    colors[static_cast<std::size_t>(NanColorRole::onSurface)]            = rgb(28, 27, 31);
-    colors[static_cast<std::size_t>(NanColorRole::surfaceVariant)]       = rgb(231, 224, 236);
-    colors[static_cast<std::size_t>(NanColorRole::onSurfaceVariant)]     = rgb(73, 69, 79);
-    colors[static_cast<std::size_t>(NanColorRole::surfaceTint)]          = rgb(103, 80, 217);
+    colors[static_cast<std::size_t>(NanColorRole::surface)]              = rgb(255, 255, 255);
+    colors[static_cast<std::size_t>(NanColorRole::onSurface)]            = rgb(10, 10, 10);
+    colors[static_cast<std::size_t>(NanColorRole::surfaceVariant)]       = rgb(245, 245, 245);
+    colors[static_cast<std::size_t>(NanColorRole::onSurfaceVariant)]     = rgb(115, 115, 115);
+    colors[static_cast<std::size_t>(NanColorRole::surfaceTint)]          = rgb(23, 23, 23);
 
-    // Background
-    colors[static_cast<std::size_t>(NanColorRole::background)]           = rgb(255, 251, 254);
-    colors[static_cast<std::size_t>(NanColorRole::onBackground)]         = rgb(28, 27, 31);
+    colors[static_cast<std::size_t>(NanColorRole::background)]           = rgb(255, 255, 255);
+    colors[static_cast<std::size_t>(NanColorRole::onBackground)]         = rgb(10, 10, 10);
 
-    // Outline
-    colors[static_cast<std::size_t>(NanColorRole::outline)]              = rgb(121, 116, 126);
-    colors[static_cast<std::size_t>(NanColorRole::outlineVariant)]       = rgb(196, 199, 197);
+    colors[static_cast<std::size_t>(NanColorRole::outline)]              = rgb(229, 229, 229);
+    colors[static_cast<std::size_t>(NanColorRole::outlineVariant)]       = rgb(229, 229, 229);
 
-    // Shadow / Scrim
     colors[static_cast<std::size_t>(NanColorRole::shadow)]               = rgb(0, 0, 0);
     colors[static_cast<std::size_t>(NanColorRole::scrim)]                = rgb(0, 0, 0);
 
-    // Inverse
     colors[static_cast<std::size_t>(NanColorRole::inverseSurface)]       = rgb(49, 48, 51);
     colors[static_cast<std::size_t>(NanColorRole::inverseOnSurface)]     = rgb(244, 239, 244);
     colors[static_cast<std::size_t>(NanColorRole::inversePrimary)]       = rgb(208, 188, 255);
@@ -165,50 +157,42 @@ inline auto make_default_dark_palette() -> std::array<NanColor, static_cast<std:
     using detail::rgb;
     std::array<NanColor, static_cast<std::size_t>(NanColorRole::_count)> colors{};
 
-    // Primary
-    colors[static_cast<std::size_t>(NanColorRole::primary)]              = rgb(208, 188, 255);   // Indigo 100
-    colors[static_cast<std::size_t>(NanColorRole::onPrimary)]            = rgb(55, 30, 115);
-    colors[static_cast<std::size_t>(NanColorRole::primaryContainer)]     = rgb(79, 55, 139);
-    colors[static_cast<std::size_t>(NanColorRole::onPrimaryContainer)]   = rgb(234, 221, 255);
+    // shadcn default dark — neutral grayscale
+    colors[static_cast<std::size_t>(NanColorRole::primary)]              = rgb(250, 250, 250);
+    colors[static_cast<std::size_t>(NanColorRole::onPrimary)]            = rgb(23, 23, 23);
+    colors[static_cast<std::size_t>(NanColorRole::primaryContainer)]     = rgb(38, 38, 38);
+    colors[static_cast<std::size_t>(NanColorRole::onPrimaryContainer)]   = rgb(250, 250, 250);
 
-    // Secondary
-    colors[static_cast<std::size_t>(NanColorRole::secondary)]            = rgb(204, 194, 220);
-    colors[static_cast<std::size_t>(NanColorRole::onSecondary)]          = rgb(51, 45, 65);
-    colors[static_cast<std::size_t>(NanColorRole::secondaryContainer)]   = rgb(74, 68, 88);
-    colors[static_cast<std::size_t>(NanColorRole::onSecondaryContainer)] = rgb(232, 222, 248);
+    colors[static_cast<std::size_t>(NanColorRole::secondary)]            = rgb(38, 38, 38);
+    colors[static_cast<std::size_t>(NanColorRole::onSecondary)]          = rgb(250, 250, 250);
+    colors[static_cast<std::size_t>(NanColorRole::secondaryContainer)]   = rgb(38, 38, 38);
+    colors[static_cast<std::size_t>(NanColorRole::onSecondaryContainer)] = rgb(250, 250, 250);
 
-    // Tertiary
-    colors[static_cast<std::size_t>(NanColorRole::tertiary)]             = rgb(239, 184, 200);
-    colors[static_cast<std::size_t>(NanColorRole::onTertiary)]           = rgb(73, 37, 50);
-    colors[static_cast<std::size_t>(NanColorRole::tertiaryContainer)]    = rgb(99, 59, 72);
-    colors[static_cast<std::size_t>(NanColorRole::onTertiaryContainer)]  = rgb(255, 216, 228);
+    colors[static_cast<std::size_t>(NanColorRole::tertiary)]             = rgb(163, 163, 163);
+    colors[static_cast<std::size_t>(NanColorRole::onTertiary)]           = rgb(23, 23, 23);
+    colors[static_cast<std::size_t>(NanColorRole::tertiaryContainer)]    = rgb(64, 64, 64);
+    colors[static_cast<std::size_t>(NanColorRole::onTertiaryContainer)]  = rgb(229, 229, 229);
 
-    // Error
-    colors[static_cast<std::size_t>(NanColorRole::error)]                = rgb(242, 184, 181);
-    colors[static_cast<std::size_t>(NanColorRole::onError)]              = rgb(96, 20, 12);
-    colors[static_cast<std::size_t>(NanColorRole::errorContainer)]       = rgb(140, 29, 24);
-    colors[static_cast<std::size_t>(NanColorRole::onErrorContainer)]     = rgb(249, 222, 220);
+    colors[static_cast<std::size_t>(NanColorRole::error)]                = rgb(239, 68, 68);
+    colors[static_cast<std::size_t>(NanColorRole::onError)]              = rgb(255, 255, 255);
+    colors[static_cast<std::size_t>(NanColorRole::errorContainer)]       = rgb(127, 29, 29);
+    colors[static_cast<std::size_t>(NanColorRole::onErrorContainer)]     = rgb(254, 226, 226);
 
-    // Surface
-    colors[static_cast<std::size_t>(NanColorRole::surface)]              = rgb(28, 27, 31);
-    colors[static_cast<std::size_t>(NanColorRole::onSurface)]            = rgb(230, 225, 229);
-    colors[static_cast<std::size_t>(NanColorRole::surfaceVariant)]       = rgb(73, 69, 79);
-    colors[static_cast<std::size_t>(NanColorRole::onSurfaceVariant)]     = rgb(196, 199, 197);
-    colors[static_cast<std::size_t>(NanColorRole::surfaceTint)]          = rgb(208, 188, 255);
+    colors[static_cast<std::size_t>(NanColorRole::surface)]              = rgb(23, 23, 23);
+    colors[static_cast<std::size_t>(NanColorRole::onSurface)]            = rgb(250, 250, 250);
+    colors[static_cast<std::size_t>(NanColorRole::surfaceVariant)]       = rgb(38, 38, 38);
+    colors[static_cast<std::size_t>(NanColorRole::onSurfaceVariant)]     = rgb(163, 163, 163);
+    colors[static_cast<std::size_t>(NanColorRole::surfaceTint)]          = rgb(250, 250, 250);
 
-    // Background
-    colors[static_cast<std::size_t>(NanColorRole::background)]           = rgb(28, 27, 31);
-    colors[static_cast<std::size_t>(NanColorRole::onBackground)]         = rgb(230, 225, 229);
+    colors[static_cast<std::size_t>(NanColorRole::background)]           = rgb(10, 10, 10);
+    colors[static_cast<std::size_t>(NanColorRole::onBackground)]         = rgb(250, 250, 250);
 
-    // Outline
-    colors[static_cast<std::size_t>(NanColorRole::outline)]              = rgb(147, 143, 153);
-    colors[static_cast<std::size_t>(NanColorRole::outlineVariant)]       = rgb(68, 71, 70);
+    colors[static_cast<std::size_t>(NanColorRole::outline)]              = rgb(229, 229, 229, 25);
+    colors[static_cast<std::size_t>(NanColorRole::outlineVariant)]       = rgb(229, 229, 229, 38);
 
-    // Shadow / Scrim
     colors[static_cast<std::size_t>(NanColorRole::shadow)]               = rgb(0, 0, 0);
     colors[static_cast<std::size_t>(NanColorRole::scrim)]                = rgb(0, 0, 0);
 
-    // Inverse
     colors[static_cast<std::size_t>(NanColorRole::inverseSurface)]       = rgb(230, 225, 229);
     colors[static_cast<std::size_t>(NanColorRole::inverseOnSurface)]     = rgb(49, 48, 51);
     colors[static_cast<std::size_t>(NanColorRole::inversePrimary)]       = rgb(103, 80, 217);
