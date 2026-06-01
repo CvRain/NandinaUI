@@ -6,6 +6,7 @@ module;
 #include <functional>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -17,6 +18,7 @@ import nandina.foundation.color;
 import nandina.theme.nan_theme_types;
 import nandina.theme.nan_primitive_tokens;
 import nandina.theme.nan_color_palette;
+import nandina.theme.nan_style;
 
 /**
  * nandina.theme.nan_theme
@@ -246,6 +248,9 @@ public:
      */
     [[nodiscard]] auto color(NanColorRole role) const -> const NanColor&;
 
+    /// 从当前活跃主题解析组件样式原语
+    [[nodiscard]] auto resolved_style() const -> NanStylePrimitives;
+
     // ── 监听器 ──
 
     /**
@@ -261,6 +266,8 @@ public:
 private:
     ThemeManager();
     ~ThemeManager() = default;
+
+    [[nodiscard]] static auto build_style(const NanTheme& theme) -> NanStylePrimitives;
 
     /// 内部：触发通知
     auto notify_changed() -> void;
@@ -333,6 +340,9 @@ inline auto NanTheme::tokens() const noexcept -> const NanPrimitiveTokens& {
 inline ThemeManager::ThemeManager()
     : active_name_("default") {
     themes_.emplace("default", NanTheme{"default"});
+    if (const auto it = themes_.find(active_name_); it != themes_.end()) {
+        NanStylePrimitives::set_current(build_style(it->second));
+    }
 }
 
 inline auto ThemeManager::instance() -> ThemeManager& {
@@ -341,9 +351,18 @@ inline auto ThemeManager::instance() -> ThemeManager& {
 }
 
 inline auto ThemeManager::register_theme(NanTheme theme) -> void {
+    bool should_sync = false;
+    std::optional<NanStylePrimitives> resolved;
     std::lock_guard lock(mutex_);
     const auto name = std::string{theme.name()};
+    should_sync = (name == active_name_);
     themes_.insert_or_assign(name, std::move(theme));
+    if (should_sync) {
+        resolved = build_style(themes_.at(active_name_));
+    }
+    if (resolved.has_value()) {
+        NanStylePrimitives::set_current(*resolved);
+    }
 }
 
 inline auto ThemeManager::unregister(const std::string& name) -> bool {
@@ -356,6 +375,7 @@ inline auto ThemeManager::unregister(const std::string& name) -> bool {
 
 inline auto ThemeManager::activate(const std::string& name) -> bool {
     std::string changed_name;
+    std::optional<NanStylePrimitives> resolved;
     {
         std::lock_guard lock(mutex_);
         if (!themes_.contains(name)) {
@@ -366,6 +386,10 @@ inline auto ThemeManager::activate(const std::string& name) -> bool {
         }
         active_name_ = name;
         changed_name = name;
+        resolved = build_style(themes_.at(active_name_));
+    }
+    if (resolved.has_value()) {
+        NanStylePrimitives::set_current(*resolved);
     }
     if (!changed_name.empty()) {
         notify_changed();
@@ -398,6 +422,7 @@ inline auto ThemeManager::active() -> NanTheme* {
 
 inline auto ThemeManager::set_scheme(NanColorScheme scheme) -> void {
     bool changed = false;
+    std::optional<NanStylePrimitives> resolved;
     {
         std::lock_guard lock(mutex_);
         const auto it = themes_.find(active_name_);
@@ -410,6 +435,10 @@ inline auto ThemeManager::set_scheme(NanColorScheme scheme) -> void {
         }
         t.set_scheme(scheme);
         changed = true;
+        resolved = build_style(t);
+    }
+    if (resolved.has_value()) {
+        NanStylePrimitives::set_current(*resolved);
     }
     if (changed) {
         notify_changed();
@@ -418,6 +447,7 @@ inline auto ThemeManager::set_scheme(NanColorScheme scheme) -> void {
 
 inline auto ThemeManager::toggle_scheme() -> void {
     bool changed = false;
+    std::optional<NanStylePrimitives> resolved;
     {
         std::lock_guard lock(mutex_);
         const auto it = themes_.find(active_name_);
@@ -426,6 +456,10 @@ inline auto ThemeManager::toggle_scheme() -> void {
         }
         it->second.toggle_scheme();
         changed = true;
+        resolved = build_style(it->second);
+    }
+    if (resolved.has_value()) {
+        NanStylePrimitives::set_current(*resolved);
     }
     if (changed) {
         notify_changed();
@@ -452,6 +486,15 @@ inline auto ThemeManager::color(NanColorRole role) const -> const NanColor& {
         return it->second.color(role);
     }
     return fallback;
+}
+
+inline auto ThemeManager::resolved_style() const -> NanStylePrimitives {
+    std::lock_guard lock(mutex_);
+    const auto it = themes_.find(active_name_);
+    if (it != themes_.end()) {
+        return build_style(it->second);
+    }
+    return NanStylePrimitives::default_style();
 }
 
 inline auto ThemeManager::on_changed(ChangeListener listener) -> Connection {
@@ -489,6 +532,377 @@ inline auto ThemeManager::Connection::disconnect() -> void {
         mgr_->disconnect(id_);
         mgr_ = nullptr;
     }
+}
+
+inline auto ThemeManager::build_style(const NanTheme& theme) -> NanStylePrimitives {
+    auto style = NanStylePrimitives::default_style();
+    const auto& tokens = theme.tokens();
+
+    auto map_weight = [](const NanFontWeight weight) -> text::NanFontWeight {
+        switch (weight) {
+        case NanFontWeight::thin:       return text::NanFontWeight::thin;
+        case NanFontWeight::extraLight: return text::NanFontWeight::extraLight;
+        case NanFontWeight::light:      return text::NanFontWeight::light;
+        case NanFontWeight::regular:    return text::NanFontWeight::regular;
+        case NanFontWeight::medium:     return text::NanFontWeight::medium;
+        case NanFontWeight::semiBold:   return text::NanFontWeight::semiBold;
+        case NanFontWeight::bold:       return text::NanFontWeight::bold;
+        case NanFontWeight::extraBold:  return text::NanFontWeight::extraBold;
+        case NanFontWeight::black:      return text::NanFontWeight::black;
+        }
+        return text::NanFontWeight::regular;
+    };
+
+    const auto role = [&theme](const NanColorRole color_role) -> const NanColor& {
+        return theme.color(color_role);
+    };
+
+    const auto transparent = NanColor::from(NanRgb{0, 0, 0, 0});
+
+    const auto make_button_family = [&tokens, &role, &transparent](
+        const NanColorRole filled_bg_role,
+        const NanColorRole filled_hover_role,
+        const NanColorRole filled_pressed_role,
+        const NanColorRole filled_text_role,
+        const NanColorRole tonal_bg_role,
+        const NanColorRole tonal_hover_role,
+        const NanColorRole tonal_pressed_role,
+        const NanColorRole tonal_text_role,
+        const NanColorRole accent_text_role,
+        const NanColorRole accent_border_role) -> NanButtonStyle::ColorFamilyStyle {
+        return NanButtonStyle::ColorFamilyStyle{
+            .filled = NanButtonStyle::PresetStyle{
+                .bg = role(filled_bg_role),
+                .bg_hover = role(filled_hover_role),
+                .bg_pressed = role(filled_pressed_role),
+                .bg_disabled = role(NanColorRole::surfaceVariant),
+                .text = role(filled_text_role),
+                .text_disabled = role(NanColorRole::outline),
+                .border = transparent,
+                .border_width = tokens.border.none,
+            },
+            .tonal = NanButtonStyle::PresetStyle{
+                .bg = role(tonal_bg_role),
+                .bg_hover = role(tonal_hover_role),
+                .bg_pressed = role(tonal_pressed_role),
+                .bg_disabled = role(NanColorRole::surfaceVariant),
+                .text = role(tonal_text_role),
+                .text_disabled = role(NanColorRole::outline),
+                .border = transparent,
+                .border_width = tokens.border.none,
+            },
+            .outlined = NanButtonStyle::PresetStyle{
+                .bg = role(NanColorRole::surface),
+                .bg_hover = role(NanColorRole::surfaceVariant),
+                .bg_pressed = role(tonal_bg_role),
+                .bg_disabled = role(NanColorRole::surface),
+                .text = role(accent_text_role),
+                .text_disabled = role(NanColorRole::outline),
+                .border = role(accent_border_role),
+                .border_width = tokens.border.thin,
+            },
+            .ghost = NanButtonStyle::PresetStyle{
+                .bg = transparent,
+                .bg_hover = role(NanColorRole::surfaceVariant),
+                .bg_pressed = role(tonal_bg_role),
+                .bg_disabled = transparent,
+                .text = role(accent_text_role),
+                .text_disabled = role(NanColorRole::outline),
+                .border = transparent,
+                .border_width = tokens.border.none,
+            },
+            .destructive = NanButtonStyle::PresetStyle{
+                .bg = role(filled_bg_role),
+                .bg_hover = role(filled_hover_role),
+                .bg_pressed = role(filled_pressed_role),
+                .bg_disabled = role(NanColorRole::surfaceVariant),
+                .text = role(filled_text_role),
+                .text_disabled = role(NanColorRole::outline),
+                .border = transparent,
+                .border_width = tokens.border.none,
+            },
+            .link = NanButtonStyle::PresetStyle{
+                .bg = transparent,
+                .bg_hover = transparent,
+                .bg_pressed = transparent,
+                .bg_disabled = transparent,
+                .text = role(accent_text_role),
+                .text_disabled = role(NanColorRole::outline),
+                .border = transparent,
+                .border_width = tokens.border.none,
+            },
+        };
+    };
+
+    const auto make_input_family = [&role](
+        const NanColorRole bg_role,
+        const NanColorRole border_role,
+        const NanColorRole border_focus_role,
+        const NanColorRole font_role,
+        const NanColorRole placeholder_role) -> NanInputStyle::ColorFamilyStyle {
+        return NanInputStyle::ColorFamilyStyle{
+            .font_color = role(font_role),
+            .placeholder_font_color = role(placeholder_role),
+            .bg = role(bg_role),
+            .border = role(border_role),
+            .border_focus = role(border_focus_role),
+        };
+    };
+
+    const auto make_progress_family = [&role](
+        const NanColorRole track_role,
+        const NanColorRole fill_role) -> NanProgressStyle::ColorFamilyStyle {
+        return NanProgressStyle::ColorFamilyStyle{
+            .track_bg = role(track_role),
+            .fill = role(fill_role),
+        };
+    };
+
+    const auto make_tag_family = [&role](
+        const NanColorRole bg_role,
+        const NanColorRole text_role,
+        const NanColorRole border_role) -> NanTagStyle::ColorFamilyStyle {
+        return NanTagStyle::ColorFamilyStyle{
+            .bg = role(bg_role),
+            .text = role(text_role),
+            .border = role(border_role),
+            .bg_disabled = role(NanColorRole::surfaceVariant),
+            .text_disabled = role(NanColorRole::outline),
+            .border_disabled = role(NanColorRole::outlineVariant),
+        };
+    };
+
+    style.spacing = tokens.spacing;
+    style.radius = tokens.radius;
+    style.elevation = tokens.elevation;
+    style.opacity = tokens.opacity;
+    style.typography = tokens.typography;
+
+    style.text.font_size = tokens.typography.body_medium.font_size;
+    style.text.font_weight = map_weight(tokens.typography.body_medium.font_weight);
+    style.text.font_color = role(NanColorRole::onSurface);
+    style.text.overflow = text::TextOverflow::wrap;
+    style.text.single_line = false;
+    style.text.max_lines = 0;
+
+    style.label.font_size = tokens.typography.body_medium.font_size;
+    style.label.font_weight = map_weight(tokens.typography.body_medium.font_weight);
+    style.label.font_color = role(NanColorRole::onSurfaceVariant);
+    style.label.disabled_font_color = role(NanColorRole::outline);
+    style.label.error_font_color = role(NanColorRole::error);
+    style.label.required_indicator_color = role(NanColorRole::error);
+    style.label.required_indicator_gap = tokens.spacing.xsmall;
+
+    style.button.corner_radius = tokens.radius.small;
+    style.button.font_size = tokens.typography.label_large.font_size;
+    style.button.font_weight = map_weight(tokens.typography.label_large.font_weight);
+    style.button.font_color = role(NanColorRole::onPrimary);
+    style.button.color_variant = ColorVariant::inherit;
+    style.button.primary_family = make_button_family(
+        NanColorRole::primary,
+        NanColorRole::primaryContainer,
+        NanColorRole::primary,
+        NanColorRole::onPrimary,
+        NanColorRole::primaryContainer,
+        NanColorRole::primary,
+        NanColorRole::primary,
+        NanColorRole::onPrimaryContainer,
+        NanColorRole::primary,
+        NanColorRole::primary);
+    style.button.secondary_family = make_button_family(
+        NanColorRole::secondary,
+        NanColorRole::secondaryContainer,
+        NanColorRole::secondary,
+        NanColorRole::onSecondary,
+        NanColorRole::secondaryContainer,
+        NanColorRole::secondary,
+        NanColorRole::secondary,
+        NanColorRole::onSecondaryContainer,
+        NanColorRole::secondary,
+        NanColorRole::secondary);
+    style.button.neutral_family = make_button_family(
+        NanColorRole::onSurfaceVariant,
+        NanColorRole::outlineVariant,
+        NanColorRole::onSurfaceVariant,
+        NanColorRole::surface,
+        NanColorRole::surfaceVariant,
+        NanColorRole::outlineVariant,
+        NanColorRole::surfaceVariant,
+        NanColorRole::onSurfaceVariant,
+        NanColorRole::onSurfaceVariant,
+        NanColorRole::outline);
+    style.button.destructive_family = make_button_family(
+        NanColorRole::error,
+        NanColorRole::errorContainer,
+        NanColorRole::error,
+        NanColorRole::onError,
+        NanColorRole::errorContainer,
+        NanColorRole::error,
+        NanColorRole::error,
+        NanColorRole::onErrorContainer,
+        NanColorRole::error,
+        NanColorRole::error);
+
+    style.button.filled = style.button.primary_family.filled;
+    style.button.tonal = style.button.secondary_family.tonal;
+    style.button.outlined = NanButtonStyle::PresetStyle{
+        .bg = role(NanColorRole::surface),
+        .bg_hover = role(NanColorRole::surfaceVariant),
+        .bg_pressed = role(NanColorRole::secondaryContainer),
+        .bg_disabled = role(NanColorRole::surface),
+        .text = role(NanColorRole::primary),
+        .text_disabled = role(NanColorRole::outline),
+        .border = role(NanColorRole::outline),
+        .border_width = tokens.border.thin,
+    };
+    style.button.ghost = NanButtonStyle::PresetStyle{
+        .bg = transparent,
+        .bg_hover = role(NanColorRole::surfaceVariant),
+        .bg_pressed = role(NanColorRole::secondaryContainer),
+        .bg_disabled = transparent,
+        .text = role(NanColorRole::primary),
+        .text_disabled = role(NanColorRole::outline),
+        .border = transparent,
+        .border_width = tokens.border.none,
+    };
+    style.button.destructive = style.button.destructive_family.destructive;
+    style.button.link = style.button.primary_family.link;
+
+    style.button.xs.height = 24.0f;
+    style.button.xs.font_size = tokens.typography.label_small.font_size;
+    style.button.xs.padding_h = tokens.spacing.small;
+    style.button.xs.padding_v = tokens.spacing.xxsmall;
+    style.button.xs.gap = tokens.spacing.xsmall;
+    style.button.xs.icon_size = 14.0f;
+
+    style.button.sm.height = 32.0f;
+    style.button.sm.font_size = tokens.typography.label_medium.font_size;
+    style.button.sm.padding_h = tokens.spacing.medium;
+    style.button.sm.padding_v = tokens.spacing.xsmall;
+    style.button.sm.gap = tokens.spacing.small - tokens.spacing.xxsmall;
+    style.button.sm.icon_size = 16.0f;
+
+    style.button.md.height = 40.0f;
+    style.button.md.font_size = tokens.typography.label_large.font_size;
+    style.button.md.padding_h = tokens.spacing.large;
+    style.button.md.padding_v = tokens.spacing.small;
+    style.button.md.gap = tokens.spacing.small;
+    style.button.md.icon_size = 18.0f;
+
+    style.button.lg.height = 48.0f;
+    style.button.lg.font_size = tokens.typography.title_small.font_size;
+    style.button.lg.padding_h = tokens.spacing.xlarge;
+    style.button.lg.padding_v = tokens.spacing.medium;
+    style.button.lg.gap = tokens.spacing.medium - tokens.spacing.xxsmall;
+    style.button.lg.icon_size = 22.0f;
+
+    style.button.icon.height = 40.0f;
+    style.button.icon.font_size = 0.0f;
+    style.button.icon.padding_h = 0.0f;
+    style.button.icon.padding_v = 0.0f;
+    style.button.icon.gap = 0.0f;
+    style.button.icon.icon_size = 20.0f;
+    style.button.icon.square = true;
+
+    style.card.bg = role(NanColorRole::surface);
+    style.card.border = role(NanColorRole::outlineVariant);
+    style.card.corner_radius = tokens.radius.small;
+    style.card.border_width = tokens.border.thin;
+    style.card.padding = geometry::NanInsets{tokens.spacing.large};
+    style.card.title_font_size = tokens.typography.title_medium.font_size;
+    style.card.title_font_weight = map_weight(tokens.typography.title_medium.font_weight);
+    style.card.title_font_color = role(NanColorRole::onSurface);
+
+    style.panel.bg = role(NanColorRole::surface);
+    style.panel.border = role(NanColorRole::outlineVariant);
+    style.panel.corner_radius = tokens.radius.small;
+    style.panel.border_width = tokens.border.thin;
+    style.panel.padding = geometry::NanInsets{tokens.spacing.medium};
+    style.panel.title_font_size = tokens.typography.title_small.font_size;
+    style.panel.title_font_weight = map_weight(tokens.typography.title_small.font_weight);
+    style.panel.title_font_color = role(NanColorRole::onSurfaceVariant);
+
+    style.input.font_size = tokens.typography.body_medium.font_size;
+    style.input.font_weight = map_weight(tokens.typography.body_medium.font_weight);
+    style.input.font_color = role(NanColorRole::onSurface);
+    style.input.placeholder_font_size = tokens.typography.body_medium.font_size;
+    style.input.placeholder_font_color = role(NanColorRole::outline);
+    style.input.color_variant = ColorVariant::inherit;
+    style.input.bg = role(NanColorRole::surface);
+    style.input.border = role(NanColorRole::outlineVariant);
+    style.input.border_focus = role(NanColorRole::primary);
+    style.input.corner_radius = tokens.radius.small;
+    style.input.border_width = tokens.border.thin;
+    style.input.padding = geometry::NanInsets{tokens.spacing.large, tokens.spacing.medium - tokens.spacing.xxsmall, tokens.spacing.large, tokens.spacing.medium - tokens.spacing.xxsmall};
+    style.input.secondary_family = make_input_family(
+        NanColorRole::secondaryContainer,
+        NanColorRole::secondary,
+        NanColorRole::secondary,
+        NanColorRole::onSecondaryContainer,
+        NanColorRole::secondary);
+    style.input.neutral_family = make_input_family(
+        NanColorRole::surfaceVariant,
+        NanColorRole::outline,
+        NanColorRole::onSurfaceVariant,
+        NanColorRole::onSurface,
+        NanColorRole::outline);
+    style.input.destructive_family = make_input_family(
+        NanColorRole::errorContainer,
+        NanColorRole::error,
+        NanColorRole::error,
+        NanColorRole::onErrorContainer,
+        NanColorRole::error);
+
+    style.tag.font_size = tokens.typography.label_medium.font_size;
+    style.tag.font_weight = map_weight(tokens.typography.label_medium.font_weight);
+    style.tag.overflow = text::TextOverflow::ellipsis;
+    style.tag.single_line = true;
+    style.tag.color_variant = ColorVariant::inherit;
+    style.tag.size = TagSize::md;
+    style.tag.corner_radius = tokens.radius.full;
+    style.tag.border_width = tokens.border.thin;
+    style.tag.bg = role(NanColorRole::primaryContainer);
+    style.tag.text = role(NanColorRole::onPrimaryContainer);
+    style.tag.border = role(NanColorRole::primary);
+    style.tag.bg_disabled = role(NanColorRole::surfaceVariant);
+    style.tag.text_disabled = role(NanColorRole::outline);
+    style.tag.border_disabled = role(NanColorRole::outlineVariant);
+    style.tag.secondary_family = make_tag_family(
+        NanColorRole::secondaryContainer,
+        NanColorRole::onSecondaryContainer,
+        NanColorRole::secondary);
+    style.tag.neutral_family = make_tag_family(
+        NanColorRole::surfaceVariant,
+        NanColorRole::onSurfaceVariant,
+        NanColorRole::outlineVariant);
+    style.tag.destructive_family = make_tag_family(
+        NanColorRole::errorContainer,
+        NanColorRole::onErrorContainer,
+        NanColorRole::error);
+    style.tag.sm.font_size = tokens.typography.label_small.font_size;
+    style.tag.sm.padding_h = tokens.spacing.small;
+    style.tag.sm.padding_v = tokens.spacing.xxsmall;
+    style.tag.md.font_size = tokens.typography.label_medium.font_size;
+    style.tag.md.padding_h = tokens.spacing.medium;
+    style.tag.md.padding_v = tokens.spacing.xsmall;
+    style.tag.lg.font_size = tokens.typography.label_large.font_size;
+    style.tag.lg.padding_h = tokens.spacing.large;
+    style.tag.lg.padding_v = tokens.spacing.small;
+
+    style.focus_ring.color = role(NanColorRole::primary);
+    style.focus_ring.width = tokens.border.focus_ring;
+    style.focus_ring.offset = tokens.spacing.xxsmall;
+
+    style.progress.track_bg = role(NanColorRole::surfaceVariant);
+    style.progress.fill = role(NanColorRole::primary);
+    style.progress.color_variant = ColorVariant::inherit;
+    style.progress.corner_radius = tokens.radius.xsmall;
+    style.progress.bar_height = tokens.spacing.small - tokens.spacing.xxsmall;
+    style.progress.secondary_family = make_progress_family(NanColorRole::secondaryContainer, NanColorRole::secondary);
+    style.progress.neutral_family = make_progress_family(NanColorRole::outlineVariant, NanColorRole::onSurfaceVariant);
+    style.progress.destructive_family = make_progress_family(NanColorRole::errorContainer, NanColorRole::error);
+
+    return style;
 }
 
 } // namespace nandina::theme

@@ -30,7 +30,7 @@ export module nandina.widgets.button;
 
 import nandina.widgets.surface;
 import nandina.widgets.focus_ring;
-import nandina.widgets.label;
+import nandina.widgets.text;
 import nandina.widgets.icon;
 import nandina.layout.flex_widgets;
 import nandina.layout.container;
@@ -46,6 +46,7 @@ import nandina.theme.nan_style;  // for ButtonVariant / ButtonSize
 export namespace nandina::widgets {
 
     // ── 导入 theme 层的类型别名 ──────────────────────────
+    using ColorVariant = nandina::theme::ColorVariant;
     using ButtonVariant = nandina::theme::ButtonVariant;
     using ButtonSize    = nandina::theme::ButtonSize;
 
@@ -77,6 +78,10 @@ export namespace nandina::widgets {
 
         [[nodiscard]] auto size() const noexcept -> ButtonSize;
 
+        auto color_variant(ColorVariant v) -> Button&;
+
+        [[nodiscard]] auto color_variant() const noexcept -> ColorVariant;
+
         // ── 图标 ──────────────────────────────────────────
         auto icon(IconType type) -> Button&;
 
@@ -85,6 +90,10 @@ export namespace nandina::widgets {
         auto icon_right(IconType type) -> Button&;
 
         [[nodiscard]] auto icon_type() const noexcept -> std::optional<IconType>;
+
+        [[nodiscard]] auto left_icon_type() const noexcept -> std::optional<IconType>;
+
+        [[nodiscard]] auto right_icon_type() const noexcept -> std::optional<IconType>;
 
         // ── 字体（委托给内部 Label）───────────────────────
         auto font_size(float pt) -> Button&;
@@ -153,12 +162,12 @@ export namespace nandina::widgets {
             return true;
         }
 
-        /// 访问内部 Label，供开发者自定义文本属性
-        [[nodiscard]] auto label() noexcept -> Label& {
+        /// 访问内部文本节点，供开发者自定义文本属性
+        [[nodiscard]] auto label() noexcept -> Text& {
             return *m_label;
         }
 
-        [[nodiscard]] auto label() const noexcept -> const Label& {
+        [[nodiscard]] auto label() const noexcept -> const Text& {
             return *m_label;
         }
 
@@ -186,6 +195,10 @@ export namespace nandina::widgets {
         /// 访问内容行，供子类调整 justify_content / align_items 等布局属性
         [[nodiscard]] auto content_row() noexcept -> layout::Row& { return *m_content_row; }
 
+        [[nodiscard]] auto resolved_preset_style() const -> theme::NanButtonStyle::PresetStyle;
+
+        auto apply_resolved_foreground_color(const nandina::NanColor& color) -> bool;
+
         /// 更新视觉状态（hover/press/disabled/loading → 背景色 + 文字色）。
         /// 子类可重写以使用自定义配色方案，需先调用 Button::update_visual_state() 处理背景。
         virtual auto update_visual_state() -> void;
@@ -205,7 +218,9 @@ export namespace nandina::widgets {
         // ── 状态 ──────────────────────────────────────
         ButtonVariant m_variant{ButtonVariant::default_variant};
         ButtonSize    m_size{ButtonSize::md};
-        std::optional<IconType> m_icon_type;
+        ColorVariant  m_color_variant{ColorVariant::inherit};
+        std::optional<IconType> m_icon_left_type;
+        std::optional<IconType> m_icon_right_type;
 
         bool m_hovered{false};
         bool m_pressed{false};
@@ -226,7 +241,8 @@ export namespace nandina::widgets {
         layout::Row* m_content_row{nullptr};
         FocusRing*   m_focus_ring{nullptr};
         Icon*        m_icon_left{nullptr};
-        Label*       m_label{nullptr};
+        Icon*        m_icon_right{nullptr};
+        Text*       m_label{nullptr};
 
         bool m_focused{false};
     };

@@ -14,7 +14,7 @@ module;
 module nandina.widgets.button;
 
 import nandina.widgets.focus_ring;
-import nandina.widgets.label;
+import nandina.widgets.text;
 import nandina.widgets.icon;
 import nandina.widgets.surface;
 import nandina.layout.container;      // Row
@@ -31,7 +31,7 @@ import nandina.theme.nan_style;  // ButtonVariant/ButtonSize
 namespace nandina::widgets {
 
     namespace {
-        auto preset_for(ButtonVariant v) -> const theme::NanButtonStyle::PresetStyle& {
+        auto preset_for_legacy(ButtonVariant v) -> const theme::NanButtonStyle::PresetStyle& {
             const auto& style = theme::NanStylePrimitives::current().button;
             switch (v) {
             case ButtonVariant::default_variant:
@@ -48,6 +48,70 @@ namespace nandina::widgets {
                 return style.link;
             }
             return style.filled;
+        }
+
+        auto resolved_color_variant(ButtonVariant variant, ColorVariant explicit_variant) noexcept -> ColorVariant {
+            if (explicit_variant != ColorVariant::inherit) {
+                return explicit_variant;
+            }
+
+            switch (variant) {
+            case ButtonVariant::secondary:
+                return ColorVariant::secondary;
+            case ButtonVariant::destructive:
+                return ColorVariant::destructive;
+            default:
+                return ColorVariant::primary;
+            }
+        }
+
+        auto family_for(ColorVariant color_variant) -> const theme::NanButtonStyle::ColorFamilyStyle& {
+            const auto& style = theme::NanStylePrimitives::current().button;
+            switch (color_variant) {
+            case ColorVariant::primary:
+            case ColorVariant::inherit:
+                return style.primary_family;
+            case ColorVariant::secondary:
+                return style.secondary_family;
+            case ColorVariant::neutral:
+                return style.neutral_family;
+            case ColorVariant::destructive:
+                return style.destructive_family;
+            }
+            return style.primary_family;
+        }
+
+        auto preset_for(ButtonVariant variant, ColorVariant color_variant) -> const theme::NanButtonStyle::PresetStyle& {
+            if (color_variant == ColorVariant::inherit) {
+                return preset_for_legacy(variant);
+            }
+
+            const auto& family = family_for(color_variant);
+            switch (variant) {
+            case ButtonVariant::default_variant:
+                return family.filled;
+            case ButtonVariant::secondary:
+                return family.tonal;
+            case ButtonVariant::outline:
+                return family.outlined;
+            case ButtonVariant::ghost:
+                return family.ghost;
+            case ButtonVariant::destructive:
+                return family.destructive;
+            case ButtonVariant::link:
+                return family.link;
+            }
+            return family.filled;
+        }
+
+        auto focus_color_for(const theme::NanButtonStyle::PresetStyle& preset) -> NanColor {
+            if (preset.border.to<NanRgb>().alpha() > 0 && preset.border_width > 0.0f) {
+                return preset.border;
+            }
+            if (preset.bg.to<NanRgb>().alpha() > 0) {
+                return preset.bg;
+            }
+            return preset.text;
         }
 
         auto size_style_for(ButtonSize s) -> const theme::NanButtonStyle::SizeStyle& {
@@ -78,6 +142,7 @@ namespace nandina::widgets {
 
     Button::Button() {
         const auto& button_style = theme::NanStylePrimitives::current().button;
+        m_color_variant = button_style.color_variant;
         m_variant = button_style.variant;
         m_size = button_style.size;
 
@@ -97,8 +162,8 @@ namespace nandina::widgets {
         m_focus_ring->set_active(false);
         add_child(std::move(focus_ring));
 
-        // Label — 按钮文本应始终单行 + ellipsis
-        auto label = Label::create();
+        // Text — 按钮文本应始终单行 + ellipsis
+        auto label = Text::create();
         m_label    = label.get();
         m_label->set_font(text::NanFont{}
             .weight(button_style.font_weight)
@@ -154,10 +219,46 @@ namespace nandina::widgets {
         return m_size;
     }
 
+    auto Button::color_variant(ColorVariant value) -> Button& {
+        if (m_color_variant == value) {
+            return *this;
+        }
+
+        m_color_variant = value;
+        apply_variant();
+        update_visual_state();
+        return *this;
+    }
+
+    auto Button::color_variant() const noexcept -> ColorVariant {
+        return m_color_variant;
+    }
+
     auto Button::apply_variant() -> void {
-        const auto& preset = preset_for(m_variant);
+        const auto& preset = preset_for(m_variant, m_color_variant);
         set_border_color(preset.border);
         set_border_width(preset.border_width);
+    }
+
+    auto Button::resolved_preset_style() const -> theme::NanButtonStyle::PresetStyle {
+        return preset_for(m_variant, m_color_variant);
+    }
+
+    auto Button::apply_resolved_foreground_color(const nandina::NanColor& color) -> bool {
+        bool changed = false;
+        if (m_label->color() != color) {
+            m_label->set_color(color);
+            changed = true;
+        }
+        if (m_icon_left && m_icon_left->color() != color) {
+            m_icon_left->set_color(color);
+            changed = true;
+        }
+        if (m_icon_right && m_icon_right->color() != color) {
+            m_icon_right->set_color(color);
+            changed = true;
+        }
+        return changed;
     }
 
     auto Button::apply_size() -> void {
@@ -171,6 +272,9 @@ namespace nandina::widgets {
         // icon-only: hide text, set square
         if (m_icon_left) {
             m_icon_left->set_size(size_style.icon_size);
+        }
+        if (m_icon_right) {
+            m_icon_right->set_size(size_style.icon_size);
         }
 
         if (size_style.square) {
@@ -203,31 +307,42 @@ namespace nandina::widgets {
         if (m_icon_left) {
             m_icon_left->set_type(type);
         }
-        m_icon_type = type;
+        m_icon_left_type = type;
+        update_visual_state();
         mark_layout_dirty();
         return *this;
     }
 
     auto Button::icon_right(IconType type) -> Button& {
-        // 在 label 之后添加 icon
-        if (!m_icon_left) {
+        if (!m_icon_right) {
             auto icon_widget = Icon::create();
             const auto& size_style = size_style_for(m_size);
             icon_widget->set_size(size_style.icon_size);
-            icon_widget->set_type(type);
-            m_icon_left = icon_widget.get();  // reuse the left slot for simplicity
+            m_icon_right = icon_widget.get();
             m_content_row->add(std::move(icon_widget));
-        } else {
-            // icon already exists as left; for now just reuse it
-            m_icon_left->set_type(type);
         }
-        m_icon_type = type;
+        if (m_icon_right) {
+            m_icon_right->set_type(type);
+        }
+        m_icon_right_type = type;
+        update_visual_state();
         mark_layout_dirty();
         return *this;
     }
 
     auto Button::icon_type() const noexcept -> std::optional<IconType> {
-        return m_icon_type;
+        if (m_icon_left_type.has_value()) {
+            return m_icon_left_type;
+        }
+        return m_icon_right_type;
+    }
+
+    auto Button::left_icon_type() const noexcept -> std::optional<IconType> {
+        return m_icon_left_type;
+    }
+
+    auto Button::right_icon_type() const noexcept -> std::optional<IconType> {
+        return m_icon_right_type;
     }
 
     // ═══════════════════════════════════════════════════════════
@@ -398,6 +513,9 @@ namespace nandina::widgets {
         if (m_icon_left) {
             w += size_style.icon_size + size_style.gap;
         }
+        if (m_icon_right) {
+            w += size_style.icon_size + size_style.gap;
+        }
         return {w, h};
     }
 
@@ -511,7 +629,7 @@ namespace nandina::widgets {
     // ═══════════════════════════════════════════════════════════
 
     auto Button::update_visual_state() -> void {
-        const auto& preset = preset_for(m_variant);
+        const auto& preset = preset_for(m_variant, m_color_variant);
 
         NanColor target_bg;
         NanColor target_text;
@@ -539,9 +657,10 @@ namespace nandina::widgets {
             set_bg_color(target_bg);
             changed = true;
         }
-        if (m_label->color() != target_text) {
-            m_label->set_color(target_text);
-            changed = true;
+        changed = apply_resolved_foreground_color(target_text) || changed;
+        if (m_focus_ring) {
+            m_focus_ring->set_color(focus_color_for(preset));
+            m_focus_ring->set_active(m_focused && !m_disabled);
         }
         if (changed) {
             mark_dirty();

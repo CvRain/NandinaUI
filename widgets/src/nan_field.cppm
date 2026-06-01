@@ -16,6 +16,7 @@ import nandina.foundation.nan_size;
 import nandina.runtime.nan_event;
 import nandina.runtime.nan_widget;
 import nandina.text.nan_font;
+import nandina.theme.nan_style;
 import nandina.widgets.label;
 import nandina.widgets.text_field;
 
@@ -120,6 +121,7 @@ export namespace nandina::widgets {
                 m_control = control.get();
                 m_control->set_hit_test_visible(true);
                 add_child(std::move(control));
+                sync_control_semantics();
             }
 
             mark_layout_dirty();
@@ -128,6 +130,21 @@ export namespace nandina::widgets {
 
         [[nodiscard]] auto control() const noexcept -> runtime::NanWidget* {
             return m_control;
+        }
+
+        auto set_color_variant(const theme::ColorVariant value) -> Field& {
+            if (m_color_variant == value) {
+                return *this;
+            }
+
+            m_color_variant = value;
+            propagate_color_variant_to_control();
+            mark_dirty();
+            return *this;
+        }
+
+        [[nodiscard]] auto color_variant() const noexcept -> theme::ColorVariant {
+            return m_color_variant;
         }
 
         auto set_required(const bool value) -> Field& {
@@ -386,6 +403,12 @@ export namespace nandina::widgets {
             // 其他 control 类型可根据未来扩展添加
         }
 
+        auto propagate_color_variant_to_control() -> void {
+            if (auto* tf = dynamic_cast<nandina::widgets::TextField*>(m_control)) {
+                tf->color_variant(m_color_variant);
+            }
+        }
+
         auto propagate_disabled() -> void {
             if (m_label_widget) {
                 m_label_widget->set_disabled(m_disabled);
@@ -404,6 +427,12 @@ export namespace nandina::widgets {
             if (m_error_widget) {
                 m_error_widget->set_disabled(m_disabled);
             }
+        }
+
+        auto sync_control_semantics() -> void {
+            propagate_color_variant_to_control();
+            propagate_invalid_to_control();
+            propagate_disabled();
         }
 
         // ── 移除子节点（内部辅助）──
@@ -444,6 +473,7 @@ export namespace nandina::widgets {
         std::string m_helper_text;
         std::string m_error_text;
 
+        theme::ColorVariant m_color_variant{theme::ColorVariant::inherit};
         bool m_required{false};
         bool m_invalid{false};
         bool m_disabled{false};

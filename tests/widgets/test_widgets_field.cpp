@@ -153,6 +153,36 @@ TEST(WidgetsFieldTest, DisabledPropagatesToTextControl) {
     EXPECT_FALSE(control_ptr->disabled());
 }
 
+TEST(WidgetsFieldTest, ColorVariantPropagatesToTextControl) {
+    auto field = nandina::widgets::Field::create();
+
+    auto control = nandina::widgets::TextField::create();
+    auto* control_ptr = control.get();
+    field->set_control(std::move(control));
+
+    field->set_color_variant(nandina::theme::ColorVariant::secondary);
+    EXPECT_EQ(field->color_variant(), nandina::theme::ColorVariant::secondary);
+    EXPECT_EQ(control_ptr->color_variant(), nandina::theme::ColorVariant::secondary);
+
+    field->set_color_variant(nandina::theme::ColorVariant::destructive);
+    EXPECT_EQ(control_ptr->color_variant(), nandina::theme::ColorVariant::destructive);
+}
+
+TEST(WidgetsFieldTest, NewlyAssignedControlReceivesCurrentSemantics) {
+    auto field = nandina::widgets::Field::create();
+    field->set_color_variant(nandina::theme::ColorVariant::secondary);
+    field->set_invalid(true);
+    field->set_disabled(true);
+
+    auto control = nandina::widgets::TextField::create();
+    auto* control_ptr = control.get();
+    field->set_control(std::move(control));
+
+    EXPECT_EQ(control_ptr->color_variant(), nandina::theme::ColorVariant::secondary);
+    EXPECT_TRUE(control_ptr->invalid());
+    EXPECT_TRUE(control_ptr->disabled());
+}
+
 TEST(WidgetsFieldTest, EmptyControlDoesNotCrash) {
     auto field = nandina::widgets::Field::create();
     field->set_label("Just Label");

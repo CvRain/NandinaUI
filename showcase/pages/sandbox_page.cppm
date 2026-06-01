@@ -40,8 +40,10 @@ export namespace nandina::showcase {
 
         [[nodiscard]] auto build() -> nandina::app::NanComponent::Ptr override {
             using namespace nandina::app;
+            using nandina::theme::ColorVariant;
             using nandina::theme::ButtonVariant;
             using nandina::theme::ButtonSize;
+            using nandina::theme::TagSize;
             using nandina::layout::LayoutAlignment;
 
             // ── Pattern A：text(fn) 自动 Effect 追踪 ─────────────────────────
@@ -186,14 +188,24 @@ export namespace nandina::showcase {
                 }
             });
 
+            auto semantic_tags = row(children(
+                    tag("Beta"),
+                    tag("Info").color_variant(ColorVariant::secondary).size(TagSize::sm),
+                    tag("Muted").color_variant(ColorVariant::neutral),
+                    tag("Disabled").color_variant(ColorVariant::destructive).disabled(true)
+                ))
+                .gap(8)
+                .align_items(LayoutAlignment::start);
+
             return mount(center(
                 column(children(
                     label,
                     double_label,
-                    text_field.width(280.0f),
+                    text_field,
                     text_field_status,
-                    field.width(280.0f),
+                    field,
                     toggle_invalid_btn,
+                    semantic_tags,
                     row(children(
                         expanded(increase_button),
                         expanded(decrease_button)

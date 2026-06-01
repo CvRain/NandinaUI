@@ -112,6 +112,17 @@ TEST(NanRadiusTokensTest, Defaults) {
     EXPECT_FLOAT_EQ(t.full,   999.0f);
 }
 
+TEST(NanBorderTokensTest, Defaults) {
+    NanBorderTokens t;
+    EXPECT_FLOAT_EQ(t.none, 0.0f);
+    EXPECT_FLOAT_EQ(t.hairline, 1.0f);
+    EXPECT_FLOAT_EQ(t.thin, 1.0f);
+    EXPECT_FLOAT_EQ(t.medium, 2.0f);
+    EXPECT_FLOAT_EQ(t.thick, 3.0f);
+    EXPECT_FLOAT_EQ(t.divider, 1.0f);
+    EXPECT_FLOAT_EQ(t.focus_ring, 2.0f);
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // NanElevationTokens 结构体默认值测试
 // ═══════════════════════════════════════════════════════════════════════════
@@ -151,6 +162,11 @@ TEST(NanPrimitiveTokensTest, DefaultValues) {
     EXPECT_FLOAT_EQ(tokens.radius.medium, 12.0f);
     EXPECT_FLOAT_EQ(tokens.radius.full, 999.0f);
 
+    // Border
+    EXPECT_FLOAT_EQ(tokens.border.thin, 1.0f);
+    EXPECT_FLOAT_EQ(tokens.border.divider, 1.0f);
+    EXPECT_FLOAT_EQ(tokens.border.focus_ring, 2.0f);
+
     // Elevation
     EXPECT_FLOAT_EQ(tokens.elevation.level0, 0.0f);
     EXPECT_FLOAT_EQ(tokens.elevation.level5, 12.0f);
@@ -164,6 +180,33 @@ TEST(NanPrimitiveTokensTest, DefaultValues) {
     EXPECT_EQ(tokens.typography.body_medium.font_weight, NanFontWeight::regular);
     EXPECT_FLOAT_EQ(tokens.typography.display_large.font_size, 57.0f);
     EXPECT_FLOAT_EQ(tokens.typography.label_small.font_size, 11.0f);
+}
+
+TEST(NanTypographyRoleTest, ResolveTypeStyle) {
+    NanTypographyTokens tokens;
+
+    const auto& headline = resolve_typography_style(tokens, NanTypographyRole::headline_large);
+    EXPECT_FLOAT_EQ(headline.font_size, 32.0f);
+    EXPECT_EQ(headline.font_weight, NanFontWeight::regular);
+
+    const auto& label = resolve_typography_style(tokens, NanTypographyRole::label_small);
+    EXPECT_FLOAT_EQ(label.font_size, 11.0f);
+    EXPECT_EQ(label.font_weight, NanFontWeight::medium);
+}
+
+TEST(NanTextStyleTest, Defaults) {
+    NanTextStyle style;
+
+    EXPECT_FLOAT_EQ(style.font_size, 14.0f);
+    EXPECT_EQ(style.font_weight, nandina::text::NanFontWeight::regular);
+    EXPECT_EQ(style.overflow, nandina::text::TextOverflow::wrap);
+    EXPECT_FALSE(style.single_line);
+    EXPECT_EQ(style.max_lines, 0);
+
+    const auto text = style.font_color.to<nandina::NanRgb>();
+    EXPECT_EQ(text.red(), 30u);
+    EXPECT_EQ(text.green(), 30u);
+    EXPECT_EQ(text.blue(), 46u);
 }
 
 TEST(NanLabelStyleTest, Defaults) {
@@ -202,6 +245,7 @@ TEST(NanButtonStyleTest, Defaults) {
     NanButtonStyle style;
 
     EXPECT_FLOAT_EQ(style.corner_radius, 6.0f);
+    EXPECT_EQ(style.color_variant, ColorVariant::inherit);
     EXPECT_EQ(style.variant, ButtonVariant::default_variant);
     EXPECT_EQ(style.size, ButtonSize::md);
     EXPECT_EQ(style.font_weight, nandina::text::NanFontWeight::medium);
@@ -230,6 +274,67 @@ TEST(NanButtonStyleTest, Defaults) {
     EXPECT_FLOAT_EQ(style.md.icon_size, 18.0f);
     EXPECT_FALSE(style.md.square);
 
+    const auto secondary_outline = style.secondary_family.outlined.border.to<nandina::NanRgb>();
+    EXPECT_GT(secondary_outline.red(), 0u);
+
+    const auto destructive_link = style.destructive_family.link.text.to<nandina::NanRgb>();
+    EXPECT_EQ(destructive_link.red(), 230u);
+
     EXPECT_FLOAT_EQ(style.icon.height, 40.0f);
     EXPECT_TRUE(style.icon.square);
+}
+
+
+TEST(NanInputStyleTest, DefaultsExposeColorFamilies) {
+    NanInputStyle style;
+
+    EXPECT_EQ(style.color_variant, ColorVariant::inherit);
+
+    const auto secondary_border = style.secondary_family.border.to<nandina::NanRgb>();
+    EXPECT_EQ(secondary_border.red(), 186u);
+    EXPECT_EQ(secondary_border.green(), 198u);
+    EXPECT_EQ(secondary_border.blue(), 255u);
+
+    const auto destructive_focus = style.destructive_family.border_focus.to<nandina::NanRgb>();
+    EXPECT_EQ(destructive_focus.red(), 230u);
+    EXPECT_EQ(destructive_focus.green(), 69u);
+    EXPECT_EQ(destructive_focus.blue(), 83u);
+}
+
+TEST(NanTagStyleTest, DefaultsExposeSemanticFamiliesAndSizes) {
+    NanTagStyle style;
+
+    EXPECT_EQ(style.color_variant, ColorVariant::inherit);
+    EXPECT_EQ(style.size, TagSize::md);
+    EXPECT_TRUE(style.single_line);
+    EXPECT_EQ(style.overflow, nandina::text::TextOverflow::ellipsis);
+
+    const auto secondary_text = style.secondary_family.text.to<nandina::NanRgb>();
+    EXPECT_EQ(secondary_text.red(), 66u);
+    EXPECT_EQ(secondary_text.green(), 84u);
+    EXPECT_EQ(secondary_text.blue(), 186u);
+
+    const auto destructive_border = style.destructive_family.border.to<nandina::NanRgb>();
+    EXPECT_EQ(destructive_border.red(), 242u);
+    EXPECT_EQ(destructive_border.green(), 170u);
+    EXPECT_EQ(destructive_border.blue(), 178u);
+
+    EXPECT_FLOAT_EQ(style.sm.font_size, 12.0f);
+    EXPECT_FLOAT_EQ(style.lg.padding_h, 12.0f);
+}
+
+TEST(NanProgressStyleTest, DefaultsExposeColorFamilies) {
+    NanProgressStyle style;
+
+    EXPECT_EQ(style.color_variant, ColorVariant::inherit);
+
+    const auto secondary_fill = style.secondary_family.fill.to<nandina::NanRgb>();
+    EXPECT_EQ(secondary_fill.red(), 114u);
+    EXPECT_EQ(secondary_fill.green(), 135u);
+    EXPECT_EQ(secondary_fill.blue(), 253u);
+
+    const auto destructive_track = style.destructive_family.track_bg.to<nandina::NanRgb>();
+    EXPECT_EQ(destructive_track.red(), 251u);
+    EXPECT_EQ(destructive_track.green(), 225u);
+    EXPECT_EQ(destructive_track.blue(), 228u);
 }

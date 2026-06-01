@@ -20,7 +20,7 @@ import nandina.foundation.color;
 import nandina.layout.flex_widgets;
 import nandina.reactive.prop;
 import nandina.widgets.surface;
-import nandina.widgets.label;
+import nandina.widgets.text;
 
 /**
  * nandina.widgets.card
@@ -30,7 +30,7 @@ import nandina.widgets.label;
  * 职责：
  * - 继承 Surface，复用背景色/圆角/描边/内边距
  * - 阴影效果（Material Design elevation，多层半透明矩形模拟）
- * - 可选头部标题（Label 组件）+ 左侧装饰色条
+ * - 可选头部标题（Text primitive）+ 左侧装饰色条
  * - 标题栏与内容区分隔线
  *
  * 继承链：NanWidget → Surface → Card
@@ -297,7 +297,7 @@ export namespace nandina::widgets {
             auto title_host = layout::Padding::Create();
             m_title_host    = title_host.get();
 
-            auto label = Label::create();
+            auto label = Text::create();
             label->set_text(m_title)
                 .set_font_size(m_title_font_size.get())
                 .set_color(m_title_color.get());
@@ -336,7 +336,7 @@ export namespace nandina::widgets {
         std::string m_title;
         bool m_show_accent{false};
         layout::Padding* m_title_host{nullptr};
-        Label* m_title_label{nullptr};
+        Text* m_title_label{nullptr};
     };
 
 } // namespace nandina::widgets

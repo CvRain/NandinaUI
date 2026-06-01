@@ -20,7 +20,7 @@ import nandina.foundation.nan_size;
 import nandina.foundation.color;
 import nandina.reactive.prop;
 import nandina.widgets.surface;
-import nandina.widgets.label;
+import nandina.widgets.text;
 import nandina.widgets.icon;
 import nandina.widgets.sidebar_group;
 import nandina.widgets.sidebar_menu_button;
@@ -219,7 +219,7 @@ export namespace nandina::widgets {
                 logo->set_visible(false);
                 m_header_logo = logo.get();
 
-                auto hdr = Label::create();
+                auto hdr = Text::create();
                 hdr->set_text("");
                 hdr->set_visible(false);
                 hdr->set_font_size(11.0f)
@@ -271,14 +271,14 @@ export namespace nandina::widgets {
                 av->set_color(NanColor::from(NanRgb{147, 150, 255}));
                 m_user_avatar = av.get();
 
-                auto un = Label::create();
+                auto un = Text::create();
                 un->set_text("");
                 un->set_visible(false);
                 un->set_font_size(9)
                     .set_color(NanColor::from(NanRgb{220, 220, 240}));
                 m_user_name_label = un.get();
 
-                auto ur = Label::create();
+                auto ur = Text::create();
                 ur->set_text("");
                 ur->set_visible(false);
                 ur->set_font_size(7)
@@ -318,7 +318,7 @@ export namespace nandina::widgets {
 
         // Header 子节点
         Icon* m_header_logo{nullptr};
-        Label* m_header_label{nullptr};
+        Text* m_header_label{nullptr};
 
         layout::SizedBox* m_header_slot{nullptr};
         layout::Expanded* m_content_slot{nullptr};
@@ -331,8 +331,8 @@ export namespace nandina::widgets {
 
         // Footer 子节点
         Icon* m_user_avatar{nullptr};
-        Label* m_user_name_label{nullptr};
-        Label* m_user_role_label{nullptr};
+        Text* m_user_name_label{nullptr};
+        Text* m_user_role_label{nullptr};
 
         // 分割线 Y 坐标
         float m_divider_header_y{0.0f};

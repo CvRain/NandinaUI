@@ -311,6 +311,167 @@ TEST(ThemeManagerTest, ColorAccess) {
     EXPECT_EQ(rgb.blue(), 217);
 }
 
+TEST(ThemeManagerTest, ResolvedStyleUsesActiveThemePaletteAndTokens) {
+    auto& mgr = ThemeManager::instance();
+
+    NanTheme theme{"resolved_style_test"};
+    theme.tokens().radius.small = 9.0f;
+    theme.tokens().border.focus_ring = 5.0f;
+    theme.tokens().border.thin = 2.0f;
+    theme.tokens().typography.body_medium.font_size = 17.0f;
+    theme.tokens().typography.body_medium.font_weight = NanFontWeight::medium;
+    theme.tokens().typography.label_large.font_size = 15.0f;
+    theme.palette().set(
+        NanColorRole::primary,
+        nandina::NanColor::from(nandina::NanRgb{1u, 2u, 3u, 255u}),
+        nandina::NanColor::from(nandina::NanRgb{4u, 5u, 6u, 255u}));
+    theme.palette().set(
+        NanColorRole::onSurfaceVariant,
+        nandina::NanColor::from(nandina::NanRgb{7u, 8u, 9u, 255u}),
+        nandina::NanColor::from(nandina::NanRgb{10u, 11u, 12u, 255u}));
+    theme.palette().set(
+        NanColorRole::onSurface,
+        nandina::NanColor::from(nandina::NanRgb{14u, 24u, 34u, 255u}),
+        nandina::NanColor::from(nandina::NanRgb{15u, 25u, 35u, 255u}));
+    theme.palette().set(
+        NanColorRole::outline,
+        nandina::NanColor::from(nandina::NanRgb{13u, 14u, 15u, 255u}),
+        nandina::NanColor::from(nandina::NanRgb{16u, 17u, 18u, 255u}));
+    theme.palette().set(
+        NanColorRole::secondary,
+        nandina::NanColor::from(nandina::NanRgb{19u, 20u, 21u, 255u}),
+        nandina::NanColor::from(nandina::NanRgb{22u, 23u, 24u, 255u}));
+    theme.palette().set(
+        NanColorRole::error,
+        nandina::NanColor::from(nandina::NanRgb{25u, 26u, 27u, 255u}),
+        nandina::NanColor::from(nandina::NanRgb{28u, 29u, 30u, 255u}));
+    theme.palette().set(
+        NanColorRole::secondaryContainer,
+        nandina::NanColor::from(nandina::NanRgb{31u, 32u, 33u, 255u}),
+        nandina::NanColor::from(nandina::NanRgb{34u, 35u, 36u, 255u}));
+    theme.palette().set(
+        NanColorRole::onSecondaryContainer,
+        nandina::NanColor::from(nandina::NanRgb{49u, 50u, 51u, 255u}),
+        nandina::NanColor::from(nandina::NanRgb{52u, 53u, 54u, 255u}));
+    theme.palette().set(
+        NanColorRole::outlineVariant,
+        nandina::NanColor::from(nandina::NanRgb{37u, 38u, 39u, 255u}),
+        nandina::NanColor::from(nandina::NanRgb{40u, 41u, 42u, 255u}));
+    theme.palette().set(
+        NanColorRole::errorContainer,
+        nandina::NanColor::from(nandina::NanRgb{43u, 44u, 45u, 255u}),
+        nandina::NanColor::from(nandina::NanRgb{46u, 47u, 48u, 255u}));
+    theme.palette().set(
+        NanColorRole::onPrimaryContainer,
+        nandina::NanColor::from(nandina::NanRgb{55u, 56u, 57u, 255u}),
+        nandina::NanColor::from(nandina::NanRgb{58u, 59u, 60u, 255u}));
+    theme.palette().set(
+        NanColorRole::onErrorContainer,
+        nandina::NanColor::from(nandina::NanRgb{61u, 62u, 63u, 255u}),
+        nandina::NanColor::from(nandina::NanRgb{64u, 65u, 66u, 255u}));
+    mgr.register_theme(std::move(theme));
+    ASSERT_TRUE(mgr.activate("resolved_style_test"));
+    mgr.set_scheme(NanColorScheme::light);
+
+    const auto style = mgr.resolved_style();
+    EXPECT_FLOAT_EQ(style.button.corner_radius, 9.0f);
+    EXPECT_FLOAT_EQ(style.focus_ring.width, 5.0f);
+    EXPECT_FLOAT_EQ(style.text.font_size, 17.0f);
+    EXPECT_EQ(style.text.font_weight, nandina::text::NanFontWeight::medium);
+    EXPECT_FLOAT_EQ(style.label.font_size, 17.0f);
+    EXPECT_EQ(style.label.font_weight, nandina::text::NanFontWeight::medium);
+    EXPECT_FLOAT_EQ(style.button.outlined.border_width, 2.0f);
+    EXPECT_EQ(style.button.color_variant, ColorVariant::inherit);
+    EXPECT_EQ(style.input.color_variant, ColorVariant::inherit);
+    EXPECT_EQ(style.tag.color_variant, ColorVariant::inherit);
+    EXPECT_EQ(style.progress.color_variant, ColorVariant::inherit);
+
+    const auto button_bg = style.button.filled.bg.to<nandina::NanRgb>();
+    EXPECT_EQ(button_bg.red(), 1u);
+    EXPECT_EQ(button_bg.green(), 2u);
+    EXPECT_EQ(button_bg.blue(), 3u);
+
+    const auto text_color = style.text.font_color.to<nandina::NanRgb>();
+    EXPECT_EQ(text_color.red(), 14u);
+    EXPECT_EQ(text_color.green(), 24u);
+    EXPECT_EQ(text_color.blue(), 34u);
+
+    const auto secondary_outline = style.button.secondary_family.outlined.border.to<nandina::NanRgb>();
+    EXPECT_EQ(secondary_outline.red(), 19u);
+    EXPECT_EQ(secondary_outline.green(), 20u);
+    EXPECT_EQ(secondary_outline.blue(), 21u);
+
+    const auto destructive_input = style.input.destructive_family.border_focus.to<nandina::NanRgb>();
+    EXPECT_EQ(destructive_input.red(), 25u);
+    EXPECT_EQ(destructive_input.green(), 26u);
+    EXPECT_EQ(destructive_input.blue(), 27u);
+
+    const auto progress_secondary = style.progress.secondary_family.track_bg.to<nandina::NanRgb>();
+    EXPECT_EQ(progress_secondary.red(), 31u);
+    EXPECT_EQ(progress_secondary.green(), 32u);
+    EXPECT_EQ(progress_secondary.blue(), 33u);
+
+    const auto tag_primary_text = style.tag.text.to<nandina::NanRgb>();
+    EXPECT_EQ(tag_primary_text.red(), 55u);
+    EXPECT_EQ(tag_primary_text.green(), 56u);
+    EXPECT_EQ(tag_primary_text.blue(), 57u);
+
+    const auto tag_secondary_bg = style.tag.secondary_family.bg.to<nandina::NanRgb>();
+    EXPECT_EQ(tag_secondary_bg.red(), 31u);
+    EXPECT_EQ(tag_secondary_bg.green(), 32u);
+    EXPECT_EQ(tag_secondary_bg.blue(), 33u);
+
+    const auto tag_secondary_text = style.tag.secondary_family.text.to<nandina::NanRgb>();
+    EXPECT_EQ(tag_secondary_text.red(), 49u);
+    EXPECT_EQ(tag_secondary_text.green(), 50u);
+    EXPECT_EQ(tag_secondary_text.blue(), 51u);
+
+    const auto progress_destructive = style.progress.destructive_family.fill.to<nandina::NanRgb>();
+    EXPECT_EQ(progress_destructive.red(), 25u);
+    EXPECT_EQ(progress_destructive.green(), 26u);
+    EXPECT_EQ(progress_destructive.blue(), 27u);
+
+    const auto label_color = style.label.font_color.to<nandina::NanRgb>();
+    EXPECT_EQ(label_color.red(), 7u);
+    EXPECT_EQ(label_color.green(), 8u);
+    EXPECT_EQ(label_color.blue(), 9u);
+
+    mgr.activate("default");
+    mgr.set_scheme(NanColorScheme::light);
+}
+
+TEST(ThemeManagerTest, CurrentStyleSyncsWhenThemeAndSchemeChange) {
+    auto& mgr = ThemeManager::instance();
+
+    NanTheme theme{"style_sync_test"};
+    theme.palette().set(
+        NanColorRole::primary,
+        nandina::NanColor::from(nandina::NanRgb{20u, 30u, 40u, 255u}),
+        nandina::NanColor::from(nandina::NanRgb{50u, 60u, 70u, 255u}));
+    theme.tokens().border.focus_ring = 6.0f;
+    mgr.register_theme(std::move(theme));
+
+    ASSERT_TRUE(mgr.activate("style_sync_test"));
+    mgr.set_scheme(NanColorScheme::light);
+
+    auto style = NanStylePrimitives::current();
+    auto primary = style.button.filled.bg.to<nandina::NanRgb>();
+    EXPECT_EQ(primary.red(), 20u);
+    EXPECT_EQ(primary.green(), 30u);
+    EXPECT_EQ(primary.blue(), 40u);
+    EXPECT_FLOAT_EQ(style.focus_ring.width, 6.0f);
+
+    mgr.set_scheme(NanColorScheme::dark);
+    style = NanStylePrimitives::current();
+    primary = style.button.filled.bg.to<nandina::NanRgb>();
+    EXPECT_EQ(primary.red(), 50u);
+    EXPECT_EQ(primary.green(), 60u);
+    EXPECT_EQ(primary.blue(), 70u);
+
+    mgr.activate("default");
+    mgr.set_scheme(NanColorScheme::light);
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // 线程安全测试
 // ═══════════════════════════════════════════════════════════════════════════

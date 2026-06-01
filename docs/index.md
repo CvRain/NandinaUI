@@ -30,6 +30,7 @@
 | [组件 Authoring 与挂载 API 设计](component-authoring-and-mounting.md) | 面向使用者的组件组合、挂载、引用与无显式 `move` 方向 `[已校正]` |
 | [无显式 move 的组件组合 API（V1）](component-composition-api-v1.md) | 当前 V1 authoring API 的已落地子集、差异说明与未收口边界 `[已校正]` |
 | [Widget Primitives 设计文档](widget-primitives.md) | 固定 Surface / Pressable / Text / FocusRing 的 primitive 边界与组合规则 `[已校正]` |
+| [Design Tokens](design-tokens.md) | 固定 primitive token、semantic palette、preset/size/colorVariant 与 TypographyRole 的选型规则 `[已校正]` |
 | [Input / Field API 设计](input-and-field-api.md) | 固定 TextField / Field 的职责边界、authoring 契约与绑定语义 `[已校正]` |
 | [布局策略](layout-strategy.md) | 当前布局阶段策略、自动布局目标与 Yoga 接入时机 `[已校正]` |
 | [模块依赖规则](module-dependency-rules.md) | 模块间依赖方向约束，避免循环依赖 `[已定稿]` |
@@ -79,7 +80,7 @@
 |------|------|------|
 | Layout 主线收口 | ✅ 已完成 | 当前阶段验收口径已达成；后续重点转入复杂 flex 语义、widgets 专项测试与 Yoga 评估前置条件 |
 | Widgets 自动布局收口 | ⚠️ 主体完成 | Issue 086 已完成；当前重点转入 widgets 专项测试、primitive/theme 收口，以及延后的 Sidebar 结构化演进 |
-| Theme / Design System | 🚧 早期 | 基础类型已存在，但 token/resolver 到 widgets 的统一消费仍未完成 |
+| Theme / Design System | ⚠️ 主体推进中 | primitive tokens、palette、ThemeManager 与 Button/TextField/SidebarMenuButton/ProgressBar 的 colorVariant 公开 API 已接通；后续重点转入更高层 style layer |
 
 ### 待开发
 

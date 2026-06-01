@@ -39,6 +39,7 @@ export namespace nandina::showcase {
             using nandina::layout::LayoutAlignment;
             using nandina::theme::ButtonVariant;
             using nandina::theme::ButtonSize;
+            using nandina::theme::ColorVariant;
 
             auto page_title = label()
                 .text("Forms")
@@ -66,25 +67,26 @@ export namespace nandina::showcase {
                 .color(NanColor::from(NanRgb{"#cdd6f4"}));
 
             auto basic_tf = text_field()
-                .placeholder("Type something...")
-                .width(280.0f);
+                .placeholder("Type something...");
 
             auto placeholder_tf = text_field()
                 .placeholder("Search...")
-                .value("prefilled text")
-                .width(280.0f);
+                .value("prefilled text");
 
             auto disabled_tf = text_field()
                 .placeholder("Disabled input")
                 .value("can't edit")
-                .disabled(true)
-                .width(280.0f);
+                .disabled(true);
 
             auto readonly_tf = text_field()
                 .placeholder("Read only")
                 .value("read only text")
-                .read_only(true)
-                .width(280.0f);
+                .read_only(true);
+
+            auto semantic_tf = row(children(
+                text_field().placeholder("Secondary accent").color_variant(ColorVariant::secondary),
+                text_field().placeholder("Destructive accent").color_variant(ColorVariant::destructive)
+            )).gap(12);
 
             // ── Section 2: Field with label/helper/error ──────
             auto section2_title = label()
@@ -98,16 +100,14 @@ export namespace nandina::showcase {
             auto email_field = field()
                 .label("Email")
                 .helper_text("We'll never share your email.")
-                .control(text_field().placeholder("you@example.com"))
-                .width(280.0f);
+                .control(text_field().placeholder("you@example.com"));
 
             auto required_field = field()
                 .label("Username")
                 .helper_text("Must be at least 3 characters.")
                 .error_text("Username is required.")
                 .control(text_field().placeholder("Enter username"))
-                .required(true)
-                .width(280.0f);
+                .required(true);
 
             // ── Section 3: Interactive invalid toggle ──────────
             auto section3_title = label()
@@ -160,6 +160,8 @@ export namespace nandina::showcase {
                 disabled_tf,
                 spacer(1).height(8.0f),
                 readonly_tf,
+                spacer(1).height(8.0f),
+                semantic_tf,
                 spacer(1).height(24.0f),
                 section2_title,
                 spacer(1).height(8.0f),
@@ -175,7 +177,7 @@ export namespace nandina::showcase {
                 toggle_btn_label
             ))
             .gap(0)
-            .align_items(LayoutAlignment::start)
+            .align_items(LayoutAlignment::stretch)
             .padding(24.0f));
         }
 

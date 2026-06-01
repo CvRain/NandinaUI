@@ -1308,9 +1308,9 @@
 
 ---
 
-## Issue 038 — 定义 spacing/radius/border 等 primitive tokens ⚠️ 部分完成
+## Issue 038 — 定义 spacing/radius/border 等 primitive tokens ✅ 已完成
 **Labels:** `area:theme`, `kind:implementation`, `priority:p0`
-**Status:** ⚠️ 部分完成 — spacing/radius 等 token 已有，但 border/divider/focus ring 仍不完整
+**Status:** ✅ 已完成 — primitive tokens 现已覆盖 spacing / radius / border / typography / elevation / opacity，border/divider/focus ring 宽度已补齐
 
 ### 目标
 建立基础视觉 token。
@@ -1329,17 +1329,15 @@
 - widgets 可以共享结构性视觉参数
 
 ### 当前进展
-- `theme/tokens/primitives` 已聚合 spacing / radius / elevation / opacity / typography
-- `tests/theme/test_theme_types.cpp` 已覆盖这些默认 token 值
-
-### 未完成部分
-- issue 范围中的 border width、divider width、focus ring width 尚未形成独立 primitive token
+- `theme/src/nan_primitive_tokens.cppm` 现已补 `NanBorderTokens`，覆盖 border/divider/focus ring 宽度
+- `NanPrimitiveTokens` 已统一聚合 spacing / radius / border / typography / elevation / opacity
+- `tests/theme/test_theme_types.cpp` 已补默认值回归，覆盖新增 border token
 
 ---
 
-## Issue 039 — 定义 palette 结构与语义色映射 ⚠️ 部分完成
+## Issue 039 — 定义 palette 结构与语义色映射 ✅ 已完成
 **Labels:** `area:theme`, `kind:implementation`, `priority:p0`
-**Status:** ⚠️ 部分完成 — palette 与 light/dark 映射已存在，但控件消费侧仍大量硬编码颜色
+**Status:** ✅ 已完成 — palette 与 semantic role 现已进入 ThemeManager -> resolved style -> widgets 默认样式链路，主线控件默认色不再主要依赖散落的局部常量
 
 ### 目标
 建立统一颜色系统，而不是零散 RGB 常量。
@@ -1358,15 +1356,15 @@
 ### 当前进展
 - `theme/palette` 已提供语义色与 light/dark 映射策略
 - `tests/theme/test_theme_manager.cpp` 已覆盖 scheme 切换取色
-
-### 未完成部分
-- `Surface` / `Button` / `Label` / `Panel` 等控件尚未系统接入语义色解析，主线仍有大量 `NanRgb` 常量写死
+- `ThemeManager::resolved_style()` 现已把 active theme 的 palette/tokens 解析为组件样式原语
+- `Label` / `Button` / `Card` / `Panel` / `Input` / `FocusRing` / `Progress` 的默认 style 已从 semantic role 映射得出
+- `tests/theme/test_theme_manager.cpp` 已补 palette -> resolved style 的回归
 
 ---
 
-## Issue 040 — 定义 typography token 与文字角色 ⚠️ 部分完成
+## Issue 040 — 定义 typography token 与文字角色 ✅ 已完成
 **Labels:** `area:theme`, `area:text`, `kind:implementation`, `priority:p1`
-**Status:** ⚠️ 部分完成 — typography tokens 已存在，但文字角色尚未接入控件 API
+**Status:** ✅ 已完成 — typography tokens 现已配套 `NanTypographyRole`，并已在 Label / LabelNode 形成第一版 widgets 公开语义 API
 
 ### 目标
 建立统一文字层级与字体语义。
@@ -1387,16 +1385,16 @@
 
 ### 当前进展
 - `theme/typography` 已提供默认字号、字重等排版 token
-
-### 未完成部分
-- `Label` 等文本控件仍直接使用 raw font size，而不是 `TypographyRole`
-- 文字角色尚未形成 widgets 层公开语义 API
+- `theme/src/nan_primitive_tokens.cppm` 现已补 `NanTypographyRole` 与 `resolve_typography_style(...)`
+- `widgets/src/nan_label.cppm` 已新增 `set_typography_role()` / `typography_role()`，把 role 落到字号、字重、行高、字间距
+- `app/src/nan_application.cppm` 的 `LabelNode` 已补 `typography_role(...)` authoring API
+- `tests/theme/test_theme_types.cpp`、`tests/widgets/test_widgets_label.cpp`、`tests/app/test_app_authoring.cpp` 已补 role 回归
 
 ---
 
-## Issue 041 — 实现 ThemeManager 最小版本 ⚠️ 部分完成
+## Issue 041 — 实现 ThemeManager 最小版本 ✅ 已完成
 **Labels:** `area:theme`, `kind:implementation`, `priority:p0`
-**Status:** ⚠️ 部分完成 — ThemeManager 已实现，但主题入口尚未真正驱动主线控件
+**Status:** ✅ 已完成 — ThemeManager 现已不仅管理 active theme / scheme，还会同步 resolved style，主线控件默认样式可从统一主题入口读取
 
 ### 目标
 建立统一主题切换入口。
@@ -1416,15 +1414,15 @@
 ### 当前进展
 - `theme/manager` 已支持当前主题、light/dark 切换、主题注册与监听
 - `tests/theme/test_theme_manager.cpp` 已覆盖注册、激活、切换与监听
-
-### 未完成部分
-- 主线 widgets 仍大量直接使用局部样式常量，尚未系统从统一主题入口解析当前主题
+- `ThemeManager` 现已新增 `resolved_style()`，并会在 activate / set_scheme / toggle_scheme 时同步 `NanStylePrimitives::set_current(...)`
+- widgets 侧继续通过 `NanStylePrimitives::current()` 取值，但该入口现已被 active theme 驱动
+- `tests/theme/test_theme_manager.cpp` 已补 active theme / scheme -> current style 同步回归
 
 ---
 
-## Issue 042 — 编写 design token 文档 ⚠️ 部分完成
+## Issue 042 — 编写 design token 文档 ✅ 已完成
 **Labels:** `area:theme`, `area:docs`, `kind:docs`, `priority:p1`
-**Status:** ⚠️ 部分完成 — token 体系已有代码与测试，但独立文档尚未落位
+**Status:** ✅ 已完成 — `docs/design-tokens.md` 已落位，并按当前真实实现固定 primitive token、palette、preset/size/colorVariant 与 TypographyRole 的职责边界
 
 ### 目标
 把 token 体系写清楚，避免后续扩展控件时语义漂移。
@@ -1443,11 +1441,8 @@
 - 未来控件作者知道应该复用哪些 token，而不是临时创造属性
 
 ### 当前进展
-- token 结构与默认值已存在于 theme 模块实现与测试中
-
-### 未完成部分
-- `docs/design-tokens.md` 尚未落位
-- 当前缺少面向控件作者的 token 选型说明文档
+- 已新增 `docs/design-tokens.md`，说明 primitive token、semantic palette、preset / size / colorVariant 与 TypographyRole 的职责边界
+- 已补 spacing / radius 选型规则，以及控件作者新增样式字段前的判断顺序
 
 ---
 
@@ -1699,9 +1694,9 @@
 
 ---
 
-## Issue 052 — 实现 Text primitive ⚠️ 部分完成
+## Issue 052 — 实现 Text primitive ✅ 已完成
 **Labels:** `area:widgets`, `area:text`, `kind:implementation`, `priority:p0`
-**Status:** ⚠️ 部分完成 — 文本能力已被 `Label` 吸收，但尚未形成独立 Text primitive
+**Status:** ✅ 已完成 — `Text` primitive 独立模块已落地，`Label` 退回成语义包装层，`Button` / `Tag` 等所有控件内部文本节点已全面切到 `Text`
 
 ### 目标
 建立 widgets 层统一的文本节点封装。
@@ -1718,14 +1713,14 @@
 ### 完成定义
 - Label/Button 不必各自重新封装底层 text 逻辑
 
-### 当前进展
-- `Label` 已封装文本内容、颜色、基础对齐、字体加载、shaping 与绘制能力
-- 文本底层能力由 `text/nan_font` 提供，已可支撑 widgets 层文本显示
-- 落地文件：`widgets/src/nan_label.cppm`、`text/src/nan_font.cppm`
-
-### 未完成部分
-- 当前没有独立的 `widgets/primitives/text` 模块或控件
-- `style role` 尚未形成独立语义 API，Button 也仍然通过嵌入 `Label` 间接复用文本能力
+### 完成记录
+- 已新增 `widgets/src/nan_text.cppm`，提供独立 `Text` primitive，承接文本内容、颜色、TypographyRole、对齐、真实测量与绘制能力
+- `theme/src/nan_style.cppm` 已补 `NanTextStyle`，`ThemeManager::resolved_style()` 已生成对应默认样式
+- `TextField` / `Button` / `Tag` / `Card` / `Sidebar` 内部文本节点已全面切到 `Text`
+- `Label` 已退回为建立在 `Text` 之上的语义包装层，仅保留 disabled / error / required 语义与 required indicator 绘制
+- `Button::label()` 与 `Tag::label()` 公开访问器返回类型已从 `Label&` 改为 `Text&`
+- 文本底层能力由 `text/nan_font` 提供
+- 落地文件：`widgets/src/nan_text.cppm`、`widgets/src/nan_label.cppm`、`text/src/nan_font.cppm`
 
 ---
 
@@ -1845,9 +1840,9 @@
 
 ---
 
-## Issue 057 — 实现 Button 控件最小版本 ⚠️ 部分完成
+## Issue 057 — 实现 Button 控件最小版本 ✅ 已完成
 **Labels:** `area:widgets`, `kind:implementation`, `priority:p0`
-**Status:** ⚠️ 部分完成 — Button 已具备 text / variant / size / disabled / loading / icon 基础能力，但 theme preset 与上层收口仍未完成
+**Status:** ✅ 已完成 — Button 已具备 text / variant / size / colorVariant / disabled / loading / icon 与 authoring / showcase / 测试消费链路
 
 ### 目标
 实现第一个完整的交互式核心控件。
@@ -1870,20 +1865,21 @@
 
 ### 当前进展
 - 已实现 text / on_click / disabled / hover / press / loading 基础状态
-- 已提供 `variant(...)`、`size(...)`、`icon(...)` / `icon_left(...)` / `icon_right(...)` 等公开 API
+- 已提供 `variant(...)`、`size(...)`、`color_variant(...)`、`icon(...)` / `icon_left(...)` / `icon_right(...)` 等公开 API
+- `app/src/nan_application.cppm` 的 `ButtonNode` 已补 `color_variant / icon / icon_left / icon_right / disabled / loading` 链式 authoring API
+- `showcase/pages/button.cppm` 已新增 variants / sizes / color variants / icon slots / states 的真实展示页消费
+- `tests/widgets/test_widgets_button.cpp` 与 `tests/app/test_app_authoring.cpp` 已补 colorVariant / icon slot / loading authoring 回归
 - 当前实现采用 `Surface + Row + Label + optional Icon` 组合，并直接在 Button 内处理交互事件
 - 落地文件：`widgets/src/nan_button.cppm`、`widgets/src/nan_button.cpp`
 
 ### 未完成部分
-- `colorVariant` 尚未形成独立语义 API
-- authoring DSL、showcase 与测试对 icon / loading 等能力的消费仍不充分
-- 更完整的 preset / resolver 文档化与 theme 层统一消费仍待收口
+- 更高层 `style.cppm` / recipe layer 仍待收口
 
 ---
 
-## Issue 058 — 为 Button 加入 icon slot / 左右图标支持 ⚠️ 部分完成
+## Issue 058 — 为 Button 加入 icon slot / 左右图标支持 ✅ 已完成
 **Labels:** `area:widgets`, `kind:implementation`, `priority:p1`
-**Status:** ⚠️ 部分完成 — widgets 层已有 `icon / icon_left / icon_right` API，但 authoring / 测试 / 语义收口仍未完成
+**Status:** ✅ 已完成 — Button 已具备独立 left / right icon slot，authoring DSL、widgets/app 测试与 showcase 消费链路均已打通
 
 ### 目标
 让 Button API 更接近真实应用需求。
@@ -1901,13 +1897,11 @@
 
 ### 当前进展
 - `Button` 已提供 `icon(...)`、`icon_left(...)`、`icon_right(...)` 公开接口
-- widgets 层已将 `Icon` 接入 `Button` 的内部内容排布
-- 模块接口注释已包含 `button("Save").icon_left(...).on_click(...)` 这类使用示例
-
-### 未完成部分
-- app authoring 层尚未暴露对应的链式 icon API
-- tests / showcase 尚未把 icon button 作为稳定回归面
-- `icon_right` 的更完整独立 slot 语义仍值得继续收口
+- widgets 层现已为 left / right icon 维护独立 slot，而非复用单一 icon 指针
+- icon 颜色已跟随 Button resolved text color，避免 hover / disabled / loading 状态下图标与文本失配
+- `app/src/nan_application.cppm` 的 `ButtonNode` 已暴露链式 `icon / icon_left / icon_right` API
+- `showcase/pages/button.cppm` 已把 icon button 纳入稳定展示面
+- `tests/widgets/test_widgets_button.cpp` 与 `tests/app/test_app_authoring.cpp` 已补独立左右 icon slot 与 authoring 回归
 
 ---
 
@@ -2320,9 +2314,9 @@
 
 ---
 
-## Issue 074 — 在 showcase 中加入主题切换能力 ❌ 未完成
+## Issue 074 — 在 showcase 中加入主题切换能力 ✅ 已完成
 **Labels:** `area:showcase`, `area:theme`, `kind:implementation`, `priority:p1`
-**Status:** ❌ 未完成 — showcase 未见 theme selector、light/dark toggle 或 live rerender 控件
+**Status:** ✅ 已完成 — showcase shell 已提供 theme selector、light/dark toggle，并在窗口层通过 ThemeManager 变更触发 live rerender
 
 ### 目标
 让组件在真实环境中验证 light/dark/theme 切换。
@@ -2338,9 +2332,11 @@
 ### 完成定义
 - 所有基础组件可在不同主题下观察效果
 
-### 当前判断
-- `showcase/application.cppm` 当前未接入主题切换控制逻辑
-- 现有运行面仍是固定配色 dashboard，不能验证跨主题效果
+### 完成记录
+- `showcase/nan_showcase.cppm` 已在 sidebar 中加入 `Theme: Default`、`Theme: Warm` 与 `Switch to Dark/Light Mode` 控件
+- showcase 现注册额外 `showcase_warm` 主题，便于验证“主题切换”与“同主题 light/dark scheme 切换”两条路径
+- `MainWindow` 现监听 `ThemeManager::on_changed(...)`，在 `on_update()` 中延后重建 root shell，避免在点击回调内直接改树
+- `tests/showcase/test_showcase_layout.cpp` 已新增主题控件与 live rerender 回归
 
 ---
 

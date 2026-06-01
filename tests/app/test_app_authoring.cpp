@@ -23,8 +23,10 @@ import nandina.widgets.label;
 import nandina.widgets.panel;
 import nandina.widgets.pressable;
 import nandina.widgets.progressbar;
+import nandina.widgets.sidebar_menu_button;
 import nandina.widgets.sidebar_group;
 import nandina.widgets.surface;
+import nandina.widgets.tag;
 import nandina.widgets.text_field;
 
 class TestWidget final : public nandina::runtime::NanWidget {
@@ -641,6 +643,74 @@ TEST(AppAuthoringTest, ButtonPresetAndSizeStylesResolveFromThemeOverrides) {
     EXPECT_EQ(outline_disabled_text.blue(), 13u);
 }
 
+TEST(AppAuthoringTest, ButtonNodeForwardsIconSlotsAndLoadingState) {
+    nandina::app::Ref<nandina::widgets::Button> button_ref;
+
+    auto mounted = nandina::app::mount(
+        nandina::app::button("Deploy")
+            .icon_left(nandina::widgets::IconType::Check)
+            .icon_right(nandina::widgets::IconType::ArrowDown)
+            .loading(true)
+            .bind(button_ref));
+
+    ASSERT_NE(mounted, nullptr);
+    ASSERT_TRUE(button_ref);
+    ASSERT_TRUE(button_ref->loading());
+    ASSERT_TRUE(button_ref->left_icon_type().has_value());
+    ASSERT_TRUE(button_ref->right_icon_type().has_value());
+    EXPECT_EQ(*button_ref->left_icon_type(), nandina::widgets::IconType::Check);
+    EXPECT_EQ(*button_ref->right_icon_type(), nandina::widgets::IconType::ArrowDown);
+
+    EXPECT_FALSE(button_ref->dispatch_event(nandina::runtime::PointerMoveEvent{
+        .x = 8.0,
+        .y = 6.0,
+        .delta_x = 0.0,
+        .delta_y = 0.0,
+    }));
+
+    auto disabled_button = nandina::app::button("Disabled").disabled(true);
+    EXPECT_TRUE(disabled_button.widget().disabled());
+}
+
+TEST(AppAuthoringTest, ButtonAndTextFieldNodesForwardColorVariant) {
+    nandina::app::Ref<nandina::widgets::Button> button_ref;
+    nandina::app::Ref<nandina::widgets::TextField> text_field_ref;
+
+    auto mounted = nandina::app::mount(
+        nandina::app::column(nandina::app::children(
+            nandina::app::button("Publish")
+                .variant(nandina::widgets::ButtonVariant::outline)
+                .color_variant(nandina::theme::ColorVariant::secondary)
+                .bind(button_ref),
+            nandina::app::text_field()
+                .color_variant(nandina::theme::ColorVariant::destructive)
+                .bind(text_field_ref))));
+
+    ASSERT_NE(mounted, nullptr);
+    ASSERT_TRUE(button_ref);
+    ASSERT_TRUE(text_field_ref);
+    EXPECT_EQ(button_ref->color_variant(), nandina::theme::ColorVariant::secondary);
+    EXPECT_EQ(text_field_ref->color_variant(), nandina::theme::ColorVariant::destructive);
+}
+
+TEST(AppAuthoringTest, TagNodeForwardsSemanticProps) {
+    nandina::app::Ref<nandina::widgets::Tag> tag_ref;
+
+    auto mounted = nandina::app::mount(
+        nandina::app::tag("Beta")
+            .size(nandina::widgets::TagSize::sm)
+            .color_variant(nandina::theme::ColorVariant::secondary)
+            .disabled(true)
+            .bind(tag_ref));
+
+    ASSERT_NE(mounted, nullptr);
+    ASSERT_TRUE(tag_ref);
+    EXPECT_EQ(tag_ref->text(), "Beta");
+    EXPECT_EQ(tag_ref->size(), nandina::widgets::TagSize::sm);
+    EXPECT_EQ(tag_ref->color_variant(), nandina::theme::ColorVariant::secondary);
+    EXPECT_TRUE(tag_ref->disabled());
+}
+
 TEST(AppAuthoringTest, CardFactorySupportsTitleStylingAndChildRefs) {
     nandina::app::Ref<nandina::widgets::Card> card_ref;
     nandina::app::Ref<TestWidget> child_ref;
@@ -796,6 +866,26 @@ TEST(AppAuthoringTest, LabelSemanticStatesResolveThemeColorsAndRequiredIndicator
     EXPECT_EQ(disabled.blue(), 180u);
 }
 
+TEST(AppAuthoringTest, LabelNodeTypographyRoleAppliesResolvedTypeStyle) {
+    nandina::app::Ref<nandina::widgets::Label> label_ref;
+
+    auto mounted = nandina::app::mount(
+        nandina::app::label("Section")
+            .typography_role(nandina::theme::NanTypographyRole::title_medium)
+            .bind(label_ref));
+
+    ASSERT_NE(mounted, nullptr);
+    ASSERT_TRUE(label_ref);
+    ASSERT_TRUE(label_ref->typography_role().has_value());
+    EXPECT_EQ(*label_ref->typography_role(), nandina::theme::NanTypographyRole::title_medium);
+
+    const auto& resolved = nandina::theme::resolve_typography_style(
+        nandina::theme::NanStylePrimitives::current().typography,
+        nandina::theme::NanTypographyRole::title_medium);
+    EXPECT_FLOAT_EQ(label_ref->font_size(), resolved.font_size);
+    EXPECT_EQ(label_ref->font_weight(), static_cast<nandina::text::NanFontWeight>(resolved.font_weight));
+}
+
 TEST(AppAuthoringTest, SurfacePaddingMarksLayoutDirty) {
     auto surface = nandina::widgets::Surface::create();
 
@@ -829,6 +919,28 @@ TEST(AppAuthoringTest, IconAndProgressBarSizeSettersMarkLayoutDirty) {
 
     progress->set_bar_height(8.0f);
     EXPECT_TRUE(progress->is_layout_dirty());
+}
+
+TEST(AppAuthoringTest, ProgressBarAndSidebarMenuButtonNodesForwardColorVariant) {
+    nandina::app::Ref<nandina::widgets::ProgressBar> progress_ref;
+    nandina::app::Ref<nandina::widgets::SidebarMenuButton> sidebar_ref;
+
+    auto mounted = nandina::app::mount(
+        nandina::app::column(nandina::app::children(
+            nandina::app::progress_bar()
+                .progress(0.4f)
+                .color_variant(nandina::theme::ColorVariant::secondary)
+                .bind(progress_ref),
+            nandina::app::sidebar_menu_button("Docs")
+                .color_variant(nandina::theme::ColorVariant::destructive)
+                .active(true)
+                .bind(sidebar_ref))));
+
+    ASSERT_NE(mounted, nullptr);
+    ASSERT_TRUE(progress_ref);
+    ASSERT_TRUE(sidebar_ref);
+    EXPECT_EQ(progress_ref->color_variant(), nandina::theme::ColorVariant::secondary);
+    EXPECT_EQ(sidebar_ref->color_variant(), nandina::theme::ColorVariant::destructive);
 }
 
 TEST(AppAuthoringTest, ButtonTextSetterMarksLayoutDirty) {
@@ -1083,6 +1195,7 @@ TEST(AppAuthoringTest, FieldFactoryCreatesNodeWithLabelAndControl) {
         .error_text("Invalid email")
         .required(true)
         .invalid(false)
+        .color_variant(nandina::theme::ColorVariant::secondary)
         .disabled(false);
 
     EXPECT_EQ(f.widget().label_text(), "Email");
@@ -1090,6 +1203,7 @@ TEST(AppAuthoringTest, FieldFactoryCreatesNodeWithLabelAndControl) {
     EXPECT_EQ(f.widget().error_text(), "Invalid email");
     EXPECT_TRUE(f.widget().required());
     EXPECT_FALSE(f.widget().invalid());
+    EXPECT_EQ(f.widget().color_variant(), nandina::theme::ColorVariant::secondary);
     EXPECT_FALSE(f.widget().disabled());
     EXPECT_EQ(f.widget().control(), nullptr);
 }
@@ -1097,12 +1211,14 @@ TEST(AppAuthoringTest, FieldFactoryCreatesNodeWithLabelAndControl) {
 TEST(AppAuthoringTest, FieldFactoryWithControlAcceptsTextFieldNode) {
     auto f = nandina::app::field()
         .label("Name")
+        .color_variant(nandina::theme::ColorVariant::secondary)
         .control(nandina::app::text_field().placeholder("Your name"));
 
     ASSERT_NE(f.widget().control(), nullptr);
     auto* tf = dynamic_cast<nandina::widgets::TextField*>(f.widget().control());
     ASSERT_NE(tf, nullptr);
     EXPECT_EQ(tf->placeholder(), "Your name");
+    EXPECT_EQ(tf->color_variant(), nandina::theme::ColorVariant::secondary);
 }
 
 TEST(AppAuthoringTest, FieldNodeBindRefWorks) {
@@ -1135,10 +1251,12 @@ TEST(AppAuthoringTest, FieldNodeDisabledAndInvalidPropagation) {
 
     auto f = nandina::app::field()
         .label("Test")
+        .color_variant(nandina::theme::ColorVariant::destructive)
         .control(std::move(control));
 
     EXPECT_FALSE(f.widget().disabled());
     EXPECT_FALSE(control_ptr->disabled());
+    EXPECT_EQ(control_ptr->color_variant(), nandina::theme::ColorVariant::destructive);
 
     f.widget().set_disabled(true);
     EXPECT_TRUE(control_ptr->disabled());

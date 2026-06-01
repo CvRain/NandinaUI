@@ -73,3 +73,24 @@ TEST(WidgetsLabelTest, WrappedMeasureUsesConstraintWidth) {
     EXPECT_GT(wide_size.height(), 0.0f);
     EXPECT_GT(narrow_size.height(), wide_size.height());
 }
+
+TEST(WidgetsLabelTest, TypographyRoleAppliesResolvedTypeStyle) {
+    ScopedStyleReset style_reset;
+
+    auto style = nandina::theme::NanStylePrimitives::default_style();
+    style.typography.title_large.font_size = 26.0f;
+    style.typography.title_large.font_weight = nandina::theme::NanFontWeight::bold;
+    style.typography.title_large.line_height = 34.0f;
+    style.typography.title_large.letter_spacing = 0.75f;
+    nandina::theme::NanStylePrimitives::set_current(style);
+
+    auto label = nandina::widgets::Label::create();
+    label->set_typography_role(nandina::theme::NanTypographyRole::title_large);
+
+    ASSERT_TRUE(label->typography_role().has_value());
+    EXPECT_EQ(*label->typography_role(), nandina::theme::NanTypographyRole::title_large);
+    EXPECT_FLOAT_EQ(label->font_size(), 26.0f);
+    EXPECT_EQ(label->font_weight(), nandina::text::NanFontWeight::bold);
+    EXPECT_FLOAT_EQ(label->font().line_height(), 34.0f);
+    EXPECT_FLOAT_EQ(label->font().letter_spacing(), 0.75f);
+}

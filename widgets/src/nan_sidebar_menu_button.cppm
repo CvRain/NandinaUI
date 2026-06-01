@@ -14,6 +14,7 @@ module;
 
 #include <functional>
 #include <memory>
+#include <optional>
 #include <thorvg-1/thorvg.h>
 
 export module nandina.widgets.sidebar_menu_button;
@@ -23,6 +24,7 @@ import nandina.foundation.nan_size;
 import nandina.foundation.color;
 import nandina.layout.container;
 import nandina.reactive.event_signal;
+import nandina.theme.nan_style;
 import nandina.widgets.button;
 import nandina.widgets.icon;
 
@@ -46,11 +48,7 @@ export namespace nandina::widgets {
         auto active(bool v) -> SidebarMenuButton& {
             if (m_active == v) return *this;
             m_active = v;
-            // font_color() 同时写入 Button::m_user_font_color，
-            // 之后 hover/leave 触发的 update_visual_state() 会自动保持该色
-            font_color(v
-                ? nandina::NanColor::from(nandina::NanRgb{220, 220, 240})
-                : nandina::NanColor::from(nandina::NanRgb{160, 162, 180}));
+            update_visual_state();
             mark_dirty();
             m_active_changed_signal.emit(v);
             return *this;
@@ -63,7 +61,9 @@ export namespace nandina::widgets {
         }
 
         auto accent_color(nandina::NanColor color) -> SidebarMenuButton& {
+            m_has_explicit_accent_color = true;
             m_accent_color = color;
+            update_visual_state();
             mark_dirty();
             return *this;
         }
@@ -86,6 +86,22 @@ export namespace nandina::widgets {
         }
 
     protected:
+        auto update_visual_state() -> void override {
+            Button::update_visual_state();
+
+            if (!m_has_explicit_accent_color) {
+                m_accent_color = resolved_accent_color();
+            }
+
+            if (!m_active) {
+                return;
+            }
+
+            if (apply_resolved_foreground_color(m_accent_color)) {
+                mark_dirty();
+            }
+        }
+
         void on_draw(tvg::SwCanvas& canvas) override {
             Button::on_draw(canvas);
 
@@ -102,7 +118,7 @@ export namespace nandina::widgets {
                 // active 高亮背景
                 auto* hl = tvg::Shape::gen();
                 hl->appendRect(rect.x(), rect.y(), rect.width(), rect.height(), 6.0f, 6.0f);
-                hl->fill(40, 42, 60, 200);
+                hl->fill(acc_rgb.red(), acc_rgb.green(), acc_rgb.blue(), 48);
                 canvas.add(hl);
             }
         }
@@ -110,16 +126,31 @@ export namespace nandina::widgets {
     private:
         SidebarMenuButton() : Button() {
             variant(ButtonVariant::ghost);
-            // font_color() 同时设置 m_user_font_color，hover/leave 后不会重置此色
-            font_color(nandina::NanColor::from(nandina::NanRgb{160, 162, 180}));
             font_size(13.0f);
             set_padding(geometry::NanInsets{14.0f, 4.0f, 12.0f, 4.0f});
             set_corner_radius(6.0f);
             // 内容左对齐（图标 + 文字靠左，而非居中）
             content_row().justify_content(layout::LayoutAlignment::start);
+            update_visual_state();
+        }
+
+        [[nodiscard]] auto resolved_accent_color() const -> nandina::NanColor {
+            const auto preset = resolved_preset_style();
+            const auto border = preset.border.to<nandina::NanRgb>();
+            if (border.alpha() > 0) {
+                return preset.border;
+            }
+
+            const auto bg = preset.bg.to<nandina::NanRgb>();
+            if (bg.alpha() > 0) {
+                return preset.bg;
+            }
+
+            return preset.text;
         }
 
         bool m_active{false};
+        bool m_has_explicit_accent_color{false};
         nandina::NanColor m_accent_color{nandina::NanColor::from(nandina::NanRgb{99, 102, 241})};
         reactive::EventSignal<bool> m_active_changed_signal;
     };

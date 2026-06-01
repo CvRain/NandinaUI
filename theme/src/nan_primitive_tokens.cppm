@@ -20,7 +20,7 @@ import nandina.theme.nan_theme_types;
  * 设计理念（类似 shadcn/ui、Radix 的 primitives）：
  *   - 系统提供一组合理的默认值（类似 CSS 的 `initial`）
  *   - 用户可覆盖任意 Token 以定制品牌风格
- *   - Token 以命名域分组：spacing / radius / typography / elevation / opacity
+ *   - Token 以命名域分组：spacing / radius / border / typography / elevation / opacity
  */
 
 export namespace nandina::theme {
@@ -65,6 +65,26 @@ struct NanRadiusTokens {
     float large   = 16.0f;  ///< 大圆角
     float xlarge  = 24.0f;  ///< 超大圆角
     float full    = 999.0f; ///< 完全圆角（pill shape）
+};
+
+// ═════════════════════════════════════════════════════════════════════════════
+// § Border Token — 描边/分隔线系统
+// ═════════════════════════════════════════════════════════════════════════════
+
+/**
+ * @brief 描边 Token。
+ *
+ * 统一管理控件描边、分隔线和 focus ring 的宽度。
+ * 值以像素为单位。
+ */
+struct NanBorderTokens {
+    float none         = 0.0f; ///< 无描边
+    float hairline     = 1.0f; ///< 最细描边
+    float thin         = 1.0f; ///< 常规描边
+    float medium       = 2.0f; ///< 中等描边
+    float thick        = 3.0f; ///< 粗描边
+    float divider      = 1.0f; ///< 分隔线宽度
+    float focus_ring   = 2.0f; ///< 焦点环宽度
 };
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -139,6 +159,24 @@ struct NanTypeStyle {
     float           letter_spacing = 0.0f; ///< 字间距 (px)
 };
 
+enum class NanTypographyRole : std::uint8_t {
+    display_large,
+    display_medium,
+    display_small,
+    headline_large,
+    headline_medium,
+    headline_small,
+    title_large,
+    title_medium,
+    title_small,
+    body_large,
+    body_medium,
+    body_small,
+    label_large,
+    label_medium,
+    label_small,
+};
+
 /**
  * @brief 字体排印 Token 集合。
  *
@@ -167,6 +205,29 @@ struct NanTypographyTokens {
     NanTypeStyle label_small  { .font_size = 11.0f, .font_weight = NanFontWeight::medium,  .line_height = 16.0f, .letter_spacing = 0.5f  };
 };
 
+[[nodiscard]] inline auto resolve_typography_style(
+    const NanTypographyTokens& tokens,
+    const NanTypographyRole role) noexcept -> const NanTypeStyle& {
+    switch (role) {
+    case NanTypographyRole::display_large: return tokens.display_large;
+    case NanTypographyRole::display_medium: return tokens.display_medium;
+    case NanTypographyRole::display_small: return tokens.display_small;
+    case NanTypographyRole::headline_large: return tokens.headline_large;
+    case NanTypographyRole::headline_medium: return tokens.headline_medium;
+    case NanTypographyRole::headline_small: return tokens.headline_small;
+    case NanTypographyRole::title_large: return tokens.title_large;
+    case NanTypographyRole::title_medium: return tokens.title_medium;
+    case NanTypographyRole::title_small: return tokens.title_small;
+    case NanTypographyRole::body_large: return tokens.body_large;
+    case NanTypographyRole::body_medium: return tokens.body_medium;
+    case NanTypographyRole::body_small: return tokens.body_small;
+    case NanTypographyRole::label_large: return tokens.label_large;
+    case NanTypographyRole::label_medium: return tokens.label_medium;
+    case NanTypographyRole::label_small: return tokens.label_small;
+    }
+    return tokens.body_medium;
+}
+
 // ═════════════════════════════════════════════════════════════════════════════
 // § NanPrimitiveTokens — 聚合所有原始 Token
 // ═════════════════════════════════════════════════════════════════════════════
@@ -180,6 +241,7 @@ struct NanTypographyTokens {
 struct NanPrimitiveTokens {
     NanSpacingTokens     spacing;
     NanRadiusTokens      radius;
+    NanBorderTokens      border;
     NanElevationTokens   elevation;
     NanOpacityTokens     opacity;
     NanTypographyTokens  typography;

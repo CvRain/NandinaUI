@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <memory>
+#include <string>
 #include <stdexcept>
 #include <vector>
 
@@ -12,6 +13,7 @@ import nandina.runtime.nan_widget;
 import nandina.showcase;
 import nandina.showcase.main_page;
 import nandina.showcase.sandbox_page;
+import nandina.theme;
 import nandina.widgets.sidebar_menu_button;
 
 namespace {
@@ -93,13 +95,86 @@ public:
     }
 };
 
-[[nodiscard]] auto alpha_of(const std::uint32_t pixel) noexcept -> std::uint8_t {
-    return static_cast<std::uint8_t>((pixel >> 24u) & 0xffu);
-}
+// Test helper that exposes protected on_draw/on_update and mimics MainWindow's theme switching
+class ThemeTestWindow final : public nandina::app::NanAppWindow {
+public:
+    ThemeTestWindow()
+        : nandina::app::NanAppWindow({
+            .title = "Theme Test",
+            .width = 1280,
+            .height = 720,
+            .resizable = false,
+            .high_dpi = false,
+        }) {
+        ensure_warm_theme_registered();
+        conn_ = nandina::theme::ThemeManager::instance().on_changed(
+            [this](const std::string&) { pending_rebuild_ = true; });
+        set_root(nandina::showcase::create_showcase_shell());
+    }
+
+    auto draw_once(tvg::SwCanvas& canvas) -> void { on_draw(canvas); }
+    auto update_once(const double dt = 0.016) -> void { on_update(dt); }
+
+protected:
+    void on_update(const double delta_seconds) override {
+        nandina::app::NanAppWindow::on_update(delta_seconds);
+        if (pending_rebuild_) {
+            pending_rebuild_ = false;
+            set_root(nandina::showcase::create_showcase_shell());
+        }
+    }
+
+private:
+    static auto ensure_warm_theme_registered() -> void {
+        static bool done = false;
+        if (done) return;
+        done = true;
+
+        auto rgb = [](std::uint8_t r, std::uint8_t g, std::uint8_t b, std::uint8_t a = 255u) {
+            return nandina::NanColor::from(nandina::NanRgb{r, g, b, a});
+        };
+        auto warm = nandina::theme::NanTheme{"showcase_warm"};
+        warm.palette().set(nandina::theme::NanColorRole::primary,          rgb(181, 99, 36),  rgb(255, 183, 126));
+        warm.palette().set(nandina::theme::NanColorRole::onPrimary,        rgb(255, 255, 255),rgb(78, 35, 0));
+        warm.palette().set(nandina::theme::NanColorRole::primaryContainer, rgb(255, 220, 196),rgb(107, 56, 10));
+        warm.palette().set(nandina::theme::NanColorRole::onPrimaryContainer,rgb(60, 22, 0),   rgb(255, 220, 196));
+        warm.palette().set(nandina::theme::NanColorRole::surface,          rgb(250, 244, 236),rgb(35, 29, 26));
+        warm.palette().set(nandina::theme::NanColorRole::onSurface,        rgb(43, 36, 33),  rgb(236, 225, 219));
+        warm.palette().set(nandina::theme::NanColorRole::surfaceVariant,   rgb(231, 220, 211),rgb(80, 69, 63));
+        warm.palette().set(nandina::theme::NanColorRole::onSurfaceVariant, rgb(79, 68, 61),  rgb(210, 196, 188));
+        warm.palette().set(nandina::theme::NanColorRole::background,       rgb(255, 248, 242),rgb(27, 22, 20));
+        warm.palette().set(nandina::theme::NanColorRole::onBackground,     rgb(32, 27, 24),  rgb(236, 225, 219));
+        warm.palette().set(nandina::theme::NanColorRole::outline,          rgb(134, 114, 101),rgb(161, 141, 128));
+        warm.palette().set(nandina::theme::NanColorRole::outlineVariant,   rgb(215, 201, 192),rgb(80, 69, 63));
+        nandina::theme::ThemeManager::instance().register_theme(std::move(warm));
+    }
+
+    nandina::theme::ThemeManager::Connection conn_;
+    bool pending_rebuild_{false};
+};
 
 struct SandboxRootFixture {
     std::unique_ptr<nandina::showcase::SandboxPage> page;
     nandina::app::NanComponent::Ptr component;
+};
+
+class ScopedShowcaseThemeReset final {
+public:
+    ScopedShowcaseThemeReset()
+        : mgr_(nandina::theme::ThemeManager::instance())
+        , active_name_(mgr_.active_name())
+        , scheme_(mgr_.scheme()) {
+    }
+
+    ~ScopedShowcaseThemeReset() {
+        mgr_.activate(active_name_);
+        mgr_.set_scheme(scheme_);
+    }
+
+private:
+    nandina::theme::ThemeManager& mgr_;
+    std::string active_name_;
+    nandina::theme::NanColorScheme scheme_;
 };
 
 auto make_sandbox_root() -> SandboxRootFixture {
@@ -247,6 +322,32 @@ TEST(ShowcaseLayoutTest, ShowcaseShellPlacesSidebarOnLeftAndPageHostOnRight) {
     EXPECT_FLOAT_EQ(content_bounds.y(), 0.0f);
     EXPECT_FLOAT_EQ(content_bounds.width(), 1020.0f);
     EXPECT_FLOAT_EQ(content_bounds.height(), 720.0f);
+}
+
+TEST(ShowcaseLayoutTest, MainWindowRebuildsShowcaseShellAfterThemeChange) {
+    ScopedShowcaseThemeReset theme_reset;
+
+    auto& mgr = nandina::theme::ThemeManager::instance();
+    mgr.activate("default");
+    mgr.set_scheme(nandina::theme::NanColorScheme::light);
+
+    ThemeTestWindow window;
+
+    // Verify the initial shell builds and renders without crashing
+    ThorvgCanvasScope scope1{1280u, 720u};
+    window.draw_once(scope1.canvas());
+    scope1.render();
+    SUCCEED();
+
+    // Switch to warm theme — should trigger deferred rebuild in on_update
+    ASSERT_TRUE(mgr.activate("showcase_warm"));
+    window.update_once(0.016);
+
+    // Verify the rebuilt shell still renders without crashing
+    ThorvgCanvasScope scope2{1280u, 720u};
+    window.draw_once(scope2.canvas());
+    scope2.render();
+    SUCCEED();
 }
 
 TEST(ShowcaseLayoutTest, MainPagePanelAndCardContentDoNotStackOnSameBounds) {

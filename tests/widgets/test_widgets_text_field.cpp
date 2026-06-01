@@ -6,14 +6,14 @@ import nandina.foundation.color;
 import nandina.runtime.nan_event;
 import nandina.theme;
 import nandina.widgets.focus_ring;
-import nandina.widgets.label;
+import nandina.widgets.text;
 import nandina.widgets.text_field;
 
 namespace {
 
-auto find_internal_label(nandina::widgets::TextField& text_field) -> nandina::widgets::Label* {
+auto find_internal_label(nandina::widgets::TextField& text_field) -> nandina::widgets::Text* {
     for (auto& child : text_field.children()) {
-        auto* label = dynamic_cast<nandina::widgets::Label*>(child.get());
+        auto* label = dynamic_cast<nandina::widgets::Text*>(child.get());
         if (label) {
             return label;
         }
@@ -219,6 +219,52 @@ TEST(WidgetsTextFieldTest, MultipleTextInputsAccumulateCorrectly) {
     EXPECT_EQ(text_field->value(), "hello");
 }
 
+TEST(WidgetsTextFieldTest, ColorVariantSelectsSemanticInputFamily) {
+    auto saved = nandina::theme::NanStylePrimitives::current();
+    auto style = nandina::theme::NanStylePrimitives::default_style();
+    style.input.secondary_family.bg = nandina::NanColor::from(nandina::NanRgb{10, 20, 30});
+    style.input.secondary_family.border = nandina::NanColor::from(nandina::NanRgb{40, 50, 60});
+    style.input.secondary_family.border_focus = nandina::NanColor::from(nandina::NanRgb{70, 80, 90});
+    style.input.secondary_family.font_color = nandina::NanColor::from(nandina::NanRgb{15, 25, 35});
+    style.input.destructive_family.placeholder_font_color = nandina::NanColor::from(nandina::NanRgb{101, 102, 103});
+    nandina::theme::NanStylePrimitives::set_current(style);
+
+    auto text_field = nandina::widgets::TextField::create();
+    auto* label = find_internal_label(*text_field);
+    ASSERT_NE(label, nullptr);
+
+    text_field->set_value("accent");
+    text_field->color_variant(nandina::theme::ColorVariant::secondary);
+    auto bg = text_field->bg_color().to<nandina::NanRgb>();
+    auto border = text_field->border_color().to<nandina::NanRgb>();
+    auto text = label->color().to<nandina::NanRgb>();
+    EXPECT_EQ(bg.red(), 10u);
+    EXPECT_EQ(bg.green(), 20u);
+    EXPECT_EQ(bg.blue(), 30u);
+    EXPECT_EQ(border.red(), 40u);
+    EXPECT_EQ(border.green(), 50u);
+    EXPECT_EQ(border.blue(), 60u);
+    EXPECT_EQ(text.red(), 15u);
+    EXPECT_EQ(text.green(), 25u);
+    EXPECT_EQ(text.blue(), 35u);
+
+    EXPECT_TRUE(text_field->dispatch_event(nandina::runtime::FocusEvent{.got_focus = true}));
+    border = text_field->border_color().to<nandina::NanRgb>();
+    EXPECT_EQ(border.red(), 70u);
+    EXPECT_EQ(border.green(), 80u);
+    EXPECT_EQ(border.blue(), 90u);
+
+    text_field->set_value("");
+    text_field->set_placeholder("Danger");
+    text_field->color_variant(nandina::theme::ColorVariant::destructive);
+    text = label->color().to<nandina::NanRgb>();
+    EXPECT_EQ(text.red(), 101u);
+    EXPECT_EQ(text.green(), 102u);
+    EXPECT_EQ(text.blue(), 103u);
+
+    nandina::theme::NanStylePrimitives::set_current(saved);
+}
+
 TEST(WidgetsTextFieldTest, PointerDownMovesCaretToClickedPosition) {
     auto text_field = nandina::widgets::TextField::create();
     text_field->set_value("abcd");
@@ -385,6 +431,88 @@ TEST(WidgetsTextFieldTest, DoubleClickAtCaretBoundaryDoesNotSelectAdjacentWord) 
     EXPECT_EQ(text_field->value(), "heXllo");
 }
 
+TEST(WidgetsTextFieldTest, TripleClickDoesNotReuseDoubleClickWordSelection) {
+    auto text_field = nandina::widgets::TextField::create();
+    text_field->set_value("hello world");
+    text_field->set_bounds(0.0f, 0.0f, 320.0f, 40.0f);
+    text_field->layout();
+
+    auto* label = find_internal_label(*text_field);
+    ASSERT_NE(label, nullptr);
+
+    const float click_x = text_field->padding().left() + label->font().estimate_text_width("hello wo") + 1.0f;
+    EXPECT_TRUE(text_field->dispatch_event(
+        nandina::runtime::PointerButtonEvent{
+            .button = nandina::types::PointerButton::Left,
+            .x = click_x,
+            .y = 20.0,
+            .click_count = 2,
+            .is_repeat = false,
+        },
+        nandina::runtime::EventType::PointerDown));
+    EXPECT_TRUE(text_field->dispatch_event(
+        nandina::runtime::PointerButtonEvent{
+            .button = nandina::types::PointerButton::Left,
+            .x = click_x,
+            .y = 20.0,
+            .click_count = 3,
+            .is_repeat = false,
+        },
+        nandina::runtime::EventType::PointerDown));
+    EXPECT_TRUE(text_field->dispatch_event(nandina::runtime::TextInputEvent{.text = "X"}));
+
+    EXPECT_EQ(text_field->value(), "hello woXrld");
+}
+
+TEST(WidgetsTextFieldTest, DragBeyondRightEdgeKeepsCaretVisibleUntilPointerUp) {
+    auto text_field = nandina::widgets::TextField::create();
+    text_field->set_value("a brown quick fox jump to a lazy dog.");
+    text_field->set_bounds(0.0f, 0.0f, 120.0f, 40.0f);
+    text_field->layout();
+
+    auto* label = find_internal_label(*text_field);
+    ASSERT_NE(label, nullptr);
+
+    const float start_x = text_field->padding().left() + label->font().estimate_text_width("a") + 1.0f;
+    const float drag_x = 360.0f;
+
+    EXPECT_TRUE(text_field->dispatch_event(
+        nandina::runtime::PointerButtonEvent{
+            .button = nandina::types::PointerButton::Left,
+            .x = start_x,
+            .y = 20.0,
+            .is_repeat = false,
+        },
+        nandina::runtime::EventType::PointerDown));
+    for (int i = 0; i < 6; ++i) {
+        EXPECT_TRUE(text_field->dispatch_event(nandina::runtime::PointerMoveEvent{
+            .x = drag_x,
+            .y = 20.0,
+            .delta_x = drag_x - start_x,
+            .delta_y = 0.0,
+        }));
+    }
+
+    const auto area = text_field->text_input_area();
+    ASSERT_TRUE(area.has_value());
+    EXPECT_LE(static_cast<float>(area->cursor), area->rect.width() + 1.0f);
+
+    EXPECT_TRUE(text_field->dispatch_event(
+        nandina::runtime::PointerButtonEvent{
+            .button = nandina::types::PointerButton::Left,
+            .x = drag_x,
+            .y = 20.0,
+            .is_repeat = false,
+        },
+        nandina::runtime::EventType::PointerUp));
+    EXPECT_FALSE(text_field->dispatch_event(nandina::runtime::PointerMoveEvent{
+        .x = drag_x,
+        .y = 20.0,
+        .delta_x = 0.0,
+        .delta_y = 0.0,
+    }));
+}
+
 TEST(WidgetsTextFieldTest, TextEditingShowsPreeditBeforeCommit) {
     auto text_field = nandina::widgets::TextField::create();
     auto* label = find_internal_label(*text_field);
@@ -426,4 +554,25 @@ TEST(WidgetsTextFieldTest, FocusedTextFieldExposesTextInputAreaWithCaretOffset) 
         static_cast<float>(area->cursor),
         label->font().estimate_text_width("hello"),
         2.0f);
+}
+
+TEST(WidgetsTextFieldTest, LongSingleLineKeepsCaretWithinVisibleInputArea) {
+    auto text_field = nandina::widgets::TextField::create();
+    text_field->set_value("a brown quick fox jump to a lazy dog.");
+    text_field->set_bounds(0.0f, 0.0f, 120.0f, 40.0f);
+    text_field->layout();
+
+    EXPECT_TRUE(text_field->dispatch_event(nandina::runtime::FocusEvent{.got_focus = true}));
+
+    const auto area = text_field->text_input_area();
+    ASSERT_TRUE(area.has_value());
+    EXPECT_GE(area->cursor, 0);
+    EXPECT_LE(static_cast<float>(area->cursor), area->rect.width() + 1.0f);
+
+    EXPECT_TRUE(text_field->dispatch_event(
+        nandina::runtime::KeyEvent{.key_code = SDLK_HOME, .is_repeat = false},
+        nandina::runtime::EventType::KeyDown));
+    const auto home_area = text_field->text_input_area();
+    ASSERT_TRUE(home_area.has_value());
+    EXPECT_LE(home_area->cursor, 1);
 }

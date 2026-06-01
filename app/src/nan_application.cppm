@@ -56,10 +56,12 @@ import nandina.widgets.card;
 import nandina.widgets.icon;
 import nandina.widgets.label;
 import nandina.widgets.panel;
+import nandina.widgets.progressbar;
 import nandina.widgets.sidebar;
 import nandina.widgets.sidebar_group;
 import nandina.widgets.sidebar_menu_button;
 import nandina.widgets.surface;
+import nandina.widgets.tag;
 import nandina.widgets.text_field;
 import nandina.widgets.field;
 import nandina.theme;
@@ -87,9 +89,11 @@ export namespace nandina::app {
     class Node;
     class Children;
     class LabelNode;
+    class TagNode;
     class ButtonNode;
     class TextFieldNode;
     class FieldNode;
+    class ProgressBarNode;
     class SidebarMenuButtonNode;
     template<typename W>
     class WidgetNode;
@@ -100,11 +104,15 @@ export namespace nandina::app {
 
     [[nodiscard]] inline auto label(std::string_view text = {}) -> LabelNode;
 
+    [[nodiscard]] inline auto tag(std::string_view text = {}) -> TagNode;
+
     [[nodiscard]] inline auto button(std::string_view text = {}) -> ButtonNode;
 
     [[nodiscard]] inline auto text_field() -> TextFieldNode;
 
     [[nodiscard]] inline auto field() -> FieldNode;
+
+    [[nodiscard]] inline auto progress_bar() -> ProgressBarNode;
 
     [[nodiscard]] inline auto sidebar_menu_button(std::string_view text = {}) -> SidebarMenuButtonNode;
 
@@ -758,6 +766,13 @@ export namespace nandina::app {
 
         template<typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, LabelNode>
+        auto typography_role(this Self &&self, const nandina::theme::NanTypographyRole value) -> Self&& {
+            self.m_typed->set_typography_role(value);
+            return std::forward<Self>(self);
+        }
+
+        template<typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, LabelNode>
         auto align(this Self &&self, const nandina::widgets::TextAlign value) -> Self&& {
             self.m_typed->set_align(value);
             return std::forward<Self>(self);
@@ -804,8 +819,6 @@ export namespace nandina::app {
             return std::forward<Self>(self);
         }
 
-        // ── getter ──────────────────────────────────────────────────────────
-
         [[nodiscard]] auto text() const -> const std::string& {
             return m_typed->text();
         }
@@ -814,11 +827,6 @@ export namespace nandina::app {
             return m_typed->font();
         }
 
-        // ── setter ──────────────────────────────────────────────────────────
-
-        /// font(NanFont) — 替换整个字体配置。
-        ///
-        /// 示例：button("提交").font(NanFont{}.size(14).weight(NanFontWeight::medium))
         template<typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, ButtonNode>
         auto font(this Self &&self, nandina::text::NanFont font_config) -> Self&& {
@@ -826,11 +834,6 @@ export namespace nandina::app {
             return std::forward<Self>(self);
         }
 
-        /// font(Fn) — 局部更新字体属性；Fn: (NanFont&) -> void
-        ///
-        /// 示例：
-        ///   button("+").font([](auto& f){ f.size(18).weight(NanFontWeight::bold); })
-        ///   button("OK").font([](auto& f){ f.size(f.size() + 2); })  // 在现有基础上调整
         template<typename Self, typename Fn>
             requires std::derived_from<std::remove_cvref_t<Self>, ButtonNode>
                      && std::invocable<Fn, nandina::text::NanFont &>
@@ -845,6 +848,7 @@ export namespace nandina::app {
         template<typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, ButtonNode>
         auto button_style(this Self &&self, const theme::NanButtonStyle &style) -> Self&& {
+            self.m_typed->color_variant(style.color_variant);
             self.m_typed->variant(style.variant);
             self.m_typed->size(style.size);
 
@@ -869,6 +873,48 @@ export namespace nandina::app {
             requires std::derived_from<std::remove_cvref_t<Self>, ButtonNode>
         auto size(this Self &&self, nandina::widgets::ButtonSize value) -> Self&& {
             self.m_typed->size(value);
+            return std::forward<Self>(self);
+        }
+
+        template<typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, ButtonNode>
+        auto color_variant(this Self &&self, nandina::theme::ColorVariant value) -> Self&& {
+            self.m_typed->color_variant(value);
+            return std::forward<Self>(self);
+        }
+
+        template<typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, ButtonNode>
+        auto icon(this Self &&self, nandina::widgets::IconType value) -> Self&& {
+            self.m_typed->icon(value);
+            return std::forward<Self>(self);
+        }
+
+        template<typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, ButtonNode>
+        auto icon_left(this Self &&self, nandina::widgets::IconType value) -> Self&& {
+            self.m_typed->icon_left(value);
+            return std::forward<Self>(self);
+        }
+
+        template<typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, ButtonNode>
+        auto icon_right(this Self &&self, nandina::widgets::IconType value) -> Self&& {
+            self.m_typed->icon_right(value);
+            return std::forward<Self>(self);
+        }
+
+        template<typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, ButtonNode>
+        auto disabled(this Self &&self, bool value) -> Self&& {
+            self.m_typed->disabled(value);
+            return std::forward<Self>(self);
+        }
+
+        template<typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, ButtonNode>
+        auto loading(this Self &&self, bool value) -> Self&& {
+            self.m_typed->loading(value);
             return std::forward<Self>(self);
         }
 
@@ -904,6 +950,81 @@ export namespace nandina::app {
             requires std::derived_from<std::remove_cvref_t<Self>, ButtonNode>
         auto on_leave(this Self &&self, std::function<void()> handler) -> Self&& {
             self.m_typed->on_leave(std::move(handler));
+            return std::forward<Self>(self);
+        }
+    };
+
+    class TagNode : public WidgetNode<nandina::widgets::Tag> {
+    public:
+        using Node::size;
+
+        explicit TagNode(nandina::widgets::Tag::Ptr widget)
+            : WidgetNode<nandina::widgets::Tag>(std::move(widget)) {
+        }
+
+        template<typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, TagNode>
+        auto text(this Self &&self, std::string_view value) -> Self&& {
+            self.m_typed->text(value);
+            return std::forward<Self>(self);
+        }
+
+        [[nodiscard]] auto text() const -> const std::string& {
+            return m_typed->text();
+        }
+
+        [[nodiscard]] auto font() const -> const nandina::text::NanFont& {
+            return m_typed->font();
+        }
+
+        [[nodiscard]] auto disabled() const -> bool {
+            return m_typed->disabled();
+        }
+
+        [[nodiscard]] auto color_variant() const -> nandina::theme::ColorVariant {
+            return m_typed->color_variant();
+        }
+
+        [[nodiscard]] auto tag_size() const -> nandina::widgets::TagSize {
+            return m_typed->size();
+        }
+
+        template<typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, TagNode>
+        auto font(this Self &&self, nandina::text::NanFont font_config) -> Self&& {
+            self.m_typed->font(std::move(font_config));
+            return std::forward<Self>(self);
+        }
+
+        template<typename Self, typename Fn>
+            requires std::derived_from<std::remove_cvref_t<Self>, TagNode>
+                     && std::invocable<Fn, nandina::text::NanFont &>
+                     && (!std::convertible_to<std::remove_cvref_t<Fn>, nandina::text::NanFont>)
+        auto font(this Self &&self, Fn &&fn) -> Self&& {
+            auto updated = self.m_typed->font();
+            std::invoke(std::forward<Fn>(fn), updated);
+            self.m_typed->font(std::move(updated));
+            return std::forward<Self>(self);
+        }
+
+        template<typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, TagNode>
+        auto size(this Self &&self, const nandina::widgets::TagSize value) -> Self&& {
+            self.m_typed->size(value);
+            return std::forward<Self>(self);
+        }
+
+        template<typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, TagNode>
+        auto color_variant(this Self &&self, const nandina::theme::ColorVariant value) -> Self&& {
+            self.m_typed->color_variant(value);
+            return std::forward<Self>(self);
+        }
+
+        template<typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, TagNode>
+        auto disabled(this Self &&self, const bool value) -> Self&& {
+            self.m_typed->disabled(value);
             return std::forward<Self>(self);
         }
     };
@@ -969,6 +1090,13 @@ export namespace nandina::app {
             requires std::derived_from<std::remove_cvref_t<Self>, TextFieldNode>
         auto invalid(this Self &&self, bool v) -> Self&& {
             self.m_typed->set_invalid(v);
+            return std::forward<Self>(self);
+        }
+
+        template<typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, TextFieldNode>
+        auto color_variant(this Self &&self, nandina::theme::ColorVariant v) -> Self&& {
+            self.m_typed->color_variant(v);
             return std::forward<Self>(self);
         }
 
@@ -1064,6 +1192,13 @@ export namespace nandina::app {
             return std::forward<Self>(self);
         }
 
+        template<typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, FieldNode>
+        auto color_variant(this Self &&self, nandina::theme::ColorVariant v) -> Self&& {
+            self.m_typed->set_color_variant(v);
+            return std::forward<Self>(self);
+        }
+
         // ── control ────────────────────────────────────────────────────────
         //
         // 接收一个 NodeLike 作为输入控件，提取其底层 widget 所有权并注入 Field。
@@ -1123,6 +1258,13 @@ export namespace nandina::app {
             return std::forward<Self>(self);
         }
 
+        template<typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, SidebarMenuButtonNode>
+        auto color_variant(this Self &&self, nandina::theme::ColorVariant value) -> Self&& {
+            self.m_typed->color_variant(value);
+            return std::forward<Self>(self);
+        }
+
         // ── active_changed 回调───────────────────────────────────────
         template<typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, SidebarMenuButtonNode>
@@ -1162,6 +1304,55 @@ export namespace nandina::app {
         // ── 隐式转换 — 支持直接传入 SidebarGroup::add_child(NanWidget::Ptr) ──
         operator nandina::runtime::NanWidget::Ptr() && {
             return static_cast<Node &&>(*this).take_widget();
+        }
+    };
+
+    class ProgressBarNode : public WidgetNode<nandina::widgets::ProgressBar> {
+    public:
+        explicit ProgressBarNode(nandina::widgets::ProgressBar::Ptr widget)
+            : WidgetNode<nandina::widgets::ProgressBar>(std::move(widget)) {
+        }
+
+        template<typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, ProgressBarNode>
+        auto progress(this Self &&self, float value) -> Self&& {
+            self.m_typed->set_progress(value);
+            return std::forward<Self>(self);
+        }
+
+        template<typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, ProgressBarNode>
+        auto color_variant(this Self &&self, nandina::theme::ColorVariant value) -> Self&& {
+            self.m_typed->color_variant(value);
+            return std::forward<Self>(self);
+        }
+
+        template<typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, ProgressBarNode>
+        auto bar_color(this Self &&self, const nandina::NanColor& value) -> Self&& {
+            self.m_typed->set_bar_color(value);
+            return std::forward<Self>(self);
+        }
+
+        template<typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, ProgressBarNode>
+        auto track_color(this Self &&self, const nandina::NanColor& value) -> Self&& {
+            self.m_typed->set_track_color(value);
+            return std::forward<Self>(self);
+        }
+
+        template<typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, ProgressBarNode>
+        auto bar_height(this Self &&self, float value) -> Self&& {
+            self.m_typed->set_bar_height(value);
+            return std::forward<Self>(self);
+        }
+
+        template<typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, ProgressBarNode>
+        auto corner_radius(this Self &&self, float value) -> Self&& {
+            self.m_typed->set_corner_radius(value);
+            return std::forward<Self>(self);
         }
     };
 
@@ -1442,6 +1633,12 @@ export namespace nandina::app {
         return LabelNode{std::move(w)};
     }
 
+    [[nodiscard]] inline auto tag(std::string_view text) -> TagNode {
+        auto w = nandina::widgets::Tag::create();
+        if (!text.empty()) w->text(text);
+        return TagNode{std::move(w)};
+    }
+
     /** @brief 创建 Button 节点 */
     [[nodiscard]] inline auto button(std::string_view text) -> ButtonNode {
         auto w = nandina::widgets::Button::create();
@@ -1457,6 +1654,10 @@ export namespace nandina::app {
     /** @brief 创建 Field 节点 */
     [[nodiscard]] inline auto field() -> FieldNode {
         return FieldNode{nandina::widgets::Field::create()};
+    }
+
+    [[nodiscard]] inline auto progress_bar() -> ProgressBarNode {
+        return ProgressBarNode(nandina::widgets::ProgressBar::create());
     }
 
     // ── 容器组件 ──────────────────────────────────────────────────────
@@ -1722,6 +1923,7 @@ export namespace nandina::app {
         auto on_window_focus_lost() -> void {
             clear_hover_target(runtime::PointerMoveEvent{});
             clear_focus_target();
+            m_pointer_capture_widget = nullptr;
             sync_focused_text_input_area();
         }
 
@@ -1835,6 +2037,7 @@ export namespace nandina::app {
         NanComponent::Ptr m_root_component{nullptr};
         runtime::NanWidget *m_hovered_widget{nullptr};
         runtime::NanWidget *m_focused_widget{nullptr};
+        runtime::NanWidget *m_pointer_capture_widget{nullptr};
         bool m_pending_root_bounds_sync{false};
 
         // ── 背景层（Surface 组件，非 widget 树成员） ──────
@@ -1885,7 +2088,9 @@ export namespace nandina::app {
                 auto *hit = m_owner.hit_test_root_component(
                     static_cast<float>(event.x), static_cast<float>(event.y));
                 const bool changed = m_owner.sync_hover_target(hit, event);
-                if (hit && !changed) {
+                if (m_owner.m_pointer_capture_widget) {
+                    m_owner.m_pointer_capture_widget->dispatch_event(event);
+                } else if (hit && !changed) {
                     hit->dispatch_event(event);
                 }
             }
@@ -1898,6 +2103,7 @@ export namespace nandina::app {
 
             void on_pointer_leave(const runtime::PointerMoveEvent &event) override {
                 m_owner.clear_hover_target(event);
+                m_owner.m_pointer_capture_widget = nullptr;
             }
 
             void on_pointer_down(const runtime::PointerButtonEvent &event) override {
@@ -1909,6 +2115,9 @@ export namespace nandina::app {
                 } else {
                     m_owner.clear_focus_target();
                 }
+                if (event.button == nandina::types::PointerButton::Left) {
+                    m_owner.m_pointer_capture_widget = hit;
+                }
                 if (hit) {
                     hit->dispatch_event(event, runtime::EventType::PointerDown);
                 }
@@ -1918,8 +2127,12 @@ export namespace nandina::app {
                 auto *hit = m_owner.hit_test_root_component(
                     static_cast<float>(event.x), static_cast<float>(event.y));
                 m_owner.sync_hover_target(hit, pointer_move_from_button(event));
-                if (hit) {
-                    hit->dispatch_event(event, runtime::EventType::PointerUp);
+                auto *target = m_owner.m_pointer_capture_widget ? m_owner.m_pointer_capture_widget : hit;
+                if (target) {
+                    target->dispatch_event(event, runtime::EventType::PointerUp);
+                }
+                if (event.button == nandina::types::PointerButton::Left) {
+                    m_owner.m_pointer_capture_widget = nullptr;
                 }
             }
 

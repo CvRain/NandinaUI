@@ -496,37 +496,11 @@ auto NanFont::glyph_advance(std::uint32_t codepoint) const noexcept -> float {
 }
 
 auto NanFont::estimate_text_width(std::string_view text) const noexcept -> float {
-    ensure_loaded();
-    if (!m_impl || !m_impl->ft_face || text.empty()) return 0.0f;
-
-    float total = 0.0f;
-    for (std::size_t i = 0; i < text.size(); ) {
-        std::uint32_t cp = 0;
-        unsigned char lead = static_cast<unsigned char>(text[i]);
-        int bytes = 0;
-
-        if (lead < 0x80) {
-            cp = lead; bytes = 1;
-        } else if ((lead & 0xE0) == 0xC0) {
-            if (i + 1 >= text.size()) break;
-            cp = ((lead & 0x1Fu) << 6u) | (static_cast<unsigned char>(text[i + 1]) & 0x3Fu);
-            bytes = 2;
-        } else if ((lead & 0xF0) == 0xE0) {
-            if (i + 2 >= text.size()) break;
-            cp = ((lead & 0x0Fu) << 12u) | ((static_cast<unsigned char>(text[i + 1]) & 0x3Fu) << 6u) | (static_cast<unsigned char>(text[i + 2]) & 0x3Fu);
-            bytes = 3;
-        } else if ((lead & 0xF8) == 0xF0) {
-            if (i + 3 >= text.size()) break;
-            cp = ((lead & 0x07u) << 18u) | ((static_cast<unsigned char>(text[i + 1]) & 0x3Fu) << 12u) | ((static_cast<unsigned char>(text[i + 2]) & 0x3Fu) << 6u) | (static_cast<unsigned char>(text[i + 3]) & 0x3Fu);
-            bytes = 4;
-        } else {
-            ++i; continue;
-        }
-
-        total += glyph_advance(cp);
-        i += static_cast<std::size_t>(bytes);
+    if (text.empty()) {
+        return 0.0f;
     }
-    return total;
+
+    return shape(text, 0.0f).total_width;
 }
 
 // ═══════════════════════════════════════════════════════════════

@@ -35,6 +35,14 @@ export namespace nandina::theme {
     // § ButtonVariant / ButtonSize — theme 层定义，widgets 导入复用
     // ═══════════════════════════════════════════════════════════════
 
+    enum class ColorVariant : std::uint8_t {
+        inherit,
+        primary,
+        secondary,
+        neutral,
+        destructive,
+    };
+
     enum class ButtonVariant : std::uint8_t {
         default_variant,
         secondary,
@@ -50,6 +58,21 @@ export namespace nandina::theme {
         md,
         lg,
         icon,
+    };
+
+    enum class TagSize : std::uint8_t {
+        sm,
+        md,
+        lg,
+    };
+
+    struct NanTextStyle {
+        float               font_size{14.0f};
+        text::NanFontWeight font_weight{text::NanFontWeight::regular};
+        NanColor            font_color{NanColor::from(NanRgb{30, 30, 46})};
+        text::TextOverflow  overflow{text::TextOverflow::wrap};
+        bool                single_line{false};
+        int                 max_lines{0};
     };
 
     // ═══════════════════════════════════════════════════════════════
@@ -95,6 +118,15 @@ export namespace nandina::theme {
             bool square{false};
         };
 
+        struct ColorFamilyStyle {
+            PresetStyle filled{};
+            PresetStyle tonal{};
+            PresetStyle outlined{};
+            PresetStyle ghost{};
+            PresetStyle destructive{};
+            PresetStyle link{};
+        };
+
         float           font_size{14.0f};
         text::NanFontWeight font_weight{text::NanFontWeight::medium};
         NanColor        font_color{NanColor::from(NanRgb{255, 255, 255})};
@@ -102,8 +134,48 @@ export namespace nandina::theme {
         bool            single_line{true};
         float           corner_radius{6.0f};
 
+        ColorVariant    color_variant{ColorVariant::inherit};
         ButtonVariant   variant{ButtonVariant::default_variant};
         ButtonSize      size{ButtonSize::md};
+
+        ColorFamilyStyle primary_family{
+            .filled = PresetStyle{},
+            .tonal = PresetStyle{
+                .bg = NanColor::from(NanRgb{230, 232, 250}),
+                .bg_hover = NanColor::from(NanRgb{210, 213, 242}),
+                .bg_pressed = NanColor::from(NanRgb{190, 193, 230}),
+                .bg_disabled = NanColor::from(NanRgb{230, 232, 250}),
+                .text = NanColor::from(NanRgb{69, 72, 200}),
+                .text_disabled = NanColor::from(NanRgb{160, 163, 200}),
+            },
+            .outlined = PresetStyle{
+                .bg = NanColor::from(NanRgb{255, 255, 255}),
+                .bg_hover = NanColor::from(NanRgb{230, 232, 250}),
+                .bg_pressed = NanColor::from(NanRgb{210, 213, 242}),
+                .bg_disabled = NanColor::from(NanRgb{255, 255, 255}),
+                .text = NanColor::from(NanRgb{69, 72, 200}),
+                .text_disabled = NanColor::from(NanRgb{160, 163, 200}),
+                .border = NanColor::from(NanRgb{99, 102, 241}),
+                .border_width = 1.0f,
+            },
+            .ghost = PresetStyle{
+                .bg = NanColor::from(NanRgb{0, 0, 0, 0}),
+                .bg_hover = NanColor::from(NanRgb{230, 232, 250}),
+                .bg_pressed = NanColor::from(NanRgb{210, 213, 242}),
+                .bg_disabled = NanColor::from(NanRgb{0, 0, 0, 0}),
+                .text = NanColor::from(NanRgb{69, 72, 200}),
+                .text_disabled = NanColor::from(NanRgb{160, 163, 200}),
+            },
+            .destructive = PresetStyle{},
+            .link = PresetStyle{
+                .bg = NanColor::from(NanRgb{0, 0, 0, 0}),
+                .bg_hover = NanColor::from(NanRgb{0, 0, 0, 0}),
+                .bg_pressed = NanColor::from(NanRgb{0, 0, 0, 0}),
+                .bg_disabled = NanColor::from(NanRgb{0, 0, 0, 0}),
+                .text = NanColor::from(NanRgb{69, 72, 200}),
+                .text_disabled = NanColor::from(NanRgb{160, 163, 200}),
+            },
+        };
 
         PresetStyle filled{};
         PresetStyle tonal{
@@ -147,6 +219,163 @@ export namespace nandina::theme {
             .bg_disabled = NanColor::from(NanRgb{0, 0, 0, 0}),
             .text = NanColor::from(NanRgb{69, 72, 200}),
             .text_disabled = NanColor::from(NanRgb{160, 163, 200}),
+        };
+
+        ColorFamilyStyle secondary_family{
+            .filled = PresetStyle{
+                .bg = NanColor::from(NanRgb{114, 135, 253}),
+                .bg_hover = NanColor::from(NanRgb{142, 161, 255}),
+                .bg_pressed = NanColor::from(NanRgb{96, 114, 230}),
+                .bg_disabled = NanColor::from(NanRgb{198, 206, 255}),
+                .text = NanColor::from(NanRgb{255, 255, 255}),
+                .text_disabled = NanColor::from(NanRgb{160, 163, 200}),
+            },
+            .tonal = PresetStyle{
+                .bg = NanColor::from(NanRgb{223, 229, 255}),
+                .bg_hover = NanColor::from(NanRgb{204, 213, 255}),
+                .bg_pressed = NanColor::from(NanRgb{184, 195, 248}),
+                .bg_disabled = NanColor::from(NanRgb{223, 229, 255}),
+                .text = NanColor::from(NanRgb{66, 84, 186}),
+                .text_disabled = NanColor::from(NanRgb{160, 163, 200}),
+            },
+            .outlined = PresetStyle{
+                .bg = NanColor::from(NanRgb{255, 255, 255}),
+                .bg_hover = NanColor::from(NanRgb{235, 239, 255}),
+                .bg_pressed = NanColor::from(NanRgb{223, 229, 255}),
+                .bg_disabled = NanColor::from(NanRgb{255, 255, 255}),
+                .text = NanColor::from(NanRgb{66, 84, 186}),
+                .text_disabled = NanColor::from(NanRgb{160, 163, 200}),
+                .border = NanColor::from(NanRgb{114, 135, 253}),
+                .border_width = 1.0f,
+            },
+            .ghost = PresetStyle{
+                .bg = NanColor::from(NanRgb{0, 0, 0, 0}),
+                .bg_hover = NanColor::from(NanRgb{235, 239, 255}),
+                .bg_pressed = NanColor::from(NanRgb{223, 229, 255}),
+                .bg_disabled = NanColor::from(NanRgb{0, 0, 0, 0}),
+                .text = NanColor::from(NanRgb{66, 84, 186}),
+                .text_disabled = NanColor::from(NanRgb{160, 163, 200}),
+            },
+            .destructive = PresetStyle{
+                .bg = NanColor::from(NanRgb{114, 135, 253}),
+                .bg_hover = NanColor::from(NanRgb{142, 161, 255}),
+                .bg_pressed = NanColor::from(NanRgb{96, 114, 230}),
+                .bg_disabled = NanColor::from(NanRgb{198, 206, 255}),
+                .text = NanColor::from(NanRgb{255, 255, 255}),
+                .text_disabled = NanColor::from(NanRgb{160, 163, 200}),
+            },
+            .link = PresetStyle{
+                .bg = NanColor::from(NanRgb{0, 0, 0, 0}),
+                .bg_hover = NanColor::from(NanRgb{0, 0, 0, 0}),
+                .bg_pressed = NanColor::from(NanRgb{0, 0, 0, 0}),
+                .bg_disabled = NanColor::from(NanRgb{0, 0, 0, 0}),
+                .text = NanColor::from(NanRgb{66, 84, 186}),
+                .text_disabled = NanColor::from(NanRgb{160, 163, 200}),
+            },
+        };
+        ColorFamilyStyle neutral_family{
+            .filled = PresetStyle{
+                .bg = NanColor::from(NanRgb{92, 95, 119}),
+                .bg_hover = NanColor::from(NanRgb{108, 111, 133}),
+                .bg_pressed = NanColor::from(NanRgb{76, 79, 105}),
+                .bg_disabled = NanColor::from(NanRgb{204, 207, 220}),
+                .text = NanColor::from(NanRgb{255, 255, 255}),
+                .text_disabled = NanColor::from(NanRgb{154, 157, 180}),
+            },
+            .tonal = PresetStyle{
+                .bg = NanColor::from(NanRgb{239, 241, 245}),
+                .bg_hover = NanColor::from(NanRgb{230, 233, 239}),
+                .bg_pressed = NanColor::from(NanRgb{220, 224, 232}),
+                .bg_disabled = NanColor::from(NanRgb{239, 241, 245}),
+                .text = NanColor::from(NanRgb{76, 79, 105}),
+                .text_disabled = NanColor::from(NanRgb{154, 157, 180}),
+            },
+            .outlined = PresetStyle{
+                .bg = NanColor::from(NanRgb{255, 255, 255}),
+                .bg_hover = NanColor::from(NanRgb{239, 241, 245}),
+                .bg_pressed = NanColor::from(NanRgb{230, 233, 239}),
+                .bg_disabled = NanColor::from(NanRgb{255, 255, 255}),
+                .text = NanColor::from(NanRgb{76, 79, 105}),
+                .text_disabled = NanColor::from(NanRgb{154, 157, 180}),
+                .border = NanColor::from(NanRgb{166, 173, 200}),
+                .border_width = 1.0f,
+            },
+            .ghost = PresetStyle{
+                .bg = NanColor::from(NanRgb{0, 0, 0, 0}),
+                .bg_hover = NanColor::from(NanRgb{239, 241, 245}),
+                .bg_pressed = NanColor::from(NanRgb{230, 233, 239}),
+                .bg_disabled = NanColor::from(NanRgb{0, 0, 0, 0}),
+                .text = NanColor::from(NanRgb{76, 79, 105}),
+                .text_disabled = NanColor::from(NanRgb{154, 157, 180}),
+            },
+            .destructive = PresetStyle{
+                .bg = NanColor::from(NanRgb{92, 95, 119}),
+                .bg_hover = NanColor::from(NanRgb{108, 111, 133}),
+                .bg_pressed = NanColor::from(NanRgb{76, 79, 105}),
+                .bg_disabled = NanColor::from(NanRgb{204, 207, 220}),
+                .text = NanColor::from(NanRgb{255, 255, 255}),
+                .text_disabled = NanColor::from(NanRgb{154, 157, 180}),
+            },
+            .link = PresetStyle{
+                .bg = NanColor::from(NanRgb{0, 0, 0, 0}),
+                .bg_hover = NanColor::from(NanRgb{0, 0, 0, 0}),
+                .bg_pressed = NanColor::from(NanRgb{0, 0, 0, 0}),
+                .bg_disabled = NanColor::from(NanRgb{0, 0, 0, 0}),
+                .text = NanColor::from(NanRgb{76, 79, 105}),
+                .text_disabled = NanColor::from(NanRgb{154, 157, 180}),
+            },
+        };
+        ColorFamilyStyle destructive_family{
+            .filled = PresetStyle{
+                .bg = NanColor::from(NanRgb{230, 69, 83}),
+                .bg_hover = NanColor::from(NanRgb{245, 90, 100}),
+                .bg_pressed = NanColor::from(NanRgb{200, 50, 65}),
+                .bg_disabled = NanColor::from(NanRgb{239, 184, 188}),
+                .text = NanColor::from(NanRgb{255, 255, 255}),
+                .text_disabled = NanColor::from(NanRgb{180, 160, 165}),
+            },
+            .tonal = PresetStyle{
+                .bg = NanColor::from(NanRgb{251, 225, 228}),
+                .bg_hover = NanColor::from(NanRgb{248, 205, 210}),
+                .bg_pressed = NanColor::from(NanRgb{243, 183, 190}),
+                .bg_disabled = NanColor::from(NanRgb{251, 225, 228}),
+                .text = NanColor::from(NanRgb{178, 47, 61}),
+                .text_disabled = NanColor::from(NanRgb{180, 160, 165}),
+            },
+            .outlined = PresetStyle{
+                .bg = NanColor::from(NanRgb{255, 255, 255}),
+                .bg_hover = NanColor::from(NanRgb{251, 225, 228}),
+                .bg_pressed = NanColor::from(NanRgb{248, 205, 210}),
+                .bg_disabled = NanColor::from(NanRgb{255, 255, 255}),
+                .text = NanColor::from(NanRgb{230, 69, 83}),
+                .text_disabled = NanColor::from(NanRgb{180, 160, 165}),
+                .border = NanColor::from(NanRgb{230, 69, 83}),
+                .border_width = 1.0f,
+            },
+            .ghost = PresetStyle{
+                .bg = NanColor::from(NanRgb{0, 0, 0, 0}),
+                .bg_hover = NanColor::from(NanRgb{251, 225, 228}),
+                .bg_pressed = NanColor::from(NanRgb{248, 205, 210}),
+                .bg_disabled = NanColor::from(NanRgb{0, 0, 0, 0}),
+                .text = NanColor::from(NanRgb{230, 69, 83}),
+                .text_disabled = NanColor::from(NanRgb{180, 160, 165}),
+            },
+            .destructive = PresetStyle{
+                .bg = NanColor::from(NanRgb{230, 69, 83}),
+                .bg_hover = NanColor::from(NanRgb{245, 90, 100}),
+                .bg_pressed = NanColor::from(NanRgb{200, 50, 65}),
+                .bg_disabled = NanColor::from(NanRgb{239, 184, 188}),
+                .text = NanColor::from(NanRgb{255, 255, 255}),
+                .text_disabled = NanColor::from(NanRgb{180, 160, 165}),
+            },
+            .link = PresetStyle{
+                .bg = NanColor::from(NanRgb{0, 0, 0, 0}),
+                .bg_hover = NanColor::from(NanRgb{0, 0, 0, 0}),
+                .bg_pressed = NanColor::from(NanRgb{0, 0, 0, 0}),
+                .bg_disabled = NanColor::from(NanRgb{0, 0, 0, 0}),
+                .text = NanColor::from(NanRgb{230, 69, 83}),
+                .text_disabled = NanColor::from(NanRgb{180, 160, 165}),
+            },
         };
 
         SizeStyle xs{
@@ -214,18 +443,120 @@ export namespace nandina::theme {
     };
 
     struct NanInputStyle {
+        struct ColorFamilyStyle {
+            NanColor font_color{NanColor::from(NanRgb{30, 30, 46})};
+            NanColor placeholder_font_color{NanColor::from(NanRgb{154, 157, 180})};
+            NanColor bg{NanColor::from(NanRgb{239, 241, 245})};
+            NanColor border{NanColor::from(NanRgb{204, 207, 220})};
+            NanColor border_focus{NanColor::from(NanRgb{99, 102, 241})};
+        };
+
         float           font_size{14.0f};
         text::NanFontWeight font_weight{text::NanFontWeight::regular};
         NanColor        font_color{NanColor::from(NanRgb{30, 30, 46})};
         float           placeholder_font_size{14.0f};
         NanColor        placeholder_font_color{NanColor::from(NanRgb{154, 157, 180})};
 
+        ColorVariant    color_variant{ColorVariant::inherit};
         NanColor bg{NanColor::from(NanRgb{239, 241, 245})};
         NanColor border{NanColor::from(NanRgb{204, 207, 220})};
         NanColor border_focus{NanColor::from(NanRgb{99, 102, 241})};
         float corner_radius{6.0f};
         float border_width{1.0f};
         geometry::NanInsets padding{12.0f, 10.0f, 12.0f, 10.0f};
+
+        ColorFamilyStyle secondary_family{
+            .font_color = NanColor::from(NanRgb{48, 52, 70}),
+            .placeholder_font_color = NanColor::from(NanRgb{114, 135, 253}),
+            .bg = NanColor::from(NanRgb{245, 247, 255}),
+            .border = NanColor::from(NanRgb{186, 198, 255}),
+            .border_focus = NanColor::from(NanRgb{114, 135, 253}),
+        };
+        ColorFamilyStyle neutral_family{
+            .font_color = NanColor::from(NanRgb{76, 79, 105}),
+            .placeholder_font_color = NanColor::from(NanRgb{154, 157, 180}),
+            .bg = NanColor::from(NanRgb{247, 248, 250}),
+            .border = NanColor::from(NanRgb{186, 194, 222}),
+            .border_focus = NanColor::from(NanRgb{92, 95, 119}),
+        };
+        ColorFamilyStyle destructive_family{
+            .font_color = NanColor::from(NanRgb{120, 36, 44}),
+            .placeholder_font_color = NanColor::from(NanRgb{210, 95, 106}),
+            .bg = NanColor::from(NanRgb{254, 242, 243}),
+            .border = NanColor::from(NanRgb{242, 170, 178}),
+            .border_focus = NanColor::from(NanRgb{230, 69, 83}),
+        };
+    };
+
+    struct NanTagStyle {
+        struct ColorFamilyStyle {
+            NanColor bg{NanColor::from(NanRgb{230, 232, 250})};
+            NanColor text{NanColor::from(NanRgb{69, 72, 200})};
+            NanColor border{NanColor::from(NanRgb{190, 193, 230})};
+            NanColor bg_disabled{NanColor::from(NanRgb{239, 241, 245})};
+            NanColor text_disabled{NanColor::from(NanRgb{154, 157, 180})};
+            NanColor border_disabled{NanColor::from(NanRgb{204, 207, 220})};
+        };
+
+        struct SizeStyle {
+            float font_size{12.0f};
+            float padding_h{10.0f};
+            float padding_v{4.0f};
+        };
+
+        float font_size{12.0f};
+        text::NanFontWeight font_weight{text::NanFontWeight::medium};
+        text::TextOverflow overflow{text::TextOverflow::ellipsis};
+        bool single_line{true};
+
+        ColorVariant color_variant{ColorVariant::inherit};
+        TagSize size{TagSize::md};
+        float corner_radius{999.0f};
+        float border_width{1.0f};
+
+        NanColor bg{NanColor::from(NanRgb{230, 232, 250})};
+        NanColor text{NanColor::from(NanRgb{69, 72, 200})};
+        NanColor border{NanColor::from(NanRgb{190, 193, 230})};
+        NanColor bg_disabled{NanColor::from(NanRgb{239, 241, 245})};
+        NanColor text_disabled{NanColor::from(NanRgb{154, 157, 180})};
+        NanColor border_disabled{NanColor::from(NanRgb{204, 207, 220})};
+
+        ColorFamilyStyle secondary_family{
+            .bg = NanColor::from(NanRgb{223, 229, 255}),
+            .text = NanColor::from(NanRgb{66, 84, 186}),
+            .border = NanColor::from(NanRgb{184, 195, 248}),
+            .bg_disabled = NanColor::from(NanRgb{239, 241, 245}),
+            .text_disabled = NanColor::from(NanRgb{154, 157, 180}),
+            .border_disabled = NanColor::from(NanRgb{204, 207, 220}),
+        };
+        ColorFamilyStyle neutral_family{
+            .bg = NanColor::from(NanRgb{247, 248, 250}),
+            .text = NanColor::from(NanRgb{76, 79, 105}),
+            .border = NanColor::from(NanRgb{215, 218, 228}),
+            .bg_disabled = NanColor::from(NanRgb{239, 241, 245}),
+            .text_disabled = NanColor::from(NanRgb{154, 157, 180}),
+            .border_disabled = NanColor::from(NanRgb{204, 207, 220}),
+        };
+        ColorFamilyStyle destructive_family{
+            .bg = NanColor::from(NanRgb{251, 225, 228}),
+            .text = NanColor::from(NanRgb{178, 47, 61}),
+            .border = NanColor::from(NanRgb{242, 170, 178}),
+            .bg_disabled = NanColor::from(NanRgb{239, 241, 245}),
+            .text_disabled = NanColor::from(NanRgb{154, 157, 180}),
+            .border_disabled = NanColor::from(NanRgb{204, 207, 220}),
+        };
+
+        SizeStyle sm{};
+        SizeStyle md{
+            .font_size = 12.0f,
+            .padding_h = 10.0f,
+            .padding_v = 4.0f,
+        };
+        SizeStyle lg{
+            .font_size = 14.0f,
+            .padding_h = 12.0f,
+            .padding_v = 6.0f,
+        };
     };
 
     struct NanFocusRingStyle {
@@ -239,10 +570,28 @@ export namespace nandina::theme {
     // ═══════════════════════════════════════════════════════════════
 
     struct NanProgressStyle {
+        struct ColorFamilyStyle {
+            NanColor track_bg{NanColor::from(NanRgb{226, 228, 240})};
+            NanColor fill{NanColor::from(NanRgb{99, 102, 241})};
+        };
+
+        ColorVariant color_variant{ColorVariant::inherit};
         NanColor track_bg{NanColor::from(NanRgb{226, 228, 240})};   // surface-variant
         NanColor fill{NanColor::from(NanRgb{99, 102, 241})};        // primary
         float corner_radius{4.0f};
         float bar_height{6.0f};
+        ColorFamilyStyle secondary_family{
+            .track_bg = NanColor::from(NanRgb{223, 229, 255}),
+            .fill = NanColor::from(NanRgb{114, 135, 253}),
+        };
+        ColorFamilyStyle neutral_family{
+            .track_bg = NanColor::from(NanRgb{230, 233, 239}),
+            .fill = NanColor::from(NanRgb{108, 111, 133}),
+        };
+        ColorFamilyStyle destructive_family{
+            .track_bg = NanColor::from(NanRgb{251, 225, 228}),
+            .fill = NanColor::from(NanRgb{230, 69, 83}),
+        };
     };
 
     // ═══════════════════════════════════════════════════════════════
@@ -264,11 +613,13 @@ export namespace nandina::theme {
      */
     struct NanStylePrimitives {
         // ── 组件样式 ──────────────────────────────────────
+        NanTextStyle      text;
         NanLabelStyle     label;
         NanButtonStyle    button;
         NanCardStyle      card;
         NanPanelStyle     panel;
         NanInputStyle     input;
+        NanTagStyle       tag;
         NanFocusRingStyle focus_ring;
         NanProgressStyle  progress;
 

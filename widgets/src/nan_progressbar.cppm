@@ -1,6 +1,7 @@
 module;
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <algorithm>
@@ -12,8 +13,11 @@ import nandina.runtime.nan_widget;
 import nandina.foundation.nan_size;
 import nandina.foundation.color;
 import nandina.reactive.prop;
+import nandina.theme.nan_style;
 
 export namespace nandina::widgets {
+
+    using ColorVariant = nandina::theme::ColorVariant;
 
     class ProgressBar : public runtime::NanWidget {
     public:
@@ -32,13 +36,26 @@ export namespace nandina::widgets {
         }
 
         auto set_bar_color(const nandina::NanColor& color) -> ProgressBar& {
+            m_explicit_bar_color = color;
             m_bar_color.set(color);
             mark_dirty();
             return *this;
         }
 
         auto set_track_color(const nandina::NanColor& color) -> ProgressBar& {
+            m_explicit_track_color = color;
             m_track_color.set(color);
+            mark_dirty();
+            return *this;
+        }
+
+        auto color_variant(ColorVariant value) -> ProgressBar& {
+            if (m_color_variant == value) {
+                return *this;
+            }
+
+            m_color_variant = value;
+            sync_visual_state();
             mark_dirty();
             return *this;
         }
@@ -57,6 +74,18 @@ export namespace nandina::widgets {
 
         [[nodiscard]] auto progress() const noexcept -> float {
             return m_progress.get();
+        }
+
+        [[nodiscard]] auto color_variant() const noexcept -> ColorVariant {
+            return m_color_variant;
+        }
+
+        [[nodiscard]] auto bar_color() const noexcept -> const nandina::NanColor& {
+            return m_bar_color.get();
+        }
+
+        [[nodiscard]] auto track_color() const noexcept -> const nandina::NanColor& {
+            return m_track_color.get();
         }
 
         [[nodiscard]] auto preferred_size() const noexcept -> geometry::NanSize override {
@@ -91,13 +120,55 @@ export namespace nandina::widgets {
         }
 
     private:
-        ProgressBar() = default;
+        struct ResolvedColors {
+            nandina::NanColor track;
+            nandina::NanColor fill;
+        };
+
+        ProgressBar() {
+            m_color_variant = nandina::theme::NanStylePrimitives::current().progress.color_variant;
+            sync_visual_state();
+        }
+
+        [[nodiscard]] auto resolved_colors() const -> ResolvedColors {
+            const auto& style = nandina::theme::NanStylePrimitives::current().progress;
+            const auto resolved_variant = m_color_variant == ColorVariant::inherit
+                ? ColorVariant::primary
+                : m_color_variant;
+
+            switch (resolved_variant) {
+            case ColorVariant::secondary:
+                return {.track = style.secondary_family.track_bg, .fill = style.secondary_family.fill};
+            case ColorVariant::neutral:
+                return {.track = style.neutral_family.track_bg, .fill = style.neutral_family.fill};
+            case ColorVariant::destructive:
+                return {.track = style.destructive_family.track_bg, .fill = style.destructive_family.fill};
+            case ColorVariant::primary:
+            case ColorVariant::inherit:
+                return {.track = style.track_bg, .fill = style.fill};
+            }
+
+            return {.track = style.track_bg, .fill = style.fill};
+        }
+
+        auto sync_visual_state() -> void {
+            const auto colors = resolved_colors();
+            if (!m_explicit_track_color.has_value()) {
+                m_track_color.set(colors.track);
+            }
+            if (!m_explicit_bar_color.has_value()) {
+                m_bar_color.set(colors.fill);
+            }
+        }
 
         reactive::Prop<float> m_progress{0.0f};
         reactive::Prop<float> m_bar_height{6.0f};
         reactive::Prop<float> m_corner_radius{3.0f};
         reactive::Prop<nandina::NanColor> m_bar_color{nandina::NanColor::from(nandina::NanRgb{99, 102, 241})};
         reactive::Prop<nandina::NanColor> m_track_color{nandina::NanColor::from(nandina::NanRgb{42, 44, 62})};
+        ColorVariant m_color_variant{ColorVariant::inherit};
+        std::optional<nandina::NanColor> m_explicit_bar_color;
+        std::optional<nandina::NanColor> m_explicit_track_color;
     };
 
 } // namespace nandina::widgets

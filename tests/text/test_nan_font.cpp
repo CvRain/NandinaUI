@@ -98,6 +98,13 @@ TEST(NanFontTest, EstimateTextWidth) {
     EXPECT_LT(w, 400.0f);
 }
 
+TEST(NanFontTest, EstimateTextWidthMatchesShapedWidth) {
+    auto font = NanFont{}.size(14.0f);
+
+    const auto layout = font.shape("afaad afdda");
+    EXPECT_NEAR(font.estimate_text_width("afaad afdda"), layout.total_width, 0.01f);
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // Shaping
 // ═══════════════════════════════════════════════════════════════════════════
