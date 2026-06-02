@@ -711,6 +711,24 @@ TEST(AppAuthoringTest, TagNodeForwardsSemanticProps) {
     EXPECT_TRUE(tag_ref->disabled());
 }
 
+TEST(AppAuthoringTest, CheckboxNodeForwardsSemanticProps) {
+    nandina::app::Ref<nandina::widgets::Checkbox> checkbox_ref;
+
+    auto mounted = nandina::app::mount(
+        nandina::app::checkbox("Accept terms")
+            .checked(true)
+            .size(nandina::widgets::CheckboxSize::sm)
+            .color_variant(nandina::theme::ColorVariant::secondary)
+            .bind(checkbox_ref));
+
+    ASSERT_NE(mounted, nullptr);
+    ASSERT_TRUE(checkbox_ref);
+    EXPECT_EQ(checkbox_ref->label(), "Accept terms");
+    EXPECT_TRUE(checkbox_ref->checked());
+    EXPECT_EQ(checkbox_ref->size(), nandina::widgets::CheckboxSize::sm);
+    EXPECT_EQ(checkbox_ref->color_variant(), nandina::theme::ColorVariant::secondary);
+}
+
 TEST(AppAuthoringTest, CardFactorySupportsTitleStylingAndChildRefs) {
     nandina::app::Ref<nandina::widgets::Card> card_ref;
     nandina::app::Ref<TestWidget> child_ref;

@@ -66,6 +66,11 @@ export namespace nandina::theme {
         lg,
     };
 
+    enum class CheckboxSize : std::uint8_t {
+        sm,
+        md,
+    };
+
     struct NanTextStyle {
         float               font_size{14.0f};
         text::NanFontWeight font_weight{text::NanFontWeight::regular};
@@ -559,6 +564,69 @@ export namespace nandina::theme {
         };
     };
 
+    // ═══════════════════════════════════════════════════════════════
+    // § NanCheckboxStyle — Checkbox 组件样式
+    // ═══════════════════════════════════════════════════════════════
+
+    struct NanCheckboxStyle {
+        struct ColorFamilyStyle {
+            NanColor box_bg{NanColor::from(NanRgb{99, 102, 241})};
+            NanColor box_border{NanColor::from(NanRgb{99, 102, 241})};
+            NanColor check{NanColor::from(NanRgb{255, 255, 255})};
+            NanColor box_bg_disabled{NanColor::from(NanRgb{204, 207, 220})};
+            NanColor box_border_disabled{NanColor::from(NanRgb{204, 207, 220})};
+            NanColor check_disabled{NanColor::from(NanRgb{154, 157, 180})};
+        };
+
+        struct SizeStyle {
+            float box_size{16.0f};
+            float font_size{14.0f};
+            float gap{8.0f};
+            float corner_radius{4.0f};
+        };
+
+        ColorVariant color_variant{ColorVariant::inherit};
+        CheckboxSize size{CheckboxSize::md};
+
+        float box_size{16.0f};
+        float font_size{14.0f};
+        float gap{8.0f};
+        float corner_radius{4.0f};
+
+        NanColor box_bg{NanColor::from(NanRgb{99, 102, 241})};
+        NanColor box_border{NanColor::from(NanRgb{99, 102, 241})};
+        NanColor check{NanColor::from(NanRgb{255, 255, 255})};
+        NanColor box_bg_unchecked{NanColor::from(NanRgb{255, 255, 255})};
+        NanColor box_border_unchecked{NanColor::from(NanRgb{186, 194, 222})};
+        NanColor box_bg_disabled{NanColor::from(NanRgb{204, 207, 220})};
+        NanColor box_border_disabled{NanColor::from(NanRgb{204, 207, 220})};
+        NanColor check_disabled{NanColor::from(NanRgb{154, 157, 180})};
+
+        ColorFamilyStyle secondary_family{
+            .box_bg = NanColor::from(NanRgb{114, 135, 253}),
+            .box_border = NanColor::from(NanRgb{114, 135, 253}),
+            .check = NanColor::from(NanRgb{255, 255, 255}),
+        };
+        ColorFamilyStyle neutral_family{
+            .box_bg = NanColor::from(NanRgb{92, 95, 119}),
+            .box_border = NanColor::from(NanRgb{92, 95, 119}),
+            .check = NanColor::from(NanRgb{255, 255, 255}),
+        };
+        ColorFamilyStyle destructive_family{
+            .box_bg = NanColor::from(NanRgb{230, 69, 83}),
+            .box_border = NanColor::from(NanRgb{230, 69, 83}),
+            .check = NanColor::from(NanRgb{255, 255, 255}),
+        };
+
+        SizeStyle sm{
+            .box_size = 14.0f,
+            .font_size = 12.0f,
+            .gap = 6.0f,
+            .corner_radius = 3.0f,
+        };
+        SizeStyle md{};
+    };
+
     struct NanFocusRingStyle {
         NanColor color{NanColor::from(NanRgb{99, 102, 241})};
         float width{2.0f};
@@ -620,6 +688,7 @@ export namespace nandina::theme {
         NanPanelStyle     panel;
         NanInputStyle     input;
         NanTagStyle       tag;
+        NanCheckboxStyle  checkbox;
         NanFocusRingStyle focus_ring;
         NanProgressStyle  progress;
 
@@ -645,14 +714,15 @@ export namespace nandina::theme {
         /// 设置全局样式
         static auto set_current(const NanStylePrimitives& style) -> void {
             if (!s_current) {
-                s_current = std::make_unique<NanStylePrimitives>();
+                s_current = new NanStylePrimitives();
             }
             *s_current = style;
         }
 
         /// 重置为默认样式
         static auto reset_to_default() -> void {
-            s_current.reset();
+            delete s_current;
+            s_current = nullptr;
         }
 
     private:
@@ -661,7 +731,7 @@ export namespace nandina::theme {
             return instance;
         }
 
-        inline static std::unique_ptr<NanStylePrimitives> s_current;
+        inline static NanStylePrimitives* s_current = nullptr;
     };
 
 } // namespace nandina::theme

@@ -95,6 +95,32 @@
       }
     },
     {
+      "name": "clang-debug",
+      "displayName": "Clang Debug",
+      "description": "使用 Clang 编译器的 Debug 构建，输出至 build/clang-debug",
+      "inherits": "base",
+      "binaryDir": "${sourceDir}/build/clang-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "NANDINA_BUILD_TESTS": "ON",
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++"
+      }
+    },
+    {
+      "name": "clang-release",
+      "displayName": "Clang Release",
+      "description": "使用 Clang 编译器的 Release 构建，输出至 build/clang-release",
+      "inherits": "base",
+      "binaryDir": "${sourceDir}/build/clang-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "NANDINA_BUILD_TESTS": "OFF",
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++"
+      }
+    },
+    {
       "name": "windows-debug",
       "displayName": "Windows Debug",
       "description": "Windows x64 Debug 构建（MinGW），使用 vcpkg x64-mingw-static triplet，启用测试，输出至 build/windows-debug",

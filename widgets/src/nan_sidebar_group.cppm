@@ -27,7 +27,6 @@ import nandina.widgets.surface;
 //
 // TODO: 待 NanIcon 组件实现后，为 SidebarGroup 添加 set_icon(IconType) 方法。
 namespace nandina::widgets {
-
     class SidebarGroupLabel final : public Button {
     public:
         static auto create() -> std::unique_ptr<SidebarGroupLabel> {
@@ -45,9 +44,9 @@ namespace nandina::widgets {
             // 分组标签左对齐
             content_row().justify_content(layout::LayoutAlignment::start);
         }
+
         // 无需覆写 update_visual_state()，Button 内置机制已处理颜色持久化
     };
-
 } // namespace nandina::widgets
 
 /**
@@ -65,7 +64,6 @@ namespace nandina::widgets {
  *   group->add_child(std::move(btn));
  */
 export namespace nandina::widgets {
-
     class SidebarGroup : public Surface {
     public:
         using Ptr = std::unique_ptr<SidebarGroup>;
@@ -110,7 +108,7 @@ export namespace nandina::widgets {
         [[nodiscard]] auto head() -> Button& { return *m_label; }
 
         // ── Surface override ──────────────────────────────
-        auto set_bg_color(const nandina::NanColor& color) -> SidebarGroup& {
+        auto set_bg_color(const nandina::NanColor &color) -> SidebarGroup& {
             Surface::set_bg_color(color);
             return *this;
         }
@@ -120,7 +118,7 @@ export namespace nandina::widgets {
             return *this;
         }
 
-        auto measure(const geometry::NanConstraints& constraints) -> void override {
+        auto measure(const geometry::NanConstraints &constraints) -> void override {
             sync_label_slot_visibility();
             Surface::measure(constraints);
         }
@@ -184,9 +182,8 @@ export namespace nandina::widgets {
         static constexpr float k_min_preferred_width = 240.0f;
 
         std::string m_label_text;
-        SidebarGroupLabel* m_label{nullptr};
-        layout::SizedBox* m_label_slot{nullptr};
-        layout::Column* m_content_layout{nullptr};
+        SidebarGroupLabel *m_label{nullptr};
+        layout::SizedBox *m_label_slot{nullptr};
+        layout::Column *m_content_layout{nullptr};
     };
-
 } // namespace nandina::widgets

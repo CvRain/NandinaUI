@@ -44,6 +44,7 @@ export namespace nandina::showcase {
             using nandina::theme::ButtonVariant;
             using nandina::theme::ButtonSize;
             using nandina::theme::TagSize;
+            using nandina::theme::CheckboxSize;
             using nandina::layout::LayoutAlignment;
 
             // ── Pattern A：text(fn) 自动 Effect 追踪 ─────────────────────────
@@ -197,6 +198,17 @@ export namespace nandina::showcase {
                 .gap(8)
                 .align_items(LayoutAlignment::start);
 
+            // ── Checkbox 演示 ─────────────────────────────────────────
+            auto checkboxes = column(children(
+                    checkbox("Accept terms and conditions"),
+                    checkbox("Subscribe to newsletter")
+                        .color_variant(ColorVariant::secondary)
+                        .size(CheckboxSize::sm),
+                    checkbox("Enable notifications")
+                        .color_variant(ColorVariant::destructive)
+                        .checked(true)
+                )).gap(8);
+
             return mount(center(
                 column(children(
                     label,
@@ -206,6 +218,7 @@ export namespace nandina::showcase {
                     field,
                     toggle_invalid_btn,
                     semantic_tags,
+                    checkboxes,
                     row(children(
                         expanded(increase_button),
                         expanded(decrease_button)

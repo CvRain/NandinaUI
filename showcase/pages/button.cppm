@@ -66,9 +66,9 @@ namespace nandina::showcase {
                 .color(NanColor::from(NanRgb{"#caddf5"}));
 
         auto variants_title = label("Variants")
-            .align(widgets::TextAlign::Start)
-            .font(text::NanFont{}.size(18).weight(text::NanFontWeight::semiBold))
-            .color(NanColor::from(NanRgb{"#cdd6f4"}));
+                .align(widgets::TextAlign::Start)
+                .font(text::NanFont{}.size(18).weight(text::NanFontWeight::semiBold))
+                .color(NanColor::from(NanRgb{"#cdd6f4"}));
 
         auto variants = row(children(
             button("Primary"),
@@ -80,9 +80,9 @@ namespace nandina::showcase {
         )).gap(12);
 
         auto sizes_title = label("Sizes")
-            .align(widgets::TextAlign::Start)
-            .font(text::NanFont{}.size(18).weight(text::NanFontWeight::semiBold))
-            .color(NanColor::from(NanRgb{"#cdd6f4"}));
+                .align(widgets::TextAlign::Start)
+                .font(text::NanFont{}.size(18).weight(text::NanFontWeight::semiBold))
+                .color(NanColor::from(NanRgb{"#cdd6f4"}));
 
         auto sizes = row(children(
             button("XS").size(ButtonSize::xs),
@@ -93,20 +93,21 @@ namespace nandina::showcase {
         )).gap(12);
 
         auto icons_title = label("With Icons")
-            .align(widgets::TextAlign::Start)
-            .font(text::NanFont{}.size(18).weight(text::NanFontWeight::semiBold))
-            .color(NanColor::from(NanRgb{"#cdd6f4"}));
+                .align(widgets::TextAlign::Start)
+                .font(text::NanFont{}.size(18).weight(text::NanFontWeight::semiBold))
+                .color(NanColor::from(NanRgb{"#cdd6f4"}));
 
         auto icon_examples = row(children(
             button("Save").icon_left(IconType::Check),
             button("More").variant(ButtonVariant::outline).icon_right(IconType::ArrowDown),
-            button("Sync").variant(ButtonVariant::secondary).icon_left(IconType::ArrowUp).icon_right(IconType::ArrowDown)
+            button("Sync").variant(ButtonVariant::secondary).icon_left(IconType::ArrowUp).icon_right(
+                IconType::ArrowDown)
         )).gap(12);
 
         auto states_title = label("States")
-            .align(widgets::TextAlign::Start)
-            .font(text::NanFont{}.size(18).weight(text::NanFontWeight::semiBold))
-            .color(NanColor::from(NanRgb{"#cdd6f4"}));
+                .align(widgets::TextAlign::Start)
+                .font(text::NanFont{}.size(18).weight(text::NanFontWeight::semiBold))
+                .color(NanColor::from(NanRgb{"#cdd6f4"}));
 
         auto states = row(children(
             button("Loading").loading(true).icon_left(IconType::Dots),
@@ -115,9 +116,9 @@ namespace nandina::showcase {
         )).gap(12);
 
         auto colors_title = label("Color Variants")
-            .align(widgets::TextAlign::Start)
-            .font(text::NanFont{}.size(18).weight(text::NanFontWeight::semiBold))
-            .color(NanColor::from(NanRgb{"#cdd6f4"}));
+                .align(widgets::TextAlign::Start)
+                .font(text::NanFont{}.size(18).weight(text::NanFontWeight::semiBold))
+                .color(NanColor::from(NanRgb{"#cdd6f4"}));
 
         auto colors = row(children(
             button("Primary").variant(ButtonVariant::outline).color_variant(ColorVariant::primary),
@@ -127,21 +128,21 @@ namespace nandina::showcase {
         )).gap(12);
 
         return mount(column(children(
-            page_title,
-            page_subtitle,
-            variants_title,
-            variants,
-            sizes_title,
-            sizes,
-            icons_title,
-            icon_examples,
-            states_title,
-            states,
-            colors_title,
-            colors
-        ))
-        .gap(12)
-        .align_items(LayoutAlignment::start)
-        .padding(24.0f));
+                page_title,
+                page_subtitle,
+                variants_title,
+                variants,
+                sizes_title,
+                sizes,
+                icons_title,
+                icon_examples,
+                states_title,
+                states,
+                colors_title,
+                colors
+            ))
+            .gap(12)
+            .align_items(LayoutAlignment::start)
+            .padding(24.0f));
     }
 }

@@ -64,6 +64,7 @@ import nandina.widgets.surface;
 import nandina.widgets.tag;
 import nandina.widgets.text_field;
 import nandina.widgets.field;
+import nandina.widgets.checkbox;
 import nandina.theme;
 
 export namespace nandina::app {
@@ -90,6 +91,7 @@ export namespace nandina::app {
     class Children;
     class LabelNode;
     class TagNode;
+    class CheckboxNode;
     class ButtonNode;
     class TextFieldNode;
     class FieldNode;
@@ -105,6 +107,8 @@ export namespace nandina::app {
     [[nodiscard]] inline auto label(std::string_view text = {}) -> LabelNode;
 
     [[nodiscard]] inline auto tag(std::string_view text = {}) -> TagNode;
+
+    [[nodiscard]] inline auto checkbox(std::string_view label = {}) -> CheckboxNode;
 
     [[nodiscard]] inline auto button(std::string_view text = {}) -> ButtonNode;
 
@@ -183,7 +187,7 @@ export namespace nandina::app {
 
         template<typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, Node>
-        auto key(this Self &&self, std::string_view value) -> Self&& {
+        auto key(this Self &&self, const std::string_view &value) -> Self&& {
             auto &node = static_cast<Node &>(self);
             node.m_key.assign(value);
             return std::forward<Self>(self);
@@ -191,12 +195,17 @@ export namespace nandina::app {
 
         template<typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, Node>
-        auto title(this Self &&self, std::string_view value) -> Self&& {
-            auto &node = static_cast<Node &>(self);
-            if (auto *widget = dynamic_cast<nandina::widgets::Card *>(node.unwrapped())) {
-                widget->set_title(std::string{value});
+        auto title(this Self &&self, const std::string_view &value) -> Self&& {
+            const auto &node = static_cast<Node &>(self);
+
+            // 由于 Node 是一个通用包装，无法预设 title 应该绑定到哪个 Widget 属性上，因此暴力尝试 Card 和 Panel 的标题属性。
+            // 但是感觉这样的写法还是不够优雅，不知道为什么我当时为什么要这样写。
+            // 或许之后有更好的写法可以替代这个暴力绑定。 --ClaudeRainer 2024-06-01
+            const auto unwrapped_node = node.unwrapped();
+            if (auto *widget = dynamic_cast<widgets::Card *>(unwrapped_node); widget != nullptr) {
+                widget->set_title(value.data());
             }
-            else if (auto *widget = dynamic_cast<nandina::widgets::Panel *>(node.unwrapped())) {
+            if (auto *widget = dynamic_cast<widgets::Panel *>(unwrapped_node); widget != nullptr) {
                 widget->set_title(value);
             }
             return std::forward<Self>(self);
@@ -1030,6 +1039,81 @@ export namespace nandina::app {
     };
 
     // ═══════════════════════════════════════════════════════════
+    // CheckboxNode — 复选框链式配置节点
+    // ═══════════════════════════════════════════════════════════
+
+    class CheckboxNode : public WidgetNode<nandina::widgets::Checkbox> {
+    public:
+        using Node::size;
+
+        explicit CheckboxNode(nandina::widgets::Checkbox::Ptr widget)
+            : WidgetNode<nandina::widgets::Checkbox>(std::move(widget)) {
+        }
+
+        template<typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, CheckboxNode>
+        auto label(this Self &&self, std::string_view value) -> Self&& {
+            self.m_typed->label(value);
+            return std::forward<Self>(self);
+        }
+
+        [[nodiscard]] auto label() const -> const std::string& {
+            return m_typed->label();
+        }
+
+        [[nodiscard]] auto checked() const -> bool {
+            return m_typed->checked();
+        }
+
+        [[nodiscard]] auto disabled() const -> bool {
+            return m_typed->disabled();
+        }
+
+        [[nodiscard]] auto color_variant() const -> nandina::theme::ColorVariant {
+            return m_typed->color_variant();
+        }
+
+        [[nodiscard]] auto checkbox_size() const -> nandina::widgets::CheckboxSize {
+            return m_typed->size();
+        }
+
+        template<typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, CheckboxNode>
+        auto checked(this Self &&self, const bool value) -> Self&& {
+            self.m_typed->checked(value);
+            return std::forward<Self>(self);
+        }
+
+        template<typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, CheckboxNode>
+        auto size(this Self &&self, const nandina::widgets::CheckboxSize value) -> Self&& {
+            self.m_typed->size(value);
+            return std::forward<Self>(self);
+        }
+
+        template<typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, CheckboxNode>
+        auto color_variant(this Self &&self, const nandina::theme::ColorVariant value) -> Self&& {
+            self.m_typed->color_variant(value);
+            return std::forward<Self>(self);
+        }
+
+        template<typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, CheckboxNode>
+        auto disabled(this Self &&self, const bool value) -> Self&& {
+            self.m_typed->disabled(value);
+            return std::forward<Self>(self);
+        }
+
+        template<typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, CheckboxNode>
+        auto on_checked_changed(this Self &&self, std::function<void(bool)> cb) -> Self&& {
+            self.m_typed->on_checked_changed(std::move(cb));
+            return std::forward<Self>(self);
+        }
+    };
+
+    // ═══════════════════════════════════════════════════════════
     // TextFieldNode — 单行输入框链式配置节点
     // ═══════════════════════════════════════════════════════════
     //
@@ -1329,14 +1413,14 @@ export namespace nandina::app {
 
         template<typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, ProgressBarNode>
-        auto bar_color(this Self &&self, const nandina::NanColor& value) -> Self&& {
+        auto bar_color(this Self &&self, const nandina::NanColor &value) -> Self&& {
             self.m_typed->set_bar_color(value);
             return std::forward<Self>(self);
         }
 
         template<typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, ProgressBarNode>
-        auto track_color(this Self &&self, const nandina::NanColor& value) -> Self&& {
+        auto track_color(this Self &&self, const nandina::NanColor &value) -> Self&& {
             self.m_typed->set_track_color(value);
             return std::forward<Self>(self);
         }
@@ -1637,6 +1721,13 @@ export namespace nandina::app {
         auto w = nandina::widgets::Tag::create();
         if (!text.empty()) w->text(text);
         return TagNode{std::move(w)};
+    }
+
+    /** @brief 创建 Checkbox 节点 */
+    [[nodiscard]] inline auto checkbox(std::string_view label) -> CheckboxNode {
+        auto w = nandina::widgets::Checkbox::create();
+        if (!label.empty()) w->label(label);
+        return CheckboxNode{std::move(w)};
     }
 
     /** @brief 创建 Button 节点 */
@@ -2093,7 +2184,8 @@ export namespace nandina::app {
                 const bool changed = m_owner.sync_hover_target(hit, event);
                 if (m_owner.m_pointer_capture_widget) {
                     m_owner.m_pointer_capture_widget->dispatch_event(event);
-                } else if (hit && !changed) {
+                }
+                else if (hit && !changed) {
                     hit->dispatch_event(event);
                 }
             }
@@ -2115,7 +2207,8 @@ export namespace nandina::app {
                 m_owner.sync_hover_target(hit, pointer_move_from_button(event));
                 if (hit) {
                     m_owner.sync_focus_target(hit);
-                } else {
+                }
+                else {
                     m_owner.clear_focus_target();
                 }
                 if (event.button == nandina::types::PointerButton::Left) {

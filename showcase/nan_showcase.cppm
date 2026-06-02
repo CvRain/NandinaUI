@@ -13,6 +13,7 @@ import nandina.showcase.sandbox_page;
 import nandina.showcase.main_page;
 import nandina.showcase.page.button;
 import nandina.showcase.page.forms;
+import nandina.showcase.page.checkbox;
 
 export namespace nandina::showcase {
     [[nodiscard]] inline auto create_showcase_shell() -> nandina::app::Node {
@@ -20,6 +21,7 @@ export namespace nandina::showcase {
         router->register_page(std::make_unique<nandina::showcase::MainPage>());
         router->register_page(std::make_unique<nandina::showcase::ButtonPage>());
         router->register_page(std::make_unique<nandina::showcase::FormsPage>());
+        router->register_page(std::make_unique<nandina::showcase::CheckboxPage>());
         router->register_page(std::make_unique<nandina::showcase::SandboxPage>());
 
         return nandina::app::create_shell(std::move(router), {

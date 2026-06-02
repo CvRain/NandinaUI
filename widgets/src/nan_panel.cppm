@@ -7,7 +7,6 @@ module;
 #include <algorithm>
 #include <memory>
 #include <string>
-#include <string_view>
 #include <thorvg-1/thorvg.h>
 
 export module nandina.widgets.panel;
@@ -15,6 +14,7 @@ export module nandina.widgets.panel;
 import nandina.runtime.nan_widget;
 import nandina.foundation.nan_insets;
 import nandina.foundation.nan_size;
+import nandina.foundation.nan_types;
 import nandina.foundation.color;
 import nandina.reactive.prop;
 import nandina.widgets.surface;
@@ -37,7 +37,6 @@ import nandina.widgets.surface;
  * - 标题使用点阵模拟绘制（与 Label 一致，M5 后由真实字体渲染替换）
  */
 export namespace nandina::widgets {
-
     /**
      * Panel — 带标题栏的容器组件
      *
@@ -61,8 +60,21 @@ export namespace nandina::widgets {
         }
 
         // ── 标题 ──────────────────────────────────────────
-        auto set_title(std::string_view title) -> Panel& {
-            m_title.set(std::string{title});
+        // auto set_title(const std::string_view &title) -> Panel& {
+        //     m_title.set(std::string{title});
+        //     mark_dirty();
+        //     return *this;
+        // }
+        //
+        // auto set_title(const std::string &title) -> Panel& {
+        //     m_title.set(title);
+        //     mark_dirty();
+        //     return *this;
+        // }
+
+        template<nandina::types::StringLike T>
+        auto set_title(T &&title) -> Panel& {
+            m_title.set(std::string{std::forward<T>(title)});
             mark_dirty();
             return *this;
         }
@@ -72,7 +84,7 @@ export namespace nandina::widgets {
         }
 
         // ── 标题栏颜色 ────────────────────────────────────
-        auto set_header_color(const nandina::NanColor& color) -> Panel& {
+        auto set_header_color(const nandina::NanColor &color) -> Panel& {
             m_header_color.set(color);
             mark_dirty();
             return *this;
@@ -83,7 +95,7 @@ export namespace nandina::widgets {
         }
 
         // ── 标题栏高度 ────────────────────────────────────
-        auto set_header_height(float height) -> Panel& {
+        auto set_header_height(const float height) -> Panel& {
             m_header_height.set(height);
             mark_layout_dirty();
             return *this;
@@ -94,54 +106,54 @@ export namespace nandina::widgets {
         }
 
         // ── 背景色 ────────────────────────────────────────
-        auto set_bg_color(const nandina::NanColor& color) -> Panel& {
+        auto set_bg_color(const nandina::NanColor &color) -> Panel& override {
             Surface::set_bg_color(color);
             return *this;
         }
 
-        [[nodiscard]] auto bg_color() const noexcept -> const nandina::NanColor& {
+        [[nodiscard]] auto bg_color() const noexcept -> const nandina::NanColor& override {
             return Surface::bg_color();
         }
 
         // ── 圆角 ──────────────────────────────────────────
-        auto set_corner_radius(float radius) -> Panel& {
+        auto set_corner_radius(const float radius) -> Panel& override {
             Surface::set_corner_radius(radius);
             return *this;
         }
 
-        [[nodiscard]] auto corner_radius() const noexcept -> float {
+        [[nodiscard]] auto corner_radius() const noexcept -> float override {
             return Surface::corner_radius();
         }
 
         // ── 内边距 ────────────────────────────────────────
-        auto set_padding(const geometry::NanInsets& insets) -> Panel& {
+        auto set_padding(const geometry::NanInsets &insets) -> Panel&  override {
             Surface::set_padding(insets);
             return *this;
         }
 
-        [[nodiscard]] auto padding() const noexcept -> const geometry::NanInsets& {
+        [[nodiscard]] auto padding() const noexcept -> const geometry::NanInsets&  override {
             return Surface::padding();
         }
 
         // ── 描边 ──────────────────────────────────────────
-        auto set_border_color(const nandina::NanColor& color) -> Panel& {
+        auto set_border_color(const nandina::NanColor &color) -> Panel&  override {
             Surface::set_border_color(color);
             return *this;
         }
 
-        auto set_border_width(float width) -> Panel& {
+        auto set_border_width(const float width) -> Panel&  override {
             Surface::set_border_width(width);
             return *this;
         }
 
         // ── 布局 ──────────────────────────────────────────
-        auto set_bounds(float x, float y, float w, float h) noexcept -> NanWidget& override {
+        auto set_bounds(const float x, const float y, const float w, const float h) noexcept -> NanWidget& override {
             runtime::NanWidget::set_bounds(x, y, w, h);
             return *this;
         }
 
-        auto measure(const geometry::NanConstraints& constraints) -> void override {
-            const auto& pad = padding();
+        auto measure(const geometry::NanConstraints &constraints) -> void override {
+            const auto &pad = padding();
             const float header_h = m_header_height.get();
             const geometry::NanConstraints child_constraints{
                 std::max(0.0f, constraints.min_width() - pad.left() - pad.right()),
@@ -155,12 +167,12 @@ export namespace nandina::widgets {
             };
 
             geometry::NanSize child_measured{0.0f, 0.0f};
-            for_each_child([&](runtime::NanWidget& child) {
+            for_each_child([&](runtime::NanWidget &child) {
                 child.measure(child_constraints.is_tight()
-                    ? child_constraints
-                    : child_constraints.loosen());
-                const auto measured = child.measured_size();
-                const auto preferred = child.preferred_size();
+                                  ? child_constraints
+                                  : child_constraints.loosen());
+                const auto& measured = child.measured_size();
+                const auto& preferred = child.preferred_size();
                 child_measured = geometry::NanSize{
                     std::max(child_measured.width(), measured.width() > 0.0f ? measured.width() : preferred.width()),
                     std::max(child_measured.height(), measured.height() > 0.0f ? measured.height() : preferred.height())
@@ -182,8 +194,8 @@ export namespace nandina::widgets {
 
         [[nodiscard]] auto preferred_size() const noexcept -> geometry::NanSize override {
             const auto child_pref = measure_content_preferred_size();
-            const auto& pad       = padding();
-            const float header_h  = m_header_height.get();
+            const auto &pad = padding();
+            const float header_h = m_header_height.get();
             return geometry::NanSize{
                 child_pref.width() + pad.left() + pad.right(),
                 header_h + child_pref.height() + pad.top() + pad.bottom()
@@ -191,9 +203,9 @@ export namespace nandina::widgets {
         }
 
     protected:
-        void on_draw(tvg::SwCanvas& canvas) override {
-            const auto rect      = bounds();
-            const float radius   = corner_radius();
+        void on_draw(tvg::SwCanvas &canvas) override {
+            const auto rect = bounds();
+            const float radius = corner_radius();
             const float header_h = m_header_height.get();
 
             // ── 1. 背景填充 ──────────────────────────────
@@ -201,53 +213,52 @@ export namespace nandina::widgets {
 
             // ── 2. 标题栏背景 ────────────────────────────
             {
-                const auto& hdr    = m_header_color.get();
+                const auto &hdr = m_header_color.get();
                 const auto hdr_rgb = hdr.to<nandina::NanRgb>();
 
                 // 主体（无圆角矩形）
-                auto* header = tvg::Shape::gen();
+                auto *header = tvg::Shape::gen();
                 header->appendRect(rect.x(), rect.y(), rect.width(), header_h, 0.0f, 0.0f);
                 header->fill(hdr_rgb.red(), hdr_rgb.green(), hdr_rgb.blue(), hdr_rgb.alpha());
                 canvas.add(header);
 
                 // 覆盖顶部圆角区域（使 header 顶部圆角与 Panel 一致）
                 if (radius > 0.0f && header_h > radius) {
-                    auto* top_round = tvg::Shape::gen();
+                    auto *top_round = tvg::Shape::gen();
                     top_round->appendRect(rect.x(), rect.y(), rect.width(), radius, radius, radius);
                     top_round->fill(hdr_rgb.red(), hdr_rgb.green(), hdr_rgb.blue(), hdr_rgb.alpha());
                     canvas.add(top_round);
                 }
 
                 // 标题栏底部分隔线
-                auto* divider = tvg::Shape::gen();
+                auto *divider = tvg::Shape::gen();
                 divider->moveTo(rect.x(), rect.y() + header_h);
                 divider->lineTo(rect.x() + rect.width(), rect.y() + header_h);
                 divider->strokeWidth(1.0f);
                 divider->strokeFill(hdr_rgb.red(), hdr_rgb.green(), hdr_rgb.blue(),
-                    static_cast<uint8_t>(hdr_rgb.alpha() * 0.8f));
+                                    static_cast<uint8_t>(0.8f * static_cast<float>(hdr_rgb.alpha())));
                 canvas.add(divider);
             }
 
             // ── 3. 标题文字 ──────────────────────────────
             {
-                const auto& title = m_title.get();
-                if (!title.empty()) {
-                    const float fs         = m_title_font_size.get();
-                    const float spacing    = fs * 0.8f;
-                    const float dot_r      = fs * 0.25f;
+                if (const auto &title = m_title.get(); !title.empty()) {
+                    const float fs = m_title_font_size.get();
+                    const float spacing = fs * 0.8f;
+                    const float dot_r = fs * 0.25f;
                     const float text_width = static_cast<float>(title.size()) * spacing;
 
                     // 水平居中（在 header 区域内）
                     const float title_x = rect.x() + (rect.width() - text_width) * 0.5f + dot_r;
                     const float title_y = rect.y() + header_h * 0.5f + dot_r;
 
-                    const auto& text_clr = m_title_color.get();
-                    const auto text_rgb  = text_clr.to<nandina::NanRgb>();
+                    const auto &text_clr = m_title_color.get();
+                    const auto text_rgb = text_clr.to<nandina::NanRgb>();
 
                     for (size_t i = 0; i < title.size(); ++i) {
                         if (title[i] == ' ')
                             continue;
-                        auto* dot      = tvg::Shape::gen();
+                        auto *dot = tvg::Shape::gen();
                         const float cx = title_x + static_cast<float>(i) * spacing;
                         const float cy = title_y;
                         dot->appendCircle(cx, cy, dot_r, dot_r);
@@ -262,8 +273,8 @@ export namespace nandina::widgets {
 
     private:
         Panel() {
-            set_bg_color(nandina::NanColor::from(nandina::NanRgb{30, 30, 46}));
-            set_corner_radius(8.0f);
+            Panel::set_bg_color(nandina::NanColor::from(nandina::NanRgb{30, 30, 46}));
+            Panel::set_corner_radius(8.0f);
         }
 
         reactive::Prop<std::string> m_title{""};
@@ -272,5 +283,4 @@ export namespace nandina::widgets {
         reactive::Prop<float> m_header_height{28.0f};
         reactive::Prop<float> m_title_font_size{13.0f};
     };
-
 } // namespace nandina::widgets

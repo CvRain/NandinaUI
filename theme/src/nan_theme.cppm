@@ -889,6 +889,49 @@ inline auto ThemeManager::build_style(const NanTheme& theme) -> NanStylePrimitiv
     style.tag.lg.padding_h = tokens.spacing.large;
     style.tag.lg.padding_v = tokens.spacing.small;
 
+    const auto make_checkbox_family = [&role](
+        const NanColorRole box_bg_role,
+        const NanColorRole box_border_role,
+        const NanColorRole check_role) -> NanCheckboxStyle::ColorFamilyStyle {
+        return NanCheckboxStyle::ColorFamilyStyle{
+            .box_bg = role(box_bg_role),
+            .box_border = role(box_border_role),
+            .check = role(check_role),
+            .box_bg_disabled = role(NanColorRole::surfaceVariant),
+            .box_border_disabled = role(NanColorRole::outlineVariant),
+            .check_disabled = role(NanColorRole::outline),
+        };
+    };
+
+    style.checkbox.color_variant = ColorVariant::inherit;
+    style.checkbox.size = CheckboxSize::md;
+    style.checkbox.box_size = tokens.spacing.medium;
+    style.checkbox.font_size = tokens.typography.body_medium.font_size;
+    style.checkbox.gap = tokens.spacing.small;
+    style.checkbox.corner_radius = tokens.radius.xsmall;
+    style.checkbox.box_bg = role(NanColorRole::primary);
+    style.checkbox.box_border = role(NanColorRole::primary);
+    style.checkbox.check = role(NanColorRole::onPrimary);
+    style.checkbox.box_bg_unchecked = role(NanColorRole::surface);
+    style.checkbox.box_border_unchecked = role(NanColorRole::outlineVariant);
+    style.checkbox.box_bg_disabled = role(NanColorRole::surfaceVariant);
+    style.checkbox.box_border_disabled = role(NanColorRole::outlineVariant);
+    style.checkbox.check_disabled = role(NanColorRole::outline);
+    style.checkbox.secondary_family = make_checkbox_family(
+        NanColorRole::secondary, NanColorRole::secondary, NanColorRole::onSecondary);
+    style.checkbox.neutral_family = make_checkbox_family(
+        NanColorRole::onSurfaceVariant, NanColorRole::onSurfaceVariant, NanColorRole::surface);
+    style.checkbox.destructive_family = make_checkbox_family(
+        NanColorRole::error, NanColorRole::error, NanColorRole::onError);
+    style.checkbox.sm.box_size = tokens.spacing.small + tokens.spacing.xxsmall;
+    style.checkbox.sm.font_size = tokens.typography.label_medium.font_size;
+    style.checkbox.sm.gap = tokens.spacing.xsmall;
+    style.checkbox.sm.corner_radius = 3.0f;
+    style.checkbox.md.box_size = tokens.spacing.medium;
+    style.checkbox.md.font_size = tokens.typography.body_medium.font_size;
+    style.checkbox.md.gap = tokens.spacing.small;
+    style.checkbox.md.corner_radius = tokens.radius.xsmall;
+
     style.focus_ring.color = role(NanColorRole::primary);
     style.focus_ring.width = tokens.border.focus_ring;
     style.focus_ring.offset = tokens.spacing.xxsmall;

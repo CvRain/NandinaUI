@@ -10,6 +10,7 @@ export import nandina.widgets.focus_ring;
 export import nandina.widgets.text;
 export import nandina.widgets.label;
 export import nandina.widgets.tag;
+export import nandina.widgets.checkbox;
 export import nandina.widgets.text_field;
 export import nandina.widgets.field;
 export import nandina.widgets.button;

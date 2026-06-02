@@ -89,15 +89,15 @@ export namespace nandina::widgets {
         }
 
         // ── 属性访问 ────────────────────────────────────────
-        [[nodiscard]] auto bg_color() const noexcept -> const nandina::NanColor& {
+        [[nodiscard]] virtual auto bg_color() const noexcept -> const nandina::NanColor& {
             return m_bg_color.get();
         }
 
-        [[nodiscard]] auto corner_radius() const noexcept -> float {
+        [[nodiscard]] virtual auto corner_radius() const noexcept -> float {
             return m_corner_radius.get();
         }
 
-        [[nodiscard]] auto padding() const noexcept -> const geometry::NanInsets& {
+        [[nodiscard]] virtual auto padding() const noexcept -> const geometry::NanInsets& {
             return m_padding.get();
         }
 

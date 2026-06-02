@@ -12,7 +12,6 @@ export import nandina.runtime.nan_widget;
 export import nandina.layout.core;
 
 export namespace nandina::layout {
-
     namespace detail {
         [[nodiscard]] inline auto deflate_constraint_min(const float value, const float delta) noexcept -> float {
             return std::max(0.0f, value - delta);
@@ -25,7 +24,8 @@ export namespace nandina::layout {
             return std::max(0.0f, value - delta);
         }
 
-        [[nodiscard]] inline auto measured_or_preferred_size(const runtime::NanWidget& child) noexcept -> geometry::NanSize {
+        [[nodiscard]] inline auto measured_or_preferred_size(
+            const runtime::NanWidget &child) noexcept -> geometry::NanSize {
             const auto measured = child.measured_size();
             const auto preferred = child.preferred_size();
             return {
@@ -34,16 +34,16 @@ export namespace nandina::layout {
             };
         }
 
-        [[nodiscard]] inline auto derive_child_max_size(const runtime::NanWidget& child) noexcept -> geometry::NanSize {
+        [[nodiscard]] inline auto derive_child_max_size(const runtime::NanWidget &child) noexcept -> geometry::NanSize {
             const auto constraints = child.measured_constraints();
             const auto preferred = child.preferred_size();
 
             const float max_width = (constraints.max_width() == 0.0f && preferred.width() > 0.0f)
-                ? geometry::NanConstraints::k_infinity
-                : constraints.max_width();
+                                        ? geometry::NanConstraints::k_infinity
+                                        : constraints.max_width();
             const float max_height = (constraints.max_height() == 0.0f && preferred.height() > 0.0f)
-                ? geometry::NanConstraints::k_infinity
-                : constraints.max_height();
+                                         ? geometry::NanConstraints::k_infinity
+                                         : constraints.max_height();
 
             return {max_width, max_height};
         }
@@ -63,53 +63,53 @@ export namespace nandina::layout {
             return *this;
         }
 
-        auto padding(const float value) -> LayoutContainer& {
+        virtual auto padding(const float value) -> LayoutContainer& {
             padding_top_ = padding_right_ = padding_bottom_ = padding_left_ = value;
             request_layout();
             return *this;
         }
 
-        auto padding(const float h, const float v) -> LayoutContainer& {
+        virtual auto padding(const float h, const float v) -> LayoutContainer& {
             padding_top_ = padding_bottom_ = v;
             padding_left_ = padding_right_ = h;
             request_layout();
             return *this;
         }
 
-        auto padding(const float left, const float top, const float right, const float bottom) -> LayoutContainer& {
-            padding_left_   = left;
-            padding_top_    = top;
-            padding_right_  = right;
+        virtual auto padding(const float left, const float top, const float right, const float bottom) -> LayoutContainer& {
+            padding_left_ = left;
+            padding_top_ = top;
+            padding_right_ = right;
             padding_bottom_ = bottom;
             request_layout();
             return *this;
         }
 
-        auto padding_left(const float value) -> LayoutContainer& {
+        virtual auto padding_left(const float value) -> LayoutContainer& {
             padding_left_ = value;
             request_layout();
             return *this;
         }
 
-        auto padding_top(const float value) -> LayoutContainer& {
+        virtual auto padding_top(const float value) -> LayoutContainer& {
             padding_top_ = value;
             request_layout();
             return *this;
         }
 
-        auto padding_right(const float value) -> LayoutContainer& {
+        virtual auto padding_right(const float value) -> LayoutContainer& {
             padding_right_ = value;
             request_layout();
             return *this;
         }
 
-        auto padding_bottom(const float value) -> LayoutContainer& {
+        virtual auto padding_bottom(const float value) -> LayoutContainer& {
             padding_bottom_ = value;
             request_layout();
             return *this;
         }
 
-        auto align_items(const LayoutAlignment value) -> LayoutContainer& {
+        virtual auto align_items(const LayoutAlignment value) -> LayoutContainer& {
             align_items_ = value;
             request_layout();
             return *this;
@@ -155,7 +155,7 @@ export namespace nandina::layout {
             return justify_content_;
         }
 
-        auto measure(const geometry::NanConstraints& constraints) -> void override {
+        auto measure(const geometry::NanConstraints &constraints) -> void override {
             const float pad_h = padding_left_ + padding_right_;
             const float pad_v = padding_top_ + padding_bottom_;
 
@@ -168,7 +168,7 @@ export namespace nandina::layout {
             const auto child_measure_constraints = child_constraints.loosen();
 
             m_child_specs.clear();
-            for_each_child([&](runtime::NanWidget& child) {
+            for_each_child([&](runtime::NanWidget &child) {
                 child.measure(child_constraints_from(child_measure_constraints, child));
                 const auto measured = detail::measured_or_preferred_size(child);
                 m_child_specs.push_back({
@@ -188,7 +188,7 @@ export namespace nandina::layout {
         }
 
         // 子类必须实现此方法
-        virtual auto layout() -> void = 0;
+        auto layout() -> void override = 0;
 
         /// 子类返回自身布局轴，用于 preferred_size 计算
         [[nodiscard]] virtual auto layout_axis() const noexcept -> LayoutAxis = 0;
@@ -200,7 +200,8 @@ export namespace nandina::layout {
             return compute_container_size(collect_child_specs(), geometry::NanConstraints::expand());
         }
 
-        auto set_bounds(const float x, const float y, const float w, const float h) noexcept -> runtime::NanWidget& override {
+        auto set_bounds(const float x, const float y, const float w,
+                        const float h) noexcept -> runtime::NanWidget& override {
             NanWidget::set_bounds(x, y, w, h);
             return *this;
         }
@@ -214,21 +215,21 @@ export namespace nandina::layout {
 
         [[nodiscard]] auto collect_child_specs() const -> std::vector<LayoutChildSpec> {
             std::vector<LayoutChildSpec> specs;
-            for_each_child([&](const runtime::NanWidget& child) {
+            for_each_child([&](const runtime::NanWidget &child) {
                 const auto preferred = detail::measured_or_preferred_size(child);
                 specs.push_back({
                     .preferred_size = preferred,
                     .min_size = child.measured_constraints().min_size(),
                     .max_size = detail::derive_child_max_size(child),
-                    .flex_factor    = child.flex_factor(),
+                    .flex_factor = child.flex_factor(),
                 });
             });
             return specs;
         }
 
-        [[nodiscard]] auto collect_child_targets() -> std::vector<runtime::NanWidget*> {
-            std::vector<runtime::NanWidget*> targets;
-            for_each_child([&](runtime::NanWidget& child) {
+        [[nodiscard]] auto collect_child_targets() -> std::vector<runtime::NanWidget *> {
+            std::vector<runtime::NanWidget *> targets;
+            for_each_child([&](runtime::NanWidget &child) {
                 targets.push_back(&child);
             });
             return targets;
@@ -236,26 +237,26 @@ export namespace nandina::layout {
 
         [[nodiscard]] auto build_layout_request(const LayoutAxis axis) const -> LayoutRequest {
             LayoutRequest request;
-            request.axis              = axis;
-            request.container_bounds  = {x(), y(), x() + width(), y() + height()};
-            request.constraints       = measured_constraints();
-            request.padding           = {padding_left_, padding_top_, padding_right_, padding_bottom_};
-            request.gap               = gap_;
-            request.cross_alignment   = align_items_;
-            request.main_alignment    = justify_content_;
-            request.children          = m_child_specs.empty() ? collect_child_specs() : m_child_specs;
+            request.axis = axis;
+            request.container_bounds = {x(), y(), x() + width(), y() + height()};
+            request.constraints = measured_constraints();
+            request.padding = {padding_left_, padding_top_, padding_right_, padding_bottom_};
+            request.gap = gap_;
+            request.cross_alignment = align_items_;
+            request.main_alignment = justify_content_;
+            request.children = m_child_specs.empty() ? collect_child_specs() : m_child_specs;
             return request;
         }
 
         auto apply_backend(const LayoutAxis axis) -> void {
-            auto targets  = collect_child_targets();
-            auto request  = build_layout_request(axis);
-            auto frames   = default_layout_backend().compute(request);
+            auto targets = collect_child_targets();
+            auto request = build_layout_request(axis);
+            auto frames = default_layout_backend().compute(request);
 
             const auto count = std::min(targets.size(), frames.size());
             for (std::size_t index = 0; index < count; ++index) {
-                auto* widget = targets[index];
-                const auto& frame = frames[index];
+                auto *widget = targets[index];
+                const auto &frame = frames[index];
                 if (widget) {
                     widget->set_bounds(frame.x(), frame.y(), frame.width(), frame.height());
                     widget->layout();
@@ -266,24 +267,26 @@ export namespace nandina::layout {
         }
 
         [[nodiscard]] auto compute_container_size(
-            const std::vector<LayoutChildSpec>& specs,
-            const geometry::NanConstraints& constraints) const noexcept -> geometry::NanSize {
+            const std::vector<LayoutChildSpec> &specs,
+            const geometry::NanConstraints &constraints) const noexcept -> geometry::NanSize {
             float total_main = 0.0f;
-            float max_cross  = 0.0f;
+            float max_cross = 0.0f;
 
-            for (const auto& child : specs) {
+            for (const auto &child: specs) {
                 const float child_w = child.preferred_size.width();
                 const float child_h = child.preferred_size.height();
 
                 if (layout_axis() == LayoutAxis::column) {
                     total_main += child_h;
-                    max_cross   = std::max(max_cross, child_w);
-                } else if (layout_axis() == LayoutAxis::row) {
+                    max_cross = std::max(max_cross, child_w);
+                }
+                else if (layout_axis() == LayoutAxis::row) {
                     total_main += child_w;
-                    max_cross   = std::max(max_cross, child_h);
-                } else {
-                    max_cross   = std::max(max_cross, child_w);
-                    total_main  = std::max(total_main, child_h);
+                    max_cross = std::max(max_cross, child_h);
+                }
+                else {
+                    max_cross = std::max(max_cross, child_w);
+                    total_main = std::max(total_main, child_h);
                 }
             }
 
@@ -295,12 +298,14 @@ export namespace nandina::layout {
                     max_cross + padding_left_ + padding_right_,
                     total_main + gap_total + padding_top_ + padding_bottom_
                 };
-            } else if (layout_axis() == LayoutAxis::row) {
+            }
+            else if (layout_axis() == LayoutAxis::row) {
                 size = {
                     total_main + gap_total + padding_left_ + padding_right_,
                     max_cross + padding_top_ + padding_bottom_
                 };
-            } else {
+            }
+            else {
                 size = {
                     max_cross + padding_left_ + padding_right_,
                     total_main + padding_top_ + padding_bottom_
@@ -310,18 +315,18 @@ export namespace nandina::layout {
             return constraints.constrain(size);
         }
 
-        float gap_                = 0.0f;
-        float padding_top_       = 0.0f;
-        float padding_right_     = 0.0f;
-        float padding_bottom_    = 0.0f;
-        float padding_left_      = 0.0f;
-        LayoutAlignment align_items_     = LayoutAlignment::start;
+        float gap_ = 0.0f;
+        float padding_top_ = 0.0f;
+        float padding_right_ = 0.0f;
+        float padding_bottom_ = 0.0f;
+        float padding_left_ = 0.0f;
+        LayoutAlignment align_items_ = LayoutAlignment::start;
         LayoutAlignment justify_content_ = LayoutAlignment::start;
         std::vector<LayoutChildSpec> m_child_specs;
 
         // ── preferred_size 缓存 ──────────────────────────────
         mutable geometry::NanSize m_cached_preferred_size{};
-        mutable bool              m_pref_size_valid{false};
+        mutable bool m_pref_size_valid{false};
     };
 
     // ── Column ───────────────────────────────────────────────
@@ -517,7 +522,8 @@ export namespace nandina::layout {
             return *this;
         }
 
-        auto set_bounds(const float x, const float y, const float w, const float h) noexcept -> runtime::NanWidget& override {
+        auto set_bounds(const float x, const float y, const float w,
+                        const float h) noexcept -> runtime::NanWidget& override {
             return LayoutContainer::set_bounds(x, y, w, h);
         }
 
@@ -532,5 +538,4 @@ export namespace nandina::layout {
     private:
         Stack() noexcept = default;
     };
-
 } // namespace nandina::layout

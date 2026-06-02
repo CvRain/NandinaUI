@@ -4,6 +4,8 @@ module;
 // 全局模块片段
 // ============================================================
 #include <cstdint>
+#include <string>
+#include <string_view>
 
 export module nandina.foundation.nan_types;
 
@@ -128,4 +130,12 @@ export namespace nandina::types {
         ResizeNWSE = 9,
         NotAllowed = 10,
     };
+
+    // ── 类型萃取 ────────────────────────────────────────────
+
+    /// StringLike 概念：支持隐式转换为 std::string_view 或 std::string 的类型
+    /// （如 const char*、std::string_view、std::string 等）。
+    /// 用于统一处理函数的字符串参数，避免为每种字符串类型编写重载。
+    template<typename T>
+    concept StringLike = std::is_convertible_v<T, std::string_view> || std::is_convertible_v<T, std::string>;
 } // namespace nandina::types
