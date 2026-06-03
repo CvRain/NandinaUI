@@ -16,7 +16,7 @@
       }
     },
     {
-      "name": "windows-base",
+      "name": "windows-msvc-base",
       "hidden": true,
       "inherits": "base",
       "condition": {
@@ -29,6 +29,26 @@
         "strategy": "external"
       },
       "cacheVariables": {
+        "VCPKG_TARGET_TRIPLET": "x64-windows-static",
+        "VCPKG_HOST_TRIPLET": "x64-windows-static"
+      }
+    },
+    {
+      "name": "windows-clang-base",
+      "hidden": true,
+      "inherits": "base",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
+      },
+      "architecture": {
+        "value": "x64",
+        "strategy": "external"
+      },
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++",
         "VCPKG_TARGET_TRIPLET": "x64-mingw-static",
         "VCPKG_HOST_TRIPLET": "x64-mingw-static"
       }
@@ -50,7 +70,7 @@
     {
       "name": "default",
       "displayName": "Default (Debug)",
-      "description": "向后兼容的默认配置，输出至 build/，clangd 默认指向此目录。VCPKG_MANIFEST_INSTALL=OFF：在 GitHub TLS 受限的沙箱环境中跳过 vcpkg 安装，回退到系统已安装的包。在网络正常的机器上请使用 debug / release 预设。",
+      "description": "向后兼容的默认配置，输出至 build/，clangd 默认指向此目录。VCPKG_MANIFEST_INSTALL=OFF：在 GitHub TLS 受限的沙箱环境中跳过 vcpkg 安装，回退到系统已安装的包。在网络正常的机器上请使用对应的平台预设。",
       "inherits": "base",
       "binaryDir": "${sourceDir}/build",
       "cacheVariables": {
@@ -84,7 +104,7 @@
     {
       "name": "debug-asan",
       "displayName": "Debug (AddressSanitizer)",
-      "description": "Debug 构建，启用 AddressSanitizer + UndefinedBehaviorSanitizer，输出至 build/debug-asan",
+      "description": "Debug 构建，启用 AddressSanitizer + UndefinedBehaviorSanitizer（仅 Clang/GCC），输出至 build/debug-asan",
       "inherits": "base",
       "binaryDir": "${sourceDir}/build/debug-asan",
       "cacheVariables": {
@@ -95,11 +115,55 @@
       }
     },
     {
-      "name": "clang-debug",
-      "displayName": "Clang Debug",
-      "description": "使用 Clang 编译器的 Debug 构建，输出至 build/clang-debug",
-      "inherits": "base",
-      "binaryDir": "${sourceDir}/build/clang-debug",
+      "name": "windows-msvc-debug",
+      "displayName": "Windows MSVC Debug",
+      "description": "Windows x64 MSVC Debug 构建，使用 vcpkg x64-windows-static triplet，启用测试，输出至 build/windows-msvc-debug",
+      "inherits": "windows-msvc-base",
+      "binaryDir": "${sourceDir}/build/windows-msvc-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "NANDINA_BUILD_TESTS": "ON"
+      }
+    },
+    {
+      "name": "windows-msvc-release",
+      "displayName": "Windows MSVC Release",
+      "description": "Windows x64 MSVC Release 构建，使用 vcpkg x64-windows-static triplet，禁用测试，输出至 build/windows-msvc-release",
+      "inherits": "windows-msvc-base",
+      "binaryDir": "${sourceDir}/build/windows-msvc-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "NANDINA_BUILD_TESTS": "OFF"
+      }
+    },
+    {
+      "name": "windows-clang-debug",
+      "displayName": "Windows Clang Debug",
+      "description": "Windows x64 Clang Debug 构建，使用 vcpkg x64-mingw-static triplet，启用测试，输出至 build/windows-clang-debug",
+      "inherits": "windows-clang-base",
+      "binaryDir": "${sourceDir}/build/windows-clang-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "NANDINA_BUILD_TESTS": "ON"
+      }
+    },
+    {
+      "name": "windows-clang-release",
+      "displayName": "Windows Clang Release",
+      "description": "Windows x64 Clang Release 构建，使用 vcpkg x64-mingw-static triplet，禁用测试，输出至 build/windows-clang-release",
+      "inherits": "windows-clang-base",
+      "binaryDir": "${sourceDir}/build/windows-clang-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "NANDINA_BUILD_TESTS": "OFF"
+      }
+    },
+    {
+      "name": "linux-clang-debug",
+      "displayName": "Linux Clang Debug",
+      "description": "Linux x64 Clang Debug 构建，使用 vcpkg x64-linux triplet，启用测试，输出至 build/linux-clang-debug",
+      "inherits": "linux-base",
+      "binaryDir": "${sourceDir}/build/linux-clang-debug",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "NANDINA_BUILD_TESTS": "ON",
@@ -108,11 +172,11 @@
       }
     },
     {
-      "name": "clang-release",
-      "displayName": "Clang Release",
-      "description": "使用 Clang 编译器的 Release 构建，输出至 build/clang-release",
-      "inherits": "base",
-      "binaryDir": "${sourceDir}/build/clang-release",
+      "name": "linux-clang-release",
+      "displayName": "Linux Clang Release",
+      "description": "Linux x64 Clang Release 构建，使用 vcpkg x64-linux triplet，禁用测试，输出至 build/linux-clang-release",
+      "inherits": "linux-base",
+      "binaryDir": "${sourceDir}/build/linux-clang-release",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
         "NANDINA_BUILD_TESTS": "OFF",
@@ -121,58 +185,29 @@
       }
     },
     {
-      "name": "windows-debug",
-      "displayName": "Windows Debug",
-      "description": "Windows x64 Debug 构建（MinGW），使用 vcpkg x64-mingw-static triplet，启用测试，输出至 build/windows-debug",
-      "inherits": "windows-base",
-      "binaryDir": "${sourceDir}/build/windows-debug",
+      "name": "linux-gcc-debug",
+      "displayName": "Linux GCC Debug",
+      "description": "Linux x64 GCC Debug 构建，使用 vcpkg x64-linux triplet，启用测试，输出至 build/linux-gcc-debug。⚠ 注意：由于项目使用了 C++20 Modules 新特性，GCC 对模块的支持尚不完善，使用此预设构建可能会出现编译失败。推荐优先使用 linux-clang-debug。",
+      "inherits": "linux-base",
+      "binaryDir": "${sourceDir}/build/linux-gcc-debug",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "NANDINA_BUILD_TESTS": "ON"
+        "NANDINA_BUILD_TESTS": "ON",
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++"
       }
     },
     {
-      "name": "windows-relwithdebinfo",
-      "displayName": "Windows RelWithDebInfo",
-      "description": "Windows x64 RelWithDebInfo 构建，保留调试信息，输出至 build/windows-relwithdebinfo",
-      "inherits": "windows-base",
-      "binaryDir": "${sourceDir}/build/windows-relwithdebinfo",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
-        "NANDINA_BUILD_TESTS": "ON"
-      }
-    },
-    {
-      "name": "windows-release",
-      "displayName": "Windows Release",
-      "description": "Windows x64 Release 构建，输出至 build/windows-release",
-      "inherits": "windows-base",
-      "binaryDir": "${sourceDir}/build/windows-release",
+      "name": "linux-gcc-release",
+      "displayName": "Linux GCC Release",
+      "description": "Linux x64 GCC Release 构建，使用 vcpkg x64-linux triplet，禁用测试，输出至 build/linux-gcc-release。⚠ 注意：由于项目使用了 C++20 Modules 新特性，GCC 对模块的支持尚不完善，使用此预设构建可能会出现编译失败。推荐优先使用 linux-clang-release。",
+      "inherits": "linux-base",
+      "binaryDir": "${sourceDir}/build/linux-gcc-release",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "NANDINA_BUILD_TESTS": "OFF"
-      }
-    },
-    {
-      "name": "linux-debug",
-      "displayName": "Linux Debug",
-      "description": "Linux x64 Debug 构建，使用 vcpkg x64-linux triplet，启用测试，输出至 build/linux-debug",
-      "inherits": "linux-base",
-      "binaryDir": "${sourceDir}/build/linux-debug",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
-        "NANDINA_BUILD_TESTS": "ON"
-      }
-    },
-    {
-      "name": "linux-release",
-      "displayName": "Linux Release",
-      "description": "Linux x64 Release 构建，使用 vcpkg x64-linux triplet，禁用测试，输出至 build/linux-release",
-      "inherits": "linux-base",
-      "binaryDir": "${sourceDir}/build/linux-release",
-      "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release",
-        "NANDINA_BUILD_TESTS": "OFF"
+        "NANDINA_BUILD_TESTS": "OFF",
+        "CMAKE_C_COMPILER": "gcc",
+        "CMAKE_CXX_COMPILER": "g++"
       }
     }
   ],
@@ -198,29 +233,44 @@
       "configurePreset": "debug-asan"
     },
     {
-      "name": "windows-debug",
-      "displayName": "Build (windows-debug)",
-      "configurePreset": "windows-debug"
+      "name": "windows-msvc-debug",
+      "displayName": "Build (windows-msvc-debug)",
+      "configurePreset": "windows-msvc-debug"
     },
     {
-      "name": "windows-relwithdebinfo",
-      "displayName": "Build (windows-relwithdebinfo)",
-      "configurePreset": "windows-relwithdebinfo"
+      "name": "windows-msvc-release",
+      "displayName": "Build (windows-msvc-release)",
+      "configurePreset": "windows-msvc-release"
     },
     {
-      "name": "windows-release",
-      "displayName": "Build (windows-release)",
-      "configurePreset": "windows-release"
+      "name": "windows-clang-debug",
+      "displayName": "Build (windows-clang-debug)",
+      "configurePreset": "windows-clang-debug"
     },
     {
-      "name": "linux-debug",
-      "displayName": "Build (linux-debug)",
-      "configurePreset": "linux-debug"
+      "name": "windows-clang-release",
+      "displayName": "Build (windows-clang-release)",
+      "configurePreset": "windows-clang-release"
     },
     {
-      "name": "linux-release",
-      "displayName": "Build (linux-release)",
-      "configurePreset": "linux-release"
+      "name": "linux-clang-debug",
+      "displayName": "Build (linux-clang-debug)",
+      "configurePreset": "linux-clang-debug"
+    },
+    {
+      "name": "linux-clang-release",
+      "displayName": "Build (linux-clang-release)",
+      "configurePreset": "linux-clang-release"
+    },
+    {
+      "name": "linux-gcc-debug",
+      "displayName": "Build (linux-gcc-debug)",
+      "configurePreset": "linux-gcc-debug"
+    },
+    {
+      "name": "linux-gcc-release",
+      "displayName": "Build (linux-gcc-release)",
+      "configurePreset": "linux-gcc-release"
     }
   ],
   "testPresets": [
@@ -251,27 +301,36 @@
       }
     },
     {
-      "name": "windows-debug",
-      "displayName": "Test (windows-debug)",
-      "configurePreset": "windows-debug",
+      "name": "windows-msvc-debug",
+      "displayName": "Test (windows-msvc-debug)",
+      "configurePreset": "windows-msvc-debug",
       "output": {
         "outputOnFailure": true,
         "verbosity": "default"
       }
     },
     {
-      "name": "windows-relwithdebinfo",
-      "displayName": "Test (windows-relwithdebinfo)",
-      "configurePreset": "windows-relwithdebinfo",
+      "name": "windows-clang-debug",
+      "displayName": "Test (windows-clang-debug)",
+      "configurePreset": "windows-clang-debug",
       "output": {
         "outputOnFailure": true,
         "verbosity": "default"
       }
     },
     {
-      "name": "linux-debug",
-      "displayName": "Test (linux-debug)",
-      "configurePreset": "linux-debug",
+      "name": "linux-clang-debug",
+      "displayName": "Test (linux-clang-debug)",
+      "configurePreset": "linux-clang-debug",
+      "output": {
+        "outputOnFailure": true,
+        "verbosity": "default"
+      }
+    },
+    {
+      "name": "linux-gcc-debug",
+      "displayName": "Test (linux-gcc-debug)",
+      "configurePreset": "linux-gcc-debug",
       "output": {
         "outputOnFailure": true,
         "verbosity": "default"
