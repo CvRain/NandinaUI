@@ -32,7 +32,6 @@ import nandina.theme.nan_style;
  * - 字体懒加载（第一次 on_draw 时自动获取系统默认字体或用户指定字体）
  */
 export namespace nandina::widgets {
-
     /**
      * Label — 文本显示组件
      *
@@ -58,39 +57,39 @@ export namespace nandina::widgets {
             return *this;
         }
 
-        auto set_font_size(float size) -> Label& {
+        auto set_font_size(const float size) -> Label& override {
             Text::set_font_size(size);
             return *this;
         }
 
-        auto set_font_family(std::string family) -> Label& {
+        auto set_font_family(const std::string &family) -> Label& override {
             Text::set_font_family(std::move(family));
             return *this;
         }
 
-        auto set_font_weight(text::NanFontWeight weight) -> Label& {
+        auto set_font_weight(const text::NanFontWeight weight) -> Label& override {
             Text::set_font_weight(weight);
             return *this;
         }
 
-        auto set_font(text::NanFont font) -> Label& {
+        auto set_font(const text::NanFont &font) -> Label& override {
             Text::set_font(std::move(font));
             return *this;
         }
 
-        auto set_typography_role(const theme::NanTypographyRole role) -> Label& {
+        auto set_typography_role(const theme::NanTypographyRole role) -> Label& override {
             Text::set_typography_role(role);
             return *this;
         }
 
-        template <typename Fn>
-            requires std::invocable<Fn, text::NanFont&>
-        auto update_font(Fn&& fn) -> Label& {
+        template<typename Fn>
+            requires std::invocable<Fn, text::NanFont &>
+        auto update_font(Fn &&fn) -> Label& {
             Text::update_font(std::forward<Fn>(fn));
             return *this;
         }
 
-        auto set_color(const nandina::NanColor& color) -> Label& {
+        auto set_color(const nandina::NanColor &color) -> Label& override {
             Text::set_color(color);
             return *this;
         }
@@ -105,7 +104,7 @@ export namespace nandina::widgets {
             return *this;
         }
 
-        auto set_align_to_ink_bounds(const bool value) -> Label& {
+        auto set_align_to_ink_bounds(const bool value) -> Label& override {
             Text::set_align_to_ink_bounds(value);
             return *this;
         }
@@ -160,7 +159,7 @@ export namespace nandina::widgets {
         }
 
     protected:
-        void on_draw(tvg::SwCanvas& canvas) override {
+        void on_draw(tvg::SwCanvas &canvas) override {
             if (!m_required) {
                 Text::on_draw(canvas);
                 return;
@@ -174,44 +173,48 @@ export namespace nandina::widgets {
             const auto bnds = bounds();
             const float avail_w = measured_constraints().max_width();
             const float max_width = (avail_w > 0.0f && avail_w < geometry::NanConstraints::k_infinity)
-                ? avail_w
-                : bnds.width();
-            const auto& layout = cached_shape(txt, max_width > 0.0f ? max_width : 0.0f);
+                                        ? avail_w
+                                        : bnds.width();
+            const auto &layout = cached_shape(txt, max_width > 0.0f ? max_width : 0.0f);
 
             if (layout.empty()) return;
 
             const float block_width = m_align_to_ink_bounds
-                ? std::max(0.0f, layout.ink_right - layout.ink_left)
-                : layout.total_width;
+                                          ? std::max(0.0f, layout.ink_right - layout.ink_left)
+                                          : layout.total_width;
             float offset_x = bnds.x();
             switch (m_align) {
-            case TextAlign::Start:  break;
-            case TextAlign::Center: offset_x += (bnds.width() - block_width) * 0.5f; break;
-            case TextAlign::End:    offset_x += bnds.width() - block_width; break;
+                case TextAlign::Start: break;
+                case TextAlign::Center: offset_x += (bnds.width() - block_width) * 0.5f;
+                    break;
+                case TextAlign::End: offset_x += bnds.width() - block_width;
+                    break;
             }
             if (m_align_to_ink_bounds) {
                 offset_x -= layout.ink_left;
             }
 
             const float block_height = m_align_to_ink_bounds
-                ? std::max(0.0f, layout.ink_bottom - layout.ink_top)
-                : layout.total_height;
+                                           ? std::max(0.0f, layout.ink_bottom - layout.ink_top)
+                                           : layout.total_height;
             float offset_y = bnds.y();
             switch (m_valign) {
-            case TextVerticalAlign::Top: break;
-            case TextVerticalAlign::Center: offset_y += (bnds.height() - block_height) * 0.5f; break;
-            case TextVerticalAlign::Bottom: offset_y += bnds.height() - block_height; break;
+                case TextVerticalAlign::Top: break;
+                case TextVerticalAlign::Center: offset_y += (bnds.height() - block_height) * 0.5f;
+                    break;
+                case TextVerticalAlign::Bottom: offset_y += bnds.height() - block_height;
+                    break;
             }
             if (m_align_to_ink_bounds) {
                 offset_y -= layout.ink_top;
             }
 
-            const auto& raw_text = m_text.get();
+            const auto &raw_text = m_text.get();
             if (!raw_text.empty()) {
                 auto text_font = m_font;
                 text_font.color(m_color.get());
-                const auto raw_layout = text_font.shape(raw_text, max_width > 0.0f ? max_width : 0.0f);
-                if (!raw_layout.empty()) {
+                if (const auto raw_layout = text_font.shape(raw_text, max_width > 0.0f ? max_width : 0.0f);
+                    !raw_layout.empty()) {
                     text_font.paint(canvas, raw_layout, offset_x, offset_y);
                 }
             }
@@ -221,8 +224,8 @@ export namespace nandina::widgets {
             const auto suffix = raw_text.empty() ? std::string{"*"} : std::string{" *"};
             const auto suffix_layout = suffix_font.shape(suffix, 0.0f);
             const float raw_width = raw_text.empty()
-                ? 0.0f
-                : m_font.shape(raw_text, max_width > 0.0f ? max_width : 0.0f).total_width;
+                                        ? 0.0f
+                                        : m_font.shape(raw_text, max_width > 0.0f ? max_width : 0.0f).total_width;
             const float suffix_x = offset_x + raw_width;
             const float suffix_y = offset_y + std::max(0.0f, layout.total_height - suffix_layout.total_height);
             suffix_font.paint(canvas, suffix_layout, suffix_x, suffix_y);
@@ -230,10 +233,10 @@ export namespace nandina::widgets {
 
     private:
         Label() {
-            const auto& style = theme::NanStylePrimitives::current().label;
+            const auto &style = theme::NanStylePrimitives::current().label;
             m_font.overflow(style.overflow)
-                .single_line(style.single_line)
-                .max_lines(style.max_lines);
+                    .single_line(style.single_line)
+                    .max_lines(style.max_lines);
             sync_resolved_style();
         }
 
@@ -250,7 +253,7 @@ export namespace nandina::widgets {
         }
 
         [[nodiscard]] auto resolved_text_color() const -> nandina::NanColor override {
-            const auto& style = theme::NanStylePrimitives::current().label;
+            const auto &style = theme::NanStylePrimitives::current().label;
 
             if (m_error) {
                 return style.error_font_color;
@@ -266,9 +269,8 @@ export namespace nandina::widgets {
             return theme::NanStylePrimitives::current().label.required_indicator_color;
         }
 
-        bool m_disabled{false};
-        bool m_error{false};
-        bool m_required{false};
+        bool m_disabled{};
+        bool m_error{};
+        bool m_required{};
     };
-
 } // namespace nandina::widgets

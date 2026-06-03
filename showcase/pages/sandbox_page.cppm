@@ -15,7 +15,6 @@ import nandina.widgets;
 import nandina.theme;
 
 export namespace nandina::showcase {
-
     /**
      * SandboxPage — 组件验证沙盒（新响应式 API 演示）
      *
@@ -50,34 +49,34 @@ export namespace nandina::showcase {
             // ── Pattern A：text(fn) 自动 Effect 追踪 ─────────────────────────
             // 不设固定尺寸，由 column align_items(stretch) 撑满列宽
             auto label = app::label()
-                .bind(label_ref)
-                .vertical_align(widgets::TextVerticalAlign::Center)
-                .align_items(LayoutAlignment::center)
-                .align(widgets::TextAlign::Center)
-                .font(text::NanFont{}
-                    .color(NanColor::from(NanRgb{"#dd7878"}))
-                    .overflow(text::TextOverflow::scale)
-                    .size(23)
-                    .weight(text::NanFontWeight::bold))
-                .text([this] {
-                    return std::to_string(m_count());
-                });
+                    .bind(label_ref)
+                    .vertical_align(widgets::TextVerticalAlign::Center)
+                    .align_items(LayoutAlignment::center)
+                    .align(widgets::TextAlign::Center)
+                    .font(text::NanFont{}
+                        .color(NanColor::from(NanRgb{"#dd7878"}))
+                        .overflow(text::TextOverflow::scale)
+                        .size(23)
+                        .weight(text::NanFontWeight::bold))
+                    .text([this] {
+                        return std::to_string(m_count());
+                    });
 
             // ── Pattern C：ComputedVar<T> 派生 signal 参与追踪图 ─────────────
             auto double_label = button()
-                .variant(ButtonVariant::outline)
-                .text([this] {
-                    return std::format("x2 = {}", m_double());
-                });
+                    .variant(ButtonVariant::outline)
+                    .text([this] {
+                        return std::format("x2 = {}", m_double());
+                    });
 
             // ── Pattern B：update() 原地修改 ─────────────────────────────────
             // expanded() 包裹后在 row 中各占 50% 宽度
             auto increase_button = button()
-                .bind(increase_button_ref)
-                .text("+");
+                    .bind(increase_button_ref)
+                    .text("+");
 
             increase_button.on_click([this]() {
-                m_count.update([](int& v) {
+                m_count.update([](int &v) {
                     v++;
                 });
             });
@@ -91,14 +90,14 @@ export namespace nandina::showcase {
             });
 
             auto decrease_button = button()
-                .bind(decrease_button_ref)
-                .text("-");
+                    .bind(decrease_button_ref)
+                    .text("-");
 
             decrease_button.on_click([&]() {
-                m_count.update([](int& v) {
+                m_count.update([](int &v) {
                     v--;
                 });
-                label_ref->update_font([this](text::NanFont& font) {
+                label_ref->update_font([this](text::NanFont &font) {
                     //generate random number 0 ~ 255
                     std::random_device random_device;
                     std::mt19937 generator(random_device());
@@ -106,8 +105,8 @@ export namespace nandina::showcase {
 
                     // generate random green color
                     const auto green = distribution(generator);
-                    const auto red   = distribution(generator);
-                    const auto blue  = distribution(generator);
+                    const auto red = distribution(generator);
+                    const auto blue = distribution(generator);
 
 
                     font.color(NanColor::from(NanRgb{red, green, blue}));
@@ -126,63 +125,64 @@ export namespace nandina::showcase {
             // ── Pattern B：update() 值语义重置 ──────────────────────────────
             // ghost sm 按钮保持自然宽度，通过两侧 spacer() 居中
             auto reset_button = button()
-                .size(ButtonSize::sm)
-                .variant(ButtonVariant::ghost)
-                .text("reset")
-                .on_click([this]() {
-                    m_count.update([](int) {
-                        return 1;
+                    .size(ButtonSize::sm)
+                    .variant(ButtonVariant::ghost)
+                    .text("reset")
+                    .on_click([this]() {
+                        m_count.update([](int) {
+                            return 1;
+                        });
                     });
-                });
 
             auto text_field = app::text_field()
-                .placeholder("Type into TextField...")
-                .on_change([this](std::string_view value) {
-                    if (text_field_status_ref) {
-                        text_field_status_ref->set_text(value.empty()
-                            ? "Input = (empty)"
-                            : std::format("Input = {}", value));
-                    }
-                })
-                .on_submit([this](std::string_view value) {
-                    if (text_field_status_ref) {
-                        text_field_status_ref->set_text(value.empty()
-                            ? "Submitted empty input"
-                            : std::format("Submitted = {}", value));
-                    }
-                });
+                    .placeholder("Type into TextField...")
+                    .on_change([this](std::string_view value) {
+                        if (text_field_status_ref) {
+                            text_field_status_ref->set_text(value.empty()
+                                                                ? "Input = (empty)"
+                                                                : std::format("Input = {}", value));
+                        }
+                    })
+                    .on_submit([this](std::string_view value) {
+                        if (text_field_status_ref) {
+                            text_field_status_ref->set_text(value.empty()
+                                                                ? "Submitted empty input"
+                                                                : std::format("Submitted = {}", value));
+                        }
+                    });
 
             auto text_field_status = app::label("Input = (empty)")
-                .bind(text_field_status_ref)
-                .font(text::NanFont{}
-                    .size(13)
-                    .color(NanColor::from(NanRgb{"#7c7f93"}))
-                    .single_line(true)
-                    .overflow(text::TextOverflow::clip));
+                    .bind(text_field_status_ref)
+                    .font(text::NanFont{}
+                        .size(13)
+                        .color(NanColor::from(NanRgb{"#7c7f93"}))
+                        .single_line(true)
+                        .overflow(text::TextOverflow::clip));
 
             // ── Field 演示 ──────────────────────────────────
             auto field = app::field()
-                .label("Email")
-                .helper_text("We'll never share your email.")
-                .error_text("Invalid email address.")
-                .control(app::text_field().placeholder("Enter email"))
-                .bind(field_ref);
+                    .label("Email")
+                    .helper_text("We'll never share your email.")
+                    .error_text("Invalid email address.")
+                    .control(app::text_field().placeholder("Enter email"))
+                    .bind(field_ref);
 
             auto toggle_invalid_btn = button()
-                .size(ButtonSize::sm)
-                .variant(ButtonVariant::outline)
-                .text([this] {
-                    return m_field_invalid ? "✓ Valid" : "✗ Invalid";
-                });
+                    .size(ButtonSize::sm)
+                    .variant(ButtonVariant::outline)
+                    .text([this] {
+                        return m_field_invalid ? "✓ Valid" : "✗ Invalid";
+                    });
 
             toggle_invalid_btn.on_click([this]() {
                 m_field_invalid = !m_field_invalid;
-                if (auto* f = field_ref.get()) {
+                if (auto *f = field_ref.get()) {
                     f->set_invalid(m_field_invalid);
-                    if (auto* ctrl = dynamic_cast<nandina::widgets::TextField*>(f->control())) {
+                    if (auto *ctrl = dynamic_cast<nandina::widgets::TextField *>(f->control())) {
                         if (m_field_invalid) {
                             ctrl->set_value("");
-                        } else {
+                        }
+                        else {
                             ctrl->set_value("user@example.com");
                         }
                     }
@@ -190,24 +190,24 @@ export namespace nandina::showcase {
             });
 
             auto semantic_tags = row(children(
-                    tag("Beta"),
-                    tag("Info").color_variant(ColorVariant::secondary).size(TagSize::sm),
-                    tag("Muted").color_variant(ColorVariant::neutral),
-                    tag("Disabled").color_variant(ColorVariant::destructive).disabled(true)
-                ))
-                .gap(8)
-                .align_items(LayoutAlignment::start);
+                        tag("Beta"),
+                        tag("Info").color_variant(ColorVariant::secondary).size(TagSize::sm),
+                        tag("Muted").color_variant(ColorVariant::neutral),
+                        tag("Disabled").color_variant(ColorVariant::destructive).disabled(true)
+                    ))
+                    .gap(8)
+                    .align_items(LayoutAlignment::start);
 
             // ── Checkbox 演示 ─────────────────────────────────────────
             auto checkboxes = column(children(
-                    checkbox("Accept terms and conditions"),
-                    checkbox("Subscribe to newsletter")
-                        .color_variant(ColorVariant::secondary)
-                        .size(CheckboxSize::sm),
-                    checkbox("Enable notifications")
-                        .color_variant(ColorVariant::destructive)
-                        .checked(true)
-                )).gap(8);
+                checkbox("Accept terms and conditions"),
+                checkbox("Subscribe to newsletter")
+                .color_variant(ColorVariant::secondary)
+                .size(CheckboxSize::sm),
+                checkbox("Enable notifications")
+                .color_variant(ColorVariant::destructive)
+                .checked(true)
+            )).gap(8);
 
             return mount(center(
                 column(children(
@@ -222,17 +222,17 @@ export namespace nandina::showcase {
                     row(children(
                         expanded(increase_button),
                         expanded(decrease_button)
-                        )).gap(12),
+                    )).gap(12),
                     row(children(
                         spacer(),
                         reset_button,
                         spacer()
-                        ))
                     ))
+                ))
                 .gap(12)
                 .align_items(LayoutAlignment::stretch)
                 .width(360.0f)
-                ));
+            ));
         }
 
     private:
@@ -248,9 +248,10 @@ export namespace nandina::showcase {
         bool m_field_invalid{false};
 
         // ComputedVar<T>：只读派生 signal，依赖图自动建立
-        nandina::app::ComputedVar<int> m_double{[this] {
-            return m_count() * 2;
-        }};
+        nandina::app::ComputedVar<int> m_double{
+            [this] {
+                return m_count() * 2;
+            }
+        };
     };
-
 } // namespace nandina::showcase

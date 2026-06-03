@@ -6,7 +6,6 @@ module;
 #include <memory>
 #include <optional>
 #include <string>
-#include <string_view>
 #include <thorvg-1/thorvg.h>
 
 export module nandina.widgets.text;
@@ -18,9 +17,9 @@ import nandina.foundation.color;
 import nandina.reactive.bindable_prop;
 import nandina.text.nan_font;
 import nandina.theme.nan_style;
+import nandina.foundation.nan_types;
 
 export namespace nandina::widgets {
-
     enum class TextAlign {
         Start,
         Center,
@@ -43,14 +42,22 @@ export namespace nandina::widgets {
             return Ptr(new Text());
         }
 
-        auto set_text(std::string_view text) -> Text& {
-            m_text.set(std::string{text});
+        // auto set_text(std::string_view text) -> Text& {
+        //     m_text.set(std::string{text});
+        //     m_shape_cache_valid = false;
+        //     mark_layout_dirty();
+        //     return *this;
+        // }
+
+        template<types::StringLike T>
+        auto set_text(T &&text) -> Text& {
+            m_text.set(std::string{std::forward<T>(text)});
             m_shape_cache_valid = false;
             mark_layout_dirty();
             return *this;
         }
 
-        auto set_font_size(float size) -> Text& {
+        virtual auto set_font_size(const float size) -> Text& {
             m_typography_role.reset();
             m_font.size(size);
             m_shape_cache_valid = false;
@@ -58,14 +65,14 @@ export namespace nandina::widgets {
             return *this;
         }
 
-        auto set_font_family(std::string family) -> Text& {
-            m_font.family(std::move(family));
+        virtual auto set_font_family(const std::string &family) -> Text& {
+            m_font.family(family);
             m_shape_cache_valid = false;
             mark_layout_dirty();
             return *this;
         }
 
-        auto set_font_weight(text::NanFontWeight weight) -> Text& {
+        virtual auto set_font_weight(const text::NanFontWeight weight) -> Text& {
             m_typography_role.reset();
             m_font.weight(weight);
             m_shape_cache_valid = false;
@@ -73,19 +80,19 @@ export namespace nandina::widgets {
             return *this;
         }
 
-        auto set_font(text::NanFont font) -> Text& {
+        virtual auto set_font(const text::NanFont &font) -> Text& {
             m_typography_role.reset();
             m_font = std::move(font);
             m_user_font_color = m_font.has_explicit_color()
-                ? std::optional<nandina::NanColor>{m_font.color()}
-                : std::nullopt;
+                                    ? std::optional<nandina::NanColor>{m_font.color()}
+                                    : std::nullopt;
             m_shape_cache_valid = false;
             sync_resolved_style();
             mark_layout_dirty();
             return *this;
         }
 
-        auto set_typography_role(const theme::NanTypographyRole role) -> Text& {
+        virtual auto set_typography_role(const theme::NanTypographyRole role) -> Text& {
             if (m_typography_role.has_value() && *m_typography_role == role) {
                 return *this;
             }
@@ -101,34 +108,34 @@ export namespace nandina::widgets {
             return m_font;
         }
 
-        template <typename Fn>
-            requires std::invocable<Fn, text::NanFont&>
-        auto update_font(Fn&& fn) -> Text& {
+        template<typename Fn>
+            requires std::invocable<Fn, text::NanFont &>
+        auto update_font(Fn &&fn) -> Text& {
             auto updated = m_font;
             std::invoke(std::forward<Fn>(fn), updated);
             return set_font(std::move(updated));
         }
 
-        auto set_color(const nandina::NanColor& color) -> Text& {
+        virtual auto set_color(const nandina::NanColor &color) -> Text& {
             m_user_font_color = color;
             sync_resolved_style();
             mark_dirty();
             return *this;
         }
 
-        auto set_align(TextAlign align) -> Text& {
+        virtual auto set_align(const TextAlign &align) -> Text& {
             m_align = align;
             mark_dirty();
             return *this;
         }
 
-        auto set_vertical_align(TextVerticalAlign valign) -> Text& {
+        virtual auto set_vertical_align(const TextVerticalAlign &valign) -> Text& {
             m_valign = valign;
             mark_dirty();
             return *this;
         }
 
-        auto set_align_to_ink_bounds(const bool value) -> Text& {
+        virtual auto set_align_to_ink_bounds(const bool value) -> Text& {
             if (m_align_to_ink_bounds == value) {
                 return *this;
             }
@@ -176,7 +183,7 @@ export namespace nandina::widgets {
             return {text_w, fs * 1.4f};
         }
 
-        auto measure(const geometry::NanConstraints& constraints) -> void override {
+        auto measure(const geometry::NanConstraints &constraints) -> void override {
             const auto txt = display_text();
             if (txt.empty()) {
                 set_measured_layout_state(constraints, geometry::NanSize{});
@@ -184,19 +191,18 @@ export namespace nandina::widgets {
             }
 
             const float max_width = constraints.max_width() != geometry::NanConstraints::k_infinity
-                ? constraints.max_width()
-                : 0.0f;
+                                        ? constraints.max_width()
+                                        : 0.0f;
 
-            const auto& layout = cached_shape(txt, max_width);
+            const auto &layout = cached_shape(txt, max_width);
             const geometry::NanSize measured = layout.empty()
-                ? geometry::NanSize{}
-                : geometry::NanSize{layout.total_width, layout.total_height};
+                                                   ? geometry::NanSize{}
+                                                   : geometry::NanSize{layout.total_width, layout.total_height};
 
-            if (measured.width() <= 0.0f && measured.height() <= 0.0f) {
-                set_measured_layout_state(constraints, constraints.constrain(preferred_size()));
-            } else {
-                set_measured_layout_state(constraints, constraints.constrain(measured));
-            }
+            set_measured_layout_state(constraints, constraints.constrain(
+                                          measured.width() <= 0.0f && measured.height() <= 0.0f
+                                              ? preferred_size()
+                                              : measured));
         }
 
         [[nodiscard]] static auto measure_diag() -> std::pair<int, int> {
@@ -212,44 +218,48 @@ export namespace nandina::widgets {
         }
 
         [[nodiscard]] virtual auto resolved_text_color() const -> nandina::NanColor {
-            const auto& style = theme::NanStylePrimitives::current().text;
+            const auto &style = theme::NanStylePrimitives::current().text;
             return m_user_font_color.value_or(style.font_color);
         }
 
-        void on_draw(tvg::SwCanvas& canvas) override {
+        void on_draw(tvg::SwCanvas &canvas) override {
             const auto txt = display_text();
             if (txt.empty()) return;
 
             const auto bnds = bounds();
             const float avail_w = measured_constraints().max_width();
             const float max_width = (avail_w > 0.0f && avail_w < geometry::NanConstraints::k_infinity)
-                ? avail_w
-                : bnds.width();
-            const auto& layout = cached_shape(txt, max_width > 0.0f ? max_width : 0.0f);
+                                        ? avail_w
+                                        : bnds.width();
+            const auto &layout = cached_shape(txt, max_width > 0.0f ? max_width : 0.0f);
 
             if (layout.empty()) return;
 
             const float block_width = m_align_to_ink_bounds
-                ? std::max(0.0f, layout.ink_right - layout.ink_left)
-                : layout.total_width;
+                                          ? std::max(0.0f, layout.ink_right - layout.ink_left)
+                                          : layout.total_width;
             float offset_x = bnds.x();
             switch (m_align) {
-            case TextAlign::Start:  break;
-            case TextAlign::Center: offset_x += (bnds.width() - block_width) * 0.5f; break;
-            case TextAlign::End:    offset_x += bnds.width() - block_width; break;
+                case TextAlign::Start: break;
+                case TextAlign::Center: offset_x += (bnds.width() - block_width) * 0.5f;
+                    break;
+                case TextAlign::End: offset_x += bnds.width() - block_width;
+                    break;
             }
             if (m_align_to_ink_bounds) {
                 offset_x -= layout.ink_left;
             }
 
             const float block_height = m_align_to_ink_bounds
-                ? std::max(0.0f, layout.ink_bottom - layout.ink_top)
-                : layout.total_height;
+                                           ? std::max(0.0f, layout.ink_bottom - layout.ink_top)
+                                           : layout.total_height;
             float offset_y = bnds.y();
             switch (m_valign) {
-            case TextVerticalAlign::Top: break;
-            case TextVerticalAlign::Center: offset_y += (bnds.height() - block_height) * 0.5f; break;
-            case TextVerticalAlign::Bottom: offset_y += bnds.height() - block_height; break;
+                case TextVerticalAlign::Top: break;
+                case TextVerticalAlign::Center: offset_y += (bnds.height() - block_height) * 0.5f;
+                    break;
+                case TextVerticalAlign::Bottom: offset_y += bnds.height() - block_height;
+                    break;
             }
             if (m_align_to_ink_bounds) {
                 offset_y -= layout.ink_top;
@@ -261,28 +271,28 @@ export namespace nandina::widgets {
         }
 
         Text() {
-            const auto& style = theme::NanStylePrimitives::current().text;
+            const auto &style = theme::NanStylePrimitives::current().text;
             m_typography_role = theme::NanTypographyRole::body_medium;
             apply_typography_role();
             m_font.overflow(style.overflow)
-                .single_line(style.single_line)
-                .max_lines(style.max_lines);
+                    .single_line(style.single_line)
+                    .max_lines(style.max_lines);
             sync_resolved_style();
         }
 
     protected:
         auto apply_typography_role() -> void {
-            if (!m_typography_role.has_value()) {
+            if (not this->m_typography_role.has_value()) {
                 return;
             }
 
-            const auto& type_style = theme::resolve_typography_style(
-                theme::NanStylePrimitives::current().typography,
-                *m_typography_role);
-            m_font.size(type_style.font_size)
-                .weight(static_cast<text::NanFontWeight>(type_style.font_weight))
-                .line_height(type_style.line_height)
-                .letter_spacing(type_style.letter_spacing);
+            const auto &[font_size, font_weight, line_height, letter_spacing] = theme::resolve_typography_style(
+                theme::NanStylePrimitives::current().typography, *m_typography_role);
+
+            m_font.size(font_size)
+                    .weight(static_cast<text::NanFontWeight>(font_weight))
+                    .line_height(line_height)
+                    .letter_spacing(letter_spacing);
         }
 
         auto sync_resolved_style() -> void {
@@ -291,11 +301,12 @@ export namespace nandina::widgets {
             m_font.color(resolved);
         }
 
-        auto invalidate_shape_cache() -> void {
+        auto invalidate_shape_cache() const -> void {
             m_shape_cache_valid = false;
         }
 
-        [[nodiscard]] auto cached_shape(const std::string& txt, float max_width) const -> const text::TextLayout& {
+        template<types::StringLike T>
+        [[nodiscard]] auto cached_shape(T &&txt, const float max_width) const -> const text::TextLayout& {
             const float quantized = std::round(max_width * 2.0f) * 0.5f;
             if (m_shape_cache_valid &&
                 m_cached_shape_text == txt &&
@@ -303,19 +314,19 @@ export namespace nandina::widgets {
                 return m_cached_shape_result;
             }
             m_cached_shape_result = m_font.shape(txt, quantized > 0.0f ? quantized : 0.0f);
-            m_cached_shape_text = txt;
+            m_cached_shape_text = std::string{txt};
             m_cached_shape_max_width = quantized;
             m_shape_cache_valid = true;
             return m_cached_shape_result;
         }
 
         reactive::BindableProp<std::string> m_text{""};
-        reactive::BindableProp<nandina::NanColor> m_color{nandina::NanColor::from(nandina::NanRgb{30, 30, 46})};
+        reactive::BindableProp<NanColor> m_color{NanColor::from(NanRgb{30, 30, 46})};
         text::NanFont m_font;
         TextAlign m_align{TextAlign::Start};
         TextVerticalAlign m_valign{TextVerticalAlign::Top};
         bool m_align_to_ink_bounds{true};
-        std::optional<theme::NanTypographyRole> m_typography_role;
+        std::optional<theme::NanTypographyRole> m_typography_role{};
         std::optional<nandina::NanColor> m_user_font_color;
 
         mutable text::TextLayout m_cached_shape_result{};
@@ -327,5 +338,4 @@ export namespace nandina::widgets {
         inline static std::atomic<int> s_measure_fast_count{0};
         inline static std::atomic<int> s_measure_slow_count{0};
     };
-
 } // namespace nandina::widgets

@@ -5,7 +5,6 @@
 module;
 
 #include <memory>
-#include <optional>
 #include <thorvg-1/thorvg.h>
 
 export module nandina.widgets.surface;
@@ -168,7 +167,7 @@ export namespace nandina::widgets {
             };
         }
 
-        auto layout_content_children(const float top_offset = 0.0f, runtime::NanWidget* skip = nullptr) -> void {
+        auto layout_content_children(const float top_offset = 0.0f, const runtime::NanWidget* skip = nullptr) -> void {
             const auto content = content_bounds(top_offset);
             for_each_child([&](runtime::NanWidget& child) {
                 if (&child == skip) {

@@ -224,7 +224,7 @@ export namespace nandina::app {
         template<typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, Node>
         auto corner_radius(this Self &&self, const float value) -> Self&& {
-            auto &node = static_cast<Node &>(self);
+            const auto &node = static_cast<Node &>(self);
             if (auto *widget = dynamic_cast<nandina::widgets::Surface *>(node.unwrapped())) {
                 widget->set_corner_radius(value);
             }
@@ -244,11 +244,12 @@ export namespace nandina::app {
         template<typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, Node>
         auto padding(this Self &&self, const float value) -> Self&& {
-            auto &node = static_cast<Node &>(self);
+            const auto &node = static_cast<Node &>(self);
             if (auto *widget = dynamic_cast<nandina::layout::Padding *>(node.m_widget.get())) {
                 widget->padding(value);
             }
-            else if (auto *widget = dynamic_cast<nandina::layout::LayoutContainer *>(node.m_widget.get())) {
+
+            if (auto *widget = dynamic_cast<nandina::layout::LayoutContainer *>(node.m_widget.get())) {
                 widget->padding(value);
             }
             return std::forward<Self>(self);
@@ -257,11 +258,12 @@ export namespace nandina::app {
         template<typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, Node>
         auto padding(this Self &&self, const float horizontal, const float vertical) -> Self&& {
-            auto &node = static_cast<Node &>(self);
+            const auto &node = static_cast<Node &>(self);
             if (auto *widget = dynamic_cast<nandina::layout::Padding *>(node.m_widget.get())) {
                 widget->padding(horizontal, vertical);
             }
-            else if (auto *widget = dynamic_cast<nandina::layout::LayoutContainer *>(node.m_widget.get())) {
+
+            if (auto *widget = dynamic_cast<nandina::layout::LayoutContainer *>(node.m_widget.get())) {
                 widget->padding(horizontal, vertical);
             }
             return std::forward<Self>(self);
@@ -271,11 +273,12 @@ export namespace nandina::app {
             requires std::derived_from<std::remove_cvref_t<Self>, Node>
         auto padding(this Self &&self, const float left, const float top, const float right, const float bottom)
             -> Self&& {
-            auto &node = static_cast<Node &>(self);
+            const auto &node = static_cast<Node &>(self);
             if (auto *widget = dynamic_cast<nandina::layout::Padding *>(node.m_widget.get())) {
                 widget->padding(left, top, right, bottom);
             }
-            else if (auto *widget = dynamic_cast<nandina::layout::LayoutContainer *>(node.m_widget.get())) {
+
+            if (auto *widget = dynamic_cast<nandina::layout::LayoutContainer *>(node.m_widget.get())) {
                 widget->padding(left, top, right, bottom);
             }
             return std::forward<Self>(self);
@@ -284,7 +287,8 @@ export namespace nandina::app {
         template<typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, Node>
         auto padding_top(this Self &&self, const float value) -> Self&& {
-            auto &node = static_cast<Node &>(self);
+            const auto &node = static_cast<Node &>(self);
+
             if (auto *widget = dynamic_cast<nandina::layout::LayoutContainer *>(node.m_widget.get())) {
                 widget->padding_top(value);
             }
@@ -598,7 +602,7 @@ export namespace nandina::app {
         auto reset_refs() -> void { for (auto &r: m_ref_resetters) r(); }
 
         /** 获取底层 widget 指针 */
-        [[nodiscard]] auto widget_ptr() -> runtime::NanWidget* { return m_widget.get(); }
+        [[nodiscard]] auto widget_ptr() const -> runtime::NanWidget* { return m_widget.get(); }
 
         /** @internal 穿透 SizedBox 找真实组件 */
         [[nodiscard]] auto unwrapped() const -> runtime::NanWidget* {
@@ -1527,7 +1531,7 @@ export namespace nandina::app {
         template<typename W, typename N> requires NodeLike<N> && requires { { detail::make_widget<W>() }; }
         [[nodiscard]] static auto wrapper(N &&child_node) -> Node {
             Node result{detail::make_widget<W>()};
-            Node moved = std::move(child_node);
+            Node moved = std::forward<N>(child_node);
             if (auto cw = std::move(moved).take_widget()) _set_child<W>(*result.widget_ptr(), std::move(cw));
             result.absorb(std::move(moved));
             return result;
@@ -1537,7 +1541,7 @@ export namespace nandina::app {
             requires NodeLike<N> && requires(Args... args) { { detail::make_widget<W>(std::forward<Args>(args)...) }; }
         [[nodiscard]] static auto wrapper_with(N &&child_node, Args &&... args) -> Node {
             Node result{detail::make_widget<W>(std::forward<Args>(args)...)};
-            Node moved = std::move(child_node);
+            Node moved = std::forward<N>(child_node);
             if (auto cw = std::move(moved).take_widget()) _set_child<W>(*result.widget_ptr(), std::move(cw));
             result.absorb(std::move(moved));
             return result;
@@ -1754,32 +1758,32 @@ export namespace nandina::app {
     // ── 容器组件 ──────────────────────────────────────────────────────
 
     /** @brief 水平排列容器 */
-    [[nodiscard]] inline auto row(Children children = {}) -> Node {
+    [[nodiscard]] inline auto row(Children&& children = {}) -> Node {
         return NodeFactory::container<nandina::layout::Row>(std::move(children));
     }
 
     /** @brief 垂直排列容器 */
-    [[nodiscard]] inline auto column(Children children = {}) -> Node {
+    [[nodiscard]] inline auto column(Children&& children = {}) -> Node {
         return NodeFactory::container<nandina::layout::Column>(std::move(children));
     }
 
     /** @brief Z 轴堆叠容器 */
-    [[nodiscard]] inline auto stack(Children children = {}) -> Node {
+    [[nodiscard]] inline auto stack(Children&& children = {}) -> Node {
         return NodeFactory::container<nandina::layout::Stack>(std::move(children));
     }
 
     /** @brief 卡片容器 */
-    [[nodiscard]] inline auto card(Children children) -> Node {
+    [[nodiscard]] inline auto card(Children&& children) -> Node {
         return NodeFactory::container<nandina::widgets::Card>(std::move(children));
     }
 
     /** @brief 面板容器 */
-    [[nodiscard]] inline auto panel(Children children) -> Node {
+    [[nodiscard]] inline auto panel(Children&& children) -> Node {
         return NodeFactory::container<nandina::widgets::Panel>(std::move(children));
     }
 
     /** @brief 自由定位容器 */
-    [[nodiscard]] inline auto positioned(Children children) -> Node {
+    [[nodiscard]] inline auto positioned(Children&& children) -> Node {
         return NodeFactory::positioned_container<nandina::layout::Positioned>(std::move(children));
     }
 
@@ -1999,7 +2003,7 @@ export namespace nandina::app {
             sync_focus_target(nullptr);
         }
 
-        auto sync_focused_text_input_area() -> void {
+        auto sync_focused_text_input_area() const -> void {
             if (!m_active_runtime_window) {
                 return;
             }
@@ -2066,7 +2070,7 @@ export namespace nandina::app {
             }
         }
 
-        auto apply_root_component_bounds() -> void {
+        auto apply_root_component_bounds() const -> void {
             if (!m_root_component) {
                 return;
             }

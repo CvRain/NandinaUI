@@ -126,22 +126,22 @@ export namespace nandina::widgets {
         }
 
         // ── 内边距 ────────────────────────────────────────
-        auto set_padding(const geometry::NanInsets &insets) -> Panel&  override {
+        auto set_padding(const geometry::NanInsets &insets) -> Panel& override {
             Surface::set_padding(insets);
             return *this;
         }
 
-        [[nodiscard]] auto padding() const noexcept -> const geometry::NanInsets&  override {
+        [[nodiscard]] auto padding() const noexcept -> const geometry::NanInsets& override {
             return Surface::padding();
         }
 
         // ── 描边 ──────────────────────────────────────────
-        auto set_border_color(const nandina::NanColor &color) -> Panel&  override {
+        auto set_border_color(const nandina::NanColor &color) -> Panel& override {
             Surface::set_border_color(color);
             return *this;
         }
 
-        auto set_border_width(const float width) -> Panel&  override {
+        auto set_border_width(const float width) -> Panel& override {
             Surface::set_border_width(width);
             return *this;
         }
@@ -171,8 +171,8 @@ export namespace nandina::widgets {
                 child.measure(child_constraints.is_tight()
                                   ? child_constraints
                                   : child_constraints.loosen());
-                const auto& measured = child.measured_size();
-                const auto& preferred = child.preferred_size();
+                const auto &measured = child.measured_size();
+                const auto &preferred = child.preferred_size();
                 child_measured = geometry::NanSize{
                     std::max(child_measured.width(), measured.width() > 0.0f ? measured.width() : preferred.width()),
                     std::max(child_measured.height(), measured.height() > 0.0f ? measured.height() : preferred.height())
