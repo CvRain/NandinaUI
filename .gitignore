@@ -49,6 +49,13 @@ CMakeLists.txt.user*
 # Vim temporary files
 .*.swp
 
+# ----------------------------------------------------------------------------
+# xmake — 构建产物与包缓存
+# ----------------------------------------------------------------------------
+.xmake/
+build/
+*.pdb
+
 # Visual Studio generated files
 *.ib_pdb_index
 *.idb

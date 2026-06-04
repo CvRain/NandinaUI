@@ -120,11 +120,11 @@ export namespace nandina::app {
 
     [[nodiscard]] inline auto sidebar_menu_button(std::string_view text = {}) -> SidebarMenuButtonNode;
 
-    [[nodiscard]] inline auto card(Children children) -> Node;
+    [[nodiscard]] inline auto card(Children&& children) -> Node;
 
-    [[nodiscard]] inline auto panel(Children children) -> Node;
+    [[nodiscard]] inline auto panel(Children&& children) -> Node;
 
-    [[nodiscard]] inline auto positioned(Children children) -> Node;
+    [[nodiscard]] inline auto positioned(Children&& children) -> Node;
 
     template<typename T>
     class Ref {
@@ -1531,7 +1531,7 @@ export namespace nandina::app {
         template<typename W, typename N> requires NodeLike<N> && requires { { detail::make_widget<W>() }; }
         [[nodiscard]] static auto wrapper(N &&child_node) -> Node {
             Node result{detail::make_widget<W>()};
-            Node moved = std::forward<N>(child_node);
+            Node moved{std::move(child_node)};
             if (auto cw = std::move(moved).take_widget()) _set_child<W>(*result.widget_ptr(), std::move(cw));
             result.absorb(std::move(moved));
             return result;
@@ -1541,7 +1541,7 @@ export namespace nandina::app {
             requires NodeLike<N> && requires(Args... args) { { detail::make_widget<W>(std::forward<Args>(args)...) }; }
         [[nodiscard]] static auto wrapper_with(N &&child_node, Args &&... args) -> Node {
             Node result{detail::make_widget<W>(std::forward<Args>(args)...)};
-            Node moved = std::forward<N>(child_node);
+            Node moved{std::move(child_node)};
             if (auto cw = std::move(moved).take_widget()) _set_child<W>(*result.widget_ptr(), std::move(cw));
             result.absorb(std::move(moved));
             return result;

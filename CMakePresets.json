@@ -63,6 +63,7 @@
         "rhs": "Linux"
       },
       "cacheVariables": {
+        "CMAKE_MAKE_PROGRAM": "/usr/bin/ninja",
         "VCPKG_TARGET_TRIPLET": "x64-linux",
         "VCPKG_HOST_TRIPLET": "x64-linux"
       }

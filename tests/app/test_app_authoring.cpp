@@ -28,6 +28,7 @@ import nandina.widgets.sidebar_group;
 import nandina.widgets.surface;
 import nandina.widgets.tag;
 import nandina.widgets.text_field;
+import nandina.widgets.checkbox;
 
 class TestWidget final : public nandina::runtime::NanWidget {
 public:
