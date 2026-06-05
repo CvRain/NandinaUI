@@ -189,22 +189,39 @@ export namespace nandina::widgets {
             const float header_h = title_header_height();
             const float footer_h = footer_height();
 
+            // 对宽度有界但非 tight 的约束，使用紧凑宽度确保文字换行测量准确
+            const float content_avail_w = constraints.max_width() == geometry::NanConstraints::k_infinity
+                ? geometry::NanConstraints::k_infinity
+                : std::max(0.0f, constraints.max_width() - pad.left() - pad.right());
+
+            float content_max_w = content_avail_w;
+            if (content_avail_w != geometry::NanConstraints::k_infinity && content_avail_w > 0.0f) {
+                geometry::NanSize preferred{0.0f, 0.0f};
+                for_each_child([&](runtime::NanWidget &child) {
+                    if (&child == m_title_host || &child == m_footer) return;
+                    preferred = geometry::NanSize{
+                        std::max(preferred.width(), child.preferred_size().width()),
+                        std::max(preferred.height(), child.preferred_size().height())
+                    };
+                });
+                if (preferred.width() > 0.0f && preferred.width() < content_max_w) {
+                    content_max_w = preferred.width();
+                }
+            }
+
             geometry::NanSize child_measured{0.0f, 0.0f};
             for_each_child([&](runtime::NanWidget &child) {
                 if (&child == m_title_host || &child == m_footer) return;
 
                 const geometry::NanConstraints cc{
                     std::max(0.0f, constraints.min_width() - pad.left() - pad.right()),
-                    constraints.max_width() == geometry::NanConstraints::k_infinity
-                        ? geometry::NanConstraints::k_infinity
-                        : std::max(0.0f, constraints.max_width() - pad.left() - pad.right()),
+                    content_max_w,
                     std::max(0.0f, constraints.min_height() - pad.top() - pad.bottom() - header_h - footer_h),
                     constraints.max_height() == geometry::NanConstraints::k_infinity
                         ? geometry::NanConstraints::k_infinity
                         : std::max(0.0f, constraints.max_height() - pad.top() - pad.bottom() - header_h - footer_h),
                 };
 
-                // 宽度保持有界（文字换行依赖此约束），仅高度放松
                 child.measure(geometry::NanConstraints{
                     cc.min_width(), cc.max_width(),
                     0.0f, geometry::NanConstraints::k_infinity
@@ -217,11 +234,10 @@ export namespace nandina::widgets {
                 };
             });
 
-            // 测量 footer
             if (m_footer) {
                 const geometry::NanConstraints fc{
                     std::max(0.0f, constraints.min_width() - pad.left() - pad.right()),
-                    std::max(0.0f, constraints.max_width() - pad.left() - pad.right()),
+                    content_avail_w,
                     0.0f, geometry::NanConstraints::k_infinity,
                 };
                 m_footer->measure(geometry::NanConstraints{

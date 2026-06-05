@@ -300,9 +300,9 @@ namespace nandina::showcase {
                 group_demo,
                 field_demo
             ))
+            .align_items(LayoutAlignment::stretch)
             .gap(20)
             .padding(24)
-            .width(520)
         );
     }
 

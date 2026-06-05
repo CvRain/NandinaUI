@@ -171,6 +171,17 @@ export namespace nandina::text {
 
         // ── Shaping（首次调用自动懒加载字体）──────────────
 
+        /// @param text 输入文本（UTF-8）
+        /// @return 按 \n 分割的已塑造字形列表（不含宽度约束换行）
+        [[nodiscard]] auto shape_text(std::string_view text) const -> std::vector<std::vector<GlyphInfo>>;
+
+        /// @param segments  shape_text() 产出的分段字形数据
+        /// @param max_width 最大宽度（像素），0 = 不限制
+        /// @return 按 max_width 换行/截断后的 TextLayout
+        [[nodiscard]] auto layout_lines(const std::vector<std::vector<GlyphInfo>>& segments,
+                                        float max_width) const -> TextLayout;
+
+        /// 便捷方法：shape_text + layout_lines = 一次完成
         /// @param text      输入文本（UTF-8）
         /// @param max_width 最大宽度（像素），0 = 不限制
         auto shape(std::string_view text, float max_width = 0.0f) const -> TextLayout;

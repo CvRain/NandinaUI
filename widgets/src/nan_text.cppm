@@ -42,17 +42,10 @@ export namespace nandina::widgets {
             return Ptr(new Text());
         }
 
-        // auto set_text(std::string_view text) -> Text& {
-        //     m_text.set(std::string{text});
-        //     m_shape_cache_valid = false;
-        //     mark_layout_dirty();
-        //     return *this;
-        // }
-
         template<types::StringLike T>
         auto set_text(T &&text) -> Text& {
             m_text.set(std::string{std::forward<T>(text)});
-            m_shape_cache_valid = false;
+            m_shaped_valid = false;
             mark_layout_dirty();
             return *this;
         }
@@ -60,14 +53,14 @@ export namespace nandina::widgets {
         virtual auto set_font_size(const float size) -> Text& {
             m_typography_role.reset();
             m_font.size(size);
-            m_shape_cache_valid = false;
+            m_shaped_valid = false;
             mark_layout_dirty();
             return *this;
         }
 
         virtual auto set_font_family(const std::string &family) -> Text& {
             m_font.family(family);
-            m_shape_cache_valid = false;
+            m_shaped_valid = false;
             mark_layout_dirty();
             return *this;
         }
@@ -75,7 +68,7 @@ export namespace nandina::widgets {
         virtual auto set_font_weight(const text::NanFontWeight weight) -> Text& {
             m_typography_role.reset();
             m_font.weight(weight);
-            m_shape_cache_valid = false;
+            m_shaped_valid = false;
             mark_layout_dirty();
             return *this;
         }
@@ -86,7 +79,7 @@ export namespace nandina::widgets {
             m_user_font_color = m_font.has_explicit_color()
                                     ? std::optional<nandina::NanColor>{m_font.color()}
                                     : std::nullopt;
-            m_shape_cache_valid = false;
+            m_shaped_valid = false;
             sync_resolved_style();
             mark_layout_dirty();
             return *this;
@@ -99,7 +92,7 @@ export namespace nandina::widgets {
 
             m_typography_role = role;
             apply_typography_role();
-            m_shape_cache_valid = false;
+            m_shaped_valid = false;
             mark_layout_dirty();
             return *this;
         }
@@ -190,11 +183,21 @@ export namespace nandina::widgets {
                 return;
             }
 
+            ensure_shaped();
+
             const float max_width = constraints.max_width() != geometry::NanConstraints::k_infinity
                                         ? constraints.max_width()
                                         : 0.0f;
 
-            const auto &layout = cached_shape(txt, max_width);
+            float measure_max_w = max_width;
+            if (max_width > 0.0f) {
+                const float pref_w = m_font.estimate_text_width(txt);
+                if (pref_w > 0.0f && pref_w < max_width) {
+                    measure_max_w = pref_w;
+                }
+            }
+
+            const auto &layout = layout_at(measure_max_w);
             const geometry::NanSize measured = layout.empty()
                                                    ? geometry::NanSize{}
                                                    : geometry::NanSize{layout.total_width, layout.total_height};
@@ -226,18 +229,15 @@ export namespace nandina::widgets {
             const auto txt = display_text();
             if (txt.empty()) return;
 
+            ensure_shaped();
+
             const auto bnds = bounds();
             const float avail_w = measured_constraints().max_width();
-            const bool measured_unbounded = avail_w <= 0.0f || avail_w >= geometry::NanConstraints::k_infinity;
-            // 优先使用 measure 阶段传入的约束宽度，确保 measure/draw 一致性；
-            // 仅在测量时无宽度约束（unbounded）时回退到 bounds 宽度
-            float max_width;
-            if (!measured_unbounded) {
+            float max_width = bnds.width();
+            if (max_width < 1.0f && avail_w > 0.0f && avail_w < geometry::NanConstraints::k_infinity) {
                 max_width = avail_w;
-            } else {
-                max_width = bnds.width() > 0.0f ? bnds.width() : 0.0f;
             }
-            const auto &layout = cached_shape(txt, max_width > 0.0f ? max_width : 0.0f);
+            const auto &layout = layout_at(max_width > 0.0f ? max_width : 0.0f);
 
             if (layout.empty()) return;
 
@@ -307,23 +307,25 @@ export namespace nandina::widgets {
             m_font.color(resolved);
         }
 
-        auto invalidate_shape_cache() const -> void {
-            m_shape_cache_valid = false;
+        auto invalidate_shaped_cache() const -> void {
+            m_shaped_valid = false;
         }
 
-        template<types::StringLike T>
-        [[nodiscard]] auto cached_shape(T &&txt, const float max_width) const -> const text::TextLayout& {
-            const float quantized = std::round(max_width * 2.0f) * 0.5f;
-            if (m_shape_cache_valid &&
-                m_cached_shape_text == txt &&
-                m_cached_shape_max_width == quantized) {
-                return m_cached_shape_result;
-            }
-            m_cached_shape_result = m_font.shape(txt, quantized > 0.0f ? quantized : 0.0f);
-            m_cached_shape_text = std::string{txt};
-            m_cached_shape_max_width = quantized;
-            m_shape_cache_valid = true;
-            return m_cached_shape_result;
+        auto ensure_shaped() const -> void {
+            const auto txt = display_text();
+            if (m_shaped_valid && m_shaped_text == txt) return;
+            m_shaped_glyphs = m_font.shape_text(txt);
+            m_shaped_text = txt;
+            m_shaped_valid = true;
+            m_layout_valid = false;
+        }
+
+        [[nodiscard]] auto layout_at(const float max_width) const -> const text::TextLayout& {
+            if (m_layout_valid && m_layout_max_width == max_width) return m_layout_result;
+            m_layout_result = m_font.layout_lines(m_shaped_glyphs, max_width);
+            m_layout_max_width = max_width;
+            m_layout_valid = true;
+            return m_layout_result;
         }
 
         reactive::BindableProp<std::string> m_text{""};
@@ -335,10 +337,14 @@ export namespace nandina::widgets {
         std::optional<theme::NanTypographyRole> m_typography_role{};
         std::optional<nandina::NanColor> m_user_font_color;
 
-        mutable text::TextLayout m_cached_shape_result{};
-        mutable std::string m_cached_shape_text{};
-        mutable float m_cached_shape_max_width{-1.0f};
-        mutable bool m_shape_cache_valid{false};
+        // 两级缓存：塑造（shaping）独立于排版（layout）
+        mutable bool m_shaped_valid{false};
+        mutable std::string m_shaped_text;
+        mutable std::vector<std::vector<text::GlyphInfo>> m_shaped_glyphs;
+
+        mutable bool m_layout_valid{false};
+        mutable float m_layout_max_width{-1.0f};
+        mutable text::TextLayout m_layout_result;
 
     private:
         inline static std::atomic<int> s_measure_fast_count{0};

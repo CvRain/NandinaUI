@@ -158,7 +158,7 @@ namespace nandina::showcase {
                         )).gap(2),
                         spacer(),
                         checkbox("").checked(true)
-                    )).align_items(LayoutAlignment::center),
+                    )).align_items(LayoutAlignment::start),
 
                     row(children(
                         column(children(
@@ -170,7 +170,7 @@ namespace nandina::showcase {
                         )).gap(2),
                         spacer(),
                         checkbox("")
-                    )).align_items(LayoutAlignment::center),
+                    )).align_items(LayoutAlignment::start),
 
                     row(children(
                         column(children(
@@ -182,7 +182,7 @@ namespace nandina::showcase {
                         )).gap(2),
                         spacer(),
                         checkbox("").disabled(true)
-                    )).align_items(LayoutAlignment::center)
+                    )).align_items(LayoutAlignment::start)
                 )).gap(8)
             )).gap(8)
         ));
@@ -256,33 +256,37 @@ namespace nandina::showcase {
                     .font(nandina::text::NanFont{}
                         .size(24).weight(nandina::text::NanFontWeight::bold)
                         .color(NanColor::from(NanRgb{"#cdd6f4"}))),
-                body_text("Displays a card with header, content, and footer."),
+                label("Displays a card with header, content, and footer.")
+                    .font(nandina::text::NanFont{}
+                        .size(13)
+                        .color(NanColor::from(NanRgb{"#a6adc8"}))),
 
                 // Row 1: Basic + Elevated
                 row(children(
-                    expanded(basic_card),
+                    expanded(sized_box(basic_card)),
                     sized_box(spacer(0)).width(16),
-                    expanded(elevated_card)
+                    expanded(sized_box(elevated_card))
                 )).align_items(LayoutAlignment::stretch),
 
                 sized_box(spacer(0)).height(16),
 
                 // Row 2: Account + Notification
                 row(children(
-                    expanded(account_card),
+                    expanded(sized_box(account_card)),
                     sized_box(spacer(0)).width(16),
-                    expanded(notification_card)
-                )).align_items(LayoutAlignment::stretch),
+                    expanded(sized_box(notification_card))
+                )).align_items(LayoutAlignment::stretch), 
 
                 sized_box(spacer(0)).height(16),
 
                 // Row 3: Payment + Login
                 row(children(
-                    expanded(payment_card),
+                    expanded(sized_box(payment_card)),
                     sized_box(spacer(0)).width(16),
-                    expanded(login_card)
+                    expanded(sized_box(login_card))
                 )).align_items(LayoutAlignment::stretch)
             ))
+            .align_items(LayoutAlignment::stretch)
             .gap(16)
             .padding(24)
         );

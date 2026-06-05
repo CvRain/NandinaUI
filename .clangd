@@ -1,25 +1,31 @@
-# clangd 配置
-# 默认对应 cmake --preset default（binaryDir: build/）
-# 若使用 cmake --preset debug，请将 CompilationDatabase 改为 build/debug
+# clangd 配置 — NandinaUI (C++26 + C++20 Modules)
 #
-# C++20 Modules 支持说明：
-# - 该项目使用 C++20 Modules（.cppm 文件）
-# - CMake GCC 生成的 compile_commands.json 中包含 GCC 专用模块扫描参数
-#   （如 -fmodules-ts, -fmodule-mapper=* 等），clangd 使用 Clang 驱动不识别这些参数
-# - 以下配置移除 GCC 专用标志，替换为 Clang 兼容的标志
+# 编译数据库指向 CMake linux-clang-debug 预设的输出目录。
+# 使用其他预设时请相应修改 CompilationDatabase 路径。
+#
+# ⚠ clangd 对 C++20 Modules 的支持需要：
+#   1. CMake 4.x 已配置并生成 compile_commands.json
+#   2. 项目至少构建过一次（生成 @*.modmap 响应文件与 .pcm 模块文件）
+#   3. 当模块依赖关系变化时需重新构建以更新 .pcm 文件
+#
+# 首次使用：
+#   cmake --preset linux-clang-debug
+#   cmake --build --preset linux-clang-debug -j$(nproc)
 
 CompileFlags:
-    CompilationDatabase: build
-    # 移除 GCC 专有的 C++ 模块扫描参数
+    CompilationDatabase: build/linux-clang-debug
+
+    # CMake 在 linux-gcc-* 预设下会向 compile_commands.json 写入 GCC 专有
+    # 模块扫描参数（-fmodules-ts, -fmodule-mapper=* 等），clangd 使用 Clang
+    # 驱动无法识别这些参数，在此提前移除并替换为 Clang 兼容的参数。
+    # 当使用 Clang 预设时 compile_commands 不含这些 GCC 标志，Remove 无副作用。
     Remove:
         - -fmodules-ts
         - -fmodule-mapper=*
         - -fdeps-format=*
         - -fdeps-file=*
-        - -fmodule-output=*
     Add:
         - -std=c++26
-        # Clang 的 C++20 Modules 支持标志（与 GCC 的 -fmodules-ts 等价）
         - -fmodules
         - -Wall
         - -Wextra

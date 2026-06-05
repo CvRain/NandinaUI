@@ -136,7 +136,7 @@ export namespace nandina::widgets {
             }
 
             m_required = value;
-            invalidate_shape_cache();
+            invalidate_shaped_cache();
             mark_dirty();
             mark_layout_dirty();
             return *this;
@@ -175,7 +175,8 @@ export namespace nandina::widgets {
             const float max_width = (avail_w > 0.0f && avail_w < geometry::NanConstraints::k_infinity)
                                         ? avail_w
                                         : bnds.width();
-            const auto &layout = cached_shape(txt, max_width > 0.0f ? max_width : 0.0f);
+            ensure_shaped();
+            const auto &layout = layout_at(max_width > 0.0f ? max_width : 0.0f);
 
             if (layout.empty()) return;
 

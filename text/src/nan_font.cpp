@@ -730,22 +730,15 @@ auto populate_line_ink_bounds(TextLine& line, FT_Face ft_face) -> void {
 } // namespace
 
 // ═══════════════════════════════════════════════════════════════
-// NanFont — Unified Shaping
+// NanFont — Shaping
 // ═══════════════════════════════════════════════════════════════
 
-auto NanFont::shape(std::string_view text, float max_width) const -> TextLayout {
+auto NanFont::shape_text(std::string_view text) const -> std::vector<std::vector<GlyphInfo>> {
     ensure_loaded();
+    if (text.empty() || !m_impl || !m_impl->hb_font) return {};
 
-    TextLayout result;
-    if (text.empty() || !m_impl || !m_impl->hb_font) return result;
-    if (max_width < 0.0f) max_width = 0.0f;
+    const bool single = m_single_line;
 
-    const float lh     = line_height();
-    const float asc    = ascent();
-    const int   ml     = m_max_lines;
-    const bool  single = m_single_line;
-
-    // ── 按 \n 分割 ──────────────────────────────────
     std::vector<std::string_view> segments;
     if (single) {
         segments.push_back(text);
@@ -760,8 +753,42 @@ auto NanFont::shape(std::string_view text, float max_width) const -> TextLayout 
         segments.push_back(text.substr(start));
     }
 
-    // ── 逐段 shaping ────────────────────────────────
-    for (auto segment : segments) {
+    std::vector<std::vector<GlyphInfo>> result;
+    result.reserve(segments.size());
+
+    for (const auto& segment : segments) {
+        if (segment.empty()) {
+            result.emplace_back();
+            continue;
+        }
+
+        auto glyphs = shape_single_segment(m_impl->hb_font, segment);
+
+        if (m_letter_spacing != 0.0f) {
+            for (auto& g : glyphs) {
+                g.advance_x += m_letter_spacing;
+            }
+        }
+
+        result.push_back(std::move(glyphs));
+    }
+
+    return result;
+}
+
+auto NanFont::layout_lines(const std::vector<std::vector<GlyphInfo>>& segments,
+                           float max_width) const -> TextLayout {
+    if (max_width < 0.0f) max_width = 0.0f;
+
+    TextLayout result;
+    if (segments.empty()) return result;
+
+    const float lh     = line_height();
+    const float asc    = ascent();
+    const int   ml     = m_max_lines;
+    const bool  single = m_single_line;
+
+    for (const auto& segment : segments) {
         if (segment.empty()) {
             TextLine empty_line;
             empty_line.height   = lh;
@@ -772,22 +799,12 @@ auto NanFont::shape(std::string_view text, float max_width) const -> TextLayout 
             continue;
         }
 
-        auto glyphs = shape_single_segment(m_impl->hb_font, segment);
+        auto glyphs = segment;
 
-        // 应用 letter_spacing
-        if (m_letter_spacing != 0.0f) {
-            for (auto& g : glyphs) {
-                g.advance_x += m_letter_spacing;
-            }
-        }
-
-        // 计算整段总宽度（用于 single_line 判断）
         float segment_total_w = 0.0f;
         for (auto& g : glyphs) segment_total_w += g.advance_x;
 
-            if (single && max_width > 0.0f && segment_total_w > max_width + k_layout_epsilon) {
-            // single_line 模式：永远只有一行，溢出时始终显示省略号
-            // （clip 静默删除字符是糟糕的 UX，wrap 在这里无意义）
+        if (single && max_width > 0.0f && segment_total_w > max_width + k_layout_epsilon) {
             TextLine line;
             line.height   = lh;
             line.baseline = asc;
@@ -820,7 +837,7 @@ auto NanFont::shape(std::string_view text, float max_width) const -> TextLayout 
             case TextOverflow::ellipsis: {
                 float total_w = 0.0f;
                 for (auto& g : glyphs) total_w += g.advance_x;
-                if (total_w <= max_width) {
+                if (total_w <= max_width + k_layout_epsilon) {
                     TextLine line;
                     line.glyphs   = std::move(glyphs);
                     line.width    = total_w;
@@ -834,7 +851,6 @@ auto NanFont::shape(std::string_view text, float max_width) const -> TextLayout 
                 break;
             }
             case TextOverflow::scale: {
-                // TODO: binary-search font size
                 auto clipped = clip_glyphs(glyphs, max_width);
                 float w = 0.0f;
                 for (auto& g : clipped) w += g.advance_x;
@@ -857,7 +873,7 @@ auto NanFont::shape(std::string_view text, float max_width) const -> TextLayout 
             line.height   = lh;
             line.baseline = asc;
             result.lines.push_back(std::move(line));
-            if (ml > 0 && static_cast<int>(result.lines.size()) >= ml) break;
+            if (ml > 0 && static_cast<int>(result.lines.size()) >= ml) goto done;
         }
     }
 
@@ -866,7 +882,7 @@ done:
     bool has_ink = false;
     for (const auto& line : result.lines) {
         result.total_height += line.height;
-        result.total_width   = std::max(result.total_width, line.width);
+        result.total_width = std::max(result.total_width, line.width);
     }
 
     for (auto& line : result.lines) {
@@ -902,6 +918,14 @@ done:
     return result;
 }
 
+auto NanFont::shape(std::string_view text, float max_width) const -> TextLayout {
+    auto segments = shape_text(text);
+    return layout_lines(segments, max_width);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// NanFont — 绘制
+// ═══════════════════════════════════════════════════════════════
 // ═══════════════════════════════════════════════════════════════
 // NanFont — 绘制
 // ═══════════════════════════════════════════════════════════════

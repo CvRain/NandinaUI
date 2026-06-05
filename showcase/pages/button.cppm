@@ -29,6 +29,7 @@ export namespace nandina::showcase {
     private:
         const std::string_view page_path{"showcase::page::button"};
         const std::string_view page_title{"Button Showcase"};
+        const std::string_view page_description{"Showcase of various button styles and states"};
     };
 }
 
@@ -126,6 +127,7 @@ namespace nandina::showcase {
             button("Neutral").variant(ButtonVariant::outline).color_variant(ColorVariant::neutral),
             button("Danger").variant(ButtonVariant::outline).color_variant(ColorVariant::destructive)
         )).gap(12);
+        
 
         return mount(column(children(
                 page_title,
@@ -142,7 +144,7 @@ namespace nandina::showcase {
                 colors
             ))
             .gap(12)
-            .align_items(LayoutAlignment::start)
+            .align_items(LayoutAlignment::stretch)
             .padding(24.0f));
     }
 }
