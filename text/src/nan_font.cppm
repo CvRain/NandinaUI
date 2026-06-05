@@ -65,6 +65,7 @@ export namespace nandina::text {
     struct GlyphInfo {
         std::uint32_t glyph_index{0};   // FreeType glyph 索引
         std::uint32_t original_cp{0};   // 原始 Unicode 码点（用于断词等）
+        std::size_t   face_index{0};    // 字体栈中的面索引（P1 字体回退）
         float         advance_x{0.0f};
         float         advance_y{0.0f};
         float         offset_x{0.0f};

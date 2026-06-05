@@ -167,9 +167,40 @@ namespace {
 // NanFont::Impl
 // ═══════════════════════════════════════════════════════════════
 
-struct NanFont::Impl {
+struct FontStackEntry {
     FT_Face      ft_face{nullptr};
     hb_font_t*   hb_font{nullptr};
+    std::string  path;
+    float        size_pt{14.0f};
+    float        pixel_height{0.0f};
+    bool         colored{false};
+
+    auto init_hb_font() -> void;
+    auto cleanup() -> void;
+};
+
+void FontStackEntry::init_hb_font() {
+    hb_font = hb_ft_font_create_referenced(ft_face);
+    if (!hb_font) return;
+    hb_font_set_scale(hb_font,
+                      static_cast<int>(pixel_height * 64.0f + 0.5f),
+                      static_cast<int>(pixel_height * 64.0f + 0.5f));
+}
+
+void FontStackEntry::cleanup() {
+    if (hb_font) {
+        hb_font_destroy(hb_font);
+        hb_font = nullptr;
+    }
+    if (ft_face) {
+        FT_Done_Face(ft_face);
+        ft_face = nullptr;
+    }
+}
+
+struct NanFont::Impl {
+    std::vector<FontStackEntry> faces;
+    std::vector<std::string> fallback_paths;
     float        size_pt{14.0f};
     float        pixel_height{0.0f};
     bool         ft_acquired{false};
@@ -182,13 +213,8 @@ struct NanFont::Impl {
     bool loaded{false};
 
     ~Impl() {
-        if (hb_font) {
-            hb_font_destroy(hb_font);
-            hb_font = nullptr;
-        }
-        if (ft_face) {
-            FT_Done_Face(ft_face);
-            ft_face = nullptr;
+        for (auto& entry : faces) {
+            entry.cleanup();
         }
         if (ft_acquired) {
             global_ft().release();
@@ -196,31 +222,111 @@ struct NanFont::Impl {
         }
     }
 
-    auto init_from_face(FT_Face face, float size_pt_val) -> void {
-        ft_face      = face;
-        size_pt      = size_pt_val;
-        pixel_height = pt_to_pixel(size_pt_val);
+    auto init_from_face(FT_Face face, float size_pt_val) -> void;
+    auto find_face_for_codepoint(unsigned int codepoint) -> std::size_t;
+    auto ensure_fallbacks() -> void;
 
-        // FT_Set_Char_Size 第二参数须为 pt 的 26.6 定点值（FreeType 内部再乘以 dpi/72 换算为像素）。
-        // 此前错误地传入了 pixel_to_ft_26_6(pixel_height)，相当于把像素值当 pt 传入，
-        // 导致实际渲染尺寸 = size_pt * (96/72)^2 ≈ 1.78x，现修正为直接传 size_pt 的 26.6 值。
-        FT_Set_Char_Size(ft_face, 0, static_cast<FT_F26Dot6>(size_pt_val * 64.0f + 0.5f), 0, 96);
-
-        hb_font = hb_ft_font_create_referenced(ft_face);
-        if (!hb_font) {
-            throw std::runtime_error("hb_ft_font_create_referenced returned nullptr");
-        }
-        hb_font_set_scale(hb_font,
-                          pixel_to_ft_26_6(pixel_height),
-                          pixel_to_ft_26_6(pixel_height));
-
-        const auto& metrics = ft_face->size->metrics;
-        ascent_cache  = static_cast<float>(metrics.ascender)  / 64.0f;
-        descent_cache = static_cast<float>(-metrics.descender) / 64.0f;
-        const float raw_gap = static_cast<float>(metrics.height - metrics.ascender + metrics.descender) / 64.0f;
-        line_gap_cache = (raw_gap > 0.0f) ? raw_gap : 0.0f;
-    }
+    static auto system_fallback_paths() -> std::vector<std::string>;
 };
+
+auto NanFont::Impl::system_fallback_paths() -> std::vector<std::string> {
+    std::vector<std::string> paths;
+
+    // Linux
+    paths.push_back("/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf");
+    paths.push_back("/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc");
+    paths.push_back("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf");
+    paths.push_back("/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf");
+    paths.push_back("/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc");
+    paths.push_back("/usr/share/fonts/noto-cjk/NotoSansCJK-Regular.ttc");
+    paths.push_back("/usr/share/fonts/truetype/ubuntu/Ubuntu-R.ttf");
+    paths.push_back("/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf");
+
+    // macOS
+    paths.push_back("/System/Library/Fonts/Apple Color Emoji.ttc");
+    paths.push_back("/System/Library/Fonts/Supplemental/Arial Unicode.ttf");
+    paths.push_back("/System/Library/Fonts/Helvetica.ttc");
+
+    // Windows
+    paths.push_back("C:/Windows/Fonts/seguiemj.ttf");
+    paths.push_back("C:/Windows/Fonts/seguisym.ttf");
+    paths.push_back("C:/Windows/Fonts/msyh.ttc");
+    paths.push_back("C:/Windows/Fonts/simhei.ttf");
+
+    return paths;
+}
+
+auto NanFont::Impl::init_from_face(FT_Face face, float size_pt_val) -> void {
+    FT_Set_Char_Size(face, 0, static_cast<FT_F26Dot6>(size_pt_val * 64.0f + 0.5f), 0, 96);
+
+    FontStackEntry entry;
+    entry.ft_face    = face;
+    entry.path       = {};
+    entry.size_pt    = size_pt_val;
+    entry.pixel_height = pt_to_pixel(size_pt_val);
+    entry.init_hb_font();
+
+    const auto& metrics = face->size->metrics;
+    ascent_cache  = static_cast<float>(metrics.ascender)  / 64.0f;
+    descent_cache = static_cast<float>(-metrics.descender) / 64.0f;
+    const float raw_gap = static_cast<float>(metrics.height - metrics.ascender + metrics.descender) / 64.0f;
+    line_gap_cache = (raw_gap > 0.0f) ? raw_gap : 0.0f;
+
+    faces.push_back(std::move(entry));
+}
+
+auto NanFont::Impl::find_face_for_codepoint(unsigned int codepoint) -> std::size_t {
+    if (faces.empty()) return 0;
+    if (codepoint == ' ' || codepoint == '\t' || codepoint == 0) return 0;
+
+    // 先检查已加载的面
+    for (std::size_t i = 0; i < faces.size(); ++i) {
+        if (FT_Get_Char_Index(faces[i].ft_face, codepoint) != 0) {
+            return i;
+        }
+    }
+
+    // 未找到，尝试惰性加载 fallback
+    if (!fallback_paths.empty()) {
+        ensure_fallbacks();
+        for (std::size_t i = 0; i < faces.size(); ++i) {
+            if (FT_Get_Char_Index(faces[i].ft_face, codepoint) != 0) {
+                return i;
+            }
+        }
+    }
+
+    // 都没有，回退到主面
+    return 0;
+}
+
+auto NanFont::Impl::ensure_fallbacks() -> void {
+    for (const auto& fb_path : fallback_paths) {
+        if (fb_path.empty()) continue;
+
+        // 跳过已加载的路径
+        bool already = false;
+        for (const auto& entry : faces) {
+            if (entry.path == fb_path) { already = true; break; }
+        }
+        if (already) continue;
+
+        FT_Face fb_face = nullptr;
+        if (FT_New_Face(global_ft().library, fb_path.c_str(), 0, &fb_face) != FT_Err_Ok || !fb_face) {
+            continue;
+        }
+
+        FontStackEntry entry;
+        entry.ft_face    = fb_face;
+        entry.path       = fb_path;
+        entry.size_pt    = size_pt;
+        entry.pixel_height = pt_to_pixel(size_pt);
+        entry.colored    = false;
+        entry.init_hb_font();
+
+        faces.push_back(std::move(entry));
+    }
+}
 
 // ═══════════════════════════════════════════════════════════════
 // NanFont — 构造 / 拷贝
@@ -385,6 +491,7 @@ auto NanFont::ensure_loaded() const -> void {
 
     auto default_font = load_system_default(m_size_pt);
     const_cast<NanFont*>(this)->m_impl = default_font->m_impl;
+    m_impl->fallback_paths = Impl::system_fallback_paths();
 }
 
 auto NanFont::is_loaded() const noexcept -> bool {
@@ -488,13 +595,15 @@ auto NanFont::em_size() const noexcept -> float {
 
 auto NanFont::glyph_advance(std::uint32_t codepoint) const noexcept -> float {
     ensure_loaded();
-    if (!m_impl || !m_impl->ft_face) return 0.0f;
+    if (!m_impl || m_impl->faces.empty()) return 0.0f;
 
-    const auto glyph_index = FT_Get_Char_Index(m_impl->ft_face, codepoint);
+    const auto face_idx = m_impl->find_face_for_codepoint(codepoint);
+    auto& face = m_impl->faces[face_idx];
+    const auto glyph_index = FT_Get_Char_Index(face.ft_face, codepoint);
     if (glyph_index == 0) return 0.0f;
-    if (FT_Load_Glyph(m_impl->ft_face, glyph_index, FT_LOAD_DEFAULT) != FT_Err_Ok) return 0.0f;
+    if (FT_Load_Glyph(face.ft_face, glyph_index, FT_LOAD_DEFAULT) != FT_Err_Ok) return 0.0f;
 
-    return static_cast<float>(m_impl->ft_face->glyph->advance.x) / 64.0f;
+    return static_cast<float>(face.ft_face->glyph->advance.x) / 64.0f;
 }
 
 auto NanFont::estimate_text_width(std::string_view text) const noexcept -> float {
@@ -661,8 +770,13 @@ auto ellipsis_glyphs(std::vector<GlyphInfo>& glyphs,
     return result;
 }
 
-auto populate_line_ink_bounds(TextLine& line, FT_Face ft_face) -> void {
-    if (!ft_face) {
+auto populate_line_ink_bounds(TextLine& line,
+                              const std::vector<FontStackEntry>& faces) -> void {
+    auto get_face_for_glyph = [&](const GlyphInfo& g) -> FT_Face {
+        return g.face_index < faces.size() ? faces[g.face_index].ft_face : nullptr;
+    };
+
+    if (faces.empty()) {
         line.ink_left = 0.0f;
         line.ink_top = 0.0f;
         line.ink_right = line.width;
@@ -678,19 +792,21 @@ auto populate_line_ink_bounds(TextLine& line, FT_Face ft_face) -> void {
     float max_bottom = 0.0f;
 
     for (const auto& glyph : line.glyphs) {
-        if (FT_Load_Glyph(ft_face, glyph.glyph_index, FT_LOAD_DEFAULT) != FT_Err_Ok) {
+        const auto face = get_face_for_glyph(glyph);
+        if (!face) { cursor_x += glyph.advance_x; continue; }
+        if (FT_Load_Glyph(face, glyph.glyph_index, FT_LOAD_DEFAULT) != FT_Err_Ok) {
             cursor_x += glyph.advance_x;
             continue;
         }
-        if (FT_Render_Glyph(ft_face->glyph, FT_RENDER_MODE_NORMAL) != FT_Err_Ok) {
+        if (FT_Render_Glyph(face->glyph, FT_RENDER_MODE_NORMAL) != FT_Err_Ok) {
             cursor_x += glyph.advance_x;
             continue;
         }
 
-        const auto* bitmap = &ft_face->glyph->bitmap;
+        const auto* bitmap = &face->glyph->bitmap;
         if (bitmap->buffer && bitmap->width > 0 && bitmap->rows > 0) {
-            const float pen_x = cursor_x + glyph.offset_x + static_cast<float>(ft_face->glyph->bitmap_left);
-            const float pen_y = line.baseline - glyph.offset_y - static_cast<float>(ft_face->glyph->bitmap_top);
+            const float pen_x = cursor_x + glyph.offset_x + static_cast<float>(face->glyph->bitmap_left);
+            const float pen_y = line.baseline - glyph.offset_y - static_cast<float>(face->glyph->bitmap_top);
             const float left = pen_x;
             const float top = pen_y;
             const float right = pen_x + static_cast<float>(bitmap->width);
@@ -735,7 +851,7 @@ auto populate_line_ink_bounds(TextLine& line, FT_Face ft_face) -> void {
 
 auto NanFont::shape_text(std::string_view text) const -> std::vector<std::vector<GlyphInfo>> {
     ensure_loaded();
-    if (text.empty() || !m_impl || !m_impl->hb_font) return {};
+    if (text.empty() || !m_impl || m_impl->faces.empty()) return {};
 
     const bool single = m_single_line;
 
@@ -753,6 +869,15 @@ auto NanFont::shape_text(std::string_view text) const -> std::vector<std::vector
         segments.push_back(text.substr(start));
     }
 
+    auto decode_utf8_cp = [](const std::string_view& str, std::size_t& idx) -> unsigned int {
+        const unsigned char lead = static_cast<unsigned char>(str[idx]);
+        if (lead < 0x80) { ++idx; return lead; }
+        if ((lead >> 5) == 0x6 && idx + 1 < str.size()) { idx += 2; return ((lead & 0x1F) << 6) | (static_cast<unsigned char>(str[idx - 1]) & 0x3F); }
+        if ((lead >> 4) == 0xE && idx + 2 < str.size()) { idx += 3; return ((lead & 0x0F) << 12) | ((static_cast<unsigned char>(str[idx - 2]) & 0x3F) << 6) | (static_cast<unsigned char>(str[idx - 1]) & 0x3F); }
+        if ((lead >> 3) == 0x1E && idx + 3 < str.size()) { idx += 4; return ((lead & 0x07) << 18) | ((static_cast<unsigned char>(str[idx - 3]) & 0x3F) << 12) | ((static_cast<unsigned char>(str[idx - 2]) & 0x3F) << 6) | (static_cast<unsigned char>(str[idx - 1]) & 0x3F); }
+        ++idx; return '?';
+    };
+
     std::vector<std::vector<GlyphInfo>> result;
     result.reserve(segments.size());
 
@@ -762,15 +887,47 @@ auto NanFont::shape_text(std::string_view text) const -> std::vector<std::vector
             continue;
         }
 
-        auto glyphs = shape_single_segment(m_impl->hb_font, segment);
+        // Split segment into uniform-face runs, so each run is shaped
+        // with the harfbuzz font that actually has the codepoints.
+        struct TextRun { std::size_t face_idx; std::size_t byte_start; std::size_t byte_len; };
+        std::vector<TextRun> runs;
+        std::size_t cur_face = static_cast<std::size_t>(-1);
+        std::size_t run_start = 0;
+        std::size_t idx = 0;
 
-        if (m_letter_spacing != 0.0f) {
-            for (auto& g : glyphs) {
-                g.advance_x += m_letter_spacing;
+        while (idx < segment.size()) {
+            const std::size_t prev = idx;
+            const unsigned int cp = decode_utf8_cp(segment, idx);
+            const std::size_t face_idx = m_impl->find_face_for_codepoint(cp);
+
+            if (cur_face == static_cast<std::size_t>(-1)) {
+                cur_face = face_idx; run_start = prev;
+            } else if (face_idx != cur_face) {
+                runs.push_back({cur_face, run_start, prev - run_start});
+                cur_face = face_idx; run_start = prev;
             }
         }
+        if (cur_face != static_cast<std::size_t>(-1)) {
+            runs.push_back({cur_face, run_start, idx - run_start});
+        }
 
-        result.push_back(std::move(glyphs));
+        std::vector<GlyphInfo> segment_glyphs;
+        for (const auto& run : runs) {
+            if (run.byte_len == 0) continue;
+            auto run_text = segment.substr(run.byte_start, run.byte_len);
+            auto glyphs = shape_single_segment(
+                m_impl->faces[run.face_idx].hb_font, run_text);
+            for (auto& g : glyphs) g.face_index = run.face_idx;
+            segment_glyphs.insert(segment_glyphs.end(),
+                std::make_move_iterator(glyphs.begin()),
+                std::make_move_iterator(glyphs.end()));
+        }
+
+        if (m_letter_spacing != 0.0f) {
+            for (auto& g : segment_glyphs) g.advance_x += m_letter_spacing;
+        }
+
+        result.push_back(std::move(segment_glyphs));
     }
 
     return result;
@@ -808,7 +965,8 @@ auto NanFont::layout_lines(const std::vector<std::vector<GlyphInfo>>& segments,
             TextLine line;
             line.height   = lh;
             line.baseline = asc;
-            line = ellipsis_glyphs(glyphs, max_width, lh, asc, m_impl->hb_font);
+            line = ellipsis_glyphs(glyphs, max_width, lh, asc,
+                                   m_impl->faces.empty() ? nullptr : m_impl->faces[0].hb_font);
             result.lines.push_back(std::move(line));
             if (ml > 0 && static_cast<int>(result.lines.size()) >= ml) goto done;
         } else if (max_width > 0.0f) {
@@ -845,7 +1003,8 @@ auto NanFont::layout_lines(const std::vector<std::vector<GlyphInfo>>& segments,
                     line.baseline = asc;
                     result.lines.push_back(std::move(line));
                 } else {
-                    result.lines.push_back(ellipsis_glyphs(glyphs, max_width, lh, asc, m_impl->hb_font));
+                    result.lines.push_back(ellipsis_glyphs(glyphs, max_width, lh, asc,
+                        m_impl->faces.empty() ? nullptr : m_impl->faces[0].hb_font));
                 }
                 if (ml > 0 && static_cast<int>(result.lines.size()) >= ml) goto done;
                 break;
@@ -886,7 +1045,7 @@ done:
     }
 
     for (auto& line : result.lines) {
-        populate_line_ink_bounds(line, m_impl->ft_face);
+        populate_line_ink_bounds(line, m_impl->faces);
 
         const float line_left = line.ink_left;
         const float line_top = line_origin_y + line.ink_top;
@@ -926,16 +1085,13 @@ auto NanFont::shape(std::string_view text, float max_width) const -> TextLayout 
 // ═══════════════════════════════════════════════════════════════
 // NanFont — 绘制
 // ═══════════════════════════════════════════════════════════════
-// ═══════════════════════════════════════════════════════════════
-// NanFont — 绘制
-// ═══════════════════════════════════════════════════════════════
 
 auto NanFont::paint(tvg::SwCanvas& canvas,
                     const TextLayout& layout,
                     float origin_x,
                     float origin_y) const -> void {
     ensure_loaded();
-    if (!m_impl || !m_impl->ft_face || layout.empty()) return;
+    if (!m_impl || m_impl->faces.empty() || layout.empty()) return;
 
     const auto rgb = m_color.to<nandina::NanRgb>();
     const auto r = rgb.red();
@@ -943,26 +1099,31 @@ auto NanFont::paint(tvg::SwCanvas& canvas,
     const auto b = rgb.blue();
     const auto a = rgb.alpha();
 
+    auto get_face_for_glyph = [&](const GlyphInfo& glyph) -> FT_Face {
+        return glyph.face_index < m_impl->faces.size()
+                   ? m_impl->faces[glyph.face_index].ft_face
+                   : nullptr;
+    };
+
     float line_y = origin_y;
     for (const auto& line : layout.lines) {
         float cursor_x = origin_x;
         for (const auto& glyph : line.glyphs) {
-            if (FT_Load_Glyph(m_impl->ft_face, glyph.glyph_index, FT_LOAD_DEFAULT) != FT_Err_Ok) {
+            const auto face = get_face_for_glyph(glyph);
+            if (!face) { cursor_x += glyph.advance_x; continue; }
+
+            if (FT_Load_Glyph(face, glyph.glyph_index, FT_LOAD_DEFAULT) != FT_Err_Ok) {
                 cursor_x += glyph.advance_x; continue;
             }
-            if (FT_Render_Glyph(m_impl->ft_face->glyph, FT_RENDER_MODE_NORMAL) != FT_Err_Ok) {
+            if (FT_Render_Glyph(face->glyph, FT_RENDER_MODE_NORMAL) != FT_Err_Ok) {
                 cursor_x += glyph.advance_x; continue;
             }
 
-            const auto* bitmap = &m_impl->ft_face->glyph->bitmap;
+            const auto* bitmap = &face->glyph->bitmap;
             if (bitmap->buffer && bitmap->width > 0 && bitmap->rows > 0) {
-                const float pen_x = cursor_x + glyph.offset_x + static_cast<float>(m_impl->ft_face->glyph->bitmap_left);
-                // 取整到像素边界：ThorVG 对 Picture 默认使用双线性过滤，
-                // 非整数 pen_y 会将字形顶行混合到 50% 透明，视觉上顶部像素被削掉。
-                // 只对垂直方向取整，保留水平方向的子像素精度。
-                const float pen_y = std::round(line_y + line.baseline - glyph.offset_y - static_cast<float>(m_impl->ft_face->glyph->bitmap_top));
+                const float pen_x = cursor_x + glyph.offset_x + static_cast<float>(face->glyph->bitmap_left);
+                const float pen_y = std::round(line_y + line.baseline - glyph.offset_y - static_cast<float>(face->glyph->bitmap_top));
 
-                // ARGB 预乘像素数据
                 std::vector<uint32_t> pixels(bitmap->width * bitmap->rows);
                 for (unsigned int row = 0; row < bitmap->rows; ++row) {
                     for (unsigned int col = 0; col < bitmap->width; ++col) {
