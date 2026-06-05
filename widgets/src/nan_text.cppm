@@ -42,6 +42,38 @@ export namespace nandina::widgets {
             return Ptr(new Text());
         }
 
+        virtual auto set_overflow(const text::TextOverflow overflow) -> Text& {
+            if (m_font.overflow() == overflow) return *this;
+            m_font.overflow(overflow);
+            m_layout_valid = false;
+            mark_layout_dirty();
+            return *this;
+        }
+
+        virtual auto set_single_line(const bool single) -> Text& {
+            if (m_font.single_line() == single) return *this;
+            m_font.single_line(single);
+            m_layout_valid = false;
+            mark_layout_dirty();
+            return *this;
+        }
+
+        virtual auto set_max_lines(const int lines) -> Text& {
+            if (m_font.max_lines() == lines) return *this;
+            m_font.max_lines(lines);
+            m_layout_valid = false;
+            mark_layout_dirty();
+            return *this;
+        }
+
+        virtual auto set_line_height(const float lh) -> Text& {
+            if (m_font.line_height() == lh) return *this;
+            m_font.line_height(lh);
+            m_layout_valid = false;
+            mark_layout_dirty();
+            return *this;
+        }
+
         template<types::StringLike T>
         auto set_text(T &&text) -> Text& {
             m_text.set(std::string{std::forward<T>(text)});
@@ -75,11 +107,19 @@ export namespace nandina::widgets {
 
         virtual auto set_font(const text::NanFont &font) -> Text& {
             m_typography_role.reset();
-            m_font = std::move(font);
+            const bool shaping_changed = font.size() != m_font.size() ||
+                                        font.family() != m_font.family() ||
+                                        font.weight() != m_font.weight() ||
+                                        font.letter_spacing() != m_font.letter_spacing();
+            m_font = text::NanFont(font);
             m_user_font_color = m_font.has_explicit_color()
                                     ? std::optional<nandina::NanColor>{m_font.color()}
                                     : std::nullopt;
-            m_shaped_valid = false;
+            if (shaping_changed) {
+                m_shaped_valid = false;
+            } else {
+                m_layout_valid = false;
+            }
             sync_resolved_style();
             mark_layout_dirty();
             return *this;
@@ -92,7 +132,6 @@ export namespace nandina::widgets {
 
             m_typography_role = role;
             apply_typography_role();
-            m_shaped_valid = false;
             mark_layout_dirty();
             return *this;
         }
@@ -292,6 +331,10 @@ export namespace nandina::widgets {
                 return;
             }
 
+            const auto old_size = m_font.size();
+            const auto old_weight = m_font.weight();
+            const auto old_letter_spacing = m_font.letter_spacing();
+
             const auto &[font_size, font_weight, line_height, letter_spacing] = theme::resolve_typography_style(
                 theme::NanStylePrimitives::current().typography, *m_typography_role);
 
@@ -299,6 +342,15 @@ export namespace nandina::widgets {
                     .weight(static_cast<text::NanFontWeight>(font_weight))
                     .line_height(line_height)
                     .letter_spacing(letter_spacing);
+
+            const bool shaping_changed = std::abs(font_size - old_size) > 0.001f ||
+                                         static_cast<int>(font_weight) != static_cast<int>(old_weight) ||
+                                         std::abs(letter_spacing - old_letter_spacing) > 0.001f;
+            if (shaping_changed) {
+                m_shaped_valid = false;
+            } else {
+                m_layout_valid = false;
+            }
         }
 
         auto sync_resolved_style() -> void {
