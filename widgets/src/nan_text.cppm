@@ -32,6 +32,27 @@ export namespace nandina::widgets {
         Bottom
     };
 
+    /// 统一的文本样式描述。各字段均为 optional，仅设置需要变更的属性。
+    struct TextStyle {
+        // — shaping 属性（变化时需 reshape）
+        std::optional<std::string>                  font_family;
+        std::optional<float>                        font_size;
+        std::optional<text::NanFontWeight>          font_weight;
+        std::optional<float>                        letter_spacing;
+
+        // — layout 属性（变化时仅 relayout）
+        std::optional<text::TextOverflow>           overflow;
+        std::optional<bool>                         single_line;
+        std::optional<int>                          max_lines;
+        std::optional<float>                        line_height;
+
+        // — 绘制属性（变化时不触发布局）
+        std::optional<TextAlign>                    horizontal_align;
+        std::optional<TextVerticalAlign>            vertical_align;
+        std::optional<bool>                         align_to_ink_bounds;
+        std::optional<nandina::NanColor>            text_color;
+    };
+
     class Text : public runtime::NanWidget {
     public:
         using Ptr = std::unique_ptr<Text>;
@@ -174,6 +195,67 @@ export namespace nandina::widgets {
 
             m_align_to_ink_bounds = value;
             mark_dirty();
+            return *this;
+        }
+
+        /// 使用 TextStyle 一次性设置多个属性，自动按变更类型分级失效缓存。
+        virtual auto set_style(const TextStyle &style) -> Text& {
+            bool shaped_dirty = false;
+            bool layout_dirty = false;
+            bool draw_dirty   = false;
+
+            if (style.font_family.has_value() && style.font_family.value() != m_font.family()) {
+                m_font.family(style.font_family.value()); shaped_dirty = true;
+            }
+            if (style.font_size.has_value() && std::abs(style.font_size.value() - m_font.size()) > 0.001f) {
+                m_typography_role.reset();
+                m_font.size(style.font_size.value()); shaped_dirty = true;
+            }
+            if (style.font_weight.has_value() && style.font_weight.value() != m_font.weight()) {
+                m_typography_role.reset();
+                m_font.weight(style.font_weight.value()); shaped_dirty = true;
+            }
+            if (style.letter_spacing.has_value() && std::abs(style.letter_spacing.value() - m_font.letter_spacing()) > 0.001f) {
+                m_font.letter_spacing(style.letter_spacing.value()); shaped_dirty = true;
+            }
+
+            if (style.overflow.has_value() && style.overflow.value() != m_font.overflow()) {
+                m_font.overflow(style.overflow.value()); layout_dirty = true;
+            }
+            if (style.single_line.has_value() && style.single_line.value() != m_font.single_line()) {
+                m_font.single_line(style.single_line.value()); layout_dirty = true;
+            }
+            if (style.max_lines.has_value() && style.max_lines.value() != m_font.max_lines()) {
+                m_font.max_lines(style.max_lines.value()); layout_dirty = true;
+            }
+            if (style.line_height.has_value() && std::abs(style.line_height.value() - m_font.line_height()) > 0.001f) {
+                m_font.line_height(style.line_height.value()); layout_dirty = true;
+            }
+
+            if (style.horizontal_align.has_value() && style.horizontal_align.value() != m_align) {
+                m_align = style.horizontal_align.value(); draw_dirty = true;
+            }
+            if (style.vertical_align.has_value() && style.vertical_align.value() != m_valign) {
+                m_valign = style.vertical_align.value(); draw_dirty = true;
+            }
+            if (style.align_to_ink_bounds.has_value() && style.align_to_ink_bounds.value() != m_align_to_ink_bounds) {
+                m_align_to_ink_bounds = style.align_to_ink_bounds.value(); draw_dirty = true;
+            }
+            if (style.text_color.has_value()) {
+                m_user_font_color = style.text_color.value();
+                sync_resolved_style();
+                draw_dirty = true;
+            }
+
+            if (shaped_dirty) {
+                m_shaped_valid = false;
+                mark_layout_dirty();
+            } else if (layout_dirty) {
+                m_layout_valid = false;
+                mark_layout_dirty();
+            } else if (draw_dirty) {
+                mark_dirty();
+            }
             return *this;
         }
 
