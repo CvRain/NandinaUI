@@ -159,6 +159,8 @@ namespace {
 
     constexpr std::string_view k_ellipsis = "...";
 
+    constexpr float k_layout_epsilon = 1e-4f;
+
 } // namespace
 
 // ═══════════════════════════════════════════════════════════════
@@ -587,13 +589,11 @@ auto wrap_lines(std::vector<GlyphInfo>& glyphs,
         for (std::size_t j = i; j < glyphs.size(); ++j) {
             float adv = glyphs[j].advance_x;
 
-            if (j > i && line_w + adv > max_width) {
-                // 溢出：在最后一个空格处断行（如果存在）
+            if (j > i && line_w + adv > max_width + k_layout_epsilon) {
                 if (last_space > i) {
                     line_end = last_space;
                     line_w   = space_line_w;
                 } else {
-                    // 无断词点，硬断在当前位置
                     line_end = j;
                 }
                 break;
@@ -628,7 +628,7 @@ auto clip_glyphs(std::vector<GlyphInfo>& glyphs, float max_width) -> std::vector
     std::vector<GlyphInfo> result;
     float cursor_x = 0.0f;
     for (auto& g : glyphs) {
-        if (cursor_x + g.advance_x > max_width) break;
+        if (cursor_x + g.advance_x > max_width + k_layout_epsilon) break;
         result.push_back(std::move(g));
         cursor_x += result.back().advance_x;
     }
@@ -648,7 +648,7 @@ auto ellipsis_glyphs(std::vector<GlyphInfo>& glyphs,
     float cursor_x = 0.0f;
 
     for (auto& g : glyphs) {
-        if (cursor_x + g.advance_x + ellipsis_w > max_width) break;
+        if (cursor_x + g.advance_x + ellipsis_w > max_width + k_layout_epsilon) break;
         result.glyphs.push_back(std::move(g));
         cursor_x += result.glyphs.back().advance_x;
     }
@@ -785,7 +785,7 @@ auto NanFont::shape(std::string_view text, float max_width) const -> TextLayout 
         float segment_total_w = 0.0f;
         for (auto& g : glyphs) segment_total_w += g.advance_x;
 
-        if (single && max_width > 0.0f && segment_total_w > max_width) {
+            if (single && max_width > 0.0f && segment_total_w > max_width + k_layout_epsilon) {
             // single_line 模式：永远只有一行，溢出时始终显示省略号
             // （clip 静默删除字符是糟糕的 UX，wrap 在这里无意义）
             TextLine line;

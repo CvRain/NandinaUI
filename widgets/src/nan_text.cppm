@@ -228,9 +228,15 @@ export namespace nandina::widgets {
 
             const auto bnds = bounds();
             const float avail_w = measured_constraints().max_width();
-            const float max_width = (avail_w > 0.0f && avail_w < geometry::NanConstraints::k_infinity)
-                                        ? avail_w
-                                        : bnds.width();
+            const bool measured_unbounded = avail_w <= 0.0f || avail_w >= geometry::NanConstraints::k_infinity;
+            // 优先使用 measure 阶段传入的约束宽度，确保 measure/draw 一致性；
+            // 仅在测量时无宽度约束（unbounded）时回退到 bounds 宽度
+            float max_width;
+            if (!measured_unbounded) {
+                max_width = avail_w;
+            } else {
+                max_width = bnds.width() > 0.0f ? bnds.width() : 0.0f;
+            }
             const auto &layout = cached_shape(txt, max_width > 0.0f ? max_width : 0.0f);
 
             if (layout.empty()) return;

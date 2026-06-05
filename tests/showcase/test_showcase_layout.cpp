@@ -263,7 +263,7 @@ TEST(ShowcaseLayoutTest, ExportedShowcaseShellRegistersMultiplePagesIntoSidebar)
     std::vector<nandina::widgets::SidebarMenuButton*> buttons;
     collect_sidebar_buttons(root_row, buttons);
 
-    ASSERT_GE(buttons.size(), 4u);
+    ASSERT_GE(buttons.size(), 5u);
     EXPECT_TRUE(buttons[0]->active());
     EXPECT_FALSE(buttons[1]->active());
     EXPECT_FALSE(buttons[2]->active());
@@ -271,7 +271,7 @@ TEST(ShowcaseLayoutTest, ExportedShowcaseShellRegistersMultiplePagesIntoSidebar)
     EXPECT_EQ(buttons[0]->text(), "Main Page");
     EXPECT_EQ(buttons[1]->text(), "Button Showcase");
     EXPECT_EQ(buttons[2]->text(), "Forms");
-    EXPECT_EQ(buttons[3]->text(), "Sandbox");
+    EXPECT_EQ(buttons[3]->text(), "Checkbox");
 }
 
 TEST(ShowcaseLayoutTest, ShowcaseShellPlacesSidebarOnLeftAndPageHostOnRight) {
