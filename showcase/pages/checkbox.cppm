@@ -37,17 +37,15 @@ export namespace nandina::showcase {
         // ── 返回一个 section 标题 ──
         static auto section_title(std::string_view text) -> app::LabelNode {
             return app::label(text)
-                .font(nandina::text::NanFont{}
-                    .size(15)
-                    .weight(nandina::text::NanFontWeight::semiBold)
-                    .color(nandina::NanColor::from(nandina::NanRgb{"#cdd6f4"})));
+                .style({
+                    .font_size = 15,
+                    .font_weight = nandina::text::NanFontWeight::semiBold,
+                    .text_color = nandina::NanColor::from(nandina::NanRgb{"#cdd6f4"}),
+                });
         }
 
         static auto section_desc(std::string_view text) -> app::LabelNode {
-            return app::label(text)
-                .font(nandina::text::NanFont{}
-                    .size(12)
-                    .color(nandina::NanColor::from(nandina::NanRgb{"#a6adc8"})));
+            return app::label(text).as_muted();
         }
 
         static auto demo_card(app::Children&& content) -> app::Node {
@@ -115,9 +113,7 @@ namespace nandina::showcase {
                         .checked(true)
                 )),
                 label("By clicking this checkbox, you agree to the terms.")
-                    .font(nandina::text::NanFont{}
-                        .size(12)
-                        .color(NanColor::from(NanRgb{"#a6adc8"})))
+                    .as_muted()
                     .align_items(LayoutAlignment::start)
             )).gap(4)
         ));
@@ -234,14 +230,13 @@ namespace nandina::showcase {
 
             column(children(
                 label("Show these items on the desktop:")
-                    .font(nandina::text::NanFont{}
-                        .size(13)
-                        .weight(nandina::text::NanFontWeight::semiBold)
-                        .color(NanColor::from(NanRgb{"#cdd6f4"}))),
+                    .style({
+                        .font_size = 13,
+                        .font_weight = nandina::text::NanFontWeight::semiBold,
+                        .text_color = NanColor::from(NanRgb{"#cdd6f4"}),
+                    }),
                 label("Select the items you want to show on the desktop.")
-                    .font(nandina::text::NanFont{}
-                        .size(12)
-                        .color(NanColor::from(NanRgb{"#a6adc8"}))),
+                    .as_muted(),
 
                 column(children(
                     checkbox("Hard disks")
@@ -282,14 +277,16 @@ namespace nandina::showcase {
         return mount(
             column(children(
                 label("Checkbox")
-                    .font(nandina::text::NanFont{}
-                        .size(24)
-                        .weight(nandina::text::NanFontWeight::bold)
-                        .color(NanColor::from(NanRgb{"#cdd6f4"}))),
+                    .style({
+                        .font_size = 24,
+                        .font_weight = nandina::text::NanFontWeight::bold,
+                        .text_color = NanColor::from(NanRgb{"#cdd6f4"}),
+                    }),
                 label("A control that allows the user to toggle between checked and not checked.")
-                    .font(nandina::text::NanFont{}
-                        .size(13)
-                        .color(NanColor::from(NanRgb{"#a6adc8"}))),
+                    .style({
+                        .font_size = 13,
+                        .text_color = NanColor::from(NanRgb{"#a6adc8"}),
+                    }),
 
                 basic_demo,
                 desc_demo,

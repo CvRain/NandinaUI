@@ -174,7 +174,7 @@ export namespace nandina::widgets {
             return true;
         }
 
-        auto on_pointer_up(const runtime::PointerButtonEvent &event) -> bool override {
+        auto on_pointer_up(const runtime::PointerButtonEvent &) -> bool override {
             if (m_disabled) return false;
             if (!m_pressed) return false;
             m_pressed = false;
@@ -230,7 +230,6 @@ export namespace nandina::widgets {
             if (m_checked) {
                 const auto check = colors.check;
                 const auto check_rgb = check.to<nandina::NanRgb>();
-                const float pad = box_sz * 0.23f;
                 const float cx = rect.x() + box_sz * 0.5f;
                 const float cy = box_y + box_sz * 0.5f;
                 const float hw = box_sz * 0.27f;

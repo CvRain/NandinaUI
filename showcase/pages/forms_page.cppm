@@ -43,28 +43,28 @@ export namespace nandina::showcase {
 
             auto page_title = label()
                 .text("Forms")
-                .align(widgets::TextAlign::Start)
-                .font(text::NanFont{}
-                    .size(24)
-                    .weight(text::NanFontWeight::bold))
-                .color(NanColor::from(NanRgb{"#caddf5"}));
+                .style({
+                    .font_size = 24,
+                    .font_weight = text::NanFontWeight::bold,
+                    .text_color = NanColor::from(NanRgb{"#caddf5"}),
+                });
 
             auto page_subtitle = label()
                 .text("Text input controls, field containers, and form state composition")
-                .align(widgets::TextAlign::Start)
-                .font(text::NanFont{}
-                    .size(16)
-                    .weight(text::NanFontWeight::medium))
-                .color(NanColor::from(NanRgb{"#caddf5"}));
+                .style({
+                    .font_size = 16,
+                    .font_weight = text::NanFontWeight::medium,
+                    .text_color = NanColor::from(NanRgb{"#caddf5"}),
+                });
 
             // ── Section 1: Basic TextField ─────────────────────
             auto section1_title = label()
                 .text("TextField")
-                .align(widgets::TextAlign::Start)
-                .font(text::NanFont{}
-                    .size(18)
-                    .weight(text::NanFontWeight::semiBold))
-                .color(NanColor::from(NanRgb{"#cdd6f4"}));
+                .style({
+                    .font_size = 18,
+                    .font_weight = text::NanFontWeight::semiBold,
+                    .text_color = NanColor::from(NanRgb{"#cdd6f4"}),
+                });
 
             auto basic_tf = text_field()
                 .placeholder("Type something...");
@@ -91,11 +91,11 @@ export namespace nandina::showcase {
             // ── Section 2: Field with label/helper/error ──────
             auto section2_title = label()
                 .text("Field")
-                .align(widgets::TextAlign::Start)
-                .font(text::NanFont{}
-                    .size(18)
-                    .weight(text::NanFontWeight::semiBold))
-                .color(NanColor::from(NanRgb{"#cdd6f4"}));
+                .style({
+                    .font_size = 18,
+                    .font_weight = text::NanFontWeight::semiBold,
+                    .text_color = NanColor::from(NanRgb{"#cdd6f4"}),
+                });
 
             auto email_field = field()
                 .label("Email")
@@ -112,11 +112,11 @@ export namespace nandina::showcase {
             // ── Section 3: Interactive invalid toggle ──────────
             auto section3_title = label()
                 .text("Interactive States")
-                .align(widgets::TextAlign::Start)
-                .font(text::NanFont{}
-                    .size(18)
-                    .weight(text::NanFontWeight::semiBold))
-                .color(NanColor::from(NanRgb{"#cdd6f4"}));
+                .style({
+                    .font_size = 18,
+                    .font_weight = text::NanFontWeight::semiBold,
+                    .text_color = NanColor::from(NanRgb{"#cdd6f4"}),
+                });
 
             auto interactive_field = field()
                 .label("Password")
@@ -142,10 +142,10 @@ export namespace nandina::showcase {
                 .text([this] {
                     return m_show_password_error ? "✓ Mark Valid" : "✗ Mark Invalid";
                 })
-                .font(text::NanFont{}
-                    .size(13)
-                    .color(NanColor::from(NanRgb{"#7c7f93"})))
-                .align(widgets::TextAlign::Start);
+                .style({
+                    .font_size = 13,
+                    .text_color = NanColor::from(NanRgb{"#7c7f93"}),
+                });
 
             return mount(column(children(
                 page_title,

@@ -784,6 +784,131 @@ export namespace nandina::app {
             return std::forward<Self>(self);
         }
 
+        // ── TextStyle 批量设置 ────────────────────────────────────────────
+
+        template<typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, LabelNode>
+        auto style(this Self &&self, const nandina::widgets::TextStyle &s) -> Self&& {
+            self.m_typed->set_style(s);
+            return std::forward<Self>(self);
+        }
+
+        // ── 排版属性（P2 layout-only setter，不影响 shaping）─────────────
+
+        template<typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, LabelNode>
+        auto overflow(this Self &&self, const nandina::text::TextOverflow value) -> Self&& {
+            self.m_typed->set_overflow(value);
+            return std::forward<Self>(self);
+        }
+
+        template<typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, LabelNode>
+        auto single_line(this Self &&self, const bool value) -> Self&& {
+            self.m_typed->set_single_line(value);
+            return std::forward<Self>(self);
+        }
+
+        template<typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, LabelNode>
+        auto max_lines(this Self &&self, const int value) -> Self&& {
+            self.m_typed->set_max_lines(value);
+            return std::forward<Self>(self);
+        }
+
+        template<typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, LabelNode>
+        auto line_height(this Self &&self, const float value) -> Self&& {
+            self.m_typed->set_line_height(value);
+            return std::forward<Self>(self);
+        }
+
+        // ── shadcn 风格语义文本变体 ──────────────────────────────────────
+        //
+        // 对应：https://ui.shadcn.com/docs/components/typography
+        // 这些方法是对 set_typography_role 的便捷包装。
+
+        /// 页面主标题：display-small（≈ shadcn h1）
+        template<typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, LabelNode>
+        auto as_h1(this Self &&self) -> Self&& {
+            self.m_typed->set_typography_role(nandina::theme::NanTypographyRole::display_small);
+            return std::forward<Self>(self);
+        }
+
+        /// 区块标题：headline-medium（≈ shadcn h2）
+        template<typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, LabelNode>
+        auto as_h2(this Self &&self) -> Self&& {
+            self.m_typed->set_typography_role(nandina::theme::NanTypographyRole::headline_medium);
+            return std::forward<Self>(self);
+        }
+
+        /// 小标题：headline-small（≈ shadcn h3）
+        template<typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, LabelNode>
+        auto as_h3(this Self &&self) -> Self&& {
+            self.m_typed->set_typography_role(nandina::theme::NanTypographyRole::headline_small);
+            return std::forward<Self>(self);
+        }
+
+        /// 卡片/面板标题：title-medium（≈ shadcn h4）
+        template<typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, LabelNode>
+        auto as_h4(this Self &&self) -> Self&& {
+            self.m_typed->set_typography_role(nandina::theme::NanTypographyRole::title_medium);
+            return std::forward<Self>(self);
+        }
+
+        /// 正文：body-medium（≈ shadcn p）
+        template<typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, LabelNode>
+        auto as_body(this Self &&self) -> Self&& {
+            self.m_typed->set_typography_role(nandina::theme::NanTypographyRole::body_medium);
+            return std::forward<Self>(self);
+        }
+
+        /// 引导文字：body-large 稍大、稍淡（≈ shadcn lead / text-xl text-muted-foreground）
+        template<typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, LabelNode>
+        auto as_lead(this Self &&self) -> Self&& {
+            self.m_typed->set_typography_role(nandina::theme::NanTypographyRole::body_large);
+            return std::forward<Self>(self);
+        }
+
+        /// 强调文字：title-medium 同等尺寸 + semibold（≈ shadcn large / text-lg font-semibold）
+        template<typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, LabelNode>
+        auto as_large(this Self &&self) -> Self&& {
+            self.m_typed->set_typography_role(nandina::theme::NanTypographyRole::title_small);
+            return std::forward<Self>(self);
+        }
+
+        /// 辅助说明：body-small（≈ shadcn small / text-sm font-medium leading-none）
+        template<typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, LabelNode>
+        auto as_small(this Self &&self) -> Self&& {
+            self.m_typed->set_typography_role(nandina::theme::NanTypographyRole::body_small);
+            return std::forward<Self>(self);
+        }
+
+        /// 次要文字：body-small + label 配色（≈ shadcn muted / text-sm text-muted-foreground）
+        template<typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, LabelNode>
+        auto as_muted(this Self &&self) -> Self&& {
+            self.m_typed->set_typography_role(nandina::theme::NanTypographyRole::body_small);
+            const auto &style = nandina::theme::NanStylePrimitives::current().label;
+            self.m_typed->set_color(style.font_color);
+            return std::forward<Self>(self);
+        }
+
+        /// inline-code 风格：未来可在此设置等宽字体 + bg 底色
+        // template<typename Self>
+        //     requires std::derived_from<std::remove_cvref_t<Self>, LabelNode>
+        // auto as_code(this Self &&self) -> Self&& { ... }
+
+        // ── 对齐 ──────────────────────────────────────────────────────────
+
         template<typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, LabelNode>
         auto align(this Self &&self, const nandina::widgets::TextAlign value) -> Self&& {

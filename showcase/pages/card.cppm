@@ -58,26 +58,43 @@ namespace nandina::showcase {
 
         auto section_title = [](std::string_view t) {
             return app::label(t)
-                .font(nandina::text::NanFont{}
-                    .size(15)
-                    .weight(nandina::text::NanFontWeight::semiBold)
-                    .color(NanColor::from(NanRgb{"#cdd6f4"})));
+                .style({
+                    .font_size = 15,
+                    .font_weight = nandina::text::NanFontWeight::semiBold,
+                    .text_color = NanColor::from(NanRgb{"#cdd6f4"}),
+                });
         };
 
         auto body_text = [](std::string_view t) {
             return app::label(t)
-                .font(nandina::text::NanFont{}
-                    .size(13)
-                    .single_line(false)
-                    .overflow(nandina::text::TextOverflow::wrap)
-                    .color(NanColor::from(NanRgb{"#a6adc8"})));
+                .style({
+                    .font_size = 13,
+                    .font_weight = nandina::text::NanFontWeight::regular,
+                    .text_color = NanColor::from(NanRgb{"#a6adc8"}),
+                    .overflow = nandina::text::TextOverflow::wrap,
+                    .single_line = false,
+                });
         };
 
         auto muted_text = [](std::string_view t) {
+            return app::label(t).as_muted();
+        };
+
+        auto field_label = [](std::string_view t) {
             return app::label(t)
-                .font(nandina::text::NanFont{}
-                    .size(12)
-                    .color(NanColor::from(NanRgb{"#6c7086"})));
+                .style({
+                    .font_size = 13,
+                    .font_weight = nandina::text::NanFontWeight::medium,
+                });
+        };
+
+        auto form_label = [](std::string_view t) {
+            return app::label(t)
+                .style({
+                    .font_size = 12,
+                    .font_weight = nandina::text::NanFontWeight::medium,
+                    .text_color = NanColor::from(NanRgb{"#a6adc8"}),
+                });
         };
 
         // ═══════════════════════════════════════════════════════════
@@ -115,23 +132,17 @@ namespace nandina::showcase {
                 // 模拟 account rows
                 column(children(
                     row(children(
-                        label("Name").font(nandina::text::NanFont{}
-                            .size(13).weight(nandina::text::NanFontWeight::medium)
-                            .color(NanColor::from(NanRgb{"#cdd6f4"}))),
+                        field_label("Name"),
                         spacer(),
                         body_text("CvRain")
                     )).align_items(LayoutAlignment::center),
                     row(children(
-                        label("Email").font(nandina::text::NanFont{}
-                            .size(13).weight(nandina::text::NanFontWeight::medium)
-                            .color(NanColor::from(NanRgb{"#cdd6f4"}))),
+                        field_label("Email"),
                         spacer(),
                         body_text("cvrain@example.com")
                     )).align_items(LayoutAlignment::center),
                     row(children(
-                        label("Plan").font(nandina::text::NanFont{}
-                            .size(13).weight(nandina::text::NanFontWeight::medium)
-                            .color(NanColor::from(NanRgb{"#cdd6f4"}))),
+                        field_label("Plan"),
                         spacer(),
                         tag("Pro").color_variant(nandina::theme::ColorVariant::secondary)
                     )).align_items(LayoutAlignment::center)
@@ -150,10 +161,7 @@ namespace nandina::showcase {
                 column(children(
                     row(children(
                         column(children(
-                            label("Push Notifications")
-                                .font(nandina::text::NanFont{}
-                                    .size(13).weight(nandina::text::NanFontWeight::medium)
-                                    .color(NanColor::from(NanRgb{"#cdd6f4"}))),
+                            field_label("Push Notifications"),
                             muted_text("Receive push notifications on your device.")
                         )).gap(2),
                         spacer(),
@@ -162,10 +170,7 @@ namespace nandina::showcase {
 
                     row(children(
                         column(children(
-                            label("Email Digest")
-                                .font(nandina::text::NanFont{}
-                                    .size(13).weight(nandina::text::NanFontWeight::medium)
-                                    .color(NanColor::from(NanRgb{"#cdd6f4"}))),
+                            field_label("Email Digest"),
                             muted_text("Weekly summary of activity.")
                         )).gap(2),
                         spacer(),
@@ -174,10 +179,7 @@ namespace nandina::showcase {
 
                     row(children(
                         column(children(
-                            label("Marketing Emails")
-                                .font(nandina::text::NanFont{}
-                                    .size(13).weight(nandina::text::NanFontWeight::medium)
-                                    .color(NanColor::from(NanRgb{"#cdd6f4"}))),
+                            field_label("Marketing Emails"),
                             muted_text("Promotions, tips, and product updates.")
                         )).gap(2),
                         spacer(),
@@ -225,21 +227,17 @@ namespace nandina::showcase {
                 body_text("Enter your credentials to access your account."),
 
                 column(children(
-                    label("Email").font(nandina::text::NanFont{}
-                        .size(12).weight(nandina::text::NanFontWeight::medium)
-                        .color(NanColor::from(NanRgb{"#a6adc8"}))),
+                    form_label("Email"),
                     text_field().placeholder("you@example.com"),
 
-                    label("Password").font(nandina::text::NanFont{}
-                        .size(12).weight(nandina::text::NanFontWeight::medium)
-                        .color(NanColor::from(NanRgb{"#a6adc8"}))),
+                    form_label("Password"),
                     text_field().placeholder("Enter your password"),
 
                     row(children(
                         checkbox("Remember me"),
                         spacer(),
-                        label("Forgot password?").font(nandina::text::NanFont{}
-                            .size(12).color(NanColor::from(NanRgb{"#89b4fa"})))
+                        app::label("Forgot password?")
+                            .style({.font_size = 12, .text_color = NanColor::from(NanRgb{"#89b4fa"})})
                     )).align_items(LayoutAlignment::center),
 
                     button("Sign In")
@@ -253,13 +251,16 @@ namespace nandina::showcase {
         return mount(
             column(children(
                 label("Card")
-                    .font(nandina::text::NanFont{}
-                        .size(24).weight(nandina::text::NanFontWeight::bold)
-                        .color(NanColor::from(NanRgb{"#cdd6f4"}))),
+                    .style({
+                        .font_size = 24,
+                        .font_weight = nandina::text::NanFontWeight::bold,
+                        .text_color = NanColor::from(NanRgb{"#cdd6f4"}),
+                    }),
                 label("Displays a card with header, content, and footer.")
-                    .font(nandina::text::NanFont{}
-                        .size(13)
-                        .color(NanColor::from(NanRgb{"#a6adc8"}))),
+                    .style({
+                        .font_size = 13,
+                        .text_color = NanColor::from(NanRgb{"#a6adc8"}),
+                    }),
 
                 // Row 1: Basic + Elevated
                 row(children(

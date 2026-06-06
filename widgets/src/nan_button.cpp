@@ -50,21 +50,6 @@ namespace nandina::widgets {
             return style.filled;
         }
 
-        auto resolved_color_variant(ButtonVariant variant, ColorVariant explicit_variant) noexcept -> ColorVariant {
-            if (explicit_variant != ColorVariant::inherit) {
-                return explicit_variant;
-            }
-
-            switch (variant) {
-            case ButtonVariant::secondary:
-                return ColorVariant::secondary;
-            case ButtonVariant::destructive:
-                return ColorVariant::destructive;
-            default:
-                return ColorVariant::primary;
-            }
-        }
-
         auto family_for(ColorVariant color_variant) -> const theme::NanButtonStyle::ColorFamilyStyle& {
             const auto& style = theme::NanStylePrimitives::current().button;
             switch (color_variant) {

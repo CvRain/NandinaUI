@@ -35,7 +35,7 @@ export namespace nandina::widgets {
     /// 统一的文本样式描述。各字段均为 optional，仅设置需要变更的属性。
     struct TextStyle {
         // — shaping 属性（变化时需 reshape）
-        std::optional<std::string>                  font_family;
+        std::optional<std::string>                  font_family{};
         std::optional<float>                        font_size;
         std::optional<text::NanFontWeight>          font_weight;
         std::optional<float>                        letter_spacing;

@@ -48,10 +48,6 @@ namespace {
         return pt * 96.0f / 72.0f;
     }
 
-    inline auto pixel_to_ft_26_6(float px) noexcept -> int {
-        return static_cast<int>(px * 64.0f + 0.5f);
-    }
-
     inline auto path_exists(std::string_view path) -> bool {
         std::error_code ec;
         return std::filesystem::exists(path, ec) && !ec;

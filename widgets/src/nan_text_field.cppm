@@ -1104,7 +1104,12 @@ export namespace nandina::widgets {
 
             const auto& input_style = theme::NanStylePrimitives::current().input;
             m_label->set_text(composed_text());
-            m_label->set_font_size(showing_placeholder() ? input_style.placeholder_font_size : input_style.font_size);
+            if (showing_placeholder()) {
+                m_label->set_font_size(input_style.placeholder_font_size);
+            } else {
+                m_label->set_typography_role(theme::NanTypographyRole::body_medium);
+                m_label->set_font_size(input_style.font_size);
+            }
             m_label->set_color(resolved_text_color());
         }
 

@@ -412,6 +412,7 @@ export namespace nandina::widgets {
 
             auto label = Text::create();
             label->set_text(m_title)
+                    .set_typography_role(theme::NanTypographyRole::title_medium)
                     .set_font_size(m_title_font_size.get())
                     .set_font_weight(m_title_font_weight)
                     .set_color(m_title_color.get());

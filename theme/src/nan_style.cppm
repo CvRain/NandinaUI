@@ -72,7 +72,7 @@ export namespace nandina::theme {
     };
 
     struct NanTextStyle {
-        float               font_size{14.0f};
+        float               font_size{NanTypographyTokens{}.body_medium.font_size};
         text::NanFontWeight font_weight{text::NanFontWeight::regular};
         NanColor            font_color{NanColor::from(NanRgb{30, 30, 46})};
         text::TextOverflow  overflow{text::TextOverflow::wrap};
@@ -85,7 +85,7 @@ export namespace nandina::theme {
     // ═══════════════════════════════════════════════════════════════
 
     struct NanLabelStyle {
-        float           font_size{14.0f};
+        float           font_size{NanTypographyTokens{}.body_medium.font_size};
         text::NanFontWeight font_weight{text::NanFontWeight::regular};
         NanColor        font_color{NanColor::from(NanRgb{76, 79, 105})};
         NanColor        disabled_font_color{NanColor::from(NanRgb{154, 157, 180})};
@@ -115,7 +115,7 @@ export namespace nandina::theme {
 
         struct SizeStyle {
             float height{40.0f};
-            float font_size{14.0f};
+            float font_size{NanTypographyTokens{}.label_large.font_size};
             float padding_h{16.0f};
             float padding_v{8.0f};
             float gap{8.0f};
@@ -132,7 +132,7 @@ export namespace nandina::theme {
             PresetStyle link{};
         };
 
-        float           font_size{14.0f};
+        float           font_size{NanTypographyTokens{}.label_large.font_size};
         text::NanFontWeight font_weight{text::NanFontWeight::medium};
         NanColor        font_color{NanColor::from(NanRgb{255, 255, 255})};
         text::TextOverflow overflow{text::TextOverflow::ellipsis};
@@ -430,7 +430,7 @@ export namespace nandina::theme {
         float border_width{1.0f};
         geometry::NanInsets padding{16.0f};
 
-        float           title_font_size{16.0f};
+        float           title_font_size{NanTypographyTokens{}.title_medium.font_size};
         text::NanFontWeight title_font_weight{text::NanFontWeight::semiBold};
         NanColor        title_font_color{NanColor::from(NanRgb{30, 30, 46})};
     };
@@ -442,7 +442,7 @@ export namespace nandina::theme {
         float border_width{1.0f};
         geometry::NanInsets padding{12.0f};
 
-        float           title_font_size{14.0f};
+        float           title_font_size{NanTypographyTokens{}.title_small.font_size};
         text::NanFontWeight title_font_weight{text::NanFontWeight::semiBold};
         NanColor        title_font_color{NanColor::from(NanRgb{76, 79, 105})};
     };
@@ -456,10 +456,10 @@ export namespace nandina::theme {
             NanColor border_focus{NanColor::from(NanRgb{99, 102, 241})};
         };
 
-        float           font_size{14.0f};
+        float           font_size{NanTypographyTokens{}.body_medium.font_size};
         text::NanFontWeight font_weight{text::NanFontWeight::regular};
         NanColor        font_color{NanColor::from(NanRgb{30, 30, 46})};
-        float           placeholder_font_size{14.0f};
+        float           placeholder_font_size{NanTypographyTokens{}.body_medium.font_size};
         NanColor        placeholder_font_color{NanColor::from(NanRgb{154, 157, 180})};
 
         ColorVariant    color_variant{ColorVariant::inherit};
@@ -504,12 +504,12 @@ export namespace nandina::theme {
         };
 
         struct SizeStyle {
-            float font_size{12.0f};
+            float font_size{NanTypographyTokens{}.label_medium.font_size};
             float padding_h{10.0f};
             float padding_v{4.0f};
         };
 
-        float font_size{12.0f};
+        float font_size{NanTypographyTokens{}.label_medium.font_size};
         text::NanFontWeight font_weight{text::NanFontWeight::medium};
         text::TextOverflow overflow{text::TextOverflow::ellipsis};
         bool single_line{true};
@@ -558,7 +558,7 @@ export namespace nandina::theme {
             .padding_v = 4.0f,
         };
         SizeStyle lg{
-            .font_size = 14.0f,
+            .font_size = NanTypographyTokens{}.label_large.font_size,
             .padding_h = 12.0f,
             .padding_v = 6.0f,
         };
@@ -580,7 +580,7 @@ export namespace nandina::theme {
 
         struct SizeStyle {
             float box_size{16.0f};
-            float font_size{14.0f};
+            float font_size{NanTypographyTokens{}.body_medium.font_size};
             float gap{8.0f};
             float corner_radius{4.0f};
         };
@@ -589,7 +589,7 @@ export namespace nandina::theme {
         CheckboxSize size{CheckboxSize::md};
 
         float box_size{16.0f};
-        float font_size{14.0f};
+        float font_size{NanTypographyTokens{}.body_medium.font_size};
         float gap{8.0f};
         float corner_radius{4.0f};
 

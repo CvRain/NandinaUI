@@ -54,43 +54,51 @@ namespace nandina::showcase {
             column(children(
                 app::label()
                 .text("Welcome to NandinaUI")
-                .align(widgets::TextAlign::Start)
-                .font(text::NanFont{}
-                    .size(24)
-                    .weight(text::NanFontWeight::bold))
-                .color(NanColor::from(NanRgb{"#cdd6f4"})),
+                .style({
+                    .font_size = 24,
+                    .font_weight = text::NanFontWeight::bold,
+                    .text_color = NanColor::from(NanRgb{"#cdd6f4"}),
+                }),
                 app::label()
                 .text(
                     "The showcase shell now routes pages through Sidebar + PageHost, so this page only describes content instead of embedding its own navigation layout.")
-                .align(widgets::TextAlign::Start)
-                .color(NanColor::from(NanRgb{"#a6adc8"}))
+                .style({
+                    .font_size = 13,
+                    .text_color = NanColor::from(NanRgb{"#a6adc8"}),
+                })
             )).gap(10),
             app::panel(children(
                 column(children(
                     app::label()
                     .text("Current validation focus")
-                    .align(widgets::TextAlign::Start)
-                    .font(text::NanFont{}.weight(text::NanFontWeight::semiBold))
-                    .color(NanColor::from(NanRgb{"#cdd6f4"})),
+                    .style({
+                        .font_weight = text::NanFontWeight::semiBold,
+                        .text_color = NanColor::from(NanRgb{"#cdd6f4"}),
+                    }),
                     app::label()
                     .text(
                         "Authoring/layout primitives, page hosting, router-driven sidebar generation, and component composition are all exercised from the same executable path.")
-                    .align(widgets::TextAlign::Start)
-                    .color(NanColor::from(NanRgb{"#a6adc8"}))
+                    .style({
+                        .font_size = 13,
+                        .text_color = NanColor::from(NanRgb{"#a6adc8"}),
+                    })
                 )).gap(10)
             )).title("Showcase Shell").padding(18.0f),
             app::card(children(
                 column(children(
                     app::label()
                     .text("Next steps")
-                    .align(widgets::TextAlign::Start)
-                    .font(text::NanFont{}.weight(text::NanFontWeight::semiBold))
-                    .color(NanColor::from(NanRgb{"#cdd6f4"})),
+                    .style({
+                        .font_weight = text::NanFontWeight::semiBold,
+                        .text_color = NanColor::from(NanRgb{"#cdd6f4"}),
+                    }),
                     app::label()
                     .text(
                         "Add more dedicated component pages and keep tests focused on structure and routing semantics rather than handwritten geometry.")
-                    .align(widgets::TextAlign::Start)
-                    .color(NanColor::from(NanRgb{"#a6adc8"}))
+                    .style({
+                        .font_size = 13,
+                        .text_color = NanColor::from(NanRgb{"#a6adc8"}),
+                    })
                 )).gap(10)
             )).title("Roadmap").padding(18.0f),
             switch_theme_button
