@@ -16,6 +16,7 @@ set(PROJECT_CPP_MODULE_FILES
         pages/button.cppm
         pages/forms_page.cppm
         pages/checkbox.cppm
+        pages/switch.cppm
         pages/card.cppm
 )
 

@@ -63,9 +63,9 @@ else ()
 endif ()
 
 set(NANDINA_THORVG_RELEASE_LIB
-    "${CMAKE_SOURCE_DIR}/vcpkg_installed/${NANDINA_VCPKG_TRIPLET}/lib/${NANDINA_THORVG_LIB_NAME}")
+        "${CMAKE_SOURCE_DIR}/vcpkg_installed/${NANDINA_VCPKG_TRIPLET}/lib/${NANDINA_THORVG_LIB_NAME}")
 set(NANDINA_THORVG_DEBUG_LIB
-    "${CMAKE_SOURCE_DIR}/vcpkg_installed/${NANDINA_VCPKG_TRIPLET}/debug/lib/${NANDINA_THORVG_LIB_NAME}")
+        "${CMAKE_SOURCE_DIR}/vcpkg_installed/${NANDINA_VCPKG_TRIPLET}/debug/lib/${NANDINA_THORVG_LIB_NAME}")
 
 set(NANDINA_THORVG_INCLUDE_DIR
         "${CMAKE_SOURCE_DIR}/vcpkg_installed/${NANDINA_VCPKG_TRIPLET}/include")
@@ -85,19 +85,19 @@ if (EXISTS "${NANDINA_THORVG_RELEASE_LIB}" AND EXISTS "${NANDINA_THORVG_INCLUDE_
 
     target_link_libraries(nandina_thorvg
             INTERFACE
-        optimized "${NANDINA_THORVG_RELEASE_LIB}"
+            optimized "${NANDINA_THORVG_RELEASE_LIB}"
     )
     if (EXISTS "${NANDINA_THORVG_DEBUG_LIB}")
-    target_link_libraries(nandina_thorvg
-        INTERFACE
-        debug "${NANDINA_THORVG_DEBUG_LIB}"
-    )
+        target_link_libraries(nandina_thorvg
+                INTERFACE
+                debug "${NANDINA_THORVG_DEBUG_LIB}"
+        )
     endif ()
 
     # ThorVG static library needs pthread on both Linux and MinGW
     target_link_libraries(nandina_thorvg
-        INTERFACE
-        Threads::Threads
+            INTERFACE
+            Threads::Threads
     )
 else ()
     find_package(PkgConfig REQUIRED)

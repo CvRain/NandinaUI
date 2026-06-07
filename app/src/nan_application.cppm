@@ -65,20 +65,20 @@ import nandina.widgets.tag;
 import nandina.widgets.text_field;
 import nandina.widgets.field;
 import nandina.widgets.checkbox;
+import nandina.widgets.switch_widget;
 import nandina.theme;
 
 export namespace nandina::app {
     namespace detail {
         using SteadyClock = std::chrono::steady_clock;
 
-        [[nodiscard]] inline auto elapsed_ms(
-            const SteadyClock::time_point start,
-            const SteadyClock::time_point end) noexcept -> double {
+        [[nodiscard]] inline auto elapsed_ms(const SteadyClock::time_point start, const SteadyClock::time_point end) noexcept
+            -> double {
             return std::chrono::duration<double, std::milli>(end - start).count();
         }
 
         inline constexpr double k_slow_layout_threshold_ms = 4.0;
-    }
+    } // namespace detail
 
     class NanComponent : public runtime::NanWidget {
     public:
@@ -92,12 +92,13 @@ export namespace nandina::app {
     class LabelNode;
     class TagNode;
     class CheckboxNode;
+    class SwitchNode;
     class ButtonNode;
     class TextFieldNode;
     class FieldNode;
     class ProgressBarNode;
     class SidebarMenuButtonNode;
-    template<typename W>
+    template <typename W>
     class WidgetNode;
 
     class NanAppWindow;
@@ -109,6 +110,7 @@ export namespace nandina::app {
     [[nodiscard]] inline auto tag(std::string_view text = {}) -> TagNode;
 
     [[nodiscard]] inline auto checkbox(std::string_view label = {}) -> CheckboxNode;
+    [[nodiscard]] inline auto switch_button(std::string_view label = {}) -> SwitchNode;
 
     [[nodiscard]] inline auto button(std::string_view text = {}) -> ButtonNode;
 
@@ -126,7 +128,7 @@ export namespace nandina::app {
 
     [[nodiscard]] inline auto positioned(Children&& children) -> Node;
 
-    template<typename T>
+    template <typename T>
     class Ref {
     public:
         Ref() = default;
@@ -148,34 +150,38 @@ export namespace nandina::app {
         }
 
         /** @internal 绑定到真实 widget */
-        auto bind(runtime::NanWidget *widget) noexcept -> void { m_ptr = dynamic_cast<T *>(widget); }
+        auto bind(runtime::NanWidget* widget) noexcept -> void {
+            m_ptr = dynamic_cast<T*>(widget);
+        }
         /** @internal 重置引用 */
-        auto reset() noexcept -> void { m_ptr = nullptr; }
+        auto reset() noexcept -> void {
+            m_ptr = nullptr;
+        }
 
-        T *m_ptr{nullptr};
+        T* m_ptr{nullptr};
     };
 
     class Node {
     public:
         Node() = default;
 
-        Node(Node &&) noexcept = default;
+        Node(Node&&) noexcept = default;
 
-        auto operator=(Node &&) noexcept -> Node& = default;
+        auto operator=(Node&&) noexcept -> Node& = default;
 
-        Node(const Node &) = delete;
+        Node(const Node&) = delete;
 
-        auto operator=(const Node &) -> Node& = delete;
+        auto operator=(const Node&) -> Node& = delete;
 
         [[nodiscard]] auto empty() const noexcept -> bool {
             return m_widget == nullptr;
         }
 
-        template<typename Self, typename T>
+        template <typename Self, typename T>
             requires std::derived_from<std::remove_cvref_t<Self>, Node>
-        auto bind(this Self &&self, Ref<T> &ref) -> Self&& {
-            auto &node = static_cast<Node &>(self);
-            auto *widget = node.m_widget.get();
+        auto bind(this Self&& self, Ref<T>& ref) -> Self&& {
+            auto& node   = static_cast<Node&>(self);
+            auto* widget = node.m_widget.get();
             node.m_ref_binders.push_back([&ref, widget]() {
                 ref.bind(widget);
             });
@@ -185,47 +191,47 @@ export namespace nandina::app {
             return std::forward<Self>(self);
         }
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, Node>
-        auto key(this Self &&self, const std::string_view &value) -> Self&& {
-            auto &node = static_cast<Node &>(self);
+        auto key(this Self&& self, const std::string_view& value) -> Self&& {
+            auto& node = static_cast<Node&>(self);
             node.m_key.assign(value);
             return std::forward<Self>(self);
         }
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, Node>
-        auto title(this Self &&self, const std::string_view &value) -> Self&& {
-            const auto &node = static_cast<Node &>(self);
+        auto title(this Self&& self, const std::string_view& value) -> Self&& {
+            const auto& node = static_cast<Node&>(self);
 
-            // 由于 Node 是一个通用包装，无法预设 title 应该绑定到哪个 Widget 属性上，因此暴力尝试 Card 和 Panel 的标题属性。
-            // 但是感觉这样的写法还是不够优雅，不知道为什么我当时为什么要这样写。
+            // 由于 Node 是一个通用包装，无法预设 title 应该绑定到哪个 Widget 属性上，因此暴力尝试 Card 和 Panel
+            // 的标题属性。 但是感觉这样的写法还是不够优雅，不知道为什么我当时为什么要这样写。
             // 或许之后有更好的写法可以替代这个暴力绑定。 --ClaudeRainer 2024-06-01
             const auto unwrapped_node = node.unwrapped();
-            if (auto *widget = dynamic_cast<widgets::Card *>(unwrapped_node); widget != nullptr) {
+            if (auto* widget = dynamic_cast<widgets::Card*>(unwrapped_node); widget != nullptr) {
                 widget->set_title(value.data());
             }
-            if (auto *widget = dynamic_cast<widgets::Panel *>(unwrapped_node); widget != nullptr) {
+            if (auto* widget = dynamic_cast<widgets::Panel*>(unwrapped_node); widget != nullptr) {
                 widget->set_title(value);
             }
             return std::forward<Self>(self);
         }
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, Node>
-        auto bg_color(this Self &&self, const nandina::NanColor &value) -> Self&& {
-            auto &node = static_cast<Node &>(self);
-            if (auto *widget = dynamic_cast<nandina::widgets::Surface *>(node.unwrapped())) {
+        auto bg_color(this Self&& self, const nandina::NanColor& value) -> Self&& {
+            auto& node = static_cast<Node&>(self);
+            if (auto* widget = dynamic_cast<nandina::widgets::Surface*>(node.unwrapped())) {
                 widget->set_bg_color(value);
             }
             return std::forward<Self>(self);
         }
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, Node>
-        auto corner_radius(this Self &&self, const float value) -> Self&& {
-            const auto &node = static_cast<Node &>(self);
-            if (auto *widget = dynamic_cast<nandina::widgets::Surface *>(node.unwrapped())) {
+        auto corner_radius(this Self&& self, const float value) -> Self&& {
+            const auto& node = static_cast<Node&>(self);
+            if (auto* widget = dynamic_cast<nandina::widgets::Surface*>(node.unwrapped())) {
                 widget->set_corner_radius(value);
             }
             return std::forward<Self>(self);
@@ -241,55 +247,55 @@ export namespace nandina::app {
         /// 示例：
         ///   column(children(...)).padding(16)        // 四边 16px
         ///   column(children(...)).padding(24, 16)    // 左右 24px，上下 16px
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, Node>
-        auto padding(this Self &&self, const float value) -> Self&& {
-            const auto &node = static_cast<Node &>(self);
-            if (auto *widget = dynamic_cast<nandina::layout::Padding *>(node.m_widget.get())) {
+        auto padding(this Self&& self, const float value) -> Self&& {
+            const auto& node = static_cast<Node&>(self);
+            if (auto* widget = dynamic_cast<nandina::layout::Padding*>(node.m_widget.get())) {
                 widget->padding(value);
             }
 
-            if (auto *widget = dynamic_cast<nandina::layout::LayoutContainer *>(node.m_widget.get())) {
+            if (auto* widget = dynamic_cast<nandina::layout::LayoutContainer*>(node.m_widget.get())) {
                 widget->padding(value);
             }
             return std::forward<Self>(self);
         }
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, Node>
-        auto padding(this Self &&self, const float horizontal, const float vertical) -> Self&& {
-            const auto &node = static_cast<Node &>(self);
-            if (auto *widget = dynamic_cast<nandina::layout::Padding *>(node.m_widget.get())) {
+        auto padding(this Self&& self, const float horizontal, const float vertical) -> Self&& {
+            const auto& node = static_cast<Node&>(self);
+            if (auto* widget = dynamic_cast<nandina::layout::Padding*>(node.m_widget.get())) {
                 widget->padding(horizontal, vertical);
             }
 
-            if (auto *widget = dynamic_cast<nandina::layout::LayoutContainer *>(node.m_widget.get())) {
+            if (auto* widget = dynamic_cast<nandina::layout::LayoutContainer*>(node.m_widget.get())) {
                 widget->padding(horizontal, vertical);
             }
             return std::forward<Self>(self);
         }
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, Node>
-        auto padding(this Self &&self, const float left, const float top, const float right, const float bottom)
+        auto padding(this Self&& self, const float left, const float top, const float right, const float bottom)
             -> Self&& {
-            const auto &node = static_cast<Node &>(self);
-            if (auto *widget = dynamic_cast<nandina::layout::Padding *>(node.m_widget.get())) {
+            const auto& node = static_cast<Node&>(self);
+            if (auto* widget = dynamic_cast<nandina::layout::Padding*>(node.m_widget.get())) {
                 widget->padding(left, top, right, bottom);
             }
 
-            if (auto *widget = dynamic_cast<nandina::layout::LayoutContainer *>(node.m_widget.get())) {
+            if (auto* widget = dynamic_cast<nandina::layout::LayoutContainer*>(node.m_widget.get())) {
                 widget->padding(left, top, right, bottom);
             }
             return std::forward<Self>(self);
         }
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, Node>
-        auto padding_top(this Self &&self, const float value) -> Self&& {
-            const auto &node = static_cast<Node &>(self);
+        auto padding_top(this Self&& self, const float value) -> Self&& {
+            const auto& node = static_cast<Node&>(self);
 
-            if (auto *widget = dynamic_cast<nandina::layout::LayoutContainer *>(node.m_widget.get())) {
+            if (auto* widget = dynamic_cast<nandina::layout::LayoutContainer*>(node.m_widget.get())) {
                 widget->padding_top(value);
             }
             return std::forward<Self>(self);
@@ -301,11 +307,11 @@ export namespace nandina::app {
         /// 示例：
         /// row(children(...)).gap(12)
         /// @endcode
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, Node>
-        auto gap(this Self &&self, const float value) -> Self&& {
-            const auto &node = static_cast<Node &>(self);
-            if (auto *widget = dynamic_cast<nandina::layout::LayoutContainer *>(node.m_widget.get())) {
+        auto gap(this Self&& self, const float value) -> Self&& {
+            const auto& node = static_cast<Node&>(self);
+            if (auto* widget = dynamic_cast<nandina::layout::LayoutContainer*>(node.m_widget.get())) {
                 widget->gap(value);
             }
             return std::forward<Self>(self);
@@ -327,11 +333,11 @@ export namespace nandina::app {
         /// // 垂直居中
         /// row(children(...)).align_items(LayoutAlignment::center)
         /// @endcode
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, Node>
-        auto align_items(this Self &&self, const nandina::layout::LayoutAlignment value) -> Self&& {
-            const auto &node = static_cast<Node &>(self);
-            if (auto *widget = dynamic_cast<nandina::layout::LayoutContainer *>(node.m_widget.get())) {
+        auto align_items(this Self&& self, const nandina::layout::LayoutAlignment value) -> Self&& {
+            const auto& node = static_cast<Node&>(self);
+            if (auto* widget = dynamic_cast<nandina::layout::LayoutContainer*>(node.m_widget.get())) {
                 widget->align_items(value);
             }
             return std::forward<Self>(self);
@@ -350,12 +356,11 @@ export namespace nandina::app {
         ///
         /// 示例：
         ///   row(children(btn_a, btn_b)).justify_content(LayoutAlignment::space_between)
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, Node>
-        auto justify_content(this Self &&self, const nandina::layout::LayoutAlignment value)
-            -> Self&& {
-            const auto &node = static_cast<Node &>(self);
-            if (auto *widget = dynamic_cast<nandina::layout::LayoutContainer *>(node.m_widget.get())) {
+        auto justify_content(this Self&& self, const nandina::layout::LayoutAlignment value) -> Self&& {
+            const auto& node = static_cast<Node&>(self);
+            if (auto* widget = dynamic_cast<nandina::layout::LayoutContainer*>(node.m_widget.get())) {
                 widget->justify_content(value);
             }
             return std::forward<Self>(self);
@@ -366,14 +371,13 @@ export namespace nandina::app {
         /// 示例：
         ///   column(children(...)).width(360)   // 将列限宽为 360px
         ///   label("文本").width(120)            // 限制标签最大宽度
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, Node>
-        auto width(this Self &&self, const float value) -> Self&& {
-            auto &node = static_cast<Node &>(self);
-            if (auto *sb = dynamic_cast<nandina::layout::SizedBox *>(node.m_widget.get())) {
+        auto width(this Self&& self, const float value) -> Self&& {
+            auto& node = static_cast<Node&>(self);
+            if (auto* sb = dynamic_cast<nandina::layout::SizedBox*>(node.m_widget.get())) {
                 sb->width(value);
-            }
-            else {
+            } else {
                 // 自动包裹到 SizedBox：label("X").width(200) 等价于 sized_box(label("X")).width(200)
                 auto wrapper = nandina::layout::SizedBox::Create();
                 wrapper->width(value);
@@ -387,14 +391,13 @@ export namespace nandina::app {
         ///
         /// 示例：
         ///   button("OK").height(48)   // 固定按钮高度为 48px
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, Node>
-        auto height(this Self &&self, const float value) -> Self&& {
-            auto &node = static_cast<Node &>(self);
-            if (auto *sb = dynamic_cast<nandina::layout::SizedBox *>(node.m_widget.get())) {
+        auto height(this Self&& self, const float value) -> Self&& {
+            auto& node = static_cast<Node&>(self);
+            if (auto* sb = dynamic_cast<nandina::layout::SizedBox*>(node.m_widget.get())) {
                 sb->height(value);
-            }
-            else {
+            } else {
                 auto wrapper = nandina::layout::SizedBox::Create();
                 wrapper->height(value);
                 wrapper->add_child(std::move(node.m_widget));
@@ -407,14 +410,13 @@ export namespace nandina::app {
         ///
         /// 示例：
         ///   button("提交").size({120, 40})
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, Node>
-        auto size(this Self &&self, const geometry::NanSize &value) -> Self&& {
-            auto &node = static_cast<Node &>(self);
-            if (auto *sb = dynamic_cast<nandina::layout::SizedBox *>(node.m_widget.get())) {
+        auto size(this Self&& self, const geometry::NanSize& value) -> Self&& {
+            auto& node = static_cast<Node&>(self);
+            if (auto* sb = dynamic_cast<nandina::layout::SizedBox*>(node.m_widget.get())) {
                 sb->size(value);
-            }
-            else {
+            } else {
                 auto wrapper = nandina::layout::SizedBox::Create();
                 wrapper->size(value);
                 wrapper->add_child(std::move(node.m_widget));
@@ -427,151 +429,139 @@ export namespace nandina::app {
         // 这些方法设置子组件在 Positioned 容器中的 anchor 约束。
         // 在 Row/Column/Stack 容器内这些属性无效（被忽略）。
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, Node>
-        auto anchor_left(this Self &&self, float v) -> Self&& {
-            static_cast<Node &>(self).m_positioned_props.left = v;
+        auto anchor_left(this Self&& self, float v) -> Self&& {
+            static_cast<Node&>(self).m_positioned_props.left = v;
             return std::forward<Self>(self);
         }
 
-        template<typename Self, typename Fn>
-            requires std::derived_from<std::remove_cvref_t<Self>, Node>
-                     && std::invocable<Fn>
-                     && std::convertible_to<std::invoke_result_t<Fn>, float>
-                     && (!std::convertible_to<std::remove_cvref_t<Fn>, float>)
-        auto anchor_left(this Self &&self, Fn fn) -> Self&& {
-            static_cast<Node &>(self).m_positioned_props.left =
-                    std::function<float()>{std::move(fn)};
+        template <typename Self, typename Fn>
+            requires std::derived_from<std::remove_cvref_t<Self>, Node> && std::invocable<Fn>
+            && std::convertible_to<std::invoke_result_t<Fn>, float>
+            && (!std::convertible_to<std::remove_cvref_t<Fn>, float>)
+        auto anchor_left(this Self&& self, Fn fn) -> Self&& {
+            static_cast<Node&>(self).m_positioned_props.left = std::function<float()>{std::move(fn)};
             return std::forward<Self>(self);
         }
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, Node>
-        auto anchor_top(this Self &&self, float v) -> Self&& {
-            static_cast<Node &>(self).m_positioned_props.top = v;
+        auto anchor_top(this Self&& self, float v) -> Self&& {
+            static_cast<Node&>(self).m_positioned_props.top = v;
             return std::forward<Self>(self);
         }
 
-        template<typename Self, typename Fn>
-            requires std::derived_from<std::remove_cvref_t<Self>, Node>
-                     && std::invocable<Fn>
-                     && std::convertible_to<std::invoke_result_t<Fn>, float>
-                     && (!std::convertible_to<std::remove_cvref_t<Fn>, float>)
-        auto anchor_top(this Self &&self, Fn fn) -> Self&& {
-            static_cast<Node &>(self).m_positioned_props.top =
-                    std::function<float()>{std::move(fn)};
+        template <typename Self, typename Fn>
+            requires std::derived_from<std::remove_cvref_t<Self>, Node> && std::invocable<Fn>
+            && std::convertible_to<std::invoke_result_t<Fn>, float>
+            && (!std::convertible_to<std::remove_cvref_t<Fn>, float>)
+        auto anchor_top(this Self&& self, Fn fn) -> Self&& {
+            static_cast<Node&>(self).m_positioned_props.top = std::function<float()>{std::move(fn)};
             return std::forward<Self>(self);
         }
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, Node>
-        auto anchor_right(this Self &&self, float v) -> Self&& {
-            static_cast<Node &>(self).m_positioned_props.right = v;
+        auto anchor_right(this Self&& self, float v) -> Self&& {
+            static_cast<Node&>(self).m_positioned_props.right = v;
             return std::forward<Self>(self);
         }
 
-        template<typename Self, typename Fn>
-            requires std::derived_from<std::remove_cvref_t<Self>, Node>
-                     && std::invocable<Fn>
-                     && std::convertible_to<std::invoke_result_t<Fn>, float>
-                     && (!std::convertible_to<std::remove_cvref_t<Fn>, float>)
-        auto anchor_right(this Self &&self, Fn fn) -> Self&& {
-            static_cast<Node &>(self).m_positioned_props.right =
-                    std::function<float()>{std::move(fn)};
+        template <typename Self, typename Fn>
+            requires std::derived_from<std::remove_cvref_t<Self>, Node> && std::invocable<Fn>
+            && std::convertible_to<std::invoke_result_t<Fn>, float>
+            && (!std::convertible_to<std::remove_cvref_t<Fn>, float>)
+        auto anchor_right(this Self&& self, Fn fn) -> Self&& {
+            static_cast<Node&>(self).m_positioned_props.right = std::function<float()>{std::move(fn)};
             return std::forward<Self>(self);
         }
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, Node>
-        auto anchor_bottom(this Self &&self, float v) -> Self&& {
-            static_cast<Node &>(self).m_positioned_props.bottom = v;
+        auto anchor_bottom(this Self&& self, float v) -> Self&& {
+            static_cast<Node&>(self).m_positioned_props.bottom = v;
             return std::forward<Self>(self);
         }
 
-        template<typename Self, typename Fn>
-            requires std::derived_from<std::remove_cvref_t<Self>, Node>
-                     && std::invocable<Fn>
-                     && std::convertible_to<std::invoke_result_t<Fn>, float>
-                     && (!std::convertible_to<std::remove_cvref_t<Fn>, float>)
-        auto anchor_bottom(this Self &&self, Fn fn) -> Self&& {
-            static_cast<Node &>(self).m_positioned_props.bottom =
-                    std::function<float()>{std::move(fn)};
+        template <typename Self, typename Fn>
+            requires std::derived_from<std::remove_cvref_t<Self>, Node> && std::invocable<Fn>
+            && std::convertible_to<std::invoke_result_t<Fn>, float>
+            && (!std::convertible_to<std::remove_cvref_t<Fn>, float>)
+        auto anchor_bottom(this Self&& self, Fn fn) -> Self&& {
+            static_cast<Node&>(self).m_positioned_props.bottom = std::function<float()>{std::move(fn)};
             return std::forward<Self>(self);
         }
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, Node>
-        auto anchor_width(this Self &&self, float v) -> Self&& {
-            static_cast<Node &>(self).m_positioned_props.width = v;
+        auto anchor_width(this Self&& self, float v) -> Self&& {
+            static_cast<Node&>(self).m_positioned_props.width = v;
             return std::forward<Self>(self);
         }
 
-        template<typename Self, typename Fn>
-            requires std::derived_from<std::remove_cvref_t<Self>, Node>
-                     && std::invocable<Fn>
-                     && std::convertible_to<std::invoke_result_t<Fn>, float>
-                     && (!std::convertible_to<std::remove_cvref_t<Fn>, float>)
-        auto anchor_width(this Self &&self, Fn fn) -> Self&& {
-            static_cast<Node &>(self).m_positioned_props.width =
-                    std::function<float()>{std::move(fn)};
+        template <typename Self, typename Fn>
+            requires std::derived_from<std::remove_cvref_t<Self>, Node> && std::invocable<Fn>
+            && std::convertible_to<std::invoke_result_t<Fn>, float>
+            && (!std::convertible_to<std::remove_cvref_t<Fn>, float>)
+        auto anchor_width(this Self&& self, Fn fn) -> Self&& {
+            static_cast<Node&>(self).m_positioned_props.width = std::function<float()>{std::move(fn)};
             return std::forward<Self>(self);
         }
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, Node>
-        auto anchor_height(this Self &&self, float v) -> Self&& {
-            static_cast<Node &>(self).m_positioned_props.height = v;
+        auto anchor_height(this Self&& self, float v) -> Self&& {
+            static_cast<Node&>(self).m_positioned_props.height = v;
             return std::forward<Self>(self);
         }
 
-        template<typename Self, typename Fn>
-            requires std::derived_from<std::remove_cvref_t<Self>, Node>
-                     && std::invocable<Fn>
-                     && std::convertible_to<std::invoke_result_t<Fn>, float>
-                     && (!std::convertible_to<std::remove_cvref_t<Fn>, float>)
-        auto anchor_height(this Self &&self, Fn fn) -> Self&& {
-            static_cast<Node &>(self).m_positioned_props.height =
-                    std::function<float()>{std::move(fn)};
+        template <typename Self, typename Fn>
+            requires std::derived_from<std::remove_cvref_t<Self>, Node> && std::invocable<Fn>
+            && std::convertible_to<std::invoke_result_t<Fn>, float>
+            && (!std::convertible_to<std::remove_cvref_t<Fn>, float>)
+        auto anchor_height(this Self&& self, Fn fn) -> Self&& {
+            static_cast<Node&>(self).m_positioned_props.height = std::function<float()>{std::move(fn)};
             return std::forward<Self>(self);
         }
 
         /// 填满父容器宽度（左右锚点均为 0）
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, Node>
-        auto fill_width(this Self &&self) -> Self&& {
-            auto &node = static_cast<Node &>(self);
-            node.m_positioned_props.left = 0.0f;
+        auto fill_width(this Self&& self) -> Self&& {
+            auto& node                    = static_cast<Node&>(self);
+            node.m_positioned_props.left  = 0.0f;
             node.m_positioned_props.right = 0.0f;
             return std::forward<Self>(self);
         }
 
         /// 填满父容器高度（上下锚点均为 0）
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, Node>
-        auto fill_height(this Self &&self) -> Self&& {
-            auto &node = static_cast<Node &>(self);
-            node.m_positioned_props.top = 0.0f;
+        auto fill_height(this Self&& self) -> Self&& {
+            auto& node                     = static_cast<Node&>(self);
+            node.m_positioned_props.top    = 0.0f;
             node.m_positioned_props.bottom = 0.0f;
             return std::forward<Self>(self);
         }
 
         /// 填满父容器（左右上下锚点均为 0）
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, Node>
-        auto fill(this Self &&self) -> Self&& {
-            auto &node = static_cast<Node &>(self);
-            node.m_positioned_props.left = 0.0f;
-            node.m_positioned_props.right = 0.0f;
-            node.m_positioned_props.top = 0.0f;
+        auto fill(this Self&& self) -> Self&& {
+            auto& node                     = static_cast<Node&>(self);
+            node.m_positioned_props.left   = 0.0f;
+            node.m_positioned_props.right  = 0.0f;
+            node.m_positioned_props.top    = 0.0f;
             node.m_positioned_props.bottom = 0.0f;
             return std::forward<Self>(self);
         }
 
         /// 将此子组件的布置结果写入 GeomRef（供后续兄弟节点 anchor lambda 引用）
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, Node>
-        auto bind_geom(this Self &&self, nandina::layout::GeomRef &ref) -> Self&& {
-            static_cast<Node &>(self).m_positioned_props.geom_ref = &ref;
+        auto bind_geom(this Self&& self, nandina::layout::GeomRef& ref) -> Self&& {
+            static_cast<Node&>(self).m_positioned_props.geom_ref = &ref;
             return std::forward<Self>(self);
         }
 
@@ -582,7 +572,9 @@ export namespace nandina::app {
         }
 
         /** @internal 提取内部 widget 所有权（仅右值） */
-        [[nodiscard]] auto take_widget() && -> std::unique_ptr<runtime::NanWidget> { return std::move(m_widget); }
+        [[nodiscard]] auto take_widget() && -> std::unique_ptr<runtime::NanWidget> {
+            return std::move(m_widget);
+        }
 
         /** @internal 提取定位属性（仅右值） */
         [[nodiscard]] auto take_positioned_props() && -> nandina::layout::PositionedProps {
@@ -591,32 +583,52 @@ export namespace nandina::app {
 
         /** @internal 吸收子节点的 Ref binder */
         auto absorb(Node child) -> void {
-            for (auto &b: child.m_ref_binders) m_ref_binders.push_back(std::move(b));
-            for (auto &r: child.m_ref_resetters) m_ref_resetters.push_back(std::move(r));
+            for (auto& b : child.m_ref_binders) {
+                m_ref_binders.push_back(std::move(b));
+            }
+            for (auto& r : child.m_ref_resetters) {
+                m_ref_resetters.push_back(std::move(r));
+            }
         }
 
         /** @internal 绑定所有 Ref<T> */
-        auto bind_refs() -> void { for (auto &b: m_ref_binders) b(); }
+        auto bind_refs() -> void {
+            for (auto& b : m_ref_binders) {
+                b();
+            }
+        }
 
         /** @internal 重置所有 Ref<T> */
-        auto reset_refs() -> void { for (auto &r: m_ref_resetters) r(); }
+        auto reset_refs() -> void {
+            for (auto& r : m_ref_resetters) {
+                r();
+            }
+        }
 
         /** 获取底层 widget 指针 */
-        [[nodiscard]] auto widget_ptr() const -> runtime::NanWidget* { return m_widget.get(); }
+        [[nodiscard]] auto widget_ptr() const -> runtime::NanWidget* {
+            return m_widget.get();
+        }
 
         /** @internal 穿透 SizedBox 找真实组件 */
         [[nodiscard]] auto unwrapped() const -> runtime::NanWidget* {
-            if (!m_widget) return nullptr;
-            if (auto *sb = dynamic_cast<nandina::layout::SizedBox *>(m_widget.get())) {
-                runtime::NanWidget *result = nullptr;
-                sb->for_each_child([&](runtime::NanWidget &c) { if (!result) result = &c; });
+            if (!m_widget) {
+                return nullptr;
+            }
+            if (auto* sb = dynamic_cast<nandina::layout::SizedBox*>(m_widget.get())) {
+                runtime::NanWidget* result = nullptr;
+                sb->for_each_child([&](runtime::NanWidget& c) {
+                    if (!result) {
+                        result = &c;
+                    }
+                });
                 return result ? result : m_widget.get();
             }
             return m_widget.get();
         }
 
     private:
-        using RefBinder = std::move_only_function<void()>;
+        using RefBinder   = std::move_only_function<void()>;
         using RefResetter = std::move_only_function<void()>;
 
         auto append_ref_binder(RefBinder b, RefResetter r) -> void {
@@ -634,7 +646,7 @@ export namespace nandina::app {
     // ── WidgetNode<W> — 类型安全组件节点基类 ───────────────────────────
     // 外来开发者创建自定义节点只需继承此类：
     //   class SliderNode : public WidgetNode<widgets::Slider> { ... };
-    template<typename W>
+    template <typename W>
     class WidgetNode : public Node {
     public:
         // 类型安全访问器
@@ -642,57 +654,49 @@ export namespace nandina::app {
             return *m_typed;
         }
 
-        [[nodiscard]] auto widget() const & noexcept -> const W& {
+        [[nodiscard]] auto widget() const& noexcept -> const W& {
             return *m_typed;
         }
 
         // 逃生口：直接操作底层 widget，保持链式返回
         // 适用于 builder 方法未覆盖的属性读/写：
         //   button("OK").configure([](Button& b) { b.set_bg_color(...); })
-        template<typename Self, typename Fn>
-            requires std::derived_from<std::remove_cvref_t<Self>, WidgetNode<W>>
-                     && std::invocable<Fn, W &>
-        auto configure(this Self &&self, Fn &&fn) -> Self&& {
-            std::invoke(std::forward<Fn>(fn), *static_cast<WidgetNode<W> &>(self).m_typed);
+        template <typename Self, typename Fn>
+            requires std::derived_from<std::remove_cvref_t<Self>, WidgetNode<W>> && std::invocable<Fn, W&>
+        auto configure(this Self&& self, Fn&& fn) -> Self&& {
+            std::invoke(std::forward<Fn>(fn), *static_cast<WidgetNode<W>&>(self).m_typed);
             return std::forward<Self>(self);
         }
 
     protected:
-        explicit WidgetNode(W::Ptr w)
-            : Node(std::move(w))
-              , m_typed(static_cast<W *>(Node::unwrapped())) {
+        explicit WidgetNode(W::Ptr w) : Node(std::move(w)), m_typed(static_cast<W*>(Node::unwrapped())) {
         }
 
-        W *m_typed{nullptr};
+        W* m_typed{nullptr};
     };
 
     class LabelNode : public WidgetNode<nandina::widgets::Label> {
     public:
-        explicit LabelNode(nandina::widgets::Label::Ptr widget)
-            : WidgetNode<nandina::widgets::Label>(std::move(widget)) {
+        explicit LabelNode(nandina::widgets::Label::Ptr widget) :
+            WidgetNode<nandina::widgets::Label>(std::move(widget)) {
         }
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, LabelNode>
-        auto text(this Self &&self, std::string_view value) -> Self&& {
+        auto text(this Self&& self, std::string_view value) -> Self&& {
             self.m_typed->set_text(value);
             return std::forward<Self>(self);
         }
 
-        template<typename Self, typename F>
-            requires std::derived_from<std::remove_cvref_t<Self>, LabelNode> &&
-                     std::invocable<F> &&
-                     std::convertible_to<std::invoke_result_t<F>, std::string_view> &&
-                     (!std::convertible_to<F, std::string_view>)
-        auto text(this Self &&self, F fn) -> Self&& {
-            auto *w = self.m_typed;
-            w->add_opaque_cleanup(
-                std::make_shared<nandina::reactive::Effect>(
-                    [w, fn = std::move(fn)] {
-                        w->set_text(fn());
-                    }
-                )
-            );
+        template <typename Self, typename F>
+            requires std::derived_from<std::remove_cvref_t<Self>, LabelNode> && std::invocable<F>
+            && std::convertible_to<std::invoke_result_t<F>, std::string_view>
+            && (!std::convertible_to<F, std::string_view>)
+        auto text(this Self&& self, F fn) -> Self&& {
+            auto* w = self.m_typed;
+            w->add_opaque_cleanup(std::make_shared<nandina::reactive::Effect>([w, fn = std::move(fn)] {
+                w->set_text(fn());
+            }));
             return std::forward<Self>(self);
         }
 
@@ -721,9 +725,9 @@ export namespace nandina::app {
         // ── setter ──────────────────────────────────────────────────────────
 
         /// color — 快捷设置文本颜色；等价于 .font([](auto& f){ f.color(v); })
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, LabelNode>
-        auto color(this Self &&self, const nandina::NanColor &value) -> Self&& {
+        auto color(this Self&& self, const nandina::NanColor& value) -> Self&& {
             self.m_typed->set_color(value);
             return std::forward<Self>(self);
         }
@@ -731,10 +735,10 @@ export namespace nandina::app {
         /// font(NanFont) — 替换整个字体配置。
         ///
         /// 示例：label("标题").font(NanFont{}.size(20).weight(NanFontWeight::bold))
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, LabelNode>
-                     && (!std::invocable<Self, nandina::text::NanFont &>)
-        auto font(this Self &&self, nandina::text::NanFont font_config) -> Self&& {
+            && (!std::invocable<Self, nandina::text::NanFont&>)
+        auto font(this Self&& self, nandina::text::NanFont font_config) -> Self&& {
             self.m_typed->set_font(std::move(font_config));
             return std::forward<Self>(self);
         }
@@ -744,11 +748,11 @@ export namespace nandina::app {
         /// 示例：
         ///   label("文本").font([](auto& f){ f.size(16).color(NanColor::white()); })
         ///   label("文本").font([](auto& f){ f.size(f.size() + 2); })  // 在现有基础上调整
-        template<typename Self, typename Fn>
+        template <typename Self, typename Fn>
             requires std::derived_from<std::remove_cvref_t<Self>, LabelNode>
-                     && std::invocable<Fn, nandina::text::NanFont &>
-                     && (!std::convertible_to<std::remove_cvref_t<Fn>, nandina::text::NanFont>)
-        auto font(this Self &&self, Fn &&fn) -> Self&& {
+            && std::invocable<Fn, nandina::text::NanFont&>
+            && (!std::convertible_to<std::remove_cvref_t<Fn>, nandina::text::NanFont>)
+        auto font(this Self&& self, Fn&& fn) -> Self&& {
             auto updated = self.m_typed->font();
             std::invoke(std::forward<Fn>(fn), updated);
             self.m_typed->set_font(std::move(updated));
@@ -756,69 +760,69 @@ export namespace nandina::app {
         }
 
         /// disabled — 禁用标签；对应 shadcn peer-disabled:opacity-70，文本渲染降至 70% 透明度
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, LabelNode>
-        auto disabled(this Self &&self, const bool value) -> Self&& {
+        auto disabled(this Self&& self, const bool value) -> Self&& {
             self.m_typed->set_disabled(value);
             return std::forward<Self>(self);
         }
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, LabelNode>
-        auto error(this Self &&self, const bool value) -> Self&& {
+        auto error(this Self&& self, const bool value) -> Self&& {
             self.m_typed->set_error(value);
             return std::forward<Self>(self);
         }
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, LabelNode>
-        auto required(this Self &&self, const bool value) -> Self&& {
+        auto required(this Self&& self, const bool value) -> Self&& {
             self.m_typed->set_required(value);
             return std::forward<Self>(self);
         }
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, LabelNode>
-        auto typography_role(this Self &&self, const nandina::theme::NanTypographyRole value) -> Self&& {
+        auto typography_role(this Self&& self, const nandina::theme::NanTypographyRole value) -> Self&& {
             self.m_typed->set_typography_role(value);
             return std::forward<Self>(self);
         }
 
         // ── TextStyle 批量设置 ────────────────────────────────────────────
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, LabelNode>
-        auto style(this Self &&self, const nandina::widgets::TextStyle &s) -> Self&& {
-            self.m_typed->set_style(s);
+        auto style(this Self&& self, const nandina::widgets::TextStyle& style) -> Self&& {
+            self.m_typed->set_style(style);
             return std::forward<Self>(self);
         }
 
         // ── 排版属性（P2 layout-only setter，不影响 shaping）─────────────
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, LabelNode>
-        auto overflow(this Self &&self, const nandina::text::TextOverflow value) -> Self&& {
+        auto overflow(this Self&& self, const nandina::text::TextOverflow value) -> Self&& {
             self.m_typed->set_overflow(value);
             return std::forward<Self>(self);
         }
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, LabelNode>
-        auto single_line(this Self &&self, const bool value) -> Self&& {
+        auto single_line(this Self&& self, const bool value) -> Self&& {
             self.m_typed->set_single_line(value);
             return std::forward<Self>(self);
         }
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, LabelNode>
-        auto max_lines(this Self &&self, const int value) -> Self&& {
+        auto max_lines(this Self&& self, const int value) -> Self&& {
             self.m_typed->set_max_lines(value);
             return std::forward<Self>(self);
         }
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, LabelNode>
-        auto line_height(this Self &&self, const float value) -> Self&& {
+        auto line_height(this Self&& self, const float value) -> Self&& {
             self.m_typed->set_line_height(value);
             return std::forward<Self>(self);
         }
@@ -829,75 +833,75 @@ export namespace nandina::app {
         // 这些方法是对 set_typography_role 的便捷包装。
 
         /// 页面主标题：display-small（≈ shadcn h1）
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, LabelNode>
-        auto as_h1(this Self &&self) -> Self&& {
+        auto as_h1(this Self&& self) -> Self&& {
             self.m_typed->set_typography_role(nandina::theme::NanTypographyRole::display_small);
             return std::forward<Self>(self);
         }
 
         /// 区块标题：headline-medium（≈ shadcn h2）
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, LabelNode>
-        auto as_h2(this Self &&self) -> Self&& {
+        auto as_h2(this Self&& self) -> Self&& {
             self.m_typed->set_typography_role(nandina::theme::NanTypographyRole::headline_medium);
             return std::forward<Self>(self);
         }
 
         /// 小标题：headline-small（≈ shadcn h3）
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, LabelNode>
-        auto as_h3(this Self &&self) -> Self&& {
+        auto as_h3(this Self&& self) -> Self&& {
             self.m_typed->set_typography_role(nandina::theme::NanTypographyRole::headline_small);
             return std::forward<Self>(self);
         }
 
         /// 卡片/面板标题：title-medium（≈ shadcn h4）
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, LabelNode>
-        auto as_h4(this Self &&self) -> Self&& {
+        auto as_h4(this Self&& self) -> Self&& {
             self.m_typed->set_typography_role(nandina::theme::NanTypographyRole::title_medium);
             return std::forward<Self>(self);
         }
 
         /// 正文：body-medium（≈ shadcn p）
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, LabelNode>
-        auto as_body(this Self &&self) -> Self&& {
+        auto as_body(this Self&& self) -> Self&& {
             self.m_typed->set_typography_role(nandina::theme::NanTypographyRole::body_medium);
             return std::forward<Self>(self);
         }
 
         /// 引导文字：body-large 稍大、稍淡（≈ shadcn lead / text-xl text-muted-foreground）
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, LabelNode>
-        auto as_lead(this Self &&self) -> Self&& {
+        auto as_lead(this Self&& self) -> Self&& {
             self.m_typed->set_typography_role(nandina::theme::NanTypographyRole::body_large);
             return std::forward<Self>(self);
         }
 
         /// 强调文字：title-medium 同等尺寸 + semibold（≈ shadcn large / text-lg font-semibold）
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, LabelNode>
-        auto as_large(this Self &&self) -> Self&& {
+        auto as_large(this Self&& self) -> Self&& {
             self.m_typed->set_typography_role(nandina::theme::NanTypographyRole::title_small);
             return std::forward<Self>(self);
         }
 
         /// 辅助说明：body-small（≈ shadcn small / text-sm font-medium leading-none）
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, LabelNode>
-        auto as_small(this Self &&self) -> Self&& {
+        auto as_small(this Self&& self) -> Self&& {
             self.m_typed->set_typography_role(nandina::theme::NanTypographyRole::body_small);
             return std::forward<Self>(self);
         }
 
         /// 次要文字：body-small + label 配色（≈ shadcn muted / text-sm text-muted-foreground）
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, LabelNode>
-        auto as_muted(this Self &&self) -> Self&& {
+        auto as_muted(this Self&& self) -> Self&& {
             self.m_typed->set_typography_role(nandina::theme::NanTypographyRole::body_small);
-            const auto &style = nandina::theme::NanStylePrimitives::current().label;
+            const auto& style = nandina::theme::NanStylePrimitives::current().label;
             self.m_typed->set_color(style.font_color);
             return std::forward<Self>(self);
         }
@@ -909,17 +913,16 @@ export namespace nandina::app {
 
         // ── 对齐 ──────────────────────────────────────────────────────────
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, LabelNode>
-        auto align(this Self &&self, const nandina::widgets::TextAlign value) -> Self&& {
+        auto align(this Self&& self, const nandina::widgets::TextAlign value) -> Self&& {
             self.m_typed->set_align(value);
             return std::forward<Self>(self);
         }
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, LabelNode>
-        auto vertical_align(this Self &&self, const nandina::widgets::TextVerticalAlign value)
-            -> Self&& {
+        auto vertical_align(this Self&& self, const nandina::widgets::TextVerticalAlign value) -> Self&& {
             self.m_typed->set_vertical_align(value);
             return std::forward<Self>(self);
         }
@@ -929,31 +932,26 @@ export namespace nandina::app {
     public:
         using Node::size;
 
-        explicit ButtonNode(nandina::widgets::Button::Ptr widget)
-            : WidgetNode<nandina::widgets::Button>(std::move(widget)) {
+        explicit ButtonNode(nandina::widgets::Button::Ptr widget) :
+            WidgetNode<nandina::widgets::Button>(std::move(widget)) {
         }
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, ButtonNode>
-        auto text(this Self &&self, std::string_view value) -> Self&& {
+        auto text(this Self&& self, std::string_view value) -> Self&& {
             self.m_typed->text(value);
             return std::forward<Self>(self);
         }
 
-        template<typename Self, typename F>
-            requires std::derived_from<std::remove_cvref_t<Self>, ButtonNode> &&
-                     std::invocable<F> &&
-                     std::convertible_to<std::invoke_result_t<F>, std::string_view> &&
-                     (!std::convertible_to<F, std::string_view>)
-        auto text(this Self &&self, F fn) -> Self&& {
-            auto *w = self.m_typed;
-            w->add_opaque_cleanup(
-                std::make_shared<nandina::reactive::Effect>(
-                    [w, fn = std::move(fn)] {
-                        w->text(fn());
-                    }
-                )
-            );
+        template <typename Self, typename F>
+            requires std::derived_from<std::remove_cvref_t<Self>, ButtonNode> && std::invocable<F>
+            && std::convertible_to<std::invoke_result_t<F>, std::string_view>
+            && (!std::convertible_to<F, std::string_view>)
+        auto text(this Self&& self, F fn) -> Self&& {
+            auto* w = self.m_typed;
+            w->add_opaque_cleanup(std::make_shared<nandina::reactive::Effect>([w, fn = std::move(fn)] {
+                w->text(fn());
+            }));
             return std::forward<Self>(self);
         }
 
@@ -965,128 +963,128 @@ export namespace nandina::app {
             return m_typed->font();
         }
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, ButtonNode>
-        auto font(this Self &&self, nandina::text::NanFont font_config) -> Self&& {
+        auto font(this Self&& self, nandina::text::NanFont font_config) -> Self&& {
             self.m_typed->font(std::move(font_config));
             return std::forward<Self>(self);
         }
 
-        template<typename Self, typename Fn>
+        template <typename Self, typename Fn>
             requires std::derived_from<std::remove_cvref_t<Self>, ButtonNode>
-                     && std::invocable<Fn, nandina::text::NanFont &>
-                     && (!std::convertible_to<std::remove_cvref_t<Fn>, nandina::text::NanFont>)
-        auto font(this Self &&self, Fn &&fn) -> Self&& {
+            && std::invocable<Fn, nandina::text::NanFont&>
+            && (!std::convertible_to<std::remove_cvref_t<Fn>, nandina::text::NanFont>)
+        auto font(this Self&& self, Fn&& fn) -> Self&& {
             auto updated = self.m_typed->font();
             std::invoke(std::forward<Fn>(fn), updated);
             self.m_typed->font(std::move(updated));
             return std::forward<Self>(self);
         }
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, ButtonNode>
-        auto button_style(this Self &&self, const theme::NanButtonStyle &style) -> Self&& {
+        auto button_style(this Self&& self, const theme::NanButtonStyle& style) -> Self&& {
             self.m_typed->color_variant(style.color_variant);
             self.m_typed->variant(style.variant);
             self.m_typed->size(style.size);
 
             auto font = nandina::text::NanFont{}
-                    .size(style.font_size)
-                    .weight(style.font_weight)
-                    .color(style.font_color)
-                    .overflow(style.overflow)
-                    .single_line(style.single_line);
+                            .size(style.font_size)
+                            .weight(style.font_weight)
+                            .color(style.font_color)
+                            .overflow(style.overflow)
+                            .single_line(style.single_line);
             self.m_typed->font(std::move(font));
             return std::forward<Self>(self);
         }
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, ButtonNode>
-        auto variant(this Self &&self, nandina::widgets::ButtonVariant value) -> Self&& {
+        auto variant(this Self&& self, nandina::widgets::ButtonVariant value) -> Self&& {
             self.m_typed->variant(value);
             return std::forward<Self>(self);
         }
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, ButtonNode>
-        auto size(this Self &&self, nandina::widgets::ButtonSize value) -> Self&& {
+        auto size(this Self&& self, nandina::widgets::ButtonSize value) -> Self&& {
             self.m_typed->size(value);
             return std::forward<Self>(self);
         }
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, ButtonNode>
-        auto color_variant(this Self &&self, nandina::theme::ColorVariant value) -> Self&& {
+        auto color_variant(this Self&& self, nandina::theme::ColorVariant value) -> Self&& {
             self.m_typed->color_variant(value);
             return std::forward<Self>(self);
         }
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, ButtonNode>
-        auto icon(this Self &&self, nandina::widgets::IconType value) -> Self&& {
+        auto icon(this Self&& self, nandina::widgets::IconType value) -> Self&& {
             self.m_typed->icon(value);
             return std::forward<Self>(self);
         }
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, ButtonNode>
-        auto icon_left(this Self &&self, nandina::widgets::IconType value) -> Self&& {
+        auto icon_left(this Self&& self, nandina::widgets::IconType value) -> Self&& {
             self.m_typed->icon_left(value);
             return std::forward<Self>(self);
         }
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, ButtonNode>
-        auto icon_right(this Self &&self, nandina::widgets::IconType value) -> Self&& {
+        auto icon_right(this Self&& self, nandina::widgets::IconType value) -> Self&& {
             self.m_typed->icon_right(value);
             return std::forward<Self>(self);
         }
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, ButtonNode>
-        auto disabled(this Self &&self, bool value) -> Self&& {
+        auto disabled(this Self&& self, bool value) -> Self&& {
             self.m_typed->disabled(value);
             return std::forward<Self>(self);
         }
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, ButtonNode>
-        auto loading(this Self &&self, bool value) -> Self&& {
+        auto loading(this Self&& self, bool value) -> Self&& {
             self.m_typed->loading(value);
             return std::forward<Self>(self);
         }
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, ButtonNode>
-        auto on_click(this Self &&self, std::function<void()> handler) -> Self&& {
+        auto on_click(this Self&& self, std::function<void()> handler) -> Self&& {
             self.m_typed->on_click(std::move(handler));
             return std::forward<Self>(self);
         }
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, ButtonNode>
-        auto on_press(this Self &&self, std::function<void()> handler) -> Self&& {
+        auto on_press(this Self&& self, std::function<void()> handler) -> Self&& {
             self.m_typed->on_press(std::move(handler));
             return std::forward<Self>(self);
         }
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, ButtonNode>
-        auto on_release(this Self &&self, std::function<void()> handler) -> Self&& {
+        auto on_release(this Self&& self, std::function<void()> handler) -> Self&& {
             self.m_typed->on_release(std::move(handler));
             return std::forward<Self>(self);
         }
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, ButtonNode>
-        auto on_hover(this Self &&self, std::function<void()> handler) -> Self&& {
+        auto on_hover(this Self&& self, std::function<void()> handler) -> Self&& {
             self.m_typed->on_hover(std::move(handler));
             return std::forward<Self>(self);
         }
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, ButtonNode>
-        auto on_leave(this Self &&self, std::function<void()> handler) -> Self&& {
+        auto on_leave(this Self&& self, std::function<void()> handler) -> Self&& {
             self.m_typed->on_leave(std::move(handler));
             return std::forward<Self>(self);
         }
@@ -1096,13 +1094,12 @@ export namespace nandina::app {
     public:
         using Node::size;
 
-        explicit TagNode(nandina::widgets::Tag::Ptr widget)
-            : WidgetNode<nandina::widgets::Tag>(std::move(widget)) {
+        explicit TagNode(nandina::widgets::Tag::Ptr widget) : WidgetNode<nandina::widgets::Tag>(std::move(widget)) {
         }
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, TagNode>
-        auto text(this Self &&self, std::string_view value) -> Self&& {
+        auto text(this Self&& self, std::string_view value) -> Self&& {
             self.m_typed->text(value);
             return std::forward<Self>(self);
         }
@@ -1127,41 +1124,40 @@ export namespace nandina::app {
             return m_typed->size();
         }
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, TagNode>
-        auto font(this Self &&self, nandina::text::NanFont font_config) -> Self&& {
+        auto font(this Self&& self, nandina::text::NanFont font_config) -> Self&& {
             self.m_typed->font(std::move(font_config));
             return std::forward<Self>(self);
         }
 
-        template<typename Self, typename Fn>
-            requires std::derived_from<std::remove_cvref_t<Self>, TagNode>
-                     && std::invocable<Fn, nandina::text::NanFont &>
-                     && (!std::convertible_to<std::remove_cvref_t<Fn>, nandina::text::NanFont>)
-        auto font(this Self &&self, Fn &&fn) -> Self&& {
+        template <typename Self, typename Fn>
+            requires std::derived_from<std::remove_cvref_t<Self>, TagNode> && std::invocable<Fn, nandina::text::NanFont&>
+            && (!std::convertible_to<std::remove_cvref_t<Fn>, nandina::text::NanFont>)
+        auto font(this Self&& self, Fn&& fn) -> Self&& {
             auto updated = self.m_typed->font();
             std::invoke(std::forward<Fn>(fn), updated);
             self.m_typed->font(std::move(updated));
             return std::forward<Self>(self);
         }
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, TagNode>
-        auto size(this Self &&self, const nandina::widgets::TagSize value) -> Self&& {
+        auto size(this Self&& self, const nandina::widgets::TagSize value) -> Self&& {
             self.m_typed->size(value);
             return std::forward<Self>(self);
         }
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, TagNode>
-        auto color_variant(this Self &&self, const nandina::theme::ColorVariant value) -> Self&& {
+        auto color_variant(this Self&& self, const nandina::theme::ColorVariant value) -> Self&& {
             self.m_typed->color_variant(value);
             return std::forward<Self>(self);
         }
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, TagNode>
-        auto disabled(this Self &&self, const bool value) -> Self&& {
+        auto disabled(this Self&& self, const bool value) -> Self&& {
             self.m_typed->disabled(value);
             return std::forward<Self>(self);
         }
@@ -1175,13 +1171,13 @@ export namespace nandina::app {
     public:
         using Node::size;
 
-        explicit CheckboxNode(nandina::widgets::Checkbox::Ptr widget)
-            : WidgetNode<nandina::widgets::Checkbox>(std::move(widget)) {
+        explicit CheckboxNode(nandina::widgets::Checkbox::Ptr widget) :
+            WidgetNode<nandina::widgets::Checkbox>(std::move(widget)) {
         }
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, CheckboxNode>
-        auto label(this Self &&self, std::string_view value) -> Self&& {
+        auto label(this Self&& self, std::string_view value) -> Self&& {
             self.m_typed->label(value);
             return std::forward<Self>(self);
         }
@@ -1206,37 +1202,112 @@ export namespace nandina::app {
             return m_typed->size();
         }
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, CheckboxNode>
-        auto checked(this Self &&self, const bool value) -> Self&& {
+        auto checked(this Self&& self, const bool value) -> Self&& {
             self.m_typed->checked(value);
             return std::forward<Self>(self);
         }
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, CheckboxNode>
-        auto size(this Self &&self, const nandina::widgets::CheckboxSize value) -> Self&& {
+        auto size(this Self&& self, const nandina::widgets::CheckboxSize value) -> Self&& {
             self.m_typed->size(value);
             return std::forward<Self>(self);
         }
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, CheckboxNode>
-        auto color_variant(this Self &&self, const nandina::theme::ColorVariant value) -> Self&& {
+        auto color_variant(this Self&& self, const nandina::theme::ColorVariant value) -> Self&& {
             self.m_typed->color_variant(value);
             return std::forward<Self>(self);
         }
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, CheckboxNode>
-        auto disabled(this Self &&self, const bool value) -> Self&& {
+        auto disabled(this Self&& self, const bool value) -> Self&& {
             self.m_typed->disabled(value);
             return std::forward<Self>(self);
         }
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, CheckboxNode>
-        auto on_checked_changed(this Self &&self, std::function<void(bool)> cb) -> Self&& {
+        auto on_checked_changed(this Self&& self, std::function<void(bool)> cb) -> Self&& {
+            self.m_typed->on_checked_changed(std::move(cb));
+            return std::forward<Self>(self);
+        }
+    };
+
+    // ═══════════════════════════════════════════════════════════
+    // SwitchNode — Switch 链式配置节点
+    // ═══════════════════════════════════════════════════════════
+
+    class SwitchNode : public WidgetNode<nandina::widgets::Switch> {
+    public:
+        using Node::size;
+
+        explicit SwitchNode(nandina::widgets::Switch::Ptr widget) :
+            WidgetNode<nandina::widgets::Switch>(std::move(widget)) {
+        }
+
+        template <typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, SwitchNode>
+        auto label(this Self&& self, std::string_view value) -> Self&& {
+            self.m_typed->label(value);
+            return std::forward<Self>(self);
+        }
+
+        [[nodiscard]] auto label() const -> const std::string& {
+            return m_typed->label();
+        }
+
+        [[nodiscard]] auto checked() const -> bool {
+            return m_typed->checked();
+        }
+
+        [[nodiscard]] auto disabled() const -> bool {
+            return m_typed->disabled();
+        }
+
+        [[nodiscard]] auto color_variant() const -> nandina::theme::ColorVariant {
+            return m_typed->color_variant();
+        }
+
+        [[nodiscard]] auto switch_size() const -> nandina::widgets::SwitchSize {
+            return m_typed->size();
+        }
+
+        template <typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, SwitchNode>
+        auto checked(this Self&& self, const bool value) -> Self&& {
+            self.m_typed->checked(value);
+            return std::forward<Self>(self);
+        }
+
+        template <typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, SwitchNode>
+        auto size(this Self&& self, const nandina::widgets::SwitchSize value) -> Self&& {
+            self.m_typed->size(value);
+            return std::forward<Self>(self);
+        }
+
+        template <typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, SwitchNode>
+        auto color_variant(this Self&& self, const nandina::theme::ColorVariant value) -> Self&& {
+            self.m_typed->color_variant(value);
+            return std::forward<Self>(self);
+        }
+
+        template <typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, SwitchNode>
+        auto disabled(this Self&& self, const bool value) -> Self&& {
+            self.m_typed->disabled(value);
+            return std::forward<Self>(self);
+        }
+
+        template <typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, SwitchNode>
+        auto on_checked_changed(this Self&& self, std::function<void(bool)> cb) -> Self&& {
             self.m_typed->on_checked_changed(std::move(cb));
             return std::forward<Self>(self);
         }
@@ -1257,76 +1328,76 @@ export namespace nandina::app {
 
     class TextFieldNode : public WidgetNode<nandina::widgets::TextField> {
     public:
-        explicit TextFieldNode(nandina::widgets::TextField::Ptr widget)
-            : WidgetNode<nandina::widgets::TextField>(std::move(widget)) {
+        explicit TextFieldNode(nandina::widgets::TextField::Ptr widget) :
+            WidgetNode<nandina::widgets::TextField>(std::move(widget)) {
         }
 
         // ── value ──────────────────────────────────────────────────────────
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, TextFieldNode>
-        auto value(this Self &&self, std::string_view v) -> Self&& {
+        auto value(this Self&& self, std::string_view v) -> Self&& {
             self.m_typed->set_value(std::string{v});
             return std::forward<Self>(self);
         }
 
         // ── placeholder ────────────────────────────────────────────────────
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, TextFieldNode>
-        auto placeholder(this Self &&self, std::string_view v) -> Self&& {
+        auto placeholder(this Self&& self, std::string_view v) -> Self&& {
             self.m_typed->set_placeholder(std::string{v});
             return std::forward<Self>(self);
         }
 
         // ── disabled ───────────────────────────────────────────────────────
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, TextFieldNode>
-        auto disabled(this Self &&self, bool v) -> Self&& {
+        auto disabled(this Self&& self, bool v) -> Self&& {
             self.m_typed->set_disabled(v);
             return std::forward<Self>(self);
         }
 
         // ── read_only ──────────────────────────────────────────────────────
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, TextFieldNode>
-        auto read_only(this Self &&self, bool v) -> Self&& {
+        auto read_only(this Self&& self, bool v) -> Self&& {
             self.m_typed->set_read_only(v);
             return std::forward<Self>(self);
         }
 
         // ── invalid ────────────────────────────────────────────────────────
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, TextFieldNode>
-        auto invalid(this Self &&self, bool v) -> Self&& {
+        auto invalid(this Self&& self, bool v) -> Self&& {
             self.m_typed->set_invalid(v);
             return std::forward<Self>(self);
         }
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, TextFieldNode>
-        auto color_variant(this Self &&self, nandina::theme::ColorVariant v) -> Self&& {
+        auto color_variant(this Self&& self, nandina::theme::ColorVariant v) -> Self&& {
             self.m_typed->color_variant(v);
             return std::forward<Self>(self);
         }
 
         // ── on_change ──────────────────────────────────────────────────────
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, TextFieldNode>
-        auto on_change(this Self &&self, std::function<void(std::string_view)> cb) -> Self&& {
+        auto on_change(this Self&& self, std::function<void(std::string_view)> cb) -> Self&& {
             self.m_typed->on_change(std::move(cb));
             return std::forward<Self>(self);
         }
 
         // ── on_submit ──────────────────────────────────────────────────────
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, TextFieldNode>
-        auto on_submit(this Self &&self, std::function<void(std::string_view)> cb) -> Self&& {
+        auto on_submit(this Self&& self, std::function<void(std::string_view)> cb) -> Self&& {
             self.m_typed->on_submit(std::move(cb));
             return std::forward<Self>(self);
         }
@@ -1347,67 +1418,67 @@ export namespace nandina::app {
 
     class FieldNode : public WidgetNode<nandina::widgets::Field> {
     public:
-        explicit FieldNode(nandina::widgets::Field::Ptr widget)
-            : WidgetNode<nandina::widgets::Field>(std::move(widget)) {
+        explicit FieldNode(nandina::widgets::Field::Ptr widget) :
+            WidgetNode<nandina::widgets::Field>(std::move(widget)) {
         }
 
         // ── label ──────────────────────────────────────────────────────────
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, FieldNode>
-        auto label(this Self &&self, std::string_view v) -> Self&& {
+        auto label(this Self&& self, std::string_view v) -> Self&& {
             self.m_typed->set_label(std::string{v});
             return std::forward<Self>(self);
         }
 
         // ── helper_text ────────────────────────────────────────────────────
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, FieldNode>
-        auto helper_text(this Self &&self, std::string_view v) -> Self&& {
+        auto helper_text(this Self&& self, std::string_view v) -> Self&& {
             self.m_typed->set_helper_text(std::string{v});
             return std::forward<Self>(self);
         }
 
         // ── error_text ─────────────────────────────────────────────────────
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, FieldNode>
-        auto error_text(this Self &&self, std::string_view v) -> Self&& {
+        auto error_text(this Self&& self, std::string_view v) -> Self&& {
             self.m_typed->set_error_text(std::string{v});
             return std::forward<Self>(self);
         }
 
         // ── required ───────────────────────────────────────────────────────
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, FieldNode>
-        auto required(this Self &&self, bool v) -> Self&& {
+        auto required(this Self&& self, bool v) -> Self&& {
             self.m_typed->set_required(v);
             return std::forward<Self>(self);
         }
 
         // ── invalid ────────────────────────────────────────────────────────
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, FieldNode>
-        auto invalid(this Self &&self, bool v) -> Self&& {
+        auto invalid(this Self&& self, bool v) -> Self&& {
             self.m_typed->set_invalid(v);
             return std::forward<Self>(self);
         }
 
         // ── disabled ───────────────────────────────────────────────────────
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, FieldNode>
-        auto disabled(this Self &&self, bool v) -> Self&& {
+        auto disabled(this Self&& self, bool v) -> Self&& {
             self.m_typed->set_disabled(v);
             return std::forward<Self>(self);
         }
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, FieldNode>
-        auto color_variant(this Self &&self, nandina::theme::ColorVariant v) -> Self&& {
+        auto color_variant(this Self&& self, nandina::theme::ColorVariant v) -> Self&& {
             self.m_typed->set_color_variant(v);
             return std::forward<Self>(self);
         }
@@ -1419,9 +1490,9 @@ export namespace nandina::app {
         // 用法：
         //   field().control(text_field().placeholder("Email"))
 
-        template<typename Self, typename NodeLike>
+        template <typename Self, typename NodeLike>
             requires std::derived_from<std::remove_cvref_t<Self>, FieldNode>
-        auto control(this Self &&self, NodeLike &&child) -> Self&& {
+        auto control(this Self&& self, NodeLike&& child) -> Self&& {
             auto node = Node(std::forward<NodeLike>(child));
             self.m_typed->set_control(std::move(node).take_widget());
             return std::forward<Self>(self);
@@ -1443,71 +1514,71 @@ export namespace nandina::app {
 
     class SidebarMenuButtonNode : public WidgetNode<nandina::widgets::SidebarMenuButton> {
     public:
-        explicit SidebarMenuButtonNode(nandina::widgets::SidebarMenuButton::Ptr widget)
-            : WidgetNode<nandina::widgets::SidebarMenuButton>(std::move(widget)) {
+        explicit SidebarMenuButtonNode(nandina::widgets::SidebarMenuButton::Ptr widget) :
+            WidgetNode<nandina::widgets::SidebarMenuButton>(std::move(widget)) {
         }
 
         // ── 文本（统一风格，转发 Button::set_text）────────────────────
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, SidebarMenuButtonNode>
-        auto text(this Self &&self, std::string_view t) -> Self&& {
+        auto text(this Self&& self, std::string_view t) -> Self&& {
             self.m_typed->text(t);
             return std::forward<Self>(self);
         }
 
         // ── 激活状态（统一 getter/setter 风格）────────────────────────
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, SidebarMenuButtonNode>
-        auto active(this Self &&self, bool value) -> Self&& {
+        auto active(this Self&& self, bool value) -> Self&& {
             self.m_typed->active(value);
             return std::forward<Self>(self);
         }
 
         // ── accent 指示条颜色─────────────────────────────────────────
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, SidebarMenuButtonNode>
-        auto accent_color(this Self &&self, const nandina::NanColor &color) -> Self&& {
+        auto accent_color(this Self&& self, const nandina::NanColor& color) -> Self&& {
             self.m_typed->accent_color(color);
             return std::forward<Self>(self);
         }
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, SidebarMenuButtonNode>
-        auto color_variant(this Self &&self, nandina::theme::ColorVariant value) -> Self&& {
+        auto color_variant(this Self&& self, nandina::theme::ColorVariant value) -> Self&& {
             self.m_typed->color_variant(value);
             return std::forward<Self>(self);
         }
 
         // ── active_changed 回调───────────────────────────────────────
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, SidebarMenuButtonNode>
-        auto on_active_changed(this Self &&self, std::function<void(bool)> cb) -> Self&& {
+        auto on_active_changed(this Self&& self, std::function<void(bool)> cb) -> Self&& {
             self.m_typed->on_active_changed(std::move(cb));
             return std::forward<Self>(self);
         }
 
         // ── 点击回调─────────────────────────────────────────────────
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, SidebarMenuButtonNode>
-        auto on_click(this Self &&self, std::function<void()> handler) -> Self&& {
+        auto on_click(this Self&& self, std::function<void()> handler) -> Self&& {
             self.m_typed->on_click(std::move(handler));
             return std::forward<Self>(self);
         }
 
         // ── 字体（全量替换）──────────────────────────────────────────
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, SidebarMenuButtonNode>
-        auto font(this Self &&self, nandina::text::NanFont font_config) -> Self&& {
+        auto font(this Self&& self, nandina::text::NanFont font_config) -> Self&& {
             self.m_typed->font(std::move(font_config));
             return std::forward<Self>(self);
         }
 
         // ── 字体（局部更新）──────────────────────────────────────────
-        template<typename Self, typename Fn>
+        template <typename Self, typename Fn>
             requires std::derived_from<std::remove_cvref_t<Self>, SidebarMenuButtonNode>
-                     && std::invocable<Fn, nandina::text::NanFont &>
-                     && (!std::convertible_to<std::remove_cvref_t<Fn>, nandina::text::NanFont>)
-        auto font(this Self &&self, Fn &&fn) -> Self&& {
+            && std::invocable<Fn, nandina::text::NanFont&>
+            && (!std::convertible_to<std::remove_cvref_t<Fn>, nandina::text::NanFont>)
+        auto font(this Self&& self, Fn&& fn) -> Self&& {
             auto updated = self.m_typed->font();
             std::invoke(std::forward<Fn>(fn), updated);
             self.m_typed->font(std::move(updated));
@@ -1516,54 +1587,54 @@ export namespace nandina::app {
 
         // ── 隐式转换 — 支持直接传入 SidebarGroup::add_child(NanWidget::Ptr) ──
         operator nandina::runtime::NanWidget::Ptr() && {
-            return static_cast<Node &&>(*this).take_widget();
+            return static_cast<Node&&>(*this).take_widget();
         }
     };
 
     class ProgressBarNode : public WidgetNode<nandina::widgets::ProgressBar> {
     public:
-        explicit ProgressBarNode(nandina::widgets::ProgressBar::Ptr widget)
-            : WidgetNode<nandina::widgets::ProgressBar>(std::move(widget)) {
+        explicit ProgressBarNode(nandina::widgets::ProgressBar::Ptr widget) :
+            WidgetNode<nandina::widgets::ProgressBar>(std::move(widget)) {
         }
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, ProgressBarNode>
-        auto progress(this Self &&self, float value) -> Self&& {
+        auto progress(this Self&& self, float value) -> Self&& {
             self.m_typed->set_progress(value);
             return std::forward<Self>(self);
         }
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, ProgressBarNode>
-        auto color_variant(this Self &&self, nandina::theme::ColorVariant value) -> Self&& {
+        auto color_variant(this Self&& self, nandina::theme::ColorVariant value) -> Self&& {
             self.m_typed->color_variant(value);
             return std::forward<Self>(self);
         }
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, ProgressBarNode>
-        auto bar_color(this Self &&self, const nandina::NanColor &value) -> Self&& {
+        auto bar_color(this Self&& self, const nandina::NanColor& value) -> Self&& {
             self.m_typed->set_bar_color(value);
             return std::forward<Self>(self);
         }
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, ProgressBarNode>
-        auto track_color(this Self &&self, const nandina::NanColor &value) -> Self&& {
+        auto track_color(this Self&& self, const nandina::NanColor& value) -> Self&& {
             self.m_typed->set_track_color(value);
             return std::forward<Self>(self);
         }
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, ProgressBarNode>
-        auto bar_height(this Self &&self, float value) -> Self&& {
+        auto bar_height(this Self&& self, float value) -> Self&& {
             self.m_typed->set_bar_height(value);
             return std::forward<Self>(self);
         }
 
-        template<typename Self>
+        template <typename Self>
             requires std::derived_from<std::remove_cvref_t<Self>, ProgressBarNode>
-        auto corner_radius(this Self &&self, float value) -> Self&& {
+        auto corner_radius(this Self&& self, float value) -> Self&& {
             self.m_typed->set_corner_radius(value);
             return std::forward<Self>(self);
         }
@@ -1595,9 +1666,9 @@ export namespace nandina::app {
     }
 
     /// 变参模板：接受任意多个 Node（lvalue 或 rvalue），内部统一移动
-    template<typename... Nodes>
-        requires (std::derived_from<std::decay_t<Nodes>, Node> && ...)
-    inline auto children(Nodes &&... nodes) -> Children {
+    template <typename... Nodes>
+        requires(std::derived_from<std::decay_t<Nodes>, Node> && ...)
+    inline auto children(Nodes&&... nodes) -> Children {
         Children result;
         (result.append(std::move(nodes)), ...);
         return result;
@@ -1605,26 +1676,27 @@ export namespace nandina::app {
 
     // ── NodeLike concept ──────────────────────────────────────────────────
     /** @brief 可接受为 Node 的类型（含派生类） */
-    template<typename T>
+    template <typename T>
     concept NodeLike = std::derived_from<std::decay_t<T>, Node>;
 
     // ── 工厂检测辅助 ────────────────────────────────────────────────────
     namespace detail {
         /** @brief 统一工厂调度：自动检测 Create() 或 create() */
-        template<typename W, typename... Args>
-        auto make_widget(Args &&... args) -> runtime::NanWidget::Ptr {
-            if constexpr (requires { { W::Create(std::forward<Args>(args)...) }; }) {
+        template <typename W, typename... Args>
+        auto make_widget(Args&&... args) -> runtime::NanWidget::Ptr {
+            if constexpr (requires {
+                              { W::Create(std::forward<Args>(args)...) };
+                          }) {
                 return W::Create(std::forward<Args>(args)...);
-            }
-            else if constexpr (requires { { W::create(std::forward<Args>(args)...) }; }) {
+            } else if constexpr (requires {
+                                     { W::create(std::forward<Args>(args)...) };
+                                 }) {
                 return W::create(std::forward<Args>(args)...);
-            }
-            else {
-                static_assert(sizeof(W) == 0,
-                              "Widget type must have a static factory: Create(...) or create(...)");
+            } else {
+                static_assert(sizeof(W) == 0, "Widget type must have a static factory: Create(...) or create(...)");
             }
         }
-    }
+    } // namespace detail
 
     // ── NodeFactory — 通用节点工厂 ──────────────────────────────────────
     /** @brief 通用节点工厂。第三方 Widget 可直接使用，无需修改框架文件。 */
@@ -1634,70 +1706,89 @@ export namespace nandina::app {
             return Node{std::move(widget)};
         }
 
-        template<typename W> requires requires { { detail::make_widget<W>() }; }
+        template <typename W>
+            requires requires {
+                { detail::make_widget<W>() };
+            }
         [[nodiscard]] static auto container(Children children) -> Node {
             Node result{detail::make_widget<W>()};
             _populate_children<W>(result, std::move(children));
             return result;
         }
 
-        template<typename W> requires requires { { detail::make_widget<W>() }; }
+        template <typename W>
+            requires requires {
+                { detail::make_widget<W>() };
+            }
         [[nodiscard]] static auto positioned_container(Children children) -> Node {
             Node result{detail::make_widget<W>()};
-            for (auto &child: std::move(children).take()) {
+            for (auto& child : std::move(children).take()) {
                 auto props = std::move(child).take_positioned_props();
-                if (auto cw = std::move(child).take_widget())
-                    static_cast<W *>(result.widget_ptr())->add_positioned_child(std::move(cw), std::move(props));
+                if (auto cw = std::move(child).take_widget()) {
+                    static_cast<W*>(result.widget_ptr())->add_positioned_child(std::move(cw), std::move(props));
+                }
                 result.absorb(std::move(child));
             }
             return result;
         }
 
-        template<typename W, typename N> requires NodeLike<N> && requires { { detail::make_widget<W>() }; }
-        [[nodiscard]] static auto wrapper(N &&child_node) -> Node {
+        template <typename W, typename N>
+            requires NodeLike<N> && requires {
+                { detail::make_widget<W>() };
+            }
+        [[nodiscard]] static auto wrapper(N&& child_node) -> Node {
             Node result{detail::make_widget<W>()};
             Node moved{std::move(child_node)};
-            if (auto cw = std::move(moved).take_widget()) _set_child<W>(*result.widget_ptr(), std::move(cw));
+            if (auto cw = std::move(moved).take_widget()) {
+                _set_child<W>(*result.widget_ptr(), std::move(cw));
+            }
             result.absorb(std::move(moved));
             return result;
         }
 
-        template<typename W, typename N, typename... Args>
-            requires NodeLike<N> && requires(Args... args) { { detail::make_widget<W>(std::forward<Args>(args)...) }; }
-        [[nodiscard]] static auto wrapper_with(N &&child_node, Args &&... args) -> Node {
+        template <typename W, typename N, typename... Args>
+            requires NodeLike<N> && requires(Args... args) {
+                { detail::make_widget<W>(std::forward<Args>(args)...) };
+            }
+        [[nodiscard]] static auto wrapper_with(N&& child_node, Args&&... args) -> Node {
             Node result{detail::make_widget<W>(std::forward<Args>(args)...)};
             Node moved{std::move(child_node)};
-            if (auto cw = std::move(moved).take_widget()) _set_child<W>(*result.widget_ptr(), std::move(cw));
+            if (auto cw = std::move(moved).take_widget()) {
+                _set_child<W>(*result.widget_ptr(), std::move(cw));
+            }
             result.absorb(std::move(moved));
             return result;
         }
 
     private:
-        template<typename W>
-        static auto _populate_children(Node &result, Children children) -> void {
-            for (auto &child: std::move(children).take()) {
+        template <typename W>
+        static auto _populate_children(Node& result, Children children) -> void {
+            for (auto& child : std::move(children).take()) {
                 if (auto cw = std::move(child).take_widget()) {
-                    if constexpr (requires(W &w, runtime::NanWidget::Ptr c) { w.add(std::move(c)); })
-                        static_cast<W *>(result.widget_ptr())->add(std::move(cw));
-                    else result.widget_ptr()->add_child(std::move(cw));
+                    if constexpr (requires(W& w, runtime::NanWidget::Ptr c) { w.add(std::move(c)); }) {
+                        static_cast<W*>(result.widget_ptr())->add(std::move(cw));
+                    } else {
+                        result.widget_ptr()->add_child(std::move(cw));
+                    }
                 }
                 result.absorb(std::move(child));
             }
         }
 
-        template<typename W>
-        static auto _set_child(runtime::NanWidget &w, runtime::NanWidget::Ptr cw) -> void {
-            if constexpr (requires(W &w2, runtime::NanWidget::Ptr c) { w2.child(std::move(c)); })
-                static_cast<W &>(w).child(std::move(cw));
-            else w.add_child(std::move(cw));
+        template <typename W>
+        static auto _set_child(runtime::NanWidget& w, runtime::NanWidget::Ptr cw) -> void {
+            if constexpr (requires(W& w2, runtime::NanWidget::Ptr c) { w2.child(std::move(c)); }) {
+                static_cast<W&>(w).child(std::move(cw));
+            } else {
+                w.add_child(std::move(cw));
+            }
         }
     };
 
     class MountedNodeComponent final : public NanComponent {
     public:
-        explicit MountedNodeComponent(Node root)
-            : m_root_node(std::move(root)) {
-            auto widget = std::move(m_root_node).take_widget();
+        explicit MountedNodeComponent(Node root) : m_root_node(std::move(root)) {
+            auto widget   = std::move(m_root_node).take_widget();
             m_root_widget = add_child(std::move(widget));
             m_root_node.bind_refs();
         }
@@ -1715,7 +1806,7 @@ export namespace nandina::app {
             return *this;
         }
 
-        auto measure(const geometry::NanConstraints &constraints) -> void override {
+        auto measure(const geometry::NanConstraints& constraints) -> void override {
             if (!m_root_widget) {
                 const geometry::NanSize empty_size{};
                 set_measured_layout_state(constraints, constraints.constrain(empty_size));
@@ -1724,8 +1815,8 @@ export namespace nandina::app {
 
             if (constraints.is_tight()) {
                 set_measured_layout_state(
-                    constraints,
-                    geometry::NanSize{constraints.max_width(), constraints.max_height()});
+                    constraints, geometry::NanSize{constraints.max_width(), constraints.max_height()}
+                );
                 return;
             }
 
@@ -1746,7 +1837,7 @@ export namespace nandina::app {
             clear_layout_dirty();
         }
 
-        void draw(tvg::SwCanvas &canvas) override {
+        void draw(tvg::SwCanvas& canvas) override {
             if (m_root_widget && (m_pending_root_layout || m_root_widget->is_layout_dirty())) {
                 flush_root_layout(m_pending_root_layout ? "draw-pending" : "draw-child-dirty");
             }
@@ -1763,29 +1854,29 @@ export namespace nandina::app {
                 return;
             }
 
-            auto log = nandina::log::get("app.mounted");
+            auto log         = nandina::log::get("app.mounted");
             const auto start = detail::SteadyClock::now();
             m_root_widget->measure(geometry::NanConstraints::tight(width(), height()));
             const auto measure_done = detail::SteadyClock::now();
             m_root_widget->layout();
             const auto layout_done = detail::SteadyClock::now();
-            m_pending_root_layout = false;
+            m_pending_root_layout  = false;
 
             // 递归 flush 子树中所有嵌套的 MountedNodeComponent，
             // 避免在后续 draw() 遍历中再次触发重复的 measure+layout
             flush_nested_mounted(*m_root_widget);
 
             const auto measure_ms = detail::elapsed_ms(start, measure_done);
-            const auto layout_ms = detail::elapsed_ms(measure_done, layout_done);
-            const auto total_ms = detail::elapsed_ms(start, layout_done);
+            const auto layout_ms  = detail::elapsed_ms(measure_done, layout_done);
+            const auto total_ms   = detail::elapsed_ms(start, layout_done);
 
             if (total_ms >= detail::k_slow_layout_threshold_ms) {
                 auto [fast_cnt, slow_cnt] = nandina::widgets::Label::measure_diag();
 
-                auto surf_n = nandina::widgets::Surface::s_measure_count;
+                auto surf_n                                = nandina::widgets::Surface::s_measure_count;
                 nandina::widgets::Surface::s_measure_count = 0;
 
-                auto lc_n = nandina::layout::LayoutContainer::s_measure_count;
+                auto lc_n                                         = nandina::layout::LayoutContainer::s_measure_count;
                 nandina::layout::LayoutContainer::s_measure_count = 0;
 
                 log.warn(
@@ -1801,14 +1892,15 @@ export namespace nandina::app {
                     fast_cnt,
                     slow_cnt,
                     surf_n,
-                    lc_n);
+                    lc_n
+                );
             }
         }
 
         /// 递归遍历子树，立即 flush 所有嵌套 MountedNodeComponent
-        static auto flush_nested_mounted(runtime::NanWidget &root) -> void {
-            root.for_each_child([](runtime::NanWidget &child) {
-                if (auto *nested = dynamic_cast<MountedNodeComponent *>(&child)) {
+        static auto flush_nested_mounted(runtime::NanWidget& root) -> void {
+            root.for_each_child([](runtime::NanWidget& child) {
+                if (auto* nested = dynamic_cast<MountedNodeComponent*>(&child)) {
                     if (nested->m_pending_root_layout) {
                         nested->flush_root_layout("draw-pending");
                     }
@@ -1818,7 +1910,7 @@ export namespace nandina::app {
         }
 
         Node m_root_node;
-        runtime::NanWidget *m_root_widget{nullptr};
+        runtime::NanWidget* m_root_widget{nullptr};
         bool m_pending_root_layout{false};
     };
 
@@ -1828,7 +1920,9 @@ export namespace nandina::app {
 
     /** @brief 将 authoring 节点树挂载为可运行的 NanComponent */
     [[nodiscard]] inline auto mount(Node root) -> NanComponent::Ptr {
-        if (root.empty()) return nullptr;
+        if (root.empty()) {
+            return nullptr;
+        }
         return std::make_unique<MountedNodeComponent>(std::move(root));
     }
 
@@ -1842,27 +1936,44 @@ export namespace nandina::app {
     /** @brief 创建 Label 节点 */
     [[nodiscard]] inline auto label(std::string_view text) -> LabelNode {
         auto w = nandina::widgets::Label::create();
-        if (!text.empty()) w->set_text(text);
+        if (!text.empty()) {
+            w->set_text(text);
+        }
         return LabelNode{std::move(w)};
     }
 
     [[nodiscard]] inline auto tag(std::string_view text) -> TagNode {
         auto w = nandina::widgets::Tag::create();
-        if (!text.empty()) w->text(text);
+        if (!text.empty()) {
+            w->text(text);
+        }
         return TagNode{std::move(w)};
     }
 
     /** @brief 创建 Checkbox 节点 */
     [[nodiscard]] inline auto checkbox(std::string_view label) -> CheckboxNode {
         auto w = nandina::widgets::Checkbox::create();
-        if (!label.empty()) w->label(label);
+        if (!label.empty()) {
+            w->label(label);
+        }
         return CheckboxNode{std::move(w)};
+    }
+
+    /** @brief 创建 Switch 节点 */
+    [[nodiscard]] inline auto switch_button(std::string_view label) -> SwitchNode {
+        auto w = nandina::widgets::Switch::create();
+        if (!label.empty()) {
+            w->label(label);
+        }
+        return SwitchNode{std::move(w)};
     }
 
     /** @brief 创建 Button 节点 */
     [[nodiscard]] inline auto button(std::string_view text) -> ButtonNode {
         auto w = nandina::widgets::Button::create();
-        if (!text.empty()) w->text(text);
+        if (!text.empty()) {
+            w->text(text);
+        }
         return ButtonNode{std::move(w)};
     }
 
@@ -1922,27 +2033,27 @@ export namespace nandina::app {
     // ── 单子节点包装 ──────────────────────────────────────────────────
 
     /** @brief 水平+垂直居中 */
-    [[nodiscard]] inline auto center(NodeLike auto &&child) -> Node {
+    [[nodiscard]] inline auto center(NodeLike auto&& child) -> Node {
         return NodeFactory::wrapper<nandina::layout::Center>(std::forward<decltype(child)>(child));
     }
 
     /** @brief 内边距包装 */
-    [[nodiscard]] inline auto padding(NodeLike auto &&child) -> Node {
+    [[nodiscard]] inline auto padding(NodeLike auto&& child) -> Node {
         return NodeFactory::wrapper<nandina::layout::Padding>(std::forward<decltype(child)>(child));
     }
 
     /** @brief 固定尺寸包装 */
-    [[nodiscard]] inline auto sized_box(NodeLike auto &&child) -> Node {
+    [[nodiscard]] inline auto sized_box(NodeLike auto&& child) -> Node {
         return NodeFactory::wrapper<nandina::layout::SizedBox>(std::forward<decltype(child)>(child));
     }
 
     /** @brief 弹性填充包装 */
-    [[nodiscard]] inline auto expanded(NodeLike auto &&child) -> Node {
+    [[nodiscard]] inline auto expanded(NodeLike auto&& child) -> Node {
         return NodeFactory::wrapper_with<nandina::layout::Expanded>(std::forward<decltype(child)>(child), 1);
     }
 
     /** @brief 弹性填充包装（指定 flex 系数） */
-    [[nodiscard]] inline auto expanded(NodeLike auto &&child, const int flex) -> Node {
+    [[nodiscard]] inline auto expanded(NodeLike auto&& child, const int flex) -> Node {
         return NodeFactory::wrapper_with<nandina::layout::Expanded>(std::forward<decltype(child)>(child), flex);
     }
 
@@ -1965,16 +2076,18 @@ export namespace nandina::app {
     /** @brief 创建侧边栏分组容器 */
     [[nodiscard]] inline auto sidebar_group(std::string_view label_text) -> Node {
         auto g = nandina::widgets::SidebarGroup::create();
-        if (!label_text.empty()) g->label(label_text);
+        if (!label_text.empty()) {
+            g->label(label_text);
+        }
         return adopt(std::move(g));
     }
 
     struct AppConfig {
         std::string title = "NandinaUI";
-        int width = 1280;
-        int height = 720;
-        bool resizable = true;
-        bool high_dpi = true;
+        int width         = 1280;
+        int height        = 720;
+        bool resizable    = true;
+        bool high_dpi     = true;
         /// 默认背景色（NanColor::from(NanRgb{0,0,0,0}) 表示透明，不绘制背景）
         NanColor bg_color = NanColor::from(NanRgb{21, 24, 32});
     };
@@ -1987,8 +2100,8 @@ export namespace nandina::app {
         virtual ~NanAppWindow() = default;
 
         auto set_root_component(NanComponent::Ptr component) -> void {
-            m_hovered_widget = nullptr;
-            m_focused_widget = nullptr;
+            m_hovered_widget         = nullptr;
+            m_focused_widget         = nullptr;
             m_pointer_capture_widget = nullptr;
             sync_focused_text_input_area();
             m_root_component = std::move(component);
@@ -2019,18 +2132,18 @@ export namespace nandina::app {
 
         /// 子类可重写 on_update。基类在此处以节流方式处理 resize。
         virtual void on_update(const double delta_seconds) {
-            (void)delta_seconds;
+            (void) delta_seconds;
             apply_throttled_resize();
         }
 
-        virtual void on_draw(tvg::SwCanvas &canvas) {
+        virtual void on_draw(tvg::SwCanvas& canvas) {
             // ── 背景层（Surface 组件，统一使用 NanColor） ──
             if (m_background) {
                 m_background->draw(canvas);
             }
 
             if (m_root_component) {
-                auto log = nandina::log::get("app.window");
+                auto log         = nandina::log::get("app.window");
                 const auto start = detail::SteadyClock::now();
                 consume_root_reflow();
                 const auto layout_done = detail::SteadyClock::now();
@@ -2040,8 +2153,8 @@ export namespace nandina::app {
                 m_root_component->clear_dirty_recursive();
 
                 const auto layout_ms = detail::elapsed_ms(start, layout_done);
-                const auto draw_ms = detail::elapsed_ms(layout_done, draw_done);
-                const auto total_ms = detail::elapsed_ms(start, draw_done);
+                const auto draw_ms   = detail::elapsed_ms(layout_done, draw_done);
+                const auto total_ms  = detail::elapsed_ms(start, draw_done);
 
                 if (total_ms >= detail::k_slow_layout_threshold_ms) {
                     log.warn(
@@ -2052,7 +2165,8 @@ export namespace nandina::app {
                         draw_ms,
                         typeid(*m_root_component).name(),
                         width(),
-                        height());
+                        height()
+                    );
                 }
             }
         }
@@ -2064,7 +2178,7 @@ export namespace nandina::app {
 
             consume_root_reflow();
 
-            auto *hit = m_root_component->hit_test(x, y);
+            auto* hit = m_root_component->hit_test(x, y);
             return hit && hit->is_interactive() ? hit : nullptr;
         }
 
@@ -2073,17 +2187,17 @@ export namespace nandina::app {
             return m_root_component && m_root_component->dirty();
         }
 
-        static auto pointer_move_from_button(const runtime::PointerButtonEvent &event) noexcept
+        static auto pointer_move_from_button(const runtime::PointerButtonEvent& event) noexcept
             -> runtime::PointerMoveEvent {
             return runtime::PointerMoveEvent{
-                .x = event.x,
-                .y = event.y,
+                .x       = event.x,
+                .y       = event.y,
                 .delta_x = 0.0,
                 .delta_y = 0.0,
             };
         }
 
-        auto sync_hover_target(runtime::NanWidget *next, const runtime::PointerMoveEvent &event) -> bool {
+        auto sync_hover_target(runtime::NanWidget* next, const runtime::PointerMoveEvent& event) -> bool {
             if (m_hovered_widget == next) {
                 return false;
             }
@@ -2101,11 +2215,11 @@ export namespace nandina::app {
             return true;
         }
 
-        auto clear_hover_target(const runtime::PointerMoveEvent &event) -> void {
+        auto clear_hover_target(const runtime::PointerMoveEvent& event) -> void {
             sync_hover_target(nullptr, event);
         }
 
-        auto sync_focus_target(runtime::NanWidget *next) -> bool {
+        auto sync_focus_target(runtime::NanWidget* next) -> bool {
             if (m_focused_widget == next) {
                 return false;
             }
@@ -2164,13 +2278,13 @@ export namespace nandina::app {
                 return;
             }
 
-            auto log = nandina::log::get("app.window");
-            const auto width = static_cast<float>(m_active_runtime_window
-                                                      ? m_active_runtime_window->width()
-                                                      : m_config.width);
-            const auto height = static_cast<float>(m_active_runtime_window
-                                                       ? m_active_runtime_window->height()
-                                                       : m_config.height);
+            auto log         = nandina::log::get("app.window");
+            const auto width = static_cast<float>(
+                m_active_runtime_window ? m_active_runtime_window->width() : m_config.width
+            );
+            const auto height = static_cast<float>(
+                m_active_runtime_window ? m_active_runtime_window->height() : m_config.height
+            );
             const auto start = detail::SteadyClock::now();
             m_root_component->measure(geometry::NanConstraints::tight(width, height));
             const auto measure_done = detail::SteadyClock::now();
@@ -2180,8 +2294,8 @@ export namespace nandina::app {
             sync_focused_text_input_area();
 
             const auto measure_ms = detail::elapsed_ms(start, measure_done);
-            const auto layout_ms = detail::elapsed_ms(measure_done, layout_done);
-            const auto total_ms = detail::elapsed_ms(start, layout_done);
+            const auto layout_ms  = detail::elapsed_ms(measure_done, layout_done);
+            const auto total_ms   = detail::elapsed_ms(start, layout_done);
 
             if (total_ms >= detail::k_slow_layout_threshold_ms) {
                 log.warn(
@@ -2191,7 +2305,8 @@ export namespace nandina::app {
                     layout_ms,
                     typeid(*m_root_component).name(),
                     width,
-                    height);
+                    height
+                );
             }
         }
 
@@ -2200,12 +2315,12 @@ export namespace nandina::app {
                 return;
             }
 
-            const auto width = static_cast<float>(m_active_runtime_window
-                                                      ? m_active_runtime_window->width()
-                                                      : m_config.width);
-            const auto height = static_cast<float>(m_active_runtime_window
-                                                       ? m_active_runtime_window->height()
-                                                       : m_config.height);
+            const auto width = static_cast<float>(
+                m_active_runtime_window ? m_active_runtime_window->width() : m_config.width
+            );
+            const auto height = static_cast<float>(
+                m_active_runtime_window ? m_active_runtime_window->height() : m_config.height
+            );
 
             m_root_component->runtime::NanWidget::set_bounds(0.0f, 0.0f, width, height);
             m_root_component->mark_layout_dirty();
@@ -2223,31 +2338,34 @@ export namespace nandina::app {
         }
 
         auto sync_background_bounds() -> void {
-            if (!m_background)
+            if (!m_background) {
                 return;
-            const auto w = static_cast<float>(m_active_runtime_window
-                                                  ? m_active_runtime_window->width()
-                                                  : m_config.width);
-            const auto h = static_cast<float>(m_active_runtime_window
-                                                  ? m_active_runtime_window->height()
-                                                  : m_config.height);
+            }
+            const auto w = static_cast<float>(
+                m_active_runtime_window ? m_active_runtime_window->width() : m_config.width
+            );
+            const auto h = static_cast<float>(
+                m_active_runtime_window ? m_active_runtime_window->height() : m_config.height
+            );
             m_background->set_bounds(0.0f, 0.0f, w, h);
         }
 
         /// resize 节流：以最小间隔（~16ms）应用最新窗口尺寸，
         /// 避免拖拽时每个 SDL resize 事件都触发完整 measure→layout→draw
         auto apply_throttled_resize() -> void {
-            if (!m_pending_resize)
+            if (!m_pending_resize) {
                 return;
+            }
 
             const auto now = detail::SteadyClock::now();
-            const auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                now - m_last_resize_apply_time).count();
-            if (elapsed_ms < static_cast<long long>(k_resize_throttle_ms))
+            const auto elapsed_ms = std::chrono::duration_cast<std::chrono::milliseconds>(now - m_last_resize_apply_time)
+                                        .count();
+            if (elapsed_ms < static_cast<long long>(k_resize_throttle_ms)) {
                 return;
+            }
 
             m_last_resize_apply_time = now;
-            m_pending_resize = false;
+            m_pending_resize         = false;
             request_root_reflow(true);
         }
 
@@ -2256,11 +2374,11 @@ export namespace nandina::app {
         }
 
         AppConfig m_config;
-        runtime::NanWindow *m_active_runtime_window{nullptr};
+        runtime::NanWindow* m_active_runtime_window{nullptr};
         NanComponent::Ptr m_root_component{nullptr};
-        runtime::NanWidget *m_hovered_widget{nullptr};
-        runtime::NanWidget *m_focused_widget{nullptr};
-        runtime::NanWidget *m_pointer_capture_widget{nullptr};
+        runtime::NanWidget* m_hovered_widget{nullptr};
+        runtime::NanWidget* m_focused_widget{nullptr};
+        runtime::NanWidget* m_pointer_capture_widget{nullptr};
         bool m_pending_root_bounds_sync{false};
 
         // ── 背景层（Surface 组件，非 widget 树成员） ──────
@@ -2273,9 +2391,8 @@ export namespace nandina::app {
 
         class BridgeWindow final : public runtime::NanWindow {
         public:
-            BridgeWindow(NanAppWindow &owner,
-                         const runtime::NanWindow::Config &config) : runtime::NanWindow(config),
-                                                                     m_owner(owner) {
+            BridgeWindow(NanAppWindow& owner, const runtime::NanWindow::Config& config) :
+                runtime::NanWindow(config), m_owner(owner) {
             }
 
         protected:
@@ -2289,7 +2406,7 @@ export namespace nandina::app {
                 m_owner.apply_throttled_resize();
             }
 
-            void on_draw(tvg::SwCanvas &canvas) override {
+            void on_draw(tvg::SwCanvas& canvas) override {
                 m_owner.on_draw(canvas);
             }
 
@@ -2307,37 +2424,32 @@ export namespace nandina::app {
                 m_owner.on_window_focus_lost();
             }
 
-            void on_pointer_move(const runtime::PointerMoveEvent &event) override {
-                auto *hit = m_owner.hit_test_root_component(
-                    static_cast<float>(event.x), static_cast<float>(event.y));
+            void on_pointer_move(const runtime::PointerMoveEvent& event) override {
+                auto* hit = m_owner.hit_test_root_component(static_cast<float>(event.x), static_cast<float>(event.y));
                 const bool changed = m_owner.sync_hover_target(hit, event);
                 if (m_owner.m_pointer_capture_widget) {
                     m_owner.m_pointer_capture_widget->dispatch_event(event);
-                }
-                else if (hit && !changed) {
+                } else if (hit && !changed) {
                     hit->dispatch_event(event);
                 }
             }
 
-            void on_pointer_enter(const runtime::PointerMoveEvent &event) override {
-                auto *hit = m_owner.hit_test_root_component(
-                    static_cast<float>(event.x), static_cast<float>(event.y));
+            void on_pointer_enter(const runtime::PointerMoveEvent& event) override {
+                auto* hit = m_owner.hit_test_root_component(static_cast<float>(event.x), static_cast<float>(event.y));
                 m_owner.sync_hover_target(hit, event);
             }
 
-            void on_pointer_leave(const runtime::PointerMoveEvent &event) override {
+            void on_pointer_leave(const runtime::PointerMoveEvent& event) override {
                 m_owner.clear_hover_target(event);
                 m_owner.m_pointer_capture_widget = nullptr;
             }
 
-            void on_pointer_down(const runtime::PointerButtonEvent &event) override {
-                auto *hit = m_owner.hit_test_root_component(
-                    static_cast<float>(event.x), static_cast<float>(event.y));
+            void on_pointer_down(const runtime::PointerButtonEvent& event) override {
+                auto* hit = m_owner.hit_test_root_component(static_cast<float>(event.x), static_cast<float>(event.y));
                 m_owner.sync_hover_target(hit, pointer_move_from_button(event));
                 if (hit) {
                     m_owner.sync_focus_target(hit);
-                }
-                else {
+                } else {
                     m_owner.clear_focus_target();
                 }
                 if (event.button == nandina::types::PointerButton::Left) {
@@ -2348,11 +2460,10 @@ export namespace nandina::app {
                 }
             }
 
-            void on_pointer_up(const runtime::PointerButtonEvent &event) override {
-                auto *hit = m_owner.hit_test_root_component(
-                    static_cast<float>(event.x), static_cast<float>(event.y));
+            void on_pointer_up(const runtime::PointerButtonEvent& event) override {
+                auto* hit = m_owner.hit_test_root_component(static_cast<float>(event.x), static_cast<float>(event.y));
                 m_owner.sync_hover_target(hit, pointer_move_from_button(event));
-                auto *target = m_owner.m_pointer_capture_widget ? m_owner.m_pointer_capture_widget : hit;
+                auto* target = m_owner.m_pointer_capture_widget ? m_owner.m_pointer_capture_widget : hit;
                 if (target) {
                     target->dispatch_event(event, runtime::EventType::PointerUp);
                 }
@@ -2361,13 +2472,13 @@ export namespace nandina::app {
                 }
             }
 
-            void on_key_down(const runtime::KeyEvent &event) override {
+            void on_key_down(const runtime::KeyEvent& event) override {
                 if (m_owner.m_focused_widget) {
                     m_owner.m_focused_widget->dispatch_event(event, runtime::EventType::KeyDown);
                 }
             }
 
-            void on_key_up(const runtime::KeyEvent &event) override {
+            void on_key_up(const runtime::KeyEvent& event) override {
                 if (m_owner.m_focused_widget) {
                     m_owner.m_focused_widget->dispatch_event(event, runtime::EventType::KeyUp);
                 }
@@ -2381,16 +2492,18 @@ export namespace nandina::app {
 
             void on_text_editing(std::string_view text, std::int32_t start, std::int32_t length) override {
                 if (m_owner.m_focused_widget) {
-                    m_owner.m_focused_widget->dispatch_event(runtime::TextEditingEvent{
-                        .text = std::string{text},
-                        .start = start,
-                        .length = length,
-                    });
+                    m_owner.m_focused_widget->dispatch_event(
+                        runtime::TextEditingEvent{
+                            .text   = std::string{text},
+                            .start  = start,
+                            .length = length,
+                        }
+                    );
                 }
             }
 
         private:
-            NanAppWindow &m_owner;
+            NanAppWindow& m_owner;
         };
     };
 
@@ -2407,8 +2520,9 @@ export namespace nandina::app {
         // Take ownership via unique_ptr in implementation but maybe GCC dislikes it in header?
         // Let's keep it but make sure the TU where it is used is clean.
         auto run(std::unique_ptr<NanAppWindow> window) -> void {
-            if (!window)
+            if (!window) {
                 return;
+            }
             m_window = std::move(window);
             m_window->run();
         }
@@ -2428,11 +2542,11 @@ export namespace nandina::app {
         }
 
         runtime::NanWindow::Config runtime_config{
-            .title = m_config.title,
-            .width = m_config.width,
-            .height = m_config.height,
+            .title     = m_config.title,
+            .width     = m_config.width,
+            .height    = m_config.height,
             .resizable = m_config.resizable,
-            .high_dpi = m_config.high_dpi
+            .high_dpi  = m_config.high_dpi
         };
 
         BridgeWindow window{*this, runtime_config};

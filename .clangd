@@ -12,21 +12,35 @@
 #   cmake --preset linux-clang-debug
 #   cmake --build --preset linux-clang-debug -j$(nproc)
 
+# ⚠ clangd 对 C++20 Modules 的支持依赖 compile_commands.json 中已有的
+# -fmodule-file= 标志。CMake 生成的编译数据库已包含全部模块依赖映射，
+# clangd 直接透传这些标志给 clang 解析器即可正常工作。
+# 不要启用 --experimental-modules-support：clangd 22 该标志有 SIGSEGV 崩溃 bug，
+# 且本项目无需 clangd 自行管理模块依赖（.pcm 由 CMake 构建生成）。
+
 CompileFlags:
     CompilationDatabase: build/linux-clang-debug
 
+    # CMake 使用响应文件 (@*.modmap) 传递模块标志，compile_commands.json 中
+    # 直接引用 @path/to/file.modmap。clangd 透传此命令给 clang 驱动，驱动会
+    # 自动展开 @file 并解析其中的 -x c++-module、-fmodule-file=、-fmodule-output= 等标志。
+    # 因此无需在此添加任何模块相关标志。
+    #
+    # 不添加 -fmodules：该标志启用的是 Clang Modules（基于 modulemap 的旧模块系统），
+    # 与 C++20 Modules 无关。开启它会导致系统头文件尝试使用模块映射，引发
+    # _Builtin_inttypes 等内置模块查找错误。
+    #
     # CMake 在 linux-gcc-* 预设下会向 compile_commands.json 写入 GCC 专有
     # 模块扫描参数（-fmodules-ts, -fmodule-mapper=* 等），clangd 使用 Clang
-    # 驱动无法识别这些参数，在此提前移除并替换为 Clang 兼容的参数。
-    # 当使用 Clang 预设时 compile_commands 不含这些 GCC 标志，Remove 无副作用。
+    # 驱动无法识别这些参数，在此提前移除。
     Remove:
         - -fmodules-ts
         - -fmodule-mapper=*
         - -fdeps-format=*
         - -fdeps-file=*
+        - -fmodules
     Add:
         - -std=c++26
-        - -fmodules
         - -Wall
         - -Wextra
         - -Wpedantic

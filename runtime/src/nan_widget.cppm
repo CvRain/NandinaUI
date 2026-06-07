@@ -35,7 +35,7 @@ export namespace nandina::runtime {
     public:
         using Ptr = std::unique_ptr<NanWidget>;
 
-        NanWidget()          {}
+        NanWidget() {}
         virtual ~NanWidget() = default;
 
         // ── 空间属性 ──────────────────────────────────────────
@@ -99,10 +99,10 @@ export namespace nandina::runtime {
          * 子节点的布局由 layout() 方法在 measure() 之后调用。
          */
         virtual auto set_bounds(const float x, const float y, const float w, const float h) noexcept -> NanWidget& {
-            m_x = x;
-            m_y = y;
-            m_width  = w;
-            m_height = h;
+            m_x            = x;
+            m_y            = y;
+            m_width        = w;
+            m_height       = h;
             m_layout_dirty = false; // bounds 已由父容器分配完毕
             mark_dirty();
             return *this;
@@ -178,9 +178,10 @@ export namespace nandina::runtime {
 
         // ── 组合能力 ──────────────────────────────────────────
         auto add_child(Ptr child) -> NanWidget* {
-            if (!child)
+            if (!child) {
                 return nullptr;
-            auto* ptr = child.get();
+            }
+            auto* ptr     = child.get();
             ptr->m_parent = this;
             m_children.push_back(std::move(child));
             mark_layout_dirty();
@@ -197,8 +198,9 @@ export namespace nandina::runtime {
 
         // ── 绘制 ──────────────────────────────────────────────
         virtual void draw(tvg::SwCanvas& canvas) {
-            if (!m_visible)
+            if (!m_visible) {
                 return;
+            }
             on_draw(canvas);
             for (const auto& child : m_children) {
                 child->draw(canvas);
@@ -392,11 +394,9 @@ export namespace nandina::runtime {
          */
         virtual auto measure(const geometry::NanConstraints& constraints) -> void {
             m_measured_constraints = constraints;
-            for_each_child([&](NanWidget& child) {
-                child.measure(child_constraints_from(constraints, child));
-            });
+            for_each_child([&](NanWidget& child) { child.measure(child_constraints_from(constraints, child)); });
             m_measured_size = calculate_intrinsic_size(constraints);
-            m_layout_dirty = false;
+            m_layout_dirty  = false;
         }
 
         /**
@@ -410,9 +410,7 @@ export namespace nandina::runtime {
          */
         virtual auto layout() -> void {
             m_layout_dirty = false;
-            for_each_child([&](NanWidget& child) {
-                child.layout();
-            });
+            for_each_child([&](NanWidget& child) { child.layout(); });
         }
 
         /**
@@ -420,10 +418,8 @@ export namespace nandina::runtime {
          *
          * 例如 Flex 容器为不同子节点计算不同约束、Padding 收缩约束等。
          */
-        [[nodiscard]] virtual auto child_constraints_from(
-            const geometry::NanConstraints& parent_constraints,
-            const NanWidget& /*child*/) const -> geometry::NanConstraints
-        {
+        [[nodiscard]] virtual auto child_constraints_from(const geometry::NanConstraints& parent_constraints,
+            const NanWidget& /*child*/) const -> geometry::NanConstraints {
             return parent_constraints; // 默认透传
         }
 
@@ -435,24 +431,20 @@ export namespace nandina::runtime {
          *
          * 叶子节点（如 Label、Spacer）应覆盖此方法返回真实需要的大小。
          */
-        [[nodiscard]] virtual auto calculate_intrinsic_size(
-            const geometry::NanConstraints& constraints) const -> geometry::NanSize
-        {
+        [[nodiscard]] virtual auto calculate_intrinsic_size(const geometry::NanConstraints& constraints) const
+            -> geometry::NanSize {
             float child_max_w = 0.0f;
             float child_max_h = 0.0f;
             for_each_child([&](const NanWidget& child) {
                 auto child_size = child.preferred_size();
-                child_max_w = std::max(child_max_w, child_size.width());
-                child_max_h = std::max(child_max_h, child_size.height());
+                child_max_w     = std::max(child_max_w, child_size.width());
+                child_max_h     = std::max(child_max_h, child_size.height());
             });
 
             const auto own_preferred = preferred_size();
-            const float resolved_w = own_preferred.width() > 0.0f ? own_preferred.width() : child_max_w;
-            const float resolved_h = own_preferred.height() > 0.0f ? own_preferred.height() : child_max_h;
-            return {
-                constraints.constrain_width(resolved_w),
-                constraints.constrain_height(resolved_h)
-            };
+            const float resolved_w   = own_preferred.width() > 0.0f ? own_preferred.width() : child_max_w;
+            const float resolved_h   = own_preferred.height() > 0.0f ? own_preferred.height() : child_max_h;
+            return {constraints.constrain_width(resolved_w), constraints.constrain_height(resolved_h)};
         }
 
         /// 返回最近一次 measure 的结果
@@ -494,7 +486,7 @@ export namespace nandina::runtime {
         /**
          * @brief 遍历所有直接子节点（只读）
          */
-        template<typename F>
+        template <typename F>
         auto for_each_child(F&& fn) -> void {
             for (auto& child : m_children) {
                 if (child) {
@@ -506,7 +498,7 @@ export namespace nandina::runtime {
         /**
          * @brief 遍历所有直接子节点（const 版本）
          */
-        template<typename F>
+        template <typename F>
         auto for_each_child(F&& fn) const -> void {
             for (const auto& child : m_children) {
                 if (child) {
@@ -517,11 +509,10 @@ export namespace nandina::runtime {
 
     protected:
         auto set_measured_layout_state(
-            const geometry::NanConstraints& constraints,
-            const geometry::NanSize& size) noexcept -> void {
+            const geometry::NanConstraints& constraints, const geometry::NanSize& size) noexcept -> void {
             m_measured_constraints = constraints;
-            m_measured_size = size;
-            m_layout_dirty = false;
+            m_measured_size        = size;
+            m_layout_dirty         = false;
         }
 
         /// 仅清除 layout dirty 标志，不触发子节点 layout 递归。
@@ -532,8 +523,7 @@ export namespace nandina::runtime {
         }
 
         // ── 自定义绘制（子类覆盖）────────────────────────────
-        virtual void on_draw(tvg::SwCanvas& /*canvas*/) {
-        }
+        virtual void on_draw(tvg::SwCanvas& /*canvas*/) {}
 
         // ── 事件处理虚方法（默认不做响应）────────────────────
         virtual auto on_pointer_move(const PointerMoveEvent& /*event*/) -> bool {

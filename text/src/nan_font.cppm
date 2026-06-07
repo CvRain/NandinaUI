@@ -23,9 +23,8 @@ module;
 #include <span>
 #include <string>
 #include <string_view>
-#include <vector>
-
 #include <thorvg-1/thorvg.h>
+#include <vector>
 
 export module nandina.text.nan_font;
 
@@ -54,22 +53,22 @@ export namespace nandina::text {
 
     // ── 文本溢出策略 ──────────────────────────────────────────
     enum class TextOverflow : std::uint8_t {
-        wrap,      // 换行（默认）
-        clip,      // 硬裁剪，超出不显示
-        ellipsis,  // 省略号 "..."
-        scale,     // 等比缩小字号直到放下（expensive）
+        wrap, // 换行（默认）
+        clip, // 硬裁剪，超出不显示
+        ellipsis, // 省略号 "..."
+        scale, // 等比缩小字号直到放下（expensive）
     };
 
     // ── Glyph 度量信息 ────────────────────────────────────────
     /// 单个字形（glyph）的度量数据，由 shaper 产出。
     struct GlyphInfo {
-        std::uint32_t glyph_index{0};   // FreeType glyph 索引
-        std::uint32_t original_cp{0};   // 原始 Unicode 码点（用于断词等）
-        std::size_t   face_index{0};    // 字体栈中的面索引（P1 字体回退）
-        float         advance_x{0.0f};
-        float         advance_y{0.0f};
-        float         offset_x{0.0f};
-        float         offset_y{0.0f};
+        std::uint32_t glyph_index{0}; // FreeType glyph 索引
+        std::uint32_t original_cp{0}; // 原始 Unicode 码点（用于断词等）
+        std::size_t face_index{0}; // 字体栈中的面索引（P1 字体回退）
+        float advance_x{0.0f};
+        float advance_y{0.0f};
+        float offset_x{0.0f};
+        float offset_y{0.0f};
     };
 
     // ── 文本布局结果 ──────────────────────────────────────────
@@ -83,7 +82,9 @@ export namespace nandina::text {
         float ink_right{0.0f};
         float ink_bottom{0.0f};
 
-        [[nodiscard]] auto empty() const noexcept -> bool { return glyphs.empty(); }
+        [[nodiscard]] auto empty() const noexcept -> bool {
+            return glyphs.empty();
+        }
     };
 
     struct TextLayout {
@@ -95,7 +96,9 @@ export namespace nandina::text {
         float ink_right{0.0f};
         float ink_bottom{0.0f};
 
-        [[nodiscard]] auto empty() const noexcept -> bool { return lines.empty(); }
+        [[nodiscard]] auto empty() const noexcept -> bool {
+            return lines.empty();
+        }
 
         [[nodiscard]] auto preferred_size() const noexcept -> geometry::NanSize {
             return {total_width, total_height};
@@ -137,12 +140,10 @@ export namespace nandina::text {
         // ── 工厂 ─────────────────────────────────────────
 
         /// 从 TrueType / OpenType 文件路径加载字体
-        [[nodiscard]] static auto load_from_path(std::string_view file_path,
-                                                  float size_pt) -> NanFont;
+        [[nodiscard]] static auto load_from_path(std::string_view file_path, float size_pt) -> NanFont;
 
         /// 从内存中的字体数据加载
-        [[nodiscard]] static auto load_from_memory(std::span<const std::byte> data,
-                                                    float size_pt) -> NanFont;
+        [[nodiscard]] static auto load_from_memory(std::span<const std::byte> data, float size_pt) -> NanFont;
 
         // ── 链式配置（纯配置，不触发 IO）─────────────────
 
@@ -158,16 +159,16 @@ export namespace nandina::text {
 
         // ── 访问器（const，与链式 setter 重载）───────────
 
-        [[nodiscard]] auto family()      const noexcept -> const std::string&;
-        [[nodiscard]] auto size()        const noexcept -> float;
-        [[nodiscard]] auto weight()      const noexcept -> NanFontWeight;
-        [[nodiscard]] auto color()       const noexcept -> const NanColor&;
+        [[nodiscard]] auto family() const noexcept -> const std::string&;
+        [[nodiscard]] auto size() const noexcept -> float;
+        [[nodiscard]] auto weight() const noexcept -> NanFontWeight;
+        [[nodiscard]] auto color() const noexcept -> const NanColor&;
         /// 是否通过 .color() 显式设置过颜色（用于区分「默认黑色」和「开发者有意设置的颜色」）
         [[nodiscard]] auto has_explicit_color() const noexcept -> bool;
         [[nodiscard]] auto line_height() const noexcept -> float;
         [[nodiscard]] auto letter_spacing() const noexcept -> float;
-        [[nodiscard]] auto overflow()    const noexcept -> TextOverflow;
-        [[nodiscard]] auto max_lines()   const noexcept -> int;
+        [[nodiscard]] auto overflow() const noexcept -> TextOverflow;
+        [[nodiscard]] auto max_lines() const noexcept -> int;
         [[nodiscard]] auto single_line() const noexcept -> bool;
 
         // ── Shaping（首次调用自动懒加载字体）──────────────
@@ -179,8 +180,8 @@ export namespace nandina::text {
         /// @param segments  shape_text() 产出的分段字形数据
         /// @param max_width 最大宽度（像素），0 = 不限制
         /// @return 按 max_width 换行/截断后的 TextLayout
-        [[nodiscard]] auto layout_lines(const std::vector<std::vector<GlyphInfo>>& segments,
-                                        float max_width) const -> TextLayout;
+        [[nodiscard]] auto layout_lines(const std::vector<std::vector<GlyphInfo>>& segments, float max_width) const
+            -> TextLayout;
 
         /// 便捷方法：shape_text + layout_lines = 一次完成
         /// @param text      输入文本（UTF-8）
@@ -189,16 +190,13 @@ export namespace nandina::text {
 
         // ── 绘制（颜色由 this->color() 提供）──────────────
 
-        auto paint(tvg::SwCanvas& canvas,
-                   const TextLayout& layout,
-                   float origin_x,
-                   float origin_y) const -> void;
+        auto paint(tvg::SwCanvas& canvas, const TextLayout& layout, float origin_x, float origin_y) const -> void;
 
         // ── 度量查询（只读，来自已加载字体）───────────────
 
-        [[nodiscard]] auto ascent()     const noexcept -> float;
-        [[nodiscard]] auto descent()    const noexcept -> float;
-        [[nodiscard]] auto em_size()    const noexcept -> float;
+        [[nodiscard]] auto ascent() const noexcept -> float;
+        [[nodiscard]] auto descent() const noexcept -> float;
+        [[nodiscard]] auto em_size() const noexcept -> float;
 
         // ── Glyph 度量 ───────────────────────────────────
 
@@ -214,16 +212,16 @@ export namespace nandina::text {
         std::shared_ptr<Impl> m_impl;
 
         // ── 配置字段（每个 NanFont 实例独立）────────────
-        std::string      m_family;
-        float            m_size_pt{14.0f};
-        NanFontWeight    m_weight{NanFontWeight::regular};
-        NanColor         m_color{};
-        bool             m_has_explicit_color{false};
-        float            m_line_height_override{0.0f};
-        float            m_letter_spacing{0.0f};
-        TextOverflow     m_overflow{TextOverflow::wrap};
-        int              m_max_lines{0};
-        bool             m_single_line{false};
+        std::string m_family;
+        float m_size_pt{14.0f};
+        NanFontWeight m_weight{NanFontWeight::regular};
+        NanColor m_color{};
+        bool m_has_explicit_color{false};
+        float m_line_height_override{0.0f};
+        float m_letter_spacing{0.0f};
+        TextOverflow m_overflow{TextOverflow::wrap};
+        int m_max_lines{0};
+        bool m_single_line{false};
 
         // 懒加载：若未加载则调用 load_system_default(size())
         auto ensure_loaded() const -> void;

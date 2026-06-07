@@ -172,9 +172,17 @@ export namespace nandina::widgets {
 
             const auto bnds = bounds();
             const float avail_w = measured_constraints().max_width();
-            const float max_width = (avail_w > 0.0f && avail_w < geometry::NanConstraints::k_infinity)
-                                        ? avail_w
-                                        : bnds.width();
+            float max_width = bnds.width();
+            if (max_width < 1.0f && avail_w > 0.0f && avail_w < geometry::NanConstraints::k_infinity) {
+                max_width = avail_w;
+            }
+
+            if (max_width > 0.0f && m_last_draw_width > 0.0f &&
+                std::abs(max_width - m_last_draw_width) > 1.0f) {
+                m_layout_valid = false;
+            }
+            m_last_draw_width = max_width;
+
             ensure_shaped();
             const auto &layout = layout_at(max_width > 0.0f ? max_width : 0.0f);
 

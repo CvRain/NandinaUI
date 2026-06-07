@@ -71,6 +71,11 @@ export namespace nandina::theme {
         md,
     };
 
+    enum class SwitchSize : std::uint8_t {
+        sm,
+        md,
+    };
+
     struct NanTextStyle {
         float               font_size{NanTypographyTokens{}.body_medium.font_size};
         text::NanFontWeight font_weight{text::NanFontWeight::regular};
@@ -627,6 +632,68 @@ export namespace nandina::theme {
         SizeStyle md{};
     };
 
+    // ═══════════════════════════════════════════════════════════════
+    // § NanSwitchStyle — Switch 组件样式
+    // ═══════════════════════════════════════════════════════════════
+
+    struct NanSwitchStyle {
+        struct ColorFamilyStyle {
+            NanColor track_on{NanColor::from(NanRgb{99, 102, 241})};
+            NanColor thumb{NanColor::from(NanRgb{255, 255, 255})};
+            NanColor track_on_disabled{NanColor::from(NanRgb{204, 207, 220})};
+            NanColor thumb_disabled{NanColor::from(NanRgb{154, 157, 180})};
+        };
+
+        struct SizeStyle {
+            float thumb_size{16.0f};
+            float track_width{28.0f};
+            float track_height{16.0f};
+            float font_size{NanTypographyTokens{}.body_medium.font_size};
+            float gap{8.0f};
+            float corner_radius{8.0f};
+        };
+
+        ColorVariant color_variant{ColorVariant::inherit};
+        SwitchSize size{SwitchSize::md};
+
+        float thumb_size{16.0f};
+        float track_width{28.0f};
+        float track_height{16.0f};
+        float font_size{NanTypographyTokens{}.body_medium.font_size};
+        float gap{8.0f};
+        float corner_radius{8.0f};
+
+        NanColor track_on{NanColor::from(NanRgb{99, 102, 241})};
+        NanColor track_off{NanColor::from(NanRgb{186, 194, 222})};
+        NanColor thumb{NanColor::from(NanRgb{255, 255, 255})};
+        NanColor track_on_disabled{NanColor::from(NanRgb{204, 207, 220})};
+        NanColor track_off_disabled{NanColor::from(NanRgb{204, 207, 220})};
+        NanColor thumb_disabled{NanColor::from(NanRgb{154, 157, 180})};
+
+        ColorFamilyStyle secondary_family{
+            .track_on = NanColor::from(NanRgb{114, 135, 253}),
+            .thumb = NanColor::from(NanRgb{255, 255, 255}),
+        };
+        ColorFamilyStyle neutral_family{
+            .track_on = NanColor::from(NanRgb{92, 95, 119}),
+            .thumb = NanColor::from(NanRgb{255, 255, 255}),
+        };
+        ColorFamilyStyle destructive_family{
+            .track_on = NanColor::from(NanRgb{230, 69, 83}),
+            .thumb = NanColor::from(NanRgb{255, 255, 255}),
+        };
+
+        SizeStyle sm{
+            .thumb_size = 14.0f,
+            .track_width = 24.0f,
+            .track_height = 14.0f,
+            .font_size = 12.0f,
+            .gap = 6.0f,
+            .corner_radius = 7.0f,
+        };
+        SizeStyle md{};
+    };
+
     struct NanFocusRingStyle {
         NanColor color{NanColor::from(NanRgb{99, 102, 241})};
         float width{2.0f};
@@ -689,6 +756,7 @@ export namespace nandina::theme {
         NanInputStyle     input;
         NanTagStyle       tag;
         NanCheckboxStyle  checkbox;
+        NanSwitchStyle    switch_style;
         NanFocusRingStyle focus_ring;
         NanProgressStyle  progress;
 

@@ -189,23 +189,33 @@ export namespace nandina::widgets {
             const float header_h = title_header_height();
             const float footer_h = footer_height();
 
-            // 对宽度有界但非 tight 的约束，使用紧凑宽度确保文字换行测量准确
             const float content_avail_w = constraints.max_width() == geometry::NanConstraints::k_infinity
                 ? geometry::NanConstraints::k_infinity
                 : std::max(0.0f, constraints.max_width() - pad.left() - pad.right());
 
+            // 用无约束测量获取子节点真实首选宽度，再以此限制排版宽度。
+            // 不能依赖 child.preferred_size() 的缓存，因为大幅缩放后缓存的
+            // 是前一次紧凑测量下的换行宽度，而不是文本的自然宽度。
             float content_max_w = content_avail_w;
             if (content_avail_w != geometry::NanConstraints::k_infinity && content_avail_w > 0.0f) {
-                geometry::NanSize preferred{0.0f, 0.0f};
+                geometry::NanSize natural_pref{0.0f, 0.0f};
                 for_each_child([&](runtime::NanWidget &child) {
                     if (&child == m_title_host || &child == m_footer) return;
-                    preferred = geometry::NanSize{
-                        std::max(preferred.width(), child.preferred_size().width()),
-                        std::max(preferred.height(), child.preferred_size().height())
+                    child.measure(geometry::NanConstraints{
+                        0.0f, geometry::NanConstraints::k_infinity,
+                        0.0f, geometry::NanConstraints::k_infinity
+                    });
+                    const auto m = child.measured_size();
+                    const auto p = child.preferred_size();
+                    const float child_w = m.width() > 0.0f ? m.width() : p.width();
+                    const float child_h = m.height() > 0.0f ? m.height() : p.height();
+                    natural_pref = geometry::NanSize{
+                        std::max(natural_pref.width(), child_w),
+                        std::max(natural_pref.height(), child_h)
                     };
                 });
-                if (preferred.width() > 0.0f && preferred.width() < content_max_w) {
-                    content_max_w = preferred.width();
+                if (natural_pref.width() > 0.0f && natural_pref.width() < content_max_w) {
+                    content_max_w = natural_pref.width();
                 }
             }
 

@@ -33,6 +33,7 @@ target_sources(nandina_widgets
             src/nan_label.cppm           # Label 文本显示组件
             src/nan_tag.cppm             # Tag 语义标签组件
             src/nan_checkbox.cppm        # Checkbox 复选框组件
+            src/nan_switch.cppm          # Switch 开关组件
             src/nan_text_field.cppm      # TextField 单行输入控件
             src/nan_field.cppm           # Field 表单语义容器
             src/nan_button.cppm          # Button 按钮组件（仅接口）
