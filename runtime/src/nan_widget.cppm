@@ -12,6 +12,7 @@ export import nandina.runtime.nan_event;
 export import nandina.foundation.nan_rect;
 export import nandina.foundation.nan_size;
 export import nandina.foundation.nan_constraints;
+export import nandina.foundation.nan_types;
 
 export namespace nandina::runtime {
     struct TextInputArea {
@@ -483,6 +484,13 @@ export namespace nandina::runtime {
             return 0;
         }
 
+        // ── SizeValue 尺寸模式 ────────────────────────────────────────
+        /// 告知父容器此控件在宽度/高度方向上的尺寸策略。
+        virtual auto set_size_value_width(const types::SizeValue value) -> void { size_value_width_ = value; }
+        virtual auto set_size_value_height(const types::SizeValue value) -> void { size_value_height_ = value; }
+        [[nodiscard]] auto size_value_width() const noexcept -> types::SizeValue { return size_value_width_; }
+        [[nodiscard]] auto size_value_height() const noexcept -> types::SizeValue { return size_value_height_; }
+
         /**
          * @brief 遍历所有直接子节点（只读）
          */
@@ -593,6 +601,8 @@ export namespace nandina::runtime {
         float m_height{0.0f};
 
         NanWidget* m_parent{nullptr};
+        types::SizeValue size_value_width_;
+        types::SizeValue size_value_height_;
         bool m_visible{true};
         bool m_hit_test_visible{true};
         bool m_dirty{true}; // 初始为脏，首次绘制前需要 layout

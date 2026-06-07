@@ -11,6 +11,7 @@ import nandina.theme.nan_theme;
 import nandina.foundation.color;
 import nandina.showcase.page.card;
 import nandina.showcase.page.switch_page;
+import nandina.showcase.page.flow_page;
 import nandina.showcase.sandbox_page;
 import nandina.showcase.main_page;
 import nandina.showcase.page.button;
@@ -26,6 +27,7 @@ export namespace nandina::showcase {
         router->register_page(std::make_unique<nandina::showcase::CheckboxPage>());
         router->register_page(std::make_unique<nandina::showcase::CardPage>());
         router->register_page(std::make_unique<nandina::showcase::SwitchPage>());
+        router->register_page(std::make_unique<nandina::showcase::FlowPage>());
         router->register_page(std::make_unique<nandina::showcase::SandboxPage>());
 
         return nandina::app::create_shell(std::move(router), {

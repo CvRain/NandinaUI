@@ -317,6 +317,17 @@ export namespace nandina::app {
             return std::forward<Self>(self);
         }
 
+        /// line_gap — 设置流式布局（Flow）的行间距。
+        template <typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, Node>
+        auto line_gap(this Self&& self, const float value) -> Self&& {
+            const auto& node = static_cast<Node&>(self);
+            if (auto* widget = dynamic_cast<nandina::layout::LayoutContainer*>(node.m_widget.get())) {
+                widget->line_gap(value);
+            }
+            return std::forward<Self>(self);
+        }
+
         /// align_items — 设置交叉轴方向的子组件对齐方式。
         ///
         /// 对 Row 生效的是垂直对齐；对 Column 生效的是水平对齐。
@@ -383,6 +394,46 @@ export namespace nandina::app {
                 wrapper->width(value);
                 wrapper->add_child(std::move(node.m_widget));
                 node.m_widget = std::move(wrapper);
+            }
+            return std::forward<Self>(self);
+        }
+
+        /// size_value_width — 设置宽度模式（Fill / Fixed / WrapContent）。
+        ///
+        /// `.width(SizeValue::fill())` 等效于 Expanded，无需外部包装器。
+        /// `.width(SizeValue::fixed(200))` 等效于 `.width(200)`。
+        /// `.width(SizeValue::wrap_content())` 恢复自然尺寸。
+        template <typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, Node>
+        auto size_value_width(this Self&& self, const nandina::types::SizeValue value) -> Self&& {
+            auto& node = static_cast<Node&>(self);
+            switch (value.mode) {
+            case nandina::types::SizeMode::Fill:
+                // 直接设置 SizeValue，父容器 LayoutContainer 会按 flex_factor 处理
+                node.m_widget->set_size_value_width(value);
+                break;
+            case nandina::types::SizeMode::Fixed:
+                // 仍使用 SizedBox 兜底 Fixed 语义
+                return self.width(value.value);
+            case nandina::types::SizeMode::WrapContent:
+                node.m_widget->set_size_value_width(value);
+                break;
+            }
+            return std::forward<Self>(self);
+        }
+
+        /// size_value_height — 设置高度模式（Fill / Fixed / WrapContent）。
+        template <typename Self>
+            requires std::derived_from<std::remove_cvref_t<Self>, Node>
+        auto size_value_height(this Self&& self, const nandina::types::SizeValue value) -> Self&& {
+            auto& node = static_cast<Node&>(self);
+            switch (value.mode) {
+            case nandina::types::SizeMode::Fill:
+            case nandina::types::SizeMode::WrapContent:
+                node.m_widget->set_size_value_height(value);
+                break;
+            case nandina::types::SizeMode::Fixed:
+                return self.height(value.value);
             }
             return std::forward<Self>(self);
         }
@@ -2006,6 +2057,11 @@ export namespace nandina::app {
     /** @brief Z 轴堆叠容器 */
     [[nodiscard]] inline auto stack(Children&& children = {}) -> Node {
         return NodeFactory::container<nandina::layout::Stack>(std::move(children));
+    }
+
+    /** @brief 流式换行容器（水平排列，超宽自动折行） */
+    [[nodiscard]] inline auto flow(Children&& children = {}) -> Node {
+        return NodeFactory::container<nandina::layout::Flow>(std::move(children));
     }
 
     /** @brief 卡片容器 */

@@ -11,6 +11,7 @@ nandina_add_test(
         ${CMAKE_SOURCE_DIR}/showcase/pages/button.cppm
         ${CMAKE_SOURCE_DIR}/showcase/pages/checkbox.cppm
         ${CMAKE_SOURCE_DIR}/showcase/pages/switch.cppm
+        ${CMAKE_SOURCE_DIR}/showcase/pages/flow.cppm
         ${CMAKE_SOURCE_DIR}/showcase/pages/card.cppm
         ${CMAKE_SOURCE_DIR}/showcase/pages/forms_page.cppm
     DEPS

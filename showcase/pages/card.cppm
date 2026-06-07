@@ -252,49 +252,42 @@ namespace nandina::showcase {
         ));
 
         // ── 最终页面布局 ──────────────────────────────────────────
-        return mount(column(children(
-                                label("Card").style({
-                                    .font_size   = 24,
-                                    .font_weight = nandina::text::NanFontWeight::bold,
-                                    .text_color  = NanColor::from(NanRgb{"#cdd6f4"}),
-                                }),
-                                label("Displays a card with header, content, and footer.")
-                                    .style({
-                                        .font_size  = 13,
-                                        .text_color = NanColor::from(NanRgb{"#a6adc8"}),
-                                    }),
+        return mount(
+            column(children(
+                       label("Card").style({
+                           .font_size   = 24,
+                           .font_weight = nandina::text::NanFontWeight::bold,
+                           .text_color  = NanColor::from(NanRgb{"#cdd6f4"}),
+                       }),
+                       label("Displays a card with header, content, and footer.")
+                           .style({
+                               .font_size  = 13,
+                               .text_color = NanColor::from(NanRgb{"#a6adc8"}),
+                           }),
 
-                                // Row 1: Basic + Elevated
-                                row(children(
-                                        expanded(sized_box(basic_card)),
-                                        sized_box(spacer(0)).width(16),
-                                        expanded(sized_box(elevated_card))
-                                    ))
-                                    .align_items(LayoutAlignment::stretch),
+                       // Row 1: Basic + Elevated — 窗口缩窄时自动折行为单列
+                       flow(children(sized_box(basic_card).width(500), sized_box(elevated_card).width(500)))
+                           .gap(16)
+                           .line_gap(16),
 
-                                sized_box(spacer(0)).height(16),
+                       sized_box(spacer(0)).height(16),
 
-                                // Row 2: Account + Notification
-                                row(children(
-                                        expanded(sized_box(account_card)),
-                                        sized_box(spacer(0)).width(16),
-                                        expanded(sized_box(notification_card))
-                                    ))
-                                    .align_items(LayoutAlignment::stretch),
+                       // Row 2: Account + Notification
+                       flow(children(sized_box(account_card).width(500), sized_box(notification_card).width(500)))
+                           .gap(16)
+                           .line_gap(16),
 
-                                sized_box(spacer(0)).height(16),
+                       sized_box(spacer(0)).height(16),
 
-                                // Row 3: Payment + Login
-                                row(children(
-                                        expanded(sized_box(payment_card)),
-                                        sized_box(spacer(0)).width(16),
-                                        expanded(sized_box(login_card))
-                                    ))
-                                    .align_items(LayoutAlignment::stretch)
-                            ))
-                         .align_items(LayoutAlignment::stretch)
-                         .gap(16)
-                         .padding(24));
+                       // Row 3: Payment + Login
+                       flow(children(sized_box(payment_card).width(500), sized_box(login_card).width(500)))
+                           .gap(16)
+                           .line_gap(16)
+                   ))
+                .align_items(LayoutAlignment::stretch)
+                .gap(16)
+                .padding(24)
+        );
     }
 
 } // namespace nandina::showcase

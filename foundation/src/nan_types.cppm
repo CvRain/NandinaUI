@@ -131,6 +131,24 @@ export namespace nandina::types {
         NotAllowed = 10,
     };
 
+    // ── 尺寸模式 ──────────────────────────────────────────
+    /// 控件在容器中的尺寸策略。
+    enum class SizeMode : std::uint8_t {
+        WrapContent,    // 取子节点自然尺寸（默认）
+        Fixed,          // 固定值
+        Fill,           // 填充分配空间（等同 Expanded）
+    };
+
+    /// 尺寸描述值：模式 + 固定数值。用于替代外部 SizedBox/Expanded 包装器。
+    struct SizeValue {
+        SizeMode mode = SizeMode::WrapContent;
+        float    value = 0.0f;  ///< Fixed 模式下有效
+
+        static constexpr auto wrap_content() noexcept -> SizeValue { return {}; }
+        static constexpr auto fixed(const float v) noexcept -> SizeValue { return {SizeMode::Fixed, v}; }
+        static constexpr auto fill() noexcept -> SizeValue { return {SizeMode::Fill, 0.0f}; }
+    };
+
     // ── 类型萃取 ────────────────────────────────────────────
 
     /// StringLike 概念：支持隐式转换为 std::string_view 或 std::string 的类型

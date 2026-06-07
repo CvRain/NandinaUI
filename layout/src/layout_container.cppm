@@ -155,6 +155,16 @@ export namespace nandina::layout {
             return justify_content_;
         }
 
+        auto line_gap(const float value) -> LayoutContainer& {
+            line_gap_ = value;
+            request_layout();
+            return *this;
+        }
+
+        [[nodiscard]] auto line_gap_value() const noexcept -> float {
+            return line_gap_;
+        }
+
         auto measure(const geometry::NanConstraints &constraints) -> void override {
             const float pad_h = padding_left_ + padding_right_;
             const float pad_v = padding_top_ + padding_bottom_;
@@ -217,11 +227,18 @@ export namespace nandina::layout {
             std::vector<LayoutChildSpec> specs;
             for_each_child([&](const runtime::NanWidget &child) {
                 const auto preferred = detail::measured_or_preferred_size(child);
+                const auto wm = child.size_value_width();
+                const auto hm = child.size_value_height();
+                const bool fill_w = wm.mode == types::SizeMode::Fill;
+                const bool fill_h = hm.mode == types::SizeMode::Fill;
+
                 specs.push_back({
                     .preferred_size = preferred,
                     .min_size = child.measured_constraints().min_size(),
                     .max_size = detail::derive_child_max_size(child),
-                    .flex_factor = child.flex_factor(),
+                    .flex_factor = (fill_w || fill_h) ? 1 : child.flex_factor(),
+                    .width_mode = wm,
+                    .height_mode = hm,
                 });
             });
             return specs;
@@ -242,6 +259,7 @@ export namespace nandina::layout {
             request.constraints = measured_constraints();
             request.padding = {padding_left_, padding_top_, padding_right_, padding_bottom_};
             request.gap = gap_;
+            request.line_gap = line_gap_;
             request.cross_alignment = align_items_;
             request.main_alignment = justify_content_;
             request.children = m_child_specs.empty() ? collect_child_specs() : m_child_specs;
@@ -280,7 +298,7 @@ export namespace nandina::layout {
                     total_main += child_h;
                     max_cross = std::max(max_cross, child_w);
                 }
-                else if (layout_axis() == LayoutAxis::row) {
+                else if (layout_axis() == LayoutAxis::row || layout_axis() == LayoutAxis::flow) {
                     total_main += child_w;
                     max_cross = std::max(max_cross, child_h);
                 }
@@ -299,7 +317,7 @@ export namespace nandina::layout {
                     total_main + gap_total + padding_top_ + padding_bottom_
                 };
             }
-            else if (layout_axis() == LayoutAxis::row) {
+            else if (layout_axis() == LayoutAxis::row || layout_axis() == LayoutAxis::flow) {
                 size = {
                     total_main + gap_total + padding_left_ + padding_right_,
                     max_cross + padding_top_ + padding_bottom_
@@ -316,6 +334,7 @@ export namespace nandina::layout {
         }
 
         float gap_ = 0.0f;
+        float line_gap_ = 0.0f;
         float padding_top_ = 0.0f;
         float padding_right_ = 0.0f;
         float padding_bottom_ = 0.0f;
@@ -537,5 +556,66 @@ export namespace nandina::layout {
 
     private:
         Stack() noexcept = default;
+    };
+
+    // ── Flow ──────────────────────────────────────────────────
+    // 流式布局容器，子 widget 沿 X 轴排列，超出容器宽度时自动折行。
+    // 相当于 CSS flex-wrap: wrap。
+    class Flow final : public LayoutContainer {
+    public:
+        static auto Create() -> std::unique_ptr<Flow> {
+            return std::unique_ptr<Flow>(new Flow());
+        }
+
+        auto gap(const float value) -> Flow& {
+            LayoutContainer::gap(value);
+            return *this;
+        }
+
+        auto line_gap(const float value) -> Flow& {
+            LayoutContainer::line_gap(value);
+            return *this;
+        }
+
+        auto padding(const float value) -> Flow& {
+            LayoutContainer::padding(value);
+            return *this;
+        }
+
+        auto padding(const float h, const float v) -> Flow& {
+            LayoutContainer::padding(h, v);
+            return *this;
+        }
+
+        auto padding(const float left, const float top, const float right, const float bottom) -> Flow& {
+            LayoutContainer::padding(left, top, right, bottom);
+            return *this;
+        }
+
+        auto align_items(const LayoutAlignment value) -> Flow& {
+            LayoutContainer::align_items(value);
+            return *this;
+        }
+
+        auto justify_content(const LayoutAlignment value) -> Flow& {
+            LayoutContainer::justify_content(value);
+            return *this;
+        }
+
+        auto add(std::unique_ptr<runtime::NanWidget> child) -> Flow& {
+            LayoutContainer::add(std::move(child));
+            return *this;
+        }
+
+        auto layout() -> void override {
+            apply_backend(LayoutAxis::flow);
+        }
+
+        [[nodiscard]] auto layout_axis() const noexcept -> LayoutAxis override {
+            return LayoutAxis::flow;
+        }
+
+    private:
+        Flow() noexcept = default;
     };
 } // namespace nandina::layout

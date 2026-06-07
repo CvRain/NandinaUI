@@ -17,6 +17,7 @@ set(PROJECT_CPP_MODULE_FILES
         pages/forms_page.cppm
         pages/checkbox.cppm
         pages/switch.cppm
+        pages/flow.cppm
         pages/card.cppm
 )
 

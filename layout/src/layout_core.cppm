@@ -9,6 +9,7 @@ export module nandina.layout.core;
 export import nandina.foundation.nan_rect;
 export import nandina.foundation.nan_size;
 export import nandina.foundation.nan_constraints;
+export import nandina.foundation.nan_types;
 
 export namespace nandina::layout {
 
@@ -17,6 +18,7 @@ export namespace nandina::layout {
         column, // 主轴垂直
         row,    // 主轴水平
         stack,  // 重叠（Z 轴堆叠）
+        flow,   // 流式换行（主轴水平，超宽自动折行）
     };
 
     // ── 对齐方式 ─────────────────────────────────────────────
@@ -37,6 +39,8 @@ export namespace nandina::layout {
                                      ///< 最大尺寸约束
         int flex_factor = 0;
         bool can_shrink = true;         ///< 空间不足时是否允许压缩
+        types::SizeValue width_mode;           ///< 宽度尺寸模式
+        types::SizeValue height_mode;          ///< 高度尺寸模式
     };
 
     // ── 内边距 ──────────────────────────────────────────────
@@ -62,6 +66,7 @@ export namespace nandina::layout {
         geometry::NanConstraints constraints = geometry::NanConstraints::expand();
         LayoutInsets padding{};
         float gap = 0.0f;
+        float line_gap = 0.0f;   ///< 流式布局行间距
         LayoutAlignment cross_alignment = LayoutAlignment::start;
         LayoutAlignment main_alignment  = LayoutAlignment::start;
         std::vector<LayoutChildSpec> children;
@@ -166,6 +171,8 @@ export namespace nandina::layout {
                 return compute_row(request);
             case LayoutAxis::stack:
                 return compute_stack(request);
+            case LayoutAxis::flow:
+                return compute_flow(request);
             }
             return {};
         }
@@ -354,6 +361,94 @@ export namespace nandina::layout {
                     content_bounds.y(), avail_h, child_h, request.main_alignment);
 
                 frames.emplace_back(child_x, child_y, child_x + child_w, child_y + child_h);
+            }
+
+            return frames;
+        }
+
+        /// 流式换行布局：子项从左到右排列，超出行宽时自动折行。
+        /// 主轴为水平方向，交叉轴为垂直方向。
+        [[nodiscard]] static auto compute_flow(const LayoutRequest& request) -> std::vector<geometry::NanRect> {
+            using namespace detail;
+
+            const auto content_bounds  = request.content_bounds();
+            const float avail_w        = clamp_non_negative(content_bounds.width());
+            const float avail_h        = clamp_non_negative(content_bounds.height());
+            const float inline_gap     = request.gap;
+            const float line_gap       = request.line_gap;
+
+            struct LineItems {
+                std::vector<std::size_t> child_indices;
+                float used_width = 0.0f;
+                float max_height = 0.0f;
+            };
+
+            std::vector<LineItems> lines;
+            lines.emplace_back();
+            float cursor_x = 0.0f;
+
+            for (std::size_t i = 0; i < request.children.size(); ++i) {
+                const auto& child = request.children[i];
+                const float child_w = clamp_non_negative(
+                    resolve_main_extent(child.preferred_size.width(), child.min_size.width(), child.max_size.width()));
+                const float child_h = clamp_non_negative(
+                    resolve_main_extent(child.preferred_size.height(), child.min_size.height(), child.max_size.height()));
+
+                // 是否需要折行（至少有一个子项在行内时才折行）
+                if (!lines.back().child_indices.empty() && cursor_x + child_w > avail_w) {
+                    // 新行
+                    lines.emplace_back();
+                    cursor_x = 0.0f;
+                }
+
+                if (!lines.back().child_indices.empty()) {
+                    cursor_x += inline_gap;
+                }
+
+                lines.back().child_indices.push_back(i);
+                lines.back().used_width = cursor_x + child_w;
+                lines.back().max_height = std::max(lines.back().max_height, child_h);
+
+                cursor_x += child_w;
+            }
+
+            // 生成 frames
+            std::vector<geometry::NanRect> frames;
+            frames.resize(request.children.size());
+
+            float line_cursor_y = content_bounds.y();
+
+            for (const auto& line : lines) {
+                const float line_h = line.max_height;
+                const float remaining_w = avail_w - (line.used_width + (line.child_indices.size() - 1) * inline_gap);
+                const float extra_per_child = line.child_indices.size() > 0
+                    ? std::max(0.0f, remaining_w / static_cast<float>(line.child_indices.size()))
+                    : 0.0f;
+
+                cursor_x = content_bounds.x();
+                bool first = true;
+
+                for (const auto idx : line.child_indices) {
+                    const auto& child = request.children[idx];
+                    const float child_pref_w = clamp_non_negative(
+                        resolve_main_extent(child.preferred_size.width(), child.min_size.width(), child.max_size.width()));
+                    const float child_h = clamp_non_negative(
+                        resolve_main_extent(child.preferred_size.height(), child.min_size.height(), child.max_size.height()));
+                    const float child_y = resolve_cross_position(
+                        line_cursor_y, line_h, child_h, request.cross_alignment);
+
+                    // 每行内等分剩余宽度，使卡片在行宽足够时填满整行
+                    const float child_w = std::min(child_pref_w + extra_per_child,
+                                                   clamp_non_negative(avail_w));
+
+                    if (!first) cursor_x += inline_gap;
+                    first = false;
+
+                    frames[idx] = geometry::NanRect{cursor_x, child_y, cursor_x + child_w, child_y + child_h};
+                    cursor_x += child_w;
+                }
+
+                line_cursor_y += line_h + line_gap;
             }
 
             return frames;
