@@ -107,3 +107,4 @@ vcpkg_installed
 .kilo
 .vs
 .continue
+compile_commands.json

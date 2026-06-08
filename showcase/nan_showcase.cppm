@@ -19,36 +19,42 @@ import nandina.showcase.page.forms;
 import nandina.showcase.page.checkbox;
 
 export namespace nandina::showcase {
-    [[nodiscard]] inline auto create_showcase_shell() -> nandina::app::Node {
-        auto router = nandina::app::NanRouter::create();
-        router->register_page(std::make_unique<nandina::showcase::MainPage>());
-        router->register_page(std::make_unique<nandina::showcase::ButtonPage>());
-        router->register_page(std::make_unique<nandina::showcase::FormsPage>());
-        router->register_page(std::make_unique<nandina::showcase::CheckboxPage>());
-        router->register_page(std::make_unique<nandina::showcase::CardPage>());
-        router->register_page(std::make_unique<nandina::showcase::SwitchPage>());
-        router->register_page(std::make_unique<nandina::showcase::FlowPage>());
-        router->register_page(std::make_unique<nandina::showcase::SandboxPage>());
+[[nodiscard]] inline auto create_showcase_shell() -> nandina::app::Node {
+    auto router = nandina::app::NanRouter::create();
+    router->register_page(std::make_unique<nandina::showcase::MainPage>());
+    router->register_page(std::make_unique<nandina::showcase::ButtonPage>());
+    router->register_page(std::make_unique<nandina::showcase::FormsPage>());
+    router->register_page(std::make_unique<nandina::showcase::CheckboxPage>());
+    router->register_page(std::make_unique<nandina::showcase::CardPage>());
+    router->register_page(std::make_unique<nandina::showcase::SwitchPage>());
+    router->register_page(std::make_unique<nandina::showcase::FlowPage>());
+    router->register_page(std::make_unique<nandina::showcase::SandboxPage>());
 
-        return nandina::app::create_shell(std::move(router), {
-                                                                 .sidebar_width = 260.0f,
-                                                                 .header_title  = "NandinaUI Showcase",
-                                                             });
-    }
+    return nandina::app::create_shell(
+        std::move(router),
+        {
+            .sidebar_width = 260.0f,
+            .header_title = "NandinaUI Showcase",
+        }
+    );
+}
 } // namespace nandina::showcase
 
 // ── MainWindow — 唯一导出 ───────────────────────────────────────────────────
-export class MainWindow final : public nandina::app::NanAppWindow {
+export class MainWindow final: public nandina::app::NanAppWindow {
 public:
-    MainWindow()
-        : nandina::app::NanAppWindow({.title = "NandinaUI — Showcase",
-              .width                         = 1280,
-              .height                        = 720,
-              .resizable                     = true,
-              .high_dpi                      = true,
-              .bg_color                      = nandina::NanColor::from(nandina::NanRgb{"#0a0a0a"})}) {
+    MainWindow():
+        nandina::app::NanAppWindow(
+            { .title = "NandinaUI — Showcase",
+              .width = 1280,
+              .height = 720,
+              .resizable = true,
+              .high_dpi = true,
+              .bg_color = nandina::NanColor::from(nandina::NanRgb { "#1e1e2e" }) }
+        ) {
         m_theme_connection = nandina::theme::ThemeManager::instance().on_changed(
-            [this](const std::string& /*name*/) { m_pending_theme_rebuild = true; });
+            [this](const std::string& /*name*/) { m_pending_theme_rebuild = true; }
+        );
         set_root(nandina::showcase::create_showcase_shell());
     }
 
@@ -64,5 +70,5 @@ protected:
 
 private:
     nandina::theme::ThemeManager::Connection m_theme_connection;
-    bool m_pending_theme_rebuild{false};
+    bool m_pending_theme_rebuild { false };
 };

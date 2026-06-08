@@ -214,7 +214,9 @@ export namespace nandina::widgets {
                         std::max(natural_pref.height(), child_h)
                     };
                 });
-                if (natural_pref.width() > 0.0f && natural_pref.width() < content_max_w) {
+                // 仅在 natural_pref 有效且在 [cc_min, avail) 区间内时钳位，
+                // 防止 0 值（无效字体、零度量）导致 content_max_w < cc.min_width 触发 constraints 断言
+                if (natural_pref.width() > 8.0f && natural_pref.width() < content_max_w) {
                     content_max_w = natural_pref.width();
                 }
             }
@@ -225,7 +227,7 @@ export namespace nandina::widgets {
 
                 const geometry::NanConstraints cc{
                     std::max(0.0f, constraints.min_width() - pad.left() - pad.right()),
-                    content_max_w,
+                    std::max(content_max_w, std::max(0.0f, constraints.min_width() - pad.left() - pad.right())),
                     std::max(0.0f, constraints.min_height() - pad.top() - pad.bottom() - header_h - footer_h),
                     constraints.max_height() == geometry::NanConstraints::k_infinity
                         ? geometry::NanConstraints::k_infinity

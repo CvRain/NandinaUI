@@ -19,7 +19,9 @@
 # 且本项目无需 clangd 自行管理模块依赖（.pcm 由 CMake 构建生成）。
 
 CompileFlags:
-    CompilationDatabase: build/linux-clang-debug
+    # 注意：如果在 CLion 中使用其他构建配置，请相应修改此路径
+    # CLion 默认使用 linux-clang-release，若切换到 debug 请改为 build/linux-clang-debug
+    CompilationDatabase: build/linux-clang-release
 
     # CMake 使用响应文件 (@*.modmap) 传递模块标志，compile_commands.json 中
     # 直接引用 @path/to/file.modmap。clangd 透传此命令给 clang 驱动，驱动会

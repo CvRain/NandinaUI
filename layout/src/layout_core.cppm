@@ -96,14 +96,23 @@ export namespace nandina::layout {
             const float unclamped = align == LayoutAlignment::stretch
                 ? clamp_non_negative(available)
                 : std::min(clamp_non_negative(desired), clamp_non_negative(available));
-            return std::clamp(unclamped, clamp_non_negative(min_extent), max_extent);
+
+            const float lo = clamp_non_negative(min_extent);
+            const float hi = max_extent;
+
+            // 防止 min > max 时 std::clamp 断言崩溃（空容器/无效约束）
+            if (lo > hi) return std::min(lo, hi);
+            return std::clamp(unclamped, lo, hi);
         }
 
         [[nodiscard]] inline auto resolve_main_extent(
             const float desired,
             const float min_extent,
             const float max_extent) noexcept -> float {
-            return std::clamp(clamp_non_negative(desired), clamp_non_negative(min_extent), max_extent);
+            const float lo = clamp_non_negative(min_extent);
+            const float hi = max_extent;
+            if (lo > hi) return std::min(lo, hi);
+            return std::clamp(clamp_non_negative(desired), lo, hi);
         }
 
         [[nodiscard]] inline auto resolve_cross_position(

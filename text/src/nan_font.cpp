@@ -129,10 +129,6 @@ namespace {
 
     auto find_system_font_impl() -> std::string {
         static constexpr std::array<const char*, 14> preferred_fonts = {{
-            "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
-            "/usr/share/fonts/noto-cjk/NotoSansCJK-Regular.ttc",
-            "/usr/share/fonts/google-noto-cjk/NotoSansCJK-Regular.ttc",
-            "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
             "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
             "/usr/share/fonts/TTF/DejaVuSans.ttf",
             "/usr/share/fonts/dejavu/DejaVuSans.ttf",
@@ -140,6 +136,10 @@ namespace {
             "/usr/share/fonts/liberation/LiberationSans-Regular.ttf",
             "/usr/share/fonts/truetype/ubuntu/Ubuntu-R.ttf",
             "/usr/share/fonts/ubuntu/Ubuntu-R.ttf",
+            "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+            "/usr/share/fonts/noto-cjk/NotoSansCJK-Regular.ttc",
+            "/usr/share/fonts/google-noto-cjk/NotoSansCJK-Regular.ttc",
+            "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
             "/System/Library/Fonts/Helvetica.ttc",
             "/System/Library/Fonts/PingFang.ttc",
             "C:/Windows/Fonts/segoeui.ttf",
@@ -307,12 +307,35 @@ auto NanFont::Impl::ensure_fallbacks() -> void {
         }
         if (already) continue;
 
-        FT_Face fb_face = nullptr;
-        if (FT_New_Face(global_ft().library, fb_path.c_str(), 0, &fb_face) != FT_Err_Ok || !fb_face) {
-            continue;
-        }
+    FT_Face fb_face = nullptr;
+    // TTC 文件通常 face_index=0 为空面，尝试 face_index 1-3
+    FT_Error fb_err = FT_New_Face(global_ft().library, fb_path.c_str(), 0, &fb_face);
+    if (fb_err != FT_Err_Ok || !fb_face) {
+        continue;
+    }
 
-        FontStackEntry entry;
+    FT_Set_Char_Size(fb_face, 0, static_cast<FT_F26Dot6>(size_pt * 64.0f + 0.5f), 0, 96);
+
+    // 检查 metrics 是否有效；对 TTC 尝试后续 face_index
+    if (fb_face->size->metrics.ascender == 0 && fb_face->size->metrics.descender == 0) {
+        FT_Done_Face(fb_face);
+        // 尝试 face_index 1（许多 Linux distro 的 CJK TTC 索引 0 为空）
+        for (int fi = 1; fi <= 3; ++fi) {
+            if (FT_New_Face(global_ft().library, fb_path.c_str(), fi, &fb_face) != FT_Err_Ok || !fb_face) {
+                fb_face = nullptr;
+                continue;
+            }
+            FT_Set_Char_Size(fb_face, 0, static_cast<FT_F26Dot6>(size_pt * 64.0f + 0.5f), 0, 96);
+            if (fb_face->size->metrics.ascender != 0 || fb_face->size->metrics.descender != 0) {
+                break;  // 找到有效面
+            }
+            FT_Done_Face(fb_face);
+            fb_face = nullptr;
+        }
+        if (!fb_face) continue;  // 所有 face_index 均无效
+    }
+
+    FontStackEntry entry;
         entry.ft_face    = fb_face;
         entry.path       = fb_path;
         entry.size_pt    = size_pt;
@@ -413,6 +436,16 @@ auto NanFont::load_from_path(std::string_view file_path, float size_pt) -> NanFo
 
     try {
         font.m_impl->init_from_face(face, size_pt);
+        // 如果字体无效（TTC 索引 0 为空面），尝试后续 face_index
+        if (font.m_impl->faces.empty()) {
+            FT_Error alt_err = FT_Err_Ok;
+            for (int fi = 1; fi <= 3 && font.m_impl->faces.empty(); ++fi) {
+                FT_Face alt_face = nullptr;
+                alt_err = FT_New_Face(global_ft().library, path_str.c_str(), fi, &alt_face);
+                if (alt_err != FT_Err_Ok || !alt_face) continue;
+                font.m_impl->init_from_face(alt_face, size_pt);
+            }
+        }
         font.m_impl->loaded = true;
     } catch (...) {
         FT_Done_Face(face);

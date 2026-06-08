@@ -22,6 +22,7 @@ add_compile_options(-Wall -Wextra -Wpedantic)
 # 避免部署到其他机器时缺少 libstdc++-6.dll / libgcc_s_seh-1.dll。
 if (MINGW)
     add_link_options(-Wl,--allow-multiple-definition -static)
+    add_compile_options(-fmodules-ts)
 endif ()
 
 # ============================================================

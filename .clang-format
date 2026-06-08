@@ -1,151 +1,72 @@
-BasedOnStyle: LLVM
-
-# ── 布局宽度 ─────────────────────────────────────────────────────────────────
-ColumnLimit: 120
-
-# ── 缩进 ─────────────────────────────────────────────────────────────────────
-IndentWidth: 4
-ContinuationIndentWidth: 4
-TabWidth: 4
-UseTab: Never
-
 AccessModifierOffset: -4
-NamespaceIndentation: All
-IndentCaseBlocks: true
-IndentCaseLabels: true
-IndentGotoLabels: true
-IndentRequiresClause: true
-IndentWrappedFunctionNames: false
-
-# ── 花括号：左花括号不另起一行（Attach 风格） ──────────────────────────────
-BreakBeforeBraces: Attach
-BreakBeforeConceptDeclarations: Always
-
-# ── 函数 / λ：不允许单行，体内容必须换行 ────────────────────────────────────
-AllowShortFunctionsOnASingleLine: None
-AllowShortLambdasOnASingleLine: None
+AlignAfterOpenBracket: BlockIndent
+AlignConsecutiveMacros: false
+AlignConsecutiveAssignments: false
+AlignConsecutiveDeclarations: false
+AlignEscapedNewlines: DontAlign
+AlignOperands: false
+AlignTrailingComments: false
+AllowAllArgumentsOnNextLine: false
+AllowAllConstructorInitializersOnNextLine: false
+AllowAllParametersOfDeclarationOnNextLine: false
 AllowShortBlocksOnASingleLine: Empty
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLambdasOnASingleLine: All
+AllowShortLoopsOnASingleLine: false
 AlwaysBreakAfterReturnType: None
-AlwaysBreakAfterDefinitionReturnType: None
+AlwaysBreakBeforeMultilineStrings: true
 AlwaysBreakTemplateDeclarations: Yes
-AlwaysBreakBeforeMultilineStrings: false
-
-# ── 参数：多参数时每个独占一行（BlockIndent 对齐） ─────────────────────────
 BinPackArguments: false
 BinPackParameters: false
-AllowAllArgumentsOnNextLine: true
-AllowAllParametersOfDeclarationOnNextLine: true
-AlignAfterOpenBracket: BlockIndent
-AllowShortEnumsOnASingleLine: false
-AllowShortIfStatementsOnASingleLine: Never
-AllowShortLoopsOnASingleLine: false
-
-# ── Penalty ─────────────────────────────────────────────────────────────────
-PenaltyExcessCharacter: 30
-PenaltyReturnTypeOnItsOwnLine: 10000
-PenaltyBreakBeforeFirstCallParameter: 200
-PenaltyBreakAssignment: 200
-PenaltyBreakComment: 300
-PenaltyBreakFirstLessLess: 120
-PenaltyBreakString: 100
-PenaltyBreakTemplateDeclaration: 10
-
-# ── 对齐 ─────────────────────────────────────────────────────────────────────
-AlignConsecutiveAssignments:
-  Enabled: true
-  AcrossEmptyLines: false
-  AcrossComments: false
-  AlignCompound: false
-  PadOperators: true
-AlignConsecutiveDeclarations:
-  Enabled: false
-AlignConsecutiveMacros:
-  Enabled: true
-  AcrossEmptyLines: false
-  AcrossComments: false
-AlignConsecutiveBitFields:
-  Enabled: false
-AlignOperands: DontAlign
-AlignTrailingComments:
-  Kind: Never
-AlignEscapedNewlines: Left
-
-# ── 运算符 ───────────────────────────────────────────────────────────────────
 BreakBeforeBinaryOperators: NonAssignment
+BreakBeforeBraces: Custom
 BreakBeforeTernaryOperators: true
-BreakStringLiterals: true
-SpaceBeforeAssignmentOperators: true
-
-# ── 空格 ─────────────────────────────────────────────────────────────────────
-SpaceAfterCStyleCast: true
-SpaceAfterLogicalNot: false
-SpaceAfterTemplateKeyword: true
-SpaceBeforeCtorInitializerColon: true
-SpaceBeforeInheritanceColon: true
-SpaceBeforeParens: ControlStatements
-SpaceBeforeParensOptions:
-  AfterPlacementOperator: true
-  AfterRequiresInClause: true
-  AfterRequiresInExpression: true
-  BeforeNonEmptyParentheses: false
-  AfterOverloadedOperator: false
-  AfterControlStatements: true
-  AfterFunctionDefinitionName: false
-  AfterFunctionDeclarationName: false
-SpaceBeforeSquareBrackets: false
-SpaceInEmptyBlock: false
-SpacesBeforeTrailingComments: 1
-SpacesInAngles: Never
-SpacesInConditionalStatement: false
-SpacesInContainerLiterals: true
-SpacesInCStyleCastParentheses: false
-SpacesInLineCommentPrefix:
-  Minimum: 1
-  Maximum: -1
-SpacesInParens: Never
-SpacesInSquareBrackets: false
-
-# ── 指针 / 引用 ──────────────────────────────────────────────────────────────
-PointerAlignment: Left
-ReferenceAlignment: Pointer
-DerivePointerAlignment: false
-
-# ── 构造函数 / 继承 ─────────────────────────────────────────────────────────
+BraceWrapping:
+  AfterControlStatement: MultiLine
+  AfterEnum: false
+  AfterStruct: false
+  SplitEmptyFunction: false
 BreakConstructorInitializers: AfterColon
 BreakInheritanceList: AfterColon
-ConstructorInitializerIndentWidth: 4
-PackConstructorInitializers: BinPack
-
-# ── 命名空间 ────────────────────────────────────────────────────────────────
+BreakStringLiterals: false
+ColumnLimit: 100
 CompactNamespaces: false
+ConstructorInitializerAllOnOneLineOrOnePerLine: true
+ConstructorInitializerIndentWidth: 4
+ContinuationIndentWidth: 4
+Cpp11BracedListStyle: false
+DerivePointerAlignment: false
 FixNamespaceComments: true
-ShortNamespaceLines: 0
-EmptyLineAfterAccessModifier: Never
-EmptyLineBeforeAccessModifier: LogicalBlock
-SeparateDefinitionBlocks: Leave
-
-# ── 包含头文件 ───────────────────────────────────────────────────────────────
-IncludeBlocks: Regroup
-IncludeCategories:
-  - Regex: '^<.*>$'
-    Priority: 1
-  - Regex: '.*'
-    Priority: 2
-SortIncludes: CaseInsensitive
+IncludeBlocks: Preserve
+IncludeIsMainRegex: '([-_](test|unittest))?$'
+IndentCaseLabels: true
+IndentPPDirectives: BeforeHash
+IndentWidth: 4
+IndentWrappedFunctionNames: false
+KeepEmptyLinesAtTheStartOfBlocks: false
+MaxEmptyLinesToKeep: 1
+NamespaceIndentation: Inner
+PointerAlignment: Left
+ReflowComments: 'IndentOnly'
+SortIncludes: true
 SortUsingDeclarations: true
-
-# ── Lambda ──────────────────────────────────────────────────────────────────
-LambdaBodyIndentation: Signature
-
-# ── 杂项 ─────────────────────────────────────────────────────────────────────
-InsertBraces: true
-InsertNewlineAtEOF: true
-MaxEmptyLinesToKeep: 2
-ReflowComments: true
-RemoveSemicolon: true
-Standard: Latest
-StatementAttributeLikeMacros:
-  - Q_EMIT
-StatementMacros:
-  - Q_UNUSED
-  - QT_REQUIRE_VERSION
+SpaceAfterCStyleCast: false
+SpaceAfterLogicalNot: false
+SpaceAfterTemplateKeyword: false
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeCpp11BracedList: true
+SpaceBeforeCtorInitializerColon: false
+SpaceBeforeInheritanceColon: false
+SpaceBeforeParens: ControlStatements
+SpaceBeforeRangeBasedForLoopColon: false
+SpaceInEmptyParentheses: false
+SpacesBeforeTrailingComments: 1
+SpacesInAngles: false
+SpacesInCStyleCastParentheses: false
+SpacesInContainerLiterals: false
+SpacesInParentheses: false
+SpacesInSquareBrackets: false
+Standard: 'Latest'
+UseTab: Never
