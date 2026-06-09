@@ -70,3 +70,45 @@ TEST(WidgetsProgressBarTest, ExplicitColorsOverrideSemanticVariantChanges) {
     EXPECT_EQ(track.green(), 5u);
     EXPECT_EQ(track.blue(), 6u);
 }
+
+TEST(WidgetsProgressBarTest, ProgressValueIsClamped) {
+    auto progress = nandina::widgets::ProgressBar::create();
+
+    progress->set_progress(0.45f);
+    EXPECT_FLOAT_EQ(progress->progress(), 0.45f);
+
+    progress->set_progress(-1.0f);
+    EXPECT_FLOAT_EQ(progress->progress(), 0.0f);
+
+    progress->set_progress(2.0f);
+    EXPECT_FLOAT_EQ(progress->progress(), 1.0f);
+}
+
+TEST(WidgetsProgressBarTest, BarHeightControlsPreferredSizeAndMarksLayoutDirty) {
+    auto progress = nandina::widgets::ProgressBar::create();
+    progress->layout();
+    progress->clear_dirty_recursive();
+    EXPECT_FALSE(progress->is_layout_dirty());
+
+    progress->set_bar_height(12.0f);
+
+    EXPECT_TRUE(progress->is_layout_dirty());
+    const auto preferred = progress->preferred_size();
+    EXPECT_FLOAT_EQ(preferred.width(), 0.0f);
+    EXPECT_FLOAT_EQ(preferred.height(), 12.0f);
+}
+
+TEST(WidgetsProgressBarTest, ColorAndProgressSettersOnlyMarkPaintDirty) {
+    auto progress = nandina::widgets::ProgressBar::create();
+    progress->layout();
+    progress->clear_dirty_recursive();
+
+    progress->set_progress(0.5f);
+    EXPECT_TRUE(progress->dirty());
+    EXPECT_FALSE(progress->is_layout_dirty());
+
+    progress->clear_dirty_recursive();
+    progress->set_bar_color(nandina::NanColor::from(nandina::NanRgb{9, 8, 7}));
+    EXPECT_TRUE(progress->dirty());
+    EXPECT_FALSE(progress->is_layout_dirty());
+}

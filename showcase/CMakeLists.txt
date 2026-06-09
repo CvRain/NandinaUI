@@ -19,6 +19,10 @@ set(PROJECT_CPP_MODULE_FILES
         pages/switch.cppm
         pages/flow.cppm
         pages/card.cppm
+        pages/tabs.cppm
+        pages/overlay.cppm
+        pages/dialog.cppm
+        pages/select.cppm
 )
 
 if (CMAKE_HOST_SYSTEM_NAME MATCHES "Linux")

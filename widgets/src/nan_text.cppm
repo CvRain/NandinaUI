@@ -6,6 +6,7 @@ module;
 #include <memory>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <thorvg-1/thorvg.h>
 
 export module nandina.widgets.text;
@@ -23,6 +24,30 @@ export namespace nandina::widgets {
 enum class TextAlign : std::uint8_t { Start, Center, End };
 
 enum class TextVerticalAlign : std::uint8_t { Top, Center, Bottom };
+
+namespace detail {
+    [[nodiscard]] inline auto is_text_break(const char ch) noexcept -> bool {
+        return ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r';
+    }
+
+    [[nodiscard]] inline auto widest_unbreakable_run_width(
+        const text::NanFont& font,
+        const std::string_view text) noexcept -> float {
+        float widest = 0.0f;
+        std::size_t run_begin = 0;
+
+        for (std::size_t i = 0; i <= text.size(); ++i) {
+            if (i == text.size() || is_text_break(text[i])) {
+                if (i > run_begin) {
+                    widest = std::max(widest, font.estimate_text_width(text.substr(run_begin, i - run_begin)));
+                }
+                run_begin = i + 1;
+            }
+        }
+
+        return widest;
+    }
+}
 
 /// 统一的文本样式描述。各字段均为 optional，仅设置需要变更的属性。
 struct TextStyle {
@@ -330,6 +355,28 @@ public:
         const float fs = m_font.size();
         const float text_w = static_cast<float>(txt.size()) * fs * 0.6f;
         return { text_w, fs * 1.4f };
+    }
+
+    [[nodiscard]] auto layout_info(const bool for_width, const float cross_constraint) const -> types::LayoutInfo override {
+        const auto txt = display_text();
+        if (txt.empty()) return {};
+
+        if (for_width) {
+            const float pref_w = m_font.estimate_text_width(txt);
+            const float min_w = detail::widest_unbreakable_run_width(m_font, txt);
+            return {pref_w, min_w, geometry::NanConstraints::k_infinity, 0.0f};
+        }
+
+        // height-for-width: 如果知道交叉轴宽度，计算实际行数
+        const float lh = m_font.line_height();
+        if (cross_constraint > 0.0f) {
+            ensure_shaped();
+            const auto layout = m_font.layout_lines(m_shaped_glyphs, cross_constraint);
+            const float total_h = layout.total_height > 0.0f ? layout.total_height : lh;
+            return {total_h, lh, geometry::NanConstraints::k_infinity, 0.0f};
+        }
+
+        return {lh, lh, geometry::NanConstraints::k_infinity, 0.0f};
     }
 
     auto measure(const geometry::NanConstraints& constraints) -> void override {

@@ -17,6 +17,7 @@ import nandina.widgets.focus_ring;
 import nandina.widgets.text;
 import nandina.widgets.icon;
 import nandina.widgets.surface;
+import nandina.widgets.pressable;
 import nandina.layout.container;      // Row
 import nandina.layout.flex_widgets;   // Center, Spacer
 import nandina.foundation.nan_insets;
@@ -147,6 +148,31 @@ namespace nandina::widgets {
         m_focus_ring->set_active(false);
         add_child(std::move(focus_ring));
 
+        m_pressable = Pressable::create();
+        m_pressable->on_hover([this] {
+            sync_pressable_state();
+            update_visual_state();
+            m_hovered_signal.emit();
+        });
+        m_pressable->on_leave([this] {
+            sync_pressable_state();
+            update_visual_state();
+            m_left_signal.emit();
+        });
+        m_pressable->on_press([this] {
+            sync_pressable_state();
+            update_visual_state();
+            m_pressed_signal.emit();
+        });
+        m_pressable->on_release([this] {
+            sync_pressable_state();
+            update_visual_state();
+            m_released_signal.emit();
+        });
+        m_pressable->on_click([this] {
+            m_clicked_signal.emit();
+        });
+
         // Text — 按钮文本应始终单行 + ellipsis
         auto label = Text::create();
         m_label    = label.get();
@@ -268,6 +294,19 @@ namespace nandina::widgets {
             m_content_row->justify_content(layout::LayoutAlignment::center);
         } else {
             m_content_row->justify_content(layout::LayoutAlignment::center);
+        }
+    }
+
+    auto Button::sync_pressable_state() -> void {
+        if (!m_pressable) {
+            return;
+        }
+        const auto state = m_pressable->state();
+        m_hovered = state.hovered;
+        m_pressed = state.pressed;
+        m_focused = state.focused;
+        if (m_focus_ring) {
+            m_focus_ring->set_active(m_focused && !m_disabled);
         }
     }
 
@@ -453,10 +492,11 @@ namespace nandina::widgets {
     auto Button::set_disabled(bool disabled) -> Button& {
         if (m_disabled == disabled) return *this;
         m_disabled = disabled;
+        if (m_pressable) {
+            m_pressable->set_disabled(disabled || m_loading);
+            sync_pressable_state();
+        }
         if (disabled) {
-            m_hovered = false;
-            m_pressed = false;
-            m_focused = false;
             if (m_focus_ring) {
                 m_focus_ring->set_active(false);
             }
@@ -471,6 +511,10 @@ namespace nandina::widgets {
 
     auto Button::set_loading(bool loading) -> Button& {
         m_loading = loading;
+        if (m_pressable) {
+            m_pressable->set_disabled(m_disabled || m_loading);
+            sync_pressable_state();
+        }
         update_visual_state();
         return *this;
     }
@@ -525,79 +569,53 @@ namespace nandina::widgets {
     // 事件（Button 直接处理）
     // ═══════════════════════════════════════════════════════════
 
-    auto Button::on_pointer_move(const runtime::PointerMoveEvent& /*event*/) -> bool {
+    auto Button::on_pointer_move(const runtime::PointerMoveEvent& event) -> bool {
         if (m_disabled || m_loading) return false;
-
-        const bool was_hovered = m_hovered;
-        m_hovered             = true;
-        if (!was_hovered) {
-            update_visual_state();
-            m_hovered_signal.emit();
-        }
-        return true;
+        return m_pressable ? m_pressable->dispatch_event(event) : false;
     }
 
     auto Button::on_pointer_enter(const runtime::PointerMoveEvent& event) -> bool {
-        return on_pointer_move(event);
-    }
-
-    auto Button::on_pointer_leave(const runtime::PointerMoveEvent& /*event*/) -> bool {
-        if (!m_hovered && !m_pressed) {
+        if (m_disabled || m_loading || !m_pressable) {
             return false;
         }
+        return m_pressable->dispatch_pointer_enter(event);
+    }
 
-        m_hovered = false;
-        m_pressed = false;
-        update_visual_state();
-        m_left_signal.emit();
-        return true;
+    auto Button::on_pointer_leave(const runtime::PointerMoveEvent& event) -> bool {
+        if (m_disabled || m_loading || !m_pressable) {
+            return false;
+        }
+        return m_pressable->dispatch_pointer_leave(event);
     }
 
     auto Button::on_pointer_down(const runtime::PointerButtonEvent& event) -> bool {
         if (m_disabled || m_loading) return false;
-        if (event.button != nandina::types::PointerButton::Left) return false;
-
-        m_pressed = true;
-        update_visual_state();
-        m_pressed_signal.emit();
-        return true;
+        if (!m_pressable) return false;
+        return m_pressable->dispatch_event(event, runtime::EventType::PointerDown);
     }
 
     auto Button::on_pointer_up(const runtime::PointerButtonEvent& event) -> bool {
         if (m_disabled || m_loading) return false;
-        if (event.button != nandina::types::PointerButton::Left) return false;
-
-        const bool was_pressed = m_pressed;
-        m_pressed              = false;
-        update_visual_state();
-
-        if (was_pressed) {
-            m_released_signal.emit();
-            if (m_hovered) {
-                m_clicked_signal.emit();
-            }
-        }
-        return true;
+        if (!m_pressable) return false;
+        return m_pressable->dispatch_event(event, runtime::EventType::PointerUp);
     }
 
     auto Button::on_focus_in() -> bool {
-        if (m_disabled) {
+        if (m_disabled || !m_pressable) {
             return false;
         }
-
-        m_focused = true;
-        if (m_focus_ring) {
-            m_focus_ring->set_active(true);
-        }
-        return true;
+        const bool handled = m_pressable->dispatch_event(runtime::FocusEvent{.got_focus = true});
+        sync_pressable_state();
+        return handled;
     }
 
     auto Button::on_focus_out() -> bool {
-        m_focused = false;
-        if (m_focus_ring) {
-            m_focus_ring->set_active(false);
+        if (!m_pressable) {
+            return false;
         }
-        return true;
+        const bool handled = m_pressable->dispatch_event(runtime::FocusEvent{.got_focus = false});
+        sync_pressable_state();
+        return handled;
     }
 
     // ═══════════════════════════════════════════════════════════

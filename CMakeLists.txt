@@ -22,7 +22,6 @@ add_compile_options(-Wall -Wextra -Wpedantic)
 # 避免部署到其他机器时缺少 libstdc++-6.dll / libgcc_s_seh-1.dll。
 if (MINGW)
     add_link_options(-Wl,--allow-multiple-definition -static)
-    add_compile_options(-fmodules-ts)
 endif ()
 
 # ============================================================
@@ -135,9 +134,9 @@ endif ()
 # 模块层（按依赖顺序：底层 → 高层）
 # ============================================================
 add_subdirectory(foundation)   # 基础几何类型与通用原语，无上层依赖
+add_subdirectory(render)       # 渲染抽象层与后端适配接口                  [ThorVG]
 add_subdirectory(runtime)      # UI 运行时：生命周期、节点树、事件循环     [SDL3]
 add_subdirectory(reactive)     # 响应式核心：State / Effect / Prop / StateList
-add_subdirectory(render)       # 渲染抽象层与后端适配接口                  [ThorVG]
 add_subdirectory(layout)       # 布局系统：Row / Column / Stack / Flex     [轻量 BasicLayoutBackend, Yoga 可选]
 add_subdirectory(text)         # 文本能力：shaping、测量、绘制             [FreeType + HarfBuzz]
 add_subdirectory(theme)        # 主题与 token：设计系统 schema 与 ThemeManager

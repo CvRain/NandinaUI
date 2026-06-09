@@ -149,6 +149,15 @@ export namespace nandina::types {
         static constexpr auto fill() noexcept -> SizeValue { return {SizeMode::Fill, 0.0f}; }
     };
 
+    // ── LayoutInfo：沿单一轴的布局约束 ────────────────────
+    /// 替代旧 preferred_size / min_size / max_size / flex_factor 等散落字段。
+    struct LayoutInfo {
+        float preferred = 0.0f;
+        float min       = 0.0f;
+        float max       = 0.0f;  // 0 表示无约束
+        float stretch   = 0.0f;  ///< 弹性因子：0=不弹性，>0=按比例分剩余空间
+    };
+
     // ── 类型萃取 ────────────────────────────────────────────
 
     /// StringLike 概念：支持隐式转换为 std::string_view 或 std::string 的类型

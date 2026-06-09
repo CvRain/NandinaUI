@@ -13,6 +13,10 @@ nandina_add_test(
         ${CMAKE_SOURCE_DIR}/showcase/pages/switch.cppm
         ${CMAKE_SOURCE_DIR}/showcase/pages/flow.cppm
         ${CMAKE_SOURCE_DIR}/showcase/pages/card.cppm
+        ${CMAKE_SOURCE_DIR}/showcase/pages/tabs.cppm
+        ${CMAKE_SOURCE_DIR}/showcase/pages/overlay.cppm
+        ${CMAKE_SOURCE_DIR}/showcase/pages/dialog.cppm
+        ${CMAKE_SOURCE_DIR}/showcase/pages/select.cppm
         ${CMAKE_SOURCE_DIR}/showcase/pages/forms_page.cppm
     DEPS
         nandina::app

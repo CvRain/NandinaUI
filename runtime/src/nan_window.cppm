@@ -14,6 +14,7 @@ module;
 export module nandina.runtime.nan_window;
 
 export import nandina.foundation.nan_rect;
+export import nandina.render.scene;
 export import nandina.runtime.nan_event;
 
 // ============================================================
@@ -166,6 +167,11 @@ export namespace nandina::runtime {
 
         // 每帧绘制调用，canvas 已清空。
         virtual auto on_draw(tvg::SwCanvas& canvas) -> void;
+
+        // 实验性 Scene 构建接口。
+        // 若本帧向 scene 写入了至少一个 DrawCommand，present_frame() 将优先走 RenderBackend 提交路径。
+        // 若 scene 为空，则自动回退到旧 on_draw(tvg::SwCanvas&) 路径。
+        virtual auto on_build_scene(nandina::render::Scene& scene) -> void;
 
         // 返回 true 表示当前帧应继续执行完整渲染与 present。
         virtual auto should_present_frame() const noexcept -> bool;

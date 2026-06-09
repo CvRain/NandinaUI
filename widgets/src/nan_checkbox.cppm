@@ -12,6 +12,7 @@ export module nandina.widgets.checkbox;
 import nandina.widgets.surface;
 import nandina.widgets.text;
 import nandina.widgets.focus_ring;
+import nandina.widgets.pressable;
 import nandina.foundation.nan_insets;
 import nandina.foundation.color;
 import nandina.reactive.event_signal;
@@ -84,9 +85,11 @@ export namespace nandina::widgets {
         auto disabled(bool value) -> Checkbox& {
             if (m_disabled == value) return *this;
             m_disabled = value;
+            if (m_pressable) {
+                m_pressable->set_disabled(value);
+                sync_pressable_state();
+            }
             if (m_disabled) {
-                m_hovered = false;
-                m_pressed = false;
                 if (m_focus_ring) m_focus_ring->set_active(false);
             }
             sync_visual_state();
@@ -138,62 +141,37 @@ export namespace nandina::widgets {
 
     protected:
         auto on_pointer_move(const runtime::PointerMoveEvent &event) -> bool override {
-            if (m_disabled) return false;
-            const auto bnds = bounds();
-            if (event.x >= bnds.x() && event.x < bnds.x() + bnds.width() &&
-                event.y >= bnds.y() && event.y < bnds.y() + bnds.height()) {
-                if (!m_hovered) {
-                    m_hovered = true;
-                    mark_dirty();
-                }
-                return true;
-            }
-            if (m_hovered) {
-                m_hovered = false;
-                m_pressed = false;
-                mark_dirty();
-            }
-            return false;
+            if (m_disabled || !m_pressable) return false;
+            return m_pressable->dispatch_event(event);
         }
 
         auto on_pointer_leave(const runtime::PointerMoveEvent &) -> bool override {
-            if (m_disabled) return false;
-            if (m_hovered || m_pressed) {
-                m_hovered = false;
-                m_pressed = false;
-                mark_dirty();
-            }
-            return true;
+            if (m_disabled || !m_pressable) return false;
+            return m_pressable->dispatch_pointer_leave(runtime::PointerMoveEvent{});
         }
 
         auto on_pointer_down(const runtime::PointerButtonEvent &event) -> bool override {
-            if (m_disabled) return false;
-            if (event.button != nandina::types::PointerButton::Left) return false;
-            m_pressed = true;
-            mark_dirty();
-            return true;
+            if (m_disabled || !m_pressable) return false;
+            return m_pressable->dispatch_event(event, runtime::EventType::PointerDown);
         }
 
-        auto on_pointer_up(const runtime::PointerButtonEvent &) -> bool override {
-            if (m_disabled) return false;
-            if (!m_pressed) return false;
-            m_pressed = false;
-            checked(!m_checked);
-            mark_dirty();
-            return true;
+        auto on_pointer_up(const runtime::PointerButtonEvent &event) -> bool override {
+            if (m_disabled || !m_pressable) return false;
+            return m_pressable->dispatch_event(event, runtime::EventType::PointerUp);
         }
 
         auto on_focus_in() -> bool override {
-            if (m_disabled) return false;
-            if (m_focus_ring) m_focus_ring->set_active(true);
-            mark_dirty();
-            return true;
+            if (m_disabled || !m_pressable) return false;
+            const bool handled = m_pressable->dispatch_event(runtime::FocusEvent{.got_focus = true});
+            sync_pressable_state();
+            return handled;
         }
 
         auto on_focus_out() -> bool override {
-            if (m_focus_ring) m_focus_ring->set_active(false);
-            mark_dirty();
-            return true;
+            if (!m_pressable) return false;
+            const bool handled = m_pressable->dispatch_event(runtime::FocusEvent{.got_focus = false});
+            sync_pressable_state();
+            return handled;
         }
 
         void on_draw(tvg::SwCanvas &canvas) override {
@@ -283,6 +261,27 @@ export namespace nandina::widgets {
             m_focus_ring->set_active(false);
             add_child(std::move(focus_ring));
 
+            m_pressable = Pressable::create();
+            m_pressable->on_hover([this] {
+                sync_pressable_state();
+                mark_dirty();
+            });
+            m_pressable->on_leave([this] {
+                sync_pressable_state();
+                mark_dirty();
+            });
+            m_pressable->on_press([this] {
+                sync_pressable_state();
+                mark_dirty();
+            });
+            m_pressable->on_release([this] {
+                sync_pressable_state();
+                mark_dirty();
+            });
+            m_pressable->on_click([this] {
+                checked(!m_checked);
+            });
+
             apply_size_style();
             sync_visual_state();
         }
@@ -358,8 +357,21 @@ export namespace nandina::widgets {
             // colors are resolved on-demand in on_draw
         }
 
+        auto sync_pressable_state() -> void {
+            if (!m_pressable) {
+                return;
+            }
+            const auto state = m_pressable->state();
+            m_hovered = state.hovered;
+            m_pressed = state.pressed;
+            if (m_focus_ring) {
+                m_focus_ring->set_active(state.focused && !m_disabled);
+            }
+        }
+
         Text *m_label_widget{nullptr};
         FocusRing *m_focus_ring{nullptr};
+        Pressable::Ptr m_pressable;
         CheckboxSize m_size{CheckboxSize::md};
         ColorVariant m_color_variant{ColorVariant::inherit};
         bool m_checked{false};

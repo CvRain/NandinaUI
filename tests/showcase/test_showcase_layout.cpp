@@ -263,7 +263,7 @@ TEST(ShowcaseLayoutTest, ExportedShowcaseShellRegistersMultiplePagesIntoSidebar)
     std::vector<nandina::widgets::SidebarMenuButton*> buttons;
     collect_sidebar_buttons(root_row, buttons);
 
-    ASSERT_GE(buttons.size(), 5u);
+    ASSERT_GE(buttons.size(), 12u);
     EXPECT_TRUE(buttons[0]->active());
     EXPECT_FALSE(buttons[1]->active());
     EXPECT_FALSE(buttons[2]->active());
@@ -272,6 +272,11 @@ TEST(ShowcaseLayoutTest, ExportedShowcaseShellRegistersMultiplePagesIntoSidebar)
     EXPECT_EQ(buttons[1]->text(), "Button Showcase");
     EXPECT_EQ(buttons[2]->text(), "Forms");
     EXPECT_EQ(buttons[3]->text(), "Checkbox");
+    EXPECT_EQ(buttons[7]->text(), "Tabs Showcase");
+    EXPECT_EQ(buttons[8]->text(), "Overlay Showcase");
+    EXPECT_EQ(buttons[9]->text(), "Dialog Showcase");
+    EXPECT_EQ(buttons[10]->text(), "Select Showcase");
+    EXPECT_EQ(buttons[11]->text(), "Sandbox");
 }
 
 TEST(ShowcaseLayoutTest, ShowcaseShellPlacesSidebarOnLeftAndPageHostOnRight) {
@@ -342,7 +347,7 @@ TEST(ShowcaseLayoutTest, MainPagePanelAndCardContentDoNotStackOnSameBounds) {
     // Card 无 title（MainPage 未设置）→ 仅 content column 一个子节点
     ASSERT_GE(card.child_count(), 1u);
     auto& card_content_column = child_at(card, 0);
-    ASSERT_EQ(card_content_column.child_count(), 2u);
+    ASSERT_EQ(card_content_column.child_count(), 3u);
 
     const auto card_first = card_content_column.children()[0]->bounds();
     const auto card_second = card_content_column.children()[1]->bounds();

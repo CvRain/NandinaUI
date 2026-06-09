@@ -9,6 +9,7 @@ module;
 #include <memory>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
 export module nandina.reactive.computed;
 
@@ -61,6 +62,7 @@ public:
 
     /// 获取计算值。如果脏了则重新求值。
     [[nodiscard]] auto operator()() const -> const ValueType& {
+        track_access();
         if (*stale_) { recompute(); }
         return cached_;
     }
@@ -69,9 +71,54 @@ public:
     [[nodiscard]] auto get() const -> const ValueType& { return (*this)(); }
 
 private:
+    auto track_access() const -> void {
+        if (!detail::current_tracking_context || !detail::current_tracking_context->invalidate) {
+            return;
+        }
+        for (const auto& obs : *observers_) {
+            if (obs.active && obs.id == detail::current_tracking_context->id) { return; }
+        }
+        observers_->push_back({
+            detail::current_tracking_context->id,
+            true,
+            *detail::current_tracking_context->invalidate,
+            detail::current_tracking_context->alive
+                ? *detail::current_tracking_context->alive
+                : std::shared_ptr<bool>{}
+        });
+    }
+
+    static auto notify_stale(std::vector<detail::ObserverEntry>& observers) -> void {
+        auto snapshot = std::move(observers);
+        observers = {};
+        std::size_t next_observer = 0;
+        detail::PendingObserverRestore restore_guard{observers, snapshot, next_observer};
+
+        for (; next_observer < snapshot.size(); ++next_observer) {
+            const auto& entry = snapshot[next_observer];
+            if (!entry.active || !detail::observer_is_live(entry) || !entry.invalidate) {
+                continue;
+            }
+
+            if (detail::is_batching()) {
+                detail::queue_invalidation(entry.id, entry.invalidate);
+            } else {
+                entry.invalidate();
+            }
+        }
+
+        restore_guard.commit();
+    }
+
     /// 在依赖追踪上下文中重算
     auto recompute() const -> void {
-        auto invalidator = std::function<void()>{ [s = stale_]{ *s = true; } };
+        auto invalidator = std::function<void()>{ [stale = stale_, observers = observers_]{
+            if (*stale) {
+                return;
+            }
+            *stale = true;
+            notify_stale(*observers);
+        } };
         detail::TrackingContext context{observer_id_, &invalidator};
         detail::TrackingContextGuard guard{context};
 
@@ -83,6 +130,8 @@ private:
     F                               compute_fn_;
     mutable ValueType               cached_{};
     mutable std::shared_ptr<bool>   stale_;
+    mutable std::shared_ptr<std::vector<detail::ObserverEntry>> observers_ =
+        std::make_shared<std::vector<detail::ObserverEntry>>();
     std::size_t                     observer_id_;
 };
 

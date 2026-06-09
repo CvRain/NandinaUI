@@ -2,6 +2,9 @@
 # TODO(crbug.com/1282228): reenable google-readability-casting once it no
 # longer has as many false-positives.
 Checks:          '-*,
+                    readability-identifier-*,
+                    -readability-magic-numbers,
+                    
                     bugprone-argument-comment,
                     bugprone-assert-side-effect,
                     bugprone-dangling-handle,
@@ -32,11 +35,10 @@ Checks:          '-*,
                     modernize-use-nullptr,
                     modernize-use-override,
                     modernize-use-transparent-functors,
-                    readability-braces-around-statements,
-                    readability-identifier-naming,
-                    readability-implicit-bool-conversion,
-                    readability-qualified-auto,
-                    readability-redundant-member-init'
+                    
+                    
+                  ',
+                
 CheckOptions:
   - key:          bugprone-assert-side-effect.AssertMacros
     value:        assert,DCHECK

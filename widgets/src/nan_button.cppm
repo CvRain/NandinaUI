@@ -32,6 +32,7 @@ import nandina.widgets.surface;
 import nandina.widgets.focus_ring;
 import nandina.widgets.text;
 import nandina.widgets.icon;
+import nandina.widgets.pressable;
 import nandina.layout.flex_widgets;
 import nandina.layout.container;
 import nandina.foundation.nan_insets;
@@ -206,6 +207,7 @@ export namespace nandina::widgets {
     private:
         auto apply_variant() -> void;
         auto apply_size() -> void;
+        auto sync_pressable_state() -> void;
 
         // ── 私有实现（通过公有统一 API 调用）────────────
         auto set_text(std::string_view text) -> Button&;
@@ -242,7 +244,8 @@ export namespace nandina::widgets {
         FocusRing*   m_focus_ring{nullptr};
         Icon*        m_icon_left{nullptr};
         Icon*        m_icon_right{nullptr};
-        Text*       m_label{nullptr};
+        Text*        m_label{nullptr};
+        Pressable::Ptr m_pressable;
 
         bool m_focused{false};
     };

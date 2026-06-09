@@ -783,6 +783,82 @@ TEST(LayoutCoreTest, Stack_FillsContainerBounds) {
     EXPECT_FLOAT_EQ(frames[1].y(), 10.0f);
 }
 
+// ─── BasicLayoutBackend: Flow ─────────────────────────────────
+
+TEST(LayoutCoreTest, Flow_ExactFitAccountsForGapOnce) {
+    BasicLayoutBackend backend;
+
+    LayoutRequest req;
+    req.axis = LayoutAxis::flow;
+    req.container_bounds = {0.0f, 0.0f, 110.0f, 100.0f};
+    req.gap = 10.0f;
+    req.children = {
+        LayoutChildSpec{.preferred_size = NanSize{50.0f, 20.0f}},
+        LayoutChildSpec{.preferred_size = NanSize{50.0f, 20.0f}},
+    };
+
+    const auto frames = backend.compute(req);
+    ASSERT_EQ(frames.size(), 2);
+    EXPECT_FLOAT_EQ(frames[0].x(), 0.0f);
+    EXPECT_FLOAT_EQ(frames[0].width(), 50.0f);
+    EXPECT_FLOAT_EQ(frames[1].x(), 60.0f);
+    EXPECT_FLOAT_EQ(frames[1].y(), 0.0f);
+    EXPECT_FLOAT_EQ(frames[1].width(), 50.0f);
+}
+
+TEST(LayoutCoreTest, Flow_GapCanForceWrap) {
+    BasicLayoutBackend backend;
+
+    LayoutRequest req;
+    req.axis = LayoutAxis::flow;
+    req.container_bounds = {0.0f, 0.0f, 109.0f, 100.0f};
+    req.gap = 10.0f;
+    req.line_gap = 5.0f;
+    req.children = {
+        LayoutChildSpec{.preferred_size = NanSize{50.0f, 20.0f}},
+        LayoutChildSpec{.preferred_size = NanSize{50.0f, 20.0f}},
+    };
+
+    const auto frames = backend.compute(req);
+    ASSERT_EQ(frames.size(), 2);
+    EXPECT_FLOAT_EQ(frames[0].x(), 0.0f);
+    EXPECT_FLOAT_EQ(frames[0].y(), 0.0f);
+    EXPECT_FLOAT_EQ(frames[1].x(), 0.0f);
+    EXPECT_FLOAT_EQ(frames[1].y(), 25.0f);
+}
+
+TEST(LayoutCoreTest, Flow_DistributesRemainingWidthWithoutDoubleCountingGap) {
+    BasicLayoutBackend backend;
+
+    LayoutRequest req;
+    req.axis = LayoutAxis::flow;
+    req.container_bounds = {0.0f, 0.0f, 120.0f, 100.0f};
+    req.gap = 10.0f;
+    req.children = {
+        LayoutChildSpec{.preferred_size = NanSize{50.0f, 20.0f}},
+        LayoutChildSpec{.preferred_size = NanSize{50.0f, 20.0f}},
+    };
+
+    const auto frames = backend.compute(req);
+    ASSERT_EQ(frames.size(), 2);
+    EXPECT_FLOAT_EQ(frames[0].width(), 55.0f);
+    EXPECT_FLOAT_EQ(frames[1].x(), 65.0f);
+    EXPECT_FLOAT_EQ(frames[1].width(), 55.0f);
+}
+
+TEST(LayoutCoreTest, Flow_MeasureComputesWrappedHeightFromWidthConstraint) {
+    auto flow = Flow::Create();
+    flow->gap(10.0f).line_gap(5.0f);
+    flow->add(std::make_unique<FixedWidget>(NanSize{50.0f, 20.0f}));
+    flow->add(std::make_unique<FixedWidget>(NanSize{50.0f, 20.0f}));
+
+    flow->measure(NanConstraints{0.0f, 109.0f, 0.0f, NanConstraints::k_infinity});
+
+    const auto measured = flow->measured_size();
+    EXPECT_FLOAT_EQ(measured.width(), 50.0f);
+    EXPECT_FLOAT_EQ(measured.height(), 45.0f);
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // FlexWidgets — 两阶段布局协议回归（Issue 085）
 // ═══════════════════════════════════════════════════════════════════════════
@@ -826,7 +902,7 @@ TEST(FlexWidgetsTest, PaddingPreferredSizeStaysIntrinsicWhileMeasureRespectsCons
     EXPECT_FLOAT_EQ(measured.height(), 90.0f);
 }
 
-TEST(FlexWidgetsTest, CenterMeasureTracksChildButDoesNotChangePreferredSize) {
+TEST(FlexWidgetsTest, CenterMeasureFillsTightConstraintsButDoesNotChangePreferredSize) {
     auto center = Center::Create();
     center->child(std::make_unique<FixedWidget>(NanSize{50.0f, 30.0f}));
 
@@ -837,8 +913,8 @@ TEST(FlexWidgetsTest, CenterMeasureTracksChildButDoesNotChangePreferredSize) {
     center->measure(NanConstraints::tight(200.0f, 100.0f));
 
     const auto measured = center->measured_size();
-    EXPECT_FLOAT_EQ(measured.width(), 50.0f);
-    EXPECT_FLOAT_EQ(measured.height(), 30.0f);
+    EXPECT_FLOAT_EQ(measured.width(), 200.0f);
+    EXPECT_FLOAT_EQ(measured.height(), 100.0f);
 }
 
 TEST(FlexWidgetsTest, ExpandedKeepsIntrinsicPreferredSizeButCanMeasureTight) {

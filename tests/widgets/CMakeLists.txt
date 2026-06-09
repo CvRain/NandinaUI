@@ -39,6 +39,61 @@ nandina_add_test(
 )
 
 nandina_add_test(
+    NAME    test_widgets_switch
+    SOURCES test_widgets_switch.cpp
+    DEPS
+        nandina::widgets
+        nandina::theme
+)
+
+nandina_add_test(
+    NAME    test_widgets_icon
+    SOURCES test_widgets_icon.cpp
+    DEPS
+        nandina::widgets
+)
+
+nandina_add_test(
+    NAME    test_widgets_card
+    SOURCES test_widgets_card.cpp
+    DEPS
+        nandina::widgets
+        nandina::theme
+)
+
+nandina_add_test(
+    NAME    test_widgets_tabs
+    SOURCES test_widgets_tabs.cpp
+    DEPS
+        nandina::widgets
+        nandina::theme
+)
+
+nandina_add_test(
+    NAME    test_widgets_popover
+    SOURCES test_widgets_popover.cpp
+    DEPS
+        nandina::widgets
+        nandina::theme
+)
+
+nandina_add_test(
+    NAME    test_widgets_dialog
+    SOURCES test_widgets_dialog.cpp
+    DEPS
+        nandina::widgets
+        nandina::theme
+)
+
+nandina_add_test(
+    NAME    test_widgets_select
+    SOURCES test_widgets_select.cpp
+    DEPS
+        nandina::widgets
+        nandina::theme
+)
+
+nandina_add_test(
     NAME    test_widgets_panel
     SOURCES test_widgets_panel.cpp
     DEPS

@@ -103,6 +103,7 @@
 
 **当前判断**
 - render 抽象仍未建立正式 Scene/DrawCommand 中间层
+- `clip_children` / `overflow: hidden` 类能力暂不在 ThorVG 直绘路径中分散实现；后续应随 Scene/DrawCommand 一起加入 `PushClip` / `PopClip` 命令，再由 render backend 统一实现。该能力将服务于 Dialog、Popover、Card、ScrollView 等容器的子内容裁剪。
 - text 已有基础测量/绘制能力，但完整 text layout 体系仍早期
 - scriptability 仍主要停留在边界与 DSL 方向讨论
 
@@ -111,4 +112,3 @@
 1. 以当前 layout 主线为稳定底座，优先推进 primitive / control 收口、widgets 专项测试与 theme 统一消费。
 2. 继续把 showcase 和自动化测试当作结构与协议回归面，而不是把 showcase 重新退回成临时布局补丁层。
 3. 只在复杂 flex / basis / wrap / 更高频 min-max 约束成为主线需求后，再正式评估 Yoga 作为复杂求解后端的接入点。
-

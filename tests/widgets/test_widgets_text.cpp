@@ -2,6 +2,7 @@
 
 import nandina.foundation.color;
 import nandina.foundation.nan_constraints;
+import nandina.runtime.nan_widget;
 import nandina.theme;
 import nandina.widgets.text;
 
@@ -57,6 +58,31 @@ TEST(WidgetsTextTest, WrappedMeasureUsesConstraintWidth) {
     EXPECT_GT(wide_size.width(), 0.0f);
     EXPECT_GT(wide_size.height(), 0.0f);
     EXPECT_GT(narrow_size.height(), wide_size.height());
+}
+
+TEST(WidgetsTextTest, HorizontalLayoutInfoUsesWidestUnbreakableRunAsMin) {
+    auto text = nandina::widgets::Text::create();
+    text->set_text("short extraordinarilylongword mid");
+    text->set_font_size(9.0f);
+
+    const auto info = text->layout_info(true, 0.0f);
+
+    EXPECT_GT(info.min, 0.0f);
+    EXPECT_GT(info.preferred, info.min);
+
+}
+
+TEST(WidgetsTextTest, VerticalLayoutInfoUsesHeightForWidth) {
+    auto text = nandina::widgets::Text::create();
+    text->set_text("Nandina UI text primitive verifies height for width behavior");
+    text->set_font_size(9.0f);
+
+    const auto wide = text->layout_info(false, 240.0f);
+    const auto narrow = text->layout_info(false, 72.0f);
+
+    EXPECT_GT(wide.preferred, 0.0f);
+    EXPECT_GT(narrow.preferred, wide.preferred);
+    EXPECT_GE(narrow.min, text->font().line_height());
 }
 
 TEST(WidgetsTextTest, TypographyRoleAppliesResolvedTypeStyle) {

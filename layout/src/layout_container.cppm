@@ -181,11 +181,15 @@ export namespace nandina::layout {
             for_each_child([&](runtime::NanWidget &child) {
                 child.measure(child_constraints_from(child_measure_constraints, child));
                 const auto measured = detail::measured_or_preferred_size(child);
+                const auto wi = child.layout_info(true);
+                const auto hi = child.layout_info(false, wi.preferred);
                 m_child_specs.push_back({
                     .preferred_size = measured,
                     .min_size = child.measured_constraints().min_size(),
                     .max_size = detail::derive_child_max_size(child),
                     .flex_factor = child.flex_factor(),
+                    .width_info  = {wi.preferred, wi.min, wi.max, 0},
+                    .height_info = {hi.preferred, hi.min, hi.max, 0},
                 });
             });
 
@@ -226,19 +230,23 @@ export namespace nandina::layout {
         [[nodiscard]] auto collect_child_specs() const -> std::vector<LayoutChildSpec> {
             std::vector<LayoutChildSpec> specs;
             for_each_child([&](const runtime::NanWidget &child) {
-                const auto preferred = detail::measured_or_preferred_size(child);
+                const auto measured = detail::measured_or_preferred_size(child);
                 const auto wm = child.size_value_width();
                 const auto hm = child.size_value_height();
                 const bool fill_w = wm.mode == types::SizeMode::Fill;
                 const bool fill_h = hm.mode == types::SizeMode::Fill;
 
+                // 通过 layout_info 获取更精确的布局约束（Text 会返回 min=最宽单词, pref=无换行宽度）
+                const auto wi = child.layout_info(true);   // width info
+                const auto hi = child.layout_info(false, wi.preferred); // height with width known
+
                 specs.push_back({
-                    .preferred_size = preferred,
+                    .preferred_size = measured,
                     .min_size = child.measured_constraints().min_size(),
                     .max_size = detail::derive_child_max_size(child),
                     .flex_factor = (fill_w || fill_h) ? 1 : child.flex_factor(),
-                    .width_mode = wm,
-                    .height_mode = hm,
+                    .width_info  = {wi.preferred, wi.min, wi.max, fill_w ? 1.0f : 0.0f},
+                    .height_info = {hi.preferred, hi.min, hi.max, fill_h ? 1.0f : 0.0f},
                 });
             });
             return specs;
@@ -287,12 +295,16 @@ export namespace nandina::layout {
         [[nodiscard]] auto compute_container_size(
             const std::vector<LayoutChildSpec> &specs,
             const geometry::NanConstraints &constraints) const noexcept -> geometry::NanSize {
+            if (layout_axis() == LayoutAxis::flow) {
+                return compute_flow_container_size(specs, constraints);
+            }
+
             float total_main = 0.0f;
             float max_cross = 0.0f;
 
             for (const auto &child: specs) {
-                const float child_w = child.preferred_size.width();
-                const float child_h = child.preferred_size.height();
+                const float child_w = child.width_info.preferred;
+                const float child_h = child.height_info.preferred;
 
                 if (layout_axis() == LayoutAxis::column) {
                     total_main += child_h;
@@ -330,6 +342,55 @@ export namespace nandina::layout {
                 };
             }
 
+            return constraints.constrain(size);
+        }
+
+        [[nodiscard]] auto compute_flow_container_size(
+            const std::vector<LayoutChildSpec> &specs,
+            const geometry::NanConstraints &constraints) const noexcept -> geometry::NanSize {
+            const float pad_h = padding_left_ + padding_right_;
+            const float pad_v = padding_top_ + padding_bottom_;
+            const float available_w = constraints.max_width() == geometry::NanConstraints::k_infinity
+                ? geometry::NanConstraints::k_infinity
+                : std::max(0.0f, constraints.max_width() - pad_h);
+
+            float max_line_width = 0.0f;
+            float line_width = 0.0f;
+            float line_height = 0.0f;
+            float total_height = 0.0f;
+            bool has_line = false;
+
+            for (const auto &child: specs) {
+                const float child_w = bounded_preferred(child.width_info);
+                const float child_h = bounded_preferred(child.height_info);
+                const bool has_item_in_line = has_line && line_width > 0.0f;
+                const float next_width = has_item_in_line ? line_width + gap_ + child_w : child_w;
+                const bool should_wrap = has_item_in_line
+                    && available_w != geometry::NanConstraints::k_infinity
+                    && next_width > available_w;
+
+                if (should_wrap) {
+                    max_line_width = std::max(max_line_width, line_width);
+                    total_height += line_height + line_gap_;
+                    line_width = child_w;
+                    line_height = child_h;
+                }
+                else {
+                    line_width = has_item_in_line ? next_width : child_w;
+                    line_height = std::max(line_height, child_h);
+                }
+                has_line = true;
+            }
+
+            if (has_line) {
+                max_line_width = std::max(max_line_width, line_width);
+                total_height += line_height;
+            }
+
+            const geometry::NanSize size{
+                max_line_width + pad_h,
+                total_height + pad_v,
+            };
             return constraints.constrain(size);
         }
 

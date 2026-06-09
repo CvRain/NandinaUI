@@ -215,6 +215,42 @@ TEST(ReactiveTest, ComputedRetriesAfterException) {
     EXPECT_EQ(recomputes, 3);
 }
 
+TEST(ReactiveTest, EffectTracksComputedAsDependency) {
+    nandina::reactive::State<int> value{2};
+    nandina::reactive::Computed doubled{[&] {
+        return value() * 2;
+    }};
+
+    int runs = 0;
+    int snapshot = 0;
+    nandina::reactive::Effect effect{[&] {
+        ++runs;
+        snapshot = doubled();
+    }};
+
+    EXPECT_EQ(runs, 1);
+    EXPECT_EQ(snapshot, 4);
+
+    value.set(5);
+
+    EXPECT_EQ(runs, 2);
+    EXPECT_EQ(snapshot, 10);
+}
+
+TEST(ReactiveTest, ComputedTracksNestedComputedAsDependency) {
+    nandina::reactive::State<int> value{3};
+    nandina::reactive::Computed doubled{[&] {
+        return value() * 2;
+    }};
+    nandina::reactive::Computed plus_one{[&] {
+        return doubled() + 1;
+    }};
+
+    EXPECT_EQ(plus_one(), 7);
+    value.set(4);
+    EXPECT_EQ(plus_one(), 9);
+}
+
 TEST(ReactiveTest, ReadStateIsCopyableAndTracks) {
     nandina::reactive::State<int> value{5};
     nandina::reactive::ReadState<int> read_value = value.as_read_only();

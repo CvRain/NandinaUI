@@ -21,6 +21,9 @@ module;
 module nandina.runtime.nan_window;
 
 import nandina.log;
+import nandina.render.scene;
+import nandina.render.backend;
+import nandina.render.thorvg_backend;
 
 namespace nandina::runtime {
     namespace {
@@ -163,6 +166,7 @@ namespace nandina::runtime {
         // canvas:       绑定到 pixel_buffer 的 SwCanvas
         std::vector<std::uint32_t> pixel_buffer;
         std::unique_ptr<tvg::SwCanvas> canvas;
+        std::unique_ptr<nandina::render::ThorVGRenderBackend> render_backend;
 
         // ── 属性缓存 ─────────────────────────────────────────────
         std::string title;
@@ -345,6 +349,8 @@ namespace nandina::runtime {
             m_impl->runtime_acquired = false;
             throw std::runtime_error("tvg::SwCanvas::gen() returned nullptr");
         }
+
+        m_impl->render_backend = std::make_unique<nandina::render::ThorVGRenderBackend>();
 
         int pixel_w = 0;
         int pixel_h = 0;
@@ -626,22 +632,59 @@ namespace nandina::runtime {
 
         auto &canvas = *m_impl->canvas;
         const auto frame_start = SteadyClock::now();
+        const nandina::render::RenderTargetView target{
+            .pixels = m_impl->pixel_buffer.data(),
+            .width = static_cast<std::uint32_t>(m_impl->width),
+            .height = static_cast<std::uint32_t>(m_impl->height),
+            .stride = static_cast<std::uint32_t>(m_impl->width),
+            .format = nandina::render::RenderTargetFormat::argb8888,
+        };
 
         // 1. 清空上一帧所有 ThorVG 绘制指令
         canvas.remove(nullptr);
         const auto remove_done = SteadyClock::now();
 
+        bool using_backend = false;
+        tvg::SwCanvas* active_canvas = &canvas;
+        if (m_impl->render_backend && m_impl->render_backend->begin_frame(target)) {
+            if (auto* backend_canvas = m_impl->render_backend->canvas(); backend_canvas != nullptr) {
+                active_canvas = backend_canvas;
+                using_backend = true;
+            }
+        }
+
         // 2. 用户回调：向 canvas 添加本帧 ThorVG 图元
-        on_draw(canvas);
+        nandina::render::Scene scene;
+        on_build_scene(scene);
+        if (using_backend && scene.command_count() > 0) {
+            if (!m_impl->render_backend->submit(scene) || !m_impl->render_backend->present()) {
+                using_backend = false;
+                active_canvas = &canvas;
+            }
+        }
+
+        if (!using_backend || scene.command_count() == 0) {
+            on_draw(*active_canvas);
+        }
         const auto build_done = SteadyClock::now();
 
         // 3. ThorVG 光栅化到 pixel_buffer（clear=true 每帧刷新背景）
-        if (canvas.draw(true) != tvg::Result::Success) {
-            return;
+        if (using_backend && scene.command_count() == 0) {
+            if (!m_impl->render_backend->present()) {
+                using_backend = false;
+                active_canvas = &canvas;
+            }
+        }
+        if (!using_backend) {
+            if (canvas.draw(true) != tvg::Result::Success) {
+                return;
+            }
         }
         const auto draw_done = SteadyClock::now();
-        if (canvas.sync() != tvg::Result::Success) {
-            return;
+        if (!using_backend) {
+            if (canvas.sync() != tvg::Result::Success) {
+                return;
+            }
         }
         const auto sync_done = SteadyClock::now();
 
@@ -750,6 +793,9 @@ namespace nandina::runtime {
     }
 
     auto NanWindow::on_draw(tvg::SwCanvas &) -> void {
+    }
+
+    auto NanWindow::on_build_scene(nandina::render::Scene&) -> void {
     }
 
     auto NanWindow::should_present_frame() const noexcept -> bool {

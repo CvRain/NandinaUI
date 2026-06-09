@@ -43,6 +43,11 @@ target_sources(nandina_widgets
             src/nan_spacer.cppm          # Spacer 弹性空白组件
             src/nan_progressbar.cppm     # ProgressBar 进度条组件
             src/nan_icon.cppm            # Icon 几何图标组件
+            src/nan_tabs.cppm            # Tabs 标签页组件
+            src/nan_popover.cppm         # Popover 浮层组件
+            src/nan_tooltip.cppm         # Tooltip 悬停提示组件
+            src/nan_dialog.cppm          # Dialog 模态对话框组件
+            src/nan_select.cppm          # Select 下拉选择控件
             src/nan_sidebar_menu_button.cppm # SidebarMenuButton 菜单项
             src/nan_sidebar_group.cppm   # SidebarGroup 分组组件
             src/nan_sidebar.cppm         # Sidebar 侧边栏主组件

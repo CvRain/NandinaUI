@@ -729,6 +729,86 @@ export namespace nandina::theme {
         };
     };
 
+    struct NanTabsStyle {
+        float header_height{40.0f};
+        float trigger_gap{8.0f};
+        float trigger_padding_h{4.0f};
+        float trigger_padding_v{4.0f};
+        float trigger_min_width{92.0f};
+        float content_gap{12.0f};
+        geometry::NanInsets content_padding{16.0f};
+        float corner_radius{10.0f};
+        float border_width{1.0f};
+
+        NanColor header_bg{NanColor::from(NanRgb{239, 241, 245})};
+        NanColor panel_bg{NanColor::from(NanRgb{255, 255, 255})};
+        NanColor border{NanColor::from(NanRgb{226, 228, 240})};
+
+        ButtonVariant trigger_variant{ButtonVariant::ghost};
+        ButtonVariant trigger_active_variant{ButtonVariant::default_variant};
+        ColorVariant trigger_color_variant{ColorVariant::neutral};
+        ColorVariant trigger_active_color_variant{ColorVariant::primary};
+        ButtonSize trigger_size{ButtonSize::sm};
+    };
+
+    enum class PopoverPlacement : std::uint8_t {
+        bottom,
+        top,
+        right,
+        left,
+    };
+
+    struct NanPopoverStyle {
+        PopoverPlacement placement{PopoverPlacement::bottom};
+        float gap{10.0f};
+        float corner_radius{10.0f};
+        float border_width{1.0f};
+        geometry::NanInsets panel_padding{12.0f};
+        NanColor panel_bg{NanColor::from(NanRgb{255, 255, 255})};
+        NanColor border{NanColor::from(NanRgb{226, 228, 240})};
+        NanColor shadow{NanColor::from(NanRgb{0, 0, 0, 36})};
+    };
+
+    struct NanTooltipStyle {
+        PopoverPlacement placement{PopoverPlacement::top};
+        float gap{8.0f};
+        float corner_radius{8.0f};
+        geometry::NanInsets padding{10.0f, 6.0f, 10.0f, 6.0f};
+        NanColor bg{NanColor::from(NanRgb{49, 50, 68})};
+        NanColor text{NanColor::from(NanRgb{239, 241, 245})};
+        float font_size{12.0f};
+    };
+
+    struct NanDialogStyle {
+        NanColor backdrop{NanColor::from(NanRgb{0, 0, 0, 110})};
+        NanColor panel_bg{NanColor::from(NanRgb{255, 255, 255})};
+        NanColor border{NanColor::from(NanRgb{226, 228, 240})};
+        float border_width{1.0f};
+        float corner_radius{12.0f};
+        geometry::NanInsets panel_padding{20.0f};
+        float max_width{560.0f};
+        float max_height{420.0f};
+    };
+
+    struct NanSelectStyle {
+        float min_width{220.0f};
+        float gap{8.0f};
+        float option_gap{4.0f};
+        geometry::NanInsets panel_padding{6.0f};
+        NanColor panel_bg{NanColor::from(NanRgb{255, 255, 255})};
+        NanColor border{NanColor::from(NanRgb{226, 228, 240})};
+        float border_width{1.0f};
+        float corner_radius{10.0f};
+        ButtonSize trigger_size{ButtonSize::md};
+        ButtonVariant trigger_variant{ButtonVariant::outline};
+        ColorVariant trigger_color_variant{ColorVariant::neutral};
+        ButtonSize option_size{ButtonSize::sm};
+        ButtonVariant option_variant{ButtonVariant::ghost};
+        ButtonVariant selected_option_variant{ButtonVariant::default_variant};
+        ColorVariant option_color_variant{ColorVariant::neutral};
+        ColorVariant selected_option_color_variant{ColorVariant::primary};
+    };
+
     // ═══════════════════════════════════════════════════════════════
     // § NanStylePrimitives — 聚合所有组件样式
     // ═══════════════════════════════════════════════════════════════
@@ -759,6 +839,11 @@ export namespace nandina::theme {
         NanSwitchStyle    switch_style;
         NanFocusRingStyle focus_ring;
         NanProgressStyle  progress;
+        NanTabsStyle      tabs;
+        NanPopoverStyle   popover;
+        NanTooltipStyle   tooltip;
+        NanDialogStyle    dialog;
+        NanSelectStyle    select;
 
         // ── 设计 Token ────────────────────────────────────
         NanSpacingTokens    spacing;

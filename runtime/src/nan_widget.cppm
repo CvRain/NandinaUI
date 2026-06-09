@@ -491,6 +491,16 @@ export namespace nandina::runtime {
         [[nodiscard]] auto size_value_width() const noexcept -> types::SizeValue { return size_value_width_; }
         [[nodiscard]] auto size_value_height() const noexcept -> types::SizeValue { return size_value_height_; }
 
+        // ── LayoutInfo ────────────────────────────────────────────────
+        /// 返回此组件在主轴方向上的布局信息，供父容器 LayoutContainer 收集。
+        /// @param cross_constraint  交叉轴约束（例如宽度），用于 height-for-width 计算。
+        [[nodiscard]] virtual auto layout_info(const bool for_width,
+                                               const float /*cross_constraint*/ = 0.0f) const -> types::LayoutInfo {
+            // 默认实现：从 measured_size 推导
+            const float v = for_width ? preferred_size().width() : preferred_size().height();
+            return {v, 0.0f, geometry::NanConstraints::k_infinity, 0.0f};
+        }
+
         /**
          * @brief 遍历所有直接子节点（只读）
          */
