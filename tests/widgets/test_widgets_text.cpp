@@ -85,6 +85,19 @@ TEST(WidgetsTextTest, VerticalLayoutInfoUsesHeightForWidth) {
     EXPECT_GE(narrow.min, text->font().line_height());
 }
 
+TEST(WidgetsTextTest, BreakWordWrapPolicyReducesHorizontalMinimum) {
+    auto text = nandina::widgets::Text::create();
+    text->set_text("supercalifragilisticexpialidocious");
+    text->set_font_size(9.0f);
+
+    const auto word_info = text->layout_info(true, 0.0f);
+
+    text->set_wrap_policy(nandina::text::TextWrapPolicy::break_word);
+    const auto break_info = text->layout_info(true, 0.0f);
+
+    EXPECT_GT(word_info.min, break_info.min);
+}
+
 TEST(WidgetsTextTest, TypographyRoleAppliesResolvedTypeStyle) {
     ScopedStyleReset style_reset;
 

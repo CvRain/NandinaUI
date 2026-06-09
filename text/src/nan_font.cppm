@@ -59,6 +59,11 @@ export namespace nandina::text {
         scale, // 等比缩小字号直到放下（expensive）
     };
 
+    enum class TextWrapPolicy : std::uint8_t {
+        word,
+        break_word,
+    };
+
     // ── Glyph 度量信息 ────────────────────────────────────────
     /// 单个字形（glyph）的度量数据，由 shaper 产出。
     struct GlyphInfo {
@@ -154,6 +159,7 @@ export namespace nandina::text {
         auto line_height(float lh) -> NanFont&;
         auto letter_spacing(float ls) -> NanFont&;
         auto overflow(TextOverflow o) -> NanFont&;
+        auto wrap_policy(TextWrapPolicy p) -> NanFont&;
         auto max_lines(int n) -> NanFont&;
         auto single_line(bool s) -> NanFont&;
 
@@ -168,6 +174,7 @@ export namespace nandina::text {
         [[nodiscard]] auto line_height() const noexcept -> float;
         [[nodiscard]] auto letter_spacing() const noexcept -> float;
         [[nodiscard]] auto overflow() const noexcept -> TextOverflow;
+        [[nodiscard]] auto wrap_policy() const noexcept -> TextWrapPolicy;
         [[nodiscard]] auto max_lines() const noexcept -> int;
         [[nodiscard]] auto single_line() const noexcept -> bool;
 
@@ -190,7 +197,12 @@ export namespace nandina::text {
 
         // ── 绘制（颜色由 this->color() 提供）──────────────
 
-        auto paint(tvg::SwCanvas& canvas, const TextLayout& layout, float origin_x, float origin_y) const -> void;
+        auto paint(
+            tvg::SwCanvas& canvas,
+            const TextLayout& layout,
+            float origin_x,
+            float origin_y,
+            const geometry::NanRect* clip_rect = nullptr) const -> void;
 
         // ── 度量查询（只读，来自已加载字体）───────────────
 
@@ -220,6 +232,7 @@ export namespace nandina::text {
         float m_line_height_override{0.0f};
         float m_letter_spacing{0.0f};
         TextOverflow m_overflow{TextOverflow::wrap};
+        TextWrapPolicy m_wrap_policy{TextWrapPolicy::word};
         int m_max_lines{0};
         bool m_single_line{false};
 

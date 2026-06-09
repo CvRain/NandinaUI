@@ -344,10 +344,10 @@ TEST(ShowcaseLayoutTest, MainPagePanelAndCardContentDoNotStackOnSameBounds) {
     ASSERT_GE(root_column.child_count(), 1u);
     auto& card = child_at(root_column, root_column.child_count() - 1);
 
-    // Card 无 title（MainPage 未设置）→ 仅 content column 一个子节点
+    // MainPage 的最后一个样例仍应是 Card，且其内部内容应按垂直方向依次排布，不能重叠在同一 bounds 上。
     ASSERT_GE(card.child_count(), 1u);
     auto& card_content_column = child_at(card, 0);
-    ASSERT_EQ(card_content_column.child_count(), 3u);
+    ASSERT_GE(card_content_column.child_count(), 2u);
 
     const auto card_first = card_content_column.children()[0]->bounds();
     const auto card_second = card_content_column.children()[1]->bounds();

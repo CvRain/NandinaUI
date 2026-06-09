@@ -99,6 +99,7 @@ class TextFieldNode;
 class FieldNode;
 class ProgressBarNode;
 class SidebarMenuButtonNode;
+class CardNode;
 template<typename W>
 class WidgetNode;
 
@@ -123,7 +124,7 @@ class NanAppWindow;
 
 [[nodiscard]] inline auto sidebar_menu_button(std::string_view text = {}) -> SidebarMenuButtonNode;
 
-[[nodiscard]] inline auto card(Children&& children) -> Node;
+[[nodiscard]] inline auto card(Children&& children) -> CardNode;
 
 [[nodiscard]] inline auto panel(Children&& children) -> Node;
 
@@ -193,24 +194,6 @@ public:
     auto key(this Self&& self, const std::string_view& value) -> Self&& {
         auto& node = static_cast<Node&>(self);
         node.m_key.assign(value);
-        return std::forward<Self>(self);
-    }
-
-    template<typename Self>
-        requires std::derived_from<std::remove_cvref_t<Self>, Node>
-    auto title(this Self&& self, const std::string_view& value) -> Self&& {
-        const auto& node = static_cast<Node&>(self);
-
-        // 由于 Node 是一个通用包装，无法预设 title 应该绑定到哪个 Widget 属性上，因此暴力尝试 Card 和 Panel
-        // 的标题属性。 但是感觉这样的写法还是不够优雅，不知道为什么我当时为什么要这样写。
-        // 或许之后有更好的写法可以替代这个暴力绑定。 --ClaudeRainer 2024-06-01
-        const auto unwrapped_node = node.unwrapped();
-        if (auto* widget = dynamic_cast<widgets::Card*>(unwrapped_node); widget != nullptr) {
-            widget->set_title(value.data());
-        }
-        if (auto* widget = dynamic_cast<widgets::Panel*>(unwrapped_node); widget != nullptr) {
-            widget->set_title(value);
-        }
         return std::forward<Self>(self);
     }
 
@@ -872,6 +855,13 @@ public:
 
     template<typename Self>
         requires std::derived_from<std::remove_cvref_t<Self>, LabelNode>
+    auto wrap_policy(this Self&& self, const nandina::text::TextWrapPolicy value) -> Self&& {
+        self.m_typed->set_wrap_policy(value);
+        return std::forward<Self>(self);
+    }
+
+    template<typename Self>
+        requires std::derived_from<std::remove_cvref_t<Self>, LabelNode>
     auto single_line(this Self&& self, const bool value) -> Self&& {
         self.m_typed->set_single_line(value);
         return std::forward<Self>(self);
@@ -1150,6 +1140,111 @@ public:
         requires std::derived_from<std::remove_cvref_t<Self>, ButtonNode>
     auto on_leave(this Self&& self, std::function<void()> handler) -> Self&& {
         self.m_typed->on_leave(std::move(handler));
+        return std::forward<Self>(self);
+    }
+};
+
+class CardNode: public WidgetNode<nandina::widgets::Card> {
+public:
+    explicit CardNode(nandina::widgets::Card::Ptr widget):
+        WidgetNode<nandina::widgets::Card>(std::move(widget)) {}
+
+    template<typename Self>
+        requires std::derived_from<std::remove_cvref_t<Self>, CardNode>
+    auto title(this Self&& self, const std::string_view value) -> Self&& {
+        self.m_typed->set_title(std::string{value});
+        return std::forward<Self>(self);
+    }
+
+    template<typename Self>
+        requires std::derived_from<std::remove_cvref_t<Self>, CardNode>
+    auto description(this Self&& self, const std::string_view value) -> Self&& {
+        self.m_typed->set_description(std::string{value});
+        return std::forward<Self>(self);
+    }
+
+    template<typename Self>
+        requires std::derived_from<std::remove_cvref_t<Self>, CardNode>
+    auto title_color(this Self&& self, const nandina::NanColor& value) -> Self&& {
+        self.m_typed->set_title_color(value);
+        return std::forward<Self>(self);
+    }
+
+    template<typename Self>
+        requires std::derived_from<std::remove_cvref_t<Self>, CardNode>
+    auto title_font_size(this Self&& self, const float value) -> Self&& {
+        self.m_typed->set_title_font_size(value);
+        return std::forward<Self>(self);
+    }
+
+    template<typename Self>
+        requires std::derived_from<std::remove_cvref_t<Self>, CardNode>
+    auto title_font_weight(this Self&& self, const nandina::text::NanFontWeight value) -> Self&& {
+        self.m_typed->set_title_font_weight(value);
+        return std::forward<Self>(self);
+    }
+
+    template<typename Self>
+        requires std::derived_from<std::remove_cvref_t<Self>, CardNode>
+    auto description_color(this Self&& self, const nandina::NanColor& value) -> Self&& {
+        self.m_typed->set_description_color(value);
+        return std::forward<Self>(self);
+    }
+
+    template<typename Self>
+        requires std::derived_from<std::remove_cvref_t<Self>, CardNode>
+    auto size(this Self&& self, const nandina::widgets::CardSize value) -> Self&& {
+        self.m_typed->set_size(value);
+        return std::forward<Self>(self);
+    }
+
+    template<typename Self>
+        requires std::derived_from<std::remove_cvref_t<Self>, CardNode>
+    auto card_spacing(this Self&& self, const float value) -> Self&& {
+        self.m_typed->set_card_spacing(value);
+        return std::forward<Self>(self);
+    }
+
+    template<typename Self>
+        requires std::derived_from<std::remove_cvref_t<Self>, CardNode>
+    auto show_accent(this Self&& self, const bool value = true) -> Self&& {
+        self.m_typed->set_show_accent(value);
+        return std::forward<Self>(self);
+    }
+
+    template<typename Self>
+        requires std::derived_from<std::remove_cvref_t<Self>, CardNode>
+    auto accent_color(this Self&& self, const nandina::NanColor& value) -> Self&& {
+        self.m_typed->set_accent_color(value);
+        return std::forward<Self>(self);
+    }
+
+    template<typename Self, typename N>
+        requires std::derived_from<std::remove_cvref_t<Self>, CardNode>
+    auto header_action(this Self&& self, N&& action_node) -> Self&& {
+        Node moved{std::forward<N>(action_node)};
+        if (auto action_widget = std::move(moved).take_widget()) {
+            self.m_typed->set_header_action(std::move(action_widget));
+        }
+        static_cast<Node&>(self).absorb(std::move(moved));
+        return std::forward<Self>(self);
+    }
+
+    template<typename Self>
+        requires std::derived_from<std::remove_cvref_t<Self>, CardNode>
+    auto elevation(this Self&& self, const float value) -> Self&& {
+        self.m_typed->set_elevation(value);
+        return std::forward<Self>(self);
+    }
+
+    template<typename Self, typename N>
+        requires std::derived_from<std::remove_cvref_t<Self>, CardNode>
+    auto footer(this Self&& self, N&& footer_node) -> Self&& {
+        Node moved{std::forward<N>(footer_node)};
+        if (auto footer_widget = std::move(moved).take_widget()) {
+            self.m_typed->set_footer(std::move(footer_widget));
+        }
+        static_cast<Node&>(self).absorb(std::move(moved));
         return std::forward<Self>(self);
     }
 };
@@ -2081,8 +2176,16 @@ private:
 }
 
 /** @brief 卡片容器 */
-[[nodiscard]] inline auto card(Children&& children) -> Node {
-    return NodeFactory::container<nandina::widgets::Card>(std::move(children));
+[[nodiscard]] inline auto card(Children&& children) -> CardNode {
+    auto widget = nandina::widgets::Card::create();
+    CardNode result{std::move(widget)};
+    for (auto& child: std::move(children).take()) {
+        if (auto cw = std::move(child).take_widget()) {
+            result.widget().add_child(std::move(cw));
+        }
+        result.absorb(std::move(child));
+    }
+    return result;
 }
 
 /** @brief 面板容器 */

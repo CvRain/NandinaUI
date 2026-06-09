@@ -235,7 +235,32 @@ Button 不应承担：
 
 - Surface：容器底面与 padding
 - Text/Label：标题与正文文本
-- Card / Panel 自身：标题区、内容区、accent/header 这些结构语义
+- Panel：中性内容面板容器，不承载 title / header / footer 语义
+- Card：标题区、内容区、accent/header、footer 这些结构语义
+
+当前对齐外部组件库后的判断：
+
+- shadcn：最接近当前目标。其 `Card / CardHeader / CardTitle / CardDescription / CardAction / CardContent / CardFooter` 强调的是语义模板结构，以及 `size + spacing` 作为一等入口。
+- PrimeNG：更偏 template slot 思路，强调 `header / title / subtitle / content / footer` 插槽与页面作者的自由排布，适合快速拼业务卡片，但结构边界略松。
+- Skeleton：更偏“卡片就是一个视觉容器”的思路，重点在 surface/preset/内容分组，而不是强语义子结构。
+
+因此 NandinaUI 当前对 `Card` 的路线应是：
+
+- 保留 Skeleton 风格的 body-only 可用性：没有 header/footer 也能自然成立
+- 采用 shadcn 风格的语义模板主线：title / description / header_action / footer / size / spacing 明确收口
+- 只吸收 PrimeNG 的少量 slot 心智，不把 `Card` 重新做成任意模板容器；自由结构仍优先交给 body 内容组合
+
+基于这个判断，`Card` 下一阶段的三个方向应调整为：
+
+- 1. header action 的固定宽度策略
+  - 目标：在窄宽度下定义 action 与 title/description 的压缩、换行、对齐契约
+  - 原因：这是 shadcn `CardAction` 真正落地后最先暴露的布局问题
+- 2. 最小化的 header layout 语义补充
+  - 目标：仅在有明确价值时补少量如 `header_action_alignment` / `header_compact` 这类入口
+  - 原因：避免过早演化为 PrimeNG 式“所有 header 都是自由模板”
+- 3. 延后完整 `CardHeader/CardContent/CardFooter` authoring 拆分
+  - 目标：先观察 typed slot API 是否足够，再决定是否正式引入更细的 authoring 子节点
+  - 原因：当前 `CardNode` 已能覆盖最高频案例，继续细拆的收益暂时低于保持 API 稳定
 
 Card / Panel 通常不是交互控件，因此不应默认塞 Pressable 或 FocusRing，除非它们真的是可聚焦/可点击容器。
 

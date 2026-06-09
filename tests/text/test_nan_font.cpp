@@ -134,6 +134,18 @@ TEST(NanFontTest, ShapeWithWrap) {
     EXPECT_GT(multi.total_height, single.total_height);
 }
 
+TEST(NanFontTest, BreakWordWrapPolicyPreservesMoreWidthForMixedText) {
+    auto word_font = NanFont{}.size(14.0f).overflow(TextOverflow::wrap).wrap_policy(TextWrapPolicy::word);
+    auto break_font = NanFont{}.size(14.0f).overflow(TextOverflow::wrap).wrap_policy(TextWrapPolicy::break_word);
+
+    const auto word_layout = word_font.shape("alpha beta gamma", 36.0f);
+    const auto break_layout = break_font.shape("alpha beta gamma", 36.0f);
+
+    EXPECT_GT(word_layout.lines.size(), 1u);
+    EXPECT_GE(break_layout.lines.size(), word_layout.lines.size());
+    EXPECT_LT(break_layout.total_width, word_layout.total_width);
+}
+
 TEST(NanFontTest, ShapeWithMaxLines) {
     auto font = NanFont{}.size(14.0f).max_lines(2);
 

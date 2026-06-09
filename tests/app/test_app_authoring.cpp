@@ -738,6 +738,7 @@ TEST(AppAuthoringTest, CardFactorySupportsTitleStylingAndChildRefs) {
         nandina::app::card(nandina::app::children(
             nandina::app::adopt(TestWidget::create()).bind(child_ref)))
             .title("Stats")
+            .description("Summary metrics")
             .bg_color(nandina::NanColor::from(nandina::NanRgb{50, 60, 70}))
             .corner_radius(12.0f)
             .bind(card_ref));
@@ -746,6 +747,7 @@ TEST(AppAuthoringTest, CardFactorySupportsTitleStylingAndChildRefs) {
     ASSERT_TRUE(card_ref);
     ASSERT_TRUE(child_ref);
     EXPECT_EQ(card_ref->title(), "Stats");
+    EXPECT_EQ(card_ref->description(), "Summary metrics");
     EXPECT_EQ(child_ref.get(), card_ref->children().front().get());
     EXPECT_FLOAT_EQ(card_ref->corner_radius(), 12.0f);
     const auto bg = card_ref->bg_color().to<nandina::NanRgb>();
@@ -754,14 +756,52 @@ TEST(AppAuthoringTest, CardFactorySupportsTitleStylingAndChildRefs) {
     EXPECT_EQ(bg.blue(), 70u);
 }
 
-TEST(AppAuthoringTest, PanelFactorySupportsTitleStylingAndChildRefs) {
+TEST(AppAuthoringTest, CardNodeFooterBindsWidgetIntoSemanticFooterSlot) {
+    nandina::app::Ref<nandina::widgets::Card> card_ref;
+
+    auto mounted = nandina::app::mount(
+        nandina::app::card(nandina::app::children(
+            nandina::app::label("Body")
+        ))
+            .title("Plan")
+            .footer(nandina::app::row(nandina::app::children(
+                nandina::app::button("Cancel"),
+                nandina::app::spacer(),
+                nandina::app::button("Save")
+            )).gap(8))
+            .bind(card_ref));
+
+    ASSERT_NE(mounted, nullptr);
+    ASSERT_TRUE(card_ref);
+    EXPECT_EQ(card_ref->title(), "Plan");
+    ASSERT_NE(card_ref->footer(), nullptr);
+}
+
+TEST(AppAuthoringTest, CardNodeHeaderActionBindsWidgetIntoSemanticHeaderSlot) {
+    nandina::app::Ref<nandina::widgets::Card> card_ref;
+
+    auto mounted = nandina::app::mount(
+        nandina::app::card(nandina::app::children(
+            nandina::app::label("Body")
+        ))
+            .title("Plan")
+            .header_action(nandina::app::button("Manage")
+                .size(nandina::widgets::ButtonSize::sm))
+            .bind(card_ref));
+
+    ASSERT_NE(mounted, nullptr);
+    ASSERT_TRUE(card_ref);
+    EXPECT_EQ(card_ref->title(), "Plan");
+    ASSERT_NE(card_ref->header_action(), nullptr);
+}
+
+TEST(AppAuthoringTest, PanelFactorySupportsNeutralContainerStylingAndChildRefs) {
     nandina::app::Ref<nandina::widgets::Panel> panel_ref;
     nandina::app::Ref<TestWidget> child_ref;
 
     auto mounted = nandina::app::mount(
         nandina::app::panel(nandina::app::children(
             nandina::app::adopt(TestWidget::create()).bind(child_ref)))
-            .title("Settings")
             .bg_color(nandina::NanColor::from(nandina::NanRgb{42, 44, 62}))
             .corner_radius(9.0f)
             .bind(panel_ref));
@@ -769,7 +809,6 @@ TEST(AppAuthoringTest, PanelFactorySupportsTitleStylingAndChildRefs) {
     ASSERT_NE(mounted, nullptr);
     ASSERT_TRUE(panel_ref);
     ASSERT_TRUE(child_ref);
-    EXPECT_EQ(panel_ref->title(), "Settings");
     EXPECT_EQ(child_ref.get(), panel_ref->children().front().get());
     EXPECT_FLOAT_EQ(panel_ref->corner_radius(), 9.0f);
     const auto bg = panel_ref->bg_color().to<nandina::NanRgb>();
@@ -798,16 +837,6 @@ TEST(AppAuthoringTest, CardLayoutAffectingSettersMarkLayoutDirty) {
 
     card->set_show_accent(true);
     EXPECT_TRUE(card->is_layout_dirty());
-}
-
-TEST(AppAuthoringTest, PanelHeaderHeightMarksLayoutDirty) {
-    auto panel = nandina::widgets::Panel::create();
-
-    panel->set_bounds(0.0f, 0.0f, 160.0f, 96.0f);
-    EXPECT_FALSE(panel->is_layout_dirty());
-
-    panel->set_header_height(36.0f);
-    EXPECT_TRUE(panel->is_layout_dirty());
 }
 
 TEST(AppAuthoringTest, LabelLayoutAffectingSettersMarkLayoutDirty) {

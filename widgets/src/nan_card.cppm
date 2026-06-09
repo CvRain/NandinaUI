@@ -7,6 +7,7 @@ module;
 #include <memory>
 #include <utility>
 #include <algorithm>
+#include <cstdint>
 #include <cmath>
 #include <thorvg-1/thorvg.h>
 
@@ -17,6 +18,7 @@ import nandina.foundation.nan_insets;
 import nandina.foundation.nan_size;
 import nandina.foundation.nan_rect;
 import nandina.foundation.color;
+import nandina.layout.container;
 import nandina.layout.flex_widgets;
 import nandina.reactive.prop;
 import nandina.widgets.surface;
@@ -46,6 +48,177 @@ import nandina.theme.nan_style;
  *   card->add_child(std::move(content));
  */
 export namespace nandina::widgets {
+    enum class CardSize : std::uint8_t {
+        default_size,
+        sm,
+    };
+
+    class CardHeaderLayout final : public runtime::NanWidget {
+    public:
+        static auto Create() -> std::unique_ptr<CardHeaderLayout> {
+            return std::unique_ptr<CardHeaderLayout>(new CardHeaderLayout());
+        }
+
+        auto set_text_widget(runtime::NanWidget::Ptr widget) -> runtime::NanWidget* {
+            m_text = add_child(std::move(widget));
+            return m_text;
+        }
+
+        auto set_action_slot(runtime::NanWidget::Ptr widget) -> runtime::NanWidget* {
+            m_action_slot = add_child(std::move(widget));
+            return m_action_slot;
+        }
+
+        auto set_section_gap(const float gap) -> CardHeaderLayout& {
+            m_gap = gap;
+            mark_layout_dirty();
+            return *this;
+        }
+
+        [[nodiscard]] auto preferred_size() const noexcept -> geometry::NanSize override {
+            const auto text = m_text && m_text->visible() ? m_text->preferred_size() : geometry::NanSize{};
+            const auto action = m_action_slot && m_action_slot->visible() ? m_action_slot->preferred_size() : geometry::NanSize{};
+
+            if (text.height() <= 0.0f) {
+                return action;
+            }
+            if (action.height() <= 0.0f) {
+                return text;
+            }
+
+            return geometry::NanSize{
+                text.width() + m_gap + action.width(),
+                std::max(text.height(), action.height())
+            };
+        }
+
+        auto measure(const geometry::NanConstraints& constraints) -> void override {
+            const bool has_text = m_text && m_text->visible();
+            const bool has_action = m_action_slot && m_action_slot->visible();
+            const float max_width = constraints.max_width();
+
+            geometry::NanSize text_size{};
+            geometry::NanSize action_size{};
+
+            if (has_action) {
+                m_action_slot->measure(geometry::NanConstraints{
+                    0.0f,
+                    max_width,
+                    0.0f,
+                    geometry::NanConstraints::k_infinity
+                });
+                action_size = measured_or_preferred(*m_action_slot);
+            }
+
+            if (has_text) {
+                const bool stack_action = should_stack(max_width, action_size.width());
+                m_stack_action = has_action && stack_action;
+
+                const float text_max_width = (!has_action || m_stack_action || max_width == geometry::NanConstraints::k_infinity)
+                    ? max_width
+                    : std::max(0.0f, max_width - action_size.width() - m_gap);
+
+                m_text->measure(geometry::NanConstraints{
+                    0.0f,
+                    text_max_width,
+                    0.0f,
+                    geometry::NanConstraints::k_infinity
+                });
+                text_size = measured_or_preferred(*m_text);
+            } else {
+                m_stack_action = false;
+            }
+
+            geometry::NanSize measured{};
+            if (has_text && has_action) {
+                if (m_stack_action) {
+                    measured = geometry::NanSize{
+                        std::max(text_size.width(), action_size.width()),
+                        text_size.height() + m_gap + action_size.height()
+                    };
+                } else {
+                    measured = geometry::NanSize{
+                        text_size.width() + m_gap + action_size.width(),
+                        std::max(text_size.height(), action_size.height())
+                    };
+                }
+            } else if (has_text) {
+                measured = text_size;
+            } else if (has_action) {
+                measured = action_size;
+            }
+
+            set_measured_layout_state(constraints, constraints.constrain(measured));
+        }
+
+        auto layout() -> void override {
+            const bool has_text = m_text && m_text->visible();
+            const bool has_action = m_action_slot && m_action_slot->visible();
+
+            if (has_text) {
+                const auto text_size = measured_or_preferred(*m_text);
+                if (has_action && m_stack_action) {
+                    const float text_h = std::min(text_size.height(), height());
+                    m_text->set_bounds(x(), y(), width(), text_h);
+                    m_text->layout();
+                } else {
+                    const float action_w = has_action ? std::min(measured_or_preferred(*m_action_slot).width(), width()) : 0.0f;
+                    const float text_w = has_action ? std::max(0.0f, width() - action_w - m_gap) : width();
+                    m_text->set_bounds(x(), y(), text_w, height());
+                    m_text->layout();
+                }
+            }
+
+            if (has_action) {
+                const auto action_size = measured_or_preferred(*m_action_slot);
+                const float action_w = std::min(action_size.width(), width());
+                const float action_h = std::min(action_size.height(), height());
+                const float action_x = x() + std::max(0.0f, width() - action_w);
+                const float action_y = has_text && m_stack_action
+                    ? y() + measured_or_preferred(*m_text).height() + m_gap
+                    : y();
+                m_action_slot->set_bounds(action_x, action_y, action_w, action_h);
+                m_action_slot->layout();
+            }
+
+            clear_layout_dirty();
+        }
+
+        auto set_bounds(const float x, const float y, const float w, const float h) noexcept -> runtime::NanWidget& override {
+            NanWidget::set_bounds(x, y, w, h);
+            return *this;
+        }
+
+    private:
+        CardHeaderLayout() noexcept = default;
+
+        [[nodiscard]] static auto measured_or_preferred(const runtime::NanWidget& widget) noexcept -> geometry::NanSize {
+            const auto measured = widget.measured_size();
+            const auto preferred = widget.preferred_size();
+            return geometry::NanSize{
+                measured.width() > 0.0f ? measured.width() : preferred.width(),
+                measured.height() > 0.0f ? measured.height() : preferred.height()
+            };
+        }
+
+        [[nodiscard]] auto should_stack(const float max_width, const float action_width) const noexcept -> bool {
+            if (max_width == geometry::NanConstraints::k_infinity || action_width <= 0.0f) {
+                return false;
+            }
+
+            constexpr float min_inline_header_width = 280.0f;
+            constexpr float min_inline_text_width = 168.0f;
+            return max_width < min_inline_header_width
+                || (max_width - action_width - m_gap) < min_inline_text_width
+                || action_width > max_width * 0.4f;
+        }
+
+        runtime::NanWidget* m_text{nullptr};
+        runtime::NanWidget* m_action_slot{nullptr};
+        float m_gap{8.0f};
+        bool m_stack_action{false};
+    };
+
     class Card : public Surface {
     public:
         using Ptr = std::unique_ptr<Card>;
@@ -65,6 +238,30 @@ export namespace nandina::widgets {
 
         [[nodiscard]] auto elevation() const noexcept -> float {
             return m_elevation.get();
+        }
+
+        auto set_size(const CardSize size) -> Card& {
+            m_size = size;
+            apply_size_style();
+            mark_layout_dirty();
+            return *this;
+        }
+
+        [[nodiscard]] auto size() const noexcept -> CardSize {
+            return m_size;
+        }
+
+        auto set_card_spacing(const float spacing) -> Card& {
+            m_card_spacing.set(std::max(8.0f, spacing));
+            m_spacing_overridden = true;
+            sync_title_host_style();
+            sync_footer_style();
+            mark_layout_dirty();
+            return *this;
+        }
+
+        [[nodiscard]] auto card_spacing() const noexcept -> float {
+            return m_card_spacing.get();
         }
 
         // ── 从 Surface override 方法（返回 Card& 以保持链式） ──
@@ -96,12 +293,14 @@ export namespace nandina::widgets {
         // ── 可选标题 ──────────────────────────────────────
         auto set_title(std::string title) -> Card& {
             m_title = std::move(title);
-            if (!m_title.empty() && !m_title_host) {
+            if ((!m_title.empty() || !m_description.empty()) && !m_title_host) {
                 ensure_title_label();
             }
             if (m_title_label) {
                 m_title_label->set_text(m_title);
+                m_title_label->set_visible(!m_title.empty());
             }
+            sync_header_visibility();
             mark_layout_dirty();
             return *this;
         }
@@ -118,6 +317,7 @@ export namespace nandina::widgets {
         auto set_title_font_size(float size) -> Card& {
             m_title_font_size.set(size);
             if (m_title_label) { m_title_label->set_font_size(size); }
+            if (m_description_label) { m_description_label->set_font_size(std::max(11.0f, size - 1.0f)); }
             sync_title_host_style();
             mark_layout_dirty();
             return *this;
@@ -155,19 +355,76 @@ export namespace nandina::widgets {
         // ── 可选描述文本（标题下方副标题） ──────────────
         auto set_description(std::string desc) -> Card& {
             m_description = std::move(desc);
-            if (!m_title_host) ensure_title_label();
+            if ((!m_title.empty() || !m_description.empty()) && !m_title_host) {
+                ensure_title_label();
+            }
+            if (m_description_label) {
+                m_description_label->set_text(m_description);
+                m_description_label->set_visible(!m_description.empty());
+            }
+            sync_header_visibility();
             mark_layout_dirty();
             return *this;
+        }
+
+        auto set_description_color(const nandina::NanColor& color) -> Card& {
+            m_description_color.set(color);
+            if (m_description_label) {
+                m_description_label->set_color(color);
+            }
+            mark_dirty();
+            return *this;
+        }
+
+        [[nodiscard]] auto description_color() const noexcept -> const nandina::NanColor& {
+            return m_description_color.get();
         }
 
         [[nodiscard]] auto description() const noexcept -> const std::string& {
             return m_description;
         }
 
+        // ── 可选 Header Action 区域 ───────────────────────
+        auto set_header_action(runtime::NanWidget::Ptr action) -> Card& {
+            m_has_header_action = action != nullptr;
+            ensure_title_label();
+            if (!m_header_action_slot) {
+                return *this;
+            }
+
+            if (m_header_action) {
+                m_header_action->set_visible(false);
+                m_header_action->set_hit_test_visible(false);
+            }
+
+            m_header_action_slot->clear_children();
+            m_header_action = nullptr;
+
+            if (action) {
+                m_header_action = m_header_action_slot->add_child(std::move(action));
+                m_header_action_slot->set_visible(true);
+            } else {
+                m_header_action_slot->set_visible(false);
+            }
+
+            sync_header_visibility();
+            sync_title_host_style();
+            mark_layout_dirty();
+            return *this;
+        }
+
+        [[nodiscard]] auto header_action() const noexcept -> runtime::NanWidget* {
+            return m_header_action;
+        }
+
         // ── 可选 Footer 区域 ────────────────────────────
         auto set_footer(runtime::NanWidget::Ptr footer) -> Card& {
+            if (m_footer) {
+                m_footer->set_visible(false);
+                m_footer->set_hit_test_visible(false);
+            }
             auto wrapper = layout::Padding::Create();
-            wrapper->padding(12.0f, 12.0f, 16.0f, 12.0f);
+            wrapper->padding(resolved_section_spacing(), resolved_section_spacing(), padding().right(), resolved_section_spacing());
             wrapper->child(std::move(footer));
             m_footer = add_child(std::move(wrapper));
             mark_layout_dirty();
@@ -186,12 +443,22 @@ export namespace nandina::widgets {
 
         auto measure(const geometry::NanConstraints &constraints) -> void override {
             const auto &pad = padding();
-            const float header_h = title_header_height();
-            const float footer_h = footer_height();
 
             const float content_avail_w = constraints.max_width() == geometry::NanConstraints::k_infinity
                 ? geometry::NanConstraints::k_infinity
                 : std::max(0.0f, constraints.max_width() - pad.left() - pad.right());
+
+            if (m_title_host) {
+                m_title_host->measure(geometry::NanConstraints{
+                    0.0f,
+                    constraints.max_width(),
+                    0.0f,
+                    geometry::NanConstraints::k_infinity
+                });
+            }
+
+            const float header_h = title_header_height();
+            const float footer_h = footer_height();
 
             // 用无约束测量获取子节点真实首选宽度，再以此限制排版宽度。
             // 不能依赖 child.preferred_size() 的缓存，因为大幅缩放后缓存的
@@ -200,7 +467,7 @@ export namespace nandina::widgets {
             if (content_avail_w != geometry::NanConstraints::k_infinity && content_avail_w > 0.0f) {
                 geometry::NanSize natural_pref{0.0f, 0.0f};
                 for_each_child([&](runtime::NanWidget &child) {
-                    if (&child == m_title_host || &child == m_footer) return;
+                    if (!child.visible() || &child == m_title_host || &child == m_footer) return;
                     child.measure(geometry::NanConstraints{
                         0.0f, geometry::NanConstraints::k_infinity,
                         0.0f, geometry::NanConstraints::k_infinity
@@ -223,7 +490,7 @@ export namespace nandina::widgets {
 
             geometry::NanSize child_measured{0.0f, 0.0f};
             for_each_child([&](runtime::NanWidget &child) {
-                if (&child == m_title_host || &child == m_footer) return;
+                if (!child.visible() || &child == m_title_host || &child == m_footer) return;
 
                 const geometry::NanConstraints cc{
                     std::max(0.0f, constraints.min_width() - pad.left() - pad.right()),
@@ -288,7 +555,7 @@ export namespace nandina::widgets {
                 const float content_h = std::max(0.0f,
                     height() - header_h - footer_h - pad.top() - pad.bottom());
                 for_each_child([&](runtime::NanWidget& child) {
-                    if (&child == m_title_host || &child == m_footer) return;
+                    if (!child.visible() || &child == m_title_host || &child == m_footer) return;
                     child.set_bounds(x() + pad.left(), content_y,
                         width() - pad.left() - pad.right(), content_h);
                     child.layout();
@@ -307,7 +574,17 @@ export namespace nandina::widgets {
         }
 
         [[nodiscard]] auto preferred_size() const noexcept -> geometry::NanSize override {
-            const auto child_pref = measure_content_preferred_size(m_title_host);
+            geometry::NanSize child_pref{0.0f, 0.0f};
+            for_each_child([&](const runtime::NanWidget& child) {
+                if (!child.visible() || &child == m_title_host || &child == m_footer) {
+                    return;
+                }
+                const auto cp = child.preferred_size();
+                child_pref = geometry::NanSize{
+                    std::max(child_pref.width(), cp.width()),
+                    std::max(child_pref.height(), cp.height())
+                };
+            });
             const auto &pad = padding();
             const float header_h = title_header_height();
             const float footer_h = footer_height();
@@ -371,7 +648,7 @@ export namespace nandina::widgets {
             }
 
             // ── 4. 标题栏与内容区分隔线 ──────────────────
-            if (!m_title.empty() && header_off > 0.0f) {
+            if (header_off > 0.0f && (!m_title.empty() || !m_description.empty() || m_header_action != nullptr)) {
                 auto *divider = tvg::Shape::gen();
                 const float div_y = rect.y() + header_off;
                 divider->moveTo(rect.x() + 4.0f, div_y);
@@ -409,28 +686,60 @@ export namespace nandina::widgets {
             m_corner_radius.set(style.corner_radius);
             m_border_color = style.border;
             m_border_width = style.border_width;
-            set_padding(style.padding);
-
-            m_title_font_size.set(style.title_font_size);
             m_title_color.set(style.title_font_color);
+            m_title_font_size.set(style.title_font_size);
+            m_card_spacing.set(style.section_spacing);
+            apply_size_style();
         }
 
         auto ensure_title_label() -> void {
-            if (m_title_host || m_title.empty())
+            if (m_title_host || (m_title.empty() && m_description.empty() && !m_has_header_action))
                 return;
 
             auto title_host = layout::Padding::Create();
             m_title_host = title_host.get();
 
-            auto label = Text::create();
-            label->set_text(m_title)
+            auto header_layout = CardHeaderLayout::Create();
+            m_header_layout = header_layout.get();
+
+            auto header_column = layout::Column::Create();
+            header_column->gap(4.0f).align_items(layout::LayoutAlignment::stretch);
+            m_header_column = header_column.get();
+
+            auto title_label = Text::create();
+            title_label->set_text(m_title)
                     .set_typography_role(theme::NanTypographyRole::title_medium)
                     .set_font_size(m_title_font_size.get())
                     .set_font_weight(m_title_font_weight)
-                    .set_color(m_title_color.get());
-            m_title_label = label.get();
-            title_host->child(std::move(label));
+                    .set_color(m_title_color.get())
+                    .set_wrap_policy(text::TextWrapPolicy::break_word)
+                    .set_single_line(false);
+            title_label->set_visible(!m_title.empty());
+            m_title_label = title_label.get();
+            header_column->add(std::move(title_label));
+
+            auto description_label = Text::create();
+            description_label->set_text(m_description)
+                .set_typography_role(theme::NanTypographyRole::body_small)
+                .set_font_size(std::max(11.0f, m_title_font_size.get() - 1.0f))
+                .set_font_weight(text::NanFontWeight::regular)
+                .set_color(m_description_color.get())
+                .set_wrap_policy(text::TextWrapPolicy::break_word)
+                .set_single_line(false);
+            description_label->set_visible(!m_description.empty());
+            m_description_label = description_label.get();
+            header_column->add(std::move(description_label));
+
+            header_layout->set_text_widget(std::move(header_column));
+
+            auto header_action_slot = layout::SizedBox::Create();
+            header_action_slot->set_visible(false);
+            m_header_action_slot = header_action_slot.get();
+            header_layout->set_action_slot(std::move(header_action_slot));
+
+            title_host->child(std::move(header_layout));
             sync_title_host_style();
+            sync_header_visibility();
             add_child(std::move(title_host));
         }
 
@@ -439,18 +748,86 @@ export namespace nandina::widgets {
                 return;
             }
 
-            const float header_off = title_header_height();
             const float left = m_show_accent ? 12.0f : 8.0f;
-            const float right = m_show_accent ? 12.0f : 16.0f;
-            const float vertical = header_off * 0.15f;
+            const float right = m_show_accent ? 12.0f : padding().right();
+            const float vertical = std::max(6.0f, resolved_section_spacing() * 0.5f);
             m_title_host->padding(left, vertical, right, vertical);
+            if (m_header_column) {
+                m_header_column->gap(m_title.empty() || m_description.empty() ? 0.0f : std::max(4.0f, resolved_section_spacing() * 0.25f));
+            }
+            if (m_header_layout) {
+                m_header_layout->set_section_gap(m_header_action ? std::max(8.0f, resolved_section_spacing() * 0.5f) : 0.0f);
+            }
+        }
+
+        auto sync_header_visibility() -> void {
+            if (!m_title_host) {
+                return;
+            }
+            const bool has_header_text = !m_title.empty() || !m_description.empty();
+            const bool has_header = has_header_text || m_header_action != nullptr;
+            m_title_host->set_visible(has_header);
+            if (m_header_column) {
+                m_header_column->set_visible(has_header_text);
+            }
+            if (m_header_action_slot) {
+                m_header_action_slot->set_visible(m_header_action != nullptr);
+            }
+        }
+
+        auto sync_footer_style() -> void {
+            if (auto* footer_padding = dynamic_cast<layout::Padding*>(m_footer)) {
+                footer_padding->padding(
+                    resolved_section_spacing(),
+                    resolved_section_spacing(),
+                    padding().right(),
+                    resolved_section_spacing());
+            }
+        }
+
+        auto apply_size_style() -> void {
+            const auto& style = nandina::theme::NanStylePrimitives::current().card;
+            switch (m_size) {
+                case CardSize::default_size:
+                    Surface::set_padding(style.padding);
+                    m_title_font_size.set(style.title_font_size);
+                    if (!m_spacing_overridden) {
+                        m_card_spacing.set(style.section_spacing);
+                    }
+                    break;
+                case CardSize::sm:
+                    Surface::set_padding(style.padding_sm);
+                    m_title_font_size.set(style.title_font_size_sm);
+                    if (!m_spacing_overridden) {
+                        m_card_spacing.set(style.section_spacing_sm);
+                    }
+                    break;
+            }
+
+            if (m_title_label) {
+                m_title_label->set_font_size(m_title_font_size.get());
+            }
+            if (m_description_label) {
+                m_description_label->set_font_size(std::max(11.0f, m_title_font_size.get() - 1.0f));
+            }
+            sync_title_host_style();
+            sync_footer_style();
+        }
+
+        [[nodiscard]] auto resolved_section_spacing() const noexcept -> float {
+            return m_card_spacing.get();
         }
 
         [[nodiscard]] auto title_header_height() const noexcept -> float {
-            if (m_title.empty()) return 0.0f;
-            float h = m_title_font_size.get() * 1.6f;
-            if (!m_description.empty()) h += m_title_font_size.get() * 0.9f;
-            return h;
+            if (!m_title_host) {
+                return 0.0f;
+            }
+            const auto measured = m_title_host->measured_size();
+            if (measured.height() > 0.0f) {
+                return measured.height();
+            }
+            const auto pref = m_title_host->preferred_size();
+            return pref.height();
         }
 
         [[nodiscard]] auto footer_height() const noexcept -> float {
@@ -463,18 +840,30 @@ export namespace nandina::widgets {
         reactive::Prop<nandina::NanColor> m_title_color{
             nandina::NanColor::from(nandina::NanRgb{220, 220, 240})
         };
+        reactive::Prop<nandina::NanColor> m_description_color{
+            nandina::NanColor::from(nandina::NanRgb{107, 114, 128})
+        };
         reactive::Prop<nandina::NanColor> m_accent_color{
             nandina::NanColor::from(nandina::NanRgb{99, 102, 241})
         };
         reactive::Prop<float> m_elevation{0.0f};
         reactive::Prop<float> m_title_font_size{12.0f};
+        reactive::Prop<float> m_card_spacing{16.0f};
         text::NanFontWeight m_title_font_weight{text::NanFontWeight::semiBold};
+        CardSize m_size{CardSize::default_size};
+        bool m_spacing_overridden{false};
 
         std::string m_title;
         std::string m_description;
         bool m_show_accent{false};
+        bool m_has_header_action{false};
         layout::Padding *m_title_host{nullptr};
+        CardHeaderLayout *m_header_layout{nullptr};
+        layout::Column *m_header_column{nullptr};
+        layout::SizedBox *m_header_action_slot{nullptr};
         Text *m_title_label{nullptr};
+        Text *m_description_label{nullptr};
+        runtime::NanWidget *m_header_action{nullptr};
         runtime::NanWidget *m_footer{nullptr};
     };
 } // namespace nandina::widgets

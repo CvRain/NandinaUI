@@ -52,7 +52,6 @@ export namespace nandina::showcase {
             return app::card(app::children(
                 app::column(std::move(content)).gap(12)
             ))
-                .title("")
                 .padding(20, 16, 20, 16);
         }
 

@@ -364,6 +364,7 @@ NanFont::NanFont(const NanFont& other)
     , m_line_height_override(other.m_line_height_override)
     , m_letter_spacing(other.m_letter_spacing)
     , m_overflow(other.m_overflow)
+    , m_wrap_policy(other.m_wrap_policy)
     , m_max_lines(other.m_max_lines)
     , m_single_line(other.m_single_line) {}
 
@@ -378,6 +379,7 @@ auto NanFont::operator=(const NanFont& other) -> NanFont& {
         m_line_height_override = other.m_line_height_override;
         m_letter_spacing       = other.m_letter_spacing;
         m_overflow             = other.m_overflow;
+        m_wrap_policy          = other.m_wrap_policy;
         m_max_lines            = other.m_max_lines;
         m_single_line          = other.m_single_line;
     }
@@ -567,6 +569,11 @@ auto NanFont::overflow(TextOverflow o) -> NanFont& {
     return *this;
 }
 
+auto NanFont::wrap_policy(TextWrapPolicy p) -> NanFont& {
+    m_wrap_policy = p;
+    return *this;
+}
+
 auto NanFont::max_lines(int n) -> NanFont& {
     m_max_lines = n;
     return *this;
@@ -588,6 +595,7 @@ auto NanFont::color() const noexcept -> const NanColor& { return m_color; }
 auto NanFont::has_explicit_color() const noexcept -> bool { return m_has_explicit_color; }
 auto NanFont::letter_spacing() const noexcept -> float { return m_letter_spacing; }
 auto NanFont::overflow() const noexcept -> TextOverflow { return m_overflow; }
+auto NanFont::wrap_policy() const noexcept -> TextWrapPolicy { return m_wrap_policy; }
 auto NanFont::max_lines() const noexcept -> int { return m_max_lines; }
 auto NanFont::single_line() const noexcept -> bool { return m_single_line; }
 
@@ -711,7 +719,8 @@ auto shape_single_segment(hb_font_t* hb_font,
 
 auto wrap_lines(std::vector<GlyphInfo>& glyphs,
                 float max_width, float line_height,
-                float ascent, int max_lines) -> std::vector<TextLine> {
+                float ascent, int max_lines,
+                const TextWrapPolicy wrap_policy) -> std::vector<TextLine> {
     std::vector<TextLine> lines;
 
     std::size_t i = 0;
@@ -728,7 +737,7 @@ auto wrap_lines(std::vector<GlyphInfo>& glyphs,
             float adv = glyphs[j].advance_x;
 
             if (j > i && line_w + adv > max_width + k_layout_epsilon) {
-                if (last_space > i) {
+                if (wrap_policy == TextWrapPolicy::word && last_space > i) {
                     line_end = last_space;
                     line_w   = space_line_w;
                 } else {
@@ -1001,7 +1010,7 @@ auto NanFont::layout_lines(const std::vector<std::vector<GlyphInfo>>& segments,
         } else if (max_width > 0.0f) {
             switch (m_overflow) {
             case TextOverflow::wrap: {
-                auto wrapped = wrap_lines(glyphs, max_width, lh, asc, ml);
+                auto wrapped = wrap_lines(glyphs, max_width, lh, asc, ml, m_wrap_policy);
                 for (auto& line : wrapped) {
                     result.lines.push_back(std::move(line));
                     if (ml > 0 && static_cast<int>(result.lines.size()) >= ml) goto done;
@@ -1118,7 +1127,8 @@ auto NanFont::shape(std::string_view text, float max_width) const -> TextLayout 
 auto NanFont::paint(tvg::SwCanvas& canvas,
                     const TextLayout& layout,
                     float origin_x,
-                    float origin_y) const -> void {
+                    float origin_y,
+                    const geometry::NanRect* clip_rect) const -> void {
     ensure_loaded();
     if (!m_impl || m_impl->faces.empty() || layout.empty()) return;
 
@@ -1153,18 +1163,54 @@ auto NanFont::paint(tvg::SwCanvas& canvas,
                 const float pen_x = cursor_x + glyph.offset_x + static_cast<float>(face->glyph->bitmap_left);
                 const float pen_y = std::round(line_y + line.baseline - glyph.offset_y - static_cast<float>(face->glyph->bitmap_top));
 
-                std::vector<uint32_t> pixels(bitmap->width * bitmap->rows);
-                for (unsigned int row = 0; row < bitmap->rows; ++row) {
-                    for (unsigned int col = 0; col < bitmap->width; ++col) {
-                        const auto alpha = bitmap->buffer[row * bitmap->pitch + col];
+                int src_x = 0;
+                int src_y = 0;
+                int draw_w = static_cast<int>(bitmap->width);
+                int draw_h = static_cast<int>(bitmap->rows);
+                float draw_x = pen_x;
+                float draw_y = pen_y;
+
+                if (clip_rect) {
+                    const int clip_left = static_cast<int>(std::floor(clip_rect->x()));
+                    const int clip_top = static_cast<int>(std::floor(clip_rect->y()));
+                    const int clip_right = static_cast<int>(std::ceil(clip_rect->right()));
+                    const int clip_bottom = static_cast<int>(std::ceil(clip_rect->bottom()));
+
+                    const int bitmap_left = static_cast<int>(std::floor(draw_x));
+                    const int bitmap_top = static_cast<int>(std::floor(draw_y));
+                    const int bitmap_right = bitmap_left + draw_w;
+                    const int bitmap_bottom = bitmap_top + draw_h;
+
+                    const int intersect_left = std::max(bitmap_left, clip_left);
+                    const int intersect_top = std::max(bitmap_top, clip_top);
+                    const int intersect_right = std::min(bitmap_right, clip_right);
+                    const int intersect_bottom = std::min(bitmap_bottom, clip_bottom);
+
+                    if (intersect_right <= intersect_left || intersect_bottom <= intersect_top) {
+                        cursor_x += glyph.advance_x;
+                        continue;
+                    }
+
+                    src_x = intersect_left - bitmap_left;
+                    src_y = intersect_top - bitmap_top;
+                    draw_w = intersect_right - intersect_left;
+                    draw_h = intersect_bottom - intersect_top;
+                    draw_x = static_cast<float>(intersect_left);
+                    draw_y = static_cast<float>(intersect_top);
+                }
+
+                std::vector<uint32_t> pixels(static_cast<std::size_t>(draw_w) * static_cast<std::size_t>(draw_h));
+                for (int row = 0; row < draw_h; ++row) {
+                    for (int col = 0; col < draw_w; ++col) {
+                        const auto alpha = bitmap->buffer[(row + src_y) * bitmap->pitch + (col + src_x)];
                         if (alpha == 0) {
-                            pixels[row * bitmap->width + col] = 0;
+                            pixels[static_cast<std::size_t>(row) * static_cast<std::size_t>(draw_w) + static_cast<std::size_t>(col)] = 0;
                         } else {
                             uint32_t pr = static_cast<uint32_t>(r) * alpha / 255;
                             uint32_t pg = static_cast<uint32_t>(g) * alpha / 255;
                             uint32_t pb = static_cast<uint32_t>(b) * alpha / 255;
                             uint32_t pa = static_cast<uint32_t>(a) * alpha / 255;
-                            pixels[row * bitmap->width + col] =
+                            pixels[static_cast<std::size_t>(row) * static_cast<std::size_t>(draw_w) + static_cast<std::size_t>(col)] =
                                 (pa << 24) | (pr << 16) | (pg << 8) | pb;
                         }
                     }
@@ -1173,9 +1219,9 @@ auto NanFont::paint(tvg::SwCanvas& canvas,
                 auto picture = tvg::Picture::gen();
                 if (picture &&
                     picture->load(pixels.data(),
-                                  bitmap->width, bitmap->rows,
+                                  static_cast<uint32_t>(draw_w), static_cast<uint32_t>(draw_h),
                                   tvg::ColorSpace::ARGB8888, true) == tvg::Result::Success) {
-                    picture->translate(pen_x, pen_y);
+                    picture->translate(draw_x, draw_y);
                     canvas.add(std::move(picture));
                 }
             }

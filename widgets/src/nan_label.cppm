@@ -224,7 +224,7 @@ export namespace nandina::widgets {
                 text_font.color(m_color.get());
                 if (const auto raw_layout = text_font.shape(raw_text, max_width > 0.0f ? max_width : 0.0f);
                     !raw_layout.empty()) {
-                    text_font.paint(canvas, raw_layout, offset_x, offset_y);
+                    text_font.paint(canvas, raw_layout, offset_x, offset_y, &bnds);
                 }
             }
 
@@ -237,13 +237,14 @@ export namespace nandina::widgets {
                                         : m_font.shape(raw_text, max_width > 0.0f ? max_width : 0.0f).total_width;
             const float suffix_x = offset_x + raw_width;
             const float suffix_y = offset_y + std::max(0.0f, layout.total_height - suffix_layout.total_height);
-            suffix_font.paint(canvas, suffix_layout, suffix_x, suffix_y);
+            suffix_font.paint(canvas, suffix_layout, suffix_x, suffix_y, &bnds);
         }
 
     private:
         Label() {
             const auto &style = theme::NanStylePrimitives::current().label;
             m_font.overflow(style.overflow)
+                    .wrap_policy(style.wrap_policy)
                     .single_line(style.single_line)
                     .max_lines(style.max_lines);
             sync_resolved_style();

@@ -1,5 +1,11 @@
 #include <gtest/gtest.h>
 
+#include <memory>
+#include <stdexcept>
+#include <vector>
+
+#include <thorvg-1/thorvg.h>
+
 import nandina.foundation.color;
 import nandina.foundation.nan_constraints;
 import nandina.theme;
@@ -19,6 +25,54 @@ public:
 
 private:
     nandina::theme::NanStylePrimitives saved_;
+};
+
+class ThorvgCanvasScope {
+public:
+    ThorvgCanvasScope(const std::uint32_t width, const std::uint32_t height)
+        : pixels_(width * height, 0u), width_(width) {
+        if (tvg::Initializer::init(0u) != tvg::Result::Success) {
+            throw std::runtime_error("tvg::Initializer::init failed");
+        }
+        canvas_.reset(tvg::SwCanvas::gen());
+        if (!canvas_) {
+            tvg::Initializer::term();
+            throw std::runtime_error("tvg::SwCanvas::gen() returned nullptr");
+        }
+        if (canvas_->target(
+                pixels_.data(),
+                width,
+                width,
+                height,
+                tvg::ColorSpace::ARGB8888) != tvg::Result::Success) {
+            canvas_.reset();
+            tvg::Initializer::term();
+            throw std::runtime_error("tvg::SwCanvas::target failed");
+        }
+    }
+
+    ~ThorvgCanvasScope() {
+        canvas_.reset();
+        tvg::Initializer::term();
+    }
+
+    auto canvas() const noexcept -> tvg::SwCanvas& {
+        return *canvas_;
+    }
+
+    auto render() const -> void {
+        ASSERT_EQ(canvas_->draw(true), tvg::Result::Success);
+        ASSERT_EQ(canvas_->sync(), tvg::Result::Success);
+    }
+
+    [[nodiscard]] auto pixel_at(const std::uint32_t x, const std::uint32_t y) const noexcept -> std::uint32_t {
+        return pixels_.at(static_cast<std::size_t>(y) * width_ + x);
+    }
+
+private:
+    std::vector<std::uint32_t> pixels_;
+    std::unique_ptr<tvg::SwCanvas> canvas_;
+    std::uint32_t width_;
 };
 
 } // namespace
@@ -93,4 +147,24 @@ TEST(WidgetsLabelTest, TypographyRoleAppliesResolvedTypeStyle) {
     EXPECT_EQ(label->font_weight(), nandina::text::NanFontWeight::bold);
     EXPECT_FLOAT_EQ(label->font().line_height(), 34.0f);
     EXPECT_FLOAT_EQ(label->font().letter_spacing(), 0.75f);
+}
+
+TEST(WidgetsLabelTest, DrawClipsWrappedTextToAssignedBounds) {
+    auto label = nandina::widgets::Label::create();
+    label->set_text("Wrapped text should not bleed below the assigned label bounds when the layout produces more lines than the visible region can hold.");
+    label->set_font_size(11.0f);
+
+    label->measure(nandina::geometry::NanConstraints{0.0f, 120.0f, 0.0f, nandina::geometry::NanConstraints::k_infinity});
+    label->set_bounds(8.0f, 8.0f, 120.0f, 20.0f);
+    label->layout();
+
+    ThorvgCanvasScope canvas_scope{160u, 64u};
+    label->draw(canvas_scope.canvas());
+    canvas_scope.render();
+
+    for (std::uint32_t y = 32; y < 64; ++y) {
+        for (std::uint32_t x = 0; x < 160; ++x) {
+            EXPECT_EQ(canvas_scope.pixel_at(x, y), 0u);
+        }
+    }
 }

@@ -59,6 +59,7 @@ struct TextStyle {
 
     // — layout 属性（变化时仅 relayout）
     std::optional<text::TextOverflow> overflow;
+    std::optional<text::TextWrapPolicy> wrap_policy;
     std::optional<bool> single_line;
     std::optional<int> max_lines;
     std::optional<float> line_height;
@@ -95,6 +96,16 @@ public:
             return *this;
         }
         m_font.single_line(single);
+        m_layout_valid = false;
+        mark_layout_dirty();
+        return *this;
+    }
+
+    virtual auto set_wrap_policy(const text::TextWrapPolicy policy) -> Text& {
+        if (m_font.wrap_policy() == policy) {
+            return *this;
+        }
+        m_font.wrap_policy(policy);
         m_layout_valid = false;
         mark_layout_dirty();
         return *this;
@@ -255,6 +266,10 @@ public:
             m_font.overflow(style.overflow.value());
             layout_dirty = true;
         }
+        if (style.wrap_policy.has_value() && style.wrap_policy.value() != m_font.wrap_policy()) {
+            m_font.wrap_policy(style.wrap_policy.value());
+            layout_dirty = true;
+        }
         if (style.single_line.has_value() && style.single_line.value() != m_font.single_line()) {
             m_font.single_line(style.single_line.value());
             layout_dirty = true;
@@ -305,12 +320,13 @@ public:
     virtual auto get_style() const -> TextStyle {
         return TextStyle { .font_family = m_font.family(),
                            .font_size = m_font.size(),
-                           .font_weight = m_font.weight(),
-                           .letter_spacing = m_font.letter_spacing(),
-                           .overflow = m_font.overflow(),
-                           .single_line = m_font.single_line(),
-                           .max_lines = m_font.max_lines(),
-                           .line_height = m_font.line_height(),
+                            .font_weight = m_font.weight(),
+                            .letter_spacing = m_font.letter_spacing(),
+                            .overflow = m_font.overflow(),
+                            .wrap_policy = m_font.wrap_policy(),
+                            .single_line = m_font.single_line(),
+                            .max_lines = m_font.max_lines(),
+                            .line_height = m_font.line_height(),
                            .horizontal_align = m_align,
                            .vertical_align = m_valign,
                            .align_to_ink_bounds = m_align_to_ink_bounds,
@@ -363,7 +379,9 @@ public:
 
         if (for_width) {
             const float pref_w = m_font.estimate_text_width(txt);
-            const float min_w = detail::widest_unbreakable_run_width(m_font, txt);
+            const float min_w = m_font.wrap_policy() == text::TextWrapPolicy::break_word
+                ? std::max(m_font.glyph_advance('W'), m_font.glyph_advance(0x4F60u))
+                : detail::widest_unbreakable_run_width(m_font, txt);
             return {pref_w, min_w, geometry::NanConstraints::k_infinity, 0.0f};
         }
 
@@ -495,14 +513,17 @@ protected:
 
         auto text_font = m_font;
         text_font.color(m_color.get());
-        text_font.paint(canvas, layout, offset_x, offset_y);
+        text_font.paint(canvas, layout, offset_x, offset_y, &bnds);
     }
 
     Text() {
         const auto& style = theme::NanStylePrimitives::current().text;
         m_typography_role = theme::NanTypographyRole::body_medium;
         apply_typography_role();
-        m_font.overflow(style.overflow).single_line(style.single_line).max_lines(style.max_lines);
+        m_font.overflow(style.overflow)
+            .wrap_policy(style.wrap_policy)
+            .single_line(style.single_line)
+            .max_lines(style.max_lines);
         sync_resolved_style();
     }
 

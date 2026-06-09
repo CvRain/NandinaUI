@@ -22,20 +22,18 @@ public:
 
 } // namespace
 
-TEST(WidgetsPanelTest, PreferredSizeIncludesHeaderAndPadding) {
+TEST(WidgetsPanelTest, PreferredSizeIncludesPadding) {
     auto panel = nandina::widgets::Panel::create();
-    panel->set_header_height(28.0f);
     panel->set_padding(nandina::geometry::NanInsets{10.0f});
     panel->add_child(FixedWidget::create());
 
     const auto preferred = panel->preferred_size();
     EXPECT_FLOAT_EQ(preferred.width(), 44.0f);
-    EXPECT_FLOAT_EQ(preferred.height(), 60.0f);
+    EXPECT_FLOAT_EQ(preferred.height(), 32.0f);
 }
 
-TEST(WidgetsPanelTest, LayoutPlacesContentBelowHeaderAndPadding) {
+TEST(WidgetsPanelTest, LayoutPlacesContentWithinPadding) {
     auto panel = nandina::widgets::Panel::create();
-    panel->set_header_height(30.0f);
     panel->set_padding(nandina::geometry::NanInsets{8.0f, 6.0f, 10.0f, 12.0f});
 
     auto child = FixedWidget::create();
@@ -48,7 +46,7 @@ TEST(WidgetsPanelTest, LayoutPlacesContentBelowHeaderAndPadding) {
 
     ASSERT_NE(child_ptr, nullptr);
     EXPECT_FLOAT_EQ(child_ptr->bounds().x(), 13.0f);
-    EXPECT_FLOAT_EQ(child_ptr->bounds().y(), 43.0f);
+    EXPECT_FLOAT_EQ(child_ptr->bounds().y(), 13.0f);
     EXPECT_FLOAT_EQ(child_ptr->bounds().width(), 182.0f);
-    EXPECT_FLOAT_EQ(child_ptr->bounds().height(), 72.0f);
+    EXPECT_FLOAT_EQ(child_ptr->bounds().height(), 102.0f);
 }

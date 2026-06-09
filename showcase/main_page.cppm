@@ -102,11 +102,48 @@ namespace nandina::showcase
                                    .text_color = NanColor::from(nandina::NanRgb {"#4c4f69"})
                                }
                            )
-                   ))
+                    ))
                 .gap(12)
                 .padding(5)
         ));
 
-        return app::mount((column(children(basic_card, how_to_use_card)).gap(10).padding(10)));
+        auto neutral_panel = panel(children(
+            column(children(
+                       label()
+                           .text("Neutral Panel")
+                           .style(
+                               widgets::TextStyle {
+                                   .font_size = 20,
+                                   .font_weight = text::NanFontWeight::bold,
+                                   .text_color = NanColor::from(nandina::NanRgb { "#7c3aed" })
+                               }
+                           ),
+                       spacer(0).height(8),
+                       label()
+                           .text(
+                               "Panel 现在是一个中性的内容面板容器。"
+                               "它负责背景、圆角、描边、padding 和内容边界，"
+                               "不再默认承担标题栏、header 或 footer 语义。"
+                           )
+                           .style(
+                               widgets::TextStyle {
+                                   .text_color = NanColor::from(nandina::NanRgb { "#4c4f69" })
+                               }
+                           ),
+                       spacer(0).height(6),
+                       row(children(
+                               tag("Surface-based").color_variant(theme::ColorVariant::secondary),
+                               tag("Neutral").color_variant(theme::ColorVariant::neutral),
+                               tag("Composable").color_variant(theme::ColorVariant::primary)
+                           ))
+                           .gap(8)
+                   ))
+                .gap(12)
+                .padding(6)
+        ))
+            .bg_color(NanColor::from(nandina::NanRgb { "#f4f1ff" }))
+            .corner_radius(14.0f);
+
+        return app::mount((column(children(basic_card, how_to_use_card, neutral_panel)).gap(10).padding(10)));
     }
 } // namespace nandina::showcase

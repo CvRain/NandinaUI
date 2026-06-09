@@ -200,6 +200,7 @@ TEST(NanTextStyleTest, Defaults) {
     EXPECT_FLOAT_EQ(style.font_size, 14.0f);
     EXPECT_EQ(style.font_weight, nandina::text::NanFontWeight::regular);
     EXPECT_EQ(style.overflow, nandina::text::TextOverflow::wrap);
+    EXPECT_EQ(style.wrap_policy, nandina::text::TextWrapPolicy::word);
     EXPECT_FALSE(style.single_line);
     EXPECT_EQ(style.max_lines, 0);
 
@@ -237,6 +238,7 @@ TEST(NanLabelStyleTest, Defaults) {
 
     EXPECT_FLOAT_EQ(style.required_indicator_gap, 4.0f);
     EXPECT_EQ(style.overflow, nandina::text::TextOverflow::wrap);
+    EXPECT_EQ(style.wrap_policy, nandina::text::TextWrapPolicy::word);
     EXPECT_FALSE(style.single_line);
     EXPECT_EQ(style.max_lines, 0);
 }

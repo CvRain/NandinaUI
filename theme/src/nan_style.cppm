@@ -81,6 +81,7 @@ export namespace nandina::theme {
         text::NanFontWeight font_weight{text::NanFontWeight::regular};
         NanColor            font_color{NanColor::from(NanRgb{30, 30, 46})};
         text::TextOverflow  overflow{text::TextOverflow::wrap};
+        text::TextWrapPolicy wrap_policy{text::TextWrapPolicy::word};
         bool                single_line{false};
         int                 max_lines{0};
     };
@@ -98,6 +99,7 @@ export namespace nandina::theme {
         NanColor        required_indicator_color{NanColor::from(NanRgb{230, 69, 83})};
         float           required_indicator_gap{4.0f};
         text::TextOverflow overflow{text::TextOverflow::wrap};
+        text::TextWrapPolicy wrap_policy{text::TextWrapPolicy::word};
         bool            single_line{false};
         int             max_lines{0};
     };
@@ -434,8 +436,12 @@ export namespace nandina::theme {
         float corner_radius{8.0f};
         float border_width{1.0f};
         geometry::NanInsets padding{16.0f};
+        geometry::NanInsets padding_sm{12.0f};
+        float section_spacing{16.0f};
+        float section_spacing_sm{12.0f};
 
         float           title_font_size{NanTypographyTokens{}.title_medium.font_size};
+        float           title_font_size_sm{NanTypographyTokens{}.title_small.font_size};
         text::NanFontWeight title_font_weight{text::NanFontWeight::semiBold};
         NanColor        title_font_color{NanColor::from(NanRgb{30, 30, 46})};
     };
