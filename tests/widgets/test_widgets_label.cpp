@@ -128,6 +128,19 @@ TEST(WidgetsLabelTest, WrappedMeasureUsesConstraintWidth) {
     EXPECT_GT(narrow_size.height(), wide_size.height());
 }
 
+TEST(WidgetsLabelTest, BreakWordMeasureHandlesExtremelyNarrowWidth) {
+    auto label = nandina::widgets::Label::create();
+    label->set_text("abc");
+    label->set_font_size(9.0f);
+    label->set_wrap_policy(nandina::text::TextWrapPolicy::break_word);
+
+    label->measure(nandina::geometry::NanConstraints{0.0f, 1.0f, 0.0f, nandina::geometry::NanConstraints::k_infinity});
+    const auto size = label->measured_size();
+
+    EXPECT_GT(size.width(), 0.0f);
+    EXPECT_GT(size.height(), label->font().line_height() * 2.0f);
+}
+
 TEST(WidgetsLabelTest, TypographyRoleAppliesResolvedTypeStyle) {
     ScopedStyleReset style_reset;
 

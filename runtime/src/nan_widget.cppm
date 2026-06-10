@@ -1,5 +1,6 @@
 module;
 
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <thorvg-1/thorvg.h>
@@ -13,12 +14,53 @@ export import nandina.foundation.nan_rect;
 export import nandina.foundation.nan_size;
 export import nandina.foundation.nan_constraints;
 export import nandina.foundation.nan_types;
+export import nandina.render.draw_clip;
 
-export namespace nandina::runtime {
+export namespace nandina::runtime
+{
     struct TextInputArea {
-        geometry::NanRect rect{};
-        int cursor{0};
+        geometry::NanRect rect {};
+        int cursor {0};
     };
+
+    enum class OverflowBehavior : std::uint8_t {
+        visible,
+        clip,
+    };
+
+    // ── Draw clip stack (thin wrappers over render::draw_clip) ─
+    //
+    // These are convenience aliases so existing widget code can stay
+    // as nandina::runtime::active_draw_clip() without changing.
+    // The canonical clip implementation lives in nandina.render.draw_clip.
+
+    using ClipEntry = nandina::render::draw_clip::ClipEntry;
+
+    [[nodiscard]] inline auto active_draw_clip() noexcept -> std::optional<ClipEntry> {
+        return nandina::render::draw_clip::active();
+    }
+
+    inline auto paint_with_draw_clip(tvg::SwCanvas& canvas, tvg::Paint* paint) -> void {
+        nandina::render::draw_clip::paint_with_clip(canvas, paint);
+    }
+
+    class ScopedDrawClip {
+    public:
+        ScopedDrawClip(const geometry::NanRect& r, float rx = 0.0f, float ry = 0.0f):
+            m_impl(r, rx, ry) {}
+
+    private:
+        nandina::render::draw_clip::ScopedClip m_impl;
+    };
+
+    inline auto push_draw_clip(const geometry::NanRect& r, float rx = 0.0f, float ry = 0.0f)
+        -> void {
+        nandina::render::draw_clip::push(r, rx, ry);
+    }
+
+    inline auto pop_draw_clip() -> void {
+        nandina::render::draw_clip::pop();
+    }
 
     /**
      * @brief NanWidget — 所有 UI 元素的基类（M1）
@@ -58,11 +100,39 @@ export namespace nandina::runtime {
 
         /** 返回当前 Widget 的包围盒（基于绝对坐标） */
         [[nodiscard]] auto bounds() const noexcept -> geometry::NanRect {
-            return geometry::NanRect{geometry::NanPoint{m_x, m_y}, geometry::NanSize{m_width, m_height}};
+            return geometry::NanRect {
+                geometry::NanPoint {m_x, m_y},
+                geometry::NanSize {m_width, m_height}
+            };
         }
 
-        [[nodiscard]] virtual auto text_input_area() const noexcept -> std::optional<TextInputArea> {
+        [[nodiscard]] virtual auto text_input_area() const noexcept
+            -> std::optional<TextInputArea> {
             return std::nullopt;
+        }
+
+        auto set_overflow_behavior(const OverflowBehavior behavior) noexcept -> void {
+                if (m_overflow_behavior == behavior) {
+                    return;
+                }
+            m_overflow_behavior = behavior;
+            mark_dirty();
+        }
+
+        [[nodiscard]] auto overflow_behavior() const noexcept -> OverflowBehavior {
+            return m_overflow_behavior;
+        }
+
+        [[nodiscard]] virtual auto child_clip_rect() const noexcept
+            -> std::optional<geometry::NanRect> {
+                if (m_overflow_behavior != OverflowBehavior::clip) {
+                    return std::nullopt;
+                }
+            return bounds();
+        }
+
+        [[nodiscard]] virtual auto child_clip_corner_radius() const noexcept -> float {
+            return 0.0f;
         }
 
         // ── 响应式资源清理（类型擦除）──────────────────────
@@ -85,7 +155,7 @@ export namespace nandina::runtime {
         }
 
         auto set_size(const float w, const float h) noexcept -> void {
-            m_width  = w;
+            m_width = w;
             m_height = h;
             mark_dirty();
         }
@@ -99,11 +169,12 @@ export namespace nandina::runtime {
          * 注意：本方法仅负责 bounds 赋值，不执行子节点布局。
          * 子节点的布局由 layout() 方法在 measure() 之后调用。
          */
-        virtual auto set_bounds(const float x, const float y, const float w, const float h) noexcept -> NanWidget& {
-            m_x            = x;
-            m_y            = y;
-            m_width        = w;
-            m_height       = h;
+        virtual auto set_bounds(const float x, const float y, const float w, const float h) noexcept
+            -> NanWidget& {
+            m_x = x;
+            m_y = y;
+            m_width = w;
+            m_height = h;
             m_layout_dirty = false; // bounds 已由父容器分配完毕
             mark_dirty();
             return *this;
@@ -141,16 +212,16 @@ export namespace nandina::runtime {
 
         auto clear_dirty_recursive() noexcept -> void {
             m_dirty = m_layout_dirty;
-            for (auto& child : m_children) {
-                child->clear_dirty_recursive();
-            }
+                for (auto& child: m_children) {
+                    child->clear_dirty_recursive();
+                }
         }
 
         auto mark_dirty() noexcept -> void {
             m_dirty = true;
-            if (m_parent) {
-                m_parent->mark_dirty();
-            }
+                if (m_parent) {
+                    m_parent->mark_dirty();
+                }
         }
 
         // ── 布局 Dirty 状态（Phase 1）────────────────────────
@@ -158,9 +229,9 @@ export namespace nandina::runtime {
         auto mark_layout_dirty() noexcept -> void {
             m_layout_dirty = true;
             mark_dirty();
-            if (m_parent) {
-                m_parent->mark_layout_dirty();
-            }
+                if (m_parent) {
+                    m_parent->mark_layout_dirty();
+                }
         }
 
         /// 查询是否需要重新 layout
@@ -179,10 +250,10 @@ export namespace nandina::runtime {
 
         // ── 组合能力 ──────────────────────────────────────────
         auto add_child(Ptr child) -> NanWidget* {
-            if (!child) {
-                return nullptr;
-            }
-            auto* ptr     = child.get();
+                if (!child) {
+                    return nullptr;
+                }
+            auto* ptr = child.get();
             ptr->m_parent = this;
             m_children.push_back(std::move(child));
             mark_layout_dirty();
@@ -190,22 +261,34 @@ export namespace nandina::runtime {
         }
 
         auto clear_children() -> void {
-            for (auto& child : m_children) {
-                child->m_parent = nullptr;
-            }
+                for (auto& child: m_children) {
+                    child->m_parent = nullptr;
+                }
             m_children.clear();
             mark_layout_dirty();
         }
 
         // ── 绘制 ──────────────────────────────────────────────
         virtual void draw(tvg::SwCanvas& canvas) {
-            if (!m_visible) {
-                return;
-            }
+                if (!m_visible) {
+                    return;
+                }
             on_draw(canvas);
-            for (const auto& child : m_children) {
-                child->draw(canvas);
-            }
+                if (auto clip_opt = child_clip_rect()) {
+                    auto guard = ScopedDrawClip {
+                        *clip_opt,
+                        child_clip_corner_radius(),
+                        child_clip_corner_radius()
+                    };
+                        for (const auto& child: m_children) {
+                            child->draw(canvas);
+                        }
+                }
+                else {
+                        for (const auto& child: m_children) {
+                            child->draw(canvas);
+                        }
+                }
         }
 
         // ── 事件分发（Issue 011/015）─────────────────────────
@@ -224,16 +307,16 @@ export namespace nandina::runtime {
         }
 
         virtual auto dispatch_event(const PointerButtonEvent& ev, const EventType type) -> bool {
-            switch (type) {
-            case EventType::PointerDown:
-                return on_pointer_down(ev);
-            case EventType::PointerUp:
-                return on_pointer_up(ev);
-            case EventType::PointerClick:
-                return on_pointer_click(ev);
-            default:
-                return false;
-            }
+                switch (type) {
+                    case EventType::PointerDown:
+                        return on_pointer_down(ev);
+                    case EventType::PointerUp:
+                        return on_pointer_up(ev);
+                    case EventType::PointerClick:
+                        return on_pointer_click(ev);
+                    default:
+                        return false;
+                }
         }
 
         virtual auto dispatch_event(const PointerWheelEvent& ev) -> bool {
@@ -241,14 +324,14 @@ export namespace nandina::runtime {
         }
 
         virtual auto dispatch_event(const KeyEvent& ev, const EventType type) -> bool {
-            switch (type) {
-            case EventType::KeyDown:
-                return on_key_down(ev);
-            case EventType::KeyUp:
-                return on_key_up(ev);
-            default:
-                return false;
-            }
+                switch (type) {
+                    case EventType::KeyDown:
+                        return on_key_down(ev);
+                    case EventType::KeyUp:
+                        return on_key_up(ev);
+                    default:
+                        return false;
+                }
         }
 
         virtual auto dispatch_event(const TextInputEvent& ev) -> bool {
@@ -272,34 +355,43 @@ export namespace nandina::runtime {
         }
 
         virtual auto dispatch_event(const Event& ev) -> bool {
-            switch (event_type(ev)) {
-            case EventType::PointerMove:
-                return dispatch_event(std::get<PointerMoveEvent>(ev));
-            case EventType::PointerDown:
-                return dispatch_event(std::get<PointerButtonEvent>(ev), EventType::PointerDown);
-            case EventType::PointerUp:
-                return dispatch_event(std::get<PointerButtonEvent>(ev), EventType::PointerUp);
-            case EventType::PointerClick:
-                return dispatch_event(std::get<PointerButtonEvent>(ev), EventType::PointerClick);
-            case EventType::PointerWheel:
-                return dispatch_event(std::get<PointerWheelEvent>(ev));
-            case EventType::KeyDown:
-                return dispatch_event(std::get<KeyEvent>(ev), EventType::KeyDown);
-            case EventType::KeyUp:
-                return dispatch_event(std::get<KeyEvent>(ev), EventType::KeyUp);
-            case EventType::TextInput:
-                return dispatch_event(std::get<TextInputEvent>(ev));
-            case EventType::TextEditing:
-                return dispatch_event(std::get<TextEditingEvent>(ev));
-            case EventType::FocusIn:
-                return dispatch_event(FocusEvent{.got_focus = true});
-            case EventType::FocusOut:
-                return dispatch_event(FocusEvent{.got_focus = false});
-            case EventType::WindowResize:
-                return dispatch_event(std::get<WindowResizeEvent>(ev));
-            case EventType::WindowClose:
-                return dispatch_event(WindowCloseEvent{});
-            }
+                switch (event_type(ev)) {
+                    case EventType::PointerMove:
+                        return dispatch_event(std::get<PointerMoveEvent>(ev));
+                    case EventType::PointerDown:
+                        return dispatch_event(
+                            std::get<PointerButtonEvent>(ev),
+                            EventType::PointerDown
+                        );
+                    case EventType::PointerUp:
+                        return dispatch_event(
+                            std::get<PointerButtonEvent>(ev),
+                            EventType::PointerUp
+                        );
+                    case EventType::PointerClick:
+                        return dispatch_event(
+                            std::get<PointerButtonEvent>(ev),
+                            EventType::PointerClick
+                        );
+                    case EventType::PointerWheel:
+                        return dispatch_event(std::get<PointerWheelEvent>(ev));
+                    case EventType::KeyDown:
+                        return dispatch_event(std::get<KeyEvent>(ev), EventType::KeyDown);
+                    case EventType::KeyUp:
+                        return dispatch_event(std::get<KeyEvent>(ev), EventType::KeyUp);
+                    case EventType::TextInput:
+                        return dispatch_event(std::get<TextInputEvent>(ev));
+                    case EventType::TextEditing:
+                        return dispatch_event(std::get<TextEditingEvent>(ev));
+                    case EventType::FocusIn:
+                        return dispatch_event(FocusEvent {.got_focus = true});
+                    case EventType::FocusOut:
+                        return dispatch_event(FocusEvent {.got_focus = false});
+                    case EventType::WindowResize:
+                        return dispatch_event(std::get<WindowResizeEvent>(ev));
+                    case EventType::WindowClose:
+                        return dispatch_event(WindowCloseEvent {});
+                }
             return false;
         }
 
@@ -307,11 +399,11 @@ export namespace nandina::runtime {
         // 将事件分发给所有子节点，直到某个子节点消费。
         // 返回 true 表示事件被某个子节点消费。
         [[nodiscard]] auto bubble_event(const Event& ev) const -> bool {
-            for (auto& child : m_children) {
-                if (child->dispatch_event(ev)) {
-                    return true;
+                for (const auto& child: m_children) {
+                        if (child->dispatch_event(ev)) {
+                            return true;
+                        }
                 }
-            }
             return false;
         }
 
@@ -329,33 +421,33 @@ export namespace nandina::runtime {
         //
         // 返回 nullptr 表示未命中任何节点。
         [[nodiscard]] virtual auto hit_test(const float px, const float py) noexcept -> NanWidget* {
-            if (!m_visible || !m_hit_test_visible) {
-                return nullptr;
-            }
+                if (!m_visible || !m_hit_test_visible) {
+                    return nullptr;
+                }
 
             const auto rect = bounds();
-            if (!rect.contains(geometry::NanPoint{px, py})) {
-                return nullptr;
-            }
+                if (!rect.contains(geometry::NanPoint {px, py})) {
+                    return nullptr;
+                }
 
             // 逆序遍历子节点（Z-order：后添加的在上层）
             NanWidget* deepest = this;
-            for (auto it = m_children.rbegin(); it != m_children.rend(); ++it) {
-                auto* result = (*it)->hit_test(px, py);
-                if (result) {
-                    deepest = result;
-                    break;
+                for (auto it = m_children.rbegin(); it != m_children.rend(); ++it) {
+                    auto* result = (*it)->hit_test(px, py);
+                        if (result) {
+                            deepest = result;
+                            break;
+                        }
                 }
-            }
 
-            // 从最深命中节点向上冒泡，返回最近的可交互祖先
-            if (deepest->is_interactive()) {
-                return deepest;
-            }
+                // 从最深命中节点向上冒泡，返回最近的可交互祖先
+                if (deepest->is_interactive()) {
+                    return deepest;
+                }
             auto* cursor = deepest;
-            while (cursor && !cursor->is_interactive()) {
-                cursor = cursor->parent();
-            }
+                while (cursor && !cursor->is_interactive()) {
+                    cursor = cursor->parent();
+                }
             // 如果冒泡到根都没有可交互节点，返回最深命中节点（回退兼容）
             return cursor ? cursor : deepest;
         }
@@ -395,9 +487,11 @@ export namespace nandina::runtime {
          */
         virtual auto measure(const geometry::NanConstraints& constraints) -> void {
             m_measured_constraints = constraints;
-            for_each_child([&](NanWidget& child) { child.measure(child_constraints_from(constraints, child)); });
+            for_each_child([&](NanWidget& child) {
+                child.measure(child_constraints_from(constraints, child));
+            });
             m_measured_size = calculate_intrinsic_size(constraints);
-            m_layout_dirty  = false;
+            m_layout_dirty = false;
         }
 
         /**
@@ -419,8 +513,10 @@ export namespace nandina::runtime {
          *
          * 例如 Flex 容器为不同子节点计算不同约束、Padding 收缩约束等。
          */
-        [[nodiscard]] virtual auto child_constraints_from(const geometry::NanConstraints& parent_constraints,
-            const NanWidget& /*child*/) const -> geometry::NanConstraints {
+        [[nodiscard]] virtual auto child_constraints_from(
+            const geometry::NanConstraints& parent_constraints,
+            const NanWidget& /*child*/
+        ) const -> geometry::NanConstraints {
             return parent_constraints; // 默认透传
         }
 
@@ -432,20 +528,26 @@ export namespace nandina::runtime {
          *
          * 叶子节点（如 Label、Spacer）应覆盖此方法返回真实需要的大小。
          */
-        [[nodiscard]] virtual auto calculate_intrinsic_size(const geometry::NanConstraints& constraints) const
+        [[nodiscard]] virtual auto
+        calculate_intrinsic_size(const geometry::NanConstraints& constraints) const
             -> geometry::NanSize {
             float child_max_w = 0.0f;
             float child_max_h = 0.0f;
             for_each_child([&](const NanWidget& child) {
                 auto child_size = child.preferred_size();
-                child_max_w     = std::max(child_max_w, child_size.width());
-                child_max_h     = std::max(child_max_h, child_size.height());
+                child_max_w = std::max(child_max_w, child_size.width());
+                child_max_h = std::max(child_max_h, child_size.height());
             });
 
             const auto own_preferred = preferred_size();
-            const float resolved_w   = own_preferred.width() > 0.0f ? own_preferred.width() : child_max_w;
-            const float resolved_h   = own_preferred.height() > 0.0f ? own_preferred.height() : child_max_h;
-            return {constraints.constrain_width(resolved_w), constraints.constrain_height(resolved_h)};
+            const float resolved_w =
+                own_preferred.width() > 0.0f ? own_preferred.width() : child_max_w;
+            const float resolved_h =
+                own_preferred.height() > 0.0f ? own_preferred.height() : child_max_h;
+            return {
+                constraints.constrain_width(resolved_w),
+                constraints.constrain_height(resolved_h)
+            };
         }
 
         /// 返回最近一次 measure 的结果
@@ -454,7 +556,8 @@ export namespace nandina::runtime {
         }
 
         /// 返回最近一次 measure 的约束
-        [[nodiscard]] auto measured_constraints() const noexcept -> const geometry::NanConstraints& {
+        [[nodiscard]] auto measured_constraints() const noexcept
+            -> const geometry::NanConstraints& {
             return m_measured_constraints;
         }
 
@@ -471,7 +574,7 @@ export namespace nandina::runtime {
          * 因为前者能感知约束。preferred_size() 保留为兼容 fallback。
          */
         [[nodiscard]] virtual auto preferred_size() const noexcept -> geometry::NanSize {
-            return geometry::NanSize{m_width, m_height};
+            return geometry::NanSize {m_width, m_height};
         }
 
         /**
@@ -486,51 +589,67 @@ export namespace nandina::runtime {
 
         // ── SizeValue 尺寸模式 ────────────────────────────────────────
         /// 告知父容器此控件在宽度/高度方向上的尺寸策略。
-        virtual auto set_size_value_width(const types::SizeValue value) -> void { size_value_width_ = value; }
-        virtual auto set_size_value_height(const types::SizeValue value) -> void { size_value_height_ = value; }
-        [[nodiscard]] auto size_value_width() const noexcept -> types::SizeValue { return size_value_width_; }
-        [[nodiscard]] auto size_value_height() const noexcept -> types::SizeValue { return size_value_height_; }
+        virtual auto set_size_value_width(const types::SizeValue value) -> void {
+            size_value_width_ = value;
+        }
+        virtual auto set_size_value_height(const types::SizeValue value) -> void {
+            size_value_height_ = value;
+        }
+        [[nodiscard]] auto size_value_width() const noexcept -> types::SizeValue {
+            return size_value_width_;
+        }
+        [[nodiscard]] auto size_value_height() const noexcept -> types::SizeValue {
+            return size_value_height_;
+        }
 
         // ── LayoutInfo ────────────────────────────────────────────────
         /// 返回此组件在主轴方向上的布局信息，供父容器 LayoutContainer 收集。
         /// @param cross_constraint  交叉轴约束（例如宽度），用于 height-for-width 计算。
-        [[nodiscard]] virtual auto layout_info(const bool for_width,
-                                               const float /*cross_constraint*/ = 0.0f) const -> types::LayoutInfo {
+        [[nodiscard]] virtual auto
+        layout_info(const bool for_width, const float /*cross_constraint*/ = 0.0f) const
+            -> types::LayoutInfo {
             // 默认实现：从 measured_size 推导
             const float v = for_width ? preferred_size().width() : preferred_size().height();
-            return {v, 0.0f, geometry::NanConstraints::k_infinity, 0.0f};
+            return types::LayoutInfo {
+                .preferred = v,
+                .min = 0.0f,
+                .max = geometry::NanConstraints::k_infinity,
+                .stretch = 0.0f,
+            };
         }
 
         /**
          * @brief 遍历所有直接子节点（只读）
          */
-        template <typename F>
+        template<typename F>
         auto for_each_child(F&& fn) -> void {
-            for (auto& child : m_children) {
-                if (child) {
-                    std::forward<F>(fn)(*child);
+                for (auto& child: m_children) {
+                        if (child) {
+                            std::forward<F>(fn)(*child);
+                        }
                 }
-            }
         }
 
         /**
          * @brief 遍历所有直接子节点（const 版本）
          */
-        template <typename F>
+        template<typename F>
         auto for_each_child(F&& fn) const -> void {
-            for (const auto& child : m_children) {
-                if (child) {
-                    std::forward<F>(fn)(*child);
+                for (const auto& child: m_children) {
+                        if (child) {
+                            std::forward<F>(fn)(*child);
+                        }
                 }
-            }
         }
 
     protected:
         auto set_measured_layout_state(
-            const geometry::NanConstraints& constraints, const geometry::NanSize& size) noexcept -> void {
+            const geometry::NanConstraints& constraints,
+            const geometry::NanSize& size
+        ) noexcept -> void {
             m_measured_constraints = constraints;
-            m_measured_size        = size;
-            m_layout_dirty         = false;
+            m_measured_size = size;
+            m_layout_dirty = false;
         }
 
         /// 仅清除 layout dirty 标志，不触发子节点 layout 递归。
@@ -605,24 +724,26 @@ export namespace nandina::runtime {
         }
 
     private:
-        float m_x{0.0f};
-        float m_y{0.0f};
-        float m_width{0.0f};
-        float m_height{0.0f};
+        float m_x {0.0f};
+        float m_y {0.0f};
+        float m_width {0.0f};
+        float m_height {0.0f};
 
-        NanWidget* m_parent{nullptr};
+        NanWidget* m_parent {nullptr};
         types::SizeValue size_value_width_;
         types::SizeValue size_value_height_;
-        bool m_visible{true};
-        bool m_hit_test_visible{true};
-        bool m_dirty{true}; // 初始为脏，首次绘制前需要 layout
+        bool m_visible {true};
+        bool m_hit_test_visible {true};
+        OverflowBehavior m_overflow_behavior {OverflowBehavior::visible};
+        bool m_dirty {true}; // 初始为脏，首次绘制前需要 layout
         // ── 响应式资源（小 list）──
         std::vector<std::shared_ptr<void>> m_cleanup_resources_;
         // ── 两阶段布局状态 ──
-        geometry::NanConstraints m_measured_constraints{};
-        geometry::NanSize m_measured_size{};
-        bool m_layout_dirty{true};
+        geometry::NanConstraints m_measured_constraints {};
+        geometry::NanSize m_measured_size {};
+        bool m_layout_dirty {true};
 
         std::vector<Ptr> m_children;
     };
+
 } // namespace nandina::runtime

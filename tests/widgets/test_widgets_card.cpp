@@ -174,3 +174,61 @@ TEST(WidgetsCardTest, LayoutPlacesContentBetweenHeaderAndFooter) {
     EXPECT_LT(content_ptr->bounds().bottom(), footer_ptr->bounds().y() + 1.0f);
     EXPECT_FLOAT_EQ(footer_ptr->bounds().bottom(), card->bounds().bottom());
 }
+
+TEST(WidgetsCardTest, FixedHeightPressureKeepsHeaderContentAndFooterSeparated) {
+    auto card = nandina::widgets::Card::create();
+    card->set_title("Workspace Settings")
+        .set_description("Long header description should wrap without collapsing the section rhythm.")
+        .set_header_action(std::make_unique<FixedWidget>(nandina::geometry::NanSize{92.0f, 24.0f}));
+
+    auto content = std::make_unique<FixedWidget>(nandina::geometry::NanSize{120.0f, 80.0f});
+    auto* content_ptr = content.get();
+    card->add_child(std::move(content));
+
+    card->set_footer(std::make_unique<FixedWidget>(nandina::geometry::NanSize{120.0f, 28.0f}));
+    auto* footer_ptr = card->footer();
+
+    card->measure(nandina::geometry::NanConstraints::tight(240.0f, 150.0f));
+    card->set_bounds(8.0f, 10.0f, 240.0f, 150.0f);
+    card->layout();
+
+    ASSERT_NE(content_ptr, nullptr);
+    ASSERT_NE(footer_ptr, nullptr);
+
+    nandina::runtime::NanWidget* header_ptr = nullptr;
+    for (const auto& child : card->children()) {
+        auto* raw = child.get();
+        if (raw != content_ptr && raw != footer_ptr) {
+            header_ptr = raw;
+            break;
+        }
+    }
+
+    ASSERT_NE(header_ptr, nullptr);
+    EXPECT_LE(header_ptr->bounds().bottom(), content_ptr->bounds().y() + 1.0f);
+    EXPECT_LE(content_ptr->bounds().bottom(), footer_ptr->bounds().y() + 1.0f);
+    EXPECT_FLOAT_EQ(footer_ptr->bounds().bottom(), card->bounds().bottom());
+    EXPECT_GE(header_ptr->bounds().x(), card->bounds().x());
+    EXPECT_LE(header_ptr->bounds().right(), card->bounds().right());
+}
+
+TEST(WidgetsCardTest, NarrowStackedHeaderActionDoesNotEnterContentArea) {
+    auto card = nandina::widgets::Card::create();
+    card->set_title("Workspace Settings")
+        .set_description("A long description that forces the header action into stacked mode.")
+        .set_header_action(std::make_unique<FixedWidget>(nandina::geometry::NanSize{96.0f, 24.0f}));
+
+    auto content = std::make_unique<FixedWidget>(nandina::geometry::NanSize{100.0f, 48.0f});
+    auto* content_ptr = content.get();
+    card->add_child(std::move(content));
+
+    card->measure(nandina::geometry::NanConstraints::tight(210.0f, 180.0f));
+    card->set_bounds(0.0f, 0.0f, 210.0f, 180.0f);
+    card->layout();
+
+    ASSERT_NE(card->header_action(), nullptr);
+    ASSERT_NE(content_ptr, nullptr);
+    EXPECT_GE(card->header_action()->bounds().x(), card->bounds().x());
+    EXPECT_LE(card->header_action()->bounds().right(), card->bounds().right());
+    EXPECT_LT(card->header_action()->bounds().bottom(), content_ptr->bounds().y() + 1.0f);
+}

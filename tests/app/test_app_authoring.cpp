@@ -176,6 +176,25 @@ TEST(AppAuthoringTest, MountPreservesNestedRefsAcrossRowComposition) {
     EXPECT_FALSE(right_ref);
 }
 
+TEST(AppAuthoringTest, LabelNodeExposesTextLayoutContractOptions) {
+    nandina::app::Ref<nandina::widgets::Label> label_ref;
+
+    auto mounted = nandina::app::mount(
+        nandina::app::label("supercalifragilisticexpialidocious")
+            .wrap_policy(nandina::text::TextWrapPolicy::break_word)
+            .max_lines(2)
+            .single_line(false)
+            .overflow(nandina::text::TextOverflow::wrap)
+            .bind(label_ref));
+
+    ASSERT_NE(mounted, nullptr);
+    ASSERT_TRUE(label_ref);
+    EXPECT_EQ(label_ref->font().wrap_policy(), nandina::text::TextWrapPolicy::break_word);
+    EXPECT_EQ(label_ref->font().max_lines(), 2);
+    EXPECT_FALSE(label_ref->font().single_line());
+    EXPECT_EQ(label_ref->font().overflow(), nandina::text::TextOverflow::wrap);
+}
+
 TEST(AppAuthoringTest, MountedNodeComponentPropagatesBoundsToRootWidget) {
     auto mounted = nandina::app::mount(nandina::app::adopt(TestWidget::create()));
 

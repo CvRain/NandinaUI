@@ -31,6 +31,7 @@
 | [无显式 move 的组件组合 API（V1）](component-composition-api-v1.md) | 当前 V1 authoring API 的已落地子集、差异说明与未收口边界 `[已校正]` |
 | [Widget Primitives 设计文档](widget-primitives.md) | 固定 Surface / Pressable / Text / FocusRing 的 primitive 边界与组合规则 `[已校正]` |
 | [Design Tokens](design-tokens.md) | 固定 primitive token、semantic palette、preset/size/colorVariant 与 TypographyRole 的选型规则 `[已校正]` |
+| [Overflow / Clip Contract 设计文档](overflow-and-clip-contract.md) | 固定父容器 child containment、`overflow` 语义与 `PushClip / PopClip` 的分层落点 `[草案]` |
 | [Input / Field API 设计](input-and-field-api.md) | 固定 TextField / Field 的职责边界、authoring 契约与绑定语义 `[已校正]` |
 | [布局策略](layout-strategy.md) | 当前布局阶段策略、自动布局目标与 Yoga 接入时机 `[已校正]` |
 | [模块依赖规则](module-dependency-rules.md) | 模块间依赖方向约束，避免循环依赖 `[已定稿]` |

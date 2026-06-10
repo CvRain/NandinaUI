@@ -5,6 +5,7 @@
 module;
 
 #include <memory>
+#include <optional>
 #include <thorvg-1/thorvg.h>
 
 export module nandina.widgets.surface;
@@ -30,7 +31,8 @@ import nandina.reactive.prop;
  * - set_bounds 时根据 padding 收缩子节点空间
  * - 颜色使用 NanColor + reactive Prop<T> 实现响应式
  */
-export namespace nandina::widgets {
+export namespace nandina::widgets
+{
 
     /**
      * Surface — 基础容器组件
@@ -42,18 +44,18 @@ export namespace nandina::widgets {
      *       .set_padding(geometry::NanInsets{12.0f});
      *   surface->add_child(std::move(label));
      */
-    class Surface : public runtime::NanWidget {
+    class Surface: public runtime::NanWidget {
     public:
         using Ptr = std::unique_ptr<Surface>;
 
         ~Surface() override = default;
 
         // ── 诊断计数器（每帧由 flush_root_layout 读取并重置） ──
-        inline static thread_local int s_measure_count{0};
+        inline static thread_local int s_measure_count {0};
 
         // ── 建造者模式 ──────────────────────────────────────
         static auto create() -> Ptr {
-            return Ptr{new Surface()};
+            return Ptr {new Surface()};
         }
 
         // ── 属性设置（返回引用支持链式）────────────────────
@@ -108,10 +110,21 @@ export namespace nandina::widgets {
             return m_border_width;
         }
 
+        [[nodiscard]] auto child_clip_rect() const noexcept -> std::optional<geometry::NanRect> {
+                if (overflow_behavior() != runtime::OverflowBehavior::clip) {
+                    return std::nullopt;
+                }
+            return content_bounds();
+        }
+
+        [[nodiscard]] auto child_clip_corner_radius() const noexcept -> float {
+            return corner_radius();
+        }
+
         // ── 布局覆盖 ────────────────────────────────────────
         auto measure(const geometry::NanConstraints& constraints) -> void override {
             const auto& pad = m_padding.get();
-            const geometry::NanConstraints child_constraints{
+            const geometry::NanConstraints child_constraints {
                 std::max(0.0f, constraints.min_width() - pad.left() - pad.right()),
                 constraints.max_width() == geometry::NanConstraints::k_infinity
                     ? geometry::NanConstraints::k_infinity
@@ -123,9 +136,9 @@ export namespace nandina::widgets {
             };
 
             for_each_child([&](runtime::NanWidget& child) {
-                child.measure(child_constraints.is_tight()
-                    ? child_constraints
-                    : child_constraints.loosen());
+                child.measure(
+                    child_constraints.is_tight() ? child_constraints : child_constraints.loosen()
+                );
             });
 
             // 计算 preferred_size 并缓存，避免后续 derive_child_max_size 等路径重复遍历子树
@@ -152,50 +165,51 @@ export namespace nandina::widgets {
             draw_background(canvas);
         }
 
-        [[nodiscard]] auto content_bounds(const float top_offset = 0.0f) const noexcept -> geometry::NanRect {
+        [[nodiscard]] auto content_bounds(const float top_offset = 0.0f) const noexcept
+            -> geometry::NanRect {
             const auto rect = bounds();
             const auto& pad = m_padding.get();
-            return geometry::NanRect{
-                geometry::NanPoint{
+            return geometry::NanRect {
+                geometry::NanPoint {
                     rect.x() + pad.left(),
                     rect.y() + pad.top() + top_offset,
                 },
-                geometry::NanSize{
+                geometry::NanSize {
                     std::max(0.0f, rect.width() - pad.left() - pad.right()),
                     std::max(0.0f, rect.height() - pad.top() - pad.bottom() - top_offset),
                 }
             };
         }
 
-        auto layout_content_children(const float top_offset = 0.0f, const runtime::NanWidget* skip = nullptr) -> void {
+        auto layout_content_children(
+            const float top_offset = 0.0f,
+            const runtime::NanWidget* skip = nullptr
+        ) -> void {
             const auto content = content_bounds(top_offset);
             for_each_child([&](runtime::NanWidget& child) {
                 if (&child == skip) {
                     return;
                 }
-                child.set_bounds(
-                    content.x(),
-                    content.y(),
-                    content.width(),
-                    content.height());
-                child.layout();
+            child.set_bounds(content.x(), content.y(), content.width(), content.height());
+            child.layout();
             });
         }
 
-        [[nodiscard]] auto measure_content_preferred_size(
-            const runtime::NanWidget* skip = nullptr) const noexcept -> geometry::NanSize {
-            geometry::NanSize child_pref{0.0f, 0.0f};
+        [[nodiscard]] auto
+        measure_content_preferred_size(const runtime::NanWidget* skip = nullptr) const noexcept
+            -> geometry::NanSize {
+            geometry::NanSize child_pref {0.0f, 0.0f};
 
             for_each_child([&](const runtime::NanWidget& child) {
                 if (&child == skip) {
                     return;
                 }
 
-                const auto cp = child.preferred_size();
-                child_pref    = geometry::NanSize{
-                    std::max(child_pref.width(), cp.width()),
-                    std::max(child_pref.height(), cp.height())
-                };
+            const auto cp = child.preferred_size();
+            child_pref = geometry::NanSize {
+                std::max(child_pref.width(), cp.width()),
+                std::max(child_pref.height(), cp.height())
+            };
             });
 
             return child_pref;
@@ -203,59 +217,71 @@ export namespace nandina::widgets {
 
         /** 绘制背景与描边 — 子类可扩展 */
         virtual void draw_background(tvg::SwCanvas& canvas) {
-            const auto rect    = bounds();
-            const auto& bg     = m_bg_color.get();
-            const auto bg_rgb  = bg.to<nandina::NanRgb>();
+            const auto rect = bounds();
+            const auto& bg = m_bg_color.get();
+            const auto bg_rgb = bg.to<nandina::NanRgb>();
             const float radius = m_corner_radius.get();
 
-            // 背景填充
-            auto* shape = tvg::Shape::gen();
-            shape->appendRect(rect.x(), rect.y(), rect.width(), rect.height(), radius, radius);
-            shape->fill(bg_rgb.red(), bg_rgb.green(), bg_rgb.blue(), bg_rgb.alpha());
-            canvas.add(shape);
-
-            // 描边（如果有）
-            if (m_border_width > 0.0f) {
-                const auto& bc    = m_border_color;
-                const auto bc_rgb = bc.to<nandina::NanRgb>();
-                auto* border      = tvg::Shape::gen();
-                border->appendRect(rect.x(), rect.y(), rect.width(), rect.height(), radius, radius);
-                border->strokeWidth(m_border_width);
-                border->strokeFill(bc_rgb.red(), bc_rgb.green(), bc_rgb.blue(), bc_rgb.alpha());
-                canvas.add(border);
+            // 背景填充（通过 paint_with_draw_clip 以尊重父级 clip stack）
+            {
+                auto* shape = tvg::Shape::gen();
+                shape->appendRect(rect.x(), rect.y(), rect.width(), rect.height(), radius, radius);
+                shape->fill(bg_rgb.red(), bg_rgb.green(), bg_rgb.blue(), bg_rgb.alpha());
+                nandina::runtime::paint_with_draw_clip(canvas, shape);
             }
+
+                // 描边（如果有）
+                if (m_border_width > 0.0f) {
+                    const auto& bc = m_border_color;
+                    const auto bc_rgb = bc.to<nandina::NanRgb>();
+                    auto* border = tvg::Shape::gen();
+                    border->appendRect(
+                        rect.x(),
+                        rect.y(),
+                        rect.width(),
+                        rect.height(),
+                        radius,
+                        radius
+                    );
+                    border->strokeWidth(m_border_width);
+                    border->strokeFill(bc_rgb.red(), bc_rgb.green(), bc_rgb.blue(), bc_rgb.alpha());
+                    nandina::runtime::paint_with_draw_clip(canvas, border);
+                }
 
             // 子节点由基类 draw() 遍历绘制
         }
 
         // ── 首选尺寸（考虑 padding + 子节点） ──────────────
+    public:
         [[nodiscard]] auto preferred_size() const noexcept -> geometry::NanSize override {
-            // layout_dirty 时缓存失效（内容可能已变化），需要重算
-            if (m_pref_size_valid && !is_layout_dirty()) {
-                return m_cached_preferred_size;
-            }
+                // layout_dirty 时缓存失效（内容可能已变化），需要重算
+                if (m_pref_size_valid && !is_layout_dirty()) {
+                    return m_cached_preferred_size;
+                }
             return compute_preferred_size();
         }
 
     protected:
         Surface() = default;
 
-        reactive::Prop<nandina::NanColor> m_bg_color{nandina::NanColor::from(nandina::NanRgb{255, 255, 255})};
-        reactive::Prop<float> m_corner_radius{0.0f};
-        reactive::Prop<geometry::NanInsets> m_padding{geometry::NanInsets{}};
+        reactive::Prop<nandina::NanColor> m_bg_color {
+            nandina::NanColor::from(nandina::NanRgb {255, 255, 255})
+        };
+        reactive::Prop<float> m_corner_radius {0.0f};
+        reactive::Prop<geometry::NanInsets> m_padding {geometry::NanInsets {}};
 
-        nandina::NanColor m_border_color{nandina::NanColor::from(nandina::NanRgb{0, 0, 0})};
-        float m_border_width{0.0f};
+        nandina::NanColor m_border_color {nandina::NanColor::from(nandina::NanRgb {0, 0, 0})};
+        float m_border_width {0.0f};
 
         // ── preferred_size 缓存（resize 时避免重复遍历子树） ──
-        mutable geometry::NanSize m_cached_preferred_size{};
-        mutable bool              m_pref_size_valid{false};
+        mutable geometry::NanSize m_cached_preferred_size {};
+        mutable bool m_pref_size_valid {false};
 
     private:
         [[nodiscard]] auto compute_preferred_size() const noexcept -> geometry::NanSize {
             const auto child_pref = measure_content_preferred_size();
             const auto& pad = m_padding.get();
-            return geometry::NanSize{
+            return geometry::NanSize {
                 child_pref.width() + pad.left() + pad.right(),
                 child_pref.height() + pad.top() + pad.bottom()
             };

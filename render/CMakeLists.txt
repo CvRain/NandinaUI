@@ -25,4 +25,7 @@ target_sources(nandina_render
             src/backend.cppm
             src/thorvg_adapter.cppm
             src/thorvg_backend.cppm
+            src/nan_draw_clip.cppm
+    PRIVATE
+        src/nan_draw_clip.cpp
 )

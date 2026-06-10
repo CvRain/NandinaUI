@@ -7,24 +7,25 @@ import nandina.foundation.nan_insets;
 import nandina.runtime.nan_widget;
 import nandina.widgets.panel;
 
-namespace {
+namespace
+{
 
-class FixedWidget final : public nandina::runtime::NanWidget {
-public:
-    static auto create() -> std::unique_ptr<FixedWidget> {
-        return std::make_unique<FixedWidget>();
-    }
+    class FixedWidget final: public nandina::runtime::NanWidget {
+    public:
+        static auto create() -> std::unique_ptr<FixedWidget> {
+            return std::make_unique<FixedWidget>();
+        }
 
-    [[nodiscard]] auto preferred_size() const noexcept -> nandina::geometry::NanSize override {
-        return {24.0f, 12.0f};
-    }
-};
+        [[nodiscard]] auto preferred_size() const noexcept -> nandina::geometry::NanSize override {
+            return {24.0f, 12.0f};
+        }
+    };
 
 } // namespace
 
 TEST(WidgetsPanelTest, PreferredSizeIncludesPadding) {
     auto panel = nandina::widgets::Panel::create();
-    panel->set_padding(nandina::geometry::NanInsets{10.0f});
+    panel->set_padding(nandina::geometry::NanInsets {10.0f});
     panel->add_child(FixedWidget::create());
 
     const auto preferred = panel->preferred_size();
@@ -34,7 +35,7 @@ TEST(WidgetsPanelTest, PreferredSizeIncludesPadding) {
 
 TEST(WidgetsPanelTest, LayoutPlacesContentWithinPadding) {
     auto panel = nandina::widgets::Panel::create();
-    panel->set_padding(nandina::geometry::NanInsets{8.0f, 6.0f, 10.0f, 12.0f});
+    panel->set_padding(nandina::geometry::NanInsets {8.0f, 6.0f, 10.0f, 12.0f});
 
     auto child = FixedWidget::create();
     auto* child_ptr = child.get();
@@ -49,4 +50,23 @@ TEST(WidgetsPanelTest, LayoutPlacesContentWithinPadding) {
     EXPECT_FLOAT_EQ(child_ptr->bounds().y(), 13.0f);
     EXPECT_FLOAT_EQ(child_ptr->bounds().width(), 182.0f);
     EXPECT_FLOAT_EQ(child_ptr->bounds().height(), 102.0f);
+}
+
+TEST(WidgetsPanelTest, ClipBehaviorUsesContentBounds) {
+    auto panel = nandina::widgets::Panel::create();
+    panel->set_padding(nandina::geometry::NanInsets {8.0f, 6.0f, 10.0f, 12.0f});
+    panel->set_corner_radius(9.0f);
+    panel->set_bounds(5.0f, 7.0f, 200.0f, 120.0f);
+
+    EXPECT_FALSE(panel->child_clip_rect().has_value());
+
+    panel->set_overflow_behavior(nandina::runtime::OverflowBehavior::clip);
+    const auto clip_rect = panel->child_clip_rect();
+
+    ASSERT_TRUE(clip_rect.has_value());
+    EXPECT_FLOAT_EQ(clip_rect->x(), 13.0f);
+    EXPECT_FLOAT_EQ(clip_rect->y(), 13.0f);
+    EXPECT_FLOAT_EQ(clip_rect->width(), 182.0f);
+    EXPECT_FLOAT_EQ(clip_rect->height(), 102.0f);
+    EXPECT_FLOAT_EQ(panel->child_clip_corner_radius(), 9.0f);
 }
