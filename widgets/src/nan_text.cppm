@@ -124,6 +124,7 @@ export namespace nandina::widgets
                     return *this;
                 }
             m_font.max_lines(lines);
+            m_has_seen_explicit_max_lines = true;
             m_layout_valid = false;
             mark_layout_dirty();
             return *this;
@@ -451,6 +452,39 @@ export namespace nandina::widgets
                         }
                 }
 
+            // 高度约束感知行数截断
+            // 当父容器给定有限高度（如 Card content 区域受 header/footer 压缩），
+            // 自动计算可容纳行数并设置到 font 上，使 layout_at() 产出有限行 layout。
+            // on_draw() 使用同一缓存，绘制的行数和测量一致。
+            // 仅在用户未显式调用 set_max_lines() 时启用动态截断。
+            const float avail_h = constraints.max_height() != geometry::NanConstraints::k_infinity
+                ? constraints.max_height() - constraints.min_height()
+                : geometry::NanConstraints::k_infinity;
+
+                if (!m_has_seen_explicit_max_lines && avail_h < geometry::NanConstraints::k_infinity
+                    && avail_h > 0.0f && measure_max_w > 0.0f && !m_shaped_glyphs.empty())
+                {
+                    const float lh = m_font.line_height();
+                        if (lh > 0.0f) {
+                            const auto& natural_layout = layout_at(measure_max_w);
+                            const int natural_lines =
+                                static_cast<int>(std::ceil(natural_layout.total_height / lh));
+                            const int fit_lines = std::max(1, static_cast<int>(avail_h / lh));
+
+                                if (natural_lines > fit_lines) {
+                                    m_font.max_lines(fit_lines);
+                                    m_layout_valid = false;
+                                }
+                                else if (m_dynamic_max_lines_active && natural_lines <= fit_lines) {
+                                    m_font.max_lines(0);
+                                    m_dynamic_max_lines_active = false;
+                                    m_layout_valid = false;
+                                }
+
+                            m_dynamic_max_lines_active = natural_lines > fit_lines;
+                        }
+                }
+
             const auto& layout = layout_at(measure_max_w);
             const geometry::NanSize measured = layout.empty()
                 ? geometry::NanSize {}
@@ -661,6 +695,10 @@ export namespace nandina::widgets
 
         // 绘制时实际使用的 bounds.width()，用于 resize 后强制刷新排版缓存
         mutable float m_last_draw_width {-1.0f};
+
+        // 高度约束感知自动截断状态
+        bool m_has_seen_explicit_max_lines {false};
+        bool m_dynamic_max_lines_active {false};
 
     private:
         inline static std::atomic<int> s_measure_fast_count {0};
