@@ -671,52 +671,38 @@ export namespace nandina::widgets
                     return;
                 }
 
-            // 1. 绘制卡面自身（阴影、背景、装饰色条、分隔线）
+            // 1. 绘制卡面自身（阴影、背景、装饰色条、分隔线）— 无 clip，
+            //    阴影需要延伸到 bounds 之外才会有层次感。
             on_draw(canvas);
 
-                // 2. Header 区域 — 无 clip
-                if (m_title_host && m_title_host->visible()) {
-                    m_title_host->draw(canvas);
-                }
-
-            // 3. Body 区域 — 带 clip
+            // 2. 所有子节点（header / body / footer）统一在 Card bounds 内裁剪。
+            //    防止任意一个 section 的文本溢出到 Card 外部，以及多个 Card
+            //    因溢出相互重叠的问题。
             {
-                const auto& pad = padding();
-                const float header_h = title_header_height();
-                float footer_h = 0.0f;
-                    if (m_footer) {
-                        const auto ms = m_footer->measured_size();
-                        const auto ps = m_footer->preferred_size();
-                        footer_h = std::max(ms.height() > 0.0f ? ms.height() : ps.height(), 0.0f);
-                    }
-                const float footer_y = (m_footer && footer_h > 0.0f)
-                    ? y() + height() - footer_h
-                    : y() + height() - pad.bottom();
-                const float content_y = y() + header_h + pad.top();
-                const float content_bottom = std::max(content_y, footer_y);
-                const float content_h = std::max(0.0f, content_bottom - content_y);
-
                 auto clip_guard = nandina::runtime::ScopedDrawClip {
-                    geometry::NanRect {
-                        geometry::NanPoint {x() + pad.left(), content_y},
-                        geometry::NanSize {width() - pad.left() - pad.right(), content_h}
-                    },
+                    bounds(),
                     m_corner_radius.get(),
                     m_corner_radius.get()
                 };
 
+                    // Header
+                    if (m_title_host && m_title_host->visible()) {
+                        m_title_host->draw(canvas);
+                    }
+
+                // Body
                 for_each_child([&](runtime::NanWidget& child) {
                     if (!child.visible() || &child == m_title_host || &child == m_footer) {
                         return;
                     }
                 child.draw(canvas);
                 });
-            }
 
-                // 4. Footer 区域 — 无 clip
-                if (m_footer && m_footer->visible()) {
-                    m_footer->draw(canvas);
-                }
+                    // Footer
+                    if (m_footer && m_footer->visible()) {
+                        m_footer->draw(canvas);
+                    }
+            }
         }
 
     protected:
