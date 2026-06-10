@@ -546,7 +546,8 @@ export namespace nandina::widgets
                         cc.min_width(),
                         cc.max_width(),
                         0.0f,
-                        geometry::NanConstraints::k_infinity
+                        cc.max_height() // 传递可用内容高度，使 Text 等组件
+                        // 自动截断行数，不溢出 footer
                     }
                 );
                 const auto m = child.measured_size();
@@ -609,8 +610,9 @@ export namespace nandina::widgets
             // Content 区域（body 子节点，位于 header 和 footer 之间）
             {
                 const float content_y = y() + header_h + pad.top();
-                const float content_bottom = std::max(content_y, footer_y);
-                const float content_h = std::max(0.0f, content_bottom - content_y);
+                // Content 不应延伸到 footer 下方 —— 在固定高度压力下 footer
+                // 优先级高于 content，防止 body 侵入 footer 区域。
+                const float content_h = std::max(0.0f, footer_y - content_y);
                 for_each_child([&](runtime::NanWidget& child) {
                     if (!child.visible() || &child == m_title_host || &child == m_footer)
                         return;
