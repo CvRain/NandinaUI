@@ -107,4 +107,5 @@ vcpkg_installed
 .kilo
 .vs
 .continue
+.zig-cache
 compile_commands.json
