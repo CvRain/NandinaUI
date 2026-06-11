@@ -23,6 +23,7 @@ import nandina.layout.flex_widgets;
 import nandina.reactive.prop;
 import nandina.widgets.surface;
 import nandina.widgets.text;
+import nandina.widgets.clip_view;
 import nandina.theme.nan_style;
 
 /**
@@ -451,6 +452,7 @@ export namespace nandina::widgets
                     m_footer->set_visible(false);
                     m_footer->set_hit_test_visible(false);
                 }
+
             auto wrapper = layout::Padding::Create();
             wrapper->padding(
                 resolved_section_spacing(),
@@ -458,7 +460,13 @@ export namespace nandina::widgets
                 padding().right(),
                 resolved_section_spacing()
             );
-            wrapper->child(std::move(footer));
+
+            // Wrap footer in ClipView to prevent footer content from
+            // overflowing into the body area.
+            auto footer_clip = ClipView::Create();
+            footer_clip->add_child(std::move(footer));
+            wrapper->child(std::move(footer_clip));
+
             m_footer = NanWidget::add_child(std::move(wrapper));
             mark_layout_dirty();
             return *this;
@@ -666,8 +674,17 @@ export namespace nandina::widgets
         }
 
         // ── 绘制覆盖 ──────────────────────────────────────────
-        // 手动管理 body 子节点的 clip scope：header 和 footer 不受 clip 影响，
-        // 而 body 子节点在 clip stack 保护下绘制，避免越界侵入相邻 section。
+        // ClipView 集成说明：
+        //
+        // Card 内部使用 ClipView 对各 section 启用了独立的子树裁剪：
+        //   - Header：m_header_column 被 ClipView 包裹 → 标题/描述文本不溢出到 body
+        //   - Footer：set_footer() 中的 ClipView → footer 内容不溢出到 body
+        //
+        // 各 section 的 ClipView 通过继承 NanWidget::draw() 自动管理自己的 clip scope，
+        // 由 thread-local draw clip stack 正确组合。
+        //
+        // Card::draw() 仅负责 Card 自身装饰（阴影/背景/分隔线）和一个对外 clip guard，
+        // 防止任何子内容溢出 Card 自身 bounds。
         void draw(tvg::SwCanvas& canvas) override {
                 if (!visible()) {
                     return;
@@ -677,9 +694,10 @@ export namespace nandina::widgets
             //    阴影需要延伸到 bounds 之外才会有层次感。
             on_draw(canvas);
 
-            // 2. 所有子节点（header / body / footer）统一在 Card bounds 内裁剪。
-            //    防止任意一个 section 的文本溢出到 Card 外部，以及多个 Card
-            //    因溢出相互重叠的问题。
+            // 2. 所有子节点在 Card bounds 内裁剪。
+            //    这是一个外层安全 guard：防止任何 section 溢出 Card 外部
+            //    （即便内部 ClipView 漏掉极端情况）。
+            //    每个 section 内部还有 ClipView 做独立裁剪（防止 section 间互相侵入）。
             {
                 auto clip_guard = nandina::runtime::ScopedDrawClip {
                     bounds(),
@@ -824,6 +842,10 @@ export namespace nandina::widgets
             auto header_layout = CardHeaderLayout::Create();
             m_header_layout = header_layout.get();
 
+            // Wrap header column in ClipView to prevent title/description
+            // text from overflowing into the body section when the card
+            // is under vertical pressure.
+            // Note: Build the Column first, add children, then wrap in ClipView.
             auto header_column = layout::Column::Create();
             header_column->gap(4.0f).align_items(layout::LayoutAlignment::stretch);
             m_header_column = header_column.get();
@@ -838,7 +860,7 @@ export namespace nandina::widgets
                 .set_single_line(false);
             title_label->set_visible(!m_title.empty());
             m_title_label = title_label.get();
-            header_column->add(std::move(title_label));
+            m_header_column->add(std::move(title_label));
 
             auto description_label = Text::create();
             description_label->set_text(m_description)
@@ -850,9 +872,14 @@ export namespace nandina::widgets
                 .set_single_line(false);
             description_label->set_visible(!m_description.empty());
             m_description_label = description_label.get();
-            header_column->add(std::move(description_label));
+            m_header_column->add(std::move(description_label));
 
-            header_layout->set_text_widget(std::move(header_column));
+            // Wrap the populated Column in ClipView for draw-time clipping.
+            auto header_clip = ClipView::Create();
+            header_clip->add_child(std::move(header_column));
+
+            // Add the ClipView (containing the Column) to CardHeaderLayout
+            header_layout->set_text_widget(std::move(header_clip));
 
             auto header_action_slot = layout::SizedBox::Create();
             header_action_slot->set_visible(false);

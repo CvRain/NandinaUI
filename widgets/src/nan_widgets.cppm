@@ -4,6 +4,7 @@
 
 export module nandina.widgets;
 
+export import nandina.widgets.clip_view;
 export import nandina.widgets.surface;
 export import nandina.widgets.pressable;
 export import nandina.widgets.focus_ring;

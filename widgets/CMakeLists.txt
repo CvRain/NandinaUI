@@ -26,6 +26,7 @@ target_sources(nandina_widgets
     PUBLIC
         FILE_SET CXX_MODULES FILES
             src/nan_widgets.cppm         # 聚合模块 nandina.widgets
+            src/nan_clip_view.cppm       # ClipView 通用裁剪容器组件
             src/nan_surface.cppm         # Surface 容器组件
             src/nan_pressable.cppm       # Pressable 交互状态机
             src/nan_focus_ring.cppm      # FocusRing 焦点可视化 primitive
