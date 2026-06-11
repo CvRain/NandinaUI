@@ -108,4 +108,5 @@ vcpkg_installed
 .vs
 .continue
 .zig-cache
+zig-out
 compile_commands.json

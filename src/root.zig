@@ -1,18 +1,27 @@
-//! By convention, root.zig is the root source file when making a package.
+//! NandinaUI - 库根模块（聚合导出）
+//!
+//! 这是 NandinaUI 包的入口。所有面向消费者的公共声明都从这里再导出。
+//! 分层依赖方向（单向）：
+//!   foundation -> reactive / render / layout / theme / text -> widgets -> app
+//!
+//! 各层职责见 docs/ARCHITECTURE.md。
 const std = @import("std");
-const Io = std.Io;
 
-/// This is a documentation comment to explain the `printAnotherMessage` function below.
-///
-/// Accepting an `Io.Writer` instance is a handy way to write reusable code.
-pub fn printAnotherMessage(writer: *Io.Writer) Io.Writer.Error!void {
-    try writer.print("Run `zig build test` to run the tests.\n", .{});
-}
+// ---- 分层模块再导出 ----
+pub const foundation = @import("foundation/foundation.zig");
+pub const reactive = @import("reactive/reactive.zig");
+pub const render = @import("render/render.zig");
+pub const layout = @import("layout/layout.zig");
+pub const theme = @import("theme/theme.zig");
+pub const text = @import("text/text.zig");
+pub const runtime = @import("runtime/runtime.zig");
+pub const widgets = @import("widgets/widgets.zig");
+pub const app = @import("app/app.zig");
 
-pub fn add(a: i32, b: i32) i32 {
-    return a + b;
-}
+/// 库版本信息。
+pub const version = std.SemanticVersion{ .major = 0, .minor = 0, .patch = 0 };
 
-test "basic add functionality" {
-    try std.testing.expect(add(3, 7) == 10);
+// 保证 `zig build test` 会递归收集所有子模块里的 test 块。
+test {
+    std.testing.refAllDecls(@This());
 }
