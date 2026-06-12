@@ -36,6 +36,7 @@ const reactive_derived = @import("demos/reactive_derived.zig");
 const reactive_batch = @import("demos/reactive_batch.zig");
 const foundation_geometry = @import("demos/foundation_geometry.zig");
 const foundation_color = @import("demos/foundation_color.zig");
+const color_space = @import("demos/color_space.zig");
 const render_scene = @import("demos/render_scene.zig");
 const layout_box = @import("demos/layout_box.zig");
 
@@ -43,6 +44,7 @@ const layout_box = @import("demos/layout_box.zig");
 pub const demos = [_]Demo{
     foundation_geometry.demo,
     foundation_color.demo,
+    color_space.demo,
     reactive_counter.demo,
     reactive_derived.demo,
     reactive_batch.demo,

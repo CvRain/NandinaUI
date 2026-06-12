@@ -22,6 +22,7 @@ showcase/
 └── demos/              # 每个 demo 一个文件，自描述并注册到 registry
     ├── foundation_geometry.zig
     ├── foundation_color.zig
+    ├── color_space.zig
     ├── reactive_counter.zig
     ├── reactive_derived.zig
     ├── reactive_batch.zig

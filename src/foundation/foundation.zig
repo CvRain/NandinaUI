@@ -6,6 +6,7 @@ const std = @import("std");
 
 pub const geometry = @import("geometry.zig");
 pub const color = @import("color.zig");
+pub const color_space = @import("color_space.zig");
 
 // 常用类型的便捷再导出
 pub const Point = geometry.Point;
@@ -13,6 +14,14 @@ pub const Size = geometry.Size;
 pub const Rect = geometry.Rect;
 pub const Insets = geometry.Insets;
 pub const Color = color.Color;
+
+// 色彩空间类型的便捷再导出
+pub const Oklab = color_space.Oklab;
+pub const Oklch = color_space.Oklch;
+pub const Lab = color_space.Lab;
+pub const Lch = color_space.Lch;
+pub const Rgb = color_space.Rgb;
+pub const HexRgb = color_space.HexRgb;
 
 test {
     std.testing.refAllDecls(@This());
