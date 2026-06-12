@@ -115,6 +115,30 @@ pub fn build(b: *std.Build) void {
         run_cmd.addArgs(args);
     }
 
+    // ── Showcase 子项目 ───────────────────────────────────────────────────────
+    // 独立可执行目标：组件 / 能力演示运行器。既用于展示库已落地的能力，
+    // 也方便开发时实际跑一下运行效果。通过 `zig build showcase` 运行。
+    const showcase_exe = b.addExecutable(.{
+        .name = "showcase",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("showcase/main.zig"),
+            .target = target,
+            .optimize = optimize,
+            .imports = &.{
+                .{ .name = "NandinaUI", .module = mod },
+            },
+        }),
+    });
+    b.installArtifact(showcase_exe);
+
+    const showcase_step = b.step("showcase", "Run the component / capability showcase");
+    const showcase_run = b.addRunArtifact(showcase_exe);
+    showcase_step.dependOn(&showcase_run.step);
+    showcase_run.step.dependOn(b.getInstallStep());
+    if (b.args) |args| {
+        showcase_run.addArgs(args);
+    }
+
     // Creates an executable that will run `test` blocks from the provided module.
     // Here `mod` needs to define a target, which is why earlier we made sure to
     // set the releative field.
@@ -141,6 +165,13 @@ pub fn build(b: *std.Build) void {
     const test_step = b.step("test", "Run tests");
     test_step.dependOn(&run_mod_tests.step);
     test_step.dependOn(&run_exe_tests.step);
+
+    // Showcase 的 test 块（注册表完整性检查等）也纳入 `zig build test`。
+    const showcase_tests = b.addTest(.{
+        .root_module = showcase_exe.root_module,
+    });
+    const run_showcase_tests = b.addRunArtifact(showcase_tests);
+    test_step.dependOn(&run_showcase_tests.step);
 
     // Just like flags, top level steps are also listed in the `--help` menu.
     //

@@ -28,19 +28,22 @@ foundation 几何/颜色已经落地并有测试。下一个该动的不是 rend
 - foundation 的 Point / Size / Rect / Insets / Color 已实现并测试。
 - `zig build run` / `zig build test` 可运行。
 
-### M1 —— reactive 核心闭环 ⬅️ 下一步
+### M1 —— reactive 核心闭环 ✅ 基本完成（linkedSignal 待补）
 > 命名采用 Angular signal 风格（`signal` / `computed` / `effect`），取代旧版 React 风格的 State/Effect。
+>
+> 实现采用显式调度图 `Graph`（无全局状态、多实例隔离），Push 失效 + Pull 取值：
+> computed 惰性重算、effect 由调度队列执行，菱形依赖 glitch-free，动态依赖自动重追踪。
 
 按以下子步骤推进，每步独立可测：
-1. `Signal(comptime T)` / `signal(v)`：get / set / 版本号 / 变更订阅。
-2. 依赖追踪上下文（tracking context）：在 effect/computed 执行期记录被读取的 signal。
-3. `effect(fn)` + `EffectScope`：依赖变化时重跑；scope 析构自动解绑。
-4. `Computed(comptime T)` / `computed(fn)`：派生值，自动追踪依赖。
-5. `batch(fn)`：批量 set 合并为一次 flush。
-6. 只读视图（`asReadonly()`）与 `linkedSignal`：统一组件输入（静态值 vs 响应式源）。
+1. ✅ `Signal(T)`：init / get / peek / set / update / 版本号 / `asReadonly()`。
+2. ✅ 依赖追踪上下文：`Graph` 在 effect/computed 执行期记录被读取的 source，自动建立双向边。
+3. ✅ `effect(g, ctx, fn)` + `EffectScope`：依赖变化时重跑；`dispose` / `scope.deinit` 自动解绑。
+4. ✅ `Computed(T)` / `computed(g, T, ctx, fn)`：惰性派生值，自动追踪依赖。
+5. ✅ `batch(g, ctx, fn)`：批量 set 合并为一次 flush（支持嵌套）。
+6. 🚧 只读视图 `asReadonly()` 已落地；`linkedSignal`（可写派生）待后续按需补充。
 
 **完成定义**：能构建 signal→computed→effect 依赖图，set 触发可预测、无重复的重算，
-并有覆盖依赖追踪、batch、scope 清理的测试。
+并有覆盖依赖追踪、batch、scope 清理、菱形/动态依赖的测试。当前 `zig build test` 全绿（42 个测试）。
 
 
 ### M2 —— render 抽象 + layout 协议

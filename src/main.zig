@@ -21,6 +21,23 @@ pub fn main(init: std.process.Init) !void {
     const c = rect.center();
     try out.print("demo rect center = ({d}, {d})\n", .{ c.x, c.y });
 
+    // 演示 reactive 最小闭环：signal → computed → effect。
+    var graph = nandina.reactive.Graph.init(init.gpa);
+    defer graph.deinit();
+
+    var count = nandina.reactive.Signal(i32).init(&graph, 1);
+    defer count.deinit();
+
+    const doubled = try nandina.reactive.computed(&graph, i32, &count, struct {
+        fn f(s: *nandina.reactive.Signal(i32)) i32 {
+            return s.get() * 2;
+        }
+    }.f);
+
+    try out.print("reactive: count={d} doubled={d}\n", .{ count.get(), doubled.get() });
+    count.set(21);
+    try out.print("reactive: count={d} doubled={d}\n", .{ count.get(), doubled.get() });
+
     try out.flush();
 }
 
