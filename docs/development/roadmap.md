@@ -1,6 +1,7 @@
 # Zig 重写路线图
 
-> 配套阅读：`docs/ARCHITECTURE.md`。本文回答「应该从哪个方向开始重写」。
+> 配套阅读：[架构](architecture.md)。本文回答「应该从哪个方向开始重写」。
+
 
 ## 总原则
 
@@ -28,16 +29,19 @@ foundation 几何/颜色已经落地并有测试。下一个该动的不是 rend
 - `zig build run` / `zig build test` 可运行。
 
 ### M1 —— reactive 核心闭环 ⬅️ 下一步
-按以下子步骤推进，每步独立可测：
-1. `State(comptime T)`：get / set / 版本号 / 变更订阅。
-2. 依赖追踪上下文（tracking context）：在 effect/computed 执行期记录被读取的 State。
-3. `Effect` + `EffectScope`：依赖变化时重跑；scope 析构自动解绑。
-4. `Computed(comptime T)`：派生值，自动追踪依赖。
-5. `batch(fn)`：批量 set 合并为一次 flush。
-6. `Prop(comptime T)`：统一组件输入（静态值 vs 响应式源）。
+> 命名采用 Angular signal 风格（`signal` / `computed` / `effect`），取代旧版 React 风格的 State/Effect。
 
-**完成定义**：能构建 State→Computed→Effect 依赖图，set 触发可预测、无重复的重算，
+按以下子步骤推进，每步独立可测：
+1. `Signal(comptime T)` / `signal(v)`：get / set / 版本号 / 变更订阅。
+2. 依赖追踪上下文（tracking context）：在 effect/computed 执行期记录被读取的 signal。
+3. `effect(fn)` + `EffectScope`：依赖变化时重跑；scope 析构自动解绑。
+4. `Computed(comptime T)` / `computed(fn)`：派生值，自动追踪依赖。
+5. `batch(fn)`：批量 set 合并为一次 flush。
+6. 只读视图（`asReadonly()`）与 `linkedSignal`：统一组件输入（静态值 vs 响应式源）。
+
+**完成定义**：能构建 signal→computed→effect 依赖图，set 触发可预测、无重复的重算，
 并有覆盖依赖追踪、batch、scope 清理的测试。
+
 
 ### M2 —— render 抽象 + layout 协议
 - `render`：定义 `DrawCommand`（FillRect / FillRoundedRect / DrawText / PushClip / PopClip）、
@@ -57,7 +61,8 @@ foundation 几何/颜色已经落地并有测试。下一个该动的不是 rend
 ### M5 —— widgets
 - primitives：Surface / Pressable。
 - controls：Label / Button / Panel / Card。
-- 组件统一接收只读输入（Prop / ReadState），内部状态用 State 并绑定 EffectScope。
+- 组件统一接收只读输入（只读 signal 视图），内部状态用 `Signal` 并绑定 `EffectScope`。
+
 
 ### M6 —— app + showcase
 - App / Page / Router / 统一挂载入口与 Ref/Handle/Key 访问机制。
