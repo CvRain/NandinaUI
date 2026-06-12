@@ -46,12 +46,14 @@ foundation 几何/颜色已经落地并有测试。下一个该动的不是 rend
 并有覆盖依赖追踪、batch、scope 清理、菱形/动态依赖的测试。当前 `zig build test` 全绿（42 个测试）。
 
 
-### M2 —— render 抽象 + layout 协议
+### M2 —— render 抽象 + layout 协议 ✅ 已完成
 - ✅ `render`：`DrawCommand`（fill_rect / fill_rounded_rect / draw_text / push_clip / pop_clip）、
   `Scene` 命令缓冲（可复用）与 `Backend` 接口（vtable）已落地，并提供可断言命令序列的
   `RecordingBackend` 内存后端。showcase 新增 `render-scene` demo 展示一帧渲染产物。
-- 🚧 `layout`：定义 `Constraints` 与 `measure(constraints) -> Size` 协议，落地 Row / Column / Stack。⬅️ 下一步
-- 两者互相独立，可并行，但都只依赖 foundation。
+- ✅ `layout`：`Constraints` 协议层 + 三套纯函数求解器 —— `flex`（盒子模型 column/row/stack，
+  对标 Qt Widget）、`flow`（流式折行）、`anchors`（QML anchors 定位）。showcase 新增 `layout-box` demo
+  展示三套求解器输出与「布局 → 渲染」链路。
+- 两者互相独立，都只依赖 foundation。
 
 ### M3 —— theme + text
 - `theme`：颜色 token、spacing / radius / typography scale、Theme resolver。
