@@ -1,17 +1,53 @@
 //! render —— 渲染抽象层
 //!
-//! 定义 Scene / DrawCommand 中间表示与渲染后端接口（backend interface），
-//! 让上层只产出绘制命令，由具体后端（如 ThorVG / 自绘）执行。
+//! 定义 `Scene` / `DrawCommand` 中间表示与渲染 `Backend` 接口（vtable），让上层只产出
+//! 后端无关的绘制命令，由具体后端（GPU / 软件 / 录制）执行。
 //!
-//! 依赖方向：render 依赖 foundation（几何 / 颜色）。
+//! 依赖方向：render 依赖 foundation（几何 / 颜色），不依赖任何更高层。
 //!
-//! 现状：骨架占位。下一步定义 DrawCommand（FillRect / FillRoundedRect /
-//! DrawText / PushClip / PopClip）与 Backend vtable 接口。
+//! ## 用法
+//!
+//! ```zig
+//! const render = @import("NandinaUI").render;
+//!
+//! var scene = render.Scene.init(allocator);
+//! defer scene.deinit();
+//! try scene.fillRoundedRect(rect, 8, color);
+//!
+//! var rec = render.RecordingBackend.init(allocator);
+//! defer rec.deinit();
+//! const backend = rec.interface();
+//!
+//! try backend.beginFrame(.{ .width = 800, .height = 600 });
+//! try backend.submit(&scene);
+//! try backend.endFrame();
+//! ```
+
 const std = @import("std");
 
-// TODO(render): 定义 DrawCommand 联合体（FillRect / FillRoundedRect / DrawText / PushClip / PopClip）
-// TODO(render): 定义 Scene（绘制命令缓冲）
-// TODO(render): 定义 Backend 接口（vtable），由具体后端实现
+pub const scene = @import("scene.zig");
+pub const backend = @import("backend.zig");
+
+// ── 公共 API 再导出 ─────────────────────────────────────────────────────────────
+
+/// 绘制命令联合体。
+pub const DrawCommand = scene.DrawCommand;
+pub const FillRect = scene.FillRect;
+pub const FillRoundedRect = scene.FillRoundedRect;
+pub const DrawText = scene.DrawText;
+pub const PushClip = scene.PushClip;
+pub const PopClip = scene.PopClip;
+/// 绘制命令缓冲。
+pub const Scene = scene.Scene;
+
+/// 渲染后端接口（vtable）。
+pub const Backend = backend.Backend;
+/// 渲染目标视图。
+pub const RenderTarget = backend.RenderTarget;
+pub const PixelFormat = backend.PixelFormat;
+pub const BackendError = backend.BackendError;
+/// 内存录制后端（测试 / 无头展示）。
+pub const RecordingBackend = backend.RecordingBackend;
 
 test {
     std.testing.refAllDecls(@This());

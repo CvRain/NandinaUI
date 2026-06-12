@@ -24,7 +24,8 @@ showcase/
     ├── foundation_color.zig
     ├── reactive_counter.zig
     ├── reactive_derived.zig
-    └── reactive_batch.zig
+    ├── reactive_batch.zig
+    └── render_scene.zig
 ```
 
 ## 新增一个 demo

@@ -47,10 +47,11 @@ foundation 几何/颜色已经落地并有测试。下一个该动的不是 rend
 
 
 ### M2 —— render 抽象 + layout 协议
-- `render`：定义 `DrawCommand`（FillRect / FillRoundedRect / DrawText / PushClip / PopClip）、
-  `Scene` 命令缓冲与 `Backend` 接口（vtable）。先做一个可断言命令序列的内存后端用于测试。
-- `layout`：定义 `Constraints` 与 `measure(constraints) -> Size` 协议，落地 Row / Column / Stack。
-- 这两者互相独立，可并行，但都只依赖 foundation。
+- ✅ `render`：`DrawCommand`（fill_rect / fill_rounded_rect / draw_text / push_clip / pop_clip）、
+  `Scene` 命令缓冲（可复用）与 `Backend` 接口（vtable）已落地，并提供可断言命令序列的
+  `RecordingBackend` 内存后端。showcase 新增 `render-scene` demo 展示一帧渲染产物。
+- 🚧 `layout`：定义 `Constraints` 与 `measure(constraints) -> Size` 协议，落地 Row / Column / Stack。⬅️ 下一步
+- 两者互相独立，可并行，但都只依赖 foundation。
 
 ### M3 —— theme + text
 - `theme`：颜色 token、spacing / radius / typography scale、Theme resolver。
