@@ -27,7 +27,8 @@ showcase/
     ├── reactive_derived.zig
     ├── reactive_batch.zig
     ├── render_scene.zig
-    └── layout_box.zig
+    ├── layout_box.zig
+    └── theme.zig
 ```
 
 ## 新增一个 demo

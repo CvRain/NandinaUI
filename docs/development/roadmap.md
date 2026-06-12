@@ -56,8 +56,11 @@ foundation 几何/颜色已经落地并有测试。下一个该动的不是 rend
 - 两者互相独立，都只依赖 foundation。
 
 ### M3 —— theme + text
-- `theme`：颜色 token、spacing / radius / typography scale、Theme resolver。
-- `text`：Font 句柄、`measureText` —— layout 需要它来确定文本尺寸。
+- ✅ `theme`：primitive token（spacing / radius / border / elevation / opacity / typography）、
+  语义调色板（ColorRole + light/dark Scheme）、`Theme` 聚合与 resolver 已落地。默认
+  主题类似「global.css」可被开发者整体/逐字段覆写。showcase 新增 `theme` demo。
+- 🚧 `text`：Font 句柄、`measureText` —— layout 需要它来确定文本尺寸。接口须把「约束宽度
+  + 换行 + 行数上限 + 截断」作为一等公民（防文字溢出组件）。⬅️ 下一步
 
 ### M4 —— runtime
 - Node 树（owning 子节点 + handle 访问）、事件类型与分发、
