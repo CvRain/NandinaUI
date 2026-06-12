@@ -60,7 +60,7 @@ foundation                         （几何 / 颜色 / 基础类型，无上游
 | `render` | Scene / DrawCommand 中间层与后端接口 | ✅ 已落地，有测试 |
 | `layout` | constraints / measure-layout 协议与基础容器 | ✅ 已落地，有测试 |
 | `theme` | token / palette / Theme resolver | ✅ 已落地，有测试 |
-| `text` | 字体、文本测量与布局 | 🚧 骨架 |
+| `text` | 字体、文本测量与布局（溢出策略） | ✅ 已落地，有测试 |
 | `runtime` | Node 树、事件循环、调度边界 | 🚧 骨架 |
 | `widgets` | primitives 与 controls | 🚧 骨架 |
 | `app` | page / router / 挂载入口 | 🚧 骨架 |

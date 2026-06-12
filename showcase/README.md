@@ -28,7 +28,8 @@ showcase/
     ├── reactive_batch.zig
     ├── render_scene.zig
     ├── layout_box.zig
-    └── theme.zig
+    ├── theme.zig
+    └── text_overflow.zig
 ```
 
 ## 新增一个 demo

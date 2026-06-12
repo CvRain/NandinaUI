@@ -55,12 +55,13 @@ foundation 几何/颜色已经落地并有测试。下一个该动的不是 rend
   展示三套求解器输出与「布局 → 渲染」链路。
 - 两者互相独立，都只依赖 foundation。
 
-### M3 —— theme + text
+### M3 —— theme + text ✅ 已完成
 - ✅ `theme`：primitive token（spacing / radius / border / elevation / opacity / typography）、
   语义调色板（ColorRole + light/dark Scheme）、`Theme` 聚合与 resolver 已落地。默认
   主题类似「global.css」可被开发者整体/逐字段覆写。showcase 新增 `theme` demo。
-- 🚧 `text`：Font 句柄、`measureText` —— layout 需要它来确定文本尺寸。接口须把「约束宽度
-  + 换行 + 行数上限 + 截断」作为一等公民（防文字溢出组件）。⬅️ 下一步
+- ✅ `text`：FontMetrics 度量接口 + 等宽估算占位后端，`measure(...)` 把约束宽度 + 换行
+  + 行数上限 + 溢出策略（clip / ellipsis 默认 / wrap / scale）作为一等公民，从根上防文字
+  溢出组件。裁剪交给 render（未来统一 ClipNode）。showcase 新增 `text-overflow` demo。
 
 ### M4 —— runtime
 - Node 树（owning 子节点 + handle 访问）、事件类型与分发、
