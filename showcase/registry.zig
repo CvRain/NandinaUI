@@ -41,6 +41,7 @@ const render_scene = @import("demos/render_scene.zig");
 const layout_box = @import("demos/layout_box.zig");
 const theme_demo = @import("demos/theme.zig");
 const text_overflow = @import("demos/text_overflow.zig");
+const runtime_loop = @import("demos/runtime_loop.zig");
 
 /// 全部已注册的 demo，按演示顺序排列。
 pub const demos = [_]Demo{
@@ -54,6 +55,7 @@ pub const demos = [_]Demo{
     layout_box.demo,
     theme_demo.demo,
     text_overflow.demo,
+    runtime_loop.demo,
 };
 
 /// 按名查找 demo。

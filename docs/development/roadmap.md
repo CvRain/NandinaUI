@@ -63,10 +63,11 @@ foundation 几何/颜色已经落地并有测试。下一个该动的不是 rend
   + 行数上限 + 溢出策略（clip / ellipsis 默认 / wrap / scale）作为一等公民，从根上防文字
   溢出组件。裁剪交给 render（未来统一 ClipNode）。showcase 新增 `text-overflow` demo。
 
-### M4 —— runtime
-- Node 树（owning 子节点 + handle 访问）、事件类型与分发、
-  `mark_dirty → reflow → repaint` 主循环骨架。
-- 此时 reactive / render / layout 已就位，runtime 才能把它们串成闭环。
+### M4 —— runtime ✅ 纯逻辑核心已完成（平台后端待接）
+- ✅ Node 树（嵌入式 + vtable，owning 子节点、dirty 两级冒泡、命中测试）、
+  事件类型与分发（命中测试 + 冒泡）、`Tree` 的 `relayout → repaint` 主循环骨架已落地，
+  产出 `render.Scene`。reactive / render / layout 已被串成一帧闭环。showcase 新增 `runtime-loop` demo。
+- 🚧 平台窗口 / 事件源（SDL3 等）作为 backend 后续接入，不污染 runtime 接口。
 
 ### M5 —— widgets
 - primitives：Surface / Pressable。
