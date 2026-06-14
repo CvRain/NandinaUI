@@ -7,16 +7,16 @@
 //! 依赖方向：widgets 依赖 foundation / reactive / layout / theme / text / runtime。
 const std = @import("std");
 
-// ── controls ──────────────────────────────────────────────────────────────────
+// ── primitives ────────────────────────────────────────────────────────────────
 
-const label_mod = @import("label.zig");
-/// Label —— 响应式文本标签（text / color / font_size 均为 ReadSignal 输入）。
-pub const Label = label_mod.Label;
-pub const LabelProps = label_mod.LabelProps;
+const surface_mod = @import("surface.zig");
+/// Surface —— 背景色 / 圆角 / padding / 描边容器（基础构建块）。
+pub const Surface = surface_mod.Surface;
+pub const SurfaceProps = surface_mod.SurfaceProps;
 
-// TODO(widgets): Surface / Pressable / Button / Panel / Card
+// TODO(widgets): Pressable / Label / Button / Panel / Card
 
 test {
     std.testing.refAllDecls(@This());
-    _ = label_mod;
+    _ = surface_mod;
 }
