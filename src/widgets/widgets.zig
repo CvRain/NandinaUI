@@ -5,14 +5,30 @@
 //! （Label / Button / Panel / Card ...）。
 //!
 //! 依赖方向：widgets 依赖 foundation / reactive / layout / theme / text / runtime。
-//!
-//! 现状：骨架占位。下一步落地 Surface / Label / Button 最小集合。
 const std = @import("std");
 
-// TODO(widgets): primitives —— Surface / Pressable
-// TODO(widgets): controls —— Label / Button / Panel / Card
-// TODO(widgets): 组件统一接收只读输入（Prop / ReadState），内部状态用 State
+// ── controls ──────────────────────────────────────────────────────────────────
+
+const panel_mod = @import("panel.zig");
+/// Panel —— 带圆角、边框、padding 的背景容器。
+pub const Panel = panel_mod.Panel;
+pub const PanelProps = panel_mod.PanelProps;
+
+const button_mod = @import("button.zig");
+/// Button —— 响应式按钮（label/颜色/状态均为 ReadSignal 输入）。
+pub const Button = button_mod.Button;
+pub const ButtonProps = button_mod.ButtonProps;
+
+const card_mod = @import("card.zig");
+/// Card —— title + description header 结构化容器。
+pub const Card = card_mod.Card;
+pub const CardProps = card_mod.CardProps;
+
+// TODO(widgets): Surface / Pressable / Label
 
 test {
     std.testing.refAllDecls(@This());
+    _ = panel_mod;
+    _ = button_mod;
+    _ = card_mod;
 }
