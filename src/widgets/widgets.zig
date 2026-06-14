@@ -9,14 +9,14 @@ const std = @import("std");
 
 // ── primitives ────────────────────────────────────────────────────────────────
 
-const pressable_mod = @import("pressable.zig");
-/// Pressable —— 交互状态机（hover / pressed / focused / disabled）。
-pub const Pressable = pressable_mod.Pressable;
-pub const PressableProps = pressable_mod.PressableProps;
+const surface_mod = @import("surface.zig");
+/// Surface —— 背景色 / 圆角 / padding / 描边容器（基础构建块）。
+pub const Surface = surface_mod.Surface;
+pub const SurfaceProps = surface_mod.SurfaceProps;
 
-// TODO(widgets): Surface / Label / Button / Panel / Card
+// TODO(widgets): Pressable / Label / Button / Panel / Card
 
 test {
     std.testing.refAllDecls(@This());
-    _ = pressable_mod;
+    _ = surface_mod;
 }
