@@ -5,14 +5,18 @@
 //! （Label / Button / Panel / Card ...）。
 //!
 //! 依赖方向：widgets 依赖 foundation / reactive / layout / theme / text / runtime。
-//!
-//! 现状：骨架占位。下一步落地 Surface / Label / Button 最小集合。
 const std = @import("std");
 
-// TODO(widgets): primitives —— Surface / Pressable
-// TODO(widgets): controls —— Label / Button / Panel / Card
-// TODO(widgets): 组件统一接收只读输入（Prop / ReadState），内部状态用 State
+// ── controls ──────────────────────────────────────────────────────────────────
+
+const label_mod = @import("label.zig");
+/// Label —— 响应式文本标签（text / color / font_size 均为 ReadSignal 输入）。
+pub const Label = label_mod.Label;
+pub const LabelProps = label_mod.LabelProps;
+
+// TODO(widgets): Surface / Pressable / Button / Panel / Card
 
 test {
     std.testing.refAllDecls(@This());
+    _ = label_mod;
 }

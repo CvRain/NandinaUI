@@ -18,7 +18,8 @@ const Graph = graph.Graph;
 /// 判断类型 `T` 是否可用 `==` 比较（用于变化检测）。
 fn isEqualityComparable(comptime T: type) bool {
     return switch (@typeInfo(T)) {
-        .int, .float, .bool, .@"enum", .pointer, .comptime_int, .comptime_float => true,
+        .int, .float, .bool, .@"enum", .comptime_int, .comptime_float => true,
+        .pointer => |p| p.size != .slice,
         .optional => |opt| isEqualityComparable(opt.child),
         else => false,
     };
