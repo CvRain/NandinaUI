@@ -16,9 +16,11 @@ const graph = @import("graph.zig");
 const Graph = graph.Graph;
 
 /// 判断类型 `T` 是否可用 `==` 比较（用于变化检测）。
+/// 注意：切片（slice）虽为 `.pointer` 但 Zig 不支持用 `==` 直接比较，须排除。
 fn isEqualityComparable(comptime T: type) bool {
     return switch (@typeInfo(T)) {
         .int, .float, .bool, .@"enum", .comptime_int, .comptime_float => true,
+        // 单项指针（*T / [*]T / [*:0]T）可比较地址；切片（[]T）不行。
         .pointer => |p| p.size != .slice,
         .optional => |opt| isEqualityComparable(opt.child),
         else => false,
