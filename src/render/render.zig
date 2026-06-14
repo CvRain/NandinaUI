@@ -27,6 +27,9 @@ const std = @import("std");
 
 pub const scene = @import("scene.zig");
 pub const backend = @import("backend.zig");
+pub const backends = struct {
+    pub const software = @import("backends/software.zig");
+};
 
 // ── 公共 API 再导出 ─────────────────────────────────────────────────────────────
 
@@ -48,7 +51,10 @@ pub const PixelFormat = backend.PixelFormat;
 pub const BackendError = backend.BackendError;
 /// 内存录制后端（测试 / 无头展示）。
 pub const RecordingBackend = backend.RecordingBackend;
+/// 纯 Zig 软件光栅后端（把 Scene 画成 ARGB8888 像素，无外部依赖）。
+pub const SoftwareBackend = backends.software.SoftwareBackend;
 
 test {
     std.testing.refAllDecls(@This());
+    _ = backends.software;
 }

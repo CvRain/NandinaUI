@@ -31,7 +31,8 @@ showcase/
     ├── theme.zig
     ├── text_overflow.zig
     ├── runtime_loop.zig
-    └── widgets_gallery.zig
+    ├── widgets_gallery.zig
+    └── software_render.zig
 ```
 
 ## 新增一个 demo

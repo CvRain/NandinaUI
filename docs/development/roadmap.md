@@ -83,6 +83,14 @@ foundation 几何/颜色已经落地并有测试。下一个该动的不是 rend
 - App / Page / Router / 统一挂载入口与 Ref/Handle/Key 访问机制。
 - 把 `src/main.zig` 从烟雾程序演进为真正的多页面 showcase。
 
+### M7 —— 真实后端（渲染 / 窗口 / 字体）🚧
+> 原则：依赖优先用 zon package，没有再用源码。后端都是已稳定接口的实现，不污染上层。
+- ✅ 软件光栅 `SoftwareBackend`（纯 Zig，无依赖）：把 Scene 画成 ARGB8888 像素。
+  showcase `software-render` demo 已能 ASCII 预览真实光栅产物。
+- 🚧 SDL3（zon package: castholm/SDL）：窗口 + 事件 + 把像素 blit 到屏幕，作为 runtime backend。
+- 🚧 字体后端（HarfBuzz / FreeType）：替换 text 的 MonospaceMetrics 占位与软件光栅的文字占位。
+- 🚧 GPU 后端（Vulkan / wgpu）：作为 `Backend` 的另一实现，与软件光栅平级，不改上层。
+
 ## 关键决策（重写时先定）
 
 - **分配器策略**：内核 API 显式接收 `std.mem.Allocator`，不藏全局分配器。
