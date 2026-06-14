@@ -71,11 +71,12 @@ foundation 几何/颜色已经落地并有测试。下一个该动的不是 rend
 
 ### M5 —— widgets 🚧 首批已落地
 - ✅ primitives：Surface（背景 / 圆角 / 描边 / padding）、Pressable（交互状态机 + 点击回调）、
-  ClipNode（通用子树裁剪；裁剪由 runtime 的 child_clip 协议统一 push/pop，不重复造轮子）。
+  ClipNode（通用子树裁剪；裁剪由 runtime 的 child_clip 协议统一 push/pop，不重复造轮子）、
+  FocusRing（焦点可视化覆盖层，最简版）。
 - ✅ controls：Label（含测量缓存）、Button（状态色）、Panel（圆角 / 边框）、Card（title/description header）。
 - ✅ 组件统一接收只读输入（`ReadSignal` 视图），内部状态用 `Signal` 并绑定 `EffectScope`。
 - ✅ showcase 新增 `widgets-gallery` demo，演示 reactive→widgets→runtime→render 全链路。
-- 🚧 待补：FocusRing primitive、更多 controls（Input / Checkbox / Switch 等）。
+- 🚧 待补：更多 controls（Input / Checkbox / Switch 等）。
 
 
 ### M6 —— app + showcase

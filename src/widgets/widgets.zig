@@ -19,6 +19,7 @@ const std = @import("std");
 const surface_mod = @import("surface.zig");
 const pressable_mod = @import("pressable.zig");
 const clip_node_mod = @import("clip_node.zig");
+const focus_ring_mod = @import("focus_ring.zig");
 const label_mod = @import("label.zig");
 const button_mod = @import("button.zig");
 const panel_mod = @import("panel.zig");
@@ -37,6 +38,10 @@ pub const PressableProps = pressable_mod.PressableProps;
 /// ClipNode —— 通用子树裁剪容器（不可见，统一裁剪机制）。
 pub const ClipNode = clip_node_mod.ClipNode;
 pub const ClipNodeProps = clip_node_mod.ClipNodeProps;
+
+/// FocusRing —— 焦点可视化覆盖层（active 时绘制描边环，不参与命中测试）。
+pub const FocusRing = focus_ring_mod.FocusRing;
+pub const FocusRingProps = focus_ring_mod.FocusRingProps;
 
 // ── controls ──────────────────────────────────────────────────────────────────
 
@@ -62,6 +67,7 @@ test {
     _ = surface_mod;
     _ = pressable_mod;
     _ = clip_node_mod;
+    _ = focus_ring_mod;
     _ = label_mod;
     _ = button_mod;
     _ = panel_mod;
