@@ -18,6 +18,7 @@ const std = @import("std");
 
 const surface_mod = @import("surface.zig");
 const pressable_mod = @import("pressable.zig");
+const clip_node_mod = @import("clip_node.zig");
 const label_mod = @import("label.zig");
 const button_mod = @import("button.zig");
 const panel_mod = @import("panel.zig");
@@ -32,6 +33,10 @@ pub const SurfaceProps = surface_mod.SurfaceProps;
 /// Pressable —— 交互状态机（hover / pressed / focused / disabled）。
 pub const Pressable = pressable_mod.Pressable;
 pub const PressableProps = pressable_mod.PressableProps;
+
+/// ClipNode —— 通用子树裁剪容器（不可见，统一裁剪机制）。
+pub const ClipNode = clip_node_mod.ClipNode;
+pub const ClipNodeProps = clip_node_mod.ClipNodeProps;
 
 // ── controls ──────────────────────────────────────────────────────────────────
 
@@ -56,6 +61,7 @@ test {
     // 显式引用各子模块，确保它们的 test 块被 `zig build test` 收集。
     _ = surface_mod;
     _ = pressable_mod;
+    _ = clip_node_mod;
     _ = label_mod;
     _ = button_mod;
     _ = panel_mod;

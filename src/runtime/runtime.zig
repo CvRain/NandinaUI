@@ -31,6 +31,7 @@ pub const tree = @import("tree.zig");
 pub const Node = node.Node;
 pub const VTable = node.VTable;
 pub const EventResult = node.EventResult;
+pub const ClipRegion = node.ClipRegion;
 
 /// UI 树容器与主循环。
 pub const Tree = tree.Tree;

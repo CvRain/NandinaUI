@@ -28,6 +28,13 @@ const Event = event.Event;
 /// 事件是否被消费（消费后停止冒泡）。
 pub const EventResult = enum { ignored, consumed };
 
+/// 子节点裁剪区域：节点可声明其子树被裁剪到该矩形（可带圆角）。
+/// 裁剪本身由 `Tree` 的绘制遍历统一 push/pop，不在组件 paint 里重复实现。
+pub const ClipRegion = struct {
+    rect: Rect,
+    radius: f32 = 0,
+};
+
 /// 节点 vtable：具体节点实现这些钩子。除 measure 外均可选（提供默认 no-op）。
 pub const VTable = struct {
     /// 在约束下计算期望尺寸。必填。
@@ -38,6 +45,9 @@ pub const VTable = struct {
     paint: *const fn (node: *Node, scene: *Scene) anyerror!void = defaultPaint,
     /// 处理一个已命中本节点的事件。默认 ignored。
     handle_event: *const fn (node: *Node, ev: Event) EventResult = defaultHandleEvent,
+    /// 声明本节点子树的裁剪区域。返回非 null 时，Tree 在绘制子节点前 push
+    /// 该裁剪、绘完后 pop。默认不裁剪（null）。统一裁剪机制，避免每组件自造轮子。
+    child_clip: *const fn (node: *Node) ?ClipRegion = defaultChildClip,
     /// 释放具体节点自有资源（不含子节点 / Node 本身缓冲，那些由框架处理）。默认 no-op。
     deinit: *const fn (node: *Node, allocator: Allocator) void = defaultDeinit,
 };
@@ -58,6 +68,11 @@ fn defaultHandleEvent(node: *Node, ev: Event) EventResult {
     _ = node;
     _ = ev;
     return .ignored;
+}
+
+fn defaultChildClip(node: *Node) ?ClipRegion {
+    _ = node;
+    return null;
 }
 
 fn defaultDeinit(node: *Node, allocator: Allocator) void {

@@ -30,7 +30,8 @@ showcase/
     ├── layout_box.zig
     ├── theme.zig
     ├── text_overflow.zig
-    └── runtime_loop.zig
+    ├── runtime_loop.zig
+    └── widgets_gallery.zig
 ```
 
 ## 新增一个 demo

@@ -98,12 +98,18 @@ pub const Tree = struct {
     }
 
     /// 深度优先绘制：先画自身，再画子节点（子节点在上层）。
+    /// 若节点声明了 child_clip，则在绘制子节点前 push 裁剪、绘完后 pop。
     fn paintNode(node: *Node, scene: *Scene) anyerror!void {
         if (!node.visible) return;
         try node.paint(scene);
+        if (node.children.items.len == 0) return;
+
+        const clip = node.vtable.child_clip(node);
+        if (clip) |c| try scene.pushClip(c.rect, c.radius);
         for (node.children.items) |child| {
             try paintNode(child, scene);
         }
+        if (clip != null) try scene.popClip();
     }
 
     fn clearLayoutDirty(node: *Node) void {
