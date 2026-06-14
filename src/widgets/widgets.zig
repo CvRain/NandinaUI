@@ -5,18 +5,59 @@
 //! （Label / Button / Panel / Card ...）。
 //!
 //! 依赖方向：widgets 依赖 foundation / reactive / layout / theme / text / runtime。
+//!
+//! ## 统一约定（M5）
+//!
+//! - 组件输入用只读视图 `reactive.ReadSignal(T)`（调用方持有背后的 `Signal`）。
+//! - 组件自身的内部状态（如 hovered / pressed）用 `reactive.Signal`，并绑定
+//!   `EffectScope`：构造时注册合并 effect 追踪全部输入，任一变化即 `markLayoutDirty`
+//!   / `markPaintDirty`，由 runtime 下一帧重新布局 / 绘制。
+//! - 通过 `node.deinitTree(allocator)` 释放（先 dispose scope，再释放自身）。
+
 const std = @import("std");
+
+const surface_mod = @import("surface.zig");
+const pressable_mod = @import("pressable.zig");
+const label_mod = @import("label.zig");
+const button_mod = @import("button.zig");
+const panel_mod = @import("panel.zig");
+const card_mod = @import("card.zig");
 
 // ── primitives ────────────────────────────────────────────────────────────────
 
-const surface_mod = @import("surface.zig");
 /// Surface —— 背景色 / 圆角 / padding / 描边容器（基础构建块）。
 pub const Surface = surface_mod.Surface;
 pub const SurfaceProps = surface_mod.SurfaceProps;
 
-// TODO(widgets): Pressable / Label / Button / Panel / Card
+/// Pressable —— 交互状态机（hover / pressed / focused / disabled）。
+pub const Pressable = pressable_mod.Pressable;
+pub const PressableProps = pressable_mod.PressableProps;
+
+// ── controls ──────────────────────────────────────────────────────────────────
+
+/// Label —— 响应式文本标签（建立在 text 层之上）。
+pub const Label = label_mod.Label;
+pub const LabelProps = label_mod.LabelProps;
+
+/// Button —— 可点击按钮（背景随交互状态变化 + 文本）。
+pub const Button = button_mod.Button;
+pub const ButtonProps = button_mod.ButtonProps;
+
+/// Panel —— 带圆角 / 边框 / padding 的内容面板。
+pub const Panel = panel_mod.Panel;
+pub const PanelProps = panel_mod.PanelProps;
+
+/// Card —— 带 title / description header 的结构化容器。
+pub const Card = card_mod.Card;
+pub const CardProps = card_mod.CardProps;
 
 test {
     std.testing.refAllDecls(@This());
+    // 显式引用各子模块，确保它们的 test 块被 `zig build test` 收集。
     _ = surface_mod;
+    _ = pressable_mod;
+    _ = label_mod;
+    _ = button_mod;
+    _ = panel_mod;
+    _ = card_mod;
 }

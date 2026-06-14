@@ -69,10 +69,12 @@ foundation 几何/颜色已经落地并有测试。下一个该动的不是 rend
   产出 `render.Scene`。reactive / render / layout 已被串成一帧闭环。showcase 新增 `runtime-loop` demo。
 - 🚧 平台窗口 / 事件源（SDL3 等）作为 backend 后续接入，不污染 runtime 接口。
 
-### M5 —— widgets
-- primitives：Surface / Pressable。
-- controls：Label / Button / Panel / Card。
-- 组件统一接收只读输入（只读 signal 视图），内部状态用 `Signal` 并绑定 `EffectScope`。
+### M5 —— widgets 🚧 首批已落地
+- ✅ primitives：Surface（背景 / 圆角 / 描边 / padding）、Pressable（交互状态机 + 点击回调）。
+- ✅ controls：Label（含测量缓存）、Button（状态色）、Panel（圆角 / 边框）、Card（title/description header）。
+- ✅ 组件统一接收只读输入（`ReadSignal` 视图），内部状态用 `Signal` 并绑定 `EffectScope`。
+- 🚧 待补：FocusRing primitive、更多 controls（Input / Checkbox / Switch 等）、统一 ClipNode、
+  showcase 的 widgets 可视化 demo。⬅️ 下一步
 
 
 ### M6 —— app + showcase

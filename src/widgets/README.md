@@ -3,16 +3,21 @@
 组件库层。**依赖 foundation / reactive / layout / theme / text / runtime**。
 对齐 shadcn 的 primitives / composition：先源语，再控件，组合优于继承。
 
-## 计划 API
+## API
 
 ### primitives（底层积木，单一维度能力）
-- `Surface`：结构与视觉容器（背景/圆角/描边/padding）。
-- `Pressable`：纯交互状态机（hover/pressed/focused/disabled）。
-- `Text`：文本能力（建立在 text 层之上）。
-- `FocusRing`：焦点可视化。
+- ✅ `Surface`：结构与视觉容器（背景 / 圆角 / 描边 / padding）。
+- ✅ `Pressable`：纯交互状态机（hover / pressed / focused / disabled）+ 点击回调。
+- 🚧 `FocusRing`：焦点可视化（待落地）。
 
 ### controls（面向页面作者的真实控件）
-- `Label` / `Button` / `Panel` / `Card` …，由 primitives 组合而成。
+- ✅ `Label`：响应式文本标签（建立在 text 层之上，含测量缓存 / 失效）。
+- ✅ `Button`：可点击按钮（背景随 hover / pressed / disabled 状态变化 + 文本）。
+- ✅ `Panel`：带圆角 / 边框 / padding 的内容面板。
+- ✅ `Card`：带 title / description header 的结构化容器。
+
+每个组件通过 `XxxProps`（一组 `ReadSignal`）构造，`create(allocator, graph, props)` 返回
+`*Xxx`，用 `node.deinitTree(allocator)` 释放。
 
 ## 设计要点
 
@@ -26,4 +31,5 @@ Control = 语义 API + primitive 组合 + 语义状态到样式的映射
 
 ## 状态
 
-🚧 骨架。边界规则见 [组件 Primitives](../../docs/development/widget-primitives.md)。
+✅ M5 primitives（Surface / Pressable）与首批 controls（Label / Button / Panel / Card）已落地，
+含单元测试。运行 `zig build test` 验证。边界规则见 [组件 Primitives](../../docs/development/widget-primitives.md)。

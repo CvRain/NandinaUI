@@ -62,7 +62,7 @@ foundation                         （几何 / 颜色 / 基础类型，无上游
 | `theme` | token / palette / Theme resolver | ✅ 已落地，有测试 |
 | `text` | 字体、文本测量与布局（溢出策略） | ✅ 已落地，有测试 |
 | `runtime` | Node 树、事件循环、调度边界 | ✅ 纯逻辑核心已落地（平台后端待接） |
-| `widgets` | primitives 与 controls | 🚧 骨架 |
+| `widgets` | primitives 与 controls | ✅ 首批已落地，有测试 |
 | `app` | page / router / 挂载入口 | 🚧 骨架 |
 
 ## 稳定边界（优先建立）
