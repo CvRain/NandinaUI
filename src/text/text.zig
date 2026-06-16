@@ -31,6 +31,12 @@ const std = @import("std");
 pub const font = @import("font.zig");
 pub const layout = @import("layout.zig");
 
+// ── 字体后端 ──────────────────────────────────────────────────────────────────
+// HarfBuzz + FreeType 后端（当系统可用时）。
+pub const backends = struct {
+    pub const hb_ft = @import("backends/hb_ft.zig");
+};
+
 // ── 公共 API 再导出 ─────────────────────────────────────────────────────────────
 
 /// 字重。

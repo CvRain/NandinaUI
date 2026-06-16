@@ -49,6 +49,9 @@ pub const Backend = backend.Backend;
 pub const RenderTarget = backend.RenderTarget;
 pub const PixelFormat = backend.PixelFormat;
 pub const BackendError = backend.BackendError;
+/// 字形渲染器接口（后端用于绘制真实文字）。
+pub const GlyphRenderer = backend.GlyphRenderer;
+pub const GlyphVMetrics = backend.GlyphVMetrics;
 /// 内存录制后端（测试 / 无头展示）。
 pub const RecordingBackend = backend.RecordingBackend;
 /// 纯 Zig 软件光栅后端（把 Scene 画成 ARGB8888 像素，无外部依赖）。

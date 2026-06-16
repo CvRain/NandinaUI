@@ -44,6 +44,7 @@ const text_overflow = @import("demos/text_overflow.zig");
 const runtime_loop = @import("demos/runtime_loop.zig");
 const widgets_gallery = @import("demos/widgets_gallery.zig");
 const software_render = @import("demos/software_render.zig");
+const sdl_window = @import("demos/sdl_window.zig");
 
 /// 全部已注册的 demo，按演示顺序排列。
 pub const demos = [_]Demo{
@@ -60,6 +61,7 @@ pub const demos = [_]Demo{
     runtime_loop.demo,
     widgets_gallery.demo,
     software_render.demo,
+    sdl_window.demo,
 };
 
 /// 按名查找 demo。

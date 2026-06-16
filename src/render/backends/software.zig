@@ -23,6 +23,7 @@ const Color = foundation.Color;
 const Rect = foundation.Rect;
 const Scene = scene_mod.Scene;
 const Backend = backend_mod.Backend;
+const GlyphRenderer = backend_mod.GlyphRenderer;
 const RenderTarget = backend_mod.RenderTarget;
 const BackendError = backend_mod.BackendError;
 
@@ -57,8 +58,16 @@ pub const SoftwareBackend = struct {
     clip_stack: [32]IRect = undefined,
     clip_depth: usize = 0,
 
+    /// 可选的字形渲染器。设置后可渲染真实文字 glyph 而非占位符。
+    glyph_renderer: ?backend_mod.GlyphRenderer = null,
+
     pub fn init() SoftwareBackend {
         return .{};
+    }
+
+    /// 设置字形渲染器，使文字渲染从占位符升级为真实 glyph。
+    pub fn setGlyphRenderer(self: *SoftwareBackend, renderer: backend_mod.GlyphRenderer) void {
+        self.glyph_renderer = renderer;
     }
 
     pub fn interface(self: *SoftwareBackend) Backend {
@@ -154,14 +163,64 @@ pub const SoftwareBackend = struct {
     /// 文本占位：在布局框内画一条淡色基线条（真实字体后端接入后替换）。
     fn drawTextPlaceholder(self: *SoftwareBackend, c: scene_mod.DrawText) void {
         if (c.text.len == 0) return;
-        // 估算宽度：每字符约 0.5 * font_size（仅占位）。
-        const est_w = if (c.layout_width > 0) c.layout_width else @as(f32, @floatFromInt(c.text.len)) * c.font_size * 0.5;
-        const bar_h = @max(1.0, c.font_size * 0.12);
-        const baseline_y = c.y + c.font_size * 0.8;
-        const bar = Rect.fromXywh(c.x, baseline_y, est_w, bar_h);
+
+        // 若有 glyph renderer，渲染真实文字
+        if (self.glyph_renderer) |gr| {
+            self.drawTextReal(gr, c);
+            return;
+        }
+
+        // 降级：占位符绘制
+        const text_w = if (c.layout_width > 0) c.layout_width else @as(f32, @floatFromInt(c.text.len)) * c.font_size * 0.6;
+        const text_h = if (c.layout_height > 0) c.layout_height else c.font_size * 1.2;
+
+        var bg = c.color;
+        bg.a *= 0.08;
+        self.fillRect(Rect.fromXywh(c.x, c.y, text_w, text_h), bg, 0);
+
+        const baseline_y = c.y + text_h * 0.7;
+        const line_h = c.font_size * 0.15;
+        const gap = line_h * 1.2;
+        const num_lines = @min(3, @as(u32, @intCast(@max(1, c.text.len / 3))));
         var faded = c.color;
-        faded.a *= 0.5; // 占位条用半透明，明显区别于实心填充
-        self.fillRect(bar, faded, 0);
+        faded.a = @min(255, faded.a * 2);
+
+        var line_i: u32 = 0;
+        while (line_i < num_lines) : (line_i += 1) {
+            const line_w = text_w * (1.0 - @as(f32, @floatFromInt(line_i)) * 0.15);
+            const y = baseline_y + @as(f32, @floatFromInt(line_i)) * gap;
+            self.fillRect(Rect.fromXywh(c.x, y, line_w, line_h), faded, 0);
+        }
+    }
+
+    /// 用 glyph renderer 渲染真实文字。
+    fn drawTextReal(self: *SoftwareBackend, gr: GlyphRenderer, c: scene_mod.DrawText) void {
+        const vm = gr.vmetrics(c.font_size);
+        const baseline_y = c.y + vm.ascent;
+
+        // 将颜色转为 ARGB8888 u32
+        const col = c.color.toHexRgba();
+
+        // 逐码点渲染
+        var view = std.unicode.Utf8View.initUnchecked(c.text);
+        var it = view.iterator();
+        var cursor_x: f32 = c.x;
+
+        while (it.nextCodepoint()) |cp| {
+            if (cp == '\n') {
+                // 换行（简单处理）
+                cursor_x = c.x;
+                continue;
+            }
+
+            const adv = gr.advance(cp, c.font_size);
+            const ix: i32 = @intFromFloat(cursor_x);
+            const iy: i32 = @intFromFloat(baseline_y);
+
+            _ = gr.renderCodepoint(cp, c.font_size, col, ix, iy, self.target.pixels orelse return, self.target.width, self.target.height, if (self.target.stride > 0) self.target.stride else self.target.width);
+
+            cursor_x += adv;
+        }
     }
 };
 

@@ -39,6 +39,43 @@ pub const BackendError = error{
     OutOfMemory,
 };
 
+/// 字形渲染器接口（vtable）。
+/// 渲染后端用此接口绘制真实文字 glyph。若不设置，则回退到占位符绘制。
+pub const GlyphRenderer = struct {
+    ptr: *anyopaque,
+    vtable: *const VTable,
+
+    pub const VTable = struct {
+        /// 渲染一个码点到像素缓冲（写入 ARGB8888 格式）。
+        /// `pixels` 为输出缓冲，`stride` 为每行像素数。
+        /// 返回渲染的字形宽度（像素）。
+        render_codepoint: *const fn (ptr: *anyopaque, codepoint: u21, font_size: f32, color: u32, x: i32, y: i32, pixels: [*]u32, width: u32, height: u32, stride: u32) i32,
+        /// 获取码点的水平步进宽度（像素）。
+        advance: *const fn (ptr: *anyopaque, codepoint: u21, font_size: f32) f32,
+        /// 获取垂直度量（行高、基线位置）。
+        vmetrics: *const fn (ptr: *anyopaque, font_size: f32) GlyphVMetrics,
+    };
+
+    pub fn renderCodepoint(self: GlyphRenderer, codepoint: u21, font_size: f32, color: u32, x: i32, y: i32, pixels: [*]u32, width: u32, height: u32, stride: u32) i32 {
+        return self.vtable.render_codepoint(self.ptr, codepoint, font_size, color, x, y, pixels, width, height, stride);
+    }
+
+    pub fn advance(self: GlyphRenderer, codepoint: u21, font_size: f32) f32 {
+        return self.vtable.advance(self.ptr, codepoint, font_size);
+    }
+
+    pub fn vmetrics(self: GlyphRenderer, font_size: f32) GlyphVMetrics {
+        return self.vtable.vmetrics(self.ptr, font_size);
+    }
+};
+
+/// 字形渲染器的垂直度量。
+pub const GlyphVMetrics = struct {
+    ascent: f32,
+    descent: f32,
+    line_gap: f32,
+};
+
 /// 渲染后端接口（vtable）。具体后端持有自身状态，通过 `interface()` 暴露本接口。
 pub const Backend = struct {
     ptr: *anyopaque,
