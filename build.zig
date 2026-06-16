@@ -1,25 +1,28 @@
 const std = @import("std");
 
 pub fn build(b: *std.Build) void {
-    // 默认 target。若系统 GCC >= 16，其 crt1.o 的 .sframe 节与 Zig LLD 不兼容，
-    // 此处将默认 Linux x86_64 降级到 glibc 2.35 以绕过该问题。
+    // ── Target ────────────────────────────────────────────────────────────────
     const host_tag = b.graph.host.result.os.tag;
     const host_arch = b.graph.host.result.cpu.arch;
     const default_query = if (host_tag == .linux and host_arch == .x86_64)
-        std.Target.Query{ .cpu_arch = .x86_64, .os_tag = .linux, .abi = .gnu, .os_version_min = .{ .semver = std.SemanticVersion{ .major = 2, .minor = 35, .patch = 0 } } }
+        std.Target.Query{ .cpu_arch = .x86_64, .os_tag = .linux, .abi = .gnu }
     else
         std.Target.Query{};
     const target = b.standardTargetOptions(.{ .default_target = default_query });
     const optimize = b.standardOptimizeOption(.{});
 
-    // ── 第三方 C / C++ 依赖路径 ──────────────────────────────────────────────
-    // 在 Linux 上使用系统路径；在 Windows 上使用 MSYS2 UCRT64 提供的库。
-    const is_windows = host_tag == .windows;
-    const sys_include = if (is_windows) "C:/msys64/ucrt64/include" else "/usr/include";
-    const sys_lib = if (is_windows) "C:/msys64/ucrt64/lib" else "/usr/lib";
-    const ft_include = if (is_windows) "C:/msys64/ucrt64/include/freetype2" else "/usr/include/freetype2";
-    const hb_include = if (is_windows) "C:/msys64/ucrt64/include/harfbuzz" else "/usr/include/harfbuzz";
-    const ft_cflag = if (is_windows) "-IC:/msys64/ucrt64/include/freetype2" else "-I/usr/include/freetype2";
+    // ── vcpkg 路径 ────────────────────────────────────────────────────────────
+    // 项目内置 vcpkg（./vcpkg/），安装目录为 ./vcpkg_installed/<triple t>/
+    const vcpkg_triplet = if (host_tag == .windows) "x64-windows" else "x64-linux";
+    const vcpkg_installed = b.pathJoin(&.{ ".", "vcpkg_installed" });
+    const vcpkg_dir = b.pathJoin(&.{ vcpkg_installed, vcpkg_triplet });
+    const vcpkg_include = b.pathJoin(&.{ vcpkg_dir, "include" });
+    const vcpkg_lib = b.pathJoin(&.{ vcpkg_dir, "lib" });
+    const vcpkg_pkgconfig = b.pathJoin(&.{ vcpkg_lib, "pkgconfig" });
+
+    // 设置 PKG_CONFIG_PATH，使 Zig 的 linkSystemLibrary 使用 pkg-config 时
+    // 能找到 vcpkg 安装的库。
+    b.graph.environ_map.put("PKG_CONFIG_PATH", vcpkg_pkgconfig) catch @panic("OOM");
 
     // ── SDL3 ─────────────────────────────────────────────────────────────────
     const sdl_dep = b.dependency("sdl", .{
@@ -35,12 +38,8 @@ pub fn build(b: *std.Build) void {
         .root_source_file = b.path("src/root.zig"),
     });
     mod.resolved_target = target;
-    mod.addIncludePath(.{ .cwd_relative = ft_include });
-    mod.addIncludePath(.{ .cwd_relative = hb_include });
-    mod.addIncludePath(.{ .cwd_relative = sys_include });
-    mod.addLibraryPath(.{ .cwd_relative = sys_lib });
-    mod.linkSystemLibrary("freetype", .{ .search_strategy = .paths_first, .needed = true });
-    mod.linkSystemLibrary("harfbuzz", .{ .search_strategy = .paths_first, .needed = true });
+    // 通过 vcpkg pkg-config 链接字体库
+    linkVcpkgModule(b, mod, vcpkg_include, vcpkg_lib);
 
     // ── SDL3 后端模块 ───────────────────────────────────────────────────────
     const sdl_backend_mod = b.createModule(.{
@@ -53,43 +52,26 @@ pub fn build(b: *std.Build) void {
     sdl_backend_mod.linkLibrary(sdl_lib);
     sdl_backend_mod.addIncludePath(sdl_dep.path("include"));
     sdl_backend_mod.addIncludePath(sdl_dep.path("src"));
-    sdl_backend_mod.addLibraryPath(.{ .cwd_relative = sys_lib });
-    sdl_backend_mod.linkSystemLibrary("freetype", .{ .search_strategy = .paths_first, .needed = true });
-    sdl_backend_mod.linkSystemLibrary("harfbuzz", .{ .search_strategy = .paths_first, .needed = true });
+    linkVcpkgModule(b, sdl_backend_mod, vcpkg_include, vcpkg_lib);
 
-    // ── FreeType / HarfBuzz 传递依赖（MSYS2 / Linux 系统库）─────────────────
-    const vcpkg_deps = [_][]const u8{
-        "freetype",     "harfbuzz",
-        "libpng16",     "zlib",
-        "bz2",          "brotlidec",
-        "brotlicommon", "graphite2",
-        "glib-2.0",     "intl",
-        "pcre2-8",
-    };
-
-    // ── 可执行目标：NandinaUI ─────────────────────────────────────────────────
-    const exe = createExe(b, "NandinaUI", "src/main.zig", mod, sdl_backend_mod, sdl_lib, sdl_dep, ft_include, hb_include, sys_include, sys_lib, &vcpkg_deps, ft_cflag, is_windows, target, optimize);
+    // ── 可执行目标 ───────────────────────────────────────────────────────────
+    const exe = createExe(b, "NandinaUI", "src/main.zig", mod, sdl_backend_mod, sdl_lib, sdl_dep, vcpkg_include, vcpkg_lib, host_tag, target, optimize);
     b.installArtifact(exe);
 
     const run_step = b.step("run", "Run the app");
     const run_cmd = b.addRunArtifact(exe);
     run_step.dependOn(&run_cmd.step);
     run_cmd.step.dependOn(b.getInstallStep());
-    if (b.args) |args| {
-        run_cmd.addArgs(args);
-    }
+    if (b.args) |args| run_cmd.addArgs(args);
 
-    // ── 可执行目标：Showcase ─────────────────────────────────────────────────
-    const showcase_exe = createExe(b, "showcase", "showcase/main.zig", mod, sdl_backend_mod, sdl_lib, sdl_dep, ft_include, hb_include, sys_include, sys_lib, &vcpkg_deps, ft_cflag, is_windows, target, optimize);
+    const showcase_exe = createExe(b, "showcase", "showcase/main.zig", mod, sdl_backend_mod, sdl_lib, sdl_dep, vcpkg_include, vcpkg_lib, host_tag, target, optimize);
     b.installArtifact(showcase_exe);
 
     const showcase_step = b.step("showcase", "Run the component / capability showcase");
     const showcase_run = b.addRunArtifact(showcase_exe);
     showcase_step.dependOn(&showcase_run.step);
     showcase_run.step.dependOn(b.getInstallStep());
-    if (b.args) |args| {
-        showcase_run.addArgs(args);
-    }
+    if (b.args) |args| showcase_run.addArgs(args);
 
     // ── 测试 ────────────────────────────────────────────────────────────────
     const mod_tests = b.addTest(.{ .root_module = mod });
@@ -104,6 +86,17 @@ pub fn build(b: *std.Build) void {
     test_step.dependOn(&run_showcase_tests.step);
 }
 
+/// 为模块添加 vcpkg 的 include 路径和字体库链接（通过 pkg-config）。
+fn linkVcpkgModule(b: *std.Build, m: *std.Build.Module, vcpkg_include: []const u8, vcpkg_lib: []const u8) void {
+    m.addIncludePath(.{ .cwd_relative = vcpkg_include });
+    m.addIncludePath(.{ .cwd_relative = b.pathJoin(&.{ vcpkg_include, "freetype2" }) });
+    m.addIncludePath(.{ .cwd_relative = b.pathJoin(&.{ vcpkg_include, "harfbuzz" }) });
+    m.addLibraryPath(.{ .cwd_relative = vcpkg_lib });
+    m.linkSystemLibrary("freetype2", .{ .use_pkg_config = .yes, .preferred_link_mode = .static, .needed = true });
+    m.linkSystemLibrary("harfbuzz", .{ .use_pkg_config = .yes, .preferred_link_mode = .static, .needed = true });
+}
+
+/// 创建可执行目标，集成 SDL3 + vcpkg 字体库。
 fn createExe(
     b: *std.Build,
     name: []const u8,
@@ -112,13 +105,9 @@ fn createExe(
     sdl_backend_mod: *std.Build.Module,
     sdl_lib: *std.Build.Step.Compile,
     sdl_dep: *std.Build.Dependency,
-    ft_include: []const u8,
-    hb_include: []const u8,
-    sys_include: []const u8,
-    sys_lib: []const u8,
-    deps: []const []const u8,
-    ft_cflag: []const u8,
-    is_windows: bool,
+    vcpkg_include: []const u8,
+    vcpkg_lib: []const u8,
+    host_tag: std.Target.Os.Tag,
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
 ) *std.Build.Step.Compile {
@@ -137,14 +126,14 @@ fn createExe(
     exe.root_module.linkLibrary(sdl_lib);
     exe.root_module.addIncludePath(sdl_dep.path("include"));
     exe.root_module.addIncludePath(sdl_dep.path("src"));
-    exe.root_module.addIncludePath(.{ .cwd_relative = ft_include });
-    exe.root_module.addIncludePath(.{ .cwd_relative = hb_include });
-    exe.root_module.addIncludePath(.{ .cwd_relative = sys_include });
-    exe.root_module.addLibraryPath(.{ .cwd_relative = sys_lib });
-    for (deps) |dep| {
-        exe.root_module.linkSystemLibrary(dep, .{ .search_strategy = .paths_first, .needed = false });
-    }
-    if (is_windows) {
+    // vcpkg 路径与字体库链接
+    linkVcpkgModule(b, exe.root_module, vcpkg_include, vcpkg_lib);
+    // FreeType glyph 渲染 C 包装器
+    exe.root_module.addCSourceFile(.{ .file = b.path("src/text/backends/ft_glyph.c"), .flags = &.{
+        b.fmt("-I{s}/freetype2", .{vcpkg_include}),
+    } });
+    // Windows 特有系统库
+    if (host_tag == .windows) {
         exe.root_module.linkSystemLibrary("dwrite", .{});
         exe.root_module.linkSystemLibrary("rpcrt4", .{});
         exe.root_module.linkSystemLibrary("ole32", .{});
@@ -152,11 +141,6 @@ fn createExe(
         exe.root_module.linkSystemLibrary("ws2_32", .{});
         exe.root_module.linkSystemLibrary("shlwapi", .{});
         exe.root_module.linkSystemLibrary("gdi32", .{});
-        exe.root_module.linkSystemLibrary("stdc++", .{ .search_strategy = .paths_first, .needed = false });
-        exe.root_module.linkSystemLibrary("gcc_s", .{ .search_strategy = .paths_first, .needed = false });
-        exe.root_module.linkSystemLibrary("ssp", .{ .search_strategy = .paths_first, .needed = false });
-        exe.root_module.linkSystemLibrary("ucrt", .{ .search_strategy = .paths_first, .needed = false });
     }
-    exe.root_module.addCSourceFile(.{ .file = b.path("src/text/backends/ft_glyph.c"), .flags = &.{ft_cflag} });
     return exe;
 }
