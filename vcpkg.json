@@ -1,0 +1,16 @@
+{
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "nandinaui",
+  "version": "0.1.0",
+  "dependencies": [
+    "freetype",
+    "harfbuzz",
+    "libpng",
+    "bzip2",
+    "brotli",
+    "graphite2",
+    "glib",
+    "pcre2",
+    "zlib"
+  ]
+}
