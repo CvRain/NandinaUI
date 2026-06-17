@@ -40,6 +40,7 @@ pub fn build(b: *std.Build) void {
     mod.resolved_target = target;
     // 通过 vcpkg pkg-config 链接字体库
     linkVcpkgModule(b, mod, vcpkg_include, vcpkg_lib);
+    linkThorvgModule(b, mod, vcpkg_include, vcpkg_lib);
 
     // ── SDL3 后端模块 ───────────────────────────────────────────────────────
     const sdl_backend_mod = b.createModule(.{
@@ -53,6 +54,7 @@ pub fn build(b: *std.Build) void {
     sdl_backend_mod.addIncludePath(sdl_dep.path("include"));
     sdl_backend_mod.addIncludePath(sdl_dep.path("src"));
     linkVcpkgModule(b, sdl_backend_mod, vcpkg_include, vcpkg_lib);
+    linkThorvgModule(b, sdl_backend_mod, vcpkg_include, vcpkg_lib);
 
     // ── 可执行目标 ───────────────────────────────────────────────────────────
     const exe = createExe(b, "NandinaUI", "src/main.zig", mod, sdl_backend_mod, sdl_lib, sdl_dep, vcpkg_include, vcpkg_lib, host_tag, target, optimize);
@@ -73,7 +75,29 @@ pub fn build(b: *std.Build) void {
     showcase_run.step.dependOn(b.getInstallStep());
     if (b.args) |args| showcase_run.addArgs(args);
 
-    // ── 测试 ────────────────────────────────────────────────────────────────
+    // ── ABI 静态库 ─────────────────────────────────────────────────────────
+    // C ABI 导出层，不纳入 root.zig 聚合导出，单独编译为静态库供 C/C++ 等绑定使用。
+    const abi_mod = b.createModule(.{
+        .root_source_file = b.path("src/abi/nandina_abi.zig"),
+        .target = target,
+        .optimize = optimize,
+        .imports = &.{
+            .{ .name = "NandinaUI", .module = mod },
+        },
+        .link_libc = true,
+    });
+    linkVcpkgModule(b, abi_mod, vcpkg_include, vcpkg_lib);
+    linkThorvgModule(b, abi_mod, vcpkg_include, vcpkg_lib);
+    const abi_lib = b.addLibrary(.{
+        .name = "nandina_abi",
+        .root_module = abi_mod,
+    });
+    b.installArtifact(abi_lib);
+
+    // 安装 C ABI 头文件
+    b.installFile("src/abi/nandina_abi.h", "include/nandina_abi.h");
+
+    // ── Zig 模块测试 ────────────────────────────────────────────────────────
     const mod_tests = b.addTest(.{ .root_module = mod });
     const run_mod_tests = b.addRunArtifact(mod_tests);
     const exe_tests = b.addTest(.{ .root_module = exe.root_module });
@@ -94,6 +118,20 @@ fn linkVcpkgModule(b: *std.Build, m: *std.Build.Module, vcpkg_include: []const u
     m.addLibraryPath(.{ .cwd_relative = vcpkg_lib });
     m.linkSystemLibrary("freetype2", .{ .use_pkg_config = .yes, .preferred_link_mode = .static, .needed = true });
     m.linkSystemLibrary("harfbuzz", .{ .use_pkg_config = .yes, .preferred_link_mode = .static, .needed = true });
+}
+
+/// 为模块添加 ThorVG 的 include 路径和库链接。
+fn linkThorvgModule(b: *std.Build, m: *std.Build.Module, vcpkg_include: []const u8, vcpkg_lib: []const u8) void {
+    _ = b;
+    _ = m;
+    _ = vcpkg_include;
+    _ = vcpkg_lib;
+    // ThorVG 后端暂未启用（链接器符号解析问题，待 Zig 版本升级后修复）
+    // 如需启用，请添加：
+    //   m.addIncludePath(.{ .cwd_relative = b.pathJoin(&.{ vcpkg_include, "thorvg-1" }) });
+    //   m.addObjectFile(.{ .cwd_relative = b.pathJoin(&.{ vcpkg_lib, "libthorvg-1.a" }) });
+    //   m.linkSystemLibrary("pthread", .{});
+    //   m.linkSystemLibrary("stdc++", .{});
 }
 
 /// 创建可执行目标，集成 SDL3 + vcpkg 字体库。
@@ -128,6 +166,7 @@ fn createExe(
     exe.root_module.addIncludePath(sdl_dep.path("src"));
     // vcpkg 路径与字体库链接
     linkVcpkgModule(b, exe.root_module, vcpkg_include, vcpkg_lib);
+    linkThorvgModule(b, exe.root_module, vcpkg_include, vcpkg_lib);
     // FreeType glyph 渲染 C 包装器
     exe.root_module.addCSourceFile(.{ .file = b.path("src/text/backends/ft_glyph.c"), .flags = &.{
         b.fmt("-I{s}/freetype2", .{vcpkg_include}),

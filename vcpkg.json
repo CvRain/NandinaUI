@@ -11,6 +11,7 @@
     "graphite2",
     "glib",
     "pcre2",
-    "zlib"
+    "zlib",
+    "thorvg"
   ]
 }

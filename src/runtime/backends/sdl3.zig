@@ -50,6 +50,7 @@ const Size = foundation.Size;
 const Event = runtime.Event;
 const Tree = runtime.Tree;
 const Backend = render.Backend;
+const RenderTarget = render.RenderTarget;
 const SoftwareBackend = render.SoftwareBackend;
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -64,6 +65,12 @@ const c = @cImport({
 // 窗口后端
 // ─────────────────────────────────────────────────────────────────────────────
 
+/// 后端类型选择。
+pub const BackendKind = enum {
+    software,
+    thorvg,
+};
+
 /// SDL3 窗口后端。持有窗口、渲染后端、事件缓冲。
 pub const Window = struct {
     allocator: Allocator,
@@ -71,12 +78,16 @@ pub const Window = struct {
     sdl_renderer: *c.SDL_Renderer,
     /// 用于上传像素的纹理（跨帧复用）。
     sdl_texture: ?*c.SDL_Texture,
-    /// 渲染后端（软件光栅，目前为默认）。
-    renderer: SoftwareBackend,
-    /// 像素缓冲（软件光栅用）。
+    /// 像素缓冲。
     pixels: []u32,
     width: u32,
     height: u32,
+
+    /// 当前选用的渲染后端类型。
+    backend_kind: BackendKind = .software,
+    /// 软件后端实例（默认）。
+    sw_renderer: SoftwareBackend = .{},
+
     /// 关联的 NandinaUI 树（可选）。
     tree: ?*Tree,
     /// 窗口是否正在运行（未收到关闭请求）。
@@ -105,7 +116,7 @@ pub const Window = struct {
             return error.SdlCreateRendererFailed;
         };
 
-        // 分配像素缓冲（软件光栅用）
+        // 分配像素缓冲
         const pixels = try allocator.alloc(u32, width * height);
 
         return Window{
@@ -113,7 +124,6 @@ pub const Window = struct {
             .sdl_window = sdl_window,
             .sdl_renderer = sdl_renderer,
             .sdl_texture = null,
-            .renderer = SoftwareBackend.init(),
             .pixels = pixels,
             .width = width,
             .height = height,
@@ -245,14 +255,15 @@ pub const Window = struct {
         const frame_produced = try tree.frame();
         if (!frame_produced) return false;
 
-        // 软件光栅：把树绘制的 Scene 画到像素缓冲
-        const backend = self.renderer.interface();
-        try backend.beginFrame(.{
+        const target = RenderTarget{
             .pixels = self.pixels.ptr,
             .width = self.width,
             .height = self.height,
             .stride = self.width,
-        });
+        };
+
+        const backend = self.sw_renderer.interface();
+        try backend.beginFrame(target);
         try backend.submit(&tree.scene);
         try backend.endFrame();
 
