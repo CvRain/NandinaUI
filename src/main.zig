@@ -1,9 +1,7 @@
 //! NandinaUI —— 主入口 / 多页面 Showcase
 //!
-//! `zig build run` 启动一个 SDL3 窗口，展示框架的核心能力。
-//! 使用 App/Page/Router 多层页面结构，支持导航切换。
-//!
-//! 若 SDL3 不可用（无图形环境），自动降级为文字烟雾测试。
+//! `zig build run` 启动 SDL3 窗口，展示框架核心能力（多页面、响应式、组件）。
+//! 命令行 demo 请运行 `zig build run-showcase`。
 
 const std = @import("std");
 const nandina = @import("NandinaUI");
@@ -129,11 +127,11 @@ fn runShowcase(window: *sdl3.Window, allocator: std.mem.Allocator, _: *std.Io.Wr
     // ── 顶栏 ──────────────────────────────────────────────────────────────
     {
         const header = try widgets.Surface.create(allocator, &g, .{
-            .bg_color = authoring.readOnly(&root_owner,Color, &g, C.mantle),
-            .corner_radius = authoring.readOnly(&root_owner,f32, &g, 0),
-            .padding = authoring.readOnly(&root_owner,Insets, &g, Insets.symmetric(16, 12)),
-            .border_color = authoring.readOnly(&root_owner,Color, &g, C.surface0),
-            .border_width = authoring.readOnly(&root_owner,f32, &g, 0),
+            .bg_color = authoring.readOnly(&root_owner, Color, &g, C.mantle),
+            .corner_radius = authoring.readOnly(&root_owner, f32, &g, 0),
+            .padding = authoring.readOnly(&root_owner, Insets, &g, Insets.symmetric(16, 12)),
+            .border_color = authoring.readOnly(&root_owner, Color, &g, C.surface0),
+            .border_width = authoring.readOnly(&root_owner, f32, &g, 0),
         });
         try main_col.addChild(allocator, &header.node);
 
@@ -171,11 +169,11 @@ fn runShowcase(window: *sdl3.Window, allocator: std.mem.Allocator, _: *std.Io.Wr
     // ── 页面内容区 ────────────────────────────────────────────────────────
     {
         const content_area = try widgets.Surface.create(allocator, &g, .{
-            .bg_color = authoring.readOnly(&root_owner,Color, &g, C.base),
-            .corner_radius = authoring.readOnly(&root_owner,f32, &g, 0),
-            .padding = authoring.readOnly(&root_owner,Insets, &g, Insets.all(24)),
-            .border_color = authoring.readOnly(&root_owner,Color, &g, C.base),
-            .border_width = authoring.readOnly(&root_owner,f32, &g, 0),
+            .bg_color = authoring.readOnly(&root_owner, Color, &g, C.base),
+            .corner_radius = authoring.readOnly(&root_owner, f32, &g, 0),
+            .padding = authoring.readOnly(&root_owner, Insets, &g, Insets.all(24)),
+            .border_color = authoring.readOnly(&root_owner, Color, &g, C.base),
+            .border_width = authoring.readOnly(&root_owner, f32, &g, 0),
         });
         try main_col.addChild(allocator, &content_area.node);
         try content_area.node.addChild(allocator, &page_host.node);

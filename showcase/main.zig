@@ -5,9 +5,9 @@
 //!   2. 开发时实际跑一下运行效果，直观感受实现后的行为。
 //!
 //! 用法：
-//!   zig build showcase                  # 运行全部 demo
-//!   zig build showcase -- <name>        # 只运行指定 demo
-//!   zig build showcase -- list          # 列出全部 demo
+//!   zig build run-showcase                  # 运行全部 demo
+//!   zig build run-showcase -- <name>        # 只运行指定 demo
+//!   zig build run-showcase -- list          # 列出全部 demo
 //!
 //! 现状：render / runtime / widgets 尚未落地，demo 以文本输出展示运行效果。
 //! 框架（registry + DemoContext）已为可视化画廊预留扩展点，详见 registry.zig。
@@ -63,7 +63,7 @@ fn printList(out: *std.Io.Writer) !void {
     for (registry.demos) |d| {
         try out.print("  {s: <22} {s}\n", .{ d.name, d.summary });
     }
-    try out.print("\n运行单个：zig build showcase -- <name>\n", .{});
+    try out.print("\n运行单个：zig build run-showcase -- <name>\n", .{});
 }
 
 fn runOne(gpa: std.mem.Allocator, out: *std.Io.Writer, d: registry.Demo) !void {
@@ -83,7 +83,7 @@ fn runAll(gpa: std.mem.Allocator, out: *std.Io.Writer) !void {
         try runOne(gpa, out, d);
     }
     try out.print("全部 {d} 个 demo 运行完毕。\n", .{registry.demos.len});
-    try out.print("提示：zig build showcase -- <name> 可单独运行某个 demo。\n", .{});
+    try out.print("提示：zig build run-showcase -- <name> 可单独运行某个 demo。\n", .{});
 }
 
 test "showcase 注册表非空且名称唯一" {

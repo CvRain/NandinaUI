@@ -57,21 +57,26 @@ pub fn build(b: *std.Build) void {
     linkThorvgModule(b, sdl_backend_mod, vcpkg_include, vcpkg_lib);
 
     // ── 可执行目标 ───────────────────────────────────────────────────────────
+    // 主程序（SDL3 可视化界面）
     const exe = createExe(b, "NandinaUI", "src/main.zig", mod, sdl_backend_mod, sdl_lib, sdl_dep, vcpkg_include, vcpkg_lib, host_tag, target, optimize);
     b.installArtifact(exe);
 
-    const run_step = b.step("run", "Run the app");
+    const run_step = b.step("run", "构建并启动主程序（SDL3 可视化界面）");
     const run_cmd = b.addRunArtifact(exe);
     run_step.dependOn(&run_cmd.step);
     run_cmd.step.dependOn(b.getInstallStep());
     if (b.args) |args| run_cmd.addArgs(args);
 
+    // 命令行 showcase（文字演示，无 GPU 依赖）
     const showcase_exe = createExe(b, "showcase", "showcase/main.zig", mod, sdl_backend_mod, sdl_lib, sdl_dep, vcpkg_include, vcpkg_lib, host_tag, target, optimize);
     b.installArtifact(showcase_exe);
 
-    const showcase_step = b.step("showcase", "Run the component / capability showcase");
+    const showcase_step = b.step("showcase", "构建命令行 showcase 二进制（不运行）");
+    showcase_step.dependOn(&showcase_exe.step);
+
+    const run_showcase_step = b.step("run-showcase", "构建并运行命令行 showcase（可选 -- <name> 指定 demo）");
     const showcase_run = b.addRunArtifact(showcase_exe);
-    showcase_step.dependOn(&showcase_run.step);
+    run_showcase_step.dependOn(&showcase_run.step);
     showcase_run.step.dependOn(b.getInstallStep());
     if (b.args) |args| showcase_run.addArgs(args);
 
