@@ -3,10 +3,11 @@
 //! 提供 Flutter 风格的声明式工厂函数，隐藏 allocator.create / Signal.init / addChild
 //! 等样板代码。每个工厂函数返回 `*Node`，可直接挂到父节点上。
 //!
-//! 设计目标：
-//!   1. 业务作者只需描述「有什么」「怎么排」，不用手工管理所有权。
-//!   2. 工厂内部自动创建 Signal 和 EffectScope，组件销毁时自动清理。
-//!   3. 未来可扩展为完整的 DSL（如 column(.{gap:8}, { label(...), button(...) })）。
+//! ## 所有权策略
+//! 工厂函数内部创建的所有 Signal 使用 `SignalOwner` 统一管理生命周期：
+//!   1. 每个页面构建时分配一个 `SignalOwner`
+//!   2. 所有通过 `SignalOwner.readOnly()` 创建的 Signal 由 owner 持有
+//!   3. 页面销毁时调用 `SignalOwner.deinit()` 统一释放所有 Signal
 
 const std = @import("std");
 const foundation = @import("../foundation/foundation.zig");
@@ -22,18 +23,57 @@ const Node = runtime.Node;
 const Ref = page_mod.Ref;
 const Graph = reactive.Graph;
 
-// ── 内部辅助：创建单个 Signal 并返回 ReadSignal ──────────────────────────────
+// ═════════════════════════════════════════════════════════════════════════════
+// SignalOwner —— 管理工厂函数创建的 Signal 生命周期
+// ═════════════════════════════════════════════════════════════════════════════
 
-fn allocSignal(comptime T: type, g: *Graph, value: T) *reactive.Signal(T) {
-    const s = std.heap.c_allocator.create(reactive.Signal(T)) catch unreachable;
+const OwnedSignal = struct {
+    ptr: *anyopaque,
+    deinit_fn: *const fn (*anyopaque) void,
+};
+
+/// 持有工厂函数内部创建的 Signal 指针，统一释放。
+pub const SignalOwner = struct {
+    allocator: Allocator,
+    signals: std.ArrayList(OwnedSignal) = .empty,
+
+    pub fn init(allocator: Allocator) SignalOwner {
+        return .{ .allocator = allocator };
+    }
+
+    /// 释放所有托管的 Signal（调用 deinit_fn 释放 Graph 内资源，
+    /// 再释放 Signal 自身内存）。
+    pub fn deinit(self: *SignalOwner) void {
+        for (self.signals.items) |owned| {
+            owned.deinit_fn(owned.ptr);
+        }
+        self.signals.deinit(self.allocator);
+    }
+};
+
+// ── 内部辅助 ─────────────────────────────────────────────────────────────────
+
+fn allocSignal(owner: *SignalOwner, comptime T: type, g: *Graph, value: T) *reactive.Signal(T) {
+    const c_alloc = std.heap.c_allocator;
+    const s = c_alloc.create(reactive.Signal(T)) catch unreachable;
     s.* = reactive.Signal(T).init(g, value);
+
+    const deleter = struct {
+        fn del(ptr: *anyopaque) void {
+            const sig: *reactive.Signal(T) = @ptrCast(@alignCast(ptr));
+            sig.deinit();
+            std.heap.c_allocator.destroy(sig);
+        }
+    }.del;
+
+    owner.signals.append(owner.allocator, .{ .ptr = @ptrCast(s), .deinit_fn = deleter }) catch unreachable;
     return s;
 }
 
-/// 创建一个值为 `value` 的 ReadSignal，用于非响应式（静态）属性输入。
-/// 创建的 Signal 由调用方负责释放（当前 leak，适合静态 demo 场景）。
-pub fn readOnly(comptime T: type, g: *Graph, value: T) reactive.ReadSignal(T) {
-    return allocSignal(T, g, value).asReadonly();
+/// 创建一个值为 `value` 的 ReadSignal，所有权由 owner 管理。
+/// 返回的 ReadSignal 在 owner.deinit 之前有效。
+pub fn readOnly(owner: *SignalOwner, comptime T: type, g: *Graph, value: T) reactive.ReadSignal(T) {
+    return allocSignal(owner, T, g, value).asReadonly();
 }
 
 // ── 默认信号工厂（用于非响应式属性） ──────────────────────────────────────────
@@ -50,11 +90,12 @@ const defaultColors = struct {
 };
 
 // ═════════════════════════════════════════════════════════════════════════════
-// 工厂函数
+// 工厂函数（均接收 owner: *SignalOwner）
 // ═════════════════════════════════════════════════════════════════════════════
 
 /// Surface 工厂。
 pub fn surface(
+    owner: *SignalOwner,
     allocator: Allocator,
     g: *Graph,
     config: struct {
@@ -66,11 +107,11 @@ pub fn surface(
     },
 ) !*Node {
     const s = try widgets.Surface.create(allocator, g, .{
-        .bg_color = readOnly(Color, g, config.bg_color),
-        .corner_radius = readOnly(f32, g, config.corner_radius),
-        .padding = readOnly(Insets, g, config.padding),
-        .border_color = readOnly(Color, g, config.border_color),
-        .border_width = readOnly(f32, g, config.border_width),
+        .bg_color = readOnly(owner, Color, g, config.bg_color),
+        .corner_radius = readOnly(owner, f32, g, config.corner_radius),
+        .padding = readOnly(owner, Insets, g, config.padding),
+        .border_color = readOnly(owner, Color, g, config.border_color),
+        .border_width = readOnly(owner, f32, g, config.border_width),
     });
     return &s.node;
 }
@@ -88,6 +129,7 @@ pub fn column(
 
 /// Label 文本工厂。
 pub fn label(
+    owner: *SignalOwner,
     allocator: Allocator,
     g: *Graph,
     text: []const u8,
@@ -97,15 +139,16 @@ pub fn label(
     },
 ) !*Node {
     const l = try widgets.Label.create(allocator, g, .{
-        .text = readOnly([]const u8, g, text),
-        .color = readOnly(Color, g, config.color),
-        .font_size = readOnly(f32, g, config.font_size),
+        .text = readOnly(owner, []const u8, g, text),
+        .color = readOnly(owner, Color, g, config.color),
+        .font_size = readOnly(owner, f32, g, config.font_size),
     });
     return &l.node;
 }
 
 /// Button 按钮工厂。
 pub fn button(
+    owner: *SignalOwner,
     allocator: Allocator,
     g: *Graph,
     label_text: []const u8,
@@ -121,15 +164,15 @@ pub fn button(
     },
 ) !*Node {
     const b = try widgets.Button.create(allocator, g, .{
-        .label = readOnly([]const u8, g, label_text),
-        .bg_color = readOnly(Color, g, config.bg_color),
-        .bg_hover_color = readOnly(Color, g, config.bg_hover_color),
-        .bg_pressed_color = readOnly(Color, g, config.bg_pressed_color),
-        .text_color = readOnly(Color, g, config.text_color),
-        .font_size = readOnly(f32, g, config.font_size),
-        .corner_radius = readOnly(f32, g, config.corner_radius),
-        .padding = readOnly(Insets, g, config.padding),
-        .disabled = readOnly(bool, g, false),
+        .label = readOnly(owner, []const u8, g, label_text),
+        .bg_color = readOnly(owner, Color, g, config.bg_color),
+        .bg_hover_color = readOnly(owner, Color, g, config.bg_hover_color),
+        .bg_pressed_color = readOnly(owner, Color, g, config.bg_pressed_color),
+        .text_color = readOnly(owner, Color, g, config.text_color),
+        .font_size = readOnly(owner, f32, g, config.font_size),
+        .corner_radius = readOnly(owner, f32, g, config.corner_radius),
+        .padding = readOnly(owner, Insets, g, config.padding),
+        .disabled = readOnly(owner, bool, g, false),
     });
     if (config.on_click) |cb| b.on_click = cb;
     return &b.node;
@@ -137,6 +180,7 @@ pub fn button(
 
 /// Card 卡片工厂。
 pub fn card(
+    owner: *SignalOwner,
     allocator: Allocator,
     g: *Graph,
     title_text: []const u8,
@@ -149,19 +193,20 @@ pub fn card(
     },
 ) !*Node {
     const c = try widgets.Card.create(allocator, g, .{
-        .title = readOnly([]const u8, g, title_text),
-        .description = readOnly([]const u8, g, description_text),
-        .bg_color = readOnly(Color, g, config.bg_color),
-        .corner_radius = readOnly(f32, g, config.corner_radius),
-        .padding = readOnly(Insets, g, Insets.all(16)),
-        .title_font_size = readOnly(f32, g, config.title_font_size),
-        .description_font_size = readOnly(f32, g, config.desc_font_size),
+        .title = readOnly(owner, []const u8, g, title_text),
+        .description = readOnly(owner, []const u8, g, description_text),
+        .bg_color = readOnly(owner, Color, g, config.bg_color),
+        .corner_radius = readOnly(owner, f32, g, config.corner_radius),
+        .padding = readOnly(owner, Insets, g, Insets.all(16)),
+        .title_font_size = readOnly(owner, f32, g, config.title_font_size),
+        .description_font_size = readOnly(owner, f32, g, config.desc_font_size),
     });
     return &c.node;
 }
 
 /// Panel 面板工厂。
 pub fn panel(
+    owner: *SignalOwner,
     allocator: Allocator,
     g: *Graph,
     config: struct {
@@ -173,11 +218,11 @@ pub fn panel(
     },
 ) !*Node {
     const p = try widgets.Panel.create(allocator, g, .{
-        .bg_color = readOnly(Color, g, config.bg_color),
-        .corner_radius = readOnly(f32, g, config.corner_radius),
-        .padding = readOnly(Insets, g, config.padding),
-        .border_color = readOnly(Color, g, config.border_color),
-        .border_width = readOnly(f32, g, config.border_width),
+        .bg_color = readOnly(owner, Color, g, config.bg_color),
+        .corner_radius = readOnly(owner, f32, g, config.corner_radius),
+        .padding = readOnly(owner, Insets, g, config.padding),
+        .border_color = readOnly(owner, Color, g, config.border_color),
+        .border_width = readOnly(owner, f32, g, config.border_width),
     });
     return &p.node;
 }

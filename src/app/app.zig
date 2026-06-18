@@ -32,6 +32,9 @@ pub const label = authoring.label;
 pub const button = authoring.button;
 pub const card = authoring.card;
 pub const panel = authoring.panel;
+/// SignalOwner：管理工厂函数创建的 Signal 生命周期。
+pub const SignalOwner = authoring.SignalOwner;
+pub const readOnly = authoring.readOnly;
 
 test {
     std.testing.refAllDecls(@This());

@@ -77,28 +77,28 @@ fn runShowcase(window: *sdl3.Window, allocator: std.mem.Allocator, _: *std.Io.Wr
     // ── 页面列表 ──────────────────────────────────────────────────────────
     const pages = [_]Page{
         .{ .title = "概述", .build = struct {
-            fn f(a: std.mem.Allocator, gr: *reactive.Graph) !*runtime.Node {
-                return buildOverview(a, gr);
+            fn f(a: std.mem.Allocator, gr: *reactive.Graph, owner: *app.SignalOwner) !*runtime.Node {
+                return buildOverview(a, gr, owner);
             }
         }.f },
         .{ .title = "Widgets", .build = struct {
-            fn f(a: std.mem.Allocator, gr: *reactive.Graph) !*runtime.Node {
-                return buildWidgets(a, gr);
+            fn f(a: std.mem.Allocator, gr: *reactive.Graph, owner: *app.SignalOwner) !*runtime.Node {
+                return buildWidgets(a, gr, owner);
             }
         }.f },
         .{ .title = "Layout", .build = struct {
-            fn f(a: std.mem.Allocator, gr: *reactive.Graph) !*runtime.Node {
-                return buildLayout(a, gr);
+            fn f(a: std.mem.Allocator, gr: *reactive.Graph, owner: *app.SignalOwner) !*runtime.Node {
+                return buildLayout(a, gr, owner);
             }
         }.f },
         .{ .title = "Reactive", .build = struct {
-            fn f(a: std.mem.Allocator, gr: *reactive.Graph) !*runtime.Node {
-                return buildReactive(a, gr);
+            fn f(a: std.mem.Allocator, gr: *reactive.Graph, owner: *app.SignalOwner) !*runtime.Node {
+                return buildReactive(a, gr, owner);
             }
         }.f },
         .{ .title = "Theme", .build = struct {
-            fn f(a: std.mem.Allocator, gr: *reactive.Graph) !*runtime.Node {
-                return buildTheme(a, gr);
+            fn f(a: std.mem.Allocator, gr: *reactive.Graph, owner: *app.SignalOwner) !*runtime.Node {
+                return buildTheme(a, gr, owner);
             }
         }.f },
     };
@@ -110,13 +110,17 @@ fn runShowcase(window: *sdl3.Window, allocator: std.mem.Allocator, _: *std.Io.Wr
     var router = Router.init(allocator, &.{}, page_host);
     g_router = &router;
 
+    // ── 根级 SignalOwner（管理顶栏 / 内容区等非页面内的 Signal）──────────
+    var root_owner = app.SignalOwner.init(allocator);
+    defer root_owner.deinit();
+
     // ── 构建根 Widget 树 ──────────────────────────────────────────────────
     var tree = runtime.Tree.init(allocator);
     defer tree.deinit();
     defer if (using_real_font) ft_backend.deinit();
 
     // 根 Surface
-    const root = try authoring.surface(allocator, &g, .{ .bg_color = C.base });
+    const root = try authoring.surface(&root_owner, allocator, &g, .{ .bg_color = C.base });
 
     // 主 Column（垂直布局）
     const main_col = try authoring.column(allocator, .{ .gap = 0 });
@@ -125,17 +129,17 @@ fn runShowcase(window: *sdl3.Window, allocator: std.mem.Allocator, _: *std.Io.Wr
     // ── 顶栏 ──────────────────────────────────────────────────────────────
     {
         const header = try widgets.Surface.create(allocator, &g, .{
-            .bg_color = authoring.readOnly(Color, &g, C.mantle),
-            .corner_radius = authoring.readOnly(f32, &g, 0),
-            .padding = authoring.readOnly(Insets, &g, Insets.symmetric(16, 12)),
-            .border_color = authoring.readOnly(Color, &g, C.surface0),
-            .border_width = authoring.readOnly(f32, &g, 0),
+            .bg_color = authoring.readOnly(&root_owner,Color, &g, C.mantle),
+            .corner_radius = authoring.readOnly(&root_owner,f32, &g, 0),
+            .padding = authoring.readOnly(&root_owner,Insets, &g, Insets.symmetric(16, 12)),
+            .border_color = authoring.readOnly(&root_owner,Color, &g, C.surface0),
+            .border_width = authoring.readOnly(&root_owner,f32, &g, 0),
         });
         try main_col.addChild(allocator, &header.node);
 
         const nav_col = try authoring.column(allocator, .{ .gap = 6 });
         // 标题
-        const title_label = try authoring.label(allocator, &g, "NandinaUI Showcase", .{
+        const title_label = try authoring.label(&root_owner, allocator, &g, "NandinaUI Showcase", .{
             .color = C.text,
             .font_size = 20,
         });
@@ -144,7 +148,7 @@ fn runShowcase(window: *sdl3.Window, allocator: std.mem.Allocator, _: *std.Io.Wr
         // 导航按钮
         {
             inline for (.{ "概述", "Widgets", "Layout", "Reactive", "Theme" }, 0..) |name, i| {
-                const btn = try authoring.button(allocator, &g, name, .{
+                const btn = try authoring.button(&root_owner, allocator, &g, name, .{
                     .bg_color = C.surface0,
                     .bg_hover_color = C.blue,
                     .bg_pressed_color = C.teal,
@@ -167,11 +171,11 @@ fn runShowcase(window: *sdl3.Window, allocator: std.mem.Allocator, _: *std.Io.Wr
     // ── 页面内容区 ────────────────────────────────────────────────────────
     {
         const content_area = try widgets.Surface.create(allocator, &g, .{
-            .bg_color = authoring.readOnly(Color, &g, C.base),
-            .corner_radius = authoring.readOnly(f32, &g, 0),
-            .padding = authoring.readOnly(Insets, &g, Insets.all(24)),
-            .border_color = authoring.readOnly(Color, &g, C.base),
-            .border_width = authoring.readOnly(f32, &g, 0),
+            .bg_color = authoring.readOnly(&root_owner,Color, &g, C.base),
+            .corner_radius = authoring.readOnly(&root_owner,f32, &g, 0),
+            .padding = authoring.readOnly(&root_owner,Insets, &g, Insets.all(24)),
+            .border_color = authoring.readOnly(&root_owner,Color, &g, C.base),
+            .border_width = authoring.readOnly(&root_owner,f32, &g, 0),
         });
         try main_col.addChild(allocator, &content_area.node);
         try content_area.node.addChild(allocator, &page_host.node);
@@ -234,27 +238,27 @@ const Colors = struct {
 };
 
 /// 概述页
-fn buildOverview(a: std.mem.Allocator, g: *reactive.Graph) !*runtime.Node {
+fn buildOverview(a: std.mem.Allocator, g: *reactive.Graph, owner: *app.SignalOwner) !*runtime.Node {
     const col = try authoring.column(a, .{ .gap = 16 });
-    try col.addChild(a, try authoring.label(a, g, "NandinaUI", .{ .color = C.text, .font_size = 28 }));
-    try col.addChild(a, try authoring.label(a, g, "Zig · reactive · layout · theme · widgets · SDL3 · software render", .{ .color = C.blue, .font_size = 14 }));
-    try col.addChild(a, try authoring.card(a, g, "分层架构", "foundation → reactive → render → layout → theme → text → runtime → widgets → app", .{ .bg_color = C.mantle, .corner_radius = 8 }));
-    try col.addChild(a, try authoring.card(a, g, "当前状态", "M0-M5: ✅ Core 完整 · P1: ✅ SDL3 + 字体 · P2: ✅ C ABI · M6: 🚧 Showcase", .{ .bg_color = C.mantle, .corner_radius = 8, .title_font_size = 16 }));
+    try col.addChild(a, try authoring.label(owner, a, g, "NandinaUI", .{ .color = C.text, .font_size = 28 }));
+    try col.addChild(a, try authoring.label(owner, a, g, "Zig · reactive · layout · theme · widgets · SDL3 · software render", .{ .color = C.blue, .font_size = 14 }));
+    try col.addChild(a, try authoring.card(owner, a, g, "分层架构", "foundation → reactive → render → layout → theme → text → runtime → widgets → app", .{ .bg_color = C.mantle, .corner_radius = 8 }));
+    try col.addChild(a, try authoring.card(owner, a, g, "当前状态", "M0-M5: ✅ Core 完整 · P1: ✅ SDL3 + 字体 · P2: ✅ C ABI · M6: 🚧 Showcase", .{ .bg_color = C.mantle, .corner_radius = 8, .title_font_size = 16 }));
     return col;
 }
 
 /// Widgets 页
-fn buildWidgets(a: std.mem.Allocator, g: *reactive.Graph) !*runtime.Node {
+fn buildWidgets(a: std.mem.Allocator, g: *reactive.Graph, owner: *app.SignalOwner) !*runtime.Node {
     const col = try authoring.column(a, .{ .gap = 16 });
-    try col.addChild(a, try authoring.label(a, g, "组件展示", .{ .color = C.text, .font_size = 22 }));
+    try col.addChild(a, try authoring.label(owner, a, g, "组件展示", .{ .color = C.text, .font_size = 22 }));
 
     // Surface demo
-    const surf = try authoring.surface(a, g, .{ .bg_color = C.mantle, .corner_radius = 8, .padding = Insets.all(16), .border_color = C.surface0, .border_width = 1 });
-    try surf.addChild(a, try authoring.label(a, g, "Surface — 基础背景容器（圆角/描边/padding）", .{ .color = C.text, .font_size = 13 }));
+    const surf = try authoring.surface(owner, a, g, .{ .bg_color = C.mantle, .corner_radius = 8, .padding = Insets.all(16), .border_color = C.surface0, .border_width = 1 });
+    try surf.addChild(a, try authoring.label(owner, a, g, "Surface — 基础背景容器（圆角/描边/padding）", .{ .color = C.text, .font_size = 13 }));
     try col.addChild(a, surf);
 
     // Button demo
-    try col.addChild(a, try authoring.button(a, g, "可点击按钮", .{
+    try col.addChild(a, try authoring.button(owner, a, g, "可点击按钮", .{
         .bg_color = C.blue,
         .bg_hover_color = Color.fromHexRgb(0x74C7EC),
         .bg_pressed_color = Color.fromHexRgb(0x89DCEB),
@@ -265,23 +269,23 @@ fn buildWidgets(a: std.mem.Allocator, g: *reactive.Graph) !*runtime.Node {
     }));
 
     // Card demo
-    try col.addChild(a, try authoring.card(a, g, "Card 组件", "组合 Surface + Label，带圆角背景的标题/描述容器", .{ .bg_color = C.mantle, .corner_radius = 8 }));
+    try col.addChild(a, try authoring.card(owner, a, g, "Card 组件", "组合 Surface + Label，带圆角背景的标题/描述容器", .{ .bg_color = C.mantle, .corner_radius = 8 }));
 
     // Panel demo
-    const pnl = try authoring.panel(a, g, .{ .bg_color = C.crust, .corner_radius = 6, .padding = Insets.all(12), .border_color = C.surface0, .border_width = 1 });
-    try pnl.addChild(a, try authoring.label(a, g, "Panel — 带边框/圆角的内容面板", .{ .color = C.text, .font_size = 13 }));
+    const pnl = try authoring.panel(owner, a, g, .{ .bg_color = C.crust, .corner_radius = 6, .padding = Insets.all(12), .border_color = C.surface0, .border_width = 1 });
+    try pnl.addChild(a, try authoring.label(owner, a, g, "Panel — 带边框/圆角的内容面板", .{ .color = C.text, .font_size = 13 }));
     try col.addChild(a, pnl);
 
     return col;
 }
 
 /// Layout 页
-fn buildLayout(a: std.mem.Allocator, g: *reactive.Graph) !*runtime.Node {
+fn buildLayout(a: std.mem.Allocator, g: *reactive.Graph, owner: *app.SignalOwner) !*runtime.Node {
     const col = try authoring.column(a, .{ .gap = 16 });
-    try col.addChild(a, try authoring.label(a, g, "布局系统", .{ .color = C.text, .font_size = 22 }));
-    try col.addChild(a, try authoring.label(a, g, "Constraints + Flex/Flow/Anchors 三套纯函数求解器", .{ .color = C.blue, .font_size = 13 }));
+    try col.addChild(a, try authoring.label(owner, a, g, "布局系统", .{ .color = C.text, .font_size = 22 }));
+    try col.addChild(a, try authoring.label(owner, a, g, "Constraints + Flex/Flow/Anchors 三套纯函数求解器", .{ .color = C.blue, .font_size = 13 }));
 
-    const demo_box = try authoring.surface(a, g, .{ .bg_color = C.mantle, .corner_radius = 8, .padding = Insets.all(16) });
+    const demo_box = try authoring.surface(owner, a, g, .{ .bg_color = C.mantle, .corner_radius = 8, .padding = Insets.all(16) });
     {
         const inner = try authoring.column(a, .{ .gap = 8 });
         try demo_box.addChild(a, inner);
@@ -291,8 +295,8 @@ fn buildLayout(a: std.mem.Allocator, g: *reactive.Graph) !*runtime.Node {
             .{ .label = "Item 3 (fixed)", .color = C.peach },
         };
         for (items) |item| {
-            const it = try authoring.surface(a, g, .{ .bg_color = item.color.withAlpha(0.3), .corner_radius = 4, .padding = Insets.all(8) });
-            try it.addChild(a, try authoring.label(a, g, item.label, .{ .color = C.text, .font_size = 12 }));
+            const it = try authoring.surface(owner, a, g, .{ .bg_color = item.color.withAlpha(0.3), .corner_radius = 4, .padding = Insets.all(8) });
+            try it.addChild(a, try authoring.label(owner, a, g, item.label, .{ .color = C.text, .font_size = 12 }));
             try inner.addChild(a, it);
         }
     }
@@ -301,28 +305,28 @@ fn buildLayout(a: std.mem.Allocator, g: *reactive.Graph) !*runtime.Node {
 }
 
 /// Reactive 页
-fn buildReactive(a: std.mem.Allocator, g: *reactive.Graph) !*runtime.Node {
+fn buildReactive(a: std.mem.Allocator, g: *reactive.Graph, owner: *app.SignalOwner) !*runtime.Node {
     const col = try authoring.column(a, .{ .gap = 16 });
-    try col.addChild(a, try authoring.label(a, g, "响应式核心", .{ .color = C.text, .font_size = 22 }));
-    try col.addChild(a, try authoring.label(a, g, "Signal → Computed → Effect，Angular 风格响应式数据流", .{ .color = C.blue, .font_size = 13 }));
-    try col.addChild(a, try authoring.card(a, g, "核心原语", "Graph（调度图）· Signal（可写状态）· Computed（惰性派生）· Effect（副作用）· batch（批量更新）", .{ .bg_color = C.mantle, .corner_radius = 8, .title_font_size = 16 }));
-    try col.addChild(a, try authoring.card(a, g, "设计要点", "无全局状态（多 Graph 隔离）· 菱形依赖 glitch-free · 动态依赖自动重追踪 · EffectScope 生命周期管理", .{ .bg_color = C.mantle, .corner_radius = 8, .title_font_size = 16 }));
+    try col.addChild(a, try authoring.label(owner, a, g, "响应式核心", .{ .color = C.text, .font_size = 22 }));
+    try col.addChild(a, try authoring.label(owner, a, g, "Signal → Computed → Effect，Angular 风格响应式数据流", .{ .color = C.blue, .font_size = 13 }));
+    try col.addChild(a, try authoring.card(owner, a, g, "核心原语", "Graph（调度图）· Signal（可写状态）· Computed（惰性派生）· Effect（副作用）· batch（批量更新）", .{ .bg_color = C.mantle, .corner_radius = 8, .title_font_size = 16 }));
+    try col.addChild(a, try authoring.card(owner, a, g, "设计要点", "无全局状态（多 Graph 隔离）· 菱形依赖 glitch-free · 动态依赖自动重追踪 · EffectScope 生命周期管理", .{ .bg_color = C.mantle, .corner_radius = 8, .title_font_size = 16 }));
     return col;
 }
 
 /// Theme 页
-fn buildTheme(a: std.mem.Allocator, g: *reactive.Graph) !*runtime.Node {
+fn buildTheme(a: std.mem.Allocator, g: *reactive.Graph, owner: *app.SignalOwner) !*runtime.Node {
     const col = try authoring.column(a, .{ .gap = 16 });
-    try col.addChild(a, try authoring.label(a, g, "主题系统", .{ .color = C.text, .font_size = 22 }));
-    try col.addChild(a, try authoring.label(a, g, "Design Tokens + Semantic Palette + Theme Resolver", .{ .color = C.blue, .font_size = 13 }));
+    try col.addChild(a, try authoring.label(owner, a, g, "主题系统", .{ .color = C.text, .font_size = 22 }));
+    try col.addChild(a, try authoring.label(owner, a, g, "Design Tokens + Semantic Palette + Theme Resolver", .{ .color = C.blue, .font_size = 13 }));
 
-    const swatch_box = try authoring.surface(a, g, .{ .bg_color = C.mantle, .corner_radius = 8, .padding = Insets.all(16) });
+    const swatch_box = try authoring.surface(owner, a, g, .{ .bg_color = C.mantle, .corner_radius = 8, .padding = Insets.all(16) });
     {
         const inner = try authoring.column(a, .{ .gap = 8 });
         try swatch_box.addChild(a, inner);
         const swatches = [_]Color{ C.red, C.peach, C.yellow, C.green, C.teal, C.blue, C.mauve };
         for (swatches) |sw| {
-            try inner.addChild(a, try authoring.surface(a, g, .{ .bg_color = sw, .corner_radius = 4, .padding = Insets.all(6) }));
+            try inner.addChild(a, try authoring.surface(owner, a, g, .{ .bg_color = sw, .corner_radius = 4, .padding = Insets.all(6) }));
         }
     }
     try col.addChild(a, swatch_box);

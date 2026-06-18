@@ -11,6 +11,7 @@ const reactive = @import("../reactive/reactive.zig");
 const render = @import("../render/render.zig");
 const layout = @import("../layout/layout.zig");
 const runtime = @import("../runtime/runtime.zig");
+const authoring = @import("authoring.zig");
 
 const Node = runtime.Node;
 const VTable = runtime.VTable;
@@ -18,6 +19,7 @@ const EventResult = runtime.EventResult;
 const Event = runtime.Event;
 const Constraints = layout.Constraints;
 const Scene = render.Scene;
+const SignalOwner = authoring.SignalOwner;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Page 接口
@@ -28,8 +30,9 @@ pub const Page = struct {
     /// 页面标题（用于展示在导航 / 标签页上）。
     title: []const u8 = "",
     /// 构建此页面的 widget 树根节点。
-    /// 在 PageHost 挂载时自动调用。
-    build: *const fn (allocator: std.mem.Allocator, g: *reactive.Graph) anyerror!*Node,
+    /// `owner` 由 PageHost 创建并传入，build 函数中用它创建所有静态 Signal；
+    /// 页面销毁时 PageHost 会调用 `owner.deinit()` 统一释放。
+    build: *const fn (allocator: std.mem.Allocator, g: *reactive.Graph, owner: *SignalOwner) anyerror!*Node,
     /// 页面激活时回调（可选）。
     on_activate: ?*const fn (*Node) void = null,
     /// 页面停用时回调（可选）。
@@ -51,6 +54,8 @@ pub const PageHost = struct {
     current_index: i32 = -1,
     /// 页面列表。
     pages: []const Page,
+    /// 当前页面的 Signal 持有者（页面销毁时自动清理）。
+    sig_owner: SignalOwner,
 
     const vtable = VTable{
         .measure = measureImpl,
@@ -67,6 +72,7 @@ pub const PageHost = struct {
             .graph = g,
             .pages = pages,
             .current_index = -1,
+            .sig_owner = SignalOwner.init(allocator),
         };
         // 挂载初始页面
         try self.navigateTo(initial_index);
@@ -85,18 +91,19 @@ pub const PageHost = struct {
             }
         }
 
-        // 释放旧子节点
+        // 释放旧子节点与旧 SignalOwner
         if (self.node.children.items.len > 0) {
-            // deinitTree 释放所有子节点
             for (self.node.children.items) |child| {
                 child.deinitTree(self.allocator);
             }
             self.node.children.clearRetainingCapacity();
+            self.sig_owner.deinit();
+            self.sig_owner = SignalOwner.init(self.allocator);
         }
 
         // 构建新页面
         const new_page = &self.pages[index];
-        const root = try new_page.build(self.allocator, self.graph);
+        const root = try new_page.build(self.allocator, self.graph, &self.sig_owner);
 
         // 添加为子节点（PageHost 的 layout 会将其铺满自身）
         try self.node.addChild(self.allocator, root);
@@ -123,9 +130,9 @@ pub const PageHost = struct {
     }
 
     fn deinitImpl(node: *Node, allocator: std.mem.Allocator) void {
-        _ = node;
-        _ = allocator;
-        // 子节点由 deinitTree 递归释放
+        const self: *PageHost = @fieldParentPtr("node", node);
+        self.sig_owner.deinit();
+        allocator.destroy(self);
     }
 };
 
