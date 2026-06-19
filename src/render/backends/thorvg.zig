@@ -57,8 +57,8 @@ pub const ThorvgBackend = struct {
 
     pub fn init(allocator: std.mem.Allocator) ThorvgBackend {
         return .{
-            .clip_paints = std.ArrayList(Tvg_Paint).init(allocator),
             .allocator = allocator,
+            // clip_paints 使用默认值 .empty
         };
     }
 

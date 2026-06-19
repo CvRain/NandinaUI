@@ -52,6 +52,7 @@ const Tree = runtime.Tree;
 const Backend = render.Backend;
 const RenderTarget = render.RenderTarget;
 const SoftwareBackend = render.SoftwareBackend;
+const ThorvgBackend = render.backends.thorvg.ThorvgBackend;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SDL3 C 头文件
@@ -59,6 +60,8 @@ const SoftwareBackend = render.SoftwareBackend;
 
 const c = @cImport({
     @cInclude("SDL3/SDL.h");
+    @cDefine("TVG_STATIC", {});
+    @cInclude("thorvg-1/thorvg_capi.h");
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -87,6 +90,9 @@ pub const Window = struct {
     backend_kind: BackendKind = .software,
     /// 软件后端实例（默认）。
     sw_renderer: SoftwareBackend = .{},
+    /// ThorVG 后端实例（可选，按需初始化）。
+    thorvg_renderer: ThorvgBackend = undefined,
+    thorvg_initialized: bool = false,
 
     /// 关联的 NandinaUI 树（可选）。
     tree: ?*Tree,
@@ -141,6 +147,10 @@ pub const Window = struct {
         c.SDL_DestroyRenderer(self.sdl_renderer);
         c.SDL_DestroyWindow(self.sdl_window);
         sdlDeinit();
+        if (self.thorvg_initialized) {
+            self.thorvg_renderer.deinit();
+            thorvgDeinit();
+        }
         self.* = undefined;
     }
 
@@ -249,7 +259,7 @@ pub const Window = struct {
         self.event_queue.clearRetainingCapacity();
     }
 
-    /// 执行一帧：布局 + 绘制 → 软件光栅 → 呈现到窗口。
+    /// 执行一帧：布局 + 绘制 → 渲染 → 呈现到窗口。
     pub fn frame(self: *Window) !bool {
         const tree = self.tree orelse return false;
         const frame_produced = try tree.frame();
@@ -262,12 +272,28 @@ pub const Window = struct {
             .stride = self.width,
         };
 
-        const backend = self.sw_renderer.interface();
+        const backend: Backend = switch (self.backend_kind) {
+            .software => self.sw_renderer.interface(),
+            .thorvg => blk: {
+                if (!self.thorvg_initialized) {
+                    try thorvgInit();
+                    self.thorvg_renderer = ThorvgBackend.init(self.allocator);
+                    self.thorvg_initialized = true;
+                }
+                break :blk self.thorvg_renderer.interface();
+            },
+        };
         try backend.beginFrame(target);
         try backend.submit(&tree.scene);
         try backend.endFrame();
 
         return true;
+    }
+
+    /// 切换渲染后端类型。
+    /// 切换到 ThorVG 时会自动初始化引擎（线程安全，引用计数）。
+    pub fn setBackendKind(self: *Window, kind: BackendKind) void {
+        self.backend_kind = kind;
     }
 
     /// 把当前像素缓冲呈现到 SDL 窗口。
@@ -357,6 +383,34 @@ pub fn sdlDeinit() void {
     if (sdl_init_count > 0) {
         c.SDL_Quit();
         sdl_init_count = 0;
+    }
+}
+
+// ── ThorVG 引擎全局生命周期（引用计数）─────────────────────────────────────────
+
+var thorvg_init_count: u32 = 0;
+
+/// 初始化 ThorVG 引擎。可多次调用（引用计数）。
+pub fn thorvgInit() !void {
+    if (thorvg_init_count > 0) {
+        thorvg_init_count += 1;
+        return;
+    }
+    if (c.tvg_engine_init(c.TVG_ENGINE_OPTION_DEFAULT) != c.TVG_RESULT_SUCCESS) {
+        return error.ThorvgInitFailed;
+    }
+    thorvg_init_count = 1;
+}
+
+/// 反初始化 ThorVG 引擎（引用计数归零时真正 Term）。
+pub fn thorvgDeinit() void {
+    if (thorvg_init_count > 1) {
+        thorvg_init_count -= 1;
+        return;
+    }
+    if (thorvg_init_count > 0) {
+        _ = c.tvg_engine_term();
+        thorvg_init_count = 0;
     }
 }
 

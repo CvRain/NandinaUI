@@ -21,10 +21,15 @@ const column_mod = @import("column.zig");
 const pressable_mod = @import("pressable.zig");
 const clip_node_mod = @import("clip_node.zig");
 const focus_ring_mod = @import("focus_ring.zig");
+const icon_mod = @import("icon.zig");
 const label_mod = @import("label.zig");
 const button_mod = @import("button.zig");
 const panel_mod = @import("panel.zig");
 const card_mod = @import("card.zig");
+const text_field_mod = @import("text_field.zig");
+const field_mod = @import("field.zig");
+const checkbox_mod = @import("checkbox.zig");
+const switch_mod = @import("switch.zig");
 
 // ── primitives ────────────────────────────────────────────────────────────────
 
@@ -48,6 +53,11 @@ pub const ClipNodeProps = clip_node_mod.ClipNodeProps;
 pub const FocusRing = focus_ring_mod.FocusRing;
 pub const FocusRingProps = focus_ring_mod.FocusRingProps;
 
+/// Icon —— 图标 primitive（纯色矩形/圆形，用于状态指示、占位等）。
+pub const Icon = icon_mod.Icon;
+pub const IconProps = icon_mod.IconProps;
+pub const IconShape = icon_mod.IconShape;
+
 // ── controls ──────────────────────────────────────────────────────────────────
 
 /// Label —— 响应式文本标签（建立在 text 层之上）。
@@ -66,6 +76,22 @@ pub const PanelProps = panel_mod.PanelProps;
 pub const Card = card_mod.Card;
 pub const CardProps = card_mod.CardProps;
 
+/// TextField —— 单行文本输入控件。
+pub const TextField = text_field_mod.TextField;
+pub const TextFieldProps = text_field_mod.TextFieldProps;
+
+/// Field —— 语义表单容器（label + 控件 + helper/error 消息）。
+pub const Field = field_mod.Field;
+pub const FieldProps = field_mod.FieldProps;
+
+/// Checkbox —— 复选框组件。
+pub const Checkbox = checkbox_mod.Checkbox;
+pub const CheckboxProps = checkbox_mod.CheckboxProps;
+
+/// Switch —— 开关组件。
+pub const Switch = switch_mod.Switch;
+pub const SwitchProps = switch_mod.SwitchProps;
+
 test {
     std.testing.refAllDecls(@This());
     // 显式引用各子模块，确保它们的 test 块被 `zig build test` 收集。
@@ -74,8 +100,13 @@ test {
     _ = pressable_mod;
     _ = clip_node_mod;
     _ = focus_ring_mod;
+    _ = icon_mod;
     _ = label_mod;
     _ = button_mod;
     _ = panel_mod;
     _ = card_mod;
+    _ = text_field_mod;
+    _ = field_mod;
+    _ = checkbox_mod;
+    _ = switch_mod;
 }

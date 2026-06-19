@@ -13,6 +13,7 @@ const std = @import("std");
 const foundation = @import("../foundation/foundation.zig");
 const reactive = @import("../reactive/reactive.zig");
 const runtime = @import("../runtime/runtime.zig");
+const layout = @import("../layout/layout.zig");
 const widgets = @import("../widgets/widgets.zig");
 const page_mod = @import("page.zig");
 
@@ -121,9 +122,13 @@ pub fn column(
     allocator: Allocator,
     config: struct {
         gap: f32 = 0,
+        cross_align: layout.Align = .start,
     },
 ) !*Node {
-    const c = try widgets.Column.create(allocator, .{ .gap = config.gap });
+    const c = try widgets.Column.create(allocator, .{
+        .gap = config.gap,
+        .cross_align = config.cross_align,
+    });
     return &c.node;
 }
 
@@ -225,4 +230,125 @@ pub fn panel(
         .border_width = readOnly(owner, f32, g, config.border_width),
     });
     return &p.node;
+}
+
+/// Icon 图标工厂。
+pub fn icon(
+    owner: *SignalOwner,
+    allocator: Allocator,
+    g: *Graph,
+    config: struct {
+        color: Color = defaultColors.blue,
+        size: f32 = 16,
+        shape: widgets.IconShape = .rect,
+    },
+) !*Node {
+    const i = try widgets.Icon.create(allocator, g, .{
+        .color = readOnly(owner, Color, g, config.color),
+        .size = readOnly(owner, f32, g, config.size),
+        .shape = config.shape,
+    });
+    return &i.node;
+}
+
+/// TextField 文本输入工厂。
+pub fn textField(
+    owner: *SignalOwner,
+    allocator: Allocator,
+    g: *Graph,
+    config: struct {
+        placeholder: []const u8 = "",
+        font_size: f32 = 14,
+        color: Color = defaultColors.text,
+        placeholder_color: Color = Color.fromHexRgb(0x6C7086),
+        caret_color: Color = defaultColors.blue,
+        bg_color: Color = defaultColors.surface0,
+        min_width: f32 = 150,
+        padding: Insets = Insets.symmetric(10, 6),
+        on_change: ?*const fn (text: []const u8) void = null,
+        on_submit: ?*const fn (text: []const u8) void = null,
+    },
+) !*widgets.TextField {
+    const tf = try widgets.TextField.create(allocator, g, .{
+        .font_size = readOnly(owner, f32, g, config.font_size),
+        .color = readOnly(owner, Color, g, config.color),
+        .placeholder_color = readOnly(owner, Color, g, config.placeholder_color),
+        .caret_color = readOnly(owner, Color, g, config.caret_color),
+        .bg_color = readOnly(owner, Color, g, config.bg_color),
+        .disabled = readOnly(owner, bool, g, false),
+        .read_only = readOnly(owner, bool, g, false),
+        .placeholder = config.placeholder,
+        .min_width = config.min_width,
+        .padding = config.padding,
+    });
+    if (config.on_change) |cb| tf.on_change = cb;
+    if (config.on_submit) |cb| tf.on_submit = cb;
+    return tf;
+}
+
+/// Field 语义表单容器工厂。
+pub fn field(
+    owner: *SignalOwner,
+    allocator: Allocator,
+    g: *Graph,
+    config: struct {
+        label: []const u8 = "",
+        helper: []const u8 = "",
+        required: bool = false,
+    },
+) !*widgets.Field {
+    const fld = try widgets.Field.create(allocator, g, .{
+        .label = readOnly(owner, []const u8, g, config.label),
+        .helper = readOnly(owner, []const u8, g, config.helper),
+        .error_text = readOnly(owner, []const u8, g, ""),
+        .required = readOnly(owner, bool, g, config.required),
+        .invalid = readOnly(owner, bool, g, false),
+        .disabled = readOnly(owner, bool, g, false),
+        .label_color = readOnly(owner, Color, g, defaultColors.text),
+        .helper_color = readOnly(owner, Color, g, Color.fromHexRgb(0x6C7086)),
+        .error_color = readOnly(owner, Color, g, Color.fromHexRgb(0xF38BA8)),
+        .label_font_size = readOnly(owner, f32, g, 14),
+        .message_font_size = readOnly(owner, f32, g, 12),
+    });
+    return fld;
+}
+
+/// Checkbox 复选框工厂。
+pub fn checkbox(
+    owner: *SignalOwner,
+    allocator: Allocator,
+    g: *Graph,
+    checked_sig: *reactive.Signal(bool),
+    config: struct {
+        color: Color = defaultColors.blue,
+        on_change: ?*const fn (checked: bool) void = null,
+    },
+) !*widgets.Checkbox {
+    const cb = try widgets.Checkbox.create(allocator, g, .{
+        .checked = checked_sig.asReadonly(),
+        .color = readOnly(owner, Color, g, config.color),
+        .disabled = readOnly(owner, bool, g, false),
+    });
+    if (config.on_change) |cb_fn| cb.on_change = cb_fn;
+    return cb;
+}
+
+/// Switch 开关工厂。
+pub fn switch_(
+    owner: *SignalOwner,
+    allocator: Allocator,
+    g: *Graph,
+    checked_sig: *reactive.Signal(bool),
+    config: struct {
+        color: Color = defaultColors.green,
+        on_change: ?*const fn (checked: bool) void = null,
+    },
+) !*widgets.Switch {
+    const sw = try widgets.Switch.create(allocator, g, .{
+        .checked = checked_sig.asReadonly(),
+        .color = readOnly(owner, Color, g, config.color),
+        .disabled = readOnly(owner, bool, g, false),
+    });
+    if (config.on_change) |sw_fn| sw.on_change = sw_fn;
+    return sw;
 }

@@ -57,8 +57,8 @@ pub fn build(b: *std.Build) void {
     linkThorvgModule(b, sdl_backend_mod, vcpkg_include, vcpkg_lib);
 
     // ── 可执行目标 ───────────────────────────────────────────────────────────
-    // 主程序（SDL3 可视化界面）
-    const exe = createExe(b, "NandinaUI", "src/main.zig", mod, sdl_backend_mod, sdl_lib, sdl_dep, vcpkg_include, vcpkg_lib, host_tag, target, optimize);
+    // GUI 展示程序（SDL3 可视化界面，展示组件库）
+    const exe = createExe(b, "NandinaUI", "showcase/gui.zig", mod, sdl_backend_mod, sdl_lib, sdl_dep, vcpkg_include, vcpkg_lib, host_tag, target, optimize);
     b.installArtifact(exe);
 
     const run_step = b.step("run", "构建并启动主程序（SDL3 可视化界面）");
@@ -127,16 +127,18 @@ fn linkVcpkgModule(b: *std.Build, m: *std.Build.Module, vcpkg_include: []const u
 
 /// 为模块添加 ThorVG 的 include 路径和库链接。
 fn linkThorvgModule(b: *std.Build, m: *std.Build.Module, vcpkg_include: []const u8, vcpkg_lib: []const u8) void {
-    _ = b;
-    _ = m;
     _ = vcpkg_include;
     _ = vcpkg_lib;
-    // ThorVG 后端暂未启用（链接器符号解析问题，待 Zig 版本升级后修复）
-    // 如需启用，请添加：
-    //   m.addIncludePath(.{ .cwd_relative = b.pathJoin(&.{ vcpkg_include, "thorvg-1" }) });
-    //   m.addObjectFile(.{ .cwd_relative = b.pathJoin(&.{ vcpkg_lib, "libthorvg-1.a" }) });
-    //   m.linkSystemLibrary("pthread", .{});
-    //   m.linkSystemLibrary("stdc++", .{});
+
+    // 使用 Clang 编译的 ThorVG 共享库（兼容 Zig 的链接器）
+    // 路径：build/thorvg-clang/install/
+    const thorvg_clang = b.pathJoin(&.{ "build", "thorvg-clang", "install" });
+    const thorvg_lib = b.pathJoin(&.{ thorvg_clang, "lib" });
+    m.addIncludePath(.{ .cwd_relative = b.pathJoin(&.{ thorvg_clang, "include", "thorvg-1" }) });
+    m.addLibraryPath(.{ .cwd_relative = thorvg_lib });
+    m.addRPath(.{ .cwd_relative = thorvg_lib });
+    m.linkSystemLibrary("thorvg-1", .{ .needed = true });
+    // __isoc23_strtol 兼容桩已由 ft_glyph.c 提供（weak alias → strtol）
 }
 
 /// 创建可执行目标，集成 SDL3 + vcpkg 字体库。

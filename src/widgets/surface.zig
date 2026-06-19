@@ -135,13 +135,19 @@ pub const Surface = struct {
         return constraints.constrain(desired);
     }
 
-    /// layout：把子节点布局在内容区（减去 padding）。
+    /// layout：把子节点放置在内容区（减去 padding），使用子节点自身测量尺寸。
     fn layoutImpl(node: *Node) void {
         const self: *Surface = @fieldParentPtr("node", node);
         const pad = self.padding.peek();
-        const inner = pad.applyToRect(node.bounds);
         for (node.children.items) |child| {
-            child.setBounds(inner);
+            const child_w = child.measured.width;
+            const child_h = child.measured.height;
+            child.setBounds(Rect.fromXywh(
+                node.bounds.left + pad.left,
+                node.bounds.top + pad.top,
+                if (child_w > 0) child_w else node.bounds.width() - pad.horizontal(),
+                if (child_h > 0) child_h else node.bounds.height() - pad.vertical(),
+            ));
         }
     }
 

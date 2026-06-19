@@ -29,7 +29,7 @@ pub const scene = @import("scene.zig");
 pub const backend = @import("backend.zig");
 pub const backends = struct {
     pub const software = @import("backends/software.zig");
-    // ThorVG 后端独立编译，不在此处聚合导出（避免链接依赖）
+    pub const thorvg = @import("backends/thorvg.zig");
 };
 
 // ── 公共 API 再导出 ─────────────────────────────────────────────────────────────
