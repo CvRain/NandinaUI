@@ -18,6 +18,9 @@ const std = @import("std");
 
 const surface_mod = @import("surface.zig");
 const column_mod = @import("column.zig");
+const row_mod = @import("row.zig");
+const stack_mod = @import("stack.zig");
+
 const pressable_mod = @import("pressable.zig");
 const clip_node_mod = @import("clip_node.zig");
 const focus_ring_mod = @import("focus_ring.zig");
@@ -40,6 +43,14 @@ pub const SurfaceProps = surface_mod.SurfaceProps;
 /// Column —— 垂直堆叠子节点的容器（基于 layout.flex 求解器）。
 pub const Column = column_mod.Column;
 pub const ColumnProps = column_mod.ColumnProps;
+
+/// Row —— 水平排列子节点的容器（基于 layout.flex 求解器）。
+pub const Row = row_mod.Row;
+pub const RowProps = row_mod.RowProps;
+
+/// Stack —— 子节点层叠的容器（基于 layout.flex 的 stack 轴）。
+pub const Stack = stack_mod.Stack;
+pub const StackProps = stack_mod.StackProps;
 
 /// Pressable —— 交互状态机（hover / pressed / focused / disabled）。
 pub const Pressable = pressable_mod.Pressable;
@@ -97,7 +108,10 @@ test {
     // 显式引用各子模块，确保它们的 test 块被 `zig build test` 收集。
     _ = surface_mod;
     _ = column_mod;
+    _ = row_mod;
+    _ = stack_mod;
     _ = pressable_mod;
+
     _ = clip_node_mod;
     _ = focus_ring_mod;
     _ = icon_mod;

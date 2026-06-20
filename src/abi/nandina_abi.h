@@ -62,6 +62,11 @@ typedef struct nandina_signal_string nandina_signal_string_t;
 typedef struct nandina_effect_scope_t nandina_effect_scope_t;
 typedef struct nandina_scene_t nandina_scene_t; // render.Scene
 typedef struct nandina_software_backend_t nandina_software_backend_t;
+typedef struct nandina_text_field_t nandina_text_field_t; // widgets.TextField
+typedef struct nandina_checkbox_t nandina_checkbox_t;     // widgets.Checkbox
+typedef struct nandina_switch_t nandina_switch_t;         // widgets.Switch
+typedef struct nandina_page_host_t nandina_page_host_t;   // app.PageHost
+typedef struct nandina_app_t nandina_app_t;               // 全包窗口应用
 
 // ═════════════════════════════════════════════════════════════════════════════
 // 生命周期
@@ -232,6 +237,122 @@ nandina_error_t nandina_panel_create(nandina_graph_t *g,
                                      nandina_insets_t padding,
                                      nandina_color_t border_color,
                                      float border_width, nandina_node_t **out);
+
+/// Row —— 水平排列容器。
+nandina_error_t nandina_row_create(float gap, nandina_node_t **out);
+
+/// Stack —— 子节点层叠容器。
+nandina_error_t nandina_stack_create(nandina_node_t **out);
+
+/// Icon —— 图标 primitive。shape：0 = rect，1 = circle。
+nandina_error_t nandina_icon_create(nandina_graph_t *g, nandina_color_t color,
+                                    float size, int32_t shape,
+                                    nandina_node_t **out);
+
+/// Field —— 语义表单容器（label + helper + 控件挂入）。
+nandina_error_t nandina_field_create(nandina_graph_t *g, const char *label,
+                                     const char *helper, bool required,
+                                     nandina_node_t **out);
+
+// ═════════════════════════════════════════════════════════════════════════════
+// 事件回调
+// ═════════════════════════════════════════════════════════════════════════════
+
+/// 设置 Button 的点击回调。`fn` 原型：`void fn(void* user_data)`。
+/// user_data 所有权归调用方；core 仅持有指针，须保证其存活至节点销毁。
+void nandina_button_set_on_click(nandina_node_t *button,
+                                 void (*fn)(void *user_data), void *user_data);
+
+// ═════════════════════════════════════════════════════════════════════════════
+// TextField — 文本输入控件
+// ═════════════════════════════════════════════════════════════════════════════
+
+/// 创建 TextField。返回独立句柄；用 `nandina_text_field_node` 取其节点挂入树。
+nandina_error_t
+nandina_text_field_create(nandina_graph_t *g, const char *placeholder,
+                          float font_size, nandina_color_t color,
+                          nandina_color_t bg_color, float min_width,
+                          nandina_text_field_t **out);
+
+/// 取 TextField 的节点指针（用于挂入树 / 添加子节点）。
+nandina_node_t *nandina_text_field_node(nandina_text_field_t *tf);
+
+/// 获取当前文本（返回线程本地缓冲，下次调用前有效）。
+const char *nandina_text_field_text(nandina_text_field_t *tf);
+
+/// 设置文本内容。
+void nandina_text_field_set_text(nandina_text_field_t *tf, const char *text);
+
+// ═════════════════════════════════════════════════════════════════════════════
+// Checkbox — 复选框
+// ═════════════════════════════════════════════════════════════════════════════
+
+nandina_error_t nandina_checkbox_create(nandina_graph_t *g,
+                                        nandina_signal_bool_t *checked,
+                                        nandina_color_t color,
+                                        nandina_checkbox_t **out);
+nandina_node_t *nandina_checkbox_node(nandina_checkbox_t *cb);
+/// 勾选变化回调。`fn` 原型：`void fn(void* user_data, bool checked)`。
+void nandina_checkbox_set_on_change(nandina_checkbox_t *cb,
+                                    void (*fn)(void *user_data, bool checked),
+                                    void *user_data);
+
+// ═════════════════════════════════════════════════════════════════════════════
+// Switch — 开关
+// ═════════════════════════════════════════════════════════════════════════════
+
+nandina_error_t nandina_switch_create(nandina_graph_t *g,
+                                      nandina_signal_bool_t *checked,
+                                      nandina_color_t color,
+                                      nandina_switch_t **out);
+nandina_node_t *nandina_switch_node(nandina_switch_t *sw);
+/// 开关变化回调。`fn` 原型：`void fn(void* user_data, bool checked)`。
+void nandina_switch_set_on_change(nandina_switch_t *sw,
+                                  void (*fn)(void *user_data, bool checked),
+                                  void *user_data);
+
+// ═════════════════════════════════════════════════════════════════════════════
+// PageHost — 多页导航容器
+// ═════════════════════════════════════════════════════════════════════════════
+
+/// 页面构建回调：返回该页面的根节点。原型 `nandina_node_t* build(void*
+/// user_data)`。
+typedef nandina_node_t *(*nandina_page_build_fn)(void *user_data);
+
+/// 创建 PageHost。`builds`/`user_datas` 为长度 `count` 的并列数组，
+/// 第 i 个页面用 builds[i](user_datas[i]) 构建。`initial_index` 为初始页面。
+nandina_error_t nandina_page_host_create(nandina_graph_t *g,
+                                         const nandina_page_build_fn *builds,
+                                         void *const *user_datas, size_t count,
+                                         size_t initial_index,
+                                         nandina_page_host_t **out);
+
+/// 取 PageHost 节点指针（挂入树）。
+nandina_node_t *nandina_page_host_node(nandina_page_host_t *host);
+
+/// 导航到指定索引页面（重建该页面子树）。
+nandina_error_t nandina_page_host_navigate_to(nandina_page_host_t *host,
+                                              size_t index);
+
+// ═════════════════════════════════════════════════════════════════════════════
+// App — 全包窗口入口（默认 SDL3 + 软件渲染后端）
+// ═════════════════════════════════════════════════════════════════════════════
+//
+// 「一行起窗口」的便利层：core 内部开窗口、跑主循环、渲染。
+// 适合快速自用；高级用户可改用 Tree + SoftwareBackend 自管窗口。
+
+/// 创建应用窗口（标题 + 初始宽高）。失败返回非 0。
+nandina_error_t nandina_app_create(const char *title, int32_t width,
+                                   int32_t height, nandina_app_t **out);
+
+/// 挂载根节点（内部建 Tree 持有）。
+nandina_error_t nandina_app_set_root(nandina_app_t *app, nandina_node_t *root);
+
+/// 进入阻塞主循环，直到窗口关闭。
+nandina_error_t nandina_app_run(nandina_app_t *app);
+
+/// 销毁应用（关闭窗口，释放 Tree 与字体资源）。
+void nandina_app_destroy(nandina_app_t *app);
 
 // ═════════════════════════════════════════════════════════════════════════════
 // Render — 场景与后端

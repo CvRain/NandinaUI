@@ -66,10 +66,14 @@ pub const Button = struct {
     // 响应式作用域
     scope: reactive.EffectScope,
 
-    // 可选回调
-    on_click: ?*const fn () void = null,
-    on_press: ?*const fn () void = null,
-    on_release: ?*const fn () void = null,
+    // 可选回调（context-carrying：首参为调用方提供的 user_data，可为 null）。
+    // Zig 调用方若不需要 context，可忽略首参；C/C++ 绑定用它承载 closure。
+    on_click: ?*const fn (?*anyopaque) void = null,
+    on_click_ctx: ?*anyopaque = null,
+    on_press: ?*const fn (?*anyopaque) void = null,
+    on_press_ctx: ?*anyopaque = null,
+    on_release: ?*const fn (?*anyopaque) void = null,
+    on_release_ctx: ?*anyopaque = null,
 
     // ── vtable ────────────────────────────────────────────────────────────────
 
@@ -218,7 +222,7 @@ pub const Button = struct {
             .pointer_down => |e| {
                 if (e.button == .left) {
                     self.pressed.set(true);
-                    if (self.on_press) |cb| cb();
+                    if (self.on_press) |cb| cb(self.on_press_ctx);
                     return .consumed;
                 }
                 return .ignored;
@@ -227,14 +231,15 @@ pub const Button = struct {
                 if (e.button == .left) {
                     const was_pressed = self.pressed.peek();
                     self.pressed.set(false);
-                    if (self.on_release) |cb| cb();
+                    if (self.on_release) |cb| cb(self.on_release_ctx);
                     if (was_pressed and self.hovered.peek()) {
-                        if (self.on_click) |cb| cb();
+                        if (self.on_click) |cb| cb(self.on_click_ctx);
                     }
                     return .consumed;
                 }
                 return .ignored;
             },
+
             .focus_out => {
                 self.hovered.set(false);
                 self.pressed.set(false);
@@ -449,7 +454,7 @@ test "Button 点击回调触发" {
     // 设置点击回调
     const Ctx = struct {
         var clicked: bool = false;
-        fn onClick() void {
+        fn onClick(_: ?*anyopaque) void {
             clicked = true;
         }
     };

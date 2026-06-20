@@ -88,11 +88,19 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
         .imports = &.{
             .{ .name = "NandinaUI", .module = mod },
+            .{ .name = "sdl_backend", .module = sdl_backend_mod },
         },
         .link_libc = true,
     });
     linkVcpkgModule(b, abi_mod, vcpkg_include, vcpkg_lib);
     linkThorvgModule(b, abi_mod, vcpkg_include, vcpkg_lib);
+    // 全包窗口入口 nandina_app_* 内部用 SDL3，需链接 SDL 与字体 C 包装。
+    abi_mod.linkLibrary(sdl_lib);
+    abi_mod.addIncludePath(sdl_dep.path("include"));
+    abi_mod.addIncludePath(sdl_dep.path("src"));
+    abi_mod.addCSourceFile(.{ .file = b.path("src/text/backends/ft_glyph.c"), .flags = &.{
+        b.fmt("-I{s}/freetype2", .{vcpkg_include}),
+    } });
     const abi_lib = b.addLibrary(.{
         .name = "nandina_abi",
         .root_module = abi_mod,

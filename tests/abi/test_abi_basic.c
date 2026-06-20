@@ -220,7 +220,145 @@ static void test_widget_factories(void) {
   assert(err == 0);
   assert(node != NULL);
 
+  // Row
+  err = nandina_row_create(8.0f, &node);
+  assert(err == 0);
+  assert(node != NULL);
+
+  // Stack
+  err = nandina_stack_create(&node);
+  assert(err == 0);
+  assert(node != NULL);
+
+  // Icon（circle）
+  err = nandina_icon_create(g, 0xFFA6E3A1, 12.0f, 1, &node);
+  assert(err == 0);
+  assert(node != NULL);
+
+  // Field
+  err = nandina_field_create(g, "用户名", "请输入用户名", true, &node);
+  assert(err == 0);
+  assert(node != NULL);
+
   nandina_graph_destroy(g);
+  printf("OK\n");
+}
+
+// ── 事件回调 / TextField / Checkbox / Switch ─────────────────────────────────
+
+static int g_click_count = 0;
+static void on_click_cb(void *user_data) {
+  int *counter = (int *)user_data;
+  (*counter)++;
+}
+
+static bool g_last_checked = false;
+static void on_change_cb(void *user_data, bool checked) {
+  (void)user_data;
+  g_last_checked = checked;
+}
+
+static void test_events_and_inputs(void) {
+  printf("  test_events_and_inputs ... ");
+  nandina_graph_t *g = NULL;
+  nandina_graph_create(&g);
+
+  // Button + on_click
+  nandina_node_t *btn = NULL;
+  nandina_insets_t pad = {12, 8, 12, 8};
+  nandina_error_t err =
+      nandina_button_create(g, "OK", 0xFF89B4FA, 0xFF74C7EC, 0xFF89DCEB,
+                            0xFF1E1E2E, 14.0f, 6.0f, pad, &btn);
+  assert(err == 0);
+  g_click_count = 0;
+  nandina_button_set_on_click(btn, on_click_cb, &g_click_count);
+
+  // TextField
+  nandina_text_field_t *tf = NULL;
+  err = nandina_text_field_create(g, "请输入...", 14.0f, 0xFFCDD6F4, 0xFF313244,
+                                  150.0f, &tf);
+  assert(err == 0);
+  assert(tf != NULL);
+  assert(nandina_text_field_node(tf) != NULL);
+  nandina_text_field_set_text(tf, "Hello");
+  assert(strcmp(nandina_text_field_text(tf), "Hello") == 0);
+
+  // Checkbox + on_change
+  nandina_signal_bool_t *checked = NULL;
+  nandina_signal_bool_create(g, false, &checked);
+  nandina_checkbox_t *cb = NULL;
+  err = nandina_checkbox_create(g, checked, 0xFF89B4FA, &cb);
+  assert(err == 0);
+  assert(cb != NULL);
+  assert(nandina_checkbox_node(cb) != NULL);
+  nandina_checkbox_set_on_change(cb, on_change_cb, NULL);
+
+  // Switch + on_change
+  nandina_switch_t *sw = NULL;
+  err = nandina_switch_create(g, checked, 0xFFA6E3A1, &sw);
+  assert(err == 0);
+  assert(sw != NULL);
+  assert(nandina_switch_node(sw) != NULL);
+  nandina_switch_set_on_change(sw, on_change_cb, NULL);
+
+  // 清理：节点由各自的 deinitTree 释放，这里仅释放 graph 与持有的 signal。
+  // 注意：widget 节点未挂入 tree，测试中不单独释放（进程退出回收）。
+  nandina_signal_bool_destroy(checked);
+  nandina_graph_destroy(g);
+  printf("OK\n");
+}
+
+// ── PageHost — 多页导航 ──────────────────────────────────────────────────────
+
+static nandina_graph_t *g_page_graph = NULL;
+static int g_page0_built = 0;
+static int g_page1_built = 0;
+
+static nandina_node_t *build_page0(void *user_data) {
+  (void)user_data;
+  g_page0_built++;
+  nandina_node_t *n = NULL;
+  nandina_label_create(g_page_graph, "Page 0", 0xFFFFFFFF, 16.0f, &n);
+  return n;
+}
+
+static nandina_node_t *build_page1(void *user_data) {
+  (void)user_data;
+  g_page1_built++;
+  nandina_node_t *n = NULL;
+  nandina_label_create(g_page_graph, "Page 1", 0xFFFFFFFF, 16.0f, &n);
+  return n;
+}
+
+static void test_page_host(void) {
+  printf("  test_page_host ... ");
+  nandina_graph_create(&g_page_graph);
+  g_page0_built = 0;
+  g_page1_built = 0;
+
+  nandina_page_build_fn builds[2] = {build_page0, build_page1};
+  void *user_datas[2] = {NULL, NULL};
+
+  nandina_page_host_t *host = NULL;
+  nandina_error_t err =
+      nandina_page_host_create(g_page_graph, builds, user_datas, 2, 0, &host);
+  assert(err == 0);
+  assert(host != NULL);
+  assert(nandina_page_host_node(host) != NULL);
+  assert(g_page0_built == 1); // 初始页面已构建
+  assert(g_page1_built == 0);
+
+  // 导航到 page 1
+  err = nandina_page_host_navigate_to(host, 1);
+  assert(err == 0);
+  assert(g_page1_built == 1);
+
+  // 越界导航应报错
+  err = nandina_page_host_navigate_to(host, 5);
+  assert(err != 0);
+
+  nandina_graph_destroy(g_page_graph);
+  g_page_graph = NULL;
   printf("OK\n");
 }
 
@@ -299,8 +437,12 @@ int main(void) {
   test_graph_signal_string();
   test_tree_create();
   test_widget_factories();
+  test_events_and_inputs();
+  test_page_host();
   test_software_backend();
+
   test_batch();
+
   test_error_message();
 
   printf("全部通过!\n");

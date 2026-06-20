@@ -149,7 +149,7 @@ fn runShowcase(window: *sdl3.Window, allocator: std.mem.Allocator, _: *std.Io.Wr
                 .corner_radius = 4,
                 .padding = Insets.symmetric(12, 6),
                 .on_click = struct {
-                    fn cb() void {
+                    fn cb(_: ?*anyopaque) void {
                         if (g_router) |r| _ = r.page_host.navigateTo(i) catch {};
                     }
                 }.cb,

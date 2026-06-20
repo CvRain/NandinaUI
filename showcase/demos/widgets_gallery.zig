@@ -96,7 +96,7 @@ fn run(ctx: *registry.DemoContext) anyerror!void {
 
 const ClickState = struct {
     var count: u32 = 0;
-    fn onClick() void {
+    fn onClick(_: ?*anyopaque) void {
         count += 1;
     }
 };

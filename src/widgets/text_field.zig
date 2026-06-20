@@ -106,9 +106,11 @@ pub const TextField = struct {
     padding: Insets,
     min_width: f32,
 
-    // ── 可选回调 ──────────────────────────────────────────────────────────
-    on_change: ?*const fn (text: []const u8) void = null,
-    on_submit: ?*const fn (text: []const u8) void = null,
+    // ── 可选回调（context-carrying：首参为 user_data，可为 null）──────────────
+    on_change: ?*const fn (ctx: ?*anyopaque, text: []const u8) void = null,
+    on_change_ctx: ?*anyopaque = null,
+    on_submit: ?*const fn (ctx: ?*anyopaque, text: []const u8) void = null,
+    on_submit_ctx: ?*anyopaque = null,
 
     // ── 响应式作用域 ─────────────────────────────────────────────────────
     scope: reactive.EffectScope,
@@ -172,10 +174,11 @@ pub const TextField = struct {
     /// 设置文本内容并移动光标到末尾。
     pub fn setText(self: *TextField, t: []const u8) !void {
         self.text_buf.clearRetainingCapacity();
-        try self.text_buf.appendSlice(t);
+        try self.text_buf.appendSlice(self.allocator, t);
         self.caret = t.len;
+
         self.node.markPaintDirty();
-        if (self.on_change) |cb| cb(self.text_buf.items);
+        if (self.on_change) |cb| cb(self.on_change_ctx, self.text_buf.items);
     }
 
     /// 清空文本。
@@ -183,7 +186,7 @@ pub const TextField = struct {
         self.text_buf.clearRetainingCapacity();
         self.caret = 0;
         self.node.markPaintDirty();
-        if (self.on_change) |cb| cb(self.text_buf.items);
+        if (self.on_change) |cb| cb(self.on_change_ctx, self.text_buf.items);
     }
 
     /// 返回焦点状态的只读视图。
@@ -199,7 +202,7 @@ pub const TextField = struct {
         try self.text_buf.insertSlice(self.allocator, self.caret, t);
         self.caret += t.len;
         self.node.markPaintDirty();
-        if (self.on_change) |cb| cb(self.text_buf.items);
+        if (self.on_change) |cb| cb(self.on_change_ctx, self.text_buf.items);
     }
 
     /// 删除光标前的字符。
@@ -222,7 +225,7 @@ pub const TextField = struct {
         }
         self.caret = start;
         self.node.markPaintDirty();
-        if (self.on_change) |cb| cb(self.text_buf.items);
+        if (self.on_change) |cb| cb(self.on_change_ctx, self.text_buf.items);
     }
 
     /// 删除光标后的字符。
@@ -239,7 +242,7 @@ pub const TextField = struct {
             _ = self.text_buf.orderedRemove(self.caret);
         }
         self.node.markPaintDirty();
-        if (self.on_change) |cb| cb(self.text_buf.items);
+        if (self.on_change) |cb| cb(self.on_change_ctx, self.text_buf.items);
     }
 
     /// 移动光标（确保在 UTF-8 边界）。
@@ -463,9 +466,10 @@ pub const TextField = struct {
                         return .consumed;
                     },
                     SDLK_RETURN => {
-                        if (self.on_submit) |cb| cb(self.text_buf.items);
+                        if (self.on_submit) |cb| cb(self.on_submit_ctx, self.text_buf.items);
                         return .consumed;
                     },
+
                     SDLK_LEFT => {
                         self.moveCaret(-1);
                         return .consumed;

@@ -44,8 +44,10 @@ pub const CheckboxProps = struct {
     disabled: reactive.ReadSignal(bool),
     /// 尺寸（默认 18x18）。
     size: f32 = 18,
-    /// 勾选变化回调。
-    on_change: ?*const fn (checked: bool) void = null,
+    /// 勾选变化回调（context-carrying：首参为 user_data，可为 null）。
+    on_change: ?*const fn (ctx: ?*anyopaque, checked: bool) void = null,
+    /// 回调上下文。
+    on_change_ctx: ?*anyopaque = null,
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -60,7 +62,8 @@ pub const Checkbox = struct {
     color: reactive.ReadSignal(Color),
     disabled: reactive.ReadSignal(bool),
     size: f32,
-    on_change: ?*const fn (checked: bool) void = null,
+    on_change: ?*const fn (ctx: ?*anyopaque, checked: bool) void = null,
+    on_change_ctx: ?*anyopaque = null,
 
     // 内部交互状态
     hovered: bool = false,
@@ -175,9 +178,10 @@ pub const Checkbox = struct {
             },
             .pointer_down => |e| {
                 if (hitTest(node.bounds, e.x, e.y)) {
-                    if (self.on_change) |cb| cb(!self.checked.peek());
+                    if (self.on_change) |cb| cb(self.on_change_ctx, !self.checked.peek());
                     return .consumed;
                 }
+
                 return .ignored;
             },
             else => return .ignored,

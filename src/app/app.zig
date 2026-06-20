@@ -25,13 +25,21 @@ pub const Route = router.Route;
 /// 路由导航器。
 pub const Router = router.Router;
 
-/// Authoring DSL 工厂函数：surface / column / label / button / card / panel。
+/// Authoring DSL 工厂函数。
 pub const surface = authoring.surface;
 pub const column = authoring.column;
+pub const row = authoring.row;
+pub const stack = authoring.stack;
 pub const label = authoring.label;
 pub const button = authoring.button;
 pub const card = authoring.card;
 pub const panel = authoring.panel;
+pub const icon = authoring.icon;
+pub const textField = authoring.textField;
+pub const field = authoring.field;
+pub const checkbox = authoring.checkbox;
+pub const switch_ = authoring.switch_;
+
 /// SignalOwner：管理工厂函数创建的 Signal 生命周期。
 pub const SignalOwner = authoring.SignalOwner;
 pub const readOnly = authoring.readOnly;

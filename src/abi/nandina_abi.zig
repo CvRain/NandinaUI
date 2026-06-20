@@ -11,12 +11,14 @@
 
 const std = @import("std");
 const nandina = @import("NandinaUI");
+const sdl = @import("sdl_backend");
 
 const foundation = nandina.foundation;
 const reactive = nandina.reactive;
 const render = nandina.render;
 const runtime = nandina.runtime;
 const widgets = nandina.widgets;
+const app_mod = nandina.app;
 
 const Color = foundation.Color;
 const Insets = foundation.Insets;
@@ -603,6 +605,42 @@ export fn nandina_button_create(
     return 0;
 }
 
+export fn nandina_button_set_on_click(
+    node: *runtime.Node,
+    cb: ?*const fn (?*anyopaque) callconv(.c) void,
+    user_data: ?*anyopaque,
+) void {
+    const btn: *widgets.Button = @fieldParentPtr("node", node);
+    btn.on_click = @ptrCast(cb);
+    btn.on_click_ctx = user_data;
+}
+
+// ── Row ──────────────────────────────────────────────────────────────────────
+
+export fn nandina_row_create(gap: f32, out: *?*runtime.Node) nandina_error_t {
+    last_error_set = false;
+    const allocator = std.heap.c_allocator;
+    const r = widgets.Row.create(allocator, .{ .gap = gap }) catch |err| {
+        setError("create Row: {s}", .{@errorName(err)});
+        return -1;
+    };
+    out.* = &r.node;
+    return 0;
+}
+
+// ── Stack ──────────────────────────────────────────────────────────────────────
+
+export fn nandina_stack_create(out: *?*runtime.Node) nandina_error_t {
+    last_error_set = false;
+    const allocator = std.heap.c_allocator;
+    const s = widgets.Stack.create(allocator, .{}) catch |err| {
+        setError("create Stack: {s}", .{@errorName(err)});
+        return -1;
+    };
+    out.* = &s.node;
+    return 0;
+}
+
 // ── Column ───────────────────────────────────────────────────────────────────
 
 export fn nandina_column_create(gap: f32, out: *?*runtime.Node) nandina_error_t {
@@ -613,6 +651,204 @@ export fn nandina_column_create(gap: f32, out: *?*runtime.Node) nandina_error_t 
         return -1;
     };
     out.* = &col.node;
+    return 0;
+}
+
+// ── Icon ───────────────────────────────────────────────────────────────────────
+
+/// 图标形状：0 = rect，1 = circle。
+export fn nandina_icon_create(
+    g: *reactive.Graph,
+    color: nandina_color_t,
+    size: f32,
+    shape: i32,
+    out: *?*runtime.Node,
+) nandina_error_t {
+    last_error_set = false;
+    const allocator = std.heap.c_allocator;
+    const color_sig = allocCreateSignal(Color, g, colorFromC(color));
+    const size_sig = allocCreateSignal(f32, g, size);
+    const ic = widgets.Icon.create(allocator, g, .{
+        .color = color_sig.asReadonly(),
+        .size = size_sig.asReadonly(),
+        .shape = if (shape == 1) .circle else .rect,
+    }) catch |err| {
+        setError("create Icon: {s}", .{@errorName(err)});
+        return -1;
+    };
+    out.* = &ic.node;
+    return 0;
+}
+
+// ── TextField ────────────────────────────────────────────────────────────────
+
+export fn nandina_text_field_create(
+    g: *reactive.Graph,
+    placeholder: [*:0]const u8,
+    font_size: f32,
+    color: nandina_color_t,
+    bg_color: nandina_color_t,
+    min_width: f32,
+    out: *?*widgets.TextField,
+) nandina_error_t {
+    last_error_set = false;
+    const allocator = std.heap.c_allocator;
+    const fs_sig = allocCreateSignal(f32, g, font_size);
+    const col_sig = allocCreateSignal(Color, g, colorFromC(color));
+    const ph_col_sig = allocCreateSignal(Color, g, Color.fromHexRgb(0x6C7086));
+    const caret_sig = allocCreateSignal(Color, g, Color.fromHexRgb(0x89B4FA));
+    const bg_sig = allocCreateSignal(Color, g, colorFromC(bg_color));
+    const dis_sig = allocCreateSignal(bool, g, false);
+    const ro_sig = allocCreateSignal(bool, g, false);
+    const tf = widgets.TextField.create(allocator, g, .{
+        .font_size = fs_sig.asReadonly(),
+        .color = col_sig.asReadonly(),
+        .placeholder_color = ph_col_sig.asReadonly(),
+        .caret_color = caret_sig.asReadonly(),
+        .bg_color = bg_sig.asReadonly(),
+        .disabled = dis_sig.asReadonly(),
+        .read_only = ro_sig.asReadonly(),
+        .placeholder = std.mem.sliceTo(placeholder, 0),
+        .min_width = min_width,
+    }) catch |err| {
+        setError("create TextField: {s}", .{@errorName(err)});
+        return -1;
+    };
+    out.* = tf;
+    return 0;
+}
+
+export fn nandina_text_field_node(tf: *widgets.TextField) *runtime.Node {
+    return &tf.node;
+}
+
+export fn nandina_text_field_text(tf: *widgets.TextField) [*:0]const u8 {
+    // 注意：内部缓冲未必零结尾，复制到线程本地缓冲返回。
+    const t = tf.text();
+    const n = @min(t.len, last_error_buf.len - 1);
+    @memcpy(last_error_buf[0..n], t[0..n]);
+    last_error_buf[n] = 0;
+    return @ptrCast(&last_error_buf);
+}
+
+export fn nandina_text_field_set_text(tf: *widgets.TextField, text: [*:0]const u8) void {
+    tf.setText(std.mem.sliceTo(text, 0)) catch {};
+}
+
+export fn nandina_text_field_set_on_change(
+    tf: *widgets.TextField,
+    cb: ?*const fn (?*anyopaque, [*:0]const u8) callconv(.c) void,
+    user_data: ?*anyopaque,
+) void {
+    _ = cb;
+    _ = user_data;
+    _ = tf;
+    // C 侧回调签名带零结尾字符串，Zig 侧为切片，签名不兼容，暂以独立 trampoline 留待后续完善。
+    setError("text_field on_change 回调暂未导出（签名待定）", .{});
+}
+
+// ── Checkbox ─────────────────────────────────────────────────────────────────
+
+export fn nandina_checkbox_create(
+    g: *reactive.Graph,
+    checked: *reactive.Signal(bool),
+    color: nandina_color_t,
+    out: *?*widgets.Checkbox,
+) nandina_error_t {
+    last_error_set = false;
+    const allocator = std.heap.c_allocator;
+    const col_sig = allocCreateSignal(Color, g, colorFromC(color));
+    const dis_sig = allocCreateSignal(bool, g, false);
+    const cb = widgets.Checkbox.create(allocator, g, .{
+        .checked = checked.asReadonly(),
+        .color = col_sig.asReadonly(),
+        .disabled = dis_sig.asReadonly(),
+    }) catch |err| {
+        setError("create Checkbox: {s}", .{@errorName(err)});
+        return -1;
+    };
+    out.* = cb;
+    return 0;
+}
+
+export fn nandina_checkbox_node(cb: *widgets.Checkbox) *runtime.Node {
+    return &cb.node;
+}
+
+export fn nandina_checkbox_set_on_change(
+    cb: *widgets.Checkbox,
+    fn_ptr: ?*const fn (?*anyopaque, bool) callconv(.c) void,
+    user_data: ?*anyopaque,
+) void {
+    cb.on_change = @ptrCast(fn_ptr);
+    cb.on_change_ctx = user_data;
+}
+
+// ── Switch ─────────────────────────────────────────────────────────────────────
+
+export fn nandina_switch_create(
+    g: *reactive.Graph,
+    checked: *reactive.Signal(bool),
+    color: nandina_color_t,
+    out: *?*widgets.Switch,
+) nandina_error_t {
+    last_error_set = false;
+    const allocator = std.heap.c_allocator;
+    const col_sig = allocCreateSignal(Color, g, colorFromC(color));
+    const dis_sig = allocCreateSignal(bool, g, false);
+    const sw = widgets.Switch.create(allocator, g, .{
+        .checked = checked.asReadonly(),
+        .color = col_sig.asReadonly(),
+        .disabled = dis_sig.asReadonly(),
+    }) catch |err| {
+        setError("create Switch: {s}", .{@errorName(err)});
+        return -1;
+    };
+    out.* = sw;
+    return 0;
+}
+
+export fn nandina_switch_node(sw: *widgets.Switch) *runtime.Node {
+    return &sw.node;
+}
+
+export fn nandina_switch_set_on_change(
+    sw: *widgets.Switch,
+    fn_ptr: ?*const fn (?*anyopaque, bool) callconv(.c) void,
+    user_data: ?*anyopaque,
+) void {
+    sw.on_change = @ptrCast(fn_ptr);
+    sw.on_change_ctx = user_data;
+}
+
+// ── Field ──────────────────────────────────────────────────────────────────────
+
+export fn nandina_field_create(
+    g: *reactive.Graph,
+    label_text: [*:0]const u8,
+    helper: [*:0]const u8,
+    required: bool,
+    out: *?*runtime.Node,
+) nandina_error_t {
+    last_error_set = false;
+    const allocator = std.heap.c_allocator;
+    const fld = widgets.Field.create(allocator, g, .{
+        .label = allocCreateSignal([]const u8, g, std.mem.sliceTo(label_text, 0)).asReadonly(),
+        .helper = allocCreateSignal([]const u8, g, std.mem.sliceTo(helper, 0)).asReadonly(),
+        .error_text = allocCreateSignal([]const u8, g, "").asReadonly(),
+        .required = allocCreateSignal(bool, g, required).asReadonly(),
+        .invalid = allocCreateSignal(bool, g, false).asReadonly(),
+        .disabled = allocCreateSignal(bool, g, false).asReadonly(),
+        .label_color = allocCreateSignal(Color, g, Color.fromHexRgb(0xCDD6F4)).asReadonly(),
+        .helper_color = allocCreateSignal(Color, g, Color.fromHexRgb(0x6C7086)).asReadonly(),
+        .error_color = allocCreateSignal(Color, g, Color.fromHexRgb(0xF38BA8)).asReadonly(),
+        .label_font_size = allocCreateSignal(f32, g, 14).asReadonly(),
+        .message_font_size = allocCreateSignal(f32, g, 12).asReadonly(),
+    }) catch |err| {
+        setError("create Field: {s}", .{@errorName(err)});
+        return -1;
+    };
+    out.* = &fld.node;
     return 0;
 }
 
@@ -723,6 +959,209 @@ export fn nandina_software_backend_pixels(
     out_width.* = @as(i32, @intCast(rt.width));
     out_height.* = @as(i32, @intCast(rt.height));
     return 0;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// § PageHost — 多页导航容器
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// C 侧每个页面用一个 build 回调构建子树：`nandina_node_t* build(void* user_data)`。
+// build 回调在“需要时”被调用（创建 / 导航切换）；回调内用 widget 工厂创建节点并返回根。
+// 内存：PageHost 持有页面节点树，切换时释放旧树。
+
+const AbiPage = struct {
+    build: *const fn (?*anyopaque) callconv(.c) ?*runtime.Node,
+    user_data: ?*anyopaque,
+};
+
+/// ABI 版 PageHost 封装：用 C 回调构建页面，桥接到 Zig 的 PageHost。
+const AbiPageHost = struct {
+    host: *app_mod.PageHost,
+    pages: []AbiPage,
+    // 为 Zig PageHost 提供的 Page 列表（build 闭包通过线程本地 current 索引取回 AbiPage）。
+    zig_pages: []app_mod.Page,
+};
+
+// PageHost 的 build 签名是 fn(allocator, *Graph, *SignalOwner) -> *Node，
+// 不携带 per-page 上下文。这里用一个全局注册表把「当前正在 build 的 AbiPage」传进去。
+threadlocal var g_building: ?*AbiPage = null;
+
+fn abiPageBuildTrampoline(
+    a: std.mem.Allocator,
+    gr: *reactive.Graph,
+    owner: *app_mod.SignalOwner,
+) anyerror!*runtime.Node {
+    _ = a;
+    _ = gr;
+    _ = owner;
+    const page = g_building orelse return error.NoPageContext;
+    const node = page.build(page.user_data) orelse return error.PageBuildFailed;
+    return node;
+}
+
+export fn nandina_page_host_create(
+    g: *reactive.Graph,
+    builds: [*]const ?*const fn (?*anyopaque) callconv(.c) ?*runtime.Node,
+    user_datas: [*]const ?*anyopaque,
+    count: usize,
+    initial_index: usize,
+    out: *?*AbiPageHost,
+) nandina_error_t {
+    last_error_set = false;
+    const allocator = std.heap.c_allocator;
+
+    const abi_pages = allocator.alloc(AbiPage, count) catch |err| {
+        setError("alloc AbiPage[]: {s}", .{@errorName(err)});
+        return -1;
+    };
+    const zig_pages = allocator.alloc(app_mod.Page, count) catch |err| {
+        allocator.free(abi_pages);
+        setError("alloc Page[]: {s}", .{@errorName(err)});
+        return -1;
+    };
+    for (0..count) |i| {
+        const cb = builds[i] orelse {
+            allocator.free(abi_pages);
+            allocator.free(zig_pages);
+            setError("page[{d}] build 回调为 null", .{i});
+            return -1;
+        };
+        abi_pages[i] = .{ .build = cb, .user_data = user_datas[i] };
+        zig_pages[i] = .{ .build = abiPageBuildTrampoline };
+    }
+
+    const self = allocator.create(AbiPageHost) catch |err| {
+        allocator.free(abi_pages);
+        allocator.free(zig_pages);
+        setError("alloc AbiPageHost: {s}", .{@errorName(err)});
+        return -1;
+    };
+    self.* = .{ .host = undefined, .pages = abi_pages, .zig_pages = zig_pages };
+
+    // PageHost.create 会立刻 build initial_index 页面，需先设好 g_building。
+    g_building = &abi_pages[@min(initial_index, count -| 1)];
+    const host = app_mod.PageHost.create(allocator, g, zig_pages, initial_index) catch |err| {
+        g_building = null;
+        allocator.destroy(self);
+        allocator.free(abi_pages);
+        allocator.free(zig_pages);
+        setError("create PageHost: {s}", .{@errorName(err)});
+        return -1;
+    };
+    g_building = null;
+    self.host = host;
+    out.* = self;
+    return 0;
+}
+
+/// 取 PageHost 的节点指针（挂入树）。
+export fn nandina_page_host_node(host: *AbiPageHost) *runtime.Node {
+    return &host.host.node;
+}
+
+/// 导航到指定索引页面。
+export fn nandina_page_host_navigate_to(host: *AbiPageHost, index: usize) nandina_error_t {
+    last_error_set = false;
+    if (index >= host.pages.len) {
+        setError("navigate index {d} 越界", .{index});
+        return -1;
+    }
+    g_building = &host.pages[index];
+    defer g_building = null;
+    host.host.navigateTo(index) catch |err| {
+        setError("navigateTo: {s}", .{@errorName(err)});
+        return -1;
+    };
+    return 0;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// § App — 全包窗口入口（默认 SDL3 + 软件后端）
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// 「Slint 式默认全包」：core 内部开 SDL3 窗口、跑主循环、渲染。SDL3 仅作为内部
+// 实现，不出现在 ABI 语义里。默认走 software 后端（当前唯一能渲染文字的路径）。
+
+const AbiApp = struct {
+    window: sdl.Window,
+    tree: ?*runtime.Tree = null,
+    // 字体后端（可选）。
+    ft: ?nandina.text.backends.hb_ft.HarfBuzzFreeTypeMetrics = null,
+};
+
+export fn nandina_app_create(
+    title: [*:0]const u8,
+    width: i32,
+    height: i32,
+    out: *?*AbiApp,
+) nandina_error_t {
+    last_error_set = false;
+    const allocator = std.heap.c_allocator;
+    const self = allocator.create(AbiApp) catch |err| {
+        setError("alloc App: {s}", .{@errorName(err)});
+        return -1;
+    };
+    self.* = .{ .window = undefined };
+
+    self.window = sdl.Window.init(
+        allocator,
+        std.mem.sliceTo(title, 0),
+        @intCast(width),
+        @intCast(height),
+    ) catch |err| {
+        allocator.destroy(self);
+        setError("create Window: {s}", .{@errorName(err)});
+        return -1;
+    };
+
+    // 尝试启用真实字体（失败则退回内置等宽估算，不报错）。
+    if (nandina.text.backends.hb_ft.HarfBuzzFreeTypeMetrics.init(allocator)) |fb| {
+        self.ft = fb;
+        self.window.sw_renderer.setGlyphRenderer(self.ft.?.glyphRenderer());
+    } else |_| {}
+
+    out.* = self;
+    return 0;
+}
+
+/// 挂载根节点（内部建一棵 Tree 持有该根）。
+export fn nandina_app_set_root(appp: *AbiApp, root: *runtime.Node) nandina_error_t {
+    last_error_set = false;
+    const allocator = std.heap.c_allocator;
+    if (appp.tree == null) {
+        const tree = allocator.create(runtime.Tree) catch |err| {
+            setError("alloc Tree: {s}", .{@errorName(err)});
+            return -1;
+        };
+        tree.* = runtime.Tree.init(allocator);
+        appp.tree = tree;
+    }
+    appp.tree.?.setRoot(root);
+    appp.window.setTree(appp.tree.?);
+    return 0;
+}
+
+/// 进入阻塞主循环：poll 事件 → dispatch → frame → present，直到窗口关闭。
+export fn nandina_app_run(appp: *AbiApp) nandina_error_t {
+    last_error_set = false;
+    while (appp.window.isRunning()) {
+        if (!(appp.window.pollEvent() catch true)) break;
+        appp.window.dispatchEvents();
+        _ = appp.window.frame() catch {};
+        appp.window.present();
+    }
+    return 0;
+}
+
+export fn nandina_app_destroy(appp: *AbiApp) void {
+    const allocator = std.heap.c_allocator;
+    if (appp.tree) |tree| {
+        tree.deinit();
+        allocator.destroy(tree);
+    }
+    if (appp.ft) |*ft| ft.deinit();
+    appp.window.deinit();
+    allocator.destroy(appp);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

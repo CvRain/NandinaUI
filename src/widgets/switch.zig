@@ -46,8 +46,10 @@ pub const SwitchProps = struct {
     track_width: f32 = 40,
     /// 轨道高度（默认 22）。
     track_height: f32 = 22,
-    /// 变化回调。
-    on_change: ?*const fn (checked: bool) void = null,
+    /// 变化回调（context-carrying：首参为 user_data，可为 null）。
+    on_change: ?*const fn (ctx: ?*anyopaque, checked: bool) void = null,
+    /// 回调上下文。
+    on_change_ctx: ?*anyopaque = null,
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -63,7 +65,8 @@ pub const Switch = struct {
     disabled: reactive.ReadSignal(bool),
     track_width: f32,
     track_height: f32,
-    on_change: ?*const fn (checked: bool) void = null,
+    on_change: ?*const fn (ctx: ?*anyopaque, checked: bool) void = null,
+    on_change_ctx: ?*anyopaque = null,
 
     hovered: bool = false,
 
@@ -171,11 +174,12 @@ pub const Switch = struct {
             },
             .pointer_down => |e| {
                 if (hitTest(node.bounds, e.x, e.y)) {
-                    if (self.on_change) |cb| cb(!self.checked.peek());
+                    if (self.on_change) |cb| cb(self.on_change_ctx, !self.checked.peek());
                     return .consumed;
                 }
                 return .ignored;
             },
+
             else => return .ignored,
         }
     }

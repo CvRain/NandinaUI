@@ -260,11 +260,20 @@ pub const nandina = struct {
 - 补 Icon / TextField / Checkbox / Switch / Field 工厂导出。
 - 同步更新 `nandina_abi.h` 与 `tests/abi/test_abi_basic.c`。
 
-**阶段 2：ABI 补齐 —— Page/Router + 窗口全包入口**
+**阶段 1 ✅ 已完成**：Row/Stack widget、context-carrying 回调（Button/Checkbox/Switch/TextField）、
+Icon/TextField/Checkbox/Switch/Field/Row/Stack 的 ABI 工厂、回调 setter，
+`nandina_abi.h` 与 `tests/abi` 同步；`zig build` / `zig build test` / C ABI 测试全绿。
 
-- 补 PageHost / navigate + build 回调。
-- 补 `nandina_app_*`（内部复用 sdl3 backend 主循环）。
-- 扩展 `tests/abi` 增加一个最小 C 用例：起窗口 → 一个按钮 → 点击回调。
+**阶段 2 ✅ 已完成**：ABI 补齐 —— Page/Router + 窗口全包入口
+
+- ✅ PageHost：`nandina_page_host_create/node/navigate_to`，C 侧每页一个
+  `nandina_node_t* build(void* user_data)` 回调，通过线程本地 `g_building` 把当前页
+  上下文传入 Zig PageHost 的 build trampoline。
+- ✅ `nandina_app_*`：`create/set_root/run/destroy`，内部复用 `sdl3` backend 主循环，
+  默认 software 后端 + 可选真实字体（失败回退等宽估算）。
+- ✅ `tests/abi` 增加 `test_page_host`（多页构建 + 导航 + 越界报错），C 测试 13 项全绿。
+- 已知：链接 `libnandina_abi.a` 的 C/C++ 程序需带齐传递依赖（SDL3 静态库、ubsan
+  运行时、freetype/harfbuzz/thorvg 及系统库），见第 10 节第 5 条。
 
 **阶段 3：Zig 前端层 + Zig showcase**
 

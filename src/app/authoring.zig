@@ -85,7 +85,9 @@ const defaultColors = struct {
     pub const blue = Color.fromHexRgb(0x89B4FA);
     pub const blue_hover = Color.fromHexRgb(0x74C7EC);
     pub const blue_pressed = Color.fromHexRgb(0x89DCEB);
+    pub const green = Color.fromHexRgb(0xA6E3A1);
     pub const surface0 = Color.fromHexRgb(0x313244);
+
     pub const mantle = Color.fromHexRgb(0x181825);
     pub const crust = Color.fromHexRgb(0x11111B);
 };
@@ -122,14 +124,48 @@ pub fn column(
     allocator: Allocator,
     config: struct {
         gap: f32 = 0,
-        cross_align: layout.Align = .start,
+        main_align: layout.Align = .start,
+        cross_align: layout.Align = .stretch,
     },
 ) !*Node {
     const c = try widgets.Column.create(allocator, .{
         .gap = config.gap,
+        .main_align = config.main_align,
         .cross_align = config.cross_align,
     });
     return &c.node;
+}
+
+/// Row 容器工厂。
+pub fn row(
+    allocator: Allocator,
+    config: struct {
+        gap: f32 = 0,
+        main_align: layout.Align = .start,
+        cross_align: layout.Align = .start,
+    },
+) !*Node {
+    const r = try widgets.Row.create(allocator, .{
+        .gap = config.gap,
+        .main_align = config.main_align,
+        .cross_align = config.cross_align,
+    });
+    return &r.node;
+}
+
+/// Stack 容器工厂。
+pub fn stack(
+    allocator: Allocator,
+    config: struct {
+        main_align: layout.Align = .start,
+        cross_align: layout.Align = .start,
+    },
+) !*Node {
+    const s = try widgets.Stack.create(allocator, .{
+        .main_align = config.main_align,
+        .cross_align = config.cross_align,
+    });
+    return &s.node;
 }
 
 /// Label 文本工厂。
@@ -165,7 +201,10 @@ pub fn button(
         font_size: f32 = 14,
         corner_radius: f32 = 6,
         padding: Insets = Insets.symmetric(20, 10),
-        on_click: ?*const fn () void = null,
+        /// 点击回调（context-carrying：首参为 on_click_ctx，可忽略）。
+        on_click: ?*const fn (ctx: ?*anyopaque) void = null,
+        /// 点击回调上下文。
+        on_click_ctx: ?*anyopaque = null,
     },
 ) !*Node {
     const b = try widgets.Button.create(allocator, g, .{
@@ -179,7 +218,10 @@ pub fn button(
         .padding = readOnly(owner, Insets, g, config.padding),
         .disabled = readOnly(owner, bool, g, false),
     });
-    if (config.on_click) |cb| b.on_click = cb;
+    if (config.on_click) |cb| {
+        b.on_click = cb;
+        b.on_click_ctx = config.on_click_ctx;
+    }
     return &b.node;
 }
 
@@ -265,8 +307,10 @@ pub fn textField(
         bg_color: Color = defaultColors.surface0,
         min_width: f32 = 150,
         padding: Insets = Insets.symmetric(10, 6),
-        on_change: ?*const fn (text: []const u8) void = null,
-        on_submit: ?*const fn (text: []const u8) void = null,
+        on_change: ?*const fn (ctx: ?*anyopaque, text: []const u8) void = null,
+        on_change_ctx: ?*anyopaque = null,
+        on_submit: ?*const fn (ctx: ?*anyopaque, text: []const u8) void = null,
+        on_submit_ctx: ?*anyopaque = null,
     },
 ) !*widgets.TextField {
     const tf = try widgets.TextField.create(allocator, g, .{
@@ -281,8 +325,14 @@ pub fn textField(
         .min_width = config.min_width,
         .padding = config.padding,
     });
-    if (config.on_change) |cb| tf.on_change = cb;
-    if (config.on_submit) |cb| tf.on_submit = cb;
+    if (config.on_change) |cb| {
+        tf.on_change = cb;
+        tf.on_change_ctx = config.on_change_ctx;
+    }
+    if (config.on_submit) |cb| {
+        tf.on_submit = cb;
+        tf.on_submit_ctx = config.on_submit_ctx;
+    }
     return tf;
 }
 
@@ -321,7 +371,8 @@ pub fn checkbox(
     checked_sig: *reactive.Signal(bool),
     config: struct {
         color: Color = defaultColors.blue,
-        on_change: ?*const fn (checked: bool) void = null,
+        on_change: ?*const fn (ctx: ?*anyopaque, checked: bool) void = null,
+        on_change_ctx: ?*anyopaque = null,
     },
 ) !*widgets.Checkbox {
     const cb = try widgets.Checkbox.create(allocator, g, .{
@@ -329,7 +380,10 @@ pub fn checkbox(
         .color = readOnly(owner, Color, g, config.color),
         .disabled = readOnly(owner, bool, g, false),
     });
-    if (config.on_change) |cb_fn| cb.on_change = cb_fn;
+    if (config.on_change) |cb_fn| {
+        cb.on_change = cb_fn;
+        cb.on_change_ctx = config.on_change_ctx;
+    }
     return cb;
 }
 
@@ -341,7 +395,8 @@ pub fn switch_(
     checked_sig: *reactive.Signal(bool),
     config: struct {
         color: Color = defaultColors.green,
-        on_change: ?*const fn (checked: bool) void = null,
+        on_change: ?*const fn (ctx: ?*anyopaque, checked: bool) void = null,
+        on_change_ctx: ?*anyopaque = null,
     },
 ) !*widgets.Switch {
     const sw = try widgets.Switch.create(allocator, g, .{
@@ -349,6 +404,9 @@ pub fn switch_(
         .color = readOnly(owner, Color, g, config.color),
         .disabled = readOnly(owner, bool, g, false),
     });
-    if (config.on_change) |sw_fn| sw.on_change = sw_fn;
+    if (config.on_change) |sw_fn| {
+        sw.on_change = sw_fn;
+        sw.on_change_ctx = config.on_change_ctx;
+    }
     return sw;
 }
