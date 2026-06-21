@@ -56,9 +56,21 @@ pub fn build(b: *std.Build) void {
     linkVcpkgModule(b, sdl_backend_mod, vcpkg_include, vcpkg_lib);
     linkThorvgModule(b, sdl_backend_mod, vcpkg_include, vcpkg_lib);
 
+    // ── Zig 前端层模块 ───────────────────────────────────────────────────────
+    // frontend/zig/nandina.zig：直通 Core 的「Zig 前端绑定」，收敛再导出 + 全包 App。
+    const frontend_mod = b.createModule(.{
+        .root_source_file = b.path("frontend/zig/nandina.zig"),
+        .imports = &.{
+            .{ .name = "NandinaUI", .module = mod },
+            .{ .name = "sdl_backend", .module = sdl_backend_mod },
+        },
+    });
+    frontend_mod.resolved_target = target;
+
     // ── 可执行目标 ───────────────────────────────────────────────────────────
-    // GUI 展示程序（SDL3 可视化界面，展示组件库）
-    const exe = createExe(b, "NandinaUI", "showcase/gui.zig", mod, sdl_backend_mod, sdl_lib, sdl_dep, vcpkg_include, vcpkg_lib, host_tag, target, optimize);
+    // GUI 展示程序：Zig 前端 showcase（消费 frontend/zig/nandina.zig）
+    const exe = createExe(b, "NandinaUI", "showcase/zig/main.zig", mod, sdl_backend_mod, sdl_lib, sdl_dep, vcpkg_include, vcpkg_lib, host_tag, target, optimize);
+    exe.root_module.addImport("nandina", frontend_mod);
     b.installArtifact(exe);
 
     const run_step = b.step("run", "构建并启动主程序（SDL3 可视化界面）");
