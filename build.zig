@@ -122,6 +122,37 @@ pub fn build(b: *std.Build) void {
     // 安装 C ABI 头文件
     b.installFile("src/abi/nandina_abi.h", "include/nandina_abi.h");
 
+    // ── C++ 前端 showcase ─────────────────────────────────────────────────────
+    // 仅依赖 nandina_abi.h + libnandina_abi.a，演示 C++ 前端（frontend/cpp）。
+    // 用 Zig 自带 clang 编译，保证单一 `zig build` 入口。
+    const cpp_exe = b.addExecutable(.{
+        .name = "NandinaUI-cpp",
+        .root_module = b.createModule(.{
+            .target = target,
+            .optimize = optimize,
+            .link_libc = true,
+        }),
+    });
+    cpp_exe.root_module.link_libcpp = true;
+    cpp_exe.root_module.addCSourceFile(.{
+        .file = b.path("showcase/cpp/main.cpp"),
+        .flags = &.{ "-std=c++20", "-fno-sanitize=undefined" },
+    });
+    cpp_exe.root_module.addIncludePath(b.path("frontend/cpp/include"));
+    cpp_exe.root_module.addIncludePath(b.path("src/abi"));
+    // 链接 ABI 静态库及其全部传递依赖。
+    cpp_exe.root_module.linkLibrary(abi_lib);
+    cpp_exe.root_module.linkLibrary(sdl_lib);
+    linkVcpkgModule(b, cpp_exe.root_module, vcpkg_include, vcpkg_lib);
+    linkThorvgModule(b, cpp_exe.root_module, vcpkg_include, vcpkg_lib);
+    b.installArtifact(cpp_exe);
+
+    const run_cpp_step = b.step("run-cpp", "构建并运行 C++ 前端 showcase");
+    const run_cpp_cmd = b.addRunArtifact(cpp_exe);
+    run_cpp_step.dependOn(&run_cpp_cmd.step);
+    run_cpp_cmd.step.dependOn(b.getInstallStep());
+    if (b.args) |args| run_cpp_cmd.addArgs(args);
+
     // ── Zig 模块测试 ────────────────────────────────────────────────────────
     const mod_tests = b.addTest(.{ .root_module = mod });
     const run_mod_tests = b.addRunArtifact(mod_tests);
@@ -133,6 +164,10 @@ pub fn build(b: *std.Build) void {
     const showcase_tests = b.addTest(.{ .root_module = showcase_exe.root_module });
     const run_showcase_tests = b.addRunArtifact(showcase_tests);
     test_step.dependOn(&run_showcase_tests.step);
+    // ABI 层测试（含“C 调用约定回调派发不崩溃”回归）。
+    const abi_tests = b.addTest(.{ .root_module = abi_mod });
+    const run_abi_tests = b.addRunArtifact(abi_tests);
+    test_step.dependOn(&run_abi_tests.step);
 }
 
 /// 为模块添加 vcpkg 的 include 路径和字体库链接（通过 pkg-config）。

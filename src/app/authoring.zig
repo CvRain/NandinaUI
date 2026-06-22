@@ -202,7 +202,7 @@ pub fn button(
         corner_radius: f32 = 6,
         padding: Insets = Insets.symmetric(20, 10),
         /// 点击回调（context-carrying：首参为 on_click_ctx，可忽略）。
-        on_click: ?*const fn (ctx: ?*anyopaque) void = null,
+        on_click: ?*const fn (ctx: ?*anyopaque) callconv(.c) void = null,
         /// 点击回调上下文。
         on_click_ctx: ?*anyopaque = null,
     },
@@ -371,7 +371,7 @@ pub fn checkbox(
     checked_sig: *reactive.Signal(bool),
     config: struct {
         color: Color = defaultColors.blue,
-        on_change: ?*const fn (ctx: ?*anyopaque, checked: bool) void = null,
+        on_change: ?*const fn (ctx: ?*anyopaque, checked: bool) callconv(.c) void = null,
         on_change_ctx: ?*anyopaque = null,
     },
 ) !*widgets.Checkbox {
@@ -395,7 +395,7 @@ pub fn switch_(
     checked_sig: *reactive.Signal(bool),
     config: struct {
         color: Color = defaultColors.green,
-        on_change: ?*const fn (ctx: ?*anyopaque, checked: bool) void = null,
+        on_change: ?*const fn (ctx: ?*anyopaque, checked: bool) callconv(.c) void = null,
         on_change_ctx: ?*anyopaque = null,
     },
 ) !*widgets.Switch {

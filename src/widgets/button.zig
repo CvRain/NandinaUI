@@ -68,11 +68,14 @@ pub const Button = struct {
 
     // 可选回调（context-carrying：首参为调用方提供的 user_data，可为 null）。
     // Zig 调用方若不需要 context，可忽略首参；C/C++ 绑定用它承载 closure。
-    on_click: ?*const fn (?*anyopaque) void = null,
+    // 用 C 调用约定（callconv(.c)）声明，使其与 C ABI 函数指针二进制兼容——
+    // C++ 前端经 nandina_button_set_on_click 直接存入 C 函数指针，Zig 侧调用时
+    // 必须按同一约定调用，否则会触发栈/寄存器错乱导致崩溃。
+    on_click: ?*const fn (?*anyopaque) callconv(.c) void = null,
     on_click_ctx: ?*anyopaque = null,
-    on_press: ?*const fn (?*anyopaque) void = null,
+    on_press: ?*const fn (?*anyopaque) callconv(.c) void = null,
     on_press_ctx: ?*anyopaque = null,
-    on_release: ?*const fn (?*anyopaque) void = null,
+    on_release: ?*const fn (?*anyopaque) callconv(.c) void = null,
     on_release_ctx: ?*anyopaque = null,
 
     // ── vtable ────────────────────────────────────────────────────────────────
@@ -454,7 +457,7 @@ test "Button 点击回调触发" {
     // 设置点击回调
     const Ctx = struct {
         var clicked: bool = false;
-        fn onClick(_: ?*anyopaque) void {
+        fn onClick(_: ?*anyopaque) callconv(.c) void {
             clicked = true;
         }
     };

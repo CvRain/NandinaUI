@@ -47,7 +47,8 @@ pub const SwitchProps = struct {
     /// 轨道高度（默认 22）。
     track_height: f32 = 22,
     /// 变化回调（context-carrying：首参为 user_data，可为 null）。
-    on_change: ?*const fn (ctx: ?*anyopaque, checked: bool) void = null,
+    /// 用 C 调用约定声明，与 C ABI 函数指针二进制兼容。
+    on_change: ?*const fn (ctx: ?*anyopaque, checked: bool) callconv(.c) void = null,
     /// 回调上下文。
     on_change_ctx: ?*anyopaque = null,
 };
@@ -65,7 +66,7 @@ pub const Switch = struct {
     disabled: reactive.ReadSignal(bool),
     track_width: f32,
     track_height: f32,
-    on_change: ?*const fn (ctx: ?*anyopaque, checked: bool) void = null,
+    on_change: ?*const fn (ctx: ?*anyopaque, checked: bool) callconv(.c) void = null,
     on_change_ctx: ?*anyopaque = null,
 
     hovered: bool = false,

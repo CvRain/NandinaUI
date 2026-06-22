@@ -133,7 +133,7 @@ fn buildRoot(app: *nd.App, res: *AppResources) !*Node {
                 .corner_radius = 4,
                 .padding = Insets.symmetric(12, 6),
                 .on_click = struct {
-                    fn cb(_: ?*anyopaque) void {
+                    fn cb(_: ?*anyopaque) callconv(.c) void {
                         if (g_router) |r| r.page_host.navigateTo(i) catch {};
                     }
                 }.cb,

@@ -611,7 +611,7 @@ export fn nandina_button_set_on_click(
     user_data: ?*anyopaque,
 ) void {
     const btn: *widgets.Button = @fieldParentPtr("node", node);
-    btn.on_click = @ptrCast(cb);
+    btn.on_click = cb;
     btn.on_click_ctx = user_data;
 }
 
@@ -780,7 +780,7 @@ export fn nandina_checkbox_set_on_change(
     fn_ptr: ?*const fn (?*anyopaque, bool) callconv(.c) void,
     user_data: ?*anyopaque,
 ) void {
-    cb.on_change = @ptrCast(fn_ptr);
+    cb.on_change = fn_ptr;
     cb.on_change_ctx = user_data;
 }
 
@@ -817,7 +817,7 @@ export fn nandina_switch_set_on_change(
     fn_ptr: ?*const fn (?*anyopaque, bool) callconv(.c) void,
     user_data: ?*anyopaque,
 ) void {
-    sw.on_change = @ptrCast(fn_ptr);
+    sw.on_change = fn_ptr;
     sw.on_change_ctx = user_data;
 }
 
@@ -1213,4 +1213,60 @@ test "abi module compiles" {
     _ = nandina_panel_create;
     _ = nandina_software_backend_create;
     _ = nandina_error_message;
+}
+
+// 回归测试：复现 C++ 前端点击导航按钮崩溃。
+// 根因是 widget 回调字段曾用 Zig 默认调用约定（.auto），而 ABI 经
+// nandina_button_set_on_click 存入的是 callconv(.c) 函数指针；Zig 侧按 .auto
+// 调用 C 约定函数会栈/寄存器错乱导致 SEGV。本测试走与 C++ 前端完全相同的路径：
+// 工厂建按钮 → set_on_click 存入 callconv(.c) 回调 → 真实派发点击 → 断言触发。
+const CClickProbe = struct {
+    var fired: bool = false;
+    fn cb(ud: ?*anyopaque) callconv(.c) void {
+        _ = ud;
+        fired = true;
+    }
+};
+
+test "ABI button on_click 走 C 调用约定派发不崩溃且触发" {
+    // ABI 工厂内部用 std.heap.c_allocator 分配节点与信号，这里的 Tree
+    // 也须用同一 allocator，否则 deinit 会用不匹配的 allocator 释放。
+    const allocator = std.heap.c_allocator;
+    var g = reactive.Graph.init(allocator);
+    defer g.deinit();
+
+    var node: ?*runtime.Node = null;
+    const pad = nandina_insets_t{ .left = 0, .top = 0, .right = 0, .bottom = 0 };
+    const err = nandina_button_create(
+        &g,
+        "OK",
+        0xFF89B4FA,
+        0xFF74C7EC,
+        0xFF89DCEB,
+        0xFF1E1E2E,
+        14.0,
+        6.0,
+        pad,
+        &node,
+    );
+    try std.testing.expectEqual(@as(nandina_error_t, 0), err);
+    const btn_node = node.?;
+
+    CClickProbe.fired = false;
+    nandina_button_set_on_click(btn_node, CClickProbe.cb, null);
+
+    var tree = runtime.Tree.init(allocator);
+    defer tree.deinit();
+    tree.setRoot(btn_node);
+    tree.setViewport(.{ .width = 200, .height = 100 });
+    _ = try tree.frame();
+
+    const b = btn_node.bounds;
+    const cx = b.left + b.width() * 0.5;
+    const cy = b.top + b.height() * 0.5;
+    _ = tree.dispatchEvent(.{ .pointer_move = .{ .x = cx, .y = cy } });
+    _ = tree.dispatchEvent(.{ .pointer_down = .{ .button = .left, .x = cx, .y = cy } });
+    _ = tree.dispatchEvent(.{ .pointer_up = .{ .button = .left, .x = cx, .y = cy } });
+
+    try std.testing.expect(CClickProbe.fired);
 }

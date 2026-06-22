@@ -140,6 +140,76 @@ pub const PageHost = struct {
 // Ref —— 组件后续访问句柄
 // ─────────────────────────────────────────────────────────────────────────────
 
+// ─────────────────────────────────────────────────────────────────────────────
+// 测试：点击按钮触发 PageHost 导航（复现 showcase 切页崩溃）
+// ─────────────────────────────────────────────────────────────────────────────
+
+const widgets = @import("../widgets/widgets.zig");
+const Tree = runtime.Tree;
+
+var g_test_host: ?*PageHost = null;
+
+fn testBuildPage(comptime label: []const u8) *const fn (std.mem.Allocator, *reactive.Graph, *SignalOwner) anyerror!*Node {
+    return struct {
+        fn f(a: std.mem.Allocator, g: *reactive.Graph, o: *SignalOwner) anyerror!*Node {
+            return authoring.label(o, a, g, label, .{});
+        }
+    }.f;
+}
+
+test "点击导航按钮切页 + 跑帧不崩溃" {
+    const a = std.testing.allocator;
+    var g = reactive.Graph.init(a);
+    defer g.deinit();
+
+    const pages = [_]Page{
+        .{ .title = "P0", .build = testBuildPage("Page 0") },
+        .{ .title = "P1", .build = testBuildPage("Page 1") },
+    };
+
+    var page_host = try PageHost.create(a, &g, &pages, 0);
+    g_test_host = page_host;
+    defer g_test_host = null;
+
+    var owner = SignalOwner.init(a);
+    defer owner.deinit();
+
+    var tree = Tree.init(a);
+    defer tree.deinit();
+
+    // 根：column 容纳 [导航按钮, PageHost]
+    const root = try authoring.column(a, .{ .cross_align = .stretch });
+    const btn = try authoring.button(&owner, a, &g, "Go", .{
+        .on_click = struct {
+            fn cb(_: ?*anyopaque) callconv(.c) void {
+                if (g_test_host) |h| h.navigateTo(1) catch {};
+            }
+        }.cb,
+    });
+    try root.addChild(a, btn);
+    try root.addChild(a, &page_host.node);
+
+    tree.setRoot(root);
+    tree.setViewport(.{ .width = 400, .height = 300 });
+    _ = try tree.frame();
+
+    // 模拟点击按钮：按钮在顶部，坐标命中它。
+    const bx = btn.bounds;
+    const cx = bx.left + bx.width() * 0.5;
+    const cy = bx.top + bx.height() * 0.5;
+    _ = tree.dispatchEvent(.{ .pointer_move = .{ .x = cx, .y = cy } });
+    _ = tree.dispatchEvent(.{ .pointer_down = .{ .button = .left, .x = cx, .y = cy } });
+    _ = tree.dispatchEvent(.{ .pointer_up = .{ .button = .left, .x = cx, .y = cy } });
+
+    // 切页后跑帧
+    _ = try tree.frame();
+    try std.testing.expectEqual(@as(i32, 1), page_host.current_index);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Ref —— 组件后续访问句柄
+// ─────────────────────────────────────────────────────────────────────────────
+
 /// Ref(T) 是一个轻量句柄，在组件挂载时自动被回填。
 /// 用于后续访问已挂载的组件，替代保留所有权变量的方式。
 pub fn Ref(comptime T: type) type {
