@@ -1270,3 +1270,35 @@ test "ABI button on_click 走 C 调用约定派发不崩溃且触发" {
 
     try std.testing.expect(CClickProbe.fired);
 }
+
+// 回归测试：复现 C++ 前端关闭窗口时的 use-after-free 崩溃。
+// showcase 的拆解契约：widget 节点（含 EffectScope 与内部 Signal）由 Tree 拆解，
+// 而拆解会回访后备 Graph（dispose effect、detachSource）。因此必须先拆 Tree、
+// 后拆 Graph；反之则对已释放的 Graph 产生 use-after-free。本测试锁定正确顺序。
+test "ABI widget 拆解顺序：Tree 先于 Graph 释放不崩溃" {
+    const allocator = std.heap.c_allocator;
+    var g = reactive.Graph.init(allocator);
+
+    // 构造一棵含响应式 widget 的树（button + label + 各自的内部 Signal/EffectScope）。
+    var col_node: ?*runtime.Node = null;
+    try std.testing.expectEqual(@as(nandina_error_t, 0), nandina_column_create(8.0, &col_node));
+    const root = col_node.?;
+
+    var btn_node: ?*runtime.Node = null;
+    const pad = nandina_insets_t{ .left = 0, .top = 0, .right = 0, .bottom = 0 };
+    try std.testing.expectEqual(@as(nandina_error_t, 0), nandina_button_create(&g, "OK", 0xFF89B4FA, 0xFF74C7EC, 0xFF89DCEB, 0xFF1E1E2E, 14.0, 6.0, pad, &btn_node));
+    try std.testing.expectEqual(@as(nandina_error_t, 0), nandina_node_add_child(root, btn_node.?));
+
+    var label_node: ?*runtime.Node = null;
+    try std.testing.expectEqual(@as(nandina_error_t, 0), nandina_label_create(&g, "Hi", 0xFFCDD6F4, 14.0, &label_node));
+    try std.testing.expectEqual(@as(nandina_error_t, 0), nandina_node_add_child(root, label_node.?));
+
+    var tree = runtime.Tree.init(allocator);
+    tree.setRoot(root);
+    tree.setViewport(.{ .width = 300, .height = 200 });
+    _ = try tree.frame();
+
+    // 正确拆解顺序：先 Tree（拆 widget 节点，此时 Graph 仍存活），再 Graph。
+    tree.deinit();
+    g.deinit();
+}

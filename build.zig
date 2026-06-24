@@ -192,7 +192,11 @@ fn linkThorvgModule(b: *std.Build, m: *std.Build.Module, vcpkg_include: []const 
     m.addIncludePath(.{ .cwd_relative = b.pathJoin(&.{ thorvg_clang, "include", "thorvg-1" }) });
     m.addLibraryPath(.{ .cwd_relative = thorvg_lib });
     m.addRPath(.{ .cwd_relative = thorvg_lib });
-    m.linkSystemLibrary("thorvg-1", .{ .needed = true });
+    // 用共享库的绝对路径直接链接，而非 `-lthorvg-1`。
+    // 否则若 vcpkg 重新安装生成了 `vcpkg_installed/.../libthorvg-1.a`（gcc 静态库，
+    // 依赖未被链接的 libstdc++ 符号），它会因 `-L` 搜索顺序在前而抢先匹配，
+    // 导致大量 std::* 未定义符号链接错误。指定 `.so` 文件路径可彻底规避该歧义。
+    m.addObjectFile(.{ .cwd_relative = b.pathJoin(&.{ thorvg_lib, "libthorvg-1.so" }) });
     // __isoc23_strtol 兼容桩已由 ft_glyph.c 提供（weak alias → strtol）
 }
 

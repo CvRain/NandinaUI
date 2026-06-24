@@ -222,10 +222,14 @@ nd::PageHost *g_host = nullptr;
 int main() {
   std::printf("NandinaUI C++ 前端 showcase\n");
 
-  nd::App app("NandinaUI Showcase (C++)", 800, 600);
-
-  // 整个 UI 共享一个 Graph（C++ 工厂从「当前 Graph」取图）。
+  // 声明顺序很重要：C++ 按声明逆序析构。
+  // 反应式 Signal/Effect 的后备图是 graph；widget 节点（含其 EffectScope 与内部
+  // Signal）由 app 的 Tree 在析构时统一拆解，而拆解过程会回访 graph（dispose effect、
+  // detachSource）。因此 graph 必须比 app 活得更久 —— 即 graph 先声明、后析构，
+  // app 后声明、先析构。否则关闭窗口时会对已释放的 graph 产生 use-after-free 崩溃。
   nd::Graph graph;
+
+  nd::App app("NandinaUI Showcase (C++)", 800, 600);
 
   std::vector<nd::PageHost::Builder> builders = {
       buildOverview, buildWidgets, buildLayout, buildReactive, buildTheme,
