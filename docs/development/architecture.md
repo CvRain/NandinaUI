@@ -93,8 +93,8 @@ render/Backend vtable（Zig 接口）
 
 开发者可通过两种方式编写界面：
 
-1. **Zig 直接编写**：`@import("NandinaUI")`，使用链式 builder API，零开销。
-2. **C++ 编写**：通过 `src/bindings/cpp/nandina.hpp` 绑定层，调用 Core 的所有能力，
+1. **Zig 直接编写**：`@import("nandina")`（`frontend/zig/nandina.zig`），使用链式 builder API，零开销。
+2. **C++ 编写**：通过 `frontend/cpp/include/nandina/nandina.hpp` 绑定层，调用 Core 的所有能力，
    语法风格与 Zig 版对齐（链式组合、signal/computed/effect、page/router）。
 
 两种方式共享同一套运行时、同一个组件树、同一个渲染后端。
@@ -111,9 +111,9 @@ render/Backend vtable（Zig 接口）
 | `text`       | 字体、文本测量与布局（溢出策略）                  | ✅ 已落地，有测试                   |
 | `runtime`    | Node 树、事件循环、调度边界                       | ✅ 纯逻辑核心已落地（平台后端待接） |
 | `widgets`    | primitives 与 controls                            | ✅ 首批已落地，有测试               |
-| `app`        | page / router / 挂载入口                          | 🚧 骨架                             |
-| `abi`        | C ABI 导出（extern "C" 函数 + 不透明句柄）        | 🚧 未开始                           |
-| `bindings`   | 各语言绑定（C++ / Python / Lua 等）               | 🚧 未开始                           |
+| `app`        | page / router / 挂载入口                          | ✅ 已落地                           |
+| `abi`        | C ABI 导出（extern "C" 函数 + 不透明句柄）        | ✅ 已落地                           |
+| `bindings`   | 各语言绑定（C++ 等在 `frontend/` 下）             | ✅ Zig/C++ 前端已落地               |
 
 ## 稳定边界（优先建立）
 
@@ -145,7 +145,8 @@ render/Backend vtable（Zig 接口）
 ## 构建与测试
 
 ```sh
-zig build run      # 运行 showcase 烟雾程序
+zig build run      # 运行 Zig 前端可视化画廊（SDL3 窗口）
+zig build run-cpp  # 运行 C++ 前端可视化画廊（同组页面对照）
 zig build test     # 运行全部分层单元测试
 ```
 

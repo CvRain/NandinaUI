@@ -1,54 +1,44 @@
 # showcase
 
-NandinaUI 的组件 / 能力演示子项目。两个用途：
-
-1. **展示库已落地的能力**（类似组件库 gallery）。
-2. **开发时实际跑一下运行效果**，直观感受实现后的行为。
+NandinaUI 的可视化画廊，作为绑定边界的验收用例。两种前端各跑一份等价页面，证明 Zig 与 C++ 两条绑定能力对齐。
 
 ## 运行
 
 ```sh
-zig build showcase                 # 运行全部 demo
-zig build showcase -- list         # 列出全部 demo
-zig build showcase -- <name>       # 只运行指定 demo，如 reactive-counter
+zig build run      # Zig 前端可视化画廊（SDL3 窗口，消费 frontend/zig/nandina.zig）
+zig build run-cpp  # C++ 前端可视化画廊（SDL3 窗口，消费 frontend/cpp/nandina.hpp）
+zig build test     # 运行全部单元测试
 ```
 
 ## 结构
 
 ```
 showcase/
-├── main.zig            # CLI 运行器：解析参数、调度 demo
-├── registry.zig        # demo 注册表 + DemoContext 抽象
-└── demos/              # 每个 demo 一个文件，自描述并注册到 registry
-    ├── foundation_geometry.zig
-    ├── foundation_color.zig
-    ├── color_space.zig
-    ├── reactive_counter.zig
-    ├── reactive_derived.zig
-    ├── reactive_batch.zig
-    ├── render_scene.zig
-    ├── layout_box.zig
-    ├── theme.zig
-    ├── text_overflow.zig
-    ├── runtime_loop.zig
-    ├── widgets_gallery.zig
-    └── software_render.zig
+├── zig/
+│   ├── main.zig            # Zig 前端入口（App + PageHost + 主循环）
+│   └── gui_pages.zig       # 页面构建（Overview/Widgets/Layout/Reactive/Theme）
+├── cpp/
+│   └── main.cpp            # C++ 前端入口（同一组页面，C ABI 之上）
+└── README.md
 ```
 
-## 新增一个 demo
+## 页面
 
-1. 在 `demos/` 下新建文件，实现 `fn run(ctx: *registry.DemoContext) anyerror!void`
-   并导出一个 `pub const demo = registry.Demo{ ... }`。
-2. 在 `registry.zig` 里 `@import` 该文件并加入 `demos` 数组。
+5 个页面覆盖主要能力：
 
-`DemoContext` 提供 `allocator`、文本输出 `out` 和共享的 `reactive.Graph`。
+| 页面     | 内容                                                |
+| -------- | --------------------------------------------------- |
+| Overview | 简介与迁移进度                                      |
+| Widgets  | 常见组件展示（Button/Icon/TextField/Checkbox/Switch）|
+| Layout   | 布局组件展示（Column/Row/Stack/Panel/Card）         |
+| Reactive | 响应式信号展示                                      |
+| Theme    | 主题系统展示                                        |
 
-## 现状与演进
+Zig 版与 C++ 版展示同一组页面，便于对照验证。
 
-当前 render / runtime / widgets 尚未落地，demo 以**文本输出**展示运行效果
-（如 reactive 的依赖追踪、batch 合并次数）。
+## 设计原则
 
-框架已为可视化画廊预留扩展点：等 render / runtime / widgets 落地后，
-`DemoContext` 可扩展出 scene / 根节点字段，demo 的 `run` 返回一棵 widget 树，
-本运行器即演进为真正的图形化组件画廊（对应 archive 旧 C++ showcase 的侧边栏 +
-多页组件演示形态）——而 demo 的注册方式与目录结构保持不变。
+- **不走绑定边界就不算数**。showcase 代码只消费前端层（`@import("nandina")` 或 `#include <nandina/nandina.hpp>`），
+  不直接 `@import("NandinaUI")` 调用 Core 内部 API。
+- **双前端对齐**。Zig 与 C++ 两个版本的页面结构、内容尽量保持一致。
+- **逻辑验证交给单元测试**。不再保留命令行文本 demo，所有功能覆盖通过 `zig build test` 保障。

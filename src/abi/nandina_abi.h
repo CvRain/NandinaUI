@@ -59,6 +59,8 @@ typedef struct nandina_signal_bool nandina_signal_bool_t;
 typedef struct nandina_signal_color nandina_signal_color_t;
 typedef struct nandina_signal_insets nandina_signal_insets_t;
 typedef struct nandina_signal_string nandina_signal_string_t;
+// TODO: Computed / Effect ABI 导出暂缓。nandina_effect_scope_t 句柄已预留，
+// 但对应的 create / destroy / listen 等函数尚未实现。等基本框架稳定后补充。
 typedef struct nandina_effect_scope_t nandina_effect_scope_t;
 typedef struct nandina_scene_t nandina_scene_t; // render.Scene
 typedef struct nandina_software_backend_t nandina_software_backend_t;

@@ -79,19 +79,6 @@ pub fn build(b: *std.Build) void {
     run_cmd.step.dependOn(b.getInstallStep());
     if (b.args) |args| run_cmd.addArgs(args);
 
-    // 命令行 showcase（文字演示，无 GPU 依赖）
-    const showcase_exe = createExe(b, "showcase", "showcase/main.zig", mod, sdl_backend_mod, sdl_lib, sdl_dep, vcpkg_include, vcpkg_lib, host_tag, target, optimize);
-    b.installArtifact(showcase_exe);
-
-    const showcase_step = b.step("showcase", "构建命令行 showcase 二进制（不运行）");
-    showcase_step.dependOn(&showcase_exe.step);
-
-    const run_showcase_step = b.step("run-showcase", "构建并运行命令行 showcase（可选 -- <name> 指定 demo）");
-    const showcase_run = b.addRunArtifact(showcase_exe);
-    run_showcase_step.dependOn(&showcase_run.step);
-    showcase_run.step.dependOn(b.getInstallStep());
-    if (b.args) |args| showcase_run.addArgs(args);
-
     // ── ABI 静态库 ─────────────────────────────────────────────────────────
     // C ABI 导出层，不纳入 root.zig 聚合导出，单独编译为静态库供 C/C++ 等绑定使用。
     const abi_mod = b.createModule(.{
@@ -161,9 +148,7 @@ pub fn build(b: *std.Build) void {
     const test_step = b.step("test", "Run tests");
     test_step.dependOn(&run_mod_tests.step);
     test_step.dependOn(&run_exe_tests.step);
-    const showcase_tests = b.addTest(.{ .root_module = showcase_exe.root_module });
-    const run_showcase_tests = b.addRunArtifact(showcase_tests);
-    test_step.dependOn(&run_showcase_tests.step);
+    // 旧命令行 showcase 已移除，其逻辑验证职责由单元测试接管
     // ABI 层测试（含“C 调用约定回调派发不崩溃”回归）。
     const abi_tests = b.addTest(.{ .root_module = abi_mod });
     const run_abi_tests = b.addRunArtifact(abi_tests);
