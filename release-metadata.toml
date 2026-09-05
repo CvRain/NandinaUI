@@ -1,0 +1,15 @@
+schema = 1
+name = "NandinaUI"
+sdk_version = "0.1.0-alpha.1"
+minimum_cli = "0.2.0"
+release_channel = "alpha"
+support_profile = "linux-desktop-source"
+revision = "unreleased"
+license = "MIT"
+license_status = "confirmed"
+
+known_limitations = [
+  "Windows and macOS platform support are not promised",
+  "System SDK installation and native application packaging are outside 1.0",
+  "Native text candidate-window positioning remains a 1.x limitation",
+]

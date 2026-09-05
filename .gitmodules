@@ -1,3 +1,33 @@
-[submodule "vcpkg"]
-	path = vcpkg
-	url = https://github.com/microsoft/vcpkg.git
+[submodule "subprojects/spdlog"]
+	path = subprojects/spdlog
+	url = https://github.com/gabime/spdlog.git
+[submodule "subprojects/raylib"]
+	path = subprojects/raylib
+	url = https://github.com/raysan5/raylib.git
+[submodule "subprojects/Catch2"]
+	path = subprojects/Catch2
+	url = https://github.com/catchorg/Catch2.git
+[submodule "subprojects/harfbuzz"]
+	path = subprojects/harfbuzz
+	url = https://github.com/harfbuzz/harfbuzz.git
+[submodule "subprojects/freetype"]
+	path = subprojects/freetype
+	url = https://gitlab.freedesktop.org/freetype/freetype.git
+[submodule "subprojects/caskaydia-cove"]
+	path = subprojects/caskaydia-cove
+	url = https://github.com/eliheuer/caskaydia-cove.git
+[submodule "subprojects/fribidi"]
+	path = subprojects/fribidi
+	url = https://github.com/fribidi/fribidi.git
+[submodule "subprojects/utf8proc"]
+	path = subprojects/utf8proc
+	url = https://github.com/JuliaStrings/utf8proc.git
+[submodule "subprojects/box2d"]
+	path = subprojects/box2d
+	url = https://github.com/erincatto/box2d.git
+[submodule "subprojects/tomlplusplus"]
+	path = subprojects/tomlplusplus
+	url = https://github.com/marzer/tomlplusplus.git
+[submodule "subprojects/nlohmann_json"]
+	path = subprojects/nlohmann_json
+	url = https://github.com/nlohmann/json.git

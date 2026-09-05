@@ -1,0 +1,36 @@
+# clangd 配置 — NandinaUI (C++26, Meson 构建系统)
+#
+# 编译数据库由 Meson 生成在 buildDir/ 目录下。
+#
+# 首次使用：
+#   meson setup buildDir
+#   meson compile -C buildDir
+
+CompileFlags:
+    CompilationDatabase: buildDir/
+        - -fmodules
+    Add:
+        - -std=c++26
+        - -Wall
+        - -Wextra
+        - -Wpedantic
+
+Diagnostics:
+    ClangTidy:
+        Add:
+            - bugprone-*
+            - modernize-*
+            - performance-*
+            - readability-*
+        Remove:
+            - modernize-use-trailing-return-type
+    UnusedIncludes: Strict
+
+Index:
+    Background: Build
+
+InlayHints:
+    Enabled: Yes
+    ParameterNames: Yes
+    DeducedTypes: Yes
+    BlockEnd: No

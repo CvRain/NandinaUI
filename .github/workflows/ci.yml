@@ -1,0 +1,170 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  MESON_VERSION: 1.7.2
+
+jobs:
+  build:
+    name: build (${{ matrix.name }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    container: ${{ matrix.image }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: gcc-16
+            image: gcc:16
+            cc: gcc
+            cxx: g++
+            toolchain_args: ''
+            extra_packages: ''
+          - name: clang-21
+            image: silkeh/clang:21-trixie
+            cc: clang
+            cxx: clang++
+            toolchain_args: ''
+            extra_packages: libstdc++-14-dev
+    env:
+      CC: ${{ matrix.cc }}
+      CXX: ${{ matrix.cxx }}
+    steps:
+      - name: Install dependencies
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            ca-certificates git python3 python3-pip ninja-build pkg-config cmake zstd \
+            zlib1g-dev ${{ matrix.extra_packages }} \
+            libsqlite3-dev libssl-dev libx11-dev libxrandr-dev libxinerama-dev \
+            libxcursor-dev libxi-dev libgl1-mesa-dev libglu1-mesa-dev
+          python3 -m pip install --break-system-packages --no-cache-dir "meson==${MESON_VERSION}"
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+      - name: Configure git
+        run: git config --global --add safe.directory '*'
+      - name: Report toolchain
+        run: |
+          "$CXX" --version
+          meson --version
+          ninja --version
+      - name: Configure
+        run: meson setup buildDir --wrap-mode=nodownload ${{ matrix.toolchain_args }}
+      - name: Build
+        run: meson compile -C buildDir
+      - name: Test
+        run: meson test -C buildDir --print-errorlogs
+
+  sanitize:
+    name: sanitize (Clang 21, ASan + UBSan)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    container: silkeh/clang:21-trixie
+    env:
+      CC: clang
+      CXX: clang++
+      # settings-example 的字体管线泄漏为测试局部（生产 teardown 由 C5.7 shutdown 覆盖），
+      # 暂关闭泄漏检测，保留 UAF/UB 检测。
+      LSAN_OPTIONS: detect_leaks=0
+    steps:
+      - name: Install dependencies
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            ca-certificates git python3 python3-pip ninja-build pkg-config cmake zstd \
+            zlib1g-dev libstdc++-14-dev \
+            libsqlite3-dev libssl-dev libx11-dev libxrandr-dev libxinerama-dev \
+            libxcursor-dev libxi-dev libgl1-mesa-dev libglu1-mesa-dev
+          python3 -m pip install --break-system-packages --no-cache-dir "meson==${MESON_VERSION}"
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+      - name: Configure git
+        run: git config --global --add safe.directory '*'
+      - name: Configure
+        run: meson setup buildDir-asan -Db_sanitize=address,undefined --wrap-mode=nodownload
+      - name: Build
+        run: meson compile -C buildDir-asan
+      - name: Test
+        run: |
+          meson test -C buildDir-asan --print-errorlogs \
+            foundation contrast font scene render image reactive widget \
+            authoring build-context-header settings-example router async viewport-scaling \
+            window-metrics linux-clipboard button theme-design-system checkbox slider switch \
+            badge card progress-bar radio-button theme-families color tabs tooltip select \
+            basic-widgets dialog animation system-fonts resource font-resource \
+            application-resource
+
+  sqlite-fallback:
+    name: SQLite fallback
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    container: gcc:16
+    env:
+      CC: gcc
+      CXX: g++
+    steps:
+      - name: Install dependencies
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            ca-certificates git python3 python3-pip ninja-build pkg-config cmake zstd \
+            zlib1g-dev \
+            libssl-dev libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev \
+            libxi-dev libgl1-mesa-dev libglu1-mesa-dev
+          python3 -m pip install --break-system-packages --no-cache-dir "meson==${MESON_VERSION}"
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+      - name: Configure git
+        run: git config --global --add safe.directory '*'
+      - name: Configure
+        run: meson setup buildDir-fallback --force-fallback-for=sqlite3
+      - name: Build
+        run: meson compile -C buildDir-fallback
+      - name: Test resource workflow
+        run: |
+          meson test -C buildDir-fallback --print-errorlogs \
+            resource nanres-cli portable-stage nanres-build-workflow \
+            nandina-subproject-fixture font-resource application-resource
+
+  physics:
+    name: physics (Box2D enabled)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    container: gcc:16
+    env:
+      CC: gcc
+      CXX: g++
+    steps:
+      - name: Install dependencies
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            ca-certificates git python3 python3-pip ninja-build pkg-config cmake zstd \
+            zlib1g-dev \
+            libsqlite3-dev libssl-dev libx11-dev libxrandr-dev libxinerama-dev \
+            libxcursor-dev libxi-dev libgl1-mesa-dev libglu1-mesa-dev
+          python3 -m pip install --break-system-packages --no-cache-dir "meson==${MESON_VERSION}"
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+      - name: Configure git
+        run: git config --global --add safe.directory '*'
+      - name: Configure
+        run: meson setup buildDir-physics -Dphysics2d=enabled --wrap-mode=nodownload
+      - name: Build
+        run: meson compile -C buildDir-physics
+      - name: Test physics
+        run: meson test -C buildDir-physics physics2d --print-errorlogs

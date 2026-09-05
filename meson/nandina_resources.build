@@ -1,0 +1,11 @@
+# Nandina resource build helper template.
+# Required variables: nanres_resource_name, nanres_policy, nanres_output_directory.
+
+nanres_package = custom_target(
+    nanres_resource_name,
+    input: nanres_policy,
+    output: nanres_output_directory,
+    command: [nanres_build_helper, 'build', nanres, nanres_policy, '@OUTPUT@'],
+    build_by_default: true,
+    build_always_stale: true,
+)

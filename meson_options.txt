@@ -1,0 +1,12 @@
+option(
+    'physics2d',
+    type: 'feature',
+    value: 'disabled',
+    description: 'Enable the optional Box2D 3.x physics bridge',
+)
+option(
+    'build_tests',
+    type: 'boolean',
+    value: true,
+    description: 'Build and register tests when Nandina is the main project',
+)
