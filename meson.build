@@ -159,4 +159,9 @@ if not meson.is_subproject()
     if get_option('build_tests')
         subdir('tests')
     endif
+
+    # 本地 playground 不随仓库发布；目录存在时才加入开发构建。
+    if fs.exists('playground/meson.build')
+        subdir('playground')
+    endif
 endif

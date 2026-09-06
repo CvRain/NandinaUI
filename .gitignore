@@ -115,3 +115,6 @@ dev-docs-*
 /subprojects/libpng.wrap
 /subprojects/tomlplusplus-*/
 /dist/
+
+# 项目用来简单测试的目录，不需要被追踪，里面的内容可能会被随意修改。
+/playground/

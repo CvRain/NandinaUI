@@ -8,7 +8,12 @@
 
 CompileFlags:
     CompilationDatabase: buildDir/
+    Remove:
         - -fmodules
+        - -fmodules-ts
+        - -fmodule-mapper=*
+        - -fdeps-format=*
+        - -fdeps-file=*
     Add:
         - -std=c++26
         - -Wall
