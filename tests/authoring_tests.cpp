@@ -1,21 +1,21 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
-#include "reactive/graph.hpp"
-#include "reactive/signal.hpp"
-#include "scene/canvas_layer.hpp"
-#include "scene/input_event.hpp"
-#include "scene/scene_tree.hpp"
-#include "semantics/semantics.hpp"
-#include "widget/authoring.hpp"
-#include "widget/build_context.hpp"
-#include "widget/button.hpp"
-#include "widget/controls.hpp"
-#include "widget/declarative.hpp"
-#include "widget/grid.hpp"
-#include "widget/label.hpp"
-#include "widget/layout.hpp"
-#include "widget/text_field.hpp"
+#include <nandina/reactive/graph.hpp>
+#include <nandina/reactive/signal.hpp>
+#include <nandina/scene/canvas_layer.hpp>
+#include <nandina/scene/input_event.hpp>
+#include <nandina/scene/scene_tree.hpp>
+#include <nandina/semantics/semantics.hpp>
+#include <nandina/widget/authoring.hpp>
+#include <nandina/widget/build_context.hpp>
+#include <nandina/widget/button.hpp>
+#include <nandina/widget/controls.hpp>
+#include <nandina/widget/declarative.hpp>
+#include <nandina/widget/grid.hpp>
+#include <nandina/widget/label.hpp>
+#include <nandina/widget/layout.hpp>
+#include <nandina/widget/text_field.hpp>
 
 #include <memory>
 #include <string>

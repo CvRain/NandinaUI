@@ -2,10 +2,10 @@
 // System font discovery + CJK fallback tests.
 //
 
-#include "text/system_fonts.hpp"
+#include <nandina/text/system_fonts.hpp>
 
-#include "resource/resource_manager.hpp"
-#include "text/font_loader.hpp"
+#include <nandina/resource/resource_manager.hpp>
+#include <nandina/text/font_loader.hpp>
 
 #include <catch2/catch_test_macros.hpp>
 

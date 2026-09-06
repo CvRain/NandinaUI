@@ -5,7 +5,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 
-#include "reactive/reactive.hpp"
+#include <nandina/reactive/reactive.hpp>
 
 #include <stdexcept>
 

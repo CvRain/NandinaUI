@@ -2,13 +2,13 @@
 // Theme / RadioButton tests.
 //
 
-#include "render/render_device.hpp"
-#include "scene/scene_tree.hpp"
-#include "theme/theme_manager.hpp"
-#include "widget/controls.hpp"
-#include "widget/layout.hpp"
-#include "widget/radio_button.hpp"
-#include "widget/radio_group.hpp"
+#include <nandina/render/render_device.hpp>
+#include <nandina/scene/scene_tree.hpp>
+#include <nandina/theme/theme_manager.hpp>
+#include <nandina/widget/controls.hpp>
+#include <nandina/widget/layout.hpp>
+#include <nandina/widget/radio_button.hpp>
+#include <nandina/widget/radio_group.hpp>
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>

@@ -6,11 +6,11 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/catch_approx.hpp>
 
-#include "scene/control.hpp"
-#include "scene/canvas_layer.hpp"
-#include "scene/input_event.hpp"
-#include "scene/node2d.hpp"
-#include "scene/scene_tree.hpp"
+#include <nandina/scene/control.hpp>
+#include <nandina/scene/canvas_layer.hpp>
+#include <nandina/scene/input_event.hpp>
+#include <nandina/scene/node2d.hpp>
+#include <nandina/scene/scene_tree.hpp>
 
 #include <functional>
 #include <limits>

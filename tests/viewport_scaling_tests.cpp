@@ -2,7 +2,7 @@
 // Fixed-design viewport scaling policy tests.
 //
 
-#include "app/viewport_scaling.hpp"
+#include <nandina/app/viewport_scaling.hpp>
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>

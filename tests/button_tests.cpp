@@ -2,14 +2,14 @@
 // Theme / primitives / Button tests.
 //
 
-#include "render/render_device.hpp"
-#include "scene/scene_tree.hpp"
-#include "theme/nan_style.hpp"
-#include "theme/style_document.hpp"
-#include "theme/theme_manager.hpp"
-#include "widget/button.hpp"
-#include "widget/text_field.hpp"
-#include "widget/primitives/pressable.hpp"
+#include <nandina/render/render_device.hpp>
+#include <nandina/scene/scene_tree.hpp>
+#include <nandina/theme/nan_style.hpp>
+#include <nandina/theme/style_document.hpp>
+#include <nandina/theme/theme_manager.hpp>
+#include <nandina/widget/button.hpp>
+#include <nandina/widget/text_field.hpp>
+#include <nandina/widget/primitives/pressable.hpp>
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>

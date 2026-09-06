@@ -2,8 +2,8 @@
 // UI dispatcher and owner-bound asynchronous work tests.
 //
 
-#include "app/async_scope.hpp"
-#include "app/ui_dispatcher.hpp"
+#include <nandina/app/async_scope.hpp>
+#include <nandina/app/ui_dispatcher.hpp>
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers.hpp>

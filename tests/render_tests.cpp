@@ -10,16 +10,16 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/catch_approx.hpp>
 
-#include "render/clip_stack.hpp"
-#include "render/draw_context.hpp"
-#include "render/render_device.hpp"
-#include "render/backends/sdf_primitive_geometry.hpp"
-#include "scene/control.hpp"
-#include "scene/canvas_layer.hpp"
-#include "scene/node2d.hpp"
-#include "scene/scene_tree.hpp"
-#include "widget/primitives/box_painter.hpp"
-#include "widget/primitives/focus_ring_painter.hpp"
+#include <nandina/render/clip_stack.hpp>
+#include <nandina/render/draw_context.hpp>
+#include <nandina/render/render_device.hpp>
+#include <nandina/render/backends/sdf_primitive_geometry.hpp>
+#include <nandina/scene/control.hpp>
+#include <nandina/scene/canvas_layer.hpp>
+#include <nandina/scene/node2d.hpp>
+#include <nandina/scene/scene_tree.hpp>
+#include <nandina/widget/primitives/box_painter.hpp>
+#include <nandina/widget/primitives/focus_ring_painter.hpp>
 
 #include <memory>
 #include <string>

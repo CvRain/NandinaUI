@@ -2,9 +2,9 @@
 // Foundation-layer UTF-8 tests.
 //
 
-#include "foundation/nan_logger.hpp"
-#include "foundation/json.hpp"
-#include "foundation/utf8.hpp"
+#include <nandina/foundation/nan_logger.hpp>
+#include <nandina/foundation/json.hpp>
+#include <nandina/foundation/utf8.hpp>
 
 #include <catch2/catch_test_macros.hpp>
 

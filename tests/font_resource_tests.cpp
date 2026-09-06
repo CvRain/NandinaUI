@@ -1,13 +1,13 @@
 #include <catch2/catch_test_macros.hpp>
 
-#include "resource/backends/memory_backend.hpp"
-#include "resource/backends/builtin_backend.hpp"
-#include "resource/resource_manager.hpp"
-#include "text/font_family.hpp"
-#include "text/font_pipeline.hpp"
-#include "text/harfbuzz_text_backend.hpp"
-#include "scene/scene_tree.hpp"
-#include "widget/primitives/text.hpp"
+#include <nandina/resource/backends/memory_backend.hpp>
+#include <nandina/resource/backends/builtin_backend.hpp>
+#include <nandina/resource/resource_manager.hpp>
+#include <nandina/text/font_family.hpp>
+#include <nandina/text/font_pipeline.hpp>
+#include <nandina/text/harfbuzz_text_backend.hpp>
+#include <nandina/scene/scene_tree.hpp>
+#include <nandina/widget/primitives/text.hpp>
 
 #include <filesystem>
 #include <fstream>

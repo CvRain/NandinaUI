@@ -2,15 +2,15 @@
 // Slider range, input, semantics, theme, and authoring tests.
 //
 
-#include "reactive/scope.hpp"
-#include "scene/input_event.hpp"
-#include "scene/scene_tree.hpp"
-#include "semantics/semantics.hpp"
-#include "theme/design_system.hpp"
-#include "theme/theme_manager.hpp"
-#include "widget/build_context.hpp"
-#include "widget/controls.hpp"
-#include "widget/slider.hpp"
+#include <nandina/reactive/scope.hpp>
+#include <nandina/scene/input_event.hpp>
+#include <nandina/scene/scene_tree.hpp>
+#include <nandina/semantics/semantics.hpp>
+#include <nandina/theme/design_system.hpp>
+#include <nandina/theme/theme_manager.hpp>
+#include <nandina/widget/build_context.hpp>
+#include <nandina/widget/controls.hpp>
+#include <nandina/widget/slider.hpp>
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>

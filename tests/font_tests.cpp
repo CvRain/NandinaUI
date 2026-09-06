@@ -2,17 +2,17 @@
 // FreeType font-face integration tests.
 //
 
-#include "resource/resource_manager.hpp"
-#include "text/font_face.hpp"
-#include "text/font_family.hpp"
-#include "text/font_loader.hpp"
-#include "text/glyph_atlas.hpp"
-#include "text/glyph_run_renderer.hpp"
-#include "text/harfbuzz_text_backend.hpp"
-#include "render/draw_context.hpp"
-#include "scene/scene_tree.hpp"
-#include "widget/primitives/editable_text.hpp"
-#include "widget/primitives/text.hpp"
+#include <nandina/resource/resource_manager.hpp>
+#include <nandina/text/font_face.hpp>
+#include <nandina/text/font_family.hpp>
+#include <nandina/text/font_loader.hpp>
+#include <nandina/text/glyph_atlas.hpp>
+#include <nandina/text/glyph_run_renderer.hpp>
+#include <nandina/text/harfbuzz_text_backend.hpp>
+#include <nandina/render/draw_context.hpp>
+#include <nandina/scene/scene_tree.hpp>
+#include <nandina/widget/primitives/editable_text.hpp>
+#include <nandina/widget/primitives/text.hpp>
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>

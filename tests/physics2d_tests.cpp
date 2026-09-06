@@ -1,10 +1,10 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
-#include "physics2d/physics_world2d.hpp"
-#include "scene/node2d.hpp"
-#include "scene/scene_tree.hpp"
-#include "widget/authoring.hpp"
+#include <nandina/physics2d/physics_world2d.hpp>
+#include <nandina/scene/node2d.hpp>
+#include <nandina/scene/scene_tree.hpp>
+#include <nandina/widget/authoring.hpp>
 
 using namespace nandina;
 

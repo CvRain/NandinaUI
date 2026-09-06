@@ -2,12 +2,12 @@
 // Theme / Switch tests.
 //
 
-#include "render/render_device.hpp"
-#include "scene/scene_tree.hpp"
-#include "theme/theme_manager.hpp"
-#include "widget/build_context.hpp"
-#include "widget/controls.hpp"
-#include "widget/switch.hpp"
+#include <nandina/render/render_device.hpp>
+#include <nandina/scene/scene_tree.hpp>
+#include <nandina/theme/theme_manager.hpp>
+#include <nandina/widget/build_context.hpp>
+#include <nandina/widget/controls.hpp>
+#include <nandina/widget/switch.hpp>
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>

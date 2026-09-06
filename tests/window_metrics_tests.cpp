@@ -2,7 +2,7 @@
 // Window and framebuffer metrics tests.
 //
 
-#include "app/window_metrics.hpp"
+#include <nandina/app/window_metrics.hpp>
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>

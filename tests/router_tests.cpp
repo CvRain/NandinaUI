@@ -2,15 +2,15 @@
 // Router + Store tests.
 //
 
-#include "app/nan_router.hpp"
-#include "app/nan_store.hpp"
-#include "foundation/geometry.hpp"
-#include "reactive/effect.hpp"
-#include "reactive/signal.hpp"
-#include "scene/control.hpp"
-#include "scene/input_event.hpp"
-#include "theme/theme.hpp"
-#include "widget/controls.hpp"
+#include <nandina/app/nan_router.hpp>
+#include <nandina/app/nan_store.hpp>
+#include <nandina/foundation/geometry.hpp>
+#include <nandina/reactive/effect.hpp>
+#include <nandina/reactive/signal.hpp>
+#include <nandina/scene/control.hpp>
+#include <nandina/scene/input_event.hpp>
+#include <nandina/theme/theme.hpp>
+#include <nandina/widget/controls.hpp>
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>

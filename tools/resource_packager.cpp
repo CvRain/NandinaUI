@@ -1,6 +1,6 @@
-#include "resource/resource_manifest.hpp"
+#include <nandina/resource/resource_manifest.hpp>
 
-#include "resource/backends/sqlite_backend.hpp"
+#include <nandina/resource/backends/sqlite_backend.hpp>
 
 #include <openssl/evp.h>
 #include <sqlite3.h>

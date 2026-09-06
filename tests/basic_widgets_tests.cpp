@@ -2,12 +2,12 @@
 // Theme / Divider / Avatar / Chip tests.
 //
 
-#include "render/render_device.hpp"
-#include "scene/scene_tree.hpp"
-#include "theme/theme_manager.hpp"
-#include "widget/avatar.hpp"
-#include "widget/chip.hpp"
-#include "widget/divider.hpp"
+#include <nandina/render/render_device.hpp>
+#include <nandina/scene/scene_tree.hpp>
+#include <nandina/theme/theme_manager.hpp>
+#include <nandina/widget/avatar.hpp>
+#include <nandina/widget/chip.hpp>
+#include <nandina/widget/divider.hpp>
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>

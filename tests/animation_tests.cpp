@@ -2,25 +2,25 @@
 // Animation easing + tween tests.
 //
 
-#include "animation/animated_property.hpp"
-#include "animation/animation_host.hpp"
-#include "animation/behavior.hpp"
-#include "animation/easing.hpp"
-#include "animation/group.hpp"
-#include "animation/keyframes.hpp"
-#include "animation/motion.hpp"
-#include "animation/spring.hpp"
-#include "animation/tween.hpp"
-#include "foundation/nandina_color.hpp"
-#include "reactive/scope.hpp"
-#include "reactive/signal.hpp"
-#include "scene/control.hpp"
-#include "scene/scene_tree.hpp"
-#include "theme/theme_manager.hpp"
-#include "widget/build_context.hpp"
-#include "widget/builtin_component_traits.hpp"
-#include "widget/button.hpp"
-#include "widget/label.hpp"
+#include <nandina/animation/animated_property.hpp>
+#include <nandina/animation/animation_host.hpp>
+#include <nandina/animation/behavior.hpp>
+#include <nandina/animation/easing.hpp>
+#include <nandina/animation/group.hpp>
+#include <nandina/animation/keyframes.hpp>
+#include <nandina/animation/motion.hpp>
+#include <nandina/animation/spring.hpp>
+#include <nandina/animation/tween.hpp>
+#include <nandina/foundation/nandina_color.hpp>
+#include <nandina/reactive/scope.hpp>
+#include <nandina/reactive/signal.hpp>
+#include <nandina/scene/control.hpp>
+#include <nandina/scene/scene_tree.hpp>
+#include <nandina/theme/theme_manager.hpp>
+#include <nandina/widget/build_context.hpp>
+#include <nandina/widget/builtin_component_traits.hpp>
+#include <nandina/widget/button.hpp>
+#include <nandina/widget/label.hpp>
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>

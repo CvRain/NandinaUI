@@ -1,5 +1,5 @@
-#include "resource/resource_manifest.hpp"
-#include "resource/resource_scanner.hpp"
+#include <nandina/resource/resource_manifest.hpp>
+#include <nandina/resource/resource_scanner.hpp>
 
 #include <filesystem>
 #include <fstream>

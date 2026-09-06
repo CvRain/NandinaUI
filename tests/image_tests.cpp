@@ -2,15 +2,15 @@
 // Image (texture) node tests — Stage 1 of the texture subsystem.
 //
 
-#include "foundation/geometry.hpp"
-#include "foundation/nandina_color.hpp"
-#include "render/render_device.hpp"
-#include "render/texture_cache.hpp"
-#include "resource/backends/memory_backend.hpp"
-#include "resource/resource_manager.hpp"
-#include "scene/scene_tree.hpp"
-#include "theme/theme_manager.hpp"
-#include "widget/controls.hpp"
+#include <nandina/foundation/geometry.hpp>
+#include <nandina/foundation/nandina_color.hpp>
+#include <nandina/render/render_device.hpp>
+#include <nandina/render/texture_cache.hpp>
+#include <nandina/resource/backends/memory_backend.hpp>
+#include <nandina/resource/resource_manager.hpp>
+#include <nandina/scene/scene_tree.hpp>
+#include <nandina/theme/theme_manager.hpp>
+#include <nandina/widget/controls.hpp>
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>

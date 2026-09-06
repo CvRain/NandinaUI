@@ -1,4 +1,4 @@
-#include "resource/resource_manifest.hpp"
+#include <nandina/resource/resource_manifest.hpp>
 
 #include <openssl/evp.h>
 #include <toml++/toml.hpp>

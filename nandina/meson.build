@@ -292,9 +292,11 @@ nandina_lib = static_library(
     dependencies : nandina_dependencies,
 )
 
-# 创建依赖对象，供 example 使用
+# 创建依赖对象，供 example 使用。
+# include 根指向 nandina/ 的父目录（仓库根），使公共头文件以
+# nandina/ 作为命名空间前缀，例如 #include <nandina/app/nan_page.hpp>。
 nandina_dep = declare_dependency(
     link_with : nandina_lib,
-    include_directories : include_directories('.'),
+    include_directories : include_directories('..'),
     dependencies : nandina_dependencies,
 )

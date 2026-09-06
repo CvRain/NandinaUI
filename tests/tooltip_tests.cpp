@@ -2,12 +2,12 @@
 // Theme / Tooltip tests.
 //
 
-#include "render/render_device.hpp"
-#include "scene/scene_tree.hpp"
-#include "theme/theme_manager.hpp"
-#include "widget/button.hpp"
-#include "widget/controls.hpp"
-#include "widget/tooltip.hpp"
+#include <nandina/render/render_device.hpp>
+#include <nandina/scene/scene_tree.hpp>
+#include <nandina/theme/theme_manager.hpp>
+#include <nandina/widget/button.hpp>
+#include <nandina/widget/controls.hpp>
+#include <nandina/widget/tooltip.hpp>
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>

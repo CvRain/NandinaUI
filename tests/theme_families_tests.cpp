@@ -2,9 +2,9 @@
 // Built-in theme family tests.
 //
 
-#include "foundation/contrast.hpp"
-#include "theme/builtin_themes.hpp"
-#include "theme/theme_manager.hpp"
+#include <nandina/foundation/contrast.hpp>
+#include <nandina/theme/builtin_themes.hpp>
+#include <nandina/theme/theme_manager.hpp>
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>

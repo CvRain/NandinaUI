@@ -1,9 +1,9 @@
-#include "app/nan_application.hpp"
-#include "app/nan_router.hpp"
-#include "resource/build_location.hpp"
-#include "resource/resource.hpp"
-#include "scene/control.hpp"
-#include "widget/controls.hpp"
+#include <nandina/app/nan_application.hpp>
+#include <nandina/app/nan_router.hpp>
+#include <nandina/resource/build_location.hpp>
+#include <nandina/resource/resource.hpp>
+#include <nandina/scene/control.hpp>
+#include <nandina/widget/controls.hpp>
 
 #include <catch2/catch_test_macros.hpp>
 

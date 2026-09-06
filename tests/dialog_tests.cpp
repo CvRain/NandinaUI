@@ -2,20 +2,20 @@
 // Dialog (modal overlay) tests.
 //
 
-#include "widget/dialog.hpp"
+#include <nandina/widget/dialog.hpp>
 
-#include "foundation/geometry.hpp"
-#include "reactive/graph.hpp"
-#include "reactive/scope.hpp"
-#include "render/render_device.hpp"
-#include "scene/input_event.hpp"
-#include "scene/scene_tree.hpp"
-#include "semantics/semantics.hpp"
-#include "theme/theme_manager.hpp"
-#include "widget/build_context.hpp"
-#include "widget/builtin_component_traits.hpp"
-#include "widget/button.hpp"
-#include "widget/layout.hpp"
+#include <nandina/foundation/geometry.hpp>
+#include <nandina/reactive/graph.hpp>
+#include <nandina/reactive/scope.hpp>
+#include <nandina/render/render_device.hpp>
+#include <nandina/scene/input_event.hpp>
+#include <nandina/scene/scene_tree.hpp>
+#include <nandina/semantics/semantics.hpp>
+#include <nandina/theme/theme_manager.hpp>
+#include <nandina/widget/build_context.hpp>
+#include <nandina/widget/builtin_component_traits.hpp>
+#include <nandina/widget/button.hpp>
+#include <nandina/widget/layout.hpp>
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>

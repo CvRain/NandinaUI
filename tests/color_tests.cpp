@@ -2,7 +2,7 @@
 // Foundation / color tests.
 //
 
-#include "foundation/nandina_color.hpp"
+#include <nandina/foundation/nandina_color.hpp>
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>

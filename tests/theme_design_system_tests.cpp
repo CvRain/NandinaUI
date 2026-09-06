@@ -2,15 +2,15 @@
 // Theme DesignSystem / shared-fragment tests.
 //
 
-#include "foundation/geometry.hpp"
-#include "render/render_device.hpp"
-#include "scene/scene_tree.hpp"
-#include "theme/design_system.hpp"
-#include "theme/theme.hpp"
-#include "theme/theme_manager.hpp"
-#include "widget/button.hpp"
-#include "widget/slider.hpp"
-#include "widget/text_field.hpp"
+#include <nandina/foundation/geometry.hpp>
+#include <nandina/render/render_device.hpp>
+#include <nandina/scene/scene_tree.hpp>
+#include <nandina/theme/design_system.hpp>
+#include <nandina/theme/theme.hpp>
+#include <nandina/theme/theme_manager.hpp>
+#include <nandina/widget/button.hpp>
+#include <nandina/widget/slider.hpp>
+#include <nandina/widget/text_field.hpp>
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>

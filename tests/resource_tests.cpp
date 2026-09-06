@@ -1,13 +1,13 @@
 #include <catch2/catch_test_macros.hpp>
 
-#include "resource/backends/builtin_backend.hpp"
-#include "resource/backends/directory_backend.hpp"
-#include "resource/backends/memory_backend.hpp"
-#include "resource/backends/sqlite_backend.hpp"
-#include "resource/platform_resource_locator.hpp"
-#include "resource/resource_manager.hpp"
-#include "resource/resource_scanner.hpp"
-#include "resource/resource_uri.hpp"
+#include <nandina/resource/backends/builtin_backend.hpp>
+#include <nandina/resource/backends/directory_backend.hpp>
+#include <nandina/resource/backends/memory_backend.hpp>
+#include <nandina/resource/backends/sqlite_backend.hpp>
+#include <nandina/resource/platform_resource_locator.hpp>
+#include <nandina/resource/resource_manager.hpp>
+#include <nandina/resource/resource_scanner.hpp>
+#include <nandina/resource/resource_uri.hpp>
 
 #include <sqlite3.h>
 

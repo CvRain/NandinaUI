@@ -248,9 +248,9 @@ namespace
 
     [[nodiscard]] auto template_main_cpp(std::string_view package_id, std::string_view name)
         -> std::string {
-        return "#include \"app/nan_application.hpp\"\n"
-               "#include \"app/nan_page.hpp\"\n"
-               "#include \"widget/controls.hpp\"\n"
+        return "#include <nandina/app/nan_application.hpp>\n"
+               "#include <nandina/app/nan_page.hpp>\n"
+               "#include <nandina/widget/controls.hpp>\n"
                "\n"
                "using namespace nandina;\n"
                "\n"
