@@ -91,19 +91,6 @@ build_context_header_tests = executable(
 )
 test('build-context-header', build_context_header_tests)
 
-settings_example_tests = executable(
-    'settings_example_tests',
-    files('settings_example_tests.cpp'),
-    dependencies : [settings_example_dep, catch2_with_main_dep],
-)
-test('settings-example', settings_example_tests)
-
-test(
-    'example-source-budget',
-    python,
-    args: [files('example_source_budget_test.py'), meson.project_source_root()],
-)
-
 router_tests = executable(
     'router_tests',
     files('router_tests.cpp'),

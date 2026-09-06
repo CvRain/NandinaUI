@@ -156,7 +156,6 @@ nandina_resource_toolchain = {
     'template': files('meson/nandina_resources.build'),
 }
 if not meson.is_subproject()
-    subdir('example')
     if get_option('build_tests')
         subdir('tests')
     endif
