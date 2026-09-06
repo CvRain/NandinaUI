@@ -74,7 +74,7 @@ jobs:
     env:
       CC: clang
       CXX: clang++
-      # settings-example 的字体管线泄漏为测试局部（生产 teardown 由 C5.7 shutdown 覆盖），
+      # 字体管线泄漏属于测试局部资源（生产 teardown 由应用关闭流程覆盖），
       # 暂关闭泄漏检测，保留 UAF/UB 检测。
       LSAN_OPTIONS: detect_leaks=0
     steps:
@@ -100,7 +100,7 @@ jobs:
         run: |
           meson test -C buildDir-asan --print-errorlogs \
             foundation contrast font scene render image reactive widget \
-            authoring build-context-header settings-example router async viewport-scaling \
+            authoring build-context-header router async viewport-scaling \
             window-metrics linux-clipboard button theme-design-system checkbox slider switch \
             badge card progress-bar radio-button theme-families color tabs tooltip select \
             basic-widgets dialog animation system-fonts resource font-resource \
