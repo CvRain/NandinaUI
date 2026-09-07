@@ -1,136 +1,93 @@
-# NandinaUI 项目介绍
+# 认识 NandinaUI
 
-**NandinaUI**（[github.com/CvRain/NandinaUI](https://github.com/CvRain/NandinaUI)）是一个用 **C++26** 编写、基于 **Meson** 构建的**原生桌面 UI 框架**，自我定位为「简单、自研、全链路」。它借鉴了 `Angular`、`Slint`、`Qt QML` 等现代声明式 UI 框架的思路，提供从响应式状态、声明式控件、渲染后端到主题、动画、资源打包的完整自研能力；当前处于 `0.1.0-alpha.1` 早期阶段，但分层设计与测试完备度已经相当可观。
+欢迎来到 NandinaUI。它是一个使用 C++26 编写的原生桌面 UI 框架，希望在保留 C++ 类型安全、性能与工程控制力的同时，提供更接近现代 UI 框架的开发体验：用声明式方式组织界面，以响应式状态驱动更新，并通过应用、页面与路由管理真实桌面程序的生命周期。
 
-## 核心特性
+在开始编写窗口之前，本章会先建立一张足够清晰的项目地图。你不需要立刻理解渲染、场景树、主题或资源系统的全部细节，只需要知道一次界面构建会经过哪些核心模块，以及后续章节中的代码分别处在框架的哪一层。完成这一章后，你应该能够判断 NandinaUI 适合解决什么问题，并准备好一个可以继续完成整套教程的 C++ 工程。
 
-- **声明式 UI DSL** —— 用 `ui.column()`、`ui.center()`、`ui.make<widget::Button>()` 组合出可读的界面树，布局、对齐、间距一链式完成。
-- **响应式状态** —— `signal` / `computed` / `effect` / `property` / `batch`，状态变化自动驱动界面更新，告别手动刷新。
-- **丰富组件库** —— Button、Label、Checkbox、Slider、Switch、Radio、Select、TextField、Tabs、Card、Badge、Chip、Avatar、Dialog、Tooltip、ProgressBar、Image、List、Grid、ScrollView 等 20+ 控件。
-- **动画系统** —— Tween、Spring、关键帧、缓动曲线与动画组，让过渡与动效顺滑自然。
-- **现代文本引擎** —— FreeType + HarfBuzz + FriBidi + utf8proc 组成的字形管线，支持多字体、系统字体发现、复杂文字整形与双向文本。
-- **主题与设计系统** —— 三层设计令牌（primitive → semantic → component）、明暗外观（Appearance）、内置主题与样式文档。
-- **资源系统** —— 资源清单（manifest）+ 内置/目录/内存/SQLite 四类后端，配合 `nanres` 编译器与可移植打包流程。
-- **应用运行时** —— 窗口、Router/Page 导航、视口缩放、异步作用域与统一的输入/剪贴板分发。
-- **可选 2D 物理** —— 基于 Box2D 3.x 的轻量物理桥（默认关闭）。
-- **无障碍语义** —— 控件语义树导出，为可访问性工具铺路。
+## 本章目标
 
-## 架构分层
+- 了解 NandinaUI 的定位、当前支持范围与 alpha 阶段约束。
+- 认识 `app`、`widget`、`reactive`、`scene`、`render` 等核心模块的职责。
+- 理解应用、页面、控件树、响应式图与渲染后端之间的基本关系。
+- 准备 C++26、Meson、Ninja 和系统依赖等开发环境。
+- 将 NandinaUI 作为 Meson subproject 引入，并获得 `nandina_dep`。
 
-模块自底向上单向依赖，共 12 个模块（`foundation / reactive / resource / scene / semantics / render / theme / text / widget / animation / app / physics2d`）：
+## 为什么会有 NandinaUI
 
-<html style="margin:0;padding:0;">
-<div style="background-color:transparent;box-sizing:border-box;padding:4px 0;font-family:'Roboto','PingFang SC','Segoe UI',Arial,sans-serif;--accent:#A3D5E8;">
-  <div style="font-size:15px;font-weight:600;color:#1A1B1C;">NandinaUI 架构分层（示意）</div>
-  <div style="font-size:12px;color:#6B7280;margin-top:2px;">基于仓库 meson.build 与目录结构整理 · 自底向上依赖</div>
+> 下面是一篇关于项目缘起的小作文。它不影响后续阅读：如果你只想尽快看到第一个窗口，可以直接跳到“现在的 NandinaUI 是什么”。
 
-  <!-- 应用层 -->
-  <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;align-items:stretch;">
-    <div style="flex:0 0 148px;min-width:0;background:rgba(163,213,232,0.22);border-radius:12px;padding:10px 12px;box-sizing:border-box;">
-      <div style="font-size:14px;font-weight:600;color:#1A1B1C;">应用层</div>
-      <div style="font-size:11px;color:#6B7280;">app</div>
-      <div style="font-size:12px;color:#374151;margin-top:6px;line-height:1.5;">窗口与生命周期、路由、UI 调度、视口缩放</div>
-    </div>
-    <div style="flex:1 1 260px;min-width:0;background:#FFFFFF;border:1px solid rgba(0,0,0,0.08);border-radius:12px;padding:10px 12px;box-sizing:border-box;display:flex;flex-wrap:wrap;gap:6px;align-content:flex-start;">
-      <span style="font-size:12px;background:rgba(163,213,232,0.18);color:#1A1B1C;border-radius:8px;padding:3px 8px;white-space:nowrap;">NanApplication</span>
-      <span style="font-size:12px;background:rgba(163,213,232,0.18);color:#1A1B1C;border-radius:8px;padding:3px 8px;white-space:nowrap;">NanWindow</span>
-      <span style="font-size:12px;background:rgba(163,213,232,0.18);color:#1A1B1C;border-radius:8px;padding:3px 8px;white-space:nowrap;">NanRouter</span>
-      <span style="font-size:12px;background:rgba(163,213,232,0.18);color:#1A1B1C;border-radius:8px;padding:3px 8px;white-space:nowrap;">RootView</span>
-      <span style="font-size:12px;background:rgba(163,213,232,0.18);color:#1A1B1C;border-radius:8px;padding:3px 8px;white-space:nowrap;">UiDispatcher</span>
-      <span style="font-size:12px;background:rgba(163,213,232,0.18);color:#1A1B1C;border-radius:8px;padding:3px 8px;white-space:nowrap;">AsyncScope</span>
-      <span style="font-size:12px;background:rgba(163,213,232,0.18);color:#1A1B1C;border-radius:8px;padding:3px 8px;white-space:nowrap;">NanStore / NanPage</span>
-    </div>
-  </div>
-  <div style="text-align:center;font-size:11px;color:#9CA3AF;margin:4px 0;">▾ 依赖</div>
+### “别用 C++ 了”
 
-  <!-- 控件层 -->
-  <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:stretch;">
-    <div style="flex:0 0 148px;min-width:0;background:rgba(155,187,244,0.20);border-radius:12px;padding:10px 12px;box-sizing:border-box;">
-      <div style="font-size:14px;font-weight:600;color:#1A1B1C;">控件层</div>
-      <div style="font-size:11px;color:#6B7280;">widget + authoring</div>
-      <div style="font-size:12px;color:#374151;margin-top:6px;line-height:1.5;">声明式组装、布局、交互与视觉原语</div>
-    </div>
-    <div style="flex:1 1 260px;min-width:0;background:#FFFFFF;border:1px solid rgba(0,0,0,0.08);border-radius:12px;padding:10px 12px;box-sizing:border-box;display:flex;flex-wrap:wrap;gap:6px;align-content:flex-start;">
-      <span style="font-size:12px;background:rgba(155,187,244,0.16);color:#1A1B1C;border-radius:8px;padding:3px 8px;white-space:nowrap;">Button / Checkbox / Switch</span>
-      <span style="font-size:12px;background:rgba(155,187,244,0.16);color:#1A1B1C;border-radius:8px;padding:3px 8px;white-space:nowrap;">Slider / Radio / Select</span>
-      <span style="font-size:12px;background:rgba(155,187,244,0.16);color:#1A1B1C;border-radius:8px;padding:3px 8px;white-space:nowrap;">TextField / Tabs / Dialog</span>
-      <span style="font-size:12px;background:rgba(155,187,244,0.16);color:#1A1B1C;border-radius:8px;padding:3px 8px;white-space:nowrap;">Card / Badge / Chip / Avatar</span>
-      <span style="font-size:12px;background:rgba(155,187,244,0.16);color:#1A1B1C;border-radius:8px;padding:3px 8px;white-space:nowrap;">Grid / ScrollView / ListView / Image</span>
-      <span style="font-size:12px;background:rgba(155,187,244,0.16);color:#1A1B1C;border-radius:8px;padding:3px 8px;white-space:nowrap;">Pressable / Ripple / FocusRing</span>
-    </div>
-  </div>
-  <div style="text-align:center;font-size:11px;color:#9CA3AF;margin:4px 0;">▾ 依赖</div>
+我（这里指 ClaudeRainer）很喜欢 C++。平时总爱写点小软件玩玩，它们最后有没有派上用场并不重要，主打的就是一个开心。
 
-  <!-- 呈现层 -->
-  <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:stretch;">
-    <div style="flex:0 0 148px;min-width:0;background:rgba(148,216,195,0.20);border-radius:12px;padding:10px 12px;box-sizing:border-box;">
-      <div style="font-size:14px;font-weight:600;color:#1A1B1C;">呈现层</div>
-      <div style="font-size:11px;color:#6B7280;">render · text · scene · animation · semantics</div>
-      <div style="font-size:12px;color:#374151;margin-top:6px;line-height:1.5;">绘制、文本排版、场景树、动效与无障碍</div>
-    </div>
-    <div style="flex:1 1 260px;min-width:0;background:#FFFFFF;border:1px solid rgba(0,0,0,0.08);border-radius:12px;padding:10px 12px;box-sizing:border-box;display:flex;flex-wrap:wrap;gap:6px;align-content:flex-start;">
-      <span style="font-size:12px;background:rgba(148,216,195,0.16);color:#1A1B1C;border-radius:8px;padding:3px 8px;white-space:nowrap;">RenderDevice(raylib) + SDF</span>
-      <span style="font-size:12px;background:rgba(148,216,195,0.16);color:#1A1B1C;border-radius:8px;padding:3px 8px;white-space:nowrap;">Text: FreeType·HarfBuzz·FriBidi</span>
-      <span style="font-size:12px;background:rgba(148,216,195,0.16);color:#1A1B1C;border-radius:8px;padding:3px 8px;white-space:nowrap;">SceneTree / Node2D / Control</span>
-      <span style="font-size:12px;background:rgba(148,216,195,0.16);color:#1A1B1C;border-radius:8px;padding:3px 8px;white-space:nowrap;">Tween / Spring / Keyframes</span>
-      <span style="font-size:12px;background:rgba(148,216,195,0.16);color:#1A1B1C;border-radius:8px;padding:3px 8px;white-space:nowrap;">Semantics(无障碍)</span>
-    </div>
-  </div>
-  <div style="text-align:center;font-size:11px;color:#9CA3AF;margin:4px 0;">▾ 依赖</div>
+工作中，我也常常尝试用 C++ 写些小工具来解决实际问题。每当同事发现我又用 C++ 做了一个新东西，办公室里便会响起熟悉的声音：“别用 C++ 了”“C++ 会带来不幸”……一时间，空气里充满了快活的气息。
 
-  <!-- 主题层 -->
-  <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:stretch;">
-    <div style="flex:0 0 148px;min-width:0;background:rgba(225,185,143,0.18);border-radius:12px;padding:10px 12px;box-sizing:border-box;">
-      <div style="font-size:14px;font-weight:600;color:#1A1B1C;">主题层</div>
-      <div style="font-size:11px;color:#6B7280;">theme</div>
-      <div style="font-size:12px;color:#374151;margin-top:6px;line-height:1.5;">设计令牌、内置主题、样式文档</div>
-    </div>
-    <div style="flex:1 1 260px;min-width:0;background:#FFFFFF;border:1px solid rgba(0,0,0,0.08);border-radius:12px;padding:10px 12px;box-sizing:border-box;display:flex;flex-wrap:wrap;gap:6px;align-content:flex-start;">
-      <span style="font-size:12px;background:rgba(225,185,143,0.14);color:#1A1B1C;border-radius:8px;padding:3px 8px;white-space:nowrap;">DesignTokens / DesignSystem</span>
-      <span style="font-size:12px;background:rgba(225,185,143,0.14);color:#1A1B1C;border-radius:8px;padding:3px 8px;white-space:nowrap;">ThemeManager / BuiltinThemes</span>
-      <span style="font-size:12px;background:rgba(225,185,143,0.14);color:#1A1B1C;border-radius:8px;padding:3px 8px;white-space:nowrap;">StyleDocument(TOML)</span>
-      <span style="font-size:12px;background:rgba(225,185,143,0.14);color:#1A1B1C;border-radius:8px;padding:3px 8px;white-space:nowrap;">VisualState / Motion</span>
-    </div>
-  </div>
-  <div style="text-align:center;font-size:11px;color:#9CA3AF;margin:4px 0;">▾ 依赖</div>
+在动手编写 NandinaUI 以前，我接触过不少桌面 GUI 工具包和跨平台框架，例如 Windows Forms、FLTK、GTK/gtkmm、Flutter 和 Slint。陪伴我时间最久的还是 Qt Widgets 与 Qt Quick；与它们相处的日子很长，快乐和痛苦也都很具体。
 
-  <!-- 基础层 -->
-  <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:stretch;">
-    <div style="flex:0 0 148px;min-width:0;background:rgba(158,172,234,0.20);border-radius:12px;padding:10px 12px;box-sizing:border-box;">
-      <div style="font-size:14px;font-weight:600;color:#1A1B1C;">基础层</div>
-      <div style="font-size:11px;color:#6B7280;">foundation · reactive · resource · physics2d</div>
-      <div style="font-size:12px;color:#374151;margin-top:6px;line-height:1.5;">响应式系统、资源管理、基础设施</div>
-    </div>
-    <div style="flex:1 1 260px;min-width:0;background:#FFFFFF;border:1px solid rgba(0,0,0,0.08);border-radius:12px;padding:10px 12px;box-sizing:border-box;display:flex;flex-wrap:wrap;gap:6px;align-content:flex-start;">
-      <span style="font-size:12px;background:rgba(158,172,234,0.16);color:#1A1B1C;border-radius:8px;padding:3px 8px;white-space:nowrap;">Signal / Computed / Effect</span>
-      <span style="font-size:12px;background:rgba(158,172,234,0.16);color:#1A1B1C;border-radius:8px;padding:3px 8px;white-space:nowrap;">ReactiveScope / Batch</span>
-      <span style="font-size:12px;background:rgba(158,172,234,0.16);color:#1A1B1C;border-radius:8px;padding:3px 8px;white-space:nowrap;">ResourceManager + 4 后端</span>
-      <span style="font-size:12px;background:rgba(158,172,234,0.16);color:#1A1B1C;border-radius:8px;padding:3px 8px;white-space:nowrap;">Color / Geometry / JSON / UTF-8</span>
-      <span style="font-size:12px;background:rgba(158,172,234,0.16);color:#1A1B1C;border-radius:8px;padding:3px 8px;white-space:nowrap;">PhysicsWorld2D(Box2D, 可选)</span>
-    </div>
-  </div>
+网络上批评 Qt 的文章与视频如繁星点点。对我而言，真正困扰我的倒不是那些宏大的争论，而是一些在日常开发中反复出现的小问题。
 
-  <!-- 依赖与工具 -->
-  <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;align-items:stretch;">
-    <div style="flex:0 0 148px;min-width:0;background:rgba(107,114,128,0.08);border-radius:12px;padding:10px 12px;box-sizing:border-box;">
-      <div style="font-size:14px;font-weight:600;color:#1A1B1C;">依赖与工具</div>
-      <div style="font-size:11px;color:#6B7280;">third-party + tools</div>
-    </div>
-    <div style="flex:1 1 260px;min-width:0;background:#FFFFFF;border:1px solid rgba(0,0,0,0.08);border-radius:12px;padding:10px 12px;box-sizing:border-box;display:flex;flex-wrap:wrap;gap:6px;align-content:flex-start;">
-      <span style="font-size:12px;background:rgba(107,114,128,0.08);color:#1A1B1C;border-radius:8px;padding:3px 8px;white-space:nowrap;">raylib · spdlog · SQLite3</span>
-      <span style="font-size:12px;background:rgba(107,114,128,0.08);color:#1A1B1C;border-radius:8px;padding:3px 8px;white-space:nowrap;">toml++ · nlohmann/json · OpenSSL</span>
-      <span style="font-size:12px;background:rgba(107,114,128,0.08);color:#1A1B1C;border-radius:8px;padding:3px 8px;white-space:nowrap;">nanres 打包器 · 项目 CLI · Catch2 测试</span>
-    </div>
-  </div>
-</div>
-</html>
+在 Qt Widgets 中制作高度定制的组件，往往是一段漫长的旅程。现在回想起那些 QSS，以及不得不亲手绘制各种形状的日子，我仍会忍不住打个寒颤。Qt Quick/QML 在很大程度上缓解了定制界面的痛苦，却又带来了另一类麻烦。我的主力机运行 Linux，在这个环境里编写 QML 时，编辑器偶尔会提示某个模块不存在，但项目偏偏又能正常编译和运行；资源路径与实际文件位置有时也很难对上。
 
+类似的问题还有很多：Qt Creator 偶尔令人费解的项目索引，以及在 VS Code 或 CLion 中不够稳定的补全与格式化体验。再说下去，这一节就要变成 Qt 批斗大会了。但必须声明，我其实很喜欢 Qt，也曾在工作中长期使用它开发软件。
 
-## 外部依赖一览
+### 原来不是所有轮子都要自己造
 
-| 类别 | 依赖 |
-| --- | --- |
-| 渲染 | raylib（GPU 后端，支持 JPG 等格式） |
-| 文本 | FreeType、HarfBuzz、FriBidi、utf8proc |
-| 数据 / 配置 | nlohmann/json、toml++、SQLite3 |
-| 其他 | spdlog（日志）、OpenSSL（资源签名）、Box2D（可选物理）、Catch2（测试） |
+真正让我在意的是另一个问题：为什么传统桌面应用开发不像 Web 前端那样，拥有那么多风格鲜明、开箱即用的组件库？难道每次编写原生桌面应用，都要从基础控件开始重新定制一遍吗？
+
+这并不只是 Qt 的问题。在不少桌面技术栈中，找到一个外观合适、维护活跃、能够顺利接入现有工程，而且允许继续深度定制的组件库，并没有想象中容易。即使找到了，接入和改造成本也可能让人望而却步。
+
+同事们常说我最喜欢“造轮子”。我曾经对此颇为不解：想要一个功能，又不自己做，那它要从哪里来呢？
+
+后来，我尝试为自己编写一个博客网站：前端使用 `Angular` 与 `PrimeNG`，后端使用 Elixir 的 `Phoenix` 框架，开发体验出乎意料地好。我似乎终于明白了大家所说的“不要重复造轮子”是什么意思——在前端生态里，很多想法早已有现成的工具可以使用。继续接触 `Vue` 和 `React` 之后，我逐渐产生了一种感觉：有些能力似乎天然就应该存在，它们待在正确的位置上，如同呼吸一样自然。
+
+Element UI、Ant Design、shadcn/ui、PrimeNG、Skeleton……不同设计体系与组件生态百花齐放。状态变化可以自然地驱动界面，页面与组件各司其职，开发者也可以从数以万计的“轮子”中挑选适合自己的那一个。反观 C++，至今仍没有一个由语言官方统一提供的包管理与分发方案，桌面 UI 生态也更加分散。
+
+看得越多，我心里越容易冒出一个大胆的想法：既然如此，不如再造一个轮子，把这些舒服的开发体验带回 C++ 桌面应用里。
+
+### 把熟悉的好东西带回 C++
+
+这个想法说起来简单，实现起来却并不轻松。从项目历史中可以看到，NandinaUI 经历过多次重构。我曾从不同角度尝试接近目标，推翻过不合适的设计，也重新划分过框架边界。今天的版本仍然称不上终点，但至少已经是一份可以运行、可以继续迭代的答卷。
+
+因此，在使用 NandinaUI 时，你会遇到许多似曾相识的概念。说得直白一点，它甚至有些像一只“缝合怪”。不过，如果借鉴来的思想能够彼此配合，最终用起来足够自然，那么“缝得舒服”本身也未尝不是一种价值。
+
+项目目前主要受到了这些框架与生态的启发：
+
+- **Godot**：场景树、节点生命周期，以及按帧处理布局、输入与绘制的整体思路。使用 Godot 制作游戏时，我发现它同样能够带来很舒服的 GUI 开发体验。NandinaUI 还提供了可选的 Box2D 物理桥，为交互实验和高度定制的动态效果预留空间；它不是普通界面或动画功能的必需依赖。
+- **Qt**：成熟的桌面应用经验、命令式控件配置方式，以及长期实践中形成的组件 API 设计。NandinaUI 的声明式 authoring DSL 最终仍会落到具体的 C++ 控件对象上，因此开发者随时可以回到底层接口进行精细控制。
+- **Flutter**：通过嵌套结构直接表达界面树的方式。`Row`、`Column`、`Center`、`Padding` 等布局容器，使界面的代码结构尽量贴近最终的视觉结构。
+- **Angular**：页面、路由以及响应式状态的组织思路。NandinaUI 使用 `Page` 与 `NanRouter` 划分应用页面，并通过 `Signal`、`Computed` 和 `Effect` 建立状态依赖。
+- **shadcn/ui**：将基础视觉原语、设计令牌与具体组件配方分离的思想。这种分层让组件既能保持统一风格，又为扩展和定制留下了空间。
+- **Slint**：状态变化后的更新调度，以及文本与字体处理方面的工程思路。NandinaUI 在此基础上结合自身的场景树和渲染管线做了不同取舍。
+
+感谢这些项目与它们背后的开发者。没有这些公开的实现、文档和设计经验，NandinaUI 不可能走到今天。
+
+## 现在的 NandinaUI 是什么
+
+回到技术本身，NandinaUI 是一个使用 C++26 编写、以 Meson 构建的原生桌面 UI 框架。它尝试把声明式界面、响应式状态、组件库、主题、动画、资源管理和页面导航放进同一套类型安全的 C++ API 中。
+
+一次典型的界面构建大致会经过下面几层：
+
+1. `app` 负责应用、窗口、页面和路由的生命周期。
+2. `widget::BuildContext` 与 authoring DSL 用来创建控件并组织界面树。
+3. `reactive` 保存状态、追踪依赖，并在数据变化时驱动绑定更新。
+4. `scene` 负责节点关系、布局、输入分发和逐帧处理。
+5. `render` 与 `text` 将图形和文字真正绘制到窗口中。
+6. `theme`、`resource` 与 `foundation` 为上层提供设计令牌、资源和基础数据类型。
+
+你不需要在开始时掌握所有模块。入门阶段最常接触的是 `app`、`widget` 和 `reactive`；其余模块会在需要时自然出现。
+
+## 当前阶段与边界
+
+NandinaUI 当前版本为 `0.1.0-alpha.1`。这意味着核心结构已经可以用于实验和开发，但 API 仍可能随着设计演进发生变化。现阶段需要特别注意以下边界：
+
+- 当前正式支持的是 Linux 桌面源码分发模式，即 `linux-desktop-source` profile。
+- Windows 与 macOS 尚不在当前版本的支持承诺内。
+- 系统级 SDK 安装和原生应用打包不属于 1.0 之前的稳定目标。
+- Box2D 物理桥是可选功能，默认关闭；普通桌面应用不需要启用它。
+- 这是一个仍在成长中的框架，更适合学习、实验和参与建设，而不是在不了解风险的情况下直接承担关键生产业务。
+
+## 开始之前
+
+后续章节会创建一个独立的小型项目，并通过 Meson subproject 使用 NandinaUI。你需要准备支持 C++26 的编译器、Meson、Ninja、CMake、pkg-config 与 Python 3；Linux 系统还需要 OpenGL、OpenSSL 和 SQLite 等基础开发库。其余主要第三方依赖由仓库中的 Git 子模块提供。
+
+接下来，我们不会继续停留在概念上。[下一章](2_first_window.md)将从一个最小程序开始，让 NandinaUI 的第一个窗口真正出现在屏幕上。
