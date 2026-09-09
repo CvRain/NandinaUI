@@ -25,10 +25,17 @@ spdlog_options.set_install(false)
 
 # 配置 raylib 的CMake选项
 raylib_options = cmake.subproject_options()
-raylib_options.add_cmake_defines({
+raylib_defines = {
     'CUSTOMIZE_BUILD': 'ON',
     'SUPPORT_FILEFORMAT_JPG': 'ON',
-})
+}
+if host_machine.system() == 'linux'
+    raylib_defines += {
+        'GLFW_BUILD_WAYLAND': 'ON',
+        'GLFW_BUILD_X11': 'ON',
+    }
+endif
+raylib_options.add_cmake_defines(raylib_defines)
 raylib_options.set_install(false)
 
 # 配置 utf8proc 的 CMake 选项

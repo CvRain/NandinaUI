@@ -830,6 +830,15 @@ namespace nandina::scene
     auto
     NanSceneTree::_bubble_input(NanNode* start, InputEvent& event, const NanNode* stop_exclusive)
         -> void {
+        std::vector<NanNode*> path;
+        for (auto* node = start; node != nullptr && node != stop_exclusive; node = node->parent()) {
+            path.push_back(node);
+        }
+        for (auto it = path.rbegin(); it != path.rend(); ++it) {
+            if ((*it)->on_input_capture(event) || event.is_accepted()) {
+                return;
+            }
+        }
         for (auto* node = start; node != nullptr && node != stop_exclusive; node = node->parent()) {
             if (node->on_input(event) || event.is_accepted()) {
                 break;

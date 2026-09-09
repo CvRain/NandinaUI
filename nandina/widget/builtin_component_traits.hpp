@@ -17,6 +17,8 @@
 #include "label.hpp"
 #include "image.hpp"
 #include "progress_bar.hpp"
+#include "pointer_area.hpp"
+#include "gesture_area.hpp"
 #include "radio_button.hpp"
 #include "radio_group.hpp"
 #include "select.hpp"
@@ -28,6 +30,20 @@
 
 namespace nandina::widget
 {
+    template<>
+    struct ComponentTraits<PointerArea> {
+        [[nodiscard]] static auto make(const BuildContext&) -> authoring::NodeBuilder<PointerArea> {
+            return authoring::make<PointerArea>();
+        }
+    };
+
+    template<>
+    struct ComponentTraits<GestureArea> {
+        [[nodiscard]] static auto make(const BuildContext&) -> authoring::NodeBuilder<GestureArea> {
+            return authoring::make<GestureArea>();
+        }
+    };
+
     template<>
     struct ComponentTraits<Image> {
         [[nodiscard]] static auto make(const BuildContext& ui, std::string source = {})

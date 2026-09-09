@@ -96,6 +96,111 @@ namespace nandina::widget::authoring
         }
 
         template<typename Handler>
+            requires requires(Node& node, Handler&& handler) { node.set_on_press(std::forward<Handler>(handler)); }
+        auto on_press(Handler&& handler) -> NodeBuilder& {
+            node_->set_on_press(guarded(std::forward<Handler>(handler)));
+            return *this;
+        }
+
+        template<typename Handler>
+            requires requires(Node& node, Handler&& handler) { node.set_on_release(std::forward<Handler>(handler)); }
+        auto on_release(Handler&& handler) -> NodeBuilder& {
+            node_->set_on_release(guarded(std::forward<Handler>(handler)));
+            return *this;
+        }
+
+        template<typename Handler>
+            requires requires(Node& node, Handler&& handler) { node.set_on_cancel(std::forward<Handler>(handler)); }
+        auto on_cancel(Handler&& handler) -> NodeBuilder& {
+            node_->set_on_cancel(guarded(std::forward<Handler>(handler)));
+            return *this;
+        }
+
+        template<typename Handler>
+            requires requires(Node& node, Handler&& handler) { node.set_on_hover_changed(std::forward<Handler>(handler)); }
+        auto on_hover_changed(Handler&& handler) -> NodeBuilder& {
+            node_->set_on_hover_changed(guarded(std::forward<Handler>(handler)));
+            return *this;
+        }
+
+        template<typename Handler>
+            requires requires(Node& node, Handler&& handler) { node.set_on_focus_changed(std::forward<Handler>(handler)); }
+        auto on_focus_changed(Handler&& handler) -> NodeBuilder& {
+            node_->set_on_focus_changed(guarded(std::forward<Handler>(handler)));
+            return *this;
+        }
+
+        template<typename Handler>
+            requires requires(Node& node, Handler&& handler) { node.set_on_pointer_down(std::forward<Handler>(handler)); }
+        auto on_pointer_down(Handler&& handler) -> NodeBuilder& {
+            node_->set_on_pointer_down(guarded(std::forward<Handler>(handler)));
+            return *this;
+        }
+
+        template<typename Handler>
+            requires requires(Node& node, Handler&& handler) { node.set_on_pointer_up(std::forward<Handler>(handler)); }
+        auto on_pointer_up(Handler&& handler) -> NodeBuilder& {
+            node_->set_on_pointer_up(guarded(std::forward<Handler>(handler)));
+            return *this;
+        }
+
+        template<typename Handler>
+            requires requires(Node& node, Handler&& handler) { node.set_on_pointer_move(std::forward<Handler>(handler)); }
+        auto on_pointer_move(Handler&& handler) -> NodeBuilder& {
+            node_->set_on_pointer_move(guarded(std::forward<Handler>(handler)));
+            return *this;
+        }
+
+        template<typename Handler>
+            requires requires(Node& node, Handler&& handler) { node.set_on_pointer_enter(std::forward<Handler>(handler)); }
+        auto on_pointer_enter(Handler&& handler) -> NodeBuilder& {
+            node_->set_on_pointer_enter(guarded(std::forward<Handler>(handler)));
+            return *this;
+        }
+
+        template<typename Handler>
+            requires requires(Node& node, Handler&& handler) { node.set_on_pointer_leave(std::forward<Handler>(handler)); }
+        auto on_pointer_leave(Handler&& handler) -> NodeBuilder& {
+            node_->set_on_pointer_leave(guarded(std::forward<Handler>(handler)));
+            return *this;
+        }
+
+        template<typename Handler>
+            requires requires(Node& node, Handler&& handler) { node.set_on_double_click(std::forward<Handler>(handler)); }
+        auto on_double_click(Handler&& handler) -> NodeBuilder& {
+            node_->set_on_double_click(guarded(std::forward<Handler>(handler)));
+            return *this;
+        }
+
+        template<typename Handler>
+            requires requires(Node& node, Handler&& handler) { node.set_on_long_press(std::forward<Handler>(handler)); }
+        auto on_long_press(Handler&& handler) -> NodeBuilder& {
+            node_->set_on_long_press(guarded(std::forward<Handler>(handler)));
+            return *this;
+        }
+
+        template<typename Handler>
+            requires requires(Node& node, Handler&& handler) { node.set_on_drag_start(std::forward<Handler>(handler)); }
+        auto on_drag_start(Handler&& handler) -> NodeBuilder& {
+            node_->set_on_drag_start(guarded(std::forward<Handler>(handler)));
+            return *this;
+        }
+
+        template<typename Handler>
+            requires requires(Node& node, Handler&& handler) { node.set_on_drag_move(std::forward<Handler>(handler)); }
+        auto on_drag_move(Handler&& handler) -> NodeBuilder& {
+            node_->set_on_drag_move(guarded(std::forward<Handler>(handler)));
+            return *this;
+        }
+
+        template<typename Handler>
+            requires requires(Node& node, Handler&& handler) { node.set_on_drag_end(std::forward<Handler>(handler)); }
+        auto on_drag_end(Handler&& handler) -> NodeBuilder& {
+            node_->set_on_drag_end(guarded(std::forward<Handler>(handler)));
+            return *this;
+        }
+
+        template<typename Handler>
             requires requires(Node& node, Handler&& handler) {
                 node.set_on_submit(std::forward<Handler>(handler));
             }

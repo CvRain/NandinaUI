@@ -186,6 +186,12 @@ namespace nandina::scene
          */
         virtual auto on_input(InputEvent& event) -> bool;
 
+        /**
+         * Observe input while it travels from the root toward the hit target.
+         * Containers can use this even when a descendant consumes bubbling.
+         */
+        virtual auto on_input_capture(InputEvent& event) -> bool;
+
         /// Called every frame.  dt is the elapsed time in seconds.
         virtual void on_process(float dt);
 

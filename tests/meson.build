@@ -135,6 +135,13 @@ button_tests = executable(
 )
 test('button', button_tests)
 
+interaction_area_tests = executable(
+    'interaction_area_tests',
+    files('interaction_area_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('interaction-area', interaction_area_tests)
+
 theme_design_system_tests = executable(
     'theme_design_system_tests',
     files('theme_design_system_tests.cpp'),

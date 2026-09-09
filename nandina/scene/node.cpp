@@ -323,6 +323,10 @@
         return false;
     }
 
+    auto NanNode::on_input_capture(InputEvent& /*event*/) -> bool {
+        return false;
+    }
+
     void NanNode::on_process(float /*dt*/) {}
     void NanNode::physics_step(float /*dt*/) {}
     void NanNode::on_draw(render::DrawContext& /*ctx*/) {}
