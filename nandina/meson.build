@@ -168,6 +168,8 @@ module_widget = files(
     'widget/pointer_area.cpp',
     'widget/gesture_area.hpp',
     'widget/gesture_area.cpp',
+    'widget/internal/overlay_host.hpp',
+    'widget/internal/overlay_host.cpp',
     'widget/primitives/text_layout.hpp',
     'widget/primitives/text_layout.cpp',
     'widget/primitives/text_layout_backend.hpp',

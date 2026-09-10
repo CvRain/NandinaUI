@@ -1,8 +1,10 @@
-# 指针与手势交互
+# PointerArea 与 GestureArea
 
 NandinaUI 将控件语义、原始指针输入和复合手势分为三个层次。内置控件只公开自身应当拥有的行为；任意控件需要额外交互时，通过组合 `PointerArea` 或 `GestureArea` 获得能力。
 
-## 选择合适的层次
+> 这两个组件目前属于实验性 API。核心职责已经确定，但命名和事件上下文仍可能在 alpha 阶段细化。
+
+## 如何选择
 
 | 需求 | 推荐接口 | 原因 |
 | --- | --- | --- |
@@ -30,6 +32,16 @@ ui.make<widget::PointerArea>()
 ```
 
 指针按下后 Area 会为其内容建立指针捕获，使移出边界后的 move 与 release 仍沿原路径分发。事件默认只被观察而不被消费，因此子控件和祖先仍可处理同一输入。
+
+### 回调
+
+| 构建器方法 | 事件 | 说明 |
+| --- | --- | --- |
+| `.on_pointer_down()` | `MouseButtonEvent` | 任意鼠标按钮按下 |
+| `.on_pointer_up()` | `MouseButtonEvent` | 任意鼠标按钮释放 |
+| `.on_pointer_move()` | `MouseMoveEvent` | 指针移动，包括捕获后的边界外移动 |
+| `.on_pointer_enter()` | `MouseEnterEvent` | 指针进入区域 |
+| `.on_pointer_leave()` | `MouseLeaveEvent` | 指针离开区域 |
 
 ## GestureArea
 

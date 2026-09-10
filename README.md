@@ -35,7 +35,7 @@ NandinaUI（南天竹）是一个用 **C++26** 编写、基于 **Meson** 构建�
 
 - **声明式 UI DSL** —— 用 `ui.column()`、`ui.center()`、`ui.make<widget::Button>()` 组合出可读的界面树，布局、对齐、间距一链式完成。
 - **响应式状态** —— `signal` / `computed` / `effect` / `property` / `batch`，状态变化自动驱动界面更新，告别手动刷新。
-- **丰富组件库** —— Button、Label、Checkbox、Slider、Switch、Radio、Select、TextField、Tabs、Card、Badge、Chip、Avatar、Dialog、Tooltip、ProgressBar、Image、List、Grid、ScrollView 等 20+ 控件。
+- **可组合组件库** —— 覆盖内容展示、输入选择、布局滚动、浮层反馈与通用指针手势，并通过统一主题和声明式构建器组合。
 - **动画系统** —— Tween、Spring、关键帧、缓动曲线与动画组，让过渡与动效顺滑自然。
 - **现代文本引擎** —— FreeType + HarfBuzz + FriBidi + utf8proc 组成的字形管线，支持多字体、系统字体发现、复杂文字整形与双向文本。
 - **主题与设计系统** —— 三层设计令牌（primitive → semantic → component）、明暗外观（Appearance）、内置主题与样式文档。
@@ -62,6 +62,18 @@ NandinaUI（南天竹）是一个用 **C++26** 编写、基于 **Meson** 构建�
 | `app` | 窗口、Router/Page、应用入口 |
 | `semantics` | 无障碍语义 |
 | `physics2d` | 可选 Box2D 物理桥 |
+
+## 🧩 组件支持
+
+| 类别 | 当前可用 |
+| --- | --- |
+| 内容与展示 | Label、Image、Avatar、Badge、Chip、Divider、ProgressBar、Card |
+| 输入与选择 | Button、Checkbox、Switch、RadioButton/RadioGroup、Slider、TextField、Select、Tabs |
+| 浮层与反馈 | Dialog、Tooltip |
+| 交互扩展 | PointerArea、GestureArea（实验性） |
+| 布局与滚动 | Column、Row、Flex、Wrap、Stack、Padding、Center、Expanded、Grid、ScrollView、ListView |
+
+完整的用途、成熟度与计划组件见 [组件参考](docs/components/README.md)。
 
 ## 🚀 快速开始
 
@@ -144,7 +156,7 @@ auto main() -> int {
                 .height = 420,
             },
         },
-        [](widget::BuildContext& ui) {
+        [](const widget::BuildContext& ui) {
             return ui.center()
                 .child(ui.make<widget::Label>("Hello, NandinaUI!"))
                 .build();
@@ -164,6 +176,29 @@ meson compile -C buildDir
 ./buildDir/nandina_playground
 ```
 ![运行效果](docs/images/z_hello_nandina.png)
+
+## 📚 文档
+
+- [入门指南](docs/getting_started/README.md)：从项目认识、创建窗口到布局、响应式状态和 Page 导航。
+- [组件参考](docs/components/README.md)：组件清单、公开 API、使用方式与交互规则。
+- [开发参考](docs/references/README.md)：组件契约、架构约束和维护流程。
+- [组件开发路线图](docs/references/component_roadmap.md)：当前差距、依赖关系与推荐实现顺序。
+
+## 🗺️ 开发计划
+
+项目当前处于 alpha 阶段，近期工作优先保证公共 API 的一致性，而不是单纯增加组件数量。
+
+- [x] 建立声明式 UI、响应式状态、主题、动画、资源和 Page/Router 基础。
+- [x] 支持 Linux Wayland 与 X11，并提供 PointerArea / GestureArea 组合式交互。
+- [x] 建立组件公共契约、组件文档与开发参考目录。
+- [x] 建立 OverlayHost/portal 的内容层、顶层层级和 RAII 生命周期基础。
+- [ ] 补齐锚点定位、外部关闭和焦点作用域等浮层基础设施。
+- [ ] 将 Select、Tooltip、Dialog 迁移到统一浮层设施并保持应用层 API 兼容。
+- [ ] 补充 TextArea、Toggle、Alert、Spinner、Skeleton、EmptyState 等高频组件。
+- [ ] 基于统一浮层实现 Popover、Menu、Combobox 和 CommandPalette。
+- [ ] 后续完善 Table/DataTable、Accordion、Sheet 等复合组件。
+
+路线图会随着基础设施成熟度调整；Getting Started 只采用推荐 API，实验性能力会在组件文档中明确标注。
 
 
 ## 外部依赖一览

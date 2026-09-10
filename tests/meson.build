@@ -142,6 +142,13 @@ interaction_area_tests = executable(
 )
 test('interaction-area', interaction_area_tests)
 
+overlay_tests = executable(
+    'overlay_tests',
+    files('overlay_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('overlay', overlay_tests)
+
 theme_design_system_tests = executable(
     'theme_design_system_tests',
     files('theme_design_system_tests.cpp'),

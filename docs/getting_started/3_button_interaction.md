@@ -45,11 +45,12 @@ int main() {
 
 重新编译并运行程序。单击按钮后，终端会打印日志。将焦点移动到按钮，再按 Enter 或 Space，也会执行同一个回调。
 
+![3_button_interaction_1](images/3_button_interaction_1.png)
+
 `ui.make<widget::Button>("Click me")` 创建 Button 及其声明式构建器；`.on_click(...)` 为控件安装行为；外层 `.build()` 最终返回根视图。传给 `.child()` 的按钮构建器会由框架自动物化，因此这里不需要额外调用一次 `.build()`。
 
-## 2. click 是“激活”，不只是鼠标单击
-
-`on_click` 沿用桌面与 Web UI 中熟悉的名称，但它表达的是按钮的主要语义行为：激活。
+## 2. 按钮的`click`事件
+`on_click` 沿用桌面与 Web UI 中熟悉的名称，但它表达的是按钮的主要语义行为：`激活`。
 
 以下输入都可以激活 Button：
 
@@ -57,7 +58,9 @@ int main() {
 - 键盘 Enter 或 Space；
 - 语义树发出的无障碍 activate 操作。
 
-因此，回调中应该放置“保存”“确认”“打开”等业务动作，而不是依赖鼠标坐标的逻辑。需要读取指针位置、识别双击或拖拽时，应使用 `PointerArea` 或 `GestureArea`，而不是削弱 Button 的跨输入设备语义。
+因此，回调中应该放置“保存”“确认”“打开”等业务动作，而不是依赖鼠标坐标的逻辑。需要读取指针位置、识别双击或拖拽
+等一些复杂或自定义事件时应使用 `PointerArea` 或 `GestureArea`，
+而不是基于Button在组件上堆叠更多的动作，或者削弱 Button 的跨输入设备语义。
 
 ## 3. 一次点击的生命周期
 
@@ -94,11 +97,14 @@ auto remove = ui.make<widget::Button>("Remove")
     .on_click([] { log::info("remove requested"); });
 ```
 
+![3_button_interaction_2](images/3_button_interaction_2.png)
+
 - `ButtonTone` 表达操作的色彩语义，包括 `primary`、`secondary`、`neutral` 和 `danger`。
 - `ButtonTreatment` 表达视觉强调方式，包括 `filled`、`tonal`、`outlined`、`ghost` 和 `link`。
 - `ButtonSize` 提供 `small`、`medium` 和 `large` 三个设计系统档位。
 
 这些值会经过当前主题解析，所以切换亮色、暗色或自定义主题时，按钮仍能保持一致的层级与对比度。特殊实例确实可以通过视觉属性微调圆角和文字颜色，但设计系统级选择应优先使用这些语义属性。
+关于如何自定义调色盘和主题风格，请参考后续章节。
 
 ## 5. 声明式构建器与直接配置
 
@@ -142,7 +148,7 @@ return ui.make<widget::GestureArea>()
     .build();
 ```
 
-Button 默认只承担一个按钮应该具备的语义；额外的指针与手势能力通过组合获得。这样既保持基础组件简单，也避免高级交互受组件类型限制。完整模型见 [指针与手势交互](../interaction_model.md)。
+Button 默认只承担一个按钮应该具备的语义；额外的指针与手势能力通过组合获得。这样既保持基础组件简单，也避免高级交互受组件类型限制。完整模型见 [PointerArea 与 GestureArea](../components/pointer_and_gesture_areas.md)。
 
 ## 最后
 
