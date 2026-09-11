@@ -20,12 +20,12 @@ NandinaUI 不以逐项复制其他组件库为目标。[shadcn/ui Components](ht
 
 ## 阶段 1：浮层基础设施
 
-当前进度：`OverlayHost` / portal 的内部基础与生命周期测试已经完成；窗口服务接入、定位、关闭和焦点能力尚未实现。
+当前进度：`OverlayHost` / portal 与 `AnchoredPositioner` 已经完成；窗口服务接入、关闭和焦点能力尚未实现。
 
 优先实现内部能力，而不是立即增加多个公开控件：
 
 - `OverlayHost` / portal：将浮层托管到顶层，避免父级裁剪（内部基础已完成）；
-- `AnchoredPositioner`：anchor、placement、alignment、offset、flip 和 shift；
+- `AnchoredPositioner`：anchor、placement、alignment、offset、flip 和 shift（已完成）；
 - `DismissLayer`：点击外部、Escape、模态阻断与关闭原因；
 - `FocusScope`：焦点限制、初始焦点和关闭后的焦点恢复；
 - roving focus/typeahead：菜单和列表选择的键盘导航。

@@ -30,10 +30,20 @@ raylib_defines = {
     'SUPPORT_FILEFORMAT_JPG': 'ON',
 }
 if host_machine.system() == 'linux'
-    raylib_defines += {
+    linux_window_system = get_option('linux_window_system')
+    if linux_window_system == 'auto'
+        session_type = run_command('printenv', 'XDG_SESSION_TYPE', check: false).stdout().strip()
+        wayland_display = run_command('printenv', 'WAYLAND_DISPLAY', check: false).stdout().strip()
+        linux_window_system = session_type == 'wayland' or wayland_display != '' ? 'wayland' : 'x11'
+    endif
+    raylib_defines += linux_window_system == 'wayland' ? {
         'GLFW_BUILD_WAYLAND': 'ON',
+        'GLFW_BUILD_X11': 'OFF',
+    } : {
+        'GLFW_BUILD_WAYLAND': 'OFF',
         'GLFW_BUILD_X11': 'ON',
     }
+    message('Linux window system: ' + linux_window_system)
 endif
 raylib_options.add_cmake_defines(raylib_defines)
 raylib_options.set_install(false)

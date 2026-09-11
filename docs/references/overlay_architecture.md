@@ -42,27 +42,27 @@ OverlayHost
 
 ## 当前边界
 
-第一阶段只提供 portal 托管和生命周期：
+第一阶段已经提供 portal 托管、生命周期与锚点定位：
 
 - 已实现 content/overlay layer 分离；
 - 已实现透明 surface、viewport 布局与顶层命中；
 - 已实现 RAII Handle 和确定性关闭；
 - 已测试父级裁剪之外的浮层命中和多浮层顺序。
+- 已实现四向 placement、三种 alignment、gap、offset、flip 与 viewport shift；
+- 已通过独立几何测试覆盖边缘翻转、视口内收和显式溢出。
 
 尚未实现：
 
 - NanWindow 对 OverlayHost 的默认安装和 BuildContext 服务注入；
-- anchor、placement、alignment、flip 与 shift；
 - 点击外部和 Escape 的统一关闭原因；
 - 模态输入阻断与焦点限制；
 - 嵌套浮层的父子关闭关系。
 
 ## 后续顺序
 
-1. 实现可独立测试的 AnchoredPositioner；
-2. 让 NanWindow 建立默认 OverlayHost，并通过构建上下文提供服务；
-3. 实现 DismissLayer 与 FocusScope；
-4. 先迁移 Tooltip 验证非模态定位；
-5. 再迁移 Select 和 Dialog，保持它们现有公开构建方式兼容。
+1. 让 NanWindow 建立默认 OverlayHost，并通过构建上下文提供服务；
+2. 实现 DismissLayer 与 FocusScope；
+3. 先迁移 Tooltip 验证非模态定位；
+4. 再迁移 Select 和 Dialog，保持它们现有公开构建方式兼容。
 
 在上述迁移完成前，OverlayHost 不应进入 `<nandina/widget/controls.hpp>`，Getting Started 也不应直接使用它。

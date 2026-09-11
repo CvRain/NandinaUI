@@ -192,7 +192,8 @@ meson compile -C buildDir
 - [x] 支持 Linux Wayland 与 X11，并提供 PointerArea / GestureArea 组合式交互。
 - [x] 建立组件公共契约、组件文档与开发参考目录。
 - [x] 建立 OverlayHost/portal 的内容层、顶层层级和 RAII 生命周期基础。
-- [ ] 补齐锚点定位、外部关闭和焦点作用域等浮层基础设施。
+- [x] 补齐浮层锚点定位、边界翻转和视口内收。
+- [ ] 补齐点击外部关闭和焦点作用域等浮层基础设施。
 - [ ] 将 Select、Tooltip、Dialog 迁移到统一浮层设施并保持应用层 API 兼容。
 - [ ] 补充 TextArea、Toggle、Alert、Spinner、Skeleton、EmptyState 等高频组件。
 - [ ] 基于统一浮层实现 Popover、Menu、Combobox 和 CommandPalette。

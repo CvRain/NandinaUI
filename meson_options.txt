@@ -10,3 +10,10 @@ option(
     value: true,
     description: 'Build and register tests when Nandina is the main project',
 )
+option(
+    'linux_window_system',
+    type: 'combo',
+    choices: ['auto', 'wayland', 'x11'],
+    value: 'auto',
+    description: 'Linux window system used by the bundled GLFW backend',
+)

@@ -170,6 +170,8 @@ module_widget = files(
     'widget/gesture_area.cpp',
     'widget/internal/overlay_host.hpp',
     'widget/internal/overlay_host.cpp',
+    'widget/internal/anchored_positioner.hpp',
+    'widget/internal/anchored_positioner.cpp',
     'widget/primitives/text_layout.hpp',
     'widget/primitives/text_layout.cpp',
     'widget/primitives/text_layout_backend.hpp',

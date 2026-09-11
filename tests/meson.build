@@ -149,6 +149,13 @@ overlay_tests = executable(
 )
 test('overlay', overlay_tests)
 
+anchored_positioner_tests = executable(
+    'anchored_positioner_tests',
+    files('anchored_positioner_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('anchored-positioner', anchored_positioner_tests)
+
 theme_design_system_tests = executable(
     'theme_design_system_tests',
     files('theme_design_system_tests.cpp'),

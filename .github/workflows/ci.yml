@@ -60,7 +60,7 @@ jobs:
           meson --version
           ninja --version
       - name: Configure
-        run: meson setup buildDir --wrap-mode=nodownload ${{ matrix.toolchain_args }}
+        run: meson setup buildDir --wrap-mode=nodownload -Dlinux_window_system=x11 ${{ matrix.toolchain_args }}
       - name: Build
         run: meson compile -C buildDir
       - name: Test
@@ -93,7 +93,7 @@ jobs:
       - name: Configure git
         run: git config --global --add safe.directory '*'
       - name: Configure
-        run: meson setup buildDir-asan -Db_sanitize=address,undefined --wrap-mode=nodownload
+        run: meson setup buildDir-asan -Db_sanitize=address,undefined -Dlinux_window_system=x11 --wrap-mode=nodownload
       - name: Build
         run: meson compile -C buildDir-asan
       - name: Test
@@ -101,7 +101,8 @@ jobs:
           meson test -C buildDir-asan --print-errorlogs \
             foundation contrast font scene render image reactive widget \
             authoring build-context-header router async viewport-scaling \
-            window-metrics linux-clipboard button theme-design-system checkbox slider switch \
+            window-metrics linux-clipboard overlay anchored-positioner \
+            button theme-design-system checkbox slider switch \
             badge card progress-bar radio-button theme-families color tabs tooltip select \
             basic-widgets dialog animation system-fonts resource font-resource \
             application-resource
@@ -130,7 +131,7 @@ jobs:
       - name: Configure git
         run: git config --global --add safe.directory '*'
       - name: Configure
-        run: meson setup buildDir-fallback --force-fallback-for=sqlite3
+        run: meson setup buildDir-fallback --force-fallback-for=sqlite3 -Dlinux_window_system=x11
       - name: Build
         run: meson compile -C buildDir-fallback
       - name: Test resource workflow
@@ -163,7 +164,7 @@ jobs:
       - name: Configure git
         run: git config --global --add safe.directory '*'
       - name: Configure
-        run: meson setup buildDir-physics -Dphysics2d=enabled --wrap-mode=nodownload
+        run: meson setup buildDir-physics -Dphysics2d=enabled -Dlinux_window_system=x11 --wrap-mode=nodownload
       - name: Build
         run: meson compile -C buildDir-physics
       - name: Test physics
