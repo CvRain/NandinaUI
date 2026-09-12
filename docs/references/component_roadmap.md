@@ -26,8 +26,8 @@ NandinaUI 不以逐项复制其他组件库为目标。[shadcn/ui Components](ht
 
 - `OverlayHost` / portal：将浮层托管到顶层，避免父级裁剪（内部基础已完成）；
 - `AnchoredPositioner`：anchor、placement、alignment、offset、flip 和 shift（已完成）；
-- `DismissLayer`：点击外部、Escape、模态阻断与关闭原因；
-- `FocusScope`：焦点限制、初始焦点和关闭后的焦点恢复；
+- `DismissLayer`：点击外部、Escape、模态阻断与关闭原因（基础已完成）；
+- `FocusScope`：焦点限制、初始焦点和关闭后的焦点恢复（基础已完成）；
 - roving focus/typeahead：菜单和列表选择的键盘导航。
 
 完成标准：嵌套浮层、窗口边缘定位、Escape、点击外部与焦点恢复具有独立测试。

@@ -156,6 +156,20 @@ anchored_positioner_tests = executable(
 )
 test('anchored-positioner', anchored_positioner_tests)
 
+dismiss_layer_tests = executable(
+    'dismiss_layer_tests',
+    files('dismiss_layer_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('dismiss-layer', dismiss_layer_tests)
+
+focus_scope_tests = executable(
+    'focus_scope_tests',
+    files('focus_scope_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('focus-scope', focus_scope_tests)
+
 theme_design_system_tests = executable(
     'theme_design_system_tests',
     files('theme_design_system_tests.cpp'),

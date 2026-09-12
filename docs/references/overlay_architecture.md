@@ -50,12 +50,13 @@ OverlayHost
 - 已测试父级裁剪之外的浮层命中和多浮层顺序。
 - 已实现四向 placement、三种 alignment、gap、offset、flip 与 viewport shift；
 - 已通过独立几何测试覆盖边缘翻转、视口内收和显式溢出。
+- 已实现 `DismissLayer` 的左键外部点击与 Escape 关闭原因分发。
+- 已实现 `FocusScope` 的初始焦点、Tab 循环与卸载焦点恢复。
 
 尚未实现：
 
 - NanWindow 对 OverlayHost 的默认安装和 BuildContext 服务注入；
-- 点击外部和 Escape 的统一关闭原因；
-- 模态输入阻断与焦点限制；
+- 完整的模态输入阻断；
 - 嵌套浮层的父子关闭关系。
 
 ## 后续顺序

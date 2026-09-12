@@ -662,6 +662,53 @@ namespace nandina::scene
         _transition_focus(*std::prev(it));
     }
 
+    auto NanSceneTree::focus_first_within(NanNode& scope) -> bool {
+        if (!scope.is_inside_tree() || scope.get_tree() != this) {
+            return false;
+        }
+        std::vector<NanNode2D*> nodes;
+        _collect_focusable_nodes(&scope, nodes);
+        if (nodes.empty()) {
+            return false;
+        }
+        _transition_focus(nodes.front());
+        return true;
+    }
+
+    auto NanSceneTree::focus_next_within(NanNode& scope) -> bool {
+        if (!scope.is_inside_tree() || scope.get_tree() != this) {
+            return false;
+        }
+        std::vector<NanNode2D*> nodes;
+        _collect_focusable_nodes(&scope, nodes);
+        if (nodes.empty()) {
+            return false;
+        }
+        const auto found = std::ranges::find(nodes, focused_node_.lock().get());
+        _transition_focus(
+            found == nodes.end() || std::next(found) == nodes.end()
+                ? nodes.front()
+                : *std::next(found)
+        );
+        return true;
+    }
+
+    auto NanSceneTree::focus_previous_within(NanNode& scope) -> bool {
+        if (!scope.is_inside_tree() || scope.get_tree() != this) {
+            return false;
+        }
+        std::vector<NanNode2D*> nodes;
+        _collect_focusable_nodes(&scope, nodes);
+        if (nodes.empty()) {
+            return false;
+        }
+        const auto found = std::ranges::find(nodes, focused_node_.lock().get());
+        _transition_focus(
+            found == nodes.end() || found == nodes.begin() ? nodes.back() : *std::prev(found)
+        );
+        return true;
+    }
+
     auto NanSceneTree::queue_delete(NanNode& node) -> void {
         for (const auto& queued_weak: delete_queue_) {
             auto queued = queued_weak.lock();

@@ -101,7 +101,7 @@ jobs:
           meson test -C buildDir-asan --print-errorlogs \
             foundation contrast font scene render image reactive widget \
             authoring build-context-header router async viewport-scaling \
-            window-metrics linux-clipboard overlay anchored-positioner \
+            window-metrics linux-clipboard overlay anchored-positioner dismiss-layer focus-scope \
             button theme-design-system checkbox slider switch \
             badge card progress-bar radio-button theme-families color tabs tooltip select \
             basic-widgets dialog animation system-fonts resource font-resource \

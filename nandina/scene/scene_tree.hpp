@@ -176,6 +176,15 @@ namespace nandina::scene
         /// Move focus backward through the tree's focusable nodes.
         auto focus_previous() -> void;
 
+        /// Focus the first focusable node contained by `scope`.
+        auto focus_first_within(NanNode& scope) -> bool;
+
+        /// Move focus forward within `scope`, wrapping at its boundary.
+        auto focus_next_within(NanNode& scope) -> bool;
+
+        /// Move focus backward within `scope`, wrapping at its boundary.
+        auto focus_previous_within(NanNode& scope) -> bool;
+
         // ---- deferred deletion ----
 
         /**
