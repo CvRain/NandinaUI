@@ -18,10 +18,12 @@
 #include "../scene/clipboard.hpp"
 #include "../scene/control.hpp"
 #include "../scene/input_event.hpp"
+#include "../widget/internal/overlay_host.hpp"
 
 #include <raylib.h>
 
 #include <cstdlib>
+#include <stdexcept>
 #include <utility>
 
 namespace nandina::app
@@ -95,7 +97,8 @@ namespace nandina::app
 
     NanWindow::NanWindow(NanApplication& app, WindowConfig config):
         app_(app),
-        config_(std::move(config)) {
+        config_(std::move(config)),
+        overlay_host_(widget::internal::OverlayHost::create()) {
         tree_.set_theme_manager(app_.theme_manager());
     }
 
@@ -107,7 +110,27 @@ namespace nandina::app
     }
 
     void NanWindow::set_content(std::shared_ptr<scene::NanNode2D> root) {
-        tree_.set_root(std::move(root));
+        if (!root) {
+            tree_.set_root(nullptr);
+            return;
+        }
+        auto* control = root->as_control();
+        if (control == nullptr) {
+            throw std::invalid_argument(
+                "NanWindow::set_content: root must be a NanControl so it can live in the "
+                "window content layer"
+            );
+        }
+        // The window owns one overlay portal per window. Application content sits in
+        // its content layer; floating content presented through `overlay_host()` is
+        // drawn above it and escapes parent clipping.
+        auto content = std::shared_ptr<scene::NanControl>(std::move(root), control);
+        (void)overlay_host_->set_content(std::move(content));
+        tree_.set_root(overlay_host_);
+    }
+
+    auto NanWindow::overlay_host() -> widget::internal::OverlayHost& {
+        return *overlay_host_;
     }
 
     auto NanWindow::use_router() -> NanRouter& {
@@ -120,7 +143,8 @@ namespace nandina::app
             &app_.font_loader(),
             &app_.font_families(),
             &app_.dispatcher(),
-            &app_.background_executor()
+            &app_.background_executor(),
+            overlay_host_.get()
         );
         set_content(router_->host());
         return *router_;
@@ -162,6 +186,7 @@ namespace nandina::app
         SetConfigFlags(flags);
 
         InitWindow(config_.width, config_.height, config_.title.c_str());
+        SetExitKey(KEY_NULL);
         SetTargetFPS(config_.target_fps);
         tree_.set_clipboard(desktop_clipboard);
 

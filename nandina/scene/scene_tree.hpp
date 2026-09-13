@@ -207,7 +207,20 @@ namespace nandina::scene
         [[nodiscard]] auto hit_test(foundation::NanPoint world_point) const -> NanNode2D*;
 
     private:
-        static auto _hit_test_node(NanNode2D* node, foundation::NanPoint world_point) -> NanNode2D*;
+        static auto _hit_test_node(
+            NanNode2D* node,
+            foundation::NanPoint world_point,
+            bool* blocked
+        ) -> NanNode2D*;
+        /// LayerStack-aware hit testing: walk layers front-to-back and honour each
+        /// layer's input mode. Applies wherever a LayerStack appears in the tree,
+        /// not only when it is the root. Sets `*blocked` when a `block_below` layer
+        /// swallows the point so ancestors stop and do not report themselves hit.
+        [[nodiscard]] static auto _hit_test_layer_stack(
+            LayerStack* stack,
+            foundation::NanPoint world_point,
+            bool* blocked
+        ) -> NanNode2D*;
         static void _collect_focusable_nodes(NanNode* node, std::vector<NanNode2D*>& out);
         [[nodiscard]] static auto _find_semantics_source(NanNode* node, semantics::SemanticsId id)
             -> NanNode*;
@@ -224,6 +237,13 @@ namespace nandina::scene
         [[nodiscard]] static auto _input_enabled_for(const NanNode* node) -> bool;
         auto _flush_deletes() -> void;
         auto _layout_root_once(foundation::NanSize viewport_size) -> bool;
+        /// Lay out every screen-space layer root of this stack against the viewport.
+        [[nodiscard]] static auto
+        _layout_layer_stack(LayerStack& stack, foundation::NanSize viewport_size) -> bool;
+        /// Find LayerStacks anywhere below `node` and lay out their layers. Needed
+        /// because a LayerStack is a NanNode2D, so ordinary control layout skips it.
+        [[nodiscard]] static auto
+        _layout_nested_layer_stacks(NanNode2D* node, foundation::NanSize viewport_size) -> bool;
         void on_theme_revision_changed(const theme::ThemeManager& manager) override;
         void on_theme_manager_destroyed(const theme::ThemeManager& manager) noexcept override;
 

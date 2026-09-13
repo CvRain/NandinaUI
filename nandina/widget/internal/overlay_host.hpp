@@ -13,6 +13,7 @@ namespace nandina::widget::internal
 {
     struct OverlayOptions {
         int order = 0;
+        bool block_below = false;
     };
 
     class OverlayHost;
@@ -57,11 +58,13 @@ namespace nandina::widget::internal
         struct Entry {
             std::uint64_t id = 0;
             std::weak_ptr<scene::NanControl> control;
+            bool block_below = false;
         };
 
         OverlayHost() = default;
         void initialize();
         auto close(std::uint64_t id) -> bool;
+        void update_input_mode();
 
         friend class OverlayHandle;
 

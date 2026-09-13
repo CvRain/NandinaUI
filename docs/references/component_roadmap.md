@@ -20,7 +20,7 @@ NandinaUI 不以逐项复制其他组件库为目标。[shadcn/ui Components](ht
 
 ## 阶段 1：浮层基础设施
 
-当前进度：`OverlayHost` / portal 与 `AnchoredPositioner` 已经完成；窗口服务接入、关闭和焦点能力尚未实现。
+当前进度：`OverlayHost` / portal、`AnchoredPositioner`、窗口服务接入、关闭和焦点能力均已完成基础实现。
 
 优先实现内部能力，而不是立即增加多个公开控件：
 

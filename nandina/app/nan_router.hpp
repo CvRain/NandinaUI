@@ -43,7 +43,8 @@ namespace nandina::app
             text::FontLoader* font_loader = nullptr,
             text::FontFamilyRegistry* font_families = nullptr,
             UiDispatcher* dispatcher = nullptr,
-            BackgroundExecutor* background_executor = nullptr
+            BackgroundExecutor* background_executor = nullptr,
+            widget::internal::OverlayHost* overlay_host = nullptr
         );
         explicit NanRouter(
             reactive::Graph& graph,
@@ -54,7 +55,8 @@ namespace nandina::app
             text::FontLoader* font_loader = nullptr,
             text::FontFamilyRegistry* font_families = nullptr,
             UiDispatcher* dispatcher = nullptr,
-            BackgroundExecutor* background_executor = nullptr
+            BackgroundExecutor* background_executor = nullptr,
+            widget::internal::OverlayHost* overlay_host = nullptr
         );
         ~NanRouter() = default;
 
@@ -196,6 +198,7 @@ namespace nandina::app
         text::FontFamilyRegistry* font_families_ = nullptr;
         UiDispatcher* dispatcher_ = nullptr;
         BackgroundExecutor* background_executor_ = nullptr;
+        widget::internal::OverlayHost* overlay_host_ = nullptr;
         std::shared_ptr<scene::NanControl> host_;
         std::vector<Frame> frames_;
         /// 淡出中的页面：生命周期（scope/async）保留，淡出完成后销毁。

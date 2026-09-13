@@ -41,6 +41,11 @@ namespace nandina::reactive
     class Graph;
 }
 
+namespace nandina::widget::internal
+{
+    class OverlayHost;
+} // namespace nandina::widget::internal
+
 namespace nandina::app
 {
 
@@ -75,6 +80,10 @@ namespace nandina::app
         [[nodiscard]] auto scene_tree() -> scene::NanSceneTree& {
             return tree_;
         }
+
+        /// 本窗口默认安装的浮层托管。应用内容位于其 content layer，页面/组件通过
+        /// `BuildContext::overlay_host()` 取得同一实例来呈现浮层。
+        [[nodiscard]] auto overlay_host() -> widget::internal::OverlayHost&;
 
         [[nodiscard]] auto config() const -> const WindowConfig& {
             return config_;
@@ -118,6 +127,9 @@ namespace nandina::app
         NanApplication& app_;
         WindowConfig config_;
         scene::NanSceneTree tree_;
+        /// Window-level overlay portal; always the scene tree root. Owns the content
+        /// layer (application/router content) and the overlay layer (presented 浮层).
+        std::shared_ptr<widget::internal::OverlayHost> overlay_host_;
         std::unique_ptr<NanRouter> router_;
         std::unique_ptr<render::IRenderDevice> device_;
         std::unique_ptr<render::TextureCache> texture_cache_;

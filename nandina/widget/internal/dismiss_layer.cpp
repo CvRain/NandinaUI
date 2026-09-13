@@ -29,6 +29,10 @@ namespace nandina::widget::internal
     }
 
     auto DismissLayer::on_input(scene::InputEvent& event) -> bool {
+        return on_input_capture(event);
+    }
+
+    auto DismissLayer::on_input_capture(scene::InputEvent& event) -> bool {
         if (event.type() == scene::EventType::mouse_button) {
             auto& pointer = static_cast<scene::MouseButtonEvent&>(event);
             if (pointer.is_pressed() && pointer.button() == scene::MouseButtonEvent::Button::left) {

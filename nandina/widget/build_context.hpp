@@ -15,6 +15,7 @@
 #include <concepts>
 #include <functional>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -27,6 +28,11 @@ namespace nandina::resource
 
 namespace nandina::widget
 {
+    namespace internal
+    {
+        class OverlayHost;
+    } // namespace internal
+
     namespace build_context_detail
     {
         template<typename Source>
@@ -42,9 +48,10 @@ namespace nandina::widget
             reactive::Graph& graph,
             reactive::ReactiveScope& scope,
             theme::ThemeManager& themes,
-            resource::ResourceManager* resources = nullptr
+            resource::ResourceManager* resources = nullptr,
+            internal::OverlayHost* overlays = nullptr
         ) noexcept:
-            BuildContext(graph, scope, themes, scope, resources) {}
+            BuildContext(graph, scope, themes, scope, resources, overlays) {}
 
         [[nodiscard]] auto graph() const noexcept -> reactive::Graph& {
             return *graph_;
@@ -66,9 +73,24 @@ namespace nandina::widget
             return resources_;
         }
 
+        [[nodiscard]] auto has_overlay_host() const noexcept -> bool {
+            return overlays_ != nullptr;
+        }
+
+        /// Overlay portal service installed by the owning window. Floating
+        /// components (Tooltip/Select/Dialog) present through this host so their
+        /// content escapes parent clipping. Throws when no window provides one,
+        /// e.g. in a detached test context.
+        [[nodiscard]] auto overlay_host() const -> internal::OverlayHost& {
+            if (overlays_ == nullptr) {
+                throw std::runtime_error("BuildContext::overlay_host: service is unavailable");
+            }
+            return *overlays_;
+        }
+
         [[nodiscard]] auto with_scope(reactive::ReactiveScope& scope) const noexcept
             -> BuildContext {
-            return BuildContext(*graph_, scope, *themes_, *callback_scope_, resources_);
+            return BuildContext(*graph_, scope, *themes_, *callback_scope_, resources_, overlays_);
         }
 
         template<typename T, typename... Args>
@@ -163,13 +185,15 @@ namespace nandina::widget
             reactive::ReactiveScope& scope,
             theme::ThemeManager& themes,
             reactive::ReactiveScope& callback_scope,
-            resource::ResourceManager* resources
+            resource::ResourceManager* resources,
+            internal::OverlayHost* overlays
         ) noexcept:
             graph_(&graph),
             scope_(&scope),
             themes_(&themes),
             callback_scope_(&callback_scope),
-            resources_(resources) {}
+            resources_(resources),
+            overlays_(overlays) {}
 
         template<typename Node, typename... Args>
         [[nodiscard]] auto make_scoped_component(Args&&... args) const
@@ -347,6 +371,7 @@ namespace nandina::widget
         theme::ThemeManager* themes_;
         reactive::ReactiveScope* callback_scope_;
         resource::ResourceManager* resources_ = nullptr;
+        internal::OverlayHost* overlays_ = nullptr;
     };
 
 } // namespace nandina::widget

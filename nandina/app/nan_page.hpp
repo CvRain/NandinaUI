@@ -66,7 +66,8 @@ namespace nandina::app
             text::FontFamilyRegistry* font_families = nullptr,
             AsyncScope* async_scope = nullptr,
             theme::ThemeManager* theme_manager = nullptr,
-            UiDispatcher* dispatcher = nullptr
+            UiDispatcher* dispatcher = nullptr,
+            widget::internal::OverlayHost* overlay_host = nullptr
         ):
             router_(&router),
             graph_(&graph),
@@ -79,7 +80,8 @@ namespace nandina::app
             font_families_(font_families),
             async_scope_(async_scope),
             theme_manager_(theme_manager),
-            dispatcher_(dispatcher) {}
+            dispatcher_(dispatcher),
+            overlay_host_(overlay_host) {}
 
         [[nodiscard]] auto router() -> NanRouter& {
             return *router_;
@@ -109,7 +111,13 @@ namespace nandina::app
         }
 
         [[nodiscard]] auto ui() -> widget::BuildContext {
-            return widget::BuildContext(graph(), scope(), theme_manager(), resources_);
+            return widget::BuildContext(
+                graph(),
+                scope(),
+                theme_manager(),
+                resources_,
+                overlay_host_
+            );
         }
 
         [[nodiscard]] auto has_store() const -> bool {
@@ -140,6 +148,20 @@ namespace nandina::app
                 throw std::runtime_error("PageContext::dispatcher: service is unavailable");
             }
             return *dispatcher_;
+        }
+
+        [[nodiscard]] auto has_overlay_host() const noexcept -> bool {
+            return overlay_host_ != nullptr;
+        }
+
+        /// Window-installed overlay portal. Pages normally reach it through
+        /// `ui().overlay_host()`; this accessor exists for contexts that need it
+        /// without constructing a BuildContext.
+        [[nodiscard]] auto overlay_host() -> widget::internal::OverlayHost& {
+            if (overlay_host_ == nullptr) {
+                throw std::runtime_error("PageContext::overlay_host: service is unavailable");
+            }
+            return *overlay_host_;
         }
 
         [[nodiscard]] auto resources() -> resource::ResourceManager& {
@@ -187,6 +209,7 @@ namespace nandina::app
         AsyncScope* async_scope_ = nullptr;
         theme::ThemeManager* theme_manager_ = nullptr;
         UiDispatcher* dispatcher_ = nullptr;
+        widget::internal::OverlayHost* overlay_host_ = nullptr;
     };
 
     class NanPage {

@@ -81,7 +81,8 @@ namespace nandina::app
         text::FontLoader* font_loader,
         text::FontFamilyRegistry* font_families,
         UiDispatcher* dispatcher,
-        BackgroundExecutor* background_executor
+        BackgroundExecutor* background_executor,
+        widget::internal::OverlayHost* overlay_host
     ):
         graph_(&graph),
         theme_(&theme),
@@ -92,6 +93,7 @@ namespace nandina::app
         font_families_(font_families),
         dispatcher_(dispatcher),
         background_executor_(background_executor),
+        overlay_host_(overlay_host),
         host_(std::make_shared<PageHost>()) {
         static_cast<PageHost*>(host_.get())->on_tick = [this] { drop_completed_exits(); };
     }
@@ -105,7 +107,8 @@ namespace nandina::app
         text::FontLoader* font_loader,
         text::FontFamilyRegistry* font_families,
         UiDispatcher* dispatcher,
-        BackgroundExecutor* background_executor
+        BackgroundExecutor* background_executor,
+        widget::internal::OverlayHost* overlay_host
     ):
         NanRouter(
             graph,
@@ -116,7 +119,8 @@ namespace nandina::app
             font_loader,
             font_families,
             dispatcher,
-            background_executor
+            background_executor,
+            overlay_host
         ) {
         theme_manager_ = &theme_manager;
     }
@@ -236,7 +240,8 @@ namespace nandina::app
             font_families_,
             async_scope.get(),
             theme_manager_,
-            dispatcher_
+            dispatcher_,
+            overlay_host_
         };
         auto root = page->build(context);
         if (!root) {
@@ -361,7 +366,8 @@ namespace nandina::app
             font_families_,
             frame.async_scope.get(),
             theme_manager_,
-            dispatcher_
+            dispatcher_,
+            overlay_host_
         };
     }
 

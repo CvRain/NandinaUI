@@ -123,8 +123,9 @@ namespace nandina::widget::internal
 
         overlay->set_z_index(options.order);
         const auto id = next_id_++;
-        entries_.push_back(Entry {.id = id, .control = overlay});
+        entries_.push_back(Entry {.id = id, .control = overlay, .block_below = options.block_below});
         overlay_surface_->add_child(std::move(overlay));
+        update_input_mode();
         return OverlayHandle {std::static_pointer_cast<OverlayHost>(shared_from_this()), id};
     }
 
@@ -148,6 +149,16 @@ namespace nandina::widget::internal
         if (overlay != nullptr && overlay->parent() == overlay_surface_.get()) {
             overlay_surface_->remove_and_delete(*overlay);
         }
+        update_input_mode();
         return true;
+    }
+
+    void OverlayHost::update_input_mode() {
+        const bool blocks = std::ranges::any_of(entries_, [](const Entry& entry) {
+            return entry.block_below;
+        });
+        overlay_layer_->set_input_mode(
+            blocks ? scene::LayerInputMode::block_below : scene::LayerInputMode::pass
+        );
     }
 }

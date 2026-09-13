@@ -11,6 +11,7 @@
 #include <nandina/scene/input_event.hpp>
 #include <nandina/theme/theme.hpp>
 #include <nandina/widget/controls.hpp>
+#include <nandina/widget/internal/overlay_host.hpp>
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
@@ -249,6 +250,37 @@ namespace
             tree.advance_animations(dt);
         }
     }
+
+    /// Records what a page sees of the window-installed overlay portal.
+    struct OverlayProbe {
+        bool context_has = false;
+        bool ui_has = false;
+        widget::internal::OverlayHost* context_host = nullptr;
+        widget::internal::OverlayHost* ui_host = nullptr;
+    };
+
+    OverlayProbe g_overlay_probe;
+
+    class OverlayProbePage final: public app::NanPageT<app::NoParams> {
+    public:
+        [[nodiscard]] auto route_key() const -> std::string_view override {
+            return "overlay-probe";
+        }
+
+        [[nodiscard]] auto build(app::PageContext& context)
+            -> std::shared_ptr<scene::NanNode2D> override {
+            g_overlay_probe.context_has = context.has_overlay_host();
+            if (g_overlay_probe.context_has) {
+                g_overlay_probe.context_host = &context.overlay_host();
+            }
+            auto ui = context.ui();
+            g_overlay_probe.ui_has = ui.has_overlay_host();
+            if (g_overlay_probe.ui_has) {
+                g_overlay_probe.ui_host = &ui.overlay_host();
+            }
+            return std::make_shared<scene::NanControl>(foundation::NanSize(10.0F, 10.0F));
+        }
+    };
 } // namespace
 
 TEST_CASE("router pushes keep-alive pages and toggles top visibility", "[app][router]") {
@@ -739,4 +771,30 @@ TEST_CASE("router with transition disabled drops pages immediately", "[app][rout
     // 关闭转场：host 直接持有页面根（无包装），pop 即时销毁。
     REQUIRE(router.pop());
     REQUIRE(destroyed);
+}
+
+TEST_CASE("router forwards the window overlay portal into page build contexts", "[app][router][overlay]") {
+    reactive::Graph graph;
+    theme::ThemeManager themes;
+    auto host = widget::internal::OverlayHost::create();
+    g_overlay_probe = {};
+
+    app::NanRouter router {
+        graph,
+        themes,
+        nullptr,
+        nullptr,
+        nullptr,
+        nullptr,
+        nullptr,
+        nullptr,
+        nullptr,
+        host.get()
+    };
+    router.push<OverlayProbePage>();
+
+    REQUIRE(g_overlay_probe.context_has);
+    REQUIRE(g_overlay_probe.context_host == host.get());
+    REQUIRE(g_overlay_probe.ui_has);
+    REQUIRE(g_overlay_probe.ui_host == host.get());
 }

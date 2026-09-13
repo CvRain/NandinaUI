@@ -417,33 +417,72 @@ namespace nandina::scene
         animation_host_->advance(dt);
     }
 
-    auto NanSceneTree::_layout_root_once(const foundation::NanSize viewport_size) -> bool {
-        if (auto* stack = root_ != nullptr ? root_->as_layer_stack() : nullptr;
-            stack != nullptr) {
-            bool laid_out = false;
+    auto NanSceneTree::_layout_layer_stack(
+        LayerStack& stack,
+        const foundation::NanSize viewport_size
+    ) -> bool {
+        bool laid_out = false;
+        for (auto* layer: stack.layers_in_order()) {
+            auto* control = layer->space() == CanvasSpace::screen ? layer->layout_root() : nullptr;
+            if (control == nullptr || (!control->layout_dirty() && control->size() == viewport_size)) {
+                continue;
+            }
+            (void)control->measure_layout(LayoutConstraints::tight(viewport_size));
+            control->layout_to(foundation::NanRect::from_origin_size(
+                foundation::NanPoint::zero(), viewport_size
+            ));
+            laid_out = true;
+        }
+        return laid_out;
+    }
+
+    auto NanSceneTree::_layout_nested_layer_stacks(
+        NanNode2D* node,
+        const foundation::NanSize viewport_size
+    ) -> bool {
+        if (node == nullptr) {
+            return false;
+        }
+        if (auto* stack = node->as_layer_stack(); stack != nullptr) {
+            bool laid_out = _layout_layer_stack(*stack, viewport_size);
             for (auto* layer: stack->layers_in_order()) {
                 auto* control = layer->space() == CanvasSpace::screen ? layer->layout_root() : nullptr;
-                if (control == nullptr
-                    || (!control->layout_dirty() && control->size() == viewport_size)) {
-                    continue;
+                if (control != nullptr && control != node) {
+                    laid_out = _layout_nested_layer_stacks(control, viewport_size) || laid_out;
                 }
-                (void)control->measure_layout(LayoutConstraints::tight(viewport_size));
-                control->layout_to(foundation::NanRect::from_origin_size(
-                    foundation::NanPoint::zero(), viewport_size
-                ));
-                laid_out = true;
             }
             return laid_out;
         }
-        auto* control = root_ != nullptr ? root_->as_control() : nullptr;
-        if (control == nullptr || (!control->layout_dirty() && control->size() == viewport_size)) {
-            return false;
+        bool laid_out = false;
+        for (std::size_t index = 0; index < node->child_count(); ++index) {
+            auto* raw = node->get_child(index);
+            auto* child = raw != nullptr ? raw->as_node2d() : nullptr;
+            if (child != nullptr) {
+                laid_out = _layout_nested_layer_stacks(child, viewport_size) || laid_out;
+            }
         }
-        (void)control->measure_layout(LayoutConstraints::tight(viewport_size));
-        control->layout_to(foundation::NanRect::from_origin_size(
-            foundation::NanPoint::zero(), viewport_size
-        ));
-        return true;
+        return laid_out;
+    }
+
+    auto NanSceneTree::_layout_root_once(const foundation::NanSize viewport_size) -> bool {
+        if (auto* stack = root_ != nullptr ? root_->as_layer_stack() : nullptr;
+            stack != nullptr) {
+            return _layout_layer_stack(*stack, viewport_size);
+        }
+
+        bool laid_out = false;
+        auto* control = root_ != nullptr ? root_->as_control() : nullptr;
+        if (control != nullptr && (control->layout_dirty() || control->size() != viewport_size)) {
+            (void)control->measure_layout(LayoutConstraints::tight(viewport_size));
+            control->layout_to(foundation::NanRect::from_origin_size(
+                foundation::NanPoint::zero(), viewport_size
+            ));
+            laid_out = true;
+        }
+        if (root_ != nullptr) {
+            laid_out = _layout_nested_layer_stacks(root_.get(), viewport_size) || laid_out;
+        }
+        return laid_out;
     }
 
     auto NanSceneTree::layout_root(const foundation::NanSize viewport_size) -> std::size_t {
@@ -737,43 +776,77 @@ namespace nandina::scene
             return nullptr;
         }
 
+        bool blocked = false;
         if (auto* stack = root_->as_layer_stack(); stack != nullptr) {
-            for (auto* layer: stack->layers_in_order(true)) {
-                if (!layer->is_visible_in_tree() || layer->input_mode() == LayerInputMode::disabled) {
-                    continue;
-                }
-                const auto child_count = layer->child_count();
-                if (child_count > 0) {
-                    std::vector<std::size_t> indices(child_count);
-                    std::iota(indices.begin(), indices.end(), static_cast<std::size_t>(0));
-                    std::ranges::stable_sort(indices, [layer](const std::size_t a, const std::size_t b) {
-                        const auto* lhs = layer->get_child(a);
-                        const auto* rhs = layer->get_child(b);
-                        return (lhs != nullptr ? lhs->subtree_z_index_hint() : 0)
-                            > (rhs != nullptr ? rhs->subtree_z_index_hint() : 0);
-                    });
-                    for (const auto index: indices) {
-                        auto* child = layer->get_child(index);
-                        auto* node = child != nullptr ? child->as_node2d() : nullptr;
-                        if (auto* hit = _hit_test_node(node, world_point); hit != nullptr) {
-                            return hit;
-                        }
-                    }
-                }
-                if (layer->input_mode() == LayerInputMode::block_below) {
-                    return nullptr;
-                }
-            }
+            return _hit_test_layer_stack(stack, world_point, &blocked);
+        }
+
+        return _hit_test_node(root_.get(), world_point, &blocked);
+    }
+
+    auto NanSceneTree::_hit_test_layer_stack(
+        LayerStack* stack,
+        const foundation::NanPoint world_point,
+        bool* blocked
+    ) -> NanNode2D* {
+        if (stack == nullptr) {
             return nullptr;
         }
 
-        return _hit_test_node(root_.get(), world_point);
+        for (auto* layer: stack->layers_in_order(true)) {
+            if (!layer->is_visible_in_tree() || layer->input_mode() == LayerInputMode::disabled) {
+                continue;
+            }
+            const auto child_count = layer->child_count();
+            if (child_count > 0) {
+                std::vector<std::size_t> indices(child_count);
+                std::iota(indices.begin(), indices.end(), static_cast<std::size_t>(0));
+                std::ranges::stable_sort(indices, [layer](const std::size_t a, const std::size_t b) {
+                    const auto* lhs = layer->get_child(a);
+                    const auto* rhs = layer->get_child(b);
+                    return (lhs != nullptr ? lhs->subtree_z_index_hint() : 0)
+                        > (rhs != nullptr ? rhs->subtree_z_index_hint() : 0);
+                });
+                for (const auto index: indices) {
+                    auto* child = layer->get_child(index);
+                    auto* node = child != nullptr ? child->as_node2d() : nullptr;
+                    bool child_blocked = false;
+                    if (auto* hit = _hit_test_node(node, world_point, &child_blocked);
+                        hit != nullptr) {
+                        return hit;
+                    }
+                    if (child_blocked) {
+                        if (blocked != nullptr) {
+                            *blocked = true;
+                        }
+                        return nullptr;
+                    }
+                }
+            }
+            if (layer->input_mode() == LayerInputMode::block_below) {
+                if (blocked != nullptr) {
+                    *blocked = true;
+                }
+                return nullptr;
+            }
+        }
+        return nullptr;
     }
 
-    auto NanSceneTree::_hit_test_node(NanNode2D* node, const foundation::NanPoint world_point)
-        -> NanNode2D* {
+    auto NanSceneTree::_hit_test_node(
+        NanNode2D* node,
+        const foundation::NanPoint world_point,
+        bool* blocked
+    ) -> NanNode2D* {
         if (!node || !node->is_visible_in_tree()) {
             return nullptr;
+        }
+
+        // A LayerStack nested below the root still owns screen-space layers with
+        // their own ordering and input modes; delegate instead of treating it as a
+        // plain node.
+        if (auto* stack = node->as_layer_stack(); stack != nullptr) {
+            return _hit_test_layer_stack(stack, world_point, blocked);
         }
 
         bool visit_children = true;
@@ -809,8 +882,16 @@ namespace nandina::scene
                     continue;
                 }
 
-                if (auto* hit = _hit_test_node(child, world_point)) {
+                bool child_blocked = false;
+                if (auto* hit = _hit_test_node(child, world_point, &child_blocked);
+                    hit != nullptr) {
                     return hit;
+                }
+                if (child_blocked) {
+                    if (blocked != nullptr) {
+                        *blocked = true;
+                    }
+                    return nullptr;
                 }
             }
         }
