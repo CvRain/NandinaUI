@@ -82,7 +82,7 @@ namespace nandina::app
         text::FontFamilyRegistry* font_families,
         UiDispatcher* dispatcher,
         BackgroundExecutor* background_executor,
-        widget::internal::OverlayHost* overlay_host
+        scene::OverlayHost* overlay_host
     ):
         graph_(&graph),
         theme_(&theme),
@@ -108,7 +108,7 @@ namespace nandina::app
         text::FontFamilyRegistry* font_families,
         UiDispatcher* dispatcher,
         BackgroundExecutor* background_executor,
-        widget::internal::OverlayHost* overlay_host
+        scene::OverlayHost* overlay_host
     ):
         NanRouter(
             graph,

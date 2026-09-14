@@ -10,6 +10,8 @@
 namespace nandina::scene
 {
 
+    class OverlayHost;
+
     enum class CanvasSpace {
         world,
         screen,
@@ -76,6 +78,16 @@ namespace nandina::scene
 
         [[nodiscard]] auto as_layer_stack() -> LayerStack* override { return this; }
         [[nodiscard]] auto as_layer_stack() const -> const LayerStack* override { return this; }
+        /// Explicit, RTTI-free type identification for a layer stack that also hosts
+        /// the overlay portal. A plain LayerStack keeps the nullptr default; only
+        /// OverlayHost overrides it, so no unverified downcast is needed. Both sides
+        /// live in scene, so the kernel never names a higher-layer type.
+        [[nodiscard]] virtual auto as_overlay_host() -> OverlayHost* {
+            return nullptr;
+        }
+        [[nodiscard]] virtual auto as_overlay_host() const -> const OverlayHost* {
+            return nullptr;
+        }
         [[nodiscard]] auto accepts_child(const NanNode& child) const -> bool override {
             return child.as_canvas_layer() != nullptr;
         }

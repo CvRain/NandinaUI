@@ -18,7 +18,7 @@
 #include "../scene/clipboard.hpp"
 #include "../scene/control.hpp"
 #include "../scene/input_event.hpp"
-#include "../widget/internal/overlay_host.hpp"
+#include "../scene/overlay_host.hpp"
 
 #include <raylib.h>
 
@@ -98,7 +98,7 @@ namespace nandina::app
     NanWindow::NanWindow(NanApplication& app, WindowConfig config):
         app_(app),
         config_(std::move(config)),
-        overlay_host_(widget::internal::OverlayHost::create()) {
+        overlay_host_(scene::OverlayHost::create()) {
         tree_.set_theme_manager(app_.theme_manager());
     }
 
@@ -129,7 +129,7 @@ namespace nandina::app
         tree_.set_root(overlay_host_);
     }
 
-    auto NanWindow::overlay_host() -> widget::internal::OverlayHost& {
+    auto NanWindow::overlay_host() -> scene::OverlayHost& {
         return *overlay_host_;
     }
 

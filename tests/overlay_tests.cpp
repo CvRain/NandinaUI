@@ -1,5 +1,5 @@
 #include <nandina/scene/scene_tree.hpp>
-#include <nandina/widget/internal/overlay_host.hpp>
+#include <nandina/scene/overlay_host.hpp>
 #include <nandina/widget/internal/dismiss_layer.hpp>
 
 #include <catch2/catch_test_macros.hpp>
@@ -24,7 +24,7 @@ namespace
 }
 
 TEST_CASE("overlay host lays out content and portal surface to the viewport", "[overlay][layout]") {
-    auto host = widget::internal::OverlayHost::create();
+    auto host = scene::OverlayHost::create();
     auto content = std::make_shared<HitControl>(foundation::NanSize(40.0F, 30.0F));
     host->set_content(content);
     scene::NanSceneTree tree;
@@ -37,7 +37,7 @@ TEST_CASE("overlay host lays out content and portal surface to the viewport", "[
 }
 
 TEST_CASE("presented content is hit above clipped application content", "[overlay][portal][input]") {
-    auto host = widget::internal::OverlayHost::create();
+    auto host = scene::OverlayHost::create();
     auto content = std::make_shared<HitControl>(foundation::NanSize(100.0F, 100.0F));
     content->set_overflow(scene::ControlOverflow::clip);
     host->set_content(content);
@@ -60,7 +60,7 @@ TEST_CASE("presented content is hit above clipped application content", "[overla
 }
 
 TEST_CASE("overlay handles own presentation lifetime and preserve order", "[overlay][lifetime]") {
-    auto host = widget::internal::OverlayHost::create();
+    auto host = scene::OverlayHost::create();
     host->set_content(std::make_shared<HitControl>(foundation::NanSize(200.0F, 100.0F)));
     auto lower = std::make_shared<HitControl>(foundation::NanSize(80.0F, 50.0F));
     auto upper = std::make_shared<HitControl>(foundation::NanSize(80.0F, 50.0F));
@@ -81,7 +81,7 @@ TEST_CASE("overlay handles own presentation lifetime and preserve order", "[over
 }
 
 TEST_CASE("overlay host rejects attached portal content", "[overlay][contract]") {
-    auto host = widget::internal::OverlayHost::create();
+    auto host = scene::OverlayHost::create();
     auto parent = std::make_shared<scene::NanControl>();
     auto attached = std::make_shared<HitControl>(foundation::NanSize(20.0F, 20.0F));
     parent->add_child(attached);
@@ -90,7 +90,7 @@ TEST_CASE("overlay host rejects attached portal content", "[overlay][contract]")
 }
 
 TEST_CASE("modal overlays block hit testing below the overlay layer", "[overlay][modal][input]") {
-    auto host = widget::internal::OverlayHost::create();
+    auto host = scene::OverlayHost::create();
     auto content = std::make_shared<HitControl>(foundation::NanSize(200.0F, 100.0F));
     host->set_content(content);
     auto overlay = std::make_shared<HitControl>(foundation::NanSize(40.0F, 30.0F));
@@ -105,7 +105,7 @@ TEST_CASE("modal overlays block hit testing below the overlay layer", "[overlay]
 }
 
 TEST_CASE("dismiss layer receives clicks outside its content", "[overlay][dismiss][input]") {
-    auto host = widget::internal::OverlayHost::create();
+    auto host = scene::OverlayHost::create();
     host->set_content(std::make_shared<HitControl>(foundation::NanSize(200.0F, 100.0F)));
     bool dismissed = false;
     auto content = std::make_shared<HitControl>(foundation::NanSize(40.0F, 30.0F));
@@ -138,7 +138,7 @@ namespace
     /// ordinary layout. Mirrors NanRouter::PageHost.
     auto make_nested_host(
         scene::NanSceneTree& tree,
-        const std::shared_ptr<widget::internal::OverlayHost>& host
+        const std::shared_ptr<scene::OverlayHost>& host
     ) -> std::shared_ptr<scene::NanControl> {
         auto page_host = std::make_shared<scene::NanControl>(foundation::NanSize(200.0F, 100.0F));
         page_host->add_child(host);
@@ -148,7 +148,7 @@ namespace
 } // namespace
 
 TEST_CASE("nested overlay host lays out its layers against the viewport", "[overlay][nested][layout]") {
-    auto host = widget::internal::OverlayHost::create();
+    auto host = scene::OverlayHost::create();
     auto content = std::make_shared<HitControl>(foundation::NanSize(40.0F, 30.0F));
     host->set_content(content);
     auto overlay = std::make_shared<HitControl>(foundation::NanSize(40.0F, 30.0F));
@@ -166,7 +166,7 @@ TEST_CASE("nested overlay host lays out its layers against the viewport", "[over
 }
 
 TEST_CASE("nested modal overlay blocks hit testing below the overlay layer", "[overlay][nested][modal]") {
-    auto host = widget::internal::OverlayHost::create();
+    auto host = scene::OverlayHost::create();
     auto content = std::make_shared<HitControl>(foundation::NanSize(200.0F, 100.0F));
     host->set_content(content);
     auto overlay = std::make_shared<HitControl>(foundation::NanSize(40.0F, 30.0F));
@@ -184,7 +184,7 @@ TEST_CASE("nested modal overlay blocks hit testing below the overlay layer", "[o
 }
 
 TEST_CASE("nested dismiss layer receives clicks outside its content", "[overlay][nested][dismiss]") {
-    auto host = widget::internal::OverlayHost::create();
+    auto host = scene::OverlayHost::create();
     auto content = std::make_shared<HitControl>(foundation::NanSize(200.0F, 100.0F));
     host->set_content(content);
     bool dismissed = false;

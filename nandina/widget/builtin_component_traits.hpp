@@ -296,7 +296,12 @@ namespace nandina::widget
             std::string text,
             std::shared_ptr<Control> trigger
         ) -> authoring::NodeBuilder<Tooltip> {
-            return authoring::make<Tooltip>(std::move(text), std::move(trigger), ui.theme());
+            return authoring::make<Tooltip>(std::move(text), std::move(trigger), ui.theme())
+                .configure([&ui](Tooltip& tooltip) {
+                    tooltip.set_overlay_service(
+                        ui.has_overlay_host() ? &ui.overlay_host() : nullptr
+                    );
+                });
         }
     };
 

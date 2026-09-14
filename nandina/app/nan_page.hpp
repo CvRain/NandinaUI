@@ -67,7 +67,7 @@ namespace nandina::app
             AsyncScope* async_scope = nullptr,
             theme::ThemeManager* theme_manager = nullptr,
             UiDispatcher* dispatcher = nullptr,
-            widget::internal::OverlayHost* overlay_host = nullptr
+            scene::OverlayHost* overlay_host = nullptr
         ):
             router_(&router),
             graph_(&graph),
@@ -157,7 +157,7 @@ namespace nandina::app
         /// Window-installed overlay portal. Pages normally reach it through
         /// `ui().overlay_host()`; this accessor exists for contexts that need it
         /// without constructing a BuildContext.
-        [[nodiscard]] auto overlay_host() -> widget::internal::OverlayHost& {
+        [[nodiscard]] auto overlay_host() -> scene::OverlayHost& {
             if (overlay_host_ == nullptr) {
                 throw std::runtime_error("PageContext::overlay_host: service is unavailable");
             }
@@ -209,7 +209,7 @@ namespace nandina::app
         AsyncScope* async_scope_ = nullptr;
         theme::ThemeManager* theme_manager_ = nullptr;
         UiDispatcher* dispatcher_ = nullptr;
-        widget::internal::OverlayHost* overlay_host_ = nullptr;
+        scene::OverlayHost* overlay_host_ = nullptr;
     };
 
     class NanPage {

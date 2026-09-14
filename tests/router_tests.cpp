@@ -11,7 +11,7 @@
 #include <nandina/scene/input_event.hpp>
 #include <nandina/theme/theme.hpp>
 #include <nandina/widget/controls.hpp>
-#include <nandina/widget/internal/overlay_host.hpp>
+#include <nandina/scene/overlay_host.hpp>
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
@@ -255,8 +255,8 @@ namespace
     struct OverlayProbe {
         bool context_has = false;
         bool ui_has = false;
-        widget::internal::OverlayHost* context_host = nullptr;
-        widget::internal::OverlayHost* ui_host = nullptr;
+        scene::OverlayHost* context_host = nullptr;
+        scene::OverlayHost* ui_host = nullptr;
     };
 
     OverlayProbe g_overlay_probe;
@@ -776,7 +776,7 @@ TEST_CASE("router with transition disabled drops pages immediately", "[app][rout
 TEST_CASE("router forwards the window overlay portal into page build contexts", "[app][router][overlay]") {
     reactive::Graph graph;
     theme::ThemeManager themes;
-    auto host = widget::internal::OverlayHost::create();
+    auto host = scene::OverlayHost::create();
     g_overlay_probe = {};
 
     app::NanRouter router {

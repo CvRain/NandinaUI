@@ -1,15 +1,15 @@
-#ifndef NANDINA_EXPERIMENT_WIDGET_INTERNAL_OVERLAY_HOST_HPP
-#define NANDINA_EXPERIMENT_WIDGET_INTERNAL_OVERLAY_HOST_HPP
+#ifndef NANDINA_EXPERIMENT_SCENE_OVERLAY_HOST_HPP
+#define NANDINA_EXPERIMENT_SCENE_OVERLAY_HOST_HPP
 
-#include "../../scene/canvas_layer.hpp"
-#include "../../scene/control.hpp"
+#include "canvas_layer.hpp"
+#include "control.hpp"
 
 #include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <vector>
 
-namespace nandina::widget::internal
+namespace nandina::scene
 {
     struct OverlayOptions {
         int order = 0;
@@ -39,25 +39,32 @@ namespace nandina::widget::internal
         std::uint64_t id_ = 0;
     };
 
-    class OverlayHost final: public scene::LayerStack {
+    class OverlayHost final: public LayerStack {
     public:
         [[nodiscard]] static auto create() -> std::shared_ptr<OverlayHost>;
 
-        auto set_content(std::shared_ptr<scene::NanControl> content) -> scene::NanControl&;
-        [[nodiscard]] auto content() const -> scene::NanControl*;
+        auto set_content(std::shared_ptr<NanControl> content) -> NanControl&;
+        [[nodiscard]] auto content() const -> NanControl*;
+        [[nodiscard]] auto as_overlay_host() -> OverlayHost* override { return this; }
+        [[nodiscard]] auto as_overlay_host() const -> const OverlayHost* override { return this; }
 
         [[nodiscard]] auto present(
-            std::shared_ptr<scene::NanControl> overlay,
+            std::shared_ptr<NanControl> overlay,
             OverlayOptions options = {}
         ) -> OverlayHandle;
 
         [[nodiscard]] auto overlay_count() const -> std::size_t;
         [[nodiscard]] auto contains(std::uint64_t id) const -> bool;
 
+        /// Viewport the screen-space layers were last laid out against. Zero before
+        /// the first layout pass. Floating components use this to keep anchored
+        /// content inside the window instead of the trigger's own bounds.
+        [[nodiscard]] auto viewport_size() const -> foundation::NanSize;
+
     private:
         struct Entry {
             std::uint64_t id = 0;
-            std::weak_ptr<scene::NanControl> control;
+            std::weak_ptr<NanControl> control;
             bool block_below = false;
         };
 
@@ -68,9 +75,9 @@ namespace nandina::widget::internal
 
         friend class OverlayHandle;
 
-        std::shared_ptr<scene::CanvasLayer> content_layer_;
-        std::shared_ptr<scene::CanvasLayer> overlay_layer_;
-        std::shared_ptr<scene::NanControl> overlay_surface_;
+        std::shared_ptr<CanvasLayer> content_layer_;
+        std::shared_ptr<CanvasLayer> overlay_layer_;
+        std::shared_ptr<NanControl> overlay_surface_;
         std::vector<Entry> entries_;
         std::uint64_t next_id_ = 1;
     };

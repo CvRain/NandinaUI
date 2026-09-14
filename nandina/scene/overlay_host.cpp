@@ -4,28 +4,28 @@
 #include <stdexcept>
 #include <utility>
 
-namespace nandina::widget::internal
+namespace nandina::scene
 {
     namespace
     {
-        class OverlaySurface final: public scene::NanControl {
+        class OverlaySurface final: public NanControl {
         public:
             [[nodiscard]] auto contains_point(foundation::NanPoint) const -> bool override {
                 return false;
             }
 
-            [[nodiscard]] auto accepts_child(const scene::NanNode& child) const -> bool override {
+            [[nodiscard]] auto accepts_child(const NanNode& child) const -> bool override {
                 return child.as_control() != nullptr;
             }
 
         protected:
-            [[nodiscard]] auto on_measure(scene::LayoutConstraints constraints)
+            [[nodiscard]] auto on_measure(LayoutConstraints constraints)
                 -> foundation::NanSize override {
                 return constraints.constrain(size());
             }
 
             void on_layout() override {
-                const scene::LayoutConstraints child_constraints {
+                const LayoutConstraints child_constraints {
                     .min_width = 0.0F,
                     .max_width = width(),
                     .min_height = 0.0F,
@@ -90,28 +90,28 @@ namespace nandina::widget::internal
     }
 
     void OverlayHost::initialize() {
-        content_layer_ = scene::CanvasLayer::create(scene::CanvasSpace::screen, 0);
-        overlay_layer_ = scene::CanvasLayer::create(scene::CanvasSpace::screen, 1000);
+        content_layer_ = CanvasLayer::create(CanvasSpace::screen, 0);
+        overlay_layer_ = CanvasLayer::create(CanvasSpace::screen, 1000);
         overlay_surface_ = std::make_shared<OverlaySurface>();
         overlay_layer_->set_layout_root(overlay_surface_);
         add_layer(content_layer_);
         add_layer(overlay_layer_);
     }
 
-    auto OverlayHost::set_content(std::shared_ptr<scene::NanControl> content)
-        -> scene::NanControl& {
+    auto OverlayHost::set_content(std::shared_ptr<NanControl> content)
+        -> NanControl& {
         if (!content) {
             throw std::invalid_argument("OverlayHost::set_content: content is null");
         }
         return content_layer_->set_layout_root(std::move(content));
     }
 
-    auto OverlayHost::content() const -> scene::NanControl* {
+    auto OverlayHost::content() const -> NanControl* {
         return content_layer_->layout_root();
     }
 
     auto OverlayHost::present(
-        std::shared_ptr<scene::NanControl> overlay,
+        std::shared_ptr<NanControl> overlay,
         const OverlayOptions options
     ) -> OverlayHandle {
         if (!overlay) {
@@ -139,6 +139,10 @@ namespace nandina::widget::internal
         });
     }
 
+    auto OverlayHost::viewport_size() const -> foundation::NanSize {
+        return overlay_surface_ != nullptr ? overlay_surface_->size() : foundation::NanSize {};
+    }
+
     auto OverlayHost::close(const std::uint64_t id) -> bool {
         const auto found = std::ranges::find(entries_, id, &Entry::id);
         if (found == entries_.end()) {
@@ -158,7 +162,7 @@ namespace nandina::widget::internal
             return entry.block_below;
         });
         overlay_layer_->set_input_mode(
-            blocks ? scene::LayerInputMode::block_below : scene::LayerInputMode::pass
+            blocks ? LayerInputMode::block_below : LayerInputMode::pass
         );
     }
 }

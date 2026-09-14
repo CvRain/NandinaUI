@@ -90,6 +90,8 @@ module_scene = files(
     'scene/scene_tree.cpp',
     'scene/control.hpp',
     'scene/control.cpp',
+    'scene/overlay_host.hpp',
+    'scene/overlay_host.cpp',
 )
 
 module_semantics = files(
@@ -168,8 +170,6 @@ module_widget = files(
     'widget/pointer_area.cpp',
     'widget/gesture_area.hpp',
     'widget/gesture_area.cpp',
-    'widget/internal/overlay_host.hpp',
-    'widget/internal/overlay_host.cpp',
     'widget/internal/anchored_positioner.hpp',
     'widget/internal/anchored_positioner.cpp',
     'widget/internal/dismiss_layer.hpp',
