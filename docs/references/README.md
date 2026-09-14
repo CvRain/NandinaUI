@@ -4,10 +4,24 @@
 
 ## 当前文档
 
+### 架构与约定
+
+- [项目演进与当前形态](project_evolution.md)：四段形态的来龙去脉、迁移到正式仓库的过程，以及阅读旧文档时的注意事项。
+- [模块依赖规则](module_dependency.md)：五层十二模块的分层、单向依赖约束，以及源码中仍然存在的偏离与收口方向。
+- [编码与 API 规范](coding_conventions.md)：命名与命名空间、头文件与包含、API 形态、注释、格式化与测试门槛。
+- [响应式内部模型](reactive_model.md)：依赖图结构、推入失效与拉取求值、effect 调度、作用域清理顺序与已知限制。
+- [设计令牌与主题系统](design_tokens.md)：三层令牌模型、配方与解析优先级、外观切换，以及控件作者的样式规则。
+- [溢出与裁剪契约](overflow_and_clip.md)：容器如何声明裁剪、render 如何执行，以及绘制与命中如何共享同一份语义。
+
+### 组件与浮层
+
 - [组件公共契约](component_contract.md)：新组件在进入推荐 API 前必须满足的状态、事件、绑定、主题、输入和无障碍要求。
 - [组件开发路线图](component_roadmap.md)：当前组件盘点、基础设施依赖和推荐开发顺序。
 - [浮层架构](overlay_architecture.md)：OverlayHost、portal 生命周期、分层规则与后续基础设施边界。
 - [Tooltip 迁移契约](tooltip_migration.md)：Tooltip 接入统一浮层设施时的 API 兼容和验收条件。
+
+### 平台
+
 - [Linux 窗口后端与缩放](linux_window_scaling.md)：Wayland/X11 选择与多显示器 DPI 验证。
 
 ## 编写原则
