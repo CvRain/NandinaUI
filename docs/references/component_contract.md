@@ -92,13 +92,30 @@ DesignSystem 默认值
 
 必须测试亮色/暗色切换、主题替换和显式实例覆盖的优先级。
 
-## 8. Builder 与头文件
+## 8. 类型识别与实现约束
+
+核心代码默认不依赖宏和 RTTI。类型识别应通过显式的虚拟访问器（例如 `as_node2d()`、
+`as_layer_stack()`、`as_overlay_host()`）完成，并在基类返回 `nullptr`。新增节点类型时，
+访问器必须保持 const / 非 const 对称，且不能通过未经验证的 `static_cast` 假定父节点类型。
+
+访问器返回的类型应与基类处于**同一层**。若某个下层设施需要识别一个上层具体类型，正确做法
+是把该设施下移到它真正依赖的那一层，而不是让下层头文件命名上层类型：例如 `OverlayHost`
+只使用 `scene` 的 `LayerStack` / `CanvasLayer` / `NanControl`，因此归属 `scene`，使
+`LayerStack::as_overlay_host()` 返回同层类型，避免 `scene` 向上依赖 `widget`。
+
+组件内部服务优先通过 `BuildContext` 注入；仅在构造函数无法获得上下文时，才沿祖先链使用
+上述安全访问器回退查找。窗口、页面和组件不得通过全局单例取得服务。
+
+实现应优先使用 C++ 类型系统、`enum class`、`std::variant` 和 RAII 表达约束，避免用宏生成
+API 或隐藏生命周期。若确需 RTTI 或宏，应在开发参考中说明原因、作用范围和未来移除路径。
+
+## 9. Builder 与头文件
 
 常用操作应由 NodeBuilder 提供短方法，低频或成组配置可以通过 `.configure()` 完成。ComponentTraits 负责让 `BuildContext::make<T>()` 使用组件的推荐构造路径，并注入主题、资源、Graph 等上下文依赖。
 
 推荐组件必须能通过 `<nandina/widget/controls.hpp>` 使用。primitive 和 internal 类型不应无意间成为入门示例的依赖。
 
-## 9. 测试门槛
+## 10. 测试门槛
 
 组件进入 recommended 前至少覆盖：
 
@@ -112,7 +129,7 @@ DesignSystem 默认值
 - 从场景树移除或销毁时的清理；
 - 边界值和无效参数。
 
-## 10. 兼容性与文档
+## 11. 兼容性与文档
 
 Getting Started 只使用 recommended API。实验性组件必须在组件文档中标记，不应成为后续教程必须依赖的基础。
 

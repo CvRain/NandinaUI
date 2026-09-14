@@ -10,7 +10,7 @@
 
 ## OverlayHost
 
-`widget::internal::OverlayHost` 建立在现有 `scene::LayerStack` 和 `scene::CanvasLayer` 上，拥有两个 screen-space layer：
+`scene::OverlayHost` 建立在现有 `scene::LayerStack` 和 `scene::CanvasLayer` 上，拥有两个 screen-space layer：
 
 ```text
 OverlayHost
@@ -27,6 +27,8 @@ OverlayHost
 `LayerStack` 的逐层布局与逐层命中不要求它位于场景树根部。当它嵌在普通控件之下时（例如通过页面根返回、由 Router 的 `PageHost` 持有），scene 仍会把每个 screen-space layer 的 layout root 按视口尺寸布局，并在命中测试中遵循 layer 顺序与 `block_below`；`block_below` 吞掉的命中会向上传播，父容器不会把自己报告为命中目标。
 
 `NanWindow` 在构造时创建一个 OverlayHost 并把它作为场景树根：`set_content()` 挂载的应用 / Router 内容进入 content layer，`NanWindow::overlay_host()` 暴露该实例；页面通过 `PageContext::ui().overlay_host()` 取得同一实例并调用 `present()`。页面根因此不再需要自行创建 OverlayHost。
+
+OverlayHost 归属 `scene` 而非 `widget::internal`：它只使用 `LayerStack` / `CanvasLayer` / `NanControl`，没有 widget 依赖；若留在上层的 widget 命名空间，底层的 `LayerStack` 就必须向上引用 widget 类型，违反「禁止向上依赖」的模块规则。`LayerStack::as_overlay_host()` 因此返回同层类型，`widget`/`app` 侧按正确方向（向下）使用它。
 
 ## Portal 生命周期
 
@@ -66,7 +68,6 @@ OverlayHost
 
 ## 后续顺序
 
-1. 先迁移 Tooltip 验证非模态定位；
-2. 再迁移 Select 和 Dialog，保持它们现有公开构建方式兼容。
+1. 迁移 Select 的 popup 与 Dialog 的模态内容，保持它们现有公开构建方式兼容。
 
 在上述迁移完成前，OverlayHost 不应进入 `<nandina/widget/controls.hpp>`，Getting Started 也不应直接使用它。

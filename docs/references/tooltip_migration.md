@@ -36,4 +36,14 @@ OverlayHost / overlay layer
 - Tooltip 卸载或触发器替换时，`OverlayHandle` 不泄漏；
 - 无窗口服务的 detached 单元测试仍可测试文本、主题和计时逻辑。
 
+## 实现状态
+
+迁移已完成：
+
+- `ComponentTraits<Tooltip>` 在构建时注入 `BuildContext::overlay_host()`；`Tooltip::create()` 没有构建上下文时回退到最近的祖先 `OverlayHost`（窗口把它安装为场景树根）；
+- 气泡是纯展示控件（`contains_point` 恒为 false），既不参与命中也不阻断 content layer 输入；
+- 气泡由 `AnchoredPositioner` 定位，视口取 `OverlayHost::viewport_size()`；触发器在滚动或布局中移动时每帧重定位，视口尚未布局或触发器尺寸无效时跳过本次定位；
+- 文本管线从 Tooltip 的 `primitives::Text` 复制到气泡，字体上下文随气泡入树自动解析；
+- `hide()`、`set_trigger()`、Tooltip 离开场景树与析构都会释放 `OverlayHandle`；未挂载到任何 `OverlayHost` 时保留原有 detached 绘制。
+
 迁移完成后，再将 Select 的 popup 和 Dialog 的模态内容接入同一套托管、定位、关闭与焦点设施。
