@@ -23,7 +23,6 @@
 #include <memory>
 #include <stdexcept>
 #include <string_view>
-#include <typeinfo>
 #include <utility>
 
 namespace nandina::text
@@ -221,6 +220,8 @@ namespace nandina::app
         NanPage(NanPage&&) = delete;
         auto operator=(NanPage&&) -> NanPage& = delete;
 
+        /// Stable application-defined identity used by current_key() and pop_to().
+        /// It must not depend on RTTI, compiler-specific names or object addresses.
         [[nodiscard]] virtual auto route_key() const -> std::string_view = 0;
         [[nodiscard]] virtual auto params_type_key() const -> NanTypeKey = 0;
         [[nodiscard]] virtual auto build(PageContext& context)
@@ -276,11 +277,6 @@ namespace nandina::app
     public:
         using Params = ParamsT;
         using NanPageT<ParamsT>::NanPageT;
-
-        [[nodiscard]] auto route_key() const -> std::string_view override {
-            // 仅作为进程内默认身份；持久化/深链接页面应覆写为稳定字符串。
-            return typeid(*this).name();
-        }
 
         [[nodiscard]] auto build(PageContext& context)
             -> std::shared_ptr<scene::NanNode2D> final {

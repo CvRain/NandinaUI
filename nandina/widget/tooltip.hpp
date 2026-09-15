@@ -96,7 +96,7 @@ namespace nandina::widget
 
         /// Nearest usable overlay portal: the injected window service, otherwise the
         /// closest ancestor OverlayHost (covers `Tooltip::create()` built tooltips).
-        [[nodiscard]] auto resolve_overlay_host() -> scene::OverlayHost*;
+        [[nodiscard]] auto resolve_overlay_host() -> std::shared_ptr<scene::OverlayHost>;
 
         /// Create, reposition or drop the portal bubble to match `visible_`.
         void sync_portal();
@@ -122,10 +122,9 @@ namespace nandina::widget
         theme::NanTheme theme_view_;
         std::optional<theme::TooltipRecipeRule> override_;
         bool system_explicit_ = false;
-        /// Window-owned portal, injected by `ComponentTraits<Tooltip>`. Non-owning:
-        /// the window outlives every tooltip mounted in its content, so this stays
-        /// valid for the tooltip's whole lifetime.
-        scene::OverlayHost* overlay_service_ = nullptr;
+        /// Window-owned portal injected by `ComponentTraits<Tooltip>`. A weak
+        /// reference also makes detached/manual contexts safe when their host dies.
+        std::weak_ptr<scene::OverlayHost> overlay_service_;
         std::unique_ptr<scene::OverlayHandle> portal_handle_;
         std::weak_ptr<scene::NanControl> portal_bubble_;
         /// Last anchor / viewport / placement the bubble was positioned against.

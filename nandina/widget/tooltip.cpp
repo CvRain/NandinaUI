@@ -294,7 +294,7 @@ namespace nandina::widget
             close_portal();
             return;
         }
-        auto* host = resolve_overlay_host();
+        auto host = resolve_overlay_host();
         auto trigger = trigger_.lock();
         if (host == nullptr || trigger == nullptr) {
             close_portal();
@@ -389,12 +389,13 @@ namespace nandina::widget
     }
 
     void Tooltip::set_overlay_service(scene::OverlayHost* host) noexcept {
-        overlay_service_ = host;
+        overlay_service_ =
+            host != nullptr ? host->weak_self() : std::weak_ptr<scene::OverlayHost> {};
     }
 
-    auto Tooltip::resolve_overlay_host() -> scene::OverlayHost* {
-        if (overlay_service_ != nullptr) {
-            return overlay_service_;
+    auto Tooltip::resolve_overlay_host() -> std::shared_ptr<scene::OverlayHost> {
+        if (auto injected = overlay_service_.lock()) {
+            return injected;
         }
         // `Tooltip::create()` has no BuildContext, so fall back to the nearest
         // ancestor OverlayHost (the window installs one as the tree root). The
@@ -407,7 +408,7 @@ namespace nandina::widget
                 continue;
             }
             if (auto* host = stack->as_overlay_host(); host != nullptr) {
-                return host;
+                return host->weak_self().lock();
             }
         }
         return nullptr;

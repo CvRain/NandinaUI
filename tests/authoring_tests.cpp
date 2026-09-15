@@ -269,20 +269,22 @@ TEST_CASE("BuildContext authors scoped conditional and keyed regions", "[authori
     REQUIRE(branch_events == 4);
 
     reactive::Signal<bool> choose_label {graph, false};
+    std::shared_ptr<widget::Label> true_branch;
+    std::shared_ptr<widget::Button> false_branch;
     auto choice = ui.when(
         choose_label,
-        [](widget::BuildContext branch) {
-            return branch.make<widget::Label>("true branch");
+        [&true_branch](widget::BuildContext branch) {
+            return branch.make<widget::Label>("true branch").expose(true_branch);
         },
-        [](widget::BuildContext branch) {
-            return branch.make<widget::Button>("false branch");
+        [&false_branch](widget::BuildContext branch) {
+            return branch.make<widget::Button>("false branch").expose(false_branch);
         }
     ).build();
     scene::NanSceneTree choice_tree;
     choice_tree.set_root(choice);
-    REQUIRE(dynamic_cast<widget::Button*>(choice->active_node()) != nullptr);
+    REQUIRE(choice->active_node() == false_branch.get());
     choose_label.set(true);
-    REQUIRE(dynamic_cast<widget::Label*>(choice->active_node()) != nullptr);
+    REQUIRE(choice->active_node() == true_branch.get());
 
     reactive::Signal<std::vector<Item>> items {
         graph,
@@ -709,16 +711,20 @@ TEST_CASE("free function factories compose nested layout trees", "[authoring][fa
 
     std::shared_ptr<widget::Label> title_label;
     std::shared_ptr<widget::Button> action_btn;
+    std::shared_ptr<widget::Column> column_node;
+    std::shared_ptr<widget::Row> row_node;
     auto root =
         padding(foundation::NanInsets::all(12.0F))
             .child(
                 column()
+                    .expose(column_node)
                     .configure([](widget::Column& c) {
                         c.set_gap(8.0F).set_cross_alignment(widget::LayoutAlignment::stretch);
                     })
                     .children(
                         make<widget::Label>(graph, "Settings").expose(title_label),
                         row()
+                            .expose(row_node)
                             .configure([](widget::Row& r) {
                                 r.set_gap(6.0F).set_cross_alignment(
                                     widget::LayoutAlignment::center
@@ -734,13 +740,13 @@ TEST_CASE("free function factories compose nested layout trees", "[authoring][fa
 
     REQUIRE(root->child_count() == 1);
     REQUIRE(root->get_child(0) != nullptr);
-    auto* col = dynamic_cast<widget::Column*>(root->get_child(0));
+    auto* col = column_node.get();
     REQUIRE(col != nullptr);
     REQUIRE(col->child_count() == 2);
     REQUIRE(col->get_child(0) == title_label.get());
     REQUIRE(title_label->text() == "Settings");
 
-    auto* row = dynamic_cast<widget::Row*>(col->get_child(1));
+    auto* row = row_node.get();
     REQUIRE(row != nullptr);
     REQUIRE(row->child_count() == 2);
     REQUIRE(row->get_child(1) == action_btn.get());

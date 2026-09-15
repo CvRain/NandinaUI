@@ -34,6 +34,7 @@ OverlayHost / overlay layer
 - 悬停延迟、离开隐藏和显式 `show()` / `hide()` 行为保持现有测试语义；
 - 气泡不抢占触发器点击，也不阻断页面其他输入；
 - Tooltip 卸载或触发器替换时，`OverlayHandle` 不泄漏；
+- 注入的窗口 OverlayHost 先于 detached Tooltip 销毁时，弱服务引用安全失效；
 - 无窗口服务的 detached 单元测试仍可测试文本、主题和计时逻辑。
 
 ## 实现状态

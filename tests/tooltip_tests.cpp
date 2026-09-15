@@ -342,6 +342,29 @@ TEST_CASE(
     REQUIRE(host->overlay_count() == 0);
 }
 
+TEST_CASE(
+    "tooltip tolerates an expired injected overlay service",
+    "[tooltip][overlay][lifetime]"
+) {
+    reactive::Graph graph;
+    reactive::ReactiveScope scope {graph};
+    theme::ThemeManager themes;
+    auto host = scene::OverlayHost::create();
+    widget::BuildContext ui {graph, scope, themes, nullptr, host.get()};
+    auto trigger = ui.make<widget::Button>("Save").build();
+    auto tooltip = ui.make<widget::Tooltip>("Saves preferences", trigger).build();
+    host.reset();
+
+    auto root = std::make_shared<scene::NanControl>(foundation::NanSize(120.0F, 40.0F));
+    root->add_child(tooltip);
+    scene::NanSceneTree tree;
+    tree.set_root(root);
+    REQUIRE(tree.layout_root(foundation::NanSize(120.0F, 40.0F)) >= 1);
+
+    tooltip->show();
+    REQUIRE(tooltip->visible());
+}
+
 TEST_CASE("tooltip bubble follows a moving trigger", "[tooltip][overlay][placement]") {
     auto host = scene::OverlayHost::create();
     auto trigger = widget::Button::create("Save");

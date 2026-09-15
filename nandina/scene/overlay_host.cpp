@@ -85,6 +85,7 @@ namespace nandina::scene
 
     auto OverlayHost::create() -> std::shared_ptr<OverlayHost> {
         auto result = std::shared_ptr<OverlayHost>(new OverlayHost());
+        result->self_ = result;
         result->initialize();
         return result;
     }
@@ -141,6 +142,10 @@ namespace nandina::scene
 
     auto OverlayHost::viewport_size() const -> foundation::NanSize {
         return overlay_surface_ != nullptr ? overlay_surface_->size() : foundation::NanSize {};
+    }
+
+    auto OverlayHost::weak_self() const noexcept -> std::weak_ptr<OverlayHost> {
+        return self_;
     }
 
     auto OverlayHost::close(const std::uint64_t id) -> bool {

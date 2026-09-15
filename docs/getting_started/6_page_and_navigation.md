@@ -7,6 +7,7 @@
 ## 本章目标
 
 - 从 `app::Page<>` 派生一个应用页面。
+- 为页面实现返回稳定字符串的 `route_key()`。
 - 实现 `build(widget::BuildContext&)` 并返回 `widget::View`。
 - 使用 `app::run<PageT>()` 将页面作为应用入口。
 - 了解 `NoParams` 与强类型页面参数的使用方式。
@@ -16,7 +17,7 @@
 
 - `Page`、`NanPageT` 与 `PageContext` 的层次和适用范围。
 - 页面级 `ReactiveScope` 以及页面卸载后的自动清理。
-- `route_key()`、页面参数与稳定路由身份。
+- `route_key()`、页面参数与稳定路由身份；框架不会通过 RTTI 自动生成页面名称。
 - keep-alive 页面栈及 `on_activate()` / `on_deactivate()` 生命周期。
 - 回调中优先使用 `request_push()`、`request_replace()` 和 `request_pop()` 延迟修改路由栈。
 - 局部页面状态与应用级 `NanStore` 的职责边界。

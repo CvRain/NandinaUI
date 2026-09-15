@@ -60,6 +60,9 @@ namespace nandina::scene
         /// the first layout pass. Floating components use this to keep anchored
         /// content inside the window instead of the trigger's own bounds.
         [[nodiscard]] auto viewport_size() const -> foundation::NanSize;
+        /// Safe non-owning reference for services whose lifetime may be shorter than
+        /// a detached component. Expires instead of leaving a dangling raw pointer.
+        [[nodiscard]] auto weak_self() const noexcept -> std::weak_ptr<OverlayHost>;
 
     private:
         struct Entry {
@@ -80,6 +83,7 @@ namespace nandina::scene
         std::shared_ptr<NanControl> overlay_surface_;
         std::vector<Entry> entries_;
         std::uint64_t next_id_ = 1;
+        std::weak_ptr<OverlayHost> self_;
     };
 }
 
