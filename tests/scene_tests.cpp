@@ -863,3 +863,38 @@ TEST_CASE("input dispatch pins the event path while handlers run", "[scene][inpu
     REQUIRE(g_alive_after_self_removal);
     REQUIRE(g_self_removal_probe.expired());
 }
+
+TEST_CASE("focus follows the press and is not re-resolved on release", "[scene][input][focus]") {
+    std::vector<std::string> trace;
+    auto root = std::make_shared<ProbeNode>(nullptr, "root");
+    auto field = std::make_shared<ProbeNode>(&trace, "field", true);
+    const auto point = foundation::NanPoint(50.0F, 50.0F);
+    field->set_position(point);
+    root->add_child(field);
+
+    scene::NanSceneTree tree;
+    tree.set_root(root);
+
+    tree.dispatch_mouse_button(scene::MouseButtonEvent {
+        scene::MouseButtonEvent::Button::left,
+        scene::MouseButtonEvent::Action::press,
+        point,
+    });
+    REQUIRE(tree.focused_node() == field.get());
+
+    // The press opened a floating layer, which is now the topmost node under the
+    // pointer. Releasing over it must not hand focus to the layer: focus follows the
+    // press, so a control that closes on focus loss survives its own click.
+    auto layer = std::make_shared<ProbeNode>(&trace, "layer");
+    layer->set_position(point);
+    root->add_child(layer);
+    REQUIRE(tree.hit_test(point) == layer.get());
+
+    tree.dispatch_mouse_button(scene::MouseButtonEvent {
+        scene::MouseButtonEvent::Button::left,
+        scene::MouseButtonEvent::Action::release,
+        point,
+    });
+    REQUIRE(tree.focused_node() == field.get());
+    REQUIRE(count(trace, "field:focus_leave") == 0);
+}

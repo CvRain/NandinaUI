@@ -556,7 +556,9 @@ namespace nandina::scene
         // re-resolving focus there would hand it to the layer instead of the control
         // the user actually clicked: a Select closes on focus loss, so its popup
         // would be torn down at button-up before an option could be picked.
-        set_focus(_find_focus_target(hit));
+        if (copy.is_pressed()) {
+            set_focus(_find_focus_target(hit));
+        }
         _bubble_input(hit, copy);
         if (!copy.is_pressed() && captured != nullptr) {
             pointer_capture_.reset();

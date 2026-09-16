@@ -314,6 +314,53 @@ TEST_CASE("moving a select reuses its popup instead of rebuilding it", "[select]
     REQUIRE(after->global_bounds().get_top() > before_top);
 }
 
+TEST_CASE("releasing over the field keeps the popup open", "[select][overlay]") {
+    auto host = scene::OverlayHost::create();
+    auto select = widget::Select::create({"A", "B", "C"});
+    // A sole content root would be stretched over the viewport, so keep the field at
+    // its natural size: the release must land on the field, not on the popup.
+    auto content = std::make_shared<scene::NanControl>(foundation::NanSize(240.0F, 240.0F));
+    select->set_position(foundation::NanPoint(20.0F, 20.0F));
+    content->add_child(select);
+    content->add_child(std::make_shared<scene::NanControl>(foundation::NanSize(1.0F, 1.0F)));
+    host->set_content(content);
+
+    scene::NanSceneTree tree;
+    tree.set_root(host);
+    REQUIRE(tree.layout_root(foundation::NanSize(240.0F, 240.0F)) >= 1);
+
+    const auto field = foundation::NanPoint(
+        select->global_bounds().get_left() + 10.0F,
+        select->global_bounds().get_top() + 10.0F
+    );
+    REQUIRE(select->global_bounds().contains_point(field));
+
+    tree.dispatch_mouse_button(scene::MouseButtonEvent {
+        scene::MouseButtonEvent::Button::left,
+        scene::MouseButtonEvent::Action::press,
+        field,
+    });
+    REQUIRE(select->is_open());
+    REQUIRE(host->overlay_count() == 1);
+    REQUIRE(tree.focused_node() == select.get());
+
+    // Real frames lay out between the press and the release, which is what makes the
+    // overlay surface hit-testable under the pointer by the time the button comes up.
+    REQUIRE(tree.layout_root(foundation::NanSize(240.0F, 240.0F)) >= 1);
+
+    // The button comes up over the field the user just clicked. The pointer is now over
+    // the overlay surface, but that must not move focus off the field and tear the
+    // popup down before the user can pick an option.
+    tree.dispatch_mouse_button(scene::MouseButtonEvent {
+        scene::MouseButtonEvent::Button::left,
+        scene::MouseButtonEvent::Action::release,
+        field,
+    });
+    REQUIRE(select->is_open());
+    REQUIRE(host->overlay_count() == 1);
+    REQUIRE(tree.focused_node() == select.get());
+}
+
 TEST_CASE("selecting an option while the field holds focus", "[select][overlay]") {
     auto host = scene::OverlayHost::create();
     auto select = widget::Select::create({"A", "B", "C"});
