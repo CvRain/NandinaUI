@@ -376,13 +376,16 @@ namespace nandina::widget
         ) -> authoring::NodeBuilder<Dialog> {
             return authoring::make<Dialog>(ui.theme())
                 .configure(
-                    [title = std::move(title), content = std::move(content)](
+                    [&ui, title = std::move(title), content = std::move(content)](
                         Dialog& dialog
                     ) mutable {
                         dialog.set_title(std::move(title));
                         if (content) {
                             (void)dialog.set_content(std::move(content));
                         }
+                        dialog.set_overlay_service(
+                            ui.has_overlay_host() ? &ui.overlay_host() : nullptr
+                        );
                     }
                 );
         }

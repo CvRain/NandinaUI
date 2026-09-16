@@ -5,77 +5,86 @@
 #include "dialog.hpp"
 
 #include "../animation/animation_host.hpp"
-#include "../render/draw_context.hpp"
-#include "../scene/input_event.hpp"
+#include "../scene/overlay_host.hpp"
 #include "../scene/scene_tree.hpp"
 #include "../theme/theme_manager.hpp"
-#include "primitives/box_painter.hpp"
+#include "internal/dialog_panel.hpp"
+#include "internal/dismiss_layer.hpp"
+#include "internal/focus_scope.hpp"
 
 #include <algorithm>
-#include <cmath>
 #include <utility>
-#include <vector>
 
 namespace nandina::widget
 {
     namespace
     {
-        // GLFW 键码：Escape / Tab。
-        constexpr int key_escape = 256;
-        constexpr int key_tab = 258;
-
-        void collect_focusable(scene::NanNode& node, std::vector<scene::NanNode2D*>& out) {
-            if (auto* as_node2d = node.as_node2d(); as_node2d != nullptr
-                && as_node2d->is_focusable() && as_node2d->is_visible_in_tree())
-            {
-                out.push_back(as_node2d);
-            }
-            for (std::size_t i = 0; i < node.child_count(); ++i) {
-                if (auto* child = node.get_child(i); child != nullptr) {
-                    collect_focusable(*child, out);
-                }
-            }
+        /// 遮罩与面板共用的淡入淡出行为：进场 ease_out，退场 ease_in。
+        [[nodiscard]] auto fade_behavior(const theme::DesignSystem& system, const bool entering)
+            -> animation::Behavior<float> {
+            return animation::Behavior<float>(
+                system.tokens.motion.long_duration,
+                entering ? animation::Easing::ease_out : animation::Easing::ease_in
+            );
         }
 
-        [[nodiscard]] auto
-        same_text_style(const primitives::TextStyle& lhs, const primitives::TextStyle& rhs)
-            -> bool {
-            return lhs.color.approx_equals(rhs.color)
-                && std::abs(lhs.font_size - rhs.font_size) <= foundation::nan_epsilon
-                && lhs.font == rhs.font && lhs.overflow == rhs.overflow
-                && lhs.max_lines == rhs.max_lines;
+        [[nodiscard]] auto scrim_style(const theme::ResolvedDialogStyle& style)
+            -> theme::ResolvedBoxStyle {
+            return theme::ResolvedBoxStyle {
+                .fill = style.scrim,
+                .border = style.scrim,
+                .border_width = 0.0F,
+                .radius = 0.0F,
+            };
         }
     } // namespace
 
-    Dialog::Dialog(theme::NanTheme theme): title_text_("") {
+    Dialog::Dialog(theme::NanTheme theme) {
         system_ =
             std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
         theme_view_ = theme;
-        set_visible(false); // 初始关闭：隐藏面板与内容子节点。
+
+        panel_ = std::make_shared<internal::DialogPanel>();
+        focus_scope_ = std::make_shared<internal::FocusScope>();
+        focus_scope_->set_content(panel_);
+        dismiss_layer_ = std::make_shared<internal::DismissLayer>();
+        dismiss_layer_->set_content_centered(true);
+        dismiss_layer_->set_content(focus_scope_);
+        dismiss_layer_->set_visible(false);
+
+        apply_style();
+        set_visible(false); // 初始关闭：面板与内容子节点都不可见。
     }
+
+    Dialog::~Dialog() = default;
 
     auto Dialog::create(theme::NanTheme theme) -> std::shared_ptr<Dialog> {
         return std::make_shared<Dialog>(theme);
     }
 
     void Dialog::set_title(std::string title) {
-        title_text_.set_text(std::move(title));
-        apply_text_style();
-        mark_layout_dirty();
+        panel_->set_title(std::move(title));
         mark_semantics_dirty();
     }
 
     auto Dialog::title() const -> std::string_view {
-        return title_text_.text();
+        return panel_->title();
+    }
+
+    auto Dialog::set_header(std::shared_ptr<scene::NanControl> header) -> Dialog& {
+        (void)panel_->set_header(std::move(header));
+        mark_layout_dirty();
+        return *this;
     }
 
     auto Dialog::set_content(std::shared_ptr<scene::NanControl> content) -> Dialog& {
-        if (!content) {
-            throw std::runtime_error("Dialog::set_content: content is null");
-        }
-        auto current = content_.lock();
-        content_ = content;
-        replace_child(current.get(), std::move(content));
+        (void)panel_->set_content(std::move(content));
+        mark_layout_dirty();
+        return *this;
+    }
+
+    auto Dialog::set_footer(std::shared_ptr<scene::NanControl> footer) -> Dialog& {
+        (void)panel_->set_footer(std::move(footer));
         mark_layout_dirty();
         return *this;
     }
@@ -84,31 +93,45 @@ namespace nandina::widget
         if (phase_ == DialogPhase::opening || phase_ == DialogPhase::opened) {
             return;
         }
-        phase_ = DialogPhase::opening;
+        // 先恢复可见性再挂载：FocusScope 在入树时解析初始焦点，节点不可见就收集不到
+        // 可聚焦控件，焦点会留在浮层之外，Escape 与 Tab 都进不来。
         set_visible(true);
-        // 用 long_duration + ease_out，让面板「浮现」而非「闪现」。
-        fade_.set_behavior(
-            animation::Behavior<float>(
-                system_->tokens.motion.long_duration, animation::Easing::ease_out
-            )
-        );
+        dismiss_layer_->set_visible(true);
+        if (!mount()) {
+            dismiss_layer_->set_visible(false);
+            set_visible(false);
+            return;
+        }
+        phase_ = DialogPhase::opening;
+        apply_style();
+
+        // 浮层在淡出期间仍然挂载，重新打开不会再次触发 FocusScope 的入树初始化；而点击
+        // 遮罩关闭时焦点已被清空。这里把焦点重新放回浮层内部，Escape 与 Tab 才可达。
+        if (auto* tree = get_tree(); tree != nullptr) {
+            auto* focused = tree->focused_node();
+            if (focused == nullptr || !focus_scope_->is_ancestor_of(*focused)) {
+                (void)tree->focus_first_within(*focus_scope_);
+            }
+        }
+
+        // 上一轮退场把 fade 停在 0；重新打开时先把属性拉回起点再启动进场。
+        auto& fade = dismiss_layer_->fade();
+        fade.clear_behavior();
+        fade.set_target(0.0F);
+        fade.set_behavior(fade_behavior(*system_, true));
         start_fade(1.0F);
-        request_focus();
+
         mark_dirty(
             scene::DirtyFlags::paint | scene::DirtyFlags::layout | scene::DirtyFlags::semantics
         );
     }
 
     void Dialog::close() {
-        if (phase_ == DialogPhase::closed || phase_ == DialogPhase::closing) {
+        if (!active() || phase_ == DialogPhase::closing) {
             return;
         }
         phase_ = DialogPhase::closing;
-        fade_.set_behavior(
-            animation::Behavior<float>(
-                system_->tokens.motion.long_duration, animation::Easing::ease_in
-            )
-        );
+        dismiss_layer_->fade().set_behavior(fade_behavior(*system_, false));
         start_fade(0.0F);
         mark_dirty(scene::DirtyFlags::paint | scene::DirtyFlags::semantics);
     }
@@ -134,8 +157,7 @@ namespace nandina::widget
             std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
         system_explicit_ = true;
         theme_view_ = theme;
-        apply_text_style();
-        mark_layout_dirty();
+        apply_style();
     }
 
     auto Dialog::theme_ref() const -> const theme::NanTheme& {
@@ -144,8 +166,7 @@ namespace nandina::widget
 
     void Dialog::set_override(theme::DialogRecipeRule rule) {
         override_ = std::move(rule);
-        apply_text_style();
-        mark_dirty(scene::DirtyFlags::paint | scene::DirtyFlags::layout);
+        apply_style();
     }
 
     auto Dialog::resolved_style() const -> theme::ResolvedDialogStyle {
@@ -157,23 +178,19 @@ namespace nandina::widget
     }
 
     void Dialog::set_text_pipeline(primitives::TextPipeline pipeline) {
-        title_text_.set_text_pipeline(std::move(pipeline));
-        mark_layout_dirty();
+        panel_->set_text_pipeline(std::move(pipeline));
     }
 
     void Dialog::apply_default_text_pipeline(const primitives::TextPipeline& pipeline) {
-        title_text_.apply_default_text_pipeline(pipeline);
-        mark_layout_dirty();
+        panel_->apply_default_text_pipeline(pipeline);
     }
 
     void Dialog::apply_font_context(text::FontPipelineCache& context) {
-        title_text_.apply_font_context(context);
-        mark_layout_dirty();
+        panel_->apply_font_context(context);
     }
 
     void Dialog::on_style_context_changed(const theme::ResolvedStyleContext&) {
-        apply_text_style();
-        mark_layout_dirty();
+        apply_style();
     }
 
     void Dialog::on_theme_changed(const theme::ThemeManager& manager) {
@@ -182,101 +199,49 @@ namespace nandina::widget
             system_ = manager.design_system_shared();
             theme_view_ = theme::NanTheme {system_->tokens, system_->palette(appearance_)};
         }
-        apply_text_style();
-        mark_layout_dirty();
+        apply_style();
     }
 
-    auto Dialog::local_opacity() const -> float {
-        return NanNode2D::local_opacity() * fade_.value();
+    void Dialog::apply_style() {
+        const auto style = resolved_style();
+        panel_->set_style(style);
+        dismiss_layer_->set_scrim(scrim_style(style));
     }
 
     auto Dialog::z_index_hint() const -> int {
-        return active() ? 1 : 0;
+        // 浮层承载时层级由 OverlayLevel 决定；树内回退要靠 z 序压过后续兄弟。
+        return active() && !overlay_mode_ ? 1 : 0;
     }
 
-    auto Dialog::global_bounds() const -> foundation::NanRect {
-        return scene::NanControl::global_bounds();
-    }
-
-    auto Dialog::contains_point(const foundation::NanPoint /*local_point*/) const -> bool {
-        return active();
-    }
-
-    auto Dialog::is_focusable() const -> bool {
-        return active();
-    }
-
-    auto Dialog::on_input(scene::InputEvent& event) -> bool {
-        if (event.type() == scene::EventType::key) {
-            auto& key = static_cast<scene::KeyEvent&>(event);
-            if (key.action() != scene::KeyEvent::Action::press) {
-                return false;
-            }
-            if (key.keycode() == key_escape && dismissible_) {
-                close();
-                return true;
-            }
-            if (key.keycode() == key_tab) {
-                trap_focus(key.modifiers().shift);
-                return true;
-            }
-            return false;
+    auto Dialog::on_measure(const scene::LayoutConstraints constraints) -> foundation::NanSize {
+        // 浮层承载时本节点只是页面里的锚点，不占位；树内回退时铺满父容器作为遮罩范围。
+        if (!active() || overlay_mode_) {
+            return constraints.constrain(foundation::NanSize {0.0F, 0.0F});
         }
-        if (event.type() == scene::EventType::mouse_button) {
-            auto& mouse = static_cast<scene::MouseButtonEvent&>(event);
-            if (mouse.button() != scene::MouseButtonEvent::Button::left || !mouse.is_pressed()) {
-                return false;
-            }
-            const auto local = to_local(mouse.screen_pos());
-            if (!panel_rect().contains_point(local) && dismissible_) {
-                close();
-            }
-            return true; // 模态：吞掉遮罩上的点击
-        }
-        return false;
+        return constraints.constrain(
+            foundation::NanSize(constraints.max_width, constraints.max_height)
+        );
     }
 
-    auto Dialog::on_draw(render::DrawContext& context) -> void {
-        if (!active()) {
+    void Dialog::on_layout() {
+        if (!active() || dismiss_layer_->parent() != this) {
             return;
         }
-        const auto style = resolved_style();
-        apply_text_style();
-        (void)title_text_.measure_layout(scene::LayoutConstraints::loose());
-
-        // 遮罩覆盖整个父容器。context.opacity() 已含 per-node opacity（淡入淡出）。
-        const auto full = render::world_bounds_from_local(context.world_transform(), local_rect());
-        primitives::BoxPainter::paint(
-            context,
-            full,
-            theme::ResolvedBoxStyle {
-                .fill = style.scrim,
-                .border = style.scrim,
-                .border_width = 0.0F,
-                .radius = 0.0F,
-            },
-            context.opacity()
-        );
-
-        // 居中面板（随同一 fade 淡入淡出）。
-        const auto panel_world =
-            render::world_bounds_from_local(context.world_transform(), panel_rect());
-        primitives::BoxPainter::paint(context, panel_world, style.panel, context.opacity());
-
-        const auto title_position = foundation::NanPoint(
-            panel_world.get_left() + context.logical_to_screen(style.metrics.padding_x),
-            panel_world.get_top() + context.logical_to_screen(style.metrics.padding_y)
-        );
-        title_text_.draw_at(context, title_position);
+        dismiss_layer_->layout_to(local_rect());
     }
 
     void Dialog::on_process(const float /*dt*/) {
-        // 淡入淡出由 AnimationHost 推进；这里只负责状态机完成转换。
-        if (phase_ == DialogPhase::opening && !fade_.is_animating()) {
+        if (!active()) {
+            return;
+        }
+        auto& fade = dismiss_layer_->fade();
+        if (phase_ == DialogPhase::opening && !fade.is_animating()) {
             phase_ = DialogPhase::opened;
         }
-        else if (phase_ == DialogPhase::closing && !fade_.is_animating()) {
+        else if (phase_ == DialogPhase::closing && !fade.is_animating()) {
             phase_ = DialogPhase::closed;
+            dismiss_layer_->set_visible(false);
+            unmount();
             set_visible(false);
             if (on_close_) {
                 on_close_();
@@ -287,55 +252,11 @@ namespace nandina::widget
         }
     }
 
-    auto Dialog::on_measure(const scene::LayoutConstraints constraints) -> foundation::NanSize {
-        if (!active()) {
-            return constraints.constrain(foundation::NanSize {0.0F, 0.0F});
-        }
-        return constraints.constrain(
-            foundation::NanSize(constraints.max_width, constraints.max_height)
-        );
-    }
-
-    auto Dialog::on_layout() -> void {
-        if (!active()) {
-            return;
-        }
-        const auto style = resolved_style();
-        apply_text_style();
-        (void)title_text_.measure_layout(scene::LayoutConstraints::loose());
-
-        auto content = content_.lock();
-        const auto panel = panel_rect();
-
-        if (content) {
-            const float title_height = title_text_.measured_size().get_height();
-            const float inner_x = panel.get_left() + style.metrics.padding_x;
-            const float inner_y =
-                panel.get_top() + style.metrics.padding_y + title_height + style.metrics.gap;
-            const float inner_width =
-                std::max(0.0F, panel.get_width() - style.metrics.padding_x * 2.0F);
-            const float inner_height = std::max(
-                0.0F,
-                panel.get_height() - style.metrics.padding_y * 2.0F - title_height
-                    - style.metrics.gap
-            );
-            const auto measured = content->measure_layout(
-                scene::LayoutConstraints {
-                    .min_width = 0.0F,
-                    .max_width = inner_width,
-                    .min_height = 0.0F,
-                    .max_height = inner_height,
-                }
-            );
-            content->layout_to(
-                foundation::NanRect::from_xywh(
-                    inner_x,
-                    inner_y,
-                    measured.get_width(),
-                    measured.get_height()
-                )
-            );
-        }
+    void Dialog::on_exit_tree() {
+        phase_ = DialogPhase::closed;
+        unmount();
+        set_visible(false);
+        scene::NanControl::on_exit_tree();
     }
 
     auto Dialog::semantics_properties() const -> semantics::Properties {
@@ -346,76 +267,75 @@ namespace nandina::widget
         };
     }
 
-    void Dialog::apply_text_style() {
-        const auto style = resolved_style();
-        const auto& context = resolved_style_context();
-        const primitives::TextStyle text_style {
-            .color = context.text_color_from_context ? context.text_color : style.title.color,
-            .font_size = context.font_size_from_context ? context.font_size : style.title.font_size,
-            .font = context.font_from_context ? context.font : title_text_.font(),
-            .overflow = primitives::TextOverflow::clip,
-            .max_lines = 1,
-        };
-        if (!same_text_style(title_text_.style(), text_style)) {
-            title_text_.set_style(text_style);
-        }
+    void Dialog::set_overlay_service(scene::OverlayHost* host) noexcept {
+        overlay_service_ =
+            host != nullptr ? host->weak_self() : std::weak_ptr<scene::OverlayHost> {};
     }
 
-    auto Dialog::panel_rect() const -> foundation::NanRect {
-        const auto style = resolved_style();
-        constexpr float margin = 16.0F;
-        const float panel_width =
-            std::min(style.metrics.panel_width, std::max(0.0F, width() - margin * 2.0F));
-
-        float content_height = 0.0F;
-        if (auto content = content_.lock()) {
-            content_height = content->measured_size().get_height();
+    auto Dialog::resolve_overlay_host() -> std::shared_ptr<scene::OverlayHost> {
+        if (auto injected = overlay_service_.lock()) {
+            return injected;
         }
-        const float title_height = title_text_.measured_size().get_height();
-        const float gap = content_height > 0.0F ? style.metrics.gap : 0.0F;
-        const float panel_height = std::max(
-            style.metrics.min_height,
-            style.metrics.padding_y * 2.0F + title_height + gap + content_height
-        );
-        return foundation::NanRect::from_center(
-            local_rect().get_center(),
-            foundation::NanSize(panel_width, panel_height)
-        );
+        for (auto* node = parent(); node != nullptr; node = node->parent()) {
+            auto* node_2d = node->as_node2d();
+            auto* stack = node_2d != nullptr ? node_2d->as_layer_stack() : nullptr;
+            if (stack == nullptr) {
+                continue;
+            }
+            if (auto* host = stack->as_overlay_host(); host != nullptr) {
+                return host->weak_self().lock();
+            }
+        }
+        return nullptr;
+    }
+
+    auto Dialog::mount() -> bool {
+        if (dismiss_layer_->parent() != nullptr || portal_handle_ != nullptr) {
+            return true;
+        }
+
+        // 关闭请求回到本对话框；弱引用保证浮层比 Dialog 活得久时不会悬空。
+        auto weak = std::weak_ptr<Dialog>(std::static_pointer_cast<Dialog>(shared_from_this()));
+        dismiss_layer_->set_callback([weak](const internal::DismissReason) {
+            if (auto dialog = weak.lock(); dialog != nullptr && dialog->dismissible_) {
+                dialog->close();
+            }
+        });
+
+        if (auto host = resolve_overlay_host()) {
+            overlay_mode_ = true;
+            portal_handle_ = std::make_unique<scene::OverlayHandle>(host->present(
+                dismiss_layer_,
+                scene::OverlayOptions {
+                    .level = scene::OverlayLevel::modal,
+                    .block_below = true,
+                }
+            ));
+            return true;
+        }
+
+        // detached 回退：面板留在树内，靠 z 序与铺满父容器维持模态语义。
+        overlay_mode_ = false;
+        add_child(dismiss_layer_);
+        mark_layout_dirty();
+        return true;
+    }
+
+    void Dialog::unmount() {
+        if (portal_handle_ != nullptr) {
+            portal_handle_->close();
+            portal_handle_.reset();
+        }
     }
 
     void Dialog::start_fade(const float target) {
-        if (auto* tree = get_tree(); tree != nullptr) {
-            tree->animation_host().set_target(*this, fade_, target, scene::DirtyFlags::paint);
+        if (auto* tree = dismiss_layer_->get_tree(); tree != nullptr) {
+            tree->animation_host().set_target(
+                *dismiss_layer_, dismiss_layer_->fade(), target, scene::DirtyFlags::paint
+            );
+            return;
         }
-        else {
-            fade_.clear_behavior();
-            fade_.set_target(target);
-        }
+        dismiss_layer_->fade().clear_behavior();
+        dismiss_layer_->fade().set_target(target);
     }
-
-    void Dialog::trap_focus(const bool backwards) {
-        auto* tree = get_tree();
-        if (tree == nullptr) {
-            return;
-        }
-        std::vector<scene::NanNode2D*> nodes;
-        collect_focusable(*this, nodes);
-        if (nodes.empty()) {
-            return;
-        }
-        auto* focused = tree->focused_node();
-        const auto found = std::ranges::find(nodes, focused);
-        if (found == nodes.end()) {
-            tree->set_focus(backwards ? nodes.back() : nodes.front());
-            return;
-        }
-        if (backwards) {
-            tree->set_focus(found == nodes.begin() ? nodes.back() : *(found - 1));
-        }
-        else {
-            const auto next = std::next(found);
-            tree->set_focus(next == nodes.end() ? nodes.front() : *next);
-        }
-    }
-
 } // namespace nandina::widget

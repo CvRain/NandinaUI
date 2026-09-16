@@ -5,7 +5,6 @@
 #ifndef NANDINA_EXPERIMENT_WIDGET_DIALOG_HPP
 #define NANDINA_EXPERIMENT_WIDGET_DIALOG_HPP
 
-#include "../animation/animated_property.hpp"
 #include "../scene/control.hpp"
 #include "../theme/design_system.hpp"
 #include "primitives/text.hpp"
@@ -16,20 +15,47 @@
 #include <string>
 #include <string_view>
 
+namespace nandina::scene
+{
+    class OverlayHandle;
+    class OverlayHost;
+}
+
 namespace nandina::widget
 {
+    template<typename Component>
+    struct ComponentTraits;
+
+    namespace internal
+    {
+        class DialogPanel;
+        class DismissLayer;
+        class FocusScope;
+    } // namespace internal
+
+    /**
+     * 模态对话框：遮罩、居中面板与焦点限制。
+     *
+     * 打开时把面板托管到窗口级浮层：遮罩与输入阻断由 DismissLayer 提供，焦点限制与关闭后的
+     * 焦点恢复由 FocusScope 提供，因此面板不会被 ScrollView / Card 之类的裁剪容器截断。
+     * 没有窗口浮层服务时（detached 上下文）回退为树内模态，公开 API 与行为保持不变。
+     */
     class Dialog: public scene::NanControl {
     public:
         explicit Dialog(theme::NanTheme theme = theme::default_theme());
+        ~Dialog() override;
 
         [[nodiscard]] static auto create(theme::NanTheme theme = theme::default_theme())
             -> std::shared_ptr<Dialog>;
 
+        /// header 槽位的文本便捷入口；与 set_header() 互斥，后设置者生效。
         void set_title(std::string title);
         [[nodiscard]] auto title() const -> std::string_view;
 
-        /// 面板主体内容（按钮 / 文本等），成为 Dialog 的子节点并布局在标题下方。
+        /// 固定语义槽位：header / content / footer，缺省为空且不占高度。
+        auto set_header(std::shared_ptr<scene::NanControl> header) -> Dialog&;
         auto set_content(std::shared_ptr<scene::NanControl> content) -> Dialog&;
+        auto set_footer(std::shared_ptr<scene::NanControl> footer) -> Dialog&;
 
         void open();
         void close();
@@ -52,40 +78,42 @@ namespace nandina::widget
         void on_style_context_changed(const theme::ResolvedStyleContext& context) override;
         void on_theme_changed(const theme::ThemeManager& manager) override;
 
-        /// 打开时提升 z 序，浮在所有兄弟之上。
+        /// 树内回退时提升 z 序，使模态面板浮在后续兄弟之上；浮层承载时由层级顺序决定。
         [[nodiscard]] auto z_index_hint() const -> int override;
-        /// 打开时把整个父容器纳入包围盒（遮罩覆盖全屏）。
-        [[nodiscard]] auto global_bounds() const -> foundation::NanRect override;
-        [[nodiscard]] auto contains_point(foundation::NanPoint local_point) const -> bool override;
-        [[nodiscard]] auto is_focusable() const -> bool override;
-        auto on_input(scene::InputEvent& event) -> bool override;
-        auto on_draw(render::DrawContext& context) -> void override;
         void on_process(float dt) override;
-
-        /// 淡入淡出通过 per-node opacity 作用于整个子树（含内容子节点），由场景树
-        /// AnimationHost 推进 fade_；此处与任何显式 local_opacity 相乘。
-        [[nodiscard]] auto local_opacity() const -> float override;
+        void on_exit_tree() override;
 
     protected:
         [[nodiscard]] auto on_measure(scene::LayoutConstraints constraints)
             -> foundation::NanSize override;
-        auto on_layout() -> void override;
+        void on_layout() override;
         [[nodiscard]] auto semantics_properties() const -> semantics::Properties override;
 
     private:
+        friend struct ComponentTraits<Dialog>;
+
         enum class DialogPhase { closed, opening, opened, closing };
 
-        void apply_text_style();
-        [[nodiscard]] auto panel_rect() const -> foundation::NanRect;
-        void trap_focus(bool backwards);
+        void set_overlay_service(scene::OverlayHost* host) noexcept;
+        [[nodiscard]] auto resolve_overlay_host() -> std::shared_ptr<scene::OverlayHost>;
+        /// 确定承载方式并挂载；已挂载时返回 true。
+        [[nodiscard]] auto mount() -> bool;
+        /// 释放浮层托管；树内承载只隐藏，不移除子树。
+        void unmount();
+        void apply_style();
         void start_fade(float target);
+        void request_close(internal::DismissLayer& layer);
         [[nodiscard]] auto active() const noexcept -> bool {
             return phase_ != DialogPhase::closed;
         }
 
-        primitives::Text title_text_;
-        std::weak_ptr<scene::NanControl> content_;
-        animation::AnimatedProperty<float> fade_ {0.0F};
+        std::shared_ptr<internal::DismissLayer> dismiss_layer_;
+        std::shared_ptr<internal::FocusScope> focus_scope_;
+        std::shared_ptr<internal::DialogPanel> panel_;
+        std::weak_ptr<scene::OverlayHost> overlay_service_;
+        std::unique_ptr<scene::OverlayHandle> portal_handle_;
+        /// 承载方式在首次挂载时确定：有窗口浮层就托管，否则留在树内做模态回退。
+        bool overlay_mode_ = false;
         DialogPhase phase_ = DialogPhase::closed;
         bool dismissible_ = true;
         std::function<void()> on_close_;

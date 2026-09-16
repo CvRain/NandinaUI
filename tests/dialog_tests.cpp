@@ -9,6 +9,7 @@
 #include <nandina/reactive/scope.hpp>
 #include <nandina/render/render_device.hpp>
 #include <nandina/scene/input_event.hpp>
+#include <nandina/scene/overlay_host.hpp>
 #include <nandina/scene/scene_tree.hpp>
 #include <nandina/semantics/semantics.hpp>
 #include <nandina/theme/theme_manager.hpp>
@@ -106,13 +107,15 @@ TEST_CASE("dialog open toggles z-order, focusability and semantics", "[dialog]")
     REQUIRE_FALSE(harness.dialog->is_open());
     REQUIRE(harness.dialog->z_index_hint() == 0);
     REQUIRE_FALSE(harness.dialog->is_focusable());
-    REQUIRE_FALSE(harness.dialog->contains_point(foundation::NanPoint(5.0F, 5.0F)));
 
     harness.dialog->open();
+    harness.layout();
     REQUIRE(harness.dialog->is_open());
     REQUIRE(harness.dialog->z_index_hint() == 1);
-    REQUIRE(harness.dialog->is_focusable());
-    REQUIRE(harness.dialog->contains_point(foundation::NanPoint(5.0F, 5.0F)));
+    // 焦点不再落在 Dialog 节点上：FocusScope 负责限制焦点，内容为空时用它自己兜底，
+    // 这样 Escape 与 Tab 才能沿浮层路径冒泡。
+    REQUIRE(harness.tree.focused_node() != nullptr);
+    REQUIRE(harness.tree.focused_node() != harness.dialog.get());
 
     const auto props = harness.dialog->resolved_semantics_properties();
     REQUIRE(props.role == semantics::Role::dialog);
@@ -274,8 +277,302 @@ TEST_CASE("dialog authoring via ComponentTraits", "[dialog][authoring]") {
     auto content = std::make_shared<widget::Button>("OK");
     auto dialog = ui.make<widget::Dialog>("Heads up", content).build();
     REQUIRE(dialog->title() == "Heads up");
-    REQUIRE(dialog->child_count() == 1);
+    // 内容进入面板槽位而不是直接挂在 Dialog 之下：没有浮层服务时，遮罩层在打开时
+    // 才作为子节点挂上来，因此 Dialog 自身始终只有一个模态壳。
+    REQUIRE_FALSE(content->is_visible_in_tree());
 
     dialog->open();
     REQUIRE(dialog->is_open());
+    REQUIRE(dialog->child_count() == 1);
+    REQUIRE(content->is_visible_in_tree());
+}
+
+namespace
+{
+    /// 带窗口浮层的对话框宿主：内容层里放一个裁剪容器，对话框挂在其中。
+    struct OverlayDialogHarness {
+        reactive::Graph graph;
+        theme::ThemeManager themes;
+        std::shared_ptr<scene::OverlayHost> host = scene::OverlayHost::create();
+        std::shared_ptr<scene::NanControl> body =
+            std::make_shared<scene::NanControl>(foundation::NanSize(800.0F, 600.0F));
+        std::shared_ptr<widget::Dialog> dialog = widget::Dialog::create();
+        /// 非空时对话框挂在其中，用来验证浮层托管不受父级裁剪影响。
+        std::shared_ptr<scene::NanControl> clip;
+        scene::NanSceneTree tree;
+
+        explicit OverlayDialogHarness(const bool inside_clip = false) {
+            tree.set_theme_manager(themes);
+            host->set_content(body);
+            tree.set_root(host);
+            // 占位兄弟：NanControl 只有一个可见子节点时会把它拉伸铺满，这里要让 body
+            // 走多子布局，裁剪容器才能保持自己的 120x80。
+            body->add_child(std::make_shared<scene::NanControl>(foundation::NanSize(1.0F, 1.0F)));
+            if (inside_clip) {
+                clip = std::make_shared<scene::NanControl>(foundation::NanSize(120.0F, 80.0F));
+                clip->set_position(foundation::NanPoint(10.0F, 10.0F));
+                clip->set_overflow(scene::ControlOverflow::clip);
+                clip->add_child(dialog);
+                body->add_child(clip);
+            }
+            else {
+                body->add_child(dialog);
+            }
+        }
+
+        void layout() {
+            (void)tree.layout_root(foundation::NanSize(800.0F, 600.0F));
+        }
+
+        /// overlay layer → surface → DismissLayer → FocusScope → DialogPanel
+        [[nodiscard]] auto panel() const -> scene::NanControl* {
+            auto* surface = host->layer_at(1)->layout_root();
+            if (surface == nullptr || surface->child_count() == 0) {
+                return nullptr;
+            }
+            auto* dismiss = surface->get_child(0)->as_control();
+            if (dismiss == nullptr || dismiss->child_count() == 0) {
+                return nullptr;
+            }
+            auto* scope = dismiss->get_child(0)->as_control();
+            return scope != nullptr && scope->child_count() > 0
+                ? scope->get_child(0)->as_control()
+                : nullptr;
+        }
+    };
+
+    /// 推进淡入淡出直到状态机稳定。
+    void settle(OverlayDialogHarness& harness) {
+        for (int i = 0; i < 8; ++i) {
+            harness.dialog->on_process(0.1F);
+            {
+                auto phase = harness.tree.enter_phase(scene::FramePhase::animation);
+                harness.tree.advance_animations(0.1F);
+            }
+        }
+    }
+} // namespace
+
+TEST_CASE("dialog hosts its panel in the window overlay", "[dialog][overlay]") {
+    OverlayDialogHarness harness;
+    harness.layout();
+    REQUIRE(harness.host->overlay_count() == 0);
+
+    harness.dialog->open();
+    harness.layout();
+
+    REQUIRE(harness.dialog->is_open());
+    REQUIRE(harness.host->overlay_count() == 1);
+
+    auto* panel = harness.panel();
+    REQUIRE(panel != nullptr);
+    // 面板按视口居中，而不是按父容器。
+    const auto bounds = panel->global_bounds();
+    REQUIRE(bounds.get_center().get_x() == Catch::Approx(400.0F).margin(1.0F));
+    REQUIRE(bounds.get_center().get_y() == Catch::Approx(300.0F).margin(1.0F));
+
+    harness.dialog->close();
+    settle(harness);
+    REQUIRE_FALSE(harness.dialog->is_open());
+    REQUIRE(harness.host->overlay_count() == 0);
+}
+
+TEST_CASE("dialog escapes a clipping container", "[dialog][overlay][clip]") {
+    // 对话框挂在 120x80 的裁剪容器里：树内绘制会被截断，浮层托管不应受影响。
+    OverlayDialogHarness harness(true);
+    harness.layout();
+
+    harness.dialog->open();
+    harness.layout();
+
+    auto* panel = harness.panel();
+    REQUIRE(panel != nullptr);
+    const auto bounds = panel->global_bounds();
+    REQUIRE(bounds.get_center().get_x() == Catch::Approx(400.0F).margin(1.0F));
+    REQUIRE(bounds.get_center().get_y() == Catch::Approx(300.0F).margin(1.0F));
+    // 面板完整落在裁剪容器之外：中心不在容器内，且比容器更宽，说明没有被截断。
+    const auto clip_bounds = harness.clip->global_bounds();
+    REQUIRE(clip_bounds.is_valid());
+    REQUIRE_FALSE(clip_bounds.contains_point(bounds.get_center()));
+    REQUIRE(bounds.get_width() > clip_bounds.get_width());
+}
+
+TEST_CASE("dialog blocks input below while open", "[dialog][overlay][modal]") {
+    OverlayDialogHarness harness;
+    auto behind = std::make_shared<widget::Button>("Behind");
+    behind->set_position(foundation::NanPoint(20.0F, 20.0F));
+    harness.body->add_child(behind);
+    harness.layout();
+
+    const auto behind_point = foundation::NanPoint(30.0F, 30.0F);
+    REQUIRE(harness.tree.hit_test(behind_point) == behind.get());
+
+    harness.dialog->open();
+    harness.layout();
+
+    // 命中被模态壳接管，不再落到下层按钮。
+    auto* hit = harness.tree.hit_test(behind_point);
+    REQUIRE(hit != nullptr);
+    REQUIRE(hit != behind.get());
+}
+
+TEST_CASE("dialog dismisses on scrim click and escape through the overlay", "[dialog][overlay][input]")
+{
+    OverlayDialogHarness harness;
+    (void)harness.dialog->set_content(std::make_shared<widget::Button>("OK"));
+    harness.dialog->open();
+    harness.layout();
+
+    harness.tree.dispatch_mouse_button(scene::MouseButtonEvent(
+        scene::MouseButtonEvent::Button::left,
+        scene::MouseButtonEvent::Action::press,
+        foundation::NanPoint(10.0F, 10.0F)
+    ));
+    REQUIRE_FALSE(harness.dialog->is_open());
+
+    harness.dialog->open();
+    harness.layout();
+    REQUIRE(harness.dialog->is_open());
+    harness.tree.dispatch_key(scene::KeyEvent(256, scene::KeyEvent::Action::press));
+    REQUIRE_FALSE(harness.dialog->is_open());
+}
+
+TEST_CASE("non-dismissible dialog swallows escape and scrim clicks", "[dialog][overlay][input]") {
+    OverlayDialogHarness harness;
+    harness.dialog->set_dismissible(false);
+    harness.dialog->open();
+    harness.layout();
+
+    int presses = 0;
+    auto behind = std::make_shared<widget::Button>("Behind");
+    behind->set_position(foundation::NanPoint(10.0F, 10.0F));
+    behind->set_on_click([&presses] { ++presses; });
+    harness.body->add_child(behind);
+    harness.layout();
+
+    harness.tree.dispatch_key(scene::KeyEvent(256, scene::KeyEvent::Action::press));
+    REQUIRE(harness.dialog->is_open());
+
+    harness.tree.dispatch_mouse_button(scene::MouseButtonEvent(
+        scene::MouseButtonEvent::Button::left,
+        scene::MouseButtonEvent::Action::press,
+        foundation::NanPoint(15.0F, 15.0F)
+    ));
+    REQUIRE(harness.dialog->is_open());
+    // 模态层吞掉输入，下层按钮不响应。
+    REQUIRE(presses == 0);
+}
+
+TEST_CASE("dialog restores focus to the opener on close", "[dialog][overlay][focus]") {
+    OverlayDialogHarness harness;
+    auto opener = std::make_shared<widget::Button>("Open");
+    harness.body->add_child(opener);
+    harness.layout();
+    harness.tree.set_focus(opener.get());
+    REQUIRE(harness.tree.focused_node() == opener.get());
+
+    (void)harness.dialog->set_content(std::make_shared<widget::Button>("OK"));
+    harness.dialog->open();
+    harness.layout();
+    REQUIRE(harness.tree.focused_node() != opener.get());
+
+    harness.dialog->close();
+    settle(harness);
+    REQUIRE(harness.tree.focused_node() == opener.get());
+}
+
+TEST_CASE("dialog reopens after closing without leaking overlays", "[dialog][overlay][lifetime]") {
+    OverlayDialogHarness harness;
+    (void)harness.dialog->set_content(std::make_shared<widget::Button>("OK"));
+    harness.layout();
+
+    for (int round = 0; round < 3; ++round) {
+        harness.dialog->open();
+        harness.layout();
+        REQUIRE(harness.host->overlay_count() == 1);
+
+        harness.dialog->close();
+        settle(harness);
+        REQUIRE(harness.host->overlay_count() == 0);
+        REQUIRE_FALSE(harness.dialog->is_open());
+    }
+}
+
+TEST_CASE("floating content opened inside a dialog stays above the scrim", "[dialog][overlay][nested]") {
+    OverlayDialogHarness harness;
+    // 模态面板里放一个 Select：它的弹层必须压在遮罩之上，否则会被埋掉且点不到。
+    auto select = widget::Select::create({"A", "B", "C"});
+    harness.dialog->set_content(select);
+    harness.dialog->open();
+    harness.layout();
+    REQUIRE(harness.host->overlay_count() == 1);
+
+    const auto field = foundation::NanPoint(
+        select->global_bounds().get_left() + 10.0F,
+        select->global_bounds().get_top() + 10.0F
+    );
+    harness.tree.dispatch_mouse_button(scene::MouseButtonEvent(
+        scene::MouseButtonEvent::Button::left,
+        scene::MouseButtonEvent::Action::press,
+        field
+    ));
+    harness.layout();
+    REQUIRE(select->is_open());
+    REQUIRE(harness.host->overlay_count() == 2);
+
+    auto* surface = harness.host->layer_at(1)->layout_root();
+    REQUIRE(surface != nullptr);
+    REQUIRE(surface->child_count() == 2);
+    auto* popup_dismiss = surface->get_child(1)->as_control();
+    REQUIRE(popup_dismiss != nullptr);
+    auto* popup = popup_dismiss->get_child(0)->as_control();
+    REQUIRE(popup != nullptr);
+
+    // 直接点第二条选项：只有弹层真的压在遮罩之上，这次点击才会被选项接走。
+    const auto row_height = popup->global_bounds().get_height() / 3.0F;
+    const auto option_point = foundation::NanPoint(
+        popup->global_bounds().get_left() + 10.0F,
+        popup->global_bounds().get_top() + row_height * 1.5F
+    );
+    harness.tree.dispatch_mouse_button(scene::MouseButtonEvent(
+        scene::MouseButtonEvent::Button::left,
+        scene::MouseButtonEvent::Action::press,
+        option_point
+    ));
+    REQUIRE(select->selected_index() == 1);
+    REQUIRE_FALSE(select->is_open());
+}
+
+TEST_CASE("dialog panel lays out the title inside the padded content area", "[dialog][layout]") {
+    OverlayDialogHarness harness;
+    harness.dialog->set_title("删除这条记录？");
+    harness.dialog->set_content(widget::Label::create(harness.graph, "删除后无法恢复。"));
+    harness.dialog->open();
+    harness.layout();
+
+    auto* panel = harness.panel();
+    REQUIRE(panel != nullptr);
+    REQUIRE(panel->child_count() == 2);
+
+    // 标题是 header 槽位的内容，必须和 content 一样参与测量与布局；只把它挂成子节点而
+    // 不登记到槽位，它会停在面板原点，与下方内容重叠。
+    auto* first = panel->get_child(0)->as_node2d();
+    auto* second = panel->get_child(1)->as_node2d();
+    REQUIRE(first != nullptr);
+    REQUIRE(second != nullptr);
+    auto* title = first->global_bounds().get_top() <= second->global_bounds().get_top() ? first
+                                                                                        : second;
+    auto* content = title == first ? second : first;
+
+    const auto style = harness.dialog->resolved_style();
+    const auto panel_bounds = panel->global_bounds();
+    const auto title_bounds = title->global_bounds();
+    REQUIRE(title_bounds.get_left() - panel_bounds.get_left()
+            == Catch::Approx(style.metrics.padding_x));
+    REQUIRE(title_bounds.get_top() - panel_bounds.get_top()
+            == Catch::Approx(style.metrics.padding_y));
+    // 两段文字之间是 recipe 的 gap，不重叠。
+    const auto gap = content->global_bounds().get_top()
+        - (title_bounds.get_top() + title_bounds.get_height());
+    REQUIRE(gap == Catch::Approx(style.metrics.gap));
 }

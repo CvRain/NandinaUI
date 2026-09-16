@@ -172,6 +172,8 @@ module_widget = files(
     'widget/gesture_area.cpp',
     'widget/internal/anchored_positioner.hpp',
     'widget/internal/anchored_positioner.cpp',
+    'widget/internal/dialog_panel.hpp',
+    'widget/internal/dialog_panel.cpp',
     'widget/internal/dismiss_layer.hpp',
     'widget/internal/dismiss_layer.cpp',
     'widget/internal/focus_scope.hpp',

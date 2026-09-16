@@ -718,7 +718,11 @@ namespace nandina::widget
                 popup_ptr->set_selected(index);
             }
         };
-        portal_handle_ = std::make_unique<scene::OverlayHandle>(host->present(std::move(dismiss)));
+        // 模态内容里再展开的下拉必须压过模态遮罩，否则会被埋掉且点不到。
+        const auto level = host->hosts_node(*this) ? scene::OverlayLevel::nested_popup
+                                                   : scene::OverlayLevel::popup;
+        portal_handle_ =
+            std::make_unique<scene::OverlayHandle>(host->present(std::move(dismiss), {.level = level}));
         portal_anchor_ = anchor;
         portal_viewport_ = viewport_size;
     }

@@ -334,8 +334,11 @@ namespace nandina::widget
                 internal::position_anchored_overlay(anchor, bubble_size, viewport, options);
             created->set_position(position.rect.get_top_left());
             portal_bubble_ = created;
-            portal_handle_ =
-                std::make_unique<scene::OverlayHandle>(host->present(std::move(created)));
+            const auto level = host->hosts_node(*this) ? scene::OverlayLevel::nested_popup
+                                                       : scene::OverlayLevel::popup;
+            portal_handle_ = std::make_unique<scene::OverlayHandle>(
+                host->present(std::move(created), {.level = level})
+            );
             portal_anchor_ = anchor;
             portal_viewport_ = viewport_size;
             portal_placement_ = placement_;
