@@ -545,6 +545,17 @@ namespace nandina::scene
             return;
         }
 
+        // Changing focus can run a handler that closes a floating layer, which
+        // destroys the hit target before it receives the event (a dropdown closes
+        // when its field loses focus). Pin the hit target across the focus change so
+        // the click is still delivered to a live node.
+        auto pinned_hit = hit->weak_from_this().lock();
+
+        // Focus follows the press, never the release. A press may open a floating
+        // layer that still sits under the pointer when the button comes back up, and
+        // re-resolving focus there would hand it to the layer instead of the control
+        // the user actually clicked: a Select closes on focus loss, so its popup
+        // would be torn down at button-up before an option could be picked.
         set_focus(_find_focus_target(hit));
         _bubble_input(hit, copy);
         if (!copy.is_pressed() && captured != nullptr) {
@@ -962,6 +973,19 @@ namespace nandina::scene
         for (auto* node = start; node != nullptr && node != stop_exclusive; node = node->parent()) {
             path.push_back(node);
         }
+        // An input handler may close a floating layer and thereby remove nodes that
+        // are still on this dispatch path (a popup that closes itself after a click,
+        // or a dismiss layer whose callback fires). Pin the whole path for the
+        // duration of the dispatch so no handler returns into, or bubbles past, a
+        // node that was just destroyed. The nodes are still detached from the tree
+        // immediately; only their destruction is postponed until the event finishes.
+        std::vector<std::shared_ptr<NanNode>> pinned;
+        pinned.reserve(path.size());
+        for (auto* node: path) {
+            if (auto keep_alive = node->weak_from_this().lock(); keep_alive != nullptr) {
+                pinned.push_back(std::move(keep_alive));
+            }
+        }
         for (auto it = path.rbegin(); it != path.rend(); ++it) {
             if ((*it)->on_input_capture(event) || event.is_accepted()) {
                 return;
@@ -977,8 +1001,16 @@ namespace nandina::scene
     auto NanSceneTree::_find_focus_target(NanNode* start) const -> NanNode2D* {
         for (auto* node = start; node != nullptr; node = node->parent()) {
             auto* node_2d = node->as_node2d();
-            if (node_2d && node_2d->is_visible_in_tree() && node_2d->is_focusable()) {
+            if (node_2d == nullptr || !node_2d->is_visible_in_tree()) {
+                continue;
+            }
+            if (node_2d->is_focusable()) {
                 return node_2d;
+            }
+            // Floating content may belong to a control in another subtree; focus that
+            // control instead of clearing focus.
+            if (auto* delegate = node_2d->focus_delegate(); delegate != nullptr) {
+                return delegate;
             }
         }
 

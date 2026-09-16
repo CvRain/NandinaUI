@@ -808,3 +808,58 @@ TEST_CASE("semantics bounds follow the root viewport transform", "[scene][semant
     REQUIRE(tree.semantics_tree().roots.front().bounds
             == foundation::NanRect::from_xywh(10.0F, 20.0F, 40.0F, 20.0F));
 }
+
+namespace
+{
+    std::weak_ptr<scene::NanControl> g_self_removal_probe;
+    bool g_alive_after_self_removal = false;
+
+    /// Removes itself from the tree from inside its own input handler — the pattern a
+    /// dropdown popup uses when a click selects an option and closes the popup.
+    class SelfRemovingControl final: public scene::NanControl {
+    public:
+        explicit SelfRemovingControl(foundation::NanSize size): scene::NanControl(size) {}
+
+        auto on_input(scene::InputEvent& event) -> bool override {
+            if (event.type() != scene::EventType::mouse_button
+                || !static_cast<scene::MouseButtonEvent&>(event).is_pressed())
+            {
+                return false;
+            }
+            if (auto* parent_node = parent(); parent_node != nullptr) {
+                parent_node->remove_and_delete(*this);
+            }
+            g_alive_after_self_removal = !g_self_removal_probe.expired();
+            event.accept();
+            return true;
+        }
+    };
+} // namespace
+
+TEST_CASE("input dispatch pins the event path while handlers run", "[scene][input]") {
+    auto root = std::make_shared<scene::NanControl>(foundation::NanSize(100.0F, 100.0F));
+    g_self_removal_probe.reset();
+    {
+        // Only the parent owns the child, so removing it would destroy it immediately
+        // unless the dispatch keeps the event path alive.
+        auto child = std::make_shared<SelfRemovingControl>(foundation::NanSize(40.0F, 40.0F));
+        root->add_child(child);
+        g_self_removal_probe = child;
+    }
+
+    scene::NanSceneTree tree;
+    tree.set_root(root);
+    REQUIRE(tree.layout_root(foundation::NanSize(100.0F, 100.0F)) >= 1);
+
+    g_alive_after_self_removal = false;
+    tree.dispatch_mouse_button(scene::MouseButtonEvent {
+        scene::MouseButtonEvent::Button::left,
+        scene::MouseButtonEvent::Action::press,
+        foundation::NanPoint(10.0F, 10.0F),
+    });
+
+    // A handler may remove nodes on the dispatch path; they must survive until the
+    // event has finished bubbling, then be destroyed normally.
+    REQUIRE(g_alive_after_self_removal);
+    REQUIRE(g_self_removal_probe.expired());
+}

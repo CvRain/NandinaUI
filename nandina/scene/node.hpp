@@ -213,6 +213,14 @@ namespace nandina::scene
         /// True if this node can become the focus target.
         [[nodiscard]] virtual auto is_focusable() const -> bool;
 
+        /**
+         * Focus target to use when a click lands on this node or its subtree.
+         * Floating content lives in another subtree than the control it belongs to;
+         * pointing back at that control keeps the click from clearing focus, so using
+         * the floating content does not blur its owner. Default: none.
+         */
+        [[nodiscard]] virtual auto focus_delegate() const -> NanNode2D*;
+
         /// True if this node should be drawn / hit-tested in the active tree.
         /// A false return means this node AND all descendants are skipped.
         [[nodiscard]] virtual auto is_visible_in_tree() const -> bool;

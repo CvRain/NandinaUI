@@ -347,6 +347,10 @@
         return false;
     }
 
+    auto NanNode::focus_delegate() const -> NanNode2D* {
+        return nullptr;
+    }
+
     auto NanNode::is_visible_in_tree() const -> bool {
         auto* p = parent();
         return p == nullptr || p->is_visible_in_tree();
