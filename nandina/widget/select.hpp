@@ -17,14 +17,24 @@
 #include <string_view>
 #include <vector>
 
+namespace nandina::scene
+{
+    class OverlayHandle;
+    class OverlayHost;
+}
+
 namespace nandina::widget
 {
+    template<typename Component>
+    struct ComponentTraits;
+
     class Select: public scene::NanControl {
     public:
         explicit Select(
             std::vector<std::string> options = {},
             theme::NanTheme theme = theme::default_theme()
         );
+        ~Select();
 
         [[nodiscard]] static auto create(
             std::vector<std::string> options = {},
@@ -73,6 +83,8 @@ namespace nandina::widget
         [[nodiscard]] auto is_focusable() const -> bool override;
         auto on_input(scene::InputEvent& event) -> bool override;
         auto on_draw(render::DrawContext& context) -> void override;
+        void on_process(float dt) override;
+        void on_exit_tree() override;
 
     protected:
         [[nodiscard]] auto on_measure(scene::LayoutConstraints constraints)
@@ -80,6 +92,14 @@ namespace nandina::widget
         [[nodiscard]] auto semantics_properties() const -> semantics::Properties override;
 
     private:
+        friend struct ComponentTraits<Select>;
+
+        void set_overlay_service(scene::OverlayHost* host) noexcept;
+        [[nodiscard]] auto resolve_overlay_host() -> std::shared_ptr<scene::OverlayHost>;
+        void sync_portal();
+        void refresh_portal();
+        void close_portal();
+
         void rebuild_texts();
         void apply_text_styles();
         [[nodiscard]] auto hit_option(float local_y) const -> int;
@@ -99,6 +119,14 @@ namespace nandina::widget
         theme::NanTheme theme_view_;
         std::optional<theme::SelectRecipeRule> override_;
         bool system_explicit_ = false;
+        std::weak_ptr<scene::OverlayHost> overlay_service_;
+        std::unique_ptr<scene::OverlayHandle> portal_handle_;
+        std::weak_ptr<scene::NanControl> portal_popup_;
+        /// Moves the popup highlight in place; empty while no portal is mounted. Kept
+        /// as a callback because the popup type is private to the implementation.
+        std::function<void(int)> portal_set_selected_;
+        foundation::NanRect portal_anchor_ {};
+        foundation::NanSize portal_viewport_ {};
     };
 } // namespace nandina::widget
 

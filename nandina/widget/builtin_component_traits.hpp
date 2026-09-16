@@ -313,7 +313,14 @@ namespace nandina::widget
             const int selected = 0
         ) -> authoring::NodeBuilder<Select> {
             return authoring::make<Select>(std::move(options), ui.theme())
-                .configure([selected](Select& select) { select.set_selected_index(selected); });
+                .configure(
+                    [&ui, selected](Select& select) {
+                        select.set_selected_index(selected);
+                        select.set_overlay_service(
+                            ui.has_overlay_host() ? &ui.overlay_host() : nullptr
+                        );
+                    }
+                );
         }
 
         [[nodiscard]] static auto make(

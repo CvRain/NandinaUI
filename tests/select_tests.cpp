@@ -4,6 +4,7 @@
 
 #include <nandina/render/render_device.hpp>
 #include <nandina/scene/scene_tree.hpp>
+#include <nandina/scene/overlay_host.hpp>
 #include <nandina/theme/theme_manager.hpp>
 #include <nandina/widget/controls.hpp>
 #include <nandina/widget/select.hpp>
@@ -206,4 +207,144 @@ TEST_CASE("BuildContext select synchronizes a selected-index signal", "[select][
 
     selected.set(1);
     REQUIRE(select->selected_index() == 1);
+}
+
+TEST_CASE("mounted select presents its popup through the overlay host", "[select][overlay]") {
+    auto host = scene::OverlayHost::create();
+    auto select = widget::Select::create({"A", "B", "C"});
+    host->set_content(select);
+    scene::NanSceneTree tree;
+    tree.set_root(host);
+    REQUIRE(tree.layout_root(foundation::NanSize(240.0F, 160.0F)) >= 1);
+
+    select->open();
+    REQUIRE(host->overlay_count() == 1);
+    auto* surface = host->layer_at(1)->layout_root();
+    REQUIRE(surface != nullptr);
+    REQUIRE(surface->child_count() == 1);
+    auto* dismiss = surface->get_child(0)->as_control();
+    REQUIRE(dismiss != nullptr);
+    REQUIRE(dismiss->child_count() == 1);
+    auto* popup = dismiss->get_child(0)->as_control();
+    REQUIRE(popup != nullptr);
+    const auto second_option = foundation::NanPoint(
+        popup->global_bounds().get_left() + 10.0F,
+        popup->global_bounds().get_top() + 48.0F
+    );
+    REQUIRE(tree.hit_test(second_option) == popup);
+
+    tree.dispatch_mouse_button(scene::MouseButtonEvent {
+        scene::MouseButtonEvent::Button::left,
+        scene::MouseButtonEvent::Action::press,
+        second_option,
+    });
+    REQUIRE(select->selected_index() == 1);
+    REQUIRE_FALSE(select->is_open());
+    REQUIRE(host->overlay_count() == 0);
+}
+
+TEST_CASE("mounted select dismisses when clicking outside its popup", "[select][overlay]") {
+    auto host = scene::OverlayHost::create();
+    auto select = widget::Select::create({"A", "B"});
+    host->set_content(select);
+    scene::NanSceneTree tree;
+    tree.set_root(host);
+    REQUIRE(tree.layout_root(foundation::NanSize(240.0F, 160.0F)) >= 1);
+
+    select->open();
+    REQUIRE(host->overlay_count() == 1);
+    tree.dispatch_mouse_button(scene::MouseButtonEvent {
+        scene::MouseButtonEvent::Button::left,
+        scene::MouseButtonEvent::Action::press,
+        foundation::NanPoint(220.0F, 140.0F),
+    });
+    REQUIRE_FALSE(select->is_open());
+    REQUIRE(host->overlay_count() == 0);
+}
+
+TEST_CASE("BuildContext injects the window overlay service into select", "[select][overlay]") {
+    reactive::Graph graph;
+    reactive::ReactiveScope scope {graph};
+    theme::ThemeManager themes;
+    auto host = scene::OverlayHost::create();
+    host->set_content(std::make_shared<scene::NanControl>());
+    scene::NanSceneTree tree;
+    tree.set_root(host);
+    REQUIRE(tree.layout_root(foundation::NanSize(240.0F, 160.0F)) >= 1);
+
+    widget::BuildContext ui {graph, scope, themes, nullptr, host.get()};
+    auto select = ui.make<widget::Select>(std::vector<std::string> {"A", "B"}).build();
+    select->open();
+
+    REQUIRE(select->is_open());
+    REQUIRE(host->overlay_count() == 1);
+    select->close();
+    REQUIRE(host->overlay_count() == 0);
+}
+
+TEST_CASE("moving a select reuses its popup instead of rebuilding it", "[select][overlay]") {
+    auto host = scene::OverlayHost::create();
+    auto select = widget::Select::create({"A", "B", "C"});
+    // Keep the select at its natural size inside a container: a sole content root
+    // would be stretched to the whole viewport and mask the anchor movement.
+    auto content = std::make_shared<scene::NanControl>(foundation::NanSize(240.0F, 240.0F));
+    select->set_position(foundation::NanPoint(20.0F, 20.0F));
+    content->add_child(select);
+    content->add_child(std::make_shared<scene::NanControl>(foundation::NanSize(1.0F, 1.0F)));
+    host->set_content(content);
+
+    scene::NanSceneTree tree;
+    tree.set_root(host);
+    REQUIRE(tree.layout_root(foundation::NanSize(240.0F, 240.0F)) >= 1);
+
+    select->open();
+    auto* dismiss = host->layer_at(1)->layout_root()->get_child(0)->as_control();
+    REQUIRE(dismiss != nullptr);
+    auto* before = dismiss->get_child(0)->as_control();
+    REQUIRE(before != nullptr);
+    const auto before_top = before->global_bounds().get_top();
+
+    // The anchor moves (scroll / re-layout); the same popup should follow it rather
+    // than being torn down and rebuilt every frame.
+    select->set_position(foundation::NanPoint(20.0F, 60.0F));
+    select->on_process(0.016F);
+
+    auto* after = dismiss->get_child(0)->as_control();
+    REQUIRE(after == before);
+    REQUIRE(after->global_bounds().get_top() > before_top);
+}
+
+TEST_CASE("selecting an option while the field holds focus", "[select][overlay]") {
+    auto host = scene::OverlayHost::create();
+    auto select = widget::Select::create({"A", "B", "C"});
+    host->set_content(select);
+    scene::NanSceneTree tree;
+    tree.set_root(host);
+    REQUIRE(tree.layout_root(foundation::NanSize(240.0F, 200.0F)) >= 1);
+
+    // A real interaction focuses the field first (the click on it) and then clicks an
+    // option, so the focus change and the option click land in the same dispatch.
+    tree.set_focus(select.get());
+    select->open();
+    REQUIRE(host->overlay_count() == 1);
+
+    auto* dismiss = host->layer_at(1)->layout_root()->get_child(0)->as_control();
+    REQUIRE(dismiss != nullptr);
+    auto* popup = dismiss->get_child(0)->as_control();
+    REQUIRE(popup != nullptr);
+    const auto option = foundation::NanPoint(
+        popup->global_bounds().get_left() + 10.0F,
+        popup->global_bounds().get_top() + 48.0F
+    );
+    tree.dispatch_mouse_button(scene::MouseButtonEvent {
+        scene::MouseButtonEvent::Button::left,
+        scene::MouseButtonEvent::Action::press,
+        option,
+    });
+
+    REQUIRE(select->selected_index() == 1);
+    REQUIRE_FALSE(select->is_open());
+    REQUIRE(host->overlay_count() == 0);
+    // The field keeps focus, the way it did while the popup was drawn inside it.
+    REQUIRE(tree.focused_node() == select.get());
 }

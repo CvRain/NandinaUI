@@ -6,8 +6,11 @@
 
 #include "primitives/box_painter.hpp"
 #include "primitives/focus_ring_painter.hpp"
+#include "internal/anchored_positioner.hpp"
+#include "internal/dismiss_layer.hpp"
 #include "../render/draw_context.hpp"
 #include "../scene/input_event.hpp"
+#include "../scene/overlay_host.hpp"
 #include "../scene/scene_tree.hpp"
 #include "../theme/theme_manager.hpp"
 
@@ -36,7 +39,142 @@ namespace nandina::widget
                 && lhs.font == rhs.font && lhs.overflow == rhs.overflow
                 && lhs.max_lines == rhs.max_lines;
         }
+
+        /// Build a text style from a resolved type style plus the inherited style
+        /// context. Shared by the in-tree option texts and the portal popup so both
+        /// render the same field/value/option typography.
+        [[nodiscard]] auto make_text_style(
+            const theme::ResolvedStyleContext& context,
+            const theme::ResolvedTypeStyle& type,
+            const text::FontRequest& fallback_font
+        ) -> primitives::TextStyle {
+            return primitives::TextStyle {
+                .color = context.text_color_from_context ? context.text_color : type.color,
+                .font_size = context.font_size_from_context ? context.font_size : type.font_size,
+                .font = context.font_from_context ? context.font : fallback_font,
+                .overflow = primitives::TextOverflow::clip,
+                .max_lines = 1,
+            };
+        }
+
+        class SelectPopup final: public scene::NanControl {
+        public:
+            SelectPopup(
+                float width,
+                std::vector<std::string> options,
+                theme::ResolvedSelectStyle style,
+                primitives::TextPipeline pipeline,
+                primitives::TextStyle option_style,
+                primitives::TextStyle option_selected_style,
+                int selected_index,
+                std::weak_ptr<Select> owner,
+                std::function<void(int)> on_select
+            ):
+                width_(width),
+                options_(std::move(options)),
+                style_(std::move(style)),
+                option_style_(std::move(option_style)),
+                option_selected_style_(std::move(option_selected_style)),
+                owner_(std::move(owner)),
+                on_select_(std::move(on_select)) {
+                option_texts_.reserve(options_.size());
+                for (const auto& option: options_) {
+                    auto text = std::make_shared<primitives::Text>(option);
+                    text->set_text_pipeline(pipeline);
+                    option_texts_.push_back(std::move(text));
+                }
+                set_selected(selected_index);
+            }
+
+            /// Move the highlight only. Arrow-key navigation must not rebuild the
+            /// popup (and every option text) on each key press.
+            void set_selected(const int index) {
+                selected_index_ = index;
+                for (std::size_t i = 0; i < option_texts_.size(); ++i) {
+                    const auto& next = static_cast<int>(i) == selected_index_
+                        ? option_selected_style_
+                        : option_style_;
+                    if (!same_text_style(option_texts_[i]->style(), next)) {
+                        option_texts_[i]->set_style(next);
+                    }
+                }
+                mark_paint_dirty();
+            }
+
+            [[nodiscard]] auto is_focusable() const -> bool override {
+                return false;
+            }
+
+            /// The popup sits in the overlay layer while its select sits in the
+            /// content layer. A click on the popup belongs to the select, so focus
+            /// must stay on the field instead of being cleared.
+            [[nodiscard]] auto focus_delegate() const -> scene::NanNode2D* override {
+                return owner_.lock().get();
+            }
+
+            auto on_input(scene::InputEvent& event) -> bool override {
+                if (event.type() != scene::EventType::mouse_button) {
+                    return false;
+                }
+                auto& mouse = static_cast<scene::MouseButtonEvent&>(event);
+                if (!mouse.is_pressed() || mouse.button() != scene::MouseButtonEvent::Button::left) {
+                    return false;
+                }
+                const auto local = to_local(mouse.screen_pos());
+                const auto row = style_.metrics.min_height;
+                const auto index = row > 0.0F
+                    ? static_cast<int>(local.get_y() / row)
+                    : -1;
+                if (index >= 0 && index < static_cast<int>(options_.size()) && on_select_) {
+                    on_select_(index);
+                    event.accept();
+                    return true;
+                }
+                return false;
+            }
+
+        protected:
+            [[nodiscard]] auto on_measure(scene::LayoutConstraints constraints)
+                -> foundation::NanSize override {
+                const auto height = style_.metrics.min_height * static_cast<float>(options_.size());
+                return constraints.constrain(foundation::NanSize(width_, height));
+            }
+
+            void on_draw(render::DrawContext& context) override {
+                const auto world =
+                    render::world_bounds_from_local(context.world_transform(), local_rect());
+                primitives::BoxPainter::paint(context, world, style_.popup, context.opacity());
+                const float row_height = context.logical_to_screen(style_.metrics.min_height);
+                for (std::size_t index = 0; index < option_texts_.size(); ++index) {
+                    auto& text = *option_texts_[index];
+                    (void)text.measure_layout(scene::LayoutConstraints::loose());
+                    const float text_height =
+                        context.logical_to_screen(text.measured_text_height());
+                    text.draw_at(
+                        context,
+                        foundation::NanPoint(
+                            world.get_left() + context.logical_to_screen(style_.metrics.padding_x),
+                            world.get_top() + row_height * static_cast<float>(index)
+                                + (row_height - text_height) * 0.5F
+                        )
+                    );
+                }
+            }
+
+        private:
+            float width_ = 0.0F;
+            std::vector<std::string> options_;
+            theme::ResolvedSelectStyle style_;
+            primitives::TextStyle option_style_;
+            primitives::TextStyle option_selected_style_;
+            std::vector<std::shared_ptr<primitives::Text>> option_texts_;
+            std::weak_ptr<Select> owner_;
+            int selected_index_ = 0;
+            std::function<void(int)> on_select_;
+        };
     } // namespace
+
+    Select::~Select() = default;
 
     Select::Select(std::vector<std::string> options, theme::NanTheme theme):
         options_(std::move(options)) {
@@ -62,6 +200,7 @@ namespace nandina::widget
         apply_text_styles();
         mark_layout_dirty();
         mark_semantics_dirty();
+        refresh_portal();
     }
 
     auto Select::option_count() const -> std::size_t {
@@ -83,6 +222,11 @@ namespace nandina::widget
         }
         selected_index_ = clamped;
         apply_text_styles();
+        // The portal popup owns its own option texts, so move its highlight in place
+        // instead of rebuilding it (arrow-key navigation changes the index often).
+        if (portal_set_selected_) {
+            portal_set_selected_(clamped);
+        }
         mark_dirty(scene::DirtyFlags::paint | scene::DirtyFlags::semantics);
     }
 
@@ -99,8 +243,12 @@ namespace nandina::widget
             return;
         }
         const int before = selected_index_;
-        set_selected_index(index);
+        // Close before touching the index: `set_selected_index()` refreshes the
+        // portal, and doing that while still open would tear the popup down and
+        // rebuild it only to close it again — and it would destroy the popup from
+        // inside its own input handler.
         close();
+        set_selected_index(index);
         if (before != selected_index_) {
             if (on_change_) {
                 on_change_(selected_index_);
@@ -114,6 +262,7 @@ namespace nandina::widget
             return;
         }
         open_ = true;
+        sync_portal();
         mark_dirty(scene::DirtyFlags::paint | scene::DirtyFlags::semantics);
     }
 
@@ -122,6 +271,7 @@ namespace nandina::widget
             return;
         }
         open_ = false;
+        close_portal();
         mark_dirty(scene::DirtyFlags::paint | scene::DirtyFlags::semantics);
     }
 
@@ -136,6 +286,7 @@ namespace nandina::widget
         disabled_ = disabled;
         if (disabled_) {
             open_ = false;
+            close_portal();
             focused_ = false;
             if (is_inside_tree() && get_tree()->focused_node() == this) {
                 get_tree()->set_focus(nullptr);
@@ -161,6 +312,7 @@ namespace nandina::widget
         system_explicit_ = true;
         theme_view_ = theme;
         apply_text_styles();
+        refresh_portal();
         mark_layout_dirty();
     }
 
@@ -171,6 +323,7 @@ namespace nandina::widget
     void Select::set_override(theme::SelectRecipeRule rule) {
         override_ = std::move(rule);
         apply_text_styles();
+        refresh_portal();
         mark_dirty(scene::DirtyFlags::paint | scene::DirtyFlags::layout);
     }
 
@@ -197,6 +350,7 @@ namespace nandina::widget
         for (auto& text: option_texts_) {
             text->set_text_pipeline(pipeline);
         }
+        refresh_portal();
         mark_layout_dirty();
     }
 
@@ -205,6 +359,7 @@ namespace nandina::widget
         for (auto& text: option_texts_) {
             text->apply_default_text_pipeline(pipeline);
         }
+        refresh_portal();
         mark_layout_dirty();
     }
 
@@ -213,11 +368,13 @@ namespace nandina::widget
         for (auto& text: option_texts_) {
             text->apply_font_context(context);
         }
+        refresh_portal();
         mark_layout_dirty();
     }
 
     void Select::on_style_context_changed(const theme::ResolvedStyleContext&) {
         apply_text_styles();
+        refresh_portal();
         mark_layout_dirty();
     }
 
@@ -228,6 +385,7 @@ namespace nandina::widget
             theme_view_ = theme::NanTheme {system_->tokens, system_->palette(appearance_)};
         }
         apply_text_styles();
+        refresh_portal();
         mark_layout_dirty();
     }
 
@@ -236,8 +394,12 @@ namespace nandina::widget
     }
 
     auto Select::global_bounds() const -> foundation::NanRect {
-        if (!open_) {
-            return scene::NanControl::global_bounds();
+        if (!open_ || portal_handle_ != nullptr) {
+            const auto style = resolved_style();
+            return render::world_bounds_from_local(
+                global_transform(),
+                foundation::NanRect::from_xywh(0.0F, 0.0F, width(), style.metrics.height)
+            );
         }
         const auto style = resolved_style();
         const float popup_height =
@@ -252,13 +414,15 @@ namespace nandina::widget
     }
 
     auto Select::contains_point(const foundation::NanPoint local_point) const -> bool {
-        if (scene::NanControl::contains_point(local_point)) {
+        const auto style = resolved_style();
+        if (local_point.get_x() >= 0.0F && local_point.get_x() <= width()
+            && local_point.get_y() >= 0.0F && local_point.get_y() <= style.metrics.height)
+        {
             return true;
         }
-        if (!open_) {
+        if (!open_ || portal_handle_ != nullptr) {
             return false;
         }
-        const auto style = resolved_style();
         const float popup_top = style.metrics.height + style.metrics.gap;
         const float popup_bottom =
             popup_top + style.metrics.min_height * static_cast<float>(options_.size());
@@ -292,12 +456,17 @@ namespace nandina::widget
             }
             const auto local = to_local(mouse.screen_pos());
             if (open_) {
-                const int hit = hit_option(local.get_y());
-                if (hit >= 0) {
-                    select(hit);
+                if (portal_handle_ != nullptr) {
+                    close();
                 }
                 else {
-                    close();
+                    const int hit = hit_option(local.get_y());
+                    if (hit >= 0) {
+                        select(hit);
+                    }
+                    else {
+                        close();
+                    }
                 }
             }
             else if (local.get_y() >= 0.0F && local.get_y() <= height()) {
@@ -390,7 +559,7 @@ namespace nandina::widget
         );
 
         // 弹出列表。
-        if (open_) {
+        if (open_ && portal_handle_ == nullptr) {
             const float row_h = context.logical_to_screen(style.metrics.min_height);
             const float gap = context.logical_to_screen(style.metrics.gap);
             const float popup_top = field.get_bottom() + gap;
@@ -419,6 +588,157 @@ namespace nandina::widget
         if (focused_ && !disabled_ && style.focus.width > 0.0F) {
             primitives::FocusRingPainter::paint(context, field, style.focus, opacity);
         }
+    }
+
+    void Select::on_process(const float /*dt*/) {
+        if (open_) {
+            sync_portal();
+        }
+    }
+
+    void Select::on_exit_tree() {
+        open_ = false;
+        close_portal();
+    }
+
+    void Select::set_overlay_service(scene::OverlayHost* host) noexcept {
+        overlay_service_ =
+            host != nullptr ? host->weak_self() : std::weak_ptr<scene::OverlayHost> {};
+    }
+
+    auto Select::resolve_overlay_host() -> std::shared_ptr<scene::OverlayHost> {
+        if (auto injected = overlay_service_.lock()) {
+            return injected;
+        }
+        for (auto* node = parent(); node != nullptr; node = node->parent()) {
+            auto* node_2d = node->as_node2d();
+            auto* stack = node_2d != nullptr ? node_2d->as_layer_stack() : nullptr;
+            if (stack == nullptr) {
+                continue;
+            }
+            if (auto* host = stack->as_overlay_host(); host != nullptr) {
+                return host->weak_self().lock();
+            }
+        }
+        return nullptr;
+    }
+
+    void Select::sync_portal() {
+        if (!open_) {
+            close_portal();
+            return;
+        }
+        auto host = resolve_overlay_host();
+        if (host == nullptr || options_.empty()) {
+            close_portal();
+            return;
+        }
+        const auto viewport_size = host->viewport_size();
+        const auto anchor = scene::NanControl::global_bounds();
+        if (!viewport_size.is_valid() || !anchor.is_valid() || width() <= 0.0F) {
+            return;
+        }
+        if (portal_handle_ != nullptr && !portal_handle_->mounted()) {
+            close_portal();
+        }
+        if (portal_handle_ != nullptr && anchor == portal_anchor_
+            && viewport_size == portal_viewport_)
+        {
+            return;
+        }
+
+        const auto style = resolved_style();
+        const auto viewport =
+            foundation::NanRect::from_origin_size(foundation::NanPoint::zero(), viewport_size);
+        const internal::AnchoredPositionOptions options {
+            .placement = internal::OverlayPlacement::bottom,
+            .alignment = internal::OverlayAlignment::start,
+            .gap = style.metrics.gap,
+            .viewport_padding = style.metrics.padding_x,
+        };
+
+        // Move the existing popup instead of rebuilding it: while the page scrolls
+        // the anchor changes every frame, and a rebuild would re-create every option
+        // text object each time. Only opening or a content change recreates the popup.
+        if (auto popup = portal_popup_.lock(); popup != nullptr && portal_handle_ != nullptr) {
+            const auto popup_size = popup->measure_layout(scene::LayoutConstraints::loose());
+            if (!popup_size.is_valid()) {
+                return;
+            }
+            const auto position =
+                internal::position_anchored_overlay(anchor, popup_size, viewport, options);
+            popup->set_position(position.rect.get_top_left());
+            portal_anchor_ = anchor;
+            portal_viewport_ = viewport_size;
+            return;
+        }
+
+        close_portal();
+        const auto& context = resolved_style_context();
+        const auto& option_font =
+            option_texts_.empty() ? value_text_.font() : option_texts_.front()->font();
+        auto self = std::static_pointer_cast<Select>(shared_from_this());
+        auto popup = std::make_shared<SelectPopup>(
+            width(),
+            options_,
+            style,
+            value_text_.text_pipeline(),
+            make_text_style(context, style.option, option_font),
+            make_text_style(context, style.option_selected, option_font),
+            selected_index_,
+            std::weak_ptr<Select>(self),
+            [weak = std::weak_ptr<Select>(self)](const int index) {
+                if (auto select = weak.lock()) {
+                    select->select(index);
+                }
+            }
+        );
+        const auto popup_size = popup->measure_layout(scene::LayoutConstraints::loose());
+        if (!popup_size.is_valid()) {
+            return;
+        }
+        const auto position =
+            internal::position_anchored_overlay(anchor, popup_size, viewport, options);
+        popup->set_position(position.rect.get_top_left());
+        popup->layout_to(
+            foundation::NanRect::from_origin_size(position.rect.get_top_left(), popup_size)
+        );
+
+        auto dismiss = std::make_shared<internal::DismissLayer>(
+            [weak = std::weak_ptr<Select>(self)](const internal::DismissReason) {
+                if (auto select = weak.lock()) {
+                    select->close();
+                }
+            }
+        );
+        dismiss->set_content(popup);
+        portal_popup_ = popup;
+        portal_set_selected_ = [weak = std::weak_ptr<SelectPopup>(popup)](const int index) {
+            if (auto popup_ptr = weak.lock()) {
+                popup_ptr->set_selected(index);
+            }
+        };
+        portal_handle_ = std::make_unique<scene::OverlayHandle>(host->present(std::move(dismiss)));
+        portal_anchor_ = anchor;
+        portal_viewport_ = viewport_size;
+    }
+
+    void Select::refresh_portal() {
+        if (open_) {
+            close_portal();
+            sync_portal();
+        }
+    }
+
+    void Select::close_portal() {
+        if (portal_handle_ != nullptr) {
+            portal_handle_->close();
+            portal_handle_.reset();
+        }
+        portal_popup_.reset();
+        portal_set_selected_ = nullptr;
+        portal_anchor_ = foundation::NanRect {};
+        portal_viewport_ = foundation::NanSize {};
     }
 
     auto Select::on_measure(const scene::LayoutConstraints constraints) -> foundation::NanSize {
@@ -463,27 +783,14 @@ namespace nandina::widget
         const auto style = resolved_style();
         const auto& context = resolved_style_context();
         value_text_.set_text(std::string(selected_label()));
-        const primitives::TextStyle value_style {
-            .color = context.text_color_from_context ? context.text_color : style.value.color,
-            .font_size = context.font_size_from_context ? context.font_size : style.value.font_size,
-            .font = context.font_from_context ? context.font : value_text_.font(),
-            .overflow = primitives::TextOverflow::clip,
-            .max_lines = 1,
-        };
+        const auto value_style = make_text_style(context, style.value, value_text_.font());
         if (!same_text_style(value_text_.style(), value_style)) {
             value_text_.set_style(value_style);
         }
         for (std::size_t i = 0; i < option_texts_.size(); ++i) {
             const auto& type =
                 static_cast<int>(i) == selected_index_ ? style.option_selected : style.option;
-            const primitives::TextStyle option_style {
-                .color = context.text_color_from_context ? context.text_color : type.color,
-                .font_size =
-                    context.font_size_from_context ? context.font_size : type.font_size,
-                .font = context.font_from_context ? context.font : option_texts_[i]->font(),
-                .overflow = primitives::TextOverflow::clip,
-                .max_lines = 1,
-            };
+            const auto option_style = make_text_style(context, type, option_texts_[i]->font());
             if (!same_text_style(option_texts_[i]->style(), option_style)) {
                 option_texts_[i]->set_style(option_style);
             }
