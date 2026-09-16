@@ -62,22 +62,37 @@ TEST_CASE("presented content is hit above clipped application content", "[overla
 TEST_CASE("overlay handles own presentation lifetime and preserve order", "[overlay][lifetime]") {
     auto host = scene::OverlayHost::create();
     host->set_content(std::make_shared<HitControl>(foundation::NanSize(200.0F, 100.0F)));
+    auto modal = std::make_shared<HitControl>(foundation::NanSize(80.0F, 50.0F));
     auto lower = std::make_shared<HitControl>(foundation::NanSize(80.0F, 50.0F));
     auto upper = std::make_shared<HitControl>(foundation::NanSize(80.0F, 50.0F));
-    auto lower_handle = host->present(lower, {.order = 1});
-    auto upper_handle = host->present(upper, {.order = 2});
+    // 模态层最先加入，仍必须压在后加入的 popup 之上：层级优先于加入顺序。
+    auto modal_handle = host->present(modal, {.level = scene::OverlayLevel::modal});
+    auto lower_handle = host->present(lower);
+    auto upper_handle = host->present(upper);
     scene::NanSceneTree tree;
     tree.set_root(host);
     (void)tree.layout_root(foundation::NanSize(200.0F, 100.0F));
 
-    REQUIRE(tree.hit_test(foundation::NanPoint(10.0F, 10.0F)) == upper.get());
-    REQUIRE(host->overlay_count() == 2);
+    // 模态内部再开的浮层压过模态本身。
+    auto nested = std::make_shared<HitControl>(foundation::NanSize(80.0F, 50.0F));
+    auto nested_handle = host->present(nested, {.level = scene::OverlayLevel::nested_popup});
+
+    REQUIRE(host->overlay_count() == 4);
+    const auto probe = foundation::NanPoint(10.0F, 10.0F);
+    REQUIRE(tree.hit_test(probe) == nested.get());
+
+    nested_handle.close();
+    REQUIRE(tree.hit_test(probe) == modal.get());
+
+    // 同一层内按加入顺序叠放。
+    modal_handle.close();
+    REQUIRE(tree.hit_test(probe) == upper.get());
 
     auto moved = std::move(upper_handle);
     REQUIRE_FALSE(upper_handle.mounted());
     REQUIRE(moved.mounted());
     moved.close();
-    REQUIRE(tree.hit_test(foundation::NanPoint(10.0F, 10.0F)) == lower.get());
+    REQUIRE(tree.hit_test(probe) == lower.get());
 }
 
 TEST_CASE("overlay host rejects attached portal content", "[overlay][contract]") {

@@ -122,7 +122,7 @@ namespace nandina::scene
             throw std::logic_error("OverlayHost::present: overlay must be detached");
         }
 
-        overlay->set_z_index(options.order);
+        overlay->set_z_index(static_cast<int>(options.level));
         const auto id = next_id_++;
         entries_.push_back(Entry {.id = id, .control = overlay, .block_below = options.block_below});
         overlay_surface_->add_child(std::move(overlay));
@@ -138,6 +138,15 @@ namespace nandina::scene
         return std::ranges::any_of(entries_, [id](const Entry& entry) {
             return entry.id == id && !entry.control.expired();
         });
+    }
+
+    auto OverlayHost::hosts_node(const NanNode& node) const -> bool {
+        for (const auto* current = node.parent(); current != nullptr; current = current->parent()) {
+            if (current == overlay_layer_.get()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     auto OverlayHost::viewport_size() const -> foundation::NanSize {

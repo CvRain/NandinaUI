@@ -3,6 +3,7 @@
 #include "../../scene/input_event.hpp"
 #include "../../scene/scene_tree.hpp"
 
+#include <cstddef>
 #include <stdexcept>
 #include <utility>
 
@@ -11,7 +12,26 @@ namespace nandina::widget::internal
     namespace
     {
         constexpr int key_tab = 258;
-    }
+
+        /// 内容子树里是否存在可见且可聚焦的控件：作用域据此决定是否用自身兜底焦点。
+        [[nodiscard]] auto has_focusable_descendant(const scene::NanNode& node) -> bool {
+            for (std::size_t index = 0; index < node.child_count(); ++index) {
+                const auto* child = node.get_child(index);
+                if (child == nullptr) {
+                    continue;
+                }
+                if (const auto* node_2d = child->as_node2d();
+                    node_2d != nullptr && node_2d->is_visible_in_tree() && node_2d->is_focusable())
+                {
+                    return true;
+                }
+                if (has_focusable_descendant(*child)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+    } // namespace
 
     auto FocusScope::set_content(std::shared_ptr<scene::NanControl> content)
         -> scene::NanControl& {
@@ -49,6 +69,11 @@ namespace nandina::widget::internal
             event.accept();
         }
         return moved;
+    }
+
+    auto FocusScope::is_focusable() const -> bool {
+        const auto content = content_.lock();
+        return content == nullptr || !has_focusable_descendant(*content);
     }
 
     void FocusScope::on_ready() {

@@ -52,7 +52,7 @@ TEST_CASE("focus scope traps tab and restores previous focus", "[overlay][focus]
     REQUIRE(tree.focused_node() == outside.get());
 }
 
-TEST_CASE("focus scope leaves focus unchanged without focusable descendants", "[overlay][focus]") {
+TEST_CASE("focus scope falls back to itself without focusable descendants", "[overlay][focus]") {
     auto root = std::make_shared<scene::NanControl>();
     auto outside = std::make_shared<FocusableControl>();
     root->add_child(outside);
@@ -64,5 +64,15 @@ TEST_CASE("focus scope leaves focus unchanged without focusable descendants", "[
     scope->set_content(std::make_shared<scene::NanControl>());
     root->add_child(scope);
 
+    // 内容没有可聚焦控件时焦点必须落在作用域内：Escape 与 Tab 都由 on_input_capture 沿焦点
+    // 节点的祖先链处理，焦点留在浮层之外会让它们完全不可达（只有标题的提示对话框即此情形）。
+    REQUIRE(tree.focused_node() == scope.get());
+    REQUIRE(scope->is_focusable());
+
+    // Tab 由作用域自行消化，不会把焦点交回页面。
+    tree.dispatch_key(scene::KeyEvent(258, scene::KeyEvent::Action::press));
+    REQUIRE(tree.focused_node() == scope.get());
+
+    root->remove_and_delete(*scope);
     REQUIRE(tree.focused_node() == outside.get());
 }

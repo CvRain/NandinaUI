@@ -1,6 +1,8 @@
 #include "dismiss_layer.hpp"
 
+#include "../../render/draw_context.hpp"
 #include "../../scene/input_event.hpp"
+#include "../primitives/box_painter.hpp"
 
 #include <stdexcept>
 #include <utility>
@@ -60,6 +62,24 @@ namespace nandina::widget::internal
         return false;
     }
 
+    auto DismissLayer::local_opacity() const -> float {
+        return scene::NanNode2D::local_opacity() * fade_.value();
+    }
+
+    auto DismissLayer::on_measure(const scene::LayoutConstraints constraints) -> foundation::NanSize {
+        return constraints.constrain(
+            foundation::NanSize(constraints.max_width, constraints.max_height)
+        );
+    }
+
+    void DismissLayer::on_draw(render::DrawContext& context) {
+        if (!scrim_) {
+            return;
+        }
+        const auto world = render::world_bounds_from_local(context.world_transform(), local_rect());
+        primitives::BoxPainter::paint(context, world, *scrim_, context.opacity());
+    }
+
     void DismissLayer::on_layout() {
         auto current = content_.lock();
         if (current == nullptr) {
@@ -72,6 +92,9 @@ namespace nandina::widget::internal
             .max_height = height(),
         };
         const auto measured = current->measure_layout(constraints);
-        current->layout_to(foundation::NanRect::from_origin_size(current->position(), measured));
+        const auto origin = content_centered_
+            ? foundation::NanRect::from_center(local_rect().get_center(), measured).get_top_left()
+            : current->position();
+        current->layout_to(foundation::NanRect::from_origin_size(origin, measured));
     }
 }

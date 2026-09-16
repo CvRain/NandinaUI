@@ -11,8 +11,18 @@
 
 namespace nandina::scene
 {
+    /// 浮层的语义层级。组件按用途声明层级，不直接写 CanvasLayer 的 order 数值。
+    enum class OverlayLevel: int {
+        /// 提示、下拉与菜单：位于应用内容之上，彼此按加入顺序叠放。
+        popup = 0,
+        /// 模态内容：高于所有 popup，并阻断其下全部输入。
+        modal = 100,
+        /// 模态内容内部再展开的提示与下拉：必须高于模态，否则会被遮罩埋掉且点不到。
+        nested_popup = 200,
+    };
+
     struct OverlayOptions {
-        int order = 0;
+        OverlayLevel level = OverlayLevel::popup;
         bool block_below = false;
     };
 
@@ -55,6 +65,10 @@ namespace nandina::scene
 
         [[nodiscard]] auto overlay_count() const -> std::size_t;
         [[nodiscard]] auto contains(std::uint64_t id) const -> bool;
+
+        /// 该节点是否位于本 host 的浮层内容之下。浮层内部再展开的提示与下拉据此选择
+        /// `OverlayLevel::nested_popup`，以免被模态遮罩盖住。
+        [[nodiscard]] auto hosts_node(const NanNode& node) const -> bool;
 
         /// Viewport the screen-space layers were last laid out against. Zero before
         /// the first layout pass. Floating components use this to keep anchored
