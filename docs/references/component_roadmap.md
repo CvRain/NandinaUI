@@ -35,7 +35,7 @@ NandinaUI 不以逐项复制其他组件库为目标。[shadcn/ui Components](ht
 ## 阶段 2：迁移已有浮层组件
 
 - Tooltip 使用统一定位和 OverlayHost（已完成，原有 API 与 detached 绘制保持兼容）；
-- Select 使用统一 popup、关闭规则与键盘导航；
+- Select popup 使用统一定位、外部关闭和 OverlayHost（已完成，保留无窗口上下文下的 detached 行为）；
 - Dialog 使用 FocusScope、DismissLayer 和命名槽位；
 - 保持已有应用层构建方式兼容，内部实现迁移不要求教程改写。
 

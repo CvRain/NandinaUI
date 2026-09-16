@@ -194,10 +194,11 @@ meson compile -C buildDir
 - [x] 建立 OverlayHost/portal 的内容层、顶层层级和 RAII 生命周期基础。
 - [x] 补齐浮层锚点定位、边界翻转和视口内收。
 - [x] 补齐点击外部关闭和焦点作用域等浮层基础设施。
-- [ ] 将 Select、Tooltip、Dialog 迁移到统一浮层设施并保持应用层 API 兼容。
+- [ ] 将 Dialog 迁移到统一浮层设施并保持应用层 API 兼容（Tooltip、Select 已完成）。
 - [ ] 补充 TextArea、Toggle、Alert、Spinner、Skeleton、EmptyState 等高频组件。
 - [ ] 基于统一浮层实现 Popover、Menu、Combobox 和 CommandPalette。
 - [ ] 后续完善 Table/DataTable、Accordion、Sheet 等复合组件。
+- [ ] 在模块边界和跨平台构建流程稳定后，重新评估 C++ Modules 与 CMake package 支持。
 
 路线图会随着基础设施成熟度调整；Getting Started 只采用推荐 API，实验性能力会在组件文档中明确标注。
 

@@ -1,6 +1,6 @@
 # 浮层架构
 
-本文记录 NandinaUI 浮层组件共享的内部架构。该能力当前属于 **internal**，尚未作为应用层 API 发布，现有 Select、Tooltip 和 Dialog 也尚未迁移。
+本文记录 NandinaUI 浮层组件共享的内部架构。该能力当前属于 **internal**，尚未作为应用层 API 发布；Tooltip 和 Select 已接入，Dialog 仍在迁移中。
 
 ## 目标
 
@@ -68,6 +68,6 @@ OverlayHost 归属 `scene` 而非 `widget::internal`：它只使用 `LayerStack`
 
 ## 后续顺序
 
-1. 迁移 Select 的 popup 与 Dialog 的模态内容，保持它们现有公开构建方式兼容。
+1. 迁移 Dialog 的模态内容，保持现有公开构建方式兼容。
 
 在上述迁移完成前，OverlayHost 不应进入 `<nandina/widget/controls.hpp>`，Getting Started 也不应直接使用它。
