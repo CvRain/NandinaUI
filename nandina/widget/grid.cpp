@@ -122,7 +122,7 @@ namespace nandina::widget
         if (!is_inside_tree()) {
             return;
         }
-        const auto current = get_tree()->layout_root(size());
+        (void)get_tree()->layout_root(size());
     }
 
     auto Grid::on_measure(const scene::LayoutConstraints constraints) -> foundation::NanSize {

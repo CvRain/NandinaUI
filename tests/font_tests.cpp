@@ -792,7 +792,7 @@ TEST_CASE("Clipped text leaves room for the last glyph's ink overhang", "[text][
     widget::primitives::Text control("1f中文");
     control.set_overflow(widget::primitives::TextOverflow::clip);
     control.set_font_size(24.0F);
-    control.measure_layout(scene::LayoutConstraints::loose());
+    (void)control.measure_layout(scene::LayoutConstraints::loose());
     const float measured_width = control.measured_text_width();
     REQUIRE(measured_width > 0.0F);
 
