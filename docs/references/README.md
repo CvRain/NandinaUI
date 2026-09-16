@@ -20,6 +20,7 @@
 - [组件开发路线图](component_roadmap.md)：当前组件盘点、基础设施依赖和推荐开发顺序。
 - [浮层架构](overlay_architecture.md)：OverlayHost、portal 生命周期、分层规则与后续基础设施边界。
 - [Tooltip 迁移契约](tooltip_migration.md)：Tooltip 接入统一浮层设施时的 API 兼容和验收条件。
+- [Dialog 迁移契约](dialog_migration.md)：Dialog 模态内容接入统一浮层设施时的槽位、层级、生命周期和验收条件。
 
 ### 平台
 
