@@ -182,6 +182,7 @@ meson compile -C buildDir
 - [入门指南](docs/getting_started/README.md)：从项目认识、创建窗口到布局、响应式状态和 Page 导航。
 - [组件参考](docs/components/README.md)：组件清单、公开 API、使用方式与交互规则。
 - [开发参考](docs/references/README.md)：组件契约、架构约束和维护流程。
+- [构建系统与 Modules 范围](docs/references/build_system_scope.md)：当前 Meson/include 主线，以及暂缓 C++ Modules 和 CMake package 的原因。
 - [组件开发路线图](docs/references/component_roadmap.md)：当前差距、依赖关系与推荐实现顺序。
 
 ## 🗺️ 开发计划
