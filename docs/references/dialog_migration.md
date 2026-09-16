@@ -35,15 +35,15 @@ OverlayHost / overlay layer
 
 | 现有实现 | 迁移后 |
 | --- | --- |
-| `z_index_hint()` 提升绘制序 | overlay layer 的层级顺序 |
+| `z_index_hint()` 提升绘制序 | 浮层承载时用 overlay layer 的层级顺序；树内回退保留 |
 | `contains_point()` 恒真吞掉遮罩命中 | `OverlayOptions::block_below` |
-| `global_bounds()` 撑满父容器 | overlay surface 的视口布局 |
+| `global_bounds()` / `on_measure()` 撑满父容器 | 浮层承载时交给 overlay surface；树内回退保留 |
 | `trap_focus()` 自研 Tab 循环 | `FocusScope` |
 | Escape / 面板外点击判定 | `DismissLayer` |
-| `open()` 中的 `request_focus()` | `FocusScope::on_ready()` 的初始焦点 |
+| `open()` 中的 `request_focus()` | `FocusScope` 的初始焦点 |
 | 关闭后的焦点恢复（缺失） | `FocusScope::on_exit_tree()` |
 
-因此 `z_index_hint()`、`contains_point()`、`is_focusable()` 三个 override 以及 `trap_focus()` 会被移除；它们不是应用层接口，对应断言改为对浮层行为的断言。
+因此 `contains_point()`、`is_focusable()`、`global_bounds()` 三个 override 以及 `trap_focus()` 会被移除；它们不是应用层接口，对应断言改为对浮层行为的断言。`on_measure()` 与 `z_index_hint()` 是虚函数而非应用层接口，保留下来服务于树内回退。
 
 ### 焦点落点与 Escape 的可达性
 
@@ -93,7 +93,7 @@ Dialog 以 `{.level = OverlayLevel::modal, .block_below = true}` 呈现。Select
 
 - Dialog 位于 `ScrollView`、`Card` 等裁剪容器内时，遮罩与面板覆盖整个视口而非父容器；这是当前实现无法满足的核心缺陷；
 - `block_below` 阻断其下所有输入：打开期间下层按钮、Select、Tooltip 触发器都不响应；
-- Dialog 内再开 Select（浮层套浮层）时，Tab 在 Dialog 的 `FocusScope` 内循环，关闭 Select 后焦点回到 Dialog 内的原控件；
+- Dialog 内再开 Select（浮层套浮层）时，弹层压过模态遮罩且选项可点，Tab 仍在 Dialog 的 `FocusScope` 内循环；
 - Escape 与点击面板外经 `DismissLayer` 关闭；`dismissible == false` 时两者都不关闭；
 - Tab / Shift+Tab 在 Dialog 内的控件间循环，首尾相接；打开期间焦点不会落到浮层之外；
 - 只含标题与说明（内部无可聚焦控件）的 Dialog 打开后，焦点仍位于浮层内部，Escape 可以关闭它；
@@ -105,12 +105,35 @@ Dialog 以 `{.level = OverlayLevel::modal, .block_below = true}` 呈现。Select
 
 ## 实现状态
 
-契约待评审，尚未开始实现。计划顺序：
+迁移已完成，实现落在以下结构上：
 
-1. `scene`：`OverlayOptions::order` → `level`（`OverlayLevel`），Select / Tooltip 取默认值；
-2. `widget::internal`：`FocusScope` 补上「内部无可聚焦控件时焦点仍留在作用域内」的兜底；
-3. `widget::internal`：抽出 `DialogPanel`，承载 header / content / footer 与淡入淡出；
-4. `widget::Dialog`：改为 portal 托管，移除 `z_index_hint()` / `contains_point()` / `is_focusable()` / `trap_focus()`，保留 detached 回退；
+```text
+浮层承载（有 OverlayHost）
+OverlayHost / overlay layer
+└── DismissLayer          全屏遮罩与阻断、点击外部 / Escape → close()
+    └── FocusScope        初始焦点、Tab 循环、卸载时焦点恢复
+        └── DialogPanel   header / content / footer
+
+树内回退（无 OverlayHost）
+Dialog（页面锚点，打开时铺满父容器）
+└── 同一套 DismissLayer → FocusScope → DialogPanel
+```
+
+与契约的差异与补充：
+
+- `z_index_hint()` **保留**：浮层承载时层级由 `OverlayLevel` 决定，但树内回退仍要靠 z 序压过后续兄弟，因此只在非浮层模式且打开时返回 1。`contains_point()`、`is_focusable()` 与 `trap_focus()` 按契约移除；
+- 槽位由 `DialogPanel` 直接持有，**不存在节点搬移**：`Dialog` 节点从不把槽位挂到自己名下，`DismissLayer` 子树在浮层模式下被 `present()`、在回退模式下作为 `Dialog` 的子节点，承载方式在首次打开时确定。这样避免了在 deferred 阶段对活动子树做 `remove_child`；
+- 新增 `OverlayLevel::nested_popup` 与 `OverlayHost::hosts_node()`：模态内部再展开的提示与下拉必须压过模态遮罩。迁移前 Dialog 在树内绘制，Select 弹层天然在它之上；改为浮层承载后若不抬高层级，弹层会被遮罩埋掉且点不到；
+- 面板居中改为 `DismissLayer::set_content_centered(true)`，由遮罩层在自己的布局里把内容居中。契约原先设想由 `Dialog` 计算位置，那样依赖 `viewport_size()` 在打开时已经有效，窗口首帧前打开会把面板留在原点；
+- `FocusScope` 的兜底形态：`is_focusable()` 返回「内容子树里没有可聚焦控件」。`_collect_focusable_nodes()` 会把作用域自身排在子节点之前，恒真的 `is_focusable()` 会让 Tab 停在不可见的容器上；
+- 淡入淡出移到了 `DismissLayer`：它是遮罩与内容的共同祖先，`local_opacity()` 一次作用于整个模态子树，遮罩与面板不会各自动画。
+
+实现顺序与落点：
+
+1. `scene`：`OverlayOptions::order` → `level`（`OverlayLevel { popup, modal }`），Select / Tooltip 取默认值；
+2. `widget::internal`：`FocusScope` 补上焦点兜底；
+3. `widget::internal`：`DismissLayer` 增加遮罩、淡入淡出与内容居中；新增 `DialogPanel`；
+4. `widget::Dialog`：改为 portal 托管，保留 detached 回退；
 5. `ComponentTraits<Dialog>` 注入浮层服务，`create()` 回退到最近的祖先 `OverlayHost`；
-6. 测试：现有 10 个用例保持语义，新增裁剪容器、模态阻断、嵌套浮层焦点、焦点恢复、无控件焦点兜底与 `dismissible` 用例；
-7. `docs/components/` 补 Dialog 使用参考。
+6. 测试：现有 10 个用例保持语义，新增浮层托管、裁剪容器逃逸、模态阻断、遮罩 / Escape 关闭、`dismissible` 吞输入、焦点恢复与重复开关用例；
+7. `docs/components/dialog.md` 记录应用层用法。

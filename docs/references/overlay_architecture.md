@@ -1,6 +1,6 @@
 # 浮层架构
 
-本文记录 NandinaUI 浮层组件共享的内部架构。该能力当前属于 **internal**，尚未作为应用层 API 发布；Tooltip 和 Select 已接入，Dialog 仍在迁移中。
+本文记录 NandinaUI 浮层组件共享的内部架构。该能力当前属于 **internal**，尚未作为应用层 API 发布；Tooltip、Select 和 Dialog 均已接入。
 
 ## 目标
 
@@ -44,7 +44,17 @@ OverlayHost 归属 `scene` 而非 `widget::internal`：它只使用 `LayerStack`
 
 ## 叠放规则
 
-`OverlayOptions::order` 决定不同 presentation 的显式层级；相同 order 使用后加入者位于上方的场景树规则。未来嵌套菜单或模态窗口需要新的层级策略时，应扩展 options 或引入分组，不应让组件直接依赖 CanvasLayer 的固定 order 数值。
+`OverlayOptions::level` 用语义层级表达浮层用途，组件不直接写 CanvasLayer 的 order 数值：
+
+| `OverlayLevel` | 用途 |
+| --- | --- |
+| `popup` | 提示、下拉与菜单；位于应用内容之上，彼此按加入顺序叠放 |
+| `modal` | 模态内容；高于所有 popup，并阻断其下全部输入 |
+| `nested_popup` | 模态内容内部再展开的提示与下拉；必须高于模态遮罩，否则会被埋掉且点不到 |
+
+同级之间使用「后加入者位于上方」的场景树规则。**浮层内部再展开的浮层**（对话框里的 Select、菜单里的子菜单）由发起方在 `present()` 时声明 `nested_popup`：它用 `OverlayHost::hosts_node()` 判断自己是否已经在浮层内容之下，是则抬高层级。层级必须显式声明而不是由 host 猜测，因为 `present()` 收到的是已经游离的控件，host 无法从祖先链推断它属于谁。
+
+未来需要真正的嵌套深度、子浮层跟随父浮层关闭时，应扩展这套层级模型，而不是让组件依赖 CanvasLayer 的固定 order。
 
 ## 当前边界
 
@@ -60,14 +70,20 @@ OverlayHost 归属 `scene` 而非 `widget::internal`：它只使用 `LayerStack`
 - 已实现 `FocusScope` 的初始焦点、Tab 循环与卸载焦点恢复。
 - 已实现 `OverlayOptions::block_below` 的模态命中阻断：阻断层之上命不中时吞掉该点，且该结果会向上传播。
 - 已支持 `OverlayHost` 嵌在普通控件之下（含 Router 页面根）：层布局、层命中与阻断不再要求它位于场景树根部。
+- 已实现 `OverlayOptions::level` 的语义层级（`popup` / `modal`）：模态内容压过提示与下拉，而不依赖 CanvasLayer 的 order 数值；
+- 已实现 `DismissLayer` 的遮罩绘制、整体淡入淡出与内容居中：模态面板因此可以与遮罩共用一条动画；
 - 已实现 `NanWindow` 默认安装 OverlayHost：它成为场景树根，应用/Router 内容进入其 content layer；页面与组件通过 `BuildContext::overlay_host()`（`PageContext` 同源）取得同一实例。
 
 尚未实现：
 
+- roving focus / typeahead；
 - 嵌套浮层的父子关闭关系。
 
 ## 后续顺序
 
-1. 迁移 Dialog 的模态内容，保持现有公开构建方式兼容。
+阶段 2 的三个组件（Tooltip、Select、Dialog）都已完成迁移，浮层基础设施本身仍需补一项：
 
-在上述迁移完成前，OverlayHost 不应进入 `<nandina/widget/controls.hpp>`，Getting Started 也不应直接使用它。
+1. roving focus / typeahead：菜单与列表选择共用的键盘导航模型，阶段 4 的 Popover、DropdownMenu 与 Combobox 依赖它；
+2. 嵌套浮层的父子关闭关系：当前叠加的浮层彼此独立，关闭一个不会连带关闭它上面新开的浮层。
+
+OverlayHost 仍不应进入 `<nandina/widget/controls.hpp>`：应用层继续通过组件构造，Getting Started 也不应直接使用它。

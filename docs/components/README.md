@@ -34,7 +34,7 @@
 
 | 组件 | 用途 | 状态 |
 | --- | --- | --- |
-| `Dialog` | 模态内容、遮罩与焦点限制 | 可用，等待统一浮层 |
+| `Dialog` | 模态内容、遮罩与焦点限制 | 可用，已接入统一浮层 |
 | `Tooltip` | 悬停后显示简短提示 | 可用，已接入统一浮层定位 |
 
 ### 交互扩展
@@ -44,7 +44,7 @@
 | `PointerArea` | 为任意单个子控件观察原始指针输入 | 实验性 |
 | `GestureArea` | 为任意单个子控件识别点击、双击、长按和拖拽 | 实验性 |
 
-参见 [PointerArea 与 GestureArea](pointer_and_gesture_areas.md)。
+参见 [Dialog](dialog.md) 与 [PointerArea 与 GestureArea](pointer_and_gesture_areas.md)。
 
 ### 布局与滚动
 

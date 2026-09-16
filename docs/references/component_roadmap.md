@@ -4,9 +4,9 @@ NandinaUI 不以逐项复制其他组件库为目标。[shadcn/ui Components](ht
 
 ## 当前判断
 
-项目已经拥有一套可运行的内容、输入、布局、主题和响应式基础。当前最大的结构性缺口不是单个组件，而是多个浮层组件共享的定位、关闭与焦点设施。
+项目已经拥有一套可运行的内容、输入、布局、主题和响应式基础。阶段 1 的定位、关闭与焦点设施已经落地，阶段 2 的 Tooltip、Select 与 Dialog 也全部接入，因此「每个浮层组件各自处理定位与关闭」的重复逻辑已经消除。
 
-现有 Select、Tooltip 和 Dialog 已可使用，但内部各自处理部分浮层行为。直接继续增加 Menu、Popover 与 Combobox 会产生重复逻辑，并可能迫使这些组件随后共同修改 API。
+当前缺口转向两类共享能力：阶段 1 尚未完成的 roving focus / typeahead（菜单与列表选择的键盘导航模型），以及嵌套浮层的父子关闭关系。阶段 4 的 Popover、DropdownMenu 与 Combobox 都依赖它们，因此应在这些组件之前补齐。
 
 ## 阶段 0：稳定公共边界
 
@@ -32,12 +32,14 @@ NandinaUI 不以逐项复制其他组件库为目标。[shadcn/ui Components](ht
 
 完成标准：嵌套浮层、窗口边缘定位、Escape、点击外部与焦点恢复具有独立测试。
 
-## 阶段 2：迁移已有浮层组件
+## 阶段 2：迁移已有浮层组件（已完成）
 
 - Tooltip 使用统一定位和 OverlayHost（已完成，原有 API 与 detached 绘制保持兼容）；
 - Select popup 使用统一定位、外部关闭和 OverlayHost（已完成，保留无窗口上下文下的 detached 行为）；
-- Dialog 使用 FocusScope、DismissLayer 和命名槽位；
+- Dialog 使用 FocusScope、DismissLayer 和命名槽位（已完成，保留无窗口上下文下的树内模态回退）；
 - 保持已有应用层构建方式兼容，内部实现迁移不要求教程改写。
+
+三个组件的迁移都已完成，浮层基础设施只剩阶段 1 的 roving focus / typeahead 与嵌套浮层的父子关闭关系待补。
 
 ## 阶段 3：高频基础组件
 
