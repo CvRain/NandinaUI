@@ -45,6 +45,9 @@ namespace nandina::widget::internal
         [[nodiscard]] auto on_measure(scene::LayoutConstraints constraints)
             -> foundation::NanSize override;
         void on_layout() override;
+        /// dialog 语义挂在面板上：两种承载方式下它都是可见的那个模态表面，边界就是面板边界。
+        /// Dialog 节点在浮层承载时只是不可见的锚点，在那里报告零尺寸的 dialog 反而误导辅助技术。
+        [[nodiscard]] auto semantics_properties() const -> semantics::Properties override;
 
     private:
         /// 面板两侧至少保留的边距，避免贴住视口边缘。

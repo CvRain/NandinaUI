@@ -93,9 +93,15 @@ namespace nandina::widget
         if (phase_ == DialogPhase::opening || phase_ == DialogPhase::opened) {
             return;
         }
-        // 先恢复可见性再挂载：FocusScope 在入树时解析初始焦点，节点不可见就收集不到
-        // 可聚焦控件，焦点会留在浮层之外，Escape 与 Tab 都进不来。
-        set_visible(true);
+        if (mount_mode_ == MountMode::unmounted) {
+            mount_mode_ = resolve_overlay_host() != nullptr ? MountMode::overlay : MountMode::tree;
+        }
+        // 可见性先于挂载确定：
+        // - 树内回退要求 Dialog 自身可见，FocusScope 入树时才能收集到可聚焦控件并解析初始
+        //   焦点，否则焦点留在浮层之外，Escape 与 Tab 都进不来；
+        // - 浮层承载时 Dialog 只是页面里的锚点，内容全部在浮层里，保持不可见，否则父级布局
+        //   会为这个零高子节点多算一个 gap。
+        set_visible(mount_mode_ == MountMode::tree);
         dismiss_layer_->set_visible(true);
         if (!mount()) {
             dismiss_layer_->set_visible(false);
@@ -210,12 +216,12 @@ namespace nandina::widget
 
     auto Dialog::z_index_hint() const -> int {
         // 浮层承载时层级由 OverlayLevel 决定；树内回退要靠 z 序压过后续兄弟。
-        return active() && !overlay_mode_ ? 1 : 0;
+        return active() && mount_mode_ != MountMode::overlay ? 1 : 0;
     }
 
     auto Dialog::on_measure(const scene::LayoutConstraints constraints) -> foundation::NanSize {
         // 浮层承载时本节点只是页面里的锚点，不占位；树内回退时铺满父容器作为遮罩范围。
-        if (!active() || overlay_mode_) {
+        if (!active() || mount_mode_ == MountMode::overlay) {
             return constraints.constrain(foundation::NanSize {0.0F, 0.0F});
         }
         return constraints.constrain(
@@ -259,14 +265,6 @@ namespace nandina::widget
         scene::NanControl::on_exit_tree();
     }
 
-    auto Dialog::semantics_properties() const -> semantics::Properties {
-        return {
-            .role = semantics::Role::dialog,
-            .label = std::string(title()),
-            .state = {.focusable = active(), .focused = active()},
-        };
-    }
-
     void Dialog::set_overlay_service(scene::OverlayHost* host) noexcept {
         overlay_service_ =
             host != nullptr ? host->weak_self() : std::weak_ptr<scene::OverlayHost> {};
@@ -290,20 +288,15 @@ namespace nandina::widget
     }
 
     auto Dialog::mount() -> bool {
-        if (dismiss_layer_->parent() != nullptr || portal_handle_ != nullptr) {
-            return true;
-        }
-
-        // 关闭请求回到本对话框；弱引用保证浮层比 Dialog 活得久时不会悬空。
-        auto weak = std::weak_ptr<Dialog>(std::static_pointer_cast<Dialog>(shared_from_this()));
-        dismiss_layer_->set_callback([weak](const internal::DismissReason) {
-            if (auto dialog = weak.lock(); dialog != nullptr && dialog->dismissible_) {
-                dialog->close();
+        if (mount_mode_ == MountMode::overlay) {
+            if (portal_handle_ != nullptr) {
+                return true;
             }
-        });
-
-        if (auto host = resolve_overlay_host()) {
-            overlay_mode_ = true;
+            auto host = resolve_overlay_host();
+            if (host == nullptr) {
+                return false;
+            }
+            install_dismiss_callback();
             portal_handle_ = std::make_unique<scene::OverlayHandle>(host->present(
                 dismiss_layer_,
                 scene::OverlayOptions {
@@ -315,10 +308,23 @@ namespace nandina::widget
         }
 
         // detached 回退：面板留在树内，靠 z 序与铺满父容器维持模态语义。
-        overlay_mode_ = false;
+        if (dismiss_layer_->parent() == this) {
+            return true;
+        }
+        install_dismiss_callback();
         add_child(dismiss_layer_);
         mark_layout_dirty();
         return true;
+    }
+
+    void Dialog::install_dismiss_callback() {
+        // 关闭请求回到本对话框；弱引用保证浮层比 Dialog 活得久时不会悬空。
+        auto weak = std::weak_ptr<Dialog>(std::static_pointer_cast<Dialog>(shared_from_this()));
+        dismiss_layer_->set_callback([weak](const internal::DismissReason) {
+            if (auto dialog = weak.lock(); dialog != nullptr && dialog->dismissible_) {
+                dialog->close();
+            }
+        });
     }
 
     void Dialog::unmount() {

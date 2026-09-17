@@ -74,6 +74,21 @@ namespace
         void layout() {
             (void)tree.layout_root(foundation::NanSize(800.0F, 600.0F));
         }
+
+        /// 树内回退：Dialog → DismissLayer → FocusScope → DialogPanel
+        [[nodiscard]] auto panel() const -> scene::NanControl* {
+            if (dialog->child_count() == 0) {
+                return nullptr;
+            }
+            auto* dismiss = dialog->get_child(0)->as_control();
+            if (dismiss == nullptr || dismiss->child_count() == 0) {
+                return nullptr;
+            }
+            auto* scope = dismiss->get_child(0)->as_control();
+            return scope != nullptr && scope->child_count() > 0
+                ? scope->get_child(0)->as_control()
+                : nullptr;
+        }
     };
 
     /// 模拟一帧：process（状态机完成转换）→ animation（Host 推进淡入淡出）。
@@ -117,9 +132,15 @@ TEST_CASE("dialog open toggles z-order, focusability and semantics", "[dialog]")
     REQUIRE(harness.tree.focused_node() != nullptr);
     REQUIRE(harness.tree.focused_node() != harness.dialog.get());
 
-    const auto props = harness.dialog->resolved_semantics_properties();
-    REQUIRE(props.role == semantics::Role::dialog);
-    REQUIRE(props.label == "Discard changes?");
+    // dialog 语义挂在面板上：浮层承载时 Dialog 节点只是不可见的锚点，在那里报告
+    // 零尺寸的 dialog 会误导辅助技术，所以两种承载方式统一由面板暴露。
+    auto* panel = harness.panel();
+    REQUIRE(panel != nullptr);
+    REQUIRE(harness.tree.update_semantics());
+    const auto* node = harness.tree.semantics_tree().find(panel->semantics_id());
+    REQUIRE(node != nullptr);
+    REQUIRE(node->properties.role == semantics::Role::dialog);
+    REQUIRE(node->properties.label == "Discard changes?");
 
     harness.dialog->close();
     REQUIRE_FALSE(harness.dialog->is_open());
@@ -575,4 +596,51 @@ TEST_CASE("dialog panel lays out the title inside the padded content area", "[di
     const auto gap = content->global_bounds().get_top()
         - (title_bounds.get_top() + title_bounds.get_height());
     REQUIRE(gap == Catch::Approx(style.metrics.gap));
+}
+
+TEST_CASE("a floating dialog leaves no gap in its parent layout", "[dialog][overlay][layout]") {
+    // 浮层承载时 Dialog 只是页面里的锚点。它一旦被标记为可见，父级布局就会为这个零高子节点
+    // 多算一个 gap，把后面的内容整体推下去。
+    auto host = scene::OverlayHost::create();
+    auto column = widget::Column::create();
+    column->set_gap(12.0F);
+    auto above = std::make_shared<scene::NanControl>(foundation::NanSize(200.0F, 40.0F));
+    auto below = std::make_shared<scene::NanControl>(foundation::NanSize(200.0F, 40.0F));
+    auto dialog = widget::Dialog::create();
+    column->add(above);
+    column->add(dialog);
+    column->add(below);
+    host->set_content(column);
+
+    scene::NanSceneTree tree;
+    tree.set_root(host);
+    REQUIRE(tree.layout_root(foundation::NanSize(400.0F, 400.0F)) >= 1);
+    const auto before = below->position().get_y() - (above->position().get_y() + above->height());
+    REQUIRE(before == Catch::Approx(12.0F));
+
+    dialog->open();
+    column->mark_layout_dirty();
+    REQUIRE(tree.layout_root(foundation::NanSize(400.0F, 400.0F)) >= 1);
+    REQUIRE(host->overlay_count() == 1);
+
+    const auto after = below->position().get_y() - (above->position().get_y() + above->height());
+    REQUIRE(after == Catch::Approx(before));
+    // 锚点保持不可见正是间距不变的机制。
+    REQUIRE_FALSE(dialog->is_visible_in_tree());
+}
+
+TEST_CASE("a floating dialog exposes the dialog role from its panel", "[dialog][overlay][semantics]") {
+    OverlayDialogHarness harness;
+    harness.dialog->set_title("删除这条记录？");
+    harness.dialog->set_content(std::make_shared<widget::Button>("删除"));
+    harness.dialog->open();
+    harness.layout();
+
+    auto* panel = harness.panel();
+    REQUIRE(panel != nullptr);
+    REQUIRE(harness.tree.update_semantics());
+    const auto* node = harness.tree.semantics_tree().find(panel->semantics_id());
+    REQUIRE(node != nullptr);
+    REQUIRE(node->properties.role == semantics::Role::dialog);
+    REQUIRE(node->properties.label == "删除这条记录？");
 }

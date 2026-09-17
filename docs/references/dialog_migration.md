@@ -99,7 +99,7 @@ Dialog 以 `{.level = OverlayLevel::modal, .block_below = true}` 呈现。Select
 - 只含标题与说明（内部无可聚焦控件）的 Dialog 打开后，焦点仍位于浮层内部，Escape 可以关闭它；
 - 关闭后焦点回到打开前的控件；打开前无焦点时回到 `nullptr`，不残留悬空焦点；
 - 淡出期间遮罩、面板与内容持续可见，`is_open()` 为 `false`；淡出完成后才卸载并触发 `on_close`；
-- 打开动画、`set_override()` 的配方覆盖、语义 role/label 与亮暗切换保持现有测试语义；
+- 打开动画、`set_override()` 的配方覆盖与亮暗切换保持现有测试语义；dialog role 与 label 仍然存在，但改由面板报告（见「实现状态」）；
 - 注入的窗口 `OverlayHost` 先于 Dialog 销毁时，弱服务引用安全失效；
 - **无窗口、无 OverlayHost 的 detached 上下文仍以树内模态方式工作**：现有 `tests/dialog_tests.cpp` 的 10 个用例不依赖浮层即可通过。
 
@@ -123,6 +123,7 @@ Dialog（页面锚点，打开时铺满父容器）
 
 - `z_index_hint()` **保留**：浮层承载时层级由 `OverlayLevel` 决定，但树内回退仍要靠 z 序压过后续兄弟，因此只在非浮层模式且打开时返回 1。`contains_point()`、`is_focusable()` 与 `trap_focus()` 按契约移除；
 - 槽位由 `DialogPanel` 直接持有，**不存在节点搬移**：`Dialog` 节点从不把槽位挂到自己名下，`DismissLayer` 子树在浮层模式下被 `present()`、在回退模式下作为 `Dialog` 的子节点，承载方式在首次打开时确定。这样避免了在 deferred 阶段对活动子树做 `remove_child`；
+- dialog 语义从 Dialog 节点移到 `DialogPanel`，并且 Dialog 节点在浮层承载时保持不可见。原因是节点一旦可见，父级 `Column` 就会为这个零高子节点多算一个 gap，把后面的内容整体推下去；而语义系统会跳过不可见节点。面板在两种承载方式下都可见，边界就是面板边界，比零尺寸的锚点更准确。代价是 `dialog open toggles z-order, focusability and semantics` 的断言改为从 `semantics_tree()` 里按面板的 `semantics_id()` 查找；
 - 新增 `OverlayLevel::nested_popup` 与 `OverlayHost::hosts_node()`：模态内部再展开的提示与下拉必须压过模态遮罩。迁移前 Dialog 在树内绘制，Select 弹层天然在它之上；改为浮层承载后若不抬高层级，弹层会被遮罩埋掉且点不到；
 - 面板居中改为 `DismissLayer::set_content_centered(true)`，由遮罩层在自己的布局里把内容居中。契约原先设想由 `Dialog` 计算位置，那样依赖 `viewport_size()` 在打开时已经有效，窗口首帧前打开会把面板留在原点；
 - `FocusScope` 的兜底形态：`is_focusable()` 返回「内容子树里没有可聚焦控件」。`_collect_focusable_nodes()` 会把作用域自身排在子节点之前，恒真的 `is_focusable()` 会让 Tab 停在不可见的容器上；

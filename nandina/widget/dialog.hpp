@@ -87,12 +87,14 @@ namespace nandina::widget
         [[nodiscard]] auto on_measure(scene::LayoutConstraints constraints)
             -> foundation::NanSize override;
         void on_layout() override;
-        [[nodiscard]] auto semantics_properties() const -> semantics::Properties override;
 
     private:
         friend struct ComponentTraits<Dialog>;
 
         enum class DialogPhase { closed, opening, opened, closing };
+
+        /// 面板的承载方式，在首次打开时确定后固定下来。
+        enum class MountMode { unmounted, tree, overlay };
 
         void set_overlay_service(scene::OverlayHost* host) noexcept;
         [[nodiscard]] auto resolve_overlay_host() -> std::shared_ptr<scene::OverlayHost>;
@@ -100,9 +102,10 @@ namespace nandina::widget
         [[nodiscard]] auto mount() -> bool;
         /// 释放浮层托管；树内承载只隐藏，不移除子树。
         void unmount();
+        /// 安装关闭回调。构造期拿不到 shared_from_this()，因此推迟到首次挂载。
+        void install_dismiss_callback();
         void apply_style();
         void start_fade(float target);
-        void request_close(internal::DismissLayer& layer);
         [[nodiscard]] auto active() const noexcept -> bool {
             return phase_ != DialogPhase::closed;
         }
@@ -112,8 +115,7 @@ namespace nandina::widget
         std::shared_ptr<internal::DialogPanel> panel_;
         std::weak_ptr<scene::OverlayHost> overlay_service_;
         std::unique_ptr<scene::OverlayHandle> portal_handle_;
-        /// 承载方式在首次挂载时确定：有窗口浮层就托管，否则留在树内做模态回退。
-        bool overlay_mode_ = false;
+        MountMode mount_mode_ = MountMode::unmounted;
         DialogPhase phase_ = DialogPhase::closed;
         bool dismissible_ = true;
         std::function<void()> on_close_;

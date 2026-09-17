@@ -199,6 +199,13 @@ namespace nandina::widget::internal
         }
     }
 
+    auto DialogPanel::semantics_properties() const -> semantics::Properties {
+        return {
+            .role = semantics::Role::dialog,
+            .label = std::string(title()),
+        };
+    }
+
     void DialogPanel::on_draw(render::DrawContext& context) {
         apply_title_style();
         const auto world = render::world_bounds_from_local(context.world_transform(), local_rect());
