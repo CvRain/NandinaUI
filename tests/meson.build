@@ -205,13 +205,24 @@ node_reparent_tests = executable(
 )
 test('node-reparent', node_reparent_tests)
 
-# 这个测试会真的开一个窗口，进而初始化 raylib/GL。无 RTTI 配置下本仓库的构建
-# 环境（sandbox 内的 EGL/ZINK）会构造字体管线失败，随后 raylib 自身的
-# CloseWindow -> rlglClose 在空 rlgl 状态上崩溃，与本框架无关，因此显式跳过。
+# 这个测试会真的开一个窗口，进而初始化 raylib/GL。无显示环境时保持测试目标存在，
+# 但让测试以成功状态报告 skipped，避免 Catch2 的 SKIP 返回码被 Meson 当作失败。
+window_tests_option = get_option('window_tests')
+window_display_available = run_command('printenv', 'DISPLAY', check: false).stdout().strip() != '' or \
+    run_command('printenv', 'WAYLAND_DISPLAY', check: false).stdout().strip() != ''
+window_tests_enabled = window_tests_option.enabled() or \
+    (window_tests_option.auto() and window_display_available)
+window_tests_optional = window_tests_option.auto() and window_display_available
+window_test_cpp_args = []
+if not window_tests_enabled
+    window_test_cpp_args += ['-DNANDINA_SKIP_WINDOW_TESTS']
+elif window_tests_optional
+    window_test_cpp_args += ['-DNANDINA_OPTIONAL_WINDOW_TESTS']
+endif
 window_lifecycle_tests = executable(
     'window_lifecycle_tests',
     files('window_lifecycle_tests.cpp'),
-    cpp_args : get_option('cpp_rtti') ? [] : ['-DNANDINA_SKIP_WINDOW_TESTS'],
+    cpp_args : window_test_cpp_args,
     dependencies : [nandina_dep, catch2_with_main_dep],
 )
 test('window-lifecycle', window_lifecycle_tests)

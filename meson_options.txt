@@ -17,3 +17,9 @@ option(
     value: 'auto',
     description: 'Linux window system used by the bundled GLFW backend',
 )
+option(
+    'window_tests',
+    type: 'feature',
+    value: 'auto',
+    description: 'Run tests that create a native raylib window when a display is available',
+)

@@ -192,6 +192,21 @@ namespace nandina::app
         SetConfigFlags(flags);
 
         InitWindow(config_.width, config_.height, config_.title.c_str());
+        if (!IsWindowReady()) {
+            log::get("app.window").error(
+                "NanWindow: failed to initialize native window {}x{} \"{}\"",
+                config_.width,
+                config_.height,
+                config_.title
+            );
+            // Do not enter CloseWindow/rlgl cleanup when raylib did not produce a
+            // usable native window; headless startup failures can have no GL context.
+            throw std::runtime_error("NanWindow: failed to initialize native window");
+        }
+        // From this point on the native window owns a live raylib/GL context. Mark
+        // it opened before constructing framework resources so an exception during
+        // device/font setup can be recovered by the destructor's normal close path.
+        opened_ = true;
         SetExitKey(KEY_NULL);
         SetTargetFPS(config_.target_fps);
         tree_.set_clipboard(desktop_clipboard);
@@ -236,6 +251,8 @@ namespace nandina::app
             CloseWindow();
             device_.reset();
             tree_.clear_clipboard();
+            opened_ = false;
+            close_pending_ = false;
             log::get("app.window").error("NanWindow: cannot create default text pipeline: {}", reason);
             throw std::runtime_error(
                 "NanWindow: cannot create default text pipeline: " + reason
@@ -243,7 +260,6 @@ namespace nandina::app
         }
         default_font_pipeline_ = *pipeline;
         default_text_pipeline_ = default_font_pipeline_->pipeline();
-        opened_ = true;
 
         log::get("app.window")
             .info("NanWindow: opened {}x{} \"{}\"", config_.width, config_.height, config_.title);
@@ -453,6 +469,7 @@ namespace nandina::app
         // 个别控件 Text 晚于 device_ 释放，导致关闭后 ~GlyphAtlasTexture 解引用
         // 已销毁的 device（已知缺陷，见 docs/references/design_tokens.md）。
         on_teardown();
+        drag_controller_.cancel();
         if (router_) {
             router_->clear();
         }
@@ -461,6 +478,7 @@ namespace nandina::app
         // 文本资源（FontPipeline → GlyphAtlasTexture）会在析构时对已销毁的 device
         // 调用 destroy_texture()，导致关闭后 SIGSEGV。先清内容层，再清场景树。
         overlay_host_->clear_content();
+        overlay_host_->clear_overlays();
         tree_.set_root(nullptr);
         tree_.clear_default_text_pipeline();
         tree_.clear_font_context();
