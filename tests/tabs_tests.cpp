@@ -263,3 +263,33 @@ TEST_CASE("BuildContext tabs synchronizes a selected-index signal", "[tabs][auth
     selected.set(1);
     REQUIRE(tabs->selected_index() == 1);
 }
+
+TEST_CASE("tabs home and end jump to the edges", "[tabs][keyboard]") {
+    auto tabs = widget::Tabs::create({"A", "B", "C"});
+    scene::NanSceneTree tree;
+    tree.set_root(tabs);
+    REQUIRE(tree.layout_root(foundation::NanSize(280.0F, 48.0F)) >= 1);
+    tree.set_focus(tabs.get());
+
+    // Home / End 由共享漫游设施提供。
+    tree.dispatch_key(scene::KeyEvent(269, scene::KeyEvent::Action::press)); // end
+    REQUIRE(tabs->selected_index() == 2);
+    tree.dispatch_key(scene::KeyEvent(268, scene::KeyEvent::Action::press)); // home
+    REQUIRE(tabs->selected_index() == 0);
+}
+
+TEST_CASE("tabs typeahead jumps to a label", "[tabs][keyboard]") {
+    auto tabs = widget::Tabs::create({"General", "Appearance", "Advanced"});
+    scene::NanSceneTree tree;
+    tree.set_root(tabs);
+    REQUIRE(tree.layout_root(foundation::NanSize(420.0F, 48.0F)) >= 1);
+    tree.set_focus(tabs.get());
+
+    // 当前在 General(0)，按 a 跳到下一个 a 开头的标签。
+    tree.dispatch_text_input(scene::TextInputEvent("a"));
+    REQUIRE(tabs->selected_index() == 1);
+
+    // 前缀累积：a + d 命中 Advanced。
+    tree.dispatch_text_input(scene::TextInputEvent("d"));
+    REQUIRE(tabs->selected_index() == 2);
+}

@@ -4,6 +4,8 @@
 
 #include "editable_text.hpp"
 
+#include "../key_codes.hpp"
+
 #include "../../foundation/utf8.hpp"
 #include "../../render/draw_context.hpp"
 #include "../../scene/input_event.hpp"
@@ -17,18 +19,6 @@ namespace nandina::widget::primitives
 {
     namespace
     {
-        constexpr int key_backspace = 259;
-        constexpr int key_delete = 261;
-        constexpr int key_right = 262;
-        constexpr int key_left = 263;
-        constexpr int key_home = 268;
-        constexpr int key_end = 269;
-        constexpr int key_a = 65;
-        constexpr int key_c = 67;
-        constexpr int key_v = 86;
-        constexpr int key_x = 88;
-        constexpr int key_y = 89;
-        constexpr int key_z = 90;
         constexpr float caret_width = 1.0F;
         constexpr std::size_t history_limit = 100;
 
@@ -344,22 +334,22 @@ namespace nandina::widget::primitives
                 if (key_event.is_pressed() && primary) {
                     std::optional<scene::EditCommand> command;
                     switch (key_event.keycode()) {
-                        case key_a:
+                        case keys::a:
                             command = scene::EditCommand::select_all;
                             break;
-                        case key_c:
+                        case keys::c:
                             command = scene::EditCommand::copy;
                             break;
-                        case key_x:
+                        case keys::x:
                             command = scene::EditCommand::cut;
                             break;
-                        case key_v:
+                        case keys::v:
                             command = scene::EditCommand::paste;
                             break;
-                        case key_y:
+                        case keys::y:
                             command = scene::EditCommand::redo;
                             break;
-                        case key_z:
+                        case keys::z:
                             command = modifiers.shift ? scene::EditCommand::redo
                                                       : scene::EditCommand::undo;
                             break;
@@ -372,7 +362,7 @@ namespace nandina::widget::primitives
                         return true;
                     }
                 }
-                if (key_event.is_pressed() && key_event.keycode() == key_backspace) {
+                if (key_event.is_pressed() && key_event.keycode() == keys::backspace) {
                     if (!read_only_) {
                         has_selection() ? erase_selection() : erase_before_caret();
                     }
@@ -384,21 +374,21 @@ namespace nandina::widget::primitives
                 }
                 const bool extend = key_event.modifiers().shift;
                 switch (key_event.keycode()) {
-                    case key_delete:
+                    case keys::delete_key:
                         if (!read_only_) {
                             has_selection() ? erase_selection() : erase_after_caret();
                         }
                         break;
-                    case key_left:
+                    case keys::left:
                         move_caret_visual(-1, extend);
                         break;
-                    case key_right:
+                    case keys::right:
                         move_caret_visual(1, extend);
                         break;
-                    case key_home:
+                    case keys::home:
                         move_caret_to_visual_edge(false, extend);
                         break;
-                    case key_end:
+                    case keys::end:
                         move_caret_to_visual_edge(true, extend);
                         break;
                     default:

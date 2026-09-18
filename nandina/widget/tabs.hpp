@@ -10,6 +10,7 @@
 #include "../scene/control.hpp"
 #include "../theme/design_system.hpp"
 #include "primitives/text.hpp"
+#include "roving_focus.hpp"
 
 #include <functional>
 #include <memory>
@@ -72,13 +73,18 @@ namespace nandina::widget
         [[nodiscard]] auto semantics_properties() const -> semantics::Properties override;
 
     private:
+        void on_process(float dt) override;
         void rebuild_texts();
+        /// 把标签列表同步给漫游设施（成员顺序 = 标签顺序 = typeahead 文本）。
+        void sync_roving();
         void apply_text_styles();
         void measure_labels();
         void sync_indicator(bool animate);
         [[nodiscard]] auto hit_index(float local_x) const -> int;
 
         std::vector<std::string> labels_;
+        // 标签条的键盘漫游（selection_only：焦点留在标签条上，方向键改选中）。
+        RovingFocus focus_;
         std::vector<std::shared_ptr<primitives::Text>> label_texts_;
         std::vector<float> tab_offsets_;
         animation::AnimatedProperty<float> indicator_x_ {0.0F};

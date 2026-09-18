@@ -20,10 +20,6 @@ namespace nandina::widget
 {
     namespace
     {
-        constexpr int key_right = 262;
-        constexpr int key_left = 263;
-        constexpr int key_down = 264;
-        constexpr int key_up = 265;
 
         [[nodiscard]] auto near(const float lhs, const float rhs) -> bool {
             return std::abs(lhs - rhs) <= foundation::nan_epsilon;
@@ -212,6 +208,11 @@ namespace nandina::widget
         return !disabled_ && !labels_.empty();
     }
 
+    void Tabs::on_process(float dt) {
+        // typeahead 缓冲按时间衰减；不推进的话一次输入会永久生效。
+        focus_.advance_time(dt);
+    }
+
     auto Tabs::on_input(scene::InputEvent& event) -> bool {
         if (event.type() == scene::EventType::mouse_enter) {
             hovered_ = !disabled_;
@@ -247,25 +248,31 @@ namespace nandina::widget
             }
             return false;
         }
+        if (event.type() == scene::EventType::text_input) {
+            sync_roving();
+            const auto intent = focus_.handle_text(static_cast<scene::TextInputEvent&>(event));
+            if (!intent.has_value()) {
+                return false;
+            }
+            select(intent->index);
+            event.accept();
+            return true;
+        }
         if (event.type() == scene::EventType::key) {
             auto& key = static_cast<scene::KeyEvent&>(event);
             if (!key.is_pressed()) {
                 return false;
             }
-            int direction = 0;
-            if (key.keycode() == key_left || key.keycode() == key_up) {
-                direction = -1;
+            // 方向键 / Home / End / PageUp / PageDown 统一交给共享漫游设施。
+            // selection_only：焦点留在标签条上，只改选中值（保持既有行为）。
+            sync_roving();
+            const auto intent = focus_.handle_key(key);
+            if (!intent.has_value()) {
+                return false;
             }
-            else if (key.keycode() == key_right || key.keycode() == key_down) {
-                direction = 1;
-            }
-            if (direction != 0 && !labels_.empty()) {
-                const int size = static_cast<int>(labels_.size());
-                select((selected_index_ + direction + size) % size);
-                event.accept();
-                return true;
-            }
-            return false;
+            select(intent->index);
+            event.accept();
+            return true;
         }
         return false;
     }
@@ -376,6 +383,18 @@ namespace nandina::widget
             label_texts_.push_back(std::make_shared<primitives::Text>(label));
         }
         tab_offsets_.assign(labels_.size(), 0.0F);
+    }
+
+    void Tabs::sync_roving() {
+        focus_.set_movement(RovingMovement::selection_only);
+        focus_.set_orientation(RovingOrientation::horizontal);
+        const auto& labels = labels_;
+        focus_.sync(
+            labels.size(),
+            {},
+            [&labels](std::size_t index) -> std::string_view { return labels[index]; }
+        );
+        focus_.set_active_index(selected_index_);
     }
 
     void Tabs::apply_text_styles() {

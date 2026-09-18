@@ -10,6 +10,7 @@
 #define NANDINA_EXPERIMENT_WIDGET_RADIO_GROUP_HPP
 
 #include "../reactive/event.hpp"
+#include "roving_focus.hpp"
 
 #include <memory>
 #include <vector>
@@ -35,6 +36,7 @@ namespace nandina::widget
         [[nodiscard]] auto selected_index() const -> int;
 
         /// 方向键漫游：从 `from` 移动 focus+selection（direction -1 上一个 / +1 下一个，循环）。
+        /// 内部走共享的 RovingFocus（widget_focus 模式），语义与迁移前一致。
         [[nodiscard]] auto move_focus(RadioButton* from, int direction) -> bool;
 
         /// 选中索引变化事件（用户或程序触发）。
@@ -44,6 +46,8 @@ namespace nandina::widget
         [[nodiscard]] auto index_of(const RadioButton* radio) const -> int;
 
         std::vector<RadioButton*> members_;
+        // 组内漫游由共享设施负责：注册顺序即视觉顺序，索引 ↔ 控件由本类映射。
+        RovingFocus focus_;
         RadioButton* selected_ = nullptr;
         reactive::Event<int> selection_changed_;
     };

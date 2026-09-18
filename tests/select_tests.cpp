@@ -395,3 +395,31 @@ TEST_CASE("selecting an option while the field holds focus", "[select][overlay]"
     // The field keeps focus, the way it did while the popup was drawn inside it.
     REQUIRE(tree.focused_node() == select.get());
 }
+
+TEST_CASE("select popup supports home, end and typeahead", "[select][keyboard]") {
+    auto select = widget::Select::create({"Alpha", "Bravo", "Charlie", "Avocado"});
+    scene::NanSceneTree tree;
+    tree.set_root(select);
+    REQUIRE(tree.layout_root(foundation::NanSize(220.0F, 48.0F)) >= 1);
+    tree.set_focus(select.get());
+
+    tree.dispatch_key(scene::KeyEvent(32, scene::KeyEvent::Action::press)); // space 打开
+    REQUIRE(select->is_open());
+
+    // Home / End 由共享漫游设施提供。
+    tree.dispatch_key(scene::KeyEvent(269, scene::KeyEvent::Action::press)); // end
+    REQUIRE(select->selected_index() == 3);
+    tree.dispatch_key(scene::KeyEvent(268, scene::KeyEvent::Action::press)); // home
+    REQUIRE(select->selected_index() == 0);
+
+    // typeahead：当前在 Alpha(0)，按 b 跳到 Bravo。
+    tree.dispatch_text_input(scene::TextInputEvent("b"));
+    REQUIRE(select->selected_index() == 1);
+
+    // 前缀累积：a + v 命中 Avocado。
+    tree.dispatch_key(scene::KeyEvent(268, scene::KeyEvent::Action::press)); // 回到 Alpha
+    REQUIRE(select->selected_index() == 0);
+    tree.dispatch_text_input(scene::TextInputEvent("a"));
+    tree.dispatch_text_input(scene::TextInputEvent("v"));
+    REQUIRE(select->selected_index() == 3);
+}

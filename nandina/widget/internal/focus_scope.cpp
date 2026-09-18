@@ -1,5 +1,7 @@
 #include "focus_scope.hpp"
 
+#include "../key_codes.hpp"
+
 #include "../../scene/input_event.hpp"
 #include "../../scene/scene_tree.hpp"
 
@@ -11,7 +13,6 @@ namespace nandina::widget::internal
 {
     namespace
     {
-        constexpr int key_tab = 258;
 
         /// 内容子树里是否存在可见且可聚焦的控件：作用域据此决定是否用自身兜底焦点。
         [[nodiscard]] auto has_focusable_descendant(const scene::NanNode& node) -> bool {
@@ -59,7 +60,7 @@ namespace nandina::widget::internal
             return false;
         }
         auto& key = static_cast<scene::KeyEvent&>(event);
-        if (!key.is_pressed() || key.keycode() != key_tab || get_tree() == nullptr) {
+        if (!key.is_pressed() || key.keycode() != keys::tab || get_tree() == nullptr) {
             return false;
         }
         const bool moved = key.modifiers().shift

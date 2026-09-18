@@ -4,7 +4,10 @@
 
 #include "radio_group.hpp"
 
+#include "key_codes.hpp"
 #include "radio_button.hpp"
+
+#include "../scene/input_event.hpp"
 
 #include <algorithm>
 
@@ -21,6 +24,7 @@ namespace nandina::widget
             return;
         }
         members_.push_back(radio);
+        focus_.sync(members_.size());
     }
 
     void RadioGroup::unregister_radio(RadioButton* radio) {
@@ -28,6 +32,7 @@ namespace nandina::widget
             selected_ = nullptr;
         }
         std::erase(members_, radio);
+        focus_.sync(members_.size());
     }
 
     void RadioGroup::select(RadioButton* radio) {
@@ -52,16 +57,25 @@ namespace nandina::widget
     }
 
     auto RadioGroup::move_focus(RadioButton* from, const int direction) -> bool {
-        if (members_.empty()) {
+        if (members_.empty() || direction == 0) {
             return false;
         }
         const int current = index_of(from);
         if (current < 0) {
             return false;
         }
-        const int size = static_cast<int>(members_.size());
-        const int next = (current + direction + size) % size;
-        auto* target = members_[static_cast<std::size_t>(next)];
+        focus_.set_movement(RovingMovement::widget_focus);
+        focus_.set_active_index(current);
+        // 方向键语义由共享设施统一，这里只负责把目标指回成员并落地选择 + 焦点。
+        const int keycode = direction < 0 ? nandina::widget::keys::up : nandina::widget::keys::down;
+        const auto intent = focus_.handle_key(scene::KeyEvent(
+            keycode,
+            scene::KeyEvent::Action::press
+        ));
+        if (!intent.has_value() || intent->index < 0) {
+            return false;
+        }
+        auto* target = members_[static_cast<std::size_t>(intent->index)];
         select(target);
         target->request_focus();
         return true;

@@ -4,6 +4,8 @@
 
 #include "radio_button.hpp"
 
+#include "key_codes.hpp"
+
 #include "primitives/box_painter.hpp"
 #include "primitives/focus_ring_painter.hpp"
 #include "../render/draw_context.hpp"
@@ -18,11 +20,6 @@ namespace nandina::widget
 {
     namespace
     {
-        constexpr int key_right = 262;
-        constexpr int key_left = 263;
-        constexpr int key_down = 264;
-        constexpr int key_up = 265;
-
         [[nodiscard]] auto near(const float lhs, const float rhs) -> bool {
             return std::abs(lhs - rhs) <= foundation::nan_epsilon;
         }
@@ -212,10 +209,10 @@ namespace nandina::widget
             auto& key = static_cast<scene::KeyEvent&>(event);
             if (key.is_pressed()) {
                 int direction = 0;
-                if (key.keycode() == key_left || key.keycode() == key_up) {
+                if (key.keycode() == nandina::widget::keys::left || key.keycode() == nandina::widget::keys::up) {
                     direction = -1;
                 }
-                else if (key.keycode() == key_right || key.keycode() == key_down) {
+                else if (key.keycode() == nandina::widget::keys::right || key.keycode() == nandina::widget::keys::down) {
                     direction = 1;
                 }
                 if (direction != 0 && group_->move_focus(this, direction)) {

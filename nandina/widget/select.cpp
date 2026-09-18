@@ -4,6 +4,8 @@
 
 #include "select.hpp"
 
+#include "key_codes.hpp"
+
 #include "primitives/box_painter.hpp"
 #include "primitives/focus_ring_painter.hpp"
 #include "internal/anchored_positioner.hpp"
@@ -22,11 +24,6 @@ namespace nandina::widget
 {
     namespace
     {
-        constexpr int key_up = 265;
-        constexpr int key_down = 264;
-        constexpr int key_enter = 257;
-        constexpr int key_space = 32;
-        constexpr int key_escape = 256;
 
         [[nodiscard]] auto near(const float lhs, const float rhs) -> bool {
             return std::abs(lhs - rhs) <= foundation::nan_epsilon;
@@ -434,6 +431,18 @@ namespace nandina::widget
         return !disabled_ && !options_.empty();
     }
 
+    void Select::sync_roving() {
+        focus_.set_movement(RovingMovement::selection_only);
+        focus_.set_orientation(RovingOrientation::vertical);
+        const auto& options = options_;
+        focus_.sync(
+            options.size(),
+            {},
+            [&options](std::size_t index) -> std::string_view { return options[index]; }
+        );
+        focus_.set_active_index(selected_index_);
+    }
+
     auto Select::on_input(scene::InputEvent& event) -> bool {
         if (event.type() == scene::EventType::focus_enter) {
             focused_ = !disabled_;
@@ -480,12 +489,12 @@ namespace nandina::widget
             if (!key.is_pressed()) {
                 return false;
             }
-            if (key.keycode() == key_escape && open_) {
+            if (key.keycode() == keys::escape && open_) {
                 close();
                 event.accept();
                 return true;
             }
-            if (key.keycode() == key_enter || key.keycode() == key_space) {
+            if (key.keycode() == keys::enter || key.keycode() == keys::space) {
                 if (open_) {
                     select(selected_index_);
                 }
@@ -496,19 +505,26 @@ namespace nandina::widget
                 return true;
             }
             if (open_ && !options_.empty()) {
-                int direction = 0;
-                if (key.keycode() == key_up) {
-                    direction = -1;
-                }
-                else if (key.keycode() == key_down) {
-                    direction = 1;
-                }
-                if (direction != 0) {
-                    const int size = static_cast<int>(options_.size());
-                    set_selected_index((selected_index_ + direction + size) % size);
+                // 弹出列表的漫游：selection_only（焦点留在触发字段上），垂直方向，
+                // 方向键 / Home / End / PageUp / PageDown 统一交给共享设施。
+                sync_roving();
+                const auto intent = focus_.handle_key(key);
+                if (intent.has_value()) {
+                    set_selected_index(intent->index);
                     event.accept();
                     return true;
                 }
+            }
+            return false;
+        }
+        if (event.type() == scene::EventType::text_input && open_ && !options_.empty()) {
+            // 弹出列表打开时按字母跳转（typeahead）。
+            sync_roving();
+            const auto intent = focus_.handle_text(static_cast<scene::TextInputEvent&>(event));
+            if (intent.has_value()) {
+                set_selected_index(intent->index);
+                event.accept();
+                return true;
             }
             return false;
         }
@@ -590,7 +606,9 @@ namespace nandina::widget
         }
     }
 
-    void Select::on_process(const float /*dt*/) {
+    void Select::on_process(const float dt) {
+        // typeahead 缓冲按时间衰减。
+        focus_.advance_time(dt);
         if (open_) {
             sync_portal();
         }

@@ -3,6 +3,8 @@
 //
 
 #include "pressable.hpp"
+
+#include "../key_codes.hpp"
 #include "../../scene/input_event.hpp"
 #include "../../scene/scene_tree.hpp"
 
@@ -101,9 +103,7 @@ namespace nandina::widget::primitives
             }
             case scene::EventType::key: {
                 auto& key = static_cast<scene::KeyEvent&>(event);
-                constexpr int key_enter = 257;
-                constexpr int key_space = 32;
-                if (key.is_pressed() && (key.keycode() == key_enter || key.keycode() == key_space))
+                if (key.is_pressed() && (key.keycode() == keys::enter || key.keycode() == keys::space))
                 {
                     emit_click();
                     event.accept();

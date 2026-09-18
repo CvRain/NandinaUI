@@ -6,7 +6,12 @@ NandinaUI 不以逐项复制其他组件库为目标。[shadcn/ui Components](ht
 
 项目已经拥有一套可运行的内容、输入、布局、主题和响应式基础。阶段 1 的定位、关闭与焦点设施已经落地，阶段 2 的 Tooltip、Select 与 Dialog 也全部接入，因此「每个浮层组件各自处理定位与关闭」的重复逻辑已经消除。
 
-当前缺口转向两类共享能力：阶段 1 尚未完成的 roving focus / typeahead（菜单与列表选择的键盘导航模型），以及嵌套浮层的父子关闭关系。阶段 4 的 Popover、DropdownMenu 与 Combobox 都依赖它们，因此应在这些组件之前补齐。
+阶段 1 的 roving focus / typeahead 已完成（`widget::RovingFocus`，接入 `RadioGroup` / `Tabs` /
+`Select`，见 [选择与导航的键盘模型](../components/selection_and_navigation.md)），键码常量也收敛到
+单一定义处。阶段 1 只剩**嵌套浮层的父子关闭关系**待补。
+
+阶段 4 的 Popover、DropdownMenu 与 Combobox 依赖上述能力，现在键盘模型已经就位，可以在
+补完嵌套浮层关系后开始。
 
 ## 阶段 0：稳定公共边界
 
@@ -28,7 +33,8 @@ NandinaUI 不以逐项复制其他组件库为目标。[shadcn/ui Components](ht
 - `AnchoredPositioner`：anchor、placement、alignment、offset、flip 和 shift（已完成）；
 - `DismissLayer`：点击外部、Escape、模态阻断与关闭原因（基础已完成）；
 - `FocusScope`：焦点限制、初始焦点和关闭后的焦点恢复（基础已完成）；
-- roving focus/typeahead：菜单和列表选择的键盘导航。
+- roving focus/typeahead：菜单和列表选择的键盘导航（已完成：`RovingFocus`，两种移动模式
+  `widget_focus` / `selection_only`，含 Home/End 与 typeahead；RTL 极性列为已知空白）。
 
 完成标准：嵌套浮层、窗口边缘定位、Escape、点击外部与焦点恢复具有独立测试。
 
@@ -39,7 +45,8 @@ NandinaUI 不以逐项复制其他组件库为目标。[shadcn/ui Components](ht
 - Dialog 使用 FocusScope、DismissLayer 和命名槽位（已完成，保留无窗口上下文下的树内模态回退）；
 - 保持已有应用层构建方式兼容，内部实现迁移不要求教程改写。
 
-三个组件的迁移都已完成，浮层基础设施只剩阶段 1 的 roving focus / typeahead 与嵌套浮层的父子关闭关系待补。
+三个组件的迁移都已完成。阶段 1 的 roving focus / typeahead 已补齐（`Select` 的弹出列表同时获得了
+Home/End 与 typeahead），只剩嵌套浮层的父子关闭关系待补。
 
 ## 阶段 3：高频基础组件
 

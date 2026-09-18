@@ -4,6 +4,8 @@
 
 #include "slider.hpp"
 
+#include "key_codes.hpp"
+
 #include "primitives/box_painter.hpp"
 #include "primitives/focus_ring_painter.hpp"
 #include "../render/draw_context.hpp"
@@ -20,12 +22,6 @@ namespace nandina::widget
 {
     namespace
     {
-        constexpr int key_right = 262;
-        constexpr int key_left = 263;
-        constexpr int key_down = 264;
-        constexpr int key_up = 265;
-        constexpr int key_home = 268;
-        constexpr int key_end = 269;
 
         [[nodiscard]] auto numeric_text(const float value) -> std::string {
             char buffer[32] {};
@@ -341,16 +337,16 @@ namespace nandina::widget
                 if (!key.is_pressed()) {
                     return false;
                 }
-                if (key.keycode() == key_left || key.keycode() == key_down) {
+                if (key.keycode() == keys::left || key.keycode() == keys::down) {
                     set_user_value(value_ - step_);
                 }
-                else if (key.keycode() == key_right || key.keycode() == key_up) {
+                else if (key.keycode() == keys::right || key.keycode() == keys::up) {
                     set_user_value(value_ + step_);
                 }
-                else if (key.keycode() == key_home) {
+                else if (key.keycode() == keys::home) {
                     set_user_value(minimum_);
                 }
-                else if (key.keycode() == key_end) {
+                else if (key.keycode() == keys::end) {
                     set_user_value(maximum_);
                 }
                 else {

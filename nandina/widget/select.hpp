@@ -9,6 +9,7 @@
 #include "../scene/control.hpp"
 #include "../theme/design_system.hpp"
 #include "primitives/text.hpp"
+#include "roving_focus.hpp"
 
 #include <functional>
 #include <memory>
@@ -84,6 +85,8 @@ namespace nandina::widget
         auto on_input(scene::InputEvent& event) -> bool override;
         auto on_draw(render::DrawContext& context) -> void override;
         void on_process(float dt) override;
+        /// 把选项列表同步给漫游设施（成员顺序 = 选项顺序 = typeahead 文本）。
+        void sync_roving();
         void on_exit_tree() override;
 
     protected:
@@ -105,6 +108,8 @@ namespace nandina::widget
         [[nodiscard]] auto hit_option(float local_y) const -> int;
 
         std::vector<std::string> options_;
+        // 弹出列表的键盘漫游（selection_only：焦点留在触发字段上）。
+        RovingFocus focus_;
         primitives::Text value_text_;
         std::vector<std::shared_ptr<primitives::Text>> option_texts_;
         int selected_index_ = 0;

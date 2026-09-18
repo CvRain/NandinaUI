@@ -4,6 +4,8 @@
 
 #include "chip.hpp"
 
+#include "key_codes.hpp"
+
 #include "primitives/box_painter.hpp"
 #include "primitives/focus_ring_painter.hpp"
 #include "../render/draw_context.hpp"
@@ -146,12 +148,8 @@ namespace nandina::widget
             if (!key.is_pressed() || !removable_) {
                 return false;
             }
-            constexpr int key_enter = 257;
-            constexpr int key_space = 32;
-            constexpr int key_backspace = 259;
-            constexpr int key_delete = 261;
-            if (key.keycode() == key_enter || key.keycode() == key_space
-                || key.keycode() == key_backspace || key.keycode() == key_delete)
+            if (key.keycode() == keys::enter || key.keycode() == keys::space
+                || key.keycode() == keys::backspace || key.keycode() == keys::delete_key)
             {
                 remove();
                 event.accept();
