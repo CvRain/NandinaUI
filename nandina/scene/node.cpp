@@ -12,7 +12,9 @@
 
 #include <algorithm>
 #include <atomic>
+#include <cstdint>
 #include <stdexcept>
+#include <string>
 #include <vector>
 
     namespace nandina::scene
@@ -21,7 +23,15 @@
     namespace
     {
         std::atomic<semantics::SemanticsId> next_semantics_id {1};
-    }
+
+        /// 诊断用：把节点地址渲染成短字符串（nullptr 显示为 "-"）。
+        [[nodiscard]] auto node_id(const NanNode* node) -> std::string {
+            if (node == nullptr) {
+                return "-";
+            }
+            return std::to_string(reinterpret_cast<std::uintptr_t>(node));
+        }
+    } // namespace
 
     NanNode::NanNode(): semantics_id_(next_semantics_id.fetch_add(1, std::memory_order_relaxed)) {}
 
@@ -92,11 +102,23 @@
         if (!child) {
             throw std::runtime_error("NanNode::insert_child: child is null");
         }
+        // 报错带上两侧节点的 name（可能为空）与地址，并直接给出出路。历史上这条
+        // 消息只有一句话，拖拽换父场景下定位成本很高。
         if (!child->parent_.expired()) {
-            throw std::runtime_error("NanNode::insert_child: child already has a parent");
+            const auto* owner = child->parent();
+            throw std::logic_error(
+                std::string("NanNode::insert_child: child already has a parent (child='")
+                + std::string(child->name()) + "' @" + node_id(child.get()) + ", parent='"
+                + (owner != nullptr ? std::string(owner->name()) : std::string()) + "' @"
+                + node_id(owner) + "); detach it first or call reparent()"
+            );
         }
         if (child->tree_ != nullptr) {
-            throw std::runtime_error("NanNode::insert_child: child is already in a tree");
+            throw std::logic_error(
+                std::string("NanNode::insert_child: child is already in a tree (child='")
+                + std::string(child->name()) + "' @" + node_id(child.get())
+                + "); detach it from its current tree first"
+            );
         }
 
         const auto* parent_2d = as_node2d();
@@ -142,6 +164,54 @@
         mark_semantics_dirty();
 
         return *raw;
+    }
+
+    auto NanNode::reparent(const std::shared_ptr<NanNode>& child, const std::size_t index)
+        -> NanNode& {
+        reparent_deferred_ = false;
+        if (!child) {
+            throw std::runtime_error("NanNode::reparent: child is null");
+        }
+        if (child.get() == this) {
+            throw std::logic_error("NanNode::reparent: a node cannot be its own parent");
+        }
+        // 防护：把祖先挂到自己下面会形成环，遍历会无限递归。
+        if (child->is_ancestor_of(*this)) {
+            throw std::logic_error(
+                std::string("NanNode::reparent: would create a cycle (child='")
+                + std::string(child->name()) + "' is an ancestor of '" + std::string(name())
+                + "')"
+            );
+        }
+
+        // 树遍历期间：整体延后到本帧的安全提交点，避免改动兄弟数组。
+        if (tree_ != nullptr && tree_->defers_tree_mutation()) {
+            reparent_deferred_ = true;
+            auto parent = shared_from_this();
+            tree_->defer_tree_mutation([parent = std::move(parent), child, index]() mutable {
+                parent->reparent(child, index);
+            });
+            return *this;
+        }
+
+        const auto target = index == npos ? children_.size() : index;
+
+        // 同一父节点下重排：交给 move_child，不触发 exit/enter。
+        if (child->parent() == this) {
+            (void)move_child(*child, target);
+            return *this;
+        }
+
+        // 先完整 detach：旧父节点负责生命周期与失效标记。
+        if (auto* owner = child->parent(); owner != nullptr) {
+            (void)owner->remove_child(*child);
+        }
+        insert_child(target, child);
+        return *this;
+    }
+
+    auto NanNode::is_reparent_deferred() const noexcept -> bool {
+        return reparent_deferred_;
     }
 
     auto NanNode::move_child(NanNode& child, const std::size_t index) -> bool {

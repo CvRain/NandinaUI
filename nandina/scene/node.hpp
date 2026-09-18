@@ -122,18 +122,84 @@ namespace nandina::scene
          * @return A reference to the added child (non-owning).
          *
          * @pre child is not null and not already owned by another node.
-         * @throws std::runtime_error if child is null, already has a parent,
-         *         or would mix NanNode/NanNode2D on the same parent-child edge.
+         * @throws std::logic_error if child already has a parent (use reparent())
+         *         or is already in a tree.
+         * @throws std::runtime_error if child is null, the parent rejects this
+         *         child type, or NanNode/NanNode2D would be mixed on one edge.
          */
         auto add_child(std::shared_ptr<NanNode> child) -> NanNode&;
 
-        /// Insert a detached child at a stable sibling position. Existing siblings
-        /// keep their lifecycle state; an out-of-range index appends the child.
+        /**
+         * Insert a detached child at a stable sibling position. Existing siblings
+         * keep their lifecycle state; an out-of-range index appends the child.
+         *
+         * @pre child is detached (no parent, not inside a tree).
+         * @throws std::logic_error if child already has a parent (use reparent())
+         *         or is already in a tree.
+         */
         auto insert_child(std::size_t index, std::shared_ptr<NanNode> child) -> NanNode&;
+
+        /**
+         * Move `child` here, detaching it from its current parent first.
+         *
+         * 这是「拖拽换父」的正规入口：把一个已经挂在别处的节点挂到本节点下。
+         * 相比 add_child/insert_child，它会先走一次完整 detach（旧父节点收到
+         * layout/semantics 失效标记，子树的 on_exit_tree 被调用），再走完整 attach
+         * （on_enter_tree / on_ready）。节点自身的内部状态（文本、数值、滚动位置等）
+         * 不受影响。
+         *
+         * 与 set_root / set_child 这类「只允许一个子节点」的容器也兼容：旧父节点
+         * 会正常失去这个子节点。
+         *
+         * @param child 目标节点；不能为 null、不能是自己、不能是自己的祖先
+         *              （否则会形成环）。
+         * @param index 在新父节点中的插入位置；越界则追加。
+         * @return 本节点（便于链式调用）。
+         *
+         * @note 在树遍历期间（process / layout / paint 等阶段）这个操作会被**延迟**
+         *       到本帧的安全提交点执行，因此调用后立刻查询 `child->parent()` 可能
+         *       仍是旧父节点；需要精确同步语义时请查询 is_reparent_deferred()。
+         */
+        auto reparent(const std::shared_ptr<NanNode>& child, std::size_t index = npos) -> NanNode&;
+
+        /// reparent() 未指定位置时的默认值：追加到末尾。
+        static constexpr std::size_t npos = static_cast<std::size_t>(-1);
+
+        /// True when the most recent reparent() call was deferred to the next commit.
+        [[nodiscard]] auto is_reparent_deferred() const noexcept -> bool;
 
         /// Reorder an attached child without exit/enter/ready notifications.
         /// Returns false when child is not attached to this parent.
         auto move_child(NanNode& child, std::size_t index) -> bool;
+
+        /**
+         * 本节点是否可以作为拖放的容器 —— **显式属性，默认 false**。
+         *
+         * 默认必须为 false：`DragController` 从命中节点沿祖先链向上找落点，若默认
+         * 为 true，第一个祖先容器（往往是不相关的行/页面）就会被当成落点，与
+         * "拖到那个列表里"的直觉不符。容器需要显式声明自己接受放置：
+         *
+         * ```cpp
+         * list->set_accepts_drop(true);   // 或用 DragController::install 的谓词
+         * ```
+         *
+         * 覆写它也可以表达更复杂的条件（例如只读列表按状态返回）。
+         */
+        [[nodiscard]] virtual auto accepts_drop() const -> bool {
+            return accepts_drop_;
+        }
+
+        /// 声明本节点是否接受拖放（容器用）。`DragController` 据此筛选落点。
+        void set_accepts_drop(bool accepts) noexcept {
+            accepts_drop_ = accepts;
+        }
+
+        /// 插入位置提示：给定指针位置，返回建议的兄弟插入下标（用于画插入线）。
+        /// 默认实现按几何就近选择；返回 npos 表示容器不提供插入提示。
+        [[nodiscard]] virtual auto drop_slot_at(foundation::NanPoint /*pointer*/) const
+            -> std::size_t {
+            return npos;
+        }
 
         /**
          * Remove a child node and return ownership to the caller.
@@ -334,6 +400,12 @@ namespace nandina::scene
         /// Guards against double-ready when children are added during on_enter_tree().
         /// Reset on exit_tree so a removed + re-added node readies again.
         bool ready_notified_ = false;
+
+        /// True when the last reparent() call had to be queued (tree traversal phase).
+        bool reparent_deferred_ = false;
+
+        /// Explicit drop-container opt-in (see accepts_drop()).
+        bool accepts_drop_ = false;
     };
 
 } // namespace nandina::scene
