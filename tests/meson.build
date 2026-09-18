@@ -255,6 +255,13 @@ drag_roundtrip_tests = executable(
 )
 test('drag-roundtrip', drag_roundtrip_tests)
 
+roving_focus_tests = executable(
+    'roving_focus_tests',
+    files('roving_focus_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('roving-focus', roving_focus_tests)
+
 checkbox_tests = executable(
     'checkbox_tests',
     files('checkbox_tests.cpp'),
