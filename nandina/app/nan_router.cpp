@@ -241,7 +241,8 @@ namespace nandina::app
             async_scope.get(),
             theme_manager_,
             dispatcher_,
-            overlay_host_
+            overlay_host_,
+            drag_controller_
         };
         auto root = page->build(context);
         if (!root) {
@@ -367,7 +368,8 @@ namespace nandina::app
             frame.async_scope.get(),
             theme_manager_,
             dispatcher_,
-            overlay_host_
+            overlay_host_,
+            drag_controller_
         };
     }
 

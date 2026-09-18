@@ -146,6 +146,9 @@ namespace nandina::app
             &app_.background_executor(),
             overlay_host_.get()
         );
+        // 直接把服务交给 Router：它内部持有指针，页面构造 BuildContext 时即可取到，
+        // 不依赖"内容是否已挂载"这种时序（曾因此让 ui.drag_controller() 恒为 nullptr）。
+        router_->set_drag_controller(&drag_controller_);
         set_content(router_->host());
         return *router_;
     }
@@ -166,6 +169,9 @@ namespace nandina::app
         if (opened_) {
             return;
         }
+
+        // 拖拽服务在任何内容 build 之前安装（install 只需 tree_ 与 overlay host 指针）。
+        drag_controller_.install(tree_, overlay_host_.get());
 
         unsigned int flags = 0;
         if (config_.msaa) {
@@ -213,17 +219,26 @@ namespace nandina::app
             app_.font_families()
         );
         tree_.set_font_context(*font_pipeline_cache_);
-        auto pipeline = font_pipeline_cache_->get({});
+        const auto pipeline = font_pipeline_cache_->get({});
         if (!pipeline) {
+            const auto reason = pipeline.error().message;
+            // 错误路径的释放顺序与 close() 一致，且有一条硬约束：`CloseWindow()`
+            // 必须在 render device 销毁**之前**调用 —— 它内部会走 raylib 的
+            // `rlglClose()`，若此时 GL 上下文已被 device 析构带走，会在
+            // `rlUnloadRenderBatch` 解引用空指针（实测无 RTTI 配置下 SIGSEGV）。
+            tree_.set_root(nullptr);
+            tree_.clear_default_text_pipeline();
             tree_.clear_font_context();
+            default_font_pipeline_.reset();
             font_pipeline_cache_.reset();
             tree_.clear_texture_cache();
             texture_cache_.reset();
+            CloseWindow();
             device_.reset();
             tree_.clear_clipboard();
-            CloseWindow();
+            log::get("app.window").error("NanWindow: cannot create default text pipeline: {}", reason);
             throw std::runtime_error(
-                "NanWindow: cannot create default text pipeline: " + pipeline.error().message
+                "NanWindow: cannot create default text pipeline: " + reason
             );
         }
         default_font_pipeline_ = *pipeline;
@@ -236,7 +251,15 @@ namespace nandina::app
     }
 
     auto NanWindow::should_close() const -> bool {
-        return WindowShouldClose();
+        return close_pending_ || WindowShouldClose();
+    }
+
+    auto NanWindow::close_requested() const noexcept -> bool {
+        return close_pending_;
+    }
+
+    void NanWindow::request_close() {
+        close_pending_ = true;
     }
 
     void NanWindow::poll_and_dispatch_input() {
@@ -410,6 +433,13 @@ namespace nandina::app
             tree_.flush_tree_mutations();
             tree_.flush_deferred_deletes();
         }
+
+        // 只有整帧（含绘制与帧末提交）结束后才真正关窗。close() 会立即销毁
+        // render device，放在 on_frame() 里调用会让本帧后续的 device_ 使用变成
+        // 空指针解引用。
+        if (close_pending_) {
+            close();
+        }
     }
 
     void NanWindow::close() {
@@ -417,10 +447,20 @@ namespace nandina::app
             return;
         }
         // 释放场景树 (触发 widget 卸载, 回访 graph) 后再释放设备、关窗口。
+        //
+        // 注意：FontPipeline 析构会对 atlas 纹理调用 device.destroy_texture()，
+        // 因此所有持有 FontPipeline 的对象必须在此之前析构。当前实现下仍有
+        // 个别控件 Text 晚于 device_ 释放，导致关闭后 ~GlyphAtlasTexture 解引用
+        // 已销毁的 device（已知缺陷，见 docs/references/design_tokens.md）。
         on_teardown();
         if (router_) {
             router_->clear();
         }
+        // 关键：应用内容由 overlay_host_ 的内容层持有，而 overlay_host_ 是窗口成员。
+        // 若不在这里主动释放，内容树会活到窗口析构，届时 device_ 已销毁，控件里的
+        // 文本资源（FontPipeline → GlyphAtlasTexture）会在析构时对已销毁的 device
+        // 调用 destroy_texture()，导致关闭后 SIGSEGV。先清内容层，再清场景树。
+        overlay_host_->clear_content();
         tree_.set_root(nullptr);
         tree_.clear_default_text_pipeline();
         tree_.clear_font_context();
@@ -434,6 +474,7 @@ namespace nandina::app
         tree_.clear_clipboard();
         CloseWindow();
         opened_ = false;
+        close_pending_ = false;
         log::get("app.window").info("NanWindow: closed");
     }
 

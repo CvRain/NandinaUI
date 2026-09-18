@@ -66,6 +66,15 @@ namespace nandina::app
         auto operator=(NanRouter&&) -> NanRouter& = delete;
 
         [[nodiscard]] auto host() -> std::shared_ptr<scene::NanControl>;
+
+        /// 窗口级拖拽服务。由 NanWindow 在构造 Router 后立刻注入，页面经
+        /// PageContext 取用（避免依赖"内容已挂载"这种时序）。
+        void set_drag_controller(widget::DragController* controller) noexcept {
+            drag_controller_ = controller;
+        }
+        [[nodiscard]] auto drag_controller() const noexcept -> widget::DragController* {
+            return drag_controller_;
+        }
         [[nodiscard]] auto graph() -> reactive::Graph&;
         [[nodiscard]] auto theme() const -> const theme::NanTheme&;
         [[nodiscard]] auto store_base() -> NanStore*;
@@ -199,6 +208,7 @@ namespace nandina::app
         UiDispatcher* dispatcher_ = nullptr;
         BackgroundExecutor* background_executor_ = nullptr;
         scene::OverlayHost* overlay_host_ = nullptr;
+        widget::DragController* drag_controller_ = nullptr;
         std::shared_ptr<scene::NanControl> host_;
         std::vector<Frame> frames_;
         /// 淡出中的页面：生命周期（scope/async）保留，淡出完成后销毁。

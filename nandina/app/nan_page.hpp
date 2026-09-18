@@ -66,7 +66,8 @@ namespace nandina::app
             AsyncScope* async_scope = nullptr,
             theme::ThemeManager* theme_manager = nullptr,
             UiDispatcher* dispatcher = nullptr,
-            scene::OverlayHost* overlay_host = nullptr
+            scene::OverlayHost* overlay_host = nullptr,
+            widget::DragController* drag_controller = nullptr
         ):
             router_(&router),
             graph_(&graph),
@@ -80,7 +81,8 @@ namespace nandina::app
             async_scope_(async_scope),
             theme_manager_(theme_manager),
             dispatcher_(dispatcher),
-            overlay_host_(overlay_host) {}
+            overlay_host_(overlay_host),
+            drag_controller_(drag_controller) {}
 
         [[nodiscard]] auto router() -> NanRouter& {
             return *router_;
@@ -115,7 +117,8 @@ namespace nandina::app
                 scope(),
                 theme_manager(),
                 resources_,
-                overlay_host_
+                overlay_host_,
+                drag_controller_
             );
         }
 
@@ -209,6 +212,7 @@ namespace nandina::app
         theme::ThemeManager* theme_manager_ = nullptr;
         UiDispatcher* dispatcher_ = nullptr;
         scene::OverlayHost* overlay_host_ = nullptr;
+        widget::DragController* drag_controller_ = nullptr;
     };
 
     class NanPage {

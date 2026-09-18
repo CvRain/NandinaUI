@@ -27,6 +27,7 @@
 #include "../render/render_device.hpp"
 #include "../render/texture_cache.hpp"
 #include "../scene/scene_tree.hpp"
+#include "../widget/drag_controller.hpp"
 #include "../text/font_pipeline.hpp"
 #include "nan_router.hpp"
 #include "viewport_scaling.hpp"
@@ -85,6 +86,11 @@ namespace nandina::app
         /// `BuildContext::overlay_host()` 取得同一实例来呈现浮层。
         [[nodiscard]] auto overlay_host() -> scene::OverlayHost&;
 
+        /// 窗口级拖拽服务：拖动一个已挂载节点到另一个容器（见 widget/drag_controller.hpp）。
+        [[nodiscard]] auto drag_controller() -> widget::DragController& {
+            return drag_controller_;
+        }
+
         [[nodiscard]] auto config() const -> const WindowConfig& {
             return config_;
         }
@@ -101,7 +107,7 @@ namespace nandina::app
         /// 打开 raylib 窗口 + 创建渲染设备。run 开始时调用一次。
         void open();
 
-        /// 是否收到关闭请求 (点 X / Alt-F4)。
+        /// 是否收到关闭请求 (点 X / Alt-F4 / request_close)。
         [[nodiscard]] auto should_close() const -> bool;
 
         /// 执行一帧: 轮询输入 → 派发 → process(dt) → on_frame → 绘制。
@@ -109,6 +115,21 @@ namespace nandina::app
 
         /// 关闭 raylib 窗口。run 结束时调用。
         void close();
+
+        /**
+         * 请求在本帧的安全点关闭窗口 —— 在 on_frame() 里应当用这个而不是 close()。
+         *
+         * 直接调用 close() 会立刻销毁 render device 与原生窗口，但 tick() 在
+         * on_frame() 返回之后仍要执行 device_->begin_frame() / clear() / 绘制，
+         * 于是必然解引用空指针。request_close() 只置标志，tick() 在**绘制与帧末
+         * 提交全部完成之后**才真正 close()。
+         *
+         * 调用后 should_close() 立即为 true，主循环在本帧结束后退出。幂等。
+         */
+        void request_close();
+
+        /// True when a close has been requested (directly or via request_close).
+        [[nodiscard]] auto close_requested() const noexcept -> bool;
 
     protected:
         /// 窗口就绪 (open 之后) 调用一次。子类覆写以注册页面 / 搭建全局框架。
@@ -130,6 +151,7 @@ namespace nandina::app
         /// Window-level overlay portal; always the scene tree root. Owns the content
         /// layer (application/router content) and the overlay layer (presented 浮层).
         std::shared_ptr<scene::OverlayHost> overlay_host_;
+        widget::DragController drag_controller_;
         std::unique_ptr<NanRouter> router_;
         std::unique_ptr<render::IRenderDevice> device_;
         std::unique_ptr<render::TextureCache> texture_cache_;
@@ -137,6 +159,8 @@ namespace nandina::app
         std::shared_ptr<text::FontPipeline> default_font_pipeline_;
         std::optional<widget::primitives::TextPipeline> default_text_pipeline_;
         bool opened_ = false;
+        /// Set by request_close(); consumed by tick() after drawing completes.
+        bool close_pending_ = false;
         std::optional<ViewportMapping> viewport_mapping_;
 
         // 上一帧鼠标位置 (用于计算 delta 与 move 事件)。
