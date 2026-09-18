@@ -176,33 +176,74 @@ namespace nandina::theme
             }
         }
 
+        /**
+         * 解析 `[themes.<name>.palette]`。
+         *
+         * 两组键都接受：shadcn 规范名（`foreground` / `card` / `muted` / `accent` …）与
+         * 兼容别名（`on_background` / `outline` / `focus_ring` …）。别名在构造时已与规范名
+         * 同值，因此先写规范名再写别名时，以别名那张表里的键为准；只写别名也仍然生效。
+         */
         void parse_palette(
             const toml::table& table,
             NanColorScheme& palette,
             const std::map<std::string, NanReferencePalette, std::less<>>& palettes
         ) {
+            // ─── shadcn 规范名 ────────────────────────────────────────────────
             assign_color(table, "background", palette.background, palettes);
-            assign_color(table, "on_background", palette.on_background, palettes);
+            assign_color(table, "foreground", palette.foreground, palettes);
+            assign_color(table, "card", palette.card, palettes);
+            assign_color(table, "card_foreground", palette.card_foreground, palettes);
+            assign_color(table, "popover", palette.popover, palettes);
+            assign_color(table, "popover_foreground", palette.popover_foreground, palettes);
             assign_color(table, "primary", palette.primary, palettes);
-            assign_color(table, "on_primary", palette.on_primary, palettes);
+            assign_color(table, "primary_foreground", palette.primary_foreground, palettes);
             assign_color(table, "secondary", palette.secondary, palettes);
-            assign_color(table, "on_secondary", palette.on_secondary, palettes);
-            assign_color(table, "tertiary", palette.tertiary, palettes);
-            assign_color(table, "on_tertiary", palette.on_tertiary, palettes);
+            assign_color(table, "secondary_foreground", palette.secondary_foreground, palettes);
+            assign_color(table, "muted", palette.muted, palettes);
+            assign_color(table, "muted_foreground", palette.muted_foreground, palettes);
+            assign_color(table, "accent", palette.accent, palettes);
+            assign_color(table, "accent_foreground", palette.accent_foreground, palettes);
+            assign_color(table, "destructive", palette.destructive, palettes);
+            assign_color(table, "destructive_foreground", palette.destructive_foreground, palettes);
+            assign_color(table, "border", palette.border, palettes);
+            assign_color(table, "input", palette.input, palettes);
+            assign_color(table, "ring", palette.ring, palettes);
             assign_color(table, "surface", palette.surface, palettes);
-            assign_color(table, "on_surface", palette.on_surface, palettes);
+            assign_color(table, "surface_foreground", palette.surface_foreground, palettes);
             assign_color(table, "surface_variant", palette.surface_variant, palettes);
+            assign_color(
+                table,
+                "surface_variant_foreground",
+                palette.surface_variant_foreground,
+                palettes
+            );
+            assign_color(table, "tertiary", palette.tertiary, palettes);
+            assign_color(table, "tertiary_foreground", palette.tertiary_foreground, palettes);
+            assign_color(table, "success", palette.success, palettes);
+            assign_color(table, "success_foreground", palette.success_foreground, palettes);
+            assign_color(table, "warning", palette.warning, palettes);
+            assign_color(table, "warning_foreground", palette.warning_foreground, palettes);
+            assign_color(table, "error", palette.error, palettes);
+            assign_color(table, "error_foreground", palette.error_foreground, palettes);
+            assign_color(table, "info", palette.info, palettes);
+            assign_color(table, "info_foreground", palette.info_foreground, palettes);
+            assign_color(table, "selection", palette.selection, palettes);
+
+            // ─── 兼容别名（与规范名同值的字段）────────────────────────────────
+            assign_color(table, "on_background", palette.on_background, palettes);
+            assign_color(table, "on_primary", palette.on_primary, palettes);
+            assign_color(table, "on_secondary", palette.on_secondary, palettes);
+            assign_color(table, "on_tertiary", palette.on_tertiary, palettes);
+            assign_color(table, "on_surface", palette.on_surface, palettes);
             assign_color(table, "on_surface_variant", palette.on_surface_variant, palettes);
+            assign_color(table, "on_muted", palette.on_muted, palettes);
             assign_color(table, "outline", palette.outline, palettes);
             assign_color(table, "outline_variant", palette.outline_variant, palettes);
-            assign_color(table, "success", palette.success, palettes);
             assign_color(table, "on_success", palette.on_success, palettes);
-            assign_color(table, "warning", palette.warning, palettes);
             assign_color(table, "on_warning", palette.on_warning, palettes);
-            assign_color(table, "error", palette.error, palettes);
             assign_color(table, "on_error", palette.on_error, palettes);
+            assign_color(table, "on_info", palette.on_info, palettes);
             assign_color(table, "focus_ring", palette.focus_ring, palettes);
-            assign_color(table, "selection", palette.selection, palettes);
         }
 
         void parse_tokens(const toml::table& table, NanTokens& tokens) {

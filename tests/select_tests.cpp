@@ -70,19 +70,19 @@ TEST_CASE("select resolves field, popup, and option tokens", "[select][theme]") 
 
     REQUIRE(
         style.container.fill.oklch().light
-        == Catch::Approx(design.light.surface_variant.oklch().light)
+        == Catch::Approx(design.light.background.oklch().light)
     );
     REQUIRE(
-        style.popup.fill.oklch().light == Catch::Approx(design.light.surface.oklch().light)
+        style.popup.fill.oklch().light == Catch::Approx(design.light.popover.oklch().light)
     );
     REQUIRE(
-        style.value.color.oklch().light == Catch::Approx(design.light.on_surface.oklch().light)
+        style.value.color.oklch().light == Catch::Approx(design.light.foreground.oklch().light)
     );
     REQUIRE(
         style.option_selected.color.oklch().light
-        == Catch::Approx(design.light.primary.oklch().light)
+        == Catch::Approx(design.light.accent_foreground.oklch().light)
     );
-    REQUIRE(style.metrics.height == Catch::Approx(40.0F));
+    REQUIRE(style.metrics.height == Catch::Approx(36.0F));
     REQUIRE(style.metrics.preferred_width == Catch::Approx(160.0F));
 }
 

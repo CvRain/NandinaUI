@@ -177,6 +177,73 @@ theme_design_system_tests = executable(
 )
 test('theme-design-system', theme_design_system_tests)
 
+theme_palette_contrast_tests = executable(
+    'theme_palette_contrast_tests',
+    files('theme_palette_contrast_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('theme-palette-contrast', theme_palette_contrast_tests)
+
+theme_switch_tests = executable(
+    'theme_switch_tests',
+    files('theme_switch_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('theme-switch', theme_switch_tests)
+
+layout_overflow_tests = executable(
+    'layout_overflow_tests',
+    files('layout_overflow_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('layout-overflow', layout_overflow_tests)
+
+node_reparent_tests = executable(
+    'node_reparent_tests',
+    files('node_reparent_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('node-reparent', node_reparent_tests)
+
+# 这个测试会真的开一个窗口，进而初始化 raylib/GL。无 RTTI 配置下本仓库的构建
+# 环境（sandbox 内的 EGL/ZINK）会构造字体管线失败，随后 raylib 自身的
+# CloseWindow -> rlglClose 在空 rlgl 状态上崩溃，与本框架无关，因此显式跳过。
+window_lifecycle_tests = executable(
+    'window_lifecycle_tests',
+    files('window_lifecycle_tests.cpp'),
+    cpp_args : get_option('cpp_rtti') ? [] : ['-DNANDINA_SKIP_WINDOW_TESTS'],
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('window-lifecycle', window_lifecycle_tests)
+
+drag_controller_tests = executable(
+    'drag_controller_tests',
+    files('drag_controller_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('drag-controller', drag_controller_tests)
+
+pointer_area_layout_tests = executable(
+    'pointer_area_layout_tests',
+    files('pointer_area_layout_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('pointer-area-layout', pointer_area_layout_tests)
+
+drag_gesture_tests = executable(
+    'drag_gesture_tests',
+    files('drag_gesture_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('drag-gesture', drag_gesture_tests)
+
+drag_roundtrip_tests = executable(
+    'drag_roundtrip_tests',
+    files('drag_roundtrip_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('drag-roundtrip', drag_roundtrip_tests)
+
 checkbox_tests = executable(
     'checkbox_tests',
     files('checkbox_tests.cpp'),

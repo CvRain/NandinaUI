@@ -72,18 +72,18 @@ TEST_CASE("tabs resolves label and indicator tokens", "[tabs][theme]") {
 
     REQUIRE(
         style.label.color.oklch().light
-        == Catch::Approx(design.light.on_surface_variant.oklch().light)
+        == Catch::Approx(design.light.muted_foreground.oklch().light)
     );
     REQUIRE(
         style.label_selected.color.oklch().light
-        == Catch::Approx(design.light.primary.oklch().light)
+        == Catch::Approx(design.light.foreground.oklch().light)
     );
     REQUIRE(
         style.indicator.oklch().light == Catch::Approx(design.light.primary.oklch().light)
     );
     REQUIRE(style.indicator_thickness == Catch::Approx(2.0F));
     REQUIRE(style.metrics.gap == Catch::Approx(20.0F));
-    REQUIRE(style.metrics.min_height == Catch::Approx(40.0F));
+    REQUIRE(style.metrics.min_height == Catch::Approx(36.0F));
 }
 
 TEST_CASE("tabs disabled state scales label and indicator alpha", "[tabs][theme]") {

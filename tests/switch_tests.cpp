@@ -83,15 +83,18 @@ TEST_CASE("switch style resolves semantic theme tokens", "[switch][theme]") {
         theme::SwitchVisualState::normal
     );
 
-    // 勾选：primary 轨道 + surface 拇指（亮色下近白）。
+    // 勾选：primary 轨道 + background 拇指（亮色下近白）。
     REQUIRE(checked.track.fill.oklch().light == Catch::Approx(0.62F));
-    REQUIRE(checked.thumb.fill.oklch().light == Catch::Approx(design.light.surface.oklch().light));
-    // 未勾选：outline_variant 轨道 + surface 拇指。
     REQUIRE(
-        unchecked.track.fill.oklch().light
-        == Catch::Approx(design.light.outline_variant.oklch().light)
+        checked.thumb.fill.oklch().light == Catch::Approx(design.light.background.oklch().light)
     );
-    REQUIRE(unchecked.thumb.fill.oklch().light == Catch::Approx(design.light.surface.oklch().light));
+    // 未勾选：input 轨道 + background 拇指。
+    REQUIRE(
+        unchecked.track.fill.oklch().light == Catch::Approx(design.light.input.oklch().light)
+    );
+    REQUIRE(
+        unchecked.thumb.fill.oklch().light == Catch::Approx(design.light.background.oklch().light)
+    );
     REQUIRE(unchecked.metrics.gap == Catch::Approx(11.0F));
     // pill 全圆角轨道。
     REQUIRE(checked.track.radius == Catch::Approx(design.tokens.radius.full));
@@ -185,8 +188,8 @@ TEST_CASE("switch builder forwards checked and change modifiers", "[switch][auth
 }
 
 TEST_CASE("switch draws track and thumb with checked-dependent position", "[switch][painter]") {
-    const float track_height = 24.0F;
-    const float track_width = 40.0F;
+    const float track_height = 20.0F;
+    const float track_width = 36.0F;
     const float thumb_size = 16.0F;
     const float thumb_padding = (track_height - thumb_size) * 0.5F;
 

@@ -76,10 +76,11 @@ TEST_CASE("tooltip resolves bubble tokens from the recipe", "[tooltip][theme]") 
     const auto style = theme::resolve_tooltip(design, theme::ColorAppearance::light);
 
     REQUIRE(
-        style.container.fill.oklch().light == Catch::Approx(design.light.primary.oklch().light)
+        style.container.fill.oklch().light == Catch::Approx(design.light.popover.oklch().light)
     );
     REQUIRE(
-        style.label.color.oklch().light == Catch::Approx(design.light.on_primary.oklch().light)
+        style.label.color.oklch().light
+        == Catch::Approx(design.light.popover_foreground.oklch().light)
     );
     REQUIRE(style.metrics.padding_x == Catch::Approx(9.0F));
     REQUIRE(style.metrics.min_height == Catch::Approx(24.0F));

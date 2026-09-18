@@ -92,11 +92,11 @@ TEST_CASE("radio button resolves indicator and dot tokens", "[radio][theme]") {
         theme::RadioButtonVisualState::normal
     );
 
-    // 未选中：透明填充 + outline 边框；选中：primary 边框（规则覆盖）。
+    // 未选中：透明填充 + input 边框；选中：primary 边框（规则覆盖）。
     REQUIRE(unchecked.indicator.fill.alpha() == Catch::Approx(0.0F));
     REQUIRE(
         unchecked.indicator.border.oklch().light
-        == Catch::Approx(design.light.outline.oklch().light)
+        == Catch::Approx(design.light.input.oklch().light)
     );
     REQUIRE(
         checked.indicator.border.oklch().light
@@ -107,7 +107,7 @@ TEST_CASE("radio button resolves indicator and dot tokens", "[radio][theme]") {
     REQUIRE(
         unchecked.dot.oklch().light == Catch::Approx(design.light.primary.oklch().light)
     );
-    REQUIRE(unchecked.metrics.box_size == Catch::Approx(20.0F));
+    REQUIRE(unchecked.metrics.box_size == Catch::Approx(16.0F));
     REQUIRE(unchecked.metrics.gap == Catch::Approx(9.0F));
 }
 

@@ -455,6 +455,40 @@ dark = "ocean-dark"
     REQUIRE_FALSE(missing_stop.has_value());
 }
 
+TEST_CASE("styles.toml palette accepts the shadcn semantic role names", "[theme][toml]") {
+    // 新增的语义角色必须能从 TOML 写入，否则样式文档作者无法表达 muted / card / accent，
+    // 组件配方引用的角色就永远只能是默认值。
+    const auto document = theme::parse_style_document(R"toml(
+[themes.custom.palette]
+background = [0.99, 0.00, 0.0]
+foreground = [0.18, 0.01, 280.0]
+card = [0.95, 0.01, 280.0]
+muted = [0.90, 0.01, 280.0]
+muted_foreground = [0.42, 0.02, 280.0]
+accent = [0.88, 0.03, 280.0]
+accent_foreground = [0.20, 0.01, 280.0]
+destructive = [0.55, 0.22, 27.0]
+popover = [1.00, 0.00, 0.0]
+input = [0.86, 0.01, 280.0]
+ring = [0.60, 0.10, 265.0]
+)toml");
+    REQUIRE(document.has_value());
+
+    const auto found = document->themes.find("custom");
+    REQUIRE(found != document->themes.end());
+    const auto& palette = found->second.palette;
+    REQUIRE(palette.foreground.oklch().light == Catch::Approx(0.18F));
+    REQUIRE(palette.card.oklch().light == Catch::Approx(0.95F));
+    REQUIRE(palette.muted.oklch().light == Catch::Approx(0.90F));
+    REQUIRE(palette.muted_foreground.oklch().light == Catch::Approx(0.42F));
+    REQUIRE(palette.accent.oklch().light == Catch::Approx(0.88F));
+    REQUIRE(palette.accent_foreground.oklch().light == Catch::Approx(0.20F));
+    REQUIRE(palette.destructive.oklch().light == Catch::Approx(0.55F));
+    REQUIRE(palette.popover.oklch().light == Catch::Approx(1.0F));
+    REQUIRE(palette.input.oklch().light == Catch::Approx(0.86F));
+    REQUIRE(palette.ring.oklch().light == Catch::Approx(0.60F));
+}
+
 TEST_CASE("Button instance theme and StyleContext keep their cascade priority", "[theme][cascade]") {
     theme::ThemeManager manager;
     auto application_theme = theme::default_theme();

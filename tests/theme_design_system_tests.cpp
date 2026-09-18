@@ -42,27 +42,57 @@ namespace
         const theme::NanColorScheme& expected
     ) {
         require_same_color(actual.background, expected.background);
-        require_same_color(actual.on_background, expected.on_background);
+        require_same_color(actual.foreground, expected.foreground);
+        require_same_color(actual.card, expected.card);
+        require_same_color(actual.card_foreground, expected.card_foreground);
+        require_same_color(actual.popover, expected.popover);
+        require_same_color(actual.popover_foreground, expected.popover_foreground);
         require_same_color(actual.primary, expected.primary);
-        require_same_color(actual.on_primary, expected.on_primary);
+        require_same_color(actual.primary_foreground, expected.primary_foreground);
         require_same_color(actual.secondary, expected.secondary);
-        require_same_color(actual.on_secondary, expected.on_secondary);
+        require_same_color(actual.secondary_foreground, expected.secondary_foreground);
+        require_same_color(actual.muted, expected.muted);
+        require_same_color(actual.muted_foreground, expected.muted_foreground);
+        require_same_color(actual.accent, expected.accent);
+        require_same_color(actual.accent_foreground, expected.accent_foreground);
+        require_same_color(actual.destructive, expected.destructive);
+        require_same_color(actual.destructive_foreground, expected.destructive_foreground);
+        require_same_color(actual.border, expected.border);
+        require_same_color(actual.input, expected.input);
+        require_same_color(actual.ring, expected.ring);
         require_same_color(actual.tertiary, expected.tertiary);
-        require_same_color(actual.on_tertiary, expected.on_tertiary);
+        require_same_color(actual.tertiary_foreground, expected.tertiary_foreground);
         require_same_color(actual.surface, expected.surface);
-        require_same_color(actual.on_surface, expected.on_surface);
+        require_same_color(actual.surface_foreground, expected.surface_foreground);
         require_same_color(actual.surface_variant, expected.surface_variant);
-        require_same_color(actual.on_surface_variant, expected.on_surface_variant);
-        require_same_color(actual.outline, expected.outline);
-        require_same_color(actual.outline_variant, expected.outline_variant);
+        require_same_color(actual.surface_variant_foreground, expected.surface_variant_foreground);
         require_same_color(actual.success, expected.success);
-        require_same_color(actual.on_success, expected.on_success);
+        require_same_color(actual.success_foreground, expected.success_foreground);
         require_same_color(actual.warning, expected.warning);
-        require_same_color(actual.on_warning, expected.on_warning);
+        require_same_color(actual.warning_foreground, expected.warning_foreground);
         require_same_color(actual.error, expected.error);
-        require_same_color(actual.on_error, expected.on_error);
+        require_same_color(actual.error_foreground, expected.error_foreground);
+        require_same_color(actual.info, expected.info);
+        require_same_color(actual.info_foreground, expected.info_foreground);
         require_same_color(actual.focus_ring, expected.focus_ring);
         require_same_color(actual.selection, expected.selection);
+    }
+
+    /** 兼容别名必须与其 shadcn 规范名同值，避免两套字段漂移。 */
+    void require_aliases_agree(const theme::NanColorScheme& scheme) {
+        require_same_color(scheme.on_background, scheme.foreground);
+        require_same_color(scheme.on_primary, scheme.primary_foreground);
+        require_same_color(scheme.on_secondary, scheme.secondary_foreground);
+        require_same_color(scheme.on_tertiary, scheme.tertiary_foreground);
+        require_same_color(scheme.on_surface, scheme.surface_foreground);
+        require_same_color(scheme.on_surface_variant, scheme.surface_variant_foreground);
+        require_same_color(scheme.on_muted, scheme.muted_foreground);
+        require_same_color(scheme.outline, scheme.border);
+        require_same_color(scheme.on_success, scheme.success_foreground);
+        require_same_color(scheme.on_warning, scheme.warning_foreground);
+        require_same_color(scheme.on_error, scheme.error_foreground);
+        require_same_color(scheme.on_info, scheme.info_foreground);
+        require_same_color(scheme.focus_ring, scheme.ring);
     }
 
     /** revision 观察探针：统计 on_theme_revision_changed 回调次数。 */
@@ -126,10 +156,10 @@ TEST_CASE("design system resolves fragment tokens against the active palette", "
         theme::ColorAppearance::light,
         system.components.button.base.container
     );
-    // base 容器：surface 透明 + radius.sm（treatment 规则在此之上覆盖）
-    REQUIRE(box.fill.oklch().light == Catch::Approx(system.light.surface.oklch().light));
+    // base 容器：background 透明 + radius_md（treatment 规则在此之上覆盖）
+    REQUIRE(box.fill.oklch().light == Catch::Approx(system.light.background.oklch().light));
     REQUIRE(box.fill.alpha() == Catch::Approx(0.0F));
-    REQUIRE(box.radius == Catch::Approx(system.tokens.radius.sm));
+    REQUIRE(box.radius == Catch::Approx(system.tokens.radius.md));
 
     const auto focus = theme::resolve(
         system,
@@ -154,10 +184,10 @@ TEST_CASE("resolve_button produces recipe-driven values for filled medium normal
     REQUIRE(resolved.container.fill.oklch().light == Catch::Approx(system.light.primary.oklch().light));
     REQUIRE(resolved.container.border_width == Catch::Approx(0.0F));
     REQUIRE(resolved.label.color.oklch().light == Catch::Approx(system.light.on_primary.oklch().light));
-    // medium：40 高 / spacing.md 内边距 / label_md 字号
-    REQUIRE(resolved.metrics.height == Catch::Approx(40.0F));
-    REQUIRE(resolved.metrics.padding_x == Catch::Approx(system.tokens.spacing.md));
-    REQUIRE(resolved.label.font_size == Catch::Approx(system.tokens.typography.label_md));
+    // medium（base）：36 高 / spacing.lg 内边距 / label_sm 字号
+    REQUIRE(resolved.metrics.height == Catch::Approx(36.0F));
+    REQUIRE(resolved.metrics.padding_x == Catch::Approx(system.tokens.spacing.lg));
+    REQUIRE(resolved.label.font_size == Catch::Approx(system.tokens.typography.label_sm));
     // 焦点环始终开启（与遗留语义一致）
     REQUIRE(resolved.focus.width == Catch::Approx(system.tokens.border.focus_ring));
 }
@@ -257,7 +287,7 @@ TEST_CASE("resolve_checkbox and resolve_slider produce composed fragments", "[th
     REQUIRE(
         checkbox.indicator.fill.oklch().light == Catch::Approx(system.light.primary.oklch().light)
     );
-    REQUIRE(checkbox.metrics.box_size == Catch::Approx(20.0F));
+    REQUIRE(checkbox.metrics.box_size == Catch::Approx(16.0F));
     REQUIRE(checkbox.metrics.gap == Catch::Approx(system.tokens.spacing.sm));
 
     const auto slider = theme::resolve_slider(system, appearance, theme::SliderVisualState::normal);
@@ -446,8 +476,8 @@ TEST_CASE("default light/dark palettes keep on_* contrast and flip neutrals", "[
     // 中性色两模式显著翻转：亮=浅底深字，暗=深底浅字。
     REQUIRE(light.background.oklch().light > dark.background.oklch().light + 0.5F);
     REQUIRE(light.on_surface.oklch().light < dark.on_surface.oklch().light - 0.5F);
-    // 品牌色两模式同值（对齐 Skeleton brand 语义）。
-    REQUIRE(light.primary.oklch().light == Catch::Approx(dark.primary.oklch().light));
+    // 品牌色两模式不同档：亮色用较深的档位（配浅字），暗色提亮（shadcn blue 约定）。
+    REQUIRE(dark.primary.oklch().light > light.primary.oklch().light);
 }
 
 TEST_CASE("default reference palette provides seven ordered eleven-stop scales", "[theme][palette][reference]") {
@@ -462,11 +492,23 @@ TEST_CASE("default reference palette provides seven ordered eleven-stop scales",
         &reference.error,
     };
 
+    // 每条色阶必须是**单调**的（相邻档明度不等、方向一致），但方向不强制：
+    // 历史上 error 色阶是降序书写的（shade_50 最深），语义映射已按此适配。
     for (const auto* scale : scales) {
         STATIC_REQUIRE(theme::NanColorScale::stop_count == 11);
+        const bool descending =
+            scale->stops[0].oklch().light > scale->stops[1].oklch().light;
         for (std::size_t index = 1; index < scale->stops.size(); ++index) {
             CAPTURE(index);
-            REQUIRE(scale->stops[index - 1].oklch().light > scale->stops[index].oklch().light);
+            const auto previous = scale->stops[index - 1].oklch().light;
+            const auto current = scale->stops[index].oklch().light;
+            REQUIRE(previous != Catch::Approx(current));
+            if (descending) {
+                REQUIRE(previous > current);
+            }
+            else {
+                REQUIRE(previous < current);
+            }
         }
     }
 }
@@ -505,35 +547,43 @@ TEST_CASE("palette variant policy can lift dark brand tones without changing lig
     const auto dark = theme::make_color_scheme(reference, theme::ColorAppearance::dark, policy);
 
     require_same_color(light.primary, reference.primary.at(theme::ColorShade::shade_500));
-    require_same_color(light.secondary, reference.secondary.at(theme::ColorShade::shade_500));
+    // secondary 是中性次操作色，取策略指定的中性档而不是品牌辅色档。
+    require_same_color(light.secondary, reference.neutral.at(policy.light_secondary));
     require_same_color(light.tertiary, reference.tertiary.at(theme::ColorShade::shade_500));
     require_same_color(dark.primary, reference.primary.at(theme::ColorShade::shade_400));
-    require_same_color(dark.secondary, reference.secondary.at(theme::ColorShade::shade_400));
+    require_same_color(dark.secondary, reference.neutral.at(policy.dark_secondary));
     require_same_color(dark.tertiary, reference.tertiary.at(theme::ColorShade::shade_400));
     require_same_color(dark.focus_ring, dark.primary);
 }
 
-TEST_CASE("generated defaults preserve legacy light scheme construction", "[theme][palette][compat]") {
-    const theme::NanColorScheme constructed;
+TEST_CASE("default palettes come from direct semantic specs and keep aliases coherent", "[theme][palette][compat]") {
     const auto light = theme::default_light_palette();
     const auto dark = theme::default_dark_palette();
     const auto reference = theme::default_reference_palette();
 
-    require_same_scheme(constructed, light);
-    require_same_scheme(
-        light,
-        theme::make_color_scheme(reference, theme::ColorAppearance::light)
-    );
-    require_same_scheme(
-        dark,
-        theme::make_color_scheme(reference, theme::ColorAppearance::dark)
-    );
+    // 默认色板走「直接声明语义值」那条作者路径，不再由参考色阶派生；
+    // 两条路径都必须自洽，且别名与规范名同值。
+    require_aliases_agree(light);
+    require_aliases_agree(dark);
+    require_aliases_agree(theme::make_color_scheme(reference, theme::ColorAppearance::light));
+    require_aliases_agree(theme::make_color_scheme(reference, theme::ColorAppearance::dark));
+    require_aliases_agree(theme::NanColorScheme {});
 
-    // Phase 7 的默认品牌色与亮/暗中性色保持不变，避免升级后 example 视觉漂移。
-    REQUIRE(light.primary.oklch().light == Catch::Approx(0.6803F));
+    // shadcn 对齐默认值：中性底 + 蓝色品牌，且品牌色在两模式下不同档。
     REQUIRE(light.background.oklch().light == Catch::Approx(1.0F));
-    REQUIRE(dark.background.oklch().light == Catch::Approx(0.1776F));
-    REQUIRE(dark.surface.oklch().light == Catch::Approx(0.2520F));
+    REQUIRE(dark.background.oklch().light == Catch::Approx(0.141F));
+    // shadcn 经典中性默认：primary 是近黑中性色（chroma == 0），不带品牌色相。
+    REQUIRE(light.primary.oklch().chroma == Catch::Approx(0.0F));
+    REQUIRE(light.primary.oklch().light < 0.3F);
+    REQUIRE(dark.primary.oklch().chroma == Catch::Approx(0.0F));
+    REQUIRE(dark.primary.oklch().light > light.primary.oklch().light);
+    // 亮色下卡片比页面低 2.5% 明度（靠 border 收边）；暗色下卡片必须比背景更亮。
+    REQUIRE(light.card.oklch().light < light.background.oklch().light);
+    REQUIRE(light.background.oklch().light - light.card.oklch().light >= 0.02F);
+    REQUIRE(dark.card.oklch().light > dark.background.oklch().light + 0.02F);
+    // 暗色边框是半透明白（shadcn 约定），不是固定灰。
+    REQUIRE(dark.border.alpha() < 1.0F);
+    REQUIRE(light.border.alpha() == Catch::Approx(1.0F));
 }
 
 TEST_CASE("attached widget follows an atomic DesignSystem apply", "[theme][manager][widget]") {
@@ -632,7 +682,7 @@ TEST_CASE("detached widget resolves against its fallback design system", "[theme
         style.container.fill.oklch().light
         == Catch::Approx(fallback.palette.primary.oklch().light)
     );
-    REQUIRE(style.metrics.height == Catch::Approx(40.0F)); // medium 尺寸
+    REQUIRE(style.metrics.height == Catch::Approx(36.0F)); // medium 尺寸（shadcn h-9）
 }
 
 TEST_CASE("focused button draws a normalized focus ring", "[theme][painter]") {

@@ -67,9 +67,7 @@ TEST_CASE("divider resolves color and thickness", "[divider][theme]") {
     design.tokens.border.thin = 2.0F;
 
     const auto style = theme::resolve_divider(design, theme::ColorAppearance::light);
-    REQUIRE(
-        style.color.oklch().light == Catch::Approx(design.light.outline_variant.oklch().light)
-    );
+    REQUIRE(style.color.oklch().light == Catch::Approx(design.light.border.oklch().light));
     REQUIRE(style.thickness == Catch::Approx(2.0F));
 }
 

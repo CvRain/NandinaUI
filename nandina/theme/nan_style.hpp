@@ -16,27 +16,61 @@
 
 namespace nandina::theme
 {
+    /**
+     * 语义颜色角色。命名沿用 shadcn/ui：底色 `x` 配前景色 `x_foreground`。
+     *
+     * 注意 `accent` 是 **hover / 选中底色**，不是品牌强调色；品牌强调色是 `primary`。
+     * `ThemeColor::accent()` 那个「随 tone 解析的强调色对」是另一回事，见 `ToneAccentRef`。
+     */
     enum class ColorToken {
+        // ─── shadcn 对齐角色 ───────────────────────────────────────────────────
         background,
-        on_background,
+        foreground,
+        card,
+        card_foreground,
+        popover,
+        popover_foreground,
         primary,
-        on_primary,
+        primary_foreground,
         secondary,
-        on_secondary,
-        tertiary,
-        on_tertiary,
+        secondary_foreground,
+        muted,
+        muted_foreground,
+        accent,
+        accent_foreground,
+        destructive,
+        destructive_foreground,
+        border,
+        input,
+        ring,
         surface,
-        on_surface,
+        surface_foreground,
         surface_variant,
+        surface_variant_foreground,
+        tertiary,
+        tertiary_foreground,
+        success,
+        success_foreground,
+        warning,
+        warning_foreground,
+        error,
+        error_foreground,
+        info,
+        info_foreground,
+        // ─── 兼容别名（与上面的角色同值，逐步迁移）────────────────────────────
+        on_background,
+        on_primary,
+        on_secondary,
+        on_tertiary,
+        on_surface,
         on_surface_variant,
+        on_muted,
         outline,
         outline_variant,
-        success,
         on_success,
-        warning,
         on_warning,
-        error,
         on_error,
+        on_info,
         focus_ring,
         selection,
     };

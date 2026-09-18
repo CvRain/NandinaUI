@@ -78,19 +78,20 @@ namespace
 
 TEST_CASE("card style resolves surface tokens from the recipe", "[card][theme]") {
     auto design = theme::default_design_system();
-    design.tokens.spacing.md = 15.0F;
+    // Card 的内边距走 spacing.lg（shadcn Card 的 p-6 档）。
+    design.tokens.spacing.lg = 15.0F;
 
     const auto style = theme::resolve_card(design, theme::ColorAppearance::light);
 
     REQUIRE(
-        style.container.fill.oklch().light == Catch::Approx(design.light.surface.oklch().light)
+        style.container.fill.oklch().light == Catch::Approx(design.light.card.oklch().light)
     );
     REQUIRE(
         style.container.border.oklch().light
-        == Catch::Approx(design.light.outline_variant.oklch().light)
+        == Catch::Approx(design.light.border.oklch().light)
     );
     REQUIRE(style.container.border_width == Catch::Approx(design.tokens.border.thin));
-    REQUIRE(style.container.radius == Catch::Approx(design.tokens.radius.md));
+    REQUIRE(style.container.radius == Catch::Approx(design.tokens.radius.lg));
     REQUIRE(style.metrics.padding_x == Catch::Approx(15.0F));
     REQUIRE(style.metrics.padding_y == Catch::Approx(15.0F));
 }
@@ -101,12 +102,10 @@ TEST_CASE("card resolves light and dark surfaces from the same snapshot", "[card
     const auto dark = theme::resolve_card(design, theme::ColorAppearance::dark);
 
     REQUIRE(
-        light.container.fill.oklch().light
-        == Catch::Approx(design.light.surface.oklch().light)
+        light.container.fill.oklch().light == Catch::Approx(design.light.card.oklch().light)
     );
     REQUIRE(
-        dark.container.fill.oklch().light
-        == Catch::Approx(design.dark.surface.oklch().light)
+        dark.container.fill.oklch().light == Catch::Approx(design.dark.card.oklch().light)
     );
     REQUIRE(dark.container.fill.oklch().light < light.container.fill.oklch().light);
 }

@@ -38,7 +38,7 @@ NandinaUI（南天竹）是一个用 **C++26** 编写、基于 **Meson** 构建�
 - **可组合组件库** —— 覆盖内容展示、输入选择、布局滚动、浮层反馈与通用指针手势，并通过统一主题和声明式构建器组合。
 - **动画系统** —— Tween、Spring、关键帧、缓动曲线与动画组，让过渡与动效顺滑自然。
 - **现代文本引擎** —— FreeType + HarfBuzz + FriBidi + utf8proc 组成的字形管线，支持多字体、系统字体发现、复杂文字整形与双向文本。
-- **主题与设计系统** —— 三层设计令牌（primitive → semantic → component）、明暗外观（Appearance）、内置主题与样式文档。
+- **主题与设计系统** —— 三层设计令牌（primitive → semantic → component）、明暗外观（Appearance）、内置主题与样式文档。默认主题对齐 shadcn 的语义角色集，开箱即用；对比度与层级由测试守住。
 - **资源系统** —— 资源清单（manifest）+ 内置/目录/内存/SQLite 四类后端，配合 `nanres` 编译器与可移植打包流程。
 - **应用运行时** —— 窗口、Router/Page 导航、视口缩放、异步作用域与统一的输入/剪贴板分发。
 - **可选 2D 物理** —— 基于 Box2D 3.x 的轻量物理桥（默认关闭）。
@@ -196,9 +196,12 @@ meson compile -C buildDir
 - [x] 补齐浮层锚点定位、边界翻转和视口内收。
 - [x] 补齐点击外部关闭和焦点作用域等浮层基础设施。
 - [x] 将 Tooltip、Select、Dialog 迁移到统一浮层设施并保持应用层 API 兼容。
-- [ ] 补充 TextArea、Toggle、Alert、Spinner、Skeleton、EmptyState 等高频组件。
+- [x] 默认主题对齐 shadcn 的语义角色集（含 `muted` / `accent` / `card` / `popover` / `destructive`），并把对比度与层级门槛固化为测试。
+- [ ] 补充 TextArea、Toggle、Alert、Spinner、Skeleton、EmptyState 等高频组件；新组件直接消费已有语义角色，不再新增硬编码色值。
 - [ ] 补齐浮层基础设施的 roving focus / typeahead 与嵌套浮层父子关闭关系。
 - [ ] 基于统一浮层实现 Popover、Menu、Combobox 和 CommandPalette。
+- [ ] 给浮层补打开/关闭过渡与缓动曲线，并把 `motion` token、`reduced_motion` 偏好接到动画侧。
+- [ ] 继续打磨 `butter`（本项目自研风格）；`fluent` / `material` 需要补上各自设计语言在几何、密度与状态层上的差异，目前只有配色与圆角尺度。
 - [ ] 后续完善 Table/DataTable、Accordion、Sheet 等复合组件。
 - [ ] 在模块边界和跨平台构建流程稳定后，重新评估 C++ Modules 与 CMake package 支持。
 

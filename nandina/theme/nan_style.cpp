@@ -28,51 +28,103 @@ namespace nandina::theme
             switch (std::get<ColorToken>(operand)) {
                 case ColorToken::background:
                     return theme.palette.background;
-                case ColorToken::on_background:
-                    return theme.palette.on_background;
+                case ColorToken::foreground:
+                    return theme.palette.foreground;
+                case ColorToken::card:
+                    return theme.palette.card;
+                case ColorToken::card_foreground:
+                    return theme.palette.card_foreground;
+                case ColorToken::popover:
+                    return theme.palette.popover;
+                case ColorToken::popover_foreground:
+                    return theme.palette.popover_foreground;
                 case ColorToken::primary:
                     return theme.palette.primary;
-                case ColorToken::on_primary:
-                    return theme.palette.on_primary;
+                case ColorToken::primary_foreground:
+                    return theme.palette.primary_foreground;
                 case ColorToken::secondary:
                     return theme.palette.secondary;
-                case ColorToken::on_secondary:
-                    return theme.palette.on_secondary;
-                case ColorToken::tertiary:
-                    return theme.palette.tertiary;
-                case ColorToken::on_tertiary:
-                    return theme.palette.on_tertiary;
+                case ColorToken::secondary_foreground:
+                    return theme.palette.secondary_foreground;
+                case ColorToken::muted:
+                    return theme.palette.muted;
+                case ColorToken::muted_foreground:
+                    return theme.palette.muted_foreground;
+                case ColorToken::accent:
+                    return theme.palette.accent;
+                case ColorToken::accent_foreground:
+                    return theme.palette.accent_foreground;
+                case ColorToken::destructive:
+                    return theme.palette.destructive;
+                case ColorToken::destructive_foreground:
+                    return theme.palette.destructive_foreground;
+                case ColorToken::border:
+                    return theme.palette.border;
+                case ColorToken::input:
+                    return theme.palette.input;
+                case ColorToken::ring:
+                    return theme.palette.ring;
                 case ColorToken::surface:
                     return theme.palette.surface;
-                case ColorToken::on_surface:
-                    return theme.palette.on_surface;
+                case ColorToken::surface_foreground:
+                    return theme.palette.surface_foreground;
                 case ColorToken::surface_variant:
                     return theme.palette.surface_variant;
+                case ColorToken::surface_variant_foreground:
+                    return theme.palette.surface_variant_foreground;
+                case ColorToken::tertiary:
+                    return theme.palette.tertiary;
+                case ColorToken::tertiary_foreground:
+                    return theme.palette.tertiary_foreground;
+                case ColorToken::success:
+                    return theme.palette.success;
+                case ColorToken::success_foreground:
+                    return theme.palette.success_foreground;
+                case ColorToken::warning:
+                    return theme.palette.warning;
+                case ColorToken::warning_foreground:
+                    return theme.palette.warning_foreground;
+                case ColorToken::error:
+                    return theme.palette.error;
+                case ColorToken::error_foreground:
+                    return theme.palette.error_foreground;
+                case ColorToken::info:
+                    return theme.palette.info;
+                case ColorToken::info_foreground:
+                    return theme.palette.info_foreground;
+                case ColorToken::on_background:
+                    return theme.palette.on_background;
+                case ColorToken::on_primary:
+                    return theme.palette.on_primary;
+                case ColorToken::on_secondary:
+                    return theme.palette.on_secondary;
+                case ColorToken::on_tertiary:
+                    return theme.palette.on_tertiary;
+                case ColorToken::on_surface:
+                    return theme.palette.on_surface;
                 case ColorToken::on_surface_variant:
                     return theme.palette.on_surface_variant;
+                case ColorToken::on_muted:
+                    return theme.palette.on_muted;
                 case ColorToken::outline:
                     return theme.palette.outline;
                 case ColorToken::outline_variant:
                     return theme.palette.outline_variant;
-                case ColorToken::success:
-                    return theme.palette.success;
                 case ColorToken::on_success:
                     return theme.palette.on_success;
-            case ColorToken::warning:
-                return theme.palette.warning;
-            case ColorToken::on_warning:
-                return theme.palette.on_warning;
-            case ColorToken::error:
-                return theme.palette.error;
-            case ColorToken::on_error:
-                return theme.palette.on_error;
-            case ColorToken::focus_ring:
-                return theme.palette.focus_ring;
-            case ColorToken::selection:
-                return theme.palette.selection;
+                case ColorToken::on_warning:
+                    return theme.palette.on_warning;
+                case ColorToken::on_error:
+                    return theme.palette.on_error;
+                case ColorToken::on_info:
+                    return theme.palette.on_info;
+                case ColorToken::focus_ring:
+                    return theme.palette.focus_ring;
+                case ColorToken::selection:
+                    return theme.palette.selection;
+            }
+            return theme.palette.primary;
         }
-        return theme.palette.primary;
-    }
     } // namespace
 
     auto button_accent(const NanColorScheme& palette, const std::optional<ButtonTone> tone)

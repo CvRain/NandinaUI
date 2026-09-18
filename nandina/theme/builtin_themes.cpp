@@ -71,7 +71,10 @@ namespace nandina::theme
                     .reference = std::move(reference),
                     .policy =
                         {
-                            .light_brand = ColorShade::shade_500,
+                            // 亮色品牌取 600 档而不是 500：500 档（L≈0.72）对奶白底只有
+                            // 2.36:1，作为按钮/焦点环等信号色达不到 3:1；600 档为 3.30:1，
+                            // 且与深色前景仍有 4.97:1。
+                            .light_brand = ColorShade::shade_600,
                             .dark_brand = ColorShade::shade_300,
                             .light_on_brand = ColorShade::shade_950,
                             .dark_on_brand = ColorShade::shade_950,

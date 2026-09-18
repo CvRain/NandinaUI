@@ -1136,12 +1136,13 @@ TEST_CASE(
     reactive::Graph graph;
     theme::ThemeManager manager;
     auto initial = theme::default_theme();
-    initial.palette.on_surface_variant = theme::nan_color(0.38F, 0.04F, 210.0F);
-    initial.palette.surface_variant = theme::nan_color(0.22F, 0.03F, 210.0F);
+    // 用规范名（shadcn 约定）赋值：别名只在构造时同步，直接改别名不会回写规范字段。
+    initial.palette.muted_foreground = theme::nan_color(0.38F, 0.04F, 210.0F);
+    initial.palette.background = theme::nan_color(0.22F, 0.03F, 210.0F);
     manager.set_theme(initial);
 
     auto label = widget::Label::create(graph, "Muted");
-    label->set_color_token(theme::ColorToken::on_surface_variant);
+    label->set_color_token(theme::ColorToken::muted_foreground);
     auto field = std::make_shared<widget::TextField>("value");
     field->set_placeholder("Input");
     label->add_child(field);
@@ -1153,8 +1154,8 @@ TEST_CASE(
     REQUIRE(field->resolved_style().container.fill.oklch().light == Catch::Approx(0.22F));
 
     auto replacement = initial;
-    replacement.palette.on_surface_variant = theme::nan_color(0.82F, 0.04F, 210.0F);
-    replacement.palette.surface_variant = theme::nan_color(0.91F, 0.03F, 210.0F);
+    replacement.palette.muted_foreground = theme::nan_color(0.82F, 0.04F, 210.0F);
+    replacement.palette.background = theme::nan_color(0.91F, 0.03F, 210.0F);
     manager.set_theme(replacement);
     REQUIRE(label->color().oklch().light == Catch::Approx(0.82F));
     REQUIRE(field->resolved_style().container.fill.oklch().light == Catch::Approx(0.91F));
@@ -2049,7 +2050,8 @@ TEST_CASE("scaled button paint does not feed world width back into text layout",
     REQUIRE(button.measured_size() == before);
     REQUIRE(button.last_layout_constraints().max_width == Catch::Approx(180.0F));
     REQUIRE_FALSE(device.texts.empty());
-    REQUIRE(device.texts.front().font_size == Catch::Approx(32.0F));
+    // 逻辑字号 14（label_sm）× 2 倍视口缩放。
+    REQUIRE(device.texts.front().font_size == Catch::Approx(28.0F));
 }
 
 TEST_CASE("scaled editable text keeps selection and caret geometry in screen space", "[widget][render][scale]") {

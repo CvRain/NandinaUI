@@ -16,10 +16,14 @@ namespace nandina::theme
         float xl = 24.0F;
     };
 
+    /**
+     * 圆角尺度对齐 shadcn/ui 的 `--radius: 0.625rem`（10px）派生关系：
+     * `sm = radius - 4`、`md = radius - 2`、`lg = radius`。改主题时三者要一起调。
+     */
     struct NanRadiusTokens {
         float sm = 6.0F;
-        float md = 10.0F;
-        float lg = 14.0F;
+        float md = 8.0F;
+        float lg = 10.0F;
         float full = 9999.0F;
     };
 

@@ -64,11 +64,11 @@ TEST_CASE("badge style resolves pill tokens from the recipe", "[badge][theme]") 
     const auto style = theme::resolve_badge(design, theme::ColorAppearance::light);
 
     REQUIRE(style.container.fill.oklch().light == Catch::Approx(
-        design.light.surface_variant.oklch().light
+        design.light.secondary.oklch().light
     ));
     REQUIRE(
         style.label.color.oklch().light
-        == Catch::Approx(design.light.on_surface_variant.oklch().light)
+        == Catch::Approx(design.light.secondary_foreground.oklch().light)
     );
     REQUIRE(style.label.font_size == Catch::Approx(design.tokens.typography.label_sm));
     REQUIRE(style.metrics.height == Catch::Approx(22.0F));
@@ -84,11 +84,11 @@ TEST_CASE("badge resolves light and dark surfaces from the same snapshot", "[bad
 
     REQUIRE(
         light.container.fill.oklch().light
-        == Catch::Approx(design.light.surface_variant.oklch().light)
+        == Catch::Approx(design.light.secondary.oklch().light)
     );
     REQUIRE(
         dark.container.fill.oklch().light
-        == Catch::Approx(design.dark.surface_variant.oklch().light)
+        == Catch::Approx(design.dark.secondary.oklch().light)
     );
     REQUIRE(dark.container.fill.oklch().light < light.container.fill.oklch().light);
 }
