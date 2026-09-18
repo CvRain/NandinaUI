@@ -95,6 +95,27 @@ TEST_CASE("overlay handles own presentation lifetime and preserve order", "[over
     REQUIRE(tree.hit_test(probe) == lower.get());
 }
 
+TEST_CASE("overlay host clears all overlays before device teardown", "[overlay][lifetime]") {
+    auto host = scene::OverlayHost::create();
+    host->set_content(std::make_shared<HitControl>(foundation::NanSize(200.0F, 100.0F)));
+    auto first = std::make_shared<HitControl>(foundation::NanSize(40.0F, 30.0F));
+    auto second = std::make_shared<HitControl>(foundation::NanSize(50.0F, 20.0F));
+    auto first_handle = host->present(first);
+    auto second_handle = host->present(second);
+
+    REQUIRE(host->overlay_count() == 2);
+    REQUIRE(first_handle.mounted());
+    REQUIRE(second_handle.mounted());
+
+    host->clear_overlays();
+
+    REQUIRE(host->overlay_count() == 0);
+    REQUIRE_FALSE(first_handle.mounted());
+    REQUIRE_FALSE(second_handle.mounted());
+    REQUIRE_FALSE(first->is_inside_tree());
+    REQUIRE_FALSE(second->is_inside_tree());
+}
+
 TEST_CASE("overlay host rejects attached portal content", "[overlay][contract]") {
     auto host = scene::OverlayHost::create();
     auto parent = std::make_shared<scene::NanControl>();

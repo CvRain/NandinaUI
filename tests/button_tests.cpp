@@ -489,6 +489,32 @@ ring = [0.60, 0.10, 265.0]
     REQUIRE(palette.ring.oklch().light == Catch::Approx(0.60F));
 }
 
+TEST_CASE("styles.toml keeps semantic aliases synchronized", "[theme][toml]") {
+    const auto canonical = theme::parse_style_document(R"toml(
+[themes.custom.palette]
+foreground = [0.18, 0.00, 0.0]
+primary_foreground = [0.91, 0.00, 0.0]
+ring = [0.61, 0.00, 0.0]
+)toml");
+    REQUIRE(canonical.has_value());
+    const auto& canonical_palette = canonical->themes.at("custom").palette;
+    REQUIRE(canonical_palette.on_background == canonical_palette.foreground);
+    REQUIRE(canonical_palette.on_primary == canonical_palette.primary_foreground);
+    REQUIRE(canonical_palette.focus_ring == canonical_palette.ring);
+
+    const auto aliases = theme::parse_style_document(R"toml(
+[themes.custom.palette]
+on_background = [0.22, 0.00, 0.0]
+on_primary = [0.88, 0.00, 0.0]
+focus_ring = [0.57, 0.00, 0.0]
+)toml");
+    REQUIRE(aliases.has_value());
+    const auto& alias_palette = aliases->themes.at("custom").palette;
+    REQUIRE(alias_palette.foreground == alias_palette.on_background);
+    REQUIRE(alias_palette.primary_foreground == alias_palette.on_primary);
+    REQUIRE(alias_palette.ring == alias_palette.focus_ring);
+}
+
 TEST_CASE("Button instance theme and StyleContext keep their cascade priority", "[theme][cascade]") {
     theme::ThemeManager manager;
     auto application_theme = theme::default_theme();

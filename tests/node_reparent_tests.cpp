@@ -206,3 +206,16 @@ TEST_CASE("insert_child names both nodes and points at reparent", "[scene][tree]
     second_parent->reparent(button);
     REQUIRE(button->parent() == second_parent.get());
 }
+
+TEST_CASE("reparent validates the destination before detaching", "[scene][tree][reparent]") {
+    auto source = widget::Column::create();
+    auto button = widget::Column::create();
+    source->add(button);
+
+    // A plain NanNode rejects children. The failed reparent must leave the source
+    // relationship intact rather than detaching first and throwing from insert_child.
+    auto rejecting_target = std::make_shared<scene::NanNode>();
+    REQUIRE_THROWS_AS(rejecting_target->reparent(button), std::runtime_error);
+    REQUIRE(button->parent() == source.get());
+    REQUIRE(source->child_count() == 1);
+}

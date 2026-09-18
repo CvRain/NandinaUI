@@ -118,6 +118,14 @@ namespace nandina::scene
         content_layer_->clear_layout_root();
     }
 
+    void OverlayHost::clear_overlays() {
+        // close() also removes the child from overlay_surface_ and updates the input
+        // mode. Remove from the back so every id remains valid while entries_ shrinks.
+        while (!entries_.empty()) {
+            (void)close(entries_.back().id);
+        }
+    }
+
     auto OverlayHost::present(
         std::shared_ptr<NanControl> overlay,
         const OverlayOptions options

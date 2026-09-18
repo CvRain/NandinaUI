@@ -160,7 +160,7 @@ namespace nandina::theme
         info(spec.info),
         info_foreground(spec.info_foreground),
         focus_ring(spec.ring),
-        selection(spec.primary.with_alpha(0.32F)),
+        selection(spec.selection),
         // 兼容别名：与上面的 shadcn 名同值，避免两套字段漂移。
         on_background(spec.foreground),
         on_primary(spec.primary_foreground),

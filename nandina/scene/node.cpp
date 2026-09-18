@@ -184,6 +184,22 @@
             );
         }
 
+        // Validate the new edge before detaching from the old parent. Without this
+        // preflight a rejected NanNode/NanNode2D edge (or a custom accepts_child()
+        // failure) would leave the node detached after insert_child() throws.
+        if (child->parent() != this) {
+            const auto* parent_2d = as_node2d();
+            const auto* child_2d = child->as_node2d();
+            if ((parent_2d != nullptr) != (child_2d != nullptr)) {
+                throw std::runtime_error(
+                    "NanNode::reparent: cannot mix NanNode and NanNode2D on the same edge"
+                );
+            }
+            if (!accepts_child(*child)) {
+                throw std::runtime_error("NanNode::reparent: parent rejects this child type");
+            }
+        }
+
         // 树遍历期间：整体延后到本帧的安全提交点，避免改动兄弟数组。
         if (tree_ != nullptr && tree_->defers_tree_mutation()) {
             reparent_deferred_ = true;

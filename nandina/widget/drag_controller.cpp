@@ -14,16 +14,6 @@
 
 namespace nandina::widget
 {
-    namespace
-    {
-        [[nodiscard]] auto
-        intersects(const scene::NanNode2D& node, const foundation::NanPoint world) -> bool {
-            const auto bounds = node.global_bounds();
-            return world.get_x() >= bounds.get_left() && world.get_x() <= bounds.get_right()
-                && world.get_y() >= bounds.get_top() && world.get_y() <= bounds.get_bottom();
-        }
-    } // namespace
-
     void DragController::install(
         scene::NanSceneTree& tree,
         scene::OverlayHost* overlays,
@@ -72,7 +62,10 @@ namespace nandina::widget
     }
 
     auto DragController::commit() -> bool {
-        if (session_ == nullptr || session_->drop_target == nullptr) {
+        // 落点是 update() 期间记录的**裸指针**，可能在拖动过程中因为别处的
+        // remove / reparent / 关闭浮层而失效或脱离树。这里在改动树之前重新确认一次：
+        // 失效就安全取消，绝不把僵死指针交给 reparent()，也不让异常穿到事件主循环。
+        if (session_ == nullptr || !can_accept_drop(*session_->node, session_->drop_target)) {
             cancel();
             return false;
         }
@@ -86,6 +79,30 @@ namespace nandina::widget
         target->reparent(node, index);
         // reparent 在树遍历期间会延后到本帧安全点；这里只报告"已受理"。
         return true;
+    }
+
+    auto DragController::can_accept_drop(scene::NanNode& node, scene::NanNode* target)
+        -> bool {
+        if (target == nullptr || target == &node) {
+            return false;
+        }
+        // 目标必须仍在当前树里（可能已被移出 / 关闭），否则 reparent 会把节点挂到
+        // 一棵“孤儿”子树上。
+        if (!target->is_inside_tree()) {
+            return false;
+        }
+        // 被拖节点自身与后代永远不是落点，拖动过程中树发生变化后要重新判定。
+        if (node.is_ancestor_of(*target)) {
+            return false;
+        }
+        // 类型边界：NanNode / NanNode2D 不能混挂。
+        const auto* target_2d = target->as_node2d();
+        const auto* node_2d = node.as_node2d();
+        if ((target_2d != nullptr) != (node_2d != nullptr)) {
+            return false;
+        }
+        // 父节点的准入钩子（例如只读列表、单子节点容器）在这里提前兑现。
+        return target->accepts_child(node);
     }
 
     void DragController::cancel() {
@@ -107,7 +124,7 @@ namespace nandina::widget
             if (candidate == session_->node.get() || session_->node->is_ancestor_of(*candidate)) {
                 continue;
             }
-            if (accepts(*candidate)) {
+            if (accepts(*candidate) && can_accept_drop(*session_->node, candidate)) {
                 return candidate;
             }
         }

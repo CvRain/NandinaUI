@@ -87,7 +87,7 @@ namespace nandina::widget
         auto start(
             std::shared_ptr<scene::NanNode> node,
             std::shared_ptr<scene::NanControl> ghost = nullptr,
-            foundation::NanPoint grab_offset = {}
+            foundation::NanPoint grab_offset = foundation::NanPoint()
         ) -> bool;
 
         /**
@@ -120,6 +120,11 @@ namespace nandina::widget
 
     private:
         [[nodiscard]] auto accepts(const scene::NanNode& node) const -> bool;
+
+        /// 落点是否仍然有效：仍在树内、不是被拖节点自身或其后代、类型边界匹配，
+        /// 且目标的 accepts_child() 认可。commit() 改树前会重新调用它。
+        [[nodiscard]] static auto can_accept_drop(scene::NanNode& node, scene::NanNode* target)
+            -> bool;
         [[nodiscard]] auto resolve_drop_target(foundation::NanPoint pointer) -> scene::NanNode*;
         [[nodiscard]] auto resolve_drop_index(
             const scene::NanNode& container,

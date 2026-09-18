@@ -67,6 +67,14 @@ namespace nandina::scene
          * 浮层内容（present 出来的）不在这里清理，由各自的 OverlayHandle 负责。
          */
         void clear_content();
+
+        /**
+         * 关闭并释放所有当前浮层。
+         *
+         * 窗口销毁前必须调用它，使浮层中的字体、纹理等 GPU 持有者在
+         * render device 仍然存活时析构。外部持有的 OverlayHandle 会变成未挂载状态。
+         */
+        void clear_overlays();
         [[nodiscard]] auto as_overlay_host() -> OverlayHost* override { return this; }
         [[nodiscard]] auto as_overlay_host() const -> const OverlayHost* override { return this; }
 

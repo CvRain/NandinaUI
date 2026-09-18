@@ -131,15 +131,15 @@ namespace nandina::theme
         -> std::pair<NanColor, NanColor> {
         switch (tone.value_or(ButtonTone::primary)) {
             case ButtonTone::primary:
-                return {palette.primary, palette.on_primary};
+                return {palette.primary, palette.primary_foreground};
             case ButtonTone::secondary:
-                return {palette.secondary, palette.on_secondary};
+                return {palette.secondary, palette.secondary_foreground};
             case ButtonTone::neutral:
-                return {palette.surface_variant, palette.on_surface_variant};
+                return {palette.surface_variant, palette.surface_variant_foreground};
             case ButtonTone::danger:
-                return {palette.error, palette.on_error};
+                return {palette.error, palette.error_foreground};
         }
-        return {palette.primary, palette.on_primary};
+        return {palette.primary, palette.primary_foreground};
     }
 
     auto resolve_theme_color(

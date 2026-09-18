@@ -217,3 +217,71 @@ TEST_CASE("custom predicate can narrow the accepted containers", "[widget][drag]
     fixture.controller.update(fixture.point_in_target(190.0F));
     REQUIRE(fixture.controller.drop_target() == fixture.target.get());
 }
+
+TEST_CASE("commit revalidates the drop target before touching the tree", "[widget][drag]") {
+    Fixture fixture;
+    fixture.controller.install(fixture.tree, nullptr);
+
+    REQUIRE(fixture.controller.start(fixture.dragged));
+    fixture.controller.update(fixture.point_in_target(190.0F));
+    REQUIRE(fixture.controller.drop_target() == fixture.target.get());
+
+    // 拖动过程中落点被移出树（例如面板卸载、浮层关闭）。commit() 必须在改树之前
+    // 重新确认，安全返回 false，而不是把已经脱离树的指针交给 reparent()。
+    auto* row = fixture.root->get_child(0);
+    REQUIRE(row != nullptr);
+    auto detached = fixture.root->remove_child(*row);
+    REQUIRE(detached != nullptr);
+    REQUIRE_FALSE(fixture.target->is_inside_tree());
+
+    REQUIRE_FALSE(fixture.controller.commit());
+    REQUIRE_FALSE(fixture.controller.active());
+    // 被拖节点必须留在原父节点下，树结构不被破坏。
+    REQUIRE(fixture.dragged->parent() == fixture.source.get());
+    REQUIRE(fixture.source->child_count() == 3);
+    REQUIRE(fixture.target->child_count() == 2);
+}
+
+TEST_CASE("a target that rejects the child is never used as a drop target", "[widget][drag]") {
+    // 目标拒绝一切子节点（例如只读容器）：既不该被解析成落点，也不该在提交时改树。
+    // 用一个只覆写 accepts_child() 的小控件来表达这条策略。
+    class RejectingColumn final: public widget::Column {
+    public:
+        [[nodiscard]] auto accepts_child(const scene::NanNode&) const -> bool override {
+            return false;
+        }
+    };
+
+    auto source = make_box(200.0F, 200.0F);
+    auto dragged = make_item(200.0F, 60.0F);
+    source->add(dragged);
+
+    auto rejecting = std::make_shared<RejectingColumn>();
+    rejecting->set_width(200.0F);
+    rejecting->set_height(200.0F);
+    rejecting->set_accepts_drop(true);
+
+    auto root = widget::Column::create();
+    auto row = widget::Row::create();
+    row->set_gap(0.0F);
+    row->add(source);
+    row->add(rejecting);
+    root->add(row);
+
+    scene::NanSceneTree tree;
+    tree.set_root(root);
+    tree.layout_root(foundation::NanSize(400.0F, 200.0F));
+
+    widget::DragController controller;
+    controller.install(tree, nullptr);
+    REQUIRE(controller.start(dragged));
+
+    const auto bounds = rejecting->global_bounds();
+    controller.update(foundation::NanPoint(
+        bounds.get_left() + bounds.get_width() * 0.5F,
+        bounds.get_bottom() - 2.0F
+    ));
+    REQUIRE(controller.drop_target() == nullptr);
+    REQUIRE_FALSE(controller.commit());
+    REQUIRE(dragged->parent() == source.get());
+}
