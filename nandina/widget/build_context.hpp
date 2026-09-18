@@ -10,6 +10,7 @@
 #include "../theme/theme_manager.hpp"
 #include "authoring.hpp"
 #include "component_traits.hpp"
+#include "drag_controller.hpp"
 
 #include <cmath>
 #include <concepts>
@@ -49,9 +50,10 @@ namespace nandina::widget
             reactive::ReactiveScope& scope,
             theme::ThemeManager& themes,
             resource::ResourceManager* resources = nullptr,
-            scene::OverlayHost* overlays = nullptr
+            scene::OverlayHost* overlays = nullptr,
+            DragController* drags = nullptr
         ) noexcept:
-            BuildContext(graph, scope, themes, scope, resources, overlays) {}
+            BuildContext(graph, scope, themes, scope, resources, overlays, drags) {}
 
         [[nodiscard]] auto graph() const noexcept -> reactive::Graph& {
             return *graph_;
@@ -90,7 +92,24 @@ namespace nandina::widget
 
         [[nodiscard]] auto with_scope(reactive::ReactiveScope& scope) const noexcept
             -> BuildContext {
-            return BuildContext(*graph_, scope, *themes_, *callback_scope_, resources_, overlays_);
+            return BuildContext(
+                *graph_,
+                scope,
+                *themes_,
+                *callback_scope_,
+                resources_,
+                overlays_,
+                drags_
+            );
+        }
+
+        /// 窗口级拖拽服务。未提供（例如脱离窗口的测试上下文）时为 nullptr。
+        [[nodiscard]] auto drag_controller() const noexcept -> DragController* {
+            return drags_;
+        }
+
+        [[nodiscard]] auto has_drag_controller() const noexcept -> bool {
+            return drags_ != nullptr;
         }
 
         template<typename T, typename... Args>
@@ -186,14 +205,16 @@ namespace nandina::widget
             theme::ThemeManager& themes,
             reactive::ReactiveScope& callback_scope,
             resource::ResourceManager* resources,
-            scene::OverlayHost* overlays
+            scene::OverlayHost* overlays,
+            DragController* drags
         ) noexcept:
             graph_(&graph),
             scope_(&scope),
             themes_(&themes),
             callback_scope_(&callback_scope),
             resources_(resources),
-            overlays_(overlays) {}
+            overlays_(overlays),
+            drags_(drags) {}
 
         template<typename Node, typename... Args>
         [[nodiscard]] auto make_scoped_component(Args&&... args) const
@@ -372,6 +393,7 @@ namespace nandina::widget
         reactive::ReactiveScope* callback_scope_;
         resource::ResourceManager* resources_ = nullptr;
         scene::OverlayHost* overlays_ = nullptr;
+        DragController* drags_ = nullptr;
     };
 
 } // namespace nandina::widget

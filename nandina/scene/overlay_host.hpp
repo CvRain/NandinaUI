@@ -55,6 +55,18 @@ namespace nandina::scene
 
         auto set_content(std::shared_ptr<NanControl> content) -> NanControl&;
         [[nodiscard]] auto content() const -> NanControl*;
+
+        /**
+         * 释放内容层持有的应用内容（没有内容时是 no-op）。
+         *
+         * 窗口关闭时必须先调用它：内容层是窗口成员，若不在这里主动释放，内容树会
+         * 一直活到窗口析构，而那时 render device 已销毁 —— 控件里的文本资源
+         * （FontPipeline → GlyphAtlasTexture）会在析构时对已销毁的 device 调用
+         * destroy_texture()，导致关闭后 SIGSEGV。
+         *
+         * 浮层内容（present 出来的）不在这里清理，由各自的 OverlayHandle 负责。
+         */
+        void clear_content();
         [[nodiscard]] auto as_overlay_host() -> OverlayHost* override { return this; }
         [[nodiscard]] auto as_overlay_host() const -> const OverlayHost* override { return this; }
 

@@ -48,6 +48,10 @@ namespace nandina::scene
         [[nodiscard]] auto layout_root() const -> NanControl*;
         auto set_layout_root(std::shared_ptr<NanControl> root) -> NanControl&;
 
+        /// 释放布局根（没有根时是 no-op）。与 set_layout_root 不同，它接受"空"。
+        /// 窗口关闭时用它把应用内容提前交还给调用方，避免内容树活过 render device。
+        void clear_layout_root();
+
         [[nodiscard]] auto as_canvas_layer() -> CanvasLayer* override { return this; }
         [[nodiscard]] auto as_canvas_layer() const -> const CanvasLayer* override { return this; }
 

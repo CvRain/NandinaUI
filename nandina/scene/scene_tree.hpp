@@ -97,6 +97,7 @@ namespace nandina::scene
         void clear_texture_cache() noexcept;
         [[nodiscard]] auto texture_cache() const noexcept -> render::TextureCache*;
         void set_theme_manager(theme::ThemeManager& manager);
+
         void clear_theme_manager() noexcept;
         [[nodiscard]] auto theme_manager() const noexcept -> theme::ThemeManager*;
         [[nodiscard]] auto animation_host() noexcept -> animation::AnimationHost&;
@@ -253,6 +254,9 @@ namespace nandina::scene
         // instead of dangling.
         std::vector<std::weak_ptr<NanNode>> delete_queue_;
         std::vector<std::function<void()>> tree_mutations_;
+        /// True while flush_tree_mutations() runs pending mutations: reparent 等操作
+        /// 在这期间必须**立即**执行，否则会二次入队并丢失。
+        bool flushing_mutations_ = false;
         std::vector<std::function<void()>> post_layout_actions_;
         std::weak_ptr<NanNode2D> hovered_node_;
         std::weak_ptr<NanNode2D> focused_node_;

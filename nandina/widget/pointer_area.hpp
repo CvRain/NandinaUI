@@ -11,7 +11,7 @@ namespace nandina::widget
 {
     class PointerArea: public scene::NanControl {
     public:
-        PointerArea() = default;
+        PointerArea();
         [[nodiscard]] static auto create() -> std::shared_ptr<PointerArea>;
 
         auto set_child(std::shared_ptr<scene::NanControl> child) -> PointerArea&;

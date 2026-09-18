@@ -5,6 +5,12 @@
 
 namespace nandina::widget
 {
+    PointerArea::PointerArea() {
+        // 单子节点交互包装器：拖放不应落进它（它的槽位是给内容用的，不是容器）。
+        // 落点应该解析到它外面的真实容器。
+        set_accepts_drop(false);
+    }
+
     auto PointerArea::create() -> std::shared_ptr<PointerArea> {
         return std::make_shared<PointerArea>();
     }

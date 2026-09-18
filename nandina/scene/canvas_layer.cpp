@@ -78,6 +78,22 @@ namespace nandina::scene
         return static_cast<NanControl&>(replace_child(current.get(), std::move(root)));
     }
 
+    void CanvasLayer::clear_layout_root() {
+        auto current = layout_root_.lock();
+        if (!current) {
+            return;
+        }
+        if (auto* tree = get_tree(); tree != nullptr && tree->defers_tree_mutation()) {
+            auto self = std::static_pointer_cast<CanvasLayer>(shared_from_this());
+            tree->defer_tree_mutation(
+                [self = std::move(self)]() mutable { self->clear_layout_root(); }
+            );
+            return;
+        }
+        layout_root_.reset();
+        (void)remove_child(*current);
+    }
+
     auto CanvasLayer::_push_draw_transform(render::DrawContext& ctx)
         -> foundation::NanTransform2D {
         auto saved = ctx.world_;

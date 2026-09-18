@@ -181,6 +181,10 @@ namespace nandina::scene
     }
 
     auto NanSceneTree::defers_tree_mutation() const -> bool {
+        // flush 期间不延迟：待执行的 mutation 若再入队，会在本次 flush 后再也不被处理。
+        if (flushing_mutations_) {
+            return false;
+        }
         return phase_ == FramePhase::process || phase_ == FramePhase::animation
             || phase_ == FramePhase::layout
             || phase_ == FramePhase::post_layout || phase_ == FramePhase::paint;
@@ -193,8 +197,17 @@ namespace nandina::scene
     void NanSceneTree::flush_tree_mutations() {
         auto pending = std::move(tree_mutations_);
         tree_mutations_.clear();
+        // 执行期间关闭"延迟"：mutation 内部的 reparent / set_layout_root 等必须立即
+        // 生效，否则会二次入队（而本次 flush 已经把队列取空）从而静默丢失。
+        flushing_mutations_ = true;
         for (auto& mutation: pending) {
             mutation();
+        }
+        flushing_mutations_ = false;
+        // 二次入队的残余（如果有）在这里补齐，保持一次 flush 收敛。
+        if (!tree_mutations_.empty()) {
+            flush_tree_mutations();
+            return;
         }
         _sync_hover_after_tree_change();
     }
@@ -301,6 +314,7 @@ namespace nandina::scene
     auto NanSceneTree::theme_manager() const noexcept -> theme::ThemeManager* {
         return theme_manager_;
     }
+
 
     void NanSceneTree::set_clipboard(IClipboard& clipboard) noexcept {
         clipboard_ = &clipboard;

@@ -170,6 +170,8 @@ module_widget = files(
     'widget/pointer_area.cpp',
     'widget/gesture_area.hpp',
     'widget/gesture_area.cpp',
+    'widget/drag_controller.hpp',
+    'widget/drag_controller.cpp',
     'widget/internal/anchored_positioner.hpp',
     'widget/internal/anchored_positioner.cpp',
     'widget/internal/dialog_panel.hpp',

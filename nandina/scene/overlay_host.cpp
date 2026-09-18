@@ -111,6 +111,13 @@ namespace nandina::scene
         return content_layer_->layout_root();
     }
 
+    void OverlayHost::clear_content() {
+        if (content_layer_ == nullptr) {
+            return;
+        }
+        content_layer_->clear_layout_root();
+    }
+
     auto OverlayHost::present(
         std::shared_ptr<NanControl> overlay,
         const OverlayOptions options
