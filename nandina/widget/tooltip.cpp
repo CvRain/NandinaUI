@@ -334,10 +334,12 @@ namespace nandina::widget
                 internal::position_anchored_overlay(anchor, bubble_size, viewport, options);
             created->set_position(position.rect.get_top_left());
             portal_bubble_ = created;
-            const auto level = host->hosts_node(*this) ? scene::OverlayLevel::nested_popup
-                                                       : scene::OverlayLevel::popup;
+            // 与 Select 同理：位于外层浮层内时登记为子层，随外层一起关闭。
+            const auto parent_id = host->overlay_containing(*this);
+            const auto level = parent_id != 0 ? scene::OverlayLevel::nested_popup
+                                              : scene::OverlayLevel::popup;
             portal_handle_ = std::make_unique<scene::OverlayHandle>(
-                host->present(std::move(created), {.level = level})
+                host->present(std::move(created), {.level = level, .parent = parent_id})
             );
             portal_anchor_ = anchor;
             portal_viewport_ = viewport_size;

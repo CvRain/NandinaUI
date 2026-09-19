@@ -6,12 +6,12 @@ NandinaUI 不以逐项复制其他组件库为目标。[shadcn/ui Components](ht
 
 项目已经拥有一套可运行的内容、输入、布局、主题和响应式基础。阶段 1 的定位、关闭与焦点设施已经落地，阶段 2 的 Tooltip、Select 与 Dialog 也全部接入，因此「每个浮层组件各自处理定位与关闭」的重复逻辑已经消除。
 
-阶段 1 的 roving focus / typeahead 已完成（`widget::RovingFocus`，接入 `RadioGroup` / `Tabs` /
-`Select`，见 [选择与导航的键盘模型](../components/selection_and_navigation.md)），键码常量也收敛到
-单一定义处。阶段 1 只剩**嵌套浮层的父子关闭关系**待补。
+阶段 1 的基础设施已全部落地：roving focus / typeahead（`widget::RovingFocus`，接入
+`RadioGroup` / `Tabs` / `Select`，见 [选择与导航的键盘模型](../components/selection_and_navigation.md)）、
+嵌套浮层的父子关闭关系（`OverlayOptions::parent` + `OverlayCloseReason`，`Select` / `Tooltip` 已接入），
+键码常量也收敛到单一定义处。
 
-阶段 4 的 Popover、DropdownMenu 与 Combobox 依赖上述能力，现在键盘模型已经就位，可以在
-补完嵌套浮层关系后开始。
+阶段 4 的 Popover、DropdownMenu 与 Combobox 依赖这些能力，现在条件已经具备，可以直接开始。
 
 ## 阶段 0：稳定公共边界
 
@@ -33,6 +33,8 @@ NandinaUI 不以逐项复制其他组件库为目标。[shadcn/ui Components](ht
 - `AnchoredPositioner`：anchor、placement、alignment、offset、flip 和 shift（已完成）；
 - `DismissLayer`：点击外部、Escape、模态阻断与关闭原因（基础已完成）；
 - `FocusScope`：焦点限制、初始焦点和关闭后的焦点恢复（基础已完成）；
+- 嵌套浮层父子关闭：`OverlayOptions::parent` 声明从属关系，父层关闭时先递归关闭后代并带上
+  `OverlayCloseReason::parent`（已完成，`Select` / `Tooltip` 接入）；
 - roving focus/typeahead：菜单和列表选择的键盘导航（已完成：`RovingFocus`，两种移动模式
   `widget_focus` / `selection_only`，含 Home/End 与 typeahead；RTL 极性列为已知空白）。
 

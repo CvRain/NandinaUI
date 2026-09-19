@@ -737,10 +737,13 @@ namespace nandina::widget
             }
         };
         // 模态内容里再展开的下拉必须压过模态遮罩，否则会被埋掉且点不到。
-        const auto level = host->hosts_node(*this) ? scene::OverlayLevel::nested_popup
-                                                   : scene::OverlayLevel::popup;
+        // 自己若位于别的浮层里（例如 Dialog 打开时下拉），就把新浮层登记为它的子层：
+        // 外层收起时内层会随之关闭，不会留下指向已消失锚点的孤儿。
+        const auto parent_id = host->overlay_containing(*this);
+        const auto level = parent_id != 0 ? scene::OverlayLevel::nested_popup
+                                          : scene::OverlayLevel::popup;
         portal_handle_ =
-            std::make_unique<scene::OverlayHandle>(host->present(std::move(dismiss), {.level = level}));
+            std::make_unique<scene::OverlayHandle>(host->present(std::move(dismiss), {.level = level, .parent = parent_id}));
         portal_anchor_ = anchor;
         portal_viewport_ = viewport_size;
     }

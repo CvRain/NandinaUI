@@ -234,6 +234,26 @@ gesture->set_child(chip);   // 正确
 这条陷阱由 `tests/pointer_area_layout_tests.cpp` 固定：既验证 `set_child` 的布局契约，
 也锁定「`add_child` 进去的节点不参与布局」这一事实，避免再次踩到。
 
+### 嵌套浮层的父子关闭关系
+
+`OverlayLevel::nested_popup` 只解决**叠放层级**（内层要压过模态遮罩，否则被埋掉且点不到），
+不解决**生命周期**。外层浮层收起时，内层若只是层级更高，就会留在屏幕上并指向已经消失的锚点。
+两者是不同的维度，需要显式的从属关系。
+
+- `OverlayOptions::parent` 声明父浮层 id（0 = 无父）。组件用
+  `OverlayHandle::id()` 透传，或直接问 `OverlayHost::overlay_containing(node)`
+  ——"这个节点在哪个浮层里"，返回最内层宿主；
+- 父浮层关闭时**先递归关闭全部后代**，再关自己，后代带
+  `OverlayCloseReason::parent`；`clear_overlays()`（窗口销毁）则整棵树带
+  `OverlayCloseReason::host_teardown`；
+- 已关闭的父层不接受新子层（`present` 抛 `std::invalid_argument`），避免产生永远收不掉的孤儿；
+- 关闭原因存在**条目**上而不是句柄副本里，句柄通过宿主查询。因此条目在关闭后作为"墓碑"
+  保留（只标记原因、不再计入 `overlay_count()`），id 永不复用 —— 这样句柄不会因为别处
+  关闭而变成悬垂，也不需要任何共享所有权技巧。
+
+`Select` 与 `Tooltip` 已接入：位于别的浮层内（例如 Dialog 打开时的下拉）时，弹出的浮层会
+登记为该浮层的子层，随外层一起关闭。
+
 ### 拖拽要移动"整个条目"，不是条目内部的控件
 
 校验台最初把 `Chip` 自己交给 `DragController::start()`，而 `Chip` 外面还套着一层

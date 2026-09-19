@@ -254,3 +254,110 @@ TEST_CASE("nested dismiss layer receives clicks outside its content", "[overlay]
     });
     REQUIRE(dismissed);
 }
+
+TEST_CASE("closing a parent overlay closes its descendants first", "[overlay][nested]") {
+    auto host = scene::OverlayHost::create();
+    auto parent = std::make_shared<HitControl>(foundation::NanSize(40.0F, 30.0F));
+    auto child = std::make_shared<HitControl>(foundation::NanSize(20.0F, 10.0F));
+    auto grandchild = std::make_shared<HitControl>(foundation::NanSize(10.0F, 10.0F));
+
+    auto parent_handle = host->present(parent);
+    auto child_handle = host->present(
+        child,
+        {.level = scene::OverlayLevel::nested_popup, .parent = parent_handle.id()}
+    );
+    auto grandchild_handle = host->present(
+        grandchild,
+        {.level = scene::OverlayLevel::nested_popup, .parent = child_handle.id()}
+    );
+
+    REQUIRE(host->overlay_count() == 3);
+    REQUIRE(host->overlay_parent(child_handle.id()) == parent_handle.id());
+    REQUIRE(host->overlay_parent(grandchild_handle.id()) == child_handle.id());
+    REQUIRE(host->overlay_child_count(parent_handle.id()) == 1);
+
+    // 关闭父层：整棵子树都要消失，且后代带 parent 原因。
+    parent_handle.close();
+    REQUIRE(host->overlay_count() == 0);
+    REQUIRE_FALSE(child_handle.mounted());
+    REQUIRE_FALSE(grandchild_handle.mounted());
+    REQUIRE(child_handle.close_reason() == scene::OverlayCloseReason::parent);
+    REQUIRE(grandchild_handle.close_reason() == scene::OverlayCloseReason::parent);
+    REQUIRE(parent_handle.close_reason() == scene::OverlayCloseReason::owner);
+}
+
+TEST_CASE("closing one overlay leaves its siblings mounted", "[overlay][nested]") {
+    auto host = scene::OverlayHost::create();
+    auto root = std::make_shared<HitControl>(foundation::NanSize(40.0F, 30.0F));
+    auto first = std::make_shared<HitControl>(foundation::NanSize(20.0F, 10.0F));
+    auto second = std::make_shared<HitControl>(foundation::NanSize(20.0F, 10.0F));
+
+    auto root_handle = host->present(root);
+    auto first_handle = host->present(first, {.parent = root_handle.id()});
+    auto second_handle = host->present(second, {.parent = root_handle.id()});
+    REQUIRE(host->overlay_child_count(root_handle.id()) == 2);
+
+    // 关掉一个兄弟不影响另一个，也不影响父层。
+    first_handle.close();
+    REQUIRE_FALSE(first_handle.mounted());
+    REQUIRE(second_handle.mounted());
+    REQUIRE(root_handle.mounted());
+    REQUIRE(host->overlay_count() == 2);
+    REQUIRE(host->overlay_child_count(root_handle.id()) == 1);
+}
+
+TEST_CASE("an unrelated overlay survives another tree closing", "[overlay][nested]") {
+    auto host = scene::OverlayHost::create();
+    auto tree_a = std::make_shared<HitControl>(foundation::NanSize(40.0F, 30.0F));
+    auto child_a = std::make_shared<HitControl>(foundation::NanSize(20.0F, 10.0F));
+    auto tree_b = std::make_shared<HitControl>(foundation::NanSize(40.0F, 30.0F));
+    auto child_b = std::make_shared<HitControl>(foundation::NanSize(20.0F, 10.0F));
+
+    auto a = host->present(tree_a);
+    auto a_child = host->present(child_a, {.parent = a.id()});
+    auto b = host->present(tree_b);
+    auto b_child = host->present(child_b, {.parent = b.id()});
+
+    a.close();
+
+    // 另一棵树必须完整存活 —— 血缘关系不能靠"关闭所有子层"来实现。
+    REQUIRE_FALSE(a.mounted());
+    REQUIRE_FALSE(a_child.mounted());
+    REQUIRE(b.mounted());
+    REQUIRE(b_child.mounted());
+    REQUIRE(host->overlay_count() == 2);
+}
+
+TEST_CASE("a closed parent handle cannot adopt new children", "[overlay][nested]") {
+    auto host = scene::OverlayHost::create();
+    auto parent = std::make_shared<HitControl>(foundation::NanSize(40.0F, 30.0F));
+    auto orphan = std::make_shared<HitControl>(foundation::NanSize(20.0F, 10.0F));
+
+    auto parent_handle = host->present(parent);
+    parent_handle.close();
+    REQUIRE_FALSE(parent_handle.mounted());
+
+    // 父层已不存在：拒绝挂子层，而不是制造一个永远收不掉的孤儿。
+    REQUIRE_THROWS_AS(
+        host->present(orphan, {.parent = parent_handle.id()}),
+        std::invalid_argument
+    );
+    REQUIRE(host->overlay_count() == 0);
+}
+
+TEST_CASE("host teardown closes nested overlays with the teardown reason", "[overlay][nested]") {
+    auto host = scene::OverlayHost::create();
+    auto parent = std::make_shared<HitControl>(foundation::NanSize(40.0F, 30.0F));
+    auto child = std::make_shared<HitControl>(foundation::NanSize(20.0F, 10.0F));
+
+    auto parent_handle = host->present(parent);
+    auto child_handle = host->present(child, {.parent = parent_handle.id()});
+
+    host->clear_overlays();
+
+    REQUIRE(host->overlay_count() == 0);
+    REQUIRE_FALSE(parent_handle.mounted());
+    REQUIRE_FALSE(child_handle.mounted());
+    REQUIRE(parent_handle.close_reason() == scene::OverlayCloseReason::host_teardown);
+    REQUIRE(child_handle.close_reason() == scene::OverlayCloseReason::host_teardown);
+}

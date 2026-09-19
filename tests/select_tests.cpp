@@ -209,6 +209,38 @@ TEST_CASE("BuildContext select synchronizes a selected-index signal", "[select][
     REQUIRE(select->selected_index() == 1);
 }
 
+TEST_CASE("a select nested in another overlay closes with its host", "[select][overlay][nested]") {
+    // 场景：Dialog（或任何浮层）打开时，里面的 Select 展开下拉。下拉必须登记为那个
+    // 浮层的子层 —— 否则收起 Dialog 时下拉会留在屏幕上，并指向已经消失的锚点。
+    auto host = scene::OverlayHost::create();
+    auto host_content = std::make_shared<scene::NanControl>(foundation::NanSize(240.0F, 160.0F));
+    auto select = widget::Select::create({"A", "B", "C"});
+
+    // 把 select 放进一个由外层浮层承载的容器里，模拟"浮层内再展开"。
+    auto panel = std::make_shared<scene::NanControl>(foundation::NanSize(200.0F, 120.0F));
+    panel->add_child(select);
+    auto host_handle = host->present(panel);
+    host->set_content(host_content);
+
+    scene::NanSceneTree tree;
+    tree.set_root(host);
+    REQUIRE(tree.layout_root(foundation::NanSize(320.0F, 240.0F)) >= 1);
+
+    // select 位于外层浮层内 -> 查询结果应是那个浮层的 id。
+    REQUIRE(host->overlay_containing(*select) == host_handle.id());
+
+    select->open();
+    REQUIRE(host->overlay_count() == 2);
+    // 下拉的父层是承载它的浮层，且被登记为 nested_popup 层级。
+    const auto child_ids = host->overlay_child_count(host_handle.id());
+    REQUIRE(child_ids == 1);
+
+    // 收起外层：下拉随之关闭。
+    host_handle.close();
+    REQUIRE(host->overlay_count() == 0);
+    REQUIRE_FALSE(select->is_open());
+}
+
 TEST_CASE("mounted select presents its popup through the overlay host", "[select][overlay]") {
     auto host = scene::OverlayHost::create();
     auto select = widget::Select::create({"A", "B", "C"});

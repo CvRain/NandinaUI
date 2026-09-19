@@ -21,9 +21,31 @@ namespace nandina::scene
         nested_popup = 200,
     };
 
+    /// 浮层被关闭的原因。组件据此区分"用户点外面关掉的"与"随父浮层一起关掉的"，
+    /// 从而决定是否要恢复焦点、回滚状态或播放不同的退场动画。
+    enum class OverlayCloseReason {
+        /// 尚未关闭（或不是被 close 关掉的）。
+        none,
+        /// 由持有者显式调用 handle.close()。
+        owner,
+        /// 随父浮层一起关闭（父浮层先关，子浮层随之关闭）。
+        parent,
+        /// 窗口 / 宿主整体清理（clear_overlays）。
+        host_teardown,
+    };
+
     struct OverlayOptions {
         OverlayLevel level = OverlayLevel::popup;
         bool block_below = false;
+
+        /**
+         * 父浮层 id（0 表示没有父）。
+         *
+         * 建立从属关系后，父浮层关闭时子浮层会**先于**父被关闭，并带有
+         * OverlayCloseReason::parent。用于 Popover 内再开菜单、Select 内再开二级面板
+         * 这类嵌套：收起外层时内层不能留在屏幕上。
+         */
+        std::uint64_t parent = 0;
     };
 
     class OverlayHost;
@@ -41,12 +63,27 @@ namespace nandina::scene
         [[nodiscard]] auto mounted() const -> bool;
         void close();
 
+        /// 本浮层的 id（透传给子浮层的 OverlayOptions::parent）。
+        [[nodiscard]] auto id() const noexcept -> std::uint64_t {
+            return id_;
+        }
+
+        /// 从属的父浮层 id（0 表示没有父）。
+        [[nodiscard]] auto parent_id() const noexcept -> std::uint64_t {
+            return parent_id_;
+        }
+
+        /// 关闭原因向宿主查询：条目会保留关闭原因（见 OverlayHost::Entry），
+        /// 因此句柄不需要维护副本，也就没有"谁写回给谁"的所有权问题。
+        [[nodiscard]] auto close_reason() const noexcept -> OverlayCloseReason;
+
     private:
         friend class OverlayHost;
         OverlayHandle(std::weak_ptr<OverlayHost> host, std::uint64_t id);
 
         std::weak_ptr<OverlayHost> host_;
         std::uint64_t id_ = 0;
+        std::uint64_t parent_id_ = 0;
     };
 
     class OverlayHost final: public LayerStack {
@@ -86,6 +123,19 @@ namespace nandina::scene
         [[nodiscard]] auto overlay_count() const -> std::size_t;
         [[nodiscard]] auto contains(std::uint64_t id) const -> bool;
 
+        /// 包含该节点的最内层浮层 id（0 表示该节点不在任何浮层内）。
+        /// 组件据此把自己弹出的浮层登记为"内层"，从而随外层一起关闭。
+        [[nodiscard]] auto overlay_containing(const NanNode& node) const -> std::uint64_t;
+
+        /// 某浮层的关闭原因（未知 id 时返回 none）。
+        [[nodiscard]] auto overlay_close_reason(std::uint64_t id) const -> OverlayCloseReason;
+
+        /// 某浮层的父浮层 id（0 表示没有父，或该浮层已不存在）。
+        [[nodiscard]] auto overlay_parent(std::uint64_t id) const -> std::uint64_t;
+
+        /// 某浮层的直接子浮层数量。
+        [[nodiscard]] auto overlay_child_count(std::uint64_t id) const -> std::size_t;
+
         /// 该节点是否位于本 host 的浮层内容之下。浮层内部再展开的提示与下拉据此选择
         /// `OverlayLevel::nested_popup`，以免被模态遮罩盖住。
         [[nodiscard]] auto hosts_node(const NanNode& node) const -> bool;
@@ -103,11 +153,18 @@ namespace nandina::scene
             std::uint64_t id = 0;
             std::weak_ptr<NanControl> control;
             bool block_below = false;
+            std::uint64_t parent = 0;
+            /// 关闭原因。条目在关闭后**保留**（不下沉删除），这样句柄仍能查询原因，
+            /// 且 id 永不复用。overlay_count() 只统计仍在挂载的条目。
+            OverlayCloseReason close_reason = OverlayCloseReason::none;
         };
 
         OverlayHost() = default;
         void initialize();
-        auto close(std::uint64_t id) -> bool;
+        auto close(std::uint64_t id, OverlayCloseReason reason = OverlayCloseReason::owner)
+            -> bool;
+        /// 关闭 id 的全部后代（递归，先子后父）。reason 透传给后代。返回关闭数量。
+        auto close_descendants(std::uint64_t id, OverlayCloseReason reason) -> std::size_t;
         void update_input_mode();
 
         friend class OverlayHandle;
