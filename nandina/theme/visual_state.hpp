@@ -101,6 +101,22 @@ namespace nandina::theme
         disabled,
     };
 
+    /** Spinner 交互状态（不定量进度指示：非交互，仅 normal / disabled）。 */
+    enum class SpinnerVisualState: std::uint8_t {
+        normal,
+        disabled,
+    };
+
+    /** Skeleton 交互状态（纯展示加载占位，无交互，仅 normal）。 */
+    enum class SkeletonVisualState: std::uint8_t {
+        normal,
+    };
+
+    /** EmptyState 交互状态（纯展示空状态，交互由 action 槽位承载，仅 normal）。 */
+    enum class EmptyStateVisualState: std::uint8_t {
+        normal,
+    };
+
     /** RadioButton 交互状态。 */
     enum class RadioButtonVisualState: std::uint8_t {
         normal,

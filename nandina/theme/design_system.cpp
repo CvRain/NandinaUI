@@ -234,6 +234,72 @@ namespace nandina::theme
             scale_alpha(style.fill.border, alpha);
         }
 
+        /** SpinnerRecipe → 解析后的片段组合（配方即事实来源）。 */
+        [[nodiscard]] auto resolve_recipe(
+            const DesignSystem& system,
+            const ColorAppearance appearance,
+            const SpinnerRecipe& recipe
+        ) -> ResolvedSpinnerStyle {
+            return {
+                .indicator = resolve_color(system, appearance, recipe.indicator),
+                .metrics = resolve(system, appearance, recipe.metrics),
+            };
+        }
+
+        /** Spinner disabled 变换：指示环颜色 ×opacity.disabled。 */
+        void apply_spinner_disabled(
+            const DesignSystem& system,
+            const ColorAppearance appearance,
+            ResolvedSpinnerStyle& style
+        ) {
+            const float alpha = resolve_scalar(
+                system,
+                appearance,
+                ThemeScalar::token(ScalarToken::opacity_disabled)
+            );
+            scale_alpha(style.indicator, alpha);
+        }
+
+        /** SkeletonRecipe → 解析后的片段组合（纯展示，仅 normal 状态）。 */
+        [[nodiscard]] auto resolve_recipe(
+            const DesignSystem& system,
+            const ColorAppearance appearance,
+            const SkeletonRecipe& recipe
+        ) -> ResolvedSkeletonStyle {
+            return {
+                .surface = resolve(system, appearance, recipe.surface),
+                .metrics = {
+                    .height = resolve_scalar(system, appearance, recipe.metrics.height),
+                    .line_gap = resolve_scalar(system, appearance, recipe.metrics.line_gap),
+                    .last_line_ratio =
+                        resolve_scalar(system, appearance, recipe.metrics.last_line_ratio),
+                    .preferred_width =
+                        resolve_scalar(system, appearance, recipe.metrics.preferred_width),
+                },
+            };
+        }
+
+        /** EmptyStateRecipe → 解析后的片段组合（纯展示，仅 normal 状态）。 */
+        [[nodiscard]] auto resolve_recipe(
+            const DesignSystem& system,
+            const ColorAppearance appearance,
+            const EmptyStateRecipe& recipe
+        ) -> ResolvedEmptyStateStyle {
+            return {
+                .container = resolve(system, appearance, recipe.container),
+                .title = resolve(system, appearance, recipe.title),
+                .description = resolve(system, appearance, recipe.description),
+                .metrics = {
+                    .gap = resolve_scalar(system, appearance, recipe.metrics.gap),
+                    .padding_x = resolve_scalar(system, appearance, recipe.metrics.padding_x),
+                    .padding_y = resolve_scalar(system, appearance, recipe.metrics.padding_y),
+                    .min_height = resolve_scalar(system, appearance, recipe.metrics.min_height),
+                    .preferred_width =
+                        resolve_scalar(system, appearance, recipe.metrics.preferred_width),
+                },
+            };
+        }
+
         /** RadioButtonRecipe → 解析后的片段组合（配方即事实来源）。 */
         [[nodiscard]] auto resolve_recipe(
             const DesignSystem& system,
@@ -622,6 +688,68 @@ namespace nandina::theme
         }
         if (state == ProgressBarVisualState::disabled) {
             apply_progress_bar_disabled(system, appearance, style);
+        }
+        return style;
+    }
+
+    /**
+     * 解析 Spinner 配方（base → 规则列表，后匹配者胜 → disabled 变换）。
+     */
+    auto resolve_spinner(
+        const DesignSystem& system,
+        const ColorAppearance appearance,
+        const SpinnerVisualState state
+    ) -> ResolvedSpinnerStyle {
+        auto style = resolve_recipe(system, appearance, system.components.spinner.base);
+        for (const auto& rule: system.components.spinner.rules) {
+            if (rule.state && *rule.state != state) {
+                continue;
+            }
+            apply_rule(system, appearance, style, rule);
+        }
+        if (state == SpinnerVisualState::disabled) {
+            apply_spinner_disabled(system, appearance, style);
+        }
+        return style;
+    }
+
+    /**
+     * 解析 Skeleton 配方（纯展示：base → state 选择器过滤的规则列表，后匹配者胜）。
+     *
+     * 目前只有 normal 一个状态，因此没有状态变换；保留 state 参数是为了与
+     * ProgressBar 的解析路径一致，未来增加 disabled / shimmer 时不必改签名。
+     */
+    auto resolve_skeleton(
+        const DesignSystem& system,
+        const ColorAppearance appearance,
+        const SkeletonVisualState state
+    ) -> ResolvedSkeletonStyle {
+        auto style = resolve_recipe(system, appearance, system.components.skeleton.base);
+        for (const auto& rule: system.components.skeleton.rules) {
+            if (rule.state && *rule.state != state) {
+                continue;
+            }
+            apply_rule(system, appearance, style, rule);
+        }
+        return style;
+    }
+
+    /**
+     * 解析 EmptyState 配方（纯展示：base → state 选择器过滤的规则列表，后匹配者胜）。
+     *
+     * 交互由 action 槽位内的控件承载，本组件自身没有状态变换。
+     */
+    auto resolve_empty_state(
+        const DesignSystem& system,
+        const ColorAppearance appearance,
+        const EmptyStateVisualState state
+    ) -> ResolvedEmptyStateStyle {
+        auto style = resolve_recipe(system, appearance, system.components.empty_state.base);
+        for (const auto& rule: system.components.empty_state.rules) {
+            if (rule.state && *rule.state != state) {
+                continue;
+            }
+            apply_rule(system, appearance, style, rule);
         }
         return style;
     }
@@ -1040,6 +1168,108 @@ namespace nandina::theme
         if (rule.metrics_min_height) {
             style.metrics.min_height =
                 resolve_scalar(system, appearance, *rule.metrics_min_height);
+        }
+        if (rule.metrics_preferred_width) {
+            style.metrics.preferred_width =
+                resolve_scalar(system, appearance, *rule.metrics_preferred_width);
+        }
+    }
+
+    void apply_rule(
+        const DesignSystem& system,
+        const ColorAppearance appearance,
+        ResolvedSpinnerStyle& style,
+        const SpinnerRecipeRule& rule
+    ) {
+        if (rule.indicator)
+            style.indicator = resolve_color(system, appearance, *rule.indicator);
+        if (rule.metrics_diameter) {
+            style.metrics.diameter = resolve_scalar(system, appearance, *rule.metrics_diameter);
+        }
+        if (rule.metrics_thickness) {
+            style.metrics.thickness = resolve_scalar(system, appearance, *rule.metrics_thickness);
+        }
+        if (rule.metrics_arc_radians) {
+            style.metrics.arc_radians =
+                resolve_scalar(system, appearance, *rule.metrics_arc_radians);
+        }
+        if (rule.metrics_rotation_speed) {
+            style.metrics.rotation_speed =
+                resolve_scalar(system, appearance, *rule.metrics_rotation_speed);
+        }
+    }
+
+    void apply_rule(
+        const DesignSystem& system,
+        const ColorAppearance appearance,
+        ResolvedSkeletonStyle& style,
+        const SkeletonRecipeRule& rule
+    ) {
+        if (rule.surface_fill)
+            style.surface.fill = resolve_color(system, appearance, *rule.surface_fill);
+        if (rule.surface_border)
+            style.surface.border = resolve_color(system, appearance, *rule.surface_border);
+        if (rule.surface_border_width) {
+            style.surface.border_width =
+                resolve_scalar(system, appearance, *rule.surface_border_width);
+        }
+        if (rule.surface_radius)
+            style.surface.radius = resolve_scalar(system, appearance, *rule.surface_radius);
+        if (rule.metrics_height)
+            style.metrics.height = resolve_scalar(system, appearance, *rule.metrics_height);
+        if (rule.metrics_line_gap) {
+            style.metrics.line_gap =
+                resolve_scalar(system, appearance, *rule.metrics_line_gap);
+        }
+        if (rule.metrics_last_line_ratio) {
+            style.metrics.last_line_ratio =
+                resolve_scalar(system, appearance, *rule.metrics_last_line_ratio);
+        }
+        if (rule.metrics_preferred_width) {
+            style.metrics.preferred_width =
+                resolve_scalar(system, appearance, *rule.metrics_preferred_width);
+        }
+    }
+
+    void apply_rule(
+        const DesignSystem& system,
+        const ColorAppearance appearance,
+        ResolvedEmptyStateStyle& style,
+        const EmptyStateRecipeRule& rule
+    ) {
+        if (rule.container_fill)
+            style.container.fill = resolve_color(system, appearance, *rule.container_fill);
+        if (rule.container_border)
+            style.container.border = resolve_color(system, appearance, *rule.container_border);
+        if (rule.container_border_width) {
+            style.container.border_width =
+                resolve_scalar(system, appearance, *rule.container_border_width);
+        }
+        if (rule.container_radius) {
+            style.container.radius = resolve_scalar(system, appearance, *rule.container_radius);
+        }
+        if (rule.title_color)
+            style.title.color = resolve_color(system, appearance, *rule.title_color);
+        if (rule.title_font_size) {
+            style.title.font_size = resolve_scalar(system, appearance, *rule.title_font_size);
+        }
+        if (rule.description_color) {
+            style.description.color = resolve_color(system, appearance, *rule.description_color);
+        }
+        if (rule.description_font_size) {
+            style.description.font_size =
+                resolve_scalar(system, appearance, *rule.description_font_size);
+        }
+        if (rule.metrics_gap)
+            style.metrics.gap = resolve_scalar(system, appearance, *rule.metrics_gap);
+        if (rule.metrics_padding_x) {
+            style.metrics.padding_x = resolve_scalar(system, appearance, *rule.metrics_padding_x);
+        }
+        if (rule.metrics_padding_y) {
+            style.metrics.padding_y = resolve_scalar(system, appearance, *rule.metrics_padding_y);
+        }
+        if (rule.metrics_min_height) {
+            style.metrics.min_height = resolve_scalar(system, appearance, *rule.metrics_min_height);
         }
         if (rule.metrics_preferred_width) {
             style.metrics.preferred_width =
@@ -1609,6 +1839,73 @@ namespace nandina::theme
         };
     }
 
+    /**
+     * @return 框架默认 Spinner 配方（primary 指示环）。
+     *
+     * 度量取 shadcn 的 size-4 圆环：直径 / 环厚 / 弧长（3π/2 留缺口）/ 角速度
+     * （4 rad/s ≈ 0.64 圈/秒）都是组件几何，没有对应的语义标量 token，故用字面量。
+     */
+    auto default_spinner_recipe() -> SpinnerRecipe {
+        return {
+            .indicator = ThemeColor::token(ColorToken::primary),
+            .metrics = SpinnerMetrics {
+                .diameter = ThemeScalar::literal(16.0F),
+                .thickness = ThemeScalar::literal(2.0F),
+                .arc_radians = ThemeScalar::literal(4.712389F), // 3π/2
+                .rotation_speed = ThemeScalar::literal(4.0F),   // rad/s
+            },
+        };
+    }
+
+    /** @return 框架默认 Skeleton 配方（muted 占位块，无状态）。 */
+    auto default_skeleton_recipe() -> SkeletonRecipe {
+        return {
+            // 骨架屏是弱化底：muted 底 + 中圆角，text 行与 rectangle 块共用同一 surface。
+            .surface = BoxStyle {
+                .fill = ThemeColor::token(ColorToken::muted),
+                .border = ThemeColor::transparent(ColorToken::muted),
+                .border_width = ThemeScalar::literal(0.0F),
+                .radius = ThemeScalar::token(ScalarToken::radius_md),
+            },
+            .metrics = SkeletonMetrics {
+                // 12px 占位条 / 8px 行距：接近 4px 网格上的正文行高节奏，无对应 token。
+                .height = ThemeScalar::literal(12.0F),
+                .line_gap = ThemeScalar::literal(8.0F),
+                // 比例而非尺度，没有合适的 ScalarToken 表达，只能是字面量。
+                .last_line_ratio = ThemeScalar::literal(0.6F),
+                .preferred_width = ThemeScalar::literal(240.0F),
+            },
+        };
+    }
+
+    /** @return 框架默认 EmptyState 配方（透明容器 + foreground 标题 + muted 描述）。 */
+    auto default_empty_state_recipe() -> EmptyStateRecipe {
+        return {
+            .container = BoxStyle {
+                // 空状态通常嵌在列表/卡片内部，默认不额外加面，避免"框中框"。
+                .fill = ThemeColor::transparent(ColorToken::background),
+                .border = ThemeColor::transparent(ColorToken::border),
+                .border_width = ThemeScalar::literal(0.0F),
+                .radius = ThemeScalar::token(ScalarToken::radius_md),
+            },
+            .title = TypeStyle {
+                .color = ThemeColor::token(ColorToken::foreground),
+                .font_size = ThemeScalar::token(ScalarToken::typography_label_lg),
+            },
+            .description = TypeStyle {
+                .color = ThemeColor::token(ColorToken::muted_foreground),
+                .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+            },
+            .metrics = EmptyStateMetrics {
+                .gap = ThemeScalar::token(ScalarToken::spacing_md),
+                .padding_x = ThemeScalar::token(ScalarToken::spacing_lg),
+                .padding_y = ThemeScalar::token(ScalarToken::spacing_lg),
+                .min_height = ThemeScalar::literal(0.0F),
+                .preferred_width = ThemeScalar::literal(240.0F),
+            },
+        };
+    }
+
     /** @return 框架默认 RadioButton 配方（未选中：透明指示器 + input 边框）。 */
     auto default_radio_button_recipe() -> RadioButtonRecipe {
         return {
@@ -2086,6 +2383,18 @@ namespace nandina::theme
                 },
                 .progress_bar = ProgressBarRecipes {
                     .base = default_progress_bar_recipe(),
+                    .rules = {},
+                },
+                .spinner = SpinnerRecipes {
+                    .base = default_spinner_recipe(),
+                    .rules = {},
+                },
+                .skeleton = SkeletonRecipes {
+                    .base = default_skeleton_recipe(),
+                    .rules = {},
+                },
+                .empty_state = EmptyStateRecipes {
+                    .base = default_empty_state_recipe(),
                     .rules = {},
                 },
                 .radio_button = RadioButtonRecipes {

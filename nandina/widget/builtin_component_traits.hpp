@@ -17,6 +17,9 @@
 #include "label.hpp"
 #include "image.hpp"
 #include "progress_bar.hpp"
+#include "spinner.hpp"
+#include "skeleton.hpp"
+#include "empty_state.hpp"
 #include "pointer_area.hpp"
 #include "gesture_area.hpp"
 #include "radio_button.hpp"
@@ -240,6 +243,51 @@ namespace nandina::widget
             auto result = make(ui, value.get());
             ui.bind(result.build(), &ProgressBar::set_value, value);
             return result;
+        }
+    };
+
+    template<>
+    struct ComponentTraits<Spinner> {
+        [[nodiscard]] static auto make(const BuildContext& ui, std::string label = {})
+            -> authoring::NodeBuilder<Spinner> {
+            return authoring::make<Spinner>(ui.theme())
+                .configure([label = std::move(label)](Spinner& spinner) mutable {
+                    if (!label.empty()) {
+                        spinner.set_label(std::move(label));
+                    }
+                });
+        }
+    };
+
+    template<>
+    struct ComponentTraits<Skeleton> {
+        [[nodiscard]] static auto make(
+            const BuildContext& ui,
+            const SkeletonVariant variant = SkeletonVariant::text,
+            const int lines = 1
+        ) -> authoring::NodeBuilder<Skeleton> {
+            return authoring::make<Skeleton>(ui.theme())
+                .configure([variant, lines](Skeleton& skeleton) {
+                    skeleton.set_variant(variant);
+                    skeleton.set_lines(lines);
+                });
+        }
+    };
+
+    template<>
+    struct ComponentTraits<EmptyState> {
+        [[nodiscard]] static auto make(
+            const BuildContext& ui,
+            std::string title = {},
+            std::string description = {}
+        ) -> authoring::NodeBuilder<EmptyState> {
+            return authoring::make<EmptyState>(ui.theme())
+                .configure([title = std::move(title), description = std::move(description)](
+                               EmptyState& empty_state
+                           ) mutable {
+                    empty_state.set_title(std::move(title));
+                    empty_state.set_description(std::move(description));
+                });
         }
     };
 

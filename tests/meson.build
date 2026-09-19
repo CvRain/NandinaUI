@@ -304,6 +304,34 @@ progress_bar_tests = executable(
 )
 test('progress-bar', progress_bar_tests)
 
+skeleton_tests = executable(
+    'skeleton_tests',
+    files('skeleton_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('skeleton', skeleton_tests)
+
+empty_state_tests = executable(
+    'empty_state_tests',
+    files('empty_state_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('empty-state', empty_state_tests)
+
+spinner_tests = executable(
+    'spinner_tests',
+    files('spinner_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('spinner', spinner_tests)
+
+arc_painter_tests = executable(
+    'arc_painter_tests',
+    files('arc_painter_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('arc-painter', arc_painter_tests)
+
 radio_button_tests = executable(
     'radio_button_tests',
     files('radio_button_tests.cpp'),

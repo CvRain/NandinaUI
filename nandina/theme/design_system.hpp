@@ -247,6 +247,61 @@ namespace nandina::theme
         ControlMetrics metrics;
     };
 
+    /**
+     * Spinner 度量：指示环直径 / 环厚 / 弧长 / 旋转速度。
+     *
+     * 组件专属片段（同 SwitchMetrics / CardMetrics）：`ControlMetrics` 没有弧长与
+     * 角速度字段，硬塞进去会让所有组件都被动携带这两个无关字段。
+     */
+    using SpinnerMetrics = struct SpinnerMetrics {
+        ThemeScalar diameter;       // 指示环外径
+        ThemeScalar thickness;      // 环厚
+        ThemeScalar arc_radians;    // 弧长（弧度，2π = 整环）
+        ThemeScalar rotation_speed; // 角速度（弧度/秒）
+    };
+
+    /** Spinner 配方：指示环颜色 + 组件专属度量（不定量进度指示，无交互）。 */
+    using SpinnerRecipe = struct SpinnerRecipe {
+        ThemeColor indicator;
+        SpinnerMetrics metrics;
+    };
+
+    /**
+     * Skeleton 度量：占位条高度 / 行间距 / 末行宽度比例 / 首选宽度。
+     *
+     * 组件专属片段（同 CardMetrics / SwitchMetrics）：`ControlMetrics` 没有行间距与
+     * 末行比例字段，硬塞进去会让所有组件都被动携带这两个无关字段。
+     */
+    using SkeletonMetrics = struct SkeletonMetrics {
+        ThemeScalar height;            // 单行占位条高度
+        ThemeScalar line_gap;          // 相邻占位条间距
+        ThemeScalar last_line_ratio;   // 末行宽度占比 [0,1]
+        ThemeScalar preferred_width;   // 无界约束下的首选宽度
+    };
+
+    /** Skeleton 配方：加载占位块（surface）+ 度量（纯展示，无交互）。 */
+    using SkeletonRecipe = struct SkeletonRecipe {
+        BoxStyle surface;
+        SkeletonMetrics metrics;
+    };
+
+    /** EmptyState 度量：内容间距 / 内边距 / 最小高度 / 首选宽度。 */
+    using EmptyStateMetrics = struct EmptyStateMetrics {
+        ThemeScalar gap;             // 相邻内容块间距
+        ThemeScalar padding_x;       // 水平内边距
+        ThemeScalar padding_y;       // 垂直内边距
+        ThemeScalar min_height;      // 整控件最小高度
+        ThemeScalar preferred_width; // 无界约束下的首选宽度
+    };
+
+    /** EmptyState 配方：容器 + 标题 / 描述排版 + 度量（空状态展示，无交互）。 */
+    using EmptyStateRecipe = struct EmptyStateRecipe {
+        BoxStyle container;
+        TypeStyle title;
+        TypeStyle description;
+        EmptyStateMetrics metrics;
+    };
+
     /** RadioButton 配方：圆形指示器 + 选中点 + 文本 + 焦点环 + 度量。 */
     using RadioButtonRecipe = struct RadioButtonRecipe {
         BoxStyle indicator;
@@ -460,6 +515,47 @@ namespace nandina::theme
         std::optional<ThemeScalar> metrics_preferred_width;
     };
 
+    /** Spinner 规则：支持 disabled 选择器，覆盖指示环颜色 / 组件专属度量字段。 */
+    using SpinnerRecipeRule = struct SpinnerRecipeRule {
+        std::optional<SpinnerVisualState> state; // nullopt = 任意
+        std::optional<ThemeColor> indicator;
+        std::optional<ThemeScalar> metrics_diameter;
+        std::optional<ThemeScalar> metrics_thickness;
+        std::optional<ThemeScalar> metrics_arc_radians;
+        std::optional<ThemeScalar> metrics_rotation_speed;
+    };
+
+    /** Skeleton 规则：支持状态选择器，覆盖占位块 / 度量字段。 */
+    using SkeletonRecipeRule = struct SkeletonRecipeRule {
+        std::optional<SkeletonVisualState> state; // nullopt = 任意
+        std::optional<ThemeColor> surface_fill;
+        std::optional<ThemeColor> surface_border;
+        std::optional<ThemeScalar> surface_border_width;
+        std::optional<ThemeScalar> surface_radius;
+        std::optional<ThemeScalar> metrics_height;
+        std::optional<ThemeScalar> metrics_line_gap;
+        std::optional<ThemeScalar> metrics_last_line_ratio;
+        std::optional<ThemeScalar> metrics_preferred_width;
+    };
+
+    /** EmptyState 规则：支持状态选择器，覆盖容器 / 标题 / 描述 / 度量字段。 */
+    using EmptyStateRecipeRule = struct EmptyStateRecipeRule {
+        std::optional<EmptyStateVisualState> state; // nullopt = 任意
+        std::optional<ThemeColor> container_fill;
+        std::optional<ThemeColor> container_border;
+        std::optional<ThemeScalar> container_border_width;
+        std::optional<ThemeScalar> container_radius;
+        std::optional<ThemeColor> title_color;
+        std::optional<ThemeScalar> title_font_size;
+        std::optional<ThemeColor> description_color;
+        std::optional<ThemeScalar> description_font_size;
+        std::optional<ThemeScalar> metrics_gap;
+        std::optional<ThemeScalar> metrics_padding_x;
+        std::optional<ThemeScalar> metrics_padding_y;
+        std::optional<ThemeScalar> metrics_min_height;
+        std::optional<ThemeScalar> metrics_preferred_width;
+    };
+
     /** RadioButton 规则：支持 checked 布尔选择器 + 状态选择器。 */
     using RadioButtonRecipeRule = struct RadioButtonRecipeRule {
         std::optional<bool> checked; // nullopt = 任意
@@ -666,6 +762,45 @@ namespace nandina::theme
         ResolvedControlMetrics metrics;
     };
 
+    using ResolvedSpinnerMetrics = struct ResolvedSpinnerMetrics {
+        float diameter = 0.0F;
+        float thickness = 0.0F;
+        float arc_radians = 0.0F;
+        float rotation_speed = 0.0F;
+    };
+
+    using ResolvedSpinnerStyle = struct ResolvedSpinnerStyle {
+        NanColor indicator;
+        ResolvedSpinnerMetrics metrics;
+    };
+
+    using ResolvedSkeletonMetrics = struct ResolvedSkeletonMetrics {
+        float height = 0.0F;
+        float line_gap = 0.0F;
+        float last_line_ratio = 1.0F;
+        float preferred_width = 0.0F;
+    };
+
+    using ResolvedSkeletonStyle = struct ResolvedSkeletonStyle {
+        ResolvedBoxStyle surface;
+        ResolvedSkeletonMetrics metrics;
+    };
+
+    using ResolvedEmptyStateMetrics = struct ResolvedEmptyStateMetrics {
+        float gap = 0.0F;
+        float padding_x = 0.0F;
+        float padding_y = 0.0F;
+        float min_height = 0.0F;
+        float preferred_width = 0.0F;
+    };
+
+    using ResolvedEmptyStateStyle = struct ResolvedEmptyStateStyle {
+        ResolvedBoxStyle container;
+        ResolvedTypeStyle title;
+        ResolvedTypeStyle description;
+        ResolvedEmptyStateMetrics metrics;
+    };
+
     using ResolvedRadioButtonStyle = struct ResolvedRadioButtonStyle {
         ResolvedBoxStyle indicator;
         NanColor dot;
@@ -787,6 +922,21 @@ namespace nandina::theme
         std::vector<ProgressBarRecipeRule> rules;
     };
 
+    using SpinnerRecipes = struct SpinnerRecipes {
+        SpinnerRecipe base;
+        std::vector<SpinnerRecipeRule> rules;
+    };
+
+    using SkeletonRecipes = struct SkeletonRecipes {
+        SkeletonRecipe base;
+        std::vector<SkeletonRecipeRule> rules;
+    };
+
+    using EmptyStateRecipes = struct EmptyStateRecipes {
+        EmptyStateRecipe base;
+        std::vector<EmptyStateRecipeRule> rules;
+    };
+
     using RadioButtonRecipes = struct RadioButtonRecipes {
         RadioButtonRecipe base;
         std::vector<RadioButtonRecipeRule> rules;
@@ -836,6 +986,9 @@ namespace nandina::theme
         BadgeRecipes badge;
         CardRecipes card;
         ProgressBarRecipes progress_bar;
+        SpinnerRecipes spinner;
+        SkeletonRecipes skeleton;
+        EmptyStateRecipes empty_state;
         RadioButtonRecipes radio_button;
         TabsRecipes tabs;
         TooltipRecipes tooltip;
@@ -1017,6 +1170,20 @@ namespace nandina::theme
         };
     }
 
+    /** 解析 Spinner 度量片段为具体值。 */
+    [[nodiscard]] inline auto resolve(
+        const DesignSystem& system,
+        const ColorAppearance appearance,
+        const SpinnerMetrics& metrics
+    ) -> ResolvedSpinnerMetrics {
+        return {
+            .diameter = resolve_scalar(system, appearance, metrics.diameter),
+            .thickness = resolve_scalar(system, appearance, metrics.thickness),
+            .arc_radians = resolve_scalar(system, appearance, metrics.arc_radians),
+            .rotation_speed = resolve_scalar(system, appearance, metrics.rotation_speed),
+        };
+    }
+
     // 组件级解析（定义见 design_system.cpp）：
     //   遗留平铺解析器给出 base 语义（tone/treatment/size/state）→
     //   应用 DesignSystem 的规则覆盖 → 组装为片段组合的解析结果。
@@ -1071,6 +1238,24 @@ namespace nandina::theme
         ColorAppearance appearance,
         ProgressBarVisualState state
     ) -> ResolvedProgressBarStyle;
+
+    [[nodiscard]] auto resolve_spinner(
+        const DesignSystem& system,
+        ColorAppearance appearance,
+        SpinnerVisualState state
+    ) -> ResolvedSpinnerStyle;
+
+    [[nodiscard]] auto resolve_skeleton(
+        const DesignSystem& system,
+        ColorAppearance appearance,
+        SkeletonVisualState state
+    ) -> ResolvedSkeletonStyle;
+
+    [[nodiscard]] auto resolve_empty_state(
+        const DesignSystem& system,
+        ColorAppearance appearance,
+        EmptyStateVisualState state
+    ) -> ResolvedEmptyStateStyle;
 
     [[nodiscard]] auto resolve_radio_button(
         const DesignSystem& system,
@@ -1185,6 +1370,27 @@ namespace nandina::theme
     void apply_rule(
         const DesignSystem& system,
         ColorAppearance appearance,
+        ResolvedSpinnerStyle& style,
+        const SpinnerRecipeRule& rule
+    );
+
+    void apply_rule(
+        const DesignSystem& system,
+        ColorAppearance appearance,
+        ResolvedSkeletonStyle& style,
+        const SkeletonRecipeRule& rule
+    );
+
+    void apply_rule(
+        const DesignSystem& system,
+        ColorAppearance appearance,
+        ResolvedEmptyStateStyle& style,
+        const EmptyStateRecipeRule& rule
+    );
+
+    void apply_rule(
+        const DesignSystem& system,
+        ColorAppearance appearance,
         ResolvedRadioButtonStyle& style,
         const RadioButtonRecipeRule& rule
     );
@@ -1248,6 +1454,9 @@ namespace nandina::theme
     [[nodiscard]] auto default_badge_recipe() -> BadgeRecipe;
     [[nodiscard]] auto default_card_recipe() -> CardRecipe;
     [[nodiscard]] auto default_progress_bar_recipe() -> ProgressBarRecipe;
+    [[nodiscard]] auto default_spinner_recipe() -> SpinnerRecipe;
+    [[nodiscard]] auto default_skeleton_recipe() -> SkeletonRecipe;
+    [[nodiscard]] auto default_empty_state_recipe() -> EmptyStateRecipe;
     [[nodiscard]] auto default_radio_button_recipe() -> RadioButtonRecipe;
     [[nodiscard]] auto default_tabs_recipe() -> TabsRecipe;
     [[nodiscard]] auto default_tooltip_recipe() -> TooltipRecipe;

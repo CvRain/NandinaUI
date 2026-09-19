@@ -17,6 +17,8 @@
 | `Chip` | 展示可移除标签 | 可用 |
 | `Divider` | 分隔内容区域 | 可用 |
 | `ProgressBar` | 展示确定性进度 | 可用 |
+| `Skeleton` | 内容加载前占据最终版式的占位块 | 可用 |
+| `EmptyState` | 列表或集合暂空时的占位与引导 | 可用 |
 | `Card` | 带主题外观的单子内容容器 | 可用，等待语义槽位 |
 
 ### 输入与选择
@@ -54,7 +56,7 @@
 
 ## 计划补充
 
-- 高频基础组件：`TextArea`、`Toggle`、`ToggleGroup`、`Alert`、`AlertDialog`、`Spinner`、`Skeleton`、`EmptyState`。
+- 高频基础组件：`TextArea`、`Toggle`、`ToggleGroup`、`Alert`、`AlertDialog`、`Spinner`。
 - 浮层组件族：`Popover`、`DropdownMenu`、`ContextMenu`、`Combobox`、`CommandPalette`、`HoverCard`。
 - 信息组织组件：`Accordion`、`Collapsible`、`Sheet`、`Breadcrumb`、`Pagination`、`Table`。
 
