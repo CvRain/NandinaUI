@@ -377,7 +377,15 @@ namespace nandina::widget
         }
         const float center_y = world.get_top() + track_inset
             + std::max(0.0F, world.get_height() - track_inset) * 0.5F;
-        const float thumb_radius = context.logical_to_screen(style.thumb.box.radius);
+        // 拇指半径必须夹在控件内：主题可能把 thumb.box.radius 解析成 radius_full
+        // （"胶囊" 语义圆角，默认为 9999）。这个字段在本控件里是**像素半径**而不是
+        // 圆角半径，不夹紧就会画出一个覆盖整窗的圆盘，把先绘制的外壳整块盖住。
+        const float max_thumb_radius =
+            std::min(world.get_width(), world.get_height()) * 0.5F;
+        const float thumb_radius = std::min(
+            context.logical_to_screen(style.thumb.box.radius),
+            max_thumb_radius
+        );
         const float track_height = context.logical_to_screen(style.inactive_track.thickness);
         const float left = world.get_left() + thumb_radius;
         const float right = world.get_right() - thumb_radius;
@@ -494,7 +502,11 @@ namespace nandina::widget
     void Slider::update_from_pointer(const foundation::NanPoint screen_position) {
         const auto style = resolved_style();
         const auto local = to_local(screen_position);
-        const float thumb_radius = style.thumb.box.radius;
+        // 与 on_draw 同一套夹紧规则：拇指半径不能超过控件半高/半宽，
+        // 否则可拖动范围会算成 0，点击直接跳到最小值。
+        const float max_thumb_radius =
+            std::min(size().get_width(), size().get_height()) * 0.5F;
+        const float thumb_radius = std::min(style.thumb.box.radius, max_thumb_radius);
         const float width = std::max(0.0F, size().get_width() - thumb_radius * 2.0F);
         const float current = width <= foundation::nan_epsilon
             ? minimum_

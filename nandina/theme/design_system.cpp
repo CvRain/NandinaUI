@@ -1677,7 +1677,11 @@ namespace nandina::theme
                     .fill = ThemeColor::token(ColorToken::background),
                     .border = ThemeColor::token(ColorToken::primary),
                     .border_width = ThemeScalar::token(ScalarToken::border_thin),
-                    .radius = ThemeScalar::token(ScalarToken::radius_full),
+                    // Slider 把这个字段当作拇指圆的**像素半径**直接传给 draw_circle，
+                    // 不是 BoxStyle 的圆角半径。这里必须是具体数值：radius_full
+                    // (=9999) 会画出覆盖整窗的圆盘，把先绘制的外壳整块盖住。
+                    // dragging 11 / hovered 10 由规则覆盖。
+                    .radius = ThemeScalar::literal(9.0F),
                 },
             },
             .focus = FocusRingStyle {

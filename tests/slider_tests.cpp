@@ -3,6 +3,8 @@
 //
 
 #include <nandina/reactive/scope.hpp>
+#include <nandina/render/draw_context.hpp>
+#include <nandina/render/render_device.hpp>
 #include <nandina/scene/input_event.hpp>
 #include <nandina/scene/scene_tree.hpp>
 #include <nandina/semantics/semantics.hpp>
@@ -15,7 +17,68 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
+#include <memory>
+#include <vector>
+
 using namespace nandina;
+
+namespace
+{
+    /// 记录每个图元的包围盒。Slider 曾把 radius_full(9999) 当作拇指圆半径直接
+    /// 传给 draw_circle，画出一个覆盖整窗的圆盘；本设备让这种越界可被断言。
+    class BoundsRecordingDevice final: public render::IRenderDevice {
+    public:
+        std::vector<foundation::NanRect> rects;
+
+        void begin_frame() override {}
+        void end_frame() override {}
+        void set_clip(const foundation::NanRect&) override {}
+        void clear_clip() override {}
+        void draw_rect(const foundation::NanRect& r, const foundation::NanColor&) override {
+            rects.push_back(r);
+        }
+        void draw_rect_outline(
+            const foundation::NanRect& r,
+            float,
+            const foundation::NanColor&
+        ) override {
+            rects.push_back(r);
+        }
+        void draw_rounded_rect(
+            const foundation::NanRect& r,
+            float,
+            const foundation::NanColor&
+        ) override {
+            rects.push_back(r);
+        }
+        void draw_line(
+            const foundation::NanPoint& a,
+            const foundation::NanPoint& b,
+            float,
+            const foundation::NanColor&
+        ) override {
+            rects.push_back(foundation::NanRect::from_points(a, b));
+        }
+        void draw_circle(
+            const foundation::NanPoint& center,
+            float radius,
+            const foundation::NanColor&
+        ) override {
+            rects.push_back(foundation::NanRect::from_xywh(
+                center.get_x() - radius,
+                center.get_y() - radius,
+                radius * 2.0F,
+                radius * 2.0F
+            ));
+        }
+        void draw_text(
+            std::string_view,
+            const foundation::NanPoint&,
+            float,
+            const foundation::NanColor&
+        ) override {}
+    };
+} // namespace
 
 TEST_CASE("slider normalizes values to its range and step", "[slider][value]") {
     widget::Slider slider("Zoom", 1.03F, 0.5F, 2.0F, 0.1F);
@@ -142,4 +205,43 @@ TEST_CASE("slider value label opt-in increases measured height and tracks value"
     REQUIRE(again.get_height() == Catch::Approx(with_label.get_height()));
     slider->set_value(0.9F);
     REQUIRE(slider->value_label_text() == "0.9");
+}
+
+TEST_CASE("slider thumb paints inside the slider bounds", "[slider][paint][theme]") {
+    // 回归：默认主题的 thumb.box.radius 曾被解析为 radius_full(9999)，而
+    // Slider::on_draw 把它当像素半径传给 draw_circle，画出一个 19998x19998 的
+    // 不透明圆盘。圆盘在内容区最后绘制，会盖掉先绘制的外壳（playground 里
+    // inputs / loading 两页外壳整块消失）。这里断言拇指不会越出控件。
+    auto slider = std::make_shared<widget::Slider>("Scale", 0.5F, 0.0F, 1.0F, 0.01F);
+    scene::NanSceneTree tree;
+    tree.set_root(slider);
+    REQUIRE(tree.layout_root(foundation::NanSize(240.0F, 32.0F)) >= 1);
+
+    BoundsRecordingDevice device;
+    render::DrawContext context {device};
+    tree.render(context);
+
+    REQUIRE_FALSE(device.rects.empty());
+    const auto bounds = slider->global_bounds().expanded(1.0F);
+    for (const auto& rect: device.rects) {
+        INFO(
+            "primitive rect = ("
+            << rect.get_left() << ", " << rect.get_top() << " " << rect.get_width() << "x"
+            << rect.get_height() << ")"
+        );
+        REQUIRE(bounds.contains_rect(rect));
+    }
+}
+
+TEST_CASE("slider normal thumb radius is a concrete pixel radius", "[slider][theme]") {
+    // radius_full 是"胶囊"圆角 token（9999），不能当像素半径用；正常态应当与
+    // dragging 11 / hovered 10 同一量级。
+    const auto design = theme::default_design_system();
+    const auto style = theme::resolve_slider(
+        design,
+        theme::ColorAppearance::light,
+        theme::SliderVisualState::normal
+    );
+    REQUIRE(style.thumb.box.radius > 0.0F);
+    REQUIRE(style.thumb.box.radius < 32.0F);
 }
