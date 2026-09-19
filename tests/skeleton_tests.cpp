@@ -234,3 +234,25 @@ TEST_CASE("skeleton exposes an indeterminate progress_bar semantics label", "[sk
     REQUIRE(node->properties.label == "Loading articles");
     REQUIRE(node->properties.value.empty());
 }
+
+TEST_CASE("skeleton narrows only the last line of a multi-line block", "[skeleton][layout]") {
+    auto skeleton = widget::Skeleton::create();
+
+    // 单行占位应当占满整行，而不是莫名只剩 60%。
+    skeleton->set_lines(1);
+    {
+        const auto ratios = skeleton->line_width_ratios();
+        REQUIRE(ratios.size() == 1);
+        REQUIRE(ratios[0] == Catch::Approx(1.0F));
+    }
+
+    // 多行时只有末行收窄。
+    skeleton->set_lines(3);
+    {
+        const auto ratios = skeleton->line_width_ratios();
+        REQUIRE(ratios.size() == 3);
+        REQUIRE(ratios[0] == Catch::Approx(1.0F));
+        REQUIRE(ratios[1] == Catch::Approx(1.0F));
+        REQUIRE(ratios[2] == Catch::Approx(0.6F));
+    }
+}

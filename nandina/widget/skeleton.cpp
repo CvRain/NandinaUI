@@ -96,6 +96,20 @@ namespace nandina::widget
         mark_layout_dirty();
     }
 
+    auto Skeleton::line_width_ratios() const -> std::vector<float> {
+        const auto style = resolved_style();
+        const float last_ratio = std::clamp(style.metrics.last_line_ratio, 0.0F, 1.0F);
+        std::vector<float> ratios;
+        ratios.reserve(static_cast<std::size_t>(std::max(0, lines_)));
+        for (int index = 0; index < lines_; ++index) {
+            // 末行收窄是多行占位的观感约定；只有一行时整条占满，
+            // 否则一个"单行文本占位"会莫名只剩 60% 宽。
+            const bool narrow_last = lines_ > 1 && index == lines_ - 1;
+            ratios.push_back(narrow_last ? last_ratio : 1.0F);
+        }
+        return ratios;
+    }
+
     auto Skeleton::on_draw(render::DrawContext& context) -> void {
         const auto style = resolved_style();
         const auto& transform = context.world_transform();
@@ -117,8 +131,11 @@ namespace nandina::widget
         const float last_ratio = std::clamp(style.metrics.last_line_ratio, 0.0F, 1.0F);
         float top = local.get_top();
         for (int index = 0; index < lines_; ++index) {
-            const float bar_width = local.get_width()
-                * (index == lines_ - 1 ? last_ratio : 1.0F);
+            // 末行收窄是多行占位的观感约定；只有一行时整条占满，
+            // 否则一个"单行文本占位"会莫名只剩 60% 宽。
+            const bool narrow_last = lines_ > 1 && index == lines_ - 1;
+            const float bar_width =
+                local.get_width() * (narrow_last ? last_ratio : 1.0F);
             const auto line_local = foundation::NanRect::from_xywh(
                 local.get_left(),
                 top,

@@ -13,6 +13,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace nandina::widget
 {
@@ -40,6 +41,9 @@ namespace nandina::widget
         /// 文本占位的行数；越界值钳制到 >= 1。`rectangle` 变体忽略该值。
         void set_lines(int lines);
         [[nodiscard]] auto lines() const -> int;
+
+        /// 各行的相对宽度比例（用于测试与布局校验）：多行时末行收窄，单行时占满。
+        [[nodiscard]] auto line_width_ratios() const -> std::vector<float>;
 
         /// 无障碍标签（可选，仅进 semantics）。
         void set_label(std::string label);
