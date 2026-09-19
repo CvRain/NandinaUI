@@ -239,3 +239,21 @@ TEST_CASE("BuildContext spinner carries an optional label", "[spinner][authoring
     auto unlabeled = ui.make<widget::Spinner>().build();
     REQUIRE(unlabeled->label().empty());
 }
+
+TEST_CASE("spinner is buildable through BuildContext", "[spinner][authoring]") {
+    // ComponentTraits 是模板：不实例化就不会被编译。这里真实走一遍 ui.make<>，
+    // 否则"Builder 支持"只是纸面存在（本会话新增的三个组件都只被 create() 覆盖过）。
+    reactive::Graph graph;
+    reactive::ReactiveScope scope {graph};
+    theme::ThemeManager themes;
+    widget::BuildContext ui {graph, scope, themes};
+
+    auto spinner = ui.make<widget::Spinner>("加载中").build();
+    REQUIRE(spinner != nullptr);
+    REQUIRE(spinner->label() == "加载中");
+
+    // 不带标签的默认路径也要可用。
+    auto bare = ui.make<widget::Spinner>().build();
+    REQUIRE(bare != nullptr);
+    REQUIRE(bare->label().empty());
+}

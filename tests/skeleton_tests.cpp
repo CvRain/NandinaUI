@@ -6,6 +6,8 @@
 #include <nandina/scene/scene_tree.hpp>
 #include <nandina/theme/theme_manager.hpp>
 #include <nandina/widget/skeleton.hpp>
+#include <nandina/widget/build_context.hpp>
+#include <nandina/widget/controls.hpp>
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
@@ -255,4 +257,21 @@ TEST_CASE("skeleton narrows only the last line of a multi-line block", "[skeleto
         REQUIRE(ratios[1] == Catch::Approx(1.0F));
         REQUIRE(ratios[2] == Catch::Approx(0.6F));
     }
+}
+
+TEST_CASE("skeleton is buildable through BuildContext", "[skeleton][authoring]") {
+    // ComponentTraits 是模板，不实例化就不会被编译；这里真实走一遍 ui.make<>。
+    reactive::Graph graph;
+    reactive::ReactiveScope scope {graph};
+    theme::ThemeManager themes;
+    widget::BuildContext ui {graph, scope, themes};
+
+    auto text = ui.make<widget::Skeleton>().build();
+    REQUIRE(text != nullptr);
+    REQUIRE(text->variant() == widget::SkeletonVariant::text);
+    REQUIRE(text->lines() == 1);
+
+    auto block = ui.make<widget::Skeleton>(widget::SkeletonVariant::rectangle, 3).build();
+    REQUIRE(block->variant() == widget::SkeletonVariant::rectangle);
+    REQUIRE(block->lines() == 3);
 }

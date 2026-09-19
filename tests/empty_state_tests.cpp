@@ -8,6 +8,8 @@
 #include <nandina/widget/badge.hpp>
 #include <nandina/widget/button.hpp>
 #include <nandina/widget/empty_state.hpp>
+#include <nandina/widget/build_context.hpp>
+#include <nandina/widget/controls.hpp>
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
@@ -243,4 +245,22 @@ TEST_CASE("empty state exposes the title as a generic semantics label", "[empty-
     REQUIRE(node->properties.role == semantics::Role::generic);
     REQUIRE(node->properties.label == "No results");
     REQUIRE(node->properties.hint == "Try a different filter");
+}
+
+TEST_CASE("empty state is buildable through BuildContext", "[empty-state][authoring]") {
+    // ComponentTraits 是模板，不实例化就不会被编译；这里真实走一遍 ui.make<>。
+    reactive::Graph graph;
+    reactive::ReactiveScope scope {graph};
+    theme::ThemeManager themes;
+    widget::BuildContext ui {graph, scope, themes};
+
+    auto state = ui.make<widget::EmptyState>("暂无内容", "先添加一条记录").build();
+    REQUIRE(state != nullptr);
+    REQUIRE(state->title() == "暂无内容");
+    REQUIRE(state->description() == "先添加一条记录");
+
+    // 无参路径：标题为空时测量为 0，便于条件挂载。
+    auto bare = ui.make<widget::EmptyState>().build();
+    REQUIRE(bare != nullptr);
+    REQUIRE(bare->title().empty());
 }
