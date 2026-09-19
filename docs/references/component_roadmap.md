@@ -87,6 +87,11 @@ Home/End 与 typeahead），只剩嵌套浮层的父子关闭关系待补。
 
 Chart、Calendar、DatePicker、Carousel、Sidebar、Questionnaire、Message、Bubble 和 Attachment 更适合作为后续 recipes、扩展包或独立子系统。它们不应阻塞核心组件契约和浮层基础设施。
 
+## 新增组件时
+
+机制（改哪些文件、四步同步清单、什么时候不需要配方）见 [新增一个组件](adding_a_component.md)；
+质量标准见 [组件公共契约](component_contract.md)。
+
 ## 每个阶段的交付要求
 
 - 公开头文件与 ComponentTraits；
