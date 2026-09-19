@@ -19,6 +19,7 @@ namespace nandina::render::detail
         segment = 2,
         clipped_circle = 3,
         shadow = 4,
+        arc = 5,
     };
 
     inline constexpr float sdf_aa_padding = 1.0F;

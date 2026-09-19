@@ -110,9 +110,13 @@ uniform vec4 uShapeRect; // 图元矩形（raylib 屏幕坐标，y 向下）
 uniform vec4 uQuadRect;  // 覆盖 quad；包含图元外侧的抗锯齿过渡区
 uniform vec2 uRadius;  // x = 圆角半径；y = 线段 / 描边半宽
 uniform vec4 uColor;   // 实心颜色（RGBA 0..1）
-uniform int uMode;     // 0 = fill; 1 = outline; 2 = segment; 3 = circle clipped by round rect; 4 = shadow
+uniform int uMode;     // 0 = fill; 1 = outline; 2 = segment; 3 = circle clipped by round rect; 4 = shadow; 5 = arc
 uniform vec2 uA;       // 线段端点 A（模式 2）
 uniform vec2 uB;       // 线段端点 B（模式 2）
+uniform vec2 uArcCenter; // 圆弧圆心（模式 5）
+uniform vec2 uArcBand;   // 圆弧内外半径：x = 内半径，y = 外半径（模式 5）
+uniform float uArcAngle; // 圆弧中角（局部 +Y 为 0、向 +X 增大）（模式 5）
+uniform float uArcSweep; // 半张角 sweep/2，扇区为 [uArcAngle-uArcSweep, uArcAngle+uArcSweep]（模式 5）
 out vec4 finalColor;
 
 float sdRoundRect(vec2 p, vec2 b, float r) {
@@ -127,6 +131,17 @@ float sdSegment(vec2 p, vec2 a, vec2 b) {
     return length(pa - ba * h);
 }
 
+// 角度环绕距离：扇区 = 两条半平面之交，其 SDF 为两条边界线有符号距离的 max。
+// 返回 (x, y)：x = 有符号角向距离（扇区内为负、扇区外为正），y = 外侧距离 max(x, 0)。
+// p 为相对圆心的向量，角度以 +Y 为 0、向 +X 增大；lo/hi 为两条边界角。
+vec2 sdArcAngle(vec2 p, float lo, float hi) {
+    float l = length(p);
+    if (l < 1e-6) return vec2(0.0);
+    float a = atan(p.x, p.y);
+    float d = max(l * sin(a - hi), -l * sin(a - lo));
+    return vec2(d, max(d, 0.0));
+}
+
 void main() {
     vec2 p = uQuadRect.xy + fragTexCoord * uQuadRect.zw;
     float alpha;
@@ -139,7 +154,25 @@ void main() {
         vec2 center = uShapeRect.xy + uShapeRect.zw * 0.5;
         float sd = sdRoundRect(p - center, uShapeRect.zw * 0.5, uRadius.x);
         float aa = max(fwidth(sd), 1e-4);
-        if (uMode == 3) {
+        if (uMode == 5) {
+            // 圆环扇区：径向带 SDF 与角向扇区 SDF 求交。
+            vec2 p2 = p - uArcCenter;
+            float l2 = length(p2);
+            vec2 band = uArcBand; // x = 内半径，y = 外半径
+            float mid = (band.x + band.y) * 0.5;
+            float half_band = (band.y - band.x) * 0.5;
+            float d_band = abs(l2 - mid) - half_band;
+            // 整环（sweep = 2π）没有角向边界：此时两条边界线重合，
+            // 半平面交的 max 公式会退化为 |sin|，必须跳过角向切割。
+            float d_cut = d_band;
+            if (uArcSweep < 3.14159265 - 1e-3) {
+                vec2 sg = sdArcAngle(p2, uArcAngle - uArcSweep, uArcAngle + uArcSweep);
+                d_cut = max(d_band, sg.x);
+            }
+            float aa2 = max(fwidth(d_cut), 1e-4);
+            alpha = 1.0 - smoothstep(-aa2 * 0.5, aa2 * 0.5, d_cut);
+        }
+        else if (uMode == 3) {
             float circleSd = length(p - uA) - uRadius.y;
             float combined = max(sd, circleSd);
             float combinedAa = max(fwidth(combined), 1e-4);
@@ -324,6 +357,52 @@ void main() {
             );
         }
 
+        void draw_arc(
+            const NanPoint& center,
+            const float inner_radius,
+            const float outer_radius,
+            const float start_radians,
+            const float sweep_radians,
+            const NanColor& c
+        ) override {
+            if (!std::isfinite(center.get_x()) || !std::isfinite(center.get_y())
+                || !std::isfinite(inner_radius) || !std::isfinite(outer_radius)
+                || !std::isfinite(start_radians) || !std::isfinite(sweep_radians)
+                || outer_radius <= 0.0F || inner_radius < 0.0F || inner_radius >= outer_radius
+                || std::abs(sweep_radians) < 1.0e-4F)
+            {
+                return;
+            }
+            // 负数 sweep 表示反向：起点移到较小角，按 |sweep| 绘制。
+            const float sweep = std::abs(sweep_radians);
+            const float start =
+                sweep_radians < 0.0F ? start_radians + sweep_radians : start_radians;
+            const float pad = outer_radius + detail::sdf_aa_padding;
+            const auto rect = foundation::NanRect::from_xywh(
+                center.get_x() - pad,
+                center.get_y() - pad,
+                pad * 2.0F,
+                pad * 2.0F
+            );
+            const AaArc arc {
+                .center = center,
+                .inner = inner_radius,
+                .outer = outer_radius,
+                .angle = start + sweep * 0.5F,
+                .sweep = sweep * 0.5F,
+            };
+            draw_aa(
+                rect,
+                0.0F,
+                0.0F,
+                detail::SdfPrimitiveMode::arc,
+                to_rl(c),
+                std::nullopt,
+                std::nullopt,
+                arc
+            );
+        }
+
         void draw_rounded_rect_shadow(
             const NanRect& r,
             const float radius,
@@ -356,6 +435,10 @@ void main() {
             aa_loc_mode_ = GetShaderLocation(aa_shader_, "uMode");
             aa_loc_a_ = GetShaderLocation(aa_shader_, "uA");
             aa_loc_b_ = GetShaderLocation(aa_shader_, "uB");
+            aa_loc_arc_center_ = GetShaderLocation(aa_shader_, "uArcCenter");
+            aa_loc_arc_band_ = GetShaderLocation(aa_shader_, "uArcBand");
+            aa_loc_arc_angle_ = GetShaderLocation(aa_shader_, "uArcAngle");
+            aa_loc_arc_sweep_ = GetShaderLocation(aa_shader_, "uArcSweep");
             // 自定义 uniform 找不到 = 回退到了默认着色器（加载失败），标记不可用。
             if (aa_loc_shape_rect_ < 0 || aa_loc_quad_rect_ < 0 || aa_loc_radius_ < 0
                 || aa_loc_color_ < 0 || aa_loc_mode_ < 0)
@@ -375,6 +458,15 @@ void main() {
             aa_white_tex_ = LoadTextureFromImage(image);
         }
 
+        /// 圆弧参数（模式 5）：圆心、内外半径、中角与半张角。
+        struct AaArc {
+            NanPoint center;
+            float inner = 0.0F;
+            float outer = 0.0F;
+            float angle = 0.0F; // 圆弧中角 start + sweep/2
+            float sweep = 0.0F; // 半张角 |sweep|/2
+        };
+
         /// 着色器不可用时的回退：沿用 raylib 原生无抗锯齿图元。
         void draw_aa_fallback(
             const NanRect& rect,
@@ -383,8 +475,34 @@ void main() {
             const detail::SdfPrimitiveMode mode,
             const ::Color& color,
             const std::optional<NanPoint>& line_a,
-            const std::optional<NanPoint>& line_b
+            const std::optional<NanPoint>& line_b,
+            const std::optional<AaArc>& arc = std::nullopt
         ) {
+            if (mode == detail::SdfPrimitiveMode::arc && arc) {
+                // 圆弧回退：按弦的粗线段（无抗锯齿），保证回退设备也画得出。
+                const float thickness = arc->outer - arc->inner;
+                const float mid = (arc->inner + arc->outer) * 0.5F;
+                const float half_sweep = std::abs(arc->sweep);
+                const float start = arc->angle - half_sweep;
+                const float total = half_sweep * 2.0F;
+                const int steps =
+                    std::clamp(static_cast<int>(std::ceil(total / 0.25F)), 2, 64);
+                const float step = total / static_cast<float>(steps);
+                auto previous = ::Vector2 {
+                    arc->center.get_x() + mid * std::sin(start),
+                    arc->center.get_y() + mid * std::cos(start),
+                };
+                for (int i = 1; i <= steps; ++i) {
+                    const float angle = start + step * static_cast<float>(i);
+                    const ::Vector2 next {
+                        arc->center.get_x() + mid * std::sin(angle),
+                        arc->center.get_y() + mid * std::cos(angle),
+                    };
+                    DrawLineEx(previous, next, thickness, color);
+                    previous = next;
+                }
+                return;
+            }
             const float shortest = std::min(rect.get_width(), rect.get_height());
             const float corner = std::clamp(radius, 0.0F, shortest * 0.5F);
             const float roundness = shortest > 0.0F ? corner * 2.0F / shortest : 0.0F;
@@ -409,7 +527,7 @@ void main() {
             }
         }
 
-        /// 用 SDF 着色器绘制一个抗锯齿图元（覆盖矩形 / 圆角矩形 / 圆 / 描边 / 线段）。
+        /// 用 SDF 着色器绘制一个抗锯齿图元（覆盖矩形 / 圆角矩形 / 圆 / 描边 / 线段 / 圆弧）。
         void draw_aa(
             const NanRect& rect,
             const float radius,
@@ -417,11 +535,12 @@ void main() {
             const detail::SdfPrimitiveMode mode,
             const ::Color& color,
             const std::optional<NanPoint>& line_a = std::nullopt,
-            const std::optional<NanPoint>& line_b = std::nullopt
+            const std::optional<NanPoint>& line_b = std::nullopt,
+            const std::optional<AaArc>& arc = std::nullopt
         ) {
             ensure_aa();
             if (aa_shader_.id == 0 || aa_white_tex_.id == 0) {
-                draw_aa_fallback(rect, radius, half_width, mode, color, line_a, line_b);
+                draw_aa_fallback(rect, radius, half_width, mode, color, line_a, line_b, arc);
                 return;
             }
             const auto quad = mode == detail::SdfPrimitiveMode::segment ? rect
@@ -460,6 +579,30 @@ void main() {
             if (aa_loc_b_ >= 0 && line_b) {
                 const float b_v[2] = {line_b->get_x(), line_b->get_y()};
                 SetShaderValue(aa_shader_, aa_loc_b_, b_v, SHADER_UNIFORM_VEC2);
+            }
+            if (arc && aa_loc_arc_center_ >= 0) {
+                const float c_v[2] = {arc->center.get_x(), arc->center.get_y()};
+                SetShaderValue(aa_shader_, aa_loc_arc_center_, c_v, SHADER_UNIFORM_VEC2);
+            }
+            if (arc && aa_loc_arc_band_ >= 0) {
+                const float band_v[2] = {arc->inner, arc->outer};
+                SetShaderValue(aa_shader_, aa_loc_arc_band_, band_v, SHADER_UNIFORM_VEC2);
+            }
+            if (arc && aa_loc_arc_angle_ >= 0) {
+                SetShaderValue(
+                    aa_shader_,
+                    aa_loc_arc_angle_,
+                    &arc->angle,
+                    SHADER_UNIFORM_FLOAT
+                );
+            }
+            if (arc && aa_loc_arc_sweep_ >= 0) {
+                SetShaderValue(
+                    aa_shader_,
+                    aa_loc_arc_sweep_,
+                    &arc->sweep,
+                    SHADER_UNIFORM_FLOAT
+                );
             }
             DrawTexturePro(
                 aa_white_tex_,
@@ -674,6 +817,10 @@ void main() {
         int aa_loc_mode_ = -1;
         int aa_loc_a_ = -1;
         int aa_loc_b_ = -1;
+        int aa_loc_arc_center_ = -1;
+        int aa_loc_arc_band_ = -1;
+        int aa_loc_arc_angle_ = -1;
+        int aa_loc_arc_sweep_ = -1;
         bool aa_ready_ = false;
     };
 

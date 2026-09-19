@@ -12,6 +12,8 @@
 #include "../foundation/geometry.hpp"
 #include "../foundation/nandina_color.hpp"
 
+#include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <optional>
 #include <span>
@@ -96,6 +98,48 @@ namespace nandina::render
             (void)clip_rect;
             (void)clip_radius;
             draw_circle(center, circle_radius, color);
+        }
+
+        /// 圆环扇区。center 为圆心；inner/outer 为环的内外半径；start_radians 为起始角、
+        /// sweep_radians 为张角（2π 表示整环）。角度以 +Y 为 0、向 +X 增大。
+        /// 默认实现退化为按弦先绘制（不保证抗锯齿），后端应覆写。
+        virtual void draw_arc(
+            const NanPoint& center,
+            float inner_radius,
+            float outer_radius,
+            float start_radians,
+            float sweep_radians,
+            const NanColor& color
+        ) {
+            if (!std::isfinite(center.get_x()) || !std::isfinite(center.get_y())
+                || !std::isfinite(inner_radius) || !std::isfinite(outer_radius)
+                || !std::isfinite(start_radians) || !std::isfinite(sweep_radians)
+                || outer_radius <= 0.0F || inner_radius < 0.0F || inner_radius >= outer_radius
+                || std::abs(sweep_radians) < 1.0e-4F)
+            {
+                return;
+            }
+            const float sweep = std::abs(sweep_radians);
+            const float start =
+                sweep_radians < 0.0F ? start_radians + sweep_radians : start_radians;
+            const float thickness = outer_radius - inner_radius;
+            const float mid = (inner_radius + outer_radius) * 0.5F;
+            // 角度 0 在 +Y、向 +X 增大：点为 center + r * (sin, cos)。
+            const int steps = std::clamp(static_cast<int>(std::ceil(sweep / 0.25F)), 2, 64);
+            const float step = sweep / static_cast<float>(steps);
+            auto previous = NanPoint(
+                center.get_x() + mid * std::sin(start),
+                center.get_y() + mid * std::cos(start)
+            );
+            for (int i = 1; i <= steps; ++i) {
+                const float angle = start + step * static_cast<float>(i);
+                const auto next = NanPoint(
+                    center.get_x() + mid * std::sin(angle),
+                    center.get_y() + mid * std::cos(angle)
+                );
+                draw_line(previous, next, thickness, color);
+                previous = next;
+            }
         }
 
         /// 软阴影：圆角矩形 + 软边衰减。rect 为阴影的圆角矩形（已含偏移），
