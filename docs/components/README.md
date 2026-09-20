@@ -29,7 +29,7 @@
 | `Checkbox` | 独立布尔选择 | 可用 |
 | `Switch` | 即时启用或关闭设置 | 可用 |
 | `RadioButton` / `RadioGroup` | 单选项组 | 可用 |
-| `Slider` | 在数值范围内选择 | 可用 |
+| [`Slider`](slider.md) | 在数值范围内选择 | 可用 |
 | `TextField` | 单行文本输入 | 可用 |
 | `Select` | 从字符串选项中单选 | 可用，已接入统一浮层 |
 | `Tabs` | 水平标签选择 | 可用，等待内容槽位 |
