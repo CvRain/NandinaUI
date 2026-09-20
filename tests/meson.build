@@ -318,6 +318,13 @@ empty_state_tests = executable(
 )
 test('empty-state', empty_state_tests)
 
+alert_tests = executable(
+    'alert_tests',
+    files('alert_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('alert', alert_tests)
+
 spinner_tests = executable(
     'spinner_tests',
     files('spinner_tests.cpp'),

@@ -308,6 +308,37 @@ namespace nandina::theme
         EmptyStateMetrics metrics;
     };
 
+    /**
+     * Alert 度量：列间距 / 内边距 / 最小高度 / dismiss 边长 / 首选宽度。
+     *
+     * 不复用共享的 `ControlMetrics`：后者没有 `padding_y`，而 Alert 的上下内边距是
+     * 真实存在的造型字段；把 `height` 当 padding 用属于语义错配（本项目已因单位 /
+     * 语义错配出过一次事故，见 `SliderRecipe::thumb_radius` 的注释）。这与
+     * `EmptyStateMetrics` 的选择一致。
+     */
+    using AlertMetrics = struct AlertMetrics {
+        ThemeScalar gap;             // 相邻列间距（icon / 文本列 / action / dismiss）
+        ThemeScalar padding_x;       // 水平内边距
+        ThemeScalar padding_y;       // 垂直内边距
+        ThemeScalar min_height;      // 整控件最小高度
+        ThemeScalar box_size;        // dismiss 小按钮的方形边长
+        ThemeScalar preferred_width; // 无界约束下的首选宽度
+    };
+
+    /**
+     * Alert 配方：容器 + 标题 / 描述排版 + 图标色 + 度量（内联消息条，无交互）。
+     *
+     * tone 不是配方字段而是解析入参：每档 tone 的填充 / 边框 / 图标色由默认设计系统里
+     * 的 tone 规则给出（见 `default_alert_recipe()` 与 `DesignSystem.components.alert.rules`）。
+     */
+    using AlertRecipe = struct AlertRecipe {
+        BoxStyle container;
+        TypeStyle title;
+        TypeStyle description;
+        ThemeColor icon;
+        AlertMetrics metrics;
+    };
+
     /** RadioButton 配方：圆形指示器 + 选中点 + 文本 + 焦点环 + 度量。 */
     using RadioButtonRecipe = struct RadioButtonRecipe {
         BoxStyle indicator;
@@ -565,6 +596,27 @@ namespace nandina::theme
         std::optional<ThemeScalar> metrics_preferred_width;
     };
 
+    /** Alert 规则：支持 tone 选择器（+ 状态选择器），覆盖容器 / 标题 / 描述 / 图标 / 度量字段。 */
+    using AlertRecipeRule = struct AlertRecipeRule {
+        std::optional<AlertTone> tone;           // nullopt = 任意 tone
+        std::optional<AlertVisualState> state;   // nullopt = 任意状态
+        std::optional<ThemeColor> container_fill;
+        std::optional<ThemeColor> container_border;
+        std::optional<ThemeScalar> container_border_width;
+        std::optional<ThemeScalar> container_radius;
+        std::optional<ThemeColor> title_color;
+        std::optional<ThemeScalar> title_font_size;
+        std::optional<ThemeColor> description_color;
+        std::optional<ThemeScalar> description_font_size;
+        std::optional<ThemeColor> icon_color;
+        std::optional<ThemeScalar> metrics_gap;
+        std::optional<ThemeScalar> metrics_padding_x;
+        std::optional<ThemeScalar> metrics_padding_y;
+        std::optional<ThemeScalar> metrics_min_height;
+        std::optional<ThemeScalar> metrics_box_size;
+        std::optional<ThemeScalar> metrics_preferred_width;
+    };
+
     /** RadioButton 规则：支持 checked 布尔选择器 + 状态选择器。 */
     using RadioButtonRecipeRule = struct RadioButtonRecipeRule {
         std::optional<bool> checked; // nullopt = 任意
@@ -810,6 +862,23 @@ namespace nandina::theme
         ResolvedEmptyStateMetrics metrics;
     };
 
+    using ResolvedAlertMetrics = struct ResolvedAlertMetrics {
+        float gap = 0.0F;
+        float padding_x = 0.0F;
+        float padding_y = 0.0F;
+        float min_height = 0.0F;
+        float box_size = 0.0F;
+        float preferred_width = 0.0F;
+    };
+
+    using ResolvedAlertStyle = struct ResolvedAlertStyle {
+        ResolvedBoxStyle container;
+        ResolvedTypeStyle title;
+        ResolvedTypeStyle description;
+        NanColor icon;
+        ResolvedAlertMetrics metrics;
+    };
+
     using ResolvedRadioButtonStyle = struct ResolvedRadioButtonStyle {
         ResolvedBoxStyle indicator;
         NanColor dot;
@@ -946,6 +1015,11 @@ namespace nandina::theme
         std::vector<EmptyStateRecipeRule> rules;
     };
 
+    using AlertRecipes = struct AlertRecipes {
+        AlertRecipe base;
+        std::vector<AlertRecipeRule> rules;
+    };
+
     using RadioButtonRecipes = struct RadioButtonRecipes {
         RadioButtonRecipe base;
         std::vector<RadioButtonRecipeRule> rules;
@@ -998,6 +1072,7 @@ namespace nandina::theme
         SpinnerRecipes spinner;
         SkeletonRecipes skeleton;
         EmptyStateRecipes empty_state;
+        AlertRecipes alert;
         RadioButtonRecipes radio_button;
         TabsRecipes tabs;
         TooltipRecipes tooltip;
@@ -1193,6 +1268,22 @@ namespace nandina::theme
         };
     }
 
+    /** 解析 Alert 度量片段为具体值。 */
+    [[nodiscard]] inline auto resolve(
+        const DesignSystem& system,
+        const ColorAppearance appearance,
+        const AlertMetrics& metrics
+    ) -> ResolvedAlertMetrics {
+        return {
+            .gap = resolve_scalar(system, appearance, metrics.gap),
+            .padding_x = resolve_scalar(system, appearance, metrics.padding_x),
+            .padding_y = resolve_scalar(system, appearance, metrics.padding_y),
+            .min_height = resolve_scalar(system, appearance, metrics.min_height),
+            .box_size = resolve_scalar(system, appearance, metrics.box_size),
+            .preferred_width = resolve_scalar(system, appearance, metrics.preferred_width),
+        };
+    }
+
     // 组件级解析（定义见 design_system.cpp）：
     //   遗留平铺解析器给出 base 语义（tone/treatment/size/state）→
     //   应用 DesignSystem 的规则覆盖 → 组装为片段组合的解析结果。
@@ -1265,6 +1356,13 @@ namespace nandina::theme
         ColorAppearance appearance,
         EmptyStateVisualState state
     ) -> ResolvedEmptyStateStyle;
+
+    [[nodiscard]] auto resolve_alert(
+        const DesignSystem& system,
+        ColorAppearance appearance,
+        AlertTone tone,
+        AlertVisualState state
+    ) -> ResolvedAlertStyle;
 
     [[nodiscard]] auto resolve_radio_button(
         const DesignSystem& system,
@@ -1400,6 +1498,13 @@ namespace nandina::theme
     void apply_rule(
         const DesignSystem& system,
         ColorAppearance appearance,
+        ResolvedAlertStyle& style,
+        const AlertRecipeRule& rule
+    );
+
+    void apply_rule(
+        const DesignSystem& system,
+        ColorAppearance appearance,
         ResolvedRadioButtonStyle& style,
         const RadioButtonRecipeRule& rule
     );
@@ -1466,6 +1571,7 @@ namespace nandina::theme
     [[nodiscard]] auto default_spinner_recipe() -> SpinnerRecipe;
     [[nodiscard]] auto default_skeleton_recipe() -> SkeletonRecipe;
     [[nodiscard]] auto default_empty_state_recipe() -> EmptyStateRecipe;
+    [[nodiscard]] auto default_alert_recipe() -> AlertRecipe;
     [[nodiscard]] auto default_radio_button_recipe() -> RadioButtonRecipe;
     [[nodiscard]] auto default_tabs_recipe() -> TabsRecipe;
     [[nodiscard]] auto default_tooltip_recipe() -> TooltipRecipe;

@@ -303,6 +303,21 @@ namespace nandina::theme
             };
         }
 
+        /** AlertRecipe → 解析后的片段组合（纯展示，仅 normal 状态）。 */
+        [[nodiscard]] auto resolve_recipe(
+            const DesignSystem& system,
+            const ColorAppearance appearance,
+            const AlertRecipe& recipe
+        ) -> ResolvedAlertStyle {
+            return {
+                .container = resolve(system, appearance, recipe.container),
+                .title = resolve(system, appearance, recipe.title),
+                .description = resolve(system, appearance, recipe.description),
+                .icon = resolve_color(system, appearance, recipe.icon),
+                .metrics = resolve(system, appearance, recipe.metrics),
+            };
+        }
+
         /** RadioButtonRecipe → 解析后的片段组合（配方即事实来源）。 */
         [[nodiscard]] auto resolve_recipe(
             const DesignSystem& system,
@@ -750,6 +765,28 @@ namespace nandina::theme
         auto style = resolve_recipe(system, appearance, system.components.empty_state.base);
         for (const auto& rule: system.components.empty_state.rules) {
             if (rule.state && *rule.state != state) {
+                continue;
+            }
+            apply_rule(system, appearance, style, rule);
+        }
+        return style;
+    }
+
+    /**
+     * 解析 Alert 配方（纯展示：base → tone + state 选择器过滤的规则列表，后匹配者胜）。
+     *
+     * tone 是第一个选择维度：默认设计系统为四档 tone 各播下一条规则，用对应语义色
+     * 覆盖容器填充 / 边框与图标色。Alert 自身不接受输入，没有状态变换。
+     */
+    auto resolve_alert(
+        const DesignSystem& system,
+        const ColorAppearance appearance,
+        const AlertTone tone,
+        const AlertVisualState state
+    ) -> ResolvedAlertStyle {
+        auto style = resolve_recipe(system, appearance, system.components.alert.base);
+        for (const auto& rule: system.components.alert.rules) {
+            if ((rule.tone && *rule.tone != tone) || (rule.state && *rule.state != state)) {
                 continue;
             }
             apply_rule(system, appearance, style, rule);
@@ -1279,6 +1316,57 @@ namespace nandina::theme
         }
         if (rule.metrics_min_height) {
             style.metrics.min_height = resolve_scalar(system, appearance, *rule.metrics_min_height);
+        }
+        if (rule.metrics_preferred_width) {
+            style.metrics.preferred_width =
+                resolve_scalar(system, appearance, *rule.metrics_preferred_width);
+        }
+    }
+
+    void apply_rule(
+        const DesignSystem& system,
+        const ColorAppearance appearance,
+        ResolvedAlertStyle& style,
+        const AlertRecipeRule& rule
+    ) {
+        if (rule.container_fill)
+            style.container.fill = resolve_color(system, appearance, *rule.container_fill);
+        if (rule.container_border)
+            style.container.border = resolve_color(system, appearance, *rule.container_border);
+        if (rule.container_border_width) {
+            style.container.border_width =
+                resolve_scalar(system, appearance, *rule.container_border_width);
+        }
+        if (rule.container_radius) {
+            style.container.radius = resolve_scalar(system, appearance, *rule.container_radius);
+        }
+        if (rule.title_color)
+            style.title.color = resolve_color(system, appearance, *rule.title_color);
+        if (rule.title_font_size) {
+            style.title.font_size = resolve_scalar(system, appearance, *rule.title_font_size);
+        }
+        if (rule.description_color) {
+            style.description.color = resolve_color(system, appearance, *rule.description_color);
+        }
+        if (rule.description_font_size) {
+            style.description.font_size =
+                resolve_scalar(system, appearance, *rule.description_font_size);
+        }
+        if (rule.icon_color)
+            style.icon = resolve_color(system, appearance, *rule.icon_color);
+        if (rule.metrics_gap)
+            style.metrics.gap = resolve_scalar(system, appearance, *rule.metrics_gap);
+        if (rule.metrics_padding_x) {
+            style.metrics.padding_x = resolve_scalar(system, appearance, *rule.metrics_padding_x);
+        }
+        if (rule.metrics_padding_y) {
+            style.metrics.padding_y = resolve_scalar(system, appearance, *rule.metrics_padding_y);
+        }
+        if (rule.metrics_min_height) {
+            style.metrics.min_height = resolve_scalar(system, appearance, *rule.metrics_min_height);
+        }
+        if (rule.metrics_box_size) {
+            style.metrics.box_size = resolve_scalar(system, appearance, *rule.metrics_box_size);
         }
         if (rule.metrics_preferred_width) {
             style.metrics.preferred_width =
@@ -1921,6 +2009,50 @@ namespace nandina::theme
         };
     }
 
+    /**
+     * @return 框架默认 Alert 配方（中性 base + 每档 tone 由默认规则覆盖）。
+     *
+     * base 只给中性 fallback：透明容器 + foreground 标题 + muted_foreground 描述 +
+     * foreground 图标。四档 tone 的填充 / 边框 / 图标色由
+     * `DesignSystem.components.alert.rules` 里的 tone 规则给出——理由见默认设计系统
+     * 里的注释（`ThemeColor` 的 accent 引用只服务于 ButtonTone，无法按 AlertTone 解析）。
+     *
+     * `metrics.box_size` 是 dismiss 小按钮的方形边长，属于组件几何，无语义标量 token；
+     * `preferred_width` 同理（无界约束下的建议宽度）。
+     */
+    auto default_alert_recipe() -> AlertRecipe {
+        return {
+            .container = BoxStyle {
+                // base 的填充 / 边框透明；四档 tone 规则会给出各自的色值。
+                .fill = ThemeColor::transparent(ColorToken::background),
+                .border = ThemeColor::transparent(ColorToken::border),
+                .border_width = ThemeScalar::token(ScalarToken::border_thin),
+                .radius = ThemeScalar::token(ScalarToken::radius_md),
+            },
+            // 标题刻意用 foreground 而不是 tone 的 `*_foreground`：后者是"实色 × 上的
+            // 文字色"（默认主题里 info_foreground / error_foreground 接近白色），
+            // 落在低透明度浅色填充上会直接看不见。soft banner 的可读文字统一取正文色。
+            .title = TypeStyle {
+                .color = ThemeColor::token(ColorToken::foreground),
+                .font_size = ThemeScalar::token(ScalarToken::typography_label_lg),
+            },
+            .description = TypeStyle {
+                .color = ThemeColor::token(ColorToken::muted_foreground),
+                .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+            },
+            .icon = ThemeColor::token(ColorToken::foreground),
+            .metrics = AlertMetrics {
+                .gap = ThemeScalar::token(ScalarToken::spacing_sm),
+                .padding_x = ThemeScalar::token(ScalarToken::spacing_lg),
+                .padding_y = ThemeScalar::token(ScalarToken::spacing_md),
+                .min_height = ThemeScalar::literal(0.0F),
+                // 20px 方形：贴近 shadcn icon-button 的 size-5，无语义 token。
+                .box_size = ThemeScalar::literal(20.0F),
+                .preferred_width = ThemeScalar::literal(320.0F),
+            },
+        };
+    }
+
     /** @return 框架默认 RadioButton 配方（未选中：透明指示器 + input 边框）。 */
     auto default_radio_button_recipe() -> RadioButtonRecipe {
         return {
@@ -2411,6 +2543,54 @@ namespace nandina::theme
                 .empty_state = EmptyStateRecipes {
                     .base = default_empty_state_recipe(),
                     .rules = {},
+                },
+                // 每档 tone 的默认造型作为有序规则播下（base → tone 规则，后匹配者胜）。
+                // 这是本仓库表达"多变体默认值"的既有机制（Button 的 treatment / size
+                // 规则同款）：`AlertRecipe.base` 无法按当前 tone 解析颜色，因为
+                // `ThemeColor` 的动态强调色引用（accent / on_accent）只服务于
+                // `ButtonTone`，没有 AlertTone 的对应实现。
+                .alert = AlertRecipes {
+                    .base = default_alert_recipe(),
+                    .rules = {
+                        // 低透明度色调填充（0.12）+ 实色 tone 边框 + tone 图标：
+                        // 软色 banner。0.12 是设计强度常量，无语义 token 表达。
+                        AlertRecipeRule {
+                            .tone = AlertTone::info,
+                            .container_fill = ThemeColor::with_alpha(
+                                ColorToken::info,
+                                ThemeScalar::literal(0.12F)
+                            ),
+                            .container_border = ThemeColor::token(ColorToken::info),
+                            .icon_color = ThemeColor::token(ColorToken::info),
+                        },
+                        AlertRecipeRule {
+                            .tone = AlertTone::success,
+                            .container_fill = ThemeColor::with_alpha(
+                                ColorToken::success,
+                                ThemeScalar::literal(0.12F)
+                            ),
+                            .container_border = ThemeColor::token(ColorToken::success),
+                            .icon_color = ThemeColor::token(ColorToken::success),
+                        },
+                        AlertRecipeRule {
+                            .tone = AlertTone::warning,
+                            .container_fill = ThemeColor::with_alpha(
+                                ColorToken::warning,
+                                ThemeScalar::literal(0.12F)
+                            ),
+                            .container_border = ThemeColor::token(ColorToken::warning),
+                            .icon_color = ThemeColor::token(ColorToken::warning),
+                        },
+                        AlertRecipeRule {
+                            .tone = AlertTone::error,
+                            .container_fill = ThemeColor::with_alpha(
+                                ColorToken::error,
+                                ThemeScalar::literal(0.12F)
+                            ),
+                            .container_border = ThemeColor::token(ColorToken::error),
+                            .icon_color = ThemeColor::token(ColorToken::error),
+                        },
+                    },
                 },
                 .radio_button = RadioButtonRecipes {
                     .base = default_radio_button_recipe(),

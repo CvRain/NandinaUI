@@ -77,6 +77,19 @@ namespace nandina::theme
         large,
     };
 
+    /**
+     * Alert 语义色家族：每个 tone 对应一对语义色角色（`info` / `info_foreground` 等）。
+     *
+     * 只表达"这条消息是什么性质"，不表达外观处理方式；容器填充 / 边框由各 tone 的
+     * 规则在默认设计系统里给出。
+     */
+    enum class AlertTone: std::uint8_t {
+        info,
+        success,
+        warning,
+        error,
+    };
+
     /** Button 交互状态。 */
     enum class ButtonVisualState: std::uint8_t {
         normal,
@@ -114,6 +127,16 @@ namespace nandina::theme
 
     /** EmptyState 交互状态（纯展示空状态，交互由 action 槽位承载，仅 normal）。 */
     enum class EmptyStateVisualState: std::uint8_t {
+        normal,
+    };
+
+    /**
+     * Alert 交互状态（纯展示消息条，交互由 action / dismiss 承载，仅 normal）。
+     *
+     * 刻意不提供 `disabled`：Alert 自身不接受任何输入，禁用它并不改变容器造型；
+     * 想弱化展示请用实例 override 或换 tone，而不是加一个没有视觉落点的死状态。
+     */
+    enum class AlertVisualState: std::uint8_t {
         normal,
     };
 

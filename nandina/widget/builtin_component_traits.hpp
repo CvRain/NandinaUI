@@ -6,6 +6,7 @@
 #define NANDINA_EXPERIMENT_WIDGET_BUILTIN_COMPONENT_TRAITS_HPP
 
 #include "build_context.hpp"
+#include "alert.hpp"
 #include "avatar.hpp"
 #include "badge.hpp"
 #include "button.hpp"
@@ -287,6 +288,25 @@ namespace nandina::widget
                            ) mutable {
                     empty_state.set_title(std::move(title));
                     empty_state.set_description(std::move(description));
+                });
+        }
+    };
+
+    template<>
+    struct ComponentTraits<Alert> {
+        [[nodiscard]] static auto make(
+            const BuildContext& ui,
+            theme::AlertTone tone,
+            std::string title,
+            std::string description = {}
+        ) -> authoring::NodeBuilder<Alert> {
+            return authoring::make<Alert>(ui.theme())
+                .configure([tone, title = std::move(title), description = std::move(description)](
+                               Alert& alert
+                           ) mutable {
+                    alert.set_tone(tone);
+                    alert.set_title(std::move(title));
+                    alert.set_description(std::move(description));
                 });
         }
     };
