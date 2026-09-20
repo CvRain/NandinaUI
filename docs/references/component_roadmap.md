@@ -55,7 +55,7 @@ Home/End 与 typeahead），只剩嵌套浮层的父子关闭关系待补。
 推荐顺序：
 
 1. `Spinner`、`Skeleton`、`EmptyState`；
-2. `Alert` 与基于 Dialog 语义约束的 `AlertDialog`；
+2. `Alert`（已完成）与基于 Dialog 语义约束的 `AlertDialog`；
 3. `Toggle`、`ToggleGroup`、`ButtonGroup`；
 4. `TextArea`，与 TextField 共享 EditableText primitive；
 5. `Breadcrumb` 与 `Pagination`。

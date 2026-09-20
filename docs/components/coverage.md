@@ -5,8 +5,8 @@
 
 ## 现状
 
-- 公开组件：**23**（有 `ComponentTraits`、可供应用直接使用）
-- 已有使用文档：**6**
+- 公开组件：**24**（有 `ComponentTraits`、可供应用直接使用）
+- 已有使用文档：**7**
 
 ## 分工约定
 
@@ -47,6 +47,7 @@
 | `Spinner` | ✅ [spinner.md](spinner.md) | 中 |
 | `Skeleton` | ✅ [skeleton.md](skeleton.md) | 中 |
 | `EmptyState` | ✅ [empty_state.md](empty_state.md) | 中 |
+| `Alert` | ✅ [alert.md](alert.md) | 中 |
 | `Slider` | ✅ [slider.md](slider.md) | 中 |
 | `Dialog` | ✅ [dialog.md](dialog.md) | 中 |
 | `Tabs` | — | 中 |

@@ -43,6 +43,7 @@
 | --- | --- | --- |
 | `Dialog` | 模态内容、遮罩与焦点限制 | 可用，已接入统一浮层 |
 | `Tooltip` | 悬停后显示简短提示 | 可用，已接入统一浮层定位 |
+| [`Alert`](alert.md) | 内联消息条，传达状态或反馈 | 可用 |
 
 ### 交互扩展
 
@@ -59,7 +60,7 @@
 
 ## 计划补充
 
-- 高频基础组件：`TextArea`、`Toggle`、`ToggleGroup`、`Alert`、`AlertDialog`、`Spinner`。
+- 高频基础组件：`TextArea`、`Toggle`、`ToggleGroup`、`AlertDialog`、`Spinner`。
 - 浮层组件族：`Popover`、`DropdownMenu`、`ContextMenu`、`Combobox`、`CommandPalette`、`HoverCard`。
 - 信息组织组件：`Accordion`、`Collapsible`、`Sheet`、`Breadcrumb`、`Pagination`、`Table`。
 
