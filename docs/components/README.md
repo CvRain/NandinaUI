@@ -1,5 +1,8 @@
 # 组件参考
 
+- 文档覆盖率与编写进度见 [覆盖率看板](coverage.md)；
+- 新增组件文档请复制 [组件文档模板](_template.md)。
+
 键盘交互模型（选择与导航类组件）见 [选择与导航的键盘模型](selection_and_navigation.md)。
 
 这里记录 NandinaUI 面向应用开发者公开的组件。项目仍处于 alpha 阶段；“可用”表示已有实现、主题与测试覆盖，不等同于已经冻结全部 API。
@@ -17,15 +20,15 @@
 | `Chip` | 展示可移除标签 | 可用 |
 | `Divider` | 分隔内容区域 | 可用 |
 | `ProgressBar` | 展示确定性进度 | 可用 |
-| `Skeleton` | 内容加载前占据最终版式的占位块 | 可用 |
-| `EmptyState` | 列表或集合暂空时的占位与引导 | 可用 |
+| [`Skeleton`](skeleton.md) | 内容加载前占据最终版式的占位块 | 可用 |
+| [`EmptyState`](empty_state.md) | 列表或集合暂空时的占位与引导 | 可用 |
 | `Card` | 带主题外观的单子内容容器 | 可用，等待语义槽位 |
 
 ### 输入与选择
 
 | 组件 | 用途 | 状态 |
 | --- | --- | --- |
-| `Button` | 执行语义操作 | 可用 |
+| [`Button`](button.md) | 执行语义操作 | 可用 |
 | `Checkbox` | 独立布尔选择 | 可用 |
 | `Switch` | 即时启用或关闭设置 | 可用 |
 | `RadioButton` / `RadioGroup` | 单选项组 | 可用 |
