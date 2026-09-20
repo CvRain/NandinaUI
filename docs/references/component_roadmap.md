@@ -7,7 +7,7 @@ NandinaUI 不以逐项复制其他组件库为目标。[shadcn/ui Components](ht
 项目已经拥有一套可运行的内容、输入、布局、主题和响应式基础。阶段 1 的定位、关闭与焦点设施已经落地，阶段 2 的 Tooltip、Select 与 Dialog 也全部接入，因此「每个浮层组件各自处理定位与关闭」的重复逻辑已经消除。
 
 阶段 1 的基础设施已全部落地：roving focus / typeahead（`widget::RovingFocus`，接入
-`RadioGroup` / `Tabs` / `Select`，见 [选择与导航的键盘模型](../components/selection_and_navigation.md)）、
+`RadioGroup` / `Tabs` / `Select` / `ToggleGroup`，见 [选择与导航的键盘模型](../components/selection_and_navigation.md)）、
 嵌套浮层的父子关闭关系（`OverlayOptions::parent` + `OverlayCloseReason`，`Select` / `Tooltip` 已接入），
 键码常量也收敛到单一定义处。
 
@@ -56,7 +56,7 @@ Home/End 与 typeahead），只剩嵌套浮层的父子关闭关系待补。
 
 1. `Spinner`、`Skeleton`、`EmptyState`；
 2. `Alert`（已完成）与基于 Dialog 语义约束的 `AlertDialog`；
-3. `Toggle`、`ToggleGroup`、`ButtonGroup`；
+3. `Toggle`、`ToggleGroup`（均已完成）、`ButtonGroup`；
 4. `TextArea`，与 TextField 共享 EditableText primitive；
 5. `Breadcrumb` 与 `Pagination`。
 

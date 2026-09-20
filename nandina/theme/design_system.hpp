@@ -348,6 +348,32 @@ namespace nandina::theme
         ControlMetrics metrics;
     };
 
+    /**
+     * Toggle 配方：容器 + 文本 + 焦点环 + 状态层 + 度量。
+     *
+     * 两态按钮（外观是按钮、语义是 checkbox）：`checked` 由解析入参决定容器填充
+     * （未选中走 treatment 规则，选中统一换成 tone 强调色），hover / pressed 走独立的
+     * 状态层片段（与 Button 同款），因此不需要 treatment × checked × state 的组合规则。
+     */
+    using ToggleRecipe = struct ToggleRecipe {
+        BoxStyle container;
+        TypeStyle label;
+        FocusRingStyle focus;
+        StateLayerStyle state_layer;
+        ControlMetrics metrics; // height、padding_x、min_height
+    };
+
+    /**
+     * ToggleGroup 配方：容器 + 度量（gap = 成员间距、padding_x = 组内边距）。
+     *
+     * 组是协调对象而不是场景节点（同 RadioGroup），容器造型由宿主读取
+     * `resolved_style()` 后自行绘制，因此默认容器完全透明。
+     */
+    using ToggleGroupRecipe = struct ToggleGroupRecipe {
+        BoxStyle container;
+        ControlMetrics metrics; // gap、padding_x、min_height
+    };
+
     /** Tabs 配方：容器（背景/边框）+ 选中 pill + 下划线 + 标签 + 焦点环 + 度量。 */
     using TabsRecipe = struct TabsRecipe {
         BoxStyle container;           // 列表容器背景/边框/圆角（透明默认 = 无背景边框）
@@ -634,6 +660,44 @@ namespace nandina::theme
         std::optional<ThemeScalar> metrics_box_size;
     };
 
+    /**
+     * Toggle 规则：支持 tone / treatment / checked / state 选择器。
+     *
+     * treatment 只描述**未选中**的容器外观；选中态由 `checked = true` 的规则统一换成
+     * tone 强调色，保证任何 tone / treatment 组合下 checked 与 unchecked 都能区分。
+     */
+    using ToggleRecipeRule = struct ToggleRecipeRule {
+        std::optional<ButtonTone> tone;              // nullopt = 任意 tone
+        std::optional<ButtonTreatment> treatment;    // nullopt = 任意 treatment
+        std::optional<bool> checked;                 // nullopt = 任意
+        std::optional<ToggleVisualState> state;      // nullopt = 任意状态
+        std::optional<ThemeColor> container_fill;
+        std::optional<ThemeColor> container_border;
+        std::optional<ThemeScalar> container_border_width;
+        std::optional<ThemeScalar> container_radius;
+        std::optional<ThemeColor> label_color;
+        std::optional<ThemeScalar> label_font_size;
+        std::optional<ThemeColor> focus_ring_color;
+        std::optional<ThemeScalar> focus_ring_width;
+        std::optional<ThemeColor> state_layer_hover;
+        std::optional<ThemeColor> state_layer_pressed;
+        std::optional<ThemeScalar> metrics_height;
+        std::optional<ThemeScalar> metrics_padding_x;
+        std::optional<ThemeScalar> metrics_min_height;
+    };
+
+    /** ToggleGroup 规则：支持状态选择器，覆盖容器 / 度量字段。 */
+    using ToggleGroupRecipeRule = struct ToggleGroupRecipeRule {
+        std::optional<ToggleGroupVisualState> state; // nullopt = 任意状态
+        std::optional<ThemeColor> container_fill;
+        std::optional<ThemeColor> container_border;
+        std::optional<ThemeScalar> container_border_width;
+        std::optional<ThemeScalar> container_radius;
+        std::optional<ThemeScalar> metrics_gap;
+        std::optional<ThemeScalar> metrics_padding_x;
+        std::optional<ThemeScalar> metrics_min_height;
+    };
+
     /** Tabs 规则：支持状态选择器，覆盖容器/选中 pill/标签/指示条/焦点环/度量字段。 */
     using TabsRecipeRule = struct TabsRecipeRule {
         std::optional<TabsVisualState> state; // nullopt = 任意
@@ -887,6 +951,19 @@ namespace nandina::theme
         ResolvedControlMetrics metrics;
     };
 
+    using ResolvedToggleStyle = struct ResolvedToggleStyle {
+        ResolvedBoxStyle container;
+        ResolvedTypeStyle label;
+        ResolvedFocusRing focus;
+        ResolvedStateLayer state_layer;
+        ResolvedControlMetrics metrics;
+    };
+
+    using ResolvedToggleGroupStyle = struct ResolvedToggleGroupStyle {
+        ResolvedBoxStyle container;
+        ResolvedControlMetrics metrics;
+    };
+
     using ResolvedTabsStyle = struct ResolvedTabsStyle {
         ResolvedBoxStyle container;
         ResolvedBoxStyle selected_background;
@@ -1025,6 +1102,16 @@ namespace nandina::theme
         std::vector<RadioButtonRecipeRule> rules;
     };
 
+    using ToggleRecipes = struct ToggleRecipes {
+        ToggleRecipe base;
+        std::vector<ToggleRecipeRule> rules;
+    };
+
+    using ToggleGroupRecipes = struct ToggleGroupRecipes {
+        ToggleGroupRecipe base;
+        std::vector<ToggleGroupRecipeRule> rules;
+    };
+
     using TabsRecipes = struct TabsRecipes {
         TabsRecipe base;
         std::vector<TabsRecipeRule> rules;
@@ -1074,6 +1161,8 @@ namespace nandina::theme
         EmptyStateRecipes empty_state;
         AlertRecipes alert;
         RadioButtonRecipes radio_button;
+        ToggleRecipes toggle;
+        ToggleGroupRecipes toggle_group;
         TabsRecipes tabs;
         TooltipRecipes tooltip;
         SelectRecipes select;
@@ -1371,6 +1460,21 @@ namespace nandina::theme
         RadioButtonVisualState state
     ) -> ResolvedRadioButtonStyle;
 
+    [[nodiscard]] auto resolve_toggle(
+        const DesignSystem& system,
+        ColorAppearance appearance,
+        ButtonTone tone,
+        ButtonTreatment treatment,
+        bool checked,
+        ToggleVisualState state
+    ) -> ResolvedToggleStyle;
+
+    [[nodiscard]] auto resolve_toggle_group(
+        const DesignSystem& system,
+        ColorAppearance appearance,
+        ToggleGroupVisualState state
+    ) -> ResolvedToggleGroupStyle;
+
     [[nodiscard]] auto resolve_tabs(
         const DesignSystem& system,
         ColorAppearance appearance,
@@ -1509,6 +1613,31 @@ namespace nandina::theme
         const RadioButtonRecipeRule& rule
     );
 
+    /** @param tone 当前 Button tone（accent / on_accent 引用依赖它）。 */
+    void apply_rule(
+        const DesignSystem& system,
+        ColorAppearance appearance,
+        ResolvedToggleStyle& style,
+        const ToggleRecipeRule& rule,
+        ButtonTone tone
+    );
+
+    void apply_rule(
+        const DesignSystem& system,
+        ColorAppearance appearance,
+        ResolvedToggleGroupStyle& style,
+        const ToggleGroupRecipeRule& rule
+    );
+
+    /**
+     * @return Toggle 当前交互状态对应的独立叠加色；normal / disabled 返回透明色。
+     * 与 `button_state_layer_color` 同款：状态反馈不写回基础容器填充。
+     */
+    [[nodiscard]] auto toggle_state_layer_color(
+        const ResolvedToggleStyle& style,
+        ToggleVisualState state
+    ) -> NanColor;
+
     void apply_rule(
         const DesignSystem& system,
         ColorAppearance appearance,
@@ -1573,6 +1702,8 @@ namespace nandina::theme
     [[nodiscard]] auto default_empty_state_recipe() -> EmptyStateRecipe;
     [[nodiscard]] auto default_alert_recipe() -> AlertRecipe;
     [[nodiscard]] auto default_radio_button_recipe() -> RadioButtonRecipe;
+    [[nodiscard]] auto default_toggle_recipe() -> ToggleRecipe;
+    [[nodiscard]] auto default_toggle_group_recipe() -> ToggleGroupRecipe;
     [[nodiscard]] auto default_tabs_recipe() -> TabsRecipe;
     [[nodiscard]] auto default_tooltip_recipe() -> TooltipRecipe;
     [[nodiscard]] auto default_select_recipe() -> SelectRecipe;

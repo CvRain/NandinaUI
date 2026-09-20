@@ -149,6 +149,25 @@ namespace nandina::theme
         disabled,
     };
 
+    /** Toggle 交互状态（checked 是解析入参，不是状态枚举成员，与 Checkbox 同款）。 */
+    enum class ToggleVisualState: std::uint8_t {
+        normal,
+        hovered,
+        pressed,
+        focused,
+        disabled,
+    };
+
+    /**
+     * ToggleGroup 交互状态（组只做协调与布局，自身不接受输入，仅 normal）。
+     *
+     * 与 Skeleton / EmptyState 同款：状态枚举先占位，规则解析器已经按 state 过滤，
+     * 将来若组需要 disabled 之类的状态，只需在此加成员并播下规则。
+     */
+    enum class ToggleGroupVisualState: std::uint8_t {
+        normal,
+    };
+
     /** Tabs 交互状态。 */
     enum class TabsVisualState: std::uint8_t {
         normal,

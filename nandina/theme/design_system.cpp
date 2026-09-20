@@ -350,6 +350,54 @@ namespace nandina::theme
             scale_alpha(style.label.color, alpha);
         }
 
+        /** ToggleRecipe → 解析后的片段组合（配方即事实来源）。 */
+        [[nodiscard]] auto resolve_recipe(
+            const DesignSystem& system,
+            const ColorAppearance appearance,
+            const ToggleRecipe& recipe,
+            const ButtonTone tone
+        ) -> ResolvedToggleStyle {
+            return {
+                .container = resolve(system, appearance, recipe.container),
+                .label = resolve(system, appearance, recipe.label),
+                .focus = resolve(system, appearance, recipe.focus),
+                .state_layer = {
+                    .hover = resolve_color(system, appearance, recipe.state_layer.hover, tone),
+                    .pressed = resolve_color(system, appearance, recipe.state_layer.pressed, tone),
+                },
+                .metrics = resolve(system, appearance, recipe.metrics),
+            };
+        }
+
+        /** ToggleGroupRecipe → 解析后的片段组合（纯容器，无状态变换）。 */
+        [[nodiscard]] auto resolve_recipe(
+            const DesignSystem& system,
+            const ColorAppearance appearance,
+            const ToggleGroupRecipe& recipe
+        ) -> ResolvedToggleGroupStyle {
+            return {
+                .container = resolve(system, appearance, recipe.container),
+                .metrics = resolve(system, appearance, recipe.metrics),
+            };
+        }
+
+        /** Toggle disabled 变换：容器 / 文本 ×opacity.disabled，焦点环隐去。 */
+        void apply_toggle_disabled(
+            const DesignSystem& system,
+            const ColorAppearance appearance,
+            ResolvedToggleStyle& style
+        ) {
+            const float alpha = resolve_scalar(
+                system,
+                appearance,
+                ThemeScalar::token(ScalarToken::opacity_disabled)
+            );
+            scale_alpha(style.container.fill, alpha);
+            scale_alpha(style.container.border, alpha);
+            scale_alpha(style.label.color, alpha);
+            style.focus.color = style.focus.color.with_alpha(0.0F);
+        }
+
         /** TabsRecipe → 解析后的片段组合（配方即事实来源）。 */
         [[nodiscard]] auto resolve_recipe(
             const DesignSystem& system,
@@ -512,6 +560,19 @@ namespace nandina::theme
             return style.state_layer.hover;
         }
         if (state == ButtonVisualState::pressed) {
+            return style.state_layer.pressed;
+        }
+        return style.state_layer.hover.with_alpha(0.0F);
+    }
+
+    auto toggle_state_layer_color(
+        const ResolvedToggleStyle& style,
+        const ToggleVisualState state
+    ) -> NanColor {
+        if (state == ToggleVisualState::hovered || state == ToggleVisualState::focused) {
+            return style.state_layer.hover;
+        }
+        if (state == ToggleVisualState::pressed) {
             return style.state_layer.pressed;
         }
         return style.state_layer.hover.with_alpha(0.0F);
@@ -813,6 +874,64 @@ namespace nandina::theme
         }
         if (state == RadioButtonVisualState::disabled) {
             apply_radio_button_disabled(system, appearance, style);
+        }
+        return style;
+    }
+
+    /**
+     * 解析 Toggle 配方。
+     *
+     * 流程：base → 配方书规则（tone / treatment / checked / state，后匹配者胜）→
+     * 独立状态层保留在解析结果中（不改写 container.fill）→ disabled 变换。
+     *
+     * @param system     设计系统快照
+     * @param appearance 当前外观
+     * @param tone       语义色家族（选中态与状态层依赖它）
+     * @param treatment  未选中态的视觉处理方式
+     * @param checked    是否选中（选中态由 `checked = true` 规则统一换成 tone 强调色）
+     * @param state      交互状态
+     * @return 片段组合的解析结果
+     */
+    auto resolve_toggle(
+        const DesignSystem& system,
+        const ColorAppearance appearance,
+        const ButtonTone tone,
+        const ButtonTreatment treatment,
+        const bool checked,
+        const ToggleVisualState state
+    ) -> ResolvedToggleStyle {
+        auto style = resolve_recipe(system, appearance, system.components.toggle.base, tone);
+        for (const auto& rule: system.components.toggle.rules) {
+            if ((rule.tone && *rule.tone != tone) || (rule.treatment && *rule.treatment != treatment)
+                || (rule.checked && *rule.checked != checked) || (rule.state && *rule.state != state))
+            {
+                continue;
+            }
+            apply_rule(system, appearance, style, rule, tone);
+        }
+        if (state == ToggleVisualState::disabled) {
+            apply_toggle_disabled(system, appearance, style);
+        }
+        return style;
+    }
+
+    /**
+     * 解析 ToggleGroup 配方（base → 规则列表，state 选择器，后匹配者胜）。
+     *
+     * 组不是场景节点，容器造型由宿主读取 `resolved_style()` 后绘制，解析路径与其它
+     * 组件保持一致，便于主题作者用同一套规则书写。
+     */
+    auto resolve_toggle_group(
+        const DesignSystem& system,
+        const ColorAppearance appearance,
+        const ToggleGroupVisualState state
+    ) -> ResolvedToggleGroupStyle {
+        auto style = resolve_recipe(system, appearance, system.components.toggle_group.base);
+        for (const auto& rule: system.components.toggle_group.rules) {
+            if (rule.state && *rule.state != state) {
+                continue;
+            }
+            apply_rule(system, appearance, style, rule);
         }
         return style;
     }
@@ -1404,6 +1523,75 @@ namespace nandina::theme
             style.metrics.gap = resolve_scalar(system, appearance, *rule.metrics_gap);
         if (rule.metrics_box_size)
             style.metrics.box_size = resolve_scalar(system, appearance, *rule.metrics_box_size);
+    }
+
+    void apply_rule(
+        const DesignSystem& system,
+        const ColorAppearance appearance,
+        ResolvedToggleStyle& style,
+        const ToggleRecipeRule& rule,
+        const ButtonTone tone
+    ) {
+        if (rule.container_fill) {
+            style.container.fill = resolve_color(system, appearance, *rule.container_fill, tone);
+        }
+        if (rule.container_border) {
+            style.container.border = resolve_color(system, appearance, *rule.container_border, tone);
+        }
+        if (rule.container_border_width) {
+            style.container.border_width =
+                resolve_scalar(system, appearance, *rule.container_border_width);
+        }
+        if (rule.container_radius) {
+            style.container.radius = resolve_scalar(system, appearance, *rule.container_radius);
+        }
+        if (rule.label_color)
+            style.label.color = resolve_color(system, appearance, *rule.label_color, tone);
+        if (rule.label_font_size)
+            style.label.font_size = resolve_scalar(system, appearance, *rule.label_font_size);
+        if (rule.focus_ring_color)
+            style.focus.color = resolve_color(system, appearance, *rule.focus_ring_color, tone);
+        if (rule.focus_ring_width)
+            style.focus.width = resolve_scalar(system, appearance, *rule.focus_ring_width);
+        if (rule.state_layer_hover) {
+            style.state_layer.hover =
+                resolve_color(system, appearance, *rule.state_layer_hover, tone);
+        }
+        if (rule.state_layer_pressed) {
+            style.state_layer.pressed =
+                resolve_color(system, appearance, *rule.state_layer_pressed, tone);
+        }
+        if (rule.metrics_height)
+            style.metrics.height = resolve_scalar(system, appearance, *rule.metrics_height);
+        if (rule.metrics_padding_x)
+            style.metrics.padding_x = resolve_scalar(system, appearance, *rule.metrics_padding_x);
+        if (rule.metrics_min_height)
+            style.metrics.min_height = resolve_scalar(system, appearance, *rule.metrics_min_height);
+    }
+
+    void apply_rule(
+        const DesignSystem& system,
+        const ColorAppearance appearance,
+        ResolvedToggleGroupStyle& style,
+        const ToggleGroupRecipeRule& rule
+    ) {
+        if (rule.container_fill)
+            style.container.fill = resolve_color(system, appearance, *rule.container_fill);
+        if (rule.container_border)
+            style.container.border = resolve_color(system, appearance, *rule.container_border);
+        if (rule.container_border_width) {
+            style.container.border_width =
+                resolve_scalar(system, appearance, *rule.container_border_width);
+        }
+        if (rule.container_radius)
+            style.container.radius = resolve_scalar(system, appearance, *rule.container_radius);
+        if (rule.metrics_gap)
+            style.metrics.gap = resolve_scalar(system, appearance, *rule.metrics_gap);
+        if (rule.metrics_padding_x)
+            style.metrics.padding_x = resolve_scalar(system, appearance, *rule.metrics_padding_x);
+        if (rule.metrics_min_height) {
+            style.metrics.min_height = resolve_scalar(system, appearance, *rule.metrics_min_height);
+        }
     }
 
     void apply_rule(
@@ -2082,6 +2270,73 @@ namespace nandina::theme
         };
     }
 
+    /**
+     * @return 框架默认 Toggle 配方。
+     *
+     * base 是"安静"的未选中底：透明容器、foreground 文本、无状态层。未选中的
+     * treatment 造型与选中态的 tone 强调色都由 `DesignSystem.components.toggle.rules`
+     * 里的有序规则给出（Button 的 treatment / size 同款机制）。
+     */
+    auto default_toggle_recipe() -> ToggleRecipe {
+        return {
+            .container = BoxStyle {
+                .fill = ThemeColor::transparent(ColorToken::background),
+                .border = ThemeColor::transparent(ColorToken::primary),
+                .border_width = ThemeScalar::literal(0.0F),
+                .radius = ThemeScalar::token(ScalarToken::radius_md),
+            },
+            .label = TypeStyle {
+                .color = ThemeColor::token(ColorToken::foreground),
+                .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+            },
+            .focus = FocusRingStyle {
+                .color = ThemeColor::token(ColorToken::ring),
+                .width = ThemeScalar::literal(0.0F), // focused 规则按需开启
+            },
+            // 状态层回退：无可见覆盖（checked / state 规则按各自语义覆盖）。
+            .state_layer = StateLayerStyle {
+                .hover = ThemeColor::transparent(ColorToken::background),
+                .pressed = ThemeColor::transparent(ColorToken::background),
+            },
+            .metrics = ControlMetrics {
+                // 与 Button base 同尺寸：shadcn h-9（36px）/ px-4（16px）/ text-sm，
+                // 工具栏 toggle 与相邻按钮等高。min_height 32 = shadcn h-8。
+                .height = ThemeScalar::literal(36.0F),
+                .padding_x = ThemeScalar::token(ScalarToken::spacing_lg),
+                .gap = ThemeScalar::literal(0.0F),
+                .min_height = ThemeScalar::literal(32.0F),
+                .box_size = ThemeScalar::literal(0.0F),
+                .preferred_width = ThemeScalar::literal(0.0F),
+            },
+        };
+    }
+
+    /**
+     * @return 框架默认 ToggleGroup 配方。
+     *
+     * 组默认没有任何可见容器（透明 + 无边框）：成员之间的节奏由 gap 表达，宿主若
+     * 需要分组底色/边框，读取 `resolved_style()` 后自行绘制或用实例 override 打开。
+     */
+    auto default_toggle_group_recipe() -> ToggleGroupRecipe {
+        return {
+            .container = BoxStyle {
+                .fill = ThemeColor::transparent(ColorToken::background),
+                .border = ThemeColor::transparent(ColorToken::primary),
+                .border_width = ThemeScalar::literal(0.0F),
+                .radius = ThemeScalar::token(ScalarToken::radius_md),
+            },
+            .metrics = ControlMetrics {
+                .height = ThemeScalar::literal(0.0F),
+                .padding_x = ThemeScalar::literal(0.0F),
+                // 4px 成员间距：工具栏 toggle 之间只需视觉分离，不用 Button 的内边距节奏。
+                .gap = ThemeScalar::token(ScalarToken::spacing_xs),
+                .min_height = ThemeScalar::literal(0.0F),
+                .box_size = ThemeScalar::literal(0.0F),
+                .preferred_width = ThemeScalar::literal(0.0F),
+            },
+        };
+    }
+
     /** @return 框架默认 Tabs 配方（下划线风格：无容器背景/pill，选中 primary + 下划线）。 */
     auto default_tabs_recipe() -> TabsRecipe {
         return {
@@ -2624,6 +2879,105 @@ namespace nandina::theme
                                 ThemeScalar::token(ScalarToken::border_focus_ring),
                         },
                     },
+                },
+                .toggle = ToggleRecipes {
+                    .base = default_toggle_recipe(),
+                    .rules = {
+                        // 未选中态：treatment 只描述"关"的样子（对照 Button 的 treatment
+                        // 默认值）；下面 checked=true 的规则统一把"开"换成 tone 强调色，
+                        // 因此任意 tone / treatment 组合都有明确的开关区分。
+                        ToggleRecipeRule {
+                            .treatment = ButtonTreatment::filled,
+                            .container_fill = ThemeColor::token(ColorToken::secondary),
+                            .container_border = ThemeColor::transparent(ColorToken::secondary),
+                            .label_color = ThemeColor::token(ColorToken::secondary_foreground),
+                        },
+                        ToggleRecipeRule {
+                            .treatment = ButtonTreatment::tonal,
+                            .container_fill = ThemeColor::mix(
+                                ColorOperand {ColorToken::secondary},
+                                accent_ref,
+                                ThemeScalar::literal(0.30F)
+                            ),
+                            .container_border = ThemeColor::transparent(accent_ref),
+                            .label_color = ThemeColor::accent(),
+                        },
+                        ToggleRecipeRule {
+                            .treatment = ButtonTreatment::outlined,
+                            .container_fill = ThemeColor::transparent(ColorToken::background),
+                            .container_border = ThemeColor::token(ColorToken::border),
+                            .container_border_width = ThemeScalar::token(ScalarToken::border_thin),
+                            .label_color = ThemeColor::token(ColorToken::foreground),
+                        },
+                        ToggleRecipeRule {
+                            .treatment = ButtonTreatment::ghost,
+                            .container_fill = ThemeColor::transparent(ColorToken::background),
+                            .container_border = ThemeColor::transparent(accent_ref),
+                            .label_color = ThemeColor::token(ColorToken::muted_foreground),
+                        },
+                        ToggleRecipeRule {
+                            .treatment = ButtonTreatment::link,
+                            .container_fill = ThemeColor::transparent(ColorToken::background),
+                            .container_border = ThemeColor::transparent(accent_ref),
+                            .label_color = ThemeColor::accent(),
+                            .metrics_padding_x = ThemeScalar::literal(0.0F),
+                        },
+                        // 选中态：任何 treatment 都换成 tone 强调色实底（+ 强调色边框，
+                        // 无边框宽度的 treatment 看不到它）。link 的零内边距在这里恢复，
+                        // 否则选中后会变成文字贴边的实色块。
+                        ToggleRecipeRule {
+                            .checked = true,
+                            .container_fill = ThemeColor::accent(),
+                            .container_border = ThemeColor::accent(),
+                            .label_color = ThemeColor::on_accent(),
+                            .metrics_padding_x = ThemeScalar::token(ScalarToken::spacing_lg),
+                        },
+                        // hover / pressed：未选中时向 tone 强调色叠加（透明/中性底上表现为
+                        // 浅色底），已选中时向 on_accent 叠加（实色底上表现为变浅），
+                        // 与 Button 的状态层语义一致。
+                        ToggleRecipeRule {
+                            .checked = false,
+                            .state = ToggleVisualState::hovered,
+                            .state_layer_hover = ThemeColor::with_alpha(
+                                accent_ref,
+                                ThemeScalar::token(ScalarToken::opacity_hover_overlay)
+                            ),
+                        },
+                        ToggleRecipeRule {
+                            .checked = false,
+                            .state = ToggleVisualState::pressed,
+                            .state_layer_pressed = ThemeColor::with_alpha(
+                                accent_ref,
+                                ThemeScalar::token(ScalarToken::opacity_pressed_overlay)
+                            ),
+                        },
+                        ToggleRecipeRule {
+                            .checked = true,
+                            .state = ToggleVisualState::hovered,
+                            .state_layer_hover = ThemeColor::with_alpha(
+                                on_accent_ref,
+                                ThemeScalar::token(ScalarToken::opacity_hover_overlay)
+                            ),
+                        },
+                        ToggleRecipeRule {
+                            .checked = true,
+                            .state = ToggleVisualState::pressed,
+                            .state_layer_pressed = ThemeColor::with_alpha(
+                                on_accent_ref,
+                                ThemeScalar::token(ScalarToken::opacity_pressed_overlay)
+                            ),
+                        },
+                        // 聚焦：焦点环开启（checked / unchecked 均适用）。
+                        ToggleRecipeRule {
+                            .state = ToggleVisualState::focused,
+                            .focus_ring_width =
+                                ThemeScalar::token(ScalarToken::border_focus_ring),
+                        },
+                    },
+                },
+                .toggle_group = ToggleGroupRecipes {
+                    .base = default_toggle_group_recipe(),
+                    .rules = {},
                 },
                 .tabs = TabsRecipes {
                     .base = default_tabs_recipe(),

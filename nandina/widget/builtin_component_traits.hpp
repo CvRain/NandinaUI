@@ -29,6 +29,8 @@
 #include "slider.hpp"
 #include "switch.hpp"
 #include "tabs.hpp"
+#include "toggle.hpp"
+#include "toggle_group.hpp"
 #include "text_field.hpp"
 #include "tooltip.hpp"
 
@@ -352,6 +354,54 @@ namespace nandina::widget
                 }
             });
             return result;
+        }
+    };
+
+    template<>
+    struct ComponentTraits<Toggle> {
+        [[nodiscard]] static auto make(const BuildContext& ui, std::string text)
+            -> authoring::NodeBuilder<Toggle> {
+            return authoring::make<Toggle>(std::move(text), ui.theme());
+        }
+
+        /// 组内成员：注册到共享的 ToggleGroup，方向键 / typeahead 由组统一漫游。
+        [[nodiscard]] static auto make(
+            const BuildContext& ui,
+            std::string text,
+            std::shared_ptr<ToggleGroup> group
+        ) -> authoring::NodeBuilder<Toggle> {
+            return authoring::make<Toggle>(std::move(text), std::move(group), ui.theme());
+        }
+
+        [[nodiscard]] static auto make(
+            const BuildContext& ui,
+            reactive::Signal<bool>& checked,
+            std::string text
+        ) -> authoring::NodeBuilder<Toggle> {
+            auto result = authoring::make<Toggle>(std::move(text), ui.theme())
+                              .configure([&checked](Toggle& toggle) {
+                                  toggle.set_checked(checked.get());
+                              });
+            const auto control = result.build();
+            ui.bind(control, &Toggle::set_checked, checked);
+            ui.connect(control->checked_changed(), [&checked](const bool current) {
+                if (checked.peek() != current) {
+                    checked.set(current);
+                }
+            });
+            return result;
+        }
+    };
+
+    /**
+     * ToggleGroup 不是场景节点（同 RadioGroup），因此这里返回 `shared_ptr` 而不是
+     * NodeBuilder：`BuildContext::make<T>()` 的约束是 `derived_from<T, scene::NanNode>`，
+     * 组要走 `ComponentTraits<ToggleGroup>::make(ui)` 或 `ToggleGroup::create()`。
+     */
+    template<>
+    struct ComponentTraits<ToggleGroup> {
+        [[nodiscard]] static auto make(const BuildContext&) -> std::shared_ptr<ToggleGroup> {
+            return ToggleGroup::create();
         }
     };
 

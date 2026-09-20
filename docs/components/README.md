@@ -31,6 +31,8 @@
 | [`Button`](button.md) | 执行语义操作 | 可用 |
 | `Checkbox` | 独立布尔选择 | 可用 |
 | `Switch` | 即时启用或关闭设置 | 可用 |
+| [`Toggle`](toggle.md) | 按钮外观的两态开关（工具栏开/关） | 可用 |
+| [`ToggleGroup`](toggle_group.md) | 协调一组 Toggle 的单选/多选与键盘漫游 | 可用 |
 | `RadioButton` / `RadioGroup` | 单选项组 | 可用 |
 | [`Slider`](slider.md) | 在数值范围内选择 | 可用 |
 | `TextField` | 单行文本输入 | 可用 |
@@ -60,7 +62,7 @@
 
 ## 计划补充
 
-- 高频基础组件：`TextArea`、`Toggle`、`ToggleGroup`、`AlertDialog`、`Spinner`。
+- 高频基础组件：`TextArea`、`AlertDialog`、`ButtonGroup`、`Breadcrumb`、`Pagination`。
 - 浮层组件族：`Popover`、`DropdownMenu`、`ContextMenu`、`Combobox`、`CommandPalette`、`HoverCard`。
 - 信息组织组件：`Accordion`、`Collapsible`、`Sheet`、`Breadcrumb`、`Pagination`、`Table`。
 

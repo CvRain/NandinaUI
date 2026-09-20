@@ -1,8 +1,8 @@
 # 选择与导航的键盘模型
 
 本文记录 NandinaUI 中「一组同类条目、同一时刻只有一个当前项」的键盘交互模型。适用组件：
-`RadioGroup`、`Tabs`、`Select` 的弹出列表，以及后续的 `DropdownMenu`、`Combobox`、
-`CommandPalette`（阶段 4）。
+`RadioGroup`、`Tabs`、`Select` 的弹出列表、`ToggleGroup`，以及后续的 `DropdownMenu`、
+`Combobox`、`CommandPalette`（阶段 4）。
 
 ## 为什么需要共享模型
 
@@ -23,11 +23,13 @@
 
 | 模式 | 方向键做什么 | 用它的组件 |
 | --- | --- | --- |
-| `widget_focus` | 同时移动**控件焦点**与选中（焦点环跟着走） | `RadioGroup` |
+| `widget_focus` | 同时移动**控件焦点**与选中（焦点环跟着走） | `RadioGroup`、`ToggleGroup`（只落地焦点） |
 | `selection_only` | 只改**选中值**，焦点留在组容器上 | `Tabs`、`Select` 弹出列表 |
 
 容器按 `Intent::move_widget_focus` 决定是否需要 `set_focus()`。这不是实现细节上的差异，
 而是两种通用的可访问性模式：radiogroup 用前者，tablist 与 combobox 用后者。
+`ToggleGroup` 也走 `widget_focus`（需要 `move_widget_focus`），但只落地焦点、不改选中值 ——
+toggle 的值语义属于成员自己的显式激活（`Enter` / `Space` / 点击）。
 
 ## 键位
 
@@ -61,6 +63,7 @@ typeahead 文本由容器通过 `sync()` 的 `label` 回调提供，通常是成
 | `RadioGroup` | ✅ | ❌ | ❌ | 走 `widget_focus` 模式；`move_focus()` 保留为兼容入口 |
 | `Tabs` | ✅ | ✅ | ✅ | 走 `selection_only` 模式，保持「焦点不离开标签条」的既有行为 |
 | `Select` 弹出列表 | ✅ | ✅ | ✅ | 走 `selection_only` 模式 |
+| `ToggleGroup` | ✅ | ✅ | ✅ | 走 `widget_focus` 模式；方向键只移动焦点，不改变任何成员的 `checked` |
 | `Slider` | ✅ | ✅ | — | 数值调节，不走本模型（无「成员」概念） |
 | `Chip` 可移除 | — | — | — | 只处理 `Enter` / `Space` / `Backspace` / `Delete` |
 
@@ -75,10 +78,14 @@ typeahead 文本由容器通过 `sync()` 的 `label` 回调提供，通常是成
    `on_input` 目前只把方向键转成 `move_focus()`。接入需要给组提供键盘入口，属于增量能力，
    不阻塞任何组件。
 4. **`PageUp` / `PageDown` 未按「可见项数」翻页**：缺少可见项高度信息，当前等价于跳首尾。
+5. **`RovingMovement` 把「移动焦点」和「选中跟随」绑在同一个枚举值上**：`widget_focus` 的
+   文档语义是两者都动，但 `ToggleGroup` 只需要 `Intent::move_widget_focus`、落地时并不改选中。
+   当前靠「容器自己决定怎么落地 Intent」绕过，枚举名与注释仍偏 radiogroup 视角；若要彻底
+   正交化，应把「焦点是否跟随」与「选中是否跟随」拆成两个开关。
 
 ## 相关代码
 
 - `nandina/widget/roving_focus.hpp` / `.cpp` —— 漫游与 typeahead 设施；
 - `nandina/widget/key_codes.hpp` —— 全项目**唯一**的键码常量定义处（此前 7 个文件各抄一份）；
 - `tests/roving_focus_tests.cpp` —— 漫游 / typeahead 契约与边界；
-- `nandina/widget/radio_group.hpp`、`tabs.cpp`、`select.cpp` —— 三个接入方。
+- `nandina/widget/radio_group.hpp`、`tabs.cpp`、`select.cpp`、`toggle_group.cpp` —— 接入方。

@@ -346,6 +346,20 @@ radio_button_tests = executable(
 )
 test('radio-button', radio_button_tests)
 
+toggle_tests = executable(
+    'toggle_tests',
+    files('toggle_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('toggle', toggle_tests)
+
+toggle_group_tests = executable(
+    'toggle_group_tests',
+    files('toggle_group_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('toggle-group', toggle_group_tests)
+
 theme_families_tests = executable(
     'theme_families_tests',
     files('theme_families_tests.cpp'),

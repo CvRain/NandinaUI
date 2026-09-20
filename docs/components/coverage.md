@@ -5,8 +5,8 @@
 
 ## 现状
 
-- 公开组件：**24**（有 `ComponentTraits`、可供应用直接使用）
-- 已有使用文档：**7**
+- 公开组件：**26**（有 `ComponentTraits`、可供应用直接使用）
+- 已有使用文档：**9**
 
 ## 分工约定
 
@@ -58,6 +58,8 @@
 | `Avatar` | — | 中 |
 | `Image` | — | 中 |
 | `RadioButton` | — | 中 |
+| `Toggle` | ✅ [toggle.md](toggle.md) | 高 |
+| `ToggleGroup` | ✅ [toggle_group.md](toggle_group.md) | 高 |
 | `PointerArea` | ✅ [pointer_and_gesture_areas.md](pointer_and_gesture_areas.md) | 中 |
 | `GestureArea` | ✅ [pointer_and_gesture_areas.md](pointer_and_gesture_areas.md) | 中 |
 
