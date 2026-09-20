@@ -62,10 +62,13 @@ namespace nandina::theme
             const ColorAppearance appearance,
             const SliderRecipe& recipe
         ) -> ResolvedSliderStyle {
+            // `radius` 是拇指圆的像素半径，独立于 `thumb.box.radius`（圆角语义）。
+            auto thumb = resolve(system, appearance, recipe.thumb);
+            thumb.radius = resolve_scalar(system, appearance, recipe.thumb_radius);
             return {
                 .inactive_track = resolve(system, appearance, recipe.inactive_track),
                 .active_track = resolve(system, appearance, recipe.active_track),
-                .thumb = resolve(system, appearance, recipe.thumb),
+                .thumb = thumb,
                 .focus = resolve(system, appearance, recipe.focus),
                 .metrics = resolve(system, appearance, recipe.metrics),
             };
@@ -986,7 +989,13 @@ namespace nandina::theme
         if (rule.thumb_fill)
             style.thumb.box.fill = resolve_color(system, appearance, *rule.thumb_fill);
         if (rule.thumb_radius)
-            style.thumb.box.radius = resolve_scalar(system, appearance, *rule.thumb_radius);
+            style.thumb.radius = resolve_scalar(system, appearance, *rule.thumb_radius);
+        if (rule.thumb_border)
+            style.thumb.box.border = resolve_color(system, appearance, *rule.thumb_border);
+        if (rule.thumb_border_width) {
+            style.thumb.box.border_width =
+                resolve_scalar(system, appearance, *rule.thumb_border_width);
+        }
         if (rule.focus_ring_color)
             style.focus.color = resolve_color(system, appearance, *rule.focus_ring_color);
         if (rule.focus_ring_width)
@@ -1677,13 +1686,15 @@ namespace nandina::theme
                     .fill = ThemeColor::token(ColorToken::background),
                     .border = ThemeColor::token(ColorToken::primary),
                     .border_width = ThemeScalar::token(ScalarToken::border_thin),
-                    // Slider 把这个字段当作拇指圆的**像素半径**直接传给 draw_circle，
-                    // 不是 BoxStyle 的圆角半径。这里必须是具体数值：radius_full
-                    // (=9999) 会画出覆盖整窗的圆盘，把先绘制的外壳整块盖住。
-                    // dragging 11 / hovered 10 由规则覆盖。
-                    .radius = ThemeScalar::literal(9.0F),
+                    // 圆角语义字段，Slider 不消费；拇指像素半径见下方的 thumb_radius。
+                    // 这里刻意不再放置半径值，避免被误当成 draw_circle 的半径。
+                    .radius = ThemeScalar::literal(0.0F),
                 },
             },
+            // 拇指圆的像素半径。必须是具体数值：radius_full (=9999) 之类的圆角 token
+            // 会画出覆盖整窗的圆盘（绘制时仍会夹紧到控件半高/半宽兜底）。
+            // dragging 11 / hovered 10 由规则覆盖。
+            .thumb_radius = ThemeScalar::literal(9.0F),
             .focus = FocusRingStyle {
                 .color = ThemeColor::token(ColorToken::ring),
                 .width = ThemeScalar::literal(0.0F), // focused 规则按需开启

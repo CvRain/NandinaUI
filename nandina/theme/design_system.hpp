@@ -70,7 +70,8 @@ namespace nandina::theme
         ThemeScalar thickness;
     };
 
-    /** 轨道上可拖拽的拇指。 */
+    /** 轨道上可拖拽的拇指。`box` 的 `radius` 仍是**圆角半径**语义；Slider 需要的拇指
+     * 像素半径放在 `SliderRecipe::thumb_radius`，两者不要混用。 */
     using ThumbStyle = struct ThumbStyle {
         BoxStyle box;
     };
@@ -143,6 +144,8 @@ namespace nandina::theme
 
     using ResolvedThumbStyle = struct ResolvedThumbStyle {
         ResolvedBoxStyle box;
+        /** 拇指圆的**像素半径**（不是圆角半径）。绘制时按屏幕缩放后再夹紧到控件内。 */
+        float radius = 0.0F;
     };
 
     using ResolvedControlMetrics = struct ResolvedControlMetrics {
@@ -196,6 +199,9 @@ namespace nandina::theme
         TrackStyle inactive_track;
         TrackStyle active_track;
         ThumbStyle thumb;
+        /** 拇指圆的像素半径。刻意独立于 `thumb.box.radius`（后者是圆角半径语义），
+         * 避免主题作者把 `radius_full` 之类的圆角 token 当像素半径填进来。 */
+        ThemeScalar thumb_radius;
         FocusRingStyle focus;
         ControlMetrics metrics;
     };
@@ -431,7 +437,10 @@ namespace nandina::theme
         std::optional<ThemeColor> track_active_fill;
         std::optional<ThemeScalar> track_thickness;
         std::optional<ThemeColor> thumb_fill;
+        /** 拇指圆的像素半径（不是圆角半径）；见 `SliderRecipe::thumb_radius`。 */
         std::optional<ThemeScalar> thumb_radius;
+        std::optional<ThemeColor> thumb_border;
+        std::optional<ThemeScalar> thumb_border_width;
         std::optional<ThemeColor> focus_ring_color;
         std::optional<ThemeScalar> focus_ring_width;
     };

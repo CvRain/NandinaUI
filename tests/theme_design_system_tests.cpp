@@ -37,7 +37,9 @@ namespace
         REQUIRE(actual_oklch.alpha == Catch::Approx(expected_oklch.alpha));
     }
 
-    void require_same_scheme(
+    // 预先定义的整份色板比较助手；当前测试未调用（保留给后续用例），
+    // 显式标注以保持本文件编译无警告。
+    [[maybe_unused]] void require_same_scheme(
         const theme::NanColorScheme& actual,
         const theme::NanColorScheme& expected
     ) {
@@ -667,7 +669,7 @@ TEST_CASE("Slider set_override patches thumb radius", "[theme][override]") {
     theme::SliderRecipeRule rule;
     rule.thumb_radius = theme::ThemeScalar::literal(12.0F);
     slider->set_override(std::move(rule));
-    REQUIRE(slider->resolved_style().thumb.box.radius == Catch::Approx(12.0F));
+    REQUIRE(slider->resolved_style().thumb.radius == Catch::Approx(12.0F));
 }
 
 TEST_CASE("detached widget resolves against its fallback design system", "[theme][override]") {

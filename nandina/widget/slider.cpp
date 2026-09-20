@@ -377,15 +377,13 @@ namespace nandina::widget
         }
         const float center_y = world.get_top() + track_inset
             + std::max(0.0F, world.get_height() - track_inset) * 0.5F;
-        // 拇指半径必须夹在控件内：主题可能把 thumb.box.radius 解析成 radius_full
-        // （"胶囊" 语义圆角，默认为 9999）。这个字段在本控件里是**像素半径**而不是
-        // 圆角半径，不夹紧就会画出一个覆盖整窗的圆盘，把先绘制的外壳整块盖住。
+        // 拇指半径是 style.thumb.radius（**像素半径**，配方字段 thumb_radius），不是
+        // BoxStyle 的圆角半径。仍夹紧到控件半高/半宽兜底：主题可能把它填成
+        // radius_full(9999)，不夹紧就会画出覆盖整窗的圆盘，把先绘制的外壳整块盖住。
         const float max_thumb_radius =
             std::min(world.get_width(), world.get_height()) * 0.5F;
-        const float thumb_radius = std::min(
-            context.logical_to_screen(style.thumb.box.radius),
-            max_thumb_radius
-        );
+        const float thumb_radius =
+            std::min(context.logical_to_screen(style.thumb.radius), max_thumb_radius);
         const float track_height = context.logical_to_screen(style.inactive_track.thickness);
         const float left = world.get_left() + thumb_radius;
         const float right = world.get_right() - thumb_radius;
@@ -405,11 +403,31 @@ namespace nandina::widget
         );
         primitives::BoxPainter::paint_fill(context, inactive, style.inactive_track.box, opacity);
         primitives::BoxPainter::paint_fill(context, active, style.active_track.box, opacity);
+        const auto thumb_fill = style.thumb.box.fill;
         context.device().draw_circle(
             foundation::NanPoint(thumb_x, center_y),
             thumb_radius,
-            style.thumb.box.fill.with_alpha(style.thumb.box.fill.alpha() * opacity)
+            thumb_fill.with_alpha(thumb_fill.alpha() * opacity)
         );
+        // shadcn 风格拇指 = 背景填充 + primary 描边环。环用「半边长 == 半径」的正方形
+        // 圆角描边表达：该正方形在圆角半径等于半边长时就是一个圆。描边落在半径内侧，
+        // 因此不会越出上面已夹紧的拇指范围；单次设备调用，不新增图元。
+        const float thumb_border_width =
+            context.logical_to_screen(style.thumb.box.border_width);
+        const auto thumb_border = style.thumb.box.border;
+        if (thumb_border_width > 0.0F && thumb_border.alpha() > 0.0F) {
+            context.device().draw_rounded_rect_outline(
+                foundation::NanRect::from_xywh(
+                    thumb_x - thumb_radius,
+                    center_y - thumb_radius,
+                    thumb_radius * 2.0F,
+                    thumb_radius * 2.0F
+                ),
+                thumb_radius,
+                thumb_border_width,
+                thumb_border.with_alpha(thumb_border.alpha() * opacity)
+            );
+        }
         if (focused_ && !disabled_ && style.focus.width > 0.0F) {
             primitives::FocusRingPainter::paint(context, world, style.focus, opacity);
         }
@@ -506,7 +524,7 @@ namespace nandina::widget
         // 否则可拖动范围会算成 0，点击直接跳到最小值。
         const float max_thumb_radius =
             std::min(size().get_width(), size().get_height()) * 0.5F;
-        const float thumb_radius = std::min(style.thumb.box.radius, max_thumb_radius);
+        const float thumb_radius = std::min(style.thumb.radius, max_thumb_radius);
         const float width = std::max(0.0F, size().get_width() - thumb_radius * 2.0F);
         const float current = width <= foundation::nan_epsilon
             ? minimum_

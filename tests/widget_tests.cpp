@@ -2025,7 +2025,7 @@ TEST_CASE("scaled component paint keeps logical layout unchanged", "[widget][ren
     const auto slider_style = slider.resolved_style();
     REQUIRE(slider.measured_size() == slider_size);
     REQUIRE(slider_device.circle_radius
-            == Catch::Approx(slider_style.thumb.box.radius * scale));
+            == Catch::Approx(slider_style.thumb.radius * scale));
 }
 
 TEST_CASE("scaled button paint does not feed world width back into text layout", "[widget][render][scale]") {
