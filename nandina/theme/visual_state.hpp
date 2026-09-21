@@ -53,6 +53,34 @@ namespace nandina::theme
             == static_cast<unsigned char>(state);
     }
 
+    /**
+     * TextArea 交互状态（位掩码：focused / disabled 可组合）。
+     *
+     * read-only 不进状态枚举：它由 `TextAreaRecipeRule::read_only` 选择器单独表达，
+     * 与视觉状态位正交（只读控件仍可获得焦点）。
+     */
+    enum class TextAreaVisualState : unsigned char {
+        normal = 0,
+        focused = 1 << 0,
+        disabled = 1 << 1,
+    };
+
+    [[nodiscard]] constexpr auto operator|(TextAreaVisualState lhs, TextAreaVisualState rhs)
+        -> TextAreaVisualState {
+        return static_cast<TextAreaVisualState>(
+            static_cast<unsigned char>(lhs) | static_cast<unsigned char>(rhs)
+        );
+    }
+
+    /** 判断位掩码状态是否包含指定状态位。 */
+    [[nodiscard]] constexpr auto
+    has_text_area_state(TextAreaVisualState value, TextAreaVisualState state) noexcept -> bool {
+        if (state == TextAreaVisualState::normal)
+            return value == state;
+        return (static_cast<unsigned char>(value) & static_cast<unsigned char>(state))
+            == static_cast<unsigned char>(state);
+    }
+
     /** Button 语义色家族。 */
     enum class ButtonTone: std::uint8_t {
         primary,
@@ -166,6 +194,29 @@ namespace nandina::theme
      */
     enum class ToggleGroupVisualState: std::uint8_t {
         normal,
+    };
+
+    /**
+     * ButtonGroup 交互状态（组只做排列与间距协调，自身不接受输入，仅 normal）。
+     *
+     * 与 ToggleGroup 同款：状态枚举先占位，规则解析器已经按 state 过滤。
+     */
+    enum class ButtonGroupVisualState: std::uint8_t {
+        normal,
+    };
+
+    /**
+     * Breadcrumb 交互状态（容器只做排布与绘制，交互由内部链接条目承载，仅 normal）。
+     */
+    enum class BreadcrumbVisualState: std::uint8_t {
+        normal,
+    };
+
+    /** Pagination 交互状态（整条分页器可聚焦，页码槽位的 hover 由组件按位置表达）。 */
+    enum class PaginationVisualState: std::uint8_t {
+        normal,
+        focused,
+        disabled,
     };
 
     /** Tabs 交互状态。 */

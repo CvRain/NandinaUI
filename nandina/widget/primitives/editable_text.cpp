@@ -256,14 +256,14 @@ namespace nandina::widget::primitives
     }
 
     void EditableText::draw_at(render::DrawContext& ctx, foundation::NanPoint position) {
+        const auto& layout = text_.layout_result();
         if (has_selection()) {
-            const auto& layout = text_.layout_result();
-            if (!layout.lines.empty()) {
-                const auto& line = layout.lines.front();
-                const auto lower = std::min(selection_.anchor, selection_.focus);
-                const auto upper = std::max(selection_.anchor, selection_.focus);
-                const auto color =
-                    selection_color_.with_alpha(selection_color_.alpha() * ctx.opacity());
+            const auto lower = std::min(selection_.anchor, selection_.focus);
+            const auto upper = std::max(selection_.anchor, selection_.focus);
+            const auto color =
+                selection_color_.with_alpha(selection_color_.alpha() * ctx.opacity());
+            float line_top = 0.0F;
+            for (const auto& line: layout.lines) {
                 for (std::size_t index = 1; index < line.caret_stops.size(); ++index) {
                     const auto& left = line.caret_stops[index - 1];
                     const auto& right = line.caret_stops[index];
@@ -275,26 +275,31 @@ namespace nandina::widget::primitives
                     ctx.device().draw_rect(
                         foundation::NanRect::from_xywh(
                             position.get_x() + ctx.logical_to_screen(std::min(left.x, right.x)),
-                            position.get_y(),
+                            position.get_y() + ctx.logical_to_screen(line_top),
                             ctx.logical_to_screen(std::abs(right.x - left.x)),
                             ctx.logical_to_screen(line.size.get_height())
                         ),
                         color
                     );
                 }
+                line_top += line.size.get_height();
             }
         }
         text_.draw_at(ctx, position);
 
-        if (!focused_) {
+        if (!focused_ || layout.lines.empty()) {
             return;
         }
 
+        const auto geometry = caret_geometry();
         const auto color = text_.color().with_alpha(text_.color().alpha() * ctx.opacity());
-        const float x = position.get_x() + ctx.logical_to_screen(caret_x());
+        const float x = position.get_x() + ctx.logical_to_screen(geometry.x);
         ctx.device().draw_line(
-            foundation::NanPoint(x, position.get_y()),
-            foundation::NanPoint(x, position.get_y() + ctx.logical_to_screen(text_.height())),
+            foundation::NanPoint(x, position.get_y() + ctx.logical_to_screen(geometry.top)),
+            foundation::NanPoint(
+                x,
+                position.get_y() + ctx.logical_to_screen(geometry.top + geometry.height)
+            ),
             ctx.logical_to_screen(caret_width),
             color
         );
@@ -385,6 +390,12 @@ namespace nandina::widget::primitives
                     case keys::right:
                         move_caret_visual(1, extend);
                         break;
+                    case keys::up:
+                        move_caret_vertical(-1, extend);
+                        break;
+                    case keys::down:
+                        move_caret_vertical(1, extend);
+                        break;
                     case keys::home:
                         move_caret_to_visual_edge(false, extend);
                         break;
@@ -474,7 +485,7 @@ namespace nandina::widget::primitives
     }
 
     void EditableText::insert_text(std::string_view text) {
-        if (text.empty()) {
+        if (read_only_ || text.empty()) {
             return;
         }
         record_undo();
@@ -551,52 +562,164 @@ namespace nandina::widget::primitives
         emit_change();
     }
 
+    auto EditableText::line_stop_for(const std::size_t offset, const TextAffinity affinity) const
+        -> LineStop {
+        const auto& layout = text_.layout_result();
+        if (layout.lines.empty()) {
+            return {};
+        }
+        for (std::size_t index = 0; index < layout.lines.size(); ++index) {
+            const auto& line = layout.lines[index];
+            const auto end = line.text_offset + line.text_length;
+            if (offset < line.text_offset) {
+                const auto previous = index == 0 ? 0 : index - 1;
+                const auto& source = layout.lines[previous];
+                return {.line_index = previous, .stop = source.caret_for_source(offset, affinity)};
+            }
+            if (offset > end) {
+                continue;
+            }
+            // 软换行边界上同一个偏移同时属于前一行的行尾与后一行的行首：
+            // downstream 归属后一行行首，upstream 归属前一行行尾。
+            if (offset == end && affinity == TextAffinity::downstream
+                && index + 1 < layout.lines.size()
+                && layout.lines[index + 1].text_offset == end)
+            {
+                return {
+                    .line_index = index + 1,
+                    .stop = layout.lines[index + 1].caret_for_source(offset, affinity),
+                };
+            }
+            return {.line_index = index, .stop = line.caret_for_source(offset, affinity)};
+        }
+        const auto last = layout.lines.size() - 1;
+        return {
+            .line_index = last,
+            .stop = layout.lines[last].caret_for_source(offset, affinity),
+        };
+    }
+
+    auto EditableText::caret_geometry() const -> TextCaretGeometry {
+        const auto& layout = text_.layout_result();
+        if (layout.lines.empty()) {
+            return {};
+        }
+        const auto located = line_stop_for(caret_, caret_affinity_);
+        float top = 0.0F;
+        for (std::size_t index = 0; index < located.line_index; ++index) {
+            top += layout.lines[index].size.get_height();
+        }
+        return {
+            .line_index = located.line_index,
+            .x = located.stop.x,
+            .top = top,
+            .height = layout.lines[located.line_index].size.get_height(),
+        };
+    }
+
     void EditableText::move_caret_visual(const int direction, const bool extend) {
         const auto& layout = text_.layout_result();
-        if (layout.lines.empty() || layout.lines.front().caret_stops.empty() || direction == 0) {
+        if (layout.lines.empty() || direction == 0) {
             return;
         }
-        const auto& line = layout.lines.front();
-        const auto current = line.caret_for_source(caret_, caret_affinity_);
+        const auto current = line_stop_for(caret_, caret_affinity_);
+        const auto& line = layout.lines[current.line_index];
+        if (line.caret_stops.empty()) {
+            return;
+        }
+
+        if (has_selection() && !extend) {
+            const auto anchor = line_stop_for(selection_.anchor, selection_.anchor_affinity);
+            const auto focus = line_stop_for(selection_.focus, selection_.focus_affinity);
+            const auto visual_less = [](const LineStop& lhs, const LineStop& rhs) {
+                if (lhs.line_index != rhs.line_index) {
+                    return lhs.line_index < rhs.line_index;
+                }
+                return lhs.stop.x < rhs.stop.x;
+            };
+            const bool anchor_first = visual_less(anchor, focus);
+            const LineStop& target =
+                direction < 0 ? (anchor_first ? anchor : focus) : (anchor_first ? focus : anchor);
+            update_selection_focus(target.stop, false);
+            return;
+        }
+
         auto current_index = std::size_t {0};
         float nearest = std::numeric_limits<float>::infinity();
         for (std::size_t index = 0; index < line.caret_stops.size(); ++index) {
             const auto& stop = line.caret_stops[index];
-            if (stop.source_offset != current.source_offset) {
+            if (stop.source_offset != current.stop.source_offset) {
                 continue;
             }
-            const float distance = std::abs(stop.x - current.x);
+            const float distance = std::abs(stop.x - current.stop.x);
             if (distance < nearest) {
                 current_index = index;
                 nearest = distance;
             }
         }
-        if (has_selection() && !extend) {
-            const auto anchor =
-                line.caret_for_source(selection_.anchor, selection_.anchor_affinity);
-            const auto focus = line.caret_for_source(selection_.focus, selection_.focus_affinity);
-            update_selection_focus(
-                direction < 0 ? (anchor.x <= focus.x ? anchor : focus)
-                              : (anchor.x >= focus.x ? anchor : focus),
-                false
-            );
+
+        if (direction < 0) {
+            if (current_index > 0) {
+                update_selection_focus(line.caret_stops[current_index - 1], extend);
+                return;
+            }
+            if (current.line_index == 0) {
+                return;
+            }
+            const auto& previous = layout.lines[current.line_index - 1];
+            if (!previous.caret_stops.empty()) {
+                update_selection_focus(previous.caret_stops.back(), extend);
+            }
             return;
         }
-        const auto target_index = direction < 0
-            ? (current_index == 0 ? 0 : current_index - 1)
-            : std::min(current_index + 1, line.caret_stops.size() - 1);
-        const auto& target = line.caret_stops[target_index];
-        update_selection_focus(target, extend);
+
+        if (current_index + 1 < line.caret_stops.size()) {
+            update_selection_focus(line.caret_stops[current_index + 1], extend);
+            return;
+        }
+        if (current.line_index + 1 >= layout.lines.size()) {
+            return;
+        }
+        const auto& next = layout.lines[current.line_index + 1];
+        if (!next.caret_stops.empty()) {
+            update_selection_focus(next.caret_stops.front(), extend);
+        }
+    }
+
+    void EditableText::move_caret_vertical(const int direction, const bool extend) {
+        const auto& layout = text_.layout_result();
+        if (layout.lines.empty() || direction == 0) {
+            return;
+        }
+        const auto current = line_stop_for(caret_, caret_affinity_);
+        if (direction < 0) {
+            if (current.line_index == 0) {
+                return;
+            }
+        }
+        else if (current.line_index + 1 >= layout.lines.size()) {
+            return;
+        }
+        const auto target_index =
+            direction < 0 ? current.line_index - 1 : current.line_index + 1;
+        const auto& target_line = layout.lines[target_index];
+        if (target_line.caret_stops.empty()) {
+            return;
+        }
+        update_selection_focus(target_line.caret_for_x(current.stop.x), extend);
     }
 
     void EditableText::move_caret_to_visual_edge(const bool end, const bool extend) {
         const auto& layout = text_.layout_result();
-        if (layout.lines.empty() || layout.lines.front().caret_stops.empty()) {
+        if (layout.lines.empty()) {
             return;
         }
-        const auto& stops = layout.lines.front().caret_stops;
-        const auto& target = end ? stops.back() : stops.front();
-        update_selection_focus(target, extend);
+        const auto current = line_stop_for(caret_, caret_affinity_);
+        const auto& stops = layout.lines[current.line_index].caret_stops;
+        if (stops.empty()) {
+            return;
+        }
+        update_selection_focus(end ? stops.back() : stops.front(), extend);
     }
 
     void EditableText::update_selection_focus(const TextCaretStop stop, const bool extend) {
@@ -621,14 +744,6 @@ namespace nandina::widget::primitives
         if (on_change_) {
             on_change_(value_);
         }
-    }
-
-    auto EditableText::caret_x() const -> float {
-        const auto& layout = text_.layout_result();
-        if (layout.lines.empty()) {
-            return 0.0F;
-        }
-        return layout.lines.front().caret_for_source(caret_, caret_affinity_).x;
     }
 
 } // namespace nandina::widget::primitives

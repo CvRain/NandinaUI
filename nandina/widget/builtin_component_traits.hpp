@@ -21,6 +21,9 @@
 #include "spinner.hpp"
 #include "skeleton.hpp"
 #include "empty_state.hpp"
+#include "breadcrumb.hpp"
+#include "button_group.hpp"
+#include "pagination.hpp"
 #include "pointer_area.hpp"
 #include "gesture_area.hpp"
 #include "radio_button.hpp"
@@ -32,6 +35,7 @@
 #include "toggle.hpp"
 #include "toggle_group.hpp"
 #include "text_field.hpp"
+#include "text_area.hpp"
 #include "tooltip.hpp"
 
 namespace nandina::widget
@@ -209,6 +213,36 @@ namespace nandina::widget
             const auto field = result.build();
             ui.bind(field, &TextField::set_value, value);
             ui.connect(field->value_changed(), [&value](const std::string_view current) {
+                if (value.peek() != current) {
+                    value.set(std::string(current));
+                }
+            });
+            return result;
+        }
+    };
+
+    template<>
+    struct ComponentTraits<TextArea> {
+        [[nodiscard]] static auto make(
+            const BuildContext& ui,
+            std::string value,
+            std::string placeholder
+        ) -> authoring::NodeBuilder<TextArea> {
+            return authoring::make<TextArea>(std::move(value), ui.theme())
+                .configure([placeholder = std::move(placeholder)](TextArea& area) mutable {
+                    area.set_placeholder(std::move(placeholder));
+                });
+        }
+
+        [[nodiscard]] static auto make(
+            const BuildContext& ui,
+            reactive::Signal<std::string>& value,
+            std::string placeholder
+        ) -> authoring::NodeBuilder<TextArea> {
+            auto result = make(ui, std::string(value.get()), std::move(placeholder));
+            const auto area = result.build();
+            ui.bind(area, &TextArea::set_value, value);
+            ui.connect(area->value_changed(), [&value](const std::string_view current) {
                 if (value.peek() != current) {
                     value.set(std::string(current));
                 }
@@ -506,6 +540,59 @@ namespace nandina::widget
                         );
                     }
                 );
+        }
+    };
+    /**
+     * ButtonGroup 是场景节点，走 NodeBuilder 正常路径；方向复用 `LayoutAxis`。
+     */
+    template<>
+    struct ComponentTraits<ButtonGroup> {
+        [[nodiscard]] static auto make(
+            const BuildContext& ui,
+            const LayoutAxis axis = LayoutAxis::horizontal
+        ) -> authoring::NodeBuilder<ButtonGroup> {
+            return authoring::make<ButtonGroup>(axis, ui.theme());
+        }
+    };
+
+    /** Breadcrumb 是场景节点；条目在构建后由调用方用 `add_item()` 追加。 */
+    template<>
+    struct ComponentTraits<Breadcrumb> {
+        [[nodiscard]] static auto make(const BuildContext& ui)
+            -> authoring::NodeBuilder<Breadcrumb> {
+            return authoring::make<Breadcrumb>(ui.theme());
+        }
+    };
+
+    /** Pagination 是场景节点；页码槽位由 page_count / current_page 派生。 */
+    template<>
+    struct ComponentTraits<Pagination> {
+        [[nodiscard]] static auto make(
+            const BuildContext& ui,
+            const int page_count = 0,
+            const int current_page = 1
+        ) -> authoring::NodeBuilder<Pagination> {
+            return authoring::make<Pagination>(ui.theme())
+                .configure([page_count, current_page](Pagination& pagination) {
+                    pagination.set_page_count(page_count);
+                    pagination.set_current_page(current_page);
+                });
+        }
+
+        [[nodiscard]] static auto make(
+            const BuildContext& ui,
+            reactive::Signal<int>& current_page,
+            const int page_count
+        ) -> authoring::NodeBuilder<Pagination> {
+            auto result = make(ui, page_count, current_page.get());
+            const auto control = result.build();
+            ui.bind(control, &Pagination::set_current_page, current_page);
+            ui.connect(control->page_changed(), [&current_page](const int page) {
+                if (current_page.peek() != page) {
+                    current_page.set(page);
+                }
+            });
+            return result;
         }
     };
 }

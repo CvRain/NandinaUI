@@ -216,6 +216,29 @@ namespace nandina::theme
         ControlMetrics metrics;
     };
 
+    /**
+     * TextArea 度量：可见行数 / 行高 / 内边距。
+     *
+     * 不复用共享的 `ControlMetrics`：后者没有 `padding_y`，而多行输入框的垂直内边距
+     * 与默认高度都由行数 × 行高决定（同 AlertMetrics 的取舍）。
+     */
+    using TextAreaMetrics = struct TextAreaMetrics {
+        ThemeScalar rows;        // 默认可见行数（set_rows 的实例覆盖优先）
+        ThemeScalar line_height; // 默认高度用的每行逻辑高度
+        ThemeScalar padding_x;   // 水平内边距
+        ThemeScalar padding_y;   // 垂直内边距
+    };
+
+    /** TextArea 配方：容器 + 值 / 占位 / 选区文本 + 焦点环 + 多行度量。 */
+    using TextAreaRecipe = struct TextAreaRecipe {
+        BoxStyle container;
+        TypeStyle value;
+        TypeStyle placeholder;
+        ThemeColor selection;
+        FocusRingStyle focus;
+        TextAreaMetrics metrics;
+    };
+
     /** Switch 配方：轨道 + 拇指 + 文本 + 焦点环 + 度量。 */
     using SwitchRecipe = struct SwitchRecipe {
         BoxStyle track;
@@ -374,6 +397,42 @@ namespace nandina::theme
         ControlMetrics metrics; // gap、padding_x、min_height
     };
 
+    /**
+     * ButtonGroup 配方：容器 + 度量（gap = 成员间距、padding_x = 组内边距）。
+     *
+     * 组是真实场景节点（子按钮经 `add_button()` 挂载），容器默认完全透明：成员之间的
+     * 节奏由 gap 表达。刻意没有 "attached"（共边）字段——当前配方模型无法表达按子项
+     * 位置覆盖圆角 / 抑制相邻边框，理由见 `widget/button_group.hpp` 的类注释。
+     */
+    using ButtonGroupRecipe = struct ButtonGroupRecipe {
+        BoxStyle container;
+        ControlMetrics metrics; // gap、padding_x、min_height
+    };
+
+    /** Breadcrumb 配方：容器 + 链接 / 当前页排版 + 分隔符 + 链接焦点环 + 度量。 */
+    using BreadcrumbRecipe = struct BreadcrumbRecipe {
+        BoxStyle container;
+        TypeStyle link;            // 可点击条目
+        ThemeColor link_hover;     // hover / pressed 文字色
+        TypeStyle current;         // 当前页 / 无回调条目
+        ThemeColor separator;      // 分隔符字形颜色
+        FocusRingStyle link_focus; // 链接条目焦点环
+        ControlMetrics metrics;    // gap（条目与分隔符间距）、padding_x、min_height
+    };
+
+    /** Pagination 配方：容器 + 槽位面（普通 / hover 叠加 / 当前页）+ 文本 + 焦点环 + 度量。 */
+    using PaginationRecipe = struct PaginationRecipe {
+        BoxStyle container;     // 整条容器（透明默认）
+        BoxStyle item;          // 普通页码槽位面（透明默认）
+        ThemeColor item_hover;  // hover 叠加色（按 alpha 覆盖在槽位面上）
+        BoxStyle item_active;   // 当前页槽位面
+        TypeStyle label;        // 普通页码 / 省略号 / 上一页·下一页文本
+        TypeStyle label_active; // 当前页文本
+        ThemeColor ellipsis;    // 省略号颜色
+        FocusRingStyle focus;   // 聚焦槽位的焦点环
+        ControlMetrics metrics; // box_size（槽位边长）、gap、padding_x、min_height
+    };
+
     /** Tabs 配方：容器（背景/边框）+ 选中 pill + 下划线 + 标签 + 焦点环 + 度量。 */
     using TabsRecipe = struct TabsRecipe {
         BoxStyle container;           // 列表容器背景/边框/圆角（透明默认 = 无背景边框）
@@ -517,6 +576,30 @@ namespace nandina::theme
         std::optional<ThemeScalar> font_size;
         std::optional<ThemeScalar> metrics_height;
         std::optional<ThemeScalar> metrics_padding_x;
+    };
+
+    /**
+     * TextArea 规则：状态位掩码 + read_only 选择器，覆盖容器 / 文本 / 选区 / 焦点环 / 度量。
+     *
+     * `read_only` 与 `state` 正交：`nullopt` 表示任意读写状态，`true` 只命中只读实例。
+     */
+    using TextAreaRecipeRule = struct TextAreaRecipeRule {
+        std::optional<TextAreaVisualState> state;
+        std::optional<bool> read_only;
+        std::optional<ThemeColor> container_fill;
+        std::optional<ThemeColor> container_border;
+        std::optional<ThemeScalar> container_border_width;
+        std::optional<ThemeScalar> container_radius;
+        std::optional<ThemeColor> value_color;
+        std::optional<ThemeColor> placeholder_color;
+        std::optional<ThemeColor> selection_color;
+        std::optional<ThemeColor> focus_ring_color;
+        std::optional<ThemeScalar> focus_ring_width;
+        std::optional<ThemeScalar> font_size;
+        std::optional<ThemeScalar> metrics_rows;
+        std::optional<ThemeScalar> metrics_line_height;
+        std::optional<ThemeScalar> metrics_padding_x;
+        std::optional<ThemeScalar> metrics_padding_y;
     };
 
     /** Switch 规则：支持 checked 布尔选择器 + 状态选择器，覆盖轨道 / 拇指 / 文本 / 焦点环 / 度量。 */
@@ -698,6 +781,67 @@ namespace nandina::theme
         std::optional<ThemeScalar> metrics_min_height;
     };
 
+    /** ButtonGroup 规则：支持状态选择器，覆盖容器 / 度量字段。 */
+    using ButtonGroupRecipeRule = struct ButtonGroupRecipeRule {
+        std::optional<ButtonGroupVisualState> state; // nullopt = 任意状态
+        std::optional<ThemeColor> container_fill;
+        std::optional<ThemeColor> container_border;
+        std::optional<ThemeScalar> container_border_width;
+        std::optional<ThemeScalar> container_radius;
+        std::optional<ThemeScalar> metrics_gap;
+        std::optional<ThemeScalar> metrics_padding_x;
+        std::optional<ThemeScalar> metrics_min_height;
+    };
+
+    /** Breadcrumb 规则：支持状态选择器，覆盖容器 / 链接 / 当前页 / 分隔符 / 焦点环 / 度量字段。 */
+    using BreadcrumbRecipeRule = struct BreadcrumbRecipeRule {
+        std::optional<BreadcrumbVisualState> state; // nullopt = 任意状态
+        std::optional<ThemeColor> container_fill;
+        std::optional<ThemeColor> container_border;
+        std::optional<ThemeScalar> container_border_width;
+        std::optional<ThemeScalar> container_radius;
+        std::optional<ThemeColor> link_color;
+        std::optional<ThemeScalar> link_font_size;
+        std::optional<ThemeColor> link_hover_color;
+        std::optional<ThemeColor> current_color;
+        std::optional<ThemeScalar> current_font_size;
+        std::optional<ThemeColor> separator_color;
+        std::optional<ThemeColor> link_focus_ring_color;
+        std::optional<ThemeScalar> link_focus_ring_width;
+        std::optional<ThemeScalar> metrics_gap;
+        std::optional<ThemeScalar> metrics_padding_x;
+        std::optional<ThemeScalar> metrics_min_height;
+    };
+
+    /** Pagination 规则：支持状态选择器，覆盖容器 / 槽位面 / 文本 / 省略号 / 焦点环 / 度量字段。 */
+    using PaginationRecipeRule = struct PaginationRecipeRule {
+        std::optional<PaginationVisualState> state; // nullopt = 任意状态
+        std::optional<ThemeColor> container_fill;
+        std::optional<ThemeColor> container_border;
+        std::optional<ThemeScalar> container_border_width;
+        std::optional<ThemeScalar> container_radius;
+        std::optional<ThemeColor> item_fill;
+        std::optional<ThemeColor> item_border;
+        std::optional<ThemeScalar> item_border_width;
+        std::optional<ThemeScalar> item_radius;
+        std::optional<ThemeColor> item_hover;
+        std::optional<ThemeColor> item_active_fill;
+        std::optional<ThemeColor> item_active_border;
+        std::optional<ThemeScalar> item_active_border_width;
+        std::optional<ThemeScalar> item_active_radius;
+        std::optional<ThemeColor> label_color;
+        std::optional<ThemeScalar> label_font_size;
+        std::optional<ThemeColor> label_active_color;
+        std::optional<ThemeScalar> label_active_font_size;
+        std::optional<ThemeColor> ellipsis_color;
+        std::optional<ThemeColor> focus_ring_color;
+        std::optional<ThemeScalar> focus_ring_width;
+        std::optional<ThemeScalar> metrics_box_size;
+        std::optional<ThemeScalar> metrics_gap;
+        std::optional<ThemeScalar> metrics_padding_x;
+        std::optional<ThemeScalar> metrics_min_height;
+    };
+
     /** Tabs 规则：支持状态选择器，覆盖容器/选中 pill/标签/指示条/焦点环/度量字段。 */
     using TabsRecipeRule = struct TabsRecipeRule {
         std::optional<TabsVisualState> state; // nullopt = 任意
@@ -855,6 +999,23 @@ namespace nandina::theme
         ResolvedControlMetrics metrics;
     };
 
+    /** 解析后的 TextArea 度量。 */
+    using ResolvedTextAreaMetrics = struct ResolvedTextAreaMetrics {
+        float rows = 0.0F;
+        float line_height = 0.0F;
+        float padding_x = 0.0F;
+        float padding_y = 0.0F;
+    };
+
+    using ResolvedTextAreaStyle = struct ResolvedTextAreaStyle {
+        ResolvedBoxStyle container;
+        ResolvedTypeStyle value;
+        ResolvedTypeStyle placeholder;
+        NanColor selection;
+        ResolvedFocusRing focus;
+        ResolvedTextAreaMetrics metrics;
+    };
+
     using ResolvedSwitchStyle = struct ResolvedSwitchStyle {
         ResolvedBoxStyle track;
         ResolvedBoxStyle thumb;
@@ -964,6 +1125,33 @@ namespace nandina::theme
         ResolvedControlMetrics metrics;
     };
 
+    using ResolvedButtonGroupStyle = struct ResolvedButtonGroupStyle {
+        ResolvedBoxStyle container;
+        ResolvedControlMetrics metrics;
+    };
+
+    using ResolvedBreadcrumbStyle = struct ResolvedBreadcrumbStyle {
+        ResolvedBoxStyle container;
+        ResolvedTypeStyle link;
+        NanColor link_hover;
+        ResolvedTypeStyle current;
+        NanColor separator;
+        ResolvedFocusRing link_focus;
+        ResolvedControlMetrics metrics;
+    };
+
+    using ResolvedPaginationStyle = struct ResolvedPaginationStyle {
+        ResolvedBoxStyle container;
+        ResolvedBoxStyle item;
+        NanColor item_hover;
+        ResolvedBoxStyle item_active;
+        ResolvedTypeStyle label;
+        ResolvedTypeStyle label_active;
+        NanColor ellipsis;
+        ResolvedFocusRing focus;
+        ResolvedControlMetrics metrics;
+    };
+
     using ResolvedTabsStyle = struct ResolvedTabsStyle {
         ResolvedBoxStyle container;
         ResolvedBoxStyle selected_background;
@@ -1057,6 +1245,11 @@ namespace nandina::theme
         std::vector<TextFieldRecipeRule> rules;
     };
 
+    using TextAreaRecipes = struct TextAreaRecipes {
+        TextAreaRecipe base;
+        std::vector<TextAreaRecipeRule> rules;
+    };
+
     using SwitchRecipes = struct SwitchRecipes {
         SwitchRecipe base;
         std::vector<SwitchRecipeRule> rules;
@@ -1112,6 +1305,21 @@ namespace nandina::theme
         std::vector<ToggleGroupRecipeRule> rules;
     };
 
+    using ButtonGroupRecipes = struct ButtonGroupRecipes {
+        ButtonGroupRecipe base;
+        std::vector<ButtonGroupRecipeRule> rules;
+    };
+
+    using BreadcrumbRecipes = struct BreadcrumbRecipes {
+        BreadcrumbRecipe base;
+        std::vector<BreadcrumbRecipeRule> rules;
+    };
+
+    using PaginationRecipes = struct PaginationRecipes {
+        PaginationRecipe base;
+        std::vector<PaginationRecipeRule> rules;
+    };
+
     using TabsRecipes = struct TabsRecipes {
         TabsRecipe base;
         std::vector<TabsRecipeRule> rules;
@@ -1152,6 +1360,7 @@ namespace nandina::theme
         CheckboxRecipes checkbox;
         SliderRecipes slider;
         TextFieldRecipes text_field;
+        TextAreaRecipes text_area;
         SwitchRecipes switch_component;
         BadgeRecipes badge;
         CardRecipes card;
@@ -1163,6 +1372,9 @@ namespace nandina::theme
         RadioButtonRecipes radio_button;
         ToggleRecipes toggle;
         ToggleGroupRecipes toggle_group;
+        ButtonGroupRecipes button_group;
+        BreadcrumbRecipes breadcrumb;
+        PaginationRecipes pagination;
         TabsRecipes tabs;
         TooltipRecipes tooltip;
         SelectRecipes select;
@@ -1405,6 +1617,13 @@ namespace nandina::theme
         TextFieldVisualState state
     ) -> ResolvedTextFieldStyle;
 
+    [[nodiscard]] auto resolve_text_area(
+        const DesignSystem& system,
+        ColorAppearance appearance,
+        TextAreaVisualState state,
+        bool read_only
+    ) -> ResolvedTextAreaStyle;
+
     [[nodiscard]] auto resolve_switch(
         const DesignSystem& system,
         ColorAppearance appearance,
@@ -1474,6 +1693,24 @@ namespace nandina::theme
         ColorAppearance appearance,
         ToggleGroupVisualState state
     ) -> ResolvedToggleGroupStyle;
+
+    [[nodiscard]] auto resolve_button_group(
+        const DesignSystem& system,
+        ColorAppearance appearance,
+        ButtonGroupVisualState state
+    ) -> ResolvedButtonGroupStyle;
+
+    [[nodiscard]] auto resolve_breadcrumb(
+        const DesignSystem& system,
+        ColorAppearance appearance,
+        BreadcrumbVisualState state
+    ) -> ResolvedBreadcrumbStyle;
+
+    [[nodiscard]] auto resolve_pagination(
+        const DesignSystem& system,
+        ColorAppearance appearance,
+        PaginationVisualState state
+    ) -> ResolvedPaginationStyle;
 
     [[nodiscard]] auto resolve_tabs(
         const DesignSystem& system,
@@ -1548,6 +1785,13 @@ namespace nandina::theme
         ColorAppearance appearance,
         ResolvedTextFieldStyle& style,
         const TextFieldRecipeRule& rule
+    );
+
+    void apply_rule(
+        const DesignSystem& system,
+        ColorAppearance appearance,
+        ResolvedTextAreaStyle& style,
+        const TextAreaRecipeRule& rule
     );
 
     void apply_rule(
@@ -1629,6 +1873,27 @@ namespace nandina::theme
         const ToggleGroupRecipeRule& rule
     );
 
+    void apply_rule(
+        const DesignSystem& system,
+        ColorAppearance appearance,
+        ResolvedButtonGroupStyle& style,
+        const ButtonGroupRecipeRule& rule
+    );
+
+    void apply_rule(
+        const DesignSystem& system,
+        ColorAppearance appearance,
+        ResolvedBreadcrumbStyle& style,
+        const BreadcrumbRecipeRule& rule
+    );
+
+    void apply_rule(
+        const DesignSystem& system,
+        ColorAppearance appearance,
+        ResolvedPaginationStyle& style,
+        const PaginationRecipeRule& rule
+    );
+
     /**
      * @return Toggle 当前交互状态对应的独立叠加色；normal / disabled 返回透明色。
      * 与 `button_state_layer_color` 同款：状态反馈不写回基础容器填充。
@@ -1693,6 +1958,7 @@ namespace nandina::theme
     [[nodiscard]] auto default_checkbox_recipe() -> CheckboxRecipe;
     [[nodiscard]] auto default_slider_recipe() -> SliderRecipe;
     [[nodiscard]] auto default_text_field_recipe() -> TextFieldRecipe;
+    [[nodiscard]] auto default_text_area_recipe() -> TextAreaRecipe;
     [[nodiscard]] auto default_switch_recipe() -> SwitchRecipe;
     [[nodiscard]] auto default_badge_recipe() -> BadgeRecipe;
     [[nodiscard]] auto default_card_recipe() -> CardRecipe;
@@ -1704,6 +1970,9 @@ namespace nandina::theme
     [[nodiscard]] auto default_radio_button_recipe() -> RadioButtonRecipe;
     [[nodiscard]] auto default_toggle_recipe() -> ToggleRecipe;
     [[nodiscard]] auto default_toggle_group_recipe() -> ToggleGroupRecipe;
+    [[nodiscard]] auto default_button_group_recipe() -> ButtonGroupRecipe;
+    [[nodiscard]] auto default_breadcrumb_recipe() -> BreadcrumbRecipe;
+    [[nodiscard]] auto default_pagination_recipe() -> PaginationRecipe;
     [[nodiscard]] auto default_tabs_recipe() -> TabsRecipe;
     [[nodiscard]] auto default_tooltip_recipe() -> TooltipRecipe;
     [[nodiscard]] auto default_select_recipe() -> SelectRecipe;

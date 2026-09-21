@@ -145,6 +145,45 @@ namespace nandina::theme
             scale_alpha(style.placeholder.color, alpha);
         }
 
+        /** TextAreaRecipe → 解析后的片段组合。 */
+        [[nodiscard]] auto resolve_recipe(
+            const DesignSystem& system,
+            const ColorAppearance appearance,
+            const TextAreaRecipe& recipe
+        ) -> ResolvedTextAreaStyle {
+            return {
+                .container = resolve(system, appearance, recipe.container),
+                .value = resolve(system, appearance, recipe.value),
+                .placeholder = resolve(system, appearance, recipe.placeholder),
+                .selection = resolve_color(system, appearance, recipe.selection),
+                .focus = resolve(system, appearance, recipe.focus),
+                .metrics = {
+                    .rows = resolve_scalar(system, appearance, recipe.metrics.rows),
+                    .line_height =
+                        resolve_scalar(system, appearance, recipe.metrics.line_height),
+                    .padding_x = resolve_scalar(system, appearance, recipe.metrics.padding_x),
+                    .padding_y = resolve_scalar(system, appearance, recipe.metrics.padding_y),
+                },
+            };
+        }
+
+        /** TextArea disabled 变换：容器 / 文本颜色 ×opacity.disabled。 */
+        void apply_text_area_disabled(
+            const DesignSystem& system,
+            const ColorAppearance appearance,
+            ResolvedTextAreaStyle& style
+        ) {
+            const float alpha = resolve_scalar(
+                system,
+                appearance,
+                ThemeScalar::token(ScalarToken::opacity_disabled)
+            );
+            scale_alpha(style.container.fill, alpha);
+            scale_alpha(style.container.border, alpha);
+            scale_alpha(style.value.color, alpha);
+            scale_alpha(style.placeholder.color, alpha);
+        }
+
         /** SwitchRecipe → 解析后的片段组合（配方即事实来源）。 */
         [[nodiscard]] auto resolve_recipe(
             const DesignSystem& system,
@@ -550,6 +589,78 @@ namespace nandina::theme
             scale_alpha(style.label.color, alpha);
             style.focus.color = style.focus.color.with_alpha(0.0F);
         }
+
+        /** ButtonGroupRecipe → 解析后的片段组合。 */
+        [[nodiscard]] auto resolve_recipe(
+            const DesignSystem& system,
+            const ColorAppearance appearance,
+            const ButtonGroupRecipe& recipe
+        ) -> ResolvedButtonGroupStyle {
+            return {
+                .container = resolve(system, appearance, recipe.container),
+                .metrics = resolve(system, appearance, recipe.metrics),
+            };
+        }
+
+        /** BreadcrumbRecipe → 解析后的片段组合。 */
+        [[nodiscard]] auto resolve_recipe(
+            const DesignSystem& system,
+            const ColorAppearance appearance,
+            const BreadcrumbRecipe& recipe
+        ) -> ResolvedBreadcrumbStyle {
+            return {
+                .container = resolve(system, appearance, recipe.container),
+                .link = resolve(system, appearance, recipe.link),
+                .link_hover = resolve_color(system, appearance, recipe.link_hover),
+                .current = resolve(system, appearance, recipe.current),
+                .separator = resolve_color(system, appearance, recipe.separator),
+                .link_focus = resolve(system, appearance, recipe.link_focus),
+                .metrics = resolve(system, appearance, recipe.metrics),
+            };
+        }
+
+        /** PaginationRecipe → 解析后的片段组合。 */
+        [[nodiscard]] auto resolve_recipe(
+            const DesignSystem& system,
+            const ColorAppearance appearance,
+            const PaginationRecipe& recipe
+        ) -> ResolvedPaginationStyle {
+            return {
+                .container = resolve(system, appearance, recipe.container),
+                .item = resolve(system, appearance, recipe.item),
+                .item_hover = resolve_color(system, appearance, recipe.item_hover),
+                .item_active = resolve(system, appearance, recipe.item_active),
+                .label = resolve(system, appearance, recipe.label),
+                .label_active = resolve(system, appearance, recipe.label_active),
+                .ellipsis = resolve_color(system, appearance, recipe.ellipsis),
+                .focus = resolve(system, appearance, recipe.focus),
+                .metrics = resolve(system, appearance, recipe.metrics),
+            };
+        }
+
+        /** Pagination disabled 变换：槽位面 / 文本 / 省略号 ×opacity.disabled，焦点环隐去。 */
+        void apply_pagination_disabled(
+            const DesignSystem& system,
+            const ColorAppearance appearance,
+            ResolvedPaginationStyle& style
+        ) {
+            const float alpha = resolve_scalar(
+                system,
+                appearance,
+                ThemeScalar::token(ScalarToken::opacity_disabled)
+            );
+            scale_alpha(style.container.fill, alpha);
+            scale_alpha(style.container.border, alpha);
+            scale_alpha(style.item.fill, alpha);
+            scale_alpha(style.item.border, alpha);
+            scale_alpha(style.item_hover, alpha);
+            scale_alpha(style.item_active.fill, alpha);
+            scale_alpha(style.item_active.border, alpha);
+            scale_alpha(style.label.color, alpha);
+            scale_alpha(style.label_active.color, alpha);
+            scale_alpha(style.ellipsis, alpha);
+            style.focus.color = style.focus.color.with_alpha(0.0F);
+        }
     } // namespace
 
     auto button_state_layer_color(
@@ -688,6 +799,39 @@ namespace nandina::theme
         }
         if (has_text_field_state(state, TextFieldVisualState::disabled)) {
             apply_text_field_disabled(system, appearance, style);
+        }
+        return style;
+    }
+
+    /**
+     * 解析 TextArea 配方。
+     *
+     * 流程：base → 规则（state 位掩码 + read_only 选择器，后匹配者胜）→ disabled 变换。
+     *
+     * @param system     设计系统快照
+     * @param appearance 当前外观
+     * @param state      位掩码交互状态（focused / disabled）
+     * @param read_only  只读选择器（与状态位正交）
+     * @return 片段组合的解析结果
+     */
+    auto resolve_text_area(
+        const DesignSystem& system,
+        const ColorAppearance appearance,
+        const TextAreaVisualState state,
+        const bool read_only
+    ) -> ResolvedTextAreaStyle {
+        auto style = resolve_recipe(system, appearance, system.components.text_area.base);
+        for (const auto& rule: system.components.text_area.rules) {
+            if (rule.state && !has_text_area_state(state, *rule.state)) {
+                continue;
+            }
+            if (rule.read_only && *rule.read_only != read_only) {
+                continue;
+            }
+            apply_rule(system, appearance, style, rule);
+        }
+        if (has_text_area_state(state, TextAreaVisualState::disabled)) {
+            apply_text_area_disabled(system, appearance, style);
         }
         return style;
     }
@@ -932,6 +1076,67 @@ namespace nandina::theme
                 continue;
             }
             apply_rule(system, appearance, style, rule);
+        }
+        return style;
+    }
+
+    /**
+     * 解析 ButtonGroup 配方（base → 规则列表，state 选择器，后匹配者胜）。
+     *
+     * 组是真实场景节点，容器造型与成员间距（metrics.gap）都可由主题作者覆盖。
+     */
+    auto resolve_button_group(
+        const DesignSystem& system,
+        const ColorAppearance appearance,
+        const ButtonGroupVisualState state
+    ) -> ResolvedButtonGroupStyle {
+        auto style = resolve_recipe(system, appearance, system.components.button_group.base);
+        for (const auto& rule: system.components.button_group.rules) {
+            if (rule.state && *rule.state != state) {
+                continue;
+            }
+            apply_rule(system, appearance, style, rule);
+        }
+        return style;
+    }
+
+    /**
+     * 解析 Breadcrumb 配方（base → 规则列表，state 选择器，后匹配者胜）。
+     *
+     * 容器不接受输入，交互状态属于内部链接条目，因此没有 disabled 变换。
+     */
+    auto resolve_breadcrumb(
+        const DesignSystem& system,
+        const ColorAppearance appearance,
+        const BreadcrumbVisualState state
+    ) -> ResolvedBreadcrumbStyle {
+        auto style = resolve_recipe(system, appearance, system.components.breadcrumb.base);
+        for (const auto& rule: system.components.breadcrumb.rules) {
+            if (rule.state && *rule.state != state) {
+                continue;
+            }
+            apply_rule(system, appearance, style, rule);
+        }
+        return style;
+    }
+
+    /**
+     * 解析 Pagination 配方（base → 规则列表，state 选择器，后匹配者胜 → disabled 变换）。
+     */
+    auto resolve_pagination(
+        const DesignSystem& system,
+        const ColorAppearance appearance,
+        const PaginationVisualState state
+    ) -> ResolvedPaginationStyle {
+        auto style = resolve_recipe(system, appearance, system.components.pagination.base);
+        for (const auto& rule: system.components.pagination.rules) {
+            if (rule.state && *rule.state != state) {
+                continue;
+            }
+            apply_rule(system, appearance, style, rule);
+        }
+        if (state == PaginationVisualState::disabled) {
+            apply_pagination_disabled(system, appearance, style);
         }
         return style;
     }
@@ -1192,6 +1397,50 @@ namespace nandina::theme
             style.metrics.height = resolve_scalar(system, appearance, *rule.metrics_height);
         if (rule.metrics_padding_x)
             style.metrics.padding_x = resolve_scalar(system, appearance, *rule.metrics_padding_x);
+    }
+
+    void apply_rule(
+        const DesignSystem& system,
+        const ColorAppearance appearance,
+        ResolvedTextAreaStyle& style,
+        const TextAreaRecipeRule& rule
+    ) {
+        if (rule.container_fill)
+            style.container.fill = resolve_color(system, appearance, *rule.container_fill);
+        if (rule.container_border)
+            style.container.border = resolve_color(system, appearance, *rule.container_border);
+        if (rule.container_border_width) {
+            style.container.border_width =
+                resolve_scalar(system, appearance, *rule.container_border_width);
+        }
+        if (rule.container_radius)
+            style.container.radius = resolve_scalar(system, appearance, *rule.container_radius);
+        if (rule.value_color)
+            style.value.color = resolve_color(system, appearance, *rule.value_color);
+        if (rule.placeholder_color)
+            style.placeholder.color = resolve_color(system, appearance, *rule.placeholder_color);
+        if (rule.selection_color)
+            style.selection = resolve_color(system, appearance, *rule.selection_color);
+        if (rule.focus_ring_color)
+            style.focus.color = resolve_color(system, appearance, *rule.focus_ring_color);
+        if (rule.focus_ring_width)
+            style.focus.width = resolve_scalar(system, appearance, *rule.focus_ring_width);
+        if (rule.font_size) {
+            style.value.font_size = resolve_scalar(system, appearance, *rule.font_size);
+            style.placeholder.font_size = resolve_scalar(system, appearance, *rule.font_size);
+        }
+        if (rule.metrics_rows)
+            style.metrics.rows = resolve_scalar(system, appearance, *rule.metrics_rows);
+        if (rule.metrics_line_height) {
+            style.metrics.line_height =
+                resolve_scalar(system, appearance, *rule.metrics_line_height);
+        }
+        if (rule.metrics_padding_x) {
+            style.metrics.padding_x = resolve_scalar(system, appearance, *rule.metrics_padding_x);
+        }
+        if (rule.metrics_padding_y) {
+            style.metrics.padding_y = resolve_scalar(system, appearance, *rule.metrics_padding_y);
+        }
     }
 
     void apply_rule(
@@ -1585,6 +1834,141 @@ namespace nandina::theme
         }
         if (rule.container_radius)
             style.container.radius = resolve_scalar(system, appearance, *rule.container_radius);
+        if (rule.metrics_gap)
+            style.metrics.gap = resolve_scalar(system, appearance, *rule.metrics_gap);
+        if (rule.metrics_padding_x)
+            style.metrics.padding_x = resolve_scalar(system, appearance, *rule.metrics_padding_x);
+        if (rule.metrics_min_height) {
+            style.metrics.min_height = resolve_scalar(system, appearance, *rule.metrics_min_height);
+        }
+    }
+
+    void apply_rule(
+        const DesignSystem& system,
+        const ColorAppearance appearance,
+        ResolvedButtonGroupStyle& style,
+        const ButtonGroupRecipeRule& rule
+    ) {
+        if (rule.container_fill)
+            style.container.fill = resolve_color(system, appearance, *rule.container_fill);
+        if (rule.container_border)
+            style.container.border = resolve_color(system, appearance, *rule.container_border);
+        if (rule.container_border_width) {
+            style.container.border_width =
+                resolve_scalar(system, appearance, *rule.container_border_width);
+        }
+        if (rule.container_radius)
+            style.container.radius = resolve_scalar(system, appearance, *rule.container_radius);
+        if (rule.metrics_gap)
+            style.metrics.gap = resolve_scalar(system, appearance, *rule.metrics_gap);
+        if (rule.metrics_padding_x)
+            style.metrics.padding_x = resolve_scalar(system, appearance, *rule.metrics_padding_x);
+        if (rule.metrics_min_height) {
+            style.metrics.min_height = resolve_scalar(system, appearance, *rule.metrics_min_height);
+        }
+    }
+
+    void apply_rule(
+        const DesignSystem& system,
+        const ColorAppearance appearance,
+        ResolvedBreadcrumbStyle& style,
+        const BreadcrumbRecipeRule& rule
+    ) {
+        if (rule.container_fill)
+            style.container.fill = resolve_color(system, appearance, *rule.container_fill);
+        if (rule.container_border)
+            style.container.border = resolve_color(system, appearance, *rule.container_border);
+        if (rule.container_border_width) {
+            style.container.border_width =
+                resolve_scalar(system, appearance, *rule.container_border_width);
+        }
+        if (rule.container_radius)
+            style.container.radius = resolve_scalar(system, appearance, *rule.container_radius);
+        if (rule.link_color)
+            style.link.color = resolve_color(system, appearance, *rule.link_color);
+        if (rule.link_font_size)
+            style.link.font_size = resolve_scalar(system, appearance, *rule.link_font_size);
+        if (rule.link_hover_color)
+            style.link_hover = resolve_color(system, appearance, *rule.link_hover_color);
+        if (rule.current_color)
+            style.current.color = resolve_color(system, appearance, *rule.current_color);
+        if (rule.current_font_size)
+            style.current.font_size = resolve_scalar(system, appearance, *rule.current_font_size);
+        if (rule.separator_color)
+            style.separator = resolve_color(system, appearance, *rule.separator_color);
+        if (rule.link_focus_ring_color) {
+            style.link_focus.color =
+                resolve_color(system, appearance, *rule.link_focus_ring_color);
+        }
+        if (rule.link_focus_ring_width) {
+            style.link_focus.width =
+                resolve_scalar(system, appearance, *rule.link_focus_ring_width);
+        }
+        if (rule.metrics_gap)
+            style.metrics.gap = resolve_scalar(system, appearance, *rule.metrics_gap);
+        if (rule.metrics_padding_x)
+            style.metrics.padding_x = resolve_scalar(system, appearance, *rule.metrics_padding_x);
+        if (rule.metrics_min_height) {
+            style.metrics.min_height = resolve_scalar(system, appearance, *rule.metrics_min_height);
+        }
+    }
+
+    void apply_rule(
+        const DesignSystem& system,
+        const ColorAppearance appearance,
+        ResolvedPaginationStyle& style,
+        const PaginationRecipeRule& rule
+    ) {
+        if (rule.container_fill)
+            style.container.fill = resolve_color(system, appearance, *rule.container_fill);
+        if (rule.container_border)
+            style.container.border = resolve_color(system, appearance, *rule.container_border);
+        if (rule.container_border_width) {
+            style.container.border_width =
+                resolve_scalar(system, appearance, *rule.container_border_width);
+        }
+        if (rule.container_radius)
+            style.container.radius = resolve_scalar(system, appearance, *rule.container_radius);
+        if (rule.item_fill)
+            style.item.fill = resolve_color(system, appearance, *rule.item_fill);
+        if (rule.item_border)
+            style.item.border = resolve_color(system, appearance, *rule.item_border);
+        if (rule.item_border_width)
+            style.item.border_width = resolve_scalar(system, appearance, *rule.item_border_width);
+        if (rule.item_radius)
+            style.item.radius = resolve_scalar(system, appearance, *rule.item_radius);
+        if (rule.item_hover)
+            style.item_hover = resolve_color(system, appearance, *rule.item_hover);
+        if (rule.item_active_fill)
+            style.item_active.fill = resolve_color(system, appearance, *rule.item_active_fill);
+        if (rule.item_active_border) {
+            style.item_active.border = resolve_color(system, appearance, *rule.item_active_border);
+        }
+        if (rule.item_active_border_width) {
+            style.item_active.border_width =
+                resolve_scalar(system, appearance, *rule.item_active_border_width);
+        }
+        if (rule.item_active_radius) {
+            style.item_active.radius = resolve_scalar(system, appearance, *rule.item_active_radius);
+        }
+        if (rule.label_color)
+            style.label.color = resolve_color(system, appearance, *rule.label_color);
+        if (rule.label_font_size)
+            style.label.font_size = resolve_scalar(system, appearance, *rule.label_font_size);
+        if (rule.label_active_color)
+            style.label_active.color = resolve_color(system, appearance, *rule.label_active_color);
+        if (rule.label_active_font_size) {
+            style.label_active.font_size =
+                resolve_scalar(system, appearance, *rule.label_active_font_size);
+        }
+        if (rule.ellipsis_color)
+            style.ellipsis = resolve_color(system, appearance, *rule.ellipsis_color);
+        if (rule.focus_ring_color)
+            style.focus.color = resolve_color(system, appearance, *rule.focus_ring_color);
+        if (rule.focus_ring_width)
+            style.focus.width = resolve_scalar(system, appearance, *rule.focus_ring_width);
+        if (rule.metrics_box_size)
+            style.metrics.box_size = resolve_scalar(system, appearance, *rule.metrics_box_size);
         if (rule.metrics_gap)
             style.metrics.gap = resolve_scalar(system, appearance, *rule.metrics_gap);
         if (rule.metrics_padding_x)
@@ -2020,6 +2404,44 @@ namespace nandina::theme
         };
     }
 
+    /**
+     * @return 框架默认 TextArea 配方（normal 状态；focused 与 read_only 由规则覆盖）。
+     *
+     * 与 TextField 同源（background + input 边框），但默认高度改由「可见行数 × 行高 +
+     * 垂直内边距」决定，因此度量是组件专属的 TextAreaMetrics。
+     */
+    auto default_text_area_recipe() -> TextAreaRecipe {
+        return {
+            .container = BoxStyle {
+                .fill = ThemeColor::token(ColorToken::background),
+                .border = ThemeColor::token(ColorToken::input),
+                .border_width = ThemeScalar::token(ScalarToken::border_thin),
+                .radius = ThemeScalar::token(ScalarToken::radius_md),
+            },
+            .value = TypeStyle {
+                .color = ThemeColor::token(ColorToken::foreground),
+                .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+            },
+            .placeholder = TypeStyle {
+                .color = ThemeColor::token(ColorToken::muted_foreground),
+                .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+            },
+            .selection = ThemeColor::token(ColorToken::selection),
+            .focus = FocusRingStyle {
+                .color = ThemeColor::token(ColorToken::ring),
+                .width = ThemeScalar::literal(0.0F), // focused 规则按需开启
+            },
+            .metrics = TextAreaMetrics {
+                .rows = ThemeScalar::literal(3.0F), // shadcn textarea 默认 3 行
+                // 14px 正文的每行逻辑高度（shadcn leading-5）；仅用于默认高度，
+                // 实际换行行高来自文本布局后端。
+                .line_height = ThemeScalar::literal(20.0F),
+                .padding_x = ThemeScalar::token(ScalarToken::spacing_md),
+                .padding_y = ThemeScalar::token(ScalarToken::spacing_sm),
+            },
+        };
+    }
+
     /** @return 框架默认 Switch 配方（未勾选：input 轨道 + background 拇指）。 */
     auto default_switch_recipe() -> SwitchRecipe {
         return {
@@ -2332,6 +2754,129 @@ namespace nandina::theme
                 .gap = ThemeScalar::token(ScalarToken::spacing_xs),
                 .min_height = ThemeScalar::literal(0.0F),
                 .box_size = ThemeScalar::literal(0.0F),
+                .preferred_width = ThemeScalar::literal(0.0F),
+            },
+        };
+    }
+
+    /**
+     * @return 框架默认 ButtonGroup 配方。
+     *
+     * 组默认没有可见容器（透明 + 无边框）：成员节奏由 gap 表达，需要分组底色/边框时由
+     * 主题或实例 override 打开。刻意没有 "attached"（共边）字段——当前配方模型无法按
+     * 子项位置覆盖圆角 / 抑制相邻边框，理由见 `widget/button_group.hpp` 的类注释。
+     */
+    auto default_button_group_recipe() -> ButtonGroupRecipe {
+        return {
+            .container = BoxStyle {
+                .fill = ThemeColor::transparent(ColorToken::background),
+                .border = ThemeColor::transparent(ColorToken::primary),
+                .border_width = ThemeScalar::literal(0.0F),
+                .radius = ThemeScalar::token(ScalarToken::radius_md),
+            },
+            .metrics = ControlMetrics {
+                .height = ThemeScalar::literal(0.0F),
+                .padding_x = ThemeScalar::literal(0.0F),
+                // 8px 成员间距：相关按钮之间需要可辨识的分离，比 ToggleGroup 的 4px 宽一档。
+                .gap = ThemeScalar::token(ScalarToken::spacing_sm),
+                .min_height = ThemeScalar::literal(0.0F),
+                .box_size = ThemeScalar::literal(0.0F),
+                .preferred_width = ThemeScalar::literal(0.0F),
+            },
+        };
+    }
+
+    /**
+     * @return 框架默认 Breadcrumb 配方。
+     *
+     * 链接用 muted_foreground、hover 转 foreground（与 shadcn BreadcrumbLink 的
+     * `hover:text-foreground` 同款）；当前页直接用 foreground 正文色。链接焦点环默认
+     * 打开（键盘可达性不能靠主题作者补），因此 `link_focus.width` 不是 0。
+     */
+    auto default_breadcrumb_recipe() -> BreadcrumbRecipe {
+        return {
+            .container = BoxStyle {
+                .fill = ThemeColor::transparent(ColorToken::background),
+                .border = ThemeColor::transparent(ColorToken::background),
+                .border_width = ThemeScalar::literal(0.0F),
+                .radius = ThemeScalar::literal(0.0F),
+            },
+            .link = TypeStyle {
+                .color = ThemeColor::token(ColorToken::muted_foreground),
+                .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+            },
+            .link_hover = ThemeColor::token(ColorToken::foreground),
+            .current = TypeStyle {
+                .color = ThemeColor::token(ColorToken::foreground),
+                .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+            },
+            .separator = ThemeColor::token(ColorToken::muted_foreground),
+            .link_focus = FocusRingStyle {
+                .color = ThemeColor::token(ColorToken::ring),
+                // 链接条目始终可聚焦，焦点环默认开启（不像 Tabs 那样等 focused 规则）。
+                .width = ThemeScalar::token(ScalarToken::border_focus_ring),
+            },
+            .metrics = ControlMetrics {
+                .height = ThemeScalar::literal(0.0F),
+                // 条目与分隔符之间各留 4px。
+                .padding_x = ThemeScalar::literal(0.0F),
+                .gap = ThemeScalar::token(ScalarToken::spacing_xs),
+                .min_height = ThemeScalar::literal(0.0F),
+                .box_size = ThemeScalar::literal(0.0F),
+                .preferred_width = ThemeScalar::literal(0.0F),
+            },
+        };
+    }
+
+    /**
+     * @return 框架默认 Pagination 配方。
+     *
+     * 普通槽位是 ghost（透明面，hover 叠一层 accent），当前页用 primary 实色 + 反色文本
+     * 明确区分；上一页 / 下一页复用同一套槽位造型。`box_size` 是无语义 token 的组件几何。
+     */
+    auto default_pagination_recipe() -> PaginationRecipe {
+        return {
+            .container = BoxStyle {
+                .fill = ThemeColor::transparent(ColorToken::background),
+                .border = ThemeColor::transparent(ColorToken::background),
+                .border_width = ThemeScalar::literal(0.0F),
+                .radius = ThemeScalar::token(ScalarToken::radius_md),
+            },
+            .item = BoxStyle {
+                .fill = ThemeColor::transparent(ColorToken::background),
+                .border = ThemeColor::transparent(ColorToken::background),
+                .border_width = ThemeScalar::literal(0.0F),
+                .radius = ThemeScalar::token(ScalarToken::radius_md),
+            },
+            .item_hover =
+                ThemeColor::with_alpha(ColorToken::accent, ThemeScalar::token(ScalarToken::opacity_hover_overlay)),
+            .item_active = BoxStyle {
+                .fill = ThemeColor::token(ColorToken::primary),
+                .border = ThemeColor::transparent(ColorToken::primary),
+                .border_width = ThemeScalar::literal(0.0F),
+                .radius = ThemeScalar::token(ScalarToken::radius_md),
+            },
+            .label = TypeStyle {
+                .color = ThemeColor::token(ColorToken::foreground),
+                .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+            },
+            .label_active = TypeStyle {
+                .color = ThemeColor::token(ColorToken::primary_foreground),
+                .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+            },
+            .ellipsis = ThemeColor::token(ColorToken::muted_foreground),
+            .focus = FocusRingStyle {
+                .color = ThemeColor::token(ColorToken::ring),
+                .width = ThemeScalar::literal(0.0F), // focused 规则按需开启
+            },
+            .metrics = ControlMetrics {
+                .height = ThemeScalar::literal(0.0F),
+                .padding_x = ThemeScalar::literal(0.0F),
+                // 4px 槽位间距，与 ToggleGroup 的工具栏节奏一致。
+                .gap = ThemeScalar::token(ScalarToken::spacing_xs),
+                .min_height = ThemeScalar::literal(0.0F),
+                // 32px 方形槽位：贴近 shadcn h-8 icon button，无语义标量 token。
+                .box_size = ThemeScalar::literal(32.0F),
                 .preferred_width = ThemeScalar::literal(0.0F),
             },
         };
@@ -2718,6 +3263,22 @@ namespace nandina::theme
                         },
                     },
                 },
+                .text_area = TextAreaRecipes {
+                    .base = default_text_area_recipe(),
+                    .rules = {
+                        // read_only 弱化容器底：muted 是"弱化底"语义角色。
+                        TextAreaRecipeRule {
+                            .read_only = true,
+                            .container_fill = ThemeColor::token(ColorToken::muted),
+                        },
+                        // 顺序：read_only 在前、focused 在后，只读仍可聚焦并保留焦点环。
+                        TextAreaRecipeRule {
+                            .state = TextAreaVisualState::focused,
+                            .focus_ring_width =
+                                ThemeScalar::token(ScalarToken::border_focus_ring),
+                        },
+                    },
+                },
                 .switch_component = SwitchRecipes {
                     .base = default_switch_recipe(),
                     .rules = {
@@ -2978,6 +3539,24 @@ namespace nandina::theme
                 .toggle_group = ToggleGroupRecipes {
                     .base = default_toggle_group_recipe(),
                     .rules = {},
+                },
+                .button_group = ButtonGroupRecipes {
+                    .base = default_button_group_recipe(),
+                    .rules = {},
+                },
+                .breadcrumb = BreadcrumbRecipes {
+                    .base = default_breadcrumb_recipe(),
+                    .rules = {},
+                },
+                .pagination = PaginationRecipes {
+                    .base = default_pagination_recipe(),
+                    .rules = {
+                        PaginationRecipeRule {
+                            .state = PaginationVisualState::focused,
+                            .focus_ring_width =
+                                ThemeScalar::token(ScalarToken::border_focus_ring),
+                        },
+                    },
                 },
                 .tabs = TabsRecipes {
                     .base = default_tabs_recipe(),

@@ -269,6 +269,13 @@ checkbox_tests = executable(
 )
 test('checkbox', checkbox_tests)
 
+text_area_tests = executable(
+    'text_area_tests',
+    files('text_area_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('text-area', text_area_tests)
+
 slider_tests = executable(
     'slider_tests',
     files('slider_tests.cpp'),
@@ -324,6 +331,27 @@ alert_tests = executable(
     dependencies : [nandina_dep, catch2_with_main_dep],
 )
 test('alert', alert_tests)
+
+button_group_tests = executable(
+    'button_group_tests',
+    files('button_group_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('button-group', button_group_tests)
+
+breadcrumb_tests = executable(
+    'breadcrumb_tests',
+    files('breadcrumb_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('breadcrumb', breadcrumb_tests)
+
+pagination_tests = executable(
+    'pagination_tests',
+    files('pagination_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('pagination', pagination_tests)
 
 spinner_tests = executable(
     'spinner_tests',

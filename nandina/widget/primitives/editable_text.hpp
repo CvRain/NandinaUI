@@ -30,6 +30,19 @@ namespace nandina::widget::primitives
         std::size_t selection_end = 0;
     };
 
+    /**
+     * 插入符在布局坐标系中的几何位置（逻辑像素）。
+     *
+     * 外层控件（TextField / TextArea）用它把插入符滚入可视区，也让多行编辑的
+     * 插入符绘制与命中测试共用同一份布局事实来源。
+     */
+    struct TextCaretGeometry {
+        std::size_t line_index = 0; // 插入符所在布局行
+        float x = 0.0F;             // 行内 x（相对布局原点）
+        float top = 0.0F;           // 行顶 y（相对布局原点）
+        float height = 0.0F;        // 所在行高
+    };
+
     class EditableText: public scene::NanControl {
     public:
         explicit EditableText(std::string value = {});
@@ -58,6 +71,12 @@ namespace nandina::widget::primitives
         void set_composition(TextComposition composition);
         void clear_composition();
         [[nodiscard]] auto composition() const -> const std::optional<TextComposition>&;
+
+        /// 在插入符处插入文本（替换选区，记录撤销，发出 change）。
+        /// 多行输入（TextArea 的 Enter）与单行输入共用这一条写入路径。
+        void insert_text(std::string_view text);
+
+        [[nodiscard]] auto caret_geometry() const -> TextCaretGeometry;
 
         void set_on_change(std::function<void(std::string_view)> callback);
 
@@ -94,21 +113,27 @@ namespace nandina::widget::primitives
             TextSelection selection;
         };
 
+        /// 一个 source 偏移落到布局的哪一行、落在该行的哪个视觉停靠点。
+        struct LineStop {
+            std::size_t line_index = 0;
+            TextCaretStop stop;
+        };
+
         [[nodiscard]] auto snapshot() const -> EditSnapshot;
+        [[nodiscard]] auto line_stop_for(std::size_t offset, TextAffinity affinity) const -> LineStop;
         void record_undo();
         void restore(EditSnapshot snapshot);
         void undo();
         void redo();
-        void insert_text(std::string_view text);
         void erase_before_caret();
         void erase_after_caret();
         void erase_selection();
         void move_caret_visual(int direction, bool extend);
+        void move_caret_vertical(int direction, bool extend);
         void move_caret_to_visual_edge(bool end, bool extend);
         void update_selection_focus(TextCaretStop stop, bool extend);
         void sync_text();
         void emit_change();
-        [[nodiscard]] auto caret_x() const -> float;
 
         std::string value_;
         std::size_t caret_ = 0;
