@@ -58,6 +58,12 @@ namespace
             return intent.has_value() ? intent->index : -1;
         }
 
+        /// 沿配置轴步进一步并返回目标索引；无目标时返回 -1。
+        [[nodiscard]] auto step(int delta) -> int {
+            const auto intent = focus.step(delta);
+            return intent.has_value() ? intent->index : -1;
+        }
+
         [[nodiscard]] auto text(const std::string& value) -> int {
             const auto intent = focus.handle_text(typed(value));
             return intent.has_value() ? intent->index : -1;
@@ -129,15 +135,119 @@ TEST_CASE("movement mode decides whether widget focus follows", "[widget][roving
         REQUIRE(intent.has_value());
         REQUIRE(intent->index == 1);
         REQUIRE_FALSE(intent->move_widget_focus);
+        REQUIRE(intent->selection_follows_focus);
     }
 
-    SECTION("widget focus") {
+    SECTION("focus and selection") {
         Fixture f;
-        f.focus.set_movement(widget::RovingMovement::widget_focus);
+        f.focus.set_movement(widget::RovingMovement::focus_and_selection);
         const auto intent = f.focus.handle_key(press(widget::keys::down));
         REQUIRE(intent.has_value());
         REQUIRE(intent->index == 1);
         REQUIRE(intent->move_widget_focus);
+        REQUIRE(intent->selection_follows_focus);
+    }
+}
+
+TEST_CASE("step walks the configured axis, wraps, and stops at the edge", "[widget][roving]") {
+    Fixture f;
+    // step 与键码无关：横向轴上的「下一个」同样是索引 +1，因此这里切到 horizontal
+    // 证明步进沿**配置的轴**而不是某组具体键码。
+    f.focus.set_orientation(widget::RovingOrientation::horizontal);
+
+    REQUIRE(f.focus.active_index() == 0);
+    REQUIRE(f.step(1) == 1);
+    REQUIRE(f.step(1) == 2);
+    REQUIRE(f.step(-1) == 1);
+
+    // 末项继续前进：环绕到首项；首项继续后退：环绕到末项。
+    f.focus.set_active_index(kItemCount - 1);
+    REQUIRE(f.step(1) == 0);
+    f.focus.set_active_index(0);
+    REQUIRE(f.step(-1) == kItemCount - 1);
+
+    // 关闭 loop：边界处返回 nullopt，且活动项保持不变。
+    f.focus.set_loop(false);
+    f.focus.set_active_index(0);
+    REQUIRE(f.focus.step(-1) == std::nullopt);
+    REQUIRE(f.focus.active_index() == 0);
+    f.focus.set_active_index(kItemCount - 1);
+    REQUIRE(f.focus.step(1) == std::nullopt);
+    REQUIRE(f.focus.active_index() == kItemCount - 1);
+}
+
+TEST_CASE("step skips non-focusable members", "[widget][roving]") {
+    Fixture f;
+    // 1 / 2 不可聚焦。
+    f.enabled = {true, false, false, true, false};
+    {
+        const auto& enabled_ref = f.enabled;
+        f.focus.sync(
+            enabled_ref.size(),
+            [&enabled_ref](std::size_t index) { return enabled_ref[index]; }
+        );
+    }
+
+    REQUIRE(f.step(1) == 3);
+    REQUIRE(f.step(-1) == 0);
+    // 末尾 3 继续前进：4 不可聚焦，环绕到 0。
+    f.focus.set_active_index(3);
+    REQUIRE(f.step(1) == 0);
+
+    // 全部成员都不可聚焦：两个方向都无处可去。
+    f.focus.sync(kItemCount, [](std::size_t) { return false; });
+    REQUIRE(f.focus.step(1) == std::nullopt);
+    REQUIRE(f.focus.step(-1) == std::nullopt);
+
+    // 没有成员时同样没有目标。
+    f.focus.sync(0);
+    REQUIRE(f.focus.step(1) == std::nullopt);
+    REQUIRE(f.focus.step(-1) == std::nullopt);
+}
+
+TEST_CASE("step with zero delta is a no-op", "[widget][roving]") {
+    Fixture f;
+    f.focus.set_active_index(2);
+
+    REQUIRE(f.focus.step(0) == std::nullopt);
+    REQUIRE(f.focus.active_index() == 2);
+    // delta 为 0 时不消耗 typeahead：缓冲与活动项都不变。
+    REQUIRE(f.text("b") == 1);
+    REQUIRE(f.focus.step(0) == std::nullopt);
+    REQUIRE(f.focus.active_index() == 1);
+    REQUIRE(f.focus.typeahead_buffer() == "b");
+}
+
+TEST_CASE("movement decisions are independently observable", "[widget][roving]") {
+    // 容器必须能分别问「焦点是否移动」与「选中是否跟随」，而不是从一个混淆的模式里猜。
+    SECTION("focus only") {
+        Fixture f;
+        f.focus.set_movement(widget::RovingMovement::focus_only);
+        const auto intent = f.focus.step(1);
+        REQUIRE(intent.has_value());
+        REQUIRE(intent->index == 1);
+        REQUIRE(intent->move_widget_focus);
+        REQUIRE_FALSE(intent->selection_follows_focus);
+    }
+
+    SECTION("selection only") {
+        Fixture f;
+        f.focus.set_movement(widget::RovingMovement::selection_only);
+        const auto intent = f.focus.step(1);
+        REQUIRE(intent.has_value());
+        REQUIRE(intent->index == 1);
+        REQUIRE_FALSE(intent->move_widget_focus);
+        REQUIRE(intent->selection_follows_focus);
+    }
+
+    SECTION("focus and selection") {
+        Fixture f;
+        f.focus.set_movement(widget::RovingMovement::focus_and_selection);
+        const auto intent = f.focus.step(1);
+        REQUIRE(intent.has_value());
+        REQUIRE(intent->index == 1);
+        REQUIRE(intent->move_widget_focus);
+        REQUIRE(intent->selection_follows_focus);
     }
 }
 

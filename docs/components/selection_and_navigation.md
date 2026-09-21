@@ -17,19 +17,43 @@
 - 按键命中时返回 `Intent`，**由容器决定怎么落地**，因为「成员是什么」（裸索引还是控件指针）
   只有容器知道。
 
-## 两种移动模式
+## 移动模型：两个独立的决定
 
-`RovingMovement` 区分了此前被混为一谈的两种语义：
+方向命中后，容器要回答两个彼此独立的问题：
 
-| 模式 | 方向键做什么 | 用它的组件 |
-| --- | --- | --- |
-| `widget_focus` | 同时移动**控件焦点**与选中（焦点环跟着走） | `RadioGroup`、`ToggleGroup`（只落地焦点） |
-| `selection_only` | 只改**选中值**，焦点留在组容器上 | `Tabs`、`Select` 弹出列表 |
+- **控件焦点是否移动到目标成员？** —— `Intent::move_widget_focus`（决定是否 `set_focus()`）；
+- **选中是否跟随焦点？** —— `Intent::selection_follows_focus`（决定是否把选中值改成目标索引）。
 
-容器按 `Intent::move_widget_focus` 决定是否需要 `set_focus()`。这不是实现细节上的差异，
-而是两种通用的可访问性模式：radiogroup 用前者，tablist 与 combobox 用后者。
-`ToggleGroup` 也走 `widget_focus`（需要 `move_widget_focus`），但只落地焦点、不改选中值 ——
-toggle 的值语义属于成员自己的显式激活（`Enter` / `Space` / 点击）。
+`RovingMovement` 不再把两者捆进一个偏 radiogroup 视角的枚举值，而是显式命名三种组合：
+
+| 模式 | 控件焦点移动 | 选中跟随 | 用它的组件 |
+| --- | --- | --- | --- |
+| `focus_and_selection` | ✅ | ✅ | `RadioGroup`（焦点环与选中值一起走） |
+| `focus_only` | ✅ | ❌ | `ToggleGroup`（方向键只漫游，值由 `Enter` / `Space` 决定） |
+| `selection_only` | ❌ | ✅ | `Tabs`、`Select` 弹出列表（焦点留在容器上） |
+
+这不是实现细节上的差异，而是通用的可访问性模式：radiogroup 两者都动；tablist 与 combobox
+只改选中值、焦点不离开容器；工具栏式的 toggle 组只移动焦点。容器直接读两个布尔字段分别落地
+即可，不必再为了「只移动焦点」而在自己的代码里绕开某个模式。
+
+## 程序化步进：`step()`
+
+`handle_key()` 是真实输入路径，按 `RovingOrientation` 过滤键码；与键码无关的「沿当前轴走一步」
+由 `RovingFocus::step()` 提供：
+
+```cpp
+[[nodiscard]] auto step(int delta) -> std::optional<Intent>;
+```
+
+- `delta < 0` 上一个，`delta > 0` 下一个，`delta == 0` 视为「不动」返回 `nullopt`；
+- 沿用同一套 `set_loop(...)` 环绕与跳过 `accepts_focus == false` 成员的规则；
+- 无处可去时返回 `nullopt`，且不改变 `active_index()`；
+- 命中时更新 `active_index()`、结束当前 typeahead 查找，并返回与 `handle_key()` 同形的
+  `Intent`，容器按上面两个决定落地即可。
+
+因此 `RadioGroup::move_focus()` 与 `ToggleGroup::move_focus()` 直接调用 `step()`，不再按
+orientation 合成上下 / 左右键码。`ToggleGroup` 的真实按键路径仍走 `handle_key()`，方向键的
+orientation 过滤对实际输入保持权威。
 
 ## 键位
 
@@ -60,28 +84,25 @@ typeahead 文本由容器通过 `sync()` 的 `label` 回调提供，通常是成
 
 | 组件 | 方向键 | Home/End | typeahead | 备注 |
 | --- | --- | --- | --- | --- |
-| `RadioGroup` | ✅ | ❌ | ❌ | 走 `widget_focus` 模式；`move_focus()` 保留为兼容入口 |
-| `Tabs` | ✅ | ✅ | ✅ | 走 `selection_only` 模式，保持「焦点不离开标签条」的既有行为 |
+| `RadioGroup` | ✅ | ❌ | ❌ | 走 `focus_and_selection` 模式；`move_focus()` 是薄封装，内部直接调用 `step()` |
+| `Tabs` | ✅ | ✅ | ✅ | 走 `selection_only` 模式，保持「焦点不离开标签条」的既有行为（有意未对齐 ARIA tablist 的焦点跟随） |
 | `Select` 弹出列表 | ✅ | ✅ | ✅ | 走 `selection_only` 模式 |
-| `ToggleGroup` | ✅ | ✅ | ✅ | 走 `widget_focus` 模式；方向键只移动焦点，不改变任何成员的 `checked` |
+| `ToggleGroup` | ✅ | ✅ | ✅ | 走 `focus_only` 模式；方向键只移动焦点，不改变任何成员的 `checked` |
 | `Slider` | ✅ | ✅ | — | 数值调节，不走本模型（无「成员」概念） |
 | `Chip` 可移除 | — | — | — | 只处理 `Enter` / `Space` / `Backspace` / `Delete` |
 
 ## 已知空白
 
-1. **RTL 方向键极性**：`horizontal` 在 RTL 下应反转左右键。项目已接入 FriBidi，但三处既有
-   实现都未处理，本轮**有意不做**，避免把行为变更混进重构。需要时按 `NanTextDirection`
+1. **非节点协调对象的 `dt` 归属**：`RadioGroup` / `ToggleGroup` 不是场景节点，没有自己的
+   `on_process(dt)`，typeahead 缓冲的超时目前由持焦点的成员代为转发（见
+   `docs/components/toggle_group.md`）。`RovingFocus::advance_time(dt)` 只接受调用方提供的
+   时钟，但「谁该在每帧调用它」尚无统一约定。
+2. **RTL 方向键极性**：`horizontal` 在 RTL 下应反转左右键。项目已接入 FriBidi，但既有实现
+   都未处理，本轮**有意不做**，避免把行为变更混进重构。需要时按 `NanTextDirection`
    传入极性，单独立项。
-2. **`Tabs` 未对齐 ARIA tablist 的「焦点跟随」模式**：目前是 `selection_only`，方向键不移动
-   控件焦点。改成 `widget_focus` 属于行为变更，需要额外的语义树与焦点环验证，单独处理。
 3. **`RadioGroup` 尚未接入 Home/End 与 typeahead**：漫游设施已具备能力，`RadioButton`
    `on_input` 目前只把方向键转成 `move_focus()`。接入需要给组提供键盘入口，属于增量能力，
    不阻塞任何组件。
-4. **`PageUp` / `PageDown` 未按「可见项数」翻页**：缺少可见项高度信息，当前等价于跳首尾。
-5. **`RovingMovement` 把「移动焦点」和「选中跟随」绑在同一个枚举值上**：`widget_focus` 的
-   文档语义是两者都动，但 `ToggleGroup` 只需要 `Intent::move_widget_focus`、落地时并不改选中。
-   当前靠「容器自己决定怎么落地 Intent」绕过，枚举名与注释仍偏 radiogroup 视角；若要彻底
-   正交化，应把「焦点是否跟随」与「选中是否跟随」拆成两个开关。
 
 ## 相关代码
 

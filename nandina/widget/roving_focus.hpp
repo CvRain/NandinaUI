@@ -13,10 +13,20 @@
 //   * 按键命中时返回 Intent，**由容器决定怎么落地** —— 因为"成员是什么"（裸索引还是
 //     控件指针）只有容器知道。
 //
-// 两种移动模式（RovingMovement）：
-//   * widget_focus   方向键同时移动控件焦点与选中（RadioGroup 语义，焦点环跟着走）；
-//   * selection_only 只改选中值，焦点留在组容器上（Tabs / Select 语义）。
-// 容器按 Intent::move_widget_focus 决定是否需要 set_focus()。
+// 移动模型（RovingMovement）把两个彼此独立的决定命名清楚：
+//   * 「控件焦点是否移动到目标成员」-> Intent::move_widget_focus；
+//   * 「选中是否跟随焦点」        -> Intent::selection_follows_focus。
+// 三种组合覆盖现有组件：
+//   * focus_and_selection 两者都动（RadioGroup：焦点环跟着走，选中值也跟着改）；
+//   * focus_only          只移动控件焦点，选中不动（ToggleGroup：Enter / Space 才改值）；
+//   * selection_only      只改选中值，焦点留在组容器上（Tabs / Select 弹出列表）。
+// 容器分别按这两个字段落地，不必自己记住"模式 -> 动作"的映射，也不必为了"只移动焦点"
+// 而在容器里绕开枚举值。
+//
+// 输入入口分两类：
+//   * handle_key / handle_text —— 真实输入路径；handle_key 按 RovingOrientation 过滤键码；
+//   * step(delta)              —— 与键码无关的"沿配置轴走一步"，供程序化调用复用同一套
+//                                 loop / 跳过不可聚焦项 / Intent 语义，调用方无需合成键码。
 //
 // 已知空白（本轮不做，见 docs/components/selection_and_navigation.md）：
 //   * RTL：horizontal 方向在 RTL 下应反转左右键极性。项目已接 FriBidi，但三处现有
@@ -42,11 +52,13 @@ namespace nandina::scene
 
 namespace nandina::widget
 {
-    /// 方向键的落地方式。
+    /// 方向键的落地语义：命名「控件焦点是否移动」与「选中是否跟随」两个独立决定的组合。
     enum class RovingMovement {
-        /// 方向键同时移动控件焦点与选中（RadioGroup）。
-        widget_focus,
-        /// 方向键只改选中值，焦点留在组容器上（Tabs / Select）。
+        /// 只移动控件焦点，选中不跟随（ToggleGroup：方向键漫游不改值）。
+        focus_only,
+        /// 移动控件焦点，选中同时跟随（RadioGroup：焦点环与选中值一起走）。
+        focus_and_selection,
+        /// 不移动控件焦点，只改选中值，焦点留在组容器上（Tabs / Select 弹出列表）。
         selection_only,
     };
 
@@ -59,12 +71,14 @@ namespace nandina::widget
 
     class RovingFocus {
     public:
-        /// 一次按键被本类识别后的结果。
+        /// 一次按键 / 步进被本类识别后的结果。
         struct Intent {
             /// 目标成员索引。
             int index = -1;
-            /// 容器是否应当把控件焦点移到该成员（由 movement 决定）。
+            /// 容器是否应当把控件焦点移到该成员。
             bool move_widget_focus = false;
+            /// 容器是否应当让选中跟随焦点（把选中值改成 index）。
+            bool selection_follows_focus = false;
         };
 
         RovingFocus() = default;
@@ -133,8 +147,23 @@ namespace nandina::widget
          * 处理按键。只有命中导航键（方向键 / Home / End / PageUp / PageDown）时才返回
          * Intent；其他键返回 nullopt，表示"不是我的键"，调用方继续按原逻辑处理
          * （Enter / Space / Escape 因此仍归组件自己）。
+         *
+         * 方向键按 orientation 过滤后走 `step()`；Home / End / PageUp / PageDown 跳首尾。
          */
         [[nodiscard]] auto handle_key(const scene::KeyEvent& event) -> std::optional<Intent>;
+
+        /**
+         * 沿配置的 orientation 轴移动一步，与具体键码无关：delta < 0 为上一个，
+         * delta > 0 为下一个，delta == 0 视为"不动"。
+         *
+         * 遵守 `set_loop(...)`、跳过 `accepts_focus` 为 false 的成员；没有可移动的目标时
+         * 返回 nullopt 且不改变 active_index()。命中时更新 active_index()、结束当前
+         * typeahead 查找，并返回与 handle_key 同形的 Intent —— 容器按同一套
+         * move_widget_focus / selection_follows_focus 落地即可。
+         *
+         * 程序化的"方向语义"入口应直接调用它，不要再按 orientation 合成上下 / 左右键。
+         */
+        [[nodiscard]] auto step(int delta) -> std::optional<Intent>;
 
         /// 处理文本输入（typeahead）。
         [[nodiscard]] auto handle_text(const scene::TextInputEvent& event)

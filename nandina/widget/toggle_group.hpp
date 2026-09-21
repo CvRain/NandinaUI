@@ -109,11 +109,11 @@ namespace nandina::widget
 
         /**
          * 方向键漫游（方向语义入口，供程序化调用）：direction -1 上一个 / +1 下一个，
-         * 到边界循环。
+         * 到边界循环。直接调用 `RovingFocus::step`，沿组配置的 orientation 轴步进，
+         * 不再按 orientation 合成上下 / 左右键。
          *
-         * 用户输入路径请用 `handle_key` —— 它把原始按键交给 RovingFocus，因此
-         * orientation（纵向 / 横向 / 双向）决定哪些键参与漫游；本入口只有"方向"，
-         * 所以按当前 orientation 合成一个对应轴上的按键再委托给它。
+         * 用户输入路径请用 `handle_key` —— 它把原始按键交给 RovingFocus，由
+         * orientation（纵向 / 横向 / 双向）决定哪些键参与漫游，是真实按键的权威过滤。
          */
         [[nodiscard]] auto move_focus(Toggle* from, int direction) -> bool;
 

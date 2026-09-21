@@ -162,8 +162,24 @@ namespace nandina::widget
     auto RovingFocus::make_intent(const int index) const -> Intent {
         return Intent {
             .index = index,
-            .move_widget_focus = movement_ == RovingMovement::widget_focus,
+            .move_widget_focus = movement_ != RovingMovement::selection_only,
+            .selection_follows_focus = movement_ != RovingMovement::focus_only,
         };
+    }
+
+    auto RovingFocus::step(const int delta) -> std::optional<Intent> {
+        if (delta == 0 || !has_members()) {
+            return std::nullopt;
+        }
+        // 只有方向有意义：沿配置轴下一 / 上一各走一步，具体键码由 handle_key 负责。
+        const int target = next_focusable(active_index(), delta < 0 ? -1 : 1);
+        if (target < 0) {
+            return std::nullopt;
+        }
+        active_ = target;
+        // 方向漫游属于导航，和按键路径一样结束上一次 typeahead 查找。
+        reset_typeahead();
+        return make_intent(target);
     }
 
     auto RovingFocus::handle_key(const scene::KeyEvent& event) -> std::optional<Intent> {
@@ -173,42 +189,28 @@ namespace nandina::widget
         const bool vertical = orientation_ != RovingOrientation::horizontal;
         const bool horizontal = orientation_ != RovingOrientation::vertical;
 
-        int target = -1;
+        // 方向键：按 orientation 过滤，再交给与程序化入口共用的 step()。
         switch (event.keycode()) {
             case keys::up:
-                if (!vertical) {
-                    return std::nullopt;
-                }
-                target = next_focusable(active_index(), -1);
-                break;
+                return vertical ? step(-1) : std::nullopt;
             case keys::down:
-                if (!vertical) {
-                    return std::nullopt;
-                }
-                target = next_focusable(active_index(), 1);
-                break;
+                return vertical ? step(1) : std::nullopt;
             case keys::left:
-                if (!horizontal) {
-                    return std::nullopt;
-                }
-                target = next_focusable(active_index(), -1);
-                break;
+                return horizontal ? step(-1) : std::nullopt;
             case keys::right:
-                if (!horizontal) {
-                    return std::nullopt;
-                }
-                target = next_focusable(active_index(), 1);
+                return horizontal ? step(1) : std::nullopt;
+            default:
                 break;
+        }
+
+        int target = -1;
+        switch (event.keycode()) {
             case keys::home:
-                target = edge_focusable(false);
-                break;
-            case keys::end:
-                target = edge_focusable(true);
-                break;
             case keys::page_up:
                 // 没有可见项高度信息，用"跳到首个 / 末尾"作为等价语义。
                 target = edge_focusable(false);
                 break;
+            case keys::end:
             case keys::page_down:
                 target = edge_focusable(true);
                 break;

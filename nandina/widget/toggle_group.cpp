@@ -4,7 +4,6 @@
 
 #include "toggle_group.hpp"
 
-#include "key_codes.hpp"
 #include "toggle.hpp"
 
 #include "../scene/input_event.hpp"
@@ -170,7 +169,9 @@ namespace nandina::widget
     }
 
     void ToggleGroup::sync_focus() {
-        focus_.set_movement(RovingMovement::widget_focus);
+        // focus_only：方向键移动控件焦点，但选中**不跟随**；toggle 的值语义属于
+        // Enter / Space / 点击这类显式激活。Intent 的两个决定因此各自独立。
+        focus_.set_movement(RovingMovement::focus_only);
         // 回调持有 members_ 的引用（不是快照）：注册顺序 = 视觉顺序 = 漫游顺序，
         // 索引 → 控件的映射始终由本类负责。sync() 会把同一个回调分发给每个成员。
         const auto& members = members_;
@@ -205,8 +206,9 @@ namespace nandina::widget
         if (target >= members_.size() || members_[target] == nullptr) {
             return false;
         }
-        // widget_focus：方向键只把焦点交给目标成员，不改写 checked —— toggle 的值
-        // 语义属于 Enter / Space / 点击这类显式激活。
+        // focus_only：方向键只把焦点交给目标成员（move_widget_focus），selected 不跟随
+        // （selection_follows_focus == false）—— toggle 的值语义属于 Enter / Space / 点击
+        // 这类显式激活。
         if (intent->move_widget_focus) {
             members_[target]->request_focus();
         }
@@ -223,14 +225,9 @@ namespace nandina::widget
         }
         sync_focus();
         focus_.set_active_index(current);
-        // RovingFocus 只接受**按键**而不是"方向"：横向组必须喂左右键、纵向组必须喂
-        // 上下键，否则 handle_key 会认为不是它的键而返回 nullopt。用户输入路径
-        // （handle_key）不需要这段映射，只有这个"方向语义"入口需要（见报告摩擦点）。
-        const bool horizontal = focus_.orientation() == RovingOrientation::horizontal;
-        const int keycode = horizontal ? (direction < 0 ? keys::left : keys::right)
-                                       : (direction < 0 ? keys::up : keys::down);
-        const auto intent =
-            focus_.handle_key(scene::KeyEvent(keycode, scene::KeyEvent::Action::press));
+        // 程序化"方向语义"入口直接调用 step()：沿组配置的 orientation 轴走一步，
+        // 不再按 orientation 合成上下 / 左右键（真实输入仍走 handle_key）。
+        const auto intent = focus_.step(direction);
         if (!intent.has_value() || intent->index < 0) {
             return false;
         }

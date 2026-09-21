@@ -254,7 +254,9 @@ namespace nandina::widget
             if (!intent.has_value()) {
                 return false;
             }
-            select(intent->index);
+            if (intent->selection_follows_focus) {
+                select(intent->index);
+            }
             event.accept();
             return true;
         }
@@ -264,13 +266,16 @@ namespace nandina::widget
                 return false;
             }
             // 方向键 / Home / End / PageUp / PageDown 统一交给共享漫游设施。
-            // selection_only：焦点留在标签条上，只改选中值（保持既有行为）。
+            // selection_only：焦点留在标签条上；选中按 Intent::selection_follows_focus 落地
+            // （保持既有行为）。
             sync_roving();
             const auto intent = focus_.handle_key(key);
             if (!intent.has_value()) {
                 return false;
             }
-            select(intent->index);
+            if (intent->selection_follows_focus) {
+                select(intent->index);
+            }
             event.accept();
             return true;
         }

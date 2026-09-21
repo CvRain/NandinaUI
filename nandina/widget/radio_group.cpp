@@ -4,10 +4,7 @@
 
 #include "radio_group.hpp"
 
-#include "key_codes.hpp"
 #include "radio_button.hpp"
-
-#include "../scene/input_event.hpp"
 
 #include <algorithm>
 
@@ -64,20 +61,21 @@ namespace nandina::widget
         if (current < 0) {
             return false;
         }
-        focus_.set_movement(RovingMovement::widget_focus);
+        focus_.set_movement(RovingMovement::focus_and_selection);
         focus_.set_active_index(current);
-        // 方向键语义由共享设施统一，这里只负责把目标指回成员并落地选择 + 焦点。
-        const int keycode = direction < 0 ? nandina::widget::keys::up : nandina::widget::keys::down;
-        const auto intent = focus_.handle_key(scene::KeyEvent(
-            keycode,
-            scene::KeyEvent::Action::press
-        ));
+        // 方向语义由共享设施统一（step 沿配置轴走一步），这里只负责把索引映射回成员
+        // 并按 Intent 的两个独立决定落地：选中跟随 + 控件焦点移动。
+        const auto intent = focus_.step(direction);
         if (!intent.has_value() || intent->index < 0) {
             return false;
         }
         auto* target = members_[static_cast<std::size_t>(intent->index)];
-        select(target);
-        target->request_focus();
+        if (intent->selection_follows_focus) {
+            select(target);
+        }
+        if (intent->move_widget_focus) {
+            target->request_focus();
+        }
         return true;
     }
 

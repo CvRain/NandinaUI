@@ -510,7 +510,9 @@ namespace nandina::widget
                 sync_roving();
                 const auto intent = focus_.handle_key(key);
                 if (intent.has_value()) {
-                    set_selected_index(intent->index);
+                    if (intent->selection_follows_focus) {
+                        set_selected_index(intent->index);
+                    }
                     event.accept();
                     return true;
                 }
@@ -522,7 +524,9 @@ namespace nandina::widget
             sync_roving();
             const auto intent = focus_.handle_text(static_cast<scene::TextInputEvent&>(event));
             if (intent.has_value()) {
-                set_selected_index(intent->index);
+                if (intent->selection_follows_focus) {
+                    set_selected_index(intent->index);
+                }
                 event.accept();
                 return true;
             }

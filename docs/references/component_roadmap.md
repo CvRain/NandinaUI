@@ -35,8 +35,9 @@ NandinaUI 不以逐项复制其他组件库为目标。[shadcn/ui Components](ht
 - `FocusScope`：焦点限制、初始焦点和关闭后的焦点恢复（基础已完成）；
 - 嵌套浮层父子关闭：`OverlayOptions::parent` 声明从属关系，父层关闭时先递归关闭后代并带上
   `OverlayCloseReason::parent`（已完成，`Select` / `Tooltip` 接入）；
-- roving focus/typeahead：菜单和列表选择的键盘导航（已完成：`RovingFocus`，两种移动模式
-  `widget_focus` / `selection_only`，含 Home/End 与 typeahead；RTL 极性列为已知空白）。
+- roving focus/typeahead：菜单和列表选择的键盘导航（已完成：`RovingFocus`，显式移动模型
+  `focus_and_selection` / `focus_only` / `selection_only` 与键码无关的 `step()`，含 Home/End
+  与 typeahead；RTL 极性列为已知空白）。
 
 完成标准：嵌套浮层、窗口边缘定位、Escape、点击外部与焦点恢复具有独立测试。
 

@@ -36,7 +36,7 @@ namespace nandina::widget
         [[nodiscard]] auto selected_index() const -> int;
 
         /// 方向键漫游：从 `from` 移动 focus+selection（direction -1 上一个 / +1 下一个，循环）。
-        /// 内部走共享的 RovingFocus（widget_focus 模式），语义与迁移前一致。
+        /// 内部走共享的 RovingFocus（focus_and_selection 模式），语义与迁移前一致。
         [[nodiscard]] auto move_focus(RadioButton* from, int direction) -> bool;
 
         /// 选中索引变化事件（用户或程序触发）。
