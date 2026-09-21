@@ -5,8 +5,8 @@
 
 ## 现状
 
-- 公开组件：**26**（有 `ComponentTraits`、可供应用直接使用）
-- 已有使用文档：**9**
+- 公开组件：**30**（有 `ComponentTraits`、可供应用直接使用）
+- 已有使用文档：**13**
 
 ## 分工约定
 
@@ -38,6 +38,7 @@
 | --- | --- | --- |
 | `Button` | ✅ [button.md](button.md) | 高 |
 | `TextField` | — | 高 |
+| `TextArea` | ✅ [text_area.md](text_area.md) | 高 |
 | `Select` | — | 高 |
 | `Card` | — | 高 |
 | `Badge` | — | 高 |
@@ -51,6 +52,8 @@
 | `Slider` | ✅ [slider.md](slider.md) | 中 |
 | `Dialog` | ✅ [dialog.md](dialog.md) | 中 |
 | `Tabs` | — | 中 |
+| `Breadcrumb` | ✅ [breadcrumb.md](breadcrumb.md) | 中 |
+| `Pagination` | ✅ [pagination.md](pagination.md) | 中 |
 | `Tooltip` | — | 中 |
 | `ProgressBar` | — | 中 |
 | `Divider` | — | 中 |
@@ -60,6 +63,7 @@
 | `RadioButton` | — | 中 |
 | `Toggle` | ✅ [toggle.md](toggle.md) | 高 |
 | `ToggleGroup` | ✅ [toggle_group.md](toggle_group.md) | 高 |
+| `ButtonGroup` | ✅ [button_group.md](button_group.md) | 高 |
 | `PointerArea` | ✅ [pointer_and_gesture_areas.md](pointer_and_gesture_areas.md) | 中 |
 | `GestureArea` | ✅ [pointer_and_gesture_areas.md](pointer_and_gesture_areas.md) | 中 |
 

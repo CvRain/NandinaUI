@@ -33,11 +33,15 @@
 | `Switch` | 即时启用或关闭设置 | 可用 |
 | [`Toggle`](toggle.md) | 按钮外观的两态开关（工具栏开/关） | 可用 |
 | [`ToggleGroup`](toggle_group.md) | 协调一组 Toggle 的单选/多选与键盘漫游 | 可用 |
+| [`ButtonGroup`](button_group.md) | 把相关按钮按统一间距排成一行/一列 | 可用 |
 | `RadioButton` / `RadioGroup` | 单选项组 | 可用 |
 | [`Slider`](slider.md) | 在数值范围内选择 | 可用 |
 | `TextField` | 单行文本输入 | 可用 |
+| [`TextArea`](text_area.md) | 多行纯文本输入 | 可用 |
 | `Select` | 从字符串选项中单选 | 可用，已接入统一浮层 |
 | `Tabs` | 水平标签选择 | 可用，等待内容槽位 |
+| [`Breadcrumb`](breadcrumb.md) | 用链接路径标出当前页在层级中的位置 | 可用 |
+| [`Pagination`](pagination.md) | 上一页/下一页与带省略号的页码导航 | 可用 |
 
 ### 浮层与反馈
 
@@ -62,9 +66,9 @@
 
 ## 计划补充
 
-- 高频基础组件：`TextArea`、`AlertDialog`、`ButtonGroup`、`Breadcrumb`、`Pagination`。
+- 高频基础组件：`AlertDialog`。
 - 浮层组件族：`Popover`、`DropdownMenu`、`ContextMenu`、`Combobox`、`CommandPalette`、`HoverCard`。
-- 信息组织组件：`Accordion`、`Collapsible`、`Sheet`、`Breadcrumb`、`Pagination`、`Table`。
+- 信息组织组件：`Accordion`、`Collapsible`、`Sheet`、`Table`。
 
 计划顺序与依赖关系见 [组件开发路线图](../references/component_roadmap.md)。
 

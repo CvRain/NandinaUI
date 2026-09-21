@@ -57,9 +57,9 @@ Home/End 与 typeahead），只剩嵌套浮层的父子关闭关系待补。
 
 1. `Spinner`、`Skeleton`、`EmptyState`；
 2. `Alert`（已完成）与基于 Dialog 语义约束的 `AlertDialog`；
-3. `Toggle`、`ToggleGroup`（均已完成）、`ButtonGroup`；
-4. `TextArea`，与 TextField 共享 EditableText primitive；
-5. `Breadcrumb` 与 `Pagination`。
+3. `Toggle`、`ToggleGroup`、`ButtonGroup`（均已完成）；
+4. `TextArea`（已完成），与 TextField 共享 EditableText primitive；
+5. `Breadcrumb` 与 `Pagination`（均已完成）。
 
 这些组件能补齐常见应用页面，同时不会引入庞大的新子系统。
 
