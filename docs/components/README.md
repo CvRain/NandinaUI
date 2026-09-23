@@ -48,6 +48,8 @@
 | 组件 | 用途 | 状态 |
 | --- | --- | --- |
 | `Dialog` | 模态内容、遮罩与焦点限制 | 可用，已接入统一浮层 |
+| [`Popover`](popover.md) | 锚定在触发控件旁的非模态浮层容器（内容为任意控件） | 可用，已接入统一浮层 |
+| [`DropdownMenu`](dropdown_menu.md) | 锚定菜单：动作 / 勾选 / 单选条目，键盘漫游与 typeahead | 可用，基于 Popover |
 | `Tooltip` | 悬停后显示简短提示 | 可用，已接入统一浮层定位 |
 | [`Alert`](alert.md) | 内联消息条，传达状态或反馈 | 可用 |
 
@@ -67,7 +69,9 @@
 ## 计划补充
 
 - 高频基础组件：`AlertDialog`。
-- 浮层组件族：`Popover`、`DropdownMenu`、`ContextMenu`、`Combobox`、`CommandPalette`、`HoverCard`。
+- 浮层组件族：`ContextMenu`、`Combobox`、`CommandPalette`、`HoverCard`
+  （基座 `Popover`、统一 MenuItem model 与 `DropdownMenu` 已落地，见
+  [菜单族条目模型](../references/menu_model.md)）。
 - 信息组织组件：`Accordion`、`Collapsible`、`Sheet`、`Table`。
 
 计划顺序与依赖关系见 [组件开发路线图](../references/component_roadmap.md)。

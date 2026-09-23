@@ -495,6 +495,55 @@ namespace nandina::theme
         ThemeScalar min_height;
     };
 
+    /** Popover 度量：面板内边距 / 面板与锚点间距 / 最小高度。 */
+    using PopoverMetrics = struct PopoverMetrics {
+        ThemeScalar padding_x;
+        ThemeScalar padding_y;
+        ThemeScalar gap;
+        ThemeScalar min_height;
+    };
+
+    /** Popover 配方：锚定浮层面板 + 度量（非模态容器，无交互状态）。 */
+    using PopoverRecipe = struct PopoverRecipe {
+        BoxStyle panel; // 浮层面板容器
+        PopoverMetrics metrics;
+    };
+
+    /**
+     * DropdownMenu 度量：条目行高 / 面板内边距 / 分隔线上下间距 / 条目圆角 /
+     * 分隔线厚度 / 最小宽度。
+     *
+     * 外层面板（填充 / 边框 / 圆角 / 面板内边距）由 `PopoverRecipe` 负责：DropdownMenu
+     * 组合一个 Popover，配方只覆盖面板**内部**的条目列表。
+     */
+    using DropdownMenuMetrics = struct DropdownMenuMetrics {
+        ThemeScalar item_height;         // 单个条目行高
+        ThemeScalar padding_x;           // 条目列表的水平内边距
+        ThemeScalar padding_y;           // 条目列表的垂直内边距
+        ThemeScalar gap;                 // 分隔线上下留白
+        ThemeScalar item_radius;         // 高亮条目填充圆角
+        ThemeScalar separator_thickness; // 分隔线厚度
+        ThemeScalar min_width;           // 面板内容最小宽度（含 padding_x）
+    };
+
+    /**
+     * DropdownMenu 配方：条目列表的排版 / 状态色 + 度量（浮层面板由 Popover 负责）。
+     *
+     * 没有组件级交互状态选择器（同 Popover / Tooltip）：hover / focused 是**逐条目**
+     * 的状态，由视图读取 `hover_fill` / `focus_fill` 直接绘制，不参与配方规则选择。
+     */
+    using DropdownMenuRecipe = struct DropdownMenuRecipe {
+        TypeStyle item_label;      // 常规条目文本
+        TypeStyle item_shortcut;   // 快捷键提示文本（仅展示）
+        TypeStyle group_label;     // 分组标题（kind == label）
+        ThemeColor disabled_label; // 禁用条目文本色
+        ThemeColor hover_fill;     // 指针悬停条目填充
+        ThemeColor focus_fill;     // 键盘高亮条目填充
+        ThemeColor checked_indicator; // 勾选指示（对勾 / 圆点）颜色
+        ThemeColor separator;         // 分隔线颜色
+        DropdownMenuMetrics metrics;
+    };
+
     /** Dialog 配方：半透明遮罩 + 居中面板 + 标题文本 + 度量。 */
     using DialogRecipe = struct DialogRecipe {
         ThemeColor scrim;    // 遮罩（半透明，覆盖全屏）
@@ -935,6 +984,40 @@ namespace nandina::theme
         std::optional<ThemeScalar> metrics_gap;
     };
 
+    /** Popover 规则：无选择器（非模态容器），覆盖面板 / 度量字段。 */
+    using PopoverRecipeRule = struct PopoverRecipeRule {
+        std::optional<ThemeColor> panel_fill;
+        std::optional<ThemeColor> panel_border;
+        std::optional<ThemeScalar> panel_border_width;
+        std::optional<ThemeScalar> panel_radius;
+        std::optional<ThemeScalar> metrics_padding_x;
+        std::optional<ThemeScalar> metrics_padding_y;
+        std::optional<ThemeScalar> metrics_gap;
+        std::optional<ThemeScalar> metrics_min_height;
+    };
+
+    /** DropdownMenu 规则：无选择器（逐条目状态在绘制时读取），覆盖条目排版 / 状态色 / 度量。 */
+    using DropdownMenuRecipeRule = struct DropdownMenuRecipeRule {
+        std::optional<ThemeColor> item_label_color;
+        std::optional<ThemeScalar> item_label_font_size;
+        std::optional<ThemeColor> item_shortcut_color;
+        std::optional<ThemeScalar> item_shortcut_font_size;
+        std::optional<ThemeColor> group_label_color;
+        std::optional<ThemeScalar> group_label_font_size;
+        std::optional<ThemeColor> disabled_label;
+        std::optional<ThemeColor> hover_fill;
+        std::optional<ThemeColor> focus_fill;
+        std::optional<ThemeColor> checked_indicator;
+        std::optional<ThemeColor> separator;
+        std::optional<ThemeScalar> metrics_item_height;
+        std::optional<ThemeScalar> metrics_padding_x;
+        std::optional<ThemeScalar> metrics_padding_y;
+        std::optional<ThemeScalar> metrics_gap;
+        std::optional<ThemeScalar> metrics_item_radius;
+        std::optional<ThemeScalar> metrics_separator_thickness;
+        std::optional<ThemeScalar> metrics_min_width;
+    };
+
     /** Dialog 规则：无选择器，覆盖遮罩/面板/标题/度量字段。 */
     using DialogRecipeRule = struct DialogRecipeRule {
         std::optional<ThemeColor> scrim;
@@ -1199,6 +1282,40 @@ namespace nandina::theme
         ResolvedControlMetrics metrics;
     };
 
+    using ResolvedPopoverMetrics = struct ResolvedPopoverMetrics {
+        float padding_x = 0.0F;
+        float padding_y = 0.0F;
+        float gap = 0.0F;
+        float min_height = 0.0F;
+    };
+
+    using ResolvedPopoverStyle = struct ResolvedPopoverStyle {
+        ResolvedBoxStyle panel;
+        ResolvedPopoverMetrics metrics;
+    };
+
+    using ResolvedDropdownMenuMetrics = struct ResolvedDropdownMenuMetrics {
+        float item_height = 0.0F;
+        float padding_x = 0.0F;
+        float padding_y = 0.0F;
+        float gap = 0.0F;
+        float item_radius = 0.0F;
+        float separator_thickness = 0.0F;
+        float min_width = 0.0F;
+    };
+
+    using ResolvedDropdownMenuStyle = struct ResolvedDropdownMenuStyle {
+        ResolvedTypeStyle item_label;
+        ResolvedTypeStyle item_shortcut;
+        ResolvedTypeStyle group_label;
+        NanColor disabled_label;
+        NanColor hover_fill;
+        NanColor focus_fill;
+        NanColor checked_indicator;
+        NanColor separator;
+        ResolvedDropdownMenuMetrics metrics;
+    };
+
     using ResolvedDialogMetrics = struct ResolvedDialogMetrics {
         float panel_width = 0.0F;
         float padding_x = 0.0F;
@@ -1355,6 +1472,16 @@ namespace nandina::theme
         std::vector<DialogRecipeRule> rules;
     };
 
+    using PopoverRecipes = struct PopoverRecipes {
+        PopoverRecipe base;
+        std::vector<PopoverRecipeRule> rules;
+    };
+
+    using DropdownMenuRecipes = struct DropdownMenuRecipes {
+        DropdownMenuRecipe base;
+        std::vector<DropdownMenuRecipeRule> rules;
+    };
+
     using ComponentRecipes = struct ComponentRecipes {
         ButtonRecipes button;
         CheckboxRecipes checkbox;
@@ -1382,6 +1509,8 @@ namespace nandina::theme
         AvatarRecipes avatar;
         ChipRecipes chip;
         DialogRecipes dialog;
+        PopoverRecipes popover;
+        DropdownMenuRecipes dropdown_menu;
     };
 
     /**
@@ -1749,6 +1878,16 @@ namespace nandina::theme
         ColorAppearance appearance
     ) -> ResolvedDialogStyle;
 
+    [[nodiscard]] auto resolve_popover(
+        const DesignSystem& system,
+        ColorAppearance appearance
+    ) -> ResolvedPopoverStyle;
+
+    [[nodiscard]] auto resolve_dropdown_menu(
+        const DesignSystem& system,
+        ColorAppearance appearance
+    ) -> ResolvedDropdownMenuStyle;
+
     // 规则覆盖：把配方规则应用到已解析的配方。解析器与 widget 的 set_override 共用同一路径。
 
     /** @param tone 当前 Button tone（accent / on_accent 引用依赖它）。 */
@@ -1952,6 +2091,20 @@ namespace nandina::theme
         const DialogRecipeRule& rule
     );
 
+    void apply_rule(
+        const DesignSystem& system,
+        ColorAppearance appearance,
+        ResolvedPopoverStyle& style,
+        const PopoverRecipeRule& rule
+    );
+
+    void apply_rule(
+        const DesignSystem& system,
+        ColorAppearance appearance,
+        ResolvedDropdownMenuStyle& style,
+        const DropdownMenuRecipeRule& rule
+    );
+
     // ─── 框架默认值（定义见 design_system.cpp） ──────────────────────────────
 
     [[nodiscard]] auto default_button_recipe() -> ButtonRecipe;
@@ -1980,6 +2133,8 @@ namespace nandina::theme
     [[nodiscard]] auto default_avatar_recipe() -> AvatarRecipe;
     [[nodiscard]] auto default_chip_recipe() -> ChipRecipe;
     [[nodiscard]] auto default_dialog_recipe() -> DialogRecipe;
+    [[nodiscard]] auto default_popover_recipe() -> PopoverRecipe;
+    [[nodiscard]] auto default_dropdown_menu_recipe() -> DropdownMenuRecipe;
 
     /**
      * 框架默认设计系统。品牌主题从本函数的拷贝开始修改字段，再通过

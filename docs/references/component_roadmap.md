@@ -48,8 +48,8 @@ NandinaUI 不以逐项复制其他组件库为目标。[shadcn/ui Components](ht
 - Dialog 使用 FocusScope、DismissLayer 和命名槽位（已完成，保留无窗口上下文下的树内模态回退）；
 - 保持已有应用层构建方式兼容，内部实现迁移不要求教程改写。
 
-三个组件的迁移都已完成。阶段 1 的 roving focus / typeahead 已补齐（`Select` 的弹出列表同时获得了
-Home/End 与 typeahead），只剩嵌套浮层的父子关闭关系待补。
+三个组件的迁移都已完成。阶段 1 的基础设施至此全部落地：roving focus / typeahead（`Select` 的
+弹出列表同时获得了 Home/End 与 typeahead）与嵌套浮层的父子关闭关系均已接入，阶段 1 不再有遗留项。
 
 ## 阶段 3：高频基础组件
 
@@ -65,10 +65,19 @@ Home/End 与 typeahead），只剩嵌套浮层的父子关闭关系待补。
 
 ## 阶段 4：菜单与选择组件族
 
-在浮层基础设施稳定后实现：
+进行中。三项公共依赖已落地，后续组件直接消费它们：
 
-- `Popover`；
-- `DropdownMenu`；
+- 统一 MenuItem model（`nandina/widget/menu_item.hpp`，规则见
+  [菜单族条目模型](menu_model.md)，契约测试 `tests/menu_item_tests.cpp`）；
+- `Popover` 浮层基座（锚定、外部关闭、焦点作用域、内容为任意控件；契约测试
+  `tests/popover_tests.cpp`），菜单族把它当作自己的浮层表面；
+- `DropdownMenu`（动作 / 勾选 / 单选条目，键盘漫游、typeahead 与无障碍语义；契约测试
+  `tests/dropdown_menu_tests.cpp`；playground 有「菜单与下拉」演示页）。
+  **已知空白**：`submenu` 只渲染尾部指示并回调 `set_on_submenu()`，不展开嵌套浮层。
+
+待实现：
+
+- `DropdownMenu` 子菜单的嵌套浮层展开；
 - `ContextMenu`；
 - `Combobox`；
 - `CommandPalette`；

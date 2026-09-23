@@ -12,6 +12,9 @@
 事情"的方法（布局与约束、响应式状态、主题与样式、键盘与无障碍等）。它是 Getting Started 与
 组件手册之间的那一层。
 
+> 该层目前只有选题清单，篇目均未编写（见 [Guide 的建议篇目](guide/README.md#建议的篇目)）。
+> 在首篇落地之前，请以 `getting_started/` 与 `components/` 为准。
+
 ## 组件文档
 
 [Components](components/README.md) 汇总当前可用组件及其成熟度。每篇组件文档同时包含用途、构建器写法、公开 API、交互规则与无障碍行为。

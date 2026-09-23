@@ -557,6 +557,51 @@ namespace nandina::theme
             };
         }
 
+        /** PopoverRecipe → 解析后的片段组合。 */
+        [[nodiscard]] auto resolve_recipe(
+            const DesignSystem& system,
+            const ColorAppearance appearance,
+            const PopoverRecipe& recipe
+        ) -> ResolvedPopoverStyle {
+            return {
+                .panel = resolve(system, appearance, recipe.panel),
+                .metrics = ResolvedPopoverMetrics {
+                    .padding_x = resolve_scalar(system, appearance, recipe.metrics.padding_x),
+                    .padding_y = resolve_scalar(system, appearance, recipe.metrics.padding_y),
+                    .gap = resolve_scalar(system, appearance, recipe.metrics.gap),
+                    .min_height = resolve_scalar(system, appearance, recipe.metrics.min_height),
+                },
+            };
+        }
+
+        /** DropdownMenuRecipe → 解析后的片段组合（面板本身由 PopoverRecipe 负责）。 */
+        [[nodiscard]] auto resolve_recipe(
+            const DesignSystem& system,
+            const ColorAppearance appearance,
+            const DropdownMenuRecipe& recipe
+        ) -> ResolvedDropdownMenuStyle {
+            return {
+                .item_label = resolve(system, appearance, recipe.item_label),
+                .item_shortcut = resolve(system, appearance, recipe.item_shortcut),
+                .group_label = resolve(system, appearance, recipe.group_label),
+                .disabled_label = resolve_color(system, appearance, recipe.disabled_label),
+                .hover_fill = resolve_color(system, appearance, recipe.hover_fill),
+                .focus_fill = resolve_color(system, appearance, recipe.focus_fill),
+                .checked_indicator = resolve_color(system, appearance, recipe.checked_indicator),
+                .separator = resolve_color(system, appearance, recipe.separator),
+                .metrics = ResolvedDropdownMenuMetrics {
+                    .item_height = resolve_scalar(system, appearance, recipe.metrics.item_height),
+                    .padding_x = resolve_scalar(system, appearance, recipe.metrics.padding_x),
+                    .padding_y = resolve_scalar(system, appearance, recipe.metrics.padding_y),
+                    .gap = resolve_scalar(system, appearance, recipe.metrics.gap),
+                    .item_radius = resolve_scalar(system, appearance, recipe.metrics.item_radius),
+                    .separator_thickness =
+                        resolve_scalar(system, appearance, recipe.metrics.separator_thickness),
+                    .min_width = resolve_scalar(system, appearance, recipe.metrics.min_width),
+                },
+            };
+        }
+
         /** Tabs disabled 变换：标签 / 指示条颜色 ×opacity.disabled。 */
         void apply_tabs_disabled(
             const DesignSystem& system,
@@ -1248,6 +1293,34 @@ namespace nandina::theme
     ) -> ResolvedDialogStyle {
         auto style = resolve_recipe(system, appearance, system.components.dialog.base);
         for (const auto& rule: system.components.dialog.rules) {
+            apply_rule(system, appearance, style, rule);
+        }
+        return style;
+    }
+
+    /**
+     * 解析 Popover 配方（纯展示容器：base → 规则列表，后匹配者胜）。
+     */
+    auto resolve_popover(
+        const DesignSystem& system,
+        const ColorAppearance appearance
+    ) -> ResolvedPopoverStyle {
+        auto style = resolve_recipe(system, appearance, system.components.popover.base);
+        for (const auto& rule: system.components.popover.rules) {
+            apply_rule(system, appearance, style, rule);
+        }
+        return style;
+    }
+
+    /**
+     * 解析 DropdownMenu 配方（条目列表：base → 规则列表，后匹配者胜）。
+     */
+    auto resolve_dropdown_menu(
+        const DesignSystem& system,
+        const ColorAppearance appearance
+    ) -> ResolvedDropdownMenuStyle {
+        auto style = resolve_recipe(system, appearance, system.components.dropdown_menu.base);
+        for (const auto& rule: system.components.dropdown_menu.rules) {
             apply_rule(system, appearance, style, rule);
         }
         return style;
@@ -2247,6 +2320,101 @@ namespace nandina::theme
         }
     }
 
+    void apply_rule(
+        const DesignSystem& system,
+        const ColorAppearance appearance,
+        ResolvedPopoverStyle& style,
+        const PopoverRecipeRule& rule
+    ) {
+        if (rule.panel_fill)
+            style.panel.fill = resolve_color(system, appearance, *rule.panel_fill);
+        if (rule.panel_border)
+            style.panel.border = resolve_color(system, appearance, *rule.panel_border);
+        if (rule.panel_border_width) {
+            style.panel.border_width =
+                resolve_scalar(system, appearance, *rule.panel_border_width);
+        }
+        if (rule.panel_radius)
+            style.panel.radius = resolve_scalar(system, appearance, *rule.panel_radius);
+        if (rule.metrics_padding_x) {
+            style.metrics.padding_x =
+                resolve_scalar(system, appearance, *rule.metrics_padding_x);
+        }
+        if (rule.metrics_padding_y) {
+            style.metrics.padding_y =
+                resolve_scalar(system, appearance, *rule.metrics_padding_y);
+        }
+        if (rule.metrics_gap)
+            style.metrics.gap = resolve_scalar(system, appearance, *rule.metrics_gap);
+        if (rule.metrics_min_height) {
+            style.metrics.min_height =
+                resolve_scalar(system, appearance, *rule.metrics_min_height);
+        }
+    }
+
+    void apply_rule(
+        const DesignSystem& system,
+        const ColorAppearance appearance,
+        ResolvedDropdownMenuStyle& style,
+        const DropdownMenuRecipeRule& rule
+    ) {
+        if (rule.item_label_color)
+            style.item_label.color = resolve_color(system, appearance, *rule.item_label_color);
+        if (rule.item_label_font_size) {
+            style.item_label.font_size =
+                resolve_scalar(system, appearance, *rule.item_label_font_size);
+        }
+        if (rule.item_shortcut_color) {
+            style.item_shortcut.color =
+                resolve_color(system, appearance, *rule.item_shortcut_color);
+        }
+        if (rule.item_shortcut_font_size) {
+            style.item_shortcut.font_size =
+                resolve_scalar(system, appearance, *rule.item_shortcut_font_size);
+        }
+        if (rule.group_label_color) {
+            style.group_label.color = resolve_color(system, appearance, *rule.group_label_color);
+        }
+        if (rule.group_label_font_size) {
+            style.group_label.font_size =
+                resolve_scalar(system, appearance, *rule.group_label_font_size);
+        }
+        if (rule.disabled_label)
+            style.disabled_label = resolve_color(system, appearance, *rule.disabled_label);
+        if (rule.hover_fill)
+            style.hover_fill = resolve_color(system, appearance, *rule.hover_fill);
+        if (rule.focus_fill)
+            style.focus_fill = resolve_color(system, appearance, *rule.focus_fill);
+        if (rule.checked_indicator) {
+            style.checked_indicator = resolve_color(system, appearance, *rule.checked_indicator);
+        }
+        if (rule.separator)
+            style.separator = resolve_color(system, appearance, *rule.separator);
+        if (rule.metrics_item_height) {
+            style.metrics.item_height =
+                resolve_scalar(system, appearance, *rule.metrics_item_height);
+        }
+        if (rule.metrics_padding_x) {
+            style.metrics.padding_x = resolve_scalar(system, appearance, *rule.metrics_padding_x);
+        }
+        if (rule.metrics_padding_y) {
+            style.metrics.padding_y = resolve_scalar(system, appearance, *rule.metrics_padding_y);
+        }
+        if (rule.metrics_gap)
+            style.metrics.gap = resolve_scalar(system, appearance, *rule.metrics_gap);
+        if (rule.metrics_item_radius) {
+            style.metrics.item_radius =
+                resolve_scalar(system, appearance, *rule.metrics_item_radius);
+        }
+        if (rule.metrics_separator_thickness) {
+            style.metrics.separator_thickness =
+                resolve_scalar(system, appearance, *rule.metrics_separator_thickness);
+        }
+        if (rule.metrics_min_width) {
+            style.metrics.min_width = resolve_scalar(system, appearance, *rule.metrics_min_width);
+        }
+    }
+
     /** @return 框架默认 Button 配方（normal 态通用语义；treatment/size 由规则覆盖）。 */
     auto default_button_recipe() -> ButtonRecipe {
         return {
@@ -3078,6 +3246,67 @@ namespace nandina::theme
     }
 
     /**
+     * @return 框架默认 Popover 配方（popover 面 + border 收边 + spacing 度量）。
+     *
+     * 非模态容器没有遮罩：面板必须自带填充与边框，否则内容会直接浮在页面文字上。
+     * 前后景都用语义角色，亮暗切换时跟随调色板。
+     */
+    auto default_popover_recipe() -> PopoverRecipe {
+        return {
+            .panel = BoxStyle {
+                .fill = ThemeColor::token(ColorToken::popover),
+                .border = ThemeColor::token(ColorToken::border),
+                .border_width = ThemeScalar::token(ScalarToken::border_thin),
+                .radius = ThemeScalar::token(ScalarToken::radius_md),
+            },
+            .metrics = PopoverMetrics {
+                .padding_x = ThemeScalar::token(ScalarToken::spacing_md),
+                .padding_y = ThemeScalar::token(ScalarToken::spacing_md),
+                .gap = ThemeScalar::token(ScalarToken::spacing_sm),
+                .min_height = ThemeScalar::literal(0.0F),
+            },
+        };
+    }
+
+    /**
+     * @return 框架默认 DropdownMenu 配方（条目列表；面板由 Popover 携带）。
+     *
+     * hover / focus 用两个不同的语义面：指针悬停走 muted（轻），键盘高亮走 accent
+     * （同一时刻只有一个条目高亮，两者都只影响条目填充，不影响面板）。所有颜色与
+     * 度量都引用语义角色，亮暗切换时跟随调色板。
+     */
+    auto default_dropdown_menu_recipe() -> DropdownMenuRecipe {
+        return {
+            .item_label = TypeStyle {
+                .color = ThemeColor::token(ColorToken::foreground),
+                .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+            },
+            .item_shortcut = TypeStyle {
+                .color = ThemeColor::token(ColorToken::muted_foreground),
+                .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+            },
+            .group_label = TypeStyle {
+                .color = ThemeColor::token(ColorToken::muted_foreground),
+                .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+            },
+            .disabled_label = ThemeColor::token(ColorToken::muted_foreground),
+            .hover_fill = ThemeColor::token(ColorToken::muted),
+            .focus_fill = ThemeColor::token(ColorToken::accent),
+            .checked_indicator = ThemeColor::token(ColorToken::accent_foreground),
+            .separator = ThemeColor::token(ColorToken::border),
+            .metrics = DropdownMenuMetrics {
+                .item_height = ThemeScalar::literal(32.0F), // shadcn menu item h-8
+                .padding_x = ThemeScalar::token(ScalarToken::spacing_xs),
+                .padding_y = ThemeScalar::token(ScalarToken::spacing_xs),
+                .gap = ThemeScalar::literal(4.0F), // 分隔线上下留白
+                .item_radius = ThemeScalar::token(ScalarToken::radius_sm),
+                .separator_thickness = ThemeScalar::token(ScalarToken::border_thin),
+                .min_width = ThemeScalar::literal(160.0F),
+            },
+        };
+    }
+
+    /**
      * 框架默认设计系统。
      *
      * 片段携带无默认构造的 ThemeValue（没有 "unset" 态），因此整棵树只能通过
@@ -3596,6 +3825,14 @@ namespace nandina::theme
                 },
                 .dialog = DialogRecipes {
                     .base = default_dialog_recipe(),
+                    .rules = {},
+                },
+                .popover = PopoverRecipes {
+                    .base = default_popover_recipe(),
+                    .rules = {},
+                },
+                .dropdown_menu = DropdownMenuRecipes {
+                    .base = default_dropdown_menu_recipe(),
                     .rules = {},
                 },
             },

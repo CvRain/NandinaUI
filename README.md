@@ -197,9 +197,12 @@ meson compile -C buildDir
 - [x] 补齐点击外部关闭和焦点作用域等浮层基础设施。
 - [x] 将 Tooltip、Select、Dialog 迁移到统一浮层设施并保持应用层 API 兼容。
 - [x] 默认主题对齐 shadcn 的语义角色集（含 `muted` / `accent` / `card` / `popover` / `destructive`），并把对比度与层级门槛固化为测试。
-- [ ] 补充 TextArea、Toggle、Alert、Spinner、Skeleton、EmptyState 等高频组件；新组件直接消费已有语义角色，不再新增硬编码色值。
-- [ ] 补齐浮层基础设施的 roving focus / typeahead 与嵌套浮层父子关闭关系。
-- [ ] 基于统一浮层实现 Popover、Menu、Combobox 和 CommandPalette。
+- [x] 补充 TextArea、Toggle、Alert、Spinner、Skeleton、EmptyState 等高频组件；新组件直接消费已有语义角色，不再新增硬编码色值。
+- [x] 补齐浮层基础设施的 roving focus / typeahead 与嵌套浮层父子关闭关系。
+- [ ] 补齐 `AlertDialog`，收尾阶段 3 的组件清单。
+- [x] 落统一 MenuItem model 与 Popover 浮层基座（锚定、外部关闭、焦点作用域，内容为任意控件），作为阶段 4 菜单族的公共依赖。
+- [x] 实现 `DropdownMenu`（动作 / 勾选 / 单选条目，键盘漫游、typeahead、无障碍语义），并在 playground 增加菜单演示页。
+- [ ] 继续基于该基座实现 ContextMenu、Combobox 和 CommandPalette，并补上子菜单的嵌套浮层展开。
 - [ ] 给浮层补打开/关闭过渡与缓动曲线，并把 `motion` token、`reduced_motion` 偏好接到动画侧。
 - [ ] 继续打磨 `butter`（本项目自研风格）；`fluent` / `material` 需要补上各自设计语言在几何、密度与状态层上的差异，目前只有配色与圆角尺度。
 - [ ] 后续完善 Table/DataTable、Accordion、Sheet 等复合组件。

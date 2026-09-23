@@ -76,14 +76,21 @@ OverlayHost 归属 `scene` 而非 `widget::internal`：它只使用 `LayerStack`
 
 尚未实现：
 
-- roving focus / typeahead；
-- 嵌套浮层的父子关闭关系。
+- 浮层打开/关闭的过渡与缓动曲线，以及 `motion` token / `reduced_motion` 偏好的接入；
+- roving focus 的 RTL 方向键极性（有意缓做，见 [选择与导航的键盘模型](../components/selection_and_navigation.md)）。
 
 ## 后续顺序
 
-阶段 2 的三个组件（Tooltip、Select、Dialog）都已完成迁移，浮层基础设施本身仍需补一项：
+阶段 1 的两项遗留都已落地：
 
-1. roving focus / typeahead：菜单与列表选择共用的键盘导航模型，阶段 4 的 Popover、DropdownMenu 与 Combobox 依赖它；
-2. 嵌套浮层的父子关闭关系：当前叠加的浮层彼此独立，关闭一个不会连带关闭它上面新开的浮层。
+1. roving focus / typeahead：`widget::RovingFocus` 提供显式移动模型（`focus_and_selection` /
+   `focus_only` / `selection_only`）以及 Home / End、PageUp / PageDown 与 typeahead，已被
+   `RadioGroup` / `Tabs` / `Select` / `ToggleGroup` / `Pagination` 接入；
+2. 嵌套浮层的父子关闭关系：`OverlayOptions::parent` 声明从属关系，父层关闭时
+   `close_descendants()` 递归关闭后代并标记 `OverlayCloseReason::parent`，`Select` 与 `Tooltip` 已接入。
+
+阶段 4 的 Popover / DropdownMenu / Combobox / CommandPalette 现在可以直接基于这套设施实现。
+新增组件应复用同一份 MenuItem model 与 selection model，而不是各自定义选项结构
+（见 [组件开发路线图](component_roadmap.md)）。
 
 OverlayHost 仍不应进入 `<nandina/widget/controls.hpp>`：应用层继续通过组件构造，Getting Started 也不应直接使用它。

@@ -37,6 +37,26 @@ namespace nandina::widget::internal
             content_centered_ = centered;
         }
 
+        /**
+         * 覆盖"内容边界"，用于锚定浮层：捕获阶段在布局落定之前运行，那时 content 的
+         * global_bounds 还是上一帧（甚至初始）的值，会让面板内点击被误判成外部点击。
+         * 宿主把已经算好的面板屏幕矩形交给它，外部点击判定就不依赖布局时序。
+         *
+         * 未设置时回退到 content 的 global_bounds（模态对话框的用法）。
+         */
+        void set_hit_bounds(foundation::NanRect bounds) {
+            hit_bounds_ = bounds;
+        }
+
+        void clear_hit_bounds() {
+            hit_bounds_.reset();
+        }
+
+        [[nodiscard]] auto hit_bounds() const noexcept
+            -> const std::optional<foundation::NanRect>& {
+            return hit_bounds_;
+        }
+
         void set_callback(Callback callback) {
             callback_ = std::move(callback);
         }
@@ -75,6 +95,8 @@ namespace nandina::widget::internal
         Callback callback_;
         std::weak_ptr<scene::NanControl> content_;
         bool content_centered_ = false;
+        /// 锚定浮层显式给出的内容屏幕矩形；未设置时用 content 的 global_bounds。
+        std::optional<foundation::NanRect> hit_bounds_;
         std::optional<theme::ResolvedBoxStyle> scrim_;
         animation::AnimatedProperty<float> fade_ {1.0F};
     };

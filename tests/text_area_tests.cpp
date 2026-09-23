@@ -229,9 +229,12 @@ TEST_CASE("text area pointer click places the caret on the clicked line", "[text
     for (std::size_t index = 0; index < 1; ++index) {
         line_top += layout.lines[index].size.get_height();
     }
-    const auto& line = layout.lines[1];
+    // 取**副本**：layout 是对 TextArea 内部 TextLayoutResult 的引用，下面的
+    // dispatch_mouse_button 会触发重新布局并 move-assign 掉 lines，持有元素引用
+    // 会在点击后悬垂（ASan: heap-use-after-free）。
+    const auto line = layout.lines[1];
     REQUIRE(line.caret_stops.size() >= 4);
-    const auto& stop = line.caret_stops[3];
+    const auto stop = line.caret_stops[3];
     const foundation::NanPoint click(
         style.metrics.padding_x + stop.x,
         style.metrics.padding_y + line_top + line.size.get_height() * 0.5F
@@ -247,8 +250,8 @@ TEST_CASE("text area pointer click places the caret on the clicked line", "[text
 
     // 第三行点击落在更大的 source 偏移上。
     float third_top = line_top + line.size.get_height();
-    const auto& third = layout.lines[2];
-    const auto& third_stop = third.caret_stops[2];
+    const auto third = layout.lines[2];
+    const auto third_stop = third.caret_stops[2];
     tree.dispatch_mouse_button(scene::MouseButtonEvent(
         scene::MouseButtonEvent::Button::left,
         scene::MouseButtonEvent::Action::press,

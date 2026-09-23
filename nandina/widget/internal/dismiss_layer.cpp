@@ -38,8 +38,17 @@ namespace nandina::widget::internal
         if (event.type() == scene::EventType::mouse_button) {
             auto& pointer = static_cast<scene::MouseButtonEvent&>(event);
             if (pointer.is_pressed() && pointer.button() == scene::MouseButtonEvent::Button::left) {
-                if (auto current = content_.lock(); current != nullptr
-                    && current->global_bounds().contains_point(pointer.screen_pos())) {
+                // 锚定浮层在捕获阶段就知道自己的面板矩形，不依赖 content 的布局时序。
+                if (hit_bounds_) {
+                    if (hit_bounds_->contains_point(pointer.screen_pos())) {
+                        return false;
+                    }
+                }
+                else if (
+                    auto current = content_.lock(); current != nullptr
+                    && current->global_bounds().contains_point(pointer.screen_pos())
+                )
+                {
                     return false;
                 }
                 if (callback_) {

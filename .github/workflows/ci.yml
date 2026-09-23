@@ -61,6 +61,18 @@ jobs:
           ninja --version
       - name: Configure
         run: meson setup buildDir --wrap-mode=nodownload -Dlinux_window_system=x11 ${{ matrix.toolchain_args }}
+      # 新增测试必须声明 suite：sanitize 任务按 suite 选取要跑的子集，而不是维
+      # 护手写名单。漏声明的测试会静默失去 ASan/UBSan 覆盖，所以在这里直接拦下。
+      - name: Assert every test declares a suite
+        run: |
+          # `meson test --list` 对已声明 suite 的测试打印 "<suite> - <project>:<name>"，
+          # 未声明时只打印 "<project>:<name>"。按分隔符判断，新增 suite 不会误报。
+          untagged=$(meson test -C buildDir --list | grep -v -- ' - ' || true)
+          if [ -n "$untagged" ]; then
+            echo "::error::these tests declare no suite and would escape sanitizer coverage:"
+            echo "$untagged"
+            exit 1
+          fi
       - name: Build
         run: meson compile -C buildDir
       - name: Test
@@ -96,16 +108,13 @@ jobs:
         run: meson setup buildDir-asan -Db_sanitize=address,undefined -Dlinux_window_system=x11 --wrap-mode=nodownload
       - name: Build
         run: meson compile -C buildDir-asan
-      - name: Test
+      - name: Test (unit suite under ASan + UBSan)
         run: |
-          meson test -C buildDir-asan --print-errorlogs \
-            foundation contrast font scene render image reactive widget \
-            authoring build-context-header router async viewport-scaling \
-            window-metrics linux-clipboard overlay anchored-positioner dismiss-layer focus-scope \
-            button theme-design-system checkbox slider switch \
-            badge card progress-bar radio-button theme-families color tabs tooltip select \
-            basic-widgets dialog animation system-fonts resource font-resource \
-            application-resource
+          # `unit` = 全部 C++ 单测。window-lifecycle 在无显示环境下会自报 skipped 并以
+          # 成功退出，所以可以安全纳入。慢速的 Python CLI / 构建工作流测试标为
+          # `integration`，由常规构建任务与 sqlite-fallback 任务覆盖。
+          # 不要改回手写名单：那正是新组件静默脱离 sanitizer 覆盖的原因。
+          meson test -C buildDir-asan --print-errorlogs --suite unit
 
   sqlite-fallback:
     name: SQLite fallback

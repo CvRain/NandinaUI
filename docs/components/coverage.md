@@ -5,8 +5,8 @@
 
 ## 现状
 
-- 公开组件：**30**（有 `ComponentTraits`、可供应用直接使用）
-- 已有使用文档：**13**
+- 公开组件：**32**（有 `ComponentTraits`、可供应用直接使用）
+- 已有使用文档：**17**（其中 `PointerArea` 与 `GestureArea` 共用一篇，实际文档文件 16 篇）
 
 ## 分工约定
 
@@ -51,6 +51,8 @@
 | `Alert` | ✅ [alert.md](alert.md) | 中 |
 | `Slider` | ✅ [slider.md](slider.md) | 中 |
 | `Dialog` | ✅ [dialog.md](dialog.md) | 中 |
+| `Popover` | ✅ [popover.md](popover.md) | 高 |
+| `DropdownMenu` | ✅ [dropdown_menu.md](dropdown_menu.md) | 高 |
 | `Tabs` | — | 中 |
 | `Breadcrumb` | ✅ [breadcrumb.md](breadcrumb.md) | 中 |
 | `Pagination` | ✅ [pagination.md](pagination.md) | 中 |
@@ -72,8 +74,8 @@
 
 ## 建议顺序
 
-1. **高优先级 8 个**（最高频、且当前完全无文档）：`TextField`、`Select`、`Card`、`Badge`、
-   `Switch`、`Checkbox`、`Label`、以及 `Tabs`；
+1. **高优先级 7 个 + `Tabs`**（最高频、且当前完全无文档）：`TextField`、`Select`、`Card`、`Badge`、
+   `Switch`、`Checkbox`、`Label`，以及表格中标为中优先级、但使用频率同样很高的 `Tabs`；
 2. 中优先级按实际被示例程序用到的顺序补；
 3. 每补一个组件文档，同步更新本文件的 ✅ 与 `README.md` 索引表。
 

@@ -37,6 +37,8 @@
 #include "text_field.hpp"
 #include "text_area.hpp"
 #include "tooltip.hpp"
+#include "popover.hpp"
+#include "dropdown_menu.hpp"
 
 namespace nandina::widget
 {
@@ -451,6 +453,46 @@ namespace nandina::widget
             return authoring::make<Tooltip>(std::move(text), std::move(trigger), ui.theme())
                 .configure([&ui](Tooltip& tooltip) {
                     tooltip.set_overlay_service(
+                        ui.has_overlay_host() ? &ui.overlay_host() : nullptr
+                    );
+                });
+        }
+    };
+
+    template<>
+    struct ComponentTraits<Popover> {
+        template<typename Control = scene::NanControl>
+            requires std::derived_from<Control, scene::NanControl>
+        [[nodiscard]] static auto make(
+            const BuildContext& ui,
+            std::shared_ptr<Control> trigger = nullptr,
+            std::shared_ptr<scene::NanControl> content = nullptr
+        ) -> authoring::NodeBuilder<Popover> {
+            return authoring::make<Popover>(std::move(trigger), std::move(content), ui.theme())
+                .configure([&ui](Popover& popover) {
+                    popover.set_overlay_service(
+                        ui.has_overlay_host() ? &ui.overlay_host() : nullptr
+                    );
+                });
+        }
+    };
+
+    /**
+     * DropdownMenu 是场景节点：注入覆盖层服务与主题，条目列表在构建后由调用方用
+     * `set_items()` 提供或替换（同 Popover 的内容槽位）。
+     */
+    template<>
+    struct ComponentTraits<DropdownMenu> {
+        template<typename Control = scene::NanControl>
+            requires std::derived_from<Control, scene::NanControl>
+        [[nodiscard]] static auto make(
+            const BuildContext& ui,
+            std::shared_ptr<Control> trigger = nullptr,
+            std::vector<MenuItem> items = {}
+        ) -> authoring::NodeBuilder<DropdownMenu> {
+            return authoring::make<DropdownMenu>(std::move(trigger), std::move(items), ui.theme())
+                .configure([&ui](DropdownMenu& menu) {
+                    menu.set_overlay_service(
                         ui.has_overlay_host() ? &ui.overlay_host() : nullptr
                     );
                 });

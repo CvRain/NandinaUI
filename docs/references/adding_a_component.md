@@ -42,7 +42,7 @@
 | `nandina/widget/foo.hpp` / `.cpp` | 组件实现。照一个同类的现有组件写（展示类看 `progress_bar` / `label`，交互类看 `button` / `checkbox`） |
 | `nandina/meson.build` | 在 `module_widget` 的 `files()` 里登记头文件与源文件 |
 | `nandina/widget/builtin_component_traits.hpp` | `ComponentTraits<Foo>`：让 `ui.make<Foo>(…)` 可用；需要绑定时一并给出 reactive 入口 |
-| `tests/foo_tests.cpp` + `tests/meson.build` | 测试目标与 `test('foo', foo_tests)` 登记 |
+| `tests/foo_tests.cpp` + `tests/meson.build` | 测试目标与 `test('foo', foo_tests, suite: 'unit')` 登记；**必须带 `suite`**，见下 |
 | `docs/components/foo.md` + `docs/components/README.md` | 使用参考；索引表里加一行并写明状态（`可用` / `实验性`） |
 | `docs/references/component_roadmap.md` | 若该组件属于某个阶段，更新阶段进度 |
 
@@ -71,6 +71,19 @@
 6. 从场景树移除时的清理（如果持有资源或注册了回调）；
 7. 边界值：0、负数、空字符串、超长文本。
 
+## 测试 suite：新组件自动进入 sanitizer 覆盖
+
+`tests/meson.build` 里每个 `test()` 都必须声明 `suite`：
+
+| suite | 用途 | 谁跑 |
+| --- | --- | --- |
+| `unit` | C++ 单测（Catch2） | 常规任务 + ASan/UBSan 任务（`meson test --suite unit`） |
+| `integration` | Python CLI / 构建工作流测试（慢） | 常规任务与 sqlite-fallback 任务 |
+
+新增组件一律用 `suite: 'unit'`。裸写 `test('foo', foo_tests)` 不会报错，但该测试会**静默失去
+ASan/UBSan 覆盖** —— 这正是本项目曾经让 21 个组件测试脱离 sanitizer 一年的原因。CI 的
+`Assert every test declares a suite` 步骤会在构建前拦下漏声明的测试。
+
 ## 常见坑
 
 - **`apply_rule` 重载漏写** → 字段看起来存在，但主题改不动（静默失效）。
@@ -81,3 +94,6 @@
 - **改了配方默认值但没同步文档** → `docs/components/*.md` 里列出的字段表要跟着改。
 - **忘记 `meson.build` 登记** → 头文件能被包含（因为不是安装式的），但 `.cpp` 不会编译，
   症状是链接期 `undefined reference`。
+- **测试里跨 dispatch 持有 `layout_result()` 的引用** → 引用指向控件内部存储；一次
+  `dispatch_mouse_button` 会触发重新布局并 move-assign 掉 `lines`，之后再读就是
+  heap-use-after-free（`text_area_tests` 曾如此）。要跨 dispatch 使用就先**取副本**。

@@ -263,6 +263,12 @@ module_widget = files(
     'widget/chip.cpp',
     'widget/dialog.hpp',
     'widget/dialog.cpp',
+    'widget/menu_item.hpp',
+    'widget/menu_item.cpp',
+    'widget/popover.hpp',
+    'widget/popover.cpp',
+    'widget/dropdown_menu.hpp',
+    'widget/dropdown_menu.cpp',
     'widget/image.hpp',
     'widget/image.cpp',
 )
