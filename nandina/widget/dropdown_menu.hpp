@@ -43,6 +43,7 @@ namespace nandina::widget
     struct ComponentTraits;
 
     class Popover;
+    class ContextMenu;
 
     namespace internal
     {
@@ -126,10 +127,17 @@ namespace nandina::widget
 
     private:
         friend struct ComponentTraits<DropdownMenu>;
+        friend class ContextMenu;
 
         /// Internal: bind the owning window's overlay portal. Called by
         /// `ComponentTraits<DropdownMenu>` so page authors never create an OverlayHost.
         void set_overlay_service(scene::OverlayHost* host) noexcept;
+        /// ContextMenu positions this menu at a pointer rect while retaining the
+        /// wrapped target as the focus/overlay owner.
+        void set_external_anchor_rect(
+            const std::shared_ptr<scene::NanControl>& owner,
+            foundation::NanRect anchor
+        ) noexcept;
 
         /// 用户激活某条目后的落地：按 kind 分派（见 menu_model.md 的规则）。
         void handle_activate(std::string_view id);

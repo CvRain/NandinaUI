@@ -233,6 +233,18 @@ namespace nandina::theme
         disabled,
     };
 
+    /**
+     * Combobox 交互状态（输入框外壳：normal / focused / disabled）。
+     *
+     * 高亮行不在此枚举里：hover / focus 是**逐条目**状态，由视图读取
+     * `hover_fill` / `focus_fill` 直接绘制（同 DropdownMenu 的取舍）。
+     */
+    enum class ComboboxVisualState: std::uint8_t {
+        normal,
+        focused,
+        disabled,
+    };
+
 } // namespace nandina::theme
 
 #endif // NANDINA_EXPERIMENT_THEME_VISUAL_STATE_HPP

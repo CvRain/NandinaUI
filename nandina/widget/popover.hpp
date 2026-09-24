@@ -112,6 +112,8 @@ namespace nandina::widget
         /// DropdownMenu 组合一个 Popover 并把 BuildContext 注入的浮层服务转发给它；
         /// 服务注入点保持 private，因此这里需要友元（不改变任何行为）。
         friend class DropdownMenu;
+        /// Combobox 同样组合一个 Popover（输入框作为触发控件），需要转发服务注入。
+        friend class Combobox;
 
         /// 内容的承载方式，在首次打开时确定后固定下来。
         enum class MountMode { unmounted, tree, overlay };
@@ -123,6 +125,12 @@ namespace nandina::widget
         /// child. DropdownMenu uses this for submenu rows that remain in the parent
         /// menu surface.
         void set_external_anchor(const std::shared_ptr<scene::NanControl>& anchor) noexcept;
+        /// Anchor to a stable screen-space rect while keeping `owner` for overlay
+        /// parent discovery and focus fallback. ContextMenu uses a 1x1 cursor rect.
+        void set_external_anchor_rect(
+            const std::shared_ptr<scene::NanControl>& owner,
+            foundation::NanRect anchor
+        ) noexcept;
         /// Nested menus let pointer hits outside the child panel reach the parent
         /// menu; the root Popover keeps the default full-screen dismiss surface.
         void set_pointer_passthrough_outside(bool enabled) noexcept;
@@ -167,6 +175,7 @@ namespace nandina::widget
 
         std::weak_ptr<scene::NanControl> trigger_;
         std::weak_ptr<scene::NanControl> anchor_;
+        std::optional<foundation::NanRect> external_anchor_rect_;
         /// 内容槽位的唯一持有者。随浮层托管时同时被 PopoverSurface 引用，关闭时收回，
         /// 因此内容不会在收起瞬间被销毁，可以再次打开。
         std::shared_ptr<scene::NanControl> content_;

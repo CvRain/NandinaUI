@@ -5,7 +5,7 @@
 
 ## 现状
 
-- 公开组件：**32**（有 `ComponentTraits`、可供应用直接使用）
+- 公开组件：**34**（有 `ComponentTraits`、可供应用直接使用）
 - 已有使用文档：**17**（其中 `PointerArea` 与 `GestureArea` 共用一篇，实际文档文件 16 篇）
 
 ## 分工约定
@@ -53,6 +53,8 @@
 | `Dialog` | ✅ [dialog.md](dialog.md) | 中 |
 | `Popover` | ✅ [popover.md](popover.md) | 高 |
 | `DropdownMenu` | ✅ [dropdown_menu.md](dropdown_menu.md) | 高 |
+| `ContextMenu` | — | 高 |
+| `Combobox` | — | 高 |
 | `Tabs` | — | 中 |
 | `Breadcrumb` | ✅ [breadcrumb.md](breadcrumb.md) | 中 |
 | `Pagination` | ✅ [pagination.md](pagination.md) | 中 |

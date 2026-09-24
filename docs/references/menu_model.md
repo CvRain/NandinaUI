@@ -137,6 +137,8 @@ checkbox / radio 则保持展开并把修改后的 children 同步回父层模�
 
 ## 后续
 
-阶段 4 已完成 `Popover`、`DropdownMenu` 及递归子菜单，下一步按 `ContextMenu` → `Combobox`
-→ `CommandPalette` 顺序实现。每新增一个消费方，都应复用本模型与 `MenuSelection`，不得新增平行的选项类型；
+阶段 4 已完成 `Popover`、`DropdownMenu`、递归子菜单、`ContextMenu` 与 `Combobox`，下一步按
+`CommandPalette` → `HoverCard` 顺序实现。`Combobox` 额外验证了一点：本模型可以同时服务
+「激活即执行」的菜单与「输入即筛选」的选择器 —— 前者用 `MenuItem` 的 kind 与 `MenuSelection`，
+后者只需按 `label` 过滤后仍交给同一套 `RovingFocus` 与条目渲染。每新增一个消费方，都应复用本模型与 `MenuSelection`，不得新增平行的选项类型；
 若模型确需扩展字段，先改这里再改实现，并同步 `tests/menu_item_tests.cpp`。

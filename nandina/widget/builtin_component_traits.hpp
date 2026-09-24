@@ -39,6 +39,8 @@
 #include "tooltip.hpp"
 #include "popover.hpp"
 #include "dropdown_menu.hpp"
+#include "context_menu.hpp"
+#include "combobox.hpp"
 
 namespace nandina::widget
 {
@@ -493,6 +495,47 @@ namespace nandina::widget
             return authoring::make<DropdownMenu>(std::move(trigger), std::move(items), ui.theme())
                 .configure([&ui](DropdownMenu& menu) {
                     menu.set_overlay_service(
+                        ui.has_overlay_host() ? &ui.overlay_host() : nullptr
+                    );
+                });
+        }
+    };
+
+    template<>
+    struct ComponentTraits<ContextMenu> {
+        template<typename Control = scene::NanControl>
+            requires std::derived_from<Control, scene::NanControl>
+        [[nodiscard]] static auto make(
+            const BuildContext& ui,
+            std::shared_ptr<Control> target = nullptr,
+            std::vector<MenuItem> items = {}
+        ) -> authoring::NodeBuilder<ContextMenu> {
+            return authoring::make<ContextMenu>(std::move(target), std::move(items), ui.theme())
+                .configure([&ui](ContextMenu& menu) {
+                    menu.set_overlay_service(
+                        ui.has_overlay_host() ? &ui.overlay_host() : nullptr
+                    );
+                });
+        }
+    };
+
+    /**
+     * Combobox 组合一个内部 TextField 与一个 Popover：注入覆盖层服务与主题，
+     * 条目列表与初始值在构建时提供（同为场景节点，`ui.make<Combobox>()` 可直接用默认值）。
+     */
+    template<>
+    struct ComponentTraits<Combobox> {
+        [[nodiscard]] static auto make(
+            const BuildContext& ui,
+            std::vector<MenuItem> items = {},
+            std::string value = {},
+            std::string placeholder = {}
+        ) -> authoring::NodeBuilder<Combobox> {
+            return authoring::make<Combobox>(
+                       std::move(items), std::move(value), std::move(placeholder), ui.theme()
+            )
+                .configure([&ui](Combobox& combobox) {
+                    combobox.set_overlay_service(
                         ui.has_overlay_host() ? &ui.overlay_host() : nullptr
                     );
                 });

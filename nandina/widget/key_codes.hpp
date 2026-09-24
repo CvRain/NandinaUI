@@ -52,6 +52,10 @@ namespace nandina::widget::keys
     inline constexpr int page_down = 267;
     inline constexpr int home = 268;
     inline constexpr int end = 269;
+
+    // ─── 系统 / 辅助入口 ────────────────────────────────────────────────
+    inline constexpr int f10 = 299;
+    inline constexpr int menu = 348;
 } // namespace nandina::widget::keys
 
 #endif // NANDINA_EXPERIMENT_WIDGET_KEY_CODES_HPP

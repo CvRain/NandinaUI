@@ -602,6 +602,61 @@ namespace nandina::theme
             };
         }
 
+        /** ComboboxRecipe → 解析后的片段组合（面板本身由 PopoverRecipe 负责）。 */
+        [[nodiscard]] auto resolve_recipe(
+            const DesignSystem& system,
+            const ColorAppearance appearance,
+            const ComboboxRecipe& recipe
+        ) -> ResolvedComboboxStyle {
+            return {
+                .input = resolve(system, appearance, recipe.input),
+                .value = resolve(system, appearance, recipe.value),
+                .placeholder = resolve(system, appearance, recipe.placeholder),
+                .selection = resolve_color(system, appearance, recipe.selection),
+                .focus = resolve(system, appearance, recipe.focus),
+                .option = resolve(system, appearance, recipe.option),
+                .disabled_label = resolve_color(system, appearance, recipe.disabled_label),
+                .hover_fill = resolve_color(system, appearance, recipe.hover_fill),
+                .focus_fill = resolve_color(system, appearance, recipe.focus_fill),
+                .metrics = ResolvedComboboxMetrics {
+                    .height = resolve_scalar(system, appearance, recipe.metrics.height),
+                    .padding_x = resolve_scalar(system, appearance, recipe.metrics.padding_x),
+                    .preferred_width =
+                        resolve_scalar(system, appearance, recipe.metrics.preferred_width),
+                    .gap = resolve_scalar(system, appearance, recipe.metrics.gap),
+                    .item_height = resolve_scalar(system, appearance, recipe.metrics.item_height),
+                    .list_padding_x =
+                        resolve_scalar(system, appearance, recipe.metrics.list_padding_x),
+                    .list_padding_y =
+                        resolve_scalar(system, appearance, recipe.metrics.list_padding_y),
+                    .item_radius =
+                        resolve_scalar(system, appearance, recipe.metrics.item_radius),
+                    .min_width = resolve_scalar(system, appearance, recipe.metrics.min_width),
+                },
+            };
+        }
+
+        /**
+         * Combobox disabled 变换：输入框外壳 / 文本颜色 ×opacity.disabled。
+         *
+         * 选项列表不参与：禁用状态下浮层根本不会打开，弱化一列看不见的行没有视觉落点。
+         */
+        void apply_combobox_disabled(
+            const DesignSystem& system,
+            const ColorAppearance appearance,
+            ResolvedComboboxStyle& style
+        ) {
+            const float alpha = resolve_scalar(
+                system,
+                appearance,
+                ThemeScalar::token(ScalarToken::opacity_disabled)
+            );
+            scale_alpha(style.input.fill, alpha);
+            scale_alpha(style.input.border, alpha);
+            scale_alpha(style.value.color, alpha);
+            scale_alpha(style.placeholder.color, alpha);
+        }
+
         /** Tabs disabled 变换：标签 / 指示条颜色 ×opacity.disabled。 */
         void apply_tabs_disabled(
             const DesignSystem& system,
@@ -1322,6 +1377,27 @@ namespace nandina::theme
         auto style = resolve_recipe(system, appearance, system.components.dropdown_menu.base);
         for (const auto& rule: system.components.dropdown_menu.rules) {
             apply_rule(system, appearance, style, rule);
+        }
+        return style;
+    }
+
+    /**
+     * 解析 Combobox 配方（输入框外壳 + 选项列表：base → 状态规则 → disabled 变换）。
+     */
+    auto resolve_combobox(
+        const DesignSystem& system,
+        const ColorAppearance appearance,
+        const ComboboxVisualState state
+    ) -> ResolvedComboboxStyle {
+        auto style = resolve_recipe(system, appearance, system.components.combobox.base);
+        for (const auto& rule: system.components.combobox.rules) {
+            if (rule.state && *rule.state != state) {
+                continue;
+            }
+            apply_rule(system, appearance, style, rule);
+        }
+        if (state == ComboboxVisualState::disabled) {
+            apply_combobox_disabled(system, appearance, style);
         }
         return style;
     }
@@ -2415,6 +2491,83 @@ namespace nandina::theme
         }
     }
 
+    void apply_rule(
+        const DesignSystem& system,
+        const ColorAppearance appearance,
+        ResolvedComboboxStyle& style,
+        const ComboboxRecipeRule& rule
+    ) {
+        if (rule.input_fill)
+            style.input.fill = resolve_color(system, appearance, *rule.input_fill);
+        if (rule.input_border)
+            style.input.border = resolve_color(system, appearance, *rule.input_border);
+        if (rule.input_border_width) {
+            style.input.border_width =
+                resolve_scalar(system, appearance, *rule.input_border_width);
+        }
+        if (rule.input_radius)
+            style.input.radius = resolve_scalar(system, appearance, *rule.input_radius);
+        if (rule.value_color)
+            style.value.color = resolve_color(system, appearance, *rule.value_color);
+        if (rule.value_font_size)
+            style.value.font_size = resolve_scalar(system, appearance, *rule.value_font_size);
+        if (rule.placeholder_color) {
+            style.placeholder.color = resolve_color(system, appearance, *rule.placeholder_color);
+        }
+        if (rule.placeholder_font_size) {
+            style.placeholder.font_size =
+                resolve_scalar(system, appearance, *rule.placeholder_font_size);
+        }
+        if (rule.selection_color)
+            style.selection = resolve_color(system, appearance, *rule.selection_color);
+        if (rule.focus_ring_color) {
+            style.focus.color = resolve_color(system, appearance, *rule.focus_ring_color);
+        }
+        if (rule.focus_ring_width) {
+            style.focus.width = resolve_scalar(system, appearance, *rule.focus_ring_width);
+        }
+        if (rule.option_color)
+            style.option.color = resolve_color(system, appearance, *rule.option_color);
+        if (rule.option_font_size)
+            style.option.font_size = resolve_scalar(system, appearance, *rule.option_font_size);
+        if (rule.disabled_label)
+            style.disabled_label = resolve_color(system, appearance, *rule.disabled_label);
+        if (rule.hover_fill)
+            style.hover_fill = resolve_color(system, appearance, *rule.hover_fill);
+        if (rule.focus_fill)
+            style.focus_fill = resolve_color(system, appearance, *rule.focus_fill);
+        if (rule.metrics_height)
+            style.metrics.height = resolve_scalar(system, appearance, *rule.metrics_height);
+        if (rule.metrics_padding_x) {
+            style.metrics.padding_x = resolve_scalar(system, appearance, *rule.metrics_padding_x);
+        }
+        if (rule.metrics_preferred_width) {
+            style.metrics.preferred_width =
+                resolve_scalar(system, appearance, *rule.metrics_preferred_width);
+        }
+        if (rule.metrics_gap)
+            style.metrics.gap = resolve_scalar(system, appearance, *rule.metrics_gap);
+        if (rule.metrics_item_height) {
+            style.metrics.item_height =
+                resolve_scalar(system, appearance, *rule.metrics_item_height);
+        }
+        if (rule.metrics_list_padding_x) {
+            style.metrics.list_padding_x =
+                resolve_scalar(system, appearance, *rule.metrics_list_padding_x);
+        }
+        if (rule.metrics_list_padding_y) {
+            style.metrics.list_padding_y =
+                resolve_scalar(system, appearance, *rule.metrics_list_padding_y);
+        }
+        if (rule.metrics_item_radius) {
+            style.metrics.item_radius =
+                resolve_scalar(system, appearance, *rule.metrics_item_radius);
+        }
+        if (rule.metrics_min_width) {
+            style.metrics.min_width = resolve_scalar(system, appearance, *rule.metrics_min_width);
+        }
+    }
+
     /** @return 框架默认 Button 配方（normal 态通用语义；treatment/size 由规则覆盖）。 */
     auto default_button_recipe() -> ButtonRecipe {
         return {
@@ -3307,6 +3460,55 @@ namespace nandina::theme
     }
 
     /**
+     * @return 框架默认 Combobox 配方（输入框外壳 + 选项列表；浮层面板由 Popover 携带）。
+     *
+     * 输入框沿用 TextField 的语义组合（background 底 + input 收边 + ring 焦点环），
+     * 选项列表沿用 DropdownMenu 的状态面（hover 走 muted、键盘高亮走 accent）。
+     * 所有颜色与度量都引用语义角色，亮暗切换时跟随调色板。
+     */
+    auto default_combobox_recipe() -> ComboboxRecipe {
+        return {
+            .input = BoxStyle {
+                .fill = ThemeColor::token(ColorToken::background),
+                .border = ThemeColor::token(ColorToken::input),
+                .border_width = ThemeScalar::token(ScalarToken::border_thin),
+                .radius = ThemeScalar::token(ScalarToken::radius_md),
+            },
+            .value = TypeStyle {
+                .color = ThemeColor::token(ColorToken::foreground),
+                .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+            },
+            .placeholder = TypeStyle {
+                .color = ThemeColor::token(ColorToken::muted_foreground),
+                .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+            },
+            .selection = ThemeColor::token(ColorToken::selection),
+            .focus = FocusRingStyle {
+                .color = ThemeColor::token(ColorToken::ring),
+                .width = ThemeScalar::literal(0.0F), // focused 规则按需开启
+            },
+            .option = TypeStyle {
+                .color = ThemeColor::token(ColorToken::foreground),
+                .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+            },
+            .disabled_label = ThemeColor::token(ColorToken::muted_foreground),
+            .hover_fill = ThemeColor::token(ColorToken::muted),
+            .focus_fill = ThemeColor::token(ColorToken::accent),
+            .metrics = ComboboxMetrics {
+                .height = ThemeScalar::literal(36.0F), // 与 TextField 同高（shadcn h-9）
+                .padding_x = ThemeScalar::token(ScalarToken::spacing_md),
+                .preferred_width = ThemeScalar::literal(200.0F),
+                .gap = ThemeScalar::token(ScalarToken::spacing_sm),
+                .item_height = ThemeScalar::literal(32.0F), // shadcn menu item h-8
+                .list_padding_x = ThemeScalar::token(ScalarToken::spacing_xs),
+                .list_padding_y = ThemeScalar::token(ScalarToken::spacing_xs),
+                .item_radius = ThemeScalar::token(ScalarToken::radius_sm),
+                .min_width = ThemeScalar::literal(160.0F),
+            },
+        };
+    }
+
+    /**
      * 框架默认设计系统。
      *
      * 片段携带无默认构造的 ThemeValue（没有 "unset" 态），因此整棵树只能通过
@@ -3834,6 +4036,16 @@ namespace nandina::theme
                 .dropdown_menu = DropdownMenuRecipes {
                     .base = default_dropdown_menu_recipe(),
                     .rules = {},
+                },
+                .combobox = ComboboxRecipes {
+                    .base = default_combobox_recipe(),
+                    .rules = {
+                        ComboboxRecipeRule {
+                            .state = ComboboxVisualState::focused,
+                            .focus_ring_width =
+                                ThemeScalar::token(ScalarToken::border_focus_ring),
+                        },
+                    },
                 },
             },
         };

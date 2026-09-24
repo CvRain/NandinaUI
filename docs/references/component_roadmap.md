@@ -65,7 +65,7 @@ NandinaUI 不以逐项复制其他组件库为目标。[shadcn/ui Components](ht
 
 ## 阶段 4：菜单与选择组件族
 
-进行中。三项公共依赖已落地，后续组件直接消费它们：
+进行中。五项公共依赖已落地，后续组件直接消费它们：
 
 - 统一 MenuItem model（`nandina/widget/menu_item.hpp`，规则见
   [菜单族条目模型](menu_model.md)，契约测试 `tests/menu_item_tests.cpp`）；
@@ -74,12 +74,14 @@ NandinaUI 不以逐项复制其他组件库为目标。[shadcn/ui Components](ht
 - `DropdownMenu`（动作 / 勾选 / 单选条目，键盘漫游、typeahead 与无障碍语义；契约测试
   `tests/dropdown_menu_tests.cpp`；playground 有「菜单与下拉」演示页）；
 - `DropdownMenu` 递归子菜单（悬停与 Right/Left/Escape、父子浮层关闭、焦点返回、父层点击
-  穿透及子层选择状态回写均已覆盖测试）。
+  穿透及子层选择状态回写均已覆盖测试）；
+- `ContextMenu`（右键 / 菜单键 / Shift+F10 在指针处打开；包装 `DropdownMenu`，自身只负责
+  目标槽位与调用策略；契约测试 `tests/context_menu_tests.cpp`）；
+- `Combobox`（组合 `TextField` + `Popover`，输入即筛选、方向键漫游、Enter 选中、自由文本可选；
+  契约测试 `tests/combobox_tests.cpp`；playground 有演示单元）。
 
 待实现：
 
-- `ContextMenu`；
-- `Combobox`；
 - `CommandPalette`；
 - `HoverCard`。
 

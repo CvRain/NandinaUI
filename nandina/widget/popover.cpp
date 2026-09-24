@@ -193,6 +193,7 @@ namespace nandina::widget
         auto current = trigger_.lock();
         trigger_ = trigger;
         anchor_ = trigger;
+        external_anchor_rect_.reset();
         replace_child(current.get(), std::move(trigger));
         sync_portal();
         mark_layout_dirty();
@@ -449,6 +450,16 @@ namespace nandina::widget
 
     void Popover::set_external_anchor(const std::shared_ptr<scene::NanControl>& anchor) noexcept {
         anchor_ = anchor;
+        external_anchor_rect_.reset();
+        sync_portal();
+    }
+
+    void Popover::set_external_anchor_rect(
+        const std::shared_ptr<scene::NanControl>& owner,
+        const foundation::NanRect anchor
+    ) noexcept {
+        anchor_ = owner;
+        external_anchor_rect_ = anchor;
         sync_portal();
     }
 
@@ -501,7 +512,7 @@ namespace nandina::widget
         }
 
         const auto viewport_size = host->viewport_size();
-        const auto anchor = anchor_control->global_bounds();
+        const auto anchor = external_anchor_rect_.value_or(anchor_control->global_bounds());
         // Positioning needs a laid-out viewport and trigger. Either can be missing on
         // the first frame or immediately after set_trigger(); skip until they are
         // valid rather than feeding the positioner an invalid rect.

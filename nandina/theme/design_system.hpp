@@ -544,6 +544,44 @@ namespace nandina::theme
         DropdownMenuMetrics metrics;
     };
 
+    /**
+     * Combobox 度量：输入框高度 / 内边距 / 首选宽度、浮层与输入框间距、
+     * 选项行高 / 列表内边距 / 行圆角 / 列表最小宽度。
+     *
+     * 外层面板（填充 / 边框 / 圆角 / 面板内边距）由 `PopoverRecipe` 负责：Combobox
+     * 组合一个 Popover，配方只覆盖输入框外壳与面板**内部**的选项列表。
+     */
+    using ComboboxMetrics = struct ComboboxMetrics {
+        ThemeScalar height;          // 输入框高度
+        ThemeScalar padding_x;       // 输入文本水平内边距
+        ThemeScalar preferred_width; // 无内容时的首选宽度
+        ThemeScalar gap;             // 输入框与浮层的间距
+        ThemeScalar item_height;     // 单个选项行高
+        ThemeScalar list_padding_x;  // 选项列表的水平内边距
+        ThemeScalar list_padding_y;  // 选项列表的垂直内边距
+        ThemeScalar item_radius;     // 高亮选项填充圆角
+        ThemeScalar min_width;       // 列表内容最小宽度（含 list_padding_x）
+    };
+
+    /**
+     * Combobox 配方：输入框外壳 + 输入 / 占位文本 + 焦点环 + 选项列表排版与状态色。
+     *
+     * 没有浮层面板字段（面板由 Popover 携带），也没有组件级状态选择器之外的造型：
+     * hover / focused 是逐条目的状态，视图直接读取 `hover_fill` / `focus_fill`。
+     */
+    using ComboboxRecipe = struct ComboboxRecipe {
+        BoxStyle input;            // 输入框外壳（填充 / 边框 / 圆角）
+        TypeStyle value;           // 输入文本（也是选中标签的显示）
+        TypeStyle placeholder;     // 占位文本
+        ThemeColor selection;      // 输入选区的填充色
+        FocusRingStyle focus;      // 输入框焦点环
+        TypeStyle option;          // 未高亮选项文本
+        ThemeColor disabled_label; // 禁用选项文本色
+        ThemeColor hover_fill;     // 指针悬停选项填充
+        ThemeColor focus_fill;     // 键盘高亮选项填充
+        ComboboxMetrics metrics;
+    };
+
     /** Dialog 配方：半透明遮罩 + 居中面板 + 标题文本 + 度量。 */
     using DialogRecipe = struct DialogRecipe {
         ThemeColor scrim;    // 遮罩（半透明，覆盖全屏）
@@ -1018,6 +1056,39 @@ namespace nandina::theme
         std::optional<ThemeScalar> metrics_min_width;
     };
 
+    /**
+     * Combobox 规则：状态选择器覆盖输入框外壳 / 文本 / 焦点环，并覆盖选项列表的
+     * 排版 / 状态色 / 度量（逐条目 hover / focus 在绘制时读取，不进选择器）。
+     */
+    using ComboboxRecipeRule = struct ComboboxRecipeRule {
+        std::optional<ComboboxVisualState> state; // nullopt = 任意
+        std::optional<ThemeColor> input_fill;
+        std::optional<ThemeColor> input_border;
+        std::optional<ThemeScalar> input_border_width;
+        std::optional<ThemeScalar> input_radius;
+        std::optional<ThemeColor> value_color;
+        std::optional<ThemeScalar> value_font_size;
+        std::optional<ThemeColor> placeholder_color;
+        std::optional<ThemeScalar> placeholder_font_size;
+        std::optional<ThemeColor> selection_color;
+        std::optional<ThemeColor> focus_ring_color;
+        std::optional<ThemeScalar> focus_ring_width;
+        std::optional<ThemeColor> option_color;
+        std::optional<ThemeScalar> option_font_size;
+        std::optional<ThemeColor> disabled_label;
+        std::optional<ThemeColor> hover_fill;
+        std::optional<ThemeColor> focus_fill;
+        std::optional<ThemeScalar> metrics_height;
+        std::optional<ThemeScalar> metrics_padding_x;
+        std::optional<ThemeScalar> metrics_preferred_width;
+        std::optional<ThemeScalar> metrics_gap;
+        std::optional<ThemeScalar> metrics_item_height;
+        std::optional<ThemeScalar> metrics_list_padding_x;
+        std::optional<ThemeScalar> metrics_list_padding_y;
+        std::optional<ThemeScalar> metrics_item_radius;
+        std::optional<ThemeScalar> metrics_min_width;
+    };
+
     /** Dialog 规则：无选择器，覆盖遮罩/面板/标题/度量字段。 */
     using DialogRecipeRule = struct DialogRecipeRule {
         std::optional<ThemeColor> scrim;
@@ -1316,6 +1387,32 @@ namespace nandina::theme
         ResolvedDropdownMenuMetrics metrics;
     };
 
+    using ResolvedComboboxMetrics = struct ResolvedComboboxMetrics {
+        float height = 0.0F;
+        float padding_x = 0.0F;
+        float preferred_width = 0.0F;
+        float gap = 0.0F;
+        float item_height = 0.0F;
+        float list_padding_x = 0.0F;
+        float list_padding_y = 0.0F;
+        float item_radius = 0.0F;
+        float min_width = 0.0F;
+    };
+
+    using ResolvedComboboxStyle = struct ResolvedComboboxStyle {
+        /** 输入框外壳（由组合的 TextField 按本样式绘制）。 */
+        ResolvedBoxStyle input;
+        ResolvedTypeStyle value;
+        ResolvedTypeStyle placeholder;
+        NanColor selection;
+        ResolvedFocusRing focus;
+        ResolvedTypeStyle option;
+        NanColor disabled_label;
+        NanColor hover_fill;
+        NanColor focus_fill;
+        ResolvedComboboxMetrics metrics;
+    };
+
     using ResolvedDialogMetrics = struct ResolvedDialogMetrics {
         float panel_width = 0.0F;
         float padding_x = 0.0F;
@@ -1482,6 +1579,11 @@ namespace nandina::theme
         std::vector<DropdownMenuRecipeRule> rules;
     };
 
+    using ComboboxRecipes = struct ComboboxRecipes {
+        ComboboxRecipe base;
+        std::vector<ComboboxRecipeRule> rules;
+    };
+
     using ComponentRecipes = struct ComponentRecipes {
         ButtonRecipes button;
         CheckboxRecipes checkbox;
@@ -1511,6 +1613,7 @@ namespace nandina::theme
         DialogRecipes dialog;
         PopoverRecipes popover;
         DropdownMenuRecipes dropdown_menu;
+        ComboboxRecipes combobox;
     };
 
     /**
@@ -1888,6 +1991,12 @@ namespace nandina::theme
         ColorAppearance appearance
     ) -> ResolvedDropdownMenuStyle;
 
+    [[nodiscard]] auto resolve_combobox(
+        const DesignSystem& system,
+        ColorAppearance appearance,
+        ComboboxVisualState state
+    ) -> ResolvedComboboxStyle;
+
     // 规则覆盖：把配方规则应用到已解析的配方。解析器与 widget 的 set_override 共用同一路径。
 
     /** @param tone 当前 Button tone（accent / on_accent 引用依赖它）。 */
@@ -2105,6 +2214,13 @@ namespace nandina::theme
         const DropdownMenuRecipeRule& rule
     );
 
+    void apply_rule(
+        const DesignSystem& system,
+        ColorAppearance appearance,
+        ResolvedComboboxStyle& style,
+        const ComboboxRecipeRule& rule
+    );
+
     // ─── 框架默认值（定义见 design_system.cpp） ──────────────────────────────
 
     [[nodiscard]] auto default_button_recipe() -> ButtonRecipe;
@@ -2135,6 +2251,7 @@ namespace nandina::theme
     [[nodiscard]] auto default_dialog_recipe() -> DialogRecipe;
     [[nodiscard]] auto default_popover_recipe() -> PopoverRecipe;
     [[nodiscard]] auto default_dropdown_menu_recipe() -> DropdownMenuRecipe;
+    [[nodiscard]] auto default_combobox_recipe() -> ComboboxRecipe;
 
     /**
      * 框架默认设计系统。品牌主题从本函数的拷贝开始修改字段，再通过

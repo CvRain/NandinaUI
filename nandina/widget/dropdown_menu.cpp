@@ -1036,6 +1036,13 @@ namespace nandina::widget
         }
     }
 
+    void DropdownMenu::set_external_anchor_rect(
+        const std::shared_ptr<scene::NanControl>& owner,
+        const foundation::NanRect anchor
+    ) noexcept {
+        popover_->set_external_anchor_rect(owner, anchor);
+    }
+
     void DropdownMenu::handle_hover(const std::string_view id) {
         const auto* item = find_menu_item(surface_->items(), id);
         if (item == nullptr || item->kind != MenuItemKind::submenu || item->children.empty()

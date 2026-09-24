@@ -67,9 +67,9 @@ NandinaUI（南天竹）是一个用 **C++26** 编写、基于 **Meson** 构建�
 
 | 类别 | 当前可用 |
 | --- | --- |
-| 内容与展示 | Label、Image、Avatar、Badge、Chip、Divider、ProgressBar、Card |
-| 输入与选择 | Button、Checkbox、Switch、RadioButton/RadioGroup、Slider、TextField、Select、Tabs |
-| 浮层与反馈 | Dialog、Tooltip |
+| 内容与展示 | Label、Image、Avatar、Badge、Chip、Divider、ProgressBar、Spinner、Skeleton、EmptyState、Card |
+| 输入与选择 | Button、Checkbox、Switch、RadioButton/RadioGroup、Slider、TextField、TextArea、Select、Combobox、Tabs、Toggle、ToggleGroup、ButtonGroup、Breadcrumb、Pagination |
+| 浮层与反馈 | Dialog、Popover、DropdownMenu、ContextMenu、Tooltip、Alert |
 | 交互扩展 | PointerArea、GestureArea（实验性） |
 | 布局与滚动 | Column、Row、Flex、Wrap、Stack、Padding、Center、Expanded、Grid、ScrollView、ListView |
 
@@ -202,7 +202,9 @@ meson compile -C buildDir
 - [ ] 补齐 `AlertDialog`，收尾阶段 3 的组件清单。
 - [x] 落统一 MenuItem model 与 Popover 浮层基座（锚定、外部关闭、焦点作用域，内容为任意控件），作为阶段 4 菜单族的公共依赖。
 - [x] 实现 `DropdownMenu`（动作 / 勾选 / 单选条目、递归子菜单、键盘漫游、typeahead、无障碍语义），并在 playground 增加菜单演示页。
-- [ ] 继续基于该基座实现 ContextMenu、Combobox 和 CommandPalette。
+- [x] 实现 `ContextMenu`（右键 / 菜单键 / Shift+F10 在指针处打开，包装 DropdownMenu）并接入构建与契约测试。
+- [x] 实现 `Combobox`（输入即筛选 + 下拉选择，自由文本可选），并在 playground 增加演示单元。
+- [ ] 继续基于该基座实现 CommandPalette 和 HoverCard。
 - [ ] 给浮层补打开/关闭过渡与缓动曲线，并把 `motion` token、`reduced_motion` 偏好接到动画侧。
 - [ ] 继续打磨 `butter`（本项目自研风格）；`fluent` / `material` 需要补上各自设计语言在几何、密度与状态层上的差异，目前只有配色与圆角尺度。
 - [ ] 后续完善 Table/DataTable、Accordion、Sheet 等复合组件。

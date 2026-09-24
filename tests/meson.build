@@ -463,6 +463,20 @@ dropdown_menu_tests = executable(
 )
 test('dropdown-menu', dropdown_menu_tests, suite: 'unit')
 
+context_menu_tests = executable(
+    'context_menu_tests',
+    files('context_menu_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('context-menu', context_menu_tests, suite: 'unit')
+
+combobox_tests = executable(
+    'combobox_tests',
+    files('combobox_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('combobox', combobox_tests, suite: 'unit')
+
 animation_tests = executable(
     'animation_tests',
     files('animation_tests.cpp'),

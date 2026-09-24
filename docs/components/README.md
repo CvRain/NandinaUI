@@ -20,6 +20,7 @@
 | `Chip` | 展示可移除标签 | 可用 |
 | `Divider` | 分隔内容区域 | 可用 |
 | `ProgressBar` | 展示确定性进度 | 可用 |
+| [`Spinner`](spinner.md) | 未知时长的等待指示 | 可用 |
 | [`Skeleton`](skeleton.md) | 内容加载前占据最终版式的占位块 | 可用 |
 | [`EmptyState`](empty_state.md) | 列表或集合暂空时的占位与引导 | 可用 |
 | `Card` | 带主题外观的单子内容容器 | 可用，等待语义槽位 |
@@ -39,6 +40,7 @@
 | `TextField` | 单行文本输入 | 可用 |
 | [`TextArea`](text_area.md) | 多行纯文本输入 | 可用 |
 | `Select` | 从字符串选项中单选 | 可用，已接入统一浮层 |
+| `Combobox` | 可输入筛选的下拉选择（自由文本可选） | 可用，基于 Popover |
 | `Tabs` | 水平标签选择 | 可用，等待内容槽位 |
 | [`Breadcrumb`](breadcrumb.md) | 用链接路径标出当前页在层级中的位置 | 可用 |
 | [`Pagination`](pagination.md) | 上一页/下一页与带省略号的页码导航 | 可用 |
@@ -50,6 +52,7 @@
 | `Dialog` | 模态内容、遮罩与焦点限制 | 可用，已接入统一浮层 |
 | [`Popover`](popover.md) | 锚定在触发控件旁的非模态浮层容器（内容为任意控件） | 可用，已接入统一浮层 |
 | [`DropdownMenu`](dropdown_menu.md) | 锚定菜单：动作 / 勾选 / 单选条目，键盘漫游与 typeahead | 可用，基于 Popover |
+| `ContextMenu` | 右键 / 菜单键在指针处打开的上下文菜单 | 可用，包装 DropdownMenu |
 | `Tooltip` | 悬停后显示简短提示 | 可用，已接入统一浮层定位 |
 | [`Alert`](alert.md) | 内联消息条，传达状态或反馈 | 可用 |
 
@@ -69,8 +72,8 @@
 ## 计划补充
 
 - 高频基础组件：`AlertDialog`。
-- 浮层组件族：`ContextMenu`、`Combobox`、`CommandPalette`、`HoverCard`
-  （基座 `Popover`、统一 MenuItem model 与 `DropdownMenu` 已落地，见
+- 浮层组件族：`CommandPalette`、`HoverCard`
+  （基座 `Popover`、统一 MenuItem model、`DropdownMenu`、`ContextMenu` 与 `Combobox` 已落地，见
   [菜单族条目模型](../references/menu_model.md)）。
 - 信息组织组件：`Accordion`、`Collapsible`、`Sheet`、`Table`。
 

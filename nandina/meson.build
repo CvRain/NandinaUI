@@ -269,6 +269,10 @@ module_widget = files(
     'widget/popover.cpp',
     'widget/dropdown_menu.hpp',
     'widget/dropdown_menu.cpp',
+    'widget/context_menu.hpp',
+    'widget/context_menu.cpp',
+    'widget/combobox.hpp',
+    'widget/combobox.cpp',
     'widget/image.hpp',
     'widget/image.cpp',
 )
