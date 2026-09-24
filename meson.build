@@ -181,4 +181,10 @@ if not meson.is_subproject()
     if fs.exists('playground/meson.build')
         subdir('playground')
     endif
+
+    # 组件展示子项目：只作为主项目时构建。放在 subproject 保护之外会让下游消费者
+    # 连带编译这个演示程序（见 showcase/meson.build），所以必须留在本块内。
+    if get_option('showcase') and fs.exists('showcase/meson.build')
+        subdir('showcase')
+    endif
 endif

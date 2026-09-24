@@ -11,6 +11,12 @@ option(
     description: 'Build and register tests when Nandina is the main project',
 )
 option(
+    'showcase',
+    type: 'boolean',
+    value: true,
+    description: 'Build the component showcase app; only honoured when Nandina is the main project',
+)
+option(
     'linux_window_system',
     type: 'combo',
     choices: ['auto', 'wayland', 'x11'],
