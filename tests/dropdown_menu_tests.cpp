@@ -86,6 +86,14 @@ namespace
 
     /// 覆盖所有 kind 的一层条目，供多数用例复用。
     [[nodiscard]] auto sample_items() -> std::vector<widget::MenuItem> {
+        auto more = item("more", "More Tools", widget::MenuItemKind::submenu);
+        auto advanced = item("advanced", "Advanced", widget::MenuItemKind::submenu);
+        advanced.children = {item("deep-action", "Deep Action")};
+        more.children = {
+            item("inspect", "Inspect"),
+            item("pin", "Pin Panel", widget::MenuItemKind::checkbox),
+            std::move(advanced),
+        };
         return {
             item("new", "New File", widget::MenuItemKind::action, false, false, "Ctrl+N"),
             item("sep", "", widget::MenuItemKind::separator),
@@ -93,7 +101,7 @@ namespace
             item("wrap", "Word Wrap", widget::MenuItemKind::checkbox, false, true),
             item("ascii", "ASCII Mode", widget::MenuItemKind::radio, false, false),
             item("pro", "Pro Mode", widget::MenuItemKind::radio, false, true),
-            item("more", "More Tools", widget::MenuItemKind::submenu),
+            std::move(more),
             item("off", "Unavailable", widget::MenuItemKind::action, true),
         };
     }
@@ -136,13 +144,13 @@ namespace
         }
 
         /// 浮层面板（PopoverSurface）：DismissLayer → FocusScope → PopoverSurface。
-        [[nodiscard]] auto panel() const -> scene::NanControl* {
+        [[nodiscard]] auto panel(const std::size_t overlay_index = 0) const -> scene::NanControl* {
             auto* layer = host->layer_at(1);
             auto* overlay_root = layer != nullptr ? layer->layout_root() : nullptr;
-            if (overlay_root == nullptr || overlay_root->child_count() == 0) {
+            if (overlay_root == nullptr || overlay_root->child_count() <= overlay_index) {
                 return nullptr;
             }
-            auto* dismiss = overlay_root->get_child(0)->as_control();
+            auto* dismiss = overlay_root->get_child(overlay_index)->as_control();
             auto* scope = dismiss != nullptr && dismiss->child_count() > 0
                 ? dismiss->get_child(0)->as_control()
                 : nullptr;
@@ -151,8 +159,9 @@ namespace
         }
 
         /// 菜单条目列表容器 = Popover 的 content。
-        [[nodiscard]] auto surface() const -> scene::NanControl* {
-            auto* popover_surface = panel();
+        [[nodiscard]] auto surface(const std::size_t overlay_index = 0) const
+            -> scene::NanControl* {
+            auto* popover_surface = panel(overlay_index);
             return popover_surface != nullptr && popover_surface->child_count() > 0
                 ? popover_surface->get_child(0)->as_control()
                 : nullptr;
@@ -418,20 +427,150 @@ TEST_CASE(
     REQUIRE(harness.menu->is_open());
 }
 
-TEST_CASE("dropdown menu submenu fires on_submenu without closing", "[dropdown-menu][submenu]") {
+TEST_CASE(
+    "dropdown menu opens a submenu and returns focus with left or escape",
+    "[dropdown-menu][submenu][keyboard]"
+) {
     MenuHarness harness;
     std::vector<std::string> opened;
     harness.menu->set_on_submenu([&opened](const std::string_view id) { opened.emplace_back(id); });
-    (void)harness.open_and_layout();
+    auto* parent_surface = harness.open_and_layout();
 
     // End 前先移到 submenu（More Tools 在索引 6）。
     harness.tree.dispatch_key(scene::KeyEvent(269, scene::KeyEvent::Action::press)); // end → 7
     harness.tree.dispatch_key(scene::KeyEvent(265, scene::KeyEvent::Action::press)); // up → 6
     REQUIRE(harness.menu->active_index() == 6);
-    harness.tree.dispatch_key(scene::KeyEvent(257, scene::KeyEvent::Action::press));
+    harness.tree.dispatch_key(scene::KeyEvent(262, scene::KeyEvent::Action::press)); // right
+    harness.layout();
     REQUIRE(opened == std::vector<std::string> {"more"});
-    // 本轮不展开嵌套浮层：菜单保持打开，且没有第二个浮层。
     REQUIRE(harness.menu->is_open());
+    REQUIRE(harness.host->overlay_count() == 2);
+    auto* child_surface = harness.surface(1);
+    REQUIRE(child_surface != nullptr);
+    REQUIRE(harness.tree.focused_node() == child_surface);
+
+    harness.tree.dispatch_key(scene::KeyEvent(263, scene::KeyEvent::Action::press)); // left
+    REQUIRE(harness.host->overlay_count() == 1);
+    REQUIRE(harness.tree.focused_node() == parent_surface);
+    REQUIRE(harness.menu->is_open());
+
+    // Enter 同样展开；Escape 只关闭当前层并把焦点还给父菜单。
+    harness.tree.dispatch_key(scene::KeyEvent(257, scene::KeyEvent::Action::press));
+    harness.layout();
+    REQUIRE(harness.host->overlay_count() == 2);
+    REQUIRE(opened == std::vector<std::string> {"more", "more"});
+    harness.tree.dispatch_key(scene::KeyEvent(256, scene::KeyEvent::Action::press));
+    REQUIRE(harness.host->overlay_count() == 1);
+    REQUIRE(harness.tree.focused_node() == parent_surface);
+}
+
+TEST_CASE(
+    "dropdown menu action closes the complete recursive menu tree",
+    "[dropdown-menu][submenu][keyboard]"
+) {
+    MenuHarness harness;
+    std::vector<std::string> selected;
+    harness.menu->set_on_select([&selected](const std::string_view id) {
+        selected.emplace_back(id);
+    });
+    (void)harness.open_and_layout();
+
+    harness.tree.dispatch_key(scene::KeyEvent(269, scene::KeyEvent::Action::press)); // end → 7
+    harness.tree.dispatch_key(scene::KeyEvent(265, scene::KeyEvent::Action::press)); // up → 6
+    harness.tree.dispatch_key(scene::KeyEvent(262, scene::KeyEvent::Action::press)); // child
+    harness.layout();
+    REQUIRE(harness.host->overlay_count() == 2);
+
+    harness.tree.dispatch_key(scene::KeyEvent(264, scene::KeyEvent::Action::press)); // pin
+    harness.tree.dispatch_key(scene::KeyEvent(264, scene::KeyEvent::Action::press)); // advanced
+    harness.tree.dispatch_key(scene::KeyEvent(262, scene::KeyEvent::Action::press)); // grandchild
+    harness.layout();
+    REQUIRE(harness.host->overlay_count() == 3);
+    REQUIRE(harness.tree.focused_node() == harness.surface(2));
+
+    harness.tree.dispatch_key(scene::KeyEvent(257, scene::KeyEvent::Action::press));
+    REQUIRE(selected == std::vector<std::string> {"deep-action"});
+    REQUIRE_FALSE(harness.menu->is_open());
+    REQUIRE(harness.host->overlay_count() == 0);
+}
+
+TEST_CASE(
+    "dropdown menu keeps submenu checks open and syncs them to the root model",
+    "[dropdown-menu][submenu][selection]"
+) {
+    MenuHarness harness;
+    harness.menu->set_selection_mode(widget::MenuSelectionMode::multiple);
+    std::vector<std::string> selected;
+    harness.menu->set_on_select([&selected](const std::string_view id) {
+        selected.emplace_back(id);
+    });
+    (void)harness.open_and_layout();
+
+    harness.tree.dispatch_key(scene::KeyEvent(269, scene::KeyEvent::Action::press));
+    harness.tree.dispatch_key(scene::KeyEvent(265, scene::KeyEvent::Action::press));
+    harness.tree.dispatch_key(scene::KeyEvent(262, scene::KeyEvent::Action::press));
+    harness.layout();
+    harness.tree.dispatch_key(scene::KeyEvent(264, scene::KeyEvent::Action::press)); // pin
+    harness.tree.dispatch_key(scene::KeyEvent(257, scene::KeyEvent::Action::press));
+
+    REQUIRE(selected == std::vector<std::string> {"pin"});
+    REQUIRE(harness.menu->items()[6].children[1].checked);
+    REQUIRE(harness.menu->is_open());
+    REQUIRE(harness.host->overlay_count() == 2);
+}
+
+TEST_CASE(
+    "submenu pointer layer passes parent menu clicks through",
+    "[dropdown-menu][submenu][pointer]"
+) {
+    MenuHarness harness;
+    harness.viewport = foundation::NanSize(720.0F, 400.0F);
+    harness.menu->set_selection_mode(widget::MenuSelectionMode::multiple);
+    auto* parent_surface = harness.open_and_layout();
+    auto* submenu_row = parent_surface->get_child(6)->as_control();
+    harness.tree.dispatch_mouse_move(
+        scene::MouseMoveEvent(
+            submenu_row->global_bounds().get_center(),
+            foundation::NanPoint(1.0F, 0.0F)
+        )
+    );
+    harness.layout();
+    REQUIRE(harness.host->overlay_count() == 2);
+
+    // 不先发送 mouse move，直接点父层 checkbox：子层的关闭面不能吞掉这个 press。
+    auto* checkbox_row = parent_surface->get_child(3)->as_control();
+    harness.tree.dispatch_mouse_button(
+        scene::MouseButtonEvent(
+            scene::MouseButtonEvent::Button::left,
+            scene::MouseButtonEvent::Action::press,
+            checkbox_row->global_bounds().get_center()
+        )
+    );
+    REQUIRE_FALSE(harness.menu->items()[3].checked);
+    REQUIRE(harness.menu->is_open());
+    REQUIRE(harness.host->overlay_count() == 1);
+}
+
+TEST_CASE("dropdown menu does not open disabled or empty submenus", "[dropdown-menu][submenu]") {
+    auto disabled = item("disabled", "Disabled", widget::MenuItemKind::submenu, true);
+    disabled.children = {item("hidden", "Hidden")};
+    auto empty = item("empty", "Empty", widget::MenuItemKind::submenu);
+    MenuHarness harness({std::move(disabled), std::move(empty)});
+    auto* surface = harness.open_and_layout();
+
+    auto* disabled_row = surface->get_child(0)->as_control();
+    harness.tree.dispatch_mouse_move(
+        scene::MouseMoveEvent(
+            disabled_row->global_bounds().get_center(),
+            foundation::NanPoint(1.0F, 0.0F)
+        )
+    );
+    harness.tree.dispatch_key(scene::KeyEvent(262, scene::KeyEvent::Action::press));
+    REQUIRE(harness.host->overlay_count() == 1);
+
+    harness.tree.dispatch_key(scene::KeyEvent(264, scene::KeyEvent::Action::press));
+    REQUIRE(harness.menu->active_index() == 1);
+    harness.tree.dispatch_key(scene::KeyEvent(262, scene::KeyEvent::Action::press));
     REQUIRE(harness.host->overlay_count() == 1);
 }
 

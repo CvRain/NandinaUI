@@ -38,7 +38,9 @@ struct MenuItem {
 | `separator` | ❌ | ❌ | 无 |
 | `label` | ❌ | ❌ | 无 |
 
-`id` 在一层内必须唯一；`separator` 不需要 id，也不应被当作可寻址目标。
+`id` 在一层内必须唯一；`separator` 不需要 id，也不应被当作可寻址目标。当前菜单组件的选择
+事件返回 leaf id，而不是完整路径；若业务把所有层级交给同一个回调，推荐让 id 在整棵菜单中
+唯一。模型层仍允许父子层复用 id，因为 `find_menu_item()` 的查找契约始终是单层的。
 
 ## 规则
 
@@ -114,6 +116,10 @@ radio 同时置为真。需要互斥语义时用 `toggle()`。
 4. 渲染需要的每项视觉状态（hovered / focused / disabled / checked）由组件配方表达，
    模型不参与造型。
 
+DropdownMenu 的子层继续消费同一组规则：子层以父条目为外部锚点，借助 OverlayHost 的
+parent 关系递归关闭；Left / Escape 只退出当前层，任意深度的 action 关闭整棵菜单，
+checkbox / radio 则保持展开并把修改后的 children 同步回父层模型。
+
 ## 浮层基座
 
 菜单族都需要"锚定在触发控件旁、点外部关闭、不被父级裁剪"的浮层表面，这一层由 `Popover`
@@ -131,6 +137,6 @@ radio 同时置为真。需要互斥语义时用 `toggle()`。
 
 ## 后续
 
-阶段 4 的组件按 `Popover` → `DropdownMenu` → `ContextMenu` → `Combobox` → `CommandPalette`
-顺序实现。每新增一个消费方，都应复用本模型与 `MenuSelection`，不得新增平行的选项类型；
+阶段 4 已完成 `Popover`、`DropdownMenu` 及递归子菜单，下一步按 `ContextMenu` → `Combobox`
+→ `CommandPalette` 顺序实现。每新增一个消费方，都应复用本模型与 `MenuSelection`，不得新增平行的选项类型；
 若模型确需扩展字段，先改这里再改实现，并同步 `tests/menu_item_tests.cpp`。

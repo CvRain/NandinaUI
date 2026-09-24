@@ -17,6 +17,15 @@ DropdownMenu 是锚定在触发控件旁的操作菜单。它复用 Popover 的�
 std::vector<widget::MenuItem> items {
     {.id = "new", .label = "新建", .shortcut = "Ctrl+N"},
     {.id = "open", .label = "打开…", .shortcut = "Ctrl+O"},
+    {
+        .id = "export",
+        .label = "导出为",
+        .kind = widget::MenuItemKind::submenu,
+        .children = {
+            {.id = "export_pdf", .label = "PDF 文档"},
+            {.id = "export_png", .label = "PNG 图像"},
+        },
+    },
 };
 
 auto menu = ui.make<widget::DropdownMenu>(
@@ -29,7 +38,7 @@ auto menu = ui.make<widget::DropdownMenu>(
 }).build();
 ```
 
-触发按钮的鼠标单击和 Enter/Space 会自动切换菜单。动作条目激活后关闭；checkbox 与 radio 条目保持菜单打开，方便连续调整。
+触发按钮的鼠标单击和 Enter/Space 会自动切换菜单。动作条目激活后关闭整棵菜单；checkbox 与 radio 条目保持当前层打开，方便连续调整。submenu 可以继续包含 submenu，组件会按层递归展开。
 
 ## 条目模型
 
@@ -47,6 +56,8 @@ auto menu = ui.make<widget::DropdownMenu>(
 | `children` | submenu 的子条目 |
 
 结构条目 `separator` 和 `label` 不参与键盘漫游。详细规则见[菜单族条目模型](../references/menu_model.md)。
+
+`set_on_select()`、`item_selected()` 与 `set_on_submenu()` 当前返回被激活条目的 leaf id，不携带完整路径。同一层必须保持 id 唯一；若多个层级共用一个集中式回调，建议让 id 在整棵菜单中唯一，避免业务侧歧义。
 
 ## 选择模式
 
@@ -70,7 +81,7 @@ const auto ids = menu->checked_ids();
 | --- | --- |
 | `set_on_select()` | action、checkbox 或 radio 被用户激活时回调 id |
 | `item_selected()` | 同一次激活对应的响应式事件 |
-| `set_on_submenu()` | submenu 被激活时回调 id |
+| `set_on_submenu()` | submenu 被 Enter、Space、Right 或点击激活时回调 leaf id；单纯悬停展开不通知 |
 | `set_on_close()` | 菜单因程序调用、Escape 或外部点击关闭后触发 |
 
 回调保存在菜单自身时，不要让回调强捕获菜单本身；需要读回 `checked_ids()` 时应捕获 `weak_ptr`，避免形成引用环。
@@ -85,8 +96,11 @@ const auto ids = menu->checked_ids();
 | PageUp / PageDown | 按共享漫游模型向首尾移动 |
 | 输入文字 | 按 `label` 前缀进行大小写不敏感的 typeahead |
 | Enter / Space | 激活当前高亮条目 |
-| Escape / 点击外部 | 关闭并把焦点恢复到触发器 |
-| 鼠标移动 | 更新高亮条目 |
+| Right | 当前项是可用且非空的 submenu 时展开并进入子层 |
+| Left | 在子层中关闭当前层并把焦点还给父菜单 |
+| Escape | 子层中返回父层；根层中关闭整棵菜单并恢复触发器焦点 |
+| 点击外部 | 关闭整棵菜单并恢复触发器焦点 |
+| 鼠标移动 | 更新高亮；进入 submenu 时立即展开，进入普通项时收起现有子层 |
 | disabled 条目 | 可以被高亮和朗读，但激活是 no-op |
 
 菜单表面本身持有焦点，条目通过 active index 表达高亮；方向键移动不会隐式改变 `checked`。
@@ -95,7 +109,7 @@ const auto ids = menu->checked_ids();
 
 `set_placement()`、`set_alignment()` 和 `set_gap()` 直接转发给内部 Popover。`open()`、`close()`、`toggle()`、`is_open()` 可程序化控制菜单；`active_index()` 返回当前高亮项，`-1` 表示没有可聚焦条目。
 
-`set_items()` 可以替换整层条目；若菜单已打开，组件会在安全的场景树提交点重建表面、重新测量并重置焦点。
+`set_items()` 可以替换根层条目；若菜单已打开，组件会先关闭子层，再在安全的场景树提交点重建表面、重新测量并重置焦点。子层 checkbox/radio 的用户变更会同步回根 `items()` 对应的 `children`。
 
 ## 主题与实例覆盖
 
@@ -121,7 +135,8 @@ menu->set_override(theme::DropdownMenuRecipeRule {
 
 ## 已知空白
 
-- submenu 当前只显示尾部指示并触发 `set_on_submenu()`，尚未展开嵌套菜单；
 - `MenuItem::icon` 已进入共享模型，但 DropdownMenu 暂未渲染图标；
+- 子菜单悬停立即展开，尚未实现延时意图判断或 safe-polygon 轨迹容错；
+- 选择事件只提供 leaf id，尚未提供完整菜单路径事件；
 - 尚未提供打开/关闭和子菜单切换动画；
 - 语义角色集合暂时没有专用 `menu` / `menuitem`，当前使用 `list` / `list_item` 表达。

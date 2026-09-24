@@ -72,12 +72,12 @@ NandinaUI 不以逐项复制其他组件库为目标。[shadcn/ui Components](ht
 - `Popover` 浮层基座（锚定、外部关闭、焦点作用域、内容为任意控件；契约测试
   `tests/popover_tests.cpp`），菜单族把它当作自己的浮层表面；
 - `DropdownMenu`（动作 / 勾选 / 单选条目，键盘漫游、typeahead 与无障碍语义；契约测试
-  `tests/dropdown_menu_tests.cpp`；playground 有「菜单与下拉」演示页）。
-  **已知空白**：`submenu` 只渲染尾部指示并回调 `set_on_submenu()`，不展开嵌套浮层。
+  `tests/dropdown_menu_tests.cpp`；playground 有「菜单与下拉」演示页）；
+- `DropdownMenu` 递归子菜单（悬停与 Right/Left/Escape、父子浮层关闭、焦点返回、父层点击
+  穿透及子层选择状态回写均已覆盖测试）。
 
 待实现：
 
-- `DropdownMenu` 子菜单的嵌套浮层展开；
 - `ContextMenu`；
 - `Combobox`；
 - `CommandPalette`；

@@ -10,9 +10,9 @@
 // `RovingFocus`（selection_only：容器保持焦点，active_index 就是高亮项，不改变任何
 // 条目的 checked）。这与 Select 弹出列表的模型一致，见 docs/components/selection_and_navigation.md。
 //
-// 已知空白（本轮不做）：`MenuItemKind::submenu` 只渲染尾部指示并以
-// `set_on_submenu()` 通知，**不展开嵌套浮层**。嵌套菜单需要 Popover 的父子浮层层级与
-// 键盘焦点转移，属于后续增量能力；当前激活 submenu 条目只触发回调、不关闭菜单。
+// 子菜单模型：`MenuItemKind::submenu` 的 children 会作为独立浮层递归展开。指针悬停，
+// Enter / Space / Right 都可进入子层；Left / Escape 返回父层。动作条目关闭整棵菜单，
+// checkbox / radio 则保持当前层打开，便于连续调整。
 //
 
 #ifndef NANDINA_EXPERIMENT_WIDGET_DROPDOWN_MENU_HPP
@@ -133,6 +133,11 @@ namespace nandina::widget
 
         /// 用户激活某条目后的落地：按 kind 分派（见 menu_model.md 的规则）。
         void handle_activate(std::string_view id);
+        /// 指针进入 submenu 条目时打开子层；进入普通条目时收起现有子层。
+        void handle_hover(std::string_view id);
+        void sync_submenu_items();
+        /// 从任意深度关闭最外层菜单，交由浮层父子关系递归清理所有子层。
+        void close_menu_tree();
         /// 触发 on_select 与 item_selected（用户激活路径）。
         void notify_select(std::string_view id);
         /// Popover 关闭回调：复位 typeahead / hover 并转发用户回调。
@@ -146,6 +151,11 @@ namespace nandina::widget
         std::shared_ptr<internal::MenuSurface> surface_;
         /// 浮层基座：唯一子节点，触发控件挂在它下面。
         std::shared_ptr<Popover> popover_;
+        std::shared_ptr<DropdownMenu> submenu_;
+        std::weak_ptr<scene::OverlayHost> overlay_service_;
+        std::string submenu_parent_id_;
+        DropdownMenu* parent_menu_ = nullptr;
+        bool nested_ = false;
         MenuSelection selection_;
         std::function<void(std::string_view)> on_select_;
         std::function<void(std::string_view)> on_submenu_;

@@ -76,6 +76,18 @@ namespace nandina::widget::internal
             return scrim_;
         }
 
+        /**
+         * 只让面板本身参与指针命中，面板外区域穿透到更低的浮层。
+         *
+         * 子菜单使用该模式：点击父菜单条目时事件必须到达父菜单，而不是先被子菜单
+         * 的全屏关闭层吞掉。根浮层保持默认 false，仍负责点击页面空白处关闭整棵菜单。
+         */
+        void set_pointer_passthrough_outside(bool enabled) {
+            pointer_passthrough_outside_ = enabled;
+        }
+
+        [[nodiscard]] auto contains_point(foundation::NanPoint local_point) const -> bool override;
+
         [[nodiscard]] auto fade() noexcept -> animation::AnimatedProperty<float>& {
             return fade_;
         }
@@ -95,11 +107,12 @@ namespace nandina::widget::internal
         Callback callback_;
         std::weak_ptr<scene::NanControl> content_;
         bool content_centered_ = false;
+        bool pointer_passthrough_outside_ = false;
         /// 锚定浮层显式给出的内容屏幕矩形；未设置时用 content 的 global_bounds。
         std::optional<foundation::NanRect> hit_bounds_;
         std::optional<theme::ResolvedBoxStyle> scrim_;
         animation::AnimatedProperty<float> fade_ {1.0F};
     };
-}
+} // namespace nandina::widget::internal
 
 #endif

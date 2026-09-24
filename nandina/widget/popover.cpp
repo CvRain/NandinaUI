@@ -192,6 +192,7 @@ namespace nandina::widget
         }
         auto current = trigger_.lock();
         trigger_ = trigger;
+        anchor_ = trigger;
         replace_child(current.get(), std::move(trigger));
         sync_portal();
         mark_layout_dirty();
@@ -446,6 +447,28 @@ namespace nandina::widget
             host != nullptr ? host->weak_self() : std::weak_ptr<scene::OverlayHost> {};
     }
 
+    void Popover::set_external_anchor(const std::shared_ptr<scene::NanControl>& anchor) noexcept {
+        anchor_ = anchor;
+        sync_portal();
+    }
+
+    void Popover::set_pointer_passthrough_outside(const bool enabled) noexcept {
+        pointer_passthrough_outside_ = enabled;
+        if (auto dismiss = overlay_dismiss_layer(); dismiss != nullptr) {
+            dismiss->set_pointer_passthrough_outside(enabled);
+        }
+    }
+
+    void Popover::inherit_runtime_style_from(const Popover& source) {
+        system_ = source.system_;
+        appearance_ = source.appearance_;
+        theme_view_ = source.theme_view_;
+        override_ = source.override_;
+        system_explicit_ = source.system_explicit_;
+        surface_->set_style(resolved_style());
+        sync_portal();
+    }
+
     auto Popover::resolve_overlay_host() -> std::shared_ptr<scene::OverlayHost> {
         if (auto injected = overlay_service_.lock()) {
             return injected;
@@ -472,13 +495,13 @@ namespace nandina::widget
             return;
         }
         auto host = resolve_overlay_host();
-        auto trigger = trigger_.lock();
-        if (host == nullptr || trigger == nullptr) {
+        auto anchor_control = anchor_.lock();
+        if (host == nullptr || anchor_control == nullptr) {
             return;
         }
 
         const auto viewport_size = host->viewport_size();
-        const auto anchor = trigger->global_bounds();
+        const auto anchor = anchor_control->global_bounds();
         // Positioning needs a laid-out viewport and trigger. Either can be missing on
         // the first frame or immediately after set_trigger(); skip until they are
         // valid rather than feeding the positioner an invalid rect.
@@ -529,10 +552,13 @@ namespace nandina::widget
             }
         );
         dismiss->set_content(scope);
+        dismiss->set_pointer_passthrough_outside(pointer_passthrough_outside_);
 
         // 模态内容里再展开的浮层必须压过模态遮罩，否则会被埋掉且点不到；同时登记为
         // 父浮层的子层，外层收起时内层随之关闭，不会留下指向已消失锚点的孤儿。
-        const auto parent_id = host->overlay_containing(*this);
+        const auto anchor_control = anchor_.lock();
+        const auto parent_id =
+            anchor_control != nullptr ? host->overlay_containing(*anchor_control) : 0;
         const auto level =
             parent_id != 0 ? scene::OverlayLevel::nested_popup : scene::OverlayLevel::popup;
         portal_handle_ = std::make_unique<scene::OverlayHandle>(
@@ -626,9 +652,8 @@ namespace nandina::widget
             // 焦点恢复：FocusScope 记录了打开前的焦点节点，浮层卸载时会把焦点放回原处；
             // 这里只在焦点没有落点时兜底到触发控件，避免焦点留在已消失的浮层里。
             if (auto* tree = get_tree(); tree != nullptr && tree->focused_node() == nullptr) {
-                if (auto trigger = trigger_.lock(); trigger != nullptr && trigger->is_inside_tree())
-                {
-                    (void)tree->focus_first_within(*trigger);
+                if (auto anchor = anchor_.lock(); anchor != nullptr && anchor->is_inside_tree()) {
+                    (void)tree->focus_first_within(*anchor);
                 }
             }
             if (on_close_) {

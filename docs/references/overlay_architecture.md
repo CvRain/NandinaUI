@@ -87,7 +87,9 @@ OverlayHost 归属 `scene` 而非 `widget::internal`：它只使用 `LayerStack`
    `focus_only` / `selection_only`）以及 Home / End、PageUp / PageDown 与 typeahead，已被
    `RadioGroup` / `Tabs` / `Select` / `ToggleGroup` / `Pagination` 接入；
 2. 嵌套浮层的父子关闭关系：`OverlayOptions::parent` 声明从属关系，父层关闭时
-   `close_descendants()` 递归关闭后代并标记 `OverlayCloseReason::parent`，`Select` 与 `Tooltip` 已接入。
+   `close_descendants()` 递归关闭后代并标记 `OverlayCloseReason::parent`，`Select`、`Tooltip`
+   与 `DropdownMenu` 递归子菜单已接入；子菜单的 DismissLayer 只命中自身面板，让父菜单
+   条目仍可直接接收指针输入。
 
 阶段 4 的 Popover / DropdownMenu / Combobox / CommandPalette 现在可以直接基于这套设施实现。
 新增组件应复用同一份 MenuItem model 与 selection model，而不是各自定义选项结构

@@ -395,8 +395,14 @@ namespace nandina::widget
          */
         class MenuSurface final: public scene::NanControl {
         public:
-            explicit MenuSurface(std::function<void(std::string_view)> on_activate):
-                on_activate_(std::move(on_activate)) {
+            explicit MenuSurface(
+                std::function<void(std::string_view)> on_activate,
+                std::function<void(std::string_view)> on_hover = {},
+                std::function<void()> on_close_level = {}
+            ):
+                on_activate_(std::move(on_activate)),
+                on_hover_(std::move(on_hover)),
+                on_close_level_(std::move(on_close_level)) {
                 focus_.set_movement(RovingMovement::selection_only);
                 focus_.set_orientation(RovingOrientation::vertical);
             }
@@ -413,6 +419,14 @@ namespace nandina::widget
                 );
             }
 
+            void set_on_hover(std::function<void(std::string_view)> callback) {
+                on_hover_ = std::move(callback);
+            }
+
+            void set_on_close_level(std::function<void()> callback) {
+                on_close_level_ = std::move(callback);
+            }
+
             [[nodiscard]] auto items() const -> const std::vector<MenuItem>& {
                 return items_;
             }
@@ -420,6 +434,16 @@ namespace nandina::widget
             /// 内部可写入口：DropdownMenu 的勾选变更（MenuSelection）需要原地改条目。
             [[nodiscard]] auto items_mutable() -> std::vector<MenuItem>& {
                 return items_;
+            }
+
+            [[nodiscard]] auto item_control(const std::string_view id) const
+                -> std::shared_ptr<scene::NanControl> {
+                for (std::size_t index = 0; index < items_.size(); ++index) {
+                    if (items_[index].id == id && index < item_nodes_.size()) {
+                        return item_nodes_[index];
+                    }
+                }
+                return nullptr;
             }
 
             /// 勾选 / 禁用被外部改动后把展示重新同步到节点（不重建节点，不做布局变化）。
@@ -642,6 +666,9 @@ namespace nandina::widget
                 hovered_ = index;
                 focus_.set_active_index(index);
                 sync_highlight_states();
+                if (on_hover_) {
+                    on_hover_(items_[target].id);
+                }
                 event.accept();
                 return true;
             }
@@ -661,6 +688,9 @@ namespace nandina::widget
                     hovered_ = index;
                     focus_.set_active_index(index);
                     sync_highlight_states();
+                    if (on_hover_) {
+                        on_hover_(items_[target].id);
+                    }
                 }
                 // 结构性条目 / 禁用条目在这里是 no-op（activate_index 会拒绝）。
                 activate_index(index);
@@ -678,6 +708,21 @@ namespace nandina::widget
                         return false;
                     }
                     activate_index(active);
+                    event.accept();
+                    return true;
+                }
+                if (event.keycode() == keys::right) {
+                    const int active = focus_.active_index();
+                    if (active >= 0
+                        && items_[static_cast<std::size_t>(active)].kind == MenuItemKind::submenu)
+                    {
+                        activate_index(active);
+                        event.accept();
+                        return true;
+                    }
+                }
+                if (event.keycode() == keys::left && on_close_level_) {
+                    on_close_level_();
                     event.accept();
                     return true;
                 }
@@ -711,6 +756,8 @@ namespace nandina::widget
             theme::ResolvedDropdownMenuStyle style_;
             theme::ResolvedStyleContext context_;
             std::function<void(std::string_view)> on_activate_;
+            std::function<void(std::string_view)> on_hover_;
+            std::function<void()> on_close_level_;
         };
     } // namespace internal
 
@@ -727,6 +774,12 @@ namespace nandina::widget
         popover_ = std::make_shared<Popover>(nullptr, nullptr, theme);
         surface_ = std::make_shared<internal::MenuSurface>([this](const std::string_view id) {
             handle_activate(id);
+        });
+        surface_->set_on_hover([this](const std::string_view id) { handle_hover(id); });
+        surface_->set_on_close_level([this] {
+            if (nested_) {
+                close();
+            }
         });
         // 先给出真实配方再灌条目：条目节点在重建时就能拿到有效的字号 / 度量。
         sync_surface_style();
@@ -760,6 +813,10 @@ namespace nandina::widget
     }
 
     void DropdownMenu::set_items(std::vector<MenuItem> items) {
+        if (submenu_ != nullptr) {
+            submenu_->close();
+        }
+        submenu_parent_id_.clear();
         surface_->set_items(std::move(items));
         // 打开状态下重新呈现：面板必须按新的条目列表重新测量，重建浮层顺带重建
         // FocusScope，避免焦点停在被替换掉的子树上。
@@ -778,6 +835,9 @@ namespace nandina::widget
 
     void DropdownMenu::set_selection_mode(const MenuSelectionMode mode) {
         selection_.set_mode(mode);
+        if (submenu_ != nullptr) {
+            submenu_->set_selection_mode(mode);
+        }
     }
 
     auto DropdownMenu::selection_mode() const -> MenuSelectionMode {
@@ -865,6 +925,9 @@ namespace nandina::widget
         // 面板与条目同属一个菜单：显式整份主题一并下发给 Popover，避免面板跟随系统而
         // 条目不跟随（或反之）的分裂。
         popover_->set_theme(theme);
+        if (submenu_ != nullptr) {
+            submenu_->set_theme(theme);
+        }
         sync_surface_style();
         mark_layout_dirty();
     }
@@ -874,7 +937,10 @@ namespace nandina::widget
     }
 
     void DropdownMenu::set_override(theme::DropdownMenuRecipeRule rule) {
-        override_ = std::move(rule);
+        override_ = rule;
+        if (submenu_ != nullptr) {
+            submenu_->set_override(std::move(rule));
+        }
         sync_surface_style();
         mark_dirty(
             scene::DirtyFlags::paint | scene::DirtyFlags::layout | scene::DirtyFlags::semantics
@@ -891,6 +957,10 @@ namespace nandina::widget
 
     void DropdownMenu::on_style_context_changed(const theme::ResolvedStyleContext& context) {
         surface_->set_style(resolved_style(), context);
+        if (submenu_ != nullptr) {
+            submenu_->on_style_context_changed(context);
+            submenu_->popover_->on_style_context_changed(context);
+        }
         mark_layout_dirty();
     }
 
@@ -899,6 +969,10 @@ namespace nandina::widget
         if (!system_explicit_) {
             system_ = manager.design_system_shared();
             theme_view_ = theme::NanTheme {system_->tokens, system_->palette(appearance_)};
+        }
+        if (submenu_ != nullptr) {
+            submenu_->on_theme_changed(manager);
+            submenu_->popover_->on_theme_changed(manager);
         }
         sync_surface_style();
         mark_layout_dirty();
@@ -919,12 +993,18 @@ namespace nandina::widget
         // Surface 挂在浮层里，但它的 typeahead 时钟统一由本组件推进（同 Select 的做法），
         // 这样即使浮层尚未挂载也能一致地衰减缓冲。
         surface_->advance_time(dt);
+        if (submenu_ != nullptr && submenu_->is_open()) {
+            submenu_->on_process(dt);
+        }
     }
 
     void DropdownMenu::on_exit_tree() {
         // Popover 自己的 on_exit_tree 会释放浮层；这里只复位本组件的瞬态。
         surface_->reset_typeahead();
         surface_->clear_hover();
+        if (submenu_ != nullptr) {
+            submenu_->close();
+        }
         scene::NanControl::on_exit_tree();
     }
 
@@ -948,7 +1028,95 @@ namespace nandina::widget
     }
 
     void DropdownMenu::set_overlay_service(scene::OverlayHost* host) noexcept {
+        overlay_service_ =
+            host != nullptr ? host->weak_self() : std::weak_ptr<scene::OverlayHost> {};
         popover_->set_overlay_service(host);
+        if (submenu_ != nullptr) {
+            submenu_->set_overlay_service(host);
+        }
+    }
+
+    void DropdownMenu::handle_hover(const std::string_view id) {
+        const auto* item = find_menu_item(surface_->items(), id);
+        if (item == nullptr || item->kind != MenuItemKind::submenu || item->children.empty()
+            || !menu_item_is_activatable(*item))
+        {
+            if (submenu_ != nullptr) {
+                submenu_->close();
+            }
+            return;
+        }
+        if (submenu_ != nullptr && submenu_->is_open() && submenu_parent_id_ == id) {
+            return;
+        }
+        auto anchor = surface_->item_control(id);
+        if (anchor == nullptr) {
+            return;
+        }
+        if (submenu_ == nullptr) {
+            submenu_ = std::make_shared<DropdownMenu>(nullptr, item->children, theme_view_);
+            submenu_->nested_ = true;
+            submenu_->parent_menu_ = this;
+            // 子菜单组件本身不挂进场景树，无法自动收到 ThemeManager 与样式上下文传播；
+            // 直接继承当前层已经解析到的运行时快照，避免自定义组件配方在第二层退回默认值。
+            submenu_->system_ = system_;
+            submenu_->appearance_ = appearance_;
+            submenu_->system_explicit_ = system_explicit_;
+            submenu_->theme_view_ = theme_view_;
+            submenu_->popover_->inherit_runtime_style_from(*popover_);
+            submenu_->on_style_context_changed(resolved_style_context());
+            auto overlay = overlay_service_.lock();
+            if (overlay == nullptr) {
+                overlay = popover_->resolve_overlay_host();
+            }
+            submenu_->set_overlay_service(overlay.get());
+            submenu_->set_selection_mode(selection_.mode());
+            submenu_->set_placement(internal::OverlayPlacement::right);
+            submenu_->set_alignment(internal::OverlayAlignment::start);
+            submenu_->set_gap(4.0F);
+            if (override_) {
+                submenu_->set_override(*override_);
+            }
+            submenu_->set_on_select([this](const std::string_view child_id) {
+                sync_submenu_items();
+                notify_select(child_id);
+            });
+            submenu_->set_on_submenu([this](const std::string_view child_id) {
+                if (on_submenu_) {
+                    on_submenu_(child_id);
+                }
+            });
+            submenu_->set_on_close([this] {
+                sync_submenu_items();
+                submenu_parent_id_.clear();
+            });
+        }
+        else {
+            submenu_->close();
+            submenu_->set_items(item->children);
+        }
+        submenu_parent_id_ = std::string(id);
+        submenu_->popover_->set_external_anchor(anchor);
+        submenu_->popover_->set_pointer_passthrough_outside(true);
+        submenu_->open();
+    }
+
+    void DropdownMenu::sync_submenu_items() {
+        if (submenu_ == nullptr || submenu_parent_id_.empty()) {
+            return;
+        }
+        auto* parent = find_menu_item(surface_->items_mutable(), submenu_parent_id_);
+        if (parent != nullptr && parent->kind == MenuItemKind::submenu) {
+            parent->children = submenu_->items();
+        }
+    }
+
+    void DropdownMenu::close_menu_tree() {
+        auto* root = this;
+        while (root->parent_menu_ != nullptr) {
+            root = root->parent_menu_;
+        }
+        root->close();
     }
 
     void DropdownMenu::handle_activate(const std::string_view id) {
@@ -961,8 +1129,8 @@ namespace nandina::widget
         switch (item->kind) {
             case MenuItemKind::action:
                 notify_select(id);
-                // 动作菜单选中即关闭。
-                close();
+                // 任意深度的动作菜单都关闭整棵菜单。
+                close_menu_tree();
                 break;
             case MenuItemKind::checkbox:
             case MenuItemKind::radio:
@@ -975,10 +1143,10 @@ namespace nandina::widget
                 // MenuSelection 在同层 radio 之间完成。
                 break;
             case MenuItemKind::submenu:
+                handle_hover(id);
                 if (on_submenu_) {
                     on_submenu_(id);
                 }
-                // 本轮不展开嵌套浮层：只通知，不关闭也不打开子菜单。
                 break;
             case MenuItemKind::separator:
             case MenuItemKind::label:
@@ -989,6 +1157,9 @@ namespace nandina::widget
     }
 
     void DropdownMenu::handle_closed() {
+        if (submenu_ != nullptr) {
+            submenu_->close();
+        }
         surface_->reset_typeahead();
         surface_->clear_hover();
         if (on_close_) {

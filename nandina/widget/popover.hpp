@@ -119,6 +119,16 @@ namespace nandina::widget
         /// Internal: bind the owning window's overlay portal. Called by
         /// `ComponentTraits<Popover>` so page authors never create an OverlayHost.
         void set_overlay_service(scene::OverlayHost* host) noexcept;
+        /// Anchor to an already mounted control without adopting it as the trigger
+        /// child. DropdownMenu uses this for submenu rows that remain in the parent
+        /// menu surface.
+        void set_external_anchor(const std::shared_ptr<scene::NanControl>& anchor) noexcept;
+        /// Nested menus let pointer hits outside the child panel reach the parent
+        /// menu; the root Popover keeps the default full-screen dismiss surface.
+        void set_pointer_passthrough_outside(bool enabled) noexcept;
+        /// Detached submenu popovers do not receive tree theme propagation. Copy the
+        /// already resolved runtime source and immediately refresh the panel recipe.
+        void inherit_runtime_style_from(const Popover& source);
 
         /// Nearest usable overlay portal: the injected window service, otherwise the
         /// closest ancestor OverlayHost (covers `Popover::create()` built popovers).
@@ -156,6 +166,7 @@ namespace nandina::widget
         [[nodiscard]] auto tree_viewport() const -> foundation::NanRect;
 
         std::weak_ptr<scene::NanControl> trigger_;
+        std::weak_ptr<scene::NanControl> anchor_;
         /// 内容槽位的唯一持有者。随浮层托管时同时被 PopoverSurface 引用，关闭时收回，
         /// 因此内容不会在收起瞬间被销毁，可以再次打开。
         std::shared_ptr<scene::NanControl> content_;
@@ -166,6 +177,7 @@ namespace nandina::widget
         float viewport_padding_ = 8.0F;
         bool dismissible_ = true;
         bool trigger_pressed_ = false;
+        bool pointer_passthrough_outside_ = false;
         std::function<void()> on_open_;
         std::function<void()> on_close_;
         MountMode mount_mode_ = MountMode::unmounted;

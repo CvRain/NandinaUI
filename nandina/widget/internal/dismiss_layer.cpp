@@ -9,6 +9,18 @@
 
 namespace nandina::widget::internal
 {
+    auto DismissLayer::contains_point(const foundation::NanPoint local_point) const -> bool {
+        if (!pointer_passthrough_outside_) {
+            return scene::NanControl::contains_point(local_point);
+        }
+        if (hit_bounds_) {
+            return hit_bounds_->contains_point(to_global(local_point));
+        }
+        const auto current = content_.lock();
+        return current != nullptr
+            && current->global_bounds().contains_point(to_global(local_point));
+    }
+
     auto DismissLayer::set_content(std::shared_ptr<scene::NanControl> content)
         -> scene::NanControl& {
         if (!content) {
@@ -75,7 +87,8 @@ namespace nandina::widget::internal
         return scene::NanNode2D::local_opacity() * fade_.value();
     }
 
-    auto DismissLayer::on_measure(const scene::LayoutConstraints constraints) -> foundation::NanSize {
+    auto DismissLayer::on_measure(const scene::LayoutConstraints constraints)
+        -> foundation::NanSize {
         return constraints.constrain(
             foundation::NanSize(constraints.max_width, constraints.max_height)
         );
@@ -106,4 +119,4 @@ namespace nandina::widget::internal
             : current->position();
         current->layout_to(foundation::NanRect::from_origin_size(origin, measured));
     }
-}
+} // namespace nandina::widget::internal
