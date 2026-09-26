@@ -388,6 +388,23 @@ TEST_CASE("configured router navigates between registered typed pages", "[app][r
     REQUIRE_FALSE(navigation.navigate<PlainPage>());
 }
 
+TEST_CASE("route configuration rejects empty and duplicate route keys", "[app][router][configure]") {
+    reactive::Graph graph;
+
+    app::NanRouter empty_key_router {graph, theme::default_theme()};
+    REQUIRE_FALSE(empty_key_router.configure(app::Routes {
+        app::route<PlainPage>(),
+    }));
+    REQUIRE_FALSE(empty_key_router.route_mode());
+
+    app::NanRouter duplicate_key_router {graph, theme::default_theme()};
+    REQUIRE_FALSE(duplicate_key_router.configure(app::Routes {
+        app::route<PlainPage>({.key = "same"}),
+        app::route<SecondPlainPage>({.key = "same"}),
+    }));
+    REQUIRE_FALSE(duplicate_key_router.route_mode());
+}
+
 TEST_CASE("router outlet replaces its mounted page without changing outlet identity", "[app][router][outlet]") {
     auto outlet = std::make_shared<app::RouterOutlet>();
     auto first = std::make_shared<scene::NanControl>(foundation::NanSize(20, 20));

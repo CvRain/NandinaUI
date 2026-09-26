@@ -153,11 +153,13 @@ namespace nandina::app
         }
         for (std::size_t i = 0; i < routes.entries().size(); ++i) {
             const auto& entry = routes.entries()[i];
-            if (entry.page_key == nullptr || entry.params_key == nullptr) {
+            if (entry.page_key == nullptr || entry.params_key == nullptr
+                || entry.options.key.empty()) {
                 return false;
             }
             for (std::size_t j = 0; j < i; ++j) {
-                if (routes.entries()[j].page_key == entry.page_key) {
+                if (routes.entries()[j].page_key == entry.page_key
+                    || routes.entries()[j].options.key == entry.options.key) {
                     return false;
                 }
             }
