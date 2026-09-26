@@ -68,6 +68,9 @@ namespace nandina::app
         /// 创建一个 keep-alive Router, 并把 Router host 挂为窗口内容。
         [[nodiscard]] auto use_router() -> NanRouter&;
 
+        /// Create and configure the single-current-route router.
+        [[nodiscard]] auto use_router(Routes routes) -> NanRouter&;
+
         [[nodiscard]] auto router() -> NanRouter* {
             return router_.get();
         }

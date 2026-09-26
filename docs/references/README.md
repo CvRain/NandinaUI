@@ -14,6 +14,10 @@
 - [设计令牌与主题系统](design_tokens.md)：三层令牌模型、配方与解析优先级、外观切换，以及控件作者的样式规则。
 - [溢出与裁剪契约](overflow_and_clip.md)：容器如何声明裁剪、render 如何执行，以及绘制与命中如何共享同一份语义。
 
+### 应用层
+
+- [Page / Router 合约](page_and_router.md)：三条入口路径的分工、单动作 `navigate` 路由，以及页面、参数与 Store 的状态职责边界。
+
 ### 组件与浮层
 
 - [组件公共契约](component_contract.md)：新组件在进入推荐 API 前必须满足的状态、事件、绑定、主题、输入和无障碍要求。

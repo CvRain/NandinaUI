@@ -55,7 +55,8 @@ namespace
             return "recommended-main";
         }
 
-        [[nodiscard]] auto build(widget::BuildContext& ui) -> widget::View override {
+        [[nodiscard]] auto build(app::PageContext& context) -> widget::View override {
+            auto ui = context.ui();
             auto label = ui.make<widget::Label>("Recommended entry").build();
             label_ = label;
             return label;

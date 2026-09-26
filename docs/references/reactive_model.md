@@ -72,6 +72,8 @@
 
 ## 与 BuildContext / PageContext 的归属
 
+> 当前源码仍由 `NanRouter::push_page()` 为 keep-alive 页面帧创建作用域；Page / Router 重构完成后，这里将改为由 RouterOutlet 为每次进入创建和销毁页面作用域。目标生命周期与迁移验收见 [Page / Router 目标合约](page_and_router.md)。
+
 Graph 的粒度最粗：它由应用持有并跨页面共享。`PageContext` 持有路由信息、各类服务，以及一个页面级的 `ReactiveScope`；`ui()` 用同一个 graph 和这个 scope 构造出 `BuildContext`，因此页面内所有 `ui.signal*()`、`ui.computed()`、`ui.effect()` 都落在这个页面作用域里。`NanRouter::push_page()` 为每个页面帧创建独立的 `ReactiveScope` 并随帧保存，页面出栈时随之清理。
 
 `BuildContext::with_scope()` 只替换 scope，graph、主题与资源保持页面级。这个区分对应两类派生场景：`make<T>()` 为自定义组件建立自己的 `ReactiveScope`，并以 shared_ptr 的自定义删除器保证「先清作用域、再析构节点」；条件区域与列表项则各自持有作用域，在重建或离开场景树时清理。延迟域的存在也解释了为什么构建期间的大量写入不会逐次触发绑定重算。

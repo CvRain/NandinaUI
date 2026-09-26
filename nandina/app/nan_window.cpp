@@ -153,6 +153,14 @@ namespace nandina::app
         return *router_;
     }
 
+    auto NanWindow::use_router(Routes routes) -> NanRouter& {
+        auto& router = use_router();
+        if (!router.configure(std::move(routes))) {
+            throw std::invalid_argument("NanWindow::use_router: invalid or duplicate routes");
+        }
+        return router;
+    }
+
     auto NanWindow::graph() -> reactive::Graph& {
         return app_.graph();
     }

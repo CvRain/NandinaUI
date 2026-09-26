@@ -95,7 +95,28 @@ namespace nandina::app
         background_executor_(background_executor),
         overlay_host_(overlay_host),
         host_(std::make_shared<PageHost>()) {
-        static_cast<PageHost*>(host_.get())->on_tick = [this] { drop_completed_exits(); };
+        const auto lifetime = std::weak_ptr<void>(command_lifetime_);
+        static_cast<PageHost*>(host_.get())->on_tick = [this, lifetime] {
+            if (lifetime.lock()) {
+                drop_completed_exits();
+            }
+        };
+        // PageContext::ui() is available for routers built from a static theme
+        // too. Keep an internal manager only for BuildContext's theme service;
+        // application windows use their own manager through the other overload.
+        owned_theme_manager_ = std::make_unique<theme::ThemeManager>();
+        owned_theme_manager_->set_theme(theme);
+        theme_manager_ = owned_theme_manager_.get();
+        navigation_state_->submit = [this](NanTypeKey page_key, std::unique_ptr<NanPage> page) {
+            return submit_navigation(page_key, std::move(page));
+        };
+    }
+
+    NanRouter::~NanRouter() {
+        if (navigation_state_) {
+            navigation_state_->submit = {};
+        }
+        command_lifetime_.reset();
     }
 
     NanRouter::NanRouter(
@@ -123,6 +144,7 @@ namespace nandina::app
             overlay_host
         ) {
         theme_manager_ = &theme_manager;
+        owned_theme_manager_.reset();
     }
 
     auto NanRouter::host() -> std::shared_ptr<scene::NanControl> {
@@ -155,6 +177,30 @@ namespace nandina::app
 
     auto NanRouter::can_pop() const -> bool {
         return frames_.size() > 1;
+    }
+
+    auto NanRouter::configure(Routes routes) -> bool {
+        if (route_mode_ || !frames_.empty() || routes.entries().empty()) {
+            return false;
+        }
+        for (std::size_t i = 0; i < routes.entries().size(); ++i) {
+            const auto& entry = routes.entries()[i];
+            if (entry.page_key == nullptr || entry.params_key == nullptr) {
+                return false;
+            }
+            for (std::size_t j = 0; j < i; ++j) {
+                if (routes.entries()[j].page_key == entry.page_key) {
+                    return false;
+                }
+            }
+        }
+        routes_ = std::move(routes);
+        route_mode_ = true;
+        return true;
+    }
+
+    auto NanRouter::navigation() const -> Navigation {
+        return Navigation {navigation_state_};
     }
 
     void NanRouter::clear_store() {
@@ -205,6 +251,7 @@ namespace nandina::app
             drop_frame(frame);
         }
         exiting_.clear();
+        current_page_key_ = nullptr;
     }
 
     auto NanRouter::request_pop() -> bool {
@@ -219,7 +266,7 @@ namespace nandina::app
         return post_command([this] { clear(); });
     }
 
-    void NanRouter::push_page(std::unique_ptr<NanPage> page) {
+    void NanRouter::push_page(std::unique_ptr<NanPage> page, std::string route_key) {
         if (!page) {
             throw std::runtime_error("NanRouter::push_page: page is null");
         }
@@ -242,7 +289,8 @@ namespace nandina::app
             theme_manager_,
             dispatcher_,
             overlay_host_,
-            drag_controller_
+            drag_controller_,
+            navigation()
         };
         auto root = page->build(context);
         if (!root) {
@@ -272,11 +320,89 @@ namespace nandina::app
                 .active = false,
             }
         );
-        frames_.back().key = std::string(frames_.back().page->route_key());
+        frames_.back().key = route_key.empty() ? std::string(frames_.back().page->route_key())
+                                               : std::move(route_key);
         sync_visibility();
         if (transition_enabled_ && frames_.back().frame) {
             fade_frame(frames_.back(), 1.0F);
         }
+    }
+
+    auto NanRouter::submit_navigation(
+        const NanTypeKey page_key,
+        std::unique_ptr<NanPage> page
+    ) -> bool {
+        const auto* entry = route_mode_ ? routes_.find(page_key) : nullptr;
+        if (entry == nullptr || page == nullptr || entry->params_key != page->params_type_key()) {
+            return false;
+        }
+        if (dispatcher_ == nullptr) {
+            return apply_navigation(page_key, std::move(page));
+        }
+
+        bool post_task = false;
+        {
+            std::scoped_lock lock(pending_navigation_mutex_);
+            // A navigation request is a value, so replacing the pending value
+            // also releases the page instance that would never be entered.
+            pending_navigation_ = PendingNavigation {
+                .page_key = page_key,
+                .page = std::move(page),
+            };
+            if (!navigation_task_posted_) {
+                navigation_task_posted_ = true;
+                post_task = true;
+            }
+        }
+        if (!post_task) {
+            return true;
+        }
+
+        if (post_command([this] { flush_pending_navigation(); })) {
+            return true;
+        }
+
+        // The dispatcher may be shutting down. Clear only the coalesced value
+        // owned by this task; no scene mutation has been accepted.
+        std::scoped_lock lock(pending_navigation_mutex_);
+        pending_navigation_.reset();
+        navigation_task_posted_ = false;
+        return false;
+    }
+
+    void NanRouter::flush_pending_navigation() {
+        std::optional<PendingNavigation> pending;
+        {
+            std::scoped_lock lock(pending_navigation_mutex_);
+            pending = std::move(pending_navigation_);
+            pending_navigation_.reset();
+            navigation_task_posted_ = false;
+        }
+        if (pending) {
+            (void)apply_navigation(pending->page_key, std::move(pending->page));
+        }
+    }
+
+    auto NanRouter::apply_navigation(
+        const NanTypeKey page_key,
+        std::unique_ptr<NanPage> page
+    ) -> bool {
+        const auto* entry = route_mode_ ? routes_.find(page_key) : nullptr;
+        if (entry == nullptr || page == nullptr || entry->params_key != page->params_type_key()) {
+            return false;
+        }
+        push_page(
+            std::move(page),
+            entry->options.key
+        );
+        if (frames_.size() > 1) {
+            // Build first, then retire the old page. If build throws, the old
+            // page and its scope remain intact.
+            drop_frame(frames_.front());
+            frames_.erase(frames_.begin());
+        }
+        current_page_key_ = page_key;
+        return true;
     }
 
     void NanRouter::sync_visibility() {
@@ -369,7 +495,8 @@ namespace nandina::app
             theme_manager_,
             dispatcher_,
             overlay_host_,
-            drag_controller_
+            drag_controller_,
+            navigation()
         };
     }
 

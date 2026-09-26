@@ -20,6 +20,7 @@
 #include <chrono>
 #include <exception>
 #include <memory>
+#include <stdexcept>
 #include <string_view>
 #include <thread>
 
@@ -88,6 +89,35 @@ namespace
             auto root = std::make_shared<scene::NanControl>(foundation::NanSize(100, 50));
             root->set_background(context.theme().palette.primary);
             return root;
+        }
+    };
+
+    struct RouteProbeParams {
+        int* builds = nullptr;
+        bool* fail = nullptr;
+        bool* destroyed = nullptr;
+        int* destruction_count = nullptr;
+    };
+
+    class RouteProbePage final: public app::NanPageT<RouteProbeParams> {
+    public:
+        explicit RouteProbePage(RouteProbeParams params): NanPageT(params) {}
+
+        ~RouteProbePage() override {
+            if (params().destroyed != nullptr) {
+                *params().destroyed = true;
+            }
+            if (params().destruction_count != nullptr) {
+                ++*params().destruction_count;
+            }
+        }
+
+        [[nodiscard]] auto build(app::PageContext&) -> std::shared_ptr<scene::NanNode2D> override {
+            ++*params().builds;
+            if (params().fail != nullptr && *params().fail) {
+                throw std::runtime_error("probe page build failed");
+            }
+            return std::make_shared<scene::NanControl>(foundation::NanSize(80, 40));
         }
     };
 
@@ -181,7 +211,8 @@ namespace
             return "retained-callback";
         }
 
-        [[nodiscard]] auto build(widget::BuildContext& ui) -> widget::View override {
+        [[nodiscard]] auto build(app::PageContext& context) -> widget::View override {
+            auto ui = context.ui();
             auto button = ui.make<widget::Button>("Retained root").on_click([this] {
                 ++*params().calls;
             });
@@ -317,6 +348,157 @@ TEST_CASE("router pushes keep-alive pages and toggles top visibility", "[app][ro
     REQUIRE(router.host()->child_count() == 1);
     REQUIRE(home_root->visible());
     REQUIRE_FALSE(router.pop());
+}
+
+TEST_CASE("configured router navigates between registered typed pages", "[app][router][navigate]") {
+    reactive::Graph graph;
+    TestStore store {graph};
+    const auto theme = theme::default_theme();
+    app::NanRouter router {graph, theme};
+    router.set_store(store);
+
+    REQUIRE(router.configure(app::Routes {
+        app::route<HomePage>(app::RouteOptions {.key = "home", .title = "Home"}),
+        app::route<DetailPage>(app::RouteOptions {.key = "detail", .title = "Detail"}),
+    }));
+    const auto navigation = router.navigation();
+    REQUIRE(navigation.valid());
+    REQUIRE(navigation.navigate<HomePage>(HomeParams {.user_id = 4}));
+    REQUIRE(router.route_mode());
+    REQUIRE(router.depth() == 1);
+    REQUIRE(router.current_key() == "home");
+    REQUIRE(router.current_page_key() == app::nan_type_key<HomePage>());
+
+    auto* first_root = router.host()->get_child(0);
+    REQUIRE(first_root != nullptr);
+    REQUIRE(navigation.navigate<DetailPage>(DetailParams {.blog_id = 8}));
+    REQUIRE(router.depth() == 1);
+    REQUIRE(router.current_key() == "detail");
+    REQUIRE(router.current_page_key() == app::nan_type_key<DetailPage>());
+    REQUIRE(router.host()->get_child(0) != first_root);
+    REQUIRE_FALSE(navigation.navigate<PlainPage>());
+}
+
+TEST_CASE("navigation requests are deferred when a UI dispatcher is installed", "[app][router][navigate]") {
+    reactive::Graph graph;
+    TestStore store {graph};
+    const auto theme = theme::default_theme();
+    app::UiDispatcher dispatcher;
+    app::NanRouter router {
+        graph,
+        theme,
+        nullptr,
+        nullptr,
+        nullptr,
+        nullptr,
+        nullptr,
+        &dispatcher,
+    };
+    router.set_store(store);
+    REQUIRE(router.configure(app::Routes {
+        app::route<HomePage>(app::RouteOptions {.key = "home"}),
+        app::route<DetailPage>(app::RouteOptions {.key = "detail"}),
+    }));
+    const auto navigation = router.navigation();
+    REQUIRE(navigation.navigate<HomePage>(HomeParams {.user_id = 1}));
+    REQUIRE(router.empty());
+    REQUIRE(dispatcher.pending_count() == 1);
+    REQUIRE(dispatcher.drain() == 1);
+    REQUIRE(router.current_key() == "home");
+
+    REQUIRE(navigation.navigate<DetailPage>(DetailParams {.blog_id = 2}));
+    REQUIRE(router.current_key() == "home");
+    REQUIRE(dispatcher.drain() == 1);
+    REQUIRE(router.current_key() == "detail");
+}
+
+TEST_CASE(
+    "navigation coalesces requests queued in one UI task phase",
+    "[app][router][navigate]"
+) {
+    reactive::Graph graph;
+    app::UiDispatcher dispatcher;
+    TestStore store {graph};
+    app::NanRouter router {
+        graph,
+        theme::default_theme(),
+        &store,
+        app::nan_type_key<TestStore>(),
+        nullptr,
+        nullptr,
+        nullptr,
+        &dispatcher,
+    };
+    REQUIRE(router.configure(app::Routes {
+        app::route<HomePage>({.key = "home"}),
+        app::route<DetailPage>({.key = "detail"}),
+    }));
+    const auto navigation = router.navigation();
+
+    REQUIRE(navigation.navigate<HomePage>(HomeParams {.user_id = 1}));
+    REQUIRE(navigation.navigate<DetailPage>(DetailParams {.blog_id = 2}));
+    REQUIRE(navigation.navigate<HomePage>(HomeParams {.user_id = 3}));
+    REQUIRE(dispatcher.pending_count() == 1);
+    REQUIRE(dispatcher.drain() == 1);
+    REQUIRE(router.current_key() == "home");
+    REQUIRE(router.depth() == 1);
+    REQUIRE(router.host()->child_count() == 1);
+}
+
+TEST_CASE(
+    "route navigation rebuilds the current page and preserves it on build failure",
+    "[app][router][navigate]"
+) {
+    reactive::Graph graph;
+    app::NanRouter router {graph, theme::default_theme()};
+    int builds = 0;
+    bool fail = false;
+    bool destroyed = false;
+    int destruction_count = 0;
+    REQUIRE(router.configure(app::Routes {
+        app::route<RouteProbePage>({.key = "probe"}),
+    }));
+    const auto navigation = router.navigation();
+    const RouteProbeParams params {
+        .builds = &builds,
+        .fail = &fail,
+        .destroyed = &destroyed,
+        .destruction_count = &destruction_count,
+    };
+
+    REQUIRE(navigation.navigate<RouteProbePage>(params));
+    auto* first_root = router.host()->get_child(0);
+    REQUIRE(builds == 1);
+    REQUIRE(first_root != nullptr);
+
+    REQUIRE(navigation.navigate<RouteProbePage>(params));
+    REQUIRE(builds == 2);
+    REQUIRE(router.host()->get_child(0) != first_root);
+    REQUIRE(destroyed);
+    REQUIRE(destruction_count == 1);
+    auto* stable_root = router.host()->get_child(0);
+
+    destroyed = false;
+    fail = true;
+    REQUIRE_THROWS(navigation.navigate<RouteProbePage>(params));
+    REQUIRE(router.current_key() == "probe");
+    REQUIRE(router.host()->child_count() == 1);
+    REQUIRE(router.host()->get_child(0) == stable_root);
+    REQUIRE(destroyed);
+    REQUIRE(destruction_count == 2);
+}
+
+TEST_CASE("navigation handles expire after their router is destroyed", "[app][router][navigate]") {
+    reactive::Graph graph;
+    app::Navigation navigation;
+    {
+        app::NanRouter router {graph, theme::default_theme()};
+        REQUIRE(router.configure(app::Routes {app::route<PlainPage>({.key = "plain"})}));
+        navigation = router.navigation();
+        REQUIRE(navigation.valid());
+    }
+    REQUIRE_FALSE(navigation.valid());
+    REQUIRE_FALSE(navigation.navigate<PlainPage>());
 }
 
 TEST_CASE("router exposes its UI dispatcher through page context", "[app][router][dispatcher]") {

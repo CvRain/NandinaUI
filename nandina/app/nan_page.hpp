@@ -3,8 +3,8 @@
 //
 // Route params are downward data (Angular route params / Svelte page data style).
 // Shared app state lives in a developer-defined NanStore and is accessed through
-// PageContext, so deep pages can update the store and keep-alive ancestor pages
-// react through Signal/Effect without reverse route plumbing.
+// PageContext, so deep pages can update the store and later page builds can read
+// the same draft without reverse route plumbing.
 //
 
 #ifndef NANDINA_EXPERIMENT_APP_NAN_PAGE_HPP
@@ -20,6 +20,7 @@
 #include "nan_store.hpp"
 
 #include <concepts>
+#include <functional>
 #include <memory>
 #include <stdexcept>
 #include <string_view>
@@ -49,6 +50,55 @@ namespace nandina::app
         return &token;
     }
 
+    class NanPage;
+    template<typename ParamsT>
+    class NanPageT;
+
+    namespace detail
+    {
+        struct NavigationState {
+            std::move_only_function<bool(NanTypeKey, std::unique_ptr<NanPage>)> submit;
+        };
+    } // namespace detail
+
+    class Navigation {
+    public:
+        Navigation() = default;
+
+        template<typename PageT, typename ParamsT>
+            requires std::derived_from<PageT, NanPageT<ParamsT>>
+        [[nodiscard]] auto navigate(ParamsT params) const -> bool {
+            return submit<PageT>(std::make_unique<PageT>(std::move(params)));
+        }
+
+        template<typename PageT>
+            requires std::derived_from<PageT, NanPageT<typename PageT::Params>>
+            && std::default_initializable<PageT>
+        [[nodiscard]] auto navigate() const -> bool {
+            return submit<PageT>(std::make_unique<PageT>());
+        }
+
+        [[nodiscard]] auto valid() const noexcept -> bool {
+            return !state_.expired();
+        }
+
+    private:
+        explicit Navigation(std::shared_ptr<detail::NavigationState> state): state_(std::move(state)) {}
+
+        template<typename PageT>
+        [[nodiscard]] auto submit(std::unique_ptr<PageT> page) const -> bool {
+            const auto state = state_.lock();
+            if (!state || !state->submit) {
+                return false;
+            }
+            return state->submit(nan_type_key<PageT>(), std::move(page));
+        }
+
+        friend class NanRouter;
+        friend class PageContext;
+        std::weak_ptr<detail::NavigationState> state_;
+    };
+
     class NanRouter;
 
     class PageContext {
@@ -67,7 +117,8 @@ namespace nandina::app
             theme::ThemeManager* theme_manager = nullptr,
             UiDispatcher* dispatcher = nullptr,
             scene::OverlayHost* overlay_host = nullptr,
-            widget::DragController* drag_controller = nullptr
+            widget::DragController* drag_controller = nullptr,
+            Navigation navigation = {}
         ):
             router_(&router),
             graph_(&graph),
@@ -82,11 +133,16 @@ namespace nandina::app
             theme_manager_(theme_manager),
             dispatcher_(dispatcher),
             overlay_host_(overlay_host),
-            drag_controller_(drag_controller) {}
+            drag_controller_(drag_controller),
+            navigation_(std::move(navigation)) {}
 
         [[nodiscard]] auto router() -> NanRouter& {
             return *router_;
         }
+
+        /// Copyable, non-owning navigation capability. Capture this value in
+        /// callbacks; never capture PageContext itself by reference.
+        [[nodiscard]] auto navigation() const -> Navigation { return navigation_; }
 
         [[nodiscard]] auto graph() -> reactive::Graph& {
             return *graph_;
@@ -213,6 +269,7 @@ namespace nandina::app
         UiDispatcher* dispatcher_ = nullptr;
         scene::OverlayHost* overlay_host_ = nullptr;
         widget::DragController* drag_controller_ = nullptr;
+        Navigation navigation_;
     };
 
     class NanPage {
@@ -224,22 +281,17 @@ namespace nandina::app
         NanPage(NanPage&&) = delete;
         auto operator=(NanPage&&) -> NanPage& = delete;
 
-        /// Stable application-defined identity used by current_key() and pop_to().
-        /// It must not depend on RTTI, compiler-specific names or object addresses.
-        [[nodiscard]] virtual auto route_key() const -> std::string_view = 0;
+        /// Legacy identity used by the stack router. Route mode obtains identity
+        /// from Routes, so modern pages may leave this empty.
+        [[nodiscard]] virtual auto route_key() const -> std::string_view { return {}; }
         [[nodiscard]] virtual auto params_type_key() const -> NanTypeKey = 0;
         [[nodiscard]] virtual auto build(PageContext& context)
             -> std::shared_ptr<scene::NanNode2D> = 0;
 
-        /// Called when this keep-alive page becomes the top of the stack (visible again).
-        /// The default implementation is a no-op. Pages override this to refresh
-        /// state that may have changed while the page was hidden (e.g. visit counters,
-        /// live data from a shared Store).
+        /// Legacy keep-alive hook. Route mode does not call it.
         virtual void on_activate(PageContext& context) {}
 
-        /// Called when this keep-alive page is no longer the top of the stack (hidden
-        /// by another page being pushed on top). The page root remains mounted and
-        /// reactive bindings stay active. The default implementation is a no-op.
+        /// Legacy keep-alive hook. Route mode does not call it.
         virtual void on_deactivate(PageContext& context) {}
 
     protected:
@@ -272,23 +324,15 @@ namespace nandina::app
         Params params_;
     };
 
-    /**
-     * Application-facing page base. The router still owns PageContext and the page
-     * scope; ordinary pages only implement the IDE-friendly BuildContext overload.
-     */
+    /// Application-facing page base for the route model. A page receives the full
+    /// app context exactly once; BuildContext remains a widget-layer value.
     template<typename ParamsT = NoParams>
     class Page: public NanPageT<ParamsT> {
     public:
         using Params = ParamsT;
         using NanPageT<ParamsT>::NanPageT;
 
-        [[nodiscard]] auto build(PageContext& context)
-            -> std::shared_ptr<scene::NanNode2D> final {
-            auto ui = context.ui();
-            return build(ui);
-        }
-
-        [[nodiscard]] virtual auto build(widget::BuildContext& ui) -> widget::View = 0;
+        [[nodiscard]] virtual auto build(PageContext& context) -> widget::View = 0;
     };
 
 } // namespace nandina::app

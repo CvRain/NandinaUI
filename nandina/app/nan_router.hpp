@@ -1,10 +1,9 @@
 //
-// app/nan_router — keep-alive page stack router.
+// app/nan_router — typed route registry and current-page navigation.
 //
-// The router owns a stack of page frames. Each frame keeps both the page object
-// and its built root node alive. Only the top frame is visible; lower frames stay
-// mounted and keep their reactive bindings active, which makes shared Store
-// updates immediately visible when popping back.
+// The single-current-route API is implemented alongside the legacy stack surface
+// while callers and tests migrate. New code configures Routes and uses Navigation;
+// stack methods remain only for the in-progress alpha migration.
 //
 
 #ifndef NANDINA_EXPERIMENT_APP_NAN_ROUTER_HPP
@@ -19,7 +18,10 @@
 
 #include <cstddef>
 #include <functional>
+#include <initializer_list>
 #include <memory>
+#include <mutex>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -31,6 +33,56 @@ namespace nandina::app
 {
 
     class PageFrame;
+    class NanPage;
+    class NanRouter;
+
+    struct RouteOptions {
+        std::string key;
+        std::string title;
+        std::string icon;
+        bool show_in_nav = true;
+    };
+
+    struct RouteEntry {
+        NanTypeKey page_key = nullptr;
+        NanTypeKey params_key = nullptr;
+        RouteOptions options;
+    };
+
+    class Routes {
+    public:
+        Routes() = default;
+        Routes(std::initializer_list<RouteEntry> entries): entries_(entries) {}
+
+        [[nodiscard]] auto entries() const noexcept -> const std::vector<RouteEntry>& {
+            return entries_;
+        }
+
+        [[nodiscard]] auto find(NanTypeKey key) const noexcept -> const RouteEntry* {
+            for (const auto& entry: entries_) {
+                if (entry.page_key == key) {
+                    return &entry;
+                }
+            }
+            return nullptr;
+        }
+
+    private:
+        std::vector<RouteEntry> entries_;
+    };
+
+    template<typename PageT>
+        requires std::derived_from<PageT, NanPageT<typename PageT::Params>>
+    [[nodiscard]] auto route(RouteOptions options = {}) -> RouteEntry {
+        if (options.key.empty()) {
+            options.key = options.title;
+        }
+        return RouteEntry {
+            .page_key = nan_type_key<PageT>(),
+            .params_key = nan_type_key<typename PageT::Params>(),
+            .options = std::move(options),
+        };
+    }
 
     class NanRouter {
     public:
@@ -58,7 +110,7 @@ namespace nandina::app
             BackgroundExecutor* background_executor = nullptr,
             scene::OverlayHost* overlay_host = nullptr
         );
-        ~NanRouter() = default;
+        ~NanRouter();
 
         NanRouter(const NanRouter&) = delete;
         auto operator=(const NanRouter&) -> NanRouter& = delete;
@@ -81,7 +133,71 @@ namespace nandina::app
         [[nodiscard]] auto depth() const -> std::size_t;
         [[nodiscard]] auto empty() const -> bool;
         [[nodiscard]] auto current_key() const -> std::string_view;
+        [[nodiscard]] auto current_page_key() const noexcept -> NanTypeKey {
+            return current_page_key_;
+        }
         [[nodiscard]] auto can_pop() const -> bool;
+
+        /// Configure the single-current-route model. Routes are immutable after
+        /// configuration; the legacy stack API remains available until migration
+        /// of the application and tests is complete.
+        [[nodiscard]] auto configure(Routes routes) -> bool;
+        [[nodiscard]] auto navigation() const -> Navigation;
+        [[nodiscard]] auto routes() const noexcept -> const Routes& { return routes_; }
+        [[nodiscard]] auto route(NanTypeKey page_key) const noexcept -> const RouteEntry* {
+            return routes_.find(page_key);
+        }
+
+        template<typename PageT>
+        [[nodiscard]] auto route() const noexcept -> const RouteEntry* {
+            return route(nan_type_key<PageT>());
+        }
+        [[nodiscard]] auto route_mode() const noexcept -> bool { return route_mode_; }
+
+        template<typename PageT, typename ParamsT>
+            requires std::derived_from<PageT, NanPageT<ParamsT>>
+        [[nodiscard]] auto start(Routes routes, ParamsT params) -> bool {
+            if (!configure(std::move(routes))) {
+                return false;
+            }
+            return apply_navigation(nan_type_key<PageT>(), std::make_unique<PageT>(std::move(params)));
+        }
+
+        template<typename PageT>
+            requires std::derived_from<PageT, NanPageT<typename PageT::Params>>
+            && std::default_initializable<PageT>
+        [[nodiscard]] auto start(Routes routes) -> bool {
+            if (!configure(std::move(routes))) {
+                return false;
+            }
+            return apply_navigation(nan_type_key<PageT>(), std::make_unique<PageT>());
+        }
+
+        /// Start the explicitly configured route table at its initial page.
+        /// This overload keeps route declaration and startup selection separate,
+        /// which is useful for NanWindow::use_router(Routes).
+        template<typename PageT, typename ParamsT>
+            requires std::derived_from<PageT, NanPageT<ParamsT>>
+            && std::constructible_from<PageT, ParamsT>
+        [[nodiscard]] auto start(ParamsT params) -> bool {
+            if (!route_mode_) {
+                return false;
+            }
+            return apply_navigation(
+                nan_type_key<PageT>(),
+                std::make_unique<PageT>(std::move(params))
+            );
+        }
+
+        template<typename PageT>
+            requires std::derived_from<PageT, NanPageT<typename PageT::Params>>
+            && std::default_initializable<PageT>
+        [[nodiscard]] auto start() -> bool {
+            if (!route_mode_) {
+                return false;
+            }
+            return apply_navigation(nan_type_key<PageT>(), std::make_unique<PageT>());
+        }
 
         template<typename StoreT>
             requires std::derived_from<StoreT, NanStore>
@@ -184,7 +300,12 @@ namespace nandina::app
             bool active = false;
         };
 
-        void push_page(std::unique_ptr<NanPage> page);
+        void push_page(std::unique_ptr<NanPage> page, std::string route_key = {});
+        [[nodiscard]] auto submit_navigation(NanTypeKey page_key, std::unique_ptr<NanPage> page)
+            -> bool;
+        void flush_pending_navigation();
+        [[nodiscard]] auto apply_navigation(NanTypeKey page_key, std::unique_ptr<NanPage> page)
+            -> bool;
         void sync_visibility();
         void attach_root(const std::shared_ptr<scene::NanNode2D>& root);
         void detach_root(const std::shared_ptr<scene::NanNode2D>& root);
@@ -199,9 +320,11 @@ namespace nandina::app
 
         reactive::Graph* graph_;
         const theme::NanTheme* theme_;
+        std::unique_ptr<theme::ThemeManager> owned_theme_manager_;
         theme::ThemeManager* theme_manager_ = nullptr;
         NanStore* store_ = nullptr;
         NanTypeKey store_key_ = nullptr;
+        NanTypeKey current_page_key_ = nullptr;
         resource::ResourceManager* resources_ = nullptr;
         text::FontLoader* font_loader_ = nullptr;
         text::FontFamilyRegistry* font_families_ = nullptr;
@@ -210,6 +333,17 @@ namespace nandina::app
         scene::OverlayHost* overlay_host_ = nullptr;
         widget::DragController* drag_controller_ = nullptr;
         std::shared_ptr<scene::NanControl> host_;
+        Routes routes_;
+        bool route_mode_ = false;
+        std::shared_ptr<detail::NavigationState> navigation_state_ =
+            std::make_shared<detail::NavigationState>();
+        struct PendingNavigation {
+            NanTypeKey page_key = nullptr;
+            std::unique_ptr<NanPage> page;
+        };
+        std::mutex pending_navigation_mutex_;
+        std::optional<PendingNavigation> pending_navigation_;
+        bool navigation_task_posted_ = false;
         std::vector<Frame> frames_;
         /// 淡出中的页面：生命周期（scope/async）保留，淡出完成后销毁。
         std::vector<Frame> exiting_;
