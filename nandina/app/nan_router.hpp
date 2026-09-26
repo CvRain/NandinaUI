@@ -15,6 +15,7 @@
 #include "nan_page.hpp"
 #include "nan_store.hpp"
 #include "async_scope.hpp"
+#include "router_outlet.hpp"
 
 #include <cstddef>
 #include <functional>
@@ -118,6 +119,7 @@ namespace nandina::app
         auto operator=(NanRouter&&) -> NanRouter& = delete;
 
         [[nodiscard]] auto host() -> std::shared_ptr<scene::NanControl>;
+        [[nodiscard]] auto outlet() -> std::shared_ptr<RouterOutlet> { return host_; }
 
         /// 窗口级拖拽服务。由 NanWindow 在构造 Router 后立刻注入，页面经
         /// PageContext 取用（避免依赖"内容已挂载"这种时序）。
@@ -332,7 +334,7 @@ namespace nandina::app
         BackgroundExecutor* background_executor_ = nullptr;
         scene::OverlayHost* overlay_host_ = nullptr;
         widget::DragController* drag_controller_ = nullptr;
-        std::shared_ptr<scene::NanControl> host_;
+        std::shared_ptr<RouterOutlet> host_;
         Routes routes_;
         bool route_mode_ = false;
         std::shared_ptr<detail::NavigationState> navigation_state_ =

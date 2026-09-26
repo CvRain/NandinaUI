@@ -30,6 +30,7 @@
 #include "../widget/drag_controller.hpp"
 #include "../text/font_pipeline.hpp"
 #include "nan_router.hpp"
+#include "shell_context.hpp"
 #include "viewport_scaling.hpp"
 #include "window_config.hpp"
 #include "window_metrics.hpp"
@@ -65,11 +66,15 @@ namespace nandina::app
         /// 挂载页面根组件 (成为 SceneTree 的 root)。
         void set_content(std::shared_ptr<scene::NanNode2D> root);
 
-        /// 创建一个 keep-alive Router, 并把 Router host 挂为窗口内容。
+        /// 创建一个 Router，并把它的 Outlet 暂时挂为窗口内容。
         [[nodiscard]] auto use_router() -> NanRouter&;
 
         /// Create and configure the single-current-route router.
         [[nodiscard]] auto use_router(Routes routes) -> NanRouter&;
+
+        /// Mount a persistent shell around the configured router outlet.
+        /// The shell is built once and remains mounted while pages navigate.
+        void set_shell(std::move_only_function<widget::View(ShellContext&)> factory);
 
         [[nodiscard]] auto router() -> NanRouter* {
             return router_.get();
@@ -156,6 +161,8 @@ namespace nandina::app
         std::shared_ptr<scene::OverlayHost> overlay_host_;
         widget::DragController drag_controller_;
         std::unique_ptr<NanRouter> router_;
+        std::unique_ptr<reactive::ReactiveScope> shell_scope_;
+        bool shell_installed_ = false;
         std::unique_ptr<render::IRenderDevice> device_;
         std::unique_ptr<render::TextureCache> texture_cache_;
         std::unique_ptr<text::FontPipelineCache> font_pipeline_cache_;

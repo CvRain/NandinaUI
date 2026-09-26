@@ -40,38 +40,6 @@ namespace nandina::app
         }
     };
 
-    namespace
-    {
-        class PageHost final: public scene::NanControl {
-        public:
-            std::function<void()> on_tick;
-
-            void on_process(const float dt) override {
-                (void)dt;
-                if (on_tick) {
-                    on_tick();
-                }
-            }
-
-        protected:
-            [[nodiscard]] auto on_measure(scene::LayoutConstraints constraints)
-                -> foundation::NanSize override {
-                return constraints.constrain(size());
-            }
-
-            auto on_layout() -> void override {
-                for (std::size_t i = 0; i < child_count(); ++i) {
-                    auto* child = get_child(i) != nullptr ? get_child(i)->as_control() : nullptr;
-                    if (!child || !child->visible()) {
-                        continue;
-                    }
-                    (void)child->measure_layout(scene::LayoutConstraints::tight(size()));
-                    child->layout_to(local_rect());
-                }
-            }
-        };
-    } // namespace
-
     NanRouter::NanRouter(
         reactive::Graph& graph,
         const theme::NanTheme& theme,
@@ -94,9 +62,9 @@ namespace nandina::app
         dispatcher_(dispatcher),
         background_executor_(background_executor),
         overlay_host_(overlay_host),
-        host_(std::make_shared<PageHost>()) {
+        host_(std::make_shared<RouterOutlet>()) {
         const auto lifetime = std::weak_ptr<void>(command_lifetime_);
-        static_cast<PageHost*>(host_.get())->on_tick = [this, lifetime] {
+        host_->on_tick = [this, lifetime] {
             if (lifetime.lock()) {
                 drop_completed_exits();
             }

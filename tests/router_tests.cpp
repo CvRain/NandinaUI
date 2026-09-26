@@ -3,6 +3,8 @@
 //
 
 #include <nandina/app/nan_router.hpp>
+#include <nandina/app/nan_application.hpp>
+#include <nandina/app/nan_window.hpp>
 #include <nandina/app/nan_store.hpp>
 #include <nandina/foundation/geometry.hpp>
 #include <nandina/reactive/effect.hpp>
@@ -89,6 +91,13 @@ namespace
             auto root = std::make_shared<scene::NanControl>(foundation::NanSize(100, 50));
             root->set_background(context.theme().palette.primary);
             return root;
+        }
+    };
+
+    class SecondPlainPage final: public app::NanPageT<app::NoParams> {
+    public:
+        [[nodiscard]] auto build(app::PageContext&) -> std::shared_ptr<scene::NanNode2D> override {
+            return std::make_shared<scene::NanControl>(foundation::NanSize(120, 60));
         }
     };
 
@@ -377,6 +386,56 @@ TEST_CASE("configured router navigates between registered typed pages", "[app][r
     REQUIRE(router.current_page_key() == app::nan_type_key<DetailPage>());
     REQUIRE(router.host()->get_child(0) != first_root);
     REQUIRE_FALSE(navigation.navigate<PlainPage>());
+}
+
+TEST_CASE("router outlet replaces its mounted page without changing outlet identity", "[app][router][outlet]") {
+    auto outlet = std::make_shared<app::RouterOutlet>();
+    auto first = std::make_shared<scene::NanControl>(foundation::NanSize(20, 20));
+    auto second = std::make_shared<scene::NanControl>(foundation::NanSize(30, 30));
+
+    REQUIRE(&outlet->set_page(first) == first.get());
+    REQUIRE(outlet->page() == first.get());
+    REQUIRE(outlet->child_count() == 1);
+
+    REQUIRE(&outlet->set_page(second) == second.get());
+    REQUIRE(outlet->page() == second.get());
+    REQUIRE(outlet->child_count() == 1);
+
+    outlet->clear_page();
+    REQUIRE(outlet->page() == nullptr);
+    REQUIRE(outlet->child_count() == 0);
+}
+
+TEST_CASE("window shell keeps the router outlet stable", "[app][router][shell]") {
+    app::NanApplication application;
+    app::NanWindow window {application, {}};
+    auto& router = window.use_router(app::Routes {
+        app::route<PlainPage>({.key = "plain", .title = "Plain"}),
+        app::route<SecondPlainPage>({.key = "second", .title = "Second"}),
+    });
+    app::RouterOutlet* observed_outlet = nullptr;
+    window.set_shell([&](app::ShellContext& context) -> widget::View {
+        observed_outlet = context.outlet().get();
+        return context.ui().center().child(context.outlet()).build();
+    });
+
+    REQUIRE(observed_outlet != nullptr);
+    REQUIRE(router.start<PlainPage>());
+    REQUIRE(window.scene_tree().layout_root(foundation::NanSize(720, 640)) > 0);
+    INFO("shell size=" << window.overlay_host().content()->width() << "x"
+                        << window.overlay_host().content()->height());
+    INFO("outlet size=" << observed_outlet->width() << "x" << observed_outlet->height());
+    REQUIRE(observed_outlet->width() > 600.0F);
+    REQUIRE(observed_outlet->height() == Catch::Approx(640.0F));
+    REQUIRE(observed_outlet->page() != nullptr);
+    REQUIRE(window.overlay_host().content() != nullptr);
+    REQUIRE(window.overlay_host().content()->child_count() == 1);
+
+    const auto navigation = router.navigation();
+    REQUIRE(navigation.navigate<SecondPlainPage>());
+    REQUIRE(observed_outlet->page() != nullptr);
+    REQUIRE(observed_outlet == router.outlet().get());
+    REQUIRE(router.depth() == 1);
 }
 
 TEST_CASE("navigation requests are deferred when a UI dispatcher is installed", "[app][router][navigate]") {

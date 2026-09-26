@@ -161,6 +161,49 @@ namespace nandina::app
         return router;
     }
 
+    void NanWindow::set_shell(std::move_only_function<widget::View(ShellContext&)> factory) {
+        if (!factory) {
+            throw std::invalid_argument("NanWindow::set_shell: factory is empty");
+        }
+        if (router_ == nullptr || !router_->route_mode()) {
+            throw std::logic_error("NanWindow::set_shell: configure Routes first");
+        }
+        if (shell_installed_) {
+            throw std::logic_error("NanWindow::set_shell: shell is already installed");
+        }
+
+        // use_router() initially mounts the outlet as the window content. Detach
+        // that temporary mount before the shell factory places the same stable
+        // outlet inside the shell tree.
+        overlay_host_->clear_content();
+        shell_scope_ = std::make_unique<reactive::ReactiveScope>(app_.graph());
+        ShellContext context {
+            app_.graph(),
+            *shell_scope_,
+            app_.theme_manager(),
+            &app_.resources(),
+            overlay_host_.get(),
+            &drag_controller_,
+            router_->navigation(),
+            router_->outlet(),
+        };
+        auto root = std::invoke(factory, context);
+        if (!root) {
+            shell_scope_.reset();
+            throw std::runtime_error("NanWindow::set_shell: factory returned null root");
+        }
+        if (root->as_control() == nullptr) {
+            shell_scope_.reset();
+            throw std::invalid_argument("NanWindow::set_shell: root must be a NanControl");
+        }
+        if (router_->outlet()->parent() == nullptr) {
+            shell_scope_.reset();
+            throw std::logic_error("NanWindow::set_shell: shell does not contain RouterOutlet");
+        }
+        set_content(std::move(root));
+        shell_installed_ = true;
+    }
+
     auto NanWindow::graph() -> reactive::Graph& {
         return app_.graph();
     }
@@ -488,6 +531,8 @@ namespace nandina::app
         overlay_host_->clear_content();
         overlay_host_->clear_overlays();
         tree_.set_root(nullptr);
+        shell_scope_.reset();
+        shell_installed_ = false;
         tree_.clear_default_text_pipeline();
         tree_.clear_font_context();
         tree_.clear_texture_cache();

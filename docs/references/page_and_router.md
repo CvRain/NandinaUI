@@ -44,7 +44,7 @@ void MainWindow::on_setup() {
         auto ui = ctx.ui();
         return ui.row().children(
             build_sidebar(ctx),
-            ui.expanded().child(ctx.outlet())
+            widget::authoring::make<widget::Expanded>().child(ctx.outlet())
         ).build();
     });
 }
