@@ -106,6 +106,8 @@ namespace
         bool* fail = nullptr;
         bool* destroyed = nullptr;
         int* destruction_count = nullptr;
+        int* activated = nullptr;
+        int* deactivated = nullptr;
     };
 
     class RouteProbePage final: public app::NanPageT<RouteProbeParams> {
@@ -127,6 +129,18 @@ namespace
                 throw std::runtime_error("probe page build failed");
             }
             return std::make_shared<scene::NanControl>(foundation::NanSize(80, 40));
+        }
+
+        void on_activate(app::PageContext&) override {
+            if (params().activated != nullptr) {
+                ++*params().activated;
+            }
+        }
+
+        void on_deactivate(app::PageContext&) override {
+            if (params().deactivated != nullptr) {
+                ++*params().deactivated;
+            }
         }
     };
 
@@ -531,6 +545,8 @@ TEST_CASE(
     bool fail = false;
     bool destroyed = false;
     int destruction_count = 0;
+    int activated = 0;
+    int deactivated = 0;
     REQUIRE(router.configure(app::Routes {
         app::route<RouteProbePage>({.key = "probe"}),
     }));
@@ -540,18 +556,24 @@ TEST_CASE(
         .fail = &fail,
         .destroyed = &destroyed,
         .destruction_count = &destruction_count,
+        .activated = &activated,
+        .deactivated = &deactivated,
     };
 
     REQUIRE(navigation.navigate<RouteProbePage>(params));
     auto* first_root = router.host()->get_child(0);
     REQUIRE(builds == 1);
     REQUIRE(first_root != nullptr);
+    REQUIRE(activated == 0);
+    REQUIRE(deactivated == 0);
 
     REQUIRE(navigation.navigate<RouteProbePage>(params));
     REQUIRE(builds == 2);
     REQUIRE(router.host()->get_child(0) != first_root);
     REQUIRE(destroyed);
     REQUIRE(destruction_count == 1);
+    REQUIRE(activated == 0);
+    REQUIRE(deactivated == 0);
     auto* stable_root = router.host()->get_child(0);
 
     destroyed = false;
@@ -562,6 +584,8 @@ TEST_CASE(
     REQUIRE(router.host()->get_child(0) == stable_root);
     REQUIRE(destroyed);
     REQUIRE(destruction_count == 2);
+    REQUIRE(activated == 0);
+    REQUIRE(deactivated == 0);
 }
 
 TEST_CASE("navigation handles expire after their router is destroyed", "[app][router][navigate]") {

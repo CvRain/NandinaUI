@@ -267,8 +267,9 @@ namespace nandina::app
             throw std::runtime_error("NanRouter::push_page: page build returned null root");
         }
 
+        const bool use_transition = transition_enabled_ && !route_mode_;
         std::shared_ptr<PageFrame> frame;
-        if (transition_enabled_) {
+        if (use_transition) {
             // 转场时由包装帧控制可见性；页面根保持可见，避免根被标记不可见而失去焦点/命中。
             frame = std::make_shared<PageFrame>();
             frame->add_child(root);
@@ -276,7 +277,10 @@ namespace nandina::app
             attach_root(frame);
         }
         else {
-            root->set_visible(false);
+            // Typed routes never keep an inactive page frame around. The new
+            // root becomes visible immediately and the previous root is
+            // detached by apply_navigation after the build succeeds.
+            root->set_visible(route_mode_);
             attach_root(root);
         }
         frames_.push_back(
@@ -292,8 +296,15 @@ namespace nandina::app
         );
         frames_.back().key = route_key.empty() ? std::string(frames_.back().page->route_key())
                                                : std::move(route_key);
-        sync_visibility();
-        if (transition_enabled_ && frames_.back().frame) {
+        if (route_mode_) {
+            // Route pages have no keep-alive activation lifecycle. Their scope
+            // and root are retired transactionally by apply_navigation.
+            frames_.back().active = false;
+        }
+        else {
+            sync_visibility();
+        }
+        if (use_transition && frames_.back().frame) {
             fade_frame(frames_.back(), 1.0F);
         }
     }
