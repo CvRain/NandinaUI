@@ -48,7 +48,7 @@ def main() -> int:
         assert "subproject('nandina'" in meson_text
         assert "nandina_resource_toolchain" in meson_text
         assert "app::run<MainPage>" in main_text
-        assert 'return "main";' in main_text
+        assert "route_key()" not in main_text
         assert 'package = "org.example.hello"' in manifest_text
 
         build = project / "build"

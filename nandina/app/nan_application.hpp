@@ -101,13 +101,21 @@ namespace nandina::app
         /// 进入阻塞主循环: 打开窗口, 每帧 tick, 直到窗口关闭。返回进程退出码。
         auto run(NanWindow& window) -> int;
 
-        /// 用指定 Page 创建普通路由窗口并进入主循环，无需为一次性 setup 继承 NanWindow。
+        /// 用指定 Page 创建普通单页窗口并进入主循环，无需为一次性 setup 继承 NanWindow。
         template<typename PageT>
             requires std::derived_from<PageT, NanPageT<typename PageT::Params>>
             && std::default_initializable<PageT>
         auto run_page(WindowConfig config) -> int {
             return run_configured(std::move(config), [](NanRouter& router) {
-                router.template push<PageT>();
+                if (!router.configure(Routes {
+                        route<PageT>({.key = "main", .title = "main page"}),
+                    }))
+                {
+                    throw std::logic_error("NanApplication::run_page: failed to configure route");
+                }
+                if (!router.template start<PageT>()) {
+                    throw std::runtime_error("NanApplication::run_page: failed to start page");
+                }
             });
         }
 
@@ -119,7 +127,19 @@ namespace nandina::app
             return run_configured(
                 std::move(config),
                 [params = std::move(params)](NanRouter& router) mutable {
-                    router.template push<PageT>(std::move(params));
+                    if (!router.configure(Routes {
+                            route<PageT>({.key = "main", .title = "main page"}),
+                        }))
+                    {
+                        throw std::logic_error(
+                            "NanApplication::run_page: failed to configure route"
+                        );
+                    }
+                    if (!router.template start<PageT>(std::move(params))) {
+                        throw std::runtime_error(
+                            "NanApplication::run_page: failed to start page"
+                        );
+                    }
                 }
             );
         }
