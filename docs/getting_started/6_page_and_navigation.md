@@ -1,6 +1,6 @@
 # 使用 app::Page 组织应用
 
-> 本章正在随 Page / Router 重构迁移。当前源码仍提供旧的 keep-alive `push/pop` API；新的应用代码请以[Page / Router 目标合约](../references/page_and_router.md)为准。教程正文将在实现迁移完成后补齐。
+> 本章正在随 Page / Router 重构迁移。当前实现采用 typed Routes、Navigation 和单当前页模型；页面每次进入重建，离开时销毁。
 
 根视图工厂很适合快速创建单窗口界面，但随着应用出现多个功能区域、页面参数和导航行为，界面需要一个更明确的结构边界。`app::Page` 是 NandinaUI 面向应用开发者提供的页面抽象：每个页面拥有自己的构建作用域，可以接收强类型参数，并由 Router 在 Outlet 中创建和销毁。
 
@@ -17,11 +17,11 @@
 
 ## 建议覆盖的知识点
 
-- `Page`、`NanPageT` 与 `PageContext` 的层次和适用范围。
+- `Page` 与 `PageContext` 的职责边界。
 - 页面级 `ReactiveScope` 以及页面离开后的自动清理。
 - 路由表、页面参数与类型路由身份；框架不会通过 RTTI 或路径解析查找页面。
 - Shell、RouterOutlet 与常驻导航 UI 的所有权关系。
 - 回调中按值捕获 Navigation，并在 UI 任务阶段提交导航。
 - 局部页面状态与应用级 `NanStore` 的职责边界。
 
-> 建议本章以两个页面之间的往返作为结尾；复杂路由、共享 Store、异步任务和页面转场可作为后续进阶文档展开。
+> 建议本章以两个页面之间的往返作为结尾；复杂路由、共享 Store 和异步任务可作为后续进阶文档展开。

@@ -2,7 +2,7 @@
 
 > 2026 年 9 月。起因是补两个组件，结果挖到了 `app` 层 Page/Router 合约的分岔。
 > 相关提交：`3a99e0f`（ContextMenu / Combobox）、`b2fec1b`（showcase 构建隔离）。
-> 状态：调查与目标合约已定；typed Routes、Navigation 和单当前页切换的第一阶段已实现，旧 keep-alive 路径仍在迁移中。
+> 状态：调查与目标合约已落地；typed Routes、Navigation 和单当前页切换已实现，旧 keep-alive 栈与转场路径已移除。
 
 ## 一、本来是件小事
 

@@ -284,11 +284,11 @@ item.on_drag_start([drags, item_handle](const auto& e) {
 
 「拖了没反应」不是交互没触发，而是链路上有两处断点：
 
-1. **窗口级服务没接到页面上。** `NanRouter` 里有两处构造 `PageContext`：`make_context_for()`
-   与 `push_page()` 的内联构造。给前者加了拖拽服务后，页面 push 走的是**后者**，因此
+1. **窗口级服务没接到页面上。** `NanRouter` 的页面构建路径在 `build_page()` 内构造
+   `PageContext`。如果只修改其它上下文构造点，页面构建仍会走漏服务，因而
    `ui.drag_controller()` 恒为 `nullptr` —— 拖拽回调里判空后静默 return，界面毫无反应。
-   现在两处都传（Router 直接持有 `DragController*`，由 `NanWindow` 注入）。
-   教训：加窗口级服务时要同时检查 `PageContext` 的**全部**构造点。
+   现在页面构建路径会传递该服务（Router 直接持有 `DragController*`，由 `NanWindow` 注入）。
+   教训：加窗口级服务时要检查 `PageContext` 的全部构造点。
 2. **延迟 mutation 在 flush 里二次入队后丢失。** `reparent()` 在 `process` 阶段会入队；
    而 `flush_tree_mutations()` 本身仍在 `tree_commit` 阶段执行（同样算"延迟中"），
    于是 `reparent` 再次入队，而队列已被取空 —— 没人再处理，操作静默丢弃。
