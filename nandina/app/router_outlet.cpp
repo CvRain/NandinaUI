@@ -1,7 +1,10 @@
 #include "router_outlet.hpp"
 
+#include "../scene/scene_tree.hpp"
+
 #include <cmath>
 #include <stdexcept>
+#include <utility>
 
 namespace nandina::app
 {
@@ -12,12 +15,42 @@ namespace nandina::app
         if (child_count() > 1) {
             throw std::logic_error("RouterOutlet::set_page: outlet contains multiple pages");
         }
-        return static_cast<scene::NanNode2D&>(
-            replace_child(child_count() == 0 ? nullptr : get_child(0), std::move(page))
-        );
+        auto* requested = page.get();
+        pending_page_ = std::move(page);
+
+        if (auto* tree = get_tree(); tree != nullptr && tree->defers_tree_mutation()) {
+            // 遍历期间 remove_child 会直接抛，所以现在不能换根。只排一个 mutation：
+            // 同阶段内再次 set_page 只会覆盖 pending_page_，flush 时换的是最后一个，
+            // 不会出现"两个替换各自捕获陈旧 current"而摘错节点、留下僵尸页面。
+            if (swap_queued_) {
+                return *requested;
+            }
+            swap_queued_ = true;
+            auto self = std::static_pointer_cast<RouterOutlet>(shared_from_this());
+            tree->defer_tree_mutation([self] {
+                self->swap_queued_ = false;
+                self->apply_page_swap();
+            });
+            return *requested;
+        }
+
+        apply_page_swap();
+        return *requested;
+    }
+
+    void RouterOutlet::apply_page_swap() {
+        auto next = std::move(pending_page_);
+        pending_page_.reset();
+        if (!next) {
+            // 排队之后又被 clear_page() 取消了。
+            return;
+        }
+        // current 在此刻解析，而不是在排队时捕获。
+        replace_child(get_child(0), std::move(next));
     }
 
     void RouterOutlet::clear_page() {
+        pending_page_.reset();
         if (auto* current = get_child(0); current != nullptr) {
             remove_and_delete(*current);
         }
