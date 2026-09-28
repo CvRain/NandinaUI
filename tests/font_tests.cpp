@@ -32,11 +32,15 @@ namespace
     public:
         int creates = 0;
         int updates = 0;
+        int region_updates = 0;
         int destroys = 0;
         int draws = 0;
         int text_draws = 0;
         foundation::NanRect last_source;
         foundation::NanRect last_destination;
+        foundation::NanRect last_region;
+        int last_region_full_width = 0;
+        int last_region_full_height = 0;
 
         void begin_frame() override {}
         void end_frame() override {}
@@ -95,6 +99,23 @@ namespace
         ) override {
             REQUIRE(alpha.size() == static_cast<std::size_t>(width * height));
             ++updates;
+        }
+
+        /// 记录局部上传。仍然记进 `updates`，这样"一次上传"这类既有断言在
+        /// 走脏矩形路径时同样成立。
+        void update_alpha_texture_region(
+            render::TextureHandle,
+            int full_width,
+            int full_height,
+            const foundation::NanRect& region,
+            std::span<const std::uint8_t> alpha
+        ) override {
+            REQUIRE(alpha.size() == static_cast<std::size_t>(full_width) * full_height);
+            ++updates;
+            ++region_updates;
+            last_region = region;
+            last_region_full_width = full_width;
+            last_region_full_height = full_height;
         }
 
         void destroy_texture(render::TextureHandle) override {
@@ -186,6 +207,77 @@ TEST_CASE("GlyphAtlas caches and packs FreeType glyphs", "[text][atlas]") {
     REQUIRE(first.metrics.advance_x > 0.0F);
     REQUIRE(atlas.find(U'a', 24.0F) == &first);
     REQUIRE(std::ranges::any_of(atlas.pixels(), [](std::uint8_t alpha) { return alpha != 0; }));
+}
+
+TEST_CASE("GlyphAtlas tracks only the pixels written since the last consume", "[text][atlas]") {
+    auto face = std::make_shared<text::FreeTypeFontFace>(test_font_path());
+    text::GlyphAtlas atlas(face, 64, 64);
+
+    // 还没写入任何字形：没有脏区域。
+    REQUIRE_FALSE(atlas.dirty_bounds().is_valid());
+
+    const auto& first = atlas.cache(U'a', 24.0F);
+    const auto after_first = atlas.dirty_bounds();
+    REQUIRE(after_first.is_valid());
+    REQUIRE(atlas.dirty_bounds().get_width() >= first.pixel_bounds.get_width());
+
+    // 再缓存一个字，脏区域扩张到覆盖两者，而不是变成"最后一个字形"。
+    // 注意测试字体是 harfbuzz 的子集字体 ab.ttf，只有 a / b 两个字形；
+    // 换成 W 会拿到空的 .notdef，位图为空、不写入图集。
+    const auto& second = atlas.cache(U'b', 24.0F);
+    const auto after_second = atlas.dirty_bounds();
+    REQUIRE(after_second.is_valid());
+    REQUIRE(
+        after_second.get_width() * after_second.get_height()
+        >= after_first.get_width() * after_first.get_height()
+    );
+    const auto right = std::max(
+        first.pixel_bounds.get_right(),
+        second.pixel_bounds.get_right()
+    );
+    REQUIRE(after_second.get_right() >= right);
+
+    // 取走之后清空；重复缓存同一个字形也不再产生脏区域。
+    REQUIRE(atlas.consume_dirty_bounds().is_valid());
+    REQUIRE_FALSE(atlas.dirty_bounds().is_valid());
+    (void)atlas.cache(U'a', 24.0F);
+    REQUIRE_FALSE(atlas.dirty_bounds().is_valid());
+}
+
+TEST_CASE(
+    "GlyphAtlasTexture uploads only the dirty region instead of the whole atlas",
+    "[text][atlas][render]"
+) {
+    auto face = std::make_shared<text::FreeTypeFontFace>(test_font_path());
+    text::GlyphAtlas atlas(face, 256, 256);
+    TextureRecordingDevice device;
+
+    text::GlyphAtlasTexture texture(device, atlas);
+    REQUIRE(device.region_updates == 0);
+
+    const auto& glyph = atlas.cache(U'a', 24.0F);
+    texture.sync();
+
+    // 走的是局部上传，而且区域只覆盖新字形所在的一小块。
+    REQUIRE(device.region_updates == 1);
+    REQUIRE(device.last_region_full_width == 256);
+    REQUIRE(device.last_region_full_height == 256);
+    REQUIRE(device.last_region.is_valid());
+    REQUIRE(device.last_region.get_left() <= glyph.pixel_bounds.get_left());
+    REQUIRE(device.last_region.get_top() <= glyph.pixel_bounds.get_top());
+    REQUIRE(device.last_region.get_right() >= glyph.pixel_bounds.get_right());
+    REQUIRE(device.last_region.get_bottom() >= glyph.pixel_bounds.get_bottom());
+    REQUIRE(device.last_region.get_width() * device.last_region.get_height() < 256 * 256);
+
+    // 没有新字形就不该再传。
+    texture.sync();
+    REQUIRE(device.region_updates == 1);
+
+    // 新字形只扩张脏区域，不会退化成整张图集。
+    (void)atlas.cache(U'b', 24.0F);
+    texture.sync();
+    REQUIRE(device.region_updates == 2);
+    REQUIRE(device.last_region.get_width() * device.last_region.get_height() < 256 * 256);
 }
 
 TEST_CASE("GlyphAtlasTexture uploads revisions and positions glyphs", "[text][atlas][render]") {

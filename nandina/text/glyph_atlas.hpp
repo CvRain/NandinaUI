@@ -49,6 +49,14 @@ namespace nandina::text
         [[nodiscard]] auto pixels() const -> std::span<const std::uint8_t>;
         [[nodiscard]] auto face() const -> const FreeTypeFontFace&;
 
+        /// 自上次 `consume_dirty_bounds()` 以来被写入的区域（并集）。
+        /// 没有新内容时返回一个无效矩形。
+        [[nodiscard]] auto dirty_bounds() const -> foundation::NanRect;
+
+        /// 取出并清空脏区域。调用方必须**先**用它完成上传再清空——清空之后图集
+        /// 就不记得这些像素还没上到 GPU。
+        [[nodiscard]] auto consume_dirty_bounds() -> foundation::NanRect;
+
     private:
         struct Key {
             std::uint32_t glyph_index = 0;
@@ -63,6 +71,7 @@ namespace nandina::text
 
         [[nodiscard]] static auto key_for(std::uint32_t glyph_index, float pixel_size) -> Key;
         [[nodiscard]] auto allocate(int width, int height) -> foundation::NanRect;
+        void mark_dirty(const foundation::NanRect& bounds);
 
         std::shared_ptr<FreeTypeFontFace> face_;
         int width_ = 0;
@@ -72,6 +81,13 @@ namespace nandina::text
         int cursor_y_ = 0;
         int row_height_ = 0;
         std::uint64_t revision_ = 0;
+        /// 脏矩形的并集用整数边界累计：图集打包是顺序游标，一次布局里新写入的
+        /// 字形往往分布在一条带上，按并集上传仍然远小于整张图集。
+        bool dirty_ = false;
+        int dirty_left_ = 0;
+        int dirty_top_ = 0;
+        int dirty_right_ = 0;
+        int dirty_bottom_ = 0;
         std::vector<std::uint8_t> pixels_;
         std::unordered_map<Key, GlyphAtlasEntry, KeyHash> entries_;
     };

@@ -682,6 +682,54 @@ void main() {
             UpdateTexture(found->second, rgba.data());
         }
 
+        /// 只把 `region` 那一块转成 RGBA 并上传。`UpdateTextureRec` 最终走到
+        /// `glTexSubImage2D`，后者按紧凑排列读取这一块，所以必须给出**只含该
+        /// 区域**的缓冲，而不是整张图集的指针。
+        void update_alpha_texture_region(
+            TextureHandle handle,
+            int full_width,
+            int full_height,
+            const foundation::NanRect& region,
+            std::span<const std::uint8_t> alpha
+        ) override {
+            const auto found = textures_.find(handle.value);
+            if (found == textures_.end() || found->second.width != full_width
+                || found->second.height != full_height
+                || alpha.size() != static_cast<std::size_t>(full_width) * full_height)
+            {
+                return;
+            }
+
+            const int left = std::max(0, static_cast<int>(region.get_left()));
+            const int top = std::max(0, static_cast<int>(region.get_top()));
+            const int width = std::min(static_cast<int>(region.get_width()), full_width - left);
+            const int height = std::min(static_cast<int>(region.get_height()), full_height - top);
+            if (width <= 0 || height <= 0) {
+                return;
+            }
+
+            // 复用 scratch：既省掉每次上传的分配，也免掉逐个 push_back。
+            rgba_scratch_.resize(static_cast<std::size_t>(width) * height);
+            for (int row = 0; row < height; ++row) {
+                const auto* source =
+                    alpha.data() + static_cast<std::size_t>(top + row) * full_width + left;
+                auto* target = rgba_scratch_.data() + static_cast<std::size_t>(row) * width;
+                for (int column = 0; column < width; ++column) {
+                    target[column] = ::Color {255, 255, 255, source[column]};
+                }
+            }
+            UpdateTextureRec(
+                found->second,
+                ::Rectangle {
+                    static_cast<float>(left),
+                    static_cast<float>(top),
+                    static_cast<float>(width),
+                    static_cast<float>(height),
+                },
+                rgba_scratch_.data()
+            );
+        }
+
         void destroy_texture(TextureHandle handle) override {
             const auto found = textures_.find(handle.value);
             if (found == textures_.end()) {
@@ -806,6 +854,8 @@ void main() {
             return handle;
         }
         std::unordered_map<std::uint64_t, ::Texture2D> textures_;
+        /// 局部上传的复用缓冲（见 update_alpha_texture_region）。
+        std::vector<::Color> rgba_scratch_;
         std::uint64_t next_texture_handle_ = 1;
         /// SDF 抗锯齿着色器与 1x1 白纹理（懒加载）。
         ::Shader aa_shader_ {};

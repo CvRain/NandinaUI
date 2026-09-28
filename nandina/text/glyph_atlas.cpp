@@ -113,6 +113,46 @@ namespace nandina::text
         return *face_;
     }
 
+    auto GlyphAtlas::dirty_bounds() const -> foundation::NanRect {
+        if (!dirty_) {
+            return foundation::NanRect::empty();
+        }
+        return foundation::NanRect::from_xywh(
+            static_cast<float>(dirty_left_),
+            static_cast<float>(dirty_top_),
+            static_cast<float>(dirty_right_ - dirty_left_),
+            static_cast<float>(dirty_bottom_ - dirty_top_)
+        );
+    }
+
+    auto GlyphAtlas::consume_dirty_bounds() -> foundation::NanRect {
+        const auto bounds = dirty_bounds();
+        dirty_ = false;
+        return bounds;
+    }
+
+    void GlyphAtlas::mark_dirty(const foundation::NanRect& bounds) {
+        if (!bounds.is_valid()) {
+            return;
+        }
+        const int left = static_cast<int>(bounds.get_left());
+        const int top = static_cast<int>(bounds.get_top());
+        const int right = static_cast<int>(bounds.get_right());
+        const int bottom = static_cast<int>(bounds.get_bottom());
+        if (!dirty_) {
+            dirty_ = true;
+            dirty_left_ = left;
+            dirty_top_ = top;
+            dirty_right_ = right;
+            dirty_bottom_ = bottom;
+            return;
+        }
+        dirty_left_ = std::min(dirty_left_, left);
+        dirty_top_ = std::min(dirty_top_, top);
+        dirty_right_ = std::max(dirty_right_, right);
+        dirty_bottom_ = std::max(dirty_bottom_, bottom);
+    }
+
     auto GlyphAtlas::KeyHash::operator()(const Key& key) const noexcept -> std::size_t {
         const auto first = std::hash<std::uint32_t> {}(key.glyph_index);
         const auto second = std::hash<std::uint32_t> {}(key.pixel_size);
@@ -144,6 +184,8 @@ namespace nandina::text
         );
         cursor_x_ += width + padding_;
         row_height_ = std::max(row_height_, height);
+        // 只有真正被写入的区域才算脏：padding 从不写像素。
+        mark_dirty(bounds);
         return bounds;
     }
 
@@ -168,7 +210,18 @@ namespace nandina::text
         if (uploaded_revision_ == atlas_.revision()) {
             return;
         }
-        device_.update_alpha_texture(texture_, atlas_.width(), atlas_.height(), atlas_.pixels());
+        // 只上传自上次同步以来被写入的区域。整张图集重传一次是十毫秒量级的
+        // 阻塞（转换 + GPU 上传），而一次布局会连续写入许多小字形；按脏矩形传
+        // 的代价只跟新增字形的面积成正比。
+        if (const auto region = atlas_.consume_dirty_bounds(); region.is_valid()) {
+            device_.update_alpha_texture_region(
+                texture_,
+                atlas_.width(),
+                atlas_.height(),
+                region,
+                atlas_.pixels()
+            );
+        }
         uploaded_revision_ = atlas_.revision();
     }
 

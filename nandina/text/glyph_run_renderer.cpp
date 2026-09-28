@@ -48,6 +48,15 @@ namespace nandina::text
                     "GlyphRunRenderer atlas face does not match backend slot"
                 );
             }
+            // 一张图集只能由一个纹理桥接上传：脏区域在 sync() 时被**取走并清空**，
+            // 若两个纹理共享同一张图集，第二个就会漏掉那些像素而画出陈旧字形。
+            for (std::size_t earlier = 0; earlier < index; ++earlier) {
+                if (bindings_[earlier].atlas == binding.atlas) {
+                    throw std::invalid_argument(
+                        "GlyphRunRenderer requires one texture per atlas"
+                    );
+                }
+            }
         }
     }
 

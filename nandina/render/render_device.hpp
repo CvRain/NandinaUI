@@ -184,6 +184,23 @@ namespace nandina::render
             std::span<const std::uint8_t> /*alpha*/
         ) {}
 
+        /// Upload only `region` of an alpha texture. `alpha` is still the **full**
+        /// tightly packed buffer, so a device that cannot address a sub-rectangle can
+        /// fall back to the full upload below — correctness is preserved everywhere,
+        /// while real backends transfer only what changed.
+        ///
+        /// 这个入口是为字形图集准备的：一次文本布局会连续写入许多小字形，整张图集
+        /// 重传一次要几十毫秒，按脏矩形传则只跟新增字形的面积成正比。
+        virtual void update_alpha_texture_region(
+            TextureHandle texture,
+            int full_width,
+            int full_height,
+            const foundation::NanRect& /*region*/,
+            std::span<const std::uint8_t> alpha
+        ) {
+            update_alpha_texture(texture, full_width, full_height, alpha);
+        }
+
         virtual void destroy_texture(TextureHandle /*texture*/) {}
 
         /// Upload tightly packed RGBA8 pixels. This is a render-thread operation;
