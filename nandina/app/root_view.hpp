@@ -18,7 +18,7 @@ namespace nandina::app
 {
     template<typename Factory>
     concept RootViewFactory =
-        std::invocable<Factory&, PageContext&> || std::invocable<Factory&, widget::BuildContext&>;
+        std::invocable<Factory&, widget::BuildContext&>;
 
     namespace detail
     {
@@ -29,16 +29,12 @@ namespace nandina::app
             ErasedRootViewFactory factory;
         };
 
-        class RootViewPage final: public NanPageT<RootViewParams> {
+        class RootViewPage final: public Page<RootViewParams> {
         public:
-            explicit RootViewPage(RootViewParams params): NanPageT(std::move(params)) {}
-
-            [[nodiscard]] auto route_key() const -> std::string_view override {
-                return "root";
-            }
+            explicit RootViewPage(RootViewParams params): Page(std::move(params)) {}
 
             [[nodiscard]] auto build(PageContext& context)
-                -> std::shared_ptr<scene::NanNode2D> override {
+                -> widget::View override {
                 if (!params().factory) {
                     throw std::invalid_argument("RootViewPage: root factory is empty");
                 }
@@ -53,29 +49,14 @@ namespace nandina::app
                 .factory = [factory = std::forward<Factory>(factory)](
                                PageContext& context
                            ) mutable -> std::shared_ptr<scene::NanNode2D> {
-                    if constexpr (std::invocable<Factory&, PageContext&>) {
-                        auto result = std::invoke(factory, context);
-                        auto root = widget::authoring::detail::materialize(std::move(result));
-                        static_assert(
-                            std::derived_from<
-                                typename decltype(root)::element_type,
-                                scene::NanNode2D>,
-                            "root view factories must return a Node2D builder or shared pointer"
-                        );
-                        return root;
-                    }
-                    else {
-                        auto ui = context.ui();
-                        auto result = std::invoke(factory, ui);
-                        auto root = widget::authoring::detail::materialize(std::move(result));
-                        static_assert(
-                            std::derived_from<
-                                typename decltype(root)::element_type,
-                                scene::NanNode2D>,
-                            "root view factories must return a Node2D builder or shared pointer"
-                        );
-                        return root;
-                    }
+                    auto ui = context.ui();
+                    auto result = std::invoke(factory, ui);
+                    auto root = widget::authoring::detail::materialize(std::move(result));
+                    static_assert(
+                        std::derived_from<typename decltype(root)::element_type, scene::NanNode2D>,
+                        "root view factories must return a Node2D builder or shared pointer"
+                    );
+                    return root;
                 },
             };
         }

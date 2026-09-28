@@ -1,9 +1,7 @@
 //
 // app/nan_router — typed route registry and current-page navigation.
 //
-// The single-current-route API is implemented alongside the legacy stack surface
-// while callers and tests migrate. New code configures Routes and uses Navigation;
-// stack methods remain only for the in-progress alpha migration.
+// Routes owns the immutable page registry; Navigation replaces one current page.
 //
 
 #ifndef NANDINA_EXPERIMENT_APP_NAN_ROUTER_HPP
@@ -18,6 +16,7 @@
 #include "router_outlet.hpp"
 
 #include <cstddef>
+#include <exception>
 #include <functional>
 #include <initializer_list>
 #include <memory>
@@ -33,11 +32,12 @@
 namespace nandina::app
 {
 
-    class PageFrame;
-    class NanPage;
     class NanRouter;
 
     struct RouteOptions {
+        /// 供应用显示的静态地址文字，**不是路由身份**——身份是页面类型。
+        /// 留空时回退到 `title`；两者都空也可以，只是没有可显示的文字。
+        /// 第一版不提供可解析的 path/深链接，所以这里不做参数匹配。
         std::string key;
         std::string title;
         std::string icon;
@@ -73,7 +73,7 @@ namespace nandina::app
     };
 
     template<typename PageT>
-        requires std::derived_from<PageT, NanPageT<typename PageT::Params>>
+        requires std::derived_from<PageT, Page<typename PageT::Params>>
     [[nodiscard]] auto route(RouteOptions options = {}) -> RouteEntry {
         if (options.key.empty()) {
             options.key = options.title;
@@ -132,17 +132,16 @@ namespace nandina::app
         [[nodiscard]] auto graph() -> reactive::Graph&;
         [[nodiscard]] auto theme() const -> const theme::NanTheme&;
         [[nodiscard]] auto store_base() -> NanStore*;
-        [[nodiscard]] auto depth() const -> std::size_t;
-        [[nodiscard]] auto empty() const -> bool;
-        [[nodiscard]] auto current_key() const -> std::string_view;
-        [[nodiscard]] auto current_page_key() const noexcept -> NanTypeKey {
-            return current_page_key_;
-        }
-        [[nodiscard]] auto can_pop() const -> bool;
 
-        /// Configure the single-current-route model. Routes are immutable after
-        /// configuration; the legacy stack API remains available until migration
-        /// of the application and tests is complete.
+        /// 当前页面的显示用地址文字；没有当前页面或路由没设 key/title 时为空。
+        [[nodiscard]] auto current_key() const -> std::string_view;
+
+        /// 当前页面的类型键——这才是路由身份。没有当前页面时为 nullptr。
+        [[nodiscard]] auto current_page_key() const noexcept -> NanTypeKey {
+            return current_ ? current_->page_key : nullptr;
+        }
+
+        /// 设置当前路由表。路由表在配置后不可变。
         [[nodiscard]] auto configure(Routes routes) -> bool;
         [[nodiscard]] auto navigation() const -> Navigation;
         [[nodiscard]] auto routes() const noexcept -> const Routes& { return routes_; }
@@ -156,30 +155,10 @@ namespace nandina::app
         }
         [[nodiscard]] auto route_mode() const noexcept -> bool { return route_mode_; }
 
+        /// 在已配置的路由表上启动初始页面。路由表由 `configure()` 或
+        /// `NanWindow::use_router(Routes)` 提供，启动与声明是两步。
         template<typename PageT, typename ParamsT>
-            requires std::derived_from<PageT, NanPageT<ParamsT>>
-        [[nodiscard]] auto start(Routes routes, ParamsT params) -> bool {
-            if (!configure(std::move(routes))) {
-                return false;
-            }
-            return apply_navigation(nan_type_key<PageT>(), std::make_unique<PageT>(std::move(params)));
-        }
-
-        template<typename PageT>
-            requires std::derived_from<PageT, NanPageT<typename PageT::Params>>
-            && std::default_initializable<PageT>
-        [[nodiscard]] auto start(Routes routes) -> bool {
-            if (!configure(std::move(routes))) {
-                return false;
-            }
-            return apply_navigation(nan_type_key<PageT>(), std::make_unique<PageT>());
-        }
-
-        /// Start the explicitly configured route table at its initial page.
-        /// This overload keeps route declaration and startup selection separate,
-        /// which is useful for NanWindow::use_router(Routes).
-        template<typename PageT, typename ParamsT>
-            requires std::derived_from<PageT, NanPageT<ParamsT>>
+            requires std::derived_from<PageT, Page<ParamsT>>
             && std::constructible_from<PageT, ParamsT>
         [[nodiscard]] auto start(ParamsT params) -> bool {
             if (!route_mode_) {
@@ -192,7 +171,7 @@ namespace nandina::app
         }
 
         template<typename PageT>
-            requires std::derived_from<PageT, NanPageT<typename PageT::Params>>
+            requires std::derived_from<PageT, Page<typename PageT::Params>>
             && std::default_initializable<PageT>
         [[nodiscard]] auto start() -> bool {
             if (!route_mode_) {
@@ -210,115 +189,64 @@ namespace nandina::app
 
         void clear_store();
 
-        template<typename PageT, typename ParamsT>
-            requires std::derived_from<PageT, NanPageT<ParamsT>>
-        auto push(ParamsT params) -> PageT& {
-            auto page = std::make_unique<PageT>(std::move(params));
-            auto* raw = page.get();
-            push_page(std::move(page));
-            return *raw;
-        }
-
-        template<typename PageT, typename ParamsT>
-            requires std::derived_from<PageT, NanPageT<ParamsT>>
-        [[nodiscard]] auto request_push(ParamsT params) -> bool {
-            return post_command([this, params = std::move(params)]() mutable {
-                (void)push<PageT>(std::move(params));
-            });
-        }
-
-        template<typename PageT>
-            requires std::derived_from<PageT, NanPageT<typename PageT::Params>>
-            && std::default_initializable<PageT>
-        auto push() -> PageT& {
-            auto page = std::make_unique<PageT>();
-            auto* raw = page.get();
-            push_page(std::move(page));
-            return *raw;
-        }
-
-        template<typename PageT>
-            requires std::derived_from<PageT, NanPageT<typename PageT::Params>>
-            && std::default_initializable<PageT>
-        [[nodiscard]] auto request_push() -> bool {
-            return post_command([this] { (void)push<PageT>(); });
-        }
-
-        template<typename PageT, typename ParamsT>
-            requires std::derived_from<PageT, NanPageT<ParamsT>>
-        auto replace(ParamsT params) -> PageT& {
-            remove_top();
-            return push<PageT>(std::move(params));
-        }
-
-        template<typename PageT, typename ParamsT>
-            requires std::derived_from<PageT, NanPageT<ParamsT>>
-        [[nodiscard]] auto request_replace(ParamsT params) -> bool {
-            return post_command([this, params = std::move(params)]() mutable {
-                (void)replace<PageT>(std::move(params));
-            });
-        }
-
-        template<typename PageT>
-            requires std::derived_from<PageT, NanPageT<typename PageT::Params>>
-            && std::default_initializable<PageT>
-        auto replace() -> PageT& {
-            remove_top();
-            return push<PageT>();
-        }
-
-        template<typename PageT>
-            requires std::derived_from<PageT, NanPageT<typename PageT::Params>>
-            && std::default_initializable<PageT>
-        [[nodiscard]] auto request_replace() -> bool {
-            return post_command([this] { (void)replace<PageT>(); });
-        }
-
-        auto pop() -> bool;
-        auto pop_to(std::string_view route_key) -> bool;
+        /// Destroy the current page and detach its root. Used by NanWindow during
+        /// shutdown; navigation never exposes history operations.
         void clear();
 
-        [[nodiscard]] auto request_pop() -> bool;
-        [[nodiscard]] auto request_pop_to(std::string route_key) -> bool;
-        [[nodiscard]] auto request_clear() -> bool;
-
-        /// 页面转场（默认关闭=即时切换）。开启后 push 淡入、pop/replace 淡出，且淡出
-        /// 完成前保留被替换页面的生命周期（scope/async），随后才销毁。
-        void set_transition_enabled(bool enabled);
-        [[nodiscard]] auto transition_enabled() const -> bool;
-        void set_transition_duration(float seconds);
+        /// 页面构建 / 切换期错误的去处。`NanWindow` 会把它接到 `on_error()`，
+        /// 所以应用通常覆写窗口钩子；不继承窗口的场景与测试用这个注入点接管。
+        ///
+        /// 未安装处理器时**不静默**：Router 至少记录一条 error 日志。
+        using PageErrorHandler =
+            std::function<void(std::string_view route_key, std::exception_ptr error)>;
+        void set_page_error_handler(PageErrorHandler handler);
 
     private:
-        using NodePtr = std::shared_ptr<scene::NanNode>;
-
+        /// 当前唯一页面。Router 只维护一个当前路由，所以这里是 optional 而不是栈；
+        /// 页面身份（page_key）也只存在于此，避免出现第二个"当前"的说法。
         struct Frame {
-            std::unique_ptr<NanPage> page;
+            NanTypeKey page_key = nullptr;
+            std::unique_ptr<detail::PageBase> page;
             std::shared_ptr<scene::NanNode2D> root;
-            /// 转场包装节点（开启转场时非空，承载每页的淡入淡出 opacity）。
-            std::shared_ptr<PageFrame> frame;
             std::unique_ptr<reactive::ReactiveScope> scope;
             std::unique_ptr<AsyncScope> async_scope;
             std::string key;
-            bool active = false;
         };
 
-        void push_page(std::unique_ptr<NanPage> page, std::string route_key = {});
-        [[nodiscard]] auto submit_navigation(NanTypeKey page_key, std::unique_ptr<NanPage> page)
+        /// 把构建期异常交给已安装的处理器；没有处理器时记 error 日志，绝不吞掉。
+        void report_page_error(std::string_view route_key, std::exception_ptr error);
+
+        /// 切换完成后把焦点交给新页面；旧页面持有焦点时先清空，避免焦点留在
+        /// 已经拆除的节点上。换页被延迟时改在布局之后交接。
+        void restore_focus_after_navigation();
+
+        /// 按默认焦点规则把焦点送入给定页面根节点；焦点已在有效节点上则不动。
+        void focus_first_in_page(scene::NanNode2D& root);
+
+        /// 构建新页面但**不挂载**：挂载交给 `RouterOutlet` 的原子换页。
+        /// 构建失败时抛出，并且不留下任何可见状态，调用方的旧页面保持完整。
+        [[nodiscard]] auto build_frame(
+            NanTypeKey page_key,
+            std::unique_ptr<detail::PageBase> page,
+            std::string route_key
+        ) -> Frame;
+
+        /// 让页面回调失效、取消异步、解除焦点，但**不拆根**：拆根属于换页事务的一部分，
+        /// 由 Outlet 在替换时一并完成（见 page_and_router.md §4 的退役顺序）。
+        void retire_frame(Frame& frame);
+
+        [[nodiscard]] auto submit_navigation(
+            NanTypeKey page_key,
+            std::unique_ptr<detail::PageBase> page
+        )
             -> bool;
         void flush_pending_navigation();
-        [[nodiscard]] auto apply_navigation(NanTypeKey page_key, std::unique_ptr<NanPage> page)
+        [[nodiscard]] auto apply_navigation(
+            NanTypeKey page_key,
+            std::unique_ptr<detail::PageBase> page
+        )
             -> bool;
-        void sync_visibility();
-        void attach_root(const std::shared_ptr<scene::NanNode2D>& root);
-        void detach_root(const std::shared_ptr<scene::NanNode2D>& root);
-        void drop_frame(Frame& frame);
-        /// 移除栈顶：开启转场时淡出并延迟 drop，否则即时 drop。
-        void remove_top();
-        [[nodiscard]] auto frame_node(const Frame& frame) const -> std::shared_ptr<scene::NanNode2D>;
-        void fade_frame(Frame& frame, float target);
-        void drop_completed_exits();
-        [[nodiscard]] auto post_command(std::move_only_function<void()> command) -> bool;
-        [[nodiscard]] auto make_context_for(Frame& frame) -> PageContext;
+        [[nodiscard]] auto post_ui_task(std::move_only_function<void()> task) -> bool;
 
         reactive::Graph* graph_;
         const theme::NanTheme* theme_;
@@ -326,7 +254,6 @@ namespace nandina::app
         theme::ThemeManager* theme_manager_ = nullptr;
         NanStore* store_ = nullptr;
         NanTypeKey store_key_ = nullptr;
-        NanTypeKey current_page_key_ = nullptr;
         resource::ResourceManager* resources_ = nullptr;
         text::FontLoader* font_loader_ = nullptr;
         text::FontFamilyRegistry* font_families_ = nullptr;
@@ -341,16 +268,13 @@ namespace nandina::app
             std::make_shared<detail::NavigationState>();
         struct PendingNavigation {
             NanTypeKey page_key = nullptr;
-            std::unique_ptr<NanPage> page;
+            std::unique_ptr<detail::PageBase> page;
         };
         std::mutex pending_navigation_mutex_;
         std::optional<PendingNavigation> pending_navigation_;
         bool navigation_task_posted_ = false;
-        std::vector<Frame> frames_;
-        /// 淡出中的页面：生命周期（scope/async）保留，淡出完成后销毁。
-        std::vector<Frame> exiting_;
-        bool transition_enabled_ = false;
-        float transition_duration_ = 0.2F;
+        std::optional<Frame> current_;
+        PageErrorHandler page_error_handler_;
         std::shared_ptr<void> command_lifetime_ = std::make_shared<int>(0);
     };
 

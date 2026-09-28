@@ -103,7 +103,7 @@ namespace nandina::app
 
         /// 用指定 Page 创建普通单页窗口并进入主循环，无需为一次性 setup 继承 NanWindow。
         template<typename PageT>
-            requires std::derived_from<PageT, NanPageT<typename PageT::Params>>
+            requires std::derived_from<PageT, Page<typename PageT::Params>>
             && std::default_initializable<PageT>
         auto run_page(WindowConfig config) -> int {
             return run_configured(std::move(config), [](NanRouter& router) {
@@ -121,7 +121,7 @@ namespace nandina::app
 
         /// 带强类型参数启动首页。高级窗口钩子仍通过显式 NanWindow 子类提供。
         template<typename PageT>
-            requires std::derived_from<PageT, NanPageT<typename PageT::Params>>
+            requires std::derived_from<PageT, Page<typename PageT::Params>>
             && std::constructible_from<PageT, typename PageT::Params>
         auto run_page(WindowConfig config, typename PageT::Params params) -> int {
             return run_configured(
@@ -145,8 +145,8 @@ namespace nandina::app
         }
 
         /// Run an ordinary single-window application from a root view factory.
-        /// PageContext factories can use routing and stores; BuildContext factories
-        /// are the compact path for a self-contained view.
+        /// The root factory receives only BuildContext; applications that need
+        /// routing or stores should use a NanWindow with typed routes.
         template<typename Factory>
             requires RootViewFactory<std::decay_t<Factory>>
         auto run(WindowConfig config, Factory&& factory) -> int {
@@ -191,7 +191,7 @@ namespace nandina::app
 
     /// Recommended application entry: the first page is also the future router root.
     template<typename PageT>
-        requires std::derived_from<PageT, NanPageT<typename PageT::Params>>
+        requires std::derived_from<PageT, Page<typename PageT::Params>>
         && std::default_initializable<PageT>
     auto run(RunConfig config) -> int {
         NanApplication application(NanApplicationConfig::for_process(std::move(config.id)));

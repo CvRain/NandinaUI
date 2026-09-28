@@ -24,12 +24,11 @@ namespace
 
     struct ServiceParams { ServiceCapture* capture = nullptr; };
 
-    class ServicePage final: public app::NanPageT<ServiceParams> {
+    class ServicePage final: public app::Page<ServiceParams> {
     public:
-        explicit ServicePage(ServiceParams params): NanPageT(params) {}
-        [[nodiscard]] auto route_key() const -> std::string_view override { return "services"; }
+        explicit ServicePage(ServiceParams params): Page(params) {}
         [[nodiscard]] auto build(app::PageContext& context)
-            -> std::shared_ptr<scene::NanNode2D> override {
+            -> widget::View override {
             REQUIRE(context.has_resource_services());
             params().capture->resources = &context.resources();
             params().capture->loader = &context.font_loader();
@@ -38,36 +37,20 @@ namespace
         }
     };
 
-    class DefaultStartupPage final: public app::NanPageT<app::NoParams> {
+    class DefaultStartupPage final: public app::Page<> {
     public:
         DefaultStartupPage() = default;
-        [[nodiscard]] auto route_key() const -> std::string_view override {
-            return "startup";
-        }
-        [[nodiscard]] auto build(app::PageContext&) -> std::shared_ptr<scene::NanNode2D> override {
+        [[nodiscard]] auto build(app::PageContext&) -> widget::View override {
             return std::make_shared<scene::NanControl>();
         }
     };
 
     class RecommendedMainPage final: public app::Page<> {
     public:
-        [[nodiscard]] auto route_key() const -> std::string_view override {
-            return "recommended-main";
-        }
-
         [[nodiscard]] auto build(app::PageContext& context) -> widget::View override {
             auto ui = context.ui();
-            auto label = ui.make<widget::Label>("Recommended entry").build();
-            label_ = label;
-            return label;
+            return ui.make<widget::Label>("Recommended entry").build();
         }
-
-        [[nodiscard]] auto label() const -> std::shared_ptr<widget::Label> {
-            return label_.lock();
-        }
-
-    private:
-        std::weak_ptr<widget::Label> label_;
     };
 
     static_assert(requires(app::NanApplication& application, app::WindowConfig config) {
@@ -116,20 +99,22 @@ TEST_CASE("NanApplication always installs builtin resource and font services", "
     REQUIRE(family->specs.front().resource == resource::ResourceKey("fonts/default"));
 }
 
-TEST_CASE("functional root views use existing page context and concrete nodes", "[app][view]") {
+TEST_CASE("functional root views receive BuildContext and concrete nodes", "[app][view]") {
     app::NanApplication application;
     app::NanRouter router {application.graph(), application.theme_manager()};
-    bool received_page_context = false;
+    bool received_build_context = false;
     std::shared_ptr<widget::Label> label;
-    auto params = app::detail::make_root_view_params([&](app::PageContext& context) {
-        received_page_context = true;
-        return context.ui().make<widget::Label>("Functional root").expose(label);
+    auto params = app::detail::make_root_view_params([&](widget::BuildContext& ui) {
+        received_build_context = true;
+        return ui.make<widget::Label>("Functional root").expose(label);
     });
 
-    (void)router.push<app::detail::RootViewPage>(std::move(params));
+    REQUIRE(router.configure(app::Routes {
+        app::route<app::detail::RootViewPage>({.key = "root"}),
+    }));
+    REQUIRE(router.navigation().navigate<app::detail::RootViewPage>(std::move(params)));
 
-    REQUIRE(received_page_context);
-    REQUIRE(router.depth() == 1);
+    REQUIRE(received_build_context);
     REQUIRE(router.current_key() == "root");
     REQUIRE(router.host()->child_count() == 1);
     REQUIRE(router.host()->get_child(0) == label.get());
@@ -145,7 +130,10 @@ TEST_CASE("functional root views accept BuildContext-only factories", "[app][vie
         return ui.make<widget::Button>("Continue").expose(button);
     });
 
-    (void)router.push<app::detail::RootViewPage>(std::move(params));
+    REQUIRE(router.configure(app::Routes {
+        app::route<app::detail::RootViewPage>({.key = "root"}),
+    }));
+    REQUIRE(router.navigation().navigate<app::detail::RootViewPage>(std::move(params)));
 
     REQUIRE(received_build_context);
     REQUIRE(router.host()->get_child(0) == button.get());
@@ -155,12 +143,14 @@ TEST_CASE("recommended pages adapt BuildContext onto the existing router", "[app
     app::NanApplication application;
     app::NanRouter router {application.graph(), application.theme_manager()};
 
-    auto& page = router.push<RecommendedMainPage>();
+    REQUIRE(router.configure(app::Routes {
+        app::route<RecommendedMainPage>({.key = "recommended-main"}),
+    }));
+    REQUIRE(router.navigation().navigate<RecommendedMainPage>());
 
-    REQUIRE(router.depth() == 1);
     REQUIRE(router.host()->child_count() == 1);
     REQUIRE(router.current_key() == "recommended-main");
-    REQUIRE(router.host()->get_child(0) == page.label().get());
+    REQUIRE(router.host()->get_child(0) != nullptr);
 }
 
 TEST_CASE("optional font fallback is absent without a project package", "[app][resource][font]") {

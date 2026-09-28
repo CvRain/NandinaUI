@@ -60,13 +60,6 @@ namespace nandina::app
         return child_count() > 0 ? get_child(child_count() - 1)->as_node2d() : nullptr;
     }
 
-    void RouterOutlet::on_process(const float dt) {
-        (void)dt;
-        if (on_tick) {
-            on_tick();
-        }
-    }
-
     auto RouterOutlet::on_measure(const scene::LayoutConstraints constraints)
         -> foundation::NanSize {
         // An outlet is a shell mount point, so it fills the space offered by its

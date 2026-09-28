@@ -1,45 +1,14 @@
 //
-// app/nan_router — keep-alive page stack router implementation.
+// app/nan_router — typed current-page router implementation.
 //
 
 #include "nan_router.hpp"
 
-#include "../animation/animated_property.hpp"
-#include "../animation/animation_host.hpp"
-#include "../animation/behavior.hpp"
+#include "../foundation/nan_logger.hpp"
 #include "../scene/scene_tree.hpp"
-
-#include <cmath>
 
 namespace nandina::app
 {
-    /// 每页的转场包装：承载淡入淡出 opacity 并透传布局。
-    class PageFrame final: public scene::NanControl {
-    public:
-        animation::AnimatedProperty<float> opacity {0.0F};
-
-        [[nodiscard]] auto local_opacity() const -> float override {
-            return NanControl::local_opacity() * opacity.value();
-        }
-
-    protected:
-        [[nodiscard]] auto on_measure(scene::LayoutConstraints constraints)
-            -> foundation::NanSize override {
-            return constraints.constrain(size());
-        }
-
-        auto on_layout() -> void override {
-            for (std::size_t i = 0; i < child_count(); ++i) {
-                auto* child = get_child(i) != nullptr ? get_child(i)->as_control() : nullptr;
-                if (!child) {
-                    continue;
-                }
-                (void)child->measure_layout(scene::LayoutConstraints::tight(size()));
-                child->layout_to(local_rect());
-            }
-        }
-    };
-
     NanRouter::NanRouter(
         reactive::Graph& graph,
         const theme::NanTheme& theme,
@@ -63,19 +32,16 @@ namespace nandina::app
         background_executor_(background_executor),
         overlay_host_(overlay_host),
         host_(std::make_shared<RouterOutlet>()) {
-        const auto lifetime = std::weak_ptr<void>(command_lifetime_);
-        host_->on_tick = [this, lifetime] {
-            if (lifetime.lock()) {
-                drop_completed_exits();
-            }
-        };
         // PageContext::ui() is available for routers built from a static theme
         // too. Keep an internal manager only for BuildContext's theme service;
         // application windows use their own manager through the other overload.
         owned_theme_manager_ = std::make_unique<theme::ThemeManager>();
         owned_theme_manager_->set_theme(theme);
         theme_manager_ = owned_theme_manager_.get();
-        navigation_state_->submit = [this](NanTypeKey page_key, std::unique_ptr<NanPage> page) {
+        navigation_state_->submit = [this](
+                                        NanTypeKey page_key,
+                                        std::unique_ptr<detail::PageBase> page
+                                    ) {
             return submit_navigation(page_key, std::move(page));
         };
     }
@@ -131,35 +97,29 @@ namespace nandina::app
         return store_;
     }
 
-    auto NanRouter::depth() const -> std::size_t {
-        return frames_.size();
-    }
-
-    auto NanRouter::empty() const -> bool {
-        return frames_.empty();
-    }
-
     auto NanRouter::current_key() const -> std::string_view {
-        return frames_.empty() ? std::string_view {} : std::string_view {frames_.back().key};
-    }
-
-    auto NanRouter::can_pop() const -> bool {
-        return frames_.size() > 1;
+        return current_ ? std::string_view {current_->key} : std::string_view {};
     }
 
     auto NanRouter::configure(Routes routes) -> bool {
-        if (route_mode_ || !frames_.empty() || routes.entries().empty()) {
+        if (route_mode_ || current_.has_value() || routes.entries().empty()) {
             return false;
         }
         for (std::size_t i = 0; i < routes.entries().size(); ++i) {
             const auto& entry = routes.entries()[i];
-            if (entry.page_key == nullptr || entry.params_key == nullptr
-                || entry.options.key.empty()) {
+            if (entry.page_key == nullptr || entry.params_key == nullptr) {
                 return false;
             }
             for (std::size_t j = 0; j < i; ++j) {
-                if (routes.entries()[j].page_key == entry.page_key
-                    || routes.entries()[j].options.key == entry.options.key) {
+                const auto& earlier = routes.entries()[j];
+                // 页面类型是路由身份，重复注册必然是笔误。
+                if (earlier.page_key == entry.page_key) {
+                    return false;
+                }
+                // 显示用地址文字是可选元数据，只在其非空时要求唯一——否则两个
+                // 都没设 key/title 的路由会互相冲突，`app::route<PageT>()` 这种
+                // 最简写法就永远配不上了。
+                if (!earlier.options.key.empty() && earlier.options.key == entry.options.key) {
                     return false;
                 }
             }
@@ -178,67 +138,51 @@ namespace nandina::app
         store_key_ = nullptr;
     }
 
-    auto NanRouter::pop() -> bool {
-        if (frames_.size() <= 1) {
-            return false;
-        }
-
-        remove_top();
-        sync_visibility();
-        return true;
-    }
-
-    auto NanRouter::pop_to(std::string_view route_key) -> bool {
-        if (frames_.empty()) {
-            return false;
-        }
-
-        std::size_t target = frames_.size();
-        for (std::size_t i = frames_.size(); i > 0; --i) {
-            if (frames_[i - 1].key == route_key) {
-                target = i - 1;
-                break;
-            }
-        }
-        if (target == frames_.size()) {
-            return false;
-        }
-
-        while (frames_.size() > target + 1) {
-            drop_frame(frames_.back());
-            frames_.pop_back();
-        }
-        sync_visibility();
-        return true;
-    }
-
     void NanRouter::clear() {
-        while (!frames_.empty()) {
-            drop_frame(frames_.back());
-            frames_.pop_back();
+        if (current_) {
+            retire_frame(*current_);
         }
-        for (auto& frame: exiting_) {
-            drop_frame(frame);
+        if (host_ != nullptr) {
+            host_->clear_page();
         }
-        exiting_.clear();
-        current_page_key_ = nullptr;
+        current_.reset();
     }
 
-    auto NanRouter::request_pop() -> bool {
-        return post_command([this] { (void)pop(); });
+    void NanRouter::set_page_error_handler(PageErrorHandler handler) {
+        page_error_handler_ = std::move(handler);
     }
 
-    auto NanRouter::request_pop_to(std::string route_key) -> bool {
-        return post_command([this, route_key = std::move(route_key)] { (void)pop_to(route_key); });
+    void NanRouter::report_page_error(
+        const std::string_view route_key,
+        std::exception_ptr error
+    ) {
+        if (page_error_handler_) {
+            page_error_handler_(route_key, error);
+            return;
+        }
+
+        // 没有处理器也不能静默：至少留下一条 error 日志，否则页面"点了没反应"
+        // 又找不到任何线索。
+        std::string message = "unknown error";
+        try {
+            std::rethrow_exception(error);
+        }
+        catch (const std::exception& caught) {
+            message = caught.what();
+        }
+        catch (...) {
+            message = "non-standard exception";
+        }
+        log::error("NanRouter: page build failed for route '{}': {}", route_key, message);
     }
 
-    auto NanRouter::request_clear() -> bool {
-        return post_command([this] { clear(); });
-    }
-
-    void NanRouter::push_page(std::unique_ptr<NanPage> page, std::string route_key) {
+    auto NanRouter::build_frame(
+        const NanTypeKey page_key,
+        std::unique_ptr<detail::PageBase> page,
+        std::string route_key
+    ) -> Frame {
         if (!page) {
-            throw std::runtime_error("NanRouter::push_page: page is null");
+            throw std::runtime_error("NanRouter::build_frame: page is null");
         }
 
         auto scope = std::make_unique<reactive::ReactiveScope>(*graph_);
@@ -246,7 +190,6 @@ namespace nandina::app
             ? std::make_unique<AsyncScope>(*dispatcher_, *background_executor_)
             : nullptr;
         PageContext context {
-            *this,
             *graph_,
             *scope,
             theme(),
@@ -264,54 +207,32 @@ namespace nandina::app
         };
         auto root = page->build(context);
         if (!root) {
-            throw std::runtime_error("NanRouter::push_page: page build returned null root");
+            throw std::runtime_error("NanRouter::build_frame: page build returned null root");
+        }
+        // 每次进入都必须构建全新的根节点。复用已经在树里的节点会让随后的换页抛错，
+        // 而那时旧页面已经退役——正好是"失败却破坏了当前页面"的情形，所以在这里
+        // 拦下来，此时还没有任何状态被改动。
+        if (root->parent() != nullptr || root->is_inside_tree()) {
+            throw std::runtime_error(
+                "NanRouter::build_frame: page build returned an already-mounted root; "
+                "each entry must build a fresh node"
+            );
         }
 
-        const bool use_transition = transition_enabled_ && !route_mode_;
-        std::shared_ptr<PageFrame> frame;
-        if (use_transition) {
-            // 转场时由包装帧控制可见性；页面根保持可见，避免根被标记不可见而失去焦点/命中。
-            frame = std::make_shared<PageFrame>();
-            frame->add_child(root);
-            frame->set_visible(false);
-            attach_root(frame);
-        }
-        else {
-            // Typed routes never keep an inactive page frame around. The new
-            // root becomes visible immediately and the previous root is
-            // detached by apply_navigation after the build succeeds.
-            root->set_visible(route_mode_);
-            attach_root(root);
-        }
-        frames_.push_back(
-            Frame {
-                .page = std::move(page),
-                .root = std::move(root),
-                .frame = std::move(frame),
-                .scope = std::move(scope),
-                .async_scope = std::move(async_scope),
-                .key = {},
-                .active = false,
-            }
-        );
-        frames_.back().key = route_key.empty() ? std::string(frames_.back().page->route_key())
-                                               : std::move(route_key);
-        if (route_mode_) {
-            // Route pages have no keep-alive activation lifecycle. Their scope
-            // and root are retired transactionally by apply_navigation.
-            frames_.back().active = false;
-        }
-        else {
-            sync_visibility();
-        }
-        if (use_transition && frames_.back().frame) {
-            fade_frame(frames_.back(), 1.0F);
-        }
+        root->set_visible(true);
+        return Frame {
+            .page_key = page_key,
+            .page = std::move(page),
+            .root = std::move(root),
+            .scope = std::move(scope),
+            .async_scope = std::move(async_scope),
+            .key = std::move(route_key),
+        };
     }
 
     auto NanRouter::submit_navigation(
         const NanTypeKey page_key,
-        std::unique_ptr<NanPage> page
+        std::unique_ptr<detail::PageBase> page
     ) -> bool {
         const auto* entry = route_mode_ ? routes_.find(page_key) : nullptr;
         if (entry == nullptr || page == nullptr || entry->params_key != page->params_type_key()) {
@@ -339,7 +260,7 @@ namespace nandina::app
             return true;
         }
 
-        if (post_command([this] { flush_pending_navigation(); })) {
+        if (post_ui_task([this] { flush_pending_navigation(); })) {
             return true;
         }
 
@@ -366,206 +287,120 @@ namespace nandina::app
 
     auto NanRouter::apply_navigation(
         const NanTypeKey page_key,
-        std::unique_ptr<NanPage> page
+        std::unique_ptr<detail::PageBase> page
     ) -> bool {
         const auto* entry = route_mode_ ? routes_.find(page_key) : nullptr;
         if (entry == nullptr || page == nullptr || entry->params_key != page->params_type_key()) {
             return false;
         }
-        push_page(
-            std::move(page),
-            entry->options.key
-        );
-        if (frames_.size() > 1) {
-            // Build first, then retire the old page. If build throws, the old
-            // page and its scope remain intact.
-            drop_frame(frames_.front());
-            frames_.erase(frames_.begin());
+        try {
+            // 先把所有可能抛出的事情做完（构建 + 换页前置条件），再退役旧页面。
+            // 顺序反过来会出现"旧页面订阅已清、却仍挂在屏幕上"的中间态。
+            auto next = build_frame(page_key, std::move(page), entry->options.key);
+            if (host_->child_count() > 1) {
+                throw std::logic_error("NanRouter: router outlet holds multiple pages");
+            }
+
+            if (current_) {
+                retire_frame(*current_);
+            }
+            // 原子换页：旧页面先摘、新页面后挂，切换期不会出现两个子节点。
+            host_->set_page(next.root);
+            // 旧 Frame 在此销毁。它的根节点已被 set_page 摘除，所以到这里才真正析构。
+            current_ = std::move(next);
         }
-        current_page_key_ = page_key;
+        catch (...) {
+            // 失败必须保持当前页面与当前路由不变。这里**不重新抛出**：带 dispatcher
+            // 时调用点在 UiDispatcher::drain() 的任务里，抛出去会穿出主循环并终止进程。
+            report_page_error(entry->options.key, std::current_exception());
+            return false;
+        }
+        // 切换完成后把键盘焦点交给新页面；旧页面若持有焦点，此时它已经被摘除，
+        // 焦点不能留在已销毁的节点上（见 page_and_router.md §4）。
+        restore_focus_after_navigation();
         return true;
     }
 
-    void NanRouter::sync_visibility() {
-        // Find the previously active frame (if any) and the new top frame.
-        Frame* deactivating = nullptr;
-        Frame* activating = nullptr;
-
-        for (auto& frame : frames_) {
-            if (frame.active) {
-                deactivating = &frame;
-                break;
-            }
-        }
-
-        // Set all frames invisible, mark top as visible.
-        for (std::size_t i = 0; i < frames_.size(); ++i) {
-            frame_node(frames_[i])->set_visible(i + 1 == frames_.size());
-        }
-
-        if (!frames_.empty()) {
-            activating = &frames_.back();
-        }
-
-        // Deactivate the previously active page before activating the new one.
-        if (deactivating != nullptr && deactivating != activating) {
-            deactivating->active = false;
-            auto ctx = make_context_for(*deactivating);
-            deactivating->page->on_deactivate(ctx);
-        }
-
-        // Activate the new top page.
-        if (activating != nullptr && !activating->active) {
-            activating->active = true;
-            auto ctx = make_context_for(*activating);
-            activating->page->on_activate(ctx);
-        }
-    }
-
-    void NanRouter::attach_root(const std::shared_ptr<scene::NanNode2D>& root) {
-        host_->add_child(root);
-    }
-
-    void NanRouter::detach_root(const std::shared_ptr<scene::NanNode2D>& root) {
-        if (!root) {
+    void NanRouter::restore_focus_after_navigation() {
+        auto* tree = host_ != nullptr ? host_->get_tree() : nullptr;
+        if (tree == nullptr || !current_ || !current_->root) {
             return;
         }
-        host_->remove_child(*root);
+        const auto root = current_->root;
+        // 换页可能在场景树遍历阶段被延迟，此刻新页面还没挂上。把交接推到布局之后，
+        // 两种情况就都能落在真正挂载好的页面上。
+        if (!root->is_inside_tree()) {
+            tree->post_layout([this, lifetime = std::weak_ptr<void>(command_lifetime_), root] {
+                if (lifetime.expired()) {
+                    return; // Router 已经销毁。
+                }
+                // 期间又被导航替换过：这次交接已经过期，不能去动新页面的焦点。
+                auto* current_tree = host_ != nullptr ? host_->get_tree() : nullptr;
+                if (current_tree == nullptr || !root->is_inside_tree()) {
+                    return;
+                }
+                focus_first_in_page(*root);
+            });
+            return;
+        }
+        focus_first_in_page(*root);
     }
 
-    void NanRouter::drop_frame(Frame& frame) {
-        if (frame.active) {
-            frame.active = false;
-            auto ctx = make_context_for(frame);
-            frame.page->on_deactivate(ctx);
+    void NanRouter::focus_first_in_page(scene::NanNode2D& root) {
+        auto* tree = host_ != nullptr ? host_->get_tree() : nullptr;
+        if (tree == nullptr) {
+            return;
         }
-        detach_root(frame_node(frame));
-        if (frame.async_scope != nullptr) {
-            frame.async_scope->clear();
+        // 焦点仍落在有效节点上（例如新页面内部已被主动聚焦）就不打扰它。
+        if (auto* current = tree->focused_node(); current != nullptr && current->is_inside_tree()) {
+            return;
         }
+        // 新页面按默认焦点规则进入；没有可聚焦控件时至少清空焦点，而不是留一个
+        // 已经脱离场景树的悬垂目标。
+        if (!tree->focus_first_within(root)) {
+            tree->set_focus(nullptr);
+        }
+    }
+
+    void NanRouter::retire_frame(Frame& frame) {
+        // 退役顺序按 page_and_router.md §4：先让旧页面的回调失效并解除它的响应式
+        // 订阅与异步任务，最后才拆根。反过来（先 detach_root）会让 on_exit_tree 在
+        // 页面订阅仍然生效时运行，回调可能去操作正在拆除的子树。
+        //
+        // ReactiveScope::clear() 本身就按"先失效 generation（guard_callbacks 的凭据）、
+        // 再断开外部事件、最后释放 signal/computed/effect"执行，所以这里一步覆盖了
+        // 合约里的"失效回调"与"解除响应式订阅"。
         if (frame.scope != nullptr) {
             frame.scope->clear();
         }
+        if (frame.async_scope != nullptr) {
+            frame.async_scope->clear();
+        }
+        // 页面拥有的浮层由页面内控件的 OverlayHandle 负责关闭，随后续的换页（摘根）
+        // 与 Frame 析构一起发生。这里不额外遍历 OverlayHost：浮层挂在 overlay layer
+        // 上，与页面节点之间没有可查询的从属边。
+        // 焦点必须先于摘根解除，否则焦点会短暂指向一个不在树内的节点。
+        if (auto* tree = host_ != nullptr ? host_->get_tree() : nullptr;
+            tree != nullptr && frame.root && tree->focused_node() != nullptr
+            && frame.root->is_ancestor_of(*tree->focused_node()))
+        {
+            tree->set_focus(nullptr);
+        }
+        // 这里**不摘根**：摘根由 RouterOutlet 换页时一并完成，这样"旧页面退役"
+        // 与"新页面挂载"之间不存在两个子节点共存的窗口。
     }
 
-    auto NanRouter::post_command(std::move_only_function<void()> command) -> bool {
+    auto NanRouter::post_ui_task(std::move_only_function<void()> task) -> bool {
         if (dispatcher_ == nullptr) {
             return false;
         }
         auto lifetime = std::weak_ptr<void>(command_lifetime_);
         return dispatcher_->post([lifetime = std::move(lifetime),
-                                  command = std::move(command)]() mutable {
+                                  task = std::move(task)]() mutable {
             if (const auto alive = lifetime.lock()) {
-                command();
+                task();
             }
         });
-    }
-
-    auto NanRouter::make_context_for(Frame& frame) -> PageContext {
-        return PageContext {
-            *this,
-            *graph_,
-            *frame.scope,
-            theme(),
-            store_,
-            store_key_,
-            resources_,
-            font_loader_,
-            font_families_,
-            frame.async_scope.get(),
-            theme_manager_,
-            dispatcher_,
-            overlay_host_,
-            drag_controller_,
-            navigation()
-        };
-    }
-
-    void NanRouter::set_transition_enabled(const bool enabled) {
-        transition_enabled_ = enabled;
-    }
-
-    auto NanRouter::transition_enabled() const -> bool {
-        return transition_enabled_;
-    }
-
-    void NanRouter::set_transition_duration(const float seconds) {
-        if (!std::isfinite(seconds) || seconds < 0.0F) {
-            throw std::invalid_argument("transition duration must be finite and non-negative");
-        }
-        transition_duration_ = seconds;
-    }
-
-    auto NanRouter::frame_node(const Frame& frame) const -> std::shared_ptr<scene::NanNode2D> {
-        if (frame.frame) {
-            return frame.frame;
-        }
-        return frame.root;
-    }
-
-    void NanRouter::fade_frame(Frame& frame, const float target) {
-        if (!frame.frame) {
-            return;
-        }
-        if (frame.frame->get_tree() == nullptr) {
-            // 未挂载（如 build() 阶段的首次 push）：无 Host 推进，直接跳到目标。
-            frame.frame->opacity.clear_behavior();
-            frame.frame->opacity.set_target(target);
-            return;
-        }
-        frame.frame->opacity.set_behavior(
-            animation::Behavior<float>(transition_duration_, animation::Easing::ease_out)
-        );
-        frame.frame->get_tree()->animation_host().set_target(
-            *frame.frame, frame.frame->opacity, target, scene::DirtyFlags::paint
-        );
-    }
-
-    void NanRouter::remove_top() {
-        if (frames_.empty()) {
-            return;
-        }
-        const bool can_transition = transition_enabled_ && frames_.back().frame
-            && host_ != nullptr && host_->get_tree() != nullptr;
-        if (can_transition) {
-            Frame& outgoing = frames_.back();
-            if (outgoing.active) {
-                outgoing.active = false;
-                auto ctx = make_context_for(outgoing);
-                outgoing.page->on_deactivate(ctx);
-            }
-            fade_frame(outgoing, 0.0F);
-            exiting_.push_back(std::move(outgoing));
-            frames_.pop_back();
-        }
-        else {
-            drop_frame(frames_.back());
-            frames_.pop_back();
-        }
-    }
-
-    void NanRouter::drop_completed_exits() {
-        auto* tree = host_ != nullptr ? host_->get_tree() : nullptr;
-        for (auto it = exiting_.begin(); it != exiting_.end();) {
-            Frame& frame = *it;
-            if (frame.frame && frame.frame->opacity.is_animating()) {
-                ++it;
-                continue;
-            }
-            // 生命周期清理是安全的；树 detach 延迟到 tree_commit（on_process 处于 process 阶段）。
-            if (frame.async_scope != nullptr) {
-                frame.async_scope->clear();
-            }
-            if (frame.scope != nullptr) {
-                frame.scope->clear();
-            }
-            if (auto node = frame_node(frame); tree != nullptr && node != nullptr) {
-                tree->defer_tree_mutation([host = host_, node = std::move(node)]() {
-                    host->remove_child(*node);
-                });
-            }
-            it = exiting_.erase(it);
-        }
     }
 
 } // namespace nandina::app

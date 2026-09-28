@@ -10,6 +10,7 @@
 #include <nandina/reactive/effect.hpp>
 #include <nandina/reactive/signal.hpp>
 #include <nandina/scene/control.hpp>
+#include <nandina/scene/scene_tree.hpp>
 #include <nandina/scene/input_event.hpp>
 #include <nandina/theme/theme.hpp>
 #include <nandina/widget/controls.hpp>
@@ -23,12 +24,32 @@
 #include <exception>
 #include <memory>
 #include <stdexcept>
+#include <string>
 #include <string_view>
 #include <thread>
 
 namespace
 {
     using namespace nandina;
+
+    // PageContext 只暴露弱 `Navigation` 句柄：它是可安全按值捕获的导航入口。
+    // 不得再退回"把 NanRouter& 交给页面"的旧形态——那既是封装泄漏（页面可以
+    // 调 clear()/start() 重置路由），也让构建期 Context 的悬垂捕获重新变得可能。
+    // 见 docs/references/page_and_router.md 第 8 节。
+    //
+    // 断言必须写成受 Context 参数化的 concept：非模板里的 requires 表达式对
+    // 非法成员是硬错误，而不是"不满足"。
+    template<typename Context>
+    concept ExposesRouter = requires(Context& context) { context.router(); };
+
+    static_assert(!ExposesRouter<app::PageContext>);
+    static_assert(requires(app::PageContext& context) { context.navigation(); });
+
+    // 证明这个 concept 真的能识别出成员，否则上面的断言可能只是"永远为真"。
+    struct RouterProbe {
+        auto router() -> int;
+    };
+    static_assert(ExposesRouter<RouterProbe>);
 
     struct TestStore final: app::NanStore {
         explicit TestStore(reactive::Graph& graph): count(graph, 0) {}
@@ -43,16 +64,12 @@ namespace
         int blog_id = 0;
     };
 
-    class HomePage final: public app::NanPageT<HomeParams> {
+    class HomePage final: public app::Page<HomeParams> {
     public:
-        explicit HomePage(HomeParams params): NanPageT(params) {}
-
-        [[nodiscard]] auto route_key() const -> std::string_view override {
-            return "home";
-        }
+        explicit HomePage(HomeParams params): Page(params) {}
 
         [[nodiscard]] auto build(app::PageContext& context)
-            -> std::shared_ptr<scene::NanNode2D> override {
+            -> widget::View override {
             auto root = std::make_shared<scene::NanControl>(foundation::NanSize(320, 200));
             root->set_name("home-root");
             root->set_position(foundation::NanPoint(static_cast<float>(params().user_id), 0.0F));
@@ -61,16 +78,12 @@ namespace
         }
     };
 
-    class DetailPage final: public app::NanPageT<DetailParams> {
+    class DetailPage final: public app::Page<DetailParams> {
     public:
-        explicit DetailPage(DetailParams params): NanPageT(params) {}
-
-        [[nodiscard]] auto route_key() const -> std::string_view override {
-            return "detail";
-        }
+        explicit DetailPage(DetailParams params): Page(params) {}
 
         [[nodiscard]] auto build(app::PageContext& context)
-            -> std::shared_ptr<scene::NanNode2D> override {
+            -> widget::View override {
             auto root = std::make_shared<scene::NanControl>(foundation::NanSize(200, 100));
             root->set_name("detail-root");
             context.store<TestStore>().count.set(params().blog_id);
@@ -78,25 +91,21 @@ namespace
         }
     };
 
-    class PlainPage final: public app::NanPageT<app::NoParams> {
+    class PlainPage final: public app::Page<> {
     public:
         PlainPage() = default;
 
-        [[nodiscard]] auto route_key() const -> std::string_view override {
-            return "plain";
-        }
-
         [[nodiscard]] auto build(app::PageContext& context)
-            -> std::shared_ptr<scene::NanNode2D> override {
+            -> widget::View override {
             auto root = std::make_shared<scene::NanControl>(foundation::NanSize(100, 50));
             root->set_background(context.theme().palette.primary);
             return root;
         }
     };
 
-    class SecondPlainPage final: public app::NanPageT<app::NoParams> {
+    class SecondPlainPage final: public app::Page<> {
     public:
-        [[nodiscard]] auto build(app::PageContext&) -> std::shared_ptr<scene::NanNode2D> override {
+        [[nodiscard]] auto build(app::PageContext&) -> widget::View override {
             return std::make_shared<scene::NanControl>(foundation::NanSize(120, 60));
         }
     };
@@ -106,13 +115,11 @@ namespace
         bool* fail = nullptr;
         bool* destroyed = nullptr;
         int* destruction_count = nullptr;
-        int* activated = nullptr;
-        int* deactivated = nullptr;
     };
 
-    class RouteProbePage final: public app::NanPageT<RouteProbeParams> {
+    class RouteProbePage final: public app::Page<RouteProbeParams> {
     public:
-        explicit RouteProbePage(RouteProbeParams params): NanPageT(params) {}
+        explicit RouteProbePage(RouteProbeParams params): Page(params) {}
 
         ~RouteProbePage() override {
             if (params().destroyed != nullptr) {
@@ -123,7 +130,7 @@ namespace
             }
         }
 
-        [[nodiscard]] auto build(app::PageContext&) -> std::shared_ptr<scene::NanNode2D> override {
+        [[nodiscard]] auto build(app::PageContext&) -> widget::View override {
             ++*params().builds;
             if (params().fail != nullptr && *params().fail) {
                 throw std::runtime_error("probe page build failed");
@@ -131,17 +138,6 @@ namespace
             return std::make_shared<scene::NanControl>(foundation::NanSize(80, 40));
         }
 
-        void on_activate(app::PageContext&) override {
-            if (params().activated != nullptr) {
-                ++*params().activated;
-            }
-        }
-
-        void on_deactivate(app::PageContext&) override {
-            if (params().deactivated != nullptr) {
-                ++*params().deactivated;
-            }
-        }
     };
 
     struct DispatcherProbeParams {
@@ -149,16 +145,12 @@ namespace
         app::UiDispatcher** dispatcher = nullptr;
     };
 
-    class DispatcherProbePage final: public app::NanPageT<DispatcherProbeParams> {
+    class DispatcherProbePage final: public app::Page<DispatcherProbeParams> {
     public:
-        explicit DispatcherProbePage(DispatcherProbeParams params): NanPageT(params) {}
-
-        [[nodiscard]] auto route_key() const -> std::string_view override {
-            return "dispatcher-probe";
-        }
+        explicit DispatcherProbePage(DispatcherProbeParams params): Page(params) {}
 
         [[nodiscard]] auto build(app::PageContext& context)
-            -> std::shared_ptr<scene::NanNode2D> override {
+            -> widget::View override {
             *params().available = context.has_dispatcher();
             *params().dispatcher = &context.dispatcher();
             return std::make_shared<scene::NanControl>(foundation::NanSize(80, 40));
@@ -174,16 +166,12 @@ namespace
         ScopedObserverLog* log = nullptr;
     };
 
-    class ScopedObserverPage final: public app::NanPageT<ScopedObserverParams> {
+    class ScopedObserverPage final: public app::Page<ScopedObserverParams> {
     public:
-        explicit ScopedObserverPage(ScopedObserverParams params): NanPageT(params) {}
-
-        [[nodiscard]] auto route_key() const -> std::string_view override {
-            return "scoped-observer";
-        }
+        explicit ScopedObserverPage(ScopedObserverParams params): Page(params) {}
 
         [[nodiscard]] auto build(app::PageContext& context)
-            -> std::shared_ptr<scene::NanNode2D> override {
+            -> widget::View override {
             auto& store = context.store<TestStore>();
             auto* log = params().log;
             context.scope().effect([&store, log] {
@@ -199,16 +187,12 @@ namespace
         int* observed = nullptr;
     };
 
-    class ScopedEventPage final: public app::NanPageT<ScopedEventParams> {
+    class ScopedEventPage final: public app::Page<ScopedEventParams> {
     public:
-        explicit ScopedEventPage(ScopedEventParams params): NanPageT(params) {}
-
-        [[nodiscard]] auto route_key() const -> std::string_view override {
-            return "scoped-event";
-        }
+        explicit ScopedEventPage(ScopedEventParams params): Page(params) {}
 
         [[nodiscard]] auto build(app::PageContext& context)
-            -> std::shared_ptr<scene::NanNode2D> override {
+            -> widget::View override {
             context.ui().connect(*params().event, [observed = params().observed](const int value) {
                 *observed += value;
             });
@@ -230,10 +214,6 @@ namespace
             *params().destroyed = true;
         }
 
-        [[nodiscard]] auto route_key() const -> std::string_view override {
-            return "retained-callback";
-        }
-
         [[nodiscard]] auto build(app::PageContext& context) -> widget::View override {
             auto ui = context.ui();
             auto button = ui.make<widget::Button>("Retained root").on_click([this] {
@@ -251,16 +231,12 @@ namespace
         bool* completed = nullptr;
     };
 
-    class AsyncPage final: public app::NanPageT<AsyncPageParams> {
+    class AsyncPage final: public app::Page<AsyncPageParams> {
     public:
-        explicit AsyncPage(AsyncPageParams params): NanPageT(params) {}
-
-        [[nodiscard]] auto route_key() const -> std::string_view override {
-            return "async";
-        }
+        explicit AsyncPage(AsyncPageParams params): Page(params) {}
 
         [[nodiscard]] auto build(app::PageContext& context)
-            -> std::shared_ptr<scene::NanNode2D> override {
+            -> widget::View override {
             const auto params = this->params();
             context.async_scope().run(
                 [params](app::CancellationToken token) {
@@ -276,35 +252,6 @@ namespace
         }
     };
 
-    struct TeardownParams {
-        bool* destroyed = nullptr;
-    };
-
-    class TeardownPage final: public app::NanPageT<TeardownParams> {
-    public:
-        explicit TeardownPage(TeardownParams params): NanPageT(params) {}
-
-        ~TeardownPage() override {
-            *params().destroyed = true;
-        }
-
-        [[nodiscard]] auto route_key() const -> std::string_view override {
-            return "teardown";
-        }
-
-        [[nodiscard]] auto build(app::PageContext&) -> std::shared_ptr<scene::NanNode2D> override {
-            return std::make_shared<scene::NanControl>(foundation::NanSize(80, 40));
-        }
-    };
-
-    void tick_router(scene::NanSceneTree& tree, const float dt) {
-        tree.process(dt);
-        {
-            auto phase = tree.enter_phase(scene::FramePhase::animation);
-            tree.advance_animations(dt);
-        }
-    }
-
     /// Records what a page sees of the window-installed overlay portal.
     struct OverlayProbe {
         bool context_has = false;
@@ -315,14 +262,10 @@ namespace
 
     OverlayProbe g_overlay_probe;
 
-    class OverlayProbePage final: public app::NanPageT<app::NoParams> {
+    class OverlayProbePage final: public app::Page<> {
     public:
-        [[nodiscard]] auto route_key() const -> std::string_view override {
-            return "overlay-probe";
-        }
-
         [[nodiscard]] auto build(app::PageContext& context)
-            -> std::shared_ptr<scene::NanNode2D> override {
+            -> widget::View override {
             g_overlay_probe.context_has = context.has_overlay_host();
             if (g_overlay_probe.context_has) {
                 g_overlay_probe.context_host = &context.overlay_host();
@@ -335,43 +278,70 @@ namespace
             return std::make_shared<scene::NanControl>(foundation::NanSize(10.0F, 10.0F));
         }
     };
+
+    /// 覆写窗口错误钩子，记录失败次数与消息。
+    class ErrorProbeWindow final: public app::NanWindow {
+    public:
+        using NanWindow::NanWindow;
+
+        int errors = 0;
+        std::string last_message;
+    protected:
+        void on_error(std::exception_ptr error) override {
+            ++errors;
+            try {
+                std::rethrow_exception(error);
+            }
+            catch (const std::exception& caught) {
+                last_message = caught.what();
+            }
+            catch (...) {
+                last_message = "non-standard exception";
+            }
+        }
+    };
+
+    /// 含可聚焦控件的页面，用来观察切换后的焦点落点。
+    class FocusablePage final: public app::Page<> {
+    public:
+        [[nodiscard]] auto build(app::PageContext& context) -> widget::View override {
+            auto ui = context.ui();
+            return ui.column()
+                .gap(4.0F)
+                .children(
+                    ui.make<widget::Button>("First"),
+                    ui.make<widget::Button>("Second")
+                )
+                .build();
+        }
+    };
+
+    /// 在自己的构建作用域里 present 一个浮层，并把 handle 存到页面对象上——
+    /// 与 Dialog / Tooltip / Select 持有 portal handle 的方式一致。
+    class OverlayHoldingPage final: public app::Page<> {
+    public:
+        [[nodiscard]] auto build(app::PageContext& context) -> widget::View override {
+            auto ui = context.ui();
+            handle_ = std::make_unique<scene::OverlayHandle>(
+                context.overlay_host().present(
+                    ui.make<widget::Label>("page overlay").build(),
+                    scene::OverlayOptions {.level = scene::OverlayLevel::popup}
+                )
+            );
+            return std::make_shared<scene::NanControl>(foundation::NanSize(40.0F, 20.0F));
+        }
+
+    private:
+        std::unique_ptr<scene::OverlayHandle> handle_;
+    };
+
+    [[nodiscard]] auto is_within(const scene::NanNode& scope, const scene::NanNode* node) -> bool {
+        if (node == nullptr) {
+            return false;
+        }
+        return node == &scope || scope.is_ancestor_of(*node);
+    }
 } // namespace
-
-TEST_CASE("router pushes keep-alive pages and toggles top visibility", "[app][router]") {
-    reactive::Graph graph;
-    TestStore store {graph};
-    const auto theme = theme::default_theme();
-    app::NanRouter router {graph, theme};
-    router.set_store(store);
-
-    auto& home = router.push<HomePage>(HomeParams {.user_id = 42});
-    REQUIRE(home.params().user_id == 42);
-    REQUIRE(router.depth() == 1);
-    REQUIRE(router.current_key() == "home");
-    REQUIRE(router.host()->child_count() == 1);
-
-    auto* home_root = router.host()->get_child(0)->as_node2d();
-    REQUIRE(home_root != nullptr);
-    REQUIRE(home_root->visible());
-    REQUIRE(store.count.peek() == 1);
-
-    router.push<DetailPage>(DetailParams {.blog_id = 7});
-    REQUIRE(router.depth() == 2);
-    REQUIRE(router.current_key() == "detail");
-    REQUIRE(router.host()->child_count() == 2);
-    REQUIRE_FALSE(home_root->visible());
-    auto* detail_root = router.host()->get_child(1)->as_node2d();
-    REQUIRE(detail_root != nullptr);
-    REQUIRE(detail_root->visible());
-    REQUIRE(store.count.peek() == 7);
-
-    REQUIRE(router.pop());
-    REQUIRE(router.depth() == 1);
-    REQUIRE(router.current_key() == "home");
-    REQUIRE(router.host()->child_count() == 1);
-    REQUIRE(home_root->visible());
-    REQUIRE_FALSE(router.pop());
-}
 
 TEST_CASE("configured router navigates between registered typed pages", "[app][router][navigate]") {
     reactive::Graph graph;
@@ -388,29 +358,48 @@ TEST_CASE("configured router navigates between registered typed pages", "[app][r
     REQUIRE(navigation.valid());
     REQUIRE(navigation.navigate<HomePage>(HomeParams {.user_id = 4}));
     REQUIRE(router.route_mode());
-    REQUIRE(router.depth() == 1);
+    REQUIRE(router.outlet()->page() != nullptr);
     REQUIRE(router.current_key() == "home");
     REQUIRE(router.current_page_key() == app::nan_type_key<HomePage>());
 
     auto* first_root = router.host()->get_child(0);
     REQUIRE(first_root != nullptr);
     REQUIRE(navigation.navigate<DetailPage>(DetailParams {.blog_id = 8}));
-    REQUIRE(router.depth() == 1);
+    REQUIRE(router.outlet()->page() != nullptr);
     REQUIRE(router.current_key() == "detail");
     REQUIRE(router.current_page_key() == app::nan_type_key<DetailPage>());
     REQUIRE(router.host()->get_child(0) != first_root);
     REQUIRE_FALSE(navigation.navigate<PlainPage>());
 }
 
-TEST_CASE("route configuration rejects empty and duplicate route keys", "[app][router][configure]") {
+TEST_CASE("route configuration validates page types and display keys", "[app][router][configure]") {
     reactive::Graph graph;
 
-    app::NanRouter empty_key_router {graph, theme::default_theme()};
-    REQUIRE_FALSE(empty_key_router.configure(app::Routes {
+    // key/title 是可选显示元数据，不是路由身份：最简写法 route<PageT>() 必须能配上，
+    // 否则"类型就是路由身份"就名不副实。
+    app::NanRouter keyless_router {graph, theme::default_theme()};
+    REQUIRE(keyless_router.configure(app::Routes {
         app::route<PlainPage>(),
+        app::route<SecondPlainPage>(),
     }));
-    REQUIRE_FALSE(empty_key_router.route_mode());
+    REQUIRE(keyless_router.route_mode());
+    REQUIRE(keyless_router.route<PlainPage>() != nullptr);
+    REQUIRE(keyless_router.route<PlainPage>()->options.key.empty());
 
+    // 无 key 的路由照样能启动与导航，只是没有可显示的地址文字。
+    REQUIRE(keyless_router.start<PlainPage>());
+    REQUIRE(keyless_router.current_page_key() == app::nan_type_key<PlainPage>());
+    REQUIRE(keyless_router.current_key().empty());
+
+    // 页面类型是路由身份：同一类型注册两次必然是笔误。
+    app::NanRouter duplicate_page_router {graph, theme::default_theme()};
+    REQUIRE_FALSE(duplicate_page_router.configure(app::Routes {
+        app::route<PlainPage>({.key = "a"}),
+        app::route<PlainPage>({.key = "b"}),
+    }));
+    REQUIRE_FALSE(duplicate_page_router.route_mode());
+
+    // 设了 key 就必须唯一，否则按 key 展示/高亮的界面会出现歧义。
     app::NanRouter duplicate_key_router {graph, theme::default_theme()};
     REQUIRE_FALSE(duplicate_key_router.configure(app::Routes {
         app::route<PlainPage>({.key = "same"}),
@@ -435,6 +424,117 @@ TEST_CASE("router outlet replaces its mounted page without changing outlet ident
     outlet->clear_page();
     REQUIRE(outlet->page() == nullptr);
     REQUIRE(outlet->child_count() == 0);
+}
+
+TEST_CASE("router outlet swaps pages without exposing two children", "[app][router][outlet]") {
+    scene::NanSceneTree tree;
+    auto outlet = std::make_shared<app::RouterOutlet>();
+    tree.set_root(outlet);
+
+    auto first = std::make_shared<scene::NanControl>(foundation::NanSize(20, 20));
+    auto second = std::make_shared<scene::NanControl>(foundation::NanSize(30, 30));
+
+    (void)outlet->set_page(first);
+    REQUIRE(outlet->page() == first.get());
+    REQUIRE(outlet->child_count() == 1);
+    REQUIRE(outlet->pending_page() == nullptr);
+
+    (void)outlet->set_page(second);
+    // 换页之后仍然只有一个子节点：旧页面先摘、新页面后挂。
+    REQUIRE(outlet->child_count() == 1);
+    REQUIRE(outlet->page() == second.get());
+    REQUIRE_FALSE(first->is_inside_tree());
+    REQUIRE(second->is_inside_tree());
+}
+
+TEST_CASE(
+    "router outlet coalesces repeated swaps inside one traversal phase",
+    "[app][router][outlet]"
+) {
+    scene::NanSceneTree tree;
+    auto outlet = std::make_shared<app::RouterOutlet>();
+    tree.set_root(outlet);
+
+    auto first = std::make_shared<scene::NanControl>(foundation::NanSize(20, 20));
+    auto second = std::make_shared<scene::NanControl>(foundation::NanSize(30, 30));
+    auto third = std::make_shared<scene::NanControl>(foundation::NanSize(40, 40));
+    (void)outlet->set_page(first);
+    REQUIRE(outlet->child_count() == 1);
+
+    {
+        auto phase = tree.enter_phase(scene::FramePhase::process);
+        // 遍历期间 remove_child 会直接抛，所以换页必须排到 flush。
+        outlet->set_page(second);
+        outlet->set_page(third);
+        REQUIRE(outlet->child_count() == 1);
+        REQUIRE(outlet->page() == first.get());
+        REQUIRE(outlet->pending_page() == third);
+    }
+
+    tree.flush_tree_mutations();
+    // 两次换页合并成最后一次：若各排一个替换，第二个会用陈旧的 current 摘错节点，
+    // 在 Outlet 里留下一个没有任何引用的僵尸页面。
+    REQUIRE(outlet->child_count() == 1);
+    REQUIRE(outlet->page() == third.get());
+    REQUIRE_FALSE(second->is_inside_tree());
+    REQUIRE(second.use_count() == 1);
+}
+
+TEST_CASE(
+    "navigating twice inside one traversal phase leaves exactly one page",
+    "[app][router][navigate]"
+) {
+    reactive::Graph graph;
+    scene::NanSceneTree tree;
+    // 不装 dispatcher：导航就地生效，于是"遍历期间换页"这条路径会被真正走到。
+    app::NanRouter router {graph, theme::default_theme()};
+    tree.set_root(router.outlet());
+    REQUIRE(router.configure(app::Routes {
+        app::route<PlainPage>({.key = "plain"}),
+        app::route<SecondPlainPage>({.key = "second"}),
+    }));
+
+    const auto navigation = router.navigation();
+    REQUIRE(navigation.navigate<PlainPage>());
+    REQUIRE(router.outlet()->child_count() == 1);
+
+    {
+        auto phase = tree.enter_phase(scene::FramePhase::process);
+        REQUIRE(navigation.navigate<SecondPlainPage>());
+        REQUIRE(navigation.navigate<PlainPage>());
+        REQUIRE(router.outlet()->child_count() == 1);
+    }
+
+    tree.flush_tree_mutations();
+    REQUIRE(router.current_key() == "plain");
+    REQUIRE(router.outlet()->child_count() == 1);
+    REQUIRE(router.outlet()->page() != nullptr);
+}
+
+TEST_CASE("focus reaches a page whose swap was deferred", "[app][router][focus]") {
+    reactive::Graph graph;
+    scene::NanSceneTree tree;
+    app::NanRouter router {graph, theme::default_theme()};
+    tree.set_root(router.outlet());
+    REQUIRE(router.configure(app::Routes {
+        app::route<FocusablePage>({.key = "focusable"}),
+    }));
+
+    const auto navigation = router.navigation();
+    {
+        auto phase = tree.enter_phase(scene::FramePhase::process);
+        REQUIRE(navigation.navigate<FocusablePage>());
+        // 换页被延迟到 flush，此刻页面还没挂上。
+        REQUIRE(router.outlet()->page() == nullptr);
+    }
+
+    tree.flush_tree_mutations();
+    tree.flush_post_layout_actions();
+    auto* root = router.outlet()->page();
+    REQUIRE(root != nullptr);
+    // 焦点交接被推到布局之后，所以延迟换页也拿得到焦点。
+    REQUIRE(tree.focused_node() != nullptr);
+    REQUIRE(is_within(*root, tree.focused_node()));
 }
 
 TEST_CASE("window shell keeps the router outlet stable", "[app][router][shell]") {
@@ -466,7 +566,82 @@ TEST_CASE("window shell keeps the router outlet stable", "[app][router][shell]")
     REQUIRE(navigation.navigate<SecondPlainPage>());
     REQUIRE(observed_outlet->page() != nullptr);
     REQUIRE(observed_outlet == router.outlet().get());
-    REQUIRE(router.depth() == 1);
+    REQUIRE(router.outlet()->page() != nullptr);
+}
+
+TEST_CASE("window routes page build failures to its on_error hook", "[app][router][error][shell]") {
+    app::NanApplication application;
+    int builds = 0;
+    bool fail = false;
+    const RouteProbeParams params {.builds = &builds, .fail = &fail};
+    // 同前：窗口（及其 Router）声明在探针状态之后，保证它先析构。
+    ErrorProbeWindow window {application, {}};
+    auto& router = window.use_router(app::Routes {
+        app::route<PlainPage>({.key = "plain"}),
+        app::route<RouteProbePage>({.key = "probe"}),
+    });
+
+    const auto navigation = router.navigation();
+    REQUIRE(navigation.navigate<PlainPage>());
+    REQUIRE(application.dispatcher().drain() == 1);
+    auto* stable_root = router.host()->get_child(0);
+    REQUIRE(stable_root != nullptr);
+
+    // 生产路径：导航在任务阶段提交，构建失败必须交给窗口的 on_error，
+    // 而不是穿出 drain() 终止进程。
+    fail = true;
+    REQUIRE(navigation.navigate<RouteProbePage>(params));
+    REQUIRE(application.dispatcher().drain() == 1);
+    REQUIRE(window.errors == 1);
+    REQUIRE(window.last_message == "probe page build failed");
+    REQUIRE(router.current_key() == "plain");
+    REQUIRE(router.host()->child_count() == 1);
+    REQUIRE(router.host()->get_child(0) == stable_root);
+}
+
+TEST_CASE("navigation moves keyboard focus into the new page", "[app][router][focus]") {
+    app::NanApplication application;
+    app::NanWindow window {application, {}};
+    auto& router = window.use_router(app::Routes {
+        app::route<PlainPage>({.key = "plain"}),
+        app::route<FocusablePage>({.key = "focusable"}),
+    });
+    auto& tree = window.scene_tree();
+    const auto navigation = router.navigation();
+
+    REQUIRE(navigation.navigate<FocusablePage>());
+    REQUIRE(application.dispatcher().drain() == 1);
+    auto* focusable_root = router.host()->get_child(0);
+    REQUIRE(focusable_root != nullptr);
+
+    // 新页面按默认焦点规则拿到焦点，而不是留在原地或落空。
+    REQUIRE(tree.focused_node() != nullptr);
+    REQUIRE(is_within(*focusable_root, tree.focused_node()));
+
+    // 切到没有可聚焦控件的页面：焦点必须清空，不能指向已经拆除的旧节点。
+    REQUIRE(navigation.navigate<PlainPage>());
+    REQUIRE(application.dispatcher().drain() == 1);
+    REQUIRE(router.host()->get_child(0) != focusable_root);
+    REQUIRE(tree.focused_node() == nullptr);
+}
+
+TEST_CASE("navigating away closes the overlays a page presented", "[app][router][overlay]") {
+    app::NanApplication application;
+    app::NanWindow window {application, {}};
+    auto& router = window.use_router(app::Routes {
+        app::route<PlainPage>({.key = "plain"}),
+        app::route<OverlayHoldingPage>({.key = "overlay"}),
+    });
+    const auto navigation = router.navigation();
+
+    REQUIRE(navigation.navigate<OverlayHoldingPage>());
+    REQUIRE(application.dispatcher().drain() == 1);
+    REQUIRE(window.overlay_host().overlay_count() == 1);
+
+    // 页面退役时必须带走它自己的浮层；否则切页后会留下一个没有归属的面板。
+    REQUIRE(navigation.navigate<PlainPage>());
+    REQUIRE(application.dispatcher().drain() == 1);
+    REQUIRE(window.overlay_host().overlay_count() == 0);
 }
 
 TEST_CASE("navigation requests are deferred when a UI dispatcher is installed", "[app][router][navigate]") {
@@ -491,7 +666,7 @@ TEST_CASE("navigation requests are deferred when a UI dispatcher is installed", 
     }));
     const auto navigation = router.navigation();
     REQUIRE(navigation.navigate<HomePage>(HomeParams {.user_id = 1}));
-    REQUIRE(router.empty());
+    REQUIRE(router.current_page_key() == nullptr);
     REQUIRE(dispatcher.pending_count() == 1);
     REQUIRE(dispatcher.drain() == 1);
     REQUIRE(router.current_key() == "home");
@@ -531,7 +706,7 @@ TEST_CASE(
     REQUIRE(dispatcher.pending_count() == 1);
     REQUIRE(dispatcher.drain() == 1);
     REQUIRE(router.current_key() == "home");
-    REQUIRE(router.depth() == 1);
+    REQUIRE(router.outlet()->page() != nullptr);
     REQUIRE(router.host()->child_count() == 1);
 }
 
@@ -540,13 +715,13 @@ TEST_CASE(
     "[app][router][navigate]"
 ) {
     reactive::Graph graph;
-    app::NanRouter router {graph, theme::default_theme()};
     int builds = 0;
     bool fail = false;
     bool destroyed = false;
     int destruction_count = 0;
-    int activated = 0;
-    int deactivated = 0;
+    // router 必须声明在探针状态**之后**：作用域结束时它先析构，页面析构会写回
+    // destroyed / destruction_count；顺序反过来就是 stack-use-after-scope（ASan 会报）。
+    app::NanRouter router {graph, theme::default_theme()};
     REQUIRE(router.configure(app::Routes {
         app::route<RouteProbePage>({.key = "probe"}),
     }));
@@ -556,36 +731,111 @@ TEST_CASE(
         .fail = &fail,
         .destroyed = &destroyed,
         .destruction_count = &destruction_count,
-        .activated = &activated,
-        .deactivated = &deactivated,
     };
 
     REQUIRE(navigation.navigate<RouteProbePage>(params));
     auto* first_root = router.host()->get_child(0);
     REQUIRE(builds == 1);
     REQUIRE(first_root != nullptr);
-    REQUIRE(activated == 0);
-    REQUIRE(deactivated == 0);
 
     REQUIRE(navigation.navigate<RouteProbePage>(params));
     REQUIRE(builds == 2);
     REQUIRE(router.host()->get_child(0) != first_root);
     REQUIRE(destroyed);
     REQUIRE(destruction_count == 1);
-    REQUIRE(activated == 0);
-    REQUIRE(deactivated == 0);
     auto* stable_root = router.host()->get_child(0);
 
     destroyed = false;
     fail = true;
-    REQUIRE_THROWS(navigation.navigate<RouteProbePage>(params));
+
+    // 构建失败不再抛异常：带 dispatcher 时调用点在 UiDispatcher::drain() 的任务里，
+    // 抛出去会穿出主循环终止进程。改为返回失败 + 把错误交给处理器，并保持当前
+    // 页面与当前路由不变。
+    std::string reported_route;
+    std::exception_ptr reported_error;
+    router.set_page_error_handler(
+        [&reported_route, &reported_error](std::string_view key, std::exception_ptr error) {
+            reported_route = std::string(key);
+            reported_error = error;
+        }
+    );
+
+    REQUIRE_FALSE(navigation.navigate<RouteProbePage>(params));
+    REQUIRE(reported_error != nullptr);
+    REQUIRE(reported_route == "probe");
     REQUIRE(router.current_key() == "probe");
     REQUIRE(router.host()->child_count() == 1);
     REQUIRE(router.host()->get_child(0) == stable_root);
     REQUIRE(destroyed);
     REQUIRE(destruction_count == 2);
-    REQUIRE(activated == 0);
-    REQUIRE(deactivated == 0);
+
+    // 没有处理器时同样不抛，只记 error 日志——错误绝不被吞掉也不该升级成崩溃。
+    reported_error = nullptr;
+    router.set_page_error_handler({});
+    destroyed = false;
+    REQUIRE_FALSE(navigation.navigate<RouteProbePage>(params));
+    REQUIRE(reported_error == nullptr);
+    REQUIRE(router.host()->child_count() == 1);
+    REQUIRE(router.host()->get_child(0) == stable_root);
+}
+
+TEST_CASE(
+    "a failed page build in the task phase is reported instead of escaping drain",
+    "[app][router][navigate][error]"
+) {
+    reactive::Graph graph;
+    app::UiDispatcher dispatcher;
+    int builds = 0;
+    bool fail = false;
+    bool destroyed = false;
+    int destruction_count = 0;
+    // 同前：router 声明在探针状态之后，保证它先析构。
+    app::NanRouter router {
+        graph,
+        theme::default_theme(),
+        nullptr,
+        nullptr,
+        nullptr,
+        nullptr,
+        nullptr,
+        &dispatcher,
+    };
+    REQUIRE(router.configure(app::Routes {
+        app::route<PlainPage>({.key = "plain"}),
+        app::route<RouteProbePage>({.key = "probe"}),
+    }));
+
+    std::string reported_route;
+    std::exception_ptr reported_error;
+    router.set_page_error_handler(
+        [&reported_route, &reported_error](std::string_view key, std::exception_ptr error) {
+            reported_route = std::string(key);
+            reported_error = error;
+        }
+    );
+
+    const auto navigation = router.navigation();
+    const RouteProbeParams params {
+        .builds = &builds,
+        .fail = &fail,
+        .destroyed = &destroyed,
+        .destruction_count = &destruction_count,
+    };
+
+    REQUIRE(navigation.navigate<PlainPage>());
+    REQUIRE(dispatcher.drain() == 1);
+    auto* stable_root = router.host()->get_child(0);
+    REQUIRE(stable_root != nullptr);
+
+    // 生产路径：导航在任务阶段提交，构建失败必须就地被接住。
+    fail = true;
+    REQUIRE(navigation.navigate<RouteProbePage>(params));
+    REQUIRE(dispatcher.drain() == 1);
+    REQUIRE(reported_error != nullptr);
+    REQUIRE(reported_route == "probe");
+    REQUIRE(router.current_key() == "plain");
+    REQUIRE(router.host()->child_count() == 1);
+    REQUIRE(router.host()->get_child(0) == stable_root);
 }
 
 TEST_CASE("navigation handles expire after their router is destroyed", "[app][router][navigate]") {
@@ -609,16 +859,20 @@ TEST_CASE("router exposes its UI dispatcher through page context", "[app][router
     bool available = false;
     app::UiDispatcher* observed = nullptr;
 
-    router.push<DispatcherProbePage>(DispatcherProbeParams {
+    REQUIRE(router.configure(app::Routes {
+        app::route<DispatcherProbePage>({.key = "dispatcher-probe"}),
+    }));
+    REQUIRE(router.navigation().navigate<DispatcherProbePage>(DispatcherProbeParams {
         .available = &available,
         .dispatcher = &observed,
-    });
+    }));
+    REQUIRE(dispatcher.drain() == 1);
 
     REQUIRE(available);
     REQUIRE(observed == &dispatcher);
 }
 
-TEST_CASE("router commands defer stack mutations to the UI task phase", "[app][router][command]") {
+TEST_CASE("navigation requests defer route replacement to the UI task phase", "[app][router][navigate]") {
     reactive::Graph graph;
     const auto theme = theme::default_theme();
     TestStore store {graph};
@@ -633,58 +887,54 @@ TEST_CASE("router commands defer stack mutations to the UI task phase", "[app][r
         nullptr,
         &dispatcher
     };
-    router.push<HomePage>(HomeParams {.user_id = 1});
+    REQUIRE(router.configure(app::Routes {
+        app::route<HomePage>({.key = "home"}),
+        app::route<DetailPage>({.key = "detail"}),
+        app::route<PlainPage>({.key = "plain"}),
+    }));
+    const auto navigation = router.navigation();
 
-    REQUIRE(router.request_push<DetailPage>(DetailParams {.blog_id = 7}));
-    REQUIRE(router.depth() == 1);
+    REQUIRE(navigation.navigate<HomePage>(HomeParams {.user_id = 1}));
+    REQUIRE(navigation.navigate<DetailPage>(DetailParams {.blog_id = 7}));
+    REQUIRE(navigation.navigate<HomePage>(HomeParams {.user_id = 2}));
+    REQUIRE(router.current_page_key() == nullptr);
     REQUIRE(dispatcher.pending_count() == 1);
     REQUIRE(dispatcher.drain() == 1);
-    REQUIRE(router.depth() == 2);
-    REQUIRE(router.current_key() == "detail");
-
-    REQUIRE(router.request_pop());
-    REQUIRE(router.depth() == 2);
-    REQUIRE(dispatcher.drain() == 1);
-    REQUIRE(router.depth() == 1);
-
-    REQUIRE(router.request_push<DetailPage>(DetailParams {.blog_id = 8}));
-    REQUIRE(dispatcher.drain() == 1);
-    REQUIRE(router.request_pop_to("home"));
-    REQUIRE(router.depth() == 2);
-    REQUIRE(dispatcher.drain() == 1);
-    REQUIRE(router.depth() == 1);
+    REQUIRE(router.outlet()->page() != nullptr);
     REQUIRE(router.current_key() == "home");
+    REQUIRE(router.current_page_key() == app::nan_type_key<HomePage>());
+    REQUIRE(store.count.peek() == 1);
 
-    REQUIRE(router.request_replace<PlainPage>());
+    // A request made after the first task phase is queued for the next one.
+    REQUIRE(navigation.navigate<PlainPage>());
     REQUIRE(router.current_key() == "home");
+    REQUIRE(dispatcher.pending_count() == 1);
     REQUIRE(dispatcher.drain() == 1);
-    REQUIRE(router.depth() == 1);
     REQUIRE(router.current_key() == "plain");
-
-    REQUIRE(router.request_clear());
-    REQUIRE_FALSE(router.empty());
-    REQUIRE(dispatcher.drain() == 1);
-    REQUIRE(router.empty());
 }
 
-TEST_CASE("queued router commands expire with their router", "[app][router][command]") {
+TEST_CASE("queued navigation expires with its router", "[app][router][navigate]") {
     reactive::Graph graph;
     const auto theme = theme::default_theme();
     app::UiDispatcher dispatcher;
+    app::Navigation navigation;
     {
         app::NanRouter
             router {graph, theme, nullptr, nullptr, nullptr, nullptr, nullptr, &dispatcher};
-        REQUIRE(router.request_push<PlainPage>());
+        REQUIRE(router.configure(app::Routes {
+            app::route<PlainPage>({.key = "plain"}),
+        }));
+        navigation = router.navigation();
+        REQUIRE(navigation.navigate<PlainPage>());
+        REQUIRE(navigation.valid());
     }
 
     REQUIRE(dispatcher.pending_count() == 1);
     std::size_t drained = 0;
     REQUIRE_NOTHROW(drained = dispatcher.drain());
     REQUIRE(drained == 1);
-
-    app::NanRouter immediate_only {graph, theme};
-    REQUIRE_FALSE(immediate_only.request_push<PlainPage>());
-    REQUIRE(immediate_only.empty());
+    REQUIRE_FALSE(navigation.valid());
+    REQUIRE_FALSE(navigation.navigate<PlainPage>());
 }
 
 TEST_CASE("router frame cancellation suppresses page async completion", "[app][router][async]") {
@@ -700,12 +950,19 @@ TEST_CASE("router frame cancellation suppresses page async completion", "[app][r
     std::atomic_bool cancelled = false;
     bool completed = false;
 
-    router.push<PlainPage>();
-    router.push<AsyncPage>(AsyncPageParams {
+    REQUIRE(router.configure(app::Routes {
+        app::route<PlainPage>({.key = "plain"}),
+        app::route<AsyncPage>({.key = "async"}),
+    }));
+    const auto navigation = router.navigation();
+    REQUIRE(navigation.navigate<PlainPage>());
+    REQUIRE(dispatcher.drain() == 1);
+    REQUIRE(navigation.navigate<AsyncPage>(AsyncPageParams {
         .started = &started,
         .cancelled = &cancelled,
         .completed = &completed,
-    });
+    }));
+    REQUIRE(dispatcher.drain() == 1);
     const auto start_deadline = std::chrono::steady_clock::now() + 2s;
     while (!started.load(std::memory_order_acquire)
            && std::chrono::steady_clock::now() < start_deadline)
@@ -714,7 +971,8 @@ TEST_CASE("router frame cancellation suppresses page async completion", "[app][r
     }
     REQUIRE(started.load(std::memory_order_acquire));
 
-    REQUIRE(router.pop());
+    REQUIRE(navigation.navigate<PlainPage>());
+    REQUIRE(dispatcher.drain() == 1);
     const auto cancel_deadline = std::chrono::steady_clock::now() + 2s;
     while (!cancelled.load(std::memory_order_acquire)
            && std::chrono::steady_clock::now() < cancel_deadline)
@@ -726,27 +984,46 @@ TEST_CASE("router frame cancellation suppresses page async completion", "[app][r
     REQUIRE_FALSE(completed);
 }
 
-TEST_CASE("router pop_to keeps target frame and removes newer frames", "[app][router]") {
+TEST_CASE("typed navigation keeps one current page and destroys the previous page", "[app][router][navigate]") {
     reactive::Graph graph;
     TestStore store {graph};
     const auto theme = theme::default_theme();
     app::NanRouter router {graph, theme, &store, app::nan_type_key<TestStore>()};
+    int destruction_count = 0;
+    int probe_builds = 0;
+    bool destroyed = false;
+    REQUIRE(router.configure(app::Routes {
+        app::route<HomePage>({.key = "home"}),
+        app::route<DetailPage>({.key = "detail"}),
+        app::route<RouteProbePage>({.key = "probe"}),
+    }));
+    const auto navigation = router.navigation();
 
-    router.push<HomePage>(HomeParams {.user_id = 1});
-    router.push<DetailPage>(DetailParams {.blog_id = 2});
-    router.push<DetailPage>(DetailParams {.blog_id = 3});
+    REQUIRE(navigation.navigate<HomePage>(HomeParams {.user_id = 1}));
+    auto* first_root = router.host()->get_child(0);
+    REQUIRE(first_root != nullptr);
+    REQUIRE(router.outlet()->page() != nullptr);
 
-    REQUIRE(router.depth() == 3);
-    REQUIRE(router.pop_to("detail"));
-    REQUIRE(router.depth() == 3);
-    REQUIRE(router.pop_to("home"));
-    REQUIRE(router.depth() == 1);
-    REQUIRE(router.current_key() == "home");
+    REQUIRE(navigation.navigate<RouteProbePage>(RouteProbeParams {
+        .builds = &probe_builds,
+        .destroyed = &destroyed,
+        .destruction_count = &destruction_count,
+    }));
+    REQUIRE(router.outlet()->page() != nullptr);
+    REQUIRE(router.current_key() == "probe");
     REQUIRE(router.host()->child_count() == 1);
-    REQUIRE_FALSE(router.pop_to("missing"));
+    REQUIRE(router.host()->get_child(0) != first_root);
+    REQUIRE(destroyed == false);
+
+    REQUIRE(navigation.navigate<DetailPage>(DetailParams {.blog_id = 2}));
+    REQUIRE(router.outlet()->page() != nullptr);
+    REQUIRE(router.current_key() == "detail");
+    REQUIRE(router.host()->child_count() == 1);
+    REQUIRE(destruction_count == 1);
+    REQUIRE(destroyed);
 }
 
-TEST_CASE("store updates propagate to keep-alive page effects", "[app][router][store]") {
+TEST_CASE("store updates propagate while typed routes are active", "[app][router][store]") {
     reactive::Graph graph;
     TestStore store {graph};
     int observed = 0;
@@ -757,10 +1034,15 @@ TEST_CASE("store updates propagate to keep-alive page effects", "[app][router][s
 
         const auto theme = theme::default_theme();
         app::NanRouter router {graph, theme, &store, app::nan_type_key<TestStore>()};
-        router.push<HomePage>(HomeParams {.user_id = 1});
+        REQUIRE(router.configure(app::Routes {
+            app::route<HomePage>({.key = "home"}),
+            app::route<DetailPage>({.key = "detail"}),
+        }));
+        const auto navigation = router.navigation();
+        REQUIRE(navigation.navigate<HomePage>(HomeParams {.user_id = 1}));
         REQUIRE(observed == 1);
 
-        router.push<DetailPage>(DetailParams {.blog_id = 9});
+        REQUIRE(navigation.navigate<DetailPage>(DetailParams {.blog_id = 9}));
         REQUIRE(observed == 9);
 
         store.count.set(12);
@@ -769,7 +1051,7 @@ TEST_CASE("store updates propagate to keep-alive page effects", "[app][router][s
 }
 
 TEST_CASE(
-    "router supports no-params pages and passes theme through context",
+    "router supports no-params routes and passes theme through context",
     "[app][router][theme]"
 ) {
     reactive::Graph graph;
@@ -777,9 +1059,11 @@ TEST_CASE(
     app_theme.palette.primary = theme::nan_color(0.72F, 0.12F, 120.0F);
     app::NanRouter router {graph, app_theme};
 
-    auto& page = router.push<PlainPage>();
-    REQUIRE(page.params_type_key() == app::nan_type_key<app::NoParams>());
-    REQUIRE(router.depth() == 1);
+    REQUIRE(router.configure(app::Routes {
+        app::route<PlainPage>({.key = "plain"}),
+    }));
+    REQUIRE(router.navigation().navigate<PlainPage>());
+    REQUIRE(router.outlet()->page() != nullptr);
     REQUIRE(router.current_key() == "plain");
 
     auto* root = router.host()->get_child(0)->as_node2d();
@@ -806,15 +1090,21 @@ TEST_CASE("router reads the active ThemeManager theme for new pages", "[app][rou
     REQUIRE(router.theme().palette.primary.oklch().light == Catch::Approx(0.73F));
 }
 
-TEST_CASE("router clears page reactive scope when a frame is popped", "[app][router][scope]") {
+TEST_CASE("router clears page reactive scope when a page is replaced", "[app][router][scope]") {
     reactive::Graph graph;
     TestStore store {graph};
     ScopedObserverLog log;
     const auto theme = theme::default_theme();
     app::NanRouter router {graph, theme, &store, app::nan_type_key<TestStore>()};
 
-    router.push<HomePage>(HomeParams {.user_id = 1});
-    router.push<ScopedObserverPage>(ScopedObserverParams {.log = &log});
+    REQUIRE(router.configure(app::Routes {
+        app::route<HomePage>({.key = "home"}),
+        app::route<ScopedObserverPage>({.key = "scoped-observer"}),
+        app::route<PlainPage>({.key = "plain"}),
+    }));
+    const auto navigation = router.navigation();
+    REQUIRE(navigation.navigate<HomePage>(HomeParams {.user_id = 1}));
+    REQUIRE(navigation.navigate<ScopedObserverPage>(ScopedObserverParams {.log = &log}));
 
     REQUIRE(log.observed == 1);
     REQUIRE(log.runs == 1);
@@ -823,14 +1113,14 @@ TEST_CASE("router clears page reactive scope when a frame is popped", "[app][rou
     REQUIRE(log.observed == 5);
     REQUIRE(log.runs == 2);
 
-    REQUIRE(router.pop());
+    REQUIRE(navigation.navigate<PlainPage>());
     store.count.set(9);
     REQUIRE(log.observed == 5);
     REQUIRE(log.runs == 2);
 }
 
 TEST_CASE(
-    "router disconnects page event subscriptions when a frame is popped",
+    "router disconnects page event subscriptions when a page is replaced",
     "[app][router][scope]"
 ) {
     reactive::Graph graph;
@@ -840,13 +1130,20 @@ TEST_CASE(
     theme::ThemeManager themes;
     app::NanRouter router {graph, themes, &store, app::nan_type_key<TestStore>()};
 
-    router.push<HomePage>(HomeParams {.user_id = 1});
-    router.push<ScopedEventPage>(ScopedEventParams {.event = &event, .observed = &observed});
+    REQUIRE(router.configure(app::Routes {
+        app::route<HomePage>({.key = "home"}),
+        app::route<ScopedEventPage>({.key = "scoped-event"}),
+    }));
+    const auto navigation = router.navigation();
+    REQUIRE(navigation.navigate<HomePage>(HomeParams {.user_id = 1}));
+    REQUIRE(navigation.navigate<ScopedEventPage>(
+        ScopedEventParams {.event = &event, .observed = &observed}
+    ));
     REQUIRE(event.subscriber_count() == 1);
 
     event.emit(2);
     REQUIRE(observed == 2);
-    REQUIRE(router.pop());
+    REQUIRE(navigation.navigate<HomePage>(HomeParams {.user_id = 2}));
     REQUIRE(event.subscriber_count() == 0);
 
     event.emit(3);
@@ -862,197 +1159,27 @@ TEST_CASE("retained page roots cannot invoke callbacks after pop", "[app][router
     int calls = 0;
     bool destroyed = false;
 
-    router.push<HomePage>(HomeParams {.user_id = 1});
-    router.push<RetainedCallbackPage>(RetainedCallbackParams {
+    REQUIRE(router.configure(app::Routes {
+        app::route<HomePage>({.key = "home"}),
+        app::route<RetainedCallbackPage>({.key = "retained-callback"}),
+    }));
+    const auto navigation = router.navigation();
+    REQUIRE(navigation.navigate<HomePage>(HomeParams {.user_id = 1}));
+    REQUIRE(navigation.navigate<RetainedCallbackPage>(RetainedCallbackParams {
         .root = &retained,
         .calls = &calls,
         .destroyed = &destroyed,
-    });
+    }));
 
     scene::KeyEvent active_click {257, scene::KeyEvent::Action::press};
     REQUIRE(retained->on_input(active_click));
     REQUIRE(calls == 1);
 
-    REQUIRE(router.pop());
+    REQUIRE(navigation.navigate<HomePage>(HomeParams {.user_id = 2}));
     REQUIRE(destroyed);
     scene::KeyEvent stale_click {257, scene::KeyEvent::Action::press};
     REQUIRE(retained->on_input(stale_click));
     REQUIRE(calls == 1);
-}
-
-struct LifecycleLog {
-    int activations = 0;
-    int deactivations = 0;
-};
-
-struct LifecycleParams {
-    LifecycleLog* log = nullptr;
-    std::string key = "lifecycle";
-};
-
-class LifecyclePage final: public app::NanPageT<LifecycleParams> {
-public:
-    explicit LifecyclePage(LifecycleParams params): NanPageT(params) {}
-
-    [[nodiscard]] auto route_key() const -> std::string_view override {
-        return params().key;
-    }
-
-    [[nodiscard]] auto build(app::PageContext& context)
-        -> std::shared_ptr<scene::NanNode2D> override {
-        return std::make_shared<scene::NanControl>(foundation::NanSize(80, 40));
-    }
-
-    void on_activate(app::PageContext& /*context*/) override {
-        ++params().log->activations;
-    }
-
-    void on_deactivate(app::PageContext& /*context*/) override {
-        ++params().log->deactivations;
-    }
-};
-
-TEST_CASE("page on_activate fires on initial push", "[app][router][lifecycle]") {
-    reactive::Graph graph;
-    const auto theme = theme::default_theme();
-    app::NanRouter router {graph, theme};
-    LifecycleLog log;
-
-    router.push<LifecyclePage>(LifecycleParams {.log = &log});
-    REQUIRE(log.activations == 1);
-    REQUIRE(log.deactivations == 0);
-}
-
-TEST_CASE("page on_deactivate fires when another page pushes on top", "[app][router][lifecycle]") {
-    reactive::Graph graph;
-    const auto theme = theme::default_theme();
-    app::NanRouter router {graph, theme};
-    LifecycleLog first_log;
-    LifecycleLog second_log;
-
-    router.push<LifecyclePage>(LifecycleParams {.log = &first_log});
-    REQUIRE(first_log.activations == 1);
-    REQUIRE(first_log.deactivations == 0);
-
-    router.push<LifecyclePage>(LifecycleParams {.log = &second_log});
-    REQUIRE(first_log.deactivations == 1);
-    REQUIRE(second_log.activations == 1);
-    REQUIRE(second_log.deactivations == 0);
-}
-
-TEST_CASE("page on_activate fires when pop restores keep-alive page", "[app][router][lifecycle]") {
-    reactive::Graph graph;
-    const auto theme = theme::default_theme();
-    app::NanRouter router {graph, theme};
-    LifecycleLog first_log;
-    LifecycleLog second_log;
-
-    router.push<LifecyclePage>(LifecycleParams {.log = &first_log});
-    router.push<LifecyclePage>(LifecycleParams {.log = &second_log});
-    // first: 1 activation, 1 deactivation; second: 1 activation
-    REQUIRE(first_log.activations == 1);
-    REQUIRE(first_log.deactivations == 1);
-    REQUIRE(second_log.activations == 1);
-
-    REQUIRE(router.pop());
-    // second page dropped (deactivation already handled by drop_frame)
-    // first page reactivated
-    REQUIRE(first_log.activations == 2);
-}
-
-TEST_CASE("pop_to reactivates target keep-alive page", "[app][router][lifecycle]") {
-    reactive::Graph graph;
-    const auto theme = theme::default_theme();
-    app::NanRouter router {graph, theme};
-    LifecycleLog first_log;
-    LifecycleLog middle_log;
-    LifecycleLog last_log;
-
-    router.push<LifecyclePage>(LifecycleParams {.log = &first_log, .key = "first"});
-    router.push<LifecyclePage>(LifecycleParams {.log = &middle_log, .key = "middle"});
-    router.push<LifecyclePage>(LifecycleParams {.log = &last_log, .key = "last"});
-
-    REQUIRE(first_log.activations == 1);
-    REQUIRE(first_log.deactivations == 1);
-    REQUIRE(middle_log.activations == 1);
-    REQUIRE(middle_log.deactivations == 1);
-    REQUIRE(last_log.activations == 1);
-
-    REQUIRE(router.pop_to("first"));
-    // pop_to removes middle and last, reactivates first
-    REQUIRE(first_log.activations == 2);
-}
-
-TEST_CASE("router clear deactivates active page", "[app][router][lifecycle]") {
-    reactive::Graph graph;
-    const auto theme = theme::default_theme();
-    app::NanRouter router {graph, theme};
-    LifecycleLog log;
-
-    router.push<LifecyclePage>(LifecycleParams {.log = &log});
-    REQUIRE(log.activations == 1);
-
-    router.clear();
-    REQUIRE(log.deactivations == 1);
-}
-
-TEST_CASE("router transition fades pages in and preserves lifecycle on exit", "[app][router][transition]") {
-    reactive::Graph graph;
-    theme::ThemeManager themes;
-    app::NanRouter router {graph, themes};
-    router.set_transition_enabled(true);
-    router.set_transition_duration(0.2F);
-
-    scene::NanSceneTree tree;
-    tree.set_theme_manager(themes);
-    tree.set_root(router.host());
-
-    router.push<PlainPage>();
-    bool destroyed = false;
-    router.push<TeardownPage>(TeardownParams {.destroyed = &destroyed});
-    REQUIRE(router.depth() == 2);
-    REQUIRE_FALSE(destroyed);
-
-    // 开启转场后，host 的直接子节点是包装帧；顶层页淡入（opacity 从 0 开始）。
-    auto* top_frame = router.host()->get_child(1)->as_control();
-    REQUIRE(top_frame != nullptr);
-    REQUIRE(top_frame->local_opacity() < 1.0F);
-
-    // 推进到淡入完成，进入稳定打开状态。
-    for (int i = 0; i < 30; ++i) {
-        tick_router(tree, 1.0F / 60.0F);
-    }
-    REQUIRE(top_frame->local_opacity() == Catch::Approx(1.0F));
-
-    // pop：栈深度立即减少，但被替换页面的生命周期在淡出期间仍保留。
-    REQUIRE(router.pop());
-    REQUIRE(router.depth() == 1);
-    REQUIRE_FALSE(destroyed);
-
-    // 淡出完成后，drop 轮询销毁页面。
-    for (int i = 0; i < 30; ++i) {
-        tick_router(tree, 1.0F / 60.0F);
-    }
-    REQUIRE(destroyed);
-}
-
-TEST_CASE("router with transition disabled drops pages immediately", "[app][router][transition]") {
-    reactive::Graph graph;
-    theme::ThemeManager themes;
-    app::NanRouter router {graph, themes};
-    REQUIRE_FALSE(router.transition_enabled());
-
-    scene::NanSceneTree tree;
-    tree.set_theme_manager(themes);
-    tree.set_root(router.host());
-
-    router.push<PlainPage>();
-    bool destroyed = false;
-    router.push<TeardownPage>(TeardownParams {.destroyed = &destroyed});
-
-    // 关闭转场：host 直接持有页面根（无包装），pop 即时销毁。
-    REQUIRE(router.pop());
-    REQUIRE(destroyed);
 }
 
 TEST_CASE("router forwards the window overlay portal into page build contexts", "[app][router][overlay]") {
@@ -1073,7 +1200,10 @@ TEST_CASE("router forwards the window overlay portal into page build contexts", 
         nullptr,
         host.get()
     };
-    router.push<OverlayProbePage>();
+    REQUIRE(router.configure(app::Routes {
+        app::route<OverlayProbePage>({.key = "overlay-probe"}),
+    }));
+    REQUIRE(router.navigation().navigate<OverlayProbePage>());
 
     REQUIRE(g_overlay_probe.context_has);
     REQUIRE(g_overlay_probe.context_host == host.get());

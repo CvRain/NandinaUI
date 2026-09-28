@@ -35,6 +35,7 @@
 #include "window_config.hpp"
 #include "window_metrics.hpp"
 
+#include <exception>
 #include <memory>
 #include <optional>
 
@@ -148,6 +149,16 @@ namespace nandina::app
 
         /// Called during close() before the render device and native window are released.
         virtual void on_teardown() {}
+
+        /**
+         * 页面构建 / 切换失败等无法就地返回给调用者的错误。
+         *
+         * 导航在 UI 任务阶段提交，调用方（按钮回调）早就返回了，所以失败不能靠
+         * 异常传播出去——那会穿出 `tick()` 并终止进程。Router 会把错误转到这里。
+         * 默认实现记录一条 error 日志，保证不静默；覆写它可以接入自己的错误界面
+         * 或上报。当前页面与当前路由在失败后保持不变。
+         */
+        virtual void on_error(std::exception_ptr error);
 
     private:
         void poll_and_dispatch_input();

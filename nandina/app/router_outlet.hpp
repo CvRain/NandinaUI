@@ -7,7 +7,6 @@
 
 #include "../scene/control.hpp"
 
-#include <functional>
 #include <memory>
 
 namespace nandina::app
@@ -19,8 +18,6 @@ namespace nandina::app
     /// 因此不会出现"切换期两个子节点"的中间态。
     class RouterOutlet final: public scene::NanControl {
     public:
-        std::function<void()> on_tick;
-
         /// 安装当前页面根节点。
         ///
         /// 在场景树遍历阶段（process / layout / post_layout / paint）调用时不能立即
@@ -42,7 +39,6 @@ namespace nandina::app
         }
 
     protected:
-        void on_process(float dt) override;
         [[nodiscard]] auto on_measure(scene::LayoutConstraints constraints)
             -> foundation::NanSize override;
         auto on_layout() -> void override;

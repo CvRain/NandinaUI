@@ -149,8 +149,29 @@ namespace nandina::app
         // 直接把服务交给 Router：它内部持有指针，页面构造 BuildContext 时即可取到，
         // 不依赖"内容是否已挂载"这种时序（曾因此让 ui.drag_controller() 恒为 nullptr）。
         router_->set_drag_controller(&drag_controller_);
+        // 导航在任务阶段提交，调用方（按钮回调）早已返回，失败无法靠异常回报过去。
+        // 转到这里由窗口决定怎么呈现；默认实现写 error 日志，不静默。
+        router_->set_page_error_handler(
+            [this](std::string_view /*route_key*/, std::exception_ptr error) {
+                on_error(std::move(error));
+            }
+        );
         set_content(router_->host());
         return *router_;
+    }
+
+    void NanWindow::on_error(std::exception_ptr error) {
+        std::string message = "unknown error";
+        try {
+            std::rethrow_exception(error);
+        }
+        catch (const std::exception& caught) {
+            message = caught.what();
+        }
+        catch (...) {
+            message = "non-standard exception";
+        }
+        log::error("NanWindow: page error: {}", message);
     }
 
     auto NanWindow::use_router(Routes routes) -> NanRouter& {
