@@ -590,6 +590,52 @@ namespace nandina::theme
         DialogMetrics metrics;
     };
 
+    /**
+     * CommandPalette 度量：面板尺寸与位置、结果行排版、分隔线厚度。
+     *
+     * 面板由本组件自己绘制（不像 Combobox 那样借 Popover 的外壳），所以面板造型
+     * 属于本配方；查询框是内嵌的 TextField，本配方只把文本与占位样式下发过去。
+     */
+    using CommandPaletteMetrics = struct CommandPaletteMetrics {
+        ThemeScalar panel_width;         // 面板首选宽度
+        ThemeScalar panel_top_offset;    // 面板距视口顶部的偏移（命令面板靠上而非居中）
+        ThemeScalar panel_padding;       // 面板内边距
+        ThemeScalar panel_radius;        // 面板圆角
+        ThemeScalar gap;                 // 查询框与结果列表的间距
+        ThemeScalar item_height;         // 单个结果行高
+        ThemeScalar item_padding_x;      // 结果行水平内边距
+        ThemeScalar item_radius;         // 高亮结果填充圆角
+        ThemeScalar separator_thickness; // 分隔线厚度
+        ThemeScalar min_width;           // 内容最小宽度
+    };
+
+    /**
+     * CommandPalette 配方：面板外壳 + 查询文本 / 占位 + 结果行排版与状态色 + 空结果文本。
+     *
+     * 与 DropdownMenu 同样的取舍：没有组件级状态选择器 —— 面板打开即处于活动状态，
+     * hover / focused 是**逐结果**的状态，视图直接读 `hover_fill` / `focus_fill`。
+     */
+    using CommandPaletteRecipe = struct CommandPaletteRecipe {
+        BoxStyle panel;            // 面板外壳（填充 / 边框 / 圆角）
+        ThemeColor scrim;          // 遮罩（半透明，覆盖全屏；必须始终压暗，见默认值注释）
+        TypeStyle query;           // 查询文本（下发给内嵌 TextField）
+        TypeStyle placeholder;     // 查询占位文本
+        TypeStyle item_label;      // 结果条目文本
+        TypeStyle item_shortcut;   // 快捷键提示文本（仅展示，不参与过滤）
+        TypeStyle group_label;     // 分组标题（kind == label）
+        TypeStyle empty;           // 无匹配结果时的提示文本
+        ThemeColor disabled_label; // 禁用结果文本色
+        ThemeColor hover_fill;     // 指针悬停结果填充
+        ThemeColor focus_fill;     // 键盘高亮结果填充
+        /// 高亮行上的文字与勾选指示颜色。必须与 focus_fill 成对 —— 高亮底是 accent，
+        /// 而"什么颜色能在 accent 上读"由调色板的 accent_foreground 保证（有对比度硬门槛）。
+        ThemeColor highlight_text;
+        /// 勾选指示颜色（未高亮的 checkbox / radio 行）。画在面板底或 hover 底上。
+        ThemeColor checked_indicator;
+        ThemeColor separator;      // 分隔线颜色
+        CommandPaletteMetrics metrics;
+    };
+
     // ─── 配方规则覆盖（selector 增量） ────────────────────────────────────────
     //
     // 配方书 = `base`（完全指定）+ 有序规则列表。
@@ -1056,6 +1102,42 @@ namespace nandina::theme
         std::optional<ThemeScalar> metrics_min_width;
     };
 
+    using CommandPaletteRecipeRule = struct CommandPaletteRecipeRule {
+        std::optional<ThemeColor> panel_fill;
+        std::optional<ThemeColor> panel_border;
+        std::optional<ThemeScalar> panel_border_width;
+        std::optional<ThemeScalar> panel_radius;
+        std::optional<ThemeColor> scrim;
+        std::optional<ThemeColor> query_color;
+        std::optional<ThemeScalar> query_font_size;
+        std::optional<ThemeColor> placeholder_color;
+        std::optional<ThemeScalar> placeholder_font_size;
+        std::optional<ThemeColor> item_label_color;
+        std::optional<ThemeScalar> item_label_font_size;
+        std::optional<ThemeColor> item_shortcut_color;
+        std::optional<ThemeScalar> item_shortcut_font_size;
+        std::optional<ThemeColor> group_label_color;
+        std::optional<ThemeScalar> group_label_font_size;
+        std::optional<ThemeColor> empty_color;
+        std::optional<ThemeScalar> empty_font_size;
+        std::optional<ThemeColor> disabled_label;
+        std::optional<ThemeColor> hover_fill;
+        std::optional<ThemeColor> focus_fill;
+        std::optional<ThemeColor> highlight_text;
+        std::optional<ThemeColor> checked_indicator;
+        std::optional<ThemeColor> separator;
+        std::optional<ThemeScalar> metrics_panel_width;
+        std::optional<ThemeScalar> metrics_panel_top_offset;
+        std::optional<ThemeScalar> metrics_panel_padding;
+        std::optional<ThemeScalar> metrics_panel_radius;
+        std::optional<ThemeScalar> metrics_gap;
+        std::optional<ThemeScalar> metrics_item_height;
+        std::optional<ThemeScalar> metrics_item_padding_x;
+        std::optional<ThemeScalar> metrics_item_radius;
+        std::optional<ThemeScalar> metrics_separator_thickness;
+        std::optional<ThemeScalar> metrics_min_width;
+    };
+
     /**
      * Combobox 规则：状态选择器覆盖输入框外壳 / 文本 / 焦点环，并覆盖选项列表的
      * 排版 / 状态色 / 度量（逐条目 hover / focus 在绘制时读取，不进选择器）。
@@ -1387,6 +1469,37 @@ namespace nandina::theme
         ResolvedDropdownMenuMetrics metrics;
     };
 
+    using ResolvedCommandPaletteMetrics = struct ResolvedCommandPaletteMetrics {
+        float panel_width = 0.0F;
+        float panel_top_offset = 0.0F;
+        float panel_padding = 0.0F;
+        float panel_radius = 0.0F;
+        float gap = 0.0F;
+        float item_height = 0.0F;
+        float item_padding_x = 0.0F;
+        float item_radius = 0.0F;
+        float separator_thickness = 0.0F;
+        float min_width = 0.0F;
+    };
+
+    using ResolvedCommandPaletteStyle = struct ResolvedCommandPaletteStyle {
+        ResolvedBoxStyle panel;
+        NanColor scrim;
+        ResolvedTypeStyle query;
+        ResolvedTypeStyle placeholder;
+        ResolvedTypeStyle item_label;
+        ResolvedTypeStyle item_shortcut;
+        ResolvedTypeStyle group_label;
+        ResolvedTypeStyle empty;
+        NanColor disabled_label;
+        NanColor hover_fill;
+        NanColor focus_fill;
+        NanColor highlight_text;
+        NanColor checked_indicator;
+        NanColor separator;
+        ResolvedCommandPaletteMetrics metrics;
+    };
+
     using ResolvedComboboxMetrics = struct ResolvedComboboxMetrics {
         float height = 0.0F;
         float padding_x = 0.0F;
@@ -1579,6 +1692,11 @@ namespace nandina::theme
         std::vector<DropdownMenuRecipeRule> rules;
     };
 
+    using CommandPaletteRecipes = struct CommandPaletteRecipes {
+        CommandPaletteRecipe base;
+        std::vector<CommandPaletteRecipeRule> rules;
+    };
+
     using ComboboxRecipes = struct ComboboxRecipes {
         ComboboxRecipe base;
         std::vector<ComboboxRecipeRule> rules;
@@ -1614,6 +1732,7 @@ namespace nandina::theme
         PopoverRecipes popover;
         DropdownMenuRecipes dropdown_menu;
         ComboboxRecipes combobox;
+        CommandPaletteRecipes command_palette;
     };
 
     /**
@@ -1991,6 +2110,11 @@ namespace nandina::theme
         ColorAppearance appearance
     ) -> ResolvedDropdownMenuStyle;
 
+    [[nodiscard]] auto resolve_command_palette(
+        const DesignSystem& system,
+        ColorAppearance appearance
+    ) -> ResolvedCommandPaletteStyle;
+
     [[nodiscard]] auto resolve_combobox(
         const DesignSystem& system,
         ColorAppearance appearance,
@@ -2217,6 +2341,13 @@ namespace nandina::theme
     void apply_rule(
         const DesignSystem& system,
         ColorAppearance appearance,
+        ResolvedCommandPaletteStyle& style,
+        const CommandPaletteRecipeRule& rule
+    );
+
+    void apply_rule(
+        const DesignSystem& system,
+        ColorAppearance appearance,
         ResolvedComboboxStyle& style,
         const ComboboxRecipeRule& rule
     );
@@ -2251,6 +2382,7 @@ namespace nandina::theme
     [[nodiscard]] auto default_dialog_recipe() -> DialogRecipe;
     [[nodiscard]] auto default_popover_recipe() -> PopoverRecipe;
     [[nodiscard]] auto default_dropdown_menu_recipe() -> DropdownMenuRecipe;
+    [[nodiscard]] auto default_command_palette_recipe() -> CommandPaletteRecipe;
     [[nodiscard]] auto default_combobox_recipe() -> ComboboxRecipe;
 
     /**

@@ -273,6 +273,8 @@ module_widget = files(
     'widget/context_menu.cpp',
     'widget/combobox.hpp',
     'widget/combobox.cpp',
+    'widget/command_palette.hpp',
+    'widget/command_palette.cpp',
     'widget/image.hpp',
     'widget/image.cpp',
 )

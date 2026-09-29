@@ -2,11 +2,13 @@
 
 > 本文件是**进度看板**，不是组件文档。目的是让"哪些组件还没有使用文档"一眼可见。
 > 写完一个组件文档后，把对应行的 `—` 改成 `✅` 并补上链接。
+> `🟡` 表示**提纲已建但正文未写**：框架、符号表与默认值已按代码核对，叙述性正文仍待人工补齐。
+> 用它而不是 `✅`，是为了避免本看板出现过的那种"✅ 但正文还是 `<!-- TODO -->`"的假完成。
 
 ## 现状
 
 - 公开组件：**34**（有 `ComponentTraits`、可供应用直接使用）
-- 已有使用文档：**17**（其中 `PointerArea` 与 `GestureArea` 共用一篇，实际文档文件 16 篇）
+- 已有使用文档：**18**（其中 `PointerArea` 与 `GestureArea` 共用一篇，实际文档文件 17 篇；其中 `CommandPalette` 的框架与符号表已核对、叙述正文待手写）
 
 ## 分工约定
 
@@ -54,6 +56,7 @@
 | `Popover` | ✅ [popover.md](popover.md) | 高 |
 | `DropdownMenu` | ✅ [dropdown_menu.md](dropdown_menu.md) | 高 |
 | `ContextMenu` | — | 高 |
+| `CommandPalette` | 🟡 [command_palette.md](command_palette.md)（框架与符号表已核对，正文待写） | 高 |
 | `Combobox` | — | 高 |
 | `Tabs` | — | 中 |
 | `Breadcrumb` | ✅ [breadcrumb.md](breadcrumb.md) | 中 |

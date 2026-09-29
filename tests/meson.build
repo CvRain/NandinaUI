@@ -477,6 +477,13 @@ combobox_tests = executable(
 )
 test('combobox', combobox_tests, suite: 'unit')
 
+command_palette_tests = executable(
+    'command_palette_tests',
+    files('command_palette_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('command-palette', command_palette_tests, suite: 'unit')
+
 animation_tests = executable(
     'animation_tests',
     files('animation_tests.cpp'),

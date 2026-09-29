@@ -602,6 +602,48 @@ namespace nandina::theme
             };
         }
 
+        /** CommandPaletteRecipe → 解析后的片段组合（面板由本组件自己绘制）。 */
+        [[nodiscard]] auto resolve_recipe(
+            const DesignSystem& system,
+            const ColorAppearance appearance,
+            const CommandPaletteRecipe& recipe
+        ) -> ResolvedCommandPaletteStyle {
+            return {
+                .panel = resolve(system, appearance, recipe.panel),
+                .scrim = resolve_color(system, appearance, recipe.scrim),
+                .query = resolve(system, appearance, recipe.query),
+                .placeholder = resolve(system, appearance, recipe.placeholder),
+                .item_label = resolve(system, appearance, recipe.item_label),
+                .item_shortcut = resolve(system, appearance, recipe.item_shortcut),
+                .group_label = resolve(system, appearance, recipe.group_label),
+                .empty = resolve(system, appearance, recipe.empty),
+                .disabled_label = resolve_color(system, appearance, recipe.disabled_label),
+                .hover_fill = resolve_color(system, appearance, recipe.hover_fill),
+                .focus_fill = resolve_color(system, appearance, recipe.focus_fill),
+                .highlight_text = resolve_color(system, appearance, recipe.highlight_text),
+                .checked_indicator =
+                    resolve_color(system, appearance, recipe.checked_indicator),
+                .separator = resolve_color(system, appearance, recipe.separator),
+                .metrics = ResolvedCommandPaletteMetrics {
+                    .panel_width = resolve_scalar(system, appearance, recipe.metrics.panel_width),
+                    .panel_top_offset =
+                        resolve_scalar(system, appearance, recipe.metrics.panel_top_offset),
+                    .panel_padding =
+                        resolve_scalar(system, appearance, recipe.metrics.panel_padding),
+                    .panel_radius =
+                        resolve_scalar(system, appearance, recipe.metrics.panel_radius),
+                    .gap = resolve_scalar(system, appearance, recipe.metrics.gap),
+                    .item_height = resolve_scalar(system, appearance, recipe.metrics.item_height),
+                    .item_padding_x =
+                        resolve_scalar(system, appearance, recipe.metrics.item_padding_x),
+                    .item_radius = resolve_scalar(system, appearance, recipe.metrics.item_radius),
+                    .separator_thickness =
+                        resolve_scalar(system, appearance, recipe.metrics.separator_thickness),
+                    .min_width = resolve_scalar(system, appearance, recipe.metrics.min_width),
+                },
+            };
+        }
+
         /** ComboboxRecipe → 解析后的片段组合（面板本身由 PopoverRecipe 负责）。 */
         [[nodiscard]] auto resolve_recipe(
             const DesignSystem& system,
@@ -1376,6 +1418,23 @@ namespace nandina::theme
     ) -> ResolvedDropdownMenuStyle {
         auto style = resolve_recipe(system, appearance, system.components.dropdown_menu.base);
         for (const auto& rule: system.components.dropdown_menu.rules) {
+            apply_rule(system, appearance, style, rule);
+        }
+        return style;
+    }
+
+    /**
+     * 解析 CommandPalette 配方（面板 + 查询框 + 结果列表）。
+     *
+     * 与 DropdownMenu 一样没有状态选择器：面板只在打开时存在，hover / focused 是逐
+     * 结果的状态，由视图读取 `hover_fill` / `focus_fill` 直接绘制。
+     */
+    auto resolve_command_palette(
+        const DesignSystem& system,
+        const ColorAppearance appearance
+    ) -> ResolvedCommandPaletteStyle {
+        auto style = resolve_recipe(system, appearance, system.components.command_palette.base);
+        for (const auto& rule: system.components.command_palette.rules) {
             apply_rule(system, appearance, style, rule);
         }
         return style;
@@ -2494,6 +2553,115 @@ namespace nandina::theme
     void apply_rule(
         const DesignSystem& system,
         const ColorAppearance appearance,
+        ResolvedCommandPaletteStyle& style,
+        const CommandPaletteRecipeRule& rule
+    ) {
+        if (rule.panel_fill)
+            style.panel.fill = resolve_color(system, appearance, *rule.panel_fill);
+        if (rule.panel_border)
+            style.panel.border = resolve_color(system, appearance, *rule.panel_border);
+        if (rule.panel_border_width) {
+            style.panel.border_width =
+                resolve_scalar(system, appearance, *rule.panel_border_width);
+        }
+        if (rule.panel_radius)
+            style.panel.radius = resolve_scalar(system, appearance, *rule.panel_radius);
+        if (rule.scrim)
+            style.scrim = resolve_color(system, appearance, *rule.scrim);
+        if (rule.query_color)
+            style.query.color = resolve_color(system, appearance, *rule.query_color);
+        if (rule.query_font_size) {
+            style.query.font_size = resolve_scalar(system, appearance, *rule.query_font_size);
+        }
+        if (rule.placeholder_color) {
+            style.placeholder.color = resolve_color(system, appearance, *rule.placeholder_color);
+        }
+        if (rule.placeholder_font_size) {
+            style.placeholder.font_size =
+                resolve_scalar(system, appearance, *rule.placeholder_font_size);
+        }
+        if (rule.item_label_color)
+            style.item_label.color = resolve_color(system, appearance, *rule.item_label_color);
+        if (rule.item_label_font_size) {
+            style.item_label.font_size =
+                resolve_scalar(system, appearance, *rule.item_label_font_size);
+        }
+        if (rule.item_shortcut_color) {
+            style.item_shortcut.color =
+                resolve_color(system, appearance, *rule.item_shortcut_color);
+        }
+        if (rule.item_shortcut_font_size) {
+            style.item_shortcut.font_size =
+                resolve_scalar(system, appearance, *rule.item_shortcut_font_size);
+        }
+        if (rule.group_label_color) {
+            style.group_label.color = resolve_color(system, appearance, *rule.group_label_color);
+        }
+        if (rule.group_label_font_size) {
+            style.group_label.font_size =
+                resolve_scalar(system, appearance, *rule.group_label_font_size);
+        }
+        if (rule.empty_color)
+            style.empty.color = resolve_color(system, appearance, *rule.empty_color);
+        if (rule.empty_font_size) {
+            style.empty.font_size = resolve_scalar(system, appearance, *rule.empty_font_size);
+        }
+        if (rule.disabled_label)
+            style.disabled_label = resolve_color(system, appearance, *rule.disabled_label);
+        if (rule.hover_fill)
+            style.hover_fill = resolve_color(system, appearance, *rule.hover_fill);
+        if (rule.focus_fill)
+            style.focus_fill = resolve_color(system, appearance, *rule.focus_fill);
+        if (rule.highlight_text)
+            style.highlight_text = resolve_color(system, appearance, *rule.highlight_text);
+        if (rule.checked_indicator) {
+            style.checked_indicator = resolve_color(system, appearance, *rule.checked_indicator);
+        }
+        if (rule.separator)
+            style.separator = resolve_color(system, appearance, *rule.separator);
+        if (rule.metrics_panel_width) {
+            style.metrics.panel_width =
+                resolve_scalar(system, appearance, *rule.metrics_panel_width);
+        }
+        if (rule.metrics_panel_top_offset) {
+            style.metrics.panel_top_offset =
+                resolve_scalar(system, appearance, *rule.metrics_panel_top_offset);
+        }
+        if (rule.metrics_panel_padding) {
+            style.metrics.panel_padding =
+                resolve_scalar(system, appearance, *rule.metrics_panel_padding);
+        }
+        if (rule.metrics_panel_radius) {
+            style.metrics.panel_radius =
+                resolve_scalar(system, appearance, *rule.metrics_panel_radius);
+        }
+        if (rule.metrics_gap) {
+            style.metrics.gap = resolve_scalar(system, appearance, *rule.metrics_gap);
+        }
+        if (rule.metrics_item_height) {
+            style.metrics.item_height =
+                resolve_scalar(system, appearance, *rule.metrics_item_height);
+        }
+        if (rule.metrics_item_padding_x) {
+            style.metrics.item_padding_x =
+                resolve_scalar(system, appearance, *rule.metrics_item_padding_x);
+        }
+        if (rule.metrics_item_radius) {
+            style.metrics.item_radius =
+                resolve_scalar(system, appearance, *rule.metrics_item_radius);
+        }
+        if (rule.metrics_separator_thickness) {
+            style.metrics.separator_thickness =
+                resolve_scalar(system, appearance, *rule.metrics_separator_thickness);
+        }
+        if (rule.metrics_min_width) {
+            style.metrics.min_width = resolve_scalar(system, appearance, *rule.metrics_min_width);
+        }
+    }
+
+    void apply_rule(
+        const DesignSystem& system,
+        const ColorAppearance appearance,
         ResolvedComboboxStyle& style,
         const ComboboxRecipeRule& rule
     ) {
@@ -3460,6 +3628,74 @@ namespace nandina::theme
     }
 
     /**
+     * @return 框架默认 CommandPalette 配方。
+     *
+     * 面板沿用浮层外壳的语义角色（popover 底 + border 收边），查询行沿用输入文本，
+     * 结果行沿用 DropdownMenu 的条目状态面（hover 走 muted、键盘高亮走 accent）。
+     * 所有颜色与度量都引用语义角色，亮暗切换时跟随调色板。
+     */
+    auto default_command_palette_recipe() -> CommandPaletteRecipe {
+        return {
+            .panel = BoxStyle {
+                .fill = ThemeColor::token(ColorToken::popover),
+                .border = ThemeColor::token(ColorToken::border),
+                .border_width = ThemeScalar::token(ScalarToken::border_thin),
+                .radius = ThemeScalar::token(ScalarToken::radius_md),
+            },
+            // 遮罩必须始终压暗：用固定黑而不是面板色。跟着面板色走会让**亮色外观下
+            // 出现一层白罩**（面板底在亮色下接近白），这是它与 Dialog 共用的同一条理由。
+            .scrim = ThemeColor::literal(NanColor::from_hex(0x000000, 0.50F)),
+            .query = TypeStyle {
+                .color = ThemeColor::token(ColorToken::foreground),
+                .font_size = ThemeScalar::token(ScalarToken::typography_label_md),
+            },
+            .placeholder = TypeStyle {
+                .color = ThemeColor::token(ColorToken::muted_foreground),
+                .font_size = ThemeScalar::token(ScalarToken::typography_label_md),
+            },
+            .item_label = TypeStyle {
+                .color = ThemeColor::token(ColorToken::foreground),
+                .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+            },
+            .item_shortcut = TypeStyle {
+                .color = ThemeColor::token(ColorToken::muted_foreground),
+                .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+            },
+            .group_label = TypeStyle {
+                .color = ThemeColor::token(ColorToken::muted_foreground),
+                .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+            },
+            .empty = TypeStyle {
+                .color = ThemeColor::token(ColorToken::muted_foreground),
+                .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+            },
+            .disabled_label = ThemeColor::token(ColorToken::muted_foreground),
+            .hover_fill = ThemeColor::token(ColorToken::muted),
+            .focus_fill = ThemeColor::token(ColorToken::accent),
+            // 高亮底是 accent，"accent 上的文字"这一对由调色板的 accent_foreground 保证；
+            // tests/command_palette_tests.cpp 对这个组合有对比度硬门槛。
+            .highlight_text = ThemeColor::token(ColorToken::accent_foreground),
+            .checked_indicator = ThemeColor::token(ColorToken::foreground),
+            .separator = ThemeColor::token(ColorToken::border),
+            .metrics = CommandPaletteMetrics {
+                // 面板宽度没有对应语义 token（现有 token 只有间距 / 圆角 / 排版档），
+                // 560 是命令面板的常用宽度；主题作者可用 scrim 之外的度量字段调整。
+                .panel_width = ThemeScalar::literal(560.0F),
+                // 靠上而非居中：偏移量同样是布局取值，无 token 可引用。
+                .panel_top_offset = ThemeScalar::literal(96.0F),
+                .panel_padding = ThemeScalar::token(ScalarToken::spacing_sm),
+                .panel_radius = ThemeScalar::token(ScalarToken::radius_md),
+                .gap = ThemeScalar::token(ScalarToken::spacing_sm),
+                .item_height = ThemeScalar::literal(32.0F), // 与菜单条目同高（shadcn menu item h-8）
+                .item_padding_x = ThemeScalar::token(ScalarToken::spacing_sm),
+                .item_radius = ThemeScalar::token(ScalarToken::radius_sm),
+                .separator_thickness = ThemeScalar::token(ScalarToken::border_thin),
+                .min_width = ThemeScalar::literal(320.0F), // 布局下限，无对应 token
+            },
+        };
+    }
+
+    /**
      * @return 框架默认 Combobox 配方（输入框外壳 + 选项列表；浮层面板由 Popover 携带）。
      *
      * 输入框沿用 TextField 的语义组合（background 底 + input 收边 + ring 焦点环），
@@ -4046,6 +4282,10 @@ namespace nandina::theme
                                 ThemeScalar::token(ScalarToken::border_focus_ring),
                         },
                     },
+                },
+                .command_palette = CommandPaletteRecipes {
+                    .base = default_command_palette_recipe(),
+                    .rules = {},
                 },
             },
         };

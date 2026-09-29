@@ -41,6 +41,7 @@
 #include "dropdown_menu.hpp"
 #include "context_menu.hpp"
 #include "combobox.hpp"
+#include "command_palette.hpp"
 
 namespace nandina::widget
 {
@@ -536,6 +537,31 @@ namespace nandina::widget
             )
                 .configure([&ui](Combobox& combobox) {
                     combobox.set_overlay_service(
+                        ui.has_overlay_host() ? &ui.overlay_host() : nullptr
+                    );
+                });
+        }
+    };
+
+    /**
+     * CommandPalette 以模态浮层呈现一个查询框 + 可执行条目列表：注入覆盖层服务与主题。
+     * 条目与占位文本在构建时提供，`ui.make<CommandPalette>()` 可用默认值后按需配置。
+     *
+     * 面板的打开由应用触发（例如在窗口里绑定 Ctrl/Cmd+K）——框架不提供全局快捷键注册，
+     * 因为那会把"谁来分发按键"变成框架的职责，而它取决于应用自己的输入焦点策略。
+     */
+    template<>
+    struct ComponentTraits<CommandPalette> {
+        [[nodiscard]] static auto make(
+            const BuildContext& ui,
+            std::vector<MenuItem> items = {},
+            std::string placeholder = {}
+        ) -> authoring::NodeBuilder<CommandPalette> {
+            return authoring::make<CommandPalette>(
+                       std::move(items), std::move(placeholder), ui.theme()
+            )
+                .configure([&ui](CommandPalette& palette) {
+                    palette.set_overlay_service(
                         ui.has_overlay_host() ? &ui.overlay_host() : nullptr
                     );
                 });
