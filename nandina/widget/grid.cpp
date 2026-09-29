@@ -122,7 +122,17 @@ namespace nandina::widget
         if (!is_inside_tree()) {
             return;
         }
-        (void)get_tree()->layout_root(size());
+        // 只重排自己，绝不能把**自己的尺寸当成 viewport** 去重排整棵树。
+        //
+        // `layout_root(size())` 会把窗口的 viewport 覆盖成这个 grid 的尺寸：整棵树的
+        // 内容根会被"紧贴"到这个假 viewport 上，于是常驻外壳（标题行、工具栏、导航栏）
+        // 连同整个列一起塌缩到 grid 那么宽，而它们内部的子节点仍按自然宽度摆放 ——
+        // 父子尺寸互相矛盾。更糟的是它每帧都与窗口真正的 `layout_root(窗口尺寸)`
+        // 来回打架，尺寸永远不收敛；`on_frame` 阶段做的断言正好看到塌缩后的那一帧。
+        // 这就是 playground 菜单页绘制断言失败的根因（该页是唯一使用 Grid 的页面）。
+        // 容器自查表见 Column / Row / Flex / Padding：它们都只重排自身。
+        (void)measure_layout(scene::LayoutConstraints::loose());
+        layout_to(foundation::NanRect::from_origin_size(position(), measured_size()));
     }
 
     auto Grid::on_measure(const scene::LayoutConstraints constraints) -> foundation::NanSize {

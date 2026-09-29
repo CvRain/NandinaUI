@@ -818,6 +818,40 @@ TEST_CASE("grid layout arranges children in rows and columns", "[authoring][fact
     REQUIRE(c->global_bounds().get_y() > b->global_bounds().get_bottom());
 }
 
+TEST_CASE("a Grid relayout must not take over the tree viewport", "[authoring][factory][grid][layout]") {
+    // 回归：`Grid::relayout()` 曾经调用 `get_tree()->layout_root(size())`，也就是拿
+    // **自己的尺寸当 viewport** 去重排整棵树。后果是整棵内容树被"紧贴"到这个假
+    // viewport 上：常驻外壳连同它的列一起塌缩，而内部子节点仍按自然宽度摆放，
+    // 父子尺寸互相矛盾；而且它每帧都与窗口真正的 layout_root 打架，永不收敛。
+    // 触发点正是"页面在已经布局过的树里构建"——Grid 进入场景树时收到 on_ready。
+    auto cell = [] {
+        return std::make_shared<scene::NanControl>(foundation::NanSize(60.0F, 20.0F));
+    };
+
+    // 用普通 NanControl 当根：Column / Row 这类容器在 `add()` 里会调用自己的
+    // `relayout()`（把自身尺寸改成内容尺寸），那是另一个话题，会掩盖这里要断言的东西。
+    scene::NanSceneTree tree;
+    auto root = std::make_shared<scene::NanControl>();
+    root->add_child(cell());
+    tree.set_root(root);
+
+    const foundation::NanSize viewport(800.0F, 600.0F);
+    REQUIRE(tree.layout_root(viewport) == 1);
+    REQUIRE(root->size().get_width() == Catch::Approx(viewport.get_width()));
+    REQUIRE(root->size().get_height() == Catch::Approx(viewport.get_height()));
+
+    // 往已经布局过的树里插入一个 Grid：它会收到 on_ready → relayout()。
+    auto grid = widget::Grid::create(2);
+    grid->add(cell());
+    grid->add(cell());
+    root->add_child(grid);
+
+    // 关键断言：整棵树的 viewport 不能被 grid 的尺寸顶替。
+    // 任何容器只应重排自身（见 Column / Row / Flex / Padding 的同名自查表）。
+    REQUIRE(root->size().get_width() == Catch::Approx(viewport.get_width()));
+    REQUIRE(root->size().get_height() == Catch::Approx(viewport.get_height()));
+}
+
 TEST_CASE("grid with single column behaves like a column", "[authoring][factory][grid]") {
     using namespace widget::authoring;
     reactive::Graph graph;
