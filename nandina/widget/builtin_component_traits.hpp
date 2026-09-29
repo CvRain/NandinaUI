@@ -42,6 +42,7 @@
 #include "context_menu.hpp"
 #include "combobox.hpp"
 #include "command_palette.hpp"
+#include "hover_card.hpp"
 
 namespace nandina::widget
 {
@@ -562,6 +563,27 @@ namespace nandina::widget
             )
                 .configure([&ui](CommandPalette& palette) {
                     palette.set_overlay_service(
+                        ui.has_overlay_host() ? &ui.overlay_host() : nullptr
+                    );
+                });
+        }
+    };
+
+    /**
+     * HoverCard 注入覆盖层服务与主题；触发控件与内容在构建时提供。
+     */
+    template<>
+    struct ComponentTraits<HoverCard> {
+        [[nodiscard]] static auto make(
+            const BuildContext& ui,
+            std::shared_ptr<scene::NanControl> trigger = nullptr,
+            std::shared_ptr<scene::NanControl> content = nullptr
+        ) -> authoring::NodeBuilder<HoverCard> {
+            return authoring::make<HoverCard>(
+                       std::move(trigger), std::move(content), ui.theme()
+            )
+                .configure([&ui](HoverCard& card) {
+                    card.set_overlay_service(
                         ui.has_overlay_host() ? &ui.overlay_host() : nullptr
                     );
                 });

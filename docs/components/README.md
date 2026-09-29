@@ -54,6 +54,7 @@
 | [`DropdownMenu`](dropdown_menu.md) | 锚定菜单：动作 / 勾选 / 单选条目，键盘漫游与 typeahead | 可用，基于 Popover |
 | `ContextMenu` | 右键 / 菜单键在指针处打开的上下文菜单 | 可用，包装 DropdownMenu |
 | [`CommandPalette`](command_palette.md) | 键盘优先的命令面板：输入即筛选、回车执行 | 可用，基于统一浮层与 MenuItem 模型 |
+| [`HoverCard`](hover_card.md) | 悬停展开的卡片，内容可交互 | 可用，自带浮层托管（同 Tooltip） |
 | `Tooltip` | 悬停后显示简短提示 | 可用，已接入统一浮层定位 |
 | [`Alert`](alert.md) | 内联消息条，传达状态或反馈 | 可用 |
 
@@ -73,9 +74,9 @@
 ## 计划补充
 
 - 高频基础组件：`AlertDialog`。
-- 浮层组件族：`HoverCard`
-  （基座 `Popover`、统一 MenuItem model、`DropdownMenu`、`ContextMenu`、`Combobox` 与
-  `CommandPalette` 已落地，见 [菜单族条目模型](../references/menu_model.md)）。
+- 浮层组件族的基础依赖已全部落地：基座 `Popover`、统一 MenuItem model、`DropdownMenu`、
+  `ContextMenu`、`Combobox`、`CommandPalette` 与 `HoverCard`
+  （见 [菜单族条目模型](../references/menu_model.md)）。
 - 信息组织组件：`Accordion`、`Collapsible`、`Sheet`、`Table`。
 
 计划顺序与依赖关系见 [组件开发路线图](../references/component_roadmap.md)。

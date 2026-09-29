@@ -452,6 +452,30 @@ namespace nandina::theme
         ControlMetrics metrics; // padding_x（气泡内边距）、gap（气泡与目标间距）、min_height
     };
 
+
+    /**
+     * HoverCard 度量：卡片尺寸与内边距、卡片与触发控件的间距。
+     */
+    using HoverCardMetrics = struct HoverCardMetrics {
+        ThemeScalar max_width;  // 卡片内容最大宽度
+        ThemeScalar min_width;  // 卡片内容最小宽度
+        ThemeScalar padding_x;  // 卡片水平内边距
+        ThemeScalar padding_y;  // 卡片垂直内边距
+        ThemeScalar gap;        // 卡片与触发控件的间距
+    };
+
+    /**
+     * HoverCard 配方：只描述卡片外壳（填充 / 边框 / 圆角）与度量。
+     *
+     * 它**没有文字样式字段** —— 卡片内容是任意控件（用户预览、链接预览、统计摘要…），
+     * 那些文字由内容自己的控件与配方负责。组件只画外壳，不替内容决定排版。
+     * 与 Tooltip 一样没有状态选择器：卡片要么显示要么不显示。
+     */
+    using HoverCardRecipe = struct HoverCardRecipe {
+        BoxStyle panel; // 卡片外壳
+        HoverCardMetrics metrics;
+    };
+
     /** Select 配方：触发字段 + 弹出列表 + 值/选项文本 + 焦点环 + 度量。 */
     using SelectRecipe = struct SelectRecipe {
         BoxStyle container;         // 触发字段（关闭态）
@@ -1102,6 +1126,18 @@ namespace nandina::theme
         std::optional<ThemeScalar> metrics_min_width;
     };
 
+    using HoverCardRecipeRule = struct HoverCardRecipeRule {
+        std::optional<ThemeColor> panel_fill;
+        std::optional<ThemeColor> panel_border;
+        std::optional<ThemeScalar> panel_border_width;
+        std::optional<ThemeScalar> panel_radius;
+        std::optional<ThemeScalar> metrics_max_width;
+        std::optional<ThemeScalar> metrics_min_width;
+        std::optional<ThemeScalar> metrics_padding_x;
+        std::optional<ThemeScalar> metrics_padding_y;
+        std::optional<ThemeScalar> metrics_gap;
+    };
+
     using CommandPaletteRecipeRule = struct CommandPaletteRecipeRule {
         std::optional<ThemeColor> panel_fill;
         std::optional<ThemeColor> panel_border;
@@ -1469,6 +1505,19 @@ namespace nandina::theme
         ResolvedDropdownMenuMetrics metrics;
     };
 
+    using ResolvedHoverCardMetrics = struct ResolvedHoverCardMetrics {
+        float max_width = 0.0F;
+        float min_width = 0.0F;
+        float padding_x = 0.0F;
+        float padding_y = 0.0F;
+        float gap = 0.0F;
+    };
+
+    using ResolvedHoverCardStyle = struct ResolvedHoverCardStyle {
+        ResolvedBoxStyle panel;
+        ResolvedHoverCardMetrics metrics;
+    };
+
     using ResolvedCommandPaletteMetrics = struct ResolvedCommandPaletteMetrics {
         float panel_width = 0.0F;
         float panel_top_offset = 0.0F;
@@ -1692,6 +1741,11 @@ namespace nandina::theme
         std::vector<DropdownMenuRecipeRule> rules;
     };
 
+    using HoverCardRecipes = struct HoverCardRecipes {
+        HoverCardRecipe base;
+        std::vector<HoverCardRecipeRule> rules;
+    };
+
     using CommandPaletteRecipes = struct CommandPaletteRecipes {
         CommandPaletteRecipe base;
         std::vector<CommandPaletteRecipeRule> rules;
@@ -1733,6 +1787,7 @@ namespace nandina::theme
         DropdownMenuRecipes dropdown_menu;
         ComboboxRecipes combobox;
         CommandPaletteRecipes command_palette;
+        HoverCardRecipes hover_card;
     };
 
     /**
@@ -2110,6 +2165,11 @@ namespace nandina::theme
         ColorAppearance appearance
     ) -> ResolvedDropdownMenuStyle;
 
+    [[nodiscard]] auto resolve_hover_card(
+        const DesignSystem& system,
+        ColorAppearance appearance
+    ) -> ResolvedHoverCardStyle;
+
     [[nodiscard]] auto resolve_command_palette(
         const DesignSystem& system,
         ColorAppearance appearance
@@ -2341,6 +2401,13 @@ namespace nandina::theme
     void apply_rule(
         const DesignSystem& system,
         ColorAppearance appearance,
+        ResolvedHoverCardStyle& style,
+        const HoverCardRecipeRule& rule
+    );
+
+    void apply_rule(
+        const DesignSystem& system,
+        ColorAppearance appearance,
         ResolvedCommandPaletteStyle& style,
         const CommandPaletteRecipeRule& rule
     );
@@ -2382,6 +2449,7 @@ namespace nandina::theme
     [[nodiscard]] auto default_dialog_recipe() -> DialogRecipe;
     [[nodiscard]] auto default_popover_recipe() -> PopoverRecipe;
     [[nodiscard]] auto default_dropdown_menu_recipe() -> DropdownMenuRecipe;
+    [[nodiscard]] auto default_hover_card_recipe() -> HoverCardRecipe;
     [[nodiscard]] auto default_command_palette_recipe() -> CommandPaletteRecipe;
     [[nodiscard]] auto default_combobox_recipe() -> ComboboxRecipe;
 

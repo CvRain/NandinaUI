@@ -80,11 +80,11 @@ NandinaUI 不以逐项复制其他组件库为目标。[shadcn/ui Components](ht
 - `Combobox`（组合 `TextField` + `Popover`，输入即筛选、方向键漫游、Enter 选中、自由文本可选；
   契约测试 `tests/combobox_tests.cpp`；playground 有演示单元）；
 - `CommandPalette`（模态命令面板：内嵌 `TextField` + 同一份 `MenuItem` 模型与 `MenuSelection`；
-  过滤保留分组结构、超上限只截断并如实提示；契约测试 `tests/command_palette_tests.cpp`）。
+  过滤保留分组结构、超上限只截断并如实提示；契约测试 `tests/command_palette_tests.cpp`）；
+- `HoverCard`（悬停触发的卡片，内容可交互：双延迟状态机、指针可移入内容区、不抢焦点、
+  不自带 `DismissLayer`；契约测试 `tests/hover_card_tests.cpp`）。
 
-待实现：
-
-- `HoverCard`。
+阶段 4 的组件清单已全部落地。
 
 这一阶段应复用统一 MenuItem model、roving focus、typeahead 和 selection model，避免每个组件定义不同的选项结构。
 

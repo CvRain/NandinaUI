@@ -602,6 +602,24 @@ namespace nandina::theme
             };
         }
 
+        /** HoverCardRecipe → 解析后的片段组合（卡片外壳由本组件绘制）。 */
+        [[nodiscard]] auto resolve_recipe(
+            const DesignSystem& system,
+            const ColorAppearance appearance,
+            const HoverCardRecipe& recipe
+        ) -> ResolvedHoverCardStyle {
+            return {
+                .panel = resolve(system, appearance, recipe.panel),
+                .metrics = ResolvedHoverCardMetrics {
+                    .max_width = resolve_scalar(system, appearance, recipe.metrics.max_width),
+                    .min_width = resolve_scalar(system, appearance, recipe.metrics.min_width),
+                    .padding_x = resolve_scalar(system, appearance, recipe.metrics.padding_x),
+                    .padding_y = resolve_scalar(system, appearance, recipe.metrics.padding_y),
+                    .gap = resolve_scalar(system, appearance, recipe.metrics.gap),
+                },
+            };
+        }
+
         /** CommandPaletteRecipe → 解析后的片段组合（面板由本组件自己绘制）。 */
         [[nodiscard]] auto resolve_recipe(
             const DesignSystem& system,
@@ -1418,6 +1436,20 @@ namespace nandina::theme
     ) -> ResolvedDropdownMenuStyle {
         auto style = resolve_recipe(system, appearance, system.components.dropdown_menu.base);
         for (const auto& rule: system.components.dropdown_menu.rules) {
+            apply_rule(system, appearance, style, rule);
+        }
+        return style;
+    }
+
+    /**
+     * 解析 HoverCard 配方（卡片外壳 + 度量）。没有状态选择器：卡片要么显示要么不显示。
+     */
+    auto resolve_hover_card(
+        const DesignSystem& system,
+        const ColorAppearance appearance
+    ) -> ResolvedHoverCardStyle {
+        auto style = resolve_recipe(system, appearance, system.components.hover_card.base);
+        for (const auto& rule: system.components.hover_card.rules) {
             apply_rule(system, appearance, style, rule);
         }
         return style;
@@ -2553,6 +2585,39 @@ namespace nandina::theme
     void apply_rule(
         const DesignSystem& system,
         const ColorAppearance appearance,
+        ResolvedHoverCardStyle& style,
+        const HoverCardRecipeRule& rule
+    ) {
+        if (rule.panel_fill)
+            style.panel.fill = resolve_color(system, appearance, *rule.panel_fill);
+        if (rule.panel_border)
+            style.panel.border = resolve_color(system, appearance, *rule.panel_border);
+        if (rule.panel_border_width) {
+            style.panel.border_width =
+                resolve_scalar(system, appearance, *rule.panel_border_width);
+        }
+        if (rule.panel_radius)
+            style.panel.radius = resolve_scalar(system, appearance, *rule.panel_radius);
+        if (rule.metrics_max_width) {
+            style.metrics.max_width = resolve_scalar(system, appearance, *rule.metrics_max_width);
+        }
+        if (rule.metrics_min_width) {
+            style.metrics.min_width = resolve_scalar(system, appearance, *rule.metrics_min_width);
+        }
+        if (rule.metrics_padding_x) {
+            style.metrics.padding_x = resolve_scalar(system, appearance, *rule.metrics_padding_x);
+        }
+        if (rule.metrics_padding_y) {
+            style.metrics.padding_y = resolve_scalar(system, appearance, *rule.metrics_padding_y);
+        }
+        if (rule.metrics_gap) {
+            style.metrics.gap = resolve_scalar(system, appearance, *rule.metrics_gap);
+        }
+    }
+
+    void apply_rule(
+        const DesignSystem& system,
+        const ColorAppearance appearance,
         ResolvedCommandPaletteStyle& style,
         const CommandPaletteRecipeRule& rule
     ) {
@@ -3628,6 +3693,30 @@ namespace nandina::theme
     }
 
     /**
+     * @return 框架默认 HoverCard 配方。
+     *
+     * 外壳沿用浮层表面的语义角色（popover 底 + border 收边），与 Popover / Dialog 一致。
+     * 卡片比下拉菜单宽一些：它承载的是内容预览而不是一列短标签。
+     */
+    auto default_hover_card_recipe() -> HoverCardRecipe {
+        return {
+            .panel = BoxStyle {
+                .fill = ThemeColor::token(ColorToken::popover),
+                .border = ThemeColor::token(ColorToken::border),
+                .border_width = ThemeScalar::token(ScalarToken::border_thin),
+                .radius = ThemeScalar::token(ScalarToken::radius_md),
+            },
+            .metrics = HoverCardMetrics {
+                .max_width = ThemeScalar::literal(320.0F), // 卡片宽度是布局取值，无对应 token
+                .min_width = ThemeScalar::literal(200.0F),
+                .padding_x = ThemeScalar::token(ScalarToken::spacing_md),
+                .padding_y = ThemeScalar::token(ScalarToken::spacing_md),
+                .gap = ThemeScalar::token(ScalarToken::spacing_sm),
+            },
+        };
+    }
+
+    /**
      * @return 框架默认 CommandPalette 配方。
      *
      * 面板沿用浮层外壳的语义角色（popover 底 + border 收边），查询行沿用输入文本，
@@ -4285,6 +4374,10 @@ namespace nandina::theme
                 },
                 .command_palette = CommandPaletteRecipes {
                     .base = default_command_palette_recipe(),
+                    .rules = {},
+                },
+                .hover_card = HoverCardRecipes {
+                    .base = default_hover_card_recipe(),
                     .rules = {},
                 },
             },

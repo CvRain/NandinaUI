@@ -275,6 +275,8 @@ module_widget = files(
     'widget/combobox.cpp',
     'widget/command_palette.hpp',
     'widget/command_palette.cpp',
+    'widget/hover_card.hpp',
+    'widget/hover_card.cpp',
     'widget/image.hpp',
     'widget/image.cpp',
 )
