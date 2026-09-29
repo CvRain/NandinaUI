@@ -48,6 +48,20 @@ namespace nandina::text
         return faces_.size();
     }
 
+    auto FontPipeline::atlas_pixel_count() const -> std::size_t {
+        // 用图集**当前**尺寸而不是配置尺寸：图集写满后会按需扩容，按配置值估算
+        // 会让缓存预算低估真实占用。
+        std::size_t total = 0;
+        for (const auto& atlas: atlases_) {
+            if (atlas == nullptr) {
+                continue;
+            }
+            total += static_cast<std::size_t>(atlas->width())
+                * static_cast<std::size_t>(atlas->height());
+        }
+        return total;
+    }
+
     FontPipelineCache::FontPipelineCache(
         render::IRenderDevice& device,
         FontLoader& loader,
@@ -165,21 +179,15 @@ namespace nandina::text
         const FontPipelineOptions options
     ) -> std::size_t {
         constexpr std::size_t raylib_bytes_per_atlas_pixel = 5;
-        const auto width = static_cast<std::size_t>(options.atlas_width);
-        const auto height = static_cast<std::size_t>(options.atlas_height);
-        const auto faces = pipeline.font_count();
-        if (width == 0 || height == 0 || faces == 0) {
+        (void)options;
+        const auto pixels = pipeline.atlas_pixel_count();
+        if (pixels == 0) {
             return 0;
         }
         constexpr auto maximum = std::numeric_limits<std::size_t>::max();
-        if (width > maximum / height) {
-            return maximum;
-        }
-        const auto pixels = width * height;
         if (pixels > maximum / raylib_bytes_per_atlas_pixel) {
             return maximum;
         }
-        const auto bytes_per_face = pixels * raylib_bytes_per_atlas_pixel;
-        return faces > maximum / bytes_per_face ? maximum : faces * bytes_per_face;
+        return pixels * raylib_bytes_per_atlas_pixel;
     }
 } // namespace nandina::text

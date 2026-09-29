@@ -29,6 +29,8 @@ namespace nandina::text
         [[nodiscard]] auto pipeline() const -> widget::primitives::TextPipeline;
         [[nodiscard]] auto backend() const -> const HarfBuzzTextLayoutBackend&;
         [[nodiscard]] auto font_count() const -> std::size_t;
+        /// 所有 font face 图集当前的像素总数（图集写满后会扩容，所以这不是配置值）。
+        [[nodiscard]] auto atlas_pixel_count() const -> std::size_t;
 
     private:
         std::vector<std::shared_ptr<FreeTypeFontFace>> faces_;

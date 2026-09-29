@@ -32,7 +32,8 @@ namespace nandina::text
             std::shared_ptr<FreeTypeFontFace> face,
             int width = 512,
             int height = 512,
-            int padding = 1
+            int padding = 1,
+            int max_dimension = kMaxDimension
         );
 
         [[nodiscard]] auto cache(char32_t codepoint, float pixel_size) -> const GlyphAtlasEntry&;
@@ -57,6 +58,11 @@ namespace nandina::text
         /// 就不记得这些像素还没上到 GPU。
         [[nodiscard]] auto consume_dirty_bounds() -> foundation::NanRect;
 
+        /// 图集尺寸上限。初始尺寸由构造函数给出，写满后按需翻倍到此上限：
+        /// 一张 4096² 的 8 位图集是 16 MB CPU 内存（每面约 80 MB 估算显存），
+        /// 再大就不划算了。超过它放不下的字形会被跳过而不是抛异常。
+        static constexpr int kMaxDimension = 4096;
+
     private:
         struct Key {
             std::uint32_t glyph_index = 0;
@@ -73,6 +79,12 @@ namespace nandina::text
         [[nodiscard]] auto allocate(int width, int height) -> foundation::NanRect;
         void mark_dirty(const foundation::NanRect& bounds);
 
+        /// 按需把图集扩容到至少 required_width × required_height。已有像素按新行距
+        /// 重排保留，所以已缓存字形的 `pixel_bounds` 依旧有效（扩容只加宽/加高，不重排）。
+        /// 超过 `kMaxDimension` 或分配失败时返回 false。
+        [[nodiscard]] auto grow_to_fit(int required_width, int required_height) -> bool;
+        [[nodiscard]] auto resize(int width, int height) -> bool;
+
         std::shared_ptr<FreeTypeFontFace> face_;
         int width_ = 0;
         int height_ = 0;
@@ -80,6 +92,8 @@ namespace nandina::text
         int cursor_x_ = 0;
         int cursor_y_ = 0;
         int row_height_ = 0;
+        /// 扩容上限；默认 kMaxDimension，可按应用需要在构造时收紧或放宽。
+        int max_dimension_ = kMaxDimension;
         std::uint64_t revision_ = 0;
         /// 脏矩形的并集用整数边界累计：图集打包是顺序游标，一次布局里新写入的
         /// 字形往往分布在一条带上，按并集上传仍然远小于整张图集。
@@ -114,10 +128,15 @@ namespace nandina::text
         [[nodiscard]] auto atlas() const -> const GlyphAtlas&;
 
     private:
+        /// 图集扩容后纹理尺寸必须跟着变：销毁旧纹理、按新尺寸重建并整张上传。
+        void rebuild();
+
         render::IRenderDevice& device_;
         GlyphAtlas& atlas_;
         render::TextureHandle texture_;
         std::uint64_t uploaded_revision_ = 0;
+        int uploaded_width_ = 0;
+        int uploaded_height_ = 0;
     };
 
 } // namespace nandina::text

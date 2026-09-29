@@ -4,9 +4,12 @@
 
 #include "glyph_atlas.hpp"
 
+#include "../foundation/nan_logger.hpp"
+
 #include <algorithm>
 #include <cmath>
 #include <functional>
+#include <new>
 #include <stdexcept>
 #include <utility>
 
@@ -17,12 +20,14 @@ namespace nandina::text
         std::shared_ptr<FreeTypeFontFace> face,
         int width,
         int height,
-        int padding
+        int padding,
+        int max_dimension
     ):
         face_(std::move(face)),
         width_(width),
         height_(height),
-        padding_(padding) {
+        padding_(padding),
+        max_dimension_(std::max(1, max_dimension)) {
         if (!face_) {
             throw std::invalid_argument("GlyphAtlas requires a font face");
         }
@@ -55,6 +60,10 @@ namespace nandina::text
         auto bounds = foundation::NanRect::empty();
         if (bitmap.width > 0 && bitmap.height > 0) {
             bounds = allocate(bitmap.width, bitmap.height);
+        }
+        // 只有真的分配到了空间才拷贝像素。allocate() 在放不下时会返回无效矩形
+        // （而不是抛异常），此时若照着 (0,0) 拷贝就会写穿图集缓冲。
+        if (bounds.is_valid()) {
             const int target_x = static_cast<int>(bounds.get_left());
             const int target_y = static_cast<int>(bounds.get_top());
             for (int row = 0; row < bitmap.height; ++row) {
@@ -167,13 +176,49 @@ namespace nandina::text
     }
 
     auto GlyphAtlas::allocate(int width, int height) -> foundation::NanRect {
+        if (width <= 0 || height <= 0) {
+            return foundation::NanRect::empty();
+        }
+
+        // 先按当前尺寸模拟一次换行，判断现有空间够不够。
+        int probe_x = cursor_x_;
+        int probe_y = cursor_y_;
+        if (probe_x > 0 && probe_x + width > width_) {
+            probe_x = 0;
+            probe_y += row_height_ + padding_;
+        }
+        if (probe_x + width > width_ || probe_y + height > height_) {
+            if (!grow_to_fit(
+                    std::max(width, probe_x + width),
+                    std::max(height, probe_y + height)
+                ))
+            {
+                // 连扩容上限都放不下（例如字号大于整张图集）。
+                //
+                // 这里**不抛异常**：这条路径在渲染过程中（draw → cache_glyph →
+                // allocate），抛出去会穿出 tick() 并终止进程。返回无效矩形即可，
+                // GlyphAtlasTexture::draw 对无效 pixel_bounds 本来就会跳过，
+                // 代价只是这一个字形不显示，而不是整个应用崩掉。
+                log::error(
+                    "GlyphAtlas: glyph {}x{} does not fit a {}x{} atlas; skipping it",
+                    width,
+                    height,
+                    max_dimension_,
+                    max_dimension_
+                );
+                return foundation::NanRect::empty();
+            }
+        }
+
         if (cursor_x_ > 0 && cursor_x_ + width > width_) {
             cursor_x_ = 0;
             cursor_y_ += row_height_ + padding_;
             row_height_ = 0;
         }
-        if (width > width_ || cursor_y_ + height > height_) {
-            throw std::runtime_error("GlyphAtlas is full");
+        if (cursor_x_ + width > width_ || cursor_y_ + height > height_) {
+            // 扩容后仍放不下：理论上不可达，兜住而不是抛。
+            log::error("GlyphAtlas: allocation still does not fit after growing; skipping glyph");
+            return foundation::NanRect::empty();
         }
 
         const auto bounds = foundation::NanRect::from_xywh(
@@ -189,6 +234,55 @@ namespace nandina::text
         return bounds;
     }
 
+    auto GlyphAtlas::grow_to_fit(const int required_width, const int required_height) -> bool {
+        if (required_width > max_dimension_ || required_height > max_dimension_) {
+            return false;
+        }
+        int next_width = width_;
+        int next_height = height_;
+        while (next_width < required_width || next_height < required_height) {
+            if (next_width < required_width) {
+                next_width = std::min(max_dimension_, next_width * 2);
+            }
+            if (next_height < required_height) {
+                next_height = std::min(max_dimension_, next_height * 2);
+            }
+        }
+        return resize(next_width, next_height);
+    }
+
+    auto GlyphAtlas::resize(const int width, const int height) -> bool {
+        if (width == width_ && height == height_) {
+            return true;
+        }
+        if (width < width_ || height < height_) {
+            return false;
+        }
+        // 只加宽/加高、不重排：已缓存字形的 pixel_bounds 保持有效，只是行距变了。
+        try {
+            std::vector<std::uint8_t> grown(
+                static_cast<std::size_t>(width) * static_cast<std::size_t>(height),
+                0
+            );
+            for (int row = 0; row < height_; ++row) {
+                const auto* source = pixels_.data() + static_cast<std::size_t>(row) * width_;
+                std::copy_n(
+                    source,
+                    static_cast<std::size_t>(width_),
+                    grown.data() + static_cast<std::size_t>(row) * width
+                );
+            }
+            pixels_ = std::move(grown);
+        }
+        catch (const std::bad_alloc&) {
+            // 同样不抛：让调用方按"放不下"处理，丢掉一个字形而不是崩掉。
+            return false;
+        }
+        width_ = width;
+        height_ = height;
+        return true;
+    }
+
     GlyphAtlasTexture::GlyphAtlasTexture(render::IRenderDevice& device, GlyphAtlas& atlas):
         device_(device),
         atlas_(atlas) {
@@ -200,6 +294,10 @@ namespace nandina::text
             throw std::runtime_error("Failed to create glyph atlas texture");
         }
         uploaded_revision_ = atlas_.revision();
+        uploaded_width_ = atlas_.width();
+        uploaded_height_ = atlas_.height();
+        // 构造时已经整张上传过一次，所以此前累积的脏区域不必再传。
+        (void)atlas_.consume_dirty_bounds();
     }
 
     GlyphAtlasTexture::~GlyphAtlasTexture() {
@@ -207,6 +305,12 @@ namespace nandina::text
     }
 
     void GlyphAtlasTexture::sync() {
+        // 图集扩容后纹理尺寸必须跟着变，只能重建；这条路径很罕见（图集写满时
+        // 才发生），而且重建后整张上传一次即可，不像以前每次同步都整张上传。
+        if (atlas_.width() != uploaded_width_ || atlas_.height() != uploaded_height_) {
+            rebuild();
+            return;
+        }
         if (uploaded_revision_ == atlas_.revision()) {
             return;
         }
@@ -223,6 +327,18 @@ namespace nandina::text
             );
         }
         uploaded_revision_ = atlas_.revision();
+    }
+
+    void GlyphAtlasTexture::rebuild() {
+        device_.destroy_texture(texture_);
+        texture_ = device_.create_alpha_texture(atlas_.width(), atlas_.height(), atlas_.pixels());
+        if (!texture_) {
+            throw std::runtime_error("Failed to recreate glyph atlas texture");
+        }
+        uploaded_width_ = atlas_.width();
+        uploaded_height_ = atlas_.height();
+        uploaded_revision_ = atlas_.revision();
+        (void)atlas_.consume_dirty_bounds();
     }
 
     void GlyphAtlasTexture::draw(

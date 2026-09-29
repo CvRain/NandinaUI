@@ -280,6 +280,85 @@ TEST_CASE(
     REQUIRE(device.last_region.get_width() * device.last_region.get_height() < 256 * 256);
 }
 
+TEST_CASE("GlyphAtlas grows instead of failing when it runs out of space", "[text][atlas]") {
+    auto face = std::make_shared<text::FreeTypeFontFace>(test_font_path());
+    text::GlyphAtlas atlas(face, 32, 32);
+
+    // 测试字体只有 a / b，所以靠不同字号制造足够多的条目把 32×32 填满。
+    const auto& first = atlas.cache(U'a', 24.0F);
+    REQUIRE(first.pixel_bounds.is_valid());
+    const auto first_bounds = first.pixel_bounds;
+    const auto initial_pixels = atlas.width() * atlas.height();
+
+    const auto region_pixels = [&atlas](const foundation::NanRect& region) {
+        std::vector<std::uint8_t> out;
+        const int stride = atlas.width();
+        for (int row = 0; row < static_cast<int>(region.get_height()); ++row) {
+            const auto* source = atlas.pixels().data()
+                + (static_cast<int>(region.get_top()) + row) * stride
+                + static_cast<int>(region.get_left());
+            out.insert(out.end(), source, source + static_cast<int>(region.get_width()));
+        }
+        return out;
+    };
+    const auto before = region_pixels(first_bounds);
+
+    for (float size = 25.0F; size <= 40.0F; size += 1.0F) {
+        REQUIRE(atlas.cache(U'a', size).pixel_bounds.is_valid());
+    }
+
+    // 容量不够时自动扩容，而不是抛 "GlyphAtlas is full"。
+    REQUIRE(atlas.width() * atlas.height() > initial_pixels);
+    REQUIRE(atlas.width() <= text::GlyphAtlas::kMaxDimension);
+    REQUIRE(atlas.height() <= text::GlyphAtlas::kMaxDimension);
+
+    // 扩容只加宽/加高、不重排，所以早先缓存的字形仍在原坐标且像素不变。
+    REQUIRE(region_pixels(first_bounds) == before);
+    REQUIRE(atlas.find(U'a', 24.0F) == &first);
+}
+
+TEST_CASE("GlyphAtlas skips a glyph larger than the maximum atlas", "[text][atlas]") {
+    auto face = std::make_shared<text::FreeTypeFontFace>(test_font_path());
+    // 把上限收紧到 64，这样用一个中等字号就能造出超过上限的字形位图，
+    // 不必真的去栅格化一张 4096 像素的字形。
+    text::GlyphAtlas atlas(face, 32, 32, 1, 64);
+
+    // 这条路径在渲染过程中（draw → cache_glyph → allocate），抛出去会终止进程；
+    // 放不下时应当只让这一个字形不显示。
+    const text::GlyphAtlasEntry* entry = nullptr;
+    REQUIRE_NOTHROW(entry = &atlas.cache(U'a', 220.0F));
+    REQUIRE(entry != nullptr);
+    REQUIRE_FALSE(entry->pixel_bounds.is_valid());
+
+    // 图集没有被撑爆，仍然可以继续放正常大小的字形。
+    REQUIRE(atlas.width() <= 64);
+    REQUIRE(atlas.height() <= 64);
+    REQUIRE(atlas.cache(U'b', 24.0F).pixel_bounds.is_valid());
+}
+
+TEST_CASE("GlyphAtlasTexture rebuilds its texture when the atlas grows", "[text][atlas][render]") {
+    auto face = std::make_shared<text::FreeTypeFontFace>(test_font_path());
+    text::GlyphAtlas atlas(face, 32, 32);
+    TextureRecordingDevice device;
+    text::GlyphAtlasTexture texture(device, atlas);
+    REQUIRE(device.creates == 1);
+
+    for (float size = 24.0F; size <= 40.0F; size += 1.0F) {
+        (void)atlas.cache(U'a', size);
+    }
+    REQUIRE(atlas.width() * atlas.height() > 32 * 32);
+
+    // 图集变大后纹理尺寸必须跟着变：旧纹理释放、按新尺寸重建、整张上传一次。
+    texture.sync();
+    REQUIRE(device.creates == 2);
+    REQUIRE(device.destroys == 1);
+    REQUIRE(texture.uploaded_revision() == atlas.revision());
+
+    // 重建之后再同步不会反复重建。
+    texture.sync();
+    REQUIRE(device.creates == 2);
+}
+
 TEST_CASE("GlyphAtlasTexture uploads revisions and positions glyphs", "[text][atlas][render]") {
     auto face = std::make_shared<text::FreeTypeFontFace>(test_font_path());
     text::GlyphAtlas atlas(face, 64, 64);
