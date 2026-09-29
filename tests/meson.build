@@ -491,6 +491,13 @@ hover_card_tests = executable(
 )
 test('hover-card', hover_card_tests, suite: 'unit')
 
+alert_dialog_tests = executable(
+    'alert_dialog_tests',
+    files('alert_dialog_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('alert-dialog', alert_dialog_tests, suite: 'unit')
+
 animation_tests = executable(
     'animation_tests',
     files('animation_tests.cpp'),

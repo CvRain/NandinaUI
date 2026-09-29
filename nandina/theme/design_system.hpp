@@ -608,9 +608,10 @@ namespace nandina::theme
 
     /** Dialog 配方：半透明遮罩 + 居中面板 + 标题文本 + 度量。 */
     using DialogRecipe = struct DialogRecipe {
-        ThemeColor scrim;    // 遮罩（半透明，覆盖全屏）
-        BoxStyle panel;      // 居中面板容器
-        TypeStyle title;     // 标题文本
+        ThemeColor scrim;      // 遮罩（半透明，覆盖全屏）
+        BoxStyle panel;        // 居中面板容器
+        TypeStyle title;       // 标题文本
+        TypeStyle description; // 说明文本（AlertDialog 的必需项；普通 Dialog 也可用）
         DialogMetrics metrics;
     };
 
@@ -1216,6 +1217,8 @@ namespace nandina::theme
         std::optional<ThemeScalar> panel_radius;
         std::optional<ThemeColor> title_color;
         std::optional<ThemeScalar> title_font_size;
+        std::optional<ThemeColor> description_color;
+        std::optional<ThemeScalar> description_font_size;
         std::optional<ThemeScalar> metrics_panel_width;
         std::optional<ThemeScalar> metrics_padding_x;
         std::optional<ThemeScalar> metrics_padding_y;
@@ -1587,6 +1590,7 @@ namespace nandina::theme
         NanColor scrim;
         ResolvedBoxStyle panel;
         ResolvedTypeStyle title;
+        ResolvedTypeStyle description;
         ResolvedDialogMetrics metrics;
     };
 

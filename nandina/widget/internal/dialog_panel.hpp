@@ -32,6 +32,12 @@ namespace nandina::widget::internal
         void set_title(std::string title);
         [[nodiscard]] auto title() const -> std::string_view;
 
+        /// 按"警告对话框"暴露语义（role = alertdialog 而不是 dialog）。AlertDialog 用它把
+        /// role 收紧；外观与布局完全不变 —— 二者的区别只在读屏的播报策略上。
+        void set_alert_semantics(bool enabled) noexcept {
+            alert_semantics_ = enabled;
+        }
+
         void set_style(theme::ResolvedDialogStyle style);
         [[nodiscard]] auto style() const noexcept -> const theme::ResolvedDialogStyle&;
 
@@ -65,6 +71,7 @@ namespace nandina::widget::internal
         std::weak_ptr<scene::NanControl> content_;
         std::weak_ptr<scene::NanControl> footer_;
         theme::ResolvedDialogStyle style_;
+        bool alert_semantics_ = false;
     };
 }
 

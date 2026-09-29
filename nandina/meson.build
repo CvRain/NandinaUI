@@ -277,6 +277,8 @@ module_widget = files(
     'widget/command_palette.cpp',
     'widget/hover_card.hpp',
     'widget/hover_card.cpp',
+    'widget/alert_dialog.hpp',
+    'widget/alert_dialog.cpp',
     'widget/image.hpp',
     'widget/image.cpp',
 )

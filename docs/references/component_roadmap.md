@@ -56,7 +56,9 @@ NandinaUI 不以逐项复制其他组件库为目标。[shadcn/ui Components](ht
 推荐顺序：
 
 1. `Spinner`、`Skeleton`、`EmptyState`；
-2. `Alert`（已完成）与基于 Dialog 语义约束的 `AlertDialog`；
+2. `Alert`（已完成）与基于 Dialog 语义约束的 `AlertDialog`（已完成：组合 `Dialog` 并固定
+   `dismissible=false` 与 `alertdialog` role；描述与确认文案为必填；契约测试
+   `tests/alert_dialog_tests.cpp`）；
 3. `Toggle`、`ToggleGroup`、`ButtonGroup`（均已完成）；
 4. `TextArea`（已完成），与 TextField 共享 EditableText primitive；
 5. `Breadcrumb` 与 `Pagination`（均已完成）。

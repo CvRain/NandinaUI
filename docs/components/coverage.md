@@ -8,7 +8,7 @@
 ## 现状
 
 - 公开组件：**34**（有 `ComponentTraits`、可供应用直接使用）
-- 已有使用文档：**19**（其中 `PointerArea` 与 `GestureArea` 共用一篇，实际文档文件 18 篇；`CommandPalette` 与 `HoverCard` 的框架与符号表已核对、叙述正文待手写）
+- 已有使用文档：**20**（其中 `PointerArea` 与 `GestureArea` 共用一篇，实际文档文件 19 篇；`CommandPalette`、`HoverCard` 与 `AlertDialog` 的框架与符号表已核对、叙述正文待手写）
 
 ## 分工约定
 
@@ -58,6 +58,7 @@
 | `ContextMenu` | — | 高 |
 | `CommandPalette` | 🟡 [command_palette.md](command_palette.md)（框架与符号表已核对，正文待写） | 高 |
 | `HoverCard` | 🟡 [hover_card.md](hover_card.md)（框架与符号表已核对，正文待写） | 高 |
+| `AlertDialog` | 🟡 [alert_dialog.md](alert_dialog.md)（框架与符号表已核对，正文待写） | 高 |
 | `Combobox` | — | 高 |
 | `Tabs` | — | 中 |
 | `Breadcrumb` | ✅ [breadcrumb.md](breadcrumb.md) | 中 |

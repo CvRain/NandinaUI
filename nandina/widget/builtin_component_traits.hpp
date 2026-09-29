@@ -43,6 +43,7 @@
 #include "combobox.hpp"
 #include "command_palette.hpp"
 #include "hover_card.hpp"
+#include "alert_dialog.hpp"
 
 namespace nandina::widget
 {
@@ -584,6 +585,30 @@ namespace nandina::widget
             )
                 .configure([&ui](HoverCard& card) {
                     card.set_overlay_service(
+                        ui.has_overlay_host() ? &ui.overlay_host() : nullptr
+                    );
+                });
+        }
+    };
+
+    /**
+     * AlertDialog 组合一个内部 Dialog：注入覆盖层服务与主题。
+     *
+     * 标题与描述在构建时提供 —— 描述是必填项（见 alert_dialog.hpp 的约束说明），
+     * 构造期就会拒绝空字符串。
+     */
+    template<>
+    struct ComponentTraits<AlertDialog> {
+        [[nodiscard]] static auto make(
+            const BuildContext& ui,
+            std::string title,
+            std::string description
+        ) -> authoring::NodeBuilder<AlertDialog> {
+            return authoring::make<AlertDialog>(
+                       std::move(title), std::move(description), ui.theme()
+            )
+                .configure([&ui](AlertDialog& dialog) {
+                    dialog.set_overlay_service(
                         ui.has_overlay_host() ? &ui.overlay_host() : nullptr
                     );
                 });

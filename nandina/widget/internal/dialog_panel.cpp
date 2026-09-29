@@ -201,7 +201,7 @@ namespace nandina::widget::internal
 
     auto DialogPanel::semantics_properties() const -> semantics::Properties {
         return {
-            .role = semantics::Role::dialog,
+            .role = alert_semantics_ ? semantics::Role::alert_dialog : semantics::Role::dialog,
             .label = std::string(title()),
         };
     }

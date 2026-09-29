@@ -553,6 +553,7 @@ namespace nandina::theme
                 .scrim = resolve_color(system, appearance, recipe.scrim),
                 .panel = resolve(system, appearance, recipe.panel),
                 .title = resolve(system, appearance, recipe.title),
+                .description = resolve(system, appearance, recipe.description),
                 .metrics = resolve(system, appearance, recipe.metrics),
             };
         }
@@ -2485,6 +2486,13 @@ namespace nandina::theme
             style.metrics.min_height =
                 resolve_scalar(system, appearance, *rule.metrics_min_height);
         }
+        if (rule.description_color) {
+            style.description.color = resolve_color(system, appearance, *rule.description_color);
+        }
+        if (rule.description_font_size) {
+            style.description.font_size =
+                resolve_scalar(system, appearance, *rule.description_font_size);
+        }
     }
 
     void apply_rule(
@@ -3620,6 +3628,10 @@ namespace nandina::theme
             .title = TypeStyle {
                 .color = ThemeColor::token(ColorToken::foreground),
                 .font_size = ThemeScalar::token(ScalarToken::typography_label_lg),
+            },
+            .description = TypeStyle {
+                .color = ThemeColor::token(ColorToken::muted_foreground),
+                .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
             },
             .metrics = DialogMetrics {
                 .panel_width = ThemeScalar::literal(360.0F),

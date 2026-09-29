@@ -36,6 +36,9 @@ namespace nandina::semantics
         combobox,
         separator,
         dialog,
+        /// 断言式的模态对话框（ARIA alertdialog）：要求用户做出响应，而不是"可以选择关掉"。
+        /// 与 dialog 的区别不是外观，而是读屏的播报策略，因此是两个 role。
+        alert_dialog,
     };
 
     enum class Composition : std::uint8_t {

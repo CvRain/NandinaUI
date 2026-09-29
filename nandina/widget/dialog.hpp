@@ -67,6 +67,10 @@ namespace nandina::widget
 
         void set_on_close(std::function<void()> callback);
 
+        /// 按"警告对话框"暴露语义（role = alertdialog）。AlertDialog 打开时设为 true；
+        /// 普通 Dialog 保持 false。外观、布局、关闭策略都不受影响。
+        void set_alert_semantics(bool enabled);
+
         void set_theme(theme::NanTheme theme);
         [[nodiscard]] auto theme_ref() const -> const theme::NanTheme&;
         void set_override(theme::DialogRecipeRule rule);
@@ -90,6 +94,9 @@ namespace nandina::widget
 
     private:
         friend struct ComponentTraits<Dialog>;
+        /// AlertDialog 组合一个 Dialog（并固定 dismissible=false / alertdialog role），
+        /// 需要代它转发 BuildContext 注入的浮层服务。
+        friend class AlertDialog;
 
         enum class DialogPhase { closed, opening, opened, closing };
 

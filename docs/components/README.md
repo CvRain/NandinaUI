@@ -55,6 +55,7 @@
 | `ContextMenu` | 右键 / 菜单键在指针处打开的上下文菜单 | 可用，包装 DropdownMenu |
 | [`CommandPalette`](command_palette.md) | 键盘优先的命令面板：输入即筛选、回车执行 | 可用，基于统一浮层与 MenuItem 模型 |
 | [`HoverCard`](hover_card.md) | 悬停展开的卡片，内容可交互 | 可用，自带浮层托管（同 Tooltip） |
+| [`AlertDialog`](alert_dialog.md) | 必须做出选择的模态确认框 | 可用，组合 Dialog 并固定 `dismissible=false` |
 | `Tooltip` | 悬停后显示简短提示 | 可用，已接入统一浮层定位 |
 | [`Alert`](alert.md) | 内联消息条，传达状态或反馈 | 可用 |
 

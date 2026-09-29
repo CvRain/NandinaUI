@@ -158,6 +158,11 @@ namespace nandina::widget
         on_close_ = std::move(callback);
     }
 
+    void Dialog::set_alert_semantics(const bool enabled) {
+        panel_->set_alert_semantics(enabled);
+        mark_semantics_dirty();
+    }
+
     void Dialog::set_theme(theme::NanTheme theme) {
         system_ =
             std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
