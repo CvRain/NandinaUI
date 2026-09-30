@@ -314,13 +314,20 @@ namespace nandina::widget
                 .max_height = height(),
             }
         );
-        const float text_width = ctx.logical_to_screen(text_.measured_text_width());
+        // 水平摆放交给 Text 按 `label.align` 处理，盒子取按钮减去内边距的**内容区**；
+        // 之前这里是硬编码的居中算术，既不可配，也让"标签对齐"没法成为配方字段。
+        // 垂直方向仍然由这里算 —— TextAlign 只管水平。
+        const float pad_x = ctx.logical_to_screen(style.metrics.padding_x);
         const float text_height = ctx.logical_to_screen(text_.measured_text_height());
-        const auto text_pos = foundation::NanPoint(
-            world.get_left() + (world.get_width() - text_width) * 0.5F,
-            world.get_top() + (world.get_height() - text_height) * 0.5F
+        text_.draw_in(
+            ctx,
+            foundation::NanRect::from_xywh(
+                world.get_left() + pad_x,
+                world.get_top() + (world.get_height() - text_height) * 0.5F,
+                std::max(0.0F, world.get_width() - pad_x * 2.0F),
+                text_height
+            )
         );
-        text_.draw_at(ctx, text_pos);
 
         if (focused() && !disabled() && style.focus.width > 0.0F) {
             primitives::FocusRingPainter::paint(ctx, world, style.focus, opacity);
@@ -450,6 +457,8 @@ namespace nandina::widget
             .font = context.font_from_context && !font_explicit_ ? context.font : text_.font(),
             .overflow = text_overflow_,
             .max_lines = 1,
+            // 对齐来自配方（默认配方写的是 center，与加入对齐之前的样子一致）。
+            .align = style.label.align,
         };
         label_presentation_.apply(text_style);
         if (text_.style().approx_equals(text_style)) {

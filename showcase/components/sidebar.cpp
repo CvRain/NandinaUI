@@ -1,7 +1,7 @@
 #include "sidebar.hpp"
 
 #include <nandina/widget/controls.hpp> // Button / Label / Divider + 它们的 ComponentTraits
-#include <nandina/widget/layout.hpp>   // Row / Column / Padding / Expanded
+#include <nandina/widget/layout.hpp> // Row / Column / Padding / Expanded
 
 #include <utility>
 
@@ -14,8 +14,7 @@ namespace nandina::showcase
         constexpr float kItemGap = 4.0F;
     } // namespace
 
-    SidebarShell::SidebarShell(app::ShellContext& context):
-        context_(&context) {
+    SidebarShell::SidebarShell(app::ShellContext& context): context_(&context) {
         project_routes();
     }
 
@@ -29,7 +28,8 @@ namespace nandina::showcase
         return *this;
     }
 
-    auto SidebarShell::set_active_treatment(const theme::ButtonTreatment treatment) -> SidebarShell& {
+    auto SidebarShell::set_active_treatment(const theme::ButtonTreatment treatment)
+        -> SidebarShell& {
         active_treatment_ = treatment;
         return *this;
     }
@@ -58,8 +58,8 @@ namespace nandina::showcase
             if (!entry.options.show_in_nav || entry.activate == nullptr) {
                 continue;
             }
-            std::string label = entry.options.title.empty() ? entry.options.key
-                                                            : entry.options.title;
+            std::string label =
+                entry.options.title.empty() ? entry.options.key : entry.options.title;
             if (label.empty()) {
                 // 既没有 title 也没有 key：没有任何可显示的文字，不占一行。
                 continue;
@@ -83,6 +83,17 @@ namespace nandina::showcase
             node.set_treatment(idle_treatment_);
         });
         auto handle = builder.build();
+
+        // 侧边栏的条目靠左对齐，而 Button 的默认配方是居中 —— 用**实例覆盖**改过来。
+        //
+        // 这里不能改成 `handle->text_node().set_align(...)`：Button 在主题变更时会用配方
+        // 重新 `set_style(TextStyle)`，从外面直接设的 align 会被整份覆盖冲掉，表现为
+        // "切换主题后对齐又变回居中"。走覆盖才是它自己的样式来源。
+        handle->set_override(
+            theme::ButtonRecipeRule {
+                .label_align = theme::TextAlign::start,
+            }
+        );
 
         if (on_activate_) {
             // 组件只报告"哪一项被激活"，跳不跳、怎么跳由应用决定。
@@ -113,9 +124,8 @@ namespace nandina::showcase
 
             // 高亮不靠应用同步：绑定到 Router 发布的当前路由，首屏 start() 与任何
             // 程序化导航都会自动跟随。
-            auto& is_current = ui.computed([&current, key = item.page_key] {
-                return current.get() == key;
-            });
+            auto& is_current =
+                ui.computed([&current, key = item.page_key] { return current.get() == key; });
             ui.bind(
                 handle,
                 [this](widget::Button& node, const bool active) {
@@ -131,12 +141,10 @@ namespace nandina::showcase
         panel->set_gap(kSectionGap);
         panel->set_cross_alignment(widget::LayoutAlignment::stretch);
         if (!title_.empty()) {
-            panel->add(
-                ui.make<widget::Label>(title_)
-                    .font_size(14.0F)
-                    .color_token(theme::ColorToken::foreground)
-                    .build()
-            );
+            panel->add(ui.make<widget::Label>(title_)
+                           .font_size(14.0F)
+                           .color_token(theme::ColorToken::foreground)
+                           .build());
             panel->add(ui.make<widget::Divider>().build());
         }
         panel->add(list);

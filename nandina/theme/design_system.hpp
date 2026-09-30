@@ -56,6 +56,9 @@ namespace nandina::theme
     using TypeStyle = struct TypeStyle {
         ThemeColor color;
         ThemeScalar font_size;
+        /// 在被指派宽度内的水平对齐。默认 `start`；需要居中的组件在**自己的默认配方**里
+        /// 显式写 `center`（例如 Button），这样"加入对齐之前的样子"由配方而不是硬编码决定。
+        TextAlign align = TextAlign::start;
     };
 
     /** 控件聚焦时绘制的焦点环。 */
@@ -90,7 +93,7 @@ namespace nandina::theme
 
     /** 软阴影（elevation）：颜色 + 偏移 + 软边衰减宽度，供 Card 等容器叠加。 */
     using ShadowStyle = struct ShadowStyle {
-        ThemeColor color;   // 阴影颜色（带 alpha 控强度）
+        ThemeColor color; // 阴影颜色（带 alpha 控强度）
         ThemeScalar offset_x;
         ThemeScalar offset_y;
         ThemeScalar spread; // 软边衰减宽度（>0）
@@ -110,11 +113,11 @@ namespace nandina::theme
 
     /** Switch 度量：轨道 / 拇指尺寸（组件专属片段）。 */
     using SwitchMetrics = struct SwitchMetrics {
-        ThemeScalar track_width;   // 轨道宽度（含拇指行程）
-        ThemeScalar track_height;  // 轨道高度（pill 直径）
-        ThemeScalar thumb_size;    // 拇指直径
-        ThemeScalar gap;           // 轨道与标签间距
-        ThemeScalar min_height;    // 整控件最小高度
+        ThemeScalar track_width; // 轨道宽度（含拇指行程）
+        ThemeScalar track_height; // 轨道高度（pill 直径）
+        ThemeScalar thumb_size; // 拇指直径
+        ThemeScalar gap; // 轨道与标签间距
+        ThemeScalar min_height; // 整控件最小高度
     };
 
     // ─── 解析后的片段（具体值） ───────────────────────────────────────────────
@@ -130,6 +133,7 @@ namespace nandina::theme
     using ResolvedTypeStyle = struct ResolvedTypeStyle {
         NanColor color;
         float font_size = 0.0F;
+        TextAlign align = TextAlign::start;
     };
 
     using ResolvedFocusRing = struct ResolvedFocusRing {
@@ -223,10 +227,10 @@ namespace nandina::theme
      * 与默认高度都由行数 × 行高决定（同 AlertMetrics 的取舍）。
      */
     using TextAreaMetrics = struct TextAreaMetrics {
-        ThemeScalar rows;        // 默认可见行数（set_rows 的实例覆盖优先）
+        ThemeScalar rows; // 默认可见行数（set_rows 的实例覆盖优先）
         ThemeScalar line_height; // 默认高度用的每行逻辑高度
-        ThemeScalar padding_x;   // 水平内边距
-        ThemeScalar padding_y;   // 垂直内边距
+        ThemeScalar padding_x; // 水平内边距
+        ThemeScalar padding_y; // 垂直内边距
     };
 
     /** TextArea 配方：容器 + 值 / 占位 / 选区文本 + 焦点环 + 多行度量。 */
@@ -283,9 +287,9 @@ namespace nandina::theme
      * 角速度字段，硬塞进去会让所有组件都被动携带这两个无关字段。
      */
     using SpinnerMetrics = struct SpinnerMetrics {
-        ThemeScalar diameter;       // 指示环外径
-        ThemeScalar thickness;      // 环厚
-        ThemeScalar arc_radians;    // 弧长（弧度，2π = 整环）
+        ThemeScalar diameter; // 指示环外径
+        ThemeScalar thickness; // 环厚
+        ThemeScalar arc_radians; // 弧长（弧度，2π = 整环）
         ThemeScalar rotation_speed; // 角速度（弧度/秒）
     };
 
@@ -302,10 +306,10 @@ namespace nandina::theme
      * 末行比例字段，硬塞进去会让所有组件都被动携带这两个无关字段。
      */
     using SkeletonMetrics = struct SkeletonMetrics {
-        ThemeScalar height;            // 单行占位条高度
-        ThemeScalar line_gap;          // 相邻占位条间距
-        ThemeScalar last_line_ratio;   // 末行宽度占比 [0,1]
-        ThemeScalar preferred_width;   // 无界约束下的首选宽度
+        ThemeScalar height; // 单行占位条高度
+        ThemeScalar line_gap; // 相邻占位条间距
+        ThemeScalar last_line_ratio; // 末行宽度占比 [0,1]
+        ThemeScalar preferred_width; // 无界约束下的首选宽度
     };
 
     /** Skeleton 配方：加载占位块（surface）+ 度量（纯展示，无交互）。 */
@@ -316,10 +320,10 @@ namespace nandina::theme
 
     /** EmptyState 度量：内容间距 / 内边距 / 最小高度 / 首选宽度。 */
     using EmptyStateMetrics = struct EmptyStateMetrics {
-        ThemeScalar gap;             // 相邻内容块间距
-        ThemeScalar padding_x;       // 水平内边距
-        ThemeScalar padding_y;       // 垂直内边距
-        ThemeScalar min_height;      // 整控件最小高度
+        ThemeScalar gap; // 相邻内容块间距
+        ThemeScalar padding_x; // 水平内边距
+        ThemeScalar padding_y; // 垂直内边距
+        ThemeScalar min_height; // 整控件最小高度
         ThemeScalar preferred_width; // 无界约束下的首选宽度
     };
 
@@ -340,11 +344,11 @@ namespace nandina::theme
      * `EmptyStateMetrics` 的选择一致。
      */
     using AlertMetrics = struct AlertMetrics {
-        ThemeScalar gap;             // 相邻列间距（icon / 文本列 / action / dismiss）
-        ThemeScalar padding_x;       // 水平内边距
-        ThemeScalar padding_y;       // 垂直内边距
-        ThemeScalar min_height;      // 整控件最小高度
-        ThemeScalar box_size;        // dismiss 小按钮的方形边长
+        ThemeScalar gap; // 相邻列间距（icon / 文本列 / action / dismiss）
+        ThemeScalar padding_x; // 水平内边距
+        ThemeScalar padding_y; // 垂直内边距
+        ThemeScalar min_height; // 整控件最小高度
+        ThemeScalar box_size; // dismiss 小按钮的方形边长
         ThemeScalar preferred_width; // 无界约束下的首选宽度
     };
 
@@ -412,37 +416,37 @@ namespace nandina::theme
     /** Breadcrumb 配方：容器 + 链接 / 当前页排版 + 分隔符 + 链接焦点环 + 度量。 */
     using BreadcrumbRecipe = struct BreadcrumbRecipe {
         BoxStyle container;
-        TypeStyle link;            // 可点击条目
-        ThemeColor link_hover;     // hover / pressed 文字色
-        TypeStyle current;         // 当前页 / 无回调条目
-        ThemeColor separator;      // 分隔符字形颜色
+        TypeStyle link; // 可点击条目
+        ThemeColor link_hover; // hover / pressed 文字色
+        TypeStyle current; // 当前页 / 无回调条目
+        ThemeColor separator; // 分隔符字形颜色
         FocusRingStyle link_focus; // 链接条目焦点环
-        ControlMetrics metrics;    // gap（条目与分隔符间距）、padding_x、min_height
+        ControlMetrics metrics; // gap（条目与分隔符间距）、padding_x、min_height
     };
 
     /** Pagination 配方：容器 + 槽位面（普通 / hover 叠加 / 当前页）+ 文本 + 焦点环 + 度量。 */
     using PaginationRecipe = struct PaginationRecipe {
-        BoxStyle container;     // 整条容器（透明默认）
-        BoxStyle item;          // 普通页码槽位面（透明默认）
-        ThemeColor item_hover;  // hover 叠加色（按 alpha 覆盖在槽位面上）
-        BoxStyle item_active;   // 当前页槽位面
-        TypeStyle label;        // 普通页码 / 省略号 / 上一页·下一页文本
+        BoxStyle container; // 整条容器（透明默认）
+        BoxStyle item; // 普通页码槽位面（透明默认）
+        ThemeColor item_hover; // hover 叠加色（按 alpha 覆盖在槽位面上）
+        BoxStyle item_active; // 当前页槽位面
+        TypeStyle label; // 普通页码 / 省略号 / 上一页·下一页文本
         TypeStyle label_active; // 当前页文本
-        ThemeColor ellipsis;    // 省略号颜色
-        FocusRingStyle focus;   // 聚焦槽位的焦点环
+        ThemeColor ellipsis; // 省略号颜色
+        FocusRingStyle focus; // 聚焦槽位的焦点环
         ControlMetrics metrics; // box_size（槽位边长）、gap、padding_x、min_height
     };
 
     /** Tabs 配方：容器（背景/边框）+ 选中 pill + 下划线 + 标签 + 焦点环 + 度量。 */
     using TabsRecipe = struct TabsRecipe {
-        BoxStyle container;           // 列表容器背景/边框/圆角（透明默认 = 无背景边框）
+        BoxStyle container; // 列表容器背景/边框/圆角（透明默认 = 无背景边框）
         BoxStyle selected_background; // 选中标签 pill 背景（透明默认 = 无 pill）
-        TypeStyle label;              // 未选中标签
-        TypeStyle label_selected;     // 选中标签
-        ThemeColor indicator;         // 下划线颜色（透明默认 = 无下划线）
+        TypeStyle label; // 未选中标签
+        TypeStyle label_selected; // 选中标签
+        ThemeColor indicator; // 下划线颜色（透明默认 = 无下划线）
         ThemeScalar indicator_thickness;
         FocusRingStyle focus;
-        ControlMetrics metrics;       // gap（标签间距）、padding_x（容器内边距）、min_height
+        ControlMetrics metrics; // gap（标签间距）、padding_x（容器内边距）、min_height
     };
 
     /** Tooltip 配方：气泡容器 + 文本 + 度量（纯展示浮层，无交互状态）。 */
@@ -452,16 +456,15 @@ namespace nandina::theme
         ControlMetrics metrics; // padding_x（气泡内边距）、gap（气泡与目标间距）、min_height
     };
 
-
     /**
      * HoverCard 度量：卡片尺寸与内边距、卡片与触发控件的间距。
      */
     using HoverCardMetrics = struct HoverCardMetrics {
-        ThemeScalar max_width;  // 卡片内容最大宽度
-        ThemeScalar min_width;  // 卡片内容最小宽度
-        ThemeScalar padding_x;  // 卡片水平内边距
-        ThemeScalar padding_y;  // 卡片垂直内边距
-        ThemeScalar gap;        // 卡片与触发控件的间距
+        ThemeScalar max_width; // 卡片内容最大宽度
+        ThemeScalar min_width; // 卡片内容最小宽度
+        ThemeScalar padding_x; // 卡片水平内边距
+        ThemeScalar padding_y; // 卡片垂直内边距
+        ThemeScalar gap; // 卡片与触发控件的间距
     };
 
     /**
@@ -478,13 +481,14 @@ namespace nandina::theme
 
     /** Select 配方：触发字段 + 弹出列表 + 值/选项文本 + 焦点环 + 度量。 */
     using SelectRecipe = struct SelectRecipe {
-        BoxStyle container;         // 触发字段（关闭态）
-        BoxStyle popup;             // 弹出列表容器
-        TypeStyle value;            // 当前选中值文本
-        TypeStyle option;           // 选项文本（未选中）
-        TypeStyle option_selected;  // 选中选项文本
+        BoxStyle container; // 触发字段（关闭态）
+        BoxStyle popup; // 弹出列表容器
+        TypeStyle value; // 当前选中值文本
+        TypeStyle option; // 选项文本（未选中）
+        TypeStyle option_selected; // 选中选项文本
         FocusRingStyle focus;
-        ControlMetrics metrics;     // height（字段高）、padding_x、gap（字段与弹窗间距）、min_height（选项行高）
+        ControlMetrics
+            metrics; // height（字段高）、padding_x、gap（字段与弹窗间距）、min_height（选项行高）
     };
 
     /** Divider 配方：分隔线颜色/厚度/首选长度（纯展示）。 */
@@ -541,13 +545,13 @@ namespace nandina::theme
      * 组合一个 Popover，配方只覆盖面板**内部**的条目列表。
      */
     using DropdownMenuMetrics = struct DropdownMenuMetrics {
-        ThemeScalar item_height;         // 单个条目行高
-        ThemeScalar padding_x;           // 条目列表的水平内边距
-        ThemeScalar padding_y;           // 条目列表的垂直内边距
-        ThemeScalar gap;                 // 分隔线上下留白
-        ThemeScalar item_radius;         // 高亮条目填充圆角
+        ThemeScalar item_height; // 单个条目行高
+        ThemeScalar padding_x; // 条目列表的水平内边距
+        ThemeScalar padding_y; // 条目列表的垂直内边距
+        ThemeScalar gap; // 分隔线上下留白
+        ThemeScalar item_radius; // 高亮条目填充圆角
         ThemeScalar separator_thickness; // 分隔线厚度
-        ThemeScalar min_width;           // 面板内容最小宽度（含 padding_x）
+        ThemeScalar min_width; // 面板内容最小宽度（含 padding_x）
     };
 
     /**
@@ -557,14 +561,14 @@ namespace nandina::theme
      * 的状态，由视图读取 `hover_fill` / `focus_fill` 直接绘制，不参与配方规则选择。
      */
     using DropdownMenuRecipe = struct DropdownMenuRecipe {
-        TypeStyle item_label;      // 常规条目文本
-        TypeStyle item_shortcut;   // 快捷键提示文本（仅展示）
-        TypeStyle group_label;     // 分组标题（kind == label）
+        TypeStyle item_label; // 常规条目文本
+        TypeStyle item_shortcut; // 快捷键提示文本（仅展示）
+        TypeStyle group_label; // 分组标题（kind == label）
         ThemeColor disabled_label; // 禁用条目文本色
-        ThemeColor hover_fill;     // 指针悬停条目填充
-        ThemeColor focus_fill;     // 键盘高亮条目填充
+        ThemeColor hover_fill; // 指针悬停条目填充
+        ThemeColor focus_fill; // 键盘高亮条目填充
         ThemeColor checked_indicator; // 勾选指示（对勾 / 圆点）颜色
-        ThemeColor separator;         // 分隔线颜色
+        ThemeColor separator; // 分隔线颜色
         DropdownMenuMetrics metrics;
     };
 
@@ -576,15 +580,15 @@ namespace nandina::theme
      * 组合一个 Popover，配方只覆盖输入框外壳与面板**内部**的选项列表。
      */
     using ComboboxMetrics = struct ComboboxMetrics {
-        ThemeScalar height;          // 输入框高度
-        ThemeScalar padding_x;       // 输入文本水平内边距
+        ThemeScalar height; // 输入框高度
+        ThemeScalar padding_x; // 输入文本水平内边距
         ThemeScalar preferred_width; // 无内容时的首选宽度
-        ThemeScalar gap;             // 输入框与浮层的间距
-        ThemeScalar item_height;     // 单个选项行高
-        ThemeScalar list_padding_x;  // 选项列表的水平内边距
-        ThemeScalar list_padding_y;  // 选项列表的垂直内边距
-        ThemeScalar item_radius;     // 高亮选项填充圆角
-        ThemeScalar min_width;       // 列表内容最小宽度（含 list_padding_x）
+        ThemeScalar gap; // 输入框与浮层的间距
+        ThemeScalar item_height; // 单个选项行高
+        ThemeScalar list_padding_x; // 选项列表的水平内边距
+        ThemeScalar list_padding_y; // 选项列表的垂直内边距
+        ThemeScalar item_radius; // 高亮选项填充圆角
+        ThemeScalar min_width; // 列表内容最小宽度（含 list_padding_x）
     };
 
     /**
@@ -594,23 +598,23 @@ namespace nandina::theme
      * hover / focused 是逐条目的状态，视图直接读取 `hover_fill` / `focus_fill`。
      */
     using ComboboxRecipe = struct ComboboxRecipe {
-        BoxStyle input;            // 输入框外壳（填充 / 边框 / 圆角）
-        TypeStyle value;           // 输入文本（也是选中标签的显示）
-        TypeStyle placeholder;     // 占位文本
-        ThemeColor selection;      // 输入选区的填充色
-        FocusRingStyle focus;      // 输入框焦点环
-        TypeStyle option;          // 未高亮选项文本
+        BoxStyle input; // 输入框外壳（填充 / 边框 / 圆角）
+        TypeStyle value; // 输入文本（也是选中标签的显示）
+        TypeStyle placeholder; // 占位文本
+        ThemeColor selection; // 输入选区的填充色
+        FocusRingStyle focus; // 输入框焦点环
+        TypeStyle option; // 未高亮选项文本
         ThemeColor disabled_label; // 禁用选项文本色
-        ThemeColor hover_fill;     // 指针悬停选项填充
-        ThemeColor focus_fill;     // 键盘高亮选项填充
+        ThemeColor hover_fill; // 指针悬停选项填充
+        ThemeColor focus_fill; // 键盘高亮选项填充
         ComboboxMetrics metrics;
     };
 
     /** Dialog 配方：半透明遮罩 + 居中面板 + 标题文本 + 度量。 */
     using DialogRecipe = struct DialogRecipe {
-        ThemeColor scrim;      // 遮罩（半透明，覆盖全屏）
-        BoxStyle panel;        // 居中面板容器
-        TypeStyle title;       // 标题文本
+        ThemeColor scrim; // 遮罩（半透明，覆盖全屏）
+        BoxStyle panel; // 居中面板容器
+        TypeStyle title; // 标题文本
         TypeStyle description; // 说明文本（AlertDialog 的必需项；普通 Dialog 也可用）
         DialogMetrics metrics;
     };
@@ -622,16 +626,16 @@ namespace nandina::theme
      * 属于本配方；查询框是内嵌的 TextField，本配方只把文本与占位样式下发过去。
      */
     using CommandPaletteMetrics = struct CommandPaletteMetrics {
-        ThemeScalar panel_width;         // 面板首选宽度
-        ThemeScalar panel_top_offset;    // 面板距视口顶部的偏移（命令面板靠上而非居中）
-        ThemeScalar panel_padding;       // 面板内边距
-        ThemeScalar panel_radius;        // 面板圆角
-        ThemeScalar gap;                 // 查询框与结果列表的间距
-        ThemeScalar item_height;         // 单个结果行高
-        ThemeScalar item_padding_x;      // 结果行水平内边距
-        ThemeScalar item_radius;         // 高亮结果填充圆角
+        ThemeScalar panel_width; // 面板首选宽度
+        ThemeScalar panel_top_offset; // 面板距视口顶部的偏移（命令面板靠上而非居中）
+        ThemeScalar panel_padding; // 面板内边距
+        ThemeScalar panel_radius; // 面板圆角
+        ThemeScalar gap; // 查询框与结果列表的间距
+        ThemeScalar item_height; // 单个结果行高
+        ThemeScalar item_padding_x; // 结果行水平内边距
+        ThemeScalar item_radius; // 高亮结果填充圆角
         ThemeScalar separator_thickness; // 分隔线厚度
-        ThemeScalar min_width;           // 内容最小宽度
+        ThemeScalar min_width; // 内容最小宽度
     };
 
     /**
@@ -641,23 +645,23 @@ namespace nandina::theme
      * hover / focused 是**逐结果**的状态，视图直接读 `hover_fill` / `focus_fill`。
      */
     using CommandPaletteRecipe = struct CommandPaletteRecipe {
-        BoxStyle panel;            // 面板外壳（填充 / 边框 / 圆角）
-        ThemeColor scrim;          // 遮罩（半透明，覆盖全屏；必须始终压暗，见默认值注释）
-        TypeStyle query;           // 查询文本（下发给内嵌 TextField）
-        TypeStyle placeholder;     // 查询占位文本
-        TypeStyle item_label;      // 结果条目文本
-        TypeStyle item_shortcut;   // 快捷键提示文本（仅展示，不参与过滤）
-        TypeStyle group_label;     // 分组标题（kind == label）
-        TypeStyle empty;           // 无匹配结果时的提示文本
+        BoxStyle panel; // 面板外壳（填充 / 边框 / 圆角）
+        ThemeColor scrim; // 遮罩（半透明，覆盖全屏；必须始终压暗，见默认值注释）
+        TypeStyle query; // 查询文本（下发给内嵌 TextField）
+        TypeStyle placeholder; // 查询占位文本
+        TypeStyle item_label; // 结果条目文本
+        TypeStyle item_shortcut; // 快捷键提示文本（仅展示，不参与过滤）
+        TypeStyle group_label; // 分组标题（kind == label）
+        TypeStyle empty; // 无匹配结果时的提示文本
         ThemeColor disabled_label; // 禁用结果文本色
-        ThemeColor hover_fill;     // 指针悬停结果填充
-        ThemeColor focus_fill;     // 键盘高亮结果填充
+        ThemeColor hover_fill; // 指针悬停结果填充
+        ThemeColor focus_fill; // 键盘高亮结果填充
         /// 高亮行上的文字与勾选指示颜色。必须与 focus_fill 成对 —— 高亮底是 accent，
         /// 而"什么颜色能在 accent 上读"由调色板的 accent_foreground 保证（有对比度硬门槛）。
         ThemeColor highlight_text;
         /// 勾选指示颜色（未高亮的 checkbox / radio 行）。画在面板底或 hover 底上。
         ThemeColor checked_indicator;
-        ThemeColor separator;      // 分隔线颜色
+        ThemeColor separator; // 分隔线颜色
         CommandPaletteMetrics metrics;
     };
 
@@ -678,6 +682,7 @@ namespace nandina::theme
         std::optional<ThemeScalar> container_radius;
         std::optional<ThemeColor> label_color;
         std::optional<ThemeScalar> label_font_size;
+        std::optional<TextAlign> label_align;
         std::optional<ThemeColor> focus_ring_color;
         std::optional<ThemeScalar> focus_ring_width;
         std::optional<ThemeScalar> metrics_height;
@@ -865,8 +870,8 @@ namespace nandina::theme
 
     /** Alert 规则：支持 tone 选择器（+ 状态选择器），覆盖容器 / 标题 / 描述 / 图标 / 度量字段。 */
     using AlertRecipeRule = struct AlertRecipeRule {
-        std::optional<AlertTone> tone;           // nullopt = 任意 tone
-        std::optional<AlertVisualState> state;   // nullopt = 任意状态
+        std::optional<AlertTone> tone; // nullopt = 任意 tone
+        std::optional<AlertVisualState> state; // nullopt = 任意状态
         std::optional<ThemeColor> container_fill;
         std::optional<ThemeColor> container_border;
         std::optional<ThemeScalar> container_border_width;
@@ -908,10 +913,10 @@ namespace nandina::theme
      * tone 强调色，保证任何 tone / treatment 组合下 checked 与 unchecked 都能区分。
      */
     using ToggleRecipeRule = struct ToggleRecipeRule {
-        std::optional<ButtonTone> tone;              // nullopt = 任意 tone
-        std::optional<ButtonTreatment> treatment;    // nullopt = 任意 treatment
-        std::optional<bool> checked;                 // nullopt = 任意
-        std::optional<ToggleVisualState> state;      // nullopt = 任意状态
+        std::optional<ButtonTone> tone; // nullopt = 任意 tone
+        std::optional<ButtonTreatment> treatment; // nullopt = 任意 treatment
+        std::optional<bool> checked; // nullopt = 任意
+        std::optional<ToggleVisualState> state; // nullopt = 任意状态
         std::optional<ThemeColor> container_fill;
         std::optional<ThemeColor> container_border;
         std::optional<ThemeScalar> container_border_width;
@@ -1829,7 +1834,11 @@ namespace nandina::theme
         const ThemeColor& value,
         const std::optional<ButtonTone> tone = std::nullopt
     ) -> NanColor {
-        return resolve_theme_color(NanTheme {system.tokens, system.palette(appearance)}, value, tone);
+        return resolve_theme_color(
+            NanTheme {system.tokens, system.palette(appearance)},
+            value,
+            tone
+        );
     }
 
     /**
@@ -1840,18 +1849,18 @@ namespace nandina::theme
      * @param value      token-or-literal 标量值
      * @return 解析后的 float
      */
-    [[nodiscard]] inline auto
-    resolve_scalar(const DesignSystem& system, const ColorAppearance appearance, const ThemeScalar& value)
-        -> float {
+    [[nodiscard]] inline auto resolve_scalar(
+        const DesignSystem& system,
+        const ColorAppearance appearance,
+        const ThemeScalar& value
+    ) -> float {
         return resolve_theme_scalar(NanTheme {system.tokens, system.palette(appearance)}, value);
     }
 
     /** 解析矩形槽位片段为具体值。 */
-    [[nodiscard]] inline auto resolve(
-        const DesignSystem& system,
-        const ColorAppearance appearance,
-        const BoxStyle& box
-    ) -> ResolvedBoxStyle {
+    [[nodiscard]] inline auto
+    resolve(const DesignSystem& system, const ColorAppearance appearance, const BoxStyle& box)
+        -> ResolvedBoxStyle {
         return {
             .fill = resolve_color(system, appearance, box.fill),
             .border = resolve_color(system, appearance, box.border),
@@ -1861,14 +1870,15 @@ namespace nandina::theme
     }
 
     /** 解析排版片段为具体值。 */
-    [[nodiscard]] inline auto resolve(
-        const DesignSystem& system,
-        const ColorAppearance appearance,
-        const TypeStyle& type
-    ) -> ResolvedTypeStyle {
+    [[nodiscard]] inline auto
+    resolve(const DesignSystem& system, const ColorAppearance appearance, const TypeStyle& type)
+        -> ResolvedTypeStyle {
         return {
             .color = resolve_color(system, appearance, type.color),
             .font_size = resolve_scalar(system, appearance, type.font_size),
+            // 枚举不需要解析，直接透传；放在这里是为了让 TypeStyle → ResolvedTypeStyle
+            // 的桥接是完整的（漏了它就又是一处静默失效）。
+            .align = type.align,
         };
     }
 
@@ -1885,11 +1895,9 @@ namespace nandina::theme
     }
 
     /** 解析轨道片段为具体值。 */
-    [[nodiscard]] inline auto resolve(
-        const DesignSystem& system,
-        const ColorAppearance appearance,
-        const TrackStyle& track
-    ) -> ResolvedTrackStyle {
+    [[nodiscard]] inline auto
+    resolve(const DesignSystem& system, const ColorAppearance appearance, const TrackStyle& track)
+        -> ResolvedTrackStyle {
         return {
             .box = resolve(system, appearance, track.box),
             .thickness = resolve_scalar(system, appearance, track.thickness),
@@ -1897,11 +1905,9 @@ namespace nandina::theme
     }
 
     /** 解析拇指片段为具体值。 */
-    [[nodiscard]] inline auto resolve(
-        const DesignSystem& system,
-        const ColorAppearance appearance,
-        const ThumbStyle& thumb
-    ) -> ResolvedThumbStyle {
+    [[nodiscard]] inline auto
+    resolve(const DesignSystem& system, const ColorAppearance appearance, const ThumbStyle& thumb)
+        -> ResolvedThumbStyle {
         return {.box = resolve(system, appearance, thumb.box)};
     }
 
@@ -1937,11 +1943,9 @@ namespace nandina::theme
     }
 
     /** 解析软阴影片段为具体值。 */
-    [[nodiscard]] inline auto resolve(
-        const DesignSystem& system,
-        const ColorAppearance appearance,
-        const ShadowStyle& shadow
-    ) -> ResolvedShadowStyle {
+    [[nodiscard]] inline auto
+    resolve(const DesignSystem& system, const ColorAppearance appearance, const ShadowStyle& shadow)
+        -> ResolvedShadowStyle {
         return {
             .color = resolve_color(system, appearance, shadow.color),
             .offset_x = resolve_scalar(system, appearance, shadow.offset_x),
@@ -2015,11 +2019,9 @@ namespace nandina::theme
         CheckboxVisualState state
     ) -> ResolvedCheckboxStyle;
 
-    [[nodiscard]] auto resolve_slider(
-        const DesignSystem& system,
-        ColorAppearance appearance,
-        SliderVisualState state
-    ) -> ResolvedSliderStyle;
+    [[nodiscard]] auto
+    resolve_slider(const DesignSystem& system, ColorAppearance appearance, SliderVisualState state)
+        -> ResolvedSliderStyle;
 
     [[nodiscard]] auto resolve_text_field(
         const DesignSystem& system,
@@ -2041,15 +2043,11 @@ namespace nandina::theme
         SwitchVisualState state
     ) -> ResolvedSwitchStyle;
 
-    [[nodiscard]] auto resolve_badge(
-        const DesignSystem& system,
-        ColorAppearance appearance
-    ) -> ResolvedBadgeStyle;
+    [[nodiscard]] auto resolve_badge(const DesignSystem& system, ColorAppearance appearance)
+        -> ResolvedBadgeStyle;
 
-    [[nodiscard]] auto resolve_card(
-        const DesignSystem& system,
-        ColorAppearance appearance
-    ) -> ResolvedCardStyle;
+    [[nodiscard]] auto resolve_card(const DesignSystem& system, ColorAppearance appearance)
+        -> ResolvedCardStyle;
 
     [[nodiscard]] auto resolve_progress_bar(
         const DesignSystem& system,
@@ -2122,62 +2120,41 @@ namespace nandina::theme
         PaginationVisualState state
     ) -> ResolvedPaginationStyle;
 
-    [[nodiscard]] auto resolve_tabs(
-        const DesignSystem& system,
-        ColorAppearance appearance,
-        TabsVisualState state
-    ) -> ResolvedTabsStyle;
+    [[nodiscard]] auto
+    resolve_tabs(const DesignSystem& system, ColorAppearance appearance, TabsVisualState state)
+        -> ResolvedTabsStyle;
 
-    [[nodiscard]] auto resolve_tooltip(
-        const DesignSystem& system,
-        ColorAppearance appearance
-    ) -> ResolvedTooltipStyle;
+    [[nodiscard]] auto resolve_tooltip(const DesignSystem& system, ColorAppearance appearance)
+        -> ResolvedTooltipStyle;
 
-    [[nodiscard]] auto resolve_select(
-        const DesignSystem& system,
-        ColorAppearance appearance,
-        SelectVisualState state
-    ) -> ResolvedSelectStyle;
+    [[nodiscard]] auto
+    resolve_select(const DesignSystem& system, ColorAppearance appearance, SelectVisualState state)
+        -> ResolvedSelectStyle;
 
-    [[nodiscard]] auto resolve_divider(
-        const DesignSystem& system,
-        ColorAppearance appearance
-    ) -> ResolvedDividerStyle;
+    [[nodiscard]] auto resolve_divider(const DesignSystem& system, ColorAppearance appearance)
+        -> ResolvedDividerStyle;
 
-    [[nodiscard]] auto resolve_avatar(
-        const DesignSystem& system,
-        ColorAppearance appearance
-    ) -> ResolvedAvatarStyle;
+    [[nodiscard]] auto resolve_avatar(const DesignSystem& system, ColorAppearance appearance)
+        -> ResolvedAvatarStyle;
 
-    [[nodiscard]] auto resolve_chip(
-        const DesignSystem& system,
-        ColorAppearance appearance
-    ) -> ResolvedChipStyle;
+    [[nodiscard]] auto resolve_chip(const DesignSystem& system, ColorAppearance appearance)
+        -> ResolvedChipStyle;
 
-    [[nodiscard]] auto resolve_dialog(
-        const DesignSystem& system,
-        ColorAppearance appearance
-    ) -> ResolvedDialogStyle;
+    [[nodiscard]] auto resolve_dialog(const DesignSystem& system, ColorAppearance appearance)
+        -> ResolvedDialogStyle;
 
-    [[nodiscard]] auto resolve_popover(
-        const DesignSystem& system,
-        ColorAppearance appearance
-    ) -> ResolvedPopoverStyle;
+    [[nodiscard]] auto resolve_popover(const DesignSystem& system, ColorAppearance appearance)
+        -> ResolvedPopoverStyle;
 
-    [[nodiscard]] auto resolve_dropdown_menu(
-        const DesignSystem& system,
-        ColorAppearance appearance
-    ) -> ResolvedDropdownMenuStyle;
+    [[nodiscard]] auto resolve_dropdown_menu(const DesignSystem& system, ColorAppearance appearance)
+        -> ResolvedDropdownMenuStyle;
 
-    [[nodiscard]] auto resolve_hover_card(
-        const DesignSystem& system,
-        ColorAppearance appearance
-    ) -> ResolvedHoverCardStyle;
+    [[nodiscard]] auto resolve_hover_card(const DesignSystem& system, ColorAppearance appearance)
+        -> ResolvedHoverCardStyle;
 
-    [[nodiscard]] auto resolve_command_palette(
-        const DesignSystem& system,
-        ColorAppearance appearance
-    ) -> ResolvedCommandPaletteStyle;
+    [[nodiscard]] auto
+    resolve_command_palette(const DesignSystem& system, ColorAppearance appearance)
+        -> ResolvedCommandPaletteStyle;
 
     [[nodiscard]] auto resolve_combobox(
         const DesignSystem& system,
@@ -2197,10 +2174,8 @@ namespace nandina::theme
     );
 
     /** @return 当前交互状态对应的独立叠加色；normal / disabled 返回透明色。 */
-    [[nodiscard]] auto button_state_layer_color(
-        const ResolvedButtonStyle& style,
-        ButtonVisualState state
-    ) -> NanColor;
+    [[nodiscard]] auto
+    button_state_layer_color(const ResolvedButtonStyle& style, ButtonVisualState state) -> NanColor;
 
     void apply_rule(
         const DesignSystem& system,
@@ -2334,10 +2309,8 @@ namespace nandina::theme
      * @return Toggle 当前交互状态对应的独立叠加色；normal / disabled 返回透明色。
      * 与 `button_state_layer_color` 同款：状态反馈不写回基础容器填充。
      */
-    [[nodiscard]] auto toggle_state_layer_color(
-        const ResolvedToggleStyle& style,
-        ToggleVisualState state
-    ) -> NanColor;
+    [[nodiscard]] auto
+    toggle_state_layer_color(const ResolvedToggleStyle& style, ToggleVisualState state) -> NanColor;
 
     void apply_rule(
         const DesignSystem& system,

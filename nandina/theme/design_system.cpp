@@ -29,14 +29,17 @@ namespace nandina::theme
                 .container = resolve(system, appearance, recipe.container),
                 .label = resolve(system, appearance, recipe.label),
                 .focus = resolve(system, appearance, recipe.focus),
-                .state_layer = {
-                    .hover = resolve_color(system, appearance, recipe.state_layer.hover, tone),
-                    .pressed = resolve_color(system, appearance, recipe.state_layer.pressed, tone),
-                },
-                .ripple = {
-                    .color = resolve_color(system, appearance, recipe.ripple.color, tone),
-                    .duration = resolve_scalar(system, appearance, recipe.ripple.duration),
-                },
+                .state_layer =
+                    {
+                        .hover = resolve_color(system, appearance, recipe.state_layer.hover, tone),
+                        .pressed =
+                            resolve_color(system, appearance, recipe.state_layer.pressed, tone),
+                    },
+                .ripple =
+                    {
+                        .color = resolve_color(system, appearance, recipe.ripple.color, tone),
+                        .duration = resolve_scalar(system, appearance, recipe.ripple.duration),
+                    },
                 .metrics = resolve(system, appearance, recipe.metrics),
             };
         }
@@ -159,8 +162,7 @@ namespace nandina::theme
                 .focus = resolve(system, appearance, recipe.focus),
                 .metrics = {
                     .rows = resolve_scalar(system, appearance, recipe.metrics.rows),
-                    .line_height =
-                        resolve_scalar(system, appearance, recipe.metrics.line_height),
+                    .line_height = resolve_scalar(system, appearance, recipe.metrics.line_height),
                     .padding_x = resolve_scalar(system, appearance, recipe.metrics.padding_x),
                     .padding_y = resolve_scalar(system, appearance, recipe.metrics.padding_y),
                 },
@@ -400,10 +402,12 @@ namespace nandina::theme
                 .container = resolve(system, appearance, recipe.container),
                 .label = resolve(system, appearance, recipe.label),
                 .focus = resolve(system, appearance, recipe.focus),
-                .state_layer = {
-                    .hover = resolve_color(system, appearance, recipe.state_layer.hover, tone),
-                    .pressed = resolve_color(system, appearance, recipe.state_layer.pressed, tone),
-                },
+                .state_layer =
+                    {
+                        .hover = resolve_color(system, appearance, recipe.state_layer.hover, tone),
+                        .pressed =
+                            resolve_color(system, appearance, recipe.state_layer.pressed, tone),
+                    },
                 .metrics = resolve(system, appearance, recipe.metrics),
             };
         }
@@ -640,8 +644,7 @@ namespace nandina::theme
                 .hover_fill = resolve_color(system, appearance, recipe.hover_fill),
                 .focus_fill = resolve_color(system, appearance, recipe.focus_fill),
                 .highlight_text = resolve_color(system, appearance, recipe.highlight_text),
-                .checked_indicator =
-                    resolve_color(system, appearance, recipe.checked_indicator),
+                .checked_indicator = resolve_color(system, appearance, recipe.checked_indicator),
                 .separator = resolve_color(system, appearance, recipe.separator),
                 .metrics = ResolvedCommandPaletteMetrics {
                     .panel_width = resolve_scalar(system, appearance, recipe.metrics.panel_width),
@@ -649,8 +652,7 @@ namespace nandina::theme
                         resolve_scalar(system, appearance, recipe.metrics.panel_top_offset),
                     .panel_padding =
                         resolve_scalar(system, appearance, recipe.metrics.panel_padding),
-                    .panel_radius =
-                        resolve_scalar(system, appearance, recipe.metrics.panel_radius),
+                    .panel_radius = resolve_scalar(system, appearance, recipe.metrics.panel_radius),
                     .gap = resolve_scalar(system, appearance, recipe.metrics.gap),
                     .item_height = resolve_scalar(system, appearance, recipe.metrics.item_height),
                     .item_padding_x =
@@ -690,8 +692,7 @@ namespace nandina::theme
                         resolve_scalar(system, appearance, recipe.metrics.list_padding_x),
                     .list_padding_y =
                         resolve_scalar(system, appearance, recipe.metrics.list_padding_y),
-                    .item_radius =
-                        resolve_scalar(system, appearance, recipe.metrics.item_radius),
+                    .item_radius = resolve_scalar(system, appearance, recipe.metrics.item_radius),
                     .min_width = resolve_scalar(system, appearance, recipe.metrics.min_width),
                 },
             };
@@ -824,10 +825,8 @@ namespace nandina::theme
         }
     } // namespace
 
-    auto button_state_layer_color(
-        const ResolvedButtonStyle& style,
-        const ButtonVisualState state
-    ) -> NanColor {
+    auto button_state_layer_color(const ResolvedButtonStyle& style, const ButtonVisualState state)
+        -> NanColor {
         if (state == ButtonVisualState::hovered || state == ButtonVisualState::focused) {
             return style.state_layer.hover;
         }
@@ -837,10 +836,8 @@ namespace nandina::theme
         return style.state_layer.hover.with_alpha(0.0F);
     }
 
-    auto toggle_state_layer_color(
-        const ResolvedToggleStyle& style,
-        const ToggleVisualState state
-    ) -> NanColor {
+    auto toggle_state_layer_color(const ResolvedToggleStyle& style, const ToggleVisualState state)
+        -> NanColor {
         if (state == ToggleVisualState::hovered || state == ToggleVisualState::focused) {
             return style.state_layer.hover;
         }
@@ -901,7 +898,8 @@ namespace nandina::theme
     ) -> ResolvedCheckboxStyle {
         auto style = resolve_recipe(system, appearance, system.components.checkbox.base);
         for (const auto& rule: system.components.checkbox.rules) {
-            if ((rule.checked && *rule.checked != checked) || (rule.state && *rule.state != state)) {
+            if ((rule.checked && *rule.checked != checked) || (rule.state && *rule.state != state))
+            {
                 continue;
             }
             apply_rule(system, appearance, style, rule);
@@ -1016,7 +1014,8 @@ namespace nandina::theme
     ) -> ResolvedSwitchStyle {
         auto style = resolve_recipe(system, appearance, system.components.switch_component.base);
         for (const auto& rule: system.components.switch_component.rules) {
-            if ((rule.checked && *rule.checked != checked) || (rule.state && *rule.state != state)) {
+            if ((rule.checked && *rule.checked != checked) || (rule.state && *rule.state != state))
+            {
                 continue;
             }
             apply_rule(system, appearance, style, rule);
@@ -1030,10 +1029,8 @@ namespace nandina::theme
     /**
      * 解析 Badge 配方（纯展示：base → 规则列表，后匹配者胜，无状态变换）。
      */
-    auto resolve_badge(
-        const DesignSystem& system,
-        const ColorAppearance appearance
-    ) -> ResolvedBadgeStyle {
+    auto resolve_badge(const DesignSystem& system, const ColorAppearance appearance)
+        -> ResolvedBadgeStyle {
         auto style = resolve_recipe(system, appearance, system.components.badge.base);
         for (const auto& rule: system.components.badge.rules) {
             apply_rule(system, appearance, style, rule);
@@ -1044,10 +1041,8 @@ namespace nandina::theme
     /**
      * 解析 Card 配方（纯容器：base → 规则列表，后匹配者胜，无状态变换）。
      */
-    auto resolve_card(
-        const DesignSystem& system,
-        const ColorAppearance appearance
-    ) -> ResolvedCardStyle {
+    auto resolve_card(const DesignSystem& system, const ColorAppearance appearance)
+        -> ResolvedCardStyle {
         auto style = resolve_recipe(system, appearance, system.components.card.base);
         for (const auto& rule: system.components.card.rules) {
             apply_rule(system, appearance, style, rule);
@@ -1172,7 +1167,8 @@ namespace nandina::theme
     ) -> ResolvedRadioButtonStyle {
         auto style = resolve_recipe(system, appearance, system.components.radio_button.base);
         for (const auto& rule: system.components.radio_button.rules) {
-            if ((rule.checked && *rule.checked != checked) || (rule.state && *rule.state != state)) {
+            if ((rule.checked && *rule.checked != checked) || (rule.state && *rule.state != state))
+            {
                 continue;
             }
             apply_rule(system, appearance, style, rule);
@@ -1207,8 +1203,10 @@ namespace nandina::theme
     ) -> ResolvedToggleStyle {
         auto style = resolve_recipe(system, appearance, system.components.toggle.base, tone);
         for (const auto& rule: system.components.toggle.rules) {
-            if ((rule.tone && *rule.tone != tone) || (rule.treatment && *rule.treatment != treatment)
-                || (rule.checked && *rule.checked != checked) || (rule.state && *rule.state != state))
+            if ((rule.tone && *rule.tone != tone)
+                || (rule.treatment && *rule.treatment != treatment)
+                || (rule.checked && *rule.checked != checked)
+                || (rule.state && *rule.state != state))
             {
                 continue;
             }
@@ -1326,10 +1324,8 @@ namespace nandina::theme
     /**
      * 解析 Tooltip 配方（纯展示：base → 规则列表，后匹配者胜）。
      */
-    auto resolve_tooltip(
-        const DesignSystem& system,
-        const ColorAppearance appearance
-    ) -> ResolvedTooltipStyle {
+    auto resolve_tooltip(const DesignSystem& system, const ColorAppearance appearance)
+        -> ResolvedTooltipStyle {
         auto style = resolve_recipe(system, appearance, system.components.tooltip.base);
         for (const auto& rule: system.components.tooltip.rules) {
             apply_rule(system, appearance, style, rule);
@@ -1361,10 +1357,8 @@ namespace nandina::theme
     /**
      * 解析 Divider 配方（纯展示：base → 规则列表，后匹配者胜）。
      */
-    auto resolve_divider(
-        const DesignSystem& system,
-        const ColorAppearance appearance
-    ) -> ResolvedDividerStyle {
+    auto resolve_divider(const DesignSystem& system, const ColorAppearance appearance)
+        -> ResolvedDividerStyle {
         auto style = resolve_recipe(system, appearance, system.components.divider.base);
         for (const auto& rule: system.components.divider.rules) {
             apply_rule(system, appearance, style, rule);
@@ -1375,10 +1369,8 @@ namespace nandina::theme
     /**
      * 解析 Avatar 配方（纯展示：base → 规则列表，后匹配者胜）。
      */
-    auto resolve_avatar(
-        const DesignSystem& system,
-        const ColorAppearance appearance
-    ) -> ResolvedAvatarStyle {
+    auto resolve_avatar(const DesignSystem& system, const ColorAppearance appearance)
+        -> ResolvedAvatarStyle {
         auto style = resolve_recipe(system, appearance, system.components.avatar.base);
         for (const auto& rule: system.components.avatar.rules) {
             apply_rule(system, appearance, style, rule);
@@ -1389,10 +1381,8 @@ namespace nandina::theme
     /**
      * 解析 Chip 配方（纯展示：base → 规则列表，后匹配者胜）。
      */
-    auto resolve_chip(
-        const DesignSystem& system,
-        const ColorAppearance appearance
-    ) -> ResolvedChipStyle {
+    auto resolve_chip(const DesignSystem& system, const ColorAppearance appearance)
+        -> ResolvedChipStyle {
         auto style = resolve_recipe(system, appearance, system.components.chip.base);
         for (const auto& rule: system.components.chip.rules) {
             apply_rule(system, appearance, style, rule);
@@ -1403,10 +1393,8 @@ namespace nandina::theme
     /**
      * 解析 Dialog 配方（纯展示：base → 规则列表，后匹配者胜）。
      */
-    auto resolve_dialog(
-        const DesignSystem& system,
-        const ColorAppearance appearance
-    ) -> ResolvedDialogStyle {
+    auto resolve_dialog(const DesignSystem& system, const ColorAppearance appearance)
+        -> ResolvedDialogStyle {
         auto style = resolve_recipe(system, appearance, system.components.dialog.base);
         for (const auto& rule: system.components.dialog.rules) {
             apply_rule(system, appearance, style, rule);
@@ -1417,10 +1405,8 @@ namespace nandina::theme
     /**
      * 解析 Popover 配方（纯展示容器：base → 规则列表，后匹配者胜）。
      */
-    auto resolve_popover(
-        const DesignSystem& system,
-        const ColorAppearance appearance
-    ) -> ResolvedPopoverStyle {
+    auto resolve_popover(const DesignSystem& system, const ColorAppearance appearance)
+        -> ResolvedPopoverStyle {
         auto style = resolve_recipe(system, appearance, system.components.popover.base);
         for (const auto& rule: system.components.popover.rules) {
             apply_rule(system, appearance, style, rule);
@@ -1431,10 +1417,8 @@ namespace nandina::theme
     /**
      * 解析 DropdownMenu 配方（条目列表：base → 规则列表，后匹配者胜）。
      */
-    auto resolve_dropdown_menu(
-        const DesignSystem& system,
-        const ColorAppearance appearance
-    ) -> ResolvedDropdownMenuStyle {
+    auto resolve_dropdown_menu(const DesignSystem& system, const ColorAppearance appearance)
+        -> ResolvedDropdownMenuStyle {
         auto style = resolve_recipe(system, appearance, system.components.dropdown_menu.base);
         for (const auto& rule: system.components.dropdown_menu.rules) {
             apply_rule(system, appearance, style, rule);
@@ -1445,10 +1429,8 @@ namespace nandina::theme
     /**
      * 解析 HoverCard 配方（卡片外壳 + 度量）。没有状态选择器：卡片要么显示要么不显示。
      */
-    auto resolve_hover_card(
-        const DesignSystem& system,
-        const ColorAppearance appearance
-    ) -> ResolvedHoverCardStyle {
+    auto resolve_hover_card(const DesignSystem& system, const ColorAppearance appearance)
+        -> ResolvedHoverCardStyle {
         auto style = resolve_recipe(system, appearance, system.components.hover_card.base);
         for (const auto& rule: system.components.hover_card.rules) {
             apply_rule(system, appearance, style, rule);
@@ -1462,10 +1444,8 @@ namespace nandina::theme
      * 与 DropdownMenu 一样没有状态选择器：面板只在打开时存在，hover / focused 是逐
      * 结果的状态，由视图读取 `hover_fill` / `focus_fill` 直接绘制。
      */
-    auto resolve_command_palette(
-        const DesignSystem& system,
-        const ColorAppearance appearance
-    ) -> ResolvedCommandPaletteStyle {
+    auto resolve_command_palette(const DesignSystem& system, const ColorAppearance appearance)
+        -> ResolvedCommandPaletteStyle {
         auto style = resolve_recipe(system, appearance, system.components.command_palette.base);
         for (const auto& rule: system.components.command_palette.rules) {
             apply_rule(system, appearance, style, rule);
@@ -1506,7 +1486,8 @@ namespace nandina::theme
         if (rule.container_fill)
             style.container.fill = resolve_color(system, appearance, *rule.container_fill, tone);
         if (rule.container_border)
-            style.container.border = resolve_color(system, appearance, *rule.container_border, tone);
+            style.container.border =
+                resolve_color(system, appearance, *rule.container_border, tone);
         if (rule.container_border_width) {
             style.container.border_width =
                 resolve_scalar(system, appearance, *rule.container_border_width);
@@ -1517,6 +1498,8 @@ namespace nandina::theme
             style.label.color = resolve_color(system, appearance, *rule.label_color, tone);
         if (rule.label_font_size)
             style.label.font_size = resolve_scalar(system, appearance, *rule.label_font_size);
+        if (rule.label_align)
+            style.label.align = *rule.label_align;
         if (rule.focus_ring_color)
             style.focus.color = resolve_color(system, appearance, *rule.focus_ring_color, tone);
         if (rule.focus_ring_width)
@@ -1582,11 +1565,14 @@ namespace nandina::theme
                 resolve_color(system, appearance, *rule.track_inactive_fill);
         }
         if (rule.track_active_fill) {
-            style.active_track.box.fill = resolve_color(system, appearance, *rule.track_active_fill);
+            style.active_track.box.fill =
+                resolve_color(system, appearance, *rule.track_active_fill);
         }
         if (rule.track_thickness) {
-            style.inactive_track.thickness = resolve_scalar(system, appearance, *rule.track_thickness);
-            style.active_track.thickness = resolve_scalar(system, appearance, *rule.track_thickness);
+            style.inactive_track.thickness =
+                resolve_scalar(system, appearance, *rule.track_thickness);
+            style.active_track.thickness =
+                resolve_scalar(system, appearance, *rule.track_thickness);
         }
         if (rule.thumb_fill)
             style.thumb.box.fill = resolve_color(system, appearance, *rule.thumb_fill);
@@ -1695,8 +1681,7 @@ namespace nandina::theme
         if (rule.track_border)
             style.track.border = resolve_color(system, appearance, *rule.track_border);
         if (rule.track_border_width) {
-            style.track.border_width =
-                resolve_scalar(system, appearance, *rule.track_border_width);
+            style.track.border_width = resolve_scalar(system, appearance, *rule.track_border_width);
         }
         if (rule.track_radius)
             style.track.radius = resolve_scalar(system, appearance, *rule.track_radius);
@@ -1721,8 +1706,7 @@ namespace nandina::theme
                 resolve_scalar(system, appearance, *rule.metrics_track_height);
         }
         if (rule.metrics_thumb_size) {
-            style.metrics.thumb_size =
-                resolve_scalar(system, appearance, *rule.metrics_thumb_size);
+            style.metrics.thumb_size = resolve_scalar(system, appearance, *rule.metrics_thumb_size);
         }
         if (rule.metrics_gap)
             style.metrics.gap = resolve_scalar(system, appearance, *rule.metrics_gap);
@@ -1773,26 +1757,21 @@ namespace nandina::theme
         if (rule.shadow_color)
             style.shadow.color = resolve_color(system, appearance, *rule.shadow_color);
         if (rule.shadow_offset_x) {
-            style.shadow.offset_x =
-                resolve_scalar(system, appearance, *rule.shadow_offset_x);
+            style.shadow.offset_x = resolve_scalar(system, appearance, *rule.shadow_offset_x);
         }
         if (rule.shadow_offset_y) {
-            style.shadow.offset_y =
-                resolve_scalar(system, appearance, *rule.shadow_offset_y);
+            style.shadow.offset_y = resolve_scalar(system, appearance, *rule.shadow_offset_y);
         }
         if (rule.shadow_spread)
             style.shadow.spread = resolve_scalar(system, appearance, *rule.shadow_spread);
         if (rule.metrics_padding_x) {
-            style.metrics.padding_x =
-                resolve_scalar(system, appearance, *rule.metrics_padding_x);
+            style.metrics.padding_x = resolve_scalar(system, appearance, *rule.metrics_padding_x);
         }
         if (rule.metrics_padding_y) {
-            style.metrics.padding_y =
-                resolve_scalar(system, appearance, *rule.metrics_padding_y);
+            style.metrics.padding_y = resolve_scalar(system, appearance, *rule.metrics_padding_y);
         }
         if (rule.metrics_min_height) {
-            style.metrics.min_height =
-                resolve_scalar(system, appearance, *rule.metrics_min_height);
+            style.metrics.min_height = resolve_scalar(system, appearance, *rule.metrics_min_height);
         }
     }
 
@@ -1807,8 +1786,7 @@ namespace nandina::theme
         if (rule.track_border)
             style.track.border = resolve_color(system, appearance, *rule.track_border);
         if (rule.track_border_width) {
-            style.track.border_width =
-                resolve_scalar(system, appearance, *rule.track_border_width);
+            style.track.border_width = resolve_scalar(system, appearance, *rule.track_border_width);
         }
         if (rule.track_radius)
             style.track.radius = resolve_scalar(system, appearance, *rule.track_radius);
@@ -1821,8 +1799,7 @@ namespace nandina::theme
         if (rule.metrics_height)
             style.metrics.height = resolve_scalar(system, appearance, *rule.metrics_height);
         if (rule.metrics_min_height) {
-            style.metrics.min_height =
-                resolve_scalar(system, appearance, *rule.metrics_min_height);
+            style.metrics.min_height = resolve_scalar(system, appearance, *rule.metrics_min_height);
         }
         if (rule.metrics_preferred_width) {
             style.metrics.preferred_width =
@@ -1873,8 +1850,7 @@ namespace nandina::theme
         if (rule.metrics_height)
             style.metrics.height = resolve_scalar(system, appearance, *rule.metrics_height);
         if (rule.metrics_line_gap) {
-            style.metrics.line_gap =
-                resolve_scalar(system, appearance, *rule.metrics_line_gap);
+            style.metrics.line_gap = resolve_scalar(system, appearance, *rule.metrics_line_gap);
         }
         if (rule.metrics_last_line_ratio) {
             style.metrics.last_line_ratio =
@@ -2026,7 +2002,8 @@ namespace nandina::theme
             style.container.fill = resolve_color(system, appearance, *rule.container_fill, tone);
         }
         if (rule.container_border) {
-            style.container.border = resolve_color(system, appearance, *rule.container_border, tone);
+            style.container.border =
+                resolve_color(system, appearance, *rule.container_border, tone);
         }
         if (rule.container_border_width) {
             style.container.border_width =
@@ -2138,8 +2115,7 @@ namespace nandina::theme
         if (rule.separator_color)
             style.separator = resolve_color(system, appearance, *rule.separator_color);
         if (rule.link_focus_ring_color) {
-            style.link_focus.color =
-                resolve_color(system, appearance, *rule.link_focus_ring_color);
+            style.link_focus.color = resolve_color(system, appearance, *rule.link_focus_ring_color);
         }
         if (rule.link_focus_ring_width) {
             style.link_focus.width =
@@ -2268,12 +2244,10 @@ namespace nandina::theme
         if (rule.metrics_gap)
             style.metrics.gap = resolve_scalar(system, appearance, *rule.metrics_gap);
         if (rule.metrics_padding_x) {
-            style.metrics.padding_x =
-                resolve_scalar(system, appearance, *rule.metrics_padding_x);
+            style.metrics.padding_x = resolve_scalar(system, appearance, *rule.metrics_padding_x);
         }
         if (rule.metrics_min_height) {
-            style.metrics.min_height =
-                resolve_scalar(system, appearance, *rule.metrics_min_height);
+            style.metrics.min_height = resolve_scalar(system, appearance, *rule.metrics_min_height);
         }
     }
 
@@ -2298,14 +2272,12 @@ namespace nandina::theme
         if (rule.label_font_size)
             style.label.font_size = resolve_scalar(system, appearance, *rule.label_font_size);
         if (rule.metrics_padding_x) {
-            style.metrics.padding_x =
-                resolve_scalar(system, appearance, *rule.metrics_padding_x);
+            style.metrics.padding_x = resolve_scalar(system, appearance, *rule.metrics_padding_x);
         }
         if (rule.metrics_gap)
             style.metrics.gap = resolve_scalar(system, appearance, *rule.metrics_gap);
         if (rule.metrics_min_height) {
-            style.metrics.min_height =
-                resolve_scalar(system, appearance, *rule.metrics_min_height);
+            style.metrics.min_height = resolve_scalar(system, appearance, *rule.metrics_min_height);
         }
     }
 
@@ -2330,8 +2302,7 @@ namespace nandina::theme
         if (rule.popup_border)
             style.popup.border = resolve_color(system, appearance, *rule.popup_border);
         if (rule.popup_border_width) {
-            style.popup.border_width =
-                resolve_scalar(system, appearance, *rule.popup_border_width);
+            style.popup.border_width = resolve_scalar(system, appearance, *rule.popup_border_width);
         }
         if (rule.popup_radius)
             style.popup.radius = resolve_scalar(system, appearance, *rule.popup_radius);
@@ -2355,14 +2326,12 @@ namespace nandina::theme
         if (rule.metrics_height)
             style.metrics.height = resolve_scalar(system, appearance, *rule.metrics_height);
         if (rule.metrics_padding_x) {
-            style.metrics.padding_x =
-                resolve_scalar(system, appearance, *rule.metrics_padding_x);
+            style.metrics.padding_x = resolve_scalar(system, appearance, *rule.metrics_padding_x);
         }
         if (rule.metrics_gap)
             style.metrics.gap = resolve_scalar(system, appearance, *rule.metrics_gap);
         if (rule.metrics_min_height) {
-            style.metrics.min_height =
-                resolve_scalar(system, appearance, *rule.metrics_min_height);
+            style.metrics.min_height = resolve_scalar(system, appearance, *rule.metrics_min_height);
         }
         if (rule.metrics_preferred_width) {
             style.metrics.preferred_width =
@@ -2381,8 +2350,7 @@ namespace nandina::theme
         if (rule.thickness)
             style.thickness = resolve_scalar(system, appearance, *rule.thickness);
         if (rule.preferred_length) {
-            style.preferred_length =
-                resolve_scalar(system, appearance, *rule.preferred_length);
+            style.preferred_length = resolve_scalar(system, appearance, *rule.preferred_length);
         }
     }
 
@@ -2439,8 +2407,7 @@ namespace nandina::theme
         if (rule.metrics_height)
             style.metrics.height = resolve_scalar(system, appearance, *rule.metrics_height);
         if (rule.metrics_padding_x) {
-            style.metrics.padding_x =
-                resolve_scalar(system, appearance, *rule.metrics_padding_x);
+            style.metrics.padding_x = resolve_scalar(system, appearance, *rule.metrics_padding_x);
         }
         if (rule.metrics_gap)
             style.metrics.gap = resolve_scalar(system, appearance, *rule.metrics_gap);
@@ -2459,8 +2426,7 @@ namespace nandina::theme
         if (rule.panel_border)
             style.panel.border = resolve_color(system, appearance, *rule.panel_border);
         if (rule.panel_border_width) {
-            style.panel.border_width =
-                resolve_scalar(system, appearance, *rule.panel_border_width);
+            style.panel.border_width = resolve_scalar(system, appearance, *rule.panel_border_width);
         }
         if (rule.panel_radius)
             style.panel.radius = resolve_scalar(system, appearance, *rule.panel_radius);
@@ -2473,18 +2439,15 @@ namespace nandina::theme
                 resolve_scalar(system, appearance, *rule.metrics_panel_width);
         }
         if (rule.metrics_padding_x) {
-            style.metrics.padding_x =
-                resolve_scalar(system, appearance, *rule.metrics_padding_x);
+            style.metrics.padding_x = resolve_scalar(system, appearance, *rule.metrics_padding_x);
         }
         if (rule.metrics_padding_y) {
-            style.metrics.padding_y =
-                resolve_scalar(system, appearance, *rule.metrics_padding_y);
+            style.metrics.padding_y = resolve_scalar(system, appearance, *rule.metrics_padding_y);
         }
         if (rule.metrics_gap)
             style.metrics.gap = resolve_scalar(system, appearance, *rule.metrics_gap);
         if (rule.metrics_min_height) {
-            style.metrics.min_height =
-                resolve_scalar(system, appearance, *rule.metrics_min_height);
+            style.metrics.min_height = resolve_scalar(system, appearance, *rule.metrics_min_height);
         }
         if (rule.description_color) {
             style.description.color = resolve_color(system, appearance, *rule.description_color);
@@ -2506,24 +2469,20 @@ namespace nandina::theme
         if (rule.panel_border)
             style.panel.border = resolve_color(system, appearance, *rule.panel_border);
         if (rule.panel_border_width) {
-            style.panel.border_width =
-                resolve_scalar(system, appearance, *rule.panel_border_width);
+            style.panel.border_width = resolve_scalar(system, appearance, *rule.panel_border_width);
         }
         if (rule.panel_radius)
             style.panel.radius = resolve_scalar(system, appearance, *rule.panel_radius);
         if (rule.metrics_padding_x) {
-            style.metrics.padding_x =
-                resolve_scalar(system, appearance, *rule.metrics_padding_x);
+            style.metrics.padding_x = resolve_scalar(system, appearance, *rule.metrics_padding_x);
         }
         if (rule.metrics_padding_y) {
-            style.metrics.padding_y =
-                resolve_scalar(system, appearance, *rule.metrics_padding_y);
+            style.metrics.padding_y = resolve_scalar(system, appearance, *rule.metrics_padding_y);
         }
         if (rule.metrics_gap)
             style.metrics.gap = resolve_scalar(system, appearance, *rule.metrics_gap);
         if (rule.metrics_min_height) {
-            style.metrics.min_height =
-                resolve_scalar(system, appearance, *rule.metrics_min_height);
+            style.metrics.min_height = resolve_scalar(system, appearance, *rule.metrics_min_height);
         }
     }
 
@@ -2601,8 +2560,7 @@ namespace nandina::theme
         if (rule.panel_border)
             style.panel.border = resolve_color(system, appearance, *rule.panel_border);
         if (rule.panel_border_width) {
-            style.panel.border_width =
-                resolve_scalar(system, appearance, *rule.panel_border_width);
+            style.panel.border_width = resolve_scalar(system, appearance, *rule.panel_border_width);
         }
         if (rule.panel_radius)
             style.panel.radius = resolve_scalar(system, appearance, *rule.panel_radius);
@@ -2634,8 +2592,7 @@ namespace nandina::theme
         if (rule.panel_border)
             style.panel.border = resolve_color(system, appearance, *rule.panel_border);
         if (rule.panel_border_width) {
-            style.panel.border_width =
-                resolve_scalar(system, appearance, *rule.panel_border_width);
+            style.panel.border_width = resolve_scalar(system, appearance, *rule.panel_border_width);
         }
         if (rule.panel_radius)
             style.panel.radius = resolve_scalar(system, appearance, *rule.panel_radius);
@@ -2743,8 +2700,7 @@ namespace nandina::theme
         if (rule.input_border)
             style.input.border = resolve_color(system, appearance, *rule.input_border);
         if (rule.input_border_width) {
-            style.input.border_width =
-                resolve_scalar(system, appearance, *rule.input_border_width);
+            style.input.border_width = resolve_scalar(system, appearance, *rule.input_border_width);
         }
         if (rule.input_radius)
             style.input.radius = resolve_scalar(system, appearance, *rule.input_radius);
@@ -2812,33 +2768,39 @@ namespace nandina::theme
     /** @return 框架默认 Button 配方（normal 态通用语义；treatment/size 由规则覆盖）。 */
     auto default_button_recipe() -> ButtonRecipe {
         return {
-            .container = BoxStyle {
-                .fill = ThemeColor::transparent(ColorToken::background),
-                .border = ThemeColor::transparent(ColorToken::primary),
-                .border_width = ThemeScalar::literal(0.0F),
-                .radius = ThemeScalar::token(ScalarToken::radius_md),
-            },
+            .container =
+                BoxStyle {
+                    .fill = ThemeColor::transparent(ColorToken::background),
+                    .border = ThemeColor::transparent(ColorToken::primary),
+                    .border_width = ThemeScalar::literal(0.0F),
+                    .radius = ThemeScalar::token(ScalarToken::radius_md),
+                },
             // label 默认绑定 primary（不是 tone 强调色）：这样没有 treatment 规则时
             // link / ghost 这类无底色按钮的文字仍然是品牌色。
-            .label = TypeStyle {
-                .color = ThemeColor::token(ColorToken::primary),
-                .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
-            },
-            .focus = FocusRingStyle {
-                .color = ThemeColor::token(ColorToken::ring),
-                .width = ThemeScalar::token(ScalarToken::border_focus_ring),
-            },
+            .label =
+                TypeStyle {
+                    .color = ThemeColor::token(ColorToken::primary),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                    // 按钮标签居中是这个组件的既有观感。在此之前它由 Button::on_draw 里的居中
+                    // 算术实现；现在改由配方表达，于是可被主题与实例覆盖改成左 / 右对齐。
+                    .align = TextAlign::center,
+                },
+            .focus =
+                FocusRingStyle {
+                    .color = ThemeColor::token(ColorToken::ring),
+                    .width = ThemeScalar::token(ScalarToken::border_focus_ring),
+                },
             // 状态层回退：无可见覆盖（treatment 规则按各自语义覆盖）。
-            .state_layer = StateLayerStyle {
-                .hover = ThemeColor::transparent(ColorToken::background),
-                .pressed = ThemeColor::transparent(ColorToken::background),
-            },
-            .ripple = RippleStyle {
-                .color = ThemeColor::with_alpha(
-                    on_accent_ref, ThemeScalar::literal(0.20F)
-                ),
-                .duration = ThemeScalar::token(ScalarToken::motion_medium_duration),
-            },
+            .state_layer =
+                StateLayerStyle {
+                    .hover = ThemeColor::transparent(ColorToken::background),
+                    .pressed = ThemeColor::transparent(ColorToken::background),
+                },
+            .ripple =
+                RippleStyle {
+                    .color = ThemeColor::with_alpha(on_accent_ref, ThemeScalar::literal(0.20F)),
+                    .duration = ThemeScalar::token(ScalarToken::motion_medium_duration),
+                },
             .metrics = ControlMetrics {
                 // shadcn Button 默认 h-9（36px）、px-4（16px）、text-sm；small 32 / large 48
                 // 由尺寸规则覆盖。
@@ -2855,21 +2817,24 @@ namespace nandina::theme
     /** @return 框架默认 Checkbox 配方（未勾选：透明指示器 + input 边框）。 */
     auto default_checkbox_recipe() -> CheckboxRecipe {
         return {
-            .indicator = BoxStyle {
-                .fill = ThemeColor::transparent(ColorToken::background),
-                .border = ThemeColor::token(ColorToken::input),
-                .border_width = ThemeScalar::token(ScalarToken::border_thin),
-                .radius = ThemeScalar::literal(4.0F), // shadcn checkbox 用 rounded-[4px]
-            },
+            .indicator =
+                BoxStyle {
+                    .fill = ThemeColor::transparent(ColorToken::background),
+                    .border = ThemeColor::token(ColorToken::input),
+                    .border_width = ThemeScalar::token(ScalarToken::border_thin),
+                    .radius = ThemeScalar::literal(4.0F), // shadcn checkbox 用 rounded-[4px]
+                },
             .check = ThemeColor::token(ColorToken::primary_foreground),
-            .label = TypeStyle {
-                .color = ThemeColor::token(ColorToken::foreground),
-                .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
-            },
-            .focus = FocusRingStyle {
-                .color = ThemeColor::token(ColorToken::ring),
-                .width = ThemeScalar::literal(0.0F), // focused 规则按需开启
-            },
+            .label =
+                TypeStyle {
+                    .color = ThemeColor::token(ColorToken::foreground),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                },
+            .focus =
+                FocusRingStyle {
+                    .color = ThemeColor::token(ColorToken::ring),
+                    .width = ThemeScalar::literal(0.0F), // focused 规则按需开启
+                },
             .metrics = ControlMetrics {
                 .height = ThemeScalar::literal(0.0F),
                 .padding_x = ThemeScalar::literal(0.0F),
@@ -2884,43 +2849,50 @@ namespace nandina::theme
     /** @return 框架默认 Slider 配方。 */
     auto default_slider_recipe() -> SliderRecipe {
         return {
-            .inactive_track = TrackStyle {
-                .box = BoxStyle {
-                    .fill = ThemeColor::token(ColorToken::muted),
-                    .border = ThemeColor::token(ColorToken::muted),
-                    .border_width = ThemeScalar::literal(0.0F),
-                    .radius = ThemeScalar::token(ScalarToken::radius_full),
+            .inactive_track =
+                TrackStyle {
+                    .box =
+                        BoxStyle {
+                            .fill = ThemeColor::token(ColorToken::muted),
+                            .border = ThemeColor::token(ColorToken::muted),
+                            .border_width = ThemeScalar::literal(0.0F),
+                            .radius = ThemeScalar::token(ScalarToken::radius_full),
+                        },
+                    .thickness = ThemeScalar::literal(4.0F),
                 },
-                .thickness = ThemeScalar::literal(4.0F),
-            },
-            .active_track = TrackStyle {
-                .box = BoxStyle {
-                    .fill = ThemeColor::token(ColorToken::primary),
-                    .border = ThemeColor::token(ColorToken::primary),
-                    .border_width = ThemeScalar::literal(0.0F),
-                    .radius = ThemeScalar::token(ScalarToken::radius_full),
+            .active_track =
+                TrackStyle {
+                    .box =
+                        BoxStyle {
+                            .fill = ThemeColor::token(ColorToken::primary),
+                            .border = ThemeColor::token(ColorToken::primary),
+                            .border_width = ThemeScalar::literal(0.0F),
+                            .radius = ThemeScalar::token(ScalarToken::radius_full),
+                        },
+                    .thickness = ThemeScalar::literal(4.0F),
                 },
-                .thickness = ThemeScalar::literal(4.0F),
-            },
             // shadcn slider 拇指是白底 + primary 描边，不是实心球。
-            .thumb = ThumbStyle {
-                .box = BoxStyle {
-                    .fill = ThemeColor::token(ColorToken::background),
-                    .border = ThemeColor::token(ColorToken::primary),
-                    .border_width = ThemeScalar::token(ScalarToken::border_thin),
-                    // 圆角语义字段，Slider 不消费；拇指像素半径见下方的 thumb_radius。
-                    // 这里刻意不再放置半径值，避免被误当成 draw_circle 的半径。
-                    .radius = ThemeScalar::literal(0.0F),
+            .thumb =
+                ThumbStyle {
+                    .box =
+                        BoxStyle {
+                            .fill = ThemeColor::token(ColorToken::background),
+                            .border = ThemeColor::token(ColorToken::primary),
+                            .border_width = ThemeScalar::token(ScalarToken::border_thin),
+                            // 圆角语义字段，Slider 不消费；拇指像素半径见下方的 thumb_radius。
+                            // 这里刻意不再放置半径值，避免被误当成 draw_circle 的半径。
+                            .radius = ThemeScalar::literal(0.0F),
+                        },
                 },
-            },
             // 拇指圆的像素半径。必须是具体数值：radius_full (=9999) 之类的圆角 token
             // 会画出覆盖整窗的圆盘（绘制时仍会夹紧到控件半高/半宽兜底）。
             // dragging 11 / hovered 10 由规则覆盖。
             .thumb_radius = ThemeScalar::literal(9.0F),
-            .focus = FocusRingStyle {
-                .color = ThemeColor::token(ColorToken::ring),
-                .width = ThemeScalar::literal(0.0F), // focused 规则按需开启
-            },
+            .focus =
+                FocusRingStyle {
+                    .color = ThemeColor::token(ColorToken::ring),
+                    .width = ThemeScalar::literal(0.0F), // focused 规则按需开启
+                },
             .metrics = ControlMetrics {
                 .height = ThemeScalar::literal(0.0F),
                 .padding_x = ThemeScalar::literal(0.0F),
@@ -2936,25 +2908,29 @@ namespace nandina::theme
     auto default_text_field_recipe() -> TextFieldRecipe {
         return {
             // shadcn Input：透明/背景底 + input 边框，不是填充的 surface_variant。
-            .container = BoxStyle {
-                .fill = ThemeColor::token(ColorToken::background),
-                .border = ThemeColor::token(ColorToken::input),
-                .border_width = ThemeScalar::token(ScalarToken::border_thin),
-                .radius = ThemeScalar::token(ScalarToken::radius_md),
-            },
-            .value = TypeStyle {
-                .color = ThemeColor::token(ColorToken::foreground),
-                .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
-            },
-            .placeholder = TypeStyle {
-                .color = ThemeColor::token(ColorToken::muted_foreground),
-                .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
-            },
+            .container =
+                BoxStyle {
+                    .fill = ThemeColor::token(ColorToken::background),
+                    .border = ThemeColor::token(ColorToken::input),
+                    .border_width = ThemeScalar::token(ScalarToken::border_thin),
+                    .radius = ThemeScalar::token(ScalarToken::radius_md),
+                },
+            .value =
+                TypeStyle {
+                    .color = ThemeColor::token(ColorToken::foreground),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                },
+            .placeholder =
+                TypeStyle {
+                    .color = ThemeColor::token(ColorToken::muted_foreground),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                },
             .selection = ThemeColor::token(ColorToken::selection),
-            .focus = FocusRingStyle {
-                .color = ThemeColor::token(ColorToken::ring),
-                .width = ThemeScalar::literal(0.0F), // focused 规则按需开启
-            },
+            .focus =
+                FocusRingStyle {
+                    .color = ThemeColor::token(ColorToken::ring),
+                    .width = ThemeScalar::literal(0.0F), // focused 规则按需开启
+                },
             .metrics = ControlMetrics {
                 .height = ThemeScalar::literal(36.0F), // shadcn h-9
                 .padding_x = ThemeScalar::token(ScalarToken::spacing_md),
@@ -2974,25 +2950,29 @@ namespace nandina::theme
      */
     auto default_text_area_recipe() -> TextAreaRecipe {
         return {
-            .container = BoxStyle {
-                .fill = ThemeColor::token(ColorToken::background),
-                .border = ThemeColor::token(ColorToken::input),
-                .border_width = ThemeScalar::token(ScalarToken::border_thin),
-                .radius = ThemeScalar::token(ScalarToken::radius_md),
-            },
-            .value = TypeStyle {
-                .color = ThemeColor::token(ColorToken::foreground),
-                .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
-            },
-            .placeholder = TypeStyle {
-                .color = ThemeColor::token(ColorToken::muted_foreground),
-                .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
-            },
+            .container =
+                BoxStyle {
+                    .fill = ThemeColor::token(ColorToken::background),
+                    .border = ThemeColor::token(ColorToken::input),
+                    .border_width = ThemeScalar::token(ScalarToken::border_thin),
+                    .radius = ThemeScalar::token(ScalarToken::radius_md),
+                },
+            .value =
+                TypeStyle {
+                    .color = ThemeColor::token(ColorToken::foreground),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                },
+            .placeholder =
+                TypeStyle {
+                    .color = ThemeColor::token(ColorToken::muted_foreground),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                },
             .selection = ThemeColor::token(ColorToken::selection),
-            .focus = FocusRingStyle {
-                .color = ThemeColor::token(ColorToken::ring),
-                .width = ThemeScalar::literal(0.0F), // focused 规则按需开启
-            },
+            .focus =
+                FocusRingStyle {
+                    .color = ThemeColor::token(ColorToken::ring),
+                    .width = ThemeScalar::literal(0.0F), // focused 规则按需开启
+                },
             .metrics = TextAreaMetrics {
                 .rows = ThemeScalar::literal(3.0F), // shadcn textarea 默认 3 行
                 // 14px 正文的每行逻辑高度（shadcn leading-5）；仅用于默认高度，
@@ -3007,28 +2987,33 @@ namespace nandina::theme
     /** @return 框架默认 Switch 配方（未勾选：input 轨道 + background 拇指）。 */
     auto default_switch_recipe() -> SwitchRecipe {
         return {
-            .track = BoxStyle {
-                .fill = ThemeColor::token(ColorToken::input),
-                .border = ThemeColor::transparent(ColorToken::input),
-                .border_width = ThemeScalar::literal(0.0F),
-                .radius = ThemeScalar::token(ScalarToken::radius_full),
-            },
-            .thumb = ThumbStyle {
-                .box = BoxStyle {
-                    .fill = ThemeColor::token(ColorToken::background),
-                    .border = ThemeColor::transparent(ColorToken::background),
+            .track =
+                BoxStyle {
+                    .fill = ThemeColor::token(ColorToken::input),
+                    .border = ThemeColor::transparent(ColorToken::input),
                     .border_width = ThemeScalar::literal(0.0F),
                     .radius = ThemeScalar::token(ScalarToken::radius_full),
                 },
-            },
-            .label = TypeStyle {
-                .color = ThemeColor::token(ColorToken::foreground),
-                .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
-            },
-            .focus = FocusRingStyle {
-                .color = ThemeColor::token(ColorToken::ring),
-                .width = ThemeScalar::literal(0.0F), // focused 规则按需开启
-            },
+            .thumb =
+                ThumbStyle {
+                    .box =
+                        BoxStyle {
+                            .fill = ThemeColor::token(ColorToken::background),
+                            .border = ThemeColor::transparent(ColorToken::background),
+                            .border_width = ThemeScalar::literal(0.0F),
+                            .radius = ThemeScalar::token(ScalarToken::radius_full),
+                        },
+                },
+            .label =
+                TypeStyle {
+                    .color = ThemeColor::token(ColorToken::foreground),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                },
+            .focus =
+                FocusRingStyle {
+                    .color = ThemeColor::token(ColorToken::ring),
+                    .width = ThemeScalar::literal(0.0F), // focused 规则按需开启
+                },
             .metrics = SwitchMetrics {
                 .track_width = ThemeScalar::literal(36.0F), // shadcn switch 36×20
                 .track_height = ThemeScalar::literal(20.0F),
@@ -3043,16 +3028,18 @@ namespace nandina::theme
     auto default_badge_recipe() -> BadgeRecipe {
         return {
             // shadcn Badge 默认 variant="secondary"：中性次级底色。
-            .container = BoxStyle {
-                .fill = ThemeColor::token(ColorToken::secondary),
-                .border = ThemeColor::transparent(ColorToken::secondary),
-                .border_width = ThemeScalar::literal(0.0F),
-                .radius = ThemeScalar::token(ScalarToken::radius_full),
-            },
-            .label = TypeStyle {
-                .color = ThemeColor::token(ColorToken::secondary_foreground),
-                .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
-            },
+            .container =
+                BoxStyle {
+                    .fill = ThemeColor::token(ColorToken::secondary),
+                    .border = ThemeColor::transparent(ColorToken::secondary),
+                    .border_width = ThemeScalar::literal(0.0F),
+                    .radius = ThemeScalar::token(ScalarToken::radius_full),
+                },
+            .label =
+                TypeStyle {
+                    .color = ThemeColor::token(ColorToken::secondary_foreground),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                },
             .metrics = ControlMetrics {
                 .height = ThemeScalar::literal(22.0F),
                 .padding_x = ThemeScalar::token(ScalarToken::spacing_sm),
@@ -3068,18 +3055,20 @@ namespace nandina::theme
     auto default_card_recipe() -> CardRecipe {
         return {
             // shadcn Card：bg-card + border（默认主题无阴影）。
-            .container = BoxStyle {
-                .fill = ThemeColor::token(ColorToken::card),
-                .border = ThemeColor::token(ColorToken::border),
-                .border_width = ThemeScalar::token(ScalarToken::border_thin),
-                .radius = ThemeScalar::token(ScalarToken::radius_lg),
-            },
-            .shadow = ShadowStyle {
-                .color = ThemeColor::literal(NanColor::from_hex(0x000000, 0.0F)),
-                .offset_x = ThemeScalar::literal(0.0F),
-                .offset_y = ThemeScalar::literal(0.0F),
-                .spread = ThemeScalar::literal(0.0F),
-            },
+            .container =
+                BoxStyle {
+                    .fill = ThemeColor::token(ColorToken::card),
+                    .border = ThemeColor::token(ColorToken::border),
+                    .border_width = ThemeScalar::token(ScalarToken::border_thin),
+                    .radius = ThemeScalar::token(ScalarToken::radius_lg),
+                },
+            .shadow =
+                ShadowStyle {
+                    .color = ThemeColor::literal(NanColor::from_hex(0x000000, 0.0F)),
+                    .offset_x = ThemeScalar::literal(0.0F),
+                    .offset_y = ThemeScalar::literal(0.0F),
+                    .spread = ThemeScalar::literal(0.0F),
+                },
             .metrics = CardMetrics {
                 .padding_x = ThemeScalar::token(ScalarToken::spacing_lg),
                 .padding_y = ThemeScalar::token(ScalarToken::spacing_lg),
@@ -3091,18 +3080,20 @@ namespace nandina::theme
     /** @return 框架默认 ProgressBar 配方（muted 轨道 + primary 填充）。 */
     auto default_progress_bar_recipe() -> ProgressBarRecipe {
         return {
-            .track = BoxStyle {
-                .fill = ThemeColor::token(ColorToken::muted),
-                .border = ThemeColor::transparent(ColorToken::muted),
-                .border_width = ThemeScalar::literal(0.0F),
-                .radius = ThemeScalar::token(ScalarToken::radius_full),
-            },
-            .fill = BoxStyle {
-                .fill = ThemeColor::token(ColorToken::primary),
-                .border = ThemeColor::transparent(ColorToken::primary),
-                .border_width = ThemeScalar::literal(0.0F),
-                .radius = ThemeScalar::token(ScalarToken::radius_full),
-            },
+            .track =
+                BoxStyle {
+                    .fill = ThemeColor::token(ColorToken::muted),
+                    .border = ThemeColor::transparent(ColorToken::muted),
+                    .border_width = ThemeScalar::literal(0.0F),
+                    .radius = ThemeScalar::token(ScalarToken::radius_full),
+                },
+            .fill =
+                BoxStyle {
+                    .fill = ThemeColor::token(ColorToken::primary),
+                    .border = ThemeColor::transparent(ColorToken::primary),
+                    .border_width = ThemeScalar::literal(0.0F),
+                    .radius = ThemeScalar::token(ScalarToken::radius_full),
+                },
             .metrics = ControlMetrics {
                 .height = ThemeScalar::literal(8.0F),
                 .padding_x = ThemeScalar::literal(0.0F),
@@ -3127,7 +3118,7 @@ namespace nandina::theme
                 .diameter = ThemeScalar::literal(16.0F),
                 .thickness = ThemeScalar::literal(2.0F),
                 .arc_radians = ThemeScalar::literal(4.712389F), // 3π/2
-                .rotation_speed = ThemeScalar::literal(4.0F),   // rad/s
+                .rotation_speed = ThemeScalar::literal(4.0F), // rad/s
             },
         };
     }
@@ -3136,12 +3127,13 @@ namespace nandina::theme
     auto default_skeleton_recipe() -> SkeletonRecipe {
         return {
             // 骨架屏是弱化底：muted 底 + 中圆角，text 行与 rectangle 块共用同一 surface。
-            .surface = BoxStyle {
-                .fill = ThemeColor::token(ColorToken::muted),
-                .border = ThemeColor::transparent(ColorToken::muted),
-                .border_width = ThemeScalar::literal(0.0F),
-                .radius = ThemeScalar::token(ScalarToken::radius_md),
-            },
+            .surface =
+                BoxStyle {
+                    .fill = ThemeColor::token(ColorToken::muted),
+                    .border = ThemeColor::transparent(ColorToken::muted),
+                    .border_width = ThemeScalar::literal(0.0F),
+                    .radius = ThemeScalar::token(ScalarToken::radius_md),
+                },
             .metrics = SkeletonMetrics {
                 // 12px 占位条 / 8px 行距：接近 4px 网格上的正文行高节奏，无对应 token。
                 .height = ThemeScalar::literal(12.0F),
@@ -3156,21 +3148,24 @@ namespace nandina::theme
     /** @return 框架默认 EmptyState 配方（透明容器 + foreground 标题 + muted 描述）。 */
     auto default_empty_state_recipe() -> EmptyStateRecipe {
         return {
-            .container = BoxStyle {
-                // 空状态通常嵌在列表/卡片内部，默认不额外加面，避免"框中框"。
-                .fill = ThemeColor::transparent(ColorToken::background),
-                .border = ThemeColor::transparent(ColorToken::border),
-                .border_width = ThemeScalar::literal(0.0F),
-                .radius = ThemeScalar::token(ScalarToken::radius_md),
-            },
-            .title = TypeStyle {
-                .color = ThemeColor::token(ColorToken::foreground),
-                .font_size = ThemeScalar::token(ScalarToken::typography_label_lg),
-            },
-            .description = TypeStyle {
-                .color = ThemeColor::token(ColorToken::muted_foreground),
-                .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
-            },
+            .container =
+                BoxStyle {
+                    // 空状态通常嵌在列表/卡片内部，默认不额外加面，避免"框中框"。
+                    .fill = ThemeColor::transparent(ColorToken::background),
+                    .border = ThemeColor::transparent(ColorToken::border),
+                    .border_width = ThemeScalar::literal(0.0F),
+                    .radius = ThemeScalar::token(ScalarToken::radius_md),
+                },
+            .title =
+                TypeStyle {
+                    .color = ThemeColor::token(ColorToken::foreground),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_label_lg),
+                },
+            .description =
+                TypeStyle {
+                    .color = ThemeColor::token(ColorToken::muted_foreground),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                },
             .metrics = EmptyStateMetrics {
                 .gap = ThemeScalar::token(ScalarToken::spacing_md),
                 .padding_x = ThemeScalar::token(ScalarToken::spacing_lg),
@@ -3194,24 +3189,27 @@ namespace nandina::theme
      */
     auto default_alert_recipe() -> AlertRecipe {
         return {
-            .container = BoxStyle {
-                // base 的填充 / 边框透明；四档 tone 规则会给出各自的色值。
-                .fill = ThemeColor::transparent(ColorToken::background),
-                .border = ThemeColor::transparent(ColorToken::border),
-                .border_width = ThemeScalar::token(ScalarToken::border_thin),
-                .radius = ThemeScalar::token(ScalarToken::radius_md),
-            },
+            .container =
+                BoxStyle {
+                    // base 的填充 / 边框透明；四档 tone 规则会给出各自的色值。
+                    .fill = ThemeColor::transparent(ColorToken::background),
+                    .border = ThemeColor::transparent(ColorToken::border),
+                    .border_width = ThemeScalar::token(ScalarToken::border_thin),
+                    .radius = ThemeScalar::token(ScalarToken::radius_md),
+                },
             // 标题刻意用 foreground 而不是 tone 的 `*_foreground`：后者是"实色 × 上的
             // 文字色"（默认主题里 info_foreground / error_foreground 接近白色），
             // 落在低透明度浅色填充上会直接看不见。soft banner 的可读文字统一取正文色。
-            .title = TypeStyle {
-                .color = ThemeColor::token(ColorToken::foreground),
-                .font_size = ThemeScalar::token(ScalarToken::typography_label_lg),
-            },
-            .description = TypeStyle {
-                .color = ThemeColor::token(ColorToken::muted_foreground),
-                .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
-            },
+            .title =
+                TypeStyle {
+                    .color = ThemeColor::token(ColorToken::foreground),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_label_lg),
+                },
+            .description =
+                TypeStyle {
+                    .color = ThemeColor::token(ColorToken::muted_foreground),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                },
             .icon = ThemeColor::token(ColorToken::foreground),
             .metrics = AlertMetrics {
                 .gap = ThemeScalar::token(ScalarToken::spacing_sm),
@@ -3228,21 +3226,24 @@ namespace nandina::theme
     /** @return 框架默认 RadioButton 配方（未选中：透明指示器 + input 边框）。 */
     auto default_radio_button_recipe() -> RadioButtonRecipe {
         return {
-            .indicator = BoxStyle {
-                .fill = ThemeColor::transparent(ColorToken::background),
-                .border = ThemeColor::token(ColorToken::input),
-                .border_width = ThemeScalar::token(ScalarToken::border_thin),
-                .radius = ThemeScalar::token(ScalarToken::radius_full),
-            },
+            .indicator =
+                BoxStyle {
+                    .fill = ThemeColor::transparent(ColorToken::background),
+                    .border = ThemeColor::token(ColorToken::input),
+                    .border_width = ThemeScalar::token(ScalarToken::border_thin),
+                    .radius = ThemeScalar::token(ScalarToken::radius_full),
+                },
             .dot = ThemeColor::token(ColorToken::primary),
-            .label = TypeStyle {
-                .color = ThemeColor::token(ColorToken::foreground),
-                .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
-            },
-            .focus = FocusRingStyle {
-                .color = ThemeColor::token(ColorToken::ring),
-                .width = ThemeScalar::literal(0.0F), // focused 规则按需开启
-            },
+            .label =
+                TypeStyle {
+                    .color = ThemeColor::token(ColorToken::foreground),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                },
+            .focus =
+                FocusRingStyle {
+                    .color = ThemeColor::token(ColorToken::ring),
+                    .width = ThemeScalar::literal(0.0F), // focused 规则按需开启
+                },
             .metrics = ControlMetrics {
                 .height = ThemeScalar::literal(0.0F),
                 .padding_x = ThemeScalar::literal(0.0F),
@@ -3263,25 +3264,29 @@ namespace nandina::theme
      */
     auto default_toggle_recipe() -> ToggleRecipe {
         return {
-            .container = BoxStyle {
-                .fill = ThemeColor::transparent(ColorToken::background),
-                .border = ThemeColor::transparent(ColorToken::primary),
-                .border_width = ThemeScalar::literal(0.0F),
-                .radius = ThemeScalar::token(ScalarToken::radius_md),
-            },
-            .label = TypeStyle {
-                .color = ThemeColor::token(ColorToken::foreground),
-                .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
-            },
-            .focus = FocusRingStyle {
-                .color = ThemeColor::token(ColorToken::ring),
-                .width = ThemeScalar::literal(0.0F), // focused 规则按需开启
-            },
+            .container =
+                BoxStyle {
+                    .fill = ThemeColor::transparent(ColorToken::background),
+                    .border = ThemeColor::transparent(ColorToken::primary),
+                    .border_width = ThemeScalar::literal(0.0F),
+                    .radius = ThemeScalar::token(ScalarToken::radius_md),
+                },
+            .label =
+                TypeStyle {
+                    .color = ThemeColor::token(ColorToken::foreground),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                },
+            .focus =
+                FocusRingStyle {
+                    .color = ThemeColor::token(ColorToken::ring),
+                    .width = ThemeScalar::literal(0.0F), // focused 规则按需开启
+                },
             // 状态层回退：无可见覆盖（checked / state 规则按各自语义覆盖）。
-            .state_layer = StateLayerStyle {
-                .hover = ThemeColor::transparent(ColorToken::background),
-                .pressed = ThemeColor::transparent(ColorToken::background),
-            },
+            .state_layer =
+                StateLayerStyle {
+                    .hover = ThemeColor::transparent(ColorToken::background),
+                    .pressed = ThemeColor::transparent(ColorToken::background),
+                },
             .metrics = ControlMetrics {
                 // 与 Button base 同尺寸：shadcn h-9（36px）/ px-4（16px）/ text-sm，
                 // 工具栏 toggle 与相邻按钮等高。min_height 32 = shadcn h-8。
@@ -3303,12 +3308,13 @@ namespace nandina::theme
      */
     auto default_toggle_group_recipe() -> ToggleGroupRecipe {
         return {
-            .container = BoxStyle {
-                .fill = ThemeColor::transparent(ColorToken::background),
-                .border = ThemeColor::transparent(ColorToken::primary),
-                .border_width = ThemeScalar::literal(0.0F),
-                .radius = ThemeScalar::token(ScalarToken::radius_md),
-            },
+            .container =
+                BoxStyle {
+                    .fill = ThemeColor::transparent(ColorToken::background),
+                    .border = ThemeColor::transparent(ColorToken::primary),
+                    .border_width = ThemeScalar::literal(0.0F),
+                    .radius = ThemeScalar::token(ScalarToken::radius_md),
+                },
             .metrics = ControlMetrics {
                 .height = ThemeScalar::literal(0.0F),
                 .padding_x = ThemeScalar::literal(0.0F),
@@ -3330,12 +3336,13 @@ namespace nandina::theme
      */
     auto default_button_group_recipe() -> ButtonGroupRecipe {
         return {
-            .container = BoxStyle {
-                .fill = ThemeColor::transparent(ColorToken::background),
-                .border = ThemeColor::transparent(ColorToken::primary),
-                .border_width = ThemeScalar::literal(0.0F),
-                .radius = ThemeScalar::token(ScalarToken::radius_md),
-            },
+            .container =
+                BoxStyle {
+                    .fill = ThemeColor::transparent(ColorToken::background),
+                    .border = ThemeColor::transparent(ColorToken::primary),
+                    .border_width = ThemeScalar::literal(0.0F),
+                    .radius = ThemeScalar::token(ScalarToken::radius_md),
+                },
             .metrics = ControlMetrics {
                 .height = ThemeScalar::literal(0.0F),
                 .padding_x = ThemeScalar::literal(0.0F),
@@ -3357,27 +3364,31 @@ namespace nandina::theme
      */
     auto default_breadcrumb_recipe() -> BreadcrumbRecipe {
         return {
-            .container = BoxStyle {
-                .fill = ThemeColor::transparent(ColorToken::background),
-                .border = ThemeColor::transparent(ColorToken::background),
-                .border_width = ThemeScalar::literal(0.0F),
-                .radius = ThemeScalar::literal(0.0F),
-            },
-            .link = TypeStyle {
-                .color = ThemeColor::token(ColorToken::muted_foreground),
-                .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
-            },
+            .container =
+                BoxStyle {
+                    .fill = ThemeColor::transparent(ColorToken::background),
+                    .border = ThemeColor::transparent(ColorToken::background),
+                    .border_width = ThemeScalar::literal(0.0F),
+                    .radius = ThemeScalar::literal(0.0F),
+                },
+            .link =
+                TypeStyle {
+                    .color = ThemeColor::token(ColorToken::muted_foreground),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                },
             .link_hover = ThemeColor::token(ColorToken::foreground),
-            .current = TypeStyle {
-                .color = ThemeColor::token(ColorToken::foreground),
-                .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
-            },
+            .current =
+                TypeStyle {
+                    .color = ThemeColor::token(ColorToken::foreground),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                },
             .separator = ThemeColor::token(ColorToken::muted_foreground),
-            .link_focus = FocusRingStyle {
-                .color = ThemeColor::token(ColorToken::ring),
-                // 链接条目始终可聚焦，焦点环默认开启（不像 Tabs 那样等 focused 规则）。
-                .width = ThemeScalar::token(ScalarToken::border_focus_ring),
-            },
+            .link_focus =
+                FocusRingStyle {
+                    .color = ThemeColor::token(ColorToken::ring),
+                    // 链接条目始终可聚焦，焦点环默认开启（不像 Tabs 那样等 focused 规则）。
+                    .width = ThemeScalar::token(ScalarToken::border_focus_ring),
+                },
             .metrics = ControlMetrics {
                 .height = ThemeScalar::literal(0.0F),
                 // 条目与分隔符之间各留 4px。
@@ -3398,39 +3409,47 @@ namespace nandina::theme
      */
     auto default_pagination_recipe() -> PaginationRecipe {
         return {
-            .container = BoxStyle {
-                .fill = ThemeColor::transparent(ColorToken::background),
-                .border = ThemeColor::transparent(ColorToken::background),
-                .border_width = ThemeScalar::literal(0.0F),
-                .radius = ThemeScalar::token(ScalarToken::radius_md),
-            },
-            .item = BoxStyle {
-                .fill = ThemeColor::transparent(ColorToken::background),
-                .border = ThemeColor::transparent(ColorToken::background),
-                .border_width = ThemeScalar::literal(0.0F),
-                .radius = ThemeScalar::token(ScalarToken::radius_md),
-            },
-            .item_hover =
-                ThemeColor::with_alpha(ColorToken::accent, ThemeScalar::token(ScalarToken::opacity_hover_overlay)),
-            .item_active = BoxStyle {
-                .fill = ThemeColor::token(ColorToken::primary),
-                .border = ThemeColor::transparent(ColorToken::primary),
-                .border_width = ThemeScalar::literal(0.0F),
-                .radius = ThemeScalar::token(ScalarToken::radius_md),
-            },
-            .label = TypeStyle {
-                .color = ThemeColor::token(ColorToken::foreground),
-                .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
-            },
-            .label_active = TypeStyle {
-                .color = ThemeColor::token(ColorToken::primary_foreground),
-                .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
-            },
+            .container =
+                BoxStyle {
+                    .fill = ThemeColor::transparent(ColorToken::background),
+                    .border = ThemeColor::transparent(ColorToken::background),
+                    .border_width = ThemeScalar::literal(0.0F),
+                    .radius = ThemeScalar::token(ScalarToken::radius_md),
+                },
+            .item =
+                BoxStyle {
+                    .fill = ThemeColor::transparent(ColorToken::background),
+                    .border = ThemeColor::transparent(ColorToken::background),
+                    .border_width = ThemeScalar::literal(0.0F),
+                    .radius = ThemeScalar::token(ScalarToken::radius_md),
+                },
+            .item_hover = ThemeColor::with_alpha(
+                ColorToken::accent,
+                ThemeScalar::token(ScalarToken::opacity_hover_overlay)
+            ),
+            .item_active =
+                BoxStyle {
+                    .fill = ThemeColor::token(ColorToken::primary),
+                    .border = ThemeColor::transparent(ColorToken::primary),
+                    .border_width = ThemeScalar::literal(0.0F),
+                    .radius = ThemeScalar::token(ScalarToken::radius_md),
+                },
+            .label =
+                TypeStyle {
+                    .color = ThemeColor::token(ColorToken::foreground),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                },
+            .label_active =
+                TypeStyle {
+                    .color = ThemeColor::token(ColorToken::primary_foreground),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                },
             .ellipsis = ThemeColor::token(ColorToken::muted_foreground),
-            .focus = FocusRingStyle {
-                .color = ThemeColor::token(ColorToken::ring),
-                .width = ThemeScalar::literal(0.0F), // focused 规则按需开启
-            },
+            .focus =
+                FocusRingStyle {
+                    .color = ThemeColor::token(ColorToken::ring),
+                    .width = ThemeScalar::literal(0.0F), // focused 规则按需开启
+                },
             .metrics = ControlMetrics {
                 .height = ThemeScalar::literal(0.0F),
                 .padding_x = ThemeScalar::literal(0.0F),
@@ -3447,32 +3466,37 @@ namespace nandina::theme
     /** @return 框架默认 Tabs 配方（下划线风格：无容器背景/pill，选中 primary + 下划线）。 */
     auto default_tabs_recipe() -> TabsRecipe {
         return {
-            .container = BoxStyle {
-                .fill = ThemeColor::transparent(ColorToken::background),
-                .border = ThemeColor::transparent(ColorToken::background),
-                .border_width = ThemeScalar::literal(0.0F),
-                .radius = ThemeScalar::literal(0.0F),
-            },
-            .selected_background = BoxStyle {
-                .fill = ThemeColor::transparent(ColorToken::background),
-                .border = ThemeColor::transparent(ColorToken::background),
-                .border_width = ThemeScalar::literal(0.0F),
-                .radius = ThemeScalar::literal(0.0F),
-            },
-            .label = TypeStyle {
-                .color = ThemeColor::token(ColorToken::muted_foreground),
-                .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
-            },
-            .label_selected = TypeStyle {
-                .color = ThemeColor::token(ColorToken::foreground),
-                .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
-            },
+            .container =
+                BoxStyle {
+                    .fill = ThemeColor::transparent(ColorToken::background),
+                    .border = ThemeColor::transparent(ColorToken::background),
+                    .border_width = ThemeScalar::literal(0.0F),
+                    .radius = ThemeScalar::literal(0.0F),
+                },
+            .selected_background =
+                BoxStyle {
+                    .fill = ThemeColor::transparent(ColorToken::background),
+                    .border = ThemeColor::transparent(ColorToken::background),
+                    .border_width = ThemeScalar::literal(0.0F),
+                    .radius = ThemeScalar::literal(0.0F),
+                },
+            .label =
+                TypeStyle {
+                    .color = ThemeColor::token(ColorToken::muted_foreground),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                },
+            .label_selected =
+                TypeStyle {
+                    .color = ThemeColor::token(ColorToken::foreground),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                },
             .indicator = ThemeColor::token(ColorToken::primary),
             .indicator_thickness = ThemeScalar::literal(2.0F),
-            .focus = FocusRingStyle {
-                .color = ThemeColor::token(ColorToken::ring),
-                .width = ThemeScalar::literal(0.0F), // focused 规则按需开启
-            },
+            .focus =
+                FocusRingStyle {
+                    .color = ThemeColor::token(ColorToken::ring),
+                    .width = ThemeScalar::literal(0.0F), // focused 规则按需开启
+                },
             .metrics = ControlMetrics {
                 .height = ThemeScalar::literal(0.0F),
                 .padding_x = ThemeScalar::literal(0.0F),
@@ -3489,16 +3513,18 @@ namespace nandina::theme
         return {
             // shadcn Tooltip 用反色气泡（亮色下近黑）。这里用 popover 面 + border，
             // 暗色外观下自动翻转为 elevated 面，不会出现"亮色气泡在暗底上"的错位。
-            .container = BoxStyle {
-                .fill = ThemeColor::token(ColorToken::popover),
-                .border = ThemeColor::token(ColorToken::border),
-                .border_width = ThemeScalar::token(ScalarToken::border_thin),
-                .radius = ThemeScalar::token(ScalarToken::radius_md),
-            },
-            .label = TypeStyle {
-                .color = ThemeColor::token(ColorToken::popover_foreground),
-                .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
-            },
+            .container =
+                BoxStyle {
+                    .fill = ThemeColor::token(ColorToken::popover),
+                    .border = ThemeColor::token(ColorToken::border),
+                    .border_width = ThemeScalar::token(ScalarToken::border_thin),
+                    .radius = ThemeScalar::token(ScalarToken::radius_md),
+                },
+            .label =
+                TypeStyle {
+                    .color = ThemeColor::token(ColorToken::popover_foreground),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                },
             .metrics = ControlMetrics {
                 .height = ThemeScalar::literal(0.0F),
                 .padding_x = ThemeScalar::token(ScalarToken::spacing_sm),
@@ -3513,34 +3539,40 @@ namespace nandina::theme
     /** @return 框架默认 Select 配方（input 字段 + popover 弹窗 + accent 高亮）。 */
     auto default_select_recipe() -> SelectRecipe {
         return {
-            .container = BoxStyle {
-                .fill = ThemeColor::token(ColorToken::background),
-                .border = ThemeColor::token(ColorToken::input),
-                .border_width = ThemeScalar::token(ScalarToken::border_thin),
-                .radius = ThemeScalar::token(ScalarToken::radius_md),
-            },
-            .popup = BoxStyle {
-                .fill = ThemeColor::token(ColorToken::popover),
-                .border = ThemeColor::token(ColorToken::border),
-                .border_width = ThemeScalar::token(ScalarToken::border_thin),
-                .radius = ThemeScalar::token(ScalarToken::radius_md),
-            },
-            .value = TypeStyle {
-                .color = ThemeColor::token(ColorToken::foreground),
-                .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
-            },
-            .option = TypeStyle {
-                .color = ThemeColor::token(ColorToken::foreground),
-                .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
-            },
-            .option_selected = TypeStyle {
-                .color = ThemeColor::token(ColorToken::accent_foreground),
-                .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
-            },
-            .focus = FocusRingStyle {
-                .color = ThemeColor::token(ColorToken::ring),
-                .width = ThemeScalar::literal(0.0F), // focused 规则按需开启
-            },
+            .container =
+                BoxStyle {
+                    .fill = ThemeColor::token(ColorToken::background),
+                    .border = ThemeColor::token(ColorToken::input),
+                    .border_width = ThemeScalar::token(ScalarToken::border_thin),
+                    .radius = ThemeScalar::token(ScalarToken::radius_md),
+                },
+            .popup =
+                BoxStyle {
+                    .fill = ThemeColor::token(ColorToken::popover),
+                    .border = ThemeColor::token(ColorToken::border),
+                    .border_width = ThemeScalar::token(ScalarToken::border_thin),
+                    .radius = ThemeScalar::token(ScalarToken::radius_md),
+                },
+            .value =
+                TypeStyle {
+                    .color = ThemeColor::token(ColorToken::foreground),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                },
+            .option =
+                TypeStyle {
+                    .color = ThemeColor::token(ColorToken::foreground),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                },
+            .option_selected =
+                TypeStyle {
+                    .color = ThemeColor::token(ColorToken::accent_foreground),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                },
+            .focus =
+                FocusRingStyle {
+                    .color = ThemeColor::token(ColorToken::ring),
+                    .width = ThemeScalar::literal(0.0F), // focused 规则按需开启
+                },
             .metrics = ControlMetrics {
                 .height = ThemeScalar::literal(36.0F), // shadcn h-9
                 .padding_x = ThemeScalar::token(ScalarToken::spacing_md),
@@ -3564,16 +3596,18 @@ namespace nandina::theme
     /** @return 框架默认 Avatar 配方（muted 圆形 + muted_foreground 首字母）。 */
     auto default_avatar_recipe() -> AvatarRecipe {
         return {
-            .container = BoxStyle {
-                .fill = ThemeColor::token(ColorToken::muted),
-                .border = ThemeColor::transparent(ColorToken::muted),
-                .border_width = ThemeScalar::literal(0.0F),
-                .radius = ThemeScalar::token(ScalarToken::radius_full),
-            },
-            .label = TypeStyle {
-                .color = ThemeColor::token(ColorToken::muted_foreground),
-                .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
-            },
+            .container =
+                BoxStyle {
+                    .fill = ThemeColor::token(ColorToken::muted),
+                    .border = ThemeColor::transparent(ColorToken::muted),
+                    .border_width = ThemeScalar::literal(0.0F),
+                    .radius = ThemeScalar::token(ScalarToken::radius_full),
+                },
+            .label =
+                TypeStyle {
+                    .color = ThemeColor::token(ColorToken::muted_foreground),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                },
             .metrics = ControlMetrics {
                 .height = ThemeScalar::literal(0.0F),
                 .padding_x = ThemeScalar::literal(0.0F),
@@ -3588,21 +3622,24 @@ namespace nandina::theme
     /** @return 框架默认 Chip 配方（secondary pill + secondary_foreground 文本）。 */
     auto default_chip_recipe() -> ChipRecipe {
         return {
-            .container = BoxStyle {
-                .fill = ThemeColor::token(ColorToken::secondary),
-                .border = ThemeColor::transparent(ColorToken::secondary),
-                .border_width = ThemeScalar::literal(0.0F),
-                .radius = ThemeScalar::token(ScalarToken::radius_full),
-            },
-            .label = TypeStyle {
-                .color = ThemeColor::token(ColorToken::secondary_foreground),
-                .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
-            },
+            .container =
+                BoxStyle {
+                    .fill = ThemeColor::token(ColorToken::secondary),
+                    .border = ThemeColor::transparent(ColorToken::secondary),
+                    .border_width = ThemeScalar::literal(0.0F),
+                    .radius = ThemeScalar::token(ScalarToken::radius_full),
+                },
+            .label =
+                TypeStyle {
+                    .color = ThemeColor::token(ColorToken::secondary_foreground),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                },
             .remove_color = ThemeColor::token(ColorToken::muted_foreground),
-            .focus = FocusRingStyle {
-                .color = ThemeColor::token(ColorToken::ring),
-                .width = ThemeScalar::token(ScalarToken::border_focus_ring),
-            },
+            .focus =
+                FocusRingStyle {
+                    .color = ThemeColor::token(ColorToken::ring),
+                    .width = ThemeScalar::token(ScalarToken::border_focus_ring),
+                },
             .metrics = ControlMetrics {
                 .height = ThemeScalar::literal(28.0F),
                 .padding_x = ThemeScalar::token(ScalarToken::spacing_sm),
@@ -3619,20 +3656,23 @@ namespace nandina::theme
         return {
             // scrim 必须始终压暗：用固定黑而不是 foreground，否则暗色外观下会变成亮罩。
             .scrim = ThemeColor::literal(NanColor::from_hex(0x000000, 0.50F)),
-            .panel = BoxStyle {
-                .fill = ThemeColor::token(ColorToken::popover),
-                .border = ThemeColor::token(ColorToken::border),
-                .border_width = ThemeScalar::token(ScalarToken::border_thin),
-                .radius = ThemeScalar::token(ScalarToken::radius_lg),
-            },
-            .title = TypeStyle {
-                .color = ThemeColor::token(ColorToken::foreground),
-                .font_size = ThemeScalar::token(ScalarToken::typography_label_lg),
-            },
-            .description = TypeStyle {
-                .color = ThemeColor::token(ColorToken::muted_foreground),
-                .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
-            },
+            .panel =
+                BoxStyle {
+                    .fill = ThemeColor::token(ColorToken::popover),
+                    .border = ThemeColor::token(ColorToken::border),
+                    .border_width = ThemeScalar::token(ScalarToken::border_thin),
+                    .radius = ThemeScalar::token(ScalarToken::radius_lg),
+                },
+            .title =
+                TypeStyle {
+                    .color = ThemeColor::token(ColorToken::foreground),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_label_lg),
+                },
+            .description =
+                TypeStyle {
+                    .color = ThemeColor::token(ColorToken::muted_foreground),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                },
             .metrics = DialogMetrics {
                 .panel_width = ThemeScalar::literal(360.0F),
                 .padding_x = ThemeScalar::token(ScalarToken::spacing_lg),
@@ -3651,12 +3691,13 @@ namespace nandina::theme
      */
     auto default_popover_recipe() -> PopoverRecipe {
         return {
-            .panel = BoxStyle {
-                .fill = ThemeColor::token(ColorToken::popover),
-                .border = ThemeColor::token(ColorToken::border),
-                .border_width = ThemeScalar::token(ScalarToken::border_thin),
-                .radius = ThemeScalar::token(ScalarToken::radius_md),
-            },
+            .panel =
+                BoxStyle {
+                    .fill = ThemeColor::token(ColorToken::popover),
+                    .border = ThemeColor::token(ColorToken::border),
+                    .border_width = ThemeScalar::token(ScalarToken::border_thin),
+                    .radius = ThemeScalar::token(ScalarToken::radius_md),
+                },
             .metrics = PopoverMetrics {
                 .padding_x = ThemeScalar::token(ScalarToken::spacing_md),
                 .padding_y = ThemeScalar::token(ScalarToken::spacing_md),
@@ -3675,18 +3716,21 @@ namespace nandina::theme
      */
     auto default_dropdown_menu_recipe() -> DropdownMenuRecipe {
         return {
-            .item_label = TypeStyle {
-                .color = ThemeColor::token(ColorToken::foreground),
-                .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
-            },
-            .item_shortcut = TypeStyle {
-                .color = ThemeColor::token(ColorToken::muted_foreground),
-                .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
-            },
-            .group_label = TypeStyle {
-                .color = ThemeColor::token(ColorToken::muted_foreground),
-                .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
-            },
+            .item_label =
+                TypeStyle {
+                    .color = ThemeColor::token(ColorToken::foreground),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                },
+            .item_shortcut =
+                TypeStyle {
+                    .color = ThemeColor::token(ColorToken::muted_foreground),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                },
+            .group_label =
+                TypeStyle {
+                    .color = ThemeColor::token(ColorToken::muted_foreground),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                },
             .disabled_label = ThemeColor::token(ColorToken::muted_foreground),
             .hover_fill = ThemeColor::token(ColorToken::muted),
             .focus_fill = ThemeColor::token(ColorToken::accent),
@@ -3712,12 +3756,13 @@ namespace nandina::theme
      */
     auto default_hover_card_recipe() -> HoverCardRecipe {
         return {
-            .panel = BoxStyle {
-                .fill = ThemeColor::token(ColorToken::popover),
-                .border = ThemeColor::token(ColorToken::border),
-                .border_width = ThemeScalar::token(ScalarToken::border_thin),
-                .radius = ThemeScalar::token(ScalarToken::radius_md),
-            },
+            .panel =
+                BoxStyle {
+                    .fill = ThemeColor::token(ColorToken::popover),
+                    .border = ThemeColor::token(ColorToken::border),
+                    .border_width = ThemeScalar::token(ScalarToken::border_thin),
+                    .radius = ThemeScalar::token(ScalarToken::radius_md),
+                },
             .metrics = HoverCardMetrics {
                 .max_width = ThemeScalar::literal(320.0F), // 卡片宽度是布局取值，无对应 token
                 .min_width = ThemeScalar::literal(200.0F),
@@ -3737,39 +3782,46 @@ namespace nandina::theme
      */
     auto default_command_palette_recipe() -> CommandPaletteRecipe {
         return {
-            .panel = BoxStyle {
-                .fill = ThemeColor::token(ColorToken::popover),
-                .border = ThemeColor::token(ColorToken::border),
-                .border_width = ThemeScalar::token(ScalarToken::border_thin),
-                .radius = ThemeScalar::token(ScalarToken::radius_md),
-            },
+            .panel =
+                BoxStyle {
+                    .fill = ThemeColor::token(ColorToken::popover),
+                    .border = ThemeColor::token(ColorToken::border),
+                    .border_width = ThemeScalar::token(ScalarToken::border_thin),
+                    .radius = ThemeScalar::token(ScalarToken::radius_md),
+                },
             // 遮罩必须始终压暗：用固定黑而不是面板色。跟着面板色走会让**亮色外观下
             // 出现一层白罩**（面板底在亮色下接近白），这是它与 Dialog 共用的同一条理由。
             .scrim = ThemeColor::literal(NanColor::from_hex(0x000000, 0.50F)),
-            .query = TypeStyle {
-                .color = ThemeColor::token(ColorToken::foreground),
-                .font_size = ThemeScalar::token(ScalarToken::typography_label_md),
-            },
-            .placeholder = TypeStyle {
-                .color = ThemeColor::token(ColorToken::muted_foreground),
-                .font_size = ThemeScalar::token(ScalarToken::typography_label_md),
-            },
-            .item_label = TypeStyle {
-                .color = ThemeColor::token(ColorToken::foreground),
-                .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
-            },
-            .item_shortcut = TypeStyle {
-                .color = ThemeColor::token(ColorToken::muted_foreground),
-                .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
-            },
-            .group_label = TypeStyle {
-                .color = ThemeColor::token(ColorToken::muted_foreground),
-                .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
-            },
-            .empty = TypeStyle {
-                .color = ThemeColor::token(ColorToken::muted_foreground),
-                .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
-            },
+            .query =
+                TypeStyle {
+                    .color = ThemeColor::token(ColorToken::foreground),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_label_md),
+                },
+            .placeholder =
+                TypeStyle {
+                    .color = ThemeColor::token(ColorToken::muted_foreground),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_label_md),
+                },
+            .item_label =
+                TypeStyle {
+                    .color = ThemeColor::token(ColorToken::foreground),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                },
+            .item_shortcut =
+                TypeStyle {
+                    .color = ThemeColor::token(ColorToken::muted_foreground),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                },
+            .group_label =
+                TypeStyle {
+                    .color = ThemeColor::token(ColorToken::muted_foreground),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                },
+            .empty =
+                TypeStyle {
+                    .color = ThemeColor::token(ColorToken::muted_foreground),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                },
             .disabled_label = ThemeColor::token(ColorToken::muted_foreground),
             .hover_fill = ThemeColor::token(ColorToken::muted),
             .focus_fill = ThemeColor::token(ColorToken::accent),
@@ -3787,7 +3839,8 @@ namespace nandina::theme
                 .panel_padding = ThemeScalar::token(ScalarToken::spacing_sm),
                 .panel_radius = ThemeScalar::token(ScalarToken::radius_md),
                 .gap = ThemeScalar::token(ScalarToken::spacing_sm),
-                .item_height = ThemeScalar::literal(32.0F), // 与菜单条目同高（shadcn menu item h-8）
+                .item_height =
+                    ThemeScalar::literal(32.0F), // 与菜单条目同高（shadcn menu item h-8）
                 .item_padding_x = ThemeScalar::token(ScalarToken::spacing_sm),
                 .item_radius = ThemeScalar::token(ScalarToken::radius_sm),
                 .separator_thickness = ThemeScalar::token(ScalarToken::border_thin),
@@ -3805,29 +3858,34 @@ namespace nandina::theme
      */
     auto default_combobox_recipe() -> ComboboxRecipe {
         return {
-            .input = BoxStyle {
-                .fill = ThemeColor::token(ColorToken::background),
-                .border = ThemeColor::token(ColorToken::input),
-                .border_width = ThemeScalar::token(ScalarToken::border_thin),
-                .radius = ThemeScalar::token(ScalarToken::radius_md),
-            },
-            .value = TypeStyle {
-                .color = ThemeColor::token(ColorToken::foreground),
-                .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
-            },
-            .placeholder = TypeStyle {
-                .color = ThemeColor::token(ColorToken::muted_foreground),
-                .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
-            },
+            .input =
+                BoxStyle {
+                    .fill = ThemeColor::token(ColorToken::background),
+                    .border = ThemeColor::token(ColorToken::input),
+                    .border_width = ThemeScalar::token(ScalarToken::border_thin),
+                    .radius = ThemeScalar::token(ScalarToken::radius_md),
+                },
+            .value =
+                TypeStyle {
+                    .color = ThemeColor::token(ColorToken::foreground),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                },
+            .placeholder =
+                TypeStyle {
+                    .color = ThemeColor::token(ColorToken::muted_foreground),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                },
             .selection = ThemeColor::token(ColorToken::selection),
-            .focus = FocusRingStyle {
-                .color = ThemeColor::token(ColorToken::ring),
-                .width = ThemeScalar::literal(0.0F), // focused 规则按需开启
-            },
-            .option = TypeStyle {
-                .color = ThemeColor::token(ColorToken::foreground),
-                .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
-            },
+            .focus =
+                FocusRingStyle {
+                    .color = ThemeColor::token(ColorToken::ring),
+                    .width = ThemeScalar::literal(0.0F), // focused 规则按需开启
+                },
+            .option =
+                TypeStyle {
+                    .color = ThemeColor::token(ColorToken::foreground),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                },
             .disabled_label = ThemeColor::token(ColorToken::muted_foreground),
             .hover_fill = ThemeColor::token(ColorToken::muted),
             .focus_fill = ThemeColor::token(ColorToken::accent),

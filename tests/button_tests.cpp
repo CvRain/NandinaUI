@@ -8,8 +8,8 @@
 #include <nandina/theme/style_document.hpp>
 #include <nandina/theme/theme_manager.hpp>
 #include <nandina/widget/button.hpp>
-#include <nandina/widget/text_field.hpp>
 #include <nandina/widget/primitives/pressable.hpp>
+#include <nandina/widget/text_field.hpp>
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
@@ -35,6 +35,7 @@ namespace
         };
         struct TextCall {
             std::string text;
+            foundation::NanPoint position;
             float font_size = 0.0F;
             float alpha = 0.0F;
         };
@@ -56,23 +57,44 @@ namespace
         void set_clip(const foundation::NanRect&) override {}
         void clear_clip() override {}
 
-        void draw_rect(const foundation::NanRect& rect, const foundation::NanColor& color) override {
-            rects.push_back({.rect = rect, .alpha = color.alpha(), .outline = false, .rounded = false});
+        void
+        draw_rect(const foundation::NanRect& rect, const foundation::NanColor& color) override {
+            rects.push_back(
+                {.rect = rect, .alpha = color.alpha(), .outline = false, .rounded = false}
+            );
             operations.emplace_back("fill");
         }
 
-        void draw_rect_outline(const foundation::NanRect& rect, float, const foundation::NanColor& color) override {
-            rects.push_back({.rect = rect, .alpha = color.alpha(), .outline = true, .rounded = false});
+        void draw_rect_outline(
+            const foundation::NanRect& rect,
+            float,
+            const foundation::NanColor& color
+        ) override {
+            rects.push_back(
+                {.rect = rect, .alpha = color.alpha(), .outline = true, .rounded = false}
+            );
             operations.emplace_back("outline");
         }
 
-        void draw_rounded_rect(const foundation::NanRect& rect, float, const foundation::NanColor& color) override {
-            rects.push_back({.rect = rect, .alpha = color.alpha(), .outline = false, .rounded = true});
+        void draw_rounded_rect(
+            const foundation::NanRect& rect,
+            float,
+            const foundation::NanColor& color
+        ) override {
+            rects.push_back(
+                {.rect = rect, .alpha = color.alpha(), .outline = false, .rounded = true}
+            );
             operations.emplace_back("fill");
         }
 
-        void draw_line(const foundation::NanPoint&, const foundation::NanPoint&, float, const foundation::NanColor&) override {}
-        void draw_circle(const foundation::NanPoint&, float, const foundation::NanColor&) override {}
+        void draw_line(
+            const foundation::NanPoint&,
+            const foundation::NanPoint&,
+            float,
+            const foundation::NanColor&
+        ) override {}
+        void draw_circle(const foundation::NanPoint&, float, const foundation::NanColor&) override {
+        }
 
         void draw_circle_clipped_rounded_rect(
             const foundation::NanPoint& center,
@@ -87,11 +109,16 @@ namespace
 
         void draw_text(
             std::string_view text,
-            const foundation::NanPoint&,
+            const foundation::NanPoint& position,
             float font_size,
             const foundation::NanColor& color
         ) override {
-            texts.push_back({.text = std::string(text), .font_size = font_size, .alpha = color.alpha()});
+            texts.push_back(
+                {.text = std::string(text),
+                 .position = position,
+                 .font_size = font_size,
+                 .alpha = color.alpha()}
+            );
             operations.emplace_back("text");
         }
     };
@@ -154,9 +181,7 @@ TEST_CASE("button recipe resolves and overrides ripple feedback", "[theme][butto
     REQUIRE(resolved.ripple.duration == Catch::Approx(system.tokens.motion.medium_duration));
 
     theme::ButtonRecipeRule rule;
-    rule.ripple_color = theme::ThemeColor::literal(
-        theme::nan_color(0.60F, 0.10F, 120.0F, 0.35F)
-    );
+    rule.ripple_color = theme::ThemeColor::literal(theme::nan_color(0.60F, 0.10F, 120.0F, 0.35F));
     rule.ripple_duration = theme::ThemeScalar::literal(0.75F);
     theme::apply_rule(
         system,
@@ -311,12 +336,12 @@ TEST_CASE("TextField rules compose focused and invalid states", "[theme][text-fi
     tree.set_focus(field.get());
     field->set_invalid(true);
 
-    REQUIRE(theme::has_text_field_state(
-        field->visual_state(), theme::TextFieldVisualState::focused
-    ));
-    REQUIRE(theme::has_text_field_state(
-        field->visual_state(), theme::TextFieldVisualState::invalid
-    ));
+    REQUIRE(
+        theme::has_text_field_state(field->visual_state(), theme::TextFieldVisualState::focused)
+    );
+    REQUIRE(
+        theme::has_text_field_state(field->visual_state(), theme::TextFieldVisualState::invalid)
+    );
     REQUIRE(field->resolved_style().metrics.height == Catch::Approx(46.0F));
     REQUIRE(
         field->resolved_style().container.border.oklch().light
@@ -395,7 +420,9 @@ faces = [{ resource = "fonts/fallback-ui/regular", weight = 400 }]
     REQUIRE(resolved.container.radius == Catch::Approx(12.0F));
 
     const auto field_style = theme::resolve_text_field(
-        manager.design_system(), manager.appearance(), theme::TextFieldVisualState::focused
+        manager.design_system(),
+        manager.appearance(),
+        theme::TextFieldVisualState::focused
     );
     REQUIRE(field_style.container.border.oklch().light == Catch::Approx(0.31F));
     REQUIRE(field_style.metrics.height == Catch::Approx(44.0F));
@@ -407,7 +434,10 @@ background = "$palette.missing"
     REQUIRE_FALSE(invalid.has_value());
 }
 
-TEST_CASE("styles.toml resolves reference palettes and appearance-aware families", "[theme][toml]") {
+TEST_CASE(
+    "styles.toml resolves reference palettes and appearance-aware families",
+    "[theme][toml]"
+) {
     constexpr std::string_view source = R"toml(
 active_family = "ocean"
 appearance = "dark"
@@ -515,7 +545,10 @@ focus_ring = [0.57, 0.00, 0.0]
     REQUIRE(alias_palette.ring == alias_palette.focus_ring);
 }
 
-TEST_CASE("Button instance theme and StyleContext keep their cascade priority", "[theme][cascade]") {
+TEST_CASE(
+    "Button instance theme and StyleContext keep their cascade priority",
+    "[theme][cascade]"
+) {
     theme::ThemeManager manager;
     auto application_theme = theme::default_theme();
     application_theme.palette.primary = theme::nan_color(0.35F, 0.1F, 40.0F);
@@ -591,30 +624,39 @@ TEST_CASE("button draws background and text and reacts to press state", "[widget
     REQUIRE(dev.texts.size() == 1);
     REQUIRE(dev.texts[0].text == "Open");
 
-    tree.dispatch_mouse_move(scene::MouseMoveEvent {foundation::NanPoint(20.0F, 30.0F), foundation::NanPoint::zero()});
-    tree.dispatch_mouse_button(scene::MouseButtonEvent {
-        scene::MouseButtonEvent::Button::left,
-        scene::MouseButtonEvent::Action::press,
-        foundation::NanPoint(20.0F, 30.0F)
-    });
+    tree.dispatch_mouse_move(
+        scene::MouseMoveEvent {foundation::NanPoint(20.0F, 30.0F), foundation::NanPoint::zero()}
+    );
+    tree.dispatch_mouse_button(
+        scene::MouseButtonEvent {
+            scene::MouseButtonEvent::Button::left,
+            scene::MouseButtonEvent::Action::press,
+            foundation::NanPoint(20.0F, 30.0F)
+        }
+    );
     REQUIRE(button->pressed());
-    tree.dispatch_mouse_button(scene::MouseButtonEvent {
-        scene::MouseButtonEvent::Button::left,
-        scene::MouseButtonEvent::Action::release,
-        foundation::NanPoint(20.0F, 30.0F)
-    });
+    tree.dispatch_mouse_button(
+        scene::MouseButtonEvent {
+            scene::MouseButtonEvent::Button::left,
+            scene::MouseButtonEvent::Action::release,
+            foundation::NanPoint(20.0F, 30.0F)
+        }
+    );
     REQUIRE(clicks == 1);
 }
 
-TEST_CASE("button paints state feedback as an overlay between base and content", "[widget][button][state-layer]") {
+TEST_CASE(
+    "button paints state feedback as an overlay between base and content",
+    "[widget][button][state-layer]"
+) {
     RecordingDevice dev;
     scene::NanSceneTree tree;
     auto button = std::make_shared<widget::Button>("Overlay");
     tree.set_root(button);
 
-    tree.dispatch_mouse_move(scene::MouseMoveEvent {
-        foundation::NanPoint(20.0F, 20.0F), foundation::NanPoint::zero()
-    });
+    tree.dispatch_mouse_move(
+        scene::MouseMoveEvent {foundation::NanPoint(20.0F, 20.0F), foundation::NanPoint::zero()}
+    );
     REQUIRE(button->hovered());
     tree.draw(dev);
 
@@ -635,14 +677,16 @@ TEST_CASE(
     button->set_position(foundation::NanPoint(10.0F, 20.0F));
     tree.set_root(button);
 
-    tree.dispatch_mouse_move(scene::MouseMoveEvent {
-        foundation::NanPoint(24.0F, 32.0F), foundation::NanPoint::zero()
-    });
-    tree.dispatch_mouse_button(scene::MouseButtonEvent {
-        scene::MouseButtonEvent::Button::left,
-        scene::MouseButtonEvent::Action::press,
-        foundation::NanPoint(24.0F, 32.0F)
-    });
+    tree.dispatch_mouse_move(
+        scene::MouseMoveEvent {foundation::NanPoint(24.0F, 32.0F), foundation::NanPoint::zero()}
+    );
+    tree.dispatch_mouse_button(
+        scene::MouseButtonEvent {
+            scene::MouseButtonEvent::Button::left,
+            scene::MouseButtonEvent::Action::press,
+            foundation::NanPoint(24.0F, 32.0F)
+        }
+    );
     REQUIRE(button->ripple_active());
     REQUIRE(button->ripple_progress() == Catch::Approx(0.0F));
 
@@ -664,14 +708,11 @@ TEST_CASE(
         std::abs(dev.ripples[0].center.get_y() - dev.ripples[0].clip_rect.get_top()),
         std::abs(dev.ripples[0].clip_rect.get_bottom() - dev.ripples[0].center.get_y())
     );
-    REQUIRE(
-        dev.ripples[0].circle_radius == Catch::Approx(std::hypot(far_x, far_y) * 0.875F)
-    );
+    REQUIRE(dev.ripples[0].circle_radius == Catch::Approx(std::hypot(far_x, far_y) * 0.875F));
     REQUIRE(dev.ripples[0].alpha == Catch::Approx(style.ripple.color.alpha() * 0.5F));
     REQUIRE(dev.ripples[0].clip_radius == Catch::Approx(style.container.radius));
     REQUIRE(
-        dev.operations
-        == std::vector<std::string> {"fill", "fill", "ripple", "text", "outline"}
+        dev.operations == std::vector<std::string> {"fill", "fill", "ripple", "text", "outline"}
     );
 
     tree.process(style.ripple.duration);
@@ -690,14 +731,16 @@ TEST_CASE(
     tree.set_root(button);
 
     const auto press = [&tree] {
-        tree.dispatch_mouse_move(scene::MouseMoveEvent {
-            foundation::NanPoint(12.0F, 12.0F), foundation::NanPoint::zero()
-        });
-        tree.dispatch_mouse_button(scene::MouseButtonEvent {
-            scene::MouseButtonEvent::Button::left,
-            scene::MouseButtonEvent::Action::press,
-            foundation::NanPoint(12.0F, 12.0F)
-        });
+        tree.dispatch_mouse_move(
+            scene::MouseMoveEvent {foundation::NanPoint(12.0F, 12.0F), foundation::NanPoint::zero()}
+        );
+        tree.dispatch_mouse_button(
+            scene::MouseButtonEvent {
+                scene::MouseButtonEvent::Button::left,
+                scene::MouseButtonEvent::Action::press,
+                foundation::NanPoint(12.0F, 12.0F)
+            }
+        );
     };
 
     press();
@@ -720,25 +763,27 @@ TEST_CASE(
     REQUIRE_FALSE(button->ripple_active());
 }
 
-TEST_CASE("button keeps outline and focus ring above the state overlay", "[widget][button][state-layer]") {
+TEST_CASE(
+    "button keeps outline and focus ring above the state overlay",
+    "[widget][button][state-layer]"
+) {
     RecordingDevice dev;
     scene::NanSceneTree tree;
     auto button = std::make_shared<widget::Button>("Outlined");
     button->set_treatment(theme::ButtonTreatment::outlined);
     tree.set_root(button);
     tree.set_focus(button.get());
-    tree.dispatch_mouse_move(scene::MouseMoveEvent {
-        foundation::NanPoint(20.0F, 20.0F), foundation::NanPoint::zero()
-    });
+    tree.dispatch_mouse_move(
+        scene::MouseMoveEvent {foundation::NanPoint(20.0F, 20.0F), foundation::NanPoint::zero()}
+    );
 
     tree.draw(dev);
 
     // 透明 base 不提交；状态层 → 控件描边 → 文本 → 焦点环。
+    REQUIRE(dev.operations == std::vector<std::string> {"fill", "outline", "text", "outline"});
     REQUIRE(
-        dev.operations
-        == std::vector<std::string> {"fill", "outline", "text", "outline"}
+        dev.rects[0].alpha == Catch::Approx(button->resolved_style().state_layer.hover.alpha())
     );
-    REQUIRE(dev.rects[0].alpha == Catch::Approx(button->resolved_style().state_layer.hover.alpha()));
     REQUIRE(dev.rects[1].outline);
     REQUIRE(dev.rects[2].outline);
 }
@@ -764,10 +809,12 @@ TEST_CASE("button font size supports logical and percentage values", "[widget][b
     // 逻辑字号：显式值优先于主题与继承上下文。
     widget::Button logical("Logical");
     logical.set_font_size(20.0F);
-    (void)logical.measure_layout(scene::LayoutConstraints {
-        .max_width = 400.0F,
-        .max_height = 80.0F,
-    });
+    (void)logical.measure_layout(
+        scene::LayoutConstraints {
+            .max_width = 400.0F,
+            .max_height = 80.0F,
+        }
+    );
     REQUIRE(logical.text_node().font_size() == Catch::Approx(20.0F));
     REQUIRE(logical.font_size() == Catch::Approx(20.0F));
 
@@ -775,10 +822,12 @@ TEST_CASE("button font size supports logical and percentage values", "[widget][b
     widget::Button proportional("Proportional");
     proportional.set_width(scene::percent(50.0F)).set_height(scene::percent(50.0F));
     proportional.set_font_size(scene::percent(45.0F));
-    const auto size = proportional.measure_layout(scene::LayoutConstraints {
-        .max_width = 400.0F,
-        .max_height = 200.0F,
-    });
+    const auto size = proportional.measure_layout(
+        scene::LayoutConstraints {
+            .max_width = 400.0F,
+            .max_height = 200.0F,
+        }
+    );
     proportional.layout_to(
         foundation::NanRect::from_origin_size(foundation::NanPoint::zero(), size)
     );
@@ -787,17 +836,21 @@ TEST_CASE("button font size supports logical and percentage values", "[widget][b
 
     // 显式值覆盖百分比；清除后回退主题配方。
     proportional.set_font_size(30.0F);
-    (void)proportional.measure_layout(scene::LayoutConstraints {
-        .max_width = 400.0F,
-        .max_height = 200.0F,
-    });
+    (void)proportional.measure_layout(
+        scene::LayoutConstraints {
+            .max_width = 400.0F,
+            .max_height = 200.0F,
+        }
+    );
     REQUIRE(proportional.text_node().font_size() == Catch::Approx(30.0F));
 
     proportional.clear_font_size();
-    (void)proportional.measure_layout(scene::LayoutConstraints {
-        .max_width = 400.0F,
-        .max_height = 200.0F,
-    });
+    (void)proportional.measure_layout(
+        scene::LayoutConstraints {
+            .max_width = 400.0F,
+            .max_height = 200.0F,
+        }
+    );
     REQUIRE(
         proportional.text_node().font_size()
         == Catch::Approx(proportional.resolved_style().label.font_size)
@@ -863,13 +916,12 @@ TEST_CASE("button interaction state invalidates layout paint and semantics", "[w
     tree.set_root(button);
     (void)tree.layout_root(foundation::NanSize(240.0F, 80.0F));
     button->clear_dirty(
-        scene::DirtyFlags::paint | scene::DirtyFlags::layout
-        | scene::DirtyFlags::semantics
+        scene::DirtyFlags::paint | scene::DirtyFlags::layout | scene::DirtyFlags::semantics
     );
 
-    tree.dispatch_mouse_move(scene::MouseMoveEvent {
-        foundation::NanPoint(4.0F, 4.0F), foundation::NanPoint::zero()
-    });
+    tree.dispatch_mouse_move(
+        scene::MouseMoveEvent {foundation::NanPoint(4.0F, 4.0F), foundation::NanPoint::zero()}
+    );
 
     REQUIRE(button->is_dirty(scene::DirtyFlags::paint));
     REQUIRE(button->is_dirty(scene::DirtyFlags::layout));
@@ -918,12 +970,13 @@ TEST_CASE("semantic actions activate and focus buttons", "[widget][button][seman
     REQUIRE(semantics::supports(node->properties.actions, semantics::Action::focus));
 
     REQUIRE(tree.perform_semantics_action(
-        button->semantics_id(), {.action = semantics::Action::activate}
+        button->semantics_id(),
+        {.action = semantics::Action::activate}
     ));
     REQUIRE(activations == 1);
-    REQUIRE(tree.perform_semantics_action(
-        button->semantics_id(), {.action = semantics::Action::focus}
-    ));
+    REQUIRE(
+        tree.perform_semantics_action(button->semantics_id(), {.action = semantics::Action::focus})
+    );
     REQUIRE(tree.focused_node() == button.get());
 
     REQUIRE(tree.update_semantics());
@@ -936,11 +989,15 @@ TEST_CASE("semantic actions activate and focus buttons", "[widget][button][seman
     REQUIRE(node->properties.state.disabled);
     REQUIRE(node->properties.actions == semantics::Action::none);
     REQUIRE_FALSE(tree.perform_semantics_action(
-        button->semantics_id(), {.action = semantics::Action::activate}
+        button->semantics_id(),
+        {.action = semantics::Action::activate}
     ));
 }
 
-TEST_CASE("text field semantics expose value and editable state", "[widget][text-field][semantics]") {
+TEST_CASE(
+    "text field semantics expose value and editable state",
+    "[widget][text-field][semantics]"
+) {
     scene::NanSceneTree tree;
     auto field = std::make_shared<widget::TextField>("draft", "Task title");
     tree.set_root(field);
@@ -967,4 +1024,44 @@ TEST_CASE("text field semantics expose value and editable state", "[widget][text
     REQUIRE(node->properties.state.invalid);
     REQUIRE(node->properties.state.read_only);
     REQUIRE_FALSE(semantics::supports(node->properties.actions, semantics::Action::set_value));
+}
+
+TEST_CASE("button label alignment comes from its recipe", "[widget][button][align]") {
+    const auto theme = theme::default_theme();
+
+    // 默认配方的对齐是 center —— 也就是"加入对齐之前" Button::on_draw 里那套硬编码居中
+    // 的等价物。它现在由配方表达，因此可被主题与实例覆盖改写。
+    {
+        auto button = std::make_shared<widget::Button>("Open", theme);
+        REQUIRE(button->resolved_style().label.align == theme::TextAlign::center);
+    }
+
+    const auto draw_x = [&theme](const std::optional<theme::TextAlign> override_align) -> float {
+        RecordingDevice dev;
+        scene::NanSceneTree tree;
+        auto root = std::make_shared<scene::NanControl>(foundation::NanSize(240.0F, 40.0F));
+        auto button = std::make_shared<widget::Button>("Open", theme);
+        if (override_align) {
+            button->set_override(theme::ButtonRecipeRule {.label_align = *override_align});
+        }
+        root->add_child(button);
+        tree.set_root(root);
+        (void)tree.layout_root(foundation::NanSize(240.0F, 40.0F));
+        tree.draw(dev);
+        REQUIRE(dev.texts.size() == 1);
+        return dev.texts[0].position.get_x();
+    };
+
+    // 按钮被拉伸到比标签宽得多：这时对齐才有可分辨的余地。
+    const float centered = draw_x(std::nullopt);
+    const float left = draw_x(theme::TextAlign::start);
+    const float right = draw_x(theme::TextAlign::end);
+
+    REQUIRE(left < centered);
+    REQUIRE(centered < right);
+    // 对齐是在**内容区**（按钮减内边距）里做的，所以三种取值都落在按钮内部。
+    REQUIRE(left > 0.0F);
+    REQUIRE(right < 240.0F);
+    // 居中时左右留白相等。
+    REQUIRE(centered - left == Catch::Approx(right - centered).margin(0.5F));
 }

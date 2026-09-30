@@ -8,6 +8,7 @@
 #include "../../foundation/nandina_color.hpp"
 #include "../../scene/control.hpp"
 #include "../../text/font_family.hpp"
+#include "../../theme/visual_state.hpp"
 
 #include <algorithm>
 #include <cstddef>
@@ -19,22 +20,9 @@
 namespace nandina::widget::primitives
 {
 
-    /// 文本块在**给定宽度**内的水平对齐方式。
-    ///
-    /// 它是布局策略而不是整形结果：整形后端只负责把字符排成行，不关心这些行最后
-    /// 落在盒子里的哪个位置。因此偏移由绘制期按目标矩形算出（见 Text::draw_in），
-    /// 各后端无需实现它。
-    ///
-    /// 注意：对齐**需要有一个比文本更宽的盒子**才有意义。收缩包裹的文本（盒子宽度
-    /// 等于自身测量宽度）三种取值结果完全一样 —— 这不是缺陷，是这个属性的定义域。
-    enum class TextAlign : std::uint8_t {
-        /// 行起点贴盒子左侧（默认）。
-        start,
-        /// 每行各自水平居中。
-        center,
-        /// 行终点贴盒子右侧。
-        end,
-    };
+    /// `TextAlign` 定义在下层的 `theme`（因为 `theme::TypeStyle` 需要它，而 theme 不能
+    /// 向上依赖 widget）。这里重导出，让原语层的使用者仍然写 `primitives::TextAlign`。
+    using theme::TextAlign;
 
     /// 一行在盒子内的水平偏移量。
     ///

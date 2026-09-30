@@ -12,7 +12,7 @@
 namespace nandina::theme
 {
     /** Checkbox 交互状态。 */
-    enum class CheckboxVisualState: std::uint8_t {
+    enum class CheckboxVisualState : std::uint8_t {
         normal,
         hovered,
         pressed,
@@ -21,7 +21,7 @@ namespace nandina::theme
     };
 
     /** Slider 交互状态。 */
-    enum class SliderVisualState: std::uint8_t {
+    enum class SliderVisualState : std::uint8_t {
         normal,
         hovered,
         dragging,
@@ -82,7 +82,27 @@ namespace nandina::theme
     }
 
     /** Button 语义色家族。 */
-    enum class ButtonTone: std::uint8_t {
+    /// 文本块在**给定宽度**内的水平对齐方式。
+    ///
+    /// 定义在 theme 层而不是 widget/primitives：`theme::TypeStyle` 需要它（标签对齐要能被
+    /// 主题和配方覆盖），而 theme 不允许向上依赖 widget。原语层用 using 重导出，见
+    /// `widget/primitives/text_layout.hpp`。
+    ///
+    /// 它是布局策略而不是整形结果：整形后端只把字符排成行，不关心这些行落在盒子里的
+    /// 位置。偏移因此由绘制期按目标矩形算出（见 `Text::draw_in`），各后端无需实现。
+    ///
+    /// 注意定义域：对齐**需要有比文本更宽的盒子**。收缩包裹的文本（盒宽 == 自身测量宽度）
+    /// 三种取值结果完全一样 —— 这不是缺陷，是没有可对齐的余地。
+    enum class TextAlign : std::uint8_t {
+        /// 行起点贴盒子左侧（默认）。
+        start,
+        /// 每行各自水平居中。
+        center,
+        /// 行终点贴盒子右侧。
+        end,
+    };
+
+    enum class ButtonTone : std::uint8_t {
         primary,
         secondary,
         neutral,
@@ -90,7 +110,7 @@ namespace nandina::theme
     };
 
     /** Button 视觉处理方式。 */
-    enum class ButtonTreatment: std::uint8_t {
+    enum class ButtonTreatment : std::uint8_t {
         filled,
         tonal,
         outlined,
@@ -99,7 +119,7 @@ namespace nandina::theme
     };
 
     /** Button 尺寸档位。 */
-    enum class ButtonSize: std::uint8_t {
+    enum class ButtonSize : std::uint8_t {
         small,
         medium,
         large,
@@ -111,7 +131,7 @@ namespace nandina::theme
      * 只表达"这条消息是什么性质"，不表达外观处理方式；容器填充 / 边框由各 tone 的
      * 规则在默认设计系统里给出。
      */
-    enum class AlertTone: std::uint8_t {
+    enum class AlertTone : std::uint8_t {
         info,
         success,
         warning,
@@ -119,7 +139,7 @@ namespace nandina::theme
     };
 
     /** Button 交互状态。 */
-    enum class ButtonVisualState: std::uint8_t {
+    enum class ButtonVisualState : std::uint8_t {
         normal,
         hovered,
         pressed,
@@ -128,7 +148,7 @@ namespace nandina::theme
     };
 
     /** Switch 交互状态。 */
-    enum class SwitchVisualState: std::uint8_t {
+    enum class SwitchVisualState : std::uint8_t {
         normal,
         hovered,
         pressed,
@@ -137,24 +157,24 @@ namespace nandina::theme
     };
 
     /** ProgressBar 交互状态（确定性进度条：非交互，仅 normal / disabled）。 */
-    enum class ProgressBarVisualState: std::uint8_t {
+    enum class ProgressBarVisualState : std::uint8_t {
         normal,
         disabled,
     };
 
     /** Spinner 交互状态（不定量进度指示：非交互，仅 normal / disabled）。 */
-    enum class SpinnerVisualState: std::uint8_t {
+    enum class SpinnerVisualState : std::uint8_t {
         normal,
         disabled,
     };
 
     /** Skeleton 交互状态（纯展示加载占位，无交互，仅 normal）。 */
-    enum class SkeletonVisualState: std::uint8_t {
+    enum class SkeletonVisualState : std::uint8_t {
         normal,
     };
 
     /** EmptyState 交互状态（纯展示空状态，交互由 action 槽位承载，仅 normal）。 */
-    enum class EmptyStateVisualState: std::uint8_t {
+    enum class EmptyStateVisualState : std::uint8_t {
         normal,
     };
 
@@ -164,12 +184,12 @@ namespace nandina::theme
      * 刻意不提供 `disabled`：Alert 自身不接受任何输入，禁用它并不改变容器造型；
      * 想弱化展示请用实例 override 或换 tone，而不是加一个没有视觉落点的死状态。
      */
-    enum class AlertVisualState: std::uint8_t {
+    enum class AlertVisualState : std::uint8_t {
         normal,
     };
 
     /** RadioButton 交互状态。 */
-    enum class RadioButtonVisualState: std::uint8_t {
+    enum class RadioButtonVisualState : std::uint8_t {
         normal,
         hovered,
         pressed,
@@ -178,7 +198,7 @@ namespace nandina::theme
     };
 
     /** Toggle 交互状态（checked 是解析入参，不是状态枚举成员，与 Checkbox 同款）。 */
-    enum class ToggleVisualState: std::uint8_t {
+    enum class ToggleVisualState : std::uint8_t {
         normal,
         hovered,
         pressed,
@@ -192,7 +212,7 @@ namespace nandina::theme
      * 与 Skeleton / EmptyState 同款：状态枚举先占位，规则解析器已经按 state 过滤，
      * 将来若组需要 disabled 之类的状态，只需在此加成员并播下规则。
      */
-    enum class ToggleGroupVisualState: std::uint8_t {
+    enum class ToggleGroupVisualState : std::uint8_t {
         normal,
     };
 
@@ -201,33 +221,33 @@ namespace nandina::theme
      *
      * 与 ToggleGroup 同款：状态枚举先占位，规则解析器已经按 state 过滤。
      */
-    enum class ButtonGroupVisualState: std::uint8_t {
+    enum class ButtonGroupVisualState : std::uint8_t {
         normal,
     };
 
     /**
      * Breadcrumb 交互状态（容器只做排布与绘制，交互由内部链接条目承载，仅 normal）。
      */
-    enum class BreadcrumbVisualState: std::uint8_t {
+    enum class BreadcrumbVisualState : std::uint8_t {
         normal,
     };
 
     /** Pagination 交互状态（整条分页器可聚焦，页码槽位的 hover 由组件按位置表达）。 */
-    enum class PaginationVisualState: std::uint8_t {
+    enum class PaginationVisualState : std::uint8_t {
         normal,
         focused,
         disabled,
     };
 
     /** Tabs 交互状态。 */
-    enum class TabsVisualState: std::uint8_t {
+    enum class TabsVisualState : std::uint8_t {
         normal,
         focused,
         disabled,
     };
 
     /** Select 交互状态。 */
-    enum class SelectVisualState: std::uint8_t {
+    enum class SelectVisualState : std::uint8_t {
         normal,
         focused,
         disabled,
@@ -239,7 +259,7 @@ namespace nandina::theme
      * 高亮行不在此枚举里：hover / focus 是**逐条目**状态，由视图读取
      * `hover_fill` / `focus_fill` 直接绘制（同 DropdownMenu 的取舍）。
      */
-    enum class ComboboxVisualState: std::uint8_t {
+    enum class ComboboxVisualState : std::uint8_t {
         normal,
         focused,
         disabled,

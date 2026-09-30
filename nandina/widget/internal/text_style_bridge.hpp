@@ -42,6 +42,8 @@ namespace nandina::widget::internal
             .font = context.font_from_context ? context.font : fallback_font,
             .overflow = overflow,
             .max_lines = max_lines,
+            // 对齐来自解析后的排版：组件的标签对齐因此可被主题 / 配方调，而不是写死的。
+            .align = type.align,
         };
     }
 } // namespace nandina::widget::internal
