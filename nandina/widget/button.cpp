@@ -3,12 +3,12 @@
 //
 
 #include "button.hpp"
-#include "primitives/box_painter.hpp"
-#include "primitives/focus_ring_painter.hpp"
-#include "primitives/ripple_painter.hpp"
 #include "../render/draw_context.hpp"
 #include "../scene/input_event.hpp"
 #include "../theme/theme_manager.hpp"
+#include "primitives/box_painter.hpp"
+#include "primitives/focus_ring_painter.hpp"
+#include "primitives/ripple_painter.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -24,20 +24,14 @@ namespace nandina::widget
             return std::abs(lhs - rhs) <= foundation::nan_epsilon;
         }
 
-        [[nodiscard]] auto
-        same_text_style(const primitives::TextStyle& lhs, const primitives::TextStyle& rhs)
-            -> bool {
-            return lhs.color.approx_equals(rhs.color) && near(lhs.font_size, rhs.font_size)
-                && lhs.font == rhs.font && lhs.overflow == rhs.overflow
-                && lhs.max_lines == rhs.max_lines;
-        }
     } // namespace
 
     Button::Button(std::string text, theme::NanTheme theme):
         text_(std::move(text)),
         label_presentation_(*this),
         container_presentation_(*this) {
-        system_ = std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ =
+            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
         theme_view_ = theme;
         apply_metrics();
     }
@@ -183,7 +177,8 @@ namespace nandina::widget
     }
 
     void Button::set_theme(theme::NanTheme theme) {
-        system_ = std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ =
+            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
         system_explicit_ = true;
         theme_view_ = theme;
         mark_layout_dirty();
@@ -310,8 +305,7 @@ namespace nandina::widget
         apply_text_style(visual_state(), height());
         // 文本布局始终使用逻辑尺寸；world 已包含视口变换，不能再作为 measure 输入，
         // 否则缩放后的文本宽度会污染下一次逻辑布局并造成组件尺寸振荡。
-        const float content_width =
-            std::max(0.0F, width() - style.metrics.padding_x * 2.0F);
+        const float content_width = std::max(0.0F, width() - style.metrics.padding_x * 2.0F);
         (void)text_.measure_layout(
             scene::LayoutConstraints {
                 .min_width = 0.0F,
@@ -339,8 +333,7 @@ namespace nandina::widget
             ripple_progress_ = 1.0F;
         }
         mark_dirty(
-            scene::DirtyFlags::paint | scene::DirtyFlags::layout
-            | scene::DirtyFlags::semantics
+            scene::DirtyFlags::paint | scene::DirtyFlags::layout | scene::DirtyFlags::semantics
         );
     }
 
@@ -354,11 +347,8 @@ namespace nandina::widget
             ripple_progress_ = 1.0F;
         }
         else {
-            ripple_progress_ = std::clamp(
-                ripple_progress_ + std::max(dt, 0.0F) / duration,
-                0.0F,
-                1.0F
-            );
+            ripple_progress_ =
+                std::clamp(ripple_progress_ + std::max(dt, 0.0F) / duration, 0.0F, 1.0F);
             if (ripple_progress_ >= 1.0F) {
                 ripple_origin_local_.reset();
             }
@@ -370,11 +360,12 @@ namespace nandina::widget
         return {
             .role = semantics::Role::button,
             .label = std::string(text()),
-            .state = {
-                .focusable = !disabled(),
-                .focused = focused(),
-                .disabled = disabled(),
-            },
+            .state =
+                {
+                    .focusable = !disabled(),
+                    .focused = focused(),
+                    .disabled = disabled(),
+                },
             .actions = disabled() ? semantics::Action::none
                                   : semantics::Action::activate | semantics::Action::focus,
         };
@@ -406,10 +397,12 @@ namespace nandina::widget
                 .max_height = style.metrics.height,
             }
         );
-        return constraints.constrain(foundation::NanSize(
-            text_.width() + style.metrics.padding_x * 2.0F,
-            style.metrics.height
-        ));
+        return constraints.constrain(
+            foundation::NanSize(
+                text_.width() + style.metrics.padding_x * 2.0F,
+                style.metrics.height
+            )
+        );
     }
 
     void Button::apply_metrics() {
@@ -419,16 +412,17 @@ namespace nandina::widget
         container_presentation_.apply(style.container);
         apply_text_style(state, height());
         (void)text_.measure_layout(scene::LayoutConstraints::loose());
-        set_size(foundation::NanSize(
-            text_.width() + style.metrics.padding_x * 2.0F,
-            style.metrics.height
-        ));
+        set_size(
+            foundation::NanSize(
+                text_.width() + style.metrics.padding_x * 2.0F,
+                style.metrics.height
+            )
+        );
     }
 
     auto Button::resolved_recipe_style(const theme::ButtonVisualState state) const
         -> theme::ResolvedButtonStyle {
-        auto style =
-            theme::resolve_button(*system_, appearance_, tone_, treatment_, size_, state);
+        auto style = theme::resolve_button(*system_, appearance_, tone_, treatment_, size_, state);
         if (override_) {
             theme::apply_rule(*system_, appearance_, style, *override_, tone_);
         }
@@ -443,10 +437,8 @@ namespace nandina::widget
         return fallback;
     }
 
-    void Button::apply_text_style(
-        const theme::ButtonVisualState state,
-        const float reference_height
-    ) {
+    void
+    Button::apply_text_style(const theme::ButtonVisualState state, const float reference_height) {
         const auto style = resolved_recipe_style(state);
         const auto& context = resolved_style_context();
         primitives::TextStyle text_style {
@@ -460,7 +452,7 @@ namespace nandina::widget
             .max_lines = 1,
         };
         label_presentation_.apply(text_style);
-        if (same_text_style(text_.style(), text_style)) {
+        if (text_.style().approx_equals(text_style)) {
             return;
         }
         text_.set_style(text_style);

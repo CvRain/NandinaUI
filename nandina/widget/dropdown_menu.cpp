@@ -13,6 +13,8 @@
 
 #include "dropdown_menu.hpp"
 
+#include "internal/text_style_bridge.hpp"
+
 #include "key_codes.hpp"
 #include "popover.hpp"
 #include "primitives/box_painter.hpp"
@@ -36,6 +38,7 @@ namespace nandina::widget
 {
     namespace
     {
+        using internal::make_text_style;
         /// 条目内容几何常量：勾选 / 单选指示器的方形边长与它到文本的间距。
         /// 配方没有这一档标量 token（同 Select 的箭头臂长），属于组件内部几何。
         constexpr float kIndicatorSize = 16.0F;
@@ -43,32 +46,7 @@ namespace nandina::widget
         /// submenu 尾部指示（右向 chevron）的臂长。
         constexpr float kArrowArm = 4.0F;
 
-        [[nodiscard]] auto near(const float lhs, const float rhs) -> bool {
-            return std::abs(lhs - rhs) <= foundation::nan_epsilon;
-        }
-
-        [[nodiscard]] auto
-        same_text_style(const primitives::TextStyle& lhs, const primitives::TextStyle& rhs)
-            -> bool {
-            return lhs.color.approx_equals(rhs.color) && near(lhs.font_size, rhs.font_size)
-                && lhs.font == rhs.font && lhs.overflow == rhs.overflow
-                && lhs.max_lines == rhs.max_lines;
-        }
-
         /// 从解析后的排版 + 继承的样式上下文构造文本样式（与 Select 同款）。
-        [[nodiscard]] auto make_text_style(
-            const theme::ResolvedStyleContext& context,
-            const theme::ResolvedTypeStyle& type,
-            const text::FontRequest& fallback_font
-        ) -> primitives::TextStyle {
-            return primitives::TextStyle {
-                .color = context.text_color_from_context ? context.text_color : type.color,
-                .font_size = context.font_size_from_context ? context.font_size : type.font_size,
-                .font = context.font_from_context ? context.font : fallback_font,
-                .overflow = primitives::TextOverflow::clip,
-                .max_lines = 1,
-            };
-        }
     } // namespace
 
     namespace internal
@@ -295,13 +273,13 @@ namespace nandina::widget
                 if (disabled_ && kind_ != MenuItemKind::label) {
                     label_style.color = style_.disabled_label;
                 }
-                if (!same_text_style(label_text_.style(), label_style)) {
+                if (!label_text_.style().approx_equals(label_style)) {
                     label_text_.set_style(label_style);
                 }
 
                 const auto shortcut_style =
                     make_text_style(context_, style_.item_shortcut, shortcut_text_.font());
-                if (!same_text_style(shortcut_text_.style(), shortcut_style)) {
+                if (!shortcut_text_.style().approx_equals(shortcut_style)) {
                     shortcut_text_.set_style(shortcut_style);
                 }
             }

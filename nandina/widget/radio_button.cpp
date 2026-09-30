@@ -6,11 +6,11 @@
 
 #include "key_codes.hpp"
 
-#include "primitives/box_painter.hpp"
-#include "primitives/focus_ring_painter.hpp"
 #include "../render/draw_context.hpp"
 #include "../scene/input_event.hpp"
 #include "../theme/theme_manager.hpp"
+#include "primitives/box_painter.hpp"
+#include "primitives/focus_ring_painter.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -19,19 +19,7 @@
 namespace nandina::widget
 {
     namespace
-    {
-        [[nodiscard]] auto near(const float lhs, const float rhs) -> bool {
-            return std::abs(lhs - rhs) <= foundation::nan_epsilon;
-        }
-
-        [[nodiscard]] auto
-        same_text_style(const primitives::TextStyle& lhs, const primitives::TextStyle& rhs)
-            -> bool {
-            return lhs.color.approx_equals(rhs.color) && near(lhs.font_size, rhs.font_size)
-                && lhs.font == rhs.font && lhs.overflow == rhs.overflow
-                && lhs.max_lines == rhs.max_lines;
-        }
-    } // namespace
+    {} // namespace
 
     RadioButton::RadioButton(
         std::string label,
@@ -39,7 +27,8 @@ namespace nandina::widget
         theme::NanTheme theme
     ):
         text_(std::move(label)) {
-        system_ = std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ =
+            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
         theme_view_ = theme;
         set_group(std::move(group));
         apply_metrics();
@@ -51,11 +40,9 @@ namespace nandina::widget
         }
     }
 
-    auto RadioButton::create(
-        std::string label,
-        std::shared_ptr<RadioGroup> group,
-        theme::NanTheme theme
-    ) -> std::shared_ptr<RadioButton> {
+    auto
+    RadioButton::create(std::string label, std::shared_ptr<RadioGroup> group, theme::NanTheme theme)
+        -> std::shared_ptr<RadioButton> {
         return std::make_shared<RadioButton>(std::move(label), std::move(group), theme);
     }
 
@@ -127,7 +114,8 @@ namespace nandina::widget
     }
 
     void RadioButton::set_theme(theme::NanTheme theme) {
-        system_ = std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ =
+            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
         system_explicit_ = true;
         theme_view_ = theme;
         apply_metrics();
@@ -209,10 +197,16 @@ namespace nandina::widget
             auto& key = static_cast<scene::KeyEvent&>(event);
             if (key.is_pressed()) {
                 int direction = 0;
-                if (key.keycode() == nandina::widget::keys::left || key.keycode() == nandina::widget::keys::up) {
+                if (key.keycode() == nandina::widget::keys::left
+                    || key.keycode() == nandina::widget::keys::up)
+                {
                     direction = -1;
                 }
-                else if (key.keycode() == nandina::widget::keys::right || key.keycode() == nandina::widget::keys::down) {
+                else if (
+                    key.keycode() == nandina::widget::keys::right
+                    || key.keycode() == nandina::widget::keys::down
+                )
+                {
                     direction = 1;
                 }
                 if (direction != 0 && group_->move_focus(this, direction)) {
@@ -229,12 +223,8 @@ namespace nandina::widget
         const auto world = render::world_bounds_from_local(context.world_transform(), local_rect());
         const float box_size = context.logical_to_screen(style.metrics.box_size);
         const float box_top = world.get_top() + (world.get_height() - box_size) * 0.5F;
-        const auto box = foundation::NanRect::from_xywh(
-            world.get_left(),
-            box_top,
-            box_size,
-            box_size
-        );
+        const auto box =
+            foundation::NanRect::from_xywh(world.get_left(), box_top, box_size, box_size);
         const float opacity = context.opacity();
 
         primitives::BoxPainter::paint(context, box, style.indicator, opacity);
@@ -263,7 +253,8 @@ namespace nandina::widget
         }
     }
 
-    auto RadioButton::on_measure(const scene::LayoutConstraints constraints) -> foundation::NanSize {
+    auto RadioButton::on_measure(const scene::LayoutConstraints constraints)
+        -> foundation::NanSize {
         const auto style = resolved_style();
         apply_text_style();
         const float text_width = std::isfinite(constraints.max_width)
@@ -277,10 +268,12 @@ namespace nandina::widget
                 .max_height = constraints.max_height,
             }
         );
-        return constraints.constrain(foundation::NanSize(
-            style.metrics.box_size + style.metrics.gap + text_size.get_width(),
-            std::max(style.metrics.min_height, text_size.get_height())
-        ));
+        return constraints.constrain(
+            foundation::NanSize(
+                style.metrics.box_size + style.metrics.gap + text_size.get_width(),
+                std::max(style.metrics.min_height, text_size.get_height())
+            )
+        );
     }
 
     void RadioButton::on_click() {
@@ -319,10 +312,12 @@ namespace nandina::widget
         apply_text_style();
         const auto style = resolved_style();
         (void)text_.measure_layout(scene::LayoutConstraints::loose());
-        set_size(foundation::NanSize(
-            style.metrics.box_size + style.metrics.gap + text_.width(),
-            std::max(style.metrics.min_height, text_.height())
-        ));
+        set_size(
+            foundation::NanSize(
+                style.metrics.box_size + style.metrics.gap + text_.width(),
+                std::max(style.metrics.min_height, text_.height())
+            )
+        );
     }
 
     void RadioButton::apply_text_style() {
@@ -330,13 +325,12 @@ namespace nandina::widget
         const auto& context = resolved_style_context();
         const primitives::TextStyle text_style {
             .color = context.text_color_from_context ? context.text_color : style.label.color,
-            .font_size =
-                context.font_size_from_context ? context.font_size : style.label.font_size,
+            .font_size = context.font_size_from_context ? context.font_size : style.label.font_size,
             .font = context.font_from_context ? context.font : text_.font(),
             .overflow = primitives::TextOverflow::clip,
             .max_lines = 1,
         };
-        if (!same_text_style(text_.style(), text_style)) {
+        if (!text_.style().approx_equals(text_style)) {
             text_.set_style(text_style);
         }
     }

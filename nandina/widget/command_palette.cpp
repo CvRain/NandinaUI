@@ -13,6 +13,9 @@
 
 #include "command_palette.hpp"
 
+#include "internal/text_style_bridge.hpp"
+
+#include "../semantics/semantics.hpp"
 #include "internal/dismiss_layer.hpp"
 #include "internal/focus_scope.hpp"
 #include "key_codes.hpp"
@@ -20,7 +23,6 @@
 #include "primitives/box_painter.hpp"
 #include "primitives/text.hpp"
 #include "roving_focus.hpp"
-#include "../semantics/semantics.hpp"
 #include "text_field.hpp"
 
 #include "../animation/animation_host.hpp"
@@ -40,42 +42,17 @@ namespace nandina::widget
 {
     namespace
     {
-        [[nodiscard]] auto near(const float lhs, const float rhs) -> bool {
-            return std::abs(lhs - rhs) <= foundation::nan_epsilon;
-        }
-
-        [[nodiscard]] auto
-        same_text_style(const primitives::TextStyle& lhs, const primitives::TextStyle& rhs) -> bool {
-            return lhs.color.approx_equals(rhs.color) && near(lhs.font_size, rhs.font_size)
-                && lhs.font == rhs.font && lhs.overflow == rhs.overflow
-                && lhs.max_lines == rhs.max_lines;
-        }
-
+        using internal::make_text_style;
         /// 从解析后的排版 + 继承的样式上下文构造文本样式（与 Combobox / DropdownMenu 同款）。
-        [[nodiscard]] auto make_text_style(
-            const theme::ResolvedStyleContext& context,
-            const theme::ResolvedTypeStyle& type,
-            const text::FontRequest& fallback_font
-        ) -> primitives::TextStyle {
-            return primitives::TextStyle {
-                .color = context.text_color_from_context ? context.text_color : type.color,
-                .font_size = context.font_size_from_context ? context.font_size : type.font_size,
-                .font = context.font_from_context ? context.font : fallback_font,
-                .overflow = primitives::TextOverflow::ellipsis,
-                .max_lines = 1,
-            };
-        }
-
         [[nodiscard]] auto lower_ascii(const char value) -> char {
             return static_cast<char>(std::tolower(static_cast<unsigned char>(value)));
         }
 
         /// 大小写不敏感（ASCII）子串匹配。只匹配 label（`menu_model.md` 规则 2：
         /// `shortcut` 是展示提示，把它纳入匹配会让 "c" 同时命中 Copy 与 Ctrl+...）。
-        [[nodiscard]] auto contains_case_insensitive(
-            const std::string_view haystack,
-            const std::string_view needle
-        ) -> bool {
+        [[nodiscard]] auto
+        contains_case_insensitive(const std::string_view haystack, const std::string_view needle)
+            -> bool {
             if (needle.empty()) {
                 return true;
             }
@@ -201,8 +178,8 @@ namespace nandina::widget
                     };
                 }
                 const auto role = kind_ == MenuItemKind::checkbox ? semantics::Role::checkbox
-                    : kind_ == MenuItemKind::radio               ? semantics::Role::radio
-                                                                 : semantics::Role::list_item;
+                    : kind_ == MenuItemKind::radio                ? semantics::Role::radio
+                                                                  : semantics::Role::list_item;
                 return {
                     .role = role,
                     .label = label_,
@@ -213,8 +190,7 @@ namespace nandina::widget
                             .focused = highlighted_,
                             .disabled = disabled_,
                         },
-                    .actions =
-                        disabled_ ? semantics::Action::none : semantics::Action::activate,
+                    .actions = disabled_ ? semantics::Action::none : semantics::Action::activate,
                 };
             }
 
@@ -229,10 +205,12 @@ namespace nandina::widget
                 }
                 if (kind_ == MenuItemKind::label) {
                     (void)label_text_.measure_layout(scene::LayoutConstraints::loose());
-                    return constraints.constrain(foundation::NanSize(
-                        label_text_.measured_text_width() + m.item_padding_x * 2.0F,
-                        m.item_height
-                    ));
+                    return constraints.constrain(
+                        foundation::NanSize(
+                            label_text_.measured_text_width() + m.item_padding_x * 2.0F,
+                            m.item_height
+                        )
+                    );
                 }
                 (void)label_text_.measure_layout(scene::LayoutConstraints::loose());
                 if (!shortcut_.empty()) {
@@ -337,7 +315,8 @@ namespace nandina::widget
                 const foundation::NanRect& box,
                 const float opacity
             ) {
-                const auto color = indicator_color().with_alpha(indicator_color().alpha() * opacity);
+                const auto color =
+                    indicator_color().with_alpha(indicator_color().alpha() * opacity);
                 if (kind_ == MenuItemKind::radio) {
                     context.device().draw_circle(box.get_center(), box.get_width() * 0.28F, color);
                     return;
@@ -349,8 +328,10 @@ namespace nandina::widget
                         box.get_top() + box.get_height() * fy
                     );
                 };
-                context.device().draw_line(point(0.20F, 0.52F), point(0.42F, 0.74F), thickness, color);
-                context.device().draw_line(point(0.42F, 0.74F), point(0.80F, 0.30F), thickness, color);
+                context.device()
+                    .draw_line(point(0.20F, 0.52F), point(0.42F, 0.74F), thickness, color);
+                context.device()
+                    .draw_line(point(0.42F, 0.74F), point(0.80F, 0.30F), thickness, color);
             }
 
             void apply_text_style() {
@@ -362,7 +343,8 @@ namespace nandina::widget
                 auto label_style = make_text_style(
                     context_,
                     kind_ == MenuItemKind::label ? style_.group_label : style_.item_label,
-                    label_text_.font()
+                    label_text_.font(),
+                    primitives::TextOverflow::ellipsis
                 );
                 if (disabled_ && kind_ != MenuItemKind::label) {
                     label_style.color = style_.disabled_label;
@@ -371,14 +353,15 @@ namespace nandina::widget
                     // 高亮底是 accent，配 accent_foreground 才有对比度保证。
                     label_style.color = style_.highlight_text;
                 }
-                if (!same_text_style(label_text_.style(), label_style)) {
+                if (!label_text_.style().approx_equals(label_style)) {
                     label_text_.set_style(label_style);
                 }
                 if (!shortcut_.empty()) {
                     auto shortcut_style = make_text_style(
                         context_,
                         style_.item_shortcut,
-                        shortcut_text_.font()
+                        shortcut_text_.font(),
+                        primitives::TextOverflow::ellipsis
                     );
                     if (disabled_) {
                         shortcut_style.color = style_.disabled_label;
@@ -386,7 +369,7 @@ namespace nandina::widget
                     else if (highlighted_) {
                         shortcut_style.color = style_.highlight_text;
                     }
-                    if (!same_text_style(shortcut_text_.style(), shortcut_style)) {
+                    if (!shortcut_text_.style().approx_equals(shortcut_style)) {
                         shortcut_text_.set_style(shortcut_style);
                     }
                 }
@@ -415,9 +398,7 @@ namespace nandina::widget
          */
         class CommandPaletteResultSurface final: public scene::NanControl {
         public:
-            explicit CommandPaletteResultSurface(
-                std::function<void(std::string_view)> on_activate
-            ):
+            explicit CommandPaletteResultSurface(std::function<void(std::string_view)> on_activate):
                 on_activate_(std::move(on_activate)) {
                 // 菜单语义：焦点移动不改值，激活由 Enter / 点击显式触发。
                 focus_.set_movement(RovingMovement::focus_only);
@@ -425,7 +406,8 @@ namespace nandina::widget
             }
 
             /// 就地替换结果行（不重建浮层，因此不会打断查询与焦点）。
-            void set_rows(std::vector<MenuItem> rows, const std::size_t hidden, const bool searching) {
+            void
+            set_rows(std::vector<MenuItem> rows, const std::size_t hidden, const bool searching) {
                 rows_ = std::move(rows);
                 hidden_ = hidden;
                 searching_ = searching;
@@ -461,7 +443,7 @@ namespace nandina::widget
                         row->set_style(style_, context_);
                     }
                 }
-                if (!same_text_style(hint_text_.style(), hint_style())) {
+                if (!hint_text_.style().approx_equals(hint_style())) {
                     hint_text_.set_style(hint_style());
                 }
                 mark_layout_dirty();
@@ -504,8 +486,8 @@ namespace nandina::widget
                 // set_active_index 不做可聚焦性校验，这里自己纠正到最近的可聚焦条目。
                 if (active_index() >= 0 && !is_focusable_at(active_index())) {
                     const int step = from_end ? -1 : 1;
-                    for (int i = active_index(); i >= 0
-                         && static_cast<std::size_t>(i) < rows_.size();
+                    for (int i = active_index();
+                         i >= 0 && static_cast<std::size_t>(i) < rows_.size();
                          i += step)
                     {
                         if (is_focusable_at(i)) {
@@ -545,7 +527,8 @@ namespace nandina::widget
                 if (index < 0) {
                     return false;
                 }
-                if (pointer.is_pressed() && pointer.button() == scene::MouseButtonEvent::Button::left)
+                if (pointer.is_pressed()
+                    && pointer.button() == scene::MouseButtonEvent::Button::left)
                 {
                     hovered_ = index;
                     focus_.set_active_index(index);
@@ -636,15 +619,14 @@ namespace nandina::widget
                         continue;
                     }
                     const auto measured = row->measured_size();
-                    row->measure_layout(scene::LayoutConstraints::tight(
-                        foundation::NanSize(width(), measured.get_height())
-                    ));
-                    row->layout_to(foundation::NanRect::from_xywh(
-                        0.0F,
-                        y,
-                        width(),
-                        measured.get_height()
-                    ));
+                    row->measure_layout(
+                        scene::LayoutConstraints::tight(
+                            foundation::NanSize(width(), measured.get_height())
+                        )
+                    );
+                    row->layout_to(
+                        foundation::NanRect::from_xywh(0.0F, y, width(), measured.get_height())
+                    );
                     y += measured.get_height();
                 }
                 if (!hint_.empty()) {
@@ -705,7 +687,7 @@ namespace nandina::widget
                 }
                 hint_ = std::move(text);
                 hint_text_.set_text(hint_);
-                if (!hint_.empty() && !same_text_style(hint_text_.style(), hint_style())) {
+                if (!hint_.empty() && !hint_text_.style().approx_equals(hint_style())) {
                     hint_text_.set_style(hint_style());
                 }
             }
@@ -714,9 +696,7 @@ namespace nandina::widget
                 // typeahead 一律返回空串：查询本身就是过滤器（见文件头说明）。
                 focus_.sync(
                     rows_.size(),
-                    [this](const std::size_t i) {
-                        return menu_item_is_focusable(rows_[i]);
-                    },
+                    [this](const std::size_t i) { return menu_item_is_focusable(rows_[i]); },
                     [](std::size_t) -> std::string_view { return {}; }
                 );
                 if (active_index() < 0 && !rows_.empty()) {
@@ -737,17 +717,19 @@ namespace nandina::widget
                     if (row == nullptr) {
                         continue;
                     }
-                    row->set_state(
-                        static_cast<int>(i) == hovered_,
-                        static_cast<int>(i) == active
-                    );
+                    row->set_state(static_cast<int>(i) == hovered_, static_cast<int>(i) == active);
                 }
                 mark_semantics_dirty();
                 mark_dirty(scene::DirtyFlags::paint);
             }
 
             [[nodiscard]] auto hint_style() const -> primitives::TextStyle {
-                return make_text_style(context_, style_.empty, hint_text_.font());
+                return make_text_style(
+                    context_,
+                    style_.empty,
+                    hint_text_.font(),
+                    primitives::TextOverflow::ellipsis
+                );
             }
 
             /// 空结果提示 / "还有 N 条" 提示占用的高度（都是单行）。
@@ -818,24 +800,27 @@ namespace nandina::widget
                     0.0F,
                     std::min(m.panel_width, constraints.max_width) - m.panel_padding * 2.0F
                 );
-                const auto query = field_->measure_layout(scene::LayoutConstraints {
-                    .min_width = 0.0F,
-                    .max_width = inner_width,
-                    .min_height = 0.0F,
-                    .max_height = constraints.max_height,
-                });
-                const auto list = surface_->measure_layout(scene::LayoutConstraints {
-                    .min_width = 0.0F,
-                    .max_width = inner_width,
-                    .min_height = 0.0F,
-                    .max_height = constraints.max_height,
-                });
+                const auto query = field_->measure_layout(
+                    scene::LayoutConstraints {
+                        .min_width = 0.0F,
+                        .max_width = inner_width,
+                        .min_height = 0.0F,
+                        .max_height = constraints.max_height,
+                    }
+                );
+                const auto list = surface_->measure_layout(
+                    scene::LayoutConstraints {
+                        .min_width = 0.0F,
+                        .max_width = inner_width,
+                        .min_height = 0.0F,
+                        .max_height = constraints.max_height,
+                    }
+                );
                 const float height =
                     m.panel_padding * 2.0F + query.get_height() + m.gap + list.get_height();
-                return constraints.constrain(foundation::NanSize(
-                    m.panel_width + m.panel_padding * 2.0F,
-                    height
-                ));
+                return constraints.constrain(
+                    foundation::NanSize(m.panel_width + m.panel_padding * 2.0F, height)
+                );
             }
 
             void on_layout() override {
@@ -843,27 +828,20 @@ namespace nandina::widget
                 const float inner_width = std::max(0.0F, width() - m.panel_padding * 2.0F);
                 float y = m.panel_padding;
                 const auto query_height = field_->measured_size().get_height();
-                field_->measure_layout(scene::LayoutConstraints::tight(
-                    foundation::NanSize(inner_width, query_height)
-                ));
-                field_->layout_to(foundation::NanRect::from_xywh(
-                    m.panel_padding,
-                    y,
-                    inner_width,
-                    query_height
-                ));
+                field_->measure_layout(
+                    scene::LayoutConstraints::tight(foundation::NanSize(inner_width, query_height))
+                );
+                field_->layout_to(
+                    foundation::NanRect::from_xywh(m.panel_padding, y, inner_width, query_height)
+                );
                 y += query_height + m.gap;
-                const float list_height =
-                    std::max(0.0F, height() - m.panel_padding - y);
-                surface_->measure_layout(scene::LayoutConstraints::tight(
-                    foundation::NanSize(inner_width, list_height)
-                ));
-                surface_->layout_to(foundation::NanRect::from_xywh(
-                    m.panel_padding,
-                    y,
-                    inner_width,
-                    list_height
-                ));
+                const float list_height = std::max(0.0F, height() - m.panel_padding - y);
+                surface_->measure_layout(
+                    scene::LayoutConstraints::tight(foundation::NanSize(inner_width, list_height))
+                );
+                surface_->layout_to(
+                    foundation::NanRect::from_xywh(m.panel_padding, y, inner_width, list_height)
+                );
             }
 
             auto on_draw(render::DrawContext& context) -> void override {
@@ -938,17 +916,14 @@ namespace nandina::widget
                 const auto measured = panel_->measured_size();
                 const float panel_width = std::min(measured.get_width(), width());
                 const float panel_height = measured.get_height();
-                panel_->measure_layout(scene::LayoutConstraints::tight(
-                    foundation::NanSize(panel_width, panel_height)
-                ));
+                panel_->measure_layout(
+                    scene::LayoutConstraints::tight(foundation::NanSize(panel_width, panel_height))
+                );
                 // 水平居中（外壳宽度 = 面板宽度，理论上 offset 为 0；保留计算以防约束收窄）。
                 const float x = std::max(0.0F, (width() - panel_width) * 0.5F);
-                panel_->layout_to(foundation::NanRect::from_xywh(
-                    x,
-                    top_offset_,
-                    panel_width,
-                    panel_height
-                ));
+                panel_->layout_to(
+                    foundation::NanRect::from_xywh(x, top_offset_, panel_width, panel_height)
+                );
                 if (dismiss_layer_ != nullptr) {
                     dismiss_layer_->set_hit_bounds(panel_->global_bounds());
                 }
@@ -982,9 +957,9 @@ namespace nandina::widget
             handle_query_changed(text);
         });
 
-        surface_ = std::make_shared<CommandPaletteResultSurface>(
-            [this](const std::string_view id) { activate_id(id); }
-        );
+        surface_ = std::make_shared<CommandPaletteResultSurface>([this](const std::string_view id) {
+            activate_id(id);
+        });
         panel_ = std::make_shared<CommandPalettePanel>(text_field_, surface_);
         shell_ = std::make_shared<CommandPaletteShell>();
         shell_->on_key = [this](scene::InputEvent& event) { return on_input_capture(event); };
@@ -1011,11 +986,7 @@ namespace nandina::widget
         std::string placeholder,
         theme::NanTheme theme
     ) -> std::shared_ptr<CommandPalette> {
-        return std::make_shared<CommandPalette>(
-            std::move(items),
-            std::move(placeholder),
-            theme
-        );
+        return std::make_shared<CommandPalette>(std::move(items), std::move(placeholder), theme);
     }
 
     // ─── 条目 ────────────────────────────────────────────────────────────
@@ -1054,7 +1025,8 @@ namespace nandina::widget
     auto CommandPalette::checked_ids() const -> std::vector<std::string> {
         std::vector<std::string> ids;
         for (const auto& item: items_) {
-            if (item.checked && (item.kind == MenuItemKind::checkbox || item.kind == MenuItemKind::radio))
+            if (item.checked
+                && (item.kind == MenuItemKind::checkbox || item.kind == MenuItemKind::radio))
             {
                 ids.push_back(item.id);
             }
@@ -1111,8 +1083,7 @@ namespace nandina::widget
             return;
         }
         if (mount_mode_ == MountMode::unmounted) {
-            mount_mode_ =
-                resolve_overlay_host() != nullptr ? MountMode::overlay : MountMode::tree;
+            mount_mode_ = resolve_overlay_host() != nullptr ? MountMode::overlay : MountMode::tree;
         }
         // 每次打开都从空查询开始：命令面板是"随手唤起"的浮层，保留上一次的输入会让
         // 第二次打开看到的是一份被过滤过的列表。
@@ -1209,9 +1180,8 @@ namespace nandina::widget
 
     void CommandPalette::set_theme(theme::NanTheme theme) {
         theme_view_ = theme;
-        system_ = std::make_shared<const theme::DesignSystem>(
-            theme::design_system_from_theme(theme)
-        );
+        system_ =
+            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
         system_explicit_ = true;
         sync_field_style();
         apply_style();
@@ -1426,9 +1396,9 @@ namespace nandina::widget
 
     void CommandPalette::install_dismiss_callback() {
         // 关闭请求回到本面板；弱引用保证浮层比面板活得久时不会悬空。
-        auto weak =
-            std::weak_ptr<CommandPalette>(std::static_pointer_cast<CommandPalette>(shared_from_this())
-            );
+        auto weak = std::weak_ptr<CommandPalette>(
+            std::static_pointer_cast<CommandPalette>(shared_from_this())
+        );
         dismiss_layer_->set_callback([weak](const internal::DismissReason) {
             if (auto palette = weak.lock(); palette != nullptr && !palette->disabled_) {
                 palette->close();
@@ -1479,7 +1449,7 @@ namespace nandina::widget
 
         // 分组保留：`label` 开一组、`separator` 结束一组。整组都无匹配时，该组连同它的
         // 标题与分隔线一起消失 —— 否则过滤之后会剩下孤零零的组标题。
-        std::vector<MenuItem> group;   // 含组标题与组内条目
+        std::vector<MenuItem> group; // 含组标题与组内条目
         std::size_t group_matches = 0;
 
         const auto flush_group = [&] {
@@ -1562,8 +1532,7 @@ namespace nandina::widget
         text_field_->set_override(
             theme::TextFieldRecipeRule {
                 .container_fill = theme::ThemeColor::literal(style.panel.fill.with_alpha(0.0F)),
-                .container_border =
-                    theme::ThemeColor::literal(style.panel.border.with_alpha(0.0F)),
+                .container_border = theme::ThemeColor::literal(style.panel.border.with_alpha(0.0F)),
                 .container_border_width = theme::ThemeScalar::literal(0.0F),
                 .container_radius = theme::ThemeScalar::literal(0.0F),
                 .value_color = theme::ThemeColor::literal(style.query.color),

@@ -13,16 +13,6 @@ namespace nandina::widget::internal
 {
     namespace
     {
-        [[nodiscard]] auto same_text_style(
-            const primitives::TextStyle& lhs,
-            const primitives::TextStyle& rhs
-        ) -> bool {
-            return lhs.color.approx_equals(rhs.color)
-                && std::abs(lhs.font_size - rhs.font_size) <= foundation::nan_epsilon
-                && lhs.font == rhs.font && lhs.overflow == rhs.overflow
-                && lhs.max_lines == rhs.max_lines;
-        }
-
         /// 替换槽位内容：旧内容立即销毁，新内容必须处于游离状态。
         void install_slot(
             scene::NanControl& panel,
@@ -57,7 +47,8 @@ namespace nandina::widget::internal
         return *header_.lock();
     }
 
-    auto DialogPanel::set_content(std::shared_ptr<scene::NanControl> content) -> scene::NanControl& {
+    auto DialogPanel::set_content(std::shared_ptr<scene::NanControl> content)
+        -> scene::NanControl& {
         install_slot(*this, content_, std::move(content), "set_content");
         mark_layout_dirty();
         return *content_.lock();
@@ -131,7 +122,7 @@ namespace nandina::widget::internal
             .overflow = primitives::TextOverflow::clip,
             .max_lines = 1,
         };
-        if (!same_text_style(title_->style(), style)) {
+        if (!title_->style().approx_equals(style)) {
             title_->set_style(style);
             mark_layout_dirty();
         }
@@ -189,12 +180,14 @@ namespace nandina::widget::internal
                 y += style_.metrics.gap;
             }
             const auto measured = slot->measure_layout(inner);
-            slot->layout_to(foundation::NanRect::from_xywh(
-                style_.metrics.padding_x,
-                y,
-                measured.get_width(),
-                measured.get_height()
-            ));
+            slot->layout_to(
+                foundation::NanRect::from_xywh(
+                    style_.metrics.padding_x,
+                    y,
+                    measured.get_width(),
+                    measured.get_height()
+                )
+            );
             y += measured.get_height();
         }
     }

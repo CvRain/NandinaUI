@@ -18,22 +18,11 @@
 namespace nandina::widget
 {
     namespace
-    {
-        [[nodiscard]] auto near(const float lhs, const float rhs) -> bool {
-            return std::abs(lhs - rhs) <= foundation::nan_epsilon;
-        }
-
-        [[nodiscard]] auto
-        same_text_style(const primitives::TextStyle& lhs, const primitives::TextStyle& rhs)
-            -> bool {
-            return lhs.color.approx_equals(rhs.color) && near(lhs.font_size, rhs.font_size)
-                && lhs.font == rhs.font && lhs.overflow == rhs.overflow
-                && lhs.max_lines == rhs.max_lines;
-        }
-    } // namespace
+    {} // namespace
 
     Breadcrumb::Breadcrumb(theme::NanTheme theme) {
-        system_ = std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ =
+            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
         theme_view_ = theme;
         apply_text_styles();
         relayout();
@@ -101,7 +90,8 @@ namespace nandina::widget
     }
 
     void Breadcrumb::set_theme(theme::NanTheme theme) {
-        system_ = std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ =
+            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
         system_explicit_ = true;
         theme_view_ = theme;
         apply_text_styles();
@@ -200,10 +190,8 @@ namespace nandina::widget
             content_height = std::max(content_height, item.height);
         }
 
-        const float height = std::max(
-            style.metrics.min_height,
-            std::max(content_height, separator_height)
-        );
+        const float height =
+            std::max(style.metrics.min_height, std::max(content_height, separator_height));
 
         separator_rects_.assign(items_.empty() ? 0 : items_.size() - 1, foundation::NanRect {});
         float x = style.metrics.padding_x;
@@ -231,8 +219,7 @@ namespace nandina::widget
         return {.width = x + style.metrics.padding_x, .height = height};
     }
 
-    auto Breadcrumb::on_measure(const scene::LayoutConstraints constraints)
-        -> foundation::NanSize {
+    auto Breadcrumb::on_measure(const scene::LayoutConstraints constraints) -> foundation::NanSize {
         const float available = std::isfinite(constraints.max_width)
             ? constraints.max_width
             : std::numeric_limits<float>::infinity();
@@ -306,11 +293,9 @@ namespace nandina::widget
         const auto style = resolved_style();
         const auto& context = resolved_style_context();
 
-        const auto make_style = [&](
-                                    const theme::ResolvedTypeStyle& type,
+        const auto make_style = [&](const theme::ResolvedTypeStyle& type,
                                     const text::FontRequest& font,
-                                    const foundation::NanColor color
-                                ) {
+                                    const foundation::NanColor color) {
             return primitives::TextStyle {
                 .color = context.text_color_from_context ? context.text_color : color,
                 .font_size = context.font_size_from_context ? context.font_size : type.font_size,
@@ -323,14 +308,14 @@ namespace nandina::widget
         // 分隔符复用当前页字号，只换颜色。
         const auto separator_style =
             make_style(style.current, separator_text_.font(), style.separator);
-        if (!same_text_style(separator_text_.style(), separator_style)) {
+        if (!separator_text_.style().approx_equals(separator_style)) {
             separator_text_.set_style(separator_style);
         }
 
         for (auto& item: items_) {
             if (item.link) {
                 const auto link_style = make_style(style.link, item.link->font(), style.link.color);
-                if (!same_text_style(item.link->text_style(), link_style)) {
+                if (!item.link->text_style().approx_equals(link_style)) {
                     item.link->set_text_style(link_style);
                 }
                 item.link->set_hover_color(style.link_hover);
@@ -339,7 +324,7 @@ namespace nandina::widget
             else if (item.text) {
                 const auto text_style =
                     make_style(style.current, item.text->font(), style.current.color);
-                if (!same_text_style(item.text->style(), text_style)) {
+                if (!item.text->style().approx_equals(text_style)) {
                     item.text->set_style(text_style);
                 }
             }

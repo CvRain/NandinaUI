@@ -6,11 +6,11 @@
 
 #include "key_codes.hpp"
 
-#include "primitives/box_painter.hpp"
-#include "primitives/focus_ring_painter.hpp"
 #include "../render/draw_context.hpp"
 #include "../scene/input_event.hpp"
 #include "../theme/theme_manager.hpp"
+#include "primitives/box_painter.hpp"
+#include "primitives/focus_ring_painter.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -19,24 +19,13 @@
 namespace nandina::widget
 {
     namespace
-    {
-        [[nodiscard]] auto near(const float lhs, const float rhs) -> bool {
-            return std::abs(lhs - rhs) <= foundation::nan_epsilon;
-        }
-
-        [[nodiscard]] auto
-        same_text_style(const primitives::TextStyle& lhs, const primitives::TextStyle& rhs)
-            -> bool {
-            return lhs.color.approx_equals(rhs.color) && near(lhs.font_size, rhs.font_size)
-                && lhs.font == rhs.font && lhs.overflow == rhs.overflow
-                && lhs.max_lines == rhs.max_lines;
-        }
-    } // namespace
+    {} // namespace
 
     Chip::Chip(std::string text, const bool removable, theme::NanTheme theme):
         text_string_(std::move(text)),
         removable_(removable) {
-        system_ = std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ =
+            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
         theme_view_ = theme;
         text_.set_text(text_string_);
         apply_text_style();
@@ -77,7 +66,8 @@ namespace nandina::widget
     }
 
     void Chip::set_theme(theme::NanTheme theme) {
-        system_ = std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ =
+            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
         system_explicit_ = true;
         theme_view_ = theme;
         apply_text_style();
@@ -198,10 +188,8 @@ namespace nandina::widget
         text_.draw_at(context, text_position);
 
         if (removable_) {
-            const auto rect = render::world_bounds_from_local(
-                context.world_transform(),
-                remove_rect()
-            );
+            const auto rect =
+                render::world_bounds_from_local(context.world_transform(), remove_rect());
             const float arm = rect.get_height() * 0.18F;
             const auto color =
                 style.remove_color.with_alpha(style.remove_color.alpha() * context.opacity());
@@ -247,13 +235,12 @@ namespace nandina::widget
         const auto& context = resolved_style_context();
         const primitives::TextStyle text_style {
             .color = context.text_color_from_context ? context.text_color : style.label.color,
-            .font_size =
-                context.font_size_from_context ? context.font_size : style.label.font_size,
+            .font_size = context.font_size_from_context ? context.font_size : style.label.font_size,
             .font = context.font_from_context ? context.font : text_.font(),
             .overflow = primitives::TextOverflow::clip,
             .max_lines = 1,
         };
-        if (!same_text_style(text_.style(), text_style)) {
+        if (!text_.style().approx_equals(text_style)) {
             text_.set_style(text_style);
         }
     }
@@ -269,11 +256,6 @@ namespace nandina::widget
         const auto style = resolved_style();
         const float size = style.metrics.height * 0.4F;
         const float right = width() - style.metrics.padding_x;
-        return foundation::NanRect::from_xywh(
-            right - size,
-            (height() - size) * 0.5F,
-            size,
-            size
-        );
+        return foundation::NanRect::from_xywh(right - size, (height() - size) * 0.5F, size, size);
     }
 } // namespace nandina::widget

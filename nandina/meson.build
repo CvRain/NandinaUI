@@ -186,6 +186,7 @@ module_widget = files(
     'widget/internal/dismiss_layer.hpp',
     'widget/internal/dismiss_layer.cpp',
     'widget/internal/focus_scope.hpp',
+    'widget/internal/text_style_bridge.hpp',
     'widget/internal/focus_scope.cpp',
     'widget/primitives/text_layout.hpp',
     'widget/primitives/text_layout.cpp',

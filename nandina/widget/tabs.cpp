@@ -4,13 +4,13 @@
 
 #include "tabs.hpp"
 
-#include "primitives/box_painter.hpp"
-#include "primitives/focus_ring_painter.hpp"
 #include "../animation/animation_host.hpp"
 #include "../render/draw_context.hpp"
 #include "../scene/input_event.hpp"
 #include "../scene/scene_tree.hpp"
 #include "../theme/theme_manager.hpp"
+#include "primitives/box_painter.hpp"
+#include "primitives/focus_ring_painter.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -19,24 +19,11 @@
 namespace nandina::widget
 {
     namespace
-    {
+    {} // namespace
 
-        [[nodiscard]] auto near(const float lhs, const float rhs) -> bool {
-            return std::abs(lhs - rhs) <= foundation::nan_epsilon;
-        }
-
-        [[nodiscard]] auto
-        same_text_style(const primitives::TextStyle& lhs, const primitives::TextStyle& rhs)
-            -> bool {
-            return lhs.color.approx_equals(rhs.color) && near(lhs.font_size, rhs.font_size)
-                && lhs.font == rhs.font && lhs.overflow == rhs.overflow
-                && lhs.max_lines == rhs.max_lines;
-        }
-    } // namespace
-
-    Tabs::Tabs(std::vector<std::string> labels, theme::NanTheme theme):
-        labels_(std::move(labels)) {
-        system_ = std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+    Tabs::Tabs(std::vector<std::string> labels, theme::NanTheme theme): labels_(std::move(labels)) {
+        system_ =
+            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
         theme_view_ = theme;
         rebuild_texts();
         apply_text_styles();
@@ -133,7 +120,8 @@ namespace nandina::widget
     }
 
     void Tabs::set_theme(theme::NanTheme theme) {
-        system_ = std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ =
+            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
         system_explicit_ = true;
         theme_view_ = theme;
         apply_text_styles();
@@ -314,7 +302,8 @@ namespace nandina::widget
 
         // 3. 标签。
         for (std::size_t i = 0; i < label_texts_.size(); ++i) {
-            const float text_height = context.logical_to_screen(label_texts_[i]->measured_text_height());
+            const float text_height =
+                context.logical_to_screen(label_texts_[i]->measured_text_height());
             const auto position = foundation::NanPoint(
                 world.get_left() + context.logical_to_screen(tab_offsets_[i]),
                 world.get_top() + (world.get_height() - text_height) * 0.5F
@@ -359,10 +348,9 @@ namespace nandina::widget
             }
             max_height = std::max(max_height, label_texts_[i]->laid_out_font_size());
         }
-        return constraints.constrain(foundation::NanSize(
-            total_width,
-            std::max(style.metrics.min_height, max_height)
-        ));
+        return constraints.constrain(
+            foundation::NanSize(total_width, std::max(style.metrics.min_height, max_height))
+        );
     }
 
     auto Tabs::semantics_properties() const -> semantics::Properties {
@@ -394,11 +382,9 @@ namespace nandina::widget
         focus_.set_movement(RovingMovement::selection_only);
         focus_.set_orientation(RovingOrientation::horizontal);
         const auto& labels = labels_;
-        focus_.sync(
-            labels.size(),
-            {},
-            [&labels](std::size_t index) -> std::string_view { return labels[index]; }
-        );
+        focus_.sync(labels.size(), {}, [&labels](std::size_t index) -> std::string_view {
+            return labels[index];
+        });
         focus_.set_active_index(selected_index_);
     }
 
@@ -410,13 +396,12 @@ namespace nandina::widget
                 static_cast<int>(i) == selected_index_ ? style.label_selected : style.label;
             const primitives::TextStyle text_style {
                 .color = context.text_color_from_context ? context.text_color : type.color,
-                .font_size =
-                    context.font_size_from_context ? context.font_size : type.font_size,
+                .font_size = context.font_size_from_context ? context.font_size : type.font_size,
                 .font = context.font_from_context ? context.font : label_texts_[i]->font(),
                 .overflow = primitives::TextOverflow::clip,
                 .max_lines = 1,
             };
-            if (!same_text_style(label_texts_[i]->style(), text_style)) {
+            if (!label_texts_[i]->style().approx_equals(text_style)) {
                 label_texts_[i]->set_style(text_style);
             }
         }
@@ -431,8 +416,8 @@ namespace nandina::widget
             x += label_texts_[i]->measured_text_width() + gap;
         }
         // 空闲时吸附指示条到当前选中项（首次绘制 / 程序化选中 / 主题变化）。
-        const bool has = selected_index_ >= 0
-            && static_cast<std::size_t>(selected_index_) < label_texts_.size();
+        const bool has =
+            selected_index_ >= 0 && static_cast<std::size_t>(selected_index_) < label_texts_.size();
         if (has && !indicator_x_.is_animating() && !indicator_width_.is_animating()) {
             const auto selected = static_cast<std::size_t>(selected_index_);
             indicator_x_.clear_behavior();
@@ -446,8 +431,8 @@ namespace nandina::widget
         // 注意：不能在选中后立即 measure_labels()——那会把指示条吸附到新目标，
         // 导致动画变成 new→new 的空操作。这里直接用上一次 measure 的偏移，
         // 从「当前（旧）值」动画到新目标。
-        const bool has = selected_index_ >= 0
-            && static_cast<std::size_t>(selected_index_) < label_texts_.size();
+        const bool has =
+            selected_index_ >= 0 && static_cast<std::size_t>(selected_index_) < label_texts_.size();
         if (!has) {
             return;
         }
@@ -466,12 +451,10 @@ namespace nandina::widget
         }
 
         if (auto* tree = get_tree(); tree != nullptr) {
-            tree->animation_host().set_target(
-                *this, indicator_x_, target_x, scene::DirtyFlags::paint
-            );
-            tree->animation_host().set_target(
-                *this, indicator_width_, target_width, scene::DirtyFlags::paint
-            );
+            tree->animation_host()
+                .set_target(*this, indicator_x_, target_x, scene::DirtyFlags::paint);
+            tree->animation_host()
+                .set_target(*this, indicator_width_, target_width, scene::DirtyFlags::paint);
         }
         else {
             // 未挂载：无 Host 推进，直接吸附。

@@ -4,12 +4,12 @@
 
 #include "tooltip.hpp"
 
-#include "primitives/box_painter.hpp"
 #include "../render/draw_context.hpp"
 #include "../scene/input_event.hpp"
+#include "../scene/overlay_host.hpp"
 #include "../theme/theme_manager.hpp"
 #include "internal/anchored_positioner.hpp"
-#include "../scene/overlay_host.hpp"
+#include "primitives/box_painter.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -50,7 +50,8 @@ namespace nandina::widget
                 const primitives::TextPipeline& pipeline,
                 primitives::TextStyle text_style
             ):
-                text_(std::move(text)), style_(std::move(style)) {
+                text_(std::move(text)),
+                style_(std::move(style)) {
                 text_.set_text_pipeline(pipeline);
                 // The resolved label style must travel with the bubble, otherwise it
                 // would render with the default TextStyle instead of the tooltip's
@@ -87,17 +88,6 @@ namespace nandina::widget
             theme::ResolvedTooltipStyle style_;
         };
 
-        [[nodiscard]] auto near(const float lhs, const float rhs) -> bool {
-            return std::abs(lhs - rhs) <= foundation::nan_epsilon;
-        }
-
-        [[nodiscard]] auto
-        same_text_style(const primitives::TextStyle& lhs, const primitives::TextStyle& rhs)
-            -> bool {
-            return lhs.color.approx_equals(rhs.color) && near(lhs.font_size, rhs.font_size)
-                && lhs.font == rhs.font && lhs.overflow == rhs.overflow
-                && lhs.max_lines == rhs.max_lines;
-        }
     } // namespace
 
     Tooltip::~Tooltip() = default;
@@ -108,7 +98,8 @@ namespace nandina::widget
         theme::NanTheme theme
     ):
         text_(std::move(text)) {
-        system_ = std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ =
+            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
         theme_view_ = theme;
         if (trigger) {
             set_trigger(std::move(trigger));
@@ -202,7 +193,8 @@ namespace nandina::widget
     }
 
     void Tooltip::set_theme(theme::NanTheme theme) {
-        system_ = std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ =
+            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
         system_explicit_ = true;
         theme_view_ = theme;
         apply_text_style();
@@ -309,10 +301,8 @@ namespace nandina::widget
         if (!viewport_size.is_valid() || !anchor.is_valid()) {
             return;
         }
-        const auto viewport = foundation::NanRect::from_origin_size(
-            foundation::NanPoint::zero(),
-            viewport_size
-        );
+        const auto viewport =
+            foundation::NanRect::from_origin_size(foundation::NanPoint::zero(), viewport_size);
         const auto options = placement_options();
 
         auto bubble = portal_bubble_.lock();
@@ -336,8 +326,8 @@ namespace nandina::widget
             portal_bubble_ = created;
             // 与 Select 同理：位于外层浮层内时登记为子层，随外层一起关闭。
             const auto parent_id = host->overlay_containing(*this);
-            const auto level = parent_id != 0 ? scene::OverlayLevel::nested_popup
-                                              : scene::OverlayLevel::popup;
+            const auto level =
+                parent_id != 0 ? scene::OverlayLevel::nested_popup : scene::OverlayLevel::popup;
             portal_handle_ = std::make_unique<scene::OverlayHandle>(
                 host->present(std::move(created), {.level = level, .parent = parent_id})
             );
@@ -388,7 +378,7 @@ namespace nandina::widget
     auto Tooltip::placement_options() const -> internal::AnchoredPositionOptions {
         return {
             .placement = placement_ == Placement::top ? internal::OverlayPlacement::top
-                                                       : internal::OverlayPlacement::bottom,
+                                                      : internal::OverlayPlacement::bottom,
             .gap = resolved_style().metrics.gap,
         };
     }
@@ -432,9 +422,8 @@ namespace nandina::widget
         const float bubble_w = text_.measured_text_width() + style.metrics.padding_x * 2.0F;
         const float bubble_h = style.metrics.min_height;
         const float bubble_x = (width() - bubble_w) * 0.5F;
-        const float bubble_y = placement_ == Placement::top
-            ? -(style.metrics.gap + bubble_h)
-            : height() + style.metrics.gap;
+        const float bubble_y = placement_ == Placement::top ? -(style.metrics.gap + bubble_h)
+                                                            : height() + style.metrics.gap;
 
         const auto world = render::world_bounds_from_local(
             context.world_transform(),
@@ -443,8 +432,7 @@ namespace nandina::widget
         paint_tooltip_bubble(context, world, style, text_);
     }
 
-    auto Tooltip::on_measure(const scene::LayoutConstraints constraints)
-        -> foundation::NanSize {
+    auto Tooltip::on_measure(const scene::LayoutConstraints constraints) -> foundation::NanSize {
         auto trigger = trigger_.lock();
         if (!trigger) {
             return constraints.constrain(foundation::NanSize(0.0F, 0.0F));
@@ -472,13 +460,12 @@ namespace nandina::widget
         const auto& context = resolved_style_context();
         const primitives::TextStyle text_style {
             .color = context.text_color_from_context ? context.text_color : style.label.color,
-            .font_size =
-                context.font_size_from_context ? context.font_size : style.label.font_size,
+            .font_size = context.font_size_from_context ? context.font_size : style.label.font_size,
             .font = context.font_from_context ? context.font : text_.font(),
             .overflow = primitives::TextOverflow::clip,
             .max_lines = 1,
         };
-        if (!same_text_style(text_.style(), text_style)) {
+        if (!text_.style().approx_equals(text_style)) {
             text_.set_style(text_style);
         }
         return text_style;

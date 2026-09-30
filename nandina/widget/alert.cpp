@@ -24,18 +24,6 @@ namespace nandina::widget
         /// （与 EmptyState 保持同一上限）。
         constexpr int kDescriptionMaxLines = 4;
 
-        [[nodiscard]] auto near(const float lhs, const float rhs) -> bool {
-            return std::abs(lhs - rhs) <= foundation::nan_epsilon;
-        }
-
-        [[nodiscard]] auto
-        same_text_style(const primitives::TextStyle& lhs, const primitives::TextStyle& rhs)
-            -> bool {
-            return lhs.color.approx_equals(rhs.color) && near(lhs.font_size, rhs.font_size)
-                && lhs.font == rhs.font && lhs.overflow == rhs.overflow
-                && lhs.max_lines == rhs.max_lines;
-        }
-
         /// 替换槽位内容：旧内容立即销毁，新内容必须处于游离状态（与 Dialog 命名槽位一致）。
         void install_slot(
             scene::NanControl& host,
@@ -59,7 +47,8 @@ namespace nandina::widget
     } // namespace
 
     Alert::Alert(theme::NanTheme theme) {
-        system_ = std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ =
+            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
         theme_view_ = theme;
         relayout();
     }
@@ -163,7 +152,8 @@ namespace nandina::widget
     }
 
     void Alert::set_theme(theme::NanTheme theme) {
-        system_ = std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ =
+            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
         system_explicit_ = true;
         theme_view_ = theme;
         apply_text_styles();
@@ -254,7 +244,8 @@ namespace nandina::widget
         foundation::NanSize action_size {};
         bool has_action = false;
         if (auto action = action_.lock()) {
-            action_size = action->measure_layout(scene::LayoutConstraints {.max_width = inner_width});
+            action_size =
+                action->measure_layout(scene::LayoutConstraints {.max_width = inner_width});
             has_action = true;
         }
         const bool has_dismiss = dismissible_ && dismiss_ != nullptr;
@@ -264,8 +255,8 @@ namespace nandina::widget
         const bool has_description = !description_text_.text().empty();
         const bool has_text = has_title || has_description;
 
-        const int columns = (has_icon ? 1 : 0) + (has_text ? 1 : 0) + (has_action ? 1 : 0)
-            + (has_dismiss ? 1 : 0);
+        const int columns =
+            (has_icon ? 1 : 0) + (has_text ? 1 : 0) + (has_action ? 1 : 0) + (has_dismiss ? 1 : 0);
         const float fixed_width = (has_icon ? icon_size.get_width() : 0.0F)
             + (has_action ? action_size.get_width() : 0.0F) + dismiss_size;
         const float gaps = columns > 1 ? gap * static_cast<float>(columns - 1) : 0.0F;
@@ -289,8 +280,7 @@ namespace nandina::widget
             }
         }
         const bool text_stacked = has_title && has_description;
-        const float text_height =
-            title_height + description_height + (text_stacked ? gap : 0.0F);
+        const float text_height = title_height + description_height + (text_stacked ? gap : 0.0F);
 
         const float content_height = std::max(
             std::max(has_icon ? icon_size.get_height() : 0.0F, text_height),
@@ -314,13 +304,20 @@ namespace nandina::widget
             const auto column = place_column(text_width, text_height);
             if (has_title) {
                 result.title = foundation::NanRect::from_xywh(
-                    column.get_left(), column.get_top(), title_text_.width(), title_height
+                    column.get_left(),
+                    column.get_top(),
+                    title_text_.width(),
+                    title_height
                 );
             }
             if (has_description) {
-                const float top = has_title ? column.get_top() + title_height + gap : column.get_top();
+                const float top =
+                    has_title ? column.get_top() + title_height + gap : column.get_top();
                 result.description = foundation::NanRect::from_xywh(
-                    column.get_left(), top, description_text_.width(), description_height
+                    column.get_left(),
+                    top,
+                    description_text_.width(),
+                    description_height
                 );
             }
         }
@@ -341,14 +338,12 @@ namespace nandina::widget
             // 条件挂载：没有标题、描述与图标时不占位，避免在列表里留下空隙。
             return constraints.constrain(foundation::NanSize(0.0F, 0.0F));
         }
-        const float width = std::isfinite(constraints.max_width)
-            ? constraints.max_width
-            : style.metrics.preferred_width;
+        const float width = std::isfinite(constraints.max_width) ? constraints.max_width
+                                                                 : style.metrics.preferred_width;
         const auto placed = placement(width);
-        return constraints.constrain(foundation::NanSize(
-            width,
-            std::max(style.metrics.min_height, placed.total_height)
-        ));
+        return constraints.constrain(
+            foundation::NanSize(width, std::max(style.metrics.min_height, placed.total_height))
+        );
     }
 
     void Alert::on_layout() {
@@ -409,21 +404,18 @@ namespace nandina::widget
     void Alert::apply_text_styles() {
         const auto style = resolved_style();
         const auto& context = resolved_style_context();
-        const auto apply = [&](
-                               primitives::Text& text,
+        const auto apply = [&](primitives::Text& text,
                                const theme::ResolvedTypeStyle& type,
                                const primitives::TextOverflow overflow,
-                               const int max_lines
-                           ) {
+                               const int max_lines) {
             const primitives::TextStyle text_style {
                 .color = context.text_color_from_context ? context.text_color : type.color,
-                .font_size =
-                    context.font_size_from_context ? context.font_size : type.font_size,
+                .font_size = context.font_size_from_context ? context.font_size : type.font_size,
                 .font = context.font_from_context ? context.font : text.font(),
                 .overflow = overflow,
                 .max_lines = max_lines,
             };
-            if (!same_text_style(text.style(), text_style)) {
+            if (!text.style().approx_equals(text_style)) {
                 text.set_style(text_style);
             }
         };
@@ -443,11 +435,13 @@ namespace nandina::widget
         const auto style = resolved_style();
         dismiss_->set_glyph_color(style.icon);
         // 焦点环取语义 ring token；关闭按钮不是配方的造型字段，这里直接解析系统快照。
-        dismiss_->set_focus_ring_color(theme::resolve_color(
-            *system_,
-            appearance_,
-            theme::ThemeColor::token(theme::ColorToken::ring)
-        ));
+        dismiss_->set_focus_ring_color(
+            theme::resolve_color(
+                *system_,
+                appearance_,
+                theme::ThemeColor::token(theme::ColorToken::ring)
+            )
+        );
         dismiss_->set_affordance_size(style.metrics.box_size);
     }
 

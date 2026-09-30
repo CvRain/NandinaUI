@@ -15,22 +15,11 @@
 namespace nandina::widget
 {
     namespace
-    {
-        [[nodiscard]] auto near(const float lhs, const float rhs) -> bool {
-            return std::abs(lhs - rhs) <= foundation::nan_epsilon;
-        }
-
-        [[nodiscard]] auto
-        same_text_style(const primitives::TextStyle& lhs, const primitives::TextStyle& rhs)
-            -> bool {
-            return lhs.color.approx_equals(rhs.color) && near(lhs.font_size, rhs.font_size)
-                && lhs.font == rhs.font && lhs.overflow == rhs.overflow
-                && lhs.max_lines == rhs.max_lines;
-        }
-    } // namespace
+    {} // namespace
 
     Badge::Badge(std::string text, theme::NanTheme theme): text_(std::move(text)) {
-        system_ = std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ =
+            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
         theme_view_ = theme;
         apply_metrics();
     }
@@ -51,7 +40,8 @@ namespace nandina::widget
     }
 
     void Badge::set_theme(theme::NanTheme theme) {
-        system_ = std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ =
+            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
         system_explicit_ = true;
         theme_view_ = theme;
         apply_metrics();
@@ -138,10 +128,12 @@ namespace nandina::widget
                 .max_height = constraints.max_height,
             }
         );
-        return constraints.constrain(foundation::NanSize(
-            style.metrics.padding_x * 2.0F + text_size.get_width(),
-            std::max(style.metrics.height, text_size.get_height())
-        ));
+        return constraints.constrain(
+            foundation::NanSize(
+                style.metrics.padding_x * 2.0F + text_size.get_width(),
+                std::max(style.metrics.height, text_size.get_height())
+            )
+        );
     }
 
     auto Badge::semantics_properties() const -> semantics::Properties {
@@ -155,10 +147,12 @@ namespace nandina::widget
         apply_text_style();
         const auto style = resolved_style();
         (void)text_.measure_layout(scene::LayoutConstraints::loose());
-        set_size(foundation::NanSize(
-            style.metrics.padding_x * 2.0F + text_.width(),
-            std::max(style.metrics.height, text_.height())
-        ));
+        set_size(
+            foundation::NanSize(
+                style.metrics.padding_x * 2.0F + text_.width(),
+                std::max(style.metrics.height, text_.height())
+            )
+        );
     }
 
     void Badge::apply_text_style() {
@@ -166,13 +160,12 @@ namespace nandina::widget
         const auto& context = resolved_style_context();
         const primitives::TextStyle text_style {
             .color = context.text_color_from_context ? context.text_color : style.label.color,
-            .font_size =
-                context.font_size_from_context ? context.font_size : style.label.font_size,
+            .font_size = context.font_size_from_context ? context.font_size : style.label.font_size,
             .font = context.font_from_context ? context.font : text_.font(),
             .overflow = primitives::TextOverflow::clip,
             .max_lines = 1,
         };
-        if (!same_text_style(text_.style(), text_style)) {
+        if (!text_.style().approx_equals(text_style)) {
             text_.set_style(text_style);
         }
     }

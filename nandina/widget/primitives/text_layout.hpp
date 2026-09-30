@@ -44,6 +44,16 @@ namespace nandina::widget::primitives
         text::FontRequest font;
         TextOverflow overflow = TextOverflow::ellipsis;
         int max_lines = 1;
+
+        /// 逐字段比较（浮点按 `nan_epsilon` 容差，颜色按 `NanColor::approx_equals`）。
+        ///
+        /// 存在的理由：组件在 `set_style()` 之前都要判断"样式是否真的变了" —— 否则每次
+        /// 重解析主题都会触发无谓的重排与重绘。这个判断原先在 20 个组件里**各抄了一份**，
+        /// 于是给 TextStyle 加字段会让 20 处同时静默失效（样式变化不再被检测到）。收敛到
+        /// 这里之后，加字段只需要改这一处。
+        ///
+        /// 新增字段时请一并更新本函数 —— 否则又是同一种静默失效，只是换了个地方。
+        [[nodiscard]] auto approx_equals(const TextStyle& other) const noexcept -> bool;
     };
 
     struct TextLayoutInput {

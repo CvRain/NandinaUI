@@ -21,18 +21,6 @@ namespace nandina::widget
         /// 描述文本最大行数：非配方字段，仅用于防止超长描述把空状态撑出容器。
         constexpr int kDescriptionMaxLines = 4;
 
-        [[nodiscard]] auto near(const float lhs, const float rhs) -> bool {
-            return std::abs(lhs - rhs) <= foundation::nan_epsilon;
-        }
-
-        [[nodiscard]] auto
-        same_text_style(const primitives::TextStyle& lhs, const primitives::TextStyle& rhs)
-            -> bool {
-            return lhs.color.approx_equals(rhs.color) && near(lhs.font_size, rhs.font_size)
-                && lhs.font == rhs.font && lhs.overflow == rhs.overflow
-                && lhs.max_lines == rhs.max_lines;
-        }
-
         /// 替换槽位内容：旧内容立即销毁，新内容必须处于游离状态（与 Dialog 命名槽位一致）。
         void install_slot(
             scene::NanControl& host,
@@ -56,7 +44,8 @@ namespace nandina::widget
     } // namespace
 
     EmptyState::EmptyState(theme::NanTheme theme) {
-        system_ = std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ =
+            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
         theme_view_ = theme;
         relayout();
     }
@@ -113,7 +102,8 @@ namespace nandina::widget
     }
 
     void EmptyState::set_theme(theme::NanTheme theme) {
-        system_ = std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ =
+            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
         system_explicit_ = true;
         theme_view_ = theme;
         apply_text_styles();
@@ -195,10 +185,9 @@ namespace nandina::widget
                 top += style.metrics.gap;
             }
             first = false;
-            const float left = style.metrics.padding_x
-                + std::max(0.0F, (result.inner_width - item_width) * 0.5F);
-            const auto rect =
-                foundation::NanRect::from_xywh(left, top, item_width, item_height);
+            const float left =
+                style.metrics.padding_x + std::max(0.0F, (result.inner_width - item_width) * 0.5F);
+            const auto rect = foundation::NanRect::from_xywh(left, top, item_width, item_height);
             top += item_height;
             return rect;
         };
@@ -232,14 +221,12 @@ namespace nandina::widget
             // 条件挂载：没有标题也没有图标时不占位，避免在列表里留下空隙。
             return constraints.constrain(foundation::NanSize(0.0F, 0.0F));
         }
-        const float width = std::isfinite(constraints.max_width)
-            ? constraints.max_width
-            : style.metrics.preferred_width;
+        const float width = std::isfinite(constraints.max_width) ? constraints.max_width
+                                                                 : style.metrics.preferred_width;
         const auto placed = placement(width);
-        return constraints.constrain(foundation::NanSize(
-            width,
-            std::max(style.metrics.min_height, placed.total_height)
-        ));
+        return constraints.constrain(
+            foundation::NanSize(width, std::max(style.metrics.min_height, placed.total_height))
+        );
     }
 
     void EmptyState::on_layout() {
@@ -295,21 +282,18 @@ namespace nandina::widget
     void EmptyState::apply_text_styles() {
         const auto style = resolved_style();
         const auto& context = resolved_style_context();
-        const auto apply = [&](
-                               primitives::Text& text,
+        const auto apply = [&](primitives::Text& text,
                                const theme::ResolvedTypeStyle& type,
                                const primitives::TextOverflow overflow,
-                               const int max_lines
-                           ) {
+                               const int max_lines) {
             const primitives::TextStyle text_style {
                 .color = context.text_color_from_context ? context.text_color : type.color,
-                .font_size =
-                    context.font_size_from_context ? context.font_size : type.font_size,
+                .font_size = context.font_size_from_context ? context.font_size : type.font_size,
                 .font = context.font_from_context ? context.font : text.font(),
                 .overflow = overflow,
                 .max_lines = max_lines,
             };
-            if (!same_text_style(text.style(), text_style)) {
+            if (!text.style().approx_equals(text_style)) {
                 text.set_style(text_style);
             }
         };

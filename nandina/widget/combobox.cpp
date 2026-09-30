@@ -18,6 +18,8 @@
 
 #include "combobox.hpp"
 
+#include "internal/text_style_bridge.hpp"
+
 #include "key_codes.hpp"
 #include "popover.hpp"
 #include "primitives/box_painter.hpp"
@@ -40,43 +42,17 @@ namespace nandina::widget
 {
     namespace
     {
-        [[nodiscard]] auto near(const float lhs, const float rhs) -> bool {
-            return std::abs(lhs - rhs) <= foundation::nan_epsilon;
-        }
-
-        [[nodiscard]] auto
-        same_text_style(const primitives::TextStyle& lhs, const primitives::TextStyle& rhs)
-            -> bool {
-            return lhs.color.approx_equals(rhs.color) && near(lhs.font_size, rhs.font_size)
-                && lhs.font == rhs.font && lhs.overflow == rhs.overflow
-                && lhs.max_lines == rhs.max_lines;
-        }
-
+        using internal::make_text_style;
         /// 从解析后的排版 + 继承的样式上下文构造文本样式（与 DropdownMenu 同款）。
-        [[nodiscard]] auto make_text_style(
-            const theme::ResolvedStyleContext& context,
-            const theme::ResolvedTypeStyle& type,
-            const text::FontRequest& fallback_font
-        ) -> primitives::TextStyle {
-            return primitives::TextStyle {
-                .color = context.text_color_from_context ? context.text_color : type.color,
-                .font_size = context.font_size_from_context ? context.font_size : type.font_size,
-                .font = context.font_from_context ? context.font : fallback_font,
-                .overflow = primitives::TextOverflow::ellipsis,
-                .max_lines = 1,
-            };
-        }
-
         [[nodiscard]] auto lower_ascii(const char value) -> char {
             return static_cast<char>(std::tolower(static_cast<unsigned char>(value)));
         }
 
         /// 大小写不敏感（ASCII）子串匹配。过滤规则见 menu_model.md 的 typeahead 约定：
         /// 只匹配 label，`shortcut` 不参与。
-        [[nodiscard]] auto contains_case_insensitive(
-            const std::string_view haystack,
-            const std::string_view needle
-        ) -> bool {
+        [[nodiscard]] auto
+        contains_case_insensitive(const std::string_view haystack, const std::string_view needle)
+            -> bool {
             if (needle.empty()) {
                 return true;
             }
@@ -153,11 +129,12 @@ namespace nandina::widget
                 return {
                     .role = semantics::Role::list_item,
                     .label = label_,
-                    .state = {
-                        .focusable = false,
-                        .focused = highlighted_,
-                        .disabled = disabled_,
-                    },
+                    .state =
+                        {
+                            .focusable = false,
+                            .focused = highlighted_,
+                            .disabled = disabled_,
+                        },
                     .actions = disabled_ ? semantics::Action::none : semantics::Action::activate,
                 };
             }
@@ -210,11 +187,16 @@ namespace nandina::widget
 
         private:
             void apply_text_style() {
-                auto style = make_text_style(context_, style_.option, label_text_.font());
+                auto style = make_text_style(
+                    context_,
+                    style_.option,
+                    label_text_.font(),
+                    primitives::TextOverflow::ellipsis
+                );
                 if (disabled_) {
                     style.color = style_.disabled_label;
                 }
-                if (!same_text_style(label_text_.style(), style)) {
+                if (!label_text_.style().approx_equals(style)) {
                     label_text_.set_style(style);
                 }
             }
@@ -369,7 +351,12 @@ namespace nandina::widget
                     const auto measured = node->measure_layout(scene::LayoutConstraints::loose());
                     const float row_height = measured.get_height();
                     node->layout_to(
-                        foundation::NanRect::from_xywh(m.list_padding_x, y, content_width, row_height)
+                        foundation::NanRect::from_xywh(
+                            m.list_padding_x,
+                            y,
+                            content_width,
+                            row_height
+                        )
                     );
                     y += row_height;
                 }
@@ -543,9 +530,10 @@ namespace nandina::widget
 
         // 浮层基座：面板配方由 Popover 自己解析，本组件只负责输入框与条目列表。
         popover_ = std::make_shared<Popover>(nullptr, nullptr, theme);
-        surface_ = std::make_shared<internal::ComboboxListSurface>([this](const std::string_view id) {
-            activate_id(id);
-        });
+        surface_ =
+            std::make_shared<internal::ComboboxListSurface>([this](const std::string_view id) {
+                activate_id(id);
+            });
         surface_->set_focus_delegate(text_field_);
 
         // 先给出真实配方再灌条目：条目节点在重建时就能拿到有效的字号 / 度量。
@@ -574,7 +562,10 @@ namespace nandina::widget
         theme::NanTheme theme
     ) -> std::shared_ptr<Combobox> {
         return std::make_shared<Combobox>(
-            std::move(items), std::move(value), std::move(placeholder), theme
+            std::move(items),
+            std::move(value),
+            std::move(placeholder),
+            theme
         );
     }
 
@@ -939,8 +930,7 @@ namespace nandina::widget
 
     // ─── 布局 / 语义 ─────────────────────────────────────────────────────
 
-    auto Combobox::on_measure(const scene::LayoutConstraints constraints)
-        -> foundation::NanSize {
+    auto Combobox::on_measure(const scene::LayoutConstraints constraints) -> foundation::NanSize {
         // Popover 的测量就是触发控件（输入框）的自然尺寸；再用配方的首选宽度 / 高度把
         // 空内容时的尺寸兜住，否则没有文本 / 占位时控件会塌成一条线。
         const auto field_size = popover_->measure_layout(scene::LayoutConstraints::loose());
@@ -965,16 +955,16 @@ namespace nandina::widget
             // `value` 保留当前文本）。
             .label = std::string(text_field_->placeholder()),
             .value = std::string(text_field_->value()),
-            .state = {
-                .focusable = !disabled_,
-                .focused = focused_,
-                .disabled = disabled_,
-                .checked = popover_->is_open(),
-            },
-            .actions = disabled_
-                ? semantics::Action::none
-                : (semantics::Action::focus | semantics::Action::set_value
-                   | semantics::Action::activate),
+            .state =
+                {
+                    .focusable = !disabled_,
+                    .focused = focused_,
+                    .disabled = disabled_,
+                    .checked = popover_->is_open(),
+                },
+            .actions = disabled_ ? semantics::Action::none
+                                 : (semantics::Action::focus | semantics::Action::set_value
+                                    | semantics::Action::activate),
         };
     }
 

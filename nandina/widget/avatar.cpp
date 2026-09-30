@@ -4,35 +4,24 @@
 
 #include "avatar.hpp"
 
-#include "primitives/box_painter.hpp"
 #include "../foundation/utf8.hpp"
 #include "../render/draw_context.hpp"
 #include "../theme/theme_manager.hpp"
+#include "primitives/box_painter.hpp"
 
 #include <algorithm>
-#include <cmath>
 #include <cctype>
+#include <cmath>
 #include <utility>
 
 namespace nandina::widget
 {
     namespace
-    {
-        [[nodiscard]] auto near(const float lhs, const float rhs) -> bool {
-            return std::abs(lhs - rhs) <= foundation::nan_epsilon;
-        }
-
-        [[nodiscard]] auto
-        same_text_style(const primitives::TextStyle& lhs, const primitives::TextStyle& rhs)
-            -> bool {
-            return lhs.color.approx_equals(rhs.color) && near(lhs.font_size, rhs.font_size)
-                && lhs.font == rhs.font && lhs.overflow == rhs.overflow
-                && lhs.max_lines == rhs.max_lines;
-        }
-    } // namespace
+    {} // namespace
 
     Avatar::Avatar(std::string name, theme::NanTheme theme): name_(std::move(name)) {
-        system_ = std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ =
+            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
         theme_view_ = theme;
         text_.set_text(initials());
         apply_text_style();
@@ -72,7 +61,8 @@ namespace nandina::widget
     }
 
     void Avatar::set_theme(theme::NanTheme theme) {
-        system_ = std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ =
+            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
         system_explicit_ = true;
         theme_view_ = theme;
         apply_text_style();
@@ -161,13 +151,12 @@ namespace nandina::widget
         const auto& context = resolved_style_context();
         const primitives::TextStyle text_style {
             .color = context.text_color_from_context ? context.text_color : style.label.color,
-            .font_size =
-                context.font_size_from_context ? context.font_size : style.label.font_size,
+            .font_size = context.font_size_from_context ? context.font_size : style.label.font_size,
             .font = context.font_from_context ? context.font : text_.font(),
             .overflow = primitives::TextOverflow::clip,
             .max_lines = 1,
         };
-        if (!same_text_style(text_.style(), text_style)) {
+        if (!text_.style().approx_equals(text_style)) {
             text_.set_style(text_style);
         }
     }

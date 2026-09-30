@@ -23,17 +23,6 @@ namespace nandina::widget
         /// 说明文本最多铺几行（与 Alert 的说明同档：够放下两三句，又不至于把面板撑高）。
         constexpr int kDescriptionMaxLines = 4;
 
-        [[nodiscard]] auto near(const float lhs, const float rhs) -> bool {
-            return std::abs(lhs - rhs) <= foundation::nan_epsilon;
-        }
-
-        [[nodiscard]] auto
-        same_text_style(const primitives::TextStyle& lhs, const primitives::TextStyle& rhs) -> bool {
-            return lhs.color.approx_equals(rhs.color) && near(lhs.font_size, rhs.font_size)
-                && lhs.font == rhs.font && lhs.overflow == rhs.overflow
-                && lhs.max_lines == rhs.max_lines;
-        }
-
         void require_non_empty(const std::string_view value, const char* what) {
             if (value.empty()) {
                 throw std::invalid_argument(std::string {"AlertDialog: "} + what + " is required");
@@ -41,11 +30,7 @@ namespace nandina::widget
         }
     } // namespace
 
-    AlertDialog::AlertDialog(
-        std::string title,
-        std::string description,
-        theme::NanTheme theme
-    ):
+    AlertDialog::AlertDialog(std::string title, std::string description, theme::NanTheme theme):
         title_(std::move(title)),
         description_(std::move(description)) {
         // 约束 1：alertdialog 的读屏契约要求有描述（见文件头）。
@@ -93,16 +78,9 @@ namespace nandina::widget
 
     AlertDialog::~AlertDialog() = default;
 
-    auto AlertDialog::create(
-        std::string title,
-        std::string description,
-        theme::NanTheme theme
-    ) -> std::shared_ptr<AlertDialog> {
-        return std::make_shared<AlertDialog>(
-            std::move(title),
-            std::move(description),
-            theme
-        );
+    auto AlertDialog::create(std::string title, std::string description, theme::NanTheme theme)
+        -> std::shared_ptr<AlertDialog> {
+        return std::make_shared<AlertDialog>(std::move(title), std::move(description), theme);
     }
 
     // ─── 文本 ────────────────────────────────────────────────────────────
@@ -229,7 +207,8 @@ namespace nandina::widget
         dialog_->on_exit_tree();
     }
 
-    auto AlertDialog::on_measure(const scene::LayoutConstraints constraints) -> foundation::NanSize {
+    auto AlertDialog::on_measure(const scene::LayoutConstraints constraints)
+        -> foundation::NanSize {
         // 本节点只是内部 Dialog 在布局里的占位（与 Popover 之于触发控件同理）。
         return constraints.constrain(dialog_->measure_layout(constraints));
     }
@@ -255,7 +234,7 @@ namespace nandina::widget
             .overflow = primitives::TextOverflow::wrap,
             .max_lines = kDescriptionMaxLines,
         };
-        if (!same_text_style(description_text_->style(), text_style)) {
+        if (!description_text_->style().approx_equals(text_style)) {
             description_text_->set_style(text_style);
             mark_layout_dirty();
         }

@@ -22,18 +22,6 @@ namespace nandina::widget
 {
     namespace
     {
-        [[nodiscard]] auto near(const float lhs, const float rhs) -> bool {
-            return std::abs(lhs - rhs) <= foundation::nan_epsilon;
-        }
-
-        [[nodiscard]] auto
-        same_text_style(const primitives::TextStyle& lhs, const primitives::TextStyle& rhs)
-            -> bool {
-            return lhs.color.approx_equals(rhs.color) && near(lhs.font_size, rhs.font_size)
-                && lhs.font == rhs.font && lhs.overflow == rhs.overflow
-                && lhs.max_lines == rhs.max_lines;
-        }
-
         /// 上一页 / 下一页字形：用 ASCII 尖括号，避免字体缺少 ‹ › 时出现豆腐块。
         constexpr const char* kPreviousGlyph = "<";
         constexpr const char* kNextGlyph = ">";
@@ -41,7 +29,8 @@ namespace nandina::widget
     } // namespace
 
     Pagination::Pagination(theme::NanTheme theme) {
-        system_ = std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ =
+            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
         theme_view_ = theme;
         ensure_model();
         relayout();
@@ -82,7 +71,9 @@ namespace nandina::widget
         }
         current_page_ = next;
         model_dirty_ = true;
-        mark_dirty(scene::DirtyFlags::paint | scene::DirtyFlags::layout | scene::DirtyFlags::semantics);
+        mark_dirty(
+            scene::DirtyFlags::paint | scene::DirtyFlags::layout | scene::DirtyFlags::semantics
+        );
         relayout();
     }
 
@@ -142,7 +133,9 @@ namespace nandina::widget
         }
         current_page_ = next;
         model_dirty_ = true;
-        mark_dirty(scene::DirtyFlags::paint | scene::DirtyFlags::layout | scene::DirtyFlags::semantics);
+        mark_dirty(
+            scene::DirtyFlags::paint | scene::DirtyFlags::layout | scene::DirtyFlags::semantics
+        );
         if (on_page_change_) {
             on_page_change_(current_page_);
         }
@@ -171,7 +164,8 @@ namespace nandina::widget
     }
 
     void Pagination::set_theme(theme::NanTheme theme) {
-        system_ = std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ =
+            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
         system_explicit_ = true;
         theme_view_ = theme;
         apply_text_styles();
@@ -501,8 +495,8 @@ namespace nandina::widget
         const float box = style.metrics.box_size;
         const float gap = style.metrics.gap;
         const float count = static_cast<float>(items_.size());
-        const float width = style.metrics.padding_x * 2.0F + count * box
-            + std::max(0.0F, count - 1.0F) * gap;
+        const float width =
+            style.metrics.padding_x * 2.0F + count * box + std::max(0.0F, count - 1.0F) * gap;
         const float height = std::max(style.metrics.min_height, box);
         return constraints.constrain(foundation::NanSize(width, height));
     }
@@ -560,7 +554,8 @@ namespace nandina::widget
             }
 
             if (item.text) {
-                const float text_width = context.logical_to_screen(item.text->measured_text_width());
+                const float text_width =
+                    context.logical_to_screen(item.text->measured_text_width());
                 const float text_height =
                     context.logical_to_screen(item.text->measured_text_height());
                 const auto position = foundation::NanPoint(
@@ -571,8 +566,8 @@ namespace nandina::widget
             }
         }
 
-        const bool focus_slot_valid = focus_index_ >= 0
-            && static_cast<std::size_t>(focus_index_) < items_.size();
+        const bool focus_slot_valid =
+            focus_index_ >= 0 && static_cast<std::size_t>(focus_index_) < items_.size();
         if (focused_ && focus_slot_valid && style.focus.width > 0.0F) {
             primitives::FocusRingPainter::paint(
                 context,
@@ -594,8 +589,7 @@ namespace nandina::widget
         // generic + "Page X of Y" 暴露当前位置。
         return {
             .role = semantics::Role::generic,
-            .label = "Page " + std::to_string(current_page_) + " of "
-                + std::to_string(page_count_),
+            .label = "Page " + std::to_string(current_page_) + " of " + std::to_string(page_count_),
             .value = std::to_string(current_page_),
             .state =
                 {
@@ -603,9 +597,8 @@ namespace nandina::widget
                     .focused = focused_,
                     .disabled = disabled_,
                 },
-            .actions =
-                disabled_ ? semantics::Action::none
-                          : (semantics::Action::focus | semantics::Action::activate),
+            .actions = disabled_ ? semantics::Action::none
+                                 : (semantics::Action::focus | semantics::Action::activate),
         };
     }
 
@@ -634,7 +627,7 @@ namespace nandina::widget
                 .overflow = primitives::TextOverflow::clip,
                 .max_lines = 1,
             };
-            if (!same_text_style(item.text->style(), text_style)) {
+            if (!item.text->style().approx_equals(text_style)) {
                 item.text->set_style(text_style);
             }
             (void)item.text->measure_layout(scene::LayoutConstraints::loose());

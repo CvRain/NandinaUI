@@ -4,17 +4,19 @@
 
 #include "select.hpp"
 
+#include "internal/text_style_bridge.hpp"
+
 #include "key_codes.hpp"
 
-#include "primitives/box_painter.hpp"
-#include "primitives/focus_ring_painter.hpp"
-#include "internal/anchored_positioner.hpp"
-#include "internal/dismiss_layer.hpp"
 #include "../render/draw_context.hpp"
 #include "../scene/input_event.hpp"
 #include "../scene/overlay_host.hpp"
 #include "../scene/scene_tree.hpp"
 #include "../theme/theme_manager.hpp"
+#include "internal/anchored_positioner.hpp"
+#include "internal/dismiss_layer.hpp"
+#include "primitives/box_painter.hpp"
+#include "primitives/focus_ring_painter.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -24,36 +26,11 @@ namespace nandina::widget
 {
     namespace
     {
-
-        [[nodiscard]] auto near(const float lhs, const float rhs) -> bool {
-            return std::abs(lhs - rhs) <= foundation::nan_epsilon;
-        }
-
-        [[nodiscard]] auto
-        same_text_style(const primitives::TextStyle& lhs, const primitives::TextStyle& rhs)
-            -> bool {
-            return lhs.color.approx_equals(rhs.color) && near(lhs.font_size, rhs.font_size)
-                && lhs.font == rhs.font && lhs.overflow == rhs.overflow
-                && lhs.max_lines == rhs.max_lines;
-        }
+        using internal::make_text_style;
 
         /// Build a text style from a resolved type style plus the inherited style
         /// context. Shared by the in-tree option texts and the portal popup so both
         /// render the same field/value/option typography.
-        [[nodiscard]] auto make_text_style(
-            const theme::ResolvedStyleContext& context,
-            const theme::ResolvedTypeStyle& type,
-            const text::FontRequest& fallback_font
-        ) -> primitives::TextStyle {
-            return primitives::TextStyle {
-                .color = context.text_color_from_context ? context.text_color : type.color,
-                .font_size = context.font_size_from_context ? context.font_size : type.font_size,
-                .font = context.font_from_context ? context.font : fallback_font,
-                .overflow = primitives::TextOverflow::clip,
-                .max_lines = 1,
-            };
-        }
-
         class SelectPopup final: public scene::NanControl {
         public:
             SelectPopup(
@@ -91,7 +68,7 @@ namespace nandina::widget
                     const auto& next = static_cast<int>(i) == selected_index_
                         ? option_selected_style_
                         : option_style_;
-                    if (!same_text_style(option_texts_[i]->style(), next)) {
+                    if (!option_texts_[i]->style().approx_equals(next)) {
                         option_texts_[i]->set_style(next);
                     }
                 }
@@ -114,14 +91,13 @@ namespace nandina::widget
                     return false;
                 }
                 auto& mouse = static_cast<scene::MouseButtonEvent&>(event);
-                if (!mouse.is_pressed() || mouse.button() != scene::MouseButtonEvent::Button::left) {
+                if (!mouse.is_pressed() || mouse.button() != scene::MouseButtonEvent::Button::left)
+                {
                     return false;
                 }
                 const auto local = to_local(mouse.screen_pos());
                 const auto row = style_.metrics.min_height;
-                const auto index = row > 0.0F
-                    ? static_cast<int>(local.get_y() / row)
-                    : -1;
+                const auto index = row > 0.0F ? static_cast<int>(local.get_y() / row) : -1;
                 if (index >= 0 && index < static_cast<int>(options_.size()) && on_select_) {
                     on_select_(index);
                     event.accept();
@@ -175,7 +151,8 @@ namespace nandina::widget
 
     Select::Select(std::vector<std::string> options, theme::NanTheme theme):
         options_(std::move(options)) {
-        system_ = std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ =
+            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
         theme_view_ = theme;
         rebuild_texts();
         apply_text_styles();
@@ -305,7 +282,8 @@ namespace nandina::widget
     }
 
     void Select::set_theme(theme::NanTheme theme) {
-        system_ = std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ =
+            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
         system_explicit_ = true;
         theme_view_ = theme;
         apply_text_styles();
@@ -399,8 +377,7 @@ namespace nandina::widget
             );
         }
         const auto style = resolved_style();
-        const float popup_height =
-            style.metrics.min_height * static_cast<float>(options_.size());
+        const float popup_height = style.metrics.min_height * static_cast<float>(options_.size());
         const auto extended = foundation::NanRect::from_xywh(
             0.0F,
             0.0F,
@@ -435,11 +412,9 @@ namespace nandina::widget
         focus_.set_movement(RovingMovement::selection_only);
         focus_.set_orientation(RovingOrientation::vertical);
         const auto& options = options_;
-        focus_.sync(
-            options.size(),
-            {},
-            [&options](std::size_t index) -> std::string_view { return options[index]; }
-        );
+        focus_.sync(options.size(), {}, [&options](std::size_t index) -> std::string_view {
+            return options[index];
+        });
         focus_.set_active_index(selected_index_);
     }
 
@@ -552,8 +527,7 @@ namespace nandina::widget
         primitives::BoxPainter::paint(context, field, style.container, opacity);
 
         (void)value_text_.measure_layout(scene::LayoutConstraints::loose());
-        const float value_height =
-            context.logical_to_screen(value_text_.measured_text_height());
+        const float value_height = context.logical_to_screen(value_text_.measured_text_height());
         const auto value_pos = foundation::NanPoint(
             field.get_left() + context.logical_to_screen(style.metrics.padding_x),
             field.get_top() + (field.get_height() - value_height) * 0.5F
@@ -598,8 +572,7 @@ namespace nandina::widget
                     context.logical_to_screen(option_texts_[i]->measured_text_height());
                 const auto pos = foundation::NanPoint(
                     popup.get_left() + context.logical_to_screen(style.metrics.padding_x),
-                    popup.get_top() + row_h * static_cast<float>(i)
-                        + (row_h - option_height) * 0.5F
+                    popup.get_top() + row_h * static_cast<float>(i) + (row_h - option_height) * 0.5F
                 );
                 option_texts_[i]->draw_at(context, pos);
             }
@@ -744,10 +717,11 @@ namespace nandina::widget
         // 自己若位于别的浮层里（例如 Dialog 打开时下拉），就把新浮层登记为它的子层：
         // 外层收起时内层会随之关闭，不会留下指向已消失锚点的孤儿。
         const auto parent_id = host->overlay_containing(*this);
-        const auto level = parent_id != 0 ? scene::OverlayLevel::nested_popup
-                                          : scene::OverlayLevel::popup;
-        portal_handle_ =
-            std::make_unique<scene::OverlayHandle>(host->present(std::move(dismiss), {.level = level, .parent = parent_id}));
+        const auto level =
+            parent_id != 0 ? scene::OverlayLevel::nested_popup : scene::OverlayLevel::popup;
+        portal_handle_ = std::make_unique<scene::OverlayHandle>(
+            host->present(std::move(dismiss), {.level = level, .parent = parent_id})
+        );
         portal_anchor_ = anchor;
         portal_viewport_ = viewport_size;
     }
@@ -776,10 +750,8 @@ namespace nandina::widget
         float max_width = style.metrics.preferred_width;
         for (auto& text: option_texts_) {
             (void)text->measure_layout(scene::LayoutConstraints::loose());
-            max_width = std::max(
-                max_width,
-                text->measured_text_width() + style.metrics.padding_x * 2.0F
-            );
+            max_width =
+                std::max(max_width, text->measured_text_width() + style.metrics.padding_x * 2.0F);
         }
         return constraints.constrain(foundation::NanSize(max_width, style.metrics.height));
     }
@@ -813,14 +785,14 @@ namespace nandina::widget
         const auto& context = resolved_style_context();
         value_text_.set_text(std::string(selected_label()));
         const auto value_style = make_text_style(context, style.value, value_text_.font());
-        if (!same_text_style(value_text_.style(), value_style)) {
+        if (!value_text_.style().approx_equals(value_style)) {
             value_text_.set_style(value_style);
         }
         for (std::size_t i = 0; i < option_texts_.size(); ++i) {
             const auto& type =
                 static_cast<int>(i) == selected_index_ ? style.option_selected : style.option;
             const auto option_style = make_text_style(context, type, option_texts_[i]->font());
-            if (!same_text_style(option_texts_[i]->style(), option_style)) {
+            if (!option_texts_[i]->style().approx_equals(option_style)) {
                 option_texts_[i]->set_style(option_style);
             }
         }

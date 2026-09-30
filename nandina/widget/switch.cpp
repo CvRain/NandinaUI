@@ -4,10 +4,10 @@
 
 #include "switch.hpp"
 
-#include "primitives/box_painter.hpp"
-#include "primitives/focus_ring_painter.hpp"
 #include "../render/draw_context.hpp"
 #include "../theme/theme_manager.hpp"
+#include "primitives/box_painter.hpp"
+#include "primitives/focus_ring_painter.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -16,24 +16,13 @@
 namespace nandina::widget
 {
     namespace
-    {
-        [[nodiscard]] auto near(const float lhs, const float rhs) -> bool {
-            return std::abs(lhs - rhs) <= foundation::nan_epsilon;
-        }
-
-        [[nodiscard]] auto
-        same_text_style(const primitives::TextStyle& lhs, const primitives::TextStyle& rhs)
-            -> bool {
-            return lhs.color.approx_equals(rhs.color) && near(lhs.font_size, rhs.font_size)
-                && lhs.font == rhs.font && lhs.overflow == rhs.overflow
-                && lhs.max_lines == rhs.max_lines;
-        }
-    } // namespace
+    {} // namespace
 
     Switch::Switch(std::string label, const bool checked, theme::NanTheme theme):
         text_(std::move(label)),
         checked_(checked) {
-        system_ = std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ =
+            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
         theme_view_ = theme;
         apply_metrics();
     }
@@ -86,7 +75,8 @@ namespace nandina::widget
     }
 
     void Switch::set_theme(theme::NanTheme theme) {
-        system_ = std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ =
+            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
         system_explicit_ = true;
         theme_view_ = theme;
         apply_metrics();
@@ -170,28 +160,18 @@ namespace nandina::widget
         const float track_width = context.logical_to_screen(style.metrics.track_width);
         const float track_height = context.logical_to_screen(style.metrics.track_height);
         const float thumb_size = context.logical_to_screen(style.metrics.thumb_size);
-        const float track_top =
-            world.get_top() + (world.get_height() - track_height) * 0.5F;
-        const auto track = foundation::NanRect::from_xywh(
-            world.get_left(),
-            track_top,
-            track_width,
-            track_height
-        );
+        const float track_top = world.get_top() + (world.get_height() - track_height) * 0.5F;
+        const auto track =
+            foundation::NanRect::from_xywh(world.get_left(), track_top, track_width, track_height);
 
         primitives::BoxPainter::paint(context, track, style.track, opacity);
 
         // 拇指：贴轨道内壁，未勾选靠左、勾选靠右。
         const float padding = (track_height - thumb_size) * 0.5F;
-        const float thumb_left = checked_
-            ? track.get_right() - padding - thumb_size
-            : track.get_left() + padding;
-        const auto thumb = foundation::NanRect::from_xywh(
-            thumb_left,
-            track_top + padding,
-            thumb_size,
-            thumb_size
-        );
+        const float thumb_left =
+            checked_ ? track.get_right() - padding - thumb_size : track.get_left() + padding;
+        const auto thumb =
+            foundation::NanRect::from_xywh(thumb_left, track_top + padding, thumb_size, thumb_size);
         primitives::BoxPainter::paint(context, thumb, style.thumb, opacity);
 
         apply_text_style();
@@ -221,10 +201,12 @@ namespace nandina::widget
                 .max_height = constraints.max_height,
             }
         );
-        return constraints.constrain(foundation::NanSize(
-            style.metrics.track_width + style.metrics.gap + text_size.get_width(),
-            std::max(style.metrics.min_height, text_size.get_height())
-        ));
+        return constraints.constrain(
+            foundation::NanSize(
+                style.metrics.track_width + style.metrics.gap + text_size.get_width(),
+                std::max(style.metrics.min_height, text_size.get_height())
+            )
+        );
     }
 
     void Switch::on_click() {
@@ -263,10 +245,12 @@ namespace nandina::widget
         apply_text_style();
         const auto style = resolved_style();
         (void)text_.measure_layout(scene::LayoutConstraints::loose());
-        set_size(foundation::NanSize(
-            style.metrics.track_width + style.metrics.gap + text_.width(),
-            std::max(style.metrics.min_height, text_.height())
-        ));
+        set_size(
+            foundation::NanSize(
+                style.metrics.track_width + style.metrics.gap + text_.width(),
+                std::max(style.metrics.min_height, text_.height())
+            )
+        );
     }
 
     void Switch::apply_text_style() {
@@ -274,13 +258,12 @@ namespace nandina::widget
         const auto& context = resolved_style_context();
         const primitives::TextStyle text_style {
             .color = context.text_color_from_context ? context.text_color : style.label.color,
-            .font_size =
-                context.font_size_from_context ? context.font_size : style.label.font_size,
+            .font_size = context.font_size_from_context ? context.font_size : style.label.font_size,
             .font = context.font_from_context ? context.font : text_.font(),
             .overflow = primitives::TextOverflow::clip,
             .max_lines = 1,
         };
-        if (!same_text_style(text_.style(), text_style)) {
+        if (!text_.style().approx_equals(text_style)) {
             text_.set_style(text_style);
         }
     }
