@@ -33,7 +33,9 @@ namespace nandina::app
             scene::OverlayHost* overlay_host,
             widget::DragController* drag_controller,
             Navigation navigation,
-            std::shared_ptr<RouterOutlet> outlet
+            std::shared_ptr<RouterOutlet> outlet,
+            const Routes& routes,
+            reactive::Signal<NanTypeKey>& current_page
         ) noexcept:
             graph_(&graph),
             scope_(&scope),
@@ -42,7 +44,9 @@ namespace nandina::app
             overlay_host_(overlay_host),
             drag_controller_(drag_controller),
             navigation_(std::move(navigation)),
-            outlet_(std::move(outlet)) {}
+            outlet_(std::move(outlet)),
+            routes_(&routes),
+            current_page_(&current_page) {}
 
         [[nodiscard]] auto ui() const -> widget::BuildContext {
             return widget::BuildContext(
@@ -58,6 +62,16 @@ namespace nandina::app
         [[nodiscard]] auto navigation() const -> Navigation { return navigation_; }
 
         [[nodiscard]] auto outlet() const -> std::shared_ptr<RouterOutlet> { return outlet_; }
+
+        /// 路由表（只读）：外壳拿它当**数据**，据此生成导航项。
+        [[nodiscard]] auto routes() const noexcept -> const Routes& { return *routes_; }
+
+        /// 当前页面类型键的响应式来源：导航高亮的事实来源，换页后自动更新。
+        /// 外壳在 `set_shell()` 时就会绑定它 —— 那时还没有任何页面，首屏由
+        /// 随后的 `start()` 发布出来。
+        [[nodiscard]] auto current_page() const noexcept -> reactive::Signal<NanTypeKey>& {
+            return *current_page_;
+        }
 
         [[nodiscard]] auto has_overlay_host() const noexcept -> bool {
             return overlay_host_ != nullptr;
@@ -79,6 +93,8 @@ namespace nandina::app
         widget::DragController* drag_controller_;
         Navigation navigation_;
         std::shared_ptr<RouterOutlet> outlet_;
+        const Routes* routes_ = nullptr;
+        reactive::Signal<NanTypeKey>* current_page_ = nullptr;
     };
 } // namespace nandina::app
 

@@ -1210,3 +1210,76 @@ TEST_CASE("router forwards the window overlay portal into page build contexts", 
     REQUIRE(g_overlay_probe.ui_has);
     REQUIRE(g_overlay_probe.ui_host == host.get());
 }
+
+TEST_CASE("a route entry carries a type-erased activation", "[app][router][route]") {
+    reactive::Graph graph;
+    const auto theme = theme::default_theme();
+    app::NanRouter router {graph, theme};
+
+    const auto routes = app::Routes {
+        app::route<PlainPage>(
+            app::RouteOptions {.key = "plain", .title = "Plain", .icon = "plain-icon"}
+        ),
+        app::route<SecondPlainPage>(app::RouteOptions {.key = "second", .title = "Second"}),
+    };
+    REQUIRE(router.configure(routes));
+
+    // 描述字段原样保留：侧边栏把它们当数据用。
+    const auto* plain = router.route<PlainPage>();
+    REQUIRE(plain != nullptr);
+    REQUIRE(plain->options.title == "Plain");
+    REQUIRE(plain->options.icon == "plain-icon");
+    REQUIRE(plain->options.show_in_nav);
+
+    // 类型擦除的跳转：消费方只拿得到 page_key（枚举 Routes::entries() 的结果）时
+    // 也能进页面，不必重写 if 链。
+    REQUIRE(plain->activate != nullptr);
+    const auto navigation = router.navigation();
+    REQUIRE(plain->activate(navigation));
+    REQUIRE(router.current_page_key() == app::nan_type_key<PlainPage>());
+    REQUIRE(router.current_key() == "plain");
+
+    const auto* second = router.route<SecondPlainPage>();
+    REQUIRE(second != nullptr);
+    REQUIRE(second->activate != nullptr);
+    REQUIRE(second->activate(navigation));
+    REQUIRE(router.current_page_key() == app::nan_type_key<SecondPlainPage>());
+    REQUIRE(router.current_key() == "second");
+
+    // 需要构造参数的页面没有类型擦除入口：凭类型键进不去，所以是 nullptr。
+    // 导航条 / 侧边栏据此把它排除，而不是给出一个点了没反应的死条目。
+    const auto with_params = app::route<HomePage>(app::RouteOptions {.key = "home"});
+    REQUIRE(with_params.activate == nullptr);
+}
+
+TEST_CASE("the router publishes its current page reactively", "[app][router][signal]") {
+    reactive::Graph graph;
+    const auto theme = theme::default_theme();
+    app::NanRouter router {graph, theme};
+
+    // 窗口外壳（导航栏 / 侧边栏）在 set_shell() 时就会绑定它 —— 那时还没有任何页面，
+    // 所以初始值必须是 nullptr，且首屏 start() 也要能被观察到。
+    auto& current = router.current_page();
+    REQUIRE(current.get() == nullptr);
+
+    REQUIRE(router.configure(app::Routes {
+        app::route<PlainPage>(app::RouteOptions {.key = "plain", .title = "Plain"}),
+        app::route<SecondPlainPage>(app::RouteOptions {.key = "second", .title = "Second"}),
+    }));
+
+    REQUIRE(router.start<PlainPage>());
+    REQUIRE(current.get() == app::nan_type_key<PlainPage>());
+
+    const auto navigation = router.navigation();
+    REQUIRE(navigation.navigate<SecondPlainPage>());
+    REQUIRE(current.get() == app::nan_type_key<SecondPlainPage>());
+
+    router.clear();
+    REQUIRE(current.get() == nullptr);
+
+    // 失败的导航不发布：拿不到路由表时 configure 失败，状态保持不变。
+    reactive::Graph other_graph;
+    app::NanRouter unconfigured {other_graph, theme};
+    REQUIRE_FALSE(unconfigured.configure(app::Routes {}));
+    REQUIRE(unconfigured.current_page().get() == nullptr);
+}

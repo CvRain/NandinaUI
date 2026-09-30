@@ -32,6 +32,9 @@ namespace nandina::app
         background_executor_(background_executor),
         overlay_host_(overlay_host),
         host_(std::make_shared<RouterOutlet>()) {
+        // 当前路由的响应式来源：外壳可以在任何页面存在之前就绑定它。
+        current_page_ = std::make_unique<reactive::Signal<NanTypeKey>>(graph, nullptr);
+
         // PageContext::ui() is available for routers built from a static theme
         // too. Keep an internal manager only for BuildContext's theme service;
         // application windows use their own manager through the other overload.
@@ -79,6 +82,7 @@ namespace nandina::app
         ) {
         theme_manager_ = &theme_manager;
         owned_theme_manager_.reset();
+        current_page_ = std::make_unique<reactive::Signal<NanTypeKey>>(graph, nullptr);
     }
 
     auto NanRouter::host() -> std::shared_ptr<scene::NanControl> {
@@ -146,6 +150,7 @@ namespace nandina::app
             host_->clear_page();
         }
         current_.reset();
+        current_page_->set(nullptr);
     }
 
     void NanRouter::set_page_error_handler(PageErrorHandler handler) {
@@ -308,6 +313,8 @@ namespace nandina::app
             host_->set_page(next.root);
             // 旧 Frame 在此销毁。它的根节点已被 set_page 摘除，所以到这里才真正析构。
             current_ = std::move(next);
+            // 换页成功后才发布当前路由：观察者（侧边栏 / 导航栏）据此更新高亮。
+            current_page_->set(page_key);
         }
         catch (...) {
             // 失败必须保持当前页面与当前路由不变。这里**不重新抛出**：带 dispatcher

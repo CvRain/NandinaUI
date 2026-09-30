@@ -8,6 +8,7 @@
 #define NANDINA_EXPERIMENT_APP_NAN_ROUTER_HPP
 
 #include "../reactive/graph.hpp"
+#include "../reactive/signal.hpp"
 #include "../scene/control.hpp"
 #include "../theme/theme_manager.hpp"
 #include "nan_page.hpp"
@@ -48,6 +49,18 @@ namespace nandina::app
         NanTypeKey page_key = nullptr;
         NanTypeKey params_key = nullptr;
         RouteOptions options;
+
+        /// 类型擦除的"进入这一页"：由 `route<PageT>()` 生成，因此路由表本身就把
+        /// 「描述」与「怎么进去」绑在了一起。
+        ///
+        /// 为什么需要它：侧边栏、命令面板这类消费者是从 `Routes::entries()` **枚举**
+        /// 出条目的，运行时只拿得到 `page_key`，拿不到编译期的 `PageT`。没有这个
+        /// thunk，每个消费者都得重写一遍 `if (key == …) navigate<PageT>()` 链。
+        ///
+        /// 参数不可默认构造的页面为 `nullptr`：这类页面需要调用方提供参数，不适合
+        /// "点一下就进去"（用 `options.show_in_nav = false` 把它从导航里隐掉）。
+        using ActivateFn = bool (*)(const Navigation& navigation);
+        ActivateFn activate = nullptr;
     };
 
     class Routes {
@@ -82,6 +95,21 @@ namespace nandina::app
             .page_key = nan_type_key<PageT>(),
             .params_key = nan_type_key<typename PageT::Params>(),
             .options = std::move(options),
+            // 注意这里是**立即调用的泛型 lambda**，而不是 `if constexpr` 写在函数体里：
+            // 后者只会切换函数体，函数指针本身永远非空 —— 于是需要构造参数的页面会得到
+            // 一个"永远返回 false 的激活入口"，在导航里表现为点了没反应的死条目。
+            // 指针本身必须在编译期就是 nullptr，消费方才能据此把它排除。
+            .activate =
+                []() -> RouteEntry::ActivateFn {
+                if constexpr (std::default_initializable<PageT>) {
+                    return [](const Navigation& navigation) -> bool {
+                        return navigation.navigate<PageT>();
+                    };
+                }
+                else {
+                    return nullptr;
+                }
+            }(),
         };
     }
 
@@ -139,6 +167,15 @@ namespace nandina::app
         /// 当前页面的类型键——这才是路由身份。没有当前页面时为 nullptr。
         [[nodiscard]] auto current_page_key() const noexcept -> NanTypeKey {
             return current_ ? current_->page_key : nullptr;
+        }
+
+        /// 当前页面类型键的**响应式来源**：`apply_navigation()` 成功换页后更新它。
+        ///
+        /// 为什么由 Router 持有：窗口外壳（导航栏 / 侧边栏）在任何页面存在之前就建好了
+        /// —— `set_shell()` 早于 `start()`。所以"当前是哪一页"必须能被观察，否则外壳
+        /// 只能靠应用手动同步（首屏还必然漏掉一次），或者每帧轮询。
+        [[nodiscard]] auto current_page() -> reactive::Signal<NanTypeKey>& {
+            return *current_page_;
         }
 
         /// 设置当前路由表。路由表在配置后不可变。
@@ -249,6 +286,8 @@ namespace nandina::app
         [[nodiscard]] auto post_ui_task(std::move_only_function<void()> task) -> bool;
 
         reactive::Graph* graph_;
+        /// 由构造函数创建（graph_ 就绪之后），见 current_page()。
+        std::unique_ptr<reactive::Signal<NanTypeKey>> current_page_;
         const theme::NanTheme* theme_;
         std::unique_ptr<theme::ThemeManager> owned_theme_manager_;
         theme::ThemeManager* theme_manager_ = nullptr;

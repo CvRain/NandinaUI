@@ -207,6 +207,8 @@ namespace nandina::app
             &drag_controller_,
             router_->navigation(),
             router_->outlet(),
+            router_->routes(),
+            router_->current_page(),
         };
         auto root = std::invoke(factory, context);
         if (!root) {
