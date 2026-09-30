@@ -89,6 +89,13 @@ namespace nandina::widget::primitives
         void set_max_lines(int lines);
         [[nodiscard]] auto max_lines() const -> int;
 
+        /// 设置文本在其**被指派矩形**内的水平对齐；见 `text_align_offset()`。
+        ///
+        /// 只有盒子比文本宽时才有视觉效果 —— 收缩包裹的文本三种取值结果相同。
+        /// 绘制入口是 `draw_in()`；`draw_at()` 没有盒子，因此不对齐。
+        void set_align(TextAlign align);
+        [[nodiscard]] auto align() const -> TextAlign;
+
         [[nodiscard]] auto measured_text_width() const -> float;
         [[nodiscard]] auto measured_text_height() const -> float;
         [[nodiscard]] auto laid_out_font_size() const -> float;
@@ -106,7 +113,17 @@ namespace nandina::widget::primitives
         void set_layout_renderer(ITextLayoutRenderer* renderer);
         [[nodiscard]] auto layout_renderer() const -> ITextLayoutRenderer*;
 
+        /// 在 `position` 处绘制（盒子 = 文本自身的测量尺寸，因此**不对齐**）。
         void draw_at(render::DrawContext& ctx, foundation::NanPoint position);
+
+        /// 在 `rect` 内绘制，并按 `style().align` 把每一行摆到该矩形的对应位置。
+        ///
+        /// @param ctx  绘制上下文。
+        /// @param rect 目标矩形（逻辑坐标）。宽度决定每行的偏移量；高度只用于垂直摆放基线。
+        ///
+        /// 偏移是**绘制期**计算的，写进布局结果的 `TextLayoutLine::origin_x`；布局本身
+        /// （`size` / `caret_stops`）不受影响，所以命中测试仍在未偏移的空间里。
+        void draw_in(render::DrawContext& ctx, foundation::NanRect rect);
         auto on_draw(render::DrawContext& ctx) -> void override;
 
     protected:

@@ -13,7 +13,8 @@ namespace nandina::widget::primitives
     auto TextStyle::approx_equals(const TextStyle& other) const noexcept -> bool {
         return color.approx_equals(other.color)
             && std::abs(font_size - other.font_size) <= foundation::nan_epsilon
-            && font == other.font && overflow == other.overflow && max_lines == other.max_lines;
+            && font == other.font && overflow == other.overflow && align == other.align
+            && max_lines == other.max_lines;
     }
 
     auto TextLayoutLine::caret_for_source(

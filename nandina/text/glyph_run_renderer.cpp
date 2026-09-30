@@ -52,9 +52,7 @@ namespace nandina::text
             // 若两个纹理共享同一张图集，第二个就会漏掉那些像素而画出陈旧字形。
             for (std::size_t earlier = 0; earlier < index; ++earlier) {
                 if (bindings_[earlier].atlas == binding.atlas) {
-                    throw std::invalid_argument(
-                        "GlyphRunRenderer requires one texture per atlas"
-                    );
+                    throw std::invalid_argument("GlyphRunRenderer requires one texture per atlas");
                 }
             }
         }
@@ -72,7 +70,8 @@ namespace nandina::text
             draw_line(
                 line,
                 foundation::NanPoint(
-                    position.get_x(),
+                    // 行起点 = 块起点 + 该行的对齐偏移（见 TextLayoutLine::origin_x）。
+                    position.get_x() + context.logical_to_screen(line.origin_x),
                     line_top + context.logical_to_screen(line.baseline)
                 ),
                 color,
@@ -97,8 +96,7 @@ namespace nandina::text
         {
             throw std::invalid_argument("GlyphRunRenderer scales must be finite and positive");
         }
-        const float raster_pixel_size =
-            logical_pixel_size * logical_to_screen * screen_to_physical;
+        const float raster_pixel_size = logical_pixel_size * logical_to_screen * screen_to_physical;
         struct CachedGlyph {
             std::size_t binding = 0;
             const GlyphAtlasEntry* entry = nullptr;
@@ -115,10 +113,7 @@ namespace nandina::text
             glyphs.push_back(
                 CachedGlyph {
                     .binding = shaped.font_index,
-                    .entry = &binding.atlas->cache_glyph(
-                        shaped.glyph_index,
-                        raster_pixel_size
-                    ),
+                    .entry = &binding.atlas->cache_glyph(shaped.glyph_index, raster_pixel_size),
                 }
             );
             used_bindings[shaped.font_index] = true;

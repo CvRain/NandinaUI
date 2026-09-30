@@ -19,6 +19,47 @@
 namespace nandina::widget::primitives
 {
 
+    /// 文本块在**给定宽度**内的水平对齐方式。
+    ///
+    /// 它是布局策略而不是整形结果：整形后端只负责把字符排成行，不关心这些行最后
+    /// 落在盒子里的哪个位置。因此偏移由绘制期按目标矩形算出（见 Text::draw_in），
+    /// 各后端无需实现它。
+    ///
+    /// 注意：对齐**需要有一个比文本更宽的盒子**才有意义。收缩包裹的文本（盒子宽度
+    /// 等于自身测量宽度）三种取值结果完全一样 —— 这不是缺陷，是这个属性的定义域。
+    enum class TextAlign : std::uint8_t {
+        /// 行起点贴盒子左侧（默认）。
+        start,
+        /// 每行各自水平居中。
+        center,
+        /// 行终点贴盒子右侧。
+        end,
+    };
+
+    /// 一行在盒子内的水平偏移量。
+    ///
+    /// @param align      对齐方式。
+    /// @param box_width  可用宽度（被指派的盒子宽度）。
+    /// @param line_width 该行自身的测量宽度。
+    /// @return 相对盒子左边缘的偏移；盒子比行还窄时返回 0（宁可贴左，也不要把文字推出盒子）。
+    [[nodiscard]] inline auto
+    text_align_offset(const TextAlign align, const float box_width, const float line_width) noexcept
+        -> float {
+        const float slack = box_width - line_width;
+        if (slack <= 0.0F) {
+            return 0.0F;
+        }
+        switch (align) {
+            case TextAlign::center:
+                return slack * 0.5F;
+            case TextAlign::end:
+                return slack;
+            case TextAlign::start:
+                break;
+        }
+        return 0.0F;
+    }
+
     enum class TextOverflow {
         clip,
         ellipsis,
@@ -44,6 +85,8 @@ namespace nandina::widget::primitives
         text::FontRequest font;
         TextOverflow overflow = TextOverflow::ellipsis;
         int max_lines = 1;
+        /// 在给定宽度内的水平对齐；见 text_align_offset()。默认 `start`，与加入之前的行为一致。
+        TextAlign align = TextAlign::start;
 
         /// 逐字段比较（浮点按 `nan_epsilon` 容差，颜色按 `NanColor::approx_equals`）。
         ///
@@ -92,6 +135,12 @@ namespace nandina::widget::primitives
         std::vector<Glyph> glyphs;
         std::vector<TextCaretStop> caret_stops;
         foundation::NanSize size {};
+        /// 绘制期的行起点水平偏移，由 `Text::draw_in()` 按目标矩形写入，整形后端不设置它。
+        ///
+        /// 它**只影响绘制**：`size` / `baseline` / `caret_stops` 仍是未偏移的布局局部坐标，
+        /// 所以任何命中测试（例如 `caret_for_point`）都工作在未对齐的空间里。要画对齐文本
+        /// 又要命中的消费者，必须自己把指针 x 减去同一个偏移。
+        float origin_x = 0.0F;
         float baseline = 0.0F;
         bool right_to_left = false;
         bool missing_glyphs = false;

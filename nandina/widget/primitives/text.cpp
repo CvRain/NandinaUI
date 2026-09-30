@@ -308,28 +308,54 @@ namespace nandina::widget::primitives
         return renderer_;
     }
 
+    void Text::set_align(const TextAlign align) {
+        if (style_.align == align) {
+            return;
+        }
+        style_.align = align;
+        // 对齐只改绘制：测量尺寸、换行结果、caret 坐标都不受影响，所以不必重排。
+        mark_dirty(scene::DirtyFlags::paint);
+    }
+
+    auto Text::align() const -> TextAlign {
+        return style_.align;
+    }
+
     void Text::draw_at(render::DrawContext& ctx, foundation::NanPoint position) {
+        // 没有目标盒子就谈不上对齐：用文本自身的测量尺寸当盒子，
+        // 于是 start / center / end 的结果完全一致（见 text_align_offset 的定义域说明）。
+        draw_in(ctx, foundation::NanRect::from_origin_size(position, layout_.size));
+    }
+
+    void Text::draw_in(render::DrawContext& ctx, foundation::NanRect rect) {
         const auto& color = *color_presentation_.value();
         if (layout_.lines.empty() || color.alpha() <= 0.0F) {
             return;
         }
 
+        // 行起点在这里算：整形后端不知道盒子，对齐是绘制期的布局策略。
+        for (auto& line: layout_.lines) {
+            line.origin_x =
+                text_align_offset(style_.align, rect.get_width(), line.size.get_width());
+        }
+
         auto clip = style_.overflow == TextOverflow::clip
             ? ctx.clip().push(
                   foundation::NanRect::from_xywh(
-                      position.get_x(),
-                      position.get_y(),
+                      rect.get_left(),
+                      rect.get_top(),
                       // 测量 advance 之外允许字形墨迹悬垂 1~2px，否则最后一个字形的
                       // 右侧墨迹会被裁掉（见 glyph_overhang_allowance）。
                       ctx.logical_to_screen(
-                          layout_.size.get_width() + glyph_overhang_allowance(layout_.font_size)
+                          rect.get_width() + glyph_overhang_allowance(layout_.font_size)
                       ),
-                      ctx.logical_to_screen(layout_.size.get_height())
+                      ctx.logical_to_screen(rect.get_height())
                   )
               )
             : render::ClipStack::Guard {nullptr, false};
 
         const auto draw_color = color.with_alpha(color.alpha() * ctx.opacity());
+        const auto position = rect.get_top_left();
         if (renderer_ != nullptr) {
             renderer_->draw(layout_, ctx, position, draw_color);
             return;
@@ -340,7 +366,10 @@ namespace nandina::widget::primitives
             if (!line.visible_text.empty()) {
                 ctx.device().draw_text(
                     line.visible_text,
-                    foundation::NanPoint(position.get_x(), y),
+                    foundation::NanPoint(
+                        position.get_x() + ctx.logical_to_screen(line.origin_x),
+                        y
+                    ),
                     ctx.logical_to_screen(layout_.font_size),
                     draw_color
                 );
@@ -350,8 +379,10 @@ namespace nandina::widget::primitives
     }
 
     void Text::on_draw(render::DrawContext& ctx) {
-        const auto pos = ctx.world_transform().transform_point(foundation::NanPoint::zero());
-        draw_at(ctx, pos);
+        // 用被指派的矩形而不是自己的原点：这样布局中的 Text（例如被拉伸到容器宽度）
+        // 直接获得 style().align 的效果，调用方不需要再算居中/靠右的偏移。
+        const auto world = render::world_bounds_from_local(ctx.world_transform(), local_rect());
+        draw_in(ctx, world);
     }
 
     auto Text::on_measure(scene::LayoutConstraints constraints) -> foundation::NanSize {

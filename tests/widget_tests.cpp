@@ -2497,3 +2497,98 @@ TEST_CASE("Wrap supports vertical axis and run alignment", "[widget][layout][wra
     REQUIRE(c->position().get_x() == Catch::Approx(61.0F));
     REQUIRE(c->position().get_y() == Catch::Approx(15.0F));
 }
+
+TEST_CASE("text align offset is a pure function of box slack", "[widget][text][align]") {
+    using widget::primitives::TextAlign;
+    using widget::primitives::text_align_offset;
+
+    REQUIRE(text_align_offset(TextAlign::start, 100.0F, 40.0F) == Catch::Approx(0.0F));
+    REQUIRE(text_align_offset(TextAlign::center, 100.0F, 40.0F) == Catch::Approx(30.0F));
+    REQUIRE(text_align_offset(TextAlign::end, 100.0F, 40.0F) == Catch::Approx(60.0F));
+
+    // 收缩包裹（盒子宽度 == 文本宽度）：三种取值结果完全一致。这不是缺陷，是对齐的
+    // 定义域 —— 没有富余空间就没有可对齐的余地。
+    for (const auto align: {TextAlign::start, TextAlign::center, TextAlign::end}) {
+        REQUIRE(text_align_offset(align, 40.0F, 40.0F) == Catch::Approx(0.0F));
+    }
+    // 盒子比行还窄时宁可贴左：负偏移会把行首推出盒子、直接裁掉开头的字。
+    REQUIRE(text_align_offset(TextAlign::end, 20.0F, 40.0F) == Catch::Approx(0.0F));
+}
+
+TEST_CASE("TextStyle comparison notices an align change", "[widget][text][align]") {
+    // 这条守的是"把 20 份比较函数收敛成一份"这笔投资：比较里漏掉 align，set_align()
+    // 之后的重设样式就会被判成"没变化"而跳过 —— 又回到静默失效。
+    widget::primitives::TextStyle a;
+    widget::primitives::TextStyle b;
+    REQUIRE(a.approx_equals(b));
+
+    b.align = widget::primitives::TextAlign::center;
+    REQUIRE_FALSE(a.approx_equals(b));
+
+    b.align = a.align;
+    REQUIRE(a.approx_equals(b));
+    // 其余字段仍按容差比较，不受影响。
+    b.font_size = a.font_size + foundation::nan_epsilon * 0.5F;
+    REQUIRE(a.approx_equals(b));
+}
+
+TEST_CASE("Text draws each line at its aligned origin", "[widget][text][align][render]") {
+    FixedTextLayoutBackend backend;
+    RecordingDevice dev;
+    render::DrawContext context(dev);
+    widget::primitives::Text text("abcdef", backend);
+    text.set_style(widget::primitives::TextStyle {
+        .font_size = 12.0F,
+        .overflow = widget::primitives::TextOverflow::clip,
+        .max_lines = 1,
+    });
+    // 固定后端给出 42x18 的一行。
+    const auto measured = text.measure_layout(scene::LayoutConstraints::loose());
+    REQUIRE(measured.get_width() == Catch::Approx(42.0F));
+
+    // 盒子 100 宽：三种对齐的起点分别是 0 / 29 / 58。
+    const auto box = foundation::NanRect::from_xywh(0.0F, 0.0F, 100.0F, 18.0F);
+
+    text.set_align(widget::primitives::TextAlign::center);
+    text.draw_in(context, box);
+    REQUIRE(dev.texts.size() == 1);
+    REQUIRE(dev.texts[0].position.get_x() == Catch::Approx(29.0F));
+
+    text.set_align(widget::primitives::TextAlign::end);
+    text.draw_in(context, box);
+    REQUIRE(dev.texts.size() == 2);
+    REQUIRE(dev.texts[1].position.get_x() == Catch::Approx(58.0F));
+
+    text.set_align(widget::primitives::TextAlign::start);
+    text.draw_in(context, box);
+    REQUIRE(dev.texts[2].position.get_x() == Catch::Approx(0.0F));
+
+    // 对齐只影响绘制：测量结果不变（否则布局会跟着抖）。
+    REQUIRE(text.measure_layout(scene::LayoutConstraints::loose()).get_width() == Catch::Approx(42.0F));
+    REQUIRE(text.align() == widget::primitives::TextAlign::start);
+
+    // draw_at() 没有盒子，因此不对齐 —— 用文本自身的测量尺寸当盒子。
+    text.set_align(widget::primitives::TextAlign::center);
+    text.draw_at(context, foundation::NanPoint(5.0F, 0.0F));
+    REQUIRE(dev.texts[3].position.get_x() == Catch::Approx(5.0F));
+}
+
+TEST_CASE("a stretched Text honors its assigned box for alignment", "[widget][text][align][layout]") {
+    // 布局中的 Text：on_draw 用被指派的矩形，所以被拉伸到容器宽度后对齐自动生效，
+    // 调用方不需要再算居中偏移。
+    FixedTextLayoutBackend backend;
+    RecordingDevice dev;
+    render::DrawContext context(dev);
+    widget::primitives::Text text("abcdef", backend);
+    text.set_align(widget::primitives::TextAlign::center);
+    text.measure_layout(scene::LayoutConstraints::loose());
+
+    // 指派一个比文本宽得多的矩形。
+    text.layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 200.0F, 18.0F));
+    REQUIRE(text.width() == Catch::Approx(200.0F));
+
+    const auto world = render::world_bounds_from_local(context.world_transform(), text.local_rect());
+    text.draw_in(context, world);
+    REQUIRE(dev.texts.size() == 1);
+    REQUIRE(dev.texts[0].position.get_x() == Catch::Approx((200.0F - 42.0F) * 0.5F));
+}
