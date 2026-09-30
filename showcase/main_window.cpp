@@ -8,6 +8,7 @@
 
 #include "pages/avatar_page.hpp"
 #include "pages/home_page.hpp"
+#include "components/sidebar.hpp"
 
 namespace nandina::showcase
 {
@@ -24,28 +25,25 @@ namespace nandina::showcase
             nandina::app::route<AvatarPage>({.key = "avatar", .title = "avatar page"}),
         };
         auto& router = use_router(routes);
-        set_shell([](nandina::app::ShellContext& context) -> nandina::widget::View {
-            auto ui = context.ui();
-            const auto navigation = context.navigation();
 
-            return ui.row()
-                .configure([](nandina::widget::Row& shell) {
-                    shell.set_width(nandina::widget::authoring::fill)
-                        .set_height(nandina::widget::authoring::fill);
-                })
-                .children(
-                    ui.make<nandina::widget::Button>("Home").on_click([navigation] {
-                        (void)navigation.navigate<ShowcaseHomePage>();
-                    }),
-                    ui.make<nandina::widget::Button>("Avatar").on_click([navigation] {
-                        (void)navigation.navigate<AvatarPage>();
-                    }),
-                    nandina::widget::authoring::make<nandina::widget::Expanded>().child(
-                        context.outlet()
-                    )
+        // 侧边栏把上面的路由表当**数据**用：条目标题 / 图标 / 是否入导航全部来自它，
+        // 新增一页只需要在 routes 里加一条，这里一行都不用改。
+        //
+        // 跳转由应用决定 —— 就是下面这一行 `item.activate(navigation)`。组件只报告
+        // "哪一项被点击"，不替应用选择；`RouteEntry::activate` 是 route<PageT>() 生成的
+        // 类型擦除跳转，所以这里不需要写 `if (key == ...) navigate<PageT>()` 链。
+        set_shell([](nandina::app::ShellContext& context) -> nandina::widget::View {
+            return SidebarShell {context}
+                .on_activate(
+                    [](const nandina::app::Navigation& navigation, const SidebarItem& item) {
+                        if (item.activate != nullptr) {
+                            (void)item.activate(navigation);
+                        }
+                    }
                 )
-                .build();
+                .build_shell();
         });
+
         (void)router.start<ShowcaseHomePage>();
     }
 } // namespace nandina::showcase

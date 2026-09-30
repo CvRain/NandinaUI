@@ -8,6 +8,8 @@ playground_exe = executable(
         'pages/home_page.cpp',
         'pages/avatar_page.hpp',
         'pages/avatar_page.cpp',
+        'components/sidebar.hpp',
+        'components/sidebar.cpp',
     ),
     dependencies : nandina_dep,
     install : false,
