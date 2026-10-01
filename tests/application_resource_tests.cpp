@@ -110,12 +110,12 @@ TEST_CASE("functional root views receive BuildContext and concrete nodes", "[app
     });
 
     REQUIRE(router.configure(app::Routes {
-        app::route<app::detail::RootViewPage>({.key = "root"}),
+        app::route<app::detail::RootViewPage>({.address = "root"}),
     }));
     REQUIRE(router.navigation().navigate<app::detail::RootViewPage>(std::move(params)));
 
     REQUIRE(received_build_context);
-    REQUIRE(router.current_key() == "root");
+    REQUIRE(router.current_address() == "root");
     REQUIRE(router.host()->child_count() == 1);
     REQUIRE(router.host()->get_child(0) == label.get());
 }
@@ -131,7 +131,7 @@ TEST_CASE("functional root views accept BuildContext-only factories", "[app][vie
     });
 
     REQUIRE(router.configure(app::Routes {
-        app::route<app::detail::RootViewPage>({.key = "root"}),
+        app::route<app::detail::RootViewPage>({.address = "root"}),
     }));
     REQUIRE(router.navigation().navigate<app::detail::RootViewPage>(std::move(params)));
 
@@ -144,12 +144,12 @@ TEST_CASE("recommended pages adapt BuildContext onto the existing router", "[app
     app::NanRouter router {application.graph(), application.theme_manager()};
 
     REQUIRE(router.configure(app::Routes {
-        app::route<RecommendedMainPage>({.key = "recommended-main"}),
+        app::route<RecommendedMainPage>({.address = "recommended-main"}),
     }));
     REQUIRE(router.navigation().navigate<RecommendedMainPage>());
 
     REQUIRE(router.host()->child_count() == 1);
-    REQUIRE(router.current_key() == "recommended-main");
+    REQUIRE(router.current_address() == "recommended-main");
     REQUIRE(router.host()->get_child(0) != nullptr);
 }
 

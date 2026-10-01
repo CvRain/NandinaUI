@@ -13,7 +13,7 @@ namespace nandina::app
         reactive::Graph& graph,
         const theme::NanTheme& theme,
         NanStore* store,
-        NanTypeKey store_key,
+        StoreKey store_key,
         resource::ResourceManager* resources,
         text::FontLoader* font_loader,
         text::FontFamilyRegistry* font_families,
@@ -33,7 +33,7 @@ namespace nandina::app
         overlay_host_(overlay_host),
         host_(std::make_shared<RouterOutlet>()) {
         // 当前路由的响应式来源：外壳可以在任何页面存在之前就绑定它。
-        current_page_ = std::make_unique<reactive::Signal<NanTypeKey>>(graph, nullptr);
+        current_page_ = std::make_unique<reactive::Signal<PageKey>>(graph, PageKey {});
 
         // PageContext::ui() is available for routers built from a static theme
         // too. Keep an internal manager only for BuildContext's theme service;
@@ -42,16 +42,22 @@ namespace nandina::app
         owned_theme_manager_->set_theme(theme);
         theme_manager_ = owned_theme_manager_.get();
         navigation_state_->submit = [this](
-                                        NanTypeKey page_key,
+                                        PageKey page_key,
                                         std::unique_ptr<detail::PageBase> page
                                     ) {
             return submit_navigation(page_key, std::move(page));
+        };
+        // `Navigation::navigate_to()` 的类型擦除入口：只有 Router 同时拥有路由表
+        // 与生命周期，所以查表 + 判空在 Router 侧完成。
+        navigation_state_->activate = [this](const PageKey key) {
+            return activate_route(key);
         };
     }
 
     NanRouter::~NanRouter() {
         if (navigation_state_) {
             navigation_state_->submit = {};
+            navigation_state_->activate = {};
         }
         command_lifetime_.reset();
     }
@@ -60,7 +66,7 @@ namespace nandina::app
         reactive::Graph& graph,
         theme::ThemeManager& theme_manager,
         NanStore* store,
-        NanTypeKey store_key,
+        StoreKey store_key,
         resource::ResourceManager* resources,
         text::FontLoader* font_loader,
         text::FontFamilyRegistry* font_families,
@@ -82,7 +88,7 @@ namespace nandina::app
         ) {
         theme_manager_ = &theme_manager;
         owned_theme_manager_.reset();
-        current_page_ = std::make_unique<reactive::Signal<NanTypeKey>>(graph, nullptr);
+        current_page_ = std::make_unique<reactive::Signal<PageKey>>(graph, PageKey {});
     }
 
     auto NanRouter::host() -> std::shared_ptr<scene::NanControl> {
@@ -101,35 +107,96 @@ namespace nandina::app
         return store_;
     }
 
-    auto NanRouter::current_key() const -> std::string_view {
-        return current_ ? std::string_view {current_->key} : std::string_view {};
+    auto NanRouter::current_address() const -> std::string_view {
+        return current_ ? std::string_view {current_->address} : std::string_view {};
     }
 
-    auto NanRouter::configure(Routes routes) -> bool {
-        if (route_mode_ || current_.has_value() || routes.entries().empty()) {
-            return false;
+    auto describe(const RoutesError& error) -> std::string {
+        switch (error.kind) {
+            case RoutesErrorKind::empty:
+                return "routes are empty";
+            case RoutesErrorKind::already_configured:
+                return "routes are already configured (or a page is already active)";
+            case RoutesErrorKind::invalid_entry:
+                return "route[" + std::to_string(error.index) + "] has an invalid page key";
+            case RoutesErrorKind::duplicate_page:
+                return "route[" + std::to_string(error.index)
+                    + "] duplicates the page type of route[" + std::to_string(error.conflict) + "]";
+            case RoutesErrorKind::duplicate_key:
+                return "route[" + std::to_string(error.index)
+                    + "] reuses the display key of route[" + std::to_string(error.conflict) + "]";
         }
-        for (std::size_t i = 0; i < routes.entries().size(); ++i) {
-            const auto& entry = routes.entries()[i];
-            if (entry.page_key == nullptr || entry.params_key == nullptr) {
-                return false;
+        return "unknown routes error";
+    }
+
+    auto Routes::validate() const -> std::expected<void, RoutesError> {
+        if (entries_.empty()) {
+            return std::unexpected(RoutesError {.kind = RoutesErrorKind::empty});
+        }
+        for (std::size_t i = 0; i < entries_.size(); ++i) {
+            const auto& entry = entries_[i];
+            // 类型键只有在经过 `route<PageT>()` 时才有效；默认构造的条目说明有人
+            // 手工拼了一个 RouteEntry 却忘了填身份。
+            if (!entry.page_key.valid() || !entry.params_key.valid()) {
+                return std::unexpected(RoutesError {
+                    .kind = RoutesErrorKind::invalid_entry,
+                    .index = i,
+                });
             }
             for (std::size_t j = 0; j < i; ++j) {
-                const auto& earlier = routes.entries()[j];
+                const auto& earlier = entries_[j];
                 // 页面类型是路由身份，重复注册必然是笔误。
                 if (earlier.page_key == entry.page_key) {
-                    return false;
+                    return std::unexpected(RoutesError {
+                        .kind = RoutesErrorKind::duplicate_page,
+                        .index = i,
+                        .conflict = j,
+                    });
                 }
                 // 显示用地址文字是可选元数据，只在其非空时要求唯一——否则两个
-                // 都没设 key/title 的路由会互相冲突，`app::route<PageT>()` 这种
+                // 都没设 address/title 的路由会互相冲突，`app::route<PageT>()` 这种
                 // 最简写法就永远配不上了。
-                if (!earlier.options.key.empty() && earlier.options.key == entry.options.key) {
-                    return false;
+                if (!earlier.options.address.empty() && earlier.options.address == entry.options.address) {
+                    return std::unexpected(RoutesError {
+                        .kind = RoutesErrorKind::duplicate_key,
+                        .index = i,
+                        .conflict = j,
+                    });
                 }
             }
+        }
+        return {};
+    }
+
+    auto NanRouter::configure(Routes routes) -> std::expected<void, RoutesError> {
+        if (route_mode_ || current_.has_value()) {
+            return std::unexpected(RoutesError {.kind = RoutesErrorKind::already_configured});
+        }
+        if (const auto valid = routes.validate(); !valid) {
+            return valid;
         }
         routes_ = std::move(routes);
         route_mode_ = true;
+        return {};
+    }
+
+    auto NanRouter::activate_route(const PageKey page_key) const
+        -> std::expected<bool, NavigationError> {
+        if (!page_key.valid()) {
+            return std::unexpected(NavigationError::invalid_key);
+        }
+        const auto* entry = route_mode_ ? routes_.find(page_key) : nullptr;
+        if (entry == nullptr) {
+            return std::unexpected(NavigationError::unknown_route);
+        }
+        // 需要构造参数的页面没有 activate thunk：它在导航里是个"死条目"，
+        // 消费方应该据 requires_params 把它排除，而不是遇到"点了没反应"。
+        if (entry->activate == nullptr) {
+            return std::unexpected(NavigationError::requires_params);
+        }
+        if (!entry->activate(Navigation {navigation_state_})) {
+            return std::unexpected(NavigationError::unavailable);
+        }
         return true;
     }
 
@@ -139,7 +206,7 @@ namespace nandina::app
 
     void NanRouter::clear_store() {
         store_ = nullptr;
-        store_key_ = nullptr;
+        store_key_ = {};
     }
 
     void NanRouter::clear() {
@@ -150,7 +217,7 @@ namespace nandina::app
             host_->clear_page();
         }
         current_.reset();
-        current_page_->set(nullptr);
+        current_page_->set(PageKey {});
     }
 
     void NanRouter::set_page_error_handler(PageErrorHandler handler) {
@@ -158,11 +225,11 @@ namespace nandina::app
     }
 
     void NanRouter::report_page_error(
-        const std::string_view route_key,
+        const std::string_view route_address,
         std::exception_ptr error
     ) {
         if (page_error_handler_) {
-            page_error_handler_(route_key, error);
+            page_error_handler_(route_address, error);
             return;
         }
 
@@ -178,13 +245,13 @@ namespace nandina::app
         catch (...) {
             message = "non-standard exception";
         }
-        log::error("NanRouter: page build failed for route '{}': {}", route_key, message);
+        log::error("NanRouter: page build failed for route '{}': {}", route_address, message);
     }
 
     auto NanRouter::build_frame(
-        const NanTypeKey page_key,
+        const PageKey page_key,
         std::unique_ptr<detail::PageBase> page,
-        std::string route_key
+        std::string route_address
     ) -> Frame {
         if (!page) {
             throw std::runtime_error("NanRouter::build_frame: page is null");
@@ -231,12 +298,12 @@ namespace nandina::app
             .root = std::move(root),
             .scope = std::move(scope),
             .async_scope = std::move(async_scope),
-            .key = std::move(route_key),
+            .address = std::move(route_address),
         };
     }
 
     auto NanRouter::submit_navigation(
-        const NanTypeKey page_key,
+        const PageKey page_key,
         std::unique_ptr<detail::PageBase> page
     ) -> bool {
         const auto* entry = route_mode_ ? routes_.find(page_key) : nullptr;
@@ -291,7 +358,7 @@ namespace nandina::app
     }
 
     auto NanRouter::apply_navigation(
-        const NanTypeKey page_key,
+        const PageKey page_key,
         std::unique_ptr<detail::PageBase> page
     ) -> bool {
         const auto* entry = route_mode_ ? routes_.find(page_key) : nullptr;
@@ -301,7 +368,7 @@ namespace nandina::app
         try {
             // 先把所有可能抛出的事情做完（构建 + 换页前置条件），再退役旧页面。
             // 顺序反过来会出现"旧页面订阅已清、却仍挂在屏幕上"的中间态。
-            auto next = build_frame(page_key, std::move(page), entry->options.key);
+            auto next = build_frame(page_key, std::move(page), entry->options.address);
             if (host_->child_count() > 1) {
                 throw std::logic_error("NanRouter: router outlet holds multiple pages");
             }
@@ -319,7 +386,7 @@ namespace nandina::app
         catch (...) {
             // 失败必须保持当前页面与当前路由不变。这里**不重新抛出**：带 dispatcher
             // 时调用点在 UiDispatcher::drain() 的任务里，抛出去会穿出主循环并终止进程。
-            report_page_error(entry->options.key, std::current_exception());
+            report_page_error(entry->options.address, std::current_exception());
             return false;
         }
         // 切换完成后把键盘焦点交给新页面；旧页面若持有焦点，此时它已经被摘除，

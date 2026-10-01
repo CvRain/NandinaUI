@@ -21,6 +21,7 @@
 
 #include <atomic>
 #include <chrono>
+#include <concepts>
 #include <exception>
 #include <memory>
 #include <stdexcept>
@@ -351,22 +352,22 @@ TEST_CASE("configured router navigates between registered typed pages", "[app][r
     router.set_store(store);
 
     REQUIRE(router.configure(app::Routes {
-        app::route<HomePage>(app::RouteOptions {.key = "home", .title = "Home"}),
-        app::route<DetailPage>(app::RouteOptions {.key = "detail", .title = "Detail"}),
+        app::route<HomePage>(app::RouteOptions {.address = "home", .title = "Home"}),
+        app::route<DetailPage>(app::RouteOptions {.address = "detail", .title = "Detail"}),
     }));
     const auto navigation = router.navigation();
     REQUIRE(navigation.valid());
     REQUIRE(navigation.navigate<HomePage>(HomeParams {.user_id = 4}));
     REQUIRE(router.route_mode());
     REQUIRE(router.outlet()->page() != nullptr);
-    REQUIRE(router.current_key() == "home");
+    REQUIRE(router.current_address() == "home");
     REQUIRE(router.current_page_key() == app::nan_type_key<HomePage>());
 
     auto* first_root = router.host()->get_child(0);
     REQUIRE(first_root != nullptr);
     REQUIRE(navigation.navigate<DetailPage>(DetailParams {.blog_id = 8}));
     REQUIRE(router.outlet()->page() != nullptr);
-    REQUIRE(router.current_key() == "detail");
+    REQUIRE(router.current_address() == "detail");
     REQUIRE(router.current_page_key() == app::nan_type_key<DetailPage>());
     REQUIRE(router.host()->get_child(0) != first_root);
     REQUIRE_FALSE(navigation.navigate<PlainPage>());
@@ -384,26 +385,26 @@ TEST_CASE("route configuration validates page types and display keys", "[app][ro
     }));
     REQUIRE(keyless_router.route_mode());
     REQUIRE(keyless_router.route<PlainPage>() != nullptr);
-    REQUIRE(keyless_router.route<PlainPage>()->options.key.empty());
+    REQUIRE(keyless_router.route<PlainPage>()->options.address.empty());
 
     // 无 key 的路由照样能启动与导航，只是没有可显示的地址文字。
     REQUIRE(keyless_router.start<PlainPage>());
     REQUIRE(keyless_router.current_page_key() == app::nan_type_key<PlainPage>());
-    REQUIRE(keyless_router.current_key().empty());
+    REQUIRE(keyless_router.current_address().empty());
 
     // 页面类型是路由身份：同一类型注册两次必然是笔误。
     app::NanRouter duplicate_page_router {graph, theme::default_theme()};
     REQUIRE_FALSE(duplicate_page_router.configure(app::Routes {
-        app::route<PlainPage>({.key = "a"}),
-        app::route<PlainPage>({.key = "b"}),
+        app::route<PlainPage>({.address = "a"}),
+        app::route<PlainPage>({.address = "b"}),
     }));
     REQUIRE_FALSE(duplicate_page_router.route_mode());
 
     // 设了 key 就必须唯一，否则按 key 展示/高亮的界面会出现歧义。
     app::NanRouter duplicate_key_router {graph, theme::default_theme()};
     REQUIRE_FALSE(duplicate_key_router.configure(app::Routes {
-        app::route<PlainPage>({.key = "same"}),
-        app::route<SecondPlainPage>({.key = "same"}),
+        app::route<PlainPage>({.address = "same"}),
+        app::route<SecondPlainPage>({.address = "same"}),
     }));
     REQUIRE_FALSE(duplicate_key_router.route_mode());
 }
@@ -490,8 +491,8 @@ TEST_CASE(
     app::NanRouter router {graph, theme::default_theme()};
     tree.set_root(router.outlet());
     REQUIRE(router.configure(app::Routes {
-        app::route<PlainPage>({.key = "plain"}),
-        app::route<SecondPlainPage>({.key = "second"}),
+        app::route<PlainPage>({.address = "plain"}),
+        app::route<SecondPlainPage>({.address = "second"}),
     }));
 
     const auto navigation = router.navigation();
@@ -506,7 +507,7 @@ TEST_CASE(
     }
 
     tree.flush_tree_mutations();
-    REQUIRE(router.current_key() == "plain");
+    REQUIRE(router.current_address() == "plain");
     REQUIRE(router.outlet()->child_count() == 1);
     REQUIRE(router.outlet()->page() != nullptr);
 }
@@ -517,7 +518,7 @@ TEST_CASE("focus reaches a page whose swap was deferred", "[app][router][focus]"
     app::NanRouter router {graph, theme::default_theme()};
     tree.set_root(router.outlet());
     REQUIRE(router.configure(app::Routes {
-        app::route<FocusablePage>({.key = "focusable"}),
+        app::route<FocusablePage>({.address = "focusable"}),
     }));
 
     const auto navigation = router.navigation();
@@ -541,8 +542,8 @@ TEST_CASE("window shell keeps the router outlet stable", "[app][router][shell]")
     app::NanApplication application;
     app::NanWindow window {application, {}};
     auto& router = window.use_router(app::Routes {
-        app::route<PlainPage>({.key = "plain", .title = "Plain"}),
-        app::route<SecondPlainPage>({.key = "second", .title = "Second"}),
+        app::route<PlainPage>({.address = "plain", .title = "Plain"}),
+        app::route<SecondPlainPage>({.address = "second", .title = "Second"}),
     });
     app::RouterOutlet* observed_outlet = nullptr;
     window.set_shell([&](app::ShellContext& context) -> widget::View {
@@ -577,8 +578,8 @@ TEST_CASE("window routes page build failures to its on_error hook", "[app][route
     // 同前：窗口（及其 Router）声明在探针状态之后，保证它先析构。
     ErrorProbeWindow window {application, {}};
     auto& router = window.use_router(app::Routes {
-        app::route<PlainPage>({.key = "plain"}),
-        app::route<RouteProbePage>({.key = "probe"}),
+        app::route<PlainPage>({.address = "plain"}),
+        app::route<RouteProbePage>({.address = "probe"}),
     });
 
     const auto navigation = router.navigation();
@@ -594,7 +595,7 @@ TEST_CASE("window routes page build failures to its on_error hook", "[app][route
     REQUIRE(application.dispatcher().drain() == 1);
     REQUIRE(window.errors == 1);
     REQUIRE(window.last_message == "probe page build failed");
-    REQUIRE(router.current_key() == "plain");
+    REQUIRE(router.current_address() == "plain");
     REQUIRE(router.host()->child_count() == 1);
     REQUIRE(router.host()->get_child(0) == stable_root);
 }
@@ -603,8 +604,8 @@ TEST_CASE("navigation moves keyboard focus into the new page", "[app][router][fo
     app::NanApplication application;
     app::NanWindow window {application, {}};
     auto& router = window.use_router(app::Routes {
-        app::route<PlainPage>({.key = "plain"}),
-        app::route<FocusablePage>({.key = "focusable"}),
+        app::route<PlainPage>({.address = "plain"}),
+        app::route<FocusablePage>({.address = "focusable"}),
     });
     auto& tree = window.scene_tree();
     const auto navigation = router.navigation();
@@ -629,8 +630,8 @@ TEST_CASE("navigating away closes the overlays a page presented", "[app][router]
     app::NanApplication application;
     app::NanWindow window {application, {}};
     auto& router = window.use_router(app::Routes {
-        app::route<PlainPage>({.key = "plain"}),
-        app::route<OverlayHoldingPage>({.key = "overlay"}),
+        app::route<PlainPage>({.address = "plain"}),
+        app::route<OverlayHoldingPage>({.address = "overlay"}),
     });
     const auto navigation = router.navigation();
 
@@ -653,7 +654,7 @@ TEST_CASE("navigation requests are deferred when a UI dispatcher is installed", 
         graph,
         theme,
         nullptr,
-        nullptr,
+        app::StoreKey {},
         nullptr,
         nullptr,
         nullptr,
@@ -661,20 +662,20 @@ TEST_CASE("navigation requests are deferred when a UI dispatcher is installed", 
     };
     router.set_store(store);
     REQUIRE(router.configure(app::Routes {
-        app::route<HomePage>(app::RouteOptions {.key = "home"}),
-        app::route<DetailPage>(app::RouteOptions {.key = "detail"}),
+        app::route<HomePage>(app::RouteOptions {.address = "home"}),
+        app::route<DetailPage>(app::RouteOptions {.address = "detail"}),
     }));
     const auto navigation = router.navigation();
     REQUIRE(navigation.navigate<HomePage>(HomeParams {.user_id = 1}));
-    REQUIRE(router.current_page_key() == nullptr);
+    REQUIRE_FALSE(router.current_page_key().valid());
     REQUIRE(dispatcher.pending_count() == 1);
     REQUIRE(dispatcher.drain() == 1);
-    REQUIRE(router.current_key() == "home");
+    REQUIRE(router.current_address() == "home");
 
     REQUIRE(navigation.navigate<DetailPage>(DetailParams {.blog_id = 2}));
-    REQUIRE(router.current_key() == "home");
+    REQUIRE(router.current_address() == "home");
     REQUIRE(dispatcher.drain() == 1);
-    REQUIRE(router.current_key() == "detail");
+    REQUIRE(router.current_address() == "detail");
 }
 
 TEST_CASE(
@@ -688,15 +689,15 @@ TEST_CASE(
         graph,
         theme::default_theme(),
         &store,
-        app::nan_type_key<TestStore>(),
+        app::store_key<TestStore>(),
         nullptr,
         nullptr,
         nullptr,
         &dispatcher,
     };
     REQUIRE(router.configure(app::Routes {
-        app::route<HomePage>({.key = "home"}),
-        app::route<DetailPage>({.key = "detail"}),
+        app::route<HomePage>({.address = "home"}),
+        app::route<DetailPage>({.address = "detail"}),
     }));
     const auto navigation = router.navigation();
 
@@ -705,7 +706,7 @@ TEST_CASE(
     REQUIRE(navigation.navigate<HomePage>(HomeParams {.user_id = 3}));
     REQUIRE(dispatcher.pending_count() == 1);
     REQUIRE(dispatcher.drain() == 1);
-    REQUIRE(router.current_key() == "home");
+    REQUIRE(router.current_address() == "home");
     REQUIRE(router.outlet()->page() != nullptr);
     REQUIRE(router.host()->child_count() == 1);
 }
@@ -723,7 +724,7 @@ TEST_CASE(
     // destroyed / destruction_count；顺序反过来就是 stack-use-after-scope（ASan 会报）。
     app::NanRouter router {graph, theme::default_theme()};
     REQUIRE(router.configure(app::Routes {
-        app::route<RouteProbePage>({.key = "probe"}),
+        app::route<RouteProbePage>({.address = "probe"}),
     }));
     const auto navigation = router.navigation();
     const RouteProbeParams params {
@@ -763,7 +764,7 @@ TEST_CASE(
     REQUIRE_FALSE(navigation.navigate<RouteProbePage>(params));
     REQUIRE(reported_error != nullptr);
     REQUIRE(reported_route == "probe");
-    REQUIRE(router.current_key() == "probe");
+    REQUIRE(router.current_address() == "probe");
     REQUIRE(router.host()->child_count() == 1);
     REQUIRE(router.host()->get_child(0) == stable_root);
     REQUIRE(destroyed);
@@ -794,15 +795,15 @@ TEST_CASE(
         graph,
         theme::default_theme(),
         nullptr,
-        nullptr,
+        app::StoreKey {},
         nullptr,
         nullptr,
         nullptr,
         &dispatcher,
     };
     REQUIRE(router.configure(app::Routes {
-        app::route<PlainPage>({.key = "plain"}),
-        app::route<RouteProbePage>({.key = "probe"}),
+        app::route<PlainPage>({.address = "plain"}),
+        app::route<RouteProbePage>({.address = "probe"}),
     }));
 
     std::string reported_route;
@@ -833,7 +834,7 @@ TEST_CASE(
     REQUIRE(dispatcher.drain() == 1);
     REQUIRE(reported_error != nullptr);
     REQUIRE(reported_route == "probe");
-    REQUIRE(router.current_key() == "plain");
+    REQUIRE(router.current_address() == "plain");
     REQUIRE(router.host()->child_count() == 1);
     REQUIRE(router.host()->get_child(0) == stable_root);
 }
@@ -843,7 +844,7 @@ TEST_CASE("navigation handles expire after their router is destroyed", "[app][ro
     app::Navigation navigation;
     {
         app::NanRouter router {graph, theme::default_theme()};
-        REQUIRE(router.configure(app::Routes {app::route<PlainPage>({.key = "plain"})}));
+        REQUIRE(router.configure(app::Routes {app::route<PlainPage>({.address = "plain"})}));
         navigation = router.navigation();
         REQUIRE(navigation.valid());
     }
@@ -855,12 +856,13 @@ TEST_CASE("router exposes its UI dispatcher through page context", "[app][router
     reactive::Graph graph;
     const auto theme = theme::default_theme();
     app::UiDispatcher dispatcher;
-    app::NanRouter router {graph, theme, nullptr, nullptr, nullptr, nullptr, nullptr, &dispatcher};
+    app::NanRouter router {graph, theme, nullptr, app::StoreKey {}, nullptr, nullptr, nullptr,
+                           &dispatcher};
     bool available = false;
     app::UiDispatcher* observed = nullptr;
 
     REQUIRE(router.configure(app::Routes {
-        app::route<DispatcherProbePage>({.key = "dispatcher-probe"}),
+        app::route<DispatcherProbePage>({.address = "dispatcher-probe"}),
     }));
     REQUIRE(router.navigation().navigate<DispatcherProbePage>(DispatcherProbeParams {
         .available = &available,
@@ -881,36 +883,36 @@ TEST_CASE("navigation requests defer route replacement to the UI task phase", "[
         graph,
         theme,
         &store,
-        app::nan_type_key<TestStore>(),
+        app::store_key<TestStore>(),
         nullptr,
         nullptr,
         nullptr,
         &dispatcher
     };
     REQUIRE(router.configure(app::Routes {
-        app::route<HomePage>({.key = "home"}),
-        app::route<DetailPage>({.key = "detail"}),
-        app::route<PlainPage>({.key = "plain"}),
+        app::route<HomePage>({.address = "home"}),
+        app::route<DetailPage>({.address = "detail"}),
+        app::route<PlainPage>({.address = "plain"}),
     }));
     const auto navigation = router.navigation();
 
     REQUIRE(navigation.navigate<HomePage>(HomeParams {.user_id = 1}));
     REQUIRE(navigation.navigate<DetailPage>(DetailParams {.blog_id = 7}));
     REQUIRE(navigation.navigate<HomePage>(HomeParams {.user_id = 2}));
-    REQUIRE(router.current_page_key() == nullptr);
+    REQUIRE_FALSE(router.current_page_key().valid());
     REQUIRE(dispatcher.pending_count() == 1);
     REQUIRE(dispatcher.drain() == 1);
     REQUIRE(router.outlet()->page() != nullptr);
-    REQUIRE(router.current_key() == "home");
+    REQUIRE(router.current_address() == "home");
     REQUIRE(router.current_page_key() == app::nan_type_key<HomePage>());
     REQUIRE(store.count.peek() == 1);
 
     // A request made after the first task phase is queued for the next one.
     REQUIRE(navigation.navigate<PlainPage>());
-    REQUIRE(router.current_key() == "home");
+    REQUIRE(router.current_address() == "home");
     REQUIRE(dispatcher.pending_count() == 1);
     REQUIRE(dispatcher.drain() == 1);
-    REQUIRE(router.current_key() == "plain");
+    REQUIRE(router.current_address() == "plain");
 }
 
 TEST_CASE("queued navigation expires with its router", "[app][router][navigate]") {
@@ -920,9 +922,9 @@ TEST_CASE("queued navigation expires with its router", "[app][router][navigate]"
     app::Navigation navigation;
     {
         app::NanRouter
-            router {graph, theme, nullptr, nullptr, nullptr, nullptr, nullptr, &dispatcher};
+            router {graph, theme, nullptr, app::StoreKey {}, nullptr, nullptr, nullptr, &dispatcher};
         REQUIRE(router.configure(app::Routes {
-            app::route<PlainPage>({.key = "plain"}),
+            app::route<PlainPage>({.address = "plain"}),
         }));
         navigation = router.navigation();
         REQUIRE(navigation.navigate<PlainPage>());
@@ -945,14 +947,15 @@ TEST_CASE("router frame cancellation suppresses page async completion", "[app][r
     app::UiDispatcher dispatcher;
     app::BackgroundExecutor executor {1};
     app::NanRouter
-        router {graph, theme, nullptr, nullptr, nullptr, nullptr, nullptr, &dispatcher, &executor};
+        router {graph, theme, nullptr, app::StoreKey {}, nullptr, nullptr, nullptr, &dispatcher,
+                &executor};
     std::atomic_bool started = false;
     std::atomic_bool cancelled = false;
     bool completed = false;
 
     REQUIRE(router.configure(app::Routes {
-        app::route<PlainPage>({.key = "plain"}),
-        app::route<AsyncPage>({.key = "async"}),
+        app::route<PlainPage>({.address = "plain"}),
+        app::route<AsyncPage>({.address = "async"}),
     }));
     const auto navigation = router.navigation();
     REQUIRE(navigation.navigate<PlainPage>());
@@ -988,14 +991,14 @@ TEST_CASE("typed navigation keeps one current page and destroys the previous pag
     reactive::Graph graph;
     TestStore store {graph};
     const auto theme = theme::default_theme();
-    app::NanRouter router {graph, theme, &store, app::nan_type_key<TestStore>()};
+    app::NanRouter router {graph, theme, &store, app::store_key<TestStore>()};
     int destruction_count = 0;
     int probe_builds = 0;
     bool destroyed = false;
     REQUIRE(router.configure(app::Routes {
-        app::route<HomePage>({.key = "home"}),
-        app::route<DetailPage>({.key = "detail"}),
-        app::route<RouteProbePage>({.key = "probe"}),
+        app::route<HomePage>({.address = "home"}),
+        app::route<DetailPage>({.address = "detail"}),
+        app::route<RouteProbePage>({.address = "probe"}),
     }));
     const auto navigation = router.navigation();
 
@@ -1010,14 +1013,14 @@ TEST_CASE("typed navigation keeps one current page and destroys the previous pag
         .destruction_count = &destruction_count,
     }));
     REQUIRE(router.outlet()->page() != nullptr);
-    REQUIRE(router.current_key() == "probe");
+    REQUIRE(router.current_address() == "probe");
     REQUIRE(router.host()->child_count() == 1);
     REQUIRE(router.host()->get_child(0) != first_root);
     REQUIRE(destroyed == false);
 
     REQUIRE(navigation.navigate<DetailPage>(DetailParams {.blog_id = 2}));
     REQUIRE(router.outlet()->page() != nullptr);
-    REQUIRE(router.current_key() == "detail");
+    REQUIRE(router.current_address() == "detail");
     REQUIRE(router.host()->child_count() == 1);
     REQUIRE(destruction_count == 1);
     REQUIRE(destroyed);
@@ -1033,10 +1036,10 @@ TEST_CASE("store updates propagate while typed routes are active", "[app][router
         scope.add([&] { observed = store.count.get(); });
 
         const auto theme = theme::default_theme();
-        app::NanRouter router {graph, theme, &store, app::nan_type_key<TestStore>()};
+        app::NanRouter router {graph, theme, &store, app::store_key<TestStore>()};
         REQUIRE(router.configure(app::Routes {
-            app::route<HomePage>({.key = "home"}),
-            app::route<DetailPage>({.key = "detail"}),
+            app::route<HomePage>({.address = "home"}),
+            app::route<DetailPage>({.address = "detail"}),
         }));
         const auto navigation = router.navigation();
         REQUIRE(navigation.navigate<HomePage>(HomeParams {.user_id = 1}));
@@ -1060,11 +1063,11 @@ TEST_CASE(
     app::NanRouter router {graph, app_theme};
 
     REQUIRE(router.configure(app::Routes {
-        app::route<PlainPage>({.key = "plain"}),
+        app::route<PlainPage>({.address = "plain"}),
     }));
     REQUIRE(router.navigation().navigate<PlainPage>());
     REQUIRE(router.outlet()->page() != nullptr);
-    REQUIRE(router.current_key() == "plain");
+    REQUIRE(router.current_address() == "plain");
 
     auto* root = router.host()->get_child(0)->as_node2d();
     REQUIRE(root != nullptr);
@@ -1095,12 +1098,12 @@ TEST_CASE("router clears page reactive scope when a page is replaced", "[app][ro
     TestStore store {graph};
     ScopedObserverLog log;
     const auto theme = theme::default_theme();
-    app::NanRouter router {graph, theme, &store, app::nan_type_key<TestStore>()};
+    app::NanRouter router {graph, theme, &store, app::store_key<TestStore>()};
 
     REQUIRE(router.configure(app::Routes {
-        app::route<HomePage>({.key = "home"}),
-        app::route<ScopedObserverPage>({.key = "scoped-observer"}),
-        app::route<PlainPage>({.key = "plain"}),
+        app::route<HomePage>({.address = "home"}),
+        app::route<ScopedObserverPage>({.address = "scoped-observer"}),
+        app::route<PlainPage>({.address = "plain"}),
     }));
     const auto navigation = router.navigation();
     REQUIRE(navigation.navigate<HomePage>(HomeParams {.user_id = 1}));
@@ -1128,11 +1131,11 @@ TEST_CASE(
     TestStore store {graph};
     int observed = 0;
     theme::ThemeManager themes;
-    app::NanRouter router {graph, themes, &store, app::nan_type_key<TestStore>()};
+    app::NanRouter router {graph, themes, &store, app::store_key<TestStore>()};
 
     REQUIRE(router.configure(app::Routes {
-        app::route<HomePage>({.key = "home"}),
-        app::route<ScopedEventPage>({.key = "scoped-event"}),
+        app::route<HomePage>({.address = "home"}),
+        app::route<ScopedEventPage>({.address = "scoped-event"}),
     }));
     const auto navigation = router.navigation();
     REQUIRE(navigation.navigate<HomePage>(HomeParams {.user_id = 1}));
@@ -1154,14 +1157,14 @@ TEST_CASE("retained page roots cannot invoke callbacks after pop", "[app][router
     reactive::Graph graph;
     TestStore store {graph};
     theme::ThemeManager themes;
-    app::NanRouter router {graph, themes, &store, app::nan_type_key<TestStore>()};
+    app::NanRouter router {graph, themes, &store, app::store_key<TestStore>()};
     std::shared_ptr<widget::Button> retained;
     int calls = 0;
     bool destroyed = false;
 
     REQUIRE(router.configure(app::Routes {
-        app::route<HomePage>({.key = "home"}),
-        app::route<RetainedCallbackPage>({.key = "retained-callback"}),
+        app::route<HomePage>({.address = "home"}),
+        app::route<RetainedCallbackPage>({.address = "retained-callback"}),
     }));
     const auto navigation = router.navigation();
     REQUIRE(navigation.navigate<HomePage>(HomeParams {.user_id = 1}));
@@ -1192,7 +1195,7 @@ TEST_CASE("router forwards the window overlay portal into page build contexts", 
         graph,
         themes,
         nullptr,
-        nullptr,
+        app::StoreKey {},
         nullptr,
         nullptr,
         nullptr,
@@ -1201,7 +1204,7 @@ TEST_CASE("router forwards the window overlay portal into page build contexts", 
         host.get()
     };
     REQUIRE(router.configure(app::Routes {
-        app::route<OverlayProbePage>({.key = "overlay-probe"}),
+        app::route<OverlayProbePage>({.address = "overlay-probe"}),
     }));
     REQUIRE(router.navigation().navigate<OverlayProbePage>());
 
@@ -1218,9 +1221,9 @@ TEST_CASE("a route entry carries a type-erased activation", "[app][router][route
 
     const auto routes = app::Routes {
         app::route<PlainPage>(
-            app::RouteOptions {.key = "plain", .title = "Plain", .icon = "plain-icon"}
+            app::RouteOptions {.address = "plain", .title = "Plain", .icon = "plain-icon"}
         ),
-        app::route<SecondPlainPage>(app::RouteOptions {.key = "second", .title = "Second"}),
+        app::route<SecondPlainPage>(app::RouteOptions {.address = "second", .title = "Second"}),
     };
     REQUIRE(router.configure(routes));
 
@@ -1237,19 +1240,209 @@ TEST_CASE("a route entry carries a type-erased activation", "[app][router][route
     const auto navigation = router.navigation();
     REQUIRE(plain->activate(navigation));
     REQUIRE(router.current_page_key() == app::nan_type_key<PlainPage>());
-    REQUIRE(router.current_key() == "plain");
+    REQUIRE(router.current_address() == "plain");
 
     const auto* second = router.route<SecondPlainPage>();
     REQUIRE(second != nullptr);
     REQUIRE(second->activate != nullptr);
     REQUIRE(second->activate(navigation));
     REQUIRE(router.current_page_key() == app::nan_type_key<SecondPlainPage>());
-    REQUIRE(router.current_key() == "second");
+    REQUIRE(router.current_address() == "second");
 
     // 需要构造参数的页面没有类型擦除入口：凭类型键进不去，所以是 nullptr。
     // 导航条 / 侧边栏据此把它排除，而不是给出一个点了没反应的死条目。
-    const auto with_params = app::route<HomePage>(app::RouteOptions {.key = "home"});
+    const auto with_params = app::route<HomePage>(app::RouteOptions {.address = "home"});
     REQUIRE(with_params.activate == nullptr);
+}
+
+TEST_CASE("type keys are tagged per category", "[app][router][key]") {
+    // 类别不同就是不同类型：把参数键或 Store 键交给路由查询会在编译期失败，
+    // 这正是旧的裸 `const void*` 做不到的。
+    static_assert(!std::same_as<app::PageKey, app::ParamsKey>);
+    static_assert(!std::same_as<app::PageKey, app::StoreKey>);
+    static_assert(!std::same_as<app::ParamsKey, app::StoreKey>);
+    static_assert(!std::convertible_to<app::ParamsKey, app::PageKey>);
+    static_assert(!std::convertible_to<app::StoreKey, app::PageKey>);
+    static_assert(std::same_as<app::NanTypeKey, app::PageKey>);
+
+    // 即使 T 相同，类别不同也会分配到不同的令牌地址，所以二者不会互相匹配。
+    REQUIRE(app::page_key<PlainPage>().token != app::params_key<PlainPage>().token);
+    REQUIRE(app::page_key<PlainPage>().token != app::store_key<PlainPage>().token);
+    REQUIRE(app::params_key<PlainPage>().token != app::store_key<PlainPage>().token);
+
+    // 同类别 + 同类型必须稳定：这是"页面类型就是路由身份"的基础。
+    REQUIRE(app::page_key<PlainPage>() == app::page_key<PlainPage>());
+    REQUIRE(app::nan_type_key<PlainPage>() == app::page_key<PlainPage>());
+
+    // 默认构造即空键，与任何真实键都不相等；`valid()` 是唯一的判空方式。
+    const app::PageKey empty {};
+    REQUIRE_FALSE(empty.valid());
+    REQUIRE(empty != app::page_key<PlainPage>());
+    REQUIRE(app::route<PlainPage>().page_key.valid());
+    REQUIRE(app::route<PlainPage>().params_key.valid());
+}
+
+TEST_CASE("routes expose read-only lookups and a navigation view", "[app][router][routes]") {
+    const auto routes = app::Routes {
+        app::route<PlainPage>({.address = "plain", .title = "Plain", .icon = "plain-icon"}),
+        app::route<SecondPlainPage>({.address = "second", .title = "Second"}),
+        // 显式从导航里隐藏：不想在侧边栏出现，但仍可被导航到。
+        app::route<RouteProbePage>({.address = "probe", .show_in_nav = false}),
+        // 需要构造参数的页面没有 activate —— 即便 show_in_nav 为真也进不去。
+        app::route<HomePage>({.address = "home"}),
+    };
+
+    REQUIRE(routes.length() == 4);
+    REQUIRE_FALSE(routes.empty());
+    REQUIRE(routes.contains(app::page_key<PlainPage>()));
+    REQUIRE_FALSE(routes.contains(app::page_key<FocusablePage>()));
+
+    REQUIRE(routes.index_of(app::page_key<PlainPage>()) == 0);
+    REQUIRE(routes.index_of(app::page_key<HomePage>()) == 3);
+    REQUIRE_FALSE(routes.index_of(app::page_key<FocusablePage>()).has_value());
+
+    REQUIRE(routes.at(app::page_key<PlainPage>()).options.title == "Plain");
+    REQUIRE(routes.at(1).options.address == "second");
+    // `at()` 表达"它一定在"：不在/越界是异常，不是 nullptr。
+    REQUIRE_THROWS_AS(routes.at(app::page_key<FocusablePage>()), std::out_of_range);
+    REQUIRE_THROWS_AS(routes.at(9), std::out_of_range);
+
+    // 范围 for 直接用，不必先 entries()。
+    std::size_t counted = 0;
+    for (const auto& entry: routes) {
+        REQUIRE(entry.page_key.valid());
+        ++counted;
+    }
+    REQUIRE(counted == 4);
+
+    // nav_entries() 一次收掉"可点击"的两个条件：显示在导航里 && 有 activate。
+    const auto nav = routes.nav_entries();
+    REQUIRE(nav.size() == 2);
+    REQUIRE(nav[0]->page_key == app::page_key<PlainPage>());
+    REQUIRE(nav[1]->page_key == app::page_key<SecondPlainPage>());
+}
+
+TEST_CASE("route validation reports why a table is rejected", "[app][router][configure]") {
+    reactive::Graph graph;
+    const auto theme = theme::default_theme();
+
+    // 空表。
+    {
+        app::NanRouter router {graph, theme};
+        const auto configured = router.configure(app::Routes {});
+        REQUIRE_FALSE(configured);
+        REQUIRE(configured.error().kind == app::RoutesErrorKind::empty);
+        REQUIRE(app::describe(configured.error()) == "routes are empty");
+        REQUIRE_FALSE(router.route_mode());
+    }
+
+    // 重复页面类型：连冲突的两个下标一起报出来，调用方才知道改哪一行。
+    {
+        app::NanRouter router {graph, theme};
+        const auto configured = router.configure(app::Routes {
+            app::route<PlainPage>({.address = "a"}),
+            app::route<PlainPage>({.address = "b"}),
+        });
+        REQUIRE_FALSE(configured);
+        REQUIRE(configured.error().kind == app::RoutesErrorKind::duplicate_page);
+        REQUIRE(configured.error().index == 1);
+        REQUIRE(configured.error().conflict == 0);
+    }
+
+    // 重复显示 key：只在两条都非空时才算冲突。
+    {
+        app::NanRouter router {graph, theme};
+        const auto configured = router.configure(app::Routes {
+            app::route<PlainPage>({.address = "same"}),
+            app::route<SecondPlainPage>({.address = "same"}),
+        });
+        REQUIRE_FALSE(configured);
+        REQUIRE(configured.error().kind == app::RoutesErrorKind::duplicate_key);
+        REQUIRE(app::describe(configured.error()).find("route[1]") != std::string::npos);
+    }
+
+    // 已经有当前页面时不允许换表：路由表在启动前一次性确定。
+    {
+        app::NanRouter router {graph, theme};
+        REQUIRE(router.configure(app::Routes {app::route<PlainPage>({.address = "plain"})}));
+        REQUIRE(router.start<PlainPage>());
+        const auto again = router.configure(app::Routes {
+            app::route<PlainPage>({.address = "again"}),
+        });
+        REQUIRE_FALSE(again);
+        REQUIRE(again.error().kind == app::RoutesErrorKind::already_configured);
+    }
+
+    // 手工拼的 RouteEntry 没有身份：明确报 invalid_entry，而不是悄悄匹配不上。
+    {
+        app::NanRouter router {graph, theme};
+        const auto configured = router.configure(app::Routes {app::RouteEntry {}});
+        REQUIRE_FALSE(configured);
+        REQUIRE(configured.error().kind == app::RoutesErrorKind::invalid_entry);
+        REQUIRE(app::describe(configured.error()).find("route[0]") != std::string::npos);
+    }
+
+    // validate() 与 Router 状态无关，可以先自查再交给 configure()。
+    REQUIRE(app::Routes {}.validate().error().kind == app::RoutesErrorKind::empty);
+}
+
+TEST_CASE("navigation can enter a page by runtime page key", "[app][router][navigate]") {
+    reactive::Graph graph;
+    app::NanRouter router {graph, theme::default_theme()};
+    REQUIRE(router.configure(app::Routes {
+        app::route<PlainPage>({.address = "plain"}),
+        app::route<SecondPlainPage>({.address = "second"}),
+        app::route<HomePage>({.address = "home"}),
+    }));
+
+    const auto navigation = router.navigation();
+
+    // 空键是调用方的 bug，不是"没这个路由"——两者必须能区分。
+    const auto empty = navigation.navigate_to(app::PageKey {});
+    REQUIRE_FALSE(empty);
+    REQUIRE(empty.error() == app::NavigationError::invalid_key);
+
+    // 没有注册的页面类型。
+    const auto unknown = navigation.navigate_to(app::page_key<FocusablePage>());
+    REQUIRE_FALSE(unknown);
+    REQUIRE(unknown.error() == app::NavigationError::unknown_route);
+
+    // 注册了但需要构造参数：消费方据此把它从导航里排除。
+    const auto needs_params = navigation.navigate_to(app::page_key<HomePage>());
+    REQUIRE_FALSE(needs_params);
+    REQUIRE(needs_params.error() == app::NavigationError::requires_params);
+
+    // 正常路径：与 navigate<PageT>() 等价，并发布当前路由。
+    const auto entered = navigation.navigate_to(app::page_key<SecondPlainPage>());
+    REQUIRE(entered.has_value());
+    REQUIRE(*entered);
+    REQUIRE(router.current_page_key() == app::page_key<SecondPlainPage>());
+    REQUIRE(router.current_address() == "second");
+    REQUIRE(router.current_entry() != nullptr);
+    REQUIRE(router.current_entry()->options.address == "second");
+    REQUIRE(router.is_current(app::page_key<SecondPlainPage>()));
+    REQUIRE_FALSE(router.is_current(app::page_key<PlainPage>()));
+
+    // 句柄失效后报 Unavailable，而不是去碰一个已经析构的路由表。
+    app::Navigation stale;
+    {
+        app::NanRouter other {graph, theme::default_theme()};
+        REQUIRE(other.configure(app::Routes {app::route<PlainPage>({.address = "plain"})}));
+        stale = other.navigation();
+    }
+    const auto expired = stale.navigate_to(app::page_key<PlainPage>());
+    REQUIRE_FALSE(expired);
+    REQUIRE(expired.error() == app::NavigationError::unavailable);
+    REQUIRE_FALSE(stale.valid());
+}
+
+TEST_CASE("route entries compare field by field", "[app][router][route]") {
+    const auto first = app::route<PlainPage>({.address = "plain", .title = "Plain"});
+    const auto same = app::route<PlainPage>({.address = "plain", .title = "Plain"});
+    const auto different = app::route<PlainPage>({.address = "other", .title = "Plain"});
+    REQUIRE(first == same);
+    REQUIRE(first != different);
+    REQUIRE(first.options == same.options);
 }
 
 TEST_CASE("the router publishes its current page reactively", "[app][router][signal]") {
@@ -1258,13 +1451,13 @@ TEST_CASE("the router publishes its current page reactively", "[app][router][sig
     app::NanRouter router {graph, theme};
 
     // 窗口外壳（导航栏 / 侧边栏）在 set_shell() 时就会绑定它 —— 那时还没有任何页面，
-    // 所以初始值必须是 nullptr，且首屏 start() 也要能被观察到。
+    // 所以初始值必须是空键，且首屏 start() 也要能被观察到。
     auto& current = router.current_page();
-    REQUIRE(current.get() == nullptr);
+    REQUIRE_FALSE(current.get().valid());
 
     REQUIRE(router.configure(app::Routes {
-        app::route<PlainPage>(app::RouteOptions {.key = "plain", .title = "Plain"}),
-        app::route<SecondPlainPage>(app::RouteOptions {.key = "second", .title = "Second"}),
+        app::route<PlainPage>(app::RouteOptions {.address = "plain", .title = "Plain"}),
+        app::route<SecondPlainPage>(app::RouteOptions {.address = "second", .title = "Second"}),
     }));
 
     REQUIRE(router.start<PlainPage>());
@@ -1275,11 +1468,11 @@ TEST_CASE("the router publishes its current page reactively", "[app][router][sig
     REQUIRE(current.get() == app::nan_type_key<SecondPlainPage>());
 
     router.clear();
-    REQUIRE(current.get() == nullptr);
+    REQUIRE_FALSE(current.get().valid());
 
     // 失败的导航不发布：拿不到路由表时 configure 失败，状态保持不变。
     reactive::Graph other_graph;
     app::NanRouter unconfigured {other_graph, theme};
     REQUIRE_FALSE(unconfigured.configure(app::Routes {}));
-    REQUIRE(unconfigured.current_page().get() == nullptr);
+    REQUIRE_FALSE(unconfigured.current_page().get().valid());
 }

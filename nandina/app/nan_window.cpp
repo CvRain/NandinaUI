@@ -152,7 +152,7 @@ namespace nandina::app
         // 导航在任务阶段提交，调用方（按钮回调）早已返回，失败无法靠异常回报过去。
         // 转到这里由窗口决定怎么呈现；默认实现写 error 日志，不静默。
         router_->set_page_error_handler(
-            [this](std::string_view /*route_key*/, std::exception_ptr error) {
+            [this](std::string_view /*route_address*/, std::exception_ptr error) {
                 on_error(std::move(error));
             }
         );
@@ -176,8 +176,10 @@ namespace nandina::app
 
     auto NanWindow::use_router(Routes routes) -> NanRouter& {
         auto& router = use_router();
-        if (!router.configure(std::move(routes))) {
-            throw std::invalid_argument("NanWindow::use_router: invalid or duplicate routes");
+        if (const auto configured = router.configure(std::move(routes)); !configured) {
+            throw std::invalid_argument(
+                "NanWindow::use_router: " + describe(configured.error())
+            );
         }
         return router;
     }

@@ -20,9 +20,12 @@
 #include "nan_store.hpp"
 
 #include <concepts>
+#include <cstdint>
+#include <expected>
 #include <functional>
 #include <memory>
 #include <stdexcept>
+#include <string_view>
 #include <utility>
 
 namespace nandina::text
@@ -39,14 +42,96 @@ namespace nandina::theme
 namespace nandina::app
 {
 
-    using NanTypeKey = const void*;
+    /// 类型令牌的类别标签。
+    ///
+    /// 令牌本身只是「某个类型独有的一段地址」，本身不携带任何类别信息：旧的
+    /// `const void*` 让页面键、参数键、Store 键在类型层面完全一样，传错位置不会
+    /// 报错，只会在运行时"悄悄匹配不上"。标签把类别放回**编译期**——把 Store 键
+    /// 交给路由查询、把页面键交给 `set_store()` 都会直接编译失败。
+    struct PageTag {};
+    struct ParamsTag {};
+    struct StoreTag {};
+
+    /// 带类别的类型令牌。`token == nullptr` 表示"空键"（默认构造）。
+    template<typename Tag>
+    struct TypeKey {
+        const void* token = nullptr;
+
+        [[nodiscard]] constexpr auto valid() const noexcept -> bool {
+            return token != nullptr;
+        }
+
+        friend constexpr auto operator==(TypeKey, TypeKey) noexcept -> bool = default;
+    };
+
+    using PageKey = TypeKey<PageTag>;
+    using ParamsKey = TypeKey<ParamsTag>;
+    using StoreKey = TypeKey<StoreTag>;
+
+    /// 兼容别名。等价于 `PageKey` —— 页面身份是最常见的用法；新代码请直接写
+    /// `PageKey` / `ParamsKey` / `StoreKey`，别再退回无类别的裸 `void*`。
+    using NanTypeKey = PageKey;
 
     struct NoParams {};
 
-    template<typename T>
-    [[nodiscard]] auto nan_type_key() -> NanTypeKey {
+    /// 取 `T` 的类型令牌：同一 `T` 在同一 `Tag` 下永远是同一个地址，不依赖 RTTI。
+    ///
+    /// `Tag` 参与函数签名，所以 `nan_type_key<Foo>()`（页面）与
+    /// `nan_type_key<Foo, ParamsTag>()`（参数）拿到的是**不同地址**，即使 `Foo`
+    /// 既是页面类型又是别人的参数类型也不会互相误判。
+    template<typename T, typename Tag = PageTag>
+    [[nodiscard]] auto nan_type_key() noexcept -> TypeKey<Tag> {
         static const int token = 0;
-        return &token;
+        return TypeKey<Tag> {&token};
+    }
+
+    /// 页面身份键：路由表按它匹配，与显示用的 `RouteOptions::key` 无关。
+    template<typename PageT>
+    [[nodiscard]] auto page_key() noexcept -> PageKey {
+        return nan_type_key<PageT>();
+    }
+
+    /// 页面参数类型键：路由表据此校验"进这一页必须带哪种参数"。
+    template<typename ParamsT>
+    [[nodiscard]] auto params_key() noexcept -> ParamsKey {
+        return nan_type_key<ParamsT, ParamsTag>();
+    }
+
+    /// Store 类型键：`set_store()` / `NanApplication::use_store()` 与查询侧共用的身份。
+    template<typename StoreT>
+    [[nodiscard]] auto store_key() noexcept -> StoreKey {
+        return nan_type_key<StoreT, StoreTag>();
+    }
+
+    /// `Navigation::navigate_to()` 的失败原因。
+    ///
+    /// 与 `navigate<PageT>()` 返回 bool 的分工：模板版本的页面类型在**编译期**确定，
+    /// 失败只可能是"忘了注册"这类编程错误；而 `navigate_to()` 的键来自运行时枚举
+    /// （侧边栏、命令面板遍历路由表），失败是**预期内**的正常路径，返回值必须说清
+    /// 为什么，否则消费方只能表现为"点了没反应"。
+    enum class NavigationError : std::uint8_t {
+        /// 句柄已失效：窗口已关闭或 Router 已销毁。
+        unavailable,
+        /// 传入的页面键为空（默认构造的 `PageKey`）。
+        invalid_key,
+        /// 路由表里没有这个页面类型。
+        unknown_route,
+        /// 该路由指向的页面需要参数，不能"点一下就进去"。
+        requires_params,
+    };
+
+    [[nodiscard]] constexpr auto describe(const NavigationError error) noexcept -> std::string_view {
+        switch (error) {
+            case NavigationError::unavailable:
+                return "navigation handle is no longer available";
+            case NavigationError::invalid_key:
+                return "page key is empty";
+            case NavigationError::unknown_route:
+                return "page type is not registered in Routes";
+            case NavigationError::requires_params:
+                return "route requires params; use navigate<PageT>(params) instead";
+        }
+        return "unknown navigation error";
     }
 
     template<typename ParamsT>
@@ -57,7 +142,13 @@ namespace nandina::app
         class PageBase;
 
         struct NavigationState {
-            std::move_only_function<bool(NanTypeKey, std::unique_ptr<PageBase>)> submit;
+            std::move_only_function<bool(PageKey, std::unique_ptr<PageBase>)> submit;
+
+            /// 类型擦除的"按页面键进入"：由 Router 安装，内部查表并调用条目上的
+            /// `RouteEntry::activate`。放在这里而不是 `Navigation` 上，是因为只有
+            /// Router 同时拥有路由表与生命周期——顺带让句柄在窗口关闭后能报出
+            /// `Unavailable`，而不是去碰一个已经析构的路由表。
+            std::move_only_function<std::expected<bool, NavigationError>(PageKey)> activate;
         };
     } // namespace detail
 
@@ -78,6 +169,22 @@ namespace nandina::app
             return submit<PageT>(std::make_unique<PageT>());
         }
 
+        /// 用运行时才拿到的页面键进入页面。`Routes::nav_entries()` 的消费方
+        /// （侧边栏、命令面板、快捷键表）用它，就不必各自重写
+        /// `if (key == …) navigate<PageT>()` 链。
+        ///
+        /// 返回 `true` 表示请求已被接受，与 `navigate<PageT>()` 同义：页面可能被
+        /// 排到下一个 UI 任务里才真正切换。返回 `unexpected` 时请求**没有被接受**，
+        /// 原因见 `describe(error)`。
+        [[nodiscard]] auto navigate_to(const PageKey key) const
+            -> std::expected<bool, NavigationError> {
+            const auto state = state_.lock();
+            if (!state || !state->activate) {
+                return std::unexpected(NavigationError::unavailable);
+            }
+            return state->activate(key);
+        }
+
         [[nodiscard]] auto valid() const noexcept -> bool {
             return !state_.expired();
         }
@@ -91,7 +198,7 @@ namespace nandina::app
             if (!state || !state->submit) {
                 return false;
             }
-            return state->submit(nan_type_key<PageT>(), std::move(page));
+            return state->submit(page_key<PageT>(), std::move(page));
         }
 
         friend class NanRouter;
@@ -105,7 +212,7 @@ namespace nandina::app
             reactive::ReactiveScope& scope,
             const theme::NanTheme& theme,
             NanStore* store,
-            NanTypeKey store_key,
+            StoreKey store_key,
             resource::ResourceManager* resources = nullptr,
             text::FontLoader* font_loader = nullptr,
             text::FontFamilyRegistry* font_families = nullptr,
@@ -237,7 +344,7 @@ namespace nandina::app
         template<typename StoreT>
             requires std::derived_from<StoreT, NanStore>
         [[nodiscard]] auto store() -> StoreT& {
-            if (store_ == nullptr || store_key_ != nan_type_key<StoreT>()) {
+            if (store_ == nullptr || store_key_ != store_key<StoreT>()) {
                 throw std::runtime_error(
                     "PageContext::store: requested store type is not installed"
                 );
@@ -250,7 +357,7 @@ namespace nandina::app
         reactive::ReactiveScope* scope_;
         const theme::NanTheme* theme_;
         NanStore* store_;
-        NanTypeKey store_key_ = nullptr;
+        StoreKey store_key_ = {};
         resource::ResourceManager* resources_ = nullptr;
         text::FontLoader* font_loader_ = nullptr;
         text::FontFamilyRegistry* font_families_ = nullptr;
@@ -273,7 +380,7 @@ namespace nandina::app
             PageBase(PageBase&&) = delete;
             auto operator=(PageBase&&) -> PageBase& = delete;
 
-            [[nodiscard]] virtual auto params_type_key() const -> NanTypeKey = 0;
+            [[nodiscard]] virtual auto params_type_key() const -> ParamsKey = 0;
             [[nodiscard]] virtual auto build(PageContext& context) -> widget::View = 0;
 
         protected:
@@ -296,8 +403,8 @@ namespace nandina::app
         [[nodiscard]] auto params() const -> const Params& { return params_; }
         [[nodiscard]] auto params() -> Params& { return params_; }
 
-        [[nodiscard]] auto params_type_key() const -> NanTypeKey override {
-            return nan_type_key<Params>();
+        [[nodiscard]] auto params_type_key() const -> ParamsKey override {
+            return params_key<Params>();
         }
 
     private:

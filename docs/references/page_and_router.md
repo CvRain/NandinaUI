@@ -51,10 +51,13 @@ void MainWindow::on_setup() {
 ```
 
 - 初始页面必须显式指定并已注册；注册顺序不决定初始页面。
-- 页面类型用现有的无 RTTI `nan_type_key<PageT>()` 识别，身份就是类型本身。`configure()` 会拒绝重复的**页面类型**，以及重复的**非空 `key`**；未注册页面的 `navigate<PageT>()` 不改变当前页面并返回失败，`start<PageT>()` 在表里没有该类型时同样失败。
+- 页面类型用无 RTTI 的 `app::page_key<PageT>()` 识别，身份就是类型本身。类型令牌带类别标签（`PageKey` / `ParamsKey` / `StoreKey`）：把参数键或 Store 键交给路由查询会在**编译期**失败，不再像裸 `const void*` 那样只能靠"运行时匹配不上"发现问题。旧的 `nan_type_key<PageT>()` 等价于 `page_key<PageT>()`，`NanTypeKey` 保留为 `PageKey` 的兼容别名。
+- 注册表校验在**声明期**一次性完成：`Routes::validate()` 与 `NanRouter::configure()` 返回 `std::expected<void, RoutesError>`。`RoutesError` 带 `kind` 与冲突条目下标，`describe()` 给出可直接用作日志/异常信息。它拒绝空表、无效条目、重复的**页面类型**、重复的**非空 `address`**，以及"已有当前页面时换表"。未注册页面的 `navigate<PageT>()` 不改变当前页面并返回失败，`start<PageT>()` 在表里没有该类型时同样失败。
+- 只读查询与遍历：`find()`（`noexcept`，未命中返回 `nullptr`）、`at()`（未命中抛 `std::out_of_range`）、`contains()`、`index_of()`、`begin()/end()`。`find()` 刻意不返回 `optional`/`expected`：唯一失败原因是"未注册"，套一层只会引入第二种"空"状态；需要说明失败原因的场合是 `navigate_to()`。
+- `nav_entries()` 返回"点一下就能进去"的只读视图（`show_in_nav` 且 `activate != nullptr`）。导航 UI 直接枚举它即可，不必各自重复这两条筛选规则，也就不会因为漏掉判空而留下点了没反应的死条目。Router 侧的 `current_entry()` / `is_current()` 是标题、图标与高亮的唯一依据。
 - 路由表在启动后不可变。`show_in_nav = false` 只影响导航 UI 的默认筛选，不禁止程序跳转。
 - `title`、`icon` 属于路由表，Page 不再提供 `route_key()`、`title()`、`icon()`。应用可以自选导航布局和排序，但同一页面的标题与图标应从路由表读取。
-- 可选的 `key` 只是给应用显示的静态地址文字（窗口标题、面包屑末段之类），**不是路由身份**：留空时回退到 `title`，两者都空也合法，所以 `app::route<PageT>()` 这种最简写法可用。
+- 可选的 `address` 只是给应用显示的静态地址文字（窗口标题、面包屑末段之类），**不是路由身份**：留空时回退到 `title`，两者都空也合法，所以 `app::route<PageT>()` 这种最简写法可用。它刻意不叫 `key`，避免与 `RouteEntry::page_key` 混淆。`NanRouter::current_address()` 读它，`current_page_key()` 读身份，两者成对。
 - 第一版不提供可解析的 URL/path，不能把 `"/items/:id"` 误当参数匹配规则。深链接、序列化和路径解析留待另行设计。
 
 路由表只保存页面类型与元数据，不预先创建页面实例；每次进入时才由导航请求创建该页面及其根节点。参数类型由 `Page<Params>` 决定，未带参数的页面使用 `Page<>`。
@@ -68,6 +71,8 @@ nav.navigate<OverviewPage>();
 ```
 
 Router 只维护一个当前路由，公开动作只有 `navigate<PageT>(params)`；没有 `push`、`pop`、`back`、`replace`、`pop_to` 或隐式历史。导航到当前页面也视为一次新进入，会重建页面。向导从三级页回概览页，直接 `navigate<OverviewPage>()`。
+
+`navigate<PageT>(params)` 的页面类型在编译期确定，失败只可能是"忘了注册"这类编程错误，所以返回 `bool`。当页面键来自运行时枚举（侧边栏、命令面板遍历 `nav_entries()` 的结果）时改用 `Navigation::navigate_to(page_key)`：它返回 `std::expected<bool, NavigationError>`，把"句柄已失效"（`Unavailable`）、"空键"（`InvalidKey`）、"没有注册"（`UnknownRoute`）、"这一页需要参数"（`RequiresParams`）区分开，`describe(error)` 给出可读文字。消费方因此不必重写 `if (key == …) navigate<PageT>()` 链，也不会把失败静默成"点了没反应"。
 
 `Navigation` 是可复制的弱句柄，由 `PageContext::navigation()` 和 `ShellContext::navigation()` 提供。回调按值捕获它；不得按引用捕获构建期的 Context。句柄不延长 Window 或 Router 寿命。窗口关闭后调用返回 `false`，不访问悬垂对象。未注册目标或已关闭窗口也返回失败；返回 `true` 只表示请求已被接受，不表示页面已经切换。
 
@@ -139,6 +144,8 @@ Outlet 的换页是**原子**的：旧页面先摘、新页面后挂，任何时
 ## 9. 与当前实现的差异和验收
 
 当前 `main` 已提供 typed `Routes`、`Navigation` 和单当前页切换；`NanApplication::run_page` 与 `app::run<PageT>` 已经通过私有单路由表启动 `Page`。页面每次进入重建，离开时销毁；Router 不再提供历史栈、keep-alive 生命周期或转场栈 API。playground 仍保留 `active_route` 作为 Shell 标题和导航高亮的 UI 状态，不承担页面生命周期。
+
+路由身份与查询层已加固：类型令牌按 `PageKey` / `ParamsKey` / `StoreKey` 分类（传错类别是编译错误），`Routes::validate()` / `configure()` 返回带原因的 `RoutesError`，`Routes` 提供 `contains` / `index_of` / `at` / `begin` / `end` / `nav_entries` 等只读辅助，`Navigation::navigate_to()` 提供类型擦除导航，Router 提供 `current_entry()` / `is_current()`。`tests/router_tests.cpp` 已覆盖这些行为。
 
 迁移完成的最低标准：
 

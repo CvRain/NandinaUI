@@ -35,7 +35,7 @@ namespace nandina::app
             Navigation navigation,
             std::shared_ptr<RouterOutlet> outlet,
             const Routes& routes,
-            reactive::Signal<NanTypeKey>& current_page
+            reactive::Signal<PageKey>& current_page
         ) noexcept:
             graph_(&graph),
             scope_(&scope),
@@ -69,7 +69,7 @@ namespace nandina::app
         /// 当前页面类型键的响应式来源：导航高亮的事实来源，换页后自动更新。
         /// 外壳在 `set_shell()` 时就会绑定它 —— 那时还没有任何页面，首屏由
         /// 随后的 `start()` 发布出来。
-        [[nodiscard]] auto current_page() const noexcept -> reactive::Signal<NanTypeKey>& {
+        [[nodiscard]] auto current_page() const noexcept -> reactive::Signal<PageKey>& {
             return *current_page_;
         }
 
@@ -94,7 +94,7 @@ namespace nandina::app
         Navigation navigation_;
         std::shared_ptr<RouterOutlet> outlet_;
         const Routes* routes_ = nullptr;
-        reactive::Signal<NanTypeKey>* current_page_ = nullptr;
+        reactive::Signal<PageKey>* current_page_ = nullptr;
     };
 } // namespace nandina::app
 

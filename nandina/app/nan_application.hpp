@@ -80,14 +80,14 @@ namespace nandina::app
             requires std::derived_from<StoreT, NanStore>
         auto use_store(Args&&... args) -> StoreT& {
             store_ = std::make_unique<StoreT>(graph_, std::forward<Args>(args)...);
-            store_key_ = nan_type_key<StoreT>();
+            store_key_ = store_key<StoreT>();
             return static_cast<StoreT&>(*store_);
         }
 
         template<typename StoreT>
             requires std::derived_from<StoreT, NanStore>
         [[nodiscard]] auto store() -> StoreT& {
-            if (store_ == nullptr || store_key_ != nan_type_key<StoreT>()) {
+            if (store_ == nullptr || store_key_ != store_key<StoreT>()) {
                 throw std::runtime_error(
                     "NanApplication::store: requested store type is not installed"
                 );
@@ -96,7 +96,7 @@ namespace nandina::app
         }
 
         [[nodiscard]] auto store_base() -> NanStore*;
-        [[nodiscard]] auto store_type_key() const -> NanTypeKey;
+        [[nodiscard]] auto store_type_key() const -> StoreKey;
 
         /// 进入阻塞主循环: 打开窗口, 每帧 tick, 直到窗口关闭。返回进程退出码。
         auto run(NanWindow& window) -> int;
@@ -107,11 +107,14 @@ namespace nandina::app
             && std::default_initializable<PageT>
         auto run_page(WindowConfig config) -> int {
             return run_configured(std::move(config), [](NanRouter& router) {
-                if (!router.configure(Routes {
-                        route<PageT>({.key = "main", .title = "main page"}),
-                    }))
-                {
-                    throw std::logic_error("NanApplication::run_page: failed to configure route");
+                const auto configured = router.configure(Routes {
+                    route<PageT>({.address = "main", .title = "main page"}),
+                });
+                if (!configured) {
+                    throw std::logic_error(
+                        "NanApplication::run_page: cannot configure route: "
+                        + describe(configured.error())
+                    );
                 }
                 if (!router.template start<PageT>()) {
                     throw std::runtime_error("NanApplication::run_page: failed to start page");
@@ -127,12 +130,13 @@ namespace nandina::app
             return run_configured(
                 std::move(config),
                 [params = std::move(params)](NanRouter& router) mutable {
-                    if (!router.configure(Routes {
-                            route<PageT>({.key = "main", .title = "main page"}),
-                        }))
-                    {
+                    const auto configured = router.configure(Routes {
+                        route<PageT>({.address = "main", .title = "main page"}),
+                    });
+                    if (!configured) {
                         throw std::logic_error(
-                            "NanApplication::run_page: failed to configure route"
+                            "NanApplication::run_page: cannot configure route: "
+                            + describe(configured.error())
                         );
                     }
                     if (!router.template start<PageT>(std::move(params))) {
@@ -172,7 +176,7 @@ namespace nandina::app
         text::FontFamilyRegistry font_families_;
         std::vector<std::shared_ptr<resource::IResourceBackend>> resource_backends_;
         std::unique_ptr<NanStore> store_;
-        NanTypeKey store_key_ = nullptr;
+        StoreKey store_key_ = {};
     };
 
     struct RunConfig {

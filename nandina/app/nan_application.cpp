@@ -199,7 +199,7 @@ namespace nandina::app
         return store_.get();
     }
 
-    auto NanApplication::store_type_key() const -> NanTypeKey {
+    auto NanApplication::store_type_key() const -> StoreKey {
         return store_key_;
     }
 

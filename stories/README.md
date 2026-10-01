@@ -32,3 +32,4 @@
 | [001](001-the-router-detour.md) | 框架忘记了自己做过的决定 | Page / Router 合约的追查与重新收敛 |
 | [002](002-the-glyph-atlas-upload.md) | 一次页面切换卡顿，和它顺带带出的两个洞 | 字形图集的全量上传、写满即崩，以及一次哨兵值改动捅出的越界写 |
 | [003](003-the-grid-that-owned-the-viewport.md) | 一个 Grid 接管了整棵树的视口 | 外壳尺寸不收敛的追查：一个控件拿自己的尺寸当 viewport 重排了整棵树 |
+| [004](004-the-key-that-was-not-an-identity.md) | 那个不承担身份的 key | 路由 API 加固：类型键分标签、失败带原因，以及一次被 grep 藏起来的编译失败 |
