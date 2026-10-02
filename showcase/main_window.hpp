@@ -9,17 +9,12 @@
 
 namespace nandina::showcase
 {
-    class MainWindow final: public nandina::app::NanWindow {
+    class MainWindow final: public app::NanWindow {
     public:
-        explicit MainWindow(
-            nandina::app::NanApplication& application,
-            const nandina::app::WindowConfig& config
-        );
+        explicit MainWindow(app::NanApplication& application, const app::WindowConfig& config);
 
     protected:
         void on_setup() override;
-
-    private:
     };
 } // namespace nandina::showcase
 

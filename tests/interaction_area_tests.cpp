@@ -13,13 +13,17 @@ using namespace nandina;
 
 namespace
 {
+    auto button_event(
+        const scene::MouseButtonEvent::Button button,
+        const scene::MouseButtonEvent::Action action,
+        const float x = 10.0F
+    ) -> scene::MouseButtonEvent {
+        return scene::MouseButtonEvent {button, action, foundation::NanPoint(x, 10.0F)};
+    }
+
     auto pointer_button(scene::MouseButtonEvent::Action action, float x = 10.0F)
         -> scene::MouseButtonEvent {
-        return scene::MouseButtonEvent {
-            scene::MouseButtonEvent::Button::left,
-            action,
-            foundation::NanPoint(x, 10.0F),
-        };
+        return button_event(scene::MouseButtonEvent::Button::left, action, x);
     }
 
 }
@@ -168,6 +172,66 @@ TEST_CASE("drag and long press suppress click recognition", "[interaction][gestu
     tree.process(0.40F);
     REQUIRE(long_presses == 1);
     REQUIRE(clicks == 0);
+}
+
+TEST_CASE(
+    "a compound pointer gesture is observable above an interactive child",
+    "[interaction][gesture-area]"
+) {
+    // 场景：左键按住不松手，期间用右键点一下，再松开左键。
+    // 这是“需要设备细节的复杂交互”——框架的答案是组合 GestureArea，而不是给 Button 堆事件。
+    scene::NanSceneTree tree;
+    auto area = std::make_shared<widget::GestureArea>();
+    auto button = std::make_shared<widget::Button>("Hold");
+    area->set_size(foundation::NanSize(100.0F, 40.0F));
+    area->set_child(button);
+    tree.set_root(area);
+
+    // 原始层（PointerArea 继承下来的）能看到**每个**按钮的 down/up，
+    // 包括 GestureArea 自己不识别的右键。
+    int left_downs = 0;
+    int right_downs = 0;
+    int right_ups = 0;
+    int left_ups = 0;
+    area->set_on_pointer_down([&](const scene::MouseButtonEvent& event) {
+        if (event.button() == scene::MouseButtonEvent::Button::left) {
+            ++left_downs;
+        }
+        else if (event.button() == scene::MouseButtonEvent::Button::right) {
+            ++right_downs;
+        }
+    });
+    area->set_on_pointer_up([&](const scene::MouseButtonEvent& event) {
+        if (event.button() == scene::MouseButtonEvent::Button::left) {
+            ++left_ups;
+        }
+        else if (event.button() == scene::MouseButtonEvent::Button::right) {
+            ++right_ups;
+        }
+    });
+    int button_clicks = 0;
+    int button_cancels = 0;
+    button->set_on_click([&] { ++button_clicks; });
+    button->set_on_cancel([&] { ++button_cancels; });
+
+    tree.dispatch_mouse_move(scene::MouseMoveEvent {
+        foundation::NanPoint(10.0F, 10.0F), foundation::NanPoint::zero()
+    });
+    tree.dispatch_mouse_button(button_event(scene::MouseButtonEvent::Button::left, scene::MouseButtonEvent::Action::press));
+    tree.dispatch_mouse_button(button_event(scene::MouseButtonEvent::Button::right, scene::MouseButtonEvent::Action::press));
+    tree.dispatch_mouse_button(button_event(scene::MouseButtonEvent::Button::right, scene::MouseButtonEvent::Action::release));
+    tree.dispatch_mouse_button(button_event(scene::MouseButtonEvent::Button::left, scene::MouseButtonEvent::Action::release));
+
+    // 四次转换全部可观察：右键的 down/up 也拿得到，而且在按住左键期间右键
+    // **不会打乱** GestureArea 自己那份左键状态机（它显式地对非主键早退）。
+    REQUIRE(left_downs == 1);
+    REQUIRE(right_downs == 1);
+    REQUIRE(right_ups == 1);
+    REQUIRE(left_ups == 1);
+    REQUIRE(button_cancels == 0);
+    // 代价：左键那一次对 Button 来说仍是一次合法点击，语义激活照常发生。
+    // 想让复合手势“吸收”掉这次点击，框架目前没有直接的开关。
+    REQUIRE(button_clicks == 1);
 }
 
 TEST_CASE("BuildContext authors gesture areas around ordinary controls", "[interaction][authoring]") {

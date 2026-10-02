@@ -2,10 +2,13 @@ playground_exe = executable(
     'nandina_showcase',
     files(
         'application.cpp',
+        'component_catalog.hpp',
         'main_window.hpp',
         'main_window.cpp',
         'pages/home_page.hpp',
         'pages/home_page.cpp',
+        'pages/component_page.hpp',
+        'pages/component_page.cpp',
         'pages/avatar_page.hpp',
         'pages/avatar_page.cpp',
         'components/sidebar.hpp',

@@ -33,3 +33,4 @@
 | [002](002-the-glyph-atlas-upload.md) | 一次页面切换卡顿，和它顺带带出的两个洞 | 字形图集的全量上传、写满即崩，以及一次哨兵值改动捅出的越界写 |
 | [003](003-the-grid-that-owned-the-viewport.md) | 一个 Grid 接管了整棵树的视口 | 外壳尺寸不收敛的追查：一个控件拿自己的尺寸当 viewport 重排了整棵树 |
 | [004](004-the-key-that-was-not-an-identity.md) | 那个不承担身份的 key | 路由 API 加固：类型键分标签、失败带原因，以及一次被 grep 藏起来的编译失败 |
+| [005](005-the-animation-system-that-was-never-plugged-in.md) | 造好了却没接出去的动画系统 | 侧边栏动效带出的动画系统普查：循环、state layer、Group、Keyframes、主题版本信号五个缺口 |

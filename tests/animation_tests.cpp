@@ -26,6 +26,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <limits>
+#include <optional>
 #include <stdexcept>
 
 using namespace nandina;
@@ -405,6 +406,114 @@ TEST_CASE(
     REQUIRE_FALSE(probe->paint_value.is_animating());
     REQUIRE(probe->paint_value.value() == Catch::Approx(10.0F));
     REQUIRE(probe->is_dirty(scene::DirtyFlags::paint));
+}
+
+TEST_CASE(
+    "a transition installed on a button radius animates a bound signal change",
+    "[animation][host][widget]"
+) {
+    reactive::Graph graph;
+    reactive::ReactiveScope scope {graph};
+    theme::ThemeManager themes;
+    widget::BuildContext ui {graph, scope, themes};
+
+    scene::NanSceneTree tree;
+    tree.set_theme_manager(themes);
+
+    // 与 showcase 侧边栏同一条路径：先登记过渡策略，再把信号绑到同一个属性上。策略只是
+    // **插值方式**而不是值，所以配件（主题 / tone / treatment）仍然是值的来源。
+    auto& hovered = ui.signal_value(false);
+    auto button = ui.make<widget::Button>("item")
+                      .behavior(
+                          widget::visual::container.radius,
+                          animation::motion::tween(0.12F)
+                      )
+                      .build();
+
+    const float base = button->resolved_style().container.radius;
+    REQUIRE(base > 0.0F);
+
+    auto& radius = ui.computed([&hovered, base] {
+        return hovered.get() ? base + 2.0F : base;
+    });
+    ui.bind(button, widget::visual::container.radius, radius);
+    tree.set_root(button);
+
+    const auto radius_now = [&button]() -> std::optional<float> {
+        const auto* value = button->visual_part(widget::visual::container_t {})
+                                .property(widget::visual::radius_t {})
+                                .value();
+        if (value == nullptr) {
+            return std::nullopt;
+        }
+        return *value;
+    };
+
+    // effect 构造时立即执行一次，所以绑定的初值必须当场就生效（否则侧边栏第一帧
+    // 会先闪一下配方的默认圆角）。
+    REQUIRE(radius_now().has_value());
+    REQUIRE(*radius_now() == Catch::Approx(base));
+    REQUIRE(tree.animation_host().active_count() == 0);
+
+    // 悬浮：目标已经变了，但当前值还停在基值上 —— 这就是"有动画"和"直接跳"的分界。
+    hovered.set(true);
+    REQUIRE(*radius_now() == Catch::Approx(base));
+    REQUIRE(tree.animation_host().active_count() == 1);
+
+    advance(tree, 0.02F);
+    REQUIRE(*radius_now() > base);
+    REQUIRE(*radius_now() < base + 2.0F);
+
+    for (int frame = 0; frame < 240; ++frame) {
+        advance(tree, 1.0F / 60.0F);
+    }
+    REQUIRE(*radius_now() == Catch::Approx(base + 2.0F).margin(0.01F));
+    REQUIRE(tree.animation_host().active_count() == 0);
+
+    // 离开：同样有一段过渡，而不是瞬时回位。
+    hovered.set(false);
+    REQUIRE(*radius_now() == Catch::Approx(base + 2.0F));
+    for (int frame = 0; frame < 240; ++frame) {
+        advance(tree, 1.0F / 60.0F);
+    }
+    REQUIRE(*radius_now() == Catch::Approx(base).margin(0.01F));
+    REQUIRE(tree.animation_host().active_count() == 0);
+}
+
+TEST_CASE(
+    "a zero-duration transition jumps without a track",
+    "[animation][host][widget]"
+) {
+    reactive::Graph graph;
+    reactive::ReactiveScope scope {graph};
+    theme::ThemeManager themes;
+    widget::BuildContext ui {graph, scope, themes};
+
+    scene::NanSceneTree tree;
+    tree.set_theme_manager(themes);
+
+    // 主题把 `motion.short_duration` 调成 0 时，微交互应该就地震到目标、不占动画轨道。
+    // 侧边栏的时长直接取自该令牌，所以这条性质是它"可被主题降速/关闭"的前提。
+    auto& hovered = ui.signal_value(false);
+    auto button = ui.make<widget::Button>("item")
+                      .behavior(widget::visual::container.radius, animation::motion::tween(0.0F))
+                      .build();
+
+    const float base = button->resolved_style().container.radius;
+    auto& radius = ui.computed([&hovered, base] {
+        return hovered.get() ? base + 2.0F : base;
+    });
+    ui.bind(button, widget::visual::container.radius, radius);
+    tree.set_root(button);
+
+    hovered.set(true);
+
+    const auto* value = button->visual_part(widget::visual::container_t {})
+                            .property(widget::visual::radius_t {})
+                            .value();
+    REQUIRE(value != nullptr);
+    REQUIRE(*value == Catch::Approx(base + 2.0F));
+    REQUIRE(tree.animation_host().active_count() == 0);
 }
 
 TEST_CASE("reduced motion forces new targets to jump without a track", "[animation][host][reduced-motion]") {

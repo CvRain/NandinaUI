@@ -5,8 +5,8 @@
 int main() {
     auto window_info = nandina::app::WindowConfig {
         .title = "nandina showcase",
-        .width = 720,
-        .height = 640,
+        .width = 1200,
+        .height = 800,
     };
 
     nandina::app::NanApplication application(
