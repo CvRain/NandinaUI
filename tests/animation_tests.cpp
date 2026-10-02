@@ -15,6 +15,7 @@
 #include <nandina/reactive/scope.hpp>
 #include <nandina/reactive/signal.hpp>
 #include <nandina/scene/control.hpp>
+#include <nandina/scene/input_event.hpp>
 #include <nandina/scene/scene_tree.hpp>
 #include <nandina/theme/theme_manager.hpp>
 #include <nandina/widget/build_context.hpp>
@@ -71,9 +72,7 @@ static_assert(
 static_assert(
     widget::property::Springable<widget::Button, decltype(widget::visual::container.radius)>
 );
-static_assert(
-    !widget::property::Springable<widget::Label, decltype(widget::visual::label.color)>
-);
+static_assert(!widget::property::Springable<widget::Label, decltype(widget::visual::label.color)>);
 
 TEST_CASE("easing curves map 0->0 and 1->1", "[animation][easing]") {
     for (const auto easing:
@@ -424,18 +423,13 @@ TEST_CASE(
     // **插值方式**而不是值，所以配件（主题 / tone / treatment）仍然是值的来源。
     auto& hovered = ui.signal_value(false);
     auto button = ui.make<widget::Button>("item")
-                      .behavior(
-                          widget::visual::container.radius,
-                          animation::motion::tween(0.12F)
-                      )
+                      .behavior(widget::visual::container.radius, animation::motion::tween(0.12F))
                       .build();
 
     const float base = button->resolved_style().container.radius;
     REQUIRE(base > 0.0F);
 
-    auto& radius = ui.computed([&hovered, base] {
-        return hovered.get() ? base + 2.0F : base;
-    });
+    auto& radius = ui.computed([&hovered, base] { return hovered.get() ? base + 2.0F : base; });
     ui.bind(button, widget::visual::container.radius, radius);
     tree.set_root(button);
 
@@ -480,10 +474,7 @@ TEST_CASE(
     REQUIRE(tree.animation_host().active_count() == 0);
 }
 
-TEST_CASE(
-    "a zero-duration transition jumps without a track",
-    "[animation][host][widget]"
-) {
+TEST_CASE("a zero-duration transition jumps without a track", "[animation][host][widget]") {
     reactive::Graph graph;
     reactive::ReactiveScope scope {graph};
     theme::ThemeManager themes;
@@ -500,9 +491,7 @@ TEST_CASE(
                       .build();
 
     const float base = button->resolved_style().container.radius;
-    auto& radius = ui.computed([&hovered, base] {
-        return hovered.get() ? base + 2.0F : base;
-    });
+    auto& radius = ui.computed([&hovered, base] { return hovered.get() ? base + 2.0F : base; });
     ui.bind(button, widget::visual::container.radius, radius);
     tree.set_root(button);
 
@@ -516,7 +505,10 @@ TEST_CASE(
     REQUIRE(tree.animation_host().active_count() == 0);
 }
 
-TEST_CASE("reduced motion forces new targets to jump without a track", "[animation][host][reduced-motion]") {
+TEST_CASE(
+    "reduced motion forces new targets to jump without a track",
+    "[animation][host][reduced-motion]"
+) {
     scene::NanSceneTree tree;
     theme::ThemeManager themes;
     themes.set_motion_preference(theme::MotionPreference::reduced);
@@ -756,10 +748,18 @@ TEST_CASE("parallel group fires all clips immediately", "[animation][group]") {
 
     auto group = animation::Group::parallel(
         {animation::Group::clip(
-             *probe, probe->a, 10.0F, animation::Behavior<float>(1.0F, animation::Easing::linear), scene::DirtyFlags::paint
+             *probe,
+             probe->a,
+             10.0F,
+             animation::Behavior<float>(1.0F, animation::Easing::linear),
+             scene::DirtyFlags::paint
          ),
          animation::Group::clip(
-             *probe, probe->b, 20.0F, animation::Behavior<float>(1.0F, animation::Easing::linear), scene::DirtyFlags::paint
+             *probe,
+             probe->b,
+             20.0F,
+             animation::Behavior<float>(1.0F, animation::Easing::linear),
+             scene::DirtyFlags::paint
          )}
     );
     tree.animation_host().run(*probe, std::move(group));
@@ -777,10 +777,18 @@ TEST_CASE("sequential group fires a clip only after the previous finishes", "[an
 
     auto group = animation::Group::sequential(
         {animation::Group::clip(
-             *probe, probe->a, 10.0F, animation::Behavior<float>(0.2F, animation::Easing::linear), scene::DirtyFlags::paint
+             *probe,
+             probe->a,
+             10.0F,
+             animation::Behavior<float>(0.2F, animation::Easing::linear),
+             scene::DirtyFlags::paint
          ),
          animation::Group::clip(
-             *probe, probe->b, 20.0F, animation::Behavior<float>(0.2F, animation::Easing::linear), scene::DirtyFlags::paint
+             *probe,
+             probe->b,
+             20.0F,
+             animation::Behavior<float>(0.2F, animation::Easing::linear),
+             scene::DirtyFlags::paint
          )}
     );
     tree.animation_host().run(*probe, std::move(group));
@@ -791,7 +799,7 @@ TEST_CASE("sequential group fires a clip only after the previous finishes", "[an
 
     advance(tree, 0.1F);
     REQUIRE(probe->a.value() == Catch::Approx(10.0F)); // a 完成
-    REQUIRE(probe->b.value() == Catch::Approx(0.0F));  // b 下一帧才触发
+    REQUIRE(probe->b.value() == Catch::Approx(0.0F)); // b 下一帧才触发
 
     advance(tree, 0.1F);
     REQUIRE(probe->a.value() == Catch::Approx(10.0F));
@@ -852,13 +860,25 @@ TEST_CASE("group finish jumps all clips to target", "[animation][group]") {
 
     auto group = animation::Group::stagger(
         {animation::Group::clip(
-             *probe, probe->a, 10.0F, animation::Behavior<float>(1.0F, animation::Easing::linear), scene::DirtyFlags::paint
+             *probe,
+             probe->a,
+             10.0F,
+             animation::Behavior<float>(1.0F, animation::Easing::linear),
+             scene::DirtyFlags::paint
          ),
          animation::Group::clip(
-             *probe, probe->b, 20.0F, animation::Behavior<float>(1.0F, animation::Easing::linear), scene::DirtyFlags::paint
+             *probe,
+             probe->b,
+             20.0F,
+             animation::Behavior<float>(1.0F, animation::Easing::linear),
+             scene::DirtyFlags::paint
          ),
          animation::Group::clip(
-             *probe, probe->c, 30.0F, animation::Behavior<float>(1.0F, animation::Easing::linear), scene::DirtyFlags::paint
+             *probe,
+             probe->c,
+             30.0F,
+             animation::Behavior<float>(1.0F, animation::Easing::linear),
+             scene::DirtyFlags::paint
          )},
         0.5F
     );
@@ -882,10 +902,18 @@ TEST_CASE("group is cancelled when its owner exits the tree", "[animation][group
 
     auto group = animation::Group::stagger(
         {animation::Group::clip(
-             *probe, probe->a, 10.0F, animation::Behavior<float>(1.0F, animation::Easing::linear), scene::DirtyFlags::paint
+             *probe,
+             probe->a,
+             10.0F,
+             animation::Behavior<float>(1.0F, animation::Easing::linear),
+             scene::DirtyFlags::paint
          ),
          animation::Group::clip(
-             *probe, probe->c, 30.0F, animation::Behavior<float>(1.0F, animation::Easing::linear), scene::DirtyFlags::paint
+             *probe,
+             probe->c,
+             30.0F,
+             animation::Behavior<float>(1.0F, animation::Easing::linear),
+             scene::DirtyFlags::paint
          )},
         1.0F
     );
@@ -947,7 +975,10 @@ TEST_CASE("spring spec rejects invalid parameters", "[animation][spring]") {
     );
 }
 
-TEST_CASE("animated property supports spring mode with overshoot", "[animation][property][spring]") {
+TEST_CASE(
+    "animated property supports spring mode with overshoot",
+    "[animation][property][spring]"
+) {
     animation::AnimatedProperty<float> property(0.0F);
     property.set_spring(animation::SpringSpec(200.0F, 10.0F));
     property.set_target(100.0F);
@@ -986,7 +1017,10 @@ TEST_CASE(
     REQUIRE_FALSE(property.is_animating());
 }
 
-TEST_CASE("keyframes interpolate across time and finish at the last frame", "[animation][keyframes]") {
+TEST_CASE(
+    "keyframes interpolate across time and finish at the last frame",
+    "[animation][keyframes]"
+) {
     animation::Keyframes<float> keyframes;
     keyframes.start(
         {{.time = 0.0F, .value = 0.0F},
@@ -996,10 +1030,10 @@ TEST_CASE("keyframes interpolate across time and finish at the last frame", "[an
     REQUIRE_FALSE(keyframes.is_finished());
     REQUIRE(keyframes.value() == Catch::Approx(0.0F));
 
-    REQUIRE(keyframes.tick(0.25F) == Catch::Approx(5.0F));  // 0 → 10 中点
+    REQUIRE(keyframes.tick(0.25F) == Catch::Approx(5.0F)); // 0 → 10 中点
     REQUIRE(keyframes.tick(0.25F) == Catch::Approx(10.0F)); // 到 0.5s
-    REQUIRE(keyframes.tick(0.25F) == Catch::Approx(5.0F));  // 10 → 0 中点
-    REQUIRE(keyframes.tick(0.25F) == Catch::Approx(0.0F));  // 到 1.0s，结束
+    REQUIRE(keyframes.tick(0.25F) == Catch::Approx(5.0F)); // 10 → 0 中点
+    REQUIRE(keyframes.tick(0.25F) == Catch::Approx(0.0F)); // 到 1.0s，结束
     REQUIRE(keyframes.is_finished());
     REQUIRE(keyframes.target() == Catch::Approx(0.0F));
 }
@@ -1017,7 +1051,10 @@ TEST_CASE("keyframes reject empty, non-increasing, and non-zero start", "[animat
     );
 }
 
-TEST_CASE("animated property plays keyframes and clears back to target", "[animation][property][keyframes]") {
+TEST_CASE(
+    "animated property plays keyframes and clears back to target",
+    "[animation][property][keyframes]"
+) {
     animation::AnimatedProperty<float> property(0.0F);
     property.set_keyframes(
         {{.time = 0.0F, .value = 0.0F},
@@ -1046,9 +1083,7 @@ TEST_CASE(
 ) {
     animation::AnimatedProperty<float> property(0.0F);
     property.set_behavior(animation::Behavior<float>(1.0F, animation::Easing::linear));
-    property.set_keyframes(
-        {{.time = 0.0F, .value = 0.0F}, {.time = 1.0F, .value = 10.0F}}
-    );
+    property.set_keyframes({{.time = 0.0F, .value = 0.0F}, {.time = 1.0F, .value = 10.0F}});
     REQUIRE_FALSE(property.behavior().has_value()); // behavior 被清除
     REQUIRE(property.keyframes().has_value());
 
@@ -1069,8 +1104,7 @@ TEST_CASE("motion::tween builds a behavior spec", "[animation][motion]") {
 }
 
 TEST_CASE("motion::spring builds a spring spec fluently", "[animation][motion]") {
-    const auto spec =
-        animation::motion::spring().stiffness(200.0F).damping(12.0F).mass(2.0F);
+    const auto spec = animation::motion::spring().stiffness(200.0F).damping(12.0F).mass(2.0F);
     REQUIRE(spec.stiffness() == Catch::Approx(200.0F));
     REQUIRE(spec.damping() == Catch::Approx(12.0F));
     REQUIRE(spec.mass() == Catch::Approx(2.0F));
@@ -1143,4 +1177,71 @@ TEST_CASE(
     }
     REQUIRE(overshot);
     REQUIRE(button->resolved_style().container.radius == Catch::Approx(24.0F).margin(0.05F));
+}
+
+TEST_CASE(
+    "a real pointer hover drives a bound visual property through the interaction callback",
+    "[animation][host][widget][input]"
+) {
+    // 上一条测试直接 `set()` 信号，绕过了"输入事件 → 交互回调 → 信号"这一段。而 showcase
+    // 侧边栏出过的正是这一段：交互回调写的是它在**自己内部**新建的信号，动画读的是外层
+    // 另一个 —— 于是动画永远不触发，而原语层的测试全绿（它们只测插值，不测接线）。
+    //
+    // 这条把整条链一起走：真实悬浮事件 → Button::on_hover_changed → 信号 → computed →
+    // 绑定的视觉属性 → 解析出的样式值。中间的 `REQUIRE(hovered.get())` 是关键的锚点：
+    // 回调只要写到了别的信号上，它立刻失败。
+    reactive::Graph graph;
+    reactive::ReactiveScope scope {graph};
+    theme::ThemeManager themes;
+    widget::BuildContext ui {graph, scope, themes};
+
+    scene::NanSceneTree tree;
+    tree.set_theme_manager(themes);
+
+    auto& hovered = ui.signal_value(false);
+    auto button = ui.make<widget::Button>("item")
+                      .behavior(widget::visual::container.radius, animation::motion::tween(0.12F))
+                      .on_hover_changed([&hovered](const bool value) { hovered.set(value); })
+                      .build();
+
+    const float base = button->resolved_style().container.radius;
+    REQUIRE(base > 0.0F);
+
+    auto& radius = ui.computed([&hovered, base] { return hovered.get() ? base + 2.0F : base; });
+    ui.bind(button, widget::visual::container.radius, radius);
+    tree.set_root(button);
+    (void)tree.layout_root(foundation::NanSize(160.0F, 40.0F));
+
+    const auto radius_now = [&button]() -> std::optional<float> {
+        const auto* value = button->visual_part(widget::visual::container_t {})
+                                .property(widget::visual::radius_t {})
+                                .value();
+        if (value == nullptr) {
+            return std::nullopt;
+        }
+        return *value;
+    };
+
+    REQUIRE(radius_now().has_value());
+    REQUIRE(*radius_now() == Catch::Approx(base));
+    REQUIRE_FALSE(hovered.get());
+
+    // 指针移到按钮上：整条链应当自己跑起来，不需要测试替它 set 任何信号。
+    tree.dispatch_mouse_move(
+        scene::MouseMoveEvent {button->global_bounds().get_center(), foundation::NanPoint::zero()}
+    );
+    REQUIRE(hovered.get());
+    // 目标变了、当前值还在基值 —— 说明过渡真的在走，而不是直接跳。
+    REQUIRE(*radius_now() == Catch::Approx(base));
+
+    tree.advance_animations(1.0F);
+    REQUIRE(*radius_now() == Catch::Approx(base + 2.0F).margin(0.01F));
+
+    // 移出同样要能回落，否则会留下一个"卡在悬浮态"的条目。
+    tree.dispatch_mouse_move(
+        scene::MouseMoveEvent {foundation::NanPoint(-10.0F, -10.0F), foundation::NanPoint::zero()}
+    );
+    REQUIRE_FALSE(hovered.get());
+    tree.advance_animations(1.0F);
+    REQUIRE(*radius_now() == Catch::Approx(base).margin(0.01F));
 }

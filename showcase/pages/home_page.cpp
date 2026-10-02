@@ -22,8 +22,6 @@ namespace nandina::showcase
     {
         inline constexpr float kComponentFontSize = 16.0F;
         inline constexpr float kComponentHoverFontSize = 18.0F;
-        inline constexpr std::uint32_t kComponentColor = 0x5c5f77;
-        inline constexpr std::uint32_t kComponentHoverColor = 0x4c4f69;
 
         auto gen_brief_intro_section(app::PageContext& context) -> auto {
             const auto& ui = context.ui();
@@ -155,24 +153,24 @@ namespace nandina::showcase
                     }
 
                     auto& is_hover = ui.signal_value(false);
-                    auto& hovered_color = ui.computed([&is_hover]() {
-                        return foundation::NanColor::from_hex(
-                            is_hover.get() ? kComponentHoverColor : kComponentColor
-                        );
-                    });
                     auto& hovered_font_size = ui.computed([&is_hover]() {
                         return is_hover.get() ? kComponentHoverFontSize : kComponentFontSize;
                     });
 
+                    // 颜色交给**语义角色**，悬浮反馈只用与外观无关的字号。
+                    //
+                    // 这里原本把两个写死的十六进制颜色绑到 `visual::label.color` 上，那有两个
+                    // 问题：它违反"页面里不写原始色"的约定；更要紧的是**切换明暗外观后必然停在
+                    // 旧值** —— 驱动它的 computed 只依赖 `is_hover`，而 `ThemeManager` 目前只有
+                    // revision + 观察者、没有 Signal，所以"主题变了"这件事进不了响应式依赖；
+                    // 何况 PropertyEndpoint 一旦有值就会永久遮罩配方字段，Label 的
+                    // on_theme_changed 也救不回来（见 stories/005 §6）。
+                    //
+                    // 保留颜色悬浮的出路是补上"主题版本信号"，那时这里可以重新绑颜色。
                     auto label = ui.make<widget::Label>(std::string(component.name))
                                      .width(widget::authoring::fill)
-                                     .bind(widget::visual::label.color, hovered_color)
+                                     .color_token(theme::ColorToken::foreground)
                                      .bind(widget::visual::label.font_size, hovered_font_size)
-                                     .behavior(
-                                         widget::visual::label.color,
-                                         animation::motion::tween(hover_animation_duration)
-                                             .easing(animation::motion::ease_out)
-                                     )
                                      .behavior(
                                          widget::visual::label.font_size,
                                          animation::motion::tween(hover_animation_duration)

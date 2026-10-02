@@ -42,12 +42,12 @@ namespace nandina::showcase
 
     auto Sidebar::generate_nav_item_builder(
         const std::string& item_title,
-        const app::PageKey& page_key
+        const app::PageKey& page_key,
+        reactive::Signal<bool>& hovered,
+        reactive::Signal<bool>& pressed
     ) const -> auto {
         const auto& ui = context.ui();
         const auto& navigation = context.navigation();
-        auto& hovered = ui.signal_value(false);
-        auto& pressed = ui.signal_value(false);
         const float micro_motion = ui.theme_manager().design_system().tokens.motion.short_duration;
 
         auto builder =
@@ -116,7 +116,7 @@ namespace nandina::showcase
 
             const auto title_text = nav_label(*entry);
 
-            auto button = generate_nav_item_builder(title_text, page_key);
+            auto button = generate_nav_item_builder(title_text, page_key, hovered, pressed);
 
             // 基值取主题解析出来的圆角，不硬编码 —— 实例覆盖只在它之上加增量，所以面板
             // 换一套圆角尺度时这里跟着走。代价是这个值在构建时取一次：运行中改圆角令牌
@@ -125,13 +125,22 @@ namespace nandina::showcase
 
             // 悬浮 + 按下的圆角动画。两个状态**叠加**而不是互相覆盖：按住时鼠标必然也在
             // 悬浮，若让 pressed 优先，按下瞬间圆角会先回缩一次，看起来像卡了一下。
-            auto& radius = ui.computed([&] {
+            // 捕获列表是刻意的：`base_radius` 是循环体内的局部量、`k_*_radius_gain` 是成员
+            // （读成员就等于捕获 `this`，而 `Sidebar` 是 main_window 里的临时对象，
+            // set_shell 工厂一返回就销毁）。这个 computed 活在**外壳作用域**里、会在
+            // hover/press 变化时被重新求值，所以三者都必须按值捕获 —— 否则动画一开始
+            // 生效就是读悬垂内存。
+            auto& radius = ui.computed([&hovered,
+                                        &pressed,
+                                        base_radius,
+                                        hover_gain = k_hover_radius_gain,
+                                        pressed_gain = k_pressed_radius_gain] {
                 float gain = 0.0F;
                 if (hovered.get()) {
-                    gain += k_hover_radius_gain;
+                    gain += hover_gain;
                 }
                 if (pressed.get()) {
-                    gain += k_pressed_radius_gain;
+                    gain += pressed_gain;
                 }
                 return base_radius + gain;
             });
