@@ -1,17 +1,15 @@
 //
-// animation/animation_host - scene-owned scheduler for active animated properties.
+// scene/animation_host - scene-owned scheduler for active animated properties.
 //
 
 #include "animation_host.hpp"
-
-#include "../scene/scene_tree.hpp"
-#include "group.hpp"
+#include "scene_tree.hpp"
 
 #include <algorithm>
 
-namespace nandina::animation
+namespace nandina::scene
 {
-    AnimationHost::AnimationHost(scene::NanSceneTree& tree) noexcept: tree_(&tree) {}
+    AnimationHost::AnimationHost(NanSceneTree& tree) noexcept: tree_(&tree) {}
 
     void AnimationHost::advance(const float dt) {
         if (reduced_motion()) {
@@ -21,8 +19,8 @@ namespace nandina::animation
         auto track = tracks_.begin();
         while (track != tracks_.end()) {
             const auto owner = track->owner.lock();
-            auto* control = owner != nullptr ? owner->as_control() : nullptr;
-            if (control == nullptr || control->get_tree() != tree_) {
+            auto* node = owner != nullptr ? owner->as_node2d() : nullptr;
+            if (node == nullptr || node->get_tree() != tree_) {
                 if (owner != nullptr) {
                     track->finish();
                 }
@@ -32,7 +30,7 @@ namespace nandina::animation
 
             const auto result = track->tick(dt);
             if (result.changed) {
-                control->mark_dirty(track->dirty_flags);
+                node->mark_dirty(track->dirty_flags);
             }
             if (!result.active) {
                 track = tracks_.erase(track);
@@ -42,7 +40,7 @@ namespace nandina::animation
         }
     }
 
-    void AnimationHost::cancel_owner(const scene::NanNode& owner) {
+    void AnimationHost::cancel_owner(const NanNode& owner) {
         std::erase_if(tracks_, [&owner](const Track& track) {
             const auto current = track.owner.lock();
             if (current != nullptr && current.get() == &owner) {
@@ -56,12 +54,12 @@ namespace nandina::animation
     void AnimationHost::clear() {
         for (const auto& track: tracks_) {
             const auto owner = track.owner.lock();
-            auto* control = owner != nullptr ? owner->as_control() : nullptr;
-            if (control == nullptr) {
+            auto* node = owner != nullptr ? owner->as_node2d() : nullptr;
+            if (node == nullptr) {
                 continue;
             }
             track.finish();
-            control->mark_dirty(track.dirty_flags);
+            node->mark_dirty(track.dirty_flags);
         }
         tracks_.clear();
     }
@@ -70,7 +68,7 @@ namespace nandina::animation
         return tracks_.size();
     }
 
-    void AnimationHost::run(scene::NanControl& owner, Group group) {
+    void AnimationHost::run(NanNode2D& owner, AnimationGroup group) {
         if (owner.get_tree() != tree_) {
             throw std::invalid_argument("animation owner must belong to the host scene tree");
         }
@@ -78,7 +76,7 @@ namespace nandina::animation
         if (weak_owner.expired()) {
             throw std::logic_error("animation owner must be managed by shared_ptr");
         }
-        auto shared = std::make_shared<Group>(std::move(group));
+        auto shared = std::make_shared<AnimationGroup>(std::move(group));
         upsert(
             std::move(weak_owner),
             static_cast<const void*>(shared.get()),
@@ -90,16 +88,16 @@ namespace nandina::animation
                 };
             },
             [shared] { shared->finish(); },
-            scene::DirtyFlags::none
+            DirtyFlags::none
         );
     }
 
     void AnimationHost::upsert(
-        std::weak_ptr<scene::NanNode> owner,
+        std::weak_ptr<NanNode> owner,
         const void* identity,
         std::function<TickResult(float)> tick,
         std::function<void()> finish,
-        const scene::DirtyFlags dirty_flags
+        const DirtyFlags dirty_flags
     ) {
         const auto existing =
             std::ranges::find(tracks_, identity, [](const Track& track) { return track.identity; });
@@ -131,4 +129,4 @@ namespace nandina::animation
         const auto* manager = tree_->theme_manager();
         return manager != nullptr && manager->reduced_motion();
     }
-} // namespace nandina::animation
+} // namespace nandina::scene

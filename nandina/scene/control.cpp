@@ -71,10 +71,7 @@ namespace nandina::scene
             const float minimum = std::max(parent_min, resolve(own_min, 0.0F));
             const float maximum = std::max(
                 minimum,
-                std::min(
-                    parent_max,
-                    resolve(own_max, std::numeric_limits<float>::infinity())
-                )
+                std::min(parent_max, resolve(own_max, std::numeric_limits<float>::infinity()))
             );
             return {minimum, maximum};
         }
@@ -132,7 +129,10 @@ namespace nandina::scene
         }
         size_ = size;
         measured_size_ = size;
-        mark_semantics_dirty();
+        // 缩放中心是按**当前布局尺寸**解析的，所以尺寸变化本身就是几何变化：必须让
+        // 几何缓存失效并重建语义 bounds。只标 paint 会让缓存永远不失效 —— 缩放中心
+        // 会停在旧尺寸上。
+        mark_dirty(DirtyFlags::paint | DirtyFlags::transform);
         if (auto* control_parent = parent() != nullptr ? parent()->as_control() : nullptr) {
             control_parent->mark_layout_dirty();
         }
@@ -286,41 +286,7 @@ namespace nandina::scene
     }
 
     auto NanControl::layout_dirty() const -> bool {
-        return has_any(dirty_flags_, layout_dirty_flags);
-    }
-
-    auto NanControl::dirty_flags() const -> DirtyFlags {
-        return dirty_flags_;
-    }
-
-    auto NanControl::is_dirty(const DirtyFlags flags) const -> bool {
-        return has_any(dirty_flags_, flags);
-    }
-
-    auto NanControl::mark_dirty(const DirtyFlags flags) -> void {
-        if (has_any(flags, DirtyFlags::semantics)) {
-            mark_semantics_dirty();
-        }
-        const auto newly_dirty = static_cast<DirtyFlags>(
-            static_cast<std::uint8_t>(flags)
-            & ~static_cast<std::uint8_t>(dirty_flags_)
-        );
-        dirty_flags_ |= flags;
-        if (!has_any(newly_dirty, layout_dirty_flags)) {
-            return;
-        }
-        for (auto* ancestor = parent(); ancestor != nullptr; ancestor = ancestor->parent()) {
-            if (auto* control = ancestor->as_control(); control != nullptr) {
-                control->dirty_flags_ |= layout_dirty_flags;
-            }
-        }
-    }
-
-    auto NanControl::clear_dirty(const DirtyFlags flags) -> void {
-        dirty_flags_ = static_cast<DirtyFlags>(
-            static_cast<std::uint8_t>(dirty_flags_)
-            & ~static_cast<std::uint8_t>(flags)
-        );
+        return is_dirty(layout_dirty_flags);
     }
 
     auto NanControl::mark_layout_dirty() -> void {

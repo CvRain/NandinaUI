@@ -6,7 +6,9 @@
 #define NANDINA_EXPERIMENT_NODE2D_HPP
 
 #include "../foundation/transform2d.hpp"
+#include "frame_scheduler.hpp"
 #include "node.hpp"
+#include "node_presentation.hpp"
 
 #include <cstdint>
 
@@ -33,6 +35,7 @@ namespace nandina::scene
     class NanNode2D: public NanNode {
     public:
         NanNode2D();
+        ~NanNode2D() override;
 
         // ---- local transform ----
 
@@ -58,6 +61,14 @@ namespace nandina::scene
         /// Multiply current scale by factor.
         void apply_scale(foundation::NanPoint factor);
 
+        [[nodiscard]] auto visual_part(visual::node_t) noexcept -> NodePresentation&;
+        [[nodiscard]] auto visual_part(visual::node_t) const noexcept -> const NodePresentation&;
+
+        void set_presentation_translate(foundation::NanPoint translate);
+        void set_presentation_scale(foundation::NanPoint scale);
+        void set_transform_origin(TransformOrigin origin);
+        [[nodiscard]] auto transform_origin() const noexcept -> TransformOrigin;
+
         // ---- global transform (world-space) ----
 
         /// World-space transform.  Lazily recomputed from the parent chain.
@@ -80,6 +91,13 @@ namespace nandina::scene
         /// Override in subclasses to return the actual interactive/visible area.
         /// Default: empty rect at global_position.
         [[nodiscard]] virtual auto global_bounds() const -> foundation::NanRect;
+
+        // ---- frame invalidation ----
+
+        [[nodiscard]] auto dirty_flags() const -> DirtyFlags;
+        [[nodiscard]] auto is_dirty(DirtyFlags flags) const -> bool;
+        auto mark_dirty(DirtyFlags flags) -> void;
+        auto clear_dirty(DirtyFlags flags) -> void;
 
         // ---- visibility ----
 
@@ -142,19 +160,24 @@ namespace nandina::scene
             const foundation::NanTransform2D& saved
         ) override;
 
-        /// Invalidate this node's cached global transform.
-        void _invalidate_global();
-
-        /// Invalidate global transform on this node and all descendants.
+        /// Invalidate the cached global transform on this node and all descendants.
+        /// Pure cache work: it sets no dirty flags. Callers that changed geometry should go
+        /// through `mark_dirty(DirtyFlags::paint | DirtyFlags::transform)` instead, which
+        /// invalidates the cache *and* asks for the semantics bounds to be rebuilt.
         void _propagate_invalidate_global();
 
         void schedule_focus_request();
 
     private:
+        [[nodiscard]] auto effective_transform() const -> foundation::NanTransform2D;
+        [[nodiscard]] auto resolved_transform_origin() const -> foundation::NanPoint;
+
         foundation::NanTransform2D transform_;
+        NodePresentation presentation_;
+        TransformOrigin transform_origin_ = TransformOrigin::center;
         bool visible_ = true;
         int z_index_ = 0;
-        float local_opacity_ = 1.0F;
+        DirtyFlags dirty_flags_ = layout_dirty_flags | DirtyFlags::paint | DirtyFlags::semantics;
 
         mutable foundation::NanTransform2D cached_global_;
         mutable bool global_invalid_ = true;

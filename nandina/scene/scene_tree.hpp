@@ -5,17 +5,17 @@
 #ifndef NANDINA_EXPERIMENT_SCENE_TREE_HPP
 #define NANDINA_EXPERIMENT_SCENE_TREE_HPP
 
-#include "../widget/primitives/text_layout_backend.hpp"
-#include "../theme/theme_manager.hpp"
 #include "../semantics/semantics.hpp"
-#include "frame_scheduler.hpp"
+#include "../theme/theme_manager.hpp"
+#include "../widget/primitives/text_layout_backend.hpp"
 #include "clipboard.hpp"
+#include "frame_scheduler.hpp"
 #include "input_event.hpp"
 #include "node2d.hpp"
 
+#include <functional>
 #include <memory>
 #include <optional>
-#include <functional>
 #include <vector>
 
 namespace nandina::render
@@ -24,11 +24,6 @@ namespace nandina::render
     class TextureCache;
 } // namespace nandina::render
 
-namespace nandina::animation
-{
-    class AnimationHost;
-}
-
 namespace nandina::text
 {
     class FontPipelineCache;
@@ -36,6 +31,7 @@ namespace nandina::text
 
 namespace nandina::scene
 {
+    class AnimationHost;
 
     /**
      * Root container and driver for the node tree.
@@ -100,8 +96,8 @@ namespace nandina::scene
 
         void clear_theme_manager() noexcept;
         [[nodiscard]] auto theme_manager() const noexcept -> theme::ThemeManager*;
-        [[nodiscard]] auto animation_host() noexcept -> animation::AnimationHost&;
-        [[nodiscard]] auto animation_host() const noexcept -> const animation::AnimationHost&;
+        [[nodiscard]] auto animation_host() noexcept -> AnimationHost&;
+        [[nodiscard]] auto animation_host() const noexcept -> const AnimationHost&;
         void set_clipboard(IClipboard& clipboard) noexcept;
         void clear_clipboard() noexcept;
         [[nodiscard]] auto clipboard() const noexcept -> IClipboard*;
@@ -113,10 +109,9 @@ namespace nandina::scene
         [[nodiscard]] auto update_semantics() -> bool;
         [[nodiscard]] auto semantics_tree() const noexcept -> const semantics::Tree&;
         void set_semantics_transform(foundation::NanTransform2D transform) noexcept;
-        [[nodiscard]] auto perform_semantics_action(
-            semantics::SemanticsId id,
-            semantics::ActionRequest request
-        ) -> bool;
+        [[nodiscard]] auto
+        perform_semantics_action(semantics::SemanticsId id, semantics::ActionRequest request)
+            -> bool;
 
         // ---- per-frame traversal ----
 
@@ -208,20 +203,15 @@ namespace nandina::scene
         [[nodiscard]] auto hit_test(foundation::NanPoint world_point) const -> NanNode2D*;
 
     private:
-        static auto _hit_test_node(
-            NanNode2D* node,
-            foundation::NanPoint world_point,
-            bool* blocked
-        ) -> NanNode2D*;
+        static auto _hit_test_node(NanNode2D* node, foundation::NanPoint world_point, bool* blocked)
+            -> NanNode2D*;
         /// LayerStack-aware hit testing: walk layers front-to-back and honour each
         /// layer's input mode. Applies wherever a LayerStack appears in the tree,
         /// not only when it is the root. Sets `*blocked` when a `block_below` layer
         /// swallows the point so ancestors stop and do not report themselves hit.
-        [[nodiscard]] static auto _hit_test_layer_stack(
-            LayerStack* stack,
-            foundation::NanPoint world_point,
-            bool* blocked
-        ) -> NanNode2D*;
+        [[nodiscard]] static auto
+        _hit_test_layer_stack(LayerStack* stack, foundation::NanPoint world_point, bool* blocked)
+            -> NanNode2D*;
         static void _collect_focusable_nodes(NanNode* node, std::vector<NanNode2D*>& out);
         [[nodiscard]] static auto _find_semantics_source(NanNode* node, semantics::SemanticsId id)
             -> NanNode*;
@@ -272,7 +262,7 @@ namespace nandina::scene
         foundation::NanTransform2D semantics_transform_;
         bool semantics_dirty_ = true;
         FramePhase phase_ = FramePhase::idle;
-        std::unique_ptr<animation::AnimationHost> animation_host_;
+        std::unique_ptr<AnimationHost> animation_host_;
     };
 
 } // namespace nandina::scene

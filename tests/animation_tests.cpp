@@ -11,6 +11,7 @@
 #include <nandina/animation/motion.hpp>
 #include <nandina/animation/spring.hpp>
 #include <nandina/animation/tween.hpp>
+#include <nandina/foundation/motion/spring.hpp>
 #include <nandina/foundation/nandina_color.hpp>
 #include <nandina/reactive/scope.hpp>
 #include <nandina/reactive/signal.hpp>
@@ -26,6 +27,7 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
+#include <algorithm>
 #include <limits>
 #include <optional>
 #include <stdexcept>
@@ -47,13 +49,23 @@ namespace
         animation::AnimatedProperty<float> c {0.0F};
     };
 
+    class TransformCacheProbe final: public scene::NanControl {
+    public:
+        // effective_transform resolves its origin through this virtual query.
+        mutable unsigned origin_queries = 0;
+        auto as_control() const -> const scene::NanControl* override {
+            ++origin_queries;
+            return this;
+        }
+    };
+
     void advance(scene::NanSceneTree& tree, const float dt) {
         auto phase = tree.enter_phase(scene::FramePhase::animation);
         tree.advance_animations(dt);
     }
 
     constexpr auto all_dirty_flags = scene::DirtyFlags::measure | scene::DirtyFlags::layout
-        | scene::DirtyFlags::paint | scene::DirtyFlags::semantics;
+        | scene::DirtyFlags::paint | scene::DirtyFlags::semantics | scene::DirtyFlags::transform;
 } // namespace
 
 static_assert(
@@ -73,6 +85,27 @@ static_assert(
     widget::property::Springable<widget::Button, decltype(widget::visual::container.radius)>
 );
 static_assert(!widget::property::Springable<widget::Label, decltype(widget::visual::label.color)>);
+static_assert(widget::property::Animatable<scene::NanNode2D, decltype(widget::visual::opacity)>);
+static_assert(widget::property::Animatable<scene::NanNode2D, decltype(widget::visual::translate)>);
+static_assert(widget::property::Animatable<scene::NanNode2D, decltype(widget::visual::scale)>);
+
+// 场景层三条路径必须对**组件**同样成立，而不只是对裸 `NanNode2D`。这里刻意选两个会
+// 隐藏基类 `visual_part` 重载的类型：`Button` 自己声明了 label/container 两个重载，
+// `Text` 声明了 label 重载 —— 二者都没有 `using NanNode2D::visual_part`，所以
+// `property::detail::visual_part` 里那条 `derived_from<NanNode2D>` 的兜底重载是承重的。
+// 缺了它，下面这些断言会静默失效（概念不满足 ⇒ 整个 DSL 入口消失）。
+static_assert(widget::property::Animatable<widget::Button, decltype(widget::visual::opacity)>);
+static_assert(widget::property::Animatable<widget::Button, decltype(widget::visual::translate)>);
+static_assert(widget::property::Animatable<widget::Button, decltype(widget::visual::scale)>);
+static_assert(
+    widget::property::Animatable<widget::primitives::Text, decltype(widget::visual::opacity)>
+);
+static_assert(
+    widget::property::Animatable<widget::primitives::Text, decltype(widget::visual::scale)>
+);
+// opacity 是浮点路径，弹簧必须能配上去（这条曾经是假的：门面上少了 set_spring）。
+static_assert(widget::property::Springable<widget::Button, decltype(widget::visual::opacity)>);
+static_assert(!widget::property::Springable<widget::Button, decltype(widget::visual::scale)>);
 
 TEST_CASE("easing curves map 0->0 and 1->1", "[animation][easing]") {
     for (const auto easing:
@@ -162,6 +195,20 @@ TEST_CASE("color tween interpolates OKLCH hue over the shortest arc", "[animatio
     REQUIRE(mid.chroma == Catch::Approx(0.2F));
     REQUIRE(mid.hue == Catch::Approx(0.0F).margin(0.001F));
     REQUIRE(mid.alpha == Catch::Approx(0.6F));
+}
+
+TEST_CASE("point tween interpolates both axes", "[animation][tween][point]") {
+    animation::Tween<foundation::NanPoint> tween;
+    tween.start(
+        foundation::NanPoint(2.0F, -4.0F),
+        foundation::NanPoint(10.0F, 8.0F),
+        1.0F,
+        animation::Easing::linear
+    );
+
+    const auto midpoint = tween.tick(0.5F);
+    REQUIRE(midpoint.get_x() == Catch::Approx(6.0F));
+    REQUIRE(midpoint.get_y() == Catch::Approx(2.0F));
 }
 
 TEST_CASE(
@@ -285,6 +332,377 @@ TEST_CASE("animation host advances only active properties with manual dt", "[ani
     probe->clear_dirty(all_dirty_flags);
     advance(tree, 0.5F);
     REQUIRE_FALSE(probe->is_dirty(scene::DirtyFlags::paint));
+}
+
+TEST_CASE("node opacity transition stays paint-only", "[animation][node-presentation]") {
+    scene::NanSceneTree tree;
+    auto node = std::make_shared<scene::NanNode2D>();
+    tree.set_root(node);
+
+    auto opacity = node->visual_part(scene::visual::node).property(scene::visual::opacity_t {});
+    opacity.set_behavior(animation::Behavior<float>(1.0F, animation::Easing::linear));
+    node->clear_dirty(all_dirty_flags);
+    opacity.set(0.0F);
+
+    REQUIRE(*opacity.target() == Catch::Approx(0.0F));
+    REQUIRE(*opacity.value() == Catch::Approx(1.0F));
+    REQUIRE(tree.animation_host().active_count() == 1);
+    REQUIRE_FALSE(node->is_dirty(scene::layout_dirty_flags));
+
+    advance(tree, 0.5F);
+    REQUIRE(node->local_opacity() == Catch::Approx(0.5F));
+    REQUIRE(node->is_dirty(scene::DirtyFlags::paint));
+    REQUIRE_FALSE(node->is_dirty(scene::layout_dirty_flags));
+    REQUIRE_FALSE(node->is_dirty(scene::DirtyFlags::semantics));
+}
+
+TEST_CASE(
+    "presentation transform updates bounds hit testing and semantics without layout",
+    "[animation][node-presentation][hit-test]"
+) {
+    scene::NanSceneTree tree;
+    auto control = std::make_shared<scene::NanControl>();
+    tree.set_root(control);
+    control->layout_to(foundation::NanRect::from_xywh(10.0F, 20.0F, 100.0F, 40.0F));
+    (void)tree.update_semantics();
+    control->clear_dirty(all_dirty_flags);
+
+    control->set_transform_origin(scene::TransformOrigin::center);
+    control->set_presentation_translate(foundation::NanPoint(5.0F, 3.0F));
+    control->set_presentation_scale(foundation::NanPoint(2.0F, 2.0F));
+
+    const auto bounds = control->global_bounds();
+    REQUIRE(bounds.get_x() == Catch::Approx(-35.0F));
+    REQUIRE(bounds.get_y() == Catch::Approx(3.0F));
+    REQUIRE(bounds.get_width() == Catch::Approx(200.0F));
+    REQUIRE(bounds.get_height() == Catch::Approx(80.0F));
+    REQUIRE(tree.hit_test(foundation::NanPoint(-30.0F, 10.0F)) == control.get());
+    REQUIRE(tree.hit_test(foundation::NanPoint(-40.0F, 10.0F)) == nullptr);
+    REQUIRE(control->is_dirty(scene::DirtyFlags::paint));
+    REQUIRE(control->is_dirty(scene::DirtyFlags::semantics));
+    REQUIRE_FALSE(control->is_dirty(scene::layout_dirty_flags));
+    REQUIRE(tree.semantics_dirty());
+}
+
+TEST_CASE(
+    "presentation transform survives layout and origin follows the new size",
+    "[animation][node-presentation][layout]"
+) {
+    scene::NanControl control;
+    control.set_transform_origin(scene::TransformOrigin::bottom_right);
+    control.set_presentation_translate(foundation::NanPoint(4.0F, 6.0F));
+    control.set_presentation_scale(foundation::NanPoint(2.0F, 3.0F));
+
+    control.layout_to(foundation::NanRect::from_xywh(20.0F, 30.0F, 50.0F, 40.0F));
+    auto bounds = control.global_bounds();
+    REQUIRE(bounds.get_x() == Catch::Approx(-26.0F));
+    REQUIRE(bounds.get_y() == Catch::Approx(-44.0F));
+    REQUIRE(bounds.get_width() == Catch::Approx(100.0F));
+    REQUIRE(bounds.get_height() == Catch::Approx(120.0F));
+
+    control.layout_to(foundation::NanRect::from_xywh(40.0F, 50.0F, 100.0F, 20.0F));
+    bounds = control.global_bounds();
+    REQUIRE(bounds.get_x() == Catch::Approx(-56.0F));
+    REQUIRE(bounds.get_y() == Catch::Approx(16.0F));
+    REQUIRE(bounds.get_width() == Catch::Approx(200.0F));
+    REQUIRE(bounds.get_height() == Catch::Approx(60.0F));
+}
+
+TEST_CASE(
+    "a presentation transform animates bounds hit testing and the semantics snapshot in step",
+    "[animation][node-presentation][hit-test][mid-flight]"
+) {
+    scene::NanSceneTree tree;
+    auto control = std::make_shared<scene::NanControl>();
+    tree.set_root(control);
+    // 裸 NanControl 的 role 是 none、不会进语义树，给它一个角色才读得到快照。
+    control->set_semantics_override(semantics::Properties {.role = semantics::Role::button});
+    control->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 100.0F, 40.0F));
+
+    control->set_transform_origin(scene::TransformOrigin::top_left);
+    auto translate =
+        control->visual_part(scene::visual::node).property(scene::visual::translate_t {});
+    translate.set_behavior(
+        animation::Behavior<foundation::NanPoint>(1.0F, animation::Easing::linear)
+    );
+
+    const auto snapshot_bounds = [&tree, &control]() -> std::optional<foundation::NanRect> {
+        const auto* snapshot = tree.semantics_tree().find(control->semantics_id());
+        if (snapshot == nullptr) {
+            return std::nullopt;
+        }
+        return snapshot->bounds;
+    };
+
+    // 先把变换缓存与语义快照都**预热**出来。之后每一帧都先清掉脏位再推进，这样每个
+    // 断言看到的都必须是这一帧当场算出来的状态，而不是上一帧留下的缓存。
+    REQUIRE(control->global_bounds().get_x() == Catch::Approx(0.0F));
+    REQUIRE(tree.update_semantics());
+    const auto initial_bounds = snapshot_bounds();
+    REQUIRE(initial_bounds.has_value());
+    REQUIRE(initial_bounds->get_x() == Catch::Approx(0.0F));
+
+    translate.set(foundation::NanPoint(100.0F, 0.0F));
+    REQUIRE(translate.value()->get_x() == Catch::Approx(0.0F));
+
+    float previous = 0.0F;
+    for (int frame = 1; frame <= 30; ++frame) {
+        control->clear_dirty(all_dirty_flags);
+        advance(tree, 1.0F / 30.0F);
+
+        const float value = translate.value()->get_x();
+        // linear、1 秒、每帧 1/30 秒 ⇒ 第 n 帧正好是 100 * n / 30
+        REQUIRE(value == Catch::Approx(100.0F * static_cast<float>(frame) / 30.0F));
+        REQUIRE(value > previous);
+        previous = value;
+
+        // 缓存、bounds、命中、语义快照四者必须与动画值同步
+        REQUIRE(control->global_transform().position().get_x() == Catch::Approx(value));
+        REQUIRE(control->global_bounds().get_x() == Catch::Approx(value));
+        REQUIRE(tree.hit_test(foundation::NanPoint(value + 5.0F, 20.0F)) == control.get());
+        REQUIRE(tree.hit_test(foundation::NanPoint(value - 5.0F, 20.0F)) == nullptr);
+        REQUIRE(control->is_dirty(scene::DirtyFlags::transform));
+        REQUIRE(control->is_dirty(scene::DirtyFlags::semantics));
+        REQUIRE_FALSE(control->is_dirty(scene::layout_dirty_flags));
+
+        REQUIRE(tree.semantics_dirty());
+        REQUIRE(tree.update_semantics());
+        const auto bounds = snapshot_bounds();
+        REQUIRE(bounds.has_value());
+        REQUIRE(bounds->get_x() == Catch::Approx(value));
+    }
+
+    advance(tree, 1.0F / 30.0F);
+    REQUIRE(control->global_bounds().get_x() == Catch::Approx(100.0F));
+    REQUIRE(tree.animation_host().active_count() == 0);
+}
+
+TEST_CASE(
+    "transform and semantics dirty bits are independent",
+    "[animation][node-presentation][dirty]"
+) {
+    scene::NanSceneTree tree;
+    auto control = std::make_shared<scene::NanControl>();
+    tree.set_root(control);
+
+    // 纯语义变化：不该声称几何变了。
+    control->clear_dirty(all_dirty_flags);
+    control->mark_dirty(scene::DirtyFlags::semantics);
+    REQUIRE(control->is_dirty(scene::DirtyFlags::semantics));
+    REQUIRE_FALSE(control->is_dirty(scene::DirtyFlags::transform));
+    REQUIRE(tree.semantics_dirty());
+
+    // 几何变化：蕴含语义（bounds 变了），但反过来不成立。
+    control->clear_dirty(all_dirty_flags);
+    control->mark_dirty(scene::DirtyFlags::transform);
+    REQUIRE(control->is_dirty(scene::DirtyFlags::transform));
+    REQUIRE(control->is_dirty(scene::DirtyFlags::semantics));
+    REQUIRE_FALSE(control->is_dirty(scene::layout_dirty_flags));
+}
+
+TEST_CASE("semantic changes preserve a warm transform cache", "[animation][cache][dirty]") {
+    TransformCacheProbe control;
+    (void)control.global_transform();
+    const auto warm_queries = control.origin_queries;
+    REQUIRE(warm_queries > 0);
+    control.mark_dirty(scene::DirtyFlags::semantics);
+    (void)control.global_transform();
+    REQUIRE(control.origin_queries == warm_queries);
+
+    control.mark_dirty(scene::DirtyFlags::transform);
+    (void)control.global_transform();
+    REQUIRE(control.origin_queries > warm_queries);
+    const auto refreshed_queries = control.origin_queries;
+    // The bit remains set: every new mutation must still invalidate the cache.
+    control.mark_dirty(scene::DirtyFlags::transform);
+    (void)control.global_transform();
+    REQUIRE(control.origin_queries > refreshed_queries);
+}
+
+TEST_CASE(
+    "an opacity spring installed through the component DSL animates and stays paint-only",
+    "[animation][node-presentation][spring][widget]"
+) {
+    reactive::Graph graph;
+    reactive::ReactiveScope scope {graph};
+    theme::ThemeManager themes;
+    widget::BuildContext ui {graph, scope, themes};
+
+    scene::NanSceneTree tree;
+    tree.set_theme_manager(themes);
+
+    // 走组件作者真正写的那条路：builder 上装弹簧，之后再改值。
+    auto button = ui.make<widget::Button>("fade")
+                      .spring(widget::visual::opacity, animation::motion::spring(300.0F, 12.0F))
+                      .build();
+    tree.set_root(button);
+
+    // 组件自己声明了 visual_part 重载、隐藏了基类那个（`Button` 只有 label/container
+    // 两个候选），所以测试里读裸 endpoint 必须显式回到基类 —— 作者侧应当用
+    // `widget::property::write` / builder，那条路有 detail::visual_part 兜底。
+    const auto opacity_endpoint = [](widget::Button& node) -> decltype(auto) {
+        return static_cast<scene::NanNode2D&>(node)
+            .visual_part(scene::visual::node)
+            .property(scene::visual::opacity_t {});
+    };
+
+    // 构建出来的节点带着初始的 layout/paint 脏位（还没跑过一次布局），先把基线清掉，
+    // 后面才谈得上"动画有没有让它重新变脏"。
+    button->clear_dirty(all_dirty_flags);
+
+    auto opacity = opacity_endpoint(*button);
+    REQUIRE(button->local_opacity() == Catch::Approx(1.0F));
+    REQUIRE(tree.animation_host().active_count() == 0);
+
+    // 第一次设目标就该动画，而不是跳过去（opacity 的 endpoint 带初值，所以弹簧立即生效）。
+    widget::property::write(*button, widget::visual::opacity, 0.0F);
+    REQUIRE(*opacity.value() == Catch::Approx(1.0F));
+    REQUIRE(*opacity.target() == Catch::Approx(0.0F));
+    REQUIRE(tree.animation_host().active_count() == 1);
+
+    // 常规帧率验证组件路径；独立的 spring 测试覆盖卡顿与不同帧分割。
+    for (int frame = 0; frame < 6; ++frame) {
+        advance(tree, 1.0F / 60.0F);
+    }
+    const float descending = *opacity.value();
+    REQUIRE(descending < 1.0F);
+    REQUIRE(descending > 0.0F);
+    REQUIRE(button->is_dirty(scene::DirtyFlags::paint));
+    REQUIRE_FALSE(button->is_dirty(scene::layout_dirty_flags));
+
+    // 中途改目标：继续沿同一条轨道推进，不重置、也不新增轨道。
+    widget::property::write(*button, widget::visual::opacity, 1.0F);
+    REQUIRE(*opacity.value() == Catch::Approx(descending));
+    REQUIRE(*opacity.target() == Catch::Approx(1.0F));
+    REQUIRE(tree.animation_host().active_count() == 1);
+
+    for (int frame = 0; frame < 3; ++frame) {
+        advance(tree, 1.0F / 60.0F);
+        REQUIRE_FALSE(button->is_dirty(scene::layout_dirty_flags));
+    }
+    REQUIRE(*opacity.value() != Catch::Approx(descending));
+
+    for (int frame = 0; frame < 240; ++frame) {
+        advance(tree, 1.0F / 60.0F);
+        REQUIRE_FALSE(button->is_dirty(scene::layout_dirty_flags));
+    }
+    REQUIRE(*opacity.value() == Catch::Approx(1.0F).margin(0.01F));
+    REQUIRE(tree.animation_host().active_count() == 0);
+}
+
+TEST_CASE(
+    "an underdamped opacity spring overshoots but presentation stays inside [0,1]",
+    "[animation][node-presentation][spring][clamp]"
+) {
+    reactive::Graph graph;
+    reactive::ReactiveScope scope {graph};
+    theme::ThemeManager themes;
+    widget::BuildContext ui {graph, scope, themes};
+
+    scene::NanSceneTree tree;
+    tree.set_theme_manager(themes);
+
+    // ζ = 12 / (2 * sqrt(300)) ≈ 0.35 ⇒ 过冲约 30%，足够越过 [0,1] 两端。
+    auto button = ui.make<widget::Button>("pulse")
+                      .spring(widget::visual::opacity, animation::motion::spring(300.0F, 12.0F))
+                      .build();
+    tree.set_root(button);
+    const auto opacity_endpoint = [](widget::Button& node) -> decltype(auto) {
+        return static_cast<scene::NanNode2D&>(node)
+            .visual_part(scene::visual::node)
+            .property(scene::visual::opacity_t {});
+    };
+    button->clear_dirty(all_dirty_flags);
+    auto opacity = opacity_endpoint(*button);
+
+    const auto settle_to = [&](const float target) {
+        widget::property::write(*button, widget::visual::opacity, target);
+        for (int frame = 0; frame < 240; ++frame) {
+            advance(tree, 1.0F / 60.0F);
+        }
+    };
+
+    settle_to(0.0F);
+    REQUIRE(*opacity.value() == Catch::Approx(0.0F).margin(0.01F));
+
+    // 0 → 1：物理值应当冲过 1，呈现值必须停在 1。
+    widget::property::write(*button, widget::visual::opacity, 1.0F);
+    float max_raw = 0.0F;
+    float max_presented = 0.0F;
+    for (int frame = 0; frame < 240; ++frame) {
+        advance(tree, 1.0F / 60.0F);
+        max_raw = std::max(max_raw, *opacity.value());
+        max_presented = std::max(max_presented, button->local_opacity());
+    }
+    REQUIRE(max_raw > 1.0F); // 前提：欠阻尼弹簧确实过冲了，否则这条测试没验证到东西
+    REQUIRE(max_presented <= 1.0F); // 呈现仍然守 [0,1] 契约
+    REQUIRE(*opacity.value() == Catch::Approx(1.0F).margin(0.01F));
+
+    // 1 → 0：同理，物理值会冲到 0 以下，呈现值不能是负数。
+    widget::property::write(*button, widget::visual::opacity, 0.0F);
+    float min_raw = 1.0F;
+    float min_presented = 1.0F;
+    for (int frame = 0; frame < 240; ++frame) {
+        advance(tree, 1.0F / 60.0F);
+        min_raw = std::min(min_raw, *opacity.value());
+        min_presented = std::min(min_presented, button->local_opacity());
+    }
+    REQUIRE(min_raw < 0.0F);
+    REQUIRE(min_presented >= 0.0F);
+}
+
+TEST_CASE(
+    "moving a parent invalidates descendant geometry caches",
+    "[animation][node-presentation][cache][descendant]"
+) {
+    scene::NanSceneTree tree;
+    auto parent = std::make_shared<scene::NanControl>();
+    auto child = std::make_shared<scene::NanControl>();
+    tree.set_root(parent);
+    parent->add_child(child);
+
+    parent->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 100.0F, 40.0F));
+    child->layout_to(foundation::NanRect::from_xywh(10.0F, 10.0F, 20.0F, 20.0F));
+
+    // 先把父子的缓存都预热出来。
+    REQUIRE(parent->global_bounds().get_x() == Catch::Approx(0.0F));
+    REQUIRE(child->global_bounds().get_x() == Catch::Approx(10.0F));
+
+    // 父节点只动表现层 —— 子节点自己没变，但它的世界坐标变了，缓存必须跟着失效。
+    parent->set_presentation_translate(foundation::NanPoint(5.0F, 0.0F));
+    REQUIRE(parent->global_bounds().get_x() == Catch::Approx(5.0F));
+    REQUIRE(child->global_bounds().get_x() == Catch::Approx(15.0F));
+    REQUIRE(child->is_dirty(scene::DirtyFlags::transform));
+    REQUIRE(tree.hit_test(foundation::NanPoint(20.0F, 20.0F)) == child.get());
+
+    // 改父节点尺寸（位置不动）：缩放中心按父节点尺寸解析，父与子的缓存都必须重算。
+    parent->set_presentation_translate(foundation::NanPoint(0.0F, 0.0F));
+    parent->set_transform_origin(scene::TransformOrigin::center);
+    parent->set_presentation_scale(foundation::NanPoint(2.0F, 2.0F));
+    REQUIRE(parent->global_bounds().get_x() == Catch::Approx(-50.0F));
+    REQUIRE(child->global_bounds().get_x() == Catch::Approx(-30.0F));
+
+    parent->set_size(foundation::NanSize(50.0F, 40.0F));
+    REQUIRE(parent->global_bounds().get_x() == Catch::Approx(-25.0F));
+    REQUIRE(parent->global_bounds().get_width() == Catch::Approx(100.0F));
+    REQUIRE(child->global_bounds().get_x() == Catch::Approx(-5.0F));
+}
+
+TEST_CASE(
+    "a pure size change re-resolves the presentation origin",
+    "[animation][node-presentation][layout][cache]"
+) {
+    scene::NanControl control;
+    control.set_transform_origin(scene::TransformOrigin::center);
+    control.set_presentation_scale(foundation::NanPoint(2.0F, 2.0F));
+
+    control.layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 100.0F, 40.0F));
+    // 先让 global transform 的缓存真正算出来：若换尺寸时不失效缓存，下面会停在旧值上。
+    REQUIRE(control.global_bounds().get_x() == Catch::Approx(-50.0F));
+
+    control.set_size(foundation::NanSize(200.0F, 40.0F));
+    REQUIRE(control.global_bounds().get_x() == Catch::Approx(-100.0F));
+    REQUIRE(control.global_bounds().get_width() == Catch::Approx(400.0F));
 }
 
 TEST_CASE("animation host retargets one property without duplicate tracks", "[animation][host]") {
@@ -925,6 +1343,95 @@ TEST_CASE("group is cancelled when its owner exits the tree", "[animation][group
     REQUIRE(tree.animation_host().active_count() == 0);
     REQUIRE(probe->a.value() == Catch::Approx(10.0F));
     REQUIRE(probe->c.value() == Catch::Approx(30.0F));
+}
+
+TEST_CASE(
+    "spring consumes a hitch consistently across damping regimes",
+    "[animation][spring][hitch]"
+) {
+    for (const float damping: {0.0F, 12.0F, 39.999F, 40.0F, 40.001F, 100.0F}) {
+        CAPTURE(damping);
+        motion::Spring<double> whole;
+        motion::Spring<double> split;
+        const motion::SpringSpec spec(400.0F, damping);
+        whole.start(1.0, 0.0, spec);
+        split.start(1.0, 0.0, spec);
+        whole.tick(0.125F);
+        for (int frame = 0; frame < 16; ++frame) {
+            split.tick(0.0078125F);
+        }
+        REQUIRE(std::isfinite(whole.value()));
+        REQUIRE(whole.value() == Catch::Approx(split.value()).margin(1e-10));
+        REQUIRE(std::abs(whole.value()) <= 1.0);
+        // Compare again after retargeting: this also checks the retained velocity.
+        whole.set_target(0.5);
+        split.set_target(0.5);
+        whole.tick(0.0625F);
+        split.tick(0.0625F);
+        REQUIRE(whole.value() == Catch::Approx(split.value()).margin(1e-10));
+        if (damping > 0.0F) {
+            for (int frame = 0; frame < 600; ++frame) {
+                whole.tick(1.0F / 60.0F);
+            }
+            REQUIRE(whole.is_finished());
+            REQUIRE(whole.value() == 0.5);
+        }
+    }
+}
+
+TEST_CASE("spring matches critical and undamped analytical motion", "[animation][spring][hitch]") {
+    motion::Spring<double> critical;
+    critical.start(1.0, 0.0, motion::SpringSpec(400.0F, 40.0F));
+    REQUIRE(critical.tick(0.125F) == Catch::Approx(3.5 * std::exp(-2.5)).margin(1e-12));
+    motion::Spring<double> undamped;
+    undamped.start(1.0, 0.0, motion::SpringSpec(400.0F, 0.0F));
+    REQUIRE(undamped.tick(0.125F) == Catch::Approx(std::cos(2.5)).margin(1e-12));
+}
+
+TEST_CASE(
+    "spring tolerates stiff parameters and rejects nonfinite time",
+    "[animation][spring][hitch]"
+) {
+    for (const auto spec:
+         {motion::SpringSpec(1e8F, 200.0F, 0.001F),
+          motion::SpringSpec(1.0F, 1e20F, 0.001F),
+          motion::SpringSpec(300.0F, 12.0F)})
+    {
+        motion::Spring<double> spring;
+        spring.start(1.0, 0.0, spec);
+        for (const float dt:
+             {-1.0F,
+              0.0F,
+              std::numeric_limits<float>::quiet_NaN(),
+              std::numeric_limits<float>::infinity()})
+        {
+            REQUIRE(spring.tick(dt) == 1.0);
+        }
+        for (const float dt: {0.1F, 0.5F, 2.0F, std::numeric_limits<float>::max()}) {
+            REQUIRE(std::isfinite(spring.tick(dt)));
+            REQUIRE(std::abs(spring.value()) <= 1.0);
+        }
+        REQUIRE(spring.is_finished());
+        REQUIRE(spring.value() == 0.0);
+    }
+}
+
+TEST_CASE("a stiff float spring retains finite internal velocity", "[animation][spring][hitch]") {
+    motion::Spring<float> spring;
+    spring.start(
+        1.0F,
+        0.0F,
+        motion::SpringSpec(
+            std::numeric_limits<float>::max(),
+            0.0F,
+            std::numeric_limits<float>::denorm_min()
+        )
+    );
+    for (int step = 0; step < 8; ++step) {
+        const auto value = spring.tick(1e-40F);
+        REQUIRE(std::isfinite(value));
+        REQUIRE(std::abs(value) <= 1.00001F);
+    }
 }
 
 TEST_CASE("spring overshoots and settles at target", "[animation][spring]") {

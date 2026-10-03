@@ -32,6 +32,12 @@ module_fundation = files(
     'foundation/json.hpp',
     'foundation/nan_logger.hpp',
     'foundation/nan_logger.cpp',
+    'foundation/motion/easing.hpp',
+    'foundation/motion/behavior.hpp',
+    'foundation/motion/spring.hpp',
+    'foundation/motion/tween.hpp',
+    'foundation/motion/keyframes.hpp',
+    'foundation/motion/animated_property.hpp',
 )
 
 module_reactive = files(
@@ -80,6 +86,14 @@ module_scene = files(
     'scene/canvas_layer.hpp',
     'scene/canvas_layer.cpp',
     'scene/frame_scheduler.hpp',
+    'scene/animation_group.hpp',
+    'scene/animation_group.cpp',
+    'scene/animation_host.hpp',
+    'scene/animation_host.cpp',
+    'scene/property_endpoint.hpp',
+    'scene/visual_property.hpp',
+    'scene/node_presentation.hpp',
+    'scene/node_presentation.cpp',
     'scene/clipboard.hpp',
     'scene/input_event.hpp',
     'scene/node.hpp',
@@ -286,12 +300,10 @@ module_widget = files(
 
 module_animation = files(
     'animation/animation_host.hpp',
-    'animation/animation_host.cpp',
     'animation/animated_property.hpp',
     'animation/behavior.hpp',
     'animation/easing.hpp',
     'animation/group.hpp',
-    'animation/group.cpp',
     'animation/keyframes.hpp',
     'animation/motion.hpp',
     'animation/property_endpoint.hpp',

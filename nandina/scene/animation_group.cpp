@@ -1,23 +1,23 @@
 //
-// animation/group - parallel / sequential / stagger composition implementation.
+// scene/animation_group - parallel / sequential / stagger composition implementation.
 //
 
-#include "group.hpp"
+#include "animation_group.hpp"
 
 #include <utility>
 
-namespace nandina::animation
+namespace nandina::scene
 {
-    auto Group::parallel(std::vector<Clip> clips) -> Group {
+    auto AnimationGroup::parallel(std::vector<Clip> clips) -> AnimationGroup {
         for (auto& clip: clips) {
             clip.ready = [](float) { return true; };
         }
-        return Group(std::move(clips));
+        return AnimationGroup(std::move(clips));
     }
 
-    auto Group::sequential(std::vector<Clip> clips) -> Group {
+    auto AnimationGroup::sequential(std::vector<Clip> clips) -> AnimationGroup {
         if (clips.empty()) {
-            return Group {};
+            return AnimationGroup {};
         }
         clips.front().ready = [](float) { return true; };
         for (std::size_t i = 1; i < clips.size(); ++i) {
@@ -26,20 +26,20 @@ namespace nandina::animation
                 return previous->started && !previous->animating();
             };
         }
-        return Group(std::move(clips));
+        return AnimationGroup(std::move(clips));
     }
 
-    auto Group::stagger(std::vector<Clip> clips, const float interval) -> Group {
+    auto AnimationGroup::stagger(std::vector<Clip> clips, const float interval) -> AnimationGroup {
         float delay = 0.0F;
         for (auto& clip: clips) {
             const float at = delay;
             clip.ready = [at](const float elapsed) { return elapsed >= at; };
             delay += interval;
         }
-        return Group(std::move(clips));
+        return AnimationGroup(std::move(clips));
     }
 
-    void Group::advance(const float dt) {
+    void AnimationGroup::advance(const float dt) {
         elapsed_ += dt;
         for (auto& clip: clips_) {
             if (!clip.started && clip.ready(elapsed_)) {
@@ -57,7 +57,7 @@ namespace nandina::animation
         }
     }
 
-    void Group::finish() {
+    void AnimationGroup::finish() {
         for (auto& clip: clips_) {
             if (!clip.started) {
                 clip.start();
@@ -68,7 +68,7 @@ namespace nandina::animation
         }
     }
 
-    auto Group::finished() const -> bool {
+    auto AnimationGroup::finished() const -> bool {
         for (const auto& clip: clips_) {
             if (!clip.started) {
                 return false;
@@ -79,4 +79,4 @@ namespace nandina::animation
         }
         return true;
     }
-} // namespace nandina::animation
+} // namespace nandina::scene

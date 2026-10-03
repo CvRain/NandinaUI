@@ -37,10 +37,15 @@ namespace
         const std::shared_ptr<widget::GestureArea>& item,
         widget::DragController& controller
     ) {
-        item->set_on_drag_start([&controller, item](const scene::MouseButtonEvent& e) {
-            const auto origin = item->global_bounds().get_top_left();
+        item->set_on_drag_start([&controller,
+                                 weak = std::weak_ptr(item)](const scene::MouseButtonEvent& e) {
+            const auto dragged = weak.lock();
+            if (dragged == nullptr) {
+                return;
+            }
+            const auto origin = dragged->global_bounds().get_top_left();
             (void)controller.start(
-                item,
+                dragged,
                 nullptr,
                 foundation::NanPoint(
                     e.screen_pos().get_x() - origin.get_x(),
@@ -132,6 +137,18 @@ namespace
         tree.flush_tree_mutations();
     }
 } // namespace
+
+TEST_CASE("drag callbacks do not retain their owning item", "[widget][drag][lifetime]") {
+    widget::DragController controller;
+    std::weak_ptr<widget::GestureArea> weak;
+    {
+        auto item = widget::GestureArea::create();
+        weak = item;
+        wire_drag(item, controller);
+        REQUIRE_FALSE(weak.expired());
+    }
+    REQUIRE(weak.expired());
+}
 
 TEST_CASE("dragging a whole item round-trips between zones", "[widget][drag][roundtrip]") {
     auto list_a = make_zone("List A", 3);

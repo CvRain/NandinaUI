@@ -8,20 +8,29 @@ NandinaUI 按模块组织，模块之间的方向决定了改动会扩散到哪�
 
 | 层 | 模块 | 职责 |
 | --- | --- | --- |
-| 基础层 | `foundation` | 几何、颜色、色彩空间、变换、UTF-8、JSON、日志 |
+| 基础层 | `foundation` | 几何、颜色、色彩空间、变换、纯值 motion、UTF-8、JSON、日志 |
 | | `reactive` | 信号图与依赖追踪，纯逻辑，不接触渲染与场景 |
 | | `resource` | 资源清单、多后端与运行时管理 |
 | | `physics2d` | 可选的 Box2D 物理桥（默认关闭） |
 | 主题层 | `theme` | 设计令牌、内置主题、样式文档 |
 | 呈现层 | `render` | 渲染设备、绘制上下文、纹理缓存与裁剪栈 |
 | | `text` | 字体加载、整形、字形图集与文本绘制 |
-| | `scene` | 场景树、节点、控件、画布层与帧调度 |
-| | `animation` | Tween / Spring / 关键帧与动画宿主 |
+| | `scene` | 场景树、节点、控件、画布层、动画宿主与帧调度 |
+| | `animation` | motion 作者 DSL 与旧公开名称的兼容入口 |
 | | `semantics` | 无障碍语义树 |
 | 控件层 | `widget` | 布局原语、primitives 与组件库 |
 | 应用层 | `app` | 窗口、Router / Page、异步作用域与入口 |
 
 依赖只允许沿这张表**向下**：上层可以使用下层的类型，下层不得反向引用上层。同一层之间的依赖应当是必要的、单向的。
+
+> **`animation` 现在只剩两样东西**：`motion.hpp`（声明式动效糖：`motion::tween(...)` /
+> `motion::spring()`）与一批纯 `using` 别名（`animation::Behavior` → `motion::Behavior` 等）。
+> 值实现已下移到 `foundation/motion/`，调度已下移到 `scene/`；两者之间的环已经消失。
+>
+> 别名本身不会漂移（同一个类型），但它是**两个名字指向同一个概念**。收口方向（未做）：
+> 新代码与主要行为测试改用 `motion::` / `scene::`；旧入口只留一条测试证明它仍能**单独编译**
+> （除了类型别名断言，还要独立 include 旧头文件）；`nandina::motion` 与
+> `nandina::animation::motion` 这两个同名尾缀的命名空间应当合并成一个，但旧词法入口保留。
 
 ## 约束
 
@@ -40,7 +49,6 @@ NandinaUI 按模块组织，模块之间的方向决定了改动会扩散到哪�
 
 | 偏离 | 位置 | 收口方向 |
 | --- | --- | --- |
-| `animation` 与 `scene` 互相引用 | `animation/animation_host.hpp`、`group.hpp` 依赖 `scene::NanControl`；`scene/node.cpp`、`scene_tree.cpp` 依赖 `animation::AnimationHost`（公开头文件里只有前向声明，这条边目前**只在 `.cpp` 层**） | `SceneTree` 需要每帧推进动画，所以它持有动画宿主；`AnimationHost` / `Group` 又需要操作场景节点。收口方案已细化为四个正交决策（值存储 / 宿主所有权 / 调度接口 / 宿主粒度），**待决**，见 [节点表现层](node_presentation.md) §5.0.1。 |
 | `text` 引用 `widget::primitives` | `text/glyph_run_renderer.hpp`、`text/harfbuzz_text_backend.hpp` 引用 `widget/primitives/text_layout*` | `TextPipeline`、`ITextLayoutBackend`、`ITextLayoutRenderer` 描述的是文本布局协议，不是组件原语；应下移到 `text`（渲染器部分可留在 `render`）。 |
 | `scene` 引用 `widget::primitives` | `scene/scene_tree.hpp` 使用 `widget::primitives::TextPipeline` | 与上一条同源：文本管线类型下移后，这条边自然消失。 |
 | `theme` 引用 `text` | `theme/style_context.hpp`、`style_document.hpp` 引用 `text/font_family.hpp` | `theme` 只需要字体的**描述**（`FontRequest` 等），不需要文本引擎；把字体描述类型下移到 `foundation`，或在 `theme` 内联一份等价类型。 |

@@ -29,6 +29,10 @@ namespace nandina::scene
         layout = 1U << 2U,
         paint = 1U << 3U,
         semantics = 1U << 4U,
+        /// 节点的**有效变换**变了（local transform、表现层 translate/scale、或缩放中心），
+        /// 因此几何缓存必须失效，语义 bounds 也需要重建。它和 `semantics` 正交：
+        /// 纯语义变化（名称、描述、角色）不该让整棵子树的变换重算。
+        transform = 1U << 5U,
     };
 
     [[nodiscard]] constexpr auto operator|(DirtyFlags lhs, DirtyFlags rhs) -> DirtyFlags {

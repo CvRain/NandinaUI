@@ -3,9 +3,9 @@
 //
 
 #include "node.hpp"
-#include "../animation/animation_host.hpp"
 #include "../render/draw_context.hpp"
 #include "../theme/theme_manager.hpp"
+#include "animation_host.hpp"
 #include "control.hpp"
 #include "node2d.hpp"
 #include "scene_tree.hpp"
@@ -17,7 +17,7 @@
 #include <string>
 #include <vector>
 
-    namespace nandina::scene
+namespace nandina::scene
 {
 
     namespace
@@ -179,8 +179,7 @@
         if (child->is_ancestor_of(*this)) {
             throw std::logic_error(
                 std::string("NanNode::reparent: would create a cycle (child='")
-                + std::string(child->name()) + "' is an ancestor of '" + std::string(name())
-                + "')"
+                + std::string(child->name()) + "' is an ancestor of '" + std::string(name()) + "')"
             );
         }
 

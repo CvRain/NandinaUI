@@ -1,7 +1,7 @@
 # 节点表现层
 
-> 本文是**设计**，不是现状。它规定"节点怎么在父容器里定位、怎么被画出来、哪些属性可以动画"
-> 这三件事的统一形状。要改这里的 API 之前先改本文。
+> 本文同时记录设计与落地状态。§5 的 L2 节点表现路径已经实现；anchors、shape 与盒模型
+> 仍是规划。要改这里的 API 之前先改本文。
 >
 > 起因是三条使用抱怨：悬浮动画卡顿、`padding` 没有 margin、想在 Label 底下画一条下划线却
 > 很难实现且会打破现约束。追下去发现它们**共用同一个前置**：节点的可定位、可动画表面太窄。
@@ -269,66 +269,37 @@ layout/base transform × presentation translate × origin × presentation scale 
 实现约束写进代码注释，并进布局抵抗测试：**布局 → 设 origin → 再用不同尺寸布局一次 →
 缩放中心跟着新尺寸走**。
 
-### 5.0.1 待决：动画模块边界（`scene ↔ animation`）
+### 5.0.1 已落地：动画模块边界（`scene → foundation`）
 
 L2 逼出的真正决策。**这里不是"三选一"，而是三个正交决策加一个粒度决策**。
 把它们混成一个选项，会导致"做完 A 环还在"：
 
-| 决策 | 问题 | 选项 |
+| 决策 | 问题 | 结论 |
 | --- | --- | --- |
-| **A 值存储** | 动画值与策略（`Easing` / `Behavior` / `SpringSpec` / `Keyframes` / `AnimatedProperty`）放哪一层 | **A1** 下移到只依赖 `foundation` 的低层 / A2 留在 `animation` |
-| **B 宿主所有权** | `AnimationHost` 由谁拥有、由谁每帧推进 | **B1** 下移进 `scene`，作为帧调度设施仍由 `SceneTree` 拥有 / B2 上移到窗口或 `app` |
-| **C 调度接口** | `scene` 与调度器之间用什么接口通信 | **C1** 类型擦除"**推进动作**"（非模板 `tick(dt)` / `finish()`）/ C2 类型擦除**插值算法** |
-| **D 宿主粒度** | 宿主接受什么 owner | **D1** 泛化到 `NanNode2D` / D2 维持 `NanControl&` |
+| **A 值存储** | 动画值与策略放哪一层 | **A1**：纯值设施下移到 `foundation::motion`；`animation::*` 保留兼容别名 |
+| **B 宿主所有权** | `AnimationHost` 由谁拥有、由谁每帧推进 | **B1**：宿主与 Group 下移到 `scene`，仍由 `SceneTree` 拥有 |
+| **C 调度接口** | 调度器如何容纳不同值类型与插值策略 | **C1**：只类型擦除 `tick(dt)` / `finish()` 推进动作 |
+| **D 宿主粒度** | 宿主接受什么 owner | **D1**：脏标记设施上提，owner 泛化为全部 `NanNode2D` |
 
-#### 更正一：A 单独**不能**消掉这个环
-
-只做 A 之后，下面三条仍然成立：
-
-- `NanSceneTree` 仍持有并推进 `AnimationHost`（`unique_ptr<AnimationHost> animation_host_`，
-  `scene_tree.hpp:275`；`advance_animations` → `animation_host_->advance(dt)`）；
-- `AnimationHost::set_target` 仍依赖 `scene::NanControl`（`animation_host.hpp:37`，
-  用到 `owner.get_tree()` / `weak_from_this()` / `mark_dirty()`）；
-- 节点属性变更仍要向宿主注册轨道。
-
-A 解决的是"**节点可以存动画值**"，没有解决"**谁调度这些值**"。有效的组合是 **A + B**
-（或 A + C），或者按 B1 直接把 `AnimationHost` 本身下移为 `scene` 的帧调度设施。
-
-> 现状的依赖方向值得记准：`scene → animation` 只出现在 `scene_tree.cpp`
-> （`#include "../animation/animation_host.hpp"`），公开头文件里只有前向声明。
-> 所以"环"在头文件层面看不出来 —— 验收要查的是**两层源码的 include**，不能只看 `.hpp`。
-
-#### 更正二：C 不必退化成"只有 tween"
-
-最小推进接口可以类型擦除**推进动作**，而不是类型擦除**插值算法**：
+这四条必须一起看：只下移值类型并不能消除调度环，宿主与 Group 也必须归 `scene`；同时
+owner 泛化到 `NanNode2D`，否则“任何节点可动画”的公开承诺仍不成立。C1 擦除的是推进动作：
 
 ```cpp
 TickResult tick(float dt);
 void finish();
 ```
 
-实现内部仍是同一份 `AnimatedProperty<T>`，因此 tween / spring / keyframes 自然都支持。
-而且 `AnimationHost::Track` 现在就已经用 `std::function` 做了同类擦除，
-这条路径**不引入新的成本模型**，也不会分裂出第二套机制。
+实现内部仍是同一份 `AnimatedProperty<T>`，所以 tween / spring / keyframes 没有分裂成第二套
+机制。`DirtyFlags` 存储与传播也已从 `NanControl` 上提到 `NanNode2D`。
 
-#### 更正三：D 决定"任何节点"这句承诺是否成立
-
-文档说这些路径适用于**所有** `NanNode2D`，但宿主只接受 `NanControl&`。
-**倾向 D1**，否则"标签下移到 `scene`"的收益会被"实际只有控件能动画"削掉一半。
-
-这不是改一个签名就能完事：`mark_dirty` 目前声明在 `NanControl`
-（`scene/control.hpp:140`），`NanNode2D` 上没有。D1 要把脏标记设施上提到 `NanNode2D`
-（`get_tree()` 已在 `NanNode` 上、`enable_shared_from_this` 也在 `NanNode`，这两条已就位）。
-这本身是合理的 —— 脏标记是**场景树**的概念，不是控件的概念。
-
-#### 推荐组合
+#### 已采用的组合
 
 **A1 + B1 + C1（+ D1）**：
 
 ```text
-foundation: Easing / Behavior / SpringSpec / Keyframes / AnimatedProperty / TickResult（推进动作的擦除点）
-scene:      AnimationHost（帧调度设施，SceneTree 拥有与推进）+ 节点上的动画值存储
-animation:  作者侧句柄与绑定（PropertyEndpoint / .animate(...) DSL），依赖 scene
+foundation: motion 值与策略（Easing / Behavior / SpringSpec / Keyframes / AnimatedProperty）
+scene:      AnimationHost / AnimationGroup / PropertyEndpoint + 节点表现值存储
+animation:  兼容入口与作者侧 motion DSL，单向依赖 scene / foundation
 ```
 
 依赖方向变成单边 `animation → scene → foundation`，`tree.advance_animations(dt)` 的
@@ -342,67 +313,107 @@ animation:  作者侧句柄与绑定（PropertyEndpoint / .animate(...) DSL）�
 否则 `scene → animation` 依然存在，验收条件不成立。留给动手时再定的是
 "作者侧句柄怎么组织"，不是 `Group` 的归属。
 
-**这一条待作者决定后，才动第 1 步以后的代码。**
+源码验收已满足：`nandina/scene/` 内没有指向 `animation/` 的 include。
 
-### 5.0.2 值类型支持矩阵（现状）
-
-下移 `AnimatedProperty` 之前要先补齐值类型 —— 三条 L2 路径的值类型不是都能 tween：
+### 5.0.2 值类型支持矩阵（已落地）
 
 | 类型 | Tween | Spring | Keyframes |
 | --- | --- | --- | --- |
 | `float` | 是 | 是 | 是 |
-| `NanPoint` | **需补一条 `lerp` 重载** | v1 否 | 依赖同一条 `lerp` |
+| `NanPoint` | 是（已补 `lerp`） | v1 否 | 是（同一条 `lerp`） |
 | `NanColor` | 已支持（OKLCH 最短弧） | 否 | 已支持（同样走 `lerp`） |
 
-原因与代价：
+补 `NanPoint` 那条 `lerp` 时踩到的坑值得留着：`motion::lerp<T>` 的约束是
+`std::is_arithmetic_v<T>`，另有一个 `NanColor` 重载，而 `NanPoint::lerp` 是**静态成员**
+（`geometry.hpp:97`）—— 成员函数不参与 ADL，所以名字在 `Tween<NanPoint>::tick()` 里不可见。
+**缺的不是数学，是名字可见性**：现在 `motion/tween.hpp` 里有一条转调静态成员的重载。
+`NanInsets::lerp` 与 `NanTransform2D::lerp` 同样是静态成员，将来要动画时走同一条路。
 
-- `animation::lerp<T>` 的约束是 `std::is_arithmetic_v<T>`（`tween.hpp:24`），另有一个
-  `NanColor` 重载。`NanPoint` 走不进去：`NanPoint::lerp` 是**静态成员**
-  （`geometry.hpp:97`），而成员函数不参与 ADL，所以名字在 `Tween<NanPoint>::tick()` 里不可见。
-- 缺的不是数学，是**名字可见性**：加一条转调静态成员的重载即可。`NanInsets::lerp` 与
-  `NanTransform2D::lerp` 同样是静态成员，将来要动画时走同一条路。
-- Spring 的限制在 `AnimatedProperty` 侧（`set_spring` 约束 `is_floating_point_v<T>`，
-  `animated_property.hpp:108`），与 `lerp` 无关 —— 分轴 spring 是 v2 的事，不是这次的前置。
+Spring 只给浮点值是 `AnimatedProperty` 侧的限制（`set_spring` 约束
+`is_floating_point_v<T>`），与 `lerp` 无关 —— 分轴 spring 是 v2 的事。
 
-**第 0 步要把这条 `lerp` 重载连同它的测试一起做完**，否则 `visual::translate` /
-`visual::scale` 会在 `Tween<NanPoint>::tick()` 实例化时炸在模板深处（而且报错信息很难读）。
+**弹簧推进契约**：`foundation/motion::Spring<T>` 使用目标固定期间的阻尼振子解析解，
+分别处理欠阻尼、临界阻尼和过阻尼。API 与状态所有权不变；改目标保留速度，
+`finish()` 与收敛阈值不变。非正或非有限 `dt` 不推进；有限正 `dt` 全量消费，
+不截短时间、不进行无界子步循环。中间运算与内部速度使用 `long double`（高刚度时，
+有限位移对应的速度可能超出 `float` 范围），过阻尼采用负实根的
+指数形式，避免 `cosh` 溢出及慢根相减消失。测试覆盖帧分割一致性、卡顿后恢复、
+高刚度/低质量、零阻尼与临界点两侧。
 
-### 5.0.3 要补的三条 L2 路径
+旧单步欧拉在刚度 300、`dt = 0.1s` 时可从 1 冲到 -2；呈现钳制只能限制有限值的
+显示范围，不能修复积分稳定性、NaN 或保证收敛，不能作为积分器的保护措施。
 
-现状只有 6 条（`label.color/font_size` + `container.fill/border_color/border_width/radius`）。
-按第 1 节的分级补齐 **L2**：
+### 5.0.3 已落地的三条 L2 路径
+
+原有 6 条（`label.color/font_size` + `container.fill/border_color/border_width/radius`），
+按第 1 节的分级补上 **L2**：
 
 | 新路径 | 值类型 | 说明 |
 | --- | --- | --- |
-| `visual::opacity` | `float` | 任何节点。底层 `NanNode2D::set_local_opacity` 已存在，只是不可动画 |
+| `visual::opacity` | `float` | 任何节点。tween / spring 都支持；**呈现值钳制在 `[0,1]`**，见下 |
 | `visual::translate` | `NanPoint` | 相对布局位置的偏移，不改布局 |
 | `visual::scale` | `NanPoint` | 分轴缩放。缩放中心由**静态**配置 `.transform_origin(...)`（九宫格枚举，同 QML `transformOrigin`）给出，它不是动画 Path（见 §5.0 ④） |
 
-`scale` 与 `translate` 不触发重排，但**会改变 `global_bounds()`** —— 命中测试要跟着走
-（这是期望行为，不是副作用）。`font_size` 留在 L3/L4，不推荐用于动效。
+`scale` 与 `translate` 不触发重排，但**会改变 `global_bounds()`** —— 命中测试、语义 bounds
+与坐标转换都要跟着走（这是期望行为，不是副作用）。`font_size` 留在 L3/L4，不推荐用于动效。
+
+**opacity 的超调契约**：`set()` 钳制的是**目标值**，弹簧的中间值不受钳制（欠阻尼弹簧本来
+就会过冲）。钳制发生在**呈现边界** —— `NodePresentation::opacity()`（进而
+`NanNode2D::local_opacity()`，也就是绘制读到的那个值）恒在 `[0,1]`，而动画值
+（`OpacityProperty::value()`）保留真实物理状态。这样过冲既不泄漏到绘制，也不打断弹簧的
+收敛过程。测试用一条欠阻尼弹簧（ζ≈0.35）同时断言"物理值确实冲过 1"和"呈现值没超过 1"——
+只断言后者会在弹簧被换成过阻尼时静默失去意义。
 
 补齐 L2 之后，005 里那些"造好了没接出去"的能力开始有用武之地：`Group` 的
 `stagger`（错峰入场）、`Keyframes`（脉冲/呼吸）都需要能廉价改变的量。
+**但"值有了"不等于"够得到"** —— 调度侧的 DSL 仍未完成，见 §6.1。
 
 ### 5.1 L2 的脏标记契约
 
 三条路径的脏标记**必须写死并测试**，否则实现者很可能只标 `paint`：
 
 ```text
-opacity：             paint
-translate / scale：   paint | semantics
-measure / layout：    始终不标
+opacity：              paint
+translate / scale：    paint | transform
+纯语义变化（名称/描述）： semantics
+measure / layout：     始终不标
 ```
 
-`translate` / `scale` 会改变节点的屏幕 bounds，而语义树直接读 `global_bounds()`、
-只在 `semantics` 脏时才重建 —— 不标就是**无障碍节点停在旧位置**：命中测试跟对了、
-读屏跟错了，这种"一半对"最难发现。
+**`transform` 与 `semantics` 是分开的两个位，方向也不同：**
 
-已知成本：按上表实现意味着动画期间**每帧重建语义树**（约 60 次/秒）。
-**v1 正确优先，先按上表做**；"动画落定时才刷新 `semantics`、期间只标 `paint`"
-（读屏不需要 60 fps 的 bounds）记作后续优化 —— 但不要为了省这次重建而漏标。
+- `transform` 表示"这个节点的**有效变换**变了"（local transform、表现层 translate/scale、
+  缩放中心、以及会改变缩放中心的布局尺寸）。它做两件事：让几何缓存失效（自身与全部
+  后代），并让语义 bounds 需要重建 —— 所以 `transform` 单向**蕴含** `semantics`。
+- `semantics` 单独出现表示只是名称、描述、角色这类非几何信息变了，**绝不去动变换缓存**。
+  否则每改一次无障碍文案都要重算整棵子树的变换。
+- `measure` / `layout` 永远不在这两条路径里：L2 是表现层变换，不参与布局。
+
+反过来的方向不成立，也不能做：`semantics ⇒ transform` 会让无障碍改动变成几何改动。
+
+**为什么必须分开（而不是"标 semantics 顺带失效缓存"）**：那种耦合下，
+"动画期间只标 `paint`"这个看似安全的优化会**连缓存失效一起跳过** ——
+缓存的 `global_transform()` 不再重算，**bounds 与命中会冻结在最后一次带 `semantics` 的值上**，
+而不只是无障碍数据变旧。故障注入验证过：把 `translate` 的脏标记去掉 `transform` 后，
+`[mid-flight]` 在第一帧就红（`global_transform().position().get_x()` 停在 0，
+而动画值已经走到 3.33）。
+
+已知成本与后续优化：动画期间每帧都会 `mark_semantics_dirty()`，也就是每帧重建语义树
+（约 60 次/秒）。**做"落定时才刷新语义"的优化时，要降的是语义重建，不是 `transform`** ——
+`transform` 必须每次变值都发，否则几何缓存就废了。
+
+> **持久脏位的消费周期**：`mark_dirty()` 会读取传入的 transform/semantics 位，
+> **当场**失效缓存、置语义树标志，且每次调用都必须执行，不能被已经置位的状态短路。
+> 存入 `dirty_flags_` 后，生产调度目前只读取 `layout_dirty_flags`；另外三个位只是
+> 契约与观测面。而且它们**粘滞**：只有 `layout_to()` 会清 `paint`，`semantics` 与
+> `transform` 置上就不再清。
+>
+> 所以别把这套位当成"帧的开关"来读：绘制是无条件发生的（窗口每帧都 `render`），
+> 布局也只认 `layout_dirty_flags`。加新读者之前先想清楚"什么时候清"。
 
 ## 6. 交付顺序
+
+L2 范围（0–7）已全部落地；以下顺序保留为同类能力的实现模板。
+**未完成的能力单独列在 §6.1**，不要把它算进"已落地"：
 
 ```text
 0. 标签归属 + 动画边界（§5.0.1 的 A/B/C/D 决策）+ `NanPoint::lerp`（§5.0.2）+ base/presentation 组合规则
@@ -419,8 +430,26 @@ measure / layout：    始终不标
 `NanPoint` 的 `lerp`、以及"布局 transform 与表现 transform 的唯一来源"**。
 否则 `opacity` 会顺利通过，而 `translate` / `scale` 会在中途把 API 与存储模型推倒重来。
 
+> 第 6 步里"showcase 真实窗口手感验收"**只有作者本人在真实会话里能判定** ——
+> playground 自检与容器里的冒烟测试替代不了它。
+>
 > 第 6 条（handler 的 concept 化与开发体验）不属于本文范围，见
 > [配置与开发体验](authoring_configuration.md)。
+
+### 6.1 明确未完成：调度侧 DSL
+
+L2 让"能廉价改变的量"齐了，但**从组件/页面够到组合调度还差一层**，这部分没做完：
+
+- `AnimationGroup`（`parallel` / `sequential` / `stagger`）目前**只被测试调用**：
+  `authoring.hpp` 没有 `.group(...)` / `.stagger(...)`，也没有 `Keyframes` 的入口。
+- `AnimationGroup::clip(...)` 要求调用方**手写 `DirtyFlags`**，而 `PropertyEndpoint` 自己
+  就知道该标什么。今天没有公开路径能构造 clip，所以还不是活 bug；但只要照着现在的签名
+  接一条公开路径，就可能写出"值动了、几何没动"（§5.1 那类故障）。
+- 因此下一步不是"把 `clip()` 包一层"。endpoint 级 clip 工厂**必须先解决**：
+  同一个属性被普通轨道与 group 同时推进时的仲裁、两边的取消语义（谁取消谁）、
+  以及 group 持有 endpoint 引用时的生命周期。这三件事没定之前不要暴露 DSL。
+
+> 记在这里的目的是：读"L2 已落地"时不要顺手认为"组合动画也能用了"。
 
 ## 7. 明确的非目标
 

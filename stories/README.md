@@ -36,3 +36,4 @@
 | [005](005-the-animation-system-that-was-never-plugged-in.md) | 造好了却没接出去的动画系统 | 侧边栏动效带出的动画系统普查：循环、state layer、Group、Keyframes、主题版本信号五个缺口 |
 | [006](006-the-animation-that-could-not-fire.md) | 那个不可能触发的动画 | 失效功能掩盖的悬垂捕获、"测了原语没测接线"的盲区，以及一处硬编码颜色如何验证了 005 的预言 |
 | [007](007-two-designs-corrected-by-the-user-view.md) | 两次被"用户视角"纠正的设计 | 七条使用反馈引出的属性代价分级，以及我把 anchors 当装饰、把 static_assert 当解法这两次错判 |
+| [008](008-spring-hitches-and-leak-evidence.md) | 卡顿帧不能靠透明度钳制修复 | 解析弹簧、缓存重算观测与两种不同结论的泄漏报告 |

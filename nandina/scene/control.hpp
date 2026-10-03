@@ -135,10 +135,6 @@ namespace nandina::scene
         [[nodiscard]] auto measured_size() const -> foundation::NanSize;
         [[nodiscard]] auto last_layout_constraints() const -> LayoutConstraints;
         [[nodiscard]] auto layout_dirty() const -> bool;
-        [[nodiscard]] auto dirty_flags() const -> DirtyFlags;
-        [[nodiscard]] auto is_dirty(DirtyFlags flags) const -> bool;
-        auto mark_dirty(DirtyFlags flags) -> void;
-        auto clear_dirty(DirtyFlags flags) -> void;
         auto mark_layout_dirty() -> void;
         auto clear_layout_dirty() -> void;
         [[nodiscard]] virtual auto layout_flex_factor() const -> int;
@@ -187,7 +183,6 @@ namespace nandina::scene
         foundation::NanSize size_ {};
         foundation::NanSize measured_size_ {};
         LayoutConstraints last_layout_constraints_ {};
-        DirtyFlags dirty_flags_ = layout_dirty_flags | DirtyFlags::paint | DirtyFlags::semantics;
         std::optional<foundation::NanColor> background_;
         ControlOverflow overflow_ = ControlOverflow::visible;
         ControlSizeSpec size_spec_;

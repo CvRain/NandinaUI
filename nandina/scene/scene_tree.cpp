@@ -3,10 +3,10 @@
 //
 
 #include "scene_tree.hpp"
-#include "../animation/animation_host.hpp"
 #include "../render/draw_context.hpp"
-#include "control.hpp"
+#include "animation_host.hpp"
 #include "canvas_layer.hpp"
+#include "control.hpp"
 
 #include <algorithm>
 #include <iterator>
@@ -70,7 +70,8 @@ namespace nandina::scene
             merge_state(target.properties.state, source.properties.state);
             if (!target.bounds.is_valid()) {
                 target.bounds = source.bounds;
-            } else if (source.bounds.is_valid()) {
+            }
+            else if (source.bounds.is_valid()) {
                 target.bounds = target.bounds.united(source.bounds);
             }
             for (const auto& child: source.children) {
@@ -92,7 +93,8 @@ namespace nandina::scene
 
         [[nodiscard]] auto build_semantics_nodes(NanNode* source) -> std::vector<semantics::Node> {
             if (source == nullptr || !source->is_visible_in_tree()
-                || source->semantics_composition() == semantics::Composition::hidden) {
+                || source->semantics_composition() == semantics::Composition::hidden)
+            {
                 return {};
             }
 
@@ -121,9 +123,8 @@ namespace nandina::scene
             semantics::Node node {
                 .id = source->semantics_id(),
                 .properties = std::move(properties),
-                .bounds = source->as_node2d() != nullptr
-                    ? source->as_node2d()->global_bounds()
-                    : foundation::NanRect::empty(),
+                .bounds = source->as_node2d() != nullptr ? source->as_node2d()->global_bounds()
+                                                         : foundation::NanRect::empty(),
                 .children = composition == semantics::Composition::merge_descendants
                     ? std::vector<semantics::Node> {}
                     : std::move(children),
@@ -138,10 +139,11 @@ namespace nandina::scene
 
     } // namespace
 
-    NanSceneTree::NanSceneTree(): animation_host_(std::make_unique<animation::AnimationHost>(*this)) {}
+    NanSceneTree::NanSceneTree(): animation_host_(std::make_unique<AnimationHost>(*this)) {}
 
     NanSceneTree::PhaseScope::PhaseScope(NanSceneTree& tree, const FramePhase phase):
-        tree_(&tree), previous_(tree.phase_) {
+        tree_(&tree),
+        previous_(tree.phase_) {
         tree.phase_ = phase;
     }
 
@@ -186,8 +188,8 @@ namespace nandina::scene
             return false;
         }
         return phase_ == FramePhase::process || phase_ == FramePhase::animation
-            || phase_ == FramePhase::layout
-            || phase_ == FramePhase::post_layout || phase_ == FramePhase::paint;
+            || phase_ == FramePhase::layout || phase_ == FramePhase::post_layout
+            || phase_ == FramePhase::paint;
     }
 
     void NanSceneTree::defer_tree_mutation(std::function<void()> mutation) {
@@ -315,7 +317,6 @@ namespace nandina::scene
         return theme_manager_;
     }
 
-
     void NanSceneTree::set_clipboard(IClipboard& clipboard) noexcept {
         clipboard_ = &clipboard;
     }
@@ -328,11 +329,11 @@ namespace nandina::scene
         return clipboard_;
     }
 
-    auto NanSceneTree::animation_host() noexcept -> animation::AnimationHost& {
+    auto NanSceneTree::animation_host() noexcept -> AnimationHost& {
         return *animation_host_;
     }
 
-    auto NanSceneTree::animation_host() const noexcept -> const animation::AnimationHost& {
+    auto NanSceneTree::animation_host() const noexcept -> const AnimationHost& {
         return *animation_host_;
     }
 
@@ -364,7 +365,8 @@ namespace nandina::scene
     void NanSceneTree::set_semantics_transform(foundation::NanTransform2D transform) noexcept {
         if (semantics_transform_.position() == transform.position()
             && semantics_transform_.rotation() == transform.rotation()
-            && semantics_transform_.scale() == transform.scale()) {
+            && semantics_transform_.scale() == transform.scale())
+        {
             return;
         }
         semantics_transform_ = transform;
@@ -378,7 +380,8 @@ namespace nandina::scene
         (void)update_semantics();
         const auto* snapshot = semantics_tree_.find(id);
         if (snapshot == nullptr
-            || !semantics::supports(snapshot->properties.actions, request.action)) {
+            || !semantics::supports(snapshot->properties.actions, request.action))
+        {
             return false;
         }
         auto* source = _find_semantics_source(root_.get(), id);
@@ -402,9 +405,7 @@ namespace nandina::scene
         }
     }
 
-    void NanSceneTree::on_theme_manager_destroyed(
-        const theme::ThemeManager& manager
-    ) noexcept {
+    void NanSceneTree::on_theme_manager_destroyed(const theme::ThemeManager& manager) noexcept {
         if (theme_manager_ != &manager) {
             return;
         }
@@ -431,20 +432,21 @@ namespace nandina::scene
         animation_host_->advance(dt);
     }
 
-    auto NanSceneTree::_layout_layer_stack(
-        LayerStack& stack,
-        const foundation::NanSize viewport_size
-    ) -> bool {
+    auto
+    NanSceneTree::_layout_layer_stack(LayerStack& stack, const foundation::NanSize viewport_size)
+        -> bool {
         bool laid_out = false;
         for (auto* layer: stack.layers_in_order()) {
             auto* control = layer->space() == CanvasSpace::screen ? layer->layout_root() : nullptr;
-            if (control == nullptr || (!control->layout_dirty() && control->size() == viewport_size)) {
+            if (control == nullptr
+                || (!control->layout_dirty() && control->size() == viewport_size))
+            {
                 continue;
             }
             (void)control->measure_layout(LayoutConstraints::tight(viewport_size));
-            control->layout_to(foundation::NanRect::from_origin_size(
-                foundation::NanPoint::zero(), viewport_size
-            ));
+            control->layout_to(
+                foundation::NanRect::from_origin_size(foundation::NanPoint::zero(), viewport_size)
+            );
             laid_out = true;
         }
         return laid_out;
@@ -460,7 +462,8 @@ namespace nandina::scene
         if (auto* stack = node->as_layer_stack(); stack != nullptr) {
             bool laid_out = _layout_layer_stack(*stack, viewport_size);
             for (auto* layer: stack->layers_in_order()) {
-                auto* control = layer->space() == CanvasSpace::screen ? layer->layout_root() : nullptr;
+                auto* control =
+                    layer->space() == CanvasSpace::screen ? layer->layout_root() : nullptr;
                 if (control != nullptr && control != node) {
                     laid_out = _layout_nested_layer_stacks(control, viewport_size) || laid_out;
                 }
@@ -479,8 +482,7 @@ namespace nandina::scene
     }
 
     auto NanSceneTree::_layout_root_once(const foundation::NanSize viewport_size) -> bool {
-        if (auto* stack = root_ != nullptr ? root_->as_layer_stack() : nullptr;
-            stack != nullptr) {
+        if (auto* stack = root_ != nullptr ? root_->as_layer_stack() : nullptr; stack != nullptr) {
             return _layout_layer_stack(*stack, viewport_size);
         }
 
@@ -488,9 +490,9 @@ namespace nandina::scene
         auto* control = root_ != nullptr ? root_->as_control() : nullptr;
         if (control != nullptr && (control->layout_dirty() || control->size() != viewport_size)) {
             (void)control->measure_layout(LayoutConstraints::tight(viewport_size));
-            control->layout_to(foundation::NanRect::from_origin_size(
-                foundation::NanPoint::zero(), viewport_size
-            ));
+            control->layout_to(
+                foundation::NanRect::from_origin_size(foundation::NanPoint::zero(), viewport_size)
+            );
             laid_out = true;
         }
         if (root_ != nullptr) {
@@ -752,9 +754,8 @@ namespace nandina::scene
         }
         const auto found = std::ranges::find(nodes, focused_node_.lock().get());
         _transition_focus(
-            found == nodes.end() || std::next(found) == nodes.end()
-                ? nodes.front()
-                : *std::next(found)
+            found == nodes.end() || std::next(found) == nodes.end() ? nodes.front()
+                                                                    : *std::next(found)
         );
         return true;
     }
@@ -828,18 +829,22 @@ namespace nandina::scene
             if (child_count > 0) {
                 std::vector<std::size_t> indices(child_count);
                 std::iota(indices.begin(), indices.end(), static_cast<std::size_t>(0));
-                std::ranges::stable_sort(indices, [layer](const std::size_t a, const std::size_t b) {
-                    const auto* lhs = layer->get_child(a);
-                    const auto* rhs = layer->get_child(b);
-                    return (lhs != nullptr ? lhs->subtree_z_index_hint() : 0)
-                        > (rhs != nullptr ? rhs->subtree_z_index_hint() : 0);
-                });
+                std::ranges::stable_sort(
+                    indices,
+                    [layer](const std::size_t a, const std::size_t b) {
+                        const auto* lhs = layer->get_child(a);
+                        const auto* rhs = layer->get_child(b);
+                        return (lhs != nullptr ? lhs->subtree_z_index_hint() : 0)
+                            > (rhs != nullptr ? rhs->subtree_z_index_hint() : 0);
+                    }
+                );
                 for (const auto index: indices) {
                     auto* child = layer->get_child(index);
                     auto* node = child != nullptr ? child->as_node2d() : nullptr;
                     bool child_blocked = false;
                     if (auto* hit = _hit_test_node(node, world_point, &child_blocked);
-                        hit != nullptr) {
+                        hit != nullptr)
+                    {
                         return hit;
                     }
                     if (child_blocked) {
@@ -910,8 +915,8 @@ namespace nandina::scene
                 }
 
                 bool child_blocked = false;
-                if (auto* hit = _hit_test_node(child, world_point, &child_blocked);
-                    hit != nullptr) {
+                if (auto* hit = _hit_test_node(child, world_point, &child_blocked); hit != nullptr)
+                {
                     return hit;
                 }
                 if (child_blocked) {
@@ -943,15 +948,16 @@ namespace nandina::scene
 
         if (auto* stack = node->as_layer_stack(); stack != nullptr) {
             for (auto* layer: stack->layers_in_order()) {
-                if (layer->is_visible_in_tree() && layer->input_mode() != LayerInputMode::disabled) {
+                if (layer->is_visible_in_tree() && layer->input_mode() != LayerInputMode::disabled)
+                {
                     _collect_focusable_nodes(layer, out);
                 }
             }
             return;
         }
-        if (auto* layer = node->as_canvas_layer();
-            layer != nullptr
-            && (!layer->is_visible_in_tree() || layer->input_mode() == LayerInputMode::disabled)) {
+        if (auto* layer = node->as_canvas_layer(); layer != nullptr
+            && (!layer->is_visible_in_tree() || layer->input_mode() == LayerInputMode::disabled))
+        {
             return;
         }
 
@@ -1131,7 +1137,8 @@ namespace nandina::scene
         }
         for (auto* current = node; current != nullptr; current = current->parent()) {
             if (const auto* layer = current->as_canvas_layer();
-                layer != nullptr && layer->input_mode() == LayerInputMode::disabled) {
+                layer != nullptr && layer->input_mode() == LayerInputMode::disabled)
+            {
                 return false;
             }
         }

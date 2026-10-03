@@ -43,7 +43,7 @@ clang-format -i <只格式化你改过的文件>
 ./buildDir/showcase/nandina_showcase              # 视觉验收的对象是 showcase
 ```
 
-### 两条硬规矩（都付过学费）
+### 四条硬规矩（都付过学费）
 
 1. **不要把编译和测试拆成两条会跑旧二进制的命令。** 只 `meson test` 而不先 `meson compile`，
    跑的是上一次构建的产物 —— [004](../../stories/004-the-key-that-was-not-an-identity.md) 的
@@ -54,6 +54,11 @@ clang-format -i <只格式化你改过的文件>
 3. **查询命令不能直接当关卡。** `grep` 在"没命中"时返回 1，所以
    `meson test --list | grep -v ' - '` 这种查询在**健康**情况下就是失败退出码。
    要当关卡就必须包一层显式判断（见第 2 节），并在**发现问题时**才 `exit 1`。
+4. **跑全量套件时不要动工作区**（对应的是"假红"）。`nandina-subproject-fixture` 会把
+   `--allow-dirty` 的工作区**打包两次**并断言两次产物逐字节一致。如果你在它运行期间保存了
+   任何被纳入包的文件（源码、文档、脚本），第二次打包看到的就不是同一份输入，
+   它会报 `repeated_manifest["artifacts"] == manifest["artifacts"]` 失败 —— 而这和你的
+   改动是否正确毫无关系。**全量套件是"先定稿、再跑"，不是"边跑边改"。**
 
 ## 3. 测试：必须证明它会红
 
