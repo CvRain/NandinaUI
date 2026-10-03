@@ -24,79 +24,126 @@
 
 > **规则**：想表达"变大了 / 更醒目了"，用 L1/L2；`font_size` 只在对排版有真实意图时才改。
 
-## 2. 定位：两套系统，不是一个
+## 2. 定位：两套对等系统，以 anchor 为主
 
-QML 把定位分成两件事，这个区分是关键：
+QML 里 layout 和 anchor 是**两套对等**的布局系统，而且分工是明确的：**anchor 为主、
+layout 为辅**。本项目目前只有 layout。缺的不是"给个别子项开个后门"，是**一整套范式**。
 
-| | QML | 本项目 |
-| --- | --- | --- |
-| **排列**（父容器自动摆放子项） | `Row` / `Column` / `Grid` positioner、`*Layout` | ✅ 已有：`Row` / `Column` / `Flex` / `Grid` / `Wrap` |
-| **锚定**（把某一项钉在父容器或兄弟的边上） | `Item.anchors` | ❌ **没有** |
+### 2.1 最深的后果：树不再是布局
 
-缺的是第二套。下划线之所以难，正是因为它要"钉在父容器底部、左右拉伸"，而这是排列系统
-表达不了的。
+```text
+只有 layout：  结构 == 排列。层层包裹层层递进：大框架 → 小框架 → 组件。
+               树的形状就是 UI 的形状。
 
-### 2.1 规则：锚定的子项**脱离排列流**
+有 anchors：   结构 ≠ 排列。空间关系由"谁贴着谁"表达，
+               因此可以是一个**扁平**的树。
+```
 
-这是两套系统能共存的前提，也是唯一的硬规则：
+这一条决定了下面全部设计 —— 包括为什么需要显式 z 序、为什么必须有兄弟锚定。
 
-- 子项**设置过锚点** → 从父容器的排列流里排除，位置完全由锚点决定（等价 CSS `position: absolute`）；
-- 子项**没有锚点** → 照旧由父容器的排列流摆放。
+### 2.2 两者如何调和：**逐层治理**
 
-父容器因此不需要知道锚定的子项；锚定也不改变其它兄弟的布局。这条规则让"形状"可以和
-正常内容混在一个容器里而不互相干扰。
+不是"一个容器里既有排列又有锚定"，而是**每一层选一套**，子层可以用另一套：
 
-### 2.2 API 形状（v1 只锚父容器）
+```text
+窗口（锚定画布）
+├── sidebar        anchors: left / top / bottom
+└── editor_region  anchors: left = sidebar.right, right / top / bottom
+    └── RowLayout            ← 这一层改用排列
+        ├── editor
+        └── preview
+
+sidebar（Column）            ← 容器自身被父层锚定，内部用排列
+├── header
+├── ListView
+└── footer
+```
+
+这正是 markdown 编辑器那种三块结构：**大方向的关系（侧边栏贴左、编辑区贴右）用锚点，
+局部序列（header / list / footer）用排列。** 侧边栏要在左在右，只是换锚点。
+
+> **规则**：一个容器对自己**直接子项**只用一套 —— 要么是锚定画布，要么是排列容器。
+> 子项若本身是容器，它内部可以换成另一套。
+>
+> 为什么不在同一层混用：会有"这个子项到底算不算在流里"的歧义，而 QML 是明确禁止
+> 在 positioner（Row/Column/Grid）内部使用锚点的。逐层治理既确定又自洽，排除了
+> 一整类"看起来生效、其实被排列覆盖"的困惑。
+
+### 2.3 求解：先隐式尺寸，再按依赖序解锚点
+
+采纳 QML 式求解，**不引入约束求解器**（Cassowary 那类表达力更强，但是另一个工程）。
+
+1. 每个节点先解出自己的**隐式尺寸**（内容 / 显式宽度 / 排列结果）；
+2. 再按锚点的依赖关系做**拓扑排序**求解位置与尺寸；
+3. **检测锚点环**并确定性报错（QML 的 "Anchor loop detected" 就是为此）。
+
+第 3 条不是加分项：没有它，一次笔误就是死循环或未定义行为。
+
+### 2.4 兄弟锚定是 v1 必需（修正）
+
+没有兄弟锚定就表达不出"内容区占掉剩下的空间"：
+
+```cpp
+editor_region.anchors.left = sidebar.right;   // ← 核心用法，不是边角
+```
+
+上一版本文把它列为"留到有需求再说"，那是按"锚点只是装饰"的视角做的判断，错了。
+
+### 2.5 z 序
+
+结构不再等于排列 ⇒ **绘制顺序不能从树上推出来** ⇒ 需要显式的 `z`（同 QML `Item.z`）。
+同层同级按加入顺序，`z` 不同的按 `z` 排。命中测试与绘制共用同一顺序
+（与 [溢出与裁剪契约](overflow_and_clip.md) "绘制与命中共享一份语义"一致）。
+
+### 2.6 API 形状
 
 ```cpp
 struct AnchorSpec {
-    // 水平：三选一 —— 或 left+right 拉伸
-    std::optional<float> left;               // 距父容器左边缘
-    std::optional<float> right;
-    std::optional<float> horizontal_center;  // 相对父容器水平中心的偏移
-    std::optional<float> width;              // 与前两者互斥
+    // 水平：三选一 —— 或 left+right 拉伸。目标缺省为父容器。
+    std::optional<Anchor> left;
+    std::optional<Anchor> right;
+    std::optional<Anchor> horizontal_center;
+    std::optional<float>  width;             // 与 left/right 互斥
     // 垂直：同理
-    std::optional<float> top;
-    std::optional<float> bottom;
-    std::optional<float> vertical_center;
-    std::optional<float> height;
+    std::optional<Anchor> top;
+    std::optional<Anchor> bottom;
+    std::optional<Anchor> vertical_center;
+    std::optional<float>  height;
+};
+
+struct Anchor {
+    float margin = 0.0F;          // 距目标边的距离（CSS 意义上的 margin）
+    scene::NanNode2D* target = nullptr;   // nullptr = 父容器
+    // target 指向兄弟时，则 "贴住它的哪条边"由使用的位置决定：
+    //   anchors.left = {.target = sidebar}  → 贴住 sidebar 的右边缘
 };
 ```
 
-用法——**这就是下划线**：
+指向兄弟时**贴哪条边由字段决定**（`anchors.left` 就是"我的左边缘贴目标的右边缘"），
+避免再多一个枚举维度。目标用**指针**优先（builder 链里本来就持有句柄），跨构建顺序时
+用 `set_name()` + 名字兜底。
 
-```cpp
-ui.make<widget::Rectangle>()
-    .anchors(widget::AnchorSpec{.left = 0.0F, .right = 0.0F, .bottom = 0.0F})
-    .height(2.0F)
-    .fill_token(theme::ColorToken::primary)
-    .opacity(0.0F)                       // L2，便宜
-    .behavior(widget::visual::opacity, animation::motion::tween(duration));
-```
+### 2.7 冲突与非法组合：当场拒绝
 
-`left + right` 同时给 = 横向拉伸到两边，**不需要动画宽度**（那是 L3，会重排）。于是"下划线
-淡入"变成一个纯 L2 动画。
-
-### 2.3 冲突与非法组合：当场拒绝
-
-过度约束必须**确定性失败**，不能像 QML 那样只是警告后行为未定义：
+（与上一版相同，保留）
 
 | 组合 | 处理 |
 | --- | --- |
 | `left` + `right` + `width` | 抛 `std::invalid_argument`（三者只能取二） |
 | `left` + `horizontal_center` | 抛（都是水平定位来源） |
-| 只给 `width` 不给任何水平锚点 | 合法：水平居中？**不合法** —— 水平方向无锚点即"不参与锚定" |
+| 锚点指向**自己**或形成环 | 抛（求解期检测） |
 | `fill` 语义 | 用 `left+right+top+bottom` 表达，不引入第二个概念 |
 
-### 2.4 margin
+### 2.8 `Expanded` 的定位（决定）
 
-锚点的 `left/right/top/bottom` 就是 CSS 意义上的 margin（子项距父容器边的距离）。
-排列流里的子项要外间距时用父容器的 `gap`（已有）或子项自身的 margin —— 后者与本文
-第 4 节的盒子模型一起做。
+`Expanded` **保留**，但它的语义收窄为一个**组件**，而不是布局系统的一部分：
 
-**刻意不做（v1）**：锚定到**兄弟节点**（QML 允许 `anchors.left: other.right`）。它需要
-一套"命名引用 + 依赖顺序"的机制，而下划线、装饰线、角标这类需求锚父容器就够。
-按"用到再列"的原则留到有真实需求时再说。
+- 它有**固定的 width / height**，行为等价于 Qt Widgets 的 `QSpacerItem`；
+- **放进排列容器才有作用**（吃掉剩余空间、把两侧推开）；
+- **在锚定画布里它什么也不做** —— 就是一个固定尺寸的占位盒子。
+
+这样分工干净：跨容器的空间关系用锚点，容器内部的"推开/占满"用 `Expanded`，
+不会出现"两个工具都能干同一件事"的困惑。
 
 ## 3. 形状家族（v1 三种）
 
@@ -168,38 +215,49 @@ margin collapsing 是历史包袱，不该学）。
 
 ## 6. 交付顺序
 
-1. **`visual::opacity` + `visual::translate` + `visual::scale`**（第 5 节）—— 4 与 7 的共同前置；
-2. **公开 painter 入口**，用它实现下划线（7 的最小可用切片，**验收用例**：下划线必须只走 L2）；
-3. **锚点**（第 2 节）—— 下划线要的"钉在底部、左右拉伸"靠它，而不是靠动画宽度；
-4. **形状节点**：`Rectangle` → `Circle` → `Line`；
-5. **盒子模型 / margin**（第 4 节，与锚点一起收尾）；
-6. 文档：把第 1 节的代价分级写进组件文档，让"别动画 font_size"成为可查的规则。
+1. **L2 路径**：`visual::opacity` + `translate` + `scale`（第 5 节）—— 动效质量的前置，
+   改动面最小、立刻能验证（把 home_page 的悬浮从 L3 换成 L2）。
+2. **锚点系统核心**：隐式尺寸求解 → 依赖序 → 兄弟锚定 → 环检测（第 2.3–2.4 节）。
+   这是"开发者怎么写 UI"的那一件，杠杆最大，也最该早做。
+3. **逐层治理落地**：容器声明自己是锚定画布还是排列容器；`Expanded` 收窄为 spacer
+   组件（第 2.8 节）。
+4. **公开 painter 入口**，用它实现下划线（冒烟用例，验收在下文）。
+5. **形状节点**：`Rectangle` → `Circle` → `Line`。
+6. **盒子模型 / margin**（第 4 节）—— 锚点的 margin 已在第 2 节落地，这一步补排列流里的。
+7. **文档**：把第 1 节的代价分级与第 2.2 节的逐层治理写进组件文档，让"别动画 font_size"
+   和"这一层该用哪套"都成为可查的规则。
 
 > 第 6 条（handler 的 concept 化与开发体验）不属于本文范围，它是 authoring/DX 的独立课题。
 
 ## 7. 明确的非目标
 
 - **多边形 / 任意路径**：用到再列（需要扩设备接口）。
-- **锚定到兄弟节点**：父容器锚定覆盖已知需求。
-- **CSS margin collapsing**：不学。
-- **旋转**：`scale`/`translate` 之外暂不做，需要时再加一条路径。
+- **同一层混用锚定与排列**：逐层治理是刻意的（第 2.2 节），不是没做。
+- **约束求解器**（Cassowary 一类）：表达力更强但是另一个工程，QML 式依赖序足够。
+- **CSS margin collapsing**：历史包袱，不学。
+- **旋转**：`scale` / `translate` 之外暂不做，需要时再加一条路径。
 
-## 8. 验收：下划线
+## 8. 验收：markdown 编辑器
 
-它同时压到本文的每一条，所以拿它当验收用例：
+定位范式的验收用例**必须能证明"树 ≠ 布局"**，所以用三块结构的编辑器，而不是下划线：
 
-```cpp
-// 一条钉在文字下方、能淡入的下划线。全程 L2，没有任何一帧触发重排。
-auto underline = ui.make<widget::Rectangle>()
-                     .anchors(widget::AnchorSpec{
-                         .left = 0.0F, .right = 0.0F, .bottom = -2.0F})
-                     .height(2.0F)
-                     .fill_token(theme::ColorToken::primary)
-                     .opacity(0.0F)
-                     .behavior(widget::visual::opacity,
-                               animation::motion::tween(motion.short_duration))
-                     .build();
+```text
+窗口（锚定画布）
+├── sidebar        anchors: left / top / bottom
+└── editor_region  anchors: left = sidebar.right, right / top / bottom
+    └── RowLayout                       ← 这一层换成排列
+        ├── editor
+        └── preview
 ```
 
-要求：**悬浮时改的是 opacity（或 scale），而不是宽度** —— 后者是 L3，会让这一页退回
-"PPT 感"。这条要求本身就是本文存在的理由。
+验收要同时成立：
+
+1. **侧边栏换边**只需改锚点（`left` → `right`，`editor_region` 跟着改成
+   `left = parent.left, right = sidebar.left`），**不需要改树的形状**；
+2. 侧边栏宽度可以由内容隐式决定，`editor_region` 仍然正确占掉剩余空间；
+3. 侧边栏内部用 `Column` 排 header / list / footer，**不受外层锚点影响**；
+4. 写错锚点（成环、`left+right+width` 同时给）**确定性报错**，不是未定义行为。
+
+**冒烟用例（下划线）**：一条钉在文字底部、能淡入的 2px 矩形。要求全程 L2 ——
+悬浮时改的是 `opacity` 或 `scale`，**而不是宽度**（那是 L3，会让整页退回"PPT 感"）。
+它同时也是公开 painter 入口的第一个消费者。
