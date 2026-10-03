@@ -222,6 +222,63 @@ margin collapsing 是历史包袱，不该学）。
 
 ## 5. `visual::Path` 补全
 
+### 5.0 前置：开工前必须落定的四条
+
+L2 看起来只是"加三条 Path"，核对代码后发现四个更底层的前置。**不先落定它们，
+`opacity` 能顺利落地，而 `translate` / `scale` 会在中途迫使 API 与存储模型返工。**
+
+#### ① 标签归属：下移到 `scene`
+
+`opacity` / `translate` / `scale` 属于**所有** `NanNode2D`，不属于 widget。所以标签定义在
+`scene`，由 `widget::visual` 重导出，应用侧写法不变（仍是 `visual::opacity`）。
+
+**保留"部分 + 字段"两级**，不要放宽成"字段 + 值类型" —— 前者才装得下以后的 rotation /
+clip / z。内部可以是 `PropertyPath<node_t, opacity_t, float>`，对外仍导出成
+`visual::opacity`，不强迫用户写 `visual::node.opacity`。
+
+（同一手法已用过两次：`TextAlign` 因 `theme::TypeStyle` 需要而下移到 `theme`。
+本层需要的东西就放到本层，见 [组件公共契约](component_contract.md) §8。）
+
+#### ② **阻塞点**：没有可复用的节点级动画存储
+
+- `NanNode2D` 只有 `transform_` 与一个**普通** `local_opacity_`（无动画状态）；
+- `PropertyEndpoint` 在 `animation`，只接受 `NanControl&`，依赖 `AnimationHost` / `SceneTree`；
+- 而 `scene` 与 `animation` **互相引用**是 [模块依赖规则](module_dependency.md) 已登记的偏离。
+
+**不能在 `NanNode2D` 里复制一份 endpoint 逻辑绕过去。** 这是唯一会阻塞开工的一条，
+决策见 §5.0.1。
+
+#### ③ `translate` 不能复用 `transform_.position`
+
+`NanControl::layout_to()` 每次布局都调用 `set_position(...)`。动画若写 position，
+下一轮布局会**静默覆盖**动画值。必须分成两层，并明确复合顺序：
+
+```text
+layout/base transform × presentation translate × origin × presentation scale × -origin
+```
+
+`translate` 是相对布局结果的偏移、`scale` 是表现变换 —— **两者都不能成为第二套布局位置**。
+
+#### ④ `transform_origin` 是静态配置，不是可动画 Path
+
+九宫格枚举没有自然的插值语义。公开 `.transform_origin(...)`，但**不支持**
+`.behavior(visual::transform_origin, ...)`。需要"跳变式"动画时那是另一个特性。
+
+### 5.0.1 待决：动画模块边界（`scene ↔ animation`）
+
+L2 逼出的真正决策。三个选项：
+
+| 选项 | 做法 | 代价 | 评价 |
+| --- | --- | --- | --- |
+| **A 拆层（推荐）** | 把**纯值级**动画类型（`Easing` / `Behavior` / `SpringSpec` / `Keyframes` / `AnimatedProperty`）下移成只依赖 `foundation` 的低层；`animation` 只留调度与绑定（`AnimationHost` / `Group` / `PropertyEndpoint`） | 移动约 5 个头文件 + 更新 include 与 `module_dependency.md` | **消掉**已登记的偏离，且节点级属性与其它动画共用同一套策略词汇 —— 不会出现两套动画机制 |
+| **B 宿主所有权上移** | 动画宿主交给窗口 / `app` 驱动（`module_dependency.md` 的建议之一） | `scene` 不再引用 `animation`，但**没解决**节点要存动画状态的问题 | 只解决一半 |
+| **C 在 scene 定义最小推进接口** | `scene` 声明非模板的"可推进值"接口，`animation` 实现 | 节点级只能拿到 tween；spring / keyframes 需类型擦除或虚调用；**出现第二套动画机制** | 可行但不自洽 |
+
+**推荐 A。** 理由是它把偏离**消掉**而不是绕过，并且避免"节点级一套、别处一套"的分裂 ——
+后者正是这个项目反复吃亏的形状（同一个概念两处定义，然后漂移）。
+
+**这一条待作者决定后，才动第 1 步以后的代码。**
+
 现状只有 6 条（`label.color/font_size` + `container.fill/border_color/border_width/radius`）。
 按第 1 节的分级补齐 **L2**：
 
@@ -229,7 +286,7 @@ margin collapsing 是历史包袱，不该学）。
 | --- | --- | --- |
 | `visual::opacity` | `float` | 任何节点。底层 `NanNode2D::set_local_opacity` 已存在，只是不可动画 |
 | `visual::translate` | `NanPoint` | 相对布局位置的偏移，不改布局 |
-| `visual::scale` | `NanPoint` | 分轴缩放 + `transform_origin`（九宫格枚举，同 QML `transformOrigin`） |
+| `visual::scale` | `NanPoint` | 分轴缩放。缩放中心由**静态**配置 `.transform_origin(...)`（九宫格枚举，同 QML `transformOrigin`）给出，它不是动画 Path（见 §5.0 ④） |
 
 `scale` 与 `translate` 不触发重排，但**会改变 `global_bounds()`** —— 命中测试要跟着走
 （这是期望行为，不是副作用）。`font_size` 留在 L3/L4，不推荐用于动效。
@@ -239,19 +296,23 @@ margin collapsing 是历史包袱，不该学）。
 
 ## 6. 交付顺序
 
-1. **L2 路径**：`visual::opacity` + `translate` + `scale`（第 5 节）—— 动效质量的前置，
-   改动面最小、立刻能验证（把 home_page 的悬浮从 L3 换成 L2）。
-2. **锚点系统核心**：隐式尺寸求解 → 依赖序 → 兄弟锚定 → 环检测（第 2.3–2.4 节）。
-   这是"开发者怎么写 UI"的那一件，杠杆最大，也最该早做。
-3. **逐层治理落地**：容器声明自己是锚定画布还是排列容器；`Expanded` 收窄为 spacer
-   组件（第 2.8 节）。
-4. **公开 painter 入口**，用它实现下划线（冒烟用例，验收在下文）。
-5. **形状节点**：`Rectangle` → `Circle` → `Line`。
-6. **盒子模型 / margin**（第 4 节）—— 锚点的 margin 已在第 2 节落地，这一步补排列流里的。
-7. **文档**：把第 1 节的代价分级与第 2.2 节的逐层治理写进组件文档，让"别动画 font_size"
-   和"这一层该用哪套"都成为可查的规则。
+```text
+0. 标签归属 + 动画边界（§5.0.1 决策）+ base/presentation 组合规则
+1. presentation transform 数据模型
+2. opacity 路径与动画
+3. translate
+4. scale + transform_origin
+5. 命中、语义 bounds、布局抵抗测试
+6. home_page 迁移 + showcase 真实窗口手感验收
+7. 三套构建验证、故障注入、文档归档
+```
 
-> 第 6 条（handler 的 concept 化与开发体验）不属于本文范围，它是 authoring/DX 的独立课题。
+第 0 步的三条不落定就不要往下走：**标签归 `scene`、动画边界的决策、以及
+"布局 transform 与表现 transform 的唯一来源"**。否则 `opacity` 会顺利通过，
+而 `translate` / `scale` 会在中途把 API 与存储模型推倒重来。
+
+> 第 6 条（handler 的 concept 化与开发体验）不属于本文范围，见
+> [配置与开发体验](authoring_configuration.md)。
 
 ## 7. 明确的非目标
 
@@ -260,6 +321,7 @@ margin collapsing 是历史包袱，不该学）。
 - **约束求解器**（Cassowary 一类）：表达力更强但是另一个工程，QML 式依赖序足够。
 - **CSS margin collapsing**：历史包袱，不学。
 - **旋转**：`scale` / `translate` 之外暂不做，需要时再加一条路径。
+- **`transform_origin` 的动画**：九宫格枚举没有自然插值语义，先只做静态配置（§5.0 ④）。
 
 ## 8. 验收：markdown 编辑器
 
