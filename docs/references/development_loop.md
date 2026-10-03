@@ -29,8 +29,13 @@ meson compile -C buildDir-asan && \
 meson compile -C buildDir-no-rtti && \
   meson test -C buildDir-no-rtti --suite unit --print-errorlogs
 
-# 测试必须声明 suite，否则静默失去 sanitizer 覆盖
-meson test -C buildDir --list | grep -v -- ' - '
+# 测试必须声明 suite，否则静默失去 sanitizer 覆盖。
+# 注意：没有遗漏时 grep 返回 1，直接当关卡会把"健康"报成"失败" —— 所以显式判断。
+missing=$(meson test -C buildDir --list | grep -v -- ' - ' || true)
+if [ -n "$missing" ]; then
+  printf 'ERROR: 以下测试没有声明 suite:\n%s\n' "$missing" >&2
+  exit 1
+fi
 
 clang-format -i <只格式化你改过的文件>
 
@@ -41,11 +46,14 @@ clang-format -i <只格式化你改过的文件>
 ### 两条硬规矩（都付过学费）
 
 1. **不要把编译和测试拆成两条会跑旧二进制的命令。** 只 `meson test` 而不先 `meson compile`，
-   跑的是上一次构建的产物 —— [004](../stories/004-the-key-that-was-not-an-identity.md) 的
+   跑的是上一次构建的产物 —— [004](../../stories/004-the-key-that-was-not-an-identity.md) 的
    "假绿"就是这么来的：编译失败被 `grep`/`head` 过滤成上下文行，第二条命令报了旧代码的
    "All tests passed"。**编译和测试用 `&&` 连起来。**
 2. **格式化范围与改动范围一致。** 只格式化自己改过的文件 —— 把别人正在写的文件一起扫了，
    会把功能变更淹没在格式化噪声里（`coding_conventions.md` 也这么要求）。
+3. **查询命令不能直接当关卡。** `grep` 在"没命中"时返回 1，所以
+   `meson test --list | grep -v ' - '` 这种查询在**健康**情况下就是失败退出码。
+   要当关卡就必须包一层显式判断（见第 2 节），并在**发现问题时**才 `exit 1`。
 
 ## 3. 测试：必须证明它会红
 
@@ -77,7 +85,7 @@ clang-format -i <只格式化你改过的文件>
 | --- | --- |
 | **分层** | 新类型/新标签有没有让下层向上依赖；有没有设施该下移到它真正依赖的那一层 |
 | **代价级别** | 写这个属性标了什么脏标记；声称为 L2 的实现在动画期间有没有偷偷触发重排 |
-| **捕获生命周期** | 存起来的 lambda（`computed` / `bind` / `on_*`）里有没有 `[&]` 抓局部量或 `this`（[006](../stories/006-the-animation-that-could-not-fire.md) 的 bug 就是它） |
+| **捕获生命周期** | 存起来的 lambda（`computed` / `bind` / `on_*`）里有没有 `[&]` 抓局部量或 `this`（[006](../../stories/006-the-animation-that-could-not-fire.md) 的 bug 就是它） |
 | **值的唯一来源** | 有没有引入第二个"当前值"；`PropertyEndpoint` 会不会永久遮罩配方字段 |
 | **测试是否会红** | 要求指出"故意改坏哪一行会让它失败" |
 | **静默失效** | 有没有"设置成功但不生效"的新路径 —— 这个项目最恨这一类 |

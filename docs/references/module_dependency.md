@@ -40,7 +40,7 @@ NandinaUI 按模块组织，模块之间的方向决定了改动会扩散到哪�
 
 | 偏离 | 位置 | 收口方向 |
 | --- | --- | --- |
-| `animation` 与 `scene` 互相引用 | `animation/animation_host.hpp`、`group.hpp` 依赖 `scene::NanControl`；`scene/node.cpp`、`scene_tree.cpp` 依赖 `animation::AnimationHost` | `SceneTree` 需要每帧推进动画，所以它持有动画宿主；`AnimationHost` / `Group` 又需要操作场景节点。可选：把动画宿主的所有权上移到窗口 / `app`，由应用驱动；或在 `scene` 定义最小的推进接口，由 `animation` 实现。 |
+| `animation` 与 `scene` 互相引用 | `animation/animation_host.hpp`、`group.hpp` 依赖 `scene::NanControl`；`scene/node.cpp`、`scene_tree.cpp` 依赖 `animation::AnimationHost`（公开头文件里只有前向声明，这条边目前**只在 `.cpp` 层**） | `SceneTree` 需要每帧推进动画，所以它持有动画宿主；`AnimationHost` / `Group` 又需要操作场景节点。收口方案已细化为四个正交决策（值存储 / 宿主所有权 / 调度接口 / 宿主粒度），**待决**，见 [节点表现层](node_presentation.md) §5.0.1。 |
 | `text` 引用 `widget::primitives` | `text/glyph_run_renderer.hpp`、`text/harfbuzz_text_backend.hpp` 引用 `widget/primitives/text_layout*` | `TextPipeline`、`ITextLayoutBackend`、`ITextLayoutRenderer` 描述的是文本布局协议，不是组件原语；应下移到 `text`（渲染器部分可留在 `render`）。 |
 | `scene` 引用 `widget::primitives` | `scene/scene_tree.hpp` 使用 `widget::primitives::TextPipeline` | 与上一条同源：文本管线类型下移后，这条边自然消失。 |
 | `theme` 引用 `text` | `theme/style_context.hpp`、`style_document.hpp` 引用 `text/font_family.hpp` | `theme` 只需要字体的**描述**（`FontRequest` 等），不需要文本引擎；把字体描述类型下移到 `foundation`，或在 `theme` 内联一份等价类型。 |
