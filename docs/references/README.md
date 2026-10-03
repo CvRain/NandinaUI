@@ -14,6 +14,7 @@
 - [设计令牌与主题系统](design_tokens.md)：三层令牌模型、配方与解析优先级、外观切换，以及控件作者的样式规则。
 - [溢出与裁剪契约](overflow_and_clip.md)：容器如何声明裁剪、render 如何执行，以及绘制与命中如何共享同一份语义。
 - [节点表现层](node_presentation.md)：**设计文档**。属性的动画代价分级、锚定（QML 风格 anchors）、形状家族与盒子模型，以及 `visual::Path` 的补全范围。
+- [配置与开发体验](authoring_configuration.md)：**作者侧规则**。回调的两类与 `guarded()` 的能力边界、handler 的 concept 化设计、组件的公开 API 表面、样式优先级。
 
 ### 应用层
 
