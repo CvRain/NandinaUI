@@ -8,9 +8,9 @@
 #include <nandina/animation/easing.hpp>
 #include <nandina/animation/group.hpp>
 #include <nandina/animation/keyframes.hpp>
-#include <nandina/animation/motion.hpp>
 #include <nandina/animation/spring.hpp>
 #include <nandina/animation/tween.hpp>
+#include <nandina/foundation/motion/spec.hpp>
 #include <nandina/foundation/motion/spring.hpp>
 #include <nandina/foundation/nandina_color.hpp>
 #include <nandina/reactive/scope.hpp>
@@ -533,7 +533,7 @@ TEST_CASE(
 
     // 走组件作者真正写的那条路：builder 上装弹簧，之后再改值。
     auto button = ui.make<widget::Button>("fade")
-                      .spring(widget::visual::opacity, animation::motion::spring(300.0F, 12.0F))
+                      .spring(widget::visual::opacity, motion::spring(300.0F, 12.0F))
                       .build();
     tree.set_root(button);
 
@@ -604,7 +604,7 @@ TEST_CASE(
 
     // ζ = 12 / (2 * sqrt(300)) ≈ 0.35 ⇒ 过冲约 30%，足够越过 [0,1] 两端。
     auto button = ui.make<widget::Button>("pulse")
-                      .spring(widget::visual::opacity, animation::motion::spring(300.0F, 12.0F))
+                      .spring(widget::visual::opacity, motion::spring(300.0F, 12.0F))
                       .build();
     tree.set_root(button);
     const auto opacity_endpoint = [](widget::Button& node) -> decltype(auto) {
@@ -841,7 +841,7 @@ TEST_CASE(
     // **插值方式**而不是值，所以配件（主题 / tone / treatment）仍然是值的来源。
     auto& hovered = ui.signal_value(false);
     auto button = ui.make<widget::Button>("item")
-                      .behavior(widget::visual::container.radius, animation::motion::tween(0.12F))
+                      .behavior(widget::visual::container.radius, motion::tween(0.12F))
                       .build();
 
     const float base = button->resolved_style().container.radius;
@@ -905,7 +905,7 @@ TEST_CASE("a zero-duration transition jumps without a track", "[animation][host]
     // 侧边栏的时长直接取自该令牌，所以这条性质是它"可被主题降速/关闭"的前提。
     auto& hovered = ui.signal_value(false);
     auto button = ui.make<widget::Button>("item")
-                      .behavior(widget::visual::container.radius, animation::motion::tween(0.0F))
+                      .behavior(widget::visual::container.radius, motion::tween(0.0F))
                       .build();
 
     const float base = button->resolved_style().container.radius;
@@ -1601,17 +1601,17 @@ TEST_CASE(
 }
 
 TEST_CASE("motion::tween builds a behavior spec", "[animation][motion]") {
-    const auto spec = animation::motion::tween(0.24F).easing(animation::motion::ease_out);
+    const auto spec = motion::tween(0.24F).easing(motion::ease_out);
     const auto behavior = spec.behavior<float>();
     REQUIRE(behavior.duration() == Catch::Approx(0.24F));
     REQUIRE(behavior.easing() == animation::Easing::ease_out);
     REQUIRE(behavior.enabled());
 
-    REQUIRE_THROWS_AS(animation::motion::tween(-0.1F), std::invalid_argument);
+    REQUIRE_THROWS_AS(motion::tween(-0.1F), std::invalid_argument);
 }
 
 TEST_CASE("motion::spring builds a spring spec fluently", "[animation][motion]") {
-    const auto spec = animation::motion::spring().stiffness(200.0F).damping(12.0F).mass(2.0F);
+    const auto spec = motion::spring().stiffness(200.0F).damping(12.0F).mass(2.0F);
     REQUIRE(spec.stiffness() == Catch::Approx(200.0F));
     REQUIRE(spec.damping() == Catch::Approx(12.0F));
     REQUIRE(spec.mass() == Catch::Approx(2.0F));
@@ -1630,7 +1630,7 @@ TEST_CASE(
     auto button = ui.make<widget::Button>("Button")
                       .behavior(
                           widget::visual::container.radius,
-                          animation::motion::tween(0.4F).easing(animation::motion::ease_standard)
+                          motion::tween(0.4F).easing(motion::ease_standard)
                       )
                       .bind(widget::visual::container.radius, radius)
                       .build();
@@ -1661,7 +1661,7 @@ TEST_CASE(
     auto button = ui.make<widget::Button>("Button")
                       .spring(
                           widget::visual::container.radius,
-                          animation::motion::spring().stiffness(200.0F).damping(10.0F)
+                          motion::spring().stiffness(200.0F).damping(10.0F)
                       )
                       .bind(widget::visual::container.radius, radius)
                       .build();
@@ -1707,7 +1707,7 @@ TEST_CASE(
 
     auto& hovered = ui.signal_value(false);
     auto button = ui.make<widget::Button>("item")
-                      .behavior(widget::visual::container.radius, animation::motion::tween(0.12F))
+                      .behavior(widget::visual::container.radius, motion::tween(0.12F))
                       .on_hover_changed([&hovered](const bool value) { hovered.set(value); })
                       .build();
 

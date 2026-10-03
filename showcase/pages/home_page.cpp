@@ -5,8 +5,8 @@
 #include "component_page.hpp"
 #include "nandina/foundation/nan_logger.hpp"
 
-#include <nandina/animation/motion.hpp>
 #include <nandina/foundation/motion/behavior.hpp>
+#include <nandina/foundation/motion/spec.hpp>
 #include <nandina/foundation/motion/spring.hpp>
 #include <nandina/theme/nan_style.hpp>
 #include <nandina/widget/controls.hpp>
@@ -219,25 +219,25 @@ namespace nandina::showcase
                     // on_theme_changed 也救不回来（见 stories/005 §6）。
                     //
                     // 保留颜色悬浮的出路是补上"主题版本信号"，那时这里可以重新绑颜色。
-                    auto label = ui.make<widget::Label>(std::string(component.name))
-                                     .width(widget::authoring::fill)
-                                     .font_size(kComponentFontSize)
-                                     .color_token(theme::ColorToken::foreground)
-                                     .transform_origin(scene::TransformOrigin::center)
-                                     .bind(widget::visual::scale, hovered_scale)
-                                     .behavior(
-                                         widget::visual::scale,
-                                         animation::motion::tween(hover_animation_duration)
-                                             .easing(animation::motion::ease_linear)
-                                     )
-                                     .configure([](widget::Label& component_label) {
-                                         component_label.set_overflow(
-                                             widget::primitives::TextOverflow::clip
-                                         );
-                                         component_label.set_max_lines(1);
-                                         component_label.set_align(theme::TextAlign::center);
-                                     })
-                                     .build();
+                    auto label =
+                        ui.make<widget::Label>(std::string(component.name))
+                            .width(widget::authoring::fill)
+                            .font_size(kComponentFontSize)
+                            .color_token(theme::ColorToken::foreground)
+                            .transform_origin(scene::TransformOrigin::center)
+                            .bind(widget::visual::scale, hovered_scale)
+                            .behavior(
+                                widget::visual::scale,
+                                motion::tween(hover_animation_duration).easing(motion::ease_linear)
+                            )
+                            .configure([](widget::Label& component_label) {
+                                component_label.set_overflow(
+                                    widget::primitives::TextOverflow::clip
+                                );
+                                component_label.set_max_lines(1);
+                                component_label.set_align(theme::TextAlign::center);
+                            })
+                            .build();
 
                     auto item =
                         ui.make<widget::GestureArea>()

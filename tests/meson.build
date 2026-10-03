@@ -12,6 +12,13 @@ foundation_tests = executable(
 )
 test('foundation', foundation_tests, suite: 'unit')
 
+motion_spec_header_tests = executable(
+    'motion_spec_header_tests',
+    files('motion_spec_header_tests.cpp', 'legacy_motion_header_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('motion-spec-header', motion_spec_header_tests, suite: 'unit')
+
 contrast_tests = executable(
     'contrast_tests',
     files('contrast_tests.cpp'),

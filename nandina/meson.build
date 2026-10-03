@@ -38,6 +38,7 @@ module_fundation = files(
     'foundation/motion/tween.hpp',
     'foundation/motion/keyframes.hpp',
     'foundation/motion/animated_property.hpp',
+    'foundation/motion/spec.hpp',
 )
 
 module_reactive = files(

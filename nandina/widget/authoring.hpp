@@ -5,8 +5,8 @@
 #ifndef NANDINA_EXPERIMENT_WIDGET_AUTHORING_HPP
 #define NANDINA_EXPERIMENT_WIDGET_AUTHORING_HPP
 
-#include "../animation/motion.hpp"
 #include "../foundation/geometry.hpp"
+#include "../foundation/motion/spec.hpp"
 #include "../reactive/graph.hpp"
 #include "../reactive/scope.hpp"
 #include "../scene/control.hpp"
@@ -529,7 +529,7 @@ namespace nandina::widget::authoring
         /// 声明式缓动：`.behavior(visual::container.radius, motion::tween(0.3F).easing(...))`。
         template<visual::Path Path>
             requires property::Animatable<Node, Path>
-        auto behavior(Path path, animation::motion::TweenSpec spec) -> NodeBuilder& {
+        auto behavior(Path path, motion::TweenSpec spec) -> NodeBuilder& {
             property::set_behavior(*node_, path, spec.behavior<property::value_t<Path>>());
             return *this;
         }

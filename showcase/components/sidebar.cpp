@@ -14,8 +14,8 @@
 
 #include "../pages/component_page.hpp"
 
-#include <nandina/animation/motion.hpp>
 #include <nandina/app/nan_router.hpp>
+#include <nandina/foundation/motion/spec.hpp>
 #include <nandina/foundation/nan_logger.hpp>
 #include <nandina/widget/controls.hpp>
 #include <nandina/widget/visual_property.hpp>
@@ -65,7 +65,7 @@ namespace nandina::showcase
                 // 那点过冲（阻尼 28 / 刚度 420 ≈ 5%，算下来不到 0.2px）根本看不见，
                 // 而弹簧参数没有任何主题来源 —— 换成主题令牌驱动的时长，手感才能被
                 // 主题统一调。弹簧留给需要连续性的大位移（拖拽、面板推出）更合适。
-                .behavior(widget::visual::container.radius, animation::motion::tween(micro_motion))
+                .behavior(widget::visual::container.radius, motion::tween(micro_motion))
                 .on_hover_changed([&hovered](const bool value) { hovered.set(value); })
                 .on_press([&pressed] { pressed.set(true); })
                 .on_release([&pressed] { pressed.set(false); })

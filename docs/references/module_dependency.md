@@ -27,10 +27,12 @@ NandinaUI 按模块组织，模块之间的方向决定了改动会扩散到哪�
 > `motion::spring()`）与一批纯 `using` 别名（`animation::Behavior` → `motion::Behavior` 等）。
 > 值实现已下移到 `foundation/motion/`，调度已下移到 `scene/`；两者之间的环已经消失。
 >
-> 别名本身不会漂移（同一个类型），但它是**两个名字指向同一个概念**。收口方向（未做）：
-> 新代码与主要行为测试改用 `motion::` / `scene::`；旧入口只留一条测试证明它仍能**单独编译**
-> （除了类型别名断言，还要独立 include 旧头文件）；`nandina::motion` 与
-> `nandina::animation::motion` 这两个同名尾缀的命名空间应当合并成一个，但旧词法入口保留。
+> 别名本身不会漂移（同一个类型），但它是**两个名字指向同一个概念**。本轮先收口
+> 声明式规格：`foundation/motion/spec.hpp` 唯一定义 `motion::TweenSpec`、`tween()`、
+> `spring()` 与缓动常量；`animation/motion.hpp` 仅提供
+> `namespace nandina::animation::motion = nandina::motion`，保留旧词法入口。
+> 新组件代码与行为测试用 `motion::`，旧头文件以独立 include 的编译测试守住兼容性。
+> 其余 `animation::Behavior` / `animation::Group` 等旧名称的迁移另行推进，不在本步机械改写。
 
 ## 约束
 
