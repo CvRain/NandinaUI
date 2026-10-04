@@ -192,6 +192,8 @@ namespace nandina::text
                 .relative_path = font_path->filename(),
                 .media_type = media_type_for(*font_path),
             }},
+            // System font discovery follows links in user font directories.
+            .allow_symlinks = true,
         });
         if (!backend) {
             return std::unexpected(

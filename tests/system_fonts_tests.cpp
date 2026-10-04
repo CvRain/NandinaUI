@@ -9,8 +9,11 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
+#include <optional>
+#include <stdexcept>
 #include <string>
 
 using namespace nandina;
@@ -44,6 +47,38 @@ namespace
         static inline std::size_t counter_ = 0;
         std::filesystem::path path_;
     };
+
+#if defined(__linux__)
+    auto home_value() -> std::optional<std::string> {
+        const auto* value = std::getenv("HOME");
+        return value != nullptr ? std::optional<std::string>(value) : std::nullopt;
+    }
+
+    class ScopedHome {
+    public:
+        explicit ScopedHome(const std::filesystem::path& temporary_home_path):
+            previous_(home_value()) {
+            if (::setenv("HOME", temporary_home_path.c_str(), 1) != 0) {
+                throw std::runtime_error("cannot set temporary HOME");
+            }
+        }
+
+        ~ScopedHome() {
+            if (previous_) {
+                (void)::setenv("HOME", previous_->c_str(), 1);
+            }
+            else {
+                (void)::unsetenv("HOME");
+            }
+        }
+
+        ScopedHome(const ScopedHome&) = delete;
+        auto operator=(const ScopedHome&) -> ScopedHome& = delete;
+
+    private:
+        std::optional<std::string> previous_;
+    };
+#endif
 } // namespace
 
 TEST_CASE("find_cjk_font_in matches known CJK filenames", "[text][system-fonts]") {
@@ -113,3 +148,36 @@ TEST_CASE("register_system_cjk_fallback degrades gracefully", "[text][system-fon
         REQUIRE_FALSE(resolved->faces.empty());
     }
 }
+
+#if defined(__linux__)
+TEST_CASE("register_system_cjk_fallback loads a discovered symlink", "[text][system-fonts]") {
+    TempDirectory directory;
+    directory.write_font("font.bin");
+    const auto temporary_home_path = directory.path() / "home";
+    const auto fonts = temporary_home_path / ".local" / "share" / "fonts";
+    std::filesystem::create_directories(fonts);
+    const auto font_link = fonts / "NotoSansCJK-Regular.ttc";
+    std::filesystem::create_symlink(directory.path() / "font.bin", font_link);
+
+    const auto previous_home = home_value();
+    {
+        // Discovery searches this directory first; a rank-zero filename also wins
+        // when the machine has other real CJK fonts. Only this process HOME changes.
+        ScopedHome temporary_home(temporary_home_path);
+        REQUIRE(text::find_system_cjk_font() == font_link);
+        resource::ResourceManager resources;
+        text::FontFamilyRegistry registry;
+        const auto registered = text::register_system_cjk_fallback(resources, registry);
+        REQUIRE(registered.has_value());
+        REQUIRE(*registered);
+
+        // Registration needs resource access, not font parsing. Prove that it loads
+        // the linked bytes, rather than merely announcing a discovered filename.
+        const auto font = resources.require(resource::ResourceKey("fonts/system-cjk"));
+        REQUIRE(font.has_value());
+        const auto bytes = (*font)->bytes();
+        REQUIRE(std::string(bytes.begin(), bytes.end()) == "dummy-font-bytes");
+    }
+    REQUIRE(home_value() == previous_home);
+}
+#endif
