@@ -169,6 +169,7 @@ module_text = files(
 module_widget = files(
     'widget/visual_property.hpp',
     'widget/authoring.hpp',
+    'widget/animation_authoring.hpp',
     'widget/build_context.hpp',
     'widget/reactive_control.hpp',
     'widget/bindable_rect.hpp',

@@ -96,6 +96,13 @@ authoring_tests = executable(
 )
 test('authoring', authoring_tests, suite: 'unit')
 
+group_authoring_tests = executable(
+    'group_authoring_tests',
+    files('group_authoring_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('group-authoring', group_authoring_tests, suite: 'unit')
+
 build_context_header_tests = executable(
     'build_context_header_tests',
     files('build_context_header_tests.cpp'),
