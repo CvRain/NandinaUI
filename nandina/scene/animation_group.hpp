@@ -14,10 +14,12 @@
 
 #include "../foundation/motion/animated_property.hpp"
 #include "../foundation/motion/behavior.hpp"
+#include "animation_clip.hpp"
 #include "node2d.hpp"
 
 #include <cstddef>
 #include <functional>
+#include <memory>
 #include <utility>
 #include <vector>
 
@@ -25,18 +27,7 @@ namespace nandina::scene
 {
     class AnimationGroup {
     public:
-        struct Clip {
-            bool started = false;
-            /// elapsed(秒) → 是否该触发本 clip（time-based 或 completion-based）。
-            std::function<bool(float)> ready;
-            std::function<void()> start;
-            /// 返回本帧 value 是否确实变化。
-            std::function<bool(float)> tick;
-            std::function<bool()> animating;
-            std::function<void()> finish;
-            NanNode2D* owner = nullptr;
-            DirtyFlags dirty = DirtyFlags::none;
-        };
+        using Clip = AnimationClip;
 
         AnimationGroup() = default;
         explicit AnimationGroup(std::vector<Clip> clips): clips_(std::move(clips)) {}
@@ -59,6 +50,7 @@ namespace nandina::scene
         ) -> Clip {
             return Clip {
                 .started = false,
+                .identity = static_cast<const void*>(std::addressof(property)),
                 .ready = [](float) { return true; },
                 .start =
                     [&property, target, behavior = std::move(behavior)]() mutable {
@@ -89,6 +81,9 @@ namespace nandina::scene
         /// 立即触发所有未触发的 clip 并跳到各自目标（取消 / 归约动效）。
         void finish();
         [[nodiscard]] auto finished() const -> bool;
+
+        /// 返回 group 中的属性身份，供 AnimationHost 安装前取消冲突轨道。
+        [[nodiscard]] auto identities() const -> std::vector<const void*>;
 
     private:
         std::vector<Clip> clips_;

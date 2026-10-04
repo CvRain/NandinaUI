@@ -6,6 +6,7 @@
 #include "../foundation/geometry.hpp"
 #include "../foundation/motion/behavior.hpp"
 #include "../foundation/motion/spring.hpp"
+#include "animation_clip.hpp"
 #include "visual_property.hpp"
 
 #include <memory>
@@ -42,6 +43,8 @@ namespace nandina::scene
             /// 弹簧与 behavior 互斥（装上这个会清掉那个）。opacity 是浮点路径，支持弹簧。
             void set_spring(motion::SpringSpec spec);
             void clear_spring();
+            [[nodiscard]] auto clip(float opacity, motion::Behavior<float> behavior)
+                -> AnimationClip;
             [[nodiscard]] auto value() const noexcept -> const float*;
             [[nodiscard]] auto target() const noexcept -> const float*;
 
@@ -54,6 +57,9 @@ namespace nandina::scene
             explicit TranslateProperty(NodePresentation& presentation) noexcept;
             void set(foundation::NanPoint translate);
             void set_behavior(motion::Behavior<foundation::NanPoint> behavior);
+            [[nodiscard]] auto
+            clip(foundation::NanPoint translate, motion::Behavior<foundation::NanPoint> behavior)
+                -> AnimationClip;
             [[nodiscard]] auto value() const noexcept -> const foundation::NanPoint*;
             [[nodiscard]] auto target() const noexcept -> const foundation::NanPoint*;
 
@@ -66,6 +72,9 @@ namespace nandina::scene
             explicit ScaleProperty(NodePresentation& presentation) noexcept;
             void set(foundation::NanPoint scale);
             void set_behavior(motion::Behavior<foundation::NanPoint> behavior);
+            [[nodiscard]] auto
+            clip(foundation::NanPoint scale, motion::Behavior<foundation::NanPoint> behavior)
+                -> AnimationClip;
             [[nodiscard]] auto value() const noexcept -> const foundation::NanPoint*;
             [[nodiscard]] auto target() const noexcept -> const foundation::NanPoint*;
 

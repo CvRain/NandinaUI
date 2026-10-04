@@ -79,4 +79,15 @@ namespace nandina::scene
         }
         return true;
     }
+
+    auto AnimationGroup::identities() const -> std::vector<const void*> {
+        std::vector<const void*> result;
+        result.reserve(clips_.size());
+        for (const auto& clip: clips_) {
+            if (clip.identity != nullptr) {
+                result.push_back(clip.identity);
+            }
+        }
+        return result;
+    }
 } // namespace nandina::scene

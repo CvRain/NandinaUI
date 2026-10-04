@@ -1346,6 +1346,40 @@ TEST_CASE("group is cancelled when its owner exits the tree", "[animation][group
 }
 
 TEST_CASE(
+    "endpoint clips arbitrate with ordinary property tracks",
+    "[animation][group][endpoint]"
+) {
+    scene::NanSceneTree tree;
+    auto probe = std::make_shared<scene::NanControl>();
+    tree.set_root(probe);
+
+    auto opacity = probe->visual_part(scene::visual::node).property(scene::visual::opacity_t {});
+    auto translate =
+        probe->visual_part(scene::visual::node).property(scene::visual::translate_t {});
+    auto group = scene::AnimationGroup::parallel(
+        {opacity.clip(0.0F, motion::Behavior<float>(1.0F, motion::Easing::linear)),
+         translate.clip(
+             foundation::NanPoint(40.0F, 0.0F),
+             motion::Behavior<foundation::NanPoint>(1.0F, motion::Easing::linear)
+         )}
+    );
+    tree.animation_host().run(*probe, std::move(group));
+    advance(tree, 0.25F);
+    REQUIRE(*opacity.value() == Catch::Approx(0.75F));
+    REQUIRE(translate.value()->get_x() == Catch::Approx(10.0F));
+    REQUIRE(tree.animation_host().active_count() == 1);
+
+    opacity.set(1.0F);
+    // Cancelling one clip completes the whole group; the new opacity target may still
+    // install its own ordinary track, but no sibling property is left unhosted.
+    REQUIRE(tree.animation_host().active_count() == 1);
+    REQUIRE(translate.value()->get_x() == Catch::Approx(40.0F));
+    advance(tree, 1.0F);
+    REQUIRE(*opacity.value() == Catch::Approx(1.0F));
+    REQUIRE(tree.animation_host().active_count() == 0);
+}
+
+TEST_CASE(
     "spring consumes a hitch consistently across damping regimes",
     "[animation][spring][hitch]"
 ) {

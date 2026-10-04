@@ -8,11 +8,13 @@
 #include "../foundation/motion/animated_property.hpp"
 #include "../foundation/motion/behavior.hpp"
 #include "../foundation/motion/spring.hpp"
+#include "animation_group.hpp"
 #include "animation_host.hpp"
 #include "scene_tree.hpp"
 
 #include <concepts>
 #include <optional>
+#include <stdexcept>
 #include <type_traits>
 #include <utility>
 
@@ -100,6 +102,19 @@ namespace nandina::scene
             const T previous = property_->value();
             property_->clear_spring();
             reconcile(previous);
+        }
+
+        [[nodiscard]] auto clip(T target, motion::Behavior<T> behavior) -> AnimationClip {
+            if (!property_) {
+                throw std::logic_error("cannot create an animation clip without a value");
+            }
+            return AnimationGroup::clip(
+                *owner_,
+                *property_,
+                std::move(target),
+                std::move(behavior),
+                dirty_flags_
+            );
         }
 
         void clear() {

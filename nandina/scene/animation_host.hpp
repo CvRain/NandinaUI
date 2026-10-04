@@ -42,6 +42,7 @@ namespace nandina::scene
             }
 
             const T previous = property.value();
+            cancel_conflicting(static_cast<const void*>(std::addressof(property)));
             property.set_target(std::move(target));
             if (reduced_motion()) {
                 property.finish();
@@ -95,6 +96,7 @@ namespace nandina::scene
             std::function<TickResult(float)> tick;
             std::function<void()> finish;
             DirtyFlags dirty_flags = DirtyFlags::none;
+            std::vector<const void*> conflicts;
         };
 
         void upsert(
@@ -102,9 +104,11 @@ namespace nandina::scene
             const void* identity,
             std::function<TickResult(float)> tick,
             std::function<void()> finish,
-            DirtyFlags dirty_flags
+            DirtyFlags dirty_flags,
+            std::vector<const void*> conflicts = {}
         );
         void cancel_property(const void* identity) noexcept;
+        void cancel_conflicting(const void* identity) noexcept;
 
         /// 全局 reduced-motion policy：宿主所在场景树的 ThemeManager 归约动效时，
         /// 新目标直跳、在途轨道立即完成。无 ThemeManager 时视为未归约。

@@ -54,6 +54,12 @@ namespace nandina::scene
         presentation_->impl_->opacity.clear_spring();
     }
 
+    auto
+    NodePresentation::OpacityProperty::clip(const float opacity, motion::Behavior<float> behavior)
+        -> AnimationClip {
+        return presentation_->impl_->opacity.clip(opacity, std::move(behavior));
+    }
+
     auto NodePresentation::OpacityProperty::value() const noexcept -> const float* {
         return presentation_->impl_->opacity.value();
     }
@@ -73,6 +79,13 @@ namespace nandina::scene
         motion::Behavior<foundation::NanPoint> behavior
     ) {
         presentation_->impl_->translate.set_behavior(std::move(behavior));
+    }
+
+    auto NodePresentation::TranslateProperty::clip(
+        foundation::NanPoint translate,
+        motion::Behavior<foundation::NanPoint> behavior
+    ) -> AnimationClip {
+        return presentation_->impl_->translate.clip(std::move(translate), std::move(behavior));
     }
 
     auto NodePresentation::TranslateProperty::value() const noexcept
@@ -98,6 +111,13 @@ namespace nandina::scene
     void
     NodePresentation::ScaleProperty::set_behavior(motion::Behavior<foundation::NanPoint> behavior) {
         presentation_->impl_->scale.set_behavior(std::move(behavior));
+    }
+
+    auto NodePresentation::ScaleProperty::clip(
+        foundation::NanPoint scale,
+        motion::Behavior<foundation::NanPoint> behavior
+    ) -> AnimationClip {
+        return presentation_->impl_->scale.clip(std::move(scale), std::move(behavior));
     }
 
     auto NodePresentation::ScaleProperty::value() const noexcept -> const foundation::NanPoint* {

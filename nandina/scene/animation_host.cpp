@@ -76,6 +76,10 @@ namespace nandina::scene
         if (weak_owner.expired()) {
             throw std::logic_error("animation owner must be managed by shared_ptr");
         }
+        const auto conflicts = group.identities();
+        for (const auto* identity: conflicts) {
+            cancel_conflicting(identity);
+        }
         auto shared = std::make_shared<AnimationGroup>(std::move(group));
         upsert(
             std::move(weak_owner),
@@ -88,7 +92,8 @@ namespace nandina::scene
                 };
             },
             [shared] { shared->finish(); },
-            DirtyFlags::none
+            DirtyFlags::none,
+            conflicts
         );
     }
 
@@ -97,7 +102,8 @@ namespace nandina::scene
         const void* identity,
         std::function<TickResult(float)> tick,
         std::function<void()> finish,
-        const DirtyFlags dirty_flags
+        const DirtyFlags dirty_flags,
+        std::vector<const void*> conflicts
     ) {
         const auto existing =
             std::ranges::find(tracks_, identity, [](const Track& track) { return track.identity; });
@@ -106,6 +112,7 @@ namespace nandina::scene
             existing->tick = std::move(tick);
             existing->finish = std::move(finish);
             existing->dirty_flags |= dirty_flags;
+            existing->conflicts = std::move(conflicts);
             return;
         }
         tracks_.push_back(
@@ -115,6 +122,7 @@ namespace nandina::scene
                 .tick = std::move(tick),
                 .finish = std::move(finish),
                 .dirty_flags = dirty_flags,
+                .conflicts = std::move(conflicts),
             }
         );
     }
@@ -122,6 +130,23 @@ namespace nandina::scene
     void AnimationHost::cancel_property(const void* identity) noexcept {
         std::erase_if(tracks_, [identity](const Track& track) {
             return track.identity == identity;
+        });
+    }
+
+    void AnimationHost::cancel_conflicting(const void* identity) noexcept {
+        std::erase_if(tracks_, [identity](const Track& track) {
+            const bool is_property_track = track.identity == identity;
+            const bool is_conflicting_group =
+                std::ranges::find(track.conflicts, identity) != track.conflicts.end();
+            if (!is_property_track && !is_conflicting_group) {
+                return false;
+            }
+            // Retargeting a normal property must preserve its current value. A group,
+            // however, must finish all clips so no sibling clip is left without a host.
+            if (is_conflicting_group) {
+                track.finish();
+            }
+            return true;
         });
     }
 

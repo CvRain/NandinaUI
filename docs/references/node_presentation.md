@@ -449,6 +449,19 @@ L2 让"能廉价改变的量"齐了，但**从组件/页面够到组合调度还
   同一个属性被普通轨道与 group 同时推进时的仲裁、两边的取消语义（谁取消谁）、
   以及 group 持有 endpoint 引用时的生命周期。这三件事没定之前不要暴露 DSL。
 
+本轮先完成 endpoint 工厂所需的底层契约，仍不开放 `.group(...)` 作者 DSL：
+
+- `PropertyEndpoint::clip(target, behavior)` 生成带属性身份的 clip；clip 只捕获
+  `AnimatedProperty`，不捕获 endpoint 或节点的强引用。
+- `AnimationHost::run()` 在安装 group 前取消并完成所有冲突轨道；普通 `set()` 命中
+  group 中任一属性时同样完成并移除整个 group，再安装新的普通轨道。这样同一属性
+  永远只有一个推进者，且 group 的其它 clip 不会失去宿主。
+- 节点离树、Host 清空和 reduced-motion 仍采用“完成整个 group”的取消语义；没有
+  “只取消一个 clip 但让其它 clip 继续”的半取消状态。
+
+作者层入口待下一步：需要在 `NodeBuilder` 里决定 group 的声明时机（构建期还是挂载后）
+以及多个 endpoint 的 owner 校验，确认后再加入 `parallel` / `sequential` / `stagger`。
+
 > 记在这里的目的是：读"L2 已落地"时不要顺手认为"组合动画也能用了"。
 
 ## 7. 明确的非目标
