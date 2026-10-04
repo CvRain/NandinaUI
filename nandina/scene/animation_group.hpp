@@ -78,6 +78,9 @@ namespace nandina::scene
         static auto stagger(std::vector<Clip> clips, float interval) -> AnimationGroup;
 
         void advance(float dt);
+        /// Reject invalid clips before the Host changes any active track. Raw
+        /// property clips remain borrowed; their storage must outlive playback.
+        void validate_owner(const NanNode2D& owner) const;
         /// 立即触发所有未触发的 clip 并跳到各自目标（取消 / 归约动效）。
         void finish();
         [[nodiscard]] auto finished() const -> bool;

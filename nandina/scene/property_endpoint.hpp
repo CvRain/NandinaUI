@@ -56,6 +56,7 @@ namespace nandina::scene
         }
 
         void set_behavior(motion::Behavior<T> behavior) {
+            cancel_conflicts();
             behavior_ = std::move(behavior);
             if constexpr (std::is_floating_point_v<T>) {
                 spring_.reset();
@@ -69,6 +70,7 @@ namespace nandina::scene
         }
 
         void clear_behavior() {
+            cancel_conflicts();
             behavior_.reset();
             if (!property_) {
                 return;
@@ -82,6 +84,7 @@ namespace nandina::scene
         void set_spring(motion::SpringSpec spec)
             requires std::is_floating_point_v<T>
         {
+            cancel_conflicts();
             spring_ = std::move(spec);
             behavior_.reset();
             if (!property_) {
@@ -95,6 +98,7 @@ namespace nandina::scene
         void clear_spring()
             requires std::is_floating_point_v<T>
         {
+            cancel_conflicts();
             spring_.reset();
             if (!property_) {
                 return;
@@ -104,23 +108,29 @@ namespace nandina::scene
             reconcile(previous);
         }
 
+        /// Borrows this endpoint and its value until playback completes. Creating
+        /// a clip has no side effects; starting it adopts its persistent policy.
         [[nodiscard]] auto clip(T target, motion::Behavior<T> behavior) -> AnimationClip {
             if (!property_) {
                 throw std::logic_error("cannot create an animation clip without a value");
             }
-            return AnimationGroup::clip(
-                *owner_,
-                *property_,
-                std::move(target),
-                std::move(behavior),
-                dirty_flags_
-            );
+            auto result = AnimationGroup::clip(*owner_, *property_, target, behavior, dirty_flags_);
+            result.start =
+                [this, target = std::move(target), behavior = std::move(behavior)]() mutable {
+                    behavior_ = std::move(behavior);
+                    spring_.reset();
+                    // Do not reconcile here: the group is already the sole scheduler.
+                    property_->set_behavior(*behavior_);
+                    property_->set_target(std::move(target));
+                };
+            return result;
         }
 
         void clear() {
             if (!property_) {
                 return;
             }
+            cancel_conflicts();
             property_->clear_behavior();
             if constexpr (std::is_floating_point_v<T>) {
                 property_->clear_spring();
@@ -154,6 +164,14 @@ namespace nandina::scene
         }
 
     private:
+        void cancel_conflicts() {
+            if (property_) {
+                if (auto* tree = owner_->get_tree(); tree != nullptr) {
+                    tree->animation_host().cancel_conflicting(std::addressof(*property_));
+                }
+            }
+        }
+
         void install_behavior() {
             if (behavior_) {
                 property_->set_behavior(*behavior_);

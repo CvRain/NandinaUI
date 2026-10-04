@@ -84,6 +84,10 @@ namespace nandina::scene
         /// 变化的属性传播 DirtyFlags。
         void run(NanNode2D& owner, AnimationGroup group);
 
+        /// Complete a conflicting group before changing endpoint policy or storage.
+        /// Ordinary tracks are removed without changing their current value.
+        void cancel_conflicting(const void* identity) noexcept;
+
     private:
         struct TickResult {
             bool changed = false;
@@ -108,7 +112,6 @@ namespace nandina::scene
             std::vector<const void*> conflicts = {}
         );
         void cancel_property(const void* identity) noexcept;
-        void cancel_conflicting(const void* identity) noexcept;
 
         /// 全局 reduced-motion policy：宿主所在场景树的 ThemeManager 归约动效时，
         /// 新目标直跳、在途轨道立即完成。无 ThemeManager 时视为未归约。

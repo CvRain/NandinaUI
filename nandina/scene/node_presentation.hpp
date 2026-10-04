@@ -9,6 +9,7 @@
 #include "animation_clip.hpp"
 #include "visual_property.hpp"
 
+#include <cstdint>
 #include <memory>
 
 namespace nandina::scene
@@ -43,6 +44,7 @@ namespace nandina::scene
             /// 弹簧与 behavior 互斥（装上这个会清掉那个）。opacity 是浮点路径，支持弹簧。
             void set_spring(motion::SpringSpec spec);
             void clear_spring();
+            /// Borrows the node's stable endpoint; starting adopts this behavior.
             [[nodiscard]] auto clip(float opacity, motion::Behavior<float> behavior)
                 -> AnimationClip;
             [[nodiscard]] auto value() const noexcept -> const float*;
