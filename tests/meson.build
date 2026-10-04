@@ -58,7 +58,7 @@ if box2d_dep.found()
         files('physics2d_tests.cpp'),
         dependencies : [nandina_dep, catch2_with_main_dep],
     )
-    test('physics2d', physics2d_tests)
+    test('physics2d', physics2d_tests, suite: 'unit')
 endif
 
 render_tests = executable(
@@ -576,6 +576,15 @@ test(
         meson.project_source_root() / 'tools' / 'sdk_bundle.py',
     ],
     timeout: 600,
+    suite: 'integration',
+)
+test(
+    'ci-test-suites',
+    python,
+    args: [
+        files('ci_test_suites_test.py'),
+        meson.project_source_root() / 'tools' / 'check_test_suites.py',
+    ],
     suite: 'integration',
 )
 release_metadata_test = find_program('release_metadata_test.py')
