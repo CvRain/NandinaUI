@@ -25,6 +25,8 @@ module_fundation = files(
     'foundation/contrast.hpp',
     'foundation/geometry.hpp',
     'foundation/geometry.cpp',
+    'foundation/layout_constraints.hpp',
+    'foundation/layout_constraints.cpp',
     'foundation/transform2d.hpp',
     'foundation/transform2d.cpp',
     'foundation/utf8.hpp',

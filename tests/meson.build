@@ -12,6 +12,13 @@ foundation_tests = executable(
 )
 test('foundation', foundation_tests, suite: 'unit')
 
+layout_constraints_tests = executable(
+    'layout_constraints_tests',
+    files('layout_constraints_tests.cpp', 'layout_constraints_compat_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('layout-constraints', layout_constraints_tests, suite: 'unit')
+
 motion_spec_header_tests = executable(
     'motion_spec_header_tests',
     files('motion_spec_header_tests.cpp', 'legacy_motion_header_tests.cpp'),

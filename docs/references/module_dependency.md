@@ -58,6 +58,43 @@ NandinaUI 按模块组织，模块之间的方向决定了改动会扩散到哪�
 
 修改这些位置时，如果需要新增一条向上依赖，正确做法通常是**把被引用的类型下移**，而不是让下层头文件命名上层类型；`docs/references/component_contract.md` 第 8 节对类型识别访问器也给出了同一条规则。
 
+## 文本管线迁移的前置：纯布局约束
+
+在移动 TextPipeline 协议之前，先将与节点无关的四个布局边界值抽到
+`foundation::NanLayoutConstraints`（`foundation/layout_constraints.hpp`）。
+`scene/control.hpp` 保留 `using LayoutConstraints = foundation::NanLayoutConstraints`，
+现有源码仍可使用 `scene::LayoutConstraints`。`TextLayoutInput::constraints` 直接使用
+foundation 类型，因此 `widget/primitives/text_layout.hpp` 不再仅为约束值包含整个 Control。
+
+本步骤只迁移 `loose()`、`tight()`、`constrain()` 和 `deflated()`，保留四个字段的顺序、
+默认值与现有数值行为。有限/无限上界、反向上下界、非有限上界的既有处理，以及四向
+inset 缩减后下限归零，均用具体数值回归覆盖；不增加约束校验或节点职责。
+新 foundation 头只依赖 foundation 几何值和标准库，以独立 include 的测试单元守住边界。
+
+该迁移保持源码类型别名兼容，但具名类型的命名空间变化会改变相关 C++ 符号，例如
+`NanControl::measure_layout` 的参数类型。因此库和调用方都需要重新编译；本步骤不提供
+旧已编译二进制的 ABI 兼容保证。
+
+这是纯约束类型的前置收口。上表中 `text -> widget::primitives` 与
+`scene -> widget::primitives` 两条 TextPipeline 依赖仍待协议迁移，不能因为删除一个
+Control include 就标记为已完成。主题字体描述与 physics2d 分层不属于本步骤。
+
+本步骤已完成（2026-10-05）。`Text` 原语显式包含自己的 Control 基类定义，不再依靠
+文本布局值头的传递 include。验证使用既有 Clang 21.1.8 / GNU libstdc++ 14 头文件环境：
+
+| 验证 | 结果 |
+| --- | --- |
+| 普通、ASan/UBSan、no-RTTI 完整构建（含 showcase） | 三套通过 |
+| 三套构建的 unit suite | 各 73/73 通过 |
+| 新约束值与源码兼容测试 | 每套 12 个用例、92 项断言通过 |
+| SDK 来源核验 | 13,812 个导出输入原始哈希、HEAD、12 项递归 submodule 状态一致 |
+| 三格式 SDK 导出 | 新 `.hpp` / `.cpp` 均存在，档案内文件哈希与源码一致 |
+| 导出后的纯值消费者 | 仅使用 ZIP 中的约束与 geometry 文件编译、运行通过 |
+
+SDK 检查为单次打包与纯 foundation 消费者，不等同于重跑全部 SDK 可复现性 fixture。
+窗口测试关闭、clipboard 的一个内部用例跳过、ASan leak 检测关闭及未运行远程 CI 的
+限制与上一轮验证相同。随后只更新此验证记录，执行代码保持冻结时的内容。
+
 ## 判断一次改动是否越界
 
 - 新增的头文件引用是在往下（可以用）还是往上（需要下移或记录债务）？

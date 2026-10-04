@@ -5,8 +5,8 @@
 #ifndef NANDINA_EXPERIMENT_WIDGET_PRIMITIVES_TEXT_LAYOUT_HPP
 #define NANDINA_EXPERIMENT_WIDGET_PRIMITIVES_TEXT_LAYOUT_HPP
 
+#include "../../foundation/layout_constraints.hpp"
 #include "../../foundation/nandina_color.hpp"
-#include "../../scene/control.hpp"
 #include "../../text/font_family.hpp"
 #include "../../theme/visual_state.hpp"
 
@@ -90,7 +90,7 @@ namespace nandina::widget::primitives
     struct TextLayoutInput {
         std::string_view text;
         TextStyle style;
-        scene::LayoutConstraints constraints = scene::LayoutConstraints::loose();
+        foundation::NanLayoutConstraints constraints = foundation::NanLayoutConstraints::loose();
     };
 
     enum class TextAffinity : std::uint8_t {
