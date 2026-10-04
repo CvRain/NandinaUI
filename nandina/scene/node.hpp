@@ -34,15 +34,11 @@ namespace nandina::render
     class TextureCache;
 } // namespace nandina::render
 
-namespace nandina::widget::primitives
-{
-    struct TextPipeline;
-}
-
 namespace nandina::text
 {
     class FontPipelineCache;
-}
+    struct TextPipeline;
+} // namespace nandina::text
 
 namespace nandina::theme
 {
@@ -112,8 +108,7 @@ namespace nandina::scene
         void set_style_context(theme::StyleContext context);
         void clear_style_context();
         [[nodiscard]] auto style_context() const -> const theme::StyleContext&;
-        [[nodiscard]] auto resolved_style_context() const
-            -> const theme::ResolvedStyleContext&;
+        [[nodiscard]] auto resolved_style_context() const -> const theme::ResolvedStyleContext&;
 
         // ---- child management ----
 
@@ -333,7 +328,7 @@ namespace nandina::scene
             return true;
         }
 
-        virtual void apply_default_text_pipeline(const widget::primitives::TextPipeline& pipeline);
+        virtual void apply_default_text_pipeline(const text::TextPipeline& pipeline);
         virtual void apply_font_context(text::FontPipelineCache& context);
         virtual void apply_texture_cache(render::TextureCache& cache);
 

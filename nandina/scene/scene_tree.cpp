@@ -253,7 +253,7 @@ namespace nandina::scene
         mark_semantics_dirty();
     }
 
-    void NanSceneTree::set_default_text_pipeline(widget::primitives::TextPipeline pipeline) {
+    void NanSceneTree::set_default_text_pipeline(text::TextPipeline pipeline) {
         if (pipeline.backend == nullptr) {
             throw std::invalid_argument("default text pipeline requires a layout backend");
         }
@@ -264,7 +264,7 @@ namespace nandina::scene
         default_text_pipeline_.reset();
     }
 
-    auto NanSceneTree::default_text_pipeline() const -> const widget::primitives::TextPipeline* {
+    auto NanSceneTree::default_text_pipeline() const -> const text::TextPipeline* {
         return default_text_pipeline_ ? &*default_text_pipeline_ : nullptr;
     }
 

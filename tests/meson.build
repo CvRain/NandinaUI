@@ -19,6 +19,13 @@ layout_constraints_tests = executable(
 )
 test('layout-constraints', layout_constraints_tests, suite: 'unit')
 
+text_layout_header_tests = executable(
+    'text_layout_header_tests',
+    files('text_layout_header_tests.cpp', 'legacy_text_layout_header_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('text-protocol-header', text_layout_header_tests, suite: 'unit')
+
 motion_spec_header_tests = executable(
     'motion_spec_header_tests',
     files('motion_spec_header_tests.cpp', 'legacy_motion_header_tests.cpp'),

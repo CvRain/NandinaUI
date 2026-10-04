@@ -441,9 +441,7 @@ namespace nandina::scene
         return p == nullptr || p->is_visible_in_tree();
     }
 
-    void NanNode::apply_default_text_pipeline(
-        const widget::primitives::TextPipeline& /*pipeline*/
-    ) {}
+    void NanNode::apply_default_text_pipeline(const text::TextPipeline& /*pipeline*/) {}
 
     void NanNode::apply_font_context(text::FontPipelineCache& /*context*/) {}
 

@@ -8,13 +8,13 @@ NandinaUI 按模块组织，模块之间的方向决定了改动会扩散到哪�
 
 | 层 | 模块 | 职责 |
 | --- | --- | --- |
-| 基础层 | `foundation` | 几何、颜色、色彩空间、变换、纯值 motion、UTF-8、JSON、日志 |
+| 基础层 | `foundation` | 几何、纯布局约束、颜色、色彩空间、变换、纯值 motion、UTF-8、JSON、日志 |
 | | `reactive` | 信号图与依赖追踪，纯逻辑，不接触渲染与场景 |
 | | `resource` | 资源清单、多后端与运行时管理 |
 | | `physics2d` | 可选的 Box2D 物理桥（默认关闭） |
 | 主题层 | `theme` | 设计令牌、内置主题、样式文档 |
 | 呈现层 | `render` | 渲染设备、绘制上下文、纹理缓存与裁剪栈 |
-| | `text` | 字体加载、整形、字形图集与文本绘制 |
+| | `text` | 文本布局协议、字体加载、整形、字形图集与文本绘制 |
 | | `scene` | 场景树、节点、控件、画布层、动画宿主与帧调度 |
 | | `animation` | motion 作者 DSL 与旧公开名称的兼容入口 |
 | | `semantics` | 无障碍语义树 |
@@ -51,8 +51,6 @@ NandinaUI 按模块组织，模块之间的方向决定了改动会扩散到哪�
 
 | 偏离 | 位置 | 收口方向 |
 | --- | --- | --- |
-| `text` 引用 `widget::primitives` | `text/glyph_run_renderer.hpp`、`text/harfbuzz_text_backend.hpp` 引用 `widget/primitives/text_layout*` | `TextPipeline`、`ITextLayoutBackend`、`ITextLayoutRenderer` 描述的是文本布局协议，不是组件原语；应下移到 `text`（渲染器部分可留在 `render`）。 |
-| `scene` 引用 `widget::primitives` | `scene/scene_tree.hpp` 使用 `widget::primitives::TextPipeline` | 与上一条同源：文本管线类型下移后，这条边自然消失。 |
 | `theme` 引用 `text` | `theme/style_context.hpp`、`style_document.hpp` 引用 `text/font_family.hpp` | `theme` 只需要字体的**描述**（`FontRequest` 等），不需要文本引擎；把字体描述类型下移到 `foundation`，或在 `theme` 内联一份等价类型。 |
 | `physics2d` 引用 `scene` | `physics2d/physics_world2d.hpp` 公开引用 `scene::NanNode2D` | `physics2d` 被列在基础层，却直接绑定场景节点。可选：把它在分层表里上移到呈现层旁；或让它只接受一个最小适配接口，由上层完成节点绑定。 |
 
@@ -75,9 +73,10 @@ inset 缩减后下限归零，均用具体数值回归覆盖；不增加约束�
 `NanControl::measure_layout` 的参数类型。因此库和调用方都需要重新编译；本步骤不提供
 旧已编译二进制的 ABI 兼容保证。
 
-这是纯约束类型的前置收口。上表中 `text -> widget::primitives` 与
-`scene -> widget::primitives` 两条 TextPipeline 依赖仍待协议迁移，不能因为删除一个
-Control include 就标记为已完成。主题字体描述与 physics2d 分层不属于本步骤。
+这是纯约束类型的前置收口。在该步骤完成时，`text -> widget::primitives` 与
+`scene -> widget::primitives` 两条 TextPipeline 依赖尚待协议迁移；删除一个 Control
+include 本身不足以完成收口。后续协议迁移见下一节。主题字体描述与 physics2d 分层
+不属于纯约束步骤。
 
 本步骤已完成（2026-10-05）。`Text` 原语显式包含自己的 Control 基类定义，不再依靠
 文本布局值头的传递 include。验证使用既有 Clang 21.1.8 / GNU libstdc++ 14 头文件环境：
@@ -94,6 +93,19 @@ Control include 就标记为已完成。主题字体描述与 physics2d 分层�
 SDK 检查为单次打包与纯 foundation 消费者，不等同于重跑全部 SDK 可复现性 fixture。
 窗口测试关闭、clipboard 的一个内部用例跳过、ASan leak 检测关闭及未运行远程 CI 的
 限制与上一轮验证相同。随后只更新此验证记录，执行代码保持冻结时的内容。
+
+## 文本布局协议收口
+
+以纯约束提交 `d7acce93a002e8933a270242baf29d11756febc7` 为基线，文本值、caret 查询、
+`ITextLayoutBackend`、`ITextLayoutRenderer`、`TextPipeline` 与 deterministic backend
+已迁入 `text/text_layout*`。text 适配器、scene node/tree 与 NanWindow 使用 canonical
+text 类型，原 `widget/primitives/text_layout*.hpp` 只重导出相同类型与函数；Meson
+只编译新实现一次，原两份 widget `.cpp` 已删除。
+
+因此上述两条 TextPipeline 上行引用已消除。设计、旧头的源码兼容边界、具名类型
+迁移后的 ABI 重编译要求与验证记录见 [文本布局协议](text_pipeline.md)。
+`theme -> text` 的字体描述债务与 physics2d 分层债务继续保留；既有 `TextAlign` 对
+theme 枚举的引用也未改变。本步骤不宣称整个依赖图无环。
 
 ## 判断一次改动是否越界
 

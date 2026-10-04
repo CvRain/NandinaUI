@@ -150,6 +150,10 @@ module_theme = files(
 )
 
 module_text = files(
+    'text/text_layout.hpp',
+    'text/text_layout.cpp',
+    'text/text_layout_backend.hpp',
+    'text/text_layout_backend.cpp',
     'text/font_face.hpp',
     'text/freetype_font_face.cpp',
     'text/font_loader.hpp',
@@ -207,9 +211,7 @@ module_widget = files(
     'widget/internal/text_style_bridge.hpp',
     'widget/internal/focus_scope.cpp',
     'widget/primitives/text_layout.hpp',
-    'widget/primitives/text_layout.cpp',
     'widget/primitives/text_layout_backend.hpp',
-    'widget/primitives/text_layout_backend.cpp',
     'widget/primitives/text.hpp',
     'widget/primitives/text.cpp',
     'widget/primitives/text_presentation.hpp',
