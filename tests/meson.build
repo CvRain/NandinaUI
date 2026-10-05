@@ -26,6 +26,13 @@ text_layout_header_tests = executable(
 )
 test('text-protocol-header', text_layout_header_tests, suite: 'unit')
 
+font_request_header_tests = executable(
+    'font_request_header_tests',
+    files('font_request_header_tests.cpp', 'legacy_font_request_header_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('font-request-header', font_request_header_tests, suite: 'unit')
+
 motion_spec_header_tests = executable(
     'motion_spec_header_tests',
     files('motion_spec_header_tests.cpp', 'legacy_motion_header_tests.cpp'),

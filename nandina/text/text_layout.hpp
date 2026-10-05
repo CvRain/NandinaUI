@@ -8,7 +8,7 @@
 #include "../foundation/layout_constraints.hpp"
 #include "../foundation/nandina_color.hpp"
 #include "../theme/visual_state.hpp"
-#include "font_family.hpp"
+#include "font_request.hpp"
 
 #include <algorithm>
 #include <cstddef>

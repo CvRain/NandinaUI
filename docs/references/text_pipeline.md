@@ -49,8 +49,10 @@ canonical 与 legacy 公开头用不同测试单元独立 include，核验所有
 新 text 头只使用 foundation、resource/text 的字体描述及既有 theme 对齐值；不重新引入
 scene 或 widget 作为共享值的来源。
 
-主题字体描述目前仍由 text 提供，`theme -> text` 的既有债务独立保留；physics2d 分层和
-具体 renderer 归 render 的选择也不属于本步骤。不宣称全部模块依赖已经无环。
+在文本协议迁移结束时，主题字体描述仍由 text 提供，`theme -> text` 债务独立保留。
+后续 [轻量字体请求拆分](font_request.md) 仅下移描述值，StyleDocument 的实际引擎应用
+依赖仍在；physics2d 分层和具体 renderer 归 render 的选择不属于文本协议步骤。
+不宣称全部模块依赖已经无环。
 
 ## 验证记录（2026-10-05）
 

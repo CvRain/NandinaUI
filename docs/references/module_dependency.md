@@ -51,7 +51,7 @@ NandinaUI 按模块组织，模块之间的方向决定了改动会扩散到哪�
 
 | 偏离 | 位置 | 收口方向 |
 | --- | --- | --- |
-| `theme` 引用 `text` | `theme/style_context.hpp`、`style_document.hpp` 引用 `text/font_family.hpp` | `theme` 只需要字体的**描述**（`FontRequest` 等），不需要文本引擎；把字体描述类型下移到 `foundation`，或在 `theme` 内联一份等价类型。 |
+| `theme` 引用 `text` | `theme/style_document.hpp` 的 `text::FontFaceSpec` 与 `FontFamilyRegistry` 应用接口 | StyleContext 所需的请求描述已归 theme；StyleDocument 仍实际注册字体族、fallback 与默认值。后续需拆出上层应用适配器或最小注册接口，不能仅移动 FontRequest 就标记整条债务解决。 |
 | `physics2d` 引用 `scene` | `physics2d/physics_world2d.hpp` 公开引用 `scene::NanNode2D` | `physics2d` 被列在基础层，却直接绑定场景节点。可选：把它在分层表里上移到呈现层旁；或让它只接受一个最小适配接口，由上层完成节点绑定。 |
 
 修改这些位置时，如果需要新增一条向上依赖，正确做法通常是**把被引用的类型下移**，而不是让下层头文件命名上层类型；`docs/references/component_contract.md` 第 8 节对类型识别访问器也给出了同一条规则。
@@ -106,6 +106,17 @@ text 类型，原 `widget/primitives/text_layout*.hpp` 只重导出相同类型�
 迁移后的 ABI 重编译要求与验证记录见 [文本布局协议](text_pipeline.md)。
 `theme -> text` 的字体描述债务与 physics2d 分层债务继续保留；既有 `TextAlign` 对
 theme 枚举的引用也未改变。本步骤不宣称整个依赖图无环。
+
+## 轻量字体请求拆分
+
+以文本协议提交 `0706449d65c6516198602699297604dd224fd6ec` 为基线，
+FontRequest / FontSlant 的唯一类型定义归 `theme/font_request.hpp`，text 通过同类型
+别名保留兼容入口。StyleContext 不再引用字体引擎，TextLayout 与内部文本样式桥也
+只包含轻量请求头。family 保持 ResourceKey，合法依赖为 `theme -> resource`；
+直接放入 foundation 会新增反向边，故本步骤不作这项迁移。
+
+设计、值语义、ABI 与 include 兼容边界及验证记录见 [轻量字体请求](font_request.md)。
+这只完成描述值的拆分，StyleDocument 的实际文本引擎应用仍列在当前偏离表中。
 
 ## 判断一次改动是否越界
 
