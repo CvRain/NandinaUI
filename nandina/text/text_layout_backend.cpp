@@ -1,16 +1,16 @@
 //
-// widget/primitives/text_layout_backend — deterministic fallback implementation.
+// text/text_layout_backend — deterministic fallback implementation.
 //
 
 #include "text_layout_backend.hpp"
 
-#include "../../foundation/utf8.hpp"
+#include "../foundation/utf8.hpp"
 
 #include <algorithm>
 #include <cmath>
 #include <utility>
 
-namespace nandina::widget::primitives
+namespace nandina::text
 {
     namespace
     {
@@ -197,4 +197,4 @@ namespace nandina::widget::primitives
         return backend;
     }
 
-} // namespace nandina::widget::primitives
+} // namespace nandina::text

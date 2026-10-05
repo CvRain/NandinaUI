@@ -6,7 +6,7 @@
 #define NANDINA_EXPERIMENT_THEME_STYLE_CONTEXT_HPP
 
 #include "../foundation/nandina_color.hpp"
-#include "../text/font_family.hpp"
+#include "font_request.hpp"
 
 #include <optional>
 #include <stdexcept>
@@ -47,7 +47,8 @@ namespace nandina::theme
 
     private:
         StyleValue(StyleValueState state, std::optional<T> value):
-            state_(state), value_(std::move(value)) {}
+            state_(state),
+            value_(std::move(value)) {}
 
         StyleValueState state_ = StyleValueState::unset;
         std::optional<T> value_;
@@ -56,7 +57,7 @@ namespace nandina::theme
     enum class TextDirection { automatic, left_to_right, right_to_left };
 
     struct StyleContext {
-        StyleValue<text::FontRequest> font;
+        StyleValue<FontRequest> font;
         StyleValue<float> font_size;
         StyleValue<foundation::NanColor> text_color;
         StyleValue<std::string> locale;
@@ -64,7 +65,7 @@ namespace nandina::theme
     };
 
     struct ResolvedStyleContext {
-        text::FontRequest font;
+        FontRequest font;
         float font_size = 16.0F;
         foundation::NanColor text_color = foundation::NanColor::from(
             foundation::NanHexRgb {.red = 255, .green = 255, .blue = 255, .alpha = 255}
@@ -78,10 +79,9 @@ namespace nandina::theme
         bool direction_from_context = false;
     };
 
-    [[nodiscard]] inline auto resolves_from_context(
-        const StyleValueState local,
-        const bool inherited_from_context
-    ) noexcept -> bool {
+    [[nodiscard]] inline auto
+    resolves_from_context(const StyleValueState local, const bool inherited_from_context) noexcept
+        -> bool {
         return local != StyleValueState::unset || inherited_from_context;
     }
 
@@ -142,7 +142,8 @@ namespace nandina::theme
                 true
             ),
             .font_from_context = resolves_from_context(
-                local.font.state(), inherited != nullptr && inherited->font_from_context
+                local.font.state(),
+                inherited != nullptr && inherited->font_from_context
             ),
             .font_size_from_context = resolves_from_context(
                 local.font_size.state(),
@@ -153,7 +154,8 @@ namespace nandina::theme
                 inherited != nullptr && inherited->text_color_from_context
             ),
             .locale_from_context = resolves_from_context(
-                local.locale.state(), inherited != nullptr && inherited->locale_from_context
+                local.locale.state(),
+                inherited != nullptr && inherited->locale_from_context
             ),
             .direction_from_context = resolves_from_context(
                 local.direction.state(),

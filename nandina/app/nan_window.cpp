@@ -177,9 +177,7 @@ namespace nandina::app
     auto NanWindow::use_router(Routes routes) -> NanRouter& {
         auto& router = use_router();
         if (const auto configured = router.configure(std::move(routes)); !configured) {
-            throw std::invalid_argument(
-                "NanWindow::use_router: " + describe(configured.error())
-            );
+            throw std::invalid_argument("NanWindow::use_router: " + describe(configured.error()));
         }
         return router;
     }
@@ -237,7 +235,7 @@ namespace nandina::app
         return app_.theme();
     }
 
-    auto NanWindow::default_text_pipeline() const -> const widget::primitives::TextPipeline* {
+    auto NanWindow::default_text_pipeline() const -> const text::TextPipeline* {
         return default_text_pipeline_ ? &*default_text_pipeline_ : nullptr;
     }
 
@@ -269,12 +267,13 @@ namespace nandina::app
 
         InitWindow(config_.width, config_.height, config_.title.c_str());
         if (!IsWindowReady()) {
-            log::get("app.window").error(
-                "NanWindow: failed to initialize native window {}x{} \"{}\"",
-                config_.width,
-                config_.height,
-                config_.title
-            );
+            log::get("app.window")
+                .error(
+                    "NanWindow: failed to initialize native window {}x{} \"{}\"",
+                    config_.width,
+                    config_.height,
+                    config_.title
+                );
             // Do not enter CloseWindow/rlgl cleanup when raylib did not produce a
             // usable native window; headless startup failures can have no GL context.
             throw std::runtime_error("NanWindow: failed to initialize native window");
@@ -329,10 +328,9 @@ namespace nandina::app
             tree_.clear_clipboard();
             opened_ = false;
             close_pending_ = false;
-            log::get("app.window").error("NanWindow: cannot create default text pipeline: {}", reason);
-            throw std::runtime_error(
-                "NanWindow: cannot create default text pipeline: " + reason
-            );
+            log::get("app.window")
+                .error("NanWindow: cannot create default text pipeline: {}", reason);
+            throw std::runtime_error("NanWindow: cannot create default text pipeline: " + reason);
         }
         default_font_pipeline_ = *pipeline;
         default_text_pipeline_ = default_font_pipeline_->pipeline();

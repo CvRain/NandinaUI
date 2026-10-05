@@ -63,16 +63,8 @@ jobs:
         run: meson setup buildDir --wrap-mode=nodownload -Dlinux_window_system=x11 ${{ matrix.toolchain_args }}
       # 新增测试必须声明 suite：sanitize 任务按 suite 选取要跑的子集，而不是维
       # 护手写名单。漏声明的测试会静默失去 ASan/UBSan 覆盖，所以在这里直接拦下。
-      - name: Assert every test declares a suite
-        run: |
-          # `meson test --list` 对已声明 suite 的测试打印 "<suite> - <project>:<name>"，
-          # 未声明时只打印 "<project>:<name>"。按分隔符判断，新增 suite 不会误报。
-          untagged=$(meson test -C buildDir --list | grep -v -- ' - ' || true)
-          if [ -n "$untagged" ]; then
-            echo "::error::these tests declare no suite and would escape sanitizer coverage:"
-            echo "$untagged"
-            exit 1
-          fi
+      - name: Assert every test belongs to a CI suite
+        run: python3 tools/check_test_suites.py buildDir
       - name: Build
         run: meson compile -C buildDir
       - name: Test

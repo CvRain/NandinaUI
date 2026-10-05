@@ -76,9 +76,20 @@ namespace nandina::scene
         if (weak_owner.expired()) {
             throw std::logic_error("animation owner must be managed by shared_ptr");
         }
+        group.validate_owner(owner);
         const auto conflicts = group.identities();
         for (const auto* identity: conflicts) {
             cancel_conflicting(identity);
+        }
+        if (reduced_motion()) {
+            group.finish();
+            return;
+        }
+        // Start ready clips now so an all-zero-duration parallel group is complete
+        // at submission, while delayed/sequential groups retain frame scheduling.
+        group.advance(0.0F);
+        if (group.finished()) {
+            return;
         }
         auto shared = std::make_shared<AnimationGroup>(std::move(group));
         upsert(

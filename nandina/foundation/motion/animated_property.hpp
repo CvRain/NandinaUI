@@ -85,19 +85,24 @@ namespace nandina::motion
         }
 
         void set_behavior(Behavior<T> behavior) {
+            const T current = value();
+            const bool active = is_animating();
             behavior_ = std::move(behavior);
             keyframes_spec_.reset();
             if constexpr (std::is_floating_point_v<T>) {
                 spring_spec_.reset();
             }
-            if (!is_animating()) {
+            // A different strategy may own the current value; the inactive tween
+            // must not become visible when spring/keyframes are removed.
+            tween_.reset(current);
+            if (!active) {
                 return;
             }
             if (!behavior_->enabled() || behavior_->duration() == 0.0F) {
                 tween_.reset(target_);
                 return;
             }
-            tween_.start(tween_.value(), target_, behavior_->duration(), behavior_->easing());
+            tween_.start(current, target_, behavior_->duration(), behavior_->easing());
         }
 
         void clear_behavior() {

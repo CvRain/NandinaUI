@@ -20,11 +20,11 @@
 #define NANDINA_EXPERIMENT_CONTROL_HPP
 
 #include "../foundation/geometry.hpp"
+#include "../foundation/layout_constraints.hpp"
 #include "../foundation/nandina_color.hpp"
 #include "frame_scheduler.hpp"
 #include "node2d.hpp"
 
-#include <limits>
 #include <optional>
 #include <variant>
 
@@ -36,17 +36,8 @@ namespace nandina::scene
         clip,
     };
 
-    struct LayoutConstraints {
-        float min_width = 0.0F;
-        float max_width = std::numeric_limits<float>::infinity();
-        float min_height = 0.0F;
-        float max_height = std::numeric_limits<float>::infinity();
-
-        [[nodiscard]] static auto loose() -> LayoutConstraints;
-        [[nodiscard]] static auto tight(foundation::NanSize size) -> LayoutConstraints;
-        [[nodiscard]] auto constrain(foundation::NanSize size) const -> foundation::NanSize;
-        [[nodiscard]] auto deflated(foundation::NanInsets insets) const -> LayoutConstraints;
-    };
+    /// Source-compatible scene spelling; the canonical type belongs to foundation.
+    using LayoutConstraints = foundation::NanLayoutConstraints;
 
     struct LayoutFlexPolicy {
         std::optional<float> basis;

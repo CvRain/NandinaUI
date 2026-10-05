@@ -4,8 +4,6 @@
 #include "property_endpoint.hpp"
 
 #include <algorithm>
-#include <cmath>
-#include <stdexcept>
 #include <utility>
 
 namespace nandina::scene
@@ -36,10 +34,7 @@ namespace nandina::scene
         presentation_(&presentation) {}
 
     void NodePresentation::OpacityProperty::set(const float opacity) {
-        if (!std::isfinite(opacity)) {
-            throw std::invalid_argument("node presentation opacity must be finite");
-        }
-        presentation_->impl_->opacity.set(std::clamp(opacity, 0.0F, 1.0F));
+        presentation_->impl_->opacity.set(visual::validated_target(visual::opacity_t {}, opacity));
     }
 
     void NodePresentation::OpacityProperty::set_behavior(motion::Behavior<float> behavior) {
@@ -57,7 +52,10 @@ namespace nandina::scene
     auto
     NodePresentation::OpacityProperty::clip(const float opacity, motion::Behavior<float> behavior)
         -> AnimationClip {
-        return presentation_->impl_->opacity.clip(opacity, std::move(behavior));
+        return presentation_->impl_->opacity.clip(
+            visual::validated_target(visual::opacity_t {}, opacity),
+            std::move(behavior)
+        );
     }
 
     auto NodePresentation::OpacityProperty::value() const noexcept -> const float* {
@@ -72,7 +70,9 @@ namespace nandina::scene
         presentation_(&presentation) {}
 
     void NodePresentation::TranslateProperty::set(foundation::NanPoint translate) {
-        presentation_->impl_->translate.set(std::move(translate));
+        presentation_->impl_->translate.set(
+            visual::validated_target(visual::translate_t {}, translate)
+        );
     }
 
     void NodePresentation::TranslateProperty::set_behavior(
@@ -85,7 +85,10 @@ namespace nandina::scene
         foundation::NanPoint translate,
         motion::Behavior<foundation::NanPoint> behavior
     ) -> AnimationClip {
-        return presentation_->impl_->translate.clip(std::move(translate), std::move(behavior));
+        return presentation_->impl_->translate.clip(
+            visual::validated_target(visual::translate_t {}, translate),
+            std::move(behavior)
+        );
     }
 
     auto NodePresentation::TranslateProperty::value() const noexcept
@@ -102,10 +105,7 @@ namespace nandina::scene
         presentation_(&presentation) {}
 
     void NodePresentation::ScaleProperty::set(foundation::NanPoint scale) {
-        if (!std::isfinite(scale.get_x()) || !std::isfinite(scale.get_y())) {
-            throw std::invalid_argument("node presentation scale must be finite");
-        }
-        presentation_->impl_->scale.set(std::move(scale));
+        presentation_->impl_->scale.set(visual::validated_target(visual::scale_t {}, scale));
     }
 
     void
@@ -117,7 +117,10 @@ namespace nandina::scene
         foundation::NanPoint scale,
         motion::Behavior<foundation::NanPoint> behavior
     ) -> AnimationClip {
-        return presentation_->impl_->scale.clip(std::move(scale), std::move(behavior));
+        return presentation_->impl_->scale.clip(
+            visual::validated_target(visual::scale_t {}, scale),
+            std::move(behavior)
+        );
     }
 
     auto NodePresentation::ScaleProperty::value() const noexcept -> const foundation::NanPoint* {

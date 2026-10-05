@@ -4,6 +4,7 @@
 #include "font_family.hpp"
 #include "glyph_atlas.hpp"
 #include "glyph_run_renderer.hpp"
+#include "text_layout_backend.hpp"
 
 #include <list>
 #include <map>
@@ -26,7 +27,7 @@ namespace nandina::text
             FontPipelineOptions options = {}
         );
 
-        [[nodiscard]] auto pipeline() const -> widget::primitives::TextPipeline;
+        [[nodiscard]] auto pipeline() const -> TextPipeline;
         [[nodiscard]] auto backend() const -> const HarfBuzzTextLayoutBackend&;
         [[nodiscard]] auto font_count() const -> std::size_t;
         /// 所有 font face 图集当前的像素总数（图集写满后会扩容，所以这不是配置值）。
@@ -83,10 +84,8 @@ namespace nandina::text
         );
         void trim();
         void prune_expired();
-        [[nodiscard]] static auto estimate_bytes(
-            const FontPipeline& pipeline,
-            FontPipelineOptions options
-        ) -> std::size_t;
+        [[nodiscard]] static auto
+        estimate_bytes(const FontPipeline& pipeline, FontPipelineOptions options) -> std::size_t;
 
         render::IRenderDevice* device_;
         FontLoader* loader_;

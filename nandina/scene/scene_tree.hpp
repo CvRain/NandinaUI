@@ -6,8 +6,8 @@
 #define NANDINA_EXPERIMENT_SCENE_TREE_HPP
 
 #include "../semantics/semantics.hpp"
+#include "../text/text_layout_backend.hpp"
 #include "../theme/theme_manager.hpp"
-#include "../widget/primitives/text_layout_backend.hpp"
 #include "clipboard.hpp"
 #include "frame_scheduler.hpp"
 #include "input_event.hpp"
@@ -83,9 +83,9 @@ namespace nandina::scene
         void flush_tree_mutations();
         void post_layout(std::function<void()> action);
         [[nodiscard]] auto flush_post_layout_actions() -> bool;
-        void set_default_text_pipeline(widget::primitives::TextPipeline pipeline);
+        void set_default_text_pipeline(text::TextPipeline pipeline);
         void clear_default_text_pipeline();
-        [[nodiscard]] auto default_text_pipeline() const -> const widget::primitives::TextPipeline*;
+        [[nodiscard]] auto default_text_pipeline() const -> const text::TextPipeline*;
         void set_font_context(text::FontPipelineCache& context) noexcept;
         void clear_font_context() noexcept;
         [[nodiscard]] auto font_context() const noexcept -> text::FontPipelineCache*;
@@ -253,7 +253,7 @@ namespace nandina::scene
         std::weak_ptr<NanNode2D> pointer_capture_;
         foundation::NanPoint last_mouse_pos_ {};
         bool has_mouse_pos_ = false;
-        std::optional<widget::primitives::TextPipeline> default_text_pipeline_;
+        std::optional<text::TextPipeline> default_text_pipeline_;
         text::FontPipelineCache* font_context_ = nullptr;
         render::TextureCache* texture_cache_ = nullptr;
         theme::ThemeManager* theme_manager_ = nullptr;

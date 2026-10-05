@@ -13,6 +13,7 @@
 #include "../theme/nan_style.hpp"
 #include "../theme/theme.hpp"
 #include "../theme/visual_state.hpp"
+#include "animation_authoring.hpp"
 #include "grid.hpp"
 #include "layout.hpp"
 #include "list_view.hpp"
@@ -540,6 +541,15 @@ namespace nandina::widget::authoring
         auto spring(Path path, animation::SpringSpec spec) -> NodeBuilder& {
             property::set_spring(*node_, path, std::move(spec));
             return *this;
+        }
+
+        /// Declare a reusable group without starting it. Capture the returned weak
+        /// handle by value in callbacks and call play() after the node is mounted.
+        template<NodeMotionPath... Paths>
+            requires std::derived_from<Node, scene::NanNode2D> && (sizeof...(Paths) > 0)
+        [[nodiscard]] auto group(NanAnimationSpec<Paths...> spec) const
+            -> NanAnimation<Node, Paths...> {
+            return NanAnimation<Node, Paths...>(std::weak_ptr<Node>(node_), std::move(spec));
         }
 
         template<typename... Child>

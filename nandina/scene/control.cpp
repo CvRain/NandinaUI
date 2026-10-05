@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <cmath>
 #include <concepts>
+#include <limits>
 #include <stdexcept>
 #include <string>
 #include <type_traits>
@@ -19,10 +20,6 @@ namespace nandina::scene
 
     namespace
     {
-        [[nodiscard]] auto finite_or(float value, float fallback) -> float {
-            return std::isfinite(value) ? value : fallback;
-        }
-
         void require_non_negative_finite(float value, const char* name) {
             if (!std::isfinite(value) || value < 0.0F) {
                 throw std::invalid_argument(std::string(name) + " must be finite and non-negative");
@@ -80,41 +77,6 @@ namespace nandina::scene
     auto percent(float value) -> PercentLength {
         require_non_negative_finite(value, "percentage");
         return {.value = value};
-    }
-
-    auto LayoutConstraints::loose() -> LayoutConstraints {
-        return {};
-    }
-
-    auto LayoutConstraints::tight(foundation::NanSize size) -> LayoutConstraints {
-        return {
-            .min_width = size.get_width(),
-            .max_width = size.get_width(),
-            .min_height = size.get_height(),
-            .max_height = size.get_height(),
-        };
-    }
-
-    auto LayoutConstraints::constrain(foundation::NanSize size) const -> foundation::NanSize {
-        const float max_w = finite_or(max_width, std::max(size.get_width(), min_width));
-        const float max_h = finite_or(max_height, std::max(size.get_height(), min_height));
-        return foundation::NanSize(
-            std::clamp(size.get_width(), min_width, std::max(min_width, max_w)),
-            std::clamp(size.get_height(), min_height, std::max(min_height, max_h))
-        );
-    }
-
-    auto LayoutConstraints::deflated(foundation::NanInsets insets) const -> LayoutConstraints {
-        const float horizontal = insets.horizontal_sum();
-        const float vertical = insets.vertical_sum();
-        return {
-            .min_width = std::max(0.0F, min_width - horizontal),
-            .max_width =
-                std::isfinite(max_width) ? std::max(0.0F, max_width - horizontal) : max_width,
-            .min_height = std::max(0.0F, min_height - vertical),
-            .max_height =
-                std::isfinite(max_height) ? std::max(0.0F, max_height - vertical) : max_height,
-        };
     }
 
     NanControl::NanControl(const foundation::NanSize& size): size_(size) {}

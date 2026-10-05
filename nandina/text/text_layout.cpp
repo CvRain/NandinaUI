@@ -1,5 +1,5 @@
 //
-// widget/primitives/text_layout — backend-neutral caret geometry queries.
+// text/text_layout — backend-neutral caret geometry queries.
 //
 
 #include "text_layout.hpp"
@@ -8,7 +8,7 @@
 #include <cmath>
 #include <limits>
 
-namespace nandina::widget::primitives
+namespace nandina::text
 {
     auto TextStyle::approx_equals(const TextStyle& other) const noexcept -> bool {
         return color.approx_equals(other.color)
@@ -91,4 +91,4 @@ namespace nandina::widget::primitives
         }
         return lines.back().caret_for_x(point.get_x());
     }
-} // namespace nandina::widget::primitives
+} // namespace nandina::text

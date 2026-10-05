@@ -59,7 +59,7 @@ namespace nandina::text
     }
 
     void GlyphRunRenderer::draw(
-        const widget::primitives::TextLayoutResult& layout,
+        const TextLayoutResult& layout,
         render::DrawContext& context,
         foundation::NanPoint position,
         foundation::NanColor color
@@ -84,7 +84,7 @@ namespace nandina::text
     }
 
     void GlyphRunRenderer::draw_line(
-        const widget::primitives::TextLayoutLine& line,
+        const TextLayoutLine& line,
         foundation::NanPoint baseline_origin,
         foundation::NanColor color,
         const float logical_pixel_size,

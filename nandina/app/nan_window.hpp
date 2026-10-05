@@ -27,8 +27,9 @@
 #include "../render/render_device.hpp"
 #include "../render/texture_cache.hpp"
 #include "../scene/scene_tree.hpp"
-#include "../widget/drag_controller.hpp"
 #include "../text/font_pipeline.hpp"
+#include "../text/text_layout_backend.hpp"
+#include "../widget/drag_controller.hpp"
 #include "nan_router.hpp"
 #include "shell_context.hpp"
 #include "viewport_scaling.hpp"
@@ -109,7 +110,7 @@ namespace nandina::app
         [[nodiscard]] auto render_device() -> render::IRenderDevice* {
             return device_.get();
         }
-        [[nodiscard]] auto default_text_pipeline() const -> const widget::primitives::TextPipeline*;
+        [[nodiscard]] auto default_text_pipeline() const -> const text::TextPipeline*;
 
         // ── 由 NanApplication::run 驱动 ─────────────────────────────────────────────
 
@@ -178,7 +179,7 @@ namespace nandina::app
         std::unique_ptr<render::TextureCache> texture_cache_;
         std::unique_ptr<text::FontPipelineCache> font_pipeline_cache_;
         std::shared_ptr<text::FontPipeline> default_font_pipeline_;
-        std::optional<widget::primitives::TextPipeline> default_text_pipeline_;
+        std::optional<text::TextPipeline> default_text_pipeline_;
         bool opened_ = false;
         /// Set by request_close(); consumed by tick() after drawing completes.
         bool close_pending_ = false;

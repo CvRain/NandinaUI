@@ -3,6 +3,7 @@
 
 #include "../resource/backends/builtin_backend.hpp"
 #include "font_loader.hpp"
+#include "font_request.hpp"
 
 #include <map>
 #include <set>
@@ -12,8 +13,6 @@ namespace nandina::text
 {
     inline constexpr std::string_view builtin_default_font_family_key = "families/default-ui";
 
-    enum class FontSlant { normal, italic, oblique };
-
     struct FontFaceSpec {
         resource::ResourceKey resource;
         std::uint32_t face_index = 0;
@@ -21,15 +20,6 @@ namespace nandina::text
         FontSlant slant = FontSlant::normal;
         /// 直接持有已加载 face（文件导入）；否则走 resource。
         std::shared_ptr<FreeTypeFontFace> direct_face;
-    };
-
-    struct FontRequest {
-        std::optional<resource::ResourceKey> family;
-        int weight = 400;
-
-        FontSlant slant = FontSlant::normal;
-
-        auto operator<=>(const FontRequest&) const = default;
     };
 
     struct ResolvedFontFamily {

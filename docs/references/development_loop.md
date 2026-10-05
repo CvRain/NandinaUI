@@ -29,13 +29,9 @@ meson compile -C buildDir-asan && \
 meson compile -C buildDir-no-rtti && \
   meson test -C buildDir-no-rtti --suite unit --print-errorlogs
 
-# 测试必须声明 suite，否则静默失去 sanitizer 覆盖。
-# 注意：没有遗漏时 grep 返回 1，直接当关卡会把"健康"报成"失败" —— 所以显式判断。
-missing=$(meson test -C buildDir --list | grep -v -- ' - ' || true)
-if [ -n "$missing" ]; then
-  printf 'ERROR: 以下测试没有声明 suite:\n%s\n' "$missing" >&2
-  exit 1
-fi
+# 测试必须归入 unit（C++）或 integration（Python / 构建工作流）。
+# CI 辅助脚本只依赖 Meson introspection JSON 的 suite 字段，不解析人类可读列表。
+python3 tools/check_test_suites.py buildDir
 
 clang-format -i <只格式化你改过的文件>
 
@@ -51,9 +47,13 @@ clang-format -i <只格式化你改过的文件>
    "All tests passed"。**编译和测试用 `&&` 连起来。**
 2. **格式化范围与改动范围一致。** 只格式化自己改过的文件 —— 把别人正在写的文件一起扫了，
    会把功能变更淹没在格式化噪声里（`coding_conventions.md` 也这么要求）。
-3. **查询命令不能直接当关卡。** `grep` 在"没命中"时返回 1，所以
-   `meson test --list | grep -v ' - '` 这种查询在**健康**情况下就是失败退出码。
-   要当关卡就必须包一层显式判断（见第 2 节），并在**发现问题时**才 `exit 1`。
+3. **测试分组关卡使用结构化元数据。** `meson test --list` 是给人看的输出；Meson 1.7.2
+   打印 `NandinaUI:unit / foundation`，不能用 ` - ` 分隔符推断有没有 suite。
+   `tools/check_test_suites.py` 属于 CI 工具层，执行 `meson introspect --tests`，
+   检查每条测试的 `suite` 字段是否含项目限定的 `unit` 或 `integration` 标签；无分组、
+   只有其他标签、空测试列表、查询失败或无效 JSON 都必须失败，不能用 `|| true` 吞掉。
+   回归测试用正常元数据与故意缺分组 / 查询失败的输入验证关卡（改掉分组判断或
+   `subprocess.run(..., check=True)` 会红）。
 4. **跑全量套件时不要动工作区**（对应的是"假红"）。`nandina-subproject-fixture` 会把
    `--allow-dirty` 的工作区**打包两次**并断言两次产物逐字节一致。如果你在它运行期间保存了
    任何被纳入包的文件（源码、文档、脚本），第二次打包看到的就不是同一份输入，

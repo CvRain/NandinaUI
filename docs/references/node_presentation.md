@@ -366,7 +366,7 @@ Spring 只给浮点值是 `AnimatedProperty` 侧的限制（`set_spring` 约束
 
 补齐 L2 之后，005 里那些"造好了没接出去"的能力开始有用武之地：`Group` 的
 `stagger`（错峰入场）、`Keyframes`（脉冲/呼吸）都需要能廉价改变的量。
-**但"值有了"不等于"够得到"** —— 调度侧的 DSL 仍未完成，见 §6.1。
+组合调度的同一节点 L2 作者入口见 §6.1；Keyframes 的作者入口仍未开放。
 
 ### 5.1 L2 的脏标记契约
 
@@ -413,7 +413,7 @@ measure / layout：     始终不标
 ## 6. 交付顺序
 
 L2 范围（0–7）已全部落地；以下顺序保留为同类能力的实现模板。
-**未完成的能力单独列在 §6.1**，不要把它算进"已落地"：
+组合调度的交付范围与剩余能力单独列在 §6.1：
 
 ```text
 0. 标签归属 + 动画边界（§5.0.1 的 A/B/C/D 决策）+ `NanPoint::lerp`（§5.0.2）+ base/presentation 组合规则
@@ -436,33 +436,30 @@ L2 范围（0–7）已全部落地；以下顺序保留为同类能力的实现
 > 第 6 条（handler 的 concept 化与开发体验）不属于本文范围，见
 > [配置与开发体验](authoring_configuration.md)。
 
-### 6.1 明确未完成：调度侧 DSL
+### 6.1 同一节点的组合调度（experimental）
 
-L2 让"能廉价改变的量"齐了，但**从组件/页面够到组合调度还差一层**，这部分没做完：
+`NodeBuilder::group(spec)` 已提供同一节点 L2 的作者入口，返回可复制的弱节点
+`NanAnimation` 句柄。`widget::authoring::to(...)`、`parallel(...)`、`sequential(...)` 与
+`stagger(...)` 描述目标与 Tween 规格；声明不改变属性，挂树后的 `play()` 显式触发。
+设计与生命周期规则见 [同一节点的组合动画作者入口](animation_authoring.md)。
 
-- `AnimationGroup`（`parallel` / `sequential` / `stagger`）目前**只被测试调用**：
-  `authoring.hpp` 没有 `.group(...)` / `.stagger(...)`，也没有 `Keyframes` 的入口。
-- `AnimationGroup::clip(...)` 要求调用方**手写 `DirtyFlags`**，而 `PropertyEndpoint` 自己
-  就知道该标什么。今天没有公开路径能构造 clip，所以还不是活 bug；但只要照着现在的签名
-  接一条公开路径，就可能写出"值动了、几何没动"（§5.1 那类故障）。
-- 因此下一步不是"把 `clip()` 包一层"。endpoint 级 clip 工厂**必须先解决**：
-  同一个属性被普通轨道与 group 同时推进时的仲裁、两边的取消语义（谁取消谁）、
-  以及 group 持有 endpoint 引用时的生命周期。这三件事没定之前不要暴露 DSL。
+初始范围只包含 `opacity`、`translate`、`scale` 的扁平 Tween 组合。每次播放取得当前
+节点与 SceneTree，再由稳定 endpoint 生成 clips；回调可以按值捕获句柄而不强持有节点。
+离树或销毁时播放返回 `false`，重新挂载后句柄使用当前树。
 
-本轮先完成 endpoint 工厂所需的底层契约，仍不开放 `.group(...)` 作者 DSL：
+- `PropertyEndpoint::clip(target, behavior)` 自带属性身份与脏标记。创建不改值；开始时
+  借用稳定 endpoint，同步更新 endpoint 配置与实际 AnimatedProperty 的持久 Tween 行为。
+- `AnimationHost::run()` 在仲裁前校验每个 clip 的 owner、重复身份和必要回调。接管普通
+  轨道时保留当前值；与旧组重叠时先整体完成旧组，再安装新组。
+- 普通 setter 命中任一组属性时完成并移除整个组。显式修改行为或 Spring 必须先完成旧组，
+  再安装新配置，防止尚未开始的步骤覆盖作者的新设置。
+- 离树、Host 清空和 reduced-motion 采用整组完成；播放时 reduced-motion 当场完成，
+  不等待下一帧、不保留轨道。
+- 公开入口测试贯穿真实指针事件、组合推进、几何/语义更新和实际重排计数；不能用仅测
+  插值的底层测试替代作者路径。
 
-- `PropertyEndpoint::clip(target, behavior)` 生成带属性身份的 clip；clip 只捕获
-  `AnimatedProperty`，不捕获 endpoint 或节点的强引用。
-- `AnimationHost::run()` 在安装 group 前取消并完成所有冲突轨道；普通 `set()` 命中
-  group 中任一属性时同样完成并移除整个 group，再安装新的普通轨道。这样同一属性
-  永远只有一个推进者，且 group 的其它 clip 不会失去宿主。
-- 节点离树、Host 清空和 reduced-motion 仍采用“完成整个 group”的取消语义；没有
-  “只取消一个 clip 但让其它 clip 继续”的半取消状态。
-
-作者层入口待下一步：需要在 `NodeBuilder` 里决定 group 的声明时机（构建期还是挂载后）
-以及多个 endpoint 的 owner 校验，确认后再加入 `parallel` / `sequential` / `stagger`。
-
-> 记在这里的目的是：读"L2 已落地"时不要顺手认为"组合动画也能用了"。
+未开放的部分：跨节点组合、嵌套时间线、组内 Spring、Keyframes 作者入口，以及浮层组件
+的自动打开/关闭过渡。它们不能从本轮的同一节点入口推断为已完成。
 
 ## 7. 明确的非目标
 

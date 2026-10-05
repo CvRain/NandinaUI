@@ -12,6 +12,27 @@ foundation_tests = executable(
 )
 test('foundation', foundation_tests, suite: 'unit')
 
+layout_constraints_tests = executable(
+    'layout_constraints_tests',
+    files('layout_constraints_tests.cpp', 'layout_constraints_compat_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('layout-constraints', layout_constraints_tests, suite: 'unit')
+
+text_layout_header_tests = executable(
+    'text_layout_header_tests',
+    files('text_layout_header_tests.cpp', 'legacy_text_layout_header_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('text-protocol-header', text_layout_header_tests, suite: 'unit')
+
+font_request_header_tests = executable(
+    'font_request_header_tests',
+    files('font_request_header_tests.cpp', 'legacy_font_request_header_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('font-request-header', font_request_header_tests, suite: 'unit')
+
 motion_spec_header_tests = executable(
     'motion_spec_header_tests',
     files('motion_spec_header_tests.cpp', 'legacy_motion_header_tests.cpp'),
@@ -58,7 +79,7 @@ if box2d_dep.found()
         files('physics2d_tests.cpp'),
         dependencies : [nandina_dep, catch2_with_main_dep],
     )
-    test('physics2d', physics2d_tests)
+    test('physics2d', physics2d_tests, suite: 'unit')
 endif
 
 render_tests = executable(
@@ -95,6 +116,13 @@ authoring_tests = executable(
     dependencies : [nandina_dep, catch2_with_main_dep],
 )
 test('authoring', authoring_tests, suite: 'unit')
+
+group_authoring_tests = executable(
+    'group_authoring_tests',
+    files('group_authoring_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('group-authoring', group_authoring_tests, suite: 'unit')
 
 build_context_header_tests = executable(
     'build_context_header_tests',
@@ -576,6 +604,15 @@ test(
         meson.project_source_root() / 'tools' / 'sdk_bundle.py',
     ],
     timeout: 600,
+    suite: 'integration',
+)
+test(
+    'ci-test-suites',
+    python,
+    args: [
+        files('ci_test_suites_test.py'),
+        meson.project_source_root() / 'tools' / 'check_test_suites.py',
+    ],
     suite: 'integration',
 )
 release_metadata_test = find_program('release_metadata_test.py')

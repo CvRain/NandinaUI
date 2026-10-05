@@ -12,7 +12,7 @@
 #ifndef NANDINA_EXPERIMENT_WIDGET_INTERNAL_TEXT_STYLE_BRIDGE_HPP
 #define NANDINA_EXPERIMENT_WIDGET_INTERNAL_TEXT_STYLE_BRIDGE_HPP
 
-#include "../../text/font_family.hpp"
+#include "../../text/font_request.hpp"
 #include "../../theme/design_system.hpp"
 #include "../../theme/style_context.hpp"
 #include "../primitives/text_layout.hpp"

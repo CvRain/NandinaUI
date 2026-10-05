@@ -7,6 +7,7 @@
 
 #include "../../animation/property_endpoint.hpp"
 #include "../../reactive/property.hpp"
+#include "../../scene/control.hpp"
 #include "../visual_property.hpp"
 #include "text_layout_backend.hpp"
 

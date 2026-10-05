@@ -133,7 +133,7 @@ namespace nandina::text
             float baseline,
             std::optional<bool> right_to_left = std::nullopt,
             std::size_t font_index = 0
-        ) const -> widget::primitives::TextLayoutLine {
+        ) const -> TextLayoutLine {
             if (text.size() > static_cast<std::size_t>(std::numeric_limits<int>::max())) {
                 throw std::length_error("Text line is too large for HarfBuzz");
             }
@@ -168,7 +168,7 @@ namespace nandina::text
             const auto* infos = hb_buffer_get_glyph_infos(buffer.get(), &glyph_count);
             const auto* positions = hb_buffer_get_glyph_positions(buffer.get(), &glyph_count);
 
-            widget::primitives::TextLayoutLine line {
+            TextLayoutLine line {
                 .text_offset = source_offset,
                 .text_length = source_length,
                 .visible_text = std::string(text),
@@ -182,7 +182,7 @@ namespace nandina::text
             for (unsigned int index = 0; index < glyph_count; ++index) {
                 const float advance = pixels(positions[index].x_advance);
                 line.glyphs.push_back(
-                    widget::primitives::TextLayoutLine::Glyph {
+                    TextLayoutLine::Glyph {
                         .glyph_index = infos[index].codepoint,
                         .font_index = font_index,
                         .cluster = source_offset
@@ -444,7 +444,7 @@ namespace nandina::text
             float line_height,
             float baseline,
             bool right_to_left
-        ) const -> widget::primitives::TextLayoutLine {
+        ) const -> TextLayoutLine {
             if (fonts.size() == 1 || text.empty()) {
                 return shape_line(
                     text,
@@ -487,7 +487,7 @@ namespace nandina::text
                 std::ranges::reverse(ranges);
             }
 
-            widget::primitives::TextLayoutLine result {
+            TextLayoutLine result {
                 .text_offset = source_offset,
                 .text_length = text.size(),
                 .visible_text = std::string(text),
@@ -520,8 +520,8 @@ namespace nandina::text
         }
 
         static void append_run_caret_stops(
-            widget::primitives::TextLayoutLine& line,
-            const widget::primitives::TextLayoutLine& shaped,
+            TextLayoutLine& line,
+            const TextLayoutLine& shaped,
             const std::size_t source_begin,
             const std::size_t source_end,
             const bool right_to_left,
@@ -555,26 +555,26 @@ namespace nandina::text
                 const auto cluster_end = next == cluster_starts.end() ? source_end : *next;
                 const float cluster_end_x = pen;
                 line.caret_stops.push_back(
-                    widget::primitives::TextCaretStop {
+                    TextCaretStop {
                         .source_offset = cluster,
                         .x = right_to_left ? cluster_end_x : cluster_start_x,
-                        .affinity = widget::primitives::TextAffinity::downstream,
+                        .affinity = TextAffinity::downstream,
                     }
                 );
                 line.caret_stops.push_back(
-                    widget::primitives::TextCaretStop {
+                    TextCaretStop {
                         .source_offset = cluster_end,
                         .x = right_to_left ? cluster_start_x : cluster_end_x,
-                        .affinity = widget::primitives::TextAffinity::upstream,
+                        .affinity = TextAffinity::upstream,
                     }
                 );
             }
         }
 
-        static void normalize_caret_stops(widget::primitives::TextLayoutLine& line) {
+        static void normalize_caret_stops(TextLayoutLine& line) {
             if (line.caret_stops.empty()) {
                 line.caret_stops.push_back(
-                    widget::primitives::TextCaretStop {
+                    TextCaretStop {
                         .source_offset = line.text_offset,
                     }
                 );
@@ -584,7 +584,7 @@ namespace nandina::text
             std::ranges::stable_sort(line.caret_stops, [](const auto& left, const auto& right) {
                 return left.x < right.x;
             });
-            std::vector<widget::primitives::TextCaretStop> normalized;
+            std::vector<TextCaretStop> normalized;
             normalized.reserve(line.caret_stops.size());
             constexpr float epsilon = 0.001F;
             for (const auto& stop: line.caret_stops) {
@@ -595,7 +595,7 @@ namespace nandina::text
                 if (duplicate == normalized.end()) {
                     normalized.push_back(stop);
                 }
-                else if (stop.affinity == widget::primitives::TextAffinity::downstream) {
+                else if (stop.affinity == TextAffinity::downstream) {
                     duplicate->affinity = stop.affinity;
                 }
             }
@@ -612,10 +612,10 @@ namespace nandina::text
             float pixel_size,
             float line_height,
             float baseline
-        ) const -> widget::primitives::TextLayoutLine {
+        ) const -> TextLayoutLine {
             const auto runs = bidi_runs(paragraph, paragraph_text, line_offset, line_length);
             const auto output_offset = paragraph_source_offset + line_offset;
-            widget::primitives::TextLayoutLine line {
+            TextLayoutLine line {
                 .text_offset = output_offset,
                 .text_length = output_source_length,
                 .visible_text = std::string(paragraph_text.substr(line_offset, line_length)),
@@ -664,7 +664,7 @@ namespace nandina::text
             float line_height,
             float baseline,
             std::optional<bool> paragraph_right_to_left = std::nullopt
-        ) const -> widget::primitives::TextLayoutLine {
+        ) const -> TextLayoutLine {
             const auto paragraph = analyze_bidi(text, paragraph_right_to_left);
             return shape_analyzed_line(
                 text,
@@ -685,7 +685,7 @@ namespace nandina::text
             float pixel_size,
             float line_height,
             float baseline
-        ) const -> widget::primitives::TextLayoutLine {
+        ) const -> TextLayoutLine {
             return shape_bidi_line(
                 text,
                 source_offset,
@@ -725,8 +725,7 @@ namespace nandina::text
             return width;
         }
 
-        [[nodiscard]] auto
-        clusters(const widget::primitives::TextLayoutLine& line, std::size_t paragraph_end) const
+        [[nodiscard]] auto clusters(const TextLayoutLine& line, std::size_t paragraph_end) const
             -> std::vector<ClusterRange> {
             std::vector<ClusterRange> result;
             if (line.glyphs.empty()) {
@@ -754,7 +753,7 @@ namespace nandina::text
         }
 
         [[nodiscard]] auto fitted_source_length(
-            const widget::primitives::TextLayoutLine& line,
+            const TextLayoutLine& line,
             std::size_t paragraph_end,
             float width_limit
         ) const -> std::size_t {
@@ -771,7 +770,7 @@ namespace nandina::text
         }
 
         [[nodiscard]] auto wrapped_ranges(
-            const widget::primitives::TextLayoutLine& line,
+            const TextLayoutLine& line,
             std::size_t paragraph_end,
             float width_limit
         ) const -> std::vector<ClusterRange> {
@@ -827,15 +826,14 @@ namespace nandina::text
 
     HarfBuzzTextLayoutBackend::~HarfBuzzTextLayoutBackend() = default;
 
-    auto HarfBuzzTextLayoutBackend::layout(widget::primitives::TextLayoutInput input) const
-        -> widget::primitives::TextLayoutResult {
+    auto HarfBuzzTextLayoutBackend::layout(TextLayoutInput input) const -> TextLayoutResult {
         const bool has_width_limit =
             std::isfinite(input.constraints.max_width) && input.constraints.max_width >= 0.0F;
         const float width_limit =
             has_width_limit ? input.constraints.max_width : std::numeric_limits<float>::infinity();
 
         float font_size = std::max(1.0F, input.style.font_size);
-        if (input.style.overflow == widget::primitives::TextOverflow::scale && has_width_limit) {
+        if (input.style.overflow == TextOverflow::scale && has_width_limit) {
             const float natural_width = impl_->max_shaped_width(input.text, font_size);
             if (natural_width > width_limit) {
                 float lower = 1.0F;
@@ -861,7 +859,7 @@ namespace nandina::text
         const float baseline = metrics.ascender;
         const auto max_lines = static_cast<std::size_t>(std::max(1, input.style.max_lines));
 
-        widget::primitives::TextLayoutResult result;
+        TextLayoutResult result;
         result.font_size = font_size;
         result.baseline = baseline;
 
@@ -886,7 +884,7 @@ namespace nandina::text
                 baseline
             );
 
-            if (input.style.overflow == widget::primitives::TextOverflow::wrap && has_width_limit
+            if (input.style.overflow == TextOverflow::wrap && has_width_limit
                 && shaped.size.get_width() > width_limit)
             {
                 const auto ranges = impl_->wrapped_ranges(shaped, end, width_limit);
@@ -917,7 +915,7 @@ namespace nandina::text
             else {
                 if (has_width_limit && shaped.size.get_width() > width_limit) {
                     result.overflowed = true;
-                    if (input.style.overflow == widget::primitives::TextOverflow::ellipsis) {
+                    if (input.style.overflow == TextOverflow::ellipsis) {
                         const auto dots = impl_->shape_source_line(
                             "...",
                             offset,

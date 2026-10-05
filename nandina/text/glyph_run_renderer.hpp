@@ -5,10 +5,10 @@
 #ifndef NANDINA_EXPERIMENT_TEXT_GLYPH_RUN_RENDERER_HPP
 #define NANDINA_EXPERIMENT_TEXT_GLYPH_RUN_RENDERER_HPP
 
-#include "../widget/primitives/text_layout.hpp"
-#include "../widget/primitives/text_layout_backend.hpp"
 #include "glyph_atlas.hpp"
 #include "harfbuzz_text_backend.hpp"
+#include "text_layout.hpp"
+#include "text_layout_backend.hpp"
 
 #include <span>
 #include <vector>
@@ -21,7 +21,7 @@ namespace nandina::text
         GlyphAtlasTexture* texture = nullptr;
     };
 
-    class GlyphRunRenderer final: public widget::primitives::ITextLayoutRenderer {
+    class GlyphRunRenderer final: public ITextLayoutRenderer {
     public:
         GlyphRunRenderer(GlyphAtlas& atlas, GlyphAtlasTexture& texture);
         GlyphRunRenderer(
@@ -38,14 +38,14 @@ namespace nandina::text
         /// @param position 文本块左上角（逻辑坐标）；某行的实际起点 = 它 + 该行 `origin_x`。
         /// @param color    文字颜色，会再乘一次上下文不透明度。
         void draw(
-            const widget::primitives::TextLayoutResult& layout,
+            const TextLayoutResult& layout,
             render::DrawContext& context,
             foundation::NanPoint position,
             foundation::NanColor color
         ) override;
 
         void draw_line(
-            const widget::primitives::TextLayoutLine& line,
+            const TextLayoutLine& line,
             foundation::NanPoint baseline_origin,
             foundation::NanColor color,
             float logical_pixel_size,

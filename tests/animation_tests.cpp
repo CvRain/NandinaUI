@@ -17,6 +17,7 @@
 #include <nandina/reactive/signal.hpp>
 #include <nandina/scene/control.hpp>
 #include <nandina/scene/input_event.hpp>
+#include <nandina/scene/property_endpoint.hpp>
 #include <nandina/scene/scene_tree.hpp>
 #include <nandina/theme/theme_manager.hpp>
 #include <nandina/widget/build_context.hpp>
@@ -31,6 +32,7 @@
 #include <limits>
 #include <optional>
 #include <stdexcept>
+#include <vector>
 
 using namespace nandina;
 
@@ -1377,6 +1379,359 @@ TEST_CASE(
     advance(tree, 1.0F);
     REQUIRE(*opacity.value() == Catch::Approx(1.0F));
     REQUIRE(tree.animation_host().active_count() == 0);
+}
+
+TEST_CASE("invalid groups preserve active tracks", "[animation][group][validation]") {
+    scene::NanSceneTree tree;
+    auto probe = std::make_shared<GroupProbe>();
+    auto other = std::make_shared<GroupProbe>();
+    tree.set_root(probe);
+    const motion::Behavior<float> behavior(1.0F, motion::Easing::linear);
+    probe->a.set_behavior(behavior);
+    tree.animation_host().set_target(*probe, probe->a, 10.0F, scene::DirtyFlags::paint);
+    advance(tree, 0.25F);
+
+    auto make_clip = [&] {
+        return scene::AnimationGroup::clip(
+            *probe,
+            probe->a,
+            20.0F,
+            behavior,
+            scene::DirtyFlags::paint
+        );
+    };
+    SECTION("wrong clip owner") {
+        auto clip = make_clip();
+        clip.owner = other.get();
+        REQUIRE_THROWS_AS(
+            tree.animation_host().run(*probe, scene::AnimationGroup::parallel({clip})),
+            std::invalid_argument
+        );
+    }
+    SECTION("duplicate property") {
+        for (int mode = 0; mode != 3; ++mode) {
+            auto clips = std::vector<scene::AnimationClip> {make_clip(), make_clip()};
+            auto group = mode == 0 ? scene::AnimationGroup::parallel(std::move(clips))
+                : mode == 1        ? scene::AnimationGroup::sequential(std::move(clips))
+                                   : scene::AnimationGroup::stagger(std::move(clips), 0.2F);
+            REQUIRE_THROWS_AS(
+                tree.animation_host().run(*probe, std::move(group)),
+                std::invalid_argument
+            );
+        }
+    }
+    SECTION("missing callback or identity") {
+        for (int field = 0; field != 6; ++field) {
+            auto clip = make_clip();
+            if (field == 0) {
+                clip.start = {};
+            }
+            if (field == 1) {
+                clip.tick = {};
+            }
+            if (field == 2) {
+                clip.animating = {};
+            }
+            if (field == 3) {
+                clip.finish = {};
+            }
+            if (field == 4) {
+                clip.identity = nullptr;
+            }
+            if (field == 5) {
+                clip.ready = {};
+            }
+            REQUIRE_THROWS_AS(
+                tree.animation_host().run(*probe, scene::AnimationGroup({clip})),
+                std::invalid_argument
+            );
+        }
+    }
+    REQUIRE(tree.animation_host().active_count() == 1);
+    REQUIRE(probe->a.value() == Catch::Approx(2.5F));
+    advance(tree, 0.25F);
+    REQUIRE(probe->a.value() == Catch::Approx(5.0F));
+}
+
+TEST_CASE(
+    "invalid replacement leaves an active group unfinished",
+    "[animation][group][validation]"
+) {
+    scene::NanSceneTree tree;
+    auto probe = std::make_shared<GroupProbe>();
+    tree.set_root(probe);
+    const motion::Behavior<float> behavior(1.0F, motion::Easing::linear);
+    auto clip_a = [&] {
+        return scene::AnimationGroup::clip(
+            *probe,
+            probe->a,
+            10.0F,
+            behavior,
+            scene::DirtyFlags::paint
+        );
+    };
+    tree.animation_host().run(
+        *probe,
+        scene::AnimationGroup::stagger(
+            {clip_a(),
+             scene::AnimationGroup::
+                 clip(*probe, probe->b, 20.0F, behavior, scene::DirtyFlags::paint)},
+            1.0F
+        )
+    );
+    advance(tree, 0.25F);
+    REQUIRE_THROWS_AS(
+        tree.animation_host().run(*probe, scene::AnimationGroup::parallel({clip_a(), clip_a()})),
+        std::invalid_argument
+    );
+    REQUIRE(probe->a.value() == Catch::Approx(2.5F));
+    REQUIRE(probe->b.value() == 0.0F);
+    REQUIRE(tree.animation_host().active_count() == 1);
+    advance(tree, 0.25F);
+    REQUIRE(probe->a.value() == Catch::Approx(5.0F));
+    REQUIRE(probe->b.value() == 0.0F);
+}
+
+TEST_CASE(
+    "group takeover preserves ordinary value and completes an overlapping group",
+    "[animation][group][arbitration]"
+) {
+    scene::NanSceneTree tree;
+    auto probe = std::make_shared<GroupProbe>();
+    tree.set_root(probe);
+    const motion::Behavior<float> behavior(1.0F, motion::Easing::linear);
+    probe->a.set_behavior(behavior);
+    tree.animation_host().set_target(*probe, probe->a, 10.0F, scene::DirtyFlags::paint);
+    advance(tree, 0.25F);
+    tree.animation_host().run(
+        *probe,
+        scene::AnimationGroup::stagger(
+            {scene::AnimationGroup::
+                 clip(*probe, probe->a, 20.0F, behavior, scene::DirtyFlags::paint),
+             scene::AnimationGroup::
+                 clip(*probe, probe->b, 30.0F, behavior, scene::DirtyFlags::paint)},
+            1.0F
+        )
+    );
+    REQUIRE(probe->a.value() == Catch::Approx(2.5F));
+    REQUIRE(tree.animation_host().active_count() == 1);
+    advance(tree, 0.25F);
+    REQUIRE(probe->a.value() == Catch::Approx(6.875F));
+    tree.animation_host().run(
+        *probe,
+        scene::AnimationGroup::parallel({scene::AnimationGroup::clip(
+            *probe,
+            probe->a,
+            40.0F,
+            behavior,
+            scene::DirtyFlags::paint
+        )})
+    );
+    REQUIRE(probe->a.value() == Catch::Approx(20.0F));
+    REQUIRE(probe->b.value() == Catch::Approx(30.0F));
+    REQUIRE(tree.animation_host().active_count() == 1);
+    advance(tree, 0.5F);
+    REQUIRE(probe->a.value() == Catch::Approx(30.0F));
+}
+
+TEST_CASE(
+    "endpoint group start adopts persistent tween without an ordinary track",
+    "[animation][group][policy]"
+) {
+    scene::NanSceneTree tree;
+    auto owner = std::make_shared<scene::NanControl>();
+    tree.set_root(owner);
+    scene::PropertyEndpoint<float> endpoint(*owner, 0.0F, scene::DirtyFlags::paint);
+    endpoint.set_spring(motion::SpringSpec(300.0F, 12.0F));
+    endpoint.set(10.0F);
+    advance(tree, 0.05F);
+    const float current = *endpoint.value();
+    REQUIRE(current > 0.0F);
+    REQUIRE(current < 10.0F);
+    auto clip = endpoint.clip(20.0F, motion::Behavior<float>(1.0F, motion::Easing::linear));
+    REQUIRE(endpoint.spring().has_value());
+    REQUIRE_FALSE(endpoint.behavior().has_value());
+    tree.animation_host().run(*owner, scene::AnimationGroup::parallel({std::move(clip)}));
+    REQUIRE(*endpoint.value() == Catch::Approx(current));
+    REQUIRE_FALSE(endpoint.spring().has_value());
+    REQUIRE(endpoint.behavior()->duration() == 1.0F);
+    REQUIRE(tree.animation_host().active_count() == 1);
+    advance(tree, 0.5F);
+    REQUIRE(*endpoint.value() == Catch::Approx((current + 20.0F) / 2.0F));
+    advance(tree, 0.5F);
+    endpoint.set(0.0F);
+    advance(tree, 0.5F);
+    REQUIRE(*endpoint.value() == Catch::Approx(10.0F));
+    tree.animation_host().clear();
+}
+
+TEST_CASE(
+    "explicit spring wins after completion of a delayed group clip",
+    "[animation][group][policy]"
+) {
+    scene::NanSceneTree tree;
+    auto owner = std::make_shared<scene::NanControl>();
+    tree.set_root(owner);
+    scene::PropertyEndpoint<float> first(*owner, 0.0F, scene::DirtyFlags::paint);
+    scene::PropertyEndpoint<float> delayed(*owner, 0.0F, scene::DirtyFlags::paint);
+    const motion::Behavior<float> behavior(1.0F, motion::Easing::linear);
+    tree.animation_host().run(
+        *owner,
+        scene::AnimationGroup::stagger(
+            {first.clip(10.0F, behavior), delayed.clip(20.0F, behavior)},
+            1.0F
+        )
+    );
+    advance(tree, 0.1F);
+    REQUIRE(*delayed.value() == 0.0F);
+    delayed.set_spring(motion::SpringSpec(300.0F, 12.0F));
+    REQUIRE(*first.value() == 10.0F);
+    REQUIRE(*delayed.value() == 20.0F);
+    REQUIRE(delayed.spring().has_value());
+    REQUIRE_FALSE(delayed.behavior().has_value());
+    REQUIRE(tree.animation_host().active_count() == 0);
+    delayed.set(0.0F);
+    advance(tree, 0.05F);
+    REQUIRE(*delayed.value() > 0.0F);
+    REQUIRE(*delayed.value() < 20.0F);
+    REQUIRE(*delayed.value() != Catch::Approx(19.0F));
+    tree.animation_host().clear();
+}
+
+TEST_CASE(
+    "spring to tween retains active and completed presentation values",
+    "[animation][property][policy]"
+) {
+    motion::AnimatedProperty<float> property(0.0F);
+    property.set_spring(motion::SpringSpec(300.0F, 12.0F));
+    property.set_target(10.0F);
+    SECTION("in flight") {
+        (void)property.tick(0.05F);
+        const float current = property.value();
+        REQUIRE(current > 0.0F);
+        property.set_behavior(motion::Behavior<float>(1.0F, motion::Easing::linear));
+        REQUIRE(property.value() == Catch::Approx(current));
+        REQUIRE(property.is_animating());
+        (void)property.tick(0.5F);
+        REQUIRE(property.value() == Catch::Approx((current + 10.0F) / 2.0F));
+    }
+    SECTION("finished") {
+        property.finish();
+        property.set_behavior(motion::Behavior<float>(1.0F, motion::Easing::linear));
+        REQUIRE(property.value() == 10.0F);
+        REQUIRE_FALSE(property.is_animating());
+        property.set_target(20.0F);
+        (void)property.tick(0.5F);
+        REQUIRE(property.value() == Catch::Approx(15.0F));
+    }
+}
+
+TEST_CASE(
+    "new reduced-motion and zero-duration groups complete immediately",
+    "[animation][group][reduced-motion]"
+) {
+    scene::NanSceneTree tree;
+    theme::ThemeManager themes;
+    tree.set_theme_manager(themes);
+    auto probe = std::make_shared<GroupProbe>();
+    tree.set_root(probe);
+    SECTION("reduced motion finishes delayed clips") {
+        themes.set_system_reduced_motion(true);
+        tree.animation_host().run(
+            *probe,
+            scene::AnimationGroup::stagger(
+                {scene::AnimationGroup::clip(
+                     *probe,
+                     probe->a,
+                     10.0F,
+                     motion::Behavior<float>(1.0F),
+                     scene::DirtyFlags::paint
+                 ),
+                 scene::AnimationGroup::clip(
+                     *probe,
+                     probe->b,
+                     20.0F,
+                     motion::Behavior<float>(1.0F),
+                     scene::DirtyFlags::paint
+                 )},
+                1.0F
+            )
+        );
+        REQUIRE(probe->b.value() == 20.0F);
+    }
+    SECTION("zero-duration parallel") {
+        tree.animation_host().run(
+            *probe,
+            scene::AnimationGroup::parallel({scene::AnimationGroup::clip(
+                *probe,
+                probe->a,
+                10.0F,
+                motion::Behavior<float>(0.0F),
+                scene::DirtyFlags::paint
+            )})
+        );
+    }
+    SECTION("policy transition finishes a running delayed group") {
+        tree.animation_host().run(
+            *probe,
+            scene::AnimationGroup::stagger(
+                {scene::AnimationGroup::clip(
+                     *probe,
+                     probe->a,
+                     10.0F,
+                     motion::Behavior<float>(1.0F),
+                     scene::DirtyFlags::paint
+                 ),
+                 scene::AnimationGroup::clip(
+                     *probe,
+                     probe->b,
+                     20.0F,
+                     motion::Behavior<float>(1.0F),
+                     scene::DirtyFlags::paint
+                 )},
+                1.0F
+            )
+        );
+        advance(tree, 0.1F);
+        REQUIRE(probe->a.value() > 0.0F);
+        REQUIRE(probe->a.value() < 10.0F);
+        REQUIRE(probe->b.value() == 0.0F);
+        themes.set_system_reduced_motion(true);
+        advance(tree, 0.1F);
+        REQUIRE(probe->b.value() == 20.0F);
+    }
+    REQUIRE(probe->a.value() == 10.0F);
+    REQUIRE(tree.animation_host().active_count() == 0);
+}
+
+TEST_CASE("clip targets share setter validation", "[animation][group][node-presentation]") {
+    auto node = std::make_shared<scene::NanControl>();
+    auto opacity = node->visual_part(scene::visual::node).property(scene::visual::opacity_t {});
+    auto scale = node->visual_part(scene::visual::node).property(scene::visual::scale_t {});
+    for (const float invalid:
+         {std::numeric_limits<float>::quiet_NaN(), std::numeric_limits<float>::infinity()})
+    {
+        REQUIRE_THROWS_AS(
+            opacity.clip(invalid, motion::Behavior<float>(1.0F)),
+            std::invalid_argument
+        );
+        REQUIRE_THROWS_AS(
+            scale.clip(
+                foundation::NanPoint(invalid, 1.0F),
+                motion::Behavior<foundation::NanPoint>(1.0F)
+            ),
+            std::invalid_argument
+        );
+        REQUIRE_THROWS_AS(scene::AnimationGroup::stagger({}, invalid), std::invalid_argument);
+    }
+    REQUIRE_THROWS_AS(scene::AnimationGroup::stagger({}, -0.1F), std::invalid_argument);
+    scene::NanSceneTree tree;
+    tree.set_root(node);
+    tree.animation_host().run(
+        *node,
+        scene::AnimationGroup::parallel({opacity.clip(2.0F, motion::Behavior<float>(0.0F))})
+    );
+    REQUIRE(*opacity.target() == 1.0F);
 }
 
 TEST_CASE(

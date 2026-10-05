@@ -4,6 +4,9 @@
 
 #include "animation_group.hpp"
 
+#include <algorithm>
+#include <cmath>
+#include <stdexcept>
 #include <utility>
 
 namespace nandina::scene
@@ -30,6 +33,11 @@ namespace nandina::scene
     }
 
     auto AnimationGroup::stagger(std::vector<Clip> clips, const float interval) -> AnimationGroup {
+        if (!std::isfinite(interval) || interval < 0.0F) {
+            throw std::invalid_argument(
+                "animation stagger interval must be finite and non-negative"
+            );
+        }
         float delay = 0.0F;
         for (auto& clip: clips) {
             const float at = delay;
@@ -39,12 +47,30 @@ namespace nandina::scene
         return AnimationGroup(std::move(clips));
     }
 
+    void AnimationGroup::validate_owner(const NanNode2D& owner) const {
+        std::vector<const void*> identities;
+        for (const auto& clip: clips_) {
+            if (clip.owner != &owner || clip.identity == nullptr || !clip.ready || !clip.start
+                || !clip.tick || !clip.animating || !clip.finish)
+            {
+                throw std::invalid_argument(
+                    "animation group clips must have the same owner and valid callbacks"
+                );
+            }
+            if (std::ranges::find(identities, clip.identity) != identities.end()) {
+                throw std::invalid_argument("animation group cannot repeat a property");
+            }
+            identities.push_back(clip.identity);
+        }
+    }
+
     void AnimationGroup::advance(const float dt) {
         elapsed_ += dt;
         for (auto& clip: clips_) {
             if (!clip.started && clip.ready(elapsed_)) {
                 clip.start();
                 clip.started = true;
+                clip.owner->mark_dirty(clip.dirty);
             }
         }
         for (auto& clip: clips_) {

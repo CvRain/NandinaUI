@@ -38,7 +38,7 @@ namespace nandina::text
         renderer_ = std::make_unique<GlyphRunRenderer>(*backend_, bindings_);
     }
 
-    auto FontPipeline::pipeline() const -> widget::primitives::TextPipeline {
+    auto FontPipeline::pipeline() const -> TextPipeline {
         return {.backend = backend_.get(), .renderer = renderer_.get()};
     }
     auto FontPipeline::backend() const -> const HarfBuzzTextLayoutBackend& {
