@@ -91,7 +91,7 @@ namespace nandina::widget
         primitives::BoxPainter::paint(context, world, style.container, context.opacity());
     }
 
-    auto Card::on_measure(scene::LayoutConstraints constraints) -> foundation::NanSize {
+    auto Card::on_measure(foundation::NanLayoutConstraints constraints) -> foundation::NanSize {
         const auto style = resolved_style();
         const float horizontal = style.metrics.padding_x * 2.0F;
         const float vertical = style.metrics.padding_y * 2.0F;
@@ -138,7 +138,7 @@ namespace nandina::widget
     }
 
     void Card::relayout() {
-        (void)measure_layout(scene::LayoutConstraints::loose());
+        (void)measure_layout(foundation::NanLayoutConstraints::loose());
         layout_to(foundation::NanRect::from_origin_size(position(), measured_size()));
     }
 } // namespace nandina::widget

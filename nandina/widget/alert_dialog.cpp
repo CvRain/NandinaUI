@@ -207,7 +207,7 @@ namespace nandina::widget
         dialog_->on_exit_tree();
     }
 
-    auto AlertDialog::on_measure(const scene::LayoutConstraints constraints)
+    auto AlertDialog::on_measure(const foundation::NanLayoutConstraints constraints)
         -> foundation::NanSize {
         // 本节点只是内部 Dialog 在布局里的占位（与 Popover 之于触发控件同理）。
         return constraints.constrain(dialog_->measure_layout(constraints));
@@ -226,12 +226,12 @@ namespace nandina::widget
     void AlertDialog::apply_text_styles() {
         const auto style = resolved_style();
         const auto& context = resolved_style_context();
-        const primitives::TextStyle text_style {
+        const text::TextStyle text_style {
             .color = context.text_color_from_context ? context.text_color : style.description.color,
             .font_size =
                 context.font_size_from_context ? context.font_size : style.description.font_size,
             .font = context.font_from_context ? context.font : description_text_->font(),
-            .overflow = primitives::TextOverflow::wrap,
+            .overflow = text::TextOverflow::wrap,
             .max_lines = kDescriptionMaxLines,
         };
         if (!description_text_->style().approx_equals(text_style)) {

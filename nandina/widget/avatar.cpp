@@ -87,12 +87,12 @@ namespace nandina::widget
         return style;
     }
 
-    void Avatar::set_text_pipeline(primitives::TextPipeline pipeline) {
+    void Avatar::set_text_pipeline(text::TextPipeline pipeline) {
         text_.set_text_pipeline(std::move(pipeline));
         mark_layout_dirty();
     }
 
-    void Avatar::apply_default_text_pipeline(const primitives::TextPipeline& pipeline) {
+    void Avatar::apply_default_text_pipeline(const text::TextPipeline& pipeline) {
         text_.apply_default_text_pipeline(pipeline);
         mark_layout_dirty();
     }
@@ -123,7 +123,7 @@ namespace nandina::widget
         primitives::BoxPainter::paint(context, world, style.container, context.opacity());
 
         apply_text_style();
-        (void)text_.measure_layout(scene::LayoutConstraints::loose());
+        (void)text_.measure_layout(foundation::NanLayoutConstraints::loose());
         const float text_height = context.logical_to_screen(text_.measured_text_height());
         const float text_width = context.logical_to_screen(text_.measured_text_width());
         const auto text_position = foundation::NanPoint(
@@ -133,7 +133,7 @@ namespace nandina::widget
         text_.draw_at(context, text_position);
     }
 
-    auto Avatar::on_measure(const scene::LayoutConstraints constraints) -> foundation::NanSize {
+    auto Avatar::on_measure(const foundation::NanLayoutConstraints constraints) -> foundation::NanSize {
         const auto style = resolved_style();
         const float size = style.metrics.box_size;
         return constraints.constrain(foundation::NanSize(size, size));
@@ -149,11 +149,11 @@ namespace nandina::widget
     void Avatar::apply_text_style() {
         const auto style = resolved_style();
         const auto& context = resolved_style_context();
-        const primitives::TextStyle text_style {
+        const text::TextStyle text_style {
             .color = context.text_color_from_context ? context.text_color : style.label.color,
             .font_size = context.font_size_from_context ? context.font_size : style.label.font_size,
             .font = context.font_from_context ? context.font : text_.font(),
-            .overflow = primitives::TextOverflow::clip,
+            .overflow = text::TextOverflow::clip,
             .max_lines = 1,
         };
         if (!text_.style().approx_equals(text_style)) {

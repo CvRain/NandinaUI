@@ -56,7 +56,7 @@ namespace nandina::text
             FontPipelineCacheLimits limits = {}
         );
 
-        [[nodiscard]] auto get(FontRequest request, FontPipelineOptions options = {})
+        [[nodiscard]] auto get(theme::FontRequest request, FontPipelineOptions options = {})
             -> FontResult<std::shared_ptr<FontPipeline>>;
         void clear();
         [[nodiscard]] auto retained_pipeline_count() const -> std::size_t;
@@ -66,7 +66,7 @@ namespace nandina::text
         struct Key {
             std::optional<resource::ResourceKey> family;
             int weight = 400;
-            FontSlant slant = FontSlant::normal;
+            theme::FontSlant slant = theme::FontSlant::normal;
             FontPipelineOptions options;
             auto operator<=>(const Key&) const = default;
         };

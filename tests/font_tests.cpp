@@ -449,14 +449,14 @@ TEST_CASE("HarfBuzz backend produces glyph runs with source clusters", "[text][h
     auto face = std::make_shared<text::FreeTypeFontFace>(test_font_path());
     text::HarfBuzzTextLayoutBackend backend(face);
 
-    const auto layout = backend.layout(widget::primitives::TextLayoutInput {
+    const auto layout = backend.layout(text::TextLayoutInput {
         .text = "ab",
-        .style = widget::primitives::TextStyle {
+        .style = text::TextStyle {
             .font_size = 24.0F,
-            .overflow = widget::primitives::TextOverflow::clip,
+            .overflow = text::TextOverflow::clip,
             .max_lines = 1,
         },
-        .constraints = scene::LayoutConstraints::loose(),
+        .constraints = foundation::NanLayoutConstraints::loose(),
     });
 
     REQUIRE(layout.lines.size() == 1);
@@ -473,10 +473,10 @@ TEST_CASE("HarfBuzz caret geometry follows shaped graphemes", "[text][harfbuzz][
     auto face = std::make_shared<text::FreeTypeFontFace>(test_font_path());
     text::HarfBuzzTextLayoutBackend backend(face);
     constexpr std::string_view source = "a\xCC\x81" "b";
-    const auto layout = backend.layout(widget::primitives::TextLayoutInput {
+    const auto layout = backend.layout(text::TextLayoutInput {
         .text = source,
-        .style = widget::primitives::TextStyle {.font_size = 24.0F},
-        .constraints = scene::LayoutConstraints::loose(),
+        .style = text::TextStyle {.font_size = 24.0F},
+        .constraints = foundation::NanLayoutConstraints::loose(),
     });
 
     const auto& line = layout.lines.front();
@@ -491,10 +491,10 @@ TEST_CASE("HarfBuzz caret geometry follows shaped graphemes", "[text][harfbuzz][
 TEST_CASE("HarfBuzz glyph runs draw through the atlas texture", "[text][harfbuzz][render]") {
     auto face = std::make_shared<text::FreeTypeFontFace>(test_font_path());
     text::HarfBuzzTextLayoutBackend backend(face);
-    const auto layout = backend.layout(widget::primitives::TextLayoutInput {
+    const auto layout = backend.layout(text::TextLayoutInput {
         .text = "ab",
-        .style = widget::primitives::TextStyle {.font_size = 24.0F},
-        .constraints = scene::LayoutConstraints::loose(),
+        .style = text::TextStyle {.font_size = 24.0F},
+        .constraints = foundation::NanLayoutConstraints::loose(),
     });
 
     text::GlyphAtlas atlas(face, 64, 64);
@@ -524,10 +524,10 @@ TEST_CASE("HarfBuzz glyph runs draw through the atlas texture", "[text][harfbuzz
 TEST_CASE("GlyphRunRenderer rasterizes at viewport times DPI scale", "[text][harfbuzz][scale]") {
     auto face = std::make_shared<text::FreeTypeFontFace>(test_font_path());
     text::HarfBuzzTextLayoutBackend backend(face);
-    const auto layout = backend.layout(widget::primitives::TextLayoutInput {
+    const auto layout = backend.layout(text::TextLayoutInput {
         .text = "a",
-        .style = widget::primitives::TextStyle {.font_size = 16.0F},
-        .constraints = scene::LayoutConstraints::loose(),
+        .style = text::TextStyle {.font_size = 16.0F},
+        .constraints = foundation::NanLayoutConstraints::loose(),
     });
     text::GlyphAtlas atlas(face, 128, 128);
     TextureRecordingDevice device;
@@ -558,14 +558,14 @@ TEST_CASE("HarfBuzz backend honors explicit line limits", "[text][harfbuzz]") {
     auto face = std::make_shared<text::FreeTypeFontFace>(test_font_path());
     text::HarfBuzzTextLayoutBackend backend(face);
 
-    const auto layout = backend.layout(widget::primitives::TextLayoutInput {
+    const auto layout = backend.layout(text::TextLayoutInput {
         .text = "a\nb\na",
-        .style = widget::primitives::TextStyle {
+        .style = text::TextStyle {
             .font_size = 24.0F,
-            .overflow = widget::primitives::TextOverflow::wrap,
+            .overflow = text::TextOverflow::wrap,
             .max_lines = 2,
         },
-        .constraints = scene::LayoutConstraints::loose(),
+        .constraints = foundation::NanLayoutConstraints::loose(),
     });
 
     REQUIRE(layout.lines.size() == 2);
@@ -578,10 +578,10 @@ TEST_CASE("FriBidi orders pure RTL and mixed-direction glyph runs", "[text][harf
     auto face = std::make_shared<text::FreeTypeFontFace>(rtl_test_font_path());
     text::HarfBuzzTextLayoutBackend backend(face);
 
-    const auto rtl = backend.layout(widget::primitives::TextLayoutInput {
+    const auto rtl = backend.layout(text::TextLayoutInput {
         .text = "لسان",
-        .style = widget::primitives::TextStyle {.font_size = 32.0F},
-        .constraints = scene::LayoutConstraints::loose(),
+        .style = text::TextStyle {.font_size = 32.0F},
+        .constraints = foundation::NanLayoutConstraints::loose(),
     });
     REQUIRE(rtl.lines.size() == 1);
     REQUIRE(rtl.lines.front().right_to_left);
@@ -589,10 +589,10 @@ TEST_CASE("FriBidi orders pure RTL and mixed-direction glyph runs", "[text][harf
     REQUIRE(rtl.lines.front().glyphs.front().cluster
             > rtl.lines.front().glyphs.back().cluster);
 
-    const auto mixed = backend.layout(widget::primitives::TextLayoutInput {
+    const auto mixed = backend.layout(text::TextLayoutInput {
         .text = "abc لسان",
-        .style = widget::primitives::TextStyle {.font_size = 32.0F},
-        .constraints = scene::LayoutConstraints::loose(),
+        .style = text::TextStyle {.font_size = 32.0F},
+        .constraints = foundation::NanLayoutConstraints::loose(),
     });
     REQUIRE_FALSE(mixed.lines.front().right_to_left);
     bool has_visual_cluster_inversion = false;
@@ -645,24 +645,24 @@ TEST_CASE("FriBidi reshapes RTL overflow at logical cluster boundaries", "[text]
     text::HarfBuzzTextLayoutBackend backend(face);
     constexpr std::string_view source = "لسان لسان";
 
-    const auto natural = backend.layout(widget::primitives::TextLayoutInput {
+    const auto natural = backend.layout(text::TextLayoutInput {
         .text = source,
-        .style = widget::primitives::TextStyle {.font_size = 32.0F},
-        .constraints = scene::LayoutConstraints::loose(),
+        .style = text::TextStyle {.font_size = 32.0F},
+        .constraints = foundation::NanLayoutConstraints::loose(),
     });
     const float width_limit = natural.size.get_width() * 0.55F;
-    const scene::LayoutConstraints constraints {
+    const foundation::NanLayoutConstraints constraints {
         .min_width = 0.0F,
         .max_width = width_limit,
         .min_height = 0.0F,
         .max_height = 200.0F,
     };
 
-    const auto wrapped = backend.layout(widget::primitives::TextLayoutInput {
+    const auto wrapped = backend.layout(text::TextLayoutInput {
         .text = source,
-        .style = widget::primitives::TextStyle {
+        .style = text::TextStyle {
             .font_size = 32.0F,
-            .overflow = widget::primitives::TextOverflow::wrap,
+            .overflow = text::TextOverflow::wrap,
             .max_lines = 4,
         },
         .constraints = constraints,
@@ -678,11 +678,11 @@ TEST_CASE("FriBidi reshapes RTL overflow at logical cluster boundaries", "[text]
     REQUIRE(consumed == source.size());
     REQUIRE_FALSE(wrapped.overflowed);
 
-    const auto clipped = backend.layout(widget::primitives::TextLayoutInput {
+    const auto clipped = backend.layout(text::TextLayoutInput {
         .text = source,
-        .style = widget::primitives::TextStyle {
+        .style = text::TextStyle {
             .font_size = 32.0F,
-            .overflow = widget::primitives::TextOverflow::clip,
+            .overflow = text::TextOverflow::clip,
             .max_lines = 1,
         },
         .constraints = constraints,
@@ -694,11 +694,11 @@ TEST_CASE("FriBidi reshapes RTL overflow at logical cluster boundaries", "[text]
     REQUIRE(clipped.lines.front().size.get_width() > width_limit);
     REQUIRE(clipped.size.get_width() <= width_limit + 0.01F);
 
-    const auto ellipsis = backend.layout(widget::primitives::TextLayoutInput {
+    const auto ellipsis = backend.layout(text::TextLayoutInput {
         .text = source,
-        .style = widget::primitives::TextStyle {
+        .style = text::TextStyle {
             .font_size = 32.0F,
-            .overflow = widget::primitives::TextOverflow::ellipsis,
+            .overflow = text::TextOverflow::ellipsis,
             .max_lines = 1,
         },
         .constraints = constraints,
@@ -709,14 +709,14 @@ TEST_CASE("FriBidi reshapes RTL overflow at logical cluster boundaries", "[text]
              || ellipsis.lines.front().visible_text.ends_with("...")));
     REQUIRE(ellipsis.lines.front().size.get_width() <= width_limit + 0.01F);
 
-    const auto rtl_with_numbers = backend.layout(widget::primitives::TextLayoutInput {
+    const auto rtl_with_numbers = backend.layout(text::TextLayoutInput {
         .text = "لسان 123456789",
-        .style = widget::primitives::TextStyle {
+        .style = text::TextStyle {
             .font_size = 32.0F,
-            .overflow = widget::primitives::TextOverflow::wrap,
+            .overflow = text::TextOverflow::wrap,
             .max_lines = 12,
         },
-        .constraints = scene::LayoutConstraints {
+        .constraints = foundation::NanLayoutConstraints {
             .min_width = 0.0F,
             .max_width = width_limit * 0.7F,
             .min_height = 0.0F,
@@ -740,10 +740,10 @@ TEST_CASE("HarfBuzz selects fallback fonts per shaping cluster", "[text][harfbuz
     auto arabic = std::make_shared<text::FreeTypeFontFace>(rtl_test_font_path());
     text::HarfBuzzTextLayoutBackend backend(primary, {arabic});
 
-    const auto layout = backend.layout(widget::primitives::TextLayoutInput {
+    const auto layout = backend.layout(text::TextLayoutInput {
         .text = "abلسان",
-        .style = widget::primitives::TextStyle {.font_size = 32.0F},
-        .constraints = scene::LayoutConstraints::loose(),
+        .style = text::TextStyle {.font_size = 32.0F},
+        .constraints = foundation::NanLayoutConstraints::loose(),
     });
 
     REQUIRE(backend.font_count() == 2);
@@ -767,10 +767,10 @@ TEST_CASE("HarfBuzz selects fallback fonts per shaping cluster", "[text][harfbuz
 
     auto arabic_marks = std::make_shared<text::FreeTypeFontFace>(arabic_mark_test_font_path());
     text::HarfBuzzTextLayoutBackend mark_backend(primary, {arabic_marks});
-    const auto combining = mark_backend.layout(widget::primitives::TextLayoutInput {
+    const auto combining = mark_backend.layout(text::TextLayoutInput {
         .text = "aكِ",
-        .style = widget::primitives::TextStyle {.font_size = 32.0F},
-        .constraints = scene::LayoutConstraints::loose(),
+        .style = text::TextStyle {.font_size = 32.0F},
+        .constraints = foundation::NanLayoutConstraints::loose(),
     });
     bool saw_arabic_grapheme = false;
     for (const auto& glyph: combining.lines.front().glyphs) {
@@ -782,20 +782,20 @@ TEST_CASE("HarfBuzz selects fallback fonts per shaping cluster", "[text][harfbuz
     }
     REQUIRE(saw_arabic_grapheme);
 
-    const auto variation = backend.layout(widget::primitives::TextLayoutInput {
+    const auto variation = backend.layout(text::TextLayoutInput {
         .text = "a\xEF\xB8\x8F",
-        .style = widget::primitives::TextStyle {.font_size = 32.0F},
-        .constraints = scene::LayoutConstraints::loose(),
+        .style = text::TextStyle {.font_size = 32.0F},
+        .constraints = foundation::NanLayoutConstraints::loose(),
     });
     REQUIRE_FALSE(variation.lines.front().glyphs.empty());
     REQUIRE(variation.lines.front().glyphs.front().font_index == 0);
     REQUIRE(variation.missing_glyphs);
 
     text::HarfBuzzTextLayoutBackend no_fallback(primary);
-    const auto missing = no_fallback.layout(widget::primitives::TextLayoutInput {
+    const auto missing = no_fallback.layout(text::TextLayoutInput {
         .text = "لسان",
-        .style = widget::primitives::TextStyle {.font_size = 32.0F},
-        .constraints = scene::LayoutConstraints::loose(),
+        .style = text::TextStyle {.font_size = 32.0F},
+        .constraints = foundation::NanLayoutConstraints::loose(),
     });
     REQUIRE(missing.missing_glyphs);
 }
@@ -804,10 +804,10 @@ TEST_CASE("GlyphRunRenderer routes fallback glyphs to matching atlases", "[text]
     auto primary = std::make_shared<text::FreeTypeFontFace>(test_font_path());
     auto arabic = std::make_shared<text::FreeTypeFontFace>(rtl_test_font_path());
     text::HarfBuzzTextLayoutBackend backend(primary, {arabic});
-    const auto layout = backend.layout(widget::primitives::TextLayoutInput {
+    const auto layout = backend.layout(text::TextLayoutInput {
         .text = "abلسان",
-        .style = widget::primitives::TextStyle {.font_size = 32.0F},
-        .constraints = scene::LayoutConstraints::loose(),
+        .style = text::TextStyle {.font_size = 32.0F},
+        .constraints = foundation::NanLayoutConstraints::loose(),
     });
 
     text::GlyphAtlas primary_atlas(primary, 128, 128);
@@ -908,7 +908,7 @@ TEST_CASE("FontFamilyRegistry register_face resolves a direct file face", "[text
     REQUIRE(registry.register_face(resource::ResourceKey("imported"), *face).has_value());
 
     const auto resolved = registry.resolve(
-        text::FontRequest {.family = resource::ResourceKey("imported")},
+        theme::FontRequest {.family = resource::ResourceKey("imported")},
         loader
     );
     REQUIRE(resolved.has_value());
@@ -961,9 +961,9 @@ TEST_CASE("Clipped text leaves room for the last glyph's ink overhang", "[text][
     // 输入框 value text 使用 TextOverflow::clip；若把 text 裁剪到 measured advance，
     // 最后一个字形超出 advance 的 1~2px 墨迹（全宽 CJK 与比例窄字符混排）会被裁。
     widget::primitives::Text control("1f中文");
-    control.set_overflow(widget::primitives::TextOverflow::clip);
+    control.set_overflow(text::TextOverflow::clip);
     control.set_font_size(24.0F);
-    (void)control.measure_layout(scene::LayoutConstraints::loose());
+    (void)control.measure_layout(foundation::NanLayoutConstraints::loose());
     const float measured_width = control.measured_text_width();
     REQUIRE(measured_width > 0.0F);
 
@@ -972,7 +972,7 @@ TEST_CASE("Clipped text leaves room for the last glyph's ink overhang", "[text][
     control.draw_at(context, foundation::NanPoint(50.0F, 60.0F));
 
     const auto expected_right = 50.0F + context.logical_to_screen(
-        measured_width + widget::primitives::glyph_overhang_allowance(control.laid_out_font_size())
+        measured_width + text::glyph_overhang_allowance(control.laid_out_font_size())
     );
     REQUIRE(device.has_clip);
     // 裁剪右缘要放到 measured advance 之外，封住末字形墨迹悬垂。
@@ -997,13 +997,13 @@ TEST_CASE("FontFamilyRegistry matches multiple face variants by weight and slant
     REQUIRE(registry.register_face(resource::ResourceKey("mixed"), *bold, 700).has_value());
     REQUIRE(
         registry
-            .register_face(resource::ResourceKey("mixed"), *italic, 400, text::FontSlant::italic)
+            .register_face(resource::ResourceKey("mixed"), *italic, 400, theme::FontSlant::italic)
             .has_value()
     );
 
-    const auto resolve = [&](int weight, text::FontSlant slant) -> std::shared_ptr<text::FreeTypeFontFace> {
+    const auto resolve = [&](int weight, theme::FontSlant slant) -> std::shared_ptr<text::FreeTypeFontFace> {
         const auto result = registry.resolve(
-            text::FontRequest {
+            theme::FontRequest {
                 .family = resource::ResourceKey("mixed"),
                 .weight = weight,
                 .slant = slant,
@@ -1014,7 +1014,7 @@ TEST_CASE("FontFamilyRegistry matches multiple face variants by weight and slant
         return result->faces.front();
     };
 
-    REQUIRE(resolve(700, text::FontSlant::normal) == *bold);
-    REQUIRE(resolve(400, text::FontSlant::italic) == *italic);
-    REQUIRE(resolve(400, text::FontSlant::normal) == *regular);
+    REQUIRE(resolve(700, theme::FontSlant::normal) == *bold);
+    REQUIRE(resolve(400, theme::FontSlant::italic) == *italic);
+    REQUIRE(resolve(400, theme::FontSlant::normal) == *regular);
 }

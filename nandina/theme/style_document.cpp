@@ -535,12 +535,12 @@ namespace nandina::theme
                 const auto resource = (*face)["resource"].value<std::string>();
                 if (!resource)
                     throw std::runtime_error("font face requires resource");
-                text::FontSlant slant = text::FontSlant::normal;
+                theme::FontSlant slant = theme::FontSlant::normal;
                 if (const auto value = (*face)["slant"].value<std::string_view>()) {
                     if (*value == "italic")
-                        slant = text::FontSlant::italic;
+                        slant = theme::FontSlant::italic;
                     else if (*value == "oblique")
-                        slant = text::FontSlant::oblique;
+                        slant = theme::FontSlant::oblique;
                     else if (*value != "normal")
                         throw std::runtime_error("unknown font slant");
                 }

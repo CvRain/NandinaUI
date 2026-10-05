@@ -64,23 +64,23 @@ namespace nandina::widget
         [[nodiscard]] auto placeholder_text() -> primitives::Text&;
         [[nodiscard]] auto placeholder_text() const -> const primitives::Text&;
 
-        void set_text_pipeline(primitives::TextPipeline pipeline);
-        [[nodiscard]] auto text_pipeline() const -> primitives::TextPipeline;
-        void apply_default_text_pipeline(const primitives::TextPipeline& pipeline) override;
+        void set_text_pipeline(text::TextPipeline pipeline);
+        [[nodiscard]] auto text_pipeline() const -> text::TextPipeline;
+        void apply_default_text_pipeline(const text::TextPipeline& pipeline) override;
         void apply_font_context(text::FontPipelineCache& context) override;
         void on_style_context_changed(const theme::ResolvedStyleContext& context) override;
         void on_theme_changed(const theme::ThemeManager& manager) override;
-        void set_font(text::FontRequest request);
+        void set_font(theme::FontRequest request);
         void set_font_family(resource::ResourceKey family);
         void set_font_weight(int weight);
-        void set_font_slant(text::FontSlant slant);
+        void set_font_slant(theme::FontSlant slant);
 
         [[nodiscard]] auto is_focusable() const -> bool override;
         auto on_input(scene::InputEvent& event) -> bool override;
         auto on_draw(render::DrawContext& ctx) -> void override;
 
     protected:
-        [[nodiscard]] auto on_measure(scene::LayoutConstraints constraints)
+        [[nodiscard]] auto on_measure(foundation::NanLayoutConstraints constraints)
             -> foundation::NanSize override;
         [[nodiscard]] auto semantics_properties() const -> semantics::Properties override;
         auto on_semantics_action(const semantics::ActionRequest& request) -> bool override;
@@ -89,11 +89,11 @@ namespace nandina::widget
         void apply_theme();
         void place_caret(foundation::NanPoint screen_point, bool extend);
         void update_scroll(float viewport_width);
-        [[nodiscard]] auto content_constraints(scene::LayoutConstraints constraints) const
-            -> scene::LayoutConstraints;
+        [[nodiscard]] auto content_constraints(foundation::NanLayoutConstraints constraints) const
+            -> foundation::NanLayoutConstraints;
         [[nodiscard]] auto line_origin(
             foundation::NanRect world,
-            const primitives::TextLayoutResult& layout,
+            const text::TextLayoutResult& layout,
             float x,
             float scale
         ) const -> foundation::NanPoint;

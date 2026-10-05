@@ -60,7 +60,7 @@ namespace nandina::app
         return child_count() > 0 ? get_child(child_count() - 1)->as_node2d() : nullptr;
     }
 
-    auto RouterOutlet::on_measure(const scene::LayoutConstraints constraints)
+    auto RouterOutlet::on_measure(const foundation::NanLayoutConstraints constraints)
         -> foundation::NanSize {
         // An outlet is a shell mount point, so it fills the space offered by its
         // parent rather than measuring to its own (initially zero) size. Keep the
@@ -83,7 +83,7 @@ namespace nandina::app
             if (!child || !child->visible()) {
                 continue;
             }
-            (void)child->measure_layout(scene::LayoutConstraints::tight(size()));
+            (void)child->measure_layout(foundation::NanLayoutConstraints::tight(size()));
             child->layout_to(local_rect());
         }
     }

@@ -145,7 +145,7 @@ namespace nandina::widget
             }
 
         protected:
-            [[nodiscard]] auto on_measure(const scene::LayoutConstraints constraints)
+            [[nodiscard]] auto on_measure(const foundation::NanLayoutConstraints constraints)
                 -> foundation::NanSize override {
                 const auto& m = style_.metrics;
                 if (kind_ == MenuItemKind::separator) {
@@ -157,12 +157,12 @@ namespace nandina::widget
                     );
                 }
 
-                (void)label_text_.measure_layout(scene::LayoutConstraints::loose());
+                (void)label_text_.measure_layout(foundation::NanLayoutConstraints::loose());
                 float width = leading_width();
                 width += label_text_.measured_text_width();
                 width += trailing_width();
                 if (!shortcut_.empty()) {
-                    (void)shortcut_text_.measure_layout(scene::LayoutConstraints::loose());
+                    (void)shortcut_text_.measure_layout(foundation::NanLayoutConstraints::loose());
                     width += m.padding_x + shortcut_text_.measured_text_width();
                 }
                 return constraints.constrain(foundation::NanSize(width, m.item_height));
@@ -507,13 +507,13 @@ namespace nandina::widget
             }
 
         protected:
-            [[nodiscard]] auto on_measure(const scene::LayoutConstraints constraints)
+            [[nodiscard]] auto on_measure(const foundation::NanLayoutConstraints constraints)
                 -> foundation::NanSize override {
                 const auto& m = style_.metrics;
                 float content_width = 0.0F;
                 float content_height = m.padding_y * 2.0F;
                 for (auto& node: item_nodes_) {
-                    const auto measured = node->measure_layout(scene::LayoutConstraints::loose());
+                    const auto measured = node->measure_layout(foundation::NanLayoutConstraints::loose());
                     content_width = std::max(content_width, measured.get_width());
                     content_height += measured.get_height();
                 }
@@ -530,7 +530,7 @@ namespace nandina::widget
                 const float content_width = std::max(0.0F, width() - m.padding_x * 2.0F);
                 float y = m.padding_y;
                 for (auto& node: item_nodes_) {
-                    const auto measured = node->measure_layout(scene::LayoutConstraints::loose());
+                    const auto measured = node->measure_layout(foundation::NanLayoutConstraints::loose());
                     const float row_height = measured.get_height();
                     node->layout_to(
                         foundation::NanRect::from_xywh(m.padding_x, y, content_width, row_height)
@@ -986,7 +986,7 @@ namespace nandina::widget
         scene::NanControl::on_exit_tree();
     }
 
-    auto DropdownMenu::on_measure(const scene::LayoutConstraints constraints)
+    auto DropdownMenu::on_measure(const foundation::NanLayoutConstraints constraints)
         -> foundation::NanSize {
         return constraints.constrain(popover_->measure_layout(constraints));
     }

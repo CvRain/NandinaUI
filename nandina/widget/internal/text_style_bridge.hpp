@@ -1,5 +1,5 @@
 //
-// widget/internal/text_style_bridge — ResolvedTypeStyle → primitives::TextStyle
+// widget/internal/text_style_bridge — ResolvedTypeStyle → text::TextStyle
 //
 // 组件在 `on_style_context_changed()` / `on_theme_changed()` 里都要做同一件事：把解析后的
 // 排版（主题侧）转成 `Text` 能吃的运行时样式，并遵守"样式上下文优先"的继承规则。
@@ -12,10 +12,9 @@
 #ifndef NANDINA_EXPERIMENT_WIDGET_INTERNAL_TEXT_STYLE_BRIDGE_HPP
 #define NANDINA_EXPERIMENT_WIDGET_INTERNAL_TEXT_STYLE_BRIDGE_HPP
 
-#include "../../text/font_request.hpp"
+#include "../../text/text_layout.hpp"
 #include "../../theme/design_system.hpp"
 #include "../../theme/style_context.hpp"
-#include "../primitives/text_layout.hpp"
 
 namespace nandina::widget::internal
 {
@@ -32,11 +31,11 @@ namespace nandina::widget::internal
     [[nodiscard]] inline auto make_text_style(
         const theme::ResolvedStyleContext& context,
         const theme::ResolvedTypeStyle& type,
-        const text::FontRequest& fallback_font,
-        const primitives::TextOverflow overflow = primitives::TextOverflow::clip,
+        const theme::FontRequest& fallback_font,
+        const text::TextOverflow overflow = text::TextOverflow::clip,
         const int max_lines = 1
-    ) -> primitives::TextStyle {
-        return primitives::TextStyle {
+    ) -> text::TextStyle {
+        return text::TextStyle {
             .color = context.text_color_from_context ? context.text_color : type.color,
             .font_size = context.font_size_from_context ? context.font_size : type.font_size,
             .font = context.font_from_context ? context.font : fallback_font,

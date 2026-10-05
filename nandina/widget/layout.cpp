@@ -34,8 +34,8 @@ namespace nandina::widget
             return result;
         }
 
-        [[nodiscard]] auto child_constraints(scene::LayoutConstraints constraints)
-            -> scene::LayoutConstraints {
+        [[nodiscard]] auto child_constraints(foundation::NanLayoutConstraints constraints)
+            -> foundation::NanLayoutConstraints {
             return {
                 .min_width = 0.0F,
                 .max_width = constraints.max_width,
@@ -90,7 +90,7 @@ namespace nandina::widget
             return axis == LayoutAxis::horizontal ? size.get_height() : size.get_width();
         }
 
-        [[nodiscard]] auto max_main(scene::LayoutConstraints constraints, LayoutAxis axis)
+        [[nodiscard]] auto max_main(foundation::NanLayoutConstraints constraints, LayoutAxis axis)
             -> float {
             return axis == LayoutAxis::horizontal ? constraints.max_width : constraints.max_height;
         }
@@ -131,7 +131,7 @@ namespace nandina::widget
         };
 
         [[nodiscard]] auto
-        policy_limit(const scene::LayoutConstraints& limits, LayoutAxis axis, bool minimum)
+        policy_limit(const foundation::NanLayoutConstraints& limits, LayoutAxis axis, bool minimum)
             -> float {
             if (axis == LayoutAxis::horizontal) {
                 return minimum ? limits.min_width : effective_limit(limits.max_width);
@@ -276,7 +276,7 @@ namespace nandina::widget
                     alignment_offset(cross_alignment, available_cross, child_cross);
                 const auto rect =
                     rect_from_extents(main_pos, cross_pos, item.target, child_cross, axis);
-                (void)item.child->measure_layout(scene::LayoutConstraints::tight(rect.get_size()));
+                (void)item.child->measure_layout(foundation::NanLayoutConstraints::tight(rect.get_size()));
                 item.child->layout_to(rect);
                 main_pos += item.target + effective_gap;
             }
@@ -294,7 +294,7 @@ namespace nandina::widget
 
         [[nodiscard]] auto collect_wrap_runs(
             std::vector<std::weak_ptr<scene::NanControl>>& items,
-            scene::LayoutConstraints constraints,
+            foundation::NanLayoutConstraints constraints,
             LayoutAxis axis,
             float gap,
             std::vector<std::pair<std::weak_ptr<scene::NanControl>, LayoutAlignment>>& overrides
@@ -410,11 +410,11 @@ namespace nandina::widget
     }
 
     void Flex::relayout() {
-        (void)measure_layout(scene::LayoutConstraints::loose());
+        (void)measure_layout(foundation::NanLayoutConstraints::loose());
         layout_to(foundation::NanRect::from_origin_size(position(), measured_size()));
     }
 
-    auto Flex::on_measure(scene::LayoutConstraints constraints) -> foundation::NanSize {
+    auto Flex::on_measure(foundation::NanLayoutConstraints constraints) -> foundation::NanSize {
         auto items = control_children(*this);
 
         float used_main = 0.0F;
@@ -565,11 +565,11 @@ namespace nandina::widget
     }
 
     void Wrap::relayout() {
-        (void)measure_layout(scene::LayoutConstraints::loose());
+        (void)measure_layout(foundation::NanLayoutConstraints::loose());
         layout_to(foundation::NanRect::from_origin_size(position(), measured_size()));
     }
 
-    auto Wrap::on_measure(scene::LayoutConstraints constraints) -> foundation::NanSize {
+    auto Wrap::on_measure(foundation::NanLayoutConstraints constraints) -> foundation::NanSize {
         auto items = control_children(*this);
         const auto runs =
             collect_wrap_runs(items, constraints, axis_, gap_, child_cross_alignments_);
@@ -589,7 +589,7 @@ namespace nandina::widget
         auto items = control_children(*this);
         auto runs = collect_wrap_runs(
             items,
-            scene::LayoutConstraints::tight(size()),
+            foundation::NanLayoutConstraints::tight(size()),
             axis_,
             gap_,
             child_cross_alignments_
@@ -695,11 +695,11 @@ namespace nandina::widget
     }
 
     void Column::relayout() {
-        (void)measure_layout(scene::LayoutConstraints::loose());
+        (void)measure_layout(foundation::NanLayoutConstraints::loose());
         layout_to(foundation::NanRect::from_origin_size(position(), measured_size()));
     }
 
-    auto Column::on_measure(scene::LayoutConstraints constraints) -> foundation::NanSize {
+    auto Column::on_measure(foundation::NanLayoutConstraints constraints) -> foundation::NanSize {
         auto items = control_children(*this);
 
         float y = 0.0F;
@@ -787,11 +787,11 @@ namespace nandina::widget
     }
 
     void Row::relayout() {
-        (void)measure_layout(scene::LayoutConstraints::loose());
+        (void)measure_layout(foundation::NanLayoutConstraints::loose());
         layout_to(foundation::NanRect::from_origin_size(position(), measured_size()));
     }
 
-    auto Row::on_measure(scene::LayoutConstraints constraints) -> foundation::NanSize {
+    auto Row::on_measure(foundation::NanLayoutConstraints constraints) -> foundation::NanSize {
         auto items = control_children(*this);
 
         float x = 0.0F;
@@ -846,11 +846,11 @@ namespace nandina::widget
     }
 
     void Stack::relayout() {
-        (void)measure_layout(scene::LayoutConstraints::loose());
+        (void)measure_layout(foundation::NanLayoutConstraints::loose());
         layout_to(foundation::NanRect::from_origin_size(position(), measured_size()));
     }
 
-    auto Stack::on_measure(scene::LayoutConstraints constraints) -> foundation::NanSize {
+    auto Stack::on_measure(foundation::NanLayoutConstraints constraints) -> foundation::NanSize {
         float max_width = 0.0F;
         float max_height = 0.0F;
         for (std::size_t i = 0; i < child_count(); ++i) {
@@ -858,7 +858,7 @@ namespace nandina::widget
             if (!child || !child->visible()) {
                 continue;
             }
-            const auto measured = child->measure_layout(scene::LayoutConstraints::loose());
+            const auto measured = child->measure_layout(foundation::NanLayoutConstraints::loose());
             max_width = std::max(max_width, measured.get_width());
             max_height = std::max(max_height, measured.get_height());
         }
@@ -871,7 +871,7 @@ namespace nandina::widget
             if (!child || !child->visible()) {
                 continue;
             }
-            (void)child->measure_layout(scene::LayoutConstraints::tight(size()));
+            (void)child->measure_layout(foundation::NanLayoutConstraints::tight(size()));
             child->layout_to(local_rect());
         }
     }
@@ -911,11 +911,11 @@ namespace nandina::widget
     }
 
     void Padding::relayout() {
-        (void)measure_layout(scene::LayoutConstraints::loose());
+        (void)measure_layout(foundation::NanLayoutConstraints::loose());
         layout_to(foundation::NanRect::from_origin_size(position(), measured_size()));
     }
 
-    auto Padding::on_measure(scene::LayoutConstraints constraints) -> foundation::NanSize {
+    auto Padding::on_measure(foundation::NanLayoutConstraints constraints) -> foundation::NanSize {
         auto child = child_.lock();
         if (!child) {
             return constraints.constrain(
@@ -973,11 +973,11 @@ namespace nandina::widget
     }
 
     void Center::relayout() {
-        (void)measure_layout(scene::LayoutConstraints::loose());
+        (void)measure_layout(foundation::NanLayoutConstraints::loose());
         layout_to(foundation::NanRect::from_origin_size(position(), measured_size()));
     }
 
-    auto Center::on_measure(scene::LayoutConstraints constraints) -> foundation::NanSize {
+    auto Center::on_measure(foundation::NanLayoutConstraints constraints) -> foundation::NanSize {
         auto child = child_.lock();
         if (!child) {
             return constraints.constrain(foundation::NanSize::zero());
@@ -1045,11 +1045,11 @@ namespace nandina::widget
     }
 
     void Expanded::relayout() {
-        (void)measure_layout(scene::LayoutConstraints::loose());
+        (void)measure_layout(foundation::NanLayoutConstraints::loose());
         layout_to(foundation::NanRect::from_origin_size(position(), measured_size()));
     }
 
-    auto Expanded::on_measure(scene::LayoutConstraints constraints) -> foundation::NanSize {
+    auto Expanded::on_measure(foundation::NanLayoutConstraints constraints) -> foundation::NanSize {
         auto child = child_.lock();
         if (!child) {
             return constraints.constrain(foundation::NanSize::zero());
@@ -1062,7 +1062,7 @@ namespace nandina::widget
         if (!child) {
             return;
         }
-        (void)child->measure_layout(scene::LayoutConstraints::tight(size()));
+        (void)child->measure_layout(foundation::NanLayoutConstraints::tight(size()));
         child->layout_to(local_rect());
     }
 
@@ -1113,7 +1113,7 @@ namespace nandina::widget
         return policy_;
     }
 
-    auto FlexItem::on_measure(scene::LayoutConstraints constraints) -> foundation::NanSize {
+    auto FlexItem::on_measure(foundation::NanLayoutConstraints constraints) -> foundation::NanSize {
         auto child = child_.lock();
         return child ? child->measure_layout(constraints)
                      : constraints.constrain(foundation::NanSize {});
@@ -1124,7 +1124,7 @@ namespace nandina::widget
         if (!child) {
             return;
         }
-        (void)child->measure_layout(scene::LayoutConstraints::tight(size()));
+        (void)child->measure_layout(foundation::NanLayoutConstraints::tight(size()));
         child->layout_to(local_rect());
     }
 

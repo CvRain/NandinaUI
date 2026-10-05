@@ -17,7 +17,7 @@ namespace nandina::widget
     Skeleton::Skeleton(theme::NanTheme theme) {
         system_ = std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
         theme_view_ = theme;
-        (void)measure_layout(scene::LayoutConstraints::loose());
+        (void)measure_layout(foundation::NanLayoutConstraints::loose());
         set_size(measured_size());
     }
 
@@ -152,7 +152,7 @@ namespace nandina::widget
         }
     }
 
-    auto Skeleton::on_measure(const scene::LayoutConstraints constraints) -> foundation::NanSize {
+    auto Skeleton::on_measure(const foundation::NanLayoutConstraints constraints) -> foundation::NanSize {
         const auto style = resolved_style();
         const float width = std::isfinite(constraints.max_width)
             ? constraints.max_width

@@ -51,14 +51,14 @@ TEST_CASE("button group measures children on the main axis with one shared gap",
     REQUIRE(group->orientation() == widget::LayoutAxis::horizontal);
 
     const float first_width =
-        first->measure_layout(scene::LayoutConstraints::loose()).get_width();
+        first->measure_layout(foundation::NanLayoutConstraints::loose()).get_width();
     const float second_width =
-        second->measure_layout(scene::LayoutConstraints::loose()).get_width();
+        second->measure_layout(foundation::NanLayoutConstraints::loose()).get_width();
     const float first_height =
-        first->measure_layout(scene::LayoutConstraints::loose()).get_height();
+        first->measure_layout(foundation::NanLayoutConstraints::loose()).get_height();
 
     const float gap = theme::default_theme().tokens.spacing.sm;
-    const auto measured = group->measure_layout(scene::LayoutConstraints::loose());
+    const auto measured = group->measure_layout(foundation::NanLayoutConstraints::loose());
     REQUIRE(
         measured.get_width()
         == Catch::Approx(first_width + second_width + gap).margin(kTolerance)
@@ -122,7 +122,7 @@ TEST_CASE("button group rejects null children and clear removes them", "[button-
 
     group->clear();
     REQUIRE(group->button_count() == 0);
-    REQUIRE(group->measure_layout(scene::LayoutConstraints::loose()).get_width() == Catch::Approx(0.0F));
+    REQUIRE(group->measure_layout(foundation::NanLayoutConstraints::loose()).get_width() == Catch::Approx(0.0F));
 }
 
 TEST_CASE("button group override patches fields and survives a system apply", "[button-group][override]") {

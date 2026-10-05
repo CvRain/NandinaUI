@@ -99,7 +99,7 @@ namespace nandina::widget::internal
         previous_focus_.reset();
     }
 
-    auto FocusScope::on_measure(const scene::LayoutConstraints constraints)
+    auto FocusScope::on_measure(const foundation::NanLayoutConstraints constraints)
         -> foundation::NanSize {
         auto current = content_.lock();
         return current != nullptr ? current->measure_layout(constraints)

@@ -18,8 +18,8 @@ namespace nandina::widget
     namespace
     {
         /// 子控件测量约束：保留父级的可用上界，但清零最小约束（与 Row 的做法一致）。
-        [[nodiscard]] auto child_constraints(const scene::LayoutConstraints constraints)
-            -> scene::LayoutConstraints {
+        [[nodiscard]] auto child_constraints(const foundation::NanLayoutConstraints constraints)
+            -> foundation::NanLayoutConstraints {
             return {
                 .min_width = 0.0F,
                 .max_width = constraints.max_width,
@@ -165,7 +165,7 @@ namespace nandina::widget
         return resolved_style().metrics.gap;
     }
 
-    auto ButtonGroup::on_measure(const scene::LayoutConstraints constraints)
+    auto ButtonGroup::on_measure(const foundation::NanLayoutConstraints constraints)
         -> foundation::NanSize {
         const auto style = resolved_style();
         const float gap = resolved_gap();
@@ -199,7 +199,7 @@ namespace nandina::widget
         const auto style = resolved_style();
         const float gap = resolved_gap();
         const float padding = style.metrics.padding_x;
-        const auto inner = child_constraints(scene::LayoutConstraints::loose());
+        const auto inner = child_constraints(foundation::NanLayoutConstraints::loose());
 
         const float group_cross = axis_ == LayoutAxis::horizontal ? height() : width();
 
@@ -253,7 +253,7 @@ namespace nandina::widget
     }
 
     void ButtonGroup::relayout() {
-        (void)measure_layout(scene::LayoutConstraints::loose());
+        (void)measure_layout(foundation::NanLayoutConstraints::loose());
         layout_to(foundation::NanRect::from_origin_size(position(), measured_size()));
     }
 } // namespace nandina::widget

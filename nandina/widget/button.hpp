@@ -36,16 +36,16 @@ namespace nandina::widget
         [[nodiscard]] auto visual_part(visual::container_t) noexcept
             -> primitives::BoxPresentation&;
 
-        void set_text_pipeline(primitives::TextPipeline pipeline);
-        [[nodiscard]] auto text_pipeline() const -> primitives::TextPipeline;
-        void apply_default_text_pipeline(const primitives::TextPipeline& pipeline) override;
+        void set_text_pipeline(text::TextPipeline pipeline);
+        [[nodiscard]] auto text_pipeline() const -> text::TextPipeline;
+        void apply_default_text_pipeline(const text::TextPipeline& pipeline) override;
         void apply_font_context(text::FontPipelineCache& context) override;
         void on_style_context_changed(const theme::ResolvedStyleContext& context) override;
         void on_theme_changed(const theme::ThemeManager& manager) override;
-        void set_font(text::FontRequest request);
+        void set_font(theme::FontRequest request);
         void set_font_family(resource::ResourceKey family);
         void set_font_weight(int weight);
-        void set_font_slant(text::FontSlant slant);
+        void set_font_slant(theme::FontSlant slant);
 
         /// 显式字号（逻辑单位），写入共享 label.font_size 实例属性。
         void set_font_size(float size);
@@ -56,8 +56,8 @@ namespace nandina::widget
         /// 当前生效的字号（最近一次样式应用后文本原语实际持有的值）。
         [[nodiscard]] auto font_size() const -> float;
 
-        void set_text_overflow(primitives::TextOverflow overflow);
-        [[nodiscard]] auto text_overflow() const -> primitives::TextOverflow;
+        void set_text_overflow(text::TextOverflow overflow);
+        [[nodiscard]] auto text_overflow() const -> text::TextOverflow;
 
         /// 高级接口：以完整 NanTheme 覆盖控件主题（等价整份快照覆盖，不再跟随系统切换）。
         void set_theme(theme::NanTheme theme);
@@ -84,7 +84,7 @@ namespace nandina::widget
         auto on_draw(render::DrawContext& ctx) -> void override;
 
     protected:
-        [[nodiscard]] auto on_measure(scene::LayoutConstraints constraints)
+        [[nodiscard]] auto on_measure(foundation::NanLayoutConstraints constraints)
             -> foundation::NanSize override;
         void on_process(float dt) override;
         void on_pressable_state_changed() override;
@@ -117,7 +117,7 @@ namespace nandina::widget
         theme::ButtonTone tone_ = theme::ButtonTone::primary;
         theme::ButtonTreatment treatment_ = theme::ButtonTreatment::filled;
         theme::ButtonSize size_ = theme::ButtonSize::medium;
-        primitives::TextOverflow text_overflow_ = primitives::TextOverflow::ellipsis;
+        text::TextOverflow text_overflow_ = text::TextOverflow::ellipsis;
         std::optional<foundation::NanPoint> ripple_origin_local_;
         float ripple_progress_ = 1.0F;
         bool reduced_motion_ = false;

@@ -36,14 +36,11 @@ namespace nandina::scene
         clip,
     };
 
-    /// Source-compatible scene spelling; the canonical type belongs to foundation.
-    using LayoutConstraints = foundation::NanLayoutConstraints;
-
     struct LayoutFlexPolicy {
         std::optional<float> basis;
         float grow = 0.0F;
         float shrink = 0.0F;
-        LayoutConstraints limits {};
+        foundation::NanLayoutConstraints limits {};
     };
 
     /// 组件尺寸的类型化表达。普通数字使用逻辑 UI 单位，百分比相对于父布局在
@@ -124,14 +121,15 @@ namespace nandina::scene
         // ---- layout protocol ----
 
         [[nodiscard]] auto measured_size() const -> foundation::NanSize;
-        [[nodiscard]] auto last_layout_constraints() const -> LayoutConstraints;
+        [[nodiscard]] auto last_layout_constraints() const -> foundation::NanLayoutConstraints;
         [[nodiscard]] auto layout_dirty() const -> bool;
         auto mark_layout_dirty() -> void;
         auto clear_layout_dirty() -> void;
         [[nodiscard]] virtual auto layout_flex_factor() const -> int;
         [[nodiscard]] virtual auto layout_flex_policy() const -> LayoutFlexPolicy;
 
-        [[nodiscard]] auto measure_layout(LayoutConstraints constraints) -> foundation::NanSize;
+        [[nodiscard]] auto measure_layout(foundation::NanLayoutConstraints constraints)
+            -> foundation::NanSize;
         auto layout_to(foundation::NanRect rect) -> void;
 
         // ---- background (可选) ----
@@ -164,7 +162,8 @@ namespace nandina::scene
         }
 
     protected:
-        [[nodiscard]] virtual auto on_measure(LayoutConstraints constraints) -> foundation::NanSize;
+        [[nodiscard]] virtual auto on_measure(foundation::NanLayoutConstraints constraints)
+            -> foundation::NanSize;
         virtual auto on_layout() -> void;
 
         [[nodiscard]] auto _push_child_clip(render::DrawContext& ctx)
@@ -173,7 +172,7 @@ namespace nandina::scene
     private:
         foundation::NanSize size_ {};
         foundation::NanSize measured_size_ {};
-        LayoutConstraints last_layout_constraints_ {};
+        foundation::NanLayoutConstraints last_layout_constraints_ {};
         std::optional<foundation::NanColor> background_;
         ControlOverflow overflow_ = ControlOverflow::visible;
         ControlSizeSpec size_spec_;

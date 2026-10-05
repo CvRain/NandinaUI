@@ -80,4 +80,4 @@ const auto style = skeleton->resolved_style();
 | `visual_state()` / `resolved_style()` | 当前状态与解析后的具体样式 |
 | `on_theme_changed()` / `on_draw()` / `on_measure()` | 控件协议实现 |
 
-`rectangle` 变体下的显式尺寸、`text` 变体下的超长文本截断属于布局系统行为，见 `scene::LayoutConstraints`。
+`rectangle` 变体下的显式尺寸、`text` 变体下的超长文本截断属于布局系统行为，见 `foundation::NanLayoutConstraints`。

@@ -86,7 +86,7 @@ namespace nandina::theme
     ///
     /// 定义在 theme 层而不是 widget/primitives：`theme::TypeStyle` 需要它（标签对齐要能被
     /// 主题和配方覆盖），而 theme 不允许向上依赖 widget。原语层用 using 重导出，见
-    /// `widget/primitives/text_layout.hpp`。
+    /// `text/text_layout.hpp`。
     ///
     /// 它是布局策略而不是整形结果：整形后端只把字符排成行，不关心这些行落在盒子里的
     /// 位置。偏移因此由绘制期按目标矩形算出（见 `Text::draw_in`），各后端无需实现。

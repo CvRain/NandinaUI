@@ -186,7 +186,7 @@ namespace nandina::widget
         return style;
     }
 
-    void Alert::apply_default_text_pipeline(const primitives::TextPipeline& pipeline) {
+    void Alert::apply_default_text_pipeline(const text::TextPipeline& pipeline) {
         title_text_.apply_default_text_pipeline(pipeline);
         description_text_.apply_default_text_pipeline(pipeline);
         mark_layout_dirty();
@@ -238,14 +238,14 @@ namespace nandina::widget
         foundation::NanSize icon_size {};
         bool has_icon = false;
         if (auto icon = icon_.lock()) {
-            icon_size = icon->measure_layout(scene::LayoutConstraints {.max_width = inner_width});
+            icon_size = icon->measure_layout(foundation::NanLayoutConstraints {.max_width = inner_width});
             has_icon = true;
         }
         foundation::NanSize action_size {};
         bool has_action = false;
         if (auto action = action_.lock()) {
             action_size =
-                action->measure_layout(scene::LayoutConstraints {.max_width = inner_width});
+                action->measure_layout(foundation::NanLayoutConstraints {.max_width = inner_width});
             has_action = true;
         }
         const bool has_dismiss = dismissible_ && dismiss_ != nullptr;
@@ -267,7 +267,7 @@ namespace nandina::widget
         float title_height = 0.0F;
         float description_height = 0.0F;
         if (has_text) {
-            const scene::LayoutConstraints text_constraints {.max_width = text_budget};
+            const foundation::NanLayoutConstraints text_constraints {.max_width = text_budget};
             if (has_title) {
                 (void)title_text_.measure_layout(text_constraints);
                 title_height = title_text_.height();
@@ -332,7 +332,7 @@ namespace nandina::widget
         return result;
     }
 
-    auto Alert::on_measure(const scene::LayoutConstraints constraints) -> foundation::NanSize {
+    auto Alert::on_measure(const foundation::NanLayoutConstraints constraints) -> foundation::NanSize {
         const auto style = resolved_style();
         if (is_empty()) {
             // 条件挂载：没有标题、描述与图标时不占位，避免在列表里留下空隙。
@@ -406,9 +406,9 @@ namespace nandina::widget
         const auto& context = resolved_style_context();
         const auto apply = [&](primitives::Text& text,
                                const theme::ResolvedTypeStyle& type,
-                               const primitives::TextOverflow overflow,
+                               const text::TextOverflow overflow,
                                const int max_lines) {
-            const primitives::TextStyle text_style {
+            const text::TextStyle text_style {
                 .color = context.text_color_from_context ? context.text_color : type.color,
                 .font_size = context.font_size_from_context ? context.font_size : type.font_size,
                 .font = context.font_from_context ? context.font : text.font(),
@@ -419,11 +419,11 @@ namespace nandina::widget
                 text.set_style(text_style);
             }
         };
-        apply(title_text_, style.title, primitives::TextOverflow::clip, 1);
+        apply(title_text_, style.title, text::TextOverflow::clip, 1);
         apply(
             description_text_,
             style.description,
-            primitives::TextOverflow::wrap,
+            text::TextOverflow::wrap,
             kDescriptionMaxLines
         );
     }
@@ -446,7 +446,7 @@ namespace nandina::widget
     }
 
     void Alert::relayout() {
-        (void)measure_layout(scene::LayoutConstraints::loose());
+        (void)measure_layout(foundation::NanLayoutConstraints::loose());
         layout_to(foundation::NanRect::from_origin_size(position(), measured_size()));
     }
 } // namespace nandina::widget

@@ -16,7 +16,7 @@ namespace
         explicit HitControl(foundation::NanSize size): scene::NanControl(size) {}
 
     protected:
-        [[nodiscard]] auto on_measure(scene::LayoutConstraints constraints)
+        [[nodiscard]] auto on_measure(foundation::NanLayoutConstraints constraints)
             -> foundation::NanSize override {
             return constraints.constrain(size());
         }

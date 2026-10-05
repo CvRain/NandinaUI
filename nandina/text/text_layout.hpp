@@ -8,7 +8,7 @@
 #include "../foundation/layout_constraints.hpp"
 #include "../foundation/nandina_color.hpp"
 #include "../theme/visual_state.hpp"
-#include "font_request.hpp"
+#include "../theme/font_request.hpp"
 
 #include <algorithm>
 #include <cstddef>
@@ -70,7 +70,7 @@ namespace nandina::text
             foundation::NanHexRgb {.red = 255, .green = 255, .blue = 255, .alpha = 255}
         );
         float font_size = 16.0F;
-        text::FontRequest font;
+        theme::FontRequest font;
         TextOverflow overflow = TextOverflow::ellipsis;
         int max_lines = 1;
         /// 在给定宽度内的水平对齐；见 text_align_offset()。默认 `start`，与加入之前的行为一致。

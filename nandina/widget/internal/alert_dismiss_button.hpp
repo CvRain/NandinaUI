@@ -47,7 +47,7 @@ namespace nandina::widget::internal
         auto on_draw(render::DrawContext& context) -> void override;
 
     protected:
-        [[nodiscard]] auto on_measure(scene::LayoutConstraints constraints)
+        [[nodiscard]] auto on_measure(foundation::NanLayoutConstraints constraints)
             -> foundation::NanSize override;
         void on_pressable_state_changed() override;
         [[nodiscard]] auto semantics_properties() const -> semantics::Properties override;

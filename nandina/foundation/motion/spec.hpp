@@ -18,7 +18,7 @@
 
 namespace nandina::motion
 {
-    // 命名缓动曲线（ease 已被 animation::ease 函数占用，故用 ease_* 前缀）。
+    // 命名缓动曲线（ease 已被 motion::ease 函数占用，故用 ease_* 前缀）。
     inline constexpr auto ease_linear = Easing::linear;
     inline constexpr auto ease_in = Easing::ease_in;
     inline constexpr auto ease_out = Easing::ease_out;

@@ -276,7 +276,7 @@ L2 逼出的真正决策。**这里不是"三选一"，而是三个正交决策�
 
 | 决策 | 问题 | 结论 |
 | --- | --- | --- |
-| **A 值存储** | 动画值与策略放哪一层 | **A1**：纯值设施下移到 `foundation::motion`；`animation::*` 保留兼容别名 |
+| **A 值存储** | 动画值与策略放哪一层 | **A1**：纯值设施下移到 `foundation::motion`；旧 `animation::*` 别名已在后续阶段退出 |
 | **B 宿主所有权** | `AnimationHost` 由谁拥有、由谁每帧推进 | **B1**：宿主与 Group 下移到 `scene`，仍由 `SceneTree` 拥有 |
 | **C 调度接口** | 调度器如何容纳不同值类型与插值策略 | **C1**：只类型擦除 `tick(dt)` / `finish()` 推进动作 |
 | **D 宿主粒度** | 宿主接受什么 owner | **D1**：脏标记设施上提，owner 泛化为全部 `NanNode2D` |
@@ -299,11 +299,12 @@ void finish();
 ```text
 foundation: motion 值与策略（Easing / Behavior / SpringSpec / Keyframes / AnimatedProperty）
 scene:      AnimationHost / AnimationGroup / PropertyEndpoint + 节点表现值存储
-animation:  兼容入口与作者侧 motion DSL，单向依赖 scene / foundation
+旧 animation 层：迁移期曾保留别名，现已删除
 ```
 
-依赖方向变成单边 `animation → scene → foundation`，`tree.advance_animations(dt)` 的
-调用位置不变。B1 而不是 B2 的理由是前者不动现有帧循环，窗口层不必知道动画存在。
+迁移期的依赖方向曾是单边 `animation → scene → foundation`；旧别名层退出后，
+当前由 `scene → foundation` 承担实现依赖。`tree.advance_animations(dt)` 的调用位置不变。
+B1 而不是 B2 的理由是前者不动现有帧循环，窗口层不必知道动画存在。
 
 **验收条件是可检的**：`nandina/scene/` 下不再出现任何 `animation/` 的 include
 （`.cpp` 也要查）。

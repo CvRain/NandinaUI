@@ -19,13 +19,13 @@ namespace nandina::scene
             }
 
         protected:
-            [[nodiscard]] auto on_measure(LayoutConstraints constraints)
+            [[nodiscard]] auto on_measure(foundation::NanLayoutConstraints constraints)
                 -> foundation::NanSize override {
                 return constraints.constrain(size());
             }
 
             void on_layout() override {
-                const LayoutConstraints child_constraints {
+                const foundation::NanLayoutConstraints child_constraints {
                     .min_width = 0.0F,
                     .max_width = width(),
                     .min_height = 0.0F,

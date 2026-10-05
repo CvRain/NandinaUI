@@ -18,7 +18,7 @@ namespace nandina::widget::primitives
         text_->set_color(std::move(color));
     }
 
-    void TextColorProperty::set_behavior(animation::Behavior<foundation::NanColor> behavior) {
+    void TextColorProperty::set_behavior(motion::Behavior<foundation::NanColor> behavior) {
         text_->color_presentation_.set_behavior(std::move(behavior));
     }
 
@@ -34,11 +34,11 @@ namespace nandina::widget::primitives
         text_->set_font_size(size);
     }
 
-    void TextFontSizeProperty::set_behavior(animation::Behavior<float> behavior) {
+    void TextFontSizeProperty::set_behavior(motion::Behavior<float> behavior) {
         text_->font_size_presentation_.set_behavior(std::move(behavior));
     }
 
-    void TextFontSizeProperty::set_spring(animation::SpringSpec spec) {
+    void TextFontSizeProperty::set_spring(motion::SpringSpec spec) {
         text_->font_size_presentation_.set_spring(std::move(spec));
     }
 
@@ -50,7 +50,7 @@ namespace nandina::widget::primitives
         return text_->font_size_presentation_.target();
     }
 
-    Text::Text(std::string text, const ITextLayoutBackend& backend):
+    Text::Text(std::string text, const text::ITextLayoutBackend& backend):
         text_(std::move(text), [this](const std::string& value) { apply_text(value); }),
         color_presentation_(*this, style_.color, scene::DirtyFlags::paint),
         font_size_presentation_(
@@ -84,7 +84,7 @@ namespace nandina::widget::primitives
         return text_.as_readonly();
     }
 
-    void Text::set_style(TextStyle style) {
+    void Text::set_style(text::TextStyle style) {
         style.max_lines = std::max(1, style.max_lines);
         if (!std::isfinite(style.font_size) || style.font_size <= 0.0F) {
             throw std::invalid_argument("Text font size must be finite and positive");
@@ -106,7 +106,7 @@ namespace nandina::widget::primitives
         update_metrics(last_layout_constraints());
     }
 
-    auto Text::style() const -> const TextStyle& {
+    auto Text::style() const -> const text::TextStyle& {
         return style_;
     }
 
@@ -146,7 +146,7 @@ namespace nandina::widget::primitives
         return TextFontSizeProperty {*this};
     }
 
-    void Text::set_font(text::FontRequest request) {
+    void Text::set_font(theme::FontRequest request) {
         if (request.weight < 1 || request.weight > 1000) {
             throw std::invalid_argument("Text font weight must be between 1 and 1000");
         }
@@ -176,23 +176,23 @@ namespace nandina::widget::primitives
         set_font(std::move(request));
     }
 
-    void Text::set_font_slant(const text::FontSlant slant) {
+    void Text::set_font_slant(const theme::FontSlant slant) {
         auto request = style_.font;
         request.slant = slant;
         set_font(std::move(request));
     }
 
-    auto Text::font() const -> const text::FontRequest& {
+    auto Text::font() const -> const theme::FontRequest& {
         return style_.font;
     }
 
-    void Text::set_overflow(TextOverflow overflow) {
+    void Text::set_overflow(text::TextOverflow overflow) {
         style_.overflow = overflow;
         mark_layout_dirty();
         update_metrics(last_layout_constraints());
     }
 
-    auto Text::overflow() const -> TextOverflow {
+    auto Text::overflow() const -> text::TextOverflow {
         return style_.overflow;
     }
 
@@ -226,13 +226,13 @@ namespace nandina::widget::primitives
         return layout_.font_size;
     }
 
-    auto Text::layout_result() const -> const TextLayoutResult& {
+    auto Text::layout_result() const -> const text::TextLayoutResult& {
         return layout_;
     }
 
-    void Text::set_text_pipeline(TextPipeline pipeline) {
+    void Text::set_text_pipeline(text::TextPipeline pipeline) {
         if (pipeline.backend == nullptr) {
-            throw std::invalid_argument("TextPipeline requires a layout backend");
+            throw std::invalid_argument("text::TextPipeline requires a layout backend");
         }
         backend_ = pipeline.backend;
         renderer_ = pipeline.renderer;
@@ -242,11 +242,11 @@ namespace nandina::widget::primitives
         update_metrics(last_layout_constraints());
     }
 
-    auto Text::text_pipeline() const -> TextPipeline {
+    auto Text::text_pipeline() const -> text::TextPipeline {
         return {.backend = backend_, .renderer = renderer_};
     }
 
-    void Text::apply_default_text_pipeline(const TextPipeline& pipeline) {
+    void Text::apply_default_text_pipeline(const text::TextPipeline& pipeline) {
         if (pipeline_explicit_) {
             return;
         }
@@ -288,27 +288,27 @@ namespace nandina::widget::primitives
         }
     }
 
-    void Text::set_layout_backend(const ITextLayoutBackend& backend) {
+    void Text::set_layout_backend(const text::ITextLayoutBackend& backend) {
         backend_ = &backend;
         pipeline_explicit_ = true;
         mark_layout_dirty();
         update_metrics(last_layout_constraints());
     }
 
-    auto Text::layout_backend() const -> const ITextLayoutBackend& {
+    auto Text::layout_backend() const -> const text::ITextLayoutBackend& {
         return *backend_;
     }
 
-    void Text::set_layout_renderer(ITextLayoutRenderer* renderer) {
+    void Text::set_layout_renderer(text::ITextLayoutRenderer* renderer) {
         renderer_ = renderer;
         pipeline_explicit_ = true;
     }
 
-    auto Text::layout_renderer() const -> ITextLayoutRenderer* {
+    auto Text::layout_renderer() const -> text::ITextLayoutRenderer* {
         return renderer_;
     }
 
-    void Text::set_align(const TextAlign align) {
+    void Text::set_align(const theme::TextAlign align) {
         if (style_.align == align) {
             return;
         }
@@ -317,13 +317,13 @@ namespace nandina::widget::primitives
         mark_dirty(scene::DirtyFlags::paint);
     }
 
-    auto Text::align() const -> TextAlign {
+    auto Text::align() const -> theme::TextAlign {
         return style_.align;
     }
 
     void Text::draw_at(render::DrawContext& ctx, foundation::NanPoint position) {
         // 没有目标盒子就谈不上对齐：用文本自身的测量尺寸当盒子，
-        // 于是 start / center / end 的结果完全一致（见 text_align_offset 的定义域说明）。
+        // 于是 start / center / end 的结果完全一致（见 text::text_align_offset 的定义域说明）。
         draw_in(ctx, foundation::NanRect::from_origin_size(position, layout_.size));
     }
 
@@ -336,18 +336,18 @@ namespace nandina::widget::primitives
         // 行起点在这里算：整形后端不知道盒子，对齐是绘制期的布局策略。
         for (auto& line: layout_.lines) {
             line.origin_x =
-                text_align_offset(style_.align, rect.get_width(), line.size.get_width());
+                text::text_align_offset(style_.align, rect.get_width(), line.size.get_width());
         }
 
-        auto clip = style_.overflow == TextOverflow::clip
+        auto clip = style_.overflow == text::TextOverflow::clip
             ? ctx.clip().push(
                   foundation::NanRect::from_xywh(
                       rect.get_left(),
                       rect.get_top(),
                       // 测量 advance 之外允许字形墨迹悬垂 1~2px，否则最后一个字形的
-                      // 右侧墨迹会被裁掉（见 glyph_overhang_allowance）。
+                      // 右侧墨迹会被裁掉（见 text::glyph_overhang_allowance）。
                       ctx.logical_to_screen(
-                          rect.get_width() + glyph_overhang_allowance(layout_.font_size)
+                          rect.get_width() + text::glyph_overhang_allowance(layout_.font_size)
                       ),
                       ctx.logical_to_screen(rect.get_height())
                   )
@@ -385,7 +385,7 @@ namespace nandina::widget::primitives
         draw_in(ctx, world);
     }
 
-    auto Text::on_measure(scene::LayoutConstraints constraints) -> foundation::NanSize {
+    auto Text::on_measure(foundation::NanLayoutConstraints constraints) -> foundation::NanSize {
         update_metrics(constraints);
         return size();
     }
@@ -417,11 +417,11 @@ namespace nandina::widget::primitives
         update_metrics(last_layout_constraints());
     }
 
-    void Text::update_metrics(scene::LayoutConstraints constraints) {
+    void Text::update_metrics(foundation::NanLayoutConstraints constraints) {
         auto presentation_style = style_;
         presentation_style.font_size = *font_size_presentation_.value();
         layout_ = backend_->layout(
-            TextLayoutInput {
+            text::TextLayoutInput {
                 .text = text_.get(),
                 .style = std::move(presentation_style),
                 .constraints = constraints,

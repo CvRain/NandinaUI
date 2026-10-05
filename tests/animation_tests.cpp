@@ -2,19 +2,18 @@
 // Animation easing + tween tests.
 //
 
-#include <nandina/animation/animated_property.hpp>
-#include <nandina/animation/animation_host.hpp>
-#include <nandina/animation/behavior.hpp>
-#include <nandina/animation/easing.hpp>
-#include <nandina/animation/group.hpp>
-#include <nandina/animation/keyframes.hpp>
-#include <nandina/animation/spring.hpp>
-#include <nandina/animation/tween.hpp>
+#include <nandina/foundation/motion/animated_property.hpp>
+#include <nandina/foundation/motion/behavior.hpp>
+#include <nandina/foundation/motion/easing.hpp>
+#include <nandina/foundation/motion/keyframes.hpp>
 #include <nandina/foundation/motion/spec.hpp>
 #include <nandina/foundation/motion/spring.hpp>
+#include <nandina/foundation/motion/tween.hpp>
 #include <nandina/foundation/nandina_color.hpp>
 #include <nandina/reactive/scope.hpp>
 #include <nandina/reactive/signal.hpp>
+#include <nandina/scene/animation_group.hpp>
+#include <nandina/scene/animation_host.hpp>
 #include <nandina/scene/control.hpp>
 #include <nandina/scene/input_event.hpp>
 #include <nandina/scene/property_endpoint.hpp>
@@ -40,15 +39,15 @@ namespace
 {
     class AnimatedProbe final: public scene::NanControl {
     public:
-        animation::AnimatedProperty<float> paint_value {0.0F};
-        animation::AnimatedProperty<float> layout_value {0.0F};
+        motion::AnimatedProperty<float> paint_value {0.0F};
+        motion::AnimatedProperty<float> layout_value {0.0F};
     };
 
     class GroupProbe final: public scene::NanControl {
     public:
-        animation::AnimatedProperty<float> a {0.0F};
-        animation::AnimatedProperty<float> b {0.0F};
-        animation::AnimatedProperty<float> c {0.0F};
+        motion::AnimatedProperty<float> a {0.0F};
+        motion::AnimatedProperty<float> b {0.0F};
+        motion::AnimatedProperty<float> c {0.0F};
     };
 
     class TransformCacheProbe final: public scene::NanControl {
@@ -111,31 +110,31 @@ static_assert(!widget::property::Springable<widget::Button, decltype(widget::vis
 
 TEST_CASE("easing curves map 0->0 and 1->1", "[animation][easing]") {
     for (const auto easing:
-         {animation::Easing::linear,
-          animation::Easing::ease_in,
-          animation::Easing::ease_out,
-          animation::Easing::ease_in_out})
+         {motion::Easing::linear,
+          motion::Easing::ease_in,
+          motion::Easing::ease_out,
+          motion::Easing::ease_in_out})
     {
-        REQUIRE(animation::ease(easing, 0.0F) == Catch::Approx(0.0F));
-        REQUIRE(animation::ease(easing, 1.0F) == Catch::Approx(1.0F));
+        REQUIRE(motion::ease(easing, 0.0F) == Catch::Approx(0.0F));
+        REQUIRE(motion::ease(easing, 1.0F) == Catch::Approx(1.0F));
     }
 }
 
 TEST_CASE("easing curves stay within [0,1] and ease-in lags", "[animation][easing]") {
-    const float mid = animation::ease(animation::Easing::ease_in, 0.5F);
+    const float mid = motion::ease(motion::Easing::ease_in, 0.5F);
     REQUIRE(mid > 0.0F);
     REQUIRE(mid < 0.5F); // ease-in 在中点落后于线性。
 
-    const float out = animation::ease(animation::Easing::ease_out, 0.5F);
+    const float out = motion::ease(motion::Easing::ease_out, 0.5F);
     REQUIRE(out > 0.5F); // ease-out 在中点超前于线性。
 
-    const float in_out = animation::ease(animation::Easing::ease_in_out, 0.5F);
+    const float in_out = motion::ease(motion::Easing::ease_in_out, 0.5F);
     REQUIRE(in_out == Catch::Approx(0.5F)); // ease-in-out 中点正好一半。
 }
 
 TEST_CASE("tween advances from start to end with easing", "[animation][tween]") {
-    animation::Tween<float> tween;
-    tween.start(0.0F, 100.0F, 1.0F, animation::Easing::linear);
+    motion::Tween<float> tween;
+    tween.start(0.0F, 100.0F, 1.0F, motion::Easing::linear);
 
     REQUIRE_FALSE(tween.is_finished());
     REQUIRE(tween.value() == Catch::Approx(0.0F));
@@ -148,14 +147,14 @@ TEST_CASE("tween advances from start to end with easing", "[animation][tween]") 
 }
 
 TEST_CASE("tween zero duration finishes immediately at target", "[animation][tween]") {
-    animation::Tween<float> tween;
+    motion::Tween<float> tween;
     tween.start(3.0F, 9.0F, 0.0F);
     REQUIRE(tween.is_finished());
     REQUIRE(tween.value() == Catch::Approx(9.0F));
 }
 
 TEST_CASE("tween finish and reset jump without animation", "[animation][tween]") {
-    animation::Tween<float> tween(0.0F);
+    motion::Tween<float> tween(0.0F);
     tween.start(0.0F, 10.0F, 1.0F);
     (void)tween.tick(0.2F);
     REQUIRE_FALSE(tween.is_finished());
@@ -170,16 +169,16 @@ TEST_CASE("tween finish and reset jump without animation", "[animation][tween]")
 }
 
 TEST_CASE("tween clamps dt overshoot and reuses target", "[animation][tween]") {
-    animation::Tween<float> tween;
-    tween.start(0.0F, 4.0F, 1.0F, animation::Easing::linear);
+    motion::Tween<float> tween;
+    tween.start(0.0F, 4.0F, 1.0F, motion::Easing::linear);
     (void)tween.tick(5.0F); // 远超时长
     REQUIRE(tween.is_finished());
     REQUIRE(tween.value() == Catch::Approx(4.0F));
 }
 
 TEST_CASE("tween ignores negative and NaN dt", "[animation][tween]") {
-    animation::Tween<float> tween;
-    tween.start(0.0F, 10.0F, 1.0F, animation::Easing::linear);
+    motion::Tween<float> tween;
+    tween.start(0.0F, 10.0F, 1.0F, motion::Easing::linear);
 
     REQUIRE(tween.tick(-0.5F) == Catch::Approx(0.0F));
     REQUIRE(tween.tick(std::numeric_limits<float>::quiet_NaN()) == Catch::Approx(0.0F));
@@ -189,8 +188,8 @@ TEST_CASE("tween ignores negative and NaN dt", "[animation][tween]") {
 TEST_CASE("color tween interpolates OKLCH hue over the shortest arc", "[animation][color]") {
     const auto from = foundation::NanColor::from_oklch(0.4F, 0.1F, 350.0F, 0.2F);
     const auto to = foundation::NanColor::from_oklch(0.8F, 0.3F, 10.0F, 1.0F);
-    animation::Tween<foundation::NanColor> tween;
-    tween.start(from, to, 1.0F, animation::Easing::linear);
+    motion::Tween<foundation::NanColor> tween;
+    tween.start(from, to, 1.0F, motion::Easing::linear);
 
     const auto mid = tween.tick(0.5F).oklch();
     REQUIRE(mid.light == Catch::Approx(0.6F));
@@ -200,12 +199,12 @@ TEST_CASE("color tween interpolates OKLCH hue over the shortest arc", "[animatio
 }
 
 TEST_CASE("point tween interpolates both axes", "[animation][tween][point]") {
-    animation::Tween<foundation::NanPoint> tween;
+    motion::Tween<foundation::NanPoint> tween;
     tween.start(
         foundation::NanPoint(2.0F, -4.0F),
         foundation::NanPoint(10.0F, 8.0F),
         1.0F,
-        animation::Easing::linear
+        motion::Easing::linear
     );
 
     const auto midpoint = tween.tick(0.5F);
@@ -217,24 +216,24 @@ TEST_CASE(
     "animated property jumps until an enabled behavior is installed",
     "[animation][property]"
 ) {
-    animation::AnimatedProperty<float> property(2.0F);
+    motion::AnimatedProperty<float> property(2.0F);
     property.set_target(8.0F);
     REQUIRE(property.target() == Catch::Approx(8.0F));
     REQUIRE(property.value() == Catch::Approx(8.0F));
     REQUIRE_FALSE(property.is_animating());
 
-    property.set_behavior(animation::Behavior<float>(1.0F).set_enabled(false));
+    property.set_behavior(motion::Behavior<float>(1.0F).set_enabled(false));
     property.set_target(12.0F);
     REQUIRE(property.value() == Catch::Approx(12.0F));
 
-    property.set_behavior(animation::Behavior<float>(0.0F));
+    property.set_behavior(motion::Behavior<float>(0.0F));
     property.set_target(16.0F);
     REQUIRE(property.value() == Catch::Approx(16.0F));
 }
 
 TEST_CASE("animated property separates target and presentation value", "[animation][property]") {
-    animation::AnimatedProperty<float> property(0.0F);
-    property.set_behavior(animation::Behavior<float>(1.0F, animation::Easing::linear));
+    motion::AnimatedProperty<float> property(0.0F);
+    property.set_behavior(motion::Behavior<float>(1.0F, motion::Easing::linear));
     property.set_target(10.0F);
 
     REQUIRE(property.target() == Catch::Approx(10.0F));
@@ -248,8 +247,8 @@ TEST_CASE(
     "animated property retargets continuously from its current value",
     "[animation][property]"
 ) {
-    animation::AnimatedProperty<float> property(0.0F);
-    property.set_behavior(animation::Behavior<float>(1.0F, animation::Easing::linear));
+    motion::AnimatedProperty<float> property(0.0F);
+    property.set_behavior(motion::Behavior<float>(1.0F, motion::Easing::linear));
     property.set_target(10.0F);
     REQUIRE(property.tick(0.5F) == Catch::Approx(5.0F));
 
@@ -262,8 +261,8 @@ TEST_CASE(
 }
 
 TEST_CASE("writing the same target does not restart an active property", "[animation][property]") {
-    animation::AnimatedProperty<float> property(0.0F);
-    property.set_behavior(animation::Behavior<float>(1.0F, animation::Easing::linear));
+    motion::AnimatedProperty<float> property(0.0F);
+    property.set_behavior(motion::Behavior<float>(1.0F, motion::Easing::linear));
     property.set_target(10.0F);
     REQUIRE(property.tick(0.25F) == Catch::Approx(2.5F));
 
@@ -272,8 +271,8 @@ TEST_CASE("writing the same target does not restart an active property", "[anima
 }
 
 TEST_CASE("clearing behavior finishes the current property transition", "[animation][property]") {
-    animation::AnimatedProperty<float> property(0.0F);
-    property.set_behavior(animation::Behavior<float>(1.0F, animation::Easing::linear));
+    motion::AnimatedProperty<float> property(0.0F);
+    property.set_behavior(motion::Behavior<float>(1.0F, motion::Easing::linear));
     property.set_target(10.0F);
     (void)property.tick(0.25F);
 
@@ -284,24 +283,24 @@ TEST_CASE("clearing behavior finishes the current property transition", "[animat
 }
 
 TEST_CASE("disabling behavior finishes an active property transition", "[animation][property]") {
-    animation::AnimatedProperty<float> property(0.0F);
-    property.set_behavior(animation::Behavior<float>(1.0F, animation::Easing::linear));
+    motion::AnimatedProperty<float> property(0.0F);
+    property.set_behavior(motion::Behavior<float>(1.0F, motion::Easing::linear));
     property.set_target(10.0F);
     (void)property.tick(0.25F);
 
-    property.set_behavior(animation::Behavior<float>(1.0F).set_enabled(false));
+    property.set_behavior(motion::Behavior<float>(1.0F).set_enabled(false));
     REQUIRE(property.value() == Catch::Approx(10.0F));
     REQUIRE_FALSE(property.is_animating());
 }
 
 TEST_CASE("behavior rejects invalid durations", "[animation][behavior]") {
-    REQUIRE_THROWS_AS(animation::Behavior<float>(-0.1F), std::invalid_argument);
+    REQUIRE_THROWS_AS(motion::Behavior<float>(-0.1F), std::invalid_argument);
     REQUIRE_THROWS_AS(
-        animation::Behavior<float>(std::numeric_limits<float>::infinity()),
+        motion::Behavior<float>(std::numeric_limits<float>::infinity()),
         std::invalid_argument
     );
     REQUIRE_THROWS_AS(
-        animation::Behavior<float>(std::numeric_limits<float>::quiet_NaN()),
+        motion::Behavior<float>(std::numeric_limits<float>::quiet_NaN()),
         std::invalid_argument
     );
 }
@@ -310,7 +309,7 @@ TEST_CASE("animation host advances only active properties with manual dt", "[ani
     scene::NanSceneTree tree;
     auto probe = std::make_shared<AnimatedProbe>();
     tree.set_root(probe);
-    probe->paint_value.set_behavior(animation::Behavior<float>(1.0F, animation::Easing::linear));
+    probe->paint_value.set_behavior(motion::Behavior<float>(1.0F, motion::Easing::linear));
     probe->clear_dirty(all_dirty_flags);
 
     tree.animation_host().set_target(*probe, probe->paint_value, 10.0F, scene::DirtyFlags::paint);
@@ -342,7 +341,7 @@ TEST_CASE("node opacity transition stays paint-only", "[animation][node-presenta
     tree.set_root(node);
 
     auto opacity = node->visual_part(scene::visual::node).property(scene::visual::opacity_t {});
-    opacity.set_behavior(animation::Behavior<float>(1.0F, animation::Easing::linear));
+    opacity.set_behavior(motion::Behavior<float>(1.0F, motion::Easing::linear));
     node->clear_dirty(all_dirty_flags);
     opacity.set(0.0F);
 
@@ -424,9 +423,7 @@ TEST_CASE(
     control->set_transform_origin(scene::TransformOrigin::top_left);
     auto translate =
         control->visual_part(scene::visual::node).property(scene::visual::translate_t {});
-    translate.set_behavior(
-        animation::Behavior<foundation::NanPoint>(1.0F, animation::Easing::linear)
-    );
+    translate.set_behavior(motion::Behavior<foundation::NanPoint>(1.0F, motion::Easing::linear));
 
     const auto snapshot_bounds = [&tree, &control]() -> std::optional<foundation::NanRect> {
         const auto* snapshot = tree.semantics_tree().find(control->semantics_id());
@@ -711,7 +708,7 @@ TEST_CASE("animation host retargets one property without duplicate tracks", "[an
     scene::NanSceneTree tree;
     auto probe = std::make_shared<AnimatedProbe>();
     tree.set_root(probe);
-    probe->paint_value.set_behavior(animation::Behavior<float>(1.0F, animation::Easing::linear));
+    probe->paint_value.set_behavior(motion::Behavior<float>(1.0F, motion::Easing::linear));
 
     tree.animation_host().set_target(*probe, probe->paint_value, 10.0F, scene::DirtyFlags::paint);
     advance(tree, 0.5F);
@@ -749,7 +746,7 @@ TEST_CASE("animation host applies immediate targets and exact dirty flags", "[an
     REQUIRE_FALSE(root->is_dirty(scene::layout_dirty_flags));
     REQUIRE(tree.semantics_dirty());
 
-    probe->layout_value.set_behavior(animation::Behavior<float>(1.0F, animation::Easing::linear));
+    probe->layout_value.set_behavior(motion::Behavior<float>(1.0F, motion::Easing::linear));
     root->clear_dirty(all_dirty_flags);
     probe->clear_dirty(all_dirty_flags);
     tree.animation_host().set_target(
@@ -773,7 +770,7 @@ TEST_CASE("animation host cancels tracks when an owner exits the tree", "[animat
     auto probe = std::make_shared<AnimatedProbe>();
     root->add_child(probe);
     tree.set_root(root);
-    probe->paint_value.set_behavior(animation::Behavior<float>(1.0F, animation::Easing::linear));
+    probe->paint_value.set_behavior(motion::Behavior<float>(1.0F, motion::Easing::linear));
     tree.animation_host().set_target(*probe, probe->paint_value, 10.0F, scene::DirtyFlags::paint);
     advance(tree, 0.25F);
     REQUIRE(probe->paint_value.value() == Catch::Approx(2.5F));
@@ -810,7 +807,7 @@ TEST_CASE(
     scene::NanSceneTree tree;
     auto probe = std::make_shared<AnimatedProbe>();
     tree.set_root(probe);
-    probe->paint_value.set_behavior(animation::Behavior<float>(1.0F, animation::Easing::linear));
+    probe->paint_value.set_behavior(motion::Behavior<float>(1.0F, motion::Easing::linear));
     tree.animation_host().set_target(*probe, probe->paint_value, 10.0F, scene::DirtyFlags::paint);
     advance(tree, 0.25F);
     probe->clear_dirty(all_dirty_flags);
@@ -936,7 +933,7 @@ TEST_CASE(
 
     auto probe = std::make_shared<AnimatedProbe>();
     tree.set_root(probe);
-    probe->paint_value.set_behavior(animation::Behavior<float>(1.0F, animation::Easing::linear));
+    probe->paint_value.set_behavior(motion::Behavior<float>(1.0F, motion::Easing::linear));
 
     tree.animation_host().set_target(*probe, probe->paint_value, 10.0F, scene::DirtyFlags::paint);
 
@@ -955,7 +952,7 @@ TEST_CASE(
 
     auto probe = std::make_shared<AnimatedProbe>();
     tree.set_root(probe);
-    probe->paint_value.set_behavior(animation::Behavior<float>(1.0F, animation::Easing::linear));
+    probe->paint_value.set_behavior(motion::Behavior<float>(1.0F, motion::Easing::linear));
     tree.animation_host().set_target(*probe, probe->paint_value, 10.0F, scene::DirtyFlags::paint);
     advance(tree, 0.25F);
     REQUIRE(probe->paint_value.value() == Catch::Approx(2.5F));
@@ -980,7 +977,7 @@ TEST_CASE(
 
     auto probe = std::make_shared<AnimatedProbe>();
     tree.set_root(probe);
-    probe->paint_value.set_behavior(animation::Behavior<float>(1.0F, animation::Easing::linear));
+    probe->paint_value.set_behavior(motion::Behavior<float>(1.0F, motion::Easing::linear));
     tree.animation_host().set_target(*probe, probe->paint_value, 10.0F, scene::DirtyFlags::paint);
     REQUIRE(probe->paint_value.value() == Catch::Approx(10.0F)); // jumped
 
@@ -1007,7 +1004,7 @@ TEST_CASE(
     auto button = ui.make<widget::Button>("Button")
                       .behavior(
                           widget::visual::container.radius,
-                          animation::Behavior<float>(1.0F, animation::Easing::linear)
+                          motion::Behavior<float>(1.0F, motion::Easing::linear)
                       )
                       .bind(widget::visual::container.radius, radius)
                       .build();
@@ -1041,13 +1038,13 @@ TEST_CASE(
                      .bind(widget::visual::label.color, color)
                      .behavior(
                          widget::visual::label.color,
-                         animation::Behavior<foundation::NanColor>(1.0F, animation::Easing::linear)
+                         motion::Behavior<foundation::NanColor>(1.0F, motion::Easing::linear)
                      )
                      .build();
     auto button = ui.make<widget::Button>("Animated button")
                       .behavior(
                           widget::visual::container.radius,
-                          animation::Behavior<float>(1.0F, animation::Easing::linear)
+                          motion::Behavior<float>(1.0F, motion::Easing::linear)
                       )
                       .bind(widget::visual::container.radius, radius)
                       .build();
@@ -1127,12 +1124,12 @@ TEST_CASE(
     widget::property::set_behavior(
         *label,
         widget::visual::label.color,
-        animation::Behavior<foundation::NanColor>(1.0F, animation::Easing::linear)
+        motion::Behavior<foundation::NanColor>(1.0F, motion::Easing::linear)
     );
     widget::property::set_behavior(
         *button,
         widget::visual::label.font_size,
-        animation::Behavior<float>(1.0F, animation::Easing::linear)
+        motion::Behavior<float>(1.0F, motion::Easing::linear)
     );
 
     auto root = std::make_shared<scene::NanControl>();
@@ -1150,7 +1147,7 @@ TEST_CASE(
     widget::property::set_behavior(
         *label,
         widget::visual::label.color,
-        animation::Behavior<foundation::NanColor>(1.0F).set_enabled(false)
+        motion::Behavior<foundation::NanColor>(1.0F).set_enabled(false)
     );
     REQUIRE(label->property(widget::visual::color_t {}).value()->approx_equals(target_color));
     REQUIRE(tree.animation_host().active_count() == 1);
@@ -1166,19 +1163,19 @@ TEST_CASE("parallel group fires all clips immediately", "[animation][group]") {
     auto probe = std::make_shared<GroupProbe>();
     tree.set_root(probe);
 
-    auto group = animation::Group::parallel(
-        {animation::Group::clip(
+    auto group = scene::AnimationGroup::parallel(
+        {scene::AnimationGroup::clip(
              *probe,
              probe->a,
              10.0F,
-             animation::Behavior<float>(1.0F, animation::Easing::linear),
+             motion::Behavior<float>(1.0F, motion::Easing::linear),
              scene::DirtyFlags::paint
          ),
-         animation::Group::clip(
+         scene::AnimationGroup::clip(
              *probe,
              probe->b,
              20.0F,
-             animation::Behavior<float>(1.0F, animation::Easing::linear),
+             motion::Behavior<float>(1.0F, motion::Easing::linear),
              scene::DirtyFlags::paint
          )}
     );
@@ -1195,19 +1192,19 @@ TEST_CASE("sequential group fires a clip only after the previous finishes", "[an
     auto probe = std::make_shared<GroupProbe>();
     tree.set_root(probe);
 
-    auto group = animation::Group::sequential(
-        {animation::Group::clip(
+    auto group = scene::AnimationGroup::sequential(
+        {scene::AnimationGroup::clip(
              *probe,
              probe->a,
              10.0F,
-             animation::Behavior<float>(0.2F, animation::Easing::linear),
+             motion::Behavior<float>(0.2F, motion::Easing::linear),
              scene::DirtyFlags::paint
          ),
-         animation::Group::clip(
+         scene::AnimationGroup::clip(
              *probe,
              probe->b,
              20.0F,
-             animation::Behavior<float>(0.2F, animation::Easing::linear),
+             motion::Behavior<float>(0.2F, motion::Easing::linear),
              scene::DirtyFlags::paint
          )}
     );
@@ -1231,26 +1228,26 @@ TEST_CASE("stagger group fires clips at fixed intervals", "[animation][group]") 
     auto probe = std::make_shared<GroupProbe>();
     tree.set_root(probe);
 
-    auto group = animation::Group::stagger(
-        {animation::Group::clip(
+    auto group = scene::AnimationGroup::stagger(
+        {scene::AnimationGroup::clip(
              *probe,
              probe->a,
              10.0F,
-             animation::Behavior<float>(0.3F, animation::Easing::linear),
+             motion::Behavior<float>(0.3F, motion::Easing::linear),
              scene::DirtyFlags::paint
          ),
-         animation::Group::clip(
+         scene::AnimationGroup::clip(
              *probe,
              probe->b,
              20.0F,
-             animation::Behavior<float>(0.3F, animation::Easing::linear),
+             motion::Behavior<float>(0.3F, motion::Easing::linear),
              scene::DirtyFlags::paint
          ),
-         animation::Group::clip(
+         scene::AnimationGroup::clip(
              *probe,
              probe->c,
              30.0F,
-             animation::Behavior<float>(0.3F, animation::Easing::linear),
+             motion::Behavior<float>(0.3F, motion::Easing::linear),
              scene::DirtyFlags::paint
          )},
         0.2F
@@ -1278,26 +1275,26 @@ TEST_CASE("group finish jumps all clips to target", "[animation][group]") {
     auto probe = std::make_shared<GroupProbe>();
     tree.set_root(probe);
 
-    auto group = animation::Group::stagger(
-        {animation::Group::clip(
+    auto group = scene::AnimationGroup::stagger(
+        {scene::AnimationGroup::clip(
              *probe,
              probe->a,
              10.0F,
-             animation::Behavior<float>(1.0F, animation::Easing::linear),
+             motion::Behavior<float>(1.0F, motion::Easing::linear),
              scene::DirtyFlags::paint
          ),
-         animation::Group::clip(
+         scene::AnimationGroup::clip(
              *probe,
              probe->b,
              20.0F,
-             animation::Behavior<float>(1.0F, animation::Easing::linear),
+             motion::Behavior<float>(1.0F, motion::Easing::linear),
              scene::DirtyFlags::paint
          ),
-         animation::Group::clip(
+         scene::AnimationGroup::clip(
              *probe,
              probe->c,
              30.0F,
-             animation::Behavior<float>(1.0F, animation::Easing::linear),
+             motion::Behavior<float>(1.0F, motion::Easing::linear),
              scene::DirtyFlags::paint
          )},
         0.5F
@@ -1320,19 +1317,19 @@ TEST_CASE("group is cancelled when its owner exits the tree", "[animation][group
     root->add_child(probe);
     tree.set_root(root);
 
-    auto group = animation::Group::stagger(
-        {animation::Group::clip(
+    auto group = scene::AnimationGroup::stagger(
+        {scene::AnimationGroup::clip(
              *probe,
              probe->a,
              10.0F,
-             animation::Behavior<float>(1.0F, animation::Easing::linear),
+             motion::Behavior<float>(1.0F, motion::Easing::linear),
              scene::DirtyFlags::paint
          ),
-         animation::Group::clip(
+         scene::AnimationGroup::clip(
              *probe,
              probe->c,
              30.0F,
-             animation::Behavior<float>(1.0F, animation::Easing::linear),
+             motion::Behavior<float>(1.0F, motion::Easing::linear),
              scene::DirtyFlags::paint
          )},
         1.0F
@@ -1824,9 +1821,9 @@ TEST_CASE("a stiff float spring retains finite internal velocity", "[animation][
 }
 
 TEST_CASE("spring overshoots and settles at target", "[animation][spring]") {
-    animation::Spring<float> spring(0.0F);
+    motion::Spring<float> spring(0.0F);
     // 欠阻尼：ζ = c / (2√(km)) ≈ 0.35 < 1，会产生 overshoot。
-    spring.start(0.0F, 100.0F, animation::SpringSpec(200.0F, 10.0F));
+    spring.start(0.0F, 100.0F, motion::SpringSpec(200.0F, 10.0F));
     REQUIRE_FALSE(spring.is_finished());
 
     bool overshot = false;
@@ -1842,8 +1839,8 @@ TEST_CASE("spring overshoots and settles at target", "[animation][spring]") {
 }
 
 TEST_CASE("spring retargets without resetting velocity", "[animation][spring]") {
-    animation::Spring<float> spring(0.0F);
-    spring.start(0.0F, 100.0F, animation::SpringSpec(200.0F, 10.0F));
+    motion::Spring<float> spring(0.0F);
+    spring.start(0.0F, 100.0F, motion::SpringSpec(200.0F, 10.0F));
     (void)spring.tick(1.0F / 60.0F); // 获得初速度
     const float before = spring.value();
 
@@ -1853,8 +1850,8 @@ TEST_CASE("spring retargets without resetting velocity", "[animation][spring]") 
 }
 
 TEST_CASE("spring finish jumps to target", "[animation][spring]") {
-    animation::Spring<float> spring(0.0F);
-    spring.start(0.0F, 100.0F, animation::SpringSpec(200.0F, 10.0F));
+    motion::Spring<float> spring(0.0F);
+    spring.start(0.0F, 100.0F, motion::SpringSpec(200.0F, 10.0F));
     (void)spring.tick(1.0F / 60.0F);
     spring.finish();
     REQUIRE(spring.is_finished());
@@ -1862,11 +1859,11 @@ TEST_CASE("spring finish jumps to target", "[animation][spring]") {
 }
 
 TEST_CASE("spring spec rejects invalid parameters", "[animation][spring]") {
-    REQUIRE_THROWS_AS(animation::SpringSpec(-1.0F, 10.0F), std::invalid_argument);
-    REQUIRE_THROWS_AS(animation::SpringSpec(200.0F, -1.0F), std::invalid_argument);
-    REQUIRE_THROWS_AS(animation::SpringSpec(200.0F, 10.0F, 0.0F), std::invalid_argument);
+    REQUIRE_THROWS_AS(motion::SpringSpec(-1.0F, 10.0F), std::invalid_argument);
+    REQUIRE_THROWS_AS(motion::SpringSpec(200.0F, -1.0F), std::invalid_argument);
+    REQUIRE_THROWS_AS(motion::SpringSpec(200.0F, 10.0F, 0.0F), std::invalid_argument);
     REQUIRE_THROWS_AS(
-        animation::SpringSpec(std::numeric_limits<float>::infinity(), 10.0F),
+        motion::SpringSpec(std::numeric_limits<float>::infinity(), 10.0F),
         std::invalid_argument
     );
 }
@@ -1875,8 +1872,8 @@ TEST_CASE(
     "animated property supports spring mode with overshoot",
     "[animation][property][spring]"
 ) {
-    animation::AnimatedProperty<float> property(0.0F);
-    property.set_spring(animation::SpringSpec(200.0F, 10.0F));
+    motion::AnimatedProperty<float> property(0.0F);
+    property.set_spring(motion::SpringSpec(200.0F, 10.0F));
     property.set_target(100.0F);
     REQUIRE(property.target() == Catch::Approx(100.0F));
     REQUIRE(property.value() == Catch::Approx(0.0F)); // 从当前值起跳
@@ -1898,9 +1895,9 @@ TEST_CASE(
     "animated property spring and behavior are mutually exclusive",
     "[animation][property][spring]"
 ) {
-    animation::AnimatedProperty<float> property(0.0F);
-    property.set_behavior(animation::Behavior<float>(1.0F, animation::Easing::linear));
-    property.set_spring(animation::SpringSpec(200.0F, 10.0F));
+    motion::AnimatedProperty<float> property(0.0F);
+    property.set_behavior(motion::Behavior<float>(1.0F, motion::Easing::linear));
+    property.set_spring(motion::SpringSpec(200.0F, 10.0F));
     REQUIRE_FALSE(property.behavior().has_value()); // behavior 被清除
     REQUIRE(property.spring().has_value());
 
@@ -1917,7 +1914,7 @@ TEST_CASE(
     "keyframes interpolate across time and finish at the last frame",
     "[animation][keyframes]"
 ) {
-    animation::Keyframes<float> keyframes;
+    motion::Keyframes<float> keyframes;
     keyframes.start(
         {{.time = 0.0F, .value = 0.0F},
          {.time = 0.5F, .value = 10.0F},
@@ -1935,7 +1932,7 @@ TEST_CASE(
 }
 
 TEST_CASE("keyframes reject empty, non-increasing, and non-zero start", "[animation][keyframes]") {
-    animation::Keyframes<float> keyframes;
+    motion::Keyframes<float> keyframes;
     REQUIRE_THROWS_AS(keyframes.start({}), std::invalid_argument);
     REQUIRE_THROWS_AS(
         keyframes.start({{.time = 0.1F, .value = 0.0F}, {.time = 1.0F, .value = 1.0F}}),
@@ -1951,7 +1948,7 @@ TEST_CASE(
     "animated property plays keyframes and clears back to target",
     "[animation][property][keyframes]"
 ) {
-    animation::AnimatedProperty<float> property(0.0F);
+    motion::AnimatedProperty<float> property(0.0F);
     property.set_keyframes(
         {{.time = 0.0F, .value = 0.0F},
          {.time = 0.4F, .value = 8.0F},
@@ -1977,8 +1974,8 @@ TEST_CASE(
     "animated property keyframes and behavior are mutually exclusive",
     "[animation][property][keyframes]"
 ) {
-    animation::AnimatedProperty<float> property(0.0F);
-    property.set_behavior(animation::Behavior<float>(1.0F, animation::Easing::linear));
+    motion::AnimatedProperty<float> property(0.0F);
+    property.set_behavior(motion::Behavior<float>(1.0F, motion::Easing::linear));
     property.set_keyframes({{.time = 0.0F, .value = 0.0F}, {.time = 1.0F, .value = 10.0F}});
     REQUIRE_FALSE(property.behavior().has_value()); // behavior 被清除
     REQUIRE(property.keyframes().has_value());
@@ -1993,7 +1990,7 @@ TEST_CASE("motion::tween builds a behavior spec", "[animation][motion]") {
     const auto spec = motion::tween(0.24F).easing(motion::ease_out);
     const auto behavior = spec.behavior<float>();
     REQUIRE(behavior.duration() == Catch::Approx(0.24F));
-    REQUIRE(behavior.easing() == animation::Easing::ease_out);
+    REQUIRE(behavior.easing() == motion::Easing::ease_out);
     REQUIRE(behavior.enabled());
 
     REQUIRE_THROWS_AS(motion::tween(-0.1F), std::invalid_argument);

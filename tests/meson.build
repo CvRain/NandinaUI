@@ -14,28 +14,28 @@ test('foundation', foundation_tests, suite: 'unit')
 
 layout_constraints_tests = executable(
     'layout_constraints_tests',
-    files('layout_constraints_tests.cpp', 'layout_constraints_compat_tests.cpp'),
+    files('layout_constraints_tests.cpp'),
     dependencies : [nandina_dep, catch2_with_main_dep],
 )
 test('layout-constraints', layout_constraints_tests, suite: 'unit')
 
 text_layout_header_tests = executable(
     'text_layout_header_tests',
-    files('text_layout_header_tests.cpp', 'legacy_text_layout_header_tests.cpp'),
+    files('text_layout_header_tests.cpp'),
     dependencies : [nandina_dep, catch2_with_main_dep],
 )
 test('text-protocol-header', text_layout_header_tests, suite: 'unit')
 
 font_request_header_tests = executable(
     'font_request_header_tests',
-    files('font_request_header_tests.cpp', 'legacy_font_request_header_tests.cpp'),
+    files('font_request_header_tests.cpp'),
     dependencies : [nandina_dep, catch2_with_main_dep],
 )
 test('font-request-header', font_request_header_tests, suite: 'unit')
 
 motion_spec_header_tests = executable(
     'motion_spec_header_tests',
-    files('motion_spec_header_tests.cpp', 'legacy_motion_header_tests.cpp'),
+    files('motion_spec_header_tests.cpp'),
     dependencies : [nandina_dep, catch2_with_main_dep],
 )
 test('motion-spec-header', motion_spec_header_tests, suite: 'unit')

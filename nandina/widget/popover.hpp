@@ -102,7 +102,7 @@ namespace nandina::widget
         void on_exit_tree() override;
 
     protected:
-        [[nodiscard]] auto on_measure(scene::LayoutConstraints constraints)
+        [[nodiscard]] auto on_measure(foundation::NanLayoutConstraints constraints)
             -> foundation::NanSize override;
         auto on_layout() -> void override;
         [[nodiscard]] auto semantics_properties() const -> semantics::Properties override;

@@ -2,8 +2,8 @@
 // Theme / Tabs tests.
 //
 
-#include <nandina/animation/animation_host.hpp>
 #include <nandina/render/render_device.hpp>
+#include <nandina/scene/animation_host.hpp>
 #include <nandina/scene/scene_tree.hpp>
 #include <nandina/theme/theme_manager.hpp>
 #include <nandina/widget/controls.hpp>
@@ -30,16 +30,11 @@ namespace
         void set_clip(const foundation::NanRect&) override {}
         void clear_clip() override {}
         void draw_rect(const foundation::NanRect&, const foundation::NanColor&) override {}
-        void draw_rect_outline(
-            const foundation::NanRect&,
-            float,
-            const foundation::NanColor&
-        ) override {}
-        void draw_rounded_rect(
-            const foundation::NanRect&,
-            float,
-            const foundation::NanColor&
-        ) override {
+        void
+        draw_rect_outline(const foundation::NanRect&, float, const foundation::NanColor&) override {
+        }
+        void
+        draw_rounded_rect(const foundation::NanRect&, float, const foundation::NanColor&) override {
             ++rounded_rects;
         }
         void draw_line(
@@ -48,7 +43,8 @@ namespace
             float,
             const foundation::NanColor&
         ) override {}
-        void draw_circle(const foundation::NanPoint&, float, const foundation::NanColor&) override {}
+        void draw_circle(const foundation::NanPoint&, float, const foundation::NanColor&) override {
+        }
         void draw_text(
             std::string_view,
             const foundation::NanPoint&,
@@ -64,11 +60,8 @@ TEST_CASE("tabs resolves label and indicator tokens", "[tabs][theme]") {
     auto design = theme::default_design_system();
     design.tokens.spacing.lg = 20.0F;
 
-    const auto style = theme::resolve_tabs(
-        design,
-        theme::ColorAppearance::light,
-        theme::TabsVisualState::normal
-    );
+    const auto style =
+        theme::resolve_tabs(design, theme::ColorAppearance::light, theme::TabsVisualState::normal);
 
     REQUIRE(
         style.label.color.oklch().light
@@ -78,9 +71,7 @@ TEST_CASE("tabs resolves label and indicator tokens", "[tabs][theme]") {
         style.label_selected.color.oklch().light
         == Catch::Approx(design.light.foreground.oklch().light)
     );
-    REQUIRE(
-        style.indicator.oklch().light == Catch::Approx(design.light.primary.oklch().light)
-    );
+    REQUIRE(style.indicator.oklch().light == Catch::Approx(design.light.primary.oklch().light));
     REQUIRE(style.indicator_thickness == Catch::Approx(2.0F));
     REQUIRE(style.metrics.gap == Catch::Approx(20.0F));
     REQUIRE(style.metrics.min_height == Catch::Approx(36.0F));
@@ -88,11 +79,8 @@ TEST_CASE("tabs resolves label and indicator tokens", "[tabs][theme]") {
 
 TEST_CASE("tabs disabled state scales label and indicator alpha", "[tabs][theme]") {
     const auto design = theme::default_design_system();
-    const auto normal = theme::resolve_tabs(
-        design,
-        theme::ColorAppearance::light,
-        theme::TabsVisualState::normal
-    );
+    const auto normal =
+        theme::resolve_tabs(design, theme::ColorAppearance::light, theme::TabsVisualState::normal);
     const auto disabled = theme::resolve_tabs(
         design,
         theme::ColorAppearance::light,
@@ -117,9 +105,11 @@ TEST_CASE("tabs override survives a system apply", "[tabs][override]") {
     tree.set_root(tabs);
     REQUIRE(tree.layout_root(foundation::NanSize(280.0F, 48.0F)) >= 1);
 
-    tabs->set_override(theme::TabsRecipeRule {
-        .label_selected_color = theme::ThemeColor::token(theme::ColorToken::error),
-    });
+    tabs->set_override(
+        theme::TabsRecipeRule {
+            .label_selected_color = theme::ThemeColor::token(theme::ColorToken::error),
+        }
+    );
     REQUIRE(
         tabs->resolved_style().label_selected.color.oklch().light
         == Catch::Approx(themes.design_system().light.error.oklch().light)
@@ -219,13 +209,15 @@ TEST_CASE("tabs paints labels plus one indicator", "[tabs][paint]") {
 
 TEST_CASE("tabs draws container, pill, and indicator when configured", "[tabs][paint]") {
     auto tabs = widget::Tabs::create({"A", "B"});
-    tabs->set_override(theme::TabsRecipeRule {
-        .container_fill = theme::ThemeColor::token(theme::ColorToken::surface_variant),
-        .container_radius = theme::ThemeScalar::literal(8.0F),
-        .selected_background_fill = theme::ThemeColor::token(theme::ColorToken::surface),
-        .selected_background_radius = theme::ThemeScalar::literal(6.0F),
-        .metrics_padding_x = theme::ThemeScalar::literal(4.0F),
-    });
+    tabs->set_override(
+        theme::TabsRecipeRule {
+            .container_fill = theme::ThemeColor::token(theme::ColorToken::surface_variant),
+            .container_radius = theme::ThemeScalar::literal(8.0F),
+            .selected_background_fill = theme::ThemeColor::token(theme::ColorToken::surface),
+            .selected_background_radius = theme::ThemeScalar::literal(6.0F),
+            .metrics_padding_x = theme::ThemeScalar::literal(4.0F),
+        }
+    );
     scene::NanSceneTree tree;
     tree.set_root(tabs);
     REQUIRE(tree.layout_root(foundation::NanSize(280.0F, 48.0F)) >= 1);
@@ -238,11 +230,8 @@ TEST_CASE("tabs draws container, pill, and indicator when configured", "[tabs][p
 
 TEST_CASE("tabs default recipe keeps container and pill transparent", "[tabs][theme]") {
     const auto design = theme::default_design_system();
-    const auto style = theme::resolve_tabs(
-        design,
-        theme::ColorAppearance::light,
-        theme::TabsVisualState::normal
-    );
+    const auto style =
+        theme::resolve_tabs(design, theme::ColorAppearance::light, theme::TabsVisualState::normal);
     REQUIRE(style.container.fill.alpha() == Catch::Approx(0.0F));
     REQUIRE(style.selected_background.fill.alpha() == Catch::Approx(0.0F));
     REQUIRE(style.indicator.alpha() > 0.0F); // 默认下划线风格

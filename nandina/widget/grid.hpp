@@ -53,7 +53,7 @@ namespace nandina::widget
         void relayout();
 
     protected:
-        [[nodiscard]] auto on_measure(scene::LayoutConstraints constraints)
+        [[nodiscard]] auto on_measure(foundation::NanLayoutConstraints constraints)
             -> foundation::NanSize override;
         auto on_layout() -> void override;
         void on_ready() override;

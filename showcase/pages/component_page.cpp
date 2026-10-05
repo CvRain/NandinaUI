@@ -34,7 +34,7 @@ namespace nandina::showcase
                                    .font_size(16.0F)
                                    .color_token(theme::ColorToken::muted_foreground)
                                    .configure([](widget::Label& label) {
-                                       label.set_overflow(widget::primitives::TextOverflow::wrap);
+                                       label.set_overflow(text::TextOverflow::wrap);
                                        label.set_max_lines(4);
                                    })
                            );

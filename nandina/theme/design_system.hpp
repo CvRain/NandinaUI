@@ -50,7 +50,7 @@ namespace nandina::theme
     };
 
     /**
-     * 文本槽位的排版。命名 `TypeStyle` 是因为 `primitives::TextStyle` 已被
+     * 文本槽位的排版。命名 `TypeStyle` 是因为 `text::TextStyle` 已被
      * widget 文本 primitive 占用。
      */
     using TypeStyle = struct TypeStyle {

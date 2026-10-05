@@ -174,18 +174,18 @@ namespace nandina::widget
         return value_text_.text();
     }
 
-    void Slider::set_text_pipeline(primitives::TextPipeline pipeline) {
+    void Slider::set_text_pipeline(text::TextPipeline pipeline) {
         value_text_.set_text_pipeline(std::move(pipeline));
         if (show_value_label_) {
             mark_layout_dirty();
         }
     }
 
-    auto Slider::text_pipeline() const -> primitives::TextPipeline {
+    auto Slider::text_pipeline() const -> text::TextPipeline {
         return value_text_.text_pipeline();
     }
 
-    void Slider::apply_default_text_pipeline(const primitives::TextPipeline& pipeline) {
+    void Slider::apply_default_text_pipeline(const text::TextPipeline& pipeline) {
         value_text_.apply_default_text_pipeline(pipeline);
         if (show_value_label_) {
             mark_layout_dirty();
@@ -208,13 +208,13 @@ namespace nandina::widget
 
     void Slider::apply_value_label_style() {
         const auto& context = resolved_style_context();
-        const primitives::TextStyle style {
+        const text::TextStyle style {
             .color = context.text_color_from_context
                 ? context.text_color
                 : system_->palette(appearance_).on_surface_variant,
             .font_size = 12.0F,
             .font = context.font_from_context ? context.font : value_text_.font(),
-            .overflow = primitives::TextOverflow::clip,
+            .overflow = text::TextOverflow::clip,
             .max_lines = 1,
         };
         const auto& current = value_text_.style();
@@ -370,7 +370,7 @@ namespace nandina::widget
         float track_inset = 0.0F;
         if (show_value_label_ && !value_text_.text().empty()) {
             apply_value_label_style();
-            (void)value_text_.measure_layout(scene::LayoutConstraints::loose());
+            (void)value_text_.measure_layout(foundation::NanLayoutConstraints::loose());
             const float label_height = context.logical_to_screen(value_text_.measured_text_height());
             value_text_.draw_at(context, foundation::NanPoint(world.get_left(), world.get_top()));
             track_inset = label_height + context.logical_to_screen(4.0F);
@@ -433,7 +433,7 @@ namespace nandina::widget
         }
     }
 
-    auto Slider::on_measure(scene::LayoutConstraints constraints) -> foundation::NanSize {
+    auto Slider::on_measure(foundation::NanLayoutConstraints constraints) -> foundation::NanSize {
         const auto style = resolved_style();
         const float width = std::isfinite(constraints.max_width)
             ? constraints.max_width
@@ -441,7 +441,7 @@ namespace nandina::widget
         float extra_height = 0.0F;
         if (show_value_label_ && !value_text_.text().empty()) {
             apply_value_label_style();
-            (void)value_text_.measure_layout(scene::LayoutConstraints::loose());
+            (void)value_text_.measure_layout(foundation::NanLayoutConstraints::loose());
             extra_height = value_text_.measured_text_height() + 4.0F;
         }
         return constraints.constrain(foundation::NanSize(width, style.metrics.min_height + extra_height));

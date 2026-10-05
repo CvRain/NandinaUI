@@ -63,7 +63,7 @@ auto save = ui.make<widget::Button>("保存")
 | `set_treatment(theme::ButtonTreatment)` | <!-- TODO --> |
 | `set_disabled(bool)` / `disabled()` | <!-- TODO --> |
 | `set_font_size(float)` / `set_font_family(...)` / `set_font_weight(int)` | <!-- TODO --> |
-| `set_text_overflow(primitives::TextOverflow)` | <!-- TODO: 文本超长时的行为 --> |
+| `set_text_overflow(text::TextOverflow)` | <!-- TODO: 文本超长时的行为 --> |
 | `text_node()` / `text_pipeline()` | <!-- TODO: 标注是否 recommended --> |
 | `set_override(theme::ButtonRecipeRule)` | 见「主题与覆盖」 |
 

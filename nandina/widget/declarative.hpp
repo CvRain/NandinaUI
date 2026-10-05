@@ -296,7 +296,7 @@ namespace nandina::widget
         }
 
     protected:
-        [[nodiscard]] auto on_measure(scene::LayoutConstraints constraints)
+        [[nodiscard]] auto on_measure(foundation::NanLayoutConstraints constraints)
             -> foundation::NanSize override {
             return active_ != nullptr ? active_->measure_layout(constraints)
                                       : constraints.constrain(foundation::NanSize {});
@@ -304,7 +304,7 @@ namespace nandina::widget
 
         auto on_layout() -> void override {
             if (active_ != nullptr) {
-                (void)active_->measure_layout(scene::LayoutConstraints::tight(size()));
+                (void)active_->measure_layout(foundation::NanLayoutConstraints::tight(size()));
                 active_->layout_to(local_rect());
             }
         }

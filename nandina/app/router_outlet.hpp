@@ -39,7 +39,7 @@ namespace nandina::app
         }
 
     protected:
-        [[nodiscard]] auto on_measure(scene::LayoutConstraints constraints)
+        [[nodiscard]] auto on_measure(foundation::NanLayoutConstraints constraints)
             -> foundation::NanSize override;
         auto on_layout() -> void override;
 

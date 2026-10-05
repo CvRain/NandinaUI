@@ -78,7 +78,7 @@ namespace nandina::widget
             }
 
         protected:
-            [[nodiscard]] auto on_measure(const scene::LayoutConstraints constraints)
+            [[nodiscard]] auto on_measure(const foundation::NanLayoutConstraints constraints)
                 -> foundation::NanSize override {
                 const auto& m = style_.metrics;
                 const float inner_max_width = std::max(
@@ -88,7 +88,7 @@ namespace nandina::widget
                 if (content_ == nullptr) {
                     return constraints.constrain(foundation::NanSize(0.0F, 0.0F));
                 }
-                const auto measured = content_->measure_layout(scene::LayoutConstraints {
+                const auto measured = content_->measure_layout(foundation::NanLayoutConstraints {
                     .min_width = 0.0F,
                     .max_width = inner_max_width,
                     .min_height = 0.0F,
@@ -115,7 +115,7 @@ namespace nandina::widget
                     std::max(0.0F, height() - m.padding_y * 2.0F)
                 );
                 content_->measure_layout(
-                    scene::LayoutConstraints::tight(inner.get_size())
+                    foundation::NanLayoutConstraints::tight(inner.get_size())
                 );
                 content_->layout_to(inner);
             }
@@ -425,7 +425,7 @@ namespace nandina::widget
         close_portal();
     }
 
-    auto HoverCard::on_measure(const scene::LayoutConstraints constraints) -> foundation::NanSize {
+    auto HoverCard::on_measure(const foundation::NanLayoutConstraints constraints) -> foundation::NanSize {
         auto trigger = trigger_.lock();
         if (trigger == nullptr) {
             return constraints.constrain(foundation::NanSize(0.0F, 0.0F));
@@ -554,13 +554,13 @@ namespace nandina::widget
             viewport_size
         );
         const auto options = placement_options();
-        const auto size = surface_->measure_layout(scene::LayoutConstraints::loose());
+        const auto size = surface_->measure_layout(foundation::NanLayoutConstraints::loose());
         if (!size.is_valid()) {
             return;
         }
         const auto position = internal::position_anchored_overlay(anchor, size, viewport, options);
         surface_->set_position(position.rect.get_top_left());
-        surface_->measure_layout(scene::LayoutConstraints::tight(size));
+        surface_->measure_layout(foundation::NanLayoutConstraints::tight(size));
         surface_->layout_to(foundation::NanRect::from_origin_size(position.rect.get_top_left(), size));
 
         if (portal_handle_ != nullptr && portal_handle_->mounted() && portal_anchor_ == anchor

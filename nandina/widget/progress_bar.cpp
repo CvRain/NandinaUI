@@ -128,7 +128,7 @@ namespace nandina::widget
         }
     }
 
-    auto ProgressBar::on_measure(const scene::LayoutConstraints constraints) -> foundation::NanSize {
+    auto ProgressBar::on_measure(const foundation::NanLayoutConstraints constraints) -> foundation::NanSize {
         const auto style = resolved_style();
         const float width = std::isfinite(constraints.max_width)
             ? constraints.max_width

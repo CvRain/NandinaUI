@@ -230,14 +230,14 @@ TEST_CASE("slider value label opt-in increases measured height and tracks value"
     REQUIRE_FALSE(slider->show_value_label());
     REQUIRE(slider->value_label_text() == "0.5");
 
-    const auto base = slider->measure_layout(scene::LayoutConstraints::loose());
+    const auto base = slider->measure_layout(foundation::NanLayoutConstraints::loose());
     slider->set_show_value_label(true);
     REQUIRE(slider->show_value_label());
-    const auto with_label = slider->measure_layout(scene::LayoutConstraints::loose());
+    const auto with_label = slider->measure_layout(foundation::NanLayoutConstraints::loose());
     REQUIRE(with_label.get_height() > base.get_height());
 
     // 开启后不额外占高（重复调用幂等），值标签随 value 更新。
-    const auto again = slider->measure_layout(scene::LayoutConstraints::loose());
+    const auto again = slider->measure_layout(foundation::NanLayoutConstraints::loose());
     REQUIRE(again.get_height() == Catch::Approx(with_label.get_height()));
     slider->set_value(0.9F);
     REQUIRE(slider->value_label_text() == "0.9");

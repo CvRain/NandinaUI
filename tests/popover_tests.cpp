@@ -125,8 +125,8 @@ TEST_CASE("popover is closed and sized to its trigger by default", "[popover]") 
 
     auto* trigger = popover.trigger().get();
     REQUIRE(trigger != nullptr);
-    const auto measured = popover.measure_layout(scene::LayoutConstraints::loose());
-    const auto trigger_size = trigger->measure_layout(scene::LayoutConstraints::loose());
+    const auto measured = popover.measure_layout(foundation::NanLayoutConstraints::loose());
+    const auto trigger_size = trigger->measure_layout(foundation::NanLayoutConstraints::loose());
     REQUIRE(measured.get_width() == Catch::Approx(trigger_size.get_width()));
     REQUIRE(measured.get_height() == Catch::Approx(trigger_size.get_height()));
 }

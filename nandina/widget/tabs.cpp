@@ -4,8 +4,8 @@
 
 #include "tabs.hpp"
 
-#include "../animation/animation_host.hpp"
 #include "../render/draw_context.hpp"
+#include "../scene/animation_host.hpp"
 #include "../scene/input_event.hpp"
 #include "../scene/scene_tree.hpp"
 #include "../theme/theme_manager.hpp"
@@ -156,14 +156,14 @@ namespace nandina::widget
         return style;
     }
 
-    void Tabs::set_text_pipeline(primitives::TextPipeline pipeline) {
+    void Tabs::set_text_pipeline(text::TextPipeline pipeline) {
         for (auto& text: label_texts_) {
             text->set_text_pipeline(pipeline);
         }
         mark_layout_dirty();
     }
 
-    void Tabs::apply_default_text_pipeline(const primitives::TextPipeline& pipeline) {
+    void Tabs::apply_default_text_pipeline(const text::TextPipeline& pipeline) {
         for (auto& text: label_texts_) {
             text->apply_default_text_pipeline(pipeline);
         }
@@ -334,7 +334,7 @@ namespace nandina::widget
         }
     }
 
-    auto Tabs::on_measure(const scene::LayoutConstraints constraints) -> foundation::NanSize {
+    auto Tabs::on_measure(const foundation::NanLayoutConstraints constraints) -> foundation::NanSize {
         const auto style = resolved_style();
         apply_text_styles();
         measure_labels();
@@ -394,11 +394,11 @@ namespace nandina::widget
         for (std::size_t i = 0; i < label_texts_.size(); ++i) {
             const auto& type =
                 static_cast<int>(i) == selected_index_ ? style.label_selected : style.label;
-            const primitives::TextStyle text_style {
+            const text::TextStyle text_style {
                 .color = context.text_color_from_context ? context.text_color : type.color,
                 .font_size = context.font_size_from_context ? context.font_size : type.font_size,
                 .font = context.font_from_context ? context.font : label_texts_[i]->font(),
-                .overflow = primitives::TextOverflow::clip,
+                .overflow = text::TextOverflow::clip,
                 .max_lines = 1,
             };
             if (!label_texts_[i]->style().approx_equals(text_style)) {
@@ -411,7 +411,7 @@ namespace nandina::widget
         float x = resolved_style().metrics.padding_x;
         const float gap = resolved_style().metrics.gap;
         for (std::size_t i = 0; i < label_texts_.size(); ++i) {
-            (void)label_texts_[i]->measure_layout(scene::LayoutConstraints::loose());
+            (void)label_texts_[i]->measure_layout(foundation::NanLayoutConstraints::loose());
             tab_offsets_[i] = x;
             x += label_texts_[i]->measured_text_width() + gap;
         }
@@ -442,8 +442,8 @@ namespace nandina::widget
 
         if (animate && labels_.size() > 1) {
             const float duration = system_->tokens.motion.medium_duration;
-            indicator_x_.set_behavior(animation::Behavior<float>(duration));
-            indicator_width_.set_behavior(animation::Behavior<float>(duration));
+            indicator_x_.set_behavior(motion::Behavior<float>(duration));
+            indicator_width_.set_behavior(motion::Behavior<float>(duration));
         }
         else {
             indicator_x_.clear_behavior();

@@ -87,7 +87,7 @@ namespace nandina::widget::internal
         return scene::NanNode2D::local_opacity() * fade_.value();
     }
 
-    auto DismissLayer::on_measure(const scene::LayoutConstraints constraints)
+    auto DismissLayer::on_measure(const foundation::NanLayoutConstraints constraints)
         -> foundation::NanSize {
         return constraints.constrain(
             foundation::NanSize(constraints.max_width, constraints.max_height)
@@ -107,7 +107,7 @@ namespace nandina::widget::internal
         if (current == nullptr) {
             return;
         }
-        const scene::LayoutConstraints constraints {
+        const foundation::NanLayoutConstraints constraints {
             .min_width = 0.0F,
             .max_width = width(),
             .min_height = 0.0F,

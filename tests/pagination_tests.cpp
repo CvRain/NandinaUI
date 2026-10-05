@@ -206,7 +206,7 @@ TEST_CASE("pagination with no pages measures to zero and is not focusable", "[pa
     REQUIRE(pagination->current_page() == 0);
     REQUIRE(pagination->visible_item_count() == 0);
     REQUIRE_FALSE(pagination->is_focusable());
-    const auto measured = pagination->measure_layout(scene::LayoutConstraints::loose());
+    const auto measured = pagination->measure_layout(foundation::NanLayoutConstraints::loose());
     REQUIRE(measured.get_width() == Catch::Approx(0.0F));
     REQUIRE(measured.get_height() == Catch::Approx(0.0F));
 

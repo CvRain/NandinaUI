@@ -47,8 +47,8 @@ namespace nandina::widget
             TooltipBubble(
                 std::string text,
                 theme::ResolvedTooltipStyle style,
-                const primitives::TextPipeline& pipeline,
-                primitives::TextStyle text_style
+                const text::TextPipeline& pipeline,
+                text::TextStyle text_style
             ):
                 text_(std::move(text)),
                 style_(std::move(style)) {
@@ -64,7 +64,7 @@ namespace nandina::widget
             }
 
             [[nodiscard]] auto measured_bubble_size() -> foundation::NanSize {
-                (void)text_.measure_layout(scene::LayoutConstraints::loose());
+                (void)text_.measure_layout(foundation::NanLayoutConstraints::loose());
                 return foundation::NanSize(
                     text_.measured_text_width() + style_.metrics.padding_x * 2.0F,
                     style_.metrics.min_height
@@ -72,7 +72,7 @@ namespace nandina::widget
             }
 
         protected:
-            [[nodiscard]] auto on_measure(scene::LayoutConstraints constraints)
+            [[nodiscard]] auto on_measure(foundation::NanLayoutConstraints constraints)
                 -> foundation::NanSize override {
                 return constraints.constrain(measured_bubble_size());
             }
@@ -221,12 +221,12 @@ namespace nandina::widget
         return style;
     }
 
-    void Tooltip::set_text_pipeline(primitives::TextPipeline pipeline) {
+    void Tooltip::set_text_pipeline(text::TextPipeline pipeline) {
         text_.set_text_pipeline(std::move(pipeline));
         mark_layout_dirty();
     }
 
-    void Tooltip::apply_default_text_pipeline(const primitives::TextPipeline& pipeline) {
+    void Tooltip::apply_default_text_pipeline(const text::TextPipeline& pipeline) {
         text_.apply_default_text_pipeline(pipeline);
         mark_layout_dirty();
     }
@@ -316,7 +316,7 @@ namespace nandina::widget
             );
             // Measure against loose constraints so the size is known before the
             // overlay layer gets a chance to lay the bubble out.
-            const auto bubble_size = created->measure_layout(scene::LayoutConstraints::loose());
+            const auto bubble_size = created->measure_layout(foundation::NanLayoutConstraints::loose());
             if (!bubble_size.is_valid()) {
                 return;
             }
@@ -344,7 +344,7 @@ namespace nandina::widget
         {
             return;
         }
-        const auto bubble_size = bubble->measure_layout(scene::LayoutConstraints::loose());
+        const auto bubble_size = bubble->measure_layout(foundation::NanLayoutConstraints::loose());
         if (!bubble_size.is_valid()) {
             return;
         }
@@ -417,7 +417,7 @@ namespace nandina::widget
         }
         const auto style = resolved_style();
         apply_text_style();
-        (void)text_.measure_layout(scene::LayoutConstraints::loose());
+        (void)text_.measure_layout(foundation::NanLayoutConstraints::loose());
 
         const float bubble_w = text_.measured_text_width() + style.metrics.padding_x * 2.0F;
         const float bubble_h = style.metrics.min_height;
@@ -432,7 +432,7 @@ namespace nandina::widget
         paint_tooltip_bubble(context, world, style, text_);
     }
 
-    auto Tooltip::on_measure(const scene::LayoutConstraints constraints) -> foundation::NanSize {
+    auto Tooltip::on_measure(const foundation::NanLayoutConstraints constraints) -> foundation::NanSize {
         auto trigger = trigger_.lock();
         if (!trigger) {
             return constraints.constrain(foundation::NanSize(0.0F, 0.0F));
@@ -455,14 +455,14 @@ namespace nandina::widget
         };
     }
 
-    auto Tooltip::apply_text_style() -> primitives::TextStyle {
+    auto Tooltip::apply_text_style() -> text::TextStyle {
         const auto style = resolved_style();
         const auto& context = resolved_style_context();
-        const primitives::TextStyle text_style {
+        const text::TextStyle text_style {
             .color = context.text_color_from_context ? context.text_color : style.label.color,
             .font_size = context.font_size_from_context ? context.font_size : style.label.font_size,
             .font = context.font_from_context ? context.font : text_.font(),
-            .overflow = primitives::TextOverflow::clip,
+            .overflow = text::TextOverflow::clip,
             .max_lines = 1,
         };
         if (!text_.style().approx_equals(text_style)) {

@@ -1,5 +1,9 @@
 # 轻量字体请求的归属与兼容入口
 
+> 当前状态：过渡头 `text/font_request.hpp` 和 `text::FontRequest` / `text::FontSlant`
+> 别名已退出；使用 `theme/font_request.hpp` 中的 `theme::FontRequest` / `theme::FontSlant`。
+> 下文的兼容范围和验证记录描述当时的迁移阶段，不是现行 API 承诺。
+
 本步骤以 `0706449d65c6516198602699297604dd224fd6ec` 为基线，先确定描述边界，再移动定义。
 
 ## 类型归属

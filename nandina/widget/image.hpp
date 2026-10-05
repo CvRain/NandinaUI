@@ -104,7 +104,7 @@ namespace nandina::widget
         void apply_texture_cache(render::TextureCache& cache) override;
 
     protected:
-        [[nodiscard]] auto on_measure(scene::LayoutConstraints constraints)
+        [[nodiscard]] auto on_measure(foundation::NanLayoutConstraints constraints)
             -> foundation::NanSize override;
 
     private:

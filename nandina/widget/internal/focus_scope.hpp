@@ -22,7 +22,7 @@ namespace nandina::widget::internal
         [[nodiscard]] auto is_focusable() const -> bool override;
 
     protected:
-        [[nodiscard]] auto on_measure(scene::LayoutConstraints constraints)
+        [[nodiscard]] auto on_measure(foundation::NanLayoutConstraints constraints)
             -> foundation::NanSize override;
         void on_layout() override;
 

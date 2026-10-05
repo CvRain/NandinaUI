@@ -4,7 +4,7 @@ NandinaUI 按模块组织，模块之间的方向决定了改动会扩散到哪�
 
 ## 分层与职责
 
-框架自底向上分为五层，共 12 个模块：
+框架自底向上分为五层，共 11 个模块：
 
 | 层 | 模块 | 职责 |
 | --- | --- | --- |
@@ -16,23 +16,16 @@ NandinaUI 按模块组织，模块之间的方向决定了改动会扩散到哪�
 | 呈现层 | `render` | 渲染设备、绘制上下文、纹理缓存与裁剪栈 |
 | | `text` | 文本布局协议、字体加载、整形、字形图集与文本绘制 |
 | | `scene` | 场景树、节点、控件、画布层、动画宿主与帧调度 |
-| | `animation` | motion 作者 DSL 与旧公开名称的兼容入口 |
 | | `semantics` | 无障碍语义树 |
 | 控件层 | `widget` | 布局原语、primitives 与组件库 |
 | 应用层 | `app` | 窗口、Router / Page、异步作用域与入口 |
 
 依赖只允许沿这张表**向下**：上层可以使用下层的类型，下层不得反向引用上层。同一层之间的依赖应当是必要的、单向的。
 
-> **`animation` 现在只剩两样东西**：`motion.hpp`（声明式动效糖：`motion::tween(...)` /
-> `motion::spring()`）与一批纯 `using` 别名（`animation::Behavior` → `motion::Behavior` 等）。
-> 值实现已下移到 `foundation/motion/`，调度已下移到 `scene/`；两者之间的环已经消失。
->
-> 别名本身不会漂移（同一个类型），但它是**两个名字指向同一个概念**。本轮先收口
-> 声明式规格：`foundation/motion/spec.hpp` 唯一定义 `motion::TweenSpec`、`tween()`、
-> `spring()` 与缓动常量；`animation/motion.hpp` 仅提供
-> `namespace nandina::animation::motion = nandina::motion`，保留旧词法入口。
-> 新组件代码与行为测试用 `motion::`，旧头文件以独立 include 的编译测试守住兼容性。
-> 其余 `animation::Behavior` / `animation::Group` 等旧名称的迁移另行推进，不在本步机械改写。
+> 原 `animation` 层的值实现已下移到 `foundation/motion/`，调度已下移到 `scene/`；
+> 旧命名空间和转发头现已退出。声明式规格由 `foundation/motion/spec.hpp` 定义，
+> `motion::TweenSpec`、`tween()`、`spring()` 与缓动常量只保留一个公开归属。
+> 迁移与验证边界见[项目进度与下一步](project_status.md)。
 
 ## 约束
 
@@ -60,9 +53,9 @@ NandinaUI 按模块组织，模块之间的方向决定了改动会扩散到哪�
 
 在移动 TextPipeline 协议之前，先将与节点无关的四个布局边界值抽到
 `foundation::NanLayoutConstraints`（`foundation/layout_constraints.hpp`）。
-`scene/control.hpp` 保留 `using LayoutConstraints = foundation::NanLayoutConstraints`，
-现有源码仍可使用 `scene::LayoutConstraints`。`TextLayoutInput::constraints` 直接使用
-foundation 类型，因此 `widget/primitives/text_layout.hpp` 不再仅为约束值包含整个 Control。
+迁移期 `scene/control.hpp` 曾保留 `scene::LayoutConstraints` 别名；当前已决定退出，公开签名
+与调用方统一使用 foundation 拼写。`TextLayoutInput::constraints` 直接使用 foundation
+类型，因此 `widget/primitives/text_layout.hpp` 不再仅为约束值包含整个 Control。
 
 本步骤只迁移 `loose()`、`tight()`、`constrain()` 和 `deflated()`，保留四个字段的顺序、
 默认值与现有数值行为。有限/无限上界、反向上下界、非有限上界的既有处理，以及四向
@@ -99,8 +92,8 @@ SDK 检查为单次打包与纯 foundation 消费者，不等同于重跑全部 
 以纯约束提交 `d7acce93a002e8933a270242baf29d11756febc7` 为基线，文本值、caret 查询、
 `ITextLayoutBackend`、`ITextLayoutRenderer`、`TextPipeline` 与 deterministic backend
 已迁入 `text/text_layout*`。text 适配器、scene node/tree 与 NanWindow 使用 canonical
-text 类型，原 `widget/primitives/text_layout*.hpp` 只重导出相同类型与函数；Meson
-只编译新实现一次，原两份 widget `.cpp` 已删除。
+text 类型；迁移期 `widget/primitives/text_layout*.hpp` 曾重导出相同类型与函数，
+现已退出。Meson 只编译新实现一次，原两份 widget `.cpp` 已删除。
 
 因此上述两条 TextPipeline 上行引用已消除。设计、旧头的源码兼容边界、具名类型
 迁移后的 ABI 重编译要求与验证记录见 [文本布局协议](text_pipeline.md)。
@@ -110,8 +103,8 @@ theme 枚举的引用也未改变。本步骤不宣称整个依赖图无环。
 ## 轻量字体请求拆分
 
 以文本协议提交 `0706449d65c6516198602699297604dd224fd6ec` 为基线，
-FontRequest / FontSlant 的唯一类型定义归 `theme/font_request.hpp`，text 通过同类型
-别名保留兼容入口。StyleContext 不再引用字体引擎，TextLayout 与内部文本样式桥也
+FontRequest / FontSlant 的唯一类型定义归 `theme/font_request.hpp`；迁移期 text
+曾通过同类型别名保留兼容入口，现已退出。StyleContext 不再引用字体引擎，TextLayout 与内部文本样式桥也
 只包含轻量请求头。family 保持 ResourceKey，合法依赖为 `theme -> resource`；
 直接放入 foundation 会新增反向边，故本步骤不作这项迁移。
 

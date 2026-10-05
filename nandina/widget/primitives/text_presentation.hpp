@@ -5,11 +5,11 @@
 #ifndef NANDINA_EXPERIMENT_WIDGET_PRIMITIVES_TEXT_PRESENTATION_HPP
 #define NANDINA_EXPERIMENT_WIDGET_PRIMITIVES_TEXT_PRESENTATION_HPP
 
-#include "../../animation/property_endpoint.hpp"
 #include "../../scene/control.hpp"
+#include "../../scene/property_endpoint.hpp"
 #include "../../theme/design_system.hpp"
 #include "../visual_property.hpp"
-#include "text_layout.hpp"
+#include "../../text/text_layout.hpp"
 
 #include <cmath>
 #include <optional>
@@ -30,7 +30,7 @@ namespace nandina::widget::primitives
             void set(foundation::NanColor color) {
                 text_->set_color(std::move(color));
             }
-            void set_behavior(animation::Behavior<foundation::NanColor> behavior) {
+            void set_behavior(motion::Behavior<foundation::NanColor> behavior) {
                 text_->color_.set_behavior(std::move(behavior));
             }
             [[nodiscard]] auto value() const noexcept -> const foundation::NanColor* {
@@ -50,10 +50,10 @@ namespace nandina::widget::primitives
             void set(float size) {
                 text_->set_font_size(size);
             }
-            void set_behavior(animation::Behavior<float> behavior) {
+            void set_behavior(motion::Behavior<float> behavior) {
                 text_->font_size_.set_behavior(std::move(behavior));
             }
-            void set_spring(animation::SpringSpec spec) {
+            void set_spring(motion::SpringSpec spec) {
                 text_->font_size_.set_spring(std::move(spec));
             }
             [[nodiscard]] auto value() const noexcept -> const float* {
@@ -84,7 +84,7 @@ namespace nandina::widget::primitives
             }
         }
 
-        void apply(TextStyle& style) const {
+        void apply(text::TextStyle& style) const {
             if (const auto* color = color_.value(); color != nullptr) {
                 style.color = *color;
             }
@@ -111,8 +111,8 @@ namespace nandina::widget::primitives
             font_size_.set(size);
         }
 
-        animation::PropertyEndpoint<foundation::NanColor> color_;
-        animation::PropertyEndpoint<float> font_size_;
+        scene::PropertyEndpoint<foundation::NanColor> color_;
+        scene::PropertyEndpoint<float> font_size_;
     };
 } // namespace nandina::widget::primitives
 

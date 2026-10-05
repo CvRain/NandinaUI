@@ -810,7 +810,7 @@ TEST_CASE("button font size supports logical and percentage values", "[widget][b
     widget::Button logical("Logical");
     logical.set_font_size(20.0F);
     (void)logical.measure_layout(
-        scene::LayoutConstraints {
+        foundation::NanLayoutConstraints {
             .max_width = 400.0F,
             .max_height = 80.0F,
         }
@@ -823,7 +823,7 @@ TEST_CASE("button font size supports logical and percentage values", "[widget][b
     proportional.set_width(scene::percent(50.0F)).set_height(scene::percent(50.0F));
     proportional.set_font_size(scene::percent(45.0F));
     const auto size = proportional.measure_layout(
-        scene::LayoutConstraints {
+        foundation::NanLayoutConstraints {
             .max_width = 400.0F,
             .max_height = 200.0F,
         }
@@ -837,7 +837,7 @@ TEST_CASE("button font size supports logical and percentage values", "[widget][b
     // 显式值覆盖百分比；清除后回退主题配方。
     proportional.set_font_size(30.0F);
     (void)proportional.measure_layout(
-        scene::LayoutConstraints {
+        foundation::NanLayoutConstraints {
             .max_width = 400.0F,
             .max_height = 200.0F,
         }
@@ -846,7 +846,7 @@ TEST_CASE("button font size supports logical and percentage values", "[widget][b
 
     proportional.clear_font_size();
     (void)proportional.measure_layout(
-        scene::LayoutConstraints {
+        foundation::NanLayoutConstraints {
             .max_width = 400.0F,
             .max_height = 200.0F,
         }
@@ -869,32 +869,32 @@ TEST_CASE("button visual instances outrank inherited text context", "[widget][bu
     const auto instance_color = foundation::NanColor::from_oklch(0.78F, 0.12F, 30.0F);
     widget::property::write(button, widget::visual::label.color, instance_color);
     widget::property::write(button, widget::visual::label.font_size, 19.0F);
-    (void)button.measure_layout(scene::LayoutConstraints::loose());
+    (void)button.measure_layout(foundation::NanLayoutConstraints::loose());
 
     REQUIRE(button.text_node().color().approx_equals(instance_color));
     REQUIRE(button.text_node().font_size() == Catch::Approx(19.0F));
 
     button.clear_font_size();
-    (void)button.measure_layout(scene::LayoutConstraints::loose());
+    (void)button.measure_layout(foundation::NanLayoutConstraints::loose());
     REQUIRE(button.text_node().font_size() == Catch::Approx(31.0F));
 
     button.set_font_size(18.0F);
-    (void)button.measure_layout(scene::LayoutConstraints::loose());
+    (void)button.measure_layout(foundation::NanLayoutConstraints::loose());
     REQUIRE(button.text_node().font_size() == Catch::Approx(18.0F));
 }
 
 TEST_CASE("button applies font-only StyleContext changes", "[widget][button][style]") {
     widget::Button button("Font");
     auto context = theme::StyleContext {};
-    auto first = text::FontRequest {};
+    auto first = theme::FontRequest {};
     first.family = resource::ResourceKey::parse("families/first");
-    context.font = theme::StyleValue<text::FontRequest>::explicit_value(first);
+    context.font = theme::StyleValue<theme::FontRequest>::explicit_value(first);
     button.set_style_context(context);
     REQUIRE(button.text_node().font() == first);
 
     auto second = first;
     second.family = resource::ResourceKey::parse("families/second");
-    context.font = theme::StyleValue<text::FontRequest>::explicit_value(second);
+    context.font = theme::StyleValue<theme::FontRequest>::explicit_value(second);
     button.set_style_context(context);
     REQUIRE(button.text_node().font() == second);
 }
@@ -941,14 +941,14 @@ TEST_CASE("button text overflow controls its internal text primitive", "[widget]
     RecordingDevice dev;
     scene::NanSceneTree tree;
     auto button = std::make_shared<widget::Button>("A very long button label");
-    button->set_text_overflow(widget::primitives::TextOverflow::clip);
+    button->set_text_overflow(text::TextOverflow::clip);
     button->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 72.0F, button->height()));
     tree.set_root(button);
 
     tree.draw(dev);
 
-    REQUIRE(button->text_overflow() == widget::primitives::TextOverflow::clip);
-    REQUIRE(button->text_node().overflow() == widget::primitives::TextOverflow::clip);
+    REQUIRE(button->text_overflow() == text::TextOverflow::clip);
+    REQUIRE(button->text_node().overflow() == text::TextOverflow::clip);
     REQUIRE(button->text_node().layout_result().overflowed);
     REQUIRE(dev.texts.size() == 1);
     REQUIRE_FALSE(dev.texts[0].text.ends_with("..."));

@@ -33,22 +33,22 @@ namespace nandina::widget::internal
         [[nodiscard]] auto label() const -> std::string_view;
 
         /// 基础文字样式（Breadcrumb 传入解析后的 `link` 片段）。
-        void set_text_style(primitives::TextStyle style);
-        [[nodiscard]] auto text_style() const -> const primitives::TextStyle&;
+        void set_text_style(text::TextStyle style);
+        [[nodiscard]] auto text_style() const -> const text::TextStyle&;
         /// 当前字体请求（Breadcrumb 组装 TextStyle 时保留链接自身的字体）。
-        [[nodiscard]] auto font() const -> const text::FontRequest&;
+        [[nodiscard]] auto font() const -> const theme::FontRequest&;
         /// hover / pressed 时的文字色（Breadcrumb 传入配方 `link_hover_color`）。
         void set_hover_color(foundation::NanColor color);
         /// 焦点环（Breadcrumb 传入配方 `link_focus`）。
         void set_focus_ring(theme::ResolvedFocusRing ring);
 
-        void apply_default_text_pipeline(const primitives::TextPipeline& pipeline) override;
+        void apply_default_text_pipeline(const text::TextPipeline& pipeline) override;
         void apply_font_context(text::FontPipelineCache& context) override;
 
         auto on_draw(render::DrawContext& context) -> void override;
 
     protected:
-        [[nodiscard]] auto on_measure(scene::LayoutConstraints constraints)
+        [[nodiscard]] auto on_measure(foundation::NanLayoutConstraints constraints)
             -> foundation::NanSize override;
         void on_pressable_state_changed() override;
         [[nodiscard]] auto semantics_properties() const -> semantics::Properties override;

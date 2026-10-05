@@ -403,7 +403,7 @@ TEST_CASE("authoring sizing uses the shared control constraints", "[authoring][l
                        .aspect_ratio(2.0F)
                        .build();
 
-    const auto measured = control->measure_layout(scene::LayoutConstraints {
+    const auto measured = control->measure_layout(foundation::NanLayoutConstraints {
         .max_width = 400.0F,
         .max_height = 200.0F,
     });
@@ -420,7 +420,7 @@ TEST_CASE("authoring exposes percentage font size and limits", "[authoring][layo
                       .max_width(percent(40.0F))
                       .font_size(percent(45.0F))
                       .build();
-    const auto size = button->measure_layout(scene::LayoutConstraints {
+    const auto size = button->measure_layout(foundation::NanLayoutConstraints {
         .max_width = 400.0F,
         .max_height = 200.0F,
     });
@@ -429,7 +429,7 @@ TEST_CASE("authoring exposes percentage font size and limits", "[authoring][layo
     REQUIRE(button->text_node().font_size() == Catch::Approx(45.0F));
 
     auto fixed = make<widget::Button>("Fixed").font_size(22.0F).build();
-    (void)fixed->measure_layout(scene::LayoutConstraints::loose());
+    (void)fixed->measure_layout(foundation::NanLayoutConstraints::loose());
     REQUIRE(fixed->text_node().font_size() == Catch::Approx(22.0F));
 }
 

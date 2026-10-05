@@ -63,7 +63,7 @@ namespace nandina::widget::internal
         return label_;
     }
 
-    auto AlertDismissButton::on_measure(const scene::LayoutConstraints constraints)
+    auto AlertDismissButton::on_measure(const foundation::NanLayoutConstraints constraints)
         -> foundation::NanSize {
         return constraints.constrain(foundation::NanSize(size_, size_));
     }

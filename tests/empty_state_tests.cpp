@@ -93,13 +93,13 @@ TEST_CASE("empty state with no title and no icon measures to zero", "[empty-stat
     REQUIRE(empty->icon() == nullptr);
     REQUIRE(empty->action() == nullptr);
 
-    const auto loose = empty->measure_layout(scene::LayoutConstraints::loose());
+    const auto loose = empty->measure_layout(foundation::NanLayoutConstraints::loose());
     REQUIRE(loose.get_width() == Catch::Approx(0.0F));
     REQUIRE(loose.get_height() == Catch::Approx(0.0F));
 
     // 描述单独存在但标题为空、无图标时仍不占位（按契约以标题/图标判定激活）。
     empty->set_description("Nothing matched the filter");
-    const auto description_only = empty->measure_layout(scene::LayoutConstraints::loose());
+    const auto description_only = empty->measure_layout(foundation::NanLayoutConstraints::loose());
     REQUIRE(description_only.get_width() == Catch::Approx(0.0F));
     REQUIRE(description_only.get_height() == Catch::Approx(0.0F));
 }
@@ -109,17 +109,17 @@ TEST_CASE("empty state measures title and description in a vertical stack", "[em
     empty->set_title("No results");
     REQUIRE(empty->title() == "No results");
 
-    const auto title_only = empty->measure_layout(scene::LayoutConstraints::loose());
+    const auto title_only = empty->measure_layout(foundation::NanLayoutConstraints::loose());
     REQUIRE(title_only.get_width() == Catch::Approx(240.0F));
     REQUIRE(title_only.get_height() > 32.0F);
 
     empty->set_description("Try a different search term");
     REQUIRE(empty->description() == "Try a different search term");
-    const auto with_description = empty->measure_layout(scene::LayoutConstraints::loose());
+    const auto with_description = empty->measure_layout(foundation::NanLayoutConstraints::loose());
     REQUIRE(with_description.get_height() > title_only.get_height());
 
     // 有界约束下铺满上限宽度，高度仍由内容决定。
-    const auto bounded = empty->measure_layout(scene::LayoutConstraints {
+    const auto bounded = empty->measure_layout(foundation::NanLayoutConstraints {
         .max_width = 120.0F,
         .max_height = 200.0F,
     });
@@ -129,18 +129,18 @@ TEST_CASE("empty state measures title and description in a vertical stack", "[em
 TEST_CASE("empty state includes icon and action slots in measurement", "[empty-state][layout]") {
     auto empty = widget::EmptyState::create();
     empty->set_title("No results");
-    const float title_only = empty->measure_layout(scene::LayoutConstraints::loose()).get_height();
+    const float title_only = empty->measure_layout(foundation::NanLayoutConstraints::loose()).get_height();
 
     auto icon = widget::Badge::create("icon");
     empty->set_icon(icon);
     REQUIRE(empty->icon() == icon.get());
-    const float with_icon = empty->measure_layout(scene::LayoutConstraints::loose()).get_height();
+    const float with_icon = empty->measure_layout(foundation::NanLayoutConstraints::loose()).get_height();
     REQUIRE(with_icon > title_only);
 
     auto action = widget::Button::create("Retry");
     empty->set_action(action);
     REQUIRE(empty->action() == action.get());
-    const float with_action = empty->measure_layout(scene::LayoutConstraints::loose()).get_height();
+    const float with_action = empty->measure_layout(foundation::NanLayoutConstraints::loose()).get_height();
     REQUIRE(with_action > with_icon);
 
     scene::NanSceneTree tree;

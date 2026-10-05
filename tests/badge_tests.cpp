@@ -143,7 +143,7 @@ TEST_CASE("badge measures text plus padding under tight constraints", "[badge][l
     REQUIRE(badge->width() <= 24.0F);
 
     // 固有高度：loose 测量 = 配方度量高度 22（layout_root 会按 tight 约束拉伸 root）。
-    const auto loose_size = badge->measure_layout(scene::LayoutConstraints::loose());
+    const auto loose_size = badge->measure_layout(foundation::NanLayoutConstraints::loose());
     REQUIRE(loose_size.get_height() == Catch::Approx(22.0F));
 }
 

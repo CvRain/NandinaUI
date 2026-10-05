@@ -5,8 +5,8 @@
 #ifndef NANDINA_EXPERIMENT_WIDGET_PRIMITIVES_BOX_PRESENTATION_HPP
 #define NANDINA_EXPERIMENT_WIDGET_PRIMITIVES_BOX_PRESENTATION_HPP
 
-#include "../../animation/property_endpoint.hpp"
 #include "../../scene/control.hpp"
+#include "../../scene/property_endpoint.hpp"
 #include "../../theme/design_system.hpp"
 #include "../visual_property.hpp"
 
@@ -31,7 +31,7 @@ namespace nandina::widget::primitives
             void set(foundation::NanColor color) {
                 box_->set_fill(std::move(color));
             }
-            void set_behavior(animation::Behavior<foundation::NanColor> behavior) {
+            void set_behavior(motion::Behavior<foundation::NanColor> behavior) {
                 box_->fill_.set_behavior(std::move(behavior));
             }
             [[nodiscard]] auto value() const noexcept -> const foundation::NanColor* {
@@ -51,7 +51,7 @@ namespace nandina::widget::primitives
             void set(foundation::NanColor color) {
                 box_->set_border_color(std::move(color));
             }
-            void set_behavior(animation::Behavior<foundation::NanColor> behavior) {
+            void set_behavior(motion::Behavior<foundation::NanColor> behavior) {
                 box_->border_color_.set_behavior(std::move(behavior));
             }
             [[nodiscard]] auto value() const noexcept -> const foundation::NanColor* {
@@ -71,10 +71,10 @@ namespace nandina::widget::primitives
             void set(float width) {
                 box_->set_border_width(width);
             }
-            void set_behavior(animation::Behavior<float> behavior) {
+            void set_behavior(motion::Behavior<float> behavior) {
                 box_->border_width_.set_behavior(std::move(behavior));
             }
-            void set_spring(animation::SpringSpec spec) {
+            void set_spring(motion::SpringSpec spec) {
                 box_->border_width_.set_spring(std::move(spec));
             }
             [[nodiscard]] auto value() const noexcept -> const float* {
@@ -94,10 +94,10 @@ namespace nandina::widget::primitives
             void set(float radius) {
                 box_->set_radius(radius);
             }
-            void set_behavior(animation::Behavior<float> behavior) {
+            void set_behavior(motion::Behavior<float> behavior) {
                 box_->radius_.set_behavior(std::move(behavior));
             }
-            void set_spring(animation::SpringSpec spec) {
+            void set_spring(motion::SpringSpec spec) {
                 box_->radius_.set_spring(std::move(spec));
             }
             [[nodiscard]] auto value() const noexcept -> const float* {
@@ -170,10 +170,10 @@ namespace nandina::widget::primitives
             radius_.set(radius);
         }
 
-        animation::PropertyEndpoint<foundation::NanColor> fill_;
-        animation::PropertyEndpoint<foundation::NanColor> border_color_;
-        animation::PropertyEndpoint<float> border_width_;
-        animation::PropertyEndpoint<float> radius_;
+        scene::PropertyEndpoint<foundation::NanColor> fill_;
+        scene::PropertyEndpoint<foundation::NanColor> border_color_;
+        scene::PropertyEndpoint<float> border_width_;
+        scene::PropertyEndpoint<float> radius_;
     };
 } // namespace nandina::widget::primitives
 

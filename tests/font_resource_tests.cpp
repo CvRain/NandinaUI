@@ -183,8 +183,8 @@ TEST_CASE("FontPipelineCache owns ordered render resources", "[resource][font][p
     REQUIRE(text_node->text_pipeline().backend == (*requested)->pipeline().backend);
 
     auto explicit_text = std::make_shared<widget::primitives::Text>("explicit pipeline");
-    const widget::primitives::TextPipeline explicit_pipeline {
-        .backend = &widget::primitives::deterministic_text_layout_backend(),
+    const text::TextPipeline explicit_pipeline {
+        .backend = &text::deterministic_text_layout_backend(),
     };
     explicit_text->set_text_pipeline(explicit_pipeline);
     tree.set_root(explicit_text);
@@ -221,7 +221,7 @@ TEST_CASE(
 
     std::weak_ptr<text::FontPipeline> regular;
     {
-        auto pipeline = cache.get(text::FontRequest {.weight = 400});
+        auto pipeline = cache.get(theme::FontRequest {.weight = 400});
         REQUIRE(pipeline.has_value());
         regular = *pipeline;
     }
@@ -229,14 +229,14 @@ TEST_CASE(
     REQUIRE(cache.retained_pipeline_count() == 1);
 
     {
-        auto pipeline = cache.get(text::FontRequest {.weight = 700});
+        auto pipeline = cache.get(theme::FontRequest {.weight = 700});
         REQUIRE(pipeline.has_value());
     }
     REQUIRE(regular.expired());
     REQUIRE(cache.retained_pipeline_count() == 1);
     REQUIRE(device.destroyed_textures == 1);
 
-    auto recreated = cache.get(text::FontRequest {.weight = 400});
+    auto recreated = cache.get(theme::FontRequest {.weight = 400});
     REQUIRE(recreated.has_value());
     REQUIRE(device.next_texture == 4);
 }
@@ -276,10 +276,10 @@ TEST_CASE(
     TextureDevice device;
     text::FontPipelineCache cache(device, loader, families);
 
-    const text::FontRequest missing_request {
+    const theme::FontRequest missing_request {
         .family = resource::ResourceKey("families/not-installed"),
         .weight = 700,
-        .slant = text::FontSlant::italic,
+        .slant = theme::FontSlant::italic,
     };
     auto resolved = families.resolve(missing_request, loader);
     REQUIRE(resolved.has_value());

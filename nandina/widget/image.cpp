@@ -197,7 +197,7 @@ namespace nandina::widget
         set_texture_cache(&cache);
     }
 
-    auto Image::on_measure(const scene::LayoutConstraints constraints) -> foundation::NanSize {
+    auto Image::on_measure(const foundation::NanLayoutConstraints constraints) -> foundation::NanSize {
         if (natural_size_.get_width() > 0.0F || natural_size_.get_height() > 0.0F) {
             return constraints.constrain(natural_size_);
         }

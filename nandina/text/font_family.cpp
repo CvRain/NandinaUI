@@ -41,7 +41,7 @@ namespace nandina::text
         resource::ResourceKey family,
         std::shared_ptr<FreeTypeFontFace> face,
         const int weight,
-        const FontSlant slant
+        const theme::FontSlant slant
     ) -> FontResult<void> {
         if (!face) {
             return std::unexpected(font_error(FontErrorCode::no_matching_face, "null face"));
@@ -139,7 +139,7 @@ namespace nandina::text
         return {};
     }
 
-    auto FontFamilyRegistry::resolve(const FontRequest& request, FontLoader& loader) const
+    auto FontFamilyRegistry::resolve(const theme::FontRequest& request, FontLoader& loader) const
         -> FontResult<ResolvedFontFamily> {
         std::map<resource::ResourceKey, Family> families;
         std::map<resource::ResourceKey, resource::ResourceKey> aliases;
@@ -216,7 +216,7 @@ namespace nandina::text
             for (const auto& candidate: candidates) {
                 const int slant_score = candidate.slant == request.slant
                     ? 0
-                    : ((candidate.slant != FontSlant::normal && request.slant != FontSlant::normal)
+                    : ((candidate.slant != theme::FontSlant::normal && request.slant != theme::FontSlant::normal)
                            ? 1
                            : 2);
                 const int weight_score = std::abs(candidate.weight - request.weight);

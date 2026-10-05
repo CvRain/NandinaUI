@@ -243,7 +243,7 @@ namespace nandina::scene
         return measured_size_;
     }
 
-    auto NanControl::last_layout_constraints() const -> LayoutConstraints {
+    auto NanControl::last_layout_constraints() const -> foundation::NanLayoutConstraints {
         return last_layout_constraints_;
     }
 
@@ -269,7 +269,8 @@ namespace nandina::scene
                           : LayoutFlexPolicy {};
     }
 
-    auto NanControl::measure_layout(LayoutConstraints constraints) -> foundation::NanSize {
+    auto NanControl::measure_layout(foundation::NanLayoutConstraints constraints)
+        -> foundation::NanSize {
         last_layout_constraints_ = constraints;
         auto [min_width, max_width] = constrained_axis(
             constraints.min_width,
@@ -303,7 +304,7 @@ namespace nandina::scene
             }
         }
 
-        LayoutConstraints effective {
+        foundation::NanLayoutConstraints effective {
             .min_width = width.value_or(min_width),
             .max_width = width.value_or(max_width),
             .min_height = height.value_or(min_height),
@@ -380,7 +381,8 @@ namespace nandina::scene
         ctx.device().draw_rect(world, color);
     }
 
-    auto NanControl::on_measure(LayoutConstraints constraints) -> foundation::NanSize {
+    auto NanControl::on_measure(foundation::NanLayoutConstraints constraints)
+        -> foundation::NanSize {
         return constraints.constrain(size_);
     }
 
@@ -396,14 +398,14 @@ namespace nandina::scene
 
         if (visible_children.size() == 1) {
             auto* child = visible_children.front();
-            (void)child->measure_layout(LayoutConstraints::tight(size()));
+            (void)child->measure_layout(foundation::NanLayoutConstraints::tight(size()));
             child->layout_to(local_rect());
             return;
         }
 
         for (auto* child: visible_children) {
             const auto measured = child->measure_layout(
-                LayoutConstraints {
+                foundation::NanLayoutConstraints {
                     .min_width = 0.0F,
                     .max_width = width(),
                     .min_height = 0.0F,

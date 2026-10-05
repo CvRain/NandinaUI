@@ -172,7 +172,7 @@ namespace nandina::widget
         return menu_->z_index_hint();
     }
 
-    auto ContextMenu::on_measure(const scene::LayoutConstraints constraints)
+    auto ContextMenu::on_measure(const foundation::NanLayoutConstraints constraints)
         -> foundation::NanSize {
         const auto current = target_.lock();
         return current != nullptr ? constraints.constrain(current->measure_layout(constraints))

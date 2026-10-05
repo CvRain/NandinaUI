@@ -25,8 +25,8 @@
 #include "roving_focus.hpp"
 #include "text_field.hpp"
 
-#include "../animation/animation_host.hpp"
 #include "../render/draw_context.hpp"
+#include "../scene/animation_host.hpp"
 #include "../scene/input_event.hpp"
 #include "../scene/overlay_host.hpp"
 #include "../scene/scene_tree.hpp"
@@ -84,10 +84,10 @@ namespace nandina::widget
 
         /// 遮罩与面板共用的淡入淡出行为：进场 ease_out，退场 ease_in（同 Dialog）。
         [[nodiscard]] auto fade_behavior(const theme::DesignSystem& system, const bool entering)
-            -> animation::Behavior<float> {
-            return animation::Behavior<float>(
+            -> motion::Behavior<float> {
+            return motion::Behavior<float>(
                 system.tokens.motion.short_duration,
-                entering ? animation::Easing::ease_out : animation::Easing::ease_in
+                entering ? motion::Easing::ease_out : motion::Easing::ease_in
             );
         }
 
@@ -195,7 +195,7 @@ namespace nandina::widget
             }
 
         protected:
-            [[nodiscard]] auto on_measure(const scene::LayoutConstraints constraints)
+            [[nodiscard]] auto on_measure(const foundation::NanLayoutConstraints constraints)
                 -> foundation::NanSize override {
                 const auto& m = style_.metrics;
                 if (kind_ == MenuItemKind::separator) {
@@ -204,7 +204,7 @@ namespace nandina::widget
                     );
                 }
                 if (kind_ == MenuItemKind::label) {
-                    (void)label_text_.measure_layout(scene::LayoutConstraints::loose());
+                    (void)label_text_.measure_layout(foundation::NanLayoutConstraints::loose());
                     return constraints.constrain(
                         foundation::NanSize(
                             label_text_.measured_text_width() + m.item_padding_x * 2.0F,
@@ -212,9 +212,9 @@ namespace nandina::widget
                         )
                     );
                 }
-                (void)label_text_.measure_layout(scene::LayoutConstraints::loose());
+                (void)label_text_.measure_layout(foundation::NanLayoutConstraints::loose());
                 if (!shortcut_.empty()) {
-                    (void)shortcut_text_.measure_layout(scene::LayoutConstraints::loose());
+                    (void)shortcut_text_.measure_layout(foundation::NanLayoutConstraints::loose());
                 }
                 return constraints.constrain(
                     foundation::NanSize(constraints.max_width, m.item_height)
@@ -344,7 +344,7 @@ namespace nandina::widget
                     context_,
                     kind_ == MenuItemKind::label ? style_.group_label : style_.item_label,
                     label_text_.font(),
-                    primitives::TextOverflow::ellipsis
+                    text::TextOverflow::ellipsis
                 );
                 if (disabled_ && kind_ != MenuItemKind::label) {
                     label_style.color = style_.disabled_label;
@@ -361,7 +361,7 @@ namespace nandina::widget
                         context_,
                         style_.item_shortcut,
                         shortcut_text_.font(),
-                        primitives::TextOverflow::ellipsis
+                        text::TextOverflow::ellipsis
                     );
                     if (disabled_) {
                         shortcut_style.color = style_.disabled_label;
@@ -584,7 +584,7 @@ namespace nandina::widget
             }
 
         protected:
-            [[nodiscard]] auto on_measure(const scene::LayoutConstraints constraints)
+            [[nodiscard]] auto on_measure(const foundation::NanLayoutConstraints constraints)
                 -> foundation::NanSize override {
                 float height = 0.0F;
                 float width = 0.0F;
@@ -594,7 +594,7 @@ namespace nandina::widget
                         continue;
                     }
                     const auto measured = row->measure_layout(
-                        scene::LayoutConstraints {
+                        foundation::NanLayoutConstraints {
                             .min_width = 0.0F,
                             .max_width = constraints.max_width,
                             .min_height = 0.0F,
@@ -620,7 +620,7 @@ namespace nandina::widget
                     }
                     const auto measured = row->measured_size();
                     row->measure_layout(
-                        scene::LayoutConstraints::tight(
+                        foundation::NanLayoutConstraints::tight(
                             foundation::NanSize(width(), measured.get_height())
                         )
                     );
@@ -630,7 +630,7 @@ namespace nandina::widget
                     y += measured.get_height();
                 }
                 if (!hint_.empty()) {
-                    (void)hint_text_.measure_layout(scene::LayoutConstraints::loose());
+                    (void)hint_text_.measure_layout(foundation::NanLayoutConstraints::loose());
                 }
             }
 
@@ -723,12 +723,12 @@ namespace nandina::widget
                 mark_dirty(scene::DirtyFlags::paint);
             }
 
-            [[nodiscard]] auto hint_style() const -> primitives::TextStyle {
+            [[nodiscard]] auto hint_style() const -> text::TextStyle {
                 return make_text_style(
                     context_,
                     style_.empty,
                     hint_text_.font(),
-                    primitives::TextOverflow::ellipsis
+                    text::TextOverflow::ellipsis
                 );
             }
 
@@ -793,7 +793,7 @@ namespace nandina::widget
             }
 
         protected:
-            [[nodiscard]] auto on_measure(const scene::LayoutConstraints constraints)
+            [[nodiscard]] auto on_measure(const foundation::NanLayoutConstraints constraints)
                 -> foundation::NanSize override {
                 const auto& m = style_.metrics;
                 const float inner_width = std::max(
@@ -801,7 +801,7 @@ namespace nandina::widget
                     std::min(m.panel_width, constraints.max_width) - m.panel_padding * 2.0F
                 );
                 const auto query = field_->measure_layout(
-                    scene::LayoutConstraints {
+                    foundation::NanLayoutConstraints {
                         .min_width = 0.0F,
                         .max_width = inner_width,
                         .min_height = 0.0F,
@@ -809,7 +809,7 @@ namespace nandina::widget
                     }
                 );
                 const auto list = surface_->measure_layout(
-                    scene::LayoutConstraints {
+                    foundation::NanLayoutConstraints {
                         .min_width = 0.0F,
                         .max_width = inner_width,
                         .min_height = 0.0F,
@@ -829,7 +829,7 @@ namespace nandina::widget
                 float y = m.panel_padding;
                 const auto query_height = field_->measured_size().get_height();
                 field_->measure_layout(
-                    scene::LayoutConstraints::tight(foundation::NanSize(inner_width, query_height))
+                    foundation::NanLayoutConstraints::tight(foundation::NanSize(inner_width, query_height))
                 );
                 field_->layout_to(
                     foundation::NanRect::from_xywh(m.panel_padding, y, inner_width, query_height)
@@ -837,7 +837,7 @@ namespace nandina::widget
                 y += query_height + m.gap;
                 const float list_height = std::max(0.0F, height() - m.panel_padding - y);
                 surface_->measure_layout(
-                    scene::LayoutConstraints::tight(foundation::NanSize(inner_width, list_height))
+                    foundation::NanLayoutConstraints::tight(foundation::NanSize(inner_width, list_height))
                 );
                 surface_->layout_to(
                     foundation::NanRect::from_xywh(m.panel_padding, y, inner_width, list_height)
@@ -903,7 +903,7 @@ namespace nandina::widget
             }
 
         protected:
-            [[nodiscard]] auto on_measure(const scene::LayoutConstraints constraints)
+            [[nodiscard]] auto on_measure(const foundation::NanLayoutConstraints constraints)
                 -> foundation::NanSize override {
                 const auto measured = panel_->measure_layout(constraints);
                 // 高度吃掉整层：居中因此只在水平方向生效（见类注释）。
@@ -917,7 +917,7 @@ namespace nandina::widget
                 const float panel_width = std::min(measured.get_width(), width());
                 const float panel_height = measured.get_height();
                 panel_->measure_layout(
-                    scene::LayoutConstraints::tight(foundation::NanSize(panel_width, panel_height))
+                    foundation::NanLayoutConstraints::tight(foundation::NanSize(panel_width, panel_height))
                 );
                 // 水平居中（外壳宽度 = 面板宽度，理论上 offset 为 0；保留计算以防约束收窄）。
                 const float x = std::max(0.0F, (width() - panel_width) * 0.5F);
@@ -1234,7 +1234,7 @@ namespace nandina::widget
         return active() && mount_mode_ != MountMode::overlay ? 1 : 0;
     }
 
-    auto CommandPalette::on_measure(const scene::LayoutConstraints constraints)
+    auto CommandPalette::on_measure(const foundation::NanLayoutConstraints constraints)
         -> foundation::NanSize {
         // 浮层承载时本节点只是页面里的锚点，不占位；树内回退时铺满父容器作为遮罩范围。
         if (!active() || mount_mode_ == MountMode::overlay) {

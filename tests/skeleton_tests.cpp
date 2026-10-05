@@ -98,12 +98,12 @@ TEST_CASE("skeleton defaults to a single text line at the preferred width", "[sk
     REQUIRE(skeleton->visual_state() == theme::SkeletonVisualState::normal);
     REQUIRE(skeleton->label().empty());
 
-    const auto loose = skeleton->measure_layout(scene::LayoutConstraints::loose());
+    const auto loose = skeleton->measure_layout(foundation::NanLayoutConstraints::loose());
     REQUIRE(loose.get_width() == Catch::Approx(240.0F));
     REQUIRE(loose.get_height() == Catch::Approx(12.0F));
 
     // 有界约束下宽度跟随约束上限，单行高度不变。
-    const auto narrow = skeleton->measure_layout(scene::LayoutConstraints {
+    const auto narrow = skeleton->measure_layout(foundation::NanLayoutConstraints {
         .max_width = 80.0F,
         .max_height = 48.0F,
     });
@@ -116,7 +116,7 @@ TEST_CASE("skeleton stacks text lines with the recipe line gap", "[skeleton][lay
     skeleton->set_lines(3);
     REQUIRE(skeleton->lines() == 3);
 
-    const auto loose = skeleton->measure_layout(scene::LayoutConstraints::loose());
+    const auto loose = skeleton->measure_layout(foundation::NanLayoutConstraints::loose());
     // 3 * 12 + 2 * 8 = 52
     REQUIRE(loose.get_height() == Catch::Approx(52.0F));
 }
@@ -155,12 +155,12 @@ TEST_CASE("skeleton rectangle variant fills constraints or an explicit size", "[
     REQUIRE(skeleton->variant() == widget::SkeletonVariant::rectangle);
 
     // 无界：回退到首选宽度与配方高度。
-    const auto loose = skeleton->measure_layout(scene::LayoutConstraints::loose());
+    const auto loose = skeleton->measure_layout(foundation::NanLayoutConstraints::loose());
     REQUIRE(loose.get_width() == Catch::Approx(240.0F));
     REQUIRE(loose.get_height() == Catch::Approx(12.0F));
 
     // 有界：铺满约束。
-    const auto bounded = skeleton->measure_layout(scene::LayoutConstraints {
+    const auto bounded = skeleton->measure_layout(foundation::NanLayoutConstraints {
         .max_width = 120.0F,
         .max_height = 40.0F,
     });
@@ -170,7 +170,7 @@ TEST_CASE("skeleton rectangle variant fills constraints or an explicit size", "[
     // 显式尺寸优先。
     skeleton->set_width(64.0F);
     skeleton->set_height(24.0F);
-    const auto explicit_size = skeleton->measure_layout(scene::LayoutConstraints::loose());
+    const auto explicit_size = skeleton->measure_layout(foundation::NanLayoutConstraints::loose());
     REQUIRE(explicit_size.get_width() == Catch::Approx(64.0F));
     REQUIRE(explicit_size.get_height() == Catch::Approx(24.0F));
 }

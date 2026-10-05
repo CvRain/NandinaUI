@@ -35,7 +35,7 @@ namespace
         int layouts = 0;
 
     protected:
-        auto on_measure(scene::LayoutConstraints constraints) -> foundation::NanSize override {
+        auto on_measure(foundation::NanLayoutConstraints constraints) -> foundation::NanSize override {
             ++measures;
             return NanControl::on_measure(constraints);
         }

@@ -443,7 +443,7 @@ namespace nandina::scene
             {
                 continue;
             }
-            (void)control->measure_layout(LayoutConstraints::tight(viewport_size));
+            (void)control->measure_layout(foundation::NanLayoutConstraints::tight(viewport_size));
             control->layout_to(
                 foundation::NanRect::from_origin_size(foundation::NanPoint::zero(), viewport_size)
             );
@@ -489,7 +489,7 @@ namespace nandina::scene
         bool laid_out = false;
         auto* control = root_ != nullptr ? root_->as_control() : nullptr;
         if (control != nullptr && (control->layout_dirty() || control->size() != viewport_size)) {
-            (void)control->measure_layout(LayoutConstraints::tight(viewport_size));
+            (void)control->measure_layout(foundation::NanLayoutConstraints::tight(viewport_size));
             control->layout_to(
                 foundation::NanRect::from_origin_size(foundation::NanPoint::zero(), viewport_size)
             );

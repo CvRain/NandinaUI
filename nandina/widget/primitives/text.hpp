@@ -5,11 +5,11 @@
 #ifndef NANDINA_EXPERIMENT_WIDGET_PRIMITIVES_TEXT_HPP
 #define NANDINA_EXPERIMENT_WIDGET_PRIMITIVES_TEXT_HPP
 
-#include "../../animation/property_endpoint.hpp"
 #include "../../reactive/property.hpp"
 #include "../../scene/control.hpp"
+#include "../../scene/property_endpoint.hpp"
 #include "../visual_property.hpp"
-#include "text_layout_backend.hpp"
+#include "../../text/text_layout_backend.hpp"
 
 #include <memory>
 #include <string>
@@ -30,7 +30,7 @@ namespace nandina::widget::primitives
     public:
         explicit TextColorProperty(Text& text) noexcept: text_(&text) {}
         void set(foundation::NanColor color);
-        void set_behavior(animation::Behavior<foundation::NanColor> behavior);
+        void set_behavior(motion::Behavior<foundation::NanColor> behavior);
         [[nodiscard]] auto value() const noexcept -> const foundation::NanColor*;
         [[nodiscard]] auto target() const noexcept -> const foundation::NanColor*;
 
@@ -42,8 +42,8 @@ namespace nandina::widget::primitives
     public:
         explicit TextFontSizeProperty(Text& text) noexcept: text_(&text) {}
         void set(float size);
-        void set_behavior(animation::Behavior<float> behavior);
-        void set_spring(animation::SpringSpec spec);
+        void set_behavior(motion::Behavior<float> behavior);
+        void set_spring(motion::SpringSpec spec);
         [[nodiscard]] auto value() const noexcept -> const float*;
         [[nodiscard]] auto target() const noexcept -> const float*;
 
@@ -58,7 +58,7 @@ namespace nandina::widget::primitives
     public:
         explicit Text(
             std::string text = {},
-            const ITextLayoutBackend& backend = deterministic_text_layout_backend()
+            const text::ITextLayoutBackend& backend = text::deterministic_text_layout_backend()
         );
 
         void set_text(std::string text);
@@ -66,8 +66,8 @@ namespace nandina::widget::primitives
         [[nodiscard]] auto text_property() -> reactive::Property<std::string>&;
         [[nodiscard]] auto text_property() const -> reactive::ReadProperty<std::string>;
 
-        void set_style(TextStyle style);
-        [[nodiscard]] auto style() const -> const TextStyle&;
+        void set_style(text::TextStyle style);
+        [[nodiscard]] auto style() const -> const text::TextStyle&;
 
         void set_color(foundation::NanColor color);
         [[nodiscard]] auto color() const -> foundation::NanColor;
@@ -77,42 +77,42 @@ namespace nandina::widget::primitives
         [[nodiscard]] auto visual_part(visual::label_t) noexcept -> Text&;
         [[nodiscard]] auto property(visual::color_t) noexcept -> TextColorProperty;
         [[nodiscard]] auto property(visual::font_size_t) noexcept -> TextFontSizeProperty;
-        void set_font(text::FontRequest request);
+        void set_font(theme::FontRequest request);
         void set_font_family(resource::ResourceKey family);
         void clear_font_family();
         void set_font_weight(int weight);
-        void set_font_slant(text::FontSlant slant);
-        [[nodiscard]] auto font() const -> const text::FontRequest&;
+        void set_font_slant(theme::FontSlant slant);
+        [[nodiscard]] auto font() const -> const theme::FontRequest&;
 
-        void set_overflow(TextOverflow overflow);
-        [[nodiscard]] auto overflow() const -> TextOverflow;
+        void set_overflow(text::TextOverflow overflow);
+        [[nodiscard]] auto overflow() const -> text::TextOverflow;
 
         void set_max_lines(int lines);
         [[nodiscard]] auto max_lines() const -> int;
 
-        /// 设置文本在其**被指派矩形**内的水平对齐；见 `text_align_offset()`。
+        /// 设置文本在其**被指派矩形**内的水平对齐；见 `text::text_align_offset()`。
         ///
         /// 只有盒子比文本宽时才有视觉效果 —— 收缩包裹的文本三种取值结果相同。
         /// 绘制入口是 `draw_in()`；`draw_at()` 没有盒子，因此不对齐。
-        void set_align(TextAlign align);
-        [[nodiscard]] auto align() const -> TextAlign;
+        void set_align(theme::TextAlign align);
+        [[nodiscard]] auto align() const -> theme::TextAlign;
 
         [[nodiscard]] auto measured_text_width() const -> float;
         [[nodiscard]] auto measured_text_height() const -> float;
         [[nodiscard]] auto laid_out_font_size() const -> float;
-        [[nodiscard]] auto layout_result() const -> const TextLayoutResult&;
+        [[nodiscard]] auto layout_result() const -> const text::TextLayoutResult&;
 
-        void set_text_pipeline(TextPipeline pipeline);
-        [[nodiscard]] auto text_pipeline() const -> TextPipeline;
-        void apply_default_text_pipeline(const TextPipeline& pipeline) override;
+        void set_text_pipeline(text::TextPipeline pipeline);
+        [[nodiscard]] auto text_pipeline() const -> text::TextPipeline;
+        void apply_default_text_pipeline(const text::TextPipeline& pipeline) override;
         void apply_font_context(text::FontPipelineCache& context) override;
         void on_style_context_changed(const theme::ResolvedStyleContext& context) override;
 
         /// The referenced backend must outlive this Text instance.
-        void set_layout_backend(const ITextLayoutBackend& backend);
-        [[nodiscard]] auto layout_backend() const -> const ITextLayoutBackend&;
-        void set_layout_renderer(ITextLayoutRenderer* renderer);
-        [[nodiscard]] auto layout_renderer() const -> ITextLayoutRenderer*;
+        void set_layout_backend(const text::ITextLayoutBackend& backend);
+        [[nodiscard]] auto layout_backend() const -> const text::ITextLayoutBackend&;
+        void set_layout_renderer(text::ITextLayoutRenderer* renderer);
+        [[nodiscard]] auto layout_renderer() const -> text::ITextLayoutRenderer*;
 
         /// 在 `position` 处绘制（盒子 = 文本自身的测量尺寸，因此**不对齐**）。
         void draw_at(render::DrawContext& ctx, foundation::NanPoint position);
@@ -122,13 +122,13 @@ namespace nandina::widget::primitives
         /// @param ctx  绘制上下文。
         /// @param rect 目标矩形（逻辑坐标）。宽度决定每行的偏移量；高度只用于垂直摆放基线。
         ///
-        /// 偏移是**绘制期**计算的，写进布局结果的 `TextLayoutLine::origin_x`；布局本身
+        /// 偏移是**绘制期**计算的，写进布局结果的 `text::TextLayoutLine::origin_x`；布局本身
         /// （`size` / `caret_stops`）不受影响，所以命中测试仍在未偏移的空间里。
         void draw_in(render::DrawContext& ctx, foundation::NanRect rect);
         auto on_draw(render::DrawContext& ctx) -> void override;
 
     protected:
-        [[nodiscard]] auto on_measure(scene::LayoutConstraints constraints)
+        [[nodiscard]] auto on_measure(foundation::NanLayoutConstraints constraints)
             -> foundation::NanSize override;
         [[nodiscard]] auto semantics_properties() const -> semantics::Properties override;
         void apply_component_color(foundation::NanColor color);
@@ -138,16 +138,16 @@ namespace nandina::widget::primitives
     private:
         void apply_text(const std::string& text);
         void
-        update_metrics(scene::LayoutConstraints constraints = scene::LayoutConstraints::loose());
+        update_metrics(foundation::NanLayoutConstraints constraints = foundation::NanLayoutConstraints::loose());
         void resolve_font();
 
         reactive::Property<std::string> text_;
-        TextStyle style_ {};
-        animation::PropertyEndpoint<foundation::NanColor> color_presentation_;
-        animation::PropertyEndpoint<float> font_size_presentation_;
-        TextLayoutResult layout_ {};
-        const ITextLayoutBackend* backend_ = nullptr;
-        ITextLayoutRenderer* renderer_ = nullptr;
+        text::TextStyle style_ {};
+        scene::PropertyEndpoint<foundation::NanColor> color_presentation_;
+        scene::PropertyEndpoint<float> font_size_presentation_;
+        text::TextLayoutResult layout_ {};
+        const text::ITextLayoutBackend* backend_ = nullptr;
+        text::ITextLayoutRenderer* renderer_ = nullptr;
         bool pipeline_explicit_ = false;
         bool color_explicit_ = false;
         bool font_size_explicit_ = false;

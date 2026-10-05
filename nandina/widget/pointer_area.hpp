@@ -24,7 +24,7 @@ namespace nandina::widget
         auto on_input_capture(scene::InputEvent& event) -> bool override;
 
     protected:
-        [[nodiscard]] auto on_measure(scene::LayoutConstraints constraints)
+        [[nodiscard]] auto on_measure(foundation::NanLayoutConstraints constraints)
             -> foundation::NanSize override;
         auto on_layout() -> void override;
 

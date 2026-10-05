@@ -159,7 +159,6 @@ module_text = files(
     'text/freetype_font_face.cpp',
     'text/font_loader.hpp',
     'text/font_loader.cpp',
-    'text/font_request.hpp',
     'text/font_family.hpp',
     'text/font_family.cpp',
     'text/system_fonts.hpp',
@@ -212,8 +211,6 @@ module_widget = files(
     'widget/internal/focus_scope.hpp',
     'widget/internal/text_style_bridge.hpp',
     'widget/internal/focus_scope.cpp',
-    'widget/primitives/text_layout.hpp',
-    'widget/primitives/text_layout_backend.hpp',
     'widget/primitives/text.hpp',
     'widget/primitives/text.cpp',
     'widget/primitives/text_presentation.hpp',
@@ -306,19 +303,6 @@ module_widget = files(
     'widget/image.cpp',
 )
 
-module_animation = files(
-    'animation/animation_host.hpp',
-    'animation/animated_property.hpp',
-    'animation/behavior.hpp',
-    'animation/easing.hpp',
-    'animation/group.hpp',
-    'animation/keyframes.hpp',
-    'animation/motion.hpp',
-    'animation/property_endpoint.hpp',
-    'animation/spring.hpp',
-    'animation/tween.hpp',
-)
-
 module_app = files(
     'app/window_metrics.hpp',
     'app/window_metrics.cpp',
@@ -372,7 +356,7 @@ endif
 
 nandina_lib = static_library(
     'nandina',
-    [module_fundation, module_reactive, module_resource, module_scene, module_semantics, module_render, module_theme, module_text, module_widget, module_app, module_animation, module_physics2d, builtin_font_data, builtin_font_license_data],
+    [module_fundation, module_reactive, module_resource, module_scene, module_semantics, module_render, module_theme, module_text, module_widget, module_app, module_physics2d, builtin_font_data, builtin_font_license_data],
     cpp_args : nandina_cpp_args,
     dependencies : nandina_dependencies,
 )

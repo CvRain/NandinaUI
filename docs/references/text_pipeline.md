@@ -1,5 +1,9 @@
 # 文本布局协议的归属与兼容入口
 
+> 当前状态：过渡头 `widget/primitives/text_layout.hpp` 与 `text_layout_backend.hpp`
+> 已退出；使用 `text/text_layout.hpp` 与 `text/text_layout_backend.hpp`。
+> 下文的兼容范围和验证记录描述当时的迁移阶段，不是现行 API 承诺。
+
 本步骤以 `d7acce93a002e8933a270242baf29d11756febc7` 为基线，先确定协议边界，再迁移实现。
 纯布局约束已归 foundation，文本协议不再需要 Control 定义。
 

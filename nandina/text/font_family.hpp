@@ -3,7 +3,7 @@
 
 #include "../resource/backends/builtin_backend.hpp"
 #include "font_loader.hpp"
-#include "font_request.hpp"
+#include "../theme/font_request.hpp"
 
 #include <map>
 #include <set>
@@ -17,7 +17,7 @@ namespace nandina::text
         resource::ResourceKey resource;
         std::uint32_t face_index = 0;
         int weight = 400;
-        FontSlant slant = FontSlant::normal;
+        theme::FontSlant slant = theme::FontSlant::normal;
         /// 直接持有已加载 face（文件导入）；否则走 resource。
         std::shared_ptr<FreeTypeFontFace> direct_face;
     };
@@ -39,7 +39,7 @@ namespace nandina::text
             resource::ResourceKey family,
             std::shared_ptr<FreeTypeFontFace> face,
             int weight = 400,
-            FontSlant slant = FontSlant::normal
+            theme::FontSlant slant = theme::FontSlant::normal
         ) -> FontResult<void>;
         [[nodiscard]] auto add_alias(resource::ResourceKey alias, resource::ResourceKey family)
             -> FontResult<void>;
@@ -54,7 +54,7 @@ namespace nandina::text
          * fallbacks. Unknown families and individual face-load failures continue down that chain;
          * resolution fails only when the complete chain provides no usable face.
          */
-        [[nodiscard]] auto resolve(const FontRequest& request, FontLoader& loader) const
+        [[nodiscard]] auto resolve(const theme::FontRequest& request, FontLoader& loader) const
             -> FontResult<ResolvedFontFamily>;
 
     private:

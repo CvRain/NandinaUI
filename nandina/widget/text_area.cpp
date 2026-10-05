@@ -38,7 +38,7 @@ namespace nandina::widget
             value_changed_.emit(value);
         });
         apply_theme();
-        (void)measure_layout(scene::LayoutConstraints::loose());
+        (void)measure_layout(foundation::NanLayoutConstraints::loose());
     }
 
     auto TextArea::create(std::string value, theme::NanTheme theme) -> std::shared_ptr<TextArea> {
@@ -156,18 +156,18 @@ namespace nandina::widget
         return foundation::NanPoint(0.0F, scroll_y_);
     }
 
-    void TextArea::set_text_pipeline(primitives::TextPipeline pipeline) {
+    void TextArea::set_text_pipeline(text::TextPipeline pipeline) {
         edit_.set_text_pipeline(pipeline);
         placeholder_.set_text_pipeline(pipeline);
         mark_layout_dirty();
         (void)measure_layout(last_layout_constraints());
     }
 
-    auto TextArea::text_pipeline() const -> primitives::TextPipeline {
+    auto TextArea::text_pipeline() const -> text::TextPipeline {
         return edit_.text_pipeline();
     }
 
-    void TextArea::apply_default_text_pipeline(const primitives::TextPipeline& pipeline) {
+    void TextArea::apply_default_text_pipeline(const text::TextPipeline& pipeline) {
         edit_.apply_default_text_pipeline(pipeline);
         placeholder_.apply_default_text_pipeline(pipeline);
         mark_layout_dirty();
@@ -194,7 +194,7 @@ namespace nandina::widget
         mark_layout_dirty();
     }
 
-    void TextArea::set_font(text::FontRequest request) {
+    void TextArea::set_font(theme::FontRequest request) {
         font_explicit_ = true;
         edit_.text_node().set_font(request);
         placeholder_.set_font(std::move(request));
@@ -215,7 +215,7 @@ namespace nandina::widget
         mark_layout_dirty();
     }
 
-    void TextArea::set_font_slant(const text::FontSlant slant) {
+    void TextArea::set_font_slant(const theme::FontSlant slant) {
         font_explicit_ = true;
         edit_.text_node().set_font_slant(slant);
         placeholder_.set_font_slant(slant);
@@ -315,7 +315,7 @@ namespace nandina::widget
         // 让最后一个字形在 content box 右缘得以完整显示：在内容框宽度基础上放出一个
         // 字形悬垂余量（advance 之外的墨迹 1~2px），否则近满时末字形的右侧墨迹被裁。
         const float overhang = ctx.logical_to_screen(
-            primitives::glyph_overhang_allowance(edit_.style().font_size)
+            text::glyph_overhang_allowance(edit_.style().font_size)
         );
         const auto viewport = foundation::NanRect::from_xywh(
             world.get_left() + padding_x,
@@ -340,10 +340,10 @@ namespace nandina::widget
         );
     }
 
-    auto TextArea::on_measure(scene::LayoutConstraints constraints) -> foundation::NanSize {
+    auto TextArea::on_measure(foundation::NanLayoutConstraints constraints) -> foundation::NanSize {
         const auto content = content_constraints(constraints);
         const auto edit_size = edit_.measure_layout(
-            scene::LayoutConstraints {
+            foundation::NanLayoutConstraints {
                 .min_width = 0.0F,
                 .max_width = content.max_width,
                 .min_height = 0.0F,
@@ -363,7 +363,7 @@ namespace nandina::widget
 
     void TextArea::on_layout() {
         const float available_width = std::max(0.0F, width() - padding_x_ * 2.0F);
-        const auto content = scene::LayoutConstraints {
+        const auto content = foundation::NanLayoutConstraints {
             .min_width = 0.0F,
             .max_width = available_width,
             .min_height = 0.0F,
@@ -418,20 +418,20 @@ namespace nandina::widget
             context.font_size_from_context ? context.font_size : style.value.font_size;
         const auto text_color = context.text_color_from_context ? context.text_color
                                                                 : style.value.color;
-        const primitives::TextStyle value_style {
+        const text::TextStyle value_style {
             .color = text_color,
             .font_size = font_size,
             .font = font,
-            .overflow = primitives::TextOverflow::wrap,
+            .overflow = text::TextOverflow::wrap,
             // 不设行数上限：多行布局必须覆盖全部内容，滚动由外壳负责。
             .max_lines = std::numeric_limits<int>::max(),
         };
-        const primitives::TextStyle placeholder_style {
+        const text::TextStyle placeholder_style {
             .color = context.text_color_from_context ? context.text_color
                                                      : style.placeholder.color,
             .font_size = font_size,
             .font = font,
-            .overflow = primitives::TextOverflow::ellipsis,
+            .overflow = text::TextOverflow::ellipsis,
             .max_lines = 1,
         };
         edit_.set_style(value_style);
@@ -439,8 +439,8 @@ namespace nandina::widget
         placeholder_.set_style(placeholder_style);
     }
 
-    auto TextArea::content_constraints(scene::LayoutConstraints constraints) const
-        -> scene::LayoutConstraints {
+    auto TextArea::content_constraints(foundation::NanLayoutConstraints constraints) const
+        -> foundation::NanLayoutConstraints {
         return {
             .min_width = 0.0F,
             .max_width = std::isfinite(constraints.max_width)

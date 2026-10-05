@@ -44,7 +44,7 @@ namespace nandina::showcase
                                    .font_size(16.0F)
                                    .width(widget::authoring::fill)
                                    .configure([](widget::Label& label) {
-                                       label.set_overflow(widget::primitives::TextOverflow::wrap);
+                                       label.set_overflow(text::TextOverflow::wrap);
                                        label.set_max_lines(8);
                                        label.set_color(foundation::NanColor::from_hex(0x6c6f85));
                                    })
@@ -111,7 +111,7 @@ namespace nandina::showcase
                         .font_size(14.0F)
                         .width(widget::authoring::fill)
                         .configure([](widget::Label& label) {
-                            label.set_overflow(widget::primitives::TextOverflow::wrap);
+                            label.set_overflow(text::TextOverflow::wrap);
                             label.set_max_lines(8);
                             label.set_color(foundation::NanColor::from_hex(0x7c7f93));
                         })
@@ -232,7 +232,7 @@ namespace nandina::showcase
                             )
                             .configure([](widget::Label& component_label) {
                                 component_label.set_overflow(
-                                    widget::primitives::TextOverflow::clip
+                                    text::TextOverflow::clip
                                 );
                                 component_label.set_max_lines(1);
                                 component_label.set_align(theme::TextAlign::center);

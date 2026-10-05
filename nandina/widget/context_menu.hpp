@@ -77,7 +77,7 @@ namespace nandina::widget
         [[nodiscard]] auto z_index_hint() const -> int override;
 
     protected:
-        [[nodiscard]] auto on_measure(scene::LayoutConstraints constraints)
+        [[nodiscard]] auto on_measure(foundation::NanLayoutConstraints constraints)
             -> foundation::NanSize override;
         void on_layout() override;
         [[nodiscard]] auto semantics_properties() const -> semantics::Properties override;

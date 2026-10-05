@@ -104,7 +104,7 @@ TEST_CASE("text area default measure follows the visible row count", "[text-area
     REQUIRE_FALSE(area.disabled());
 
     const auto style = area.resolved_style();
-    const auto three_rows = area.measure_layout(scene::LayoutConstraints::loose());
+    const auto three_rows = area.measure_layout(foundation::NanLayoutConstraints::loose());
     REQUIRE(
         three_rows.get_height()
         == Catch::Approx(style.metrics.line_height * 3.0F + style.metrics.padding_y * 2.0F)
@@ -114,7 +114,7 @@ TEST_CASE("text area default measure follows the visible row count", "[text-area
 
     area.set_rows(5);
     REQUIRE(area.rows() == 5);
-    const auto five_rows = area.measure_layout(scene::LayoutConstraints::loose());
+    const auto five_rows = area.measure_layout(foundation::NanLayoutConstraints::loose());
     REQUIRE(
         five_rows.get_height()
         == Catch::Approx(style.metrics.line_height * 5.0F + style.metrics.padding_y * 2.0F)
@@ -310,7 +310,7 @@ TEST_CASE("text area arrow keys move the caret across visual lines", "[text-area
 TEST_CASE("text area scrolls vertically to keep the caret visible", "[text-area][scroll]") {
     auto area = std::make_shared<widget::TextArea>("");
     area->set_rows(2);
-    const auto measured = area->measure_layout(scene::LayoutConstraints::loose());
+    const auto measured = area->measure_layout(foundation::NanLayoutConstraints::loose());
 
     scene::NanSceneTree tree;
     tree.set_root(area);
@@ -350,7 +350,7 @@ TEST_CASE("text area scrolls vertically to keep the caret visible", "[text-area]
 TEST_CASE("text area wheel scrolls within the overflow range", "[text-area][scroll][wheel]") {
     auto area = std::make_shared<widget::TextArea>("");
     area->set_rows(2);
-    const auto measured = area->measure_layout(scene::LayoutConstraints::loose());
+    const auto measured = area->measure_layout(foundation::NanLayoutConstraints::loose());
 
     scene::NanSceneTree tree;
     tree.set_root(area);

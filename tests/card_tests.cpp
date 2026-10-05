@@ -151,14 +151,14 @@ TEST_CASE("card measures child plus padding and places it inside", "[card][layou
     // 空卡片固有尺寸 = padding * 2（layout_root 会按 tight 约束拉伸 root，
     // 固有尺寸需用 loose 测量）。
     const auto padding_x = card->resolved_style().metrics.padding_x;
-    const auto empty_size = card->measure_layout(scene::LayoutConstraints::loose());
+    const auto empty_size = card->measure_layout(foundation::NanLayoutConstraints::loose());
     REQUIRE(empty_size.get_width() == Catch::Approx(padding_x * 2.0F));
     REQUIRE(empty_size.get_height() == Catch::Approx(padding_x * 2.0F));
 
     card->set_child(label);
     REQUIRE(tree.layout_root(foundation::NanSize(280.0F, 120.0F)) >= 1);
     const float child_width = label->measured_text_width();
-    const auto sized = card->measure_layout(scene::LayoutConstraints::loose());
+    const auto sized = card->measure_layout(foundation::NanLayoutConstraints::loose());
     REQUIRE(sized.get_width() == Catch::Approx(child_width + padding_x * 2.0F));
 
     // 子节点位于内边距内（左上角偏移 = padding）。

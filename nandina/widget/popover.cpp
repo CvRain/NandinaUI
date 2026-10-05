@@ -89,7 +89,7 @@ namespace nandina::widget
             }
 
         protected:
-            [[nodiscard]] auto on_measure(scene::LayoutConstraints constraints)
+            [[nodiscard]] auto on_measure(foundation::NanLayoutConstraints constraints)
                 -> foundation::NanSize override {
                 const auto inner = content_.lock();
                 if (inner == nullptr) {
@@ -99,7 +99,7 @@ namespace nandina::widget
                 }
                 // 内容按面板内边距内收后再测量；最小高度保证空内容时面板仍可见。
                 const auto measured = inner->measure_layout(
-                    scene::LayoutConstraints {
+                    foundation::NanLayoutConstraints {
                         .min_width = 0.0F,
                         .max_width =
                             std::max(0.0F, constraints.max_width - style_.metrics.padding_x * 2.0F),
@@ -131,7 +131,7 @@ namespace nandina::widget
                     return;
                 }
                 const auto measured = inner->measure_layout(
-                    scene::LayoutConstraints {
+                    foundation::NanLayoutConstraints {
                         .min_width = 0.0F,
                         .max_width = std::max(0.0F, width() - style_.metrics.padding_x * 2.0F),
                         .min_height = 0.0F,
@@ -585,7 +585,7 @@ namespace nandina::widget
     ) {
         // Measure against loose constraints so the size is known before the overlay
         // layout runs; `flip` / `shift` need a concrete size on the first frame.
-        const auto surface_size = surface_->measure_layout(scene::LayoutConstraints::loose());
+        const auto surface_size = surface_->measure_layout(foundation::NanLayoutConstraints::loose());
         if (!surface_size.is_valid()) {
             return;
         }
@@ -723,7 +723,7 @@ namespace nandina::widget
         return bounds.is_valid() ? bounds : local_rect();
     }
 
-    auto Popover::on_measure(const scene::LayoutConstraints constraints) -> foundation::NanSize {
+    auto Popover::on_measure(const foundation::NanLayoutConstraints constraints) -> foundation::NanSize {
         auto trigger = trigger_.lock();
         if (!trigger) {
             return constraints.constrain(foundation::NanSize(0.0F, 0.0F));
@@ -749,7 +749,7 @@ namespace nandina::widget
         // 必须在最前面：面板挂上来之前这里可能提前返回，回退子树就会停在默认尺寸上。
         dismiss_layer_->layout_to(local_rect());
 
-        const auto surface_size = surface_->measure_layout(scene::LayoutConstraints::loose());
+        const auto surface_size = surface_->measure_layout(foundation::NanLayoutConstraints::loose());
         if (!surface_size.is_valid()) {
             return;
         }

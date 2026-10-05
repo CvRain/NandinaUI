@@ -123,7 +123,7 @@ namespace nandina::widget
         return style;
     }
 
-    void Breadcrumb::apply_default_text_pipeline(const primitives::TextPipeline& pipeline) {
+    void Breadcrumb::apply_default_text_pipeline(const text::TextPipeline& pipeline) {
         // 只作用于容器自绘文本；链接子控件由场景树各自传播。
         separator_text_.apply_default_text_pipeline(pipeline);
         for (auto& item: items_) {
@@ -164,7 +164,7 @@ namespace nandina::widget
         const auto style = resolved_style();
         apply_text_styles();
 
-        const scene::LayoutConstraints text_constraints {
+        const foundation::NanLayoutConstraints text_constraints {
             .max_width = available_width,
         };
         (void)separator_text_.measure_layout(text_constraints);
@@ -219,7 +219,7 @@ namespace nandina::widget
         return {.width = x + style.metrics.padding_x, .height = height};
     }
 
-    auto Breadcrumb::on_measure(const scene::LayoutConstraints constraints) -> foundation::NanSize {
+    auto Breadcrumb::on_measure(const foundation::NanLayoutConstraints constraints) -> foundation::NanSize {
         const float available = std::isfinite(constraints.max_width)
             ? constraints.max_width
             : std::numeric_limits<float>::infinity();
@@ -294,13 +294,13 @@ namespace nandina::widget
         const auto& context = resolved_style_context();
 
         const auto make_style = [&](const theme::ResolvedTypeStyle& type,
-                                    const text::FontRequest& font,
+                                    const theme::FontRequest& font,
                                     const foundation::NanColor color) {
-            return primitives::TextStyle {
+            return text::TextStyle {
                 .color = context.text_color_from_context ? context.text_color : color,
                 .font_size = context.font_size_from_context ? context.font_size : type.font_size,
                 .font = context.font_from_context ? context.font : font,
-                .overflow = primitives::TextOverflow::clip,
+                .overflow = text::TextOverflow::clip,
                 .max_lines = 1,
             };
         };
@@ -332,7 +332,7 @@ namespace nandina::widget
     }
 
     void Breadcrumb::relayout() {
-        (void)measure_layout(scene::LayoutConstraints::loose());
+        (void)measure_layout(foundation::NanLayoutConstraints::loose());
         layout_to(foundation::NanRect::from_origin_size(position(), measured_size()));
     }
 } // namespace nandina::widget

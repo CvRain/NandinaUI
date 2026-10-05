@@ -150,13 +150,13 @@ TEST_CASE("alert with no title description or icon measures to zero", "[alert][l
     REQUIRE(alert->tone() == theme::AlertTone::info);
     REQUIRE_FALSE(alert->dismissible());
 
-    const auto loose = alert->measure_layout(scene::LayoutConstraints::loose());
+    const auto loose = alert->measure_layout(foundation::NanLayoutConstraints::loose());
     REQUIRE(loose.get_width() == Catch::Approx(0.0F));
     REQUIRE(loose.get_height() == Catch::Approx(0.0F));
 
     // 只有描述没有标题 / 图标时仍然占位（Alert 的 is_empty 以三者全空为界）。
     alert->set_description("Saved just now");
-    const auto description_only = alert->measure_layout(scene::LayoutConstraints::loose());
+    const auto description_only = alert->measure_layout(foundation::NanLayoutConstraints::loose());
     REQUIRE(description_only.get_width() > 0.0F);
     REQUIRE(description_only.get_height() > 0.0F);
 }
@@ -165,17 +165,17 @@ TEST_CASE("alert lays title and description out as a text column", "[alert][layo
     auto alert = widget::Alert::create();
     alert->set_title("Saved");
     REQUIRE(alert->title() == "Saved");
-    const auto title_only = alert->measure_layout(scene::LayoutConstraints::loose());
+    const auto title_only = alert->measure_layout(foundation::NanLayoutConstraints::loose());
     REQUIRE(title_only.get_width() == Catch::Approx(320.0F));
     REQUIRE(title_only.get_height() > 0.0F);
 
     alert->set_description("Your changes are safe");
     REQUIRE(alert->description() == "Your changes are safe");
-    const auto stacked = alert->measure_layout(scene::LayoutConstraints::loose());
+    const auto stacked = alert->measure_layout(foundation::NanLayoutConstraints::loose());
     REQUIRE(stacked.get_height() > title_only.get_height());
 
     // 有界约束下铺满上限宽度，高度仍由内容决定。
-    const auto bounded = alert->measure_layout(scene::LayoutConstraints {
+    const auto bounded = alert->measure_layout(foundation::NanLayoutConstraints {
         .max_width = 120.0F,
         .max_height = 200.0F,
     });
@@ -185,7 +185,7 @@ TEST_CASE("alert lays title and description out as a text column", "[alert][layo
 TEST_CASE("alert includes icon and action slots in measurement and layout", "[alert][layout]") {
     auto alert = widget::Alert::create();
     alert->set_title("Saved");
-    const float text_only = alert->measure_layout(scene::LayoutConstraints::loose()).get_width();
+    const float text_only = alert->measure_layout(foundation::NanLayoutConstraints::loose()).get_width();
 
     auto icon = widget::Badge::create("i");
     alert->set_icon(icon);

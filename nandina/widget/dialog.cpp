@@ -4,7 +4,7 @@
 
 #include "dialog.hpp"
 
-#include "../animation/animation_host.hpp"
+#include "../scene/animation_host.hpp"
 #include "../scene/overlay_host.hpp"
 #include "../scene/scene_tree.hpp"
 #include "../theme/theme_manager.hpp"
@@ -21,10 +21,10 @@ namespace nandina::widget
     {
         /// 遮罩与面板共用的淡入淡出行为：进场 ease_out，退场 ease_in。
         [[nodiscard]] auto fade_behavior(const theme::DesignSystem& system, const bool entering)
-            -> animation::Behavior<float> {
-            return animation::Behavior<float>(
+            -> motion::Behavior<float> {
+            return motion::Behavior<float>(
                 system.tokens.motion.long_duration,
-                entering ? animation::Easing::ease_out : animation::Easing::ease_in
+                entering ? motion::Easing::ease_out : motion::Easing::ease_in
             );
         }
 
@@ -188,11 +188,11 @@ namespace nandina::widget
         return style;
     }
 
-    void Dialog::set_text_pipeline(primitives::TextPipeline pipeline) {
+    void Dialog::set_text_pipeline(text::TextPipeline pipeline) {
         panel_->set_text_pipeline(std::move(pipeline));
     }
 
-    void Dialog::apply_default_text_pipeline(const primitives::TextPipeline& pipeline) {
+    void Dialog::apply_default_text_pipeline(const text::TextPipeline& pipeline) {
         panel_->apply_default_text_pipeline(pipeline);
     }
 
@@ -224,7 +224,7 @@ namespace nandina::widget
         return active() && mount_mode_ != MountMode::overlay ? 1 : 0;
     }
 
-    auto Dialog::on_measure(const scene::LayoutConstraints constraints) -> foundation::NanSize {
+    auto Dialog::on_measure(const foundation::NanLayoutConstraints constraints) -> foundation::NanSize {
         // 浮层承载时本节点只是页面里的锚点，不占位；树内回退时铺满父容器作为遮罩范围。
         if (!active() || mount_mode_ == MountMode::overlay) {
             return constraints.constrain(foundation::NanSize {0.0F, 0.0F});
@@ -342,7 +342,10 @@ namespace nandina::widget
     void Dialog::start_fade(const float target) {
         if (auto* tree = dismiss_layer_->get_tree(); tree != nullptr) {
             tree->animation_host().set_target(
-                *dismiss_layer_, dismiss_layer_->fade(), target, scene::DirtyFlags::paint
+                *dismiss_layer_,
+                dismiss_layer_->fade(),
+                target,
+                scene::DirtyFlags::paint
             );
             return;
         }

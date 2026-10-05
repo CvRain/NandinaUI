@@ -42,7 +42,7 @@ namespace nandina::widget
     protected:
         void on_enter_tree() override;
         void on_exit_tree() override;
-        [[nodiscard]] auto on_measure(scene::LayoutConstraints constraints)
+        [[nodiscard]] auto on_measure(foundation::NanLayoutConstraints constraints)
             -> foundation::NanSize override;
         auto on_layout() -> void override;
 

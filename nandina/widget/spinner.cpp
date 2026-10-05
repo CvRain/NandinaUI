@@ -117,7 +117,7 @@ namespace nandina::widget
         );
     }
 
-    auto Spinner::on_measure(const scene::LayoutConstraints constraints) -> foundation::NanSize {
+    auto Spinner::on_measure(const foundation::NanLayoutConstraints constraints) -> foundation::NanSize {
         const float diameter = resolved_style().metrics.diameter;
         return constraints.constrain(foundation::NanSize(diameter, diameter));
     }

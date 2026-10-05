@@ -207,14 +207,14 @@ TEST_CASE("dropdown menu is closed and sized to its trigger by default", "[dropd
     REQUIRE(empty.active_index() == -1);
     REQUIRE(empty.selection_mode() == widget::MenuSelectionMode::none);
     REQUIRE(empty.z_index_hint() == 0);
-    const auto measured = empty.measure_layout(scene::LayoutConstraints::loose());
+    const auto measured = empty.measure_layout(foundation::NanLayoutConstraints::loose());
     REQUIRE(measured.get_width() == Catch::Approx(0.0F));
     REQUIRE(measured.get_height() == Catch::Approx(0.0F));
 
     auto trigger = widget::Button::create("Open");
     auto menu = widget::DropdownMenu::create(trigger, sample_items());
-    const auto measured_menu = menu->measure_layout(scene::LayoutConstraints::loose());
-    const auto measured_trigger = trigger->measure_layout(scene::LayoutConstraints::loose());
+    const auto measured_menu = menu->measure_layout(foundation::NanLayoutConstraints::loose());
+    const auto measured_trigger = trigger->measure_layout(foundation::NanLayoutConstraints::loose());
     REQUIRE(measured_menu.get_width() == Catch::Approx(measured_trigger.get_width()));
     REQUIRE(measured_menu.get_height() == Catch::Approx(measured_trigger.get_height()));
     REQUIRE(menu->item_count() == 8);

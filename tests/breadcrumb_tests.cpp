@@ -76,26 +76,26 @@ TEST_CASE("breadcrumb tracks items, clickability and the separator", "[breadcrum
 
 TEST_CASE("breadcrumb measures its trail and lays out link children", "[breadcrumb][layout]") {
     auto crumb = widget::Breadcrumb::create();
-    const auto empty = crumb->measure_layout(scene::LayoutConstraints::loose());
+    const auto empty = crumb->measure_layout(foundation::NanLayoutConstraints::loose());
     REQUIRE(empty.get_width() == Catch::Approx(0.0F));
 
     crumb->add_item("Home", [] {});
-    const float one = crumb->measure_layout(scene::LayoutConstraints::loose()).get_width();
+    const float one = crumb->measure_layout(foundation::NanLayoutConstraints::loose()).get_width();
     REQUIRE(one > 0.0F);
 
     crumb->add_item("Library");
-    const float two = crumb->measure_layout(scene::LayoutConstraints::loose()).get_width();
+    const float two = crumb->measure_layout(foundation::NanLayoutConstraints::loose()).get_width();
     REQUIRE(two > one);
 
     crumb->add_item("Data", [] {});
-    const auto measured = crumb->measure_layout(scene::LayoutConstraints::loose());
+    const auto measured = crumb->measure_layout(foundation::NanLayoutConstraints::loose());
     REQUIRE(measured.get_width() > two);
     REQUIRE(measured.get_height() > 0.0F);
 
     // 更长的分隔符会改变整条宽度。
     crumb->set_separator("-->");
     REQUIRE(
-        crumb->measure_layout(scene::LayoutConstraints::loose()).get_width()
+        crumb->measure_layout(foundation::NanLayoutConstraints::loose()).get_width()
         > measured.get_width()
     );
 

@@ -88,14 +88,14 @@ namespace nandina::widget::internal
         mark_dirty(scene::DirtyFlags::paint | scene::DirtyFlags::layout);
     }
 
-    void DialogPanel::set_text_pipeline(primitives::TextPipeline pipeline) {
+    void DialogPanel::set_text_pipeline(text::TextPipeline pipeline) {
         if (title_ != nullptr) {
             title_->set_text_pipeline(std::move(pipeline));
             mark_layout_dirty();
         }
     }
 
-    void DialogPanel::apply_default_text_pipeline(const primitives::TextPipeline& pipeline) {
+    void DialogPanel::apply_default_text_pipeline(const text::TextPipeline& pipeline) {
         if (title_ != nullptr) {
             title_->apply_default_text_pipeline(pipeline);
             mark_layout_dirty();
@@ -114,12 +114,12 @@ namespace nandina::widget::internal
             return;
         }
         const auto& context = resolved_style_context();
-        const primitives::TextStyle style {
+        const text::TextStyle style {
             .color = context.text_color_from_context ? context.text_color : style_.title.color,
             .font_size =
                 context.font_size_from_context ? context.font_size : style_.title.font_size,
             .font = context.font_from_context ? context.font : title_->font(),
-            .overflow = primitives::TextOverflow::clip,
+            .overflow = text::TextOverflow::clip,
             .max_lines = 1,
         };
         if (!title_->style().approx_equals(style)) {
@@ -144,8 +144,8 @@ namespace nandina::widget::internal
     }
 
     auto DialogPanel::inner_constraints(const float panel_width, const float max_height) const
-        -> scene::LayoutConstraints {
-        return scene::LayoutConstraints {
+        -> foundation::NanLayoutConstraints {
+        return foundation::NanLayoutConstraints {
             .min_width = 0.0F,
             .max_width = std::max(0.0F, panel_width - style_.metrics.padding_x * 2.0F),
             .min_height = 0.0F,
@@ -153,7 +153,7 @@ namespace nandina::widget::internal
         };
     }
 
-    auto DialogPanel::on_measure(const scene::LayoutConstraints constraints)
+    auto DialogPanel::on_measure(const foundation::NanLayoutConstraints constraints)
         -> foundation::NanSize {
         apply_title_style();
         const float available = std::max(0.0F, constraints.max_width - kViewportMargin * 2.0F);

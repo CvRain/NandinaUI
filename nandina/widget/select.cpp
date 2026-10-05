@@ -37,9 +37,9 @@ namespace nandina::widget
                 float width,
                 std::vector<std::string> options,
                 theme::ResolvedSelectStyle style,
-                primitives::TextPipeline pipeline,
-                primitives::TextStyle option_style,
-                primitives::TextStyle option_selected_style,
+                text::TextPipeline pipeline,
+                text::TextStyle option_style,
+                text::TextStyle option_selected_style,
                 int selected_index,
                 std::weak_ptr<Select> owner,
                 std::function<void(int)> on_select
@@ -107,7 +107,7 @@ namespace nandina::widget
             }
 
         protected:
-            [[nodiscard]] auto on_measure(scene::LayoutConstraints constraints)
+            [[nodiscard]] auto on_measure(foundation::NanLayoutConstraints constraints)
                 -> foundation::NanSize override {
                 const auto height = style_.metrics.min_height * static_cast<float>(options_.size());
                 return constraints.constrain(foundation::NanSize(width_, height));
@@ -120,7 +120,7 @@ namespace nandina::widget
                 const float row_height = context.logical_to_screen(style_.metrics.min_height);
                 for (std::size_t index = 0; index < option_texts_.size(); ++index) {
                     auto& text = *option_texts_[index];
-                    (void)text.measure_layout(scene::LayoutConstraints::loose());
+                    (void)text.measure_layout(foundation::NanLayoutConstraints::loose());
                     const float text_height =
                         context.logical_to_screen(text.measured_text_height());
                     text.draw_at(
@@ -138,8 +138,8 @@ namespace nandina::widget
             float width_ = 0.0F;
             std::vector<std::string> options_;
             theme::ResolvedSelectStyle style_;
-            primitives::TextStyle option_style_;
-            primitives::TextStyle option_selected_style_;
+            text::TextStyle option_style_;
+            text::TextStyle option_selected_style_;
             std::vector<std::shared_ptr<primitives::Text>> option_texts_;
             std::weak_ptr<Select> owner_;
             int selected_index_ = 0;
@@ -320,7 +320,7 @@ namespace nandina::widget
         return style;
     }
 
-    void Select::set_text_pipeline(primitives::TextPipeline pipeline) {
+    void Select::set_text_pipeline(text::TextPipeline pipeline) {
         value_text_.set_text_pipeline(pipeline);
         for (auto& text: option_texts_) {
             text->set_text_pipeline(pipeline);
@@ -329,7 +329,7 @@ namespace nandina::widget
         mark_layout_dirty();
     }
 
-    void Select::apply_default_text_pipeline(const primitives::TextPipeline& pipeline) {
+    void Select::apply_default_text_pipeline(const text::TextPipeline& pipeline) {
         value_text_.apply_default_text_pipeline(pipeline);
         for (auto& text: option_texts_) {
             text->apply_default_text_pipeline(pipeline);
@@ -526,7 +526,7 @@ namespace nandina::widget
         );
         primitives::BoxPainter::paint(context, field, style.container, opacity);
 
-        (void)value_text_.measure_layout(scene::LayoutConstraints::loose());
+        (void)value_text_.measure_layout(foundation::NanLayoutConstraints::loose());
         const float value_height = context.logical_to_screen(value_text_.measured_text_height());
         const auto value_pos = foundation::NanPoint(
             field.get_left() + context.logical_to_screen(style.metrics.padding_x),
@@ -567,7 +567,7 @@ namespace nandina::widget
             primitives::BoxPainter::paint(context, popup, style.popup, opacity);
 
             for (std::size_t i = 0; i < option_texts_.size(); ++i) {
-                (void)option_texts_[i]->measure_layout(scene::LayoutConstraints::loose());
+                (void)option_texts_[i]->measure_layout(foundation::NanLayoutConstraints::loose());
                 const float option_height =
                     context.logical_to_screen(option_texts_[i]->measured_text_height());
                 const auto pos = foundation::NanPoint(
@@ -656,7 +656,7 @@ namespace nandina::widget
         // the anchor changes every frame, and a rebuild would re-create every option
         // text object each time. Only opening or a content change recreates the popup.
         if (auto popup = portal_popup_.lock(); popup != nullptr && portal_handle_ != nullptr) {
-            const auto popup_size = popup->measure_layout(scene::LayoutConstraints::loose());
+            const auto popup_size = popup->measure_layout(foundation::NanLayoutConstraints::loose());
             if (!popup_size.is_valid()) {
                 return;
             }
@@ -688,7 +688,7 @@ namespace nandina::widget
                 }
             }
         );
-        const auto popup_size = popup->measure_layout(scene::LayoutConstraints::loose());
+        const auto popup_size = popup->measure_layout(foundation::NanLayoutConstraints::loose());
         if (!popup_size.is_valid()) {
             return;
         }
@@ -744,12 +744,12 @@ namespace nandina::widget
         portal_viewport_ = foundation::NanSize {};
     }
 
-    auto Select::on_measure(const scene::LayoutConstraints constraints) -> foundation::NanSize {
+    auto Select::on_measure(const foundation::NanLayoutConstraints constraints) -> foundation::NanSize {
         const auto style = resolved_style();
         apply_text_styles();
         float max_width = style.metrics.preferred_width;
         for (auto& text: option_texts_) {
-            (void)text->measure_layout(scene::LayoutConstraints::loose());
+            (void)text->measure_layout(foundation::NanLayoutConstraints::loose());
             max_width =
                 std::max(max_width, text->measured_text_width() + style.metrics.padding_x * 2.0F);
         }

@@ -41,14 +41,14 @@ namespace nandina::widget::internal
         void set_style(theme::ResolvedDialogStyle style);
         [[nodiscard]] auto style() const noexcept -> const theme::ResolvedDialogStyle&;
 
-        void set_text_pipeline(primitives::TextPipeline pipeline);
-        void apply_default_text_pipeline(const primitives::TextPipeline& pipeline);
+        void set_text_pipeline(text::TextPipeline pipeline);
+        void apply_default_text_pipeline(const text::TextPipeline& pipeline);
         void apply_font_context(text::FontPipelineCache& context);
 
         auto on_draw(render::DrawContext& context) -> void override;
 
     protected:
-        [[nodiscard]] auto on_measure(scene::LayoutConstraints constraints)
+        [[nodiscard]] auto on_measure(foundation::NanLayoutConstraints constraints)
             -> foundation::NanSize override;
         void on_layout() override;
         /// dialog 语义挂在面板上：两种承载方式下它都是可见的那个模态表面，边界就是面板边界。
@@ -64,7 +64,7 @@ namespace nandina::widget::internal
         /// 按 header / content / footer 的顺序返回当前非空槽位。
         [[nodiscard]] auto slot_nodes() const -> std::vector<scene::NanControl*>;
         [[nodiscard]] auto inner_constraints(float panel_width, float max_height) const
-            -> scene::LayoutConstraints;
+            -> foundation::NanLayoutConstraints;
 
         std::shared_ptr<primitives::Text> title_;
         std::weak_ptr<scene::NanControl> header_;

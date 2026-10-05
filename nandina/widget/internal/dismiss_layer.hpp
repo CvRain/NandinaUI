@@ -1,7 +1,7 @@
 #ifndef NANDINA_EXPERIMENT_WIDGET_INTERNAL_DISMISS_LAYER_HPP
 #define NANDINA_EXPERIMENT_WIDGET_INTERNAL_DISMISS_LAYER_HPP
 
-#include "../../animation/animated_property.hpp"
+#include "../../foundation/motion/animated_property.hpp"
 #include "../../scene/control.hpp"
 #include "../../theme/design_system.hpp"
 
@@ -88,7 +88,7 @@ namespace nandina::widget::internal
 
         [[nodiscard]] auto contains_point(foundation::NanPoint local_point) const -> bool override;
 
-        [[nodiscard]] auto fade() noexcept -> animation::AnimatedProperty<float>& {
+        [[nodiscard]] auto fade() noexcept -> motion::AnimatedProperty<float>& {
             return fade_;
         }
 
@@ -98,7 +98,7 @@ namespace nandina::widget::internal
         [[nodiscard]] auto on_input_capture(scene::InputEvent& event) -> bool override;
 
     protected:
-        [[nodiscard]] auto on_measure(scene::LayoutConstraints constraints)
+        [[nodiscard]] auto on_measure(foundation::NanLayoutConstraints constraints)
             -> foundation::NanSize override;
         void on_layout() override;
         void on_draw(render::DrawContext& context) override;
@@ -111,7 +111,7 @@ namespace nandina::widget::internal
         /// 锚定浮层显式给出的内容屏幕矩形；未设置时用 content 的 global_bounds。
         std::optional<foundation::NanRect> hit_bounds_;
         std::optional<theme::ResolvedBoxStyle> scrim_;
-        animation::AnimatedProperty<float> fade_ {1.0F};
+        motion::AnimatedProperty<float> fade_ {1.0F};
     };
 } // namespace nandina::widget::internal
 

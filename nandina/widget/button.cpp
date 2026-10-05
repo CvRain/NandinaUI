@@ -67,17 +67,17 @@ namespace nandina::widget
         return container_presentation_;
     }
 
-    void Button::set_text_pipeline(primitives::TextPipeline pipeline) {
+    void Button::set_text_pipeline(text::TextPipeline pipeline) {
         text_.set_text_pipeline(pipeline);
         mark_layout_dirty();
         apply_metrics();
     }
 
-    auto Button::text_pipeline() const -> primitives::TextPipeline {
+    auto Button::text_pipeline() const -> text::TextPipeline {
         return text_.text_pipeline();
     }
 
-    void Button::apply_default_text_pipeline(const primitives::TextPipeline& pipeline) {
+    void Button::apply_default_text_pipeline(const text::TextPipeline& pipeline) {
         text_.apply_default_text_pipeline(pipeline);
         mark_layout_dirty();
     }
@@ -107,7 +107,7 @@ namespace nandina::widget
         apply_metrics();
     }
 
-    void Button::set_font(text::FontRequest request) {
+    void Button::set_font(theme::FontRequest request) {
         font_explicit_ = true;
         text_.set_font(std::move(request));
         mark_layout_dirty();
@@ -125,7 +125,7 @@ namespace nandina::widget
         mark_layout_dirty();
     }
 
-    void Button::set_font_slant(const text::FontSlant slant) {
+    void Button::set_font_slant(const theme::FontSlant slant) {
         font_explicit_ = true;
         text_.set_font_slant(slant);
         mark_layout_dirty();
@@ -166,13 +166,13 @@ namespace nandina::widget
         return text_.font_size();
     }
 
-    void Button::set_text_overflow(primitives::TextOverflow overflow) {
+    void Button::set_text_overflow(text::TextOverflow overflow) {
         text_overflow_ = overflow;
         mark_layout_dirty();
         apply_metrics();
     }
 
-    auto Button::text_overflow() const -> primitives::TextOverflow {
+    auto Button::text_overflow() const -> text::TextOverflow {
         return text_overflow_;
     }
 
@@ -307,7 +307,7 @@ namespace nandina::widget
         // 否则缩放后的文本宽度会污染下一次逻辑布局并造成组件尺寸振荡。
         const float content_width = std::max(0.0F, width() - style.metrics.padding_x * 2.0F);
         (void)text_.measure_layout(
-            scene::LayoutConstraints {
+            foundation::NanLayoutConstraints {
                 .min_width = 0.0F,
                 .max_width = content_width,
                 .min_height = 0.0F,
@@ -386,7 +386,7 @@ namespace nandina::widget
         return true;
     }
 
-    auto Button::on_measure(scene::LayoutConstraints constraints) -> foundation::NanSize {
+    auto Button::on_measure(foundation::NanLayoutConstraints constraints) -> foundation::NanSize {
         const auto state = visual_state();
         const auto style = resolved_style();
         // 百分比字号的基准 = 本次布局后按钮的最终高度（高度由 size_spec/配方决定）。
@@ -397,7 +397,7 @@ namespace nandina::widget
             ? std::max(0.0F, constraints.max_width - style.metrics.padding_x * 2.0F)
             : constraints.max_width;
         (void)text_.measure_layout(
-            scene::LayoutConstraints {
+            foundation::NanLayoutConstraints {
                 .min_width = 0.0F,
                 .max_width = max_text_width,
                 .min_height = 0.0F,
@@ -418,7 +418,7 @@ namespace nandina::widget
         label_presentation_.apply(style.label);
         container_presentation_.apply(style.container);
         apply_text_style(state, height());
-        (void)text_.measure_layout(scene::LayoutConstraints::loose());
+        (void)text_.measure_layout(foundation::NanLayoutConstraints::loose());
         set_size(
             foundation::NanSize(
                 text_.width() + style.metrics.padding_x * 2.0F,
@@ -448,7 +448,7 @@ namespace nandina::widget
     Button::apply_text_style(const theme::ButtonVisualState state, const float reference_height) {
         const auto style = resolved_recipe_style(state);
         const auto& context = resolved_style_context();
-        primitives::TextStyle text_style {
+        text::TextStyle text_style {
             .color = context.text_color_from_context ? context.text_color : style.label.color,
             .font_size = resolved_font_size(
                 reference_height,

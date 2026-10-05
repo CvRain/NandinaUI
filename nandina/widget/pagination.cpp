@@ -202,7 +202,7 @@ namespace nandina::widget
         return style;
     }
 
-    void Pagination::apply_default_text_pipeline(const primitives::TextPipeline& pipeline) {
+    void Pagination::apply_default_text_pipeline(const text::TextPipeline& pipeline) {
         for (auto& item: items_) {
             if (item.text) {
                 item.text->apply_default_text_pipeline(pipeline);
@@ -485,7 +485,7 @@ namespace nandina::widget
         return false;
     }
 
-    auto Pagination::on_measure(const scene::LayoutConstraints constraints) -> foundation::NanSize {
+    auto Pagination::on_measure(const foundation::NanLayoutConstraints constraints) -> foundation::NanSize {
         ensure_model();
         const auto style = resolved_style();
         if (items_.empty()) {
@@ -620,22 +620,22 @@ namespace nandina::widget
                 // 边界处不可用的上一页 / 下一页弱化（与 disabled 同一不透明度 token）。
                 color = color.with_alpha(color.alpha() * disabled_alpha);
             }
-            const primitives::TextStyle text_style {
+            const text::TextStyle text_style {
                 .color = context.text_color_from_context ? context.text_color : color,
                 .font_size = context.font_size_from_context ? context.font_size : type.font_size,
                 .font = context.font_from_context ? context.font : item.text->font(),
-                .overflow = primitives::TextOverflow::clip,
+                .overflow = text::TextOverflow::clip,
                 .max_lines = 1,
             };
             if (!item.text->style().approx_equals(text_style)) {
                 item.text->set_style(text_style);
             }
-            (void)item.text->measure_layout(scene::LayoutConstraints::loose());
+            (void)item.text->measure_layout(foundation::NanLayoutConstraints::loose());
         }
     }
 
     void Pagination::relayout() {
-        (void)measure_layout(scene::LayoutConstraints::loose());
+        (void)measure_layout(foundation::NanLayoutConstraints::loose());
         layout_to(foundation::NanRect::from_origin_size(position(), measured_size()));
     }
 } // namespace nandina::widget

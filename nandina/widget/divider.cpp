@@ -153,7 +153,7 @@ namespace nandina::widget
         }
     }
 
-    auto Divider::on_measure(const scene::LayoutConstraints constraints)
+    auto Divider::on_measure(const foundation::NanLayoutConstraints constraints)
         -> foundation::NanSize {
         const auto style = resolved_style();
         if (orientation_ == Orientation::horizontal) {

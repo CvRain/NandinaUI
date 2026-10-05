@@ -48,7 +48,7 @@
 | `set_override(theme::TextAreaRecipeRule)` | <!-- TODO --> |
 | `visual_state() -> theme::TextAreaVisualState` | <!-- TODO --> |
 | `resolved_style() -> theme::ResolvedTextAreaStyle` | <!-- TODO --> |
-| `set_text_pipeline(primitives::TextPipeline)` / `text_pipeline()` | <!-- TODO --> |
+| `set_text_pipeline(text::TextPipeline)` / `text_pipeline()` | <!-- TODO --> |
 | `editable_text() -> primitives::EditableText&` | <!-- TODO --> |
 | `scroll_offset() -> foundation::NanPoint` | <!-- TODO --> |
 | `ui.make<TextArea>(std::string value, std::string placeholder)` | <!-- TODO --> |

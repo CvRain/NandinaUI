@@ -11,7 +11,7 @@ NandinaUI 不以逐项复制其他组件库为目标。[shadcn/ui Components](ht
 嵌套浮层的父子关闭关系（`OverlayOptions::parent` + `OverlayCloseReason`，`Select` / `Tooltip` 已接入），
 键码常量也收敛到单一定义处。
 
-阶段 4 的 Popover、DropdownMenu 与 Combobox 依赖这些能力，现在条件已经具备，可以直接开始。
+阶段 4 的 Popover、DropdownMenu、Combobox、CommandPalette 与 HoverCard 均已落地。进入阶段 5 前，优先重新评估布局基础设施与旧源码入口的退出，见[项目进度与下一步](project_status.md)。
 
 ## 阶段 0：稳定公共边界
 
@@ -67,7 +67,7 @@ NandinaUI 不以逐项复制其他组件库为目标。[shadcn/ui Components](ht
 
 ## 阶段 4：菜单与选择组件族
 
-进行中。五项公共依赖已落地，后续组件直接消费它们：
+已完成。五项公共依赖已落地，后续组件直接消费它们：
 
 - 统一 MenuItem model（`nandina/widget/menu_item.hpp`，规则见
   [菜单族条目模型](menu_model.md)，契约测试 `tests/menu_item_tests.cpp`）；

@@ -73,7 +73,7 @@ namespace nandina::text
         families_(&families),
         limits_(limits) {}
 
-    auto FontPipelineCache::get(FontRequest request, const FontPipelineOptions options)
+    auto FontPipelineCache::get(theme::FontRequest request, const FontPipelineOptions options)
         -> FontResult<std::shared_ptr<FontPipeline>> {
         const Key key {
             .family = request.family,

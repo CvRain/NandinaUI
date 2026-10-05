@@ -35,16 +35,16 @@ namespace nandina::widget::internal
         return text_.text();
     }
 
-    void BreadcrumbLink::set_text_style(primitives::TextStyle style) {
+    void BreadcrumbLink::set_text_style(text::TextStyle style) {
         text_.set_style(std::move(style));
         mark_layout_dirty();
     }
 
-    auto BreadcrumbLink::text_style() const -> const primitives::TextStyle& {
+    auto BreadcrumbLink::text_style() const -> const text::TextStyle& {
         return text_.style();
     }
 
-    auto BreadcrumbLink::font() const -> const text::FontRequest& {
+    auto BreadcrumbLink::font() const -> const theme::FontRequest& {
         return text_.font();
     }
 
@@ -58,7 +58,7 @@ namespace nandina::widget::internal
         mark_dirty(scene::DirtyFlags::paint);
     }
 
-    void BreadcrumbLink::apply_default_text_pipeline(const primitives::TextPipeline& pipeline) {
+    void BreadcrumbLink::apply_default_text_pipeline(const text::TextPipeline& pipeline) {
         text_.apply_default_text_pipeline(pipeline);
         mark_layout_dirty();
     }
@@ -68,7 +68,7 @@ namespace nandina::widget::internal
         mark_layout_dirty();
     }
 
-    auto BreadcrumbLink::on_measure(const scene::LayoutConstraints constraints)
+    auto BreadcrumbLink::on_measure(const foundation::NanLayoutConstraints constraints)
         -> foundation::NanSize {
         (void)text_.measure_layout(constraints);
         return constraints.constrain(foundation::NanSize(

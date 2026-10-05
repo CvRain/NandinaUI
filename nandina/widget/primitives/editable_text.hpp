@@ -19,9 +19,9 @@ namespace nandina::widget::primitives
 {
     struct TextSelection {
         std::size_t anchor = 0;
-        TextAffinity anchor_affinity = TextAffinity::downstream;
+        text::TextAffinity anchor_affinity = text::TextAffinity::downstream;
         std::size_t focus = 0;
-        TextAffinity focus_affinity = TextAffinity::downstream;
+        text::TextAffinity focus_affinity = text::TextAffinity::downstream;
     };
 
     struct TextComposition {
@@ -50,12 +50,12 @@ namespace nandina::widget::primitives
         void set_value(std::string value);
         [[nodiscard]] auto value() const -> std::string_view;
 
-        void set_style(TextStyle style);
-        [[nodiscard]] auto style() const -> const TextStyle&;
+        void set_style(text::TextStyle style);
+        [[nodiscard]] auto style() const -> const text::TextStyle&;
 
-        void set_caret(std::size_t offset, TextAffinity affinity = TextAffinity::downstream);
+        void set_caret(std::size_t offset, text::TextAffinity affinity = text::TextAffinity::downstream);
         [[nodiscard]] auto caret() const -> std::size_t;
-        [[nodiscard]] auto caret_affinity() const -> TextAffinity;
+        [[nodiscard]] auto caret_affinity() const -> text::TextAffinity;
 
         void set_selection(TextSelection selection);
         [[nodiscard]] auto selection() const -> TextSelection;
@@ -87,9 +87,9 @@ namespace nandina::widget::primitives
         [[nodiscard]] auto text_node() -> Text&;
         [[nodiscard]] auto text_node() const -> const Text&;
 
-        void set_text_pipeline(TextPipeline pipeline);
-        [[nodiscard]] auto text_pipeline() const -> TextPipeline;
-        void apply_default_text_pipeline(const TextPipeline& pipeline) override;
+        void set_text_pipeline(text::TextPipeline pipeline);
+        [[nodiscard]] auto text_pipeline() const -> text::TextPipeline;
+        void apply_default_text_pipeline(const text::TextPipeline& pipeline) override;
         void apply_font_context(text::FontPipelineCache& context) override;
         void on_style_context_changed(const theme::ResolvedStyleContext& context) override;
 
@@ -102,25 +102,25 @@ namespace nandina::widget::primitives
         auto on_draw(render::DrawContext& ctx) -> void override;
 
     protected:
-        [[nodiscard]] auto on_measure(scene::LayoutConstraints constraints)
+        [[nodiscard]] auto on_measure(foundation::NanLayoutConstraints constraints)
             -> foundation::NanSize override;
 
     private:
         struct EditSnapshot {
             std::string value;
             std::size_t caret = 0;
-            TextAffinity caret_affinity = TextAffinity::downstream;
+            text::TextAffinity caret_affinity = text::TextAffinity::downstream;
             TextSelection selection;
         };
 
         /// 一个 source 偏移落到布局的哪一行、落在该行的哪个视觉停靠点。
         struct LineStop {
             std::size_t line_index = 0;
-            TextCaretStop stop;
+            text::TextCaretStop stop;
         };
 
         [[nodiscard]] auto snapshot() const -> EditSnapshot;
-        [[nodiscard]] auto line_stop_for(std::size_t offset, TextAffinity affinity) const -> LineStop;
+        [[nodiscard]] auto line_stop_for(std::size_t offset, text::TextAffinity affinity) const -> LineStop;
         void record_undo();
         void restore(EditSnapshot snapshot);
         void undo();
@@ -131,13 +131,13 @@ namespace nandina::widget::primitives
         void move_caret_visual(int direction, bool extend);
         void move_caret_vertical(int direction, bool extend);
         void move_caret_to_visual_edge(bool end, bool extend);
-        void update_selection_focus(TextCaretStop stop, bool extend);
+        void update_selection_focus(text::TextCaretStop stop, bool extend);
         void sync_text();
         void emit_change();
 
         std::string value_;
         std::size_t caret_ = 0;
-        TextAffinity caret_affinity_ = TextAffinity::downstream;
+        text::TextAffinity caret_affinity_ = text::TextAffinity::downstream;
         TextSelection selection_ {};
         bool read_only_ = false;
         bool focused_ = false;

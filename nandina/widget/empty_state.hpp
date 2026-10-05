@@ -52,7 +52,7 @@ namespace nandina::widget
         [[nodiscard]] auto visual_state() const -> theme::EmptyStateVisualState;
         [[nodiscard]] auto resolved_style() const -> theme::ResolvedEmptyStateStyle;
 
-        void apply_default_text_pipeline(const primitives::TextPipeline& pipeline) override;
+        void apply_default_text_pipeline(const text::TextPipeline& pipeline) override;
         void apply_font_context(text::FontPipelineCache& context) override;
         void on_style_context_changed(const theme::ResolvedStyleContext& context) override;
         void on_theme_changed(const theme::ThemeManager& manager) override;
@@ -60,7 +60,7 @@ namespace nandina::widget
         auto on_draw(render::DrawContext& context) -> void override;
 
     protected:
-        [[nodiscard]] auto on_measure(scene::LayoutConstraints constraints)
+        [[nodiscard]] auto on_measure(foundation::NanLayoutConstraints constraints)
             -> foundation::NanSize override;
         void on_layout() override;
         [[nodiscard]] auto semantics_properties() const -> semantics::Properties override;

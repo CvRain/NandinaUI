@@ -222,7 +222,7 @@ TEST_CASE("combobox is closed and measured by default", "[combobox]") {
     REQUIRE_FALSE(empty.disabled());
     REQUIRE_FALSE(empty.allow_custom_value());
 
-    const auto measured = empty.measure_layout(scene::LayoutConstraints::loose());
+    const auto measured = empty.measure_layout(foundation::NanLayoutConstraints::loose());
     REQUIRE(measured.get_width() == Catch::Approx(200.0F));
     REQUIRE(measured.get_height() == Catch::Approx(36.0F));
 

@@ -521,7 +521,7 @@ namespace nandina::widget::authoring
 
         template<visual::Path Path>
             requires property::Animatable<Node, Path>
-        auto behavior(Path path, animation::Behavior<property::value_t<Path>> behavior)
+        auto behavior(Path path, motion::Behavior<property::value_t<Path>> behavior)
             -> NodeBuilder& {
             property::set_behavior(*node_, path, std::move(behavior));
             return *this;
@@ -538,7 +538,7 @@ namespace nandina::widget::authoring
         /// 声明式弹簧：`.spring(visual::container.radius, motion::spring().stiffness(280.0F))`。
         template<visual::Path Path>
             requires property::Springable<Node, Path>
-        auto spring(Path path, animation::SpringSpec spec) -> NodeBuilder& {
+        auto spring(Path path, motion::SpringSpec spec) -> NodeBuilder& {
             property::set_spring(*node_, path, std::move(spec));
             return *this;
         }

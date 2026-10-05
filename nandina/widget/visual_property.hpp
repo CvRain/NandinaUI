@@ -5,8 +5,8 @@
 #ifndef NANDINA_EXPERIMENT_WIDGET_VISUAL_PROPERTY_HPP
 #define NANDINA_EXPERIMENT_WIDGET_VISUAL_PROPERTY_HPP
 
-#include "../animation/behavior.hpp"
-#include "../animation/spring.hpp"
+#include "../foundation/motion/behavior.hpp"
+#include "../foundation/motion/spring.hpp"
 #include "../foundation/nandina_color.hpp"
 #include "../scene/node2d.hpp"
 #include "../scene/visual_property.hpp"
@@ -107,7 +107,7 @@ namespace nandina::widget::property
     concept Animatable = Writable<Node, Path> && requires(Node& node) {
         detail::visual_part(node, typename std::remove_cvref_t<Path>::part_type {})
             .property(typename std::remove_cvref_t<Path>::field_type {})
-            .set_behavior(animation::Behavior<value_t<Path>>(0.0F));
+            .set_behavior(motion::Behavior<value_t<Path>>(0.0F));
     };
 
     /// 弹簧仅适用于浮点值路径。
@@ -116,7 +116,7 @@ namespace nandina::widget::property
         Animatable<Node, Path> && std::is_floating_point_v<value_t<Path>> && requires(Node& node) {
             detail::visual_part(node, typename std::remove_cvref_t<Path>::part_type {})
                 .property(typename std::remove_cvref_t<Path>::field_type {})
-                .set_spring(animation::SpringSpec());
+                .set_spring(motion::SpringSpec());
         };
 
     template<typename Node, visual::Path Path, typename Value>
@@ -129,7 +129,7 @@ namespace nandina::widget::property
 
     template<typename Node, visual::Path Path>
         requires Animatable<Node, Path>
-    void set_behavior(Node& node, Path, animation::Behavior<value_t<Path>> behavior) {
+    void set_behavior(Node& node, Path, motion::Behavior<value_t<Path>> behavior) {
         auto endpoint = detail::visual_part(node, typename std::remove_cvref_t<Path>::part_type {})
                             .property(typename std::remove_cvref_t<Path>::field_type {});
         endpoint.set_behavior(std::move(behavior));
@@ -137,7 +137,7 @@ namespace nandina::widget::property
 
     template<typename Node, visual::Path Path>
         requires Springable<Node, Path>
-    void set_spring(Node& node, Path, animation::SpringSpec spec) {
+    void set_spring(Node& node, Path, motion::SpringSpec spec) {
         auto endpoint = detail::visual_part(node, typename std::remove_cvref_t<Path>::part_type {})
                             .property(typename std::remove_cvref_t<Path>::field_type {});
         endpoint.set_spring(std::move(spec));

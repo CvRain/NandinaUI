@@ -65,7 +65,7 @@ namespace nandina::widget::primitives
         }
         value_ = std::move(value);
         caret_ = clamp_grapheme_boundary(value_, caret_);
-        caret_affinity_ = TextAffinity::downstream;
+        caret_affinity_ = text::TextAffinity::downstream;
         clear_selection();
         clear_composition();
         undo_stack_.clear();
@@ -77,16 +77,16 @@ namespace nandina::widget::primitives
         return value_;
     }
 
-    void EditableText::set_style(TextStyle style) {
+    void EditableText::set_style(text::TextStyle style) {
         text_.set_style(style);
         mark_layout_dirty();
     }
 
-    auto EditableText::style() const -> const TextStyle& {
+    auto EditableText::style() const -> const text::TextStyle& {
         return text_.style();
     }
 
-    void EditableText::set_caret(const std::size_t offset, const TextAffinity affinity) {
+    void EditableText::set_caret(const std::size_t offset, const text::TextAffinity affinity) {
         caret_ = clamp_grapheme_boundary(value_, offset);
         caret_affinity_ = affinity;
         clear_selection();
@@ -96,7 +96,7 @@ namespace nandina::widget::primitives
         return caret_;
     }
 
-    auto EditableText::caret_affinity() const -> TextAffinity {
+    auto EditableText::caret_affinity() const -> text::TextAffinity {
         return caret_affinity_;
     }
 
@@ -119,9 +119,9 @@ namespace nandina::widget::primitives
     void EditableText::select_all() {
         selection_ = TextSelection {
             .anchor = 0,
-            .anchor_affinity = TextAffinity::downstream,
+            .anchor_affinity = text::TextAffinity::downstream,
             .focus = value_.size(),
-            .focus_affinity = TextAffinity::upstream,
+            .focus_affinity = text::TextAffinity::upstream,
         };
         caret_ = selection_.focus;
         caret_affinity_ = selection_.focus_affinity;
@@ -229,18 +229,18 @@ namespace nandina::widget::primitives
         return text_;
     }
 
-    void EditableText::set_text_pipeline(TextPipeline pipeline) {
+    void EditableText::set_text_pipeline(text::TextPipeline pipeline) {
         text_.set_text_pipeline(pipeline);
         mark_layout_dirty();
         (void)text_.measure_layout(last_layout_constraints());
         set_size(text_.size());
     }
 
-    auto EditableText::text_pipeline() const -> TextPipeline {
+    auto EditableText::text_pipeline() const -> text::TextPipeline {
         return text_.text_pipeline();
     }
 
-    void EditableText::apply_default_text_pipeline(const TextPipeline& pipeline) {
+    void EditableText::apply_default_text_pipeline(const text::TextPipeline& pipeline) {
         text_.apply_default_text_pipeline(pipeline);
         mark_layout_dirty();
     }
@@ -428,7 +428,7 @@ namespace nandina::widget::primitives
         draw_at(ctx, pos);
     }
 
-    auto EditableText::on_measure(scene::LayoutConstraints constraints) -> foundation::NanSize {
+    auto EditableText::on_measure(foundation::NanLayoutConstraints constraints) -> foundation::NanSize {
         const auto measured = text_.measure_layout(constraints);
         set_size(measured);
         return measured;
@@ -494,13 +494,13 @@ namespace nandina::widget::primitives
             const auto upper = std::max(selection_.anchor, selection_.focus);
             value_.erase(lower, upper - lower);
             caret_ = lower;
-            caret_affinity_ = TextAffinity::downstream;
+            caret_affinity_ = text::TextAffinity::downstream;
             clear_selection();
         }
         value_.insert(caret_, text);
         caret_ += text.size();
         caret_ = next_grapheme_boundary(value_, caret_);
-        caret_affinity_ = TextAffinity::downstream;
+        caret_affinity_ = text::TextAffinity::downstream;
         clear_selection();
         clear_composition();
         sync_text();
@@ -524,7 +524,7 @@ namespace nandina::widget::primitives
         record_undo();
         value_.erase(previous->offset, previous->length);
         caret_ = previous->offset;
-        caret_affinity_ = TextAffinity::downstream;
+        caret_affinity_ = text::TextAffinity::downstream;
         clear_selection();
         sync_text();
         emit_change();
@@ -540,7 +540,7 @@ namespace nandina::widget::primitives
         }
         record_undo();
         value_.erase(next->offset, next->length);
-        caret_affinity_ = TextAffinity::downstream;
+        caret_affinity_ = text::TextAffinity::downstream;
         clear_selection();
         sync_text();
         emit_change();
@@ -555,14 +555,14 @@ namespace nandina::widget::primitives
         const auto upper = std::max(selection_.anchor, selection_.focus);
         value_.erase(lower, upper - lower);
         caret_ = lower;
-        caret_affinity_ = TextAffinity::downstream;
+        caret_affinity_ = text::TextAffinity::downstream;
         clear_selection();
         clear_composition();
         sync_text();
         emit_change();
     }
 
-    auto EditableText::line_stop_for(const std::size_t offset, const TextAffinity affinity) const
+    auto EditableText::line_stop_for(const std::size_t offset, const text::TextAffinity affinity) const
         -> LineStop {
         const auto& layout = text_.layout_result();
         if (layout.lines.empty()) {
@@ -581,7 +581,7 @@ namespace nandina::widget::primitives
             }
             // 软换行边界上同一个偏移同时属于前一行的行尾与后一行的行首：
             // downstream 归属后一行行首，upstream 归属前一行行尾。
-            if (offset == end && affinity == TextAffinity::downstream
+            if (offset == end && affinity == text::TextAffinity::downstream
                 && index + 1 < layout.lines.size()
                 && layout.lines[index + 1].text_offset == end)
             {
@@ -722,7 +722,7 @@ namespace nandina::widget::primitives
         update_selection_focus(end ? stops.back() : stops.front(), extend);
     }
 
-    void EditableText::update_selection_focus(const TextCaretStop stop, const bool extend) {
+    void EditableText::update_selection_focus(const text::TextCaretStop stop, const bool extend) {
         if (!extend) {
             selection_.anchor = stop.source_offset;
             selection_.anchor_affinity = stop.affinity;

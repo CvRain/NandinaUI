@@ -71,7 +71,7 @@ namespace nandina::widget
         }
     }
 
-    auto PointerArea::on_measure(scene::LayoutConstraints constraints) -> foundation::NanSize {
+    auto PointerArea::on_measure(foundation::NanLayoutConstraints constraints) -> foundation::NanSize {
         auto child = child_.lock();
         return child ? constraints.constrain(child->measure_layout(constraints))
                      : constraints.constrain(foundation::NanSize {});
@@ -80,7 +80,7 @@ namespace nandina::widget
     auto PointerArea::on_layout() -> void {
         auto child = child_.lock();
         if (!child) return;
-        (void)child->measure_layout(scene::LayoutConstraints::tight(size()));
+        (void)child->measure_layout(foundation::NanLayoutConstraints::tight(size()));
         child->layout_to(local_rect());
     }
 }

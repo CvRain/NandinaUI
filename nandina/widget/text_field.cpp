@@ -38,7 +38,7 @@ namespace nandina::widget
             value_changed_.emit(value);
         });
         apply_theme();
-        (void)measure_layout(scene::LayoutConstraints::loose());
+        (void)measure_layout(foundation::NanLayoutConstraints::loose());
     }
 
     auto TextField::create(std::string value, std::string placeholder, theme::NanTheme theme)
@@ -160,18 +160,18 @@ namespace nandina::widget
         return placeholder_;
     }
 
-    void TextField::set_text_pipeline(primitives::TextPipeline pipeline) {
+    void TextField::set_text_pipeline(text::TextPipeline pipeline) {
         edit_.set_text_pipeline(pipeline);
         placeholder_.set_text_pipeline(pipeline);
         mark_layout_dirty();
         (void)measure_layout(last_layout_constraints());
     }
 
-    auto TextField::text_pipeline() const -> primitives::TextPipeline {
+    auto TextField::text_pipeline() const -> text::TextPipeline {
         return edit_.text_pipeline();
     }
 
-    void TextField::apply_default_text_pipeline(const primitives::TextPipeline& pipeline) {
+    void TextField::apply_default_text_pipeline(const text::TextPipeline& pipeline) {
         edit_.apply_default_text_pipeline(pipeline);
         placeholder_.apply_default_text_pipeline(pipeline);
         mark_layout_dirty();
@@ -198,7 +198,7 @@ namespace nandina::widget
         mark_layout_dirty();
     }
 
-    void TextField::set_font(text::FontRequest request) {
+    void TextField::set_font(theme::FontRequest request) {
         font_explicit_ = true;
         edit_.text_node().set_font(request);
         placeholder_.set_font(std::move(request));
@@ -219,7 +219,7 @@ namespace nandina::widget
         mark_layout_dirty();
     }
 
-    void TextField::set_font_slant(const text::FontSlant slant) {
+    void TextField::set_font_slant(const theme::FontSlant slant) {
         font_explicit_ = true;
         edit_.text_node().set_font_slant(slant);
         placeholder_.set_font_slant(slant);
@@ -304,7 +304,7 @@ namespace nandina::widget
         // 让最后一个字形在 content box 右缘得以完整显示：在内容框宽度基础上放出一个
         // 字形悬垂余量（advance 之外的墨迹 1~2px），否则近满时末字形的右侧墨迹被裁。
         const float overhang = ctx.logical_to_screen(
-            primitives::glyph_overhang_allowance(edit_.style().font_size)
+            text::glyph_overhang_allowance(edit_.style().font_size)
         );
         const auto viewport = foundation::NanRect::from_xywh(
             world.get_left() + padding,
@@ -336,10 +336,10 @@ namespace nandina::widget
         );
     }
 
-    auto TextField::on_measure(scene::LayoutConstraints constraints) -> foundation::NanSize {
+    auto TextField::on_measure(foundation::NanLayoutConstraints constraints) -> foundation::NanSize {
         const auto content = content_constraints(constraints);
         const auto edit_size = edit_.measure_layout(
-            scene::LayoutConstraints {
+            foundation::NanLayoutConstraints {
                 .min_width = 0.0F,
                 .max_width = std::numeric_limits<float>::infinity(),
                 .min_height = 0.0F,
@@ -394,19 +394,19 @@ namespace nandina::widget
             context.font_size_from_context ? context.font_size : style.value.font_size;
         const auto text_color = context.text_color_from_context ? context.text_color
                                                                 : style.value.color;
-        const primitives::TextStyle value_style {
+        const text::TextStyle value_style {
             .color = text_color,
             .font_size = font_size,
             .font = font,
-            .overflow = primitives::TextOverflow::clip,
+            .overflow = text::TextOverflow::clip,
             .max_lines = 1,
         };
-        const primitives::TextStyle placeholder_style {
+        const text::TextStyle placeholder_style {
             .color = context.text_color_from_context ? context.text_color
                                                      : style.placeholder.color,
             .font_size = font_size,
             .font = font,
-            .overflow = primitives::TextOverflow::ellipsis,
+            .overflow = text::TextOverflow::ellipsis,
             .max_lines = 1,
         };
         edit_.set_style(value_style);
@@ -414,8 +414,8 @@ namespace nandina::widget
         placeholder_.set_style(placeholder_style);
     }
 
-    auto TextField::content_constraints(scene::LayoutConstraints constraints) const
-        -> scene::LayoutConstraints {
+    auto TextField::content_constraints(foundation::NanLayoutConstraints constraints) const
+        -> foundation::NanLayoutConstraints {
         return {
             .min_width = 0.0F,
             .max_width = std::isfinite(constraints.max_width)
@@ -463,7 +463,7 @@ namespace nandina::widget
 
     auto TextField::line_origin(
         const foundation::NanRect world,
-        const primitives::TextLayoutResult& layout,
+        const text::TextLayoutResult& layout,
         const float x,
         const float scale
     ) const -> foundation::NanPoint {

@@ -31,8 +31,8 @@ namespace nandina::widget
             return result;
         }
 
-        [[nodiscard]] auto cell_constraints(scene::LayoutConstraints parent, float cell_width)
-            -> scene::LayoutConstraints {
+        [[nodiscard]] auto cell_constraints(foundation::NanLayoutConstraints parent, float cell_width)
+            -> foundation::NanLayoutConstraints {
             return {
                 .min_width = 0.0F,
                 .max_width = std::max(0.0F, cell_width),
@@ -131,11 +131,11 @@ namespace nandina::widget
         // 来回打架，尺寸永远不收敛；`on_frame` 阶段做的断言正好看到塌缩后的那一帧。
         // 这就是 playground 菜单页绘制断言失败的根因（该页是唯一使用 Grid 的页面）。
         // 容器自查表见 Column / Row / Flex / Padding：它们都只重排自身。
-        (void)measure_layout(scene::LayoutConstraints::loose());
+        (void)measure_layout(foundation::NanLayoutConstraints::loose());
         layout_to(foundation::NanRect::from_origin_size(position(), measured_size()));
     }
 
-    auto Grid::on_measure(const scene::LayoutConstraints constraints) -> foundation::NanSize {
+    auto Grid::on_measure(const foundation::NanLayoutConstraints constraints) -> foundation::NanSize {
         const auto children = collect_controls(*this);
         if (children.empty() || columns_ <= 0) {
             const auto empty = foundation::NanSize(
@@ -204,7 +204,7 @@ namespace nandina::widget
         for (int i = 0; i < total_children; ++i) {
             const int row = i / columns_;
             const auto child_constraints =
-                cell_constraints(scene::LayoutConstraints::loose(), cell_width);
+                cell_constraints(foundation::NanLayoutConstraints::loose(), cell_width);
             const auto measured =
                 children[static_cast<std::size_t>(i)]->measure_layout(child_constraints);
             row_heights[static_cast<std::size_t>(row)] =
@@ -224,7 +224,7 @@ namespace nandina::widget
 
                 // Allow children to be smaller than the cell on the cross axis
                 // so alignment (center/end) takes effect.
-                const auto child_constraints = scene::LayoutConstraints {
+                const auto child_constraints = foundation::NanLayoutConstraints {
                     .min_width = 0.0F,
                     .max_width = cell_width,
                     .min_height = 0.0F,

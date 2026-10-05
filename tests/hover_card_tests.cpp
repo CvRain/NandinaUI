@@ -272,7 +272,7 @@ TEST_CASE("hover card validates its slots", "[hover-card][boundary]") {
     REQUIRE(card->trigger() == nullptr);
     REQUIRE(card->content() == nullptr);
     // 没有触发器时测量为 0，而不是崩溃。
-    REQUIRE(card->measure_layout(scene::LayoutConstraints::loose()).get_width() == Catch::Approx(0.0F));
+    REQUIRE(card->measure_layout(foundation::NanLayoutConstraints::loose()).get_width() == Catch::Approx(0.0F));
 }
 
 TEST_CASE("hover card recipe resolves semantic roles and honors rules", "[hover-card][theme]") {

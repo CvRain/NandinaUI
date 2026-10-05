@@ -170,12 +170,12 @@ TEST_CASE("progress bar measures preferred width under loose and tight constrain
     auto bar = widget::ProgressBar::create(0.5F);
 
     // loose 测量：高度 = 配方厚度 8、宽度 = 配方首选 240。
-    const auto loose = bar->measure_layout(scene::LayoutConstraints::loose());
+    const auto loose = bar->measure_layout(foundation::NanLayoutConstraints::loose());
     REQUIRE(loose.get_width() == Catch::Approx(240.0F));
     REQUIRE(loose.get_height() == Catch::Approx(8.0F));
 
     // 窄约束：宽度收缩到约束上限，厚度保持 8。
-    const auto narrow = bar->measure_layout(scene::LayoutConstraints {
+    const auto narrow = bar->measure_layout(foundation::NanLayoutConstraints {
         .max_width = 24.0F,
         .max_height = 48.0F,
     });

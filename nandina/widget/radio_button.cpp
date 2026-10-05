@@ -155,17 +155,17 @@ namespace nandina::widget
         return style;
     }
 
-    void RadioButton::set_text_pipeline(primitives::TextPipeline pipeline) {
+    void RadioButton::set_text_pipeline(text::TextPipeline pipeline) {
         text_.set_text_pipeline(std::move(pipeline));
         apply_metrics();
         mark_layout_dirty();
     }
 
-    auto RadioButton::text_pipeline() const -> primitives::TextPipeline {
+    auto RadioButton::text_pipeline() const -> text::TextPipeline {
         return text_.text_pipeline();
     }
 
-    void RadioButton::apply_default_text_pipeline(const primitives::TextPipeline& pipeline) {
+    void RadioButton::apply_default_text_pipeline(const text::TextPipeline& pipeline) {
         text_.apply_default_text_pipeline(pipeline);
         apply_metrics();
         mark_layout_dirty();
@@ -253,7 +253,7 @@ namespace nandina::widget
         }
     }
 
-    auto RadioButton::on_measure(const scene::LayoutConstraints constraints)
+    auto RadioButton::on_measure(const foundation::NanLayoutConstraints constraints)
         -> foundation::NanSize {
         const auto style = resolved_style();
         apply_text_style();
@@ -261,7 +261,7 @@ namespace nandina::widget
             ? std::max(0.0F, constraints.max_width - style.metrics.box_size - style.metrics.gap)
             : constraints.max_width;
         const auto text_size = text_.measure_layout(
-            scene::LayoutConstraints {
+            foundation::NanLayoutConstraints {
                 .min_width = 0.0F,
                 .max_width = text_width,
                 .min_height = 0.0F,
@@ -311,7 +311,7 @@ namespace nandina::widget
     void RadioButton::apply_metrics() {
         apply_text_style();
         const auto style = resolved_style();
-        (void)text_.measure_layout(scene::LayoutConstraints::loose());
+        (void)text_.measure_layout(foundation::NanLayoutConstraints::loose());
         set_size(
             foundation::NanSize(
                 style.metrics.box_size + style.metrics.gap + text_.width(),
@@ -323,11 +323,11 @@ namespace nandina::widget
     void RadioButton::apply_text_style() {
         const auto style = resolved_style();
         const auto& context = resolved_style_context();
-        const primitives::TextStyle text_style {
+        const text::TextStyle text_style {
             .color = context.text_color_from_context ? context.text_color : style.label.color,
             .font_size = context.font_size_from_context ? context.font_size : style.label.font_size,
             .font = context.font_from_context ? context.font : text_.font(),
-            .overflow = primitives::TextOverflow::clip,
+            .overflow = text::TextOverflow::clip,
             .max_lines = 1,
         };
         if (!text_.style().approx_equals(text_style)) {

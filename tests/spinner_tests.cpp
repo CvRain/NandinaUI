@@ -112,11 +112,11 @@ TEST_CASE("spinner measures a diameter square", "[spinner][layout]") {
     auto spinner = widget::Spinner::create();
     REQUIRE(spinner->resolved_style().metrics.diameter == Catch::Approx(16.0F));
 
-    const auto loose = spinner->measure_layout(scene::LayoutConstraints::loose());
+    const auto loose = spinner->measure_layout(foundation::NanLayoutConstraints::loose());
     REQUIRE(loose.get_width() == Catch::Approx(16.0F));
     REQUIRE(loose.get_height() == Catch::Approx(16.0F));
 
-    const auto narrow = spinner->measure_layout(scene::LayoutConstraints {
+    const auto narrow = spinner->measure_layout(foundation::NanLayoutConstraints {
         .max_width = 8.0F,
         .max_height = 8.0F,
     });

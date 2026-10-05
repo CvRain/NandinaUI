@@ -158,33 +158,33 @@ public:
     }
 };
 
-class FixedTextLayoutBackend final: public widget::primitives::ITextLayoutBackend {
+class FixedTextLayoutBackend final: public text::ITextLayoutBackend {
 public:
     mutable int calls = 0;
 
-    [[nodiscard]] auto layout(widget::primitives::TextLayoutInput input) const
-        -> widget::primitives::TextLayoutResult override {
+    [[nodiscard]] auto layout(text::TextLayoutInput input) const
+        -> text::TextLayoutResult override {
         ++calls;
-        return widget::primitives::TextLayoutResult {
+        return text::TextLayoutResult {
             .size = foundation::NanSize(42.0F, 18.0F),
             .lines = {
-                widget::primitives::TextLayoutLine {
+                text::TextLayoutLine {
                     .text_offset = 0,
                     .text_length = input.text.size(),
                     .visible_text = "backend",
                     .caret_stops = {
-                        widget::primitives::TextCaretStop {
+                        text::TextCaretStop {
                             .source_offset = 0,
                             .x = 0.0F,
                         },
-                        widget::primitives::TextCaretStop {
+                        text::TextCaretStop {
                             .source_offset = std::min<std::size_t>(1, input.text.size()),
                             .x = 5.0F,
                         },
-                        widget::primitives::TextCaretStop {
+                        text::TextCaretStop {
                             .source_offset = input.text.size(),
                             .x = 42.0F,
-                            .affinity = widget::primitives::TextAffinity::upstream,
+                            .affinity = text::TextAffinity::upstream,
                         },
                     },
                     .size = foundation::NanSize(42.0F, 18.0F),
@@ -198,12 +198,12 @@ public:
     }
 };
 
-class FixedTextLayoutRenderer final: public widget::primitives::ITextLayoutRenderer {
+class FixedTextLayoutRenderer final: public text::ITextLayoutRenderer {
 public:
     int draws = 0;
 
     void draw(
-        const widget::primitives::TextLayoutResult&,
+        const text::TextLayoutResult&,
         render::DrawContext&,
         foundation::NanPoint,
         foundation::NanColor
@@ -876,19 +876,19 @@ TEST_CASE("Row Column and Padding arrange control children", "[widget][layout]")
 TEST_CASE("Layout constraints remeasure a subtree for changing root bounds", "[widget][layout][responsive]") {
     auto root = std::make_shared<scene::NanControl>();
     auto text = std::make_shared<widget::primitives::Text>("a very long line of text");
-    text->set_overflow(widget::primitives::TextOverflow::ellipsis);
+    text->set_overflow(text::TextOverflow::ellipsis);
 
     auto padding = widget::Padding::create(foundation::NanInsets::all(10.0F));
     padding->set_child(text);
     root->add_child(padding);
 
-    (void)root->measure_layout(scene::LayoutConstraints::tight(foundation::NanSize(100.0F, 80.0F)));
+    (void)root->measure_layout(foundation::NanLayoutConstraints::tight(foundation::NanSize(100.0F, 80.0F)));
     root->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 100.0F, 80.0F));
 
     REQUIRE(padding->width() <= 100.0F);
     REQUIRE(text->width() <= 80.0F);
 
-    (void)root->measure_layout(scene::LayoutConstraints::tight(foundation::NanSize(320.0F, 80.0F)));
+    (void)root->measure_layout(foundation::NanLayoutConstraints::tight(foundation::NanSize(320.0F, 80.0F)));
     root->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 320.0F, 80.0F));
 
     REQUIRE(padding->width() > 100.0F);
@@ -1018,13 +1018,13 @@ TEST_CASE("TextStyle updates text measurement and drawing style", "[widget][text
     RecordingDevice dev;
     scene::NanSceneTree tree;
     auto text = std::make_shared<widget::primitives::Text>("abcdef");
-    text->set_style(widget::primitives::TextStyle {
+    text->set_style(text::TextStyle {
         .color = opaque_color(0.7F).with_alpha(0.5F),
         .font_size = 20.0F,
-        .overflow = widget::primitives::TextOverflow::clip,
+        .overflow = text::TextOverflow::clip,
         .max_lines = 1,
     });
-    (void)text->measure_layout(scene::LayoutConstraints {
+    (void)text->measure_layout(foundation::NanLayoutConstraints {
         .min_width = 0.0F,
         .max_width = 40.0F,
         .min_height = 0.0F,
@@ -1035,7 +1035,7 @@ TEST_CASE("TextStyle updates text measurement and drawing style", "[widget][text
     tree.draw(dev);
 
     REQUIRE(text->font_size() == Catch::Approx(20.0F));
-    REQUIRE(text->overflow() == widget::primitives::TextOverflow::clip);
+    REQUIRE(text->overflow() == text::TextOverflow::clip);
     REQUIRE(text->width() <= 40.0F);
     REQUIRE(text->layout_result().lines.front().text_length == text->text().size());
     REQUIRE(text->layout_result().lines.front().visible_text == text->text());
@@ -1049,7 +1049,7 @@ TEST_CASE("TextStyle updates text measurement and drawing style", "[widget][text
         dev.clips.front().get_width()
         == Catch::Approx(
             40.0F
-            + widget::primitives::glyph_overhang_allowance(text->laid_out_font_size())
+            + text::glyph_overhang_allowance(text->laid_out_font_size())
         )
     );
     REQUIRE(dev.clip_clears == 1);
@@ -1070,9 +1070,9 @@ TEST_CASE("Text consumes inherited style unless the instance overrides it", "[wi
     context.text_color = theme::StyleValue<foundation::NanColor>::explicit_value(
         opaque_color(0.7F).with_alpha(0.3F)
     );
-    auto inherited_font = text::FontRequest {};
+    auto inherited_font = theme::FontRequest {};
     inherited_font.weight = 700;
-    context.font = theme::StyleValue<text::FontRequest>::explicit_value(inherited_font);
+    context.font = theme::StyleValue<theme::FontRequest>::explicit_value(inherited_font);
     root->set_style_context(context);
 
     REQUIRE(inherited->font_size() == Catch::Approx(28.0F));
@@ -1085,7 +1085,7 @@ TEST_CASE("Text consumes inherited style unless the instance overrides it", "[wi
     context.font_size = theme::StyleValue<float>::explicit_value(32.0F);
     context.text_color = theme::StyleValue<foundation::NanColor>::initial();
     inherited_font.weight = 300;
-    context.font = theme::StyleValue<text::FontRequest>::explicit_value(inherited_font);
+    context.font = theme::StyleValue<theme::FontRequest>::explicit_value(inherited_font);
     root->set_style_context(context);
 
     REQUIRE(inherited->font_size() == Catch::Approx(32.0F));
@@ -1165,12 +1165,12 @@ TEST_CASE("Text clip intersects and restores an ancestor clip", "[widget][text][
     RecordingDevice dev;
     render::DrawContext context(dev);
     widget::primitives::Text text("abcdef");
-    text.set_style(widget::primitives::TextStyle {
+    text.set_style(text::TextStyle {
         .font_size = 20.0F,
-        .overflow = widget::primitives::TextOverflow::clip,
+        .overflow = text::TextOverflow::clip,
         .max_lines = 1,
     });
-    (void)text.measure_layout(scene::LayoutConstraints {
+    (void)text.measure_layout(foundation::NanLayoutConstraints {
         .min_width = 0.0F,
         .max_width = 40.0F,
         .min_height = 0.0F,
@@ -1203,7 +1203,7 @@ TEST_CASE("Text layout backend controls measurement and draw output", "[widget][
     scene::NanSceneTree tree;
     tree.set_root(text);
 
-    (void)text->measure_layout(scene::LayoutConstraints::loose());
+    (void)text->measure_layout(foundation::NanLayoutConstraints::loose());
     tree.draw(dev);
 
     REQUIRE(&text->layout_backend() == &backend);
@@ -1219,7 +1219,7 @@ TEST_CASE("Text layout backend controls measurement and draw output", "[widget][
 TEST_CASE("Text consumers forward one shared text pipeline", "[widget][text][pipeline]") {
     FixedTextLayoutBackend backend;
     FixedTextLayoutRenderer renderer;
-    const widget::primitives::TextPipeline pipeline {
+    const text::TextPipeline pipeline {
         .backend = &backend,
         .renderer = &renderer,
     };
@@ -1247,7 +1247,7 @@ TEST_CASE("Text consumers forward one shared text pipeline", "[widget][text][pip
     REQUIRE(field.placeholder_text().text_pipeline().renderer == &renderer);
 
     REQUIRE_THROWS_AS(
-        label->set_text_pipeline(widget::primitives::TextPipeline {.backend = nullptr}),
+        label->set_text_pipeline(text::TextPipeline {.backend = nullptr}),
         std::invalid_argument
     );
 }
@@ -1290,14 +1290,14 @@ TEST_CASE("Text exposes a layout result shared by measure and draw", "[widget][t
     RecordingDevice dev;
     scene::NanSceneTree tree;
     auto text = std::make_shared<widget::primitives::Text>("abcdefghi");
-    text->set_style(widget::primitives::TextStyle {
+    text->set_style(text::TextStyle {
         .color = opaque_color(0.8F),
         .font_size = 10.0F,
-        .overflow = widget::primitives::TextOverflow::ellipsis,
+        .overflow = text::TextOverflow::ellipsis,
         .max_lines = 1,
     });
 
-    (void)text->measure_layout(scene::LayoutConstraints {
+    (void)text->measure_layout(foundation::NanLayoutConstraints {
         .min_width = 0.0F,
         .max_width = 28.0F,
         .min_height = 0.0F,
@@ -1317,14 +1317,14 @@ TEST_CASE("Text exposes a layout result shared by measure and draw", "[widget][t
 
 TEST_CASE("Text overflow preserves UTF-8 codepoint boundaries", "[widget][text][utf8]") {
     auto text = std::make_shared<widget::primitives::Text>("中文测试字");
-    text->set_style(widget::primitives::TextStyle {
+    text->set_style(text::TextStyle {
         .color = opaque_color(0.8F),
         .font_size = 10.0F,
-        .overflow = widget::primitives::TextOverflow::ellipsis,
+        .overflow = text::TextOverflow::ellipsis,
         .max_lines = 1,
     });
 
-    (void)text->measure_layout(scene::LayoutConstraints {
+    (void)text->measure_layout(foundation::NanLayoutConstraints {
         .min_width = 0.0F,
         .max_width = 23.0F,
         .min_height = 0.0F,
@@ -1340,12 +1340,12 @@ TEST_CASE("Text overflow preserves UTF-8 codepoint boundaries", "[widget][text][
 TEST_CASE("deterministic caret geometry follows grapheme boundaries", "[widget][text][caret]") {
     constexpr std::string_view source = "a\xCC\x81" "b";
     widget::primitives::Text text {std::string(source)};
-    text.set_style(widget::primitives::TextStyle {
+    text.set_style(text::TextStyle {
         .font_size = 10.0F,
-        .overflow = widget::primitives::TextOverflow::clip,
+        .overflow = text::TextOverflow::clip,
         .max_lines = 1,
     });
-    (void)text.measure_layout(scene::LayoutConstraints {
+    (void)text.measure_layout(foundation::NanLayoutConstraints {
         .min_width = 0.0F,
         .max_width = 6.0F,
         .min_height = 0.0F,
@@ -1378,14 +1378,14 @@ TEST_CASE("Text wrap produces and draws actual UTF-8 lines", "[widget][text][wra
     RecordingDevice dev;
     scene::NanSceneTree tree;
     auto text = std::make_shared<widget::primitives::Text>("A中文B测试");
-    text->set_style(widget::primitives::TextStyle {
+    text->set_style(text::TextStyle {
         .color = opaque_color(0.8F),
         .font_size = 10.0F,
-        .overflow = widget::primitives::TextOverflow::wrap,
+        .overflow = text::TextOverflow::wrap,
         .max_lines = 3,
     });
 
-    (void)text->measure_layout(scene::LayoutConstraints {
+    (void)text->measure_layout(foundation::NanLayoutConstraints {
         .min_width = 0.0F,
         .max_width = 17.0F,
         .min_height = 0.0F,
@@ -1411,14 +1411,14 @@ TEST_CASE("Text wrap produces and draws actual UTF-8 lines", "[widget][text][wra
 
 TEST_CASE("Text wrap honors explicit newlines and max lines", "[widget][text][wrap]") {
     auto text = std::make_shared<widget::primitives::Text>("first\nsecond\nthird");
-    text->set_style(widget::primitives::TextStyle {
+    text->set_style(text::TextStyle {
         .color = opaque_color(0.8F),
         .font_size = 10.0F,
-        .overflow = widget::primitives::TextOverflow::wrap,
+        .overflow = text::TextOverflow::wrap,
         .max_lines = 2,
     });
 
-    (void)text->measure_layout(scene::LayoutConstraints::loose());
+    (void)text->measure_layout(foundation::NanLayoutConstraints::loose());
 
     const auto& layout = text->layout_result();
     REQUIRE(layout.lines.size() == 2);
@@ -1695,10 +1695,10 @@ TEST_CASE("EditableText draws text and focused caret", "[widget][editable-text]"
     RecordingDevice dev;
     scene::NanSceneTree tree;
     auto edit = std::make_shared<widget::primitives::EditableText>("Edit");
-    edit->set_style(widget::primitives::TextStyle {
+    edit->set_style(text::TextStyle {
         .color = opaque_color(0.8F),
         .font_size = 16.0F,
-        .overflow = widget::primitives::TextOverflow::ellipsis,
+        .overflow = text::TextOverflow::ellipsis,
         .max_lines = 1,
     });
     tree.set_root(edit);
@@ -1823,7 +1823,7 @@ TEST_CASE("Row alignment positions children inside assigned bounds", "[widget][l
         .add(a)
         .add(b);
 
-    (void)row->measure_layout(scene::LayoutConstraints::tight(foundation::NanSize(120.0F, 40.0F)));
+    (void)row->measure_layout(foundation::NanLayoutConstraints::tight(foundation::NanSize(120.0F, 40.0F)));
     row->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 120.0F, 40.0F));
 
     REQUIRE(a->position().get_x() == Catch::Approx(30.0F));
@@ -1843,7 +1843,7 @@ TEST_CASE("Column cross stretch expands children to assigned width", "[widget][l
         .add(a)
         .add(b);
 
-    (void)column->measure_layout(scene::LayoutConstraints::tight(foundation::NanSize(90.0F, 60.0F)));
+    (void)column->measure_layout(foundation::NanLayoutConstraints::tight(foundation::NanSize(90.0F, 60.0F)));
     column->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 90.0F, 60.0F));
 
     REQUIRE(a->position().get_y() == Catch::Approx(30.0F));
@@ -1864,7 +1864,7 @@ TEST_CASE("Row and Column distribute main-axis space between children", "[widget
         .add(b)
         .add(c);
 
-    (void)row->measure_layout(scene::LayoutConstraints::tight(foundation::NanSize(120.0F, 20.0F)));
+    (void)row->measure_layout(foundation::NanLayoutConstraints::tight(foundation::NanSize(120.0F, 20.0F)));
     row->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 120.0F, 20.0F));
 
     REQUIRE(a->position().get_x() == Catch::Approx(0.0F));
@@ -1879,7 +1879,7 @@ TEST_CASE("Row and Column distribute main-axis space between children", "[widget
         .add(top)
         .add(bottom);
 
-    (void)column->measure_layout(scene::LayoutConstraints::tight(foundation::NanSize(40.0F, 100.0F)));
+    (void)column->measure_layout(foundation::NanLayoutConstraints::tight(foundation::NanSize(40.0F, 100.0F)));
     column->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 40.0F, 100.0F));
 
     REQUIRE(top->position().get_y() == Catch::Approx(0.0F));
@@ -1891,7 +1891,7 @@ TEST_CASE("Center positions a single child in assigned bounds", "[widget][layout
     auto center = widget::Center::create();
     center->set_child(child);
 
-    (void)center->measure_layout(scene::LayoutConstraints::tight(foundation::NanSize(120.0F, 80.0F)));
+    (void)center->measure_layout(foundation::NanLayoutConstraints::tight(foundation::NanSize(120.0F, 80.0F)));
     center->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 120.0F, 80.0F));
 
     REQUIRE(child->position().get_x() == Catch::Approx(40.0F));
@@ -1905,7 +1905,7 @@ TEST_CASE("NanControl single child layout fills parent bounds", "[widget][layout
     auto child = std::make_shared<scene::NanControl>(foundation::NanSize(40.0F, 20.0F));
     root->add_child(child);
 
-    (void)root->measure_layout(scene::LayoutConstraints::tight(foundation::NanSize(200.0F, 120.0F)));
+    (void)root->measure_layout(foundation::NanLayoutConstraints::tight(foundation::NanSize(200.0F, 120.0F)));
     root->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 200.0F, 120.0F));
 
     REQUIRE(child->position().get_x() == Catch::Approx(0.0F));
@@ -1918,7 +1918,7 @@ TEST_CASE("NanControl resolves typed component dimensions", "[widget][layout][si
     auto control = std::make_shared<scene::NanControl>(foundation::NanSize(40.0F, 20.0F));
     control->set_width(scene::percent(50.0F)).set_min_width(80.0F).set_max_width(180.0F);
 
-    const auto measured = control->measure_layout(scene::LayoutConstraints {
+    const auto measured = control->measure_layout(foundation::NanLayoutConstraints {
         .max_width = 400.0F,
         .max_height = 100.0F,
     });
@@ -1926,7 +1926,7 @@ TEST_CASE("NanControl resolves typed component dimensions", "[widget][layout][si
     REQUIRE(measured.get_height() == Catch::Approx(20.0F));
 
     control->set_width(120.0F).set_height(scene::fill);
-    const auto fixed = control->measure_layout(scene::LayoutConstraints {
+    const auto fixed = control->measure_layout(foundation::NanLayoutConstraints {
         .max_width = 400.0F,
         .max_height = 90.0F,
     });
@@ -1937,7 +1937,7 @@ TEST_CASE("NanControl resolves typed component dimensions", "[widget][layout][si
 TEST_CASE("NanControl resolves percentage min and max limits", "[widget][layout][sizing]") {
     auto capped = std::make_shared<scene::NanControl>(foundation::NanSize(40.0F, 20.0F));
     capped->set_width(scene::percent(50.0F)).set_max_width(scene::percent(25.0F));
-    const auto capped_size = capped->measure_layout(scene::LayoutConstraints {
+    const auto capped_size = capped->measure_layout(foundation::NanLayoutConstraints {
         .max_width = 400.0F,
         .max_height = 100.0F,
     });
@@ -1945,7 +1945,7 @@ TEST_CASE("NanControl resolves percentage min and max limits", "[widget][layout]
 
     auto floored = std::make_shared<scene::NanControl>(foundation::NanSize(40.0F, 20.0F));
     floored->set_width(scene::percent(10.0F)).set_min_width(scene::percent(30.0F));
-    const auto floored_size = floored->measure_layout(scene::LayoutConstraints {
+    const auto floored_size = floored->measure_layout(foundation::NanLayoutConstraints {
         .max_width = 400.0F,
         .max_height = 100.0F,
     });
@@ -1953,7 +1953,7 @@ TEST_CASE("NanControl resolves percentage min and max limits", "[widget][layout]
 
     auto shorted = std::make_shared<scene::NanControl>(foundation::NanSize(40.0F, 20.0F));
     shorted->set_height(scene::percent(50.0F)).set_max_height(scene::percent(20.0F));
-    const auto shorted_size = shorted->measure_layout(scene::LayoutConstraints {
+    const auto shorted_size = shorted->measure_layout(foundation::NanLayoutConstraints {
         .max_width = 400.0F,
         .max_height = 100.0F,
     });
@@ -1966,7 +1966,7 @@ TEST_CASE("scaled component paint keeps logical layout unchanged", "[widget][ren
 
     ScaleRecordingDevice checkbox_device;
     widget::Checkbox checkbox("Scaled checkbox", true);
-    const auto checkbox_size = checkbox.measure_layout(scene::LayoutConstraints::loose());
+    const auto checkbox_size = checkbox.measure_layout(foundation::NanLayoutConstraints::loose());
     checkbox.layout_to(foundation::NanRect::from_origin_size(
         foundation::NanPoint::zero(), checkbox_size
     ));
@@ -1990,7 +1990,7 @@ TEST_CASE("scaled component paint keeps logical layout unchanged", "[widget][ren
 
     ScaleRecordingDevice switch_device;
     widget::Switch switch_control("Scaled switch", true);
-    const auto switch_size = switch_control.measure_layout(scene::LayoutConstraints::loose());
+    const auto switch_size = switch_control.measure_layout(foundation::NanLayoutConstraints::loose());
     switch_control.layout_to(foundation::NanRect::from_origin_size(
         foundation::NanPoint::zero(), switch_size
     ));
@@ -2009,7 +2009,7 @@ TEST_CASE("scaled component paint keeps logical layout unchanged", "[widget][ren
 
     ScaleRecordingDevice slider_device;
     widget::Slider slider("Scaled slider", 0.5F);
-    const auto slider_size = slider.measure_layout(scene::LayoutConstraints {
+    const auto slider_size = slider.measure_layout(foundation::NanLayoutConstraints {
         .max_width = 200.0F,
         .max_height = 40.0F,
     });
@@ -2030,7 +2030,7 @@ TEST_CASE("scaled component paint keeps logical layout unchanged", "[widget][ren
 
 TEST_CASE("scaled button paint does not feed world width back into text layout", "[widget][render][scale]") {
     widget::Button button("A button label that must remain logically constrained");
-    const auto logical_size = button.measure_layout(scene::LayoutConstraints {
+    const auto logical_size = button.measure_layout(foundation::NanLayoutConstraints {
         .max_width = 180.0F,
         .max_height = 48.0F,
     });
@@ -2058,7 +2058,7 @@ TEST_CASE("scaled editable text keeps selection and caret geometry in screen spa
     FixedTextLayoutBackend backend;
     widget::primitives::EditableText edit("abc");
     edit.set_text_pipeline({.backend = &backend});
-    (void)edit.measure_layout(scene::LayoutConstraints::loose());
+    (void)edit.measure_layout(foundation::NanLayoutConstraints::loose());
     edit.set_selection(widget::primitives::TextSelection {
         .anchor = 0,
         .focus = 1,
@@ -2088,7 +2088,7 @@ TEST_CASE("Percentage sizing falls back to content on an unbounded axis", "[widg
     scene::NanControl control(foundation::NanSize(42.0F, 18.0F));
     control.set_width(scene::percent(50.0F));
 
-    const auto measured = control.measure_layout(scene::LayoutConstraints::loose());
+    const auto measured = control.measure_layout(foundation::NanLayoutConstraints::loose());
     REQUIRE(measured.get_width() == Catch::Approx(42.0F));
     REQUIRE(measured.get_height() == Catch::Approx(18.0F));
 }
@@ -2096,7 +2096,7 @@ TEST_CASE("Percentage sizing falls back to content on an unbounded axis", "[widg
 TEST_CASE("Aspect ratio derives the unspecified component axis", "[widget][layout][sizing]") {
     scene::NanControl from_width(foundation::NanSize(10.0F, 10.0F));
     from_width.set_width(scene::percent(50.0F)).set_aspect_ratio(16.0F / 9.0F);
-    const auto landscape = from_width.measure_layout(scene::LayoutConstraints {
+    const auto landscape = from_width.measure_layout(foundation::NanLayoutConstraints {
         .max_width = 320.0F,
         .max_height = 200.0F,
     });
@@ -2105,7 +2105,7 @@ TEST_CASE("Aspect ratio derives the unspecified component axis", "[widget][layou
 
     scene::NanControl from_height(foundation::NanSize(10.0F, 10.0F));
     from_height.set_height(60.0F).set_aspect_ratio(2.0F);
-    const auto landscape_from_height = from_height.measure_layout(scene::LayoutConstraints {
+    const auto landscape_from_height = from_height.measure_layout(foundation::NanLayoutConstraints {
         .max_width = 200.0F,
         .max_height = 100.0F,
     });
@@ -2121,7 +2121,7 @@ TEST_CASE("Percentage sizing is distinct from flex remaining-space distribution"
 
     auto row = widget::Row::create();
     row->set_gap(10.0F).add(percentage).add(expanded);
-    (void)row->measure_layout(scene::LayoutConstraints::tight(foundation::NanSize(200.0F, 20.0F)));
+    (void)row->measure_layout(foundation::NanLayoutConstraints::tight(foundation::NanSize(200.0F, 20.0F)));
     row->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 200.0F, 20.0F));
 
     REQUIRE(percentage->width() == Catch::Approx(100.0F));
@@ -2141,7 +2141,7 @@ TEST_CASE("Row distributes remaining width across Expanded children", "[widget][
     auto row = widget::Row::create();
     row->set_gap(5.0F).add(fixed).add(first).add(second);
 
-    (void)row->measure_layout(scene::LayoutConstraints::tight(foundation::NanSize(155.0F, 20.0F)));
+    (void)row->measure_layout(foundation::NanLayoutConstraints::tight(foundation::NanSize(155.0F, 20.0F)));
     row->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 155.0F, 20.0F));
 
     REQUIRE(fixed->width() == Catch::Approx(30.0F));
@@ -2162,7 +2162,7 @@ TEST_CASE("Column distributes remaining height across Expanded children", "[widg
     auto column = widget::Column::create();
     column->set_gap(8.0F).add(fixed).add(expanded);
 
-    (void)column->measure_layout(scene::LayoutConstraints::tight(foundation::NanSize(80.0F, 100.0F)));
+    (void)column->measure_layout(foundation::NanLayoutConstraints::tight(foundation::NanSize(80.0F, 100.0F)));
     column->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 80.0F, 100.0F));
 
     REQUIRE(fixed->height() == Catch::Approx(12.0F));
@@ -2183,7 +2183,7 @@ TEST_CASE("Flex supports both axes and Expanded children", "[widget][layout][fle
         .add(fixed)
         .add(expanded);
 
-    (void)flex->measure_layout(scene::LayoutConstraints::tight(foundation::NanSize(120.0F, 30.0F)));
+    (void)flex->measure_layout(foundation::NanLayoutConstraints::tight(foundation::NanSize(120.0F, 30.0F)));
     flex->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 120.0F, 30.0F));
 
     REQUIRE(fixed->position().get_x() == Catch::Approx(0.0F));
@@ -2203,7 +2203,7 @@ TEST_CASE("Flex supports both axes and Expanded children", "[widget][layout][fle
         .add(vertical_fixed)
         .add(vertical_expanded);
 
-    (void)vertical->measure_layout(scene::LayoutConstraints::tight(foundation::NanSize(80.0F, 140.0F)));
+    (void)vertical->measure_layout(foundation::NanLayoutConstraints::tight(foundation::NanSize(80.0F, 140.0F)));
     vertical->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 80.0F, 140.0F));
 
     REQUIRE(vertical_fixed->position().get_y() == Catch::Approx(0.0F));
@@ -2225,7 +2225,7 @@ TEST_CASE("Flex distributes main-axis space between fixed children", "[widget][l
         .add(b)
         .add(c);
 
-    (void)flex->measure_layout(scene::LayoutConstraints::tight(foundation::NanSize(120.0F, 20.0F)));
+    (void)flex->measure_layout(foundation::NanLayoutConstraints::tight(foundation::NanSize(120.0F, 20.0F)));
     flex->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 120.0F, 20.0F));
 
     REQUIRE(a->position().get_x() == Catch::Approx(0.0F));
@@ -2247,7 +2247,7 @@ TEST_CASE("FlexItem grows and redistributes at max limits", "[widget][layout][fl
     auto row = widget::Row::create();
     row->add(a).add(b);
 
-    (void)row->measure_layout(scene::LayoutConstraints::tight(foundation::NanSize(90.0F, 20.0F)));
+    (void)row->measure_layout(foundation::NanLayoutConstraints::tight(foundation::NanSize(90.0F, 20.0F)));
     row->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 90.0F, 20.0F));
 
     REQUIRE(a->width() == Catch::Approx(30.0F));
@@ -2272,7 +2272,7 @@ TEST_CASE("FlexItem shrinks by scaled basis and respects minima", "[widget][layo
     auto row = widget::Row::create();
     row->add(a).add(b);
 
-    (void)row->measure_layout(scene::LayoutConstraints::tight(foundation::NanSize(120.0F, 20.0F)));
+    (void)row->measure_layout(foundation::NanLayoutConstraints::tight(foundation::NanSize(120.0F, 20.0F)));
     row->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 120.0F, 20.0F));
 
     REQUIRE(a->width() == Catch::Approx(70.0F));
@@ -2288,7 +2288,7 @@ TEST_CASE("Wrap flows horizontal children into multiple runs", "[widget][layout]
     auto wrap = widget::Wrap::create();
     wrap->set_gap(5.0F).set_run_gap(7.0F).add(a).add(b).add(c).add(d);
 
-    (void)wrap->measure_layout(scene::LayoutConstraints::tight(foundation::NanSize(80.0F, 64.0F)));
+    (void)wrap->measure_layout(foundation::NanLayoutConstraints::tight(foundation::NanSize(80.0F, 64.0F)));
     wrap->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 80.0F, 64.0F));
 
     REQUIRE(a->position().get_x() == Catch::Approx(0.0F));
@@ -2316,7 +2316,7 @@ TEST_CASE("Wrap distributes space independently inside each run", "[widget][layo
         .add(c)
         .add(d);
 
-    (void)wrap->measure_layout(scene::LayoutConstraints::tight(foundation::NanSize(80.0F, 64.0F)));
+    (void)wrap->measure_layout(foundation::NanLayoutConstraints::tight(foundation::NanSize(80.0F, 64.0F)));
     wrap->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 80.0F, 64.0F));
 
     REQUIRE(a->position().get_x() == Catch::Approx(0.0F));
@@ -2336,7 +2336,7 @@ TEST_CASE("Wrap distributes spare cross-axis space between runs", "[widget][layo
         .add(a)
         .add(b);
 
-    (void)wrap->measure_layout(scene::LayoutConstraints::tight(foundation::NanSize(40.0F, 80.0F)));
+    (void)wrap->measure_layout(foundation::NanLayoutConstraints::tight(foundation::NanSize(40.0F, 80.0F)));
     wrap->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 40.0F, 80.0F));
 
     REQUIRE(a->position().get_y() == Catch::Approx(0.0F));
@@ -2352,7 +2352,7 @@ TEST_CASE("Wrap stretches runs and honors child cross alignment", "[widget][layo
         .add(a, widget::LayoutAlignment::end)
         .add(b, widget::LayoutAlignment::stretch);
 
-    (void)wrap->measure_layout(scene::LayoutConstraints::tight(foundation::NanSize(40.0F, 80.0F)));
+    (void)wrap->measure_layout(foundation::NanLayoutConstraints::tight(foundation::NanSize(40.0F, 80.0F)));
     wrap->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 40.0F, 80.0F));
 
     REQUIRE(a->position().get_y() == Catch::Approx(22.5F));
@@ -2365,7 +2365,7 @@ TEST_CASE("ScrollView clamps offsets and translates content", "[widget][scroll]"
     auto content = std::make_shared<scene::NanControl>(foundation::NanSize(50.0F, 200.0F));
     auto scroll = widget::ScrollView::create(widget::ScrollAxis::vertical);
     scroll->set_child(content);
-    (void)scroll->measure_layout(scene::LayoutConstraints::tight(foundation::NanSize(100.0F, 80.0F)));
+    (void)scroll->measure_layout(foundation::NanLayoutConstraints::tight(foundation::NanSize(100.0F, 80.0F)));
     scroll->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 100.0F, 80.0F));
 
     REQUIRE(scroll->overflow() == scene::ControlOverflow::clip);
@@ -2435,7 +2435,7 @@ TEST_CASE("ScrollView consumes wheel only when offset changes", "[widget][scroll
     auto content = std::make_shared<scene::NanControl>(foundation::NanSize(100.0F, 200.0F));
     auto scroll = widget::ScrollView::create();
     scroll->set_child(content).set_wheel_step(25.0F);
-    (void)scroll->measure_layout(scene::LayoutConstraints::tight(foundation::NanSize(100.0F, 80.0F)));
+    (void)scroll->measure_layout(foundation::NanLayoutConstraints::tight(foundation::NanSize(100.0F, 80.0F)));
     scroll->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 100.0F, 80.0F));
 
     scene::MouseWheelEvent down(
@@ -2461,7 +2461,7 @@ TEST_CASE("Flow wraps again when assigned bounds shrink", "[widget][layout][wrap
     auto flow = widget::Flow::create();
     flow->set_gap(4.0F).set_run_gap(6.0F).add(a).add(b).add(c);
 
-    (void)flow->measure_layout(scene::LayoutConstraints::tight(foundation::NanSize(132.0F, 40.0F)));
+    (void)flow->measure_layout(foundation::NanLayoutConstraints::tight(foundation::NanSize(132.0F, 40.0F)));
     flow->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 132.0F, 40.0F));
     REQUIRE(c->position().get_y() == Catch::Approx(0.0F));
 
@@ -2487,7 +2487,7 @@ TEST_CASE("Wrap supports vertical axis and run alignment", "[widget][layout][wra
         .add(b)
         .add(c);
 
-    (void)wrap->measure_layout(scene::LayoutConstraints::tight(foundation::NanSize(100.0F, 60.0F)));
+    (void)wrap->measure_layout(foundation::NanLayoutConstraints::tight(foundation::NanSize(100.0F, 60.0F)));
     wrap->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 100.0F, 60.0F));
 
     REQUIRE(a->position().get_x() == Catch::Approx(31.0F));
@@ -2499,8 +2499,8 @@ TEST_CASE("Wrap supports vertical axis and run alignment", "[widget][layout][wra
 }
 
 TEST_CASE("text align offset is a pure function of box slack", "[widget][text][align]") {
-    using widget::primitives::TextAlign;
-    using widget::primitives::text_align_offset;
+    using theme::TextAlign;
+    using text::text_align_offset;
 
     REQUIRE(text_align_offset(TextAlign::start, 100.0F, 40.0F) == Catch::Approx(0.0F));
     REQUIRE(text_align_offset(TextAlign::center, 100.0F, 40.0F) == Catch::Approx(30.0F));
@@ -2518,11 +2518,11 @@ TEST_CASE("text align offset is a pure function of box slack", "[widget][text][a
 TEST_CASE("TextStyle comparison notices an align change", "[widget][text][align]") {
     // 这条守的是"把 20 份比较函数收敛成一份"这笔投资：比较里漏掉 align，set_align()
     // 之后的重设样式就会被判成"没变化"而跳过 —— 又回到静默失效。
-    widget::primitives::TextStyle a;
-    widget::primitives::TextStyle b;
+    text::TextStyle a;
+    text::TextStyle b;
     REQUIRE(a.approx_equals(b));
 
-    b.align = widget::primitives::TextAlign::center;
+    b.align = theme::TextAlign::center;
     REQUIRE_FALSE(a.approx_equals(b));
 
     b.align = a.align;
@@ -2537,38 +2537,38 @@ TEST_CASE("Text draws each line at its aligned origin", "[widget][text][align][r
     RecordingDevice dev;
     render::DrawContext context(dev);
     widget::primitives::Text text("abcdef", backend);
-    text.set_style(widget::primitives::TextStyle {
+    text.set_style(text::TextStyle {
         .font_size = 12.0F,
-        .overflow = widget::primitives::TextOverflow::clip,
+        .overflow = text::TextOverflow::clip,
         .max_lines = 1,
     });
     // 固定后端给出 42x18 的一行。
-    const auto measured = text.measure_layout(scene::LayoutConstraints::loose());
+    const auto measured = text.measure_layout(foundation::NanLayoutConstraints::loose());
     REQUIRE(measured.get_width() == Catch::Approx(42.0F));
 
     // 盒子 100 宽：三种对齐的起点分别是 0 / 29 / 58。
     const auto box = foundation::NanRect::from_xywh(0.0F, 0.0F, 100.0F, 18.0F);
 
-    text.set_align(widget::primitives::TextAlign::center);
+    text.set_align(theme::TextAlign::center);
     text.draw_in(context, box);
     REQUIRE(dev.texts.size() == 1);
     REQUIRE(dev.texts[0].position.get_x() == Catch::Approx(29.0F));
 
-    text.set_align(widget::primitives::TextAlign::end);
+    text.set_align(theme::TextAlign::end);
     text.draw_in(context, box);
     REQUIRE(dev.texts.size() == 2);
     REQUIRE(dev.texts[1].position.get_x() == Catch::Approx(58.0F));
 
-    text.set_align(widget::primitives::TextAlign::start);
+    text.set_align(theme::TextAlign::start);
     text.draw_in(context, box);
     REQUIRE(dev.texts[2].position.get_x() == Catch::Approx(0.0F));
 
     // 对齐只影响绘制：测量结果不变（否则布局会跟着抖）。
-    REQUIRE(text.measure_layout(scene::LayoutConstraints::loose()).get_width() == Catch::Approx(42.0F));
-    REQUIRE(text.align() == widget::primitives::TextAlign::start);
+    REQUIRE(text.measure_layout(foundation::NanLayoutConstraints::loose()).get_width() == Catch::Approx(42.0F));
+    REQUIRE(text.align() == theme::TextAlign::start);
 
     // draw_at() 没有盒子，因此不对齐 —— 用文本自身的测量尺寸当盒子。
-    text.set_align(widget::primitives::TextAlign::center);
+    text.set_align(theme::TextAlign::center);
     text.draw_at(context, foundation::NanPoint(5.0F, 0.0F));
     REQUIRE(dev.texts[3].position.get_x() == Catch::Approx(5.0F));
 }
@@ -2580,8 +2580,8 @@ TEST_CASE("a stretched Text honors its assigned box for alignment", "[widget][te
     RecordingDevice dev;
     render::DrawContext context(dev);
     widget::primitives::Text text("abcdef", backend);
-    text.set_align(widget::primitives::TextAlign::center);
-    text.measure_layout(scene::LayoutConstraints::loose());
+    text.set_align(theme::TextAlign::center);
+    text.measure_layout(foundation::NanLayoutConstraints::loose());
 
     // 指派一个比文本宽得多的矩形。
     text.layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 200.0F, 18.0F));
