@@ -24,7 +24,17 @@
 
 > **规则**：想表达"变大了 / 更醒目了"，用 L1/L2；`font_size` 只在对排版有真实意图时才改。
 
-## 2. 定位：两套对等系统，以 anchor 为主
+## 2. 定位：anchors 设计索引
+
+当前设计以独立的 [Anchors 布局设计](anchors.md) 为准。本文后续内容仍保留早期讨论记录，
+其中的 API 草图和未决项已经过修正，不是实现依据。特别是：作者侧采用 `.anchor.*` 与直接
+父关系 `parent`，匿名 DSL 目标使用非拥有型 `NodeRef<T>`；锚点不拥有宽高；百分比尺寸由
+`ControlSizeSpec` / `PercentLength` 管理；已有 z 序被复用；`baseline` 暂缓。
+
+实现状态、测试边界和后续实现前检查统一维护在 [Anchors 布局设计](anchors.md)，避免两份规范
+各自演进。
+
+### 背景：树不再是布局（历史记录）
 
 QML 里 layout 和 anchor 是**两套对等**的布局系统，而且分工是明确的：**anchor 为主、
 layout 为辅**。本项目目前只有 layout。缺的不是"给个别子项开个后门"，是**一整套范式**。
@@ -473,21 +483,12 @@ L2 范围（0–7）已全部落地；以下顺序保留为同类能力的实现
 
 ## 8. 验收：markdown 编辑器
 
-定位范式的验收用例**必须能证明"树 ≠ 布局"**，所以用三块结构的编辑器，而不是下划线：
-
-```text
-窗口（锚定画布）
-├── sidebar        anchors: left / top / bottom
-└── editor_region  anchors: left = sidebar.right, right / top / bottom
-    └── RowLayout                       ← 这一层换成排列
-        ├── editor
-        └── preview
-```
+定位范式的验收用例**必须能证明"树 ≠ 布局"**，所以用三块结构的编辑器，而不是下划线。
+作者模型和伪代码见 [Anchors 布局设计](anchors.md) §4；本节只保留验收目标。
 
 验收要同时成立：
 
-1. **侧边栏换边**只需改锚点（`left` → `right`，`editor_region` 跟着改成
-   `left = parent.left, right = sidebar.left`），**不需要改树的形状**；
+1. **侧边栏换边**只需改锚点关系，**不需要改树的形状**；
 2. 侧边栏宽度可以由内容隐式决定，`editor_region` 仍然正确占掉剩余空间；
 3. 侧边栏内部用 `Column` 排 header / list / footer，**不受外层锚点影响**；
 4. 写错锚点（成环、`left+right+width` 同时给）**确定性报错**，不是未定义行为。

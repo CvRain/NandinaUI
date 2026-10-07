@@ -38,7 +38,7 @@
 
 ## 当前形态
 
-当前 `main` 由 12 个模块组成（自底向上）：`foundation`、`reactive`、`resource`、`physics2d`、`theme`、`render`、`text`、`scene`、`animation`、`semantics`、`widget`、`app`。模块职责与依赖方向记录在 [模块依赖规则](module_dependency.md)，各模块的分层示意见 [项目介绍](../getting_started/1_overview.md)。
+当前 `main` 由 11 个模块组成：`foundation`、`reactive`、`resource`、`physics2d`、`theme`、`render`、`text`、`scene`、`semantics`、`widget`、`app`。值级 motion 属于 `foundation/motion`，节点动画调度属于 `scene`，不再有独立的 `animation` 模块。模块职责与依赖方向记录在 [模块依赖规则](module_dependency.md)，各模块的分层示意见 [项目介绍](../getting_started/1_overview.md)。
 
 文档按读者目的分三条路线：`getting_started/` 是应用开发者的学习路径，`components/` 是单个组件的公开使用参考，`references/` 是维护者的设计与流程规则。
 

@@ -4,7 +4,7 @@
 
 # NandinaUI · 南天竹
 
-**一个基于 C++26 的桌面 GUI 框架 —— 让编写桌面应用成为一件舒服的事。**
+**一个面向 Linux 桌面的 C++26 GUI 框架 —— 让编写桌面应用成为一件舒服的事。**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/version-0.1.0--alpha.1-blue.svg)](release-metadata.toml)
@@ -15,17 +15,17 @@
 
 ## 简介
 
-NandinaUI（南天竹）是一个用 **C++26** 编写、基于 **Meson** 构建的**原生桌面 UI 框架**。它把「声明式 UI」「响应式状态」「动画」「主题」「资源管理」等现代应用开发体验带进 C++，让你用一套简洁、类型安全的 DSL 构建桌面界面，而无需在繁琐的样板代码之间来回穿梭。  
+NandinaUI（南天竹）是一个用 **C++26** 编写、基于 **Meson** 构建的原生桌面 UI 框架。它以 C++ 控件和场景树为基础，提供声明式界面构建、响应式状态、主题、动画、资源管理与页面导航，让应用代码可以用类型安全的 DSL 组织桌面界面，同时保留直接访问控件对象的能力。
 
 项目在开发时参考了现有主流框架的设计思路，如 `Angular` 的页面调度与响应式机制、`Shadcn` 的 primitives + token 组件设计、`Slint` 的脏数据更新与文件渲染机制、`Qt` 的新信号槽机制与组件 API 设计。
 
-> 当前处于 **alpha** 阶段，仅支持 `linux-desktop-source` profile（Linux 桌面 · 源码分发）。
+> 当前处于 **alpha** 阶段，正式支持范围为 `linux-desktop-source` profile（Linux 桌面源码集成）。API 仍在快速演进；项目不承诺保留旧公开头文件或命名空间的源码兼容入口。
 
 ## 项目速览
 
 | 项目 | 信息 |
 | --- | --- |
-| 定位 | 原生桌面 UI 框架（简单、自研、全链路） |
+| 定位 | 面向 Linux 桌面应用的原生 C++ UI 框架 |
 | 语言 / 标准 | C++，`cpp_std=c++26` |
 | 构建系统 | Meson（第三方库经 CMake subproject 适配） |
 | 许可证 | MIT（Copyright © 2026 ClaudeRainer） |
@@ -36,7 +36,7 @@ NandinaUI（南天竹）是一个用 **C++26** 编写、基于 **Meson** 构建�
 - **声明式 UI DSL** —— 用 `ui.column()`、`ui.center()`、`ui.make<widget::Button>()` 组合出可读的界面树，布局、对齐、间距一链式完成。
 - **响应式状态** —— `signal` / `computed` / `effect` / `property` / `batch`，状态变化自动驱动界面更新，告别手动刷新。
 - **可组合组件库** —— 覆盖内容展示、输入选择、布局滚动、浮层反馈与通用指针手势，并通过统一主题和声明式构建器组合。
-- **动画系统** —— 值级 Tween、Spring、关键帧与缓动曲线；节点表现层支持 L2 属性动画，同一节点的扁平 Tween 组合提供实验性作者入口。跨节点组合、组内 Spring 与关键帧作者入口尚未开放。
+- **动画系统** —— 值级 Tween、Spring、关键帧与缓动曲线；节点表现层支持 opacity、translate、scale 等 L2 属性动画，同一节点的扁平 Tween 组合提供实验性作者入口。跨节点组合、组内 Spring 与关键帧作者入口尚未开放。
 - **现代文本引擎** —— FreeType + HarfBuzz + FriBidi + utf8proc 组成的字形管线，支持多字体、系统字体发现、复杂文字整形与双向文本。
 - **主题与设计系统** —— 三层设计令牌（primitive → semantic → component）、明暗外观（Appearance）、内置主题与样式文档。默认主题对齐 shadcn 的语义角色集，开箱即用；对比度与层级由测试守住。
 - **资源系统** —— 资源清单（manifest）+ 内置/目录/内存/SQLite 四类后端，配合 `nanres` 编译器与可移植打包流程。
@@ -52,21 +52,21 @@ NandinaUI（南天竹）是一个用 **C++26** 编写、基于 **Meson** 构建�
 | --- | --- |
 | `foundation` | 颜色、几何、布局约束、纯值 motion、UTF-8、JSON、日志 |
 | `reactive` | 信号图、computed/effect、属性绑定 |
-| `text` | 字体加载、字形图集、复杂文本整形 |
-| `render` | 渲染设备（raylib 后端）、纹理缓存、SDF 图元 |
 | `resource` | 资源清单、多后端、运行时管理 |
-| `scene` | 场景树、节点、表现层、动画宿主与帧调度 |
-| `widget` | 组件库、声明式 DSL、布局原语 |
+| `physics2d` | 可选 Box2D 物理桥（默认关闭） |
 | `theme` | 设计令牌、主题管理器、样式文档 |
-| `app` | 窗口、Router/Page、应用入口 |
+| `render` | 渲染设备（raylib 后端）、纹理缓存、SDF 图元 |
+| `text` | 字体加载、字形图集、复杂文本整形 |
+| `scene` | 场景树、节点、控件、表现层、动画宿主与帧调度 |
 | `semantics` | 无障碍语义 |
-| `physics2d` | 可选 Box2D 物理桥 |
+| `widget` | 组件库、声明式 DSL、布局原语 |
+| `app` | 窗口、Router/Page、应用入口 |
 
 ## 🧩 组件支持
 
 | 类别 | 当前可用 |
 | --- | --- |
-| 内容与展示 | Label、Image、Avatar、Badge、Chip、Divider、ProgressBar、Spinner、Skeleton、EmptyState、Card |
+| 内容与展示 | Label、Image、Avatar（首字母占位）、Badge、Chip、Divider、ProgressBar、Spinner、Skeleton、EmptyState、Card |
 | 输入与选择 | Button、Checkbox、Switch、RadioButton/RadioGroup、Slider、TextField、TextArea、Select、Combobox、Tabs、Toggle、ToggleGroup、ButtonGroup、Breadcrumb、Pagination |
 | 浮层与反馈 | Dialog、Popover、DropdownMenu、ContextMenu、Tooltip、Alert |
 | 交互扩展 | PointerArea、GestureArea（实验性） |
@@ -74,7 +74,7 @@ NandinaUI（南天竹）是一个用 **C++26** 编写、基于 **Meson** 构建�
 
 完整的用途、成熟度与计划组件见 [组件参考](docs/components/README.md)。
 
-当前布局以 Column、Row、Flex、Grid 等排列容器为主；场景树内的 anchors 仍是设计草案，不能与已经落地的浮层锚定定位器混为一谈。
+当前布局以 Column、Row、Flex、Grid 等排列容器为主。场景树 anchors 已有设计 reference，尚未实现；不要与已落地的浮层锚定定位器混为一谈，也不要在应用代码中依赖草案 API。
 
 ## 🚀 快速开始
 
@@ -185,11 +185,11 @@ meson compile -C buildDir
 - [开发参考](docs/references/README.md)：组件契约、架构约束和维护流程。
 - [构建系统与 Modules 范围](docs/references/build_system_scope.md)：当前 Meson/include 主线，以及暂缓 C++ Modules 和 CMake package 的原因。
 - [组件开发路线图](docs/references/component_roadmap.md)：当前差距、依赖关系与推荐实现顺序。
-- [项目进度与下一步](docs/references/project_status.md)：已实现能力、旧入口退出记录及 anchors 的设计关口。
+- [项目进度与下一步](docs/references/project_status.md)：当前能力边界、anchors 开发阶段与验证关口。
 
 ## 🗺️ 开发计划
 
-项目当前处于 alpha 阶段。下列已完成项是历史里程碑；近期工作的排序与验收标准以[项目进度与下一步](docs/references/project_status.md)为准。项目使用者较少，不承诺长期保留旧公开头或命名空间的源码兼容入口。
+项目当前处于 alpha 阶段。下列已完成项是历史里程碑；近期工作的排序与验收标准以[项目进度与下一步](docs/references/project_status.md)为准。项目处于快速演进期，不承诺长期保留旧公开头或命名空间的源码兼容入口；发生破坏性 API 调整时，库内示例、文档和测试应同步迁移。
 
 - [x] 建立声明式 UI、响应式状态、主题、动画、资源和 Page/Router 基础。
 - [x] 支持 Linux Wayland 与 X11，并提供 PointerArea / GestureArea 组合式交互。
@@ -211,7 +211,10 @@ meson compile -C buildDir
 - [x] 清理旧 `animation::` 名称及转发头；值级动画归 `foundation/motion`，节点调度归 `scene`。
 - [x] 退出旧 `scene::LayoutConstraints` 名称；布局约束统一使用 `foundation::NanLayoutConstraints`。
 - [x] 退出文本布局与字体请求值的旧公开转发入口；使用 `text/text_layout*.hpp` 与 `theme/font_request.hpp`。
-- [ ] 完成 anchors 的设计决策与布局原型验证，再安排场景树锚定布局的实现；草案不是已开放 API。
+- [ ] **Anchors 开发阶段**：先验证百分比与无界约束、隐藏子项、`NodeRef<T>` 生命周期/reparent、画布约束传播及 ScrollView 边界，并把结论写回 reference。
+- [ ] **Anchors 核心实现**：显式锚定画布、父/同画布兄弟锚线、尺寸归属与冲突诊断、依赖排序和环检测；统一通过 `layout_to()` 交付布局结果。
+- [ ] **Anchors 集成验收**：覆盖重复布局、布局系统误用、绘制/命中/语义几何一致性；更新 showcase/playground，以侧边栏与编辑区场景进行人工体验验收。
+- [ ] Anchors 稳定后再评估阶段 5 复合组件及浮层打开/关闭动效；两者不作为 anchors 的隐含前置。
 - [ ] 给浮层补打开/关闭过渡与缓动曲线，并把 `motion` token、`reduced_motion` 偏好接到动画侧。
 - [ ] 继续打磨 `butter`（本项目自研风格）；`fluent` / `material` 需要补上各自设计语言在几何、密度与状态层上的差异，目前只有配色与圆角尺度。
 - [ ] 后续完善 Table/DataTable、Accordion、Sheet 等复合组件。
