@@ -19,6 +19,27 @@ layout_constraints_tests = executable(
 )
 test('layout-constraints', layout_constraints_tests, suite: 'unit')
 
+anchors_boundary_tests = executable(
+    'anchors_boundary_tests',
+    files('anchors_boundary_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('anchors-boundary', anchors_boundary_tests, suite: 'unit')
+
+anchors_tests = executable(
+    'anchors_tests',
+    files('anchors_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('anchors', anchors_tests, suite: 'unit')
+
+anchors_authoring_tests = executable(
+    'anchors_authoring_tests',
+    files('anchors_authoring_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('anchors-authoring', anchors_authoring_tests, suite: 'unit')
+
 text_layout_header_tests = executable(
     'text_layout_header_tests',
     files('text_layout_header_tests.cpp'),

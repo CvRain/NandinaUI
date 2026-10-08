@@ -128,16 +128,17 @@ namespace nandina::widget
         scene::NanControl::on_exit_tree();
     }
 
-    auto ScrollView::on_measure(foundation::NanLayoutConstraints constraints) -> foundation::NanSize {
+    auto ScrollView::on_measure(foundation::NanLayoutConstraints constraints)
+        -> foundation::NanSize {
         auto current = child_.lock();
         if (!current) {
             return constraints.constrain(foundation::NanSize {});
         }
         auto child_limits = foundation::NanLayoutConstraints::loose();
-        if (axis_ != ScrollAxis::horizontal) {
+        if (axis_ == ScrollAxis::vertical) {
             child_limits.max_width = constraints.max_width;
         }
-        if (axis_ != ScrollAxis::vertical) {
+        else if (axis_ == ScrollAxis::horizontal) {
             child_limits.max_height = constraints.max_height;
         }
         content_size_ = current->measure_layout(child_limits);
@@ -152,11 +153,11 @@ namespace nandina::widget
             return;
         }
         foundation::NanLayoutConstraints limits = foundation::NanLayoutConstraints::loose();
-        if (axis_ != ScrollAxis::horizontal) {
+        if (axis_ == ScrollAxis::vertical) {
             limits.min_width = width();
             limits.max_width = width();
         }
-        if (axis_ != ScrollAxis::vertical) {
+        else if (axis_ == ScrollAxis::horizontal) {
             limits.min_height = height();
             limits.max_height = height();
         }

@@ -246,6 +246,16 @@ namespace nandina::widget
             return prepare_builder(authoring::row());
         }
 
+        template<typename T>
+            requires std::derived_from<T, scene::NanControl>
+        [[nodiscard]] auto ref() const -> scene::NodeRef<T> {
+            return {};
+        }
+
+        [[nodiscard]] auto anchor_canvas() const -> authoring::NodeBuilder<scene::AnchorCanvas> {
+            return prepare_builder(authoring::anchor_canvas());
+        }
+
         [[nodiscard]] auto column() const -> authoring::NodeBuilder<Column> {
             return prepare_builder(authoring::column());
         }

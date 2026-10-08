@@ -22,6 +22,7 @@
 #include "../foundation/geometry.hpp"
 #include "../foundation/layout_constraints.hpp"
 #include "../foundation/nandina_color.hpp"
+#include "anchors.hpp"
 #include "frame_scheduler.hpp"
 #include "node2d.hpp"
 
@@ -70,6 +71,9 @@ namespace nandina::scene
 
     using LayoutLength = std::variant<ContentLength, LogicalLength, PercentLength, FillLength>;
 
+    [[nodiscard]] auto resolve_layout_length(const LayoutLength& length, float available)
+        -> std::optional<float>;
+
     struct ControlSizeSpec {
         LayoutLength width = content;
         LayoutLength height = content;
@@ -83,6 +87,8 @@ namespace nandina::scene
 
     /// 带尺寸的 2D 控件基类。局部矩形为 [0,0,size.w,size.h] (原点左上角)。
     class NanControl: public NanNode2D {
+        friend class AnchorCanvas;
+
     public:
         NanControl() = default;
         explicit NanControl(const foundation::NanSize& size);
@@ -114,6 +120,14 @@ namespace nandina::scene
         auto set_aspect_ratio(float ratio) -> NanControl&;
         auto clear_aspect_ratio() -> NanControl&;
         [[nodiscard]] auto size_spec() const -> const ControlSizeSpec&;
+
+        auto set_anchors(AnchorSpec spec) -> NanControl&;
+        [[nodiscard]] auto anchors() const -> const AnchorSpec&;
+        [[nodiscard]] virtual auto is_anchor_canvas() const -> bool {
+            return false;
+        }
+        /// Checks the prospective parent before attach/reparent, without mutating either tree.
+        void validate_anchor_parent(const NanNode& prospective_parent) const;
 
         /// 局部空间矩形 [0,0,w,h]。
         [[nodiscard]] auto local_rect() const -> foundation::NanRect;
@@ -170,12 +184,17 @@ namespace nandina::scene
             -> render::ClipStack::Guard override;
 
     private:
+        [[nodiscard]] auto measure_layout_with_basis(
+            foundation::NanLayoutConstraints constraints,
+            foundation::NanSize percentage_basis
+        ) -> foundation::NanSize;
         foundation::NanSize size_ {};
         foundation::NanSize measured_size_ {};
         foundation::NanLayoutConstraints last_layout_constraints_ {};
         std::optional<foundation::NanColor> background_;
         ControlOverflow overflow_ = ControlOverflow::visible;
         ControlSizeSpec size_spec_;
+        std::unique_ptr<AnchorSpec> anchors_;
     };
 
 } // namespace nandina::scene

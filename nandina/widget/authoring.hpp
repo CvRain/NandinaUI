@@ -9,7 +9,9 @@
 #include "../foundation/motion/spec.hpp"
 #include "../reactive/graph.hpp"
 #include "../reactive/scope.hpp"
+#include "../scene/anchor_canvas.hpp"
 #include "../scene/control.hpp"
+#include "../scene/node_ref.hpp"
 #include "../theme/nan_style.hpp"
 #include "../theme/theme.hpp"
 #include "../theme/visual_state.hpp"
@@ -63,11 +65,49 @@ namespace nandina::widget::authoring
 
     template<typename Node>
     class NodeBuilder {
+        std::shared_ptr<Node> node_;
+        scene::NodeRef<Node> identity_;
+
     public:
+        // Author handles expose immutable relation values, not writable geometry.
+        const scene::AnchorLines anchor {identity_.anchor};
+        const typename scene::NodeRef<Node>::Parent parent {identity_.parent};
+
         explicit NodeBuilder(std::shared_ptr<Node> node): node_(std::move(node)) {
             if (!node_) {
                 throw std::invalid_argument("NodeBuilder node cannot be null");
             }
+            identity_.bind(node_);
+        }
+
+        template<typename Target>
+            requires std::derived_from<Node, Target>
+        auto bind(const scene::NodeRef<Target>& ref) -> NodeBuilder& {
+            ref.bind(node_);
+            return *this;
+        }
+
+        auto anchors(scene::AnchorSpec spec) -> NodeBuilder&
+            requires std::derived_from<Node, scene::NanControl>
+        {
+            node_->set_anchors(std::move(spec));
+            return *this;
+        }
+
+        template<typename Source>
+            requires std::derived_from<Node, scene::NanControl> && requires(Source& source) {
+                { source.get() } -> std::convertible_to<scene::AnchorSpec>;
+            }
+        auto anchors(Source& source) -> NodeBuilder& {
+            if (!binding_scope_) {
+                throw std::logic_error("NodeBuilder anchors binding requires a BuildContext");
+            }
+            binding_scope_->effect([weak = std::weak_ptr<Node>(node_), &source] {
+                if (const auto current = weak.lock()) {
+                    current->set_anchors(source.get());
+                }
+            });
+            return *this;
         }
 
         /// Prevent subsequently installed application callbacks from entering after
@@ -595,7 +635,6 @@ namespace nandina::widget::authoring
             };
         }
 
-        std::shared_ptr<Node> node_;
         std::optional<std::weak_ptr<void>> callback_lifetime_;
         reactive::ReactiveScope* binding_scope_ = nullptr;
     };
@@ -622,6 +661,10 @@ namespace nandina::widget::authoring
 
     [[nodiscard]] inline auto column() -> NodeBuilder<Column> {
         return make<Column>();
+    }
+
+    [[nodiscard]] inline auto anchor_canvas() -> NodeBuilder<scene::AnchorCanvas> {
+        return make<scene::AnchorCanvas>();
     }
 
     [[nodiscard]] inline auto flex(LayoutAxis axis = LayoutAxis::horizontal) -> NodeBuilder<Flex> {

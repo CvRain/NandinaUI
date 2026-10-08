@@ -11,6 +11,8 @@ playground_exe = executable(
         'pages/component_page.cpp',
         'pages/avatar_page.hpp',
         'pages/avatar_page.cpp',
+        'pages/anchors_page.hpp',
+        'pages/anchors_page.cpp',
         'components/sidebar.hpp',
         'components/sidebar.cpp',
     ),

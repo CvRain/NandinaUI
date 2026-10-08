@@ -26,44 +26,48 @@ namespace nandina::scene
             }
         }
 
-        [[nodiscard]] auto resolved_length(const LayoutLength& length, float available)
-            -> std::optional<float> {
-            return std::visit(
-                [available](const auto& value) -> std::optional<float> {
-                    using Value = std::decay_t<decltype(value)>;
-                    if constexpr (std::same_as<Value, LogicalLength>) {
-                        return value.value;
-                    }
-                    else if constexpr (std::same_as<Value, PercentLength>) {
-                        return std::isfinite(available)
-                            ? std::optional(available * value.value * 0.01F)
-                            : std::nullopt;
-                    }
-                    else if constexpr (std::same_as<Value, FillLength>) {
-                        return std::isfinite(available) ? std::optional(available) : std::nullopt;
-                    }
-                    else {
-                        return std::nullopt;
-                    }
-                },
-                length
-            );
-        }
+    } // namespace
 
+    auto resolve_layout_length(const LayoutLength& length, float available)
+        -> std::optional<float> {
+        return std::visit(
+            [available](const auto& value) -> std::optional<float> {
+                using Value = std::decay_t<decltype(value)>;
+                if constexpr (std::same_as<Value, LogicalLength>) {
+                    return value.value;
+                }
+                else if constexpr (std::same_as<Value, PercentLength>) {
+                    return std::isfinite(available) ? std::optional(available * value.value * 0.01F)
+                                                    : std::nullopt;
+                }
+                else if constexpr (std::same_as<Value, FillLength>) {
+                    return std::isfinite(available) ? std::optional(available) : std::nullopt;
+                }
+                else {
+                    return std::nullopt;
+                }
+            },
+            length
+        );
+    }
+
+    namespace
+    {
         [[nodiscard]] auto constrained_axis(
             float parent_min,
             float parent_max,
+            float percentage_basis,
             const std::optional<LayoutLength>& own_min,
             const std::optional<LayoutLength>& own_max
         ) -> std::pair<float, float> {
-            const auto resolve = [parent_max](
+            const auto resolve = [percentage_basis](
                                      const std::optional<LayoutLength>& length,
                                      const float fallback
                                  ) -> float {
                 if (!length.has_value()) {
                     return fallback;
                 }
-                return resolved_length(*length, parent_max).value_or(fallback);
+                return resolve_layout_length(*length, percentage_basis).value_or(fallback);
             };
             const float minimum = std::max(parent_min, resolve(own_min, 0.0F));
             const float maximum = std::max(
@@ -80,6 +84,36 @@ namespace nandina::scene
     }
 
     NanControl::NanControl(const foundation::NanSize& size): size_(size) {}
+
+    auto NanControl::anchors() const -> const AnchorSpec& {
+        static const AnchorSpec empty;
+        return anchors_ ? *anchors_ : empty;
+    }
+
+    void NanControl::validate_anchor_parent(const NanNode& prospective_parent) const {
+        const auto* control = prospective_parent.as_control();
+        if (!anchors().empty() && (!control || !control->is_anchor_canvas())) {
+            throw std::logic_error(
+                "anchors: child '" + std::string(name())
+                + "' requires an AnchorCanvas parent; clear anchors before moving to a linear layout"
+            );
+        }
+    }
+
+    auto NanControl::set_anchors(AnchorSpec spec) -> NanControl& {
+        spec.validate();
+        if (!spec.empty() && parent()) {
+            const auto* owner = parent()->as_control();
+            if (!owner || !owner->is_anchor_canvas()) {
+                throw std::logic_error(
+                    "anchors: child '" + std::string(name()) + "' requires an AnchorCanvas parent"
+                );
+            }
+        }
+        anchors_ = spec.empty() ? nullptr : std::make_unique<AnchorSpec>(std::move(spec));
+        mark_layout_dirty();
+        return *this;
+    }
 
     auto NanControl::size() const -> foundation::NanSize {
         return size_;
@@ -271,22 +305,42 @@ namespace nandina::scene
 
     auto NanControl::measure_layout(foundation::NanLayoutConstraints constraints)
         -> foundation::NanSize {
+        if (!anchors().empty() && is_inside_tree()) {
+            if (!parent()) {
+                throw std::logic_error(
+                    "anchors: a detached node requires an AnchorCanvas parent before layout"
+                );
+            }
+            validate_anchor_parent(*parent());
+        }
+        return measure_layout_with_basis(
+            constraints,
+            foundation::NanSize(constraints.max_width, constraints.max_height)
+        );
+    }
+
+    auto NanControl::measure_layout_with_basis(
+        foundation::NanLayoutConstraints constraints,
+        foundation::NanSize percentage_basis
+    ) -> foundation::NanSize {
         last_layout_constraints_ = constraints;
         auto [min_width, max_width] = constrained_axis(
             constraints.min_width,
             constraints.max_width,
+            percentage_basis.get_width(),
             size_spec_.min_width,
             size_spec_.max_width
         );
         auto [min_height, max_height] = constrained_axis(
             constraints.min_height,
             constraints.max_height,
+            percentage_basis.get_height(),
             size_spec_.min_height,
             size_spec_.max_height
         );
 
-        auto width = resolved_length(size_spec_.width, constraints.max_width);
-        auto height = resolved_length(size_spec_.height, constraints.max_height);
+        auto width = resolve_layout_length(size_spec_.width, percentage_basis.get_width());
+        auto height = resolve_layout_length(size_spec_.height, percentage_basis.get_height());
         if (width.has_value()) {
             width = std::clamp(*width, min_width, max_width);
         }
@@ -328,6 +382,14 @@ namespace nandina::scene
     }
 
     auto NanControl::layout_to(foundation::NanRect rect) -> void {
+        if (!anchors().empty() && is_inside_tree()) {
+            if (!parent()) {
+                throw std::logic_error(
+                    "anchors: a detached node requires an AnchorCanvas parent before layout"
+                );
+            }
+            validate_anchor_parent(*parent());
+        }
         clear_dirty(layout_dirty_flags);
         set_position(rect.get_top_left());
         set_size(rect.get_size());

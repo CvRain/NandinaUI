@@ -86,6 +86,10 @@ module_resource = files(
 )
 
 module_scene = files(
+    'scene/anchors.hpp',
+    'scene/node_ref.hpp',
+    'scene/anchor_canvas.hpp',
+    'scene/anchor_canvas.cpp',
     'scene/canvas_layer.hpp',
     'scene/canvas_layer.cpp',
     'scene/frame_scheduler.hpp',

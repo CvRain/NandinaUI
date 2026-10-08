@@ -131,6 +131,9 @@ namespace nandina::scene
         if (!accepts_child(*child)) {
             throw std::runtime_error("NanNode::insert_child: parent rejects this child type");
         }
+        if (const auto* control = child->as_control()) {
+            control->validate_anchor_parent(*this);
+        }
 
         if (tree_ != nullptr && tree_->defers_tree_mutation()) {
             auto* raw = child.get();
@@ -200,6 +203,10 @@ namespace nandina::scene
         }
 
         // 树遍历期间：整体延后到本帧的安全提交点，避免改动兄弟数组。
+        if (const auto* control = child->as_control()) {
+            control->validate_anchor_parent(*this);
+        }
+
         if (tree_ != nullptr && tree_->defers_tree_mutation()) {
             reparent_deferred_ = true;
             auto parent = shared_from_this();
