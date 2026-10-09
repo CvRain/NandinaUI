@@ -37,3 +37,5 @@
 | [006](006-the-animation-that-could-not-fire.md) | 那个不可能触发的动画 | 失效功能掩盖的悬垂捕获、"测了原语没测接线"的盲区，以及一处硬编码颜色如何验证了 005 的预言 |
 | [007](007-two-designs-corrected-by-the-user-view.md) | 两次被"用户视角"纠正的设计 | 七条使用反馈引出的属性代价分级，以及我把 anchors 当装饰、把 static_assert 当解法这两次错判 |
 | [008](008-spring-hitches-and-leak-evidence.md) | 卡顿帧不能靠透明度钳制修复 | 解析弹簧、缓存重算观测与两种不同结论的泄漏报告 |
+| [009](009-focus-ring-and-the-missing-input-modality.md) | 焦点环：从"很丑"追到缺失的输入模态 | 方框焦点环的绘制错误、测试设备对形状是瞎的，以及焦点与选中的混淆 |
+| [012](012-from-focus-rings-to-input-sessions.md) | 从一个焦点环，讨论到输入会话的边界 | 无历史默认显示的取舍、两种 roving 模型、paint-only 失效，以及注入服务不能照搬同步生命周期 |
