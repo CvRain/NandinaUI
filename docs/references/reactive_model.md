@@ -38,6 +38,12 @@
 
 `Effect` 是 eager 的一侧：`make_effect()` 创建后立即执行一次以建立初始依赖，此后由队列调度。`enqueue()` 用 `in_queue` 去重，保证同一节点在一波待执行队列里只出现一次。
 
+首次执行若抛异常，`make_effect()` 必须 dispose 已交给 Graph 的 effect，再原样传播异常。
+因为工厂尚未返回，EffectScope / ReactiveScope 此时还没有获得句柄；若只恢复 flush 状态，
+就会残留一个无法随 scope 清理的订阅。dispose 同时清理依赖、队列和捕获资源，不回滚用户
+回调已经产生的外部副作用。`effect_initialization_tests.cpp` 覆盖普通及嵌套 flush 的失败路径，
+anchors 作者测试还验证非法初始绑定不会在后续 source 更新时“复活”。
+
 `notify_source()` 在传播结束后才判断是否立即 flush：只有不在 batch 中、不在延迟域中、当前也没有正在 flush 时才调用 `flush()`。因此单独一次 `set()` 是同步的——写入返回时 effect 已经跑完。这正是测试里「写入后立刻断言」能够成立的原因。
 
 `batch()` 用 RAII guard 递增 / 递减 `batch_depth_`，支持嵌套，只在最外层退出且延迟域也为空时 flush 一次；即使 fn 抛异常，guard 析构也保证退出批量模式。`flush()` 按索引遍历 pending 队列（执行过程中可能继续入队），同一波内每个 effect 最多执行一次：如果 effect 在执行中再次使自己失效，`enqueue()` 会把它放进 `next_pending_`，留到下一波。这条规则避免了自反馈 effect 在同一波里锁死 UI 线程，代价是这类更新要多一个波次才稳定。作为兜底，单次 flush 的执行数超过 10000 会抛出 `reactive effect cascade exceeded flush limit`，而不是静默卡死。

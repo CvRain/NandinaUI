@@ -81,7 +81,15 @@ namespace nandina::reactive
         auto owned = std::make_unique<Effect>(graph, std::function<void()>(std::forward<Fn>(fn)));
         // adopt 转移所有权并返回 Graph 持有的稳定地址。
         auto* raw = static_cast<Effect*>(graph.adopt(std::move(owned)));
-        graph.run_effect_once(*raw); // 立即执行一次, 建立初始依赖。
+        try {
+            graph.run_effect_once(*raw); // 立即执行一次, 建立初始依赖。
+        }
+        catch (...) {
+            // The caller's scope cannot own the effect until this factory returns.
+            // Roll back subscriptions and pending entries when initial execution fails.
+            graph.dispose_reactor(raw);
+            throw;
+        }
         return raw;
     }
 

@@ -227,6 +227,16 @@ canvas->add_child(sidebar);
 
 ### 5.3 剩余验收
 
+#### 审核补充（2026-10-09）
+
+`.anchors(source)` 首次执行若因非法关系抛错，effect 的创建必须回滚：从 Graph 释放刚注册的
+effect 并移除依赖/待执行队列，不允许留下尚未纳入 ReactiveScope 的订阅。此规则归 reactive
+公共设施，不能只在 anchors 门面绕过。测试须验证异常后改变 source 不会再修改节点，且原有
+合法 effect 仍能继续工作；scope 清理后也不得恢复这条失败的绑定。
+
+批量入口提交的是**描述**而非即时几何：随后标记布局脏，下一次 layout 才更新位置、命中与语义。
+示例的状态提示可以在描述成功提交后发布，但回调内不能据此读取“已经更新”的 bounds。
+
 #### 作者入口落地形状（2026-10-08 约定，同日落地）
 
 约定与实际实现一致，差异处已注明：
@@ -266,13 +276,17 @@ v1 不包含文本 baseline、旋转、约束求解器、跨锚定画布引用�
 
 - `ui.ref<T>()`、builder `.bind(ref)`、只读 `.anchor.*` / `.parent.anchor.*` 门面、`.anchors(AnchorSpec)`
   与 `.anchors(source)`、`ui.anchor_canvas()` 均已实现于 `widget/authoring.hpp` 与
-  `widget/build_context.hpp`，由 `tests/anchors_authoring_tests.cpp` 覆盖（10 用例 / 53 断言）：
+  `widget/build_context.hpp`，由 `tests/anchors_authoring_tests.cpp` 覆盖（11 用例，含审核补充）：
   复制 builder、离开 build 栈后的表达式、scope 清理、节点销毁后的弱绑定、无 BuildContext 报错。
 - 应用级组合回归：`[page-root]` 覆盖"画布作页面根 + header/侧边栏/编辑区依赖链 + 批量换边"，
   `[scroll]` 覆盖画布在 ScrollView 中（无界轴必须显式尺寸），`[z-order]` 覆盖求解顺序不影响
   绘制与命中 z 序，`[nested]` 覆盖嵌套画布与跨画布拒绝，`[reactive]` 覆盖响应式替换。
 - showcase 案例：`showcase/pages/anchors_page.cpp`（路由 `anchors`）以侧边栏停靠切换演示
-  "树 ≠ 布局"，切换走 `set_child_anchors()`，先提交几何再发布状态。
+  "树 ≠ 布局"，切换走 `set_child_anchors()`，先提交描述再发布状态，几何在下一次 layout 更新。
+  侧栏宽度和页头高度分别最多占画布对应轴的 30%，不使用跨面板固定间隔（内容留白由 Card
+  自己负责），避免小视口/零尺寸产生负跨度。编辑区说明随停靠边更新。
+  `anchors-showcase` unit 直接编译此页面，覆盖缩小到 200×120 / 0×0、恢复大小、反复切换、
+  描述/几何提交时机，以及页面销毁后仍被外部持有的按钮不会访问失效 NodeRef。
 
 仍未完成：**真实窗口的人工体验验收**（含窗口缩放、快速重复点击与明暗切换下的手感），
 以及 playground 侧的同类案例。自动测试不能替代这一项。
@@ -282,22 +296,29 @@ v1 不包含文本 baseline、旋转、约束求解器、跨锚定画布引用�
 画布要求测量时两轴已有**确定尺寸**：`on_measure` 采用父级给出的可用空间，`measure_layout`
 会把已声明的确定尺寸（显式像素、可解析的百分比）收紧为有限上界，因此：
 
-- **显式/百分比尺寸的画布可以嵌入排列容器。** `Row` / `Column` / `Flex` / `Wrap` / `Stack` /
-  `Center` / `Padding` / `Grid` / `Card` 在 `add()` 与 `on_ready()` 时会调用一次
-  `measure_layout(loose())`（`widget/layout.cpp`、`widget/card.cpp`），但确定尺寸会把该次测量的
-  上界收紧为有限值，画布照常求解。
-- **`fill` 画布不行。** `FillLength` 只在基（percentage basis）有限时解析出值；`loose()` 的基是
-  无穷，因此 `fill` 解析为 `nullopt`，上界保持无穷，构建期抛出 “finite” 诊断。
+- **两轴显式像素尺寸的画布可以嵌入排列容器。** 例如 Column / Card 的即时 relayout 使用
+  `measure_layout(loose())`，显式尺寸仍能把传给画布的上界收紧为有限值。
+- **百分比不是无条件的确定尺寸。** `PercentLength` 与 `FillLength` 都只有在父级基有限时才能
+  解析。单纯给画布设置百分比，在 `loose()` 下同样解析为 `nullopt`，因此会像 `fill` 一样报
+  “finite”；不能用最终窗口尺寸推断离树构建时已有百分比基。`[arranged-parent]` 已覆盖此分支。
 
 结论：**画布无法表达"占满排列容器剩下的空间"**。需要这种结构时，把画布放在布局根（页面根 /
 `CanvasLayer` 的 layout root），再用同层兄弟锚点表达"header 之下的剩余区域"——
 `showcase/pages/anchors_page.cpp` 就是这么写的。`ScrollView` 内容与浮层 surface 同样可用
 （无界轴必须给显式尺寸）。
 
-`tests/anchors_authoring_tests.cpp` 的 `[arranged-parent]` 用例同时锁定了两支：确定尺寸的画布
-在 `Column` 中正常求解，`fill` 画布抛 “finite”。若要让 `fill` 也成立，需要给 `FillLength`
-在无界基下定义非循环的回退规则（而不是让 `on_measure` 无条件报错），并同步修改 §5.1 的措辞
-与 `[scroll]` 的无界画布用例——这是一次契约变更，须先改本文再改代码。
+`tests/anchors_authoring_tests.cpp` 的 `[arranged-parent]` 用例锁定三支：显式尺寸正常求解，
+`fill` 与无界百分比都抛 “finite”。要支持剩余空间画布，应单独设计排列容器的测量阶段与约束
+传播（或明确非循环回退），不能从上一帧/未来窗口尺寸隐式取值；变更须先更新 §5.1 契约。
+
+#### 审核回归与可复现注入（2026-10-09）
+
+- `[failed-binding]`：原实现中安装非法锚点的 effect 抛错，但 scope.clear 后修改 source 仍会
+  安装新锚点。`make_effect()` 在首跑失败时 dispose 已注册 effect 后，该测试通过。
+- reactive 的 `[initial-failure]` / `[nested-initial-failure]` 还锁住捕获资源释放、订阅与排队
+  清理，以及嵌套 flush 中初始化失败不破坏既有 effect；移除 catch 中 dispose 会失败。
+- showcase 的 `[resize]`：移除侧栏 30% 上限，200px 视口中侧栏占满 200px（上限应为 60px）；
+  `[expired]`：把 `side.lock()` 提到画布弱引用检查之前，页面销毁后点击会抛 “expired”。
 
 
 第一阶段验收至少包括：侧边栏位置切换、同父兄弟填充剩余区域、嵌套排列布局、依赖顺序与环、

@@ -40,6 +40,13 @@ anchors_authoring_tests = executable(
 )
 test('anchors-authoring', anchors_authoring_tests, suite: 'unit')
 
+anchors_showcase_tests = executable(
+    'anchors_showcase_tests',
+    files('anchors_showcase_tests.cpp', '../showcase/pages/anchors_page.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('anchors-showcase', anchors_showcase_tests, suite: 'unit')
+
 text_layout_header_tests = executable(
     'text_layout_header_tests',
     files('text_layout_header_tests.cpp'),
@@ -119,7 +126,7 @@ test('image', image_tests, suite: 'unit')
 
 reactive_tests = executable(
     'reactive_tests',
-    files('reactive_tests.cpp'),
+    files('reactive_tests.cpp', 'effect_initialization_tests.cpp'),
     dependencies : [nandina_dep, catch2_with_main_dep],
 )
 test('reactive', reactive_tests, suite: 'unit')

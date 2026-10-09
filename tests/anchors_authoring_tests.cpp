@@ -418,6 +418,32 @@ TEST_CASE(
         ctx.ui.column().children(ctx.ui.anchor_canvas().width(widget::authoring::fill)),
         ContainsSubstring("finite")
     );
+    // Percentages also need a finite basis; they are not definite under loose().
+    REQUIRE_THROWS_WITH(
+        ctx.ui.column().children(
+            ctx.ui.anchor_canvas().width(scene::percent(50.0F)).height(120.0F)
+        ),
+        ContainsSubstring("finite")
+    );
     // Making on_measure fall back to the declared size instead of throwing turns this green
     // and requires the same change in anchors.md §5.1 and the scroll boundary case.
+}
+
+TEST_CASE(
+    "a failed initial anchors binding leaves no subscription behind",
+    "[anchors-authoring][failed-binding]"
+) {
+    Context ctx;
+    auto child = ctx.ui.column().width(40.0F).height(20.0F);
+    reactive::Signal<scene::AnchorSpec> source(ctx.graph, {.left = child.parent.anchor.top});
+    REQUIRE_THROWS_WITH(child.anchors(source), ContainsSubstring("cannot be mixed"));
+    REQUIRE(child.get().anchors().empty());
+    ctx.scope.clear();
+    source.set({.right = child.parent.anchor.right});
+    REQUIRE(child.get().anchors().empty());
+    auto canvas = ctx.ui.anchor_canvas().children(child).build();
+    layout(*canvas);
+    REQUIRE(child.get().position().get_x() == Catch::Approx(0.0F));
+    // Without make_effect's exception rollback, the rejected effect survives scope.clear()
+    // and installs the later right anchor (x = 360) despite construction having failed.
 }
