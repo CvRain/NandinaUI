@@ -29,6 +29,7 @@
 ### 组件与浮层
 
 - [组件公共契约](component_contract.md)：新组件在进入推荐 API 前必须满足的状态、事件、绑定、主题、输入和无障碍要求。
+- [统一输入、焦点与文本编辑](focus_and_input.md)：**planned，D1 设计已接受**。取代旧 D1 工作稿；区分指向/导航/编辑、输入焦点与提示，定义文本会话、软键盘边界、三阶段实施和故障注入验收。
 - [组件开发路线图](component_roadmap.md)：当前组件盘点、基础设施依赖和推荐开发顺序。
 - [浮层架构](overlay_architecture.md)：OverlayHost、portal 生命周期、分层规则与后续基础设施边界。
 - [菜单族条目模型](menu_model.md)：阶段 4 菜单组件共享的 MenuItem、聚焦/激活规则与勾选语义。

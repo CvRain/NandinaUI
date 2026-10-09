@@ -214,6 +214,8 @@ meson compile -C buildDir
 - [x] **Anchors 基础验证**：百分比与无界约束、隐藏排列项、ScrollView 轴向约束与 reparent 失效规则已固定为测试，并写回 reference。
 - [x] **Anchors scene 内核**：类型化弱引用、显式锚定画布、父/同画布兄弟锚线、尺寸冲突诊断、依赖排序与环检测、批量关系切换；通过 `layout_to()` 交付布局结果。
 - [x] **Anchors 作者入口**：`ui.ref<T>()`、builder 绑定与只读锚线门面、`ui.anchor_canvas()`、`.anchors(spec|source)` 与 `AnchorCanvas::set_child_anchors()` 批量切换均已落地，由 `tests/anchors_authoring_tests.cpp` 覆盖。
+- [x] **D1 设计定案**：[统一输入、焦点与文本编辑](docs/references/focus_and_input.md) 已成为实施依据，取代旧 D1 工作稿；按交互意图区分指向定位、焦点导航和编辑输入，不按设备简单开关焦点环。
+- [ ] **D1 第一阶段（下一步）**：鼠标/键盘焦点核心、统一提示策略、文本控件例外与焦点恢复；随后分阶段接文本输入会话、软键盘和触摸/笔/手柄。设计定案不表示这些能力已经实现。
 - [ ] **Anchors 集成验收**：重复布局、布局系统误用、绘制/命中/语义几何一致性已由 authoring 测试覆盖，`showcase` 的 `anchors` 页面已提供侧边栏切换案例；剩余真实窗口的人工体验验收与 playground 同类案例。
 - [ ] Anchors 稳定后再评估阶段 5 复合组件及浮层打开/关闭动效；两者不作为 anchors 的隐含前置。
 - [ ] 给浮层补打开/关闭过渡与缓动曲线，并把 `motion` token、`reduced_motion` 偏好接到动画侧。

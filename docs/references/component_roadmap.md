@@ -11,7 +11,7 @@ NandinaUI 不以逐项复制其他组件库为目标。[shadcn/ui Components](ht
 嵌套浮层的父子关闭关系（`OverlayOptions::parent` + `OverlayCloseReason`，`Select` / `Tooltip` 已接入），
 键码常量也收敛到单一定义处。
 
-阶段 4 的 Popover、DropdownMenu、Combobox、CommandPalette 与 HoverCard 均已落地。进入阶段 5 前，优先重新评估布局基础设施与旧源码入口的退出，见[项目进度与下一步](project_status.md)。
+阶段 4 的 Popover、DropdownMenu、Combobox、CommandPalette 与 HoverCard 均已落地。进入阶段 5 前，先按已接受的 [D1 统一输入与焦点设计](focus_and_input.md) 落鼠标/键盘焦点提示策略；文本输入会话与其他设备分期接入。旧源码入口退出已有阶段成果，Anchors 剩余空间测量仍需独立设计；具体进度与后续排序见[项目进度与下一步](project_status.md)。
 
 ## 阶段 0：稳定公共边界
 
