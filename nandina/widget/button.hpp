@@ -66,6 +66,14 @@ namespace nandina::widget
         /// 类型化字段覆盖：只覆盖明确指定的配方字段，系统切换后保留并跟随新快照重解析。
         void set_override(theme::ButtonRecipeRule rule);
 
+        /// 只覆盖文本对齐，并**合并**进已有的类型化覆盖（不清掉其它已覆盖字段）。
+        ///
+        /// 为什么必须走覆盖而不是 `text_node().set_align(...)`：对齐在每次样式应用时都由
+        /// `style.label.align` 重新写入（默认配方写的是 `center`），直接改文本节点会在下一次
+        /// 状态或外观变化时被盖掉 —— 那就是"设置成功但不生效"。导航条目这类需要左对齐的
+        /// 用法走这条入口。
+        void set_label_align(theme::TextAlign align);
+
         void set_tone(theme::ButtonTone tone);
         [[nodiscard]] auto tone() const -> theme::ButtonTone;
 

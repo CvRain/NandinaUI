@@ -305,6 +305,7 @@ namespace nandina::widget
                 world,
                 style.focus,
                 ctx.opacity(),
+                style.container.radius,
                 /*gap=*/0.0F
             );
         }

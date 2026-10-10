@@ -108,7 +108,9 @@ namespace nandina::widget::internal
                     .color = focus_ring_color_,
                     .width = kFocusRingWidth,
                 },
-                context.opacity()
+                context.opacity(),
+                // 它画的是圆（容器半径 = 尺寸的一半），环跟着圆走。
+                size_ * 0.5F
             );
         }
 

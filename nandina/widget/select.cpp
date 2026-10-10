@@ -579,7 +579,13 @@ namespace nandina::widget
         }
 
         if (focused_ && !disabled_ && style.focus.width > 0.0F) {
-            primitives::FocusRingPainter::paint(context, field, style.focus, opacity);
+            primitives::FocusRingPainter::paint(
+                context,
+                field,
+                style.focus,
+                opacity,
+                style.container.radius
+            );
         }
     }
 

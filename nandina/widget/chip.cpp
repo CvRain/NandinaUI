@@ -175,7 +175,13 @@ namespace nandina::widget
         const auto world = render::world_bounds_from_local(context.world_transform(), local_rect());
         primitives::BoxPainter::paint(context, world, style.container, context.opacity());
         if (focused_ && style.focus.width > 0.0F) {
-            primitives::FocusRingPainter::paint(context, world, style.focus, context.opacity());
+            primitives::FocusRingPainter::paint(
+                context,
+                world,
+                style.focus,
+                context.opacity(),
+                style.container.radius
+            );
         }
 
         apply_text_style();

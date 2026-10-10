@@ -576,7 +576,8 @@ namespace nandina::widget
                     items_[static_cast<std::size_t>(focus_index_)].rect
                 ),
                 style.focus,
-                opacity
+                opacity,
+                style.item.radius
             );
         }
     }

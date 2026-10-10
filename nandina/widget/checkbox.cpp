@@ -200,7 +200,13 @@ namespace nandina::widget
         text_.draw_at(context, text_position);
 
         if (focused() && !disabled() && style.focus.width > 0.0F) {
-            primitives::FocusRingPainter::paint(context, world, style.focus, opacity);
+            primitives::FocusRingPainter::paint(
+                context,
+                world,
+                style.focus,
+                opacity,
+                style.indicator.radius
+            );
         }
     }
 

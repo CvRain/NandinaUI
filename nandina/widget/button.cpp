@@ -195,6 +195,13 @@ namespace nandina::widget
         mark_dirty(scene::DirtyFlags::paint | scene::DirtyFlags::layout);
     }
 
+    void Button::set_label_align(const theme::TextAlign align) {
+        // 合并而不是整体替换：调用方可能已经覆盖了别的字段，只改对齐不该把它们抹掉。
+        auto rule = override_.value_or(theme::ButtonRecipeRule {});
+        rule.label_align = align;
+        set_override(std::move(rule));
+    }
+
     void Button::set_tone(theme::ButtonTone tone) {
         tone_ = tone;
         mark_layout_dirty();
@@ -330,7 +337,7 @@ namespace nandina::widget
         );
 
         if (focused() && !disabled() && style.focus.width > 0.0F) {
-            primitives::FocusRingPainter::paint(ctx, world, style.focus, opacity);
+            primitives::FocusRingPainter::paint(ctx, world, style.focus, opacity, style.container.radius);
         }
     }
 

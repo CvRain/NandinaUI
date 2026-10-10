@@ -32,6 +32,8 @@ namespace
             float alpha = 0.0F;
             bool outline = false;
             bool rounded = false;
+            /// 圆角半径（方框路径为 0）。聚焦环是否贴合控件形状靠它判断。
+            float radius = 0.0F;
         };
         struct TextCall {
             std::string text;
@@ -76,13 +78,35 @@ namespace
             operations.emplace_back("outline");
         }
 
-        void draw_rounded_rect(
+        void draw_rounded_rect_outline(
             const foundation::NanRect& rect,
+            float radius,
             float,
             const foundation::NanColor& color
         ) override {
             rects.push_back(
-                {.rect = rect, .alpha = color.alpha(), .outline = false, .rounded = true}
+                {.rect = rect,
+                 .alpha = color.alpha(),
+                 .outline = true,
+                 .rounded = true,
+                 .radius = radius}
+            );
+            // op 名保持 "outline"：既有的顺序断言（"焦点环在状态层之上"）关心的是**次序**，
+            // 不是形状。形状用 `rounded` / `radius` 字段断言，见 [focus] 用例。
+            operations.emplace_back("outline");
+        }
+
+        void draw_rounded_rect(
+            const foundation::NanRect& rect,
+            float radius,
+            const foundation::NanColor& color
+        ) override {
+            rects.push_back(
+                {.rect = rect,
+                 .alpha = color.alpha(),
+                 .outline = false,
+                 .rounded = true,
+                 .radius = radius}
             );
             operations.emplace_back("fill");
         }
@@ -908,6 +932,33 @@ TEST_CASE("button overrides refresh detached metrics immediately", "[widget][but
 
     REQUIRE(button.resolved_style().metrics.padding_x == Catch::Approx(48.0F));
     REQUIRE(button.width() > before);
+}
+
+TEST_CASE("a focused button draws a rounded focus ring that follows its radius", "[widget][button][focus]") {
+    RecordingDevice dev;
+    scene::NanSceneTree tree;
+    auto button = std::make_shared<widget::Button>("Open");
+    tree.set_root(button);
+    (void)tree.layout_root(foundation::NanSize(200.0F, 60.0F));
+
+    tree.set_focus(button.get());
+    tree.draw(dev);
+
+    // 聚焦环是描边，不是填充：找出这一帧画出的那条描边，检验它跟着控件的圆角走。
+    const auto ring = std::ranges::find_if(dev.rects, [](const RecordingDevice::RectCall& call) {
+        return call.outline;
+    });
+    REQUIRE(ring != dev.rects.end());
+    REQUIRE(ring->rounded);
+
+    // 半径 = 容器圆角 + 环外扩量。环画在控件外侧（width + 默认 1.0 gap），
+    // 半径必须同步外扩才是同心的 —— 少了这一步就会退回方框。
+    const auto style = button->resolved_style();
+    const float expected = style.container.radius + style.focus.width + 1.0F;
+    REQUIRE(ring->radius == Catch::Approx(expected));
+
+    // 环确实在控件外一圈。
+    REQUIRE(ring->rect.get_width() > button->width());
 }
 
 TEST_CASE("button interaction state invalidates layout paint and semantics", "[widget][button]") {

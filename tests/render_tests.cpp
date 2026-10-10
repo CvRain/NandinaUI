@@ -177,11 +177,32 @@ TEST_CASE("shared painters scale logical visual metrics", "[render][scale][paint
         context,
         world,
         {.color = color, .width = 2.0F},
-        1.0F
+        1.0F,
+        box.radius
     );
     REQUIRE(dev.last_thickness == Catch::Approx(4.0F));
+    // 环的半径必须跟着外扩一起长，才与控件同心：6 逻辑 × 2 = 12，再加外扩 (2+1)×2 = 6。
+    // 少了这一步，圆角控件外面会套一个方框 —— 这是本断言存在的理由。
+    REQUIRE(dev.last_radius == Catch::Approx(18.0F));
     REQUIRE(dev.rects.back().rect.get_left() == Catch::Approx(-6.0F));
     REQUIRE(dev.rects.back().rect.get_width() == Catch::Approx(92.0F));
+
+    // 直角控件仍然走方框路径（录制设备在方框路径里不写 `last_radius`，所以它保持 0）。
+    RecordingDevice square_device;
+    render::DrawContext square_context(
+        square_device,
+        foundation::NanTransform2D::from_scale(2.0F),
+        {.logical_to_screen = 2.0F}
+    );
+    widget::primitives::FocusRingPainter::paint(
+        square_context,
+        world,
+        {.color = color, .width = 2.0F},
+        1.0F,
+        0.0F
+    );
+    REQUIRE(square_device.last_thickness == Catch::Approx(4.0F));
+    REQUIRE(square_device.last_radius == Catch::Approx(0.0F));
 }
 
 TEST_CASE("viewport root transform survives CanvasLayer traversal", "[render][scale][layer]") {

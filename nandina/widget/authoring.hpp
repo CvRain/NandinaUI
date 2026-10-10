@@ -487,6 +487,15 @@ namespace nandina::widget::authoring
             return *this;
         }
 
+        /// 文本对齐。对齐是配方字段（`label_align`），这里只是把它接到作者侧 ——
+        /// 没有这条入口，作者只能去改文本节点，然后被下一次样式应用盖掉。
+        auto label_align(theme::TextAlign align) -> NodeBuilder&
+            requires requires(Node& node) { node.set_label_align(align); }
+        {
+            node_->set_label_align(align);
+            return *this;
+        }
+
         auto wheel_step(float step) -> NodeBuilder&
             requires requires(Node& node) { node.set_wheel_step(step); }
         {
