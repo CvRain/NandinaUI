@@ -1322,6 +1322,51 @@ TEST_CASE("routes expose read-only lookups and a navigation view", "[app][router
     REQUIRE(nav[1]->page_key == app::page_key<SecondPlainPage>());
 }
 
+TEST_CASE("nav sections keep first-appearance order of route types", "[app][router][nav]") {
+    // 刻意让两个 type **交错**出现：如果实现是"按 type 排序"或"只把相邻的同 type 切块"，
+    // 下面都会失败。
+    const auto routes = app::Routes {
+        app::route<PlainPage>({.title = "面板 A", .type = "面板"}),
+        app::route<SecondPlainPage>({.title = "表单 A", .type = "表单"}),
+        // 没声明 type 的条目落在 `RouteOptions` 的默认值上，自己成一段。
+        app::route<FocusablePage>({.title = "未分类"}),
+        app::route<OverlayProbePage>({.title = "面板 B", .type = "面板"}),
+        // 不在导航里的条目不参与分段（这里同时因为需要参数而被排除）。
+        app::route<DetailPage>({.title = "隐藏", .type = "面板", .show_in_nav = false}),
+    };
+
+    const auto sections = routes.nav_sections();
+    REQUIRE(sections.size() == 3);
+
+    // 顺序 = 首次出现顺序（"面板" 在 "表单" 之前），不是字典序。
+    REQUIRE(sections[0].type == "面板");
+    REQUIRE(sections[1].type == "表单");
+    REQUIRE(sections[2].type == "default");
+
+    // 交错出现的同类条目要合并回同一段，且段内保持路由表顺序。
+    REQUIRE(sections[0].entries.size() == 2);
+    REQUIRE(sections[0].entries[0]->options.title == "面板 A");
+    REQUIRE(sections[0].entries[1]->options.title == "面板 B");
+    REQUIRE(sections[1].entries.size() == 1);
+    REQUIRE(sections[1].entries[0]->options.title == "表单 A");
+    REQUIRE(sections[2].entries.size() == 1);
+    REQUIRE(sections[2].entries[0]->options.title == "未分类");
+
+    // 每段的条目必须恰好是 nav_entries() 的一次划分：不重不漏。
+    std::size_t total = 0;
+    for (const auto& section: sections) {
+        total += section.entries.size();
+    }
+    REQUIRE(total == routes.nav_entries().size());
+
+    // 同一份表两次分组必须一致 —— 顺序不能是"这次恰好这样"。
+    REQUIRE(routes.nav_sections() == sections);
+
+    // 空表与"全都不可导航"的表都得到空分段，而不是一段空标题。
+    REQUIRE(app::Routes {}.nav_sections().empty());
+    REQUIRE(app::Routes {app::route<DetailPage>({.show_in_nav = false})}.nav_sections().empty());
+}
+
 TEST_CASE("route validation reports why a table is rejected", "[app][router][configure]") {
     reactive::Graph graph;
     const auto theme = theme::default_theme();

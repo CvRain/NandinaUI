@@ -48,6 +48,7 @@ namespace nandina::app
         std::string address;
         std::string title;
         std::string icon;
+        std::string type {"default"};
         bool show_in_nav = true;
 
         friend auto operator==(const RouteOptions&, const RouteOptions&) -> bool = default;
@@ -103,6 +104,21 @@ namespace nandina::app
 
     /// 人类可读的失败描述，含条目下标，可直接用作异常信息或日志。
     [[nodiscard]] auto describe(const RoutesError& error) -> std::string;
+
+    /// 导航分组：同一 `options.type` 的条目归为一段。
+    ///
+    /// **分段顺序 = 各 type 首次出现的顺序**，也就是路由表的声明顺序；段内保持路由表顺序。
+    ///
+    /// 为什么不是 `unordered_map` 分组再拼接：哈希表的迭代顺序未指定，会把导航顺序变成
+    /// 实现细节 —— 换一次标准库实现、加一条路由都可能让分组顺序变化，而导航顺序是用户
+    /// 直接看得见的。有序单遍扫描既确定了顺序，也不必维护"map + 拼接"两步。
+    struct NavSection {
+        /// 指向该段条目的 `options.type`，生存期跟随 `Routes`。
+        std::string_view type;
+        std::vector<const RouteEntry*> entries;
+
+        friend auto operator==(const NavSection&, const NavSection&) -> bool = default;
+    };
 
     /// 页面注册表：页面类型 → 导航元数据的唯一声明点。
     ///
@@ -186,6 +202,25 @@ namespace nandina::app
                 }
             }
             return visible;
+        }
+
+        /// 把 `nav_entries()` 按 `options.type` 分段，供侧边栏这类"分组导航"消费。
+        ///
+        /// 用**线性扫描**而不是哈希表：段数是个位数，扫描更快；更重要的是它一眼就能看出
+        /// "顺序 = 首次出现顺序"，不需要读者去推理哈希表的迭代顺序。要调整分组顺序，
+        /// 把同一 `type` 的路由在声明处写在一起即可 —— 顺序不在这里，也不在调用方。
+        [[nodiscard]] auto nav_sections() const -> std::vector<NavSection> {
+            std::vector<NavSection> sections;
+            for (const auto* entry: nav_entries()) {
+                const std::string_view type {entry->options.type};
+                const auto found = std::ranges::find(sections, type, &NavSection::type);
+                if (found != sections.end()) {
+                    found->entries.push_back(entry);
+                    continue;
+                }
+                sections.push_back(NavSection {.type = type, .entries = {entry}});
+            }
+            return sections;
         }
 
         [[nodiscard]] auto length() const noexcept -> std::size_t {
@@ -352,10 +387,7 @@ namespace nandina::app
             if (!route_mode_) {
                 return false;
             }
-            return apply_navigation(
-                page_key<PageT>(),
-                std::make_unique<PageT>(std::move(params))
-            );
+            return apply_navigation(page_key<PageT>(), std::make_unique<PageT>(std::move(params)));
         }
 
         template<typename PageT>
