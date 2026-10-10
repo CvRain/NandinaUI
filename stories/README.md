@@ -38,4 +38,6 @@
 | [007](007-two-designs-corrected-by-the-user-view.md) | 两次被"用户视角"纠正的设计 | 七条使用反馈引出的属性代价分级，以及我把 anchors 当装饰、把 static_assert 当解法这两次错判 |
 | [008](008-spring-hitches-and-leak-evidence.md) | 卡顿帧不能靠透明度钳制修复 | 解析弹簧、缓存重算观测与两种不同结论的泄漏报告 |
 | [009](009-focus-ring-and-the-missing-input-modality.md) | 焦点环：从"很丑"追到缺失的输入模态 | 方框焦点环的绘制错误、测试设备对形状是瞎的，以及焦点与选中的混淆 |
+| [010](010-the-theme-signal-that-cannot-be-subscribed.md) | 主题变化发不出去：一个只能写的开关 | `ThemeManager` 缺少面向应用的外观信号，外壳无法响应外观变化 |
+| [011](011-the-route-type-that-is-a-string.md) | 分组的类型是一个字符串：拼错就多一段 | 有序分组、`unordered_map` 的顺序陷阱，以及 `type` 的类型安全 |
 | [012](012-from-focus-rings-to-input-sessions.md) | 从一个焦点环，讨论到输入会话的边界 | 无历史默认显示的取舍、两种 roving 模型、paint-only 失效，以及注入服务不能照搬同步生命周期 |

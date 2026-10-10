@@ -225,6 +225,14 @@ meson compile -C buildDir
 
 路线图会随着基础设施成熟度调整；Getting Started 只采用推荐 API，实验性能力会在组件文档中明确标注。
 
+### 🧭 待拍板的设计决策
+
+下面三项都已核实到代码层面，但**还没决定**；选项、代价、影响面与倾向见[待决设计草案](docs/references/reference_draft.md)（D2–D4）。D1 已定案，见上文[统一输入、焦点与文本编辑](docs/references/focus_and_input.md)。
+
+- [ ] **主题变化的订阅**：`ThemeManager` 只有 `revision()` 和给 `SceneTree` 用的观察者，外壳拿不到"外观变了"，因此 footer 里的亮/暗开关只能写、不能跟随外部变化。过程见 [story 010](stories/010-the-theme-signal-that-cannot-be-subscribed.md)。
+- [ ] **分组类型的类型安全**：`RouteOptions::type` 是 `std::string`，拼错一个字母不会报错，只会静默多出一个导航分组；考虑换成枚举或加声明期校验。过程见 [story 011](stories/011-the-route-type-that-is-a-string.md)。
+- [ ] **平台层与渲染后端（D4，最大的一项）**：现状是 raylib（GLFW + OpenGL），目标是 Windows / Web 与 Linux 桌面组件（dock、panel）。核实结论是**换后端的成本远小于听起来**（设备接口已中立、形状是自研 SDF、raylib 真实触点只有 5 处），但这是**四件事**：平台层（SDL3）、图形 API（建议 `SDL_GPU` 而非手写 Vulkan）、2D 几何引擎（ThorVG 建议拆出去）、合成器集成（`wlr-layer-shell`，SDL3 给不了）。选项、矛盾与分期建议见[待决设计草案](docs/references/reference_draft.md) D4 节。
+
 
 ## 外部依赖一览
 
