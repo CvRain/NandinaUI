@@ -9,14 +9,16 @@
 ///
 /// 圆角基值在构建时读一次。实例覆盖的本质是"接管这个字段"，所以主题在运行中改圆角令牌不会反映到已有条目上；
 /// 圆角令牌与明暗外观无关，实际不会变。
+///
+/// 结构是纵向三段：标题 / 分组导航 / 外观切换。中间的导航按 `RouteOptions::type` 分段，
+/// 分段顺序由 `Routes::nav_sections()` 决定（= 各 type 首次出现的顺序），这里只负责画出来。
 
 #include "sidebar.hpp"
-
-#include "../pages/component_page.hpp"
 
 #include <nandina/app/nan_router.hpp>
 #include <nandina/foundation/motion/spec.hpp>
 #include <nandina/foundation/nan_logger.hpp>
+#include <nandina/theme/appearance.hpp>
 #include <nandina/widget/controls.hpp>
 #include <nandina/widget/visual_property.hpp>
 
@@ -57,6 +59,9 @@ namespace nandina::showcase
                 // 初始 treatment 只是"第一帧别闪"：真正的选中态由下面绑定 Router 决定。
                 .treatment(theme::ButtonTreatment::outlined)
                 .font_size(k_item_font_size)
+                // 导航条目左对齐：按钮配方默认居中，那是给动作按钮的。对齐必须走
+                // 类型化覆盖（`label_align`），直接改文本节点会被下一次样式应用盖掉。
+                .label_align(theme::TextAlign::start)
 
                 // 登记过渡策略**不等于**写入值：这里只安装插值方式，值的来源仍然是
                 // 主题配方，所以换主题、换 tone 都不受影响。
@@ -84,27 +89,20 @@ namespace nandina::showcase
         return builder.build();
     }
 
-    auto Sidebar::generate_navigation_buttons() const -> auto {
+    auto Sidebar::generate_section(const app::NavSection& section) const
+        -> std::shared_ptr<scene::NanControl> {
         const auto ui = context.ui();
-        const auto navigation = context.navigation();
-
-        // 当前页面的响应式来源由 Router 持有，外壳在 set_shell() 时就能绑定它 ——
-        // 那时还没有任何页面，首屏 start() 会把它发布出来。
         auto& current = context.current_page();
 
-        // 导航项直接从路由表生成：`nav_entries()` 已经把「显示在导航里」和
-        // 「点一下就进得去」两条规则收好了，这里不必再按页面类型逐个写
-        // `navigate<PageT>()` 分支，也不会漏掉 `activate` 判空而留下点了没反应的死条目。
-        //
-        // 动效时长取自主题令牌而不是写死：主题把 `short_duration` 调小（或改成 0）
-        // 就能整体降速或关闭这类微交互，不必逐个组件改。
-        auto navigation_buttons = ui.column().gap(k_item_gap).width(widget::authoring::fill);
+        // 一段 = 段标题 + 该段的条目。段内用 `k_item_gap`，段与段之间由外层列的
+        // `k_section_gap` 拉开，这样"段落"在视觉上先于"条目"被读出来。
+        auto items = ui.column().gap(k_item_gap).width(widget::authoring::fill);
 
-        navigation_buttons.children(ui.make<widget::Label>("页面").font_size(12.0F).color_token(
-            theme::ColorToken::muted_foreground
-        ));
+        items.children(ui.make<widget::Label>(std::string(section.type))
+                           .font_size(k_section_label_font_size)
+                           .color_token(theme::ColorToken::muted_foreground));
 
-        for (const auto* entry: context.routes().nav_entries()) {
+        for (const auto* entry: section.entries) {
             const auto page_key = entry->page_key;
 
             // `Button::hovered()` / `pressed()` 是普通 getter、不是响应式来源。要用它们驱动
@@ -162,60 +160,83 @@ namespace nandina::showcase
 
             // 按下时的水波纹由配方的 ripple 字段驱动（默认 `motion_medium_duration`），
             // Button 自己按 `on_process` 推进并遵循 reduced-motion，这里不必重做一遍。
-            navigation_buttons.children(button);
+            items.children(button);
         }
 
-        navigation_buttons.children(
-            ui.make<widget::Divider>().width(widget::authoring::fill),
-            ui.make<widget::Label>("组件").font_size(12.0F).color_token(
-                theme::ColorToken::muted_foreground
-            )
-        );
+        return items.build();
+    }
 
-        for (const auto& category: kComponentCategories) {
-            navigation_buttons.children(ui.make<widget::Label>(std::string(category.name))
-                                            .font_size(11.0F)
-                                            .color_token(theme::ColorToken::muted_foreground));
+    auto Sidebar::generate_navigation_sections() const -> std::shared_ptr<scene::NanControl> {
+        const auto ui = context.ui();
 
-            for (const auto& component: kComponentCatalog) {
-                if (component.category != category.id) {
-                    continue;
-                }
+        auto sections_column = ui.column().gap(k_section_gap).width(widget::authoring::fill);
 
-                navigation_buttons.children(
-                    ui.make<widget::Button>(std::string(component.name))
-                        .width(widget::authoring::fill)
-                        .height(k_item_height)
-                        .treatment(theme::ButtonTreatment::outlined)
-                        .font_size(k_item_font_size)
-                        .on_click([navigation, component_id = component.id] {
-                            if (!navigation.navigate<ComponentPage>(
-                                    ComponentPageParams {component_id}
-                                )) {
-                                log::error("showcase sidebar: cannot enter component page");
-                            }
-                        })
-                );
+        // 分隔线画在**两段之间**而不是每段之后：这样最后一段不会拖着一条悬空的线，
+        // 也不必在循环外补一个"是不是最后一段"的判断。
+        bool first = true;
+        for (const auto& section: context.routes().nav_sections()) {
+            if (!first) {
+                sections_column.children(ui.make<widget::Divider>());
             }
+            first = false;
+            sections_column.children(generate_section(section));
         }
-        return navigation_buttons;
+
+        return sections_column.build();
+    }
+
+    auto Sidebar::generate_sidebar_content() const -> std::shared_ptr<scene::NanControl> {
+        const auto ui = context.ui();
+        auto& themes = ui.theme_manager();
+
+        auto title = ui.make<widget::Label>("NandinaUI")
+                         .font_size(k_title_font_size)
+                         .color_token(theme::ColorToken::foreground);
+
+        // 开关的初始状态直接读当前生效外观，所以切到暗色后再重建外壳不会回弹。
+        const bool dark_now = themes.appearance() == theme::ColorAppearance::dark;
+
+        // 主题管理器归 NanApplication 所有，比外壳作用域活得久，所以这里存指针。
+        // 存引用捕获会让读代码的人以为它跟着某个局部作用域走 —— 本文件上面那些
+        // `[&]` 的教训就是这类误读的代价。
+        //
+        // 已知边界：这是**单向**的，开关只负责"写"偏好。外观若从别处改变（系统外观变化、
+        // 别处调 set_preference），开关的勾选状态不会跟着更新 —— ThemeManager 目前没有
+        // 可供订阅的外观信号（只有 `revision()` 与观察者接口），要跟随就得在外壳里挂一个
+        // ThemeObserver。先按"外壳只提供入口"实现。
+        theme::ThemeManager* manager = &themes;
+        auto appearance_switch =
+            ui.make<widget::Switch>("暗色模式", dark_now).on_change([manager](const bool dark) {
+                manager->set_preference(
+                    dark ? theme::ThemePreference::dark : theme::ThemePreference::light
+                );
+            });
+
+        auto content = ui.column()
+                           .gap(k_section_gap)
+                           .cross_alignment(widget::LayoutAlignment::stretch)
+                           .width(widget::authoring::fill)
+                           .height(widget::authoring::fill);
+
+        content.children(title);
+        content.children(ui.make<widget::Divider>());
+        // 中间一段吃掉剩余高度：`Expanded` 在排列容器里就是一个 flex 项。
+        content.children(
+            ui.expanded().child(ui.scroll_view().child(generate_navigation_sections()))
+        );
+        content.children(ui.make<widget::Divider>());
+        content.children(appearance_switch);
+
+        return content.build();
     }
 
     auto Sidebar::build_shell() const -> widget::View {
         const auto ui = context.ui();
-        const auto navigation = context.navigation();
-
-        auto navigation_buttons = generate_navigation_buttons();
-
-        auto button_scroll_view = ui.scroll_view()
-                                      .child(navigation_buttons)
-                                      .width(widget::authoring::fill)
-                                      .height(widget::authoring::fill);
 
         auto sidebar_content = ui.make<widget::Card>()
                                    .width(scene::percent(100))
                                    .height(scene::percent(100))
-                                   .child(button_scroll_view);
+                                   .child(generate_sidebar_content());
 
         auto sidebar = ui.padding(foundation::NanInsets::all(12.0F))
                            .min_width(220.0F)
@@ -229,7 +250,8 @@ namespace nandina::showcase
             .cross_alignment(widget::LayoutAlignment::stretch)
             .width(widget::authoring::fill)
             .height(widget::authoring::fill)
-            .children(std::move(sidebar), ui.expanded().child(context.outlet()))
+            .children(sidebar)
+            .children(ui.expanded().child(context.outlet()))
             .build();
     }
 } // namespace nandina::showcase
