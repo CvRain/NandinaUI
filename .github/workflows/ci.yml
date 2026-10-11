@@ -15,6 +15,21 @@ env:
   MESON_VERSION: 1.7.2
 
 jobs:
+  format:
+    name: format (clang-format 23.1.1)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      # 格式化基线只有在工具版本固定时才有意义：21 与 23 在少数文件上给出不同
+      # 结果。这里装的正是 tools/check_format.py 的 PINNED_VERSION，版本不符时
+      # 关卡直接失败，而不是拿另一份输出静默比较 —— 也不要改成 `clang-format`
+      # 的发行版包，那会把版本重新交给基础镜像决定。
+      - name: Install the pinned clang-format
+        run: python3 -m pip install --break-system-packages --no-cache-dir clang-format==23.1.1
+      - name: Check formatting
+        run: python3 tools/check_format.py
+
   build:
     name: build (${{ matrix.name }})
     runs-on: ubuntu-latest

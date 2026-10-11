@@ -1,0 +1,5 @@
+# SQLite 官方 amalgamation 的原样副本：第三方代码不参与本项目的格式基线。
+# 重排它会让 README 里"未做任何本地修改"的声明失真，也会让下次升级的 diff
+# 无法审查，所以这里显式退出格式化 —— DisableFormat 同时保护编辑器、
+# 手工执行的 clang-format -i 与 CI 的 tools/check_format.py。
+DisableFormat: true

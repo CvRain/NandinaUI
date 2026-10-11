@@ -51,6 +51,13 @@ SHA3-256 与 sqlite.org `download.html` 公布的值一致；该归档与 wrapdb
 改动这组选项等于改动随包分发的引擎能力，需同时更新本节、根 `meson.build` 与 README
 的依赖说明。
 
+## 格式
+
+本目录带一个 `DisableFormat: true` 的 `.clang-format`：vendored 源码不参与项目的格式
+基线。它同时作用于 `tools/check_format.py`、手工执行的 `clang-format -i` 和编辑器，
+因此不存在"有人顺手把第三方代码排了"的路径。今后再 vendored 别的第三方目录，也应
+照此放置同一个开关，而不是在关卡里逐个加白名单。
+
 ## 未来接 CMake 时
 
 CMake 顶层构建落地后，对同一个 `sqlite3.c` 做 `add_library(sqlite3 STATIC ...)` 并施加

@@ -643,6 +643,15 @@ test(
     ],
     suite: 'integration',
 )
+test(
+    'format-gate',
+    python,
+    args: [
+        files('format_gate_test.py'),
+        meson.project_source_root() / 'tools' / 'check_format.py',
+    ],
+    suite: 'integration',
+)
 release_metadata_test = find_program('release_metadata_test.py')
 test(
     'release-metadata',

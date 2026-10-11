@@ -74,6 +74,12 @@
 
 格式化由 `.clang-format` 统一，关键取值包括 `ColumnLimit: 100`、`IndentWidth: 4`、`UseTab: Never`、`PointerAlignment: Left`、`NamespaceIndentation: All`，以及 `BreakBeforeBraces: Custom`（命名空间左花括号换行）。提交前应对改动文件运行 clang-format；不要为了格式化而重排未改动的代码，以免把功能变更淹没在噪声 diff 中。
 
+工具版本固定为 **clang-format 23.1.1**：实测 21 与 23 会在一小批文件上给出不同结果，所以"用哪个版本"必须是一个明确的决定，而不是留给各自机器上的安装。`tools/check_format.py` 里的 `PINNED_VERSION` 就是这条基线的唯一定义，版本不符时它直接失败，而不是拿另一份输出去比较。本地要跑同一关卡就装同一个版本：`pip install clang-format==23.1.1`，然后执行 `python3 tools/check_format.py`（CI 的 `format` 任务跑的是同一条命令）。
+
+仓库已经做过一次全仓归一化，因此这道关卡在干净树上应当是绿的；它拦住的是之后的漂移 —— 这正是过去 166 个文件脱离基线的原因。
+
+vendored 的第三方源码不参与这条基线：`third_party/` 下每个第三方目录放一个 `DisableFormat: true` 的 `.clang-format` 显式退出（见 `third_party/sqlite3/.clang-format`），这样关卡本身不需要维护白名单，手工 `clang-format -i` 也不会破坏"原样副本"的声明。新增 vendored 目录时照此办理。
+
 `.clang-tidy` 启用了 `readability-identifier-*`（类型 `CamelCase`，命名空间、函数、变量、成员 `lower_case`，宏与全局常量 `UPPER_CASE`），以及 `modernize-use-override`、`modernize-use-nullptr`、`modernize-use-emplace`、`bugprone-use-after-move`、`bugprone-dangling-handle` 等检查。新增代码不应引入新的告警；若必须抑制，应在代码中说明原因，而不是关闭整条检查。
 
 ## 8. 测试门槛

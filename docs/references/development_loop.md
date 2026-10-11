@@ -34,6 +34,7 @@ meson compile -C buildDir-no-rtti && \
 python3 tools/check_test_suites.py buildDir
 
 clang-format -i <只格式化你改过的文件>
+python3 tools/check_format.py     # 全仓格式关卡，固定 clang-format 23.1.1
 
 ./buildDir/playground/playground --self-test      # 有窗口副作用时
 ./buildDir/showcase/nandina_showcase              # 视觉验收的对象是 showcase
@@ -46,7 +47,10 @@ clang-format -i <只格式化你改过的文件>
    "假绿"就是这么来的：编译失败被 `grep`/`head` 过滤成上下文行，第二条命令报了旧代码的
    "All tests passed"。**编译和测试用 `&&` 连起来。**
 2. **格式化范围与改动范围一致。** 只格式化自己改过的文件 —— 把别人正在写的文件一起扫了，
-   会把功能变更淹没在格式化噪声里（`coding_conventions.md` 也这么要求）。
+   会把功能变更淹没在格式化噪声里（`coding_conventions.md` 也这么要求）。全仓已做过一次
+   性归一化（单独成一个提交），之后的漂移由 CI 的 `format` 任务拦下（`python3
+   tools/check_format.py`，固定 clang-format 23.1.1），所以这条规矩继续适用于日常提交，
+   不需要再出现第二次"顺手全仓排一遍"。
 3. **测试分组关卡使用结构化元数据。** `meson test --list` 是给人看的输出；Meson 1.7.2
    打印 `NandinaUI:unit / foundation`，不能用 ` - ` 分隔符推断有没有 suite。
    `tools/check_test_suites.py` 属于 CI 工具层，执行 `meson introspect --tests`，
