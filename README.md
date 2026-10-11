@@ -83,9 +83,9 @@ NandinaUI（南天竹）是一个用 **C++26** 编写、基于 **Meson** 构建�
 - **Linux 桌面**（Wayland | Xorg）
 - **编译器**：GCC ≥ 16 或 Clang ≥ 21（需 C++26 支持）
 - **构建工具**：Meson、Ninja、CMake、pkg-config、Python 3
-- **系统库**：OpenGL、OpenSSL ≥ 3.0、SQLite ≥ 3.37
+- **系统库**：OpenGL、OpenSSL ≥ 3.0
 
-其余第三方依赖（spdlog、raylib、FreeType、HarfBuzz、FriBidi、utf8proc、toml++、nlohmann/json、Catch2、Box2D 等）均以 Git 子模块方式随仓库提供。
+其余第三方依赖（spdlog、raylib、FreeType、HarfBuzz、FriBidi、utf8proc、toml++、nlohmann/json、Catch2、Box2D 等）均以 Git 子模块方式随仓库提供；SQLite 以官方 amalgamation 直接随源码分发（见 `third_party/sqlite3/README.md`），不需要系统安装。
 
 ### 创建 C++ 项目
 ```bash
@@ -240,7 +240,7 @@ meson compile -C buildDir
 | --- | --- |
 | 渲染 | raylib（GPU 后端，支持 JPG 等格式） |
 | 文本 | FreeType、HarfBuzz、FriBidi、utf8proc |
-| 数据 / 配置 | nlohmann/json、toml++、SQLite3 |
+| 数据 / 配置 | nlohmann/json、toml++、SQLite（vendored amalgamation，见 `third_party/sqlite3/`） |
 | 其他 | spdlog（日志）、OpenSSL（资源签名）、Box2D（可选物理）、Catch2（测试） |
 
 

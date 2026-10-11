@@ -78,7 +78,7 @@
 | suite | 用途 | 谁跑 |
 | --- | --- | --- |
 | `unit` | C++ 单测（Catch2） | 常规任务 + ASan/UBSan 任务（`meson test --suite unit`） |
-| `integration` | Python CLI / 构建工作流测试（慢） | 常规任务与 sqlite-fallback 任务 |
+| `integration` | Python CLI / 构建工作流测试（慢） | 常规任务的全量 `meson test` |
 
 新增组件一律用 `suite: 'unit'`。裸写 `test('foo', foo_tests)` 不会报错，但该测试会**静默失去
 ASan/UBSan 覆盖** —— 这正是本项目曾经让 21 个组件测试脱离 sanitizer 一年的原因。CI 的

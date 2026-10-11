@@ -46,7 +46,7 @@ jobs:
           DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
             ca-certificates git python3 python3-pip ninja-build pkg-config cmake zstd \
             zlib1g-dev ${{ matrix.extra_packages }} \
-            libsqlite3-dev libssl-dev libx11-dev libxrandr-dev libxinerama-dev \
+            libssl-dev libx11-dev libxrandr-dev libxinerama-dev \
             libxcursor-dev libxi-dev libgl1-mesa-dev libglu1-mesa-dev
           python3 -m pip install --break-system-packages --no-cache-dir "meson==${MESON_VERSION}"
       - uses: actions/checkout@v5
@@ -88,7 +88,7 @@ jobs:
           DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
             ca-certificates git python3 python3-pip ninja-build pkg-config cmake zstd \
             zlib1g-dev libstdc++-14-dev \
-            libsqlite3-dev libssl-dev libx11-dev libxrandr-dev libxinerama-dev \
+            libssl-dev libx11-dev libxrandr-dev libxinerama-dev \
             libxcursor-dev libxi-dev libgl1-mesa-dev libglu1-mesa-dev
           python3 -m pip install --break-system-packages --no-cache-dir "meson==${MESON_VERSION}"
       - uses: actions/checkout@v5
@@ -104,42 +104,9 @@ jobs:
         run: |
           # `unit` = 全部 C++ 单测。window-lifecycle 在无显示环境下会自报 skipped 并以
           # 成功退出，所以可以安全纳入。慢速的 Python CLI / 构建工作流测试标为
-          # `integration`，由常规构建任务与 sqlite-fallback 任务覆盖。
+          # `integration`，由常规构建任务的全量 `meson test` 覆盖。
           # 不要改回手写名单：那正是新组件静默脱离 sanitizer 覆盖的原因。
           meson test -C buildDir-asan --print-errorlogs --suite unit
-
-  sqlite-fallback:
-    name: SQLite fallback
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    container: gcc:16
-    env:
-      CC: gcc
-      CXX: g++
-    steps:
-      - name: Install dependencies
-        run: |
-          apt-get update
-          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-            ca-certificates git python3 python3-pip ninja-build pkg-config cmake zstd \
-            zlib1g-dev \
-            libssl-dev libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev \
-            libxi-dev libgl1-mesa-dev libglu1-mesa-dev
-          python3 -m pip install --break-system-packages --no-cache-dir "meson==${MESON_VERSION}"
-      - uses: actions/checkout@v5
-        with:
-          submodules: recursive
-      - name: Configure git
-        run: git config --global --add safe.directory '*'
-      - name: Configure
-        run: meson setup buildDir-fallback --force-fallback-for=sqlite3 -Dlinux_window_system=x11
-      - name: Build
-        run: meson compile -C buildDir-fallback
-      - name: Test resource workflow
-        run: |
-          meson test -C buildDir-fallback --print-errorlogs \
-            resource nanres-cli portable-stage nanres-build-workflow \
-            nandina-subproject-fixture font-resource application-resource
 
   physics:
     name: physics (Box2D enabled)
@@ -156,7 +123,7 @@ jobs:
           DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
             ca-certificates git python3 python3-pip ninja-build pkg-config cmake zstd \
             zlib1g-dev \
-            libsqlite3-dev libssl-dev libx11-dev libxrandr-dev libxinerama-dev \
+            libssl-dev libx11-dev libxrandr-dev libxinerama-dev \
             libxcursor-dev libxi-dev libgl1-mesa-dev libglu1-mesa-dev
           python3 -m pip install --break-system-packages --no-cache-dir "meson==${MESON_VERSION}"
       - uses: actions/checkout@v5

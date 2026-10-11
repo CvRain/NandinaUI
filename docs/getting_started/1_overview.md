@@ -88,6 +88,6 @@ NandinaUI 当前版本为 `0.1.0-alpha.1`。这意味着核心结构已经可以
 
 ## 开始之前
 
-后续章节会创建一个独立的小型项目，并通过 Meson subproject 使用 NandinaUI。你需要准备支持 C++26 的编译器、Meson、Ninja、CMake、pkg-config 与 Python 3；Linux 系统还需要 OpenGL、OpenSSL 和 SQLite 等基础开发库。其余主要第三方依赖由仓库中的 Git 子模块提供。
+后续章节会创建一个独立的小型项目，并通过 Meson subproject 使用 NandinaUI。你需要准备支持 C++26 的编译器、Meson、Ninja、CMake、pkg-config 与 Python 3；Linux 系统还需要 OpenGL、OpenSSL 等基础开发库。其余主要第三方依赖由仓库中的 Git 子模块提供，SQLite 则已以 amalgamation 形式随源码分发，无需系统安装。
 
 接下来，我们不会继续停留在概念上。[下一章](2_first_window.md)将从一个最小程序开始，让 NandinaUI 的第一个窗口真正出现在屏幕上。

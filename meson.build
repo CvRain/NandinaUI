@@ -1,6 +1,9 @@
 project(
     'NandinaUI',
     'cpp',
+    # `c` 只服务于 SQLite 的 vendored amalgamation（third_party/sqlite3/sqlite3.c）：
+    # 它是 C 源码，必须由 C 编译器编译。任何提供 C++ 编译器的工具链都同时提供 C 编译器。
+    'c',
     version: '0.1.0-alpha.1',
     default_options: ['default_library=static', 'cpp_std=c++26'],
 )
@@ -141,11 +144,26 @@ if not physics2d_option.disabled()
         box2d_dep = box2d_subproj.dependency('box2d')
     endif
 endif
-sqlite3_dep = dependency(
-    'sqlite3',
-    version: '>=3.37',
-    fallback: ['sqlite3', 'sqlite3_dep'],
-    default_options: ['default_library=static'],
+# SQLite 以官方 amalgamation 形式随仓库分发（third_party/sqlite3），不再走系统库或
+# wrap 兜底：wrap 只服务 Meson、vcpkg 只服务 CMake、submodule 要求消费者 clone 镜像
+# 仓，三条路都会让两套构建系统拿到来源不同的同一个依赖。版本、来源哈希与升级步骤见
+# third_party/sqlite3/README.md。
+sqlite3_c_args = [
+    # 与运行时 SQLITE_OPEN_FULLMUTEX 的用法保持一致。
+    '-DSQLITE_THREADSAFE=1',
+    # 运行时打开的是可能随应用分发到用户磁盘的库文件，而框架从不加载扩展。
+    '-DSQLITE_OMIT_LOAD_EXTENSION',
+]
+sqlite3_include = include_directories('third_party/sqlite3')
+sqlite3_dep = declare_dependency(
+    link_with: static_library(
+        'sqlite3',
+        'third_party/sqlite3/sqlite3.c',
+        c_args: sqlite3_c_args,
+        include_directories: sqlite3_include,
+        install: false,
+    ),
+    include_directories: sqlite3_include,
 )
 openssl_dep = dependency('openssl', version: '>=3.0')
 
