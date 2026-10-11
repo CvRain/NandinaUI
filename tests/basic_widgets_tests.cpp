@@ -32,16 +32,11 @@ namespace
         void draw_rect(const foundation::NanRect&, const foundation::NanColor&) override {
             ++rects;
         }
-        void draw_rect_outline(
-            const foundation::NanRect&,
-            float,
-            const foundation::NanColor&
-        ) override {}
-        void draw_rounded_rect(
-            const foundation::NanRect&,
-            float,
-            const foundation::NanColor&
-        ) override {
+        void
+        draw_rect_outline(const foundation::NanRect&, float, const foundation::NanColor&) override {
+        }
+        void
+        draw_rounded_rect(const foundation::NanRect&, float, const foundation::NanColor&) override {
             ++rounded_rects;
         }
         void draw_line(
@@ -50,7 +45,8 @@ namespace
             float,
             const foundation::NanColor&
         ) override {}
-        void draw_circle(const foundation::NanPoint&, float, const foundation::NanColor&) override {}
+        void draw_circle(const foundation::NanPoint&, float, const foundation::NanColor&) override {
+        }
         void draw_text(
             std::string_view,
             const foundation::NanPoint&,
@@ -137,7 +133,10 @@ TEST_CASE("chip remove button emits removed event", "[chip][interaction]") {
     REQUIRE(removed == 1);
 }
 
-TEST_CASE("chip is focusable when removable and activates via keyboard", "[chip][focus][keyboard]") {
+TEST_CASE(
+    "chip is focusable when removable and activates via keyboard",
+    "[chip][focus][keyboard]"
+) {
     auto chip = widget::Chip::create("Tag", true);
     auto plain = widget::Chip::create("Plain", false);
     REQUIRE(chip->is_focusable());

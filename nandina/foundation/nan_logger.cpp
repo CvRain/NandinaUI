@@ -149,10 +149,10 @@ namespace nandina::log
 
         /// 日志后端失效时直接写 stderr，避免回退路径再次依赖日志或格式化设施。
         void report_backend_failure(const char* operation, const char* message) noexcept {
-        //todo 在windows上可能出现报错：
-        // in function `std::vprint_unicode(_iobuf*, std::basic_string_view<char, std::char_traits<char> >, std::basic_format_args<std::basic_format_context<std::__format::_Sink_iter<char>, char> >)':
-        // undefined reference to `std::__open_terminal(_iobuf*)'
-	// undefined reference to `std::__write_to_terminal(void*, std::span<char, 18446744073709551615ull>)'
+            // todo 在windows上可能出现报错：
+            // in function `std::vprint_unicode(_iobuf*, std::basic_string_view<char, std::char_traits<char> >, std::basic_format_args<std::basic_format_context<std::__format::_Sink_iter<char>, char> >)':
+            // undefined reference to `std::__open_terminal(_iobuf*)'
+            // undefined reference to `std::__write_to_terminal(void*, std::span<char, 18446744073709551615ull>)'
             std::println(
                 stderr,
                 "[LoggerBackend] Failed to {}{}{}",

@@ -5,45 +5,45 @@
 #ifndef NANDINA_EXPERIMENT_WIDGET_BUILTIN_COMPONENT_TRAITS_HPP
 #define NANDINA_EXPERIMENT_WIDGET_BUILTIN_COMPONENT_TRAITS_HPP
 
-#include "build_context.hpp"
 #include "alert.hpp"
+#include "alert_dialog.hpp"
 #include "avatar.hpp"
 #include "badge.hpp"
+#include "breadcrumb.hpp"
+#include "build_context.hpp"
 #include "button.hpp"
+#include "button_group.hpp"
 #include "card.hpp"
 #include "checkbox.hpp"
 #include "chip.hpp"
+#include "combobox.hpp"
+#include "command_palette.hpp"
+#include "context_menu.hpp"
 #include "dialog.hpp"
 #include "divider.hpp"
-#include "label.hpp"
-#include "image.hpp"
-#include "progress_bar.hpp"
-#include "spinner.hpp"
-#include "skeleton.hpp"
+#include "dropdown_menu.hpp"
 #include "empty_state.hpp"
-#include "breadcrumb.hpp"
-#include "button_group.hpp"
+#include "gesture_area.hpp"
+#include "hover_card.hpp"
+#include "image.hpp"
+#include "label.hpp"
 #include "pagination.hpp"
 #include "pointer_area.hpp"
-#include "gesture_area.hpp"
+#include "popover.hpp"
+#include "progress_bar.hpp"
 #include "radio_button.hpp"
 #include "radio_group.hpp"
 #include "select.hpp"
+#include "skeleton.hpp"
 #include "slider.hpp"
+#include "spinner.hpp"
 #include "switch.hpp"
 #include "tabs.hpp"
+#include "text_area.hpp"
+#include "text_field.hpp"
 #include "toggle.hpp"
 #include "toggle_group.hpp"
-#include "text_field.hpp"
-#include "text_area.hpp"
 #include "tooltip.hpp"
-#include "popover.hpp"
-#include "dropdown_menu.hpp"
-#include "context_menu.hpp"
-#include "combobox.hpp"
-#include "command_palette.hpp"
-#include "hover_card.hpp"
-#include "alert_dialog.hpp"
 
 namespace nandina::widget
 {
@@ -112,19 +112,15 @@ namespace nandina::widget
 
     template<>
     struct ComponentTraits<Checkbox> {
-        [[nodiscard]] static auto make(
-            const BuildContext& ui,
-            std::string label,
-            const bool checked = false
-        ) -> authoring::NodeBuilder<Checkbox> {
+        [[nodiscard]] static auto
+        make(const BuildContext& ui, std::string label, const bool checked = false)
+            -> authoring::NodeBuilder<Checkbox> {
             return authoring::make<Checkbox>(std::move(label), checked, ui.theme());
         }
 
-        [[nodiscard]] static auto make(
-            const BuildContext& ui,
-            reactive::Signal<bool>& checked,
-            std::string label
-        ) -> authoring::NodeBuilder<Checkbox> {
+        [[nodiscard]] static auto
+        make(const BuildContext& ui, reactive::Signal<bool>& checked, std::string label)
+            -> authoring::NodeBuilder<Checkbox> {
             auto result = make(ui, std::move(label), checked.get());
             const auto control = result.build();
             ui.bind(control, &Checkbox::set_checked, checked);
@@ -139,19 +135,15 @@ namespace nandina::widget
 
     template<>
     struct ComponentTraits<Switch> {
-        [[nodiscard]] static auto make(
-            const BuildContext& ui,
-            std::string label,
-            const bool checked = false
-        ) -> authoring::NodeBuilder<Switch> {
+        [[nodiscard]] static auto
+        make(const BuildContext& ui, std::string label, const bool checked = false)
+            -> authoring::NodeBuilder<Switch> {
             return authoring::make<Switch>(std::move(label), checked, ui.theme());
         }
 
-        [[nodiscard]] static auto make(
-            const BuildContext& ui,
-            reactive::Signal<bool>& checked,
-            std::string label
-        ) -> authoring::NodeBuilder<Switch> {
+        [[nodiscard]] static auto
+        make(const BuildContext& ui, reactive::Signal<bool>& checked, std::string label)
+            -> authoring::NodeBuilder<Switch> {
             auto result = make(ui, std::move(label), checked.get());
             const auto control = result.build();
             ui.bind(control, &Switch::set_checked, checked);
@@ -175,7 +167,12 @@ namespace nandina::widget
             const float step = 0.01F
         ) -> authoring::NodeBuilder<Slider> {
             return authoring::make<Slider>(
-                std::move(label), value, minimum, maximum, step, ui.theme()
+                std::move(label),
+                value,
+                minimum,
+                maximum,
+                step,
+                ui.theme()
             );
         }
 
@@ -201,21 +198,15 @@ namespace nandina::widget
 
     template<>
     struct ComponentTraits<TextField> {
-        [[nodiscard]] static auto make(
-            const BuildContext& ui,
-            std::string value,
-            std::string placeholder
-        ) -> authoring::NodeBuilder<TextField> {
-            return authoring::make<TextField>(
-                std::move(value), std::move(placeholder), ui.theme()
-            );
+        [[nodiscard]] static auto
+        make(const BuildContext& ui, std::string value, std::string placeholder)
+            -> authoring::NodeBuilder<TextField> {
+            return authoring::make<TextField>(std::move(value), std::move(placeholder), ui.theme());
         }
 
-        [[nodiscard]] static auto make(
-            const BuildContext& ui,
-            reactive::Signal<std::string>& value,
-            std::string placeholder
-        ) -> authoring::NodeBuilder<TextField> {
+        [[nodiscard]] static auto
+        make(const BuildContext& ui, reactive::Signal<std::string>& value, std::string placeholder)
+            -> authoring::NodeBuilder<TextField> {
             auto result = make(ui, std::string(value.get()), std::move(placeholder));
             const auto field = result.build();
             ui.bind(field, &TextField::set_value, value);
@@ -230,22 +221,18 @@ namespace nandina::widget
 
     template<>
     struct ComponentTraits<TextArea> {
-        [[nodiscard]] static auto make(
-            const BuildContext& ui,
-            std::string value,
-            std::string placeholder
-        ) -> authoring::NodeBuilder<TextArea> {
+        [[nodiscard]] static auto
+        make(const BuildContext& ui, std::string value, std::string placeholder)
+            -> authoring::NodeBuilder<TextArea> {
             return authoring::make<TextArea>(std::move(value), ui.theme())
                 .configure([placeholder = std::move(placeholder)](TextArea& area) mutable {
                     area.set_placeholder(std::move(placeholder));
                 });
         }
 
-        [[nodiscard]] static auto make(
-            const BuildContext& ui,
-            reactive::Signal<std::string>& value,
-            std::string placeholder
-        ) -> authoring::NodeBuilder<TextArea> {
+        [[nodiscard]] static auto
+        make(const BuildContext& ui, reactive::Signal<std::string>& value, std::string placeholder)
+            -> authoring::NodeBuilder<TextArea> {
             auto result = make(ui, std::string(value.get()), std::move(placeholder));
             const auto area = result.build();
             ui.bind(area, &TextArea::set_value, value);
@@ -280,10 +267,8 @@ namespace nandina::widget
             return authoring::make<ProgressBar>(value, ui.theme());
         }
 
-        [[nodiscard]] static auto make(
-            const BuildContext& ui,
-            reactive::Signal<float>& value
-        ) -> authoring::NodeBuilder<ProgressBar> {
+        [[nodiscard]] static auto make(const BuildContext& ui, reactive::Signal<float>& value)
+            -> authoring::NodeBuilder<ProgressBar> {
             auto result = make(ui, value.get());
             ui.bind(result.build(), &ProgressBar::set_value, value);
             return result;
@@ -320,15 +305,12 @@ namespace nandina::widget
 
     template<>
     struct ComponentTraits<EmptyState> {
-        [[nodiscard]] static auto make(
-            const BuildContext& ui,
-            std::string title = {},
-            std::string description = {}
-        ) -> authoring::NodeBuilder<EmptyState> {
+        [[nodiscard]] static auto
+        make(const BuildContext& ui, std::string title = {}, std::string description = {})
+            -> authoring::NodeBuilder<EmptyState> {
             return authoring::make<EmptyState>(ui.theme())
-                .configure([title = std::move(title), description = std::move(description)](
-                               EmptyState& empty_state
-                           ) mutable {
+                .configure([title = std::move(title),
+                            description = std::move(description)](EmptyState& empty_state) mutable {
                     empty_state.set_title(std::move(title));
                     empty_state.set_description(std::move(description));
                 });
@@ -344,9 +326,9 @@ namespace nandina::widget
             std::string description = {}
         ) -> authoring::NodeBuilder<Alert> {
             return authoring::make<Alert>(ui.theme())
-                .configure([tone, title = std::move(title), description = std::move(description)](
-                               Alert& alert
-                           ) mutable {
+                .configure([tone,
+                            title = std::move(title),
+                            description = std::move(description)](Alert& alert) mutable {
                     alert.set_tone(tone);
                     alert.set_title(std::move(title));
                     alert.set_description(std::move(description));
@@ -361,22 +343,18 @@ namespace nandina::widget
             return authoring::make<RadioButton>(std::move(label), nullptr, ui.theme());
         }
 
-        [[nodiscard]] static auto make(
-            const BuildContext& ui,
-            std::string label,
-            std::shared_ptr<RadioGroup> group
-        ) -> authoring::NodeBuilder<RadioButton> {
+        [[nodiscard]] static auto
+        make(const BuildContext& ui, std::string label, std::shared_ptr<RadioGroup> group)
+            -> authoring::NodeBuilder<RadioButton> {
             return authoring::make<RadioButton>(std::move(label), std::move(group), ui.theme());
         }
     };
 
     template<>
     struct ComponentTraits<Tabs> {
-        [[nodiscard]] static auto make(
-            const BuildContext& ui,
-            std::vector<std::string> labels,
-            const int selected = 0
-        ) -> authoring::NodeBuilder<Tabs> {
+        [[nodiscard]] static auto
+        make(const BuildContext& ui, std::vector<std::string> labels, const int selected = 0)
+            -> authoring::NodeBuilder<Tabs> {
             return authoring::make<Tabs>(std::move(labels), ui.theme())
                 .configure([selected](Tabs& tabs) { tabs.set_selected_index(selected); });
         }
@@ -406,23 +384,18 @@ namespace nandina::widget
         }
 
         /// 组内成员：注册到共享的 ToggleGroup，方向键 / typeahead 由组统一漫游。
-        [[nodiscard]] static auto make(
-            const BuildContext& ui,
-            std::string text,
-            std::shared_ptr<ToggleGroup> group
-        ) -> authoring::NodeBuilder<Toggle> {
+        [[nodiscard]] static auto
+        make(const BuildContext& ui, std::string text, std::shared_ptr<ToggleGroup> group)
+            -> authoring::NodeBuilder<Toggle> {
             return authoring::make<Toggle>(std::move(text), std::move(group), ui.theme());
         }
 
-        [[nodiscard]] static auto make(
-            const BuildContext& ui,
-            reactive::Signal<bool>& checked,
-            std::string text
-        ) -> authoring::NodeBuilder<Toggle> {
-            auto result = authoring::make<Toggle>(std::move(text), ui.theme())
-                              .configure([&checked](Toggle& toggle) {
-                                  toggle.set_checked(checked.get());
-                              });
+        [[nodiscard]] static auto
+        make(const BuildContext& ui, reactive::Signal<bool>& checked, std::string text)
+            -> authoring::NodeBuilder<Toggle> {
+            auto result =
+                authoring::make<Toggle>(std::move(text), ui.theme())
+                    .configure([&checked](Toggle& toggle) { toggle.set_checked(checked.get()); });
             const auto control = result.build();
             ui.bind(control, &Toggle::set_checked, checked);
             ui.connect(control->checked_changed(), [&checked](const bool current) {
@@ -450,11 +423,9 @@ namespace nandina::widget
     struct ComponentTraits<Tooltip> {
         template<typename Control>
             requires std::derived_from<Control, scene::NanControl>
-        [[nodiscard]] static auto make(
-            const BuildContext& ui,
-            std::string text,
-            std::shared_ptr<Control> trigger
-        ) -> authoring::NodeBuilder<Tooltip> {
+        [[nodiscard]] static auto
+        make(const BuildContext& ui, std::string text, std::shared_ptr<Control> trigger)
+            -> authoring::NodeBuilder<Tooltip> {
             return authoring::make<Tooltip>(std::move(text), std::move(trigger), ui.theme())
                 .configure([&ui](Tooltip& tooltip) {
                     tooltip.set_overlay_service(
@@ -497,9 +468,7 @@ namespace nandina::widget
         ) -> authoring::NodeBuilder<DropdownMenu> {
             return authoring::make<DropdownMenu>(std::move(trigger), std::move(items), ui.theme())
                 .configure([&ui](DropdownMenu& menu) {
-                    menu.set_overlay_service(
-                        ui.has_overlay_host() ? &ui.overlay_host() : nullptr
-                    );
+                    menu.set_overlay_service(ui.has_overlay_host() ? &ui.overlay_host() : nullptr);
                 });
         }
     };
@@ -515,9 +484,7 @@ namespace nandina::widget
         ) -> authoring::NodeBuilder<ContextMenu> {
             return authoring::make<ContextMenu>(std::move(target), std::move(items), ui.theme())
                 .configure([&ui](ContextMenu& menu) {
-                    menu.set_overlay_service(
-                        ui.has_overlay_host() ? &ui.overlay_host() : nullptr
-                    );
+                    menu.set_overlay_service(ui.has_overlay_host() ? &ui.overlay_host() : nullptr);
                 });
         }
     };
@@ -535,7 +502,10 @@ namespace nandina::widget
             std::string placeholder = {}
         ) -> authoring::NodeBuilder<Combobox> {
             return authoring::make<Combobox>(
-                       std::move(items), std::move(value), std::move(placeholder), ui.theme()
+                       std::move(items),
+                       std::move(value),
+                       std::move(placeholder),
+                       ui.theme()
             )
                 .configure([&ui](Combobox& combobox) {
                     combobox.set_overlay_service(
@@ -554,13 +524,13 @@ namespace nandina::widget
      */
     template<>
     struct ComponentTraits<CommandPalette> {
-        [[nodiscard]] static auto make(
-            const BuildContext& ui,
-            std::vector<MenuItem> items = {},
-            std::string placeholder = {}
-        ) -> authoring::NodeBuilder<CommandPalette> {
+        [[nodiscard]] static auto
+        make(const BuildContext& ui, std::vector<MenuItem> items = {}, std::string placeholder = {})
+            -> authoring::NodeBuilder<CommandPalette> {
             return authoring::make<CommandPalette>(
-                       std::move(items), std::move(placeholder), ui.theme()
+                       std::move(items),
+                       std::move(placeholder),
+                       ui.theme()
             )
                 .configure([&ui](CommandPalette& palette) {
                     palette.set_overlay_service(
@@ -580,13 +550,9 @@ namespace nandina::widget
             std::shared_ptr<scene::NanControl> trigger = nullptr,
             std::shared_ptr<scene::NanControl> content = nullptr
         ) -> authoring::NodeBuilder<HoverCard> {
-            return authoring::make<HoverCard>(
-                       std::move(trigger), std::move(content), ui.theme()
-            )
+            return authoring::make<HoverCard>(std::move(trigger), std::move(content), ui.theme())
                 .configure([&ui](HoverCard& card) {
-                    card.set_overlay_service(
-                        ui.has_overlay_host() ? &ui.overlay_host() : nullptr
-                    );
+                    card.set_overlay_service(ui.has_overlay_host() ? &ui.overlay_host() : nullptr);
                 });
         }
     };
@@ -599,13 +565,13 @@ namespace nandina::widget
      */
     template<>
     struct ComponentTraits<AlertDialog> {
-        [[nodiscard]] static auto make(
-            const BuildContext& ui,
-            std::string title,
-            std::string description
-        ) -> authoring::NodeBuilder<AlertDialog> {
+        [[nodiscard]] static auto
+        make(const BuildContext& ui, std::string title, std::string description)
+            -> authoring::NodeBuilder<AlertDialog> {
             return authoring::make<AlertDialog>(
-                       std::move(title), std::move(description), ui.theme()
+                       std::move(title),
+                       std::move(description),
+                       ui.theme()
             )
                 .configure([&ui](AlertDialog& dialog) {
                     dialog.set_overlay_service(
@@ -617,20 +583,16 @@ namespace nandina::widget
 
     template<>
     struct ComponentTraits<Select> {
-        [[nodiscard]] static auto make(
-            const BuildContext& ui,
-            std::vector<std::string> options,
-            const int selected = 0
-        ) -> authoring::NodeBuilder<Select> {
+        [[nodiscard]] static auto
+        make(const BuildContext& ui, std::vector<std::string> options, const int selected = 0)
+            -> authoring::NodeBuilder<Select> {
             return authoring::make<Select>(std::move(options), ui.theme())
-                .configure(
-                    [&ui, selected](Select& select) {
-                        select.set_selected_index(selected);
-                        select.set_overlay_service(
-                            ui.has_overlay_host() ? &ui.overlay_host() : nullptr
-                        );
-                    }
-                );
+                .configure([&ui, selected](Select& select) {
+                    select.set_selected_index(selected);
+                    select.set_overlay_service(
+                        ui.has_overlay_host() ? &ui.overlay_host() : nullptr
+                    );
+                });
         }
 
         [[nodiscard]] static auto make(
@@ -652,8 +614,7 @@ namespace nandina::widget
 
     template<>
     struct ComponentTraits<Divider> {
-        [[nodiscard]] static auto make(const BuildContext& ui)
-            -> authoring::NodeBuilder<Divider> {
+        [[nodiscard]] static auto make(const BuildContext& ui) -> authoring::NodeBuilder<Divider> {
             return authoring::make<Divider>(ui.theme());
         }
     };
@@ -668,11 +629,9 @@ namespace nandina::widget
 
     template<>
     struct ComponentTraits<Chip> {
-        [[nodiscard]] static auto make(
-            const BuildContext& ui,
-            std::string text,
-            const bool removable = false
-        ) -> authoring::NodeBuilder<Chip> {
+        [[nodiscard]] static auto
+        make(const BuildContext& ui, std::string text, const bool removable = false)
+            -> authoring::NodeBuilder<Chip> {
             return authoring::make<Chip>(std::move(text), removable, ui.theme());
         }
     };
@@ -685,19 +644,17 @@ namespace nandina::widget
             std::shared_ptr<scene::NanControl> content = nullptr
         ) -> authoring::NodeBuilder<Dialog> {
             return authoring::make<Dialog>(ui.theme())
-                .configure(
-                    [&ui, title = std::move(title), content = std::move(content)](
-                        Dialog& dialog
-                    ) mutable {
-                        dialog.set_title(std::move(title));
-                        if (content) {
-                            (void)dialog.set_content(std::move(content));
-                        }
-                        dialog.set_overlay_service(
-                            ui.has_overlay_host() ? &ui.overlay_host() : nullptr
-                        );
+                .configure([&ui,
+                            title = std::move(title),
+                            content = std::move(content)](Dialog& dialog) mutable {
+                    dialog.set_title(std::move(title));
+                    if (content) {
+                        (void)dialog.set_content(std::move(content));
                     }
-                );
+                    dialog.set_overlay_service(
+                        ui.has_overlay_host() ? &ui.overlay_host() : nullptr
+                    );
+                });
         }
     };
     /**
@@ -705,10 +662,9 @@ namespace nandina::widget
      */
     template<>
     struct ComponentTraits<ButtonGroup> {
-        [[nodiscard]] static auto make(
-            const BuildContext& ui,
-            const LayoutAxis axis = LayoutAxis::horizontal
-        ) -> authoring::NodeBuilder<ButtonGroup> {
+        [[nodiscard]] static auto
+        make(const BuildContext& ui, const LayoutAxis axis = LayoutAxis::horizontal)
+            -> authoring::NodeBuilder<ButtonGroup> {
             return authoring::make<ButtonGroup>(axis, ui.theme());
         }
     };
@@ -725,11 +681,9 @@ namespace nandina::widget
     /** Pagination 是场景节点；页码槽位由 page_count / current_page 派生。 */
     template<>
     struct ComponentTraits<Pagination> {
-        [[nodiscard]] static auto make(
-            const BuildContext& ui,
-            const int page_count = 0,
-            const int current_page = 1
-        ) -> authoring::NodeBuilder<Pagination> {
+        [[nodiscard]] static auto
+        make(const BuildContext& ui, const int page_count = 0, const int current_page = 1)
+            -> authoring::NodeBuilder<Pagination> {
             return authoring::make<Pagination>(ui.theme())
                 .configure([page_count, current_page](Pagination& pagination) {
                     pagination.set_page_count(page_count);
@@ -737,11 +691,9 @@ namespace nandina::widget
                 });
         }
 
-        [[nodiscard]] static auto make(
-            const BuildContext& ui,
-            reactive::Signal<int>& current_page,
-            const int page_count
-        ) -> authoring::NodeBuilder<Pagination> {
+        [[nodiscard]] static auto
+        make(const BuildContext& ui, reactive::Signal<int>& current_page, const int page_count)
+            -> authoring::NodeBuilder<Pagination> {
             auto result = make(ui, page_count, current_page.get());
             const auto control = result.build();
             ui.bind(control, &Pagination::set_current_page, current_page);
@@ -753,6 +705,6 @@ namespace nandina::widget
             return result;
         }
     };
-}
+} // namespace nandina::widget
 
 #endif // NANDINA_EXPERIMENT_WIDGET_BUILTIN_COMPONENT_TRAITS_HPP

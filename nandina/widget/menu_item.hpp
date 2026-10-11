@@ -28,7 +28,7 @@ namespace nandina::widget
      * 种类决定该条目是否参与键盘漫游与选择，而不决定它长什么样：外观由组件的配方
      * 与状态层表达，同一 kind 在不同组件里可以有不同造型。
      */
-    enum class MenuItemKind: std::uint8_t {
+    enum class MenuItemKind : std::uint8_t {
         /// 触发一个动作（默认）。不承载勾选状态。
         action,
         /// 独立可勾选项：`checked` 有意义，多选语义。
@@ -99,7 +99,7 @@ namespace nandina::widget
         -> const MenuItem*;
 
     /// 勾选语义：决定勾选如何被用户操作改变。
-    enum class MenuSelectionMode: std::uint8_t {
+    enum class MenuSelectionMode : std::uint8_t {
         /// 纯动作菜单：不保留勾选状态，toggle 一律不生效。
         none,
         /// 单选：勾选一项会清除同层的其他 radio 项。
@@ -118,8 +118,7 @@ namespace nandina::widget
     class MenuSelection {
     public:
         MenuSelection() = default;
-        explicit MenuSelection(MenuSelectionMode mode) noexcept:
-            mode_(mode) {}
+        explicit MenuSelection(MenuSelectionMode mode) noexcept: mode_(mode) {}
 
         void set_mode(MenuSelectionMode mode) noexcept {
             mode_ = mode;
@@ -146,8 +145,8 @@ namespace nandina::widget
         static auto set_checked(std::vector<MenuItem>& items, std::string_view id, bool checked)
             -> bool;
 
-        [[nodiscard]] static auto is_checked(const std::vector<MenuItem>& items, std::string_view id)
-            -> bool;
+        [[nodiscard]] static auto
+        is_checked(const std::vector<MenuItem>& items, std::string_view id) -> bool;
         /// 本层所有 checkbox / radio 中处于勾选状态的 id，按条目顺序。
         [[nodiscard]] static auto checked_ids(const std::vector<MenuItem>& items)
             -> std::vector<std::string>;

@@ -2,19 +2,19 @@
 // Router + Store tests.
 //
 
-#include <nandina/app/nan_router.hpp>
 #include <nandina/app/nan_application.hpp>
-#include <nandina/app/nan_window.hpp>
+#include <nandina/app/nan_router.hpp>
 #include <nandina/app/nan_store.hpp>
+#include <nandina/app/nan_window.hpp>
 #include <nandina/foundation/geometry.hpp>
 #include <nandina/reactive/effect.hpp>
 #include <nandina/reactive/signal.hpp>
 #include <nandina/scene/control.hpp>
-#include <nandina/scene/scene_tree.hpp>
 #include <nandina/scene/input_event.hpp>
+#include <nandina/scene/overlay_host.hpp>
+#include <nandina/scene/scene_tree.hpp>
 #include <nandina/theme/theme.hpp>
 #include <nandina/widget/controls.hpp>
-#include <nandina/scene/overlay_host.hpp>
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
@@ -69,8 +69,7 @@ namespace
     public:
         explicit HomePage(HomeParams params): Page(params) {}
 
-        [[nodiscard]] auto build(app::PageContext& context)
-            -> widget::View override {
+        [[nodiscard]] auto build(app::PageContext& context) -> widget::View override {
             auto root = std::make_shared<scene::NanControl>(foundation::NanSize(320, 200));
             root->set_name("home-root");
             root->set_position(foundation::NanPoint(static_cast<float>(params().user_id), 0.0F));
@@ -83,8 +82,7 @@ namespace
     public:
         explicit DetailPage(DetailParams params): Page(params) {}
 
-        [[nodiscard]] auto build(app::PageContext& context)
-            -> widget::View override {
+        [[nodiscard]] auto build(app::PageContext& context) -> widget::View override {
             auto root = std::make_shared<scene::NanControl>(foundation::NanSize(200, 100));
             root->set_name("detail-root");
             context.store<TestStore>().count.set(params().blog_id);
@@ -96,8 +94,7 @@ namespace
     public:
         PlainPage() = default;
 
-        [[nodiscard]] auto build(app::PageContext& context)
-            -> widget::View override {
+        [[nodiscard]] auto build(app::PageContext& context) -> widget::View override {
             auto root = std::make_shared<scene::NanControl>(foundation::NanSize(100, 50));
             root->set_background(context.theme().palette.primary);
             return root;
@@ -138,7 +135,6 @@ namespace
             }
             return std::make_shared<scene::NanControl>(foundation::NanSize(80, 40));
         }
-
     };
 
     struct DispatcherProbeParams {
@@ -150,8 +146,7 @@ namespace
     public:
         explicit DispatcherProbePage(DispatcherProbeParams params): Page(params) {}
 
-        [[nodiscard]] auto build(app::PageContext& context)
-            -> widget::View override {
+        [[nodiscard]] auto build(app::PageContext& context) -> widget::View override {
             *params().available = context.has_dispatcher();
             *params().dispatcher = &context.dispatcher();
             return std::make_shared<scene::NanControl>(foundation::NanSize(80, 40));
@@ -171,8 +166,7 @@ namespace
     public:
         explicit ScopedObserverPage(ScopedObserverParams params): Page(params) {}
 
-        [[nodiscard]] auto build(app::PageContext& context)
-            -> widget::View override {
+        [[nodiscard]] auto build(app::PageContext& context) -> widget::View override {
             auto& store = context.store<TestStore>();
             auto* log = params().log;
             context.scope().effect([&store, log] {
@@ -192,8 +186,7 @@ namespace
     public:
         explicit ScopedEventPage(ScopedEventParams params): Page(params) {}
 
-        [[nodiscard]] auto build(app::PageContext& context)
-            -> widget::View override {
+        [[nodiscard]] auto build(app::PageContext& context) -> widget::View override {
             context.ui().connect(*params().event, [observed = params().observed](const int value) {
                 *observed += value;
             });
@@ -217,9 +210,8 @@ namespace
 
         [[nodiscard]] auto build(app::PageContext& context) -> widget::View override {
             auto ui = context.ui();
-            auto button = ui.make<widget::Button>("Retained root").on_click([this] {
-                ++*params().calls;
-            });
+            auto button =
+                ui.make<widget::Button>("Retained root").on_click([this] { ++*params().calls; });
             auto root = button.build();
             *params().root = root;
             return root;
@@ -236,8 +228,7 @@ namespace
     public:
         explicit AsyncPage(AsyncPageParams params): Page(params) {}
 
-        [[nodiscard]] auto build(app::PageContext& context)
-            -> widget::View override {
+        [[nodiscard]] auto build(app::PageContext& context) -> widget::View override {
             const auto params = this->params();
             context.async_scope().run(
                 [params](app::CancellationToken token) {
@@ -265,8 +256,7 @@ namespace
 
     class OverlayProbePage final: public app::Page<> {
     public:
-        [[nodiscard]] auto build(app::PageContext& context)
-            -> widget::View override {
+        [[nodiscard]] auto build(app::PageContext& context) -> widget::View override {
             g_overlay_probe.context_has = context.has_overlay_host();
             if (g_overlay_probe.context_has) {
                 g_overlay_probe.context_host = &context.overlay_host();
@@ -287,6 +277,7 @@ namespace
 
         int errors = 0;
         std::string last_message;
+
     protected:
         void on_error(std::exception_ptr error) override {
             ++errors;
@@ -309,10 +300,7 @@ namespace
             auto ui = context.ui();
             return ui.column()
                 .gap(4.0F)
-                .children(
-                    ui.make<widget::Button>("First"),
-                    ui.make<widget::Button>("Second")
-                )
+                .children(ui.make<widget::Button>("First"), ui.make<widget::Button>("Second"))
                 .build();
         }
     };
@@ -323,12 +311,10 @@ namespace
     public:
         [[nodiscard]] auto build(app::PageContext& context) -> widget::View override {
             auto ui = context.ui();
-            handle_ = std::make_unique<scene::OverlayHandle>(
-                context.overlay_host().present(
-                    ui.make<widget::Label>("page overlay").build(),
-                    scene::OverlayOptions {.level = scene::OverlayLevel::popup}
-                )
-            );
+            handle_ = std::make_unique<scene::OverlayHandle>(context.overlay_host().present(
+                ui.make<widget::Label>("page overlay").build(),
+                scene::OverlayOptions {.level = scene::OverlayLevel::popup}
+            ));
             return std::make_shared<scene::NanControl>(foundation::NanSize(40.0F, 20.0F));
         }
 
@@ -351,10 +337,12 @@ TEST_CASE("configured router navigates between registered typed pages", "[app][r
     app::NanRouter router {graph, theme};
     router.set_store(store);
 
-    REQUIRE(router.configure(app::Routes {
-        app::route<HomePage>(app::RouteOptions {.address = "home", .title = "Home"}),
-        app::route<DetailPage>(app::RouteOptions {.address = "detail", .title = "Detail"}),
-    }));
+    REQUIRE(router.configure(
+        app::Routes {
+            app::route<HomePage>(app::RouteOptions {.address = "home", .title = "Home"}),
+            app::route<DetailPage>(app::RouteOptions {.address = "detail", .title = "Detail"}),
+        }
+    ));
     const auto navigation = router.navigation();
     REQUIRE(navigation.valid());
     REQUIRE(navigation.navigate<HomePage>(HomeParams {.user_id = 4}));
@@ -379,10 +367,12 @@ TEST_CASE("route configuration validates page types and display keys", "[app][ro
     // key/title 是可选显示元数据，不是路由身份：最简写法 route<PageT>() 必须能配上，
     // 否则"类型就是路由身份"就名不副实。
     app::NanRouter keyless_router {graph, theme::default_theme()};
-    REQUIRE(keyless_router.configure(app::Routes {
-        app::route<PlainPage>(),
-        app::route<SecondPlainPage>(),
-    }));
+    REQUIRE(keyless_router.configure(
+        app::Routes {
+            app::route<PlainPage>(),
+            app::route<SecondPlainPage>(),
+        }
+    ));
     REQUIRE(keyless_router.route_mode());
     REQUIRE(keyless_router.route<PlainPage>() != nullptr);
     REQUIRE(keyless_router.route<PlainPage>()->options.address.empty());
@@ -394,22 +384,29 @@ TEST_CASE("route configuration validates page types and display keys", "[app][ro
 
     // 页面类型是路由身份：同一类型注册两次必然是笔误。
     app::NanRouter duplicate_page_router {graph, theme::default_theme()};
-    REQUIRE_FALSE(duplicate_page_router.configure(app::Routes {
-        app::route<PlainPage>({.address = "a"}),
-        app::route<PlainPage>({.address = "b"}),
-    }));
+    REQUIRE_FALSE(duplicate_page_router.configure(
+        app::Routes {
+            app::route<PlainPage>({.address = "a"}),
+            app::route<PlainPage>({.address = "b"}),
+        }
+    ));
     REQUIRE_FALSE(duplicate_page_router.route_mode());
 
     // 设了 key 就必须唯一，否则按 key 展示/高亮的界面会出现歧义。
     app::NanRouter duplicate_key_router {graph, theme::default_theme()};
-    REQUIRE_FALSE(duplicate_key_router.configure(app::Routes {
-        app::route<PlainPage>({.address = "same"}),
-        app::route<SecondPlainPage>({.address = "same"}),
-    }));
+    REQUIRE_FALSE(duplicate_key_router.configure(
+        app::Routes {
+            app::route<PlainPage>({.address = "same"}),
+            app::route<SecondPlainPage>({.address = "same"}),
+        }
+    ));
     REQUIRE_FALSE(duplicate_key_router.route_mode());
 }
 
-TEST_CASE("router outlet replaces its mounted page without changing outlet identity", "[app][router][outlet]") {
+TEST_CASE(
+    "router outlet replaces its mounted page without changing outlet identity",
+    "[app][router][outlet]"
+) {
     auto outlet = std::make_shared<app::RouterOutlet>();
     auto first = std::make_shared<scene::NanControl>(foundation::NanSize(20, 20));
     auto second = std::make_shared<scene::NanControl>(foundation::NanSize(30, 30));
@@ -490,10 +487,12 @@ TEST_CASE(
     // 不装 dispatcher：导航就地生效，于是"遍历期间换页"这条路径会被真正走到。
     app::NanRouter router {graph, theme::default_theme()};
     tree.set_root(router.outlet());
-    REQUIRE(router.configure(app::Routes {
-        app::route<PlainPage>({.address = "plain"}),
-        app::route<SecondPlainPage>({.address = "second"}),
-    }));
+    REQUIRE(router.configure(
+        app::Routes {
+            app::route<PlainPage>({.address = "plain"}),
+            app::route<SecondPlainPage>({.address = "second"}),
+        }
+    ));
 
     const auto navigation = router.navigation();
     REQUIRE(navigation.navigate<PlainPage>());
@@ -517,9 +516,11 @@ TEST_CASE("focus reaches a page whose swap was deferred", "[app][router][focus]"
     scene::NanSceneTree tree;
     app::NanRouter router {graph, theme::default_theme()};
     tree.set_root(router.outlet());
-    REQUIRE(router.configure(app::Routes {
-        app::route<FocusablePage>({.address = "focusable"}),
-    }));
+    REQUIRE(router.configure(
+        app::Routes {
+            app::route<FocusablePage>({.address = "focusable"}),
+        }
+    ));
 
     const auto navigation = router.navigation();
     {
@@ -541,10 +542,12 @@ TEST_CASE("focus reaches a page whose swap was deferred", "[app][router][focus]"
 TEST_CASE("window shell keeps the router outlet stable", "[app][router][shell]") {
     app::NanApplication application;
     app::NanWindow window {application, {}};
-    auto& router = window.use_router(app::Routes {
-        app::route<PlainPage>({.address = "plain", .title = "Plain"}),
-        app::route<SecondPlainPage>({.address = "second", .title = "Second"}),
-    });
+    auto& router = window.use_router(
+        app::Routes {
+            app::route<PlainPage>({.address = "plain", .title = "Plain"}),
+            app::route<SecondPlainPage>({.address = "second", .title = "Second"}),
+        }
+    );
     app::RouterOutlet* observed_outlet = nullptr;
     window.set_shell([&](app::ShellContext& context) -> widget::View {
         observed_outlet = context.outlet().get();
@@ -554,8 +557,10 @@ TEST_CASE("window shell keeps the router outlet stable", "[app][router][shell]")
     REQUIRE(observed_outlet != nullptr);
     REQUIRE(router.start<PlainPage>());
     REQUIRE(window.scene_tree().layout_root(foundation::NanSize(720, 640)) > 0);
-    INFO("shell size=" << window.overlay_host().content()->width() << "x"
-                        << window.overlay_host().content()->height());
+    INFO(
+        "shell size=" << window.overlay_host().content()->width() << "x"
+                      << window.overlay_host().content()->height()
+    );
     INFO("outlet size=" << observed_outlet->width() << "x" << observed_outlet->height());
     REQUIRE(observed_outlet->width() > 600.0F);
     REQUIRE(observed_outlet->height() == Catch::Approx(640.0F));
@@ -577,10 +582,12 @@ TEST_CASE("window routes page build failures to its on_error hook", "[app][route
     const RouteProbeParams params {.builds = &builds, .fail = &fail};
     // 同前：窗口（及其 Router）声明在探针状态之后，保证它先析构。
     ErrorProbeWindow window {application, {}};
-    auto& router = window.use_router(app::Routes {
-        app::route<PlainPage>({.address = "plain"}),
-        app::route<RouteProbePage>({.address = "probe"}),
-    });
+    auto& router = window.use_router(
+        app::Routes {
+            app::route<PlainPage>({.address = "plain"}),
+            app::route<RouteProbePage>({.address = "probe"}),
+        }
+    );
 
     const auto navigation = router.navigation();
     REQUIRE(navigation.navigate<PlainPage>());
@@ -603,10 +610,12 @@ TEST_CASE("window routes page build failures to its on_error hook", "[app][route
 TEST_CASE("navigation moves keyboard focus into the new page", "[app][router][focus]") {
     app::NanApplication application;
     app::NanWindow window {application, {}};
-    auto& router = window.use_router(app::Routes {
-        app::route<PlainPage>({.address = "plain"}),
-        app::route<FocusablePage>({.address = "focusable"}),
-    });
+    auto& router = window.use_router(
+        app::Routes {
+            app::route<PlainPage>({.address = "plain"}),
+            app::route<FocusablePage>({.address = "focusable"}),
+        }
+    );
     auto& tree = window.scene_tree();
     const auto navigation = router.navigation();
 
@@ -629,10 +638,12 @@ TEST_CASE("navigation moves keyboard focus into the new page", "[app][router][fo
 TEST_CASE("navigating away closes the overlays a page presented", "[app][router][overlay]") {
     app::NanApplication application;
     app::NanWindow window {application, {}};
-    auto& router = window.use_router(app::Routes {
-        app::route<PlainPage>({.address = "plain"}),
-        app::route<OverlayHoldingPage>({.address = "overlay"}),
-    });
+    auto& router = window.use_router(
+        app::Routes {
+            app::route<PlainPage>({.address = "plain"}),
+            app::route<OverlayHoldingPage>({.address = "overlay"}),
+        }
+    );
     const auto navigation = router.navigation();
 
     REQUIRE(navigation.navigate<OverlayHoldingPage>());
@@ -645,7 +656,10 @@ TEST_CASE("navigating away closes the overlays a page presented", "[app][router]
     REQUIRE(window.overlay_host().overlay_count() == 0);
 }
 
-TEST_CASE("navigation requests are deferred when a UI dispatcher is installed", "[app][router][navigate]") {
+TEST_CASE(
+    "navigation requests are deferred when a UI dispatcher is installed",
+    "[app][router][navigate]"
+) {
     reactive::Graph graph;
     TestStore store {graph};
     const auto theme = theme::default_theme();
@@ -661,10 +675,12 @@ TEST_CASE("navigation requests are deferred when a UI dispatcher is installed", 
         &dispatcher,
     };
     router.set_store(store);
-    REQUIRE(router.configure(app::Routes {
-        app::route<HomePage>(app::RouteOptions {.address = "home"}),
-        app::route<DetailPage>(app::RouteOptions {.address = "detail"}),
-    }));
+    REQUIRE(router.configure(
+        app::Routes {
+            app::route<HomePage>(app::RouteOptions {.address = "home"}),
+            app::route<DetailPage>(app::RouteOptions {.address = "detail"}),
+        }
+    ));
     const auto navigation = router.navigation();
     REQUIRE(navigation.navigate<HomePage>(HomeParams {.user_id = 1}));
     REQUIRE_FALSE(router.current_page_key().valid());
@@ -678,10 +694,7 @@ TEST_CASE("navigation requests are deferred when a UI dispatcher is installed", 
     REQUIRE(router.current_address() == "detail");
 }
 
-TEST_CASE(
-    "navigation coalesces requests queued in one UI task phase",
-    "[app][router][navigate]"
-) {
+TEST_CASE("navigation coalesces requests queued in one UI task phase", "[app][router][navigate]") {
     reactive::Graph graph;
     app::UiDispatcher dispatcher;
     TestStore store {graph};
@@ -695,10 +708,12 @@ TEST_CASE(
         nullptr,
         &dispatcher,
     };
-    REQUIRE(router.configure(app::Routes {
-        app::route<HomePage>({.address = "home"}),
-        app::route<DetailPage>({.address = "detail"}),
-    }));
+    REQUIRE(router.configure(
+        app::Routes {
+            app::route<HomePage>({.address = "home"}),
+            app::route<DetailPage>({.address = "detail"}),
+        }
+    ));
     const auto navigation = router.navigation();
 
     REQUIRE(navigation.navigate<HomePage>(HomeParams {.user_id = 1}));
@@ -723,9 +738,11 @@ TEST_CASE(
     // router 必须声明在探针状态**之后**：作用域结束时它先析构，页面析构会写回
     // destroyed / destruction_count；顺序反过来就是 stack-use-after-scope（ASan 会报）。
     app::NanRouter router {graph, theme::default_theme()};
-    REQUIRE(router.configure(app::Routes {
-        app::route<RouteProbePage>({.address = "probe"}),
-    }));
+    REQUIRE(router.configure(
+        app::Routes {
+            app::route<RouteProbePage>({.address = "probe"}),
+        }
+    ));
     const auto navigation = router.navigation();
     const RouteProbeParams params {
         .builds = &builds,
@@ -801,10 +818,12 @@ TEST_CASE(
         nullptr,
         &dispatcher,
     };
-    REQUIRE(router.configure(app::Routes {
-        app::route<PlainPage>({.address = "plain"}),
-        app::route<RouteProbePage>({.address = "probe"}),
-    }));
+    REQUIRE(router.configure(
+        app::Routes {
+            app::route<PlainPage>({.address = "plain"}),
+            app::route<RouteProbePage>({.address = "probe"}),
+        }
+    ));
 
     std::string reported_route;
     std::exception_ptr reported_error;
@@ -856,14 +875,16 @@ TEST_CASE("router exposes its UI dispatcher through page context", "[app][router
     reactive::Graph graph;
     const auto theme = theme::default_theme();
     app::UiDispatcher dispatcher;
-    app::NanRouter router {graph, theme, nullptr, app::StoreKey {}, nullptr, nullptr, nullptr,
-                           &dispatcher};
+    app::NanRouter
+        router {graph, theme, nullptr, app::StoreKey {}, nullptr, nullptr, nullptr, &dispatcher};
     bool available = false;
     app::UiDispatcher* observed = nullptr;
 
-    REQUIRE(router.configure(app::Routes {
-        app::route<DispatcherProbePage>({.address = "dispatcher-probe"}),
-    }));
+    REQUIRE(router.configure(
+        app::Routes {
+            app::route<DispatcherProbePage>({.address = "dispatcher-probe"}),
+        }
+    ));
     REQUIRE(router.navigation().navigate<DispatcherProbePage>(DispatcherProbeParams {
         .available = &available,
         .dispatcher = &observed,
@@ -874,7 +895,10 @@ TEST_CASE("router exposes its UI dispatcher through page context", "[app][router
     REQUIRE(observed == &dispatcher);
 }
 
-TEST_CASE("navigation requests defer route replacement to the UI task phase", "[app][router][navigate]") {
+TEST_CASE(
+    "navigation requests defer route replacement to the UI task phase",
+    "[app][router][navigate]"
+) {
     reactive::Graph graph;
     const auto theme = theme::default_theme();
     TestStore store {graph};
@@ -889,11 +913,13 @@ TEST_CASE("navigation requests defer route replacement to the UI task phase", "[
         nullptr,
         &dispatcher
     };
-    REQUIRE(router.configure(app::Routes {
-        app::route<HomePage>({.address = "home"}),
-        app::route<DetailPage>({.address = "detail"}),
-        app::route<PlainPage>({.address = "plain"}),
-    }));
+    REQUIRE(router.configure(
+        app::Routes {
+            app::route<HomePage>({.address = "home"}),
+            app::route<DetailPage>({.address = "detail"}),
+            app::route<PlainPage>({.address = "plain"}),
+        }
+    ));
     const auto navigation = router.navigation();
 
     REQUIRE(navigation.navigate<HomePage>(HomeParams {.user_id = 1}));
@@ -921,11 +947,21 @@ TEST_CASE("queued navigation expires with its router", "[app][router][navigate]"
     app::UiDispatcher dispatcher;
     app::Navigation navigation;
     {
-        app::NanRouter
-            router {graph, theme, nullptr, app::StoreKey {}, nullptr, nullptr, nullptr, &dispatcher};
-        REQUIRE(router.configure(app::Routes {
-            app::route<PlainPage>({.address = "plain"}),
-        }));
+        app::NanRouter router {
+            graph,
+            theme,
+            nullptr,
+            app::StoreKey {},
+            nullptr,
+            nullptr,
+            nullptr,
+            &dispatcher
+        };
+        REQUIRE(router.configure(
+            app::Routes {
+                app::route<PlainPage>({.address = "plain"}),
+            }
+        ));
         navigation = router.navigation();
         REQUIRE(navigation.navigate<PlainPage>());
         REQUIRE(navigation.valid());
@@ -946,17 +982,27 @@ TEST_CASE("router frame cancellation suppresses page async completion", "[app][r
     const auto theme = theme::default_theme();
     app::UiDispatcher dispatcher;
     app::BackgroundExecutor executor {1};
-    app::NanRouter
-        router {graph, theme, nullptr, app::StoreKey {}, nullptr, nullptr, nullptr, &dispatcher,
-                &executor};
+    app::NanRouter router {
+        graph,
+        theme,
+        nullptr,
+        app::StoreKey {},
+        nullptr,
+        nullptr,
+        nullptr,
+        &dispatcher,
+        &executor
+    };
     std::atomic_bool started = false;
     std::atomic_bool cancelled = false;
     bool completed = false;
 
-    REQUIRE(router.configure(app::Routes {
-        app::route<PlainPage>({.address = "plain"}),
-        app::route<AsyncPage>({.address = "async"}),
-    }));
+    REQUIRE(router.configure(
+        app::Routes {
+            app::route<PlainPage>({.address = "plain"}),
+            app::route<AsyncPage>({.address = "async"}),
+        }
+    ));
     const auto navigation = router.navigation();
     REQUIRE(navigation.navigate<PlainPage>());
     REQUIRE(dispatcher.drain() == 1);
@@ -987,7 +1033,10 @@ TEST_CASE("router frame cancellation suppresses page async completion", "[app][r
     REQUIRE_FALSE(completed);
 }
 
-TEST_CASE("typed navigation keeps one current page and destroys the previous page", "[app][router][navigate]") {
+TEST_CASE(
+    "typed navigation keeps one current page and destroys the previous page",
+    "[app][router][navigate]"
+) {
     reactive::Graph graph;
     TestStore store {graph};
     const auto theme = theme::default_theme();
@@ -995,11 +1044,13 @@ TEST_CASE("typed navigation keeps one current page and destroys the previous pag
     int destruction_count = 0;
     int probe_builds = 0;
     bool destroyed = false;
-    REQUIRE(router.configure(app::Routes {
-        app::route<HomePage>({.address = "home"}),
-        app::route<DetailPage>({.address = "detail"}),
-        app::route<RouteProbePage>({.address = "probe"}),
-    }));
+    REQUIRE(router.configure(
+        app::Routes {
+            app::route<HomePage>({.address = "home"}),
+            app::route<DetailPage>({.address = "detail"}),
+            app::route<RouteProbePage>({.address = "probe"}),
+        }
+    ));
     const auto navigation = router.navigation();
 
     REQUIRE(navigation.navigate<HomePage>(HomeParams {.user_id = 1}));
@@ -1037,10 +1088,12 @@ TEST_CASE("store updates propagate while typed routes are active", "[app][router
 
         const auto theme = theme::default_theme();
         app::NanRouter router {graph, theme, &store, app::store_key<TestStore>()};
-        REQUIRE(router.configure(app::Routes {
-            app::route<HomePage>({.address = "home"}),
-            app::route<DetailPage>({.address = "detail"}),
-        }));
+        REQUIRE(router.configure(
+            app::Routes {
+                app::route<HomePage>({.address = "home"}),
+                app::route<DetailPage>({.address = "detail"}),
+            }
+        ));
         const auto navigation = router.navigation();
         REQUIRE(navigation.navigate<HomePage>(HomeParams {.user_id = 1}));
         REQUIRE(observed == 1);
@@ -1062,9 +1115,11 @@ TEST_CASE(
     app_theme.palette.primary = theme::nan_color(0.72F, 0.12F, 120.0F);
     app::NanRouter router {graph, app_theme};
 
-    REQUIRE(router.configure(app::Routes {
-        app::route<PlainPage>({.address = "plain"}),
-    }));
+    REQUIRE(router.configure(
+        app::Routes {
+            app::route<PlainPage>({.address = "plain"}),
+        }
+    ));
     REQUIRE(router.navigation().navigate<PlainPage>());
     REQUIRE(router.outlet()->page() != nullptr);
     REQUIRE(router.current_address() == "plain");
@@ -1100,11 +1155,13 @@ TEST_CASE("router clears page reactive scope when a page is replaced", "[app][ro
     const auto theme = theme::default_theme();
     app::NanRouter router {graph, theme, &store, app::store_key<TestStore>()};
 
-    REQUIRE(router.configure(app::Routes {
-        app::route<HomePage>({.address = "home"}),
-        app::route<ScopedObserverPage>({.address = "scoped-observer"}),
-        app::route<PlainPage>({.address = "plain"}),
-    }));
+    REQUIRE(router.configure(
+        app::Routes {
+            app::route<HomePage>({.address = "home"}),
+            app::route<ScopedObserverPage>({.address = "scoped-observer"}),
+            app::route<PlainPage>({.address = "plain"}),
+        }
+    ));
     const auto navigation = router.navigation();
     REQUIRE(navigation.navigate<HomePage>(HomeParams {.user_id = 1}));
     REQUIRE(navigation.navigate<ScopedObserverPage>(ScopedObserverParams {.log = &log}));
@@ -1133,10 +1190,12 @@ TEST_CASE(
     theme::ThemeManager themes;
     app::NanRouter router {graph, themes, &store, app::store_key<TestStore>()};
 
-    REQUIRE(router.configure(app::Routes {
-        app::route<HomePage>({.address = "home"}),
-        app::route<ScopedEventPage>({.address = "scoped-event"}),
-    }));
+    REQUIRE(router.configure(
+        app::Routes {
+            app::route<HomePage>({.address = "home"}),
+            app::route<ScopedEventPage>({.address = "scoped-event"}),
+        }
+    ));
     const auto navigation = router.navigation();
     REQUIRE(navigation.navigate<HomePage>(HomeParams {.user_id = 1}));
     REQUIRE(navigation.navigate<ScopedEventPage>(
@@ -1162,10 +1221,12 @@ TEST_CASE("retained page roots cannot invoke callbacks after pop", "[app][router
     int calls = 0;
     bool destroyed = false;
 
-    REQUIRE(router.configure(app::Routes {
-        app::route<HomePage>({.address = "home"}),
-        app::route<RetainedCallbackPage>({.address = "retained-callback"}),
-    }));
+    REQUIRE(router.configure(
+        app::Routes {
+            app::route<HomePage>({.address = "home"}),
+            app::route<RetainedCallbackPage>({.address = "retained-callback"}),
+        }
+    ));
     const auto navigation = router.navigation();
     REQUIRE(navigation.navigate<HomePage>(HomeParams {.user_id = 1}));
     REQUIRE(navigation.navigate<RetainedCallbackPage>(RetainedCallbackParams {
@@ -1185,7 +1246,10 @@ TEST_CASE("retained page roots cannot invoke callbacks after pop", "[app][router
     REQUIRE(calls == 1);
 }
 
-TEST_CASE("router forwards the window overlay portal into page build contexts", "[app][router][overlay]") {
+TEST_CASE(
+    "router forwards the window overlay portal into page build contexts",
+    "[app][router][overlay]"
+) {
     reactive::Graph graph;
     theme::ThemeManager themes;
     auto host = scene::OverlayHost::create();
@@ -1203,9 +1267,11 @@ TEST_CASE("router forwards the window overlay portal into page build contexts", 
         nullptr,
         host.get()
     };
-    REQUIRE(router.configure(app::Routes {
-        app::route<OverlayProbePage>({.address = "overlay-probe"}),
-    }));
+    REQUIRE(router.configure(
+        app::Routes {
+            app::route<OverlayProbePage>({.address = "overlay-probe"}),
+        }
+    ));
     REQUIRE(router.navigation().navigate<OverlayProbePage>());
 
     REQUIRE(g_overlay_probe.context_has);
@@ -1384,10 +1450,12 @@ TEST_CASE("route validation reports why a table is rejected", "[app][router][con
     // 重复页面类型：连冲突的两个下标一起报出来，调用方才知道改哪一行。
     {
         app::NanRouter router {graph, theme};
-        const auto configured = router.configure(app::Routes {
-            app::route<PlainPage>({.address = "a"}),
-            app::route<PlainPage>({.address = "b"}),
-        });
+        const auto configured = router.configure(
+            app::Routes {
+                app::route<PlainPage>({.address = "a"}),
+                app::route<PlainPage>({.address = "b"}),
+            }
+        );
         REQUIRE_FALSE(configured);
         REQUIRE(configured.error().kind == app::RoutesErrorKind::duplicate_page);
         REQUIRE(configured.error().index == 1);
@@ -1397,10 +1465,12 @@ TEST_CASE("route validation reports why a table is rejected", "[app][router][con
     // 重复显示 key：只在两条都非空时才算冲突。
     {
         app::NanRouter router {graph, theme};
-        const auto configured = router.configure(app::Routes {
-            app::route<PlainPage>({.address = "same"}),
-            app::route<SecondPlainPage>({.address = "same"}),
-        });
+        const auto configured = router.configure(
+            app::Routes {
+                app::route<PlainPage>({.address = "same"}),
+                app::route<SecondPlainPage>({.address = "same"}),
+            }
+        );
         REQUIRE_FALSE(configured);
         REQUIRE(configured.error().kind == app::RoutesErrorKind::duplicate_key);
         REQUIRE(app::describe(configured.error()).find("route[1]") != std::string::npos);
@@ -1411,9 +1481,11 @@ TEST_CASE("route validation reports why a table is rejected", "[app][router][con
         app::NanRouter router {graph, theme};
         REQUIRE(router.configure(app::Routes {app::route<PlainPage>({.address = "plain"})}));
         REQUIRE(router.start<PlainPage>());
-        const auto again = router.configure(app::Routes {
-            app::route<PlainPage>({.address = "again"}),
-        });
+        const auto again = router.configure(
+            app::Routes {
+                app::route<PlainPage>({.address = "again"}),
+            }
+        );
         REQUIRE_FALSE(again);
         REQUIRE(again.error().kind == app::RoutesErrorKind::already_configured);
     }
@@ -1434,11 +1506,13 @@ TEST_CASE("route validation reports why a table is rejected", "[app][router][con
 TEST_CASE("navigation can enter a page by runtime page key", "[app][router][navigate]") {
     reactive::Graph graph;
     app::NanRouter router {graph, theme::default_theme()};
-    REQUIRE(router.configure(app::Routes {
-        app::route<PlainPage>({.address = "plain"}),
-        app::route<SecondPlainPage>({.address = "second"}),
-        app::route<HomePage>({.address = "home"}),
-    }));
+    REQUIRE(router.configure(
+        app::Routes {
+            app::route<PlainPage>({.address = "plain"}),
+            app::route<SecondPlainPage>({.address = "second"}),
+            app::route<HomePage>({.address = "home"}),
+        }
+    ));
 
     const auto navigation = router.navigation();
 
@@ -1500,10 +1574,12 @@ TEST_CASE("the router publishes its current page reactively", "[app][router][sig
     auto& current = router.current_page();
     REQUIRE_FALSE(current.get().valid());
 
-    REQUIRE(router.configure(app::Routes {
-        app::route<PlainPage>(app::RouteOptions {.address = "plain", .title = "Plain"}),
-        app::route<SecondPlainPage>(app::RouteOptions {.address = "second", .title = "Second"}),
-    }));
+    REQUIRE(router.configure(
+        app::Routes {
+            app::route<PlainPage>(app::RouteOptions {.address = "plain", .title = "Plain"}),
+            app::route<SecondPlainPage>(app::RouteOptions {.address = "second", .title = "Second"}),
+        }
+    ));
 
     REQUIRE(router.start<PlainPage>());
     REQUIRE(current.get() == app::nan_type_key<PlainPage>());

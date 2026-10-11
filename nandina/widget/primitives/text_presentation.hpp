@@ -7,9 +7,9 @@
 
 #include "../../scene/control.hpp"
 #include "../../scene/property_endpoint.hpp"
+#include "../../text/text_layout.hpp"
 #include "../../theme/design_system.hpp"
 #include "../visual_property.hpp"
-#include "../../text/text_layout.hpp"
 
 #include <cmath>
 #include <optional>

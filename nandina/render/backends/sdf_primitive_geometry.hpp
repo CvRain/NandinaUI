@@ -88,9 +88,9 @@ namespace nandina::render::detail
         const float half_width = 0.0F
     ) -> foundation::NanRect {
         // outline 需容纳外侧半线宽；shadow 的软边衰减（spread）落在图元外侧。
-        const float soft_padding = mode == SdfPrimitiveMode::outline
-            ? std::max(0.0F, half_width)
-            : mode == SdfPrimitiveMode::shadow ? std::max(0.0F, half_width) : 0.0F;
+        const float soft_padding = mode == SdfPrimitiveMode::outline ? std::max(0.0F, half_width)
+            : mode == SdfPrimitiveMode::shadow                       ? std::max(0.0F, half_width)
+                                                                     : 0.0F;
         return shape_bounds.expanded(soft_padding + sdf_aa_padding);
     }
 

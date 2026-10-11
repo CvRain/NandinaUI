@@ -166,8 +166,7 @@ namespace nandina::widget
         [[nodiscard]] auto step(int delta) -> std::optional<Intent>;
 
         /// 处理文本输入（typeahead）。
-        [[nodiscard]] auto handle_text(const scene::TextInputEvent& event)
-            -> std::optional<Intent>;
+        [[nodiscard]] auto handle_text(const scene::TextInputEvent& event) -> std::optional<Intent>;
 
         /// typeahead 缓冲超时推进。容器在 on_process(dt) 里调用。
         void advance_time(float dt);

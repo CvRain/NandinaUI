@@ -33,9 +33,7 @@ namespace nandina::widget
         std::vector<MenuItem> items,
         theme::NanTheme theme
     ) -> std::shared_ptr<ContextMenu> {
-        return std::make_shared<ContextMenu>(
-            std::move(target), std::move(items), std::move(theme)
-        );
+        return std::make_shared<ContextMenu>(std::move(target), std::move(items), std::move(theme));
     }
 
     auto ContextMenu::set_target(std::shared_ptr<scene::NanControl> target) -> ContextMenu& {
@@ -90,7 +88,10 @@ namespace nandina::widget
         menu_->set_external_anchor_rect(
             owner,
             foundation::NanRect::from_xywh(
-                screen_position.get_x(), screen_position.get_y(), 1.0F, 1.0F
+                screen_position.get_x(),
+                screen_position.get_y(),
+                1.0F,
+                1.0F
             )
         );
         menu_->open();
@@ -145,8 +146,7 @@ namespace nandina::widget
     auto ContextMenu::on_input_capture(scene::InputEvent& event) -> bool {
         if (event.type() == scene::EventType::mouse_button) {
             auto& pointer = static_cast<scene::MouseButtonEvent&>(event);
-            if (pointer.is_pressed()
-                && pointer.button() == scene::MouseButtonEvent::Button::right)
+            if (pointer.is_pressed() && pointer.button() == scene::MouseButtonEvent::Button::right)
             {
                 open_at(pointer.screen_pos());
                 event.accept();

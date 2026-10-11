@@ -66,15 +66,11 @@ namespace nandina::app
         // parent rather than measuring to its own (initially zero) size. Keep the
         // current size as a fallback for an unbounded axis, where there is no
         // meaningful viewport to fill.
-        const auto available_width = std::isfinite(constraints.max_width)
-            ? constraints.max_width
-            : size().get_width();
-        const auto available_height = std::isfinite(constraints.max_height)
-            ? constraints.max_height
-            : size().get_height();
-        return constraints.constrain(
-            foundation::NanSize(available_width, available_height)
-        );
+        const auto available_width =
+            std::isfinite(constraints.max_width) ? constraints.max_width : size().get_width();
+        const auto available_height =
+            std::isfinite(constraints.max_height) ? constraints.max_height : size().get_height();
+        return constraints.constrain(foundation::NanSize(available_width, available_height));
     }
 
     auto RouterOutlet::on_layout() -> void {

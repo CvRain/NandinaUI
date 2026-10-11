@@ -216,7 +216,8 @@ namespace nandina::text
             for (const auto& candidate: candidates) {
                 const int slant_score = candidate.slant == request.slant
                     ? 0
-                    : ((candidate.slant != theme::FontSlant::normal && request.slant != theme::FontSlant::normal)
+                    : ((candidate.slant != theme::FontSlant::normal
+                        && request.slant != theme::FontSlant::normal)
                            ? 1
                            : 2);
                 const int weight_score = std::abs(candidate.weight - request.weight);

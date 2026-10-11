@@ -238,7 +238,8 @@ namespace nandina::widget
         foundation::NanSize icon_size {};
         bool has_icon = false;
         if (auto icon = icon_.lock()) {
-            icon_size = icon->measure_layout(foundation::NanLayoutConstraints {.max_width = inner_width});
+            icon_size =
+                icon->measure_layout(foundation::NanLayoutConstraints {.max_width = inner_width});
             has_icon = true;
         }
         foundation::NanSize action_size {};
@@ -332,7 +333,8 @@ namespace nandina::widget
         return result;
     }
 
-    auto Alert::on_measure(const foundation::NanLayoutConstraints constraints) -> foundation::NanSize {
+    auto Alert::on_measure(const foundation::NanLayoutConstraints constraints)
+        -> foundation::NanSize {
         const auto style = resolved_style();
         if (is_empty()) {
             // 条件挂载：没有标题、描述与图标时不占位，避免在列表里留下空隙。
@@ -420,12 +422,7 @@ namespace nandina::widget
             }
         };
         apply(title_text_, style.title, text::TextOverflow::clip, 1);
-        apply(
-            description_text_,
-            style.description,
-            text::TextOverflow::wrap,
-            kDescriptionMaxLines
-        );
+        apply(description_text_, style.description, text::TextOverflow::wrap, kDescriptionMaxLines);
     }
 
     void Alert::sync_dismiss_appearance() {

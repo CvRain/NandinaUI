@@ -19,10 +19,9 @@ namespace nandina::widget
     public:
         explicit Badge(std::string text, theme::NanTheme theme = theme::default_theme());
 
-        [[nodiscard]] static auto create(
-            std::string text,
-            theme::NanTheme theme = theme::default_theme()
-        ) -> std::shared_ptr<Badge>;
+        [[nodiscard]] static auto
+        create(std::string text, theme::NanTheme theme = theme::default_theme())
+            -> std::shared_ptr<Badge>;
 
         void set_text(std::string text);
         [[nodiscard]] auto text() const -> std::string_view;

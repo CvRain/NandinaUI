@@ -19,10 +19,9 @@ namespace nandina::theme
             return result;
         }
 
-        [[nodiscard]] auto brand_shade(
-            const ColorAppearance appearance,
-            const PaletteVariantPolicy policy
-        ) -> ColorShade {
+        [[nodiscard]] auto
+        brand_shade(const ColorAppearance appearance, const PaletteVariantPolicy policy)
+            -> ColorShade {
             return appearance == ColorAppearance::dark ? policy.dark_brand : policy.light_brand;
         }
     } // namespace
@@ -48,62 +47,97 @@ namespace nandina::theme
         // built-in appearance; all semantic defaults below are selected from here.
         return {
             .primary = scale({{
-                {0.9700F, 0.02F, 42.00F}, {0.9200F, 0.04F, 41.50F},
-                {0.8500F, 0.07F, 41.00F}, {0.7900F, 0.09F, 40.50F},
-                {0.7300F, 0.11F, 40.00F}, {0.6803F, 0.12F, 39.30F},
-                {0.6000F, 0.14F, 37.50F}, {0.5200F, 0.14F, 35.50F},
-                {0.4400F, 0.13F, 34.00F}, {0.3600F, 0.12F, 33.00F},
+                {0.9700F, 0.02F, 42.00F},
+                {0.9200F, 0.04F, 41.50F},
+                {0.8500F, 0.07F, 41.00F},
+                {0.7900F, 0.09F, 40.50F},
+                {0.7300F, 0.11F, 40.00F},
+                {0.6803F, 0.12F, 39.30F},
+                {0.6000F, 0.14F, 37.50F},
+                {0.5200F, 0.14F, 35.50F},
+                {0.4400F, 0.13F, 34.00F},
+                {0.3600F, 0.12F, 33.00F},
                 {0.2949F, 0.11F, 32.48F},
             }}),
             .secondary = scale({{
-                {0.8666F, 0.05F, 300.15F}, {0.7851F, 0.09F, 303.57F},
-                {0.7044F, 0.13F, 304.44F}, {0.6283F, 0.17F, 303.81F},
-                {0.5548F, 0.20F, 302.75F}, {0.4907F, 0.23F, 300.46F},
-                {0.4539F, 0.21F, 299.60F}, {0.4175F, 0.19F, 298.26F},
-                {0.3784F, 0.17F, 296.27F}, {0.3408F, 0.15F, 293.97F},
+                {0.8666F, 0.05F, 300.15F},
+                {0.7851F, 0.09F, 303.57F},
+                {0.7044F, 0.13F, 304.44F},
+                {0.6283F, 0.17F, 303.81F},
+                {0.5548F, 0.20F, 302.75F},
+                {0.4907F, 0.23F, 300.46F},
+                {0.4539F, 0.21F, 299.60F},
+                {0.4175F, 0.19F, 298.26F},
+                {0.3784F, 0.17F, 296.27F},
+                {0.3408F, 0.15F, 293.97F},
                 {0.3018F, 0.13F, 291.16F},
             }}),
             .tertiary = scale({{
-                {0.9073F, 0.08F, 328.92F}, {0.8291F, 0.13F, 339.68F},
-                {0.7600F, 0.18F, 345.55F}, {0.7027F, 0.23F, 350.68F},
-                {0.6648F, 0.25F, 355.85F}, {0.6454F, 0.26F, 2.48F},
-                {0.5937F, 0.24F, 1.70F}, {0.5390F, 0.22F, 0.50F},
-                {0.4845F, 0.20F, 359.66F}, {0.4269F, 0.17F, 357.71F},
+                {0.9073F, 0.08F, 328.92F},
+                {0.8291F, 0.13F, 339.68F},
+                {0.7600F, 0.18F, 345.55F},
+                {0.7027F, 0.23F, 350.68F},
+                {0.6648F, 0.25F, 355.85F},
+                {0.6454F, 0.26F, 2.48F},
+                {0.5937F, 0.24F, 1.70F},
+                {0.5390F, 0.22F, 0.50F},
+                {0.4845F, 0.20F, 359.66F},
+                {0.4269F, 0.17F, 357.71F},
                 {0.3693F, 0.15F, 355.34F},
             }}),
             .neutral = scale({{
-                {1.0000F, 0.00F, 0.0F}, {0.9067F, 0.00F, 0.0F},
-                {0.8141F, 0.00F, 0.0F}, {0.7155F, 0.00F, 0.0F},
-                {0.6167F, 0.00F, 0.0F}, {0.5103F, 0.00F, 0.0F},
-                {0.4495F, 0.00F, 0.0F}, {0.3867F, 0.00F, 0.0F},
-                {0.3211F, 0.00F, 0.0F}, {0.2520F, 0.00F, 0.0F},
+                {1.0000F, 0.00F, 0.0F},
+                {0.9067F, 0.00F, 0.0F},
+                {0.8141F, 0.00F, 0.0F},
+                {0.7155F, 0.00F, 0.0F},
+                {0.6167F, 0.00F, 0.0F},
+                {0.5103F, 0.00F, 0.0F},
+                {0.4495F, 0.00F, 0.0F},
+                {0.3867F, 0.00F, 0.0F},
+                {0.3211F, 0.00F, 0.0F},
+                {0.2520F, 0.00F, 0.0F},
                 {0.1776F, 0.00F, 0.0F},
             }}),
             .success = scale({{
-                {0.9405F, 0.09F, 178.66F}, {0.9162F, 0.10F, 178.60F},
-                {0.8944F, 0.11F, 177.16F}, {0.8713F, 0.12F, 176.90F},
-                {0.8509F, 0.13F, 175.45F}, {0.8291F, 0.13F, 174.95F},
-                {0.7285F, 0.12F, 175.70F}, {0.6240F, 0.10F, 175.99F},
-                {0.5126F, 0.08F, 178.28F}, {0.3972F, 0.06F, 179.74F},
+                {0.9405F, 0.09F, 178.66F},
+                {0.9162F, 0.10F, 178.60F},
+                {0.8944F, 0.11F, 177.16F},
+                {0.8713F, 0.12F, 176.90F},
+                {0.8509F, 0.13F, 175.45F},
+                {0.8291F, 0.13F, 174.95F},
+                {0.7285F, 0.12F, 175.70F},
+                {0.6240F, 0.10F, 175.99F},
+                {0.5126F, 0.08F, 178.28F},
+                {0.3972F, 0.06F, 179.74F},
                 {0.2727F, 0.04F, 185.29F},
             }}),
             .warning = scale({{
-                {0.9567F, 0.05F, 84.56F}, {0.9283F, 0.06F, 82.16F},
-                {0.9012F, 0.08F, 80.33F}, {0.8759F, 0.10F, 80.01F},
-                {0.8503F, 0.12F, 78.35F}, {0.8246F, 0.14F, 76.71F},
-                {0.7634F, 0.13F, 72.25F}, {0.7034F, 0.13F, 68.09F},
-                {0.6399F, 0.13F, 63.18F}, {0.5791F, 0.13F, 57.97F},
+                {0.9567F, 0.05F, 84.56F},
+                {0.9283F, 0.06F, 82.16F},
+                {0.9012F, 0.08F, 80.33F},
+                {0.8759F, 0.10F, 80.01F},
+                {0.8503F, 0.12F, 78.35F},
+                {0.8246F, 0.14F, 76.71F},
+                {0.7634F, 0.13F, 72.25F},
+                {0.7034F, 0.13F, 68.09F},
+                {0.6399F, 0.13F, 63.18F},
+                {0.5791F, 0.13F, 57.97F},
                 {0.5169F, 0.13F, 51.44F},
             }}),
             .error = scale({{
                 // 注意：本仓库的 error 色阶历史上就是**降序**书写的（shade_50 最深、
                 // shade_950 最浅），与另外六条相反；`on_error` 因此取 shade_50。
                 // 改动顺序会翻转默认错误色，别"顺手修正"。
-                {0.8999F, 0.04F, 14.04F}, {0.8349F, 0.07F, 19.81F},
-                {0.7740F, 0.11F, 21.98F}, {0.7213F, 0.15F, 24.90F},
-                {0.6739F, 0.19F, 26.71F}, {0.6372F, 0.22F, 28.71F},
-                {0.5928F, 0.21F, 28.53F}, {0.5492F, 0.20F, 28.58F},
-                {0.5051F, 0.19F, 28.72F}, {0.4622F, 0.18F, 28.88F},
+                {0.8999F, 0.04F, 14.04F},
+                {0.8349F, 0.07F, 19.81F},
+                {0.7740F, 0.11F, 21.98F},
+                {0.7213F, 0.15F, 24.90F},
+                {0.6739F, 0.19F, 26.71F},
+                {0.6372F, 0.22F, 28.71F},
+                {0.5928F, 0.21F, 28.53F},
+                {0.5492F, 0.20F, 28.58F},
+                {0.5051F, 0.19F, 28.72F},
+                {0.4622F, 0.18F, 28.88F},
                 {0.4186F, 0.17F, 29.23F},
             }}),
         };
@@ -248,8 +282,8 @@ namespace nandina::theme
         const auto luminance = [](const NanColor& color) {
             const auto rgb = color.to<NanRgb>();
             return nan_srgb_to_linear_channel(rgb.red) * 0.2126F
-                 + nan_srgb_to_linear_channel(rgb.green) * 0.7152F
-                 + nan_srgb_to_linear_channel(rgb.blue) * 0.0722F;
+                + nan_srgb_to_linear_channel(rgb.green) * 0.7152F
+                + nan_srgb_to_linear_channel(rgb.blue) * 0.0722F;
         };
         const auto contrast_against = [&](const NanColor& fill, const NanColor& candidate) {
             const auto fill_luminance = luminance(fill);
@@ -331,60 +365,80 @@ namespace nandina::theme
         [[nodiscard]] auto default_light_spec() -> SemanticColorSpec {
             const auto background = NanColor::from(NanOklch {.light = 1.0F});
             // 卡片比页面低 2.5% 明度：既能与 page 分开，又比 muted 块亮，靠 border 收边。
-            const auto card = NanColor::from(NanOklch {
-                .light = 0.975F,
-                .chroma = 0.001F,
-                .hue = 286.375F,
-            });
-            const auto foreground = NanColor::from(NanOklch {
-                .light = 0.141F,
-                .chroma = 0.005F,
-                .hue = 285.823F,
-            });
+            const auto card = NanColor::from(
+                NanOklch {
+                    .light = 0.975F,
+                    .chroma = 0.001F,
+                    .hue = 286.375F,
+                }
+            );
+            const auto foreground = NanColor::from(
+                NanOklch {
+                    .light = 0.141F,
+                    .chroma = 0.005F,
+                    .hue = 285.823F,
+                }
+            );
             // shadcn 经典中性默认：primary 是近黑的中性色，品牌色本身不带色相
             // （oklch(0.205 0 0)）。这样换肤时任何一处带色相的改动都很显眼，
             // 也避免框架给出一个"看起来像品牌"的默认蓝。
-            const auto primary = NanColor::from(NanOklch {
-                .light = 0.205F,
-                .chroma = 0.0F,
-                .hue = 0.0F,
-            });
-            const auto primary_foreground = NanColor::from(NanOklch {
-                .light = 0.985F,
-                .chroma = 0.0F,
-                .hue = 0.0F,
-            });
-            const auto subtle = NanColor::from(NanOklch {
-                .light = 0.967F,
-                .chroma = 0.001F,
-                .hue = 286.375F,
-            });
-            const auto subtle_foreground = NanColor::from(NanOklch {
-                .light = 0.21F,
-                .chroma = 0.006F,
-                .hue = 285.885F,
-            });
-            const auto muted_foreground = NanColor::from(NanOklch {
-                .light = 0.52F,
-                .chroma = 0.016F,
-                .hue = 285.938F,
-            });
-            const auto destructive = NanColor::from(NanOklch {
-                .light = 0.53F,
-                .chroma = 0.245F,
-                .hue = 27.325F,
-            });
-            const auto border = NanColor::from(NanOklch {
-                .light = 0.94F,
-                .chroma = 0.004F,
-                .hue = 286.32F,
-            });
+            const auto primary = NanColor::from(
+                NanOklch {
+                    .light = 0.205F,
+                    .chroma = 0.0F,
+                    .hue = 0.0F,
+                }
+            );
+            const auto primary_foreground = NanColor::from(
+                NanOklch {
+                    .light = 0.985F,
+                    .chroma = 0.0F,
+                    .hue = 0.0F,
+                }
+            );
+            const auto subtle = NanColor::from(
+                NanOklch {
+                    .light = 0.967F,
+                    .chroma = 0.001F,
+                    .hue = 286.375F,
+                }
+            );
+            const auto subtle_foreground = NanColor::from(
+                NanOklch {
+                    .light = 0.21F,
+                    .chroma = 0.006F,
+                    .hue = 285.885F,
+                }
+            );
+            const auto muted_foreground = NanColor::from(
+                NanOklch {
+                    .light = 0.52F,
+                    .chroma = 0.016F,
+                    .hue = 285.938F,
+                }
+            );
+            const auto destructive = NanColor::from(
+                NanOklch {
+                    .light = 0.53F,
+                    .chroma = 0.245F,
+                    .hue = 27.325F,
+                }
+            );
+            const auto border = NanColor::from(
+                NanOklch {
+                    .light = 0.94F,
+                    .chroma = 0.004F,
+                    .hue = 286.32F,
+                }
+            );
             // 焦点环要在白底和卡片上都看得见（≥ 3:1），shadcn 原来那档偏浅。
-            const auto ring = NanColor::from(NanOklch {
-                .light = 0.64F,
-                .chroma = 0.015F,
-                .hue = 286.067F,
-            });
+            const auto ring = NanColor::from(
+                NanOklch {
+                    .light = 0.64F,
+                    .chroma = 0.015F,
+                    .hue = 286.067F,
+                }
+            );
 
             return SemanticColorSpec {
                 .background = background,
@@ -411,34 +465,44 @@ namespace nandina::theme
                 .surface_foreground = foreground,
                 .surface_variant = subtle,
                 .surface_variant_foreground = muted_foreground,
-                .tertiary = NanColor::from(NanOklch {
-                    .light = 0.558F,
-                    .chroma = 0.213F,
-                    .hue = 302.321F,
-                }),
+                .tertiary = NanColor::from(
+                    NanOklch {
+                        .light = 0.558F,
+                        .chroma = 0.213F,
+                        .hue = 302.321F,
+                    }
+                ),
                 .tertiary_foreground = NanColor::from(NanOklch {.light = 0.98F}),
-                .success = NanColor::from(NanOklch {
-                    .light = 0.627F,
-                    .chroma = 0.194F,
-                    .hue = 149.214F,
-                }),
+                .success = NanColor::from(
+                    NanOklch {
+                        .light = 0.627F,
+                        .chroma = 0.194F,
+                        .hue = 149.214F,
+                    }
+                ),
                 // 状态色上的文字统一取中性最深/最浅档：色阶自身的明度跨度不足以
                 // 稳定达到 4.5:1，用中性极端档才不会随色相变化而退化。
-                .success_foreground = NanColor::from(NanOklch {
-                    .light = 0.1776F,
-                    .chroma = 0.0F,
-                    .hue = 0.0F,
-                }),
-                .warning = NanColor::from(NanOklch {
-                    .light = 0.795F,
-                    .chroma = 0.184F,
-                    .hue = 86.047F,
-                }),
-                .warning_foreground = NanColor::from(NanOklch {
-                    .light = 0.1776F,
-                    .chroma = 0.0F,
-                    .hue = 0.0F,
-                }),
+                .success_foreground = NanColor::from(
+                    NanOklch {
+                        .light = 0.1776F,
+                        .chroma = 0.0F,
+                        .hue = 0.0F,
+                    }
+                ),
+                .warning = NanColor::from(
+                    NanOklch {
+                        .light = 0.795F,
+                        .chroma = 0.184F,
+                        .hue = 86.047F,
+                    }
+                ),
+                .warning_foreground = NanColor::from(
+                    NanOklch {
+                        .light = 0.1776F,
+                        .chroma = 0.0F,
+                        .hue = 0.0F,
+                    }
+                ),
                 .error = destructive,
                 .error_foreground = NanColor::from(NanOklch {.light = 0.98F}),
                 .info = primary,
@@ -456,53 +520,69 @@ namespace nandina::theme
          * @return 默认暗色语义色板
          */
         [[nodiscard]] auto default_dark_spec() -> SemanticColorSpec {
-            const auto background = NanColor::from(NanOklch {
-                .light = 0.141F,
-                .chroma = 0.005F,
-                .hue = 285.823F,
-            });
+            const auto background = NanColor::from(
+                NanOklch {
+                    .light = 0.141F,
+                    .chroma = 0.005F,
+                    .hue = 285.823F,
+                }
+            );
             const auto foreground = NanColor::from(NanOklch {.light = 0.985F});
-            const auto elevated = NanColor::from(NanOklch {
-                .light = 0.21F,
-                .chroma = 0.006F,
-                .hue = 285.885F,
-            });
+            const auto elevated = NanColor::from(
+                NanOklch {
+                    .light = 0.21F,
+                    .chroma = 0.006F,
+                    .hue = 285.885F,
+                }
+            );
             // 暗色品牌色提亮到 0.72：与深底拉开 8:1（作为信号色足够），
             // 品牌面上的文字改用深色前景（与 butter / fluent / material 同一约定：
             // 暗色下亮品牌配深字，实测 7:1 以上，远优于亮字方案的 3.3:1）。
             // 暗色对应 shadcn 的 oklch(0.922 0 0)：亮灰底 + 近黑字。
-            const auto primary = NanColor::from(NanOklch {
-                .light = 0.922F,
-                .chroma = 0.0F,
-                .hue = 0.0F,
-            });
-            const auto primary_foreground = NanColor::from(NanOklch {
-                .light = 0.205F,
-                .chroma = 0.0F,
-                .hue = 0.0F,
-            });
-            const auto subtle = NanColor::from(NanOklch {
-                .light = 0.274F,
-                .chroma = 0.006F,
-                .hue = 286.033F,
-            });
-            const auto muted_foreground = NanColor::from(NanOklch {
-                .light = 0.705F,
-                .chroma = 0.015F,
-                .hue = 286.067F,
-            });
+            const auto primary = NanColor::from(
+                NanOklch {
+                    .light = 0.922F,
+                    .chroma = 0.0F,
+                    .hue = 0.0F,
+                }
+            );
+            const auto primary_foreground = NanColor::from(
+                NanOklch {
+                    .light = 0.205F,
+                    .chroma = 0.0F,
+                    .hue = 0.0F,
+                }
+            );
+            const auto subtle = NanColor::from(
+                NanOklch {
+                    .light = 0.274F,
+                    .chroma = 0.006F,
+                    .hue = 286.033F,
+                }
+            );
+            const auto muted_foreground = NanColor::from(
+                NanOklch {
+                    .light = 0.705F,
+                    .chroma = 0.015F,
+                    .hue = 286.067F,
+                }
+            );
             // 危险色在暗色下取 0.58：与深底拉开 4.15:1（作为信号色足够醒目），
             // 同时浅色文字仍达 4.52:1。再亮一档就会让文字掉到 4.5 以下。
-            const auto destructive = NanColor::from(NanOklch {
-                .light = 0.58F,
-                .chroma = 0.22F,
-                .hue = 25.0F,
-            });
-            const auto ring = NanColor::from(NanOklch {
-                .light = 0.552F,
-                .chroma = 0.016F,
-                .hue = 285.938F,
-            });
+            const auto destructive = NanColor::from(
+                NanOklch {
+                    .light = 0.58F,
+                    .chroma = 0.22F,
+                    .hue = 25.0F,
+                }
+            );
+            const auto ring = NanColor::from(
+                NanOklch {
+                    .light = 0.552F,
+                    .chroma = 0.016F,
+                    .hue = 285.938F,
+                }
+            );
             // 半透明边框：在任意层级的表面上都保持相对亮度。
             const auto border = NanColor::from(NanOklch {.light = 1.0F, .alpha = 0.10F});
             const auto input = NanColor::from(NanOklch {.light = 1.0F, .alpha = 0.15F});
@@ -531,32 +611,42 @@ namespace nandina::theme
                 .surface_foreground = foreground,
                 .surface_variant = subtle,
                 .surface_variant_foreground = muted_foreground,
-                .tertiary = NanColor::from(NanOklch {
-                    .light = 0.667F,
-                    .chroma = 0.295F,
-                    .hue = 322.15F,
-                }),
+                .tertiary = NanColor::from(
+                    NanOklch {
+                        .light = 0.667F,
+                        .chroma = 0.295F,
+                        .hue = 322.15F,
+                    }
+                ),
                 .tertiary_foreground = NanColor::from(NanOklch {.light = 0.98F}),
-                .success = NanColor::from(NanOklch {
-                    .light = 0.723F,
-                    .chroma = 0.219F,
-                    .hue = 149.579F,
-                }),
-                .success_foreground = NanColor::from(NanOklch {
-                    .light = 0.266F,
-                    .chroma = 0.065F,
-                    .hue = 152.934F,
-                }),
-                .warning = NanColor::from(NanOklch {
-                    .light = 0.852F,
-                    .chroma = 0.199F,
-                    .hue = 91.936F,
-                }),
-                .warning_foreground = NanColor::from(NanOklch {
-                    .light = 0.421F,
-                    .chroma = 0.095F,
-                    .hue = 57.708F,
-                }),
+                .success = NanColor::from(
+                    NanOklch {
+                        .light = 0.723F,
+                        .chroma = 0.219F,
+                        .hue = 149.579F,
+                    }
+                ),
+                .success_foreground = NanColor::from(
+                    NanOklch {
+                        .light = 0.266F,
+                        .chroma = 0.065F,
+                        .hue = 152.934F,
+                    }
+                ),
+                .warning = NanColor::from(
+                    NanOklch {
+                        .light = 0.852F,
+                        .chroma = 0.199F,
+                        .hue = 91.936F,
+                    }
+                ),
+                .warning_foreground = NanColor::from(
+                    NanOklch {
+                        .light = 0.421F,
+                        .chroma = 0.095F,
+                        .hue = 57.708F,
+                    }
+                ),
                 .error = destructive,
                 .error_foreground = NanColor::from(NanOklch {.light = 0.98F}),
                 .info = primary,

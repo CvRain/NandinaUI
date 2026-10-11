@@ -60,24 +60,20 @@ namespace
             if (root == nullptr || root->child_count() == 0) {
                 return nullptr;
             }
-            auto* dismiss = root->get_child(0) != nullptr
-                ? root->get_child(0)->as_control()
-                : nullptr;
+            auto* dismiss =
+                root->get_child(0) != nullptr ? root->get_child(0)->as_control() : nullptr;
             auto* scope = dismiss != nullptr && dismiss->child_count() > 0
                 ? dismiss->get_child(0)->as_control()
                 : nullptr;
-            return scope != nullptr && scope->child_count() > 0
-                ? scope->get_child(0)->as_control()
-                : nullptr;
+            return scope != nullptr && scope->child_count() > 0 ? scope->get_child(0)->as_control()
+                                                                : nullptr;
         }
         void press_escape() {
             tree.dispatch_key(scene::KeyEvent(256, scene::KeyEvent::Action::press));
         }
         /// 按语义在浮层子树里找按钮：比写死节点层级耐改，也顺带验证按钮语义暴露正确。
-        [[nodiscard]] static auto find_button(
-            scene::NanControl* node,
-            const std::string_view label
-        ) -> scene::NanControl* {
+        [[nodiscard]] static auto find_button(scene::NanControl* node, const std::string_view label)
+            -> scene::NanControl* {
             if (node == nullptr) {
                 return nullptr;
             }
@@ -87,7 +83,8 @@ namespace
             }
             for (std::size_t i = 0; i < node->child_count(); ++i) {
                 auto* child = node->get_child(i);
-                if (auto* found = find_button(child != nullptr ? child->as_control() : nullptr, label);
+                if (auto* found =
+                        find_button(child != nullptr ? child->as_control() : nullptr, label);
                     found != nullptr)
                 {
                     return found;
@@ -101,24 +98,30 @@ namespace
             // 所以先 move 建立悬停，再一次完整的按下 / 抬起。
             const auto point = node.global_bounds().get_center();
             tree.dispatch_mouse_move(scene::MouseMoveEvent(point, foundation::NanPoint {}));
-            tree.dispatch_mouse_button(scene::MouseButtonEvent(
-                scene::MouseButtonEvent::Button::left,
-                scene::MouseButtonEvent::Action::press,
-                point
-            ));
-            tree.dispatch_mouse_button(scene::MouseButtonEvent(
-                scene::MouseButtonEvent::Button::left,
-                scene::MouseButtonEvent::Action::release,
-                point
-            ));
+            tree.dispatch_mouse_button(
+                scene::MouseButtonEvent(
+                    scene::MouseButtonEvent::Button::left,
+                    scene::MouseButtonEvent::Action::press,
+                    point
+                )
+            );
+            tree.dispatch_mouse_button(
+                scene::MouseButtonEvent(
+                    scene::MouseButtonEvent::Button::left,
+                    scene::MouseButtonEvent::Action::release,
+                    point
+                )
+            );
         }
 
         void click_outside() {
-            tree.dispatch_mouse_button(scene::MouseButtonEvent(
-                scene::MouseButtonEvent::Button::left,
-                scene::MouseButtonEvent::Action::press,
-                foundation::NanPoint(2.0F, 2.0F)
-            ));
+            tree.dispatch_mouse_button(
+                scene::MouseButtonEvent(
+                    scene::MouseButtonEvent::Button::left,
+                    scene::MouseButtonEvent::Action::press,
+                    foundation::NanPoint(2.0F, 2.0F)
+                )
+            );
         }
         /// 把淡出动画推完，让 phase 真正走到 closed。
         ///
@@ -141,10 +144,7 @@ namespace
 TEST_CASE("alert dialog requires a description and a confirm action", "[alert-dialog][boundary]") {
     // 这两条不是风格约束，是可用性约束（见 alert_dialog.hpp 的文件头）：
     // 没有描述时用户不知道自己在确认什么；没有确认动作时不可关闭的模态会把用户困住。
-    REQUIRE_THROWS_AS(
-        widget::AlertDialog::create("标题", ""),
-        std::invalid_argument
-    );
+    REQUIRE_THROWS_AS(widget::AlertDialog::create("标题", ""), std::invalid_argument);
 
     auto alert = widget::AlertDialog::create("标题", "描述");
     REQUIRE_THROWS_AS(alert->set_description(""), std::invalid_argument);
@@ -186,7 +186,10 @@ TEST_CASE("alert dialog exposes alertdialog semantics", "[alert-dialog][semantic
     REQUIRE(dialog_panel->semantics_properties().role == semantics::Role::dialog);
 }
 
-TEST_CASE("alert dialog cannot be dismissed by escape or an outside click", "[alert-dialog][interaction]") {
+TEST_CASE(
+    "alert dialog cannot be dismissed by escape or an outside click",
+    "[alert-dialog][interaction]"
+) {
     AlertHarness harness;
     harness.open();
     REQUIRE(harness.alert->is_open());
@@ -282,7 +285,10 @@ TEST_CASE("alert dialog applies the confirm tone", "[alert-dialog][interaction]"
     REQUIRE(harness.alert->is_open());
 }
 
-TEST_CASE("alert dialog mounts a portal while open and releases it on exit", "[alert-dialog][overlay]") {
+TEST_CASE(
+    "alert dialog mounts a portal while open and releases it on exit",
+    "[alert-dialog][overlay]"
+) {
     AlertHarness harness;
     harness.layout();
     REQUIRE(harness.host->overlay_count() == 0);
@@ -351,11 +357,7 @@ TEST_CASE("alert dialog is reachable through BuildContext", "[alert-dialog][trai
     auto host = scene::OverlayHost::create();
     widget::BuildContext ui {graph, scope, themes, nullptr, host.get()};
 
-    auto alert = ui.make<widget::AlertDialog>(
-                      "退出登录？",
-                      "未保存的修改会丢失。"
-    )
-                     .build();
+    auto alert = ui.make<widget::AlertDialog>("退出登录？", "未保存的修改会丢失。").build();
     REQUIRE(alert != nullptr);
     REQUIRE(alert->title() == "退出登录？");
     REQUIRE(alert->description() == "未保存的修改会丢失。");

@@ -18,11 +18,9 @@ namespace
         return foundation::NanColor::from(foundation::NanRgb {red, green, blue, 1.0F});
     }
 
-    [[nodiscard]] auto hex_color(
-        const std::uint8_t red,
-        const std::uint8_t green,
-        const std::uint8_t blue
-    ) -> foundation::NanColor {
+    [[nodiscard]] auto
+    hex_color(const std::uint8_t red, const std::uint8_t green, const std::uint8_t blue)
+        -> foundation::NanColor {
         return foundation::NanColor::from(foundation::NanHexRgb {red, green, blue, 255});
     }
 } // namespace

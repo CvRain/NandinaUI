@@ -16,7 +16,7 @@ namespace
             return true;
         }
     };
-}
+} // namespace
 
 TEST_CASE("focus scope traps tab and restores previous focus", "[overlay][focus]") {
     auto root = std::make_shared<scene::NanControl>();
@@ -41,11 +41,7 @@ TEST_CASE("focus scope traps tab and restores previous focus", "[overlay][focus]
     REQUIRE(tree.focused_node() == second.get());
     tree.dispatch_key(scene::KeyEvent(258, scene::KeyEvent::Action::press));
     REQUIRE(tree.focused_node() == first.get());
-    tree.dispatch_key(scene::KeyEvent(
-        258,
-        scene::KeyEvent::Action::press,
-        {.shift = true}
-    ));
+    tree.dispatch_key(scene::KeyEvent(258, scene::KeyEvent::Action::press, {.shift = true}));
     REQUIRE(tree.focused_node() == second.get());
 
     root->remove_and_delete(*scope);

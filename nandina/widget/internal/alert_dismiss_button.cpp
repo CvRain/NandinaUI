@@ -116,8 +116,7 @@ namespace nandina::widget::internal
 
         // × 字形：两条对角线，避免依赖字体里是否存在 U+00D7。
         const float inset = size_ * kGlyphInsetRatio;
-        const auto color =
-            glyph_color_.with_alpha(glyph_color_.alpha() * context.opacity());
+        const auto color = glyph_color_.with_alpha(glyph_color_.alpha() * context.opacity());
         context.device().draw_line(
             foundation::NanPoint(world.get_left() + inset, world.get_top() + inset),
             foundation::NanPoint(world.get_right() - inset, world.get_bottom() - inset),

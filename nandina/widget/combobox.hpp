@@ -125,7 +125,8 @@ namespace nandina::widget
         /// 文本或选中发生变化时触发：携带当前文本与选中 id（未匹配时为空串）。
         /// 用户输入、选中条目与自定义值提交都会触发；`set_text` / `set_selected_id` /
         /// `clear_selection` 静默。
-        void set_on_change(std::function<void(std::string_view text, std::string_view id)> callback);
+        void
+        set_on_change(std::function<void(std::string_view text, std::string_view id)> callback);
         /// 用户选中条目时触发，携带条目 id。
         [[nodiscard]] auto item_selected() const -> const reactive::Event<std::string>&;
         void set_on_close(std::function<void()> callback);

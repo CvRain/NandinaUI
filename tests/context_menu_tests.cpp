@@ -73,10 +73,12 @@ namespace
             std::vector<widget::MenuItem> items = sample_items(),
             const bool with_target = true
         ):
-            menu(widget::ContextMenu::create(
-                with_target ? std::static_pointer_cast<scene::NanControl>(target) : nullptr,
-                std::move(items)
-            )) {
+            menu(
+                widget::ContextMenu::create(
+                    with_target ? std::static_pointer_cast<scene::NanControl>(target) : nullptr,
+                    std::move(items)
+                )
+            ) {
             tree.set_theme_manager(themes);
             menu->set_position(foundation::NanPoint(24.0F, 60.0F));
             body->add_child(menu);
@@ -199,14 +201,14 @@ TEST_CASE("menu key opens a context menu at the target corner", "[context-menu][
     harness.layout();
     auto* panel = harness.panel();
     REQUIRE(panel != nullptr);
-    REQUIRE(
-        panel->global_bounds().get_left()
-        == Catch::Approx(corner.get_x()).margin(1.0F)
-    );
+    REQUIRE(panel->global_bounds().get_left() == Catch::Approx(corner.get_x()).margin(1.0F));
     REQUIRE(panel->global_bounds().get_top() >= corner.get_y());
 }
 
-TEST_CASE("shift+F10 opens a context menu but bare F10 does not", "[context-menu][input][keyboard]") {
+TEST_CASE(
+    "shift+F10 opens a context menu but bare F10 does not",
+    "[context-menu][input][keyboard]"
+) {
     ContextHarness harness;
     harness.layout();
     REQUIRE(harness.tree.focus_first_within(*harness.target));
@@ -270,9 +272,7 @@ TEST_CASE("activating an item fires on_select and closes the tree", "[context-me
     REQUIRE(harness.menu->is_open());
 
     std::vector<std::string> picked;
-    harness.menu->set_on_select([&picked](const std::string_view id) {
-        picked.emplace_back(id);
-    });
+    harness.menu->set_on_select([&picked](const std::string_view id) { picked.emplace_back(id); });
 
     int close_count = 0;
     harness.menu->set_on_close([&close_count] { ++close_count; });

@@ -30,10 +30,9 @@ namespace nandina::app
      * Build a validated metrics snapshot without accessing the platform backend.
      * Both sizes must be finite and strictly positive, otherwise `invalid_argument` is thrown.
      */
-    [[nodiscard]] auto make_window_metrics(
-        foundation::NanSize screen_size,
-        foundation::NanSize framebuffer_size
-    ) -> WindowMetrics;
+    [[nodiscard]] auto
+    make_window_metrics(foundation::NanSize screen_size, foundation::NanSize framebuffer_size)
+        -> WindowMetrics;
 
 } // namespace nandina::app
 

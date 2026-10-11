@@ -153,7 +153,8 @@ namespace nandina::text
             while (iterator != end) {
                 const auto& entry = *iterator;
                 if (entry.is_regular_file(error) && !error && is_font_file(entry.path())
-                    && ascii_lower(entry.path().filename().string()).find(needle) != std::string::npos)
+                    && ascii_lower(entry.path().filename().string()).find(needle)
+                        != std::string::npos)
                 {
                     return entry.path();
                 }

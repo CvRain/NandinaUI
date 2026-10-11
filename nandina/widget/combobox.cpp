@@ -331,7 +331,8 @@ namespace nandina::widget
                 float content_width = 0.0F;
                 float content_height = m.list_padding_y * 2.0F;
                 for (auto& node: item_nodes_) {
-                    const auto measured = node->measure_layout(foundation::NanLayoutConstraints::loose());
+                    const auto measured =
+                        node->measure_layout(foundation::NanLayoutConstraints::loose());
                     content_width = std::max(content_width, measured.get_width());
                     content_height += measured.get_height();
                 }
@@ -348,7 +349,8 @@ namespace nandina::widget
                 const float content_width = std::max(0.0F, width() - m.list_padding_x * 2.0F);
                 float y = m.list_padding_y;
                 for (auto& node: item_nodes_) {
-                    const auto measured = node->measure_layout(foundation::NanLayoutConstraints::loose());
+                    const auto measured =
+                        node->measure_layout(foundation::NanLayoutConstraints::loose());
                     const float row_height = measured.get_height();
                     node->layout_to(
                         foundation::NanRect::from_xywh(
@@ -930,7 +932,8 @@ namespace nandina::widget
 
     // ─── 布局 / 语义 ─────────────────────────────────────────────────────
 
-    auto Combobox::on_measure(const foundation::NanLayoutConstraints constraints) -> foundation::NanSize {
+    auto Combobox::on_measure(const foundation::NanLayoutConstraints constraints)
+        -> foundation::NanSize {
         // Popover 的测量就是触发控件（输入框）的自然尺寸；再用配方的首选宽度 / 高度把
         // 空内容时的尺寸兜住，否则没有文本 / 占位时控件会塌成一条线。
         const auto field_size = popover_->measure_layout(foundation::NanLayoutConstraints::loose());

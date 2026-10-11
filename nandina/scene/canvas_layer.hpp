@@ -34,7 +34,9 @@ namespace nandina::scene
         void set_space(CanvasSpace space);
         [[nodiscard]] auto order() const -> int;
         void set_order(int order);
-        [[nodiscard]] auto z_index_hint() const -> int override { return order_; }
+        [[nodiscard]] auto z_index_hint() const -> int override {
+            return order_;
+        }
         [[nodiscard]] auto input_mode() const -> LayerInputMode;
         void set_input_mode(LayerInputMode mode);
 
@@ -52,8 +54,12 @@ namespace nandina::scene
         /// 窗口关闭时用它把应用内容提前交还给调用方，避免内容树活过 render device。
         void clear_layout_root();
 
-        [[nodiscard]] auto as_canvas_layer() -> CanvasLayer* override { return this; }
-        [[nodiscard]] auto as_canvas_layer() const -> const CanvasLayer* override { return this; }
+        [[nodiscard]] auto as_canvas_layer() -> CanvasLayer* override {
+            return this;
+        }
+        [[nodiscard]] auto as_canvas_layer() const -> const CanvasLayer* override {
+            return this;
+        }
 
     protected:
         [[nodiscard]] auto _push_draw_transform(render::DrawContext& ctx)
@@ -80,8 +86,12 @@ namespace nandina::scene
         [[nodiscard]] auto layers_in_order(bool front_to_back = false) const
             -> std::vector<CanvasLayer*>;
 
-        [[nodiscard]] auto as_layer_stack() -> LayerStack* override { return this; }
-        [[nodiscard]] auto as_layer_stack() const -> const LayerStack* override { return this; }
+        [[nodiscard]] auto as_layer_stack() -> LayerStack* override {
+            return this;
+        }
+        [[nodiscard]] auto as_layer_stack() const -> const LayerStack* override {
+            return this;
+        }
         /// Explicit, RTTI-free type identification for a layer stack that also hosts
         /// the overlay portal. A plain LayerStack keeps the nullptr default; only
         /// OverlayHost overrides it, so no unverified downcast is needed. Both sides

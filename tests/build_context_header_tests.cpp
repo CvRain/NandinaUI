@@ -17,7 +17,7 @@ namespace
     private:
         reactive::Graph* graph_;
     };
-}
+} // namespace
 
 TEST_CASE(
     "BuildContext supports custom components without the controls umbrella",

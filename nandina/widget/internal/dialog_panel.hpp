@@ -73,6 +73,6 @@ namespace nandina::widget::internal
         theme::ResolvedDialogStyle style_;
         bool alert_semantics_ = false;
     };
-}
+} // namespace nandina::widget::internal
 
 #endif

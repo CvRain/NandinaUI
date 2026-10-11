@@ -20,10 +20,9 @@ namespace nandina::widget
         /// @param value 进度分数 [0,1]（越界/非有限值会被钳制）。
         explicit ProgressBar(float value = 0.0F, theme::NanTheme theme = theme::default_theme());
 
-        [[nodiscard]] static auto create(
-            float value = 0.0F,
-            theme::NanTheme theme = theme::default_theme()
-        ) -> std::shared_ptr<ProgressBar>;
+        [[nodiscard]] static auto
+        create(float value = 0.0F, theme::NanTheme theme = theme::default_theme())
+            -> std::shared_ptr<ProgressBar>;
 
         /// 无障碍标签（可选，仅进 semantics）。
         void set_label(std::string label);

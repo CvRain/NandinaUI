@@ -8,8 +8,8 @@
 #include "../../reactive/property.hpp"
 #include "../../scene/control.hpp"
 #include "../../scene/property_endpoint.hpp"
-#include "../visual_property.hpp"
 #include "../../text/text_layout_backend.hpp"
+#include "../visual_property.hpp"
 
 #include <memory>
 #include <string>
@@ -137,8 +137,9 @@ namespace nandina::widget::primitives
 
     private:
         void apply_text(const std::string& text);
-        void
-        update_metrics(foundation::NanLayoutConstraints constraints = foundation::NanLayoutConstraints::loose());
+        void update_metrics(
+            foundation::NanLayoutConstraints constraints = foundation::NanLayoutConstraints::loose()
+        );
         void resolve_font();
 
         reactive::Property<std::string> text_;

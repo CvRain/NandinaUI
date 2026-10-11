@@ -13,9 +13,12 @@ namespace nandina::physics2d
     {
         [[nodiscard]] auto to_b2_type(const PhysicsBodyType type) -> b2BodyType {
             switch (type) {
-            case PhysicsBodyType::static_body: return b2_staticBody;
-            case PhysicsBodyType::kinematic_body: return b2_kinematicBody;
-            case PhysicsBodyType::dynamic_body: return b2_dynamicBody;
+                case PhysicsBodyType::static_body:
+                    return b2_staticBody;
+                case PhysicsBodyType::kinematic_body:
+                    return b2_kinematicBody;
+                case PhysicsBodyType::dynamic_body:
+                    return b2_dynamicBody;
             }
             return b2_staticBody;
         }
@@ -25,13 +28,18 @@ namespace nandina::physics2d
         PhysicsWorld2D& world,
         const b2BodyId id,
         const PhysicsBodyType type
-    ): world_(&world), id_(id), type_(type) {}
+    ):
+        world_(&world),
+        id_(id),
+        type_(type) {}
 
     auto PhysicsBody2D::valid() const -> bool {
         return world_ != nullptr && B2_IS_NON_NULL(id_) && b2Body_IsValid(id_);
     }
 
-    auto PhysicsBody2D::type() const -> PhysicsBodyType { return type_; }
+    auto PhysicsBody2D::type() const -> PhysicsBodyType {
+        return type_;
+    }
 
     auto PhysicsBody2D::position() const -> foundation::NanPoint {
         if (!valid()) {
@@ -75,22 +83,24 @@ namespace nandina::physics2d
         b2Body_SetLinearVelocity(id_, world_->to_b2(velocity));
     }
 
-    auto PhysicsBody2D::visual() const -> scene::NanNode2D* { return visual_.lock().get(); }
+    auto PhysicsBody2D::visual() const -> scene::NanNode2D* {
+        return visual_.lock().get();
+    }
     void PhysicsBody2D::bind_visual(const std::shared_ptr<scene::NanNode2D>& visual) {
         visual_ = visual;
     }
 
-    auto PhysicsBody2D::shape_count() const -> std::size_t { return shapes_.size(); }
+    auto PhysicsBody2D::shape_count() const -> std::size_t {
+        return shapes_.size();
+    }
 
-    auto PhysicsBody2D::create_box(
-        const foundation::NanSize size,
-        PhysicsShapeDef def
-    ) -> std::shared_ptr<PhysicsShape2D> {
+    auto PhysicsBody2D::create_box(const foundation::NanSize size, PhysicsShapeDef def)
+        -> std::shared_ptr<PhysicsShape2D> {
         if (!valid() || !std::isfinite(size.get_width()) || !std::isfinite(size.get_height())
-            || size.get_width() <= 0.0F || size.get_height() <= 0.0F
-            || !std::isfinite(def.density) || def.density < 0.0F
-            || !std::isfinite(def.friction) || def.friction < 0.0F
-            || !std::isfinite(def.restitution) || def.restitution < 0.0F) {
+            || size.get_width() <= 0.0F || size.get_height() <= 0.0F || !std::isfinite(def.density)
+            || def.density < 0.0F || !std::isfinite(def.friction) || def.friction < 0.0F
+            || !std::isfinite(def.restitution) || def.restitution < 0.0F)
+        {
             throw std::invalid_argument("invalid physics box");
         }
         auto shape_def = b2DefaultShapeDef();
@@ -116,14 +126,12 @@ namespace nandina::physics2d
         return shape;
     }
 
-    auto PhysicsBody2D::create_circle(
-        const float radius,
-        PhysicsShapeDef def
-    ) -> std::shared_ptr<PhysicsShape2D> {
-        if (!valid() || !std::isfinite(radius) || radius <= 0.0F
-            || !std::isfinite(def.density) || def.density < 0.0F
-            || !std::isfinite(def.friction) || def.friction < 0.0F
-            || !std::isfinite(def.restitution) || def.restitution < 0.0F) {
+    auto PhysicsBody2D::create_circle(const float radius, PhysicsShapeDef def)
+        -> std::shared_ptr<PhysicsShape2D> {
+        if (!valid() || !std::isfinite(radius) || radius <= 0.0F || !std::isfinite(def.density)
+            || def.density < 0.0F || !std::isfinite(def.friction) || def.friction < 0.0F
+            || !std::isfinite(def.restitution) || def.restitution < 0.0F)
+        {
             throw std::invalid_argument("invalid physics circle");
         }
         auto shape_def = b2DefaultShapeDef();
@@ -161,14 +169,25 @@ namespace nandina::physics2d
         const b2ShapeId id,
         const PhysicsShapeType type,
         const bool sensor
-    ): world_(&world), body_(&body), id_(id), type_(type), sensor_(sensor) {}
+    ):
+        world_(&world),
+        body_(&body),
+        id_(id),
+        type_(type),
+        sensor_(sensor) {}
 
     auto PhysicsShape2D::valid() const -> bool {
         return world_ != nullptr && B2_IS_NON_NULL(id_) && b2Shape_IsValid(id_);
     }
-    auto PhysicsShape2D::type() const -> PhysicsShapeType { return type_; }
-    auto PhysicsShape2D::sensor() const -> bool { return sensor_; }
-    auto PhysicsShape2D::body() const -> PhysicsBody2D* { return body_; }
+    auto PhysicsShape2D::type() const -> PhysicsShapeType {
+        return type_;
+    }
+    auto PhysicsShape2D::sensor() const -> bool {
+        return sensor_;
+    }
+    auto PhysicsShape2D::body() const -> PhysicsBody2D* {
+        return body_;
+    }
     auto PhysicsShape2D::filter() const -> PhysicsFilter {
         if (!valid()) {
             throw std::logic_error("PhysicsShape2D is not valid");
@@ -201,20 +220,30 @@ namespace nandina::physics2d
         }
     }
 
-    PhysicsWorld2D::~PhysicsWorld2D() { destroy_world(); }
+    PhysicsWorld2D::~PhysicsWorld2D() {
+        destroy_world();
+    }
 
     auto PhysicsWorld2D::create(PhysicsWorldConfig config) -> std::shared_ptr<PhysicsWorld2D> {
         return std::make_shared<PhysicsWorld2D>(config);
     }
 
-    auto PhysicsWorld2D::config() const -> const PhysicsWorldConfig& { return config_; }
-    auto PhysicsWorld2D::body_count() const -> std::size_t { return bodies_.size(); }
-    auto PhysicsWorld2D::accumulator() const -> float { return accumulator_; }
-    auto PhysicsWorld2D::total_steps() const -> std::size_t { return total_steps_; }
-    auto PhysicsWorld2D::events() const -> const std::vector<PhysicsTouchEvent>& { return events_; }
-    void PhysicsWorld2D::set_event_handler(
-        std::function<void(const PhysicsTouchEvent&)> handler
-    ) {
+    auto PhysicsWorld2D::config() const -> const PhysicsWorldConfig& {
+        return config_;
+    }
+    auto PhysicsWorld2D::body_count() const -> std::size_t {
+        return bodies_.size();
+    }
+    auto PhysicsWorld2D::accumulator() const -> float {
+        return accumulator_;
+    }
+    auto PhysicsWorld2D::total_steps() const -> std::size_t {
+        return total_steps_;
+    }
+    auto PhysicsWorld2D::events() const -> const std::vector<PhysicsTouchEvent>& {
+        return events_;
+    }
+    void PhysicsWorld2D::set_event_handler(std::function<void(const PhysicsTouchEvent&)> handler) {
         event_handler_ = std::move(handler);
     }
 
@@ -254,14 +283,18 @@ namespace nandina::physics2d
             auto first = find_shape(contacts.beginEvents[i].shapeIdA);
             auto second = find_shape(contacts.beginEvents[i].shapeIdB);
             if (first != nullptr && second != nullptr) {
-                events_.push_back({PhysicsTouchKind::contact_begin, std::move(first), std::move(second)});
+                events_.push_back(
+                    {PhysicsTouchKind::contact_begin, std::move(first), std::move(second)}
+                );
             }
         }
         for (int i = 0; i < contacts.endCount; ++i) {
             auto first = find_shape(contacts.endEvents[i].shapeIdA);
             auto second = find_shape(contacts.endEvents[i].shapeIdB);
             if (first != nullptr && second != nullptr) {
-                events_.push_back({PhysicsTouchKind::contact_end, std::move(first), std::move(second)});
+                events_.push_back(
+                    {PhysicsTouchKind::contact_end, std::move(first), std::move(second)}
+                );
             }
         }
 
@@ -270,14 +303,18 @@ namespace nandina::physics2d
             auto sensor = find_shape(sensors.beginEvents[i].sensorShapeId);
             auto visitor = find_shape(sensors.beginEvents[i].visitorShapeId);
             if (sensor != nullptr && visitor != nullptr) {
-                events_.push_back({PhysicsTouchKind::sensor_begin, std::move(sensor), std::move(visitor)});
+                events_.push_back(
+                    {PhysicsTouchKind::sensor_begin, std::move(sensor), std::move(visitor)}
+                );
             }
         }
         for (int i = 0; i < sensors.endCount; ++i) {
             auto sensor = find_shape(sensors.endEvents[i].sensorShapeId);
             auto visitor = find_shape(sensors.endEvents[i].visitorShapeId);
             if (sensor != nullptr && visitor != nullptr) {
-                events_.push_back({PhysicsTouchKind::sensor_end, std::move(sensor), std::move(visitor)});
+                events_.push_back(
+                    {PhysicsTouchKind::sensor_end, std::move(sensor), std::move(visitor)}
+                );
             }
         }
     }
@@ -374,11 +411,14 @@ namespace nandina::physics2d
     void PhysicsWorld2D::sync_scene_to_physics() {
         for (const auto& body: bodies_) {
             auto visual = body->visual_.lock();
-            if (!body->valid() || visual == nullptr || body->type_ == PhysicsBodyType::dynamic_body) {
+            if (!body->valid() || visual == nullptr || body->type_ == PhysicsBodyType::dynamic_body)
+            {
                 continue;
             }
             b2Body_SetTransform(
-                body->id_, to_b2(visual->global_position()), b2MakeRot(visual->global_rotation())
+                body->id_,
+                to_b2(visual->global_position()),
+                b2MakeRot(visual->global_rotation())
             );
         }
     }
@@ -386,12 +426,13 @@ namespace nandina::physics2d
     void PhysicsWorld2D::sync_physics_to_scene() {
         for (const auto& body: bodies_) {
             auto visual = body->visual_.lock();
-            if (!body->valid() || visual == nullptr || body->type_ != PhysicsBodyType::dynamic_body) {
+            if (!body->valid() || visual == nullptr || body->type_ != PhysicsBodyType::dynamic_body)
+            {
                 continue;
             }
             visual->set_global_position(from_b2(b2Body_GetPosition(body->id_)));
-            const auto parent_rotation = visual->parent() != nullptr
-                && visual->parent()->as_node2d() != nullptr
+            const auto parent_rotation =
+                visual->parent() != nullptr && visual->parent()->as_node2d() != nullptr
                 ? visual->parent()->as_node2d()->global_rotation()
                 : 0.0F;
             visual->set_rotation(b2Rot_GetAngle(b2Body_GetRotation(body->id_)) - parent_rotation);

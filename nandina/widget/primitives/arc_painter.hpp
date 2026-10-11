@@ -22,10 +22,10 @@ namespace nandina::widget::primitives
 {
     /** Ring / arc geometry. All lengths are logical px. */
     struct ArcStyle {
-        float radius = 8.0F;               // outer radius, logical px
-        float thickness = 2.0F;            // ring thickness
-        float start_radians = 0.0F;        // arc start
-        float sweep_radians = 6.2831853F;  // arc extent (6.2831853F == full ring)
+        float radius = 8.0F; // outer radius, logical px
+        float thickness = 2.0F; // ring thickness
+        float start_radians = 0.0F; // arc start
+        float sweep_radians = 6.2831853F; // arc extent (6.2831853F == full ring)
     };
 
     class ArcPainter {

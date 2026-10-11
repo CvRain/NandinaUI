@@ -29,10 +29,9 @@ namespace
     using namespace nandina;
 
     /// 把前景按自身 alpha 合成到不透明背景上。
-    [[nodiscard]] auto composite_over(
-        const foundation::NanColor& foreground,
-        const foundation::NanColor& background
-    ) -> foundation::NanColor {
+    [[nodiscard]] auto
+    composite_over(const foundation::NanColor& foreground, const foundation::NanColor& background)
+        -> foundation::NanColor {
         const auto source = foreground.to<foundation::NanRgb>();
         const auto backdrop = background.to<foundation::NanRgb>();
         const auto alpha = source.alpha;
@@ -43,10 +42,9 @@ namespace
         );
     }
 
-    [[nodiscard]] auto contrast_of(
-        const foundation::NanColor& foreground,
-        const foundation::NanColor& background
-    ) -> float {
+    [[nodiscard]] auto
+    contrast_of(const foundation::NanColor& foreground, const foundation::NanColor& background)
+        -> float {
         return foundation::nan_contrast_ratio(composite_over(foreground, background), background);
     }
 
@@ -77,20 +75,45 @@ namespace
         const bool strict_status_text = true
     ) {
         const float text_minimum = foundation::nan_contrast_aa_text;
-        const float status_minimum = strict_status_text
-            ? foundation::nan_contrast_aa_text
-            : foundation::nan_contrast_aa_large_text;
+        const float status_minimum = strict_status_text ? foundation::nan_contrast_aa_text
+                                                        : foundation::nan_contrast_aa_large_text;
         // 正文与各层表面的文字。
-        require_contrast(scheme, "foreground/background", scheme.foreground, scheme.background, text_minimum);
-        require_contrast(scheme, "card_foreground/card", scheme.card_foreground, scheme.card, text_minimum);
         require_contrast(
-            scheme, "popover_foreground/popover", scheme.popover_foreground, scheme.popover, text_minimum
+            scheme,
+            "foreground/background",
+            scheme.foreground,
+            scheme.background,
+            text_minimum
+        );
+        require_contrast(
+            scheme,
+            "card_foreground/card",
+            scheme.card_foreground,
+            scheme.card,
+            text_minimum
+        );
+        require_contrast(
+            scheme,
+            "popover_foreground/popover",
+            scheme.popover_foreground,
+            scheme.popover,
+            text_minimum
         );
         // 次要文字：既可能压在背景上，也可能压在 muted 块上（Badge / 表头 / 代码块）。
         require_contrast(
-            scheme, "muted_foreground/background", scheme.muted_foreground, scheme.background, text_minimum
+            scheme,
+            "muted_foreground/background",
+            scheme.muted_foreground,
+            scheme.background,
+            text_minimum
         );
-        require_contrast(scheme, "muted_foreground/muted", scheme.muted_foreground, scheme.muted, text_minimum);
+        require_contrast(
+            scheme,
+            "muted_foreground/muted",
+            scheme.muted_foreground,
+            scheme.muted,
+            text_minimum
+        );
         // 中性次操作与 hover 高亮上的文字（Button secondary/ghost、下拉高亮项）。
         require_contrast(
             scheme,
@@ -100,11 +123,19 @@ namespace
             text_minimum
         );
         require_contrast(
-            scheme, "accent_foreground/accent", scheme.accent_foreground, scheme.accent, text_minimum
+            scheme,
+            "accent_foreground/accent",
+            scheme.accent_foreground,
+            scheme.accent,
+            text_minimum
         );
         // 品牌与语义状态按钮的文字（Button filled / tone danger）。
         require_contrast(
-            scheme, "primary_foreground/primary", scheme.primary_foreground, scheme.primary, text_minimum
+            scheme,
+            "primary_foreground/primary",
+            scheme.primary_foreground,
+            scheme.primary,
+            text_minimum
         );
         require_contrast(
             scheme,
@@ -114,13 +145,25 @@ namespace
             status_minimum
         );
         require_contrast(
-            scheme, "error_foreground/error", scheme.error_foreground, scheme.error, status_minimum
+            scheme,
+            "error_foreground/error",
+            scheme.error_foreground,
+            scheme.error,
+            status_minimum
         );
         require_contrast(
-            scheme, "success_foreground/success", scheme.success_foreground, scheme.success, status_minimum
+            scheme,
+            "success_foreground/success",
+            scheme.success_foreground,
+            scheme.success,
+            status_minimum
         );
         require_contrast(
-            scheme, "warning_foreground/warning", scheme.warning_foreground, scheme.warning, status_minimum
+            scheme,
+            "warning_foreground/warning",
+            scheme.warning_foreground,
+            scheme.warning,
+            status_minimum
         );
 
         // 非文本信号：焦点环与语义色在页面上必须能看见（≥ 3:1）。
@@ -129,18 +172,34 @@ namespace
         if (require_ring_on_card) {
             require_contrast(scheme, "ring/card", scheme.ring, scheme.card, signal_minimum);
         }
-        require_contrast(scheme, "primary/background", scheme.primary, scheme.background, signal_minimum);
         require_contrast(
-            scheme, "destructive/background", scheme.destructive, scheme.background, signal_minimum
+            scheme,
+            "primary/background",
+            scheme.primary,
+            scheme.background,
+            signal_minimum
+        );
+        require_contrast(
+            scheme,
+            "destructive/background",
+            scheme.destructive,
+            scheme.background,
+            signal_minimum
         );
     }
 } // namespace
 
-TEST_CASE("default light palette meets text and signal contrast floors", "[theme][palette][contrast]") {
+TEST_CASE(
+    "default light palette meets text and signal contrast floors",
+    "[theme][palette][contrast]"
+) {
     require_palette_readable(theme::default_light_palette(), /*require_ring_on_card=*/true);
 }
 
-TEST_CASE("default dark palette meets text and signal contrast floors", "[theme][palette][contrast]") {
+TEST_CASE(
+    "default dark palette meets text and signal contrast floors",
+    "[theme][palette][contrast]"
+) {
     require_palette_readable(theme::default_dark_palette(), /*require_ring_on_card=*/true);
 }
 
@@ -180,7 +239,10 @@ TEST_CASE("default palettes keep a monotonic surface hierarchy", "[theme][palett
     check(dark, /*elevated_is_lighter=*/true);
 }
 
-TEST_CASE("reference-derived palettes stay readable for the built-in families", "[theme][palette][contrast]") {
+TEST_CASE(
+    "reference-derived palettes stay readable for the built-in families",
+    "[theme][palette][contrast]"
+) {
     // 参考色阶路径（butter / fluent / material 用它）也必须过同一套门槛。
     // 逐族用**各族自己的 policy** 编译，否则会把某族的品牌档位当成通用规则来量。
     const auto families = theme::default_theme_families();

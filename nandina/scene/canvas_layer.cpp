@@ -1,8 +1,8 @@
 #include "canvas_layer.hpp"
 
+#include "../render/draw_context.hpp"
 #include "control.hpp"
 #include "scene_tree.hpp"
-#include "../render/draw_context.hpp"
 
 #include <algorithm>
 #include <stdexcept>
@@ -11,7 +11,8 @@ namespace nandina::scene
 {
 
     CanvasLayer::CanvasLayer(const CanvasSpace space, const int order):
-        space_(space), order_(order) {
+        space_(space),
+        order_(order) {
         NanNode2D::set_z_index(order);
     }
 
@@ -20,20 +21,28 @@ namespace nandina::scene
         return std::make_shared<CanvasLayer>(space, order);
     }
 
-    auto CanvasLayer::space() const -> CanvasSpace { return space_; }
+    auto CanvasLayer::space() const -> CanvasSpace {
+        return space_;
+    }
     void CanvasLayer::set_space(const CanvasSpace space) {
         if (space == CanvasSpace::world && layout_root() != nullptr) {
             throw std::logic_error("a layer with a layout root must remain screen-space");
         }
         space_ = space;
     }
-    auto CanvasLayer::order() const -> int { return order_; }
+    auto CanvasLayer::order() const -> int {
+        return order_;
+    }
     void CanvasLayer::set_order(const int order) {
         order_ = order;
         NanNode2D::set_z_index(order);
     }
-    auto CanvasLayer::input_mode() const -> LayerInputMode { return input_mode_; }
-    void CanvasLayer::set_input_mode(const LayerInputMode mode) { input_mode_ = mode; }
+    auto CanvasLayer::input_mode() const -> LayerInputMode {
+        return input_mode_;
+    }
+    void CanvasLayer::set_input_mode(const LayerInputMode mode) {
+        input_mode_ = mode;
+    }
 
     auto CanvasLayer::canvas_transform() const -> const foundation::NanTransform2D& {
         return transform();
@@ -85,17 +94,16 @@ namespace nandina::scene
         }
         if (auto* tree = get_tree(); tree != nullptr && tree->defers_tree_mutation()) {
             auto self = std::static_pointer_cast<CanvasLayer>(shared_from_this());
-            tree->defer_tree_mutation(
-                [self = std::move(self)]() mutable { self->clear_layout_root(); }
-            );
+            tree->defer_tree_mutation([self = std::move(self)]() mutable {
+                self->clear_layout_root();
+            });
             return;
         }
         layout_root_.reset();
         (void)remove_child(*current);
     }
 
-    auto CanvasLayer::_push_draw_transform(render::DrawContext& ctx)
-        -> foundation::NanTransform2D {
+    auto CanvasLayer::_push_draw_transform(render::DrawContext& ctx) -> foundation::NanTransform2D {
         auto saved = ctx.world_;
         ctx.world_ = ctx.root_transform_.compose(transform());
         return saved;
@@ -128,8 +136,7 @@ namespace nandina::scene
         return child != nullptr ? child->as_canvas_layer() : nullptr;
     }
 
-    auto LayerStack::layers_in_order(const bool front_to_back) const
-        -> std::vector<CanvasLayer*> {
+    auto LayerStack::layers_in_order(const bool front_to_back) const -> std::vector<CanvasLayer*> {
         std::vector<CanvasLayer*> result;
         result.reserve(child_count());
         for (std::size_t i = 0; i < child_count(); ++i) {

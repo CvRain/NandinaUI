@@ -44,7 +44,7 @@ namespace nandina::widget
     class Toggle;
 
     /** 组的选中模式。 */
-    enum class ToggleGroupMode: std::uint8_t {
+    enum class ToggleGroupMode : std::uint8_t {
         /** 至多一个成员选中（选择新成员会取消旧成员）。 */
         single,
         /** 成员各自独立开关，组只报告选中集合。 */

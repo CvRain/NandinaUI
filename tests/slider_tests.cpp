@@ -34,7 +34,7 @@ namespace
             foundation::NanRect rect;
             foundation::NanColor color;
             bool outline = false; // 描边类图元：draw_rect_outline / draw_rounded_rect_outline
-            bool circle = false;  // draw_circle 填充
+            bool circle = false; // draw_circle 填充
         };
 
         std::vector<Primitive> primitives;
@@ -225,7 +225,10 @@ TEST_CASE("slider style resolves semantic theme colors", "[slider][theme]") {
     REQUIRE(style.thumb.radius == Catch::Approx(11.0F));
 }
 
-TEST_CASE("slider value label opt-in increases measured height and tracks value", "[slider][label]") {
+TEST_CASE(
+    "slider value label opt-in increases measured height and tracks value",
+    "[slider][label]"
+) {
     auto slider = std::make_shared<widget::Slider>("Zoom", 0.5F, 0.0F, 1.0F, 0.1F);
     REQUIRE_FALSE(slider->show_value_label());
     REQUIRE(slider->value_label_text() == "0.5");
@@ -261,9 +264,8 @@ TEST_CASE("slider thumb paints inside the slider bounds", "[slider][paint][theme
     const auto bounds = slider->global_bounds().expanded(1.0F);
     for (const auto& rect: device.rects) {
         INFO(
-            "primitive rect = ("
-            << rect.get_left() << ", " << rect.get_top() << " " << rect.get_width() << "x"
-            << rect.get_height() << ")"
+            "primitive rect = (" << rect.get_left() << ", " << rect.get_top() << " "
+                                 << rect.get_width() << "x" << rect.get_height() << ")"
         );
         REQUIRE(bounds.contains_rect(rect));
     }
@@ -334,9 +336,11 @@ TEST_CASE("slider thumb ring paints in the normal state", "[slider][paint][theme
 
 TEST_CASE("slider thumb ring is skipped when the border width is zero", "[slider][paint][theme]") {
     auto slider = std::make_shared<widget::Slider>("Scale", 0.5F, 0.0F, 1.0F, 0.01F);
-    slider->set_override(theme::SliderRecipeRule {
-        .thumb_border_width = theme::ThemeScalar::literal(0.0F),
-    });
+    slider->set_override(
+        theme::SliderRecipeRule {
+            .thumb_border_width = theme::ThemeScalar::literal(0.0F),
+        }
+    );
     scene::NanSceneTree tree;
     tree.set_root(slider);
     REQUIRE(tree.layout_root(foundation::NanSize(240.0F, 32.0F)) >= 1);
@@ -346,18 +350,22 @@ TEST_CASE("slider thumb ring is skipped when the border width is zero", "[slider
     render::DrawContext context {device};
     tree.render(context);
 
-    REQUIRE(std::none_of(
-        device.primitives.begin(),
-        device.primitives.end(),
-        [](const BoundsRecordingDevice::Primitive& primitive) { return primitive.outline; }
-    ));
+    REQUIRE(
+        std::none_of(
+            device.primitives.begin(),
+            device.primitives.end(),
+            [](const BoundsRecordingDevice::Primitive& primitive) { return primitive.outline; }
+        )
+    );
 }
 
 TEST_CASE("slider thumb ring is skipped when the border is transparent", "[slider][paint][theme]") {
     auto slider = std::make_shared<widget::Slider>("Scale", 0.5F, 0.0F, 1.0F, 0.01F);
-    slider->set_override(theme::SliderRecipeRule {
-        .thumb_border = theme::ThemeColor::transparent(theme::ColorToken::primary),
-    });
+    slider->set_override(
+        theme::SliderRecipeRule {
+            .thumb_border = theme::ThemeColor::transparent(theme::ColorToken::primary),
+        }
+    );
     scene::NanSceneTree tree;
     tree.set_root(slider);
     REQUIRE(tree.layout_root(foundation::NanSize(240.0F, 32.0F)) >= 1);
@@ -367,20 +375,27 @@ TEST_CASE("slider thumb ring is skipped when the border is transparent", "[slide
     render::DrawContext context {device};
     tree.render(context);
 
-    REQUIRE(std::none_of(
-        device.primitives.begin(),
-        device.primitives.end(),
-        [](const BoundsRecordingDevice::Primitive& primitive) { return primitive.outline; }
-    ));
+    REQUIRE(
+        std::none_of(
+            device.primitives.begin(),
+            device.primitives.end(),
+            [](const BoundsRecordingDevice::Primitive& primitive) { return primitive.outline; }
+        )
+    );
 }
 
-TEST_CASE("slider thumb_radius override patches the dedicated pixel radius", "[slider][theme][override]") {
+TEST_CASE(
+    "slider thumb_radius override patches the dedicated pixel radius",
+    "[slider][theme][override]"
+) {
     auto slider = std::make_shared<widget::Slider>("Scale", 0.5F, 0.0F, 1.0F, 0.05F);
     REQUIRE(slider->resolved_style().thumb.radius == Catch::Approx(9.0F));
 
-    slider->set_override(theme::SliderRecipeRule {
-        .thumb_radius = theme::ThemeScalar::literal(21.0F),
-    });
+    slider->set_override(
+        theme::SliderRecipeRule {
+            .thumb_radius = theme::ThemeScalar::literal(21.0F),
+        }
+    );
     const auto style = slider->resolved_style();
     REQUIRE(style.thumb.radius == Catch::Approx(21.0F));
     // 像素半径只写进专用字段，绝不落回圆角语义的 BoxStyle.radius。
@@ -401,13 +416,18 @@ TEST_CASE("slider thumb_radius override patches the dedicated pixel radius", "[s
     REQUIRE(fill->rect.get_width() == Catch::Approx(42.0F));
 }
 
-TEST_CASE("slider thumb_radius tolerates a corner token without overpainting", "[slider][paint][theme]") {
+TEST_CASE(
+    "slider thumb_radius tolerates a corner token without overpainting",
+    "[slider][paint][theme]"
+) {
     // 语义兜底：主题作者按圆角习惯把 thumb_radius 填成 radius_full(9999) 时，
     // 控件仍应把半径夹到半高/半宽，而不是画出覆盖整窗的圆盘。
     auto slider = std::make_shared<widget::Slider>("Scale", 0.5F, 0.0F, 1.0F, 0.01F);
-    slider->set_override(theme::SliderRecipeRule {
-        .thumb_radius = theme::ThemeScalar::token(theme::ScalarToken::radius_full),
-    });
+    slider->set_override(
+        theme::SliderRecipeRule {
+            .thumb_radius = theme::ThemeScalar::token(theme::ScalarToken::radius_full),
+        }
+    );
     scene::NanSceneTree tree;
     tree.set_root(slider);
     REQUIRE(tree.layout_root(foundation::NanSize(240.0F, 32.0F)) >= 1);

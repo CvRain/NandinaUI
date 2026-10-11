@@ -188,10 +188,7 @@ namespace nandina::text
             probe_y += row_height_ + padding_;
         }
         if (probe_x + width > width_ || probe_y + height > height_) {
-            if (!grow_to_fit(
-                    std::max(width, probe_x + width),
-                    std::max(height, probe_y + height)
-                ))
+            if (!grow_to_fit(std::max(width, probe_x + width), std::max(height, probe_y + height)))
             {
                 // 连扩容上限都放不下（例如字号大于整张图集）。
                 //

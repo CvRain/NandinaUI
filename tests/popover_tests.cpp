@@ -173,16 +173,20 @@ TEST_CASE("popover trigger toggles from pointer and keyboard activation", "[popo
     harness.layout();
     const auto center = harness.trigger->global_bounds().get_center();
 
-    harness.tree.dispatch_mouse_button(scene::MouseButtonEvent {
-        scene::MouseButtonEvent::Button::left,
-        scene::MouseButtonEvent::Action::press,
-        center,
-    });
-    harness.tree.dispatch_mouse_button(scene::MouseButtonEvent {
-        scene::MouseButtonEvent::Button::left,
-        scene::MouseButtonEvent::Action::release,
-        center,
-    });
+    harness.tree.dispatch_mouse_button(
+        scene::MouseButtonEvent {
+            scene::MouseButtonEvent::Button::left,
+            scene::MouseButtonEvent::Action::press,
+            center,
+        }
+    );
+    harness.tree.dispatch_mouse_button(
+        scene::MouseButtonEvent {
+            scene::MouseButtonEvent::Button::left,
+            scene::MouseButtonEvent::Action::release,
+            center,
+        }
+    );
     REQUIRE(harness.popover->is_open());
 
     harness.popover->close();
@@ -197,16 +201,20 @@ TEST_CASE("disabled popover trigger does not open", "[popover][input]") {
     harness.layout();
     const auto center = harness.trigger->global_bounds().get_center();
 
-    harness.tree.dispatch_mouse_button(scene::MouseButtonEvent {
-        scene::MouseButtonEvent::Button::left,
-        scene::MouseButtonEvent::Action::press,
-        center,
-    });
-    harness.tree.dispatch_mouse_button(scene::MouseButtonEvent {
-        scene::MouseButtonEvent::Button::left,
-        scene::MouseButtonEvent::Action::release,
-        center,
-    });
+    harness.tree.dispatch_mouse_button(
+        scene::MouseButtonEvent {
+            scene::MouseButtonEvent::Button::left,
+            scene::MouseButtonEvent::Action::press,
+            center,
+        }
+    );
+    harness.tree.dispatch_mouse_button(
+        scene::MouseButtonEvent {
+            scene::MouseButtonEvent::Button::left,
+            scene::MouseButtonEvent::Action::release,
+            center,
+        }
+    );
     REQUIRE_FALSE(harness.popover->is_open());
 }
 

@@ -12,7 +12,7 @@
 namespace nandina::scene
 {
     /// 浮层的语义层级。组件按用途声明层级，不直接写 CanvasLayer 的 order 数值。
-    enum class OverlayLevel: int {
+    enum class OverlayLevel : int {
         /// 提示、下拉与菜单：位于应用内容之上，彼此按加入顺序叠放。
         popup = 0,
         /// 模态内容：高于所有 popup，并阻断其下全部输入。
@@ -112,13 +112,15 @@ namespace nandina::scene
          * render device 仍然存活时析构。外部持有的 OverlayHandle 会变成未挂载状态。
          */
         void clear_overlays();
-        [[nodiscard]] auto as_overlay_host() -> OverlayHost* override { return this; }
-        [[nodiscard]] auto as_overlay_host() const -> const OverlayHost* override { return this; }
+        [[nodiscard]] auto as_overlay_host() -> OverlayHost* override {
+            return this;
+        }
+        [[nodiscard]] auto as_overlay_host() const -> const OverlayHost* override {
+            return this;
+        }
 
-        [[nodiscard]] auto present(
-            std::shared_ptr<NanControl> overlay,
-            OverlayOptions options = {}
-        ) -> OverlayHandle;
+        [[nodiscard]] auto present(std::shared_ptr<NanControl> overlay, OverlayOptions options = {})
+            -> OverlayHandle;
 
         [[nodiscard]] auto overlay_count() const -> std::size_t;
         [[nodiscard]] auto contains(std::uint64_t id) const -> bool;
@@ -161,8 +163,7 @@ namespace nandina::scene
 
         OverlayHost() = default;
         void initialize();
-        auto close(std::uint64_t id, OverlayCloseReason reason = OverlayCloseReason::owner)
-            -> bool;
+        auto close(std::uint64_t id, OverlayCloseReason reason = OverlayCloseReason::owner) -> bool;
         /// 关闭 id 的全部后代（递归，先子后父）。reason 透传给后代。返回关闭数量。
         auto close_descendants(std::uint64_t id, OverlayCloseReason reason) -> std::size_t;
         void update_input_mode();
@@ -176,6 +177,6 @@ namespace nandina::scene
         std::uint64_t next_id_ = 1;
         std::weak_ptr<OverlayHost> self_;
     };
-}
+} // namespace nandina::scene
 
 #endif

@@ -83,11 +83,7 @@ TEST_CASE("anchored positioning rejects invalid geometry", "[overlay][position][
     const auto viewport = foundation::NanRect::from_xywh(0.0F, 0.0F, 100.0F, 100.0F);
 
     REQUIRE_THROWS_AS(
-        widget::internal::position_anchored_overlay(
-            anchor,
-            foundation::NanSize::zero(),
-            viewport
-        ),
+        widget::internal::position_anchored_overlay(anchor, foundation::NanSize::zero(), viewport),
         std::invalid_argument
     );
     REQUIRE_THROWS_AS(

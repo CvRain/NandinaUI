@@ -101,9 +101,18 @@ namespace
         return {
             widget::MenuItem {.id = "file.new", .label = "新建文件", .shortcut = "Ctrl+N"},
             widget::MenuItem {.id = "file.open", .label = "打开文件", .shortcut = "Ctrl+O"},
-            widget::MenuItem {.id = "file.saveas", .label = "另存为", .shortcut = "Ctrl+S", .disabled = true},
+            widget::MenuItem {
+                .id = "file.saveas",
+                .label = "另存为",
+                .shortcut = "Ctrl+S",
+                .disabled = true
+            },
             widget::MenuItem {.id = "sep", .kind = widget::MenuItemKind::separator},
-            widget::MenuItem {.id = "group.view", .label = "视图", .kind = widget::MenuItemKind::label},
+            widget::MenuItem {
+                .id = "group.view",
+                .label = "视图",
+                .kind = widget::MenuItemKind::label
+            },
             widget::MenuItem {.id = "view.zoom", .label = "缩放", .shortcut = "Ctrl+0"},
         };
     }
@@ -191,7 +200,10 @@ TEST_CASE("command palette drops groups that have no match", "[command-palette][
     REQUIRE(ids[0] == "file.new");
 }
 
-TEST_CASE("command palette keyboard moves the highlight and Enter activates", "[command-palette][keyboard]") {
+TEST_CASE(
+    "command palette keyboard moves the highlight and Enter activates",
+    "[command-palette][keyboard]"
+) {
     PaletteHarness harness;
     harness.open();
     std::vector<std::string> selected;
@@ -248,7 +260,10 @@ TEST_CASE("command palette checkbox items toggle without closing", "[command-pal
     REQUIRE(checked[0] == "toggle.grid");
 }
 
-TEST_CASE("command palette caps visible results and reports the hidden count", "[command-palette][limit]") {
+TEST_CASE(
+    "command palette caps visible results and reports the hidden count",
+    "[command-palette][limit]"
+) {
     PaletteHarness harness;
     harness.open();
     REQUIRE(harness.palette->hidden_result_count() == 0);
@@ -266,7 +281,10 @@ TEST_CASE("command palette caps visible results and reports the hidden count", "
     REQUIRE(harness.palette->filtered_ids().size() == 4);
 }
 
-TEST_CASE("command palette portals on open and unmounts when leaving the tree", "[command-palette][overlay]") {
+TEST_CASE(
+    "command palette portals on open and unmounts when leaving the tree",
+    "[command-palette][overlay]"
+) {
     PaletteHarness harness;
     harness.layout();
     REQUIRE(harness.host->overlay_count() == 0);
@@ -283,7 +301,10 @@ TEST_CASE("command palette portals on open and unmounts when leaving the tree", 
     REQUIRE_FALSE(harness.palette->is_open());
 }
 
-TEST_CASE("command palette theme switch and override change the resolved style", "[command-palette][theme]") {
+TEST_CASE(
+    "command palette theme switch and override change the resolved style",
+    "[command-palette][theme]"
+) {
     PaletteHarness harness;
     harness.layout();
     const auto initial = harness.palette->resolved_style();
@@ -339,9 +360,8 @@ TEST_CASE("command palette pointer click activates a row", "[command-palette][po
     auto* overlay_root = layer != nullptr ? layer->layout_root() : nullptr;
     REQUIRE(overlay_root != nullptr);
     REQUIRE(overlay_root->child_count() > 0);
-    auto* dismiss = overlay_root->get_child(0) != nullptr
-        ? overlay_root->get_child(0)->as_control()
-        : nullptr;
+    auto* dismiss =
+        overlay_root->get_child(0) != nullptr ? overlay_root->get_child(0)->as_control() : nullptr;
     REQUIRE(dismiss != nullptr);
     REQUIRE(dismiss->child_count() > 0);
     auto* scope = dismiss->get_child(0) != nullptr ? dismiss->get_child(0)->as_control() : nullptr;
@@ -360,11 +380,13 @@ TEST_CASE("command palette pointer click activates a row", "[command-palette][po
         bounds.get_left() + 8.0F,
         bounds.get_top() + style.metrics.item_height * 0.5F
     );
-    harness.tree.dispatch_mouse_button(scene::MouseButtonEvent(
-        scene::MouseButtonEvent::Button::left,
-        scene::MouseButtonEvent::Action::press,
-        point
-    ));
+    harness.tree.dispatch_mouse_button(
+        scene::MouseButtonEvent(
+            scene::MouseButtonEvent::Button::left,
+            scene::MouseButtonEvent::Action::press,
+            point
+        )
+    );
 
     REQUIRE(selected.size() == 1);
     REQUIRE(selected[0] == "file.new");
@@ -377,11 +399,13 @@ TEST_CASE("command palette click outside the panel dismisses it", "[command-pale
 
     // 面板下方的空白仍然属于"外壳"，但不在面板矩形内：命中范围必须由面板矩形决定，
     // 否则这部分会被误判为面板内部、点了不关。
-    harness.tree.dispatch_mouse_button(scene::MouseButtonEvent(
-        scene::MouseButtonEvent::Button::left,
-        scene::MouseButtonEvent::Action::press,
-        foundation::NanPoint(4.0F, harness.viewport.get_height() - 4.0F)
-    ));
+    harness.tree.dispatch_mouse_button(
+        scene::MouseButtonEvent(
+            scene::MouseButtonEvent::Button::left,
+            scene::MouseButtonEvent::Action::press,
+            foundation::NanPoint(4.0F, harness.viewport.get_height() - 4.0F)
+        )
+    );
     // 关闭是淡出动画驱动的，推进一帧让 phase 走到 closed。
     harness.palette->on_process(0.5F);
     REQUIRE_FALSE(harness.palette->is_open());
@@ -390,10 +414,9 @@ TEST_CASE("command palette click outside the panel dismisses it", "[command-pale
 namespace
 {
     /// 把前景按自身 alpha 合成到不透明背景上（同 theme_palette_contrast_tests）。
-    [[nodiscard]] auto composite_over(
-        const foundation::NanColor& foreground,
-        const foundation::NanColor& background
-    ) -> foundation::NanColor {
+    [[nodiscard]] auto
+    composite_over(const foundation::NanColor& foreground, const foundation::NanColor& background)
+        -> foundation::NanColor {
         const auto source = foreground.to<foundation::NanRgb>();
         const auto backdrop = background.to<foundation::NanRgb>();
         const auto alpha = source.alpha;
@@ -404,24 +427,24 @@ namespace
         );
     }
 
-    [[nodiscard]] auto contrast_of(
-        const foundation::NanColor& foreground,
-        const foundation::NanColor& background
-    ) -> float {
+    [[nodiscard]] auto
+    contrast_of(const foundation::NanColor& foreground, const foundation::NanColor& background)
+        -> float {
         return foundation::nan_contrast_ratio(composite_over(foreground, background), background);
     }
 } // namespace
 
-TEST_CASE("command palette row text stays legible on every state fill", "[command-palette][theme][contrast]") {
+TEST_CASE(
+    "command palette row text stays legible on every state fill",
+    "[command-palette][theme][contrast]"
+) {
     // 结果行会把文字画在三种底上：面板底（常规）、hover_fill（悬停）、focus_fill（键盘
     // 高亮）。前两者用 item_label，高亮用 highlight_text。三个组合都按 WCAG AA 正文档
     // （4.5:1）要求 —— 高亮行最容易踩坑，因为 accent 是一个**有饱和度的底**。
     const auto design = theme::default_design_system();
     for (const auto appearance: {theme::ColorAppearance::light, theme::ColorAppearance::dark}) {
         const auto style = theme::resolve_command_palette(design, appearance);
-        INFO(
-            "appearance=" << (appearance == theme::ColorAppearance::light ? "light" : "dark")
-        );
+        INFO("appearance=" << (appearance == theme::ColorAppearance::light ? "light" : "dark"));
 
         REQUIRE(contrast_of(style.item_label.color, style.panel.fill) >= 4.5F);
         REQUIRE(contrast_of(style.item_label.color, style.hover_fill) >= 4.5F);
@@ -441,15 +464,16 @@ TEST_CASE("command palette scrim always darkens", "[command-palette][theme][cont
     const auto design = theme::default_design_system();
     for (const auto appearance: {theme::ColorAppearance::light, theme::ColorAppearance::dark}) {
         const auto style = theme::resolve_command_palette(design, appearance);
-        INFO(
-            "appearance=" << (appearance == theme::ColorAppearance::light ? "light" : "dark")
-        );
+        INFO("appearance=" << (appearance == theme::ColorAppearance::light ? "light" : "dark"));
         REQUIRE(style.scrim.oklch().light < 0.30F);
         REQUIRE(style.scrim.alpha() > 0.0F);
     }
 }
 
-TEST_CASE("command palette scrim and indicator are themeable", "[command-palette][theme][override]") {
+TEST_CASE(
+    "command palette scrim and indicator are themeable",
+    "[command-palette][theme][override]"
+) {
     // 这两个字段是审查后补上的：之前遮罩由组件从面板色派生、勾选指示颜色根本不存在，
     // 主题作者想调也调不了。用"改字段 → 断言解析结果变化"确认四处同步都接通了。
     auto design = theme::default_design_system();

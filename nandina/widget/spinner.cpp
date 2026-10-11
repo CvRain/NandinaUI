@@ -14,7 +14,8 @@
 namespace nandina::widget
 {
     Spinner::Spinner(theme::NanTheme theme) {
-        system_ = std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ =
+            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
         theme_view_ = theme;
         const auto style = resolved_style();
         set_size(foundation::NanSize(style.metrics.diameter, style.metrics.diameter));
@@ -46,7 +47,8 @@ namespace nandina::widget
     }
 
     void Spinner::set_theme(theme::NanTheme theme) {
-        system_ = std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ =
+            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
         system_explicit_ = true;
         theme_view_ = theme;
         mark_layout_dirty();
@@ -62,8 +64,7 @@ namespace nandina::widget
     }
 
     auto Spinner::visual_state() const -> theme::SpinnerVisualState {
-        return disabled_ ? theme::SpinnerVisualState::disabled
-                         : theme::SpinnerVisualState::normal;
+        return disabled_ ? theme::SpinnerVisualState::disabled : theme::SpinnerVisualState::normal;
     }
 
     auto Spinner::resolved_style() const -> theme::ResolvedSpinnerStyle {
@@ -117,7 +118,8 @@ namespace nandina::widget
         );
     }
 
-    auto Spinner::on_measure(const foundation::NanLayoutConstraints constraints) -> foundation::NanSize {
+    auto Spinner::on_measure(const foundation::NanLayoutConstraints constraints)
+        -> foundation::NanSize {
         const float diameter = resolved_style().metrics.diameter;
         return constraints.constrain(foundation::NanSize(diameter, diameter));
     }

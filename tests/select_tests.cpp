@@ -3,8 +3,8 @@
 //
 
 #include <nandina/render/render_device.hpp>
-#include <nandina/scene/scene_tree.hpp>
 #include <nandina/scene/overlay_host.hpp>
+#include <nandina/scene/scene_tree.hpp>
 #include <nandina/theme/theme_manager.hpp>
 #include <nandina/widget/controls.hpp>
 #include <nandina/widget/select.hpp>
@@ -30,16 +30,11 @@ namespace
         void set_clip(const foundation::NanRect&) override {}
         void clear_clip() override {}
         void draw_rect(const foundation::NanRect&, const foundation::NanColor&) override {}
-        void draw_rect_outline(
-            const foundation::NanRect&,
-            float,
-            const foundation::NanColor&
-        ) override {}
-        void draw_rounded_rect(
-            const foundation::NanRect&,
-            float,
-            const foundation::NanColor&
-        ) override {
+        void
+        draw_rect_outline(const foundation::NanRect&, float, const foundation::NanColor&) override {
+        }
+        void
+        draw_rounded_rect(const foundation::NanRect&, float, const foundation::NanColor&) override {
             ++rounded_rects;
         }
         void draw_line(
@@ -48,7 +43,8 @@ namespace
             float,
             const foundation::NanColor&
         ) override {}
-        void draw_circle(const foundation::NanPoint&, float, const foundation::NanColor&) override {}
+        void draw_circle(const foundation::NanPoint&, float, const foundation::NanColor&) override {
+        }
         void draw_text(
             std::string_view,
             const foundation::NanPoint&,
@@ -69,12 +65,9 @@ TEST_CASE("select resolves field, popup, and option tokens", "[select][theme]") 
     );
 
     REQUIRE(
-        style.container.fill.oklch().light
-        == Catch::Approx(design.light.background.oklch().light)
+        style.container.fill.oklch().light == Catch::Approx(design.light.background.oklch().light)
     );
-    REQUIRE(
-        style.popup.fill.oklch().light == Catch::Approx(design.light.popover.oklch().light)
-    );
+    REQUIRE(style.popup.fill.oklch().light == Catch::Approx(design.light.popover.oklch().light));
     REQUIRE(
         style.value.color.oklch().light == Catch::Approx(design.light.foreground.oklch().light)
     );
@@ -100,7 +93,9 @@ TEST_CASE("select disabled state scales field colors", "[select][theme]") {
     );
 
     const float expected = design.tokens.opacity.disabled;
-    REQUIRE(disabled.container.fill.alpha() == Catch::Approx(normal.container.fill.alpha() * expected));
+    REQUIRE(
+        disabled.container.fill.alpha() == Catch::Approx(normal.container.fill.alpha() * expected)
+    );
     REQUIRE(disabled.value.color.alpha() == Catch::Approx(normal.value.color.alpha() * expected));
 }
 
@@ -199,7 +194,8 @@ TEST_CASE("BuildContext select synchronizes a selected-index signal", "[select][
     theme::ThemeManager themes;
     widget::BuildContext ui {graph, scope, themes};
     auto& selected = ui.signal<int>(0);
-    auto select = ui.make<widget::Select>(selected, std::vector<std::string> {"A", "B", "C"}).build();
+    auto select =
+        ui.make<widget::Select>(selected, std::vector<std::string> {"A", "B", "C"}).build();
 
     REQUIRE(select->selected_index() == 0);
     select->select(2);
@@ -265,11 +261,13 @@ TEST_CASE("mounted select presents its popup through the overlay host", "[select
     );
     REQUIRE(tree.hit_test(second_option) == popup);
 
-    tree.dispatch_mouse_button(scene::MouseButtonEvent {
-        scene::MouseButtonEvent::Button::left,
-        scene::MouseButtonEvent::Action::press,
-        second_option,
-    });
+    tree.dispatch_mouse_button(
+        scene::MouseButtonEvent {
+            scene::MouseButtonEvent::Button::left,
+            scene::MouseButtonEvent::Action::press,
+            second_option,
+        }
+    );
     REQUIRE(select->selected_index() == 1);
     REQUIRE_FALSE(select->is_open());
     REQUIRE(host->overlay_count() == 0);
@@ -285,11 +283,13 @@ TEST_CASE("mounted select dismisses when clicking outside its popup", "[select][
 
     select->open();
     REQUIRE(host->overlay_count() == 1);
-    tree.dispatch_mouse_button(scene::MouseButtonEvent {
-        scene::MouseButtonEvent::Button::left,
-        scene::MouseButtonEvent::Action::press,
-        foundation::NanPoint(220.0F, 140.0F),
-    });
+    tree.dispatch_mouse_button(
+        scene::MouseButtonEvent {
+            scene::MouseButtonEvent::Button::left,
+            scene::MouseButtonEvent::Action::press,
+            foundation::NanPoint(220.0F, 140.0F),
+        }
+    );
     REQUIRE_FALSE(select->is_open());
     REQUIRE(host->overlay_count() == 0);
 }
@@ -367,11 +367,13 @@ TEST_CASE("releasing over the field keeps the popup open", "[select][overlay]") 
     );
     REQUIRE(select->global_bounds().contains_point(field));
 
-    tree.dispatch_mouse_button(scene::MouseButtonEvent {
-        scene::MouseButtonEvent::Button::left,
-        scene::MouseButtonEvent::Action::press,
-        field,
-    });
+    tree.dispatch_mouse_button(
+        scene::MouseButtonEvent {
+            scene::MouseButtonEvent::Button::left,
+            scene::MouseButtonEvent::Action::press,
+            field,
+        }
+    );
     REQUIRE(select->is_open());
     REQUIRE(host->overlay_count() == 1);
     REQUIRE(tree.focused_node() == select.get());
@@ -383,11 +385,13 @@ TEST_CASE("releasing over the field keeps the popup open", "[select][overlay]") 
     // The button comes up over the field the user just clicked. The pointer is now over
     // the overlay surface, but that must not move focus off the field and tear the
     // popup down before the user can pick an option.
-    tree.dispatch_mouse_button(scene::MouseButtonEvent {
-        scene::MouseButtonEvent::Button::left,
-        scene::MouseButtonEvent::Action::release,
-        field,
-    });
+    tree.dispatch_mouse_button(
+        scene::MouseButtonEvent {
+            scene::MouseButtonEvent::Button::left,
+            scene::MouseButtonEvent::Action::release,
+            field,
+        }
+    );
     REQUIRE(select->is_open());
     REQUIRE(host->overlay_count() == 1);
     REQUIRE(tree.focused_node() == select.get());
@@ -415,11 +419,13 @@ TEST_CASE("selecting an option while the field holds focus", "[select][overlay]"
         popup->global_bounds().get_left() + 10.0F,
         popup->global_bounds().get_top() + 48.0F
     );
-    tree.dispatch_mouse_button(scene::MouseButtonEvent {
-        scene::MouseButtonEvent::Button::left,
-        scene::MouseButtonEvent::Action::press,
-        option,
-    });
+    tree.dispatch_mouse_button(
+        scene::MouseButtonEvent {
+            scene::MouseButtonEvent::Button::left,
+            scene::MouseButtonEvent::Action::press,
+            option,
+        }
+    );
 
     REQUIRE(select->selected_index() == 1);
     REQUIRE_FALSE(select->is_open());

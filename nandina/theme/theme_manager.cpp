@@ -142,11 +142,9 @@ namespace nandina::theme
         apply(theme_to_design_system(theme));
     }
 
-    auto ThemeManager::register_family(
-        std::string name,
-        std::string light_theme,
-        std::string dark_theme
-    ) -> bool {
+    auto
+    ThemeManager::register_family(std::string name, std::string light_theme, std::string dark_theme)
+        -> bool {
         if (name.empty()) {
             throw std::invalid_argument("ThemeManager family name cannot be empty");
         }
@@ -296,10 +294,7 @@ namespace nandina::theme
     }
 
     auto ThemeManager::reduced_motion() const noexcept -> bool {
-        return resolve_reduced_motion(
-            motion_preference_,
-            system_preferences_.reduced_motion
-        );
+        return resolve_reduced_motion(motion_preference_, system_preferences_.reduced_motion);
     }
 
     auto ThemeManager::revision() const noexcept -> std::uint64_t {

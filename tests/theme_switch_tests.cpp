@@ -8,11 +8,11 @@
 //
 
 #include <nandina/foundation/geometry.hpp>
+#include <nandina/reactive/graph.hpp>
 #include <nandina/render/render_device.hpp>
 #include <nandina/scene/scene_tree.hpp>
 #include <nandina/theme/builtin_themes.hpp>
 #include <nandina/theme/theme_manager.hpp>
-#include <nandina/reactive/graph.hpp>
 #include <nandina/widget/avatar.hpp>
 #include <nandina/widget/badge.hpp>
 #include <nandina/widget/button.hpp>
@@ -51,17 +51,20 @@ namespace
         void set_clip(const foundation::NanRect&) override {}
         void clear_clip() override {}
         void draw_rect(const foundation::NanRect&, const foundation::NanColor&) override {}
-        void draw_rect_outline(const foundation::NanRect&, float, const foundation::NanColor&)
-            override {}
-        void draw_rounded_rect(const foundation::NanRect&, float, const foundation::NanColor&)
-            override {}
+        void
+        draw_rect_outline(const foundation::NanRect&, float, const foundation::NanColor&) override {
+        }
+        void
+        draw_rounded_rect(const foundation::NanRect&, float, const foundation::NanColor&) override {
+        }
         void draw_line(
             const foundation::NanPoint&,
             const foundation::NanPoint&,
             float,
             const foundation::NanColor&
         ) override {}
-        void draw_circle(const foundation::NanPoint&, float, const foundation::NanColor&) override {}
+        void draw_circle(const foundation::NanPoint&, float, const foundation::NanColor&) override {
+        }
         void draw_text(
             std::string_view,
             const foundation::NanPoint&,
@@ -71,8 +74,8 @@ namespace
     };
 
     /// 一棵挂满控件的场景树：覆盖校验台里出现的全部组件类型。
-    [[nodiscard]] auto
-    build_gallery_root(reactive::Graph& graph) -> std::shared_ptr<scene::NanControl> {
+    [[nodiscard]] auto build_gallery_root(reactive::Graph& graph)
+        -> std::shared_ptr<scene::NanControl> {
         auto column = widget::Column::create();
         column->set_gap(12.0F);
 
@@ -167,10 +170,7 @@ TEST_CASE(
     REQUIRE(palette.primary.oklch().chroma == Catch::Approx(0.0F));
 }
 
-TEST_CASE(
-    "repeated appearance flips keep the tree drawable",
-    "[theme][manager][widget][switch]"
-) {
+TEST_CASE("repeated appearance flips keep the tree drawable", "[theme][manager][widget][switch]") {
     theme::ThemeManager manager;
     theme::register_default_theme_families(manager);
 

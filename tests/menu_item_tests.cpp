@@ -63,14 +63,19 @@ TEST_CASE("menu item focusability skips structure but keeps disabled items", "[m
     CHECK_FALSE(widget::menu_item_is_activatable(make_item("s", MenuItemKind::separator)));
 }
 
-TEST_CASE("menu typeahead matches label only, never the shortcut hint", "[menu][model][typeahead]") {
+TEST_CASE(
+    "menu typeahead matches label only, never the shortcut hint",
+    "[menu][model][typeahead]"
+) {
     auto item = make_item("save", widget::MenuItemKind::action, "Save");
     item.shortcut = "Ctrl+S";
 
     CHECK(widget::menu_item_typeahead_text(item) == "Save");
 
     // 结构性条目不参与匹配：返回空串，RovingFocus 会跳过空标签。
-    CHECK(widget::menu_item_typeahead_text(make_item("s", widget::MenuItemKind::separator)).empty());
+    CHECK(
+        widget::menu_item_typeahead_text(make_item("s", widget::MenuItemKind::separator)).empty()
+    );
     CHECK(widget::menu_item_typeahead_text(make_item("l", widget::MenuItemKind::label)).empty());
 }
 
@@ -98,9 +103,8 @@ TEST_CASE("none selection mode keeps no checked state", "[menu][selection]") {
     widget::MenuSelection selection {widget::MenuSelectionMode::none};
 
     int changes = 0;
-    const auto subscription = selection.changed().subscribe([&changes](const std::string&) {
-        ++changes;
-    });
+    const auto subscription =
+        selection.changed().subscribe([&changes](const std::string&) { ++changes; });
 
     CHECK_FALSE(selection.toggle(items, "wrap"));
     CHECK_FALSE(widget::MenuSelection::is_checked(items, "wrap"));
@@ -112,9 +116,9 @@ TEST_CASE("single selection mode clears sibling radios only", "[menu][selection]
     widget::MenuSelection selection {widget::MenuSelectionMode::single};
 
     std::vector<std::string> observed;
-    const auto subscription = selection.changed().subscribe(
-        [&observed](const std::string& id) { observed.push_back(id); }
-    );
+    const auto subscription = selection.changed().subscribe([&observed](const std::string& id) {
+        observed.push_back(id);
+    });
 
     CHECK(selection.toggle(items, "left"));
     CHECK(widget::MenuSelection::is_checked(items, "left"));
@@ -154,9 +158,8 @@ TEST_CASE("selection rejects structural, disabled and unknown targets", "[menu][
     widget::MenuSelection selection {widget::MenuSelectionMode::single};
 
     int changes = 0;
-    const auto subscription = selection.changed().subscribe([&changes](const std::string&) {
-        ++changes;
-    });
+    const auto subscription =
+        selection.changed().subscribe([&changes](const std::string&) { ++changes; });
 
     // 结构性条目没有勾选语义。
     CHECK_FALSE(selection.toggle(items, "sep"));
@@ -186,9 +189,8 @@ TEST_CASE("set_checked writes silently without exclusivity or events", "[menu][s
     widget::MenuSelection selection {widget::MenuSelectionMode::single};
 
     int changes = 0;
-    const auto subscription = selection.changed().subscribe([&changes](const std::string&) {
-        ++changes;
-    });
+    const auto subscription =
+        selection.changed().subscribe([&changes](const std::string&) { ++changes; });
 
     CHECK(widget::MenuSelection::set_checked(items, "left", true));
     CHECK(widget::MenuSelection::set_checked(items, "center", true));

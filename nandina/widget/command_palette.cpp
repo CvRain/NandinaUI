@@ -829,7 +829,9 @@ namespace nandina::widget
                 float y = m.panel_padding;
                 const auto query_height = field_->measured_size().get_height();
                 field_->measure_layout(
-                    foundation::NanLayoutConstraints::tight(foundation::NanSize(inner_width, query_height))
+                    foundation::NanLayoutConstraints::tight(
+                        foundation::NanSize(inner_width, query_height)
+                    )
                 );
                 field_->layout_to(
                     foundation::NanRect::from_xywh(m.panel_padding, y, inner_width, query_height)
@@ -837,7 +839,9 @@ namespace nandina::widget
                 y += query_height + m.gap;
                 const float list_height = std::max(0.0F, height() - m.panel_padding - y);
                 surface_->measure_layout(
-                    foundation::NanLayoutConstraints::tight(foundation::NanSize(inner_width, list_height))
+                    foundation::NanLayoutConstraints::tight(
+                        foundation::NanSize(inner_width, list_height)
+                    )
                 );
                 surface_->layout_to(
                     foundation::NanRect::from_xywh(m.panel_padding, y, inner_width, list_height)
@@ -917,7 +921,9 @@ namespace nandina::widget
                 const float panel_width = std::min(measured.get_width(), width());
                 const float panel_height = measured.get_height();
                 panel_->measure_layout(
-                    foundation::NanLayoutConstraints::tight(foundation::NanSize(panel_width, panel_height))
+                    foundation::NanLayoutConstraints::tight(
+                        foundation::NanSize(panel_width, panel_height)
+                    )
                 );
                 // 水平居中（外壳宽度 = 面板宽度，理论上 offset 为 0；保留计算以防约束收窄）。
                 const float x = std::max(0.0F, (width() - panel_width) * 0.5F);

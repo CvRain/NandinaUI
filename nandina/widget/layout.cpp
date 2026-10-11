@@ -276,7 +276,9 @@ namespace nandina::widget
                     alignment_offset(cross_alignment, available_cross, child_cross);
                 const auto rect =
                     rect_from_extents(main_pos, cross_pos, item.target, child_cross, axis);
-                (void)item.child->measure_layout(foundation::NanLayoutConstraints::tight(rect.get_size()));
+                (void)item.child->measure_layout(
+                    foundation::NanLayoutConstraints::tight(rect.get_size())
+                );
                 item.child->layout_to(rect);
                 main_pos += item.target + effective_gap;
             }

@@ -21,9 +21,7 @@ namespace nandina::reactive
 
     class ReactiveScope {
     public:
-        explicit ReactiveScope(Graph& graph):
-            graph_(&graph),
-            lifetime_(std::make_shared<int>(0)) {}
+        explicit ReactiveScope(Graph& graph): graph_(&graph), lifetime_(std::make_shared<int>(0)) {}
 
         ~ReactiveScope() {
             lifetime_.reset();

@@ -41,17 +41,13 @@ namespace nandina::app
         owned_theme_manager_ = std::make_unique<theme::ThemeManager>();
         owned_theme_manager_->set_theme(theme);
         theme_manager_ = owned_theme_manager_.get();
-        navigation_state_->submit = [this](
-                                        PageKey page_key,
-                                        std::unique_ptr<detail::PageBase> page
-                                    ) {
-            return submit_navigation(page_key, std::move(page));
-        };
+        navigation_state_->submit =
+            [this](PageKey page_key, std::unique_ptr<detail::PageBase> page) {
+                return submit_navigation(page_key, std::move(page));
+            };
         // `Navigation::navigate_to()` 的类型擦除入口：只有 Router 同时拥有路由表
         // 与生命周期，所以查表 + 判空在 Router 侧完成。
-        navigation_state_->activate = [this](const PageKey key) {
-            return activate_route(key);
-        };
+        navigation_state_->activate = [this](const PageKey key) { return activate_route(key); };
     }
 
     NanRouter::~NanRouter() {
@@ -123,8 +119,8 @@ namespace nandina::app
                 return "route[" + std::to_string(error.index)
                     + "] duplicates the page type of route[" + std::to_string(error.conflict) + "]";
             case RoutesErrorKind::duplicate_key:
-                return "route[" + std::to_string(error.index)
-                    + "] reuses the display key of route[" + std::to_string(error.conflict) + "]";
+                return "route[" + std::to_string(error.index) + "] reuses the display key of route["
+                    + std::to_string(error.conflict) + "]";
         }
         return "unknown routes error";
     }
@@ -138,30 +134,38 @@ namespace nandina::app
             // 类型键只有在经过 `route<PageT>()` 时才有效；默认构造的条目说明有人
             // 手工拼了一个 RouteEntry 却忘了填身份。
             if (!entry.page_key.valid() || !entry.params_key.valid()) {
-                return std::unexpected(RoutesError {
-                    .kind = RoutesErrorKind::invalid_entry,
-                    .index = i,
-                });
+                return std::unexpected(
+                    RoutesError {
+                        .kind = RoutesErrorKind::invalid_entry,
+                        .index = i,
+                    }
+                );
             }
             for (std::size_t j = 0; j < i; ++j) {
                 const auto& earlier = entries_[j];
                 // 页面类型是路由身份，重复注册必然是笔误。
                 if (earlier.page_key == entry.page_key) {
-                    return std::unexpected(RoutesError {
-                        .kind = RoutesErrorKind::duplicate_page,
-                        .index = i,
-                        .conflict = j,
-                    });
+                    return std::unexpected(
+                        RoutesError {
+                            .kind = RoutesErrorKind::duplicate_page,
+                            .index = i,
+                            .conflict = j,
+                        }
+                    );
                 }
                 // 显示用地址文字是可选元数据，只在其非空时要求唯一——否则两个
                 // 都没设 address/title 的路由会互相冲突，`app::route<PageT>()` 这种
                 // 最简写法就永远配不上了。
-                if (!earlier.options.address.empty() && earlier.options.address == entry.options.address) {
-                    return std::unexpected(RoutesError {
-                        .kind = RoutesErrorKind::duplicate_key,
-                        .index = i,
-                        .conflict = j,
-                    });
+                if (!earlier.options.address.empty()
+                    && earlier.options.address == entry.options.address)
+                {
+                    return std::unexpected(
+                        RoutesError {
+                            .kind = RoutesErrorKind::duplicate_key,
+                            .index = i,
+                            .conflict = j,
+                        }
+                    );
                 }
             }
         }
@@ -224,10 +228,8 @@ namespace nandina::app
         page_error_handler_ = std::move(handler);
     }
 
-    void NanRouter::report_page_error(
-        const std::string_view route_address,
-        std::exception_ptr error
-    ) {
+    void
+    NanRouter::report_page_error(const std::string_view route_address, std::exception_ptr error) {
         if (page_error_handler_) {
             page_error_handler_(route_address, error);
             return;
@@ -302,10 +304,9 @@ namespace nandina::app
         };
     }
 
-    auto NanRouter::submit_navigation(
-        const PageKey page_key,
-        std::unique_ptr<detail::PageBase> page
-    ) -> bool {
+    auto
+    NanRouter::submit_navigation(const PageKey page_key, std::unique_ptr<detail::PageBase> page)
+        -> bool {
         const auto* entry = route_mode_ ? routes_.find(page_key) : nullptr;
         if (entry == nullptr || page == nullptr || entry->params_key != page->params_type_key()) {
             return false;
@@ -357,10 +358,8 @@ namespace nandina::app
         }
     }
 
-    auto NanRouter::apply_navigation(
-        const PageKey page_key,
-        std::unique_ptr<detail::PageBase> page
-    ) -> bool {
+    auto NanRouter::apply_navigation(const PageKey page_key, std::unique_ptr<detail::PageBase> page)
+        -> bool {
         const auto* entry = route_mode_ ? routes_.find(page_key) : nullptr;
         if (entry == nullptr || page == nullptr || entry->params_key != page->params_type_key()) {
             return false;
@@ -454,8 +453,8 @@ namespace nandina::app
         // 与 Frame 析构一起发生。这里不额外遍历 OverlayHost：浮层挂在 overlay layer
         // 上，与页面节点之间没有可查询的从属边。
         // 焦点必须先于摘根解除，否则焦点会短暂指向一个不在树内的节点。
-        if (auto* tree = host_ != nullptr ? host_->get_tree() : nullptr;
-            tree != nullptr && frame.root && tree->focused_node() != nullptr
+        if (auto* tree = host_ != nullptr ? host_->get_tree() : nullptr; tree != nullptr
+            && frame.root && tree->focused_node() != nullptr
             && frame.root->is_ancestor_of(*tree->focused_node()))
         {
             tree->set_focus(nullptr);

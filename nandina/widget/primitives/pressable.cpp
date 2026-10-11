@@ -4,9 +4,9 @@
 
 #include "pressable.hpp"
 
-#include "../key_codes.hpp"
 #include "../../scene/input_event.hpp"
 #include "../../scene/scene_tree.hpp"
+#include "../key_codes.hpp"
 
 namespace nandina::widget::primitives
 {
@@ -48,11 +48,21 @@ namespace nandina::widget::primitives
         on_click_ = std::move(callback);
     }
 
-    void Pressable::set_on_press(std::function<void()> callback) { on_press_ = std::move(callback); }
-    void Pressable::set_on_release(std::function<void()> callback) { on_release_ = std::move(callback); }
-    void Pressable::set_on_cancel(std::function<void()> callback) { on_cancel_ = std::move(callback); }
-    void Pressable::set_on_hover_changed(std::function<void(bool)> callback) { on_hover_changed_ = std::move(callback); }
-    void Pressable::set_on_focus_changed(std::function<void(bool)> callback) { on_focus_changed_ = std::move(callback); }
+    void Pressable::set_on_press(std::function<void()> callback) {
+        on_press_ = std::move(callback);
+    }
+    void Pressable::set_on_release(std::function<void()> callback) {
+        on_release_ = std::move(callback);
+    }
+    void Pressable::set_on_cancel(std::function<void()> callback) {
+        on_cancel_ = std::move(callback);
+    }
+    void Pressable::set_on_hover_changed(std::function<void(bool)> callback) {
+        on_hover_changed_ = std::move(callback);
+    }
+    void Pressable::set_on_focus_changed(std::function<void(bool)> callback) {
+        on_focus_changed_ = std::move(callback);
+    }
 
     auto Pressable::is_focusable() const -> bool {
         return !disabled_;
@@ -85,15 +95,18 @@ namespace nandina::widget::primitives
                 }
                 if (mouse.is_pressed()) {
                     set_pressed(true);
-                    if (is_inside_tree()) get_tree()->set_pointer_capture(this);
-                    if (on_press_) on_press_();
+                    if (is_inside_tree())
+                        get_tree()->set_pointer_capture(this);
+                    if (on_press_)
+                        on_press_();
                     event.accept();
                     return true;
                 }
                 const bool should_click = pressed_ && hovered_;
                 const bool was_pressed = pressed_;
                 set_pressed(false);
-                if (was_pressed && on_release_) on_release_();
+                if (was_pressed && on_release_)
+                    on_release_();
                 if (should_click) {
                     emit_click();
                     event.accept();
@@ -103,7 +116,8 @@ namespace nandina::widget::primitives
             }
             case scene::EventType::key: {
                 auto& key = static_cast<scene::KeyEvent&>(event);
-                if (key.is_pressed() && (key.keycode() == keys::enter || key.keycode() == keys::space))
+                if (key.is_pressed()
+                    && (key.keycode() == keys::enter || key.keycode() == keys::space))
                 {
                     emit_click();
                     event.accept();
@@ -127,9 +141,11 @@ namespace nandina::widget::primitives
     }
 
     void Pressable::cancel_press() {
-        if (!pressed_) return;
+        if (!pressed_)
+            return;
         set_pressed(false);
-        if (on_cancel_) on_cancel_();
+        if (on_cancel_)
+            on_cancel_();
     }
 
     void Pressable::activate() {
@@ -144,7 +160,8 @@ namespace nandina::widget::primitives
         }
         hovered_ = hovered;
         on_pressable_state_changed();
-        if (on_hover_changed_) on_hover_changed_(hovered_);
+        if (on_hover_changed_)
+            on_hover_changed_(hovered_);
     }
 
     void Pressable::set_pressed(bool pressed) {
@@ -162,7 +179,8 @@ namespace nandina::widget::primitives
         focused_ = focused;
         on_pressable_state_changed();
         mark_semantics_dirty();
-        if (on_focus_changed_) on_focus_changed_(focused_);
+        if (on_focus_changed_)
+            on_focus_changed_(focused_);
     }
 
 } // namespace nandina::widget::primitives

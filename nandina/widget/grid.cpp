@@ -31,7 +31,8 @@ namespace nandina::widget
             return result;
         }
 
-        [[nodiscard]] auto cell_constraints(foundation::NanLayoutConstraints parent, float cell_width)
+        [[nodiscard]] auto
+        cell_constraints(foundation::NanLayoutConstraints parent, float cell_width)
             -> foundation::NanLayoutConstraints {
             return {
                 .min_width = 0.0F,
@@ -135,7 +136,8 @@ namespace nandina::widget
         layout_to(foundation::NanRect::from_origin_size(position(), measured_size()));
     }
 
-    auto Grid::on_measure(const foundation::NanLayoutConstraints constraints) -> foundation::NanSize {
+    auto Grid::on_measure(const foundation::NanLayoutConstraints constraints)
+        -> foundation::NanSize {
         const auto children = collect_controls(*this);
         if (children.empty() || columns_ <= 0) {
             const auto empty = foundation::NanSize(

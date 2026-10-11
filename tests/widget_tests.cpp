@@ -6,14 +6,14 @@
 // those signals change, and stops updating once unmounted (EffectScope cleared).
 //
 
-#include <catch2/catch_test_macros.hpp>
 #include <catch2/catch_approx.hpp>
+#include <catch2/catch_test_macros.hpp>
 
 #include <nandina/reactive/reactive.hpp>
 #include <nandina/render/draw_context.hpp>
 #include <nandina/render/render_device.hpp>
-#include <nandina/scene/control.hpp>
 #include <nandina/scene/canvas_layer.hpp>
+#include <nandina/scene/control.hpp>
 #include <nandina/scene/scene_tree.hpp>
 #include <nandina/widget/bindable_rect.hpp>
 #include <nandina/widget/button.hpp>
@@ -21,12 +21,12 @@
 #include <nandina/widget/declarative.hpp>
 #include <nandina/widget/label.hpp>
 #include <nandina/widget/layout.hpp>
-#include <nandina/widget/text_field.hpp>
 #include <nandina/widget/primitives/editable_text.hpp>
 #include <nandina/widget/primitives/text.hpp>
 #include <nandina/widget/scroll_view.hpp>
 #include <nandina/widget/slider.hpp>
 #include <nandina/widget/switch.hpp>
+#include <nandina/widget/text_field.hpp>
 
 #include <memory>
 #include <stdexcept>
@@ -40,287 +40,303 @@ using namespace nandina;
 namespace
 {
 
-/// Minimal recording device (rect fills only) for asserting draw output.
-class RecordingDevice final : public render::IRenderDevice {
-public:
-    struct RectCall {
-        foundation::NanRect rect;
-        float alpha;
+    /// Minimal recording device (rect fills only) for asserting draw output.
+    class RecordingDevice final: public render::IRenderDevice {
+    public:
+        struct RectCall {
+            foundation::NanRect rect;
+            float alpha;
+        };
+        struct TextCall {
+            std::string text;
+            float alpha;
+            foundation::NanPoint position;
+        };
+        struct LineCall {
+            foundation::NanPoint start;
+            foundation::NanPoint end;
+        };
+        int line_count = 0;
+        int outline_count = 0;
+        int rounded_count = 0;
+        int clip_clears = 0;
+        std::vector<RectCall> rects;
+        std::vector<TextCall> texts;
+        std::vector<LineCall> lines;
+        std::vector<foundation::NanRect> clips;
+
+        void begin_frame() override {}
+        void end_frame() override {}
+        void set_clip(const foundation::NanRect& rect) override {
+            clips.push_back(rect);
+        }
+        void clear_clip() override {
+            ++clip_clears;
+        }
+        void draw_rect(const foundation::NanRect& r, const foundation::NanColor& c) override {
+            rects.push_back({r, c.alpha()});
+        }
+        void
+        draw_rect_outline(const foundation::NanRect&, float, const foundation::NanColor&) override {
+            ++outline_count;
+        }
+        void
+        draw_rounded_rect(const foundation::NanRect&, float, const foundation::NanColor&) override {
+            ++rounded_count;
+        }
+        void draw_line(
+            const foundation::NanPoint& start,
+            const foundation::NanPoint& end,
+            float,
+            const foundation::NanColor&
+        ) override {
+            ++line_count;
+            lines.push_back({.start = start, .end = end});
+        }
+        void draw_circle(const foundation::NanPoint&, float, const foundation::NanColor&) override {
+        }
+        void draw_text(
+            std::string_view text,
+            const foundation::NanPoint& position,
+            float,
+            const foundation::NanColor& color
+        ) override {
+            texts.push_back({std::string(text), color.alpha(), position});
+        }
     };
-    struct TextCall {
-        std::string text;
-        float alpha;
-        foundation::NanPoint position;
+
+    class ScaleRecordingDevice final: public render::IRenderDevice {
+    public:
+        struct LineCall {
+            foundation::NanPoint start;
+            foundation::NanPoint end;
+            float thickness = 0.0F;
+        };
+        struct TextCall {
+            foundation::NanPoint position;
+            float font_size = 0.0F;
+        };
+
+        std::vector<foundation::NanRect> rounded_rects;
+        std::vector<foundation::NanRect> rects;
+        std::vector<LineCall> lines;
+        std::vector<TextCall> texts;
+        foundation::NanPoint circle_center;
+        float circle_radius = 0.0F;
+
+        void begin_frame() override {}
+        void end_frame() override {}
+        void set_clip(const foundation::NanRect&) override {}
+        void clear_clip() override {}
+        void draw_rect(const foundation::NanRect& rect, const foundation::NanColor&) override {
+            rects.push_back(rect);
+        }
+        void
+        draw_rect_outline(const foundation::NanRect&, float, const foundation::NanColor&) override {
+        }
+        void draw_rounded_rect(
+            const foundation::NanRect& rect,
+            float,
+            const foundation::NanColor&
+        ) override {
+            rounded_rects.push_back(rect);
+        }
+        void draw_line(
+            const foundation::NanPoint& start,
+            const foundation::NanPoint& end,
+            float thickness,
+            const foundation::NanColor&
+        ) override {
+            lines.push_back({.start = start, .end = end, .thickness = thickness});
+        }
+        void draw_circle(
+            const foundation::NanPoint& center,
+            float radius,
+            const foundation::NanColor&
+        ) override {
+            circle_center = center;
+            circle_radius = radius;
+        }
+        void draw_text(
+            std::string_view,
+            const foundation::NanPoint& position,
+            float font_size,
+            const foundation::NanColor&
+        ) override {
+            texts.push_back({.position = position, .font_size = font_size});
+        }
     };
-    struct LineCall {
-        foundation::NanPoint start;
-        foundation::NanPoint end;
-    };
-    int line_count = 0;
-    int outline_count = 0;
-    int rounded_count = 0;
-    int clip_clears = 0;
-    std::vector<RectCall> rects;
-    std::vector<TextCall> texts;
-    std::vector<LineCall> lines;
-    std::vector<foundation::NanRect> clips;
 
-    void begin_frame() override {}
-    void end_frame() override {}
-    void set_clip(const foundation::NanRect& rect) override {
-        clips.push_back(rect);
-    }
-    void clear_clip() override {
-        ++clip_clears;
-    }
-    void draw_rect(const foundation::NanRect& r, const foundation::NanColor& c) override {
-        rects.push_back({r, c.alpha()});
-    }
-    void draw_rect_outline(const foundation::NanRect&, float, const foundation::NanColor&) override {
-        ++outline_count;
-    }
-    void draw_rounded_rect(const foundation::NanRect&, float, const foundation::NanColor&) override {
-        ++rounded_count;
-    }
-    void draw_line(const foundation::NanPoint& start, const foundation::NanPoint& end, float,
-                   const foundation::NanColor&) override {
-        ++line_count;
-        lines.push_back({.start = start, .end = end});
-    }
-    void draw_circle(const foundation::NanPoint&, float, const foundation::NanColor&) override {}
-    void draw_text(std::string_view text, const foundation::NanPoint& position, float,
-                   const foundation::NanColor& color) override {
-        texts.push_back({std::string(text), color.alpha(), position});
-    }
-};
+    class FixedTextLayoutBackend final: public text::ITextLayoutBackend {
+    public:
+        mutable int calls = 0;
 
-class ScaleRecordingDevice final: public render::IRenderDevice {
-public:
-    struct LineCall {
-        foundation::NanPoint start;
-        foundation::NanPoint end;
-        float thickness = 0.0F;
-    };
-    struct TextCall {
-        foundation::NanPoint position;
-        float font_size = 0.0F;
-    };
-
-    std::vector<foundation::NanRect> rounded_rects;
-    std::vector<foundation::NanRect> rects;
-    std::vector<LineCall> lines;
-    std::vector<TextCall> texts;
-    foundation::NanPoint circle_center;
-    float circle_radius = 0.0F;
-
-    void begin_frame() override {}
-    void end_frame() override {}
-    void set_clip(const foundation::NanRect&) override {}
-    void clear_clip() override {}
-    void draw_rect(const foundation::NanRect& rect, const foundation::NanColor&) override {
-        rects.push_back(rect);
-    }
-    void draw_rect_outline(
-        const foundation::NanRect&,
-        float,
-        const foundation::NanColor&
-    ) override {}
-    void draw_rounded_rect(
-        const foundation::NanRect& rect,
-        float,
-        const foundation::NanColor&
-    ) override {
-        rounded_rects.push_back(rect);
-    }
-    void draw_line(
-        const foundation::NanPoint& start,
-        const foundation::NanPoint& end,
-        float thickness,
-        const foundation::NanColor&
-    ) override {
-        lines.push_back({.start = start, .end = end, .thickness = thickness});
-    }
-    void draw_circle(
-        const foundation::NanPoint& center,
-        float radius,
-        const foundation::NanColor&
-    ) override {
-        circle_center = center;
-        circle_radius = radius;
-    }
-    void draw_text(
-        std::string_view,
-        const foundation::NanPoint& position,
-        float font_size,
-        const foundation::NanColor&
-    ) override {
-        texts.push_back({.position = position, .font_size = font_size});
-    }
-};
-
-class FixedTextLayoutBackend final: public text::ITextLayoutBackend {
-public:
-    mutable int calls = 0;
-
-    [[nodiscard]] auto layout(text::TextLayoutInput input) const
-        -> text::TextLayoutResult override {
-        ++calls;
-        return text::TextLayoutResult {
-            .size = foundation::NanSize(42.0F, 18.0F),
-            .lines = {
-                text::TextLayoutLine {
-                    .text_offset = 0,
-                    .text_length = input.text.size(),
-                    .visible_text = "backend",
-                    .caret_stops = {
-                        text::TextCaretStop {
-                            .source_offset = 0,
-                            .x = 0.0F,
-                        },
-                        text::TextCaretStop {
-                            .source_offset = std::min<std::size_t>(1, input.text.size()),
-                            .x = 5.0F,
-                        },
-                        text::TextCaretStop {
-                            .source_offset = input.text.size(),
-                            .x = 42.0F,
-                            .affinity = text::TextAffinity::upstream,
+        [[nodiscard]] auto layout(text::TextLayoutInput input) const
+            -> text::TextLayoutResult override {
+            ++calls;
+            return text::TextLayoutResult {
+                .size = foundation::NanSize(42.0F, 18.0F),
+                .lines =
+                    {
+                        text::TextLayoutLine {
+                            .text_offset = 0,
+                            .text_length = input.text.size(),
+                            .visible_text = "backend",
+                            .caret_stops =
+                                {
+                                    text::TextCaretStop {
+                                        .source_offset = 0,
+                                        .x = 0.0F,
+                                    },
+                                    text::TextCaretStop {
+                                        .source_offset =
+                                            std::min<std::size_t>(1, input.text.size()),
+                                        .x = 5.0F,
+                                    },
+                                    text::TextCaretStop {
+                                        .source_offset = input.text.size(),
+                                        .x = 42.0F,
+                                        .affinity = text::TextAffinity::upstream,
+                                    },
+                                },
+                            .size = foundation::NanSize(42.0F, 18.0F),
+                            .baseline = 12.0F,
                         },
                     },
-                    .size = foundation::NanSize(42.0F, 18.0F),
-                    .baseline = 12.0F,
-                },
-            },
-            .font_size = 12.0F,
-            .baseline = 12.0F,
-            .overflowed = false,
-        };
-    }
-};
+                .font_size = 12.0F,
+                .baseline = 12.0F,
+                .overflowed = false,
+            };
+        }
+    };
 
-class FixedTextLayoutRenderer final: public text::ITextLayoutRenderer {
-public:
-    int draws = 0;
+    class FixedTextLayoutRenderer final: public text::ITextLayoutRenderer {
+    public:
+        int draws = 0;
 
-    void draw(
-        const text::TextLayoutResult&,
-        render::DrawContext&,
-        foundation::NanPoint,
-        foundation::NanColor
-    ) override {
-        ++draws;
-    }
-};
+        void draw(
+            const text::TextLayoutResult&,
+            render::DrawContext&,
+            foundation::NanPoint,
+            foundation::NanColor
+        ) override {
+            ++draws;
+        }
+    };
 
-class LayoutInvalidationProbe final: public scene::NanControl {
-public:
-    int layouts = 0;
-    bool invalidate_once = false;
+    class LayoutInvalidationProbe final: public scene::NanControl {
+    public:
+        int layouts = 0;
+        bool invalidate_once = false;
 
-protected:
-    void on_layout() override {
-        ++layouts;
-        if (invalidate_once) {
-            invalidate_once = false;
+    protected:
+        void on_layout() override {
+            ++layouts;
+            if (invalidate_once) {
+                invalidate_once = false;
+                mark_layout_dirty();
+            }
+        }
+    };
+
+    class PaintMutationProbe final: public scene::NanControl {
+    public:
+        void on_draw(render::DrawContext&) override {
+            set_size(foundation::NanSize(80.0F, 40.0F));
             mark_layout_dirty();
         }
-    }
-};
+    };
 
-class PaintMutationProbe final: public scene::NanControl {
-public:
-    void on_draw(render::DrawContext&) override {
-        set_size(foundation::NanSize(80.0F, 40.0F));
-        mark_layout_dirty();
-    }
-};
+    struct RegionItem {
+        int key = 0;
+        std::string value;
 
-struct RegionItem {
-    int key = 0;
-    std::string value;
+        auto operator==(const RegionItem&) const -> bool = default;
+    };
 
-    auto operator==(const RegionItem&) const -> bool = default;
-};
+    class RegionControl final: public scene::NanControl {
+    public:
+        explicit RegionControl(int key): key(key) {}
 
-class RegionControl final: public scene::NanControl {
-public:
-    explicit RegionControl(int key): key(key) {}
+        [[nodiscard]] auto is_focusable() const -> bool override {
+            return true;
+        }
 
-    [[nodiscard]] auto is_focusable() const -> bool override {
-        return true;
-    }
+        void on_enter_tree() override {
+            ++enters;
+        }
 
-    void on_enter_tree() override {
-        ++enters;
-    }
+        void on_ready() override {
+            ++readies;
+        }
 
-    void on_ready() override {
-        ++readies;
-    }
+        void on_exit_tree() override {
+            ++exits;
+        }
 
-    void on_exit_tree() override {
-        ++exits;
-    }
+        int key = 0;
+        std::string value;
+        int enters = 0;
+        int readies = 0;
+        int exits = 0;
+    };
 
-    int key = 0;
-    std::string value;
-    int enters = 0;
-    int readies = 0;
-    int exits = 0;
-};
+    class InteractiveRegionRow final: public widget::Row {
+    public:
+        explicit InteractiveRegionRow(int key, int& toggles, int& removals): key(key) {
+            auto label = widget::FlexItem::create(
+                scene::LayoutFlexPolicy {
+                    .grow = 1.0F,
+                    .shrink = 1.0F,
+                    .limits = {.min_width = 80.0F},
+                }
+            );
+            label->set_child(
+                std::make_shared<scene::NanControl>(foundation::NanSize(120.0F, 32.0F))
+            );
+            toggle = widget::Button::create("完成");
+            toggle->set_on_click([&toggles] { ++toggles; });
+            remove = widget::Button::create("删除");
+            remove->set_on_click([&removals] { ++removals; });
+            set_gap(8.0F)
+                .set_cross_alignment(widget::LayoutAlignment::stretch)
+                .add(label)
+                .add(toggle)
+                .add(remove);
+        }
 
-class InteractiveRegionRow final: public widget::Row {
-public:
-    explicit InteractiveRegionRow(int key, int& toggles, int& removals): key(key) {
-        auto label = widget::FlexItem::create(
-            scene::LayoutFlexPolicy {
-                .grow = 1.0F,
-                .shrink = 1.0F,
-                .limits = {.min_width = 80.0F},
-            }
+        int key = 0;
+        std::shared_ptr<widget::Button> toggle;
+        std::shared_ptr<widget::Button> remove;
+    };
+
+    class MemoryClipboard final: public scene::IClipboard {
+    public:
+        [[nodiscard]] auto read_text() const -> std::optional<std::string> override {
+            return text;
+        }
+
+        auto write_text(const std::string_view value) -> bool override {
+            text = std::string(value);
+            return writable;
+        }
+
+        std::optional<std::string> text;
+        bool writable = true;
+    };
+
+    auto opaque_color(float light) -> foundation::NanColor {
+        return foundation::NanColor::from(
+            foundation::NanOklch {.light = light, .chroma = 0.1F, .hue = 120.0F, .alpha = 1.0F}
         );
-        label->set_child(
-            std::make_shared<scene::NanControl>(foundation::NanSize(120.0F, 32.0F))
-        );
-        toggle = widget::Button::create("完成");
-        toggle->set_on_click([&toggles] { ++toggles; });
-        remove = widget::Button::create("删除");
-        remove->set_on_click([&removals] { ++removals; });
-        set_gap(8.0F)
-            .set_cross_alignment(widget::LayoutAlignment::stretch)
-            .add(label)
-            .add(toggle)
-            .add(remove);
     }
-
-    int key = 0;
-    std::shared_ptr<widget::Button> toggle;
-    std::shared_ptr<widget::Button> remove;
-};
-
-class MemoryClipboard final: public scene::IClipboard {
-public:
-    [[nodiscard]] auto read_text() const -> std::optional<std::string> override {
-        return text;
-    }
-
-    auto write_text(const std::string_view value) -> bool override {
-        text = std::string(value);
-        return writable;
-    }
-
-    std::optional<std::string> text;
-    bool writable = true;
-};
-
-auto opaque_color(float light) -> foundation::NanColor {
-    return foundation::NanColor::from(
-        foundation::NanOklch{.light = light, .chroma = 0.1F, .hue = 120.0F, .alpha = 1.0F});
-}
 
 } // namespace
 
-TEST_CASE("ForEach reuses keyed controls and disposes removed scopes", "[widget][declarative][foreach]") {
+TEST_CASE(
+    "ForEach reuses keyed controls and disposes removed scopes",
+    "[widget][declarative][foreach]"
+) {
     reactive::Graph graph;
     reactive::Signal<int> probe {graph, 0};
     reactive::Signal<std::vector<RegionItem>> items {
@@ -379,7 +395,10 @@ TEST_CASE("ForEach reuses keyed controls and disposes removed scopes", "[widget]
     REQUIRE(scope_runs[2] == retained_runs + 1);
 }
 
-TEST_CASE("dynamic keyed rows keep button hit geometry and scroll extent", "[widget][declarative][scroll][input]") {
+TEST_CASE(
+    "dynamic keyed rows keep button hit geometry and scroll extent",
+    "[widget][declarative][scroll][input]"
+) {
     reactive::Graph graph;
     reactive::Signal<std::vector<RegionItem>> items {
         graph,
@@ -412,31 +431,39 @@ TEST_CASE("dynamic keyed rows keep button hit geometry and scroll extent", "[wid
     const auto remove_point = first->remove->global_bounds().get_center();
     REQUIRE(tree.hit_test(remove_point) == first->remove.get());
     tree.dispatch_mouse_move(scene::MouseMoveEvent(remove_point, foundation::NanPoint {}));
-    tree.dispatch_mouse_button(scene::MouseButtonEvent {
-        scene::MouseButtonEvent::Button::left,
-        scene::MouseButtonEvent::Action::press,
-        remove_point,
-    });
-    tree.dispatch_mouse_button(scene::MouseButtonEvent {
-        scene::MouseButtonEvent::Button::left,
-        scene::MouseButtonEvent::Action::release,
-        remove_point,
-    });
+    tree.dispatch_mouse_button(
+        scene::MouseButtonEvent {
+            scene::MouseButtonEvent::Button::left,
+            scene::MouseButtonEvent::Action::press,
+            remove_point,
+        }
+    );
+    tree.dispatch_mouse_button(
+        scene::MouseButtonEvent {
+            scene::MouseButtonEvent::Button::left,
+            scene::MouseButtonEvent::Action::release,
+            remove_point,
+        }
+    );
     REQUIRE(removals == 1);
 
     const auto toggle_point = first->toggle->global_bounds().get_center();
     REQUIRE(tree.hit_test(toggle_point) == first->toggle.get());
     tree.dispatch_mouse_move(scene::MouseMoveEvent(toggle_point, foundation::NanPoint {}));
-    tree.dispatch_mouse_button(scene::MouseButtonEvent {
-        scene::MouseButtonEvent::Button::left,
-        scene::MouseButtonEvent::Action::press,
-        toggle_point,
-    });
-    tree.dispatch_mouse_button(scene::MouseButtonEvent {
-        scene::MouseButtonEvent::Button::left,
-        scene::MouseButtonEvent::Action::release,
-        toggle_point,
-    });
+    tree.dispatch_mouse_button(
+        scene::MouseButtonEvent {
+            scene::MouseButtonEvent::Button::left,
+            scene::MouseButtonEvent::Action::press,
+            toggle_point,
+        }
+    );
+    tree.dispatch_mouse_button(
+        scene::MouseButtonEvent {
+            scene::MouseButtonEvent::Button::left,
+            scene::MouseButtonEvent::Action::release,
+            toggle_point,
+        }
+    );
     REQUIRE(toggles == 1);
 
     std::vector<RegionItem> expanded;
@@ -455,7 +482,10 @@ TEST_CASE("dynamic keyed rows keep button hit geometry and scroll extent", "[wid
     REQUIRE(scroll->scroll_offset().get_y() > 0.0F);
 }
 
-TEST_CASE("ForEach rejects duplicate keys before changing children", "[widget][declarative][foreach]") {
+TEST_CASE(
+    "ForEach rejects duplicate keys before changing children",
+    "[widget][declarative][foreach]"
+) {
     reactive::Graph graph;
     auto region = widget::ForEach<RegionItem, int, RegionControl>::create(
         graph,
@@ -467,10 +497,7 @@ TEST_CASE("ForEach rejects duplicate keys before changing children", "[widget][d
     region->set_items({{.key = 1, .value = "one"}});
     auto* original = region->node_for(1);
 
-    REQUIRE_THROWS_AS(
-        region->set_items({{.key = 1}, {.key = 1}}),
-        std::invalid_argument
-    );
+    REQUIRE_THROWS_AS(region->set_items({{.key = 1}, {.key = 1}}), std::invalid_argument);
     REQUIRE(region->item_count() == 1);
     REQUIRE(region->node_for(1) == original);
 }
@@ -490,16 +517,16 @@ TEST_CASE("ForEach preserves its tree when item creation fails", "[widget][decla
     region->set_items({{.key = 1, .value = "one"}});
     auto* original = region->node_for(1);
 
-    REQUIRE_THROWS_AS(
-        region->set_items({{.key = 1}, {.key = 2}}),
-        std::runtime_error
-    );
+    REQUIRE_THROWS_AS(region->set_items({{.key = 1}, {.key = 2}}), std::runtime_error);
     REQUIRE(region->item_count() == 1);
     REQUIRE(region->node_for(1) == original);
     REQUIRE(region->get_child(0) == original);
 }
 
-TEST_CASE("IfRegion reuses stable branches and clears replaced scopes", "[widget][declarative][if]") {
+TEST_CASE(
+    "IfRegion reuses stable branches and clears replaced scopes",
+    "[widget][declarative][if]"
+) {
     reactive::Graph graph;
     reactive::Signal<bool> condition {graph, false};
     reactive::Signal<int> probe {graph, 0};
@@ -545,7 +572,7 @@ TEST_CASE("IfRegion reuses stable branches and clears replaced scopes", "[widget
 }
 
 TEST_CASE("NanControl rect hit-test and bounds", "[widget][control]") {
-    scene::NanControl c{foundation::NanSize(40, 20)};
+    scene::NanControl c {foundation::NanSize(40, 20)};
     c.set_position(foundation::NanPoint(100, 50));
 
     SECTION("contains_point uses [0,w]x[0,h] local box") {
@@ -577,7 +604,10 @@ TEST_CASE("NanControl draws its background rect", "[widget][control][render]") {
     REQUIRE(dev.rects[0].rect.get_width() == Catch::Approx(10.0F));
 }
 
-TEST_CASE("scene text context is inherited without overriding explicit pipelines", "[widget][text][pipeline]") {
+TEST_CASE(
+    "scene text context is inherited without overriding explicit pipelines",
+    "[widget][text][pipeline]"
+) {
     reactive::Graph graph;
     FixedTextLayoutBackend inherited_backend;
     FixedTextLayoutRenderer inherited_renderer;
@@ -620,14 +650,14 @@ TEST_CASE("scene text context is inherited without overriding explicit pipelines
 
 TEST_CASE("BindableRect: signal drives visibility across frames", "[widget][reactive]") {
     reactive::Graph g;
-    reactive::Signal<bool> visible{g, true};
+    reactive::Signal<bool> visible {g, true};
 
     RecordingDevice dev;
     scene::NanSceneTree tree;
     auto rect = std::make_shared<widget::BindableRect>(g, foundation::NanSize(10, 10));
     rect->set_background(opaque_color(0.5F));
     rect->bind_visible(visible);
-    tree.set_root(rect);  // on_ready fires bind() -> effect reads visible
+    tree.set_root(rect); // on_ready fires bind() -> effect reads visible
 
     // Frame 1: visible == true, one draw.
     tree.draw(dev);
@@ -648,7 +678,7 @@ TEST_CASE("BindableRect: signal drives visibility across frames", "[widget][reac
 
 TEST_CASE("BindableRect: signal drives background color", "[widget][reactive]") {
     reactive::Graph g;
-    reactive::Signal<foundation::NanColor> color{g, opaque_color(0.3F)};
+    reactive::Signal<foundation::NanColor> color {g, opaque_color(0.3F)};
 
     RecordingDevice dev;
     scene::NanSceneTree tree;
@@ -659,7 +689,7 @@ TEST_CASE("BindableRect: signal drives background color", "[widget][reactive]") 
     tree.draw(dev);
     REQUIRE(dev.rects.size() == 1);
     const float a0 = dev.rects[0].alpha;
-    REQUIRE(a0 == Catch::Approx(1.0F));  // opaque
+    REQUIRE(a0 == Catch::Approx(1.0F)); // opaque
 
     // Change to a semi-transparent color; next frame reflects it.
     color.set(opaque_color(0.3F).with_alpha(0.5F));
@@ -671,7 +701,7 @@ TEST_CASE("BindableRect: signal drives background color", "[widget][reactive]") 
 
 TEST_CASE("BindableRect: signal drives position", "[widget][reactive]") {
     reactive::Graph g;
-    reactive::Signal<foundation::NanPoint> pos{g, foundation::NanPoint(0, 0)};
+    reactive::Signal<foundation::NanPoint> pos {g, foundation::NanPoint(0, 0)};
 
     RecordingDevice dev;
     scene::NanSceneTree tree;
@@ -690,9 +720,12 @@ TEST_CASE("BindableRect: signal drives position", "[widget][reactive]") {
     REQUIRE(dev.rects[0].rect.get_top() == Catch::Approx(25.0F));
 }
 
-TEST_CASE("BindableRect: unmount clears subscriptions (no update after removal)", "[widget][reactive][lifecycle]") {
+TEST_CASE(
+    "BindableRect: unmount clears subscriptions (no update after removal)",
+    "[widget][reactive][lifecycle]"
+) {
     reactive::Graph g;
-    reactive::Signal<bool> visible{g, true};
+    reactive::Signal<bool> visible {g, true};
 
     RecordingDevice dev;
     scene::NanSceneTree tree;
@@ -716,7 +749,10 @@ TEST_CASE("BindableRect: unmount clears subscriptions (no update after removal)"
     REQUIRE_FALSE(rect->visible());
 }
 
-TEST_CASE("Label text follows computed state changed by buttons", "[widget][label][button][reactive]") {
+TEST_CASE(
+    "Label text follows computed state changed by buttons",
+    "[widget][label][button][reactive]"
+) {
     reactive::Graph graph;
     reactive::Signal<int> count {graph, 0};
     auto* text = reactive::make_computed(graph, [&] {
@@ -747,52 +783,66 @@ TEST_CASE("Label text follows computed state changed by buttons", "[widget][labe
     REQUIRE_FALSE(dev.texts.empty());
     REQUIRE(dev.texts.front().text == "Count: 0");
 
-    tree.dispatch_mouse_move(scene::MouseMoveEvent {
-        foundation::NanPoint(90.0F, 58.0F),
-        foundation::NanPoint::zero(),
-    });
-    tree.dispatch_mouse_button(scene::MouseButtonEvent {
-        scene::MouseButtonEvent::Button::left,
-        scene::MouseButtonEvent::Action::press,
-        foundation::NanPoint(90.0F, 58.0F),
-    });
-    tree.dispatch_mouse_button(scene::MouseButtonEvent {
-        scene::MouseButtonEvent::Button::left,
-        scene::MouseButtonEvent::Action::release,
-        foundation::NanPoint(90.0F, 58.0F),
-    });
+    tree.dispatch_mouse_move(
+        scene::MouseMoveEvent {
+            foundation::NanPoint(90.0F, 58.0F),
+            foundation::NanPoint::zero(),
+        }
+    );
+    tree.dispatch_mouse_button(
+        scene::MouseButtonEvent {
+            scene::MouseButtonEvent::Button::left,
+            scene::MouseButtonEvent::Action::press,
+            foundation::NanPoint(90.0F, 58.0F),
+        }
+    );
+    tree.dispatch_mouse_button(
+        scene::MouseButtonEvent {
+            scene::MouseButtonEvent::Button::left,
+            scene::MouseButtonEvent::Action::release,
+            foundation::NanPoint(90.0F, 58.0F),
+        }
+    );
 
     dev.texts.clear();
     tree.draw(dev);
     REQUIRE(dev.texts.front().text == "Count: 1");
 
-    tree.dispatch_mouse_move(scene::MouseMoveEvent {
-        foundation::NanPoint(10.0F, 58.0F),
-        foundation::NanPoint(-80.0F, 0.0F),
-    });
-    tree.dispatch_mouse_button(scene::MouseButtonEvent {
-        scene::MouseButtonEvent::Button::left,
-        scene::MouseButtonEvent::Action::press,
-        foundation::NanPoint(10.0F, 58.0F),
-    });
-    tree.dispatch_mouse_button(scene::MouseButtonEvent {
-        scene::MouseButtonEvent::Button::left,
-        scene::MouseButtonEvent::Action::release,
-        foundation::NanPoint(10.0F, 58.0F),
-    });
+    tree.dispatch_mouse_move(
+        scene::MouseMoveEvent {
+            foundation::NanPoint(10.0F, 58.0F),
+            foundation::NanPoint(-80.0F, 0.0F),
+        }
+    );
+    tree.dispatch_mouse_button(
+        scene::MouseButtonEvent {
+            scene::MouseButtonEvent::Button::left,
+            scene::MouseButtonEvent::Action::press,
+            foundation::NanPoint(10.0F, 58.0F),
+        }
+    );
+    tree.dispatch_mouse_button(
+        scene::MouseButtonEvent {
+            scene::MouseButtonEvent::Button::left,
+            scene::MouseButtonEvent::Action::release,
+            foundation::NanPoint(10.0F, 58.0F),
+        }
+    );
 
     dev.texts.clear();
     tree.draw(dev);
     REQUIRE(dev.texts.front().text == "Count: 0");
 }
 
-TEST_CASE("Text setter and property share mutation and dirty behavior", "[widget][text][property]") {
+TEST_CASE(
+    "Text setter and property share mutation and dirty behavior",
+    "[widget][text][property]"
+) {
     auto text = std::make_shared<widget::primitives::Text>("initial");
     text->clear_layout_dirty();
     int changes = 0;
-    auto subscription = text->text_property().changed().subscribe(
-        [&changes](const std::string&) { ++changes; }
-    );
+    auto subscription =
+        text->text_property().changed().subscribe([&changes](const std::string&) { ++changes; });
 
     text->set_text("setter");
     REQUIRE(text->text() == "setter");
@@ -873,7 +923,10 @@ TEST_CASE("Row Column and Padding arrange control children", "[widget][layout]")
     REQUIRE(padding->height() == Catch::Approx(57.0F));
 }
 
-TEST_CASE("Layout constraints remeasure a subtree for changing root bounds", "[widget][layout][responsive]") {
+TEST_CASE(
+    "Layout constraints remeasure a subtree for changing root bounds",
+    "[widget][layout][responsive]"
+) {
     auto root = std::make_shared<scene::NanControl>();
     auto text = std::make_shared<widget::primitives::Text>("a very long line of text");
     text->set_overflow(text::TextOverflow::ellipsis);
@@ -882,13 +935,17 @@ TEST_CASE("Layout constraints remeasure a subtree for changing root bounds", "[w
     padding->set_child(text);
     root->add_child(padding);
 
-    (void)root->measure_layout(foundation::NanLayoutConstraints::tight(foundation::NanSize(100.0F, 80.0F)));
+    (void)root->measure_layout(
+        foundation::NanLayoutConstraints::tight(foundation::NanSize(100.0F, 80.0F))
+    );
     root->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 100.0F, 80.0F));
 
     REQUIRE(padding->width() <= 100.0F);
     REQUIRE(text->width() <= 80.0F);
 
-    (void)root->measure_layout(foundation::NanLayoutConstraints::tight(foundation::NanSize(320.0F, 80.0F)));
+    (void)root->measure_layout(
+        foundation::NanLayoutConstraints::tight(foundation::NanSize(320.0F, 80.0F))
+    );
     root->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 320.0F, 80.0F));
 
     REQUIRE(padding->width() > 100.0F);
@@ -941,7 +998,10 @@ TEST_CASE("layout invalidation raised during layout is preserved", "[widget][lay
     REQUIRE_FALSE(root->layout_dirty());
 }
 
-TEST_CASE("post-layout action may request one additional layout pass", "[widget][layout][scheduler]") {
+TEST_CASE(
+    "post-layout action may request one additional layout pass",
+    "[widget][layout][scheduler]"
+) {
     auto root = std::make_shared<LayoutInvalidationProbe>();
     scene::NanSceneTree tree;
     tree.set_root(root);
@@ -952,7 +1012,10 @@ TEST_CASE("post-layout action may request one additional layout pass", "[widget]
     REQUIRE_FALSE(root->layout_dirty());
 }
 
-TEST_CASE("only screen canvas roots participate in viewport layout", "[widget][layout][canvas-layer]") {
+TEST_CASE(
+    "only screen canvas roots participate in viewport layout",
+    "[widget][layout][canvas-layer]"
+) {
     auto stack = scene::LayerStack::create();
     auto world = scene::CanvasLayer::create(scene::CanvasSpace::world, 0);
     auto hud = scene::CanvasLayer::create(scene::CanvasSpace::screen, 10);
@@ -973,7 +1036,10 @@ TEST_CASE("only screen canvas roots participate in viewport layout", "[widget][l
     REQUIRE_THROWS_AS(hud->set_space(scene::CanvasSpace::world), std::logic_error);
 }
 
-TEST_CASE("deferred canvas layout root is not laid out before commit", "[widget][layout][canvas-layer]") {
+TEST_CASE(
+    "deferred canvas layout root is not laid out before commit",
+    "[widget][layout][canvas-layer]"
+) {
     auto stack = scene::LayerStack::create();
     auto layer = scene::CanvasLayer::create(scene::CanvasSpace::screen);
     auto initial = std::make_shared<LayoutInvalidationProbe>();
@@ -1018,18 +1084,22 @@ TEST_CASE("TextStyle updates text measurement and drawing style", "[widget][text
     RecordingDevice dev;
     scene::NanSceneTree tree;
     auto text = std::make_shared<widget::primitives::Text>("abcdef");
-    text->set_style(text::TextStyle {
-        .color = opaque_color(0.7F).with_alpha(0.5F),
-        .font_size = 20.0F,
-        .overflow = text::TextOverflow::clip,
-        .max_lines = 1,
-    });
-    (void)text->measure_layout(foundation::NanLayoutConstraints {
-        .min_width = 0.0F,
-        .max_width = 40.0F,
-        .min_height = 0.0F,
-        .max_height = 80.0F,
-    });
+    text->set_style(
+        text::TextStyle {
+            .color = opaque_color(0.7F).with_alpha(0.5F),
+            .font_size = 20.0F,
+            .overflow = text::TextOverflow::clip,
+            .max_lines = 1,
+        }
+    );
+    (void)text->measure_layout(
+        foundation::NanLayoutConstraints {
+            .min_width = 0.0F,
+            .max_width = 40.0F,
+            .min_height = 0.0F,
+            .max_height = 80.0F,
+        }
+    );
     tree.set_root(text);
 
     tree.draw(dev);
@@ -1047,15 +1117,15 @@ TEST_CASE("TextStyle updates text measurement and drawing style", "[widget][text
     // clip 在 constrained 宽度上再放出一个字形悬垂余量，避免末字形墨迹被裁。
     REQUIRE(
         dev.clips.front().get_width()
-        == Catch::Approx(
-            40.0F
-            + text::glyph_overhang_allowance(text->laid_out_font_size())
-        )
+        == Catch::Approx(40.0F + text::glyph_overhang_allowance(text->laid_out_font_size()))
     );
     REQUIRE(dev.clip_clears == 1);
 }
 
-TEST_CASE("Text consumes inherited style unless the instance overrides it", "[widget][text][style]") {
+TEST_CASE(
+    "Text consumes inherited style unless the instance overrides it",
+    "[widget][text][style]"
+) {
     auto root = std::make_shared<scene::NanControl>();
     auto inherited = std::make_shared<widget::primitives::Text>("inherited");
     auto explicit_text = std::make_shared<widget::primitives::Text>("explicit");
@@ -1095,7 +1165,10 @@ TEST_CASE("Text consumes inherited style unless the instance overrides it", "[wi
     REQUIRE(explicit_text->font().weight == 500);
 }
 
-TEST_CASE("Label keeps component theme, StyleContext, and instance priority", "[widget][label][style]") {
+TEST_CASE(
+    "Label keeps component theme, StyleContext, and instance priority",
+    "[widget][label][style]"
+) {
     reactive::Graph graph;
     theme::ThemeManager manager;
     auto themed = theme::default_theme();
@@ -1129,10 +1202,7 @@ TEST_CASE("Label keeps component theme, StyleContext, and instance priority", "[
     REQUIRE(label->color().oklch().light == Catch::Approx(0.83F));
 }
 
-TEST_CASE(
-    "semantic label and surface colors follow theme revisions",
-    "[widget][theme][token]"
-) {
+TEST_CASE("semantic label and surface colors follow theme revisions", "[widget][theme][token]") {
     reactive::Graph graph;
     theme::ThemeManager manager;
     auto initial = theme::default_theme();
@@ -1165,22 +1235,25 @@ TEST_CASE("Text clip intersects and restores an ancestor clip", "[widget][text][
     RecordingDevice dev;
     render::DrawContext context(dev);
     widget::primitives::Text text("abcdef");
-    text.set_style(text::TextStyle {
-        .font_size = 20.0F,
-        .overflow = text::TextOverflow::clip,
-        .max_lines = 1,
-    });
-    (void)text.measure_layout(foundation::NanLayoutConstraints {
-        .min_width = 0.0F,
-        .max_width = 40.0F,
-        .min_height = 0.0F,
-        .max_height = 80.0F,
-    });
+    text.set_style(
+        text::TextStyle {
+            .font_size = 20.0F,
+            .overflow = text::TextOverflow::clip,
+            .max_lines = 1,
+        }
+    );
+    (void)text.measure_layout(
+        foundation::NanLayoutConstraints {
+            .min_width = 0.0F,
+            .max_width = 40.0F,
+            .min_height = 0.0F,
+            .max_height = 80.0F,
+        }
+    );
 
     {
-        auto ancestor = context.clip().push(
-            foundation::NanRect::from_xywh(10.0F, 10.0F, 25.0F, 30.0F)
-        );
+        auto ancestor =
+            context.clip().push(foundation::NanRect::from_xywh(10.0F, 10.0F, 25.0F, 30.0F));
         text.draw_at(context, foundation::NanPoint(20.0F, 5.0F));
 
         REQUIRE(context.clip().depth() == 1);
@@ -1267,7 +1340,10 @@ TEST_CASE("Button draws through its forwarded text renderer", "[widget][button][
     REQUIRE(dev.texts.empty());
 }
 
-TEST_CASE("TextField draws placeholder and value through one text pipeline", "[widget][text-field][pipeline]") {
+TEST_CASE(
+    "TextField draws placeholder and value through one text pipeline",
+    "[widget][text-field][pipeline]"
+) {
     FixedTextLayoutBackend backend;
     FixedTextLayoutRenderer renderer;
     auto field = std::make_shared<widget::TextField>("", "placeholder");
@@ -1290,19 +1366,23 @@ TEST_CASE("Text exposes a layout result shared by measure and draw", "[widget][t
     RecordingDevice dev;
     scene::NanSceneTree tree;
     auto text = std::make_shared<widget::primitives::Text>("abcdefghi");
-    text->set_style(text::TextStyle {
-        .color = opaque_color(0.8F),
-        .font_size = 10.0F,
-        .overflow = text::TextOverflow::ellipsis,
-        .max_lines = 1,
-    });
+    text->set_style(
+        text::TextStyle {
+            .color = opaque_color(0.8F),
+            .font_size = 10.0F,
+            .overflow = text::TextOverflow::ellipsis,
+            .max_lines = 1,
+        }
+    );
 
-    (void)text->measure_layout(foundation::NanLayoutConstraints {
-        .min_width = 0.0F,
-        .max_width = 28.0F,
-        .min_height = 0.0F,
-        .max_height = 80.0F,
-    });
+    (void)text->measure_layout(
+        foundation::NanLayoutConstraints {
+            .min_width = 0.0F,
+            .max_width = 28.0F,
+            .min_height = 0.0F,
+            .max_height = 80.0F,
+        }
+    );
     tree.set_root(text);
     tree.draw(dev);
 
@@ -1317,19 +1397,23 @@ TEST_CASE("Text exposes a layout result shared by measure and draw", "[widget][t
 
 TEST_CASE("Text overflow preserves UTF-8 codepoint boundaries", "[widget][text][utf8]") {
     auto text = std::make_shared<widget::primitives::Text>("中文测试字");
-    text->set_style(text::TextStyle {
-        .color = opaque_color(0.8F),
-        .font_size = 10.0F,
-        .overflow = text::TextOverflow::ellipsis,
-        .max_lines = 1,
-    });
+    text->set_style(
+        text::TextStyle {
+            .color = opaque_color(0.8F),
+            .font_size = 10.0F,
+            .overflow = text::TextOverflow::ellipsis,
+            .max_lines = 1,
+        }
+    );
 
-    (void)text->measure_layout(foundation::NanLayoutConstraints {
-        .min_width = 0.0F,
-        .max_width = 23.0F,
-        .min_height = 0.0F,
-        .max_height = 80.0F,
-    });
+    (void)text->measure_layout(
+        foundation::NanLayoutConstraints {
+            .min_width = 0.0F,
+            .max_width = 23.0F,
+            .min_height = 0.0F,
+            .max_height = 80.0F,
+        }
+    );
 
     const auto& line = text->layout_result().lines.front();
     REQUIRE(text->layout_result().overflowed);
@@ -1338,19 +1422,25 @@ TEST_CASE("Text overflow preserves UTF-8 codepoint boundaries", "[widget][text][
 }
 
 TEST_CASE("deterministic caret geometry follows grapheme boundaries", "[widget][text][caret]") {
-    constexpr std::string_view source = "a\xCC\x81" "b";
+    constexpr std::string_view source =
+        "a\xCC\x81"
+        "b";
     widget::primitives::Text text {std::string(source)};
-    text.set_style(text::TextStyle {
-        .font_size = 10.0F,
-        .overflow = text::TextOverflow::clip,
-        .max_lines = 1,
-    });
-    (void)text.measure_layout(foundation::NanLayoutConstraints {
-        .min_width = 0.0F,
-        .max_width = 6.0F,
-        .min_height = 0.0F,
-        .max_height = 40.0F,
-    });
+    text.set_style(
+        text::TextStyle {
+            .font_size = 10.0F,
+            .overflow = text::TextOverflow::clip,
+            .max_lines = 1,
+        }
+    );
+    (void)text.measure_layout(
+        foundation::NanLayoutConstraints {
+            .min_width = 0.0F,
+            .max_width = 6.0F,
+            .min_height = 0.0F,
+            .max_height = 40.0F,
+        }
+    );
 
     const auto& layout = text.layout_result();
     const auto& line = layout.lines.front();
@@ -1378,19 +1468,23 @@ TEST_CASE("Text wrap produces and draws actual UTF-8 lines", "[widget][text][wra
     RecordingDevice dev;
     scene::NanSceneTree tree;
     auto text = std::make_shared<widget::primitives::Text>("A中文B测试");
-    text->set_style(text::TextStyle {
-        .color = opaque_color(0.8F),
-        .font_size = 10.0F,
-        .overflow = text::TextOverflow::wrap,
-        .max_lines = 3,
-    });
+    text->set_style(
+        text::TextStyle {
+            .color = opaque_color(0.8F),
+            .font_size = 10.0F,
+            .overflow = text::TextOverflow::wrap,
+            .max_lines = 3,
+        }
+    );
 
-    (void)text->measure_layout(foundation::NanLayoutConstraints {
-        .min_width = 0.0F,
-        .max_width = 17.0F,
-        .min_height = 0.0F,
-        .max_height = 80.0F,
-    });
+    (void)text->measure_layout(
+        foundation::NanLayoutConstraints {
+            .min_width = 0.0F,
+            .max_width = 17.0F,
+            .min_height = 0.0F,
+            .max_height = 80.0F,
+        }
+    );
     tree.set_root(text);
     tree.draw(dev);
 
@@ -1411,12 +1505,14 @@ TEST_CASE("Text wrap produces and draws actual UTF-8 lines", "[widget][text][wra
 
 TEST_CASE("Text wrap honors explicit newlines and max lines", "[widget][text][wrap]") {
     auto text = std::make_shared<widget::primitives::Text>("first\nsecond\nthird");
-    text->set_style(text::TextStyle {
-        .color = opaque_color(0.8F),
-        .font_size = 10.0F,
-        .overflow = text::TextOverflow::wrap,
-        .max_lines = 2,
-    });
+    text->set_style(
+        text::TextStyle {
+            .color = opaque_color(0.8F),
+            .font_size = 10.0F,
+            .overflow = text::TextOverflow::wrap,
+            .max_lines = 2,
+        }
+    );
 
     (void)text->measure_layout(foundation::NanLayoutConstraints::loose());
 
@@ -1451,7 +1547,10 @@ TEST_CASE("EditableText accepts focused text input and backspace", "[widget][edi
     REQUIRE(changes.back() == "A");
 }
 
-TEST_CASE("EditableText caret and backspace preserve UTF-8 boundaries", "[widget][editable-text][utf8]") {
+TEST_CASE(
+    "EditableText caret and backspace preserve UTF-8 boundaries",
+    "[widget][editable-text][utf8]"
+) {
     auto edit = std::make_shared<widget::primitives::EditableText>("A中🙂");
     scene::NanSceneTree tree;
     tree.set_root(edit);
@@ -1472,7 +1571,9 @@ TEST_CASE("EditableText caret and backspace preserve UTF-8 boundaries", "[widget
 }
 
 TEST_CASE("EditableText deletes complete grapheme clusters", "[widget][editable-text][grapheme]") {
-    constexpr std::string_view combined = "a\xCC\x81" "b";
+    constexpr std::string_view combined =
+        "a\xCC\x81"
+        "b";
     auto edit = std::make_shared<widget::primitives::EditableText>(std::string(combined));
     scene::NanSceneTree tree;
     tree.set_root(edit);
@@ -1531,7 +1632,10 @@ TEST_CASE("EditableText draws caret from layout geometry", "[widget][editable-te
     REQUIRE(dev.lines.front().end.get_x() == Catch::Approx(5.0F));
 }
 
-TEST_CASE("EditableText selection replaces and deletes once", "[widget][editable-text][selection]") {
+TEST_CASE(
+    "EditableText selection replaces and deletes once",
+    "[widget][editable-text][selection]"
+) {
     auto edit = std::make_shared<widget::primitives::EditableText>("abc");
     std::vector<std::string> changes;
     edit->set_on_change([&](std::string_view value) { changes.emplace_back(value); });
@@ -1557,12 +1661,17 @@ TEST_CASE("EditableText selection replaces and deletes once", "[widget][editable
     REQUIRE(changes.size() == 2);
 }
 
-TEST_CASE("EditableText clipboard commands preserve UTF-8 selections", "[widget][editable-text][clipboard]") {
+TEST_CASE(
+    "EditableText clipboard commands preserve UTF-8 selections",
+    "[widget][editable-text][clipboard]"
+) {
     auto edit = std::make_shared<widget::primitives::EditableText>("A中文B");
-    edit->set_selection(widget::primitives::TextSelection {
-        .anchor = 1,
-        .focus = 7,
-    });
+    edit->set_selection(
+        widget::primitives::TextSelection {
+            .anchor = 1,
+            .focus = 7,
+        }
+    );
     MemoryClipboard clipboard;
     scene::NanSceneTree tree;
     tree.set_clipboard(clipboard);
@@ -1583,11 +1692,9 @@ TEST_CASE("EditableText clipboard commands preserve UTF-8 selections", "[widget]
 
     tree.dispatch_key(scene::KeyEvent(90, scene::KeyEvent::Action::press, primary));
     REQUIRE(edit->value() == "AB");
-    tree.dispatch_key(scene::KeyEvent(
-        90,
-        scene::KeyEvent::Action::press,
-        {.shift = true, .ctrl = true}
-    ));
+    tree.dispatch_key(
+        scene::KeyEvent(90, scene::KeyEvent::Action::press, {.shift = true, .ctrl = true})
+    );
     REQUIRE(edit->value() == "A中文B");
 }
 
@@ -1596,10 +1703,12 @@ TEST_CASE(
     "[widget][text-field][clipboard]"
 ) {
     auto field = std::make_shared<widget::TextField>("A中文B", "");
-    field->editable_text().set_selection(widget::primitives::TextSelection {
-        .anchor = 1,
-        .focus = 7,
-    });
+    field->editable_text().set_selection(
+        widget::primitives::TextSelection {
+            .anchor = 1,
+            .focus = 7,
+        }
+    );
     MemoryClipboard clipboard;
     scene::NanSceneTree tree;
     tree.set_clipboard(clipboard);
@@ -1620,7 +1729,10 @@ TEST_CASE(
     REQUIRE(field->value() == "A替换B");
 }
 
-TEST_CASE("EditableText undo redo tracks committed CJK and clears redo branches", "[widget][editable-text][undo][utf8]") {
+TEST_CASE(
+    "EditableText undo redo tracks committed CJK and clears redo branches",
+    "[widget][editable-text][undo][utf8]"
+) {
     auto edit = std::make_shared<widget::primitives::EditableText>();
     scene::NanSceneTree tree;
     tree.set_root(edit);
@@ -1648,7 +1760,10 @@ TEST_CASE("EditableText undo redo tracks committed CJK and clears redo branches"
     REQUIRE(edit->value() == "中文测试");
 }
 
-TEST_CASE("EditableText read-only shortcuts copy without mutating", "[widget][editable-text][clipboard][state]") {
+TEST_CASE(
+    "EditableText read-only shortcuts copy without mutating",
+    "[widget][editable-text][clipboard][state]"
+) {
     auto edit = std::make_shared<widget::primitives::EditableText>("只读");
     MemoryClipboard clipboard;
     clipboard.text = "替换";
@@ -1670,14 +1785,19 @@ TEST_CASE("EditableText read-only shortcuts copy without mutating", "[widget][ed
     REQUIRE(edit->value() == "只读历史");
 }
 
-TEST_CASE("EditableText read-only and composition state preserve value", "[widget][editable-text][state]") {
+TEST_CASE(
+    "EditableText read-only and composition state preserve value",
+    "[widget][editable-text][state]"
+) {
     auto edit = std::make_shared<widget::primitives::EditableText>("value");
     edit->set_read_only(true);
-    edit->set_composition(widget::primitives::TextComposition {
-        .text = "preedit",
-        .selection_start = 2,
-        .selection_end = 4,
-    });
+    edit->set_composition(
+        widget::primitives::TextComposition {
+            .text = "preedit",
+            .selection_start = 2,
+            .selection_end = 4,
+        }
+    );
     scene::NanSceneTree tree;
     tree.set_root(edit);
     tree.set_focus(edit.get());
@@ -1695,12 +1815,14 @@ TEST_CASE("EditableText draws text and focused caret", "[widget][editable-text]"
     RecordingDevice dev;
     scene::NanSceneTree tree;
     auto edit = std::make_shared<widget::primitives::EditableText>("Edit");
-    edit->set_style(text::TextStyle {
-        .color = opaque_color(0.8F),
-        .font_size = 16.0F,
-        .overflow = text::TextOverflow::ellipsis,
-        .max_lines = 1,
-    });
+    edit->set_style(
+        text::TextStyle {
+            .color = opaque_color(0.8F),
+            .font_size = 16.0F,
+            .overflow = text::TextOverflow::ellipsis,
+            .max_lines = 1,
+        }
+    );
     tree.set_root(edit);
     tree.set_focus(edit.get());
 
@@ -1747,28 +1869,38 @@ TEST_CASE("TextField forwards text editing and change callback", "[widget][text-
     REQUIRE(dev.line_count == 1);
 }
 
-TEST_CASE("TextField pointer selection uses capture outside bounds", "[widget][text-field][selection]") {
+TEST_CASE(
+    "TextField pointer selection uses capture outside bounds",
+    "[widget][text-field][selection]"
+) {
     auto field = std::make_shared<widget::TextField>("abcdef", "");
     field->layout_to(foundation::NanRect::from_xywh(20.0F, 20.0F, 100.0F, 40.0F));
     scene::NanSceneTree tree;
     tree.set_root(field);
 
-    tree.dispatch_mouse_button(scene::MouseButtonEvent(
-        scene::MouseButtonEvent::Button::left,
-        scene::MouseButtonEvent::Action::press,
-        foundation::NanPoint(34.0F, 40.0F)
-    ));
+    tree.dispatch_mouse_button(
+        scene::MouseButtonEvent(
+            scene::MouseButtonEvent::Button::left,
+            scene::MouseButtonEvent::Action::press,
+            foundation::NanPoint(34.0F, 40.0F)
+        )
+    );
     REQUIRE(tree.pointer_capture() == field.get());
-    tree.dispatch_mouse_move(scene::MouseMoveEvent(
-        foundation::NanPoint(200.0F, 40.0F), foundation::NanPoint(166.0F, 0.0F)
-    ));
+    tree.dispatch_mouse_move(
+        scene::MouseMoveEvent(
+            foundation::NanPoint(200.0F, 40.0F),
+            foundation::NanPoint(166.0F, 0.0F)
+        )
+    );
     REQUIRE(field->editable_text().has_selection());
     REQUIRE(field->editable_text().selection().focus == field->value().size());
-    tree.dispatch_mouse_button(scene::MouseButtonEvent(
-        scene::MouseButtonEvent::Button::left,
-        scene::MouseButtonEvent::Action::release,
-        foundation::NanPoint(200.0F, 40.0F)
-    ));
+    tree.dispatch_mouse_button(
+        scene::MouseButtonEvent(
+            scene::MouseButtonEvent::Button::left,
+            scene::MouseButtonEvent::Action::release,
+            foundation::NanPoint(200.0F, 40.0F)
+        )
+    );
     REQUIRE(tree.pointer_capture() == nullptr);
 }
 
@@ -1800,11 +1932,7 @@ TEST_CASE("TextField exposes semantic states and submit", "[widget][text-field][
     REQUIRE_FALSE(field->is_focusable());
     REQUIRE(tree.focused_node() == nullptr);
     tree.dispatch_text_input(scene::TextInputEvent("x"));
-    tree.dispatch_key(scene::KeyEvent(
-        86,
-        scene::KeyEvent::Action::press,
-        {.ctrl = true}
-    ));
+    tree.dispatch_key(scene::KeyEvent(86, scene::KeyEvent::Action::press, {.ctrl = true}));
     REQUIRE(field->value() == "value");
 
     RecordingDevice dev;
@@ -1812,7 +1940,10 @@ TEST_CASE("TextField exposes semantic states and submit", "[widget][text-field][
     REQUIRE(dev.line_count == 0);
 }
 
-TEST_CASE("Row alignment positions children inside assigned bounds", "[widget][layout][alignment]") {
+TEST_CASE(
+    "Row alignment positions children inside assigned bounds",
+    "[widget][layout][alignment]"
+) {
     auto a = std::make_shared<scene::NanControl>(foundation::NanSize(20.0F, 10.0F));
     auto b = std::make_shared<scene::NanControl>(foundation::NanSize(30.0F, 14.0F));
 
@@ -1823,7 +1954,9 @@ TEST_CASE("Row alignment positions children inside assigned bounds", "[widget][l
         .add(a)
         .add(b);
 
-    (void)row->measure_layout(foundation::NanLayoutConstraints::tight(foundation::NanSize(120.0F, 40.0F)));
+    (void)row->measure_layout(
+        foundation::NanLayoutConstraints::tight(foundation::NanSize(120.0F, 40.0F))
+    );
     row->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 120.0F, 40.0F));
 
     REQUIRE(a->position().get_x() == Catch::Approx(30.0F));
@@ -1832,7 +1965,10 @@ TEST_CASE("Row alignment positions children inside assigned bounds", "[widget][l
     REQUIRE(b->position().get_y() == Catch::Approx(26.0F));
 }
 
-TEST_CASE("Column cross stretch expands children to assigned width", "[widget][layout][alignment]") {
+TEST_CASE(
+    "Column cross stretch expands children to assigned width",
+    "[widget][layout][alignment]"
+) {
     auto a = std::make_shared<scene::NanControl>(foundation::NanSize(20.0F, 10.0F));
     auto b = std::make_shared<scene::NanControl>(foundation::NanSize(30.0F, 14.0F));
 
@@ -1843,7 +1979,9 @@ TEST_CASE("Column cross stretch expands children to assigned width", "[widget][l
         .add(a)
         .add(b);
 
-    (void)column->measure_layout(foundation::NanLayoutConstraints::tight(foundation::NanSize(90.0F, 60.0F)));
+    (void)column->measure_layout(
+        foundation::NanLayoutConstraints::tight(foundation::NanSize(90.0F, 60.0F))
+    );
     column->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 90.0F, 60.0F));
 
     REQUIRE(a->position().get_y() == Catch::Approx(30.0F));
@@ -1852,7 +1990,10 @@ TEST_CASE("Column cross stretch expands children to assigned width", "[widget][l
     REQUIRE(b->width() == Catch::Approx(90.0F));
 }
 
-TEST_CASE("Row and Column distribute main-axis space between children", "[widget][layout][alignment]") {
+TEST_CASE(
+    "Row and Column distribute main-axis space between children",
+    "[widget][layout][alignment]"
+) {
     auto a = std::make_shared<scene::NanControl>(foundation::NanSize(20.0F, 10.0F));
     auto b = std::make_shared<scene::NanControl>(foundation::NanSize(30.0F, 10.0F));
     auto c = std::make_shared<scene::NanControl>(foundation::NanSize(10.0F, 10.0F));
@@ -1864,7 +2005,9 @@ TEST_CASE("Row and Column distribute main-axis space between children", "[widget
         .add(b)
         .add(c);
 
-    (void)row->measure_layout(foundation::NanLayoutConstraints::tight(foundation::NanSize(120.0F, 20.0F)));
+    (void)row->measure_layout(
+        foundation::NanLayoutConstraints::tight(foundation::NanSize(120.0F, 20.0F))
+    );
     row->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 120.0F, 20.0F));
 
     REQUIRE(a->position().get_x() == Catch::Approx(0.0F));
@@ -1879,7 +2022,9 @@ TEST_CASE("Row and Column distribute main-axis space between children", "[widget
         .add(top)
         .add(bottom);
 
-    (void)column->measure_layout(foundation::NanLayoutConstraints::tight(foundation::NanSize(40.0F, 100.0F)));
+    (void)column->measure_layout(
+        foundation::NanLayoutConstraints::tight(foundation::NanSize(40.0F, 100.0F))
+    );
     column->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 40.0F, 100.0F));
 
     REQUIRE(top->position().get_y() == Catch::Approx(0.0F));
@@ -1891,7 +2036,9 @@ TEST_CASE("Center positions a single child in assigned bounds", "[widget][layout
     auto center = widget::Center::create();
     center->set_child(child);
 
-    (void)center->measure_layout(foundation::NanLayoutConstraints::tight(foundation::NanSize(120.0F, 80.0F)));
+    (void)center->measure_layout(
+        foundation::NanLayoutConstraints::tight(foundation::NanSize(120.0F, 80.0F))
+    );
     center->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 120.0F, 80.0F));
 
     REQUIRE(child->position().get_x() == Catch::Approx(40.0F));
@@ -1905,7 +2052,9 @@ TEST_CASE("NanControl single child layout fills parent bounds", "[widget][layout
     auto child = std::make_shared<scene::NanControl>(foundation::NanSize(40.0F, 20.0F));
     root->add_child(child);
 
-    (void)root->measure_layout(foundation::NanLayoutConstraints::tight(foundation::NanSize(200.0F, 120.0F)));
+    (void)root->measure_layout(
+        foundation::NanLayoutConstraints::tight(foundation::NanSize(200.0F, 120.0F))
+    );
     root->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 200.0F, 120.0F));
 
     REQUIRE(child->position().get_x() == Catch::Approx(0.0F));
@@ -1918,18 +2067,22 @@ TEST_CASE("NanControl resolves typed component dimensions", "[widget][layout][si
     auto control = std::make_shared<scene::NanControl>(foundation::NanSize(40.0F, 20.0F));
     control->set_width(scene::percent(50.0F)).set_min_width(80.0F).set_max_width(180.0F);
 
-    const auto measured = control->measure_layout(foundation::NanLayoutConstraints {
-        .max_width = 400.0F,
-        .max_height = 100.0F,
-    });
+    const auto measured = control->measure_layout(
+        foundation::NanLayoutConstraints {
+            .max_width = 400.0F,
+            .max_height = 100.0F,
+        }
+    );
     REQUIRE(measured.get_width() == Catch::Approx(180.0F));
     REQUIRE(measured.get_height() == Catch::Approx(20.0F));
 
     control->set_width(120.0F).set_height(scene::fill);
-    const auto fixed = control->measure_layout(foundation::NanLayoutConstraints {
-        .max_width = 400.0F,
-        .max_height = 90.0F,
-    });
+    const auto fixed = control->measure_layout(
+        foundation::NanLayoutConstraints {
+            .max_width = 400.0F,
+            .max_height = 90.0F,
+        }
+    );
     REQUIRE(fixed.get_width() == Catch::Approx(120.0F));
     REQUIRE(fixed.get_height() == Catch::Approx(90.0F));
 }
@@ -1937,26 +2090,32 @@ TEST_CASE("NanControl resolves typed component dimensions", "[widget][layout][si
 TEST_CASE("NanControl resolves percentage min and max limits", "[widget][layout][sizing]") {
     auto capped = std::make_shared<scene::NanControl>(foundation::NanSize(40.0F, 20.0F));
     capped->set_width(scene::percent(50.0F)).set_max_width(scene::percent(25.0F));
-    const auto capped_size = capped->measure_layout(foundation::NanLayoutConstraints {
-        .max_width = 400.0F,
-        .max_height = 100.0F,
-    });
+    const auto capped_size = capped->measure_layout(
+        foundation::NanLayoutConstraints {
+            .max_width = 400.0F,
+            .max_height = 100.0F,
+        }
+    );
     REQUIRE(capped_size.get_width() == Catch::Approx(100.0F));
 
     auto floored = std::make_shared<scene::NanControl>(foundation::NanSize(40.0F, 20.0F));
     floored->set_width(scene::percent(10.0F)).set_min_width(scene::percent(30.0F));
-    const auto floored_size = floored->measure_layout(foundation::NanLayoutConstraints {
-        .max_width = 400.0F,
-        .max_height = 100.0F,
-    });
+    const auto floored_size = floored->measure_layout(
+        foundation::NanLayoutConstraints {
+            .max_width = 400.0F,
+            .max_height = 100.0F,
+        }
+    );
     REQUIRE(floored_size.get_width() == Catch::Approx(120.0F));
 
     auto shorted = std::make_shared<scene::NanControl>(foundation::NanSize(40.0F, 20.0F));
     shorted->set_height(scene::percent(50.0F)).set_max_height(scene::percent(20.0F));
-    const auto shorted_size = shorted->measure_layout(foundation::NanLayoutConstraints {
-        .max_width = 400.0F,
-        .max_height = 100.0F,
-    });
+    const auto shorted_size = shorted->measure_layout(
+        foundation::NanLayoutConstraints {
+            .max_width = 400.0F,
+            .max_height = 100.0F,
+        }
+    );
     REQUIRE(shorted_size.get_height() == Catch::Approx(20.0F));
 }
 
@@ -1967,76 +2126,81 @@ TEST_CASE("scaled component paint keeps logical layout unchanged", "[widget][ren
     ScaleRecordingDevice checkbox_device;
     widget::Checkbox checkbox("Scaled checkbox", true);
     const auto checkbox_size = checkbox.measure_layout(foundation::NanLayoutConstraints::loose());
-    checkbox.layout_to(foundation::NanRect::from_origin_size(
-        foundation::NanPoint::zero(), checkbox_size
-    ));
-    render::DrawContext checkbox_context(
-        checkbox_device,
-        transform,
-        {.logical_to_screen = scale}
+    checkbox.layout_to(
+        foundation::NanRect::from_origin_size(foundation::NanPoint::zero(), checkbox_size)
     );
+    render::DrawContext checkbox_context(checkbox_device, transform, {.logical_to_screen = scale});
     checkbox.on_draw(checkbox_context);
     const auto checkbox_style = checkbox.resolved_style();
     REQUIRE(checkbox.measured_size() == checkbox_size);
-    REQUIRE(checkbox_device.rounded_rects.front().get_width()
-            == Catch::Approx(checkbox_style.metrics.box_size * scale));
+    REQUIRE(
+        checkbox_device.rounded_rects.front().get_width()
+        == Catch::Approx(checkbox_style.metrics.box_size * scale)
+    );
     REQUIRE(checkbox_device.lines.size() == 2);
     REQUIRE(checkbox_device.lines.front().thickness == Catch::Approx(4.0F));
     const auto checkbox_box = checkbox_device.rounded_rects.front();
-    REQUIRE(checkbox_device.lines.front().start.get_x()
-            == Catch::Approx(checkbox_box.get_left() + checkbox_box.get_width() * 0.22F));
-    REQUIRE(checkbox_device.lines.back().end.get_x()
-            == Catch::Approx(checkbox_box.get_left() + checkbox_box.get_width() * 0.80F));
+    REQUIRE(
+        checkbox_device.lines.front().start.get_x()
+        == Catch::Approx(checkbox_box.get_left() + checkbox_box.get_width() * 0.22F)
+    );
+    REQUIRE(
+        checkbox_device.lines.back().end.get_x()
+        == Catch::Approx(checkbox_box.get_left() + checkbox_box.get_width() * 0.80F)
+    );
 
     ScaleRecordingDevice switch_device;
     widget::Switch switch_control("Scaled switch", true);
-    const auto switch_size = switch_control.measure_layout(foundation::NanLayoutConstraints::loose());
-    switch_control.layout_to(foundation::NanRect::from_origin_size(
-        foundation::NanPoint::zero(), switch_size
-    ));
-    render::DrawContext switch_context(
-        switch_device,
-        transform,
-        {.logical_to_screen = scale}
+    const auto switch_size =
+        switch_control.measure_layout(foundation::NanLayoutConstraints::loose());
+    switch_control.layout_to(
+        foundation::NanRect::from_origin_size(foundation::NanPoint::zero(), switch_size)
     );
+    render::DrawContext switch_context(switch_device, transform, {.logical_to_screen = scale});
     switch_control.on_draw(switch_context);
     const auto switch_style = switch_control.resolved_style();
     REQUIRE(switch_control.measured_size() == switch_size);
-    REQUIRE(switch_device.rounded_rects.front().get_width()
-            == Catch::Approx(switch_style.metrics.track_width * scale));
-    REQUIRE(switch_device.rounded_rects.at(1).get_width()
-            == Catch::Approx(switch_style.metrics.thumb_size * scale));
+    REQUIRE(
+        switch_device.rounded_rects.front().get_width()
+        == Catch::Approx(switch_style.metrics.track_width * scale)
+    );
+    REQUIRE(
+        switch_device.rounded_rects.at(1).get_width()
+        == Catch::Approx(switch_style.metrics.thumb_size * scale)
+    );
 
     ScaleRecordingDevice slider_device;
     widget::Slider slider("Scaled slider", 0.5F);
-    const auto slider_size = slider.measure_layout(foundation::NanLayoutConstraints {
-        .max_width = 200.0F,
-        .max_height = 40.0F,
-    });
-    slider.layout_to(foundation::NanRect::from_origin_size(
-        foundation::NanPoint::zero(), slider_size
-    ));
-    render::DrawContext slider_context(
-        slider_device,
-        transform,
-        {.logical_to_screen = scale}
+    const auto slider_size = slider.measure_layout(
+        foundation::NanLayoutConstraints {
+            .max_width = 200.0F,
+            .max_height = 40.0F,
+        }
     );
+    slider.layout_to(
+        foundation::NanRect::from_origin_size(foundation::NanPoint::zero(), slider_size)
+    );
+    render::DrawContext slider_context(slider_device, transform, {.logical_to_screen = scale});
     slider.on_draw(slider_context);
     const auto slider_style = slider.resolved_style();
     REQUIRE(slider.measured_size() == slider_size);
-    REQUIRE(slider_device.circle_radius
-            == Catch::Approx(slider_style.thumb.radius * scale));
+    REQUIRE(slider_device.circle_radius == Catch::Approx(slider_style.thumb.radius * scale));
 }
 
-TEST_CASE("scaled button paint does not feed world width back into text layout", "[widget][render][scale]") {
+TEST_CASE(
+    "scaled button paint does not feed world width back into text layout",
+    "[widget][render][scale]"
+) {
     widget::Button button("A button label that must remain logically constrained");
-    const auto logical_size = button.measure_layout(foundation::NanLayoutConstraints {
-        .max_width = 180.0F,
-        .max_height = 48.0F,
-    });
-    button.layout_to(foundation::NanRect::from_origin_size(
-        foundation::NanPoint::zero(), logical_size
-    ));
+    const auto logical_size = button.measure_layout(
+        foundation::NanLayoutConstraints {
+            .max_width = 180.0F,
+            .max_height = 48.0F,
+        }
+    );
+    button.layout_to(
+        foundation::NanRect::from_origin_size(foundation::NanPoint::zero(), logical_size)
+    );
     const auto before = button.measured_size();
 
     ScaleRecordingDevice device;
@@ -2054,15 +2218,20 @@ TEST_CASE("scaled button paint does not feed world width back into text layout",
     REQUIRE(device.texts.front().font_size == Catch::Approx(28.0F));
 }
 
-TEST_CASE("scaled editable text keeps selection and caret geometry in screen space", "[widget][render][scale]") {
+TEST_CASE(
+    "scaled editable text keeps selection and caret geometry in screen space",
+    "[widget][render][scale]"
+) {
     FixedTextLayoutBackend backend;
     widget::primitives::EditableText edit("abc");
     edit.set_text_pipeline({.backend = &backend});
     (void)edit.measure_layout(foundation::NanLayoutConstraints::loose());
-    edit.set_selection(widget::primitives::TextSelection {
-        .anchor = 0,
-        .focus = 1,
-    });
+    edit.set_selection(
+        widget::primitives::TextSelection {
+            .anchor = 0,
+            .focus = 1,
+        }
+    );
 
     ScaleRecordingDevice device;
     scene::FocusEnterEvent focus;
@@ -2084,7 +2253,10 @@ TEST_CASE("scaled editable text keeps selection and caret geometry in screen spa
     REQUIRE(device.lines.front().thickness == Catch::Approx(2.0F));
 }
 
-TEST_CASE("Percentage sizing falls back to content on an unbounded axis", "[widget][layout][sizing]") {
+TEST_CASE(
+    "Percentage sizing falls back to content on an unbounded axis",
+    "[widget][layout][sizing]"
+) {
     scene::NanControl control(foundation::NanSize(42.0F, 18.0F));
     control.set_width(scene::percent(50.0F));
 
@@ -2096,24 +2268,31 @@ TEST_CASE("Percentage sizing falls back to content on an unbounded axis", "[widg
 TEST_CASE("Aspect ratio derives the unspecified component axis", "[widget][layout][sizing]") {
     scene::NanControl from_width(foundation::NanSize(10.0F, 10.0F));
     from_width.set_width(scene::percent(50.0F)).set_aspect_ratio(16.0F / 9.0F);
-    const auto landscape = from_width.measure_layout(foundation::NanLayoutConstraints {
-        .max_width = 320.0F,
-        .max_height = 200.0F,
-    });
+    const auto landscape = from_width.measure_layout(
+        foundation::NanLayoutConstraints {
+            .max_width = 320.0F,
+            .max_height = 200.0F,
+        }
+    );
     REQUIRE(landscape.get_width() == Catch::Approx(160.0F));
     REQUIRE(landscape.get_height() == Catch::Approx(90.0F));
 
     scene::NanControl from_height(foundation::NanSize(10.0F, 10.0F));
     from_height.set_height(60.0F).set_aspect_ratio(2.0F);
-    const auto landscape_from_height = from_height.measure_layout(foundation::NanLayoutConstraints {
-        .max_width = 200.0F,
-        .max_height = 100.0F,
-    });
+    const auto landscape_from_height = from_height.measure_layout(
+        foundation::NanLayoutConstraints {
+            .max_width = 200.0F,
+            .max_height = 100.0F,
+        }
+    );
     REQUIRE(landscape_from_height.get_width() == Catch::Approx(120.0F));
     REQUIRE(landscape_from_height.get_height() == Catch::Approx(60.0F));
 }
 
-TEST_CASE("Percentage sizing is distinct from flex remaining-space distribution", "[widget][layout][sizing]") {
+TEST_CASE(
+    "Percentage sizing is distinct from flex remaining-space distribution",
+    "[widget][layout][sizing]"
+) {
     auto percentage = std::make_shared<scene::NanControl>(foundation::NanSize(10.0F, 10.0F));
     percentage->set_width(scene::percent(50.0F));
     auto expanded = widget::Expanded::create();
@@ -2121,7 +2300,9 @@ TEST_CASE("Percentage sizing is distinct from flex remaining-space distribution"
 
     auto row = widget::Row::create();
     row->set_gap(10.0F).add(percentage).add(expanded);
-    (void)row->measure_layout(foundation::NanLayoutConstraints::tight(foundation::NanSize(200.0F, 20.0F)));
+    (void)row->measure_layout(
+        foundation::NanLayoutConstraints::tight(foundation::NanSize(200.0F, 20.0F))
+    );
     row->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 200.0F, 20.0F));
 
     REQUIRE(percentage->width() == Catch::Approx(100.0F));
@@ -2129,7 +2310,10 @@ TEST_CASE("Percentage sizing is distinct from flex remaining-space distribution"
     REQUIRE(expanded->width() == Catch::Approx(90.0F));
 }
 
-TEST_CASE("Row distributes remaining width across Expanded children", "[widget][layout][expanded]") {
+TEST_CASE(
+    "Row distributes remaining width across Expanded children",
+    "[widget][layout][expanded]"
+) {
     auto fixed = std::make_shared<scene::NanControl>(foundation::NanSize(30.0F, 10.0F));
     auto first_child = std::make_shared<scene::NanControl>(foundation::NanSize(5.0F, 10.0F));
     auto second_child = std::make_shared<scene::NanControl>(foundation::NanSize(5.0F, 10.0F));
@@ -2141,7 +2325,9 @@ TEST_CASE("Row distributes remaining width across Expanded children", "[widget][
     auto row = widget::Row::create();
     row->set_gap(5.0F).add(fixed).add(first).add(second);
 
-    (void)row->measure_layout(foundation::NanLayoutConstraints::tight(foundation::NanSize(155.0F, 20.0F)));
+    (void)row->measure_layout(
+        foundation::NanLayoutConstraints::tight(foundation::NanSize(155.0F, 20.0F))
+    );
     row->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 155.0F, 20.0F));
 
     REQUIRE(fixed->width() == Catch::Approx(30.0F));
@@ -2153,7 +2339,10 @@ TEST_CASE("Row distributes remaining width across Expanded children", "[widget][
     REQUIRE(second_child->width() == Catch::Approx(second->width()));
 }
 
-TEST_CASE("Column distributes remaining height across Expanded children", "[widget][layout][expanded]") {
+TEST_CASE(
+    "Column distributes remaining height across Expanded children",
+    "[widget][layout][expanded]"
+) {
     auto fixed = std::make_shared<scene::NanControl>(foundation::NanSize(20.0F, 12.0F));
     auto expanded_child = std::make_shared<scene::NanControl>(foundation::NanSize(20.0F, 5.0F));
     auto expanded = widget::Expanded::create();
@@ -2162,7 +2351,9 @@ TEST_CASE("Column distributes remaining height across Expanded children", "[widg
     auto column = widget::Column::create();
     column->set_gap(8.0F).add(fixed).add(expanded);
 
-    (void)column->measure_layout(foundation::NanLayoutConstraints::tight(foundation::NanSize(80.0F, 100.0F)));
+    (void)column->measure_layout(
+        foundation::NanLayoutConstraints::tight(foundation::NanSize(80.0F, 100.0F))
+    );
     column->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 80.0F, 100.0F));
 
     REQUIRE(fixed->height() == Catch::Approx(12.0F));
@@ -2183,7 +2374,9 @@ TEST_CASE("Flex supports both axes and Expanded children", "[widget][layout][fle
         .add(fixed)
         .add(expanded);
 
-    (void)flex->measure_layout(foundation::NanLayoutConstraints::tight(foundation::NanSize(120.0F, 30.0F)));
+    (void)flex->measure_layout(
+        foundation::NanLayoutConstraints::tight(foundation::NanSize(120.0F, 30.0F))
+    );
     flex->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 120.0F, 30.0F));
 
     REQUIRE(fixed->position().get_x() == Catch::Approx(0.0F));
@@ -2193,7 +2386,8 @@ TEST_CASE("Flex supports both axes and Expanded children", "[widget][layout][fle
     REQUIRE(expanded_child->width() == Catch::Approx(90.0F));
 
     auto vertical_fixed = std::make_shared<scene::NanControl>(foundation::NanSize(24.0F, 10.0F));
-    auto vertical_expanded_child = std::make_shared<scene::NanControl>(foundation::NanSize(4.0F, 4.0F));
+    auto vertical_expanded_child =
+        std::make_shared<scene::NanControl>(foundation::NanSize(4.0F, 4.0F));
     auto vertical_expanded = widget::Expanded::create(2);
     vertical_expanded->set_child(vertical_expanded_child);
 
@@ -2203,7 +2397,9 @@ TEST_CASE("Flex supports both axes and Expanded children", "[widget][layout][fle
         .add(vertical_fixed)
         .add(vertical_expanded);
 
-    (void)vertical->measure_layout(foundation::NanLayoutConstraints::tight(foundation::NanSize(80.0F, 140.0F)));
+    (void)vertical->measure_layout(
+        foundation::NanLayoutConstraints::tight(foundation::NanSize(80.0F, 140.0F))
+    );
     vertical->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 80.0F, 140.0F));
 
     REQUIRE(vertical_fixed->position().get_y() == Catch::Approx(0.0F));
@@ -2225,7 +2421,9 @@ TEST_CASE("Flex distributes main-axis space between fixed children", "[widget][l
         .add(b)
         .add(c);
 
-    (void)flex->measure_layout(foundation::NanLayoutConstraints::tight(foundation::NanSize(120.0F, 20.0F)));
+    (void)flex->measure_layout(
+        foundation::NanLayoutConstraints::tight(foundation::NanSize(120.0F, 20.0F))
+    );
     flex->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 120.0F, 20.0F));
 
     REQUIRE(a->position().get_x() == Catch::Approx(0.0F));
@@ -2236,18 +2434,22 @@ TEST_CASE("Flex distributes main-axis space between fixed children", "[widget][l
 TEST_CASE("FlexItem grows and redistributes at max limits", "[widget][layout][flex]") {
     auto a_child = std::make_shared<scene::NanControl>(foundation::NanSize(10.0F, 10.0F));
     auto b_child = std::make_shared<scene::NanControl>(foundation::NanSize(10.0F, 10.0F));
-    auto a = widget::FlexItem::create(scene::LayoutFlexPolicy {
-        .basis = 20.0F,
-        .grow = 1.0F,
-        .limits = {.max_width = 30.0F},
-    });
+    auto a = widget::FlexItem::create(
+        scene::LayoutFlexPolicy {
+            .basis = 20.0F,
+            .grow = 1.0F,
+            .limits = {.max_width = 30.0F},
+        }
+    );
     auto b = widget::FlexItem::create(scene::LayoutFlexPolicy {.basis = 20.0F, .grow = 1.0F});
     a->set_child(a_child);
     b->set_child(b_child);
     auto row = widget::Row::create();
     row->add(a).add(b);
 
-    (void)row->measure_layout(foundation::NanLayoutConstraints::tight(foundation::NanSize(90.0F, 20.0F)));
+    (void)row->measure_layout(
+        foundation::NanLayoutConstraints::tight(foundation::NanSize(90.0F, 20.0F))
+    );
     row->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 90.0F, 20.0F));
 
     REQUIRE(a->width() == Catch::Approx(30.0F));
@@ -2257,22 +2459,28 @@ TEST_CASE("FlexItem grows and redistributes at max limits", "[widget][layout][fl
 }
 
 TEST_CASE("FlexItem shrinks by scaled basis and respects minima", "[widget][layout][flex]") {
-    auto a = widget::FlexItem::create(scene::LayoutFlexPolicy {
-        .basis = 100.0F,
-        .shrink = 1.0F,
-        .limits = {.min_width = 70.0F},
-    });
-    auto b = widget::FlexItem::create(scene::LayoutFlexPolicy {
-        .basis = 100.0F,
-        .shrink = 1.0F,
-        .limits = {.min_width = 20.0F},
-    });
+    auto a = widget::FlexItem::create(
+        scene::LayoutFlexPolicy {
+            .basis = 100.0F,
+            .shrink = 1.0F,
+            .limits = {.min_width = 70.0F},
+        }
+    );
+    auto b = widget::FlexItem::create(
+        scene::LayoutFlexPolicy {
+            .basis = 100.0F,
+            .shrink = 1.0F,
+            .limits = {.min_width = 20.0F},
+        }
+    );
     a->set_child(std::make_shared<scene::NanControl>(foundation::NanSize(100.0F, 10.0F)));
     b->set_child(std::make_shared<scene::NanControl>(foundation::NanSize(100.0F, 10.0F)));
     auto row = widget::Row::create();
     row->add(a).add(b);
 
-    (void)row->measure_layout(foundation::NanLayoutConstraints::tight(foundation::NanSize(120.0F, 20.0F)));
+    (void)row->measure_layout(
+        foundation::NanLayoutConstraints::tight(foundation::NanSize(120.0F, 20.0F))
+    );
     row->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 120.0F, 20.0F));
 
     REQUIRE(a->width() == Catch::Approx(70.0F));
@@ -2288,7 +2496,9 @@ TEST_CASE("Wrap flows horizontal children into multiple runs", "[widget][layout]
     auto wrap = widget::Wrap::create();
     wrap->set_gap(5.0F).set_run_gap(7.0F).add(a).add(b).add(c).add(d);
 
-    (void)wrap->measure_layout(foundation::NanLayoutConstraints::tight(foundation::NanSize(80.0F, 64.0F)));
+    (void)wrap->measure_layout(
+        foundation::NanLayoutConstraints::tight(foundation::NanSize(80.0F, 64.0F))
+    );
     wrap->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 80.0F, 64.0F));
 
     REQUIRE(a->position().get_x() == Catch::Approx(0.0F));
@@ -2316,7 +2526,9 @@ TEST_CASE("Wrap distributes space independently inside each run", "[widget][layo
         .add(c)
         .add(d);
 
-    (void)wrap->measure_layout(foundation::NanLayoutConstraints::tight(foundation::NanSize(80.0F, 64.0F)));
+    (void)wrap->measure_layout(
+        foundation::NanLayoutConstraints::tight(foundation::NanSize(80.0F, 64.0F))
+    );
     wrap->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 80.0F, 64.0F));
 
     REQUIRE(a->position().get_x() == Catch::Approx(0.0F));
@@ -2331,12 +2543,11 @@ TEST_CASE("Wrap distributes spare cross-axis space between runs", "[widget][layo
     auto b = std::make_shared<scene::NanControl>(foundation::NanSize(40.0F, 20.0F));
 
     auto wrap = widget::Wrap::create();
-    wrap->set_run_gap(5.0F)
-        .set_run_alignment(widget::LayoutAlignment::space_between)
-        .add(a)
-        .add(b);
+    wrap->set_run_gap(5.0F).set_run_alignment(widget::LayoutAlignment::space_between).add(a).add(b);
 
-    (void)wrap->measure_layout(foundation::NanLayoutConstraints::tight(foundation::NanSize(40.0F, 80.0F)));
+    (void)wrap->measure_layout(
+        foundation::NanLayoutConstraints::tight(foundation::NanSize(40.0F, 80.0F))
+    );
     wrap->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 40.0F, 80.0F));
 
     REQUIRE(a->position().get_y() == Catch::Approx(0.0F));
@@ -2352,7 +2563,9 @@ TEST_CASE("Wrap stretches runs and honors child cross alignment", "[widget][layo
         .add(a, widget::LayoutAlignment::end)
         .add(b, widget::LayoutAlignment::stretch);
 
-    (void)wrap->measure_layout(foundation::NanLayoutConstraints::tight(foundation::NanSize(40.0F, 80.0F)));
+    (void)wrap->measure_layout(
+        foundation::NanLayoutConstraints::tight(foundation::NanSize(40.0F, 80.0F))
+    );
     wrap->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 40.0F, 80.0F));
 
     REQUIRE(a->position().get_y() == Catch::Approx(22.5F));
@@ -2365,7 +2578,9 @@ TEST_CASE("ScrollView clamps offsets and translates content", "[widget][scroll]"
     auto content = std::make_shared<scene::NanControl>(foundation::NanSize(50.0F, 200.0F));
     auto scroll = widget::ScrollView::create(widget::ScrollAxis::vertical);
     scroll->set_child(content);
-    (void)scroll->measure_layout(foundation::NanLayoutConstraints::tight(foundation::NanSize(100.0F, 80.0F)));
+    (void)scroll->measure_layout(
+        foundation::NanLayoutConstraints::tight(foundation::NanSize(100.0F, 80.0F))
+    );
     scroll->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 100.0F, 80.0F));
 
     REQUIRE(scroll->overflow() == scene::ControlOverflow::clip);
@@ -2389,9 +2604,7 @@ TEST_CASE("focus and scroll intents wait for mounting and layout", "[widget][int
     }
 
     SECTION("scroll to end") {
-        auto content = std::make_shared<scene::NanControl>(
-            foundation::NanSize(100.0F, 240.0F)
-        );
+        auto content = std::make_shared<scene::NanControl>(foundation::NanSize(100.0F, 240.0F));
         auto scroll = widget::ScrollView::create();
         scroll->set_child(content);
         scroll->request_scroll_to_end();
@@ -2435,11 +2648,14 @@ TEST_CASE("ScrollView consumes wheel only when offset changes", "[widget][scroll
     auto content = std::make_shared<scene::NanControl>(foundation::NanSize(100.0F, 200.0F));
     auto scroll = widget::ScrollView::create();
     scroll->set_child(content).set_wheel_step(25.0F);
-    (void)scroll->measure_layout(foundation::NanLayoutConstraints::tight(foundation::NanSize(100.0F, 80.0F)));
+    (void)scroll->measure_layout(
+        foundation::NanLayoutConstraints::tight(foundation::NanSize(100.0F, 80.0F))
+    );
     scroll->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 100.0F, 80.0F));
 
     scene::MouseWheelEvent down(
-        foundation::NanPoint(10.0F, 10.0F), foundation::NanPoint(0.0F, -1.0F)
+        foundation::NanPoint(10.0F, 10.0F),
+        foundation::NanPoint(0.0F, -1.0F)
     );
     REQUIRE(scroll->on_input(down));
     REQUIRE(down.is_accepted());
@@ -2447,7 +2663,8 @@ TEST_CASE("ScrollView consumes wheel only when offset changes", "[widget][scroll
 
     scroll->set_scroll_offset(scroll->maximum_scroll_offset());
     scene::MouseWheelEvent at_end(
-        foundation::NanPoint(10.0F, 10.0F), foundation::NanPoint(0.0F, -1.0F)
+        foundation::NanPoint(10.0F, 10.0F),
+        foundation::NanPoint(0.0F, -1.0F)
     );
     REQUIRE_FALSE(scroll->on_input(at_end));
     REQUIRE_FALSE(at_end.is_accepted());
@@ -2461,7 +2678,9 @@ TEST_CASE("Flow wraps again when assigned bounds shrink", "[widget][layout][wrap
     auto flow = widget::Flow::create();
     flow->set_gap(4.0F).set_run_gap(6.0F).add(a).add(b).add(c);
 
-    (void)flow->measure_layout(foundation::NanLayoutConstraints::tight(foundation::NanSize(132.0F, 40.0F)));
+    (void)flow->measure_layout(
+        foundation::NanLayoutConstraints::tight(foundation::NanSize(132.0F, 40.0F))
+    );
     flow->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 132.0F, 40.0F));
     REQUIRE(c->position().get_y() == Catch::Approx(0.0F));
 
@@ -2487,7 +2706,9 @@ TEST_CASE("Wrap supports vertical axis and run alignment", "[widget][layout][wra
         .add(b)
         .add(c);
 
-    (void)wrap->measure_layout(foundation::NanLayoutConstraints::tight(foundation::NanSize(100.0F, 60.0F)));
+    (void)wrap->measure_layout(
+        foundation::NanLayoutConstraints::tight(foundation::NanSize(100.0F, 60.0F))
+    );
     wrap->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 100.0F, 60.0F));
 
     REQUIRE(a->position().get_x() == Catch::Approx(31.0F));
@@ -2499,8 +2720,8 @@ TEST_CASE("Wrap supports vertical axis and run alignment", "[widget][layout][wra
 }
 
 TEST_CASE("text align offset is a pure function of box slack", "[widget][text][align]") {
-    using theme::TextAlign;
     using text::text_align_offset;
+    using theme::TextAlign;
 
     REQUIRE(text_align_offset(TextAlign::start, 100.0F, 40.0F) == Catch::Approx(0.0F));
     REQUIRE(text_align_offset(TextAlign::center, 100.0F, 40.0F) == Catch::Approx(30.0F));
@@ -2537,11 +2758,13 @@ TEST_CASE("Text draws each line at its aligned origin", "[widget][text][align][r
     RecordingDevice dev;
     render::DrawContext context(dev);
     widget::primitives::Text text("abcdef", backend);
-    text.set_style(text::TextStyle {
-        .font_size = 12.0F,
-        .overflow = text::TextOverflow::clip,
-        .max_lines = 1,
-    });
+    text.set_style(
+        text::TextStyle {
+            .font_size = 12.0F,
+            .overflow = text::TextOverflow::clip,
+            .max_lines = 1,
+        }
+    );
     // 固定后端给出 42x18 的一行。
     const auto measured = text.measure_layout(foundation::NanLayoutConstraints::loose());
     REQUIRE(measured.get_width() == Catch::Approx(42.0F));
@@ -2564,7 +2787,10 @@ TEST_CASE("Text draws each line at its aligned origin", "[widget][text][align][r
     REQUIRE(dev.texts[2].position.get_x() == Catch::Approx(0.0F));
 
     // 对齐只影响绘制：测量结果不变（否则布局会跟着抖）。
-    REQUIRE(text.measure_layout(foundation::NanLayoutConstraints::loose()).get_width() == Catch::Approx(42.0F));
+    REQUIRE(
+        text.measure_layout(foundation::NanLayoutConstraints::loose()).get_width()
+        == Catch::Approx(42.0F)
+    );
     REQUIRE(text.align() == theme::TextAlign::start);
 
     // draw_at() 没有盒子，因此不对齐 —— 用文本自身的测量尺寸当盒子。
@@ -2573,7 +2799,10 @@ TEST_CASE("Text draws each line at its aligned origin", "[widget][text][align][r
     REQUIRE(dev.texts[3].position.get_x() == Catch::Approx(5.0F));
 }
 
-TEST_CASE("a stretched Text honors its assigned box for alignment", "[widget][text][align][layout]") {
+TEST_CASE(
+    "a stretched Text honors its assigned box for alignment",
+    "[widget][text][align][layout]"
+) {
     // 布局中的 Text：on_draw 用被指派的矩形，所以被拉伸到容器宽度后对齐自动生效，
     // 调用方不需要再算居中偏移。
     FixedTextLayoutBackend backend;
@@ -2587,7 +2816,8 @@ TEST_CASE("a stretched Text honors its assigned box for alignment", "[widget][te
     text.layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 200.0F, 18.0F));
     REQUIRE(text.width() == Catch::Approx(200.0F));
 
-    const auto world = render::world_bounds_from_local(context.world_transform(), text.local_rect());
+    const auto world =
+        render::world_bounds_from_local(context.world_transform(), text.local_rect());
     text.draw_in(context, world);
     REQUIRE(dev.texts.size() == 1);
     REQUIRE(dev.texts[0].position.get_x() == Catch::Approx((200.0F - 42.0F) * 0.5F));

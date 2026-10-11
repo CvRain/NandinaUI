@@ -1,6 +1,6 @@
-#include <nandina/widget/internal/dismiss_layer.hpp>
 #include <nandina/scene/input_event.hpp>
 #include <nandina/scene/scene_tree.hpp>
+#include <nandina/widget/internal/dismiss_layer.hpp>
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -56,7 +56,10 @@ TEST_CASE("dismiss layer ignores non-dismiss input", "[overlay][dismiss]") {
     REQUIRE(calls == 0);
 }
 
-TEST_CASE("dismiss layer distinguishes content clicks and receives bubbled escape", "[overlay][dismiss]") {
+TEST_CASE(
+    "dismiss layer distinguishes content clicks and receives bubbled escape",
+    "[overlay][dismiss]"
+) {
     int calls = 0;
     widget::internal::DismissReason reason {};
     auto layer = std::make_shared<widget::internal::DismissLayer>([&](const auto value) {
@@ -70,23 +73,29 @@ TEST_CASE("dismiss layer distinguishes content clicks and receives bubbled escap
     tree.set_root(layer);
     (void)tree.layout_root(foundation::NanSize(100.0F, 80.0F));
 
-    tree.dispatch_mouse_button(scene::MouseButtonEvent(
-        scene::MouseButtonEvent::Button::left,
-        scene::MouseButtonEvent::Action::press,
-        foundation::NanPoint(30.0F, 20.0F)
-    ));
+    tree.dispatch_mouse_button(
+        scene::MouseButtonEvent(
+            scene::MouseButtonEvent::Button::left,
+            scene::MouseButtonEvent::Action::press,
+            foundation::NanPoint(30.0F, 20.0F)
+        )
+    );
     REQUIRE(calls == 0);
 
-    tree.dispatch_mouse_button(scene::MouseButtonEvent(
-        scene::MouseButtonEvent::Button::left,
-        scene::MouseButtonEvent::Action::press,
-        foundation::NanPoint(90.0F, 70.0F)
-    ));
+    tree.dispatch_mouse_button(
+        scene::MouseButtonEvent(
+            scene::MouseButtonEvent::Button::left,
+            scene::MouseButtonEvent::Action::press,
+            foundation::NanPoint(90.0F, 70.0F)
+        )
+    );
     REQUIRE(calls == 1);
     REQUIRE(reason == widget::internal::DismissReason::pointer);
 
     class Focusable final: public scene::NanControl {
-        [[nodiscard]] auto is_focusable() const -> bool override { return true; }
+        [[nodiscard]] auto is_focusable() const -> bool override {
+            return true;
+        }
     };
     auto focusable = std::make_shared<Focusable>();
     content->add_child(focusable);

@@ -16,7 +16,8 @@
 namespace nandina::widget
 {
     Card::Card(theme::NanTheme theme) {
-        system_ = std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ =
+            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
         theme_view_ = theme;
         relayout();
     }
@@ -38,7 +39,8 @@ namespace nandina::widget
     }
 
     void Card::set_theme(theme::NanTheme theme) {
-        system_ = std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ =
+            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
         system_explicit_ = true;
         theme_view_ = theme;
         mark_layout_dirty();
@@ -97,22 +99,20 @@ namespace nandina::widget
         const float vertical = style.metrics.padding_y * 2.0F;
         auto child = child_.lock();
         if (!child) {
-            return constraints.constrain(foundation::NanSize(
-                horizontal,
-                std::max(style.metrics.min_height, vertical)
-            ));
+            return constraints.constrain(
+                foundation::NanSize(horizontal, std::max(style.metrics.min_height, vertical))
+            );
         }
 
-        const auto measured = child->measure_layout(
-            constraints.deflated(foundation::NanInsets::symmetric(
-                style.metrics.padding_x,
-                style.metrics.padding_y
-            ))
-        );
-        return constraints.constrain(foundation::NanSize(
-            measured.get_width() + horizontal,
-            std::max(style.metrics.min_height, measured.get_height() + vertical)
+        const auto measured = child->measure_layout(constraints.deflated(
+            foundation::NanInsets::symmetric(style.metrics.padding_x, style.metrics.padding_y)
         ));
+        return constraints.constrain(
+            foundation::NanSize(
+                measured.get_width() + horizontal,
+                std::max(style.metrics.min_height, measured.get_height() + vertical)
+            )
+        );
     }
 
     auto Card::on_layout() -> void {
@@ -122,10 +122,8 @@ namespace nandina::widget
         }
 
         const auto style = resolved_style();
-        const float content_width =
-            std::max(0.0F, width() - style.metrics.padding_x * 2.0F);
-        const float content_height =
-            std::max(0.0F, height() - style.metrics.padding_y * 2.0F);
+        const float content_width = std::max(0.0F, width() - style.metrics.padding_x * 2.0F);
+        const float content_height = std::max(0.0F, height() - style.metrics.padding_y * 2.0F);
         const auto child_size = child->measured_size();
         child->layout_to(
             foundation::NanRect::from_xywh(

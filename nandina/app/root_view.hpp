@@ -17,8 +17,7 @@
 namespace nandina::app
 {
     template<typename Factory>
-    concept RootViewFactory =
-        std::invocable<Factory&, widget::BuildContext&>;
+    concept RootViewFactory = std::invocable<Factory&, widget::BuildContext&>;
 
     namespace detail
     {
@@ -33,8 +32,7 @@ namespace nandina::app
         public:
             explicit RootViewPage(RootViewParams params): Page(std::move(params)) {}
 
-            [[nodiscard]] auto build(PageContext& context)
-                -> widget::View override {
+            [[nodiscard]] auto build(PageContext& context) -> widget::View override {
                 if (!params().factory) {
                     throw std::invalid_argument("RootViewPage: root factory is empty");
                 }

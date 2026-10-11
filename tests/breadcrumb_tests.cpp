@@ -29,19 +29,14 @@ TEST_CASE("breadcrumb resolves link, current and separator tokens", "[breadcrumb
 
     REQUIRE(style.container.fill.alpha() == Catch::Approx(0.0F));
     REQUIRE(
-        style.link.color.oklch().light
-        == Catch::Approx(design.light.muted_foreground.oklch().light)
+        style.link.color.oklch().light == Catch::Approx(design.light.muted_foreground.oklch().light)
+    );
+    REQUIRE(style.link_hover.oklch().light == Catch::Approx(design.light.foreground.oklch().light));
+    REQUIRE(
+        style.current.color.oklch().light == Catch::Approx(design.light.foreground.oklch().light)
     );
     REQUIRE(
-        style.link_hover.oklch().light == Catch::Approx(design.light.foreground.oklch().light)
-    );
-    REQUIRE(
-        style.current.color.oklch().light
-        == Catch::Approx(design.light.foreground.oklch().light)
-    );
-    REQUIRE(
-        style.separator.oklch().light
-        == Catch::Approx(design.light.muted_foreground.oklch().light)
+        style.separator.oklch().light == Catch::Approx(design.light.muted_foreground.oklch().light)
     );
     REQUIRE(style.link.font_size == Catch::Approx(design.tokens.typography.label_sm));
     // 链接条目始终可聚焦，焦点环默认开启（不能靠主题作者补）。
@@ -111,7 +106,10 @@ TEST_CASE("breadcrumb measures its trail and lays out link children", "[breadcru
     REQUIRE(second_link->position().get_x() > first_link->position().get_x());
 }
 
-TEST_CASE("breadcrumb links are Tab reachable and activate with Enter and Space", "[breadcrumb][keyboard]") {
+TEST_CASE(
+    "breadcrumb links are Tab reachable and activate with Enter and Space",
+    "[breadcrumb][keyboard]"
+) {
     int clicks = 0;
     auto crumb = widget::Breadcrumb::create();
     crumb->add_item("Home", [&clicks] { ++clicks; });
@@ -153,20 +151,27 @@ TEST_CASE("breadcrumb links activate on pointer click", "[breadcrumb][pointer]")
         link->position().get_y() + link->height() * 0.5F
     );
     tree.dispatch_mouse_move(scene::MouseMoveEvent(center, foundation::NanPoint(0.0F, 0.0F)));
-    tree.dispatch_mouse_button(scene::MouseButtonEvent(
-        scene::MouseButtonEvent::Button::left,
-        scene::MouseButtonEvent::Action::press,
-        center
-    ));
-    tree.dispatch_mouse_button(scene::MouseButtonEvent(
-        scene::MouseButtonEvent::Button::left,
-        scene::MouseButtonEvent::Action::release,
-        center
-    ));
+    tree.dispatch_mouse_button(
+        scene::MouseButtonEvent(
+            scene::MouseButtonEvent::Button::left,
+            scene::MouseButtonEvent::Action::press,
+            center
+        )
+    );
+    tree.dispatch_mouse_button(
+        scene::MouseButtonEvent(
+            scene::MouseButtonEvent::Button::left,
+            scene::MouseButtonEvent::Action::release,
+            center
+        )
+    );
     REQUIRE(clicks == 1);
 }
 
-TEST_CASE("breadcrumb override patches fields and survives an appearance switch", "[breadcrumb][override]") {
+TEST_CASE(
+    "breadcrumb override patches fields and survives an appearance switch",
+    "[breadcrumb][override]"
+) {
     theme::ThemeManager themes;
     auto crumb = widget::Breadcrumb::create();
     crumb->add_item("Home", [] {});
@@ -176,11 +181,13 @@ TEST_CASE("breadcrumb override patches fields and survives an appearance switch"
     tree.set_root(crumb);
     REQUIRE(tree.layout_root(foundation::NanSize(320.0F, 48.0F)) >= 1);
 
-    crumb->set_override(theme::BreadcrumbRecipeRule {
-        .current_color = theme::ThemeColor::token(theme::ColorToken::foreground),
-        .separator_color = theme::ThemeColor::token(theme::ColorToken::error),
-        .metrics_gap = theme::ThemeScalar::literal(12.0F),
-    });
+    crumb->set_override(
+        theme::BreadcrumbRecipeRule {
+            .current_color = theme::ThemeColor::token(theme::ColorToken::foreground),
+            .separator_color = theme::ThemeColor::token(theme::ColorToken::error),
+            .metrics_gap = theme::ThemeScalar::literal(12.0F),
+        }
+    );
     const auto overridden = crumb->resolved_style();
     REQUIRE(overridden.metrics.gap == Catch::Approx(12.0F));
     REQUIRE(
@@ -198,7 +205,10 @@ TEST_CASE("breadcrumb override patches fields and survives an appearance switch"
     REQUIRE(crumb->resolved_style().metrics.gap == Catch::Approx(12.0F));
 }
 
-TEST_CASE("breadcrumb exposes the trail as generic and links as buttons", "[breadcrumb][semantics]") {
+TEST_CASE(
+    "breadcrumb exposes the trail as generic and links as buttons",
+    "[breadcrumb][semantics]"
+) {
     auto crumb = widget::Breadcrumb::create();
     crumb->add_item("Home", [] {});
     crumb->add_item("Library");

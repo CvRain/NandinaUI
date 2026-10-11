@@ -49,18 +49,12 @@ namespace
         void draw_rect(const foundation::NanRect& rect, const foundation::NanColor&) override {
             rects.push_back(rect);
         }
-        void draw_rect_outline(
-            const foundation::NanRect&,
-            float,
-            const foundation::NanColor&
-        ) override {
+        void
+        draw_rect_outline(const foundation::NanRect&, float, const foundation::NanColor&) override {
             ++outline_count;
         }
-        void draw_rounded_rect(
-            const foundation::NanRect&,
-            float,
-            const foundation::NanColor&
-        ) override {
+        void
+        draw_rounded_rect(const foundation::NanRect&, float, const foundation::NanColor&) override {
             ++rounded_count;
         }
         void draw_rounded_rect_outline(
@@ -78,11 +72,8 @@ namespace
             ++line_count;
             line_starts.push_back(start);
         }
-        void draw_circle(
-            const foundation::NanPoint&,
-            float,
-            const foundation::NanColor&
-        ) override {}
+        void draw_circle(const foundation::NanPoint&, float, const foundation::NanColor&) override {
+        }
         void draw_text(
             std::string_view text,
             const foundation::NanPoint& position,
@@ -214,7 +205,10 @@ TEST_CASE("text area wraps long lines to the available width", "[text-area][layo
     REQUIRE(reassembled == std::string(60, 'a'));
 }
 
-TEST_CASE("text area pointer click places the caret on the clicked line", "[text-area][input][pointer]") {
+TEST_CASE(
+    "text area pointer click places the caret on the clicked line",
+    "[text-area][input][pointer]"
+) {
     auto area = std::make_shared<widget::TextArea>("first\nsecond\nthird");
     scene::NanSceneTree tree;
     tree.set_root(area);
@@ -240,11 +234,13 @@ TEST_CASE("text area pointer click places the caret on the clicked line", "[text
         style.metrics.padding_y + line_top + line.size.get_height() * 0.5F
     );
 
-    tree.dispatch_mouse_button(scene::MouseButtonEvent(
-        scene::MouseButtonEvent::Button::left,
-        scene::MouseButtonEvent::Action::press,
-        click
-    ));
+    tree.dispatch_mouse_button(
+        scene::MouseButtonEvent(
+            scene::MouseButtonEvent::Button::left,
+            scene::MouseButtonEvent::Action::press,
+            click
+        )
+    );
     REQUIRE(area->editable_text().caret() == stop.source_offset);
     REQUIRE(stop.source_offset == line.text_offset + 3);
 
@@ -252,21 +248,25 @@ TEST_CASE("text area pointer click places the caret on the clicked line", "[text
     float third_top = line_top + line.size.get_height();
     const auto third = layout.lines[2];
     const auto third_stop = third.caret_stops[2];
-    tree.dispatch_mouse_button(scene::MouseButtonEvent(
-        scene::MouseButtonEvent::Button::left,
-        scene::MouseButtonEvent::Action::press,
-        foundation::NanPoint(
-            style.metrics.padding_x + third_stop.x,
-            style.metrics.padding_y + third_top + third.size.get_height() * 0.5F
+    tree.dispatch_mouse_button(
+        scene::MouseButtonEvent(
+            scene::MouseButtonEvent::Button::left,
+            scene::MouseButtonEvent::Action::press,
+            foundation::NanPoint(
+                style.metrics.padding_x + third_stop.x,
+                style.metrics.padding_y + third_top + third.size.get_height() * 0.5F
+            )
         )
-    ));
+    );
     REQUIRE(area->editable_text().caret() == third.text_offset + 2);
 
-    tree.dispatch_mouse_button(scene::MouseButtonEvent(
-        scene::MouseButtonEvent::Button::left,
-        scene::MouseButtonEvent::Action::release,
-        click
-    ));
+    tree.dispatch_mouse_button(
+        scene::MouseButtonEvent(
+            scene::MouseButtonEvent::Button::left,
+            scene::MouseButtonEvent::Action::release,
+            click
+        )
+    );
     REQUIRE(tree.pointer_capture() == nullptr);
 }
 
@@ -391,9 +391,7 @@ TEST_CASE("text area disabled drops focus and ignores input", "[text-area][state
     REQUIRE(area->disabled());
     REQUIRE_FALSE(area->is_focusable());
     REQUIRE(tree.focused_node() == nullptr);
-    REQUIRE(
-        theme::has_text_area_state(area->visual_state(), theme::TextAreaVisualState::disabled)
-    );
+    REQUIRE(theme::has_text_area_state(area->visual_state(), theme::TextAreaVisualState::disabled));
 
     tree.dispatch_text_input(scene::TextInputEvent("x"));
     tree.dispatch_key(scene::KeyEvent(widget::keys::enter, scene::KeyEvent::Action::press));
@@ -403,7 +401,10 @@ TEST_CASE("text area disabled drops focus and ignores input", "[text-area][state
     REQUIRE(area->is_focusable());
 }
 
-TEST_CASE("text area read-only keeps the value but still edits nothing", "[text-area][state][read-only]") {
+TEST_CASE(
+    "text area read-only keeps the value but still edits nothing",
+    "[text-area][state][read-only]"
+) {
     auto area = std::make_shared<widget::TextArea>("locked");
     scene::NanSceneTree tree;
     tree.set_root(area);
@@ -447,11 +448,13 @@ TEST_CASE("text area shows the placeholder only while empty", "[text-area][place
 TEST_CASE("text area recipe override survives a theme switch", "[text-area][theme][override]") {
     theme::ThemeManager themes;
     auto area = widget::TextArea::create();
-    area->set_override(theme::TextAreaRecipeRule {
-        .container_radius = theme::ThemeScalar::literal(24.0F),
-        .metrics_rows = theme::ThemeScalar::literal(6.0F),
-        .metrics_padding_y = theme::ThemeScalar::literal(14.0F),
-    });
+    area->set_override(
+        theme::TextAreaRecipeRule {
+            .container_radius = theme::ThemeScalar::literal(24.0F),
+            .metrics_rows = theme::ThemeScalar::literal(6.0F),
+            .metrics_padding_y = theme::ThemeScalar::literal(14.0F),
+        }
+    );
 
     scene::NanSceneTree tree;
     tree.set_theme_manager(themes);
@@ -538,7 +541,9 @@ TEST_CASE("text area exposes text field semantics and set_value action", "[text-
     const auto* read_only_node = tree.semantics_tree().find(area->semantics_id());
     REQUIRE(read_only_node != nullptr);
     REQUIRE(read_only_node->properties.state.read_only);
-    REQUIRE_FALSE(semantics::supports(read_only_node->properties.actions, semantics::Action::set_value));
+    REQUIRE_FALSE(
+        semantics::supports(read_only_node->properties.actions, semantics::Action::set_value)
+    );
     REQUIRE_FALSE(tree.perform_semantics_action(
         area->semantics_id(),
         {.action = semantics::Action::set_value, .value = "nope"}
@@ -546,7 +551,10 @@ TEST_CASE("text area exposes text field semantics and set_value action", "[text-
     REQUIRE(area->value() == "replaced");
 }
 
-TEST_CASE("text area builds through BuildContext and binds a string signal", "[text-area][authoring]") {
+TEST_CASE(
+    "text area builds through BuildContext and binds a string signal",
+    "[text-area][authoring]"
+) {
     reactive::Graph graph;
     reactive::ReactiveScope scope {graph};
     theme::ThemeManager themes;

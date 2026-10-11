@@ -84,9 +84,7 @@ namespace
             throw std::runtime_error("cannot create child process");
         }
         if (pid == 0) {
-            if (!working_directory.empty()
-                && ::chdir(working_directory.c_str()) != 0)
-            {
+            if (!working_directory.empty() && ::chdir(working_directory.c_str()) != 0) {
                 ::_exit(126);
             }
             if (capture) {
@@ -164,8 +162,7 @@ namespace
             return std::nullopt;
         }
         ++cursor;
-        if (cursor == value.size()
-            || std::isdigit(static_cast<unsigned char>(value[cursor])) == 0)
+        if (cursor == value.size() || std::isdigit(static_cast<unsigned char>(value[cursor])) == 0)
         {
             return std::nullopt;
         }
@@ -178,10 +175,8 @@ namespace
         return result;
     }
 
-    [[nodiscard]] auto version_at_least(
-        const ToolVersion actual,
-        const ToolVersion minimum
-    ) -> bool {
+    [[nodiscard]] auto version_at_least(const ToolVersion actual, const ToolVersion minimum)
+        -> bool {
         return actual.major > minimum.major
             || (actual.major == minimum.major && actual.minor >= minimum.minor);
     }
@@ -201,12 +196,16 @@ namespace
     }
 
     [[nodiscard]] auto valid_package_id(std::string_view value) -> bool {
-        if (value.empty() || value.find('/') != std::string_view::npos) { return false; }
+        if (value.empty() || value.find('/') != std::string_view::npos) {
+            return false;
+        }
         for (const char character: value) {
             const bool valid = (character >= 'a' && character <= 'z')
                 || (character >= 'A' && character <= 'Z') || (character >= '0' && character <= '9')
                 || character == '_' || character == '-' || character == '.';
-            if (!valid || character == ' ' || character == '\t') { return false; }
+            if (!valid || character == ' ' || character == '\t') {
+                return false;
+            }
         }
         return true;
     }
@@ -285,12 +284,11 @@ namespace
     }
 
     [[nodiscard]] auto resolve_project_root(std::string_view path) -> std::filesystem::path {
-        const auto requested = path.empty() ? std::filesystem::current_path()
-                                            : std::filesystem::path(path);
+        const auto requested =
+            path.empty() ? std::filesystem::current_path() : std::filesystem::path(path);
         std::error_code error;
-        auto root = std::filesystem::weakly_canonical(
-            std::filesystem::absolute(requested, error), error
-        );
+        auto root =
+            std::filesystem::weakly_canonical(std::filesystem::absolute(requested, error), error);
         if (error || !std::filesystem::is_directory(root)
             || !std::filesystem::is_regular_file(root / "meson.build"))
         {
@@ -301,12 +299,11 @@ namespace
         return root;
     }
 
-    [[nodiscard]] auto resolve_build_directory(
-        const std::filesystem::path& root,
-        std::string_view path
-    ) -> std::filesystem::path {
-        const auto requested = path.empty() ? std::filesystem::path("build")
-                                            : std::filesystem::path(path);
+    [[nodiscard]] auto
+    resolve_build_directory(const std::filesystem::path& root, std::string_view path)
+        -> std::filesystem::path {
+        const auto requested =
+            path.empty() ? std::filesystem::path("build") : std::filesystem::path(path);
         return requested.is_absolute() ? requested.lexically_normal()
                                        : (root / requested).lexically_normal();
     }
@@ -331,19 +328,15 @@ namespace
         const auto build = resolve_build_directory(root, build_path);
         if (!std::filesystem::is_regular_file(build / "meson-private" / "coredata.dat")) {
             std::cout << "nandina build: configuring " << build << '\n';
-            const auto setup = run_process(
-                {"meson", "setup", build.string()}, root, false
-            );
+            const auto setup = run_process({"meson", "setup", build.string()}, root, false);
             if (setup.exit_code != 0) {
-                std::cerr << "nandina build: meson setup failed with exit code "
-                          << setup.exit_code << '\n';
+                std::cerr << "nandina build: meson setup failed with exit code " << setup.exit_code
+                          << '\n';
                 return setup.exit_code;
             }
         }
         std::cout << "nandina build: compiling " << build << '\n';
-        const auto compile = run_process(
-            {"meson", "compile", "-C", build.string()}, root, false
-        );
+        const auto compile = run_process({"meson", "compile", "-C", build.string()}, root, false);
         if (compile.exit_code != 0) {
             std::cerr << "nandina build: compile failed with exit code " << compile.exit_code
                       << '\n';
@@ -367,7 +360,9 @@ namespace
         }
 
         const auto executable = build / project_target(root);
-        if (!std::filesystem::is_regular_file(executable) || ::access(executable.c_str(), X_OK) != 0) {
+        if (!std::filesystem::is_regular_file(executable)
+            || ::access(executable.c_str(), X_OK) != 0)
+        {
             std::cerr << "nandina run: executable is missing or not runnable: " << executable
                       << '\n';
             return 2;
@@ -421,10 +416,12 @@ namespace
             family = "Clang";
             minimum = {21, 0};
         }
-        else if (result.output.find("GCC") != std::string::npos
-                 || result.output.find("gcc") != std::string::npos
-                 || result.output.find("g++") != std::string::npos
-                 || result.output.find("Free Software Foundation") != std::string::npos)
+        else if (
+            result.output.find("GCC") != std::string::npos
+            || result.output.find("gcc") != std::string::npos
+            || result.output.find("g++") != std::string::npos
+            || result.output.find("Free Software Foundation") != std::string::npos
+        )
         {
             family = "GCC";
             minimum = {16, 0};
@@ -449,9 +446,8 @@ namespace
     auto check_cpp26() -> bool {
         std::error_code error;
         const auto root = std::filesystem::temp_directory_path(error)
-            / ("nandina-doctor-" + std::to_string(
-                   std::chrono::steady_clock::now().time_since_epoch().count()
-               ));
+            / ("nandina-doctor-"
+               + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
         if (error || !std::filesystem::create_directories(root, error) || error) {
             std::cerr << "doctor: cannot create C++26 probe directory\n";
             return false;
@@ -471,7 +467,9 @@ namespace
                 "}\n"
             );
             const auto result = run_process(
-                {"c++", "-std=c++26", source.string(), "-o", binary.string()}, root, true
+                {"c++", "-std=c++26", source.string(), "-o", binary.string()},
+                root,
+                true
             );
             (void)std::filesystem::remove_all(root, error);
             if (result.exit_code != 0) {
@@ -511,8 +509,8 @@ namespace
             if (!std::filesystem::exists(dependency_root)
                 || std::filesystem::is_empty(dependency_root))
             {
-                std::cerr << "doctor: Nandina submodule missing or empty: "
-                          << dependency_root << '\n';
+                std::cerr << "doctor: Nandina submodule missing or empty: " << dependency_root
+                          << '\n';
                 ok = false;
             }
         }
@@ -574,8 +572,9 @@ namespace
 
         std::error_code error;
         const auto candidate = project_path.empty() ? std::filesystem::current_path()
-                                                     : std::filesystem::path(project_path);
-        if (project_required || std::filesystem::is_regular_file(candidate / "meson.build", error)) {
+                                                    : std::filesystem::path(project_path);
+        if (project_required || std::filesystem::is_regular_file(candidate / "meson.build", error))
+        {
             try {
                 ok = check_project(resolve_project_root(candidate.string())) && ok;
             }
@@ -596,9 +595,9 @@ namespace
     }
 
     [[nodiscard]] auto resolve_nandina_source(std::string_view source) -> std::filesystem::path {
-        const std::filesystem::path requested =
-            source.empty() ? std::filesystem::path(NANDINA_SOURCE_ROOT)
-                           : std::filesystem::path(source);
+        const std::filesystem::path requested = source.empty()
+            ? std::filesystem::path(NANDINA_SOURCE_ROOT)
+            : std::filesystem::path(source);
         std::error_code error;
         auto absolute = std::filesystem::absolute(requested, error);
         if (error) {
@@ -625,17 +624,16 @@ namespace
             / ("." + root.filename().string() + ".nandina-tmp-" + std::to_string(stamp));
     }
 
-    auto new_project(
-        std::string_view path,
-        std::string_view package_id,
-        std::string_view nandina_source
-    ) -> int {
+    auto
+    new_project(std::string_view path, std::string_view package_id, std::string_view nandina_source)
+        -> int {
         if (path.empty()) {
             std::cerr << "nandina new: path is required\n";
             return 2;
         }
         std::error_code error;
-        auto root = std::filesystem::absolute(std::filesystem::path(path), error).lexically_normal();
+        auto root =
+            std::filesystem::absolute(std::filesystem::path(path), error).lexically_normal();
         if (!error && root.filename().empty() && root.has_parent_path()) {
             root = root.parent_path();
         }
@@ -648,8 +646,8 @@ namespace
             return 2;
         }
         const auto name = sanitize_name(root.filename().string());
-        const auto resolved_package = package_id.empty() ? "org.example." + name
-                                                          : std::string(package_id);
+        const auto resolved_package =
+            package_id.empty() ? "org.example." + name : std::string(package_id);
         if (!valid_package_id(resolved_package)) {
             std::cerr << "nandina new: invalid package id: " << resolved_package << '\n';
             return 2;
@@ -675,17 +673,23 @@ namespace
             }
             write_file(staging / "meson.build", template_meson_build(name));
             write_file(staging / "src" / "main.cpp", template_main_cpp(resolved_package, name));
-            write_file(staging / "resources" / "resources.toml",
-                       "package = \"" + resolved_package + "\"\n");
+            write_file(
+                staging / "resources" / "resources.toml",
+                "package = \"" + resolved_package + "\"\n"
+            );
             write_file(staging / "resources" / "assets" / ".gitkeep", "");
             std::filesystem::create_directories(staging / ".nandina", error);
             if (error) {
-                throw std::runtime_error("cannot create CLI metadata directory: " + error.message());
+                throw std::runtime_error(
+                    "cannot create CLI metadata directory: " + error.message()
+                );
             }
             write_file(staging / ".nandina" / "target", name + "\n");
             write_file(staging / ".gitignore", "build/\nsubprojects/nandina\n");
             std::filesystem::create_directory_symlink(
-                source, staging / "subprojects" / "nandina", error
+                source,
+                staging / "subprojects" / "nandina",
+                error
             );
             if (error) {
                 throw std::runtime_error("cannot link Nandina source: " + error.message());
@@ -728,16 +732,16 @@ namespace
         std::vector<std::string> forwarded;
     };
 
-    [[nodiscard]] auto parse_project_options(
-        const std::vector<std::string>& args,
-        const bool allow_run_options
-    ) -> ProjectCommandOptions {
+    [[nodiscard]] auto
+    parse_project_options(const std::vector<std::string>& args, const bool allow_run_options)
+        -> ProjectCommandOptions {
         ProjectCommandOptions result;
         bool project_seen = false;
         for (std::size_t index = 1; index < args.size(); ++index) {
             if (allow_run_options && args[index] == "--") {
                 result.forwarded.insert(
-                    result.forwarded.end(), args.begin() + static_cast<std::ptrdiff_t>(index + 1),
+                    result.forwarded.end(),
+                    args.begin() + static_cast<std::ptrdiff_t>(index + 1),
                     args.end()
                 );
                 break;
@@ -815,8 +819,10 @@ auto main(int argc, char** argv) -> int {
             if (args.size() > 2) {
                 throw std::invalid_argument("doctor accepts at most one project path");
             }
-            return doctor(args.size() == 2 ? std::string_view(args[1]) : std::string_view {},
-                          args.size() == 2);
+            return doctor(
+                args.size() == 2 ? std::string_view(args[1]) : std::string_view {},
+                args.size() == 2
+            );
         }
     }
     catch (const std::exception& exception) {

@@ -662,7 +662,8 @@ namespace nandina::widget
         // the anchor changes every frame, and a rebuild would re-create every option
         // text object each time. Only opening or a content change recreates the popup.
         if (auto popup = portal_popup_.lock(); popup != nullptr && portal_handle_ != nullptr) {
-            const auto popup_size = popup->measure_layout(foundation::NanLayoutConstraints::loose());
+            const auto popup_size =
+                popup->measure_layout(foundation::NanLayoutConstraints::loose());
             if (!popup_size.is_valid()) {
                 return;
             }
@@ -750,7 +751,8 @@ namespace nandina::widget
         portal_viewport_ = foundation::NanSize {};
     }
 
-    auto Select::on_measure(const foundation::NanLayoutConstraints constraints) -> foundation::NanSize {
+    auto Select::on_measure(const foundation::NanLayoutConstraints constraints)
+        -> foundation::NanSize {
         const auto style = resolved_style();
         apply_text_styles();
         float max_width = style.metrics.preferred_width;

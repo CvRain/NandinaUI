@@ -22,7 +22,7 @@ namespace nandina::widget
      * - `text`：文本行占位，可多行堆叠，末行按 `last_line_ratio` 收窄；
      * - `rectangle`：整块矩形占位，填充请求到的尺寸。
      */
-    enum class SkeletonVariant: std::uint8_t {
+    enum class SkeletonVariant : std::uint8_t {
         text,
         rectangle,
     };

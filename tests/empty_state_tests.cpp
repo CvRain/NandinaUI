@@ -6,10 +6,10 @@
 #include <nandina/scene/scene_tree.hpp>
 #include <nandina/theme/theme_manager.hpp>
 #include <nandina/widget/badge.hpp>
-#include <nandina/widget/button.hpp>
-#include <nandina/widget/empty_state.hpp>
 #include <nandina/widget/build_context.hpp>
+#include <nandina/widget/button.hpp>
 #include <nandina/widget/controls.hpp>
+#include <nandina/widget/empty_state.hpp>
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
@@ -32,16 +32,11 @@ namespace
         void set_clip(const foundation::NanRect&) override {}
         void clear_clip() override {}
         void draw_rect(const foundation::NanRect&, const foundation::NanColor&) override {}
-        void draw_rect_outline(
-            const foundation::NanRect&,
-            float,
-            const foundation::NanColor&
-        ) override {}
-        void draw_rounded_rect(
-            const foundation::NanRect&,
-            float,
-            const foundation::NanColor&
-        ) override {
+        void
+        draw_rect_outline(const foundation::NanRect&, float, const foundation::NanColor&) override {
+        }
+        void
+        draw_rounded_rect(const foundation::NanRect&, float, const foundation::NanColor&) override {
             ++rounded_rects;
         }
         void draw_line(
@@ -50,7 +45,8 @@ namespace
             float,
             const foundation::NanColor&
         ) override {}
-        void draw_circle(const foundation::NanPoint&, float, const foundation::NanColor&) override {}
+        void draw_circle(const foundation::NanPoint&, float, const foundation::NanColor&) override {
+        }
         void draw_text(
             std::string_view,
             const foundation::NanPoint&,
@@ -62,7 +58,10 @@ namespace
     };
 } // namespace
 
-TEST_CASE("empty state resolves transparent container and typography tokens", "[empty-state][theme]") {
+TEST_CASE(
+    "empty state resolves transparent container and typography tokens",
+    "[empty-state][theme]"
+) {
     const auto design = theme::default_design_system();
     const auto style = theme::resolve_empty_state(
         design,
@@ -73,7 +72,9 @@ TEST_CASE("empty state resolves transparent container and typography tokens", "[
     REQUIRE(style.container.fill.alpha() == Catch::Approx(0.0F));
     REQUIRE(style.container.border.alpha() == Catch::Approx(0.0F));
     REQUIRE(style.container.radius == Catch::Approx(design.tokens.radius.md));
-    REQUIRE(style.title.color.oklch().light == Catch::Approx(design.light.foreground.oklch().light));
+    REQUIRE(
+        style.title.color.oklch().light == Catch::Approx(design.light.foreground.oklch().light)
+    );
     REQUIRE(style.title.font_size == Catch::Approx(design.tokens.typography.label_lg));
     REQUIRE(
         style.description.color.oklch().light
@@ -104,7 +105,10 @@ TEST_CASE("empty state with no title and no icon measures to zero", "[empty-stat
     REQUIRE(description_only.get_height() == Catch::Approx(0.0F));
 }
 
-TEST_CASE("empty state measures title and description in a vertical stack", "[empty-state][layout]") {
+TEST_CASE(
+    "empty state measures title and description in a vertical stack",
+    "[empty-state][layout]"
+) {
     auto empty = widget::EmptyState::create();
     empty->set_title("No results");
     REQUIRE(empty->title() == "No results");
@@ -119,28 +123,33 @@ TEST_CASE("empty state measures title and description in a vertical stack", "[em
     REQUIRE(with_description.get_height() > title_only.get_height());
 
     // 有界约束下铺满上限宽度，高度仍由内容决定。
-    const auto bounded = empty->measure_layout(foundation::NanLayoutConstraints {
-        .max_width = 120.0F,
-        .max_height = 200.0F,
-    });
+    const auto bounded = empty->measure_layout(
+        foundation::NanLayoutConstraints {
+            .max_width = 120.0F,
+            .max_height = 200.0F,
+        }
+    );
     REQUIRE(bounded.get_width() == Catch::Approx(120.0F));
 }
 
 TEST_CASE("empty state includes icon and action slots in measurement", "[empty-state][layout]") {
     auto empty = widget::EmptyState::create();
     empty->set_title("No results");
-    const float title_only = empty->measure_layout(foundation::NanLayoutConstraints::loose()).get_height();
+    const float title_only =
+        empty->measure_layout(foundation::NanLayoutConstraints::loose()).get_height();
 
     auto icon = widget::Badge::create("icon");
     empty->set_icon(icon);
     REQUIRE(empty->icon() == icon.get());
-    const float with_icon = empty->measure_layout(foundation::NanLayoutConstraints::loose()).get_height();
+    const float with_icon =
+        empty->measure_layout(foundation::NanLayoutConstraints::loose()).get_height();
     REQUIRE(with_icon > title_only);
 
     auto action = widget::Button::create("Retry");
     empty->set_action(action);
     REQUIRE(empty->action() == action.get());
-    const float with_action = empty->measure_layout(foundation::NanLayoutConstraints::loose()).get_height();
+    const float with_action =
+        empty->measure_layout(foundation::NanLayoutConstraints::loose()).get_height();
     REQUIRE(with_action > with_icon);
 
     scene::NanSceneTree tree;
@@ -163,7 +172,10 @@ TEST_CASE("empty state rejects null and already-mounted slot content", "[empty-s
     REQUIRE_THROWS_AS(empty->set_icon(mounted), std::logic_error);
 }
 
-TEST_CASE("empty state paints nothing while inactive and text once titled", "[empty-state][paint]") {
+TEST_CASE(
+    "empty state paints nothing while inactive and text once titled",
+    "[empty-state][paint]"
+) {
     auto empty = widget::EmptyState::create();
     scene::NanSceneTree tree;
     tree.set_root(empty);
@@ -180,7 +192,10 @@ TEST_CASE("empty state paints nothing while inactive and text once titled", "[em
     REQUIRE(titled.text_draws >= 1);
 }
 
-TEST_CASE("empty state override patches fields and survives a system apply", "[empty-state][override]") {
+TEST_CASE(
+    "empty state override patches fields and survives a system apply",
+    "[empty-state][override]"
+) {
     theme::ThemeManager themes;
     auto empty = widget::EmptyState::create();
     empty->set_title("No results");
@@ -189,11 +204,13 @@ TEST_CASE("empty state override patches fields and survives a system apply", "[e
     tree.set_root(empty);
     REQUIRE(tree.layout_root(foundation::NanSize(240.0F, 160.0F)) >= 1);
 
-    empty->set_override(theme::EmptyStateRecipeRule {
-        .container_fill = theme::ThemeColor::token(theme::ColorToken::error),
-        .description_color = theme::ThemeColor::token(theme::ColorToken::primary),
-        .metrics_gap = theme::ThemeScalar::literal(20.0F),
-    });
+    empty->set_override(
+        theme::EmptyStateRecipeRule {
+            .container_fill = theme::ThemeColor::token(theme::ColorToken::error),
+            .description_color = theme::ThemeColor::token(theme::ColorToken::primary),
+            .metrics_gap = theme::ThemeScalar::literal(20.0F),
+        }
+    );
     const auto overridden = empty->resolved_style();
     REQUIRE(
         overridden.container.fill.oklch().light
@@ -231,7 +248,10 @@ TEST_CASE("empty state re-resolves after an appearance switch", "[empty-state][t
     );
 }
 
-TEST_CASE("empty state exposes the title as a generic semantics label", "[empty-state][semantics]") {
+TEST_CASE(
+    "empty state exposes the title as a generic semantics label",
+    "[empty-state][semantics]"
+) {
     auto empty = widget::EmptyState::create();
     empty->set_title("No results");
     empty->set_description("Try a different filter");

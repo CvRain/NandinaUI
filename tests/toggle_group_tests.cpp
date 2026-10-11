@@ -23,7 +23,10 @@
 
 using namespace nandina;
 
-TEST_CASE("toggle group single mode keeps at most one member checked", "[toggle-group][selection]") {
+TEST_CASE(
+    "toggle group single mode keeps at most one member checked",
+    "[toggle-group][selection]"
+) {
     auto group = widget::ToggleGroup::create();
     auto bold = widget::Toggle::create("Bold", group);
     auto italic = widget::Toggle::create("Italic", group);
@@ -69,8 +72,7 @@ TEST_CASE("toggle group can forbid an empty single selection", "[toggle-group][s
     REQUIRE(bold->checked());
 
     int changes = 0;
-    auto subscription =
-        group->selection_changed().subscribe([&](std::vector<int>) { ++changes; });
+    auto subscription = group->selection_changed().subscribe([&](std::vector<int>) { ++changes; });
 
     // 取消唯一选中项被忽略：既不改状态，也不发事件。
     bold->toggle();
@@ -104,14 +106,16 @@ TEST_CASE("toggle group multiple mode toggles members independently", "[toggle-g
     REQUIRE(group->checked_indices() == std::vector<int> {1});
 }
 
-TEST_CASE("toggle group select is mode aware and ignores bad indices", "[toggle-group][selection]") {
+TEST_CASE(
+    "toggle group select is mode aware and ignores bad indices",
+    "[toggle-group][selection]"
+) {
     auto group = widget::ToggleGroup::create();
     auto first = widget::Toggle::create("A", group);
     auto second = widget::Toggle::create("B", group);
 
     int changes = 0;
-    auto subscription =
-        group->selection_changed().subscribe([&](std::vector<int>) { ++changes; });
+    auto subscription = group->selection_changed().subscribe([&](std::vector<int>) { ++changes; });
 
     group->select(1);
     REQUIRE(second->checked());
@@ -225,7 +229,10 @@ TEST_CASE("toggle group members still activate with space and enter", "[toggle-g
     REQUIRE(group->checked_indices().empty());
 }
 
-TEST_CASE("toggle group move_focus follows the configured orientation", "[toggle-group][keyboard]") {
+TEST_CASE(
+    "toggle group move_focus follows the configured orientation",
+    "[toggle-group][keyboard]"
+) {
     auto group = widget::ToggleGroup::create();
     auto first = widget::Toggle::create("A", group);
     auto second = widget::Toggle::create("B", group);
@@ -284,7 +291,10 @@ TEST_CASE("toggle group typeahead moves focus by label prefix", "[toggle-group][
     REQUIRE(tree.focused_node() == italic.get());
 }
 
-TEST_CASE("toggle group typeahead buffer expires on the focused member tick", "[toggle-group][keyboard]") {
+TEST_CASE(
+    "toggle group typeahead buffer expires on the focused member tick",
+    "[toggle-group][keyboard]"
+) {
     auto group = widget::ToggleGroup::create();
     auto bold = widget::Toggle::create("Bold", group);
     auto italic = widget::Toggle::create("Italic", group);
@@ -368,9 +378,11 @@ TEST_CASE("toggle group override survives a theme switch", "[toggle-group][theme
         == Catch::Approx(themes.design_system().tokens.spacing.xs)
     );
 
-    group->set_override(theme::ToggleGroupRecipeRule {
-        .container_fill = theme::ThemeColor::token(theme::ColorToken::error),
-    });
+    group->set_override(
+        theme::ToggleGroupRecipeRule {
+            .container_fill = theme::ThemeColor::token(theme::ColorToken::error),
+        }
+    );
     REQUIRE(
         group->resolved_style().container.fill.oklch().light
         == Catch::Approx(themes.design_system().light.error.oklch().light)

@@ -47,6 +47,6 @@ namespace nandina::widget
         float drag_threshold_ = 5.0F;
         float double_click_distance_ = 5.0F;
     };
-}
+} // namespace nandina::widget
 
 #endif

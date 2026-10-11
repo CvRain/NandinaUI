@@ -277,10 +277,12 @@ TEST_CASE("a target that rejects the child is never used as a drop target", "[wi
     REQUIRE(controller.start(dragged));
 
     const auto bounds = rejecting->global_bounds();
-    controller.update(foundation::NanPoint(
-        bounds.get_left() + bounds.get_width() * 0.5F,
-        bounds.get_bottom() - 2.0F
-    ));
+    controller.update(
+        foundation::NanPoint(
+            bounds.get_left() + bounds.get_width() * 0.5F,
+            bounds.get_bottom() - 2.0F
+        )
+    );
     REQUIRE(controller.drop_target() == nullptr);
     REQUIRE_FALSE(controller.commit());
     REQUIRE(dragged->parent() == source.get());

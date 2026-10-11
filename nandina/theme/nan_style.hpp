@@ -143,9 +143,9 @@ namespace nandina::theme
 
     /** 颜色变换类型。 */
     enum class ColorTransformOp {
-        with_alpha,  // lhs.with_alpha(factor)
+        with_alpha, // lhs.with_alpha(factor)
         transparent, // lhs.with_alpha(0)
-        mix,         // lhs.mix(rhs, factor)
+        mix, // lhs.mix(rhs, factor)
     };
 
     /** 浅层颜色变换（操作数不嵌套表达式）。 */
@@ -153,7 +153,7 @@ namespace nandina::theme
         ColorTransformOp op;
         ColorOperand lhs;
         std::optional<ColorOperand> rhs; // mix 的右操作数；with_alpha / transparent 忽略
-        ThemeScalar factor;              // with_alpha 的 alpha；mix 的混合因子；transparent 忽略
+        ThemeScalar factor; // with_alpha 的 alpha；mix 的混合因子；transparent 忽略
     };
 
     /** 颜色值：字面量 | 颜色 token | tone 强调色引用 | 浅层变换。 */
@@ -178,32 +178,39 @@ namespace nandina::theme
         }
 
         /** @return source.with_alpha(factor) 的颜色表达式。 */
-        [[nodiscard]] static auto with_alpha(ColorOperand source, ThemeScalar factor) -> ThemeColor {
-            return ThemeColor(ColorTransform {
-                .op = ColorTransformOp::with_alpha,
-                .lhs = std::move(source),
-                .factor = std::move(factor),
-            });
+        [[nodiscard]] static auto with_alpha(ColorOperand source, ThemeScalar factor)
+            -> ThemeColor {
+            return ThemeColor(
+                ColorTransform {
+                    .op = ColorTransformOp::with_alpha,
+                    .lhs = std::move(source),
+                    .factor = std::move(factor),
+                }
+            );
         }
 
         /** @return source.with_alpha(0)，即完全透明。 */
         [[nodiscard]] static auto transparent(ColorOperand source) -> ThemeColor {
-            return ThemeColor(ColorTransform {
-                .op = ColorTransformOp::transparent,
-                .lhs = std::move(source),
-                .factor = ThemeScalar::literal(0.0F),
-            });
+            return ThemeColor(
+                ColorTransform {
+                    .op = ColorTransformOp::transparent,
+                    .lhs = std::move(source),
+                    .factor = ThemeScalar::literal(0.0F),
+                }
+            );
         }
 
         /** @return lhs.mix(rhs, factor) 的颜色表达式。 */
         [[nodiscard]] static auto mix(ColorOperand lhs, ColorOperand rhs, ThemeScalar factor)
             -> ThemeColor {
-            return ThemeColor(ColorTransform {
-                .op = ColorTransformOp::mix,
-                .lhs = std::move(lhs),
-                .rhs = std::move(rhs),
-                .factor = std::move(factor),
-            });
+            return ThemeColor(
+                ColorTransform {
+                    .op = ColorTransformOp::mix,
+                    .lhs = std::move(lhs),
+                    .rhs = std::move(rhs),
+                    .factor = std::move(factor),
+                }
+            );
         }
 
         [[nodiscard]] auto value() const
@@ -224,8 +231,7 @@ namespace nandina::theme
      * 解析当前 tone 的强调色对（accent, on_accent）。
      * tone 为 nullopt 时按 primary 处理（非 Button 语境下 accent 引用无意义）。
      */
-    [[nodiscard]] auto
-    button_accent(const NanColorScheme& palette, std::optional<ButtonTone> tone)
+    [[nodiscard]] auto button_accent(const NanColorScheme& palette, std::optional<ButtonTone> tone)
         -> std::pair<NanColor, NanColor>;
 
     [[nodiscard]] auto resolve_theme_color(

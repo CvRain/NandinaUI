@@ -2,8 +2,8 @@
 // Foundation-layer UTF-8 tests.
 //
 
-#include <nandina/foundation/nan_logger.hpp>
 #include <nandina/foundation/json.hpp>
+#include <nandina/foundation/nan_logger.hpp>
 #include <nandina/foundation/utf8.hpp>
 
 #include <catch2/catch_test_macros.hpp>
@@ -34,10 +34,7 @@ namespace
 
     [[nodiscard]] auto read_file(const std::filesystem::path& path) -> std::string {
         std::ifstream input(path);
-        return {
-            std::istreambuf_iterator<char>(input),
-            std::istreambuf_iterator<char>()
-        };
+        return {std::istreambuf_iterator<char>(input), std::istreambuf_iterator<char>()};
     }
 } // namespace
 
@@ -100,10 +97,7 @@ TEST_CASE("Explicit Logger configuration replaces the implicit default", "[found
 TEST_CASE("Logger rejects invalid configuration", "[foundation][logger]") {
     log::shutdown();
     const LogShutdown shutdown;
-    REQUIRE_THROWS_AS(
-        log::initialize({.name = ""}),
-        std::invalid_argument
-    );
+    REQUIRE_THROWS_AS(log::initialize({.name = ""}), std::invalid_argument);
     REQUIRE_THROWS_AS(
         log::initialize({.file = temporary_log_path(), .max_file_size = 0}),
         std::invalid_argument
@@ -146,7 +140,10 @@ TEST_CASE("UTF-8 decode preserves source byte ranges", "[foundation][utf8]") {
     REQUIRE(decoded[2].byte_offset == 4);
     REQUIRE(decoded[2].byte_length == 4);
 
-    const auto malformed = foundation::utf8::decode("\xFF" "A");
+    const auto malformed = foundation::utf8::decode(
+        "\xFF"
+        "A"
+    );
     REQUIRE(malformed.size() == 2);
     REQUIRE(malformed[0].value == foundation::utf8::replacement_character);
     REQUIRE(malformed[0].byte_length == 1);
@@ -154,7 +151,9 @@ TEST_CASE("UTF-8 decode preserves source byte ranges", "[foundation][utf8]") {
 }
 
 TEST_CASE("UTF-8 grapheme ranges follow UAX 29 boundaries", "[foundation][utf8][grapheme]") {
-    const std::string combining = "a\xCC\x81" "b";
+    const std::string combining =
+        "a\xCC\x81"
+        "b";
     const auto combining_ranges = foundation::utf8::grapheme_ranges(combining);
     REQUIRE(combining_ranges.size() == 2);
     REQUIRE(combining_ranges[0].offset == 0);

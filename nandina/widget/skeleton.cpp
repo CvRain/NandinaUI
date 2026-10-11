@@ -15,7 +15,8 @@
 namespace nandina::widget
 {
     Skeleton::Skeleton(theme::NanTheme theme) {
-        system_ = std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ =
+            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
         theme_view_ = theme;
         (void)measure_layout(foundation::NanLayoutConstraints::loose());
         set_size(measured_size());
@@ -60,7 +61,8 @@ namespace nandina::widget
     }
 
     void Skeleton::set_theme(theme::NanTheme theme) {
-        system_ = std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ =
+            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
         system_explicit_ = true;
         theme_view_ = theme;
         mark_layout_dirty();
@@ -134,8 +136,7 @@ namespace nandina::widget
             // 末行收窄是多行占位的观感约定；只有一行时整条占满，
             // 否则一个"单行文本占位"会莫名只剩 60% 宽。
             const bool narrow_last = lines_ > 1 && index == lines_ - 1;
-            const float bar_width =
-                local.get_width() * (narrow_last ? last_ratio : 1.0F);
+            const float bar_width = local.get_width() * (narrow_last ? last_ratio : 1.0F);
             const auto line_local = foundation::NanRect::from_xywh(
                 local.get_left(),
                 top,
@@ -152,17 +153,16 @@ namespace nandina::widget
         }
     }
 
-    auto Skeleton::on_measure(const foundation::NanLayoutConstraints constraints) -> foundation::NanSize {
+    auto Skeleton::on_measure(const foundation::NanLayoutConstraints constraints)
+        -> foundation::NanSize {
         const auto style = resolved_style();
-        const float width = std::isfinite(constraints.max_width)
-            ? constraints.max_width
-            : style.metrics.preferred_width;
+        const float width = std::isfinite(constraints.max_width) ? constraints.max_width
+                                                                 : style.metrics.preferred_width;
 
         if (variant_ == SkeletonVariant::rectangle) {
             // 显式尺寸经 size_spec 变成 tight 约束，因此取上界即"尊重显式尺寸"。
-            const float height = std::isfinite(constraints.max_height)
-                ? constraints.max_height
-                : style.metrics.height;
+            const float height = std::isfinite(constraints.max_height) ? constraints.max_height
+                                                                       : style.metrics.height;
             return constraints.constrain(foundation::NanSize(width, height));
         }
 

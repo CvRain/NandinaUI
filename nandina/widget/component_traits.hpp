@@ -14,6 +14,6 @@ namespace nandina::widget
      */
     template<typename Component>
     struct ComponentTraits;
-}
+} // namespace nandina::widget
 
 #endif // NANDINA_EXPERIMENT_WIDGET_COMPONENT_TRAITS_HPP

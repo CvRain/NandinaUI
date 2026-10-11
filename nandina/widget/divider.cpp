@@ -14,7 +14,8 @@
 namespace nandina::widget
 {
     Divider::Divider(theme::NanTheme theme) {
-        system_ = std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ =
+            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
         theme_view_ = theme;
     }
 
@@ -53,7 +54,8 @@ namespace nandina::widget
     }
 
     void Divider::set_theme(theme::NanTheme theme) {
-        system_ = std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ =
+            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
         system_explicit_ = true;
         theme_view_ = theme;
         mark_layout_dirty();
@@ -89,16 +91,14 @@ namespace nandina::widget
         const auto style = resolved_style();
         const auto world = render::world_bounds_from_local(context.world_transform(), local_rect());
         const float thickness = context.logical_to_screen(style.thickness);
-        const float dash = dash_length_ > 0.0F
-            ? context.logical_to_screen(dash_length_)
-            : thickness * 4.0F;
+        const float dash =
+            dash_length_ > 0.0F ? context.logical_to_screen(dash_length_) : thickness * 4.0F;
         const auto color = style.color.with_alpha(style.color.alpha() * context.opacity());
 
         const bool horizontal = orientation_ == Orientation::horizontal;
         const bool solid = pattern_ == Pattern::solid || pattern_ == Pattern::double_line;
-        const int line_count = (pattern_ == Pattern::double_line || pattern_ == Pattern::double_dashed)
-            ? 2
-            : 1;
+        const int line_count =
+            (pattern_ == Pattern::double_line || pattern_ == Pattern::double_dashed) ? 2 : 1;
 
         // 沿主轴画一条线；offset 为垂直于主轴的偏移（双线的第二根）。
         const auto paint_line = [&](const float offset) {
@@ -106,7 +106,12 @@ namespace nandina::widget
                 const float y = world.get_top() + (world.get_height() - thickness) * 0.5F + offset;
                 if (solid) {
                     context.device().draw_rect(
-                        foundation::NanRect::from_xywh(world.get_left(), y, world.get_width(), thickness),
+                        foundation::NanRect::from_xywh(
+                            world.get_left(),
+                            y,
+                            world.get_width(),
+                            thickness
+                        ),
                         color
                     );
                 }
@@ -126,7 +131,12 @@ namespace nandina::widget
                 const float x = world.get_left() + (world.get_width() - thickness) * 0.5F + offset;
                 if (solid) {
                     context.device().draw_rect(
-                        foundation::NanRect::from_xywh(x, world.get_top(), thickness, world.get_height()),
+                        foundation::NanRect::from_xywh(
+                            x,
+                            world.get_top(),
+                            thickness,
+                            world.get_height()
+                        ),
                         color
                     );
                 }
@@ -157,24 +167,21 @@ namespace nandina::widget
         -> foundation::NanSize {
         const auto style = resolved_style();
         if (orientation_ == Orientation::horizontal) {
-            const float width = std::isfinite(constraints.max_width)
-                ? constraints.max_width
-                : style.preferred_length;
+            const float width = std::isfinite(constraints.max_width) ? constraints.max_width
+                                                                     : style.preferred_length;
             return constraints.constrain(foundation::NanSize(width, style.thickness));
         }
-        const float height = std::isfinite(constraints.max_height)
-            ? constraints.max_height
-            : style.preferred_length;
+        const float height =
+            std::isfinite(constraints.max_height) ? constraints.max_height : style.preferred_length;
         return constraints.constrain(foundation::NanSize(style.thickness, height));
     }
 
     auto Divider::semantics_properties() const -> semantics::Properties {
         return {
             .role = semantics::Role::separator,
-            .state =
-                {
-                    .focusable = false,
-                },
+            .state = {
+                .focusable = false,
+            },
         };
     }
 } // namespace nandina::widget

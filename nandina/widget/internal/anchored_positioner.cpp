@@ -75,38 +75,40 @@ namespace nandina::widget::internal
             const AnchoredPositionOptions& options,
             const OverlayPlacement placement
         ) -> foundation::NanRect {
-            const auto origin = aligned_origin(
-                                    anchor,
-                                    overlay_size,
-                                    placement,
-                                    options.alignment,
-                                    options.gap
-                                )
+            const auto origin =
+                aligned_origin(anchor, overlay_size, placement, options.alignment, options.gap)
                 + options.offset;
             return foundation::NanRect::from_origin_size(origin, overlay_size);
         }
 
-        [[nodiscard]] auto overflow(const foundation::NanRect rect, const foundation::NanRect bounds)
-            -> float {
+        [[nodiscard]] auto
+        overflow(const foundation::NanRect rect, const foundation::NanRect bounds) -> float {
             return std::max(0.0F, bounds.get_left() - rect.get_left())
                 + std::max(0.0F, rect.get_right() - bounds.get_right())
                 + std::max(0.0F, bounds.get_top() - rect.get_top())
                 + std::max(0.0F, rect.get_bottom() - bounds.get_bottom());
         }
 
-        [[nodiscard]] auto shifted_into(
-            const foundation::NanRect rect,
-            const foundation::NanRect bounds
-        ) -> foundation::NanRect {
+        [[nodiscard]] auto
+        shifted_into(const foundation::NanRect rect, const foundation::NanRect bounds)
+            -> foundation::NanRect {
             const float x = rect.get_width() <= bounds.get_width()
-                ? std::clamp(rect.get_left(), bounds.get_left(), bounds.get_right() - rect.get_width())
+                ? std::clamp(
+                      rect.get_left(),
+                      bounds.get_left(),
+                      bounds.get_right() - rect.get_width()
+                  )
                 : bounds.get_left();
             const float y = rect.get_height() <= bounds.get_height()
-                ? std::clamp(rect.get_top(), bounds.get_top(), bounds.get_bottom() - rect.get_height())
+                ? std::clamp(
+                      rect.get_top(),
+                      bounds.get_top(),
+                      bounds.get_bottom() - rect.get_height()
+                  )
                 : bounds.get_top();
             return rect.with_origin(x, y);
         }
-    }
+    } // namespace
 
     auto position_anchored_overlay(
         const foundation::NanRect anchor,
@@ -138,7 +140,8 @@ namespace nandina::widget::internal
         bool flipped = false;
         if (options.flip) {
             const auto alternative_placement = opposite(placement);
-            const auto alternative = candidate(anchor, overlay_size, options, alternative_placement);
+            const auto alternative =
+                candidate(anchor, overlay_size, options, alternative_placement);
             if (overflow(alternative, bounds) < overflow(rect, bounds)) {
                 placement = alternative_placement;
                 rect = alternative;
@@ -157,4 +160,4 @@ namespace nandina::widget::internal
             .shifted = rect != before_shift,
         };
     }
-}
+} // namespace nandina::widget::internal

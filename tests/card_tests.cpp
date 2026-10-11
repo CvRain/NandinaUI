@@ -29,16 +29,11 @@ namespace
         void set_clip(const foundation::NanRect&) override {}
         void clear_clip() override {}
         void draw_rect(const foundation::NanRect&, const foundation::NanColor&) override {}
-        void draw_rect_outline(
-            const foundation::NanRect&,
-            float,
-            const foundation::NanColor&
-        ) override {}
-        void draw_rounded_rect(
-            const foundation::NanRect&,
-            float,
-            const foundation::NanColor&
-        ) override {
+        void
+        draw_rect_outline(const foundation::NanRect&, float, const foundation::NanColor&) override {
+        }
+        void
+        draw_rounded_rect(const foundation::NanRect&, float, const foundation::NanColor&) override {
             ++rounded_fills;
         }
         void draw_rounded_rect_shadow(
@@ -66,7 +61,8 @@ namespace
             float,
             const foundation::NanColor&
         ) override {}
-        void draw_circle(const foundation::NanPoint&, float, const foundation::NanColor&) override {}
+        void draw_circle(const foundation::NanPoint&, float, const foundation::NanColor&) override {
+        }
         void draw_text(
             std::string_view,
             const foundation::NanPoint&,
@@ -83,12 +79,9 @@ TEST_CASE("card style resolves surface tokens from the recipe", "[card][theme]")
 
     const auto style = theme::resolve_card(design, theme::ColorAppearance::light);
 
+    REQUIRE(style.container.fill.oklch().light == Catch::Approx(design.light.card.oklch().light));
     REQUIRE(
-        style.container.fill.oklch().light == Catch::Approx(design.light.card.oklch().light)
-    );
-    REQUIRE(
-        style.container.border.oklch().light
-        == Catch::Approx(design.light.border.oklch().light)
+        style.container.border.oklch().light == Catch::Approx(design.light.border.oklch().light)
     );
     REQUIRE(style.container.border_width == Catch::Approx(design.tokens.border.thin));
     REQUIRE(style.container.radius == Catch::Approx(design.tokens.radius.lg));
@@ -101,12 +94,8 @@ TEST_CASE("card resolves light and dark surfaces from the same snapshot", "[card
     const auto light = theme::resolve_card(design, theme::ColorAppearance::light);
     const auto dark = theme::resolve_card(design, theme::ColorAppearance::dark);
 
-    REQUIRE(
-        light.container.fill.oklch().light == Catch::Approx(design.light.card.oklch().light)
-    );
-    REQUIRE(
-        dark.container.fill.oklch().light == Catch::Approx(design.dark.card.oklch().light)
-    );
+    REQUIRE(light.container.fill.oklch().light == Catch::Approx(design.light.card.oklch().light));
+    REQUIRE(dark.container.fill.oklch().light == Catch::Approx(design.dark.card.oklch().light));
     REQUIRE(dark.container.fill.oklch().light < light.container.fill.oklch().light);
 }
 
@@ -121,10 +110,12 @@ TEST_CASE("card override patches fields and survives a system apply", "[card][ov
 
     const float fill_light = card->resolved_style().container.fill.oklch().light;
 
-    card->set_override(theme::CardRecipeRule {
-        .container_fill = theme::ThemeColor::token(theme::ColorToken::primary),
-        .metrics_padding_x = theme::ThemeScalar::literal(24.0F),
-    });
+    card->set_override(
+        theme::CardRecipeRule {
+            .container_fill = theme::ThemeColor::token(theme::ColorToken::primary),
+            .metrics_padding_x = theme::ThemeScalar::literal(24.0F),
+        }
+    );
     const auto overridden = card->resolved_style();
     REQUIRE(
         overridden.container.fill.oklch().light
@@ -181,13 +172,14 @@ TEST_CASE("card paints a rounded surface with outline", "[card][paint]") {
 
 TEST_CASE("card draws soft shadow before container when configured", "[card][shadow]") {
     auto card = widget::Card::create();
-    card->set_override(theme::CardRecipeRule {
-        .shadow_color = theme::ThemeColor::literal(
-            foundation::NanColor::from_hex(0x000000, 0.5F)
-        ),
-        .shadow_offset_y = theme::ThemeScalar::literal(4.0F),
-        .shadow_spread = theme::ThemeScalar::literal(8.0F),
-    });
+    card->set_override(
+        theme::CardRecipeRule {
+            .shadow_color =
+                theme::ThemeColor::literal(foundation::NanColor::from_hex(0x000000, 0.5F)),
+            .shadow_offset_y = theme::ThemeScalar::literal(4.0F),
+            .shadow_spread = theme::ThemeScalar::literal(8.0F),
+        }
+    );
     scene::NanSceneTree tree;
     tree.set_root(card);
     REQUIRE(tree.layout_root(foundation::NanSize(280.0F, 120.0F)) >= 1);

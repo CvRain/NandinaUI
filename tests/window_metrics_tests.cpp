@@ -78,10 +78,7 @@ TEST_CASE("window metrics tolerate integer framebuffer rounding", "[app][window-
 
 TEST_CASE("window metrics reject invalid coordinate spaces", "[app][window-metrics]") {
     REQUIRE_THROWS_AS(
-        app::make_window_metrics(
-            foundation::NanSize::zero(),
-            foundation::NanSize(800.0F, 600.0F)
-        ),
+        app::make_window_metrics(foundation::NanSize::zero(), foundation::NanSize(800.0F, 600.0F)),
         std::invalid_argument
     );
     REQUIRE_THROWS_AS(

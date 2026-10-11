@@ -29,16 +29,11 @@ namespace
         void set_clip(const foundation::NanRect&) override {}
         void clear_clip() override {}
         void draw_rect(const foundation::NanRect&, const foundation::NanColor&) override {}
-        void draw_rect_outline(
-            const foundation::NanRect&,
-            float,
-            const foundation::NanColor&
-        ) override {}
-        void draw_rounded_rect(
-            const foundation::NanRect&,
-            float,
-            const foundation::NanColor&
-        ) override {
+        void
+        draw_rect_outline(const foundation::NanRect&, float, const foundation::NanColor&) override {
+        }
+        void
+        draw_rounded_rect(const foundation::NanRect&, float, const foundation::NanColor&) override {
             ++rounded_rects;
         }
         void draw_line(
@@ -47,7 +42,8 @@ namespace
             float,
             const foundation::NanColor&
         ) override {}
-        void draw_circle(const foundation::NanPoint&, float, const foundation::NanColor&) override {}
+        void draw_circle(const foundation::NanPoint&, float, const foundation::NanColor&) override {
+        }
         void draw_text(
             std::string_view,
             const foundation::NanPoint&,
@@ -68,19 +64,19 @@ TEST_CASE("progress bar resolves track and fill tokens from the recipe", "[progr
     );
 
     REQUIRE(
-        style.track.fill.oklch().light
-        == Catch::Approx(design.light.outline_variant.oklch().light)
+        style.track.fill.oklch().light == Catch::Approx(design.light.outline_variant.oklch().light)
     );
-    REQUIRE(
-        style.fill.fill.oklch().light == Catch::Approx(design.light.primary.oklch().light)
-    );
+    REQUIRE(style.fill.fill.oklch().light == Catch::Approx(design.light.primary.oklch().light));
     REQUIRE(style.track.radius == Catch::Approx(9999.0F));
     REQUIRE(style.fill.radius == Catch::Approx(9999.0F));
     REQUIRE(style.metrics.height == Catch::Approx(8.0F));
     REQUIRE(style.metrics.preferred_width == Catch::Approx(240.0F));
 }
 
-TEST_CASE("progress bar resolves light and dark surfaces from the same snapshot", "[progress-bar][theme]") {
+TEST_CASE(
+    "progress bar resolves light and dark surfaces from the same snapshot",
+    "[progress-bar][theme]"
+) {
     const auto design = theme::default_design_system();
     const auto light = theme::resolve_progress_bar(
         design,
@@ -94,12 +90,10 @@ TEST_CASE("progress bar resolves light and dark surfaces from the same snapshot"
     );
 
     REQUIRE(
-        light.track.fill.oklch().light
-        == Catch::Approx(design.light.outline_variant.oklch().light)
+        light.track.fill.oklch().light == Catch::Approx(design.light.outline_variant.oklch().light)
     );
     REQUIRE(
-        dark.track.fill.oklch().light
-        == Catch::Approx(design.dark.outline_variant.oklch().light)
+        dark.track.fill.oklch().light == Catch::Approx(design.dark.outline_variant.oklch().light)
     );
     REQUIRE(dark.track.fill.oklch().light < light.track.fill.oklch().light);
 }
@@ -122,7 +116,10 @@ TEST_CASE("progress bar disabled state scales track and fill alpha", "[progress-
     REQUIRE(disabled.fill.fill.alpha() == Catch::Approx(normal.fill.fill.alpha() * expected));
 }
 
-TEST_CASE("progress bar override patches fields and survives a system apply", "[progress-bar][override]") {
+TEST_CASE(
+    "progress bar override patches fields and survives a system apply",
+    "[progress-bar][override]"
+) {
     reactive::Graph graph;
     theme::ThemeManager themes;
     auto bar = widget::ProgressBar::create(0.5F);
@@ -133,10 +130,12 @@ TEST_CASE("progress bar override patches fields and survives a system apply", "[
 
     const float fill_light = bar->resolved_style().fill.fill.oklch().light;
 
-    bar->set_override(theme::ProgressBarRecipeRule {
-        .fill_fill = theme::ThemeColor::token(theme::ColorToken::error),
-        .metrics_height = theme::ThemeScalar::literal(12.0F),
-    });
+    bar->set_override(
+        theme::ProgressBarRecipeRule {
+            .fill_fill = theme::ThemeColor::token(theme::ColorToken::error),
+            .metrics_height = theme::ThemeScalar::literal(12.0F),
+        }
+    );
     const auto overridden = bar->resolved_style();
     REQUIRE(
         overridden.fill.fill.oklch().light
@@ -148,9 +147,7 @@ TEST_CASE("progress bar override patches fields and survives a system apply", "[
     auto design = theme::default_design_system();
     design.light.error = theme::nan_color(0.60F, 0.20F, 20.0F);
     themes.apply(std::make_shared<const theme::DesignSystem>(std::move(design)));
-    REQUIRE(
-        bar->resolved_style().fill.fill.oklch().light == Catch::Approx(0.60F)
-    );
+    REQUIRE(bar->resolved_style().fill.fill.oklch().light == Catch::Approx(0.60F));
     REQUIRE(bar->resolved_style().fill.fill.oklch().light != Catch::Approx(fill_light));
 }
 
@@ -166,7 +163,10 @@ TEST_CASE("progress bar clamps value into the unit interval", "[progress-bar][va
     REQUIRE(bar->value() == Catch::Approx(0.0F));
 }
 
-TEST_CASE("progress bar measures preferred width under loose and tight constraints", "[progress-bar][layout]") {
+TEST_CASE(
+    "progress bar measures preferred width under loose and tight constraints",
+    "[progress-bar][layout]"
+) {
     auto bar = widget::ProgressBar::create(0.5F);
 
     // loose 测量：高度 = 配方厚度 8、宽度 = 配方首选 240。
@@ -175,10 +175,12 @@ TEST_CASE("progress bar measures preferred width under loose and tight constrain
     REQUIRE(loose.get_height() == Catch::Approx(8.0F));
 
     // 窄约束：宽度收缩到约束上限，厚度保持 8。
-    const auto narrow = bar->measure_layout(foundation::NanLayoutConstraints {
-        .max_width = 24.0F,
-        .max_height = 48.0F,
-    });
+    const auto narrow = bar->measure_layout(
+        foundation::NanLayoutConstraints {
+            .max_width = 24.0F,
+            .max_height = 48.0F,
+        }
+    );
     REQUIRE(narrow.get_width() == Catch::Approx(24.0F));
     REQUIRE(narrow.get_height() == Catch::Approx(8.0F));
 
@@ -190,7 +192,10 @@ TEST_CASE("progress bar measures preferred width under loose and tight constrain
     REQUIRE(bar->height() == Catch::Approx(48.0F));
 }
 
-TEST_CASE("progress bar exposes progress_bar semantics with percentage value", "[progress-bar][semantics]") {
+TEST_CASE(
+    "progress bar exposes progress_bar semantics with percentage value",
+    "[progress-bar][semantics]"
+) {
     auto bar = widget::ProgressBar::create(0.42F);
     bar->set_label("Upload");
     scene::NanSceneTree tree;
@@ -232,7 +237,10 @@ TEST_CASE("progress bar paints track plus a partial fill", "[progress-bar][paint
     REQUIRE(dev2.rounded_rects == 2);
 }
 
-TEST_CASE("BuildContext progress bar binds a progress signal one-way", "[progress-bar][authoring]") {
+TEST_CASE(
+    "BuildContext progress bar binds a progress signal one-way",
+    "[progress-bar][authoring]"
+) {
     reactive::Graph graph;
     reactive::ReactiveScope scope {graph};
     theme::ThemeManager themes;

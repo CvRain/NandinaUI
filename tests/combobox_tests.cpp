@@ -41,7 +41,8 @@ namespace
             last_fill = color;
         }
         void
-        draw_rect_outline(const foundation::NanRect&, float, const foundation::NanColor&) override {}
+        draw_rect_outline(const foundation::NanRect&, float, const foundation::NanColor&) override {
+        }
         void draw_rounded_rect(
             const foundation::NanRect&,
             float,
@@ -56,7 +57,8 @@ namespace
             float,
             const foundation::NanColor&
         ) override {}
-        void draw_circle(const foundation::NanPoint&, float, const foundation::NanColor&) override {}
+        void draw_circle(const foundation::NanPoint&, float, const foundation::NanColor&) override {
+        }
         void draw_text(
             std::string_view,
             const foundation::NanPoint&,
@@ -158,7 +160,7 @@ namespace
                 ? dismiss->get_child(0)->as_control()
                 : nullptr;
             return scope != nullptr && scope->child_count() > 0 ? scope->get_child(0)->as_control()
-                                                               : nullptr;
+                                                                : nullptr;
         }
 
         /// 选项列表容器 = Popover 的 content。
@@ -358,9 +360,10 @@ TEST_CASE("combobox enter selects the highlighted item", "[combobox][keyboard][c
         }
     );
     std::vector<std::string> selected;
-    auto subscription = harness.combo->item_selected().subscribe(
-        [&selected](const std::string& id) { selected.push_back(id); }
-    );
+    auto subscription =
+        harness.combo->item_selected().subscribe([&selected](const std::string& id) {
+            selected.push_back(id);
+        });
 
     harness.tree.dispatch_key(scene::KeyEvent(264, scene::KeyEvent::Action::press)); // down → 1
     harness.tree.dispatch_key(scene::KeyEvent(257, scene::KeyEvent::Action::press)); // enter
@@ -376,9 +379,8 @@ TEST_CASE("combobox enter never activates a disabled item", "[combobox][keyboard
     ComboboxHarness harness;
     REQUIRE(harness.open_and_layout() != nullptr);
     int selected = 0;
-    auto subscription = harness.combo->item_selected().subscribe([&selected](const std::string&) {
-        ++selected;
-    });
+    auto subscription =
+        harness.combo->item_selected().subscribe([&selected](const std::string&) { ++selected; });
 
     harness.combo->set_text("cherry");
     REQUIRE(harness.combo->filtered_ids() == std::vector<std::string> {"cherry"});
@@ -454,7 +456,10 @@ TEST_CASE("combobox clicking outside closes the popup", "[combobox][pointer]") {
         scene::MouseButtonEvent(
             scene::MouseButtonEvent::Button::left,
             scene::MouseButtonEvent::Action::press,
-            foundation::NanPoint(harness.viewport.get_width() - 5.0F, harness.viewport.get_height() - 5.0F)
+            foundation::NanPoint(
+                harness.viewport.get_width() - 5.0F,
+                harness.viewport.get_height() - 5.0F
+            )
         )
     );
     REQUIRE_FALSE(harness.combo->is_open());
@@ -608,9 +613,8 @@ TEST_CASE("combobox set_items while open re-filters in place", "[combobox][mutat
 
     // 重建后键盘仍然可用，禁用条目不可激活。
     int selected = 0;
-    auto subscription = harness.combo->item_selected().subscribe([&selected](const std::string&) {
-        ++selected;
-    });
+    auto subscription =
+        harness.combo->item_selected().subscribe([&selected](const std::string&) { ++selected; });
     harness.tree.dispatch_key(scene::KeyEvent(264, scene::KeyEvent::Action::press)); // down → 1
     harness.tree.dispatch_key(scene::KeyEvent(257, scene::KeyEvent::Action::press)); // enter
     REQUIRE(selected == 0);
@@ -623,9 +627,10 @@ TEST_CASE("combobox filters and selects inside an input phase", "[combobox][muta
     ComboboxHarness harness;
     REQUIRE(harness.open_and_layout() != nullptr);
     std::vector<std::string> selected;
-    auto subscription = harness.combo->item_selected().subscribe([&selected](const std::string& id) {
-        selected.push_back(id);
-    });
+    auto subscription =
+        harness.combo->item_selected().subscribe([&selected](const std::string& id) {
+            selected.push_back(id);
+        });
 
     {
         auto phase = harness.tree.enter_phase(scene::FramePhase::input);
@@ -757,15 +762,25 @@ TEST_CASE("combobox exposes combobox and option semantics", "[combobox][semantic
 
 TEST_CASE("combobox recipe resolves semantic roles", "[combobox][theme]") {
     const auto design = theme::default_design_system();
-    const auto normal =
-        theme::resolve_combobox(design, theme::ColorAppearance::light, theme::ComboboxVisualState::normal);
-    const auto dark =
-        theme::resolve_combobox(design, theme::ColorAppearance::dark, theme::ComboboxVisualState::normal);
+    const auto normal = theme::resolve_combobox(
+        design,
+        theme::ColorAppearance::light,
+        theme::ComboboxVisualState::normal
+    );
+    const auto dark = theme::resolve_combobox(
+        design,
+        theme::ColorAppearance::dark,
+        theme::ComboboxVisualState::normal
+    );
     const auto focused = theme::resolve_combobox(
-        design, theme::ColorAppearance::light, theme::ComboboxVisualState::focused
+        design,
+        theme::ColorAppearance::light,
+        theme::ComboboxVisualState::focused
     );
     const auto disabled = theme::resolve_combobox(
-        design, theme::ColorAppearance::light, theme::ComboboxVisualState::disabled
+        design,
+        theme::ColorAppearance::light,
+        theme::ComboboxVisualState::disabled
     );
 
     REQUIRE(
@@ -794,15 +809,14 @@ TEST_CASE("combobox recipe resolves semantic roles", "[combobox][theme]") {
     REQUIRE(normal.focus.width == Catch::Approx(0.0F));
     REQUIRE(focused.focus.width > 0.0F);
     const float alpha = design.tokens.opacity.disabled;
-    REQUIRE(
-        disabled.input.fill.alpha() == Catch::Approx(normal.input.fill.alpha() * alpha)
-    );
-    REQUIRE(
-        disabled.value.color.alpha() == Catch::Approx(normal.value.color.alpha() * alpha)
-    );
+    REQUIRE(disabled.input.fill.alpha() == Catch::Approx(normal.input.fill.alpha() * alpha));
+    REQUIRE(disabled.value.color.alpha() == Catch::Approx(normal.value.color.alpha() * alpha));
 }
 
-TEST_CASE("combobox theme switch and instance override change resolved style", "[combobox][theme]") {
+TEST_CASE(
+    "combobox theme switch and instance override change resolved style",
+    "[combobox][theme]"
+) {
     ComboboxHarness harness;
     harness.layout();
     auto* combo = harness.combo.get();
@@ -818,9 +832,7 @@ TEST_CASE("combobox theme switch and instance override change resolved style", "
         }
     );
     const auto overridden = combo->resolved_style();
-    REQUIRE(
-        overridden.input.fill.oklch().light == Catch::Approx(design.light.error.oklch().light)
-    );
+    REQUIRE(overridden.input.fill.oklch().light == Catch::Approx(design.light.error.oklch().light));
     REQUIRE(overridden.metrics.item_height == Catch::Approx(21.0F));
     // 未覆盖的字段保持默认。
     REQUIRE(overridden.metrics.padding_x == Catch::Approx(initial.metrics.padding_x));
@@ -896,9 +908,7 @@ TEST_CASE("combobox recipe rule covers every field", "[combobox][theme][override
     REQUIRE(style.input.radius == Catch::Approx(9.0F));
     REQUIRE(style.value.color.oklch().light == Catch::Approx(ds.light.success.oklch().light));
     REQUIRE(style.value.font_size == Catch::Approx(11.0F));
-    REQUIRE(
-        style.placeholder.color.oklch().light == Catch::Approx(ds.light.info.oklch().light)
-    );
+    REQUIRE(style.placeholder.color.oklch().light == Catch::Approx(ds.light.info.oklch().light));
     REQUIRE(style.placeholder.font_size == Catch::Approx(12.0F));
     REQUIRE(style.selection.oklch().light == Catch::Approx(ds.light.tertiary.oklch().light));
     REQUIRE(style.focus.color.oklch().light == Catch::Approx(ds.light.primary.oklch().light));
@@ -974,8 +984,11 @@ TEST_CASE("combobox authoring via ComponentTraits", "[combobox][authoring]") {
     REQUIRE_FALSE(empty->is_open());
 
     auto combo = ui.make<widget::Combobox>(
-        sample_items(), std::string {"Apple"}, std::string {"Pick a fruit"}
-    ).build();
+                       sample_items(),
+                       std::string {"Apple"},
+                       std::string {"Pick a fruit"}
+    )
+                     .build();
     REQUIRE(combo->item_count() == 6);
     REQUIRE(combo->text() == "Apple");
     REQUIRE(combo->selected_id() == "apple");

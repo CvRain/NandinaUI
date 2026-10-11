@@ -224,7 +224,8 @@ namespace nandina::widget
         return active() && mount_mode_ != MountMode::overlay ? 1 : 0;
     }
 
-    auto Dialog::on_measure(const foundation::NanLayoutConstraints constraints) -> foundation::NanSize {
+    auto Dialog::on_measure(const foundation::NanLayoutConstraints constraints)
+        -> foundation::NanSize {
         // 浮层承载时本节点只是页面里的锚点，不占位；树内回退时铺满父容器作为遮罩范围。
         if (!active() || mount_mode_ == MountMode::overlay) {
             return constraints.constrain(foundation::NanSize {0.0F, 0.0F});

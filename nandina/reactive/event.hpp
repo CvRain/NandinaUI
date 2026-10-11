@@ -17,7 +17,9 @@ namespace nandina::reactive
         explicit Subscription(std::function<void()> disconnect):
             disconnect_(std::move(disconnect)) {}
 
-        ~Subscription() { disconnect(); }
+        ~Subscription() {
+            disconnect();
+        }
 
         Subscription(const Subscription&) = delete;
         auto operator=(const Subscription&) -> Subscription& = delete;
@@ -69,10 +71,10 @@ namespace nandina::reactive
         void emit(Args... args) const {
             const auto snapshot = state_->handlers;
             for (const auto& entry: snapshot) {
-                const auto still_connected = std::ranges::any_of(
-                    state_->handlers,
-                    [&entry](const Entry& current) { return current.id == entry.id; }
-                );
+                const auto still_connected =
+                    std::ranges::any_of(state_->handlers, [&entry](const Entry& current) {
+                        return current.id == entry.id;
+                    });
                 if (still_connected) {
                     entry.handler(args...);
                 }

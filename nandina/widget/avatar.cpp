@@ -133,7 +133,8 @@ namespace nandina::widget
         text_.draw_at(context, text_position);
     }
 
-    auto Avatar::on_measure(const foundation::NanLayoutConstraints constraints) -> foundation::NanSize {
+    auto Avatar::on_measure(const foundation::NanLayoutConstraints constraints)
+        -> foundation::NanSize {
         const auto style = resolved_style();
         const float size = style.metrics.box_size;
         return constraints.constrain(foundation::NanSize(size, size));

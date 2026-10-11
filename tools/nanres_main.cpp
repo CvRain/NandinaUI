@@ -131,7 +131,9 @@ namespace
         }
         output << "package = \"com.example.application\"\n";
         output.close();
-        if (!output) { return 2; }
+        if (!output) {
+            return 2;
+        }
         std::error_code error;
         std::filesystem::create_directories("assets", error);
         if (error) {

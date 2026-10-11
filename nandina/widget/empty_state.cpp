@@ -215,7 +215,8 @@ namespace nandina::widget
         return result;
     }
 
-    auto EmptyState::on_measure(const foundation::NanLayoutConstraints constraints) -> foundation::NanSize {
+    auto EmptyState::on_measure(const foundation::NanLayoutConstraints constraints)
+        -> foundation::NanSize {
         const auto style = resolved_style();
         if (is_empty()) {
             // 条件挂载：没有标题也没有图标时不占位，避免在列表里留下空隙。
@@ -298,12 +299,7 @@ namespace nandina::widget
             }
         };
         apply(title_text_, style.title, text::TextOverflow::clip, 1);
-        apply(
-            description_text_,
-            style.description,
-            text::TextOverflow::wrap,
-            kDescriptionMaxLines
-        );
+        apply(description_text_, style.description, text::TextOverflow::wrap, kDescriptionMaxLines);
     }
 
     void EmptyState::relayout() {

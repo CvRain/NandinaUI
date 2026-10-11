@@ -22,13 +22,14 @@ namespace
         text::FontFamilyRegistry* families = nullptr;
     };
 
-    struct ServiceParams { ServiceCapture* capture = nullptr; };
+    struct ServiceParams {
+        ServiceCapture* capture = nullptr;
+    };
 
     class ServicePage final: public app::Page<ServiceParams> {
     public:
         explicit ServicePage(ServiceParams params): Page(params) {}
-        [[nodiscard]] auto build(app::PageContext& context)
-            -> widget::View override {
+        [[nodiscard]] auto build(app::PageContext& context) -> widget::View override {
             REQUIRE(context.has_resource_services());
             params().capture->resources = &context.resources();
             params().capture->loader = &context.font_loader();
@@ -79,10 +80,8 @@ namespace
         { app::run<RecommendedMainPage>(std::move(config)) } -> std::same_as<int>;
     });
 
-    [[maybe_unused]] auto compile_default_page_runner(
-        app::NanApplication& application,
-        app::WindowConfig config
-    ) -> int {
+    [[maybe_unused]] auto
+    compile_default_page_runner(app::NanApplication& application, app::WindowConfig config) -> int {
         return application.run_page<DefaultStartupPage>(std::move(config));
     }
 } // namespace
@@ -109,9 +108,11 @@ TEST_CASE("functional root views receive BuildContext and concrete nodes", "[app
         return ui.make<widget::Label>("Functional root").expose(label);
     });
 
-    REQUIRE(router.configure(app::Routes {
-        app::route<app::detail::RootViewPage>({.address = "root"}),
-    }));
+    REQUIRE(router.configure(
+        app::Routes {
+            app::route<app::detail::RootViewPage>({.address = "root"}),
+        }
+    ));
     REQUIRE(router.navigation().navigate<app::detail::RootViewPage>(std::move(params)));
 
     REQUIRE(received_build_context);
@@ -130,9 +131,11 @@ TEST_CASE("functional root views accept BuildContext-only factories", "[app][vie
         return ui.make<widget::Button>("Continue").expose(button);
     });
 
-    REQUIRE(router.configure(app::Routes {
-        app::route<app::detail::RootViewPage>({.address = "root"}),
-    }));
+    REQUIRE(router.configure(
+        app::Routes {
+            app::route<app::detail::RootViewPage>({.address = "root"}),
+        }
+    ));
     REQUIRE(router.navigation().navigate<app::detail::RootViewPage>(std::move(params)));
 
     REQUIRE(received_build_context);
@@ -143,9 +146,11 @@ TEST_CASE("recommended pages adapt BuildContext onto the existing router", "[app
     app::NanApplication application;
     app::NanRouter router {application.graph(), application.theme_manager()};
 
-    REQUIRE(router.configure(app::Routes {
-        app::route<RecommendedMainPage>({.address = "recommended-main"}),
-    }));
+    REQUIRE(router.configure(
+        app::Routes {
+            app::route<RecommendedMainPage>({.address = "recommended-main"}),
+        }
+    ));
     REQUIRE(router.navigation().navigate<RecommendedMainPage>());
 
     REQUIRE(router.host()->child_count() == 1);
@@ -169,13 +174,18 @@ TEST_CASE("NanApplication rejects malformed discovered packages", "[app][resourc
     const auto root = std::filesystem::temp_directory_path()
         / ("nandina-app-" + resource::ResourceId::random().to_string());
     std::filesystem::create_directories(root / "resources");
-    { std::ofstream file(root / "resources/resources.db"); file << "not sqlite"; }
+    {
+        std::ofstream file(root / "resources/resources.db");
+        file << "not sqlite";
+    }
     REQUIRE_THROWS_AS(
-        app::NanApplication(app::NanApplicationConfig {
-            .application_id = "org.nandina.invalid",
-            .executable_path = root / "application",
-            .environment = {{"HOME", "/nonexistent-home"}},
-        }),
+        app::NanApplication(
+            app::NanApplicationConfig {
+                .application_id = "org.nandina.invalid",
+                .executable_path = root / "application",
+                .environment = {{"HOME", "/nonexistent-home"}},
+            }
+        ),
         std::runtime_error
     );
     std::error_code error;
@@ -187,7 +197,9 @@ namespace
     void exec(sqlite3* db, const char* sql) {
         char* message = nullptr;
         const int result = sqlite3_exec(db, sql, nullptr, nullptr, &message);
-        if (message) { sqlite3_free(message); }
+        if (message) {
+            sqlite3_free(message);
+        }
         REQUIRE(result == SQLITE_OK);
     }
 
@@ -195,13 +207,15 @@ namespace
         sqlite3* db = nullptr;
         REQUIRE(sqlite3_open(path.string().c_str(), &db) == SQLITE_OK);
         exec(db, "PRAGMA application_id=1312902724; PRAGMA user_version=1;");
-        exec(db,
+        exec(
+            db,
             "CREATE TABLE resources("
             "id BLOB PRIMARY KEY, resource_key TEXT NOT NULL UNIQUE, media_type TEXT NOT NULL,"
             "storage INTEGER NOT NULL, data BLOB, external_path TEXT, size INTEGER NOT NULL);"
             "CREATE TABLE aliases(alias TEXT PRIMARY KEY, resource_id BLOB NOT NULL);"
         );
-        exec(db,
+        exec(
+            db,
             "INSERT INTO resources VALUES("
             "X'20112233445546778899aabbccddeeff','assets/hello','text/plain',0,"
             "X'68656c6c6f',NULL,5);"
@@ -210,28 +224,32 @@ namespace
     }
 } // namespace
 
-TEST_CASE("NanApplication mounts the build-tree package from resource-location.json", "[app][resource][d2]") {
+TEST_CASE(
+    "NanApplication mounts the build-tree package from resource-location.json",
+    "[app][resource][d2]"
+) {
     const auto root = std::filesystem::temp_directory_path()
         / ("nandina-d2-" + resource::ResourceId::random().to_string());
-    std::filesystem::create_directories(root / "resources");       // executable-relative resources root
-    std::filesystem::create_directories(root / "build-package");   // the pointed build-tree package
+    std::filesystem::create_directories(root / "resources"); // executable-relative resources root
+    std::filesystem::create_directories(root / "build-package"); // the pointed build-tree package
 
     create_package_database(root / "build-package" / "resources.db");
     {
         std::ofstream metadata(root / "resources" / "resource-location.json");
         metadata << "{\"package_id\":\"org.nandina.d2\",\"package_root\":\""
-                 << (root / "build-package").string()
-                 << "\",\"database\":\"resources.db\"}\n";
+                 << (root / "build-package").string() << "\",\"database\":\"resources.db\"}\n";
     }
 
     // executable_path = root/application => executable-relative root = root/resources,
     // which holds only resource-location.json (no direct resources.db), so the package
     // is reachable only through the build metadata.
-    app::NanApplication application(app::NanApplicationConfig {
-        .application_id = "org.nandina.d2",
-        .executable_path = root / "application",
-        .environment = {{"HOME", "/nonexistent-home"}},
-    });
+    app::NanApplication application(
+        app::NanApplicationConfig {
+            .application_id = "org.nandina.d2",
+            .executable_path = root / "application",
+            .environment = {{"HOME", "/nonexistent-home"}},
+        }
+    );
 
     const auto hello = application.resources().require(resource::ResourceKey("assets/hello"));
     REQUIRE(hello.has_value());
@@ -242,18 +260,21 @@ TEST_CASE("NanApplication mounts the build-tree package from resource-location.j
     std::filesystem::remove_all(root, error);
 }
 
-TEST_CASE("read_build_location_metadata parses, rejects missing, and rejects malformed", "[resource][d2]") {
+TEST_CASE(
+    "read_build_location_metadata parses, rejects missing, and rejects malformed",
+    "[resource][d2]"
+) {
     const auto root = std::filesystem::temp_directory_path()
         / ("nandina-d2-meta-" + resource::ResourceId::random().to_string());
     std::filesystem::create_directories(root);
 
-    const auto valid =
-        resource::read_build_location_metadata(root / "resource-location.json");
+    const auto valid = resource::read_build_location_metadata(root / "resource-location.json");
     REQUIRE_FALSE(valid.has_value()); // missing file
 
     {
         std::ofstream file(root / "resource-location.json");
-        file << "{\"package_id\":\"org.nandina.meta\",\"package_root\":\"/tmp/pkg\",\"database\":\"resources.db\"}";
+        file
+            << "{\"package_id\":\"org.nandina.meta\",\"package_root\":\"/tmp/pkg\",\"database\":\"resources.db\"}";
     }
     const auto parsed = resource::read_build_location_metadata(root / "resource-location.json");
     REQUIRE(parsed.has_value());
@@ -261,7 +282,10 @@ TEST_CASE("read_build_location_metadata parses, rejects missing, and rejects mal
     REQUIRE(parsed->package_root == std::filesystem::path("/tmp/pkg"));
     REQUIRE(parsed->database == "resources.db");
 
-    { std::ofstream file(root / "resource-location.json"); file << "{not json"; }
+    {
+        std::ofstream file(root / "resource-location.json");
+        file << "{not json";
+    }
     const auto malformed = resource::read_build_location_metadata(root / "resource-location.json");
     REQUIRE_FALSE(malformed.has_value());
 

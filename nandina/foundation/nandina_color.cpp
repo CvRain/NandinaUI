@@ -70,9 +70,8 @@ namespace nandina::foundation
         const auto t = nan_clamp01(amount);
         // hue 沿最短弧插值，避免 350° ↔ 10° 绕远路。
         const auto delta = nan_normalize_degrees(other.color_.hue - color_.hue);
-        const auto hue = delta <= 180.0F
-            ? color_.hue + delta * t
-            : color_.hue - (360.0F - delta) * t;
+        const auto hue =
+            delta <= 180.0F ? color_.hue + delta * t : color_.hue - (360.0F - delta) * t;
         return NanColor {{
             nan_lerp(color_.light, other.color_.light, t),
             nan_lerp(color_.chroma, other.color_.chroma, t),

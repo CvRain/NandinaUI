@@ -46,21 +46,18 @@ namespace nandina::render
     public:
         explicit DrawContext(IRenderDevice& device): device_(device), clip_(device) {}
 
-        DrawContext(
-            IRenderDevice& device,
-            NanTransform2D root_transform,
-            RenderScale scale
-        ):
+        DrawContext(IRenderDevice& device, NanTransform2D root_transform, RenderScale scale):
             device_(device),
             root_transform_(root_transform),
             world_(root_transform),
             scale_(scale),
             clip_(device) {
             if (!std::isfinite(scale_.logical_to_screen) || scale_.logical_to_screen <= 0.0F
-                || !std::isfinite(scale_.screen_to_physical)
-                || scale_.screen_to_physical <= 0.0F)
+                || !std::isfinite(scale_.screen_to_physical) || scale_.screen_to_physical <= 0.0F)
             {
-                throw std::invalid_argument("DrawContext render scales must be finite and positive");
+                throw std::invalid_argument(
+                    "DrawContext render scales must be finite and positive"
+                );
             }
         }
 

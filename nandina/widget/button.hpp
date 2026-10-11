@@ -31,8 +31,7 @@ namespace nandina::widget
         [[nodiscard]] auto text() const -> std::string_view;
         [[nodiscard]] auto text_node() -> primitives::Text&;
         [[nodiscard]] auto text_node() const -> const primitives::Text&;
-        [[nodiscard]] auto visual_part(visual::label_t) noexcept
-            -> primitives::TextPresentation&;
+        [[nodiscard]] auto visual_part(visual::label_t) noexcept -> primitives::TextPresentation&;
         [[nodiscard]] auto visual_part(visual::container_t) noexcept
             -> primitives::BoxPresentation&;
 

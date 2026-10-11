@@ -16,17 +16,26 @@ namespace nandina::resource
     {
         [[nodiscard]] auto storage_from_string(std::string_view value)
             -> std::optional<ManifestStorage> {
-            if (value == "auto") { return ManifestStorage::automatic; }
-            if (value == "embedded") { return ManifestStorage::embedded; }
-            if (value == "external") { return ManifestStorage::external; }
+            if (value == "auto") {
+                return ManifestStorage::automatic;
+            }
+            if (value == "embedded") {
+                return ManifestStorage::embedded;
+            }
+            if (value == "external") {
+                return ManifestStorage::external;
+            }
             return std::nullopt;
         }
 
         [[nodiscard]] auto storage_name(ManifestStorage storage) -> std::string_view {
             switch (storage) {
-            case ManifestStorage::automatic: return "auto";
-            case ManifestStorage::embedded: return "embedded";
-            case ManifestStorage::external: return "external";
+                case ManifestStorage::automatic:
+                    return "auto";
+                case ManifestStorage::embedded:
+                    return "embedded";
+                case ManifestStorage::external:
+                    return "external";
             }
             return "auto";
         }
@@ -38,7 +47,8 @@ namespace nandina::resource
             std::size_t retry = 0;
             while (value_index < value.size()) {
                 if (pattern_index < pattern.size()
-                    && (pattern[pattern_index] == '?' || pattern[pattern_index] == value[value_index]))
+                    && (pattern[pattern_index] == '?'
+                        || pattern[pattern_index] == value[value_index]))
                 {
                     ++pattern_index;
                     ++value_index;
@@ -51,9 +61,13 @@ namespace nandina::resource
                     pattern_index = star + 1;
                     value_index = ++retry;
                 }
-                else { return false; }
+                else {
+                    return false;
+                }
             }
-            while (pattern_index < pattern.size() && pattern[pattern_index] == '*') { ++pattern_index; }
+            while (pattern_index < pattern.size() && pattern[pattern_index] == '*') {
+                ++pattern_index;
+            }
             return pattern_index == pattern.size();
         }
 
@@ -61,7 +75,9 @@ namespace nandina::resource
             std::string result;
             result.reserve(value.size());
             for (const char character: value) {
-                if (character == '\\' || character == '"') { result.push_back('\\'); }
+                if (character == '\\' || character == '"') {
+                    result.push_back('\\');
+                }
                 result.push_back(character);
             }
             return result;
@@ -70,7 +86,9 @@ namespace nandina::resource
         [[nodiscard]] auto parse_root(const toml::table& table, const std::filesystem::path& base)
             -> std::expected<ResourceScanRoot, std::string> {
             const auto path = table["path"].value<std::string>();
-            if (!path || path->empty()) { return std::unexpected("root.path is required"); }
+            if (!path || path->empty()) {
+                return std::unexpected("root.path is required");
+            }
             const auto prefix = table["key_prefix"].value_or(std::string {});
             if (!prefix.empty() && !ResourceKey::parse(prefix)) {
                 return std::unexpected("root.key_prefix is not canonical");
@@ -110,7 +128,7 @@ namespace nandina::resource
                 .revision = static_cast<std::uint64_t>(*revision),
             };
         }
-    }
+    } // namespace
 
     auto load_resource_policy(const std::filesystem::path& path)
         -> std::expected<ResourcePolicy, std::string> {
@@ -118,8 +136,8 @@ namespace nandina::resource
             const auto document = toml::parse_file(path.string());
             const auto legacy_package_id = document["package_id"].value<std::string>();
             const auto simple_package_id = document["package"].value<std::string>();
-            if (legacy_package_id && simple_package_id
-                && *legacy_package_id != *simple_package_id) {
+            if (legacy_package_id && simple_package_id && *legacy_package_id != *simple_package_id)
+            {
                 return std::unexpected("package and package_id disagree");
             }
             const auto package_id = legacy_package_id.or_else([&] { return simple_package_id; });
@@ -150,9 +168,13 @@ namespace nandina::resource
             if (roots && !roots->empty()) {
                 for (const auto& node: *roots) {
                     const auto* table = node.as_table();
-                    if (!table) { return std::unexpected("roots entries must be tables"); }
+                    if (!table) {
+                        return std::unexpected("roots entries must be tables");
+                    }
                     auto root = parse_root(*table, policy.base_directory);
-                    if (!root) { return std::unexpected(root.error()); }
+                    if (!root) {
+                        return std::unexpected(root.error());
+                    }
                     policy.roots.push_back(std::move(*root));
                 }
             }
@@ -174,21 +196,29 @@ namespace nandina::resource
             if (const auto* excludes = document["excludes"].as_array()) {
                 for (const auto& node: *excludes) {
                     const auto value = node.value<std::string>();
-                    if (!value) { return std::unexpected("excludes entries must be strings"); }
+                    if (!value) {
+                        return std::unexpected("excludes entries must be strings");
+                    }
                     policy.excludes.push_back(*value);
                 }
             }
             if (const auto* rules = document["rules"].as_array()) {
                 for (const auto& node: *rules) {
                     const auto* table = node.as_table();
-                    if (!table) { return std::unexpected("rules entries must be tables"); }
+                    if (!table) {
+                        return std::unexpected("rules entries must be tables");
+                    }
                     const auto glob = (*table)["glob"].value<std::string>();
-                    if (!glob || glob->empty()) { return std::unexpected("rule.glob is required"); }
+                    if (!glob || glob->empty()) {
+                        return std::unexpected("rule.glob is required");
+                    }
                     ResourcePolicyRule rule {.glob = *glob};
                     rule.media_type = (*table)["media_type"].value<std::string>();
                     if (const auto storage = (*table)["storage"].value<std::string>()) {
                         rule.storage = storage_from_string(*storage);
-                        if (!rule.storage) { return std::unexpected("rule.storage is invalid"); }
+                        if (!rule.storage) {
+                            return std::unexpected("rule.storage is invalid");
+                        }
                     }
                     rule.streaming = (*table)["streaming"].value<bool>();
                     policy.rules.push_back(std::move(rule));
@@ -197,7 +227,9 @@ namespace nandina::resource
             if (const auto* overrides = document["resources"].as_array()) {
                 for (const auto& node: *overrides) {
                     const auto* table = node.as_table();
-                    if (!table) { return std::unexpected("resources entries must be tables"); }
+                    if (!table) {
+                        return std::unexpected("resources entries must be tables");
+                    }
                     const auto key_text = (*table)["key"].value<std::string>();
                     const auto key = key_text ? ResourceKey::parse(*key_text) : std::nullopt;
                     if (!key_text || key_text->empty() || !key) {
@@ -207,11 +239,15 @@ namespace nandina::resource
                     override.media_type = (*table)["media_type"].value<std::string>();
                     if (const auto storage = (*table)["storage"].value<std::string>()) {
                         override.storage = storage_from_string(*storage);
-                        if (!override.storage) { return std::unexpected("resources[].storage is invalid"); }
+                        if (!override.storage) {
+                            return std::unexpected("resources[].storage is invalid");
+                        }
                     }
                     override.streaming = (*table)["streaming"].value<bool>();
                     if (policy.overrides.contains(*key)) {
-                        return std::unexpected("duplicate resources override for key: " + key_text.value());
+                        return std::unexpected(
+                            "duplicate resources override for key: " + key_text.value()
+                        );
                     }
                     policy.overrides.emplace(std::move(*key), std::move(override));
                 }
@@ -221,14 +257,18 @@ namespace nandina::resource
                     const auto target = target_node.value<std::string>();
                     const auto alias_key = ResourceKey::parse(alias.str());
                     const auto target_key = target ? ResourceKey::parse(*target) : std::nullopt;
-                    if (!alias_key || !target_key) { return std::unexpected("alias keys must be canonical"); }
+                    if (!alias_key || !target_key) {
+                        return std::unexpected("alias keys must be canonical");
+                    }
                     policy.aliases.emplace(*alias_key, *target_key);
                 }
             }
             return policy;
         }
         catch (const toml::parse_error& error) {
-            return std::unexpected(std::string("resources.toml parse error: ") + error.description().data());
+            return std::unexpected(
+                std::string("resources.toml parse error: ") + error.description().data()
+            );
         }
     }
 
@@ -247,9 +287,13 @@ namespace nandina::resource
                 std::set<ResourceKey> keys;
                 for (const auto& node: *resources) {
                     const auto* table = node.as_table();
-                    if (!table) { return std::unexpected("lock resources entries must be tables"); }
+                    if (!table) {
+                        return std::unexpected("lock resources entries must be tables");
+                    }
                     auto resource = parse_locked_resource(*table);
-                    if (!resource) { return std::unexpected(resource.error()); }
+                    if (!resource) {
+                        return std::unexpected(resource.error());
+                    }
                     if (!ids.insert(resource->id).second || !keys.insert(resource->key).second) {
                         return std::unexpected("lock manifest contains duplicate identities");
                     }
@@ -259,17 +303,23 @@ namespace nandina::resource
             return result;
         }
         catch (const toml::parse_error& error) {
-            return std::unexpected(std::string("resources.lock.toml parse error: ") + error.description().data());
+            return std::unexpected(
+                std::string("resources.lock.toml parse error: ") + error.description().data()
+            );
         }
     }
 
-    auto sha256_file(const std::filesystem::path& path)
-        -> std::expected<std::string, std::string> {
+    auto sha256_file(const std::filesystem::path& path) -> std::expected<std::string, std::string> {
         std::ifstream input(path, std::ios::binary);
-        if (!input) { return std::unexpected("cannot open resource for hashing: " + path.string()); }
+        if (!input) {
+            return std::unexpected("cannot open resource for hashing: " + path.string());
+        }
         EVP_MD_CTX* raw_context = EVP_MD_CTX_new();
-        if (!raw_context) { return std::unexpected("cannot allocate SHA-256 context"); }
-        const auto context = std::unique_ptr<EVP_MD_CTX, decltype(&EVP_MD_CTX_free)>(raw_context, EVP_MD_CTX_free);
+        if (!raw_context) {
+            return std::unexpected("cannot allocate SHA-256 context");
+        }
+        const auto context =
+            std::unique_ptr<EVP_MD_CTX, decltype(&EVP_MD_CTX_free)>(raw_context, EVP_MD_CTX_free);
         if (EVP_DigestInit_ex(context.get(), EVP_sha256(), nullptr) != 1) {
             return std::unexpected("cannot initialize SHA-256");
         }
@@ -281,7 +331,9 @@ namespace nandina::resource
                 return std::unexpected("cannot update SHA-256");
             }
         }
-        if (!input.eof()) { return std::unexpected("resource read failed while hashing"); }
+        if (!input.eof()) {
+            return std::unexpected("resource read failed while hashing");
+        }
         std::array<unsigned char, EVP_MAX_MD_SIZE> digest {};
         unsigned int size = 0;
         if (EVP_DigestFinal_ex(context.get(), digest.data(), &size) != 1 || size != 32) {
@@ -299,15 +351,18 @@ namespace nandina::resource
         ResourceScanOptions options {
             .roots = policy.roots,
             .excludes = policy.excludes,
-            .output_paths = {
-                policy.base_directory / "resources.lock.toml",
-                policy.base_directory / policy.package_directory,
-            },
+            .output_paths =
+                {
+                    policy.base_directory / "resources.lock.toml",
+                    policy.base_directory / policy.package_directory,
+                },
             .include_hidden = policy.include_hidden,
             .allow_symlinks = policy.allow_symlinks,
         };
         for (const auto& rule: policy.rules) {
-            if (rule.media_type) { options.type_rules.push_back({rule.glob, *rule.media_type}); }
+            if (rule.media_type) {
+                options.type_rules.push_back({rule.glob, *rule.media_type});
+            }
         }
         return options;
     }
@@ -317,7 +372,9 @@ namespace nandina::resource
         const ResourceScanResult& scan,
         const std::optional<ResourceLockManifest>& previous
     ) -> std::expected<ResourceLockManifest, std::string> {
-        if (!scan.valid()) { return std::unexpected("cannot build lock manifest from an invalid scan"); }
+        if (!scan.valid()) {
+            return std::unexpected("cannot build lock manifest from an invalid scan");
+        }
         if (previous && previous->package_id != policy.package_id) {
             return std::unexpected("lock package_id does not match resources.toml");
         }
@@ -333,36 +390,61 @@ namespace nandina::resource
         std::set<ResourceId> claimed;
         for (const auto& scanned: scan.resources) {
             auto hash = sha256_file(scanned.source_path);
-            if (!hash) { return std::unexpected(hash.error()); }
-            const auto relative = std::filesystem::relative(scanned.source_path, policy.base_directory)
-                                      .lexically_normal();
+            if (!hash) {
+                return std::unexpected(hash.error());
+            }
+            const auto relative =
+                std::filesystem::relative(scanned.source_path, policy.base_directory)
+                    .lexically_normal();
             ManifestStorage storage = ManifestStorage::automatic;
             bool streaming = false;
             std::string media_type = scanned.media_type;
             for (const auto& rule: policy.rules) {
-                if (!glob_matches(rule.glob, scanned.key.value())) { continue; }
-                if (rule.storage) { storage = *rule.storage; }
-                if (rule.streaming) { streaming = *rule.streaming; }
+                if (!glob_matches(rule.glob, scanned.key.value())) {
+                    continue;
+                }
+                if (rule.storage) {
+                    storage = *rule.storage;
+                }
+                if (rule.streaming) {
+                    streaming = *rule.streaming;
+                }
             }
             // per-key overrides win over glob rules（`[[resources]]`）。
-            if (const auto found = policy.overrides.find(scanned.key); found != policy.overrides.end()) {
-                if (found->second.storage) { storage = *found->second.storage; }
-                if (found->second.streaming) { streaming = *found->second.streaming; }
-                if (found->second.media_type) { media_type = *found->second.media_type; }
+            if (const auto found = policy.overrides.find(scanned.key);
+                found != policy.overrides.end())
+            {
+                if (found->second.storage) {
+                    storage = *found->second.storage;
+                }
+                if (found->second.streaming) {
+                    streaming = *found->second.streaming;
+                }
+                if (found->second.media_type) {
+                    media_type = *found->second.media_type;
+                }
             }
             const LockedResource* identity = nullptr;
-            if (const auto found = by_source.find(relative.generic_string()); found != by_source.end()) {
+            if (const auto found = by_source.find(relative.generic_string());
+                found != by_source.end())
+            {
                 identity = found->second;
             }
             else if (const auto found = by_hash.find(*hash); found != by_hash.end()) {
                 std::vector<const LockedResource*> available;
-                std::ranges::copy_if(found->second, std::back_inserter(available), [&](const auto* item) {
-                    return !claimed.contains(item->id);
-                });
+                std::ranges::copy_if(
+                    found->second,
+                    std::back_inserter(available),
+                    [&](const auto* item) { return !claimed.contains(item->id); }
+                );
                 if (available.size() > 1) {
-                    return std::unexpected("ambiguous content-hash move for " + relative.generic_string());
+                    return std::unexpected(
+                        "ambiguous content-hash move for " + relative.generic_string()
+                    );
                 }
-                if (available.size() == 1) { identity = available.front(); }
+                if (available.size() == 1) {
+                    identity = available.front();
+                }
             }
             const auto resource_id = identity ? identity->id : ResourceId::random();
             if (!claimed.insert(resource_id).second) {
@@ -383,15 +465,21 @@ namespace nandina::resource
         }
         const std::set<ResourceKey> generated_keys = [&] {
             std::set<ResourceKey> keys;
-            for (const auto& item: result.resources) { keys.insert(item.key); }
+            for (const auto& item: result.resources) {
+                keys.insert(item.key);
+            }
             return keys;
         }();
         for (const auto& [alias, target]: policy.aliases) {
             if (generated_keys.contains(alias)) {
-                return std::unexpected("alias collides with a canonical resource key: " + std::string(alias.value()));
+                return std::unexpected(
+                    "alias collides with a canonical resource key: " + std::string(alias.value())
+                );
             }
             if (!generated_keys.contains(target)) {
-                return std::unexpected("alias target does not exist: " + std::string(target.value()));
+                return std::unexpected(
+                    "alias target does not exist: " + std::string(target.value())
+                );
             }
         }
         return result;
@@ -404,7 +492,9 @@ namespace nandina::resource
         const auto temporary = path.string() + ".tmp";
         {
             std::ofstream output(temporary, std::ios::binary | std::ios::trunc);
-            if (!output) { return std::unexpected("cannot create lock manifest temporary file"); }
+            if (!output) {
+                return std::unexpected("cannot create lock manifest temporary file");
+            }
             output << "format = 1\npackage_id = \"" << toml_escape(manifest.package_id) << "\"\n";
             for (const auto& item: manifest.resources) {
                 output << "\n[[resources]]\n"
@@ -419,7 +509,10 @@ namespace nandina::resource
                        << "revision = " << item.revision << "\n";
             }
             output.flush();
-            if (!output) { std::filesystem::remove(temporary); return std::unexpected("cannot write lock manifest"); }
+            if (!output) {
+                std::filesystem::remove(temporary);
+                return std::unexpected("cannot write lock manifest");
+            }
         }
         std::error_code error;
         std::filesystem::rename(temporary, path, error);

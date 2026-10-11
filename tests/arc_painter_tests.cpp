@@ -55,16 +55,12 @@ namespace
         void set_clip(const foundation::NanRect&) override {}
         void clear_clip() override {}
         void draw_rect(const foundation::NanRect&, const foundation::NanColor&) override {}
-        void draw_rect_outline(
-            const foundation::NanRect&,
-            float,
-            const foundation::NanColor&
-        ) override {}
-        void draw_rounded_rect(
-            const foundation::NanRect&,
-            float,
-            const foundation::NanColor&
-        ) override {}
+        void
+        draw_rect_outline(const foundation::NanRect&, float, const foundation::NanColor&) override {
+        }
+        void
+        draw_rounded_rect(const foundation::NanRect&, float, const foundation::NanColor&) override {
+        }
         void draw_rounded_rect_outline(
             const foundation::NanRect& rect,
             float radius,
@@ -85,11 +81,7 @@ namespace
         ) override {
             lines.push_back({a, b, thickness, color});
         }
-        void draw_circle(
-            const foundation::NanPoint&,
-            float,
-            const foundation::NanColor&
-        ) override {
+        void draw_circle(const foundation::NanPoint&, float, const foundation::NanColor&) override {
             ++circles;
         }
         void draw_arc(

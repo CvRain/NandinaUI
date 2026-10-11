@@ -23,7 +23,9 @@ namespace nandina::reactive
             value_(std::move(initial)),
             apply_(std::move(apply)) {}
 
-        [[nodiscard]] auto get() const -> const T& { return value_; }
+        [[nodiscard]] auto get() const -> const T& {
+            return value_;
+        }
 
         auto set(T value) -> bool {
             if (!has_changed(value)) {
@@ -45,8 +47,12 @@ namespace nandina::reactive
             return ReadProperty<T> {*this};
         }
 
-        [[nodiscard]] auto changed() -> Event<const T&>& { return changed_; }
-        [[nodiscard]] auto changed() const -> const Event<const T&>& { return changed_; }
+        [[nodiscard]] auto changed() -> Event<const T&>& {
+            return changed_;
+        }
+        [[nodiscard]] auto changed() const -> const Event<const T&>& {
+            return changed_;
+        }
 
         template<typename Source>
             requires requires(Source& source) {
@@ -74,9 +80,12 @@ namespace nandina::reactive
     public:
         explicit ReadProperty(const Property<T>& property): property_(&property) {}
 
-        [[nodiscard]] auto get() const -> const T& { return property_->get(); }
+        [[nodiscard]] auto get() const -> const T& {
+            return property_->get();
+        }
 
-        [[nodiscard]] auto observe(typename Event<const T&>::Handler handler) const -> Subscription {
+        [[nodiscard]] auto observe(typename Event<const T&>::Handler handler) const
+            -> Subscription {
             return property_->changed().subscribe(std::move(handler));
         }
 

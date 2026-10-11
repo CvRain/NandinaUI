@@ -40,10 +40,9 @@ namespace nandina::widget
 
         ~Toggle() override;
 
-        [[nodiscard]] static auto create(
-            std::string text,
-            theme::NanTheme theme = theme::default_theme()
-        ) -> std::shared_ptr<Toggle>;
+        [[nodiscard]] static auto
+        create(std::string text, theme::NanTheme theme = theme::default_theme())
+            -> std::shared_ptr<Toggle>;
 
         [[nodiscard]] static auto create(
             std::string text,

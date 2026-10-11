@@ -52,10 +52,9 @@ namespace nandina::app
         return foundation::NanRect::from_origin_size(offset, logical_size * scale);
     }
 
-    auto make_viewport_mapping(
-        const foundation::NanSize screen_size,
-        const ViewportScalePolicy& policy
-    ) -> ViewportMapping {
+    auto
+    make_viewport_mapping(const foundation::NanSize screen_size, const ViewportScalePolicy& policy)
+        -> ViewportMapping {
         if (!valid_size(screen_size)) {
             throw std::invalid_argument("viewport screen size must be finite and positive");
         }

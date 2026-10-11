@@ -98,7 +98,10 @@ namespace
     };
 } // namespace
 
-TEST_CASE("hover card opens after the open delay and closes after the close delay", "[hover-card][interaction]") {
+TEST_CASE(
+    "hover card opens after the open delay and closes after the close delay",
+    "[hover-card][interaction]"
+) {
     CardHarness harness;
     harness.layout();
 
@@ -118,7 +121,10 @@ TEST_CASE("hover card opens after the open delay and closes after the close dela
     REQUIRE_FALSE(harness.card->is_open());
 }
 
-TEST_CASE("hover card keeps open when the pointer moves into the content", "[hover-card][interaction]") {
+TEST_CASE(
+    "hover card keeps open when the pointer moves into the content",
+    "[hover-card][interaction]"
+) {
     CardHarness harness;
     harness.layout();
     harness.enter_trigger();
@@ -137,7 +143,10 @@ TEST_CASE("hover card keeps open when the pointer moves into the content", "[hov
     REQUIRE_FALSE(harness.card->is_open());
 }
 
-TEST_CASE("hover card without hoverable content behaves like a tooltip", "[hover-card][interaction]") {
+TEST_CASE(
+    "hover card without hoverable content behaves like a tooltip",
+    "[hover-card][interaction]"
+) {
     CardHarness harness;
     harness.card->set_hoverable_content(false);
     harness.layout();
@@ -190,7 +199,10 @@ TEST_CASE("hover card tolerates the gap between trigger and card", "[hover-card]
     REQUIRE(harness.card->is_open());
 }
 
-TEST_CASE("hover card mounts a portal while open and releases it on exit", "[hover-card][overlay]") {
+TEST_CASE(
+    "hover card mounts a portal while open and releases it on exit",
+    "[hover-card][overlay]"
+) {
     CardHarness harness;
     harness.layout();
     REQUIRE(harness.host->overlay_count() == 0);
@@ -235,16 +247,11 @@ TEST_CASE("hover card sizes itself from the content plus padding", "[hover-card]
     REQUIRE(surface != nullptr);
     const auto size = surface->size();
 
-    REQUIRE(
-        size.get_height()
-        == Catch::Approx(50.0F + style.metrics.padding_y * 2.0F)
-    );
+    REQUIRE(size.get_height() == Catch::Approx(50.0F + style.metrics.padding_y * 2.0F));
     // 内容比 min_width 窄，所以宽度走 min_width 下限。
     REQUIRE(
         size.get_width()
-        == Catch::Approx(
-            std::max(100.0F + style.metrics.padding_x * 2.0F, style.metrics.min_width)
-        )
+        == Catch::Approx(std::max(100.0F + style.metrics.padding_x * 2.0F, style.metrics.min_width))
     );
 
     // 触发控件铺满 HoverCard 的占位矩形。
@@ -272,7 +279,10 @@ TEST_CASE("hover card validates its slots", "[hover-card][boundary]") {
     REQUIRE(card->trigger() == nullptr);
     REQUIRE(card->content() == nullptr);
     // 没有触发器时测量为 0，而不是崩溃。
-    REQUIRE(card->measure_layout(foundation::NanLayoutConstraints::loose()).get_width() == Catch::Approx(0.0F));
+    REQUIRE(
+        card->measure_layout(foundation::NanLayoutConstraints::loose()).get_width()
+        == Catch::Approx(0.0F)
+    );
 }
 
 TEST_CASE("hover card recipe resolves semantic roles and honors rules", "[hover-card][theme]") {
@@ -294,14 +304,16 @@ TEST_CASE("hover card recipe resolves semantic roles and honors rules", "[hover-
             .metrics_max_width = theme::ThemeScalar::literal(420.0F),
         }
     );
-    const auto overridden =
-        theme::resolve_hover_card(themed, theme::ColorAppearance::light);
+    const auto overridden = theme::resolve_hover_card(themed, theme::ColorAppearance::light);
     REQUIRE(overridden.metrics.max_width == Catch::Approx(420.0F));
     REQUIRE(overridden.metrics.min_width == Catch::Approx(light.metrics.min_width));
     REQUIRE(overridden.panel.radius == Catch::Approx(light.panel.radius));
 }
 
-TEST_CASE("hover card instance override and theme switch change the resolved style", "[hover-card][theme]") {
+TEST_CASE(
+    "hover card instance override and theme switch change the resolved style",
+    "[hover-card][theme]"
+) {
     CardHarness harness;
     harness.layout();
     const auto initial = harness.card->resolved_style();
@@ -320,7 +332,10 @@ TEST_CASE("hover card instance override and theme switch change the resolved sty
     REQUIRE(harness.card->resolved_style().metrics.padding_y == Catch::Approx(20.0F));
 }
 
-TEST_CASE("hover card card surface is exposed to semantics but stays out of focus", "[hover-card][semantics]") {
+TEST_CASE(
+    "hover card card surface is exposed to semantics but stays out of focus",
+    "[hover-card][semantics]"
+) {
     CardHarness harness;
     harness.layout();
     harness.card->open();
@@ -347,8 +362,8 @@ TEST_CASE("hover card is reachable through BuildContext", "[hover-card][traits]"
     widget::BuildContext ui {graph, scope, themes, nullptr, host.get()};
 
     auto card = ui.make<widget::HoverCard>(
-                    std::make_shared<scene::NanControl>(foundation::NanSize(64.0F, 24.0F)),
-                    std::make_shared<scene::NanControl>(foundation::NanSize(90.0F, 30.0F))
+                      std::make_shared<scene::NanControl>(foundation::NanSize(64.0F, 24.0F)),
+                      std::make_shared<scene::NanControl>(foundation::NanSize(90.0F, 30.0F))
     )
                     .build();
     REQUIRE(card != nullptr);

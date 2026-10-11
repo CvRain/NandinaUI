@@ -1,8 +1,8 @@
 #include <nandina/scene/scene_tree.hpp>
-#include <nandina/widget/gesture_area.hpp>
-#include <nandina/widget/pointer_area.hpp>
 #include <nandina/widget/button.hpp>
 #include <nandina/widget/controls.hpp>
+#include <nandina/widget/gesture_area.hpp>
+#include <nandina/widget/pointer_area.hpp>
 #include <nandina/widget/primitives/pressable.hpp>
 
 #include <catch2/catch_test_macros.hpp>
@@ -26,7 +26,7 @@ namespace
         return button_event(scene::MouseButtonEvent::Button::left, action, x);
     }
 
-}
+} // namespace
 
 TEST_CASE("pressable reports press release cancel hover and focus", "[interaction][pressable]") {
     widget::primitives::Pressable pressable {foundation::NanSize(100.0F, 40.0F)};
@@ -59,7 +59,10 @@ TEST_CASE("pressable reports press release cancel hover and focus", "[interactio
     REQUIRE(focus_changes == 2);
 }
 
-TEST_CASE("pointer area observes bubbled events and captures a press", "[interaction][pointer-area]") {
+TEST_CASE(
+    "pointer area observes bubbled events and captures a press",
+    "[interaction][pointer-area]"
+) {
     scene::NanSceneTree tree;
     auto area = std::make_shared<widget::PointerArea>();
     area->set_size(foundation::NanSize(100.0F, 40.0F));
@@ -72,14 +75,17 @@ TEST_CASE("pointer area observes bubbled events and captures a press", "[interac
     area->set_on_pointer_move([&](const auto&) { ++moves; });
     area->set_on_pointer_up([&](const auto&) { ++ups; });
 
-    tree.dispatch_mouse_move(scene::MouseMoveEvent {
-        foundation::NanPoint(10.0F, 10.0F), foundation::NanPoint::zero()
-    });
+    tree.dispatch_mouse_move(
+        scene::MouseMoveEvent {foundation::NanPoint(10.0F, 10.0F), foundation::NanPoint::zero()}
+    );
     tree.dispatch_mouse_button(pointer_button(scene::MouseButtonEvent::Action::press));
     REQUIRE(tree.pointer_capture() != nullptr);
-    tree.dispatch_mouse_move(scene::MouseMoveEvent {
-        foundation::NanPoint(140.0F, 10.0F), foundation::NanPoint(130.0F, 0.0F)
-    });
+    tree.dispatch_mouse_move(
+        scene::MouseMoveEvent {
+            foundation::NanPoint(140.0F, 10.0F),
+            foundation::NanPoint(130.0F, 0.0F)
+        }
+    );
     tree.dispatch_mouse_button(pointer_button(scene::MouseButtonEvent::Action::release, 140.0F));
 
     REQUIRE(downs == 1);
@@ -88,7 +94,10 @@ TEST_CASE("pointer area observes bubbled events and captures a press", "[interac
     REQUIRE(tree.pointer_capture() == nullptr);
 }
 
-TEST_CASE("gesture area keeps single and double click mutually exclusive", "[interaction][gesture-area]") {
+TEST_CASE(
+    "gesture area keeps single and double click mutually exclusive",
+    "[interaction][gesture-area]"
+) {
     scene::NanSceneTree tree;
     auto area = std::make_shared<widget::GestureArea>();
     area->set_size(foundation::NanSize(100.0F, 40.0F));
@@ -97,9 +106,9 @@ TEST_CASE("gesture area keeps single and double click mutually exclusive", "[int
     int doubles = 0;
     area->set_on_click([&](const auto&) { ++clicks; });
     area->set_on_double_click([&](const auto&) { ++doubles; });
-    tree.dispatch_mouse_move(scene::MouseMoveEvent {
-        foundation::NanPoint(10.0F, 10.0F), foundation::NanPoint::zero()
-    });
+    tree.dispatch_mouse_move(
+        scene::MouseMoveEvent {foundation::NanPoint(10.0F, 10.0F), foundation::NanPoint::zero()}
+    );
 
     tree.dispatch_mouse_button(pointer_button(scene::MouseButtonEvent::Action::press));
     tree.dispatch_mouse_button(pointer_button(scene::MouseButtonEvent::Action::release));
@@ -112,7 +121,10 @@ TEST_CASE("gesture area keeps single and double click mutually exclusive", "[int
     REQUIRE(clicks == 0);
 }
 
-TEST_CASE("gesture area observes an interactive child during capture", "[interaction][gesture-area]") {
+TEST_CASE(
+    "gesture area observes an interactive child during capture",
+    "[interaction][gesture-area]"
+) {
     scene::NanSceneTree tree;
     auto area = std::make_shared<widget::GestureArea>();
     auto button = std::make_shared<widget::Button>("Open");
@@ -123,9 +135,9 @@ TEST_CASE("gesture area observes an interactive child during capture", "[interac
     int gesture_clicks = 0;
     button->set_on_click([&] { ++button_clicks; });
     area->set_on_click([&](const auto&) { ++gesture_clicks; });
-    tree.dispatch_mouse_move(scene::MouseMoveEvent {
-        foundation::NanPoint(10.0F, 10.0F), foundation::NanPoint::zero()
-    });
+    tree.dispatch_mouse_move(
+        scene::MouseMoveEvent {foundation::NanPoint(10.0F, 10.0F), foundation::NanPoint::zero()}
+    );
     tree.dispatch_mouse_button(pointer_button(scene::MouseButtonEvent::Action::press));
     tree.dispatch_mouse_button(pointer_button(scene::MouseButtonEvent::Action::release));
 
@@ -148,14 +160,17 @@ TEST_CASE("drag and long press suppress click recognition", "[interaction][gestu
     area->set_on_drag_move([&](const auto&) { ++drag_moves; });
     area->set_on_drag_end([&](const auto&) { ++drag_ends; });
     area->set_on_long_press([&](const auto&) { ++long_presses; });
-    tree.dispatch_mouse_move(scene::MouseMoveEvent {
-        foundation::NanPoint(10.0F, 10.0F), foundation::NanPoint::zero()
-    });
+    tree.dispatch_mouse_move(
+        scene::MouseMoveEvent {foundation::NanPoint(10.0F, 10.0F), foundation::NanPoint::zero()}
+    );
 
     tree.dispatch_mouse_button(pointer_button(scene::MouseButtonEvent::Action::press));
-    tree.dispatch_mouse_move(scene::MouseMoveEvent {
-        foundation::NanPoint(30.0F, 10.0F), foundation::NanPoint(20.0F, 0.0F)
-    });
+    tree.dispatch_mouse_move(
+        scene::MouseMoveEvent {
+            foundation::NanPoint(30.0F, 10.0F),
+            foundation::NanPoint(20.0F, 0.0F)
+        }
+    );
     tree.dispatch_mouse_button(pointer_button(scene::MouseButtonEvent::Action::release, 30.0F));
     tree.process(0.40F);
     REQUIRE(drag_starts == 1);
@@ -163,9 +178,9 @@ TEST_CASE("drag and long press suppress click recognition", "[interaction][gestu
     REQUIRE(drag_ends == 1);
     REQUIRE(clicks == 0);
 
-    tree.dispatch_mouse_move(scene::MouseMoveEvent {
-        foundation::NanPoint(10.0F, 10.0F), foundation::NanPoint::zero()
-    });
+    tree.dispatch_mouse_move(
+        scene::MouseMoveEvent {foundation::NanPoint(10.0F, 10.0F), foundation::NanPoint::zero()}
+    );
     tree.dispatch_mouse_button(pointer_button(scene::MouseButtonEvent::Action::press));
     tree.process(0.60F);
     tree.dispatch_mouse_button(pointer_button(scene::MouseButtonEvent::Action::release));
@@ -214,13 +229,23 @@ TEST_CASE(
     button->set_on_click([&] { ++button_clicks; });
     button->set_on_cancel([&] { ++button_cancels; });
 
-    tree.dispatch_mouse_move(scene::MouseMoveEvent {
-        foundation::NanPoint(10.0F, 10.0F), foundation::NanPoint::zero()
-    });
-    tree.dispatch_mouse_button(button_event(scene::MouseButtonEvent::Button::left, scene::MouseButtonEvent::Action::press));
-    tree.dispatch_mouse_button(button_event(scene::MouseButtonEvent::Button::right, scene::MouseButtonEvent::Action::press));
-    tree.dispatch_mouse_button(button_event(scene::MouseButtonEvent::Button::right, scene::MouseButtonEvent::Action::release));
-    tree.dispatch_mouse_button(button_event(scene::MouseButtonEvent::Button::left, scene::MouseButtonEvent::Action::release));
+    tree.dispatch_mouse_move(
+        scene::MouseMoveEvent {foundation::NanPoint(10.0F, 10.0F), foundation::NanPoint::zero()}
+    );
+    tree.dispatch_mouse_button(
+        button_event(scene::MouseButtonEvent::Button::left, scene::MouseButtonEvent::Action::press)
+    );
+    tree.dispatch_mouse_button(
+        button_event(scene::MouseButtonEvent::Button::right, scene::MouseButtonEvent::Action::press)
+    );
+    tree.dispatch_mouse_button(button_event(
+        scene::MouseButtonEvent::Button::right,
+        scene::MouseButtonEvent::Action::release
+    ));
+    tree.dispatch_mouse_button(button_event(
+        scene::MouseButtonEvent::Button::left,
+        scene::MouseButtonEvent::Action::release
+    ));
 
     // 四次转换全部可观察：右键的 down/up 也拿得到，而且在按住左键期间右键
     // **不会打乱** GestureArea 自己那份左键状态机（它显式地对非主键早退）。
@@ -234,7 +259,10 @@ TEST_CASE(
     REQUIRE(button_clicks == 1);
 }
 
-TEST_CASE("BuildContext authors gesture areas around ordinary controls", "[interaction][authoring]") {
+TEST_CASE(
+    "BuildContext authors gesture areas around ordinary controls",
+    "[interaction][authoring]"
+) {
     reactive::Graph graph;
     reactive::ReactiveScope scope {graph};
     theme::ThemeManager themes;

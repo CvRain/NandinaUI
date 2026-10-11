@@ -55,7 +55,8 @@ namespace
             float,
             const foundation::NanColor&
         ) override {}
-        void draw_circle(const foundation::NanPoint&, float, const foundation::NanColor&) override {}
+        void draw_circle(const foundation::NanPoint&, float, const foundation::NanColor&) override {
+        }
         void draw_text(
             std::string_view,
             const foundation::NanPoint&,
@@ -89,9 +90,7 @@ TEST_CASE("switch style resolves semantic theme tokens", "[switch][theme]") {
         checked.thumb.fill.oklch().light == Catch::Approx(design.light.background.oklch().light)
     );
     // 未勾选：input 轨道 + background 拇指。
-    REQUIRE(
-        unchecked.track.fill.oklch().light == Catch::Approx(design.light.input.oklch().light)
-    );
+    REQUIRE(unchecked.track.fill.oklch().light == Catch::Approx(design.light.input.oklch().light));
     REQUIRE(
         unchecked.thumb.fill.oklch().light == Catch::Approx(design.light.background.oklch().light)
     );

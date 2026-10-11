@@ -309,10 +309,8 @@ namespace nandina::widget::primitives
         return true;
     }
 
-    auto EditableText::handle_input(
-        scene::InputEvent& event,
-        scene::IClipboard* clipboard
-    ) -> bool {
+    auto EditableText::handle_input(scene::InputEvent& event, scene::IClipboard* clipboard)
+        -> bool {
         switch (event.type()) {
             case scene::EventType::focus_enter:
                 focused_ = true;
@@ -428,7 +426,8 @@ namespace nandina::widget::primitives
         draw_at(ctx, pos);
     }
 
-    auto EditableText::on_measure(foundation::NanLayoutConstraints constraints) -> foundation::NanSize {
+    auto EditableText::on_measure(foundation::NanLayoutConstraints constraints)
+        -> foundation::NanSize {
         const auto measured = text_.measure_layout(constraints);
         set_size(measured);
         return measured;
@@ -562,7 +561,8 @@ namespace nandina::widget::primitives
         emit_change();
     }
 
-    auto EditableText::line_stop_for(const std::size_t offset, const text::TextAffinity affinity) const
+    auto
+    EditableText::line_stop_for(const std::size_t offset, const text::TextAffinity affinity) const
         -> LineStop {
         const auto& layout = text_.layout_result();
         if (layout.lines.empty()) {
@@ -582,8 +582,7 @@ namespace nandina::widget::primitives
             // 软换行边界上同一个偏移同时属于前一行的行尾与后一行的行首：
             // downstream 归属后一行行首，upstream 归属前一行行尾。
             if (offset == end && affinity == text::TextAffinity::downstream
-                && index + 1 < layout.lines.size()
-                && layout.lines[index + 1].text_offset == end)
+                && index + 1 < layout.lines.size() && layout.lines[index + 1].text_offset == end)
             {
                 return {
                     .line_index = index + 1,
@@ -700,8 +699,7 @@ namespace nandina::widget::primitives
         else if (current.line_index + 1 >= layout.lines.size()) {
             return;
         }
-        const auto target_index =
-            direction < 0 ? current.line_index - 1 : current.line_index + 1;
+        const auto target_index = direction < 0 ? current.line_index - 1 : current.line_index + 1;
         const auto& target_line = layout.lines[target_index];
         if (target_line.caret_stops.empty()) {
             return;

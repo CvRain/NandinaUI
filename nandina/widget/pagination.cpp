@@ -485,7 +485,8 @@ namespace nandina::widget
         return false;
     }
 
-    auto Pagination::on_measure(const foundation::NanLayoutConstraints constraints) -> foundation::NanSize {
+    auto Pagination::on_measure(const foundation::NanLayoutConstraints constraints)
+        -> foundation::NanSize {
         ensure_model();
         const auto style = resolved_style();
         if (items_.empty()) {

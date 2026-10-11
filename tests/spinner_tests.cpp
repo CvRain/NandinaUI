@@ -30,16 +30,11 @@ namespace
         void set_clip(const foundation::NanRect&) override {}
         void clear_clip() override {}
         void draw_rect(const foundation::NanRect&, const foundation::NanColor&) override {}
-        void draw_rect_outline(
-            const foundation::NanRect&,
-            float,
-            const foundation::NanColor&
-        ) override {}
-        void draw_rounded_rect(
-            const foundation::NanRect&,
-            float,
-            const foundation::NanColor&
-        ) override {
+        void
+        draw_rect_outline(const foundation::NanRect&, float, const foundation::NanColor&) override {
+        }
+        void
+        draw_rounded_rect(const foundation::NanRect&, float, const foundation::NanColor&) override {
             ++rounded_rects;
         }
         void draw_rounded_rect_outline(
@@ -59,11 +54,7 @@ namespace
             ++lines;
             last_line_color = color;
         }
-        void draw_circle(
-            const foundation::NanPoint&,
-            float,
-            const foundation::NanColor&
-        ) override {
+        void draw_circle(const foundation::NanPoint&, float, const foundation::NanColor&) override {
             ++circles;
         }
         void draw_text(
@@ -83,9 +74,7 @@ TEST_CASE("spinner resolves its indicator token and metrics from the recipe", "[
         theme::SpinnerVisualState::normal
     );
 
-    REQUIRE(
-        style.indicator.oklch().light == Catch::Approx(design.light.primary.oklch().light)
-    );
+    REQUIRE(style.indicator.oklch().light == Catch::Approx(design.light.primary.oklch().light));
     REQUIRE(style.metrics.diameter == Catch::Approx(16.0F));
     REQUIRE(style.metrics.thickness == Catch::Approx(2.0F));
     REQUIRE(style.metrics.arc_radians == Catch::Approx(4.712389F));
@@ -105,7 +94,10 @@ TEST_CASE("spinner disabled state scales indicator alpha", "[spinner][theme]") {
         theme::SpinnerVisualState::disabled
     );
 
-    REQUIRE(disabled.indicator.alpha() == Catch::Approx(normal.indicator.alpha() * design.tokens.opacity.disabled));
+    REQUIRE(
+        disabled.indicator.alpha()
+        == Catch::Approx(normal.indicator.alpha() * design.tokens.opacity.disabled)
+    );
 }
 
 TEST_CASE("spinner measures a diameter square", "[spinner][layout]") {
@@ -116,10 +108,12 @@ TEST_CASE("spinner measures a diameter square", "[spinner][layout]") {
     REQUIRE(loose.get_width() == Catch::Approx(16.0F));
     REQUIRE(loose.get_height() == Catch::Approx(16.0F));
 
-    const auto narrow = spinner->measure_layout(foundation::NanLayoutConstraints {
-        .max_width = 8.0F,
-        .max_height = 8.0F,
-    });
+    const auto narrow = spinner->measure_layout(
+        foundation::NanLayoutConstraints {
+            .max_width = 8.0F,
+            .max_height = 8.0F,
+        }
+    );
     REQUIRE(narrow.get_width() == Catch::Approx(8.0F));
     REQUIRE(narrow.get_height() == Catch::Approx(8.0F));
 }
@@ -172,10 +166,12 @@ TEST_CASE("spinner override patches fields and survives a system apply", "[spinn
 
     const float indicator_light = spinner->resolved_style().indicator.oklch().light;
 
-    spinner->set_override(theme::SpinnerRecipeRule {
-        .indicator = theme::ThemeColor::token(theme::ColorToken::error),
-        .metrics_diameter = theme::ThemeScalar::literal(24.0F),
-    });
+    spinner->set_override(
+        theme::SpinnerRecipeRule {
+            .indicator = theme::ThemeColor::token(theme::ColorToken::error),
+            .metrics_diameter = theme::ThemeScalar::literal(24.0F),
+        }
+    );
     const auto overridden = spinner->resolved_style();
     REQUIRE(
         overridden.indicator.oklch().light
@@ -208,9 +204,7 @@ TEST_CASE("spinner re-resolves its indicator on a theme switch", "[spinner][them
     auto design = theme::default_design_system();
     design.light.primary = theme::nan_color(0.42F, 0.12F, 150.0F);
     themes.apply(std::make_shared<const theme::DesignSystem>(std::move(design)));
-    REQUIRE(
-        spinner->resolved_style().indicator.oklch().light == Catch::Approx(0.42F)
-    );
+    REQUIRE(spinner->resolved_style().indicator.oklch().light == Catch::Approx(0.42F));
 }
 
 TEST_CASE("spinner paints an arc through the scene tree", "[spinner][paint]") {

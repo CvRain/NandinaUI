@@ -17,24 +17,23 @@ namespace nandina::widget
     namespace
     {
         [[nodiscard]] auto percent_text(const float fraction) -> std::string {
-            const int percent = std::clamp(
-                static_cast<int>(std::lround(fraction * 100.0F)),
-                0,
-                100
-            );
+            const int percent =
+                std::clamp(static_cast<int>(std::lround(fraction * 100.0F)), 0, 100);
             return std::to_string(percent) + "%";
         }
     } // namespace
 
     ProgressBar::ProgressBar(const float value, theme::NanTheme theme) {
-        system_ = std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ =
+            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
         theme_view_ = theme;
         set_value(value);
         const auto style = resolved_style();
         set_size(foundation::NanSize(style.metrics.preferred_width, style.metrics.height));
     }
 
-    auto ProgressBar::create(const float value, theme::NanTheme theme) -> std::shared_ptr<ProgressBar> {
+    auto ProgressBar::create(const float value, theme::NanTheme theme)
+        -> std::shared_ptr<ProgressBar> {
         return std::make_shared<ProgressBar>(value, theme);
     }
 
@@ -73,7 +72,8 @@ namespace nandina::widget
     }
 
     void ProgressBar::set_theme(theme::NanTheme theme) {
-        system_ = std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ =
+            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
         system_explicit_ = true;
         theme_view_ = theme;
         mark_layout_dirty();
@@ -128,11 +128,11 @@ namespace nandina::widget
         }
     }
 
-    auto ProgressBar::on_measure(const foundation::NanLayoutConstraints constraints) -> foundation::NanSize {
+    auto ProgressBar::on_measure(const foundation::NanLayoutConstraints constraints)
+        -> foundation::NanSize {
         const auto style = resolved_style();
-        const float width = std::isfinite(constraints.max_width)
-            ? constraints.max_width
-            : style.metrics.preferred_width;
+        const float width = std::isfinite(constraints.max_width) ? constraints.max_width
+                                                                 : style.metrics.preferred_width;
         return constraints.constrain(foundation::NanSize(width, style.metrics.height));
     }
 

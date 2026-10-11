@@ -85,9 +85,8 @@ namespace
                 return nullptr;
             }
             auto* scope = dismiss->get_child(0)->as_control();
-            return scope != nullptr && scope->child_count() > 0
-                ? scope->get_child(0)->as_control()
-                : nullptr;
+            return scope != nullptr && scope->child_count() > 0 ? scope->get_child(0)->as_control()
+                                                                : nullptr;
         }
     };
 
@@ -274,8 +273,8 @@ TEST_CASE("dialog override adjusts scrim and close callback fires", "[dialog][ov
     harness.dialog->open();
     harness.dialog->close();
     REQUIRE(closes == 0); // 淡出完成前不触发 on_close
-    tick(harness, 0.5F);  // 完成淡出
-    tick(harness, 0.5F);  // closing → closed，触发 on_close
+    tick(harness, 0.5F); // 完成淡出
+    tick(harness, 0.5F); // closing → closed，触发 on_close
     REQUIRE(closes == 1);
 }
 
@@ -356,9 +355,8 @@ namespace
                 return nullptr;
             }
             auto* scope = dismiss->get_child(0)->as_control();
-            return scope != nullptr && scope->child_count() > 0
-                ? scope->get_child(0)->as_control()
-                : nullptr;
+            return scope != nullptr && scope->child_count() > 0 ? scope->get_child(0)->as_control()
+                                                                : nullptr;
         }
     };
 
@@ -437,18 +435,22 @@ TEST_CASE("dialog blocks input below while open", "[dialog][overlay][modal]") {
     REQUIRE(hit != behind.get());
 }
 
-TEST_CASE("dialog dismisses on scrim click and escape through the overlay", "[dialog][overlay][input]")
-{
+TEST_CASE(
+    "dialog dismisses on scrim click and escape through the overlay",
+    "[dialog][overlay][input]"
+) {
     OverlayDialogHarness harness;
     (void)harness.dialog->set_content(std::make_shared<widget::Button>("OK"));
     harness.dialog->open();
     harness.layout();
 
-    harness.tree.dispatch_mouse_button(scene::MouseButtonEvent(
-        scene::MouseButtonEvent::Button::left,
-        scene::MouseButtonEvent::Action::press,
-        foundation::NanPoint(10.0F, 10.0F)
-    ));
+    harness.tree.dispatch_mouse_button(
+        scene::MouseButtonEvent(
+            scene::MouseButtonEvent::Button::left,
+            scene::MouseButtonEvent::Action::press,
+            foundation::NanPoint(10.0F, 10.0F)
+        )
+    );
     REQUIRE_FALSE(harness.dialog->is_open());
 
     harness.dialog->open();
@@ -474,11 +476,13 @@ TEST_CASE("non-dismissible dialog swallows escape and scrim clicks", "[dialog][o
     harness.tree.dispatch_key(scene::KeyEvent(256, scene::KeyEvent::Action::press));
     REQUIRE(harness.dialog->is_open());
 
-    harness.tree.dispatch_mouse_button(scene::MouseButtonEvent(
-        scene::MouseButtonEvent::Button::left,
-        scene::MouseButtonEvent::Action::press,
-        foundation::NanPoint(15.0F, 15.0F)
-    ));
+    harness.tree.dispatch_mouse_button(
+        scene::MouseButtonEvent(
+            scene::MouseButtonEvent::Button::left,
+            scene::MouseButtonEvent::Action::press,
+            foundation::NanPoint(15.0F, 15.0F)
+        )
+    );
     REQUIRE(harness.dialog->is_open());
     // 模态层吞掉输入，下层按钮不响应。
     REQUIRE(presses == 0);
@@ -519,7 +523,10 @@ TEST_CASE("dialog reopens after closing without leaking overlays", "[dialog][ove
     }
 }
 
-TEST_CASE("floating content opened inside a dialog stays above the scrim", "[dialog][overlay][nested]") {
+TEST_CASE(
+    "floating content opened inside a dialog stays above the scrim",
+    "[dialog][overlay][nested]"
+) {
     OverlayDialogHarness harness;
     // 模态面板里放一个 Select：它的弹层必须压在遮罩之上，否则会被埋掉且点不到。
     auto select = widget::Select::create({"A", "B", "C"});
@@ -532,11 +539,13 @@ TEST_CASE("floating content opened inside a dialog stays above the scrim", "[dia
         select->global_bounds().get_left() + 10.0F,
         select->global_bounds().get_top() + 10.0F
     );
-    harness.tree.dispatch_mouse_button(scene::MouseButtonEvent(
-        scene::MouseButtonEvent::Button::left,
-        scene::MouseButtonEvent::Action::press,
-        field
-    ));
+    harness.tree.dispatch_mouse_button(
+        scene::MouseButtonEvent(
+            scene::MouseButtonEvent::Button::left,
+            scene::MouseButtonEvent::Action::press,
+            field
+        )
+    );
     harness.layout();
     REQUIRE(select->is_open());
     REQUIRE(harness.host->overlay_count() == 2);
@@ -555,11 +564,13 @@ TEST_CASE("floating content opened inside a dialog stays above the scrim", "[dia
         popup->global_bounds().get_left() + 10.0F,
         popup->global_bounds().get_top() + row_height * 1.5F
     );
-    harness.tree.dispatch_mouse_button(scene::MouseButtonEvent(
-        scene::MouseButtonEvent::Button::left,
-        scene::MouseButtonEvent::Action::press,
-        option_point
-    ));
+    harness.tree.dispatch_mouse_button(
+        scene::MouseButtonEvent(
+            scene::MouseButtonEvent::Button::left,
+            scene::MouseButtonEvent::Action::press,
+            option_point
+        )
+    );
     REQUIRE(select->selected_index() == 1);
     REQUIRE_FALSE(select->is_open());
 }
@@ -581,20 +592,22 @@ TEST_CASE("dialog panel lays out the title inside the padded content area", "[di
     auto* second = panel->get_child(1)->as_node2d();
     REQUIRE(first != nullptr);
     REQUIRE(second != nullptr);
-    auto* title = first->global_bounds().get_top() <= second->global_bounds().get_top() ? first
-                                                                                        : second;
+    auto* title =
+        first->global_bounds().get_top() <= second->global_bounds().get_top() ? first : second;
     auto* content = title == first ? second : first;
 
     const auto style = harness.dialog->resolved_style();
     const auto panel_bounds = panel->global_bounds();
     const auto title_bounds = title->global_bounds();
-    REQUIRE(title_bounds.get_left() - panel_bounds.get_left()
-            == Catch::Approx(style.metrics.padding_x));
-    REQUIRE(title_bounds.get_top() - panel_bounds.get_top()
-            == Catch::Approx(style.metrics.padding_y));
+    REQUIRE(
+        title_bounds.get_left() - panel_bounds.get_left() == Catch::Approx(style.metrics.padding_x)
+    );
+    REQUIRE(
+        title_bounds.get_top() - panel_bounds.get_top() == Catch::Approx(style.metrics.padding_y)
+    );
     // 两段文字之间是 recipe 的 gap，不重叠。
-    const auto gap = content->global_bounds().get_top()
-        - (title_bounds.get_top() + title_bounds.get_height());
+    const auto gap =
+        content->global_bounds().get_top() - (title_bounds.get_top() + title_bounds.get_height());
     REQUIRE(gap == Catch::Approx(style.metrics.gap));
 }
 
@@ -629,7 +642,10 @@ TEST_CASE("a floating dialog leaves no gap in its parent layout", "[dialog][over
     REQUIRE_FALSE(dialog->is_visible_in_tree());
 }
 
-TEST_CASE("a floating dialog exposes the dialog role from its panel", "[dialog][overlay][semantics]") {
+TEST_CASE(
+    "a floating dialog exposes the dialog role from its panel",
+    "[dialog][overlay][semantics]"
+) {
     OverlayDialogHarness harness;
     harness.dialog->set_title("删除这条记录？");
     harness.dialog->set_content(std::make_shared<widget::Button>("删除"));

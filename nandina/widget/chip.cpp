@@ -214,7 +214,8 @@ namespace nandina::widget
         }
     }
 
-    auto Chip::on_measure(const foundation::NanLayoutConstraints constraints) -> foundation::NanSize {
+    auto Chip::on_measure(const foundation::NanLayoutConstraints constraints)
+        -> foundation::NanSize {
         const auto style = resolved_style();
         apply_text_style();
         (void)text_.measure_layout(foundation::NanLayoutConstraints::loose());

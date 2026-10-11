@@ -485,8 +485,7 @@ void main() {
                 const float half_sweep = std::abs(arc->sweep);
                 const float start = arc->angle - half_sweep;
                 const float total = half_sweep * 2.0F;
-                const int steps =
-                    std::clamp(static_cast<int>(std::ceil(total / 0.25F)), 2, 64);
+                const int steps = std::clamp(static_cast<int>(std::ceil(total / 0.25F)), 2, 64);
                 const float step = total / static_cast<float>(steps);
                 auto previous = ::Vector2 {
                     arc->center.get_x() + mid * std::sin(start),
@@ -589,20 +588,10 @@ void main() {
                 SetShaderValue(aa_shader_, aa_loc_arc_band_, band_v, SHADER_UNIFORM_VEC2);
             }
             if (arc && aa_loc_arc_angle_ >= 0) {
-                SetShaderValue(
-                    aa_shader_,
-                    aa_loc_arc_angle_,
-                    &arc->angle,
-                    SHADER_UNIFORM_FLOAT
-                );
+                SetShaderValue(aa_shader_, aa_loc_arc_angle_, &arc->angle, SHADER_UNIFORM_FLOAT);
             }
             if (arc && aa_loc_arc_sweep_ >= 0) {
-                SetShaderValue(
-                    aa_shader_,
-                    aa_loc_arc_sweep_,
-                    &arc->sweep,
-                    SHADER_UNIFORM_FLOAT
-                );
+                SetShaderValue(aa_shader_, aa_loc_arc_sweep_, &arc->sweep, SHADER_UNIFORM_FLOAT);
             }
             DrawTexturePro(
                 aa_white_tex_,

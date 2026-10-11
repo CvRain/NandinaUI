@@ -227,8 +227,7 @@ namespace nandina::widget
         return make_intent(target);
     }
 
-    auto RovingFocus::handle_text(const scene::TextInputEvent& event)
-        -> std::optional<Intent> {
+    auto RovingFocus::handle_text(const scene::TextInputEvent& event) -> std::optional<Intent> {
         if (!has_members()) {
             return std::nullopt;
         }

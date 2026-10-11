@@ -316,7 +316,8 @@ namespace nandina::widget
             );
             // Measure against loose constraints so the size is known before the
             // overlay layer gets a chance to lay the bubble out.
-            const auto bubble_size = created->measure_layout(foundation::NanLayoutConstraints::loose());
+            const auto bubble_size =
+                created->measure_layout(foundation::NanLayoutConstraints::loose());
             if (!bubble_size.is_valid()) {
                 return;
             }
@@ -432,7 +433,8 @@ namespace nandina::widget
         paint_tooltip_bubble(context, world, style, text_);
     }
 
-    auto Tooltip::on_measure(const foundation::NanLayoutConstraints constraints) -> foundation::NanSize {
+    auto Tooltip::on_measure(const foundation::NanLayoutConstraints constraints)
+        -> foundation::NanSize {
         auto trigger = trigger_.lock();
         if (!trigger) {
             return constraints.constrain(foundation::NanSize(0.0F, 0.0F));

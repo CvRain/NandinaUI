@@ -19,13 +19,13 @@ namespace nandina::foundation
     [[nodiscard]] inline auto nan_relative_luminance(const NanColor& color) -> float {
         const auto rgb = color.to<NanRgb>();
         return 0.2126F * nan_srgb_to_linear_channel(rgb.red)
-             + 0.7152F * nan_srgb_to_linear_channel(rgb.green)
-             + 0.0722F * nan_srgb_to_linear_channel(rgb.blue);
+            + 0.7152F * nan_srgb_to_linear_channel(rgb.green)
+            + 0.0722F * nan_srgb_to_linear_channel(rgb.blue);
     }
 
     /// WCAG 2.x contrast ratio in [1, 21], symmetric in its arguments.
-    [[nodiscard]] inline auto
-    nan_contrast_ratio(const NanColor& first, const NanColor& second) -> float {
+    [[nodiscard]] inline auto nan_contrast_ratio(const NanColor& first, const NanColor& second)
+        -> float {
         const float first_luminance = nan_relative_luminance(first);
         const float second_luminance = nan_relative_luminance(second);
         const float lighter = std::max(first_luminance, second_luminance);

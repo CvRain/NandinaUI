@@ -5,9 +5,9 @@
 #ifndef NANDINA_EXPERIMENT_APP_SHELL_CONTEXT_HPP
 #define NANDINA_EXPERIMENT_APP_SHELL_CONTEXT_HPP
 
+#include "../widget/build_context.hpp"
 #include "nan_router.hpp"
 #include "router_outlet.hpp"
-#include "../widget/build_context.hpp"
 
 namespace nandina::resource
 {
@@ -18,7 +18,7 @@ namespace nandina::text
 {
     class FontLoader;
     class FontFamilyRegistry;
-}
+} // namespace nandina::text
 
 namespace nandina::app
 {
@@ -59,12 +59,18 @@ namespace nandina::app
             );
         }
 
-        [[nodiscard]] auto navigation() const -> Navigation { return navigation_; }
+        [[nodiscard]] auto navigation() const -> Navigation {
+            return navigation_;
+        }
 
-        [[nodiscard]] auto outlet() const -> std::shared_ptr<RouterOutlet> { return outlet_; }
+        [[nodiscard]] auto outlet() const -> std::shared_ptr<RouterOutlet> {
+            return outlet_;
+        }
 
         /// 路由表（只读）：外壳拿它当**数据**，据此生成导航项。
-        [[nodiscard]] auto routes() const noexcept -> const Routes& { return *routes_; }
+        [[nodiscard]] auto routes() const noexcept -> const Routes& {
+            return *routes_;
+        }
 
         /// 当前页面类型键的响应式来源：导航高亮的事实来源，换页后自动更新。
         /// 外壳在 `set_shell()` 时就会绑定它 —— 那时还没有任何页面，首屏由

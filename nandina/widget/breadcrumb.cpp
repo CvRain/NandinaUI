@@ -219,7 +219,8 @@ namespace nandina::widget
         return {.width = x + style.metrics.padding_x, .height = height};
     }
 
-    auto Breadcrumb::on_measure(const foundation::NanLayoutConstraints constraints) -> foundation::NanSize {
+    auto Breadcrumb::on_measure(const foundation::NanLayoutConstraints constraints)
+        -> foundation::NanSize {
         const float available = std::isfinite(constraints.max_width)
             ? constraints.max_width
             : std::numeric_limits<float>::infinity();

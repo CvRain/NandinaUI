@@ -88,12 +88,14 @@ namespace nandina::widget
                 if (content_ == nullptr) {
                     return constraints.constrain(foundation::NanSize(0.0F, 0.0F));
                 }
-                const auto measured = content_->measure_layout(foundation::NanLayoutConstraints {
-                    .min_width = 0.0F,
-                    .max_width = inner_max_width,
-                    .min_height = 0.0F,
-                    .max_height = constraints.max_height,
-                });
+                const auto measured = content_->measure_layout(
+                    foundation::NanLayoutConstraints {
+                        .min_width = 0.0F,
+                        .max_width = inner_max_width,
+                        .min_height = 0.0F,
+                        .max_height = constraints.max_height,
+                    }
+                );
                 const float width = std::max(
                     measured.get_width() + m.padding_x * 2.0F,
                     std::min(m.min_width, constraints.max_width)
@@ -114,9 +116,7 @@ namespace nandina::widget
                     std::max(0.0F, width() - m.padding_x * 2.0F),
                     std::max(0.0F, height() - m.padding_y * 2.0F)
                 );
-                content_->measure_layout(
-                    foundation::NanLayoutConstraints::tight(inner.get_size())
-                );
+                content_->measure_layout(foundation::NanLayoutConstraints::tight(inner.get_size()));
                 content_->layout_to(inner);
             }
 
@@ -159,9 +159,7 @@ namespace nandina::widget
         theme_view_ = theme;
 
         surface_ = std::make_shared<internal::HoverCardSurface>();
-        surface_->on_pointer_inside = [this](const bool inside) {
-            set_pointer_in_content(inside);
-        };
+        surface_->on_pointer_inside = [this](const bool inside) { set_pointer_in_content(inside); };
         surface_->set_style(resolved_style());
 
         if (trigger) {
@@ -425,7 +423,8 @@ namespace nandina::widget
         close_portal();
     }
 
-    auto HoverCard::on_measure(const foundation::NanLayoutConstraints constraints) -> foundation::NanSize {
+    auto HoverCard::on_measure(const foundation::NanLayoutConstraints constraints)
+        -> foundation::NanSize {
         auto trigger = trigger_.lock();
         if (trigger == nullptr) {
             return constraints.constrain(foundation::NanSize(0.0F, 0.0F));
@@ -549,10 +548,8 @@ namespace nandina::widget
             return;
         }
 
-        const auto viewport = foundation::NanRect::from_origin_size(
-            foundation::NanPoint::zero(),
-            viewport_size
-        );
+        const auto viewport =
+            foundation::NanRect::from_origin_size(foundation::NanPoint::zero(), viewport_size);
         const auto options = placement_options();
         const auto size = surface_->measure_layout(foundation::NanLayoutConstraints::loose());
         if (!size.is_valid()) {
@@ -561,7 +558,9 @@ namespace nandina::widget
         const auto position = internal::position_anchored_overlay(anchor, size, viewport, options);
         surface_->set_position(position.rect.get_top_left());
         surface_->measure_layout(foundation::NanLayoutConstraints::tight(size));
-        surface_->layout_to(foundation::NanRect::from_origin_size(position.rect.get_top_left(), size));
+        surface_->layout_to(
+            foundation::NanRect::from_origin_size(position.rect.get_top_left(), size)
+        );
 
         if (portal_handle_ != nullptr && portal_handle_->mounted() && portal_anchor_ == anchor
             && portal_viewport_ == viewport_size && portal_placement_ == position.placement)
@@ -571,8 +570,8 @@ namespace nandina::widget
 
         // 已经在浮层里就不重新 present：撤掉再挂会让内容节点经历一次无谓的父子切换。
         const auto parent_id = host->overlay_containing(*this);
-        const auto level = parent_id != 0 ? scene::OverlayLevel::nested_popup
-                                         : scene::OverlayLevel::popup;
+        const auto level =
+            parent_id != 0 ? scene::OverlayLevel::nested_popup : scene::OverlayLevel::popup;
         if (portal_handle_ == nullptr || !portal_handle_->mounted()) {
             portal_handle_ = std::make_unique<scene::OverlayHandle>(
                 host->present(surface_, {.level = level, .parent = parent_id})

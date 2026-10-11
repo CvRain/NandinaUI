@@ -3,13 +3,13 @@
 //
 
 #include <nandina/render/render_device.hpp>
+#include <nandina/scene/overlay_host.hpp>
 #include <nandina/scene/scene_tree.hpp>
 #include <nandina/theme/theme_manager.hpp>
 #include <nandina/widget/button.hpp>
 #include <nandina/widget/controls.hpp>
 #include <nandina/widget/scroll_view.hpp>
 #include <nandina/widget/tooltip.hpp>
-#include <nandina/scene/overlay_host.hpp>
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
@@ -38,16 +38,11 @@ namespace
         void set_clip(const foundation::NanRect&) override {}
         void clear_clip() override {}
         void draw_rect(const foundation::NanRect&, const foundation::NanColor&) override {}
-        void draw_rect_outline(
-            const foundation::NanRect&,
-            float,
-            const foundation::NanColor&
-        ) override {}
-        void draw_rounded_rect(
-            const foundation::NanRect&,
-            float,
-            const foundation::NanColor&
-        ) override {
+        void
+        draw_rect_outline(const foundation::NanRect&, float, const foundation::NanColor&) override {
+        }
+        void
+        draw_rounded_rect(const foundation::NanRect&, float, const foundation::NanColor&) override {
             ++rounded_rects;
         }
         void draw_line(
@@ -56,7 +51,8 @@ namespace
             float,
             const foundation::NanColor&
         ) override {}
-        void draw_circle(const foundation::NanPoint&, float, const foundation::NanColor&) override {}
+        void draw_circle(const foundation::NanPoint&, float, const foundation::NanColor&) override {
+        }
         void draw_text(
             std::string_view text,
             const foundation::NanPoint&,
@@ -95,9 +91,11 @@ TEST_CASE("tooltip override survives a system apply", "[tooltip][override]") {
     tree.set_root(tooltip);
     REQUIRE(tree.layout_root(foundation::NanSize(120.0F, 40.0F)) >= 1);
 
-    tooltip->set_override(theme::TooltipRecipeRule {
-        .container_fill = theme::ThemeColor::token(theme::ColorToken::error),
-    });
+    tooltip->set_override(
+        theme::TooltipRecipeRule {
+            .container_fill = theme::ThemeColor::token(theme::ColorToken::error),
+        }
+    );
     REQUIRE(
         tooltip->resolved_style().container.fill.oklch().light
         == Catch::Approx(themes.design_system().light.error.oklch().light)
@@ -224,7 +222,10 @@ TEST_CASE("tooltip bubble escapes a clipping container", "[tooltip][overlay][cli
     REQUIRE(host->layer_at(1)->is_ancestor_of(*bubble));
 }
 
-TEST_CASE("tooltip bubble stays inside the viewport near an edge", "[tooltip][overlay][placement]") {
+TEST_CASE(
+    "tooltip bubble stays inside the viewport near an edge",
+    "[tooltip][overlay][placement]"
+) {
     auto host = scene::OverlayHost::create();
     auto trigger = widget::Button::create("Save");
     auto tooltip = widget::Tooltip::create("Saves preferences", trigger);
@@ -343,10 +344,7 @@ TEST_CASE(
     REQUIRE(host->overlay_count() == 0);
 }
 
-TEST_CASE(
-    "tooltip tolerates an expired injected overlay service",
-    "[tooltip][overlay][lifetime]"
-) {
+TEST_CASE("tooltip tolerates an expired injected overlay service", "[tooltip][overlay][lifetime]") {
     reactive::Graph graph;
     reactive::ReactiveScope scope {graph};
     theme::ThemeManager themes;
@@ -396,9 +394,11 @@ TEST_CASE("portal tooltip bubble renders the resolved label style", "[tooltip][o
     auto trigger = widget::Button::create("Save");
     auto tooltip = widget::Tooltip::create("Saves preferences", trigger);
     // A distinctive size so a bubble that forgot the resolved TextStyle is caught.
-    tooltip->set_override(theme::TooltipRecipeRule {
-        .label_font_size = theme::ThemeScalar::literal(13.0F),
-    });
+    tooltip->set_override(
+        theme::TooltipRecipeRule {
+            .label_font_size = theme::ThemeScalar::literal(13.0F),
+        }
+    );
     host->set_content(tooltip);
 
     scene::NanSceneTree tree;

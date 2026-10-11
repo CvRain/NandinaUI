@@ -41,6 +41,6 @@ namespace nandina::widget::internal
         foundation::NanRect viewport,
         const AnchoredPositionOptions& options = {}
     ) -> AnchoredPosition;
-}
+} // namespace nandina::widget::internal
 
 #endif

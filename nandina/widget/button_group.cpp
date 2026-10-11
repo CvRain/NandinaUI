@@ -49,7 +49,8 @@ namespace nandina::widget
     } // namespace
 
     ButtonGroup::ButtonGroup(const LayoutAxis axis, theme::NanTheme theme): axis_(axis) {
-        system_ = std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ =
+            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
         theme_view_ = theme;
     }
 
@@ -118,7 +119,8 @@ namespace nandina::widget
     }
 
     void ButtonGroup::set_theme(theme::NanTheme theme) {
-        system_ = std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ =
+            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
         system_explicit_ = true;
         theme_view_ = theme;
         mark_layout_dirty();
@@ -191,7 +193,10 @@ namespace nandina::widget
 
         const auto content = size_from_extents(main, cross, axis_);
         return constraints.constrain(
-            foundation::NanSize(content.get_width(), std::max(style.metrics.min_height, content.get_height()))
+            foundation::NanSize(
+                content.get_width(),
+                std::max(style.metrics.min_height, content.get_height())
+            )
         );
     }
 

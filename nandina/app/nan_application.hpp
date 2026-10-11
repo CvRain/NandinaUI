@@ -107,9 +107,11 @@ namespace nandina::app
             && std::default_initializable<PageT>
         auto run_page(WindowConfig config) -> int {
             return run_configured(std::move(config), [](NanRouter& router) {
-                const auto configured = router.configure(Routes {
-                    route<PageT>({.address = "main", .title = "main page"}),
-                });
+                const auto configured = router.configure(
+                    Routes {
+                        route<PageT>({.address = "main", .title = "main page"}),
+                    }
+                );
                 if (!configured) {
                     throw std::logic_error(
                         "NanApplication::run_page: cannot configure route: "
@@ -130,9 +132,11 @@ namespace nandina::app
             return run_configured(
                 std::move(config),
                 [params = std::move(params)](NanRouter& router) mutable {
-                    const auto configured = router.configure(Routes {
-                        route<PageT>({.address = "main", .title = "main page"}),
-                    });
+                    const auto configured = router.configure(
+                        Routes {
+                            route<PageT>({.address = "main", .title = "main page"}),
+                        }
+                    );
                     if (!configured) {
                         throw std::logic_error(
                             "NanApplication::run_page: cannot configure route: "
@@ -140,9 +144,7 @@ namespace nandina::app
                         );
                     }
                     if (!router.template start<PageT>(std::move(params))) {
-                        throw std::runtime_error(
-                            "NanApplication::run_page: failed to start page"
-                        );
+                        throw std::runtime_error("NanApplication::run_page: failed to start page");
                     }
                 }
             );

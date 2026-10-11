@@ -5,8 +5,8 @@
 #ifndef NANDINA_EXPERIMENT_WIDGET_PRIMITIVES_EDITABLE_TEXT_HPP
 #define NANDINA_EXPERIMENT_WIDGET_PRIMITIVES_EDITABLE_TEXT_HPP
 
-#include "../../scene/control.hpp"
 #include "../../scene/clipboard.hpp"
+#include "../../scene/control.hpp"
 #include "text.hpp"
 
 #include <functional>
@@ -38,9 +38,9 @@ namespace nandina::widget::primitives
      */
     struct TextCaretGeometry {
         std::size_t line_index = 0; // 插入符所在布局行
-        float x = 0.0F;             // 行内 x（相对布局原点）
-        float top = 0.0F;           // 行顶 y（相对布局原点）
-        float height = 0.0F;        // 所在行高
+        float x = 0.0F; // 行内 x（相对布局原点）
+        float top = 0.0F; // 行顶 y（相对布局原点）
+        float height = 0.0F; // 所在行高
     };
 
     class EditableText: public scene::NanControl {
@@ -53,7 +53,8 @@ namespace nandina::widget::primitives
         void set_style(text::TextStyle style);
         [[nodiscard]] auto style() const -> const text::TextStyle&;
 
-        void set_caret(std::size_t offset, text::TextAffinity affinity = text::TextAffinity::downstream);
+        void
+        set_caret(std::size_t offset, text::TextAffinity affinity = text::TextAffinity::downstream);
         [[nodiscard]] auto caret() const -> std::size_t;
         [[nodiscard]] auto caret_affinity() const -> text::TextAffinity;
 
@@ -96,8 +97,7 @@ namespace nandina::widget::primitives
         void draw_at(render::DrawContext& ctx, foundation::NanPoint position);
 
         [[nodiscard]] auto is_focusable() const -> bool override;
-        auto handle_input(scene::InputEvent& event, scene::IClipboard* clipboard)
-            -> bool;
+        auto handle_input(scene::InputEvent& event, scene::IClipboard* clipboard) -> bool;
         auto on_input(scene::InputEvent& event) -> bool override;
         auto on_draw(render::DrawContext& ctx) -> void override;
 
@@ -120,7 +120,8 @@ namespace nandina::widget::primitives
         };
 
         [[nodiscard]] auto snapshot() const -> EditSnapshot;
-        [[nodiscard]] auto line_stop_for(std::size_t offset, text::TextAffinity affinity) const -> LineStop;
+        [[nodiscard]] auto line_stop_for(std::size_t offset, text::TextAffinity affinity) const
+            -> LineStop;
         void record_undo();
         void restore(EditSnapshot snapshot);
         void undo();

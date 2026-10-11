@@ -3,11 +3,11 @@
 // Headless: scene/ never calls raylib, so these run without a window.
 //
 
-#include <catch2/catch_test_macros.hpp>
 #include <catch2/catch_approx.hpp>
+#include <catch2/catch_test_macros.hpp>
 
-#include <nandina/scene/control.hpp>
 #include <nandina/scene/canvas_layer.hpp>
+#include <nandina/scene/control.hpp>
 #include <nandina/scene/input_event.hpp>
 #include <nandina/scene/node2d.hpp>
 #include <nandina/scene/scene_tree.hpp>
@@ -24,100 +24,133 @@ using namespace nandina;
 namespace
 {
 
-/// Records lifecycle + input callbacks into a shared trace for order assertions.
-class ProbeNode : public scene::NanNode2D {
-public:
-    ProbeNode(std::vector<std::string>* trace, std::string tag, bool focusable = false)
-        : trace_(trace), tag_(std::move(tag)), focusable_(focusable) {}
+    /// Records lifecycle + input callbacks into a shared trace for order assertions.
+    class ProbeNode: public scene::NanNode2D {
+    public:
+        ProbeNode(std::vector<std::string>* trace, std::string tag, bool focusable = false):
+            trace_(trace),
+            tag_(std::move(tag)),
+            focusable_(focusable) {}
 
-    [[nodiscard]] auto contains_point(foundation::NanPoint local) const -> bool override {
-        // Unit box centered at origin (half-extent 10) for simple hit tests.
-        return local.get_x() >= -10 && local.get_x() <= 10
-            && local.get_y() >= -10 && local.get_y() <= 10;
-    }
-
-    [[nodiscard]] auto global_bounds() const -> foundation::NanRect override {
-        const auto p = global_position();
-        return foundation::NanRect::from_xywh(p.get_x() - 10, p.get_y() - 10, 20, 20);
-    }
-
-    [[nodiscard]] auto is_focusable() const -> bool override { return focusable_; }
-
-    void on_enter_tree() override { NanNode2D::on_enter_tree(); log("enter"); }
-    void on_ready() override { log("ready"); }
-    void on_exit_tree() override { NanNode2D::on_exit_tree(); log("exit"); }
-
-    auto on_input(scene::InputEvent& e) -> bool override {
-        switch (e.type()) {
-        case scene::EventType::mouse_enter: log("hover_enter"); break;
-        case scene::EventType::mouse_leave: log("hover_leave"); break;
-        case scene::EventType::focus_enter: log("focus_enter"); break;
-        case scene::EventType::focus_leave: log("focus_leave"); break;
-        case scene::EventType::mouse_wheel: {
-            const auto& w = static_cast<const scene::MouseWheelEvent&>(e);
-            log("wheel:" + std::to_string(static_cast<int>(w.delta().get_y())));
-            break;
+        [[nodiscard]] auto contains_point(foundation::NanPoint local) const -> bool override {
+            // Unit box centered at origin (half-extent 10) for simple hit tests.
+            return local.get_x() >= -10 && local.get_x() <= 10 && local.get_y() >= -10
+                && local.get_y() <= 10;
         }
-        case scene::EventType::text_input: {
-            const auto& t = static_cast<const scene::TextInputEvent&>(e);
-            log("text:" + std::string(t.text()));
-            break;
+
+        [[nodiscard]] auto global_bounds() const -> foundation::NanRect override {
+            const auto p = global_position();
+            return foundation::NanRect::from_xywh(p.get_x() - 10, p.get_y() - 10, 20, 20);
         }
-        default: break;
+
+        [[nodiscard]] auto is_focusable() const -> bool override {
+            return focusable_;
         }
-        return false;
-    }
 
-    std::function<void(ProbeNode&)> on_enter_hook;
-
-protected:
-    void log(const std::string& ev) {
-        if (trace_) { trace_->push_back(tag_ + ":" + ev); }
-    }
-
-private:
-    std::vector<std::string>* trace_;
-    std::string tag_;
-    bool focusable_;
-};
-
-/// ProbeNode variant that runs a hook during on_enter_tree (P0 regression).
-class HookNode : public ProbeNode {
-public:
-    using ProbeNode::ProbeNode;
-    void on_enter_tree() override {
-        ProbeNode::on_enter_tree();
-        if (on_enter_hook) { on_enter_hook(*this); }
-    }
-};
-
-class ProcessMutationNode final: public ProbeNode {
-public:
-    using ProbeNode::ProbeNode;
-
-    void on_process(float) override {
-        if (mutated) {
-            return;
+        void on_enter_tree() override {
+            NanNode2D::on_enter_tree();
+            log("enter");
         }
-        mutated = true;
-        added = std::make_shared<ProbeNode>(nullptr, "added");
-        add_child(added);
+        void on_ready() override {
+            log("ready");
+        }
+        void on_exit_tree() override {
+            NanNode2D::on_exit_tree();
+            log("exit");
+        }
+
+        auto on_input(scene::InputEvent& e) -> bool override {
+            switch (e.type()) {
+                case scene::EventType::mouse_enter:
+                    log("hover_enter");
+                    break;
+                case scene::EventType::mouse_leave:
+                    log("hover_leave");
+                    break;
+                case scene::EventType::focus_enter:
+                    log("focus_enter");
+                    break;
+                case scene::EventType::focus_leave:
+                    log("focus_leave");
+                    break;
+                case scene::EventType::mouse_wheel: {
+                    const auto& w = static_cast<const scene::MouseWheelEvent&>(e);
+                    log("wheel:" + std::to_string(static_cast<int>(w.delta().get_y())));
+                    break;
+                }
+                case scene::EventType::text_input: {
+                    const auto& t = static_cast<const scene::TextInputEvent&>(e);
+                    log("text:" + std::string(t.text()));
+                    break;
+                }
+                default:
+                    break;
+            }
+            return false;
+        }
+
+        std::function<void(ProbeNode&)> on_enter_hook;
+
+    protected:
+        void log(const std::string& ev) {
+            if (trace_) {
+                trace_->push_back(tag_ + ":" + ev);
+            }
+        }
+
+    private:
+        std::vector<std::string>* trace_;
+        std::string tag_;
+        bool focusable_;
+    };
+
+    /// ProbeNode variant that runs a hook during on_enter_tree (P0 regression).
+    class HookNode: public ProbeNode {
+    public:
+        using ProbeNode::ProbeNode;
+        void on_enter_tree() override {
+            ProbeNode::on_enter_tree();
+            if (on_enter_hook) {
+                on_enter_hook(*this);
+            }
+        }
+    };
+
+    class ProcessMutationNode final: public ProbeNode {
+    public:
+        using ProbeNode::ProbeNode;
+
+        void on_process(float) override {
+            if (mutated) {
+                return;
+            }
+            mutated = true;
+            added = std::make_shared<ProbeNode>(nullptr, "added");
+            add_child(added);
+        }
+
+        bool mutated = false;
+        std::shared_ptr<ProbeNode> added;
+    };
+
+    auto count(const std::vector<std::string>& trace, const std::string& what) -> int {
+        int n = 0;
+        for (const auto& s: trace) {
+            if (s == what) {
+                ++n;
+            }
+        }
+        return n;
     }
 
-    bool mutated = false;
-    std::shared_ptr<ProbeNode> added;
-};
-
-auto count(const std::vector<std::string>& trace, const std::string& what) -> int {
-    int n = 0;
-    for (const auto& s : trace) { if (s == what) { ++n; } }
-    return n;
-}
-
-auto index_of(const std::vector<std::string>& trace, const std::string& what) -> long {
-    for (size_t i = 0; i < trace.size(); ++i) { if (trace[i] == what) { return static_cast<long>(i); } }
-    return -1;
-}
+    auto index_of(const std::vector<std::string>& trace, const std::string& what) -> long {
+        for (size_t i = 0; i < trace.size(); ++i) {
+            if (trace[i] == what) {
+                return static_cast<long>(i);
+            }
+        }
+        return -1;
+    }
 
 } // namespace
 
@@ -147,7 +180,10 @@ TEST_CASE("lifecycle callbacks fire in the correct order", "[scene][lifecycle]")
     }
 }
 
-TEST_CASE("adding a child during on_enter_tree does not double-fire (P0)", "[scene][lifecycle][regression]") {
+TEST_CASE(
+    "adding a child during on_enter_tree does not double-fire (P0)",
+    "[scene][lifecycle][regression]"
+) {
     std::vector<std::string> trace;
 
     auto root = std::make_shared<HookNode>(&trace, "root");
@@ -175,11 +211,15 @@ TEST_CASE("hover tracking sends one enter and one leave", "[scene][hover]") {
     scene::NanSceneTree tree;
     tree.set_root(root);
 
-    tree.dispatch_mouse_move(scene::MouseMoveEvent(foundation::NanPoint(200, 200), foundation::NanPoint(0, 0)));
+    tree.dispatch_mouse_move(
+        scene::MouseMoveEvent(foundation::NanPoint(200, 200), foundation::NanPoint(0, 0))
+    );
     REQUIRE(tree.hovered_node() == b.get());
     REQUIRE(count(trace, "b:hover_enter") == 1);
 
-    tree.dispatch_mouse_move(scene::MouseMoveEvent(foundation::NanPoint(500, 500), foundation::NanPoint(0, 0)));
+    tree.dispatch_mouse_move(
+        scene::MouseMoveEvent(foundation::NanPoint(500, 500), foundation::NanPoint(0, 0))
+    );
     REQUIRE(tree.hovered_node() == nullptr);
     REQUIRE(count(trace, "b:hover_leave") == 1);
 }
@@ -229,7 +269,10 @@ TEST_CASE("nested control clips prune complete descendant branches", "[scene][hi
     REQUIRE(tree.hit_test(foundation::NanPoint(160.0F, 120.0F)) == nullptr);
 }
 
-TEST_CASE("transformed control clips use rendering world bounds", "[scene][hit-test][clip][transform]") {
+TEST_CASE(
+    "transformed control clips use rendering world bounds",
+    "[scene][hit-test][clip][transform]"
+) {
     auto root = std::make_shared<ProbeNode>(nullptr, "root");
     auto clip = std::make_shared<scene::NanControl>(foundation::NanSize(40.0F, 20.0F));
     auto child = std::make_shared<ProbeNode>(nullptr, "child");
@@ -269,22 +312,27 @@ TEST_CASE("clipped descendants lose hover and cannot receive click focus", "[sce
 
     scene::NanSceneTree tree;
     tree.set_root(root);
-    tree.dispatch_mouse_move(scene::MouseMoveEvent(
-        foundation::NanPoint(130.0F, 120.0F), foundation::NanPoint::zero()
-    ));
+    tree.dispatch_mouse_move(
+        scene::MouseMoveEvent(foundation::NanPoint(130.0F, 120.0F), foundation::NanPoint::zero())
+    );
     REQUIRE(tree.hovered_node() == child.get());
 
-    tree.dispatch_mouse_move(scene::MouseMoveEvent(
-        foundation::NanPoint(145.0F, 120.0F), foundation::NanPoint(15.0F, 0.0F)
-    ));
+    tree.dispatch_mouse_move(
+        scene::MouseMoveEvent(
+            foundation::NanPoint(145.0F, 120.0F),
+            foundation::NanPoint(15.0F, 0.0F)
+        )
+    );
     REQUIRE(tree.hovered_node() == nullptr);
     REQUIRE(count(trace, "child:hover_leave") == 1);
 
-    tree.dispatch_mouse_button(scene::MouseButtonEvent(
-        scene::MouseButtonEvent::Button::left,
-        scene::MouseButtonEvent::Action::press,
-        foundation::NanPoint(145.0F, 120.0F)
-    ));
+    tree.dispatch_mouse_button(
+        scene::MouseButtonEvent(
+            scene::MouseButtonEvent::Button::left,
+            scene::MouseButtonEvent::Action::press,
+            foundation::NanPoint(145.0F, 120.0F)
+        )
+    );
     REQUIRE(tree.focused_node() == nullptr);
 }
 
@@ -303,11 +351,11 @@ TEST_CASE("focus traversal skips non-focusable and wraps", "[scene][focus]") {
     tree.focus_next();
     REQUIRE(tree.focused_node() == f1.get());
     tree.focus_next();
-    REQUIRE(tree.focused_node() == f2.get());  // skips non-focusable plain
+    REQUIRE(tree.focused_node() == f2.get()); // skips non-focusable plain
     tree.focus_next();
-    REQUIRE(tree.focused_node() == f1.get());  // wraps
+    REQUIRE(tree.focused_node() == f1.get()); // wraps
     tree.focus_previous();
-    REQUIRE(tree.focused_node() == f2.get());  // wraps back
+    REQUIRE(tree.focused_node() == f2.get()); // wraps back
 }
 
 TEST_CASE("queue_delete dedups descendants and never dangles", "[scene][delete]") {
@@ -320,7 +368,7 @@ TEST_CASE("queue_delete dedups descendants and never dangles", "[scene][delete]"
         parentw = parent;
         childw = child;
         parent->add_child(child);
-        root->add_child(parent);  // root becomes the sole strong owner
+        root->add_child(parent); // root becomes the sole strong owner
     }
 
     scene::NanSceneTree tree;
@@ -328,10 +376,10 @@ TEST_CASE("queue_delete dedups descendants and never dangles", "[scene][delete]"
 
     SECTION("ancestor request absorbs descendant request") {
         tree.queue_delete(*parentw.lock());
-        tree.queue_delete(*childw.lock());  // deduped under parent
+        tree.queue_delete(*childw.lock()); // deduped under parent
 
         REQUIRE_FALSE(childw.expired());
-        tree.process(0.016F);  // flush
+        tree.process(0.016F); // flush
         REQUIRE(childw.expired());
         REQUIRE(parentw.expired());
         REQUIRE(root->child_count() == 0);
@@ -341,9 +389,9 @@ TEST_CASE("queue_delete dedups descendants and never dangles", "[scene][delete]"
         auto lone = std::make_shared<ProbeNode>(nullptr, "lone");
         root->add_child(lone);
         tree.queue_delete(*lone);
-        root->remove_and_delete(*lone);  // gone before flush
-        REQUIRE_NOTHROW(tree.process(0.016F));  // expired weak_ptr must not crash
-        REQUIRE(root->child_count() == 1);  // only 'parent' subtree remains
+        root->remove_and_delete(*lone); // gone before flush
+        REQUIRE_NOTHROW(tree.process(0.016F)); // expired weak_ptr must not crash
+        REQUIRE(root->child_count() == 1); // only 'parent' subtree remains
     }
 }
 
@@ -433,7 +481,10 @@ TEST_CASE("replacing the scene root discards old frame queues", "[scene][schedul
     REQUIRE(tree.root() == new_root.get());
 }
 
-TEST_CASE("canvas layer input honors order transform and blocking", "[scene][canvas-layer][input]") {
+TEST_CASE(
+    "canvas layer input honors order transform and blocking",
+    "[scene][canvas-layer][input]"
+) {
     auto stack = scene::LayerStack::create();
     auto world = scene::CanvasLayer::create(scene::CanvasSpace::world, 0);
     auto hud = scene::CanvasLayer::create(scene::CanvasSpace::screen, 10);
@@ -461,7 +512,10 @@ TEST_CASE("canvas layer input honors order transform and blocking", "[scene][can
     REQUIRE(tree.hit_test(foundation::NanPoint(110.0F, 60.0F)) == world_target.get());
 }
 
-TEST_CASE("nested canvas transforms preserve global positioning", "[scene][canvas-layer][transform]") {
+TEST_CASE(
+    "nested canvas transforms preserve global positioning",
+    "[scene][canvas-layer][transform]"
+) {
     auto stack = scene::LayerStack::create();
     auto layer = scene::CanvasLayer::create(scene::CanvasSpace::world);
     foundation::NanTransform2D canvas;
@@ -483,11 +537,16 @@ TEST_CASE("nested canvas transforms preserve global positioning", "[scene][canva
     child->set_global_position(target);
     REQUIRE(child->global_position().get_x() == Catch::Approx(target.get_x()).margin(0.001F));
     REQUIRE(child->global_position().get_y() == Catch::Approx(target.get_y()).margin(0.001F));
-    REQUIRE(child->to_global(foundation::NanPoint::zero()).get_x()
-            == Catch::Approx(target.get_x()).margin(0.001F));
+    REQUIRE(
+        child->to_global(foundation::NanPoint::zero()).get_x()
+        == Catch::Approx(target.get_x()).margin(0.001F)
+    );
 }
 
-TEST_CASE("disabled canvas invalidates focus capture and traversal", "[scene][canvas-layer][input]") {
+TEST_CASE(
+    "disabled canvas invalidates focus capture and traversal",
+    "[scene][canvas-layer][input]"
+) {
     auto stack = scene::LayerStack::create();
     auto back = scene::CanvasLayer::create(scene::CanvasSpace::screen, 0);
     auto front = scene::CanvasLayer::create(scene::CanvasSpace::screen, 10);
@@ -510,9 +569,9 @@ TEST_CASE("disabled canvas invalidates focus capture and traversal", "[scene][ca
     front->set_input_mode(scene::LayerInputMode::disabled);
     tree.dispatch_key(scene::KeyEvent(65, scene::KeyEvent::Action::press));
     REQUIRE(tree.focused_node() == nullptr);
-    tree.dispatch_mouse_move(scene::MouseMoveEvent(
-        foundation::NanPoint::zero(), foundation::NanPoint::zero()
-    ));
+    tree.dispatch_mouse_move(
+        scene::MouseMoveEvent(foundation::NanPoint::zero(), foundation::NanPoint::zero())
+    );
     REQUIRE(tree.pointer_capture() == nullptr);
     tree.focus_next();
     REQUIRE(tree.focused_node() == back_target.get());
@@ -566,18 +625,21 @@ TEST_CASE("mouse wheel dispatches to hovered node and bubbles", "[scene][wheel]"
     tree.set_root(root);
 
     SECTION("falls back to hit-test when nothing hovered") {
-        tree.dispatch_mouse_wheel(scene::MouseWheelEvent(
-            foundation::NanPoint(100, 100), foundation::NanPoint(0, 3)));
+        tree.dispatch_mouse_wheel(
+            scene::MouseWheelEvent(foundation::NanPoint(100, 100), foundation::NanPoint(0, 3))
+        );
         REQUIRE(count(child_trace, "child:wheel:3") == 1);
-        REQUIRE(count(parent_trace, "parent:wheel:3") == 1);  // bubbled to parent
+        REQUIRE(count(parent_trace, "parent:wheel:3") == 1); // bubbled to parent
     }
 
     SECTION("uses current hover target") {
-        tree.dispatch_mouse_move(scene::MouseMoveEvent(
-            foundation::NanPoint(100, 100), foundation::NanPoint(0, 0)));
+        tree.dispatch_mouse_move(
+            scene::MouseMoveEvent(foundation::NanPoint(100, 100), foundation::NanPoint(0, 0))
+        );
         REQUIRE(tree.hovered_node() == child.get());
-        tree.dispatch_mouse_wheel(scene::MouseWheelEvent(
-            foundation::NanPoint(100, 100), foundation::NanPoint(0, -2)));
+        tree.dispatch_mouse_wheel(
+            scene::MouseWheelEvent(foundation::NanPoint(100, 100), foundation::NanPoint(0, -2))
+        );
         REQUIRE(count(child_trace, "child:wheel:-2") == 1);
     }
 }
@@ -614,9 +676,12 @@ TEST_CASE("modifiers propagate through button and key events", "[scene][modifier
     REQUIRE_FALSE(key.modifiers().alt);
     REQUIRE(key.modifiers().any());
 
-    scene::MouseButtonEvent btn(scene::MouseButtonEvent::Button::left,
-                                scene::MouseButtonEvent::Action::press,
-                                foundation::NanPoint(0, 0), mods);
+    scene::MouseButtonEvent btn(
+        scene::MouseButtonEvent::Button::left,
+        scene::MouseButtonEvent::Action::press,
+        foundation::NanPoint(0, 0),
+        mods
+    );
     REQUIRE(btn.modifiers().ctrl);
     REQUIRE(btn.type() == scene::EventType::mouse_button);
 }
@@ -639,8 +704,10 @@ TEST_CASE("StyleContext resolves four-state inherited values", "[scene][style]")
     REQUIRE(resolved.font_size == Catch::Approx(16.0F));
     REQUIRE(resolved.locale == "zh-CN");
     REQUIRE(resolved.direction == theme::TextDirection::right_to_left);
-    REQUIRE(theme::resolve_style_value(local.font_size, 12.0F, &inherited.font_size, false)
-            == Catch::Approx(12.0F));
+    REQUIRE(
+        theme::resolve_style_value(local.font_size, 12.0F, &inherited.font_size, false)
+        == Catch::Approx(12.0F)
+    );
     REQUIRE(
         theme::resolve_style_value(
             theme::StyleValue<int> {},
@@ -787,8 +854,7 @@ TEST_CASE("semantics snapshots merge and hide composed descendants", "[scene][se
     REQUIRE(tree.semantics_dirty());
     REQUIRE(tree.update_semantics());
     REQUIRE(tree.semantics_tree().revision == revision + 1);
-    REQUIRE(tree.semantics_tree().roots.front().properties.label
-            == "Todo panel, Updated child");
+    REQUIRE(tree.semantics_tree().roots.front().properties.label == "Todo panel, Updated child");
 }
 
 TEST_CASE("semantics bounds follow the root viewport transform", "[scene][semantics][viewport]") {
@@ -799,14 +865,18 @@ TEST_CASE("semantics bounds follow the root viewport transform", "[scene][semant
 
     scene::NanSceneTree tree;
     tree.set_root(root);
-    tree.set_semantics_transform(foundation::NanTransform2D {
-        foundation::NanPoint(10.0F, 20.0F),
-        0.0F,
-        foundation::NanPoint(2.0F, 2.0F),
-    });
+    tree.set_semantics_transform(
+        foundation::NanTransform2D {
+            foundation::NanPoint(10.0F, 20.0F),
+            0.0F,
+            foundation::NanPoint(2.0F, 2.0F),
+        }
+    );
     REQUIRE(tree.update_semantics());
-    REQUIRE(tree.semantics_tree().roots.front().bounds
-            == foundation::NanRect::from_xywh(10.0F, 20.0F, 40.0F, 20.0F));
+    REQUIRE(
+        tree.semantics_tree().roots.front().bounds
+        == foundation::NanRect::from_xywh(10.0F, 20.0F, 40.0F, 20.0F)
+    );
 }
 
 namespace
@@ -852,11 +922,13 @@ TEST_CASE("input dispatch pins the event path while handlers run", "[scene][inpu
     REQUIRE(tree.layout_root(foundation::NanSize(100.0F, 100.0F)) >= 1);
 
     g_alive_after_self_removal = false;
-    tree.dispatch_mouse_button(scene::MouseButtonEvent {
-        scene::MouseButtonEvent::Button::left,
-        scene::MouseButtonEvent::Action::press,
-        foundation::NanPoint(10.0F, 10.0F),
-    });
+    tree.dispatch_mouse_button(
+        scene::MouseButtonEvent {
+            scene::MouseButtonEvent::Button::left,
+            scene::MouseButtonEvent::Action::press,
+            foundation::NanPoint(10.0F, 10.0F),
+        }
+    );
 
     // A handler may remove nodes on the dispatch path; they must survive until the
     // event has finished bubbling, then be destroyed normally.
@@ -875,11 +947,13 @@ TEST_CASE("focus follows the press and is not re-resolved on release", "[scene][
     scene::NanSceneTree tree;
     tree.set_root(root);
 
-    tree.dispatch_mouse_button(scene::MouseButtonEvent {
-        scene::MouseButtonEvent::Button::left,
-        scene::MouseButtonEvent::Action::press,
-        point,
-    });
+    tree.dispatch_mouse_button(
+        scene::MouseButtonEvent {
+            scene::MouseButtonEvent::Button::left,
+            scene::MouseButtonEvent::Action::press,
+            point,
+        }
+    );
     REQUIRE(tree.focused_node() == field.get());
 
     // The press opened a floating layer, which is now the topmost node under the
@@ -890,11 +964,13 @@ TEST_CASE("focus follows the press and is not re-resolved on release", "[scene][
     root->add_child(layer);
     REQUIRE(tree.hit_test(point) == layer.get());
 
-    tree.dispatch_mouse_button(scene::MouseButtonEvent {
-        scene::MouseButtonEvent::Button::left,
-        scene::MouseButtonEvent::Action::release,
-        point,
-    });
+    tree.dispatch_mouse_button(
+        scene::MouseButtonEvent {
+            scene::MouseButtonEvent::Button::left,
+            scene::MouseButtonEvent::Action::release,
+            point,
+        }
+    );
     REQUIRE(tree.focused_node() == field.get());
     REQUIRE(count(trace, "field:focus_leave") == 0);
 }

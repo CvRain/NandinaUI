@@ -5,9 +5,9 @@
 #include <nandina/render/render_device.hpp>
 #include <nandina/scene/scene_tree.hpp>
 #include <nandina/theme/theme_manager.hpp>
-#include <nandina/widget/skeleton.hpp>
 #include <nandina/widget/build_context.hpp>
 #include <nandina/widget/controls.hpp>
+#include <nandina/widget/skeleton.hpp>
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
@@ -29,11 +29,9 @@ namespace
         void set_clip(const foundation::NanRect&) override {}
         void clear_clip() override {}
         void draw_rect(const foundation::NanRect&, const foundation::NanColor&) override {}
-        void draw_rect_outline(
-            const foundation::NanRect&,
-            float,
-            const foundation::NanColor&
-        ) override {}
+        void
+        draw_rect_outline(const foundation::NanRect&, float, const foundation::NanColor&) override {
+        }
         void draw_rounded_rect(
             const foundation::NanRect& rect,
             float,
@@ -47,7 +45,8 @@ namespace
             float,
             const foundation::NanColor&
         ) override {}
-        void draw_circle(const foundation::NanPoint&, float, const foundation::NanColor&) override {}
+        void draw_circle(const foundation::NanPoint&, float, const foundation::NanColor&) override {
+        }
         void draw_text(
             std::string_view,
             const foundation::NanPoint&,
@@ -103,10 +102,12 @@ TEST_CASE("skeleton defaults to a single text line at the preferred width", "[sk
     REQUIRE(loose.get_height() == Catch::Approx(12.0F));
 
     // 有界约束下宽度跟随约束上限，单行高度不变。
-    const auto narrow = skeleton->measure_layout(foundation::NanLayoutConstraints {
-        .max_width = 80.0F,
-        .max_height = 48.0F,
-    });
+    const auto narrow = skeleton->measure_layout(
+        foundation::NanLayoutConstraints {
+            .max_width = 80.0F,
+            .max_height = 48.0F,
+        }
+    );
     REQUIRE(narrow.get_width() == Catch::Approx(80.0F));
     REQUIRE(narrow.get_height() == Catch::Approx(12.0F));
 }
@@ -149,7 +150,10 @@ TEST_CASE("skeleton narrows the last text line by the recipe ratio", "[skeleton]
     REQUIRE(last_width < first_width);
 }
 
-TEST_CASE("skeleton rectangle variant fills constraints or an explicit size", "[skeleton][layout]") {
+TEST_CASE(
+    "skeleton rectangle variant fills constraints or an explicit size",
+    "[skeleton][layout]"
+) {
     auto skeleton = widget::Skeleton::create();
     skeleton->set_variant(widget::SkeletonVariant::rectangle);
     REQUIRE(skeleton->variant() == widget::SkeletonVariant::rectangle);
@@ -160,10 +164,12 @@ TEST_CASE("skeleton rectangle variant fills constraints or an explicit size", "[
     REQUIRE(loose.get_height() == Catch::Approx(12.0F));
 
     // 有界：铺满约束。
-    const auto bounded = skeleton->measure_layout(foundation::NanLayoutConstraints {
-        .max_width = 120.0F,
-        .max_height = 40.0F,
-    });
+    const auto bounded = skeleton->measure_layout(
+        foundation::NanLayoutConstraints {
+            .max_width = 120.0F,
+            .max_height = 40.0F,
+        }
+    );
     REQUIRE(bounded.get_width() == Catch::Approx(120.0F));
     REQUIRE(bounded.get_height() == Catch::Approx(40.0F));
 
@@ -185,10 +191,12 @@ TEST_CASE("skeleton override patches fields and survives a system apply", "[skel
 
     const float fill_light = skeleton->resolved_style().surface.fill.oklch().light;
 
-    skeleton->set_override(theme::SkeletonRecipeRule {
-        .surface_fill = theme::ThemeColor::token(theme::ColorToken::error),
-        .metrics_height = theme::ThemeScalar::literal(16.0F),
-    });
+    skeleton->set_override(
+        theme::SkeletonRecipeRule {
+            .surface_fill = theme::ThemeColor::token(theme::ColorToken::error),
+            .metrics_height = theme::ThemeScalar::literal(16.0F),
+        }
+    );
     const auto overridden = skeleton->resolved_style();
     REQUIRE(
         overridden.surface.fill.oklch().light
@@ -222,7 +230,10 @@ TEST_CASE("skeleton re-resolves after a theme switch", "[skeleton][theme]") {
     REQUIRE(skeleton->resolved_style().surface.fill.oklch().light != Catch::Approx(before));
 }
 
-TEST_CASE("skeleton exposes an indeterminate progress_bar semantics label", "[skeleton][semantics]") {
+TEST_CASE(
+    "skeleton exposes an indeterminate progress_bar semantics label",
+    "[skeleton][semantics]"
+) {
     auto skeleton = widget::Skeleton::create();
     skeleton->set_label("Loading articles");
     scene::NanSceneTree tree;

@@ -109,7 +109,10 @@ TEST_CASE("find_cjk_font_in returns nullopt when absent", "[text][system-fonts]"
     REQUIRE_FALSE(found.has_value());
 }
 
-TEST_CASE("find_system_font_in matches a filename substring, case-insensitively", "[text][system-fonts]") {
+TEST_CASE(
+    "find_system_font_in matches a filename substring, case-insensitively",
+    "[text][system-fonts]"
+) {
     TempDirectory directory;
     directory.write_font("FreeSerifItalic.otf");
     directory.write_font("unrelated.ttf");

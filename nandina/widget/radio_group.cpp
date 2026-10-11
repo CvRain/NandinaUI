@@ -15,9 +15,7 @@ namespace nandina::widget
     }
 
     void RadioGroup::register_radio(RadioButton* radio) {
-        if (radio == nullptr
-            || std::ranges::find(members_, radio) != members_.end())
-        {
+        if (radio == nullptr || std::ranges::find(members_, radio) != members_.end()) {
             return;
         }
         members_.push_back(radio);

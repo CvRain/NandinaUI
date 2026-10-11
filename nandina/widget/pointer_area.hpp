@@ -36,6 +36,6 @@ namespace nandina::widget
         std::function<void(const scene::MouseEnterEvent&)> on_pointer_enter_;
         std::function<void(const scene::MouseLeaveEvent&)> on_pointer_leave_;
     };
-}
+} // namespace nandina::widget
 
 #endif

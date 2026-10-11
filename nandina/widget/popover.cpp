@@ -585,7 +585,8 @@ namespace nandina::widget
     ) {
         // Measure against loose constraints so the size is known before the overlay
         // layout runs; `flip` / `shift` need a concrete size on the first frame.
-        const auto surface_size = surface_->measure_layout(foundation::NanLayoutConstraints::loose());
+        const auto surface_size =
+            surface_->measure_layout(foundation::NanLayoutConstraints::loose());
         if (!surface_size.is_valid()) {
             return;
         }
@@ -723,7 +724,8 @@ namespace nandina::widget
         return bounds.is_valid() ? bounds : local_rect();
     }
 
-    auto Popover::on_measure(const foundation::NanLayoutConstraints constraints) -> foundation::NanSize {
+    auto Popover::on_measure(const foundation::NanLayoutConstraints constraints)
+        -> foundation::NanSize {
         auto trigger = trigger_.lock();
         if (!trigger) {
             return constraints.constrain(foundation::NanSize(0.0F, 0.0F));
@@ -749,7 +751,8 @@ namespace nandina::widget
         // 必须在最前面：面板挂上来之前这里可能提前返回，回退子树就会停在默认尺寸上。
         dismiss_layer_->layout_to(local_rect());
 
-        const auto surface_size = surface_->measure_layout(foundation::NanLayoutConstraints::loose());
+        const auto surface_size =
+            surface_->measure_layout(foundation::NanLayoutConstraints::loose());
         if (!surface_size.is_valid()) {
             return;
         }

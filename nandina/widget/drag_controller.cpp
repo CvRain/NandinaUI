@@ -81,8 +81,7 @@ namespace nandina::widget
         return true;
     }
 
-    auto DragController::can_accept_drop(scene::NanNode& node, scene::NanNode* target)
-        -> bool {
+    auto DragController::can_accept_drop(scene::NanNode& node, scene::NanNode* target) -> bool {
         if (target == nullptr || target == &node) {
             return false;
         }

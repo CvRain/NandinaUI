@@ -30,6 +30,6 @@ namespace nandina::widget::internal
         std::weak_ptr<scene::NanNode> previous_focus_;
         std::weak_ptr<scene::NanControl> content_;
     };
-}
+} // namespace nandina::widget::internal
 
 #endif

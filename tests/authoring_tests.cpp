@@ -254,8 +254,8 @@ TEST_CASE("BuildContext authors scoped conditional and keyed regions", "[authori
     int branch_events = 0;
 
     auto conditional = ui.when(visible, [&](widget::BuildContext branch) {
-        return branch.make<ScopedComponent>(selected, branch_events);
-    }).build();
+                             return branch.make<ScopedComponent>(selected, branch_events);
+                         }).build();
     scene::NanSceneTree conditional_tree;
     conditional_tree.set_root(conditional);
     REQUIRE(conditional->active_node() == nullptr);
@@ -272,13 +272,13 @@ TEST_CASE("BuildContext authors scoped conditional and keyed regions", "[authori
     std::shared_ptr<widget::Label> true_branch;
     std::shared_ptr<widget::Button> false_branch;
     auto choice = ui.when(
-        choose_label,
-        [&true_branch](widget::BuildContext branch) {
-            return branch.make<widget::Label>("true branch").expose(true_branch);
-        },
-        [&false_branch](widget::BuildContext branch) {
-            return branch.make<widget::Button>("false branch").expose(false_branch);
-        }
+                        choose_label,
+                        [&true_branch](widget::BuildContext branch) {
+                            return branch.make<widget::Label>("true branch").expose(true_branch);
+                        },
+                        [&false_branch](widget::BuildContext branch) {
+                            return branch.make<widget::Button>("false branch").expose(false_branch);
+                        }
     ).build();
     scene::NanSceneTree choice_tree;
     choice_tree.set_root(choice);
@@ -292,12 +292,12 @@ TEST_CASE("BuildContext authors scoped conditional and keyed regions", "[authori
     };
     int selections = 0;
     auto rows = ui.for_each(
-        items,
-        &Item::key,
-        [&](widget::BuildContext item, const Item& value) {
-            return item.make<ScopedItemControl>(selected, value.key, selections);
-        },
-        [](ScopedItemControl& row, const Item& value) { row.value = value.value; }
+                      items,
+                      &Item::key,
+                      [&](widget::BuildContext item, const Item& value) {
+                          return item.make<ScopedItemControl>(selected, value.key, selections);
+                      },
+                      [](ScopedItemControl& row, const Item& value) { row.value = value.value; }
     ).build();
     scene::NanSceneTree rows_tree;
     rows_tree.set_root(rows);
@@ -316,13 +316,9 @@ TEST_CASE("BuildContext authors scoped conditional and keyed regions", "[authori
     selected.emit(1);
     REQUIRE(selections == 1);
 
-    auto simple_rows = ui.for_each(
-        items,
-        &Item::key,
-        [](widget::BuildContext, const Item& value) {
-            return widget::authoring::make<ItemControl>(value.key);
-        }
-    ).build();
+    auto simple_rows = ui.for_each(items, &Item::key, [](widget::BuildContext, const Item& value) {
+                             return widget::authoring::make<ItemControl>(value.key);
+                         }).build();
     scene::NanSceneTree simple_tree;
     simple_tree.set_root(simple_rows);
     REQUIRE(simple_rows->item_count() == 1);
@@ -403,10 +399,12 @@ TEST_CASE("authoring sizing uses the shared control constraints", "[authoring][l
                        .aspect_ratio(2.0F)
                        .build();
 
-    const auto measured = control->measure_layout(foundation::NanLayoutConstraints {
-        .max_width = 400.0F,
-        .max_height = 200.0F,
-    });
+    const auto measured = control->measure_layout(
+        foundation::NanLayoutConstraints {
+            .max_width = 400.0F,
+            .max_height = 200.0F,
+        }
+    );
     REQUIRE(measured.get_width() == Catch::Approx(180.0F));
     REQUIRE(measured.get_height() == Catch::Approx(90.0F));
 }
@@ -420,10 +418,12 @@ TEST_CASE("authoring exposes percentage font size and limits", "[authoring][layo
                       .max_width(percent(40.0F))
                       .font_size(percent(45.0F))
                       .build();
-    const auto size = button->measure_layout(foundation::NanLayoutConstraints {
-        .max_width = 400.0F,
-        .max_height = 200.0F,
-    });
+    const auto size = button->measure_layout(
+        foundation::NanLayoutConstraints {
+            .max_width = 400.0F,
+            .max_height = 200.0F,
+        }
+    );
     REQUIRE(size.get_width() == Catch::Approx(160.0F));
     REQUIRE(size.get_height() == Catch::Approx(100.0F));
     REQUIRE(button->text_node().font_size() == Catch::Approx(45.0F));
@@ -586,9 +586,8 @@ TEST_CASE(
     reactive::Signal<foundation::NanColor> color {graph, initial};
     reactive::Signal<float> radius {graph, 6.0F};
 
-    auto label = ui.make<widget::Label>("Motion label")
-                     .set(widget::visual::label.font_size, 22.0F)
-                     .build();
+    auto label =
+        ui.make<widget::Label>("Motion label").set(widget::visual::label.font_size, 22.0F).build();
     auto button = ui.make<widget::Button>("Motion button").build();
     ui.bind(label, widget::visual::label.color, color);
     ui.bind(button, widget::visual::label.color, color);
@@ -607,10 +606,7 @@ TEST_CASE(
     REQUIRE(button->resolved_style().container.radius == Catch::Approx(24.0F));
 }
 
-TEST_CASE(
-    "BuildContext text fields synchronize writable string signals",
-    "[authoring][binding]"
-) {
+TEST_CASE("BuildContext text fields synchronize writable string signals", "[authoring][binding]") {
     reactive::Graph graph;
     reactive::ReactiveScope scope {graph};
     theme::ThemeManager themes;
@@ -643,16 +639,17 @@ TEST_CASE("free function DSL trees match imperative construction", "[authoring][
 
     // DSL with free functions
     std::shared_ptr<widget::Button> dsl_button;
-    auto dsl = column()
-                   .configure([](widget::Column& c) {
-                       c.set_gap(4.0F).set_cross_alignment(widget::LayoutAlignment::stretch);
-                   })
-                   .children(make<widget::Button>("Save")
-                                 .configure([](widget::Button& b) {
-                                     b.set_tone(theme::ButtonTone::primary);
-                                 })
-                                 .expose(dsl_button))
-                   .build();
+    auto dsl =
+        column()
+            .configure([](widget::Column& c) {
+                c.set_gap(4.0F).set_cross_alignment(widget::LayoutAlignment::stretch);
+            })
+            .children(
+                make<widget::Button>("Save")
+                    .configure([](widget::Button& b) { b.set_tone(theme::ButtonTone::primary); })
+                    .expose(dsl_button)
+            )
+            .build();
 
     scene::NanSceneTree imp_tree;
     imp_tree.set_root(imp);
@@ -818,7 +815,10 @@ TEST_CASE("grid layout arranges children in rows and columns", "[authoring][fact
     REQUIRE(c->global_bounds().get_y() > b->global_bounds().get_bottom());
 }
 
-TEST_CASE("a Grid relayout must not take over the tree viewport", "[authoring][factory][grid][layout]") {
+TEST_CASE(
+    "a Grid relayout must not take over the tree viewport",
+    "[authoring][factory][grid][layout]"
+) {
     // 回归：`Grid::relayout()` 曾经调用 `get_tree()->layout_root(size())`，也就是拿
     // **自己的尺寸当 viewport** 去重排整棵树。后果是整棵内容树被"紧贴"到这个假
     // viewport 上：常驻外壳连同它的列一起塌缩，而内部子节点仍按自然宽度摆放，

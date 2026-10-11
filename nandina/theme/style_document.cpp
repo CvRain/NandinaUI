@@ -189,9 +189,9 @@ namespace nandina::theme
             const std::map<std::string, NanReferencePalette, std::less<>>& palettes
         ) {
             const auto assign_synced = [&](std::string_view canonical_key,
-                                            NanColor& canonical,
-                                            std::string_view alias_key,
-                                            NanColor& alias) {
+                                           NanColor& canonical,
+                                           std::string_view alias_key,
+                                           NanColor& alias) {
                 const bool has_canonical = table.contains(canonical_key);
                 const bool has_alias = table.contains(alias_key);
                 if (has_canonical) {
@@ -212,11 +212,26 @@ namespace nandina::theme
             assign_color(table, "popover", palette.popover, palettes);
             assign_color(table, "popover_foreground", palette.popover_foreground, palettes);
             assign_color(table, "primary", palette.primary, palettes);
-            assign_synced("primary_foreground", palette.primary_foreground, "on_primary", palette.on_primary);
+            assign_synced(
+                "primary_foreground",
+                palette.primary_foreground,
+                "on_primary",
+                palette.on_primary
+            );
             assign_color(table, "secondary", palette.secondary, palettes);
-            assign_synced("secondary_foreground", palette.secondary_foreground, "on_secondary", palette.on_secondary);
+            assign_synced(
+                "secondary_foreground",
+                palette.secondary_foreground,
+                "on_secondary",
+                palette.on_secondary
+            );
             assign_color(table, "muted", palette.muted, palettes);
-            assign_synced("muted_foreground", palette.muted_foreground, "on_muted", palette.on_muted);
+            assign_synced(
+                "muted_foreground",
+                palette.muted_foreground,
+                "on_muted",
+                palette.on_muted
+            );
             assign_color(table, "accent", palette.accent, palettes);
             assign_color(table, "accent_foreground", palette.accent_foreground, palettes);
             assign_color(table, "destructive", palette.destructive, palettes);
@@ -225,17 +240,52 @@ namespace nandina::theme
             assign_color(table, "input", palette.input, palettes);
             assign_synced("ring", palette.ring, "focus_ring", palette.focus_ring);
             assign_color(table, "surface", palette.surface, palettes);
-            assign_synced("surface_foreground", palette.surface_foreground, "on_surface", palette.on_surface);
-            assign_synced("surface_variant", palette.surface_variant, "outline_variant", palette.outline_variant);
-            assign_synced("surface_variant_foreground", palette.surface_variant_foreground, "on_surface_variant", palette.on_surface_variant);
+            assign_synced(
+                "surface_foreground",
+                palette.surface_foreground,
+                "on_surface",
+                palette.on_surface
+            );
+            assign_synced(
+                "surface_variant",
+                palette.surface_variant,
+                "outline_variant",
+                palette.outline_variant
+            );
+            assign_synced(
+                "surface_variant_foreground",
+                palette.surface_variant_foreground,
+                "on_surface_variant",
+                palette.on_surface_variant
+            );
             assign_color(table, "tertiary", palette.tertiary, palettes);
-            assign_synced("tertiary_foreground", palette.tertiary_foreground, "on_tertiary", palette.on_tertiary);
+            assign_synced(
+                "tertiary_foreground",
+                palette.tertiary_foreground,
+                "on_tertiary",
+                palette.on_tertiary
+            );
             assign_color(table, "success", palette.success, palettes);
-            assign_synced("success_foreground", palette.success_foreground, "on_success", palette.on_success);
+            assign_synced(
+                "success_foreground",
+                palette.success_foreground,
+                "on_success",
+                palette.on_success
+            );
             assign_color(table, "warning", palette.warning, palettes);
-            assign_synced("warning_foreground", palette.warning_foreground, "on_warning", palette.on_warning);
+            assign_synced(
+                "warning_foreground",
+                palette.warning_foreground,
+                "on_warning",
+                palette.on_warning
+            );
             assign_color(table, "error", palette.error, palettes);
-            assign_synced("error_foreground", palette.error_foreground, "on_error", palette.on_error);
+            assign_synced(
+                "error_foreground",
+                palette.error_foreground,
+                "on_error",
+                palette.on_error
+            );
             assign_color(table, "info", palette.info, palettes);
             assign_synced("info_foreground", palette.info_foreground, "on_info", palette.on_info);
             assign_color(table, "selection", palette.selection, palettes);

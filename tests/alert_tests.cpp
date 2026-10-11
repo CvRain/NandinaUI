@@ -7,8 +7,8 @@
 #include <nandina/theme/theme_manager.hpp>
 #include <nandina/widget/alert.hpp>
 #include <nandina/widget/badge.hpp>
-#include <nandina/widget/button.hpp>
 #include <nandina/widget/build_context.hpp>
+#include <nandina/widget/button.hpp>
 #include <nandina/widget/controls.hpp>
 #include <nandina/widget/key_codes.hpp>
 
@@ -35,16 +35,11 @@ namespace
         void set_clip(const foundation::NanRect&) override {}
         void clear_clip() override {}
         void draw_rect(const foundation::NanRect&, const foundation::NanColor&) override {}
-        void draw_rect_outline(
-            const foundation::NanRect&,
-            float,
-            const foundation::NanColor&
-        ) override {}
-        void draw_rounded_rect(
-            const foundation::NanRect&,
-            float,
-            const foundation::NanColor&
-        ) override {
+        void
+        draw_rect_outline(const foundation::NanRect&, float, const foundation::NanColor&) override {
+        }
+        void
+        draw_rounded_rect(const foundation::NanRect&, float, const foundation::NanColor&) override {
             ++rounded_rects;
         }
         void draw_rounded_rect_outline(
@@ -66,7 +61,8 @@ namespace
         ) override {
             ++lines;
         }
-        void draw_circle(const foundation::NanPoint&, float, const foundation::NanColor&) override {}
+        void draw_circle(const foundation::NanPoint&, float, const foundation::NanColor&) override {
+        }
         void draw_text(
             std::string_view,
             const foundation::NanPoint&,
@@ -134,8 +130,7 @@ TEST_CASE("alert resolves each tone to its semantic colour pair", "[alert][theme
         alert->set_tone(expected.tone);
         const auto widget_style = alert->resolved_style();
         REQUIRE(
-            light_of(widget_style.container.border)
-            == Catch::Approx(light_of(*expected.tone_color))
+            light_of(widget_style.container.border) == Catch::Approx(light_of(*expected.tone_color))
         );
         REQUIRE(light_of(widget_style.icon) == Catch::Approx(light_of(*expected.tone_color)));
     }
@@ -175,17 +170,20 @@ TEST_CASE("alert lays title and description out as a text column", "[alert][layo
     REQUIRE(stacked.get_height() > title_only.get_height());
 
     // 有界约束下铺满上限宽度，高度仍由内容决定。
-    const auto bounded = alert->measure_layout(foundation::NanLayoutConstraints {
-        .max_width = 120.0F,
-        .max_height = 200.0F,
-    });
+    const auto bounded = alert->measure_layout(
+        foundation::NanLayoutConstraints {
+            .max_width = 120.0F,
+            .max_height = 200.0F,
+        }
+    );
     REQUIRE(bounded.get_width() == Catch::Approx(120.0F));
 }
 
 TEST_CASE("alert includes icon and action slots in measurement and layout", "[alert][layout]") {
     auto alert = widget::Alert::create();
     alert->set_title("Saved");
-    const float text_only = alert->measure_layout(foundation::NanLayoutConstraints::loose()).get_width();
+    const float text_only =
+        alert->measure_layout(foundation::NanLayoutConstraints::loose()).get_width();
 
     auto icon = widget::Badge::create("i");
     alert->set_icon(icon);
@@ -259,11 +257,13 @@ TEST_CASE("alert override patches fields and survives a system apply", "[alert][
     tree.set_root(alert);
     REQUIRE(tree.layout_root(foundation::NanSize(320.0F, 160.0F)) >= 1);
 
-    alert->set_override(theme::AlertRecipeRule {
-        .container_fill = theme::ThemeColor::token(theme::ColorToken::error),
-        .icon_color = theme::ThemeColor::token(theme::ColorToken::primary),
-        .metrics_padding_x = theme::ThemeScalar::literal(28.0F),
-    });
+    alert->set_override(
+        theme::AlertRecipeRule {
+            .container_fill = theme::ThemeColor::token(theme::ColorToken::error),
+            .icon_color = theme::ThemeColor::token(theme::ColorToken::primary),
+            .metrics_padding_x = theme::ThemeScalar::literal(28.0F),
+        }
+    );
     const auto overridden = alert->resolved_style();
     REQUIRE(
         overridden.container.fill.oklch().light
@@ -336,16 +336,20 @@ TEST_CASE("alert dismiss affordance is focusable only when dismissible", "[alert
         (bounds.get_top() + bounds.get_bottom()) * 0.5F
     );
     tree.dispatch_mouse_move(scene::MouseMoveEvent {point, foundation::NanPoint::zero()});
-    tree.dispatch_mouse_button(scene::MouseButtonEvent {
-        scene::MouseButtonEvent::Button::left,
-        scene::MouseButtonEvent::Action::press,
-        point
-    });
-    tree.dispatch_mouse_button(scene::MouseButtonEvent {
-        scene::MouseButtonEvent::Button::left,
-        scene::MouseButtonEvent::Action::release,
-        point
-    });
+    tree.dispatch_mouse_button(
+        scene::MouseButtonEvent {
+            scene::MouseButtonEvent::Button::left,
+            scene::MouseButtonEvent::Action::press,
+            point
+        }
+    );
+    tree.dispatch_mouse_button(
+        scene::MouseButtonEvent {
+            scene::MouseButtonEvent::Button::left,
+            scene::MouseButtonEvent::Action::release,
+            point
+        }
+    );
     REQUIRE(dismissed == 2);
 
     // 关掉 dismissible 后按钮从场景树移除，焦点回到空。
@@ -355,7 +359,10 @@ TEST_CASE("alert dismiss affordance is focusable only when dismissible", "[alert
     REQUIRE(tree.focused_node() == nullptr);
 }
 
-TEST_CASE("alert dismiss affordance draws a cross and hides while empty", "[alert][dismiss][paint]") {
+TEST_CASE(
+    "alert dismiss affordance draws a cross and hides while empty",
+    "[alert][dismiss][paint]"
+) {
     auto alert = widget::Alert::create();
     alert->set_title("Saved");
     alert->set_dismissible(true);
@@ -376,7 +383,10 @@ TEST_CASE("alert dismiss affordance draws a cross and hides while empty", "[aler
     REQUIRE(empty.rounded_rects == 0);
 }
 
-TEST_CASE("alert exposes the title as a generic semantics label with a hint", "[alert][semantics]") {
+TEST_CASE(
+    "alert exposes the title as a generic semantics label with a hint",
+    "[alert][semantics]"
+) {
     auto alert = widget::Alert::create();
     alert->set_title("Saved");
     alert->set_description("Your changes are safe");
@@ -412,8 +422,8 @@ TEST_CASE("alert is buildable through BuildContext", "[alert][authoring]") {
     theme::ThemeManager themes;
     widget::BuildContext ui {graph, scope, themes};
 
-    auto alert = ui.make<widget::Alert>(theme::AlertTone::warning, "磁盘空间不足", "请清理缓存")
-                     .build();
+    auto alert =
+        ui.make<widget::Alert>(theme::AlertTone::warning, "磁盘空间不足", "请清理缓存").build();
     REQUIRE(alert != nullptr);
     REQUIRE(alert->tone() == theme::AlertTone::warning);
     REQUIRE(alert->title() == "磁盘空间不足");

@@ -24,7 +24,10 @@ namespace
     constexpr float kTolerance = 0.01F;
 } // namespace
 
-TEST_CASE("button group resolves a transparent container and spacing tokens", "[button-group][theme]") {
+TEST_CASE(
+    "button group resolves a transparent container and spacing tokens",
+    "[button-group][theme]"
+) {
     const auto design = theme::default_design_system();
     const auto style = theme::resolve_button_group(
         design,
@@ -40,7 +43,10 @@ TEST_CASE("button group resolves a transparent container and spacing tokens", "[
     REQUIRE(style.metrics.min_height == Catch::Approx(0.0F));
 }
 
-TEST_CASE("button group measures children on the main axis with one shared gap", "[button-group][layout]") {
+TEST_CASE(
+    "button group measures children on the main axis with one shared gap",
+    "[button-group][layout]"
+) {
     auto group = widget::ButtonGroup::create();
     auto first = widget::Button::create("A");
     auto second = widget::Button::create("BB");
@@ -60,8 +66,7 @@ TEST_CASE("button group measures children on the main axis with one shared gap",
     const float gap = theme::default_theme().tokens.spacing.sm;
     const auto measured = group->measure_layout(foundation::NanLayoutConstraints::loose());
     REQUIRE(
-        measured.get_width()
-        == Catch::Approx(first_width + second_width + gap).margin(kTolerance)
+        measured.get_width() == Catch::Approx(first_width + second_width + gap).margin(kTolerance)
     );
     REQUIRE(measured.get_height() == Catch::Approx(first_height).margin(kTolerance));
 }
@@ -85,7 +90,10 @@ TEST_CASE("button group lays children out on the shared rhythm", "[button-group]
     REQUIRE(second->position().get_y() == Catch::Approx(first->position().get_y()));
 }
 
-TEST_CASE("button group vertical orientation stacks and a gap override wins", "[button-group][layout]") {
+TEST_CASE(
+    "button group vertical orientation stacks and a gap override wins",
+    "[button-group][layout]"
+) {
     auto group = widget::ButtonGroup::create();
     auto first = widget::Button::create("A");
     auto second = widget::Button::create("BB");
@@ -122,10 +130,16 @@ TEST_CASE("button group rejects null children and clear removes them", "[button-
 
     group->clear();
     REQUIRE(group->button_count() == 0);
-    REQUIRE(group->measure_layout(foundation::NanLayoutConstraints::loose()).get_width() == Catch::Approx(0.0F));
+    REQUIRE(
+        group->measure_layout(foundation::NanLayoutConstraints::loose()).get_width()
+        == Catch::Approx(0.0F)
+    );
 }
 
-TEST_CASE("button group override patches fields and survives a system apply", "[button-group][override]") {
+TEST_CASE(
+    "button group override patches fields and survives a system apply",
+    "[button-group][override]"
+) {
     theme::ThemeManager themes;
     auto group = widget::ButtonGroup::create();
     group->add_button(widget::Button::create("A"));
@@ -134,10 +148,12 @@ TEST_CASE("button group override patches fields and survives a system apply", "[
     tree.set_root(group);
     REQUIRE(tree.layout_root(foundation::NanSize(240.0F, 80.0F)) >= 1);
 
-    group->set_override(theme::ButtonGroupRecipeRule {
-        .container_fill = theme::ThemeColor::token(theme::ColorToken::error),
-        .metrics_gap = theme::ThemeScalar::literal(24.0F),
-    });
+    group->set_override(
+        theme::ButtonGroupRecipeRule {
+            .container_fill = theme::ThemeColor::token(theme::ColorToken::error),
+            .metrics_gap = theme::ThemeScalar::literal(24.0F),
+        }
+    );
     REQUIRE(
         group->resolved_style().container.fill.oklch().light
         == Catch::Approx(themes.design_system().light.error.oklch().light)
@@ -156,9 +172,11 @@ TEST_CASE("button group re-resolves after an appearance switch", "[button-group]
     theme::ThemeManager themes;
     auto group = widget::ButtonGroup::create();
     group->add_button(widget::Button::create("A"));
-    group->set_override(theme::ButtonGroupRecipeRule {
-        .container_fill = theme::ThemeColor::token(theme::ColorToken::background),
-    });
+    group->set_override(
+        theme::ButtonGroupRecipeRule {
+            .container_fill = theme::ThemeColor::token(theme::ColorToken::background),
+        }
+    );
     scene::NanSceneTree tree;
     tree.set_theme_manager(themes);
     tree.set_root(group);
@@ -174,7 +192,10 @@ TEST_CASE("button group re-resolves after an appearance switch", "[button-group]
     REQUIRE(group->resolved_style().container.fill.oklch().light != Catch::Approx(light));
 }
 
-TEST_CASE("button group stays a plain container without inventing a role", "[button-group][semantics]") {
+TEST_CASE(
+    "button group stays a plain container without inventing a role",
+    "[button-group][semantics]"
+) {
     auto group = widget::ButtonGroup::create();
     auto button = widget::Button::create("Run");
     group->add_button(button);

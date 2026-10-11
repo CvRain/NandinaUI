@@ -31,10 +31,9 @@ namespace nandina::widget
     public:
         explicit TextArea(std::string value = {}, theme::NanTheme theme = theme::default_theme());
 
-        [[nodiscard]] static auto create(
-            std::string value = {},
-            theme::NanTheme theme = theme::default_theme()
-        ) -> std::shared_ptr<TextArea>;
+        [[nodiscard]] static auto
+        create(std::string value = {}, theme::NanTheme theme = theme::default_theme())
+            -> std::shared_ptr<TextArea>;
 
         void set_value(std::string value);
         [[nodiscard]] auto value() const -> std::string_view;

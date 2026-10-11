@@ -6,12 +6,12 @@
 
 #include "key_codes.hpp"
 
-#include "primitives/box_painter.hpp"
-#include "primitives/focus_ring_painter.hpp"
 #include "../render/draw_context.hpp"
 #include "../scene/input_event.hpp"
 #include "../scene/scene_tree.hpp"
 #include "../theme/theme_manager.hpp"
+#include "primitives/box_painter.hpp"
+#include "primitives/focus_ring_painter.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -27,9 +27,9 @@ namespace nandina::widget
         constexpr float wheel_step = 40.0F;
     } // namespace
 
-    TextArea::TextArea(std::string value, theme::NanTheme theme):
-        edit_(std::move(value)) {
-        system_ = std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+    TextArea::TextArea(std::string value, theme::NanTheme theme): edit_(std::move(value)) {
+        system_ =
+            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
         theme_view_ = theme;
         edit_.set_on_change([this](std::string_view value) {
             if (on_change_) {
@@ -112,7 +112,8 @@ namespace nandina::widget
     }
 
     void TextArea::set_theme(theme::NanTheme theme) {
-        system_ = std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ =
+            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
         system_explicit_ = true;
         theme_view_ = theme;
         apply_theme();
@@ -131,8 +132,10 @@ namespace nandina::widget
 
     auto TextArea::visual_state() const -> theme::TextAreaVisualState {
         auto state = theme::TextAreaVisualState::normal;
-        if (focused_) state = state | theme::TextAreaVisualState::focused;
-        if (disabled_) state = state | theme::TextAreaVisualState::disabled;
+        if (focused_)
+            state = state | theme::TextAreaVisualState::focused;
+        if (disabled_)
+            state = state | theme::TextAreaVisualState::disabled;
         return state;
     }
 
@@ -283,7 +286,8 @@ namespace nandina::widget
         }
         if (event.type() == scene::EventType::key) {
             const auto& key = static_cast<scene::KeyEvent&>(event);
-            if (key.is_pressed() && (key.keycode() == keys::enter || key.keycode() == key_kp_enter)) {
+            if (key.is_pressed() && (key.keycode() == keys::enter || key.keycode() == key_kp_enter))
+            {
                 // 多行输入：Enter 插入换行，不提交、不激活。
                 if (!read_only_) {
                     edit_.insert_text("\n");
@@ -315,9 +319,8 @@ namespace nandina::widget
         const float padding_y = ctx.logical_to_screen(padding_y_);
         // 让最后一个字形在 content box 右缘得以完整显示：在内容框宽度基础上放出一个
         // 字形悬垂余量（advance 之外的墨迹 1~2px），否则近满时末字形的右侧墨迹被裁。
-        const float overhang = ctx.logical_to_screen(
-            text::glyph_overhang_allowance(edit_.style().font_size)
-        );
+        const float overhang =
+            ctx.logical_to_screen(text::glyph_overhang_allowance(edit_.style().font_size));
         const auto viewport = foundation::NanRect::from_xywh(
             world.get_left() + padding_x,
             world.get_top() + padding_y,
@@ -357,7 +360,8 @@ namespace nandina::widget
         // 默认高度 = 可见行数 × 行高 + 垂直内边距；内容更高时由垂直滚动承载。
         const float natural_height =
             line_height_ * static_cast<float>(std::max(1, rows_)) + padding_y_ * 2.0F;
-        const auto measured = constraints.constrain(foundation::NanSize(natural_width, natural_height));
+        const auto measured =
+            constraints.constrain(foundation::NanSize(natural_width, natural_height));
         set_size(measured);
         return measured;
     }
@@ -385,12 +389,13 @@ namespace nandina::widget
             .role = semantics::Role::text_field,
             .label = std::string(placeholder()),
             .value = std::string(value()),
-            .state = {
-                .focusable = !disabled_,
-                .focused = focused_,
-                .disabled = disabled_,
-                .read_only = read_only_,
-            },
+            .state =
+                {
+                    .focusable = !disabled_,
+                    .focused = focused_,
+                    .disabled = disabled_,
+                    .read_only = read_only_,
+                },
             .actions = actions,
         };
     }
@@ -413,12 +418,12 @@ namespace nandina::widget
         }
 
         const auto& context = resolved_style_context();
-        const auto font = context.font_from_context && !font_explicit_ ? context.font
-                                                                       : edit_.style().font;
+        const auto font =
+            context.font_from_context && !font_explicit_ ? context.font : edit_.style().font;
         const auto font_size =
             context.font_size_from_context ? context.font_size : style.value.font_size;
-        const auto text_color = context.text_color_from_context ? context.text_color
-                                                                : style.value.color;
+        const auto text_color =
+            context.text_color_from_context ? context.text_color : style.value.color;
         const text::TextStyle value_style {
             .color = text_color,
             .font_size = font_size,
@@ -428,8 +433,7 @@ namespace nandina::widget
             .max_lines = std::numeric_limits<int>::max(),
         };
         const text::TextStyle placeholder_style {
-            .color = context.text_color_from_context ? context.text_color
-                                                     : style.placeholder.color,
+            .color = context.text_color_from_context ? context.text_color : style.placeholder.color,
             .font_size = font_size,
             .font = font,
             .overflow = text::TextOverflow::ellipsis,
@@ -470,10 +474,7 @@ namespace nandina::widget
         const auto local = to_local(screen_point);
         // 与 TextField 同款：映射到局部坐标、补偿滚动偏移，再交给布局做命中测试。
         const auto stop = edit_.text_node().layout_result().caret_for_point(
-            foundation::NanPoint(
-                local.get_x() - padding_x_,
-                local.get_y() - padding_y_ + scroll_y_
-            )
+            foundation::NanPoint(local.get_x() - padding_x_, local.get_y() - padding_y_ + scroll_y_)
         );
         if (extend) {
             auto selection = edit_.selection();

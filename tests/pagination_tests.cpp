@@ -32,16 +32,11 @@ namespace
         void set_clip(const foundation::NanRect&) override {}
         void clear_clip() override {}
         void draw_rect(const foundation::NanRect&, const foundation::NanColor&) override {}
-        void draw_rect_outline(
-            const foundation::NanRect&,
-            float,
-            const foundation::NanColor&
-        ) override {}
-        void draw_rounded_rect(
-            const foundation::NanRect&,
-            float,
-            const foundation::NanColor&
-        ) override {
+        void
+        draw_rect_outline(const foundation::NanRect&, float, const foundation::NanColor&) override {
+        }
+        void
+        draw_rounded_rect(const foundation::NanRect&, float, const foundation::NanColor&) override {
             ++rounded_rects;
         }
         void draw_line(
@@ -50,7 +45,8 @@ namespace
             float,
             const foundation::NanColor&
         ) override {}
-        void draw_circle(const foundation::NanPoint&, float, const foundation::NanColor&) override {}
+        void draw_circle(const foundation::NanPoint&, float, const foundation::NanColor&) override {
+        }
         void draw_text(
             std::string_view,
             const foundation::NanPoint&,
@@ -104,8 +100,7 @@ TEST_CASE("pagination resolves slot, label and ellipsis tokens", "[pagination][t
         == Catch::Approx(design.light.primary_foreground.oklch().light)
     );
     REQUIRE(
-        style.ellipsis.oklch().light
-        == Catch::Approx(design.light.muted_foreground.oklch().light)
+        style.ellipsis.oklch().light == Catch::Approx(design.light.muted_foreground.oklch().light)
     );
     REQUIRE(style.focus.width == Catch::Approx(0.0F)); // focused 规则按需开启
     REQUIRE(style.metrics.box_size == Catch::Approx(32.0F));
@@ -135,7 +130,10 @@ TEST_CASE("pagination disabled state scales slot and label alpha", "[pagination]
     REQUIRE(disabled.focus.color.alpha() == Catch::Approx(0.0F));
 }
 
-TEST_CASE("pagination shows every page for small counts and skips ellipsis", "[pagination][window]") {
+TEST_CASE(
+    "pagination shows every page for small counts and skips ellipsis",
+    "[pagination][window]"
+) {
     auto pagination = widget::Pagination::create();
     pagination->set_page_count(5);
     pagination->set_current_page(3);
@@ -173,7 +171,10 @@ TEST_CASE("pagination windows clamp correctly at both edges", "[pagination][wind
     REQUIRE(ellipsis_count(*pagination) == 1);
 }
 
-TEST_CASE("pagination sibling count zero keeps only boundaries and current", "[pagination][window]") {
+TEST_CASE(
+    "pagination sibling count zero keeps only boundaries and current",
+    "[pagination][window]"
+) {
     auto pagination = widget::Pagination::create();
     pagination->set_page_count(7);
     pagination->set_sibling_count(0);
@@ -200,7 +201,10 @@ TEST_CASE("pagination clamps page count and current page", "[pagination][boundar
     REQUIRE(pagination->current_page() == 1);
 }
 
-TEST_CASE("pagination with no pages measures to zero and is not focusable", "[pagination][boundary]") {
+TEST_CASE(
+    "pagination with no pages measures to zero and is not focusable",
+    "[pagination][boundary]"
+) {
     auto pagination = widget::Pagination::create();
     REQUIRE(pagination->page_count() == 0);
     REQUIRE(pagination->current_page() == 0);
@@ -228,9 +232,8 @@ TEST_CASE("pagination notifies only on user page changes", "[pagination][event]"
         last_page = page;
     });
     int event_count = 0;
-    const auto subscription = pagination->page_changed().subscribe([&](const int) {
-        ++event_count;
-    });
+    const auto subscription =
+        pagination->page_changed().subscribe([&](const int) { ++event_count; });
 
     // 程序化 setter 静默。
     pagination->set_current_page(4);
@@ -312,7 +315,10 @@ TEST_CASE("pagination roams page slots through the real key path", "[pagination]
     REQUIRE(pagination->focused_item_index() == 0);
 }
 
-TEST_CASE("pagination arrow roaming never lands on a disabled edge slot", "[pagination][keyboard]") {
+TEST_CASE(
+    "pagination arrow roaming never lands on a disabled edge slot",
+    "[pagination][keyboard]"
+) {
     auto pagination = widget::Pagination::create();
     pagination->set_page_count(10);
     pagination->set_current_page(10);
@@ -337,9 +343,8 @@ TEST_CASE("pagination Enter activates the focused slot", "[pagination][keyboard]
     pagination->set_page_count(10);
     pagination->set_current_page(5);
     int event_count = 0;
-    const auto subscription = pagination->page_changed().subscribe([&](const int) {
-        ++event_count;
-    });
+    const auto subscription =
+        pagination->page_changed().subscribe([&](const int) { ++event_count; });
 
     scene::NanSceneTree tree;
     tree.set_root(pagination);
@@ -375,16 +380,21 @@ TEST_CASE("pagination pointer press activates a page slot", "[pagination][pointe
     const float y = pagination->height() * 0.5F;
     const auto point = foundation::NanPoint(x, y);
     tree.dispatch_mouse_move(scene::MouseMoveEvent(point, foundation::NanPoint(0.0F, 0.0F)));
-    tree.dispatch_mouse_button(scene::MouseButtonEvent(
-        scene::MouseButtonEvent::Button::left,
-        scene::MouseButtonEvent::Action::press,
-        point
-    ));
+    tree.dispatch_mouse_button(
+        scene::MouseButtonEvent(
+            scene::MouseButtonEvent::Button::left,
+            scene::MouseButtonEvent::Action::press,
+            point
+        )
+    );
     REQUIRE(pagination->current_page() == 3);
     REQUIRE(pagination->focused_item_index() >= 0);
 }
 
-TEST_CASE("pagination override patches fields and survives a system apply", "[pagination][override]") {
+TEST_CASE(
+    "pagination override patches fields and survives a system apply",
+    "[pagination][override]"
+) {
     theme::ThemeManager themes;
     auto pagination = widget::Pagination::create();
     pagination->set_page_count(10);
@@ -394,10 +404,12 @@ TEST_CASE("pagination override patches fields and survives a system apply", "[pa
     tree.set_root(pagination);
     REQUIRE(tree.layout_root(foundation::NanSize(480.0F, 80.0F)) >= 1);
 
-    pagination->set_override(theme::PaginationRecipeRule {
-        .item_active_fill = theme::ThemeColor::token(theme::ColorToken::error),
-        .metrics_box_size = theme::ThemeScalar::literal(40.0F),
-    });
+    pagination->set_override(
+        theme::PaginationRecipeRule {
+            .item_active_fill = theme::ThemeColor::token(theme::ColorToken::error),
+            .metrics_box_size = theme::ThemeScalar::literal(40.0F),
+        }
+    );
     REQUIRE(
         pagination->resolved_style().item_active.fill.oklch().light
         == Catch::Approx(themes.design_system().light.error.oklch().light)
@@ -407,9 +419,7 @@ TEST_CASE("pagination override patches fields and survives a system apply", "[pa
     auto design = theme::default_design_system();
     design.light.error = theme::nan_color(0.60F, 0.20F, 20.0F);
     themes.apply(std::make_shared<const theme::DesignSystem>(std::move(design)));
-    REQUIRE(
-        pagination->resolved_style().item_active.fill.oklch().light == Catch::Approx(0.60F)
-    );
+    REQUIRE(pagination->resolved_style().item_active.fill.oklch().light == Catch::Approx(0.60F));
     REQUIRE(pagination->resolved_style().metrics.box_size == Catch::Approx(40.0F));
 }
 
@@ -417,9 +427,11 @@ TEST_CASE("pagination re-resolves after an appearance switch", "[pagination][the
     theme::ThemeManager themes;
     auto pagination = widget::Pagination::create();
     pagination->set_page_count(5);
-    pagination->set_override(theme::PaginationRecipeRule {
-        .label_color = theme::ThemeColor::token(theme::ColorToken::foreground),
-    });
+    pagination->set_override(
+        theme::PaginationRecipeRule {
+            .label_color = theme::ThemeColor::token(theme::ColorToken::foreground),
+        }
+    );
     scene::NanSceneTree tree;
     tree.set_theme_manager(themes);
     tree.set_root(pagination);

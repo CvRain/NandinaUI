@@ -6,12 +6,12 @@
 
 #include "key_codes.hpp"
 
-#include "primitives/box_painter.hpp"
-#include "primitives/focus_ring_painter.hpp"
 #include "../render/draw_context.hpp"
 #include "../scene/input_event.hpp"
 #include "../scene/scene_tree.hpp"
 #include "../theme/theme_manager.hpp"
+#include "primitives/box_painter.hpp"
+#include "primitives/focus_ring_painter.hpp"
 
 #include <algorithm>
 #include <charconv>
@@ -48,7 +48,8 @@ namespace nandina::widget
         minimum_(minimum),
         maximum_(maximum),
         step_(step) {
-        system_ = std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ =
+            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
         theme_view_ = theme;
         if (!(minimum_ < maximum_)) {
             throw std::invalid_argument("Slider minimum must be less than maximum");
@@ -228,7 +229,8 @@ namespace nandina::widget
     }
 
     void Slider::set_theme(theme::NanTheme theme) {
-        system_ = std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ =
+            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
         system_explicit_ = true;
         theme_view_ = theme;
         mark_layout_dirty();
@@ -371,17 +373,17 @@ namespace nandina::widget
         if (show_value_label_ && !value_text_.text().empty()) {
             apply_value_label_style();
             (void)value_text_.measure_layout(foundation::NanLayoutConstraints::loose());
-            const float label_height = context.logical_to_screen(value_text_.measured_text_height());
+            const float label_height =
+                context.logical_to_screen(value_text_.measured_text_height());
             value_text_.draw_at(context, foundation::NanPoint(world.get_left(), world.get_top()));
             track_inset = label_height + context.logical_to_screen(4.0F);
         }
-        const float center_y = world.get_top() + track_inset
-            + std::max(0.0F, world.get_height() - track_inset) * 0.5F;
+        const float center_y =
+            world.get_top() + track_inset + std::max(0.0F, world.get_height() - track_inset) * 0.5F;
         // 拇指半径是 style.thumb.radius（**像素半径**，配方字段 thumb_radius），不是
         // BoxStyle 的圆角半径。仍夹紧到控件半高/半宽兜底：主题可能把它填成
         // radius_full(9999)，不夹紧就会画出覆盖整窗的圆盘，把先绘制的外壳整块盖住。
-        const float max_thumb_radius =
-            std::min(world.get_width(), world.get_height()) * 0.5F;
+        const float max_thumb_radius = std::min(world.get_width(), world.get_height()) * 0.5F;
         const float thumb_radius =
             std::min(context.logical_to_screen(style.thumb.radius), max_thumb_radius);
         const float track_height = context.logical_to_screen(style.inactive_track.thickness);
@@ -412,8 +414,7 @@ namespace nandina::widget
         // shadcn 风格拇指 = 背景填充 + primary 描边环。环用「半边长 == 半径」的正方形
         // 圆角描边表达：该正方形在圆角半径等于半边长时就是一个圆。描边落在半径内侧，
         // 因此不会越出上面已夹紧的拇指范围；单次设备调用，不新增图元。
-        const float thumb_border_width =
-            context.logical_to_screen(style.thumb.box.border_width);
+        const float thumb_border_width = context.logical_to_screen(style.thumb.box.border_width);
         const auto thumb_border = style.thumb.box.border;
         if (thumb_border_width > 0.0F && thumb_border.alpha() > 0.0F) {
             context.device().draw_rounded_rect_outline(
@@ -441,16 +442,17 @@ namespace nandina::widget
 
     auto Slider::on_measure(foundation::NanLayoutConstraints constraints) -> foundation::NanSize {
         const auto style = resolved_style();
-        const float width = std::isfinite(constraints.max_width)
-            ? constraints.max_width
-            : style.metrics.preferred_width;
+        const float width = std::isfinite(constraints.max_width) ? constraints.max_width
+                                                                 : style.metrics.preferred_width;
         float extra_height = 0.0F;
         if (show_value_label_ && !value_text_.text().empty()) {
             apply_value_label_style();
             (void)value_text_.measure_layout(foundation::NanLayoutConstraints::loose());
             extra_height = value_text_.measured_text_height() + 4.0F;
         }
-        return constraints.constrain(foundation::NanSize(width, style.metrics.min_height + extra_height));
+        return constraints.constrain(
+            foundation::NanSize(width, style.metrics.min_height + extra_height)
+        );
     }
 
     auto Slider::semantics_properties() const -> semantics::Properties {
@@ -528,14 +530,13 @@ namespace nandina::widget
         const auto local = to_local(screen_position);
         // 与 on_draw 同一套夹紧规则：拇指半径不能超过控件半高/半宽，
         // 否则可拖动范围会算成 0，点击直接跳到最小值。
-        const float max_thumb_radius =
-            std::min(size().get_width(), size().get_height()) * 0.5F;
+        const float max_thumb_radius = std::min(size().get_width(), size().get_height()) * 0.5F;
         const float thumb_radius = std::min(style.thumb.radius, max_thumb_radius);
         const float width = std::max(0.0F, size().get_width() - thumb_radius * 2.0F);
-        const float current = width <= foundation::nan_epsilon
-            ? minimum_
-            : minimum_ + std::clamp((local.get_x() - thumb_radius) / width, 0.0F, 1.0F)
-                  * (maximum_ - minimum_);
+        const float current = width <= foundation::nan_epsilon ? minimum_
+                                                               : minimum_
+                + std::clamp((local.get_x() - thumb_radius) / width, 0.0F, 1.0F)
+                    * (maximum_ - minimum_);
         set_user_value(current);
     }
 

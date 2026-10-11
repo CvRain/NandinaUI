@@ -7,15 +7,15 @@
 // intersection, and visibility skipping are now testable.
 //
 
-#include <catch2/catch_test_macros.hpp>
 #include <catch2/catch_approx.hpp>
+#include <catch2/catch_test_macros.hpp>
 
+#include <nandina/render/backends/sdf_primitive_geometry.hpp>
 #include <nandina/render/clip_stack.hpp>
 #include <nandina/render/draw_context.hpp>
 #include <nandina/render/render_device.hpp>
-#include <nandina/render/backends/sdf_primitive_geometry.hpp>
-#include <nandina/scene/control.hpp>
 #include <nandina/scene/canvas_layer.hpp>
+#include <nandina/scene/control.hpp>
 #include <nandina/scene/node2d.hpp>
 #include <nandina/scene/scene_tree.hpp>
 #include <nandina/widget/primitives/box_painter.hpp>
@@ -30,91 +30,110 @@ using namespace nandina;
 namespace
 {
 
-/// Records draw/clip calls for assertions. No windowing.
-class RecordingDevice final : public render::IRenderDevice {
-public:
-    struct RectCall {
-        foundation::NanRect rect;
-        float alpha;  // color alpha in [0,1], for opacity checks
+    /// Records draw/clip calls for assertions. No windowing.
+    class RecordingDevice final: public render::IRenderDevice {
+    public:
+        struct RectCall {
+            foundation::NanRect rect;
+            float alpha; // color alpha in [0,1], for opacity checks
+        };
+        struct ClipCall {
+            foundation::NanRect rect;
+            bool cleared; // true if this was a clear_clip()
+        };
+
+        std::vector<RectCall> rects;
+        std::vector<ClipCall> clips;
+        std::vector<std::string> events;
+        int begin_count = 0;
+        int end_count = 0;
+        float last_radius = 0.0F;
+        float last_thickness = 0.0F;
+
+        void begin_frame() override {
+            ++begin_count;
+        }
+        void end_frame() override {
+            ++end_count;
+        }
+
+        void set_clip(const foundation::NanRect& r) override {
+            clips.push_back({r, false});
+            events.push_back("clip");
+        }
+        void clear_clip() override {
+            clips.push_back({foundation::NanRect::empty(), true});
+            events.push_back("clear");
+        }
+
+        void draw_rect(const foundation::NanRect& r, const foundation::NanColor& c) override {
+            rects.push_back({r, c.alpha()});
+            events.push_back("rect");
+        }
+        void draw_rect_outline(
+            const foundation::NanRect& r,
+            float thickness,
+            const foundation::NanColor& c
+        ) override {
+            last_thickness = thickness;
+            rects.push_back({r, c.alpha()});
+        }
+        void draw_rounded_rect(
+            const foundation::NanRect& r,
+            float radius,
+            const foundation::NanColor& c
+        ) override {
+            last_radius = radius;
+            rects.push_back({r, c.alpha()});
+        }
+        void draw_rounded_rect_outline(
+            const foundation::NanRect& r,
+            float radius,
+            float thickness,
+            const foundation::NanColor& c
+        ) override {
+            last_radius = radius;
+            last_thickness = thickness;
+            rects.push_back({r, c.alpha()});
+        }
+        void draw_line(
+            const foundation::NanPoint&,
+            const foundation::NanPoint&,
+            float,
+            const foundation::NanColor&
+        ) override {}
+        void draw_circle(const foundation::NanPoint&, float, const foundation::NanColor&) override {
+        }
+        void draw_text(
+            std::string_view,
+            const foundation::NanPoint&,
+            float,
+            const foundation::NanColor&
+        ) override {}
     };
-    struct ClipCall {
-        foundation::NanRect rect;
-        bool cleared;  // true if this was a clear_clip()
+
+    /// A node that draws one rect at its world origin, tagged via fill alpha so the
+    /// recorded call order can be identified. opacity() is folded into the alpha.
+    class RectNode: public scene::NanNode2D {
+    public:
+        explicit RectNode(float tag_alpha): tag_(tag_alpha) {}
+
+        [[nodiscard]] auto contains_point(foundation::NanPoint) const -> bool override {
+            return false;
+        }
+
+        void on_draw(render::DrawContext& ctx) override {
+            const auto p = ctx.world_transform().position();
+            const auto rect = foundation::NanRect::from_xywh(p.get_x(), p.get_y(), 10, 10);
+            const auto color = foundation::NanColor::from(
+                foundation::NanOklch {.light = 0.5F, .chroma = 0.1F, .hue = 120.0F, .alpha = 1.0F}
+            );
+            ctx.device().draw_rect(rect, color.with_alpha(tag_ * ctx.opacity()));
+        }
+
+    private:
+        float tag_;
     };
-
-    std::vector<RectCall> rects;
-    std::vector<ClipCall> clips;
-    std::vector<std::string> events;
-    int begin_count = 0;
-    int end_count = 0;
-    float last_radius = 0.0F;
-    float last_thickness = 0.0F;
-
-    void begin_frame() override { ++begin_count; }
-    void end_frame() override { ++end_count; }
-
-    void set_clip(const foundation::NanRect& r) override {
-        clips.push_back({r, false});
-        events.push_back("clip");
-    }
-    void clear_clip() override {
-        clips.push_back({foundation::NanRect::empty(), true});
-        events.push_back("clear");
-    }
-
-    void draw_rect(const foundation::NanRect& r, const foundation::NanColor& c) override {
-        rects.push_back({r, c.alpha()});
-        events.push_back("rect");
-    }
-    void draw_rect_outline(const foundation::NanRect& r, float thickness,
-                           const foundation::NanColor& c) override {
-        last_thickness = thickness;
-        rects.push_back({r, c.alpha()});
-    }
-    void draw_rounded_rect(const foundation::NanRect& r, float radius,
-                           const foundation::NanColor& c) override {
-        last_radius = radius;
-        rects.push_back({r, c.alpha()});
-    }
-    void draw_rounded_rect_outline(
-        const foundation::NanRect& r,
-        float radius,
-        float thickness,
-        const foundation::NanColor& c
-    ) override {
-        last_radius = radius;
-        last_thickness = thickness;
-        rects.push_back({r, c.alpha()});
-    }
-    void draw_line(const foundation::NanPoint&, const foundation::NanPoint&, float,
-                   const foundation::NanColor&) override {}
-    void draw_circle(const foundation::NanPoint&, float,
-                     const foundation::NanColor&) override {}
-    void draw_text(std::string_view, const foundation::NanPoint&, float,
-                   const foundation::NanColor&) override {}
-};
-
-/// A node that draws one rect at its world origin, tagged via fill alpha so the
-/// recorded call order can be identified. opacity() is folded into the alpha.
-class RectNode : public scene::NanNode2D {
-public:
-    explicit RectNode(float tag_alpha) : tag_(tag_alpha) {}
-
-    [[nodiscard]] auto contains_point(foundation::NanPoint) const -> bool override {
-        return false;
-    }
-
-    void on_draw(render::DrawContext& ctx) override {
-        const auto p = ctx.world_transform().position();
-        const auto rect = foundation::NanRect::from_xywh(p.get_x(), p.get_y(), 10, 10);
-        const auto color = foundation::NanColor::from(
-            foundation::NanOklch{.light = 0.5F, .chroma = 0.1F, .hue = 120.0F, .alpha = 1.0F});
-        ctx.device().draw_rect(rect, color.with_alpha(tag_ * ctx.opacity()));
-    }
-
-private:
-    float tag_;
-};
 
 } // namespace
 
@@ -327,20 +346,15 @@ TEST_CASE("ClipStack intersects with the parent clip", "[render][clip]") {
 TEST_CASE("SDF quad bounds preserve the exterior antialiasing band", "[render][sdf]") {
     const auto shape = foundation::NanRect::from_xywh(10.0F, 20.0F, 40.0F, 24.0F);
 
-    const auto fill = render::detail::sdf_quad_bounds(
-        shape,
-        render::detail::SdfPrimitiveMode::fill
-    );
+    const auto fill =
+        render::detail::sdf_quad_bounds(shape, render::detail::SdfPrimitiveMode::fill);
     REQUIRE(fill.get_left() == Catch::Approx(9.0F));
     REQUIRE(fill.get_top() == Catch::Approx(19.0F));
     REQUIRE(fill.get_width() == Catch::Approx(42.0F));
     REQUIRE(fill.get_height() == Catch::Approx(26.0F));
 
-    const auto outline = render::detail::sdf_quad_bounds(
-        shape,
-        render::detail::SdfPrimitiveMode::outline,
-        2.0F
-    );
+    const auto outline =
+        render::detail::sdf_quad_bounds(shape, render::detail::SdfPrimitiveMode::outline, 2.0F);
     REQUIRE(outline.get_left() == Catch::Approx(7.0F));
     REQUIRE(outline.get_top() == Catch::Approx(17.0F));
     REQUIRE(outline.get_width() == Catch::Approx(46.0F));
@@ -454,7 +468,10 @@ TEST_CASE("nested control overflow clips are intersected", "[render][clip][contr
     REQUIRE(dev.clips[3].cleared);
 }
 
-TEST_CASE("node local opacity multiplies once per node (no exponential decay)", "[render][opacity]") {
+TEST_CASE(
+    "node local opacity multiplies once per node (no exponential decay)",
+    "[render][opacity]"
+) {
     RecordingDevice dev;
     scene::NanSceneTree tree;
     auto root = std::make_shared<RectNode>(1.0F);
@@ -491,7 +508,10 @@ TEST_CASE("deep nesting multiplies each local opacity exactly once", "[render][o
     REQUIRE(dev.rects[2].alpha == Catch::Approx(0.125F));
 }
 
-TEST_CASE("sibling opacity is isolated and the context restores after a subtree", "[render][opacity]") {
+TEST_CASE(
+    "sibling opacity is isolated and the context restores after a subtree",
+    "[render][opacity]"
+) {
     RecordingDevice dev;
     scene::NanSceneTree tree;
     auto root = std::make_shared<RectNode>(1.0F);
@@ -543,7 +563,10 @@ TEST_CASE("canvas layers draw by layer order and reset their transform", "[rende
     REQUIRE(dev.rects[1].rect.get_top() == Catch::Approx(6.0F));
 }
 
-TEST_CASE("CanvasLayer inherited transform aliases its canvas transform", "[render][canvas-layer]") {
+TEST_CASE(
+    "CanvasLayer inherited transform aliases its canvas transform",
+    "[render][canvas-layer]"
+) {
     RecordingDevice dev;
     scene::NanSceneTree tree;
     auto stack = scene::LayerStack::create();

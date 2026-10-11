@@ -54,8 +54,7 @@ namespace nandina::foundation
         [[nodiscard]] constexpr auto packed() const -> std::uint32_t {
             return (static_cast<std::uint32_t>(red) << 24)
                 | (static_cast<std::uint32_t>(green) << 16)
-                | (static_cast<std::uint32_t>(blue) << 8)
-                | static_cast<std::uint32_t>(alpha);
+                | (static_cast<std::uint32_t>(blue) << 8) | static_cast<std::uint32_t>(alpha);
         }
 
         auto operator==(const NanHexRgb&) const -> bool = default;

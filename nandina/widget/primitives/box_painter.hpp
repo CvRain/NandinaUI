@@ -40,11 +40,7 @@ namespace nandina::widget::primitives
             }
             const auto color = box.fill.with_alpha(box.fill.alpha() * parent_opacity);
             if (box.radius > 0.0F && ctx.device().supports_rounded_rect()) {
-                ctx.device().draw_rounded_rect(
-                    world,
-                    ctx.logical_to_screen(box.radius),
-                    color
-                );
+                ctx.device().draw_rounded_rect(world, ctx.logical_to_screen(box.radius), color);
             }
             else {
                 ctx.device().draw_rect(world, color);
@@ -72,11 +68,8 @@ namespace nandina::widget::primitives
                 );
             }
             else {
-                ctx.device().draw_rect_outline(
-                    world,
-                    ctx.logical_to_screen(box.border_width),
-                    color
-                );
+                ctx.device()
+                    .draw_rect_outline(world, ctx.logical_to_screen(box.border_width), color);
             }
         }
     };

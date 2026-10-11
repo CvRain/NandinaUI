@@ -34,8 +34,7 @@ namespace nandina::widget::internal
         }
     } // namespace
 
-    auto FocusScope::set_content(std::shared_ptr<scene::NanControl> content)
-        -> scene::NanControl& {
+    auto FocusScope::set_content(std::shared_ptr<scene::NanControl> content) -> scene::NanControl& {
         if (!content) {
             throw std::invalid_argument("FocusScope::set_content: content is null");
         }
@@ -63,9 +62,8 @@ namespace nandina::widget::internal
         if (!key.is_pressed() || key.keycode() != keys::tab || get_tree() == nullptr) {
             return false;
         }
-        const bool moved = key.modifiers().shift
-            ? get_tree()->focus_previous_within(*this)
-            : get_tree()->focus_next_within(*this);
+        const bool moved = key.modifiers().shift ? get_tree()->focus_previous_within(*this)
+                                                 : get_tree()->focus_next_within(*this);
         if (moved) {
             event.accept();
         }
@@ -82,8 +80,9 @@ namespace nandina::widget::internal
         if (tree == nullptr) {
             return;
         }
-        if (auto* focused = tree->focused_node(); focused != nullptr && focused != this
-            && !is_ancestor_of(*focused)) {
+        if (auto* focused = tree->focused_node();
+            focused != nullptr && focused != this && !is_ancestor_of(*focused))
+        {
             previous_focus_ = focused->weak_from_this();
         }
         (void)tree->focus_first_within(*this);
@@ -111,4 +110,4 @@ namespace nandina::widget::internal
             current->layout_to(local_rect());
         }
     }
-}
+} // namespace nandina::widget::internal

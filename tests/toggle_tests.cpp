@@ -54,8 +54,7 @@ TEST_CASE("toggle checked and unchecked styles are clearly different", "[toggle]
     // 未选中 ghost：透明容器 + muted_foreground 文本。
     REQUIRE(off.container.fill.alpha() == Catch::Approx(0.0F));
     REQUIRE(
-        off.label.color.oklch().light
-        == Catch::Approx(design.light.muted_foreground.oklch().light)
+        off.label.color.oklch().light == Catch::Approx(design.light.muted_foreground.oklch().light)
     );
 
     // 选中：tone 强调色实底 + on_primary 文本 —— 区分来自容器填充/边框，不只是文字色。
@@ -63,8 +62,7 @@ TEST_CASE("toggle checked and unchecked styles are clearly different", "[toggle]
     REQUIRE(on.container.fill.oklch().light == Catch::Approx(design.light.primary.oklch().light));
     REQUIRE(on.container.border.oklch().light == Catch::Approx(design.light.primary.oklch().light));
     REQUIRE(
-        on.label.color.oklch().light
-        == Catch::Approx(design.light.primary_foreground.oklch().light)
+        on.label.color.oklch().light == Catch::Approx(design.light.primary_foreground.oklch().light)
     );
     REQUIRE(on.container.fill.oklch().light != Catch::Approx(off.container.fill.oklch().light));
     REQUIRE(on.label.color.oklch().light != Catch::Approx(off.label.color.oklch().light));
@@ -79,12 +77,10 @@ TEST_CASE("toggle hover and pressed feedback are distinct", "[toggle][theme]") {
     REQUIRE(normal.state_layer.hover.alpha() == Catch::Approx(0.0F));
     REQUIRE(normal.state_layer.pressed.alpha() == Catch::Approx(0.0F));
     REQUIRE(
-        hovered.state_layer.hover.alpha()
-        == Catch::Approx(design.tokens.opacity.hover_overlay)
+        hovered.state_layer.hover.alpha() == Catch::Approx(design.tokens.opacity.hover_overlay)
     );
     REQUIRE(
-        pressed.state_layer.pressed.alpha()
-        == Catch::Approx(design.tokens.opacity.pressed_overlay)
+        pressed.state_layer.pressed.alpha() == Catch::Approx(design.tokens.opacity.pressed_overlay)
     );
     // pressed 必须比 hover 更深一档（契约状态表）。
     REQUIRE(
@@ -104,8 +100,7 @@ TEST_CASE("toggle disabled state scales colors and drops the focus ring", "[togg
 
     const float factor = design.tokens.opacity.disabled;
     REQUIRE(
-        disabled.container.fill.alpha()
-        == Catch::Approx(normal.container.fill.alpha() * factor)
+        disabled.container.fill.alpha() == Catch::Approx(normal.container.fill.alpha() * factor)
     );
     REQUIRE(disabled.label.color.alpha() == Catch::Approx(normal.label.color.alpha() * factor));
     REQUIRE(disabled.focus.color.alpha() == Catch::Approx(0.0F));
@@ -124,8 +119,7 @@ TEST_CASE("toggle resolves dark appearance from the dark palette", "[toggle][the
     );
 
     REQUIRE(
-        dark.label.color.oklch().light
-        == Catch::Approx(design.dark.muted_foreground.oklch().light)
+        dark.label.color.oklch().light == Catch::Approx(design.dark.muted_foreground.oklch().light)
     );
     REQUIRE(dark.label.color.oklch().light > light.label.color.oklch().light);
 }
@@ -190,8 +184,7 @@ TEST_CASE("toggle activates on pointer release inside its bounds", "[toggle][inp
     REQUIRE(toggle->checked());
 
     // 在控件外释放不计为点击。
-    const auto outside =
-        foundation::NanPoint(center.get_x() + 400.0F, center.get_y());
+    const auto outside = foundation::NanPoint(center.get_x() + 400.0F, center.get_y());
     tree.dispatch_mouse_button(
         scene::MouseButtonEvent(
             scene::MouseButtonEvent::Button::left,
@@ -315,9 +308,11 @@ TEST_CASE("toggle override survives a system apply", "[toggle][override]") {
     tree.set_root(toggle);
     REQUIRE(tree.layout_root(foundation::NanSize(240.0F, 48.0F)) >= 1);
 
-    toggle->set_override(theme::ToggleRecipeRule {
-        .container_fill = theme::ThemeColor::token(theme::ColorToken::error),
-    });
+    toggle->set_override(
+        theme::ToggleRecipeRule {
+            .container_fill = theme::ThemeColor::token(theme::ColorToken::error),
+        }
+    );
     REQUIRE(
         toggle->resolved_style().container.fill.oklch().light
         == Catch::Approx(themes.design_system().light.error.oklch().light)
@@ -348,7 +343,10 @@ TEST_CASE("toggle widget re-resolves when the appearance switches", "[toggle][th
     REQUIRE(dark.label.color.oklch().light != Catch::Approx(light.label.color.oklch().light));
 }
 
-TEST_CASE("BuildContext toggle instantiates ComponentTraits and a signal binding", "[toggle][authoring]") {
+TEST_CASE(
+    "BuildContext toggle instantiates ComponentTraits and a signal binding",
+    "[toggle][authoring]"
+) {
     reactive::Graph graph;
     reactive::ReactiveScope scope {graph};
     theme::ThemeManager themes;

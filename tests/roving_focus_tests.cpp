@@ -46,9 +46,7 @@ namespace
             focus.sync(
                 enabled_ref.size(),
                 [&enabled_ref](std::size_t index) { return enabled_ref[index]; },
-                [&labels_ref](std::size_t index) -> std::string_view {
-                    return labels_ref[index];
-                }
+                [&labels_ref](std::size_t index) -> std::string_view { return labels_ref[index]; }
             );
         }
 
@@ -182,10 +180,9 @@ TEST_CASE("step skips non-focusable members", "[widget][roving]") {
     f.enabled = {true, false, false, true, false};
     {
         const auto& enabled_ref = f.enabled;
-        f.focus.sync(
-            enabled_ref.size(),
-            [&enabled_ref](std::size_t index) { return enabled_ref[index]; }
-        );
+        f.focus.sync(enabled_ref.size(), [&enabled_ref](std::size_t index) {
+            return enabled_ref[index];
+        });
     }
 
     REQUIRE(f.step(1) == 3);
@@ -266,10 +263,9 @@ TEST_CASE("disabled members are skipped", "[widget][roving]") {
     f.enabled = {true, false, false, true, true};
     {
         const auto& enabled_ref = f.enabled;
-        f.focus.sync(
-            enabled_ref.size(),
-            [&enabled_ref](std::size_t index) { return enabled_ref[index]; }
-        );
+        f.focus.sync(enabled_ref.size(), [&enabled_ref](std::size_t index) {
+            return enabled_ref[index];
+        });
     }
 
     REQUIRE(f.key(widget::keys::down) == 3);

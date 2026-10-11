@@ -29,17 +29,15 @@ namespace nandina::widget
     }
 
     auto find_menu_item(std::vector<MenuItem>& items, const std::string_view id) -> MenuItem* {
-        const auto found = std::ranges::find_if(items, [id](const MenuItem& item) {
-            return item.id == id;
-        });
+        const auto found =
+            std::ranges::find_if(items, [id](const MenuItem& item) { return item.id == id; });
         return found == items.end() ? nullptr : &*found;
     }
 
     auto find_menu_item(const std::vector<MenuItem>& items, const std::string_view id)
         -> const MenuItem* {
-        const auto found = std::ranges::find_if(items, [id](const MenuItem& item) {
-            return item.id == id;
-        });
+        const auto found =
+            std::ranges::find_if(items, [id](const MenuItem& item) { return item.id == id; });
         return found == items.end() ? nullptr : &*found;
     }
 

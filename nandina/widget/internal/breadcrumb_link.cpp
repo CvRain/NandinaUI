@@ -71,10 +71,12 @@ namespace nandina::widget::internal
     auto BreadcrumbLink::on_measure(const foundation::NanLayoutConstraints constraints)
         -> foundation::NanSize {
         (void)text_.measure_layout(constraints);
-        return constraints.constrain(foundation::NanSize(
-            std::max(1.0F, text_.measured_text_width()),
-            std::max(1.0F, text_.measured_text_height())
-        ));
+        return constraints.constrain(
+            foundation::NanSize(
+                std::max(1.0F, text_.measured_text_width()),
+                std::max(1.0F, text_.measured_text_height())
+            )
+        );
     }
 
     void BreadcrumbLink::on_pressable_state_changed() {

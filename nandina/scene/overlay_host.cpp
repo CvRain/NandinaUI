@@ -32,30 +32,31 @@ namespace nandina::scene
                     .max_height = height(),
                 };
                 for (std::size_t index = 0; index < child_count(); ++index) {
-                    auto* child = get_child(index) != nullptr
-                        ? get_child(index)->as_control()
-                        : nullptr;
+                    auto* child =
+                        get_child(index) != nullptr ? get_child(index)->as_control() : nullptr;
                     if (child == nullptr || !child->visible()) {
                         continue;
                     }
                     const auto measured = child->measure_layout(child_constraints);
-                    child->layout_to(foundation::NanRect::from_origin_size(
-                        child->position(), measured
-                    ));
+                    child->layout_to(
+                        foundation::NanRect::from_origin_size(child->position(), measured)
+                    );
                 }
             }
         };
-    }
+    } // namespace
 
     OverlayHandle::OverlayHandle(std::weak_ptr<OverlayHost> host, const std::uint64_t id):
-        host_(std::move(host)), id_(id) {}
+        host_(std::move(host)),
+        id_(id) {}
 
     OverlayHandle::~OverlayHandle() {
         close();
     }
 
     OverlayHandle::OverlayHandle(OverlayHandle&& other) noexcept:
-        host_(std::move(other.host_)), id_(std::exchange(other.id_, 0)) {}
+        host_(std::move(other.host_)),
+        id_(std::exchange(other.id_, 0)) {}
 
     auto OverlayHandle::operator=(OverlayHandle&& other) noexcept -> OverlayHandle& {
         if (this == &other) {
@@ -100,8 +101,7 @@ namespace nandina::scene
         add_layer(overlay_layer_);
     }
 
-    auto OverlayHost::set_content(std::shared_ptr<NanControl> content)
-        -> NanControl& {
+    auto OverlayHost::set_content(std::shared_ptr<NanControl> content) -> NanControl& {
         if (!content) {
             throw std::invalid_argument("OverlayHost::set_content: content is null");
         }
@@ -143,10 +143,8 @@ namespace nandina::scene
         }
     }
 
-    auto OverlayHost::present(
-        std::shared_ptr<NanControl> overlay,
-        const OverlayOptions options
-    ) -> OverlayHandle {
+    auto OverlayHost::present(std::shared_ptr<NanControl> overlay, const OverlayOptions options)
+        -> OverlayHandle {
         if (!overlay) {
             throw std::invalid_argument("OverlayHost::present: overlay is null");
         }
@@ -156,36 +154,32 @@ namespace nandina::scene
 
         // 父浮层必须仍存在：父已被关闭时不允许再挂子层，否则会立刻变成孤儿。
         if (options.parent != 0 && !contains(options.parent)) {
-            throw std::invalid_argument(
-                "OverlayHost::present: parent overlay does not exist"
-            );
+            throw std::invalid_argument("OverlayHost::present: parent overlay does not exist");
         }
 
         overlay->set_z_index(static_cast<int>(options.level));
         const auto id = next_id_++;
-        entries_.push_back(Entry {
-            .id = id,
-            .control = overlay,
-            .block_below = options.block_below,
-            .parent = options.parent,
-        });
+        entries_.push_back(
+            Entry {
+                .id = id,
+                .control = overlay,
+                .block_below = options.block_below,
+                .parent = options.parent,
+            }
+        );
         overlay_surface_->add_child(std::move(overlay));
         update_input_mode();
 
-        OverlayHandle handle {
-            std::static_pointer_cast<OverlayHost>(shared_from_this()),
-            id
-        };
+        OverlayHandle handle {std::static_pointer_cast<OverlayHost>(shared_from_this()), id};
         handle.parent_id_ = options.parent;
         return handle;
     }
 
     auto OverlayHost::overlay_count() const -> std::size_t {
         // 已关闭的条目会作为"墓碑"保留，统计时不计入。
-        return static_cast<std::size_t>(std::ranges::count_if(
-            entries_,
-            [](const Entry& entry) { return entry.close_reason == OverlayCloseReason::none; }
-        ));
+        return static_cast<std::size_t>(std::ranges::count_if(entries_, [](const Entry& entry) {
+            return entry.close_reason == OverlayCloseReason::none;
+        }));
     }
 
     auto OverlayHost::contains(const std::uint64_t id) const -> bool {
@@ -214,8 +208,7 @@ namespace nandina::scene
         return innermost;
     }
 
-    auto OverlayHost::overlay_close_reason(const std::uint64_t id) const
-        -> OverlayCloseReason {
+    auto OverlayHost::overlay_close_reason(const std::uint64_t id) const -> OverlayCloseReason {
         const auto found = std::ranges::find(entries_, id, &Entry::id);
         return found == entries_.end() ? OverlayCloseReason::none : found->close_reason;
     }
@@ -226,12 +219,9 @@ namespace nandina::scene
     }
 
     auto OverlayHost::overlay_child_count(const std::uint64_t id) const -> std::size_t {
-        return static_cast<std::size_t>(std::ranges::count_if(
-            entries_,
-            [id](const Entry& entry) {
-                return entry.parent == id && entry.close_reason == OverlayCloseReason::none;
-            }
-        ));
+        return static_cast<std::size_t>(std::ranges::count_if(entries_, [id](const Entry& entry) {
+            return entry.parent == id && entry.close_reason == OverlayCloseReason::none;
+        }));
     }
 
     auto OverlayHost::hosts_node(const NanNode& node) const -> bool {
@@ -258,9 +248,10 @@ namespace nandina::scene
         }
         // 先关掉自己的后代：内层浮层不能比外层活得久，否则会留在屏幕上且指向已消失的
         // 锚点。后代各自带上 OverlayCloseReason::parent。
-        (void)close_descendants(id, reason == OverlayCloseReason::owner
-                ? OverlayCloseReason::parent
-                : reason);
+        (void)close_descendants(
+            id,
+            reason == OverlayCloseReason::owner ? OverlayCloseReason::parent : reason
+        );
 
         // found 可能因为在上面关闭后代时被 erase 而失效，重新查找一次。
         const auto current = std::ranges::find(entries_, id, &Entry::id);
@@ -278,10 +269,8 @@ namespace nandina::scene
         return true;
     }
 
-    auto OverlayHost::close_descendants(
-        const std::uint64_t id,
-        const OverlayCloseReason reason
-    ) -> std::size_t {
+    auto OverlayHost::close_descendants(const std::uint64_t id, const OverlayCloseReason reason)
+        -> std::size_t {
         // 直接子层里可能有已经失效的条目，逐个通过 close() 递归下去。
         std::vector<std::uint64_t> children;
         for (const auto& entry: entries_) {
@@ -302,9 +291,7 @@ namespace nandina::scene
         const bool blocks = std::ranges::any_of(entries_, [](const Entry& entry) {
             return entry.block_below && entry.close_reason == OverlayCloseReason::none;
         });
-        overlay_layer_->set_input_mode(
-            blocks ? LayerInputMode::block_below : LayerInputMode::pass
-        );
+        overlay_layer_->set_input_mode(blocks ? LayerInputMode::block_below : LayerInputMode::pass);
     }
 
     auto OverlayHandle::close_reason() const noexcept -> OverlayCloseReason {

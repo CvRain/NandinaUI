@@ -340,7 +340,8 @@ namespace nandina::widget
         }
     }
 
-    auto Tabs::on_measure(const foundation::NanLayoutConstraints constraints) -> foundation::NanSize {
+    auto Tabs::on_measure(const foundation::NanLayoutConstraints constraints)
+        -> foundation::NanSize {
         const auto style = resolved_style();
         apply_text_styles();
         measure_labels();

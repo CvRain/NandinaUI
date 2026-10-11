@@ -76,9 +76,9 @@ TEST_CASE("request_close from on_frame shuts the window down cleanly", "[app][wi
     // 返回码会被 Meson 当作失败。
     SUCCEED("window tests are disabled because no native display is available");
 #else
-#ifdef NANDINA_OPTIONAL_WINDOW_TESTS
+    #ifdef NANDINA_OPTIONAL_WINDOW_TESTS
     try {
-#endif
+    #endif
         app::NanApplication application(
             app::NanApplicationConfig::for_process("com.nandina.lifecycle_test")
         );
@@ -100,16 +100,18 @@ TEST_CASE("request_close from on_frame shuts the window down cleanly", "[app][wi
         // 关闭请求在第 3 帧发出，且之后不再有帧。
         REQUIRE(window.close_requested_at_frame() == 3);
         REQUIRE(window.frames() == 3);
-#ifdef NANDINA_OPTIONAL_WINDOW_TESTS
-    } catch (const std::runtime_error& error) {
+    #ifdef NANDINA_OPTIONAL_WINDOW_TESTS
+    }
+    catch (const std::runtime_error& error) {
         // Meson auto 模式只能根据环境变量判断显示环境是否可能存在；容器或
         // sandbox 中 socket 可能存在但不可连接，此时仍应把窗口测试视为不可用。
         if (std::string_view(error.what()) == "NanWindow: failed to initialize native window") {
             SUCCEED("window tests are unavailable because the native display cannot be opened");
-        } else {
+        }
+        else {
             throw;
         }
     }
-#endif
+    #endif
 #endif
 }

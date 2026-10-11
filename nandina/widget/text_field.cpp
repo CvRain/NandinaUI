@@ -6,12 +6,12 @@
 
 #include "key_codes.hpp"
 
-#include "primitives/box_painter.hpp"
-#include "primitives/focus_ring_painter.hpp"
 #include "../render/draw_context.hpp"
 #include "../scene/input_event.hpp"
 #include "../scene/scene_tree.hpp"
 #include "../theme/theme_manager.hpp"
+#include "primitives/box_painter.hpp"
+#include "primitives/focus_ring_painter.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -29,7 +29,8 @@ namespace nandina::widget
     TextField::TextField(std::string value, std::string placeholder, theme::NanTheme theme):
         edit_(std::move(value)),
         placeholder_(std::move(placeholder)) {
-        system_ = std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ =
+            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
         theme_view_ = theme;
         edit_.set_on_change([this](std::string_view value) {
             if (on_change_) {
@@ -67,7 +68,8 @@ namespace nandina::widget
     }
 
     void TextField::set_theme(theme::NanTheme theme) {
-        system_ = std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ =
+            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
         system_explicit_ = true;
         theme_view_ = theme;
         apply_theme();
@@ -130,9 +132,12 @@ namespace nandina::widget
 
     auto TextField::visual_state() const -> theme::TextFieldVisualState {
         auto state = theme::TextFieldVisualState::normal;
-        if (focused_) state = state | theme::TextFieldVisualState::focused;
-        if (disabled_) state = state | theme::TextFieldVisualState::disabled;
-        if (invalid_) state = state | theme::TextFieldVisualState::invalid;
+        if (focused_)
+            state = state | theme::TextFieldVisualState::focused;
+        if (disabled_)
+            state = state | theme::TextFieldVisualState::disabled;
+        if (invalid_)
+            state = state | theme::TextFieldVisualState::invalid;
         return state;
     }
 
@@ -272,7 +277,8 @@ namespace nandina::widget
         }
         if (event.type() == scene::EventType::key) {
             const auto& key = static_cast<scene::KeyEvent&>(event);
-            if (key.is_pressed() && (key.keycode() == keys::enter || key.keycode() == key_kp_enter)) {
+            if (key.is_pressed() && (key.keycode() == keys::enter || key.keycode() == key_kp_enter))
+            {
                 if (on_submit_) {
                     on_submit_(value());
                 }
@@ -304,9 +310,8 @@ namespace nandina::widget
         const float padding = ctx.logical_to_screen(padding_x_);
         // 让最后一个字形在 content box 右缘得以完整显示：在内容框宽度基础上放出一个
         // 字形悬垂余量（advance 之外的墨迹 1~2px），否则近满时末字形的右侧墨迹被裁。
-        const float overhang = ctx.logical_to_screen(
-            text::glyph_overhang_allowance(edit_.style().font_size)
-        );
+        const float overhang =
+            ctx.logical_to_screen(text::glyph_overhang_allowance(edit_.style().font_size));
         const auto viewport = foundation::NanRect::from_xywh(
             world.get_left() + padding,
             world.get_top(),
@@ -337,7 +342,8 @@ namespace nandina::widget
         );
     }
 
-    auto TextField::on_measure(foundation::NanLayoutConstraints constraints) -> foundation::NanSize {
+    auto TextField::on_measure(foundation::NanLayoutConstraints constraints)
+        -> foundation::NanSize {
         const auto content = content_constraints(constraints);
         const auto edit_size = edit_.measure_layout(
             foundation::NanLayoutConstraints {
@@ -364,13 +370,14 @@ namespace nandina::widget
             .role = semantics::Role::text_field,
             .label = std::string(placeholder()),
             .value = std::string(value()),
-            .state = {
-                .focusable = !disabled_,
-                .focused = focused_,
-                .disabled = disabled_,
-                .read_only = read_only_,
-                .invalid = invalid_,
-            },
+            .state =
+                {
+                    .focusable = !disabled_,
+                    .focused = focused_,
+                    .disabled = disabled_,
+                    .read_only = read_only_,
+                    .invalid = invalid_,
+                },
             .actions = actions,
         };
     }
@@ -389,12 +396,12 @@ namespace nandina::widget
         height_ = style.metrics.height;
 
         const auto& context = resolved_style_context();
-        const auto font = context.font_from_context && !font_explicit_ ? context.font
-                                                                       : edit_.style().font;
+        const auto font =
+            context.font_from_context && !font_explicit_ ? context.font : edit_.style().font;
         const auto font_size =
             context.font_size_from_context ? context.font_size : style.value.font_size;
-        const auto text_color = context.text_color_from_context ? context.text_color
-                                                                : style.value.color;
+        const auto text_color =
+            context.text_color_from_context ? context.text_color : style.value.color;
         const text::TextStyle value_style {
             .color = text_color,
             .font_size = font_size,
@@ -403,8 +410,7 @@ namespace nandina::widget
             .max_lines = 1,
         };
         const text::TextStyle placeholder_style {
-            .color = context.text_color_from_context ? context.text_color
-                                                     : style.placeholder.color,
+            .color = context.text_color_from_context ? context.text_color : style.placeholder.color,
             .font_size = font_size,
             .font = font,
             .overflow = text::TextOverflow::ellipsis,
@@ -468,8 +474,8 @@ namespace nandina::widget
         const float x,
         const float scale
     ) const -> foundation::NanPoint {
-        const float line_height =
-            scale * (layout.lines.empty() ? layout.font_size : layout.lines.front().size.get_height());
+        const float line_height = scale
+            * (layout.lines.empty() ? layout.font_size : layout.lines.front().size.get_height());
         return foundation::NanPoint(
             x,
             world.get_top() + std::max(0.0F, (world.get_height() - line_height) * 0.5F)

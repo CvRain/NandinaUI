@@ -27,16 +27,11 @@ namespace
         void set_clip(const foundation::NanRect&) override {}
         void clear_clip() override {}
         void draw_rect(const foundation::NanRect&, const foundation::NanColor&) override {}
-        void draw_rect_outline(
-            const foundation::NanRect&,
-            float,
-            const foundation::NanColor&
-        ) override {}
-        void draw_rounded_rect(
-            const foundation::NanRect&,
-            float,
-            const foundation::NanColor&
-        ) override {
+        void
+        draw_rect_outline(const foundation::NanRect&, float, const foundation::NanColor&) override {
+        }
+        void
+        draw_rounded_rect(const foundation::NanRect&, float, const foundation::NanColor&) override {
             ++rounded_rects;
         }
         void draw_line(
@@ -45,7 +40,8 @@ namespace
             float,
             const foundation::NanColor&
         ) override {}
-        void draw_circle(const foundation::NanPoint&, float, const foundation::NanColor&) override {}
+        void draw_circle(const foundation::NanPoint&, float, const foundation::NanColor&) override {
+        }
         void draw_text(
             std::string_view,
             const foundation::NanPoint&,
@@ -63,9 +59,9 @@ TEST_CASE("badge style resolves pill tokens from the recipe", "[badge][theme]") 
 
     const auto style = theme::resolve_badge(design, theme::ColorAppearance::light);
 
-    REQUIRE(style.container.fill.oklch().light == Catch::Approx(
-        design.light.secondary.oklch().light
-    ));
+    REQUIRE(
+        style.container.fill.oklch().light == Catch::Approx(design.light.secondary.oklch().light)
+    );
     REQUIRE(
         style.label.color.oklch().light
         == Catch::Approx(design.light.secondary_foreground.oklch().light)
@@ -83,12 +79,10 @@ TEST_CASE("badge resolves light and dark surfaces from the same snapshot", "[bad
     const auto dark = theme::resolve_badge(design, theme::ColorAppearance::dark);
 
     REQUIRE(
-        light.container.fill.oklch().light
-        == Catch::Approx(design.light.secondary.oklch().light)
+        light.container.fill.oklch().light == Catch::Approx(design.light.secondary.oklch().light)
     );
     REQUIRE(
-        dark.container.fill.oklch().light
-        == Catch::Approx(design.dark.secondary.oklch().light)
+        dark.container.fill.oklch().light == Catch::Approx(design.dark.secondary.oklch().light)
     );
     REQUIRE(dark.container.fill.oklch().light < light.container.fill.oklch().light);
 }
@@ -104,10 +98,12 @@ TEST_CASE("badge override patches fields and survives a system apply", "[badge][
 
     const float fill_light = badge->resolved_style().container.fill.oklch().light;
 
-    badge->set_override(theme::BadgeRecipeRule {
-        .container_fill = theme::ThemeColor::token(theme::ColorToken::primary),
-        .label_color = theme::ThemeColor::token(theme::ColorToken::on_primary),
-    });
+    badge->set_override(
+        theme::BadgeRecipeRule {
+            .container_fill = theme::ThemeColor::token(theme::ColorToken::primary),
+            .label_color = theme::ThemeColor::token(theme::ColorToken::on_primary),
+        }
+    );
     const auto overridden = badge->resolved_style();
     REQUIRE(
         overridden.container.fill.oklch().light
@@ -122,10 +118,7 @@ TEST_CASE("badge override patches fields and survives a system apply", "[badge][
     auto design = theme::default_design_system();
     design.light.primary = theme::nan_color(0.50F, 0.20F, 30.0F);
     themes.apply(std::make_shared<const theme::DesignSystem>(std::move(design)));
-    REQUIRE(
-        badge->resolved_style().container.fill.oklch().light
-        == Catch::Approx(0.50F)
-    );
+    REQUIRE(badge->resolved_style().container.fill.oklch().light == Catch::Approx(0.50F));
     REQUIRE(badge->resolved_style().container.fill.oklch().light != Catch::Approx(fill_light));
 }
 

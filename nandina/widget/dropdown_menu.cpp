@@ -513,7 +513,8 @@ namespace nandina::widget
                 float content_width = 0.0F;
                 float content_height = m.padding_y * 2.0F;
                 for (auto& node: item_nodes_) {
-                    const auto measured = node->measure_layout(foundation::NanLayoutConstraints::loose());
+                    const auto measured =
+                        node->measure_layout(foundation::NanLayoutConstraints::loose());
                     content_width = std::max(content_width, measured.get_width());
                     content_height += measured.get_height();
                 }
@@ -530,7 +531,8 @@ namespace nandina::widget
                 const float content_width = std::max(0.0F, width() - m.padding_x * 2.0F);
                 float y = m.padding_y;
                 for (auto& node: item_nodes_) {
-                    const auto measured = node->measure_layout(foundation::NanLayoutConstraints::loose());
+                    const auto measured =
+                        node->measure_layout(foundation::NanLayoutConstraints::loose());
                     const float row_height = measured.get_height();
                     node->layout_to(
                         foundation::NanRect::from_xywh(m.padding_x, y, content_width, row_height)

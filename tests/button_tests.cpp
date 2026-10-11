@@ -934,7 +934,10 @@ TEST_CASE("button overrides refresh detached metrics immediately", "[widget][but
     REQUIRE(button.width() > before);
 }
 
-TEST_CASE("a focused button draws a rounded focus ring that follows its radius", "[widget][button][focus]") {
+TEST_CASE(
+    "a focused button draws a rounded focus ring that follows its radius",
+    "[widget][button][focus]"
+) {
     RecordingDevice dev;
     scene::NanSceneTree tree;
     auto button = std::make_shared<widget::Button>("Open");

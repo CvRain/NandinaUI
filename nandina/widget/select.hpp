@@ -22,7 +22,7 @@ namespace nandina::scene
 {
     class OverlayHandle;
     class OverlayHost;
-}
+} // namespace nandina::scene
 
 namespace nandina::widget
 {

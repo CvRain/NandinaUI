@@ -30,8 +30,8 @@ auto main(int argc, char** argv) -> int {
 
     output << "#include <array>\n#include <cstdint>\n\n"
               "namespace nandina::resource::detail\n{\n"
-              "    extern const std::array<std::uint8_t, " << bytes.size() << "> " << argv[3]
-           << " = {\n        ";
+              "    extern const std::array<std::uint8_t, "
+           << bytes.size() << "> " << argv[3] << " = {\n        ";
     output << std::hex << std::setfill('0');
     for (std::size_t index = 0; index < bytes.size(); ++index) {
         if (index != 0 && index % 12 == 0) {

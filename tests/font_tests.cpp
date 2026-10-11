@@ -2,15 +2,15 @@
 // FreeType font-face integration tests.
 //
 
+#include <nandina/render/draw_context.hpp>
 #include <nandina/resource/resource_manager.hpp>
+#include <nandina/scene/scene_tree.hpp>
 #include <nandina/text/font_face.hpp>
 #include <nandina/text/font_family.hpp>
 #include <nandina/text/font_loader.hpp>
 #include <nandina/text/glyph_atlas.hpp>
 #include <nandina/text/glyph_run_renderer.hpp>
 #include <nandina/text/harfbuzz_text_backend.hpp>
-#include <nandina/render/draw_context.hpp>
-#include <nandina/scene/scene_tree.hpp>
 #include <nandina/widget/primitives/editable_text.hpp>
 #include <nandina/widget/primitives/text.hpp>
 
@@ -47,27 +47,20 @@ namespace
         void set_clip(const foundation::NanRect&) override {}
         void clear_clip() override {}
         void draw_rect(const foundation::NanRect&, const foundation::NanColor&) override {}
-        void draw_rect_outline(
-            const foundation::NanRect&,
-            float,
-            const foundation::NanColor&
-        ) override {}
-        void draw_rounded_rect(
-            const foundation::NanRect&,
-            float,
-            const foundation::NanColor&
-        ) override {}
+        void
+        draw_rect_outline(const foundation::NanRect&, float, const foundation::NanColor&) override {
+        }
+        void
+        draw_rounded_rect(const foundation::NanRect&, float, const foundation::NanColor&) override {
+        }
         void draw_line(
             const foundation::NanPoint&,
             const foundation::NanPoint&,
             float,
             const foundation::NanColor&
         ) override {}
-        void draw_circle(
-            const foundation::NanPoint&,
-            float,
-            const foundation::NanColor&
-        ) override {}
+        void draw_circle(const foundation::NanPoint&, float, const foundation::NanColor&) override {
+        }
         void draw_text(
             std::string_view,
             const foundation::NanPoint&,
@@ -81,11 +74,9 @@ namespace
             return true;
         }
 
-        [[nodiscard]] auto create_alpha_texture(
-            int width,
-            int height,
-            std::span<const std::uint8_t> alpha
-        ) -> render::TextureHandle override {
+        [[nodiscard]] auto
+        create_alpha_texture(int width, int height, std::span<const std::uint8_t> alpha)
+            -> render::TextureHandle override {
             REQUIRE(alpha.size() == static_cast<std::size_t>(width * height));
             ++creates;
             return {.value = 1};
@@ -231,10 +222,7 @@ TEST_CASE("GlyphAtlas tracks only the pixels written since the last consume", "[
         after_second.get_width() * after_second.get_height()
         >= after_first.get_width() * after_first.get_height()
     );
-    const auto right = std::max(
-        first.pixel_bounds.get_right(),
-        second.pixel_bounds.get_right()
-    );
+    const auto right = std::max(first.pixel_bounds.get_right(), second.pixel_bounds.get_right());
     REQUIRE(after_second.get_right() >= right);
 
     // 取走之后清空；重复缓存同一个字形也不再产生脏区域。
@@ -383,10 +371,14 @@ TEST_CASE("GlyphAtlasTexture uploads revisions and positions glyphs", "[text][at
         REQUIRE(device.last_source.get_top() == Catch::Approx(glyph.pixel_bounds.get_top()));
         REQUIRE(device.last_source.get_width() == Catch::Approx(glyph.pixel_bounds.get_width()));
         REQUIRE(device.last_source.get_height() == Catch::Approx(glyph.pixel_bounds.get_height()));
-        REQUIRE(device.last_destination.get_left()
-                == Catch::Approx(std::round(10.0F + glyph.metrics.bearing_x)));
-        REQUIRE(device.last_destination.get_top()
-                == Catch::Approx(std::round(30.0F - glyph.metrics.bearing_y)));
+        REQUIRE(
+            device.last_destination.get_left()
+            == Catch::Approx(std::round(10.0F + glyph.metrics.bearing_x))
+        );
+        REQUIRE(
+            device.last_destination.get_top()
+            == Catch::Approx(std::round(30.0F - glyph.metrics.bearing_y))
+        );
 
         texture.sync();
         REQUIRE(device.updates == 1);
@@ -394,7 +386,10 @@ TEST_CASE("GlyphAtlasTexture uploads revisions and positions glyphs", "[text][at
     REQUIRE(device.destroys == 1);
 }
 
-TEST_CASE("GlyphAtlasTexture snaps fractional shaped positions without resizing glyphs", "[text][atlas][render]") {
+TEST_CASE(
+    "GlyphAtlasTexture snaps fractional shaped positions without resizing glyphs",
+    "[text][atlas][render]"
+) {
     auto face = std::make_shared<text::FreeTypeFontFace>(test_font_path());
     text::GlyphAtlas atlas(face, 64, 64);
     TextureRecordingDevice device;
@@ -407,14 +402,16 @@ TEST_CASE("GlyphAtlasTexture snaps fractional shaped positions without resizing 
         foundation::NanColor::from(foundation::NanOklch {})
     );
 
-    REQUIRE(device.last_destination.get_left()
-            == Catch::Approx(std::round(10.25F + glyph.metrics.bearing_x)));
-    REQUIRE(device.last_destination.get_top()
-            == Catch::Approx(std::round(30.75F - glyph.metrics.bearing_y)));
-    REQUIRE(device.last_destination.get_width()
-            == Catch::Approx(glyph.pixel_bounds.get_width()));
-    REQUIRE(device.last_destination.get_height()
-            == Catch::Approx(glyph.pixel_bounds.get_height()));
+    REQUIRE(
+        device.last_destination.get_left()
+        == Catch::Approx(std::round(10.25F + glyph.metrics.bearing_x))
+    );
+    REQUIRE(
+        device.last_destination.get_top()
+        == Catch::Approx(std::round(30.75F - glyph.metrics.bearing_y))
+    );
+    REQUIRE(device.last_destination.get_width() == Catch::Approx(glyph.pixel_bounds.get_width()));
+    REQUIRE(device.last_destination.get_height() == Catch::Approx(glyph.pixel_bounds.get_height()));
 }
 
 TEST_CASE("GlyphAtlasTexture converts physical glyphs back to screen space", "[text][atlas][dpi]") {
@@ -431,33 +428,39 @@ TEST_CASE("GlyphAtlasTexture converts physical glyphs back to screen space", "[t
         2.0F
     );
 
-    REQUIRE(device.last_destination.get_left()
-            == Catch::Approx(
-                std::round(10.25F * 2.0F + glyph.metrics.bearing_x) / 2.0F
-            ));
-    REQUIRE(device.last_destination.get_top()
-            == Catch::Approx(
-                std::round(30.75F * 2.0F - glyph.metrics.bearing_y) / 2.0F
-            ));
-    REQUIRE(device.last_destination.get_width()
-            == Catch::Approx(glyph.pixel_bounds.get_width() / 2.0F));
-    REQUIRE(device.last_destination.get_height()
-            == Catch::Approx(glyph.pixel_bounds.get_height() / 2.0F));
+    REQUIRE(
+        device.last_destination.get_left()
+        == Catch::Approx(std::round(10.25F * 2.0F + glyph.metrics.bearing_x) / 2.0F)
+    );
+    REQUIRE(
+        device.last_destination.get_top()
+        == Catch::Approx(std::round(30.75F * 2.0F - glyph.metrics.bearing_y) / 2.0F)
+    );
+    REQUIRE(
+        device.last_destination.get_width() == Catch::Approx(glyph.pixel_bounds.get_width() / 2.0F)
+    );
+    REQUIRE(
+        device.last_destination.get_height()
+        == Catch::Approx(glyph.pixel_bounds.get_height() / 2.0F)
+    );
 }
 
 TEST_CASE("HarfBuzz backend produces glyph runs with source clusters", "[text][harfbuzz]") {
     auto face = std::make_shared<text::FreeTypeFontFace>(test_font_path());
     text::HarfBuzzTextLayoutBackend backend(face);
 
-    const auto layout = backend.layout(text::TextLayoutInput {
-        .text = "ab",
-        .style = text::TextStyle {
-            .font_size = 24.0F,
-            .overflow = text::TextOverflow::clip,
-            .max_lines = 1,
-        },
-        .constraints = foundation::NanLayoutConstraints::loose(),
-    });
+    const auto layout = backend.layout(
+        text::TextLayoutInput {
+            .text = "ab",
+            .style =
+                text::TextStyle {
+                    .font_size = 24.0F,
+                    .overflow = text::TextOverflow::clip,
+                    .max_lines = 1,
+                },
+            .constraints = foundation::NanLayoutConstraints::loose(),
+        }
+    );
 
     REQUIRE(layout.lines.size() == 1);
     REQUIRE(layout.lines.front().glyphs.size() == 2);
@@ -472,12 +475,16 @@ TEST_CASE("HarfBuzz backend produces glyph runs with source clusters", "[text][h
 TEST_CASE("HarfBuzz caret geometry follows shaped graphemes", "[text][harfbuzz][caret]") {
     auto face = std::make_shared<text::FreeTypeFontFace>(test_font_path());
     text::HarfBuzzTextLayoutBackend backend(face);
-    constexpr std::string_view source = "a\xCC\x81" "b";
-    const auto layout = backend.layout(text::TextLayoutInput {
-        .text = source,
-        .style = text::TextStyle {.font_size = 24.0F},
-        .constraints = foundation::NanLayoutConstraints::loose(),
-    });
+    constexpr std::string_view source =
+        "a\xCC\x81"
+        "b";
+    const auto layout = backend.layout(
+        text::TextLayoutInput {
+            .text = source,
+            .style = text::TextStyle {.font_size = 24.0F},
+            .constraints = foundation::NanLayoutConstraints::loose(),
+        }
+    );
 
     const auto& line = layout.lines.front();
     REQUIRE(line.caret_stops.size() == 3);
@@ -491,11 +498,13 @@ TEST_CASE("HarfBuzz caret geometry follows shaped graphemes", "[text][harfbuzz][
 TEST_CASE("HarfBuzz glyph runs draw through the atlas texture", "[text][harfbuzz][render]") {
     auto face = std::make_shared<text::FreeTypeFontFace>(test_font_path());
     text::HarfBuzzTextLayoutBackend backend(face);
-    const auto layout = backend.layout(text::TextLayoutInput {
-        .text = "ab",
-        .style = text::TextStyle {.font_size = 24.0F},
-        .constraints = foundation::NanLayoutConstraints::loose(),
-    });
+    const auto layout = backend.layout(
+        text::TextLayoutInput {
+            .text = "ab",
+            .style = text::TextStyle {.font_size = 24.0F},
+            .constraints = foundation::NanLayoutConstraints::loose(),
+        }
+    );
 
     text::GlyphAtlas atlas(face, 64, 64);
     TextureRecordingDevice device;
@@ -510,10 +519,8 @@ TEST_CASE("HarfBuzz glyph runs draw through the atlas texture", "[text][harfbuzz
 
     int expected_draws = 0;
     for (const auto& glyph: layout.lines.front().glyphs) {
-        const auto bitmap = backend.font_face(glyph.font_index)->rasterize_glyph(
-            glyph.glyph_index,
-            layout.font_size
-        );
+        const auto bitmap = backend.font_face(glyph.font_index)
+                                ->rasterize_glyph(glyph.glyph_index, layout.font_size);
         expected_draws += bitmap.width > 0 && bitmap.height > 0 ? 1 : 0;
     }
     REQUIRE(device.draws == expected_draws);
@@ -524,11 +531,13 @@ TEST_CASE("HarfBuzz glyph runs draw through the atlas texture", "[text][harfbuzz
 TEST_CASE("GlyphRunRenderer rasterizes at viewport times DPI scale", "[text][harfbuzz][scale]") {
     auto face = std::make_shared<text::FreeTypeFontFace>(test_font_path());
     text::HarfBuzzTextLayoutBackend backend(face);
-    const auto layout = backend.layout(text::TextLayoutInput {
-        .text = "a",
-        .style = text::TextStyle {.font_size = 16.0F},
-        .constraints = foundation::NanLayoutConstraints::loose(),
-    });
+    const auto layout = backend.layout(
+        text::TextLayoutInput {
+            .text = "a",
+            .style = text::TextStyle {.font_size = 16.0F},
+            .constraints = foundation::NanLayoutConstraints::loose(),
+        }
+    );
     text::GlyphAtlas atlas(face, 128, 128);
     TextureRecordingDevice device;
     text::GlyphAtlasTexture texture(device, atlas);
@@ -550,23 +559,28 @@ TEST_CASE("GlyphRunRenderer rasterizes at viewport times DPI scale", "[text][har
     const auto* cached = atlas.find_glyph(glyph_index, 48.0F);
     REQUIRE(cached != nullptr);
     REQUIRE(cached->pixel_size == Catch::Approx(48.0F));
-    REQUIRE(device.last_destination.get_width()
-            == Catch::Approx(cached->pixel_bounds.get_width() / 2.0F));
+    REQUIRE(
+        device.last_destination.get_width()
+        == Catch::Approx(cached->pixel_bounds.get_width() / 2.0F)
+    );
 }
 
 TEST_CASE("HarfBuzz backend honors explicit line limits", "[text][harfbuzz]") {
     auto face = std::make_shared<text::FreeTypeFontFace>(test_font_path());
     text::HarfBuzzTextLayoutBackend backend(face);
 
-    const auto layout = backend.layout(text::TextLayoutInput {
-        .text = "a\nb\na",
-        .style = text::TextStyle {
-            .font_size = 24.0F,
-            .overflow = text::TextOverflow::wrap,
-            .max_lines = 2,
-        },
-        .constraints = foundation::NanLayoutConstraints::loose(),
-    });
+    const auto layout = backend.layout(
+        text::TextLayoutInput {
+            .text = "a\nb\na",
+            .style =
+                text::TextStyle {
+                    .font_size = 24.0F,
+                    .overflow = text::TextOverflow::wrap,
+                    .max_lines = 2,
+                },
+            .constraints = foundation::NanLayoutConstraints::loose(),
+        }
+    );
 
     REQUIRE(layout.lines.size() == 2);
     REQUIRE(layout.lines[0].text_offset == 0);
@@ -578,22 +592,25 @@ TEST_CASE("FriBidi orders pure RTL and mixed-direction glyph runs", "[text][harf
     auto face = std::make_shared<text::FreeTypeFontFace>(rtl_test_font_path());
     text::HarfBuzzTextLayoutBackend backend(face);
 
-    const auto rtl = backend.layout(text::TextLayoutInput {
-        .text = "لسان",
-        .style = text::TextStyle {.font_size = 32.0F},
-        .constraints = foundation::NanLayoutConstraints::loose(),
-    });
+    const auto rtl = backend.layout(
+        text::TextLayoutInput {
+            .text = "لسان",
+            .style = text::TextStyle {.font_size = 32.0F},
+            .constraints = foundation::NanLayoutConstraints::loose(),
+        }
+    );
     REQUIRE(rtl.lines.size() == 1);
     REQUIRE(rtl.lines.front().right_to_left);
     REQUIRE(rtl.lines.front().glyphs.size() >= 2);
-    REQUIRE(rtl.lines.front().glyphs.front().cluster
-            > rtl.lines.front().glyphs.back().cluster);
+    REQUIRE(rtl.lines.front().glyphs.front().cluster > rtl.lines.front().glyphs.back().cluster);
 
-    const auto mixed = backend.layout(text::TextLayoutInput {
-        .text = "abc لسان",
-        .style = text::TextStyle {.font_size = 32.0F},
-        .constraints = foundation::NanLayoutConstraints::loose(),
-    });
+    const auto mixed = backend.layout(
+        text::TextLayoutInput {
+            .text = "abc لسان",
+            .style = text::TextStyle {.font_size = 32.0F},
+            .constraints = foundation::NanLayoutConstraints::loose(),
+        }
+    );
     REQUIRE_FALSE(mixed.lines.front().right_to_left);
     bool has_visual_cluster_inversion = false;
     for (std::size_t index = 1; index < mixed.lines.front().glyphs.size(); ++index) {
@@ -605,8 +622,7 @@ TEST_CASE("FriBidi orders pure RTL and mixed-direction glyph runs", "[text][harf
 
     const auto& rtl_line = rtl.lines.front();
     REQUIRE(rtl_line.caret_for_source(0).x == Catch::Approx(rtl_line.size.get_width()));
-    REQUIRE(rtl_line.caret_for_source(std::string_view("لسان").size()).x
-            == Catch::Approx(0.0F));
+    REQUIRE(rtl_line.caret_for_source(std::string_view("لسان").size()).x == Catch::Approx(0.0F));
 
     bool has_split_bidi_boundary = false;
     const auto& mixed_stops = mixed.lines.front().caret_stops;
@@ -640,16 +656,21 @@ TEST_CASE("EditableText moves visually through RTL caret stops", "[text][harfbuz
     REQUIRE(edit->caret() < source.size());
 }
 
-TEST_CASE("FriBidi reshapes RTL overflow at logical cluster boundaries", "[text][harfbuzz][bidi][overflow]") {
+TEST_CASE(
+    "FriBidi reshapes RTL overflow at logical cluster boundaries",
+    "[text][harfbuzz][bidi][overflow]"
+) {
     auto face = std::make_shared<text::FreeTypeFontFace>(rtl_test_font_path());
     text::HarfBuzzTextLayoutBackend backend(face);
     constexpr std::string_view source = "لسان لسان";
 
-    const auto natural = backend.layout(text::TextLayoutInput {
-        .text = source,
-        .style = text::TextStyle {.font_size = 32.0F},
-        .constraints = foundation::NanLayoutConstraints::loose(),
-    });
+    const auto natural = backend.layout(
+        text::TextLayoutInput {
+            .text = source,
+            .style = text::TextStyle {.font_size = 32.0F},
+            .constraints = foundation::NanLayoutConstraints::loose(),
+        }
+    );
     const float width_limit = natural.size.get_width() * 0.55F;
     const foundation::NanLayoutConstraints constraints {
         .min_width = 0.0F,
@@ -658,15 +679,18 @@ TEST_CASE("FriBidi reshapes RTL overflow at logical cluster boundaries", "[text]
         .max_height = 200.0F,
     };
 
-    const auto wrapped = backend.layout(text::TextLayoutInput {
-        .text = source,
-        .style = text::TextStyle {
-            .font_size = 32.0F,
-            .overflow = text::TextOverflow::wrap,
-            .max_lines = 4,
-        },
-        .constraints = constraints,
-    });
+    const auto wrapped = backend.layout(
+        text::TextLayoutInput {
+            .text = source,
+            .style =
+                text::TextStyle {
+                    .font_size = 32.0F,
+                    .overflow = text::TextOverflow::wrap,
+                    .max_lines = 4,
+                },
+            .constraints = constraints,
+        }
+    );
     REQUIRE(wrapped.lines.size() > 1);
     std::size_t consumed = 0;
     for (const auto& line: wrapped.lines) {
@@ -678,15 +702,18 @@ TEST_CASE("FriBidi reshapes RTL overflow at logical cluster boundaries", "[text]
     REQUIRE(consumed == source.size());
     REQUIRE_FALSE(wrapped.overflowed);
 
-    const auto clipped = backend.layout(text::TextLayoutInput {
-        .text = source,
-        .style = text::TextStyle {
-            .font_size = 32.0F,
-            .overflow = text::TextOverflow::clip,
-            .max_lines = 1,
-        },
-        .constraints = constraints,
-    });
+    const auto clipped = backend.layout(
+        text::TextLayoutInput {
+            .text = source,
+            .style =
+                text::TextStyle {
+                    .font_size = 32.0F,
+                    .overflow = text::TextOverflow::clip,
+                    .max_lines = 1,
+                },
+            .constraints = constraints,
+        }
+    );
     REQUIRE(clipped.overflowed);
     REQUIRE(clipped.lines.front().right_to_left);
     REQUIRE(clipped.lines.front().text_length == source.size());
@@ -694,35 +721,43 @@ TEST_CASE("FriBidi reshapes RTL overflow at logical cluster boundaries", "[text]
     REQUIRE(clipped.lines.front().size.get_width() > width_limit);
     REQUIRE(clipped.size.get_width() <= width_limit + 0.01F);
 
-    const auto ellipsis = backend.layout(text::TextLayoutInput {
-        .text = source,
-        .style = text::TextStyle {
-            .font_size = 32.0F,
-            .overflow = text::TextOverflow::ellipsis,
-            .max_lines = 1,
-        },
-        .constraints = constraints,
-    });
+    const auto ellipsis = backend.layout(
+        text::TextLayoutInput {
+            .text = source,
+            .style =
+                text::TextStyle {
+                    .font_size = 32.0F,
+                    .overflow = text::TextOverflow::ellipsis,
+                    .max_lines = 1,
+                },
+            .constraints = constraints,
+        }
+    );
     REQUIRE(ellipsis.overflowed);
     REQUIRE(ellipsis.lines.front().right_to_left);
-    REQUIRE((ellipsis.lines.front().visible_text.empty()
-             || ellipsis.lines.front().visible_text.ends_with("...")));
+    REQUIRE(
+        (ellipsis.lines.front().visible_text.empty()
+         || ellipsis.lines.front().visible_text.ends_with("..."))
+    );
     REQUIRE(ellipsis.lines.front().size.get_width() <= width_limit + 0.01F);
 
-    const auto rtl_with_numbers = backend.layout(text::TextLayoutInput {
-        .text = "لسان 123456789",
-        .style = text::TextStyle {
-            .font_size = 32.0F,
-            .overflow = text::TextOverflow::wrap,
-            .max_lines = 12,
-        },
-        .constraints = foundation::NanLayoutConstraints {
-            .min_width = 0.0F,
-            .max_width = width_limit * 0.7F,
-            .min_height = 0.0F,
-            .max_height = 500.0F,
-        },
-    });
+    const auto rtl_with_numbers = backend.layout(
+        text::TextLayoutInput {
+            .text = "لسان 123456789",
+            .style =
+                text::TextStyle {
+                    .font_size = 32.0F,
+                    .overflow = text::TextOverflow::wrap,
+                    .max_lines = 12,
+                },
+            .constraints = foundation::NanLayoutConstraints {
+                .min_width = 0.0F,
+                .max_width = width_limit * 0.7F,
+                .min_height = 0.0F,
+                .max_height = 500.0F,
+            },
+        }
+    );
     bool found_numeric_continuation = false;
     for (const auto& line: rtl_with_numbers.lines) {
         if (!line.visible_text.empty() && line.visible_text.front() >= '0'
@@ -740,11 +775,13 @@ TEST_CASE("HarfBuzz selects fallback fonts per shaping cluster", "[text][harfbuz
     auto arabic = std::make_shared<text::FreeTypeFontFace>(rtl_test_font_path());
     text::HarfBuzzTextLayoutBackend backend(primary, {arabic});
 
-    const auto layout = backend.layout(text::TextLayoutInput {
-        .text = "abلسان",
-        .style = text::TextStyle {.font_size = 32.0F},
-        .constraints = foundation::NanLayoutConstraints::loose(),
-    });
+    const auto layout = backend.layout(
+        text::TextLayoutInput {
+            .text = "abلسان",
+            .style = text::TextStyle {.font_size = 32.0F},
+            .constraints = foundation::NanLayoutConstraints::loose(),
+        }
+    );
 
     REQUIRE(backend.font_count() == 2);
     REQUIRE(backend.font_face(0) == primary);
@@ -767,11 +804,13 @@ TEST_CASE("HarfBuzz selects fallback fonts per shaping cluster", "[text][harfbuz
 
     auto arabic_marks = std::make_shared<text::FreeTypeFontFace>(arabic_mark_test_font_path());
     text::HarfBuzzTextLayoutBackend mark_backend(primary, {arabic_marks});
-    const auto combining = mark_backend.layout(text::TextLayoutInput {
-        .text = "aكِ",
-        .style = text::TextStyle {.font_size = 32.0F},
-        .constraints = foundation::NanLayoutConstraints::loose(),
-    });
+    const auto combining = mark_backend.layout(
+        text::TextLayoutInput {
+            .text = "aكِ",
+            .style = text::TextStyle {.font_size = 32.0F},
+            .constraints = foundation::NanLayoutConstraints::loose(),
+        }
+    );
     bool saw_arabic_grapheme = false;
     for (const auto& glyph: combining.lines.front().glyphs) {
         if (glyph.cluster >= 1 && glyph.cluster < 5) {
@@ -782,33 +821,42 @@ TEST_CASE("HarfBuzz selects fallback fonts per shaping cluster", "[text][harfbuz
     }
     REQUIRE(saw_arabic_grapheme);
 
-    const auto variation = backend.layout(text::TextLayoutInput {
-        .text = "a\xEF\xB8\x8F",
-        .style = text::TextStyle {.font_size = 32.0F},
-        .constraints = foundation::NanLayoutConstraints::loose(),
-    });
+    const auto variation = backend.layout(
+        text::TextLayoutInput {
+            .text = "a\xEF\xB8\x8F",
+            .style = text::TextStyle {.font_size = 32.0F},
+            .constraints = foundation::NanLayoutConstraints::loose(),
+        }
+    );
     REQUIRE_FALSE(variation.lines.front().glyphs.empty());
     REQUIRE(variation.lines.front().glyphs.front().font_index == 0);
     REQUIRE(variation.missing_glyphs);
 
     text::HarfBuzzTextLayoutBackend no_fallback(primary);
-    const auto missing = no_fallback.layout(text::TextLayoutInput {
-        .text = "لسان",
-        .style = text::TextStyle {.font_size = 32.0F},
-        .constraints = foundation::NanLayoutConstraints::loose(),
-    });
+    const auto missing = no_fallback.layout(
+        text::TextLayoutInput {
+            .text = "لسان",
+            .style = text::TextStyle {.font_size = 32.0F},
+            .constraints = foundation::NanLayoutConstraints::loose(),
+        }
+    );
     REQUIRE(missing.missing_glyphs);
 }
 
-TEST_CASE("GlyphRunRenderer routes fallback glyphs to matching atlases", "[text][harfbuzz][fallback][render]") {
+TEST_CASE(
+    "GlyphRunRenderer routes fallback glyphs to matching atlases",
+    "[text][harfbuzz][fallback][render]"
+) {
     auto primary = std::make_shared<text::FreeTypeFontFace>(test_font_path());
     auto arabic = std::make_shared<text::FreeTypeFontFace>(rtl_test_font_path());
     text::HarfBuzzTextLayoutBackend backend(primary, {arabic});
-    const auto layout = backend.layout(text::TextLayoutInput {
-        .text = "abلسان",
-        .style = text::TextStyle {.font_size = 32.0F},
-        .constraints = foundation::NanLayoutConstraints::loose(),
-    });
+    const auto layout = backend.layout(
+        text::TextLayoutInput {
+            .text = "abلسان",
+            .style = text::TextStyle {.font_size = 32.0F},
+            .constraints = foundation::NanLayoutConstraints::loose(),
+        }
+    );
 
     text::GlyphAtlas primary_atlas(primary, 128, 128);
     text::GlyphAtlas fallback_atlas(arabic, 128, 128);
@@ -823,10 +871,7 @@ TEST_CASE("GlyphRunRenderer routes fallback glyphs to matching atlases", "[text]
         text::GlyphAtlasBinding {.atlas = &fallback_atlas, .texture = &fallback_texture},
         text::GlyphAtlasBinding {.atlas = &primary_atlas, .texture = &primary_texture},
     };
-    REQUIRE_THROWS_AS(
-        text::GlyphRunRenderer(backend, swapped_bindings),
-        std::invalid_argument
-    );
+    REQUIRE_THROWS_AS(text::GlyphRunRenderer(backend, swapped_bindings), std::invalid_argument);
     text::GlyphRunRenderer renderer(backend, bindings);
 
     renderer.draw_line(
@@ -838,10 +883,8 @@ TEST_CASE("GlyphRunRenderer routes fallback glyphs to matching atlases", "[text]
 
     int expected_draws = 0;
     for (const auto& glyph: layout.lines.front().glyphs) {
-        const auto bitmap = backend.font_face(glyph.font_index)->rasterize_glyph(
-            glyph.glyph_index,
-            layout.font_size
-        );
+        const auto bitmap = backend.font_face(glyph.font_index)
+                                ->rasterize_glyph(glyph.glyph_index, layout.font_size);
         expected_draws += bitmap.width > 0 && bitmap.height > 0 ? 1 : 0;
     }
     REQUIRE(device.draws == expected_draws);
@@ -851,7 +894,10 @@ TEST_CASE("GlyphRunRenderer routes fallback glyphs to matching atlases", "[text]
     REQUIRE(fallback_texture.uploaded_revision() == fallback_atlas.revision());
 }
 
-TEST_CASE("GlyphRunRenderer rejects mismatched atlas texture bindings", "[text][fallback][render]") {
+TEST_CASE(
+    "GlyphRunRenderer rejects mismatched atlas texture bindings",
+    "[text][fallback][render]"
+) {
     auto face = std::make_shared<text::FreeTypeFontFace>(test_font_path());
     text::HarfBuzzTextLayoutBackend backend(face);
     text::GlyphAtlas first(face, 64, 64);
@@ -865,7 +911,10 @@ TEST_CASE("GlyphRunRenderer rejects mismatched atlas texture bindings", "[text][
     REQUIRE_THROWS_AS(text::GlyphRunRenderer(backend, bindings), std::invalid_argument);
 }
 
-TEST_CASE("Text draws HarfBuzz layouts through the glyph atlas renderer", "[text][harfbuzz][widget]") {
+TEST_CASE(
+    "Text draws HarfBuzz layouts through the glyph atlas renderer",
+    "[text][harfbuzz][widget]"
+) {
     auto face = std::make_shared<text::FreeTypeFontFace>(test_font_path());
     text::HarfBuzzTextLayoutBackend backend(face);
     text::GlyphAtlas atlas(face, 64, 64);
@@ -907,10 +956,8 @@ TEST_CASE("FontFamilyRegistry register_face resolves a direct file face", "[text
     REQUIRE(face.has_value());
     REQUIRE(registry.register_face(resource::ResourceKey("imported"), *face).has_value());
 
-    const auto resolved = registry.resolve(
-        theme::FontRequest {.family = resource::ResourceKey("imported")},
-        loader
-    );
+    const auto resolved =
+        registry.resolve(theme::FontRequest {.family = resource::ResourceKey("imported")}, loader);
     REQUIRE(resolved.has_value());
     REQUIRE(resolved->faces.size() == 1);
     REQUIRE(resolved->faces.front() == *face);
@@ -929,27 +976,20 @@ TEST_CASE("Clipped text leaves room for the last glyph's ink overhang", "[text][
         }
         void clear_clip() override {}
         void draw_rect(const foundation::NanRect&, const foundation::NanColor&) override {}
-        void draw_rect_outline(
-            const foundation::NanRect&,
-            float,
-            const foundation::NanColor&
-        ) override {}
-        void draw_rounded_rect(
-            const foundation::NanRect&,
-            float,
-            const foundation::NanColor&
-        ) override {}
+        void
+        draw_rect_outline(const foundation::NanRect&, float, const foundation::NanColor&) override {
+        }
+        void
+        draw_rounded_rect(const foundation::NanRect&, float, const foundation::NanColor&) override {
+        }
         void draw_line(
             const foundation::NanPoint&,
             const foundation::NanPoint&,
             float,
             const foundation::NanColor&
         ) override {}
-        void draw_circle(
-            const foundation::NanPoint&,
-            float,
-            const foundation::NanColor&
-        ) override {}
+        void draw_circle(const foundation::NanPoint&, float, const foundation::NanColor&) override {
+        }
         void draw_text(
             std::string_view,
             const foundation::NanPoint&,
@@ -971,16 +1011,20 @@ TEST_CASE("Clipped text leaves room for the last glyph's ink overhang", "[text][
     render::DrawContext context(device);
     control.draw_at(context, foundation::NanPoint(50.0F, 60.0F));
 
-    const auto expected_right = 50.0F + context.logical_to_screen(
-        measured_width + text::glyph_overhang_allowance(control.laid_out_font_size())
-    );
+    const auto expected_right = 50.0F
+        + context.logical_to_screen(
+            measured_width + text::glyph_overhang_allowance(control.laid_out_font_size())
+        );
     REQUIRE(device.has_clip);
     // 裁剪右缘要放到 measured advance 之外，封住末字形墨迹悬垂。
     REQUIRE(device.last_clip.get_right() == Catch::Approx(expected_right));
     REQUIRE(device.last_clip.get_right() > 50.0F + measured_width);
 }
 
-TEST_CASE("FontFamilyRegistry matches multiple face variants by weight and slant", "[text][font-import]") {
+TEST_CASE(
+    "FontFamilyRegistry matches multiple face variants by weight and slant",
+    "[text][font-import]"
+) {
     resource::ResourceManager resources;
     text::FontLoader loader {resources};
     text::FontFamilyRegistry registry;
@@ -1001,7 +1045,8 @@ TEST_CASE("FontFamilyRegistry matches multiple face variants by weight and slant
             .has_value()
     );
 
-    const auto resolve = [&](int weight, theme::FontSlant slant) -> std::shared_ptr<text::FreeTypeFontFace> {
+    const auto resolve = [&](int weight,
+                             theme::FontSlant slant) -> std::shared_ptr<text::FreeTypeFontFace> {
         const auto result = registry.resolve(
             theme::FontRequest {
                 .family = resource::ResourceKey("mixed"),

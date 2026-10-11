@@ -120,7 +120,8 @@ namespace nandina::app
         requires_params,
     };
 
-    [[nodiscard]] constexpr auto describe(const NavigationError error) noexcept -> std::string_view {
+    [[nodiscard]] constexpr auto describe(const NavigationError error) noexcept
+        -> std::string_view {
         switch (error) {
             case NavigationError::unavailable:
                 return "navigation handle is no longer available";
@@ -190,7 +191,8 @@ namespace nandina::app
         }
 
     private:
-        explicit Navigation(std::shared_ptr<detail::NavigationState> state): state_(std::move(state)) {}
+        explicit Navigation(std::shared_ptr<detail::NavigationState> state):
+            state_(std::move(state)) {}
 
         template<typename PageT>
         [[nodiscard]] auto submit(std::unique_ptr<PageT> page) const -> bool {
@@ -240,7 +242,9 @@ namespace nandina::app
 
         /// Copyable, non-owning navigation capability. Capture this value in
         /// callbacks; never capture PageContext itself by reference.
-        [[nodiscard]] auto navigation() const -> Navigation { return navigation_; }
+        [[nodiscard]] auto navigation() const -> Navigation {
+            return navigation_;
+        }
 
         [[nodiscard]] auto graph() -> reactive::Graph& {
             return *graph_;
@@ -400,8 +404,12 @@ namespace nandina::app
         = default;
         explicit Page(Params params): params_(std::move(params)) {}
 
-        [[nodiscard]] auto params() const -> const Params& { return params_; }
-        [[nodiscard]] auto params() -> Params& { return params_; }
+        [[nodiscard]] auto params() const -> const Params& {
+            return params_;
+        }
+        [[nodiscard]] auto params() -> Params& {
+            return params_;
+        }
 
         [[nodiscard]] auto params_type_key() const -> ParamsKey override {
             return params_key<Params>();

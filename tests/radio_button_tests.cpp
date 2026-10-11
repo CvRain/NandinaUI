@@ -32,11 +32,9 @@ namespace
         void set_clip(const foundation::NanRect&) override {}
         void clear_clip() override {}
         void draw_rect(const foundation::NanRect&, const foundation::NanColor&) override {}
-        void draw_rect_outline(
-            const foundation::NanRect&,
-            float,
-            const foundation::NanColor&
-        ) override {}
+        void
+        draw_rect_outline(const foundation::NanRect&, float, const foundation::NanColor&) override {
+        }
         void draw_rounded_rect_outline(
             const foundation::NanRect&,
             float,
@@ -45,22 +43,16 @@ namespace
         ) override {
             ++rounded_rect_outlines;
         }
-        void draw_rounded_rect(
-            const foundation::NanRect&,
-            float,
-            const foundation::NanColor&
-        ) override {}
+        void
+        draw_rounded_rect(const foundation::NanRect&, float, const foundation::NanColor&) override {
+        }
         void draw_line(
             const foundation::NanPoint&,
             const foundation::NanPoint&,
             float,
             const foundation::NanColor&
         ) override {}
-        void draw_circle(
-            const foundation::NanPoint&,
-            float,
-            const foundation::NanColor&
-        ) override {
+        void draw_circle(const foundation::NanPoint&, float, const foundation::NanColor&) override {
             ++circles;
         }
         void draw_text(
@@ -95,18 +87,14 @@ TEST_CASE("radio button resolves indicator and dot tokens", "[radio][theme]") {
     // 未选中：透明填充 + input 边框；选中：primary 边框（规则覆盖）。
     REQUIRE(unchecked.indicator.fill.alpha() == Catch::Approx(0.0F));
     REQUIRE(
-        unchecked.indicator.border.oklch().light
-        == Catch::Approx(design.light.input.oklch().light)
+        unchecked.indicator.border.oklch().light == Catch::Approx(design.light.input.oklch().light)
     );
     REQUIRE(
-        checked.indicator.border.oklch().light
-        == Catch::Approx(design.light.primary.oklch().light)
+        checked.indicator.border.oklch().light == Catch::Approx(design.light.primary.oklch().light)
     );
     // 圆形指示器 + primary 内点。
     REQUIRE(unchecked.indicator.radius == Catch::Approx(9999.0F));
-    REQUIRE(
-        unchecked.dot.oklch().light == Catch::Approx(design.light.primary.oklch().light)
-    );
+    REQUIRE(unchecked.dot.oklch().light == Catch::Approx(design.light.primary.oklch().light));
     REQUIRE(unchecked.metrics.box_size == Catch::Approx(16.0F));
     REQUIRE(unchecked.metrics.gap == Catch::Approx(9.0F));
 }
@@ -129,9 +117,7 @@ TEST_CASE("radio button resolves light and dark surfaces", "[radio][theme]") {
     REQUIRE(
         light.label.color.oklch().light == Catch::Approx(design.light.on_surface.oklch().light)
     );
-    REQUIRE(
-        dark.label.color.oklch().light == Catch::Approx(design.dark.on_surface.oklch().light)
-    );
+    REQUIRE(dark.label.color.oklch().light == Catch::Approx(design.dark.on_surface.oklch().light));
     // 文本在暗色下翻转为浅色（on_surface 从暗变亮）。
     REQUIRE(dark.label.color.oklch().light > light.label.color.oklch().light);
 }
@@ -152,7 +138,10 @@ TEST_CASE("radio button disabled state scales colors", "[radio][theme]") {
     );
 
     const float expected = design.tokens.opacity.disabled;
-    REQUIRE(disabled.indicator.border.alpha() == Catch::Approx(normal.indicator.border.alpha() * expected));
+    REQUIRE(
+        disabled.indicator.border.alpha()
+        == Catch::Approx(normal.indicator.border.alpha() * expected)
+    );
     REQUIRE(disabled.dot.alpha() == Catch::Approx(normal.dot.alpha() * expected));
 }
 
@@ -165,9 +154,11 @@ TEST_CASE("radio button override survives a system apply", "[radio][override]") 
     tree.set_root(radio);
     REQUIRE(tree.layout_root(foundation::NanSize(240.0F, 48.0F)) >= 1);
 
-    radio->set_override(theme::RadioButtonRecipeRule {
-        .dot_color = theme::ThemeColor::token(theme::ColorToken::error),
-    });
+    radio->set_override(
+        theme::RadioButtonRecipeRule {
+            .dot_color = theme::ThemeColor::token(theme::ColorToken::error),
+        }
+    );
     REQUIRE(
         radio->resolved_style().dot.oklch().light
         == Catch::Approx(themes.design_system().light.error.oklch().light)
@@ -186,7 +177,8 @@ TEST_CASE("radio group enforces mutual exclusion", "[radio][group]") {
     auto c = widget::RadioButton::create("C", group);
 
     int last = -1;
-    auto subscription = group->selection_changed().subscribe([&](const int index) { last = index; });
+    auto subscription =
+        group->selection_changed().subscribe([&](const int index) { last = index; });
 
     b->select();
     REQUIRE(b->checked());

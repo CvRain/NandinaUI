@@ -13,7 +13,7 @@ namespace nandina::app
     /** 固定设计视口放入窗口时的等比例适配方式。 */
     enum class ViewportFit {
         contain, ///< 完整显示设计视口，剩余区域留白（letterbox）。
-        cover,   ///< 填满窗口，超出窗口的设计区域被裁切。
+        cover, ///< 填满窗口，超出窗口的设计区域被裁切。
     };
 
     /** contain/cover 在某一轴出现剩余量时的对齐位置。 */
@@ -56,10 +56,9 @@ namespace nandina::app
      * 计算固定设计视口映射。尺寸必须有限且严格为正，否则抛出 invalid_argument。
      * 该函数不访问窗口或渲染后端，可独立用于布局、输入和测试。
      */
-    [[nodiscard]] auto make_viewport_mapping(
-        foundation::NanSize screen_size,
-        const ViewportScalePolicy& policy
-    ) -> ViewportMapping;
+    [[nodiscard]] auto
+    make_viewport_mapping(foundation::NanSize screen_size, const ViewportScalePolicy& policy)
+        -> ViewportMapping;
 
 } // namespace nandina::app
 

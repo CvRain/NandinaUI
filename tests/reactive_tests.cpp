@@ -13,7 +13,7 @@ using namespace nandina::reactive;
 
 TEST_CASE("Signal basic get/set", "[reactive][signal]") {
     Graph g;
-    Signal<int> s{g, 10};
+    Signal<int> s {g, 10};
     REQUIRE(s.get() == 10);
     s.set(42);
     REQUIRE(s.get() == 42);
@@ -21,31 +21,34 @@ TEST_CASE("Signal basic get/set", "[reactive][signal]") {
 
 TEST_CASE("Signal set with equal value does not bump version", "[reactive][signal]") {
     Graph g;
-    Signal<int> s{g, 1};
+    Signal<int> s {g, 1};
     const auto v0 = s.source_version();
-    s.set(1);  // equal, ignored
+    s.set(1); // equal, ignored
     REQUIRE(s.source_version() == v0);
-    s.set(2);  // changed, bumps
+    s.set(2); // changed, bumps
     REQUIRE(s.source_version() == v0 + 1);
 }
 
 TEST_CASE("Signal update mutates in place", "[reactive][signal]") {
     Graph g;
-    Signal<int> s{g, 0};
+    Signal<int> s {g, 0};
     s.update([](int& v) { v += 5; });
     REQUIRE(s.get() == 5);
 }
 
 TEST_CASE("ReadSignal is a read-only view", "[reactive][signal]") {
     Graph g;
-    Signal<int> s{g, 7};
+    Signal<int> s {g, 7};
     auto ro = s.as_readonly();
     REQUIRE(ro.get() == 7);
     s.set(8);
     REQUIRE(ro.peek() == 8);
 }
 
-TEST_CASE("Property applies changes once and exposes read-only observation", "[reactive][property]") {
+TEST_CASE(
+    "Property applies changes once and exposes read-only observation",
+    "[reactive][property]"
+) {
     int applied = 0;
     int observed = 0;
     Property<int> property {1, [&applied](const int& value) { applied = value; }};
@@ -123,7 +126,7 @@ TEST_CASE("Effect runs once on creation", "[reactive][effect]") {
 
 TEST_CASE("Effect re-runs when a dependency changes", "[reactive][effect]") {
     Graph g;
-    Signal<int> s{g, 0};
+    Signal<int> s {g, 0};
     int seen = 0;
     int runs = 0;
     make_effect(g, [&] {
@@ -138,13 +141,13 @@ TEST_CASE("Effect re-runs when a dependency changes", "[reactive][effect]") {
     REQUIRE(runs == 2);
     REQUIRE(seen == 5);
 
-    s.set(5);  // equal, no re-run
+    s.set(5); // equal, no re-run
     REQUIRE(runs == 2);
 }
 
 TEST_CASE("Effect stops re-running after dispose", "[reactive][effect]") {
     Graph g;
-    Signal<int> s{g, 0};
+    Signal<int> s {g, 0};
     int runs = 0;
     auto* e = make_effect(g, [&] {
         (void)s.get();
@@ -159,39 +162,42 @@ TEST_CASE("Effect stops re-running after dispose", "[reactive][effect]") {
 
 TEST_CASE("Computed derives lazily and caches", "[reactive][computed]") {
     Graph g;
-    Signal<int> n{g, 0};
+    Signal<int> n {g, 0};
     int computes = 0;
     auto* c = make_computed(g, [&] {
         ++computes;
         return n.get();
     });
 
-    REQUIRE(computes == 0);  // not read yet, not computed
+    REQUIRE(computes == 0); // not read yet, not computed
     REQUIRE(c->get() == 0);
     REQUIRE(computes == 1);
-    (void)c->get();  // clean, reuse cache
+    (void)c->get(); // clean, reuse cache
     REQUIRE(computes == 1);
 
-    n.set(1);  // invalidated but not recomputed
+    n.set(1); // invalidated but not recomputed
     REQUIRE(computes == 1);
-    REQUIRE(c->get() == 1);  // recompute
+    REQUIRE(c->get() == 1); // recompute
     REQUIRE(computes == 2);
 }
 
 TEST_CASE("Computed chained dependency (computed depends on computed)", "[reactive][computed]") {
     Graph g;
-    Signal<int> n{g, 2};
+    Signal<int> n {g, 2};
     auto* doubled = make_computed(g, [&] { return n.get() * 2; });
     auto* plus_one = make_computed(g, [&] { return doubled->get() + 1; });
 
-    REQUIRE(plus_one->get() == 5);  // 2*2+1
+    REQUIRE(plus_one->get() == 5); // 2*2+1
     n.set(10);
-    REQUIRE(plus_one->get() == 21);  // 10*2+1
+    REQUIRE(plus_one->get() == 21); // 10*2+1
 }
 
-TEST_CASE("Effect depends on computed, re-runs when source changes", "[reactive][computed][effect]") {
+TEST_CASE(
+    "Effect depends on computed, re-runs when source changes",
+    "[reactive][computed][effect]"
+) {
     Graph g;
-    Signal<int> n{g, 1};
+    Signal<int> n {g, 1};
     auto* doubled = make_computed(g, [&] { return n.get() * 2; });
 
     int seen = 0;
@@ -212,7 +218,7 @@ TEST_CASE("Effect depends on computed, re-runs when source changes", "[reactive]
 TEST_CASE("Diamond dependency: effect runs once, no glitch", "[reactive][computed][diamond]") {
     Graph g;
     // a -> b, a -> c, (b,c) -> effect. Changing a should run the effect once.
-    Signal<int> a{g, 1};
+    Signal<int> a {g, 1};
     auto* b = make_computed(g, [&] { return a.get() + 1; });
     auto* c = make_computed(g, [&] { return a.get() * 10; });
 
@@ -224,18 +230,21 @@ TEST_CASE("Diamond dependency: effect runs once, no glitch", "[reactive][compute
     });
 
     REQUIRE(runs == 1);
-    REQUIRE(sum == 12);  // (1+1) + (1*10)
+    REQUIRE(sum == 12); // (1+1) + (1*10)
 
     a.set(2);
-    REQUIRE(runs == 2);  // exactly once
-    REQUIRE(sum == 23);  // (2+1) + (2*10)
+    REQUIRE(runs == 2); // exactly once
+    REQUIRE(sum == 23); // (2+1) + (2*10)
 }
 
-TEST_CASE("Dynamic dependency: old dep stops triggering after branch switch", "[reactive][effect][dynamic]") {
+TEST_CASE(
+    "Dynamic dependency: old dep stops triggering after branch switch",
+    "[reactive][effect][dynamic]"
+) {
     Graph g;
-    Signal<bool> cond{g, true};
-    Signal<int> a{g, 1};
-    Signal<int> b{g, 100};
+    Signal<bool> cond {g, true};
+    Signal<int> a {g, 1};
+    Signal<int> b {g, 100};
 
     int seen = 0;
     int runs = 0;
@@ -246,25 +255,25 @@ TEST_CASE("Dynamic dependency: old dep stops triggering after branch switch", "[
 
     REQUIRE(seen == 1);
 
-    b.set(200);  // currently depends on a, changing b should not trigger
+    b.set(200); // currently depends on a, changing b should not trigger
     REQUIRE(runs == 1);
 
-    cond.set(false);  // switch to b branch
+    cond.set(false); // switch to b branch
     REQUIRE(runs == 2);
     REQUIRE(seen == 200);
 
-    a.set(5);  // now depends on b, changing a should not trigger
+    a.set(5); // now depends on b, changing a should not trigger
     REQUIRE(runs == 2);
 
-    b.set(300);  // should trigger
+    b.set(300); // should trigger
     REQUIRE(runs == 3);
     REQUIRE(seen == 300);
 }
 
 TEST_CASE("batch merges multiple sets into one effect run", "[reactive][batch]") {
     Graph g;
-    Signal<int> a{g, 0};
-    Signal<int> b{g, 0};
+    Signal<int> a {g, 0};
+    Signal<int> b {g, 0};
 
     int sum = 0;
     int runs = 0;
@@ -277,16 +286,16 @@ TEST_CASE("batch merges multiple sets into one effect run", "[reactive][batch]")
     batch(g, [&] {
         a.set(10);
         b.set(20);
-        REQUIRE(runs == 1);  // effect not yet run inside batch
+        REQUIRE(runs == 1); // effect not yet run inside batch
     });
 
-    REQUIRE(runs == 2);  // one run after batch exit
+    REQUIRE(runs == 2); // one run after batch exit
     REQUIRE(sum == 30);
 }
 
 TEST_CASE("nested batch flushes only at outermost exit", "[reactive][batch]") {
     Graph g;
-    Signal<int> s{g, 0};
+    Signal<int> s {g, 0};
     int runs = 0;
     make_effect(g, [&] {
         (void)s.get();
@@ -296,16 +305,17 @@ TEST_CASE("nested batch flushes only at outermost exit", "[reactive][batch]") {
 
     batch(g, [&] {
         s.set(1);
-        batch(g, [&] {
-            s.set(2);
-        });
-        REQUIRE(runs == 1);  // inner batch exit did not flush
+        batch(g, [&] { s.set(2); });
+        REQUIRE(runs == 1); // inner batch exit did not flush
     });
 
     REQUIRE(runs == 2);
 }
 
-TEST_CASE("deferred effect scope keeps values synchronous and coalesces one wave", "[reactive][scheduler]") {
+TEST_CASE(
+    "deferred effect scope keeps values synchronous and coalesces one wave",
+    "[reactive][scheduler]"
+) {
     Graph graph;
     Signal<int> first {graph, 0};
     Signal<int> second {graph, 0};
@@ -331,7 +341,10 @@ TEST_CASE("deferred effect scope keeps values synchronous and coalesces one wave
     REQUIRE_FALSE(graph.has_pending_effects());
 }
 
-TEST_CASE("property bindings update in the deferred reactive wave", "[reactive][scheduler][property]") {
+TEST_CASE(
+    "property bindings update in the deferred reactive wave",
+    "[reactive][scheduler][property]"
+) {
     Graph graph;
     EffectScope scope {graph};
     Signal<int> source {graph, 1};
@@ -350,7 +363,10 @@ TEST_CASE("property bindings update in the deferred reactive wave", "[reactive][
     REQUIRE(property.get() == 3);
 }
 
-TEST_CASE("deferred effect scopes and batches flush only at the outer tick", "[reactive][scheduler][batch]") {
+TEST_CASE(
+    "deferred effect scopes and batches flush only at the outer tick",
+    "[reactive][scheduler][batch]"
+) {
     Graph graph;
     Signal<int> value {graph, 0};
     int runs = 0;
@@ -447,7 +463,10 @@ TEST_CASE("self-invalidating effects advance once per deferred wave", "[reactive
     REQUIRE_FALSE(graph.has_pending_effects());
 }
 
-TEST_CASE("self-invalidating effect is deferred to the next flush", "[reactive][effect][scheduler]") {
+TEST_CASE(
+    "self-invalidating effect is deferred to the next flush",
+    "[reactive][effect][scheduler]"
+) {
     Graph g;
     Signal<int> value {g, 0};
     int runs = 0;
@@ -517,13 +536,19 @@ TEST_CASE("effect failure restores dependency tracking context", "[reactive][eff
 
 TEST_CASE("EffectScope clears all effects together", "[reactive][effect][scope]") {
     Graph g;
-    Signal<int> s{g, 0};
+    Signal<int> s {g, 0};
     int runs_a = 0;
     int runs_b = 0;
 
-    EffectScope scope{g};
-    scope.add([&] { (void)s.get(); ++runs_a; });
-    scope.add([&] { (void)s.get(); ++runs_b; });
+    EffectScope scope {g};
+    scope.add([&] {
+        (void)s.get();
+        ++runs_a;
+    });
+    scope.add([&] {
+        (void)s.get();
+        ++runs_b;
+    });
     REQUIRE(scope.count() == 2);
 
     s.set(1);
@@ -532,7 +557,7 @@ TEST_CASE("EffectScope clears all effects together", "[reactive][effect][scope]"
 
     scope.clear();
     s.set(2);
-    REQUIRE(runs_a == 2);  // no re-run after clear
+    REQUIRE(runs_a == 2); // no re-run after clear
     REQUIRE(runs_b == 2);
 }
 
@@ -592,7 +617,7 @@ TEST_CASE("Undisposed effect is released by Graph destruction", "[reactive][life
     // No leak / crash: effect and computed outlive their handles but the Graph
     // owns them and tears down cleanly. (Signal must outlive the Graph.)
     Graph g;
-    Signal<int> s{g, 0};
+    Signal<int> s {g, 0};
     make_effect(g, [&] { (void)s.get(); });
     (void)make_computed(g, [&] { return s.get() + 1; });
     s.set(1);

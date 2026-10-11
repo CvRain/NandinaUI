@@ -33,8 +33,8 @@ namespace nandina::foundation
         [[nodiscard]] static auto from_hex(std::uint32_t rgb, float alpha = 1.0F) -> NanColor;
 
         /** 从归一化 sRGB 分量构造（[0,1]，alpha 默认不透明）。 */
-        [[nodiscard]] static auto
-        from_rgb(float red, float green, float blue, float alpha = 1.0F) -> NanColor {
+        [[nodiscard]] static auto from_rgb(float red, float green, float blue, float alpha = 1.0F)
+            -> NanColor {
             return from(NanRgb {.red = red, .green = green, .blue = blue, .alpha = alpha});
         }
 
@@ -61,10 +61,8 @@ namespace nandina::foundation
             -> bool {
             const auto a = color_;
             const auto b = other.color_;
-            const auto hue_delta = std::min(
-                std::abs(a.hue - b.hue),
-                360.0F - std::abs(a.hue - b.hue)
-            );
+            const auto hue_delta =
+                std::min(std::abs(a.hue - b.hue), 360.0F - std::abs(a.hue - b.hue));
             return std::abs(a.light - b.light) <= epsilon
                 && std::abs(a.chroma - b.chroma) <= epsilon && hue_delta <= epsilon
                 && std::abs(a.alpha - b.alpha) <= epsilon;
