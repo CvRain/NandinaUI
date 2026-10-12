@@ -4,6 +4,10 @@ NandinaUI 不以逐项复制其他组件库为目标。[shadcn/ui Components](ht
 
 ## 当前判断
 
+作者 DSL 与文本测量的 D6 设计已归档、待审阅。进入 Section 或扩充布局工厂之前，先把
+Label 的推荐属性表、跨组件 part 规则，以及有限宽度下文字自然长高的测量协议落到测试和 showcase；
+具体分期见[作者 DSL、文本能力与内容测量](authoring_dsl_and_content_measurement.md)。
+
 项目已经拥有一套可运行的内容、输入、布局、主题和响应式基础。阶段 1 的定位、关闭与焦点设施已经落地，阶段 2 的 Tooltip、Select 与 Dialog 也全部接入，因此「每个浮层组件各自处理定位与关闭」的重复逻辑已经消除。
 
 阶段 1 的基础设施已全部落地：roving focus / typeahead（`widget::RovingFocus`，接入
