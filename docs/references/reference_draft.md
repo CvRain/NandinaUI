@@ -1,19 +1,19 @@
 # 待决设计草案
 
-> **这是工作稿，不是决定记录。** 三件事都已核实到代码层面，但**都还没拍板**。
+> **这是工作稿，不是决定记录。** D2–D4 都仍在讨论，不能把本稿的候选形状当作已冻结契约。
 > 拍板之后：决定写进对应的 reference（`component_contract.md` / `theme` 相关 / `page_and_router.md`），
 > 过程补充到 stories；本文随之删除或降级为历史草案。
 >
 > 文件名沿用当前叫法；若想改成 `open_decisions.md` 这类更直白的名字，改索引一行即可。
 
-三件事彼此独立，可以分开拍板、分开实施：
+三项设计彼此独立，可以分开拍板、分开实施：
 
 | # | 待决事项 | 现状 | 阻塞谁 |
 | --- | --- | --- | --- |
 | ~~D1~~ | ~~焦点环什么时候显示~~ → **已定案** | 见 [统一输入、焦点与文本编辑](focus_and_input.md)；几何修复已落地 | — |
 | **D2** | 主题变化**发不发信号** | 只能写不能订阅；外壳无法响应外观变化 | 外壳里一切"跟随主题"的东西 |
-| **D3** | 路由分组类型**要不要类型安全** | `std::string`，拼错静默多一段 | 导航分组顺序与正确性 |
-| **D4** | 平台层与渲染后端**走向哪里** | raylib（GLFW + OpenGL）；接口已中立、形状是自研 SDF | Windows / Web / Linux 桌面组件（dock、panel） |
+| **D3** | 路由元数据应保持多大开放性 | route identity 已由页面类型表达；导航分组改为开放、可选值 | 应用路由配置与可选导航分组呈现 |
+| **D4** | 先跨平台、再扩展平台集成的后端路线 | raylib + GLFW/OpenGL；SDL3 的 Web 2D 路径可行，SDL_GPU 是不同取舍 | Linux / Windows / Web；未来可选 Wayland shell/compositor 集成 |
 
 **D5 已于 2026-10-11 冻结范围与目标契约，未实施**，不加入本稿的三项待决：见
 [资源构建、部署与运行时定位](resource_build_and_deployment.md)。解耦、作用域、身份独立交付，
@@ -76,163 +76,214 @@
 
 ---
 
-# D3 分组类型的类型安全
+# D3 路由身份与导航分组：开放到哪一层
 
 ## 背景
 
-侧边栏按 `RouteOptions::type` 分段。分组实现已落地（`Routes::nav_sections()`，顺序 = 各 type
-首次出现的顺序，注入 `unordered_map` 版本会当场变红）。留下的是类型问题：**`std::string`，
-拼错不报错，只会在导航里多出一个带错字的分组**。
+本节最初把 `RouteOptions::type` 当成路由键，因而把“拼错后多出一组”列成需要框架修复的
+类型安全问题。复核代码后应收窄这个问题：**它不是路由匹配身份，而是可见导航项的分组值**；
+当前侧栏还直接把该值绘制为分组标题。
+
+Nandina 的路由身份是 `PageKey`（页面类型）；`RouteOptions::address` 是静态显示地址，当前不做
+path 匹配或深链接。应用可以自行把 UUID、manifest 常量、生成头文件、环境配置或其他值映射到
+页面路由。路由库不应要求所有应用共享一套分组词汇，也不应将应用内部的拼写约定升级成框架白名单。
+
+Angular 的 route config 把字符串 `path`、组件、`title` 和可选 `data` 作为不同字段；这可作为
+“用户声明路由元数据”的参考，但不表示 Nandina 当前 `address` 已经具备 URL 匹配语义，也不要求
+Nandina 移植 Angular 的路由模型。参见 [Angular: Define Routes](https://angular.dev/guide/routing/define-routes)。
 
 ## 现状核实
 
 | 事实 | 位置 |
 | --- | --- |
-| `std::string type{"default"}` | `nan_router.hpp` 的 `RouteOptions` |
-| 分组是稳定有序的（不依赖哈希表） | `Routes::nav_sections()` + `[app][router][nav]` 测试 |
-| 未声明 type 的条目自成一段（标签是 `"default"`） | 同上 |
+| 页面类型 `PageKey` 是路由身份 | `RouteEntry::page_key`、`route<PageT>()`、`Routes::find()` |
+| `RouteOptions::address` 不参与当前匹配 | `nan_router.hpp` 注释与 `Routes` 实现 |
+| `std::string type{"default"}` 只用于导航分组 | `RouteOptions`、`Routes::nav_sections()` |
+| 分组值同时成为当前 UI 分组标题，且当前无空值语义 | `NavSection::type`、`showcase/components/sidebar.cpp` |
+| 分组顺序稳定，为首次出现顺序 | `Routes::nav_sections()` 与 `[app][router][nav]` 测试 |
 
-## 选项
+## 初步决定（方向已接受，尚未实施）
 
-| 选项 | 做法 | 拼错时 | 扩展性 |
-| --- | --- | --- | --- |
-| **A 枚举（倾向）** | `enum class RouteSection { manual, form, button, data, panel, overlay, menu, dialog, misc }` | 编译不过 | 需要决定第三方分组怎么办 |
-| B 字符串 + 校验 | `validate()` 里检查非空 / 白名单 | 声明期报错（若白名单） | 最好 |
-| C 字符串 + 集中常量 | `namespace route_section { inline constexpr auto form = "表单"; }` | 仍不报错，但避免重复字面量 | 好 |
+- 不把分组改成封闭枚举，不做框架级已知名字白名单，也不因陌生分组值拒绝 route。
+- 应用可以继续传任意字符串；其来源可以是 `constexpr`、用户自己的类型/UUID 序列化、manifest、
+  生成的 `env.hpp` 或外部配置。是否拼写一致属于应用自己的配置治理。
+- `RouteOptions::type` 改名为 `nav_group`，不保留兼容字段；空字符串表示未分组，非空值按完全相同的值合并。
+- 暂不增加单独的标题字段：非空 `nav_group` 同时是分组身份和值标题。未来若真实需要 UUID/manifest key
+  搭配本地化标题，再新增可选 `nav_title`，默认回退到 `nav_group`。
+- 未分组 route 仍进入侧栏，不生成空标题；所有未分组 route 因空键相同而全局合并成一个无标题分组。
+  该分组放在第一个未分组 route 的位置，后续未分组项加入该组；这是按值分组的既有语义，不是保留
+  它们在原路由表中的交错位置。
+- 非空分组仍按首次出现顺序排列，段内保留路由顺序；不增加独立排序表。
+- `nav_sections()` 继续按值扫描，不需要 `"default"` 特判或组名校验。sidebar 在 `nav_group.empty()`
+  时跳过标题 Label；组与组之间的分隔线仍按 section 边界绘制，不能跟着标题一起消失。
 
-## 倾向
+## 实施与验收
 
-**A**：把拼写错误挡在编译期，和项目"不要让错误变成静默的 UI 变形"一致。唯一的顾虑是扩展性 ——
-若需要"库外自定义分组"，用"枚举 + 可选自定义标签"折中，而不是退回纯字符串。
+按以下清单落地后，D3 可从初步决定转为已实施：
 
-## 待决问题
+1. `RouteOptions::type` → `nav_group`、`NavSection::type` → `group`；不留旧字段/别名。更新构建器、注释、
+   测试、`showcase/main_window.cpp` 中包括注释掉的占位 route，以及 Story 011 / 页面路由文档。
+2. 未设置与显式空串语义相同：route 仍可见、不画分组标题；非空值精确分组并作为标题。
+3. 多个未分组 route，即使在声明表中被有名分组穿插，也合并成一个无标题 section，位置由首个未分组项决定。
+4. 测试 section 分隔线仍只出现在 section 边界、不出现空标题或相邻重复分隔线。
+5. 已有非空分组首次出现顺序和段内顺序保持不变；隐藏 route 不进入分组。
 
-1. 是否需要库外自定义分组？（决定 A 还是 A+自定义标签）
-2. 枚举命名：标识用英文（`form`）而标签用中文（"表单"）？还是标识本身就是显示名？
-3. 分组**顺序**是否需要一个显式声明处（现在是"首次出现顺序"，隐含在声明位置）；
-4. 声明期校验的落点：`Routes::validate()` 是现成的关口，适合放 B 的检查。
+本轮暂不把“字符串拼写可能产生意外分组”视为库级 bug；如果应用想防 typo，可在自己的 constants、
+manifest、route factory 或构建生成步骤中完成，而无需所有应用承担同一套机制。
 
 ---
 
-# D4 平台层与渲染后端：从 raylib 走向哪里
+# D4 跨平台优先的窗口与渲染后端路线
 
-## 背景（作者的目标，原话归纳）
+## 目标优先级（当前讨论方向）
 
-- **跨平台**：Linux 已在跑；Windows 想要；**Web 更佳**；
-- **目标场景**：做 QuickShell 那一类东西 —— 用本框架直接做 Wayland 合成器步子太大，
-  先做 **Hyprland 上的 dock / panel**；
-- **对现状的不满**：raylib 是 GLFW + OpenGL；在 Linux/Wayland 上 SDL3 + Vulkan 更好 ——
-  显式同步/更低延迟、dmabuf 零拷贝与合成器协作、摆脱 GL 驱动差异、以及作为通用渲染器的长期可移植性；
-- **计划**：现有开发工作完成后，考虑切换到 **SDL3 + ThorVG**，不直接写 Vulkan 代码，
-  同时保住跨平台能力，库足够轻。
+1. **首要目标：** 让基于 Nandina 的应用能在 Linux、Windows 和 Web 构建、启动并具备可用的
+   输入、文本、资源和绘制路径。Web 不只是“SDL 能创建 canvas”，而是应用级可交付目标。
+2. **平台方向候选：** SDL3 是主要候选，因为它同时提供桌面平台抽象和适用于 Emscripten 的
+   2D Render API；这仍需用本项目的窗口、输入、文本和 SDF 案例验证，不据单个示例宣称全框架支持。
+3. **后续可能目标：** 以本框架开发 Wayland dock/panel，甚至与 wlroots compositor 集成。它们是
+   未来可组合的平台接入需求，不是首个跨平台交付的前置，也不要求框架现在依赖 wlroots。
+4. **ThorVG 与窗口/图形 API 选型分离。** 当前 SDF 原语继续作为基线；只有出现 SVG、任意路径等
+   具体能力缺口时，再评估引入独立矢量渲染能力。它不是 SDL3 或跨平台路线的必选项。
 
-## 现状核实（代码层面）
+## 当前代码边界
 
-这一节是本文最有价值的部分：**换后端的真实成本，比"换掉 raylib"这个说法听起来小得多**。
-
-| 事实 | 证据 |
+| 事实 | 位置 / 含义 |
 | --- | --- |
-| 设备接口**本来就是中立**的 | `render/render_device.hpp:5-6`：*"Backends submit primitives to a concrete renderer (raylib / offscreen / recording test double). **No raylib types appear in this header.**"* |
-| 形状不是 raylib 画的，是**自研 SDF** | `backends/raylib_device.cpp` 走 `SdfPrimitiveMode::fill / outline / segment / clipped_circle` + `sdf_*_geometry` + 自定义 shader（`draw_aa`） |
-| 窗口层很薄且自认独占 | `app/nan_window.cpp:4`：*"raylib is included ONLY here"*；文件里 raylib 相关调用只有约 9 处 |
-| raylib 的**真实**触点只有 5 个文件 | `nan_window.{hpp,cpp}`、`backends/raylib_device.{hpp,cpp}`、`render/image_decoder.*`、`widget/key_codes.hpp`、`text/font_pipeline.cpp`（只剩一个 `raylib_bytes_per_atlas_pixel = 5` 的常量） |
-| 图片解码已经是可替换的接口 | `image_decoder.hpp` 暴露 `IImageDecoder` + `make_raylib_image_decoder()` |
-| 平台特化已经隔离 | `app/detail/linux_clipboard.*`、`resource/platform_resource_locator.cpp`、`app/application_config.cpp` |
-| 接口形状**已被大量消费者验证** | 唯一生产实现是 `raylib_device.cpp`，另有约 30 个测试替身（`tests/*` 的 `RecordingDevice`）与 `playground/shell.cpp` |
-| `scene` 内核明确不依赖 raylib | `scene/control.hpp:12`：*"这一层是纯 scene 语义, **不依赖 reactive / raylib**, 保持内核独立"* |
+| `IRenderDevice` 是渲染 primitive 的抽象，公开接口不暴露 raylib 类型 | `render/render_device.hpp`；这是可复用边界，不等于完整平台适配已抽象 |
+| 生产 GPU 实现是 raylib/OpenGL + 自研 SDF | `render/backends/raylib_device.*`、SDF geometry；迁移需核验 shader、裁剪、圆角、纹理和像素一致性 |
+| `NanWindow` 仍持有窗口、设备、输入轮询与帧驱动职责 | `app/nan_window.*`；新平台不仅实现 `IRenderDevice`，还要接窗口生命周期、事件、时间和 redraw |
+| key code 目前与 raylib/GLFW 取值有关，NanWindow 直接把 `GetKeyPressed()` 原值放入 `KeyEvent` | `widget/key_codes.hpp`、`NanWindow::poll_and_dispatch_input()`；SDL/wlroots 原始码必须先归一化 |
+| 当前 glyph atlas 的 alpha CPU buffer 在 FontPipeline 存活期间保留，且 raylib texture 用 RGBA8 | `FontPipeline::atlases_` + `textures_`；`raylib_device.cpp::create_alpha_texture()` 展开为 RGBA8 |
+| font cache 中的 5 bytes/pixel 是保留内存估算，不是像素寻址布局 | `FontPipelineCache::estimate_bytes()` 返回值用于 `retained_bytes_` 预算与 trim |
+| 图片 decoder 与资源定位已有部分抽象；系统剪贴板和字体发现仍带平台差异 | `render/image_decoder.*`、`resource/platform_resource_locator.*`、`app/detail/linux_clipboard.*`、font pipeline |
+| recording/offscreen 测试替身验证的是渲染调用契约 | 不证明窗口、Web 主循环、GPU shader 或输入法行为已跨平台 |
 
-**结论**：新后端 = **实现约 25 个虚函数 + 一层窗口/输入**，而不是重写框架。几何、布局、
-主题、动画、文本整形、语义都在接口之上，不随后端改变。
+因此“实现约 25 个虚函数”不足以估算完整后端迁移：至少要分别验收 platform/window、input、
+frame scheduling、render device、image/resource、font/clipboard 与构建/打包。scene 的平台中立性
+有价值，但不能把它误读为现有 `NanWindow` 已可随意替换。
 
-## 但这**不是一件事，是四件**
+## SDL Renderer、GPU shader 与 Web 边界
 
-把它们捆成"切到 SDL3 + ThorVG"会让它看起来像一次大爆炸重写，而四件事的成本、风险、
-甚至目标之间是**互相冲突**的：
+SDL 官方 Emscripten 说明指出，SDL 2D Render API 在 Web 上使用 GLES2/WebGL；给出的
+[`renderer/01-clear` 示例](https://examples.libsdl.org/SDL3/renderer/01-clear/)验证的是 SDL Renderer
+路径，不是 `SDL_GPU`。但“SDL Renderer API 完全没有用户 shader”已过时：自 SDL **3.4.0** 起，
+`SDL_CreateGPURenderer` / `SDL_GPURenderState` 可为 GPU-backed Renderer 配置自定义 fragment shader。
+这使桌面 SDF shader 有了具体候选实现，不代表每个 renderer/backend 都提供该能力。参见
+[SDL_CreateGPURenderState](https://wiki.libsdl.org/SDL3/SDL_CreateGPURenderState) 与
+[SDL_GPURenderStateCreateInfo](https://wiki.libsdl.org/SDL3/SDL_GPURenderStateCreateInfo)。
 
-| # | 层次 | 现状 | 目标 | 我的判断 |
-| --- | --- | --- | --- | --- |
-| D4.1 | **平台层**（窗口/输入/剪贴板/DPI/字体发现） | GLFW（经 raylib） | SDL3 | **赞成**。触点小（`nan_window` + `key_codes` + 一个解码器 + 一个常量），跨平台面更宽 |
-| D4.2 | **图形 API** | OpenGL | Vulkan 级能力 | **赞成方向，但走 `SDL_GPU`**（Vulkan/Metal/D3D12/WebGPU 统一抽象），不自己写 Vulkan。现有 SDF shader 可移植 |
-| D4.3 | **2D 几何引擎** | 自研 SDF 原语（已测） | ThorVG | **建议拆出去，倾向暂不引入**（理由见下） |
-| D4.4 | **合成器集成**（dock / panel） | 无 | `wlr-layer-shell` | **必须独立立项**，而且它与 D4.1 的 SDL3 选择存在冲突 |
+截至本草案的核对日期（2026-10-12），SDL_GPU 设备创建 API 列出的驱动为
+Vulkan、D3D12、Metal，未列出 WebGPU/Emscripten 驱动。参见
+[SDL3 Emscripten notes](https://wiki.libsdl.org/SDL3/README-emscripten) 与
+[SDL_CreateGPUDevice](https://wiki.libsdl.org/SDL3/SDL_CreateGPUDevice)。后端状态可能发展，
+真正选型或升级 SDL 时应重新核对。
 
-## 三个必须说清的矛盾
+因此，SDL3 平台层、SDL 的 2D Renderer API 与 GPU renderer 是相关但不同的路径：
 
-### (1) SDL3 与"Wayland 一等公民"是两条路，不是同一条
-
-作者列的四个好处里，有两个 SDL3 **反而更远**，因为 SDL 把 Wayland surface 的所有权收走了：
-
-- **显式同步 / 更低延迟 / dmabuf 零拷贝**：这些要靠拿到 `wl_surface` / swapchain 参与
-  `linux-drm-syncobj` 与 dmabuf 交换。SDL 自己管理 presentation，不一定把这些暴露出来。
-- **`wlr-layer-shell`**：dock / panel 必须是 layer-shell surface，而 SDL3 只创建
-  xdg_toplevel / xdg_popup。**这是 D4.4 的硬阻塞**，也是"用本框架做 Hyprland 组件"这个目标的
-  真正门槛 —— 它买不到，只能自己实现。
-
-> 所以"SDL3 省力"与"成为桌面组件"是要**分期**的：近期用 SDL3 拿跨平台，
-> 中期为 dock/panel 做一条 Wayland 专用后端（`wayland-client` + layer-shell + EGL/Vulkan），
-> 复用同一个 `IRenderDevice`。它只跑 Linux，只在需要"成为桌面组件"时启用。
-
-**需核实**：SDL3 是否允许从窗口取到 `wl_display` / `wl_surface`（历史上 SDL2 的
-`SDL_SysWMinfo` 可以）并自行挂 layer-shell role；即便能取到，把 role 从 xdg_toplevel 换掉
-也不是 SDL 支持的用法。这一条要**先验证再决定 D4.1 是否"单后端就够"**。
-
-### (2) ThorVG 会引入第二套几何模型，而且买的是§7 里刻意推迟的能力
-
-- 现在的能力是 **SDF 原语**：圆角矩形、描边、阴影、裁剪圆、圆弧，带 AA，已被
-  `arc_painter_tests` / `render_tests` 等固定。ThorVG 是**矢量路径光栅器**（SVG 语义：
-  路径、渐变、描边）—— 另一套几何模型。
-- 两者并存 = 项目里同时有两套光栅化机制，正是这个项目反复吃亏的形状（同一个概念两处定义）。
-  要避免它，就得让 ThorVG **替换** SDF 管线 —— 那等于把已经做对、已经测过的东西扔掉，
-  并重新解决 AA / 圆角 / 阴影 / 裁剪的质量。
-- 它真正买到的能力（**多边形 / 任意路径 / SVG 资源**）在
-  [节点表现层 §7](node_presentation.md) 里是**明确的非目标**，理由是"用到再列"。
-- 它**不解决**文本整形（已有 FreeType/HarfBuzz/FriBidi 管线）、**不解决**窗口/输入/合成器 ——
-  对作者列的四个目标一个都不直接命中。
-- 若将来确实需要路径：更小的步子是把路径细分成三角形喂给现有管线，或对路径做 SDF，
-  而不是整包换引擎。
-
-**判据**（什么情况下它才值得）：出现"必须渲染 SVG 图标/资源"或"必须路径渐变"的**具体 case**。
-在那之前，"轻量、跨平台、不写 Vulkan"这三点都不由 ThorVG 提供 —— 它们由 D4.1/D4.2 提供。
-
-> 说明：以上是**架构层面**的判断（第二套几何模型 + 买到的是推迟项），不依赖 ThorVG 内部细节。
-> 它的具体能力（软件光栅/GL 引擎/文本 API 覆盖度）在真要引入时再核实。
-
-### (3) 跨平台的真正阻碍大概率不是渲染器
-
-raylib **本身就支持 Windows 与 Emscripten**。也就是说：如果目标是"能跑在 Windows / Web"，
-用现在的后端就能试 —— 而且**应该先试**，因为它会把真正的阻碍暴露出来，而那些阻碍换后端也不会消失：
-
-- 剪贴板（现在只有 `linux_clipboard`）；
-- **系统字体发现**（Windows 注册表 / Web 无文件系统）；
-- 资源后端（SQLite / 内存 / 目录）与可移植打包（`nanres` 流程）；
-- 线程 / 文件系统 / 主循环（Emscripten 的 rAF 模型）；
-- 构建系统（MSVC / mingw / emscripten 下的 Meson 与 subprojects）。
-
-"换后端能拿到跨平台"这个因果链是**反的**：跨平台由这些平台适配层决定，渲染器只是其中一格。
-
-## 建议（分期）
-
-| 阶段 | 做什么 | 为什么这个顺序 |
+| 路径 | shader 能力 | 本项目要验证的内容 |
 | --- | --- | --- |
-| **P0 能力探测**（小） | 用**现有 raylib 后端**各试一次 Windows 与 emscripten 构建，产出一张"真实阻碍清单" | 最便宜、信息量最大。它决定后续优先级，也可能改变结论（比如发现 Web 的阻碍无法接受） |
-| **P1 第二后端**（中） | SDL3 + `SDL_GPU` 作为**并存**后端：复用 `IRenderDevice`，移植 SDF shader；与 raylib 跑同一套测试，通过后切默认 | 接口已经中立、已被 30 个替身验证；并存能把风险关在开关后面 |
-| **P2 桌面组件**（中） | Wayland 专用后端 + `wlr-layer-shell`，实现 dock / panel | 它要的是**协议**能力，与 P1 的性质不同；不先做这个，Hyprland 组件永远只是"一个普通窗口" |
-| **P3 矢量引擎**（待定） | ThorVG：等"路径/SVG 资源"有真实 case 再评估 | 见矛盾 (2)：现在引入是拿两套几何模型换一个非目标 |
+| SDL GPU-backed Renderer（桌面候选） | SDL 3.4+ `SDL_GPURenderState` 提供自定义 fragment shader 状态 | 现有 SDF 几何/参数/clip 能否表达；Vulkan、D3D12、Metal 的 shader 编译/加载与像素结果；API 和驱动限制 |
+| SDL 2D Renderer 的 Emscripten/WebGL 路径 | 可用 SDL 2D 绘制 API；不能假定具备 SDL GPU renderer 的自定义 fragment shader 路径 | SDF 是否需改为细分几何/其他 AA；若需 Web 专用 shader renderer，是否接受一份额外 backend |
+| 桌面 GPU renderer + Web 专用 renderer | 可按平台保留 shader 能力 | 多 `IRenderDevice` 实现、视觉回归、shader 与 geometry 行为的一致性、维护和 CI 成本 |
 
-## 待决问题
+**P1 门槛：** 分开回答两题，而不是以“SDL 支持 shader”一笔带过：
 
-1. **Windows / Web 是"必须"还是"更好"？** 这决定 P0 的优先级，也决定是否值得为 Web 的
-   限制妥协（例如放弃某些系统集成）。
-2. **是否接受"两条后端"**（SDL3 跨平台 + Wayland 专用）？如果坚持单后端，就必须在
-   "layer-shell 桌面组件"与"跨平台"之间做取舍 —— 这两个目标目前没有单解。
-3. **SDL3 能否参与合成器**（拿到 `wl_surface`、显式同步、dmabuf）？需先核实；若不能，
-   P2 必须自己写 platform 层，且 D4.1 的"省力"只对 Windows/Web 成立。
-4. `SDL_GPU` 的成熟度与 shader 工具链是否可接受（版本、许可证、Wayland 后端质量）—— 需核实。
-5. **键码迁移**：`widget/key_codes.hpp` 现在是 GLFW 值（raylib 直接透传），SDL3 的值不同。
-   迁移要一次性映射并补测试（好在它已经收敛到单一定义处）。
-6. ThorVG 的引入判据（见矛盾 2 的"判据"）—— 什么 case 会让你觉得"必须它"？
-7. **dock/panel 的产品形态**：它是本框架的一个"应用"，还是一个独立的目标平台？
-   这会决定 layer-shell 支持是进 `app` 层还是进新的 `platform` 模块。
+1. 桌面 GPU Renderer 的 shader path 能否表达并匹配现有 SDF primitive、AA、圆角/阴影和 clip 行为？
+2. 目标 Web renderer 能否运行同一类 fragment shader？若不能，是采用独立 WebGL/WebGPU `IRenderDevice`，
+   还是有意识地接受 Web 光栅化差异？
+
+`SDL_GPURenderState` API floor 为 SDL 3.4.0。项目应声明最低 SDL 版本，并在 CI/SDK 锁定文件中固定
+具体受测版本；升级时重新核对 GPU driver/shader 能力与 Emscripten 路径。Web driver 列表是截至
+2026-10-12 的观察，不是永久保证。
+
+### Shader 构建工具是 P1 的构建机依赖
+
+GPU Renderer 的各目标后端需要对应的 shader binary。现有 SDF shader 是 GLSL 330；应先选定 canonical
+shader source 与到 SPIR-V/DXIL/MSL 等目标格式的转换链。若使用
+[SDL_shadercross](https://github.com/libsdl-org/SDL_shadercross)（及 GLSL→SPIR-V 的前置编译器），
+它们是**构建机运行的 host tools**，不是目标应用的隐式系统依赖，也不应依赖开发者机器上“刚好装好”的工具。
+
+P1 通过条件至少包括：
+
+- 明确工具及其依赖的准确版本、获取/构建方式和运行平台；跨编译时执行 host 版本工具；
+- shader outputs 在 build tree 中生成或作为明确的 checked-in source artifact 管理，生成输入/命令/后端均进入
+  build graph；增量构建不会漏掉源 shader 变化；
+- 安装/打包应用时带上所需 shader binaries，或者有清楚的生成式嵌入流程；不在运行时偷偷要求构建机工具；
+- shader 编译失败报告源文件、目标 backend/format、工具版本与诊断输出；CI 对每个承诺支持的目标格式实际生成并加载。
+
+不能假设一条 GLSL 源码可由 SDL 自动转成所有格式；若采用 shadercross，需把 source frontend 到 SPIR-V/其他中间格式
+的步骤也纳入依赖和版本契约。
+
+`SDL_GPURenderState` 从 SDL 3.4.0 起可用。项目对外声明的 minimum version 不得低于 3.4.0；CI/SDK
+再固定精确受测版本，并在升级时复验。该 API 较新，P1 先交付“目标 driver 上可用 + 已知限制清单”，不直接等同
+生产就绪。诸如 [SDL issue #15774](https://github.com/libsdl-org/SDL/issues/15774) 的 shader 使用报告应作为
+验证线索；issue 的存在本身既不证明功能普遍不可用，也不能替代项目自己的 renderer/driver 测试。
+
+### Alpha atlas 的缓存预算边界
+
+当前 `FontPipeline` 同时持有 CPU `GlyphAtlas` 与 `GlyphAtlasTexture`；`GlyphAtlasTexture` 引用 atlas，更新与扩容路径
+会继续读取 CPU alpha 数据，因此 pipeline 存活期间并未释放 alpha atlas。结合 raylib backend 将 alpha 展开为 RGBA8，
+现有 5 bytes/pixel 可读作约 1 byte CPU alpha + 4 bytes RGBA backing。它是缓存 eviction 用的估算值，不保证等于
+driver 的精确 VRAM 分配（例如对齐、mipmap 或内部格式可能不同）；`maximum / 5` 只防止估算乘法溢出，不是纹理寻址边界。
+
+预算低估会令 retained font pipelines 超过目标内存；高估可能提前淘汰并增加重建/抖动。不要把该值当作
+buffer 实际尺寸或越界检查。
+
+后续抽象应把**CPU atlas 常驻字节**与**backend texture memory estimate**分开：CPU 部分由 atlas 格式拥有，GPU 部分由
+render device/texture format 报告或保守估计；text cache 合并两项预算。P1/P2 应测试 atlas 增长、纹理重建、缓存 trim
+与预算变化，并验证 backend 报告是估算语义，而非精确显存承诺。
+
+## Wayland shell / wlroots：未来集成，不是当前阻塞
+
+原稿曾把“SDL 只创建 xdg_toplevel”写成 layer-shell 硬阻塞；SDL3 当前文档说明，可为其他协议
+创建 custom roleless Wayland surface，并取回 `wl_display` / `wl_surface`，同时继续让 SDL 处理输入
+与绘制。该模式下除 `SDL_SetWindowSize()` 外，许多通用窗口状态调用都是 no-op；SDL 也不会收到
+surface 尺寸变化通知，因此应用要处理协议 configure 并同步尺寸。“技术上可接入”仍不等于
+“dock/panel 已验证可靠”。参见
+[SDL3 Wayland notes](https://wiki.libsdl.org/SDL3/README-wayland)。
+
+本项目不需要现在实现 layer-shell。将来可分别评估：
+
+- SDL custom surface + layer-shell，是否满足普通 dock/panel 应用；
+- 面向 wlroots compositor 的独立渲染/输入宿主接入；
+- 若现有 `NanWindow` 所有权模型不适配，再增加窄的 host/platform 接口。
+
+不能假定 compositor 集成只需传入一个 `IRenderDevice`：当前 `NanWindow` 也拥有事件轮询、时钟、
+帧提交和窗口状态。未来应先定义 host/platform 的**行为契约**，再比较 SDL custom-surface adapter 与
+wlroots host；两个 adapter 可以用不同机制满足同一组行为，不要求实现细节相同。
+
+该契约至少规定：
+
+- **尺寸与缩放：** host 报告 surface 的物理/逻辑尺寸及 scale；变化进入与普通窗口 resize 相同的应用/layout
+  路径，不允许 adapter 各自调用节点 `layout_to()` 或直接写控件尺寸。
+- **输入：** host 输入先转换为 Nandina 规范键值/指针/文本事件；scene/widget 看不到 SDL、GLFW、wlroots 原始 key code。
+- **帧时序：** 明确由 host callback 或 Nandina scheduler 其中一方拥有 frame tick/时间推进，禁止两者同时驱动。
+- **redraw：** 统一应用请求重绘的语义，并规定它如何合并、调度到下一帧；不能由每个 adapter 私自用 timer/vsync 改变语义。
+- **生命周期：** surface/host attach、resize/configure、暂不可绘制、detach 与 shutdown 有唯一顺序，已排队事件不能在 host 销毁后进入应用。
+
+满足该行为契约后，Nandina 才能复用 scene/layout/widget 并以 adapter 隔离 surface 技术。此工作属于未来 P4，
+不阻塞 P0–P3 跨平台应用交付。
+
+## 初步交付顺序（待审阅，不是迁移批准）
+
+| 阶段 | 目标 | 通过条件 |
+| --- | --- | --- |
+| P0 SDL3 应用级探测 | 建立最小 SDL3 window/event/frame loop，Linux、Windows、Emscripten 各自配置/构建/运行 | 必须实际经过 Nandina 的 SDF/clip/shadow、字体 atlas 上传、resize/DPI 与键盘路径；记录文本、资源、剪贴板和 Web 主循环能力，不能把 SDK sample 通过当成 Nandina 应用通过 |
+| P1 渲染与 shader 管线门槛 | 分别在 SDL GPU-backed Renderer 桌面路径和目标 Web Renderer 验证 SDF expressibility；建立 shader binary 生成链 | SDL minimum >= 3.4.0、CI 精确 pin 测试版；shader source/front-end/target formats/tool versions/output location/依赖边/错误诊断齐全；能表达时比像素行为和性能；不能表达时显式选择 Web 专用 backend 或接受可见差异；先交付已知限制清单 |
+| P2 平台能力与消费者回归 | 按 P0 暴露的问题补平台服务、资源与字体策略、输入归一化、Emscripten 主循环/打包 | alpha atlas + GPU texture 的实际驻留与预算估算符合策略；SDL raw key 不穿透 backend，映射测试与全量 widget tests 通过；逐平台真实构建和运行 |
+| P3 默认后端决策 | 新后端达到生产应用验收后，决定是否切换默认、保留 raylib 或支持多 backend | Showcase、playground、文本/输入和集成测试都走正式入口；移除旧后端另作显式决定 |
+| P4 host 行为契约与 shell/compositor adapter | 有具体应用需求后先定义 host 行为契约，再分别评估 SDL custom surface 或 wlroots host | 尺寸/scale 进入普通 resize-layout 路径；输入归一化；帧时钟单一所有者；redraw 语义统一；生命周期有序。先契约、后选 host；不阻塞 P0–P3 |
+| 独立能力：ThorVG | 有真实 SVG/任意路径需求时评估，不与 SDL 迁移捆绑 | 证明当前 SDF/三角形路径不能以更小成本满足用例；明确软件/硬件后端和维护成本 |
+
+## 待审阅问题
+
+1. Linux、Windows、Web 三个平台的首发验收等级分别是什么（CI build、自动测试、人工运行哪些必需）？
+2. SDL3 是否先作为 window/input/frame-loop 层接入，渲染暂沿用 OpenGL/现有 SDF；还是 PoC 同时比较 SDL_Renderer？
+3. 若采用桌面 SDL_GPU，是否接受 Web 使用独立 `IRenderDevice` 实现及其长期双路径成本？
+4. P0 应用级样本需要覆盖哪些 Nandina 功能，才能称为“应用跑起来”，而不只是 SDK 示例？
+5. P4 的 host 行为契约由哪个窄接口承载，哪些部分留在外部 adapter 而不进入 framework core？至少涵盖尺寸/scale、输入、帧时钟所有权、redraw 与生命周期。
+6. `NanWindow` 与平台服务的可插拔改造何时值得做，哪些具体消费者会触发它？
 
 ## 与 D1 的交集（修正本文早先的"完全独立"说法）
 
@@ -257,11 +308,10 @@ D1 已定案，它的**第二阶段**（文本输入会话、组合输入、软�
 - **D1 已定案**（见 [focus_and_input.md](focus_and_input.md)），本文不再保留它的选项表。
   它留给 D2 的交集只剩一条：D1 的"用户始终显示焦点提示"偏好需要一个运行时更新通道，
   形状与 D2 相同（但偏好不是外观，两者不要合并成一条信号）。
-- **D3 最独立**，纯作者 API 收紧，影响面局限在路由表与测试。
-- **D4 独立定案，但与 D1 第二阶段的平台接入存在交集**；它不是 D1 第一阶段的前置，也不是文本输入能力的唯一来源。
-  如果 P0 探测发现 Web/Windows 的阻碍无法接受，D4 的结论会变成"先把平台适配补完"。
-- D2/D3/D4 之间的建议顺序：**D2 → D3 →（D4 的 P0 探测可随时并行）**。项目下一步仍是 D1 第一阶段，设计已定案、实现尚未开始。
-  D2 有现成的使用场景在等，D3 是收尾；D4 的 P0 探测成本低、信息量大，适合插空先做。
+- **D3** 的语义方向已接受、尚未实施：`nav_group` 空值是不分组，非空值兼作标题；改名不保留 `type` 兼容字段。
+  改动仅涉及路由元数据、section 分组/呈现与对应测试。
+- **D4** 先追求 Linux / Windows / Web 的应用级交付，SDL3 是主要候选平台层，但渲染路径仍待 PoC；它不是 D1 第一阶段的前置，也不要求现在实现 shell/compositor 集成。
+- D2/D3/D4 不必按一条功能依赖链串行。D3 的元数据 API 审阅可独立完成；D4 P0 是独立探测，启动时间取决于项目近期开发优先级。
 - ⚠️ D1 第二阶段以相应平台能力验收为准，不写死依赖 D4/P1；D4 其他后端选型仍是待验证工作稿，
   本次仅修正交付依赖，不代表这些选型已获确认。
 
@@ -274,4 +324,4 @@ D1 已定案，它的**第二阶段**（文本输入会话、组合输入、软�
 | D3 | `page_and_router.md` + stories/011 |
 | D4 | 新增平台/后端 reference（或并入 `build_system_scope.md`）+ 一篇 story 记录取舍 |
 | D5 | ✅ 已冻结为 [resource_build_and_deployment.md](resource_build_and_deployment.md)，过程见 [story 013](../../stories/013-resource-scope-before-identity.md)；实施细节按批次定形 |
-| 本文 | 三件都拍板后删除；若中途放弃某项，把"为什么不做"补进对应 story |
+| 本文 | D2–D4 拍板后删除或降级为历史记录；若中途放弃某项，把“为什么不做”补进对应 story |
