@@ -23,6 +23,10 @@
 
 [References](references/README.md) 面向框架维护者，记录公共组件契约、架构约束、开发顺序和兼容性规则。这些文档用于回答“新组件应该如何设计”，而不是作为应用层教程。
 
+[D5 资源构建、部署与运行时定位](references/resource_build_and_deployment.md) 已冻结设计，
+实现仍为 planned；批次和验收进度见 [项目进度与下一步](references/project_status.md)。
+其中的目标接口和构建选项不能直接作为当前应用用法。
+
 ## 文档边界
 
 - `getting_started/`：稳定、短小、连续的学习路线。

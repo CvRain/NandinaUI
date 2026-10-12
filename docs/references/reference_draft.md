@@ -15,6 +15,10 @@
 | **D3** | 路由分组类型**要不要类型安全** | `std::string`，拼错静默多一段 | 导航分组顺序与正确性 |
 | **D4** | 平台层与渲染后端**走向哪里** | raylib（GLFW + OpenGL）；接口已中立、形状是自研 SDF | Windows / Web / Linux 桌面组件（dock、panel） |
 
+**D5 已于 2026-10-11 冻结范围与目标契约，未实施**，不加入本稿的三项待决：见
+[资源构建、部署与运行时定位](resource_build_and_deployment.md)。解耦、作用域、身份独立交付，
+不等待 D4 选型；跨平台定位与 Web 资源就绪协议仍在 D4/D5 交界按平台验收。
+
 ---
 
 # D1 焦点环的显示时机 —— **已定案（2026-10-09），不要按本节旧稿实施**
@@ -269,4 +273,5 @@ D1 已定案，它的**第二阶段**（文本输入会话、组合输入、软�
 | D2 | `theme` 相关 reference（或 `design_tokens.md` 里的解析链路一节）+ stories/010 |
 | D3 | `page_and_router.md` + stories/011 |
 | D4 | 新增平台/后端 reference（或并入 `build_system_scope.md`）+ 一篇 story 记录取舍 |
+| D5 | ✅ 已冻结为 [resource_build_and_deployment.md](resource_build_and_deployment.md)，过程见 [story 013](../../stories/013-resource-scope-before-identity.md)；实施细节按批次定形 |
 | 本文 | 三件都拍板后删除；若中途放弃某项，把"为什么不做"补进对应 story |

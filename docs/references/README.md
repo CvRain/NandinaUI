@@ -11,6 +11,7 @@
 - [文本布局协议](text_pipeline.md)：canonical text 类型、旧 widget 头的兼容入口、默认后端及迁移边界。
 - [轻量字体请求](font_request.md)：主题描述值、text 兼容别名、字段语义与字体引擎依赖边界。
 - [构建系统与 Modules 范围](build_system_scope.md)：为什么当前主线使用 Meson/include，以及 Modules 和 CMake package 的暂缓条件。
+- [D5：资源构建、部署与运行时定位](resource_build_and_deployment.md)：**planned，范围与契约已冻结，未实施**。解耦/作用域/身份分批，管理器八入口、弱域令牌、后端发布与流生命周期，以及声明式构建、安装定位和故障注入；过程见 [story 013](../../stories/013-resource-scope-before-identity.md)。
 - [开发流程](development_loop.md)：每轮改动的六步循环、三套验证关卡、"测试必须证明会红"，以及审核会重点看什么。
 - [编码与 API 规范](coding_conventions.md)：命名与命名空间、头文件与包含、API 形态、注释、格式化与测试门槛。
 - [响应式内部模型](reactive_model.md)：依赖图结构、推入失效与拉取求值、effect 调度、作用域清理顺序与已知限制。

@@ -44,6 +44,10 @@ NandinaUI（南天竹）是一个用 **C++26** 编写、基于 **Meson** 构建�
 - **可选 2D 物理** —— 基于 Box2D 3.x 的轻量物理桥（默认关闭）。
 - **无障碍语义** —— 控件语义树导出，为可访问性工具铺路。
 
+资源构建已有 helper 和脚手架自动化，但 `nanres` 目前仍链接完整框架，SQLite 尚无工具/后端
+独立关闭选项。[D5 资源构建与部署](docs/references/resource_build_and_deployment.md) 已冻结设计，
+将分批补齐工具解耦、运行时查询作用域、身份生成及声明式构建/安装定位；这些能力尚未实施。
+
 ## 🧱 架构
 
 框架按模块组织：
@@ -186,6 +190,7 @@ meson compile -C buildDir
 - [构建系统与 Modules 范围](docs/references/build_system_scope.md)：当前 Meson/include 主线，以及暂缓 C++ Modules 和 CMake package 的原因。
 - [组件开发路线图](docs/references/component_roadmap.md)：当前差距、依赖关系与推荐实现顺序。
 - [项目进度与下一步](docs/references/project_status.md)：当前能力边界、anchors 开发阶段与验证关口。
+- [D5 资源构建、部署与运行时定位](docs/references/resource_build_and_deployment.md)：已冻结、未实施的资源模块边界、作用域契约与分批验收计划。
 
 ## 🗺️ 开发计划
 
@@ -215,6 +220,9 @@ meson compile -C buildDir
 - [x] **Anchors scene 内核**：类型化弱引用、显式锚定画布、父/同画布兄弟锚线、尺寸冲突诊断、依赖排序与环检测、批量关系切换；通过 `layout_to()` 交付布局结果。
 - [x] **Anchors 作者入口**：`ui.ref<T>()`、builder 绑定与只读锚线门面、`ui.anchor_canvas()`、`.anchors(spec|source)` 与 `AnchorCanvas::set_child_anchors()` 批量切换均已落地，由 `tests/anchors_authoring_tests.cpp` 覆盖。
 - [x] **D1 设计定案**：[统一输入、焦点与文本编辑](docs/references/focus_and_input.md) 已成为实施依据，取代旧 D1 工作稿；按交互意图区分指向定位、焦点导航和编辑输入，不按设备简单开关焦点环。
+- [x] **D5 设计冻结**：资源语义统一由 `resources.toml` 声明；解耦、作用域、身份分批，保留包记录格式，安装规则与运行时定位同源。
+- [ ] **D5 解耦首批**：nanres 脱离完整 UI，增加工具/SQLite 后端独立开关、关闭组合 CI 与依赖闭包门禁；保持既有 ID、包格式和扫描语义。
+- [ ] **D5 后续批次**：先补管理器八个查询入口的作用域、后端发布代次与缓存隔离，再独立推进身份生成、声明式构建及部署定位；不等待全部后续事项即可交付解耦。
 - [ ] **D1 第一阶段（下一步）**：鼠标/键盘焦点核心、统一提示策略、文本控件例外与焦点恢复；随后分阶段接文本输入会话、软键盘和触摸/笔/手柄。设计定案不表示这些能力已经实现。
 - [ ] **Anchors 集成验收**：重复布局、布局系统误用、绘制/命中/语义几何一致性已由 authoring 测试覆盖，`showcase` 的 `anchors` 页面已提供侧边栏切换案例；剩余真实窗口的人工体验验收与 playground 同类案例。
 - [ ] Anchors 稳定后再评估阶段 5 复合组件及浮层打开/关闭动效；两者不作为 anchors 的隐含前置。
@@ -228,6 +236,9 @@ meson compile -C buildDir
 ### 🧭 待拍板的设计决策
 
 下面三项都已核实到代码层面，但**还没决定**；选项、代价、影响面与倾向见[待决设计草案](docs/references/reference_draft.md)（D2–D4）。D1 已定案，见上文[统一输入、焦点与文本编辑](docs/references/focus_and_input.md)。
+
+D2 的完整讨论见[主题方案、作者入口与状态订阅](docs/references/theme_authoring_and_state.md)。
+D5 已另行冻结，其分批计划见上文；设计冻结不改变当前平台支持范围或 D1 的下一步安排。
 
 - [ ] **主题变化的订阅**：`ThemeManager` 只有 `revision()` 和给 `SceneTree` 用的观察者，外壳拿不到"外观变了"，因此 footer 里的亮/暗开关只能写、不能跟随外部变化。过程见 [story 010](stories/010-the-theme-signal-that-cannot-be-subscribed.md)。
 - [ ] **分组类型的类型安全**：`RouteOptions::type` 是 `std::string`，拼错一个字母不会报错，只会静默多出一个导航分组；考虑换成枚举或加声明期校验。过程见 [story 011](stories/011-the-route-type-that-is-a-string.md)。
