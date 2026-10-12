@@ -52,7 +52,7 @@
 
 | 组件 | 用途 | 状态 |
 | --- | --- | --- |
-| `Dialog` | 模态内容、遮罩与焦点限制 | 可用，已接入统一浮层 |
+| [`Dialog`](dialog.md) | 模态内容、遮罩与焦点限制 | 可用，已接入统一浮层 |
 | [`Popover`](popover.md) | 锚定在触发控件旁的非模态浮层容器（内容为任意控件） | 可用，已接入统一浮层 |
 | [`DropdownMenu`](dropdown_menu.md) | 锚定菜单：动作 / 勾选 / 单选条目，键盘漫游与 typeahead | 可用，基于 Popover |
 | `ContextMenu` | 右键 / 菜单键在指针处打开的上下文菜单 | 可用，包装 DropdownMenu |
@@ -69,19 +69,20 @@
 | `PointerArea` | 为任意单个子控件观察原始指针输入 | 实验性 |
 | `GestureArea` | 为任意单个子控件识别点击、双击、长按和拖拽 | 实验性 |
 
-参见 [Dialog](dialog.md) 与 [PointerArea 与 GestureArea](pointer_and_gesture_areas.md)。
+参见 [PointerArea 与 GestureArea](pointer_and_gesture_areas.md)。
 
 ### 布局与滚动
 
-当前提供 `Column`、`Row`、`Flex`、`Wrap`、`Stack`、`Padding`、`Center`、`Expanded`、`FlexItem`、`Grid`、`ScrollView` 和列表声明能力。布局系统将在独立专题中统一说明。
+当前提供 `Column`、`Row`、`Flex`、`FlexItem`、`Wrap`、`Stack`、`Padding`、`Center`、`Expanded`、`Grid`、`ScrollView` 与 `ListView`。布局系统将在独立专题中统一说明。
 
 ## 计划补充
 
-- 高频基础组件：`AlertDialog`。
-- 浮层组件族的基础依赖已全部落地：基座 `Popover`、统一 MenuItem model、`DropdownMenu`、
-  `ContextMenu`、`Combobox`、`CommandPalette` 与 `HoverCard`
-  （见 [菜单族条目模型](../references/menu_model.md)）。
-- 信息组织组件：`Accordion`、`Collapsible`、`Sheet`、`Table`。
+浮层组件族已全部落地：基座 `Popover`、统一 MenuItem model、`DropdownMenu`、`ContextMenu`、
+`Combobox`、`CommandPalette`、`HoverCard` 与 `AlertDialog`
+（见 [菜单族条目模型](../references/menu_model.md)）。
+
+仍待实现的信息组织组件：`Accordion`、`Collapsible`、`Sheet` 与静态 `Table`；`DataTable`
+待选择模型、虚拟化与排序契约成熟后再排期。
 
 计划顺序与依赖关系见 [组件开发路线图](../references/component_roadmap.md)。
 

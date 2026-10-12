@@ -72,11 +72,11 @@ NandinaUI（南天竹）是一个用 **C++26** 编写、基于 **Meson** 构建�
 | --- | --- |
 | 内容与展示 | Label、Image、Avatar（首字母占位）、Badge、Chip、Divider、ProgressBar、Spinner、Skeleton、EmptyState、Card |
 | 输入与选择 | Button、Checkbox、Switch、RadioButton/RadioGroup、Slider、TextField、TextArea、Select、Combobox、Tabs、Toggle、ToggleGroup、ButtonGroup、Breadcrumb、Pagination |
-| 浮层与反馈 | Dialog、Popover、DropdownMenu、ContextMenu、Tooltip、Alert |
+| 浮层与反馈 | Dialog、AlertDialog、Popover、DropdownMenu、ContextMenu、CommandPalette、HoverCard、Tooltip、Alert |
 | 交互扩展 | PointerArea、GestureArea（实验性） |
-| 布局与滚动 | Column、Row、Flex、Wrap、Stack、Padding、Center、Expanded、Grid、ScrollView、ListView |
+| 布局与滚动 | Column、Row、Flex、FlexItem、Wrap、Stack、Padding、Center、Expanded、Grid、ScrollView、ListView |
 
-完整的用途、成熟度与计划组件见 [组件参考](docs/components/README.md)。
+表中前四类共 37 个公开组件（`RadioGroup` 与 `RadioButton` 同行记录）；"布局与滚动"一栏是声明式布局原语，不计入组件数。完整的用途、成熟度与计划组件见 [组件参考](docs/components/README.md)。
 
 当前布局以 Column、Row、Flex、Grid 等排列容器为主。场景树 anchors 已落地 scene 内核（`NodeRef<T>`、`AnchorCanvas`、`set_anchors`）与作者入口（`ui.ref<T>()`、`ui.anchor_canvas()`、builder 的 `.anchor.*` / `.parent.anchor.*` 与 `.anchors(...)`），支持父级/兄弟关系、依赖排序、批量关系切换与冲突诊断；`showcase` 的 `anchors` 页面提供侧边栏停靠切换案例。当前边界是**画布需要确定尺寸，因此 `fill` 画布无法占据排列容器的剩余空间**（显式/百分比尺寸的画布可以嵌入排列容器），把画布放在布局根再用兄弟锚点表达剩余区域即可，见 [Anchors](docs/references/anchors.md)。它与浮层锚定定位器是两项独立能力。
 
@@ -90,6 +90,119 @@ NandinaUI（南天竹）是一个用 **C++26** 编写、基于 **Meson** 构建�
 - **系统库**：OpenGL、OpenSSL ≥ 3.0
 
 其余第三方依赖（spdlog、raylib、FreeType、HarfBuzz、FriBidi、utf8proc、toml++、nlohmann/json、Catch2、Box2D 等）均以 Git 子模块方式随仓库提供；SQLite 以官方 amalgamation 直接随源码分发（见 `third_party/sqlite3/README.md`），不需要系统安装。
+
+### 在 Debian / Ubuntu 上准备环境
+
+发行版自带的编译器通常达不到上面的版本要求，所以分四步：装系统库、装合规工具链、装 Meson、再配置构建。
+
+**1. 系统库**（X11 后端，与 CI 同源）
+
+```bash
+sudo apt-get update
+sudo apt-get install -y --no-install-recommends \
+  git ca-certificates curl python3 python3-pip ninja-build pkg-config cmake \
+  zlib1g-dev libssl-dev \
+  libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev \
+  libgl1-mesa-dev libglu1-mesa-dev
+```
+
+Wayland 会话还需要 `libwayland-dev libxkbcommon-dev wayland-protocols libdecor-0-dev`。默认的 `linux_window_system=auto` 在 `WAYLAND_DISPLAY` 存在时会选 Wayland，缺这些开发包会直接配置失败；暂时不想装就显式加 `-Dlinux_window_system=x11`。
+
+`zstd` 只有 SDK 打包与全量测试套件需要，构建框架本身不需要。
+
+**2. C++26 工具链**
+
+| 发行版 | 仓库内最高版本 | 做法 |
+| --- | --- | --- |
+| Debian 13 trixie | gcc-14 / clang-19 | 都低于要求 → 用 apt.llvm.org 装 clang-21，或改用 sid |
+| Debian sid | gcc-16 / clang-22 | `sudo apt-get install -y g++-16`（或 `clang-21` / `clang-22`） |
+| Ubuntu 24.04 LTS | gcc-14 / clang-18 | 都低于要求 → 用 apt.llvm.org 装 clang-21 |
+| Ubuntu 25.10 questing | gcc-15 / clang-21 | GCC 不够、Clang 够 → `sudo apt-get install -y clang-21` |
+| Ubuntu 26.04 resolute | gcc-16 / clang-21 | `sudo apt-get install -y g++-16` |
+
+走 LLVM 官方仓库装 Clang 21：
+
+```bash
+curl -fsSL -o llvm.sh https://apt.llvm.org/llvm.sh && chmod +x llvm.sh
+sudo ./llvm.sh 21
+```
+
+Clang 链接系统自带的 libstdc++；Debian 13 与 Ubuntu 24.04 提供的是 GCC 14 的版本，与 CI 的 Clang 任务相同。若发行版更旧（libstdc++ 低于 GCC 14），需要先补一个新的 `libstdc++-*-dev`，否则会缺 C++26 库特性。
+
+**3. Meson**
+
+CI 固定 1.7.2。Debian 13 自带的 1.7.0 与之接近；Ubuntu 24.04 自带的 1.3.2 差距较大，建议装一份与 CI 一致的（`pip install --user` 从 Ubuntu 24.04 起会被 PEP 668 拒绝，所以用 pipx）：
+
+```bash
+sudo apt-get install -y meson                                  # 自带版本够新时
+sudo apt-get install -y pipx && pipx install "meson==1.7.2"    # 或：与 CI 对齐
+```
+
+**4. 配置与构建**
+
+版本化的编译器不是默认的 `gcc` / `clang`，要把 `CC` / `CXX` 指过去；Meson 只在首次配置时读取它们。项目同时需要 C 与 C++ 编译器，因为随源码分发的 SQLite amalgamation 是 C 源码：
+
+```bash
+CC=clang-21 CXX=clang++-21 meson setup buildDir --wrap-mode=nodownload
+# GCC 组合换成：CC=gcc-16 CXX=g++-16
+meson compile -C buildDir
+```
+
+把 NandinaUI 作为 subproject 引入时同理：在消费项目**首次** `meson setup` 之前设好 `CC` / `CXX`，否则 Meson 会把发行版默认编译器固化进缓存。
+
+### 在 Fedora 上准备环境
+
+Fedora 比 Debian/Ubuntu 省事：仓库自带的编译器通常已经够新，Meson 也无须额外安装。
+
+**1. 系统库**
+
+```bash
+sudo dnf install -y \
+  git python3 ninja-build cmake pkgconf-pkg-config \
+  zlib-ng-compat-devel openssl-devel \
+  libX11-devel libXrandr-devel libXinerama-devel libXcursor-devel libXi-devel \
+  mesa-libGL-devel mesa-libGLU-devel
+```
+
+Wayland 会话还需要 `wayland-devel libxkbcommon-devel wayland-protocols-devel libdecor-devel mesa-libEGL-devel`；`linux_window_system=auto` 的取舍与上面 Debian 一节相同。
+
+注意 zlib 自 Fedora 40 起已由 zlib-ng 提供，`zlib-devel` 不再存在，开发头文件在 `zlib-ng-compat-devel`。`zstd` 同样只服务 SDK 打包与全量测试套件。
+
+**2. 工具链与 Meson**
+
+| Fedora | 默认 gcc / g++ | 默认 clang | 自带 Meson |
+| --- | --- | --- | --- |
+| 43 | 15.3（低于要求） | 21.1 ✓ | 1.8.5 |
+| 44 | 16.0 ✓ | 22.1 ✓ | 1.11.2 |
+| rawhide | 16.2 ✓ | 23.1 ✓ | 1.12.1 |
+
+Fedora 44 及以上直接用默认组合：
+
+```bash
+sudo dnf install -y gcc gcc-c++ meson
+```
+
+Fedora 43 的默认 GCC 只有 15，达不到要求，但它自带 Clang 21，改用 Clang：
+
+```bash
+sudo dnf install -y clang meson
+```
+
+Fedora 另外提供带版本号的兼容包（如 `gcc15`、`clang21`）。注意包名不带连字符，与 Debian 的 `gcc-15` / `clang-21` 写法相反。
+
+**3. 配置与构建**
+
+```bash
+# Fedora 44+：默认 gcc / g++ 已合规
+meson setup buildDir --wrap-mode=nodownload
+
+# Fedora 43：默认 GCC 15 不够，显式指向 Clang
+CC=clang CXX=clang++ meson setup buildDir --wrap-mode=nodownload
+
+meson compile -C buildDir
+```
+
+与 Debian 一节同理：项目同时需要 C 与 C++ 编译器（随源码分发的 SQLite amalgamation 是 C 源码），作为 subproject 引入时 `CC` / `CXX` 要在消费项目**首次** `meson setup` 之前设好。
 
 ### 创建 C++ 项目
 ```bash
@@ -191,6 +304,7 @@ meson compile -C buildDir
 - [组件开发路线图](docs/references/component_roadmap.md)：当前差距、依赖关系与推荐实现顺序。
 - [项目进度与下一步](docs/references/project_status.md)：当前能力边界、anchors 开发阶段与验证关口。
 - [D5 资源构建、部署与运行时定位](docs/references/resource_build_and_deployment.md)：已冻结、未实施的资源模块边界、作用域契约与分批验收计划。
+- [D6 作者 DSL、文本能力与内容测量](docs/references/authoring_dsl_and_content_measurement.md)：待审阅设计；先定 Label 作者能力与有限宽度测量，再决定布局语法糖、border 和 Section 的实现。
 
 ## 🗺️ 开发计划
 
@@ -221,6 +335,9 @@ meson compile -C buildDir
 - [x] **Anchors 作者入口**：`ui.ref<T>()`、builder 绑定与只读锚线门面、`ui.anchor_canvas()`、`.anchors(spec|source)` 与 `AnchorCanvas::set_child_anchors()` 批量切换均已落地，由 `tests/anchors_authoring_tests.cpp` 覆盖。
 - [x] **D1 设计定案**：[统一输入、焦点与文本编辑](docs/references/focus_and_input.md) 已成为实施依据，取代旧 D1 工作稿；按交互意图区分指向定位、焦点导航和编辑输入，不按设备简单开关焦点环。
 - [x] **D5 设计冻结**：资源语义统一由 `resources.toml` 声明；解耦、作用域、身份分批，保留包记录格式，安装规则与运行时定位同源。
+- [x] **D6 设计归档**：[作者 DSL、文本能力与内容测量](docs/references/authoring_dsl_and_content_measurement.md) 已汇总作者反馈与 Slint/QML 对照；当前待审阅，不表示 API/布局改动已经实施。
+- [ ] **D6 第一实施批（待审阅确认）**：先确认 Label 作者能力表、共同属性规则和有限宽度自然长高的测量契约，再以 showcase Label 页面及 `ComponentInfoTable` 验收。
+- [ ] **D6 后续（依赖首批验收）**：根据实际重复模式加入布局 factory 子项重载与共享边框入口，再设计 ScrollView/布局/viewport 明确的 Section 组合；迁移旧写法，不要求保留快速演进期的旧 DSL。
 - [ ] **D5 解耦首批**：nanres 脱离完整 UI，增加工具/SQLite 后端独立开关、关闭组合 CI 与依赖闭包门禁；保持既有 ID、包格式和扫描语义。
 - [ ] **D5 后续批次**：先补管理器八个查询入口的作用域、后端发布代次与缓存隔离，再独立推进身份生成、声明式构建及部署定位；不等待全部后续事项即可交付解耦。
 - [ ] **D1 第一阶段（下一步）**：鼠标/键盘焦点核心、统一提示策略、文本控件例外与焦点恢复；随后分阶段接文本输入会话、软键盘和触摸/笔/手柄。设计定案不表示这些能力已经实现。
@@ -235,14 +352,14 @@ meson compile -C buildDir
 
 ### 🧭 待拍板的设计决策
 
-下面三项都已核实到代码层面，但**还没决定**；选项、代价、影响面与倾向见[待决设计草案](docs/references/reference_draft.md)（D2–D4）。D1 已定案，见上文[统一输入、焦点与文本编辑](docs/references/focus_and_input.md)。
+下面三项分别有代码现状或平台能力依据，但**仍处于讨论/候选阶段**；边界与待决问题见[待决设计草案](docs/references/reference_draft.md)（D2–D4）。D1 已定案，见上文[统一输入、焦点与文本编辑](docs/references/focus_and_input.md)。
 
 D2 的完整讨论见[主题方案、作者入口与状态订阅](docs/references/theme_authoring_and_state.md)。
 D5 已另行冻结，其分批计划见上文；设计冻结不改变当前平台支持范围或 D1 的下一步安排。
 
 - [ ] **主题变化的订阅**：`ThemeManager` 只有 `revision()` 和给 `SceneTree` 用的观察者，外壳拿不到"外观变了"，因此 footer 里的亮/暗开关只能写、不能跟随外部变化。过程见 [story 010](stories/010-the-theme-signal-that-cannot-be-subscribed.md)。
-- [ ] **分组类型的类型安全**：`RouteOptions::type` 是 `std::string`，拼错一个字母不会报错，只会静默多出一个导航分组；考虑换成枚举或加声明期校验。过程见 [story 011](stories/011-the-route-type-that-is-a-string.md)。
-- [ ] **平台层与渲染后端（D4，最大的一项）**：现状是 raylib（GLFW + OpenGL），目标是 Windows / Web 与 Linux 桌面组件（dock、panel）。核实结论是**换后端的成本远小于听起来**（设备接口已中立、形状是自研 SDF、raylib 真实触点只有 5 处），但这是**四件事**：平台层（SDL3）、图形 API（建议 `SDL_GPU` 而非手写 Vulkan）、2D 几何引擎（ThorVG 建议拆出去）、合成器集成（`wlr-layer-shell`，SDL3 给不了）。选项、矛盾与分期建议见[待决设计草案](docs/references/reference_draft.md) D4 节。
+- [ ] **D3 路由元数据**：真实路由身份已是页面类型；已接受将 `type` 改名为 `nav_group`，空值表示未分组且不画标题，非空值兼作标题；无旧字段兼容，未分组 route 按空键全局合并在首个未分组项的位置。实现与测试清单见[待决设计草案](docs/references/reference_draft.md) D3 节及 [story 011](stories/011-the-route-type-that-is-a-string.md)。
+- [ ] **D4 跨平台平台层与渲染路线**：首要目标是 Linux、Windows、Web 应用级交付；SDL 3.4.0 起 GPU Renderer 有自定义 fragment shader 路径，但 WebGL 与 SDL_GPU 能力不能混为一谈。P1 还须验证 shadercross 等构建机工具的锁版/产物链、SDF/字体 atlas/规范键码回归；layer-shell host 行为契约留在未来阶段。见[待决设计草案](docs/references/reference_draft.md) D4 节。
 
 
 ## 外部依赖一览

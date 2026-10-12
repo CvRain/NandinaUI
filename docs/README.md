@@ -27,6 +27,9 @@
 实现仍为 planned；批次和验收进度见 [项目进度与下一步](references/project_status.md)。
 其中的目标接口和构建选项不能直接作为当前应用用法。
 
+[D6 作者 DSL、文本能力与内容测量](references/authoring_dsl_and_content_measurement.md) 汇总了
+Label、构建器子项简写、组件扩展与响应式内容测量的设计方向；API 和测量契约仍待审阅，尚未实现。
+
 ## 文档边界
 
 - `getting_started/`：稳定、短小、连续的学习路线。

@@ -42,3 +42,4 @@
 | [011](011-the-route-type-that-is-a-string.md) | 分组的类型是一个字符串：拼错就多一段 | 有序分组、`unordered_map` 的顺序陷阱，以及 `type` 的类型安全 |
 | [012](012-from-focus-rings-to-input-sessions.md) | 从一个焦点环，讨论到输入会话的边界 | 无历史默认显示的取舍、两种 roving 模型、paint-only 失效，以及注入服务不能照搬同步生命周期 |
 | [013](013-resource-scope-before-identity.md) | 资源自动构建之前，先找回查询丢掉的作用域 | 解耦不等待身份、纯内容 ID 的记录冲突、管理器八入口、发布代次，以及流和弱令牌的证据边界 |
+| [014](014-the-dsl-that-kept-sending-authors-to-configure.md) | DSL 一边提供链式 API，一边把作者送回 configure | Label 作者能力、Slint/QML 的取舍、有限宽度文本测量，以及先测量后抽象 Section 的顺序 |

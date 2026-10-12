@@ -7,8 +7,14 @@
 
 ## 现状
 
-- 公开组件：**34**（有 `ComponentTraits`、可供应用直接使用）
+- 公开组件：**37**（有 `ComponentTraits`、可供应用直接使用）
 - 已有使用文档：**20**（其中 `PointerArea` 与 `GestureArea` 共用一篇，实际文档文件 19 篇；`CommandPalette`、`HoverCard` 与 `AlertDialog` 的框架与符号表已核对、叙述正文待手写）
+
+> 计数口径：`公开组件` 只统计 `nandina/widget/builtin_component_traits.hpp` 中有 `ComponentTraits`
+> 特化的类型，它与 `showcase/component_catalog.hpp` 的编译期目录一一对应（该目录带
+> `static_assert`，两边数量或顺序不一致会直接编译失败）。`RadioGroup` 是 `RadioButton` 的容器，
+> 没有独立 `ComponentTraits`，因此与 `RadioButton` 同行记录、不单独计数。布局原语
+> （`Column`、`Row`、`Flex`、`Grid`、`ScrollView` 等）是声明式容器而非组件，同样不计入。
 
 ## 分工约定
 
@@ -88,5 +94,7 @@
 
 ## 待办
 
-- [ ] 确认 `docs/components/README.md` 的索引表与本看板一致
+- [x] 确认 `docs/components/README.md` 的索引表与本看板一致（2026-10-11 逐行核对：20 个已文档化
+      的组件在索引表中均有链接；`Dialog` 补上表内链接，`PointerArea` / `GestureArea` 共用一篇并在
+      表下引用；`AlertDialog` 已从索引的"计划补充"移入已落地清单）
 - [ ] 决定是否新增面向"深入使用"的独立文档区（用于放不属于开发手册的内容）
