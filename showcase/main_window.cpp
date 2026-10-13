@@ -28,28 +28,6 @@ namespace nandina::showcase
             nandina::app::route<LabelPage>(
                 app::RouteOptions {.address = "form/label", .title = "Label", .type = "表单"}
             ),
-            // nandina::app::route<AnchorsPage>(
-            //     app::RouteOptions {.address = "anchors", .title = "Label", .type = "按钮"}
-            // ),
-            // nandina::app::route<AnchorsPage>(
-            //     app::RouteOptions {.address = "anchors", .title = "Label", .type = "数据"}
-            // ),
-            // nandina::app::route<AnchorsPage>(
-            //     app::RouteOptions {.address = "anchors", .title = "Label", .type = "面板"}
-            // ),
-            // nandina::app::route<AnchorsPage>(
-            //     app::RouteOptions {.address = "anchors", .title = "Label", .type = "浮层"}
-            // ),
-            // nandina::app::route<AnchorsPage>(
-            //     app::RouteOptions {.address = "anchors", .title = "Label", .type = "菜单"}
-            // ),
-            // nandina::app::route<AnchorsPage>(
-            //     app::RouteOptions {.address = "anchors", .title = "Label", .type = "对话框"}
-            // ),
-            // nandina::app::route<AnchorsPage>(
-            //     app::RouteOptions {.address = "anchors", .title = "Label", .type = "杂项"}
-            // )
-
         };
         auto& router = use_router(routes);
 

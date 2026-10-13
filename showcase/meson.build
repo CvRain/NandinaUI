@@ -7,18 +7,29 @@ page_files = [
     'pages/label_page.cpp'
 ]
 
+components = [
+    'components/sidebar.hpp',
+    'components/sidebar.cpp',
+    'components/page_chrome.hpp',
+    'components/component_info_table.hpp',
+    'components/component_info_table.cpp',
+]
+
 sources = files(
     'application.cpp',
     'component_catalog.hpp',
     'main_window.hpp',
     'main_window.cpp',
-    'components/sidebar.hpp',
-    'components/sidebar.cpp',
 )
 
 foreach file: page_files
     sources += file
 endforeach
+
+foreach file: components
+    sources += file
+endforeach
+
 
 playground_exe = executable(
     'nandina_showcase',
