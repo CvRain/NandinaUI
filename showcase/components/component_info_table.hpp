@@ -27,7 +27,7 @@ namespace nandina::showcase
         auto get_inherits() const -> std::string;
         auto get_tips() const -> std::vector<std::string>;
 
-        auto build() -> widget::authoring::NodeBuilder<widget::Card>;
+        auto build() const -> widget::authoring::NodeBuilder<widget::Card>;
 
     private:
         /// 一行「键 | 值」。键固定宽度以对齐，值占满剩余宽度并允许换行。

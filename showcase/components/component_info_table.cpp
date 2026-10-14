@@ -62,7 +62,7 @@ namespace nandina::showcase
             .children(key_label, value_label);
     }
 
-    auto ComponentInfoTable::build() -> widget::authoring::NodeBuilder<widget::Card> {
+    auto ComponentInfoTable::build() const -> widget::authoring::NodeBuilder<widget::Card> {
         const auto& ui = context_.ui();
         const auto chrome = make_page_chrome(ui);
 
