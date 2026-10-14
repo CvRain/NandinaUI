@@ -93,6 +93,19 @@ namespace nandina::foundation::utf8
     /** 按 UAX #29 扩展 grapheme cluster 返回源 UTF-8 字节范围。 */
     [[nodiscard]] auto grapheme_ranges(std::string_view text) -> std::vector<ByteRange>;
 
+    /**
+     * 获取 `offset` 处 grapheme cluster 的下一个边界。
+     *
+     * 与 `grapheme_ranges()` 使用同一个 UAX #29 状态机，但**只解码到边界为止**：
+     * 不分配，也不对整段剩余文本重新分段。循环里逐簇推进必须用这个入口 ——
+     * 每次调用 `grapheme_ranges(text.substr(offset))` 会让整段文本退化成 O(n²)，
+     * 而且每次都要分配一个 vector（见 docs/references/text_shaping_cost.md）。
+     *
+     * `offset` 越界时返回 `text.size()`。
+     */
+    [[nodiscard]] auto next_grapheme_boundary(std::string_view text, std::size_t offset)
+        -> std::size_t;
+
 } // namespace nandina::foundation::utf8
 
 #endif // NANDINA_EXPERIMENT_FOUNDATION_UTF8_HPP

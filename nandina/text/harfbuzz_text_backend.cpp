@@ -581,24 +581,57 @@ namespace nandina::text
                 return;
             }
 
-            std::ranges::stable_sort(line.caret_stops, [](const auto& left, const auto& right) {
+            // 去重语义：同一 `source_offset` 且 x 相差不超过 epsilon 的停靠点视为同一位置；
+            // 先出现的胜出，`downstream` 覆盖 `upstream`。
+            //
+            // 原实现按 x 排序后，对**已收敛结果**做线性查找；这与停靠点数成 O(n²)：
+            // 一行 5000 字时约有 1 万个停靠点，仅这一步就要数秒（见
+            // docs/references/text_shaping_cost.md）。这里改为三趟 O(n log n)：
+            //   1. 按 (source_offset, x) 排序，使同一 offset 的停靠点连续且组内保持 x 序；
+            //   2. 逐组去重 —— 组内只需与**本组**已收敛项比较，这正是原条件
+            //      `existing.source_offset == stop.source_offset` 的含义；
+            //   3. 再按 x 排序，恢复公共契约（`front()`/`back()` 是左右端点）。
+            // 处理顺序（组内 x 序、downstream 覆盖）与原实现逐项一致。
+            std::ranges::sort(line.caret_stops, [](const auto& left, const auto& right) {
+                if (left.source_offset != right.source_offset) {
+                    return left.source_offset < right.source_offset;
+                }
                 return left.x < right.x;
             });
+
             std::vector<TextCaretStop> normalized;
             normalized.reserve(line.caret_stops.size());
             constexpr float epsilon = 0.001F;
-            for (const auto& stop: line.caret_stops) {
-                const auto duplicate = std::ranges::find_if(normalized, [&](const auto& existing) {
-                    return existing.source_offset == stop.source_offset
-                        && std::abs(existing.x - stop.x) <= epsilon;
-                });
-                if (duplicate == normalized.end()) {
-                    normalized.push_back(stop);
+            for (std::size_t begin = 0; begin < line.caret_stops.size();) {
+                std::size_t end = begin;
+                while (end < line.caret_stops.size()
+                       && line.caret_stops[end].source_offset
+                           == line.caret_stops[begin].source_offset)
+                {
+                    ++end;
                 }
-                else if (stop.affinity == TextAffinity::downstream) {
-                    duplicate->affinity = stop.affinity;
+                const auto group_base = normalized.size();
+                for (std::size_t index = begin; index < end; ++index) {
+                    const auto& stop = line.caret_stops[index];
+                    auto duplicate = group_base;
+                    for (; duplicate < normalized.size(); ++duplicate) {
+                        if (std::abs(normalized[duplicate].x - stop.x) <= epsilon) {
+                            break;
+                        }
+                    }
+                    if (duplicate == normalized.size()) {
+                        normalized.push_back(stop);
+                    }
+                    else if (stop.affinity == TextAffinity::downstream) {
+                        normalized[duplicate].affinity = stop.affinity;
+                    }
                 }
+                begin = end;
             }
+
+            std::ranges::stable_sort(normalized, [](const auto& left, const auto& right) {
+                return left.x < right.x;
+            });
             line.caret_stops = std::move(normalized);
         }
 

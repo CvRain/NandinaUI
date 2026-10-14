@@ -495,6 +495,47 @@ TEST_CASE("HarfBuzz caret geometry follows shaped graphemes", "[text][harfbuzz][
     REQUIRE(line.caret_for_source(source.size()).x == Catch::Approx(line.size.get_width()));
 }
 
+TEST_CASE("HarfBuzz caret stops dedupe a long line in bounded time", "[text][harfbuzz][caret]") {
+    // 复杂度守卫：caret 停靠点去重曾经对已收敛结果做线性查找（O(n²)）。
+    // 一行 8000 个簇会产生约 16000 个候选停靠点：O(n²) 是上亿次比较（秒级），
+    // O(n log n) 只需毫秒。
+    auto face = std::make_shared<text::FreeTypeFontFace>(test_font_path());
+    text::HarfBuzzTextLayoutBackend backend(face);
+
+    std::string source;
+    source.reserve(6000);
+    for (int index = 0; index < 8000; ++index) {
+        source += "abc";
+    }
+
+    const auto started = std::chrono::steady_clock::now();
+    const auto layout = backend.layout(
+        text::TextLayoutInput {
+            .text = source,
+            .style =
+                text::TextStyle {
+                    .font_size = 16.0F,
+                    .overflow = text::TextOverflow::clip,
+                    .max_lines = 1,
+                },
+            .constraints = foundation::NanLayoutConstraints::loose(),
+        }
+    );
+    const auto elapsed =
+        std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - started)
+            .count();
+
+    REQUIRE(layout.lines.size() == 1);
+    const auto& line = layout.lines.front();
+    // 去重后：每个簇一个下游停靠点 + 末尾一个上游停靠点。
+    REQUIRE(line.caret_stops.size() == source.size() + 1);
+    REQUIRE(line.caret_stops.front().source_offset == 0);
+    REQUIRE(line.caret_stops.back().source_offset == source.size());
+    // 公共契约：按 x 递增，front()/back() 是左右端点。
+    REQUIRE(std::ranges::is_sorted(line.caret_stops, {}, &text::TextCaretStop::x));
+    REQUIRE(elapsed < 500.0);
+}
+
 TEST_CASE("HarfBuzz glyph runs draw through the atlas texture", "[text][harfbuzz][render]") {
     auto face = std::make_shared<text::FreeTypeFontFace>(test_font_path());
     text::HarfBuzzTextLayoutBackend backend(face);

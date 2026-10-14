@@ -214,4 +214,61 @@ namespace nandina::foundation::utf8
         return result;
     }
 
+    auto next_grapheme_boundary(std::string_view text, std::size_t offset) -> std::size_t {
+        offset = std::min(offset, text.size());
+        if (offset >= text.size()) {
+            return text.size();
+        }
+
+        // 单码点解码（不分配）：容错规则与 decode() 一致 —— 非法序列退化为替换字符并按
+        // valid_sequence_length 推进，避免在坏字节上原地打转。
+        const auto decode_at = [&text](std::size_t position) -> DecodedCodepoint {
+            const auto length = valid_sequence_length(text, position);
+            const auto first = byte_at(text, position);
+            char32_t value = replacement_character;
+            if (length == 1 && first <= 0x7FU) {
+                value = first;
+            }
+            else if (length == 2) {
+                value = static_cast<char32_t>(first & 0x1FU) << 6U;
+                value |= static_cast<char32_t>(byte_at(text, position + 1) & 0x3FU);
+            }
+            else if (length == 3) {
+                value = static_cast<char32_t>(first & 0x0FU) << 12U;
+                value |= static_cast<char32_t>(byte_at(text, position + 1) & 0x3FU) << 6U;
+                value |= static_cast<char32_t>(byte_at(text, position + 2) & 0x3FU);
+            }
+            else if (length == 4) {
+                value = static_cast<char32_t>(first & 0x07U) << 18U;
+                value |= static_cast<char32_t>(byte_at(text, position + 1) & 0x3FU) << 12U;
+                value |= static_cast<char32_t>(byte_at(text, position + 2) & 0x3FU) << 6U;
+                value |= static_cast<char32_t>(byte_at(text, position + 3) & 0x3FU);
+            }
+            return DecodedCodepoint {
+                .value = value,
+                .byte_offset = position,
+                .byte_length = length,
+            };
+        };
+
+        // 与 grapheme_ranges() 相同的状态机与推进顺序。
+        auto previous = decode_at(offset);
+        auto cursor = offset + previous.byte_length;
+        utf8proc_int32_t state = 0;
+        while (cursor < text.size()) {
+            const auto current = decode_at(cursor);
+            if (utf8proc_grapheme_break_stateful(
+                    static_cast<utf8proc_int32_t>(previous.value),
+                    static_cast<utf8proc_int32_t>(current.value),
+                    &state
+                ))
+            {
+                break;
+            }
+            previous = current;
+            cursor += current.byte_length;
+        }
+        return cursor;
+    }
+
 } // namespace nandina::foundation::utf8

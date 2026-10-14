@@ -5,6 +5,7 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
+#include <chrono>
 #include <string>
 #include <type_traits>
 
@@ -88,4 +89,38 @@ TEST_CASE(
     REQUIRE(result.size.get_height() == Catch::Approx(14.0F));
     REQUIRE(result.font_size == Catch::Approx(18.0F));
     REQUIRE(pipeline.renderer == &renderer);
+}
+
+TEST_CASE("deterministic wrap advances in bounded time over a long run", "[text][header][budget]") {
+    // 复杂度守卫：fallback 后端的换行循环曾经对每个 grapheme 都重新分段整段剩余文本
+    // （O(n²)，且每次分配一个 vector）。5000 字的页面构建因此要数秒 —— 见
+    // docs/references/text_shaping_cost.md。O(n) 实现只需毫秒级。
+    std::string source;
+    source.reserve(15000);
+    for (int index = 0; index < 5000; ++index) {
+        source += "汉";
+    }
+
+    const auto started = std::chrono::steady_clock::now();
+    const auto result = text::deterministic_text_layout_backend().layout(
+        text::TextLayoutInput {
+            .text = source,
+            .style =
+                text::TextStyle {
+                    .font_size = 16.0F,
+                    .overflow = text::TextOverflow::wrap,
+                    .max_lines = 100000,
+                },
+            .constraints = foundation::NanLayoutConstraints {
+                .min_width = 1173.0F,
+                .max_width = 1173.0F,
+            },
+        }
+    );
+    const auto elapsed =
+        std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - started)
+            .count();
+
+    REQUIRE_FALSE(result.lines.empty());
+    REQUIRE(elapsed < 500.0); // O(n²) 在这个规模上要数秒
 }

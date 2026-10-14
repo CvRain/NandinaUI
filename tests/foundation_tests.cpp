@@ -171,6 +171,74 @@ TEST_CASE("UTF-8 grapheme ranges follow UAX 29 boundaries", "[foundation][utf8][
     REQUIRE(flag_ranges.front().length == flag.size());
 }
 
+TEST_CASE(
+    "next_grapheme_boundary agrees with grapheme_ranges at every boundary",
+    "[foundation][utf8][grapheme]"
+) {
+    // 逐簇推进的循环用 next_grapheme_boundary（非分配、只解码到边界），它必须与
+    // grapheme_ranges 的分段结果**逐字节一致**，否则换行与 caret 会错位。
+    const std::string samples[] = {
+        "",
+        "a",
+        "abc",
+        "a\xCC\x81"
+        "b", // 组合记号
+        "👩‍💻x", // ZWJ 序列
+        "🇨🇳🇺🇸", // 区域指示符对
+        "中文换行テスト",
+        "e\xCC\x81\xCC\x82"
+        "f", // 多个组合记号
+        "\xF0\x9F\x91\xA8\xE2\x80\x8D\xF0\x9F\x91\xA9\xE2\x80\x8D\xF0\x9F\x91\xA6", // 家庭 ZWJ
+    };
+
+    for (const auto& sample: samples) {
+        std::vector<std::size_t> expected;
+        for (const auto& range: foundation::utf8::grapheme_ranges(sample)) {
+            expected.push_back(range.offset);
+        }
+        expected.push_back(sample.size());
+
+        std::vector<std::size_t> actual;
+        for (auto cursor = std::size_t {0}; cursor < sample.size();) {
+            actual.push_back(cursor);
+            const auto next = foundation::utf8::next_grapheme_boundary(sample, cursor);
+            REQUIRE(next > cursor); // 必须前进，否则调用方会死循环
+            cursor = next;
+        }
+        actual.push_back(sample.size());
+
+        REQUIRE(actual == expected);
+        REQUIRE(foundation::utf8::next_grapheme_boundary(sample, sample.size()) == sample.size());
+        REQUIRE(
+            foundation::utf8::next_grapheme_boundary(sample, sample.size() + 7) == sample.size()
+        );
+    }
+}
+
+TEST_CASE("a long grapheme run advances in bounded time", "[foundation][utf8][grapheme][budget]") {
+    // 复杂度守卫：逐簇推进曾经是 O(n²)（每次对整段剩余文本重新分段并分配一个 vector），
+    // 5000 字的页面因此要数秒才打开。这里给一个宽松预算：O(n) 实现只需毫秒量级，
+    // 而 O(n²) 会明显越界。断言的是「没有退化」，不是精确性能。
+    std::string run;
+    run.reserve(30000);
+    for (int index = 0; index < 10000; ++index) {
+        run += "汉";
+    }
+
+    const auto started = std::chrono::steady_clock::now();
+    std::size_t clusters = 0;
+    for (auto cursor = std::size_t {0}; cursor < run.size();) {
+        cursor = foundation::utf8::next_grapheme_boundary(run, cursor);
+        ++clusters;
+    }
+    const auto elapsed =
+        std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - started)
+            .count();
+
+    REQUIRE(clusters == 10000);
+    REQUIRE(elapsed < 200.0); // O(n²) 在这个规模上要数秒
+}
+
 TEST_CASE("JSON wrapper parses documents and maps errors", "[foundation][json]") {
     const auto root = foundation::parse_json(
         R"({"format":1,"package_id":"org.nandina.d2","meta":{"ok":true},"items":[1,2]})"

@@ -21,12 +21,10 @@ namespace nandina::text
                 * 0.56F;
         }
 
-        [[nodiscard]] auto
-        next_grapheme_boundary(const std::string_view text, const std::size_t offset)
-            -> std::size_t {
-            const auto ranges = foundation::utf8::grapheme_ranges(text.substr(offset));
-            return ranges.empty() ? text.size() : offset + ranges.front().length;
-        }
+        /// 逐簇推进用 foundation 的非分配入口。原实现每次都对整段剩余文本重新分段
+        /// （`grapheme_ranges(text.substr(offset))`），在整段文本上是 O(n²)，而且每次都要
+        /// 分配一个 vector：5000 字的页面构建因此要数秒。见 docs/references/text_shaping_cost.md。
+        using foundation::utf8::next_grapheme_boundary;
 
         [[nodiscard]] auto caret_stops_for(
             const std::string_view source,
