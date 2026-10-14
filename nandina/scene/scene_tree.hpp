@@ -125,6 +125,21 @@ namespace nandina::scene
         /// may request one additional pass; further invalidation remains for next frame.
         auto layout_root(foundation::NanSize viewport_size) -> std::size_t;
 
+        /// 是否正处在一次 `layout_root()` 周期内。
+        ///
+        /// `NanControl::set_size()` 用它区分两种尺寸变化：
+        ///   - **周期外**（构造、样式变化、外部 setter）：几何真的变了，必须向上标脏，
+        ///     让下一次布局跑到这里；
+        ///   - **周期内**（measure / arrange 的写入）：这是布局的**输出**，父级当轮本来
+        ///     就在测它、摆它，不需要再被标脏。否则 `Expanded` 的子项这种「测量值与
+        ///     被指派值本来就不同」的节点会每轮把祖先链标脏，整棵树每帧重排一次。
+        ///
+        /// 周期内由控件**自己**显式调用 `mark_layout_dirty()`（例如 `on_layout` 里发现
+        /// 需要第二轮）不受影响 —— 那是输入变化，由
+        /// tests/widget_tests.cpp「layout invalidation raised during layout is preserved」
+        /// 固定下来。
+        [[nodiscard]] auto layout_pass_active() const noexcept -> bool;
+
         /// Draw every visible node (top-down, depth-first) via the given device.
         /// Brackets the frame with device.begin_frame()/end_frame() and threads a
         /// DrawContext (world transform + opacity + clip) through the traversal.
@@ -248,6 +263,8 @@ namespace nandina::scene
         /// 在这期间必须**立即**执行，否则会二次入队并丢失。
         bool flushing_mutations_ = false;
         std::vector<std::function<void()>> post_layout_actions_;
+        /// 布局周期嵌套深度；`layout_pass_active()` 即 `> 0`。
+        int layout_pass_depth_ = 0;
         std::weak_ptr<NanNode2D> hovered_node_;
         std::weak_ptr<NanNode2D> focused_node_;
         std::weak_ptr<NanNode2D> pointer_capture_;

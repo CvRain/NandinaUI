@@ -273,3 +273,35 @@ TEST_CASE(
         REQUIRE(flexible->size().get_width() == Catch::Approx(290.0F));
     }
 }
+
+TEST_CASE(
+    "an expanded child that fills its parent still converges",
+    "[layout][convergence][expanded]"
+) {
+    // `Expanded` 的子项本来就会被指派到与它自己测量的尺寸不同的宽度（填满剩余空间）。
+    // 这是布局的**输出**而不是输入变化：如果这次写入把祖先链标脏，整棵树会每帧重排。
+    // 真实后果：showcase 侧边栏的 Expanded(ScrollView) 让每个页面每帧跑一次全量布局，
+    // 空闲 CPU 占满一个核的 72%（见 layout_convergence_and_text_measurement.md §4.2）。
+    auto row = widget::Row::create();
+    row->set_width(scene::fill);
+    row->set_gap(10.0F);
+
+    auto fixed = std::make_shared<scene::NanControl>(foundation::NanSize(100.0F, 20.0F));
+    // 子项必须是**会报告自己自然尺寸**的图元（Text）：它测量出来的是文本宽度，
+    // 而父级给它的是剩余空间，两者不同 —— 这正是「布局输出被误当成输入变化」的路径。
+    // 普通 NanControl 的 on_measure 只是回读当前尺寸，天然不会抖，测不出这个问题。
+    auto flexible = std::make_shared<widget::primitives::Text>(std::string("sample text"));
+    auto wrapper = widget::Expanded::create();
+    wrapper->set_child(flexible);
+
+    row->add(fixed);
+    row->add(wrapper);
+
+    scene::NanSceneTree tree;
+    tree.set_root(row);
+    require_converged(tree);
+
+    // 子项被指派到剩余空间，而不是它自己的 50。
+    REQUIRE(flexible->size().get_width() == Catch::Approx(290.0F));
+    REQUIRE(wrapper->size().get_width() == Catch::Approx(290.0F));
+}

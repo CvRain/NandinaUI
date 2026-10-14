@@ -501,7 +501,20 @@ namespace nandina::scene
         return laid_out;
     }
 
+    auto NanSceneTree::layout_pass_active() const noexcept -> bool {
+        return layout_pass_depth_ > 0;
+    }
+
     auto NanSceneTree::layout_root(const foundation::NanSize viewport_size) -> std::size_t {
+        struct PassScope {
+            NanSceneTree& tree;
+            explicit PassScope(NanSceneTree& owner): tree(owner) {
+                ++tree.layout_pass_depth_;
+            }
+            ~PassScope() {
+                --tree.layout_pass_depth_;
+            }
+        } pass_scope {*this};
         std::size_t passes = 0;
         {
             auto phase = enter_phase(FramePhase::layout);

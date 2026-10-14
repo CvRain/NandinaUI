@@ -136,6 +136,12 @@ namespace nandina::scene
         // 几何缓存失效并重建语义 bounds。只标 paint 会让缓存永远不失效 —— 缩放中心
         // 会停在旧尺寸上。
         mark_dirty(DirtyFlags::paint | DirtyFlags::transform);
+        // 周期内的尺寸写入是布局的输出，不是输入变化：父级当轮正在测它、摆它，
+        // 不需要再被标脏（否则 Expanded 的子项这类节点会让整棵树每帧重排）。
+        // 周期外的尺寸变化照常向上标脏。见 NanSceneTree::layout_pass_active()。
+        if (auto* tree = get_tree(); tree != nullptr && tree->layout_pass_active()) {
+            return;
+        }
         if (auto* control_parent = parent() != nullptr ? parent()->as_control() : nullptr) {
             control_parent->mark_layout_dirty();
         }
