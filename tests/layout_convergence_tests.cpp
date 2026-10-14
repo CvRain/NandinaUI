@@ -227,3 +227,49 @@ TEST_CASE("sub-pixel size churn is not a geometry change", "[layout][convergence
     child->set_size(foundation::NanSize(120.0F, 50.0F));
     REQUIRE(parent->layout_dirty());
 }
+
+TEST_CASE(
+    "main-axis fill takes the whole width while expanded takes the remainder",
+    "[layout][fill]"
+) {
+    // `fill` 的定义是「请求整个可用约束」，不是「分配余量」（见 ControlSizeSpec 的注释）。
+    // 在容器**主轴**上这意味着它会把后面的兄弟推出容器 —— 想要剩余空间要用 `Expanded`。
+    // 这条测试把两者的区别钉住：showcase 的 Label 页面曾在 Row 里用 fill 装弹性子项，
+    // 结果 End 对齐文本与右侧按钮被推到卡片外（见 text_shaping_cost.md §5）。
+    const auto make_row = [](bool use_expanded) {
+        auto row = widget::Row::create();
+        row->set_width(scene::fill);
+        row->set_gap(10.0F);
+        auto fixed = std::make_shared<scene::NanControl>(foundation::NanSize(100.0F, 20.0F));
+        auto flexible = std::make_shared<scene::NanControl>(foundation::NanSize(50.0F, 20.0F));
+        row->add(fixed);
+        if (use_expanded) {
+            auto wrapper = widget::Expanded::create();
+            wrapper->set_child(flexible);
+            row->add(wrapper);
+        }
+        else {
+            flexible->set_width(scene::fill);
+            row->add(flexible);
+        }
+        return std::tuple {row, fixed, flexible};
+    };
+
+    {
+        const auto [row, fixed, flexible] = make_row(false);
+        scene::NanSceneTree tree;
+        tree.set_root(row);
+        (void)tree.layout_root(foundation::NanSize(400.0F, 100.0F));
+        REQUIRE(fixed->size().get_width() == Catch::Approx(100.0F));
+        // fill 拿到整个 400，而不是 400-100-10=290：它会越过 Row 的右边界。
+        REQUIRE(flexible->size().get_width() == Catch::Approx(400.0F));
+    }
+    {
+        const auto [row, fixed, flexible] = make_row(true);
+        scene::NanSceneTree tree;
+        tree.set_root(row);
+        (void)tree.layout_root(foundation::NanSize(400.0F, 100.0F));
+        REQUIRE(fixed->size().get_width() == Catch::Approx(100.0F));
+        REQUIRE(flexible->size().get_width() == Catch::Approx(290.0F));
+    }
+}

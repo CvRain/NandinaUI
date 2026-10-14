@@ -46,14 +46,16 @@ namespace nandina::showcase
                                    .font_size(chrome.supporting)
                                    .width(kKeyColumnWidth);
 
-        const auto value_label = ui.make<widget::Label>(std::string(value))
-                                     .color_token(theme::ColorToken::foreground)
-                                     .font_size(chrome.body)
-                                     .width(widget::authoring::fill)
-                                     .configure([](widget::Label& label) {
-                                         label.set_overflow(text::TextOverflow::wrap);
-                                         label.set_max_lines(4);
-                                     });
+        // Row 的主轴上 `fill` 会请求整个可用宽度，值列必须用 Expanded 才能拿到剩余空间。
+        const auto value_label =
+            ui.expanded().child(ui.make<widget::Label>(std::string(value))
+                                    .color_token(theme::ColorToken::foreground)
+                                    .font_size(chrome.body)
+                                    .width(widget::authoring::fill)
+                                    .configure([](widget::Label& label) {
+                                        label.set_overflow(text::TextOverflow::wrap);
+                                        label.set_max_lines(4);
+                                    }));
 
         return ui.row()
             .width(widget::authoring::fill)
@@ -81,16 +83,18 @@ namespace nandina::showcase
                                .cross_alignment(widget::LayoutAlignment::stretch);
 
             for (const auto& one_tip: tips_) {
-                bullets.children(ui.row()
-                                     .width(widget::authoring::fill)
-                                     .gap(chrome.item)
-                                     .cross_alignment(widget::LayoutAlignment::start)
-                                     .children(
-                                         ui.make<widget::Label>("•")
-                                             .color_token(theme::ColorToken::muted_foreground)
-                                             .font_size(chrome.supporting),
-                                         supporting_text(ui, chrome, one_tip, 3)
-                                     ));
+                bullets.children(
+                    ui.row()
+                        .width(widget::authoring::fill)
+                        .gap(chrome.item)
+                        .cross_alignment(widget::LayoutAlignment::start)
+                        .children(
+                            ui.make<widget::Label>("•")
+                                .color_token(theme::ColorToken::muted_foreground)
+                                .font_size(chrome.supporting),
+                            ui.expanded().child(supporting_text(ui, chrome, one_tip, 3))
+                        )
+                );
             }
 
             rows.children(ui.column()

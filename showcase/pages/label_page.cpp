@@ -61,10 +61,12 @@ namespace nandina::showcase
                         .configure([](widget::Label& label) {
                             label.set_align(theme::TextAlign::end);
                         }),
-                    ui.make<widget::Label>(std::string(sample))
-                        .color_token(theme::ColorToken::foreground)
-                        .font_size(sample_size)
-                        .width(widget::authoring::fill)
+                    // Row 的**主轴**上 `fill` 会请求整个可用宽度（见 ControlSizeSpec），
+                    // 于是后面的兄弟会被推出容器；要「占剩余空间」必须用 Expanded。
+                    ui.expanded().child(ui.make<widget::Label>(std::string(sample))
+                                            .color_token(theme::ColorToken::foreground)
+                                            .font_size(sample_size)
+                                            .width(widget::authoring::fill))
                 );
         }
 
@@ -84,14 +86,14 @@ namespace nandina::showcase
                         .color_token(theme::ColorToken::muted_foreground)
                         .font_size(chrome.supporting)
                         .width(kKeyColumnWidth),
-                    ui.make<widget::Label>(std::string(value))
-                        .color_token(theme::ColorToken::foreground)
-                        .font_size(chrome.body)
-                        .width(widget::authoring::fill)
-                        .configure([](widget::Label& label) {
-                            label.set_overflow(text::TextOverflow::wrap);
-                            label.set_max_lines(4);
-                        })
+                    ui.expanded().child(ui.make<widget::Label>(std::string(value))
+                                            .color_token(theme::ColorToken::foreground)
+                                            .font_size(chrome.body)
+                                            .width(widget::authoring::fill)
+                                            .configure([](widget::Label& label) {
+                                                label.set_overflow(text::TextOverflow::wrap);
+                                                label.set_max_lines(4);
+                                            }))
                 );
         }
 
@@ -209,14 +211,16 @@ namespace nandina::showcase
                                           .configure([](widget::Label& label) {
                                               label.set_align(theme::TextAlign::end);
                                           }),
-                                      ui.make<widget::Label>(std::string(kPangram))
-                                          .color_token(theme::ColorToken::foreground)
-                                          .font_size(kSpecimenSize)
-                                          .width(widget::authoring::fill)
-                                          .configure([weight, slant](widget::Label& label) {
-                                              label.set_font_weight(weight);
-                                              label.set_font_slant(slant);
-                                          })
+                                      ui.expanded().child(
+                                          ui.make<widget::Label>(std::string(kPangram))
+                                              .color_token(theme::ColorToken::foreground)
+                                              .font_size(kSpecimenSize)
+                                              .width(widget::authoring::fill)
+                                              .configure([weight, slant](widget::Label& label) {
+                                                  label.set_font_weight(weight);
+                                                  label.set_font_slant(slant);
+                                              })
+                                      )
                                   ));
             }
 
@@ -411,24 +415,28 @@ namespace nandina::showcase
                             .gap(chrome.item)
                             .cross_alignment(widget::LayoutAlignment::stretch);
             for (const auto& [name, align]: alignments) {
-                rows.children(ui.row()
-                                  .width(widget::authoring::fill)
-                                  .gap(chrome.group)
-                                  .cross_alignment(widget::LayoutAlignment::center)
-                                  .children(
-                                      ui.make<widget::Label>(std::string(name))
-                                          .color_token(theme::ColorToken::muted_foreground)
-                                          .font_size(chrome.caption)
-                                          .width(kAlignmentColumnWidth),
-                                      ui.make<widget::Label>(std::string(name) + " aligned text")
-                                          .width(widget::authoring::fill)
-                                          .height(32.0F)
-                                          .font_size(chrome.body)
-                                          .color_token(theme::ColorToken::foreground)
-                                          .configure([align](widget::Label& label) {
-                                              label.set_align(align);
-                                          })
-                                  ));
+                rows.children(
+                    ui.row()
+                        .width(widget::authoring::fill)
+                        .gap(chrome.group)
+                        .cross_alignment(widget::LayoutAlignment::center)
+                        .children(
+                            ui.make<widget::Label>(std::string(name))
+                                .color_token(theme::ColorToken::muted_foreground)
+                                .font_size(chrome.caption)
+                                .width(kAlignmentColumnWidth),
+                            ui.expanded().child(
+                                ui.make<widget::Label>(std::string(name) + " aligned text")
+                                    .width(widget::authoring::fill)
+                                    .height(32.0F)
+                                    .font_size(chrome.body)
+                                    .color_token(theme::ColorToken::foreground)
+                                    .configure([align](widget::Label& label) {
+                                        label.set_align(align);
+                                    })
+                            )
+                        )
+                );
             }
 
             return section_block(
@@ -449,29 +457,29 @@ namespace nandina::showcase
             auto& message =
                 ui.signal_value(std::string {"The label is bound to a reactive string."});
 
-            auto panel = ui.row()
-                             .width(widget::authoring::fill)
-                             .gap(chrome.group)
-                             .cross_alignment(widget::LayoutAlignment::center)
-                             .children(
-                                 ui.make<widget::Label>(message)
-                                     .width(widget::authoring::fill)
-                                     .font_size(chrome.body)
-                                     .color_token(theme::ColorToken::info)
-                                     .configure([](widget::Label& label) {
-                                         label.set_overflow(text::TextOverflow::wrap);
-                                         label.set_max_lines(4);
-                                     }),
-                                 ui.make<widget::Button>("Update label")
-                                     .treatment(theme::ButtonTreatment::outlined)
-                                     .on_click([&message] {
-                                         const std::string next =
-                                             message.get().starts_with("The label")
-                                             ? "Reactive text updates without rebuilding the page."
-                                             : "The label is bound to a reactive string.";
-                                         message.set(next);
-                                     })
-                             );
+            auto panel =
+                ui.row()
+                    .width(widget::authoring::fill)
+                    .gap(chrome.group)
+                    .cross_alignment(widget::LayoutAlignment::center)
+                    .children(
+                        ui.expanded().child(ui.make<widget::Label>(message)
+                                                .width(widget::authoring::fill)
+                                                .font_size(chrome.body)
+                                                .color_token(theme::ColorToken::info)
+                                                .configure([](widget::Label& label) {
+                                                    label.set_overflow(text::TextOverflow::wrap);
+                                                    label.set_max_lines(4);
+                                                })),
+                        ui.make<widget::Button>("Update label")
+                            .treatment(theme::ButtonTreatment::outlined)
+                            .on_click([&message] {
+                                const std::string next = message.get().starts_with("The label")
+                                    ? "Reactive text updates without rebuilding the page."
+                                    : "The label is bound to a reactive string.";
+                                message.set(next);
+                            })
+                    );
 
             return section_block(
                 ui,
