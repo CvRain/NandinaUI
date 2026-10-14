@@ -136,11 +136,24 @@ namespace nandina::widget
         }
         auto child_limits = foundation::NanLayoutConstraints::loose();
         if (axis_ == ScrollAxis::vertical) {
-            child_limits.max_width = constraints.max_width;
+            // 与 on_layout() 使用**同一份**横向契约。arrange 阶段内容被摆在 ScrollView 自己的
+            // 宽度上（limits.min_width = width()），所以 measure 阶段也必须在同一宽度上测量。
+            // 若这里只给上界（min = 0），内容会在「自己的 max_width 生效」与「被父级 min
+            // 强制拉宽」两个宽度之间来回跳变：每个布局周期产生两次尺寸写入，每次都把祖先链
+            // 标脏，整棵树永不收敛，文本每帧重新整形。
+            // 见 docs/references/layout_convergence_and_text_measurement.md §2。
+            const auto cross_width = width() > 0.0F ? width() : constraints.max_width;
+            if (std::isfinite(cross_width)) {
+                child_limits.min_width = cross_width;
+                child_limits.max_width = cross_width;
+            }
         }
         else if (axis_ == ScrollAxis::horizontal) {
             child_limits.max_height = constraints.max_height;
         }
+        // ScrollAxis::both：两轴都可滚动，两轴都保持 loose —— 这是既有契约
+        // （见 tests/anchors_boundary_tests.cpp「scroll views constrain only their
+        // non-scrolling axis」）。此时 on_layout() 也同样使用 loose，两侧一致。
         content_size_ = current->measure_layout(child_limits);
         return constraints.constrain(content_size_);
     }

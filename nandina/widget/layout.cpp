@@ -74,20 +74,50 @@ namespace nandina::widget
             return base_gap + std::max(0.0F, available - used) / static_cast<float>(count - 1);
         }
 
-        [[nodiscard]] auto
-        stretched_extent(LayoutAlignment alignment, float available, float measured) -> float {
-            if (alignment == LayoutAlignment::stretch) {
-                return std::max(0.0F, available);
-            }
-            return measured;
-        }
-
         [[nodiscard]] auto main_extent(foundation::NanSize size, LayoutAxis axis) -> float {
             return axis == LayoutAxis::horizontal ? size.get_width() : size.get_height();
         }
 
         [[nodiscard]] auto cross_extent(foundation::NanSize size, LayoutAxis axis) -> float {
             return axis == LayoutAxis::horizontal ? size.get_height() : size.get_width();
+        }
+
+        [[nodiscard]] constexpr auto perpendicular_axis(LayoutAxis axis) -> LayoutAxis {
+            return axis == LayoutAxis::horizontal ? LayoutAxis::vertical : LayoutAxis::horizontal;
+        }
+
+        /// 子项是否在给定轴上显式声明了尺寸。固定值与百分比算显式声明；
+        /// `fill` 由父级分配空间、`content` 由内容决定，两者都不算。
+        [[nodiscard]] auto has_explicit_extent(const scene::NanControl& child, LayoutAxis axis)
+            -> bool {
+            const auto& spec = child.size_spec();
+            const auto& length = axis == LayoutAxis::horizontal ? spec.width : spec.height;
+            return std::holds_alternative<scene::LogicalLength>(length)
+                || std::holds_alternative<scene::PercentLength>(length);
+        }
+
+        /// 交叉轴上的目标尺寸。`stretch` 只在子项**没有**声明该轴尺寸时生效；
+        /// 子项声明了固定值或百分比时一律使用它自己的测量结果 —— 该结果已经在 measure
+        /// 阶段按同一份约束解析过（见 `NanControl::measure_layout`）。
+        ///
+        /// 原因：arrange 若越过子项自己的尺寸规格，子项就会在「measure 得到的宽度」与
+        /// 「arrange 指派的宽度」之间每个布局周期来回改写尺寸；`set_size()` 每次都会把
+        /// 父级标脏，而父级是在 `layout_to()` 里刚清完标记之后被标脏的，于是整棵树永不收敛。
+        /// 见 docs/references/layout_convergence_and_text_measurement.md §2。
+        ///
+        /// @param axis 容器的**主轴**；交叉轴由它推出（`cross_extent` 的既有语义）。
+        [[nodiscard]] auto cross_target_extent(
+            const scene::NanControl& child,
+            LayoutAxis axis,
+            LayoutAlignment alignment,
+            float available_cross,
+            foundation::NanSize measured
+        ) -> float {
+            const auto cross_axis = perpendicular_axis(axis);
+            if (alignment == LayoutAlignment::stretch && !has_explicit_extent(child, cross_axis)) {
+                return std::max(0.0F, available_cross);
+            }
+            return cross_extent(measured, axis);
         }
 
         [[nodiscard]] auto max_main(foundation::NanLayoutConstraints constraints, LayoutAxis axis)
@@ -247,29 +277,18 @@ namespace nandina::widget
             const auto effective_gap =
                 distributed_gap(main_alignment, gap, available_main, used_main, items.size());
             float main_pos = alignment_offset(main_alignment, available_main, used_main);
+            const auto cross_axis = perpendicular_axis(axis);
             for (auto& item: items) {
-                const float min_cross = std::max(
-                    0.0F,
-                    policy_limit(
-                        item.policy.limits,
-                        axis == LayoutAxis::horizontal ? LayoutAxis::vertical
-                                                       : LayoutAxis::horizontal,
-                        true
-                    )
-                );
-                const float max_cross = std::max(
-                    min_cross,
-                    policy_limit(
-                        item.policy.limits,
-                        axis == LayoutAxis::horizontal ? LayoutAxis::vertical
-                                                       : LayoutAxis::horizontal,
-                        false
-                    )
-                );
-                const float desired_cross = stretched_extent(
+                const float min_cross =
+                    std::max(0.0F, policy_limit(item.policy.limits, cross_axis, true));
+                const float max_cross =
+                    std::max(min_cross, policy_limit(item.policy.limits, cross_axis, false));
+                const float desired_cross = cross_target_extent(
+                    *item.child,
+                    axis,
                     cross_alignment,
                     available_cross,
-                    cross_extent(item.measured, axis)
+                    item.measured
                 );
                 const float child_cross = std::clamp(desired_cross, min_cross, max_cross);
                 const float cross_pos =
@@ -632,7 +651,7 @@ namespace nandina::widget
                 const auto child_main = main_extent(child_size, axis_);
                 const auto alignment = item.cross_alignment.value_or(cross_alignment_);
                 const auto child_cross =
-                    stretched_extent(alignment, run.cross, cross_extent(child_size, axis_));
+                    cross_target_extent(*child, axis_, alignment, run.cross, child_size);
                 const auto child_cross_pos =
                     run_pos + alignment_offset(alignment, run.cross, child_cross);
                 child->layout_to(

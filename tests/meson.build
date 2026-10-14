@@ -266,6 +266,14 @@ layout_overflow_tests = executable(
 )
 test('layout-overflow', layout_overflow_tests, suite: 'unit')
 
+# 布局收敛：一次 layout_root 之后树必须不再脏；arrange 不得越过子项自己的尺寸规格。
+layout_convergence_tests = executable(
+    'layout_convergence_tests',
+    files('layout_convergence_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('layout-convergence', layout_convergence_tests, suite: 'unit')
+
 node_reparent_tests = executable(
     'node_reparent_tests',
     files('node_reparent_tests.cpp'),

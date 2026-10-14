@@ -427,7 +427,14 @@ namespace nandina::widget::primitives
                 .constraints = constraints,
             }
         );
-        set_size(layout_.size);
+        // 节点尺寸必须等于本次 measure 契约报告的值：整形结果的原始尺寸要**先收敛到约束内**
+        // 再写入。否则在紧约束（fill / percent 宽度）配 wrap 的情况下，size_ 记录的是最长行的
+        // 内容宽度、而 measured_size_ 记录的是可用宽度；同一布局周期里 arrange 又会把 size_
+        // 写回可用宽度，于是每个周期产生两次尺寸跳变，每次都通过 set_size() 把祖先链标脏 ——
+        // 父级在 layout_to() 里刚清完标记就又被标脏，布局永不收敛，整页文本每帧重新整形。
+        // 同层既有约定见 EditableText::on_measure 与 TextField::on_measure：先收敛再写入。
+        // 原始内容尺寸仍可经 layout_result() / measured_text_width() 查询。
+        set_size(constraints.constrain(layout_.size));
     }
 
     void Text::resolve_font() {

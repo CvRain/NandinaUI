@@ -67,6 +67,17 @@ namespace nandina::scene
 
     inline constexpr auto layout_dirty_flags = DirtyFlags::measure | DirtyFlags::layout;
 
+    /// 几何比较阈值（逻辑像素）。小于它的尺寸差异不算一次几何变化。
+    ///
+    /// 存在的理由：measure 与 arrange 会用不同的浮点运算顺序算出**同一个**尺寸
+    /// （例如 wrap 的行高 `font_size * 1.2 * lines` 与父级按测量值反推的紧约束），
+    /// 实测差值在 1e-5 量级。`set_size()` 若按精确相等判断「是否变了」，这种噪声会让
+    /// 节点每一轮布局都被判为"改了尺寸"，次次把祖先链标脏 —— 布局永不收敛。
+    /// 千分之一逻辑像素在任何显示尺度下都不可见，作为「几何是否变化」的门槛是安全的。
+    /// 注意：阈值只影响**是否标脏**，不影响尺寸本身的取值（见 `NanControl::set_size`）。
+    /// 见 docs/references/layout_convergence_and_text_measurement.md §4.1。
+    inline constexpr float layout_size_epsilon = 0.001F;
+
 } // namespace nandina::scene
 
 #endif // NANDINA_EXPERIMENT_FRAME_SCHEDULER_HPP

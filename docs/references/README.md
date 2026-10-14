@@ -25,6 +25,8 @@
 - [配置与开发体验](authoring_configuration.md)：**作者侧规则**。回调的两类与 `guarded()` 的能力边界、handler 的 concept 化设计、组件的公开 API 表面、样式优先级。
 - [D6：作者 DSL、文本能力与内容测量](authoring_dsl_and_content_measurement.md)：**讨论汇总，待审阅，未实施**。Label 能力表、共享属性归属、builder 子项简写、有限宽度自然长高，以及 border / Section 的阶段边界；过程见 [story 014](../../stories/014-the-dsl-that-kept-sending-authors-to-configure.md)。
 - [待决设计草案](reference_draft.md)：**工作稿**。D2 的后续讨论已汇总到[主题方案、作者入口与状态订阅](theme_authoring_and_state.md)；D3 的 `nav_group` 空值与合并语义已收敛、未实施；D4 仍需 SDL3 应用级 PoC，含 GPU shader 工具链与未来 host 行为契约。D1 已定案为[统一输入、焦点与文本编辑](focus_and_input.md)。
+- [布局收敛与文本测量](layout_convergence_and_text_measurement.md)：**已实施**。布局永不收敛的实测证据与四条根因（`Text` 写入原始尺寸、`ScrollView` 两个阶段跨轴契约不一致、`stretch` 越过子项显式尺寸、亚像素浮点噪声）、收敛契约、故障注入矩阵、未覆盖缺口与开放项（含整形成本与一次被实测否决的缓存方案）。
+- [跨平台后端探测：SDL3 GPU 与 Web 现状](cross_platform_backend_probe.md)：**探测记录，不是选型批准**。Vulkan GPU Renderer 与两条 Web 路径各自证明了什么、未验证清单、shader 构建链门槛，以及为什么不能用修复前的页面性能做后端结论。
 
 ### 应用层
 

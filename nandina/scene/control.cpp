@@ -120,11 +120,18 @@ namespace nandina::scene
     }
 
     void NanControl::set_size(foundation::NanSize size) {
-        if (size_ == size) {
-            return;
-        }
+        // 尺寸本身**总是**按精确值记下来：measure 与 arrange 必须看到同一个量，
+        // 父级拿到的 `measured_size()` 不能因为阈值而滞后。
+        const auto geometry_changed =
+            std::abs(size_.get_width() - size.get_width()) > layout_size_epsilon
+            || std::abs(size_.get_height() - size.get_height()) > layout_size_epsilon;
         size_ = size;
         measured_size_ = size;
+        if (!geometry_changed) {
+            // 亚像素差异（1e-5 量级的浮点噪声）不是几何变化：见 layout_size_epsilon。
+            // 若照样标脏，节点每一轮布局都会把祖先链重新标脏，布局永不收敛。
+            return;
+        }
         // 缩放中心是按**当前布局尺寸**解析的，所以尺寸变化本身就是几何变化：必须让
         // 几何缓存失效并重建语义 bounds。只标 paint 会让缓存永远不失效 —— 缩放中心
         // 会停在旧尺寸上。
