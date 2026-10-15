@@ -12,7 +12,7 @@ meson 构建，也不改动 raylib 生产路径：探测是独立的 CMake 工�
 
 | 路径 | 内容 |
 | --- | --- |
-| `desktop/` | SDL3 探测：`sdl_render_device.{hpp,cpp}` 是用 SDL 2D API 实现的 `IRenderDevice`；`main.cpp` 同时驱动设备路径与 GPU render state（自定义 SDF shader）路径 |
+| `desktop/` | SDL3 探测，两个构建方式见下：`sdl_render_device.{hpp,cpp}` 是用 SDL 2D API 实现的 `IRenderDevice`；`main.cpp`（CMake）驱动手写图元 + GPU render state（自定义 SDF shader）；`page_probe.cpp`（meson）把**真实的 showcase 页面**画到同一个设备上 |
 | `web/` | SDL3 2D Renderer / WebGL2 探测（Emscripten）：`main.cpp` + CMake |
 | `tools/verify_toolchain.sh` | 打印并校验所有固定版本（一条命令核对工具链） |
 
@@ -35,7 +35,46 @@ meson 构建，也不改动 raylib 生产路径：探测是独立的 CMake 工�
 前四项是**必需**：缺了或版本不符时脚本退出 1、CMake 在配置期就报错。Emscripten 与
 shadercross 只在对应路径上需要，缺失时脚本给警告。
 
-## 构建与运行（桌面 / Vulkan）
+## 两份构建的分工
+
+| | CMake（独立） | meson（`-Dsdl_page_probe=true`） |
+| --- | --- | --- |
+| 目标 | `nandina_sdl_gpu_probe` | `nandina_sdl_page_probe` |
+| 依赖 | SDL3 + Nandina **头文件** + 三个 foundation TU | `nandina_dep`（整个 libnandina）+ SDL3 |
+| 画什么 | 手写图元调用 + GPU render state 的 SDF shader | **真实 showcase 页面**（`LabelPage`）：真实主题、HarfBuzz 整形、`GlyphAtlasTexture` |
+| 回答 | 设备契约能不能**独立**实现（构建层面的可插拔性） | 真实页面能不能在这个后端上**正确渲染**，成本是多少 |
+
+```sh
+meson setup buildDir-probe -Dsdl_page_probe=true
+meson compile -C buildDir-probe nandina_sdl_page_probe
+NANDINA_PROBE_CAPTURE=page.bmp NANDINA_PROBE_FRAMES=60 ./buildDir-probe/probe/cross_platform/desktop/nandina_sdl_page_probe
+```
+
+最小宿主是手写的：`NanApplication`（资源/字体/主题/调度）+ `NanRouter` + `NanSceneTree` + 本设备，
+**不用 `NanWindow`**（它同时持有窗口、设备、输入与帧驱动，是 P4 的待办；宿主需要的越少，P4 的契约越清楚）。
+
+### 真实页面跑通的结果（2026-10-15）
+
+[截图](../../docs/images/probe/sdl-page-label.png) 与 raylib 基线在版式、字体（regular/medium/bold/italic）、
+主题色、圆角卡片、裁剪上一致。同一页面的稳态成本：
+
+```
+frame cost over 91832 frames: layout=0.005 ms, draw=1.85 ms, total=1.85 ms
+device stats: ... textures=234643537（每帧约 1277 次纹理绘制）alpha_uploads=65 clips=275511
+```
+
+- `layout=0.005 ms`：稳态 **0 次布局** —— 在 SDL 后端上复现了与 raylib 相同的收敛性质。
+- `draw=1.85 ms`：与 raylib 基准（同页面约 2.2 ms）同量级。注意两者**不可直接比质量**：
+  本设备的圆角无抗锯齿。
+- `alpha_uploads=65`：4 条字体管线（400/500/700/italic）× 2 个 face，加上图集扩容时的重建。
+
+**踩到并修掉的一个真实 bug**（值得记下来）：`SDL_PIXELFORMAT_RGBA8888` 是**打包**格式
+（`0xRRGGBBAA`），小端机上的内存字节序是 `A,B,G,R`；而设备产出的缓冲是 `R,G,B,A`。
+结果是 alpha 从错误的字节读出，**每个字形都画成一个不透明方块**。改用平台首选的
+`SDL_PIXELFORMAT_RGBA32` 即可。同一轮还补上了 `SDL_SCALEMODE_NEAREST`：生产后端对字形图集
+用点采样（raylib 的 `TEXTURE_FILTER_POINT`），线性过滤会造成二次软化与邻区渗色。
+
+## 构建与运行（桌面 / Vulkan，CMake 独立版）
 
 ```sh
 # 依赖（Debian/Ubuntu 系）：libsdl3-dev + shaderc 提供的 glslc + SPIRV-Tools 提供的 spirv-val

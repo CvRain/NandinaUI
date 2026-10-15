@@ -205,4 +205,10 @@ if not meson.is_subproject()
     if get_option('showcase') and fs.exists('showcase/meson.build')
         subdir('showcase')
     endif
+
+    # 跨平台探测里「真实页面走 SDL 设备」的那一个：需要 libnandina 与 showcase 的页面源码，
+    # 所以它属于本构建（而不是 CMake 的独立探测）。默认关闭：它需要 SDL3 与一个真窗口。
+    if get_option('sdl_page_probe') and fs.exists('probe/cross_platform/desktop/meson.build')
+        subdir('probe/cross_platform/desktop')
+    endif
 endif

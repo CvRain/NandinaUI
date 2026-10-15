@@ -11,6 +11,12 @@ option(
     description: 'Build and register tests when Nandina is the main project',
 )
 option(
+    'sdl_page_probe',
+    type: 'boolean',
+    value: false,
+    description: 'Build the SDL3 backend probe that renders a real showcase page through IRenderDevice',
+)
+option(
     'showcase',
     type: 'boolean',
     value: true,

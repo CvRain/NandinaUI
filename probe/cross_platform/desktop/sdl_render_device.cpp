@@ -8,6 +8,8 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
+#include <cstdlib>
 #include <stdexcept>
 #include <vector>
 
@@ -391,15 +393,28 @@ namespace nandina::probe
             return {};
         }
         ++stats_.alpha_uploads;
+        if (std::getenv("NANDINA_PROBE_TRACE_TEXTURE") != nullptr) {
+            std::fprintf(stderr, "[atlas] create %dx%d bytes=%zu\n", width, height, alpha.size());
+        }
+        // 用 `SDL_PIXELFORMAT_RGBA32`（平台首选 32 位 RGBA）而不是 `RGBA8888`：
+        // 后者是**打包**格式（0xRRGGBBAA），小端机上的内存字节序是 A,B,G,R，与下面
+        // alpha_to_rgba 产出的 R,G,B,A 缓冲不一致 —— alpha 会从错误的字节读出来，
+        // 表现为「每个字形画成一个不透明方块」。实测就是这么错的。
         auto* texture = SDL_CreateTexture(
             renderer_,
-            SDL_PIXELFORMAT_RGBA8888,
+            SDL_PIXELFORMAT_RGBA32,
             SDL_TEXTUREACCESS_STATIC,
             width,
             height
         );
         check_sdl(texture != nullptr, "SDL_CreateTexture(alpha atlas)");
         check_sdl(SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND), "SDL_SetTextureBlendMode");
+        // 与生产后端一致：字形图集按 1:1 点采样，避免双线性过滤造成二次软化与邻区渗色
+        // （raylib 后端同样设了 TEXTURE_FILTER_POINT）。
+        check_sdl(
+            SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_NEAREST),
+            "SDL_SetTextureScaleMode"
+        );
         const auto rgba = alpha_to_rgba(
             alpha.first(static_cast<std::size_t>(width) * static_cast<std::size_t>(height))
         );

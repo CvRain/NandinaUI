@@ -105,7 +105,35 @@ device capabilities: alpha_textures=1 rounded_rect=1
 
 **已验证**：填充/描边、圆角矩形、圆、线段、由接口默认实现派生的 `draw_arc` 与
 `draw_circle_clipped_rounded_rect`、`draw_text`、alpha 图集创建 + 按子矩形更新、纹理区域绘制
-与 tint、`set_clip` 裁剪、两个 capability 查询。**未验证**的部分见下表。
+与 tint、`set_clip` 裁剪、两个 capability 查询。
+
+### 2.3.1 真实页面已经跑通（同一天，第二个目标）
+
+手写图元只证明「契约可实现」。真正回答 §4 第 2 件事的是
+[probe/cross_platform/desktop/page_probe.cpp](../../probe/cross_platform/desktop/page_probe.cpp)：
+它用 `NanApplication` + `NanRouter` + `NanSceneTree` 组成一个**最小宿主**（不用 `NanWindow`），
+挂载**真实的 showcase `LabelPage`**，走真实主题、HarfBuzz 整形与 `GlyphAtlasTexture`，
+再用 `NanSceneTree::draw(device)` 整棵树画到 SDL 设备上。构建：`-Dsdl_page_probe=true`。
+
+![SDL 渲染的真实 Label 页面](../images/probe/sdl-page-label.png)
+
+版式、字体（regular/medium/bold/italic）、主题色、圆角卡片与裁剪都与 raylib 基线一致。
+同一页面的稳态成本（无 vsync，91832 帧平均）：
+
+```
+frame cost: layout=0.005 ms, draw=1.85 ms, total=1.85 ms   （每帧约 1277 次纹理绘制）
+```
+
+两条可与基线对照的结论：**稳态 0 次布局**（与 raylib 上测到的收敛性质一致），以及 draw 成本
+与 raylib 基准（约 2.2 ms）同量级 —— 但**不能按质量对比**，本设备圆角无抗锯齿。
+每帧 1277 次纹理绘制说明文本路径是逐字形提交的，批处理是后续的优化项（两个后端同样如此）。
+
+**踩到的一个真实 bug**：`SDL_PIXELFORMAT_RGBA8888` 是打包格式（`0xRRGGBBAA`），小端机上内存
+字节序为 `A,B,G,R`，与设备产出的 `R,G,B,A` 缓冲不一致 —— alpha 从错误字节读出，每个字形都画成
+不透明方块。改用 `SDL_PIXELFORMAT_RGBA32`（平台首选）修复；并补上 `SDL_SCALEMODE_NEAREST`
+以对齐生产后端的字形图集点采样。
+
+**未验证**的部分见下表。
 
 **能力差异**（记录在案，不是等价实现）：
 
@@ -147,7 +175,7 @@ CI/SDK 再固定精确受测版本并在升级时复检。P1 的交付物是「�
 
 | D4 阶段 | 当前状态 |
 | --- | --- |
-| P0 SDL3 应用级探测 | **大部分**：窗口/事件/帧循环、GPU render state 的自定义 SDF shader、以及一个真实的 `IRenderDevice`（SDL 2D + CPU 几何）都已跑通；仍缺真实字体图集（`GlyphAtlasTexture` 接设备）与键码映射验证 |
+| P0 SDL3 应用级探测 | **基本完成**：窗口/事件/帧循环、GPU render state 的自定义 SDF shader、真实的 `IRenderDevice`（SDL 2D + CPU 几何），以及**真实 showcase 页面 + 真实字体图集**（§2.3.1）都已跑通；仍缺键码映射验证 |
 | P1 渲染与 shader 管线门槛 | **进行中**：工具链已固定并可一条命令核对（`glslc`/`spirv-val`/SDL/emsdk），SPIR-V 校验进构建图；仍缺 `SDL_shadercross` 的 DXIL/MSL 产物、多格式 CI 生成与加载、以及与现有 SDF 图元的逐项等价性 |
 | P2 平台能力与消费者回归 | 未开始 |
 | P3 默认后端决策 | 未开始；`raylib` 仍是唯一生产路径 |
@@ -156,9 +184,10 @@ CI/SDK 再固定精确受测版本并在升级时复检。P1 的交付物是「�
 在 P1 之前建议的两件事，第 1 件已完成（§2.3）；第 2 件仍未做：
 
 1. ~~让探测走一次**真实的 `IRenderDevice` 实现**~~ —— 已完成，见 §2.3。
-2. 用真实页面负载（`playground/bench/label_bench.cpp`）而不是 SDK 示例做性能与视觉对比。
-   下一步是把 `NanSceneTree::draw(device)` 的输出（真实的字体图集与页面）接到这个设备上，
-   而不是继续手写图元调用。
+2. ~~用真实页面负载而不是 SDK 示例做性能与视觉对比~~ —— 已完成（§2.3.1：真实 `LabelPage`
+   经 `NanSceneTree::draw(device)` 渲染，稳态 0 次布局、draw 1.85 ms/帧）。
+   下一步是把两个后端的**同一页面**做逐像素/逐图元对照，并把圆角抗锯齿、软阴影、
+   圆角裁剪这些能力差异变成设备能力查询驱动的降级路径。
 
 ## 5. 相关记录
 
