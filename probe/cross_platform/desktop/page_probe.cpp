@@ -28,7 +28,11 @@
 #include <nandina/foundation/nandina_color_space.hpp>
 #include <nandina/scene/scene_tree.hpp>
 #include <nandina/text/font_pipeline.hpp>
+#include <showcase/pages/anchors_page.hpp>
+#include <showcase/pages/home_page.hpp>
 #include <showcase/pages/label_page.hpp>
+
+#include <string_view>
 
 #include <chrono>
 #include <cstdlib>
@@ -118,12 +122,25 @@ int main() {
             &application.background_executor()
         );
         // 路由表：Router 只有 configure() 之后才进入 route 模式，`start<Page>()` 才可用。
-        // 这里只注册 Label 一页 —— 探测要的是「真实页面」，不是完整的导航壳。
+        // 三个 showcase 页面都注册，用 NANDINA_PROBE_PAGE 选择挂载哪一个 —— 消费者回归需要
+        // 「每个页面都过一遍这个后端」，而不是只看一页。
+        const auto* page_env = std::getenv("NANDINA_PROBE_PAGE");
+        const std::string_view page = page_env != nullptr ? page_env : "label";
         const auto routes = nandina::app::Routes {
             nandina::app::route<nandina::showcase::LabelPage>(nandina::app::RouteOptions {
                 .address = "form/label",
                 .title = "Label",
                 .type = "表单",
+            }),
+            nandina::app::route<nandina::showcase::ShowcaseHomePage>(nandina::app::RouteOptions {
+                .address = "home",
+                .title = "Home",
+                .type = "手册",
+            }),
+            nandina::app::route<nandina::showcase::AnchorsPage>(nandina::app::RouteOptions {
+                .address = "layout/anchors",
+                .title = "Anchors",
+                .type = "布局",
             }),
         };
         if (const auto configured = router.configure(routes); !configured) {
@@ -136,9 +153,21 @@ int main() {
         }
         tree.set_root(outlet);
 
-        const auto started = router.start<nandina::showcase::LabelPage>();
+        auto started = false;
+        if (page == "home") {
+            started = router.start<nandina::showcase::ShowcaseHomePage>();
+        }
+        else if (page == "anchors") {
+            started = router.start<nandina::showcase::AnchorsPage>();
+        }
+        else if (page == "label") {
+            started = router.start<nandina::showcase::LabelPage>();
+        }
+        else {
+            throw std::runtime_error("unknown NANDINA_PROBE_PAGE: " + std::string(page));
+        }
         if (!started) {
-            throw std::runtime_error("router.start<LabelPage> failed");
+            throw std::runtime_error("router.start failed for page: " + std::string(page));
         }
 
         const auto* capture_path = std::getenv("NANDINA_PROBE_CAPTURE");
@@ -149,7 +178,7 @@ int main() {
 
         std::cout << "SDL " << SDL_GetVersion() << ", renderer="
                   << (SDL_GetRendererName(renderer) ? SDL_GetRendererName(renderer) : "unknown")
-                  << ", page=showcase::LabelPage" << '\n';
+                  << ", page=" << page << '\n';
         // 能力摘要就是「这个后端与生产后端的差异清单」的可执行版本：消费者按这些查询选路。
         std::cout << "device capabilities: alpha_textures=" << device.supports_alpha_textures()
                   << " rounded_rect=" << device.supports_rounded_rect()
@@ -234,10 +263,11 @@ int main() {
         const auto& stats = device.stats();
         std::cout << "device stats: frames=" << stats.frames << " rects=" << stats.rects
                   << " outlines=" << stats.rect_outlines << " rounded=" << stats.rounded_rects
-                  << " circles=" << stats.circles << " lines=" << stats.lines
-                  << " texts=" << stats.texts << " textures=" << stats.texture_draws
-                  << " alpha_uploads=" << stats.alpha_uploads << " clips=" << stats.clips
-                  << " cpu_vertices=" << stats.generated_vertices << '\n';
+                  << " rounded_outlines=" << stats.rounded_outlines << " circles=" << stats.circles
+                  << " lines=" << stats.lines << " texts=" << stats.texts
+                  << " textures=" << stats.texture_draws << " alpha_uploads=" << stats.alpha_uploads
+                  << " clips=" << stats.clips << " cpu_vertices=" << stats.generated_vertices
+                  << '\n';
 
         tree.set_root(nullptr);
     }

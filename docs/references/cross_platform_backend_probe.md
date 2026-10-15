@@ -211,6 +211,40 @@ mean |Δ| = 0.0033      >8: 338 px (0.019%)      >16: 176 px (0.010%)      max =
 所以这次对照只能是像素级，做不了逐图元对照。要拿 raylib 的逐图元 trace，先得有设备注入 ——
 这正是 P4 要解决的事。
 
+#### 2.3.3 消费者回归：三个 showcase 页面全过一遍（2026-10-15）
+
+只对照一个页面不够 —— 把三个页面都交给 SDL 设备，逐个与 raylib 基线比对，**扫出一个只有
+anchors 页面才暴露的真实缺陷**：
+
+| 页面 | 修复前 | 修复后 | 稳态成本（SDL） |
+| --- | --- | --- | --- |
+| Home | **逐像素相同**（max 0） | 相同 | layout 0.001 ms / draw 0.45 ms |
+| Label | mean 0.0033、max 20 | mean 0.0009、**max 9** | layout 0.005 ms / draw 1.93 ms |
+| Anchors | mean 0.0135、**max 116**、124 px >24 | mean 0.0068、**max 55**、42 px >24 | layout 0.002 ms / draw 0.14 ms |
+
+**扫出的缺陷**：anchors 页右上角按钮的圆角**描边**在 SDL 上画成了方框（max 116 就集中在那四个
+角）。根因不在 painter，而在设备：`IRenderDevice::draw_rounded_rect_outline()` 的**接口默认实现
+会退化成方框描边**（注释写的是"测试设备可不实现"），而 `SdlRenderDevice` 当时只实现了圆角填充。
+raylib 后端是覆写了这一条的（`raylib_device.cpp:264`），所以只有新设备会踩到。
+
+```cpp
+// probe/cross_platform/desktop/sdl_render_device.cpp（修复）
+// 圆角描边 = 四条直边矩形 + 四个同心环扇（外半径 r、内半径 r-t，圆心相同）。
+```
+
+![圆角描边修复：raylib / SDL 修复前 / SDL 修复后](../images/probe/anchors-outline-fix.png)
+
+修复后剩余的差异全部是**角上的抗锯齿**（几何路径无 AA），与 Label 页的结论一致。三个页面的
+**稳态布局都是 0 次**（0.001–0.005 ms）—— 收敛性质在三个页面 × 两个后端上都成立。
+
+anchors 页面在 SDL 后端的完整渲染（`rounded_outlines=160/80 帧`，即新的描边路径确实被走到）：
+
+![anchors 页面在 SDL 后端](../images/probe/sdl-page-anchors.png)
+
+**这条经验值得单独记**：接口里"默认实现会静默降级"的入口（`draw_rounded_rect_outline` →
+方框、`draw_circle_clipped_rounded_rect` → 未裁剪、`draw_rounded_rect_shadow` → no-op）是新后端的
+三个坑。前两个已经在本设备实现或被能力查询覆盖，软阴影由 `supports_soft_shadows()` 降级。
+
 **未验证**的部分见下表。
 
 **能力差异**（记录在案，不是等价实现）：

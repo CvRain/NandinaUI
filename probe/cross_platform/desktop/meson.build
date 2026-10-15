@@ -7,7 +7,10 @@
 
 sdl3_dep = dependency('sdl3', version: '>=3.4.0', required: true)
 
+# 消费者回归要覆盖每个 showcase 页面，所以三个页面源码都编进来。
 showcase_page_sources = files(
+    '../../../showcase/pages/anchors_page.cpp',
+    '../../../showcase/pages/home_page.cpp',
     '../../../showcase/pages/label_page.cpp',
     '../../../showcase/components/page_chrome.hpp',
     '../../../showcase/components/component_info_table.cpp',

@@ -285,6 +285,101 @@ namespace nandina::probe
         );
     }
 
+    void SdlRenderDevice::draw_rounded_rect_outline(
+        const foundation::NanRect& rect,
+        const float radius,
+        const float thickness,
+        const foundation::NanColor& color
+    ) {
+        ++stats_.rounded_outlines;
+        const auto edge = std::max(thickness, 0.0F);
+        const auto clamped =
+            std::clamp(radius, 0.0F, std::min(rect.get_width(), rect.get_height()) * 0.5F);
+        if (edge <= 0.0F) {
+            return;
+        }
+        if (clamped <= 0.5F) {
+            draw_rect_outline(rect, edge, color);
+            return;
+        }
+
+        // 圆角描边 = 四条直边矩形 + 四个**同心环扇**（外半径 r、内半径 r-t，圆心相同）。
+        // 内边界正是外边界向内偏移 t：半径减 t、四边各内缩 t，圆心不变。
+        const auto left = rect.get_left();
+        const auto top = rect.get_top();
+        const auto right = rect.get_right();
+        const auto bottom = rect.get_bottom();
+        const auto inner_radius = std::max(0.0F, clamped - edge);
+
+        draw_rect(foundation::NanRect(left + clamped, top, right - clamped, top + edge), color);
+        draw_rect(
+            foundation::NanRect(left + clamped, bottom - edge, right - clamped, bottom),
+            color
+        );
+        draw_rect(foundation::NanRect(left, top + clamped, left + edge, bottom - clamped), color);
+        draw_rect(foundation::NanRect(right - edge, top + clamped, right, bottom - clamped), color);
+
+        const auto ring = [&](const foundation::NanPoint& center,
+                              const float from,
+                              const float to) {
+            const auto segments = segments_for(clamped);
+            const auto converted = to_sdl_color(color);
+            const auto vertex = [&](const float x, const float y) {
+                return SDL_Vertex {
+                    .position = SDL_FPoint {.x = x, .y = y},
+                    .color =
+                        SDL_FColor {
+                            .r = static_cast<float>(converted.r) / 255.0F,
+                            .g = static_cast<float>(converted.g) / 255.0F,
+                            .b = static_cast<float>(converted.b) / 255.0F,
+                            .a = static_cast<float>(converted.a) / 255.0F,
+                        },
+                    .tex_coord = SDL_FPoint {.x = 0.0F, .y = 0.0F},
+                };
+            };
+            std::vector<SDL_Vertex> vertices;
+            vertices.reserve(static_cast<std::size_t>(segments + 1) * 2);
+            for (int index = 0; index <= segments; ++index) {
+                const auto angle =
+                    from + (to - from) * static_cast<float>(index) / static_cast<float>(segments);
+                const auto cos = std::cos(angle);
+                const auto sin = std::sin(angle);
+                vertices.push_back(
+                    vertex(center.get_x() + clamped * cos, center.get_y() + clamped * sin)
+                );
+                vertices.push_back(
+                    vertex(center.get_x() + inner_radius * cos, center.get_y() + inner_radius * sin)
+                );
+            }
+            std::vector<int> indices;
+            indices.reserve(static_cast<std::size_t>(segments) * 6);
+            for (int index = 0; index < segments; ++index) {
+                const auto outer0 = index * 2;
+                const auto inner0 = index * 2 + 1;
+                const auto outer1 = index * 2 + 2;
+                const auto inner1 = index * 2 + 3;
+                indices.insert(indices.end(), {outer0, outer1, inner1, outer0, inner1, inner0});
+            }
+            check_sdl(
+                SDL_RenderGeometry(
+                    renderer_,
+                    nullptr,
+                    vertices.data(),
+                    static_cast<int>(vertices.size()),
+                    indices.data(),
+                    static_cast<int>(indices.size())
+                ),
+                "SDL_RenderGeometry(rounded outline)"
+            );
+            stats_.generated_vertices += vertices.size();
+        };
+
+        ring(foundation::NanPoint(right - clamped, top + clamped), -kPi * 0.5F, 0.0F);
+        ring(foundation::NanPoint(right - clamped, bottom - clamped), 0.0F, kPi * 0.5F);
+        ring(foundation::NanPoint(left + clamped, bottom - clamped), kPi * 0.5F, kPi);
+        ring(foundation::NanPoint(left + clamped, top + clamped), kPi, kPi * 1.5F);
+    }
+
     void SdlRenderDevice::draw_line(
         const foundation::NanPoint& a,
         const foundation::NanPoint& b,

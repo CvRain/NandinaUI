@@ -36,6 +36,7 @@ namespace nandina::probe
         std::uint64_t rects = 0;
         std::uint64_t rect_outlines = 0;
         std::uint64_t rounded_rects = 0;
+        std::uint64_t rounded_outlines = 0;
         std::uint64_t circles = 0;
         std::uint64_t lines = 0;
         std::uint64_t texts = 0;
@@ -72,6 +73,15 @@ namespace nandina::probe
         void draw_rounded_rect(
             const foundation::NanRect& rect,
             float radius,
+            const foundation::NanColor& color
+        ) override;
+        /// 圆角描边：四条直边 + 四个同心环扇。**必须覆写** —— 接口的默认实现会退化成
+        /// 方框描边，圆角按钮/卡片的边框会在四角露出直角（anchors 页面的按钮就是这么被
+        /// 消费者回归扫出来的）。
+        void draw_rounded_rect_outline(
+            const foundation::NanRect& rect,
+            float radius,
+            float thickness,
             const foundation::NanColor& color
         ) override;
         void draw_line(
