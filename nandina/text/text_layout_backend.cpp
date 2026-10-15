@@ -4,6 +4,8 @@
 
 #include "text_layout_backend.hpp"
 
+#include "line_break.hpp"
+
 #include "../foundation/utf8.hpp"
 
 #include <algorithm>
@@ -94,6 +96,18 @@ namespace nandina::text
                         {
                             line_end = next_grapheme_boundary(input.text, line_end);
                             ++graphemes;
+                        }
+
+                        // 按字符数切出来的位置可能落在单词中间。若这一段里存在断行机会
+                        // （空格/连字符之后，或 CJK 字符之后），就回退到最后一个机会，
+                        // 让 fallback 的换行也按词而不是按字符断开；找不到机会时保留
+                        // 原切分点 —— 超长单词与 URL 必须能在词中间断开，否则会溢出。
+                        if (line_end < input.text.size() && input.text[line_end] != '\n') {
+                            const auto opportunity =
+                                last_break_opportunity(input.text, line_offset, line_end);
+                            if (opportunity > line_offset) {
+                                line_end = opportunity;
+                            }
                         }
 
                         const auto line_text =

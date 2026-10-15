@@ -158,6 +158,7 @@ module_text = files(
     'text/text_layout.hpp',
     'text/text_layout.cpp',
     'text/text_layout_backend.hpp',
+    'text/line_break.cpp',
     'text/text_layout_backend.cpp',
     'text/font_face.hpp',
     'text/freetype_font_face.cpp',

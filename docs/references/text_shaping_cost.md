@@ -224,8 +224,50 @@ raylib 后端目前把 1 字节 alpha 展开成 RGBA8（`alpha_to_rgba`）。改
 4. **`DesignSystem` 按主题共享一份**：现在每个控件 15 KB，一个页面就有上百次构造
    （实测单次 0.024 ms，所以这是内存项而不是 CPU 项）。
 
-## 8. 未纳入本次
+## 8. 断行机会（已实施）
+
+### 8.1 问题
+
+`wrapped_ranges()` 原先只做「能塞几个簇就塞几个」，没有任何断行机会的概念，
+于是英文会从单词中间断开。Label 页面上肉眼可见：`cont|inues`、`availa|ble`、
+`when t|he user needs`。
+
+### 8.2 规则（UAX #14 的实用子集）
+
+新增 `nandina/text/line_break.{hpp,cpp}`，判定「某个 grapheme cluster **之后**能否断行」：
+
+1. 空格 / 制表符之后 —— 拉丁文本的主要断点；
+2. 连字符、短/长破折号（U+2010..U+2015、U+2212）之后 —— `well-known`；
+3. 宽字符之后 —— CJK 表意文字、假名、谚文、全角标点等（U+1100..U+11FF、
+   U+2E80..U+33FF、U+3400..U+9FFF、U+A000..U+A4CF、U+AC00..U+D7A3、U+F900..U+FAFF、
+   U+FE30..U+FE4F、U+FF00..U+FF60、U+20000..U+3FFFF）。这些书写系统本来就可以在任意
+   字符之间断行，所以每个字符都是断点。
+
+**找不到机会时退回按簇断行** —— 超长单词与 URL 必须能在词中间断开，否则会溢出盒子。
+
+两个后端都用这条规则：HarfBuzz 的 `wrapped_ranges()` 在放不下时回退到本行最后一个机会
+（并重算那一段的宽度）；fallback 后端在按字符数切完之后回退到 `last_break_opportunity()`。
+
+### 8.3 效果与测试
+
+Label 页截图对比：`continues`、`width is limited`、`content area` 都改成按词断开，
+CJK 段落照常逐字换行。测试在 `tests/text_layout_header_tests.cpp`（不依赖字体）：
+
+| 测试 | 钉住什么 |
+| --- | --- |
+| 「line break opportunities follow spaces, hyphens and wide characters」 | 规则表：空格/制表/连字符/en dash/CJK/假名/谚文/全角标点为真；拉丁字母、句点、组合序列、emoji、空串为假 |
+| 「last break opportunity picks the latest allowed break」 | 取最靠后的机会；无机会时返回 `begin`（调用方保留原切分点）；越界范围被夹住 |
+| 「deterministic wrap breaks at word boundaries」 | 集成：`alpha beta gamma` 断成 `"alpha "` / `"beta gamma"`；无空格的长串仍按字符断；CJK 每行 10 个汉字 |
+
+### 8.4 已知限制
+
+这不是完整的 UAX #14：没有 Line_Break 属性表，也不做「禁止在收尾标点之前断行」这类成对
+规则。实际后果是**一行可能以收尾标点开头**（例如 `」`、`，`），以及不做西文连字断词
+（hyphenation）。要补齐需要引入属性表，属于后续工作。
+
+## 9. 未纳入本次
 
 - 构建期 relayout 策略（§5.1）：会改变「未挂载控件的尺寸何时有效」这条既有行为，需单独定案。
 - `wrap` 先整形整段再逐行整形（约 2× 浪费）：需要增量断行，属于文本后端内部重构。
+- 完整 UAX #14（属性表 + 收尾标点规则）与西文断词（hyphenation）：见 §8.4。
 - 绘制遍历的 z 序缓存与裁剪剔除：见 [跨平台后端探测](cross_platform_backend_probe.md)。

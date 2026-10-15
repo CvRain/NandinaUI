@@ -1,5 +1,6 @@
 // The canonical text protocol must work without any scene or widget include.
 
+#include <nandina/text/line_break.hpp>
 #include <nandina/text/text_layout_backend.hpp>
 
 #include <catch2/catch_approx.hpp>
@@ -123,4 +124,85 @@ TEST_CASE("deterministic wrap advances in bounded time over a long run", "[text]
 
     REQUIRE_FALSE(result.lines.empty());
     REQUIRE(elapsed < 500.0); // O(n²) 在这个规模上要数秒
+}
+
+TEST_CASE("line break opportunities follow spaces, hyphens and wide characters", "[text][wrap]") {
+    using text::break_opportunity_after;
+    // 空格与制表符之后
+    REQUIRE(break_opportunity_after(" "));
+    REQUIRE(break_opportunity_after("\t"));
+    // 连字符与破折号之后
+    REQUIRE(break_opportunity_after("-"));
+    REQUIRE(break_opportunity_after("\xE2\x80\x93")); // en dash U+2013
+    // 宽字符（CJK / 假名 / 谚文 / 全角标点）之后
+    REQUIRE(break_opportunity_after("汉"));
+    REQUIRE(break_opportunity_after("あ"));
+    REQUIRE(break_opportunity_after("한"));
+    REQUIRE(break_opportunity_after("\xEF\xBC\x8C")); // fullwidth comma U+FF0C
+    // 普通拉丁字母、标点、组合序列、emoji 之后都不断
+    REQUIRE_FALSE(break_opportunity_after("a"));
+    REQUIRE_FALSE(break_opportunity_after("."));
+    REQUIRE_FALSE(break_opportunity_after("e\xCC\x81")); // e + combining acute
+    REQUIRE_FALSE(break_opportunity_after("\xF0\x9F\x91\xA9\xE2\x80\x8D\xF0\x9F\x92\xBB"));
+    REQUIRE_FALSE(break_opportunity_after(""));
+}
+
+TEST_CASE("last break opportunity picks the latest allowed break", "[text][wrap]") {
+    using text::last_break_opportunity;
+    const std::string source = "hello world foo";
+
+    // "hello world" 内最后一个机会是空格之后（下标 6）。
+    REQUIRE(last_break_opportunity(source, 0, 11) == 6);
+    // 整个串内最后一个机会是第二个空格之后（下标 12）。
+    REQUIRE(last_break_opportunity(source, 0, source.size()) == 12);
+    // "hello" 里没有机会：返回 begin，调用方据此保留原切分点。
+    REQUIRE(last_break_opportunity(source, 0, 5) == 0);
+    // 连字符之后可以断。
+    REQUIRE(last_break_opportunity("well-known", 0, 6) == 5);
+    // CJK 每个字之后都可以断：范围里的最后一个字之后就是答案。
+    REQUIRE(last_break_opportunity("中文测试", 0, 6) == 6);
+    // 后面接拉丁字母时，最后一个机会停在第二个汉字之后（下标 6）。
+    REQUIRE(last_break_opportunity("中文abc", 0, 9) == 6);
+    // 非法范围不越界。
+    REQUIRE(last_break_opportunity(source, 5, 5) == 5);
+    REQUIRE(last_break_opportunity(source, 0, source.size() + 100) == 12);
+}
+
+TEST_CASE("deterministic wrap breaks at word boundaries", "[text][header][wrap]") {
+    const text::ITextLayoutBackend& backend = text::deterministic_text_layout_backend();
+    // font_size 10 -> 每字宽 5.6；宽 60 -> 每行 10 个字符。
+    const auto wrap = [&backend](std::string_view source) {
+        return backend.layout(
+            text::TextLayoutInput {
+                .text = source,
+                .style =
+                    text::TextStyle {
+                        .font_size = 10.0F,
+                        .overflow = text::TextOverflow::wrap,
+                        .max_lines = 10,
+                    },
+                .constraints = foundation::NanLayoutConstraints {
+                    .min_width = 60.0F,
+                    .max_width = 60.0F,
+                },
+            }
+        );
+    };
+
+    // "alpha beta" 正好 10 字符，但最后一个断行机会在空格之后：回退到 "alpha "。
+    const auto wrapped = wrap("alpha beta gamma");
+    REQUIRE(wrapped.lines.size() == 2);
+    REQUIRE(wrapped.lines[0].visible_text == "alpha ");
+    REQUIRE(wrapped.lines[1].visible_text == "beta gamma");
+
+    // 找不到机会时仍然按字符断（超长单词必须能断，否则会溢出盒子）。
+    const auto unbreakable = wrap("abcdefghijklmnop");
+    REQUIRE(unbreakable.lines.size() == 2);
+    REQUIRE(unbreakable.lines[0].visible_text == "abcdefghij");
+    REQUIRE(unbreakable.lines[1].visible_text == "klmnop");
+
+    // CJK 没有空格，但每个字之后都可断：按字符数切分即可。
+    const auto cjk = wrap("这是一段没有空格的中文文本用来测试换行行为");
+    REQUIRE(cjk.lines.size() >= 3);
+    REQUIRE(cjk.lines[0].visible_text.size() == 30); // 10 个汉字 = 30 字节
 }

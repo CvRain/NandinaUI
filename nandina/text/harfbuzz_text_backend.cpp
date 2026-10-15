@@ -4,6 +4,8 @@
 
 #include "harfbuzz_text_backend.hpp"
 
+#include "line_break.hpp"
+
 #include "../foundation/utf8.hpp"
 
 #include <ft2build.h>
@@ -802,8 +804,15 @@ namespace nandina::text
             return end - line.text_offset;
         }
 
+        /// 把段落切成若干行（每行一个 ClusterRange）。
+        ///
+        /// 断行优先在**断行机会**处进行（空格/连字符之后，或 CJK 字符之后）：一行放不下
+        /// 时回退到本行内最后一个机会，而不是把当前簇硬切下去 —— 否则英文会从单词中间
+        /// 断开（`cont|inues`、`availa|ble`）。找不到机会时（超长单词、URL）才退回按簇断行。
         [[nodiscard]] auto wrapped_ranges(
             const TextLayoutLine& line,
+            std::string_view paragraph,
+            std::size_t paragraph_offset,
             std::size_t paragraph_end,
             float width_limit
         ) const -> std::vector<ClusterRange> {
@@ -816,32 +825,71 @@ namespace nandina::text
                 };
             }
 
-            std::vector<ClusterRange> result;
-            std::size_t line_offset = shaped_clusters.front().offset;
-            std::size_t line_end = line_offset;
-            float line_width = 0.0F;
-            for (const auto& cluster: shaped_clusters) {
-                if (line_width > 0.0F && line_width + cluster.width > width_limit) {
-                    result.push_back(
+            // 某个簇的源文本（用于判定它之后能否断行）。cluster.length 对最后一个簇会
+            // 延伸到段落末尾，这里夹到段落范围内。
+            const auto cluster_text = [&](const ClusterRange& cluster) -> std::string_view {
+                if (cluster.offset < paragraph_offset) {
+                    return {};
+                }
+                const auto begin = cluster.offset - paragraph_offset;
+                if (begin >= paragraph.size()) {
+                    return {};
+                }
+                return paragraph.substr(begin, std::min(cluster.length, paragraph.size() - begin));
+            };
+            // [from, to] 两个簇之间的宽度和（重算被回退的那一小段）。
+            const auto width_between = [&](std::size_t from, std::size_t to) {
+                auto total = 0.0F;
+                for (auto index = from; index <= to && index < shaped_clusters.size(); ++index) {
+                    total += shaped_clusters[index].width;
+                }
+                return total;
+            };
+            const auto push_range =
+                [&](std::vector<ClusterRange>& out, std::size_t start, std::size_t last) {
+                    const auto& first = shaped_clusters[start];
+                    const auto& tail = shaped_clusters[last];
+                    out.push_back(
                         ClusterRange {
-                            .offset = line_offset,
-                            .length = line_end - line_offset,
-                            .width = line_width,
+                            .offset = first.offset,
+                            .length = tail.offset + tail.length - first.offset,
+                            .width = width_between(start, last),
                         }
                     );
-                    line_offset = cluster.offset;
-                    line_width = 0.0F;
+                };
+
+            std::vector<ClusterRange> result;
+            auto line_start = std::size_t {0};
+            auto last_break = std::size_t {0};
+            bool has_break = false;
+            float line_width = 0.0F;
+
+            for (std::size_t index = 0; index < shaped_clusters.size(); ++index) {
+                const auto& cluster = shaped_clusters[index];
+                if (line_width > 0.0F && line_width + cluster.width > width_limit) {
+                    if (has_break && last_break >= line_start && last_break < index) {
+                        // 回退到本行最后一个断行机会。
+                        push_range(result, line_start, last_break);
+                        line_start = last_break + 1;
+                        line_width =
+                            index > line_start ? width_between(line_start, index - 1) : 0.0F;
+                    }
+                    else {
+                        push_range(result, line_start, index - 1);
+                        line_start = index;
+                        line_width = 0.0F;
+                    }
+                    has_break = false;
                 }
                 line_width += cluster.width;
-                line_end = cluster.offset + cluster.length;
-            }
-            result.push_back(
-                ClusterRange {
-                    .offset = line_offset,
-                    .length = line_end - line_offset,
-                    .width = line_width,
+                if (break_opportunity_after(cluster_text(cluster))) {
+                    last_break = index;
+                    has_break = true;
                 }
-            );
+            }
+            if (line_start < shaped_clusters.size()) {
+                push_range(result, line_start, shaped_clusters.size() - 1);
+            }
             return result;
         }
 
@@ -920,7 +968,8 @@ namespace nandina::text
             if (input.style.overflow == TextOverflow::wrap && has_width_limit
                 && shaped.size.get_width() > width_limit)
             {
-                const auto ranges = impl_->wrapped_ranges(shaped, end, width_limit);
+                const auto ranges =
+                    impl_->wrapped_ranges(shaped, paragraph, offset, end, width_limit);
                 for (std::size_t range_index = 0;
                      range_index < ranges.size() && result.lines.size() < max_lines;
                      ++range_index)
