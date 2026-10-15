@@ -8,6 +8,7 @@
 #include <nandina/text/font_face.hpp>
 #include <nandina/text/font_family.hpp>
 #include <nandina/text/font_loader.hpp>
+#include <nandina/text/font_pipeline.hpp>
 #include <nandina/text/glyph_atlas.hpp>
 #include <nandina/text/glyph_run_renderer.hpp>
 #include <nandina/text/harfbuzz_text_backend.hpp>
@@ -1103,4 +1104,20 @@ TEST_CASE(
     REQUIRE(resolve(700, theme::FontSlant::normal) == *bold);
     REQUIRE(resolve(400, theme::FontSlant::italic) == *italic);
     REQUIRE(resolve(400, theme::FontSlant::normal) == *regular);
+}
+
+TEST_CASE(
+    "the default font pipeline does not preallocate a large atlas",
+    "[text][pipeline][budget]"
+) {
+    // 预算守卫：图集是**起始**尺寸，写满后按需翻倍，所以默认值不该预先占一大片空图集。
+    // 1024² 起步时一条管线每个 face 立刻占 1 MB CPU + 4 MB RGBA8 纹理；showcase 的
+    // Label 页有 4 条管线 × 2 个 face，实测约 8 MB + 32 MB，而字形只填满几百 KB。
+    // 见 docs/references/text_shaping_cost.md §7.2。
+    const text::FontPipelineOptions defaults;
+    REQUIRE(defaults.atlas_width <= 256);
+    REQUIRE(defaults.atlas_height <= 256);
+
+    // 起始尺寸小不影响正确性：图集仍然能长到放得下。
+    REQUIRE(text::GlyphAtlas::kMaxDimension >= 1024);
 }
