@@ -1,7 +1,11 @@
 # 跨平台后端探测：SDL3 GPU 与 Web 现状
 
-> 本文是 D4「跨平台优先的窗口与渲染后端路线」的**探测记录**，不是选型批准，也不是生产就绪声明。
-> 它按 [开发流程](development_loop.md) 的语言区分「已证明」「未验证」和「只是路径选择」。
+> 本文是 D4「跨平台优先的窗口与渲染后端路线」的**探测证据记录**：按
+> [开发流程](development_loop.md) 的语言区分「已证明」「未验证」和「只是路径选择」。
+>
+> **方向已定**（作者 2026-10-15）：先补齐 D4 计划内容，随后把生产后端替换为 SDL3。
+> 目标形态、所有权划分、能力契约与阶段验收见[平台与后端契约](platform_backend_contract.md)；
+> 本文只负责「测到了什么、没测什么」。迁移本身尚未开始，raylib 仍是唯一生产路径。
 
 **探测源码已入库**：[probe/cross_platform/](../../probe/cross_platform/README.md)（`desktop/`、`web/`、
 `tools/verify_toolchain.sh`）。只追踪源码：SDL 源码树、emsdk、构建产物仍然现取现建

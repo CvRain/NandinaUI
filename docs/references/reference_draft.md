@@ -322,6 +322,6 @@ D1 已定案，它的**第二阶段**（文本输入会话、组合输入、软�
 | D1 | ✅ 已归档为 [focus_and_input.md](focus_and_input.md)（并已同步 `component_contract.md` / `component_roadmap.md` / `project_status.md`） |
 | D2 | `theme` 相关 reference（或 `design_tokens.md` 里的解析链路一节）+ stories/010 |
 | D3 | `page_and_router.md` + stories/011 |
-| D4 | 新增平台/后端 reference（或并入 `build_system_scope.md`）+ 一篇 story 记录取舍 |
+| D4 | ✅ 已归档为 [platform_backend_contract.md](platform_backend_contract.md)（方向已定：完成计划内容后替换为 SDL3；证据见 [跨平台后端探测](cross_platform_backend_probe.md)，过程见 [story 015](../../stories/015-the-probe-that-was-not-in-version-control.md)） |
 | D5 | ✅ 已冻结为 [resource_build_and_deployment.md](resource_build_and_deployment.md)，过程见 [story 013](../../stories/013-resource-scope-before-identity.md)；实施细节按批次定形 |
 | 本文 | D2–D4 拍板后删除或降级为历史记录；若中途放弃某项，把“为什么不做”补进对应 story |
