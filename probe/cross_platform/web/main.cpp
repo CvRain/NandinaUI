@@ -4,8 +4,14 @@
 #include <SDL3/SDL_render.h>
 
 #include <array>
+#include <cmath>
 #include <cstdint>
+#include <cstdio>
 #include <vector>
+
+#ifdef __EMSCRIPTEN__
+    #include <emscripten.h>
+#endif
 
 namespace
 {
@@ -16,7 +22,38 @@ namespace
         bool alternate = false;
         int pixel_width = 0;
         int pixel_height = 0;
+        /// 自证：跑到 kReportFrame 帧时读回帧缓冲，统计「非背景像素」与目标色的出现，
+        /// 然后把结果 fetch 回服务器 —— 这样一次浏览器运行会留下可核对的服务端记录，
+        /// 而不是只有一张「可能停在加载壳上」的截图。
+        int frames = 0;
+        int reports = 0;
     };
+
+    /// 第一次上报要早：`firefox --headless --screenshot` 截完就可能退出进程。
+    constexpr int kFirstReportFrame = 2;
+    /// 之后每这么多帧再报一次，让存活更久的页面留下更完整的记录。
+    constexpr int kRepeatReportFrames = 30;
+
+    /// 把一条结果发回服务器；服务端日志即证据。**失败路径也要报** —— 否则「黑屏」永远
+    /// 分不清「wasm 没加载完」「没有 WebGL2」还是「渲染报错」。非 wasm 构建下是空实现。
+    auto report_to_server(const char* stage, const char* detail) -> void {
+#ifdef __EMSCRIPTEN__
+        EM_ASM(
+            {
+                fetch(
+                    '/probe-report?stage=' + encodeURIComponent(UTF8ToString($0)) + '&detail='
+                    + encodeURIComponent(UTF8ToString($1))
+                )
+                    .catch(function() {});
+            },
+            stage,
+            detail
+        );
+#else
+        (void)stage;
+        (void)detail;
+#endif
+    }
 
     auto append_triangle(
         std::vector<SDL_Vertex>& vertices,
@@ -80,6 +117,7 @@ SDL_AppResult SDL_AppInit(void** appstate, int, char**) {
     *appstate = state;
     if (!SDL_Init(SDL_INIT_VIDEO)) {
         SDL_Log("SDL_Init failed: %s", SDL_GetError());
+        report_to_server("init-failed", SDL_GetError());
         return SDL_APP_FAILURE;
     }
     SDL_SetHint(SDL_HINT_RENDER_VSYNC, "1");
@@ -96,8 +134,10 @@ SDL_AppResult SDL_AppInit(void** appstate, int, char**) {
     state->renderer = SDL_CreateRenderer(state->window, nullptr);
     if (state->renderer == nullptr) {
         SDL_Log("SDL_CreateRenderer failed: %s", SDL_GetError());
+        report_to_server("renderer-failed", SDL_GetError());
         return SDL_APP_FAILURE;
     }
+    report_to_server("renderer-created", SDL_GetRendererName(state->renderer));
     SDL_SetRenderVSync(state->renderer, 1);
     state->atlas = SDL_CreateTexture(
         state->renderer,
@@ -190,6 +230,75 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
         360.0F,
         "SDL WebGL probe: SPACE changes color; resize logs pixel size"
     );
+
+    // ---- 自证：读回帧缓冲，统计非背景像素与目标色的出现 ----
+    ++state->frames;
+    if (state->frames >= kFirstReportFrame
+        && (state->reports == 0
+            || state->frames >= kFirstReportFrame + state->reports * kRepeatReportFrames))
+    {
+        ++state->reports;
+        int ink = 0;
+        int teal = 0;
+        int total = 0;
+        if (auto* shot = SDL_RenderReadPixels(state->renderer, nullptr); shot != nullptr) {
+            total = shot->w * shot->h;
+            if (auto* pixels = static_cast<const std::uint8_t*>(shot->pixels);
+                pixels != nullptr && shot->format == SDL_PIXELFORMAT_RGBA32)
+            {
+                for (int index = 0; index < total; ++index) {
+                    const auto r = pixels[index * 4 + 0];
+                    const auto g = pixels[index * 4 + 1];
+                    const auto b = pixels[index * 4 + 2];
+                    // 背景是 245,246,248；任何明显偏离它的像素都是「画出来的东西」。
+                    if (std::abs(int(r) - 245) > 8 || std::abs(int(g) - 246) > 8
+                        || std::abs(int(b) - 248) > 8)
+                    {
+                        ++ink;
+                    }
+                    // 圆角矩形的主色（teal 0.20,0.72,0.55 → 约 51,184,140）。
+                    if (r > 30 && r < 90 && g > 150 && g < 220 && b > 110 && b < 180) {
+                        ++teal;
+                    }
+                }
+            }
+            SDL_RenderDebugTextFormat(
+                state->renderer,
+                24.0F,
+                376.0F,
+                "frame %d ink %d/%d teal %d",
+                state->frames,
+                ink,
+                total,
+                teal
+            );
+            SDL_DestroySurface(shot);
+        }
+#ifdef __EMSCRIPTEN__
+        // 服务端能看到这一行请求（查询串即证据）；返回什么不影响探测。
+        EM_ASM(
+            {
+                fetch(
+                    '/probe-report?stage=rendered&frames=' + $0 + '&ink=' + $1 + '&teal=' + $2
+                    + '&total=' + $3
+                )
+                    .catch(function() {});
+            },
+            state->frames,
+            ink,
+            teal,
+            total
+        );
+#endif
+        SDL_Log(
+            "web probe report: frames=%d ink=%d teal=%d total=%d",
+            state->frames,
+            ink,
+            teal,
+            total
+        );
+    }
+
     SDL_RenderPresent(state->renderer);
     return SDL_APP_CONTINUE;
 }

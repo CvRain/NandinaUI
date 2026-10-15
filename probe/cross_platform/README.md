@@ -113,8 +113,18 @@ cmake --build playground/probe-build/web
 # 产物 html/js/wasm 需要用静态服务器打开（file:// 不行）
 ```
 
-**Web 路径尚未完成浏览器验收**：上一次构建成功但截图停在加载壳的 "Downloading…" 上，
-画面是黑的，无法据此判定成败。需要一次能读到 canvas 像素（或加载完成之后再截图）的验证。
+**Web 路径已完成有效验收（2026-10-15）**：`firefox --headless --screenshot` 会在 2 MB wasm
+实例化**之前**截图（画面全黑 + 加载壳），所以别靠截图。探测改成自证：跑满若干帧后自己
+`SDL_RenderReadPixels` 读回画布、统计像素，再 `fetch('/probe-report?...')` 回服务器，
+用静态服务器的请求日志当证据。实测（Emscripten 6.0.10 / headless Firefox / 软件 WebGL）：
+
+```
+stage=renderer-created  detail=opengles2
+stage=rendered  frames=92  ink=9556  teal=6220  total=307200
+```
+
+失败路径也上报（`init-failed` / `renderer-failed` 带 SDL 错误串），所以黑屏能区分原因。
+完整步骤见 [探测记录 §2.1.1](../../docs/references/cross_platform_backend_probe.md#211-有效的浏览器验收让探测自己上报2026-10-15)。
 
 ## IRenderDevice 路径（`sdl_render_device.*`）
 

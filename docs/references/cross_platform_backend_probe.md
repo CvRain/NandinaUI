@@ -69,8 +69,8 @@ CPU 布局，因此**不能**用这个探测对后端做性能结论。后续如
   `SDL_MAIN_USE_CALLBACKS` 主回调模型，链接参数 `-sMIN/MAX_WEBGL_VERSION=2`、
   `-sALLOW_MEMORY_GROWTH=1`、`-sEXIT_RUNTIME=0`。用本地 emsdk（Emscripten 6.0.10）成功产出
   `html/js/wasm`。内容为 CPU 生成的圆角矩形三角网格 + 16×16 位图 atlas + `SDL_RenderDebugTextFormat`。
-  截图 `web/firefox-webgl.png` 停在 Emscripten 加载壳的 "Downloading…" 上、画面是黑的 ——
-  **无法据此判定成功或失败**，因为截图发生在资源加载完成之前。
+  上一次的截图停在 Emscripten 加载壳的 "Downloading…" 上、画面是黑的，**无法据此判定成功或
+  失败**。**2026-10-15 已完成有效验收**，见 §2.1.1。
 - 另有一个独立的 SDL3 2D Renderer Web 示例（`/workspace/Cpp/playground/hello_emsdk`，不在本仓库内）：
   `SDL_CreateWindowAndRenderer` + `SDL_MAIN_USE_CALLBACKS`，随源码 vendored SDL **3.5.0**，
   用 `emcmake cmake -S . -B dist/web` 配置、`cmake --build` 构建，产物拷到 `public/js/` 由静态服务器打开。
@@ -80,13 +80,47 @@ CPU 布局，因此**不能**用这个探测对后端做性能结论。后续如
   注意示例自身的脚本不一致：`config-wasm.sh` 配置到 `dist/web`，而 `build-wasm.sh` 构建的是 `dist/`
   （`dist/` 里是更早一次配置留下的产物）。复用这套脚本前需要先统一构建目录。
 
+#### 2.1.1 有效的浏览器验收：让探测自己上报（2026-10-15）
+
+截图这条路在这个环境里走不通：`firefox --headless --screenshot` 在 2 MB wasm 实例化**之前**
+就截图（两次复现：画面全黑 + 加载壳）。所以探测改成**自证**：跑满若干帧后自己读回帧缓冲
+（`SDL_RenderReadPixels`），统计像素，再 `fetch('/probe-report?...')` 回服务器 ——
+用 `python3 -m http.server` 的请求日志当证据，不依赖截图时机。
+
+```sh
+source playground/sdl_gpu_probe/emsdk/emsdk_env.sh
+emcmake cmake -S probe/cross_platform/web -B playground/probe-build/web -G Ninja \
+  -DNANDINA_SDL_SOURCE_DIR="$PWD/playground/sdl_gpu_probe/SDL"
+cmake --build playground/probe-build/web
+python3 -m http.server 8901 --bind 127.0.0.1 --directory playground/probe-build/web &
+timeout 60 firefox --headless --no-remote --profile /tmp/ff-profile \
+  http://127.0.0.1:8901/nandina_sdl_web_probe.html
+grep -o 'GET /probe-report?[^ ]*' /tmp/webserver.log
+```
+
+实测输出（640×480 canvas = 307200 像素，Emscripten 6.0.10，headless Firefox，软件 WebGL）：
+
+```
+stage=renderer-created  detail=opengles2
+stage=rendered  frames=2   ink=9556  teal=6220  total=307200
+stage=rendered  frames=32  ink=9556  teal=6220  total=307200
+stage=rendered  frames=92  ink=9556  teal=6220  total=307200
+```
+
+**已证明**：SDL 的 2D renderer 路径在真实浏览器里拿到 WebGL2 上下文（`opengles2`）、持续出帧
+（跑满 92 帧以上），并且**画布上确实有预期的像素** —— 9556 个非背景像素里有 6220 个是圆角矩形
+的主色。失败路径也上报（`stage=init-failed` / `renderer-failed` 带 SDL 错误串），所以
+「黑屏」不再分不清「没加载完」「没有 WebGL2」「渲染报错」。
+
+**未证明**：Nandina 本身在 Web 上能跑（这个探测是独立程序 + CPU 几何，不是 `IRenderDevice`）、
+性能、输入与事件、以及 WebGL1（不承诺）。
+
 ### 2.2 暂定路线（仍未定案）
 
 保留共享的 `IRenderDevice` 契约，Web 使用**单独的**实现接 SDL 2D Renderer / WebGL，
 并接受 Web 端 SDF 光栅化与桌面存在可见差异。前置条件：
 
-1. 需要一次**有效的浏览器运行验证**（能读到 canvas 像素或截图在加载完成之后），
-   否则「黑屏」永远分不清「资源没加载完」和「没渲染」。
+1. ~~需要一次**有效的浏览器运行验证**~~ —— 已完成，见 §2.1.1（画布像素读回 + 服务端记录）。
 2. WebGL2 是最低要求（当前 shader 依赖 `fwidth` 导数）；WebGL1 不在承诺范围内。
 3. 能力差异要写成**代码里的能力查询**（`IRenderDevice` 已有 `supports_alpha_textures` /
    `supports_rounded_rect` 的先例），而不是只写在文档里 —— 否则 SDK 示例跑通会被误读成
@@ -220,7 +254,7 @@ CI/SDK 再固定精确受测版本并在升级时复检。P1 的交付物是「�
 | D4 阶段 | 当前状态 |
 | --- | --- |
 | P0 SDL3 应用级探测 | **基本完成**：窗口/事件/帧循环、GPU render state 的自定义 SDF shader、真实的 `IRenderDevice`（SDL 2D + CPU 几何），以及**真实 showcase 页面 + 真实字体图集**（§2.3.1）都已跑通；仍缺键码映射验证 |
-| P1 渲染与 shader 管线门槛 | **进行中**：工具链已固定并可一条命令核对（`glslc`/`spirv-val`/SDL/emsdk），SPIR-V 校验进构建图；仍缺 `SDL_shadercross` 的 DXIL/MSL 产物、多格式 CI 生成与加载、以及与现有 SDF 图元的逐项等价性 |
+| P1 渲染与 shader 管线门槛 | **进行中**：工具链固定并可一条命令核对（`glslc`/`spirv-val`/SDL/emsdk）、SPIR-V 校验进构建图、能力降级路径（阴影/圆角裁剪）、同页像素对照（§2.3.2）、Web 端有效验收（§2.1.1）；仍缺 `SDL_shadercross` 的 DXIL/MSL 产物、多格式 CI 生成与加载、以及逐图元等价性 |
 | P2 平台能力与消费者回归 | 未开始 |
 | P3 默认后端决策 | 未开始；`raylib` 仍是唯一生产路径 |
 | P4 host 行为契约 | 未开始；`NanWindow` 仍同时持有窗口、设备、输入轮询与帧驱动 |
