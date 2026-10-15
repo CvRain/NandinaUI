@@ -68,6 +68,16 @@ device stats: ... textures=234643537（每帧约 1277 次纹理绘制）alpha_up
   本设备的圆角无抗锯齿。
 - `alpha_uploads=65`：4 条字体管线（400/500/700/italic）× 2 个 face，加上图集扩容时的重建。
 
+### 同页跨后端像素对照
+
+同一条链路可以做「同一页面、两个后端」的像素对照：raylib 侧用
+`NANDINA_BENCH_SCREENSHOT=... ./buildDir/playground/label_bench label`（raylib 自己存 PNG），
+SDL 侧用 `NANDINA_PROBE_CAPTURE=... nandina_sdl_page_probe`（帧缓冲读回），再逐像素比对。
+2026-10-15 的实测结论与图见探测记录 §2.3.2：mean |Δ| 0.0033、最大 20/255、差异只在边缘抗锯齿。
+
+注意**清屏色必须一致**：页面自己只画卡片与文本，最外层背景由宿主决定。第一版对照把
+「宿主清成主题灰」误读成了「后端有到处都有的色差」。
+
 **踩到并修掉的一个真实 bug**（值得记下来）：`SDL_PIXELFORMAT_RGBA8888` 是**打包**格式
 （`0xRRGGBBAA`），小端机上的内存字节序是 `A,B,G,R`；而设备产出的缓冲是 `R,G,B,A`。
 结果是 alpha 从错误的字节读出，**每个字形都画成一个不透明方块**。改用平台首选的

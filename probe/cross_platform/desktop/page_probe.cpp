@@ -189,7 +189,10 @@ int main() {
 
             // 真实页面：布局 → 绘制，全部走 Nandina 自己的路径。
             device.begin_frame();
-            device.clear(color_rgba(0xf5f6f8ffU));
+            // 宿主清屏色：与 raylib 窗口的默认清屏色保持一致（白），否则跨后端对照会把
+            // 「宿主选择」误读成「后端差异」。页面自己只画卡片/文本，最外层背景由宿主决定 ——
+            // 这正是 P4 要说清楚的一件事（见 platform_backend_contract.md §2）。
+            device.clear(color_rgba(0xffffffffU));
             const auto layout_started = std::chrono::steady_clock::now();
             (void)tree.layout_root(viewport);
             const auto layout_ended = std::chrono::steady_clock::now();

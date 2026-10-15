@@ -11,7 +11,7 @@
 | 输入与焦点 | 现有鼠标/键盘、输入焦点与作用域可用；D1 统一交互语义、焦点提示和文本会话的设计已接受 | [焦点与输入](focus_and_input.md) 为 planned：先实现鼠标/键盘提示策略，再接文本输入会话与其他设备 |
 | 文本与分层 | 纯布局约束在 `foundation`，文本布局协议在 `text`，字体请求值在 `theme`；旧布局、文本与字体转发入口已退出 | `theme::StyleDocument` 对字体注册的依赖仍待收口 |
 | 路由元数据 | 路由身份由页面类型 `PageKey` 确定；当前 `type` 字段既分组也作为标题 | D3 初步方案已接受、未实施：重命名 `nav_group`；空值是不分组、无标题，route 仍可见；分组按值全局合并 |
-| 平台与渲染 | 当前生产路径为 raylib + GLFW/OpenGL；`IRenderDevice` 隔离绘制设备，但 `NanWindow` 仍负责窗口、输入和帧驱动 | **D4 方向已定**：先补齐计划内容，随后把生产后端替换为 SDL3（[平台与后端契约](platform_backend_contract.md)）。P0 基本完成（真实页面 + 真实字体图集在 SDL 设备上正确渲染，稳态 0 次布局、draw 1.85 ms/帧），P1 进行中（工具链固定、`spirv-val` 进构建图；缺能力降级路径、双后端同页对照、`SDL_shadercross` 多后端产物、Web 浏览器验收、键码映射） |
+| 平台与渲染 | 当前生产路径为 raylib + GLFW/OpenGL；`IRenderDevice` 隔离绘制设备，但 `NanWindow` 仍负责窗口、输入和帧驱动 | **D4 方向已定**：先补齐计划内容，随后把生产后端替换为 SDL3（[平台与后端契约](platform_backend_contract.md)）。P0 基本完成（真实页面 + 真实字体图集在 SDL 设备上正确渲染，稳态 0 次布局、draw 1.85 ms/帧），P1 进行中（工具链固定、`spirv-val` 进构建图、阴影/圆角裁剪的能力降级路径、同页跨后端像素对照已完成：差异 ≤20/255、仅 0.01% 像素；缺 `SDL_shadercross` 多后端产物、逐图元对照、Web 浏览器验收、键码映射） |
 | 动画 | 值级 motion 在 `foundation/motion`，节点 endpoint、宿主与组调度在 `scene`；旧 `animation/` 入口已退出；L2 opacity/translate/scale 可用 | `NodeBuilder::group` 仅开放同节点、扁平 Tween 组合；跨节点、组内 Spring、Keyframes 作者入口与浮层自动过渡未完成，见 [节点表现层 §6.1](node_presentation.md) |
 | 布局与文本成本 | 排列容器及 `NanControl::layout_to` 已用在生产路径；anchors 内核与作者入口已落地；**布局收敛**（Label 页 80.4 ms/帧 → 2.5 ms、稳态 0 次布局）与**两个文本 O(n²)** 已修复，见 [布局收敛](layout_convergence_and_text_measurement.md) 与 [整形成本](text_shaping_cost.md) | `fill` 画布无法占据排列容器剩余空间（见 [Anchors §5.3](anchors.md#53-剩余验收)）；`max_width` 仍会被父级紧约束压过；Label 页打开约 271 ms（构建 159 ms，[整形成本 §5.1](text_shaping_cost.md)）；一次完整布局仍约 55 ms |
 | 分发 | Linux 桌面源码分发 profile 已有构建与 SDK 流程 | Modules、CMake package 与跨平台仍待重新评估 |
