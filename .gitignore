@@ -118,3 +118,8 @@ dev-docs-*
 
 # 项目用来简单测试的目录，不需要被追踪，里面的内容可能会被随意修改。
 /playground/
+
+# 跨平台探测（probe/cross_platform）只追踪源码：SDL 源码树与构建产物现取/现建。
+# 构建目录按 README 约定放在 /playground/ 下，这里再兜一层，避免误提交。
+/probe/cross_platform/web/SDL/
+/probe/cross_platform/**/build/

@@ -1,6 +1,6 @@
 # 项目进度与下一步
 
-> 2026-10-14 更新：布局收敛修复已实施并跑通三套验证；SDL3/Web 探测记录已入库。本文区分“实现存在”“作者可用”和“设计已接受但未实现”；不把旧头文件的存在视为永久兼容承诺。组件细目见 [组件路线图](component_roadmap.md)。D1 与 D5 仍按各自计划推进；D3/D4 仍是初步设计，D6 当前待审阅，不代表 API 或测量行为已实现。
+> 2026-10-15 更新：布局收敛与文本成本（两个 O(n²)、按输入键控的文本记忆化、按词断行）已实施；跨平台探测**源码**已入库（`probe/cross_platform/`），工具链固定点可一条命令核对。本文区分“实现存在”“作者可用”和“设计已接受但未实现”；不把旧头文件的存在视为永久兼容承诺。组件细目见 [组件路线图](component_roadmap.md)。D1 与 D5 仍按各自计划推进；D3/D4 仍是初步设计，D6 当前待审阅，不代表 API 或测量行为已实现。
 
 ## 当前能力边界
 
@@ -11,7 +11,7 @@
 | 输入与焦点 | 现有鼠标/键盘、输入焦点与作用域可用；D1 统一交互语义、焦点提示和文本会话的设计已接受 | [焦点与输入](focus_and_input.md) 为 planned：先实现鼠标/键盘提示策略，再接文本输入会话与其他设备 |
 | 文本与分层 | 纯布局约束在 `foundation`，文本布局协议在 `text`，字体请求值在 `theme`；旧布局、文本与字体转发入口已退出 | `theme::StyleDocument` 对字体注册的依赖仍待收口 |
 | 路由元数据 | 路由身份由页面类型 `PageKey` 确定；当前 `type` 字段既分组也作为标题 | D3 初步方案已接受、未实施：重命名 `nav_group`；空值是不分组、无标题，route 仍可见；分组按值全局合并 |
-| 平台与渲染 | 当前生产路径为 raylib + GLFW/OpenGL；`IRenderDevice` 隔离绘制设备，但 `NanWindow` 仍负责窗口、输入和帧驱动 | D4 优先目标为 Linux/Windows/Web 应用交付；SDL 3.4+ GPU Renderer shader、WebGL 路径、shader host tools 与消费端耦合待 PoC，已证明与未验证的边界见 [跨平台后端探测](cross_platform_backend_probe.md) |
+| 平台与渲染 | 当前生产路径为 raylib + GLFW/OpenGL；`IRenderDevice` 隔离绘制设备，但 `NanWindow` 仍负责窗口、输入和帧驱动 | D4 优先目标为 Linux/Windows/Web 应用交付；SDL 3.4+ GPU Renderer shader 已在 Vulkan 上跑通（探测源码入库于 `probe/cross_platform/`，`glslc`/`spirv-val` 版本固定且校验进构建图），WebGL 路径、`SDL_shadercross` 多后端产物与消费端耦合仍待 PoC，已证明与未验证的边界见 [跨平台后端探测](cross_platform_backend_probe.md) |
 | 动画 | 值级 motion 在 `foundation/motion`，节点 endpoint、宿主与组调度在 `scene`；旧 `animation/` 入口已退出；L2 opacity/translate/scale 可用 | `NodeBuilder::group` 仅开放同节点、扁平 Tween 组合；跨节点、组内 Spring、Keyframes 作者入口与浮层自动过渡未完成，见 [节点表现层 §6.1](node_presentation.md) |
 | 布局与文本成本 | 排列容器及 `NanControl::layout_to` 已用在生产路径；anchors 内核与作者入口已落地；**布局收敛**（Label 页 80.4 ms/帧 → 2.5 ms、稳态 0 次布局）与**两个文本 O(n²)** 已修复，见 [布局收敛](layout_convergence_and_text_measurement.md) 与 [整形成本](text_shaping_cost.md) | `fill` 画布无法占据排列容器剩余空间（见 [Anchors §5.3](anchors.md#53-剩余验收)）；`max_width` 仍会被父级紧约束压过；Label 页打开约 271 ms（构建 159 ms，[整形成本 §5.1](text_shaping_cost.md)）；一次完整布局仍约 55 ms |
 | 分发 | Linux 桌面源码分发 profile 已有构建与 SDK 流程 | Modules、CMake package 与跨平台仍待重新评估 |
@@ -20,7 +20,7 @@
 
 ## 近期顺序
 
-0. **布局收敛已落地，进入维护。** [布局收敛与文本测量](layout_convergence_and_text_measurement.md) 的四条修复已实施并通过主套件、ASan/UBSan、no-RTTI；`tests/layout_convergence_tests.cpp` 覆盖其中三条，`ScrollView` 跨轴契约目前只由真窗口探测保护（该文 §6 记为已知缺口）。下一步性能目标是整形成本（§7），不是继续加缓存。
+0. **布局收敛已落地，进入维护。** [布局收敛与文本测量](layout_convergence_and_text_measurement.md) 的四条修复已实施并通过主套件、ASan/UBSan、no-RTTI；`tests/layout_convergence_tests.cpp` 覆盖全部四条（含 `ScrollView` 跨轴契约，§6 的已知缺口已关闭）。文本成本见 [整形成本](text_shaping_cost.md)：两个 O(n²) 已修、`Text` 按完整排版输入记忆化（Label 页构建 858 → 159 ms）、按词断行已实施。
 1. **D6 设计审阅。** 先确认 [作者 DSL、文本能力与内容测量](authoring_dsl_and_content_measurement.md) 的 Label 能力表、共享属性规则、覆盖/绑定语义和有限宽度测量前置；不把 `row(children...)`、border 或 Section 的目标形状误写成现有能力。
 2. **D6 首批实现建议。** 审阅通过后先打通有限宽度下 Label 自然长高及测量缓存契约，再用 showcase Label 页面与 `ComponentInfoTable` 进行自动/人工验收；完成结果再决定组合组件、Section 和泛化 DSL 的实现范围。
 3. **D1 第一阶段：焦点核心与提示策略。** API 定形以正式 reference 的文本能力矩阵、paint-only 增量失效、事件映射和程序化默认值为输入；提示查询统一为 `should_show_focus_hint()`。接现有鼠标/键盘、同节点提示变化、程序化恢复、窗口失活/激活和两种 roving 模型；Showcase 注册表单用于人工验收。具体契约和“改坏哪里会红”见 [统一输入、焦点与文本编辑](focus_and_input.md)。该优先级在 D6 审阅后再与用户确认，不表示 D6 的文档归档改变了 D1 的 API。

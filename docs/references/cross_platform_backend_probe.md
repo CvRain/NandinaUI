@@ -1,9 +1,15 @@
 # 跨平台后端探测：SDL3 GPU 与 Web 现状
 
 > 本文是 D4「跨平台优先的窗口与渲染后端路线」的**探测记录**，不是选型批准，也不是生产就绪声明。
-> 它把此前只存在于 git 忽略目录（`playground/sdl_gpu_probe/README.md`）里的结论搬进版本管理，
-> 并按 [开发流程](development_loop.md) 的语言区分「已证明」「未验证」和「只是路径选择」。
-> 探测代码、SDK 与构建产物仍在 `playground/`（被 `.gitignore:120` 整目录忽略）；**本文是唯一的受管记录**。
+> 它按 [开发流程](development_loop.md) 的语言区分「已证明」「未验证」和「只是路径选择」。
+
+**探测源码已入库**：[probe/cross_platform/](../../probe/cross_platform/README.md)（`desktop/`、`web/`、
+`tools/verify_toolchain.sh`）。只追踪源码：SDL 源码树、emsdk、构建产物仍然现取现建
+（构建目录约定放在已忽略的 `playground/probe-build/` 下）。工具链的**唯一核对入口**是
+
+```sh
+probe/cross_platform/tools/verify_toolchain.sh   # 打印并校验所有固定版本，缺必需项则退出 1
+```
 
 ## 1. 桌面侧：SDL3 GPU-backed Renderer（Linux / Vulkan）
 
@@ -19,8 +25,14 @@ fragment shader，并把它应用到一个被 `SDL_SetRenderClipRect` 裁剪的 
 | SDL | 系统 `sdl3>=3.4.0`，实测 3.4.18 |
 | shader 编译器 | `glslc`，**配置期硬校验 2026.4** |
 | 编译命令 | `glslc -x hlsl -fshader-stage=frag --target-env=vulkan1.0` |
+| SPIR-V 校验器 | `spirv-val`（SPIRV-Tools），**配置期硬校验 v2026.4，且已接进构建图** |
 | 运行时定位 | `SDL_GetBasePath()/assets/sdf.frag.spv`，空或非 4 字节对齐时拒绝 |
 | 产物 | 构建树 `build/assets/` + 安装树 `bin/assets/`（不嵌入可执行文件） |
+
+从入库后的受追踪位置重新构建并运行过一次（2026-10-15）：`SDL 3.4.18, renderer=gpu,
+shader-formats=0x2, DPI=1`，窗口正常出帧。校验门也实测有效 —— 把 `generated/sdf.frag.spv`
+替换成垃圾数据后构建在 `spirv-val` 一步失败（`error: file size should be a multiple of 4`），
+而不是留到运行时。
 
 **未验证**（不要把它读成更大范围的支持）：
 
@@ -29,8 +41,8 @@ fragment shader，并把它应用到一个被 `SDL_SetRenderClipRect` 裁剪的 
 - SDL 键码映射只覆盖 Space / 方向键，且**没有经过实际按键验证**；Nandina 侧的规范键值
   （`widget/key_codes.hpp` 目前直接是 GLFW 码）也未接入。
 - 窗口尺寸来自合成器平铺变化，不代表 DPI 或多屏验收；截图里的尺寸与请求值不同。
-- 探测里没有测试目标、没有图像断言：README 声称用 `spirv-val` 验证过，但 CMake 与 build.ninja
-  里都没有这一步 —— 要么接进构建图，要么不要这么写。
+- 探测里仍然没有**测试目标与图像断言**。`spirv-val` 已经不在此列：它现在在构建图里，
+  版本被硬校验，失败会中断构建（上一节有实测）——但「渲染出来的像素对不对」仍然只靠人看截图。
 - 只覆盖了现有 SDF 图元的**一个子集**（一个 fragment shader、一种裁剪），没有对齐
   `IRenderDevice` 的 `draw_arc` / `draw_circle_clipped_rounded_rect` / 描边吸附等行为。
 
@@ -49,7 +61,7 @@ CPU 布局，因此**不能**用这个探测对后端做性能结论。后续如
 
 ### 2.1 已有两次 Web 构建，但都没有完成浏览器验收
 
-- `playground/sdl_gpu_probe/web/`：用 `SDL_CreateRenderer(window, nullptr)` 的默认 WebGL2 路径，
+- [probe/cross_platform/web/](../../probe/cross_platform/web/CMakeLists.txt)：用 `SDL_CreateRenderer(window, nullptr)` 的默认 WebGL2 路径，
   `SDL_MAIN_USE_CALLBACKS` 主回调模型，链接参数 `-sMIN/MAX_WEBGL_VERSION=2`、
   `-sALLOW_MEMORY_GROWTH=1`、`-sEXIT_RUNTIME=0`。用本地 emsdk（Emscripten 6.0.10）成功产出
   `html/js/wasm`。内容为 CPU 生成的圆角矩形三角网格 + 16×16 位图 atlas + `SDL_RenderDebugTextFormat`。
@@ -114,6 +126,9 @@ CI/SDK 再固定精确受测版本并在升级时复检。P1 的交付物是「�
 
 ## 5. 相关记录
 
+- 探测源码与构建说明：[probe/cross_platform/README.md](../../probe/cross_platform/README.md)
+- 工具链核对：`probe/cross_platform/tools/verify_toolchain.sh`
+- 探测证据截图：[docs/images/probe/](../images/probe/)（`sdl-gpu-vulkan.png`、`sdl-gpu-vulkan-top.png`）
 - 视觉基线：[raylib 基线（2026-10-13）](../images/baselines/raylib-2026-10-13/README.md)
 - 布局收敛（为什么不能拿旧数据做后端性能结论）：[布局收敛与文本测量](layout_convergence_and_text_measurement.md)
 - D4 的待审阅问题与 host 行为契约：[待决设计草案](reference_draft.md#d4-跨平台优先的窗口与渲染后端路线)
