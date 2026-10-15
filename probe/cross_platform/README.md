@@ -12,7 +12,7 @@ meson 构建，也不改动 raylib 生产路径：探测是独立的 CMake 工�
 
 | 路径 | 内容 |
 | --- | --- |
-| `desktop/` | SDL3 GPU-backed Renderer 探测（Linux/Vulkan）：`main.cpp` + HLSL fragment shader + CMake |
+| `desktop/` | SDL3 探测：`sdl_render_device.{hpp,cpp}` 是用 SDL 2D API 实现的 `IRenderDevice`；`main.cpp` 同时驱动设备路径与 GPU render state（自定义 SDF shader）路径 |
 | `web/` | SDL3 2D Renderer / WebGL2 探测（Emscripten）：`main.cpp` + CMake |
 | `tools/verify_toolchain.sh` | 打印并校验所有固定版本（一条命令核对工具链） |
 
@@ -67,9 +67,48 @@ cmake --build playground/probe-build/web
 **Web 路径尚未完成浏览器验收**：上一次构建成功但截图停在加载壳的 "Downloading…" 上，
 画面是黑的，无法据此判定成败。需要一次能读到 canvas 像素（或加载完成之后再截图）的验证。
 
+## IRenderDevice 路径（`sdl_render_device.*`）
+
+这是探测记录 §4 列为 P1 前置条件的那件事：**让探测走一次真实的 `IRenderDevice`**，而不是
+另写一个程序画图。设备用 SDL 的 2D API 实现，圆角与圆走 **CPU 三角形扇**（`SDL_RenderGeometry`），
+不依赖自定义 shader —— 这同时验证了探测记录 §2 给 Web 定的暂定路线（CPU 几何/覆盖率 + 独立设备）。
+
+运行后打印的统计（30 帧，`NANDINA_PROBE_CAPTURE` 触发的那次）：
+
+```
+device stats: frames=30 rects=420 outlines=30 rounded=90 circles=90 lines=600 texts=30
+              textures=30 alpha_uploads=2 clips=60 cpu_vertices=9750
+device capabilities: alpha_textures=1 rounded_rect=1
+```
+
+证据截图：[docs/images/probe/sdl-render-device.png](../../docs/images/probe/sdl-render-device.png)。
+
+**已验证**（同一帧内可见）：填充/描边、圆角矩形、圆、线段、接口默认实现派生的 `draw_arc`
+与 `draw_circle_clipped_rounded_rect`、`draw_text`、alpha 图集创建 + **按子矩形更新**
+（`update_alpha_texture_region`）、纹理区域绘制与 tint、`set_clip` 裁剪、两个 capability 查询。
+
+**能力差异**（不是等价实现，测到就要写下来）：
+
+| 项 | 生产 raylib 后端 | 本设备 |
+| --- | --- | --- |
+| 圆角/圆的抗锯齿 | SDF 解析 + `fwidth` | 无（几何边缘是硬的；分段数按半径取 6–48） |
+| `draw_circle_clipped_rounded_rect` | SDF 求解析交集 | 退化成「矩形裁剪 + 圆」，圆角处按方角裁 |
+| `draw_arc` | SDF 环 | 接口默认实现（弦逼近，64 段上限 → 可见折线） |
+| `draw_rounded_rect_shadow` | SDF 软阴影 | 接口默认 no-op（未实现） |
+| 文本 | HarfBuzz 整形 + `GlyphAtlasTexture` | `SDL_RenderDebugText` 内置字体（仅证明文字落在同一套坐标/裁剪里） |
+| alpha 图集上传 | 1 字节 A8 + raylib 扩展成 RGBA8 | A8 → RGBA8（同样的 4× 纹理字节代价），子矩形按行段上传 |
+| 图像文件加载 | 有 | 接口默认 no-op |
+
+**集成事实（P4 的输入）**：`IRenderDevice` 是 header-only 的，但它用到的 foundation 值类型
+（`NanRect` / `NanPoint` / `NanSize` / `NanColor`）**有 out-of-line 实现**，所以一个独立的设备实现
+必须要么链上 `libnandina`，要么把 `foundation/geometry.cpp`、`foundation/nandina_color.cpp`、
+`foundation/nandina_color_space.cpp` 编进来（本探测选了后者，避免把 raylib 拖进探测）。
+「设备可插拔」因此在构建层面并不成立 —— 这一点要在 P4 的 host 契约里解决。
+
 ## 已知偏差（不要拿它做框架结论）
 
-探测程序**不经过** Nandina 的 `IRenderDevice`，也不挂载页面；字体图集是合成纹理，
-不是 `GlyphAtlasTexture`。所以它证明的是「后端能加载 shader 并画出这些图元」，
-**不是**「Nandina 应用已支持该后端」，也不能用来做性能结论 —— 性能对比要跑
-`playground/bench/label_bench.cpp` 那种真实页面负载（见探测记录 §1 的说明）。
+设备路径已经经过 `IRenderDevice`，但**仍然不挂载页面**：本文件手写图元调用，而不是把
+`NanSceneTree::draw()` 的结果喂给设备；字体图集也是手写的块状字形，不是 `GlyphAtlasTexture`。
+所以它证明的是「设备契约在这个后端上可以落地、差异清单是什么」，**不是**「Nandina 应用已
+支持该后端」。性能结论同样不成立 —— 那要跑 `playground/bench/label_bench.cpp` 那种真实页面
+负载（见探测记录 §1 与 §4）。

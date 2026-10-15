@@ -55,8 +55,38 @@ add_custom_command(
 )
 add_custom_target(probe_shaders DEPENDS "${SHADER_VALIDATED}")
 
-add_executable(nandina_sdl_gpu_probe main.cpp)
+# IRenderDevice 的接口是 header-only 的，所以探测只依赖 Nandina 的**头文件**，不链接
+# libnandina：这样「设备能不能实现这个契约」与「Nandina 的完整运行时」是两件独立的事。
+set(NANDINA_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../.."
+    CACHE PATH "Path to the NandinaUI source root (headers only)")
+if(NOT EXISTS "${NANDINA_SOURCE_DIR}/nandina/render/render_device.hpp")
+    message(FATAL_ERROR
+        "NandinaUI headers not found under ${NANDINA_SOURCE_DIR}; pass "
+        "-DNANDINA_SOURCE_DIR=<path-to-NandinaUI>.")
+endif()
+
+# 接口本身是 header-only，但它用到的 foundation **值类型**（NanRect/NanPoint/NanSize/NanColor）
+# 有 out-of-line 实现，所以探测必须编进这几个 TU（或改去链接 libnandina）。这里选择前者：
+# 依赖面小、且不需要把 raylib 拖进来。这条事实本身是 P4「host 行为契约」的输入 ——
+# 设备实现无法是一个纯头文件的插件。
+set(NANDINA_FOUNDATION_SOURCES
+    "${NANDINA_SOURCE_DIR}/nandina/foundation/geometry.cpp"
+    "${NANDINA_SOURCE_DIR}/nandina/foundation/nandina_color.cpp"
+    "${NANDINA_SOURCE_DIR}/nandina/foundation/nandina_color_space.cpp"
+)
+foreach(source IN LISTS NANDINA_FOUNDATION_SOURCES)
+    if(NOT EXISTS "${source}")
+        message(FATAL_ERROR "Missing NandinaUI source: ${source}")
+    endif()
+endforeach()
+
+add_executable(nandina_sdl_gpu_probe
+    main.cpp
+    sdl_render_device.cpp
+    ${NANDINA_FOUNDATION_SOURCES}
+)
 target_compile_features(nandina_sdl_gpu_probe PRIVATE cxx_std_20)
+target_include_directories(nandina_sdl_gpu_probe PRIVATE "${NANDINA_SOURCE_DIR}")
 target_link_libraries(nandina_sdl_gpu_probe PRIVATE PkgConfig::SDL3)
 add_dependencies(nandina_sdl_gpu_probe probe_shaders)
 add_custom_command(TARGET nandina_sdl_gpu_probe POST_BUILD

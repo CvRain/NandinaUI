@@ -88,6 +88,41 @@ CPU 布局，因此**不能**用这个探测对后端做性能结论。后续如
    `supports_rounded_rect` 的先例），而不是只写在文档里 —— 否则 SDK 示例跑通会被误读成
    「Nandina 应用已支持」。
 
+## 2.3 真实 IRenderDevice 路径（新增，2026-10-15）
+
+探测记录 §4 把「让探测走一次真实的 `IRenderDevice` 实现」列为 P1 的前置条件。现在有了：
+[probe/cross_platform/desktop/sdl_render_device.hpp](../../probe/cross_platform/desktop/sdl_render_device.hpp)
+用 SDL 的 2D API 实现了该契约，圆角与圆走 **CPU 三角形扇**（`SDL_RenderGeometry`），
+不依赖自定义 shader —— 这同时验证了 §2.2 给 Web 定的暂定路线（CPU 几何/覆盖率 + 独立设备）。
+
+一次 30 帧运行的统计与证据：[sdl-render-device.png](../images/probe/sdl-render-device.png)
+
+```
+device stats: frames=30 rects=420 outlines=30 rounded=90 circles=90 lines=600 texts=30
+              textures=30 alpha_uploads=2 clips=60 cpu_vertices=9750
+device capabilities: alpha_textures=1 rounded_rect=1
+```
+
+**已验证**：填充/描边、圆角矩形、圆、线段、由接口默认实现派生的 `draw_arc` 与
+`draw_circle_clipped_rounded_rect`、`draw_text`、alpha 图集创建 + 按子矩形更新、纹理区域绘制
+与 tint、`set_clip` 裁剪、两个 capability 查询。**未验证**的部分见下表。
+
+**能力差异**（记录在案，不是等价实现）：
+
+| 项 | 生产 raylib 后端 | SDL 2D 设备 | 影响 |
+| --- | --- | --- | --- |
+| 圆角/圆抗锯齿 | SDF + `fwidth` | 无（硬边缘，分段 6–48） | 视觉差异；Web 路线要接受或用覆盖率 |
+| `draw_circle_clipped_rounded_rect` | SDF 解析交集 | 矩形裁剪 + 圆（圆角处方角） | 图标/头像的裁剪会露方角 |
+| `draw_arc` | SDF 环 | 接口默认（弦逼近，≤64 段） | 可见折线 |
+| `draw_rounded_rect_shadow` | SDF 软阴影 | no-op | 弹层/卡片阴影缺失 |
+| 文本 | HarfBuzz + `GlyphAtlasTexture` | `SDL_RenderDebugText` 内置字体 | 只证明文字落在同一套坐标/裁剪里 |
+| alpha 图集 | A8，raylib 扩成 RGBA8 | A8 → RGBA8（同样 4×），按行段上传子矩形 | 与生产后端同构的内存代价 |
+| 图像文件加载 | 有 | no-op | 需要解码器或 SDL_image |
+
+**构建层的事实（P4 的输入）**：`IRenderDevice` 头文件是 header-only，但它用到的 foundation
+值类型有 out-of-line 实现，所以独立设备要么链 `libnandina`、要么编进三个 foundation TU
+（探测选了后者）。「设备实现可插拔」在构建层面并不成立，这条要进入 P4 的 host 行为契约。
+
 ## 3. Shader 构建链（P1 门槛）
 
 现状：Nandina 的 SDF shader 是**内嵌在 `render/backends/raylib_device.cpp` 里的 GLSL 330 字符串**，
@@ -112,17 +147,18 @@ CI/SDK 再固定精确受测版本并在升级时复检。P1 的交付物是「�
 
 | D4 阶段 | 当前状态 |
 | --- | --- |
-| P0 SDL3 应用级探测 | **部分**：窗口/事件/帧循环与一个 SDF shader 已跑通；但没有经过 Nandina 的 `IRenderDevice`、没有真实字体图集、没有键码映射测试 |
-| P1 渲染与 shader 管线门槛 | **未开始**：跨后端产物、版本契约、错误诊断、与现有 SDF 图元的等价性都还没有 |
+| P0 SDL3 应用级探测 | **大部分**：窗口/事件/帧循环、GPU render state 的自定义 SDF shader、以及一个真实的 `IRenderDevice`（SDL 2D + CPU 几何）都已跑通；仍缺真实字体图集（`GlyphAtlasTexture` 接设备）与键码映射验证 |
+| P1 渲染与 shader 管线门槛 | **进行中**：工具链已固定并可一条命令核对（`glslc`/`spirv-val`/SDL/emsdk），SPIR-V 校验进构建图；仍缺 `SDL_shadercross` 的 DXIL/MSL 产物、多格式 CI 生成与加载、以及与现有 SDF 图元的逐项等价性 |
 | P2 平台能力与消费者回归 | 未开始 |
 | P3 默认后端决策 | 未开始；`raylib` 仍是唯一生产路径 |
 | P4 host 行为契约 | 未开始；`NanWindow` 仍同时持有窗口、设备、输入轮询与帧驱动 |
 
-在 P1 之前，建议先补两件事：
+在 P1 之前建议的两件事，第 1 件已完成（§2.3）；第 2 件仍未做：
 
-1. 让探测走一次**真实的 `IRenderDevice` 实现**（哪怕是只支持子集的），这样测到的才是
-   框架的行为，而不是另一个程序的渲染。
+1. ~~让探测走一次**真实的 `IRenderDevice` 实现**~~ —— 已完成，见 §2.3。
 2. 用真实页面负载（`playground/bench/label_bench.cpp`）而不是 SDK 示例做性能与视觉对比。
+   下一步是把 `NanSceneTree::draw(device)` 的输出（真实的字体图集与页面）接到这个设备上，
+   而不是继续手写图元调用。
 
 ## 5. 相关记录
 
