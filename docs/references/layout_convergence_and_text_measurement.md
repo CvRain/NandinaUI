@@ -85,7 +85,7 @@ Label 页的 "Wrapping" 一节标注 `Assigned width: 68% of the content column`
 | 「同一容器/滚动容器在 measure 与 arrange 必须使用同一份跨轴契约」 | 各容器自己的两个阶段 | `ScrollView` 的两处必须同源；容器不得在 arrange 阶段改变 measure 已经确定的宽 |
 | 「子项显式声明的交叉轴尺寸优先于父级 stretch」 | `widget::layout` 的线性排列 | 只认 `LogicalLength` / `PercentLength`；`fill` 由父级分配、`content` 由内容决定，两者保持原语义 |
 | 「亚像素差异不算几何变化」 | `scene::NanControl::set_size` | 阈值只影响是否标脏，不影响尺寸取值 |
-| 「相同排版输入不重复整形」 | `text::ITextLayoutBackend` 的装饰器 | **本轮未实现**，见 §6 的实测结论 |
+| 「相同排版输入不重复整形」 | `widget::primitives::Text::update_metrics` 按**完整排版输入**记忆化（不是后端装饰器） | 已实施，见 [整形成本 §5.1](text_shaping_cost.md)。键含文本与所有影响排版的样式字段，命中即输入相同，因此没有「忘了失效」这一类错误；颜色与后端对象不在键里，后者由 `resolve_font()`/`set_text_pipeline()` 显式清缓存 |
 
 不引入第二套几何：本文不改 `measured_size_` 与 `size_` 的字段含义，也不新增布局阶段。
 
@@ -130,23 +130,16 @@ Label 页的 "Wrapping" 一节标注 `Assigned width: 68% of the content column`
 | 把 `Text::update_metrics` 还原成 `set_size(layout_.size)` | 6 个用例中 5 个失败 |
 | 把 `layout_linear_items` 的 stretch 判断还原成"只看 alignment" | 6 个用例中 4 个失败 |
 | 把 `set_size` 的亚像素阈值还原成 `> 0.0F` | 亚像素用例失败 |
-| 把 `ScrollView::on_measure` 还原成只给上界 | **全部用例仍然通过** |
+| 把 `ScrollView::on_measure` 还原成只给上界 | `layout_convergence_tests`「a scroll view measures its content on its own width」失败 |
 
-最后一条是**已知缺口，不是已覆盖**：上面的最小场景在两个阶段得到的几何恰好相同，
-因此复现不出机制 B。机制 B 的必要性由真窗口基线复现证明：
+最后一条原先**复现不出来**（缺口）：旧的最小场景里 ScrollView 自己没有宽度，父级给它的
+上界恰好等于 arrange 会用的宽度，两种写法得到的几何相同。现已补上能复现的用例 ——
+关键是让宽度**只来自 arrange**（控件没有 width 规格）而父级这次 measure 给的上界更大
+（1205 vs 288，即侧边栏 `Expanded(ScrollView)` 的形态）；此时旧写法会让内容量到 1205，
+而它随后会被摆到 288。还原该契约后这条用例失败，保留则通过。
 
-```bash
-# 还原 ScrollView::on_measure 的跨轴契约后
-./buildDir/playground/label_bench label
-#   back-to-back layout passes: 1, 1, 1
-#   layout: mean=68.8 ms   passes_per_frame=1.000
-# 保留该契约
-#   back-to-back layout passes: 0, 0, 0
-#   layout: mean=0.002 ms  passes_per_frame=0.000
-```
-
-即缺这条契约会让真实页面回到 68 ms/帧。后续应补一个能复现机制 B 的 headless 用例，
-或把这条探测升级为可在 CI 运行的确定性测试；在那之前，机制 B 的回归保护来自人工/基线探测。
+真窗口基线的历史数据（供对照）：还原后 68.8 ms/帧、`passes_per_frame=1.000`；
+保留则 0.002 ms、0.000。
 
 ## 7. 开放项
 

@@ -305,3 +305,60 @@ TEST_CASE(
     REQUIRE(flexible->size().get_width() == Catch::Approx(290.0F));
     REQUIRE(wrapper->size().get_width() == Catch::Approx(290.0F));
 }
+
+TEST_CASE("a scroll view measures its content on its own width", "[layout][convergence][scroll]") {
+    // ScrollView 的跨轴契约（机制 B）：`on_measure()` 必须和 `on_layout()` 用**同一份**
+    // 横向契约。上面那个 fixture 里 ScrollView 自己没有宽度，父级给它的上界恰好等于
+    // arrange 会用的宽度，两种写法看不出区别 —— 这正是这条契约之前没有测试的原因。
+    //
+    // 这里让 ScrollView 有确定宽度（288），而父级给它的约束上界是无限的：
+    // 若 on_measure 只给内容上界（min = 0），内容会按**自己的自然宽度**测量（5000），
+    // 而 arrange 又把它摆到 288 —— 每次布局都产生两次尺寸写入。
+    auto scroll = widget::ScrollView::create(widget::ScrollAxis::vertical);
+    scroll->set_width(288.0F);
+    scroll->set_height(400.0F);
+
+    auto content = widget::Column::create();
+    content->set_width(scene::fill);
+    content->set_cross_alignment(widget::LayoutAlignment::stretch);
+
+    auto wide = std::make_shared<scene::NanControl>(foundation::NanSize(5000.0F, 20.0F));
+    content->add(wide);
+    scroll->set_child(content);
+
+    (void)scroll->measure_layout(foundation::NanLayoutConstraints::loose());
+    REQUIRE(content->measured_size().get_width() == Catch::Approx(288.0F));
+    REQUIRE(wide->measured_size().get_width() == Catch::Approx(288.0F));
+
+    // 真正的回归点：宽度来自**上一次 arrange**、控件自己没有 width 规格时，父级这次
+    // measure 给出的上界可能更大 —— 侧边栏的 `Expanded(ScrollView)` 就是这样。
+    // 机制 B 取 `width()`（288）而不是 `constraints.max_width`（1205），否则内容会在
+    // 1205 与 288 之间来回跳变（上面那个 ScrollView 设了 width 规格，量度时约束会被
+    // 它自己收窄，两种写法看不出区别，所以这里单独造一个没有规格的）。
+    auto arranged = widget::ScrollView::create(widget::ScrollAxis::vertical);
+    arranged->set_size(foundation::NanSize(288.0F, 400.0F)); // 模拟 arrange 结果
+    REQUIRE(arranged->width() == Catch::Approx(288.0F));
+    REQUIRE(arranged->height() == Catch::Approx(400.0F));
+    auto arranged_content = widget::Column::create();
+    arranged_content->set_width(scene::fill);
+    arranged_content->set_cross_alignment(widget::LayoutAlignment::stretch);
+    auto arranged_wide = std::make_shared<scene::NanControl>(foundation::NanSize(5000.0F, 20.0F));
+    arranged_content->add(arranged_wide);
+    arranged->set_child(arranged_content);
+
+    (void)arranged->measure_layout(
+        foundation::NanLayoutConstraints {
+            .min_width = 0.0F,
+            .max_width = 1205.0F,
+        }
+    );
+    REQUIRE(arranged_content->measured_size().get_width() == Catch::Approx(288.0F));
+    REQUIRE(arranged_wide->measured_size().get_width() == Catch::Approx(288.0F));
+
+    // 同一个结构放进树里也必须收敛。作为根节点时 ScrollView 会被拉伸到视口宽度
+    // （根节点总是被摆到视口上），所以这里断言契约本身：内容宽度 == ScrollView 宽度。
+    scene::NanSceneTree tree;
+    tree.set_root(scroll);
+    require_converged(tree);
+    REQUIRE(content->size().get_width() == Catch::Approx(scroll->size().get_width()));
+}
