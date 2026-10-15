@@ -253,6 +253,22 @@ namespace nandina::render
         [[nodiscard]] virtual auto supports_rounded_rect() const -> bool {
             return true;
         }
+
+        /// 是否能把**圆角轮廓**当裁剪边界用（`draw_circle_clipped_rounded_rect`）。
+        ///
+        /// 返回 false 不代表方法不可用：接口默认实现只是画一个**未裁剪**的圆。所以消费者
+        /// 不能假定「调了就会被裁」—— 返回 false 时必须自己用 `set_clip()` 配上圆，
+        /// 否则内容会溢出到圆角容器之外（见 platform_backend_contract.md §3）。
+        [[nodiscard]] virtual auto supports_rounded_clip() const -> bool {
+            return true;
+        }
+
+        /// 是否真的实现了软阴影（`draw_rounded_rect_shadow`）。默认 true 与
+        /// `supports_rounded_rect()` 保持同一约定：能做的设备不必覆写，做不到的必须显式
+        /// 返回 false，让消费者退化为硬边阴影而不是什么都不画。
+        [[nodiscard]] virtual auto supports_soft_shadows() const -> bool {
+            return true;
+        }
     };
 
 } // namespace nandina::render

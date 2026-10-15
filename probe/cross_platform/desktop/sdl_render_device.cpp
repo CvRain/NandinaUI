@@ -548,4 +548,17 @@ namespace nandina::probe
     auto SdlRenderDevice::supports_rounded_rect() const -> bool {
         return true;
     }
+
+    auto SdlRenderDevice::supports_rounded_clip() const -> bool {
+        // 圆角矩形是用三角形扇画出来的，绘制本身没问题；但**裁剪**只能交给
+        // SDL_SetRenderClipRect，那是矩形 —— 圆角处的裁剪会退化成方角。所以这里如实
+        // 返回 false，让 RipplePainter 走「自己 set_clip + 画圆」的降级路径。
+        return false;
+    }
+
+    auto SdlRenderDevice::supports_soft_shadows() const -> bool {
+        // draw_rounded_rect_shadow 未实现（接口默认是 no-op），因此不能声称支持软阴影；
+        // ShadowPainter 会退化成硬边圆角阴影。
+        return false;
+    }
 } // namespace nandina::probe

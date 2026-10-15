@@ -53,11 +53,24 @@ namespace
         std::vector<TextCall> texts;
         std::vector<RippleCall> ripples;
         std::vector<std::string> operations;
+        /// 降级路径的观测量：设备只能矩形裁剪时，painter 自己 set_clip + 画圆。
+        std::vector<foundation::NanRect> clips;
+        /// 设为 false 模拟「只能矩形裁剪」的后端（如 SDL 2D 设备）。
+        bool rounded_clip_supported = true;
 
         void begin_frame() override {}
         void end_frame() override {}
-        void set_clip(const foundation::NanRect&) override {}
-        void clear_clip() override {}
+        void set_clip(const foundation::NanRect& rect) override {
+            clips.push_back(rect);
+            operations.emplace_back("clip");
+        }
+        void clear_clip() override {
+            operations.emplace_back("clip-clear");
+        }
+
+        [[nodiscard]] auto supports_rounded_clip() const -> bool override {
+            return rounded_clip_supported;
+        }
 
         void
         draw_rect(const foundation::NanRect& rect, const foundation::NanColor& color) override {
@@ -117,7 +130,11 @@ namespace
             float,
             const foundation::NanColor&
         ) override {}
+        int circles = 0;
+
         void draw_circle(const foundation::NanPoint&, float, const foundation::NanColor&) override {
+            ++circles;
+            operations.emplace_back("circle");
         }
 
         void draw_circle_clipped_rounded_rect(
@@ -1118,4 +1135,38 @@ TEST_CASE("button label alignment comes from its recipe", "[widget][button][alig
     REQUIRE(right < 240.0F);
     // 居中时左右留白相等。
     REQUIRE(centered - left == Catch::Approx(right - centered).margin(0.5F));
+}
+
+TEST_CASE(
+    "button ripple clips itself when the device cannot clip to a rounded outline",
+    "[widget][button][ripple]"
+) {
+    // 接口默认的 draw_circle_clipped_rounded_rect 只画**未裁剪**的圆。设备如实报告
+    // supports_rounded_clip() == false 时，painter 必须自己用矩形裁剪保证水波纹不溢出，
+    // 否则圆角容器上会看到波纹漏到外面（见 platform_backend_contract.md §3）。
+    RecordingDevice dev;
+    dev.rounded_clip_supported = false;
+    scene::NanSceneTree tree;
+    auto button = std::make_shared<widget::Button>("Ripple");
+    button->set_position(foundation::NanPoint(10.0F, 20.0F));
+    tree.set_root(button);
+
+    tree.dispatch_mouse_move(
+        scene::MouseMoveEvent {foundation::NanPoint(24.0F, 32.0F), foundation::NanPoint::zero()}
+    );
+    tree.dispatch_mouse_button(
+        scene::MouseButtonEvent {
+            scene::MouseButtonEvent::Button::left,
+            scene::MouseButtonEvent::Action::press,
+            foundation::NanPoint(24.0F, 32.0F)
+        }
+    );
+    tree.process(button->resolved_style().ripple.duration * 0.5F);
+    tree.draw(dev);
+
+    REQUIRE(dev.ripples.empty()); // 没有走圆角裁剪入口
+    REQUIRE(dev.circles == 1); // 画了圆
+    REQUIRE(dev.clips.size() == 1); // 并且自己套了矩形裁剪
+    REQUIRE(dev.clips[0].get_left() == Catch::Approx(10.0F));
+    REQUIRE(dev.clips[0].get_top() == Catch::Approx(20.0F));
 }

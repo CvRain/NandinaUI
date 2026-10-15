@@ -46,17 +46,23 @@
 - 不允许用「文档里记了已知差异」代替代码分支 —— 否则 SDK 示例跑通会被误读成「应用已支持」；
 - 每个后端必须给出自己的能力表，并由测试或探测证据支撑。
 
-实测到的差异（SDL 2D 设备 vs 生产 raylib 后端，见探测记录 §2.3）：
+实测到的差异（SDL 2D 设备 vs 生产 raylib 后端，见探测记录 §2.3）。**"已被查询覆盖"** 列表示
+这条差异已经有代码分支、并有会红的测试；其余是待办。
 
-| 能力 | raylib 生产后端 | SDL 2D 设备 | 需要的降级/补齐 |
-| --- | --- | --- | --- |
-| 圆角/圆抗锯齿 | SDF + `fwidth` | 硬边缘（几何分段 6–48） | 覆盖率几何或 SDF shader |
-| `draw_rounded_rect_shadow` | SDF 软阴影 | 未实现 | 几何近似或 capability 关闭 |
-| `draw_circle_clipped_rounded_rect` | SDF 解析交集 | 矩形裁剪 + 圆（圆角处方角） | 遮罩/模板或 SDF |
-| `draw_arc` | SDF 环 | 接口默认（弦逼近 ≤ 64 段） | 提高分段或 SDF |
-| 文本 | HarfBuzz + `GlyphAtlasTexture` | 已跑通（真实图集、真实页面） | 保持 |
-| 图像文件加载 | 有 | 未实现 | 解码器或 SDL_image |
-| alpha 图集内存 | A8 → RGBA8（4×） | 同构（4×） | 单通道 + 专用字形着色器 |
+| 能力 | raylib 生产后端 | SDL 2D 设备 | 已被查询覆盖 | 待办 |
+| --- | --- | --- | --- | --- |
+| 矩形圆角绘制 | SDF | CPU 三角形扇 | `supports_rounded_rect()`（`BoxPainter`） | 提高分段/覆盖率质量 |
+| 圆角/圆抗锯齿 | SDF + `fwidth` | 硬边缘 | —（质量差异，无离散路径） | 覆盖率几何或 SDF shader |
+| 软阴影 | SDF 软阴影 | 未实现 | **`supports_soft_shadows()`**（`ShadowPainter` 退化为硬边圆角阴影，`tests/card_tests.cpp`） | 更好的硬边近似 |
+| 圆角裁剪 | SDF 解析交集 | 只能矩形裁剪 | **`supports_rounded_clip()`**（`RipplePainter` 自己 `set_clip` + 画圆，`tests/button_tests.cpp`） | 遮罩/模板或 SDF |
+| `draw_arc` | SDF 环 | 接口默认（弦逼近 ≤ 64 段） | —（未实现该入口） | 提高分段或 SDF |
+| 文本 | HarfBuzz + `GlyphAtlasTexture` | 已跑通（真实图集、真实页面） | `supports_alpha_textures()` | 保持 |
+| 图像文件加载 | 有 | 未实现 | — | 解码器或 SDL_image |
+| alpha 图集内存 | A8 → RGBA8（4×） | 同构（4×） | — | 单通道 + 专用字形着色器 |
+
+`supports_rounded_clip()` 顺带修掉一类真实的溢出：**接口默认的
+`draw_circle_clipped_rounded_rect()` 只画未裁剪的圆**，所以过去任何不覆写它的设备都会让水波纹
+漏到圆角容器外面。现在消费者按能力选择「交给设备裁」还是「自己 `set_clip` 保证不溢出」。
 
 ## 4. Shader 构建链契约（P1 门槛）
 
@@ -76,7 +82,7 @@
 | 阶段 | 交付 | 验收 | 证据/状态 |
 | --- | --- | --- | --- |
 | **P0** 应用级探测 | 窗口/事件/帧循环；GPU render state 自定义 shader；真实 `IRenderDevice`；真实页面 + 真实字体图集 | 真实 showcase 页面在 SDL 设备上正确渲染；稳态 0 次布局 | **基本完成**，缺键码映射验证（[§2.3.1](cross_platform_backend_probe.md)） |
-| **P1** 渲染与 shader 管线门槛 | 工具链固定；SPIR-V 校验入构建图；多后端产物；逐图元等价性 | 每个承诺格式都能生成并加载；能力差异有代码分支 | **进行中**：工具链与校验已完成，多后端产物与能力降级路径未完成 |
+| **P1** 渲染与 shader 管线门槛 | 工具链固定；SPIR-V 校验入构建图；多后端产物；逐图元等价性；能力差异落成代码分支 | 每个承诺格式都能生成并加载；能力差异有会红的测试 | **进行中**：工具链、校验与**阴影/圆角裁剪两条降级路径**已完成；多后端产物、抗锯齿与逐图元等价性未完成 |
 | **P2** 平台能力与消费者回归 | 能力查询落地到组件；各后端行为回归 | 组件在两种后端下的行为有对照记录；差异要么修复要么降级 | 未开始 |
 | **P3** 默认后端替换 | SDL 设备成为默认；raylib 退回离线/录制设备 | 真实应用（showcase + bench）在 SDL 默认路径下通过三套验证与人工验收 | 未开始 |
 | **P4** host 行为契约收口 | 平台层接口成形；`NanWindow` 不再持有窗口/输入/帧驱动 | 同一份组件代码在 SDL 与 raylib 两个宿主下行为一致 | 未开始 |

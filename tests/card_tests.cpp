@@ -23,11 +23,17 @@ namespace
         int rounded_outlines = 0;
         int shadows = 0;
         int shadow_before_fill = 0;
+        /// 设为 false 模拟「不会画软阴影」的后端（如 SDL 2D 设备）。
+        bool soft_shadows_supported = true;
 
         void begin_frame() override {}
         void end_frame() override {}
         void set_clip(const foundation::NanRect&) override {}
         void clear_clip() override {}
+
+        [[nodiscard]] auto supports_soft_shadows() const -> bool override {
+            return soft_shadows_supported;
+        }
         void draw_rect(const foundation::NanRect&, const foundation::NanColor&) override {}
         void
         draw_rect_outline(const foundation::NanRect&, float, const foundation::NanColor&) override {
@@ -189,6 +195,33 @@ TEST_CASE("card draws soft shadow before container when configured", "[card][sha
     REQUIRE(dev.shadows == 1);
     REQUIRE(dev.shadow_before_fill == 1);
     REQUIRE(dev.rounded_fills == 1);
+}
+
+TEST_CASE(
+    "card falls back to a hard shadow when the device has no soft shadows",
+    "[card][shadow]"
+) {
+    // 能力查询驱动的降级：不能画软边时，至少保留「盒子后面有一层偏移的暗色圆角」，
+    // 而不是什么都不画（见 docs/references/platform_backend_contract.md §3）。
+    auto card = widget::Card::create();
+    card->set_override(
+        theme::CardRecipeRule {
+            .shadow_color =
+                theme::ThemeColor::literal(foundation::NanColor::from_hex(0x000000, 0.5F)),
+            .shadow_offset_y = theme::ThemeScalar::literal(4.0F),
+            .shadow_spread = theme::ThemeScalar::literal(8.0F),
+        }
+    );
+    scene::NanSceneTree tree;
+    tree.set_root(card);
+    REQUIRE(tree.layout_root(foundation::NanSize(280.0F, 120.0F)) >= 1);
+
+    RecordingDevice dev;
+    dev.soft_shadows_supported = false;
+    tree.draw(dev);
+    REQUIRE(dev.shadows == 0); // 没有调用软阴影入口
+    REQUIRE(dev.rounded_fills == 2); // 硬边阴影 + 容器填充
+    REQUIRE(dev.shadow_before_fill == 0);
 }
 
 TEST_CASE("card keeps child semantics reachable", "[card][semantics]") {

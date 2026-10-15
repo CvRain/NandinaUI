@@ -37,12 +37,26 @@ namespace nandina::widget::primitives
                 world.get_height()
             );
             const auto color = shadow.color.with_alpha(shadow.color.alpha() * parent_opacity);
-            ctx.device().draw_rounded_rect_shadow(
-                shadow_rect,
-                ctx.logical_to_screen(radius),
-                ctx.logical_to_screen(shadow.spread),
-                color
-            );
+            const auto screen_radius = ctx.logical_to_screen(radius);
+            if (ctx.device().supports_soft_shadows()) {
+                ctx.device().draw_rounded_rect_shadow(
+                    shadow_rect,
+                    screen_radius,
+                    ctx.logical_to_screen(shadow.spread),
+                    color
+                );
+                return;
+            }
+
+            // 降级：设备不会画软边。软边表达不出来时至少保留「盒子后面有一层偏移的暗色
+            // 圆角」这条信息 —— 比什么都不画更接近设计意图。`spread` 是柔化半径，硬边
+            // 阴影没有对应量，因此忽略；alpha 保持原值（不假装能算出等效的柔化浓度）。
+            if (screen_radius > 0.0F && ctx.device().supports_rounded_rect()) {
+                ctx.device().draw_rounded_rect(shadow_rect, screen_radius, color);
+            }
+            else {
+                ctx.device().draw_rect(shadow_rect, color);
+            }
         }
     };
 } // namespace nandina::widget::primitives

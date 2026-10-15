@@ -126,14 +126,14 @@ device capabilities: alpha_textures=1 rounded_rect=1
 与 `draw_circle_clipped_rounded_rect`、`draw_text`、alpha 图集创建 + **按子矩形更新**
 （`update_alpha_texture_region`）、纹理区域绘制与 tint、`set_clip` 裁剪、两个 capability 查询。
 
-**能力差异**（不是等价实现，测到就要写下来）：
+**能力差异**（不是等价实现，测到就要写下来；标 ✅ 的已经落成 capability 查询 + 会红的测试）：
 
 | 项 | 生产 raylib 后端 | 本设备 |
 | --- | --- | --- |
 | 圆角/圆的抗锯齿 | SDF 解析 + `fwidth` | 无（几何边缘是硬的；分段数按半径取 6–48） |
-| `draw_circle_clipped_rounded_rect` | SDF 求解析交集 | 退化成「矩形裁剪 + 圆」，圆角处按方角裁 |
+| `draw_circle_clipped_rounded_rect` | SDF 求解析交集 | 退化成「矩形裁剪 + 圆」，圆角处按方角裁；设备返回 `supports_rounded_clip() == false`，由 `RipplePainter` 自己 `set_clip` ✅ |
 | `draw_arc` | SDF 环 | 接口默认实现（弦逼近，64 段上限 → 可见折线） |
-| `draw_rounded_rect_shadow` | SDF 软阴影 | 接口默认 no-op（未实现） |
+| `draw_rounded_rect_shadow` | SDF 软阴影 | 未实现；设备返回 `supports_soft_shadows() == false`，由 `ShadowPainter` 退化为硬边圆角阴影 ✅ |
 | 文本 | HarfBuzz 整形 + `GlyphAtlasTexture` | `SDL_RenderDebugText` 内置字体（仅证明文字落在同一套坐标/裁剪里） |
 | alpha 图集上传 | 1 字节 A8 + raylib 扩展成 RGBA8 | A8 → RGBA8（同样的 4× 纹理字节代价），子矩形按行段上传 |
 | 图像文件加载 | 有 | 接口默认 no-op |

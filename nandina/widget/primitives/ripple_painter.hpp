@@ -38,13 +38,24 @@ namespace nandina::widget::primitives
             const float eased = 1.0F - std::pow(1.0F - std::clamp(progress, 0.0F, 1.0F), 3.0F);
             const float radius = std::hypot(far_x, far_y) * eased;
             const float alpha = style.color.alpha() * (1.0F - progress) * parent_opacity;
-            ctx.device().draw_circle_clipped_rounded_rect(
-                origin,
-                radius,
-                world,
-                ctx.logical_to_screen(container_radius),
-                style.color.with_alpha(alpha)
-            );
+            const auto color = style.color.with_alpha(alpha);
+            if (ctx.device().supports_rounded_clip()) {
+                ctx.device().draw_circle_clipped_rounded_rect(
+                    origin,
+                    radius,
+                    world,
+                    ctx.logical_to_screen(container_radius),
+                    color
+                );
+                return;
+            }
+
+            // 降级：设备不能按圆角轮廓裁剪。接口默认实现只画**未裁剪**的圆，所以这里必须
+            // 自己用矩形裁剪保证水波纹不溢出容器（代价是圆角处按方角裁，见
+            // platform_backend_contract.md §3 的能力差异表）。
+            ctx.device().set_clip(world);
+            ctx.device().draw_circle(origin, radius, color);
+            ctx.device().clear_clip();
         }
     };
 } // namespace nandina::widget::primitives

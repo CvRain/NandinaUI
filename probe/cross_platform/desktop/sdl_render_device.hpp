@@ -129,6 +129,10 @@ namespace nandina::probe
 
         // ---- capabilities ----
         [[nodiscard]] auto supports_rounded_rect() const -> bool override;
+        /// 只能按外接矩形裁剪（圆角处退化为方角），返回 false。
+        [[nodiscard]] auto supports_rounded_clip() const -> bool override;
+        /// 未实现软阴影，返回 false，消费者退化为硬边阴影。
+        [[nodiscard]] auto supports_soft_shadows() const -> bool override;
 
     private:
         void set_draw_color(const foundation::NanColor& color);

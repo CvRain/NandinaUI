@@ -150,6 +150,11 @@ int main() {
         std::cout << "SDL " << SDL_GetVersion() << ", renderer="
                   << (SDL_GetRendererName(renderer) ? SDL_GetRendererName(renderer) : "unknown")
                   << ", page=showcase::LabelPage" << '\n';
+        // 能力摘要就是「这个后端与生产后端的差异清单」的可执行版本：消费者按这些查询选路。
+        std::cout << "device capabilities: alpha_textures=" << device.supports_alpha_textures()
+                  << " rounded_rect=" << device.supports_rounded_rect()
+                  << " rounded_clip=" << device.supports_rounded_clip()
+                  << " soft_shadows=" << device.supports_soft_shadows() << '\n';
 
         bool running = true;
         auto frame = 0;
