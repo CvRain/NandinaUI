@@ -238,6 +238,8 @@ namespace nandina::widget::primitives
         renderer_ = pipeline.renderer;
         pipeline_explicit_ = true;
         resolved_font_pipeline_.reset();
+        // 后端不在缓存键里：换后端必须清，否则会复用上一个后端的排版结果。
+        clear_metrics_cache();
         mark_layout_dirty();
         update_metrics(last_layout_constraints());
     }
@@ -417,16 +419,116 @@ namespace nandina::widget::primitives
         update_metrics(last_layout_constraints());
     }
 
+    namespace
+    {
+        /// 记忆化键的样式比较：只比**影响排版**的字段，并且用精确相等（不是
+        /// `TextStyle::approx_equals` 的容差比较）—— 缓存命中必须意味着结果一定相同。
+        [[nodiscard]] auto
+        same_layout_style(const text::TextStyle& left, const text::TextStyle& right) -> bool {
+            return left.font_size == right.font_size && left.font == right.font
+                && left.overflow == right.overflow && left.max_lines == right.max_lines
+                && left.align == right.align;
+        }
+
+        [[nodiscard]] auto same_layout_constraints(
+            const foundation::NanLayoutConstraints& left,
+            const foundation::NanLayoutConstraints& right
+        ) -> bool {
+            return left.min_width == right.min_width && left.max_width == right.max_width
+                && left.min_height == right.min_height && left.max_height == right.max_height;
+        }
+    } // namespace
+
+    auto Text::find_metrics_cache(const text::TextLayoutInput& input) const
+        -> const text::TextLayoutResult* {
+        for (std::size_t index = 0; index < metrics_cache_used_; ++index) {
+            const auto& entry = metrics_cache_[index];
+            if (entry.text == input.text && same_layout_style(entry.style, input.style)
+                && same_layout_constraints(entry.constraints, input.constraints))
+            {
+                return &entry.result;
+            }
+        }
+        return nullptr;
+    }
+
+    auto Text::metrics_entry_bytes(std::string_view text, const text::TextLayoutResult& result)
+        -> std::size_t {
+        std::size_t bytes = text.size() + sizeof(text::TextStyle);
+        for (const auto& line: result.lines) {
+            bytes += line.visible_text.size()
+                + line.glyphs.size() * sizeof(text::TextLayoutLine::Glyph)
+                + line.caret_stops.size() * sizeof(text::TextCaretStop);
+        }
+        return bytes;
+    }
+
+    void
+    Text::store_metrics_cache(const text::TextLayoutInput& input, text::TextLayoutResult result) {
+        const auto bytes = metrics_entry_bytes(input.text, result);
+        if (bytes > kMetricsCacheByteBudget) {
+            // 大结果：只留这一条，避免 8 份长文本排版结果同时驻留。
+            clear_metrics_cache();
+            auto& entry = metrics_cache_[0];
+            entry.text = std::string(input.text);
+            entry.style = input.style;
+            entry.constraints = input.constraints;
+            entry.result = std::move(result);
+            metrics_cache_used_ = 1;
+            metrics_cache_next_ = 1 % kMetricsCacheEntries;
+            metrics_cache_bytes_ = bytes;
+            return;
+        }
+
+        auto& entry = metrics_cache_[metrics_cache_next_];
+        metrics_cache_bytes_ -=
+            std::min(metrics_cache_bytes_, metrics_entry_bytes(entry.text, entry.result));
+        entry.text = std::string(input.text);
+        entry.style = input.style;
+        entry.constraints = input.constraints;
+        entry.result = std::move(result);
+        metrics_cache_bytes_ += bytes;
+        metrics_cache_next_ = (metrics_cache_next_ + 1) % kMetricsCacheEntries;
+        metrics_cache_used_ = std::min(metrics_cache_used_ + 1, kMetricsCacheEntries);
+    }
+
+    void Text::clear_metrics_cache() noexcept {
+        for (auto& entry: metrics_cache_) {
+            entry.text.clear();
+            entry.result = {};
+        }
+        metrics_cache_used_ = 0;
+        metrics_cache_next_ = 0;
+        metrics_cache_bytes_ = 0;
+    }
+
+    auto Text::metrics_cache_hits() const noexcept -> long {
+        return metrics_cache_hits_;
+    }
+
+    auto Text::metrics_cache_misses() const noexcept -> long {
+        return metrics_cache_misses_;
+    }
+
     void Text::update_metrics(foundation::NanLayoutConstraints constraints) {
         auto presentation_style = style_;
         presentation_style.font_size = *font_size_presentation_.value();
-        layout_ = backend_->layout(
-            text::TextLayoutInput {
-                .text = text_.get(),
-                .style = std::move(presentation_style),
-                .constraints = constraints,
-            }
-        );
+        const text::TextLayoutInput input {
+            .text = text_.get(),
+            .style = std::move(presentation_style),
+            .constraints = constraints,
+        };
+        if (const auto* cached = find_metrics_cache(input); cached != nullptr) {
+            ++metrics_cache_hits_;
+            // 命中：直接复用上次的排版结果，跳过整形（比拷贝结果贵两个数量级）。
+            layout_ = *cached;
+        }
+        else {
+            ++metrics_cache_misses_;
+            auto result = backend_->layout(input);
+            layout_ = result;
+            store_metrics_cache(input, std::move(result));
+        }
         // 节点尺寸必须等于本次 measure 契约报告的值：整形结果的原始尺寸要**先收敛到约束内**
         // 再写入。否则在紧约束（fill / percent 宽度）配 wrap 的情况下，size_ 记录的是最长行的
         // 内容宽度、而 measured_size_ 记录的是可用宽度；同一布局周期里 arrange 又会把 size_
@@ -449,6 +551,8 @@ namespace nandina::widget::primitives
         const auto resolved = resolved_font_pipeline_->pipeline();
         backend_ = resolved.backend;
         renderer_ = resolved.renderer;
+        // 从 fallback 后端切到真实字体后端：清缓存（后端不在键里）。
+        clear_metrics_cache();
         mark_layout_dirty();
         update_metrics(last_layout_constraints());
     }

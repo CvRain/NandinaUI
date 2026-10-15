@@ -1280,7 +1280,9 @@ TEST_CASE("Text layout backend controls measurement and draw output", "[widget][
     tree.draw(dev);
 
     REQUIRE(&text->layout_backend() == &backend);
-    REQUIRE(backend.calls >= 2);
+    // 恰好 1 次：构造时测过一次，随后的 measure 与 draw 都命中记忆化（输入逐字段相同）。
+    // 记忆化本身由「Text memoizes layout for identical inputs」单独固定。
+    REQUIRE(backend.calls == 1);
     REQUIRE(text->width() == Catch::Approx(42.0F));
     REQUIRE(text->height() == Catch::Approx(18.0F));
     REQUIRE(text->layout_result().lines.front().visible_text == "backend");
@@ -2821,4 +2823,75 @@ TEST_CASE(
     text.draw_in(context, world);
     REQUIRE(dev.texts.size() == 1);
     REQUIRE(dev.texts[0].position.get_x() == Catch::Approx((200.0F - 42.0F) * 0.5F));
+}
+
+TEST_CASE("Text memoizes layout for identical inputs", "[widget][text][cache]") {
+    // 容器每加一个子项就 relayout() 一次，整棵子树被反复测量：showcase 的 Label 页在
+    // 构建期产生约 1.4 万次测量。Text 因此按**完整排版输入**记忆化 —— 命中意味着输入逐
+    // 字段相同，结果必然相同，所以不存在「忘了失效」这类静默错误（颜色不进键，它不影响
+    // 排版）。见 docs/references/text_shaping_cost.md §5.1。
+    FixedTextLayoutBackend backend;
+    auto text = std::make_shared<widget::primitives::Text>("source", backend);
+
+    (void)text->measure_layout(foundation::NanLayoutConstraints::loose());
+    const auto after_first = backend.calls;
+    REQUIRE(after_first >= 1);
+
+    // 同样的输入再来一次：不再调后端。
+    (void)text->measure_layout(foundation::NanLayoutConstraints::loose());
+    REQUIRE(backend.calls == after_first);
+    REQUIRE(text->metrics_cache_hits() >= 1);
+    REQUIRE(text->width() == Catch::Approx(42.0F));
+
+    // 换约束：是不相同的输入，必须重新测量；再来一次又命中。
+    (void)text->measure_layout(
+        foundation::NanLayoutConstraints::tight(foundation::NanSize(10.0F, 10.0F))
+    );
+    const auto after_tight = backend.calls;
+    REQUIRE(after_tight > after_first);
+    (void)text->measure_layout(
+        foundation::NanLayoutConstraints::tight(foundation::NanSize(10.0F, 10.0F))
+    );
+    REQUIRE(backend.calls == after_tight);
+
+    // 文本变了：重新测量。
+    text->set_text("different source");
+    (void)text->measure_layout(foundation::NanLayoutConstraints::loose());
+    REQUIRE(backend.calls > after_tight);
+    REQUIRE(
+        text->layout_result().lines.front().text_length == std::string("different source").size()
+    );
+
+    // 样式变了：重新测量（字号影响排版）。
+    const auto after_text = backend.calls;
+    text->set_font_size(24.0F);
+    (void)text->measure_layout(foundation::NanLayoutConstraints::loose());
+    REQUIRE(backend.calls > after_text);
+
+    // 换后端必须清缓存：后端不在键里，否则会复用上一个后端的结果。
+    FixedTextLayoutBackend other;
+    text->set_text_pipeline(text::TextPipeline {.backend = &other});
+    (void)text->measure_layout(foundation::NanLayoutConstraints::loose());
+    REQUIRE(other.calls >= 1);
+    const auto after_switch = other.calls;
+    (void)text->measure_layout(foundation::NanLayoutConstraints::loose());
+    REQUIRE(other.calls == after_switch);
+}
+
+TEST_CASE("Text keeps a large layout correct while caching", "[widget][text][cache]") {
+    // 大结果只留一条（字节预算）：无论命中与否，尺寸都必须与后端报告的一致。
+    FixedTextLayoutBackend backend;
+    std::string source(9000, 'x');
+    auto text = std::make_shared<widget::primitives::Text>(source, backend);
+
+    for (int round = 0; round < 3; ++round) {
+        (void)text->measure_layout(foundation::NanLayoutConstraints::loose());
+        REQUIRE(text->width() == Catch::Approx(42.0F));
+        REQUIRE(text->height() == Catch::Approx(18.0F));
+        (void)text->measure_layout(
+            foundation::NanLayoutConstraints::tight(foundation::NanSize(20.0F, 20.0F))
+        );
+        REQUIRE(text->width() == Catch::Approx(20.0F));
+        REQUIRE(text->height() == Catch::Approx(20.0F));
+    }
 }

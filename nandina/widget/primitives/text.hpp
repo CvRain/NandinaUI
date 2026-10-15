@@ -11,6 +11,7 @@
 #include "../../text/text_layout_backend.hpp"
 #include "../visual_property.hpp"
 
+#include <array>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -103,6 +104,10 @@ namespace nandina::widget::primitives
         [[nodiscard]] auto layout_result() const -> const text::TextLayoutResult&;
 
         void set_text_pipeline(text::TextPipeline pipeline);
+
+        /// update_metrics() 记忆化的命中/失配计数（诊断与测试用）。
+        [[nodiscard]] auto metrics_cache_hits() const noexcept -> long;
+        [[nodiscard]] auto metrics_cache_misses() const noexcept -> long;
         [[nodiscard]] auto text_pipeline() const -> text::TextPipeline;
         void apply_default_text_pipeline(const text::TextPipeline& pipeline) override;
         void apply_font_context(text::FontPipelineCache& context) override;
@@ -141,6 +146,52 @@ namespace nandina::widget::primitives
             foundation::NanLayoutConstraints constraints = foundation::NanLayoutConstraints::loose()
         );
         void resolve_font();
+
+        /// update_metrics() 的记忆化条目。
+        ///
+        /// 键是**完整的排版输入**（文本 + 所有影响排版的样式字段 + 约束）：命中就代表输入
+        /// 逐字段相同，结果必然相同，因此这里没有「忘了失效」这类静默错误。颜色不进键 ——
+        /// 颜色不影响排版，TextLayoutResult 里也不含颜色。
+        ///
+        /// 为什么需要：容器每加一个子项就 `relayout()` 一次，整棵子树被反复测量 ——
+        /// showcase 的 Label 页因此在构建期产生约 1.4 万次测量（见
+        /// docs/references/text_shaping_cost.md §5.1）。
+        ///
+        /// 为什么是 8 条：同一个 Text 在一个周期里会被交替用多种约束测量/摆放
+        /// （父级 measure 用 loose，arrange 用 tight，横向拉伸后 tight 的宽度还会变），
+        /// 再加上构建过程中样式是分步应用的。实测命中率：
+        /// 2 条 8%、4 条 45%、8 条 74%（Label 页构建 378 → 154 ms）。
+        ///
+        /// 为什么还要字节预算：条目里存的是完整排版结果。短标签一条几百字节，但一个
+        /// 5000 字的 Text 一条就是几百 KB —— 8 条会让这个节点多占几 MB。所以超过预算的
+        /// 结果只留一条（`kMetricsCacheByteBudget`），把「按条数」和「按字节」两个上限
+        /// 一起用上。淘汰永远是安全的：最坏情况只是少一次命中。
+        struct MetricsCacheEntry {
+            std::string text;
+            text::TextStyle style;
+            foundation::NanLayoutConstraints constraints;
+            text::TextLayoutResult result;
+        };
+        static constexpr std::size_t kMetricsCacheEntries = 8;
+        /// 单个 Text 节点允许的缓存字节上限；超过它的结果只保留一条。
+        static constexpr std::size_t kMetricsCacheByteBudget = 64 * 1024;
+
+        [[nodiscard]] auto find_metrics_cache(const text::TextLayoutInput& input) const
+            -> const text::TextLayoutResult*;
+        void store_metrics_cache(const text::TextLayoutInput& input, text::TextLayoutResult result);
+        /// 后端换了（resolve_font / set_text_pipeline）就必须清：后端不在键里。
+        void clear_metrics_cache() noexcept;
+
+        [[nodiscard]] static auto
+        metrics_entry_bytes(std::string_view text, const text::TextLayoutResult& result)
+            -> std::size_t;
+
+        std::array<MetricsCacheEntry, kMetricsCacheEntries> metrics_cache_ {};
+        std::size_t metrics_cache_used_ = 0;
+        std::size_t metrics_cache_next_ = 0;
+        std::size_t metrics_cache_bytes_ = 0;
+        long metrics_cache_hits_ = 0;
+        long metrics_cache_misses_ = 0;
 
         reactive::Property<std::string> text_;
         text::TextStyle style_ {};

@@ -13,7 +13,7 @@
 | 路由元数据 | 路由身份由页面类型 `PageKey` 确定；当前 `type` 字段既分组也作为标题 | D3 初步方案已接受、未实施：重命名 `nav_group`；空值是不分组、无标题，route 仍可见；分组按值全局合并 |
 | 平台与渲染 | 当前生产路径为 raylib + GLFW/OpenGL；`IRenderDevice` 隔离绘制设备，但 `NanWindow` 仍负责窗口、输入和帧驱动 | D4 优先目标为 Linux/Windows/Web 应用交付；SDL 3.4+ GPU Renderer shader、WebGL 路径、shader host tools 与消费端耦合待 PoC，已证明与未验证的边界见 [跨平台后端探测](cross_platform_backend_probe.md) |
 | 动画 | 值级 motion 在 `foundation/motion`，节点 endpoint、宿主与组调度在 `scene`；旧 `animation/` 入口已退出；L2 opacity/translate/scale 可用 | `NodeBuilder::group` 仅开放同节点、扁平 Tween 组合；跨节点、组内 Spring、Keyframes 作者入口与浮层自动过渡未完成，见 [节点表现层 §6.1](node_presentation.md) |
-| 布局与文本成本 | 排列容器及 `NanControl::layout_to` 已用在生产路径；anchors 内核与作者入口已落地；**布局收敛**（Label 页 80.4 ms/帧 → 2.5 ms、稳态 0 次布局）与**两个文本 O(n²)** 已修复，见 [布局收敛](layout_convergence_and_text_measurement.md) 与 [整形成本](text_shaping_cost.md) | `fill` 画布无法占据排列容器剩余空间（见 [Anchors §5.3](anchors.md#53-剩余验收)）；`max_width` 仍会被父级紧约束压过；Label 页打开仍约 500 ms，其中 378 ms 是构建期 1.1 万次测量（[整形成本 §5.1](text_shaping_cost.md)）；一次完整布局仍约 55 ms |
+| 布局与文本成本 | 排列容器及 `NanControl::layout_to` 已用在生产路径；anchors 内核与作者入口已落地；**布局收敛**（Label 页 80.4 ms/帧 → 2.5 ms、稳态 0 次布局）与**两个文本 O(n²)** 已修复，见 [布局收敛](layout_convergence_and_text_measurement.md) 与 [整形成本](text_shaping_cost.md) | `fill` 画布无法占据排列容器剩余空间（见 [Anchors §5.3](anchors.md#53-剩余验收)）；`max_width` 仍会被父级紧约束压过；Label 页打开约 271 ms（构建 159 ms，[整形成本 §5.1](text_shaping_cost.md)）；一次完整布局仍约 55 ms |
 | 分发 | Linux 桌面源码分发 profile 已有构建与 SDK 流程 | Modules、CMake package 与跨平台仍待重新评估 |
 | 资源构建与运行时 | 四类后端、nanres 与构建 helper 已有实现；SQLite 已 vendored，但依赖无条件启用，工具仍链接完整框架；查询结果不带挂载身份 | [D5](resource_build_and_deployment.md) 已冻结、未实施：先解耦，再独立交付作用域与身份；声明式构建和部署定位随后汇合 |
 | 工程门禁 | 代码格式已统一，`tools/check_format.py` 与 CI 固定 clang-format 23.1.1；SQLite 每构建配置编译一次 | D5 关闭组合与纯工具依赖门禁尚未实现；格式门禁不证明资源行为或依赖解耦 |
