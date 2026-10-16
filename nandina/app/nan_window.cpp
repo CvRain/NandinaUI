@@ -5,6 +5,11 @@
 //
 
 #include "nan_window.hpp"
+
+#include "detail/raylib_platform_window.hpp"
+#if defined(NANDINA_HAS_SDL_BACKEND)
+    #include "detail/sdl_platform_window.hpp"
+#endif
 #include "nan_application.hpp"
 
 #if defined(__linux__)
@@ -31,37 +36,15 @@ namespace nandina::app
     namespace
     {
 
-        /// Snapshot raylib modifier-key state into a KeyModifiers.
-        auto current_modifiers() -> scene::KeyModifiers {
-            return scene::KeyModifiers {
-                .shift = IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT),
-                .ctrl = IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL),
-                .alt = IsKeyDown(KEY_LEFT_ALT) || IsKeyDown(KEY_RIGHT_ALT),
-                .super = IsKeyDown(KEY_LEFT_SUPER) || IsKeyDown(KEY_RIGHT_SUPER),
-            };
-        }
-
-        void dispatch_mouse_button(
-            scene::NanSceneTree& tree,
-            foundation::NanPoint pos,
-            scene::MouseButtonEvent::Button button,
-            int rl_button
-        ) {
-            const auto mods = current_modifiers();
-            if (IsMouseButtonPressed(rl_button)) {
-                scene::MouseButtonEvent
-                    ev {button, scene::MouseButtonEvent::Action::press, pos, mods};
-                tree.dispatch_mouse_button(ev);
-            }
-            if (IsMouseButtonReleased(rl_button)) {
-                scene::MouseButtonEvent
-                    ev {button, scene::MouseButtonEvent::Action::release, pos, mods};
-                tree.dispatch_mouse_button(ev);
-            }
-        }
-
-        class DesktopClipboard final: public scene::IClipboard {
+        /// 把 `IPlatformWindow` 的剪贴板接成 `scene::IClipboard`。
+        ///
+        /// 行为与搬迁前一致：Linux/Wayland 会话下先走项目自己的 Wayland 细节实现
+        /// （`app/detail/linux_clipboard`），失败或非 Wayland 时回退到平台实现。
+        /// 平台实现由各自后端提供（raylib → GLFW；SDL → SDL 的原生剪贴板）。
+        class PlatformClipboard final: public scene::IClipboard {
         public:
+            explicit PlatformClipboard(IPlatformWindow& platform): platform_(&platform) {}
+
             [[nodiscard]] auto read_text() const -> std::optional<std::string> override {
 #if defined(__linux__)
                 if (detail::is_wayland_session(std::getenv("WAYLAND_DISPLAY"))) {
@@ -70,8 +53,8 @@ namespace nandina::app
                     }
                 }
 #endif
-                const auto* text = GetClipboardText();
-                return text != nullptr ? std::optional<std::string>(text) : std::nullopt;
+                auto text = platform_->clipboard_text();
+                return text.empty() ? std::nullopt : std::optional<std::string>(std::move(text));
             }
 
             auto write_text(const std::string_view text) -> bool override {
@@ -85,14 +68,35 @@ namespace nandina::app
                     return true;
                 }
 #endif
-                const std::string owned(text);
-                SetClipboardText(owned.c_str());
+                platform_->set_clipboard_text(text);
                 return true;
             }
+
+        private:
+            IPlatformWindow* platform_ = nullptr;
         };
 
-        DesktopClipboard desktop_clipboard;
-
+        /// 按后端创建平台实现。`automatic` 用本构建的默认后端；
+        /// 本构建没有 SDL 后端而要求 sdl3 时**不静默回退**，直接抛错（配置错误要早暴露）。
+        [[nodiscard]] auto make_platform(WindowBackend backend)
+            -> std::unique_ptr<IPlatformWindow> {
+            const auto resolved =
+                backend == WindowBackend::automatic ? default_window_backend() : backend;
+            switch (resolved) {
+                case WindowBackend::sdl3:
+#if defined(NANDINA_HAS_SDL_BACKEND)
+                    return std::make_unique<detail::SdlPlatformWindow>();
+#else
+                    throw std::invalid_argument(
+                        "NanWindow: sdl3 backend requested but this build has no SDL3 support"
+                    );
+#endif
+                case WindowBackend::raylib:
+                case WindowBackend::automatic:
+                    break;
+            }
+            return std::make_unique<detail::RaylibPlatformWindow>();
+        }
     } // namespace
 
     NanWindow::NanWindow(NanApplication& app, WindowConfig config):
@@ -100,11 +104,12 @@ namespace nandina::app
         config_(std::move(config)),
         overlay_host_(scene::OverlayHost::create()) {
         tree_.set_theme_manager(app_.theme_manager());
+        platform_ = make_platform(config_.backend);
     }
 
     NanWindow::~NanWindow() {
         // 若 run 未显式 close (异常路径), 兜底关闭窗口。
-        if (opened_ && IsWindowReady()) {
+        if (opened_ && platform_ != nullptr && platform_->is_ready()) {
             close();
         }
     }
@@ -247,51 +252,39 @@ namespace nandina::app
         // 拖拽服务在任何内容 build 之前安装（install 只需 tree_ 与 overlay host 指针）。
         drag_controller_.install(tree_, overlay_host_.get());
 
-        unsigned int flags = 0;
-        if (config_.msaa) {
-            flags |= FLAG_MSAA_4X_HINT;
+        if (platform_ == nullptr) {
+            platform_ = std::make_unique<detail::RaylibPlatformWindow>();
         }
-        if (config_.vsync) {
-            flags |= FLAG_VSYNC_HINT;
-        }
-        if (config_.high_dpi) {
-            flags |= FLAG_WINDOW_HIGHDPI;
-        }
-        if (config_.resizable) {
-            flags |= FLAG_WINDOW_RESIZABLE;
-        }
-        if (!config_.decorated) {
-            flags |= FLAG_WINDOW_UNDECORATED;
-        }
-        SetConfigFlags(flags);
-
-        InitWindow(config_.width, config_.height, config_.title.c_str());
-        if (!IsWindowReady()) {
+        if (!platform_->create(config_)) {
             log::get("app.window")
                 .error(
-                    "NanWindow: failed to initialize native window {}x{} \"{}\"",
+                    "NanWindow: platform \"{}\" failed to initialize native window {}x{} \"{}\"",
+                    platform_->name(),
                     config_.width,
                     config_.height,
                     config_.title
                 );
-            // Do not enter CloseWindow/rlgl cleanup when raylib did not produce a
-            // usable native window; headless startup failures can have no GL context.
+            // 平台没给出可用窗口时不要进入清理路径：headless 启动失败可能根本没有 GL 上下文。
             throw std::runtime_error("NanWindow: failed to initialize native window");
         }
         // From this point on the native window owns a live raylib/GL context. Mark
         // it opened before constructing framework resources so an exception during
         // device/font setup can be recovered by the destructor's normal close path.
         opened_ = true;
-        SetExitKey(KEY_NULL);
-        SetTargetFPS(config_.target_fps);
-        tree_.set_clipboard(desktop_clipboard);
+        clipboard_ = std::make_unique<PlatformClipboard>(*platform_);
+        tree_.set_clipboard(*clipboard_);
 
-        device_ = render::make_raylib_device();
+        device_ = platform_->make_render_device();
+        if (device_ == nullptr) {
+            platform_->destroy();
+            opened_ = false;
+            throw std::runtime_error("NanWindow: platform failed to create a render device");
+        }
         texture_cache_ = std::make_unique<render::TextureCache>(
             *device_,
             render::TextureCacheLimits {},
             render::TextureCacheAsyncServices {
-                .decoder = render::make_raylib_image_decoder(),
+                .decoder = platform_->make_image_decoder(),
                 .submit_background =
                     [this](std::move_only_function<void()> task) {
                         return app_.background_executor().submit(std::move(task));
@@ -323,7 +316,7 @@ namespace nandina::app
             font_pipeline_cache_.reset();
             tree_.clear_texture_cache();
             texture_cache_.reset();
-            CloseWindow();
+            platform_->destroy();
             device_.reset();
             tree_.clear_clipboard();
             opened_ = false;
@@ -340,8 +333,26 @@ namespace nandina::app
         on_setup();
     }
 
+    void NanWindow::set_platform_window(std::unique_ptr<IPlatformWindow> platform) {
+        if (opened_) {
+            throw std::logic_error("NanWindow::set_platform_window: window already opened");
+        }
+        platform_ = platform != nullptr ? std::move(platform)
+                                        : std::make_unique<detail::RaylibPlatformWindow>();
+    }
+
+    auto NanWindow::platform_name() const -> std::string_view {
+        return platform_ != nullptr ? platform_->name() : std::string_view {"none"};
+    }
+
+    auto NanWindow::platform_backend() const -> WindowBackend {
+        const auto resolved = config_.backend == WindowBackend::automatic ? default_window_backend()
+                                                                          : config_.backend;
+        return resolved == WindowBackend::automatic ? WindowBackend::raylib : resolved;
+    }
+
     auto NanWindow::should_close() const -> bool {
-        return close_pending_ || WindowShouldClose();
+        return close_pending_ || (platform_ != nullptr && platform_->should_close());
     }
 
     auto NanWindow::close_requested() const noexcept -> bool {
@@ -353,76 +364,66 @@ namespace nandina::app
     }
 
     void NanWindow::poll_and_dispatch_input() {
-        const auto mx = static_cast<float>(GetMouseX());
-        const auto my = static_cast<float>(GetMouseY());
-        const foundation::NanPoint screen_pos {mx, my};
-        const auto pos =
-            viewport_mapping_ ? viewport_mapping_->screen_to_logical(screen_pos) : screen_pos;
+        // 宿主只负责「派发」：平台把这一帧的输入翻译成 scene 事件（见 platform_window.hpp）。
+        // 这里按类型分发，派发顺序与搬迁前一致：move → buttons → wheel → keys → text。
+        frame_input_.mouse_moves.clear();
+        frame_input_.mouse_buttons.clear();
+        frame_input_.mouse_wheels.clear();
+        frame_input_.keys.clear();
+        frame_input_.text_inputs.clear();
+        frame_input_.has_pointer = false;
+        platform_->poll_input(frame_input_);
 
-        // Mouse move (only when actually moved).
-        if (!has_mouse_) {
-            last_mouse_x_ = mx;
-            last_mouse_y_ = my;
-            has_mouse_ = true;
-        }
-        if (mx != last_mouse_x_ || my != last_mouse_y_) {
-            const auto previous = viewport_mapping_
-                ? viewport_mapping_->screen_to_logical(
-                      foundation::NanPoint {last_mouse_x_, last_mouse_y_}
-                  )
-                : foundation::NanPoint {last_mouse_x_, last_mouse_y_};
+        const auto to_logical = [this](const foundation::NanPoint screen_pos) {
+            return viewport_mapping_ ? viewport_mapping_->screen_to_logical(screen_pos)
+                                     : screen_pos;
+        };
+        const auto pos = to_logical(frame_input_.pointer);
+
+        for (const auto& screen_ev: frame_input_.mouse_moves) {
+            const auto logical = to_logical(screen_ev.screen_pos());
+            const auto previous_screen = foundation::NanPoint {
+                screen_ev.screen_pos().get_x() - screen_ev.delta().get_x(),
+                screen_ev.screen_pos().get_y() - screen_ev.delta().get_y(),
+            };
+            const auto previous = to_logical(previous_screen);
             scene::MouseMoveEvent ev {
-                pos,
+                logical,
                 foundation::NanPoint {
-                    pos.get_x() - previous.get_x(),
-                    pos.get_y() - previous.get_y()
+                    logical.get_x() - previous.get_x(),
+                    logical.get_y() - previous.get_y(),
                 }
             };
             tree_.dispatch_mouse_move(ev);
-            last_mouse_x_ = mx;
-            last_mouse_y_ = my;
         }
 
-        // Mouse buttons.
-        dispatch_mouse_button(tree_, pos, scene::MouseButtonEvent::Button::left, MOUSE_BUTTON_LEFT);
-        dispatch_mouse_button(
-            tree_,
-            pos,
-            scene::MouseButtonEvent::Button::right,
-            MOUSE_BUTTON_RIGHT
-        );
-        dispatch_mouse_button(
-            tree_,
-            pos,
-            scene::MouseButtonEvent::Button::middle,
-            MOUSE_BUTTON_MIDDLE
-        );
-
-        // Mouse wheel.
-        if (const float wheel = GetMouseWheelMove(); wheel != 0.0F) {
-            scene::MouseWheelEvent ev {
+        for (const auto& screen_ev: frame_input_.mouse_buttons) {
+            scene::MouseButtonEvent ev {
+                screen_ev.button(),
+                screen_ev.action(),
                 pos,
-                foundation::NanPoint {0.0F, wheel},
-                current_modifiers()
+                screen_ev.modifiers(),
             };
+            tree_.dispatch_mouse_button(ev);
+        }
+
+        for (const auto& screen_ev: frame_input_.mouse_wheels) {
+            scene::MouseWheelEvent ev {pos, screen_ev.delta(), screen_ev.modifiers()};
             tree_.dispatch_mouse_wheel(ev);
         }
 
-        // Keyboard: drain the pressed-key queue.
-        for (int key = GetKeyPressed(); key != 0; key = GetKeyPressed()) {
-            scene::KeyEvent ev {key, scene::KeyEvent::Action::press, current_modifiers()};
+        for (const auto& screen_ev: frame_input_.keys) {
+            scene::KeyEvent ev {
+                screen_ev.keycode(),
+                screen_ev.action(),
+                screen_ev.modifiers(),
+            };
             tree_.dispatch_key(ev);
         }
 
-        // Text input: drain the char queue (already composed unicode codepoints).
-        for (int codepoint = GetCharPressed(); codepoint != 0; codepoint = GetCharPressed()) {
-            if (codepoint >= 32) {
-                tree_.dispatch_text_input(
-                    scene::TextInputEvent {
-                        foundation::utf8::encode(static_cast<char32_t>(codepoint))
-                    }
-                );
-            }
+        for (const auto& screen_ev: frame_input_.text_inputs) {
+            scene::TextInputEvent ev {std::string(screen_ev.text())};
+            tree_.dispatch_text_input(ev);
         }
     }
 
@@ -435,17 +436,15 @@ namespace nandina::app
     }
 
     void NanWindow::tick() {
-        const float dt = GetFrameTime();
-        const auto metrics = make_window_metrics(
-            foundation::NanSize(
-                static_cast<float>(GetScreenWidth()),
-                static_cast<float>(GetScreenHeight())
-            ),
-            foundation::NanSize(
-                static_cast<float>(GetRenderWidth()),
-                static_cast<float>(GetRenderHeight())
-            )
-        );
+        // 关窗之后不再推进任何阶段：close() 会销毁设备与平台窗口，继续 tick 会读到 0×0
+        // 尺寸并访问已释放的资源。宿主的主循环通常靠 should_close() 停下，但这一层也要
+        // 自己守住（SDL 平台的 should_close() 已按同一语义返回 true，见其实现）。
+        if (!opened_) {
+            return;
+        }
+        const float dt = platform_->frame_time();
+        const auto metrics =
+            make_window_metrics(platform_->screen_size(), platform_->drawable_size());
         update_viewport_mapping(metrics.screen_size);
         auto deferred_effects = app_.graph().defer_effects();
         if (texture_cache_) {
@@ -517,6 +516,8 @@ namespace nandina::app
             tree_.render(ctx);
         }
         device_->end_frame();
+        // 平台呈现：raylib 平台的 EndDrawing 在设备里（no-op），SDL 平台在这里 present。
+        platform_->present();
 
         {
             auto phase = tree_.enter_phase(scene::FramePhase::dispose);
@@ -566,7 +567,8 @@ namespace nandina::app
         router_.reset();
         device_.reset();
         tree_.clear_clipboard();
-        CloseWindow();
+        clipboard_.reset();
+        platform_->destroy();
         opened_ = false;
         close_pending_ = false;
         log::get("app.window").info("NanWindow: closed");

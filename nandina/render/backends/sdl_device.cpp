@@ -1,10 +1,10 @@
 //
-// probe/cross_platform/desktop — SdlRenderDevice 实现。
+// render/backends/sdl_device — SdlRenderDevice 实现。
 //
 
-#include "sdl_render_device.hpp"
+#include "sdl_device.hpp"
 
-#include <nandina/foundation/nandina_color_space.hpp>
+#include "../../foundation/nandina_color_space.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -13,7 +13,7 @@
 #include <stdexcept>
 #include <vector>
 
-namespace nandina::probe
+namespace nandina::render
 {
     namespace
     {
@@ -656,4 +656,4 @@ namespace nandina::probe
         // ShadowPainter 会退化成硬边圆角阴影。
         return false;
     }
-} // namespace nandina::probe
+} // namespace nandina::render

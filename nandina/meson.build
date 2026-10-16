@@ -333,10 +333,26 @@ module_app = files(
     'app/nan_window.hpp',
     'app/nan_window.cpp',
 )
+module_app += files(
+    'app/platform_window.hpp',
+    'app/window_config.cpp',
+    'app/detail/raylib_platform_window.hpp',
+    'app/detail/raylib_platform_window.cpp',
+)
 if host_machine.system() == 'linux'
     module_app += files(
         'app/detail/linux_clipboard.hpp',
         'app/detail/linux_clipboard.cpp',
+    )
+endif
+
+module_sdl_backend = []
+if sdl3_dep.found()
+    module_sdl_backend = files(
+        'app/detail/sdl_platform_window.hpp',
+        'app/detail/sdl_platform_window.cpp',
+        'render/backends/sdl_device.hpp',
+        'render/backends/sdl_device.cpp',
     )
 endif
 
@@ -358,10 +374,14 @@ if box2d_dep.found()
     nandina_dependencies += box2d_dep
     nandina_cpp_args += '-DNANDINA_HAS_PHYSICS2D=1'
 endif
+if sdl3_dep.found()
+    nandina_dependencies += sdl3_dep
+    nandina_cpp_args += '-DNANDINA_HAS_SDL_BACKEND=1'
+endif
 
 nandina_lib = static_library(
     'nandina',
-    [module_fundation, module_reactive, module_resource, module_scene, module_semantics, module_render, module_theme, module_text, module_widget, module_app, module_physics2d, builtin_font_data, builtin_font_license_data],
+    [module_fundation, module_reactive, module_resource, module_scene, module_semantics, module_render, module_sdl_backend, module_theme, module_text, module_widget, module_app, module_physics2d, builtin_font_data, builtin_font_license_data],
     cpp_args : nandina_cpp_args,
     dependencies : nandina_dependencies,
 )

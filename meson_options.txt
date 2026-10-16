@@ -11,6 +11,12 @@ option(
     description: 'Build and register tests when Nandina is the main project',
 )
 option(
+    'sdl_backend',
+    type: 'feature',
+    value: 'auto',
+    description: 'Build the SDL3 render device and platform window (needs SDL >= 3.4.0)',
+)
+option(
     'sdl_page_probe',
     type: 'boolean',
     value: false,

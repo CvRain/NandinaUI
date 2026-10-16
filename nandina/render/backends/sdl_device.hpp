@@ -1,5 +1,9 @@
 //
-// probe/cross_platform/desktop — 用 SDL3 的 2D Renderer 实现 Nandina 的 IRenderDevice。
+// render/backends/sdl_device — 用 SDL3 的 2D Renderer 实现 Nandina 的 IRenderDevice。
+//
+// 这是**生产候选后端**，不是探测专用代码：探测（probe/cross_platform/）只是它最早的宿主。
+// 只有在 `-Dsdl_backend=enabled|auto` 且找到 SDL3 >= 3.4.0 时才编进 libnandina
+// （见 nandina/meson.build 的 module_sdl_backend）。
 //
 // 为什么先做「几何路径」而不是把生产的 SDF fragment shader 搬过来：
 //
@@ -16,10 +20,10 @@
 // 图像文件加载（load_texture_from_file/memory）与 `draw_rounded_rect_shadow` 仍走接口默认
 // 实现（no-op），因为它们要么需要解码器，要么是 SDF 专属效果 —— 这两条差异会打印在能力摘要里。
 
-#ifndef NANDINA_PROBE_SDL_RENDER_DEVICE_HPP
-#define NANDINA_PROBE_SDL_RENDER_DEVICE_HPP
+#ifndef NANDINA_EXPERIMENT_RENDER_BACKENDS_SDL_DEVICE_HPP
+#define NANDINA_EXPERIMENT_RENDER_BACKENDS_SDL_DEVICE_HPP
 
-#include <nandina/render/render_device.hpp>
+#include "../render_device.hpp"
 
 #include <SDL3/SDL.h>
 
@@ -28,7 +32,7 @@
 #include <span>
 #include <string_view>
 
-namespace nandina::probe
+namespace nandina::render
 {
     /// 统计信息：用来把「这个设备被要求画了什么」变成可打印的事实，而不是凭截图猜。
     struct SdlDeviceStats {
@@ -162,6 +166,6 @@ namespace nandina::probe
         std::uint64_t next_texture_ = 1;
     };
 
-} // namespace nandina::probe
+} // namespace nandina::render
 
-#endif // NANDINA_PROBE_SDL_RENDER_DEVICE_HPP
+#endif // NANDINA_EXPERIMENT_RENDER_BACKENDS_SDL_DEVICE_HPP

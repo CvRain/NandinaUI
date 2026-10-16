@@ -16,7 +16,7 @@
 //
 // 运行：`NANDINA_PROBE_CAPTURE=<path.bmp> NANDINA_PROBE_FRAMES=30 ./nandina_sdl_page_probe`
 
-#include "sdl_render_device.hpp"
+#include <nandina/render/backends/sdl_device.hpp>
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_gpu.h>
@@ -126,7 +126,7 @@ int main() {
             nandina::app::NanApplicationConfig::for_process("com.nandina.probe.sdl_page")
         );
 
-        nandina::probe::SdlRenderDevice device(*renderer);
+        nandina::render::SdlRenderDevice device(*renderer);
         // 真实字体管线：FontPipelineCache 直接接收本设备，所以字形图集（GlyphAtlasTexture）
         // 的创建、扩容与子矩形更新都走这个后端 —— 这正是探测记录里未验证的那条路径。
         auto fonts = nandina::text::FontPipelineCache(

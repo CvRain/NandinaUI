@@ -26,11 +26,13 @@
 
 #include "../render/render_device.hpp"
 #include "../render/texture_cache.hpp"
+#include "../scene/clipboard.hpp"
 #include "../scene/scene_tree.hpp"
 #include "../text/font_pipeline.hpp"
 #include "../text/text_layout_backend.hpp"
 #include "../widget/drag_controller.hpp"
 #include "nan_router.hpp"
+#include "platform_window.hpp"
 #include "shell_context.hpp"
 #include "viewport_scaling.hpp"
 #include "window_config.hpp"
@@ -39,6 +41,7 @@
 #include <exception>
 #include <memory>
 #include <optional>
+#include <string_view>
 
 namespace nandina::reactive
 {
@@ -58,6 +61,16 @@ namespace nandina::app
     class NanWindow {
     public:
         NanWindow(NanApplication& app, WindowConfig config);
+
+        /// 平台后端注入点（P4）：默认是 raylib + GLFW 实现，可以在 open() 之前替换成
+        /// 别的平台（例如 SDL3）。传 nullptr 会退回默认实现。
+        void set_platform_window(std::unique_ptr<IPlatformWindow> platform);
+
+        /// 当前平台名（诊断/能力报告用），未创建时返回 "none"。
+        [[nodiscard]] auto platform_name() const -> std::string_view;
+
+        /// 解析后的平台后端（`automatic` 已按本构建展开）。
+        [[nodiscard]] auto platform_backend() const -> WindowBackend;
         virtual ~NanWindow();
 
         NanWindow(const NanWindow&) = delete;
@@ -175,6 +188,10 @@ namespace nandina::app
         std::unique_ptr<NanRouter> router_;
         std::unique_ptr<reactive::ReactiveScope> shell_scope_;
         bool shell_installed_ = false;
+        /// 平台后端：窗口 + 输入 + 呈现 + 设备工厂。默认在构造函数里装 raylib 实现。
+        std::unique_ptr<IPlatformWindow> platform_;
+        /// 剪贴板适配器：把平台实现接成 `scene::IClipboard`（open() 里创建）。
+        std::unique_ptr<scene::IClipboard> clipboard_;
         std::unique_ptr<render::IRenderDevice> device_;
         std::unique_ptr<render::TextureCache> texture_cache_;
         std::unique_ptr<text::FontPipelineCache> font_pipeline_cache_;
@@ -184,11 +201,8 @@ namespace nandina::app
         /// Set by request_close(); consumed by tick() after drawing completes.
         bool close_pending_ = false;
         std::optional<ViewportMapping> viewport_mapping_;
-
-        // 上一帧鼠标位置 (用于计算 delta 与 move 事件)。
-        float last_mouse_x_ = 0.0F;
-        float last_mouse_y_ = 0.0F;
-        bool has_mouse_ = false;
+        /// 平台层翻译好的一帧输入（复用缓冲，避免每帧分配）。
+        FrameInput frame_input_ {};
     };
 
 } // namespace nandina::app

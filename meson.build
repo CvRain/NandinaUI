@@ -123,6 +123,14 @@ freetype_dep = freetype_subproj.get_variable('freetype_dep')
 harfbuzz_dep = harfbuzz_subproj.get_variable('libharfbuzz_dep')
 fribidi_dep = fribidi_subproj.get_variable('libfribidi_dep')
 nlohmann_json_dep = nlohmann_json_subproj.get_variable('nlohmann_json_dep')
+# SDL3 是 P3/P4 的目标平台层：窗口/输入/帧驱动 + SDL 2D 渲染设备。用 feature 选项控制，
+# 找不到时（auto）静默退化为纯 raylib 构建；enabled 时找不到会让配置失败。
+sdl_backend_option = get_option('sdl_backend')
+sdl3_dep = disabler()
+if not sdl_backend_option.disabled()
+    sdl3_dep = dependency('sdl3', version: '>=3.4.0', required: sdl_backend_option)
+endif
+
 physics2d_option = get_option('physics2d')
 box2d_dep = disabler()
 if not physics2d_option.disabled()

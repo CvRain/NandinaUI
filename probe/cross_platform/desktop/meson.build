@@ -5,7 +5,11 @@
 # SDL3 设备上的表现，而不是手写图元。CMake 那份刻意只依赖头文件 + 三个 foundation TU，
 # 用来回答「设备契约能不能独立实现」；两份并存的理由见 README。
 
-sdl3_dep = dependency('sdl3', version: '>=3.4.0', required: true)
+# 这个探测现在直接使用**库里**的 SDL 设备（render/backends/sdl_device.*），所以它要求
+# `-Dsdl_backend=enabled`：探测不该自己再实现一份生产后端。
+if not sdl3_dep.found()
+    error('nandina_sdl_page_probe requires -Dsdl_backend=enabled (SDL3 >= 3.4.0)')
+endif
 
 # 消费者回归要覆盖每个 showcase 页面，所以三个页面源码都编进来。
 showcase_page_sources = files(
@@ -19,7 +23,7 @@ showcase_page_sources = files(
 
 sdl_page_probe = executable(
     'nandina_sdl_page_probe',
-    files('page_probe.cpp', 'sdl_render_device.cpp') + showcase_page_sources,
+    files('page_probe.cpp') + showcase_page_sources,
     include_directories : include_directories('../../..'),
     dependencies : [nandina_dep, sdl3_dep],
     install : false,
