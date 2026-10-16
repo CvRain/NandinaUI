@@ -286,6 +286,21 @@ python3 tools/compare_render_traces.py /tmp/trace_raylib_home.txt /tmp/trace_sdl
 （每格是「raylib / SDL」。）也就是说：**同一个页面在两个后端上由同样的图元、按同样的顺序画出来**
 —— 圆角没有被降级成方框，裁剪栈的开合次数也一致。
 
+#### 2.3.7 P3 切换后的性能与内存复测（2026-10-16）
+
+P3 的验收要求"在 SDL 上重新测量性能与内存"。同一台机器、同一个 showcase、同一份组件代码，
+只切 `NANDINA_WINDOW_BACKEND`：
+
+| 后端 | RSS | 空闲 CPU（单核占比） | 稳态每帧（探测，含侧边栏） |
+| --- | --- | --- | --- |
+| `sdl3`（默认） | **64 MB** | 6% | layout 0.002 ms / draw 2.0–2.2 ms |
+| `raylib`（对照） | 150 MB | 10% | 探测侧未测（bench 侧历史值 1.85 ms/帧 draw） |
+
+RSS 差了 86 MB，主要不是"我们多画了东西"，而是 raylib 路径要多带一整套 GL/GLFW 上下文与
+Mesa 的着色器缓存（此前查 150 MB 时已经定位过：其中约 40 MB 是 4 条字体管线 × 2 个字面 ×
+1024² 图集，95.7 MB 是文件映射）。**这个数字只说明"默认后端更轻"，不说明 SDL 设备更快** ——
+逐帧 draw 成本两侧同量级，且 SDL 设备目前是 CPU 侧几何（见 §2.2 的取舍说明）。
+
 **唯一偏差**：raylib 侧每帧多一次 `clear`。原因已定位且与后端无关：真实宿主
 （`NanWindow::tick`）由宿主开帧边界再 `tree.render(ctx)`，而独立探测用的是
 `tree.draw(device)`，后者内部**自己**再开一次 begin/end_frame，于是探测每帧有两对帧边界与两次
