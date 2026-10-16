@@ -18,7 +18,8 @@
 
 - Wayland shell / compositor 集成；
 - WebGL1（当前 shader 依赖 `fwidth` 导数，WebGL2 是最低要求）；
-- D3D12 / Metal 的完成时间（`SDL_shadercross` 多后端产物**尚未构建验证**）；
+- D3D12 / Metal 的完成时间（`SDL_shadercross` 的多后端产物**已构建验证**，但**加载**需要
+  对应设备，见探测记录 §3.1）；
 - 「同一份 SDF shader 跑遍所有平台」：Web 走独立的 2D 实现（见 §2）。
 
 ## 2. 分层与所有权（P4 的核心）
@@ -74,7 +75,7 @@
 | host 工具 | 版本固定并**校验**（`glslc` 2026.4、SPIRV-Tools v2026.4 已在配置期硬校验）；跨编译时执行 host 版本，不依赖开发机「刚好装好」 |
 | 产物入构建图 | 源 shader 变化触发重新生成；`spirv-val` **是构建图的一步**（已实施：坏产物会让构建失败）；安装/打包带上二进制 |
 | 失败可定位 | 报源文件、目标 backend/format、工具版本与诊断输出 |
-| 多后端产物 | `SDL_shadercross`（候选提交 `1ff05bec…`）的 SPIR-V/DXIL/MSL 均**未构建验证**；CI 需对每个承诺格式实际生成并加载 |
+| 多后端产物 | `SDL_shadercross`（提交 `1ff05bec…`）已构建，SPIR-V/DXIL/MSL **均已实际生成**并由独立 `spirv-val` 校验（`tools/verify_shadercross.sh`，探测记录 §3.1）；**加载** DXIL/MSL 仍需 D3D12/Metal 设备 |
 | API floor | `SDL_GPURenderState` 需要 SDL **3.4.0**；对外声明的最低版本不得低于它，CI/SDK 固定精确受测版本 |
 
 ## 5. 阶段交付与验收
@@ -84,7 +85,7 @@
 | 阶段 | 交付 | 验收 | 证据/状态 |
 | --- | --- | --- | --- |
 | **P0** 应用级探测 | 窗口/事件/帧循环；GPU render state 自定义 shader；真实 `IRenderDevice`；真实页面 + 真实字体图集 | 真实 showcase 页面在 SDL 设备上正确渲染；稳态 0 次布局 | **基本完成**，缺键码映射验证（[§2.3.1](cross_platform_backend_probe.md)） |
-| **P1** 渲染与 shader 管线门槛 | 工具链固定；SPIR-V 校验入构建图；多后端产物；同页跨后端对照；能力差异落成代码分支；Web 端有效验收 | 每个承诺格式都能生成并加载；能力差异有会红的测试；同页对照有量化结论；Web 验收能区分失败原因 | **进行中**：工具链、校验、**阴影/圆角裁剪降级路径**、**同页像素对照**（差异 0.01% 像素、≤20/255）、**Web 端有效验收**（画布像素读回 + 服务端记录）已完成；`SDL_shadercross` 多后端产物与逐图元对照未完成 |
+| **P1** 渲染与 shader 管线门槛 | 工具链固定；SPIR-V 校验入构建图；多后端产物；同页跨后端对照；能力差异落成代码分支；Web 端有效验收 | 每个承诺格式都能生成并加载；能力差异有会红的测试；同页对照有量化结论；Web 验收能区分失败原因 | **基本完成**：工具链、校验、能力降级路径、同页像素对照（0.01% 像素、≤20/255）、Web 端验收、**多后端产物已生成并外部校验**（§3.1）均已完成；剩余：DXIL/MSL 的**加载**（需对应设备）与逐图元等价性（trace 设备未写） |
 | **P2** 平台能力与消费者回归 | 能力查询落地到组件；各后端行为回归；**含外壳与交互态** | 组件在两种后端下的行为有对照记录；交互态可用框架状态核对；差异要么修复要么降级 | **进行中**：三个 showcase 页面逐像素对照（Home 相同、其余只剩角部 AA，扫出并修复圆角描边缺陷，§2.3.3）；**真实外壳 + hover/press/导航/选中态回归通过**（§2.3.4，并挖出两条 host 契约） |
 | **P3** 默认后端替换 | SDL 设备成为默认；raylib 退回离线/录制设备 | 真实应用在 SDL 默认路径下通过三套验证与人工验收 | **已落地**：`NANDINA_WINDOW_BACKEND=sdl3 ./buildDir/showcase/nandina_showcase` 正常运行（renderer=gpu、~5% 单核、侧边栏 + Home 页正确渲染）；三套验证在 SDL 为默认后端下全绿（含 window-lifecycle 走 SDL 宿主）；`playground/bench` 显式钉住 raylib 以继续充当基线采集器 |
 | **P4** host 行为契约收口 | 平台层接口成形；`NanWindow` 不再持有窗口/输入/帧驱动；**设备可注入**；**应用背景由谁绘制**要有定义；宿主阶段链完整（drain dispatcher、process、tree_commit、physics、advance_animations） | 同一份组件代码在 SDL 与 raylib 两个宿主下行为一致 | **基本完成**：seam + 两个实现已落地，设备由平台创建（可注入）；三条必备契约记在探测记录 §2.3.4/§2.3.5（drain UiDispatcher、完整阶段链、浮层必须以 OverlayHost 为树根）；仍缺**逐图元 trace 设备**本身 |
@@ -106,7 +107,8 @@
 ## 7. 未定项（不要假装已冻结）
 
 1. Windows 与 Web 的先后顺序；
-2. D3D12 / Metal 是否纳入承诺，以及 `SDL_shadercross` 的实际可用性；
+2. D3D12 / Metal 是否纳入承诺（`SDL_shadercross` 的可用性已在 Linux 上验证到"生成 +
+   独立校验"这一步，见探测记录 §3.1）；
 3. Web 是否复用 SDL GPU renderer，还是坚持独立的 2D 实现（当前倾向后者）；
 4. 平台层接口的精确形状（`NanWindow` 拆分后的宿主 API）——属于 P4 的定形工作；
 5. 规范键值的归属：`widget/key_codes.hpp` 目前直接是 GLFW 码，多后端下需要自己的规范化值。

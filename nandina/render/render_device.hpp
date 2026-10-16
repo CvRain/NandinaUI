@@ -269,6 +269,15 @@ namespace nandina::render
         [[nodiscard]] virtual auto supports_soft_shadows() const -> bool {
             return true;
         }
+
+        /// 是否能加载图片（`load_texture_from_file` / `load_texture_from_memory`）。
+        ///
+        /// 接口默认实现是 no-op，返回空 handle；做不到的设备必须如实返回 false，让消费者
+        /// **在尝试之前**就知道会失败（`Image` 据此给出一次性诊断并保持空内容），而不是
+        /// 每个实例、每次刷新都报一次笼统的"decode/upload failed"。
+        [[nodiscard]] virtual auto supports_image_loading() const -> bool {
+            return true;
+        }
     };
 
 } // namespace nandina::render

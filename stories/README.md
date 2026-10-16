@@ -44,3 +44,4 @@
 | [013](013-resource-scope-before-identity.md) | 资源自动构建之前，先找回查询丢掉的作用域 | 解耦不等待身份、纯内容 ID 的记录冲突、管理器八入口、发布代次，以及流和弱令牌的证据边界 |
 | [014](014-the-dsl-that-kept-sending-authors-to-configure.md) | DSL 一边提供链式 API，一边把作者送回 configure | Label 作者能力、Slint/QML 的取舍、有限宽度文本测量，以及先测量后抽象 Section 的顺序 |
 | [015](015-the-probe-that-was-not-in-version-control.md) | 探针在版本控制之外待了两周，然后我们决定换掉生产后端 | SDL3 探测入库、`spirv-val` 进构建图、真实页面在 SDL 上渲染，以及一次像素格式错位；D4 方向定案 |
+| [016](016-swapping-the-production-backend-to-sdl3.md) | 把生产后端换成 SDL3：三条宿主契约，两个自己写出来的 bug | `IPlatformWindow` 拆分、SDL 宿主与设备、默认后端切换，以及只在真实宿主里才暴露的关闭语义与动画阶段 |

@@ -42,6 +42,7 @@ namespace nandina::render
         std::uint64_t rounded_rects = 0;
         std::uint64_t rounded_outlines = 0;
         std::uint64_t circles = 0;
+        std::uint64_t arcs = 0;
         std::uint64_t lines = 0;
         std::uint64_t texts = 0;
         std::uint64_t texture_draws = 0;
@@ -86,6 +87,15 @@ namespace nandina::render
             const foundation::NanRect& rect,
             float radius,
             float thickness,
+            const foundation::NanColor& color
+        ) override;
+        /// 圆环扇区：同心环扇一次提交，不退化到接口默认的弦逼近折线（Spinner/ProgressBar 用它）。
+        void draw_arc(
+            const foundation::NanPoint& center,
+            float inner_radius,
+            float outer_radius,
+            float start_radians,
+            float sweep_radians,
             const foundation::NanColor& color
         ) override;
         void draw_line(
@@ -147,6 +157,8 @@ namespace nandina::render
         [[nodiscard]] auto supports_rounded_clip() const -> bool override;
         /// 未实现软阴影，返回 false，消费者退化为硬边阴影。
         [[nodiscard]] auto supports_soft_shadows() const -> bool override;
+        /// 不能加载图片（无解码器/loader），返回 false。
+        [[nodiscard]] auto supports_image_loading() const -> bool override;
 
     private:
         void set_draw_color(const foundation::NanColor& color);

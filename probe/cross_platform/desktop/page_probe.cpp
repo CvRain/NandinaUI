@@ -467,7 +467,7 @@ int main() {
         std::cout << "device stats: frames=" << stats.frames << " rects=" << stats.rects
                   << " outlines=" << stats.rect_outlines << " rounded=" << stats.rounded_rects
                   << " rounded_outlines=" << stats.rounded_outlines << " circles=" << stats.circles
-                  << " lines=" << stats.lines << " texts=" << stats.texts
+                  << " arcs=" << stats.arcs << " lines=" << stats.lines << " texts=" << stats.texts
                   << " textures=" << stats.texture_draws << " alpha_uploads=" << stats.alpha_uploads
                   << " clips=" << stats.clips << " cpu_vertices=" << stats.generated_vertices
                   << '\n';

@@ -47,6 +47,8 @@ namespace
         std::vector<render::TextureHandle> destroyed;
         std::vector<Region> regions;
         bool fail_loads = false;
+        /// 设为 false 模拟「后端不能加载图片」（如 SDL 设备）。
+        bool image_loading_supported = true;
         foundation::NanSize size_to_return {64.0F, 32.0F};
         render::ImageLoadOptions last_options {};
 
@@ -77,6 +79,10 @@ namespace
             float,
             const foundation::NanColor&
         ) override {}
+
+        [[nodiscard]] auto supports_image_loading() const -> bool override {
+            return image_loading_supported;
+        }
 
         [[nodiscard]] auto
         load_texture_from_file(std::string_view path, const render::ImageLoadOptions& options)
@@ -1140,4 +1146,33 @@ TEST_CASE("async decode priority orders the pending queue", "[image][cache][asyn
 
     REQUIRE(decoder->calls == 3);
     REQUIRE(decoder->decoded_bytes == std::vector<std::uint8_t> {1, 3, 2});
+}
+
+TEST_CASE(
+    "image does not attempt a load when the backend cannot load images",
+    "[image][capability]"
+) {
+    // 能力查询驱动的降级：后端如实报告不能加载图片时，Image 必须在**尝试之前**就停手，
+    // 而不是每次刷新都"尝试-失败-告警"（见 platform_backend_contract.md §3）。
+    TextureRecordingDevice device;
+    device.image_loading_supported = false;
+    auto image = std::make_shared<widget::Image>("textures/photo.png");
+    scene::NanSceneTree tree;
+    tree.set_root(image);
+
+    (void)tree.layout_root(foundation::NanSize(400.0F, 200.0F));
+    tree.draw(device);
+
+    REQUIRE(device.loaded.empty());
+    REQUIRE(device.memory_loads == 0);
+    REQUIRE(image->load_state() == widget::ImageLoadState::failed);
+
+    // 对照组：支持加载的设备照常尝试。
+    TextureRecordingDevice capable;
+    auto capable_image = std::make_shared<widget::Image>("textures/photo.png");
+    scene::NanSceneTree capable_tree;
+    capable_tree.set_root(capable_image);
+    (void)capable_tree.layout_root(foundation::NanSize(400.0F, 200.0F));
+    capable_tree.draw(capable);
+    REQUIRE(capable.loaded.size() == 1);
 }

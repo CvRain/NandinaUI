@@ -209,6 +209,18 @@ namespace nandina::widget
         if (load_state_ != ImageLoadState::idle || source_.empty()) {
             return;
         }
+        // 能力查询优先：后端不支持图片加载时，不要每次刷新都重复"尝试-失败-告警"。
+        // 这是 `supports_image_loading()` 的消费者侧（见 platform_backend_contract.md §3）。
+        if (!device.supports_image_loading()) {
+            static bool warned = false;
+            if (!warned) {
+                warned = true;
+                log::get("widget.image")
+                    .warn("Image: the active render backend cannot load images; Image stays empty");
+            }
+            load_state_ = ImageLoadState::failed;
+            return;
+        }
         load_state_ = ImageLoadState::loading;
         if (source_.starts_with("res://")) {
             if (!resources_) {

@@ -285,6 +285,79 @@ namespace nandina::render
         );
     }
 
+    void SdlRenderDevice::draw_arc(
+        const foundation::NanPoint& center,
+        const float inner_radius,
+        const float outer_radius,
+        const float start_radians,
+        const float sweep_radians,
+        const foundation::NanColor& color
+    ) {
+        ++stats_.arcs;
+        if (!std::isfinite(center.get_x()) || !std::isfinite(center.get_y())
+            || !std::isfinite(inner_radius) || !std::isfinite(outer_radius)
+            || !std::isfinite(start_radians) || !std::isfinite(sweep_radians)
+            || outer_radius <= 0.0F || inner_radius < 0.0F || inner_radius >= outer_radius
+            || std::abs(sweep_radians) < 1.0e-4F)
+        {
+            return;
+        }
+        // 与圆角描边同一套几何：同心环扇（外半径 / 内半径、同一圆心）。接口默认实现是
+        // 弦逼近的线段序列（≤64 段），在细环上会露出明显折线 —— Spinner/ProgressBar 走这条。
+        const auto sweep = std::abs(sweep_radians);
+        const auto start = sweep_radians < 0.0F ? start_radians + sweep_radians : start_radians;
+        const auto segments = std::clamp(static_cast<int>(std::ceil(sweep * 12.0F)), 6, 96);
+        const auto converted = to_sdl_color(color);
+        const auto vertex = [&](const float x, const float y) {
+            return SDL_Vertex {
+                .position = SDL_FPoint {.x = x, .y = y},
+                .color =
+                    SDL_FColor {
+                        .r = static_cast<float>(converted.r) / 255.0F,
+                        .g = static_cast<float>(converted.g) / 255.0F,
+                        .b = static_cast<float>(converted.b) / 255.0F,
+                        .a = static_cast<float>(converted.a) / 255.0F,
+                    },
+                .tex_coord = SDL_FPoint {.x = 0.0F, .y = 0.0F},
+            };
+        };
+        std::vector<SDL_Vertex> vertices;
+        vertices.reserve(static_cast<std::size_t>(segments + 1) * 2);
+        for (int index = 0; index <= segments; ++index) {
+            const auto angle =
+                start + sweep * static_cast<float>(index) / static_cast<float>(segments);
+            const auto cos = std::cos(angle);
+            const auto sin = std::sin(angle);
+            vertices.push_back(
+                vertex(center.get_x() + outer_radius * cos, center.get_y() + outer_radius * sin)
+            );
+            vertices.push_back(
+                vertex(center.get_x() + inner_radius * cos, center.get_y() + inner_radius * sin)
+            );
+        }
+        std::vector<int> indices;
+        indices.reserve(static_cast<std::size_t>(segments) * 6);
+        for (int index = 0; index < segments; ++index) {
+            const auto outer0 = index * 2;
+            const auto inner0 = index * 2 + 1;
+            const auto outer1 = index * 2 + 2;
+            const auto inner1 = index * 2 + 3;
+            indices.insert(indices.end(), {outer0, outer1, inner1, outer0, inner1, inner0});
+        }
+        check_sdl(
+            SDL_RenderGeometry(
+                renderer_,
+                nullptr,
+                vertices.data(),
+                static_cast<int>(vertices.size()),
+                indices.data(),
+                static_cast<int>(indices.size())
+            ),
+            "SDL_RenderGeometry(arc)"
+        );
+        stats_.generated_vertices += vertices.size();
+    }
+
     void SdlRenderDevice::draw_rounded_rect_outline(
         const foundation::NanRect& rect,
         const float radius,
@@ -648,6 +721,12 @@ namespace nandina::render
         // 圆角矩形是用三角形扇画出来的，绘制本身没问题；但**裁剪**只能交给
         // SDL_SetRenderClipRect，那是矩形 —— 圆角处的裁剪会退化成方角。所以这里如实
         // 返回 false，让 RipplePainter 走「自己 set_clip + 画圆」的降级路径。
+        return false;
+    }
+
+    auto SdlRenderDevice::supports_image_loading() const -> bool {
+        // 没有解码器：SDL 平台也不提供 `IImageDecoder`（见 sdl_platform_window 的
+        // make_image_decoder）。如实返回 false，让 Image 走"明确不支持"的路径。
         return false;
     }
 

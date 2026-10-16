@@ -27,8 +27,8 @@
 - [待决设计草案](reference_draft.md)：**工作稿**。D2 的后续讨论已汇总到[主题方案、作者入口与状态订阅](theme_authoring_and_state.md)；D3 的 `nav_group` 空值与合并语义已收敛、未实施；D4 仍需 SDL3 应用级 PoC，含 GPU shader 工具链与未来 host 行为契约。D1 已定案为[统一输入、焦点与文本编辑](focus_and_input.md)。
 - [布局收敛与文本测量](layout_convergence_and_text_measurement.md)：**已实施**。布局永不收敛的实测证据与四条根因（`Text` 写入原始尺寸、`ScrollView` 两个阶段跨轴契约不一致、`stretch` 越过子项显式尺寸、亚像素浮点噪声）、收敛契约、故障注入矩阵、未覆盖缺口与开放项（含整形成本与一次被实测否决的缓存方案）。
 - [文本整形与页面打开成本](text_shaping_cost.md)：**已实施**。页面打开时间（Label 858 ms 构建 / 5000 汉字 6.4 s）的两个 O(n²)（caret 停靠点去重、逐簇推进重新分段）、空闲 CPU（`Expanded` 子项尺寸抖动导致每帧全量布局，72% → 9% 单核）与常驻内存构成（4 条字体管线 × 1024² 图集 ≈ 40 MB）、整形成本曲线、一次被实测否决的整形缓存，构建期 1.4 万次重复测量与按输入键控的文本记忆化（构建 378 → 159 ms）、按词换行（断行机会），以及剩余目标。
-- [平台与后端契约（D4）](platform_backend_contract.md)：**方向已定，迁移未开始**。目标平台与分层、`NanWindow` 所有权的收口方向、能力差异必须写成代码里的 capability 查询、shader 构建链契约、P0–P4 阶段交付与验收，以及未定项（Windows/Web 顺序、D3D12/Metal、宿主接口形状、规范键值归属）。
-- [跨平台后端探测：SDL3 GPU 与 Web 现状](cross_platform_backend_probe.md)：**探测记录，不是选型批准**。Vulkan GPU Renderer 与两条 Web 路径各自证明了什么、未验证清单、shader 构建链门槛，以及为什么不能用修复前的页面性能做后端结论。探测源码已入库（[probe/cross_platform/](../../probe/cross_platform/README.md)），工具链固定点由 `tools/verify_toolchain.sh` 一条命令核对，`spirv-val` 已接进构建图；已实现真实的 `IRenderDevice`（SDL 2D + CPU 几何），并让**真实 showcase 页面**（真实字体图集）经 `NanSceneTree::draw()` 在该设备上渲染（稳态 0 次布局，draw 1.85 ms/帧）。
+- [平台与后端契约（D4）](platform_backend_contract.md)：**后端替换已实施，收尾中**。目标平台与分层、`NanWindow` 所有权的收口方向、能力差异必须写成代码里的 capability 查询、shader 构建链契约、P0–P4 阶段交付与验收，以及未定项（Windows/Web 顺序、D3D12/Metal、宿主接口形状、规范键值归属）。
+- [跨平台后端探测：SDL3 GPU 与 Web 现状](cross_platform_backend_probe.md)：**探测记录，不是选型批准**。Vulkan GPU Renderer 与两条 Web 路径各自证明了什么、未验证清单、shader 构建链门槛，以及为什么不能用修复前的页面性能做后端结论。**P3 已落地**：`IPlatformWindow` seam + SDL3 宿主/SDL 渲染设备，装了 SDL3 的构建默认走 SDL3；探测源码已入库（[probe/cross_platform/](../../probe/cross_platform/README.md)），工具链固定点由 `tools/verify_toolchain.sh` 一条命令核对，`spirv-val` 已接进构建图；已实现真实的 `IRenderDevice`（SDL 2D + CPU 几何），并让**真实 showcase 页面**（真实字体图集）经 `NanSceneTree::draw()` 在该设备上渲染（稳态 0 次布局，draw 1.85 ms/帧）。
 
 ### 应用层
 

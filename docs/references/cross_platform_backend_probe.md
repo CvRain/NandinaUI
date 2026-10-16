@@ -342,8 +342,33 @@ frame cost: layout=0.04 ms, draw=0.27 ms（含侧边栏）
 - **产物进构建图与最终包**：源 shader 变化必须触发重新生成；安装/打包带上所需二进制；
   运行时不得偷偷要求构建机工具。
 - **失败可定位**：报源文件、目标 backend/format、工具版本与诊断输出；CI 对每个承诺的格式
-  实际生成并加载。`SDL_shadercross` 的候选提交 `1ff05bec573988a98ef9e0260b4da44f512b8367`
-  目前**多后端产物尚未构建验证**。
+  实际生成并加载。
+
+### 3.1 `SDL_shadercross` 已构建验证（2026-10-16）
+
+候选提交 `1ff05bec573988a98ef9e0260b4da44f512b8367`（= 当时 main）已在本机构建成功，
+并且**每个承诺格式都实际生成了产物** —— 一条命令可复现：`tools/verify_shadercross.sh`。
+
+```
+OK    HLSL -> SPIR-V             2204 B, magic 03022307
+OK    spirv-val (external)       shadercross 的 SPIR-V 产物通过独立校验
+OK    SPIR-V -> DXIL             4552 B, DXBC container
+OK    SPIR-V -> MSL              1607 B, metal_stdlib 入口
+OK    SPIR-V -> HLSL             1805 B, 资源绑定可见
+```
+
+值得单独说的是 **`spirv-val` 那次校验**：产物不是"我们自己看了一眼觉得对"，而是被
+**工具链里那份独立的 `spirv-val`**（与 shadercross 自带的 SPIRV-Tools 是两份）接受。
+这是本机能拿到的最强证据。
+
+构建本身踩了三个坑，都写进了脚本的 `BUILD_HINT`：DXC 的**嵌套子模块**
+`external/DirectX-Headers`（少了它缺 `d3d12shader.h`）、vendored SPIRV-Tools 在 GCC 14 上的
+`-Werror=array-bounds` 误报、以及 `SDLSHADERCROSS_SPIRVCROSS_SHARED=ON` 默认要求**预装**
+的 spirv_cross（要么装，要么 `VENDORED=ON` + 静态）。
+
+**仍然未验证的是"加载"**：DXIL 需要 D3D12 设备、MSL 需要 Metal 设备，而这台验收机是
+Linux/AMD。脚本把两条命令打印出来（`xcrun metal`、`dxc -dumpbin -verify`），
+在对应平台上补跑即可 —— 这是外部阻塞，不是"没做"。
 
 `SDL_GPURenderState` 的 API floor 是 SDL 3.4.0：对外声明的最低版本不得低于它，
 CI/SDK 再固定精确受测版本并在升级时复检。P1 的交付物是「目标 driver 上可用 + 已知限制清单」，
@@ -354,7 +379,7 @@ CI/SDK 再固定精确受测版本并在升级时复检。P1 的交付物是「�
 | D4 阶段 | 当前状态 |
 | --- | --- |
 | P0 SDL3 应用级探测 | **基本完成**：窗口/事件/帧循环、GPU render state 的自定义 SDF shader、真实的 `IRenderDevice`（SDL 2D + CPU 几何），以及**真实 showcase 页面 + 真实字体图集**（§2.3.1）都已跑通；仍缺键码映射验证 |
-| P1 渲染与 shader 管线门槛 | **进行中**：工具链固定并可一条命令核对（`glslc`/`spirv-val`/SDL/emsdk）、SPIR-V 校验进构建图、能力降级路径（阴影/圆角裁剪）、同页像素对照（§2.3.2）、Web 端有效验收（§2.1.1）；仍缺 `SDL_shadercross` 的 DXIL/MSL 产物、多格式 CI 生成与加载、以及逐图元等价性 |
+| P1 渲染与 shader 管线门槛 | **基本完成**：工具链固定并可一条命令核对（`glslc`/`spirv-val`/SDL/emsdk）、SPIR-V 校验进构建图、能力降级路径（阴影/圆角裁剪）、同页像素对照（§2.3.2）、Web 端有效验收（§2.1.1）、**`SDL_shadercross` 的 SPIR-V/DXIL/MSL 产物已实际生成并被独立 `spirv-val` 接受**（§3.1，`tools/verify_shadercross.sh`）；仍缺 DXIL/MSL 的**加载**（需 D3D12/Metal 设备）与逐图元等价性（trace 设备尚未写） |
 | P2 平台能力与消费者回归 | 未开始 |
 | P3 默认后端决策 | 未开始；`raylib` 仍是唯一生产路径 |
 | P4 host 行为契约 | 未开始；`NanWindow` 仍同时持有窗口、设备、输入轮询与帧驱动 |
