@@ -17,6 +17,8 @@
 // 运行：`NANDINA_PROBE_CAPTURE=<path.bmp> NANDINA_PROBE_FRAMES=30 ./nandina_sdl_page_probe`
 
 #include <nandina/render/backends/sdl_device.hpp>
+#include <nandina/render/draw_context.hpp>
+#include <nandina/render/recording_device.hpp>
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_gpu.h>
@@ -46,6 +48,7 @@
 
 #include <chrono>
 #include <cstdlib>
+#include <fstream>
 #include <iostream>
 #include <stdexcept>
 #include <string>
@@ -131,7 +134,16 @@ int main() {
             nandina::app::NanApplicationConfig::for_process("com.nandina.probe.sdl_page")
         );
 
-        nandina::render::SdlRenderDevice device(*renderer);
+        // 逐图元 trace：`NANDINA_PROBE_TRACE=<path>` 时把调用序列录下来，与 raylib 侧的录制
+        // （bench 的 `NANDINA_BENCH_TRACE`）逐行对比 —— 像素相同不代表图元相同。
+        const auto* trace_path = std::getenv("NANDINA_PROBE_TRACE");
+        auto sdl_device = std::make_unique<nandina::render::SdlRenderDevice>(*renderer);
+        auto recorder = trace_path != nullptr
+            ? std::make_unique<nandina::render::RecordingDevice>(std::move(sdl_device))
+            : nullptr;
+        nandina::render::IRenderDevice& device = recorder != nullptr
+            ? static_cast<nandina::render::IRenderDevice&>(*recorder)
+            : static_cast<nandina::render::IRenderDevice&>(*sdl_device);
         // 真实字体管线：FontPipelineCache 直接接收本设备，所以字形图集（GlyphAtlasTexture）
         // 的创建、扩容与子矩形更新都走这个后端 —— 这正是探测记录里未验证的那条路径。
         auto fonts = nandina::text::FontPipelineCache(
@@ -349,6 +361,12 @@ int main() {
             tree.advance_animations(kProbeDt);
 
             // 真实页面：布局 → 绘制，全部走 Nandina 自己的路径。
+            //
+            // 已知偏差（记录在探测文档 §2.3.6）：这里用 `tree.draw(device)`，它内部会再开一次
+            // begin/end_frame，所以探测每帧有**两对**帧边界与两次 clear，而真实宿主
+            // （`NanWindow::tick`）是宿主开边界 + `tree.render(ctx)` 遍历，只有一对。
+            // 试图改成同样的形式会让这个独立探测崩溃（`render(ctx)` 需要宿主侧完整的
+            // viewport 上下文），所以保留现状并把差异写清楚 —— 逐图元对照只差这一次 clear。
             device.begin_frame();
             // 宿主清屏色：与 raylib 窗口的默认清屏色保持一致（白），否则跨后端对照会把
             // 「宿主选择」误读成「后端差异」。页面自己只画卡片/文本，最外层背景由宿主决定 ——
@@ -428,16 +446,24 @@ int main() {
             check_sdl(SDL_RenderPresent(renderer), "SDL_RenderPresent");
 
             ++frame;
-            if (capture_path != nullptr && frame >= frames_to_run) {
-                auto* shot = SDL_RenderReadPixels(renderer, nullptr);
-                if (shot == nullptr) {
-                    throw std::runtime_error(
-                        std::string("SDL_RenderReadPixels: ") + SDL_GetError()
-                    );
+            if ((capture_path != nullptr || trace_path != nullptr) && frame >= frames_to_run) {
+                if (capture_path != nullptr) {
+                    auto* shot = SDL_RenderReadPixels(renderer, nullptr);
+                    if (shot == nullptr) {
+                        throw std::runtime_error(
+                            std::string("SDL_RenderReadPixels: ") + SDL_GetError()
+                        );
+                    }
+                    check_sdl(SDL_SaveBMP(shot, capture_path), "SDL_SaveBMP");
+                    SDL_DestroySurface(shot);
+                    std::cout << "captured frame " << frame << " to " << capture_path << '\n';
                 }
-                check_sdl(SDL_SaveBMP(shot, capture_path), "SDL_SaveBMP");
-                SDL_DestroySurface(shot);
-                std::cout << "captured frame " << frame << " to " << capture_path << '\n';
+                if (recorder != nullptr) {
+                    std::ofstream trace(trace_path);
+                    recorder->dump(trace);
+                    std::cout << "trace: " << recorder->call_count() << " calls -> " << trace_path
+                              << '\n';
+                }
                 running = false;
             }
         }
@@ -463,7 +489,7 @@ int main() {
                       << interaction.radius_after << " (shell gain = +2)\n";
         }
 
-        const auto& stats = device.stats();
+        const auto& stats = sdl_device->stats();
         std::cout << "device stats: frames=" << stats.frames << " rects=" << stats.rects
                   << " outlines=" << stats.rect_outlines << " rounded=" << stats.rounded_rects
                   << " rounded_outlines=" << stats.rounded_outlines << " circles=" << stats.circles

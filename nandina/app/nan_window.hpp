@@ -39,6 +39,7 @@
 #include "window_metrics.hpp"
 
 #include <exception>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string_view>
@@ -71,6 +72,15 @@ namespace nandina::app
 
         /// 解析后的平台后端（`automatic` 已按本构建展开）。
         [[nodiscard]] auto platform_backend() const -> WindowBackend;
+
+        /// 设备包装钩子（P4 的「设备可注入」）：平台创建出设备后交给它，返回的设备
+        /// 成为窗口实际使用的设备。用于逐图元 trace（`render/recording_device.hpp`）
+        /// 或任何需要观察绘制调用的场景。必须在 open() 之前设置。
+        void set_render_device_wrapper(
+            std::move_only_function<
+                std::unique_ptr<render::IRenderDevice>(std::unique_ptr<render::IRenderDevice>)>
+                wrapper
+        );
         virtual ~NanWindow();
 
         NanWindow(const NanWindow&) = delete;
@@ -190,6 +200,10 @@ namespace nandina::app
         bool shell_installed_ = false;
         /// 平台后端：窗口 + 输入 + 呈现 + 设备工厂。默认在构造函数里装 raylib 实现。
         std::unique_ptr<IPlatformWindow> platform_;
+        /// 平台设备到手后的包装钩子（见 set_render_device_wrapper）。
+        std::move_only_function<
+            std::unique_ptr<render::IRenderDevice>(std::unique_ptr<render::IRenderDevice>)>
+            device_wrapper_;
         /// 剪贴板适配器：把平台实现接成 `scene::IClipboard`（open() 里创建）。
         std::unique_ptr<scene::IClipboard> clipboard_;
         std::unique_ptr<render::IRenderDevice> device_;

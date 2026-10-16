@@ -13,6 +13,7 @@
 #include <nandina/render/backends/sdf_primitive_geometry.hpp>
 #include <nandina/render/clip_stack.hpp>
 #include <nandina/render/draw_context.hpp>
+#include <nandina/render/recording_device.hpp>
 #include <nandina/render/render_device.hpp>
 #include <nandina/scene/canvas_layer.hpp>
 #include <nandina/scene/control.hpp>
@@ -587,4 +588,38 @@ TEST_CASE(
 
     layer->set_order(7);
     REQUIRE(layer->z_index_hint() == 7);
+}
+
+TEST_CASE("recording device logs every forwarded call in a stable text format", "[render][trace]") {
+    // 逐图元 trace 的格式是跨后端对照的接口（tools/compare_render_traces.py 解析它），
+    // 所以这里钉住三件事：调用被转发、顺序被保留、参数按固定精度成文。
+    auto inner = std::make_unique<RecordingDevice>();
+    auto* raw = inner.get();
+    render::RecordingDevice recorder(std::move(inner));
+
+    recorder.begin_frame();
+    // NanRect 是 (left, top, right, bottom)：宽高由它算出来，录制里记的是宽高。
+    recorder.draw_rounded_rect(
+        foundation::NanRect(10.0F, 20.0F, 100.0F, 60.0F),
+        8.0F,
+        foundation::NanColor::from(foundation::NanHexRgb::from_uint32(0xFF0000FFU))
+    );
+    recorder.set_clip(foundation::NanRect(0.0F, 0.0F, 200.0F, 100.0F));
+    recorder.clear_clip();
+    recorder.end_frame();
+
+    // 转发没有被吞掉（否则「录制」会掩盖真实渲染）。
+    REQUIRE(raw->begin_count == 1);
+    REQUIRE(raw->end_count == 1);
+    REQUIRE(raw->rects.empty() == false);
+    REQUIRE(recorder.call_count() == 5);
+
+    const auto& calls = recorder.calls();
+    REQUIRE(calls[0] == "begin_frame");
+    // 名字在前，参数按 3 位定点小数追加：几何参数跨后端可比，不受窗口尺寸影响的还有名字本身。
+    REQUIRE(calls[1].starts_with("draw_rounded_rect "));
+    REQUIRE(calls[1].find("10.000 20.000 90.000 40.000 8.000") != std::string::npos);
+    REQUIRE(calls[2].starts_with("set_clip 0.000 0.000 200.000 100.000"));
+    REQUIRE(calls[3] == "clear_clip");
+    REQUIRE(calls[4] == "end_frame");
 }

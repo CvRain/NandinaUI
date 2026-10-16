@@ -257,6 +257,45 @@ overlay report: open=1 overlay_count=1
 
 ![SDL 后端的浮层](../images/probe/sdl-overlay.png)
 
+#### 2.3.6 逐图元对照（2026-10-16）
+
+像素对照回答"看起来是否一样"，但**圆角被画成方框时像素差异可能只有几个像素**。所以补一层
+逐图元对照：`render/recording_device.hpp` 是个装饰器，包住任意 `IRenderDevice` 就能把
+"用户代码向设备要了什么"录成一行一次调用的文本；两个宿主各录一份，用
+`tools/compare_render_traces.py` 比图元直方图与调用名字序列。
+
+采集方式：
+
+```
+# SDL 侧（探测）
+NANDINA_PROBE_TRACE=/tmp/trace_sdl_home.txt NANDINA_PROBE_PAGE=home \
+  ./buildDir-probe/probe/cross_platform/desktop/nandina_sdl_page_probe
+# raylib 侧（bench，跑真实 NanWindow）
+NANDINA_BENCH_TRACE=/tmp/trace_raylib_home.txt ./buildDir/playground/label_bench home
+python3 tools/compare_render_traces.py /tmp/trace_raylib_home.txt /tmp/trace_sdl_home.txt
+```
+
+稳态帧的图元构成**逐项相同**（只有一处已知偏差，见下）：
+
+| 页面 | draw_texture_region | draw_rounded_rect | draw_rounded_rect_outline | set_clip | clear_clip |
+| --- | --- | --- | --- | --- | --- |
+| Home | 675 / 675 | – | – | 1 / 1 | 1 / 1 |
+| Label | 2555 / 2555 | 10 / 10 | 11 / 11 | 3 / 3 | 3 / 3 |
+| Anchors | 81 / 81 | 3 / 3 | 4 / 4 | 3 / 3 | 3 / 3 |
+
+（每格是「raylib / SDL」。）也就是说：**同一个页面在两个后端上由同样的图元、按同样的顺序画出来**
+—— 圆角没有被降级成方框，裁剪栈的开合次数也一致。
+
+**唯一偏差**：raylib 侧每帧多一次 `clear`。原因已定位且与后端无关：真实宿主
+（`NanWindow::tick`）由宿主开帧边界再 `tree.render(ctx)`，而独立探测用的是
+`tree.draw(device)`，后者内部**自己**再开一次 begin/end_frame，于是探测每帧有两对帧边界与两次
+clear。试图把探测改成宿主形式会让它崩溃（`render(ctx)` 需要宿主侧完整的 viewport 上下文），
+所以保留现状、把差异写在文档里；对照工具按"名字序列"比较，因此这次 clear 是唯一分歧点、
+其后逐项对齐。
+
+这也顺带说明了**逐图元对照比像素对照更敏感**：表格里的数字完全一致，是本轮 D4 里最强的
+等价性证据；而像素对照只能给出"差异 0.01% 像素"。
+
 **走过的坑（三条宿主契约，全部进 P4）**：
 
 1. 手搓 `Dialog::create()` 拿不到 overlay service，`open()` 会**静默退化成树内 z 序**，

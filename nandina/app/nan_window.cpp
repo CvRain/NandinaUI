@@ -275,6 +275,10 @@ namespace nandina::app
         tree_.set_clipboard(*clipboard_);
 
         device_ = platform_->make_render_device();
+        if (device_ != nullptr && device_wrapper_) {
+            // trace / 其它观察者：包装后窗口用返回的设备，内层仍是平台设备。
+            device_ = device_wrapper_(std::move(device_));
+        }
         if (device_ == nullptr) {
             platform_->destroy();
             opened_ = false;
@@ -331,6 +335,16 @@ namespace nandina::app
         log::get("app.window")
             .info("NanWindow: opened {}x{} \"{}\"", config_.width, config_.height, config_.title);
         on_setup();
+    }
+
+    void NanWindow::set_render_device_wrapper(
+        std::move_only_function<
+            std::unique_ptr<render::IRenderDevice>(std::unique_ptr<render::IRenderDevice>)> wrapper
+    ) {
+        if (opened_) {
+            throw std::logic_error("NanWindow::set_render_device_wrapper: window already opened");
+        }
+        device_wrapper_ = std::move(wrapper);
     }
 
     void NanWindow::set_platform_window(std::unique_ptr<IPlatformWindow> platform) {
