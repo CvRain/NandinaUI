@@ -4,7 +4,7 @@
 
 ## 当前主线
 
-NandinaUI 当前使用 Meson + Ninja 构建，公共源码以普通头文件和实现文件分发。应用通过 Meson subproject 引入框架，框架自身负责构建第三方依赖适配层。
+NandinaUI 当前使用 Meson + Ninja 构建，公共源码以普通头文件和实现文件分发。应用通过 Meson subproject 引入框架，框架自身负责构建第三方依赖适配层。**第三方依赖的获取方式（`wrap-git` + 三态开关 + `min`/`pin` 版本规则）由[第三方依赖策略](dependency_policy.md)规定**；那条策略说的是"Meson 侧依赖从哪来"，不改变本文"CMake 消费端暂缓"的结论，也不预判未来 CMake 侧用 vcpkg 还是 FetchContent。
 
 这里的“支持 CMake”需要区分两件事：仓库可以在第三方依赖的构建过程中调用 CMake，但当前还没有提供可被 CMake `find_package()` 或 `add_subdirectory()` 直接消费的稳定 NandinaUI package target。
 
@@ -30,7 +30,7 @@ CMake 支持不仅是增加一个 `CMakeLists.txt`。稳定的消费者体验还
 - Linux 上不同编译器与窗口后端组合下的资源、窗口和测试行为；
 - 与 Meson subproject 相同的版本约束、可选功能和 CI 覆盖。
 
-在这些规则尚未稳定前，维护两套完整的一等构建入口会让问题分散到两个构建图中，也会增加 playground、示例和 CI 的验证矩阵。当前优先保证 Meson 源码分发和 Wayland / X11 两个窗口后端的行为，CMake 消费支持进入后续里程碑。
+在这些规则尚未稳定前，维护两套完整的一等构建入口会让问题分散到两个构建图中，也会增加 playground、示例和 CI 的验证矩阵。其中"第三方依赖的传递关系"这一条现在有了具体答案（[依赖策略](dependency_policy.md)：每个依赖一份权威来源），但**只覆盖 Meson 侧**；CMake 侧一旦启动，必须复用同一份来源声明，而不是另开一套依赖获取。当前优先保证 Meson 源码分发和 Wayland / X11 两个窗口后端的行为，CMake 消费支持进入后续里程碑。
 
 ## 重新评估条件
 

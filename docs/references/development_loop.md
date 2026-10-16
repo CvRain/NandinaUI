@@ -40,6 +40,25 @@ python3 tools/check_format.py     # 全仓格式关卡，固定 clang-format 23.
 ./buildDir/showcase/nandina_showcase              # 视觉验收的对象是 showcase
 ```
 
+**只改渲染后端 / 宿主 / 依赖时，再加跑这几条**（D4 的教训：三套套件全绿不等于后端等价）：
+
+```bash
+# 1) 三个 showcase 页面各过一遍该后端（像素 + 稳态成本）
+for p in home label anchors; do
+  NANDINA_PROBE_PAGE=$p NANDINA_PROBE_CAPTURE=/tmp/sdl_$p.bmp \
+    ./buildDir-probe/probe/cross_platform/desktop/nandina_sdl_page_probe
+done
+
+# 2) 逐图元对照：像素相同不代表图元相同（圆角画成方框时像素差异可能只有几个像素）
+NANDINA_BENCH_TRACE=/tmp/raylib.txt  ./buildDir/playground/label_bench <page>
+NANDINA_PROBE_TRACE=/tmp/sdl.txt NANDINA_PROBE_PAGE=<page> \
+  ./buildDir-probe/probe/cross_platform/desktop/nandina_sdl_page_probe
+python3 tools/compare_render_traces.py /tmp/raylib.txt /tmp/sdl.txt
+
+# 3) 换过依赖或动了依赖来源后，核对解析结果（版本 + 来源 + 路径）
+cat buildDir/deps.json        # 目标形态，见 dependency_policy.md §6
+```
+
 ### 四条硬规矩（都付过学费）
 
 1. **不要把编译和测试拆成两条会跑旧二进制的命令。** 只 `meson test` 而不先 `meson compile`，
@@ -107,3 +126,43 @@ python3 tools/check_format.py     # 全仓格式关卡，固定 clang-format 23.
 这个项目已经三次栽在同一个形状上：`Group` 与 `Keyframes` 造好了但没有部件层句柄、
 painter 家族写好了但停在 `primitives/` 里当不了应用依赖、
 `NanNode2D::set_local_opacity` 存在却不可动画。
+
+## 7. 动后端/host 时的宿主契约清单（D4 用血换的）
+
+一个"最小宿主"漏掉下面任何一条，症状都会伪装成**框架缺陷**。真实宿主（`NanWindow`）的顺序是：
+
+| 阶段 | 必须做什么 | 漏掉的表现 |
+| --- | --- | --- |
+| input | 平台翻译输入 → `tree.dispatch_*` | 点了没反应 |
+| tasks | **`dispatcher().drain()`** | 回调执行了但路由不换 —— "按了没反应" |
+| process | `tree.process(dt)` | 状态机停在中间态 |
+| tree_commit | `flush_tree_mutations()` / `flush_deferred_deletes()` | 新挂载节点这一帧不参与渲染；跨帧堆积会崩 |
+| physics | `tree.physics_step(dt)` | 物理组件不动 |
+| reactive | `deferred_effects.commit()` | effect 跨帧延迟 |
+| animation | **`tree.advance_animations(dt)`** | 动画停在起点：浮层"已打开但不可见"（opacity=0）、hover 过渡不动 |
+| layout → semantics → render | 宿主开/关帧边界并 `clear()`，再 `tree.render(ctx)` | 用 `tree.draw(device)` 会**再开一次**帧边界（探测里踩过：每帧两对 begin/end 与两次 clear） |
+
+推论：**探测程序不是宿主，不能拿它当行为基准**；它要么照抄上表，要么明确记录自己偏离在哪一条
+（[跨平台后端探测](cross_platform_backend_probe.md) §2.3.4/§2.3.6 就是这种"记录偏离"的例子）。
+
+## 8. 已知陷阱清单（新后端/新平台首先检查）
+
+1. **接口里"默认实现会静默降级"的入口**：`draw_rounded_rect_outline`（默认退化成方框描边）、
+   `draw_circle_clipped_rounded_rect`（默认画**未裁剪**的圆）、`draw_rounded_rect_shadow`（默认 no-op）。
+   新后端必须逐个覆写或让能力查询如实返回 false，并**每个都配一条会红的测试**。
+2. **能力查询缺一个消费者就等于没有**：`supports_*()` 只有在组件真的据此改走降级路径时才算落地。
+3. **半透明 + 混合**：几何与纹理的混合模式是两套 API（例如 SDL 的 `SDL_SetRenderDrawBlendMode` 与
+   `SDL_SetTextureBlendMode`）。只设一个，症状是"某个交互看起来怪"，而静止帧的像素对照**完全看不到**。
+   → 状态类观感（hover/pressed/ripple/遮罩）必须有专门的截图回归，不能只对静止帧。
+4. **关闭/销毁后的语义**：`should_close()` 在窗口销毁后必须报真（raylib 的 `WindowShouldClose()` 语义），
+   否则主循环会 tick 已销毁的窗口并读到 0×0 尺寸。
+5. **未知输入不要伪造**：键码映射不到时**不发事件**并计数，不要退化成"发一个相近的键"。
+
+## 9. 依赖变更的规矩
+
+新增或替换第三方依赖时，**先读 [第三方依赖策略](dependency_policy.md)**，并遵守：
+
+- 每个依赖只有**一份权威来源声明**，禁止同一依赖同时存在两种获取方式；
+- 新增依赖先问"上游用什么构建系统"：CMake-only 加 `method = cmake`，其余默认 meson 方法；
+- 版本写 `min`（硬下限）与 `pin`（受测版本），不写分支；
+- 迁移完成后更新 `build/deps.json` 报告，并在离线模式（`--wrap-mode=nodownload`）验证一次。

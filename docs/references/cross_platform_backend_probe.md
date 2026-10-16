@@ -129,7 +129,7 @@ stage=rendered  frames=92  ink=9556  teal=6220  total=307200
 ## 2.3 真实 IRenderDevice 路径（新增，2026-10-15）
 
 探测记录 §4 把「让探测走一次真实的 `IRenderDevice` 实现」列为 P1 的前置条件。现在有了：
-[probe/cross_platform/desktop/sdl_render_device.hpp](../../probe/cross_platform/desktop/sdl_render_device.hpp)
+[nandina/render/backends/sdl_device.hpp](../../nandina/render/backends/sdl_device.hpp)（已从探测目录移进库，理由见 [D7 §图片解码器](reference_draft.md#图片解码器与后端解耦而不是给-sdl-单独补一个)：探测不该维护生产后端的副本）
 用 SDL 的 2D API 实现了该契约，圆角与圆走 **CPU 三角形扇**（`SDL_RenderGeometry`），
 不依赖自定义 shader —— 这同时验证了 §2.2 给 Web 定的暂定路线（CPU 几何/覆盖率 + 独立设备）。
 
@@ -228,7 +228,7 @@ anchors 页面才暴露的真实缺陷**：
 raylib 后端是覆写了这一条的（`raylib_device.cpp:264`），所以只有新设备会踩到。
 
 ```cpp
-// probe/cross_platform/desktop/sdl_render_device.cpp（修复）
+// nandina/render/backends/sdl_device.cpp（修复）
 // 圆角描边 = 四条直边矩形 + 四个同心环扇（外半径 r、内半径 r-t，圆心相同）。
 ```
 
@@ -427,6 +427,19 @@ Linux/AMD。脚本把两条命令打印出来（`xcrun metal`、`dxc -dumpbin -v
 `SDL_GPURenderState` 的 API floor 是 SDL 3.4.0：对外声明的最低版本不得低于它，
 CI/SDK 再固定精确受测版本并在升级时复检。P1 的交付物是「目标 driver 上可用 + 已知限制清单」，
 不等同生产就绪。
+
+## 3.2 已知缺陷与偏离（2026-10-16 复核）
+
+探测记录里的结论要按下面两条修正，它们是 D4 之后作者在 showcase 里肉眼发现的：
+
+1. **SDL 设备未启用几何混合**（只设了纹理混合，`SDL_SetRenderDrawBlendMode` 从未调用）。
+   所有半透明几何被当不透明画：按钮状态层 → 白底白字、涟漪 → 实心硬边盘、对话框遮罩 → 不透明。
+   §2.3.5 那张浮层截图里"遮罩均匀盖住整页、看不到背后内容"**正是这个现象**，
+   不是遮罩被设计得那么暗 —— 该截图不能再用来说明遮罩观感。这条是缺陷、待修
+   （1 行 + 按下态回归），见 [D7](reference_draft.md#d7-渲染质量与后端视觉一致性)。
+2. **像素对照只覆盖静止帧**。状态层在静止时 alpha=0 且 `BoxPainter::paint_fill` 对 `alpha<=0`
+   直接 return，所以 §2.3.2/§2.3.3 的"差异 ≤20/255"**不包含**任何交互态 —— 上一条缺陷正是这样
+   漏过去的。逐图元对照（§2.3.6）不受此影响，因为它是调用序列而非像素。
 
 ## 4. 与 D4 交付顺序的对应
 

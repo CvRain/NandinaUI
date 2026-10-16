@@ -14,7 +14,7 @@
 //
 // 见 probe/cross_platform/README.md 与 docs/references/cross_platform_backend_probe.md。
 
-#include "sdl_render_device.hpp"
+#include <nandina/render/backends/sdl_device.hpp>
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_gpu.h>
@@ -111,7 +111,7 @@ namespace
     }
 
     /// 通过 IRenderDevice 画一整组图元。刻意覆盖：填充/描边/圆角/圆/线段/文字/裁剪。
-    void draw_device_scene(nandina::probe::SdlRenderDevice& device) {
+    void draw_device_scene(nandina::render::SdlRenderDevice& device) {
         device.clear(color_rgba(0xf5f6f8ffU));
 
         // 填充与描边
@@ -258,7 +258,7 @@ int main(int argc, char** argv) {
         );
 
         // ---- IRenderDevice 路径 ----
-        nandina::probe::SdlRenderDevice device(*renderer);
+        nandina::render::SdlRenderDevice device(*renderer);
         const auto atlas_alpha = make_alpha_atlas();
         const auto atlas = device.create_alpha_texture(64, 64, atlas_alpha);
         if (!atlas) {

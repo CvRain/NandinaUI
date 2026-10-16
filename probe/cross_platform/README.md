@@ -12,7 +12,7 @@ meson 构建，也不改动 raylib 生产路径：探测是独立的 CMake 工�
 
 | 路径 | 内容 |
 | --- | --- |
-| `desktop/` | SDL3 探测，两个构建方式见下：`sdl_render_device.{hpp,cpp}` 是用 SDL 2D API 实现的 `IRenderDevice`；`main.cpp`（CMake）驱动手写图元 + GPU render state（自定义 SDF shader）；`page_probe.cpp`（meson）把**真实的 showcase 页面**画到同一个设备上 |
+| `desktop/` | SDL3 探测，两个构建方式见下：渲染设备是**库里的** `nandina/render/backends/sdl_device.{hpp,cpp}`（D4 期间从本目录移入，避免探测维护生产后端的副本）；`main.cpp`（CMake）驱动手写图元 + GPU render state（自定义 SDF shader）；`page_probe.cpp`（meson）把**真实的 showcase 页面**画到同一个设备上 |
 | `web/` | SDL3 2D Renderer / WebGL2 探测（Emscripten）：`main.cpp` + CMake |
 | `tools/verify_toolchain.sh` | 打印并校验所有固定版本（一条命令核对工具链） |
 
@@ -126,7 +126,7 @@ stage=rendered  frames=92  ink=9556  teal=6220  total=307200
 失败路径也上报（`init-failed` / `renderer-failed` 带 SDL 错误串），所以黑屏能区分原因。
 完整步骤见 [探测记录 §2.1.1](../../docs/references/cross_platform_backend_probe.md#211-有效的浏览器验收让探测自己上报2026-10-15)。
 
-## IRenderDevice 路径（`sdl_render_device.*`）
+## IRenderDevice 路径（库里的 `render/backends/sdl_device.*`）
 
 这是探测记录 §4 列为 P1 前置条件的那件事：**让探测走一次真实的 `IRenderDevice`**，而不是
 另写一个程序画图。设备用 SDL 的 2D API 实现，圆角与圆走 **CPU 三角形扇**（`SDL_RenderGeometry`），

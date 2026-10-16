@@ -80,9 +80,11 @@ foreach(source IN LISTS NANDINA_FOUNDATION_SOURCES)
     endif()
 endforeach()
 
+# 设备实现已从探测目录移进库（`nandina/render/backends/sdl_device.*`），这里直接编译库里的那份：
+# 探测不该再维护一份生产后端的副本，而这条 CMake 路径顺带充当「库的设备能被 CMake 构建消费」的哨兵。
 add_executable(nandina_sdl_gpu_probe
     main.cpp
-    sdl_render_device.cpp
+    "${NANDINA_SOURCE_DIR}/nandina/render/backends/sdl_device.cpp"
     ${NANDINA_FOUNDATION_SOURCES}
 )
 target_compile_features(nandina_sdl_gpu_probe PRIVATE cxx_std_20)

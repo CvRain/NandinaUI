@@ -89,7 +89,13 @@ NandinaUI（南天竹）是一个用 **C++26** 编写、基于 **Meson** 构建�
 - **构建工具**：Meson、Ninja、CMake、pkg-config、Python 3
 - **系统库**：OpenGL、OpenSSL ≥ 3.0
 
-其余第三方依赖（spdlog、raylib、FreeType、HarfBuzz、FriBidi、utf8proc、toml++、nlohmann/json、Catch2、Box2D 等）均以 Git 子模块方式随仓库提供；SQLite 以官方 amalgamation 直接随源码分发（见 `third_party/sqlite3/README.md`），不需要系统安装。
+其余第三方依赖（spdlog、SDL3、raylib、FreeType、HarfBuzz、FriBidi、utf8proc、toml++、nlohmann/json、Catch2、Box2D 等）**当前**以 Git 子模块方式随仓库提供；SQLite 以官方 amalgamation 直接随源码分发（见 `third_party/sqlite3/README.md`），不需要系统安装。
+
+> **依赖获取方式正在迁移**（策略已定、尚未实施）：目标形态是 `wrap-git` + 依赖级三态开关
+> （`system` / `vendored` / `auto`，默认 wrap 优先），迁移完成后只有字体数据包保留为子模块，
+> 那时 `git clone --recursive` 不再是必需步骤。权威规则见
+> [第三方依赖策略](docs/references/dependency_policy.md)；SDL3 作为默认窗口/渲染后端的版本下限
+> （≥ 3.4.0，`SDL_GPURenderState`）也记在那里。
 
 ### 在 Debian / Ubuntu 上准备环境
 
@@ -366,7 +372,8 @@ D5 已另行冻结，其分批计划见上文；设计冻结不改变当前平�
 
 | 类别 | 依赖 |
 | --- | --- |
-| 渲染 | raylib（GPU 后端，支持 JPG 等格式） |
+| 平台层 | **SDL3 ≥ 3.4.0**（默认窗口/输入/帧驱动 + SDL 2D 渲染设备；`SDL_GPURenderState` 是 3.4 起的 API） |
+| 渲染 | raylib（对照与离线/录制后端，也是跨后端验收的基线） |
 | 文本 | FreeType、HarfBuzz、FriBidi、utf8proc |
 | 数据 / 配置 | nlohmann/json、toml++、SQLite（vendored amalgamation，见 `third_party/sqlite3/`） |
 | 其他 | spdlog（日志）、OpenSSL（资源签名）、Box2D（可选物理）、Catch2（测试） |

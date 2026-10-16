@@ -1,21 +1,24 @@
 # 待决设计草案
 
-> **这是工作稿，不是决定记录。** D2–D4 都仍在讨论，不能把本稿的候选形状当作已冻结契约。
-> 拍板之后：决定写进对应的 reference（`component_contract.md` / `theme` 相关 / `page_and_router.md`），
-> 过程补充到 stories；本文随之删除或降级为历史草案。
+> **这是工作稿，不是决定记录。** D2、D3、D7、D8 都仍在讨论或"方向已接受、尚未实施"，
+> 不能把本稿的候选形状当作已冻结契约。
+> 拍板之后：决定写进对应的 reference（`component_contract.md` / `theme` 相关 / `page_and_router.md`
+> / `platform_backend_contract.md`），过程补充到 stories；本文随之删除或降级为历史草案。
 >
 > 文件名沿用当前叫法；若想改成 `open_decisions.md` 这类更直白的名字，改索引一行即可。
 
-三项设计彼此独立，可以分开拍板、分开实施：
+各项设计彼此独立，可以分开拍板、分开实施：
 
 | # | 待决事项 | 现状 | 阻塞谁 |
 | --- | --- | --- | --- |
 | ~~D1~~ | ~~焦点环什么时候显示~~ → **已定案** | 见 [统一输入、焦点与文本编辑](focus_and_input.md)；几何修复已落地 | — |
 | **D2** | 主题变化**发不发信号** | 只能写不能订阅；外壳无法响应外观变化 | 外壳里一切"跟随主题"的东西 |
 | **D3** | 路由元数据应保持多大开放性 | route identity 已由页面类型表达；导航分组改为开放、可选值 | 应用路由配置与可选导航分组呈现 |
-| **D4** | 先跨平台、再扩展平台集成的后端路线 | raylib + GLFW/OpenGL；SDL3 的 Web 2D 路径可行，SDL_GPU 是不同取舍 | Linux / Windows / Web；未来可选 Wayland shell/compositor 集成 |
+| ~~D4~~ | ~~先跨平台、再扩展平台集成的后端路线~~ → **已归档** | 见 [平台与后端契约](platform_backend_contract.md)；P3 已把默认后端换成 SDL3 | — |
+| **D7** | 后端替换后的**视觉质量一致性**（抗锯齿、半透明、圆角裁剪、图片解码器） | SDL 设备用 CPU 三角形扇、**无抗锯齿**，且几何绘制**未启用混合**；raylib 侧是 SDF + 解析 AA | 所有"细腻度"相关的观感结论；SDF 路线与着色器产物打包 |
+| **D8** | **键码与输入码空间的归属** | 框架键码就是 GLFW 码（`widget/key_codes.hpp`）；SDL 平台临时把它翻译过来 | 快捷键、编辑键、输入法边界；跨后端输入对照 |
 
-**D5 已于 2026-10-11 冻结范围与目标契约，未实施**，不加入本稿的三项待决：见
+**D5 已于 2026-10-11 冻结范围与目标契约，未实施**，不加入本稿的待决表：见
 [资源构建、部署与运行时定位](resource_build_and_deployment.md)。解耦、作用域、身份独立交付，
 不等待 D4 选型；跨平台定位与 Web 资源就绪协议仍在 D4/D5 交界按平台验收。
 
@@ -303,7 +306,141 @@ D1 已定案，它的**第二阶段**（文本输入会话、组合输入、软�
 
 ---
 
-# 四者之间的关系与排序建议
+# D7 渲染质量与后端视觉一致性
+
+## 背景
+
+D4 把默认后端换成 SDL3 之后，作者在 showcase 里立刻看到两个现象：
+
+1. **边缘明显锯齿**，圆形尤其明显，不如 raylib 细腻；
+2. **按钮"激活后白底白字"**，涟漪过渡不自然。
+
+第 2 条后来定位为**缺陷**而不是设计取舍（见下），第 1 条是当前 SDL 设备实现方式的必然结果。
+
+## 现状核实（2026-10-16，读代码）
+
+| | raylib 设备 | SDL 设备（当前） |
+| --- | --- | --- |
+| 图元实现 | SDF fragment shader | CPU 三角形扇 |
+| 边缘 | `fwidth` + `smoothstep` **解析抗锯齿**（任意半径平滑） | 硬边多边形，`segments_for(r)=clamp(ceil(r*0.75), 6, 48)` |
+| MSAA | 不需要（解析 AA） | **没有**：SDL 2D GPU 渲染器不公开 sample count |
+| 混合 | 正常 | **几何绘制未启用混合** |
+
+**缺陷（必修，1 行）**：`render/backends/sdl_device.cpp` 只给**纹理**设了
+`SDL_SetTextureBlendMode(..., SDL_BLENDMODE_BLEND)`，**从未**调用 `SDL_SetRenderDrawBlendMode`。
+于是所有几何图元的 alpha 不参与混合，一律按不透明画。三处症状同一个根因：
+
+| 症状 | 路径 | 不混合时 |
+| --- | --- | --- |
+| 按钮"激活后白底白字" | `Button::on_draw`：容器 → **状态层**（filled 时是 `on_accent` 白 @0.10/0.20）→ 标签 | 状态层被画成实白盖住深色容器，标签仍是白色 |
+| 涟漪过渡不自然 | `RipplePainter`：`style.color.with_alpha(alpha)` 随进度衰减 | 低透明度圆被画成实心硬边圆盘，不随进度淡出 |
+| 对话框遮罩"近黑" | `DismissLayer::on_draw` → `BoxPainter::paint(scrim)` | 半透明遮罩变不透明（实测 mean 5.9） |
+
+**为什么现有验证没抓到**：交互回归断言的是**状态位**（hovered/pressed/treatment/route），不看像素；
+跨后端像素对照取的是**静止帧**，那时状态层 alpha=0 而 `BoxPainter::paint_fill` 对 `alpha<=0` 直接
+return（`box_painter.hpp:38`）。→ **D7 的验收必须包含"按下态"的像素对照**，不能只对静止帧。
+
+涟漪还有**第二条**差异（非缺陷）：SDL 设备 `supports_rounded_clip()=false`，涟漪退化成"矩形裁剪 +
+未裁剪圆"（`ripple_painter.hpp` 的降级分支），圆角处按方角溢出。混合修好之后观感会明显改善，
+但要完全对齐 raylib 仍需 SDF 或真正的圆角裁剪实现。
+
+## 选项
+
+| 选项 | 质量 | 成本 | 判断 |
+| --- | --- | --- | --- |
+| **A. 把现有 SDF 搬到 `SDL_GPURenderState`** | 与 raylib 同级（解析 AA） | 中；需要 per-platform 着色器产物 | **推荐**：这是生产路径 |
+| B. CPU 侧 analytic AA（羽化 / 超采样） | 一般；细描边与阴影做不好 | 中高，且随面积增长 | 只作过渡，不做长期投入；SDF 落地后作废 |
+| C. 让 2D GPU 渲染器开 MSAA | — | — | **不成立**：SDL3 无公开 API |
+
+选项 A 现在成本最低的三个理由：
+
+1. **逐图元 trace 已证明两个后端的调用序列逐项相同**（Home 675/675 texture、Label 2555/2555 texture +
+   10/10 圆角填充 + 11/11 圆角描边、Anchors 81/81）：要换的只是 `IRenderDevice` **之下**的实现，
+   组件、布局、painter 一行都不动；
+2. **着色器产物链已打通并验证**：`tools/verify_shadercross.sh` 生成 SPIR-V/DXIL/MSL，且 SPIR-V 被工具链里
+   独立的 `spirv-val` 接受 —— 正好是 `SDL_GPURenderState` 需要的格式（本机头文件确认该 API 自 SDL 3.4 起，
+   接受三种着色器格式）；
+3. **顶点格式兼容**：SDL_GPURenderState 走 `SDL_Vertex`（position + color + uv），几何路径已经在用。
+
+## 图片解码器：与后端解耦，而不是给 SDL 单独补一个
+
+SDL 平台现在 `make_image_decoder()` 返回 nullptr，所以 `Image` 在 SDL 上不加载图片。这不是 SDL 的限制：
+解码是 **CPU 侧服务**，早已抽象为 `render::IImageDecoder` + `TextureCache`。
+
+**候选决定**：实现**一个**与后端无关的解码器（stb_image 单文件，覆盖 PNG/JPEG/BMP/GIF/TGA），
+raylib 与 SDL 共用；把 `Image` 现有的 `supports_image_loading()` 能力查询保留为"消费者侧明确降级"。
+只有当确实需要 WebP/SVG 时才评估 SDL_image。这样"图片加载"不再是任何后端的特性。
+
+## 初步决定（方向已接受，尚未实施）
+
+1. **先修混合模式缺陷**（1 行 + 一条**按下态**会红的回归）。它污染所有半透明绘制，也会污染后续 AA 的验收；
+2. **抗锯齿走选项 A**（SDF + `SDL_GPURenderState`），不做 CPU AA 的长期投入；
+3. **图片解码器与后端解耦**，一个解码器两个后端共用；
+4. **SDL 上补真正的圆角裁剪**（涟漪、图片/头像溢出），排在 AA 之后。
+
+## 实施顺序与验收
+
+| 步 | 内容 | 验收（会红的标准） |
+| --- | --- | --- |
+| 1 | 启用几何混合 | 按下态像素对照：探针在 hover/pressed 帧截图，与 raylib 基线比；把 `SDL_SetRenderDrawBlendMode` 那行删掉必须变红。同时修正探测记录里"遮罩近黑"的旧解释 |
+| 2 | 依赖与着色器产物打包（依赖 [依赖策略](dependency_policy.md)） | 三种格式产物随包可用；无 shadercross 的机器也能构建 |
+| 3 | SDF + `SDL_GPURenderState` | 同页像素对照的**角部 AA 差异消失**（当前 Anchors max 55、Label max 9 都来自硬边）；逐图元 trace 不变 |
+| 4 | 圆角裁剪 | 涟漪在圆角容器内不外溢：一张截图 + 一条能力为 false 时的降级测试 |
+
+## 待决问题
+
+1. 着色器产物是**构建期生成**（需要 shadercross 作为构建机依赖）还是**入库**（配 `--check` 关卡）？
+   倾向后者，理由与 D4 P1 的"host tool 是构建机依赖"约束一致。
+2. SDF 与 CPU 几何是否长期共存（例如小尺寸用 CPU、大圆角用 SDF）？**倾向不共存**：两条路径会立刻
+   在 AA 与混合语义上分叉。
+3. Windows 上是否同时接 D3D12（DXIL 产物已能生成，但**加载**仍未验证）。属 D4 的未定项，不在 D7 内解决。
+
+---
+
+# D8 键码与输入码空间
+
+## 背景
+
+框架当前的键码就是 **GLFW 码**：`widget/key_codes.hpp` 开头写着"这些值是 GLFW 的键码（raylib 直接透传）"。
+SDL 后端因此必须把 `SDL_Keycode` 翻译回 GLFW 码空间（要做字母大小写重映射、命名键映射表，未覆盖的键
+计数跳过）。这是"用某一家的编号当框架契约"，也是 D4 契约里最后一条未收口的项（"规范键值归属"）。
+
+## 现状核实
+
+- `scene::KeyEvent` 携带 `int keycode`；widget 侧通过 `widget::keys::*` 常量使用（16 个文件、56 处引用）；
+- SDL 平台的映射表已实现但有已知缺口（`{|}~`、小键盘、非 US 布局、媒体键、PrintScreen 等被跳过并计数）；
+- 文本输入独立于键码：`TextInputEvent` 携带已合成的 UTF-8，不经过键码空间。
+
+## 初步决定（方向已接受，尚未实施）
+
+1. **框架自己拥有语义键码**：`nandina::input::Key` 枚举，值与任何厂商无关；
+2. **映射归平台层**：每个后端一个 mapper（`SDL_Keycode → Key`、GLFW code → Key、将来 Web
+   `KeyboardEvent.code → Key`）。位置刚好是 D4 建立的 `IPlatformWindow` seam；
+3. **`scene::KeyEvent` 携带 `Key`**，另留 `native_code`（诊断、录制、极端快捷键用），
+   不让厂商编码出现在组件签名里；
+4. **`widget/key_codes.hpp` 并入 `input/key.hpp`**；56 处引用机械替换；
+5. **枚举语义以物理位置为主**：`Key::z` 指键盘上 Z 所处的位置（SDL scancode / 浏览器 `event.code`），
+   与布局无关，快捷键因而稳定；文本继续走 `TextInputEvent`；编辑键（Home/End/方向键）两种语义等价。
+
+## 实施与验收
+
+| 步 | 内容 | 验收 |
+| --- | --- | --- |
+| 1 | 定义 `input::Key` + 两个平台的 mapper + 未映射计数 | 表驱动的映射测试：已知键双向一致；未映射键**不产生事件**且计数增加 |
+| 2 | `KeyEvent` 改携带 `Key`（保留 `native_code`） | 编辑/导航控件的现有测试改用 `Key` 后全绿；故障注入：把一个映射项改错必须让对应测试变红 |
+| 3 | 迁移 56 处 `keys::` 引用 | 编译通过 + 上述测试；`widget/key_codes.hpp` 删除 |
+| 4 | 跨后端输入对照 | 同一按键序列在 raylib 与 SDL 下产生**相同的 `Key` 序列**（可复用逐图元 trace 的思路做输入 trace） |
+
+## 待决问题
+
+1. **物理 vs 逻辑**需要最终拍板（本文按物理位置拟定）。这是用户可见行为：AZERTY 上 `Ctrl+Z` 的物理位置
+   与标注字母不同；若选逻辑语义，则快捷键随布局变化。
+2. 是否需要 `Key::unknown` 之外的"位置未知但字符已知"的表达？倾向不要：那种情况属于文本输入，不属于键码。
+3. 输入法/组合期间的键码抑制规则。属 D1 第二阶段的文本服务范围，本文只保证不与它冲突。
+
+---
+
+# 各项之间的关系与排序建议
 
 - **D1 已定案**（见 [focus_and_input.md](focus_and_input.md)），本文不再保留它的选项表。
   它留给 D2 的交集只剩一条：D1 的"用户始终显示焦点提示"偏好需要一个运行时更新通道，
@@ -324,4 +461,6 @@ D1 已定案，它的**第二阶段**（文本输入会话、组合输入、软�
 | D3 | `page_and_router.md` + stories/011 |
 | D4 | ✅ 已归档为 [platform_backend_contract.md](platform_backend_contract.md)（方向已定：完成计划内容后替换为 SDL3；证据见 [跨平台后端探测](cross_platform_backend_probe.md)，过程见 [story 015](../../stories/015-the-probe-that-was-not-in-version-control.md)） |
 | D5 | ✅ 已冻结为 [resource_build_and_deployment.md](resource_build_and_deployment.md)，过程见 [story 013](../../stories/013-resource-scope-before-identity.md)；实施细节按批次定形 |
-| 本文 | D2–D4 拍板后删除或降级为历史记录；若中途放弃某项，把“为什么不做”补进对应 story |
+| D7 | 抗锯齿/混合/圆角裁剪进 [平台与后端契约](platform_backend_contract.md) 的差异表与验收；SDF 路径的取舍补一条 story |
+| D8 | 键码语义进 [统一输入、焦点与文本编辑](focus_and_input.md)（或新 reference），迁移过程补一条 story |
+| 本文 | D2/D3/D7/D8 拍板后删除或降级为历史记录；若中途放弃某项，把"为什么不做"补进对应 story |
