@@ -24,14 +24,20 @@
 
 #include <nandina/app/nan_application.hpp>
 #include <nandina/app/nan_router.hpp>
+#include <nandina/app/shell_context.hpp>
 #include <nandina/foundation/nandina_color.hpp>
 #include <nandina/foundation/nandina_color_space.hpp>
+#include <nandina/scene/overlay_host.hpp>
 #include <nandina/scene/scene_tree.hpp>
 #include <nandina/text/font_pipeline.hpp>
+#include <nandina/widget/button.hpp>
+#include <nandina/widget/primitives/pressable.hpp>
+#include <showcase/components/sidebar.hpp>
 #include <showcase/pages/anchors_page.hpp>
 #include <showcase/pages/home_page.hpp>
 #include <showcase/pages/label_page.hpp>
 
+#include <memory>
 #include <string_view>
 
 #include <chrono>
@@ -55,6 +61,35 @@ namespace
 
     auto color_rgba(const std::uint32_t packed) -> NanColor {
         return NanColor::from(NanHexRgb::from_uint32(packed));
+    }
+
+    /// 交互回归的可核对结果。全部由**框架自己的状态**读出（Pressable 的 hover/press、
+    /// Button 的 treatment 与解析后的圆角、Router 的当前页键），不看截图猜。
+    struct InteractionReport {
+        bool hovered = false;
+        bool pressed = false;
+        bool route_switched = false;
+        bool selected_treatment = false;
+        /// hover 前的基础圆角（用于记录观察，不作为断言）。
+        float radius_before = 0.0F;
+    };
+
+    [[nodiscard]] auto find_button(nandina::scene::NanNode* node, const std::string_view text)
+        -> nandina::widget::Button* {
+        if (node == nullptr) {
+            return nullptr;
+        }
+        if (auto* button = dynamic_cast<nandina::widget::Button*>(node->as_control());
+            button != nullptr && button->text() == text)
+        {
+            return button;
+        }
+        for (std::size_t index = 0; index < node->child_count(); ++index) {
+            if (auto* found = find_button(node->get_child(index), text); found != nullptr) {
+                return found;
+            }
+        }
+        return nullptr;
     }
 } // namespace
 
@@ -102,6 +137,7 @@ int main() {
 
         nandina::scene::NanSceneTree tree;
         tree.set_font_context(fonts);
+        tree.set_theme_manager(application.theme_manager());
         const auto default_pipeline = fonts.get({});
         if (!default_pipeline) {
             throw std::runtime_error(
@@ -110,6 +146,7 @@ int main() {
         }
         tree.set_default_text_pipeline((*default_pipeline)->pipeline());
 
+        auto overlay_host = nandina::scene::OverlayHost::create();
         auto router = nandina::app::NanRouter(
             application.graph(),
             application.theme_manager(),
@@ -119,28 +156,33 @@ int main() {
             &application.font_loader(),
             &application.font_families(),
             &application.dispatcher(),
-            &application.background_executor()
+            &application.background_executor(),
+            overlay_host.get()
         );
         // 路由表：Router 只有 configure() 之后才进入 route 模式，`start<Page>()` 才可用。
         // 三个 showcase 页面都注册，用 NANDINA_PROBE_PAGE 选择挂载哪一个 —— 消费者回归需要
         // 「每个页面都过一遍这个后端」，而不是只看一页。
+        //
+        // title / type 与 showcase/main_window.cpp **逐字一致**：外壳的导航条目文字直接来自
+        // `RouteOptions::title`，分组来自 `type`。用英文标题会让 shell 截图与真实应用不同，
+        // 也会让「按标题找按钮」的交互回归找不到目标（踩过一次）。
         const auto* page_env = std::getenv("NANDINA_PROBE_PAGE");
         const std::string_view page = page_env != nullptr ? page_env : "label";
         const auto routes = nandina::app::Routes {
+            nandina::app::route<nandina::showcase::ShowcaseHomePage>(nandina::app::RouteOptions {
+                .address = "home",
+                .title = "首页",
+                .type = "手册",
+            }),
+            nandina::app::route<nandina::showcase::AnchorsPage>(nandina::app::RouteOptions {
+                .address = "anchors",
+                .title = "锚点",
+                .type = "手册",
+            }),
             nandina::app::route<nandina::showcase::LabelPage>(nandina::app::RouteOptions {
                 .address = "form/label",
                 .title = "Label",
                 .type = "表单",
-            }),
-            nandina::app::route<nandina::showcase::ShowcaseHomePage>(nandina::app::RouteOptions {
-                .address = "home",
-                .title = "Home",
-                .type = "手册",
-            }),
-            nandina::app::route<nandina::showcase::AnchorsPage>(nandina::app::RouteOptions {
-                .address = "layout/anchors",
-                .title = "Anchors",
-                .type = "布局",
             }),
         };
         if (const auto configured = router.configure(routes); !configured) {
@@ -151,7 +193,36 @@ int main() {
         if (outlet == nullptr) {
             throw std::runtime_error("router has no outlet");
         }
-        tree.set_root(outlet);
+
+        const bool shell_enabled = std::getenv("NANDINA_PROBE_SHELL") != nullptr;
+        auto shell_scope = std::make_unique<nandina::reactive::ReactiveScope>(application.graph());
+        if (shell_enabled) {
+            nandina::app::ShellContext shell_context(
+                application.graph(),
+                *shell_scope,
+                application.theme_manager(),
+                &application.resources(),
+                overlay_host.get(),
+                nullptr,
+                router.navigation(),
+                outlet,
+                routes,
+                router.current_page()
+            );
+            const nandina::showcase::Sidebar sidebar(shell_context);
+            auto shell_view = sidebar.build_shell();
+            auto* shell_control = shell_view ? shell_view->as_control() : nullptr;
+            if (shell_control == nullptr) {
+                throw std::runtime_error("showcase sidebar did not build a control root");
+            }
+            auto shell_root =
+                std::shared_ptr<nandina::scene::NanControl>(shell_view, shell_control);
+            overlay_host->set_content(std::move(shell_root));
+            tree.set_root(overlay_host);
+        }
+        else {
+            tree.set_root(outlet);
+        }
 
         auto started = false;
         if (page == "home") {
@@ -168,6 +239,14 @@ int main() {
         }
         if (!started) {
             throw std::runtime_error("router.start failed for page: " + std::string(page));
+        }
+
+        // 可复跑的消费者回归：真实 Sidebar 中「锚点」导航按钮 hover → press → release，
+        // 检查 Pressable 状态、shell transition 和 Router 路由结果。无需依赖人工鼠标时序。
+        const bool inject_interaction = std::getenv("NANDINA_PROBE_INTERACTION") != nullptr;
+        InteractionReport interaction {};
+        if (inject_interaction && !shell_enabled) {
+            throw std::runtime_error("NANDINA_PROBE_INTERACTION requires NANDINA_PROBE_SHELL=1");
         }
 
         const auto* capture_path = std::getenv("NANDINA_PROBE_CAPTURE");
@@ -187,6 +266,7 @@ int main() {
 
         bool running = true;
         auto frame = 0;
+        constexpr float kProbeDt = 1.0F / 60.0F;
         // 帧成本：layout + draw + end_frame 的 CPU 时间。真实的页面负载对比需要它
         // （探测记录 §4 第 2 件事），而 draw call 数量由设备统计给出。
         auto layout_ms = 0.0;
@@ -216,6 +296,18 @@ int main() {
             const auto viewport =
                 NanSize(static_cast<float>(pixel_width), static_cast<float>(pixel_height));
 
+            // 宿主契约（P4 的一手证据）：Router 的换页是**投递给 dispatcher** 的，宿主必须在
+            // 每帧的 tasks 阶段把它取出来。`NanWindow` 在 `FramePhase::tasks` 里做同一件事
+            // （nan_window.cpp:462）。最小宿主漏了这一步时，点击回调执行了、路由却不换 ——
+            // 表现为「按了没反应」。
+            (void)application.dispatcher().drain();
+            if (shell_enabled) {
+                // 另一条宿主契约：动画只在宿主推进时间时前进（`NanWindow` 的 process 阶段）。
+                // 用**固定步长**而不是墙钟差：这个探测不锁帧（几千 fps），墙钟 dt 会让动画在
+                // 模拟时间里几乎不动，交互回归就永远看不到过渡结束的状态。
+                tree.process(kProbeDt);
+            }
+
             // 真实页面：布局 → 绘制，全部走 Nandina 自己的路径。
             device.begin_frame();
             // 宿主清屏色：与 raylib 窗口的默认清屏色保持一致（白），否则跨后端对照会把
@@ -225,6 +317,55 @@ int main() {
             const auto layout_started = std::chrono::steady_clock::now();
             (void)tree.layout_root(viewport);
             const auto layout_ended = std::chrono::steady_clock::now();
+
+            if (inject_interaction && frame == 2) {
+                auto* anchors_button = find_button(overlay_host.get(), "锚点");
+                if (anchors_button == nullptr) {
+                    throw std::runtime_error(
+                        "could not find the Anchors navigation button in shell"
+                    );
+                }
+                const auto bounds = anchors_button->global_bounds();
+                const auto point = nandina::foundation::NanPoint(
+                    (bounds.get_left() + bounds.get_right()) * 0.5F,
+                    (bounds.get_top() + bounds.get_bottom()) * 0.5F
+                );
+                interaction.radius_before = anchors_button->resolved_style().container.radius;
+                tree.dispatch_mouse_move(
+                    nandina::scene::MouseMoveEvent {point, nandina::foundation::NanPoint::zero()}
+                );
+                interaction.hovered = anchors_button->hovered();
+                tree.dispatch_mouse_button(
+                    nandina::scene::MouseButtonEvent {
+                        nandina::scene::MouseButtonEvent::Button::left,
+                        nandina::scene::MouseButtonEvent::Action::press,
+                        point,
+                    }
+                );
+                interaction.pressed = anchors_button->pressed();
+                tree.dispatch_mouse_button(
+                    nandina::scene::MouseButtonEvent {
+                        nandina::scene::MouseButtonEvent::Button::left,
+                        nandina::scene::MouseButtonEvent::Action::release,
+                        point,
+                    }
+                );
+                // 换页是投递给 dispatcher 的：宿主在 tasks 阶段取出来（与 NanWindow 一致）。
+                (void)application.dispatcher().drain();
+                interaction.route_switched = router.current_page_key()
+                    == nandina::app::page_key<nandina::showcase::AnchorsPage>();
+                interaction.selected_treatment =
+                    anchors_button->treatment() == nandina::theme::ButtonTreatment::filled;
+            }
+            else if (inject_interaction && frame >= 3 && frame <= 24 && frame % 3 == 0) {
+                auto* button = find_button(overlay_host.get(), "锚点");
+                std::cout << "  [anim] frame=" << frame << " radius="
+                          << (button != nullptr ? button->resolved_style().container.radius : -1.0F)
+                          << " state="
+                          << (button != nullptr ? static_cast<int>(button->visual_state()) : -1)
+                          << " pending=" << application.graph().has_pending_effects() << '\n';
+            }
+
             tree.draw(device);
             device.end_frame();
             const auto draw_ended = std::chrono::steady_clock::now();
@@ -258,6 +399,18 @@ int main() {
                       << " frames: layout=" << (layout_ms / measured)
                       << " ms, draw=" << (draw_ms / measured)
                       << " ms, total=" << ((layout_ms + draw_ms) / measured) << " ms\n";
+        }
+
+        if (inject_interaction) {
+            std::cout << "interaction report: hovered=" << interaction.hovered
+                      << " pressed=" << interaction.pressed
+                      << " route_switched=" << interaction.route_switched
+                      << " selected_treatment=" << interaction.selected_treatment << '\n';
+            // 观察（不是断言）：侧边栏 hover 的圆角增益没有通过 `resolved_style().container.radius`
+            // 反映出来。这条链（signal → computed → bind → tween）与后端无关，属于 shell/动画层的
+            // 独立问题，不作为 SDL 后端差异记账；见探测记录 §2.3.4。
+            std::cout << "  note: hover radius gain not observed through resolved_style "
+                         "(backend-independent)\n";
         }
 
         const auto& stats = device.stats();

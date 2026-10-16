@@ -245,6 +245,40 @@ anchors 页面在 SDL 后端的完整渲染（`rounded_outlines=160/80 帧`，�
 方框、`draw_circle_clipped_rounded_rect` → 未裁剪、`draw_rounded_rect_shadow` → no-op）是新后端的
 三个坑。前两个已经在本设备实现或被能力查询覆盖，软阴影由 `supports_soft_shadows()` 降级。
 
+#### 2.3.4 外壳与交互态回归（2026-10-15）
+
+静态页面全过一遍之后，剩下的是**外壳**与**交互态**：探测现在可以用
+`NANDINA_PROBE_SHELL=1` 挂载**真实的 showcase 外壳**（`ShellContext` + `Sidebar` + `RouterOutlet`
+在同一棵树里），并用 `NANDINA_PROBE_INTERACTION=1` 注入确定性输入：在导航按钮的
+`global_bounds()` 中心依次派发 `MouseMove` → `MouseButton(press)` → `MouseButton(release)`，
+然后读**框架自己的状态**核对（`Pressable::hovered()/pressed()`、`Button::treatment()`、
+`Router::current_page_key()`），不看截图猜。
+
+三个起始页面（home / anchors / label）结果一致：
+
+```
+interaction report: hovered=1 pressed=1 route_switched=1 selected_treatment=1
+frame cost: layout=0.04 ms, draw=0.27 ms（含侧边栏）
+```
+
+![SDL 后端的 showcase 外壳与交互回归](../images/probe/sdl-shell-interaction.png)
+
+上图就是「注入点击之后」的状态：侧边栏「锚点」条目变成选中态（filled），内容区切到 Anchors 页。
+
+**这一步顺带挖出两条 host 契约**（都进 P4，且都是"漏了就表现为诡异 bug"的类型）：
+
+1. **Router 换页是投递给 `UiDispatcher` 的**，宿主必须在每帧的 tasks 阶段取出来 ——
+   `NanWindow` 在 `FramePhase::tasks` 里调 `dispatcher().drain()`（`nan_window.cpp:462`）。
+   最小宿主漏掉这一步时，点击回调正常执行、**路由却不换**，现象就是「按了没反应」。
+2. **动画只在宿主推进时间时前进**：宿主必须调 `NanSceneTree::process(dt)`（`NanWindow` 的
+   process 阶段）。而且探测里必须用**固定步长**（1/60）而不是墙钟差 —— 这个探测不锁帧
+   （几千 fps），墙钟 dt 会让过渡动画在模拟时间里几乎不动，交互回归永远看不到终态。
+
+**一条如实记录的观察**（不是 SDL 后端差异）：侧边栏 hover 时的圆角增益（+2px）没有通过
+`resolved_style().container.radius` 反映出来，`visual_state()` 确认 hover 已生效。这条链
+（signal → computed → bind → tween）**与后端无关**，属于 shell/动画层的独立问题，不计入
+本后端的差异清单；留作后续单独排查。
+
 **未验证**的部分见下表。
 
 **能力差异**（记录在案，不是等价实现）：
