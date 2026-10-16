@@ -245,6 +245,30 @@ anchors 页面在 SDL 后端的完整渲染（`rounded_outlines=160/80 帧`，�
 方框、`draw_circle_clipped_rounded_rect` → 未裁剪、`draw_rounded_rect_shadow` → no-op）是新后端的
 三个坑。前两个已经在本设备实现或被能力查询覆盖，软阴影由 `supports_soft_shadows()` 降级。
 
+#### 2.3.5 浮层回归与「宿主阶段」契约（2026-10-15）
+
+`NANDINA_PROBE_OVERLAY=1` 用 `BuildContext` 构建一个真实 `Dialog`（走 `ComponentTraits<Dialog>`
+注入 overlay service）、挂到 RouterOutlet 下并 `open()`，然后核对
+`OverlayHost::overlay_count()` 与截图：
+
+```
+overlay report: open=1 overlay_count=1
+```
+
+![SDL 后端的浮层](../images/probe/sdl-overlay.png)
+
+**走过的坑（三条宿主契约，全部进 P4）**：
+
+1. 手搓 `Dialog::create()` 拿不到 overlay service，`open()` 会**静默退化成树内 z 序**，
+   `overlay_count` 保持 0；必须经 `BuildContext` 构建。
+2. no-shell 模式把树根挂在 `RouterOutlet` 上，而 `OverlayHost` 不在树里 —— 浮层会 present 到
+   一个**没人绘制的宿主**上（`count=1` 但画面里什么都没有）。真实宿主（`NanWindow`）是以
+   OverlayHost 为根的。
+3. 宿主必须跑完整阶段链，**只调 `process()` 不够**：浮层淡入在 `advance_animations()` 里推进，
+   漏了它就会出现「对话框已打开但不可见（面板 opacity 停在 0）」，以及「hover 过渡不动」。
+   探测现在照抄 `NanWindow::tick` 的顺序：`process → flush_tree_mutations/deferred_deletes →
+   physics_step → advance_animations`，再 layout / semantics / draw。
+
 #### 2.3.4 外壳与交互态回归（2026-10-15）
 
 静态页面全过一遍之后，剩下的是**外壳**与**交互态**：探测现在可以用
@@ -274,10 +298,18 @@ frame cost: layout=0.04 ms, draw=0.27 ms（含侧边栏）
    process 阶段）。而且探测里必须用**固定步长**（1/60）而不是墙钟差 —— 这个探测不锁帧
    （几千 fps），墙钟 dt 会让过渡动画在模拟时间里几乎不动，交互回归永远看不到终态。
 
-**一条如实记录的观察**（不是 SDL 后端差异）：侧边栏 hover 时的圆角增益（+2px）没有通过
-`resolved_style().container.radius` 反映出来，`visual_state()` 确认 hover 已生效。这条链
-（signal → computed → bind → tween）**与后端无关**，属于 shell/动画层的独立问题，不计入
-本后端的差异清单；留作后续单独排查。
+**后续修正（同一天）：那条"hover 圆角不动"的观察是探测自己的 bug，不是框架问题。** 探测只调了
+`tree.process(dt)`，没调 `tree.advance_animations(dt)` —— 动画阶段根本没跑。补上完整宿主阶段后，
+侧边栏的 hover 增益正常过渡并停在终值：
+
+```
+[anim] frame=3  radius=8        state=1（hovered）
+[anim] frame=6  radius=8.69444
+[anim] frame=9  radius=9.88889
+[anim] frame=12 radius=10       ← 基值 8 + hover 增益 2，之后保持
+```
+
+这条教训比原来的"观察"更值钱：**宿主少跑一个阶段，症状会伪装成框架缺陷**（见下面第 3 条契约）。
 
 **未验证**的部分见下表。
 

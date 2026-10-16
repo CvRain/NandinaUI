@@ -1,8 +1,9 @@
 # 平台与后端契约（D4）
 
-> **状态：方向已定，迁移未开始。** 作者 2026-10-15 决定：**先完成 D4 计划中的内容，随后把生产
-> 后端替换为 SDL3**。当前生产路径仍是 raylib + GLFW/OpenGL；本文记录目标形态、阶段交付、
-> 所有权划分与验收标准，**不代表任何一步已经完成**。
+> **状态：后端替换已实施，D4 收尾中。** 作者 2026-10-15 决定先完成 D4 计划内容、随后把生产
+> 后端替换为 SDL3。**P3 已落地**：`IPlatformWindow` seam 成形、SDL3 宿主与 SDL 渲染设备可用，
+> 且装了 SDL3 的构建默认就走 SDL3（raylib 保留为对照/离线设备）；剩余是 P1 的多后端 shader
+> 产物、P2 的若干消费者面与逐图元对照。
 >
 > 探测证据与「已证明 / 未验证」清单见[跨平台后端探测](cross_platform_backend_probe.md)；
 > 取舍过程见 [story 015](../../stories/015-the-probe-that-was-not-in-version-control.md)；
@@ -24,8 +25,8 @@
 
 | 职责 | 今天谁持有 | 目标 |
 | --- | --- | --- |
-| 窗口、事件、输入轮询、帧驱动 | `NanWindow`（raylib + GLFW） | 平台层接口 + SDL 实现；`NanWindow` 退化为协调者，不再直接持有窗口 API |
-| 绘制原语与帧边界 | `IRenderDevice`（`render/backends/raylib_device.cpp`） | `IRenderDevice` 的 SDL 实现（2D + CPU 几何起步，后续可换 GPU render state） |
+| 窗口、事件、输入轮询、帧驱动 | ✅ `IPlatformWindow`（`app/platform_window.hpp`）+ `detail/raylib_platform_window`、`detail/sdl_platform_window`；`NanWindow` 只做协调 | 已完成。默认后端 = 装了 SDL3 就用 SDL3（`NANDINA_WINDOW_BACKEND` 可覆盖） |
+| 绘制原语与帧边界 | ✅ `render/backends/sdl_device.{hpp,cpp}`（SDL 2D + CPU 几何）与 `raylib_device` | SDL 设备是默认；raylib 设备保留给对照/离线/录制 |
 | 文本整形、图集、排版 | `text` 层 | **不变**：保持在设备边界之上，不随平台分叉 |
 | 资源、主题、响应式、组件 | `foundation` / `theme` / `scene` / `widget` | **不变** |
 
@@ -85,8 +86,8 @@
 | **P0** 应用级探测 | 窗口/事件/帧循环；GPU render state 自定义 shader；真实 `IRenderDevice`；真实页面 + 真实字体图集 | 真实 showcase 页面在 SDL 设备上正确渲染；稳态 0 次布局 | **基本完成**，缺键码映射验证（[§2.3.1](cross_platform_backend_probe.md)） |
 | **P1** 渲染与 shader 管线门槛 | 工具链固定；SPIR-V 校验入构建图；多后端产物；同页跨后端对照；能力差异落成代码分支；Web 端有效验收 | 每个承诺格式都能生成并加载；能力差异有会红的测试；同页对照有量化结论；Web 验收能区分失败原因 | **进行中**：工具链、校验、**阴影/圆角裁剪降级路径**、**同页像素对照**（差异 0.01% 像素、≤20/255）、**Web 端有效验收**（画布像素读回 + 服务端记录）已完成；`SDL_shadercross` 多后端产物与逐图元对照未完成 |
 | **P2** 平台能力与消费者回归 | 能力查询落地到组件；各后端行为回归；**含外壳与交互态** | 组件在两种后端下的行为有对照记录；交互态可用框架状态核对；差异要么修复要么降级 | **进行中**：三个 showcase 页面逐像素对照（Home 相同、其余只剩角部 AA，扫出并修复圆角描边缺陷，§2.3.3）；**真实外壳 + hover/press/导航/选中态回归通过**（§2.3.4，并挖出两条 host 契约） |
-| **P3** 默认后端替换 | SDL 设备成为默认；raylib 退回离线/录制设备 | 真实应用（showcase + bench）在 SDL 默认路径下通过三套验证与人工验收 | 未开始 |
-| **P4** host 行为契约收口 | 平台层接口成形；`NanWindow` 不再持有窗口/输入/帧驱动；**设备可注入**（否则无法做逐图元 trace）；**应用背景由谁绘制**要有定义；**每帧 drain UiDispatcher**（否则导航"按了没反应"）；**每帧 `process(dt)` 推进动画** | 同一份组件代码在 SDL 与 raylib 两个宿主下行为一致 | 未开始；已由最小宿主挖出两条必备契约（探测记录 §2.3.4） |
+| **P3** 默认后端替换 | SDL 设备成为默认；raylib 退回离线/录制设备 | 真实应用在 SDL 默认路径下通过三套验证与人工验收 | **已落地**：`NANDINA_WINDOW_BACKEND=sdl3 ./buildDir/showcase/nandina_showcase` 正常运行（renderer=gpu、~5% 单核、侧边栏 + Home 页正确渲染）；三套验证在 SDL 为默认后端下全绿（含 window-lifecycle 走 SDL 宿主）；`playground/bench` 显式钉住 raylib 以继续充当基线采集器 |
+| **P4** host 行为契约收口 | 平台层接口成形；`NanWindow` 不再持有窗口/输入/帧驱动；**设备可注入**；**应用背景由谁绘制**要有定义；宿主阶段链完整（drain dispatcher、process、tree_commit、physics、advance_animations） | 同一份组件代码在 SDL 与 raylib 两个宿主下行为一致 | **基本完成**：seam + 两个实现已落地，设备由平台创建（可注入）；三条必备契约记在探测记录 §2.3.4/§2.3.5（drain UiDispatcher、完整阶段链、浮层必须以 OverlayHost 为树根）；仍缺**逐图元 trace 设备**本身 |
 
 ## 6. 迁移策略（后端替换）
 

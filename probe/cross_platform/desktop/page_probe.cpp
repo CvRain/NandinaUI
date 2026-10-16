@@ -30,7 +30,11 @@
 #include <nandina/scene/overlay_host.hpp>
 #include <nandina/scene/scene_tree.hpp>
 #include <nandina/text/font_pipeline.hpp>
+#include <nandina/widget/build_context.hpp>
+#include <nandina/widget/builtin_component_traits.hpp>
 #include <nandina/widget/button.hpp>
+#include <nandina/widget/dialog.hpp>
+#include <nandina/widget/label.hpp>
 #include <nandina/widget/primitives/pressable.hpp>
 #include <showcase/components/sidebar.hpp>
 #include <showcase/pages/anchors_page.hpp>
@@ -70,8 +74,9 @@ namespace
         bool pressed = false;
         bool route_switched = false;
         bool selected_treatment = false;
-        /// hover 前的基础圆角（用于记录观察，不作为断言）。
+        /// hover 前的基础圆角与过渡结束后的值（shell 的 hover 增益 = +2）。
         float radius_before = 0.0F;
+        float radius_after = 0.0F;
     };
 
     [[nodiscard]] auto find_button(nandina::scene::NanNode* node, const std::string_view text)
@@ -249,6 +254,36 @@ int main() {
             throw std::runtime_error("NANDINA_PROBE_INTERACTION requires NANDINA_PROBE_SHELL=1");
         }
 
+        // 可选：浮层回归。浮层走 OverlayHost 的独立层级，必须能越过页面自身的裁剪，
+        // 并且关闭后计数归零 —— 这条路径（层级 + clip + present）在 SDL 后端上此前没验证过。
+        const bool overlay_enabled = std::getenv("NANDINA_PROBE_OVERLAY") != nullptr;
+        std::shared_ptr<nandina::widget::Dialog> dialog;
+        auto overlay_scope =
+            std::make_unique<nandina::reactive::ReactiveScope>(application.graph());
+        if (overlay_enabled) {
+            // 必须走 BuildContext 构建：`ComponentTraits<Dialog>::make` 会注入
+            // overlay service。手搓 `Dialog::create()` 拿不到它，`open()` 就会退化成
+            // 树内 z 序（实测 overlay_count=0），浮层层级与越裁剪那条路径根本没被走到。
+            const auto ui = nandina::widget::BuildContext(
+                application.graph(),
+                *overlay_scope,
+                application.theme_manager(),
+                &application.resources(),
+                overlay_host.get(),
+                nullptr
+            );
+            auto content = nandina::widget::Label::create(
+                application.graph(),
+                "Presented through OverlayHost."
+            );
+            dialog = ui.make<nandina::widget::Dialog>("SDL3 overlay regression", content).build();
+            // 挂到 outlet 上：Dialog 需要「在树里」才能拿到样式/字体上下文并沿祖先链解析
+            // OverlayHost。不要挂到 tree.root()（shell 模式下那是 LayerStack，会拒绝这种子节点）——
+            // 而且 no-shell 模式下 root 就是 outlet 本身，OverlayHost 不在树里，
+            // 浮层会被 present 到一个没人绘制的宿主上（实测：count=1 但画面里没有）。
+            outlet->add_child(dialog);
+        }
+
         const auto* capture_path = std::getenv("NANDINA_PROBE_CAPTURE");
         const auto frames_to_run = [] {
             const auto* value = std::getenv("NANDINA_PROBE_FRAMES");
@@ -301,12 +336,17 @@ int main() {
             // （nan_window.cpp:462）。最小宿主漏了这一步时，点击回调执行了、路由却不换 ——
             // 表现为「按了没反应」。
             (void)application.dispatcher().drain();
-            if (shell_enabled) {
-                // 另一条宿主契约：动画只在宿主推进时间时前进（`NanWindow` 的 process 阶段）。
-                // 用**固定步长**而不是墙钟差：这个探测不锁帧（几千 fps），墙钟 dt 会让动画在
-                // 模拟时间里几乎不动，交互回归就永远看不到过渡结束的状态。
-                tree.process(kProbeDt);
-            }
+            // 宿主契约（照抄 NanWindow::tick 的阶段顺序）：只调 process() 是不够的 ——
+            //   * 动画（浮层淡入、属性过渡）在 `advance_animations()` 里推进，漏了它会出现
+            //     「overlay_count=1 但对话框不可见（面板 opacity 停在 0）」「hover 半径不动」；
+            //   * 树变更/延迟删除要在 process 之后提交，否则新挂载的节点这一帧不参与渲染。
+            // 步长固定而不是墙钟差：这个探测不锁帧（几千 fps），墙钟 dt 会让动画在模拟时间里
+            // 几乎不动，交互回归永远看不到过渡终态。
+            tree.process(kProbeDt);
+            tree.flush_tree_mutations();
+            tree.flush_deferred_deletes();
+            tree.physics_step(kProbeDt);
+            tree.advance_animations(kProbeDt);
 
             // 真实页面：布局 → 绘制，全部走 Nandina 自己的路径。
             device.begin_frame();
@@ -357,6 +397,11 @@ int main() {
                 interaction.selected_treatment =
                     anchors_button->treatment() == nandina::theme::ButtonTreatment::filled;
             }
+            else if (inject_interaction && frame == 20) {
+                if (auto* button = find_button(overlay_host.get(), "锚点"); button != nullptr) {
+                    interaction.radius_after = button->resolved_style().container.radius;
+                }
+            }
             else if (inject_interaction && frame >= 3 && frame <= 24 && frame % 3 == 0) {
                 auto* button = find_button(overlay_host.get(), "锚点");
                 std::cout << "  [anim] frame=" << frame << " radius="
@@ -366,6 +411,9 @@ int main() {
                           << " pending=" << application.graph().has_pending_effects() << '\n';
             }
 
+            if (overlay_enabled && frame == 1) {
+                dialog->open();
+            }
             tree.draw(device);
             device.end_frame();
             const auto draw_ended = std::chrono::steady_clock::now();
@@ -401,16 +449,18 @@ int main() {
                       << " ms, total=" << ((layout_ms + draw_ms) / measured) << " ms\n";
         }
 
+        if (overlay_enabled) {
+            std::cout << "overlay report: open=" << dialog->is_open()
+                      << " overlay_count=" << overlay_host->overlay_count() << '\n';
+        }
+
         if (inject_interaction) {
             std::cout << "interaction report: hovered=" << interaction.hovered
                       << " pressed=" << interaction.pressed
                       << " route_switched=" << interaction.route_switched
                       << " selected_treatment=" << interaction.selected_treatment << '\n';
-            // 观察（不是断言）：侧边栏 hover 的圆角增益没有通过 `resolved_style().container.radius`
-            // 反映出来。这条链（signal → computed → bind → tween）与后端无关，属于 shell/动画层的
-            // 独立问题，不作为 SDL 后端差异记账；见探测记录 §2.3.4。
-            std::cout << "  note: hover radius gain not observed through resolved_style "
-                         "(backend-independent)\n";
+            std::cout << "  hover radius tween: " << interaction.radius_before << " -> "
+                      << interaction.radius_after << " (shell gain = +2)\n";
         }
 
         const auto& stats = device.stats();
