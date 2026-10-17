@@ -14,9 +14,12 @@
 //
 
 #include <nandina/foundation/nandina_color_space.hpp>
+#include <nandina/reactive/graph.hpp>
 #include <nandina/render/backends/sdl_device.hpp>
+#include <nandina/scene/overlay_host.hpp>
 #include <nandina/scene/scene_tree.hpp>
 #include <nandina/theme/design_system.hpp>
+#include <nandina/theme/theme_manager.hpp>
 #include <nandina/widget/button.hpp>
 #include <nandina/widget/dialog.hpp>
 
@@ -26,6 +29,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdint>
 #include <memory>
@@ -261,6 +265,47 @@ TEST_CASE("translucent geometry composites over a known background", "[visual][b
     REQUIRE(channels_differ(canvas.pixel(100, 60), opaque));
     // 控件之外必须仍是背景本身。
     require_pixel(canvas.pixel(5, 5), background, "untouched background", 5, 5);
+
+    // 四角扇形内部，远离圆弧边界；中心采样无法发现几何扇形漏画或 alpha 丢失。
+    for (const auto& point:
+         std::array<std::array<int, 2>, 4> {{{46, 36}, {153, 36}, {46, 83}, {153, 83}}})
+    {
+        require_pixel(
+            canvas.pixel(point[0], point[1]),
+            over(background, translucent),
+            "corner fan interior",
+            point[0],
+            point[1]
+        );
+    }
+    // 跨过 x=52/148、y=42/78 的拼接线：漏缝或重复混合都不应出现。
+    for (const int x: {51, 52, 147, 148}) {
+        for (const int y: {35, 84}) {
+            require_pixel(canvas.pixel(x, y), over(background, translucent), "vertical join", x, y);
+        }
+    }
+    for (const int x: {45, 154}) {
+        for (const int y: {41, 42, 77, 78}) {
+            require_pixel(
+                canvas.pixel(x, y),
+                over(background, translucent),
+                "horizontal join",
+                x,
+                y
+            );
+        }
+    }
+    for (const auto& point:
+         std::array<std::array<int, 2>, 4> {{{41, 31}, {158, 31}, {41, 88}, {158, 88}}})
+    {
+        require_pixel(
+            canvas.pixel(point[0], point[1]),
+            background,
+            "outside rounded corner",
+            point[0],
+            point[1]
+        );
+    }
 }
 
 TEST_CASE(
@@ -344,27 +389,85 @@ TEST_CASE("ripple mid-state composites over the pressed button", "[visual][blend
 }
 
 TEST_CASE("dialog scrim composites over the background", "[visual][blend][sdl]") {
-    SoftwareCanvas canvas {200, 120};
+    SoftwareCanvas canvas {800, 600};
     render::SdlRenderDevice device {canvas.renderer()};
-
+    reactive::Graph graph;
+    theme::ThemeManager themes;
+    const auto host = scene::OverlayHost::create();
+    const auto body = std::make_shared<scene::NanControl>(foundation::NanSize(800.0F, 600.0F));
     const auto dialog = widget::Dialog::create();
+    scene::NanSceneTree tree;
+    tree.set_theme_manager(themes);
+    host->set_content(body);
+    tree.set_root(host);
+    body->add_child(dialog);
+    const auto layout = [&] { (void)tree.layout_root(foundation::NanSize(800.0F, 600.0F)); };
+    const auto settle = [&] {
+        for (int i = 0; i < 8; ++i) {
+            dialog->on_process(0.1F);
+            auto phase = tree.enter_phase(scene::FramePhase::animation);
+            tree.advance_animations(0.1F);
+        }
+        layout();
+    };
+    const auto draw = [&] {
+        device.clear_clip();
+        device.clear(color_from_hex(kBackground));
+        tree.draw(device);
+    };
+    const auto background = from_hex(kBackground);
+    layout();
+    REQUIRE(host->overlay_count() == 0);
+    draw();
+    require_pixel(canvas.pixel(10, 10), background, "before opening", 10, 10);
+
+    dialog->open();
+    layout();
+    settle();
+    // 收敛性自检：再推进一步并重绘，采样点像素必须不变。
+    // 这样"动画还没结束"会以明确的失败暴露，而不是伪装成合成色不符。
+    draw();
+    const auto settled_pixel = canvas.pixel(10, 10);
+    settle();
+    draw();
+    require_pixel(canvas.pixel(10, 10), settled_pixel, "scrim settled", 10, 10);
+    REQUIRE(dialog->is_open());
+    REQUIRE(host->overlay_count() == 1);
+    // 与 dialog_tests 的 overlay 层级一致，明确确认采样点在实际面板之外。
+    // 先确认层级存在：层级编号变化应当是清晰的断言失败，而不是空指针解引用。
+    auto* overlay_layer = host->layer_at(1);
+    REQUIRE(overlay_layer != nullptr);
+    auto* surface = overlay_layer->layout_root();
+    REQUIRE(surface != nullptr);
+    REQUIRE(surface->child_count() == 1);
+    auto* dismiss = surface->get_child(0)->as_control();
+    REQUIRE(dismiss != nullptr);
+    REQUIRE(dismiss->child_count() == 1);
+    auto* scope = dismiss->get_child(0)->as_control();
+    REQUIRE(scope != nullptr);
+    REQUIRE(scope->child_count() == 1);
+    auto* panel = scope->get_child(0)->as_control();
+    REQUIRE(panel != nullptr);
+    REQUIRE(panel->global_bounds().is_valid());
+    REQUIRE_FALSE(panel->global_bounds().contains_point(foundation::NanPoint(10.0F, 10.0F)));
     const auto scrim = to_rgba(dialog->resolved_style().scrim);
     INFO("scrim alpha " << scrim.a);
     REQUIRE(scrim.a > 0);
     REQUIRE(scrim.a < 255); // 遮罩本来就该是半透明的
 
-    const auto background = from_hex(kBackground);
-    device.clear(color_from_hex(kBackground));
-    device.draw_rect(
-        foundation::NanRect(0.0F, 0.0F, 200.0F, 120.0F),
-        dialog->resolved_style().scrim
-    );
-
+    draw();
     const auto expected = over(background, scrim);
-    require_pixel(canvas.pixel(100, 60), expected, "scrim centre", 100, 60);
+    REQUIRE(channels_differ(expected, background));
+    require_pixel(canvas.pixel(10, 10), expected, "opened scrim outside panel", 10, 10);
     // 遮罩不该把背景压成不透明的一块。
     REQUIRE(channels_differ(
-        canvas.pixel(100, 60),
+        canvas.pixel(10, 10),
         Rgba {.r = scrim.r, .g = scrim.g, .b = scrim.b, .a = 255}
     ));
+    dialog->close();
+    settle();
+    REQUIRE_FALSE(dialog->is_open());
+    REQUIRE(host->overlay_count() == 0);
+    draw();
+    require_pixel(canvas.pixel(10, 10), background, "after closing", 10, 10);
 }
