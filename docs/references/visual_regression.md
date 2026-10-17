@@ -63,13 +63,41 @@ alpha 改成 1）。
 
 当前由作者主导视觉体验，"作者审核候选结果、工具负责再生与比较"已经足够，不需要先做权限系统。
 
-## 5. 第一批（D7 混合修复）的落地要求
+## 5. 第一批（D7 混合修复）：已落地
 
-1. 测试**自绘已知背景**（不依赖宿主 clear 色——跨后端曾因清屏色不同产生 4.51 的平均差，与渲染无关）；
-2. 读回发生在 `SDL_RenderPresent` **之前**（探测里 present 之后 `SDL_RenderReadPixels` 曾读到空帧）；
-3. 固定动画时刻：固定 dt + 明确帧号，涟漪取中间态而不是首帧/末帧；
-4. 注册为 **integration 测试**，不是手工命令；CPU 与无显示环境下给出明确的 skip 理由；
-5. 故障注入至少两条：移除混合设置、把某个状态层 alpha 设为 1，都必须让测试变红。
+**测试**：`tests/sdl_visual_tests.cpp`，4 个用例 / 31 条断言，注册为 `unit` 套件里的
+`sdl-visual` 目标（C++ 测试按仓库既有约定归 `unit`；`integration` 保留给 Python 与构建工作流）。
+
+**为什么能确定性**：用 `SDL_CreateSoftwareRenderer(surface)` —— 不需要窗口、显示器或 GPU 驱动，
+像素只由绘制调用与合成决定；期望值是**解析合成色**（8 位逐通道 `src*a + dst*(1-a)`，容差 ±2），
+不取任何后端当前输出，因此没有 golden、也不受驱动差异影响。
+
+| 用例 | 断言 |
+| --- | --- |
+| 半透明圆角矩形压在已知背景上 | 中心 == `over(bg, color@128)`；外部仍等于背景；且结果不同于"原色不透明" |
+| 按下态 filled 按钮 | 中心 == `over(over(bg, fill), pressed_state_layer)`；前提断言状态层 alpha ∈ (0,255)；且不等于"状态层不透明" |
+| 涟漪中间态（固定 dt 推进到 progress≈0.5） | 中心 == `over(over(over(bg, fill), state), ripple@alpha*(1-p))` |
+| 对话框遮罩 | 中心 == `over(bg, scrim)`；前提断言 scrim alpha ∈ (0,255) |
+
+**故障注入已执行**：删掉设备构造里的 `SDL_SetRenderDrawBlendMode(BLEND)` → 4 个用例全部变红；
+还原后全绿。这是"改坏哪一行会让它红"的答案。
+
+**GPU 路径的同一修复证据**（探针，真实窗口 + GPU renderer）：
+
+| 场景 | 修复前 | 修复后 |
+| --- | --- | --- |
+| Dialog 遮罩下的整页亮度（mean） | 5.9（近黑，看不到背后内容） | 125.0（可透视） |
+| 侧边栏选中项最暗行均值 / 行带标准差 | 156.9 / 32.1（白块，文字不可见） | 74.7 / 88.0（深色填充 + 白字） |
+
+![遮罩修复前后](../images/probe/blend-fix-scrim.png)
+
+![选中项修复前后](../images/probe/blend-fix-nav.png)
+
+**仍未做的部分**：页面级"审核过的 golden"这一层。当前基础正确性层已经把"对错"钉住，页面级 golden
+要等 §3 的 manifest 与 §4 的审批流程真正建起来；在那之前不提交 golden，避免把当前输出固化成预期。
+
+**harness 规则已同步到探针**：`page_probe` 的读回移到了 `SDL_RenderPresent` 之前（超过 300 行前的
+实践是 present 之后再读，曾经读到空帧）。
 
 ## 6. 与其它文档的关系
 

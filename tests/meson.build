@@ -101,6 +101,18 @@ scene_tests = executable(
 )
 test('scene', scene_tests, suite: 'unit')
 
+# SDL 视觉回归：用**软件渲染器**做确定性像素断言（不需要窗口/显示器/GPU），
+# 期望值是解析计算出来的合成色，而不是某个后端某次画出来的图。
+# 没有 SDL3 后端时不注册：没有 SDL 设备可测，注册一个必然跳过的目标只会制造噪声。
+if sdl3_dep.found()
+    sdl_visual_tests = executable(
+        'sdl_visual_tests',
+        files('sdl_visual_tests.cpp'),
+        dependencies : [nandina_dep, catch2_with_main_dep],
+    )
+    test('sdl-visual', sdl_visual_tests, suite: 'unit')
+endif
+
 if box2d_dep.found()
     physics2d_tests = executable(
         'physics2d_tests',

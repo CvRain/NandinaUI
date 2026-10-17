@@ -57,7 +57,7 @@
 | --- | --- | --- | --- | --- |
 | 矩形圆角绘制 | SDF | CPU 三角形扇 | `supports_rounded_rect()`（`BoxPainter`） | D7 生产 SDF 路径 |
 | 圆角/圆抗锯齿 | SDF + `fwidth` | 硬边缘 | —（质量差异，无离散路径） | D7 SDF。历史单页静止帧差异见探测记录 §2.3.2，不代表其他页面或交互态 |
-| 几何**半透明混合** | 正常 | **未启用**：只设了纹理混合（`SDL_SetTextureBlendMode`），从未调用 `SDL_SetRenderDrawBlendMode` | —（这是**缺陷**，不是长期差异） | 启用混合并处理失败；独立预期像素 + 按下态/涟漪/遮罩回归。三处症状：按钮状态层 → 白底白字、涟漪 → 实心硬边盘、对话框遮罩 → 近黑（[D7](reference_draft.md#d7-渲染质量与后端视觉一致性)） |
+| 几何**半透明混合** | 正常 | **已修复（2026-10-17）**：设备构造启用 `SDL_BLENDMODE_BLEND`，`check_sdl` 处理失败 | — | 回归已落地：`tests/sdl_visual_tests.cpp` 用软件渲染器 + 解析合成预期覆盖半透明圆角矩形、按下态、涟漪中间态、Dialog 遮罩；删除设置 4 用例全红（见[视觉回归](visual_regression.md) §5） |
 | 软阴影 | SDF 软阴影 | 未实现 | **`supports_soft_shadows()`**（`ShadowPainter` 退化为硬边圆角阴影，`tests/card_tests.cpp`） | D7 SDF 软阴影，基础路径继续明确降级 |
 | 涟漪专用圆角交集 | SDF 解析交集 | 只能矩形裁剪 | **`supports_rounded_clip()`**（`RipplePainter` 自己 `set_clip` + 画圆，`tests/button_tests.cpp`） | D7 专用交集先行；图片/子树通用裁剪另批定形 |
 | 圆角**描边** | SDF | 已实现（四条直边 + 四个同心环扇） | —（不需要查询，设备必须覆写） | **接口默认会退化成方框描边**，新后端必须覆写；消费者回归在 anchors 页面扫到过（探测记录 §2.3.3） |
@@ -90,7 +90,7 @@
 | **P0** 应用级探测 | 窗口/事件/帧循环；GPU render state 自定义 shader；真实 `IRenderDevice`；真实页面 + 真实字体图集 | 真实 showcase 页面在 SDL 设备上正确渲染；稳态 0 次布局 | **基本完成**，缺键码映射验证（[§2.3.1](cross_platform_backend_probe.md)） |
 | **P1** 渲染与 shader 管线门槛 | 工具链固定；SPIR-V 校验入构建图；多后端产物；同页跨后端对照；能力差异落成代码分支；Web 端有效验收 | 每个承诺格式都能生成并加载；能力差异有会红的测试；同页对照有量化结论；Web 验收能区分失败原因 | **基本完成**：工具链、校验、能力降级路径、同页像素对照（0.01% 像素、≤20/255）、Web 端验收、**多后端产物已生成并外部校验**（§3.1）、**逐图元对照**（`render/recording_device.hpp` + `tools/compare_render_traces.py`，三个页面的图元构成逐项相同，§2.3.6）均已完成；剩余：DXIL/MSL 的**加载**（需 D3D12/Metal 设备） |
 | **P2** 平台能力与消费者回归 | 能力查询落地到组件；各后端行为回归；**含外壳、交互态与浮层** | 组件在两种后端下的行为有对照记录；交互态可用框架状态核对；差异要么修复要么降级 | **基本完成**：三个页面像素对照（Home 相同、其余只剩角部 AA，扫出并修复圆角描边退化，§2.3.3）；**真实外壳 + hover/press/导航/选中态**回归通过并挖出三条 host 契约（§2.3.4）；**浮层回归**（`Dialog` 经 `OverlayHost` present，`overlay_count=1`，§2.3.5）；`draw_arc` 已实现；剩余观感差异归 [D7](reference_draft.md#d7-渲染质量与后端视觉一致性) |
-| **P3** 默认后端替换 | SDL 设备成为默认；raylib 退回离线/录制设备 | 真实应用在 SDL 默认路径下通过三套验证与人工验收 | **机械验收通过，人工观感验收未通过**（含性能/内存复测：SDL 64 MB / 6% 单核 vs raylib 150 MB / 10%，探测记录 §2.3.7）：`NANDINA_WINDOW_BACKEND=sdl3 ./buildDir/showcase/nandina_showcase` 可运行（renderer=gpu、~5% 单核、侧边栏 + Home 页渲染），三套验证在 SDL 为默认后端下全绿（含 window-lifecycle 走 SDL 宿主），`playground/bench` 显式钉住 raylib 作基线；但作者实测出现按钮按下白底白字、涟漪失真（几何混合缺失，见 [D7](reference_draft.md#d7-渲染质量与后端视觉一致性)），因此**不能标记为通过人工验收**，该项转入 D7 批次 1 |
+| **P3** 默认后端替换 | SDL 设备成为默认；raylib 退回离线/录制设备 | 真实应用在 SDL 默认路径下通过三套验证与人工验收 | **机械验收通过；当时人工观感验收未通过（混合缺陷），该缺陷已于 2026-10-17 修复、待人工复验**（含性能/内存复测：SDL 64 MB / 6% 单核 vs raylib 150 MB / 10%，探测记录 §2.3.7）：`NANDINA_WINDOW_BACKEND=sdl3 ./buildDir/showcase/nandina_showcase` 可运行（renderer=gpu、~5% 单核、侧边栏 + Home 页渲染），三套验证在 SDL 为默认后端下全绿（含 window-lifecycle 走 SDL 宿主），`playground/bench` 显式钉住 raylib 作基线；但作者实测出现按钮按下白底白字、涟漪失真（几何混合缺失，见 [D7](reference_draft.md#d7-渲染质量与后端视觉一致性)），因此**不能标记为通过人工验收**，该项转入 D7 批次 1 |
 | **P4** host 行为契约收口 | 平台层接口成形；`NanWindow` 不再持有窗口/输入/帧驱动；**设备可注入**；**应用背景由谁绘制**要有定义；宿主阶段链完整（drain dispatcher、process、tree_commit、physics、advance_animations） | 同一份组件代码在 SDL 与 raylib 两个宿主下行为一致 | **基本完成**：seam + 两个实现已落地，设备由平台创建（可注入）；三条必备契约记在探测记录 §2.3.4/§2.3.5（drain UiDispatcher、完整阶段链、浮层必须以 OverlayHost 为树根）；逐图元 trace 设备（`render/recording_device.hpp`）与对照工具已落地（探测记录 §2.3.6） |
 
 ## 6. D4 收尾与 D7/D8 的接口

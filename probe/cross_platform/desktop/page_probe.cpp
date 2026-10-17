@@ -443,21 +443,24 @@ int main() {
                     std::chrono::duration<double, std::milli>(draw_ended - layout_ended).count();
                 ++measured;
             }
+            // 读回必须在 present **之前**：present 之后目标内容由驱动决定（曾经读到过空帧），
+            // 像素回归的 harness 规则见 docs/references/visual_regression.md §5。
+            const bool last_frame = frame + 1 >= frames_to_run;
+            if (last_frame && capture_path != nullptr) {
+                auto* shot = SDL_RenderReadPixels(renderer, nullptr);
+                if (shot == nullptr) {
+                    throw std::runtime_error(
+                        std::string("SDL_RenderReadPixels: ") + SDL_GetError()
+                    );
+                }
+                check_sdl(SDL_SaveBMP(shot, capture_path), "SDL_SaveBMP");
+                SDL_DestroySurface(shot);
+                std::cout << "captured frame " << frame + 1 << " to " << capture_path << '\n';
+            }
             check_sdl(SDL_RenderPresent(renderer), "SDL_RenderPresent");
 
             ++frame;
             if ((capture_path != nullptr || trace_path != nullptr) && frame >= frames_to_run) {
-                if (capture_path != nullptr) {
-                    auto* shot = SDL_RenderReadPixels(renderer, nullptr);
-                    if (shot == nullptr) {
-                        throw std::runtime_error(
-                            std::string("SDL_RenderReadPixels: ") + SDL_GetError()
-                        );
-                    }
-                    check_sdl(SDL_SaveBMP(shot, capture_path), "SDL_SaveBMP");
-                    SDL_DestroySurface(shot);
-                    std::cout << "captured frame " << frame << " to " << capture_path << '\n';
-                }
                 if (recorder != nullptr) {
                     std::ofstream trace(trace_path);
                     recorder->dump(trace);

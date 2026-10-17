@@ -69,7 +69,19 @@ namespace nandina::render
         }
     } // namespace
 
-    SdlRenderDevice::SdlRenderDevice(SDL_Renderer& renderer): renderer_(&renderer) {}
+    SdlRenderDevice::SdlRenderDevice(SDL_Renderer& renderer): renderer_(&renderer) {
+        // 几何图元的混合必须在这里打开：`SDL_RenderGeometry` / `FillRect` / 线段都沿用 renderer 的
+        // draw blend mode，而纹理另有自己的 `SDL_SetTextureBlendMode`。不设置时默认不混合，
+        // 所有半透明几何都会被画成不透明 —— 表现是按钮状态层白底白字、涟漪变成实心硬边盘、
+        // 对话框遮罩把整页压黑（D7 的缺陷，见 reference_draft.md）。
+        //
+        // 放在构造（设备初始化边界）而不是逐帧设置：renderer 由平台创建、只交给本设备绘制，
+        // 帧内没有任何路径会改这个状态；逐帧重设反而会掩盖"某处偷改状态"的问题。
+        check_sdl(
+            SDL_SetRenderDrawBlendMode(renderer_, SDL_BLENDMODE_BLEND),
+            "SDL_SetRenderDrawBlendMode(BLEND)"
+        );
+    }
 
     auto SdlRenderDevice::stats() const -> const SdlDeviceStats& {
         return stats_;
