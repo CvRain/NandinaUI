@@ -69,6 +69,29 @@ foo-bar-1.0 = foo_bar_dep
 已有源码目录可能优先于下载，**不代表它一定等于 pin**。迁移验证应分别使用已有目录与
 全新检出；目录存在时仍核对 commit 和脏状态，不能从 wrap 的声明反推实际版本。
 
+### 2.4 SDL3 最小实验实测结论（2026-10-18）
+
+环境：本机 Meson **1.12.1**（策略上文引用的 1.7.2 是 CI 固定版本；所用 wrap/`cmake.subproject`
+能力远早于 1.7，但**正式接入前仍需在 CI 的 1.7.2 上复跑一次**，不能默认一致）。实验在 `/tmp` 的
+独立工程里做，未改仓库。
+
+| 项 | 结论 |
+| --- | --- |
+| `[wrap-git]` + `method = cmake` + `cmake.subproject('SDL3')` | **可行**：SDL3 作为子项目配置并构建成功，消费者链接、运行，`SDL_GetVersion` 输出 3.4.18 |
+| CMake 选项传递 | `options:` 必须是 `cmake.subproject_options()` 对象（`add_cmake_defines({...})`），**不接受裸 dict**（裸 dict 会报类型错误） |
+| 实测可用选项 | `SDL_TESTS=OFF, SDL_EXAMPLES=OFF, SDL_INSTALL=OFF, SDL_SHARED=OFF, SDL_STATIC=ON, SDL_TEST_LIBRARY=OFF` |
+| 真实 target 名 | `SDL3-static`（静态）/ `SDL3-shared`（动态）；`target_list()` 还列出 `SDL3_Headers`、`SDL3-collector` 等。**不要猜名字**：`cmake.subproject().dependency()` 不接受 `required:`，猜错只会得到硬错误 |
+| wrap 存在会**遮蔽**系统同名依赖 | 只有 `subprojects/SDL3.wrap`、没有 `[provide]` 时，`dependency('sdl3', required: false)` 返回 **not found**（不带 wrap 的对照工程是 `pkgconfig 3.4.18`） |
+| `[provide] sdl3 = SDL3_static_dep` | 系统存在时 `dependency('sdl3')` 得到 `pkgconfig 3.4.18`（遮蔽解除）；但**系统隐藏时仍 not found**——子项目被配置（fallback 已提升）却解析不到依赖变量。**结论：CMake-only 上游不要依赖 `[provide]` 变量名，显式分支** |
+| 显式解析三态（推荐形态） | `system`：`dependency('sdl3', version:'>=3.4.0', method:'pkg-config', required:false)`（`method:` 过滤避开 wrap 遮蔽）；`vendored`：`cmake.subproject('SDL3', options:…).dependency('SDL3-static')`；`auto`：先 system，未找到再 vendored。三者均已实测：分别得到 `system 3.4.18` / 子项目构建 / 回落 vendored |
+| **静默失效陷阱** | 把没解析到的结果留成 `disabler()` 时，`system` 状态在无系统库的机器上**配置仍然 exit 0**，执行文件被静默禁用。正式接入必须 `error()` 明确失败 |
+| 离线 | `-Dsdl3_source=vendored --wrap-mode=nodownload`（源码已在 `subprojects/`）构建并运行成功 |
+| 全新检出 | 无 `subprojects/SDL3`、系统隐藏、`auto` → 按 wrap 下载 `release-3.4.18`、构建、运行成功 |
+| CMake 适配器告警 | SDL3 的 CMake 里有 Meson 不认识的 generator expression（如 `$<COMPILE_LANGUAGE:…>`、`$<TARGET_NAME:SDL3::Headers>`、`$<CONFIG:…>`）与 `target_precompile_headers`；均为告警，构建与链接正常 |
+
+**据此确定的接入形态**：不写 `[provide]` 变量名，改为每个依赖在 `meson/deps.build` 里写**显式三态块**
+（`if/else` 即可，不需要用户函数）；解析结果必须写入解析报告；解析失败必须 `error()`。
+
 ### 2.3 WrapDB 不是 wrap 机制本身
 
 2026-10-16 的既有调查记录：WrapDB 中未找到 raylib，box2d 条目为 2.4.1，
@@ -174,7 +197,7 @@ CI 缓存键应包含来源声明、pin、构建选项及适用工具链，缓�
 
 | 批次 | 交付 | 退出关口 |
 | --- | --- | --- |
-| 1 SDL3 最小实验 | 固定源码 + CMake wrap + 实际 target/选项/依赖消费；记录 Meson 版本 | 干净目录构建并链接一个实际消费者；核对 fallback 行为与产物 |
+| 1 SDL3 最小实验（**已完成** 2026-10-18） | 固定源码 + CMake wrap + 实际 target/选项/依赖消费；记录 Meson 版本 | 已达成并记录于 §2.4：`SDL3-static`、选项对象、三态解析、离线、全新检出均实测；**结论不进 `[provide]` 变量名，改显式分支；解析失败必须 `error()`**。CI 的 Meson 1.7.2 复跑待正式接入时补 |
 | 2 SDL3 正式接入 | 三态来源、功能开关、解析报告、CI 与 SDK | 三态与 disabled 组合、实际 SDL 消费、离线 SDK、三套代码验证 |
 | 3 其余依赖逐项迁移 | 每项单独提交，必要时较大依赖拆实验与接入两批 | 保持受测版本；删除该 submodule 跟踪项；报告、离线/SDK 与三套验证通过 |
 | 4 完成迁移 | 字体保留 submodule，SQLite 保留 amalgamation，相关说明与清单同步 | 全新检出、联网预热、断网源码包消费完整走通 |
