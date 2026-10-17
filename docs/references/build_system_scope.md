@@ -4,7 +4,11 @@
 
 ## 当前主线
 
-NandinaUI 当前使用 Meson + Ninja 构建，公共源码以普通头文件和实现文件分发。应用通过 Meson subproject 引入框架，框架自身负责构建第三方依赖适配层。**第三方依赖的获取方式（`wrap-git` + 三态开关 + `min`/`pin` 版本规则）由[第三方依赖策略](dependency_policy.md)规定**；那条策略说的是"Meson 侧依赖从哪来"，不改变本文"CMake 消费端暂缓"的结论，也不预判未来 CMake 侧用 vcpkg 还是 FetchContent。
+NandinaUI 当前使用 Meson + Ninja 构建，公共源码以普通头文件和实现文件分发。应用通过 Meson subproject 引入框架，框架自身负责构建第三方依赖适配层。**第三方依赖的获取方式（目标为 `wrap-git` + 默认 vendored 的三态开关 + `min`/`pin` 版本规则，尚未实施）由[第三方依赖策略](dependency_policy.md)规定**；那条策略说的是"Meson 侧依赖从哪来"，不改变本文"CMake 消费端暂缓"的结论，未来 CMake 消费适配也须复用同一份来源/版本声明。
+
+实施顺序以[项目进度与下一步](project_status.md)为准：SDL3 单项 wrap/CI/离线 SDK 先交付，
+其余依赖逐项迁移；生产 SDF 不等待全部迁移。CMake wrap 的 dependency 回退机制与 target 映射
+按[依赖策略](dependency_policy.md)先实测，不引入未经验证的通用解析器。
 
 这里的“支持 CMake”需要区分两件事：仓库可以在第三方依赖的构建过程中调用 CMake，但当前还没有提供可被 CMake `find_package()` 或 `add_subdirectory()` 直接消费的稳定 NandinaUI package target。
 

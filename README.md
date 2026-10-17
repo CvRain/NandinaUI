@@ -89,10 +89,10 @@ NandinaUI（南天竹）是一个用 **C++26** 编写、基于 **Meson** 构建�
 - **构建工具**：Meson、Ninja、CMake、pkg-config、Python 3
 - **系统库**：OpenGL、OpenSSL ≥ 3.0
 
-其余第三方依赖（spdlog、SDL3、raylib、FreeType、HarfBuzz、FriBidi、utf8proc、toml++、nlohmann/json、Catch2、Box2D 等）**当前**以 Git 子模块方式随仓库提供；SQLite 以官方 amalgamation 直接随源码分发（见 `third_party/sqlite3/README.md`），不需要系统安装。
+其余第三方依赖（spdlog、raylib、FreeType、HarfBuzz、FriBidi、utf8proc、toml++、nlohmann/json、Catch2、Box2D 等）**当前**以 Git 子模块方式随仓库提供；SQLite 以官方 amalgamation 直接随源码分发（见 `third_party/sqlite3/README.md`），不需要系统安装。SDL3 当前通过系统依赖发现（≥ 3.4.0）；编入时默认走 SDL3，auto 未找到时仍使用 raylib。
 
-> **依赖获取方式正在迁移**（策略已定、尚未实施）：目标形态是 `wrap-git` + 依赖级三态开关
-> （`system` / `vendored` / `auto`，默认 wrap 优先），迁移完成后只有字体数据包保留为子模块，
+> **依赖获取方式计划迁移**（策略已定、尚未实施）：目标形态是 `wrap-git` + 依赖级三态开关
+> （`system` / `vendored` / `auto`，默认 `vendored`，`auto` 为系统优先），迁移完成后只有字体数据包保留为子模块，
 > 那时 `git clone --recursive` 不再是必需步骤。权威规则见
 > [第三方依赖策略](docs/references/dependency_policy.md)；SDL3 作为默认窗口/渲染后端的版本下限
 > （≥ 3.4.0，`SDL_GPURenderState`）也记在那里。
@@ -339,40 +339,46 @@ meson compile -C buildDir
 - [x] **Anchors 基础验证**：百分比与无界约束、隐藏排列项、ScrollView 轴向约束与 reparent 失效规则已固定为测试，并写回 reference。
 - [x] **Anchors scene 内核**：类型化弱引用、显式锚定画布、父/同画布兄弟锚线、尺寸冲突诊断、依赖排序与环检测、批量关系切换；通过 `layout_to()` 交付布局结果。
 - [x] **Anchors 作者入口**：`ui.ref<T>()`、builder 绑定与只读锚线门面、`ui.anchor_canvas()`、`.anchors(spec|source)` 与 `AnchorCanvas::set_child_anchors()` 批量切换均已落地，由 `tests/anchors_authoring_tests.cpp` 覆盖。
-- [x] **D1 设计定案**：[统一输入、焦点与文本编辑](docs/references/focus_and_input.md) 已成为实施依据，取代旧 D1 工作稿；按交互意图区分指向定位、焦点导航和编辑输入，不按设备简单开关焦点环。
-- [x] **D5 设计冻结**：资源语义统一由 `resources.toml` 声明；解耦、作用域、身份分批，保留包记录格式，安装规则与运行时定位同源。
-- [x] **D6 设计归档**：[作者 DSL、文本能力与内容测量](docs/references/authoring_dsl_and_content_measurement.md) 已汇总作者反馈与 Slint/QML 对照；当前待审阅，不表示 API/布局改动已经实施。
-- [ ] **D6 第一实施批（待审阅确认）**：先确认 Label 作者能力表、共同属性规则和有限宽度自然长高的测量契约，再以 showcase Label 页面及 `ComponentInfoTable` 验收。
-- [ ] **D6 后续（依赖首批验收）**：根据实际重复模式加入布局 factory 子项重载与共享边框入口，再设计 ScrollView/布局/viewport 明确的 Section 组合；迁移旧写法，不要求保留快速演进期的旧 DSL。
-- [ ] **D5 解耦首批**：nanres 脱离完整 UI，增加工具/SQLite 后端独立开关、关闭组合 CI 与依赖闭包门禁；保持既有 ID、包格式和扫描语义。
-- [ ] **D5 后续批次**：先补管理器八个查询入口的作用域、后端发布代次与缓存隔离，再独立推进身份生成、声明式构建及部署定位；不等待全部后续事项即可交付解耦。
-- [ ] **D1 第一阶段（下一步）**：鼠标/键盘焦点核心、统一提示策略、文本控件例外与焦点恢复；随后分阶段接文本输入会话、软键盘和触摸/笔/手柄。设计定案不表示这些能力已经实现。
-- [ ] **Anchors 集成验收**：重复布局、布局系统误用、绘制/命中/语义几何一致性已由 authoring 测试覆盖，`showcase` 的 `anchors` 页面已提供侧边栏切换案例；剩余真实窗口的人工体验验收与 playground 同类案例。
-- [ ] Anchors 稳定后再评估阶段 5 复合组件及浮层打开/关闭动效；两者不作为 anchors 的隐含前置。
-- [ ] 给浮层补打开/关闭过渡与缓动曲线，并把 `motion` token、`reduced_motion` 偏好接到动画侧。
-- [ ] 继续打磨 `butter`（本项目自研风格）；`fluent` / `material` 需要补上各自设计语言在几何、密度与状态层上的差异，目前只有配色与圆角尺度。
-- [ ] 后续完善 Table/DataTable、Accordion、Sheet 等复合组件。
-- [ ] 在模块边界和跨平台构建流程稳定后，重新评估 C++ Modules 与 CMake package 支持。
+- [x] **D4 默认切换与平台接口**：编入 SDL3 时默认使用 SDL3；`IPlatformWindow`、设备包装和三页逐图元对照已落地。生产 SDL 仍使用 CPU 几何，Windows/Web 应用交付尚未完成。
 
-路线图会随着基础设施成熟度调整；Getting Started 只采用推荐 API，实验性能力会在组件文档中明确标注。
+### 当前议题与推进顺序
 
-### 🧭 待拍板的设计决策
+D1–D8 是设计编号，**不表示执行顺序**。设计接受、实现完成和平台验收分别记录；
+统一排期与每批退出条件见[项目进度与下一步](docs/references/project_status.md#推进顺序与批次关口)。
 
-下面三项分别有代码现状或平台能力依据，但**仍处于讨论/候选阶段**；边界与待决问题见[待决设计草案](docs/references/reference_draft.md)（D2–D4）。D1 已定案，见上文[统一输入、焦点与文本编辑](docs/references/focus_and_input.md)。
+| 议题 | 当前状态 | 下一项交付 |
+| --- | --- | --- |
+| D1 输入与焦点 | 设计已接受，未实施 | 先统一焦点提示，再文本会话与其他设备 |
+| D2 主题状态与作者模型 | 待审阅，未实施 | 先只读状态/通知，完整主题模型另批 |
+| D3 导航分组 | 方向已接受，未实施 | `type → nav_group`、空组与全局合并 |
+| D4 平台与后端 | 默认切换与 host seam 已落地，收尾中 | 逐平台交付；不把 Web 探测当作应用支持 |
+| D5 资源构建与部署 | 目标契约冻结，未实施 | 解耦 → 作用域 → 身份 → 构建/部署 → 下游验收 |
+| D6 DSL 与内容测量 | 方向已接受，详细契约待审阅 | Label 能力/绑定规则与有限宽度测量，随后组合入口 |
+| D7 渲染质量与图片 | 方向已接受，未实施 | 混合修复、生产 SDF、共享解码、分层裁剪 |
+| D8 键码与输入事件 | 方向已接受，未实施 | 物理/逻辑键与事件契约、平台映射、输入保序 |
+| 依赖工程 | 策略已接受，未实施 | SDL3 wrap 首批，逐项迁移并同步 CI/离线 SDK |
 
-D2 的完整讨论见[主题方案、作者入口与状态订阅](docs/references/theme_authoring_and_state.md)。
-D5 已另行冻结，其分批计划见上文；设计冻结不改变当前平台支持范围或 D1 的下一步安排。
+近期执行主线：
 
-- [ ] **主题变化的订阅**：`ThemeManager` 只有 `revision()` 和给 `SceneTree` 用的观察者，外壳拿不到"外观变了"，因此 footer 里的亮/暗开关只能写、不能跟随外部变化。过程见 [story 010](stories/010-the-theme-signal-that-cannot-be-subscribed.md)。
-- [ ] **D3 路由元数据**：真实路由身份已是页面类型；已接受将 `type` 改名为 `nav_group`，空值表示未分组且不画标题，非空值兼作标题；无旧字段兼容，未分组 route 按空键全局合并在首个未分组项的位置。实现与测试清单见[待决设计草案](docs/references/reference_draft.md) D3 节及 [story 011](stories/011-the-route-type-that-is-a-string.md)。
-- [ ] **D4 跨平台平台层与渲染路线**：首要目标是 Linux、Windows、Web 应用级交付；SDL 3.4.0 起 GPU Renderer 有自定义 fragment shader 路径，但 WebGL 与 SDL_GPU 能力不能混为一谈。P1 还须验证 shadercross 等构建机工具的锁版/产物链、SDF/字体 atlas/规范键码回归；layer-shell host 行为契约留在未来阶段。见[待决设计草案](docs/references/reference_draft.md) D4 节。
+1. **下一轮先修 D7 混合缺陷**，补独立预期像素和固定交互帧回归。
+2. **SDL3 单项依赖与交付**：wrap 最小实验、固定来源、来源/功能开关、CI 和离线 SDK。
+3. **生产 SDF**：多参数与状态恢复实验、受控产物交付、图元与质量验收；不等待全部依赖迁移。
+4. **共享图片解码**，保持既有预处理；不依赖 SDF，可按真实应用需求提前。
+5. **D8 输入基础**与**D7 裁剪收口**分别交付，之后推进 D1 焦点提示和 D6 作者测量。
+6. D2/D3、D5 按各自前置分批推进；其余依赖迁移贯穿上述过程。技术依赖与可插入批次以统一排期为准。
 
+后续仍保留 Anchors 与排列容器组合、真实窗口验收、浮层过渡、主题家族完善及阶段 5 复合组件。
+先用真实应用验证导航、表单、图片、滚动和弹窗，再扩充抽象；Modules、CMake package、
+shell/compositor 与新平台支持各自经过专门关口。
+
+议题细节见[开发参考索引](docs/references/README.md)、[D7/D8 设计](docs/references/reference_draft.md)与
+[依赖策略](docs/references/dependency_policy.md)。本轮仅同步计划，不新增这些 API 或能力。
 
 ## 外部依赖一览
 
 | 类别 | 依赖 |
 | --- | --- |
-| 平台层 | **SDL3 ≥ 3.4.0**（默认窗口/输入/帧驱动 + SDL 2D 渲染设备；`SDL_GPURenderState` 是 3.4 起的 API） |
+| 平台层 | **SDL3 ≥ 3.4.0**（编入时默认的窗口/输入/帧驱动 + SDL 2D 渲染设备；`SDL_GPURenderState` 是 3.4 起的 API） |
 | 渲染 | raylib（对照与离线/录制后端，也是跨后端验收的基线） |
 | 文本 | FreeType、HarfBuzz、FriBidi、utf8proc |
 | 数据 / 配置 | nlohmann/json、toml++、SQLite（vendored amalgamation，见 `third_party/sqlite3/`） |

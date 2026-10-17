@@ -4,6 +4,10 @@ NandinaUI 不以逐项复制其他组件库为目标。[shadcn/ui Components](ht
 
 ## 当前判断
 
+2026-10-17：此文的阶段号是组件依赖顺序，不是全项目排期。默认后端的混合、SDF、图片和输入
+先按[统一推进计划](project_status.md)分批收口；不把新增组件数量作为这一阶段的完成指标。
+
+
 作者 DSL 与文本测量的 D6 设计已归档、待审阅。进入 Section 或扩充布局工厂之前，先把
 Label 的推荐属性表、跨组件 part 规则，以及有限宽度下文字自然长高的测量协议落到测试和 showcase；
 具体分期见[作者 DSL、文本能力与内容测量](authoring_dsl_and_content_measurement.md)。

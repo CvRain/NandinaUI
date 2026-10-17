@@ -1,9 +1,10 @@
 # 平台与后端契约（D4）
 
-> **状态：后端替换已实施，D4 收尾中。** 作者 2026-10-15 决定先完成 D4 计划内容、随后把生产
-> 后端替换为 SDL3。**P3 已落地**：`IPlatformWindow` seam 成形、SDL3 宿主与 SDL 渲染设备可用，
-> 且装了 SDL3 的构建默认就走 SDL3（raylib 保留为对照/离线设备）；剩余是 P1 的多后端 shader
-> 产物、P2 的若干消费者面与逐图元对照。
+> **状态：默认后端切换与平台接口已落地，D4 收尾中；2026-10-17 文档核对。**
+> 编入 SDL3 的构建默认走 SDL3，raylib 保留对照路径。三格式探测产物与逐图元 trace 已存在；
+> 剩余为生产渲染质量（D7）、规范输入（D8）、可重复依赖交付和逐平台应用验收。
+> DXIL/MSL 目标设备加载未验证；P3 落地不等于 P0–P4 全部验收完成。
+> 全局批次顺序见[项目进度与下一步](project_status.md)，本文历史测试与测量本轮未重跑。
 >
 > 探测证据与「已证明 / 未验证」清单见[跨平台后端探测](cross_platform_backend_probe.md)；
 > 取舍过程见 [story 015](../../stories/015-the-probe-that-was-not-in-version-control.md)；
@@ -12,7 +13,7 @@
 ## 1. 目标与范围
 
 **目标平台**：Linux / Windows / Web 的应用级交付。平台层选 **SDL3**（窗口、事件、输入、
-帧驱动候选），渲染在 `IRenderDevice` 之下各自实现。
+帧驱动），渲染在 `IRenderDevice` 之下各自实现。
 
 **明确不在承诺内**：
 
@@ -29,16 +30,16 @@
 | 窗口、事件、输入轮询、帧驱动 | ✅ `IPlatformWindow`（`app/platform_window.hpp`）+ `detail/raylib_platform_window`、`detail/sdl_platform_window`；`NanWindow` 只做协调 | 已完成。默认后端 = 装了 SDL3 就用 SDL3（`NANDINA_WINDOW_BACKEND` 可覆盖） |
 | 绘制原语与帧边界 | ✅ `render/backends/sdl_device.{hpp,cpp}`（SDL 2D + CPU 几何）与 `raylib_device` | SDL 设备是默认；raylib 设备保留给对照/离线/录制 |
 | 文本整形、图集、排版 | `text` 层 | **不变**：保持在设备边界之上，不随平台分叉 |
-| 资源、主题、响应式、组件 | `foundation` / `theme` / `scene` / `widget` | **不变** |
+| 资源、主题、响应式、组件 | `resource` / `theme` / `reactive` / `widget` | 保持各自职责，平台不持有其业务状态 |
 
-两条已经实测的构建层事实（写进来是因为它们直接限制「后端可替换」的程度）：
+两条已有探测记录支持的构建层事实（写进来是因为它们直接限制「后端可替换」的程度）：
 
 1. **设备实现不是纯头文件插件。** `IRenderDevice` 是 header-only，但它用到的 foundation 值类型
    （`NanRect` / `NanPoint` / `NanSize` / `NanColor`）有 out-of-line 实现。独立设备要么链
    `libnandina`，要么编进 `foundation/geometry.cpp`、`nandina_color.cpp`、
    `nandina_color_space.cpp` 三个 TU（探测选了后者）。
 2. **最小宿主已经证明可以绕开 `NanWindow`**：`NanApplication` + `NanRouter` + `NanSceneTree`
-   + 设备即可挂载并绘制真实页面。这条路径目前只是探测代码，是 P4 拆分的现实起点。
+   + 设备即可挂载并绘制真实页面。这条路径是探测代码；正式宿主接口现已拆出。探测仍需遵守相同帧阶段和浮层根契约。
 
 ## 3. 能力契约：差异必须写在代码里
 
@@ -53,20 +54,20 @@
 
 | 能力 | raylib 生产后端 | SDL 2D 设备 | 已被查询覆盖 | 待办 |
 | --- | --- | --- | --- | --- |
-| 矩形圆角绘制 | SDF | CPU 三角形扇 | `supports_rounded_rect()`（`BoxPainter`） | 提高分段/覆盖率质量 |
-| 圆角/圆抗锯齿 | SDF + `fwidth` | 硬边缘 | —（质量差异，无离散路径） | 覆盖率几何或 SDF shader。**已量化**：同页对照下差异 ≤20/255、仅 0.01% 的像素（探测记录 §2.3.2） |
-| 几何**半透明混合** | 正常 | **未启用**：只设了纹理混合（`SDL_SetTextureBlendMode`），从未调用 `SDL_SetRenderDrawBlendMode` | —（这是**缺陷**，不是长期差异） | **必修 1 行**：启用 `SDL_BLENDMODE_BLEND` + 一条**按下态**像素回归。三处症状：按钮状态层 → 白底白字、涟漪 → 实心硬边盘、对话框遮罩 → 近黑（[D7](reference_draft.md#d7-渲染质量与后端视觉一致性)） |
-| 软阴影 | SDF 软阴影 | 未实现 | **`supports_soft_shadows()`**（`ShadowPainter` 退化为硬边圆角阴影，`tests/card_tests.cpp`） | 更好的硬边近似 |
-| 圆角裁剪 | SDF 解析交集 | 只能矩形裁剪 | **`supports_rounded_clip()`**（`RipplePainter` 自己 `set_clip` + 画圆，`tests/button_tests.cpp`） | 遮罩/模板或 SDF |
+| 矩形圆角绘制 | SDF | CPU 三角形扇 | `supports_rounded_rect()`（`BoxPainter`） | D7 生产 SDF 路径 |
+| 圆角/圆抗锯齿 | SDF + `fwidth` | 硬边缘 | —（质量差异，无离散路径） | D7 SDF。历史单页静止帧差异见探测记录 §2.3.2，不代表其他页面或交互态 |
+| 几何**半透明混合** | 正常 | **未启用**：只设了纹理混合（`SDL_SetTextureBlendMode`），从未调用 `SDL_SetRenderDrawBlendMode` | —（这是**缺陷**，不是长期差异） | 启用混合并处理失败；独立预期像素 + 按下态/涟漪/遮罩回归。三处症状：按钮状态层 → 白底白字、涟漪 → 实心硬边盘、对话框遮罩 → 近黑（[D7](reference_draft.md#d7-渲染质量与后端视觉一致性)） |
+| 软阴影 | SDF 软阴影 | 未实现 | **`supports_soft_shadows()`**（`ShadowPainter` 退化为硬边圆角阴影，`tests/card_tests.cpp`） | D7 SDF 软阴影，基础路径继续明确降级 |
+| 涟漪专用圆角交集 | SDF 解析交集 | 只能矩形裁剪 | **`supports_rounded_clip()`**（`RipplePainter` 自己 `set_clip` + 画圆，`tests/button_tests.cpp`） | D7 专用交集先行；图片/子树通用裁剪另批定形 |
 | 圆角**描边** | SDF | 已实现（四条直边 + 四个同心环扇） | —（不需要查询，设备必须覆写） | **接口默认会退化成方框描边**，新后端必须覆写；消费者回归在 anchors 页面扫到过（探测记录 §2.3.3） |
 | `draw_arc` | SDF 环 | **已实现**（同心环扇，按张角取 6–96 段） | —（不需要查询，设备必须覆写） | 当前 showcase 没有页面用到 Spinner/ProgressBar，因此只有设备级证据、没有页面级证据 |
 | 文本 | HarfBuzz + `GlyphAtlasTexture` | 已跑通（真实图集、真实页面） | `supports_alpha_textures()` | 保持 |
-| 图像文件加载 | 有 | 未实现（`make_image_decoder()` 返回 nullptr） | **`supports_image_loading()`**（`Image` 据此一次性诊断并保持空内容，`tests/image_tests.cpp`） | 与后端解耦的 CPU 解码器（stb_image），两个后端共用；见 [D7](reference_draft.md#d7-渲染质量与后端视觉一致性) |
+| 图像文件加载 | 有 | 未实现（`make_image_decoder()` 返回 nullptr） | **`supports_image_loading()`**（`Image` 据此一次性诊断并保持空内容，`tests/image_tests.cpp`） | 应用服务提供共享 CPU 解码器（库待定），保持预处理行为；见 [D7](reference_draft.md#d7-渲染质量与后端视觉一致性) |
 | alpha 图集内存 | A8 → RGBA8（4×） | 同构（4×） | — | 单通道 + 专用字形着色器 |
 
 `supports_rounded_clip()` 顺带修掉一类真实的溢出：**接口默认的
 `draw_circle_clipped_rounded_rect()` 只画未裁剪的圆**，所以过去任何不覆写它的设备都会让水波纹
-漏到圆角容器外面。现在消费者按能力选择「交给设备裁」还是「自己 `set_clip` 保证不溢出」。
+漏到圆角容器外面。现在消费者按能力选择「交给设备裁」还是「自己 `set_clip` 限制到矩形边界」。这不保证圆角区域不外溢，也不证明通用子树裁剪已可用。
 
 ## 4. Shader 构建链契约（P1 门槛）
 
@@ -74,48 +75,42 @@
 | --- | --- |
 | canonical source | HLSL（已验证 `glslc -x hlsl -fshader-stage=frag --target-env=vulkan1.0` 路径） |
 | host 工具 | 版本固定并**校验**（`glslc` 2026.4、SPIRV-Tools v2026.4 已在配置期硬校验）；跨编译时执行 host 版本，不依赖开发机「刚好装好」 |
-| 产物入构建图 | 源 shader 变化触发重新生成；`spirv-val` **是构建图的一步**（已实施：坏产物会让构建失败）；安装/打包带上二进制 |
+| 产物交付 | 探测已把生成与 spirv-val 接进构建图；生产 D7 推荐随源码包交付受控产物，维护关卡核对源哈希/工具/生成结果，普通消费者不依赖 shadercross；嵌入/安装布局待定 |
 | 失败可定位 | 报源文件、目标 backend/format、工具版本与诊断输出 |
-| 多后端产物 | `SDL_shadercross`（提交 `1ff05bec…`）已构建，SPIR-V/DXIL/MSL **均已实际生成**并由独立 `spirv-val` 校验（`tools/verify_shadercross.sh`，探测记录 §3.1）；**加载** DXIL/MSL 仍需 D3D12/Metal 设备 |
+| 多后端产物 | `SDL_shadercross`（提交 `1ff05bec…`）已构建，SPIR-V/DXIL/MSL **均已实际生成**；仅 SPIR-V 由独立 `spirv-val` 校验（`tools/verify_shadercross.sh`，探测记录 §3.1）；**加载** DXIL/MSL 仍需 D3D12/Metal 设备 |
 | API floor | `SDL_GPURenderState` 需要 SDL **3.4.0**；对外声明的最低版本不得低于它，CI/SDK 固定精确受测版本 |
 
 ## 5. 阶段交付与验收
 
-每阶段独立提交；验收标准里的「证据」列指向可复跑的产物。
+阶段中的已完成部分与剩余验收分别记录；下面引用的是历史证据，不是本轮运行结果。
 
 | 阶段 | 交付 | 验收 | 证据/状态 |
 | --- | --- | --- | --- |
 | **P0** 应用级探测 | 窗口/事件/帧循环；GPU render state 自定义 shader；真实 `IRenderDevice`；真实页面 + 真实字体图集 | 真实 showcase 页面在 SDL 设备上正确渲染；稳态 0 次布局 | **基本完成**，缺键码映射验证（[§2.3.1](cross_platform_backend_probe.md)） |
 | **P1** 渲染与 shader 管线门槛 | 工具链固定；SPIR-V 校验入构建图；多后端产物；同页跨后端对照；能力差异落成代码分支；Web 端有效验收 | 每个承诺格式都能生成并加载；能力差异有会红的测试；同页对照有量化结论；Web 验收能区分失败原因 | **基本完成**：工具链、校验、能力降级路径、同页像素对照（0.01% 像素、≤20/255）、Web 端验收、**多后端产物已生成并外部校验**（§3.1）、**逐图元对照**（`render/recording_device.hpp` + `tools/compare_render_traces.py`，三个页面的图元构成逐项相同，§2.3.6）均已完成；剩余：DXIL/MSL 的**加载**（需 D3D12/Metal 设备） |
 | **P2** 平台能力与消费者回归 | 能力查询落地到组件；各后端行为回归；**含外壳、交互态与浮层** | 组件在两种后端下的行为有对照记录；交互态可用框架状态核对；差异要么修复要么降级 | **基本完成**：三个页面像素对照（Home 相同、其余只剩角部 AA，扫出并修复圆角描边退化，§2.3.3）；**真实外壳 + hover/press/导航/选中态**回归通过并挖出三条 host 契约（§2.3.4）；**浮层回归**（`Dialog` 经 `OverlayHost` present，`overlay_count=1`，§2.3.5）；`draw_arc` 已实现；剩余观感差异归 [D7](reference_draft.md#d7-渲染质量与后端视觉一致性) |
-| **P3** 默认后端替换 | SDL 设备成为默认；raylib 退回离线/录制设备 | 真实应用在 SDL 默认路径下通过三套验证与人工验收 | **已落地**（含性能/内存复测：SDL 64 MB / 6% 单核 vs raylib 150 MB / 10%，探测记录 §2.3.7）：`NANDINA_WINDOW_BACKEND=sdl3 ./buildDir/showcase/nandina_showcase` 正常运行（renderer=gpu、~5% 单核、侧边栏 + Home 页正确渲染）；三套验证在 SDL 为默认后端下全绿（含 window-lifecycle 走 SDL 宿主）；`playground/bench` 显式钉住 raylib 以继续充当基线采集器 |
+| **P3** 默认后端替换 | SDL 设备成为默认；raylib 退回离线/录制设备 | 真实应用在 SDL 默认路径下通过三套验证与人工验收 | **机械验收通过，人工观感验收未通过**（含性能/内存复测：SDL 64 MB / 6% 单核 vs raylib 150 MB / 10%，探测记录 §2.3.7）：`NANDINA_WINDOW_BACKEND=sdl3 ./buildDir/showcase/nandina_showcase` 可运行（renderer=gpu、~5% 单核、侧边栏 + Home 页渲染），三套验证在 SDL 为默认后端下全绿（含 window-lifecycle 走 SDL 宿主），`playground/bench` 显式钉住 raylib 作基线；但作者实测出现按钮按下白底白字、涟漪失真（几何混合缺失，见 [D7](reference_draft.md#d7-渲染质量与后端视觉一致性)），因此**不能标记为通过人工验收**，该项转入 D7 批次 1 |
 | **P4** host 行为契约收口 | 平台层接口成形；`NanWindow` 不再持有窗口/输入/帧驱动；**设备可注入**；**应用背景由谁绘制**要有定义；宿主阶段链完整（drain dispatcher、process、tree_commit、physics、advance_animations） | 同一份组件代码在 SDL 与 raylib 两个宿主下行为一致 | **基本完成**：seam + 两个实现已落地，设备由平台创建（可注入）；三条必备契约记在探测记录 §2.3.4/§2.3.5（drain UiDispatcher、完整阶段链、浮层必须以 OverlayHost 为树根）；逐图元 trace 设备（`render/recording_device.hpp`）与对照工具已落地（探测记录 §2.3.6） |
 
-## 6. 迁移策略（后端替换）
+## 6. D4 收尾与 D7/D8 的接口
 
-1. **并行期**：两个设备都能渲染真实页面（已完成）；**同页像素对照已完成**（探测记录 §2.3.2：
-   mean |Δ| 0.0033、最大 20/255、差异只出现在边缘抗锯齿）。**逐图元对照也已完成**（P4 的设备注入
-   钩子 + `render/recording_device.hpp` + `tools/compare_render_traces.py`，三个页面的图元构成逐项相同，
-   探测记录 §2.3.6）。注意：像素对照只覆盖**静止帧**，状态类观感（hover/pressed/ripple/遮罩）需要
-   专门截图回归 —— 混合缺陷就是这么漏过去的（[D7](reference_draft.md#d7-渲染质量与后端视觉一致性)）。
-2. **补齐降级路径**：按 §3 的能力表，先把「会导致可见错误」的三项（圆角抗锯齿、圆角裁剪、
-   软阴影）做成 capability 驱动的路径。
-3. **消费者回归**：showcase 全页面 + `playground/bench` 在 SDL 后端下跑通；性能与内存重新测量
-   （**不要**沿用布局收敛修复之前的任何后端性能数字，见[整形成本 §1](text_shaping_cost.md)）。
-4. **切默认**：SDL 成为默认后端；raylib 后端保留为离线/无窗口/录制设备（测试需要它）。
-5. **收口 host**：把窗口/输入/帧驱动从 `NanWindow` 拆到平台层接口。
+- 默认切换和平台接口不重做；复用 `IPlatformWindow`、设备包装及既有 trace 工具。
+- D7 首先修混合，再以同帧多参数图元、文字/纹理交错验证生产 SDF。已有探测 shader
+  无 uniform buffer，不能替代这一步；基础 SDL Renderer 回退必须明确能力和质量。
+- 图片解码归共享 CPU 服务；纹理上传归设备。通用圆角裁剪与涟漪专用交集分别定形。
+- D8 定形物理/逻辑键、事件快照与输入保序；D1 第二阶段的 `ITextInputService`
+  复用现有 seam，由窗口注入，不能另写一套宿主。
+- 历史 trace、静止帧像素、交互状态、交互像素是不同证据；通过其中一类不自动覆盖其他类。
+  视觉验收细目以 [D7](reference_draft.md#d7-渲染质量与后端视觉一致性) 为准。
 
-**协调风险**：D4 P4 与 [D1 第二阶段](focus_and_input.md)（窗口注入 `ITextInputService`）都要动
-`NanWindow`；两者必须排序或合并设计，不能在同一个提交里各改一半。
+## 7. 尚未完成的验收与决策
 
-## 7. 未定项（不要假装已冻结）
-
-1. Windows 与 Web 的先后顺序；
-2. D3D12 / Metal 是否纳入承诺（`SDL_shadercross` 的可用性已在 Linux 上验证到"生成 +
-   独立校验"这一步，见探测记录 §3.1）；
-3. Web 是否复用 SDL GPU renderer，还是坚持独立的 2D 实现（当前倾向后者）；
-4. 平台层接口的精确形状（`NanWindow` 拆分后的宿主 API）——属于 P4 的定形工作；
-5. 规范键值的归属：`widget/key_codes.hpp` 目前直接是 GLFW 码，多后端下需要自己的规范化值。
+1. Windows 与 Web 的应用级交付顺序、构建工具链和真实应用验收等级；
+2. DXIL/MSL 在 D3D12/Metal 设备上的创建、绑定、绘制与读回；生成/静态校验不替代实际加载；
+3. Web 应用的主循环、输入、字体和资源交付；现有 Web 探测只证明指定探测路径；
+4. D7 的 shader 参数/产物布局、基础回退和通用裁剪协议；
+5. D8 的框架输入值类型及各平台能提供的字段；不再把 GLFW 编号作为公开契约；
+6. 依赖策略的 SDL3 固定源码、明确启用的 CI 与离线 SDK；当前 CI 可能在无 SDL3 时只覆盖 raylib。
 
 ## 8. 相关记录
 

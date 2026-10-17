@@ -1,8 +1,11 @@
 # 跨平台后端探测（受追踪）
 
-这是 D4「跨平台优先的窗口与渲染后端路线」P0/P1 的**探测源码**。它**不属于** Nandina 的
-meson 构建，也不改动 raylib 生产路径：探测是独立的 CMake 工程，用来回答「某个后端能不能
-承载 Nandina 需要的图元与 shader」这类问题。
+这是 D4 的受追踪探测源码。独立 CMake 工程验证手写图元与 GPU render state；
+Meson 的可选 page probe 复用框架和真实 showcase 页面。生产设备已迁入 nandina，
+编入 SDL3 时正式宿主默认走 SDL3，探测不维护设备副本。
+
+> 2026-10-17 文档核对：以下运行数据是既有记录，本轮未重跑。生产 SDF 与默认混合缺陷
+> 仍待 D7 处理；全局顺序见[项目进度与下一步](../../docs/references/project_status.md)。
 
 > 结论、已验证/未验证清单、路线选择都在
 > [docs/references/cross_platform_backend_probe.md](../../docs/references/cross_platform_backend_probe.md)。
@@ -16,12 +19,12 @@ meson 构建，也不改动 raylib 生产路径：探测是独立的 CMake 工�
 | `web/` | SDL3 2D Renderer / WebGL2 探测（Emscripten）：`main.cpp` + CMake |
 | `tools/verify_toolchain.sh` | 打印并校验所有固定版本（一条命令核对工具链） |
 
-构建产物、SDL 源码与 emsdk **都不入库**：构建目录放在已忽略的 `playground/` 下，
-依赖用下面的命令现取。
+本探测的临时构建产物、SDL 源码与 emsdk **都不入库**：构建目录放在已忽略的 `playground/` 下，
+依赖用下面的命令现取。生产 D7 的受控 shader 产物交付另按依赖策略定形。
 
 ## 固定工具链
 
-`probe/cross_platform/tools/verify_toolchain.sh` 是唯一的核对入口。2026-10-15 在本机的实测值：
+`probe/cross_platform/tools/verify_toolchain.sh` 核对探测工具版本；`tools/verify_shadercross.sh` 单独验证多格式生成。以下为 2026-10-15/16 的已有实测记录：
 
 | 项 | 固定/最低 | 实测 | 作用 |
 | --- | --- | --- | --- |
@@ -30,7 +33,7 @@ meson 构建，也不改动 raylib 生产路径：探测是独立的 CMake 工�
 | SDL3 | **>= 3.4.0**（`SDL_GPURenderState` 的 API floor） | 3.4.18 | 窗口、GPU/2D renderer |
 | CMake / Ninja | 3.24 / 任意 | 4.4.4 / 1.13.2 | 构建器 |
 | Emscripten | **6.0.10**（Web 路径） | 6.0.10 (d6c521a7) | 只在 Web 时需要 |
-| `SDL_shadercross` | 提交 `1ff05bec…`（候选，**未验证**） | 未安装 | P1 的多后端产物（DXIL/MSL） |
+| `SDL_shadercross` | 提交 `1ff05bec573988a98ef9e0260b4da44f512b8367` | 2026-10-16 已构建，三格式已生成 | 仅 SPIR-V 通过独立 spirv-val；DXIL/MSL 目标设备加载未验收 |
 
 前四项是**必需**：缺了或版本不符时脚本退出 1、CMake 在配置期就报错。Emscripten 与
 shadercross 只在对应路径上需要，缺失时脚本给警告。
@@ -51,7 +54,7 @@ NANDINA_PROBE_CAPTURE=page.bmp NANDINA_PROBE_FRAMES=60 ./buildDir-probe/probe/cr
 ```
 
 最小宿主是手写的：`NanApplication`（资源/字体/主题/调度）+ `NanRouter` + `NanSceneTree` + 本设备，
-**不用 `NanWindow`**（它同时持有窗口、设备、输入与帧驱动，是 P4 的待办；宿主需要的越少，P4 的契约越清楚）。
+**不用 `NanWindow`**，但必须遵循相同帧阶段、dispatcher、动画与 OverlayHost 契约。正式宿主已通过 `IPlatformWindow` 拆分平台职责。
 
 ### 真实页面跑通的结果（2026-10-15）
 
@@ -162,7 +165,7 @@ device capabilities: alpha_textures=1 rounded_rect=1
 （`NanRect` / `NanPoint` / `NanSize` / `NanColor`）**有 out-of-line 实现**，所以一个独立的设备实现
 必须要么链上 `libnandina`，要么把 `foundation/geometry.cpp`、`foundation/nandina_color.cpp`、
 `foundation/nandina_color_space.cpp` 编进来（本探测选了后者，避免把 raylib 拖进探测）。
-「设备可插拔」因此在构建层面并不成立 —— 这一点要在 P4 的 host 契约里解决。
+这说明设备不是纯头文件插件；运行时注入与链接基础类型是两个边界，现有平台接口并不消除后者。
 
 ## 已知偏差（不要拿它做框架结论）
 

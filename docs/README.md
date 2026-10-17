@@ -21,6 +21,9 @@
 
 ## 开发参考
 
+[项目进度与下一步](references/project_status.md) 是统一实施排期，覆盖 D1–D8 与依赖工程，
+区分已接受设计、现有实现和待验收能力。下一轮从 D7 混合修复开始，专题编号不代表执行顺序。
+
 [References](references/README.md) 面向框架维护者，记录公共组件契约、架构约束、开发顺序和兼容性规则。这些文档用于回答“新组件应该如何设计”，而不是作为应用层教程。
 
 [D5 资源构建、部署与运行时定位](references/resource_build_and_deployment.md) 已冻结设计，

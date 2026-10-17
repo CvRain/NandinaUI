@@ -4,10 +4,12 @@
 
 ## 当前文档
 
+- [项目进度与下一步](project_status.md)：**统一实施排期**。D1–D8 与依赖工程的状态、默认推进顺序、技术前置、独立批次和退出条件。下一轮首批为 D7 混合修复；文档归档不表示代码已实现。
+
 ### 架构与约定
 
 - [项目演进与当前形态](project_evolution.md)：四段形态的来龙去脉、迁移到正式仓库的过程，以及阅读旧文档时的注意事项。
-- [模块依赖规则](module_dependency.md)：五层十二模块的分层、单向依赖约束，以及源码中仍然存在的偏离与收口方向。
+- [模块依赖规则](module_dependency.md)：五层十一模块的分层、单向依赖约束，以及源码中仍然存在的偏离与收口方向。
 - [文本布局协议](text_pipeline.md)：canonical text 类型、旧 widget 头的兼容入口、默认后端及迁移边界。
 - [轻量字体请求](font_request.md)：主题描述值、text 兼容别名、字段语义与字体引擎依赖边界。
 - [构建系统与 Modules 范围](build_system_scope.md)：为什么当前主线使用 Meson/include，以及 Modules 和 CMake package 的暂缓条件。
@@ -23,13 +25,13 @@
 - [Anchors 布局设计](anchors.md)：作者模型、布局边界与百分比；scene 内核、作者入口、已知边界与故障注入见 §5。
 - [锚点系统：历史草案](anchor_draft.md)：保留讨论脉络与旧建议；不是规范，冲突时以 [Anchors 布局设计](anchors.md) 为准。
 - [配置与开发体验](authoring_configuration.md)：**作者侧规则**。回调的两类与 `guarded()` 的能力边界、handler 的 concept 化设计、组件的公开 API 表面、样式优先级。
-- [第三方依赖策略](dependency_policy.md)：**策略已定，未实施**。统一用 `wrap-git`（CMake-only 上游加 `method = cmake`）、依赖级三态开关（`system`/`vendored`/`auto`，默认 wrap 优先）、`min`+`pin` 两条版本线与解析报告、`deps/manifest.toml` 的未来形态，以及"每个依赖只有一份权威来源"的成文规则；含 WrapDB 版本核实（raylib 缺失、box2d 仅 2.4.1、sdl3 是 357 文件的社区 meson 端口）。
+- [第三方依赖策略](dependency_policy.md)：**策略已接受，未实施**。默认 vendored 的 wrap-git、功能/来源开关分离、min/pin 与实际解析报告、CMake wrap 的依赖映射、SDL3 首批和逐项迁移，以及离线 SDK/CI 的同步验收；清单生成器不是首批前置。
 - [D6：作者 DSL、文本能力与内容测量](authoring_dsl_and_content_measurement.md)：**讨论汇总，待审阅，未实施**。Label 能力表、共享属性归属、builder 子项简写、有限宽度自然长高，以及 border / Section 的阶段边界；过程见 [story 014](../../stories/014-the-dsl-that-kept-sending-authors-to-configure.md)。
-- [待决设计草案](reference_draft.md)：**工作稿**。D2 的后续讨论已汇总到[主题方案、作者入口与状态订阅](theme_authoring_and_state.md)；D3 的 `nav_group` 空值与合并语义已收敛、未实施；**D4 已归档**（P3 已把默认后端换成 SDL3）；新增 **D7 渲染质量与后端视觉一致性**（抗锯齿/半透明/圆角裁剪/图片解码器）与 **D8 键码与输入码空间**，两者方向已接受、尚未实施。D1 已定案为[统一输入、焦点与文本编辑](focus_and_input.md)。
+- [待决设计草案](reference_draft.md)：**工作稿**。D2 的后续讨论已汇总到[主题方案、作者入口与状态订阅](theme_authoring_and_state.md)；D3 的 `nav_group` 空值与合并语义已收敛、未实施；**D4 已归档**（P3 已把默认后端换成 SDL3）；**D7** 补齐混合独立预期、生产 SDF 参数/状态、共享图片和分层裁剪；**D8** 补齐物理/逻辑键、事件快照和保序。两者方向已接受、精确接口分批定形、尚未实施。D1 已定案为[统一输入、焦点与文本编辑](focus_and_input.md)。
 - [布局收敛与文本测量](layout_convergence_and_text_measurement.md)：**已实施**。布局永不收敛的实测证据与四条根因（`Text` 写入原始尺寸、`ScrollView` 两个阶段跨轴契约不一致、`stretch` 越过子项显式尺寸、亚像素浮点噪声）、收敛契约、故障注入矩阵、未覆盖缺口与开放项（含整形成本与一次被实测否决的缓存方案）。
 - [文本整形与页面打开成本](text_shaping_cost.md)：**已实施**。页面打开时间（Label 858 ms 构建 / 5000 汉字 6.4 s）的两个 O(n²)（caret 停靠点去重、逐簇推进重新分段）、空闲 CPU（`Expanded` 子项尺寸抖动导致每帧全量布局，72% → 9% 单核）与常驻内存构成（4 条字体管线 × 1024² 图集 ≈ 40 MB）、整形成本曲线、一次被实测否决的整形缓存，构建期 1.4 万次重复测量与按输入键控的文本记忆化（构建 378 → 159 ms）、按词换行（断行机会），以及剩余目标。
-- [平台与后端契约（D4）](platform_backend_contract.md)：**后端替换已实施，收尾中**（视觉质量与半透明缺陷见 [D7](reference_draft.md#d7-渲染质量与后端视觉一致性)）。目标平台与分层、`NanWindow` 所有权的收口方向、能力差异必须写成代码里的 capability 查询、shader 构建链契约、P0–P4 阶段交付与验收，以及未定项（Windows/Web 顺序、D3D12/Metal、宿主接口形状、规范键值归属）。
-- [跨平台后端探测：SDL3 GPU 与 Web 现状](cross_platform_backend_probe.md)：**探测记录，不是选型批准**。Vulkan GPU Renderer 与两条 Web 路径各自证明了什么、未验证清单、shader 构建链门槛，以及为什么不能用修复前的页面性能做后端结论。**P3 已落地**：`IPlatformWindow` seam + SDL3 宿主/SDL 渲染设备，装了 SDL3 的构建默认走 SDL3；探测源码已入库（[probe/cross_platform/](../../probe/cross_platform/README.md)），工具链固定点由 `tools/verify_toolchain.sh` 一条命令核对，`spirv-val` 已接进构建图；已实现真实的 `IRenderDevice`（SDL 2D + CPU 几何），并让**真实 showcase 页面**（真实字体图集）经 `NanSceneTree::draw()` 在该设备上渲染（稳态 0 次布局，draw 1.85 ms/帧）。
+- [平台与后端契约（D4）](platform_backend_contract.md)：**后端替换已实施，收尾中**（视觉质量与半透明缺陷见 [D7](reference_draft.md#d7-渲染质量与后端视觉一致性)）。目标平台与分层、`NanWindow` 所有权的收口方向、能力差异必须写成代码里的 capability 查询、shader 构建链契约、P0–P4 阶段交付与验收，以及未定项（Windows/Web 顺序、D3D12/Metal、文本服务接入、规范键值归属）。
+- [跨平台后端探测：SDL3 GPU 与 Web 现状](cross_platform_backend_probe.md)：**按阶段保留的探测证据**。Vulkan GPU Renderer 与两条 Web 路径各自证明了什么、未验证清单、shader 构建链门槛，以及为什么不能用修复前的页面性能做后端结论。**P3 已落地**：`IPlatformWindow` seam + SDL3 宿主/SDL 渲染设备，装了 SDL3 的构建默认走 SDL3；探测源码已入库（[probe/cross_platform/](../../probe/cross_platform/README.md)），工具链固定点由 `tools/verify_toolchain.sh` 一条命令核对，`spirv-val` 已接进构建图；已实现真实的 `IRenderDevice`（SDL 2D + CPU 几何），并让**真实 showcase 页面**（真实字体图集）经 `NanSceneTree::draw()` 在该设备上渲染（稳态 0 次布局，draw 1.85 ms/帧）。
 
 ### 应用层
 
