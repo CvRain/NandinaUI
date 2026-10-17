@@ -60,8 +60,14 @@
 
 ## 5. 破坏性变更的记录方式
 
-`IPlatformWindow::make_image_decoder()` 的删除（[D7 图片批](reference_draft.md#图片解码器删除平台钩子改为应用服务2026-10-17-定)）
-是**破坏性 API 变更**。项目处于 alpha、源码集成、不承诺旧入口长期兼容，因此：
+图片批同时有两处**破坏性 API 变更**，都要登记：
+
+| 变更 | 位置 | 迁移说明 |
+| --- | --- | --- |
+| 删除 `make_image_decoder()` | `IPlatformWindow`（experimental public） | 改为应用服务注入 `IImageDecoder` |
+| `supports_image_loading()` 收窄 + 新增 RGBA 上传查询 | `IRenderDevice`（设备实现方接口） | 原先判断"能不能显示图片"的调用方，改为分别查询解码服务、设备直载、设备 RGBA 上传三项，见 [D7](reference_draft.md#三项能力分开表达2026-10-17-定) |
+
+项目处于 alpha、源码集成、不承诺旧入口长期兼容，因此：
 
 - **不保留**一个仍可 override、但框架已不再调用的虚函数 —— 那是最难发现的静默失效；
 - 迁移说明只表达一件事：原来由自定义平台 override 提供的解码器，改为应用服务注入；

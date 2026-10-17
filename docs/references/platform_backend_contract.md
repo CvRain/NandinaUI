@@ -63,7 +63,7 @@
 | 圆角**描边** | SDF | 已实现（四条直边 + 四个同心环扇） | —（不需要查询，设备必须覆写） | **接口默认会退化成方框描边**，新后端必须覆写；消费者回归在 anchors 页面扫到过（探测记录 §2.3.3） |
 | `draw_arc` | SDF 环 | **已实现**（同心环扇，按张角取 6–96 段） | —（不需要查询，设备必须覆写） | 当前 showcase 没有页面用到 Spinner/ProgressBar，因此只有设备级证据、没有页面级证据 |
 | 文本 | HarfBuzz + `GlyphAtlasTexture` | 已跑通（真实图集、真实页面） | `supports_alpha_textures()` | 保持 |
-| 图像文件加载 | 有（`load_texture_from_*` + `create_rgba_texture`） | 未实现：无解码服务，且**未实现 `create_rgba_texture`**（`TextureCache` 唯一上传入口） | **`supports_image_loading()`**（`Image` 据此一次性诊断并保持空内容，`tests/image_tests.cpp`） | 应用服务提供共享 CPU 解码器（库待定），保持预处理行为；见 [D7](reference_draft.md#d7-渲染质量与后端视觉一致性) |
+| 图像文件加载 | 直载与 `create_rgba_texture` 都有 | 两者都没有（无解码服务、未实现 `create_rgba_texture`） | 改为**三项能力分别查询**（解码服务可用 / 设备直载 / 设备 RGBA 上传）；当前单布尔 `supports_image_loading()` 属未迁移现状 | 标准路径 = 解码服务可用 **且** 设备支持 RGBA 上传；SDL 补 `create_rgba_texture` 与共享解码器，解码与上传分别验收；见 [D7](reference_draft.md#三项能力分开表达2026-10-17-定) |
 | alpha 图集内存 | A8 → RGBA8（4×） | 同构（4×） | — | 单通道 + 专用字形着色器 |
 
 `supports_rounded_clip()` 顺带修掉一类真实的溢出：**接口默认的

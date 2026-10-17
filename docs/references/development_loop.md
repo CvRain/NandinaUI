@@ -164,6 +164,8 @@ painter 家族写好了但停在 `primitives/` 里当不了应用依赖、
    `draw_circle_clipped_rounded_rect`（默认画**未裁剪**的圆）、`draw_rounded_rect_shadow`（默认 no-op）。
    新后端必须逐个覆写或让能力查询如实返回 false，并**每个都配一条会红的测试**。
 2. **能力查询缺一个消费者就等于没有**：`supports_*()` 只有在组件真的据此改走降级路径时才算落地。
+   也不要**用一个布尔值概括多件独立的事**（例如"能不能显示图片"其实由解码、直载、上传三项组成）：
+   拆开分别报告，否则排查时只能看到"不可用"，看不到缺哪一项。
 3. **半透明 + 混合**：几何与纹理的混合模式是两套 API（例如 SDL 的 `SDL_SetRenderDrawBlendMode` 与
    `SDL_SetTextureBlendMode`）。只设一个，症状是"某个交互看起来怪"，而静止帧的像素对照**完全看不到**。
    → 状态类观感（hover/pressed/ripple/遮罩）必须有专门的截图回归，不能只对静止帧。
