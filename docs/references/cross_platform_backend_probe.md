@@ -133,7 +133,7 @@ stage=rendered  frames=92  ink=9556  teal=6220  total=307200
 ## 2.3 真实 IRenderDevice 路径（新增，2026-10-15）
 
 探测记录 §4 把「让探测走一次真实的 `IRenderDevice` 实现」列为 P1 的前置条件。现在有了：
-[nandina/render/backends/sdl_device.hpp](../../nandina/render/backends/sdl_device.hpp)（已从探测目录移进库，理由见 [D7 §图片解码器](reference_draft.md#图片解码器与后端解耦而不是给-sdl-单独补一个)：探测不该维护生产后端的副本）
+[nandina/render/backends/sdl_device.hpp](../../nandina/render/backends/sdl_device.hpp)（已从探测目录移进库，理由见 [D7 §图片解码器](reference_draft.md#图片解码器删除平台钩子改为应用服务2026-10-17-定)：探测不该维护生产后端的副本）
 用 SDL 的 2D API 实现了该契约，圆角与圆走 **CPU 三角形扇**（`SDL_RenderGeometry`），
 不依赖自定义 shader —— 这同时验证了 §2.2 给 Web 定的暂定路线（CPU 几何/覆盖率 + 独立设备）。
 

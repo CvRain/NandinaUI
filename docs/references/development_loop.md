@@ -180,9 +180,11 @@ painter 家族写好了但停在 `primitives/` 里当不了应用依赖、
   不把全图平均差掩盖的局部缺陷当作通过。trace、像素和实际行为各证明自己的边界。
 - 像素回归的 harness 自身要满足三条：**测试自绘背景**（不依赖宿主 clear 色，否则一个宿主选择就能
   造出"后端差异"）、**读回在 present 之前**（present 后读回可能拿到空帧）、**注册为 integration
-  测试并纳入 golden 管理**（否则它只是手工命令，会腐烂）。
+  测试并纳入 golden 管理**（否则它只是手工命令，会腐烂）。目录、manifest 与审批流程见
+  [视觉回归](visual_regression.md)。
 - 状态切换也是成本：自定义 render state / 着色器切换会 flush 2D 批次，要统计每帧切换次数，
-  不能只看总帧时间。
+  不能只看总帧时间。采样协议、p50/p95 口径与候选阈值见[性能预算](performance_budget.md)；
+  在稳定性实验完成前只报告、不阻断。
 - shader 分别记录生成、静态校验、目标设备加载/绘制；spirv-val 只验证 SPIR-V。
   普通回退 Renderer 的能力和效果独立验证。
 - 输入测试覆盖事件时修饰键、物理/逻辑身份、release/repeat 和跨类型顺序；

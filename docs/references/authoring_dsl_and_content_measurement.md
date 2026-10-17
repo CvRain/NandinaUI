@@ -33,7 +33,7 @@ D6 的目标是让作者能从类型化 API 中发现一个组件**承诺支持*
 | Builder 已有 `.font_size()`、尺寸、颜色 token、文本对齐等受约束入口，但没有完整的 Label typography 配置表 | [`authoring.hpp`](../../nandina/widget/authoring.hpp) |
 | Card 已消费 box style 和公共 BoxPainter；Row/Column 等排列容器没有同一套语义边框入口 | [`card.cpp`](../../nandina/widget/card.cpp)、[`box_painter.hpp`](../../nandina/widget/primitives/box_painter.hpp) |
 | `Column` 以传入约束测量子项；`ScrollView` 在滚动方向放宽子项约束，并将非滚动方向约束传入 | [`layout.cpp`](../../nandina/widget/layout.cpp)、[`scroll_view.cpp`](../../nandina/widget/scroll_view.cpp) |
-| `AnchorCanvas` 要求测量时获得有限的两个轴尺寸；无界 `loose()` 下没有可推导的画布视口 | [`anchor_canvas.cpp`](../../nandina/scene/anchor_canvas.cpp)、[anchors §5](anchors.md#5-实施与已知边界) |
+| `AnchorCanvas` 要求测量时获得有限的两个轴尺寸；无界 `loose()` 下没有可推导的画布视口 | [`anchor_canvas.cpp`](../../nandina/scene/anchor_canvas.cpp)、[anchors §5](anchors.md#5-已验证边界与实现前检查) |
 | Showcase 的 Label 页面混合了 `NodeBuilder`、`.configure()`、`.build()`、固定高度、Column/ScrollView/AnchorCanvas 与逐项 `.children()` | [`label_page.cpp`](../../showcase/pages/label_page.cpp)、[`component_info_table.cpp`](../../showcase/components/component_info_table.cpp) |
 
 ### 2.1 一个需要纠正的文本样式事实

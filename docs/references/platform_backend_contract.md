@@ -30,6 +30,7 @@
 | 窗口、事件、输入轮询、帧驱动 | ✅ `IPlatformWindow`（`app/platform_window.hpp`）+ `detail/raylib_platform_window`、`detail/sdl_platform_window`；`NanWindow` 只做协调 | 已完成。默认后端 = 装了 SDL3 就用 SDL3（`NANDINA_WINDOW_BACKEND` 可覆盖） |
 | 绘制原语与帧边界 | ✅ `render/backends/sdl_device.{hpp,cpp}`（SDL 2D + CPU 几何）与 `raylib_device` | SDL 设备是默认；raylib 设备保留给对照/离线/录制 |
 | 文本整形、图集、排版 | `text` 层 | **不变**：保持在设备边界之上，不随平台分叉 |
+| 图片解码 | 应用服务（默认或注入的 `IImageDecoder`） | **已定**：不属平台职责；`IPlatformWindow::make_image_decoder()` 删除，平台只保留设备上传入口（[D7](reference_draft.md#图片解码器删除平台钩子改为应用服务2026-10-17-定)） |
 | 资源、主题、响应式、组件 | `resource` / `theme` / `reactive` / `widget` | 保持各自职责，平台不持有其业务状态 |
 
 两条已有探测记录支持的构建层事实（写进来是因为它们直接限制「后端可替换」的程度）：
@@ -62,7 +63,7 @@
 | 圆角**描边** | SDF | 已实现（四条直边 + 四个同心环扇） | —（不需要查询，设备必须覆写） | **接口默认会退化成方框描边**，新后端必须覆写；消费者回归在 anchors 页面扫到过（探测记录 §2.3.3） |
 | `draw_arc` | SDF 环 | **已实现**（同心环扇，按张角取 6–96 段） | —（不需要查询，设备必须覆写） | 当前 showcase 没有页面用到 Spinner/ProgressBar，因此只有设备级证据、没有页面级证据 |
 | 文本 | HarfBuzz + `GlyphAtlasTexture` | 已跑通（真实图集、真实页面） | `supports_alpha_textures()` | 保持 |
-| 图像文件加载 | 有 | 未实现（`make_image_decoder()` 返回 nullptr） | **`supports_image_loading()`**（`Image` 据此一次性诊断并保持空内容，`tests/image_tests.cpp`） | 应用服务提供共享 CPU 解码器（库待定），保持预处理行为；见 [D7](reference_draft.md#d7-渲染质量与后端视觉一致性) |
+| 图像文件加载 | 有（`load_texture_from_*` + `create_rgba_texture`） | 未实现：无解码服务，且**未实现 `create_rgba_texture`**（`TextureCache` 唯一上传入口） | **`supports_image_loading()`**（`Image` 据此一次性诊断并保持空内容，`tests/image_tests.cpp`） | 应用服务提供共享 CPU 解码器（库待定），保持预处理行为；见 [D7](reference_draft.md#d7-渲染质量与后端视觉一致性) |
 | alpha 图集内存 | A8 → RGBA8（4×） | 同构（4×） | — | 单通道 + 专用字形着色器 |
 
 `supports_rounded_clip()` 顺带修掉一类真实的溢出：**接口默认的
@@ -111,6 +112,10 @@
 4. D7 的 shader 参数/产物布局、基础回退和通用裁剪协议；
 5. D8 的框架输入值类型及各平台能提供的字段；不再把 GLFW 编号作为公开契约；
 6. 依赖策略的 SDL3 固定源码、明确启用的 CI 与离线 SDK；当前 CI 可能在无 SDL3 时只覆盖 raylib。
+
+政策已定、机制未实施的三份配套文档：[SDK 表面](sdk_surface.md)（头文件等级与门禁）、
+[视觉回归](visual_regression.md)（golden 组织与审批）、[性能预算](performance_budget.md)
+（采样协议与候选阈值）。
 
 ## 8. 相关记录
 
