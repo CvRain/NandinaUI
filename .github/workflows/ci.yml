@@ -279,11 +279,12 @@ jobs:
         run: git config --global --add safe.directory '*'
       # 除 SDL3 外的依赖也是 wrap 了：预热它们，但**故意不预取 SDL3**，
       # 这样"关闭后端就不查找、不下载"仍是被验证的行为，而不是被缓存掩盖。
-      - name: Restore wrap dependency cache
+      # 独立缓存键：与其它任务共用会把 SDL3 检出一起恢复，"关闭后端就不下载"就不可验证了。
+      - name: Restore wrap dependency cache (without SDL3)
         uses: actions/cache@v4
         with:
           path: subprojects
-          key: wraps-${{ hashFiles('subprojects/*.wrap') }}
+          key: wraps-nosdl-${{ hashFiles('subprojects/*.wrap') }}
       - name: Prewarm non-SDL wraps
         run: meson subprojects download raylib spdlog box2d utf8proc tomlplusplus freetype harfbuzz fribidi Catch2 nlohmann_json
       - name: Configure (SDL disabled)

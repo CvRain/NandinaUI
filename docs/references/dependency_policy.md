@@ -260,11 +260,17 @@ SDL 交付关卡显式启用后端，不能让 auto 回落 raylib 后仍宣称 S
 
 ## 5. 解析报告与单一声明
 
-目标输出为配置 summary 与构建目录内的 `deps.json`，每项包含：
+目标输出为配置 summary 与构建目录内的 `deps.json`。**当前实现的字段**（与
+`meson/deps.json.in` 一致，避免文档与产物各说一套）：
 
-- 名称、是否启用、选择的来源、实际版本与源码 commit；
-- min/pin、实际路径、构建方法及影响行为的关键选项；
-- 构建机工具或目标机依赖的角色，以及未满足/跳过的原因。
+| 字段 | 含义 |
+| --- | --- |
+| `name` / `enabled` | 依赖名 / 是否**实际采用**（auto 未解析时为 false） |
+| `source` / `resolved_by` | system / vendored / disabled / unavailable；pkg-config / cmake.subproject / none |
+| `version` / `min` | 实际版本 / 硬下限 |
+| `pin` / `pin_version` | 固定的完整 commit（system 与 disabled 为 `null`）/ 可读的 pin 版本 |
+| `revision` | 实际 commit；vendored 在 configure 期等于 pin（检出是否真的在 pin 上由 SDK 打包器校验） |
+| `path` / `method` / `linkage` / `license` | 源码目录 / cmake 或 pkg-config / shared 或 unknown / 许可证 |
 
 报告反映实际输入，不能只是抄一遍 wrap。CI 检查关键字段并验证其确实对应构建依赖。
 
