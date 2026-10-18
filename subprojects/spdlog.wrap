@@ -1,0 +1,7 @@
+# 上游源码固定为完整 commit（迁移时保持当时受测的版本）。
+# 由 Git submodule 迁移而来：构建方式仍是 CMake，消费入口不变。
+[wrap-git]
+directory = spdlog
+url = https://github.com/gabime/spdlog.git
+revision = b12aa355070ca2d475900bd6fe743862b7fd9f9f
+method = cmake

@@ -1,0 +1,7 @@
+# 上游源码固定为完整 commit（迁移时保持当时受测的版本）。
+# 由 Git submodule 迁移而来：构建方式仍是 Meson，消费入口不变。
+[wrap-git]
+directory = fribidi
+url = https://github.com/fribidi/fribidi.git
+revision = b93119f5fdc7ea47672cc304c1455ffa6dfe7536
+method = meson

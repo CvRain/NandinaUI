@@ -111,6 +111,16 @@ dev-docs-*
 
 # Meson fallback downloads generated while configuring optional font features.
 # wrap 检出（`[wrap-git]`）是未跟踪工作树：忽略它，但 SDK 打包会显式收集其源码与许可证
+/subprojects/raylib/
+/subprojects/spdlog/
+/subprojects/box2d/
+/subprojects/utf8proc/
+/subprojects/tomlplusplus/
+/subprojects/freetype/
+/subprojects/harfbuzz/
+/subprojects/fribidi/
+/subprojects/Catch2/
+/subprojects/nlohmann_json/
 # （见 tools/sdk_bundle.py 的 dependencies 部分与 docs/references/dependency_policy.md §6）。
 /subprojects/SDL3/
 /subprojects/packagecache/

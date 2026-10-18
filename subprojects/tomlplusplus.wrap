@@ -1,0 +1,7 @@
+# 上游源码固定为完整 commit（迁移时保持当时受测的版本）。
+# 由 Git submodule 迁移而来：构建方式仍是 CMake，消费入口不变。
+[wrap-git]
+directory = tomlplusplus
+url = https://github.com/marzer/tomlplusplus.git
+revision = 30172438cee64926dc41fdd9c11fb3ba5b2ba9de
+method = cmake

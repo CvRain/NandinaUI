@@ -1,0 +1,7 @@
+# 上游源码固定为完整 commit（迁移时保持当时受测的版本）。
+# 由 Git submodule 迁移而来：构建方式仍是 Meson，消费入口不变。
+[wrap-git]
+directory = nlohmann_json
+url = https://github.com/nlohmann/json.git
+revision = 55f93686c01528224f448c19128836e7df245f72
+method = meson

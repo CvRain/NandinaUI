@@ -107,8 +107,9 @@ def main() -> int:
         manifest = json.loads((release / "sdk-manifest.json").read_text(encoding="utf-8"))
         dependencies = manifest["dependencies"]
         assert dependencies, "SDK manifest carries no dependency sources"
-        dependency = dependencies[0]
-        assert dependency["name"] == "SDL3", dependency
+        # 迁移后依赖不止一个：按名字取，不能假设顺序。
+        dependency = next(item for item in dependencies if item["name"] == "SDL3")
+        assert all(item["matches_pin"] and not item["dirty"] for item in dependencies), dependencies
         assert dependency["matches_pin"] is True, dependency
         assert dependency["dirty"] is False, dependency
         assert len(dependency["revision"]) == 40, dependency

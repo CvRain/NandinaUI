@@ -26,13 +26,15 @@
 
 ## 2. 当前事实与机制核对
 
-### 2.1 仓库现状
+### 2.1 仓库现状（2026-10-18 迁移后）
 
-- 10 个库源码 submodule，另有 1 个字体数据 submodule；当前没有依赖 wrap 文件。
-- raylib、box2d、spdlog、utf8proc 经 CMake 适配；tomlplusplus 当前也经 CMake 接入，
-  即使其上游提供其他构建入口，也不能把当前接法记成 Meson。
-- FreeType、HarfBuzz、FriBidi、Catch2、nlohmann_json 使用原生 Meson 子项目。
-- SDL3 通过系统 `dependency('sdl3', version: '>=3.4.0')` 获取，OpenSSL 也来自系统。
+- **11 个依赖全部是 `wrap-git`**（SDL3、raylib、spdlog、box2d、utf8proc、tomlplusplus、freetype、
+  harfbuzz、fribidi、Catch2、nlohmann_json），每个 pin 完整 40 位 commit；只剩**字体数据包**
+  `caskaydia-cove` 是 submodule，SQLite 仍是 amalgamation。
+- 构建方式沿用迁移前的接法：CMake —— raylib、spdlog、box2d、utf8proc、tomlplusplus、SDL3；
+  原生 Meson —— freetype、harfbuzz、fribidi、Catch2、nlohmann_json。
+- 迁移只换来源，不换构建入口：`cmake.subproject(...)` / `subproject(...)` 调用与 target 名保持不变。
+- OpenSSL 仍来自系统。
 - `sdl_backend=auto` 未找到 SDL3 时仍可构建 raylib 路径；这不证明 SDL 交付成功。
 - `tools/sdk_bundle.py` 通过 `git ls-files --recurse-submodules` 收集源码，
   manifest 也记录 submodule；依赖来源改变时必须同时迁移这条交付链。
@@ -68,6 +70,14 @@ foo-bar-1.0 = foo_bar_dep
 
 已有源码目录可能优先于下载，**不代表它一定等于 pin**。迁移验证应分别使用已有目录与
 全新检出；目录存在时仍核对 commit 和脏状态，不能从 wrap 的声明反推实际版本。
+
+### 2.3 WrapDB 不是 wrap 机制本身
+
+2026-10-16 的既有调查记录：WrapDB 中未找到 raylib，box2d 条目为 2.4.1，
+freetype 使用 freetype2 名称，SDL3 条目是 3.4.14 的社区 Meson 端口，而本机受测 SDL3
+为 3.4.18。这些是当时的选型证据，不是对仓库索引最新状态的持续保证，本轮未重新查询索引。
+
+选用上游源码和上游构建系统的理由是减少额外适配维护面；不把“版本更新”当作唯一判断标准。
 
 ### 2.4 SDL3 最小实验实测结论（2026-10-18）
 
@@ -185,18 +195,22 @@ vendored SDL3 是共享库，而 **CMake 子项目没有 Meson install 规则**�
 4. **守卫**：`tests/portable_bundle_test.py`（`portable-bundle`，integration，无显示器）同时断言
    反例（孤立二进制解析不到 soname）与正例（便携目录解析到 `lib/` 内）。
 
-**仍未做**：OS 包/安装器层面的 DSO 打包（当前没有应用安装路径可验）、
-`tools/header_surface.toml` 与 `check_headers.py` 门禁（[SDK 表面](sdk_surface.md) §4）、
-其余依赖逐项迁移，以及"把两个后端拆成独立库"的重构（拆库后静态 SDL3 与 raylib 的符号冲突
-会自然消失，那时可重新评估链接方式）。
+### 2.7 其余依赖迁移（2026-10-18）
 
-### 2.3 WrapDB 不是 wrap 机制本身
-
-2026-10-16 的既有调查记录：WrapDB 中未找到 raylib，box2d 条目为 2.4.1，
-freetype 使用 freetype2 名称，SDL3 条目是 3.4.14 的社区 Meson 端口，而本机受测 SDL3
-为 3.4.18。这些是当时的选型证据，不是对仓库索引最新状态的持续保证，本轮未重新查询索引。
-
-选用上游源码和上游构建系统的理由是减少额外适配维护面；不把“版本更新”当作唯一判断标准。
+- 10 个依赖生成 `subprojects/<name>.wrap`（`[wrap-git]`、完整 commit、`method = cmake|meson` 与
+  迁移前的构建入口一致），`.gitmodules` 只保留字体包，`.gitignore` 忽略各 wrap 检出。
+- **行为不变**：pin 就是迁移前 submodule 的 commit；`cmake.subproject`/`subproject` 调用与 target 名未改。
+  迁移过程中顺手关掉了两个一直存在的浪费：raylib 的 `BUILD_EXAMPLES`（此前一直在编示例）与
+  harfbuzz 的 `benchmark`（不构建基准，也才能不随 SDK 携带 `perf/`）。
+- **SDK 体积**：依赖源码未裁剪时合计 333 MB（harfbuzz `test/` 90 MB、raylib `examples/` 70 MB 占大头）。
+  现在按依赖排除"构建系统在关闭选项下不会进入"的目录（harfbuzz `test/perf/docs`、raylib
+  `examples/projects`、SDL3 `test/examples/IDE 工程`、fribidi `test`、nlohmann `docs/tests`、
+  Catch2 `tests`），预估约 100 MB；**裁剪由 `sdk-vendored-consumer` fixture 兜底**：它从打包后的
+  SDK 离线配置/编译/运行，缺文件就会失败（实测 133 s 通过，比裁剪前的 190 s 更快）。
+- **迁移后仍未做**：OS 包/安装器层面的 DSO 打包（当前没有应用安装路径可验）、
+"internal 类型进公开签名"的评审项（脚本只查 include 方向）、以及"把两个后端拆成独立库"的重构
+（拆库后静态 SDL3 与 raylib 的符号冲突会自然消失，那时可重新评估链接方式）。
+  其余依赖**已全部迁移**；`header-surface` 门禁**已落地**（[SDK 表面](sdk_surface.md) §4）。
 
 ## 3. 来源、版本与构建适配
 
@@ -297,7 +311,7 @@ CI 缓存键应包含来源声明、pin、构建选项及适用工具链，缓�
 | --- | --- | --- |
 | 1 SDL3 最小实验（**已完成** 2026-10-18） | 固定源码 + CMake wrap + 实际 target/选项/依赖消费；记录 Meson 版本 | 已达成并记录于 §2.4：`SDL3-static`、选项对象、三态解析、离线、全新检出均实测；**结论不进 `[provide]` 变量名，改显式分支；解析失败必须 `error()`**。CI 的 Meson 1.7.2 复跑待正式接入时补 |
 | 2 SDL3 正式接入 | 三态来源、功能开关、解析报告、CI 与 SDK | 三态与 disabled 组合、实际 SDL 消费、离线 SDK、三套代码验证 |
-| 3 其余依赖逐项迁移 | 每项单独提交，必要时较大依赖拆实验与接入两批 | 保持受测版本；删除该 submodule 跟踪项；报告、离线/SDK 与三套验证通过 |
+| 3 其余依赖逐项迁移（**已完成** 2026-10-18） | 每项单独提交，必要时较大依赖拆实验与接入两批 | 已达成：10 个依赖改为 wrap-git、pin 保持迁移前 commit、`.gitmodules` 只剩字体包、SDK 依赖源码收集 + 消费 fixture 通过；详见 §2.7 |
 | 4 完成迁移 | 字体保留 submodule，SQLite 保留 amalgamation，相关说明与清单同步 | 全新检出、联网预热、断网源码包消费完整走通 |
 | 5 可选清单生成 | 有实际收益时引入 manifest 与生成器 | 单一声明、生成物一致性关卡；不成为前四批前置 |
 

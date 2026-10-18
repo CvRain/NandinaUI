@@ -1,0 +1,7 @@
+# 上游源码固定为完整 commit（迁移时保持当时受测的版本）。
+# 由 Git submodule 迁移而来：构建方式仍是 CMake，消费入口不变。
+[wrap-git]
+directory = utf8proc
+url = https://github.com/JuliaStrings/utf8proc.git
+revision = 79cdd5ab40c79afa559f689ffc13b76812dee1ac
+method = cmake

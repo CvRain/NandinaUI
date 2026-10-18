@@ -148,8 +148,18 @@ def wrap_dependencies(source: pathlib.Path, allow_dirty: bool) -> list[dict[str,
     return dependencies
 
 
-# 依赖源码树里不需要进包的内容：版本库元数据与 CI 配置。
-DEPENDENCY_EXCLUDED_DIRS = {".git", ".github"}
+# 依赖源码树里不需要进包的目录：版本库元数据、CI 配置，以及**构建系统在不启用的选项下
+# 不会进入**的测试/示例/文档目录（各依赖的 meson/CMake 里都只在对应选项开启时才 subdir）。
+# 裁剪本身由 `sdk-vendored-consumer` fixture 兜底：它从打包后的 SDK 离线构建，缺文件就会失败。
+DEPENDENCY_EXCLUDED_DIRS = {
+    "*": {".git", ".github"},
+    "SDL3": {".git", ".github", "test", "examples", "Xcode", "VisualC", "VisualC-GDK", "android-project"},
+    "harfbuzz": {".git", ".github", "test", "perf", "docs"},
+    "raylib": {".git", ".github", "examples", "projects"},
+    "fribidi": {".git", ".github", "test"},
+    "nlohmann_json": {".git", ".github", "docs", "tests"},
+    "Catch2": {".git", ".github", "tests"},
+}
 
 
 def dependency_paths(
@@ -159,8 +169,11 @@ def dependency_paths(
     paths: list[pathlib.Path] = []
     for dependency in dependencies:
         root = source / str(dependency["directory"])
+        excluded = DEPENDENCY_EXCLUDED_DIRS["*"] | DEPENDENCY_EXCLUDED_DIRS.get(
+            str(dependency["name"]), set()
+        )
         for current, dirnames, filenames in os.walk(root):
-            dirnames[:] = sorted(name for name in dirnames if name not in DEPENDENCY_EXCLUDED_DIRS)
+            dirnames[:] = sorted(name for name in dirnames if name not in excluded)
             for name in sorted(filenames):
                 paths.append((pathlib.Path(current) / name).relative_to(source))
     return paths

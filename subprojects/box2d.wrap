@@ -1,0 +1,7 @@
+# 上游源码固定为完整 commit（迁移时保持当时受测的版本）。
+# 由 Git submodule 迁移而来：构建方式仍是 CMake，消费入口不变。
+[wrap-git]
+directory = box2d
+url = https://github.com/erincatto/box2d.git
+revision = 8c661469c9507d3ad6fbd2fea3f1aa71669c2fe3
+method = cmake

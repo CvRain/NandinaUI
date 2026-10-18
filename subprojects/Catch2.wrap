@@ -1,0 +1,7 @@
+# 上游源码固定为完整 commit（迁移时保持当时受测的版本）。
+# 由 Git submodule 迁移而来：构建方式仍是 Meson，消费入口不变。
+[wrap-git]
+directory = Catch2
+url = https://github.com/catchorg/Catch2.git
+revision = 08092139210881f01a34e60c5f2fd6afa0ea4024
+method = meson

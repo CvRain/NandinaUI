@@ -31,6 +31,9 @@ raylib_options = cmake.subproject_options()
 raylib_defines = {
     'CUSTOMIZE_BUILD': 'ON',
     'SUPPORT_FILEFORMAT_JPG': 'ON',
+    # 示例不是构建需求：默认开启会让 CMake subdir('examples')（历史上一直在编，只是被忽略）。
+    # 关掉它既减少构建时间，也让 SDK 可以安全地不携带 examples/。
+    'BUILD_EXAMPLES': 'OFF',
 }
 if host_machine.system() == 'linux'
     linux_window_system = get_option('linux_window_system')
@@ -83,6 +86,8 @@ harfbuzz_subproj = subproject(
     default_options: [
         'tests=disabled',
         'docs=disabled',
+        # 基准目录（perf/）不随 SDK 交付；不开这个选项，meson 会 subdir('perf') 并因缺目录失败。
+        'benchmark=disabled',
         'utilities=disabled',
         'introspection=disabled',
         'glib=disabled',

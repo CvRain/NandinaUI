@@ -77,8 +77,8 @@ jobs:
       - name: Restore wrap dependency cache
         uses: actions/cache@v4
         with:
-          path: subprojects/SDL3
-          key: sdl3-${{ hashFiles('subprojects/SDL3.wrap') }}
+          path: subprojects
+          key: wraps-${{ hashFiles('subprojects/*.wrap') }}
       - name: Prewarm wrap dependencies
         run: meson subprojects download
       - name: Configure (explicit vendored SDL3, offline)
@@ -133,8 +133,8 @@ jobs:
       - name: Restore wrap dependency cache
         uses: actions/cache@v4
         with:
-          path: subprojects/SDL3
-          key: sdl3-${{ hashFiles('subprojects/SDL3.wrap') }}
+          path: subprojects
+          key: wraps-${{ hashFiles('subprojects/*.wrap') }}
       - name: Prewarm wrap dependencies
         run: meson subprojects download
       # 本机 vendored 共享 SDL3 在 ASan 下会撞 ld.bfd 的 DWARF bug（见
@@ -225,8 +225,8 @@ jobs:
       - name: Restore wrap dependency cache
         uses: actions/cache@v4
         with:
-          path: subprojects/SDL3
-          key: sdl3-${{ hashFiles('subprojects/SDL3.wrap') }}
+          path: subprojects
+          key: wraps-${{ hashFiles('subprojects/*.wrap') }}
       - name: Prewarm wrap dependencies
         run: meson subprojects download
       - name: Install the pinned SDL3 into a prefix
@@ -277,7 +277,16 @@ jobs:
           submodules: recursive
       - name: Configure git
         run: git config --global --add safe.directory '*'
-      - name: Configure (SDL disabled, no prewarm on purpose)
+      # 除 SDL3 外的依赖也是 wrap 了：预热它们，但**故意不预取 SDL3**，
+      # 这样"关闭后端就不查找、不下载"仍是被验证的行为，而不是被缓存掩盖。
+      - name: Restore wrap dependency cache
+        uses: actions/cache@v4
+        with:
+          path: subprojects
+          key: wraps-${{ hashFiles('subprojects/*.wrap') }}
+      - name: Prewarm non-SDL wraps
+        run: meson subprojects download raylib spdlog box2d utf8proc tomlplusplus freetype harfbuzz fribidi Catch2 nlohmann_json
+      - name: Configure (SDL disabled)
         run: meson setup buildDir-raylib --wrap-mode=nodownload -Dlinux_window_system=x11 -Dsdl_backend=disabled
       # 关掉后端就不许查找、更不许下载：目录不存在 + 报告如实，两条一起断言。
       - name: Assert SDL3 was neither fetched nor used
@@ -327,8 +336,8 @@ jobs:
       - name: Restore wrap dependency cache
         uses: actions/cache@v4
         with:
-          path: subprojects/SDL3
-          key: sdl3-${{ hashFiles('subprojects/SDL3.wrap') }}
+          path: subprojects
+          key: wraps-${{ hashFiles('subprojects/*.wrap') }}
       - name: Prewarm wrap dependencies
         run: meson subprojects download
       - name: Configure (vendored SDL3, lld)
