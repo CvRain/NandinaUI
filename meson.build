@@ -123,13 +123,106 @@ freetype_dep = freetype_subproj.get_variable('freetype_dep')
 harfbuzz_dep = harfbuzz_subproj.get_variable('libharfbuzz_dep')
 fribidi_dep = fribidi_subproj.get_variable('libfribidi_dep')
 nlohmann_json_dep = nlohmann_json_subproj.get_variable('nlohmann_json_dep')
-# SDL3 是 P3/P4 的目标平台层：窗口/输入/帧驱动 + SDL 2D 渲染设备。用 feature 选项控制，
-# 找不到时（auto）静默退化为纯 raylib 构建；enabled 时找不到会让配置失败。
+# SDL3 是 P3/P4 的平台层：窗口/输入/帧驱动 + SDL 2D 渲染设备。
+#
+# 来源解析按 docs/references/dependency_policy.md §2.4 的实测结论写成**显式三态**：
+#   - system   ：只查系统（`method: 'pkg-config'` 显式过滤；否则 wrap 的存在会遮蔽同名依赖，
+#                实测会让 dependency() 返回 not found）；
+#   - vendored ：只用 subprojects/SDL3（wrap-git + method=cmake，target 名实测为 SDL3-static）；
+#   - auto     ：先系统，缺失/版本不足再回落 vendored。
+# 不使用 wrap 的 `[provide]` 变量名机制：CMake-only 上游在系统缺失时解析不到（实测），
+# 显式分支更小也更可测。默认 vendored：构建来源确定，不依赖机器上装了什么。
+#
+# 失败策略：`sdl_backend=enabled` 且没有任何来源解析成功 → error（不许静默）；
+# `auto` 且都没解析到 → 回落 raylib 并打印原因；`disabled` → 完全不查找、不下载。
 sdl_backend_option = get_option('sdl_backend')
+sdl3_source_option = get_option('sdl3_source')
+sdl3_min_version = '3.4.0'
+sdl3_pin = 'release-3.4.18'
+sdl3_pin_version = '3.4.18'
 sdl3_dep = disabler()
+sdl3_origin = 'disabled'
+sdl3_method = 'none'
+sdl3_linkage = 'none'
+sdl3_version = 'n/a'
+
 if not sdl_backend_option.disabled()
-    sdl3_dep = dependency('sdl3', version: '>=3.4.0', required: sdl_backend_option)
+    if sdl3_source_option != 'vendored'
+        # `method: 'pkg-config'` 只查系统副本：wrap 存在时依赖名会被遮蔽（实测），
+        # 显式限定 method 才能让 system 状态真的只看系统。
+        sdl3_dep = dependency(
+            'sdl3',
+            version: '>=' + sdl3_min_version,
+            method: 'pkg-config',
+            required: false,
+        )
+    endif
+    if sdl3_dep.found()
+        sdl3_origin = 'system'
+        sdl3_method = 'pkg-config'
+        # 系统副本的静态/动态由发行版决定，不假装知道。
+        sdl3_linkage = 'unknown'
+        sdl3_version = sdl3_dep.version()
+    elif sdl3_source_option != 'system'
+        sdl3_cmake_options = cmake.subproject_options()
+        sdl3_cmake_options.add_cmake_defines({
+            'SDL_TESTS': 'OFF',
+            'SDL_EXAMPLES': 'OFF',
+            'SDL_INSTALL': 'OFF',
+            # 与 raylib 内置 GLFW 的静态链接冲突：两边都带 Wayland 协议生成代码
+            # （`wp_fractional_scale_manager_v1_interface` 重复定义，静态库无法共存）。
+            # 编成共享库让两边各自持有符号、互不干扰，同时保留 raylib 的原生 Wayland。
+            'SDL_SHARED': 'ON',
+            'SDL_STATIC': 'OFF',
+            'SDL_TEST_LIBRARY': 'OFF',
+        })
+        sdl3_subproject = cmake.subproject('SDL3', options: sdl3_cmake_options)
+        sdl3_dep = sdl3_subproject.dependency('SDL3-shared')
+        sdl3_origin = 'vendored'
+        sdl3_method = 'cmake'
+        # 静态 SDL3 与 raylib 内置 GLFW 的 Wayland 协议生成代码符号冲突，故用共享库。
+        sdl3_linkage = 'shared'
+        sdl3_version = sdl3_pin_version
+    endif
+    if not sdl3_dep.found()
+        if sdl_backend_option.enabled()
+            error(
+                'sdl_backend=enabled 但 sdl3_source='
+                + sdl3_source_option
+                + ' 未解析到 SDL3 >= '
+                + sdl3_min_version
+                + '（system 需 pkg-config，vendored 需 subprojects/SDL3；'
+                + '可用 meson subprojects download 预热）',
+            )
+        endif
+        sdl3_origin = 'unavailable'
+        warning(
+            'SDL3 未解析到（sdl3_source='
+            + sdl3_source_option
+            + '），auto 回落 raylib 路径；显式启用请用 -Dsdl_backend=enabled',
+        )
+    endif
 endif
+
+message('[deps] sdl3 -> ' + sdl3_origin + ' ' + sdl3_version)
+# 机器可读的解析报告：CI 与 bug 报告共用（docs/references/dependency_policy.md §5）。
+# 用模板而不是 content:（`configure_file` 在 Meson 1.12 里没有 `content` 关键字，
+# `output_format: 'json'` 也只接受扁平 dict）。
+configure_file(
+    input: 'meson/deps.json.in',
+    output: 'deps.json',
+    configuration: {
+        # `enabled` 表示"SDL3 实际被采用"，而不是"后端开关没关"：
+        # auto + 未解析时后端开关是开着的，但构建走的是 raylib。
+        'SDL3_ENABLED': sdl3_dep.found().to_string(),
+        'SDL3_SOURCE': sdl3_origin,
+        'SDL3_VERSION': sdl3_version,
+        'SDL3_MIN': sdl3_min_version,
+        'SDL3_PIN': sdl3_pin,
+        'SDL3_METHOD': sdl3_method,
+        'SDL3_LINKAGE': sdl3_linkage,
+    },
+)
 
 physics2d_option = get_option('physics2d')
 box2d_dep = disabler()

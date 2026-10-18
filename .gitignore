@@ -110,6 +110,9 @@ vcpkg_installed
 dev-docs-*
 
 # Meson fallback downloads generated while configuring optional font features.
+# wrap 检出（`[wrap-git]`）是未跟踪工作树：忽略它，但 SDK 打包会显式收集其源码与许可证
+# （见 tools/sdk_bundle.py 的 dependencies 部分与 docs/references/dependency_policy.md §6）。
+/subprojects/SDL3/
 /subprojects/packagecache/
 /subprojects/libpng-*/
 /subprojects/libpng.wrap

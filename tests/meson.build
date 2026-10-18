@@ -651,7 +651,9 @@ test(
         meson.project_source_root(),
         meson.project_source_root() / 'tools' / 'sdk_bundle.py',
     ],
-    timeout: 600,
+    # 打包现在把依赖源码（SDL3，约 53 MB）一起收进 SDK，且 fixture 会打包两次；
+    # 超时按实测留余量，不靠"重跑一次就过"。
+    timeout: 900,
     suite: 'integration',
 )
 test(

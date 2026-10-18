@@ -17,6 +17,13 @@ option(
     description: 'Build the SDL3 render device and platform window (needs SDL >= 3.4.0)',
 )
 option(
+    'sdl3_source',
+    type: 'combo',
+    choices: ['auto', 'system', 'vendored'],
+    value: 'vendored',
+    description: 'SDL3 source: system pkg-config, subprojects/SDL3 (wrap), or system-first fallback',
+)
+option(
     'sdl_page_probe',
     type: 'boolean',
     value: false,

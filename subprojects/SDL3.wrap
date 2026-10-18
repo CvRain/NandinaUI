@@ -1,0 +1,8 @@
+# SDL3 来源固定为上游发布 tag（不是 WrapDB 的社区 meson 端口）。
+# 依据：docs/references/dependency_policy.md §2.3/§2.4（raylib 不在 WrapDB、box2d 版本不符、
+# sdl3 的 WrapDB 条目是 357 文件的社区端口；CMake-only 上游应当用它自己的构建系统）。
+[wrap-git]
+directory = SDL3
+url = https://github.com/libsdl-org/SDL.git
+revision = release-3.4.18
+method = cmake

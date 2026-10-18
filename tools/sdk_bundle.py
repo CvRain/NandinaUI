@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import configparser
 import datetime
 import hashlib
 import io
@@ -65,6 +66,62 @@ def submodule_manifest(source: pathlib.Path) -> list[dict[str, object]]:
             }
         )
     return result
+
+
+def wrap_dependencies(source: pathlib.Path) -> list[dict[str, object]]:
+    """解析 subprojects/*.wrap，列出随 SDK 交付的依赖源码。
+
+    wrap 检出目录被 .gitignore 忽略、也不在 git 跟踪里，所以必须显式收集：
+    默认 `sdl3_source=vendored` 时，源码包缺依赖会让消费者构建失败或静默回落到别的后端。
+    缺失时直接失败，不静默跳过（对应 dependency_policy.md §6 的"不能只改 .gitmodules 而让
+    源码包丢依赖"）。
+    """
+    dependencies: list[dict[str, object]] = []
+    subprojects = source / "subprojects"
+    if not subprojects.is_dir():
+        return dependencies
+    for wrap_path in sorted(subprojects.glob("*.wrap")):
+        parser = configparser.ConfigParser(interpolation=None)
+        parser.read(wrap_path, encoding="utf-8")
+        if not parser.has_section("wrap-git"):
+            continue
+        section = parser["wrap-git"]
+        directory = section.get("directory") or wrap_path.stem
+        root = subprojects / directory
+        if not root.is_dir():
+            raise SystemExit(
+                f"wrap dependency source missing: {root.relative_to(source)}; "
+                "run `meson subprojects download` (or a configure) before packaging"
+            )
+        dependencies.append(
+            {
+                "name": wrap_path.stem,
+                "directory": (pathlib.Path("subprojects") / directory).as_posix(),
+                "url": section.get("url", ""),
+                "pinned": section.get("revision", ""),
+                "revision": git(root, "rev-parse", "HEAD").decode("ascii").strip(),
+                "method": section.get("method", "meson"),
+            }
+        )
+    return dependencies
+
+
+# 依赖源码树里不需要进包的内容：版本库元数据与 CI 配置。
+DEPENDENCY_EXCLUDED_DIRS = {".git", ".github"}
+
+
+def dependency_paths(
+    source: pathlib.Path, dependencies: list[dict[str, object]]
+) -> list[pathlib.Path]:
+    """依赖源码里的文件（相对仓库根）。SDK 必须能离线构建，只带 wrap 文件不够。"""
+    paths: list[pathlib.Path] = []
+    for dependency in dependencies:
+        root = source / str(dependency["directory"])
+        for current, dirnames, filenames in os.walk(root):
+            dirnames[:] = sorted(name for name in dirnames if name not in DEPENDENCY_EXCLUDED_DIRS)
+            for name in sorted(filenames):
+                paths.append((pathlib.Path(current) / name).relative_to(source))
+    return paths
 
 
 def archive_metadata(timestamp: int, mode: int) -> dict[str, object]:
@@ -255,7 +312,11 @@ def main() -> int:
     timestamp = int(timestamp_text) if timestamp_text else int(
         git(source, "show", "-s", "--format=%ct", "HEAD").decode("ascii")
     )
-    paths = git_paths(source, options.allow_dirty)
+    dependencies = wrap_dependencies(source)
+    paths = sorted(
+        set(git_paths(source, options.allow_dirty))
+        | set(dependency_paths(source, dependencies))
+    )
     output.mkdir(parents=True, exist_ok=True)
     root_name = f"nandina-sdk-{version}"
     license_path = next(
@@ -271,6 +332,7 @@ def main() -> int:
         "dirty": dirty,
         "license": license_path,
         "submodules": submodule_manifest(source),
+        "dependencies": dependencies,
     }
     for key in ("release_channel", "support_profile", "license_status", "known_limitations"):
         if key in metadata:

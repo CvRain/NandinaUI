@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "deps": [
+    {
+      "name": "sdl3",
+      "enabled": @SDL3_ENABLED@,
+      "source": "@SDL3_SOURCE@",
+      "version": "@SDL3_VERSION@",
+      "min": "@SDL3_MIN@",
+      "pin": "@SDL3_PIN@",
+      "method": "@SDL3_METHOD@",
+      "linkage": "@SDL3_LINKAGE@",
+      "license": "zlib"
+    }
+  ]
+}

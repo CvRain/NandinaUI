@@ -7,6 +7,7 @@ import shutil
 import sqlite3
 import subprocess
 import sys
+import tarfile
 import tempfile
 import tomllib
 
@@ -39,8 +40,10 @@ def write_consumer(source: pathlib.Path, archive: pathlib.Path, sha256: str) -> 
     )
     (source / "meson.build").write_text(
         "project('nandina_consumer_fixture', 'cpp')\n"
+        # fixture 只验证 SDK 消费链路；vendored SDL3 的构建由专门的构建目录与视觉测试验证，
+        # 这里关掉以免把集成测试的时长翻倍。
         "nandina = subproject('nandina', default_options: "
-        "['build_tests=false', 'physics2d=disabled'])\n"
+        "['build_tests=false', 'physics2d=disabled', 'sdl_backend=disabled'])\n"
         "toolchain = nandina.get_variable('nandina_resource_toolchain')\n"
         "policy = files('resources/resources.toml')\n"
         "package = custom_target(\n"
@@ -86,6 +89,13 @@ def main() -> int:
         assert index["packages"][0]["sha256"] == tar_artifact["sha256"]
         assert manifest["directory"] == "nandina-sdk-0.0.0-test"
         assert manifest["minimum_cli"] == "0.2.0"
+        # 依赖源码必须随 SDK 交付：默认 sdl3_source=vendored，缺 SDL3 源码会让消费者构建失败。
+        dependencies = {item["name"]: item for item in manifest["dependencies"]}
+        assert "SDL3" in dependencies, dependencies
+        assert len(dependencies["SDL3"]["revision"]) == 40
+        with tarfile.open(archive, "r:xz") as bundle:
+            names = set(bundle.getnames())
+        assert "nandina-sdk-0.0.0-test/subprojects/SDL3/CMakeLists.txt" in names
         assert isinstance(manifest["dirty"], bool)
         repeated_release = root / "release-repeated"
         run(

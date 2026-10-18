@@ -89,8 +89,62 @@ foo-bar-1.0 = foo_bar_dep
 | 全新检出 | 无 `subprojects/SDL3`、系统隐藏、`auto` → 按 wrap 下载 `release-3.4.18`、构建、运行成功 |
 | CMake 适配器告警 | SDL3 的 CMake 里有 Meson 不认识的 generator expression（如 `$<COMPILE_LANGUAGE:…>`、`$<TARGET_NAME:SDL3::Headers>`、`$<CONFIG:…>`）与 `target_precompile_headers`；均为告警，构建与链接正常 |
 
-**据此确定的接入形态**：不写 `[provide]` 变量名，改为每个依赖在 `meson/deps.build` 里写**显式三态块**
-（`if/else` 即可，不需要用户函数）；解析结果必须写入解析报告；解析失败必须 `error()`。
+**据此确定的接入形态**：不写 `[provide]` 变量名，改为**显式三态块**（`if/else` 即可，不需要用户函数）；
+解析结果写入解析报告；解析失败必须 `error()`。
+
+### 2.5 SDL3 正式接入的落地记录（2026-10-18）
+
+| 项 | 落地形态 |
+| --- | --- |
+| wrap | `subprojects/SDL3.wrap`：`[wrap-git]` 指向上游、`revision = release-3.4.18`、`method = cmake`、**不写 `[provide]`** |
+| 选项 | `-Dsdl3_source=auto\|system\|vendored`（默认 **vendored**）；`sdl_backend` 仍是"要不要这个后端"的独立开关 |
+| 解析位置 | 根 `meson.build` 顶部的显式三态块（只有一个依赖；超过 2–3 个再抽 `meson/deps.build` + `subdir()`，届时也要先定义共享变量，Meson 没有用户函数） |
+| 报告 | `configure` 打印 `[deps] sdl3 -> <origin> <version>`；`build/deps.json` 由 `meson/deps.json.in` 模板生成（`configure_file(content:)` 在 Meson 1.12 不存在，`output_format:'json'` 只接受扁平 dict） |
+| 失败策略 | `sdl_backend=enabled` 且未解析 → `error()`；`auto` 未解析 → 警告并回落 raylib；`disabled` → 不查找、不下载 |
+| 忽略规则 | `.gitignore` 增加 `/subprojects/SDL3/`（wrap 检出是未跟踪工作树） |
+
+**接入时发现并解决的链接冲突（重要）**：静态 SDL3 自带 Wayland 协议生成代码
+（`wayland-protocols` → `fractional-scale-v1-protocol.c`），而 raylib 内置的 GLFW 也自带同一份，
+`wp_fractional_scale_manager_v1_interface` 在两个静态库里各定义一次 → 所有同时链接两个后端的可执行
+文件都链接失败（完整套件里的 `router_tests` / `window_lifecycle_tests` 最先暴露）。
+
+取舍：
+
+| 方案 | 结果 |
+| --- | --- |
+| **vendored SDL3 编成共享库**（`SDL_SHARED=ON` / `SDL_STATIC=OFF`，target `SDL3-shared`） | **采用**。符号各自留在 DSO 里，raylib 保持原生 Wayland；Meson 会给构建树里的可执行文件加相对 rpath（`$ORIGIN/../subprojects/SDL3`），测试与探针直接可运行 |
+| 让 raylib 关掉 Wayland（X11/XWayland） | 备选，但会让对照后端的平台能力与产品后端不一致 |
+| `--allow-multiple-definition` | 否决：会掩盖真正的重复定义 |
+| 把两个后端拆成独立库、按需链接 | 架构上更干净，属后续批次（当前 `nandina` 单库同时编入两个设备） |
+
+**SDK 交付**：`tools/sdk_bundle.py` 现在解析 `subprojects/*.wrap`、要求 wrap 检出存在（缺失直接失败）、
+把依赖源码（除 `.git`/`.github`）收进源码包，并在 `nandina-sdk.json` 里记录
+`name/directory/url/pinned/revision/method`。SDL3 源码树 53 MB / 2195 文件；脏工作区下单次打包约 98 s
+（三种格式）。fixture 消费者显式 `sdl_backend=disabled` 以控制集成测试时长，并新增断言：
+manifest 的 `dependencies` 含 SDL3 且 revision 为 40 位、tar 内含
+`subprojects/SDL3/CMakeLists.txt`。fixture 超时 600 → 900 s，实测 250 s。
+
+**验证矩阵（本次实跑）**：
+
+| 场景 | 结果 |
+| --- | --- |
+| `sdl3_source=system` | `system 3.4.18`，`deps.json` 记录 `pkg-config` / `linkage: unknown` |
+| `system` + 版本被伪装成 3.0.0 + `sdl_backend=enabled` | **配置失败**，报"未解析到 SDL3 >= 3.4.0"（不是静默回退） |
+| `disabled` + `--wrap-mode=nodownload` 且源码移走 | 配置成功，日志中 **0 次** SDL3 提及，`enabled=false` |
+| `auto` + 系统版本不足 | 回落 `vendored` |
+| `vendored` + `--wrap-mode=nodownload` | 构建并运行 `sdl_visual_tests`（155 断言）通过 |
+| 全新检出（无 `subprojects/SDL3`）+ 默认 vendored | 首次 configure 按 wrap 下载并构建 |
+| 主套件 | 89/89（含 SDK fixture）；ASan/no-RTTI 见各构建目录日志 |
+
+**ASan 配置的已知例外**：vendored 共享 SDL3 在 ASan 构建里链接失败
+（`ld.bfd: DWARF error: mangled line number section (bad file number)`，本机没有 lld 可换）。
+ASan 的职责是检查**本项目**代码，因此该构建目录显式 `-Dsdl3_source=system`（系统 3.4.18），
+`buildDir-asan` 81/81 通过；默认构建与 no-RTTI 仍走 vendored 共享 SDL3。CI 若具备 lld，
+应改为 vendored + lld 以同时覆盖第三方构建。
+
+**仍未做**：CI 的显式 SDL 任务与 Meson 1.7.2 复跑、`tools/header_surface.toml` 与
+`check_headers.py` 门禁（[SDK 表面](sdk_surface.md) §4）、以及"把两个后端拆成独立库"的重构
+（拆库后静态 SDL3 与 raylib 的符号冲突会自然消失，那时可重新评估链接方式）。
 
 ### 2.3 WrapDB 不是 wrap 机制本身
 
