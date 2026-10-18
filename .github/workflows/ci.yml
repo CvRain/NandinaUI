@@ -74,8 +74,27 @@ jobs:
           "$CXX" --version
           meson --version
           ninja --version
-      - name: Configure
-        run: meson setup buildDir --wrap-mode=nodownload -Dlinux_window_system=x11 ${{ matrix.toolchain_args }}
+      - name: Restore wrap dependency cache
+        uses: actions/cache@v4
+        with:
+          path: subprojects/SDL3
+          key: sdl3-${{ hashFiles('subprojects/SDL3.wrap') }}
+      - name: Prewarm wrap dependencies
+        run: meson subprojects download
+      - name: Configure (explicit vendored SDL3, offline)
+        run: meson setup buildDir --wrap-mode=nodownload -Dlinux_window_system=x11 -Dsdl_backend=enabled -Dsdl3_source=vendored ${{ matrix.toolchain_args }}
+      - name: Assert SDL3 comes from the pinned wrap
+        run: |
+          python3 - <<'PY'
+          import json
+          dep = json.load(open("buildDir/deps.json"))["deps"][0]
+          assert dep["source"] == "vendored", dep
+          assert dep["resolved_by"] == "cmake.subproject", dep
+          assert dep["linkage"] == "shared", dep
+          assert len(dep["pin"] or "") == 40, dep
+          assert dep["revision"] == dep["pin"], dep
+          print("deps.json:", dep)
+          PY
       # 新增测试必须声明 suite：sanitize 任务按 suite 选取要跑的子集，而不是维
       # 护手写名单。漏声明的测试会静默失去 ASan/UBSan 覆盖，所以在这里直接拦下。
       - name: Assert every test belongs to a CI suite
@@ -111,11 +130,34 @@ jobs:
           submodules: recursive
       - name: Configure git
         run: git config --global --add safe.directory '*'
-      - name: Configure
-        run: meson setup buildDir-asan -Db_sanitize=address,undefined -Dlinux_window_system=x11 --wrap-mode=nodownload
+      - name: Restore wrap dependency cache
+        uses: actions/cache@v4
+        with:
+          path: subprojects/SDL3
+          key: sdl3-${{ hashFiles('subprojects/SDL3.wrap') }}
+      - name: Prewarm wrap dependencies
+        run: meson subprojects download
+      # 本机 vendored 共享 SDL3 在 ASan 下会撞 ld.bfd 的 DWARF bug（见
+      # docs/references/dependency_policy.md §2.5）。sanitizer 的职责是检查本项目代码，
+      # 因此这里把固定源码装到 prefix、以 system 来源链接；vendored + lld 的实验另有一个
+      # 非阻断任务（sanitize-vendored-lld）。
+      - name: Install the pinned SDL3 into a prefix
+        run: |
+          cmake -S subprojects/SDL3 -B /tmp/sdl3-sys -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/opt/sdl3 \
+            -DSDL_TESTS=OFF -DSDL_EXAMPLES=OFF -DSDL_INSTALL=ON \
+            -DSDL_WAYLAND=OFF -DSDL_X11=ON
+          cmake --build /tmp/sdl3-sys
+          cmake --install /tmp/sdl3-sys
+      - name: Configure (system SDL3)
+        env:
+          PKG_CONFIG_PATH: /opt/sdl3/lib/pkgconfig:/opt/sdl3/lib/x86_64-linux-gnu/pkgconfig
+        run: meson setup buildDir-asan -Db_sanitize=address,undefined -Dlinux_window_system=x11 --wrap-mode=nodownload -Dsdl_backend=enabled -Dsdl3_source=system
       - name: Build
         run: meson compile -C buildDir-asan
       - name: Test (unit suite under ASan + UBSan)
+        env:
+          LD_LIBRARY_PATH: /opt/sdl3/lib:/opt/sdl3/lib/x86_64-linux-gnu
         run: |
           # `unit` = 全部 C++ 单测。window-lifecycle 在无显示环境下会自报 skipped 并以
           # 成功退出，所以可以安全纳入。慢速的 Python CLI / 构建工作流测试标为
@@ -152,3 +194,152 @@ jobs:
         run: meson compile -C buildDir-physics
       - name: Test physics
         run: meson test -C buildDir-physics physics2d --print-errorlogs
+
+  # SDL3 来源与交付的三条显式路径（依赖策略 §2.5）。不要只跑 auto：
+  # auto 在 SDL 解析失败时会回落 raylib，任务会"成功"却没有覆盖 SDL。
+  sdl-system:
+    name: SDL3 from a system prefix
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    container: silkeh/clang:21-trixie
+    env:
+      CC: clang
+      CXX: clang++
+      PKG_CONFIG_PATH: /opt/sdl3/lib/pkgconfig:/opt/sdl3/lib/x86_64-linux-gnu/pkgconfig
+      LD_LIBRARY_PATH: /opt/sdl3/lib:/opt/sdl3/lib/x86_64-linux-gnu
+    steps:
+      - name: Install dependencies
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            ca-certificates git python3 python3-pip ninja-build pkg-config cmake zstd \
+            zlib1g-dev libstdc++-14-dev \
+            libssl-dev libx11-dev libxrandr-dev libxinerama-dev \
+            libxcursor-dev libxi-dev libgl1-mesa-dev libglu1-mesa-dev
+          python3 -m pip install --break-system-packages --no-cache-dir "meson==${MESON_VERSION}"
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+      - name: Configure git
+        run: git config --global --add safe.directory '*'
+      - name: Restore wrap dependency cache
+        uses: actions/cache@v4
+        with:
+          path: subprojects/SDL3
+          key: sdl3-${{ hashFiles('subprojects/SDL3.wrap') }}
+      - name: Prewarm wrap dependencies
+        run: meson subprojects download
+      - name: Install the pinned SDL3 into a prefix
+        run: |
+          cmake -S subprojects/SDL3 -B /tmp/sdl3-sys -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/opt/sdl3 \
+            -DSDL_TESTS=OFF -DSDL_EXAMPLES=OFF -DSDL_INSTALL=ON \
+            -DSDL_WAYLAND=OFF -DSDL_X11=ON
+          cmake --build /tmp/sdl3-sys
+          cmake --install /tmp/sdl3-sys
+      - name: Configure (system SDL3)
+        run: meson setup buildDir-sdl-system --wrap-mode=nodownload -Dlinux_window_system=x11 -Dsdl_backend=enabled -Dsdl3_source=system
+      - name: Assert the system source is reported honestly
+        run: |
+          python3 - <<'PY'
+          import json
+          dep = json.load(open("buildDir-sdl-system/deps.json"))["deps"][0]
+          assert dep["source"] == "system", dep
+          assert dep["resolved_by"] == "pkg-config", dep
+          assert dep["pin"] is None and dep["revision"] is None, dep
+          print("deps.json:", dep)
+          PY
+      - name: Build
+        run: meson compile -C buildDir-sdl-system
+      - name: Test (unit suite, includes sdl-visual)
+        run: meson test -C buildDir-sdl-system --suite unit --print-errorlogs
+
+  sdl-disabled:
+    name: raylib fallback (SDL disabled)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    container: silkeh/clang:21-trixie
+    env:
+      CC: clang
+      CXX: clang++
+    steps:
+      - name: Install dependencies
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            ca-certificates git python3 python3-pip ninja-build pkg-config cmake zstd \
+            zlib1g-dev libstdc++-14-dev \
+            libssl-dev libx11-dev libxrandr-dev libxinerama-dev \
+            libxcursor-dev libxi-dev libgl1-mesa-dev libglu1-mesa-dev
+          python3 -m pip install --break-system-packages --no-cache-dir "meson==${MESON_VERSION}"
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+      - name: Configure git
+        run: git config --global --add safe.directory '*'
+      - name: Configure (SDL disabled, no prewarm on purpose)
+        run: meson setup buildDir-raylib --wrap-mode=nodownload -Dlinux_window_system=x11 -Dsdl_backend=disabled
+      # 关掉后端就不许查找、更不许下载：目录不存在 + 报告如实，两条一起断言。
+      - name: Assert SDL3 was neither fetched nor used
+        run: |
+          test ! -d subprojects/SDL3
+          python3 - <<'PY'
+          import json
+          dep = json.load(open("buildDir-raylib/deps.json"))["deps"][0]
+          assert dep["enabled"] is False, dep
+          assert dep["source"] == "disabled", dep
+          assert dep["resolved_by"] == "none", dep
+          print("deps.json:", dep)
+          PY
+      - name: Build
+        run: meson compile -C buildDir-raylib
+      - name: Test (unit suite on the raylib path)
+        run: meson test -C buildDir-raylib --suite unit --print-errorlogs
+
+  sanitize-vendored-lld:
+    # 实验任务：验证 vendored 共享 SDL3 在 lld 下能否通过 ASan。
+    # 本机 ld.bfd 会报 DWARF 错误（dependency_policy.md §2.5）；lld 是否解决尚未确认，
+    # 因此先非阻断地收集证据，确认后再把它并入阻断的 sanitize 任务。
+    name: sanitize vendored SDL3 with lld (experimental)
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    container: silkeh/clang:21-trixie
+    continue-on-error: true
+    env:
+      CC: clang
+      CXX: clang++
+      LSAN_OPTIONS: detect_leaks=0
+    steps:
+      - name: Install dependencies
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            ca-certificates git python3 python3-pip ninja-build pkg-config cmake zstd \
+            zlib1g-dev libstdc++-14-dev lld \
+            libssl-dev libx11-dev libxrandr-dev libxinerama-dev \
+            libxcursor-dev libxi-dev libgl1-mesa-dev libglu1-mesa-dev
+          python3 -m pip install --break-system-packages --no-cache-dir "meson==${MESON_VERSION}"
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+      - name: Configure git
+        run: git config --global --add safe.directory '*'
+      - name: Restore wrap dependency cache
+        uses: actions/cache@v4
+        with:
+          path: subprojects/SDL3
+          key: sdl3-${{ hashFiles('subprojects/SDL3.wrap') }}
+      - name: Prewarm wrap dependencies
+        run: meson subprojects download
+      - name: Configure (vendored SDL3, lld)
+        run: |
+          meson setup buildDir-asan-vendored \
+            -Db_sanitize=address,undefined \
+            -Dlinux_window_system=x11 \
+            -Dsdl_backend=enabled -Dsdl3_source=vendored \
+            -Dc_link_args=-fuse-ld=lld -Dcpp_link_args=-fuse-ld=lld \
+            --wrap-mode=nodownload
+      - name: Build
+        run: meson compile -C buildDir-asan-vendored
+      - name: Test (unit suite)
+        run: meson test -C buildDir-asan-vendored --suite unit --print-errorlogs

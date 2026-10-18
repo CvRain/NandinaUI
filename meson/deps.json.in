@@ -7,7 +7,11 @@
       "source": "@SDL3_SOURCE@",
       "version": "@SDL3_VERSION@",
       "min": "@SDL3_MIN@",
-      "pin": "@SDL3_PIN@",
+      "pin": @SDL3_PIN_JSON@,
+      "pin_version": @SDL3_PIN_VERSION_JSON@,
+      "revision": @SDL3_REVISION_JSON@,
+      "path": "@SDL3_PATH@",
+      "resolved_by": "@SDL3_RESOLVED_BY@",
       "method": "@SDL3_METHOD@",
       "linkage": "@SDL3_LINKAGE@",
       "license": "zlib"

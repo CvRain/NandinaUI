@@ -138,13 +138,21 @@ nlohmann_json_dep = nlohmann_json_subproj.get_variable('nlohmann_json_dep')
 sdl_backend_option = get_option('sdl_backend')
 sdl3_source_option = get_option('sdl3_source')
 sdl3_min_version = '3.4.0'
-sdl3_pin = 'release-3.4.18'
+# pin 必须是不可变的完整 commit（tag 只写在 wrap 的注释里供人阅读）。
+sdl3_pin = '829a65d769d935c4852f8159e964312c0957260a'
 sdl3_pin_version = '3.4.18'
 sdl3_dep = disabler()
 sdl3_origin = 'disabled'
 sdl3_method = 'none'
 sdl3_linkage = 'none'
 sdl3_version = 'n/a'
+# 报告字段默认值：system/disabled 下没有"项目固定的源码"，因此 pin/revision 为 null，
+# 不能让 system 看起来像 vendored（docs/references/dependency_policy.md §5）。
+sdl3_pin_json = 'null'
+sdl3_pin_version_json = 'null'
+sdl3_revision_json = 'null'
+sdl3_path = ''
+sdl3_resolved_by = 'none'
 
 if not sdl_backend_option.disabled()
     if sdl3_source_option != 'vendored'
@@ -160,7 +168,8 @@ if not sdl_backend_option.disabled()
     if sdl3_dep.found()
         sdl3_origin = 'system'
         sdl3_method = 'pkg-config'
-        # 系统副本的静态/动态由发行版决定，不假装知道。
+        sdl3_resolved_by = 'pkg-config'
+        # 系统副本的静态/动态由发行版决定，不假装知道；pin/revision 保持 null。
         sdl3_linkage = 'unknown'
         sdl3_version = sdl3_dep.version()
     elif sdl3_source_option != 'system'
@@ -180,6 +189,11 @@ if not sdl_backend_option.disabled()
         sdl3_dep = sdl3_subproject.dependency('SDL3-shared')
         sdl3_origin = 'vendored'
         sdl3_method = 'cmake'
+        sdl3_resolved_by = 'cmake.subproject'
+        sdl3_path = 'subprojects/SDL3'
+        sdl3_pin_json = '"' + sdl3_pin + '"'
+        sdl3_pin_version_json = '"' + sdl3_pin_version + '"'
+        sdl3_revision_json = '"' + sdl3_pin + '"'
         # 静态 SDL3 与 raylib 内置 GLFW 的 Wayland 协议生成代码符号冲突，故用共享库。
         sdl3_linkage = 'shared'
         sdl3_version = sdl3_pin_version
@@ -218,7 +232,11 @@ configure_file(
         'SDL3_SOURCE': sdl3_origin,
         'SDL3_VERSION': sdl3_version,
         'SDL3_MIN': sdl3_min_version,
-        'SDL3_PIN': sdl3_pin,
+        'SDL3_PIN_JSON': sdl3_pin_json,
+        'SDL3_PIN_VERSION_JSON': sdl3_pin_version_json,
+        'SDL3_REVISION_JSON': sdl3_revision_json,
+        'SDL3_PATH': sdl3_path,
+        'SDL3_RESOLVED_BY': sdl3_resolved_by,
         'SDL3_METHOD': sdl3_method,
         'SDL3_LINKAGE': sdl3_linkage,
     },

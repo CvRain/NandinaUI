@@ -68,7 +68,26 @@ def submodule_manifest(source: pathlib.Path) -> list[dict[str, object]]:
     return result
 
 
-def wrap_dependencies(source: pathlib.Path) -> list[dict[str, object]]:
+# Meson 在 wrap 检出目录里写这个标记；它不是"本地修改"，dirty 判定必须排除它。
+WRAP_STATE_FILE = ".meson-subproject-wrap-hash.txt"
+COMMIT_ID = re.compile(r"^[0-9a-f]{40}$")
+
+
+def dependency_head(root: pathlib.Path) -> str:
+    return git(root, "rev-parse", "HEAD").decode("ascii").strip()
+
+
+def dependency_dirty(root: pathlib.Path) -> bool:
+    """跳过 meson 的 wrap 标记，其余任何改动/未跟踪文件都算 dirty。"""
+    status = git(root, "status", "--porcelain=v1", "--untracked-files=all").decode("utf-8")
+    for line in status.splitlines():
+        changed = line[3:].strip()
+        if changed != WRAP_STATE_FILE:
+            return True
+    return False
+
+
+def wrap_dependencies(source: pathlib.Path, allow_dirty: bool) -> list[dict[str, object]]:
     """解析 subprojects/*.wrap，列出随 SDK 交付的依赖源码。
 
     wrap 检出目录被 .gitignore 忽略、也不在 git 跟踪里，所以必须显式收集：
@@ -93,13 +112,36 @@ def wrap_dependencies(source: pathlib.Path) -> list[dict[str, object]]:
                 f"wrap dependency source missing: {root.relative_to(source)}; "
                 "run `meson subprojects download` (or a configure) before packaging"
             )
+        pinned = section.get("revision", "").strip()
+        # 来源必须不可变：tag/分支会在不同时间解析出不同代码，只允许完整 commit。
+        if not COMMIT_ID.fullmatch(pinned):
+            raise SystemExit(
+                f"{wrap_path.name}: revision must be a full 40-char commit, got {pinned!r}; "
+                "keep the tag name in a comment for readability"
+            )
+        revision = dependency_head(root)
+        matches_pin = revision == pinned
+        if not matches_pin:
+            raise SystemExit(
+                f"{wrap_path.name}: checkout is not at the pinned commit\n"
+                f"  pinned:   {pinned}\n  checkout: {revision}\n"
+                "run `meson subprojects download` or check out the pinned commit"
+            )
+        dirty = dependency_dirty(root)
+        if dirty and not allow_dirty:
+            raise SystemExit(
+                f"{wrap_path.name}: dependency checkout has local changes; "
+                "clean it or pass --allow-dirty (the manifest will record it)"
+            )
         dependencies.append(
             {
                 "name": wrap_path.stem,
                 "directory": (pathlib.Path("subprojects") / directory).as_posix(),
                 "url": section.get("url", ""),
-                "pinned": section.get("revision", ""),
-                "revision": git(root, "rev-parse", "HEAD").decode("ascii").strip(),
+                "pinned": pinned,
+                "revision": revision,
+                "matches_pin": matches_pin,
+                "dirty": dirty,
                 "method": section.get("method", "meson"),
             }
         )
@@ -307,12 +349,14 @@ def main() -> int:
     source = options.source.resolve()
     output = options.output.resolve()
     revision = git(source, "rev-parse", "HEAD").decode("ascii").strip()
-    dirty = bool(git(source, "status", "--porcelain=v1", "--ignore-submodules=none"))
+    dirty = bool(git(source, "status", "--porcelain=v1", "--ignore-submodules=none")) or any(
+        bool(item["dirty"]) for item in dependencies
+    )
     timestamp_text = os.environ.get("SOURCE_DATE_EPOCH")
     timestamp = int(timestamp_text) if timestamp_text else int(
         git(source, "show", "-s", "--format=%ct", "HEAD").decode("ascii")
     )
-    dependencies = wrap_dependencies(source)
+    dependencies = wrap_dependencies(source, options.allow_dirty)
     paths = sorted(
         set(git_paths(source, options.allow_dirty))
         | set(dependency_paths(source, dependencies))

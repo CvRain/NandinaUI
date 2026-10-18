@@ -656,6 +656,21 @@ test(
     timeout: 900,
     suite: 'integration',
 )
+# SDK 下游 vendored SDL 消费：解压到全新目录、断网配置/编译/链接/运行。
+# 与资源 fixture 分开，因为后者用 sdl_backend=disabled 控制时长，不覆盖 SDL 交付路径；
+# 这里跑一次完整 SDK 打包 + 带 SDL3 的下游构建（实测见 docs/references/dependency_policy.md §2.5）。
+sdk_vendored_consumer_test = find_program('sdk_vendored_consumer_test.py')
+test(
+    'sdk-vendored-consumer',
+    sdk_vendored_consumer_test,
+    args: [
+        meson.project_source_root(),
+        meson.project_source_root() / 'tools' / 'sdk_bundle.py',
+    ],
+    timeout: 1500,
+    is_parallel: false,
+    suite: 'integration',
+)
 test(
     'ci-test-suites',
     python,

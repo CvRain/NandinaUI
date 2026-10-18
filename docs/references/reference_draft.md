@@ -427,7 +427,8 @@ SDF 只等待混合正确、SDL3 来源与 shader 交付定形，不等待整个
 
 ## 实施前仍需定形
 
-- shader 参数结构、资源绑定、alpha 约定、AA 外扩边界与坐标空间；
+- shader 参数结构、资源绑定、alpha 约定、AA 外扩边界与坐标空间（契约草案见
+  [渲染设备路径契约](render_device_path_contract.md)）；
 - **fragment uniform 预算**：`SDL_SetGPURenderStateFragmentUniforms` 的数据按 slot 经
   `SDL_PushGPUFragmentUniformData` 推送（16 字节对齐），参数集必须装进目标驱动的 push uniform 上限；
   装不下就要把一部分参数移到顶点属性或纹理，这属于参数布局决策，不能等到图元接通后才发现；

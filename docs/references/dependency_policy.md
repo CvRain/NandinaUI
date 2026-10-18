@@ -102,6 +102,9 @@ foo-bar-1.0 = foo_bar_dep
 | 报告 | `configure` 打印 `[deps] sdl3 -> <origin> <version>`；`build/deps.json` 由 `meson/deps.json.in` 模板生成（`configure_file(content:)` 在 Meson 1.12 不存在，`output_format:'json'` 只接受扁平 dict） |
 | 失败策略 | `sdl_backend=enabled` 且未解析 → `error()`；`auto` 未解析 → 警告并回落 raylib；`disabled` → 不查找、不下载 |
 | 忽略规则 | `.gitignore` 增加 `/subprojects/SDL3/`（wrap 检出是未跟踪工作树） |
+| pin 形式 | wrap 的 `revision` 是**完整 40 位 commit**（`829a65d7…`，对应 `release-3.4.18`），tag 只写在注释里：tag 可移动，不满足不可变来源 |
+| 检出校验 | `tools/sdk_bundle.py` 校验：revision 必须是 40 位 commit、`HEAD == pin`（否则失败）、逐依赖 `git status --porcelain --untracked-files=all` 为空（`--allow-dirty` 时记录 `dirty: true`）。Meson 自己写入的 `.meson-subproject-wrap-hash.txt` 不算本地修改 |
+| 报告字段 | `deps.json` 区分来源：vendored 记录 `pin/pin_version/revision/path/resolved_by`；system 的 `pin/revision/pin_version` 为 `null`（不能让人以为系统库是项目固定源码） |
 
 **接入时发现并解决的链接冲突（重要）**：静态 SDL3 自带 Wayland 协议生成代码
 （`wayland-protocols` → `fractional-scale-v1-protocol.c`），而 raylib 内置的 GLFW 也自带同一份，
@@ -124,6 +127,23 @@ foo-bar-1.0 = foo_bar_dep
 manifest 的 `dependencies` 含 SDL3 且 revision 为 40 位、tar 内含
 `subprojects/SDL3/CMakeLists.txt`。fixture 超时 600 → 900 s，实测 250 s。
 
+**SDK 交付闭环（新增 fixture）**：`tests/sdk_vendored_consumer_test.py`（`integration` 套件，
+`is_parallel: false`，实测 193 s）走完整链路：打包 SDK → 解压到全新目录 → 断网
+（`--wrap-mode=nodownload`）→ 消费者以 `sdl_backend=enabled` + `sdl3_source=vendored` 配置、编译、
+链接并运行 → 断言默认后端为 `sdl3`、子项目 `deps.json` 为 vendored/shared/cmake.subproject 且
+revision 与 SDK manifest 一致、`ldd` 解析到的 `libSDL3` 位于**消费者构建树**。
+资源 fixture 继续用 `sdl_backend=disabled` 保持时长可控；两者职责分开。
+
+**CI（`.github/workflows/ci.yml`）**：`build` 与 `sanitize` 增加 wrap 缓存
+（key = `subprojects/SDL3.wrap` 哈希）+ `meson subprojects download` 预热，随后用
+`--wrap-mode=nodownload` 配置；新增三条显式路径任务：`sdl-system`（把固定源码装进 prefix 后走
+`system`，断言 `pin=null`）、`sdl-disabled`（不预热，断言 `subprojects/SDL3` 不存在且报告 `disabled`）、
+`sanitize-vendored-lld`（实验性、非阻断：vendored + ASan + lld，用于收集 lld 是否能绕过 DWARF bug 的证据）。
+CI 固定的 Meson 是 **1.7.2**；本地已用 1.7.2 在 vendored + `--wrap-mode=nodownload` 下完成配置、
+构建并跑通 `sdl_visual_tests`（155 断言）✓；`sdl-system` 任务的关键步骤也在本地验证过：
+把固定源码用 CMake 装进 prefix（99 个文件）后以 `-Dsdl3_source=system` 配置，报告为
+`source=system / resolved_by=pkg-config / version=3.4.18 / pin=null` ✓。
+
 **验证矩阵（本次实跑）**：
 
 | 场景 | 结果 |
@@ -142,9 +162,11 @@ ASan 的职责是检查**本项目**代码，因此该构建目录显式 `-Dsdl3
 `buildDir-asan` 81/81 通过；默认构建与 no-RTTI 仍走 vendored 共享 SDL3。CI 若具备 lld，
 应改为 vendored + lld 以同时覆盖第三方构建。
 
-**仍未做**：CI 的显式 SDL 任务与 Meson 1.7.2 复跑、`tools/header_surface.toml` 与
-`check_headers.py` 门禁（[SDK 表面](sdk_surface.md) §4）、以及"把两个后端拆成独立库"的重构
-（拆库后静态 SDL3 与 raylib 的符号冲突会自然消失，那时可重新评估链接方式）。
+**仍未做**：共享 SDL3 在**安装/分发**场景的 rpath 与 DSO 打包（当前只验证了构建树内运行；
+`SDL_INSTALL=OFF`、安装到 prefix、打包进应用分发目录三种情况都还没验证）、
+`tools/header_surface.toml` 与 `check_headers.py` 门禁（[SDK 表面](sdk_surface.md) §4）、
+其余依赖逐项迁移，以及"把两个后端拆成独立库"的重构（拆库后静态 SDL3 与 raylib 的符号冲突
+会自然消失，那时可重新评估链接方式）。
 
 ### 2.3 WrapDB 不是 wrap 机制本身
 

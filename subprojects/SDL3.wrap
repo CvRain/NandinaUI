@@ -4,5 +4,6 @@
 [wrap-git]
 directory = SDL3
 url = https://github.com/libsdl-org/SDL.git
-revision = release-3.4.18
+# release-3.4.18（tag 以便阅读；pin 必须是不可变的完整 commit）
+revision = 829a65d769d935c4852f8159e964312c0957260a
 method = cmake
