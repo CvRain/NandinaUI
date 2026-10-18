@@ -44,16 +44,42 @@
 而把 `recording_device.hpp` 提升为 public 会让一个取证格式变成长期负担。两者的正确等级不同，
 不能"统一处理"。
 
-## 4. 两类门禁
+## 4. 三类门禁（**已实施 2026-10-18**）
 
 | 门禁 | 检查什么 | 失败表现 |
 | --- | --- | --- |
-| 分类完整 | 仓库内每个框架头都在清单里有等级 | 新头未分类 → 失败（不是警告） |
-| 独立可包含 | 每个 public/experimental 头能被单独编译的 TU 包含 | 缺依赖/隐式前置 → 失败 |
-| 不越界 | public/experimental 头不引用 internal 头；internal 头不出现在公开签名 | 依赖方向倒置 → 失败 |
+| 分类完整 | `nandina/**/*.hpp` 每个都在清单里恰好一条 | 新头未分类 / 陈旧条目 / 非法等级 → 失败（不是警告） |
+| 不越界 | public/experimental 头不 `#include` internal 头（相对与 `<nandina/...>` 两种写法都解析） | 依赖方向倒置 → 失败 |
+| 独立可包含 | 每个 public/experimental 头用一个只包含它的 TU 做 `-fsyntax-only` | 缺依赖/隐式前置 → 失败 |
 
-清单落点建议 `tools/header_surface.toml`（分类 + 一句话理由），门禁脚本建议
-`tools/check_headers.py`，与现有 `check_format.py` / `check_test_suites.py` 同一层。
+落点：清单 `tools/header_surface.toml`（182 条，含 `level`、可选 `reason`、可选 `requires`），
+脚本 `tools/check_headers.py`，注册为 `header-surface`（`integration`，实测约 16 s，8 路并行）。
+用法：
+
+```bash
+tools/check_headers.py --source . --write                 # 新头补默认等级，陈旧条目清理
+tools/check_headers.py --source . --build-dir buildDir    # 三条门禁全跑（CI 走这条）
+tools/check_headers.py --source . --skip-compile          # 无构建目录时只跑前两条
+```
+
+实现要点：
+
+- **编译 flag 不手写第二份**：从 `compile_commands.json` 汇总 `-I`/`-isystem`/`-D`/`-std=`，
+  所以 spdlog/raylib/SDL3 等 include 路径自动正确。
+- **可选功能用 `requires` 表达**：例如 `physics2d/physics_world2d.hpp` 标 `requires = "physics2d"`，
+  该选项关闭时跳过独立可包含检查并打印跳过原因，而不是硬编码依赖的 include 路径。
+- **故障注入已验证**：新增未分类头 → 失败；`button.hpp` 包含 `internal/focus_scope.hpp` → 失败并指出
+  两端；破坏 `geometry.hpp` → 独立可包含失败（并级联到包含它的头）。
+- **"internal 头不出现在公开签名里"仍靠评审**：脚本只能检查 include 方向，看不到类型出现在签名中；
+  这一条写在这里，避免被误认为已自动化。
+
+### 4.1 首次运行发现的真实违规与处理
+
+`popover.hpp` / `hover_card.hpp` / `dropdown_menu.hpp` 在公开签名里使用
+`internal::OverlayPlacement` / `internal::OverlayAlignment`，而定义它们的是
+`nandina/widget/internal/anchored_positioner.hpp`（原分类 internal）。处理：**把该头提升为
+experimental**，理由与后续动作写进清单——两个枚举是公开 widget API 的一部分，但文件仍在
+`internal/` 目录下，后续应移动到 `nandina/widget/overlay_placement.hpp` 再删除这条例外。
 
 **清单描述支持范围，`sdk_bundle.py` 描述构建闭包。** 将来提供安装式 SDK 时，由这份清单生成
 公共 include 树，而不是再维护第二份"安装头列表"。
@@ -73,8 +99,10 @@
 - 迁移说明只表达一件事：原来由自定义平台 override 提供的解码器，改为应用服务注入；
 - 库内实现、测试替身、下游样例一次改完，要求重新编译。
 
-## 6. 未实施前不要声明的事
+## 6. 不要越界声明的事
 
-- 不要声称"SDK 已有公共头门禁"——门禁与清单都还不存在；
+- 门禁已实现，但它**不检查签名**：internal 类型出现在公开签名里仍要靠评审（见 §4）；
 - 不要把"文件在 SDK 里"当成"支持范围已定义"；
-- 不要用本清单代替构建闭包校验（SDK 仍必须包含构建所需的 internal 头）。
+- 不要用本清单代替构建闭包校验（SDK 仍必须包含构建所需的 internal 头）；
+- 提升等级是**决策**，不是 `--write` 的副作用：`--write` 只补默认值（`detail/`、`internal/` 归
+  internal，其余 experimental），理由与例外必须人来写。

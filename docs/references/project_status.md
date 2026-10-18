@@ -30,7 +30,7 @@
 | D6 作者 DSL 与内容测量 | 方向已接受；Label 能力、绑定覆盖、测量详细契约待审阅 | 未实施；[D6](authoring_dsl_and_content_measurement.md)，测量先于 Section/语法糖 |
 | D7 渲染质量与图片 | 混合修复 → SDF 高质量路径；共享解码；分层处理圆角裁剪 | 混合修复与软件视觉测试已落地，其余批次未实施；[D7](reference_draft.md#d7-渲染质量与后端视觉一致性)，每批定形接口后验收 |
 | D8 键码与输入事件 | 框架拥有键身份；物理位置、逻辑含义与提交文本分开 | 未实施；[D8](reference_draft.md#d8-键码与输入码空间)，不再按纯机械 rename 估算 |
-| 依赖工程 | wrap-git；默认 vendored，system/auto 显式选择；功能与来源开关分离 | **SDL3 来源与构建侧已落地**（§2.5）：三态解析、`deps.json` 报告、pin/dirty 校验、SDK 依赖源码收集与 vendored 消费 fixture、CI 三条显式路径。**仍未完成**：其余依赖逐项迁移、OS 包层面的 DSO 打包、头文件分类门禁；共享库的便携目录分发已实测并有 `portable-bundle` 守卫（[§2.6](dependency_policy.md)）；[依赖策略](dependency_policy.md) |
+| 依赖工程 | wrap-git；默认 vendored，system/auto 显式选择；功能与来源开关分离 | **SDL3 来源与构建侧已落地**（§2.5）：三态解析、`deps.json` 报告、pin/dirty 校验、SDK 依赖源码收集与 vendored 消费 fixture、CI 三条显式路径。**仍未完成**：其余依赖逐项迁移、OS 包层面的 DSO 打包、内部头出现在公开签名的评审项；**头文件分类门禁已落地**（`header-surface`：182 条分类、包含方向、独立可包含，故障注入已验证，见 [SDK 表面](sdk_surface.md) §4）；共享库便携目录分发已实测并有 `portable-bundle` 守卫（[§2.6](dependency_policy.md)）；[依赖策略](dependency_policy.md) |
 
 ## 推进顺序与批次关口
 

@@ -70,6 +70,9 @@ python3 tools/compare_render_traces.py /tmp/raylib.txt /tmp/sdl.txt
 
 # 3) deps.json 实现后再执行：换过依赖时核对实际版本、来源和路径
 cat buildDir/deps.json        # 目标形态，见 dependency_policy.md §6
+
+# 4) 新增/移动框架头文件时：分类完整性 + 包含方向 + 独立可包含
+python3 tools/check_headers.py --source . --build-dir buildDir
 ```
 
 ### 四条硬规矩（都付过学费）

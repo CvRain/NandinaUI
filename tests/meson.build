@@ -656,6 +656,19 @@ test(
     timeout: 900,
     suite: 'integration',
 )
+# 头文件表面门禁（docs/references/sdk_surface.md §4）：分类完整性、包含方向、独立可包含。
+# 独立可包含检查会编译每个 public/experimental 头（182 个，约 16 s），可选功能关闭时按配置跳过。
+header_surface_gate = find_program('../tools/check_headers.py')
+test(
+    'header-surface',
+    header_surface_gate,
+    args: [
+        '--source', meson.project_source_root(),
+        '--build-dir', meson.project_build_root(),
+    ],
+    timeout: 300,
+    suite: 'integration',
+)
 # 共享依赖的运行时分发：vendored SDL3 是共享库，且 CMake 子项目没有 install 规则，
 # 所以"只装可执行文件"在运行期会找不到 libSDL3_shared.so.0。这个测试同时守卫反例与
 # "bin/ + lib/ + $ORIGIN/../lib" 便携布局（无显示器，读 ldd/readelf）。

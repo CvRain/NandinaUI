@@ -1,0 +1,739 @@
+# 框架头文件的公共表面分类（docs/references/sdk_surface.md §4）。
+#
+# 等级：public（推荐使用）/ experimental（允许使用，可能调整）/ internal（仅构建与内部实现）。
+# 新增头文件必须在这里登记：`tools/check_headers.py --write` 会补一条 experimental/internal 默认项，
+# 分类本身仍需人确认。删掉的头文件要从清单里移除，否则门禁失败。
+
+schema = 1
+
+[[headers]]
+path = "nandina/app/application_config.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/app/async_scope.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/app/detail/linux_clipboard.hpp"
+level = "internal"
+
+[[headers]]
+path = "nandina/app/detail/raylib_platform_window.hpp"
+level = "internal"
+
+[[headers]]
+path = "nandina/app/detail/sdl_platform_window.hpp"
+level = "internal"
+
+[[headers]]
+path = "nandina/app/nan_application.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/app/nan_page.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/app/nan_router.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/app/nan_store.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/app/nan_window.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/app/platform_window.hpp"
+level = "experimental"
+reason = "自定义宿主与平台适配器的注入点；D8 会调整输入模型"
+
+[[headers]]
+path = "nandina/app/root_view.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/app/router_outlet.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/app/shell_context.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/app/ui_dispatcher.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/app/viewport_scaling.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/app/window_config.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/app/window_metrics.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/foundation/contrast.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/foundation/geometry.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/foundation/json.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/foundation/layout_constraints.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/foundation/motion/animated_property.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/foundation/motion/behavior.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/foundation/motion/easing.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/foundation/motion/keyframes.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/foundation/motion/spec.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/foundation/motion/spring.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/foundation/motion/tween.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/foundation/nan_logger.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/foundation/nandina_color.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/foundation/nandina_color_space.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/foundation/transform2d.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/foundation/utf8.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/physics2d/physics_world2d.hpp"
+level = "experimental"
+requires = "physics2d"
+
+[[headers]]
+path = "nandina/reactive/batch.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/reactive/computed.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/reactive/effect.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/reactive/event.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/reactive/graph.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/reactive/property.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/reactive/reactive.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/reactive/scope.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/reactive/signal.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/render/backends/raylib_device.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/render/backends/sdf_primitive_geometry.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/render/backends/sdl_device.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/render/clip_stack.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/render/draw_context.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/render/image_decoder.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/render/recording_device.hpp"
+level = "internal"
+reason = "取证格式与成本不是对外契约；外部可用公共 IRenderDevice 自造装饰器"
+
+[[headers]]
+path = "nandina/render/render_device.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/render/texture_cache.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/resource/backends/builtin_backend.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/resource/backends/directory_backend.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/resource/backends/memory_backend.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/resource/backends/sqlite_backend.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/resource/build_location.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/resource/file_resource_stream.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/resource/platform_resource_locator.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/resource/resource.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/resource/resource_backend.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/resource/resource_manager.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/resource/resource_manifest.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/resource/resource_scanner.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/resource/resource_stream.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/resource/resource_uri.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/scene/anchor_canvas.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/scene/anchors.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/scene/animation_clip.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/scene/animation_group.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/scene/animation_host.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/scene/canvas_layer.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/scene/clipboard.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/scene/control.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/scene/frame_scheduler.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/scene/input_event.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/scene/node.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/scene/node2d.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/scene/node_presentation.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/scene/node_ref.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/scene/overlay_host.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/scene/property_endpoint.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/scene/scene_tree.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/scene/visual_property.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/semantics/semantics.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/text/font_face.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/text/font_family.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/text/font_loader.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/text/font_pipeline.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/text/glyph_atlas.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/text/glyph_run_renderer.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/text/harfbuzz_text_backend.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/text/line_break.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/text/system_fonts.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/text/text_layout.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/text/text_layout_backend.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/theme/appearance.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/theme/builtin_themes.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/theme/design_system.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/theme/font_request.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/theme/motion.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/theme/nan_style.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/theme/style_context.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/theme/style_document.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/theme/theme.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/theme/theme_manager.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/theme/tokens.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/theme/visual_state.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/alert.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/alert_dialog.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/animation_authoring.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/authoring.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/avatar.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/badge.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/bindable_rect.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/breadcrumb.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/build_context.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/builtin_component_traits.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/button.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/button_group.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/card.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/checkbox.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/chip.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/combobox.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/command_palette.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/component_traits.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/context_menu.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/controls.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/declarative.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/dialog.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/divider.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/drag_controller.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/dropdown_menu.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/empty_state.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/gesture_area.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/grid.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/hover_card.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/image.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/internal/alert_dismiss_button.hpp"
+level = "internal"
+
+[[headers]]
+path = "nandina/widget/internal/anchored_positioner.hpp"
+level = "experimental"
+reason = "OverlayPlacement/OverlayAlignment 出现在 popover/hover_card/dropdown_menu 的公开签名里；仍在 internal/ 目录下，后续应移到 nandina/widget/overlay_placement.hpp"
+
+[[headers]]
+path = "nandina/widget/internal/breadcrumb_link.hpp"
+level = "internal"
+
+[[headers]]
+path = "nandina/widget/internal/dialog_panel.hpp"
+level = "internal"
+
+[[headers]]
+path = "nandina/widget/internal/dismiss_layer.hpp"
+level = "internal"
+
+[[headers]]
+path = "nandina/widget/internal/focus_scope.hpp"
+level = "internal"
+
+[[headers]]
+path = "nandina/widget/internal/text_style_bridge.hpp"
+level = "internal"
+
+[[headers]]
+path = "nandina/widget/key_codes.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/label.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/layout.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/list_view.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/menu_item.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/pagination.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/pointer_area.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/popover.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/primitives/arc_painter.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/primitives/box_painter.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/primitives/box_presentation.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/primitives/editable_text.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/primitives/focus_ring_painter.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/primitives/pressable.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/primitives/ripple_painter.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/primitives/shadow_painter.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/primitives/text.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/primitives/text_presentation.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/progress_bar.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/radio_button.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/radio_group.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/reactive_control.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/roving_focus.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/scroll_view.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/select.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/skeleton.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/slider.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/spinner.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/switch.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/tabs.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/text_area.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/text_field.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/toggle.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/toggle_group.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/tooltip.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/visual_property.hpp"
+level = "experimental"
