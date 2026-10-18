@@ -656,6 +656,17 @@ test(
     timeout: 900,
     suite: 'integration',
 )
+# 共享依赖的运行时分发：vendored SDL3 是共享库，且 CMake 子项目没有 install 规则，
+# 所以"只装可执行文件"在运行期会找不到 libSDL3_shared.so.0。这个测试同时守卫反例与
+# "bin/ + lib/ + $ORIGIN/../lib" 便携布局（无显示器，读 ldd/readelf）。
+portable_bundle_test = find_program('portable_bundle_test.py')
+test(
+    'portable-bundle',
+    portable_bundle_test,
+    args: [meson.project_build_root()],
+    timeout: 120,
+    suite: 'integration',
+)
 # SDK 下游 vendored SDL 消费：解压到全新目录、断网配置/编译/链接/运行。
 # 与资源 fixture 分开，因为后者用 sdl_backend=disabled 控制时长，不覆盖 SDL 交付路径；
 # 这里跑一次完整 SDK 打包 + 带 SDL3 的下游构建（实测见 docs/references/dependency_policy.md §2.5）。

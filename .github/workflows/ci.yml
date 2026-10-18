@@ -60,7 +60,7 @@ jobs:
           apt-get update
           DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
             ca-certificates git python3 python3-pip ninja-build pkg-config cmake zstd \
-            zlib1g-dev ${{ matrix.extra_packages }} \
+            patchelf zlib1g-dev ${{ matrix.extra_packages }} \
             libssl-dev libx11-dev libxrandr-dev libxinerama-dev \
             libxcursor-dev libxi-dev libgl1-mesa-dev libglu1-mesa-dev
           python3 -m pip install --break-system-packages --no-cache-dir "meson==${MESON_VERSION}"

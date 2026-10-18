@@ -162,8 +162,30 @@ ASan 的职责是检查**本项目**代码，因此该构建目录显式 `-Dsdl3
 `buildDir-asan` 81/81 通过；默认构建与 no-RTTI 仍走 vendored 共享 SDL3。CI 若具备 lld，
 应改为 vendored + lld 以同时覆盖第三方构建。
 
-**仍未做**：共享 SDL3 在**安装/分发**场景的 rpath 与 DSO 打包（当前只验证了构建树内运行；
-`SDL_INSTALL=OFF`、安装到 prefix、打包进应用分发目录三种情况都还没验证）、
+### 2.6 共享库的运行时分发（2026-10-18 实测）
+
+vendored SDL3 是共享库，而 **CMake 子项目没有 Meson install 规则**：
+`meson introspect buildDir --installed` 共 120 条，其中 SDL3 条目 **0 条**；本仓库当前也
+不安装任何应用二进制（`bin/` 条目 0）。因此"只装可执行文件"的形态在运行期必然失败。
+
+| 场景 | 结果 |
+| --- | --- |
+| 只拷贝 `nandina_showcase` 到新目录运行 | **失败**：`error while loading shared libraries: libSDL3_shared.so.0: cannot open shared object file` |
+| `app/bin` + `app/lib/libSDL3_shared.so*` + RUNPATH `$ORIGIN/../lib` | **成功**：`ldd` 解析到打包目录内的 DSO，应用以 `renderer=gpu` 启动 |
+| `meson install --destdir` | 成功，但安装内容不含 SDL3（也没有应用二进制） |
+
+**策略**：
+
+1. 应用以"便携目录"分发时，必须同时带上 `libSDL3_shared.so.0`（soname）与真实文件，并给可执行
+   文件设置 `$ORIGIN/../lib`（或等价）RUNPATH；`LD_LIBRARY_PATH` 不是解决方案。
+2. 以系统包形式分发时，把 SDL3 声明为**运行期依赖**（`-Dsdl3_source=system` 与发行版包一致），
+   不要把项目固定的源码版本与系统包混着用。
+3. 框架自身继续只分发**源码 SDK**；一旦开始分发应用二进制或 OS 包，必须同时把 DSO 纳入打包，
+   并为此新增验收（当前 `portable-bundle` 只守卫 rpath 与打包目录解析）。
+4. **守卫**：`tests/portable_bundle_test.py`（`portable-bundle`，integration，无显示器）同时断言
+   反例（孤立二进制解析不到 soname）与正例（便携目录解析到 `lib/` 内）。
+
+**仍未做**：OS 包/安装器层面的 DSO 打包（当前没有应用安装路径可验）、
 `tools/header_surface.toml` 与 `check_headers.py` 门禁（[SDK 表面](sdk_surface.md) §4）、
 其余依赖逐项迁移，以及"把两个后端拆成独立库"的重构（拆库后静态 SDL3 与 raylib 的符号冲突
 会自然消失，那时可重新评估链接方式）。

@@ -69,6 +69,8 @@ raylib 的 SDF 用一个 `uMode` 管 6 种图元（fill / outline / segment / cl
   （[依赖策略](dependency_policy.md) §7）。普通消费者不需要安装 shadercross。
 - 嵌入方式（编译进二进制 vs 随资源包）与安装布局在批次 3 定形；**不能假设构建树路径在安装后仍可用**。
 - 共享库分发（当前 vendored SDL3 是共享库）与着色器产物是两件事，分别验证。
+  便携目录布局、RUNPATH 与"CMake 子项目不进 Meson install 计划"的实测见
+  [依赖策略 §2.6](dependency_policy.md#26-共享库的运行时分发2026-10-18-实测)。
 
 ## 6. 批次 3 的验收（不替代 D7）
 
