@@ -349,6 +349,7 @@ def main() -> int:
     source = options.source.resolve()
     output = options.output.resolve()
     revision = git(source, "rev-parse", "HEAD").decode("ascii").strip()
+    dependencies = wrap_dependencies(source, options.allow_dirty)
     dirty = bool(git(source, "status", "--porcelain=v1", "--ignore-submodules=none")) or any(
         bool(item["dirty"]) for item in dependencies
     )
@@ -356,7 +357,6 @@ def main() -> int:
     timestamp = int(timestamp_text) if timestamp_text else int(
         git(source, "show", "-s", "--format=%ct", "HEAD").decode("ascii")
     )
-    dependencies = wrap_dependencies(source, options.allow_dirty)
     paths = sorted(
         set(git_paths(source, options.allow_dirty))
         | set(dependency_paths(source, dependencies))
