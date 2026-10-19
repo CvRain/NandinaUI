@@ -67,7 +67,9 @@ def run_once(
         if stress > 0:
             environment["NANDINA_PROBE_STRESS"] = str(stress)
         if interaction:
+            # 交互注入需要 shell 里的导航按钮；探针会拒绝无 shell 的交互模式。
             environment["NANDINA_PROBE_INTERACTION"] = "1"
+            environment["NANDINA_PROBE_SHELL"] = "1"
         if overlay:
             environment["NANDINA_PROBE_OVERLAY"] = "1"
         result = subprocess.run(

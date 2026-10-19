@@ -371,6 +371,19 @@ SDF（后者仅 GPU），覆盖 1/1.25/1.5 render scale、letterbox 开关及 vi
   `--stress 300` 时 300 个不同参数块超过 256 容量会出现 LRU 抖动（每帧全 miss），
   这正是压力场景要观察的，报告会如实给出。
 
+### 11.1 压力与交互场景（2026-10-19）
+
+- **缓存压力**：`--stress 300`（页面之后画 300 个不同参数块的圆角矩形，超过 256 容量）：
+  label 的 p50 从 2.505 升到 **3.386 ms**（+35%），每帧 321 次绑定、**321 miss、0 hit**、
+  缓存停在 256 —— 典型的 LRU 抖动。这正是"超容量流量"要暴露的成本，也是容量仍需按页面
+  校准的原因。原始数据 `backend-perf-stress-2026-10-19.json`。
+- **交互**：探针的 `--interaction` 是**一次**导航按钮 press（随后路由切到 anchors）+ hover
+  采样，不是规格要求的"按钮 press/release 周期 + Dialog 周期"。带 shell 时实测落在 anchors
+  （p50 0.226 ms、16 binds/帧），**不能**当作 label 交互成本。原始数据
+  `backend-perf-interaction-2026-10-19.json`。
+- **仍未做**：周期性 press/release 与 Dialog 开关周期的交互场景、交互 p95/p99 门禁，
+  以及让 harness 记录路由切换后的**实际页面**（当前报告仍标请求的 page）。
+
 剩余验收：**golden 审批**（候选层见 §12，维护者批准前不作基线）、
 DXIL/MSL 目标设备加载（Windows D3D12 / macOS Metal）、直线 AA 的独立面积积分、
 交互/压力场景的正式阈值。
