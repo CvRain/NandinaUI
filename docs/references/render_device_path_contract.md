@@ -347,31 +347,31 @@ SDF（后者仅 GPU），覆盖 1/1.25/1.5 render scale、letterbox 开关及 vi
 圆角矩形，用于缓存压力）、`resources:` 汇总（`ru_maxrss` 与设备持有的 RGBA 纹理字节）。
 `SdlDeviceStats::texture_bytes` 只统计本设备创建的贴图，不是 GPU 总内存。
 
-结果（RADV RX 6750 GRE、本机 debug 构建、2026-10-19，
+结果（RADV RX 6750 GRE、本机 debug 构建、**隐藏窗口固定 1200×800**、2026-10-19，
 原始数据 `probe/cross_platform/results/backend-perf-2026-10-19.json`）：
 
 | page | 模式 | p50 (ms) | p95 (ms) | binds/帧 | misses/帧 | hits/帧 | cache 条目 | max RSS (KB) | 纹理字节 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| home | SDF | 0.602 | 0.626 | 0 | 0 | 0 | 0 | 63960 | 786432 |
-| home | CPU | 0.587 | 0.608 | 0 | 0 | 0 | 0 | 63708 | 786432 |
-| label | SDF | 2.550 | 2.615 | 21 | 0 | 21 | 42 | 82980 | 2097152 |
-| label | CPU | 2.614 | 2.677 | 0 | 0 | 0 | 0 | 82924 | 2097152 |
-| anchors | SDF | 0.111 | 0.136 | 7 | 0 | 7 | 14 | 62956 | 524288 |
-| anchors | CPU | 0.157 | 0.190 | 0 | 0 | 0 | 0 | 62772 | 524288 |
+| home | SDF | 0.596 | 0.643 | 0 | 0 | 0 | 0 | 63844 | 786432 |
+| home | CPU | 0.580 | 0.603 | 0 | 0 | 0 | 0 | 63280 | 786432 |
+| label | SDF | 2.505 | 2.599 | 21 | 0 | 21 | 21 | 83180 | 2097152 |
+| label | CPU | 2.559 | 2.657 | 0 | 0 | 0 | 0 | 83480 | 2097152 |
+| anchors | SDF | 0.106 | 0.116 | 7 | 0 | 7 | 7 | 62956 | 524288 |
+| anchors | CPU | 0.152 | 0.173 | 0 | 0 | 0 | 0 | 63312 | 524288 |
 
 读法：
 
-- **label**：SDF 比 CPU 快约 2.4%，每帧 21 次绑定、42 个缓存条目、稳定后 **0 miss/帧**
-  （全部命中，跨帧保留生效）；p95 只比 p50 高约 2.5%。
-- **anchors**：SDF 快约 29%（CPU 扇形细分被解析图元替代），7 次绑定/帧。
-- **home**：两模式都在 0.6 ms 量级，差异约 2.6%（在噪声内）；该页 **0 次 SDF 绑定** ——
+- **label**：SDF 比 CPU 快约 2.1%，每帧 21 次绑定、21 个缓存条目、稳定后 **0 miss/帧**
+  （全部命中，跨帧保留生效）；p95 只比 p50 高约 3.8%。
+- **anchors**：SDF 快约 30%（CPU 扇形细分被解析图元替代），7 次绑定/帧。
+- **home**：两模式都在 0.6 ms 量级，差异约 2.8%（在噪声内）；该页 **0 次 SDF 绑定** ——
   它没有走矩形/圆角/圆图元，主要是文字与纹理，因此两种模式几乎一样。
-- RSS 与纹理字节两模式一致（同一图集/窗口），说明差异来自绘制路径而不是资源。
+- RSS 与纹理字节两模式一致（同一图集/窗口），差异来自绘制路径而不是资源。
 - 这不是基线：单机、debug 构建、采样期间可能有并行负载；阈值未启用。用
-  `--stress 300` 时 300 个不同参数块超过 256 容量会出现 LRU 抖动（每帧全 miss），这正是
-  压力场景要观察的，报告会如实给出。
+  `--stress 300` 时 300 个不同参数块超过 256 容量会出现 LRU 抖动（每帧全 miss），
+  这正是压力场景要观察的，报告会如实给出。
 
-剩余验收：**页面 golden**（候选图 + manifest + 差异图 + 比较器，维护者批准前不作基线）、
+剩余验收：**golden 审批**（候选层见 §12，维护者批准前不作基线）、
 DXIL/MSL 目标设备加载（Windows D3D12 / macOS Metal）、直线 AA 的独立面积积分、
 交互/压力场景的正式阈值。
 
@@ -387,3 +387,30 @@ AA 同时使用直线解析预期与独立的 64×64 面积积分，按边缘像
 页面 golden 先交付候选图、采样 manifest、差异图与比较器；维护者批准之前不作为已接受基线。
 DXIL/MSL 本轮尝试生成并接入按设备格式选择；生成/静态检查与 Windows D3D12、macOS Metal
 目标设备验收分开，当前 Linux 不能声称后二者实机通过。
+
+## 12. 页面 golden 候选层（2026-10-19）
+
+`tests/golden/backend/manifest.toml` 记录 6 条候选（home/label/anchors × SDF/CPU），
+图像在 `candidates/*.png`（1200×800，640×480 缩略亦可，本目录总计约 0.4 MB）。manifest 字段：
+`page`、`backend`、`image`、`width`、`height`、`sha256`、`status`、`captured`。
+
+工作流：
+
+```bash
+# 采集/刷新候选（approved 条目默认拒绝覆盖，需 --force）
+python3 tools/capture_backend_golden.py --pages home,label,anchors --modes sdf,cpu
+# 与候选/基线比较（candidate 只报告；approved 超阈值退出 1）
+python3 tools/compare_backend_golden.py --page label --backend sdf \
+  --diff /tmp/diff.png --json /tmp/stats.json
+```
+
+`golden-manifest`（integration）只验证清单自身：文件存在、哈希/尺寸匹配、状态合法、无重复。
+像素比较是手动工具，**不随 CI 运行**；维护者审阅候选后把 `status` 改成 `approved`，比较器才把它
+当基线判失败。
+
+同机 cross-backend 页面差异（SDF vs CPU，逐通道 ±3 以外）：home **0**（该页无 SDF 图元）、
+label **0.0111%**（最大 9）、anchors **0.0244%**（最大 55，AA 边缘）。这些数字说明当前生产
+覆盖内两条路径的页面差异局限在边缘像素，不替代 golden 审批。
+
+边界：候选图来自单机/单构建，未批准；home 的 SDF/CPU 图完全相同；比较器当前是逐像素阈值 +
+差异图，没有做感知差异或分区容差。

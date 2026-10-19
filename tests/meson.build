@@ -705,6 +705,15 @@ test(
     timeout: 900,
     suite: 'integration',
 )
+# 页面 golden 清单完整性（候选层）：文件存在、哈希/尺寸匹配、状态合法。
+# 像素比较是手动工具（tools/compare_backend_golden.py），approved 条目才判失败。
+test(
+    'golden-manifest',
+    find_program('python3'),
+    args: [files('golden_manifest_test.py')],
+    suite: 'integration',
+)
+
 # 头文件表面门禁（docs/references/sdk_surface.md §4）：分类完整性、包含方向、独立可包含。
 # 独立可包含检查会编译每个 public/experimental 头（182 个，约 16 s），可选功能关闭时按配置跳过。
 header_surface_gate = find_program('../tools/check_headers.py')

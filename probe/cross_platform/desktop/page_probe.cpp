@@ -117,11 +117,13 @@ int main() {
                 std::string("SDL_CreateGPUDevice(vulkan, SPIR-V): ") + SDL_GetError()
             );
         }
+        // 隐藏窗口：可见窗口会被合成器平铺成屏幕相关尺寸（实测 1269x1383），
+        // 那样页面像素与性能采样都不可复现。探针只读回渲染结果，不需要显示。
         window = SDL_CreateWindow(
             "Nandina SDL page probe",
             1200,
             800,
-            SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY
+            SDL_WINDOW_HIDDEN | SDL_WINDOW_HIGH_PIXEL_DENSITY
         );
         if (window == nullptr) {
             throw std::runtime_error(std::string("SDL_CreateWindow: ") + SDL_GetError());
