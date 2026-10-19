@@ -7,6 +7,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
+#include <cstring>
 #include <iostream>
 #include <memory>
 #include <span>
@@ -443,6 +444,41 @@ namespace
         std::cout << "reused state after native texture passed\n";
     }
 
+    // 不可变参数 state：同一帧内交错使用两个不同参数块，像素必须各自正确。
+    // 这条检查是"参数提交策略"的像素侧证据：缓存/绑定不能改变图元的外观。
+    void verify_cached_states(Context& context) {
+        require(SDL_SetRenderTarget(context.renderer, context.target), "cached target");
+        require(SDL_SetRenderScale(context.renderer, 1, 1), "cached scale");
+        context.clear();
+        const auto create = [&](const Shape& shape) {
+            SDL_GPURenderStateCreateInfo info {};
+            info.fragment_shader = context.shader;
+            auto* created = SDL_CreateGPURenderState(context.renderer, &info);
+            require(created != nullptr, "create cached state");
+            const auto parameters = parameters_for(shape, 1);
+            require(
+                SDL_SetGPURenderStateFragmentUniforms(created, 0, &parameters, sizeof(parameters)),
+                "seed cached state"
+            );
+            return created;
+        };
+        auto* first = create(FIRST);
+        auto* second = create(SECOND);
+        context.set_state(first);
+        context.quad(FIRST, 1);
+        context.set_state(second);
+        context.quad(SECOND, 1);
+        context.set_state(nullptr);
+        Surface surface(SDL_RenderReadPixels(context.renderer, nullptr), SDL_DestroySurface);
+        require(surface != nullptr, "cached state readback");
+        expect(surface.get(), 40, 50, over(BACKGROUND, FIRST.color), "cached state A fill");
+        expect(surface.get(), 170, 30, over(BACKGROUND, SECOND.color), "cached state B outline");
+        expect(surface.get(), 170, 55, BACKGROUND, "cached state B hollow center");
+        SDL_DestroyGPURenderState(first);
+        SDL_DestroyGPURenderState(second);
+        std::cout << "immutable parameter states interleaved correctly\n";
+    }
+
     auto milliseconds(Uint64 start, Uint64 end) -> double {
         return static_cast<double>(end - start) * 1e-6;
     }
@@ -452,11 +488,66 @@ namespace
         return samples[static_cast<std::size_t>(std::ceil(samples.size() * fraction)) - 1];
     }
 
+    // 生产页面的常见形态不是"每个图元都不同参数"，而是成组的相同参数（列表行、按钮组）
+    // 与少量交错。runs 模式用 8 个参数块、每块 64 次几何提交来模拟这种形态。
+    constexpr int RUNS = 8;
+    constexpr int RUN_ITERATIONS = DRAWS_PER_FRAME / RUNS;
+
+    auto block_for(int slot) -> Parameters {
+        auto shape = FIRST;
+        shape.color.a = 1;
+        shape.radius = 8.0F + static_cast<float>(slot % 4) * 2.0F;
+        shape.bounds.w = 60.0F + static_cast<float>(slot) * 4.0F;
+        return parameters_for(shape, 1);
+    }
+
+    auto same(const Parameters& left, const Parameters& right) -> bool {
+        return std::memcmp(&left, &right, sizeof(Parameters)) == 0;
+    }
+
     void benchmark(Context& context) {
         require(SDL_SetRenderTarget(context.renderer, nullptr), "benchmark window target");
         require(SDL_SetRenderScale(context.renderer, 1, 1), "benchmark scale");
-        constexpr std::array<std::string_view, 5>
-            MODES {"native", "fixed", "update", "switch", "interleaved"};
+        constexpr std::array<std::string_view, 8> MODES {
+            "native",
+            "fixed",
+            "update",
+            "switch",
+            "interleaved",
+            "dedup-runs",
+            "cached-runs",
+            "cached-alternate"
+        };
+        const auto create_parameter_state = [&](const Parameters& parameters) {
+            SDL_GPURenderStateCreateInfo info {};
+            info.fragment_shader = context.shader;
+            auto* created = SDL_CreateGPURenderState(context.renderer, &info);
+            require(created != nullptr, "create parameter state");
+            require(
+                SDL_SetGPURenderStateFragmentUniforms(created, 0, &parameters, sizeof(parameters)),
+                "seed parameter state"
+            );
+            return created;
+        };
+        constexpr int CREATION_SAMPLES = 32;
+        require(SDL_WaitForGPUIdle(context.gpu), "creation timing isolation");
+        const auto creation_begin = SDL_GetTicksNS();
+        std::array<SDL_GPURenderState*, CREATION_SAMPLES> created {};
+        for (int index = 0; index < CREATION_SAMPLES; ++index) {
+            created[static_cast<std::size_t>(index)] =
+                create_parameter_state(block_for(index % RUNS));
+        }
+        const auto creation_end = SDL_GetTicksNS();
+        for (auto* state: created) {
+            SDL_DestroyGPURenderState(state);
+        }
+        std::cout << "state creation: samples=" << CREATION_SAMPLES << " create_and_seed_us_each="
+                  << static_cast<double>(creation_end - creation_begin) / 1e3 / CREATION_SAMPLES
+                  << '\n';
+        std::array<SDL_GPURenderState*, RUNS> pool {};
+        for (int slot = 0; slot < RUNS; ++slot) {
+            pool[static_cast<std::size_t>(slot)] = create_parameter_state(block_for(slot));
+        }
         for (int repeat = 0; repeat < 5; ++repeat) {
             for (std::size_t mode_offset = 0; mode_offset < MODES.size(); ++mode_offset) {
                 const auto mode = MODES[(mode_offset + repeat) % MODES.size()];
@@ -472,14 +563,38 @@ namespace
                     shape.color.a = 1;
                     const auto begin = SDL_GetTicksNS();
                     context.clear();
-                    if (mode != "native") {
+                    if (mode == "fixed" || mode == "update" || mode == "switch"
+                        || mode == "interleaved")
+                    {
                         context.upload(parameters_for(shape, 1));
                         context.set_state(context.state);
                     }
+                    if (mode == "dedup-runs") {
+                        // 一个可变 state：只在参数块变化时上传，块内 64 次提交零上传零切换。
+                        context.set_state(context.state);
+                    }
+                    bool seeded = false;
+                    Parameters last {};
                     for (int draw = 0; draw < DRAWS_PER_FRAME; ++draw) {
                         if (mode == "update" || mode == "interleaved") {
                             shape.radius = draw % 2 == 0 ? 8.0F : 14.0F;
                             context.upload(parameters_for(shape, 1));
+                        }
+                        else if (mode == "dedup-runs") {
+                            const auto block = block_for(draw / RUN_ITERATIONS);
+                            if (!seeded || !same(block, last)) {
+                                context.upload(block);
+                                last = block;
+                                seeded = true;
+                            }
+                        }
+                        else if (mode == "cached-runs") {
+                            context.set_state(
+                                pool[static_cast<std::size_t>(draw / RUN_ITERATIONS)]
+                            );
+                        }
+                        else if (mode == "cached-alternate") {
+                            context.set_state(pool[static_cast<std::size_t>(draw % RUNS)]);
                         }
                         if (mode == "switch" || mode == "interleaved") {
                             context.set_state(context.state);
@@ -514,6 +629,9 @@ namespace
                           << " completed_p50_ms=" << percentile(total, 0.50)
                           << " completed_p95_ms=" << percentile(total, 0.95) << std::endl;
             }
+        }
+        for (auto* state: pool) {
+            SDL_DestroyGPURenderState(state);
         }
     }
 } // namespace
@@ -555,6 +673,7 @@ auto main(int argc, char** argv) -> int {
         }
         verify_budget(context);
         verify_reused_state(context);
+        verify_cached_states(context);
         if (run_benchmark) {
             benchmark(context);
         }
