@@ -15,6 +15,7 @@
 
 #include "sidebar.hpp"
 
+#include <map>
 #include <nandina/app/nan_router.hpp>
 #include <nandina/foundation/motion/spec.hpp>
 #include <nandina/foundation/nan_logger.hpp>

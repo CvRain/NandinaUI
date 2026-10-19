@@ -155,6 +155,12 @@ test(
     args: [files('../tools/shader_artifacts.py')],
     suite: 'integration',
 )
+test(
+    'shader-artifacts-negative',
+    find_program('python3'),
+    args: [files('shader_artifacts_test.py')],
+    suite: 'integration',
+)
 
 if box2d_dep.found()
     physics2d_tests = executable(

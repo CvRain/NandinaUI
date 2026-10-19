@@ -138,6 +138,7 @@ int main() {
         // （bench 的 `NANDINA_BENCH_TRACE`）逐行对比 —— 像素相同不代表图元相同。
         const auto* trace_path = std::getenv("NANDINA_PROBE_TRACE");
         auto sdl_device = std::make_unique<nandina::render::SdlRenderDevice>(*renderer);
+        const auto* sdl_diagnostics = sdl_device.get();
         auto recorder = trace_path != nullptr
             ? std::make_unique<nandina::render::RecordingDevice>(std::move(sdl_device))
             : nullptr;
@@ -307,6 +308,7 @@ int main() {
                   << ", page=" << page << '\n';
         // 能力摘要就是「这个后端与生产后端的差异清单」的可执行版本：消费者按这些查询选路。
         std::cout << "device capabilities: alpha_textures=" << device.supports_alpha_textures()
+                  << " analytic_aa=" << sdl_diagnostics->analytic_antialiasing()
                   << " rounded_rect=" << device.supports_rounded_rect()
                   << " rounded_clip=" << device.supports_rounded_clip()
                   << " soft_shadows=" << device.supports_soft_shadows() << '\n';
@@ -362,11 +364,9 @@ int main() {
 
             // 真实页面：布局 → 绘制，全部走 Nandina 自己的路径。
             //
-            // 已知偏差（记录在探测文档 §2.3.6）：这里用 `tree.draw(device)`，它内部会再开一次
-            // begin/end_frame，所以探测每帧有**两对**帧边界与两次 clear，而真实宿主
-            // （`NanWindow::tick`）是宿主开边界 + `tree.render(ctx)` 遍历，只有一对。
-            // 试图改成同样的形式会让这个独立探测崩溃（`render(ctx)` 需要宿主侧完整的
-            // viewport 上下文），所以保留现状并把差异写清楚 —— 逐图元对照只差这一次 clear。
+            // 与真实宿主同构：宿主开帧 + `tree.render(ctx)` 遍历 + 宿主关帧，每帧一对帧边界、
+            // 一次 clear。此前用 `tree.draw(device)` 会再开一次 begin/end 并重复 clear，
+            // 逐图元对照因此多出一次清屏（记录在探测文档 §2.3.6）。
             device.begin_frame();
             // 宿主清屏色：与 raylib 窗口的默认清屏色保持一致（白），否则跨后端对照会把
             // 「宿主选择」误读成「后端差异」。页面自己只画卡片/文本，最外层背景由宿主决定 ——
@@ -432,7 +432,8 @@ int main() {
             if (overlay_enabled && frame == 1) {
                 dialog->open();
             }
-            tree.draw(device);
+            nandina::render::DrawContext draw_context {device};
+            tree.render(draw_context);
             device.end_frame();
             const auto draw_ended = std::chrono::steady_clock::now();
             if (frame >= 5) {
@@ -492,7 +493,7 @@ int main() {
                       << interaction.radius_after << " (shell gain = +2)\n";
         }
 
-        const auto& stats = sdl_device->stats();
+        const auto& stats = sdl_diagnostics->stats();
         std::cout << "device stats: frames=" << stats.frames << " rects=" << stats.rects
                   << " outlines=" << stats.rect_outlines << " rounded=" << stats.rounded_rects
                   << " rounded_outlines=" << stats.rounded_outlines << " circles=" << stats.circles

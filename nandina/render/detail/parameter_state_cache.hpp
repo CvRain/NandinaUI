@@ -55,7 +55,24 @@ namespace nandina::render::detail
                 return {.handle = found->second->second, .created = false};
             }
             ++misses_;
-            if (entries_.size() >= capacity_) {
+            auto handle = create_(key);
+            try {
+                entries_.emplace_front(key, handle);
+                try {
+                    index_.emplace(key, entries_.begin());
+                }
+                catch (...) {
+                    entries_.pop_front();
+                    throw;
+                }
+            }
+            catch (...) {
+                if (destroy_) {
+                    destroy_(handle);
+                }
+                throw;
+            }
+            if (entries_.size() > capacity_) {
                 const auto& oldest = entries_.back();
                 if (destroy_) {
                     destroy_(oldest.second);
@@ -63,9 +80,6 @@ namespace nandina::render::detail
                 index_.erase(oldest.first);
                 entries_.pop_back();
             }
-            auto handle = create_(key);
-            entries_.emplace_front(key, handle);
-            index_.emplace(key, entries_.begin());
             return {.handle = handle, .created = true};
         }
 

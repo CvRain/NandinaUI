@@ -133,8 +133,8 @@ raylib 的 SDF 用一个 `uMode` 管 6 种图元（fill / outline / segment / cl
 
 `sdf_state.frag.hlsl` 由 glslc 2026.4 生成两个 SPIR-V 变体，独立 SPIRV-Tools v2026.4 校验。
 `sdf_state_spirv.hpp` 嵌入源码 SHA-256、编译器信息及产物 SHA-256；普通构建不执行 shader 编译器，
-运行不依赖源码或构建树中的着色器文件。`sdf-probe-artifacts` 检查源码/产物一致性，维护命令
-`python3 tools/sdf_probe_shader.py --verify-compiler` 进一步验证固定编译器可复现。
+运行不依赖源码或构建树中的着色器文件。`shader-artifacts` 检查源码/产物一致性，维护命令
+`python3 tools/shader_artifacts.py --verify-compiler sdf_state` 进一步验证固定编译器可复现。
 
 这里只交付 **Vulkan 实验产物**。生产 SPIR-V/DXIL/MSL、真实 Image/文字消费者、CPU 降级与驱动逃生舱、
 三页 trace/像素/性能、内存和 GPU 资源测量仍是批次 3 的剩余工作。
@@ -224,9 +224,9 @@ clang-format 23.1.1、suite 门禁、文档相对链接/锚点和 diff 检查通
    的第二条注入（漏一次 uniform 更新）正是这类缺陷，接入后由所有权约束排除，而不是靠测试兜底；
 4. **创建成本低**（0.21 µs），缓存未命中可以直接创建，不需要为"避免创建"引入复杂的复用逻辑。
 
-缓存规则（生产接入时实现）：
+缓存规则（已实现）：
 
-- key = 64 字节参数块的**按位**内容（hash + `memcmp`；`-0.0` 与 `+0.0` 视为不同，不做归一化，
+- key = 参数块的**按位**内容（探针 64 字节，当前生产填充/描边/圆为 32 字节；`-0.0` 与 `+0.0` 视为不同，不做归一化，
   以免掩盖上游不一致）；
 - 容量有界（初定 256，LRU 淘汰并销毁 state），**跨帧保留**（按钮/列表行参数稳定，命中率高）；
   设备重建或上下文丢失时整体清空；
@@ -250,3 +250,32 @@ clang-format 23.1.1、suite 门禁、文档相对链接/锚点和 diff 检查通
 2. 真实页面（Label / 列表 / 按钮 / 涟漪）按[性能预算](performance_budget.md)协议采样，并与 CPU 几何路径对比；
 3. 同一参数块在两条路径上的像素一致（GPU 需要显示器，归入探针或人工验收）；
 4. GPU renderer 不可用或 state 创建失败时回落到 CPU 几何，报告 `render_path=cpu` 与原因。
+
+## 10. 生产接入审查（2026-10-19）
+
+当前生产覆盖填充、描边与圆。审查修复非等比缩放回落及帧结束未恢复默认 state、
+viewport/逻辑呈现偏移未进入 uniform、uniform 上传失败的 state 泄漏与运行期降级，
+以及缓存分配失败时的所有权清理。SDL 3.4.18 销毁 state 时会 flush 引用它的命令队列，
+正常 LRU 淘汰不要求额外延迟销毁；代价是超容量流量可能触发 flush，256 的容量仍待页面校准。
+
+生产设备回归增加三档缩放下的非零 viewport、logical presentation、非等比回落、
+帧结束后的默认绘制及 300 参数块淘汰。能力查询在非等比缩放下返回 false；
+运行期 state 创建/上传失败后关闭本设备的 SDF 路径并保存原因。
+当前诊断计数是设备生命周期累计值，逐帧报告须取差值；`binds` 只计非空绑定，
+不含恢复默认 state，尚不能代替契约要求的完整切换/上传性能报告。
+
+产物默认门禁新增工具链元数据核对，`--emit` 同样要求固定工具版本；负例覆盖源码、
+产物和工具链元数据变化。SPIR-V 仍是唯一生产产物。
+
+本轮验证：主套件 97/97（无跳过）、no-RTTI unit 82/82；ASan/UBSan 首轮并行时
+字体计时断言 537.7 ms 超出 500 ms，串行重跑 unit 82/82。三配置生产 GPU 专项通过；
+实验两条故障注入均在指定像素断言失败。两个 shader 固定工具再生与 spirv-val、
+clang-format 23.1.1、suite/header 门禁通过。无显示默认退出 77、强制 GPU 退出 1。
+
+页面专项发现并修复探针启用 trace 后访问已 move 的 unique_ptr，以及重复开帧丢失
+clear 记录的问题。修复后 home/label/anchors 在 GPU renderer 各运行 30 帧并捕获 BMP，
+与 raylib 稳态调用名字序列分别为 678/2581/95 次，完全一致。截图未建立或审批 golden，
+采样期间有并行构建，本轮计时不作为性能基线。
+
+剩余验收：生产字形图集/图片交错的像素断言与完整 AA 误差界、真实页面像素/性能/内存、
+驱动逃生舱、GPU 失败注入、DXIL/MSL。探针的故障注入与历史页面证据不能替代这些生产验收。

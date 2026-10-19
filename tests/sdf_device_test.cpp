@@ -152,10 +152,11 @@ namespace
     }
 } // namespace
 
-auto main() -> int {
+auto main(int argc, char** argv) -> int {
+    const bool require_gpu = argc > 1 && std::string(argv[1]) == "--require-gpu";
     if (SDL_getenv("DISPLAY") == nullptr && SDL_getenv("WAYLAND_DISPLAY") == nullptr) {
         std::printf("SKIP: no desktop display\n");
-        return 77;
+        return require_gpu ? 1 : 77;
     }
     if (!SDL_Init(SDL_INIT_VIDEO)) {
         std::fprintf(stderr, "SDL_Init failed: %s\n", SDL_GetError());
@@ -174,7 +175,7 @@ auto main() -> int {
             SDL_DestroyGPUDevice(gpu);
         }
         SDL_Quit();
-        return 77;
+        return require_gpu ? 1 : 77;
     }
 
     const Scene scene {
@@ -226,6 +227,96 @@ auto main() -> int {
             ok &= require(second.misses == first.misses, "frame 2 must not create new states");
             ok &= require(second.hits == 3, "frame 2 hits the cache three times");
             ok &= require(second.binds == 6, "frame 2 binds once per block");
+
+            // viewport shifts fragment coordinates, including fractional render scales.
+            for (const float scale: {1.0F, 1.25F, 1.5F}) {
+                device.begin_frame();
+                device.clear(scene.background);
+                SDL_SetRenderScale(renderer, scale, scale);
+                const SDL_Rect viewport {13, 9, 120, 90};
+                SDL_SetRenderViewport(renderer, &viewport);
+                device.draw_rect(nandina::foundation::NanRect(10, 10, 40, 40), scene.outline);
+                device.end_frame();
+                SDL_SetRenderViewport(renderer, nullptr);
+                auto* shifted = SDL_RenderReadPixels(renderer, nullptr);
+                ok &= require(shifted != nullptr, "read viewport frame");
+                if (shifted != nullptr) {
+                    ok &= expect_pixel(
+                        shifted,
+                        static_cast<int>(48 * scale),
+                        static_cast<int>(44 * scale),
+                        to_rgba(scene.outline),
+                        "viewport offset"
+                    );
+                    SDL_DestroySurface(shifted);
+                }
+            }
+            SDL_SetRenderScale(renderer, 1, 1);
+            SDL_SetRenderLogicalPresentation(
+                renderer,
+                120,
+                100,
+                SDL_LOGICAL_PRESENTATION_LETTERBOX
+            );
+            device.begin_frame();
+            device.clear(scene.background);
+            device.draw_rect(nandina::foundation::NanRect(10, 10, 40, 40), scene.outline);
+            device.end_frame();
+            SDL_SetRenderLogicalPresentation(renderer, 0, 0, SDL_LOGICAL_PRESENTATION_DISABLED);
+            auto* logical = SDL_RenderReadPixels(renderer, nullptr);
+            ok &= require(logical != nullptr, "read logical presentation");
+            if (logical != nullptr) {
+                ok &= expect_pixel(
+                    logical,
+                    80,
+                    55,
+                    to_rgba(scene.outline),
+                    "logical scale and letterbox"
+                );
+                SDL_DestroySurface(logical);
+            }
+            SDL_SetRenderLogicalPresentation(renderer, 0, 0, SDL_LOGICAL_PRESENTATION_DISABLED);
+            device.begin_frame();
+            device.clear(scene.background);
+            device.draw_rect(nandina::foundation::NanRect(10, 10, 20, 20), scene.fill);
+            SDL_SetRenderScale(renderer, 2, 1);
+            ok &= require(!device.analytic_antialiasing(), "nonuniform scale reports CPU quality");
+            device.draw_rect(nandina::foundation::NanRect(60, 60, 80, 80), scene.outline);
+            device.end_frame();
+            SDL_SetRenderScale(renderer, 1, 1);
+            auto* fallback = SDL_RenderReadPixels(renderer, nullptr);
+            ok &= require(fallback != nullptr, "read nonuniform fallback");
+            if (fallback != nullptr) {
+                ok &= expect_pixel(
+                    fallback,
+                    130,
+                    70,
+                    to_rgba(scene.outline),
+                    "fallback restores state"
+                );
+                SDL_DestroySurface(fallback);
+            }
+
+            device.begin_frame();
+            device.clear(scene.background);
+            for (int index = 0; index < 300; ++index) {
+                device.draw_rect(
+                    nandina::foundation::NanRect(10, 10, 20 + index * 0.01F, 20),
+                    scene.outline
+                );
+            }
+            device.end_frame();
+            ok &= require(device.sdf_diagnostics().cached == 256, "GPU cache remains bounded");
+            SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
+            const SDL_FRect native_rect {120, 100, 30, 30};
+            SDL_RenderFillRect(renderer, &native_rect);
+            auto* native = SDL_RenderReadPixels(renderer, nullptr);
+            ok &= require(native != nullptr, "read native draw after frame");
+            if (native != nullptr) {
+                ok &= expect_pixel(native, 130, 110, {255, 0, 0, 255}, "end frame restores state");
+                ok &= expect_pixel(native, 15, 15, to_rgba(scene.outline), "evicted queued states");
+                SDL_DestroySurface(native);
+            }
         }
         SDL_SetRenderTarget(renderer, nullptr);
         SDL_DestroyTexture(target);
@@ -263,6 +354,8 @@ auto main() -> int {
     if (!ok) {
         return 1;
     }
-    std::printf("SDF device path matches CPU geometry on %d sampled pixels\n", 6 + 6);
+    std::printf(
+        "SDF device pixels, viewport scales, fallback, frame restore and eviction passed\n"
+    );
     return 0;
 }

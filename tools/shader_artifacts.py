@@ -107,11 +107,18 @@ def render_header(entry: dict, toolchain: dict) -> str:
     return "\n".join(lines)
 
 
-def check_entry(entry: dict) -> None:
+def check_entry(entry: dict, toolchain: dict) -> None:
     header_path = ROOT / entry["header"]
     if not header_path.is_file():
         raise RuntimeError(f"missing artifact header: {entry['header']}; run --emit {entry['name']}")
     header = header_path.read_text(encoding="utf-8")
+    compiler = re.search(r'COMPILER\[\]\s*=\s*"([^"]+)"', header)
+    expected_compiler = (
+        f'glslc {toolchain["glslc_version"]}; '
+        f'SPIRV-Tools {toolchain["spirv_tools_version"]}; {toolchain["target_env"]}'
+    )
+    if compiler is None or compiler[1] != expected_compiler:
+        raise RuntimeError(f"{entry['header']}: toolchain metadata differs from registry")
     source = ROOT / entry["source"]
     source_hash = re.search(r'SOURCE_SHA256\[\]\s*=\s*"([0-9a-f]{64})"', header)
     if source_hash is None or source_hash[1] != digest(source.read_bytes()):
@@ -155,6 +162,7 @@ def main() -> int:
     toolchain = config["toolchain"]
 
     if options.emit:
+        check_toolchain(toolchain)
         print(render_header(entry_by_name(config, options.emit), toolchain), end="")
         return 0
 
@@ -175,7 +183,7 @@ def main() -> int:
         return 0
 
     for entry in config["shaders"]:
-        check_entry(entry)
+        check_entry(entry, toolchain)
     print(
         "shader artifacts verified (no compiler required): "
         + ", ".join(entry["name"] for entry in config["shaders"])

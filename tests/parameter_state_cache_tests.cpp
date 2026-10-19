@@ -4,6 +4,7 @@
 
 #include <array>
 #include <cstdint>
+#include <stdexcept>
 #include <vector>
 
 using namespace nandina;
@@ -105,4 +106,23 @@ TEST_CASE("parameter state cache tolerates zero capacity", "[render][sdf][cache]
     REQUIRE(cache.size() == 1);
     REQUIRE(cache.acquire(key(2, 2)).handle == 7);
     REQUIRE(cache.size() == 1);
+}
+
+TEST_CASE("failed state creation preserves cached handles", "[render][sdf][cache]") {
+    std::vector<int> destroyed;
+    Cache cache(
+        1,
+        [](const Key& value) {
+            if (value[0] == 2) {
+                throw std::runtime_error("injected state creation failure");
+            }
+            return 7;
+        },
+        [&](int handle) { destroyed.push_back(handle); }
+    );
+    cache.acquire(key(1, 0));
+    REQUIRE_THROWS_AS(cache.acquire(key(2, 0)), std::runtime_error);
+    REQUIRE(cache.size() == 1);
+    REQUIRE(destroyed.empty());
+    REQUIRE_FALSE(cache.acquire(key(1, 0)).created);
 }

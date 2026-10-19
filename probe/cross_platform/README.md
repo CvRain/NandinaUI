@@ -4,7 +4,7 @@
 Meson 的可选 page probe 复用框架和真实 showcase 页面。生产设备已迁入 nandina，
 编入 SDL3 时正式宿主默认走 SDL3，探测不维护设备副本。
 
-> D7 混合修复已落地；批次 3 新增受追踪的参数/状态最小实验，生产 SDF 仍待接入。
+> D7 混合修复已落地；批次 3 的参数/状态最小实验已通过，生产填充/描边/圆已接入 SDF，其余图元仍走 CPU。
 > 本文旧截图与性能数字保持历史记录；全局顺序见[项目进度与下一步](../../docs/references/project_status.md)。
 
 > 结论、已验证/未验证清单、路线选择都在
@@ -32,7 +32,7 @@ Meson 的可选 page probe 复用框架和真实 showcase 页面。生产设备�
 ```bash
 meson setup --reconfigure buildDir -Dsdl_backend=enabled
 meson compile -C buildDir sdf_state_probe && \
-  meson test -C buildDir sdf-state-probe sdf-probe-artifacts --print-errorlogs
+  meson test -C buildDir sdf-state-probe shader-artifacts --print-errorlogs
 ./buildDir/tests/sdf_state_probe --require-gpu
 ```
 

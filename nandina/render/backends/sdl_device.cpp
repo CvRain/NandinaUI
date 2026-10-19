@@ -108,15 +108,19 @@ namespace nandina::render
             cache(
                 kCacheCapacity,
                 [this](const Key& key) { return create_state(key); },
-                [](SDL_GPURenderState* state) {
+                [this](SDL_GPURenderState* state) {
                     if (state != nullptr) {
+                        if (bound == state) {
+                            unbind();
+                        }
                         SDL_DestroyGPURenderState(state);
                     }
                 }
             ) {}
 
         ~SdfPath() {
-            unbind();
+            (void)SDL_SetGPURenderState(renderer, nullptr);
+            bound = nullptr;
             cache.clear();
             if (white != nullptr) {
                 SDL_DestroyTexture(white);
@@ -159,10 +163,12 @@ namespace nandina::render
             auto* state = SDL_CreateGPURenderState(renderer, &info);
             check_sdl(state != nullptr, "SDL_CreateGPURenderState");
             // 参数块就是缓存键本身：创建即播种，之后不再上传，从结构上排除"忘记更新"。
-            check_sdl(
-                SDL_SetGPURenderStateFragmentUniforms(state, 0, key.data(), sizeof(key)),
-                "SDL_SetGPURenderStateFragmentUniforms"
-            );
+            if (!SDL_SetGPURenderStateFragmentUniforms(state, 0, key.data(), sizeof(key))) {
+                const auto error =
+                    std::string("SDL_SetGPURenderStateFragmentUniforms: ") + SDL_GetError();
+                SDL_DestroyGPURenderState(state);
+                throw std::runtime_error(error);
+            }
             return state;
         }
     };
@@ -251,7 +257,8 @@ namespace nandina::render
     }
 
     auto SdlRenderDevice::analytic_antialiasing() const -> bool {
-        return sdf_ != nullptr;
+        float scale = 0.0F;
+        return sdf_scale(scale);
     }
 
     auto SdlRenderDevice::sdf_diagnostics() const -> SdfDiagnostics {
@@ -277,8 +284,24 @@ namespace nandina::render
         }
         float horizontal = 1.0F;
         float vertical = 1.0F;
+        int width = 0;
+        int height = 0;
+        SDL_RendererLogicalPresentation presentation {};
+        SDL_FRect destination {};
+        if (!SDL_GetRenderLogicalPresentation(renderer_, &width, &height, &presentation)
+            || !SDL_GetRenderLogicalPresentationRect(renderer_, &destination))
+        {
+            return false;
+        }
         // SDF 的距离场假设各向同性；非等比缩放时无法用同一个半径表达，交回 CPU 几何。
-        if (!SDL_GetRenderScale(renderer_, &horizontal, &vertical) || horizontal <= 0.0F
+        if (!SDL_GetRenderScale(renderer_, &horizontal, &vertical)) {
+            return false;
+        }
+        if (presentation != SDL_LOGICAL_PRESENTATION_DISABLED && width > 0 && height > 0) {
+            horizontal *= destination.w / static_cast<float>(width);
+            vertical *= destination.h / static_cast<float>(height);
+        }
+        if (!std::isfinite(horizontal) || !std::isfinite(vertical) || horizontal <= 0.0F
             || vertical <= 0.0F || horizontal != vertical)
         {
             return false;
@@ -302,6 +325,7 @@ namespace nandina::render
     ) -> bool {
         float scale = 0.0F;
         if (!sdf_scale(scale)) {
+            unbind_sdf();
             return false;
         }
         // 覆盖 quad 要包住 AA 过渡区：设备空间 1px（逻辑坐标 1/scale）。
@@ -317,9 +341,19 @@ namespace nandina::render
 
         // 参数块（目标像素）：中心、半尺寸、圆角半径、半线宽、模式。
         const auto center = bounds.get_center();
+        SDL_Rect viewport {};
+        SDL_FRect destination {};
+        check_sdl(SDL_GetRenderViewport(renderer_, &viewport), "SDL_GetRenderViewport");
+        check_sdl(
+            SDL_GetRenderLogicalPresentationRect(renderer_, &destination),
+            "SDL_GetRenderLogicalPresentationRect"
+        );
+        // Match SDL's integer pixel viewport origin, including letterboxing.
+        const auto origin_x = std::floor(viewport.x * scale + destination.x);
+        const auto origin_y = std::floor(viewport.y * scale + destination.y);
         const std::array<float, 8> values {
-            center.get_x() * scale,
-            center.get_y() * scale,
+            center.get_x() * scale + origin_x,
+            center.get_y() * scale + origin_y,
             bounds.get_width() * 0.5F * scale,
             bounds.get_height() * 0.5F * scale,
             radius * scale,
@@ -331,8 +365,15 @@ namespace nandina::render
         static_assert(sizeof(values) == sizeof(key));
         std::memcpy(key.data(), values.data(), sizeof(values));
 
-        const auto acquired = sdf_->cache.acquire(key);
-        sdf_->bind(acquired.handle);
+        try {
+            const auto acquired = sdf_->cache.acquire(key);
+            sdf_->bind(acquired.handle);
+        }
+        catch (const std::runtime_error& error) {
+            sdf_reason_ = error.what();
+            sdf_.reset();
+            return false;
+        }
         check_sdl(
             SDL_RenderGeometry(renderer_, sdf_->white, vertices.data(), 4, indices.data(), 6),
             "SDL_RenderGeometry(SDF)"
@@ -346,6 +387,7 @@ namespace nandina::render
     }
 
     void SdlRenderDevice::end_frame() {
+        unbind_sdf();
         // present 由宿主负责：设备只负责把图元提交给 renderer（与 raylib 后端的边界一致）。
     }
 
