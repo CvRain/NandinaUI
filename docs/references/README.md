@@ -25,11 +25,11 @@
 - [Anchors 布局设计](anchors.md)：作者模型、布局边界与百分比；scene 内核、作者入口、已知边界与故障注入见 §5。
 - [锚点系统：历史草案](anchor_draft.md)：保留讨论脉络与旧建议；不是规范，冲突时以 [Anchors 布局设计](anchors.md) 为准。
 - [配置与开发体验](authoring_configuration.md)：**作者侧规则**。回调的两类与 `guarded()` 的能力边界、handler 的 concept 化设计、组件的公开 API 表面、样式优先级。
-- [SDK 表面：头文件分类与门禁](sdk_surface.md)：**planned**。区分"SDK 文件收集（构建闭包）"与"公共表面（支持范围）"、三档等级（public/experimental/internal）与当前决策（`platform_window.hpp` = experimental public、`recording_device.hpp` = internal）、两类门禁，以及破坏性变更的记录方式。
+- [SDK 表面：头文件分类与门禁](sdk_surface.md)：**已实施**。区分构建闭包与公共表面；182 个头文件分类、包含方向与独立包含三类门禁已落地。公开签名检查仍需评审，图片解码钩子删除仍待实施。
 - [视觉回归：golden、容差与更新流程](visual_regression.md)：**planned**。两层预期（数学/独立参考值 vs 审核过的 golden）、`tests/golden/backend/` 布局与 manifest 字段、比较器只执行规则、更新必须人工批准。
 - [性能预算：采样协议与候选阈值](performance_budget.md)：**planned**。为什么现有毫秒数不能直接当基线、固定采样协议（预热 300/采样 1200/重复 5 次、p50/p95）、预警与阻断候选阈值、与毫秒无关的确定性门禁，以及基线更新政策。
-- [渲染设备路径契约](render_device_path_contract.md)：**planned**。SDF 与 CPU 几何两条路径的边界、能力报告、`SDL_GPURenderState` 的 uniform/顶点/AA/状态恢复/批次 flush 约束、参数布局，以及批次 3 的最小实验与验收。
-- [第三方依赖策略](dependency_policy.md)：**策略已接受，未实施**。默认 vendored 的 wrap-git、功能/来源开关分离、min/pin 与实际解析报告、CMake wrap 的依赖映射、SDL3 首批和逐项迁移，以及离线 SDK/CI 的同步验收；清单生成器不是首批前置。
+- [渲染设备路径契约](render_device_path_contract.md)：**最小实验已落地，生产未接入**。64 字节参数、Vulkan 的 4 KiB uniform 边界、三档缩放与纹理/字形交错、失败注入、嵌入产物和分项计时；生产六类图元与其他平台仍待验收。
+- [第三方依赖策略](dependency_policy.md)：**批次 2 已完成**。11 个 wrap、字体 submodule、SDL3 三态来源、pin/dirty 与 SDK 消费门禁已落地；全部依赖的 GitHub 首次下载仍需有网环境验收，OS 包与后端拆库另列后续工作。
 - [D6：作者 DSL、文本能力与内容测量](authoring_dsl_and_content_measurement.md)：**讨论汇总，待审阅，未实施**。Label 能力表、共享属性归属、builder 子项简写、有限宽度自然长高，以及 border / Section 的阶段边界；过程见 [story 014](../../stories/014-the-dsl-that-kept-sending-authors-to-configure.md)。
 - [待决设计草案](reference_draft.md)：**工作稿**。D2 的后续讨论已汇总到[主题方案、作者入口与状态订阅](theme_authoring_and_state.md)；D3 的 `nav_group` 空值与合并语义已收敛、未实施；**D4 已归档**（P3 已把默认后端换成 SDL3）；**D7** 补齐混合独立预期、生产 SDF 参数/状态、共享图片和分层裁剪；**D8** 补齐物理/逻辑键、事件快照和保序。两者方向已接受、精确接口分批定形、尚未实施。D1 已定案为[统一输入、焦点与文本编辑](focus_and_input.md)。
 - [布局收敛与文本测量](layout_convergence_and_text_measurement.md)：**已实施**。布局永不收敛的实测证据与四条根因（`Text` 写入原始尺寸、`ScrollView` 两个阶段跨轴契约不一致、`stretch` 越过子项显式尺寸、亚像素浮点噪声）、收敛契约、故障注入矩阵、未覆盖缺口与开放项（含整形成本与一次被实测否决的缓存方案）。

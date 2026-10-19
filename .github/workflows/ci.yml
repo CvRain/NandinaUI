@@ -188,6 +188,13 @@ jobs:
           submodules: recursive
       - name: Configure git
         run: git config --global --add safe.directory '*'
+      - name: Restore wrap dependency cache
+        uses: actions/cache@v4
+        with:
+          path: subprojects
+          key: wraps-${{ hashFiles('subprojects/*.wrap') }}
+      - name: Prewarm wrap dependencies
+        run: meson subprojects download
       - name: Configure
         run: meson setup buildDir-physics -Dphysics2d=enabled -Dlinux_window_system=x11 --wrap-mode=nodownload
       - name: Build

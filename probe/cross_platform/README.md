@@ -4,8 +4,8 @@
 Meson 的可选 page probe 复用框架和真实 showcase 页面。生产设备已迁入 nandina，
 编入 SDL3 时正式宿主默认走 SDL3，探测不维护设备副本。
 
-> 2026-10-17 文档核对：以下运行数据是既有记录，本轮未重跑。生产 SDF 与默认混合缺陷
-> 仍待 D7 处理；全局顺序见[项目进度与下一步](../../docs/references/project_status.md)。
+> D7 混合修复已落地；批次 3 新增受追踪的参数/状态最小实验，生产 SDF 仍待接入。
+> 本文旧截图与性能数字保持历史记录；全局顺序见[项目进度与下一步](../../docs/references/project_status.md)。
 
 > 结论、已验证/未验证清单、路线选择都在
 > [docs/references/cross_platform_backend_probe.md](../../docs/references/cross_platform_backend_probe.md)。
@@ -23,6 +23,37 @@ Meson 的可选 page probe 复用框架和真实 showcase 页面。生产设备�
 依赖用下面的命令现取。生产 D7 的受控 shader 产物交付另按依赖策略定形。
 
 ## 固定工具链
+
+### 批次 3：参数与状态最小实验
+
+这条 Meson 路径与旧 CMake 单图元探针独立，使用工程解析的 SDL3 和嵌入的 SPIR-V，
+普通构建不需要 glslc、shadercross 或 spirv-val：
+
+```bash
+meson setup --reconfigure buildDir -Dsdl_backend=enabled
+meson compile -C buildDir sdf_state_probe && \
+  meson test -C buildDir sdf-state-probe sdf-probe-artifacts --print-errorlogs
+./buildDir/tests/sdf_state_probe --require-gpu
+```
+
+integration harness 自动运行正常帧、漏 uniform 更新、漏状态恢复三个进程。没有桌面显示时
+报告 SKIP；需要 GPU 的专项验收必须使用 `--require-gpu`。它实际验证填充/描边、RGBA 上传纹理
+及 SDL 字形纹理，不声称覆盖框架生产字体管线。具体像素预期与 uniform 边界见
+[路径契约 §8](../../docs/references/render_device_path_contract.md#8-最小实验记录2026-10-18)。
+
+维护着色器时，显式生成候选头并审阅后替换，再格式化与验证；不在构建时静默再生：
+
+```bash
+python3 tools/sdf_probe_shader.py --emit > /tmp/sdf_state_spirv.hpp
+python3 tools/sdf_probe_shader.py --verify-compiler
+```
+
+性能实验：`sdf_state_probe --require-gpu --benchmark`。每种模式预热 300 帧、采样 1200 帧，
+重复 5 次并轮换顺序；每帧 512 次几何提交。分别输出 CPU 提交、present 和等待 GPU 完成的总耗时
+p50/p95，以及 state 设置与 uniform 更新次数。采样不读回像素，先前正确性测试的读回不计入采样。
+这是隔离帧的微基准，不能当作 Label 页或流水化应用的帧率；普通 debug 构建也不能冒称 release 基线。
+
+### 既有工具链记录
 
 `probe/cross_platform/tools/verify_toolchain.sh` 核对探测工具版本；`tools/verify_shadercross.sh` 单独验证多格式生成。以下为 2026-10-15/16 的已有实测记录：
 

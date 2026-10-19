@@ -111,7 +111,29 @@ if sdl3_dep.found()
         dependencies : [nandina_dep, catch2_with_main_dep],
     )
     test('sdl-visual', sdl_visual_tests, suite: 'unit')
+    sdf_state_probe = executable(
+        'sdf_state_probe',
+        files('../probe/cross_platform/desktop/sdf_state_probe.cpp'),
+        dependencies: [sdl3_dep],
+    )
+    test(
+        'sdf-state-probe',
+        find_program('python3'),
+        args: [files('sdf_state_probe_test.py'), sdf_state_probe],
+        suite: 'integration',
+        is_parallel: false,
+        timeout: 180,
+    )
 endif
+
+# 着色器产物一致性是纯文件检查（不需要 SDL、不需要编译器）：放在 SDL 条件之外，
+# 关闭 SDL 的构建同样会执行它。
+test(
+    'sdf-probe-artifacts',
+    find_program('python3'),
+    args: [files('../tools/sdf_probe_shader.py')],
+    suite: 'integration',
+)
 
 if box2d_dep.found()
     physics2d_tests = executable(

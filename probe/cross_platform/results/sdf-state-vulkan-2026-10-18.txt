@@ -1,0 +1,31 @@
+driver=vulkan device=AMD Radeon RX 6750 GRE 12GB (RADV NAVI22) SDL=3004018 uniform_bytes=64
+scene scale=1 passed
+scene scale=1.25 passed
+scene scale=1.5 passed
+budget verified_bytes=4096 slots_used=1 last_vector=255 passed
+reused state after native texture passed
+bench mode=native repeat=1 draws=512 state_sets=1 uniform_updates=0 warmup=300 samples=1200 submit_p50_ms=0.09615 submit_p95_ms=0.114835 present_p50_ms=0.043061 present_p95_ms=0.054993 completed_p50_ms=0.396191 completed_p95_ms=0.717713
+bench mode=fixed repeat=1 draws=512 state_sets=2 uniform_updates=1 warmup=300 samples=1200 submit_p50_ms=0.095849 submit_p95_ms=0.108103 present_p50_ms=0.043332 present_p95_ms=0.052558 completed_p50_ms=0.475079 completed_p95_ms=0.609681
+bench mode=update repeat=1 draws=512 state_sets=2 uniform_updates=257 warmup=300 samples=1200 submit_p50_ms=0.928177 submit_p95_ms=1.22783 present_p50_ms=0.052318 present_p95_ms=0.062587 completed_p50_ms=4.04116 completed_p95_ms=4.32144
+bench mode=switch repeat=1 draws=512 state_sets=514 uniform_updates=1 warmup=300 samples=1200 submit_p50_ms=0.481902 submit_p95_ms=0.50231 present_p50_ms=0.045795 present_p95_ms=0.054802 completed_p50_ms=1.45312 completed_p95_ms=1.61667
+bench mode=interleaved repeat=1 draws=512 state_sets=514 uniform_updates=257 warmup=300 samples=1200 submit_p50_ms=1.17066 submit_p95_ms=1.46512 present_p50_ms=0.052298 present_p95_ms=0.065132 completed_p50_ms=4.30424 completed_p95_ms=4.59469
+bench mode=fixed repeat=2 draws=512 state_sets=2 uniform_updates=1 warmup=300 samples=1200 submit_p50_ms=0.095799 submit_p95_ms=0.108834 present_p50_ms=0.043181 present_p95_ms=0.052489 completed_p50_ms=0.474508 completed_p95_ms=0.518029
+bench mode=update repeat=2 draws=512 state_sets=2 uniform_updates=257 warmup=300 samples=1200 submit_p50_ms=0.924019 submit_p95_ms=1.20106 present_p50_ms=0.050985 present_p95_ms=0.062687 completed_p50_ms=4.03646 completed_p95_ms=4.30288
+bench mode=switch repeat=2 draws=512 state_sets=514 uniform_updates=1 warmup=300 samples=1200 submit_p50_ms=0.478796 submit_p95_ms=0.514042 present_p50_ms=0.045826 present_p95_ms=0.054913 completed_p50_ms=1.45195 completed_p95_ms=1.6146
+bench mode=interleaved repeat=2 draws=512 state_sets=514 uniform_updates=257 warmup=300 samples=1200 submit_p50_ms=1.16806 submit_p95_ms=1.47871 present_p50_ms=0.052779 present_p95_ms=0.065072 completed_p50_ms=4.29752 completed_p95_ms=4.60596
+bench mode=native repeat=2 draws=512 state_sets=1 uniform_updates=0 warmup=300 samples=1200 submit_p50_ms=0.096721 submit_p95_ms=0.109976 present_p50_ms=0.043822 present_p95_ms=0.052709 completed_p50_ms=0.413945 completed_p95_ms=0.440293
+bench mode=update repeat=3 draws=512 state_sets=2 uniform_updates=257 warmup=300 samples=1200 submit_p50_ms=0.929539 submit_p95_ms=1.22961 present_p50_ms=0.051236 present_p95_ms=0.066214 completed_p50_ms=4.04604 completed_p95_ms=4.33594
+bench mode=switch repeat=3 draws=512 state_sets=514 uniform_updates=1 warmup=300 samples=1200 submit_p50_ms=0.483084 submit_p95_ms=0.51315 present_p50_ms=0.046738 present_p95_ms=0.056826 completed_p50_ms=1.44309 completed_p95_ms=1.60272
+bench mode=interleaved repeat=3 draws=512 state_sets=514 uniform_updates=257 warmup=300 samples=1200 submit_p50_ms=1.17017 submit_p95_ms=1.48201 present_p50_ms=0.05351 present_p95_ms=0.067326 completed_p50_ms=4.29906 completed_p95_ms=4.61879
+bench mode=native repeat=3 draws=512 state_sets=1 uniform_updates=0 warmup=300 samples=1200 submit_p50_ms=0.095739 submit_p95_ms=0.106971 present_p50_ms=0.042509 present_p95_ms=0.050284 completed_p50_ms=0.411711 completed_p95_ms=0.433341
+bench mode=fixed repeat=3 draws=512 state_sets=2 uniform_updates=1 warmup=300 samples=1200 submit_p50_ms=0.095749 submit_p95_ms=0.106349 present_p50_ms=0.043331 present_p95_ms=0.052799 completed_p50_ms=0.474228 completed_p95_ms=0.659814
+bench mode=switch repeat=4 draws=512 state_sets=514 uniform_updates=1 warmup=300 samples=1200 submit_p50_ms=0.483926 submit_p95_ms=0.590325 present_p50_ms=0.04844 present_p95_ms=0.062668 completed_p50_ms=1.44652 completed_p95_ms=1.62662
+bench mode=interleaved repeat=4 draws=512 state_sets=514 uniform_updates=257 warmup=300 samples=1200 submit_p50_ms=1.16753 submit_p95_ms=1.4602 present_p50_ms=0.051998 present_p95_ms=0.063799 completed_p50_ms=4.29548 completed_p95_ms=4.58254
+bench mode=native repeat=4 draws=512 state_sets=1 uniform_updates=0 warmup=300 samples=1200 submit_p50_ms=0.09592 submit_p95_ms=0.10723 present_p50_ms=0.04276 present_p95_ms=0.052037 completed_p50_ms=0.412722 completed_p95_ms=0.435986
+bench mode=fixed repeat=4 draws=512 state_sets=2 uniform_updates=1 warmup=300 samples=1200 submit_p50_ms=0.09604 submit_p95_ms=0.108733 present_p50_ms=0.043582 present_p95_ms=0.051476 completed_p50_ms=0.478035 completed_p95_ms=0.50742
+bench mode=update repeat=4 draws=512 state_sets=2 uniform_updates=257 warmup=300 samples=1200 submit_p50_ms=0.924981 submit_p95_ms=1.21668 present_p50_ms=0.051947 present_p95_ms=0.061946 completed_p50_ms=4.03904 completed_p95_ms=4.31278
+bench mode=interleaved repeat=5 draws=512 state_sets=514 uniform_updates=257 warmup=300 samples=1200 submit_p50_ms=1.1707 submit_p95_ms=1.47659 present_p50_ms=0.052959 present_p95_ms=0.06444 completed_p50_ms=4.30319 completed_p95_ms=4.63394
+bench mode=native repeat=5 draws=512 state_sets=1 uniform_updates=0 warmup=300 samples=1200 submit_p50_ms=0.092563 submit_p95_ms=0.105979 present_p50_ms=0.041147 present_p95_ms=0.05374 completed_p50_ms=0.407773 completed_p95_ms=0.460281
+bench mode=fixed repeat=5 draws=512 state_sets=2 uniform_updates=1 warmup=300 samples=1200 submit_p50_ms=0.096391 submit_p95_ms=0.114524 present_p50_ms=0.044303 present_p95_ms=0.054502 completed_p50_ms=0.479497 completed_p95_ms=0.512248
+bench mode=update repeat=5 draws=512 state_sets=2 uniform_updates=257 warmup=300 samples=1200 submit_p50_ms=0.92978 submit_p95_ms=1.23282 present_p50_ms=0.052088 present_p95_ms=0.064571 completed_p50_ms=4.04867 completed_p95_ms=4.35133
+bench mode=switch repeat=5 draws=512 state_sets=514 uniform_updates=1 warmup=300 samples=1200 submit_p50_ms=0.483214 submit_p95_ms=0.527687 present_p50_ms=0.04798 present_p95_ms=0.056887 completed_p50_ms=1.45364 completed_p95_ms=1.64236
