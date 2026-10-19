@@ -21,8 +21,10 @@
 #include <nandina/render/recording_device.hpp>
 
 #include <SDL3/SDL.h>
+
 #include <SDL3/SDL_gpu.h>
 #include <SDL3/SDL_render.h>
+#include <sys/resource.h>
 
 #include <nandina/app/nan_application.hpp>
 #include <nandina/app/nan_router.hpp>
@@ -303,6 +305,19 @@ int main() {
             return value != nullptr ? std::max(std::atoi(value), 1) : 30;
         }();
 
+        // 性能 harness：逐帧样本 + 可选设备级压力（不同参数块）。
+        const auto* samples_path = std::getenv("NANDINA_PROBE_SAMPLES_OUT");
+        std::ofstream samples;
+        if (samples_path != nullptr) {
+            samples.open(samples_path);
+            samples << "frame,total_ms,layout_ms,draw_ms,layout_passes,frame_binds,frame_unbinds,"
+                       "hits,misses,cached\n";
+        }
+        const auto stress_count = [] {
+            const auto* value = std::getenv("NANDINA_PROBE_STRESS");
+            return value != nullptr ? std::max(std::atoi(value), 0) : 0;
+        }();
+
         std::cout << "SDL " << SDL_GetVersion() << ", renderer="
                   << (SDL_GetRendererName(renderer) ? SDL_GetRendererName(renderer) : "unknown")
                   << ", page=" << page << '\n';
@@ -321,6 +336,7 @@ int main() {
         auto layout_ms = 0.0;
         auto draw_ms = 0.0;
         auto measured = 0;
+        auto layout_passes_total = std::size_t {0};
         while (running) {
             SDL_Event event {};
             while (SDL_PollEvent(&event)) {
@@ -373,7 +389,7 @@ int main() {
             // 这正是 P4 要说清楚的一件事（见 platform_backend_contract.md §2）。
             device.clear(color_rgba(0xffffffffU));
             const auto layout_started = std::chrono::steady_clock::now();
-            (void)tree.layout_root(viewport);
+            const auto layout_passes = tree.layout_root(viewport);
             const auto layout_ended = std::chrono::steady_clock::now();
 
             if (inject_interaction && frame == 2) {
@@ -434,15 +450,38 @@ int main() {
             }
             nandina::render::DrawContext draw_context {device};
             tree.render(draw_context);
+            // 设备级压力：不同尺寸/圆角的圆角矩形会各自生成参数块，用来观察缓存 miss/淘汰，
+            // 而不修改页面本身（真实页面没有 300 个不同参数的图元时也能压到缓存）。
+            for (int index = 0; index < stress_count; ++index) {
+                const auto column = index % 20;
+                const auto row = index / 20;
+                const auto x = 20.0F + static_cast<float>(column) * 18.0F;
+                const auto y = 20.0F + static_cast<float>(row) * 14.0F;
+                device.draw_rounded_rect(
+                    nandina::foundation::NanRect::from_ltrb(x, y, x + 12.0F, y + 10.0F),
+                    2.0F + static_cast<float>(index % 5),
+                    nandina::foundation::NanColor::from_hex(0x1F6FEB, 0.35F)
+                );
+            }
             device.end_frame();
             const auto draw_ended = std::chrono::steady_clock::now();
             if (frame >= 5) {
-                layout_ms +=
+                const auto frame_layout_ms =
                     std::chrono::duration<double, std::milli>(layout_ended - layout_started)
                         .count();
-                draw_ms +=
+                const auto frame_draw_ms =
                     std::chrono::duration<double, std::milli>(draw_ended - layout_ended).count();
+                layout_passes_total += layout_passes;
+                layout_ms += frame_layout_ms;
+                draw_ms += frame_draw_ms;
                 ++measured;
+                if (samples.is_open()) {
+                    const auto sdf = sdl_diagnostics->sdf_diagnostics();
+                    samples << frame << ',' << (frame_layout_ms + frame_draw_ms) << ','
+                            << frame_layout_ms << ',' << frame_draw_ms << ',' << layout_passes
+                            << ',' << sdf.frame_binds << ',' << sdf.frame_unbinds << ',' << sdf.hits
+                            << ',' << sdf.misses << ',' << sdf.cached << '\n';
+                }
             }
             // 读回必须在 present **之前**：present 之后目标内容由驱动决定（曾经读到过空帧），
             // 像素回归的 harness 规则见 docs/references/visual_regression.md §5。
@@ -461,7 +500,8 @@ int main() {
             check_sdl(SDL_RenderPresent(renderer), "SDL_RenderPresent");
 
             ++frame;
-            if ((capture_path != nullptr || trace_path != nullptr) && frame >= frames_to_run) {
+            // 帧数到达就退出；此前只有 capture/trace 才停，性能采样不带截图时会一直跑到超时。
+            if (frame >= frames_to_run) {
                 if (recorder != nullptr) {
                     std::ofstream trace(trace_path);
                     recorder->dump(trace);
@@ -493,6 +533,21 @@ int main() {
                       << interaction.radius_after << " (shell gain = +2)\n";
         }
 
+        if (measured > 0) {
+            std::cout << "layout passes=" << layout_passes_total << " over " << measured
+                      << " frames\n";
+        }
+        {
+            const auto sdf = sdl_diagnostics->sdf_diagnostics();
+            std::cout << "sdf: format=" << sdl_diagnostics->sdf_shader_format()
+                      << " binds=" << sdf.binds << " hits=" << sdf.hits << " misses=" << sdf.misses
+                      << " cached=" << sdf.cached << " capacity=" << sdf.capacity << '\n';
+            struct rusage usage {};
+            if (getrusage(RUSAGE_SELF, &usage) == 0) {
+                std::cout << "resources: max_rss_kb=" << usage.ru_maxrss
+                          << " texture_bytes=" << sdl_diagnostics->stats().texture_bytes << '\n';
+            }
+        }
         const auto& stats = sdl_diagnostics->stats();
         std::cout << "device stats: frames=" << stats.frames << " rects=" << stats.rects
                   << " outlines=" << stats.rect_outlines << " rounded=" << stats.rounded_rects

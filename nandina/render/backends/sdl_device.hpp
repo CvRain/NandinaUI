@@ -52,6 +52,8 @@ namespace nandina::render
         std::uint64_t clips = 0;
         /// 几何路径生成的顶点数：CPU 细分几何的代价可以直接读出来。
         std::uint64_t generated_vertices = 0;
+        /// 当前持有的 alpha 纹理字节数（RGBA8）。不是 GPU 总内存，只是本设备创建的贴图。
+        std::uint64_t texture_bytes = 0;
     };
 
     /// SDF 路径的运行期计数：绑定次数、缓存命中/未命中（未命中即创建）、缓存规模。

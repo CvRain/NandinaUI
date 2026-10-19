@@ -335,7 +335,45 @@ SDF（后者仅 GPU），覆盖 1/1.25/1.5 render scale、letterbox 开关及 vi
 `sdf_unavailable_reason()`）。Linux 只能实机验证 Vulkan；DXIL/MSL 只做到"生成 + 静态校验 +
 按驱动选择的代码路径"，Windows D3D12 与 macOS Metal 的目标设备加载验收仍未做。
 
-## 11. 本轮验收范围（2026-10-19，进行中）
+## 11. 页面性能 harness（2026-10-19）
+
+`tools/backend_performance.py` 驱动受追踪的页面探针（`probe/cross_platform/desktop/page_probe.cpp`），
+固定 1200×800、`dt=1/60`，按协议每配置预热 300 帧、采样 1200 帧、重复 5 次（轮换顺序），
+对每次取 p50/p95 再取重复中位数。SDF 与 CPU 几何分别采样：CPU 侧用 `NANDINA_SDL_SDF=off`
+走同一设备的 CPU 路径，因此差异只来自绘制路径而不是宿主。
+
+探针新增：逐帧 CSV（total/layout/draw、实际布局 pass 数、`frame_binds`/`frame_unbinds`、
+累计 hits/misses、缓存条目数）、`NANDINA_PROBE_STRESS=<n>`（页面之后画 n 个不同参数块的
+圆角矩形，用于缓存压力）、`resources:` 汇总（`ru_maxrss` 与设备持有的 RGBA 纹理字节）。
+`SdlDeviceStats::texture_bytes` 只统计本设备创建的贴图，不是 GPU 总内存。
+
+结果（RADV RX 6750 GRE、本机 debug 构建、2026-10-19，
+原始数据 `probe/cross_platform/results/backend-perf-2026-10-19.json`）：
+
+| page | 模式 | p50 (ms) | p95 (ms) | binds/帧 | misses/帧 | hits/帧 | cache 条目 | max RSS (KB) | 纹理字节 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| home | SDF | 0.602 | 0.626 | 0 | 0 | 0 | 0 | 63960 | 786432 |
+| home | CPU | 0.587 | 0.608 | 0 | 0 | 0 | 0 | 63708 | 786432 |
+| label | SDF | 2.550 | 2.615 | 21 | 0 | 21 | 42 | 82980 | 2097152 |
+| label | CPU | 2.614 | 2.677 | 0 | 0 | 0 | 0 | 82924 | 2097152 |
+| anchors | SDF | 0.111 | 0.136 | 7 | 0 | 7 | 14 | 62956 | 524288 |
+| anchors | CPU | 0.157 | 0.190 | 0 | 0 | 0 | 0 | 62772 | 524288 |
+
+读法：
+
+- **label**：SDF 比 CPU 快约 2.4%，每帧 21 次绑定、42 个缓存条目、稳定后 **0 miss/帧**
+  （全部命中，跨帧保留生效）；p95 只比 p50 高约 2.5%。
+- **anchors**：SDF 快约 29%（CPU 扇形细分被解析图元替代），7 次绑定/帧。
+- **home**：两模式都在 0.6 ms 量级，差异约 2.6%（在噪声内）；该页 **0 次 SDF 绑定** ——
+  它没有走矩形/圆角/圆图元，主要是文字与纹理，因此两种模式几乎一样。
+- RSS 与纹理字节两模式一致（同一图集/窗口），说明差异来自绘制路径而不是资源。
+- 这不是基线：单机、debug 构建、采样期间可能有并行负载；阈值未启用。用
+  `--stress 300` 时 300 个不同参数块超过 256 容量会出现 LRU 抖动（每帧全 miss），这正是
+  压力场景要观察的，报告会如实给出。
+
+剩余验收：**页面 golden**（候选图 + manifest + 差异图 + 比较器，维护者批准前不作基线）、
+DXIL/MSL 目标设备加载（Windows D3D12 / macOS Metal）、直线 AA 的独立面积积分、
+交互/压力场景的正式阈值。
 
 保留 §10.2 已有的 viewport 取证，重新运行强断言；实际字形测试先走冷图集的 SDF 交错帧，
 再用已上传的图集绘制参考帧，并明确验证上传和扩容，避免先画参考把待测上传路径预热掉。

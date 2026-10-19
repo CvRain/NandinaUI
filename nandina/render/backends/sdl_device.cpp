@@ -1027,6 +1027,8 @@ namespace nandina::render
         );
         const auto handle = render::TextureHandle {next_texture_++};
         textures_[handle.value] = texture;
+        stats_.texture_bytes +=
+            static_cast<std::uint64_t>(width) * static_cast<std::uint64_t>(height) * 4U;
         return handle;
     }
 
@@ -1097,6 +1099,13 @@ namespace nandina::render
         const auto found = textures_.find(texture.value);
         if (found == textures_.end()) {
             return;
+        }
+        float texture_width = 0.0F;
+        float texture_height = 0.0F;
+        if (SDL_GetTextureSize(found->second, &texture_width, &texture_height)) {
+            const auto bytes = static_cast<std::uint64_t>(texture_width)
+                * static_cast<std::uint64_t>(texture_height) * 4U;
+            stats_.texture_bytes = stats_.texture_bytes > bytes ? stats_.texture_bytes - bytes : 0;
         }
         SDL_DestroyTexture(found->second);
         textures_.erase(found);
