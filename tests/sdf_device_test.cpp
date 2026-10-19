@@ -9,12 +9,16 @@
 // 才返回 1。
 //
 
+#include <nandina/app/nan_application.hpp>
 #include <nandina/foundation/nandina_color.hpp>
 #include <nandina/foundation/nandina_color_space.hpp>
 #include <nandina/render/backends/sdl_device.hpp>
+#include <nandina/render/draw_context.hpp>
+#include <nandina/text/font_pipeline.hpp>
 
 #include <SDL3/SDL.h>
 
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -150,6 +154,331 @@ namespace
         ok &= expect_pixel(surface, 70, 90, background, path);
         return ok;
     }
+
+    auto check_coordinates(SDL_Renderer* renderer, bool sdf) -> bool {
+        bool ok = true;
+        nandina::render::SdlRenderDevice device(*renderer);
+        for (const bool letterbox: {false, true}) {
+            for (const float scale: {1.0F, 1.25F, 1.5F}) {
+                for (int path = 0; path < (sdf ? 3 : 2); ++path) {
+                    ok &= require(SDL_SetRenderScale(renderer, 1, 1), "reset scale");
+                    ok &= require(SDL_SetRenderViewport(renderer, nullptr), "reset viewport");
+                    ok &= require(
+                        SDL_SetRenderLogicalPresentation(
+                            renderer,
+                            letterbox ? 120 : 0,
+                            letterbox ? 100 : 0,
+                            letterbox ? SDL_LOGICAL_PRESENTATION_LETTERBOX
+                                      : SDL_LOGICAL_PRESENTATION_DISABLED
+                        ),
+                        "set presentation"
+                    );
+                    ok &= require(SDL_SetRenderScale(renderer, scale, scale), "set scale");
+                    const SDL_Rect viewport {13, 9, 60, 40};
+                    ok &= require(SDL_SetRenderViewport(renderer, &viewport), "set viewport");
+                    SDL_FRect destination {};
+                    SDL_GetRenderLogicalPresentationRect(renderer, &destination);
+                    const float effective = scale * (letterbox ? destination.w / 120.0F : 1.0F);
+                    const int x = static_cast<int>(std::floor(13 * effective + destination.x));
+                    const int y = static_cast<int>(std::floor(9 * effective + destination.y));
+                    device.begin_frame();
+                    device.clear(nandina::foundation::NanColor::from_hex(0x203040));
+                    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+                    const SDL_FRect rect {3, 3, 6, 6};
+                    if (path == 0) {
+                        ok &= require(SDL_RenderFillRect(renderer, &rect), "native fill");
+                    }
+                    else if (path == 1) {
+                        const SDL_FColor white {1, 1, 1, 1};
+                        const SDL_Vertex vertices[] {
+                            {{3, 3}, white, {}},
+                            {{9, 3}, white, {}},
+                            {{9, 9}, white, {}},
+                            {{3, 9}, white, {}}
+                        };
+                        const int indices[] {0, 1, 2, 0, 2, 3};
+                        ok &= require(
+                            SDL_RenderGeometry(renderer, nullptr, vertices, 4, indices, 6),
+                            "native geometry"
+                        );
+                    }
+                    else {
+                        device.draw_rect(
+                            nandina::foundation::NanRect::from_ltrb(3, 3, 9, 9),
+                            nandina::foundation::NanColor::from_hex(0xFFFFFF)
+                        );
+                    }
+                    device.end_frame();
+                    auto* cropped = SDL_RenderReadPixels(renderer, nullptr);
+                    ok &= require(cropped != nullptr, "read viewport-cropped frame");
+                    if (cropped != nullptr) {
+                        ok &= expect_pixel(
+                            cropped,
+                            static_cast<int>(6 * effective),
+                            static_cast<int>(6 * effective),
+                            {255, 255, 255},
+                            "cropped readback rebases the viewport origin"
+                        );
+                        SDL_DestroySurface(cropped);
+                    }
+                    // ReadPixels is viewport-cropped. Flush before changing view, then read
+                    // the complete target, so samples are absolute framebuffer coordinates.
+                    ok &= require(SDL_FlushRenderer(renderer), "flush coordinate frame");
+                    SDL_SetRenderLogicalPresentation(
+                        renderer,
+                        0,
+                        0,
+                        SDL_LOGICAL_PRESENTATION_DISABLED
+                    );
+                    SDL_SetRenderScale(renderer, 1, 1);
+                    SDL_SetRenderViewport(renderer, nullptr);
+                    auto* pixels = SDL_RenderReadPixels(renderer, nullptr);
+                    ok &= require(pixels != nullptr, "read full coordinate frame");
+                    if (pixels != nullptr) {
+                        std::printf(
+                            "coordinates renderer=%s path=%d letterbox=%d scale=%.2f origin=%d,%d read=%dx%d\n",
+                            SDL_GetRendererName(renderer),
+                            path,
+                            letterbox,
+                            scale,
+                            x,
+                            y,
+                            pixels->w,
+                            pixels->h
+                        );
+                        ok &= expect_pixel(
+                            pixels,
+                            x + static_cast<int>(6 * effective),
+                            y + static_cast<int>(6 * effective),
+                            {255, 255, 255},
+                            "shifted small shape"
+                        );
+                        ok &= expect_pixel(
+                            pixels,
+                            static_cast<int>(6 * effective),
+                            static_cast<int>(6 * effective),
+                            {32, 48, 64},
+                            "unshifted location empty"
+                        );
+                        ok &= expect_pixel(
+                            pixels,
+                            x + static_cast<int>(12 * effective),
+                            y + static_cast<int>(6 * effective),
+                            {32, 48, 64},
+                            "outside small shape"
+                        );
+                        SDL_DestroySurface(pixels);
+                    }
+                }
+            }
+        }
+        return ok;
+    }
+    auto check_font_interleave(SDL_Renderer* renderer) -> bool {
+        using nandina::foundation::NanPoint;
+        using nandina::foundation::NanRect;
+        nandina::render::SdlRenderDevice device(*renderer);
+        auto application = nandina::app::NanApplication(
+            nandina::app::NanApplicationConfig::for_process("com.nandina.test.sdf-font")
+        );
+        nandina::text::FontPipelineCache fonts(
+            device,
+            application.font_loader(),
+            application.font_families()
+        );
+        const auto font = fonts.get({}, {.atlas_width = 32, .atlas_height = 32});
+        if (!require(font.has_value(), "load actual font pipeline")) {
+            return false;
+        }
+        const auto layout = (*font)->backend().layout({
+            .text = "SDF atlas Ag 012",
+            .style = {.font_size = 20.0F},
+            .constraints = nandina::foundation::NanLayoutConstraints::loose(),
+        });
+        const auto white = nandina::foundation::NanColor::from_hex(0xFFFFFF);
+        const auto background = nandina::foundation::NanColor::from_hex(0x203040);
+        nandina::render::DrawContext context(device);
+        const auto draw = [&](bool interleave) {
+            device.begin_frame();
+            device.clear(background);
+            if (interleave) {
+                device.draw_circle(NanPoint(20, 110), 8, white);
+            }
+            (*font)->pipeline().renderer->draw(layout, context, NanPoint(10, 10), white);
+            if (interleave) {
+                device.draw_rounded_rect(NanRect::from_ltrb(60, 100, 90, 130), 3, white);
+            }
+            // A second run also exercises an already-uploaded atlas after a fresh SDF bind.
+            (*font)->pipeline().renderer->draw(layout, context, NanPoint(10, 50), white);
+            if (interleave) {
+                device.draw_circle(NanPoint(120, 110), 8, white);
+            }
+            device.end_frame();
+            return SDL_RenderReadPixels(renderer, nullptr);
+        };
+        const auto uploads_before = device.stats().alpha_uploads;
+        auto* actual = draw(true);
+        const auto cold_uploads = device.stats().alpha_uploads - uploads_before;
+        const auto uploads_after_cold = device.stats().alpha_uploads;
+        auto* reference = draw(false);
+        bool ok = require(reference != nullptr && actual != nullptr, "read real glyph frames");
+        ok &= require(cold_uploads > 0, "cold interleaved run uploads the actual glyph atlas");
+        ok &= require(
+            device.stats().alpha_uploads == uploads_after_cold,
+            "warm glyph run reuses uploaded atlas"
+        );
+        ok &= require(
+            (*font)->atlas_pixel_count() > 2 * 32 * 32,
+            "glyph atlas grows from small initial allocation"
+        );
+        int foreground = 0;
+        int mismatches = 0;
+        if (reference != nullptr && actual != nullptr) {
+            for (int y = 0; y < 90; ++y) {
+                for (int x = 0; x < kWidth; ++x) {
+                    const auto expected = pixel(reference, x, y);
+                    const auto observed = pixel(actual, x, y);
+                    foreground += expected.red > 40;
+                    mismatches += std::abs(expected.red - observed.red) > 2
+                        || std::abs(expected.green - observed.green) > 2
+                        || std::abs(expected.blue - observed.blue) > 2;
+                }
+            }
+            ok &= require(foreground > 100, "reference contains rasterized glyphs");
+            ok &= require(mismatches == 0, "real glyph atlas unchanged by SDF interleave");
+            ok &= expect_pixel(actual, 120, 110, {255, 255, 255}, "SDF after real glyphs");
+            ok &= expect_pixel(actual, 20, 110, {255, 255, 255}, "SDF before real glyphs");
+        }
+        std::printf(
+            "font interleave: foreground=%d mismatches=%d atlas_pixels=%zu binds=%llu unbinds=%llu\n",
+            foreground,
+            mismatches,
+            (*font)->atlas_pixel_count(),
+            static_cast<unsigned long long>(device.sdf_diagnostics().frame_binds),
+            static_cast<unsigned long long>(device.sdf_diagnostics().frame_unbinds)
+        );
+        SDL_DestroySurface(reference);
+        SDL_DestroySurface(actual);
+        return ok;
+    }
+
+    auto check_antialiasing(SDL_Renderer* renderer) -> bool {
+        using nandina::foundation::NanPoint;
+        using nandina::foundation::NanRect;
+        nandina::render::SdlRenderDevice device(*renderer);
+        const auto white = nandina::foundation::NanColor::from_hex(0xFFFFFF);
+        const auto black = nandina::foundation::NanColor::from_hex(0x000000);
+        bool ok = true;
+        for (const float scale: {1.0F, 1.25F, 1.5F}) {
+            SDL_SetRenderScale(renderer, scale, scale);
+            for (const float thickness: {0.75F, 1.0F, 1.25F}) {
+                device.begin_frame();
+                device.clear(black);
+                device.draw_rounded_rect_outline(
+                    NanRect::from_ltrb(20.25F, 20.25F, 60.25F, 50.25F),
+                    2,
+                    thickness,
+                    white
+                );
+                device.end_frame();
+                auto* surface = SDL_RenderReadPixels(renderer, nullptr);
+                ok &= require(surface != nullptr, "read thin outline AA");
+                if (surface != nullptr) {
+                    // At the middle of a horizontal edge the signed-distance derivative is 1.
+                    // The contract's cubic filter is independently evaluated at pixel centers.
+                    for (int y = static_cast<int>(19 * scale); y < static_cast<int>(24 * scale);
+                         ++y)
+                    {
+                        // Outline outer bounds snap to logical integer pixels by contract.
+                        const double center = (20.0 + thickness / 2.0) * scale;
+                        const double distance =
+                            std::abs(y + 0.5 - center) - thickness * scale / 2.0;
+                        const double t = std::clamp(0.5 - distance, 0.0, 1.0);
+                        const int expected =
+                            static_cast<int>(std::lround(255 * t * t * (3 - 2 * t)));
+                        ok &= expect_pixel(
+                            surface,
+                            static_cast<int>(40 * scale),
+                            y,
+                            {expected, expected, expected},
+                            "thin outline cubic AA"
+                        );
+                    }
+                    SDL_DestroySurface(surface);
+                }
+            }
+            for (const float radius: {2.0F, 4.0F}) {
+                device.begin_frame();
+                device.clear(black);
+                device.draw_circle(NanPoint(30.25F, 30.25F), radius, white);
+                device.end_frame();
+                auto* surface = SDL_RenderReadPixels(renderer, nullptr);
+                ok &= require(surface != nullptr, "read small circle AA");
+                int maximum = 0;
+                double sum = 0;
+                int edge_count = 0;
+                if (surface != nullptr) {
+                    const double center = 30.25 * scale;
+                    const double physical_radius = radius * scale;
+                    for (int y = static_cast<int>(center - physical_radius - 2);
+                         y <= center + physical_radius + 2;
+                         ++y)
+                    {
+                        for (int x = static_cast<int>(center - physical_radius - 2);
+                             x <= center + physical_radius + 2;
+                             ++x)
+                        {
+                            int inside = 0;
+                            // Independent 64x64 area integration, not shader distance/fwidth.
+                            for (int sy = 0; sy < 64; ++sy) {
+                                for (int sx = 0; sx < 64; ++sx) {
+                                    const double dx = x + (sx + 0.5) / 64 - center;
+                                    const double dy = y + (sy + 0.5) / 64 - center;
+                                    inside +=
+                                        dx * dx + dy * dy <= physical_radius * physical_radius;
+                                }
+                            }
+                            const int expected =
+                                static_cast<int>(std::lround(255.0 * inside / 4096));
+                            const auto observed = pixel(surface, x, y);
+                            const int error = std::max(
+                                {std::abs(observed.red - expected),
+                                 std::abs(observed.green - expected),
+                                 std::abs(observed.blue - expected)}
+                            );
+                            maximum = std::max(maximum, error);
+                            if ((expected > 0 && expected < 255)
+                                || (observed.red > 0 && observed.red < 255))
+                            {
+                                sum += error;
+                                ++edge_count;
+                            }
+                        }
+                    }
+                    // Cubic L1 derivative AA is not exact box coverage. Bound local errors,
+                    // never dilute them by averaging the full background image.
+                    ok &= require(edge_count > 0, "small circle contains AA edge pixels");
+                    ok &=
+                        require(maximum <= 64, "circle area-reference maximum error <= 25 percent");
+                    ok &= require(
+                        edge_count > 0 && sum / edge_count <= 24,
+                        "circle area-reference edge MAE <= 9.5 percent"
+                    );
+                    std::printf(
+                        "circle AA scale=%.2f radius=%.1f max=%d edge_mae=%.3f edges=%d\n",
+                        scale,
+                        radius,
+                        maximum,
+                        edge_count ? sum / edge_count : 0,
+                        edge_count
+                    );
+                    SDL_DestroySurface(surface);
+                }
+            }
+        }
+        SDL_SetRenderScale(renderer, 1, 1);
+        return ok;
+    }
 } // namespace
 
 auto main(int argc, char** argv) -> int {
@@ -190,6 +519,18 @@ auto main(int argc, char** argv) -> int {
     };
 
     bool ok = true;
+    ok &= check_coordinates(renderer, true);
+    auto* software_window = SDL_CreateWindow("nandina software coordinates", kWidth, kHeight, 0);
+    ok &= require(software_window != nullptr, "create software window");
+    if (software_window != nullptr) {
+        auto* software_renderer = SDL_CreateRenderer(software_window, "software");
+        ok &= require(software_renderer != nullptr, "create window software renderer");
+        if (software_renderer != nullptr) {
+            ok &= check_coordinates(software_renderer, false);
+            SDL_DestroyRenderer(software_renderer);
+        }
+        SDL_DestroyWindow(software_window);
+    }
     auto* target = SDL_CreateTexture(
         renderer,
         SDL_PIXELFORMAT_RGBA32,
@@ -200,6 +541,9 @@ auto main(int argc, char** argv) -> int {
     ok &= require(target != nullptr, "create render target");
     if (target != nullptr) {
         SDL_SetRenderTarget(renderer, target);
+        ok &= check_coordinates(renderer, true);
+        ok &= check_font_interleave(renderer);
+        ok &= check_antialiasing(renderer);
         {
             nandina::render::SdlRenderDevice device(*renderer);
             if (!require(device.analytic_antialiasing(), "GPU renderer must use the SDF path")) {
@@ -452,6 +796,7 @@ auto main(int argc, char** argv) -> int {
         auto* cpu_renderer = SDL_CreateSoftwareRenderer(cpu_surface);
         ok &= require(cpu_renderer != nullptr, "create software renderer");
         if (cpu_renderer != nullptr) {
+            ok &= check_coordinates(cpu_renderer, false);
             nandina::render::SdlRenderDevice device(*cpu_renderer);
             ok &=
                 require(!device.analytic_antialiasing(), "software renderer must fall back to CPU");

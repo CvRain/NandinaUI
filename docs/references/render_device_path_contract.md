@@ -298,6 +298,42 @@ clear 记录的问题。修复后 home/label/anchors 在 GPU renderer 各运行 
   viewport 或逻辑呈现，因此日常渲染不受影响。启用 HiDPI/letterbox 前必须用真实窗口重做这个实验，
   再决定是否保留原点项。
 
+### 10.2 viewport 取证修正（2026-10-19）
+
+`tests/sdf_device_test.cpp` 增加 60 组小矩形强断言：GPU 窗口 backbuffer 与离屏 target
+各 18 组，software 窗口与 surface 各 12 组；分别走 SDL-only FillRect、Geometry 与生产
+SDF（后者仅 GPU），覆盖 1/1.25/1.5 render scale、letterbox 开关及 viewport (13,9)。
+本机真实桌面专项实跑全部通过，不再仅用大矩形内部的重叠区域证明偏移。
+
+同帧先保持 viewport 读回，再 flush、禁用 logical presentation、重置 scale/viewport 后
+读完整目标。前者图元落在返回 surface 的局部坐标，后者落在绝对偏移位置；同时断言旧原点
+与图元外侧仍是背景。原因是固定 SDL 的 `SDL_RenderReadPixels` 从
+`renderer->view->pixel_viewport` 开始读回（`SDL_render.c`），返回 surface 的原点不是
+目标原点。此前“viewport 已设置而图元仍在逻辑原点”的证据混淆了这两个坐标系。
+矩阵使用 60x40 viewport，确保最高有效缩放下读回范围仍在目标内；software renderer
+不会像 GPU 路径一样容忍该实验原先越出目标的读回范围。
+
+因此保留生产参数公式 `floor(viewport * effective_scale + logical_offset)`。
+实际故障注入去掉 uniform 中的 `+ origin_x/y` 后，新增的 12 组 SDF 偏移内断言全部失败，
+例如 (19,15) 得到背景 (32,48,64) 而不是 (255,255,255)，SDL-only 对照仍通过。
+恢复实现并重新编译后专项通过。没有修改 SDL、删除失败断言或放宽像素容差。
+这轮记录仅表示坐标专项通过，不替代剩余验收或全套验证。
+
 剩余验收：**真实字形图集**（而非通用 alpha 纹理）的交错像素断言、完整 AA 误差界、
 真实页面像素/性能/内存基线、GPU 失败注入的更多故障类型、DXIL/MSL。
 探针的故障注入与历史页面证据不能替代这些生产验收。
+
+## 11. 本轮验收范围（2026-10-19，进行中）
+
+保留 §10.2 已有的 viewport 取证，重新运行强断言；实际字形测试先走冷图集的 SDF 交错帧，
+再用已上传的图集绘制参考帧，并明确验证上传和扩容，避免先画参考把待测上传路径预热掉。
+AA 同时使用直线解析预期与独立的 64×64 面积积分，按边缘像素报告误差，不用整图平均稀释。
+
+页面验收新增受追踪 harness：固定 1200×800、dt=1/60，home/label/anchors 稳态、按钮 press/release
+与 Dialog 周期交互、Label 加 300 个不同参数块的压力场景。CPU 几何与 SDF 分别采样；预热 300 帧、
+采样 1200 帧、重复 5 次，记录每次 p50/p95、实际布局次数、state 绑定/解绑、cache hit/miss、
+进程 RSS 和设备持有的 RGBA 纹理字节。RSS 不是 GPU 总内存；参数缓存 payload 也不等于驱动分配。
+
+页面 golden 先交付候选图、采样 manifest、差异图与比较器；维护者批准之前不作为已接受基线。
+DXIL/MSL 本轮尝试生成并接入按设备格式选择；生成/静态检查与 Windows D3D12、macOS Metal
+目标设备验收分开，当前 Linux 不能声称后二者实机通过。

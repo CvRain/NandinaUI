@@ -25,6 +25,8 @@ except ModuleNotFoundError:  # pragma: no cover - Python < 3.11
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 REGISTRY = ROOT / "tools" / "shader_artifacts.toml"
+SHADERCROSS = ROOT / "playground/shadercross-build/shadercross"
+SHADERCROSS_SOURCE = ROOT / "playground/shadercross"
 
 
 def digest(data: bytes) -> str:
@@ -85,6 +87,17 @@ def render_header(entry: dict, toolchain: dict) -> str:
         f'    inline constexpr char COMPILER[] = "glslc {toolchain["glslc_version"]}; '
         f'SPIRV-Tools {toolchain["spirv_tools_version"]}; {toolchain["target_env"]}";',
     ]
+    if entry.get("cross_formats"):
+        revision = subprocess.check_output(
+            ["git", "-C", str(SHADERCROSS_SOURCE), "rev-parse", "HEAD"], text=True
+        ).strip()
+        if revision != toolchain["shadercross_revision"]:
+            raise RuntimeError("shadercross source revision differs from registry")
+        if subprocess.check_output(
+            ["git", "-C", str(SHADERCROSS_SOURCE), "status", "--porcelain", "--untracked-files=no"], text=True
+        ).strip():
+            raise RuntimeError("shadercross source checkout is dirty")
+        lines.append(f'    inline constexpr char CROSS_COMPILER[] = "SDL_shadercross {revision}; input=glslc-SPIRV";')
     with tempfile.TemporaryDirectory(prefix="nandina-shader-") as directory:
         for variant in entry["variants"]:
             binary = pathlib.Path(directory) / f"{variant['name']}.spv"
@@ -103,6 +116,23 @@ def render_header(entry: dict, toolchain: dict) -> str:
                     + ","
                 )
             lines.append("    };")
+            for format_name in entry.get("cross_formats", []):
+                output = pathlib.Path(directory) / f"{variant['name']}.{format_name.lower()}"
+                subprocess.run([str(SHADERCROSS), str(binary), "-s", "SPIRV", "-d", format_name,
+                                "-t", "fragment", "-o", str(output)], check=True)
+                product = output.read_bytes()
+                if format_name == "MSL":
+                    if b"fragment " not in product or b" main0(" not in product:
+                        raise RuntimeError("unexpected MSL entrypoint")
+                    product += b"\0"
+                elif not product.startswith(b"DXBC"):
+                    raise RuntimeError("unexpected DXIL container")
+                name = f"{variant['name']}_{format_name}"
+                lines.extend([f'    inline constexpr char {name}_SHA256[] = "{digest(product)}";',
+                              f"    inline constexpr std::uint8_t {name}[] = {{"])
+                for offset in range(0, len(product), 16):
+                    lines.append("        " + ", ".join(f"0x{byte:02x}" for byte in product[offset:offset + 16]) + ",")
+                lines.append("    };")
     lines.extend(["} // namespace " + entry["namespace"], "", "#endif", ""])
     return "\n".join(lines)
 
@@ -144,10 +174,31 @@ def check_entry(entry: dict, toolchain: dict) -> None:
         data = struct.pack(f"<{len(words)}I", *words)
         if digest(data) != expected[1]:
             raise RuntimeError(f"{entry['header']}: {name} artifact does not match its hash")
+        for format_name in entry.get("cross_formats", []):
+            product_name = f"{name}_{format_name}"
+            checksum = re.search(rf'{product_name}_SHA256\[\]\s*=\s*"([0-9a-f]{{64}})"', header)
+            product_array = re.search(rf"{product_name}\[\]\s*=\s*\{{(.*?)\}};", header, re.S)
+            if checksum is None or product_array is None:
+                raise RuntimeError(f"{entry['header']}: missing {product_name}")
+            product = bytes(int(byte, 16) for byte in re.findall(r"0x([0-9a-f]{2})\b", product_array[1]))
+            if digest(product) != checksum[1]:
+                raise RuntimeError(f"{entry['header']}: {product_name} artifact does not match its hash")
+            if format_name == "DXIL" and not product.startswith(b"DXBC"):
+                raise RuntimeError("invalid DXIL container")
+            if format_name == "MSL" and (not product.endswith(b"\0") or b" main0(" not in product):
+                raise RuntimeError("invalid MSL entrypoint/terminator")
+    if entry.get("cross_formats"):
+        cross_compiler = re.search(r'CROSS_COMPILER\[\]\s*=\s*"([^"]+)"', header)
+        expected_cross = f'SDL_shadercross {toolchain["shadercross_revision"]}; input=glslc-SPIRV'
+        if cross_compiler is None or cross_compiler[1] != expected_cross:
+            raise RuntimeError("shadercross toolchain metadata differs from registry")
 
 
 def main() -> int:
+    global SHADERCROSS, SHADERCROSS_SOURCE
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--shadercross", type=pathlib.Path, default=SHADERCROSS)
+    parser.add_argument("--shadercross-source", type=pathlib.Path, default=SHADERCROSS_SOURCE)
     modes = parser.add_mutually_exclusive_group()
     modes.add_argument("--emit", metavar="NAME", help="regenerate and print that shader header")
     modes.add_argument(
@@ -158,6 +209,8 @@ def main() -> int:
         help="recompile with the pinned toolchain and compare against the checked-in header",
     )
     options = parser.parse_args()
+    SHADERCROSS = options.shadercross.resolve()
+    SHADERCROSS_SOURCE = options.shadercross_source.resolve()
     config = load()
     toolchain = config["toolchain"]
 

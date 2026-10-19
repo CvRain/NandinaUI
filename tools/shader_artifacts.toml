@@ -5,6 +5,7 @@ schema = 1
 glslc_version = "2026.4"
 spirv_tools_version = "v2026.4"
 target_env = "vulkan1.0"
+shadercross_revision = "1ff05bec573988a98ef9e0260b4da44f512b8367"
 
 [[shaders]]
 name = "sdf_state"
@@ -21,6 +22,7 @@ vectors = 256
 
 [[shaders]]
 name = "sdf_rounded"
+cross_formats = ["DXIL", "MSL"]
 source = "nandina/render/backends/sdf_rounded.frag.hlsl"
 header = "nandina/render/backends/sdf_rounded_spirv.hpp"
 guard = "NANDINA_RENDER_BACKENDS_SDF_ROUNDED_SPIRV_HPP"
