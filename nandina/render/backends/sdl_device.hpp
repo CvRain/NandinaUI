@@ -183,6 +183,8 @@ namespace nandina::render
         [[nodiscard]] auto sdf_diagnostics() const -> SdfDiagnostics;
         /// SDF 路径不可用的原因（可用于诊断报告）；可用时为空。
         [[nodiscard]] auto sdf_unavailable_reason() const -> std::string_view;
+        /// 实际使用的着色器产物格式（`spirv` / `dxil` / `msl`）；无 SDF 路径时为空。
+        [[nodiscard]] auto sdf_shader_format() const -> std::string_view;
 
     private:
         struct SdfPath;

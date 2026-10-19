@@ -98,6 +98,7 @@ namespace nandina::render
         SDL_GPUShader* shader = nullptr;
         SDL_GPURenderState* bound = nullptr;
         SDL_Texture* white = nullptr;
+        std::string_view format_name;
         std::uint64_t binds = 0;
         std::uint64_t frame_binds = 0;
         std::uint64_t frame_unbinds = 0;
@@ -105,10 +106,16 @@ namespace nandina::render
         std::uint64_t fail_after = 0;
         Cache cache;
 
-        SdfPath(SDL_Renderer* target, SDL_GPUShader* fragment, SDL_Texture* white_texture):
+        SdfPath(
+            SDL_Renderer* target,
+            SDL_GPUShader* fragment,
+            SDL_Texture* white_texture,
+            std::string_view format
+        ):
             renderer(target),
             shader(fragment),
             white(white_texture),
+            format_name(format),
             cache(
                 kCacheCapacity,
                 [this](const Key& key) { return create_state(key); },
@@ -216,26 +223,53 @@ namespace nandina::render
         if (sdf_disabled) {
             sdf_reason_ = "disabled by NANDINA_SDL_SDF";
         }
-        SDL_GPUShaderCreateInfo shader_info {};
-        const auto shader_words = std::span(detail::ROUNDED_SPIRV);
-        shader_info.code = reinterpret_cast<const Uint8*>(shader_words.data());
-        shader_info.code_size = shader_words.size_bytes();
-        shader_info.entrypoint = "main";
-        shader_info.format = SDL_GPU_SHADERFORMAT_SPIRV;
-        shader_info.stage = SDL_GPU_SHADERSTAGE_FRAGMENT;
-        shader_info.num_samplers = 1;
-        shader_info.num_uniform_buffers = 1;
         auto* gpu = sdf_disabled ? nullptr
                                  : static_cast<SDL_GPUDevice*>(SDL_GetPointerProperty(
                                        SDL_GetRendererProperties(renderer_),
                                        SDL_PROP_RENDERER_GPU_DEVICE_POINTER,
                                        nullptr
                                    ));
+        // 按驱动选择产物：平台必须用同一格式创建 GPU device，否则 SDL_CreateGPUShader 失败
+        // （原因记录在 sdf_reason_）。Windows/macOS 目标设备尚未实机验收。
+        SDL_GPUShaderCreateInfo shader_info {};
+        shader_info.entrypoint = "main";
+        shader_info.stage = SDL_GPU_SHADERSTAGE_FRAGMENT;
+        shader_info.num_samplers = 1;
+        shader_info.num_uniform_buffers = 1;
+        std::string_view format_name;
+        if (!sdf_disabled && gpu != nullptr) {
+            const char* driver = SDL_GetGPUDeviceDriver(gpu);
+            const std::string_view driver_name = driver != nullptr ? driver : "";
+            if (driver_name == "vulkan") {
+                format_name = "spirv";
+                shader_info.format = SDL_GPU_SHADERFORMAT_SPIRV;
+                shader_info.code = reinterpret_cast<const Uint8*>(detail::ROUNDED_SPIRV);
+                shader_info.code_size = sizeof(detail::ROUNDED_SPIRV);
+            }
+            else if (driver_name == "d3d12") {
+                format_name = "dxil";
+                shader_info.format = SDL_GPU_SHADERFORMAT_DXIL;
+                shader_info.code = detail::ROUNDED_DXIL;
+                shader_info.code_size = sizeof(detail::ROUNDED_DXIL);
+            }
+            else if (driver_name == "metal") {
+                format_name = "msl";
+                shader_info.format = SDL_GPU_SHADERFORMAT_MSL;
+                shader_info.code = detail::ROUNDED_MSL;
+                shader_info.code_size = sizeof(detail::ROUNDED_MSL);
+            }
+            else {
+                sdf_reason_ = std::string("no SDF shader artifact for driver ") + driver_name;
+            }
+        }
         if (sdf_disabled) {
             // 原因已记录；创建整段跳过。
         }
         else if (gpu == nullptr) {
             sdf_reason_ = "renderer has no GPU device (SDF requires the GPU renderer)";
+        }
+        else if (format_name.empty()) {
+            // 原因已按驱动记录。
         }
         else {
             auto* shader = SDL_CreateGPUShader(gpu, &shader_info);
@@ -262,7 +296,8 @@ namespace nandina::render
                         SDL_ReleaseGPUShader(gpu, shader);
                     }
                     else {
-                        auto candidate = std::make_unique<SdfPath>(renderer_, shader, white);
+                        auto candidate =
+                            std::make_unique<SdfPath>(renderer_, shader, white, format_name);
                         // 用一个真实 state 探测可用性：非 GPU renderer 上会失败。
                         SDL_GPURenderStateCreateInfo probe_info {};
                         probe_info.fragment_shader = shader;
@@ -310,6 +345,10 @@ namespace nandina::render
 
     auto SdlRenderDevice::sdf_unavailable_reason() const -> std::string_view {
         return sdf_reason_;
+    }
+
+    auto SdlRenderDevice::sdf_shader_format() const -> std::string_view {
+        return sdf_ ? sdf_->format_name : std::string_view {};
     }
 
     auto SdlRenderDevice::sdf_scale(float& scale) const -> bool {

@@ -556,6 +556,8 @@ auto main(int argc, char** argv) -> int {
             }
             draw_scene(device, scene);
             const auto first = device.sdf_diagnostics();
+            // Linux 上只有 Vulkan 可实机验证；DXIL/MSL 分支在 Windows/macOS 目标设备上另行验收。
+            ok &= require(device.sdf_shader_format() == "spirv", "Vulkan uses the SPIR-V artifact");
             ok &= require(first.misses == 3, "frame 1 creates three parameter states");
             ok &= require(first.hits == 0, "frame 1 has no cache hits");
             ok &= require(first.cached == 3, "cache keeps the three states");
@@ -731,6 +733,7 @@ auto main(int argc, char** argv) -> int {
             SDL_setenv_unsafe("NANDINA_SDL_SDF", "off", 1);
             nandina::render::SdlRenderDevice device(*renderer);
             ok &= require(!device.analytic_antialiasing(), "escape switch disables SDF");
+            ok &= require(device.sdf_shader_format().empty(), "escape switch has no shader format");
             ok &=
                 require(!device.sdf_unavailable_reason().empty(), "escape switch reports a reason");
             device.begin_frame();
@@ -766,6 +769,10 @@ auto main(int argc, char** argv) -> int {
             );
             device.end_frame();
             ok &= require(!device.analytic_antialiasing(), "injected failure disables SDF");
+            ok &= require(
+                device.sdf_shader_format().empty(),
+                "injected failure has no shader format"
+            );
             ok &= require(
                 device.sdf_unavailable_reason().find("injected") != std::string_view::npos,
                 "injected failure is reported"

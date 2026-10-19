@@ -323,6 +323,18 @@ SDF（后者仅 GPU），覆盖 1/1.25/1.5 render scale、letterbox 开关及 vi
 真实页面像素/性能/内存基线、GPU 失败注入的更多故障类型、DXIL/MSL。
 探针的故障注入与历史页面证据不能替代这些生产验收。
 
+### 10.3 产物格式选择（2026-10-19）
+
+生产 shader 现在嵌入 SPIR-V、DXIL、MSL 三份产物（`tools/shader_artifacts.toml` 的
+`cross_formats`，经固定版本 SDL_shadercross 生成并校验容器签名/哈希）。设备按
+`SDL_GetGPUDeviceDriver()` 选择：`vulkan → SPIR-V`、`d3d12 → DXIL`、`metal → MSL`；
+其它驱动记录原因并回落 CPU。`sdf_shader_format()` 报告实际格式，设备测试在 Vulkan 上断言
+`spirv`，逃生舱/注入失败时为空。
+
+边界：**平台必须用同一格式创建 GPU device**，否则 `SDL_CreateGPUShader` 失败（原因进
+`sdf_unavailable_reason()`）。Linux 只能实机验证 Vulkan；DXIL/MSL 只做到"生成 + 静态校验 +
+按驱动选择的代码路径"，Windows D3D12 与 macOS Metal 的目标设备加载验收仍未做。
+
 ## 11. 本轮验收范围（2026-10-19，进行中）
 
 保留 §10.2 已有的 viewport 取证，重新运行强断言；实际字形测试先走冷图集的 SDF 交错帧，
