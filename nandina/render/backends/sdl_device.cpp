@@ -99,6 +99,10 @@ namespace nandina::render
         SDL_GPURenderState* bound = nullptr;
         SDL_Texture* white = nullptr;
         std::uint64_t binds = 0;
+        std::uint64_t frame_binds = 0;
+        std::uint64_t frame_unbinds = 0;
+        std::uint64_t created = 0;
+        std::uint64_t fail_after = 0;
         Cache cache;
 
         SdfPath(SDL_Renderer* target, SDL_GPUShader* fragment, SDL_Texture* white_texture):
@@ -116,7 +120,14 @@ namespace nandina::render
                         SDL_DestroyGPURenderState(state);
                     }
                 }
-            ) {}
+            ) {
+            // 仅供设备级测试注入运行期失败；生产路径不设置这个变量。
+            if (const char* inject = SDL_getenv("NANDINA_SDL_SDF_TEST_FAIL_AFTER");
+                inject != nullptr)
+            {
+                fail_after = std::strtoull(inject, nullptr, 10);
+            }
+        }
 
         ~SdfPath() {
             (void)SDL_SetGPURenderState(renderer, nullptr);
@@ -147,9 +158,14 @@ namespace nandina::render
                 return;
             }
             check_sdl(SDL_SetGPURenderState(renderer, state), "SDL_SetGPURenderState");
+            // 解绑只计"离开自定义 state"；SDF→SDF 只是一次新的绑定。
+            if (bound != nullptr && state == nullptr) {
+                ++frame_unbinds;
+            }
             bound = state;
             if (state != nullptr) {
                 ++binds;
+                ++frame_binds;
             }
         }
 
@@ -158,6 +174,10 @@ namespace nandina::render
         }
 
         auto create_state(const Key& key) -> SDL_GPURenderState* {
+            ++created;
+            if (fail_after != 0 && created > fail_after) {
+                throw std::runtime_error("injected SDF state creation failure");
+            }
             SDL_GPURenderStateCreateInfo info {};
             info.fragment_shader = shader;
             auto* state = SDL_CreateGPURenderState(renderer, &info);
@@ -188,6 +208,14 @@ namespace nandina::render
 
         // SDF 路径是可选增强：普通 renderer（软件/OpenGL）上 SDL_CreateGPURenderState 会失败，
         // 此时如实记录原因并继续走 CPU 几何，而不是让整个页面不可用。
+        // 驱动逃生舱：显式禁用 SDF 而不改构建（`NANDINA_SDL_SDF=off|0|false`）。
+        const char* sdf_switch = SDL_getenv("NANDINA_SDL_SDF");
+        const bool sdf_disabled = sdf_switch != nullptr
+            && (std::string_view(sdf_switch) == "off" || std::string_view(sdf_switch) == "0"
+                || std::string_view(sdf_switch) == "false");
+        if (sdf_disabled) {
+            sdf_reason_ = "disabled by NANDINA_SDL_SDF";
+        }
         SDL_GPUShaderCreateInfo shader_info {};
         const auto shader_words = std::span(detail::ROUNDED_SPIRV);
         shader_info.code = reinterpret_cast<const Uint8*>(shader_words.data());
@@ -197,12 +225,16 @@ namespace nandina::render
         shader_info.stage = SDL_GPU_SHADERSTAGE_FRAGMENT;
         shader_info.num_samplers = 1;
         shader_info.num_uniform_buffers = 1;
-        auto* gpu = static_cast<SDL_GPUDevice*>(SDL_GetPointerProperty(
-            SDL_GetRendererProperties(renderer_),
-            SDL_PROP_RENDERER_GPU_DEVICE_POINTER,
-            nullptr
-        ));
-        if (gpu == nullptr) {
+        auto* gpu = sdf_disabled ? nullptr
+                                 : static_cast<SDL_GPUDevice*>(SDL_GetPointerProperty(
+                                       SDL_GetRendererProperties(renderer_),
+                                       SDL_PROP_RENDERER_GPU_DEVICE_POINTER,
+                                       nullptr
+                                   ));
+        if (sdf_disabled) {
+            // 原因已记录；创建整段跳过。
+        }
+        else if (gpu == nullptr) {
             sdf_reason_ = "renderer has no GPU device (SDF requires the GPU renderer)";
         }
         else {
@@ -267,6 +299,8 @@ namespace nandina::render
         }
         return {
             .binds = sdf_->binds,
+            .frame_binds = sdf_->frame_binds,
+            .frame_unbinds = sdf_->frame_unbinds,
             .hits = sdf_->cache.hits(),
             .misses = sdf_->cache.misses(),
             .cached = sdf_->cache.size(),
@@ -383,6 +417,10 @@ namespace nandina::render
 
     void SdlRenderDevice::begin_frame() {
         ++stats_.frames;
+        if (sdf_) {
+            sdf_->frame_binds = 0;
+            sdf_->frame_unbinds = 0;
+        }
         unbind_sdf();
     }
 

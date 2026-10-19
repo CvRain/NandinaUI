@@ -227,6 +227,9 @@ auto main(int argc, char** argv) -> int {
             ok &= require(second.misses == first.misses, "frame 2 must not create new states");
             ok &= require(second.hits == 3, "frame 2 hits the cache three times");
             ok &= require(second.binds == 6, "frame 2 binds once per block");
+            // 契约要的是"每帧状态切换次数"：逐帧绑定 + 解绑，不能只看累计值。
+            ok &= require(second.frame_binds == 3, "frame 2 reports three binds");
+            ok &= require(second.frame_unbinds == 1, "frame 2 reports the end-frame unbind");
 
             // viewport shifts fragment coordinates, including fractional render scales.
             for (const float scale: {1.0F, 1.25F, 1.5F}) {
@@ -318,6 +321,126 @@ auto main(int argc, char** argv) -> int {
                 SDL_DestroySurface(native);
             }
         }
+        // 纹理（字形图集与图片都走 draw_texture_region）与 SDF 交错：纹理之后再画 SDF，
+        // 必须重新绑定自定义 state，且纹理本身不能被污染。
+        {
+            static constexpr std::array<std::uint8_t, 16> alpha {
+                255,
+                255,
+                255,
+                255,
+                255,
+                255,
+                255,
+                255,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+            };
+            nandina::render::SdlRenderDevice device(*renderer);
+            device.begin_frame();
+            device.clear(scene.background);
+            device.draw_rect(
+                nandina::foundation::NanRect::from_ltrb(10, 10, 40, 40),
+                scene.outline
+            );
+            const auto texture = device.create_alpha_texture(4, 4, alpha);
+            ok &= require(texture.value != 0, "create alpha texture");
+            device.draw_texture_region(
+                texture,
+                nandina::foundation::NanRect(0, 0, 4, 4),
+                nandina::foundation::NanRect::from_ltrb(80, 20, 88, 28),
+                nandina::foundation::NanColor::from_hex(0xFFFFFF)
+            );
+            device.draw_rounded_rect(
+                nandina::foundation::NanRect::from_ltrb(120, 60, 160, 100),
+                8,
+                scene.fill
+            );
+            device.end_frame();
+            auto* surface = SDL_RenderReadPixels(renderer, nullptr);
+            ok &= require(surface != nullptr, "read texture interleave");
+            if (surface != nullptr) {
+                // 8px 的目标对应 4 个 texel（每 texel 2px）：row 0/1 = 255，row 2/3 = 0。
+                ok &= expect_pixel(surface, 84, 21, {255, 255, 255, 255}, "texture after SDF");
+                ok &= expect_pixel(surface, 84, 27, to_rgba(scene.background), "texture mask zero");
+                ok &= expect_pixel(surface, 25, 20, to_rgba(scene.outline), "SDF before texture");
+                ok &= expect_pixel(
+                    surface,
+                    140,
+                    80,
+                    over(to_rgba(scene.background), to_rgba(scene.fill)),
+                    "SDF after texture"
+                );
+                SDL_DestroySurface(surface);
+            }
+            device.destroy_texture(texture);
+        }
+
+        // 驱动逃生舱：显式禁用 SDF 后能力查询如实为 false，CPU 几何仍然正确。
+        {
+            SDL_setenv_unsafe("NANDINA_SDL_SDF", "off", 1);
+            nandina::render::SdlRenderDevice device(*renderer);
+            ok &= require(!device.analytic_antialiasing(), "escape switch disables SDF");
+            ok &=
+                require(!device.sdf_unavailable_reason().empty(), "escape switch reports a reason");
+            device.begin_frame();
+            device.clear(scene.background);
+            device.draw_rect(
+                nandina::foundation::NanRect::from_ltrb(30, 30, 70, 60),
+                scene.outline
+            );
+            device.end_frame();
+            auto* surface = SDL_RenderReadPixels(renderer, nullptr);
+            ok &= require(surface != nullptr, "read escape frame");
+            if (surface != nullptr) {
+                ok &= expect_pixel(surface, 50, 45, to_rgba(scene.outline), "escape CPU pixels");
+                SDL_DestroySurface(surface);
+            }
+            SDL_setenv_unsafe("NANDINA_SDL_SDF", "", 1);
+        }
+
+        // 运行期失败注入：第三次 state 创建失败后，本设备的 SDF 路径停用，该图元由 CPU 画出。
+        {
+            SDL_setenv_unsafe("NANDINA_SDL_SDF_TEST_FAIL_AFTER", "2", 1);
+            nandina::render::SdlRenderDevice device(*renderer);
+            device.begin_frame();
+            device.clear(scene.background);
+            device.draw_rect(nandina::foundation::NanRect(10, 10, 20, 20), scene.outline);
+            device.draw_rect(
+                nandina::foundation::NanRect::from_ltrb(40, 10, 60, 30),
+                scene.outline
+            );
+            device.draw_rect(
+                nandina::foundation::NanRect::from_ltrb(70, 10, 90, 30),
+                scene.outline
+            );
+            device.end_frame();
+            ok &= require(!device.analytic_antialiasing(), "injected failure disables SDF");
+            ok &= require(
+                device.sdf_unavailable_reason().find("injected") != std::string_view::npos,
+                "injected failure is reported"
+            );
+            auto* surface = SDL_RenderReadPixels(renderer, nullptr);
+            ok &= require(surface != nullptr, "read injected failure frame");
+            if (surface != nullptr) {
+                ok &= expect_pixel(
+                    surface,
+                    80,
+                    20,
+                    to_rgba(scene.outline),
+                    "failed draw falls back to CPU"
+                );
+                SDL_DestroySurface(surface);
+            }
+            SDL_setenv_unsafe("NANDINA_SDL_SDF_TEST_FAIL_AFTER", "0", 1);
+        }
+
         SDL_SetRenderTarget(renderer, nullptr);
         SDL_DestroyTexture(target);
     }

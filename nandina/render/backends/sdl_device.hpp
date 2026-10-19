@@ -57,7 +57,11 @@ namespace nandina::render
     /// SDF 路径的运行期计数：绑定次数、缓存命中/未命中（未命中即创建）、缓存规模。
     /// 生产接线的验收看这些数：稳定页面上 misses 应趋近 0，binds 应等于参数块连续段数。
     struct SdfDiagnostics {
+        /// 生命周期累计的非空绑定次数（不含解绑）。
         std::uint64_t binds = 0;
+        /// 本帧的非空绑定 / 解绑次数（begin_frame 清零）；契约要求的"每帧状态切换次数"取两者之和。
+        std::uint64_t frame_binds = 0;
+        std::uint64_t frame_unbinds = 0;
         std::uint64_t hits = 0;
         std::uint64_t misses = 0;
         std::size_t cached = 0;

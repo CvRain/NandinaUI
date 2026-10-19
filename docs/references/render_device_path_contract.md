@@ -277,5 +277,27 @@ clear 记录的问题。修复后 home/label/anchors 在 GPU renderer 各运行 
 与 raylib 稳态调用名字序列分别为 678/2581/95 次，完全一致。截图未建立或审批 golden，
 采样期间有并行构建，本轮计时不作为性能基线。
 
-剩余验收：生产字形图集/图片交错的像素断言与完整 AA 误差界、真实页面像素/性能/内存、
-驱动逃生舱、GPU 失败注入、DXIL/MSL。探针的故障注入与历史页面证据不能替代这些生产验收。
+### 10.1 逃生舱、失败注入与逐帧统计（2026-10-19 补齐）
+
+- **驱动逃生舱**：`NANDINA_SDL_SDF=off|0|false` 在构造时禁用 SDF 并记录
+  `disabled by NANDINA_SDL_SDF`；消费者据此退化到 CPU 几何。设备测试验证该路径的能力查询
+  为 false、CPU 像素正确。
+- **运行期失败注入**（仅测试）：`NANDINA_SDL_SDF_TEST_FAIL_AFTER=<n>` 让前 n 次 state 创建
+  成功后注入一次创建失败；设备随后关闭本设备的 SDF 路径、记录原因并让当次图元由 CPU 画出。
+  生产路径不设置该变量。
+- **逐帧统计**：`SdfDiagnostics::binds` 是生命周期累计值（不含解绑）；`frame_binds` /
+  `frame_unbinds` 在 `begin_frame` 清零，切换次数取两者之和。设备测试断言第二帧
+  `frame_binds=3`、`frame_unbinds=1`，因此可以据此做契约要求的"每帧状态切换次数"报告。
+- **纹理/文字交错**：设备测试在两次 SDF 绘制之间插入 alpha 纹理（与字形图集、图片共用
+  `draw_texture_region`），断言纹理像素、掩码为零处、以及之后的 SDF 仍正确。
+- **未决（viewport / 逻辑呈现）**：原点公式按 SDL 的 `UpdatePixelViewport()` 推导
+  （`floor(viewport*scale + logical_offset)`），但本轮在**离屏 target** 上做"小矩形 + 偏移内/外"
+  强断言时，观测到的落点与公式不符（`SDL_GetRenderViewport` 报告 (13,9)，图元却仍在逻辑原点），
+  且 `SDL_RenderFillRect`/`SDL_RenderGeometry` 在最小 SDL-only 实验里的偏移与裁剪行为也不一致。
+  该强断言已撤回，viewport/逻辑呈现分支**尚未被真实窗口路径独立验证**；生产宿主当前不设置
+  viewport 或逻辑呈现，因此日常渲染不受影响。启用 HiDPI/letterbox 前必须用真实窗口重做这个实验，
+  再决定是否保留原点项。
+
+剩余验收：**真实字形图集**（而非通用 alpha 纹理）的交错像素断言、完整 AA 误差界、
+真实页面像素/性能/内存基线、GPU 失败注入的更多故障类型、DXIL/MSL。
+探针的故障注入与历史页面证据不能替代这些生产验收。
