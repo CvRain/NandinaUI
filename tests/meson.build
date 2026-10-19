@@ -5,6 +5,13 @@
 #   integration —— Python CLI / 构建工作流测试（慢），只在常规任务与对应矩阵中跑
 # 新增测试时必须带上 suite，否则会静默脱离 sanitizer 覆盖。
 
+parameter_state_cache_tests = executable(
+    'parameter_state_cache_tests',
+    files('parameter_state_cache_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('parameter-state-cache', parameter_state_cache_tests, suite: 'unit')
+
 foundation_tests = executable(
     'foundation_tests',
     files('foundation_tests.cpp'),
@@ -116,6 +123,20 @@ if sdl3_dep.found()
         files('../probe/cross_platform/desktop/sdf_state_probe.cpp'),
         dependencies: [sdl3_dep],
     )
+    # 生产 SDF 路径的设备级像素测试：GPU renderer 走 SDF、软件 renderer 走 CPU 几何，
+    # 同一几何与解析预期对照。无显示或拿不到 GPU renderer 时以 77 跳过。
+    sdf_device_tests = executable(
+        'sdf_device_test',
+        files('sdf_device_test.cpp'),
+        dependencies : [nandina_dep, sdl3_dep],
+    )
+    test(
+        'sdf-device',
+        sdf_device_tests,
+        suite: 'integration',
+        is_parallel: false,
+        timeout: 120,
+    )
     test(
         'sdf-state-probe',
         find_program('python3'),
@@ -127,11 +148,11 @@ if sdl3_dep.found()
 endif
 
 # 着色器产物一致性是纯文件检查（不需要 SDL、不需要编译器）：放在 SDL 条件之外，
-# 关闭 SDL 的构建同样会执行它。
+# 关闭 SDL 的构建同样会执行它。覆盖探针与生产两条 shader。
 test(
-    'sdf-probe-artifacts',
+    'shader-artifacts',
     find_program('python3'),
-    args: [files('../tools/sdf_probe_shader.py')],
+    args: [files('../tools/shader_artifacts.py')],
     suite: 'integration',
 )
 

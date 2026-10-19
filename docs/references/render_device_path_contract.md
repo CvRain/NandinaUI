@@ -1,6 +1,6 @@
 # 渲染设备路径契约（SDF 生产路径的前置）
 
-> **状态：批次 3 最小实验已落地；生产 SDF 未实施。** 批次 3 会用 `SDL_GPURenderState` 打通生产 SDF。
+> **状态：批次 3 最小实验与参数策略已落地；生产 SDF 已接入填充/描边/圆。** 其余图元与多平台产物仍待做。
 > 在动代码前先把"两条渲染路径的边界"冻在这里，避免边写边改接口。本文写契约、验收与实测记录；
 > uniform 预算见 §3，微基准与失败注入见 §8。生产接入仍按 §6 验收。
 
@@ -8,7 +8,7 @@
 
 | 路径 | 何时使用 | 质量 | 状态 |
 | --- | --- | --- | --- |
-| **SDF**（`SDL_GPURenderState` 自定义 fragment shader） | 宿主拿到 SDL **GPU renderer** 且能创建 render state | 解析抗锯齿，与 raylib 同级 | **Vulkan 最小实验已通过（§8）；生产未接入** |
+| **SDF**（`SDL_GPURenderState` 自定义 fragment shader） | 宿主拿到 SDL **GPU renderer** 且能创建 render state | 解析抗锯齿，与 raylib 同级 | **已接入填充/描边/圆（Vulkan 实测）；arc/线段/阴影/圆角裁剪仍走 CPU** |
 | **CPU 几何**（当前实现：中心矩形 + 边条 + 圆角扇形） | 普通 `SDL_Renderer`、GPU render state 不可用、或显式关闭 | 硬边（`segments_for(r)=clamp(ceil(r*0.75),6,48)`） | 已存在，保留为基础路径 |
 
 规则：
@@ -25,10 +25,10 @@
 
 | 能力 | 含义 | 今天 |
 | --- | --- | --- |
-| `supports_analytic_aa()` | 当前路径是否提供解析抗锯齿 | false（CPU 几何） |
+| `supports_analytic_aa()` | 当前路径是否提供解析抗锯齿 | **是**（GPU renderer 上的 SDF；默认 false 的接口方法 `analytic_antialiasing()`） |
 | `supports_rounded_clip()` | 是否按圆角轮廓裁剪 | false（只到矩形） |
 | `supports_soft_shadows()` | 是否提供软阴影 | false |
-| `render_path()` | `sdf` / `cpu` + 原因 | `cpu`（仅 CPU 几何实现） |
+| `render_path()` | `sdf` / `cpu` + 原因 | `sdf`（GPU renderer）或 `cpu`；原因见 `sdf_unavailable_reason()` |
 
 已有的 `supports_rounded_rect()` / `supports_alpha_textures()` 保持语义不变。
 **新查询必须有消费者**：`supports_analytic_aa()` 至少要被一处诊断或测试读取，否则不算落地。
@@ -80,7 +80,10 @@ raylib 的 SDF 用一个 `uMode` 管 6 种图元（fill / outline / segment / cl
 ## 5. 产物与分发
 
 - 着色器产物（SPIR-V / DXIL / MSL）由源生成并受控提交；维护关卡核对"源哈希 + 工具版本 + 产物"一致
-  （[依赖策略](dependency_policy.md) §7）。普通消费者不需要安装 shadercross。
+  （[依赖策略](dependency_policy.md) §7）。生产 shader 的 SPIR-V 已嵌入 libnandina
+  （`nandina/render/backends/sdf_rounded_spirv.hpp`，登记在 `tools/shader_artifacts.toml`），
+  普通构建不需要 glslc/spirv-val；`tools/shader_artifacts.py` 默认校验哈希，`--verify-compiler`
+  用固定工具链再生。DXIL/MSL 尚未交付。
 - 嵌入方式（编译进二进制 vs 随资源包）与安装布局在批次 3 定形；**不能假设构建树路径在安装后仍可用**。
 - 共享库分发（当前 vendored SDL3 是共享库）与着色器产物是两件事，分别验证。
   便携目录布局、RUNPATH 与"CMake 子项目不进 Meson install 计划"的实测见
@@ -243,6 +246,7 @@ clang-format 23.1.1、suite 门禁、文档相对链接/锚点和 diff 检查通
 ### 9.4 生产接入的验收
 
 1. 每帧 `binds` ≈ 参数块连续段数 + 文字/纹理段数；稳定页面上 `misses` 应趋近 0；
+   `SdlRenderDevice::sdf_diagnostics()` 提供 `binds/hits/misses/cached/capacity`；
 2. 真实页面（Label / 列表 / 按钮 / 涟漪）按[性能预算](performance_budget.md)协议采样，并与 CPU 几何路径对比；
 3. 同一参数块在两条路径上的像素一致（GPU 需要显示器，归入探针或人工验收）；
 4. GPU renderer 不可用或 state 创建失败时回落到 CPU 几何，报告 `render_path=cpu` 与原因。

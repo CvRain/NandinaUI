@@ -44,8 +44,8 @@ integration harness 自动运行正常帧、漏 uniform 更新、漏状态恢复
 维护着色器时，显式生成候选头并审阅后替换，再格式化与验证；不在构建时静默再生：
 
 ```bash
-python3 tools/sdf_probe_shader.py --emit > /tmp/sdf_state_spirv.hpp
-python3 tools/sdf_probe_shader.py --verify-compiler
+python3 tools/shader_artifacts.py --emit sdf_state > /tmp/sdf_state_spirv.hpp
+python3 tools/shader_artifacts.py --verify-compiler sdf_state
 ```
 
 性能实验：`sdf_state_probe --require-gpu --benchmark`。每种模式预热 300 帧、采样 1200 帧，

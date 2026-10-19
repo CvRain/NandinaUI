@@ -1,0 +1,29 @@
+# 嵌入 SPIR-V 产物的登记表。tools/shader_artifacts.py 依据它校验/再生头文件。
+schema = 1
+
+[toolchain]
+glslc_version = "2026.4"
+spirv_tools_version = "v2026.4"
+target_env = "vulkan1.0"
+
+[[shaders]]
+name = "sdf_state"
+source = "probe/cross_platform/desktop/sdf_state.frag.hlsl"
+header = "probe/cross_platform/desktop/sdf_state_spirv.hpp"
+guard = "NANDINA_PROBE_SDF_STATE_SPIRV_HPP"
+namespace = "nandina::probe"
+[[shaders.variants]]
+name = "SHAPE"
+vectors = 4
+[[shaders.variants]]
+name = "BUDGET"
+vectors = 256
+
+[[shaders]]
+name = "sdf_rounded"
+source = "nandina/render/backends/sdf_rounded.frag.hlsl"
+header = "nandina/render/backends/sdf_rounded_spirv.hpp"
+guard = "NANDINA_RENDER_BACKENDS_SDF_ROUNDED_SPIRV_HPP"
+namespace = "nandina::render::detail"
+[[shaders.variants]]
+name = "ROUNDED"

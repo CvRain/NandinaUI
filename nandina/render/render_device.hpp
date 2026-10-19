@@ -270,6 +270,13 @@ namespace nandina::render
             return true;
         }
 
+        /// 是否提供**解析抗锯齿**（SDF 路径）。默认 false；消费者至少是诊断报告与设备测试。
+        ///
+        /// 返回 false 不代表不能画：CPU 几何路径仍然可用，只是边缘是硬边。
+        [[nodiscard]] virtual auto analytic_antialiasing() const -> bool {
+            return false;
+        }
+
         /// 是否能加载图片（`load_texture_from_file` / `load_texture_from_memory`）。
         ///
         /// 接口默认实现是 no-op，返回空 handle；做不到的设备必须如实返回 false，让消费者

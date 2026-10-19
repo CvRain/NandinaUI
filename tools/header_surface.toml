@@ -193,12 +193,20 @@ path = "nandina/render/backends/sdf_primitive_geometry.hpp"
 level = "experimental"
 
 [[headers]]
+path = "nandina/render/backends/sdf_rounded_spirv.hpp"
+level = "experimental"
+
+[[headers]]
 path = "nandina/render/backends/sdl_device.hpp"
 level = "experimental"
 
 [[headers]]
 path = "nandina/render/clip_stack.hpp"
 level = "experimental"
+
+[[headers]]
+path = "nandina/render/detail/parameter_state_cache.hpp"
+level = "internal"
 
 [[headers]]
 path = "nandina/render/draw_context.hpp"

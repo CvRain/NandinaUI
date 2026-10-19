@@ -29,7 +29,9 @@
 
 #include <cstdint>
 #include <map>
+#include <memory>
 #include <span>
+#include <string>
 #include <string_view>
 
 namespace nandina::render
@@ -52,10 +54,21 @@ namespace nandina::render
         std::uint64_t generated_vertices = 0;
     };
 
+    /// SDF 路径的运行期计数：绑定次数、缓存命中/未命中（未命中即创建）、缓存规模。
+    /// 生产接线的验收看这些数：稳定页面上 misses 应趋近 0，binds 应等于参数块连续段数。
+    struct SdfDiagnostics {
+        std::uint64_t binds = 0;
+        std::uint64_t hits = 0;
+        std::uint64_t misses = 0;
+        std::size_t cached = 0;
+        std::size_t capacity = 0;
+    };
+
     class SdlRenderDevice final: public render::IRenderDevice {
     public:
         /// `renderer` 由调用方持有；本设备不创建窗口/渲染器，也不 present。
         explicit SdlRenderDevice(SDL_Renderer& renderer);
+        ~SdlRenderDevice() override;
 
         auto stats() const -> const SdlDeviceStats&;
 
@@ -159,8 +172,28 @@ namespace nandina::render
         [[nodiscard]] auto supports_soft_shadows() const -> bool override;
         /// 不能加载图片（无解码器/loader），返回 false。
         [[nodiscard]] auto supports_image_loading() const -> bool override;
+        /// SDF 路径是否生效（GPU renderer 且 render state 创建成功）。这是 `render_path` 的事实来源。
+        [[nodiscard]] auto analytic_antialiasing() const -> bool override;
+
+        /// SDF 路径的计数快照（无 SDF 路径时全零）。
+        [[nodiscard]] auto sdf_diagnostics() const -> SdfDiagnostics;
+        /// SDF 路径不可用的原因（可用于诊断报告）；可用时为空。
+        [[nodiscard]] auto sdf_unavailable_reason() const -> std::string_view;
 
     private:
+        struct SdfPath;
+        /// 当前 render scale（要求各向同性）；不可用时返回 false，调用方回落到 CPU 几何。
+        auto sdf_scale(float& scale) const -> bool;
+        /// bounds 为图元边界（描边传入中心线边界）；mode 0 = 填充、1 = 中心线描边。
+        auto draw_sdf_shape(
+            const foundation::NanRect& bounds,
+            float radius,
+            float half_width,
+            int mode,
+            const foundation::NanColor& color
+        ) -> bool;
+        void unbind_sdf();
+
         void set_draw_color(const foundation::NanColor& color);
         /// 圆形/圆角的三角形扇：返回顶点数（同时计入 stats）。
         auto draw_fan(
@@ -176,6 +209,8 @@ namespace nandina::render
         SdlDeviceStats stats_ {};
         std::map<std::uint64_t, SDL_Texture*> textures_ {};
         std::uint64_t next_texture_ = 1;
+        std::unique_ptr<SdfPath> sdf_;
+        std::string sdf_reason_;
     };
 
 } // namespace nandina::render

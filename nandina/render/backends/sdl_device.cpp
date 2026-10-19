@@ -5,12 +5,20 @@
 #include "sdl_device.hpp"
 
 #include "../../foundation/nandina_color_space.hpp"
+#include "../detail/parameter_state_cache.hpp"
+#include "sdf_primitive_geometry.hpp"
+#include "sdf_rounded_spirv.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
+#include <memory>
+#include <span>
 #include <stdexcept>
+#include <string>
 #include <vector>
 
 namespace nandina::render
@@ -37,6 +45,16 @@ namespace nandina::render
                 .g = rgb.green,
                 .b = rgb.blue,
                 .a = rgb.alpha,
+            };
+        }
+
+        [[nodiscard]] auto to_vertex_color(const foundation::NanColor& color) -> SDL_FColor {
+            const auto converted = to_sdl_color(color);
+            return SDL_FColor {
+                .r = static_cast<float>(converted.r) / 255.0F,
+                .g = static_cast<float>(converted.g) / 255.0F,
+                .b = static_cast<float>(converted.b) / 255.0F,
+                .a = static_cast<float>(converted.a) / 255.0F,
             };
         }
 
@@ -69,6 +87,86 @@ namespace nandina::render
         }
     } // namespace
 
+    // SDF 路径（不可变参数 state + 有界 LRU，策略见
+    // docs/references/render_device_path_contract.md §9）。
+    struct SdlRenderDevice::SdfPath {
+        using Cache = detail::ParameterStateCache<SDL_GPURenderState*, 8>;
+        using Key = Cache::Key;
+        static constexpr std::size_t kCacheCapacity = 256;
+
+        SDL_Renderer* renderer = nullptr;
+        SDL_GPUShader* shader = nullptr;
+        SDL_GPURenderState* bound = nullptr;
+        SDL_Texture* white = nullptr;
+        std::uint64_t binds = 0;
+        Cache cache;
+
+        SdfPath(SDL_Renderer* target, SDL_GPUShader* fragment, SDL_Texture* white_texture):
+            renderer(target),
+            shader(fragment),
+            white(white_texture),
+            cache(
+                kCacheCapacity,
+                [this](const Key& key) { return create_state(key); },
+                [](SDL_GPURenderState* state) {
+                    if (state != nullptr) {
+                        SDL_DestroyGPURenderState(state);
+                    }
+                }
+            ) {}
+
+        ~SdfPath() {
+            unbind();
+            cache.clear();
+            if (white != nullptr) {
+                SDL_DestroyTexture(white);
+            }
+            if (shader != nullptr) {
+                // 释放 shader 需要 GPU device：从 renderer 属性取，而不是让调用方再传一份所有权。
+                const auto properties = SDL_GetRendererProperties(renderer);
+                auto* gpu = static_cast<SDL_GPUDevice*>(SDL_GetPointerProperty(
+                    properties,
+                    SDL_PROP_RENDERER_GPU_DEVICE_POINTER,
+                    nullptr
+                ));
+                if (gpu != nullptr) {
+                    SDL_ReleaseGPUShader(gpu, shader);
+                }
+            }
+        }
+
+        SdfPath(const SdfPath&) = delete;
+        SdfPath& operator=(const SdfPath&) = delete;
+
+        void bind(SDL_GPURenderState* state) {
+            if (bound == state) {
+                return;
+            }
+            check_sdl(SDL_SetGPURenderState(renderer, state), "SDL_SetGPURenderState");
+            bound = state;
+            if (state != nullptr) {
+                ++binds;
+            }
+        }
+
+        void unbind() {
+            bind(nullptr);
+        }
+
+        auto create_state(const Key& key) -> SDL_GPURenderState* {
+            SDL_GPURenderStateCreateInfo info {};
+            info.fragment_shader = shader;
+            auto* state = SDL_CreateGPURenderState(renderer, &info);
+            check_sdl(state != nullptr, "SDL_CreateGPURenderState");
+            // 参数块就是缓存键本身：创建即播种，之后不再上传，从结构上排除"忘记更新"。
+            check_sdl(
+                SDL_SetGPURenderStateFragmentUniforms(state, 0, key.data(), sizeof(key)),
+                "SDL_SetGPURenderStateFragmentUniforms"
+            );
+            return state;
+        }
+    };
+
     SdlRenderDevice::SdlRenderDevice(SDL_Renderer& renderer): renderer_(&renderer) {
         // 几何图元的混合必须在这里打开：`SDL_RenderGeometry` / `FillRect` / 线段都沿用 renderer 的
         // draw blend mode，而纹理另有自己的 `SDL_SetTextureBlendMode`。不设置时默认不混合，
@@ -81,14 +179,170 @@ namespace nandina::render
             SDL_SetRenderDrawBlendMode(renderer_, SDL_BLENDMODE_BLEND),
             "SDL_SetRenderDrawBlendMode(BLEND)"
         );
+
+        // SDF 路径是可选增强：普通 renderer（软件/OpenGL）上 SDL_CreateGPURenderState 会失败，
+        // 此时如实记录原因并继续走 CPU 几何，而不是让整个页面不可用。
+        SDL_GPUShaderCreateInfo shader_info {};
+        const auto shader_words = std::span(detail::ROUNDED_SPIRV);
+        shader_info.code = reinterpret_cast<const Uint8*>(shader_words.data());
+        shader_info.code_size = shader_words.size_bytes();
+        shader_info.entrypoint = "main";
+        shader_info.format = SDL_GPU_SHADERFORMAT_SPIRV;
+        shader_info.stage = SDL_GPU_SHADERSTAGE_FRAGMENT;
+        shader_info.num_samplers = 1;
+        shader_info.num_uniform_buffers = 1;
+        auto* gpu = static_cast<SDL_GPUDevice*>(SDL_GetPointerProperty(
+            SDL_GetRendererProperties(renderer_),
+            SDL_PROP_RENDERER_GPU_DEVICE_POINTER,
+            nullptr
+        ));
+        if (gpu == nullptr) {
+            sdf_reason_ = "renderer has no GPU device (SDF requires the GPU renderer)";
+        }
+        else {
+            auto* shader = SDL_CreateGPUShader(gpu, &shader_info);
+            if (shader == nullptr) {
+                sdf_reason_ = std::string("SDL_CreateGPUShader: ") + SDL_GetError();
+            }
+            else {
+                auto* white = SDL_CreateTexture(
+                    renderer_,
+                    SDL_PIXELFORMAT_RGBA32,
+                    SDL_TEXTUREACCESS_STATIC,
+                    1,
+                    1
+                );
+                if (white == nullptr) {
+                    SDL_ReleaseGPUShader(gpu, shader);
+                    sdf_reason_ = std::string("SDL_CreateTexture(white): ") + SDL_GetError();
+                }
+                else {
+                    const std::array<Uint8, 4> pixel {255, 255, 255, 255};
+                    if (!SDL_UpdateTexture(white, nullptr, pixel.data(), 4)) {
+                        sdf_reason_ = std::string("SDL_UpdateTexture(white): ") + SDL_GetError();
+                        SDL_DestroyTexture(white);
+                        SDL_ReleaseGPUShader(gpu, shader);
+                    }
+                    else {
+                        auto candidate = std::make_unique<SdfPath>(renderer_, shader, white);
+                        // 用一个真实 state 探测可用性：非 GPU renderer 上会失败。
+                        SDL_GPURenderStateCreateInfo probe_info {};
+                        probe_info.fragment_shader = shader;
+                        auto* probe_state = SDL_CreateGPURenderState(renderer_, &probe_info);
+                        if (probe_state == nullptr) {
+                            sdf_reason_ =
+                                std::string("SDL_CreateGPURenderState: ") + SDL_GetError();
+                            candidate.reset();
+                        }
+                        else {
+                            SDL_DestroyGPURenderState(probe_state);
+                            sdf_ = std::move(candidate);
+                        }
+                    }
+                }
+            }
+        }
     }
+
+    SdlRenderDevice::~SdlRenderDevice() = default;
 
     auto SdlRenderDevice::stats() const -> const SdlDeviceStats& {
         return stats_;
     }
 
+    auto SdlRenderDevice::analytic_antialiasing() const -> bool {
+        return sdf_ != nullptr;
+    }
+
+    auto SdlRenderDevice::sdf_diagnostics() const -> SdfDiagnostics {
+        if (!sdf_) {
+            return {};
+        }
+        return {
+            .binds = sdf_->binds,
+            .hits = sdf_->cache.hits(),
+            .misses = sdf_->cache.misses(),
+            .cached = sdf_->cache.size(),
+            .capacity = sdf_->cache.capacity(),
+        };
+    }
+
+    auto SdlRenderDevice::sdf_unavailable_reason() const -> std::string_view {
+        return sdf_reason_;
+    }
+
+    auto SdlRenderDevice::sdf_scale(float& scale) const -> bool {
+        if (!sdf_) {
+            return false;
+        }
+        float horizontal = 1.0F;
+        float vertical = 1.0F;
+        // SDF 的距离场假设各向同性；非等比缩放时无法用同一个半径表达，交回 CPU 几何。
+        if (!SDL_GetRenderScale(renderer_, &horizontal, &vertical) || horizontal <= 0.0F
+            || vertical <= 0.0F || horizontal != vertical)
+        {
+            return false;
+        }
+        scale = horizontal;
+        return true;
+    }
+
+    void SdlRenderDevice::unbind_sdf() {
+        if (sdf_) {
+            sdf_->unbind();
+        }
+    }
+
+    auto SdlRenderDevice::draw_sdf_shape(
+        const foundation::NanRect& bounds,
+        const float radius,
+        const float half_width,
+        const int mode,
+        const foundation::NanColor& color
+    ) -> bool {
+        float scale = 0.0F;
+        if (!sdf_scale(scale)) {
+            return false;
+        }
+        // 覆盖 quad 要包住 AA 过渡区：设备空间 1px（逻辑坐标 1/scale）。
+        const auto cover = bounds.expanded(std::max(half_width, 0.0F) + 1.0F / scale);
+        const auto vertex_color = to_vertex_color(color);
+        const std::array<SDL_Vertex, 4> vertices {{
+            {{cover.get_left(), cover.get_top()}, vertex_color, {0.0F, 0.0F}},
+            {{cover.get_right(), cover.get_top()}, vertex_color, {1.0F, 0.0F}},
+            {{cover.get_right(), cover.get_bottom()}, vertex_color, {1.0F, 1.0F}},
+            {{cover.get_left(), cover.get_bottom()}, vertex_color, {0.0F, 1.0F}},
+        }};
+        const std::array<int, 6> indices {0, 1, 2, 0, 2, 3};
+
+        // 参数块（目标像素）：中心、半尺寸、圆角半径、半线宽、模式。
+        const auto center = bounds.get_center();
+        const std::array<float, 8> values {
+            center.get_x() * scale,
+            center.get_y() * scale,
+            bounds.get_width() * 0.5F * scale,
+            bounds.get_height() * 0.5F * scale,
+            radius * scale,
+            half_width * scale,
+            static_cast<float>(mode),
+            0.0F,
+        };
+        SdfPath::Key key {};
+        static_assert(sizeof(values) == sizeof(key));
+        std::memcpy(key.data(), values.data(), sizeof(values));
+
+        const auto acquired = sdf_->cache.acquire(key);
+        sdf_->bind(acquired.handle);
+        check_sdl(
+            SDL_RenderGeometry(renderer_, sdf_->white, vertices.data(), 4, indices.data(), 6),
+            "SDL_RenderGeometry(SDF)"
+        );
+        return true;
+    }
+
     void SdlRenderDevice::begin_frame() {
         ++stats_.frames;
+        unbind_sdf();
     }
 
     void SdlRenderDevice::end_frame() {
@@ -118,6 +372,9 @@ namespace nandina::render
     void
     SdlRenderDevice::draw_rect(const foundation::NanRect& rect, const foundation::NanColor& color) {
         ++stats_.rects;
+        if (draw_sdf_shape(rect, 0.0F, 0.0F, 0, color)) {
+            return;
+        }
         set_color(*renderer_, color);
         const SDL_FRect target {
             .x = rect.get_left(),
@@ -137,6 +394,19 @@ namespace nandina::render
         const auto edge = std::max(thickness, 0.0F);
         if (edge <= 0.0F) {
             return;
+        }
+        {
+            const auto outline = detail::sdf_inner_outline_geometry(rect, 0.0F, edge);
+            if (draw_sdf_shape(
+                    outline.centerline_bounds,
+                    outline.centerline_radius,
+                    outline.half_width,
+                    1,
+                    color
+                ))
+            {
+                return;
+            }
         }
         // 四条边分别填充：SDL 的 SDL_RenderRect 只有 1px，厚度要自己拼。
         draw_rect(
@@ -241,6 +511,9 @@ namespace nandina::render
         ++stats_.rounded_rects;
         const auto clamped =
             std::clamp(radius, 0.0F, std::min(rect.get_width(), rect.get_height()) * 0.5F);
+        if (draw_sdf_shape(rect, clamped, 0.0F, 0, color)) {
+            return;
+        }
         if (clamped <= 0.5F) {
             draw_rect(rect, color);
             return;
@@ -306,6 +579,7 @@ namespace nandina::render
         const foundation::NanColor& color
     ) {
         ++stats_.arcs;
+        unbind_sdf();
         if (!std::isfinite(center.get_x()) || !std::isfinite(center.get_y())
             || !std::isfinite(inner_radius) || !std::isfinite(outer_radius)
             || !std::isfinite(start_radians) || !std::isfinite(sweep_radians)
@@ -382,6 +656,19 @@ namespace nandina::render
             std::clamp(radius, 0.0F, std::min(rect.get_width(), rect.get_height()) * 0.5F);
         if (edge <= 0.0F) {
             return;
+        }
+        {
+            const auto outline = detail::sdf_inner_outline_geometry(rect, clamped, edge);
+            if (draw_sdf_shape(
+                    outline.centerline_bounds,
+                    outline.centerline_radius,
+                    outline.half_width,
+                    1,
+                    color
+                ))
+            {
+                return;
+            }
         }
         if (clamped <= 0.5F) {
             draw_rect_outline(rect, edge, color);
@@ -472,6 +759,7 @@ namespace nandina::render
         const foundation::NanColor& color
     ) {
         ++stats_.lines;
+        unbind_sdf();
         const auto half = std::max(thickness, 0.0F) * 0.5F;
         const auto dx = b.get_x() - a.get_x();
         const auto dy = b.get_y() - a.get_y();
@@ -519,6 +807,21 @@ namespace nandina::render
         if (radius <= 0.0F) {
             return;
         }
+        if (draw_sdf_shape(
+                foundation::NanRect::from_ltrb(
+                    center.get_x() - radius,
+                    center.get_y() - radius,
+                    center.get_x() + radius,
+                    center.get_y() + radius
+                ),
+                radius,
+                0.0F,
+                0,
+                color
+            ))
+        {
+            return;
+        }
         (void)draw_fan(center, radius, 0.0F, kPi * 2.0F, color);
     }
 
@@ -544,6 +847,7 @@ namespace nandina::render
         const foundation::NanColor& color
     ) {
         ++stats_.texts;
+        unbind_sdf();
         set_color(*renderer_, color);
         // SDL 的内置 8x8 调试字体：能证明「文字能落到同一套坐标/裁剪里」，
         // 但**不是**真正的文本路径（真正的路径是 update_alpha_texture_region + draw_texture_region）。
@@ -690,6 +994,7 @@ namespace nandina::render
             return;
         }
         ++stats_.texture_draws;
+        unbind_sdf();
         const auto converted = to_sdl_color(tint);
         check_sdl(
             SDL_SetTextureColorMod(target, converted.r, converted.g, converted.b),
