@@ -1,0 +1,37 @@
+{
+  "protocol": {
+    "warmup": 300,
+    "samples": 1200,
+    "repeats": 5,
+    "stress": 0,
+    "interaction": "cycle",
+    "overlay": false
+  },
+  "configurations": [
+    {
+      "page": "label",
+      "mode": "sdf",
+      "interaction": "cycle",
+      "p50_ms": 2.59424,
+      "p95_ms": 16.8943,
+      "p50_range_ms": [
+        2.59192,
+        2.60172
+      ],
+      "layout_passes_per_frame": 0.06694560669456066,
+      "binds_per_frame": 23.372384937238493,
+      "unbinds_per_frame": 13.485355648535565,
+      "misses_per_frame": 0.0,
+      "hits_per_frame": 24.366834170854272,
+      "cached": 142.0,
+      "summary": {
+        "capabilities": "device capabilities: alpha_textures=1 analytic_aa=1 rounded_rect=1 rounded_clip=0 soft_shadows=0",
+        "frame_cost": "frame cost over 1495 frames: layout=0.827603 ms, draw=3.92732 ms, total=4.75493 ms",
+        "interaction": "interaction cycle: presses=50 releases=50 dialog_opens=0 dialog_closes=0 route_switches=50 page_after=label",
+        "layout": "layout passes=100 over 1495 frames",
+        "sdf": "sdf: format=spirv binds=35110 hits=36458 misses=142 cached=142 capacity=256",
+        "resources": "resources: max_rss_kb=83956 texture_bytes=2097152"
+      }
+    }
+  ]
+}

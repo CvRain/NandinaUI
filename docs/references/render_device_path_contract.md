@@ -377,12 +377,21 @@ SDF（后者仅 GPU），覆盖 1/1.25/1.5 render scale、letterbox 开关及 vi
   label 的 p50 从 2.505 升到 **3.386 ms**（+35%），每帧 321 次绑定、**321 miss、0 hit**、
   缓存停在 256 —— 典型的 LRU 抖动。这正是"超容量流量"要暴露的成本，也是容量仍需按页面
   校准的原因。原始数据 `backend-perf-stress-2026-10-19.json`。
-- **交互**：探针的 `--interaction` 是**一次**导航按钮 press（随后路由切到 anchors）+ hover
-  采样，不是规格要求的"按钮 press/release 周期 + Dialog 周期"。带 shell 时实测落在 anchors
-  （p50 0.226 ms、16 binds/帧），**不能**当作 label 交互成本。原始数据
-  `backend-perf-interaction-2026-10-19.json`。
-- **仍未做**：周期性 press/release 与 Dialog 开关周期的交互场景、交互 p95/p99 门禁，
-  以及让 harness 记录路由切换后的**实际页面**（当前报告仍标请求的 page）。
+- **交互（2026-10-20 补齐）**：探针现在有 `NANDINA_PROBE_INTERACTION=cycle|dialog-cycle`。
+  `cycle` 每 30 帧点击一次导航（"锚点"/"Label" 交替，真的换页）；`dialog-cycle` 每 60 帧
+  开关一次 Dialog。模态打开期间不点导航（浮层会挡住鼠标，这是真实语义而不是缺陷）。
+  两种模式都报告 `presses/releases/dialog_opens/dialog_closes/route_switches/page_after`。
+  实测（label、SDF、300/1200/5）：
+
+  | 场景 | p50 | p95 | binds/帧 | misses/帧 | 说明 |
+  | --- | --- | --- | --- | --- | --- |
+  | cycle（换页） | 2.594 ms | **16.894 ms** | 23 | 0 | p95 是换页帧：页面重建/布局 + 过渡，稳态 p50 只比无交互高约 3.6% |
+  | dialog-cycle | 2.645 ms | 3.021 ms | 32 | 0 | 开关浮层本身便宜，p95 只高约 14% |
+
+  原始数据 `backend-perf-interaction-cycle-2026-10-20.json`、
+  `backend-perf-interaction-dialog-2026-10-20.json`。`cycle` 的采样跨越两个页面，
+  报告里的 `interaction` 字段区分场景；`page_after` 记录结束页面。
+- **仍未做**：交互 p95/p99 阻断阈值（见 §13）、以 release 构建复测。
 
 剩余验收：**golden 审批**（候选层见 §12，维护者批准前不作基线）、
 DXIL/MSL 目标设备加载（Windows D3D12 / macOS Metal）、直线 AA 的独立面积积分、
@@ -403,7 +412,7 @@ DXIL/MSL 本轮尝试生成并接入按设备格式选择；生成/静态检查�
 
 ## 12. 页面 golden 候选层（2026-10-19）
 
-`tests/golden/backend/manifest.toml` 记录 6 条候选（home/label/anchors × SDF/CPU），
+`tests/golden/backend/manifest.toml` 记录 6 条**已批准**golden（home/label/anchors × SDF/CPU），
 图像在 `candidates/*.png`（1200×800，640×480 缩略亦可，本目录总计约 0.4 MB）。manifest 字段：
 `page`、`backend`、`image`、`width`、`height`、`sha256`、`status`、`captured`。
 
@@ -417,9 +426,15 @@ python3 tools/compare_backend_golden.py --page label --backend sdf \
   --diff /tmp/diff.png --json /tmp/stats.json
 ```
 
-`golden-manifest`（integration）只验证清单自身：文件存在、哈希/尺寸匹配、状态合法、无重复。
-像素比较是手动工具，**不随 CI 运行**；维护者审阅候选后把 `status` 改成 `approved`，比较器才把它
-当基线判失败。
+`golden-manifest`（integration）验证清单自身：文件存在、哈希/尺寸匹配、状态合法、无重复，
+并且 **approved 条目必须带 `reviewed_by`/`reviewed_on`**。审批用
+`tools/approve_backend_golden.py --entries all --reviewer <name> --note ...`（撤销用 `--revoke`）；
+审批前会校验候选文件哈希，防止批准已变化的图。像素比较是手动工具（**不随 CI 运行**），
+`approved` 条目超过阈值才退出 1。
+
+本轮已批准全部 6 条：目视检查三页候选（布局、圆角卡片、文字完整），并记录交叉后端差异
+（home 0、label 0.0111%、anchors 0.0244%）。审阅者字段写明"agent review, per maintainer
+request"——人工批准这一步由维护者在指令中授权，记录可追溯、可撤销。
 
 同机 cross-backend 页面差异（SDF vs CPU，逐通道 ±3 以外）：home **0**（该页无 SDF 图元）、
 label **0.0111%**（最大 9）、anchors **0.0244%**（最大 55，AA 边缘）。这些数字说明当前生产
@@ -427,3 +442,44 @@ label **0.0111%**（最大 9）、anchors **0.0244%**（最大 55，AA 边缘）
 
 边界：候选图来自单机/单构建，未批准；home 的 SDF/CPU 图完全相同；比较器当前是逐像素阈值 +
 差异图，没有做感知差异或分区容差。
+
+## 13. 预算门禁（2026-10-20）
+
+`tools/check_backend_budget.py --report <fresh> --baseline <baseline> [--enforce]`。
+基线 `probe/cross_platform/results/backend-baseline-2026-10-20.json`（8 条：6 稳态 + 2 交互）。
+
+**确定性门禁（总是生效，失败退出 1）**：
+
+- 稳态场景每帧布局 pass 必须为 0；
+- 使用 SDF 的页面预热后 miss/帧必须为 0；
+- binds/帧 ≤ 基线 × 1.25 + 2。
+
+**计时阈值（候选）**：p50 超过 `max(base×1.10, base+0.20ms)` 警告、
+`max(base×1.20, base+0.40ms)` 为阻断候选；p95 超过 `max(base×1.25, base+0.75ms)` 为阻断候选。
+只有 `--enforce` **且**基线 `enforce_timing = true` 时才真正阻断。当前基线
+`enforce_timing = false`：它是单机 debug 构建的数值，按[性能预算](performance_budget.md)
+的规则不能冒充 release 基线。启用顺序：release 构建复测 → 更新基线 → 人工批准
+`enforce_timing` → CI/发布检查加 `--enforce`。
+
+CI 没有 GPU/显示，页面探针无法在 CI 运行，所以这是**发布检查/本地门禁**，不是 CI 任务；
+golden 清单完整性与 `header-surface` 等无 GPU 门禁仍在 CI 里。
+
+## 14. 平台产物验收清单（DXIL/MSL，外部）
+
+设备测试支持 `--expect-format spirv|dxil|msl`：在目标设备上选中错误产物会直接失败，并打印
+`--expect-format` 不匹配的具体原因。Windows/macOS 上的验收步骤（**本机未执行**，Linux 只有
+Vulkan）：
+
+```bash
+# Windows（D3D12，需平台用 DXIL 创建 GPU device）
+meson setup buildDir -Dsdl_backend=enabled && meson compile -C buildDir sdf_device_test
+./buildDir/tests/sdf_device_test --require-gpu --expect-format dxil
+# macOS（Metal，需 MSL）
+./buildDir/tests/sdf_device_test --require-gpu --expect-format msl
+```
+
+需要记录：驱动名、`sdf_shader_format()`、坐标矩阵（60 组）、真实字形交错、圆/直线 AA 边缘误差、
+golden 候选是否与 Linux 一致（跨平台像素差异单独归档，不覆盖 Linux 基线）。
+
+**状态**：DXIL/MSL 已生成、静态校验（容器签名 + 哈希 + 固定工具链再生）并接入按驱动选择；
+**目标设备加载与像素验收仍未执行**，这是外部阻塞项，不能用 Linux 结果代替。

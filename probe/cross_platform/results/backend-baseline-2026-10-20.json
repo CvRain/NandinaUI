@@ -1,0 +1,112 @@
+{
+  "schema": 1,
+  "approved": false,
+  "enforce_timing": false,
+  "note": "\u5355\u673a RADV RX 6750 GRE\u3001debug \u6784\u5efa\u6d4b\u5f97\uff1b\u8ba1\u65f6\u963b\u65ad\u9700 release \u6784\u5efa\u57fa\u7ebf\u5e76\u4eba\u5de5\u6279\u51c6\u3002",
+  "protocol": {
+    "warmup": 300,
+    "samples": 1200,
+    "repeats": 5,
+    "stress": 0,
+    "interaction": false,
+    "overlay": false
+  },
+  "entries": [
+    {
+      "page": "home",
+      "mode": "sdf",
+      "p50_ms": 0.596009,
+      "p95_ms": 0.642848,
+      "binds_per_frame": 0.0,
+      "misses_per_frame": 0.0,
+      "hits_per_frame": 0.0,
+      "cached": 0.0,
+      "layout_passes_per_frame": 0.0,
+      "interaction": "none"
+    },
+    {
+      "page": "home",
+      "mode": "cpu",
+      "p50_ms": 0.579668,
+      "p95_ms": 0.602782,
+      "binds_per_frame": 0.0,
+      "misses_per_frame": 0.0,
+      "hits_per_frame": 0.0,
+      "cached": 0.0,
+      "layout_passes_per_frame": 0.0,
+      "interaction": "none"
+    },
+    {
+      "page": "label",
+      "mode": "sdf",
+      "p50_ms": 2.50541,
+      "p95_ms": 2.59873,
+      "binds_per_frame": 21.0,
+      "misses_per_frame": 0.0,
+      "hits_per_frame": 21.0,
+      "cached": 21.0,
+      "layout_passes_per_frame": 0.0,
+      "interaction": "none"
+    },
+    {
+      "page": "label",
+      "mode": "cpu",
+      "p50_ms": 2.55927,
+      "p95_ms": 2.65671,
+      "binds_per_frame": 0.0,
+      "misses_per_frame": 0.0,
+      "hits_per_frame": 0.0,
+      "cached": 0.0,
+      "layout_passes_per_frame": 0.0,
+      "interaction": "none"
+    },
+    {
+      "page": "anchors",
+      "mode": "sdf",
+      "p50_ms": 0.105642,
+      "p95_ms": 0.11556,
+      "binds_per_frame": 7.0,
+      "misses_per_frame": 0.0,
+      "hits_per_frame": 7.0,
+      "cached": 7.0,
+      "layout_passes_per_frame": 0.0,
+      "interaction": "none"
+    },
+    {
+      "page": "anchors",
+      "mode": "cpu",
+      "p50_ms": 0.152432,
+      "p95_ms": 0.173071,
+      "binds_per_frame": 0.0,
+      "misses_per_frame": 0.0,
+      "hits_per_frame": 0.0,
+      "cached": 0.0,
+      "layout_passes_per_frame": 0.0,
+      "interaction": "none"
+    },
+    {
+      "page": "label",
+      "mode": "sdf",
+      "interaction": "cycle",
+      "p50_ms": 2.59424,
+      "p95_ms": 16.8943,
+      "binds_per_frame": 23.372384937238493,
+      "misses_per_frame": 0.0,
+      "hits_per_frame": 24.366834170854272,
+      "cached": 142.0,
+      "layout_passes_per_frame": 0.06694560669456066
+    },
+    {
+      "page": "label",
+      "mode": "sdf",
+      "interaction": "dialog",
+      "p50_ms": 2.64478,
+      "p95_ms": 3.02149,
+      "binds_per_frame": 31.598326359832637,
+      "misses_per_frame": 0.0,
+      "hits_per_frame": 31.597989949748744,
+      "cached": 36.0,
+      "layout_passes_per_frame": 0.03347280334728033
+    }
+  ]
+}

@@ -137,6 +137,134 @@ namespace
         device.end_frame();
     }
 
+    /// 64×64 子像素的面积积分：几何覆盖率，独立于 shader 的 smoothstep 实现。
+    [[nodiscard]] auto
+    rect_coverage(float pixel_x, float pixel_y, float left, float top, float right, float bottom)
+        -> float {
+        constexpr int samples = 64;
+        int inside = 0;
+        for (int vertical = 0; vertical < samples; ++vertical) {
+            for (int horizontal = 0; horizontal < samples; ++horizontal) {
+                const float x =
+                    pixel_x + (static_cast<float>(horizontal) + 0.5F) / static_cast<float>(samples);
+                const float y =
+                    pixel_y + (static_cast<float>(vertical) + 0.5F) / static_cast<float>(samples);
+                inside += (x >= left && x < right && y >= top && y < bottom) ? 1 : 0;
+            }
+        }
+        return static_cast<float>(inside) / static_cast<float>(samples * samples);
+    }
+
+    /// 直线边的覆盖率对照：把渲染像素反解成覆盖率，与几何面积积分逐边缘像素比较。
+    /// 只采样边缘 2px 带，避免平坦区域把误差稀释掉。
+    auto check_straight_edge_area(SDL_Renderer* renderer) -> bool {
+        constexpr float left = 20.5F;
+        constexpr float top = 30.25F;
+        constexpr float right = 160.75F;
+        constexpr float bottom = 90.5F;
+        const Rgba background {32, 48, 64, 255};
+        const Rgba fill {200, 60, 20, 255};
+        bool ok = true;
+        auto* previous_target = SDL_GetRenderTarget(renderer);
+        auto* scratch =
+            SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_TARGET, 320, 200);
+        if (!require(scratch != nullptr, "create AA scratch target")) {
+            return false;
+        }
+        SDL_SetRenderTarget(renderer, scratch);
+        for (const float scale: {1.0F, 1.25F, 1.5F}) {
+            SDL_SetRenderScale(renderer, scale, scale);
+            nandina::render::SdlRenderDevice device(*renderer);
+            device.begin_frame();
+            device.clear(nandina::foundation::NanColor::from_hex(0x203040));
+            device.draw_rect(
+                nandina::foundation::NanRect::from_ltrb(left, top, right, bottom),
+                nandina::foundation::NanColor::from_hex(0xC83C14)
+            );
+            device.end_frame();
+            // 读回前复位缩放：SDL_RenderReadPixels 的区域按 pixel viewport 计算，
+            // 非 1.0 缩放下会读回一个缩放后的子区域（表现为越界像素全黑）。
+            SDL_SetRenderScale(renderer, 1, 1);
+            auto* surface = SDL_RenderReadPixels(renderer, nullptr);
+            if (!require(surface != nullptr, "read straight-edge frame")) {
+                SDL_SetRenderScale(renderer, 1, 1);
+                SDL_SetRenderTarget(renderer, previous_target);
+                SDL_DestroyTexture(scratch);
+                return false;
+            }
+            std::fprintf(
+                stderr,
+                "[aa] scale=%.2f surface=%dx%d corner=%d,%d\n",
+                scale,
+                surface->w,
+                surface->h,
+                pixel(surface, 0, 0).red,
+                pixel(surface, 0, 0).green
+            );
+            const auto device_left = static_cast<int>(std::floor(left * scale)) - 2;
+            const auto device_top = static_cast<int>(std::floor(top * scale)) - 2;
+            const auto device_right = static_cast<int>(std::ceil(right * scale)) + 2;
+            const auto device_bottom = static_cast<int>(std::ceil(bottom * scale)) + 2;
+            double error_sum = 0.0;
+            double error_max = 0.0;
+            int edge_pixels = 0;
+            for (int y = device_top; y <= device_bottom; ++y) {
+                for (int x = device_left; x <= device_right; ++x) {
+                    const auto actual = pixel(surface, x, y);
+                    const double measured = (static_cast<double>(actual.red) - background.red)
+                        / (static_cast<double>(fill.red) - background.red);
+                    const double expected = rect_coverage(
+                        static_cast<float>(x),
+                        static_cast<float>(y),
+                        left * scale,
+                        top * scale,
+                        right * scale,
+                        bottom * scale
+                    );
+                    // 只比较直边过渡带：排除角点附近的像素（SDF 的距离场在直角处与面积
+                    // 积分本来就会不同，这里检验的是直线边），预期覆盖率也不能接近 0/1。
+                    const bool near_corner = (x < device_left + 6 || x > device_right - 6)
+                        && (y < device_top + 6 || y > device_bottom - 6);
+                    if (!near_corner && expected > 0.03 && expected < 0.97) {
+                        const double error = std::abs(measured - expected);
+                        if (error > error_max) {
+                            error_max = error;
+                            if (std::getenv("NANDINA_AA_DEBUG") != nullptr) {
+                                std::fprintf(
+                                    stderr,
+                                    "[aa] scale=%.2f (%d,%d) measured=%.3f expected=%.3f\n",
+                                    scale,
+                                    x,
+                                    y,
+                                    measured,
+                                    expected
+                                );
+                            }
+                        }
+                        error_sum += error;
+                        ++edge_pixels;
+                    }
+                }
+            }
+            SDL_DestroySurface(surface);
+            const double mae = edge_pixels > 0 ? error_sum / edge_pixels : 0.0;
+            std::printf(
+                "straight edge AA scale=%.2f edge_mae=%.3f max=%.3f edges=%d\n",
+                scale,
+                mae,
+                error_max,
+                edge_pixels
+            );
+            ok &= require(edge_pixels > 50, "edge band has enough pixels");
+            ok &= require(mae <= 0.12, "straight edge area integral MAE");
+            ok &= require(error_max <= 0.20, "straight edge area integral max");
+        }
+        SDL_SetRenderScale(renderer, 1, 1);
+        SDL_SetRenderTarget(renderer, previous_target);
+        SDL_DestroyTexture(scratch);
+        return ok;
+    }
+
     auto check_pixels(SDL_Surface* surface, const Scene& scene, const char* path) -> bool {
         const auto background = to_rgba(scene.background);
         const auto fill = over(background, to_rgba(scene.fill));
@@ -483,6 +611,12 @@ namespace
 
 auto main(int argc, char** argv) -> int {
     const bool require_gpu = argc > 1 && std::string(argv[1]) == "--require-gpu";
+    std::string expect_format;
+    for (int index = 1; index < argc; ++index) {
+        if (std::string(argv[index]) == "--expect-format" && index + 1 < argc) {
+            expect_format = argv[index + 1];
+        }
+    }
     if (SDL_getenv("DISPLAY") == nullptr && SDL_getenv("WAYLAND_DISPLAY") == nullptr) {
         std::printf("SKIP: no desktop display\n");
         return require_gpu ? 1 : 77;
@@ -555,9 +689,16 @@ auto main(int argc, char** argv) -> int {
                 return 1;
             }
             draw_scene(device, scene);
+            ok &= check_straight_edge_area(renderer);
             const auto first = device.sdf_diagnostics();
             // Linux 上只有 Vulkan 可实机验证；DXIL/MSL 分支在 Windows/macOS 目标设备上另行验收。
             ok &= require(device.sdf_shader_format() == "spirv", "Vulkan uses the SPIR-V artifact");
+            if (!expect_format.empty()) {
+                ok &= require(
+                    device.sdf_shader_format() == expect_format,
+                    "--expect-format must match the artifact selected for this GPU driver"
+                );
+            }
             ok &= require(first.misses == 3, "frame 1 creates three parameter states");
             ok &= require(first.hits == 0, "frame 1 has no cache hits");
             ok &= require(first.cached == 3, "cache keeps the three states");

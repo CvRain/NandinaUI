@@ -82,6 +82,13 @@ namespace
         /// hover 前的基础圆角与过渡结束后的值（shell 的 hover 增益 = +2）。
         float radius_before = 0.0F;
         float radius_after = 0.0F;
+        /// 周期模式（NANDINA_PROBE_INTERACTION=cycle）的计数。
+        int presses = 0;
+        int releases = 0;
+        int dialog_opens = 0;
+        int dialog_closes = 0;
+        int route_switches = 0;
+        std::string_view last_page_key;
     };
 
     [[nodiscard]] auto find_button(nandina::scene::NanNode* node, const std::string_view text)
@@ -265,7 +272,14 @@ int main() {
 
         // 可复跑的消费者回归：真实 Sidebar 中「锚点」导航按钮 hover → press → release，
         // 检查 Pressable 状态、shell transition 和 Router 路由结果。无需依赖人工鼠标时序。
-        const bool inject_interaction = std::getenv("NANDINA_PROBE_INTERACTION") != nullptr;
+        const char* interaction_env = std::getenv("NANDINA_PROBE_INTERACTION");
+        const bool inject_interaction = interaction_env != nullptr;
+        // `cycle`：周期性 press/release 导航按钮并与 Dialog 开关交错，用于交互采样；
+        // 其它非空值保持原来的一次性注入（frame 2 按一次）。
+        const bool cycle_interaction =
+            interaction_env != nullptr && std::string_view(interaction_env) == "cycle";
+        const bool dialog_cycle =
+            interaction_env != nullptr && std::string_view(interaction_env) == "dialog-cycle";
         InteractionReport interaction {};
         if (inject_interaction && !shell_enabled) {
             throw std::runtime_error("NANDINA_PROBE_INTERACTION requires NANDINA_PROBE_SHELL=1");
@@ -273,7 +287,8 @@ int main() {
 
         // 可选：浮层回归。浮层走 OverlayHost 的独立层级，必须能越过页面自身的裁剪，
         // 并且关闭后计数归零 —— 这条路径（层级 + clip + present）在 SDL 后端上此前没验证过。
-        const bool overlay_enabled = std::getenv("NANDINA_PROBE_OVERLAY") != nullptr;
+        const bool overlay_enabled =
+            dialog_cycle || std::getenv("NANDINA_PROBE_OVERLAY") != nullptr;
         std::shared_ptr<nandina::widget::Dialog> dialog;
         auto overlay_scope =
             std::make_unique<nandina::reactive::ReactiveScope>(application.graph());
@@ -330,6 +345,23 @@ int main() {
                   << " rounded_clip=" << device.supports_rounded_clip()
                   << " soft_shadows=" << device.supports_soft_shadows() << '\n';
 
+        const auto page_name = [&router]() -> std::string_view {
+            if (router.current_page_key()
+                == nandina::app::page_key<nandina::showcase::ShowcaseHomePage>())
+            {
+                return "home";
+            }
+            if (router.current_page_key() == nandina::app::page_key<nandina::showcase::LabelPage>())
+            {
+                return "label";
+            }
+            if (router.current_page_key()
+                == nandina::app::page_key<nandina::showcase::AnchorsPage>())
+            {
+                return "anchors";
+            }
+            return "unknown";
+        };
         bool running = true;
         auto frame = 0;
         constexpr float kProbeDt = 1.0F / 60.0F;
@@ -394,7 +426,63 @@ int main() {
             const auto layout_passes = tree.layout_root(viewport);
             const auto layout_ended = std::chrono::steady_clock::now();
 
-            if (inject_interaction && frame == 2) {
+            const auto click_navigation = [&](const std::string_view text) {
+                auto* button = find_button(overlay_host.get(), text);
+                if (button == nullptr) {
+                    throw std::runtime_error(
+                        "could not find navigation button: " + std::string(text)
+                    );
+                }
+                const auto bounds = button->global_bounds();
+                const auto point = nandina::foundation::NanPoint(
+                    (bounds.get_left() + bounds.get_right()) * 0.5F,
+                    (bounds.get_top() + bounds.get_bottom()) * 0.5F
+                );
+                tree.dispatch_mouse_move(
+                    nandina::scene::MouseMoveEvent {point, nandina::foundation::NanPoint::zero()}
+                );
+                tree.dispatch_mouse_button(
+                    nandina::scene::MouseButtonEvent {
+                        nandina::scene::MouseButtonEvent::Button::left,
+                        nandina::scene::MouseButtonEvent::Action::press,
+                        point,
+                    }
+                );
+                tree.dispatch_mouse_button(
+                    nandina::scene::MouseButtonEvent {
+                        nandina::scene::MouseButtonEvent::Button::left,
+                        nandina::scene::MouseButtonEvent::Action::release,
+                        point,
+                    }
+                );
+            };
+            if (cycle_interaction) {
+                // 每 30 帧点一次导航，交替"锚点"/"Label"，保证每次都真的换页。
+                if (frame % 30 == 10) {
+                    click_navigation(interaction.presses % 2 == 0 ? "锚点" : "Label");
+                    ++interaction.presses;
+                    ++interaction.releases;
+                    (void)application.dispatcher().drain();
+                    const auto name = page_name();
+                    if (name != interaction.last_page_key) {
+                        ++interaction.route_switches;
+                        interaction.last_page_key = name;
+                    }
+                }
+            }
+            else if (dialog_cycle) {
+                // 每 60 帧开关一次 Dialog；模态打开期间不点导航（鼠标会被浮层挡住，真实行为）。
+                if (frame % 60 == 30) {
+                    dialog->open();
+                    ++interaction.dialog_opens;
+                }
+                else if (frame % 60 == 45) {
+                    dialog->close();
+                    ++interaction.dialog_closes;
+                }
+                (void)application.dispatcher().drain();
+            }
+            else if (inject_interaction && frame == 2) {
                 auto* anchors_button = find_button(overlay_host.get(), "锚点");
                 if (anchors_button == nullptr) {
                     throw std::runtime_error(
@@ -433,12 +521,16 @@ int main() {
                 interaction.selected_treatment =
                     anchors_button->treatment() == nandina::theme::ButtonTreatment::filled;
             }
-            else if (inject_interaction && frame == 20) {
+            else if (inject_interaction && !cycle_interaction && frame == 20) {
                 if (auto* button = find_button(overlay_host.get(), "锚点"); button != nullptr) {
                     interaction.radius_after = button->resolved_style().container.radius;
                 }
             }
-            else if (inject_interaction && frame >= 3 && frame <= 24 && frame % 3 == 0) {
+            else if (
+                inject_interaction && !cycle_interaction && frame >= 3 && frame <= 24
+                && frame % 3 == 0
+            )
+            {
                 auto* button = find_button(overlay_host.get(), "锚点");
                 std::cout << "  [anim] frame=" << frame << " radius="
                           << (button != nullptr ? button->resolved_style().container.radius : -1.0F)
@@ -447,7 +539,7 @@ int main() {
                           << " pending=" << application.graph().has_pending_effects() << '\n';
             }
 
-            if (overlay_enabled && frame == 1) {
+            if (overlay_enabled && !cycle_interaction && !dialog_cycle && frame == 1) {
                 dialog->open();
             }
             nandina::render::DrawContext draw_context {device};
@@ -526,7 +618,15 @@ int main() {
                       << " overlay_count=" << overlay_host->overlay_count() << '\n';
         }
 
-        if (inject_interaction) {
+        if (cycle_interaction || dialog_cycle) {
+            std::cout << "interaction cycle: presses=" << interaction.presses
+                      << " releases=" << interaction.releases
+                      << " dialog_opens=" << interaction.dialog_opens
+                      << " dialog_closes=" << interaction.dialog_closes
+                      << " route_switches=" << interaction.route_switches
+                      << " page_after=" << page_name() << '\n';
+        }
+        if (inject_interaction && !cycle_interaction && !dialog_cycle) {
             std::cout << "interaction report: hovered=" << interaction.hovered
                       << " pressed=" << interaction.pressed
                       << " route_switched=" << interaction.route_switched

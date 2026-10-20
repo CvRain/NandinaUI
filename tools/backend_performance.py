@@ -36,6 +36,8 @@ def parse_summary(output: str) -> dict[str, str]:
             ("layout", "layout passes="),
             ("frame_cost", "frame cost over "),
             ("capabilities", "device capabilities: "),
+            ("interaction", "interaction cycle: "),
+            ("interaction_once", "interaction report: "),
         ):
             if marker in line:
                 summary[key] = line.strip()
@@ -48,7 +50,7 @@ def run_once(
     mode: str,
     frames: int,
     stress: int,
-    interaction: bool,
+    interaction: str,
     overlay: bool,
 ) -> tuple[list[dict[str, float]], dict[str, str]]:
     with tempfile.TemporaryDirectory(prefix="nandina-perf-") as directory:
@@ -66,9 +68,11 @@ def run_once(
             environment.pop("NANDINA_SDL_SDF", None)
         if stress > 0:
             environment["NANDINA_PROBE_STRESS"] = str(stress)
-        if interaction:
+        if interaction != "none":
             # 交互注入需要 shell 里的导航按钮；探针会拒绝无 shell 的交互模式。
-            environment["NANDINA_PROBE_INTERACTION"] = "1"
+            environment["NANDINA_PROBE_INTERACTION"] = (
+                "1" if interaction == "once" else ("cycle" if interaction == "cycle" else "dialog-cycle")
+            )
             environment["NANDINA_PROBE_SHELL"] = "1"
         if overlay:
             environment["NANDINA_PROBE_OVERLAY"] = "1"
@@ -134,7 +138,12 @@ def main() -> int:
     parser.add_argument("--samples", type=int, default=1200)
     parser.add_argument("--repeats", type=int, default=5)
     parser.add_argument("--stress", type=int, default=0)
-    parser.add_argument("--interaction", action="store_true")
+    parser.add_argument(
+        "--interaction",
+        default="none",
+        choices=["none", "once", "cycle", "dialog"],
+        help="cycle = 周期点击换页；dialog = 周期开关 Dialog",
+    )
     parser.add_argument("--overlay", action="store_true")
     parser.add_argument("--output", type=pathlib.Path)
     options = parser.parse_args()
@@ -163,7 +172,7 @@ def main() -> int:
                     mode.strip(),
                     options.warmup + options.samples,
                     options.stress,
-                    options.interaction,
+                    "none" if options.interaction == "none" else options.interaction,
                     options.overlay,
                 )
                 repeats.append(summarise(rows, options.warmup))
@@ -171,6 +180,7 @@ def main() -> int:
             entry = {
                 "page": page.strip(),
                 "mode": mode.strip(),
+                "interaction": options.interaction,
                 "p50_ms": statistics.median(item["p50_ms"] for item in repeats),
                 "p95_ms": statistics.median(item["p95_ms"] for item in repeats),
                 "p50_range_ms": [

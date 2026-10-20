@@ -29,6 +29,9 @@ def main() -> int:
         seen.add(key)
         if entry.get("status") not in VALID_STATUS:
             problems.append(f"{key}: invalid status {entry.get('status')}")
+        if entry.get("status") == "approved":
+            if not entry.get("reviewed_by") or not entry.get("reviewed_on"):
+                problems.append(f"{key}: approved entry lacks reviewed_by/reviewed_on")
         image = MANIFEST.parent / str(entry.get("image", ""))
         if not image.is_file():
             problems.append(f"{key}: missing image {entry.get('image')}")

@@ -47,6 +47,9 @@ def render_manifest(entries: dict[tuple[str, str], dict[str, object]], protocol:
         lines.append(f'sha256 = "{entry["sha256"]}"')
         lines.append(f'status = "{entry["status"]}"')
         lines.append(f'captured = "{entry["captured"]}"')
+        for field in ("reviewed_by", "reviewed_on", "review_note"):
+            if entry.get(field):
+                lines.append(f'{field} = "{entry[field]}"')
         lines.append("")
     return "\n".join(lines).rstrip() + "\n"
 

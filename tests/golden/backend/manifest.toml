@@ -14,8 +14,11 @@ image = "candidates/anchors-cpu.png"
 width = 1200
 height = 800
 sha256 = "7edaf869e82f1e92f2602e1521452bcfc9ba0c067033166c264bac5b9ae4551f"
-status = "candidate"
+status = "approved"
 captured = "2026-10-19"
+reviewed_by = "agent review, per maintainer request"
+reviewed_on = "2026-10-20"
+review_note = "visual review of all six candidates; cross-backend diff home 0, label 0.0111%, anchors 0.0244% (max 55)"
 
 [[entries]]
 page = "anchors"
@@ -24,8 +27,11 @@ image = "candidates/anchors-sdf.png"
 width = 1200
 height = 800
 sha256 = "3816e9628429a8792338021d4979912beb8d876866a9e5acbc586d42ec01f3cc"
-status = "candidate"
+status = "approved"
 captured = "2026-10-19"
+reviewed_by = "agent review, per maintainer request"
+reviewed_on = "2026-10-20"
+review_note = "visual review of all six candidates; cross-backend diff home 0, label 0.0111%, anchors 0.0244% (max 55)"
 
 [[entries]]
 page = "home"
@@ -34,8 +40,11 @@ image = "candidates/home-cpu.png"
 width = 1200
 height = 800
 sha256 = "8cb199948604fc86da1f969bfeebf74c0877236ee01ad610810d3a0044b60efe"
-status = "candidate"
+status = "approved"
 captured = "2026-10-19"
+reviewed_by = "agent review, per maintainer request"
+reviewed_on = "2026-10-20"
+review_note = "visual review of all six candidates; cross-backend diff home 0, label 0.0111%, anchors 0.0244% (max 55)"
 
 [[entries]]
 page = "home"
@@ -44,8 +53,11 @@ image = "candidates/home-sdf.png"
 width = 1200
 height = 800
 sha256 = "8cb199948604fc86da1f969bfeebf74c0877236ee01ad610810d3a0044b60efe"
-status = "candidate"
+status = "approved"
 captured = "2026-10-19"
+reviewed_by = "agent review, per maintainer request"
+reviewed_on = "2026-10-20"
+review_note = "visual review of all six candidates; cross-backend diff home 0, label 0.0111%, anchors 0.0244% (max 55)"
 
 [[entries]]
 page = "label"
@@ -54,8 +66,11 @@ image = "candidates/label-cpu.png"
 width = 1200
 height = 800
 sha256 = "eee5a325f9be401ad6def5485720e6594e84485874af2ea4bd07c7aa1fbc65f3"
-status = "candidate"
+status = "approved"
 captured = "2026-10-19"
+reviewed_by = "agent review, per maintainer request"
+reviewed_on = "2026-10-20"
+review_note = "visual review of all six candidates; cross-backend diff home 0, label 0.0111%, anchors 0.0244% (max 55)"
 
 [[entries]]
 page = "label"
@@ -64,5 +79,8 @@ image = "candidates/label-sdf.png"
 width = 1200
 height = 800
 sha256 = "9a49b138257bda1607cdad17be74cbaac20e1ee967892d00384f0f2d18323356"
-status = "candidate"
+status = "approved"
 captured = "2026-10-19"
+reviewed_by = "agent review, per maintainer request"
+reviewed_on = "2026-10-20"
+review_note = "visual review of all six candidates; cross-backend diff home 0, label 0.0111%, anchors 0.0244% (max 55)"

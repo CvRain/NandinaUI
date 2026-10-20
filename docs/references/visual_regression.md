@@ -1,7 +1,7 @@
 # 视觉回归：golden、容差与更新流程
 
-> **状态：候选层已交付（2026-10-19），approved 基线仍待人工批准。** 设备/页面 golden 的候选图、
-> manifest 与比较器在 [路径契约](render_device_path_contract.md#12-页面-golden-候选层2026-10-19) §12；
+> **状态：候选层与 6 条 approved 基线已交付（2026-10-20），仅限单机 debug 构建。** 设备/页面 golden 的候选图、
+> manifest、比较器与审批工具在 [路径契约](render_device_path_contract.md#12-页面-golden-候选层2026-10-19) §12；
 > 谁能改 golden"。第一批落地对象是 [D7](reference_draft.md#d7-渲染质量与后端视觉一致性) 的
 > 混合修复：按钮按下、涟漪中间态、Dialog 遮罩。
 
