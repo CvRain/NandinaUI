@@ -16,6 +16,11 @@ using namespace nandina;
 
 namespace
 {
+    /// 平台无关的“绝对但不存在”的 HOME：Windows 的 `/nonexistent-home` 不是绝对路径。
+    [[nodiscard]] auto nonexistent_home() -> std::filesystem::path {
+        return std::filesystem::temp_directory_path() / "nandina-nonexistent-home";
+    }
+
     struct ServiceCapture {
         resource::ResourceManager* resources = nullptr;
         text::FontLoader* loader = nullptr;
@@ -183,7 +188,7 @@ TEST_CASE("NanApplication rejects malformed discovered packages", "[app][resourc
             app::NanApplicationConfig {
                 .application_id = "org.nandina.invalid",
                 .executable_path = root / "application",
-                .environment = {{"HOME", "/nonexistent-home"}},
+                .environment = {{"HOME", nonexistent_home().string()}},
             }
         ),
         std::runtime_error
@@ -237,7 +242,9 @@ TEST_CASE(
     {
         std::ofstream metadata(root / "resources" / "resource-location.json");
         metadata << "{\"package_id\":\"org.nandina.d2\",\"package_root\":\""
-                 << (root / "build-package").string() << "\",\"database\":\"resources.db\"}\n";
+                 // JSON 字符串里不能出现 Windows 的反斜杠；generic_string() 用 `/`。
+                 << (root / "build-package").generic_string()
+                 << "\",\"database\":\"resources.db\"}\n";
     }
 
     // executable_path = root/application => executable-relative root = root/resources,
@@ -247,7 +254,7 @@ TEST_CASE(
         app::NanApplicationConfig {
             .application_id = "org.nandina.d2",
             .executable_path = root / "application",
-            .environment = {{"HOME", "/nonexistent-home"}},
+            .environment = {{"HOME", nonexistent_home().string()}},
         }
     );
 

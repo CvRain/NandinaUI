@@ -9,9 +9,9 @@
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/spdlog.h>
 
+#include <cstdio>
 #include <memory>
 #include <mutex>
-#include <print>
 #include <stdexcept>
 #include <string>
 #include <unordered_map>
@@ -149,13 +149,12 @@ namespace nandina::log
 
         /// 日志后端失效时直接写 stderr，避免回退路径再次依赖日志或格式化设施。
         void report_backend_failure(const char* operation, const char* message) noexcept {
-            // todo 在windows上可能出现报错：
-            // in function `std::vprint_unicode(_iobuf*, std::basic_string_view<char, std::char_traits<char> >, std::basic_format_args<std::basic_format_context<std::__format::_Sink_iter<char>, char> >)':
-            // undefined reference to `std::__open_terminal(_iobuf*)'
-            // undefined reference to `std::__write_to_terminal(void*, std::span<char, 18446744073709551615ull>)'
-            std::println(
+            // 不能用 std::println：mingw 的 libstdc++ 没有导出
+            // `std::__open_terminal` / `std::__write_to_terminal`（GCC 16.2 实测链接失败），
+            // 回退路径改成 fprintf，语义一致且不依赖 <print>。
+            std::fprintf(
                 stderr,
-                "[LoggerBackend] Failed to {}{}{}",
+                "[LoggerBackend] Failed to %s%s%s\n",
                 operation,
                 message != nullptr ? ": " : "",
                 message != nullptr ? message : ""

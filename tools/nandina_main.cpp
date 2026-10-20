@@ -638,11 +638,11 @@ namespace
                 source,
                 "#include <expected>\n"
                 "#include <functional>\n"
-                "#include <print>\n"
+                "#include <iostream>\n"
                 "int main() {\n"
                 "  std::expected<int, int> value = 1;\n"
                 "  std::move_only_function<int()> fn = [] { return 2; };\n"
-                "  std::println(\"{}\", *value + fn());\n"
+                "  std::cout << *value + fn() << '\\n';\n"
                 "}\n"
             );
             const auto result = run_process(
