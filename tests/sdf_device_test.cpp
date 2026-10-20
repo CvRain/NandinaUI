@@ -192,15 +192,6 @@ namespace
                 SDL_DestroyTexture(scratch);
                 return false;
             }
-            std::fprintf(
-                stderr,
-                "[aa] scale=%.2f surface=%dx%d corner=%d,%d\n",
-                scale,
-                surface->w,
-                surface->h,
-                pixel(surface, 0, 0).red,
-                pixel(surface, 0, 0).green
-            );
             const auto device_left = static_cast<int>(std::floor(left * scale)) - 2;
             const auto device_top = static_cast<int>(std::floor(top * scale)) - 2;
             const auto device_right = static_cast<int>(std::ceil(right * scale)) + 2;
@@ -227,20 +218,7 @@ namespace
                         && (y < device_top + 6 || y > device_bottom - 6);
                     if (!near_corner && expected > 0.03 && expected < 0.97) {
                         const double error = std::abs(measured - expected);
-                        if (error > error_max) {
-                            error_max = error;
-                            if (std::getenv("NANDINA_AA_DEBUG") != nullptr) {
-                                std::fprintf(
-                                    stderr,
-                                    "[aa] scale=%.2f (%d,%d) measured=%.3f expected=%.3f\n",
-                                    scale,
-                                    x,
-                                    y,
-                                    measured,
-                                    expected
-                                );
-                            }
-                        }
+                        error_max = std::max(error_max, error);
                         error_sum += error;
                         ++edge_pixels;
                     }

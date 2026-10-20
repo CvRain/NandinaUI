@@ -253,8 +253,10 @@ meson test -C buildDir --suite unit
 
 现状与边界：
 
-- 编入 SDL3 时默认走 SDL3（D3D12/Vulkan 由 SDL 选择）；生产 SDF 在 `d3d12` 驱动上会选 **DXIL** 产物，
-  `sdf_device_test --require-gpu --expect-format dxil` 是目标设备验收命令，**尚未在 Windows 上执行**。
+- 编入 SDL3 时默认走 SDL3（D3D12/Vulkan 由 SDL 选择）；生产 SDF 在 `direct3d12` 驱动上选 **DXIL** 产物。
+  `sdf_device_test --require-gpu --expect-format dxil` **已于 2026-10-20 在 Windows 真机（D3D12）通过**：
+  坐标矩阵、真实字形交错、圆/直线 AA 面积积分、产物选择、回落与淘汰全部通过，且直线 AA 数值与 Linux
+  的 SPIR-V 路径逐位一致。必须在交互式桌面会话运行（SSH 会话 0 创建不了 swapchain，会带原因 skip）。
 - 2026-10-20 的 Windows 修复：CLI 的子进程调用改用 `CreateProcessW`（原 `fork/execvp` 是 POSIX 专用）；
   可执行文件路径改用 `GetModuleFileNameW`；资源定位沿用 XDG 命名，用 `USERPROFILE`/`APPDATA`/`LOCALAPPDATA`
   补齐（不是官方 Windows 目录约定，只为让应用能启动）；`system-fonts` 测试在 Windows 上不注册

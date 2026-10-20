@@ -505,8 +505,10 @@ golden 候选是否与 Linux 一致（跨平台像素差异单独归档，不覆
   构建通过、`meson test --suite unit` 80/80、`nandina doctor` 全绿。DXIL 产物已生成并接入
   选择逻辑；真机上 `SDL_CreateGPUDevice(DXIL, …, 自动)` 能创建 **direct3d12** 设备（此前
   `sdf_shader_format()` 只认驱动名 `"d3d12"`，而 SDL3 返回 `"direct3d12"`，该 bug 已修）。
-  `--expect-format dxil` 的像素验收仍**未执行**：远程 SSH 会话没有显示输出，创建 swapchain
-  失败（`0x887A0022`），设备测试以明确原因 skip；必须在交互式桌面会话里跑。优先级低于主线功能完善。
+  `--expect-format dxil` 的像素验收**已于 2026-10-20 在 Windows 真机（D3D12）通过**：60 组坐标、
+  真实字形交错（mismatches=0）、圆/直线 AA 面积积分（直线 MAE 0.048/0.078/0.081、max ≤0.095，
+  与 Linux SPIR-V 逐位一致）、产物选择与淘汰。远程 SSH 会话仍不能跑（会话 0 无显示输出，swapchain
+  失败 `0x887A0022`），必须在交互式桌面会话执行。页面 golden 与性能基线仍只有 Linux；macOS 不支持。
 - **macOS**：**明确不在支持范围**——没有硬件与测试环境，不提供构建或运行承诺。MSL 产物
   已生成并做静态校验（容器/入口/哈希），但**不声明**它在 Metal 上可用；也不复制 Linux
   基线充数（见[视觉回归](visual_regression.md) §7 的跨平台策略）。
