@@ -253,6 +253,16 @@ clang-format 23.1.1、suite 门禁、文档相对链接/锚点和 diff 检查通
 
 ## 10. 生产接入审查（2026-10-19）
 
+**图元范围（2026-10-20 更新）**：SDF 模式 0 填充 / 1 中心线描边 / 2 线段（圆头）/
+5 环形扇区（含整环）已接入生产设备；arc/线段复用同一 32 字节参数块（bounds.xy /
+bounds.zw / style.x / style.y / style.z），不新增 cbuffer 或 state 容量。线段与弧的
+覆盖 quad 分别由 `sdf_segment_bounds()` / `sdf_arc_bounds()` 计算；CPU 回落保留
+（`draw_line` 四边带、`draw_arc` 环扇三角带），并修正了 SDL CPU 弧的角度约定
+（+Y 为 0、向 +X 增大，与 `IRenderDevice::draw_arc` 文档和 raylib 一致）。角向 SDF
+使用环绕角差而不是"两半平面之交"的 sine 公式：后者在 sweep > π 时会把扇区画成补集。
+阴影（mode 4）与圆角裁剪仍走 CPU/未实现。
+
+
 当前生产覆盖填充、描边与圆。审查修复非等比缩放回落及帧结束未恢复默认 state、
 viewport/逻辑呈现偏移未进入 uniform、uniform 上传失败的 state 泄漏与运行期降级，
 以及缓存分配失败时的所有权清理。SDL 3.4.18 销毁 state 时会 flush 引用它的命令队列，

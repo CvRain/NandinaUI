@@ -390,20 +390,35 @@ namespace nandina::render
         }
     }
 
-    auto SdlRenderDevice::draw_sdf_shape(
-        const foundation::NanRect& bounds,
-        const float radius,
-        const float half_width,
-        const int mode,
-        const foundation::NanColor& color
-    ) -> bool {
-        float scale = 0.0F;
-        if (!sdf_scale(scale)) {
-            unbind_sdf();
+    auto SdlRenderDevice::sdf_scale_and_origin(float& scale, float& origin_x, float& origin_y) const
+        -> bool {
+        float local_scale = 0.0F;
+        if (!sdf_scale(local_scale)) {
             return false;
         }
-        // 覆盖 quad 要包住 AA 过渡区：设备空间 1px（逻辑坐标 1/scale）。
-        const auto cover = bounds.expanded(std::max(half_width, 0.0F) + 1.0F / scale);
+        SDL_Rect viewport {};
+        if (!SDL_GetRenderViewport(renderer_, &viewport)) {
+            return false;
+        }
+        SDL_FRect destination {};
+        if (!SDL_GetRenderLogicalPresentationRect(renderer_, &destination)) {
+            return false;
+        }
+        scale = local_scale;
+        // Match SDL's integer pixel viewport origin, including letterboxing.
+        origin_x = std::floor(viewport.x * scale + destination.x);
+        origin_y = std::floor(viewport.y * scale + destination.y);
+        return true;
+    }
+
+    auto SdlRenderDevice::submit_sdf(
+        const foundation::NanRect& cover,
+        const std::array<float, 8>& values,
+        const foundation::NanColor& color
+    ) -> bool {
+        if (!sdf_) {
+            return false;
+        }
         const auto vertex_color = to_vertex_color(color);
         const std::array<SDL_Vertex, 4> vertices {{
             {{cover.get_left(), cover.get_top()}, vertex_color, {0.0F, 0.0F}},
@@ -412,33 +427,9 @@ namespace nandina::render
             {{cover.get_left(), cover.get_bottom()}, vertex_color, {0.0F, 1.0F}},
         }};
         const std::array<int, 6> indices {0, 1, 2, 0, 2, 3};
-
-        // 参数块（目标像素）：中心、半尺寸、圆角半径、半线宽、模式。
-        const auto center = bounds.get_center();
-        SDL_Rect viewport {};
-        SDL_FRect destination {};
-        check_sdl(SDL_GetRenderViewport(renderer_, &viewport), "SDL_GetRenderViewport");
-        check_sdl(
-            SDL_GetRenderLogicalPresentationRect(renderer_, &destination),
-            "SDL_GetRenderLogicalPresentationRect"
-        );
-        // Match SDL's integer pixel viewport origin, including letterboxing.
-        const auto origin_x = std::floor(viewport.x * scale + destination.x);
-        const auto origin_y = std::floor(viewport.y * scale + destination.y);
-        const std::array<float, 8> values {
-            center.get_x() * scale + origin_x,
-            center.get_y() * scale + origin_y,
-            bounds.get_width() * 0.5F * scale,
-            bounds.get_height() * 0.5F * scale,
-            radius * scale,
-            half_width * scale,
-            static_cast<float>(mode),
-            0.0F,
-        };
         SdfPath::Key key {};
         static_assert(sizeof(values) == sizeof(key));
         std::memcpy(key.data(), values.data(), sizeof(values));
-
         try {
             const auto acquired = sdf_->cache.acquire(key);
             sdf_->bind(acquired.handle);
@@ -453,6 +444,96 @@ namespace nandina::render
             "SDL_RenderGeometry(SDF)"
         );
         return true;
+    }
+
+    auto SdlRenderDevice::draw_sdf_shape(
+        const foundation::NanRect& bounds,
+        const float radius,
+        const float half_width,
+        const int mode,
+        const foundation::NanColor& color
+    ) -> bool {
+        float scale = 0.0F;
+        float origin_x = 0.0F;
+        float origin_y = 0.0F;
+        if (!sdf_scale_and_origin(scale, origin_x, origin_y)) {
+            unbind_sdf();
+            return false;
+        }
+        // 覆盖 quad 要包住 AA 过渡区：设备空间 1px（逻辑坐标 1/scale）。
+        const auto cover = bounds.expanded(std::max(half_width, 0.0F) + 1.0F / scale);
+        // 参数块（目标像素）：中心、半尺寸、圆角半径、半线宽、模式。
+        const auto center = bounds.get_center();
+        const std::array<float, 8> values {
+            center.get_x() * scale + origin_x,
+            center.get_y() * scale + origin_y,
+            bounds.get_width() * 0.5F * scale,
+            bounds.get_height() * 0.5F * scale,
+            radius * scale,
+            half_width * scale,
+            static_cast<float>(mode),
+            0.0F,
+        };
+        return submit_sdf(cover, values, color);
+    }
+
+    auto SdlRenderDevice::draw_sdf_segment(
+        const foundation::NanPoint& a,
+        const foundation::NanPoint& b,
+        const float half_width,
+        const foundation::NanColor& color
+    ) -> bool {
+        float scale = 0.0F;
+        float origin_x = 0.0F;
+        float origin_y = 0.0F;
+        if (!sdf_scale_and_origin(scale, origin_x, origin_y)) {
+            return false;
+        }
+        const auto cover = detail::sdf_segment_bounds(a, b, half_width);
+        // segment：bounds.xy = A，bounds.zw = B - A（方向），style.x = 半宽。
+        const std::array<float, 8> values {
+            a.get_x() * scale + origin_x,
+            a.get_y() * scale + origin_y,
+            (b.get_x() - a.get_x()) * scale,
+            (b.get_y() - a.get_y()) * scale,
+            half_width * scale,
+            0.0F,
+            static_cast<float>(detail::SdfPrimitiveMode::segment),
+            0.0F,
+        };
+        return submit_sdf(cover, values, color);
+    }
+
+    auto SdlRenderDevice::draw_sdf_arc(
+        const foundation::NanPoint& center,
+        const float inner_radius,
+        const float outer_radius,
+        const float start_radians,
+        const float sweep_radians,
+        const foundation::NanColor& color
+    ) -> bool {
+        float scale = 0.0F;
+        float origin_x = 0.0F;
+        float origin_y = 0.0F;
+        if (!sdf_scale_and_origin(scale, origin_x, origin_y)) {
+            return false;
+        }
+        const auto sweep = std::abs(sweep_radians);
+        const auto begin = sweep_radians < 0.0F ? start_radians + sweep_radians : start_radians;
+        const auto cover = detail::sdf_arc_bounds(center, outer_radius);
+        // arc：bounds.xy = 圆心，bounds.zw = (内半径, 外半径)，
+        // style.x = 起始角 + 半张角，style.y = 半张角（整环时跳过角向切割）。
+        const std::array<float, 8> values {
+            center.get_x() * scale + origin_x,
+            center.get_y() * scale + origin_y,
+            inner_radius * scale,
+            outer_radius * scale,
+            begin + sweep * 0.5F,
+            sweep * 0.5F,
+            static_cast<float>(detail::SdfPrimitiveMode::arc),
+            0.0F,
+        };
+        return submit_sdf(cover, values, color);
     }
 
     void SdlRenderDevice::begin_frame() {
@@ -699,7 +780,6 @@ namespace nandina::render
         const foundation::NanColor& color
     ) {
         ++stats_.arcs;
-        unbind_sdf();
         if (!std::isfinite(center.get_x()) || !std::isfinite(center.get_y())
             || !std::isfinite(inner_radius) || !std::isfinite(outer_radius)
             || !std::isfinite(start_radians) || !std::isfinite(sweep_radians)
@@ -708,6 +788,19 @@ namespace nandina::render
         {
             return;
         }
+        if (sdf_
+            && draw_sdf_arc(
+                center,
+                inner_radius,
+                outer_radius,
+                start_radians,
+                sweep_radians,
+                color
+            ))
+        {
+            return;
+        }
+        unbind_sdf();
         // 与圆角描边同一套几何：同心环扇（外半径 / 内半径、同一圆心）。接口默认实现是
         // 弦逼近的线段序列（≤64 段），在细环上会露出明显折线 —— Spinner/ProgressBar 走这条。
         const auto sweep = std::abs(sweep_radians);
@@ -732,13 +825,14 @@ namespace nandina::render
         for (int index = 0; index <= segments; ++index) {
             const auto angle =
                 start + sweep * static_cast<float>(index) / static_cast<float>(segments);
-            const auto cos = std::cos(angle);
+            // 角度以 +Y 为 0、向 +X 增大：center + r * (sin, cos)。
             const auto sin = std::sin(angle);
+            const auto cos = std::cos(angle);
             vertices.push_back(
-                vertex(center.get_x() + outer_radius * cos, center.get_y() + outer_radius * sin)
+                vertex(center.get_x() + outer_radius * sin, center.get_y() + outer_radius * cos)
             );
             vertices.push_back(
-                vertex(center.get_x() + inner_radius * cos, center.get_y() + inner_radius * sin)
+                vertex(center.get_x() + inner_radius * sin, center.get_y() + inner_radius * cos)
             );
         }
         std::vector<int> indices;
@@ -879,14 +973,19 @@ namespace nandina::render
         const foundation::NanColor& color
     ) {
         ++stats_.lines;
-        unbind_sdf();
         const auto half = std::max(thickness, 0.0F) * 0.5F;
         const auto dx = b.get_x() - a.get_x();
         const auto dy = b.get_y() - a.get_y();
         const auto length = std::sqrt(dx * dx + dy * dy);
-        if (length <= 1.0e-5F) {
+        if (!std::isfinite(a.get_x()) || !std::isfinite(a.get_y()) || !std::isfinite(b.get_x())
+            || !std::isfinite(b.get_y()) || length <= 1.0e-5F)
+        {
             return;
         }
+        if (half > 0.0F && sdf_ && draw_sdf_segment(a, b, half, color)) {
+            return;
+        }
+        unbind_sdf();
         // 法线方向偏移出四边形；比 SDL_RenderLine（1px）更符合 IRenderDevice 的厚度契约。
         const auto nx = -dy / length * half;
         const auto ny = dx / length * half;

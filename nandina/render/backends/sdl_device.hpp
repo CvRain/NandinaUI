@@ -192,6 +192,29 @@ namespace nandina::render
         struct SdfPath;
         /// 当前 render scale（要求各向同性）；不可用时返回 false，调用方回落到 CPU 几何。
         auto sdf_scale(float& scale) const -> bool;
+        /// scale 与设备像素原点（含 letterbox 偏移）：参数块按设备像素编码。
+        auto sdf_scale_and_origin(float& scale, float& origin_x, float& origin_y) const -> bool;
+        /// 提交一次 SDF 图元：cover 为逻辑坐标覆盖 quad，values 为 32 字节参数块。
+        auto submit_sdf(
+            const foundation::NanRect& cover,
+            const std::array<float, 8>& values,
+            const foundation::NanColor& color
+        ) -> bool;
+        /// 线段与圆环扇区的 SDF 编码；失败时调用方回落到 CPU 几何。
+        auto draw_sdf_segment(
+            const foundation::NanPoint& a,
+            const foundation::NanPoint& b,
+            float half_width,
+            const foundation::NanColor& color
+        ) -> bool;
+        auto draw_sdf_arc(
+            const foundation::NanPoint& center,
+            float inner_radius,
+            float outer_radius,
+            float start_radians,
+            float sweep_radians,
+            const foundation::NanColor& color
+        ) -> bool;
         /// bounds 为图元边界（描边传入中心线边界）；mode 0 = 填充、1 = 中心线描边。
         auto draw_sdf_shape(
             const foundation::NanRect& bounds,

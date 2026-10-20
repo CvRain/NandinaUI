@@ -94,6 +94,19 @@ namespace nandina::render::detail
         return shape_bounds.expanded(soft_padding + sdf_aa_padding);
     }
 
+    /** 环形扇区（含整环）的最小覆盖：外接圆方框 + 抗锯齿过渡区。 */
+    [[nodiscard]] inline auto
+    sdf_arc_bounds(const foundation::NanPoint& center, const float outer_radius)
+        -> foundation::NanRect {
+        const float padding = std::max(0.0F, outer_radius) + sdf_aa_padding;
+        return foundation::NanRect::from_ltrb(
+            center.get_x() - padding,
+            center.get_y() - padding,
+            center.get_x() + padding,
+            center.get_y() + padding
+        );
+    }
+
     /** 包含线段圆头与抗锯齿过渡区的最小覆盖 quad。 */
     [[nodiscard]] inline auto sdf_segment_bounds(
         const foundation::NanPoint& start,

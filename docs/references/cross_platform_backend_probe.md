@@ -1,7 +1,7 @@
 # 跨平台后端探测：SDL3 GPU 与 Web 现状
 
 > 2026-10-20 状态核对：§4 汇总当前交付状态，前文按探测发生阶段保留证据。
-> 默认 SDL3 与 host seam、混合修复、生产 SDF（填充/描边/圆）已交付，并在 Windows D3D12/DXIL
+> 默认 SDL3 与 host seam、混合修复、生产 SDF（填充/描边/圆/线段/弧）已交付，并在 Windows D3D12/DXIL
 > 通过设备级验收；图片解码、规范输入与 Web 应用交付尚未交付。本轮只改文档，未重跑探测；
 > 下一阶段见[开发路线](development_roadmap.md)，历史状态见[项目进度与下一步](project_status.md)。
 

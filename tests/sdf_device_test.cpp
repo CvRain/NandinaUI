@@ -468,6 +468,155 @@ namespace
         return ok;
     }
 
+    /// 线段与环形扇区的像素/AA/缓存断言。CPU 渲染器只验证几何与角度约定（圆头与 AA
+    /// 由 SDF 路径提供，CPU 折线不保证），SDF 路径额外验证圆头、整环 seam 与缓存。
+    /// 图形全部放在 60x60 逻辑区域内：240x160 的 render target 在 1.5 倍缩放下只剩
+    /// 160x106 逻辑可视区，越界采样会读不到像素。
+    auto check_line_arc(SDL_Renderer* renderer, const bool sdf) -> bool {
+        using nandina::foundation::NanColor;
+        using nandina::foundation::NanPoint;
+        using nandina::render::SdlRenderDevice;
+        const auto white = NanColor::from_hex(0xFFFFFF);
+        const auto black = NanColor::from_hex(0x000000);
+        const auto device_coordinate = [](const float logical, const float scale) {
+            return static_cast<int>(std::lround(logical * scale));
+        };
+        const auto kPi = 3.14159265358979323846F;
+        bool ok = true;
+        auto device = SdlRenderDevice(*renderer);
+        for (const float scale: {1.0F, 1.25F, 1.5F}) {
+            SDL_SetRenderScale(renderer, scale, scale);
+            device.begin_frame();
+            device.clear(black);
+            // 水平线段（半宽 2）与斜线（半宽 2.5）。
+            device.draw_line(NanPoint(5.0F, 10.0F), NanPoint(30.0F, 10.0F), 4.0F, white);
+            device.draw_line(NanPoint(5.0F, 20.0F), NanPoint(20.0F, 30.0F), 5.0F, white);
+            // 整环：验证 seam 保护（整环没有角向边界）。
+            device.draw_arc(NanPoint(35.0F, 12.0F), 3.0F, 7.0F, 0.0F, 2.0F * kPi, white);
+            // 270° 扇区：验证角向切割，缺口落在左下（角度 315°）。
+            device.draw_arc(NanPoint(10.0F, 35.0F), 3.0F, 6.0F, 0.0F, kPi * 1.5F, white);
+            device.end_frame();
+            auto* surface = SDL_RenderReadPixels(renderer, nullptr);
+            if (!require(surface != nullptr, "read line/arc frame")) {
+                return false;
+            }
+            const auto sample = [&](const float logical_x,
+                                    const float logical_y,
+                                    Rgba expected,
+                                    const char* label) {
+                return expect_pixel(
+                    surface,
+                    device_coordinate(logical_x, scale),
+                    device_coordinate(logical_y, scale),
+                    expected,
+                    label
+                );
+            };
+            // 线段内部 / 两侧外侧（半宽 2，取 4）。
+            ok &= sample(15.0F, 10.0F, {255, 255, 255}, "segment interior");
+            ok &= sample(15.0F, 14.0F, {0, 0, 0}, "segment outside below");
+            ok &= sample(15.0F, 6.0F, {0, 0, 0}, "segment outside above");
+            // 斜线：中点在线上，远离处为背景。
+            ok &= sample(12.5F, 25.0F, {255, 255, 255}, "diagonal segment interior");
+            ok &= sample(8.0F, 15.0F, {0, 0, 0}, "diagonal segment outside");
+            if (sdf) {
+                // SDF 线段有圆头：端点沿方向内 1.5px 仍是前景，向外 6px 是背景。
+                ok &= sample(28.5F, 10.0F, {255, 255, 255}, "segment round cap");
+                ok &= sample(36.0F, 10.0F, {0, 0, 0}, "segment past cap");
+                // 整环四个方向（0°=+Y 向下、90°=+X、180°=向上、270°=向左），中半径 5。
+                for (const auto& offset:
+                     {std::pair {0.0F, 5.0F},
+                      std::pair {5.0F, 0.0F},
+                      std::pair {0.0F, -5.0F},
+                      std::pair {-5.0F, 0.0F}})
+                {
+                    ok &= sample(
+                        35.0F + offset.first,
+                        12.0F + offset.second,
+                        {255, 255, 255},
+                        "ring centerline"
+                    );
+                }
+                ok &= sample(35.0F, 12.0F, {0, 0, 0}, "ring hole");
+                ok &= sample(35.0F, 20.0F, {0, 0, 0}, "ring outside");
+                // 270° 扇区：45° 在扇区内，315° 落在缺口（中半径 4）。
+                ok &= sample(
+                    10.0F + 4.0F * std::sin(kPi * 0.25F),
+                    35.0F + 4.0F * std::cos(kPi * 0.25F),
+                    {255, 255, 255},
+                    "sector inside"
+                );
+                ok &= sample(
+                    10.0F + 4.0F * std::sin(kPi * 1.75F),
+                    35.0F + 4.0F * std::cos(kPi * 1.75F),
+                    {0, 0, 0},
+                    "sector cut"
+                );
+                // 平直边的立方滤波 AA：与 thin outline 用例同一套独立预期。
+                for (int y = static_cast<int>(std::floor(7.0F * scale));
+                     y <= static_cast<int>(std::ceil(13.0F * scale));
+                     ++y)
+                {
+                    const double center = 10.0 * scale;
+                    const double distance = std::abs(y + 0.5 - center) - 2.0 * scale;
+                    const double t = std::clamp(0.5 - distance, 0.0, 1.0);
+                    const int expected = static_cast<int>(std::lround(255 * t * t * (3 - 2 * t)));
+                    ok &= expect_pixel(
+                        surface,
+                        device_coordinate(15.0F, scale),
+                        y,
+                        {expected, expected, expected},
+                        "segment cubic AA"
+                    );
+                }
+            }
+            else {
+                // CPU 折线回落不保证精确边缘（契约只要求默认实现退化绘制），
+                // 因此只验证"画到了"与角度约定，不验证 AA/圆头/整环 seam。
+                ok &= sample(15.0F, 10.0F, {255, 255, 255}, "cpu segment interior");
+                ok &= sample(15.0F, 14.0F, {0, 0, 0}, "cpu segment outside");
+                ok &= sample(12.5F, 25.0F, {255, 255, 255}, "cpu diagonal interior");
+                ok &= sample(8.0F, 15.0F, {0, 0, 0}, "cpu diagonal outside");
+                // 扇区内部：45° 中径处（避开多边形弦逼近的内外边缘）；缺口：315°。
+                ok &= sample(
+                    10.0F + 4.5F * std::sin(kPi * 0.25F),
+                    35.0F + 4.5F * std::cos(kPi * 0.25F),
+                    {255, 255, 255},
+                    "cpu sector inside"
+                );
+                ok &= sample(
+                    10.0F + 4.5F * std::sin(kPi * 1.75F),
+                    35.0F + 4.5F * std::cos(kPi * 1.75F),
+                    {0, 0, 0},
+                    "cpu sector cut"
+                );
+            }
+            SDL_DestroySurface(surface);
+        }
+        SDL_SetRenderScale(renderer, 1, 1);
+        if (sdf) {
+            // 缓存：两个新参数块各建一次 state；重画必须命中且不重复上传。
+            auto cache_device = SdlRenderDevice(*renderer);
+            const auto draw_two = [&] {
+                cache_device.begin_frame();
+                cache_device.clear(black);
+                cache_device.draw_line(NanPoint(5.0F, 10.0F), NanPoint(30.0F, 10.0F), 4.0F, white);
+                cache_device.draw_arc(NanPoint(10.0F, 35.0F), 3.0F, 6.0F, 0.0F, kPi, white);
+                cache_device.end_frame();
+            };
+            draw_two();
+            const auto first = cache_device.sdf_diagnostics();
+            ok &= require(first.misses == 2, "line and arc create two parameter states");
+            ok &= require(first.binds == 2, "line and arc bind once each");
+            draw_two();
+            const auto second = cache_device.sdf_diagnostics();
+            ok &= require(second.misses == 2, "redraw creates no new states");
+            ok &= require(second.hits == 2, "redraw hits both cached states");
+            ok &= require(second.binds == 4, "redraw binds once per primitive");
+        }
+        return ok;
+    }
+
     auto check_antialiasing(SDL_Renderer* renderer) -> bool {
         using nandina::foundation::NanPoint;
         using nandina::foundation::NanRect;
@@ -683,6 +832,7 @@ auto main(int argc, char** argv) -> int {
         ok &= check_coordinates(renderer, true);
         ok &= check_font_interleave(renderer);
         ok &= check_antialiasing(renderer);
+        ok &= check_line_arc(renderer, true);
         {
             nandina::render::SdlRenderDevice device(*renderer);
             if (!require(device.analytic_antialiasing(), "GPU renderer must use the SDF path")) {
@@ -952,6 +1102,7 @@ auto main(int argc, char** argv) -> int {
         ok &= require(cpu_renderer != nullptr, "create software renderer");
         if (cpu_renderer != nullptr) {
             ok &= check_coordinates(cpu_renderer, false);
+            ok &= check_line_arc(cpu_renderer, false);
             nandina::render::SdlRenderDevice device(*cpu_renderer);
             ok &=
                 require(!device.analytic_antialiasing(), "software renderer must fall back to CPU");
