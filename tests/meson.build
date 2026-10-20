@@ -637,12 +637,16 @@ animation_tests = executable(
 )
 test('animation', animation_tests, suite: 'unit')
 
-system_fonts_tests = executable(
-    'system_fonts_tests',
-    files('system_fonts_tests.cpp'),
-    dependencies : [nandina_dep, catch2_with_main_dep],
-)
-test('system-fonts', system_fonts_tests, suite: 'unit')
+# 系统字体发现测试依赖 Linux 的字体目录布局（HOME/XDG 与 /usr/share/fonts），
+# 用 setenv 隔离 HOME；Windows 上 setenv 不存在、字体目录也不同，未验收前只跑 Linux。
+if host_machine.system() == 'linux'
+    system_fonts_tests = executable(
+        'system_fonts_tests',
+        files('system_fonts_tests.cpp'),
+        dependencies : [nandina_dep, catch2_with_main_dep],
+    )
+    test('system-fonts', system_fonts_tests, suite: 'unit')
+endif
 
 resource_tests = executable(
     'resource_tests',

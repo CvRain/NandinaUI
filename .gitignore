@@ -136,3 +136,6 @@ dev-docs-*
 # 构建目录按 README 约定放在 /playground/ 下，这里再兜一层，避免误提交。
 /probe/cross_platform/web/SDL/
 /probe/cross_platform/**/build/
+
+# 本地产物：DSH 会话临时目录（构建日志等），不随仓库分发
+/.dsh/

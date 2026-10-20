@@ -32,8 +32,13 @@
 #include <utility>
 #include <vector>
 
-#include <sys/wait.h>
-#include <unistd.h>
+#if defined(_WIN32)
+    #define WIN32_LEAN_AND_MEAN
+    #include <windows.h>
+#else
+    #include <sys/wait.h>
+    #include <unistd.h>
+#endif
 
 namespace
 {
@@ -49,6 +54,7 @@ namespace
         int minor = 0;
     };
 
+#if !defined(_WIN32)
     [[nodiscard]] auto process_exit_code(const int status) -> int {
         if (WIFEXITED(status)) {
             return WEXITSTATUS(status);
@@ -57,6 +63,18 @@ namespace
             return 128 + WTERMSIG(status);
         }
         return 1;
+    }
+#endif
+
+    /// 传给子进程的路径参数：Windows 用 UTF-8（run_process 会转成 UTF-16），
+    /// POSIX 用原生字节串。`path::string()` 在 Windows 上是 ANSI，非 ASCII 路径会乱码。
+    [[nodiscard]] auto path_argument(const std::filesystem::path& path) -> std::string {
+#if defined(_WIN32)
+        const auto utf8 = path.u8string();
+        return std::string(reinterpret_cast<const char*>(utf8.data()), utf8.size());
+#else
+        return path.string();
+#endif
     }
 
     [[nodiscard]] auto run_process(
@@ -67,7 +85,154 @@ namespace
         if (args.empty()) {
             throw std::invalid_argument("process command is empty");
         }
+#if defined(_WIN32)
+        // Windows 没有 fork/execvp：用 CreateProcessW + 匿名管道实现同样的语义
+        // （退出码、cwd、可选捕获 stdout+stderr、命令不存在返回 127）。
+        const auto to_wide = [](std::string_view utf8) -> std::wstring {
+            if (utf8.empty()) {
+                return {};
+            }
+            const auto length = ::MultiByteToWideChar(
+                CP_UTF8,
+                0,
+                utf8.data(),
+                static_cast<int>(utf8.size()),
+                nullptr,
+                0
+            );
+            if (length <= 0) {
+                throw std::runtime_error("cannot convert process argument to UTF-16");
+            }
+            std::wstring result(static_cast<std::size_t>(length), L'\0');
+            ::MultiByteToWideChar(
+                CP_UTF8,
+                0,
+                utf8.data(),
+                static_cast<int>(utf8.size()),
+                result.data(),
+                length
+            );
+            return result;
+        };
+        const auto quote = [](const std::wstring& argument) -> std::wstring {
+            if (argument.empty()) {
+                return L"\"\"";
+            }
+            if (argument.find_first_of(L" \t\n\v\"") == std::wstring::npos) {
+                return argument;
+            }
+            std::wstring result;
+            result.push_back(L'"');
+            std::size_t backslashes = 0;
+            for (const wchar_t character: argument) {
+                if (character == L'\\') {
+                    ++backslashes;
+                    continue;
+                }
+                if (character == L'"') {
+                    result.append(backslashes * 2 + 1, L'\\');
+                    result.push_back(L'"');
+                    backslashes = 0;
+                    continue;
+                }
+                result.append(backslashes, L'\\');
+                backslashes = 0;
+                result.push_back(character);
+            }
+            result.append(backslashes * 2, L'\\');
+            result.push_back(L'"');
+            return result;
+        };
 
+        std::wstring command_line;
+        for (const auto& arg: args) {
+            if (!command_line.empty()) {
+                command_line.push_back(L' ');
+            }
+            command_line += quote(to_wide(arg));
+        }
+        std::wstring mutable_command = command_line;
+
+        SECURITY_ATTRIBUTES attributes {
+            .nLength = sizeof(SECURITY_ATTRIBUTES),
+            .lpSecurityDescriptor = nullptr,
+            .bInheritHandle = TRUE,
+        };
+        HANDLE read_pipe = nullptr;
+        HANDLE write_pipe = nullptr;
+        if (capture && !::CreatePipe(&read_pipe, &write_pipe, &attributes, 0)) {
+            throw std::runtime_error("cannot create process output pipe");
+        }
+        if (capture) {
+            (void)::SetHandleInformation(read_pipe, HANDLE_FLAG_INHERIT, 0);
+        }
+
+        STARTUPINFOW startup {};
+        startup.cb = sizeof(startup);
+        startup.dwFlags = STARTF_USESTDHANDLES;
+        startup.hStdInput = ::GetStdHandle(STD_INPUT_HANDLE);
+        startup.hStdOutput = capture ? write_pipe : ::GetStdHandle(STD_OUTPUT_HANDLE);
+        startup.hStdError = capture ? write_pipe : ::GetStdHandle(STD_ERROR_HANDLE);
+        const auto directory =
+            working_directory.empty() ? std::wstring {} : working_directory.wstring();
+
+        std::cout.flush();
+        std::cerr.flush();
+        PROCESS_INFORMATION process {};
+        const auto created = ::CreateProcessW(
+            nullptr,
+            mutable_command.data(),
+            nullptr,
+            nullptr,
+            TRUE,
+            capture ? CREATE_NO_WINDOW : 0,
+            nullptr,
+            directory.empty() ? nullptr : directory.c_str(),
+            &startup,
+            &process
+        );
+        const auto error = ::GetLastError();
+        if (capture) {
+            (void)::CloseHandle(write_pipe);
+        }
+        if (!created) {
+            if (capture) {
+                (void)::CloseHandle(read_pipe);
+            }
+            if (error == ERROR_FILE_NOT_FOUND || error == ERROR_PATH_NOT_FOUND) {
+                return ProcessResult {.exit_code = 127};
+            }
+            throw std::runtime_error("cannot create child process");
+        }
+
+        ProcessResult result;
+        if (capture) {
+            std::array<char, 4096> buffer {};
+            DWORD count = 0;
+            while (::ReadFile(
+                       read_pipe,
+                       buffer.data(),
+                       static_cast<DWORD>(buffer.size()),
+                       &count,
+                       nullptr
+                   )
+                   && count > 0)
+            {
+                result.output.append(buffer.data(), static_cast<std::size_t>(count));
+            }
+            (void)::CloseHandle(read_pipe);
+        }
+        (void)::WaitForSingleObject(process.hProcess, INFINITE);
+        DWORD code = 0;
+        const auto exited = ::GetExitCodeProcess(process.hProcess, &code);
+        (void)::CloseHandle(process.hThread);
+        (void)::CloseHandle(process.hProcess);
+        if (!exited) {
+            throw std::runtime_error("cannot wait for child process");
+        }
+        result.exit_code = static_cast<int>(code);
+        return result;
+#else
         std::array<int, 2> output_pipe {-1, -1};
         if (capture && ::pipe(output_pipe.data()) != 0) {
             throw std::runtime_error("cannot create process output pipe");
@@ -133,6 +298,7 @@ namespace
         }
         result.exit_code = process_exit_code(status);
         return result;
+#endif
     }
 
     [[nodiscard]] auto first_line(std::string_view value) -> std::string_view {
@@ -328,7 +494,7 @@ namespace
         const auto build = resolve_build_directory(root, build_path);
         if (!std::filesystem::is_regular_file(build / "meson-private" / "coredata.dat")) {
             std::cout << "nandina build: configuring " << build << '\n';
-            const auto setup = run_process({"meson", "setup", build.string()}, root, false);
+            const auto setup = run_process({"meson", "setup", path_argument(build)}, root, false);
             if (setup.exit_code != 0) {
                 std::cerr << "nandina build: meson setup failed with exit code " << setup.exit_code
                           << '\n';
@@ -336,7 +502,8 @@ namespace
             }
         }
         std::cout << "nandina build: compiling " << build << '\n';
-        const auto compile = run_process({"meson", "compile", "-C", build.string()}, root, false);
+        const auto compile =
+            run_process({"meson", "compile", "-C", path_argument(build)}, root, false);
         if (compile.exit_code != 0) {
             std::cerr << "nandina build: compile failed with exit code " << compile.exit_code
                       << '\n';
@@ -353,13 +520,24 @@ namespace
         const auto root = resolve_project_root(project_path);
         const auto build = resolve_build_directory(root, build_path);
         if (!no_build) {
-            const auto build_result = build_project(root.string(), build.string());
+            const auto build_result = build_project(path_argument(root), path_argument(build));
             if (build_result != 0) {
                 return build_result;
             }
         }
 
         const auto executable = build / project_target(root);
+#if defined(_WIN32)
+        // Windows 没有可执行位：用存在性判断，并补上 Meson 产出的 .exe 后缀。
+        const auto target_binary = std::filesystem::is_regular_file(executable)
+            ? executable
+            : std::filesystem::path(path_argument(executable) + ".exe");
+        if (!std::filesystem::is_regular_file(target_binary)) {
+            std::cerr << "nandina run: executable is missing: " << target_binary << '\n';
+            return 2;
+        }
+        std::vector<std::string> command {path_argument(target_binary)};
+#else
         if (!std::filesystem::is_regular_file(executable)
             || ::access(executable.c_str(), X_OK) != 0)
         {
@@ -367,7 +545,8 @@ namespace
                       << '\n';
             return 2;
         }
-        std::vector<std::string> command {executable.string()};
+        std::vector<std::string> command {path_argument(executable)};
+#endif
         command.insert(command.end(), forwarded.begin(), forwarded.end());
         std::cout << "nandina run: " << executable << '\n';
         return run_process(command, root, false).exit_code;
@@ -467,7 +646,7 @@ namespace
                 "}\n"
             );
             const auto result = run_process(
-                {"c++", "-std=c++26", source.string(), "-o", binary.string()},
+                {"c++", "-std=c++26", path_argument(source), "-o", path_argument(binary)},
                 root,
                 true
             );

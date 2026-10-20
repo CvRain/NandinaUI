@@ -213,15 +213,16 @@ meson compile -C buildDir
 
 ### 在 Windows 上构建（实验性，非支持范围）
 
-Windows 构建目前只做到“能配置、能编译、能跑单元测试”的探索阶段，**没有**完整的回归验收；
-问题请按实验性支持对待。前置条件：
+Windows 构建目前做到“能配置、能编译、能跑单元测试”的探索阶段，**没有**完整的回归验收；
+问题请按实验性支持对待。目前**实测可用**的组合是 MSYS2 UCRT64 工具链（GCC 16.2 + Meson 1.12.1），
+clang-cl / MSVC 未验证（项目要求 C++26，MSVC 的语言特性覆盖不足以作为承诺）。
 
-- **Clang ≥ 21（推荐 clang-cl）**；Windows SDK 与 CMake。MSVC 未验证：项目要求 C++26，
-  MSVC 的语言特性覆盖不足以作为承诺；Visual Studio 仅用于提供 SDK/运行时
-- Python 3 + Meson + Ninja（`py -m pip install meson ninja`）
-- 首次配置需要网络拉取 wrap 依赖（SDL3 等），之后可加 `--wrap-mode=nodownload`
+在 **MSYS2 UCRT64** 终端里：
 
-```powershell
+```bash
+pacman -S --needed mingw-w64-ucrt-x86_64-{gcc,cmake,ninja,pkgconf,openssl,git,zlib}
+pacman -S --needed mingw-w64-ucrt-x86_64-python
+python -m pip install meson
 meson setup buildDir --buildtype=release
 meson compile -C buildDir
 meson test -C buildDir --suite unit
@@ -229,13 +230,18 @@ meson test -C buildDir --suite unit
 
 现状与边界：
 
-- 编入 SDL3 时默认走 SDL3；生产 SDF 路径会选择 **DXIL** 产物（驱动为 `d3d12` 时），
+- 编入 SDL3 时默认走 SDL3（D3D12/Vulkan 由 SDL 选择）；生产 SDF 在 `d3d12` 驱动上会选 **DXIL** 产物，
   `sdf_device_test --require-gpu --expect-format dxil` 是目标设备验收命令，**尚未在 Windows 上执行**。
-- 字体数据包仍是 submodule（`git clone --recursive`）；其余依赖为 wrap，路径与盘符由 Meson 处理。
+- 2026-10-20 的 Windows 修复：CLI 的子进程调用改用 `CreateProcessW`（原 `fork/execvp` 是 POSIX 专用）；
+  可执行文件路径改用 `GetModuleFileNameW`；资源定位沿用 XDG 命名，用 `USERPROFILE`/`APPDATA`/`LOCALAPPDATA`
+  补齐（不是官方 Windows 目录约定，只为让应用能启动）；`system-fonts` 测试在 Windows 上不注册
+  （它依赖 Linux 字体目录与 `setenv`）。这些改动通过 zig 交叉编译 + Wine 实跑验证，但仍需 Windows 实机确认。
+- 路径含非 ASCII 字符尚未验收（环境变量按 ANSI 读取）。
 - raylib 后端、探针与页面 golden 在 Windows 上没有验收；golden 基线目前只有 Linux（见
   [视觉回归](docs/references/visual_regression.md) 的跨平台策略）。
+- 字体数据包仍是 submodule（`git clone --recursive`）；其余依赖为 wrap，首次 `meson setup` 联网拉取。
 
-### 创建 C++ 项目
+### 创建 C++ 项目### 创建 C++ 项目
 ```bash
 # 建立项目目录
 mkdir nandina_playground

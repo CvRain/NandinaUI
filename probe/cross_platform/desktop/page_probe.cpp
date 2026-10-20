@@ -24,7 +24,13 @@
 
 #include <SDL3/SDL_gpu.h>
 #include <SDL3/SDL_render.h>
-#include <sys/resource.h>
+#if defined(_WIN32)
+    #define WIN32_LEAN_AND_MEAN
+    #include <psapi.h>
+    #include <windows.h>
+#else
+    #include <sys/resource.h>
+#endif
 
 #include <nandina/app/nan_application.hpp>
 #include <nandina/app/nan_router.hpp>
@@ -644,11 +650,24 @@ int main() {
             std::cout << "sdf: format=" << sdl_diagnostics->sdf_shader_format()
                       << " binds=" << sdf.binds << " hits=" << sdf.hits << " misses=" << sdf.misses
                       << " cached=" << sdf.cached << " capacity=" << sdf.capacity << '\n';
+#if defined(_WIN32)
+            PROCESS_MEMORY_COUNTERS counters {};
+            if (::GetProcessMemoryInfo(
+                    ::GetCurrentProcess(),
+                    &counters,
+                    static_cast<DWORD>(sizeof(counters))
+                ))
+            {
+                std::cout << "resources: max_rss_kb=" << (counters.PeakWorkingSetSize / 1024U)
+                          << " texture_bytes=" << sdl_diagnostics->stats().texture_bytes << '\n';
+            }
+#else
             struct rusage usage {};
             if (getrusage(RUSAGE_SELF, &usage) == 0) {
                 std::cout << "resources: max_rss_kb=" << usage.ru_maxrss
                           << " texture_bytes=" << sdl_diagnostics->stats().texture_bytes << '\n';
             }
+#endif
         }
         const auto& stats = sdl_diagnostics->stats();
         std::cout << "device stats: frames=" << stats.frames << " rects=" << stats.rects
