@@ -228,6 +228,11 @@ meson compile -C buildDir
 meson test -C buildDir --suite unit
 ```
 
+> **远程/非交互构建（SSH、CI）**：先 `$env:PATH = 'C:\msys64\ucrt64\bin;' + $env:PATH`。
+> 否则 `cc1plus.exe`/`ld.exe` 找不到同目录的 DLL，编译/链接会**静默**退出 1（没有任何报错），
+> 表现为 CMake 子项目报 "compiler is not able to compile a simple test program"。
+> 2026-10-20 已在真机上验证：release 构建通过、`meson test --suite unit` 80/80、`nandina doctor` 全绿。
+
 现状与边界：
 
 - 编入 SDL3 时默认走 SDL3（D3D12/Vulkan 由 SDL 选择）；生产 SDF 在 `d3d12` 驱动上会选 **DXIL** 产物，

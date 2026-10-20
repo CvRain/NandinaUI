@@ -501,8 +501,10 @@ golden 候选是否与 Linux 一致（跨平台像素差异单独归档，不覆
 
 **状态与范围（2026-10-20）**：
 
-- **Windows**：实验性构建（README“在 Windows 上构建”）。DXIL 产物已生成并接入选择逻辑，
-  `--expect-format dxil` 的目标设备验收**尚未执行**；优先级低于主线功能完善。
+- **Windows**：实验性构建（README“在 Windows 上构建”），2026-10-20 已在真机验证 release
+  构建通过、`meson test --suite unit` 80/80、`nandina doctor` 全绿。DXIL 产物已生成并接入
+  选择逻辑；`--expect-format dxil` 的目标设备验收**尚未执行**——SSH 会话没有桌面，设备测试
+  会 skip（"no desktop display"），必须在交互式会话里跑。优先级低于主线功能完善。
 - **macOS**：**明确不在支持范围**——没有硬件与测试环境，不提供构建或运行承诺。MSL 产物
   已生成并做静态校验（容器/入口/哈希），但**不声明**它在 Metal 上可用；也不复制 Linux
   基线充数（见[视觉回归](visual_regression.md) §7 的跨平台策略）。
