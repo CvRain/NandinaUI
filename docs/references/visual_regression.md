@@ -1,6 +1,6 @@
 # 视觉回归：golden、容差与更新流程
 
-> **状态：候选层与 6 条 approved 基线已交付（2026-10-20），仅限单机 debug 构建。** 设备/页面 golden 的候选图、
+> **状态：候选层与 6 条 approved 基线已交付（2026-10-20，仅限 Linux 单机；debug 与 release 渲染逐像素一致）。** 设备/页面 golden 的候选图、
 > manifest、比较器与审批工具在 [路径契约](render_device_path_contract.md#12-页面-golden-候选层2026-10-19) §12；
 > 谁能改 golden"。第一批落地对象是 [D7](reference_draft.md#d7-渲染质量与后端视觉一致性) 的
 > 混合修复：按钮按下、涟漪中间态、Dialog 遮罩。
@@ -111,3 +111,36 @@ alpha 改成 1）。
 - 采样协议与性能阈值见[性能预算](performance_budget.md)（测量口径不同，不要混用同一份数字）；
 - 后端能力差异与降级路径见[平台与后端契约](platform_backend_contract.md) §3；
 - 逐图元 trace 只证明调用序列一致，**不证明像素正确**；trace 与像素各自证明自己的边界。
+
+## 7. 跨平台 golden 策略（2026-10-20）
+
+**基线按平台隔离**：manifest 每条 entry 带 `platform`（`linux` / `windows` / `macos`），键为
+`(page, backend, platform)`；比较器默认选择**当前平台**的条目，`--platform` 仅用于显式分析。
+`golden-manifest` 校验字段合法、无重复、approved 必须有审阅元数据。
+
+**不跨平台比较像素**。字体栅格化（hinting/抗锯齿）、AA、DPI、像素格式与合成顺序都可能不同；
+Linux 图不能当 Windows/macOS 的预期。跨平台只比较**结构性**结果（页面结构、元素存在、
+逐图元 trace 调用序列），像素基线各平台独立维护，容差也各自设定（Linux 当前为逐通道 ±3、
+变更像素比例 ≤0.1%）。
+
+**当前状态**：
+
+| 平台 | 状态 | 说明 |
+| --- | --- | --- |
+| Linux | **6 条 approved**（2026-10-20） | 1200×800、30 帧、隐藏窗口、单机；debug 与 release 采集逐像素一致，候选图 380 KB |
+| Windows | 未开始（低优先级） | 构建说明见 README“在 Windows 上构建”；有可用机器时按下面的步骤落地 |
+| macOS | **不支持** | 没有硬件与测试环境，不提供构建/运行承诺；不复制 Linux 基线充数 |
+
+**新平台落地步骤**（Windows 可用时）：
+
+1. 按 README 构建 `nandina_sdl_page_probe`；
+2. `python3 tools/capture_backend_golden.py --platform windows --pages home,label,anchors --modes sdf,cpu`；
+3. `python3 tools/compare_backend_golden.py --platform windows --page label --backend sdf`
+   （首轮与自己的候选比较应为 0 差异，确认采集确定性）；
+4. 人工审阅候选（可另存缩略图/差异图）后
+   `python3 tools/approve_backend_golden.py --entries all --reviewer <name> --note ...`；
+5. 提交候选图与 manifest；**不要**复制 Linux 图或修改 `platform` 来“复用”基线。
+
+**CI**：无 GPU/显示，像素比较不进 CI；`golden-manifest`（含 `platform` 校验）仍在 CI。
+设备级测试（坐标矩阵、真实字形、AA 面积积分、产物格式）是跨平台契约；页面 golden 是
+平台相关观感基线——两者分开维护，互不替代。

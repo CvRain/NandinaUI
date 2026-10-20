@@ -39,7 +39,7 @@ def render(entries: list[dict[str, str]]) -> str:
     ]
     for entry in entries:
         lines.append("[[entries]]")
-        for field in ("page", "backend", "image", "width", "height", "sha256", "status", "captured"):
+        for field in ("page", "backend", "platform", "image", "width", "height", "sha256", "status", "captured"):
             value = entry[field]
             lines.append(f'{field} = "{value}"' if field != "width" and field != "height" else f"{field} = {value}")
         for field in ("reviewed_by", "reviewed_on", "review_note"):
@@ -65,7 +65,7 @@ def main() -> int:
     wanted = None if options.entries == "all" else set(options.entries.split(","))
     changed = 0
     for entry in entries:
-        key = f"{entry['page']}/{entry['backend']}"
+        key = f"{entry['page']}/{entry['backend']}/{entry.get('platform', 'linux')}"
         if wanted is not None and key not in wanted:
             continue
         image = options.manifest.parent / entry["image"]

@@ -24,11 +24,21 @@ import golden_image  # noqa: E402
 DEFAULT_PROBE = ROOT / "buildDir-probe/probe/cross_platform/desktop/nandina_sdl_page_probe"
 
 
-def load_entries(manifest: pathlib.Path) -> dict[tuple[str, str], dict[str, object]]:
+def current_platform() -> str:
+    import sys
+
+    mapping = {"linux": "linux", "win32": "windows", "cygwin": "windows", "darwin": "macos"}
+    return mapping.get(sys.platform, sys.platform)
+
+
+def load_entries(manifest: pathlib.Path) -> dict[tuple[str, str, str], dict[str, object]]:
     import tomllib
 
     data = tomllib.loads(manifest.read_text(encoding="utf-8"))
-    return {(entry["page"], entry["backend"]): entry for entry in data.get("entries", [])}
+    return {
+        (entry["page"], entry["backend"], entry.get("platform", "linux")): entry
+        for entry in data.get("entries", [])
+    }
 
 
 def capture(probe: pathlib.Path, page: str, backend: str, frames: int) -> pathlib.Path:
@@ -57,6 +67,7 @@ def main() -> int:
     parser.add_argument("--manifest", type=pathlib.Path, default=ROOT / "tests/golden/backend/manifest.toml")
     parser.add_argument("--page", default="label")
     parser.add_argument("--backend", default="sdf")
+    parser.add_argument("--platform", default="", help="defaults to the current platform")
     parser.add_argument("--capture", type=pathlib.Path, help="use an existing screenshot")
     parser.add_argument("--probe", type=pathlib.Path, default=DEFAULT_PROBE)
     parser.add_argument("--frames", type=int, default=30)
@@ -67,10 +78,11 @@ def main() -> int:
     parser.add_argument("--strict", action="store_true", help="fail for candidates too")
     options = parser.parse_args()
 
+    platform = options.platform or current_platform()
     entries = load_entries(options.manifest)
-    entry = entries.get((options.page, options.backend))
+    entry = entries.get((options.page, options.backend, platform))
     if entry is None:
-        raise SystemExit(f"no golden entry for {options.page}/{options.backend}")
+        raise SystemExit(f"no golden entry for {options.page}/{options.backend} on {platform}")
     golden = golden_image.load(str(options.manifest.parent / str(entry["image"])))
     captured = options.capture or capture(options.probe, options.page, options.backend, options.frames)
     image = golden_image.load(str(captured))

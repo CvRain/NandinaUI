@@ -1,0 +1,111 @@
+{
+  "schema": 2,
+  "approved": true,
+  "enforce_timing": true,
+  "buildtype": "release",
+  "protocol": {
+    "warmup": 300,
+    "samples": 1200,
+    "repeats": 5,
+    "window": "1200x800 hidden"
+  },
+  "note": "Release \u6784\u5efa\u57fa\u7ebf\uff08RADV RX 6750 GRE\uff0c\u5355\u673a\uff09\u3002\u8ba1\u65f6\u9608\u503c\u81ea\u672c\u8f6e\u8d77\u53ef\u7ecf --enforce \u963b\u65ad\uff1bdebug \u57fa\u7ebf\u4ec5\u4f5c\u5bf9\u7167\uff0c\u4e0d\u4f5c\u4e3a\u6027\u80fd\u57fa\u7ebf\u3002",
+  "entries": [
+    {
+      "page": "home",
+      "mode": "sdf",
+      "interaction": "none",
+      "p50_ms": 0.109159,
+      "p95_ms": 0.134337,
+      "binds_per_frame": 0.0,
+      "misses_per_frame": 0.0,
+      "hits_per_frame": 0.0,
+      "cached": 0.0,
+      "layout_passes_per_frame": 0.0
+    },
+    {
+      "page": "home",
+      "mode": "cpu",
+      "interaction": "none",
+      "p50_ms": 0.106403,
+      "p95_ms": 0.119719,
+      "binds_per_frame": 0.0,
+      "misses_per_frame": 0.0,
+      "hits_per_frame": 0.0,
+      "cached": 0.0,
+      "layout_passes_per_frame": 0.0
+    },
+    {
+      "page": "label",
+      "mode": "sdf",
+      "interaction": "none",
+      "p50_ms": 0.45067,
+      "p95_ms": 0.476148,
+      "binds_per_frame": 21.0,
+      "misses_per_frame": 0.0,
+      "hits_per_frame": 21.0,
+      "cached": 21.0,
+      "layout_passes_per_frame": 0.0
+    },
+    {
+      "page": "label",
+      "mode": "cpu",
+      "interaction": "none",
+      "p50_ms": 0.480548,
+      "p95_ms": 0.515954,
+      "binds_per_frame": 0.0,
+      "misses_per_frame": 0.0,
+      "hits_per_frame": 0.0,
+      "cached": 0.0,
+      "layout_passes_per_frame": 0.0
+    },
+    {
+      "page": "anchors",
+      "mode": "sdf",
+      "interaction": "none",
+      "p50_ms": 0.019297,
+      "p95_ms": 0.021822,
+      "binds_per_frame": 7.0,
+      "misses_per_frame": 0.0,
+      "hits_per_frame": 7.0,
+      "cached": 7.0,
+      "layout_passes_per_frame": 0.0
+    },
+    {
+      "page": "anchors",
+      "mode": "cpu",
+      "interaction": "none",
+      "p50_ms": 0.027463,
+      "p95_ms": 0.031982,
+      "binds_per_frame": 0.0,
+      "misses_per_frame": 0.0,
+      "hits_per_frame": 0.0,
+      "cached": 0.0,
+      "layout_passes_per_frame": 0.0
+    },
+    {
+      "page": "label",
+      "mode": "sdf",
+      "interaction": "cycle",
+      "p50_ms": 0.464717,
+      "p95_ms": 4.8145,
+      "binds_per_frame": 23.372384937238493,
+      "misses_per_frame": 0.0,
+      "hits_per_frame": 24.366834170854272,
+      "cached": 142.0,
+      "layout_passes_per_frame": 0.06694560669456066
+    },
+    {
+      "page": "label",
+      "mode": "sdf",
+      "interaction": "dialog",
+      "p50_ms": 0.493342,
+      "p95_ms": 0.650762,
+      "binds_per_frame": 31.598326359832637,
+      "misses_per_frame": 0.0,
+      "hits_per_frame": 31.597989949748744,
+      "cached": 36.0,
+      "layout_passes_per_frame": 0.03347280334728033
+    }
+  ]
+}

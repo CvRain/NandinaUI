@@ -40,6 +40,13 @@ def main() -> int:
     problems: list[str] = []
     warnings: list[str] = []
     blocks: list[str] = []
+    if options.enforce and baseline.get("enforce_timing") and baseline.get("buildtype") != "release":
+        print(
+            "refusing to enforce timing against a non-release baseline "
+            f"(buildtype={baseline.get('buildtype')!r})",
+            file=sys.stderr,
+        )
+        return 1
     checked = 0
     for entry in report.get("configurations", []):
         key = (entry["page"], entry["mode"], entry.get("interaction", "none"))
@@ -94,6 +101,12 @@ def main() -> int:
         print(f"{'FAIL' if options.enforce and baseline.get('enforce_timing') else 'WARN'}: {block}", file=sys.stderr)
     for warning in warnings:
         print(f"WARN: {warning}", file=sys.stderr)
+    if options.enforce and not baseline.get("enforce_timing"):
+        print(
+            "note: timing enforcement is disabled by the baseline (enforce_timing=false); "
+            "only deterministic gates are enforced",
+            file=sys.stderr,
+        )
     if problems:
         return 1
     if options.enforce and baseline.get("enforce_timing") and blocks:

@@ -10,6 +10,7 @@ protocol = "30 frames, dt=1/60, 1200x800 window"
 [[entries]]
 page = "anchors"
 backend = "cpu"
+platform = "linux"
 image = "candidates/anchors-cpu.png"
 width = 1200
 height = 800
@@ -23,6 +24,7 @@ review_note = "visual review of all six candidates; cross-backend diff home 0, l
 [[entries]]
 page = "anchors"
 backend = "sdf"
+platform = "linux"
 image = "candidates/anchors-sdf.png"
 width = 1200
 height = 800
@@ -36,6 +38,7 @@ review_note = "visual review of all six candidates; cross-backend diff home 0, l
 [[entries]]
 page = "home"
 backend = "cpu"
+platform = "linux"
 image = "candidates/home-cpu.png"
 width = 1200
 height = 800
@@ -49,6 +52,7 @@ review_note = "visual review of all six candidates; cross-backend diff home 0, l
 [[entries]]
 page = "home"
 backend = "sdf"
+platform = "linux"
 image = "candidates/home-sdf.png"
 width = 1200
 height = 800
@@ -62,6 +66,7 @@ review_note = "visual review of all six candidates; cross-backend diff home 0, l
 [[entries]]
 page = "label"
 backend = "cpu"
+platform = "linux"
 image = "candidates/label-cpu.png"
 width = 1200
 height = 800
@@ -75,6 +80,7 @@ review_note = "visual review of all six candidates; cross-backend diff home 0, l
 [[entries]]
 page = "label"
 backend = "sdf"
+platform = "linux"
 image = "candidates/label-sdf.png"
 width = 1200
 height = 800

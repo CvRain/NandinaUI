@@ -84,18 +84,19 @@ NandinaUI（南天竹）是一个用 **C++26** 编写、基于 **Meson** 构建�
 
 ### 环境要求
 
-- **Linux 桌面**（Wayland | Xorg）
+- **Linux 桌面**（Wayland | Xorg）——**正式支持范围**
+- **Windows**：实验性构建，见下文“在 Windows 上构建”；不在正式支持范围
+- **macOS**：**不在支持范围**（无硬件、无测试环境，不提供构建或运行承诺）
 - **编译器**：GCC ≥ 16 或 Clang ≥ 21（需 C++26 支持）
 - **构建工具**：Meson、Ninja、CMake、pkg-config、Python 3
 - **系统库**：OpenGL、OpenSSL ≥ 3.0
 
-其余第三方依赖（spdlog、raylib、FreeType、HarfBuzz、FriBidi、utf8proc、toml++、nlohmann/json、Catch2、Box2D 等）**当前**以 Git 子模块方式随仓库提供；SQLite 以官方 amalgamation 直接随源码分发（见 `third_party/sqlite3/README.md`），不需要系统安装。SDL3 当前通过系统依赖发现（≥ 3.4.0）；编入时默认走 SDL3，auto 未找到时仍使用 raylib。
+其余第三方依赖（spdlog、raylib、FreeType、HarfBuzz、FriBidi、utf8proc、toml++、nlohmann/json、Catch2、Box2D、SDL3）以 **`wrap-git` + 完整 commit pin** 提供，默认 `vendored` 来源；SQLite 以官方 amalgamation 直接随源码分发（见 `third_party/sqlite3/README.md`），不需要系统安装。仓库里只剩字体数据包（`caskaydia-cove`）是 submodule，所以 `git clone --recursive` 只用于取它；其余依赖由首次 `meson setup` 或 `meson subprojects download` 拉取。
 
-> **依赖获取方式计划迁移**（策略已定、尚未实施）：目标形态是 `wrap-git` + 依赖级三态开关
-> （`system` / `vendored` / `auto`，默认 `vendored`，`auto` 为系统优先），迁移完成后只有字体数据包保留为子模块，
-> 那时 `git clone --recursive` 不再是必需步骤。权威规则见
-> [第三方依赖策略](docs/references/dependency_policy.md)；SDL3 作为默认窗口/渲染后端的版本下限
-> （≥ 3.4.0，`SDL_GPURenderState`）也记在那里。
+> 想完全离线构建：先 `meson subprojects download` 预热，再用 `--wrap-mode=nodownload` 配置。
+> 依赖级三态开关是 `-Dsdl3_source=auto|system|vendored`（默认 `vendored`），解析结果会写进
+> `build/deps.json`。权威规则见[第三方依赖策略](docs/references/dependency_policy.md)；
+> SDL3 作为默认窗口/渲染后端的版本下限（≥ 3.4.0，`SDL_GPURenderState`）也记在那里。
 
 ### 在 Debian / Ubuntu 上准备环境
 
@@ -210,6 +211,30 @@ meson compile -C buildDir
 
 与 Debian 一节同理：项目同时需要 C 与 C++ 编译器（随源码分发的 SQLite amalgamation 是 C 源码），作为 subproject 引入时 `CC` / `CXX` 要在消费项目**首次** `meson setup` 之前设好。
 
+### 在 Windows 上构建（实验性，非支持范围）
+
+Windows 构建目前只做到“能配置、能编译、能跑单元测试”的探索阶段，**没有**完整的回归验收；
+问题请按实验性支持对待。前置条件：
+
+- **Clang ≥ 21（推荐 clang-cl）**；Windows SDK 与 CMake。MSVC 未验证：项目要求 C++26，
+  MSVC 的语言特性覆盖不足以作为承诺；Visual Studio 仅用于提供 SDK/运行时
+- Python 3 + Meson + Ninja（`py -m pip install meson ninja`）
+- 首次配置需要网络拉取 wrap 依赖（SDL3 等），之后可加 `--wrap-mode=nodownload`
+
+```powershell
+meson setup buildDir --buildtype=release
+meson compile -C buildDir
+meson test -C buildDir --suite unit
+```
+
+现状与边界：
+
+- 编入 SDL3 时默认走 SDL3；生产 SDF 路径会选择 **DXIL** 产物（驱动为 `d3d12` 时），
+  `sdf_device_test --require-gpu --expect-format dxil` 是目标设备验收命令，**尚未在 Windows 上执行**。
+- 字体数据包仍是 submodule（`git clone --recursive`）；其余依赖为 wrap，路径与盘符由 Meson 处理。
+- raylib 后端、探针与页面 golden 在 Windows 上没有验收；golden 基线目前只有 Linux（见
+  [视觉回归](docs/references/visual_regression.md) 的跨平台策略）。
+
 ### 创建 C++ 项目
 ```bash
 # 建立项目目录
@@ -225,6 +250,8 @@ meson init --name nandina_playground --language cpp
 mkdir subprojects
 cd subprojects
 git clone https://github.com/CvRain/NandinaUI.git --recursive
+# --recursive 只取字体数据包；wrap 依赖在首次 meson setup 时拉取（或显式预热）：
+cd NandinaUI && meson subprojects download
 ```
 
 ### 编辑 `meson.build`
@@ -339,7 +366,7 @@ meson compile -C buildDir
 - [x] **Anchors 基础验证**：百分比与无界约束、隐藏排列项、ScrollView 轴向约束与 reparent 失效规则已固定为测试，并写回 reference。
 - [x] **Anchors scene 内核**：类型化弱引用、显式锚定画布、父/同画布兄弟锚线、尺寸冲突诊断、依赖排序与环检测、批量关系切换；通过 `layout_to()` 交付布局结果。
 - [x] **Anchors 作者入口**：`ui.ref<T>()`、builder 绑定与只读锚线门面、`ui.anchor_canvas()`、`.anchors(spec|source)` 与 `AnchorCanvas::set_child_anchors()` 批量切换均已落地，由 `tests/anchors_authoring_tests.cpp` 覆盖。
-- [x] **D4 默认切换与平台接口**：编入 SDL3 时默认使用 SDL3；`IPlatformWindow`、设备包装和三页逐图元对照已落地。生产 SDL 仍使用 CPU 几何，Windows/Web 应用交付尚未完成。
+- [x] **D4 默认切换与平台接口**：编入 SDL3 时默认使用 SDL3；`IPlatformWindow`、设备包装和三页逐图元对照已落地。生产 SDL 的填充/描边/圆已走 Vulkan SDF（其余图元仍是 CPU 几何），Windows/Web 应用交付尚未完成。
 
 ### 当前议题与推进顺序
 

@@ -367,7 +367,8 @@ SDF（后者仅 GPU），覆盖 1/1.25/1.5 render scale、letterbox 开关及 vi
 - **home**：两模式都在 0.6 ms 量级，差异约 2.8%（在噪声内）；该页 **0 次 SDF 绑定** ——
   它没有走矩形/圆角/圆图元，主要是文字与纹理，因此两种模式几乎一样。
 - RSS 与纹理字节两模式一致（同一图集/窗口），差异来自绘制路径而不是资源。
-- 这不是基线：单机、debug 构建、采样期间可能有并行负载；阈值未启用。用
+- 这些是 **debug 构建的对照数字**（release 基线见 §13，label 快约 5.5×）；采样期间可能有
+  并行负载，阈值见 §13。用
   `--stress 300` 时 300 个不同参数块超过 256 容量会出现 LRU 抖动（每帧全 miss），
   这正是压力场景要观察的，报告会如实给出。
 
@@ -443,26 +444,43 @@ label **0.0111%**（最大 9）、anchors **0.0244%**（最大 55，AA 边缘）
 边界：候选图来自单机/单构建，未批准；home 的 SDF/CPU 图完全相同；比较器当前是逐像素阈值 +
 差异图，没有做感知差异或分区容差。
 
-## 13. 预算门禁（2026-10-20）
+## 13. 预算门禁（2026-10-20，release 基线）
 
 `tools/check_backend_budget.py --report <fresh> --baseline <baseline> [--enforce]`。
-基线 `probe/cross_platform/results/backend-baseline-2026-10-20.json`（8 条：6 稳态 + 2 交互）。
 
-**确定性门禁（总是生效，失败退出 1）**：
+**基线**：`probe/cross_platform/results/backend-baseline-release-2026-10-20.json`
+（`buildtype = "release"`、`enforce_timing = true`、8 个配置）。debug 基线
+`backend-baseline-2026-10-20.json` 保留为对照，**不能**启用计时阻断（检查器拒绝
+非 release 基线 + `--enforce`）。
 
-- 稳态场景每帧布局 pass 必须为 0；
-- 使用 SDF 的页面预热后 miss/帧必须为 0；
-- binds/帧 ≤ 基线 × 1.25 + 2。
+release 实测（RADV RX 6750 GRE，1200×800，300/1200/5）：
 
-**计时阈值（候选）**：p50 超过 `max(base×1.10, base+0.20ms)` 警告、
-`max(base×1.20, base+0.40ms)` 为阻断候选；p95 超过 `max(base×1.25, base+0.75ms)` 为阻断候选。
-只有 `--enforce` **且**基线 `enforce_timing = true` 时才真正阻断。当前基线
-`enforce_timing = false`：它是单机 debug 构建的数值，按[性能预算](performance_budget.md)
-的规则不能冒充 release 基线。启用顺序：release 构建复测 → 更新基线 → 人工批准
-`enforce_timing` → CI/发布检查加 `--enforce`。
+| page | 模式 | p50 | p95 | 对 CPU |
+| --- | --- | --- | --- | --- |
+| home | SDF | 0.109 ms | 0.134 ms | +2.8% |
+| home | CPU | 0.106 ms | 0.120 ms | — |
+| label | SDF | 0.451 ms | 0.476 ms | **−6.2%** |
+| label | CPU | 0.481 ms | 0.516 ms | — |
+| anchors | SDF | 0.019 ms | 0.022 ms | **−30%** |
+| anchors | CPU | 0.027 ms | 0.032 ms | — |
+| label cycle（换页） | SDF | 0.465 ms | **4.814 ms** | 换页帧的尾延迟 |
+| label dialog-cycle | SDF | 0.493 ms | 0.651 ms | 浮层开关 |
 
-CI 没有 GPU/显示，页面探针无法在 CI 运行，所以这是**发布检查/本地门禁**，不是 CI 任务；
-golden 清单完整性与 `header-surface` 等无 GPU 门禁仍在 CI 里。
+debug 基线只作对照：label SDF 在 debug 上是 2.505 ms、release 是 0.451 ms（约 5.5×），
+拿 debug 数字当性能基线会系统性高估。六个页面 golden 在 debug 与 release 下**逐像素一致**
+（0 差异），说明渲染结果不依赖构建类型，只有计时依赖。
+
+**确定性门禁（总是生效，失败退出 1）**：稳态每帧布局 pass 必须为 0；使用 SDF 的页面预热后
+miss/帧必须为 0；binds/帧 ≤ 基线 × 1.25 + 2。
+
+**计时阈值**（`--enforce` 且基线 `enforce_timing=true` 时阻断）：p50 超过
+`max(base×1.10, base+0.20ms)` 警告、`max(base×1.20, base+0.40ms)` 阻断；
+p95 超过 `max(base×1.25, base+0.75ms)` 阻断。绝对项是给亚毫秒页面留噪声余量的；
+因此 +30% 的回归在 0.45ms 的页面上不会阻断，+100% 会（实测 0.901ms > 0.851ms 退出 1）。
+阈值按[性能预算](performance_budget.md)的候选规则执行，未经人审不收紧。
+
+**CI**：没有 GPU/显示，页面探针无法在 CI 运行，这是发布检查/本地门禁；无 GPU 的
+golden 清单、头文件表面与产物门禁仍在 CI。
 
 ## 14. 平台产物验收清单（DXIL/MSL，外部）
 
@@ -481,5 +499,11 @@ meson setup buildDir -Dsdl_backend=enabled && meson compile -C buildDir sdf_devi
 需要记录：驱动名、`sdf_shader_format()`、坐标矩阵（60 组）、真实字形交错、圆/直线 AA 边缘误差、
 golden 候选是否与 Linux 一致（跨平台像素差异单独归档，不覆盖 Linux 基线）。
 
-**状态**：DXIL/MSL 已生成、静态校验（容器签名 + 哈希 + 固定工具链再生）并接入按驱动选择；
-**目标设备加载与像素验收仍未执行**，这是外部阻塞项，不能用 Linux 结果代替。
+**状态与范围（2026-10-20）**：
+
+- **Windows**：实验性构建（README“在 Windows 上构建”）。DXIL 产物已生成并接入选择逻辑，
+  `--expect-format dxil` 的目标设备验收**尚未执行**；优先级低于主线功能完善。
+- **macOS**：**明确不在支持范围**——没有硬件与测试环境，不提供构建或运行承诺。MSL 产物
+  已生成并做静态校验（容器/入口/哈希），但**不声明**它在 Metal 上可用；也不复制 Linux
+  基线充数（见[视觉回归](visual_regression.md) §7 的跨平台策略）。
+- Linux 只有 Vulkan，不能用它替代 D3D12/Metal 的实机验收。

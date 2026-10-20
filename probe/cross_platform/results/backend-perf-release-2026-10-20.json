@@ -1,0 +1,156 @@
+{
+  "protocol": {
+    "warmup": 300,
+    "samples": 1200,
+    "repeats": 5,
+    "stress": 0,
+    "interaction": "none",
+    "overlay": false
+  },
+  "configurations": [
+    {
+      "page": "home",
+      "mode": "sdf",
+      "interaction": "none",
+      "p50_ms": 0.109159,
+      "p95_ms": 0.134337,
+      "p50_range_ms": [
+        0.106744,
+        0.111193
+      ],
+      "layout_passes_per_frame": 0.0,
+      "binds_per_frame": 0.0,
+      "unbinds_per_frame": 0.0,
+      "misses_per_frame": 0.0,
+      "hits_per_frame": 0.0,
+      "cached": 0.0,
+      "summary": {
+        "capabilities": "device capabilities: alpha_textures=1 analytic_aa=1 rounded_rect=1 rounded_clip=0 soft_shadows=0",
+        "frame_cost": "frame cost over 1495 frames: layout=0.000150962 ms, draw=0.108079 ms, total=0.10823 ms",
+        "layout": "layout passes=0 over 1495 frames",
+        "sdf": "sdf: format=spirv binds=0 hits=0 misses=0 cached=0 capacity=256",
+        "resources": "resources: max_rss_kb=63336 texture_bytes=786432"
+      }
+    },
+    {
+      "page": "home",
+      "mode": "cpu",
+      "interaction": "none",
+      "p50_ms": 0.106403,
+      "p95_ms": 0.119719,
+      "p50_range_ms": [
+        0.105963,
+        0.107144
+      ],
+      "layout_passes_per_frame": 0.0,
+      "binds_per_frame": 0.0,
+      "unbinds_per_frame": 0.0,
+      "misses_per_frame": 0.0,
+      "hits_per_frame": 0.0,
+      "cached": 0.0,
+      "summary": {
+        "capabilities": "device capabilities: alpha_textures=1 analytic_aa=0 rounded_rect=1 rounded_clip=0 soft_shadows=0",
+        "frame_cost": "frame cost over 1495 frames: layout=0.000167457 ms, draw=0.108716 ms, total=0.108883 ms",
+        "layout": "layout passes=0 over 1495 frames",
+        "sdf": "sdf: format= binds=0 hits=0 misses=0 cached=0 capacity=0",
+        "resources": "resources: max_rss_kb=63808 texture_bytes=786432"
+      }
+    },
+    {
+      "page": "label",
+      "mode": "sdf",
+      "interaction": "none",
+      "p50_ms": 0.45067,
+      "p95_ms": 0.476148,
+      "p50_range_ms": [
+        0.446181,
+        0.454036
+      ],
+      "layout_passes_per_frame": 0.0,
+      "binds_per_frame": 21.0,
+      "unbinds_per_frame": 11.0,
+      "misses_per_frame": 0.0,
+      "hits_per_frame": 21.0,
+      "cached": 21.0,
+      "summary": {
+        "capabilities": "device capabilities: alpha_textures=1 analytic_aa=1 rounded_rect=1 rounded_clip=0 soft_shadows=0",
+        "frame_cost": "frame cost over 1495 frames: layout=0.000911187 ms, draw=0.456435 ms, total=0.457346 ms",
+        "layout": "layout passes=0 over 1495 frames",
+        "sdf": "sdf: format=spirv binds=31500 hits=31479 misses=21 cached=21 capacity=256",
+        "resources": "resources: max_rss_kb=83068 texture_bytes=2097152"
+      }
+    },
+    {
+      "page": "label",
+      "mode": "cpu",
+      "interaction": "none",
+      "p50_ms": 0.480548,
+      "p95_ms": 0.515954,
+      "p50_range_ms": [
+        0.469876,
+        0.486659
+      ],
+      "layout_passes_per_frame": 0.0,
+      "binds_per_frame": 0.0,
+      "unbinds_per_frame": 0.0,
+      "misses_per_frame": 0.0,
+      "hits_per_frame": 0.0,
+      "cached": 0.0,
+      "summary": {
+        "capabilities": "device capabilities: alpha_textures=1 analytic_aa=0 rounded_rect=1 rounded_clip=0 soft_shadows=0",
+        "frame_cost": "frame cost over 1495 frames: layout=0.00104095 ms, draw=0.502938 ms, total=0.503979 ms",
+        "layout": "layout passes=0 over 1495 frames",
+        "sdf": "sdf: format= binds=0 hits=0 misses=0 cached=0 capacity=0",
+        "resources": "resources: max_rss_kb=83404 texture_bytes=2097152"
+      }
+    },
+    {
+      "page": "anchors",
+      "mode": "sdf",
+      "interaction": "none",
+      "p50_ms": 0.019297,
+      "p95_ms": 0.021822,
+      "p50_range_ms": [
+        0.019086,
+        0.019678
+      ],
+      "layout_passes_per_frame": 0.0,
+      "binds_per_frame": 7.0,
+      "unbinds_per_frame": 3.0,
+      "misses_per_frame": 0.0,
+      "hits_per_frame": 7.0,
+      "cached": 7.0,
+      "summary": {
+        "capabilities": "device capabilities: alpha_textures=1 analytic_aa=1 rounded_rect=1 rounded_clip=0 soft_shadows=0",
+        "frame_cost": "frame cost over 1495 frames: layout=0.000139004 ms, draw=0.0194134 ms, total=0.0195524 ms",
+        "layout": "layout passes=0 over 1495 frames",
+        "sdf": "sdf: format=spirv binds=10500 hits=10493 misses=7 cached=7 capacity=256",
+        "resources": "resources: max_rss_kb=65644 texture_bytes=524288"
+      }
+    },
+    {
+      "page": "anchors",
+      "mode": "cpu",
+      "interaction": "none",
+      "p50_ms": 0.027463,
+      "p95_ms": 0.031982,
+      "p50_range_ms": [
+        0.027232,
+        0.027613
+      ],
+      "layout_passes_per_frame": 0.0,
+      "binds_per_frame": 0.0,
+      "unbinds_per_frame": 0.0,
+      "misses_per_frame": 0.0,
+      "hits_per_frame": 0.0,
+      "cached": 0.0,
+      "summary": {
+        "capabilities": "device capabilities: alpha_textures=1 analytic_aa=0 rounded_rect=1 rounded_clip=0 soft_shadows=0",
+        "frame_cost": "frame cost over 1495 frames: layout=0.000147932 ms, draw=0.0283478 ms, total=0.0284957 ms",
+        "layout": "layout passes=0 over 1495 frames",
+        "sdf": "sdf: format= binds=0 hits=0 misses=0 cached=0 capacity=0",
+        "resources": "resources: max_rss_kb=65208 texture_bytes=524288"
+      }
+    }
+  ]
+}

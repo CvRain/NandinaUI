@@ -24,7 +24,12 @@ import golden_image  # noqa: E402
 DEFAULT_PROBE = ROOT / "buildDir-probe/probe/cross_platform/desktop/nandina_sdl_page_probe"
 
 
-def render_manifest(entries: dict[tuple[str, str], dict[str, object]], protocol: str) -> str:
+def current_platform() -> str:
+    mapping = {"linux": "linux", "win32": "windows", "cygwin": "windows", "darwin": "macos"}
+    return mapping.get(__import__("sys").platform, __import__("sys").platform)
+
+
+def render_manifest(entries: dict[tuple[str, str, str], dict[str, object]], protocol: str) -> str:
     lines = [
         "# 页面 golden 清单（docs/references/visual_regression.md 的候选层）。",
         "# 候选图由 tools/capture_backend_golden.py 生成；只有维护者把 status 改成",
@@ -41,6 +46,7 @@ def render_manifest(entries: dict[tuple[str, str], dict[str, object]], protocol:
         lines.append("[[entries]]")
         lines.append(f'page = "{entry["page"]}"')
         lines.append(f'backend = "{entry["backend"]}"')
+        lines.append(f'platform = "{entry["platform"]}"')
         lines.append(f'image = "{entry["image"]}"')
         lines.append(f'width = {entry["width"]}')
         lines.append(f'height = {entry["height"]}')
@@ -54,7 +60,7 @@ def render_manifest(entries: dict[tuple[str, str], dict[str, object]], protocol:
     return "\n".join(lines).rstrip() + "\n"
 
 
-def load_existing(manifest: pathlib.Path) -> dict[tuple[str, str], dict[str, object]]:
+def load_existing(manifest: pathlib.Path) -> dict[tuple[str, str, str], dict[str, object]]:
     try:
         import tomllib
     except ModuleNotFoundError:  # pragma: no cover
@@ -62,7 +68,10 @@ def load_existing(manifest: pathlib.Path) -> dict[tuple[str, str], dict[str, obj
     if not manifest.is_file():
         return {}
     data = tomllib.loads(manifest.read_text(encoding="utf-8"))
-    return {(entry["page"], entry["backend"]): entry for entry in data.get("entries", [])}
+    return {
+        (entry["page"], entry["backend"], entry.get("platform", "linux")): entry
+        for entry in data.get("entries", [])
+    }
 
 
 def main() -> int:
@@ -73,6 +82,7 @@ def main() -> int:
     parser.add_argument("--frames", type=int, default=30)
     parser.add_argument("--output", type=pathlib.Path, default=ROOT / "tests/golden/backend")
     parser.add_argument("--force", action="store_true", help="overwrite approved entries")
+    parser.add_argument("--platform", default="", help="override the detected platform tag")
     options = parser.parse_args()
     if not options.probe.is_file():
         raise SystemExit(f"probe not built: {options.probe}")
@@ -81,11 +91,12 @@ def main() -> int:
     candidates = options.output / "candidates"
     candidates.mkdir(parents=True, exist_ok=True)
     entries = load_existing(manifest)
+    platform = options.platform or current_platform()
     captured = "2026-10-19"
     for page in options.pages.split(","):
         for backend in options.modes.split(","):
             page, backend = page.strip(), backend.strip()
-            key = (page, backend)
+            key = (page, backend, platform)
             if entries.get(key, {}).get("status") == "approved" and not options.force:
                 print(f"skip {page}/{backend}: approved baseline (use --force to replace)")
                 continue
@@ -115,6 +126,7 @@ def main() -> int:
                 entries[key] = {
                     "page": page,
                     "backend": backend,
+                    "platform": platform,
                     "image": f"candidates/{target.name}",
                     "width": image.width,
                     "height": image.height,

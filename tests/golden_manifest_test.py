@@ -11,6 +11,7 @@ import tomllib
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "tests/golden/backend/manifest.toml"
 VALID_STATUS = {"candidate", "approved"}
+VALID_PLATFORMS = {"linux", "windows", "macos"}
 
 
 def main() -> int:
@@ -23,7 +24,10 @@ def main() -> int:
     problems = []
     seen = set()
     for entry in entries:
-        key = (entry.get("page"), entry.get("backend"))
+        platform = entry.get("platform")
+        if platform not in VALID_PLATFORMS:
+            problems.append(f"{entry.get('page')}/{entry.get('backend')}: invalid platform {platform}")
+        key = (entry.get("page"), entry.get("backend"), platform)
         if key in seen:
             problems.append(f"duplicate entry: {key}")
         seen.add(key)
