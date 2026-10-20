@@ -10,7 +10,7 @@
 
 | 方向 | 结论 | 证据入口 |
 | --- | --- | --- |
-| 平台 | **Linux 正式支持**（Wayland/X11，主套件 98/98）；**Windows 实验性**（release 构建通过、`--suite unit` 80/80、`nandina doctor` 全绿、showcase 可运行）；**macOS 不支持**（无硬件，不承诺） | README“在 Windows 上构建”、路径契约 §14 |
+| 平台 | **Linux 正式支持**（Wayland/X11，主套件 98/98）；**Windows 实验性**（release 构建通过、`--suite unit` 80/80、showcase 可运行、DXIL 设备级验收通过）；**macOS 不支持**（无硬件，不承诺） | README“在 Windows 上构建”、路径契约 §14 |
 | 渲染 | SDL3 为默认后端；生产 SDF 已接入**填充/描边/圆/线段/圆环扇区**，Vulkan(SPIR-V) 与 Windows D3D12(DXIL) 均通过设备级像素验收，直线 AA 数值逐位一致；其余图元仍走 CPU 几何 | 路径契约 §10、§14 |
 | 视觉回归 | 6 条页面 golden 已批准（Linux，平台隔离）；比较器与审批工具就绪；Windows 基线未建立 | [视觉回归](visual_regression.md) |
 | 性能 | release 基线 8 配置 + 确定性门禁（布局 0、稳态 miss 0、binds 上限）+ 候选计时阈值（`--enforce` 启用） | [性能预算](performance_budget.md) |
@@ -35,7 +35,7 @@
 | P1.1 | **发布检查脚本**：把 format、header、artifact、golden 清单、budget 确定性门禁串成一条 `tools/release_check.py`（本地/发布用，CI 可复用无 GPU 部分） | 各门禁已就绪 | **已完成（2026-10-20）**：8 项逐条 PASS/SKIP/FAIL、失败非零退出；`--ci` 跳过 GPU 项，`--report` 追加性能预算；已写进[开发流程](development_loop.md) §2 |
 | P1.2 | **Windows 页面 golden 候选**：`capture_backend_golden.py --platform windows` 采集 → 人工审阅 → 批准（不替换 Linux 基线） | P1 前 Windows 构建可跑（已满足） | manifest 出现 platform=windows 的 approved 条目；比较器按当前平台选择；跨平台策略文档同步 |
 | P1.3 | **Windows 性能基线（可选）**：同协议在 Windows release 构建采样，作为对照而非跨平台比较 | P1.2 同前置 | 报告归档；不要求与 Linux 可比 |
-| P1.4 | **CLI 端到端**：`nandina new` → `nandina build` → `nandina run` 在 Linux 与 Windows 各走一遍真实项目（验证 CreateProcessW、`.exe`、路径转义） | 无 | **Linux 已完成（2026-10-20）**：`nandina-cli` 集成测试新增真实二进制端到端（改 main 为立即返回 3，`run` 增量重建、启动真实 exe、透传 stdout 与退出码），不依赖窗口/GPU；Windows 部分随 Windows 批延后 |
+| P1.4 | **CLI 端到端**（**已移出本仓库**：CLI 由独立仓库 NandinaCLI 承担，主仓库只保留库、模板契约与框架开发工具） | — | 本仓库不再构建/测试 CLI；`new/build/run` 的端到端与 SDK 获取在 NandinaCLI 验收。2026-10-20 移除 `tools/nandina`、`nandina-cli` 集成测试与 `NANDINA_SOURCE_ROOT` 注入 |
 | P1.5a | **SDF 线段 + 环形扇区**：复用 32 字节参数块（模式 2/5），修正 CPU 弧角度约定与 sweep>π 的角向公式 | 现有 SDF 参数策略与产物链 | **已完成（2026-10-20）**：`sdf-device` 覆盖内部/圆头/整环 seam/270° 缺口/立方 AA/缓存命中（misses==2→hits==2）；golden 逐字节不变；release 预算 0 失败；产物三格式再生并经固定工具链验证 |
 | P1.5b | **阴影（mode 4）+ 涟漪圆角裁剪**：先做 D7 批次 6 的涟漪专用圆角交集，再按用例定形通用裁剪 | P1.5a 已落地 | 阴影软边与裁剪不外溢、状态恢复、能力为 false 的降级；绘制/命中遵循既有裁剪契约 |
 | P1.6 | **图片路径**：共享 CPU 解码器、SDL RGBA 上传、删除 `IPlatformWindow::make_image_decoder()`（破坏性，按 SDK 表面记录） | 解码库来源定形 | 两后端真实 Image 消费者可用；PNG/JPEG/透明/失败输入测试；删除后无遗留 override |

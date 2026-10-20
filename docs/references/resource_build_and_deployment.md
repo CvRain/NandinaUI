@@ -51,8 +51,8 @@ nanres 是服务应用的资源构建工具，不是 UI 组件。它可以独立
 | SQLite 打包器写包，SQLiteBackend 运行时读包 | [resource_packager.cpp](../../tools/resource_packager.cpp)、[sqlite_backend.cpp](../../nandina/resource/backends/sqlite_backend.cpp) | 关闭 CLI 不足以去掉 SQLite |
 | SQLite 被无条件构建并加入库依赖；nanres 链接完整 `nandina_dep` | [meson.build](../../meson.build)、[nandina/meson.build](../../nandina/meson.build) | 打包工具和可选后端还没有独立构建边界 |
 | manifest/packager 的公开声明在 resource，部分实现位于 tools | [resource_manifest.hpp](../../nandina/resource/resource_manifest.hpp)、[resource_manifest.cpp](../../tools/resource_manifest.cpp) | 声明、实现归属与构建目标需要一起梳理，不只是移动 main |
-| 模板与项目脚手架已通过 custom target 调用 nanres | [nandina_resources.build](../../meson/nandina_resources.build)、[nandina_main.cpp](../../tools/nandina_main.cpp) | 并非所有路径都必须手工打包；应完善并统一现有自动化 |
-| 脚手架资源目标是 `build_by_default`，应用 executable 未显式依赖它 | [nandina_main.cpp](../../tools/nandina_main.cpp) | 定向构建应用不能仅凭默认目标保证资源就绪 |
+| 模板与项目脚手架已通过 custom target 调用 nanres | [nandina_resources.build](../../meson/nandina_resources.build)；脚手架模板由独立仓库 NandinaCLI 消费 | 并非所有路径都必须手工打包；应完善并统一现有自动化 |
+| 脚手架资源目标是 `build_by_default`，应用 executable 未显式依赖它 | 脚手架模板（NandinaCLI 消费），主仓库只保留 `nandina_resources.build` | 定向构建应用不能仅凭默认目标保证资源就绪 |
 | 模板设置 `build_always_stale: true` | [nandina_resources.build](../../meson/nandina_resources.build) | 每次运行 helper 是当前发现变化的方式，不是精确增量依赖模型 |
 | helper 在 validate 失败后 scan，并生成开发定位元数据 | [nanres_build_helper.py](../../tools/nanres_build_helper.py) | 缺少过期与真正错误的结构化区分，自动行为还会影响 lock |
 | scan 写策略目录下的 lock，新身份可由 `ResourceId::random()` 产生 | [nanres_main.cpp](../../tools/nanres_main.cpp)、[resource_manifest.cpp](../../tools/resource_manifest.cpp) | 不能不分析身份语义就将 lock 移进可随时删除的 build 目录 |

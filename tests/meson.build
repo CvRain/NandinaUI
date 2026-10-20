@@ -667,14 +667,6 @@ test(
     args: [nanres, nanres_package_probe],
     suite: 'integration',
 )
-nandina_cli_test = find_program('nandina_cli_test.py')
-test(
-    'nandina-cli',
-    nandina_cli_test,
-    args: [nandina, meson.project_source_root()],
-    timeout: 600,
-    suite: 'integration',
-)
 portable_stage_test = find_program('portable_stage_test.py')
 test(
     'portable-stage',

@@ -512,7 +512,7 @@ golden 候选是否与 Linux 一致（跨平台像素差异单独归档，不覆
 **状态与范围（2026-10-20）**：
 
 - **Windows**：实验性构建（README“在 Windows 上构建”），2026-10-20 已在真机验证 release
-  构建通过、`meson test --suite unit` 80/80、`nandina doctor` 全绿。DXIL 产物已生成并接入
+  构建通过、`meson test --suite unit` 80/80、showcase 可运行、DXIL 设备级验收通过。DXIL 产物已生成并接入
   选择逻辑；真机上 `SDL_CreateGPUDevice(DXIL, …, 自动)` 能创建 **direct3d12** 设备（此前
   `sdf_shader_format()` 只认驱动名 `"d3d12"`，而 SDL3 返回 `"direct3d12"`，该 bug 已修）。
   `--expect-format dxil` 的像素验收**已于 2026-10-20 在 Windows 真机（D3D12）通过**：60 组坐标、

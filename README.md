@@ -231,7 +231,7 @@ meson test -C buildDir --suite unit
 > **远程/非交互构建（SSH、CI）**：先 `$env:PATH = 'C:\msys64\ucrt64\bin;' + $env:PATH`。
 > 否则 `cc1plus.exe`/`ld.exe` 找不到同目录的 DLL，编译/链接会**静默**退出 1（没有任何报错），
 > 表现为 CMake 子项目报 "compiler is not able to compile a simple test program"。
-> 2026-10-20 已在真机上验证：release 构建通过、`meson test --suite unit` 80/80、`nandina doctor` 全绿。
+> 2026-10-20 已在真机上验证：release 构建通过、`meson test --suite unit` 80/80、showcase 可运行、DXIL 设备级验收通过。
 
 构建完成后，Windows 运行时 DLL（`libstdc++-6`、`libgcc_s_seh-1`、`libwinpthread-1`、zlib/bz2/png/brotli、
 以及 SDL3 的 `libSDL3_shared.dll`）会被自动复制到每个可执行文件旁边（`windows-runtime-dlls` 构建步骤），
@@ -401,7 +401,7 @@ meson compile -C buildDir
 - [x] **D4 默认切换与平台接口**：编入 SDL3 时默认使用 SDL3；`IPlatformWindow`、设备包装和三页逐图元对照已落地。生产 SDL 的填充/描边/圆已走 SDF（Vulkan SPIR-V 与 Windows D3D12/DXIL 均通过设备级验收），其余图元仍是 CPU 几何。
 - [x] **页面 golden 与审批**：6 条 approved 基线（Linux，平台隔离）、比较器、审批/撤销工具与清单门禁。
 - [x] **release 性能基线与预算门禁**：8 配置 release 基线、确定性门禁（布局 0/稳态 miss 0/binds 上限）与候选计时阈值（`--enforce` 启用）。
-- [x] **Windows 实验性支持**：MSYS2 UCRT64 release 构建、单元测试 80/80、`nandina doctor` 全绿、DXIL 设备级验收；macOS 明确不支持。
+- [x] **Windows 实验性支持**：MSYS2 UCRT64 release 构建、单元测试 80/80、showcase 可运行、DXIL 设备级验收；macOS 明确不支持。
 
 ### 当前议题与推进顺序
 
