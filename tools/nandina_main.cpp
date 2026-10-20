@@ -307,38 +307,36 @@ namespace
     }
 
     [[nodiscard]] auto parse_version(std::string_view value) -> std::optional<ToolVersion> {
-        std::size_t cursor = 0;
-        while (cursor < value.size()
-               && std::isdigit(static_cast<unsigned char>(value[cursor])) == 0)
-        {
+        // 找第一个形如 <digits>.<digits> 的片段，而不是第一个数字。
+        // MSYS2 的 `c++ --version` 首行是 `c++ (Rev6, Built by MSYS2 project) 16.2.0`：
+        // 只看第一个数字会把 Rev6 当成主版本（6 < 16 → 误报工具链不达标）。
+        const auto is_digit = [](const char character) {
+            return std::isdigit(static_cast<unsigned char>(character)) != 0;
+        };
+        for (std::size_t start = 0; start < value.size(); ++start) {
+            if (!is_digit(value[start])) {
+                continue;
+            }
+            std::size_t cursor = start;
+            ToolVersion result;
+            while (cursor < value.size() && is_digit(value[cursor])) {
+                result.major = result.major * 10 + (value[cursor] - '0');
+                ++cursor;
+            }
+            if (cursor == value.size() || value[cursor] != '.') {
+                continue;
+            }
             ++cursor;
+            if (cursor == value.size() || !is_digit(value[cursor])) {
+                continue;
+            }
+            while (cursor < value.size() && is_digit(value[cursor])) {
+                result.minor = result.minor * 10 + (value[cursor] - '0');
+                ++cursor;
+            }
+            return result;
         }
-        if (cursor == value.size()) {
-            return std::nullopt;
-        }
-
-        ToolVersion result;
-        while (cursor < value.size()
-               && std::isdigit(static_cast<unsigned char>(value[cursor])) != 0)
-        {
-            result.major = result.major * 10 + (value[cursor] - '0');
-            ++cursor;
-        }
-        if (cursor == value.size() || value[cursor] != '.') {
-            return std::nullopt;
-        }
-        ++cursor;
-        if (cursor == value.size() || std::isdigit(static_cast<unsigned char>(value[cursor])) == 0)
-        {
-            return std::nullopt;
-        }
-        while (cursor < value.size()
-               && std::isdigit(static_cast<unsigned char>(value[cursor])) != 0)
-        {
-            result.minor = result.minor * 10 + (value[cursor] - '0');
-            ++cursor;
-        }
-        return result;
+        return std::nullopt;
     }
 
     [[nodiscard]] auto version_at_least(const ToolVersion actual, const ToolVersion minimum)
