@@ -617,20 +617,47 @@ auto main(int argc, char** argv) -> int {
             expect_format = argv[index + 1];
         }
     }
+#if defined(__linux__)
+    // 只有 Linux 需要 X11/Wayland 会话；Windows/macOS 没有这两个变量。
     if (SDL_getenv("DISPLAY") == nullptr && SDL_getenv("WAYLAND_DISPLAY") == nullptr) {
         std::printf("SKIP: no desktop display\n");
         return require_gpu ? 1 : 77;
     }
+#endif
     if (!SDL_Init(SDL_INIT_VIDEO)) {
         std::fprintf(stderr, "SDL_Init failed: %s\n", SDL_GetError());
         return 1;
     }
-    auto* gpu = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV, false, "vulkan");
+    // 每个平台用驱动对应的着色器产物：Windows/D3D12→DXIL，macOS/Metal→MSL，Linux→SPIR-V。
+#if defined(_WIN32)
+    constexpr auto kGpuShaderFormat = SDL_GPU_SHADERFORMAT_DXIL;
+    constexpr const char* kGpuDriver = nullptr; // 由 shader format 决定后端（DXIL→direct3d12）
+    constexpr const char* kExpectedArtifact = "dxil";
+#elif defined(__APPLE__)
+    constexpr auto kGpuShaderFormat = SDL_GPU_SHADERFORMAT_METAL;
+    constexpr const char* kGpuDriver = nullptr;
+    constexpr const char* kExpectedArtifact = "msl";
+#else
+    constexpr auto kGpuShaderFormat = SDL_GPU_SHADERFORMAT_SPIRV;
+    constexpr const char* kGpuDriver = nullptr;
+    constexpr const char* kExpectedArtifact = "spirv";
+#endif
+    auto* gpu = SDL_CreateGPUDevice(kGpuShaderFormat, false, kGpuDriver);
+    if (gpu == nullptr) {
+        std::printf("SKIP: no GPU device (%s)\n", SDL_GetError());
+    }
     auto* window = SDL_CreateWindow("nandina sdf device", kWidth, kHeight, SDL_WINDOW_HIDDEN);
+    if (window == nullptr && gpu != nullptr) {
+        std::printf("SKIP: cannot create window (%s)\n", SDL_GetError());
+    }
     auto* renderer =
         gpu != nullptr && window != nullptr ? SDL_CreateGPURenderer(gpu, window) : nullptr;
     if (renderer == nullptr) {
-        std::printf("SKIP: no GPU renderer available (%s)\n", SDL_GetError());
+        std::printf(
+            "SKIP: no GPU renderer available (driver=%s, %s)\n",
+            gpu != nullptr ? SDL_GetGPUDeviceDriver(gpu) : "none",
+            SDL_GetError()
+        );
         if (window != nullptr) {
             SDL_DestroyWindow(window);
         }
@@ -691,8 +718,10 @@ auto main(int argc, char** argv) -> int {
             draw_scene(device, scene);
             ok &= check_straight_edge_area(renderer);
             const auto first = device.sdf_diagnostics();
-            // Linux 上只有 Vulkan 可实机验证；DXIL/MSL 分支在 Windows/macOS 目标设备上另行验收。
-            ok &= require(device.sdf_shader_format() == "spirv", "Vulkan uses the SPIR-V artifact");
+            ok &= require(
+                device.sdf_shader_format() == kExpectedArtifact,
+                "the device selects the artifact for this platform's GPU driver"
+            );
             if (!expect_format.empty()) {
                 ok &= require(
                     device.sdf_shader_format() == expect_format,

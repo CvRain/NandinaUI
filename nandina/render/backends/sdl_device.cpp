@@ -246,7 +246,8 @@ namespace nandina::render
                 shader_info.code = reinterpret_cast<const Uint8*>(detail::ROUNDED_SPIRV);
                 shader_info.code_size = sizeof(detail::ROUNDED_SPIRV);
             }
-            else if (driver_name == "d3d12") {
+            else if (driver_name == "direct3d12" || driver_name == "d3d12") {
+                // SDL3 返回 "direct3d12"；"d3d12" 留作旧驱动名的兼容。
                 format_name = "dxil";
                 shader_info.format = SDL_GPU_SHADERFORMAT_DXIL;
                 shader_info.code = detail::ROUNDED_DXIL;

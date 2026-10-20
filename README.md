@@ -233,6 +233,24 @@ meson test -C buildDir --suite unit
 > 表现为 CMake 子项目报 "compiler is not able to compile a simple test program"。
 > 2026-10-20 已在真机上验证：release 构建通过、`meson test --suite unit` 80/80、`nandina doctor` 全绿。
 
+构建完成后，Windows 运行时 DLL（`libstdc++-6`、`libgcc_s_seh-1`、`libwinpthread-1`、zlib/bz2/png/brotli、
+以及 SDL3 的 `libSDL3_shared.dll`）会被自动复制到每个可执行文件旁边（`windows-runtime-dlls` 构建步骤），
+所以可以直接运行：
+
+```powershell
+.\buildDir\showcase\nandina_showcase.exe
+.\buildDir\tests\sdf_device_test.exe --require-gpu --expect-format dxil
+```
+
+如果看到退出码 `0xC0000135`（STATUS_DLL_NOT_FOUND，终端里通常“什么都没发生”），说明 DLL 没在 exe 旁边：
+重新 `ninja -C buildDir` 让复制步骤补上，或把 `C:\msys64\ucrt64\bin` 与
+`buildDir\subprojects\SDL3` 加进 `PATH`。CLion 直接运行 exe 也可以，无需额外配置环境变量。
+
+> **GPU 验收需要交互式桌面会话**：`sdf_device_test --require-gpu` 在远程 SSH 会话里会以
+> `SKIP: no GPU renderer available (driver=direct3d12, Could not create swapchain! ... 0x887A0022)` 跳过——
+> D3D12 设备能创建（DXIL 产物已按 `direct3d12` 选中），但会话 0 没有显示输出，创建不出 swapchain。
+> 请在本地桌面终端或 CLion 里运行该命令完成 DXIL 实机验收。
+
 现状与边界：
 
 - 编入 SDL3 时默认走 SDL3（D3D12/Vulkan 由 SDL 选择）；生产 SDF 在 `d3d12` 驱动上会选 **DXIL** 产物，

@@ -336,3 +336,27 @@ if not meson.is_subproject()
         subdir('probe/cross_platform/desktop')
     endif
 endif
+
+# Windows 的 DLL 搜索顺序不包含构建目录：把运行时 DLL 复制到每个 .exe 旁边，
+# 这样终端、CLion、双击都能直接运行（否则 0xC0000135 STATUS_DLL_NOT_FOUND）。
+# 只在主项目构建时挂上；CMake 子项目自己的产物不动。
+if host_machine.system() == 'windows' and not meson.is_subproject()
+    _windows_runtime_deps = []
+    foreach _target_name : ['playground_exe', 'sdf_device_tests', 'nandina']
+        if is_variable(_target_name)
+            _windows_runtime_deps += [get_variable(_target_name)]
+        endif
+    endforeach
+    custom_target(
+        'windows-runtime-dlls',
+        output: 'windows-runtime-dlls.stamp',
+        build_by_default: true,
+        build_always_stale: true,
+        depends: _windows_runtime_deps,
+        command: [
+            python,
+            files('tools/copy_runtime_dlls.py'),
+            '--build-dir', meson.current_build_dir(),
+        ],
+    )
+endif
