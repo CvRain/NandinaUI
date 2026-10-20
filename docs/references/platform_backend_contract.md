@@ -30,7 +30,7 @@
 | 窗口、事件、输入轮询、帧驱动 | ✅ `IPlatformWindow`（`app/platform_window.hpp`）+ `detail/raylib_platform_window`、`detail/sdl_platform_window`；`NanWindow` 只做协调 | 已完成。默认后端 = 装了 SDL3 就用 SDL3（`NANDINA_WINDOW_BACKEND` 可覆盖） |
 | 绘制原语与帧边界 | ✅ `render/backends/sdl_device.{hpp,cpp}`（SDL 2D + CPU 几何）与 `raylib_device` | SDL 设备是默认；raylib 设备保留给对照/离线/录制 |
 | 文本整形、图集、排版 | `text` 层 | **不变**：保持在设备边界之上，不随平台分叉 |
-| 图片解码 | 应用服务（默认或注入的 `IImageDecoder`） | **已定**：不属平台职责；`IPlatformWindow::make_image_decoder()` 删除，平台只保留设备上传入口（[D7](reference_draft.md#图片解码器删除平台钩子改为应用服务2026-10-17-定)） |
+| 图片解码 | 应用服务（默认或注入的 `IImageDecoder`） | **已落地（2026-10-20）**：`make_image_decoder()` 已删除；`NanApplication` 默认注入 CPU 解码器（stb），平台只保留设备上传入口（[D7](reference_draft.md#图片解码器删除平台钩子改为应用服务2026-10-17-定)） |
 | 资源、主题、响应式、组件 | `resource` / `theme` / `reactive` / `widget` | 保持各自职责，平台不持有其业务状态 |
 
 两条已有探测记录支持的构建层事实（写进来是因为它们直接限制「后端可替换」的程度）：
@@ -63,7 +63,7 @@
 | 圆角**描边** | SDF | 已实现（四条直边 + 四个同心环扇） | —（不需要查询，设备必须覆写） | **接口默认会退化成方框描边**，新后端必须覆写；消费者回归在 anchors 页面扫到过（探测记录 §2.3.3） |
 | `draw_arc` | SDF 环 | **已实现**（同心环扇，按张角取 6–96 段） | —（不需要查询，设备必须覆写） | 当前 showcase 没有页面用到 Spinner/ProgressBar，因此只有设备级证据、没有页面级证据 |
 | 文本 | HarfBuzz + `GlyphAtlasTexture` | 已跑通（真实图集、真实页面） | `supports_alpha_textures()` | 保持 |
-| 图像文件加载 | 直载与 `create_rgba_texture` 都有 | 两者都没有（无解码服务、未实现 `create_rgba_texture`） | 改为**三项能力分别查询**（解码服务可用 / 设备直载 / 设备 RGBA 上传）；当前单布尔 `supports_image_loading()` 属未迁移现状 | 标准路径 = 解码服务可用 **且** 设备支持 RGBA 上传；SDL 补 `create_rgba_texture` 与共享解码器，解码与上传分别验收；见 [D7](reference_draft.md#三项能力分开表达2026-10-17-定) |
+| 图像文件加载 | 直载与 `create_rgba_texture` 都有 | **已落地**：SDL 直载 false / RGBA 上传 true；raylib 两者皆 true | **三项能力分别查询**：`can_decode()` / `supports_direct_image_loading()` / `supports_rgba_texture_upload()` | 标准路径 = 解码服务可用 **且** 设备支持 RGBA 上传；SDL 的 `create_rgba_texture` 已补齐并通过 `sdl-visual` 上传/绘制像素断言；见 [D7](reference_draft.md#三项能力分开表达2026-10-17-定) |
 | alpha 图集内存 | A8 → RGBA8（4×） | 同构（4×） | — | 单通道 + 专用字形着色器 |
 
 `supports_rounded_clip()` 顺带修掉一类真实的溢出：**接口默认的

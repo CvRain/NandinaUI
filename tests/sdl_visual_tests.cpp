@@ -471,3 +471,74 @@ TEST_CASE("dialog scrim composites over the background", "[visual][blend][sdl]")
     draw();
     require_pixel(canvas.pixel(10, 10), background, "after closing", 10, 10);
 }
+
+TEST_CASE("rgba texture upload draws with blend and scale", "[visual][texture][sdl]") {
+    // 服务路径的最后一个环节：应用（或默认 CPU 解码器）解码出的 RGBA8 像素
+    // 经 create_rgba_texture 上传，再由 draw_texture_region 绘制。
+    SoftwareCanvas canvas {64, 64};
+    render::SdlRenderDevice device {canvas.renderer()};
+    device.clear(color_from_hex(kBackground));
+
+    REQUIRE(device.supports_rgba_texture_upload());
+    REQUIRE_FALSE(device.supports_direct_image_loading());
+
+    // 2x2：红、绿、蓝、白（不透明），放大到 16x16 后每个源像素占 8x8。
+    const std::array<std::uint8_t, 16> pixels {
+        255,
+        0,
+        0,
+        255, // (0,0) red
+        0,
+        255,
+        0,
+        255, // (1,0) green
+        0,
+        0,
+        255,
+        255, // (0,1) blue
+        255,
+        255,
+        255,
+        255, // (1,1) white
+    };
+    const auto texture = device.create_rgba_texture(2, 2, pixels);
+    REQUIRE(texture);
+    REQUIRE(device.texture_size(texture).get_width() == 2.0F);
+    REQUIRE(device.texture_size(texture).get_height() == 2.0F);
+
+    device.draw_texture_region(
+        texture,
+        foundation::NanRect::from_ltrb(0.0F, 0.0F, 2.0F, 2.0F),
+        foundation::NanRect::from_ltrb(8.0F, 8.0F, 24.0F, 24.0F),
+        color_from_hex(0xFFFFFFFFU)
+    );
+    // 2x2 放大 8 倍且线性过滤：采样点落在纹素中心之间，断言通道主导关系而不是
+    // 精确值；这仍能证明 RGBA 字节序与通道映射正确。
+    const auto expect_dominant = [&](const int x, const int y, const int channel) {
+        const auto actual = canvas.pixel(x, y);
+        REQUIRE(actual.a == Catch::Approx(255).margin(kChannelTolerance));
+        const int values[3] {actual.r, actual.g, actual.b};
+        for (int index = 0; index < 3; ++index) {
+            if (index != channel) {
+                REQUIRE(values[index] < 60);
+            }
+        }
+        REQUIRE(values[channel] > 190);
+    };
+    expect_dominant(12, 12, 0); // red
+    expect_dominant(20, 12, 1); // green
+    expect_dominant(12, 20, 2); // blue
+    {
+        const auto white = canvas.pixel(20, 20);
+        REQUIRE(white.r > 190);
+        REQUIRE(white.g > 190);
+        REQUIRE(white.b > 190);
+    }
+    // 纹理之外保持背景。
+    require_pixel(canvas.pixel(4, 4), from_hex(kBackground), "outside texture", 4, 4);
+    device.destroy_texture(texture);
+
+    // 非法尺寸 / 缓冲区不足：返回空 handle，不崩溃。
+    REQUIRE_FALSE(device.create_rgba_texture(0, 2, pixels));
+    REQUIRE_FALSE(device.create_rgba_texture(2, 2, std::span(pixels).first(8)));
+}

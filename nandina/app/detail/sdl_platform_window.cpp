@@ -451,12 +451,6 @@ namespace nandina::app::detail
         return std::make_unique<render::SdlRenderDevice>(*renderer_);
     }
 
-    auto SdlPlatformWindow::make_image_decoder() -> std::shared_ptr<render::IImageDecoder> {
-        // 已知缺口：SDL 平台还没有图片解码路径（sdl_device 的 load_texture_from_file/memory
-        // 也仍是接口默认实现）。返回 nullptr，消费者必须退化而不是崩。
-        return nullptr;
-    }
-
     auto SdlPlatformWindow::name() const -> std::string_view {
         return "sdl3";
     }

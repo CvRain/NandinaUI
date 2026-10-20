@@ -90,7 +90,11 @@ experimental**，理由与后续动作写进清单——两个枚举是公开 wi
 
 | 变更 | 位置 | 迁移说明 |
 | --- | --- | --- |
-| 删除 `make_image_decoder()` | `IPlatformWindow`（experimental public） | 改为应用服务注入 `IImageDecoder` |
+| 删除 `make_image_decoder()` | `IPlatformWindow`（experimental public） | 改为应用服务注入 `IImageDecoder`（2026-10-20 已删除，含两后端 override） |
+| 删除 `make_raylib_image_decoder()` | `render/image_decoder.hpp`（experimental public） | 默认实现改为 `render::make_cpu_image_decoder()`（stb，后端无关） |
+| `supports_image_loading()` → `supports_direct_image_loading()` | `IRenderDevice`（experimental public） | 语义收窄为"设备自己解码直载"，默认 false |
+| 新增 `supports_rgba_texture_upload()` | `IRenderDevice` | SDL/raylib 均为 true；`Image` 用三项能力选择服务路径 |
+| 新增 `NanApplication::image_decoder()` / `set_image_decoder()` | `app`（experimental public） | 默认注入 CPU 解码器，应用可替换；无热切换（窗口打开时快照） |
 | `supports_image_loading()` 收窄 + 新增 RGBA 上传查询 | `IRenderDevice`（设备实现方接口） | 原先判断"能不能显示图片"的调用方，改为分别查询解码服务、设备直载、设备 RGBA 上传三项，见 [D7](reference_draft.md#三项能力分开表达2026-10-17-定) |
 
 项目处于 alpha、源码集成、不承诺旧入口长期兼容，因此：

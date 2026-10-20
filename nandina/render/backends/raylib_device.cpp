@@ -620,6 +620,12 @@ void main() {
             );
         }
 
+        [[nodiscard]] auto supports_direct_image_loading() const -> bool override {
+            return true;
+        }
+        [[nodiscard]] auto supports_rgba_texture_upload() const -> bool override {
+            return true;
+        }
         [[nodiscard]] auto supports_alpha_textures() const -> bool override {
             return true;
         }

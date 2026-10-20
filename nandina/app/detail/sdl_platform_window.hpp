@@ -74,7 +74,6 @@ namespace nandina::app::detail
         // ---- 设备与服务 ----
         [[nodiscard]] auto make_render_device() -> std::unique_ptr<render::IRenderDevice> override;
         /// SDL 平台目前没有图片解码路径（已知缺口）：显式返回 nullptr，消费者按接口约定退化。
-        [[nodiscard]] auto make_image_decoder() -> std::shared_ptr<render::IImageDecoder> override;
 
         [[nodiscard]] auto name() const -> std::string_view override;
 

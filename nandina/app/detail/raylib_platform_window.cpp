@@ -6,7 +6,6 @@
 
 #include "../../foundation/utf8.hpp"
 #include "../../render/backends/raylib_device.hpp"
-#include "../../render/image_decoder.hpp"
 
 #include <raylib.h>
 
@@ -190,10 +189,6 @@ namespace nandina::app::detail
 
     auto RaylibPlatformWindow::make_render_device() -> std::unique_ptr<render::IRenderDevice> {
         return render::make_raylib_device();
-    }
-
-    auto RaylibPlatformWindow::make_image_decoder() -> std::shared_ptr<render::IImageDecoder> {
-        return render::make_raylib_image_decoder();
     }
 
     auto RaylibPlatformWindow::name() const -> std::string_view {

@@ -277,6 +277,8 @@ sqlite3_c_args = [
     # 运行时打开的是可能随应用分发到用户磁盘的库文件，而框架从不加载扩展。
     '-DSQLITE_OMIT_LOAD_EXTENSION',
 ]
+stb_include = include_directories('third_party/stb')
+stb_dep = declare_dependency(include_directories: stb_include)
 sqlite3_include = include_directories('third_party/sqlite3')
 sqlite3_dep = declare_dependency(
     link_with: static_library(

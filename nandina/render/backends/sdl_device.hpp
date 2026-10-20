@@ -49,6 +49,7 @@ namespace nandina::render
         std::uint64_t texts = 0;
         std::uint64_t texture_draws = 0;
         std::uint64_t alpha_uploads = 0;
+        std::uint64_t rgba_uploads = 0;
         std::uint64_t clips = 0;
         /// 几何路径生成的顶点数：CPU 细分几何的代价可以直接读出来。
         std::uint64_t generated_vertices = 0;
@@ -177,7 +178,11 @@ namespace nandina::render
         /// 未实现软阴影，返回 false，消费者退化为硬边阴影。
         [[nodiscard]] auto supports_soft_shadows() const -> bool override;
         /// 不能加载图片（无解码器/loader），返回 false。
-        [[nodiscard]] auto supports_image_loading() const -> bool override;
+        [[nodiscard]] auto supports_direct_image_loading() const -> bool override;
+        [[nodiscard]] auto supports_rgba_texture_upload() const -> bool override;
+        [[nodiscard]] auto
+        create_rgba_texture(int width, int height, std::span<const std::uint8_t> rgba)
+            -> render::TextureHandle override;
         /// SDF 路径是否生效（GPU renderer 且 render state 创建成功）。这是 `render_path` 的事实来源。
         [[nodiscard]] auto analytic_antialiasing() const -> bool override;
 

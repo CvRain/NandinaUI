@@ -4,7 +4,10 @@
 
 #include <algorithm>
 #include <cmath>
+#include <fstream>
+#include <iterator>
 #include <limits>
+#include <string>
 #include <utility>
 
 namespace nandina::render
@@ -33,6 +36,26 @@ namespace nandina::render
 
         [[nodiscard]] auto decoded_byte_size(const DecodedImage& decoded) noexcept -> std::size_t {
             return decoded.rgba.size();
+        }
+
+        /// 文件扩展名 → 媒体类型。服务路径要先按媒体类型校验再解码。
+        [[nodiscard]] auto media_type_for_path(const std::string_view path) -> std::string_view {
+            const auto dot = path.find_last_of('.');
+            if (dot == std::string_view::npos) {
+                return {};
+            }
+            const auto extension = path.substr(dot);
+            if (extension == ".png")
+                return "image/png";
+            if (extension == ".jpg" || extension == ".jpeg")
+                return "image/jpeg";
+            if (extension == ".bmp")
+                return "image/bmp";
+            if (extension == ".gif")
+                return "image/gif";
+            if (extension == ".tga")
+                return "image/tga";
+            return {};
         }
     } // namespace
 
@@ -94,6 +117,44 @@ namespace nandina::render
             retain(key, cached);
             return cached;
         }
+        if (can_upload_decoded()) {
+            const auto media_type = media_type_for_path(path);
+            std::ifstream input {std::string(path), std::ios::binary};
+            std::vector<std::uint8_t> bytes;
+            if (input && !media_type.empty()) {
+                bytes.assign(
+                    std::istreambuf_iterator<char>(input),
+                    std::istreambuf_iterator<char>()
+                );
+            }
+            if (!bytes.empty()) {
+                const auto decoded = async_.decoder->decode_memory(bytes, media_type, options);
+                if (decoded.valid()) {
+                    const auto handle =
+                        device_->create_rgba_texture(decoded.width, decoded.height, decoded.rgba);
+                    if (handle) {
+                        auto texture = std::make_shared<CachedTexture>(
+                            *device_,
+                            handle,
+                            NanSize {
+                                static_cast<float>(decoded.width),
+                                static_cast<float>(decoded.height),
+                            }
+                        );
+                        index(key, texture);
+                        retain(key, texture);
+                        return texture;
+                    }
+                }
+            }
+            // 服务路径失败不是"悄悄换路"的理由：设备不声明 direct load 就直接失败。
+            if (!device_->supports_direct_image_loading()) {
+                return {};
+            }
+        }
+        if (!device_->supports_direct_image_loading()) {
+            return {};
+        }
         const auto handle = device_->load_texture_from_file(path, options);
         if (!handle) {
             return {};
@@ -123,6 +184,32 @@ namespace nandina::render
         if (auto cached = find(key)) {
             retain(key, cached);
             return cached;
+        }
+        if (can_upload_decoded()) {
+            const auto decoded = async_.decoder->decode_memory(bytes, media_type, options);
+            if (decoded.valid()) {
+                const auto handle =
+                    device_->create_rgba_texture(decoded.width, decoded.height, decoded.rgba);
+                if (handle) {
+                    auto texture = std::make_shared<CachedTexture>(
+                        *device_,
+                        handle,
+                        NanSize {
+                            static_cast<float>(decoded.width),
+                            static_cast<float>(decoded.height),
+                        }
+                    );
+                    index(key, texture);
+                    retain(key, texture);
+                    return texture;
+                }
+            }
+            if (!device_->supports_direct_image_loading()) {
+                return {};
+            }
+        }
+        if (!device_->supports_direct_image_loading()) {
+            return {};
         }
         const auto handle = device_->load_texture_from_memory(bytes, media_type, options);
         if (!handle) {
@@ -200,6 +287,14 @@ namespace nandina::render
     auto TextureCache::supports_async_loading() const noexcept -> bool {
         return static_cast<bool>(async_) && async_.max_concurrent_decodes > 0
             && async_.max_load_attempts > 0;
+    }
+
+    auto TextureCache::can_decode() const noexcept -> bool {
+        return async_.decoder != nullptr;
+    }
+
+    auto TextureCache::can_upload_decoded() const noexcept -> bool {
+        return can_decode() && device_ != nullptr && device_->supports_rgba_texture_upload();
     }
 
     auto TextureCache::load_resource_async(

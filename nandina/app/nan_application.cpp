@@ -3,6 +3,8 @@
 //
 
 #include "nan_application.hpp"
+
+#include "../render/image_decoder.hpp"
 #include "nan_window.hpp"
 
 #include "../foundation/nan_logger.hpp"
@@ -56,7 +58,7 @@ namespace nandina::app
         }
     } // namespace
 
-    NanApplication::NanApplication() {
+    NanApplication::NanApplication(): image_decoder_(render::make_cpu_image_decoder()) {
         log::initialize();
         install_builtin_services(resources_, resource_backends_, font_families_);
         font_loader_ = std::make_unique<text::FontLoader>(resources_);
@@ -64,7 +66,8 @@ namespace nandina::app
     }
 
     NanApplication::NanApplication(NanApplicationConfig config):
-        application_id_(std::move(config.application_id)) {
+        application_id_(std::move(config.application_id)),
+        image_decoder_(render::make_cpu_image_decoder()) {
         log::initialize({.name = application_id_.empty() ? "nandina" : application_id_});
         install_builtin_services(resources_, resource_backends_, font_families_);
         auto locator = resource::PlatformResourceLocator::create({
@@ -176,6 +179,14 @@ namespace nandina::app
     }
     auto NanApplication::application_id() const noexcept -> std::string_view {
         return application_id_;
+    }
+
+    auto NanApplication::image_decoder() -> std::shared_ptr<render::IImageDecoder> {
+        return image_decoder_;
+    }
+
+    void NanApplication::set_image_decoder(std::shared_ptr<render::IImageDecoder> decoder) {
+        image_decoder_ = std::move(decoder);
     }
 
     auto NanApplication::platform_paths() const -> const resource::PlatformResourceLocator& {

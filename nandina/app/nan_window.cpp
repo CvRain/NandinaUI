@@ -288,7 +288,7 @@ namespace nandina::app
             *device_,
             render::TextureCacheLimits {},
             render::TextureCacheAsyncServices {
-                .decoder = platform_->make_image_decoder(),
+                .decoder = app_.image_decoder(),
                 .submit_background =
                     [this](std::move_only_function<void()> task) {
                         return app_.background_executor().submit(std::move(task));

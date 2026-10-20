@@ -119,6 +119,11 @@ namespace nandina::render
 
         [[nodiscard]] auto supports_async_loading() const noexcept -> bool;
 
+        /// 是否安装了 CPU 解码器（服务路径的前半段）。
+        [[nodiscard]] auto can_decode() const noexcept -> bool;
+        /// 服务路径是否完整：有解码器且设备支持上传 RGBA8。
+        [[nodiscard]] auto can_upload_decoded() const noexcept -> bool;
+
         /// 帧起点：重置本帧上传计数并补做上一帧排队的上传（C5.6）。
         void begin_frame();
 

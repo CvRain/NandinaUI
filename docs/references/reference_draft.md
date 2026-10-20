@@ -396,9 +396,9 @@ IPlatformWindow
 
 | 能力 | 归属 | 当前取值 | 表达方式（名称首批定形） |
 | --- | --- | --- | --- |
-| 解码服务可用 | 应用服务 / `TextureCache` | raylib 路径：装了解码器 → 可用；SDL 路径：未装 → 不可用 | 服务查询（例如 `TextureCache::can_decode()`） |
-| 设备**直接**加载文件/字节 | `IRenderDevice::load_texture_from_*` | raylib 有；SDL 没有 | 设备查询（由 `supports_image_loading()` 改名收窄，只表示这条入口） |
-| 设备 **RGBA 上传** | `IRenderDevice::create_rgba_texture` | raylib 有；**SDL 尚未实现** | 设备查询（例如 `supports_rgba_texture_upload()`） |
+| 解码服务可用 | 应用服务 / `TextureCache` | **已落地（2026-10-20）**：`NanApplication` 默认注入 `make_cpu_image_decoder()`（stb），两条后端路径都可用 | 服务查询（例如 `TextureCache::can_decode()`） |
+| 设备**直接**加载文件/字节 | `IRenderDevice::load_texture_from_*` | **已落地**：raylib true；SDL false（`supports_direct_image_loading()`） | 设备查询（`supports_image_loading()` 已改名收窄） |
+| 设备 **RGBA 上传** | `IRenderDevice::create_rgba_texture` | **已落地**：raylib / SDL 均为 true（SDL 补齐 `create_rgba_texture`） | 设备查询（`supports_rgba_texture_upload()`） |
 
 **标准图片路径是否可用 = 解码服务可用 且 设备支持 RGBA 上传。** `Image` 的解析顺序：
 
@@ -410,8 +410,10 @@ IPlatformWindow
 
 - 三项能力**分别报告**，禁止再用一个布尔值表示"图片能用"；
 - 三项能力可以独立为真/假，组合结果必须能从报告里读出来（这是排查"图片为什么不显示"的第一手信息）；
-- 当前代码仍在用单个 `supports_image_loading()`（`Image` 的守卫与 `tests/image_tests.cpp`）——
-  这是**尚未迁移的现状**，图片批一并改掉，不保留两套并存。
+- **已实施（2026-10-20）**：`Image` 守卫按三项能力选择服务路径/直载；旧
+  `supports_image_loading()` 与 `IPlatformWindow::make_image_decoder()` 已删除，
+  `make_raylib_image_decoder()` 改为 `make_cpu_image_decoder()`；`TextureCache` 同步路径
+  优先"解码 + 上传"，服务失败不静默改道。
 
 ## 实施顺序与验收
 

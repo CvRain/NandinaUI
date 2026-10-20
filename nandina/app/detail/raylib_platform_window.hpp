@@ -40,7 +40,6 @@ namespace nandina::app::detail
         [[nodiscard]] auto clipboard_text() const -> std::string override;
 
         [[nodiscard]] auto make_render_device() -> std::unique_ptr<render::IRenderDevice> override;
-        [[nodiscard]] auto make_image_decoder() -> std::shared_ptr<render::IImageDecoder> override;
 
         [[nodiscard]] auto name() const -> std::string_view override;
 

@@ -30,6 +30,11 @@
 #include "nan_router.hpp"
 #include "nan_store.hpp"
 #include "root_view.hpp"
+
+namespace nandina::render
+{
+    class IImageDecoder;
+} // namespace nandina::render
 #include "ui_dispatcher.hpp"
 #include "window_config.hpp"
 
@@ -73,6 +78,9 @@ namespace nandina::app
         [[nodiscard]] auto font_families() -> text::FontFamilyRegistry&;
         [[nodiscard]] auto application_id() const noexcept -> std::string_view;
         [[nodiscard]] auto platform_paths() const -> const resource::PlatformResourceLocator&;
+        /// 图片解码服务。默认是后端无关的 CPU 解码器（stb），应用可替换成自己的实现。
+        [[nodiscard]] auto image_decoder() -> std::shared_ptr<render::IImageDecoder>;
+        void set_image_decoder(std::shared_ptr<render::IImageDecoder> decoder);
         [[nodiscard]] auto dispatcher() -> UiDispatcher&;
         [[nodiscard]] auto background_executor() -> BackgroundExecutor&;
 
@@ -172,6 +180,7 @@ namespace nandina::app
         reactive::Graph graph_;
         theme::ThemeManager theme_manager_;
         std::string application_id_;
+        std::shared_ptr<render::IImageDecoder> image_decoder_;
         std::optional<resource::PlatformResourceLocator> platform_paths_;
         resource::ResourceManager resources_;
         std::unique_ptr<text::FontLoader> font_loader_;

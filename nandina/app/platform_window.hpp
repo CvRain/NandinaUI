@@ -18,7 +18,6 @@
 #define NANDINA_EXPERIMENT_APP_PLATFORM_WINDOW_HPP
 
 #include "../foundation/geometry.hpp"
-#include "../render/image_decoder.hpp"
 #include "../render/render_device.hpp"
 #include "../scene/input_event.hpp"
 #include "window_config.hpp"
@@ -92,11 +91,6 @@ namespace nandina::app
         /// 用本平台的窗口上下文创建绘制设备。
         [[nodiscard]] virtual auto make_render_device()
             -> std::unique_ptr<render::IRenderDevice> = 0;
-        /// 图片解码服务。返回 nullptr 表示本平台不提供图片加载（消费者必须退化，而不是崩）。
-        [[nodiscard]] virtual auto make_image_decoder() -> std::shared_ptr<render::IImageDecoder> {
-            return nullptr;
-        }
-
         /// 平台名（诊断与能力报告用），例如 "raylib"、"sdl3"。
         [[nodiscard]] virtual auto name() const -> std::string_view = 0;
     };

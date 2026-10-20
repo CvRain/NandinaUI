@@ -277,8 +277,11 @@ namespace nandina::render
         [[nodiscard]] auto supports_soft_shadows() const -> bool override {
             return inner_->supports_soft_shadows();
         }
-        [[nodiscard]] auto supports_image_loading() const -> bool override {
-            return inner_->supports_image_loading();
+        [[nodiscard]] auto supports_direct_image_loading() const -> bool override {
+            return inner_->supports_direct_image_loading();
+        }
+        [[nodiscard]] auto supports_rgba_texture_upload() const -> bool override {
+            return inner_->supports_rgba_texture_upload();
         }
 
     private:

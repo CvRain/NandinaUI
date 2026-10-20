@@ -47,8 +47,10 @@ namespace
         std::vector<render::TextureHandle> destroyed;
         std::vector<Region> regions;
         bool fail_loads = false;
-        /// 设为 false 模拟「后端不能加载图片」（如 SDL 设备）。
+        /// 设为 false 模拟「后端不能直载图片」（如 SDL 设备）。
         bool image_loading_supported = true;
+        /// 模拟「后端支持 RGBA 上传」（SDL / raylib 都是 true）。
+        bool rgba_upload_supported = false;
         foundation::NanSize size_to_return {64.0F, 32.0F};
         render::ImageLoadOptions last_options {};
 
@@ -80,8 +82,12 @@ namespace
             const foundation::NanColor&
         ) override {}
 
-        [[nodiscard]] auto supports_image_loading() const -> bool override {
+        [[nodiscard]] auto supports_direct_image_loading() const -> bool override {
             return image_loading_supported;
+        }
+
+        [[nodiscard]] auto supports_rgba_texture_upload() const -> bool override {
+            return rgba_upload_supported;
         }
 
         [[nodiscard]] auto
@@ -1175,4 +1181,59 @@ TEST_CASE(
     (void)capable_tree.layout_root(foundation::NanSize(400.0F, 200.0F));
     capable_tree.draw(capable);
     REQUIRE(capable.loaded.size() == 1);
+}
+
+TEST_CASE("texture cache prefers decoder and upload service path", "[image][cache]") {
+    TextureRecordingDevice device;
+    device.image_loading_supported = false; // 模拟 SDL：不能直载
+    device.rgba_upload_supported = true;
+    auto decoder = std::make_shared<RecordingDecoder>();
+    render::TextureCache cache(
+        device,
+        render::TextureCacheLimits {},
+        render::TextureCacheAsyncServices {.decoder = decoder}
+    );
+    REQUIRE(cache.can_decode());
+    REQUIRE(cache.can_upload_decoded());
+    const std::vector<std::uint8_t> bytes {1, 2, 3};
+    const auto texture = cache.load_memory("image-a", bytes, "image/png");
+    REQUIRE(texture);
+    REQUIRE(decoder->calls == 1);
+    REQUIRE(device.rgba_uploads == 1);
+    REQUIRE(device.memory_loads == 0);
+}
+
+TEST_CASE("texture cache falls back to direct loading only when declared", "[image][cache]") {
+    // 有解码器但设备不支持上传、支持直载 → 直载路径。
+    {
+        TextureRecordingDevice device;
+        device.image_loading_supported = true;
+        device.rgba_upload_supported = false;
+        auto decoder = std::make_shared<RecordingDecoder>();
+        render::TextureCache cache(
+            device,
+            render::TextureCacheLimits {},
+            render::TextureCacheAsyncServices {.decoder = decoder}
+        );
+        REQUIRE_FALSE(cache.can_upload_decoded());
+        REQUIRE(cache.load_memory("image-b", std::vector<std::uint8_t> {1}, "image/png"));
+        REQUIRE(device.memory_loads == 1);
+        REQUIRE(device.rgba_uploads == 0);
+        REQUIRE(decoder->calls == 0);
+    }
+    // 既没有解码上传、也没有直载 → 明确失败，不静默换路。
+    {
+        TextureRecordingDevice device;
+        device.image_loading_supported = false;
+        device.rgba_upload_supported = false;
+        auto decoder = std::make_shared<RecordingDecoder>();
+        render::TextureCache cache(
+            device,
+            render::TextureCacheLimits {},
+            render::TextureCacheAsyncServices {.decoder = decoder}
+        );
+        REQUIRE_FALSE(cache.load_memory("image-c", std::vector<std::uint8_t> {1}, "image/png"));
+        REQUIRE(device.memory_loads == 0);
+        REQUIRE(device.rgba_uploads == 0);
+    }
 }

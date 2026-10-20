@@ -1269,10 +1269,47 @@ namespace nandina::render
         return false;
     }
 
-    auto SdlRenderDevice::supports_image_loading() const -> bool {
-        // 没有解码器：SDL 平台也不提供 `IImageDecoder`（见 sdl_platform_window 的
-        // make_image_decoder）。如实返回 false，让 Image 走"明确不支持"的路径。
+    auto SdlRenderDevice::supports_direct_image_loading() const -> bool {
+        // SDL 后端不在内部解码：图片走"应用解码器 + create_rgba_texture 上传"的服务路径。
         return false;
+    }
+
+    auto SdlRenderDevice::supports_rgba_texture_upload() const -> bool {
+        return true;
+    }
+
+    auto SdlRenderDevice::create_rgba_texture(
+        const int width,
+        const int height,
+        const std::span<const std::uint8_t> rgba
+    ) -> render::TextureHandle {
+        const auto expected =
+            static_cast<std::size_t>(width) * static_cast<std::size_t>(height) * 4U;
+        if (width <= 0 || height <= 0 || rgba.size() < expected) {
+            return {};
+        }
+        auto* texture = SDL_CreateTexture(
+            renderer_,
+            SDL_PIXELFORMAT_RGBA32,
+            SDL_TEXTUREACCESS_STATIC,
+            width,
+            height
+        );
+        if (texture == nullptr) {
+            return {};
+        }
+        (void)SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
+        // 与 raylib 后端一致的线性缩放：图片缩放时平滑，不出现块状像素。
+        (void)SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_LINEAR);
+        if (!SDL_UpdateTexture(texture, nullptr, rgba.data(), width * 4)) {
+            SDL_DestroyTexture(texture);
+            return {};
+        }
+        ++stats_.rgba_uploads;
+        stats_.texture_bytes += static_cast<std::uint64_t>(expected);
+        const auto handle = render::TextureHandle {next_texture_++};
+        textures_[handle.value] = texture;
+        return handle;
     }
 
     auto SdlRenderDevice::supports_soft_shadows() const -> bool {

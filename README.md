@@ -402,6 +402,7 @@ meson compile -C buildDir
 - [x] **页面 golden 与审批**：6 条 approved 基线（Linux，平台隔离）、比较器、审批/撤销工具与清单门禁。
 - [x] **release 性能基线与预算门禁**：8 配置 release 基线、确定性门禁（布局 0/稳态 miss 0/binds 上限）与候选计时阈值（`--enforce` 启用）。
 - [x] **Windows 实验性支持**：MSYS2 UCRT64 release 构建、单元测试 80/80、showcase 可运行、DXIL 设备级验收；macOS 明确不支持。
+- [x] **后端无关图片解码**：vendored stb（PNG/JPEG/BMP/GIF/TGA）+ 应用可注入解码器 + SDL RGBA 上传；raylib 从图像路径解耦，进入退役阶段。
 
 ### 当前议题与推进顺序
 
@@ -441,7 +442,7 @@ shell/compositor 与新平台支持各自经过专门关口。
 | 类别 | 依赖 |
 | --- | --- |
 | 平台层 | **SDL3 ≥ 3.4.0**（编入时默认的窗口/输入/帧驱动 + SDL 2D 渲染设备；`SDL_GPURenderState` 是 3.4 起的 API） |
-| 渲染 | raylib（对照与离线/录制后端，也是跨后端验收的基线） |
+| 渲染 | raylib（**退役中**：图片解码已迁到 vendored stb；剩余为后备渲染后端与窗口测试宿主，迁完后移除） |
 | 文本 | FreeType、HarfBuzz、FriBidi、utf8proc |
 | 数据 / 配置 | nlohmann/json、toml++、SQLite（vendored amalgamation，见 `third_party/sqlite3/`） |
 | 其他 | spdlog（日志）、OpenSSL（资源签名）、Box2D（可选物理）、Catch2（测试） |

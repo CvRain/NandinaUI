@@ -28,6 +28,10 @@
 
 ### 2.1 仓库现状（2026-10-18 迁移后）
 
+- **stb（vendored，非 wrap）**：`third_party/stb/stb_image.h` 与 `stb_image_resize2.h`
+  （Public Domain）用于后端无关的 CPU 图片解码，见 `third_party/stb/README.md`。
+- **raylib 计划退役**：图片解码已迁走（2026-10-20），剩余用途是后备渲染后端与窗口测试宿主；
+  这两项迁走后 raylib 将从依赖闭包和 CI 中移除。移除前它仍是硬依赖（`nandina_dependencies`）。
 - **11 个依赖全部是 `wrap-git`**（SDL3、raylib、spdlog、box2d、utf8proc、tomlplusplus、freetype、
   harfbuzz、fribidi、Catch2、nlohmann_json），每个 pin 完整 40 位 commit；只剩**字体数据包**
   `caskaydia-cove` 是 submodule，SQLite 仍是 amalgamation。

@@ -36,7 +36,10 @@ namespace nandina::render
         ) -> DecodedImage = 0;
     };
 
-    [[nodiscard]] auto make_raylib_image_decoder() -> std::shared_ptr<IImageDecoder>;
+    /// 后端无关的默认 CPU 解码器（stb_image + stb_image_resize2，见 third_party/stb）。
+    /// 支持 PNG/JPEG/BMP/GIF/TGA；RGBA8 输出，预处理（crop/resize/tint）在 CPU 侧完成。
+    /// 应用可用 `NanApplication::set_image_decoder()` 注入自己的实现。
+    [[nodiscard]] auto make_cpu_image_decoder() -> std::shared_ptr<IImageDecoder>;
 } // namespace nandina::render
 
 #endif // NANDINA_EXPERIMENT_RENDER_IMAGE_DECODER_HPP

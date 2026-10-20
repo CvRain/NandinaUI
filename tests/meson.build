@@ -185,6 +185,17 @@ image_tests = executable(
 )
 test('image', image_tests, suite: 'unit')
 
+# 默认 CPU 解码器（stb）：格式、crop/resize/tint、错误输入与后台线程。
+image_decoder_tests = executable(
+    'image_decoder_tests',
+    files('image_decoder_tests.cpp'),
+    cpp_args : [
+        '-DNANDINA_TEST_IMAGE_DIR="' + meson.current_source_dir() / 'fixtures' / 'images' + '"',
+    ],
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('image-decoder', image_decoder_tests, suite: 'unit')
+
 reactive_tests = executable(
     'reactive_tests',
     files('reactive_tests.cpp', 'effect_initialization_tests.cpp'),
