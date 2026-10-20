@@ -1,8 +1,10 @@
 # 性能预算：采样协议与候选阈值
 
-> **状态：采样协议与候选阈值已定（2026-10-17），硬门禁未启用。**
-> 先用一轮稳定性实验确认这些阈值能否区分"正常波动"与"真实回归"，再决定是否阻断。
-> 本文只谈**测量与判定**；具体渲染质量的取舍见 [D7](reference_draft.md#d7-渲染质量与后端视觉一致性)。
+> **状态：采样协议、release 基线与确定性门禁已实施（2026-10-20）。**
+> 确定性门禁（布局 0、稳态 miss 0、binds 上限）总是生效；计时阈值按本文候选规则执行，
+> 只有 `--enforce` **且**基线 `buildtype=release` 时才阻断。CI 无 GPU，页面探针进不了 CI，
+> 这是发布检查/本地门禁。本文只谈**测量与判定**；具体渲染质量的取舍见
+> [D7](reference_draft.md#d7-渲染质量与后端视觉一致性)。
 
 ## 1. 为什么现有数字不能直接当基线
 
@@ -60,3 +62,24 @@
 - 历史测量记录在[整形成本](text_shaping_cost.md)与[布局收敛](layout_convergence_and_text_measurement.md)，
   它们是**记录**，不是当前门禁基线；
 - 依赖迁移后的构建时间不在本文范围（属 [依赖策略 §6](dependency_policy.md) 的离线/SDK 交付）。
+
+## 7. 已实施的门禁（2026-10-20）
+
+- 检查器：`tools/check_backend_budget.py --report <fresh.json> --baseline <baseline.json> [--enforce]`；
+- 基线：`probe/cross_platform/results/backend-baseline-release-2026-10-20.json`（`buildtype=release`、
+  `enforce_timing=true`、8 个配置）；debug 基线保留为对照，**不允许**启用计时阻断；
+- 采样工具：`tools/backend_performance.py`（可指定 `--probe`、`--interaction none|once|cycle|dialog`）；
+- 确定性门禁：稳态每帧布局 pass 必须为 0；使用 SDF 的页面预热后 miss/帧必须为 0；
+  binds/帧 ≤ 基线 × 1.25 + 2；
+- 计时阈值：p50 超过 `max(base×1.10, base+0.20ms)` 警告、`max(base×1.20, base+0.40ms)` 阻断；
+  p95 超过 `max(base×1.25, base+0.75ms)` 阻断。绝对项是给亚毫秒页面的噪声余量，因此 +30% 的
+  回归在 0.45 ms 页面上不会阻断，+100% 会（实测 0.901 ms > 0.851 ms 退出 1）；
+- release 实测（RADV RX 6750 GRE，1200×800）：label SDF 0.451 ms（CPU 0.481，−6.2%）、
+  anchors SDF 0.019 ms（CPU 0.027，−30%）、home 0.109 ms；交互换页 p50 0.465 / p95 4.814 ms，
+  Dialog 开关 0.493 / 0.651 ms。debug 构建的 label SDF 为 2.505 ms（约 5.5×），不能当基线；
+- Windows 尚无性能基线（实验性平台，非当前门禁）。
+
+## 8. 与发布检查的关系
+
+无 GPU 的 CI 只跑确定性部分之外的门禁（format/header/artifact/golden 清单）；完整预算检查在发布
+检查或本地运行。把各门禁串成一条命令属于 P1.1，见[开发路线](development_roadmap.md)。

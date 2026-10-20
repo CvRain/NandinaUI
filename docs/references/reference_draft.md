@@ -1,6 +1,6 @@
 # 待决设计草案
 
-> **这是设计工作稿。** 2026-10-17 同步 D7/D8 已接受的方向和分批验收；D2 仍待审阅，D3 方向已接受、未实施。
+> **这是设计工作稿。** 2026-10-20 同步：D7 的混合修复与生产 SDF（填充/描边/圆）已交付并在 Vulkan/DXIL 上验收，D8 方向已接受未实施；D2 仍待审阅，D3 方向已接受、未实施。
 > 方向已接受不等于精确 API 已冻结；未定项在各批实现前定形。跨专题顺序以[项目进度与下一步](project_status.md)为准。
 > 拍板之后：决定写进对应的 reference（`component_contract.md` / `theme` 相关 / `page_and_router.md`
 > / `platform_backend_contract.md`），过程补充到 stories；本文随之删除或降级为历史草案。

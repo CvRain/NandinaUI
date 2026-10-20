@@ -1,6 +1,6 @@
 # 项目进度与下一步
 
-> 2026-10-19 更新：本文是**跨专题实施顺序的唯一入口**；D1–D8 是设计议题编号，不是执行顺序。批次 1 混合修复与批次 2 依赖交付已完成；批次 3 已完成 Vulkan 参数/状态实验，并接入生产填充/描边/圆。批次 3 尚未完成，历史页面 GPU/性能记录不视为本轮重测，审查修复与剩余边界见路径契约 §10。
+> 2026-10-20 更新：本文是**已完成批次与设计议题状态的唯一入口**（下一阶段的排序见[开发路线](development_roadmap.md)）；D1–D8 是设计议题编号，不是执行顺序。批次 1、2 已完成；批次 3 的生产接入（填充/描边/圆）已完成，并通过 Vulkan(SPIR-V) 与 Windows D3D12(DXIL) 设备级像素验收；页面 golden、release 性能基线与预算门禁已落地（路径契约 §10–§14）。**下一阶段 P1–P4 的排序与退出条件见[开发路线](development_roadmap.md)**；本文保留已完成批次、D1–D8 状态与剩余边界。
 
 ## 当前能力边界
 
@@ -11,12 +11,12 @@
 | 输入与焦点 | 现有鼠标/键盘、输入焦点与作用域可用；D1 统一交互语义、焦点提示和文本会话的设计已接受 | [焦点与输入](focus_and_input.md) 为 planned：先实现鼠标/键盘提示策略，再接文本输入会话与其他设备 |
 | 文本与分层 | 纯布局约束在 `foundation`，文本布局协议在 `text`，字体请求值在 `theme`；旧布局、文本与字体转发入口已退出 | `theme::StyleDocument` 对字体注册的依赖仍待收口 |
 | 路由元数据 | 路由身份由页面类型 `PageKey` 确定；当前 `type` 字段既分组也作为标题 | D3 初步方案已接受、未实施：重命名 `nav_group`；空值是不分组、无标题，route 仍可见；分组按值全局合并 |
-| 平台与渲染 | 编入 SDL3 时默认走 SDL3（环境变量可覆盖），未找到 SDL3 的 auto 构建仍走 raylib；`IPlatformWindow`、设备包装入口和三页 trace 对照已存在。生产 SDL 的填充/描边/圆已有 Vulkan SDF，其余图元仍走 CPU 几何 | 混合/AA/图片/裁剪见 D7，键码见 D8；DXIL/MSL 加载及 Windows/Web 应用交付未验收。P3 落地不等于 P0–P4 全部验收完成 |
+| 平台与渲染 | 编入 SDL3 时默认走 SDL3（环境变量可覆盖），未找到 SDL3 的 auto 构建仍走 raylib；`IPlatformWindow`、设备包装入口和三页 trace 对照已存在。生产 SDL 的填充/描边/圆已有 SDF：Linux Vulkan(SPIR-V) 与 Windows D3D12(DXIL) 均通过设备级像素验收，其余图元仍走 CPU 几何 | 混合/AA/图片/裁剪见 D7，键码见 D8；Windows 为实验性（构建/单元/doctor/DXIL 已验收，无应用交付承诺），macOS 不支持，Web 非交付路径。P3 落地不等于 P0–P4 全部验收完成 |
 | 动画 | 值级 motion 在 `foundation/motion`，节点 endpoint、宿主与组调度在 `scene`；旧 `animation/` 入口已退出；L2 opacity/translate/scale 可用 | `NodeBuilder::group` 仅开放同节点、扁平 Tween 组合；跨节点、组内 Spring、Keyframes 作者入口与浮层自动过渡未完成，见 [节点表现层 §6.1](node_presentation.md) |
 | 布局与文本成本 | 排列容器及 `NanControl::layout_to` 已用在生产路径；anchors 内核与作者入口已落地；**布局收敛**（Label 页 80.4 ms/帧 → 2.5 ms、稳态 0 次布局）与**两个文本 O(n²)** 已修复，见 [布局收敛](layout_convergence_and_text_measurement.md) 与 [整形成本](text_shaping_cost.md) | `fill` 画布无法占据排列容器剩余空间（见 [Anchors §5.3](anchors.md#53-剩余验收)）；`max_width` 仍会被父级紧约束压过；Label 页打开约 271 ms（构建 159 ms，[整形成本 §5.1](text_shaping_cost.md)）；一次完整布局仍约 55 ms |
-| 分发 | Linux 桌面源码分发 profile 已有构建与 SDK 流程 | Modules、CMake package 与跨平台仍待重新评估 |
+| 分发 | Linux 桌面源码分发 profile 已有构建与 SDK 流程；Windows 为实验性构建（无安装器承诺） | macOS 不支持；Modules、CMake package 与跨平台应用交付仍待重新评估 |
 | 资源构建与运行时 | 四类后端、nanres 与构建 helper 已有实现；SQLite 已 vendored，但依赖无条件启用，工具仍链接完整框架；查询结果不带挂载身份 | [D5](resource_build_and_deployment.md) 已冻结、未实施：先解耦，再独立交付作用域与身份；声明式构建和部署定位随后汇合 |
-| 工程门禁 | 代码格式已统一，`tools/check_format.py` 与 CI 固定 clang-format 23.1.1；SQLite 每构建配置编译一次 | D5 关闭组合与纯工具依赖门禁尚未实现；格式门禁不证明资源行为或依赖解耦 |
+| 工程门禁 | 代码格式统一（固定 clang-format 23.1.1）、header-surface 184/11、shader artifact 校验、golden 清单、backend budget 确定性门禁均已接入；GPU 相关检查留在本地/发布检查 | D5 关闭组合与纯工具依赖门禁尚未实现；无 GPU 的 CI 不覆盖页面 golden 与性能采样 |
 
 ## D1–D8 与依赖工程的状态
 
@@ -25,10 +25,10 @@
 | D1 输入、焦点与文本会话 | 设计方向已接受；焦点事实、提示策略、文本会话分离 | 未实施；[正式契约](focus_and_input.md)。先焦点提示，随后组合输入/软键盘，再其他设备 |
 | D2 主题方案与状态订阅 | 讨论已汇总；只读状态、事件和主题方案模型需定形 | 待审阅；[主题设计](theme_authoring_and_state.md)。先解决状态可观察性，完整主题作者模型另批 |
 | D3 导航分组 | `type → nav_group`、空值未分组、同值全局合并已接受 | 未实施；[D3](reference_draft.md#d3-路由身份与导航分组开放到哪一层)，独立小批 |
-| D4 平台与后端 | SDL3 默认路径与 host seam 已落地，raylib 保留对照 | 收尾中；[阶段证据](platform_backend_contract.md)。Windows/Web 仍不是正式应用支持面 |
+| D4 平台与后端 | SDL3 默认路径与 host seam 已落地，raylib 保留对照 | **已收尾**：生产 SDF 在 Vulkan 与 Windows D3D12 通过设备级验收；[阶段证据](platform_backend_contract.md)。Windows 为实验性支持，macOS 不支持，Web 不是交付面 |
 | D5 资源构建与部署 | 范围与目标契约冻结 | 未实施；[正式契约](resource_build_and_deployment.md)，内部六批见下节 |
 | D6 作者 DSL 与内容测量 | 方向已接受；Label 能力、绑定覆盖、测量详细契约待审阅 | 未实施；[D6](authoring_dsl_and_content_measurement.md)，测量先于 Section/语法糖 |
-| D7 渲染质量与图片 | 混合修复 → SDF 高质量路径；共享解码；分层处理圆角裁剪 | 混合修复与软件视觉测试已落地，其余批次未实施；[D7](reference_draft.md#d7-渲染质量与后端视觉一致性)，每批定形接口后验收 |
+| D7 渲染质量与图片 | 混合修复 → SDF 高质量路径；共享解码；分层处理圆角裁剪 | 混合修复、生产 SDF（填充/描边/圆）与设备级/页面级验收（Linux golden）已落地；arc/线段/阴影/裁剪、共享解码、MSL 与 Windows 页面基线未做；[D7](reference_draft.md#d7-渲染质量与后端视觉一致性) |
 | D8 键码与输入事件 | 框架拥有键身份；物理位置、逻辑含义与提交文本分开 | 未实施；[D8](reference_draft.md#d8-键码与输入码空间)，不再按纯机械 rename 估算 |
 | 依赖工程 | wrap-git；默认 vendored，system/auto 显式选择；功能与来源开关分离 | **已完成迁移**（§2.5–§2.7）：11 个依赖全部 wrap-git + 完整 commit pin（只剩字体包为 submodule、SQLite 仍为 amalgamation），SDL3 三态解析与 `deps.json`、pin/dirty 校验、SDK 依赖源码收集与裁剪、vendored 消费 fixture、CI 三条显式路径、`portable-bundle` 守卫、`header-surface` 门禁均已落地。**仍未完成**：OS 包层面的 DSO 打包（暂无应用安装路径）、内部类型进公开签名的评审项、后端拆库 |
 
@@ -40,9 +40,9 @@
 | 批次 | 交付 | 技术前置 | 退出条件 |
 | --- | --- | --- | --- |
 | 0 文档基线（本轮） | 核对状态、修正机制判断、统一排期并提交 | 现有源码与历史证据 | 文档链接、状态、diff 核对；不将计划标为实现完成 |
-| 1 D7 混合修复（**已完成**） | 设备初始化时启用几何混合；确定性交互帧回归 | 无；不等依赖迁移 | **已交付**：`tests/sdl_visual_tests.cpp`（软件渲染器，4 用例/150 断言，解析合成预期 ±2，`unit` 的 `sdl-visual`）。本次补强真实 OverlayHost + Dialog 开关/布局/动画/绘制，在面板外核对打开前、打开后、关闭后颜色；补四角扇形内部与拼接附近采样。实际 Dialog fill alpha=0/1、扇形漏画注入均会红，恢复并重编译后全绿。历史移除混合设置的 4 用例全红记录保留。历史 GPU 证据：遮罩 mean 5.9→125.0、选中项最暗行 156.9→74.7（std 32.1→88.0）；本次未重跑 GPU，软件结果不覆盖历史 GPU 验收。仍缺页面级审核 golden；具体证据和边界见[视觉回归](visual_regression.md) §5 |
+| 1 D7 混合修复（**已完成**） | 设备初始化时启用几何混合；确定性交互帧回归 | 无；不等依赖迁移 | **已交付**：`tests/sdl_visual_tests.cpp`（软件渲染器，4 用例/150 断言，解析合成预期 ±2，`unit` 的 `sdl-visual`）。本次补强真实 OverlayHost + Dialog 开关/布局/动画/绘制，在面板外核对打开前、打开后、关闭后颜色；补四角扇形内部与拼接附近采样。实际 Dialog fill alpha=0/1、扇形漏画注入均会红，恢复并重编译后全绿。历史移除混合设置的 4 用例全红记录保留。历史 GPU 证据：遮罩 mean 5.9→125.0、选中项最暗行 156.9→74.7（std 32.1→88.0）；本次未重跑 GPU，软件结果不覆盖历史 GPU 验收。页面级审核 golden 已由批次 3 补齐（6 条 approved，见[视觉回归](visual_regression.md) §5）；具体证据和边界见该文 |
 | 2 SDL3 来源与交付（**已完成**） | 实测 CMake wrap、固定版本、三态来源和解析报告；接 CI/SDK；建立[头文件分类](sdk_surface.md)门禁 | **最小实验已完成**（[依赖策略 §2.4](dependency_policy.md)）：`SDL3-static`、`subproject_options()`、三态显式解析、离线与全新检出均实测；结论是不用 `[provide]` 变量名、失败必须 `error()`、随后已用 CI 固定的 Meson 1.7.2 复跑（§2.5）。正式接入已落地（[依赖策略 §2.5](dependency_policy.md)）：`sdl3_source` 三态默认 vendored、`deps.json` 报告、`.gitignore`、SDK 收集依赖源码并记录 manifest、fixture 断言依赖随包；**静态 SDL3 与 raylib 内置 GLFW 的 Wayland 协议符号冲突，vendored 改用共享库**。已交付：11 个依赖 wrap 化、三态来源与 `deps.json`、pin/dirty 校验、SDK 依赖源码收集与裁剪、两个 SDK 消费 fixture、CI 三条显式路径 + 预热/缓存、`portable-bundle` 与 `header-surface` 门禁、Meson 1.7.2 复跑。**明确不在本批**：OS 包/安装器层面的 DSO 打包（当前没有应用安装路径）、内部类型进公开签名的评审项、后端拆库（长期）。**ASan 构建目录例外**：vendored 共享 SDL3 撞 `ld.bfd` DWARF bug，该目录显式用系统 SDL3（81/81 通过）；CI 另有非阻断的 lld 实验任务 | 三态、关闭后端不获取、干净检出与预热后断网构建通过；SDL 路径被显式启用并验证；SDK 包含所需依赖。`.gitignore` 覆盖 wrap 检出目录、SDK 显式收集依赖源码与许可证、打包在 nodownload 下可重复（fixture 逐字节断言不失真） |
-| 3 D7 生产 SDF（**填充/描边/圆已接入；其余图元与多平台未接入**） | 同帧多参数实验 → 产物交付 → 逐图元实现；保留有能力说明的基础降级路径。实验已有 64 字节参数、4 KiB 尾部读取、三档缩放/细描边/纹理与 SDL 字形交错、两条失败注入，并已定下**不可变参数 state + 有界缓存**的提交策略（[路径契约 §9](render_device_path_contract.md#9-参数提交策略2026-10-19-决定)）。生产设备已接入 SDF 填充/描边/圆（`analytic_antialiasing()`、`sdf_diagnostics()`、CPU 回落），由 `sdf-device` 设备级测试与 `parameter-state-cache` 单测覆盖；arc/线段/阴影/圆角裁剪、DXIL/MSL 与真实页面基线仍未做 | 批次 1、2 已完成；Vulkan 实测不替代 DXIL/MSL 或真实页面验收 | 生产图元/文字/图片纹理交错时参数和状态正确；分数缩放、细描边与半透明叠加通过；质量达标且像素差异有界可解释；报告稳态与交互成本（按[性能预算](performance_budget.md)协议采样，先报告模式），**每帧状态设置与 uniform 更新次数**、内存一并记录，新路径经审核建立自己的基线；驱动级逃生舱可用 |
+| 3 D7 生产 SDF（**填充/描边/圆已完成并验收；其余图元与多平台在范围外**） | 同帧多参数实验 → 产物交付 → 逐图元实现；保留有能力说明的基础降级路径。实验已有 64 字节参数、4 KiB 尾部读取、三档缩放/细描边/纹理与 SDL 字形交错、两条失败注入，并已定下**不可变参数 state + 有界缓存**的提交策略（[路径契约 §9](render_device_path_contract.md#9-参数提交策略2026-10-19-决定)）。生产设备已接入 SDF 填充/描边/圆（`analytic_antialiasing()`、`sdf_diagnostics()`、CPU 回落），由 `sdf-device` 设备级测试与 `parameter-state-cache` 单测覆盖。**已交付**：6 条页面 golden approved（Linux，`--platform` 隔离）、release 性能基线（8 配置）与预算门禁、Windows D3D12/DXIL 实机设备级验收（与 Linux 直线 AA 逐位一致）。**未交付**：arc/线段/阴影/圆角裁剪、MSL、Windows 页面 golden 与性能基线（见[开发路线](development_roadmap.md)） | 批次 1、2 已完成；Vulkan 与 DXIL 已分别实机验收，MSL 未验收；页面基线仅 Linux | 生产图元/文字/图片纹理交错时参数和状态正确；分数缩放、细描边与半透明叠加通过；质量达标且像素差异有界可解释；报告稳态与交互成本（按[性能预算](performance_budget.md)协议采样，先报告模式），**每帧状态设置与 uniform 更新次数**、内存一并记录，新路径经审核建立自己的基线；驱动级逃生舱可用 |
 | 4 D7 共享图片解码 | 应用服务提供默认 CPU 解码器，两后端复用；**删除 `IPlatformWindow::make_image_decoder()`**（破坏性变更，按 [SDK 表面](sdk_surface.md) 记录）；SDL 补 `create_rgba_texture` 上传链；保持 crop/resize/tint | 解码库来源与行为定形；不依赖 SDF，可因应用需求提前 | PNG/JPEG、透明纹理、失败输入与预处理测试；**解码服务 / 设备直载 / 设备 RGBA 上传三项能力分别验收并分别报告**，不再用单个布尔值；两后端真实 Image 消费者可用；两者都不可用时降级明确并指出缺哪一项；删除后无遗留 override |
 | 5 D8 输入基础 | 先修"宿主用帧级字段覆盖每事件坐标/修饰键"（已核实的缺陷），再定形物理/逻辑键、事件快照、release/repeat/unknown，迁移 mapper 与控件；保序事件另小批 | 无渲染前置；可在批次 2–4 之间独立推进 | 同帧"在 A 按下、移到 B"派发到 A；按键用事件时修饰键；US/非 US 布局、左右修饰键、按下/释放/重复、未映射策略与跨后端规范事件对照；点击切焦点与输入同帧仍按序分发 |
 | 6 D7 裁剪收口 | 先涟漪专用圆角交集，再按实际用例定形图片/子树嵌套裁剪 | 高质量图元路径；通用裁剪需单独协议 | 不外溢、状态恢复、能力为 false 的降级；绘制/命中遵循既有裁剪契约，不用专用图元冒充通用能力 |
@@ -62,8 +62,9 @@
   会话依赖实际平台文本能力与有序事件，不以生成 shader 或完成全部 D4 为前提。
 - **D6 扩展建立在测量上**：先定覆盖/绑定语义并验收内容测量，再决定共享 box/border、子项简写、
   Section 和 anchors 与排列容器剩余空间的组合；这些分别定形，不打包成一次 DSL 重写。
-- **跨平台分开记录**：SPIR-V/DXIL/MSL 已有探测产物，只有 SPIR-V 有独立 spirv-val 校验；
-  DXIL/MSL 的目标设备加载待验收。Web canvas 探测不等于 Nandina 应用可交付。
+- **跨平台分开记录**：SPIR-V/DXIL/MSL 已有产物；SPIR-V 有独立 spirv-val 与设备级像素验收，
+  DXIL 已在 Windows D3D12 实机通过设备级验收（直线 AA 与 Linux 逐位一致），MSL 仅有静态校验、
+  目标设备未验收。Web canvas 探测不等于 Nandina 应用可交付。
 - Modules、CMake package、shell/compositor、任意矢量路径仍待实际需求与对应关口，不进入当前关键路径。
 
 ### 每批的完成定义
@@ -127,3 +128,15 @@ showcase 页面的小视口/零尺寸、反复换边和页面销毁回调测试�
 ## 验证与交付
 
 兼容层退出会跨多个模块，需跑主套件、ASan/UBSan unit、no-RTTI unit，核对 suite 注册、SDK 导出与独立 include/消费者；构建和测试不得通过管道掩盖失败。anchors 实现还需覆盖重复布局、兄弟依赖、环、重挂载、绘制/命中同序与语义 bounds。真实窗口手感仍由作者在 playground/showcase 验收，自动测试不能替代。
+
+## 下一阶段路线（2026-10-20）
+
+已验收基线与 P1–P4 的排序、退出条件、近期切入顺序和非目标见[开发路线](development_roadmap.md)。
+
+- **P1 收口与平台补齐**：发布检查脚本、Windows 页面 golden/性能基线、CLI 端到端、SDF arc/线段/阴影、图片共享解码；
+- **P2 应用闭环**：D5 解耦 → 作用域 → 身份，真实示例应用贯穿导航/表单/图片/滚动/弹窗；
+- **P3 输入与焦点**：D8 键身份/事件保序 → D1 焦点提示 → 文本会话/IME；
+- **P4 作者与组件**：D6 Label 能力与测量 → 阶段 5 数据组件 → D2/D3。
+
+本轮之后建议先做 **P1.1 发布检查脚本** 与 **P1.4 CLI 端到端**：前者把已有门禁变成可重复流程，
+后者用真实项目验证 Windows 实验性路径；两者风险低、产出可直接作为发布证据。

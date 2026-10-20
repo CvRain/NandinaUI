@@ -366,13 +366,14 @@ meson compile -C buildDir
 - [开发参考](docs/references/README.md)：组件契约、架构约束和维护流程。
 - [构建系统与 Modules 范围](docs/references/build_system_scope.md)：当前 Meson/include 主线，以及暂缓 C++ Modules 和 CMake package 的原因。
 - [组件开发路线图](docs/references/component_roadmap.md)：当前差距、依赖关系与推荐实现顺序。
-- [项目进度与下一步](docs/references/project_status.md)：当前能力边界、anchors 开发阶段与验证关口。
+- [开发路线](docs/references/development_roadmap.md)：**下一阶段 P1–P4 的排序、退出条件、近期切入点与非目标**。
+- [项目进度与下一步](docs/references/project_status.md)：当前能力边界、已完成批次、D1–D8 状态与验证关口。
 - [D5 资源构建、部署与运行时定位](docs/references/resource_build_and_deployment.md)：已冻结、未实施的资源模块边界、作用域契约与分批验收计划。
 - [D6 作者 DSL、文本能力与内容测量](docs/references/authoring_dsl_and_content_measurement.md)：待审阅设计；先定 Label 作者能力与有限宽度测量，再决定布局语法糖、border 和 Section 的实现。
 
 ## 🗺️ 开发计划
 
-项目当前处于 alpha 阶段。下列已完成项是历史里程碑；近期工作的排序与验收标准以[项目进度与下一步](docs/references/project_status.md)为准。项目处于快速演进期，不承诺长期保留旧公开头或命名空间的源码兼容入口；发生破坏性 API 调整时，库内示例、文档和测试应同步迁移。
+项目当前处于 alpha 阶段。下列已完成项是历史里程碑；**下一阶段的排序与验收标准以[开发路线](docs/references/development_roadmap.md)为准**，历史状态与批次边界见[项目进度与下一步](docs/references/project_status.md)。项目处于快速演进期，不承诺长期保留旧公开头或命名空间的源码兼容入口；发生破坏性 API 调整时，库内示例、文档和测试应同步迁移。
 
 - [x] 建立声明式 UI、响应式状态、主题、动画、资源和 Page/Router 基础。
 - [x] 支持 Linux Wayland 与 X11，并提供 PointerArea / GestureArea 组合式交互。
@@ -397,7 +398,10 @@ meson compile -C buildDir
 - [x] **Anchors 基础验证**：百分比与无界约束、隐藏排列项、ScrollView 轴向约束与 reparent 失效规则已固定为测试，并写回 reference。
 - [x] **Anchors scene 内核**：类型化弱引用、显式锚定画布、父/同画布兄弟锚线、尺寸冲突诊断、依赖排序与环检测、批量关系切换；通过 `layout_to()` 交付布局结果。
 - [x] **Anchors 作者入口**：`ui.ref<T>()`、builder 绑定与只读锚线门面、`ui.anchor_canvas()`、`.anchors(spec|source)` 与 `AnchorCanvas::set_child_anchors()` 批量切换均已落地，由 `tests/anchors_authoring_tests.cpp` 覆盖。
-- [x] **D4 默认切换与平台接口**：编入 SDL3 时默认使用 SDL3；`IPlatformWindow`、设备包装和三页逐图元对照已落地。生产 SDL 的填充/描边/圆已走 Vulkan SDF（其余图元仍是 CPU 几何），Windows/Web 应用交付尚未完成。
+- [x] **D4 默认切换与平台接口**：编入 SDL3 时默认使用 SDL3；`IPlatformWindow`、设备包装和三页逐图元对照已落地。生产 SDL 的填充/描边/圆已走 SDF（Vulkan SPIR-V 与 Windows D3D12/DXIL 均通过设备级验收），其余图元仍是 CPU 几何。
+- [x] **页面 golden 与审批**：6 条 approved 基线（Linux，平台隔离）、比较器、审批/撤销工具与清单门禁。
+- [x] **release 性能基线与预算门禁**：8 配置 release 基线、确定性门禁（布局 0/稳态 miss 0/binds 上限）与候选计时阈值（`--enforce` 启用）。
+- [x] **Windows 实验性支持**：MSYS2 UCRT64 release 构建、单元测试 80/80、`nandina doctor` 全绿、DXIL 设备级验收；macOS 明确不支持。
 
 ### 当前议题与推进顺序
 
