@@ -32,10 +32,10 @@
 
 | 编号 | 交付 | 前置 | 退出条件 |
 | --- | --- | --- | --- |
-| P1.1 | **发布检查脚本**：把 format、header、artifact、golden 清单、budget 确定性门禁串成一条 `tools/release_check.*`（本地/发布用，CI 可复用无 GPU 部分） | 各门禁已就绪 | 一条命令给出逐项结论；失败即非零退出；文档写清哪些项需要 GPU/交互桌面 |
+| P1.1 | **发布检查脚本**：把 format、header、artifact、golden 清单、budget 确定性门禁串成一条 `tools/release_check.py`（本地/发布用，CI 可复用无 GPU 部分） | 各门禁已就绪 | **已完成（2026-10-20）**：8 项逐条 PASS/SKIP/FAIL、失败非零退出；`--ci` 跳过 GPU 项，`--report` 追加性能预算；已写进[开发流程](development_loop.md) §2 |
 | P1.2 | **Windows 页面 golden 候选**：`capture_backend_golden.py --platform windows` 采集 → 人工审阅 → 批准（不替换 Linux 基线） | P1 前 Windows 构建可跑（已满足） | manifest 出现 platform=windows 的 approved 条目；比较器按当前平台选择；跨平台策略文档同步 |
 | P1.3 | **Windows 性能基线（可选）**：同协议在 Windows release 构建采样，作为对照而非跨平台比较 | P1.2 同前置 | 报告归档；不要求与 Linux 可比 |
-| P1.4 | **CLI 端到端**：`nandina new` → `nandina build` → `nandina run` 在 Linux 与 Windows 各走一遍真实项目（验证 CreateProcessW、`.exe`、路径转义） | 无 | 两个平台各有一份完整输出；失败路径（命令不存在、构建失败）有明确退出码 |
+| P1.4 | **CLI 端到端**：`nandina new` → `nandina build` → `nandina run` 在 Linux 与 Windows 各走一遍真实项目（验证 CreateProcessW、`.exe`、路径转义） | 无 | **Linux 已完成（2026-10-20）**：`nandina-cli` 集成测试新增真实二进制端到端（改 main 为立即返回 3，`run` 增量重建、启动真实 exe、透传 stdout 与退出码），不依赖窗口/GPU；Windows 部分随 Windows 批延后 |
 | P1.5 | **SDF 剩余图元**：arc / 线段 / 阴影；先做 D7 批次 6 的涟漪专用圆角交集，再按用例定形通用裁剪 | 现有 SDF 参数策略与产物链 | 设备级像素验收覆盖新图元；参数 state 不重复上传；能力缺失有 reason |
 | P1.6 | **图片路径**：共享 CPU 解码器、SDL RGBA 上传、删除 `IPlatformWindow::make_image_decoder()`（破坏性，按 SDK 表面记录） | 解码库来源定形 | 两后端真实 Image 消费者可用；PNG/JPEG/透明/失败输入测试；删除后无遗留 override |
 

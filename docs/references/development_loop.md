@@ -49,6 +49,11 @@ python3 tools/check_test_suites.py buildDir
 clang-format -i <只格式化你改过的文件>
 python3 tools/check_format.py     # 全仓格式关卡，固定 clang-format 23.1.1
 
+# 一条命令汇总无 GPU 门禁（format/header/artifact/golden/suite/docs/whitespace）：
+python3 tools/release_check.py --build-dir buildDir
+# 发布检查再带上性能采样报告（需要 GPU/窗口，本地或发布机执行）：
+python3 tools/release_check.py --build-dir buildDir --report <perf-report.json>
+
 ./buildDir/playground/playground --self-test      # 有窗口副作用时
 ./buildDir/showcase/nandina_showcase              # 视觉验收的对象是 showcase
 ```

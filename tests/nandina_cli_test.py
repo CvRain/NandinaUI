@@ -75,6 +75,21 @@ def main() -> int:
         assert "project ok" in project_doctor.stdout
         assert "all checks passed" in project_doctor.stdout
 
+        # 真实二进制端到端：改 main 为立即返回，run（不带 --no-build）应增量重建、
+        # 启动真实 exe、透传 stdout 与退出码——不依赖窗口/GPU，可在 CI 跑。
+        (project / "src" / "main.cpp").write_text(
+            "#include <cstdio>\n"
+            "int main() {\n"
+            '    std::printf("e2e-run-ok\\n");\n'
+            "    return 3;\n"
+            "}\n",
+            encoding="utf-8",
+        )
+        rebuilt = run(nandina, root, "run", str(project))
+        assert rebuilt.returncode == 3, rebuilt.stdout + rebuilt.stderr
+        assert "e2e-run-ok" in rebuilt.stdout
+        assert "nandina run:" in rebuilt.stdout
+
         original_executable = build / "hello.real"
         (build / "hello").rename(original_executable)
         marker = root / "run-arguments.txt"
