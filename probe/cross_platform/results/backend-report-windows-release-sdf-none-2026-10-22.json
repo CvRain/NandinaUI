@@ -1,0 +1,84 @@
+{
+  "protocol": {
+    "warmup": 300,
+    "samples": 1200,
+    "repeats": 5,
+    "stress": 0,
+    "interaction": "none",
+    "overlay": false
+  },
+  "configurations": [
+    {
+      "page": "home",
+      "mode": "sdf",
+      "interaction": "none",
+      "p50_ms": 0.1566,
+      "p95_ms": 0.1842,
+      "p50_range_ms": [
+        0.1545,
+        0.1572
+      ],
+      "layout_passes_per_frame": 0.0,
+      "binds_per_frame": 0.0,
+      "unbinds_per_frame": 0.0,
+      "misses_per_frame": 0.0,
+      "hits_per_frame": 0.0,
+      "cached": 0.0,
+      "summary": {
+        "capabilities": "device capabilities: alpha_textures=1 analytic_aa=1 rounded_rect=1 rounded_clip=1 soft_shadows=1",
+        "frame_cost": "frame cost over 1495 frames: layout=0.00036194 ms, draw=0.163071 ms, total=0.163433 ms",
+        "layout": "layout passes=0 over 1495 frames",
+        "sdf": "sdf: format=dxil binds=0 hits=0 misses=0 cached=0 capacity=256",
+        "resources": "resources: max_rss_kb=102572 texture_bytes=786432"
+      }
+    },
+    {
+      "page": "label",
+      "mode": "sdf",
+      "interaction": "none",
+      "p50_ms": 0.637,
+      "p95_ms": 0.6834,
+      "p50_range_ms": [
+        0.6297,
+        0.644
+      ],
+      "layout_passes_per_frame": 0.0,
+      "binds_per_frame": 21.0,
+      "unbinds_per_frame": 11.0,
+      "misses_per_frame": 0.0,
+      "hits_per_frame": 21.0,
+      "cached": 21.0,
+      "summary": {
+        "capabilities": "device capabilities: alpha_textures=1 analytic_aa=1 rounded_rect=1 rounded_clip=1 soft_shadows=1",
+        "frame_cost": "frame cost over 1495 frames: layout=0.00125559 ms, draw=0.64498 ms, total=0.646235 ms",
+        "layout": "layout passes=0 over 1495 frames",
+        "sdf": "sdf: format=dxil binds=31500 hits=31479 misses=21 cached=21 capacity=256",
+        "resources": "resources: max_rss_kb=117608 texture_bytes=2097152"
+      }
+    },
+    {
+      "page": "anchors",
+      "mode": "sdf",
+      "interaction": "none",
+      "p50_ms": 0.0356,
+      "p95_ms": 0.0502,
+      "p50_range_ms": [
+        0.0345,
+        0.0367
+      ],
+      "layout_passes_per_frame": 0.0,
+      "binds_per_frame": 7.0,
+      "unbinds_per_frame": 3.0,
+      "misses_per_frame": 0.0,
+      "hits_per_frame": 7.0,
+      "cached": 7.0,
+      "summary": {
+        "capabilities": "device capabilities: alpha_textures=1 analytic_aa=1 rounded_rect=1 rounded_clip=1 soft_shadows=1",
+        "frame_cost": "frame cost over 1495 frames: layout=0.000443077 ms, draw=0.0391002 ms, total=0.0395433 ms",
+        "layout": "layout passes=0 over 1495 frames",
+        "sdf": "sdf: format=dxil binds=10500 hits=10493 misses=7 cached=7 capacity=256",
+        "resources": "resources: max_rss_kb=100656 texture_bytes=524288"
+      }
+    }
+  ]
+}

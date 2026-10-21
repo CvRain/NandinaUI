@@ -79,28 +79,41 @@
   Dialog 开关 0.493 / 0.651 ms。debug 构建的 label SDF 为 2.505 ms（约 5.5×），不能当基线；
 - Windows 尚无性能基线（实验性平台，非当前门禁）。
 
-## 9. Windows release CPU 路径参考（2026-10-22）
+## 9. Windows release 参考基线（2026-10-22）
 
-采集环境：Windows 桌面机、`buildtype=release`、SSH 会话（session 0 无法创建 GPU swapchain）、
-`NANDINA_PROBE_RENDERER=sdl2d` 走 SDL 2D 的 **CPU 几何路径**；协议与 Linux 相同（300 预热 /
-1200 采样 / 5 次重复轮换、1200×800 隐藏窗口）。报告与基线：
+采集环境：Windows 桌面机、`buildtype=release`、协议与 Linux 相同（300 预热 / 1200 采样 /
+5 次重复轮换、1200×800 隐藏窗口）。两条路径分开采集：
 
-- `probe/cross_platform/results/backend-report-windows-release-none-2026-10-22.json`（原始报告）
-- `probe/cross_platform/results/backend-report-windows-release-cycle-2026-10-22.json`（原始报告）
-- `probe/cross_platform/results/backend-baseline-windows-release-2026-10-22.json`（整理后的参考基线，
+- **CPU 路径**：SSH 会话（session 0 无 GPU swapchain），`NANDINA_PROBE_RENDERER=sdl2d`；
+- **SDF 路径**：交互式桌面会话，SDL GPU renderer + DXIL 产物；报告的能力行确认
+  `analytic_aa=1 rounded_clip=1 soft_shadows=1`（P1.5b 已在 Windows release 生效）。
+
+报告与基线（`probe/cross_platform/results/`）：
+
+- `backend-report-windows-release-none-2026-10-22.json` / `...-cycle-...`（CPU 原始报告）
+- `backend-report-windows-release-sdf-none-2026-10-22.json` / `...-sdf-cycle-...`（SDF 原始报告）
+- `backend-baseline-windows-release-2026-10-22.json`（整理后的参考基线：8 条，
   `approved=false`、`enforce_timing=false`）
 
-| 页面 | 模式 | interaction | p50 (ms) | p95 (ms) | binds/帧 |
+| 页面 | 路径 | interaction | p50 (ms) | p95 (ms) | binds/帧 |
 | --- | --- | --- | --- | --- | --- |
+| home | sdf | none | 0.157 | 0.184 | 0 |
+| label | sdf | none | 0.637 | 0.683 | 21 |
+| anchors | sdf | none | 0.036 | 0.050 | 7 |
 | home | cpu | none | 0.177 | 0.214 | 0 |
 | label | cpu | none | 0.752 | 0.830 | 0 |
 | anchors | cpu | none | 0.051 | 0.079 | 0 |
+| label | sdf | cycle | 0.634 | 8.110 | 23.37 |
 | label | cpu | cycle | 0.723 | 8.993 | 0 |
 
-**边界**：这里只有 CPU 路径数字；SDF 路径需要在交互式桌面会话重跑同样的两条命令（见
-[Windows 验收清单](windows_acceptance.md) §6）。这些数字**只作 Windows 自身参考**，
-不跨平台比较、不参与计时门禁（`approved=false`、`enforce_timing=false`）；确定性门禁
-（稳态布局 pass=0、miss=0、binds 上限）仍可用该基线按需检查。
+观察（仅 Windows 自身对照）：稳态下 SDF 路径在 label 上比 CPU 快约 15%（0.637 vs 0.752），
+anchors 上 0.036 vs 0.051；home 两路径都约 0.16 ms（该页无 SDF 图元，binds=0）。交互 cycle 的
+p95 尖峰（8.1 / 9.0 ms）来自换页，与 Linux 记录同量级，不作为质量结论。
+
+**边界**：这些数字**只作 Windows 自身参考**，不跨平台比较、不参与计时门禁
+（`approved=false`、`enforce_timing=false`）；确定性门禁（稳态布局 pass=0、miss=0、binds 上限）
+可按需用该基线检查。CPU 路径运行在无 GPU 的 SSH 会话（sdl2d），SDF 路径运行在桌面会话，
+两者环境不同，不能互相推断。
 
 ## 8. 与发布检查的关系
 

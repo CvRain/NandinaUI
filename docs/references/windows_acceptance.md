@@ -99,15 +99,14 @@ python3 tools/capture_backend_golden.py --probe buildDir\probe\cross_platform\de
 
 ## 6. Windows 性能基线（P1.3，可选）
 
-> 2026-10-22：CPU 路径已通过 SSH 采集并归档（见 §7 第 6 项）；如果希望补齐 **SDF 路径**数字，
-> 在桌面会话里对 `buildDir-release` 重跑下面两条命令（`NANDINA_PROBE_RENDERER` 不设，让探针
-> 走 GPU），把生成的 JSON 发我，我归档为 Windows SDF 路径参考。
+> 2026-10-22：CPU 路径（SSH，sdl2d）与 SDF 路径（桌面会话，DXIL）均已采集并归档，
+> 见[性能预算](performance_budget.md) §9。下列命令保留为复现步骤。
 
 ```powershell
 meson setup buildDir-release --buildtype=release -Dsdl_page_probe=true --wrap-mode=nodownload
 meson compile -C buildDir-release
-python3 tools/backend_performance.py --probe buildDir-release\probe\cross_platform\desktop\nandina_sdl_page_probe.exe --pages home,label,anchors --modes sdf,cpu --interaction none --repeats 5 --output probe\baselines\windows-release-none.json
-python3 tools/backend_performance.py --probe buildDir-release\probe\cross_platform\desktop\nandina_sdl_page_probe.exe --pages label --modes sdf --interaction cycle --repeats 5 --output probe\baselines\windows-release-cycle.json
+python3 tools/backend_performance.py --probe buildDir-release\probe\cross_platform\desktop\nandina_sdl_page_probe.exe --pages home,label,anchors --modes sdf,cpu --interaction none --repeats 5 --output probe\cross_platform\results\backend-report-windows-release-none.json
+python3 tools/backend_performance.py --probe buildDir-release\probe\cross_platform\desktop\nandina_sdl_page_probe.exe --pages label --modes sdf --interaction cycle --repeats 5 --output probe\cross_platform\results\backend-report-windows-release-sdf-cycle.json
 ```
 
 - **期望**：两份 JSON 报告 + CSV 目录；报告里的数字只用于 Windows 自身对照，**不跨平台比较**；
@@ -123,7 +122,7 @@ python3 tools/backend_performance.py --probe buildDir-release\probe\cross_platfo
 | 3. 涟漪圆角裁剪 | 通过 | butter 主题按钮点击无溢出；`NANDINA_SDL_SDF=off` 退化为方角（符合能力差异） |
 | 4. DXIL 设备测试 | 通过 | `--require-gpu --expect-format dxil` 退出 0；末尾 `SDF device pixels, viewport scales, fallback, frame restore and eviction passed`。直线 AA 的 MAE 0.048/0.078/0.081 与 Linux 记录一致；圆面积参考 max ≤17；新增 shadow/clip 断言通过 |
 | 5. Windows SDF 页面 golden | **已批准** | home/label/anchors 三条 SDF approved；第二次采集逐字节一致（上传文件与仓库候选 sha 相同）；home 的 sha 与 CPU 基线相同（该页无 SDF 图元） |
-| 6. 性能基线 | **CPU 路径已归档（2026-10-22）** | release 构建 + `--renderer sdl2d`，经 SSH 采集：报告与参考基线已入库（`probe/cross_platform/results/backend-*-windows-*`）；SDF 路径的数字需在桌面会话重跑同样两条命令（见 §6） |
+| 6. 性能基线 | **已完成（2026-10-22，参考）** | CPU 路径经 SSH（`--renderer sdl2d`）、SDF 路径在桌面会话（DXIL，能力行确认软阴影/圆角裁剪生效）；4 份原始报告 + 8 条参考基线已入库，见[性能预算](performance_budget.md) §9。只作 Windows 自身参考，不跨平台比较、不参与计时门禁 |
 
 > 注意：第一次 DXIL 运行曾因终端残留 `NANDINA_SDL_SDF=off` 在 CPU 回退路径上失败；清掉环境变量后通过。测试现已对这种情况快速失败并给出可操作提示。
 

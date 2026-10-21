@@ -4,7 +4,10 @@
   "enforce_timing": false,
   "buildtype": "release",
   "platform": "windows",
-  "path": "cpu: SDL 2D renderer (NANDINA_PROBE_RENDERER=sdl2d), SSH session 0, no GPU swapchain",
+  "paths": {
+    "cpu": "SDL 2D renderer (NANDINA_PROBE_RENDERER=sdl2d), SSH session 0, no GPU swapchain",
+    "sdf": "SDL GPU renderer + DXIL artifact, interactive desktop session"
+  },
   "protocol": {
     "warmup": 300,
     "samples": 1200,
@@ -13,7 +16,7 @@
     "interaction": "none",
     "overlay": false
   },
-  "note": "Windows release CPU-path reference (2026-10-22). Captured over SSH because session 0 cannot create a GPU swapchain, so this covers only the CPU geometry path; SDF-path numbers require an interactive desktop session. Timing is never enforced across platforms and this file is not a gate baseline (approved=false).",
+  "note": "Windows release reference (2026-10-22). CPU path captured over SSH (session 0 has no GPU swapchain); SDF path captured in an interactive desktop session, capabilities analytic_aa=1 rounded_clip=1 soft_shadows=1. Timing is never compared across platforms and this file is not a gate baseline (approved=false).",
   "entries": [
     {
       "page": "home",
@@ -52,6 +55,42 @@
       "layout_passes_per_frame": 0.0
     },
     {
+      "page": "home",
+      "mode": "sdf",
+      "interaction": "none",
+      "p50_ms": 0.1566,
+      "p95_ms": 0.1842,
+      "binds_per_frame": 0.0,
+      "misses_per_frame": 0.0,
+      "hits_per_frame": 0.0,
+      "cached": 0.0,
+      "layout_passes_per_frame": 0.0
+    },
+    {
+      "page": "label",
+      "mode": "sdf",
+      "interaction": "none",
+      "p50_ms": 0.637,
+      "p95_ms": 0.6834,
+      "binds_per_frame": 21.0,
+      "misses_per_frame": 0.0,
+      "hits_per_frame": 21.0,
+      "cached": 21.0,
+      "layout_passes_per_frame": 0.0
+    },
+    {
+      "page": "anchors",
+      "mode": "sdf",
+      "interaction": "none",
+      "p50_ms": 0.0356,
+      "p95_ms": 0.0502,
+      "binds_per_frame": 7.0,
+      "misses_per_frame": 0.0,
+      "hits_per_frame": 7.0,
+      "cached": 7.0,
+      "layout_passes_per_frame": 0.0
+    },
+    {
       "page": "label",
       "mode": "cpu",
       "interaction": "cycle",
@@ -61,6 +100,18 @@
       "misses_per_frame": 0.0,
       "hits_per_frame": 0.0,
       "cached": 0.0,
+      "layout_passes_per_frame": 0.06694560669456066
+    },
+    {
+      "page": "label",
+      "mode": "sdf",
+      "interaction": "cycle",
+      "p50_ms": 0.6344,
+      "p95_ms": 8.1095,
+      "binds_per_frame": 23.372384937238493,
+      "misses_per_frame": 0.0,
+      "hits_per_frame": 24.366834170854272,
+      "cached": 142.0,
       "layout_passes_per_frame": 0.06694560669456066
     }
   ]
