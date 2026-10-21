@@ -26,8 +26,10 @@
 #include <SDL3/SDL_render.h>
 #if defined(_WIN32)
     #define WIN32_LEAN_AND_MEAN
-    #include <psapi.h>
+    // windows.h 必须在 psapi.h 之前；空行分段是为了阻止 clang-format 按字母重排。
     #include <windows.h>
+
+    #include <psapi.h>
 #else
     #include <sys/resource.h>
 #endif
@@ -124,12 +126,6 @@ int main() {
 
     try {
         check_sdl(SDL_Init(SDL_INIT_VIDEO), "SDL_Init");
-        gpu_device = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV, false, "vulkan");
-        if (gpu_device == nullptr) {
-            throw std::runtime_error(
-                std::string("SDL_CreateGPUDevice(vulkan, SPIR-V): ") + SDL_GetError()
-            );
-        }
         // 隐藏窗口：可见窗口会被合成器平铺成屏幕相关尺寸（实测 1269x1383），
         // 那样页面像素与性能采样都不可复现。探针只读回渲染结果，不需要显示。
         window = SDL_CreateWindow(
@@ -141,9 +137,35 @@ int main() {
         if (window == nullptr) {
             throw std::runtime_error(std::string("SDL_CreateWindow: ") + SDL_GetError());
         }
-        renderer = SDL_CreateGPURenderer(gpu_device, window);
-        if (renderer == nullptr) {
-            throw std::runtime_error(std::string("SDL_CreateGPURenderer: ") + SDL_GetError());
+        // 无 GPU/交互桌面时（例如 Windows SSH 会话创建不了 swapchain），可以用
+        // `NANDINA_PROBE_RENDERER=sdl2d` 走 SDL 的 2D 渲染器采集 CPU 几何路径。
+        const char* renderer_mode = SDL_getenv("NANDINA_PROBE_RENDERER");
+        const bool use_sdl2d =
+            renderer_mode != nullptr && std::string_view(renderer_mode) == "sdl2d";
+        if (use_sdl2d) {
+            renderer = SDL_CreateRenderer(window, nullptr);
+            if (renderer == nullptr) {
+                throw std::runtime_error(std::string("SDL_CreateRenderer: ") + SDL_GetError());
+            }
+        }
+        else {
+            // 每个平台用驱动对应的着色器产物：Windows/D3D12→DXIL，macOS/Metal→MSL，
+            // 其余（含 Linux）→SPIR-V。驱动交给 SDL 按格式自动选择。
+#if defined(_WIN32)
+            constexpr auto gpu_shader_format = SDL_GPU_SHADERFORMAT_DXIL;
+#elif defined(__APPLE__)
+            constexpr auto gpu_shader_format = SDL_GPU_SHADERFORMAT_METAL;
+#else
+            constexpr auto gpu_shader_format = SDL_GPU_SHADERFORMAT_SPIRV;
+#endif
+            gpu_device = SDL_CreateGPUDevice(gpu_shader_format, false, nullptr);
+            if (gpu_device == nullptr) {
+                throw std::runtime_error(std::string("SDL_CreateGPUDevice: ") + SDL_GetError());
+            }
+            renderer = SDL_CreateGPURenderer(gpu_device, window);
+            if (renderer == nullptr) {
+                throw std::runtime_error(std::string("SDL_CreateGPURenderer: ") + SDL_GetError());
+            }
         }
 
         // ---- 最小宿主：应用服务 + 设备 + 字体上下文 + 路由 ----

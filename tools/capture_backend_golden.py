@@ -83,6 +83,13 @@ def main() -> int:
     parser.add_argument("--output", type=pathlib.Path, default=ROOT / "tests/golden/backend")
     parser.add_argument("--force", action="store_true", help="overwrite approved entries")
     parser.add_argument("--platform", default="", help="override the detected platform tag")
+    parser.add_argument(
+        "--renderer",
+        choices=("gpu", "sdl2d"),
+        default="gpu",
+        help="probe renderer: gpu keeps the SDF path; sdl2d captures the CPU path "
+        "without a GPU swapchain (needed on headless Windows sessions)",
+    )
     options = parser.parse_args()
     if not options.probe.is_file():
         raise SystemExit(f"probe not built: {options.probe}")
@@ -112,6 +119,10 @@ def main() -> int:
                     environment["NANDINA_SDL_SDF"] = "off"
                 else:
                     environment.pop("NANDINA_SDL_SDF", None)
+                if options.renderer == "sdl2d":
+                    environment["NANDINA_PROBE_RENDERER"] = "sdl2d"
+                else:
+                    environment.pop("NANDINA_PROBE_RENDERER", None)
                 result = subprocess.run(
                     [str(options.probe)], capture_output=True, text=True, timeout=300, env=environment
                 )
@@ -120,7 +131,7 @@ def main() -> int:
                         f"capture failed for {page}/{backend}: {result.returncode}\n{result.stdout}\n{result.stderr}"
                     )
                 image = golden_image.read_bmp(str(bmp))
-                target = candidates / f"{page}-{backend}.png"
+                target = candidates / f"{page}-{backend}-{platform}.png"
                 golden_image.write_png(str(target), image)
                 digest = hashlib.sha256(target.read_bytes()).hexdigest()
                 entries[key] = {
