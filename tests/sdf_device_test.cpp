@@ -901,6 +901,21 @@ auto main(int argc, char** argv) -> int {
             expect_format = argv[index + 1];
         }
     }
+    // 外部环境变量若禁用 SDF，整套 SDF 断言都会红；这通常是上一项人工检查
+    // （NANDINA_SDL_SDF=off，用于对照 CPU 路径）遗留在同一个终端里。
+    // 直接给出可操作原因，而不是几十条难以定位的像素失败。
+    if (const char* override = SDL_getenv("NANDINA_SDL_SDF"); override != nullptr) {
+        const std::string_view value {override};
+        if (value == "off" || value == "0" || value == "false") {
+            std::fprintf(
+                stderr,
+                "FAIL: NANDINA_SDL_SDF=%s disables the SDF path; unset it before running the "
+                "device acceptance test\n",
+                override
+            );
+            return 1;
+        }
+    }
 #if defined(__linux__)
     // 只有 Linux 需要 X11/Wayland 会话；Windows/macOS 没有这两个变量。
     if (SDL_getenv("DISPLAY") == nullptr && SDL_getenv("WAYLAND_DISPLAY") == nullptr) {

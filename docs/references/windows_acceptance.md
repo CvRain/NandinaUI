@@ -17,6 +17,16 @@ git pull --ff-only
 ninja -C buildDir
 ```
 
+> 每项之间清掉上一项留下的环境变量（尤其是 `NANDINA_SDL_SDF`）：
+>
+> ```powershell
+> Remove-Item Env:NANDINA_SDL_SDF -ErrorAction SilentlyContinue
+> Remove-Item Env:NANDINA_SHOWCASE_THEME -ErrorAction SilentlyContinue
+> ```
+>
+> 忘了清 `NANDINA_SDL_SDF=off` 时，`sdf_device_test` 现在会直接报
+> `NANDINA_SDL_SDF=off disables the SDF path` 并退出 1，而不是抛几十条像素断言失败。
+
 `ninja` 结束后 `buildDir\tests\*.exe` 与 `buildDir\showcase\nandina_showcase.exe` 旁会自动
 复制运行库 DLL；静态 SDL3 构建不会出现 `libSDL3_shared.dll`（若出现说明构建目录残留，
 删除即可）。
@@ -62,6 +72,7 @@ $env:NANDINA_SDL_SDF = 'off'
 ## 4. GPU 设备级验收（DXIL）
 
 ```powershell
+Remove-Item Env:NANDINA_SDL_SDF -ErrorAction SilentlyContinue
 .\buildDir\tests\sdf_device_test.exe --require-gpu --expect-format dxil
 ```
 
