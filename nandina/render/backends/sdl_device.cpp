@@ -72,7 +72,7 @@ namespace nandina::render
             );
         }
 
-        /// A8 → RGBA8（白色 + alpha）。与生产的 raylib 后端 alpha_to_rgba 同构：
+        /// A8 → RGBA8（白色 + alpha）。与历史 raylib 后端 alpha_to_rgba 同构：
         /// 两边都因为「2D API 只吃 RGBA」而付出 4 倍纹理字节，这个代价本身就是结论之一。
         [[nodiscard]] auto alpha_to_rgba(const std::span<const std::uint8_t> alpha)
             -> std::vector<std::uint8_t> {
@@ -547,7 +547,7 @@ namespace nandina::render
 
     void SdlRenderDevice::end_frame() {
         unbind_sdf();
-        // present 由宿主负责：设备只负责把图元提交给 renderer（与 raylib 后端的边界一致）。
+        // present 由宿主负责：设备只负责把图元提交给 renderer。
     }
 
     void SdlRenderDevice::clear(const foundation::NanColor& color) {
@@ -1113,7 +1113,7 @@ namespace nandina::render
         check_sdl(texture != nullptr, "SDL_CreateTexture(alpha atlas)");
         check_sdl(SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND), "SDL_SetTextureBlendMode");
         // 与生产后端一致：字形图集按 1:1 点采样，避免双线性过滤造成二次软化与邻区渗色
-        // （raylib 后端同样设了 TEXTURE_FILTER_POINT）。
+        // （历史 raylib 后端同样设了 TEXTURE_FILTER_POINT）。
         check_sdl(
             SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_NEAREST),
             "SDL_SetTextureScaleMode"
@@ -1299,7 +1299,7 @@ namespace nandina::render
             return {};
         }
         (void)SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
-        // 与 raylib 后端一致的线性缩放：图片缩放时平滑，不出现块状像素。
+        // 延续历史后端的线性缩放：图片缩放时平滑，不出现块状像素。
         (void)SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_LINEAR);
         if (!SDL_UpdateTexture(texture, nullptr, rgba.data(), width * 4)) {
             SDL_DestroyTexture(texture);

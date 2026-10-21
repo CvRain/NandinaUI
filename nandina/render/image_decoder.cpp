@@ -10,8 +10,6 @@
 #include <vector>
 
 // 只启用需要的格式并禁用 stdio：解码只走内存，避免额外依赖。
-// 用 static 实现：raylib 也内联了同一份 stb（非 static），不隔离会出现重复符号，
-// 直到 raylib 退役为止都需要这两个宏。
 #define STB_IMAGE_STATIC
 #define STB_IMAGE_RESIZE_STATIC
 #define STB_IMAGE_IMPLEMENTATION

@@ -10,7 +10,8 @@
 >
 > **方向已定**（作者 2026-10-15）：先补齐 D4 计划内容，随后把生产后端替换为 SDL3。
 > 目标形态、所有权划分、能力契约与阶段验收见[平台与后端契约](platform_backend_contract.md)；
-> 本文只负责「测到了什么、没测什么」。迁移本身尚未开始，raylib 仍是唯一生产路径。
+> 本文只负责「测到了什么、没测什么」。**历史勘误（2026-10-20）**：迁移已完成，raylib 已完整退役；
+> 下文“当前/生产路径”均指本文写作时的状态，不作为现状。
 
 **探测源码已入库**：[probe/cross_platform/](../../probe/cross_platform/README.md)（`desktop/`、`web/`、
 `tools/verify_toolchain.sh`）。只追踪源码：SDL 源码树、emsdk、构建产物仍然现取现建

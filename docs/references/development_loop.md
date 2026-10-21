@@ -211,5 +211,5 @@ painter 家族写好了但停在 `primitives/` 里当不了应用依赖、
 - 版本写 min 与 pin 的版本/完整 commit，不写浮动分支；来源默认 vendored，auto 明确为系统优先；
 - 单项迁移时同步解析报告、SDK 输入收集/许可证/manifest 和下游消费，不等全部迁完再修分发；
 - nodownload 配合断网验证；wrap-git 保留固定源码检出，不能只保存 packagecache；
-- 显式启用 SDL 的 CI 证明 SDL 路径，自动回落 raylib 的成功不算；关闭功能不查找或下载专属依赖；
+- 显式启用 SDL 的 CI 证明 SDL 路径，auto 无后端构建的成功不算；关闭功能不查找或下载专属依赖；
 - source/feature 开关、报告和 SDK 改造未落地前保持 planned，下一轮先做最小实验。

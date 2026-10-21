@@ -11,12 +11,12 @@
 | 输入与焦点 | 现有鼠标/键盘、输入焦点与作用域可用；D1 统一交互语义、焦点提示和文本会话的设计已接受 | [焦点与输入](focus_and_input.md) 为 planned：先实现鼠标/键盘提示策略，再接文本输入会话与其他设备 |
 | 文本与分层 | 纯布局约束在 `foundation`，文本布局协议在 `text`，字体请求值在 `theme`；旧布局、文本与字体转发入口已退出 | `theme::StyleDocument` 对字体注册的依赖仍待收口 |
 | 路由元数据 | 路由身份由页面类型 `PageKey` 确定；当前 `type` 字段既分组也作为标题 | D3 初步方案已接受、未实施：重命名 `nav_group`；空值是不分组、无标题，route 仍可见；分组按值全局合并 |
-| 平台与渲染 | 编入 SDL3 时默认走 SDL3（环境变量可覆盖），未找到 SDL3 的 auto 构建仍走 raylib；`IPlatformWindow`、设备包装入口和三页 trace 对照已存在。生产 SDL 的填充/描边/圆/线段/弧已有 SDF：Linux Vulkan(SPIR-V) 与 Windows D3D12(DXIL) 均通过设备级像素验收，其余图元仍走 CPU 几何 | 混合/AA/图片/裁剪见 D7，键码见 D8；Windows 为实验性（构建/单元/doctor/DXIL 已验收，无应用交付承诺），macOS 不支持，Web 非交付路径。P3 落地不等于 P0–P4 全部验收完成 |
+| 平台与渲染 | 默认启用 SDL3（唯一内置后端），raylib 已删除；显式关闭 SDL3 时须注入平台才能打开窗口；`IPlatformWindow`、设备包装入口和三页 trace 对照已存在。生产 SDL 的填充/描边/圆/线段/弧已有 SDF：Linux Vulkan(SPIR-V) 与 Windows D3D12(DXIL) 均通过设备级像素验收，其余图元仍走 CPU 几何 | 混合/AA/图片/裁剪见 D7，键码见 D8；Windows 为实验性（构建/单元/doctor/DXIL 已验收，无应用交付承诺），macOS 不支持，Web 非交付路径。P3 落地不等于 P0–P4 全部验收完成 |
 | 动画 | 值级 motion 在 `foundation/motion`，节点 endpoint、宿主与组调度在 `scene`；旧 `animation/` 入口已退出；L2 opacity/translate/scale 可用 | `NodeBuilder::group` 仅开放同节点、扁平 Tween 组合；跨节点、组内 Spring、Keyframes 作者入口与浮层自动过渡未完成，见 [节点表现层 §6.1](node_presentation.md) |
 | 布局与文本成本 | 排列容器及 `NanControl::layout_to` 已用在生产路径；anchors 内核与作者入口已落地；**布局收敛**（Label 页 80.4 ms/帧 → 2.5 ms、稳态 0 次布局）与**两个文本 O(n²)** 已修复，见 [布局收敛](layout_convergence_and_text_measurement.md) 与 [整形成本](text_shaping_cost.md) | `fill` 画布无法占据排列容器剩余空间（见 [Anchors §5.3](anchors.md#53-剩余验收)）；`max_width` 仍会被父级紧约束压过；Label 页打开约 271 ms（构建 159 ms，[整形成本 §5.1](text_shaping_cost.md)）；一次完整布局仍约 55 ms |
 | 分发 | Linux 桌面源码分发 profile 已有构建与 SDK 流程；Windows 为实验性构建（无安装器承诺） | macOS 不支持；Modules、CMake package 与跨平台应用交付仍待重新评估 |
 | 资源构建与运行时 | 四类后端、nanres 与构建 helper 已有实现；SQLite 已 vendored，但依赖无条件启用，工具仍链接完整框架；查询结果不带挂载身份 | [D5](resource_build_and_deployment.md) 已冻结、未实施：先解耦，再独立交付作用域与身份；声明式构建和部署定位随后汇合 |
-| 工程门禁 | 代码格式统一（固定 clang-format 23.1.1）、header-surface 184/11、shader artifact 校验、golden 清单、backend budget 确定性门禁均已接入；GPU 相关检查留在本地/发布检查 | D5 关闭组合与纯工具依赖门禁尚未实现；无 GPU 的 CI 不覆盖页面 golden 与性能采样 |
+| 工程门禁 | 代码格式统一（固定 clang-format 23.1.1）、header-surface 182/10、shader artifact 校验、golden 清单、backend budget 确定性门禁均已接入；GPU 相关检查留在本地/发布检查 | D5 关闭组合与纯工具依赖门禁尚未实现；无 GPU 的 CI 不覆盖页面 golden 与性能采样 |
 
 ## D1–D8 与依赖工程的状态
 
@@ -25,7 +25,7 @@
 | D1 输入、焦点与文本会话 | 设计方向已接受；焦点事实、提示策略、文本会话分离 | 未实施；[正式契约](focus_and_input.md)。先焦点提示，随后组合输入/软键盘，再其他设备 |
 | D2 主题方案与状态订阅 | 讨论已汇总；只读状态、事件和主题方案模型需定形 | 待审阅；[主题设计](theme_authoring_and_state.md)。先解决状态可观察性，完整主题作者模型另批 |
 | D3 导航分组 | `type → nav_group`、空值未分组、同值全局合并已接受 | 未实施；[D3](reference_draft.md#d3-路由身份与导航分组开放到哪一层)，独立小批 |
-| D4 平台与后端 | SDL3 默认路径与 host seam 已落地，raylib 保留对照 | **已收尾**：生产 SDF 在 Vulkan 与 Windows D3D12 通过设备级验收；[阶段证据](platform_backend_contract.md)。Windows 为实验性支持，macOS 不支持，Web 不是交付面 |
+| D4 平台与后端 | SDL3 默认路径与 host seam 已落地，raylib 已完整退役 | **已收尾**：生产 SDF 在 Vulkan 与 Windows D3D12 通过设备级验收；[阶段证据](platform_backend_contract.md)。Windows 为实验性支持，macOS 不支持，Web 不是交付面 |
 | D5 资源构建与部署 | 范围与目标契约冻结 | 未实施；[正式契约](resource_build_and_deployment.md)，内部六批见下节 |
 | D6 作者 DSL 与内容测量 | 方向已接受；Label 能力、绑定覆盖、测量详细契约待审阅 | 未实施；[D6](authoring_dsl_and_content_measurement.md)，测量先于 Section/语法糖 |
 | D7 渲染质量与图片 | 混合修复 → SDF 高质量路径；共享解码；分层处理圆角裁剪 | 混合修复、生产 SDF（填充/描边/圆/线段/弧）与设备级/页面级验收（Linux golden）、共享图片解码已落地；阴影/裁剪、MSL、raylib 退役与 Windows 页面基线未做；[D7](reference_draft.md#d7-渲染质量与后端视觉一致性) |
@@ -138,5 +138,8 @@ showcase 页面的小视口/零尺寸、反复换边和页面销毁回调测试�
 - **P3 输入与焦点**：D8 键身份/事件保序 → D1 焦点提示 → 文本会话/IME；
 - **P4 作者与组件**：D6 Label 能力与测量 → 阶段 5 数据组件 → D2/D3。
 
-本轮之后建议先做 **P1.1 发布检查脚本** 与 **P1.6 图片解码**：前者把已有门禁变成可重复流程，
-后者是移除 raylib 的前置（CLI 工作已归 NandinaCLI 独立仓库）。
+P1.1 与 P1.6 核心实现已完成，raylib 后端、工厂、枚举项、wrap 与依赖已完整删除。
+当前 vendored SDL3 默认静态、可选共享；无后端构建需关闭 showcase，并在打开窗口前注入平台。
+退役验收入口为窗口生命周期、后端选择、主套件、无后端 unit 与 SDK static/shared 消费。
+Windows 静态模式复验、Image 页面端到端采样和 P1.5b 阴影/裁剪仍待完成。
+CLI 与生成模板唯一归属 NandinaCLI；框架保留最小 SDK 应用契约 fixture。

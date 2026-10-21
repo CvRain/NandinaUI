@@ -25,34 +25,6 @@ spdlog_options = cmake.subproject_options()
 spdlog_options.add_cmake_defines({})
 spdlog_options.set_install(false)
 
-# 配置 raylib 的CMake选项
-raylib_options = cmake.subproject_options()
-raylib_defines = {
-    'CUSTOMIZE_BUILD': 'ON',
-    'SUPPORT_FILEFORMAT_JPG': 'ON',
-    # 示例不是构建需求：默认开启会让 CMake subdir('examples')（历史上一直在编，只是被忽略）。
-    # 关掉它既减少构建时间，也让 SDK 可以安全地不携带 examples/。
-    'BUILD_EXAMPLES': 'OFF',
-}
-if host_machine.system() == 'linux'
-    linux_window_system = get_option('linux_window_system')
-    if linux_window_system == 'auto'
-        session_type = run_command('printenv', 'XDG_SESSION_TYPE', check: false).stdout().strip()
-        wayland_display = run_command('printenv', 'WAYLAND_DISPLAY', check: false).stdout().strip()
-        linux_window_system = session_type == 'wayland' or wayland_display != '' ? 'wayland' : 'x11'
-    endif
-    raylib_defines += linux_window_system == 'wayland' ? {
-        'GLFW_BUILD_WAYLAND': 'ON',
-        'GLFW_BUILD_X11': 'OFF',
-    } : {
-        'GLFW_BUILD_WAYLAND': 'OFF',
-        'GLFW_BUILD_X11': 'ON',
-    }
-    message('Linux window system: ' + linux_window_system)
-endif
-raylib_options.add_cmake_defines(raylib_defines)
-raylib_options.set_install(false)
-
 # 配置 utf8proc 的 CMake 选项
 utf8proc_options = cmake.subproject_options()
 utf8proc_options.add_cmake_defines({
@@ -73,7 +45,6 @@ tomlplusplus_options.set_install(false)
 
 # 配置 subproject
 spdlog_subproj = cmake.subproject('spdlog', options: spdlog_options)
-raylib_subproj = cmake.subproject('raylib', options: raylib_options)
 utf8proc_subproj = cmake.subproject('utf8proc', options: utf8proc_options)
 tomlplusplus_subproj = cmake.subproject('tomlplusplus', options: tomlplusplus_options)
 freetype_subproj = subproject(
@@ -118,7 +89,6 @@ nlohmann_json_subproj = subproject('nlohmann_json')
 
 # 获取依赖（静态库）
 spdlog_dep = spdlog_subproj.dependency('spdlog')
-raylib_dep = raylib_subproj.dependency('raylib')
 utf8proc_dep = utf8proc_subproj.dependency('utf8proc')
 # Meson 的 CMake 适配器将命名空间 target `tomlplusplus::tomlplusplus`
 # 规范化为底层实际 target 名。
@@ -138,9 +108,10 @@ nlohmann_json_dep = nlohmann_json_subproj.get_variable('nlohmann_json_dep')
 # 显式分支更小也更可测。默认 vendored：构建来源确定，不依赖机器上装了什么。
 #
 # 失败策略：`sdl_backend=enabled` 且没有任何来源解析成功 → error（不许静默）；
-# `auto` 且都没解析到 → 回落 raylib 并打印原因；`disabled` → 完全不查找、不下载。
+# `auto` 且都没解析到 → 无内置窗口后端；`disabled` → 完全不查找、不下载。
 sdl_backend_option = get_option('sdl_backend')
 sdl3_source_option = get_option('sdl3_source')
+sdl3_linkage_option = get_option('sdl3_linkage')
 sdl3_min_version = '3.4.0'
 # pin 必须是不可变的完整 commit（tag 只写在 wrap 的注释里供人阅读）。
 sdl3_pin = '829a65d769d935c4852f8159e964312c0957260a'
@@ -176,21 +147,27 @@ if not sdl_backend_option.disabled()
         # 系统副本的静态/动态由发行版决定，不假装知道；pin/revision 保持 null。
         sdl3_linkage = 'unknown'
         sdl3_version = sdl3_dep.version()
+        if sdl3_linkage_option != 'static'
+            warning('sdl3_linkage only controls vendored SDL3; system linkage is selected by pkg-config and reported as unknown')
+        endif
     elif sdl3_source_option != 'system'
         sdl3_cmake_options = cmake.subproject_options()
         sdl3_cmake_options.add_cmake_defines({
             'SDL_TESTS': 'OFF',
             'SDL_EXAMPLES': 'OFF',
             'SDL_INSTALL': 'OFF',
-            # 与 raylib 内置 GLFW 的静态链接冲突：两边都带 Wayland 协议生成代码
-            # （`wp_fractional_scale_manager_v1_interface` 重复定义，静态库无法共存）。
-            # 编成共享库让两边各自持有符号、互不干扰，同时保留 raylib 的原生 Wayland。
-            'SDL_SHARED': 'ON',
-            'SDL_STATIC': 'OFF',
+            'SDL_SHARED': sdl3_linkage_option == 'shared' ? 'ON' : 'OFF',
+            'SDL_STATIC': sdl3_linkage_option == 'static' ? 'ON' : 'OFF',
             'SDL_TEST_LIBRARY': 'OFF',
         })
+        if host_machine.system() == 'linux' and get_option('linux_window_system') != 'auto'
+            sdl3_cmake_options.add_cmake_defines({
+                'SDL_WAYLAND': get_option('linux_window_system') == 'wayland' ? 'ON' : 'OFF',
+                'SDL_X11': get_option('linux_window_system') == 'x11' ? 'ON' : 'OFF',
+            })
+        endif
         sdl3_subproject = cmake.subproject('SDL3', options: sdl3_cmake_options)
-        sdl3_dep = sdl3_subproject.dependency('SDL3-shared')
+        sdl3_dep = sdl3_subproject.dependency('SDL3-' + sdl3_linkage_option)
         sdl3_origin = 'vendored'
         sdl3_method = 'cmake'
         sdl3_resolved_by = 'cmake.subproject'
@@ -198,8 +175,7 @@ if not sdl_backend_option.disabled()
         sdl3_pin_json = '"' + sdl3_pin + '"'
         sdl3_pin_version_json = '"' + sdl3_pin_version + '"'
         sdl3_revision_json = '"' + sdl3_pin + '"'
-        # 静态 SDL3 与 raylib 内置 GLFW 的 Wayland 协议生成代码符号冲突，故用共享库。
-        sdl3_linkage = 'shared'
+        sdl3_linkage = sdl3_linkage_option
         sdl3_version = sdl3_pin_version
     endif
     if not sdl3_dep.found()
@@ -217,7 +193,7 @@ if not sdl_backend_option.disabled()
         warning(
             'SDL3 未解析到（sdl3_source='
             + sdl3_source_option
-            + '），auto 回落 raylib 路径；显式启用请用 -Dsdl_backend=enabled',
+            + '），没有内置窗口后端；打开窗口需启用 SDL3 或注入 IPlatformWindow',
         )
     endif
 endif
@@ -231,7 +207,7 @@ configure_file(
     output: 'deps.json',
     configuration: {
         # `enabled` 表示"SDL3 实际被采用"，而不是"后端开关没关"：
-        # auto + 未解析时后端开关是开着的，但构建走的是 raylib。
+        # auto + 未解析时后端开关未关，但没有内置窗口后端。
         'SDL3_ENABLED': sdl3_dep.found().to_string(),
         'SDL3_SOURCE': sdl3_origin,
         'SDL3_VERSION': sdl3_version,
@@ -304,8 +280,6 @@ nanres = executable(
     ['tools/nanres_main.cpp', 'tools/resource_manifest.cpp', 'tools/resource_packager.cpp'],
     dependencies: [nandina_dep, tomlplusplus_dep, openssl_dep],
 )
-# D3：项目级工作流 CLI（脚手架/体检），只依赖 C++ 标准库，不链接框架运行时。
-# 放在 tools/ 子目录，构建产物为 buildDir/tools/nandina。
 nanres_build_helper = [python, files('tools/nanres_build_helper.py')]
 nandina_portable_stage_helper = [python, files('tools/portable_stage.py')]
 nandina_resource_toolchain = {
@@ -320,13 +294,16 @@ if not meson.is_subproject()
     endif
 
     # 本地 playground 不随仓库发布；目录存在时才加入开发构建。
-    if fs.exists('playground/meson.build')
+    if get_option('playground') and fs.exists('playground/meson.build')
         subdir('playground')
     endif
 
     # 组件展示子项目：只作为主项目时构建。放在 subproject 保护之外会让下游消费者
     # 连带编译这个演示程序（见 showcase/meson.build），所以必须留在本块内。
     if get_option('showcase') and fs.exists('showcase/meson.build')
+        if not sdl3_dep.found()
+            error('showcase requires SDL3; use -Dshowcase=false for a build without a window backend')
+        endif
         subdir('showcase')
     endif
 

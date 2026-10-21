@@ -1,7 +1,7 @@
 # 第三方依赖策略：来源、开关与版本
 
-> **状态：批次 2 已完成；2026-10-18 核对修订。**
-> 11 个代码依赖使用固定 commit 的 wrap，字体保留 submodule，SQLite 保留入库源码。
+> **状态：批次 2 已完成，raylib 完整退役（2026-10-20）。**
+> 10 个代码依赖使用固定 commit 的 wrap，字体保留 submodule，SQLite/stb 保留入库源码。
 > SDL3 三态来源、解析报告与 SDK 消费门禁已落地；其它功能/来源开关和可选清单生成器按正文另列计划。
 > 执行顺序见[项目进度与下一步](project_status.md)：SDL3 先交付，其余依赖逐项迁移，
 > 不要求完成全部迁移才开始 SDF。D5 的资源模块解耦与运行时身份仍按独立批次推进。
@@ -26,25 +26,62 @@
 
 ## 2. 当前事实与机制核对
 
-### 2.1 仓库现状（2026-10-18 迁移后）
+### 2.1 仓库现状（2026-10-20 退役后）
 
 - **stb（vendored，非 wrap）**：`third_party/stb/stb_image.h` 与 `stb_image_resize2.h`
   （Public Domain）用于后端无关的 CPU 图片解码，见 `third_party/stb/README.md`。
-- **raylib 计划退役**：图片解码已迁走（2026-10-20），剩余用途是后备渲染后端与窗口测试宿主；
-  这两项迁走后 raylib 将从依赖闭包和 CI 中移除。移除前它仍是硬依赖（`nandina_dependencies`）。
-- **11 个依赖全部是 `wrap-git`**（SDL3、raylib、spdlog、box2d、utf8proc、tomlplusplus、freetype、
+- **raylib 已退役**：后端源码、工厂、窗口枚举项、wrap、构建依赖均删除，不保留 opt-in 开关。
+  窗口生命周期测试显式使用 SDL3；原 raylib CI 改为无窗口后端的库/工具测试。
+- **10 个依赖全部是 `wrap-git`**（SDL3、spdlog、box2d、utf8proc、tomlplusplus、freetype、
   harfbuzz、fribidi、Catch2、nlohmann_json），每个 pin 完整 40 位 commit；只剩**字体数据包**
   `caskaydia-cove` 是 submodule，SQLite 仍是 amalgamation。
-- 构建方式沿用迁移前的接法：CMake —— raylib、spdlog、box2d、utf8proc、tomlplusplus、SDL3；
+- 构建方式沿用迁移前的接法：CMake —— spdlog、box2d、utf8proc、tomlplusplus、SDL3；
   原生 Meson —— freetype、harfbuzz、fribidi、Catch2、nlohmann_json。
 - 迁移只换来源，不换构建入口：`cmake.subproject(...)` / `subproject(...)` 调用与 target 名保持不变。
 - OpenSSL 仍来自系统。
-- `sdl_backend=auto` 未找到 SDL3 时仍可构建 raylib 路径；这不证明 SDL 交付成功。
+- `sdl_backend` 默认 enabled；显式 auto 找不到系统 SDL3 时可构建无内置窗口后端的库，
+  但须 `showcase=false`，窗口打开必须注入平台。disabled 不查找或下载 SDL3。
+- vendored SDL3 默认 `sdl3_linkage=static`，可选 shared；system 继续由 pkg-config 决定链接方式。
+  `linux_window_system` 现在控制 vendored SDL3 的 X11/Wayland 构建选项，auto 由 SDL 探测。
 - `tools/sdk_bundle.py` 通过 `git ls-files --recurse-submodules` 收集源码，
   manifest 也记录 submodule；依赖来源改变时必须同时迁移这条交付链。
-- wrap 下载到 `subprojects/<dep>/` 的是**未跟踪工作树**（不是 submodule）：`.gitignore` 目前只覆盖
-  `packagecache` 与少数几个目录，`git status` 会把它算成未跟踪文件，SDK 的 `ls-files` 也收不到它。
-  两项都要在首批迁移时一起改：忽略规则 + 显式的依赖源码/许可证收集路径。
+- wrap 检出是被忽略的工作树，SDK 显式收集其源码/许可证。旧 raylib 检出仍被忽略，
+  避免升级工作区后出现大量未跟踪文件，但不再进入 SDK。
+
+**退役后的交付边界**：静态 SDL3 不需要 SDL3 DSO，仍需要系统运行库与驱动。
+`portable-bundle` 按 `deps.json` 分别检查静态无 SDL3 动态依赖，以及共享便携布局；
+`sdk-vendored-consumer` 从归档离线构建真实应用契约 fixture，分别切换 static/shared 并运行，
+同时断言 SDK 和构建 target 不含 raylib。下面 §2.4–§2.7 的共享强制策略与计时属于历史证据，
+其中 GLFW 符号冲突及“必须共享”的结论随 raylib 删除而失效。
+
+2026-10-20 本轮 Linux 验证：
+
+| 检查 | 结果与边界 |
+| --- | --- |
+| SDL3 静态主构建 | showcase、库与测试编译通过；真实 SDL3 GPU 窗口完成三帧关闭；构建 target 无 raylib |
+| 主套件 | 补充窗口 runner 与 DLL 搜索回归测试后，非 SDK 项 99/99；两个离线 SDK fixture 在前一轮分别通过，本次未重复执行 |
+| 无后端构建 | `sdl_backend=disabled, showcase=false`，全套 94 通过、1 SKIP（窗口生命周期）；target 无 SDL3/raylib，不能打开内置窗口 |
+| ASan/UBSan | system SDL3 的前轮 84/84 unit；本轮 vendored 静态 SDL3 + Clang 21/lld 21 构建及 84/84 unit 通过；均沿用既有 `detect_leaks=0`，不代表泄漏检测通过 |
+| no-RTTI | vendored 静态 SDL3，84/84 unit |
+| GPU 设备验收 | 普通、ASan、no-RTTI 三种构建的既有验收通过；本轮 vendored 静态 SDL3 + ASan/lld 的 `sdf_device_test --require-gpu --expect-format spirv` 也通过 |
+| 资源 SDK fixture | 从归档离线构建并生成资源成功（175.44 s，本轮并行构建环境，不作性能基线） |
+| 应用 SDK fixture | 从归档离线构建、运行 static/shared 两种模式成功（207.56 s）；仅在 vendored SDL 构建注册（无后端/系统 SDL 没有可打包的源码树）；无 raylib 源码/target，静态无 SDL3 DSO、共享解析到自身构建树 |
+| 格式 | pinned clang-format 23.1.1 全量扫描通过；`third_party/stb/.clang-format` 沿用 SQLite 的禁格式化策略，未改写第三方源码 |
+| 窗口测试 | auto 模式下无效视频驱动、环境变量显式跳过均报告 Meson SKIP；enabled 模式下无效驱动保持失败（Catch2 退出码 42），正常窗口三帧退出通过 |
+| 本地 playground | 移除旧 bench target 后，`-Dplayground=true` 的 playground 目标编译通过；仍属未跟踪本地代码 |
+| 平台范围 | 上述为 Linux 本地证据；Windows 静态模式与 DXIL 必须在真实桌面复验；CI 配置已更新，未声称远端任务已运行 |
+
+CI 常规矩阵分别覆盖 GCC 静态 SDL3 与 Clang 共享 SDL3；原 raylib-only 职责改为无后端库/工具
+构建，并保留“不预取 SDL3、配置后目录仍不存在”的断言。历史 `subprojects/raylib/` 工作树
+可留在本机，但不会被构建或打包。未跟踪 playground 现在须显式 `-Dplayground=true`，
+其中旧 raylib bench 已从本地构建目标移除，源码保留待迁移；这一改动随被忽略的 playground
+留在本机，不进入 SDK 或主仓库模板。
+
+CI 的无后端任务现在执行全套测试，窗口不可用时由 Catch2 SKIP 经 runner 映射为 Meson
+退出码 77；`NANDINA_SKIP_WINDOW_TESTS=1` 可在 SSH/session 0 显式跳过。系统 SDL 的 Windows
+DLL 搜索回退到编译器目录/PATH，未找到时提示链接方式未知。静态/禁用路径不复制 SDL DLL。
+`sanitize-vendored-lld` 改验默认静态链接，本地实验已通过；主 sanitizer 任务暂保留 system SDL，
+待远端 CI 证据后再评估移除历史例外。
 
 ### 2.2 CMake wrap 支持 dependency 回退
 
@@ -114,7 +151,7 @@ freetype 使用 freetype2 名称，SDL3 条目是 3.4.14 的社区 Meson 端口�
 | 选项 | `-Dsdl3_source=auto\|system\|vendored`（默认 **vendored**）；`sdl_backend` 仍是"要不要这个后端"的独立开关 |
 | 解析位置 | 根 `meson.build` 顶部的显式三态块（只有一个依赖；超过 2–3 个再抽 `meson/deps.build` + `subdir()`，届时也要先定义共享变量，Meson 没有用户函数） |
 | 报告 | `configure` 打印 `[deps] sdl3 -> <origin> <version>`；`build/deps.json` 由 `meson/deps.json.in` 模板生成（`configure_file(content:)` 在 Meson 1.12 不存在，`output_format:'json'` 只接受扁平 dict） |
-| 失败策略 | `sdl_backend=enabled` 且未解析 → `error()`；`auto` 未解析 → 警告并回落 raylib；`disabled` → 不查找、不下载 |
+| 失败策略 | `sdl_backend=enabled` 且未解析 → `error()`；`auto` 未解析 → 警告并保留无内置后端的库构建（showcase 须关闭）；`disabled` → 不查找、不下载 |
 | 忽略规则 | `.gitignore` 增加 `/subprojects/SDL3/`（wrap 检出是未跟踪工作树） |
 | pin 形式 | wrap 的 `revision` 是**完整 40 位 commit**（`829a65d7…`，对应 `release-3.4.18`），tag 只写在注释里：tag 可移动，不满足不可变来源 |
 | 检出校验 | `tools/sdk_bundle.py` 校验：revision 必须是 40 位 commit、`HEAD == pin`（否则失败）、逐依赖 `git status --porcelain --untracked-files=all` 为空（`--allow-dirty` 时记录 `dirty: true`）。Meson 自己写入的 `.meson-subproject-wrap-hash.txt` 不算本地修改 |
@@ -213,7 +250,7 @@ vendored SDL3 是共享库，而 **CMake 子项目没有 Meson install 规则**�
   SDK 离线配置/编译/运行，缺文件就会失败（实测 133 s 通过，比裁剪前的 190 s 更快）。
 - **迁移后仍未做**：OS 包/安装器层面的 DSO 打包（当前没有应用安装路径可验）、
 "internal 类型进公开签名"的评审项（脚本只查 include 方向）、以及"把两个后端拆成独立库"的重构
-（拆库后静态 SDL3 与 raylib 的符号冲突会自然消失，那时可重新评估链接方式）。
+（raylib 退役已消除该符号冲突；当前静态/共享选择见 §2.1）。
   其余依赖**已全部迁移**；`header-surface` 门禁**已落地**（[SDK 表面](sdk_surface.md) §4）。
 
 ## 3. 来源、版本与构建适配
@@ -260,7 +297,7 @@ Meson 脚本不支持任意用户函数定义，旧 `resolve_dep(...)` 伪代码
 
 至少保证：system 不偷偷走子项目，vendored 不偷偷采用系统同名库，nodownload 绝不下载。
 冲突配置须明确报错或说明解析结果，不得静默改变用户选择。
-SDL 交付关卡显式启用后端，不能让 auto 回落 raylib 后仍宣称 SDL 检查通过。
+SDL 交付关卡显式启用后端，不能让 auto 无后端构建后仍宣称 SDL 检查通过。
 
 ## 5. 解析报告与单一声明
 
@@ -274,7 +311,7 @@ SDL 交付关卡显式启用后端，不能让 auto 回落 raylib 后仍宣称 S
 | `version` / `min` | 实际版本 / 硬下限 |
 | `pin` / `pin_version` | 固定的完整 commit（system 与 disabled 为 `null`）/ 可读的 pin 版本 |
 | `revision` | 实际 commit；vendored 在 configure 期等于 pin（检出是否真的在 pin 上由 SDK 打包器校验） |
-| `path` / `method` / `linkage` / `license` | 源码目录 / cmake 或 pkg-config / shared 或 unknown / 许可证 |
+| `path` / `method` / `linkage` / `license` | 源码目录 / cmake 或 pkg-config / static、shared 或 unknown / 许可证 |
 
 报告反映实际输入，不能只是抄一遍 wrap。CI 检查关键字段并验证其确实对应构建依赖。
 

@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """共享依赖的运行时分发守卫（便携应用目录）。
 
-背景：vendored SDL3 是**共享库**（静态 SDL3 与 raylib 内置 GLFW 的 Wayland 协议符号冲突，
-见 docs/references/dependency_policy.md §2.5）。CMake 子项目没有 Meson install 规则——
+默认静态 SDL3 不应出现在可执行文件的动态依赖中。选择共享 SDL3 时，
+CMake 子项目没有 Meson install 规则——
 `meson introspect --installed` 里 SDL3 条目为 0——所以"只装可执行文件"的程序在运行期找不到
 `libSDL3_shared.so.0`。
 
-这个测试证明两件事，且都不需要显示器：
+共享模式证明两件事，且都不需要显示器：
 
 1. 反例：只拷二进制 → `ldd` 解析不到 `libSDL3_shared.so.0`；
 2. 正例：`bin/ + lib/` 便携布局 + `$ORIGIN/../lib` RUNPATH → `ldd` 解析到打包目录内的 DSO。
@@ -14,6 +14,7 @@
 没有 patchelf 时明确跳过（CI 安装它）。
 """
 
+import json
 import pathlib
 import shutil
 import subprocess
@@ -37,6 +38,16 @@ def main() -> int:
     binary = build_root / "showcase" / "nandina_showcase"
     if not binary.is_file():
         raise SystemExit(f"missing built application: {binary}; run `meson compile` first")
+
+    dependencies = json.loads((build_root / "deps.json").read_text())["deps"]
+    sdl3 = next(item for item in dependencies if item["name"] == "sdl3")
+    if sdl3["linkage"] == "static":
+        dynamic = subprocess.run(
+            ["readelf", "-d", str(binary)], check=True, text=True, capture_output=True
+        ).stdout.lower()
+        assert "sdl3" not in dynamic and "raylib" not in dynamic, dynamic
+        print("static SDL3: application has no SDL3 or raylib runtime DSO dependency")
+        return 0
 
     libraries = find_library(build_root)
     assert libraries, "no libSDL3_shared.so* in the build tree; is sdl3_source=vendored?"

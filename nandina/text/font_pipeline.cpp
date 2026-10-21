@@ -178,16 +178,16 @@ namespace nandina::text
         const FontPipeline& pipeline,
         const FontPipelineOptions options
     ) -> std::size_t {
-        constexpr std::size_t raylib_bytes_per_atlas_pixel = 5;
+        constexpr std::size_t bytes_per_atlas_pixel = 5;
         (void)options;
         const auto pixels = pipeline.atlas_pixel_count();
         if (pixels == 0) {
             return 0;
         }
         constexpr auto maximum = std::numeric_limits<std::size_t>::max();
-        if (pixels > maximum / raylib_bytes_per_atlas_pixel) {
+        if (pixels > maximum / bytes_per_atlas_pixel) {
             return maximum;
         }
-        return pixels * raylib_bytes_per_atlas_pixel;
+        return pixels * bytes_per_atlas_pixel;
     }
 } // namespace nandina::text

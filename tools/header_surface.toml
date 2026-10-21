@@ -19,10 +19,6 @@ path = "nandina/app/detail/linux_clipboard.hpp"
 level = "internal"
 
 [[headers]]
-path = "nandina/app/detail/raylib_platform_window.hpp"
-level = "internal"
-
-[[headers]]
 path = "nandina/app/detail/sdl_platform_window.hpp"
 level = "internal"
 
@@ -182,10 +178,6 @@ level = "experimental"
 
 [[headers]]
 path = "nandina/reactive/signal.hpp"
-level = "experimental"
-
-[[headers]]
-path = "nandina/render/backends/raylib_device.hpp"
 level = "experimental"
 
 [[headers]]

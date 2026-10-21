@@ -2,8 +2,8 @@
 // Created by cvrain on 2026/7/2.
 //
 // Abstract render device. All coordinates are world coordinates (screen pixels,
-// y down). Backends submit primitives to a concrete renderer (raylib / offscreen
-// / recording test double). No raylib types appear in this header.
+// y down). Backends submit primitives to a concrete renderer (SDL3 / offscreen
+// / recording test double).
 //
 
 #ifndef NANDINA_EXPERIMENT_RENDER_DEVICE_HPP
@@ -36,7 +36,7 @@ namespace nandina::render
         auto operator==(const TextureHandle&) const -> bool = default;
     };
 
-    /// 图片加载时的可选预处理（在 raylib Image 上执行，像素坐标）。
+    /// 图片加载时的可选 CPU 预处理（像素坐标）。
     struct ImageLoadOptions {
         std::optional<NanRect> crop = std::nullopt; // 先裁剪
         std::optional<NanSize> resize = std::nullopt; // 再缩放到目标尺寸

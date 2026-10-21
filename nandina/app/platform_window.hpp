@@ -51,8 +51,7 @@ namespace nandina::app
 
     /// 一个平台实现 = 窗口 + 输入 + 呈现 + 剪贴板 + 匹配的绘制设备。
     ///
-    /// 实现见 `detail/raylib_platform_window.*`（raylib + GLFW，历史生产路径）与
-    /// `detail/sdl_platform_window.*`（SDL3，D4 的目标平台层）。
+    /// 内置实现见 `detail/sdl_platform_window.*`。
     class IPlatformWindow {
     public:
         virtual ~IPlatformWindow() = default;
@@ -79,8 +78,7 @@ namespace nandina::app
         virtual void poll_input(FrameInput& out) = 0;
 
         // ---- 呈现 ----
-        /// 呈现这一帧。注意：raylib 的 `EndDrawing()` 历史上由设备负责，因此 raylib 平台
-        /// 这里是 no-op；SDL 平台在这里 present（设备不持有 swap）。
+        /// 呈现这一帧；设备不持有 swap。
         virtual void present() = 0;
 
         // ---- 剪贴板 ----
@@ -91,7 +89,7 @@ namespace nandina::app
         /// 用本平台的窗口上下文创建绘制设备。
         [[nodiscard]] virtual auto make_render_device()
             -> std::unique_ptr<render::IRenderDevice> = 0;
-        /// 平台名（诊断与能力报告用），例如 "raylib"、"sdl3"。
+        /// 平台名（诊断与能力报告用），例如 "sdl3"。
         [[nodiscard]] virtual auto name() const -> std::string_view = 0;
     };
 

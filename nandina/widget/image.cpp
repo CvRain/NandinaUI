@@ -211,7 +211,7 @@ namespace nandina::widget
         }
         // 能力查询优先：两条路径都不成立时，不要每次刷新都重复"尝试-失败-告警"。
         // 服务路径 = 应用解码器（TextureCache）+ 后端 RGBA 上传；
-        // 直载路径 = 后端自己解码（raylib）。见 platform_backend_contract.md §3。
+        // 直载路径 = 设备自行解码的可选能力（历史 raylib 后端曾提供）。见 platform_backend_contract.md §3。
         const bool has_decoder = texture_cache_ != nullptr && texture_cache_->can_decode();
         const bool can_service = has_decoder && device.supports_rgba_texture_upload();
         const bool can_direct = device.supports_direct_image_loading();

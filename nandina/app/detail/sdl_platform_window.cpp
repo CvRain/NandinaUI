@@ -19,7 +19,7 @@ namespace nandina::app::detail
     namespace
     {
         // ─── GLFW 键码空间（`widget/key_codes.hpp`）────────────────────────────
-        // 框架的键码就是 GLFW 的：raylib 直接透传。SDL 的键码不同，必须翻译。
+        // 框架暂时沿用 GLFW 键码值，历史 raylib 后端曾直接透传。SDL 的键码不同，必须翻译。
         // 下面这些值对应 GLFW_KEY_*，与 key_codes.hpp 一一对应。
         constexpr int kGlfwEscape = 256;
         constexpr int kGlfwEnter = 257;
@@ -271,7 +271,7 @@ namespace nandina::app::detail
 
     auto SdlPlatformWindow::should_close() const -> bool {
         // 已销毁（或从未创建成功）的窗口必须报「该关闭了」：宿主的主循环用这个判断是否继续
-        // tick，而 tick 会读窗口尺寸。raylib 平台的 WindowShouldClose() 在关窗后为真，语义
+        // tick，而 tick 会读窗口尺寸。关窗后的 should_close() 语义
         // 必须一致 —— 否则 SDL 路径会在 close() 之后继续 tick，读到 0×0 尺寸并断言失败
         // （window_lifecycle 用例就是这么抓到的）。
         if (!ready_ || window_ == nullptr) {
@@ -375,7 +375,7 @@ namespace nandina::app::detail
                 }
 
                 case SDL_EVENT_KEY_DOWN: {
-                    // 只发按下、跳过自动重复：对应 raylib `GetKeyPressed()` 队列的语义。
+                    // 只发按下、跳过自动重复：延续旧输入模型的按下队列语义。
                     if (event.key.repeat) {
                         break;
                     }

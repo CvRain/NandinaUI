@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import hashlib
 import json
 import os
 import pathlib
@@ -10,6 +11,29 @@ import sys
 import tarfile
 import tempfile
 import tomllib
+
+
+def working_tree_fingerprint(source: pathlib.Path) -> str:
+    """工作区内容指纹：已跟踪改动的内容 + 未跟踪文件清单。
+
+    SDK 可复现性断言会在同一测试内打包两次并比较产物哈希；如果两次之间工作区被改动
+    （例如编辑器在测试运行期间保存文件、或并行任务改源码），产物会不同，而原始断言
+    只报 artifacts 不相等，难以定位。这里显式检查并给出可操作的错误。
+    """
+    digest = hashlib.sha256()
+    tracked_changes = subprocess.run(
+        ["git", "-C", str(source), "diff", "HEAD", "--binary"],
+        check=True,
+        capture_output=True,
+    ).stdout
+    digest.update(tracked_changes)
+    untracked = subprocess.run(
+        ["git", "-C", str(source), "ls-files", "--others", "--exclude-standard", "-z"],
+        check=True,
+        capture_output=True,
+    ).stdout
+    digest.update(untracked)
+    return digest.hexdigest()
 
 
 def run(*args: str, cwd: pathlib.Path, environment: dict[str, str] | None = None) -> None:
@@ -79,6 +103,7 @@ def main() -> int:
             cwd=nandina_source,
             environment={"SOURCE_DATE_EPOCH": "315532800"},
         )
+        stable_fingerprint = working_tree_fingerprint(nandina_source)
         manifest = json.loads((release / "sdk-manifest.json").read_text(encoding="utf-8"))
         tar_artifact = next(item for item in manifest["artifacts"] if item["format"] == "tar.xz")
         assert any(item["format"] == "tar.zst" for item in manifest["artifacts"])
@@ -116,6 +141,11 @@ def main() -> int:
         repeated_manifest = json.loads(
             (repeated_release / "sdk-manifest.json").read_text(encoding="utf-8")
         )
+        if working_tree_fingerprint(nandina_source) != stable_fingerprint:
+            raise SystemExit(
+                "working tree changed while the SDK determinism check was running; "
+                "re-run on a stable tree (no editor writes or parallel source edits)"
+            )
         assert repeated_manifest["artifacts"] == manifest["artifacts"]
 
         source = root / "source"

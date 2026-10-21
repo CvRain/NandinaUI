@@ -111,6 +111,7 @@ dev-docs-*
 
 # Meson fallback downloads generated while configuring optional font features.
 # wrap 检出（`[wrap-git]`）是未跟踪工作树：忽略它，但 SDK 打包会显式收集其源码与许可证
+# 历史 raylib 检出：已退役，不参与构建或 SDK，保留忽略以便旧工作区升级。
 /subprojects/raylib/
 /subprojects/spdlog/
 /subprojects/box2d/

@@ -1,6 +1,6 @@
 //
 // Scene-layer unit tests (Catch2 v3).
-// Headless: scene/ never calls raylib, so these run without a window.
+// Headless: scene/ never creates a native window, so these run without a window.
 //
 
 #include <catch2/catch_approx.hpp>

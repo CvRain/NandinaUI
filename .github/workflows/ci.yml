@@ -44,12 +44,14 @@ jobs:
             cc: gcc
             cxx: g++
             toolchain_args: '-Dcpp_rtti=false'
+            sdl_linkage: static
             extra_packages: ''
           - name: clang-21
             image: silkeh/clang:21-trixie
             cc: clang
             cxx: clang++
             toolchain_args: ''
+            sdl_linkage: shared
             extra_packages: libstdc++-14-dev
     env:
       CC: ${{ matrix.cc }}
@@ -82,7 +84,7 @@ jobs:
       - name: Prewarm wrap dependencies
         run: meson subprojects download
       - name: Configure (explicit vendored SDL3, offline)
-        run: meson setup buildDir --wrap-mode=nodownload -Dlinux_window_system=x11 -Dsdl_backend=enabled -Dsdl3_source=vendored ${{ matrix.toolchain_args }}
+        run: meson setup buildDir --wrap-mode=nodownload -Dlinux_window_system=x11 -Dsdl_backend=enabled -Dsdl3_source=vendored -Dsdl3_linkage=${{ matrix.sdl_linkage }} ${{ matrix.toolchain_args }}
       - name: Assert SDL3 comes from the pinned wrap
         run: |
           python3 - <<'PY'
@@ -90,7 +92,7 @@ jobs:
           dep = json.load(open("buildDir/deps.json"))["deps"][0]
           assert dep["source"] == "vendored", dep
           assert dep["resolved_by"] == "cmake.subproject", dep
-          assert dep["linkage"] == "shared", dep
+          assert dep["linkage"] == "${{ matrix.sdl_linkage }}", dep
           assert len(dep["pin"] or "") == 40, dep
           assert dep["revision"] == dep["pin"], dep
           print("deps.json:", dep)
@@ -159,8 +161,8 @@ jobs:
         env:
           LD_LIBRARY_PATH: /opt/sdl3/lib:/opt/sdl3/lib/x86_64-linux-gnu
         run: |
-          # `unit` = 全部 C++ 单测。window-lifecycle 在无显示环境下会自报 skipped 并以
-          # 成功退出，所以可以安全纳入。慢速的 Python CLI / 构建工作流测试标为
+          # `unit` = 全部 C++ 单测。window-lifecycle 在无显示环境下由 wrapper 映射为
+          # Meson SKIP，所以可以安全纳入。慢速的 Python CLI / 构建工作流测试标为
           # `integration`，由常规构建任务的全量 `meson test` 覆盖。
           # 不要改回手写名单：那正是新组件静默脱离 sanitizer 覆盖的原因。
           meson test -C buildDir-asan --print-errorlogs --suite unit
@@ -203,7 +205,7 @@ jobs:
         run: meson test -C buildDir-physics physics2d --print-errorlogs
 
   # SDL3 来源与交付的三条显式路径（依赖策略 §2.5）。不要只跑 auto：
-  # auto 在 SDL 解析失败时会回落 raylib，任务会"成功"却没有覆盖 SDL。
+  # 显式启用 SDL，缺少系统依赖时必须配置失败。
   sdl-system:
     name: SDL3 from a system prefix
     runs-on: ubuntu-latest
@@ -262,7 +264,7 @@ jobs:
         run: meson test -C buildDir-sdl-system --suite unit --print-errorlogs
 
   sdl-disabled:
-    name: raylib fallback (SDL disabled)
+    name: headless library and tools (SDL disabled)
     runs-on: ubuntu-latest
     timeout-minutes: 30
     container: silkeh/clang:21-trixie
@@ -293,30 +295,30 @@ jobs:
           path: subprojects
           key: wraps-nosdl-${{ hashFiles('subprojects/*.wrap') }}
       - name: Prewarm non-SDL wraps
-        run: meson subprojects download raylib spdlog box2d utf8proc tomlplusplus freetype harfbuzz fribidi Catch2 nlohmann_json
+        run: meson subprojects download spdlog box2d utf8proc tomlplusplus freetype harfbuzz fribidi Catch2 nlohmann_json
       - name: Configure (SDL disabled)
-        run: meson setup buildDir-raylib --wrap-mode=nodownload -Dlinux_window_system=x11 -Dsdl_backend=disabled
+        run: meson setup buildDir-headless --wrap-mode=nodownload -Dsdl_backend=disabled -Dshowcase=false
       # 关掉后端就不许查找、更不许下载：目录不存在 + 报告如实，两条一起断言。
       - name: Assert SDL3 was neither fetched nor used
         run: |
           test ! -d subprojects/SDL3
           python3 - <<'PY'
           import json
-          dep = json.load(open("buildDir-raylib/deps.json"))["deps"][0]
+          dep = json.load(open("buildDir-headless/deps.json"))["deps"][0]
           assert dep["enabled"] is False, dep
           assert dep["source"] == "disabled", dep
           assert dep["resolved_by"] == "none", dep
           print("deps.json:", dep)
           PY
       - name: Build
-        run: meson compile -C buildDir-raylib
-      - name: Test (unit suite on the raylib path)
-        run: meson test -C buildDir-raylib --suite unit --print-errorlogs
+        run: meson compile -C buildDir-headless
+      - name: Test (full suite without a window backend)
+        run: meson test -C buildDir-headless --print-errorlogs
 
   sanitize-vendored-lld:
-    # 实验任务：验证 vendored 共享 SDL3 在 lld 下能否通过 ASan。
-    # 本机 ld.bfd 会报 DWARF 错误（dependency_policy.md §2.5）；lld 是否解决尚未确认，
-    # 因此先非阻断地收集证据，确认后再把它并入阻断的 sanitize 任务。
+    # 实验任务：验证默认的 vendored 静态 SDL3 在 lld 下能否通过 ASan。
+    # 历史 ld.bfd DWARF 错误见 dependency_policy.md §2.5；本地静态 ASan/lld 已通过，
+    # 远端仍先非阻断地收集证据，确认后再把它并入阻断的 sanitize 任务。
     name: sanitize vendored SDL3 with lld (experimental)
     runs-on: ubuntu-latest
     timeout-minutes: 40
@@ -353,7 +355,7 @@ jobs:
           meson setup buildDir-asan-vendored \
             -Db_sanitize=address,undefined \
             -Dlinux_window_system=x11 \
-            -Dsdl_backend=enabled -Dsdl3_source=vendored \
+            -Dsdl_backend=enabled -Dsdl3_source=vendored -Dsdl3_linkage=static \
             -Dc_link_args=-fuse-ld=lld -Dcpp_link_args=-fuse-ld=lld \
             --wrap-mode=nodownload
       - name: Build

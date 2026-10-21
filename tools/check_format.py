@@ -40,7 +40,11 @@ def tracked_sources(source_root: pathlib.Path) -> list[pathlib.Path]:
         capture_output=True,
         text=True,
     )
-    return [source_root / value for value in result.stdout.split("\0") if value]
+    return [
+        source_root / value
+        for value in result.stdout.split("\0")
+        if value and (source_root / value).is_file()
+    ]
 
 
 def clang_format_version(executable: str) -> str:

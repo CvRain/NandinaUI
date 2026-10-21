@@ -74,8 +74,15 @@ class FakeToolchain:
 
 
 class FormatGuardTests(unittest.TestCase):
-    def invoke(self, toolchain):
-        with mock.patch.object(helper.subprocess, "run", toolchain):
+    def invoke(self, toolchain, missing=()):
+        with (
+            mock.patch.object(helper.subprocess, "run", toolchain),
+            mock.patch.object(
+                pathlib.Path,
+                "is_file",
+                lambda path: path.relative_to(SOURCE_ROOT).as_posix() not in missing,
+            ),
+        ):
             errors = io.StringIO()
             with contextlib.redirect_stderr(errors):
                 status = helper.main([SOURCE_ROOT])
@@ -100,6 +107,13 @@ class FormatGuardTests(unittest.TestCase):
         self.assertIn("nandina/alpha.cpp", errors)
         self.assertIn("1 of 3", errors)
         self.assertNotIn("nandina/beta.hpp", errors)
+
+    def test_deleted_tracked_file_is_not_sent_to_the_formatter(self):
+        toolchain = FakeToolchain()
+        status, errors = self.invoke(toolchain, missing=("nandina/beta.hpp",))
+        self.assertEqual(status, 0)
+        self.assertEqual(errors, "")
+        self.assertEqual(toolchain.checked, ["nandina/alpha.cpp", "tests/gamma.cpp"])
 
     def test_unpinned_version_is_rejected_before_any_file_is_checked(self):
         toolchain = FakeToolchain(version="21.1.8", dirty=["nandina/alpha.cpp"])

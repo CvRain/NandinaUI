@@ -1,0 +1,4 @@
+# stb 原始头文件：第三方代码不参与本项目的格式基线。
+# 重排它们会让"与上游逐字节一致"的声明失真，也会让升级 diff 无法审查。
+# DisableFormat 同时保护编辑器、手工 clang-format -i 与 tools/check_format.py。
+DisableFormat: true

@@ -59,7 +59,7 @@ NandinaUI（南天竹）是一个用 **C++26** 编写、基于 **Meson** 构建�
 | `resource` | 资源清单、多后端、运行时管理 |
 | `physics2d` | 可选 Box2D 物理桥（默认关闭） |
 | `theme` | 设计令牌、主题管理器、样式文档 |
-| `render` | 渲染设备（raylib 后端）、纹理缓存、SDF 图元 |
+| `render` | SDL3 渲染设备、共享图片解码、纹理缓存、SDF 图元 |
 | `text` | 字体加载、字形图集、复杂文本整形 |
 | `scene` | 场景树、节点、控件、表现层、动画宿主与帧调度 |
 | `semantics` | 无障碍语义 |
@@ -89,20 +89,26 @@ NandinaUI（南天竹）是一个用 **C++26** 编写、基于 **Meson** 构建�
 - **macOS**：**不在支持范围**（无硬件、无测试环境，不提供构建或运行承诺）
 - **编译器**：GCC ≥ 16 或 Clang ≥ 21（需 C++26 支持）
 - **构建工具**：Meson、Ninja、CMake、pkg-config、Python 3
-- **系统库**：OpenGL、OpenSSL ≥ 3.0
+- **系统库**：OpenSSL ≥ 3.0，以及所选 SDL3 窗口系统与渲染驱动的依赖
 
-其余第三方依赖（spdlog、raylib、FreeType、HarfBuzz、FriBidi、utf8proc、toml++、nlohmann/json、Catch2、Box2D、SDL3）以 **`wrap-git` + 完整 commit pin** 提供，默认 `vendored` 来源；SQLite 以官方 amalgamation 直接随源码分发（见 `third_party/sqlite3/README.md`），不需要系统安装。仓库里只剩字体数据包（`caskaydia-cove`）是 submodule，所以 `git clone --recursive` 只用于取它；其余依赖由首次 `meson setup` 或 `meson subprojects download` 拉取。
+其余第三方依赖（spdlog、FreeType、HarfBuzz、FriBidi、utf8proc、toml++、nlohmann/json、Catch2、Box2D、SDL3）以 **`wrap-git` + 完整 commit pin** 提供，默认 `vendored` 来源；SQLite 以官方 amalgamation 直接随源码分发（见 `third_party/sqlite3/README.md`），不需要系统安装。仓库里只剩字体数据包（`caskaydia-cove`）是 submodule，所以 `git clone --recursive` 只用于取它；其余依赖由首次 `meson setup` 或 `meson subprojects download` 拉取。
 
 > 想完全离线构建：先 `meson subprojects download` 预热，再用 `--wrap-mode=nodownload` 配置。
 > 依赖级三态开关是 `-Dsdl3_source=auto|system|vendored`（默认 `vendored`），解析结果会写进
 > `build/deps.json`。权威规则见[第三方依赖策略](docs/references/dependency_policy.md)；
 > SDL3 作为默认窗口/渲染后端的版本下限（≥ 3.4.0，`SDL_GPURenderState`）也记在那里。
 
+raylib 已完整退出源码和依赖闭包，不提供 `raylib_backend` 开关。
+默认 `sdl_backend=enabled`、vendored SDL3 静态链接；`-Dsdl3_linkage=shared` 可选共享模式。
+静态 SDL3 只免除 SDL3 自身的 DSO 分发，不表示系统运行库或图形驱动也静态打包。
+无窗口后端构建使用 `-Dsdl_backend=disabled -Dshowcase=false`；打开窗口须自行注入平台。
+未追踪的本地 playground 仅在 `-Dplayground=true` 时构建；旧 raylib bench 已从本地目标移除，源码保留作历史记录。
+
 ### 在 Debian / Ubuntu 上准备环境
 
 发行版自带的编译器通常达不到上面的版本要求，所以分四步：装系统库、装合规工具链、装 Meson、再配置构建。
 
-**1. 系统库**（X11 后端，与 CI 同源）
+**1. 系统库**（X11 后端，与 CI 同源的开发环境清单）
 
 ```bash
 sudo apt-get update
@@ -113,7 +119,9 @@ sudo apt-get install -y --no-install-recommends \
   libgl1-mesa-dev libglu1-mesa-dev
 ```
 
-Wayland 会话还需要 `libwayland-dev libxkbcommon-dev wayland-protocols libdecor-0-dev`。默认的 `linux_window_system=auto` 在 `WAYLAND_DISPLAY` 存在时会选 Wayland，缺这些开发包会直接配置失败；暂时不想装就显式加 `-Dlinux_window_system=x11`。
+这份清单保留 OpenGL/GLU 开发包；raylib 退役后的最小容器依赖尚未复验，因此不将其视为最小必需集合。
+
+Wayland 开发需要 `libwayland-dev libxkbcommon-dev wayland-protocols libdecor-0-dev`。`linux_window_system=auto` 交给 vendored SDL3 探测可用驱动；可显式用 `-Dlinux_window_system=x11` 或 `wayland` 限制构建的窗口系统。
 
 `zstd` 只有 SDK 打包与全量测试套件需要，构建框架本身不需要。
 
@@ -234,13 +242,23 @@ meson test -C buildDir --suite unit
 > 2026-10-20 已在真机上验证：release 构建通过、`meson test --suite unit` 80/80、showcase 可运行、DXIL 设备级验收通过。
 
 构建完成后，Windows 运行时 DLL（`libstdc++-6`、`libgcc_s_seh-1`、`libwinpthread-1`、zlib/bz2/png/brotli、
-以及 SDL3 的 `libSDL3_shared.dll`）会被自动复制到每个可执行文件旁边（`windows-runtime-dlls` 构建步骤），
+以及共享模式的 SDL3 DLL）会被自动复制到每个可执行文件旁边（`windows-runtime-dlls` 构建步骤），
 所以可以直接运行：
 
 ```powershell
 .\buildDir\showcase\nandina_showcase.exe
 .\buildDir\tests\sdf_device_test.exe --require-gpu --expect-format dxil
 ```
+
+默认 vendored 静态 SDL3 不复制 SDL3 DLL，也不会提示“共享库尚未生成”。system SDL3
+会按编译器目录/PATH 查找 DLL；找不到时明确提示核对链接方式与运行时分发，不能据此声称已打包完整。
+当前程序使用普通 `main`，未包含 `SDL_main.h`；固定版本 SDL3 已不使用 SDL2 的 SDLmain 静态库，
+不额外手写 `-lmingw32` / SDLmain 链接顺序。Windows 静态完整构建仍需真机验收。
+
+窗口测试默认 auto：无显示或原生窗口无法创建时记录为 **SKIP**。SSH/session 0 可设置
+`$env:NANDINA_SKIP_WINDOW_TESTS='1'` 显式跳过；本地桌面验收用 `-Dwindow_tests=enabled`
+并移除该环境变量，创建窗口失败必须报错。Catch2 的全跳过码由 runner 映射为 Meson 的 77，
+跳过不会计作通过。
 
 如果看到退出码 `0xC0000135`（STATUS_DLL_NOT_FOUND，终端里通常“什么都没发生”），说明 DLL 没在 exe 旁边：
 重新 `ninja -C buildDir` 让复制步骤补上，或把 `C:\msys64\ucrt64\bin` 与
@@ -262,7 +280,7 @@ meson test -C buildDir --suite unit
   补齐（不是官方 Windows 目录约定，只为让应用能启动）；`system-fonts` 测试在 Windows 上不注册
   （它依赖 Linux 字体目录与 `setenv`）。这些改动通过 zig 交叉编译 + Wine 实跑验证，但仍需 Windows 实机确认。
 - 路径含非 ASCII 字符尚未验收（环境变量按 ANSI 读取）。
-- raylib 后端、探针与页面 golden 在 Windows 上没有验收；golden 基线目前只有 Linux（见
+- 本轮静态 SDL3 的 Windows 构建、探针与页面 golden 尚未重新验收；golden 基线目前只有 Linux（见
   [视觉回归](docs/references/visual_regression.md) 的跨平台策略）。
 - 字体数据包仍是 submodule（`git clone --recursive`）；其余依赖为 wrap，首次 `meson setup` 联网拉取。
 
@@ -402,7 +420,7 @@ meson compile -C buildDir
 - [x] **页面 golden 与审批**：6 条 approved 基线（Linux，平台隔离）、比较器、审批/撤销工具与清单门禁。
 - [x] **release 性能基线与预算门禁**：8 配置 release 基线、确定性门禁（布局 0/稳态 miss 0/binds 上限）与候选计时阈值（`--enforce` 启用）。
 - [x] **Windows 实验性支持**：MSYS2 UCRT64 release 构建、单元测试 80/80、showcase 可运行、DXIL 设备级验收；macOS 明确不支持。
-- [x] **后端无关图片解码**：vendored stb（PNG/JPEG/BMP/GIF/TGA）+ 应用可注入解码器 + SDL RGBA 上传；raylib 从图像路径解耦，进入退役阶段。
+- [x] **后端无关图片解码**：vendored stb（PNG/JPEG/BMP/GIF/TGA）+ 应用可注入解码器 + SDL RGBA 上传；raylib 后端与依赖已删除。
 
 ### 当前议题与推进顺序
 
@@ -442,7 +460,7 @@ shell/compositor 与新平台支持各自经过专门关口。
 | 类别 | 依赖 |
 | --- | --- |
 | 平台层 | **SDL3 ≥ 3.4.0**（编入时默认的窗口/输入/帧驱动 + SDL 2D 渲染设备；`SDL_GPURenderState` 是 3.4 起的 API） |
-| 渲染 | raylib（**退役中**：图片解码已迁到 vendored stb；剩余为后备渲染后端与窗口测试宿主，迁完后移除） |
+| 渲染 / 图片 | SDL3 + SDF；vendored stb CPU 图片解码（PNG/JPEG/BMP/GIF/TGA） |
 | 文本 | FreeType、HarfBuzz、FriBidi、utf8proc |
 | 数据 / 配置 | nlohmann/json、toml++、SQLite（vendored amalgamation，见 `third_party/sqlite3/`） |
 | 其他 | spdlog（日志）、OpenSSL（资源签名）、Box2D（可选物理）、Catch2（测试） |

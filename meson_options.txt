@@ -13,7 +13,7 @@ option(
 option(
     'sdl_backend',
     type: 'feature',
-    value: 'auto',
+    value: 'enabled',
     description: 'Build the SDL3 render device and platform window (needs SDL >= 3.4.0)',
 )
 option(
@@ -24,10 +24,23 @@ option(
     description: 'SDL3 source: system pkg-config, subprojects/SDL3 (wrap), or system-first fallback',
 )
 option(
+    'sdl3_linkage',
+    type: 'combo',
+    choices: ['static', 'shared'],
+    value: 'static',
+    description: 'Linkage for vendored SDL3; system SDL3 uses pkg-config',
+)
+option(
     'sdl_page_probe',
     type: 'boolean',
     value: false,
     description: 'Build the SDL3 backend probe that renders a real showcase page through IRenderDevice',
+)
+option(
+    'playground',
+    type: 'boolean',
+    value: false,
+    description: 'Build the untracked local playground when present',
 )
 option(
     'showcase',
@@ -40,11 +53,11 @@ option(
     type: 'combo',
     choices: ['auto', 'wayland', 'x11'],
     value: 'auto',
-    description: 'Linux window system used by the bundled GLFW backend',
+    description: 'Linux window system enabled in vendored SDL3 (auto lets SDL detect available drivers)',
 )
 option(
     'window_tests',
     type: 'feature',
     value: 'auto',
-    description: 'Run tests that create a native raylib window when a display is available',
+    description: 'Run tests that create a native SDL3 window when a display is available',
 )

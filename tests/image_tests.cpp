@@ -49,7 +49,7 @@ namespace
         bool fail_loads = false;
         /// 设为 false 模拟「后端不能直载图片」（如 SDL 设备）。
         bool image_loading_supported = true;
-        /// 模拟「后端支持 RGBA 上传」（SDL / raylib 都是 true）。
+        /// 模拟「后端支持 RGBA 上传」（SDL 设备为 true）。
         bool rgba_upload_supported = false;
         foundation::NanSize size_to_return {64.0F, 32.0F};
         render::ImageLoadOptions last_options {};

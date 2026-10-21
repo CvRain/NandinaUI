@@ -14,7 +14,7 @@
 | 渲染 | SDL3 为默认后端；生产 SDF 已接入**填充/描边/圆/线段/圆环扇区**，Vulkan(SPIR-V) 与 Windows D3D12(DXIL) 均通过设备级像素验收，直线 AA 数值逐位一致；其余图元仍走 CPU 几何 | 路径契约 §10、§14 |
 | 视觉回归 | 6 条页面 golden 已批准（Linux，平台隔离）；比较器与审批工具就绪；Windows 基线未建立 | [视觉回归](visual_regression.md) |
 | 性能 | release 基线 8 配置 + 确定性门禁（布局 0、稳态 miss 0、binds 上限）+ 候选计时阈值（`--enforce` 启用） | [性能预算](performance_budget.md) |
-| 依赖与分发 | 11 个 wrap + 字体 submodule + SQLite amalgamation；Linux SDK 消费 fixture；头文件门禁 184 个（11 internal） | [依赖策略](dependency_policy.md)、[SDK 表面](sdk_surface.md) |
+| 依赖与分发 | 10 个 wrap + 字体 submodule + SQLite/stb 入库源码；raylib 已删除；vendored SDL3 默认静态、可选共享；头文件门禁 182 个（10 internal） | [依赖策略](dependency_policy.md)、[SDK 表面](sdk_surface.md) |
 | 工程门禁 | format / suite / header / shader artifact / golden manifest / backend budget；CI 无 GPU | README、路径契约 §13 |
 
 ## 2. 推进原则
@@ -39,7 +39,7 @@
 | P1.5a | **SDF 线段 + 环形扇区**：复用 32 字节参数块（模式 2/5），修正 CPU 弧角度约定与 sweep>π 的角向公式 | 现有 SDF 参数策略与产物链 | **已完成（2026-10-20）**：`sdf-device` 覆盖内部/圆头/整环 seam/270° 缺口/立方 AA/缓存命中（misses==2→hits==2）；golden 逐字节不变；release 预算 0 失败；产物三格式再生并经固定工具链验证 |
 | P1.5b | **阴影（mode 4）+ 涟漪圆角裁剪**：先做 D7 批次 6 的涟漪专用圆角交集，再按用例定形通用裁剪 | P1.5a 已落地 | 阴影软边与裁剪不外溢、状态恢复、能力为 false 的降级；绘制/命中遵循既有裁剪契约 |
 | P1.6 | **图片路径**：共享 CPU 解码器、SDL RGBA 上传、删除 `IPlatformWindow::make_image_decoder()`（破坏性，按 SDK 表面记录） | 解码库来源定形 | **已完成（2026-10-20）**：vendored stb 解码（PNG/JPEG/BMP/GIF/TGA + crop/resize/tint）、`make_cpu_image_decoder()` + 应用注入、SDL `create_rgba_texture`、三项能力拆分、旧钩子删除；`image-decoder` 8 用例 + `sdl-visual` 上传像素断言；套件 98/98。**未做**：SDL 页面级 Image 端到端采样 |
-| P1.7 | **raylib 退役**：窗口测试宿主换 SDL3 → `-Draylib_backend=false` 默认 → `raylib_dep` 移出依赖闭包 → 删除 wrap；收益：依赖闭包缩小、单一 shader 实现、静态 SDL3 可行 | P1.6 已完成（图像路径不再依赖 raylib） | 构建与套件在无 raylib 下通过；CI 去掉 raylib-only job；文档记录退役证据 |
+| P1.7 | **raylib 完整退役**：窗口测试宿主换 SDL3；删除旧后端、工厂、枚举项、wrap 与依赖，不保留临时开关；vendored SDL3 默认静态、可选共享 | P1.6 已完成（图像路径不再依赖 raylib） | **实现与 Linux 验收已完成（2026-10-20）**：本轮非 SDK 99/99；两个离线 SDK fixture 前轮通过；静态 ASan/lld 84/84 与 GPU 设备验收通过，no-RTTI 前轮 84/84；无后端全套 94 通过、1 SKIP。原 raylib CI 改为无后端全套门禁，窗口跳过、系统 SDL DLL 搜索补充回归测试。Windows 静态模式仍须真机复验，详见[依赖策略](dependency_policy.md) |
 
 ### P2 应用闭环（资源与工具）
 
@@ -69,11 +69,15 @@
 
 ## 4. 建议的近期切入顺序
 
-1. **P1.1 发布检查脚本**（一天内可完成，立刻把已有门禁变成可重复流程，风险最低）。
-2. **P1.4 CLI 端到端**（验证 Windows 实验性路径的真实可用性，产出可复制的证据）。
-3. **P1.5 SDF arc/线段**（继续补渲染主线，依赖最少）。
-4. **P1.2 Windows golden 候选**（有机器时再做；不急，不阻塞主线）。
-5. P2/P3/P4 按应用需求插入；D8 与 D1 是交互体验的下一道大门，值得在组件扩张前完成。
+1. **退役后的 Windows 复验**：静态构建、窗口生命周期与 DXIL。Linux 的静态/共享 SDK、窗口与无后端验收已完成。
+2. **P1.6 页面补验**：SDL 完整 Image 页面端到端采样，不能用解码/上传单测替代。
+3. **P1.5b 阴影与涟漪圆角裁剪**：继续补渲染主线。
+4. **P1.2 Windows golden 候选**，以及可选 P1.3 性能基线。
+5. P2/P3/P4 按应用需求插入；D8 与 D1 在组件扩张前推进。P1.1/P1.5a/P1.6 核心实现已完成，P1.4 归 NandinaCLI。
+
+模板唯一归属 NandinaCLI，并按兼容 SDK 版本发布。框架仅维护
+[`tests/fixtures/sdk_app`](../../tests/fixtures/sdk_app/README.md) 的消费契约 fixture；
+CLI 仓库负责真实模板生成与 SDK 配对验收，主仓库 fixture 不替代跨仓库测试。
 
 ## 5. 非目标（明确不做，或只保留探测）
 

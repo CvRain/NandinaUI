@@ -65,7 +65,7 @@ tools/check_headers.py --source . --skip-compile          # 无构建目录时�
 实现要点：
 
 - **编译 flag 不手写第二份**：从 `compile_commands.json` 汇总 `-I`/`-isystem`/`-D`/`-std=`，
-  所以 spdlog/raylib/SDL3 等 include 路径自动正确。
+  所以 spdlog/SDL3 等 include 路径自动正确。
 - **可选功能用 `requires` 表达**：例如 `physics2d/physics_world2d.hpp` 标 `requires = "physics2d"`，
   该选项关闭时跳过独立可包含检查并打印跳过原因，而不是硬编码依赖的 include 路径。
 - **故障注入已验证**：新增未分类头 → 失败；`button.hpp` 包含 `internal/focus_scope.hpp` → 失败并指出
@@ -95,6 +95,9 @@ experimental**，理由与后续动作写进清单——两个枚举是公开 wi
 | `supports_image_loading()` → `supports_direct_image_loading()` | `IRenderDevice`（experimental public） | 语义收窄为"设备自己解码直载"，默认 false |
 | 新增 `supports_rgba_texture_upload()` | `IRenderDevice` | SDL/raylib 均为 true；`Image` 用三项能力选择服务路径 |
 | 新增 `NanApplication::image_decoder()` / `set_image_decoder()` | `app`（experimental public） | 默认注入 CPU 解码器，应用可替换；无热切换（窗口打开时快照） |
+| 删除 `make_raylib_device()` 与 `raylib_device.hpp` | `render/backends`（experimental） | 使用 SDL3，或实现并注入自己的 `IPlatformWindow` / `IRenderDevice` |
+| 删除 `WindowBackend::raylib` | `app/window_config.hpp`（experimental） | 改为 `automatic` / `sdl3`；`sdl3` 保留原数值 2。环境变量中的 raylib/未知值明确报错，不能静默选择另一路径 |
+| 默认 SDL3 静态链接 | Meson / SDK | `sdl3_linkage=shared` 可恢复共享模式；关闭 SDL3 时无内置窗口后端，`showcase=false`，应用在 `open()` 前注入平台 |
 | `supports_image_loading()` 收窄 + 新增 RGBA 上传查询 | `IRenderDevice`（设备实现方接口） | 原先判断"能不能显示图片"的调用方，改为分别查询解码服务、设备直载、设备 RGBA 上传三项，见 [D7](reference_draft.md#三项能力分开表达2026-10-17-定) |
 
 项目处于 alpha、源码集成、不承诺旧入口长期兼容，因此：
@@ -102,6 +105,9 @@ experimental**，理由与后续动作写进清单——两个枚举是公开 wi
 - **不保留**一个仍可 override、但框架已不再调用的虚函数 —— 那是最难发现的静默失效；
 - 迁移说明只表达一件事：原来由自定义平台 override 提供的解码器，改为应用服务注入；
 - 库内实现、测试替身、下游样例一次改完，要求重新编译。
+
+退役后清单为 182 个头文件，其中 10 个 internal。生成模板归 NandinaCLI；
+框架维护 [`sdk_app` 消费 fixture](../../tests/fixtures/sdk_app/README.md)，不维护第二份模板。
 
 ## 6. 不要越界声明的事
 

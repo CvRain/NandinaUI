@@ -1,7 +1,0 @@
-# 上游源码固定为完整 commit（迁移时保持当时受测的版本）。
-# 由 Git submodule 迁移而来：构建方式仍是 CMake，消费入口不变。
-[wrap-git]
-directory = raylib
-url = https://github.com/raysan5/raylib.git
-revision = 3edfe194381b36ae6bafde59cfb4597afafd731c
-method = cmake

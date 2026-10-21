@@ -17,7 +17,7 @@ namespace nandina::text
         /// `GlyphAtlas::kMaxDimension`，所以这里唯一的作用是「不要预先占一大片空图集」。
         ///
         /// 1024² 起步时，一条管线每个 face 立刻占 1 MB CPU alpha + 4 MB RGBA8 纹理
-        /// （raylib 后端把 alpha 展开成 RGBA8）；showcase 的 Label 页用到 4 条管线 ×
+        /// （SDL3 后端把 alpha 展开成 RGBA8）；showcase 的 Label 页用到 4 条管线 ×
         /// 2 个 face，光这一项约 8 MB + 32 MB，而实际用到的字形只填满几百 KB。
         /// 256² 起步时同样的页面约 0.5 MB + 2 MB，需要更多时再增长。
         /// 见 docs/references/text_shaping_cost.md §7.2。

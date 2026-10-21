@@ -1,9 +1,10 @@
 # 平台与后端契约（D4）
 
-> **状态：默认后端切换与平台接口已落地，D4 收尾中；2026-10-17 文档核对。**
-> 编入 SDL3 的构建默认走 SDL3，raylib 保留对照路径。三格式探测产物与逐图元 trace 已存在；
+> **状态：SDL3 为唯一内置后端，raylib 已完整退役；2026-10-20 更新。**
+> 默认启用 SDL3，vendored 默认静态、可选共享；关闭 SDL 后须注入平台才能打开窗口。
+> 三格式探测产物与逐图元 trace 已存在；
 > 剩余为生产渲染质量（D7）、规范输入（D8）、可重复依赖交付和逐平台应用验收。
-> DXIL/MSL 目标设备加载未验证；P3 落地不等于 P0–P4 全部验收完成。
+> DXIL 在退役前已有 Windows 真机证据；本轮静态模式需复验，MSL 尚无目标设备验收。
 > 全局批次顺序见[项目进度与下一步](project_status.md)，本文历史测试与测量本轮未重跑。
 >
 > 探测证据与「已证明 / 未验证」清单见[跨平台后端探测](cross_platform_backend_probe.md)；
@@ -27,8 +28,8 @@
 
 | 职责 | 今天谁持有 | 目标 |
 | --- | --- | --- |
-| 窗口、事件、输入轮询、帧驱动 | ✅ `IPlatformWindow`（`app/platform_window.hpp`）+ `detail/raylib_platform_window`、`detail/sdl_platform_window`；`NanWindow` 只做协调 | 已完成。默认后端 = 装了 SDL3 就用 SDL3（`NANDINA_WINDOW_BACKEND` 可覆盖） |
-| 绘制原语与帧边界 | ✅ `render/backends/sdl_device.{hpp,cpp}`（SDL 2D + CPU 几何）与 `raylib_device` | SDL 设备是默认；raylib 设备保留给对照/离线/录制 |
+| 窗口、事件、输入轮询、帧驱动 | ✅ `IPlatformWindow` + `detail/sdl_platform_window`；`NanWindow` 只做协调 | SDL3 为唯一内置后端；自定义平台仍可注入。无后端时打开窗口明确报错 |
+| 绘制原语与帧边界 | ✅ `render/backends/sdl_device.{hpp,cpp}`（SDF + CPU 几何回落） | raylib 实现已删除；保留 `IRenderDevice`、录制装饰器与测试替身 |
 | 文本整形、图集、排版 | `text` 层 | **不变**：保持在设备边界之上，不随平台分叉 |
 | 图片解码 | 应用服务（默认或注入的 `IImageDecoder`） | **已落地（2026-10-20）**：`make_image_decoder()` 已删除；`NanApplication` 默认注入 CPU 解码器（stb），平台只保留设备上传入口（[D7](reference_draft.md#图片解码器删除平台钩子改为应用服务2026-10-17-定)） |
 | 资源、主题、响应式、组件 | `resource` / `theme` / `reactive` / `widget` | 保持各自职责，平台不持有其业务状态 |
@@ -50,7 +51,9 @@
 - 不允许用「文档里记了已知差异」代替代码分支 —— 否则 SDK 示例跑通会被误读成「应用已支持」；
 - 每个后端必须给出自己的能力表，并由测试或探测证据支撑。
 
-实测到的差异（SDL 2D 设备 vs 生产 raylib 后端，见探测记录 §2.3）。**"已被查询覆盖"** 列表示
+下面保留退役前的差异取证（SDL 2D 设备 vs 当时的 raylib 后端，见探测记录 §2.3）。
+raylib 不再可构建；当前 SDF 已覆盖填充/描边/圆/线段/弧，阴影与圆角裁剪仍缺。
+**"已被查询覆盖"** 列表示
 这条差异已经有代码分支、并有会红的测试；其余是待办。
 
 | 能力 | raylib 生产后端 | SDL 2D 设备 | 已被查询覆盖 | 待办 |

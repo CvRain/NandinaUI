@@ -353,13 +353,16 @@ node_reparent_tests = executable(
 )
 test('node-reparent', node_reparent_tests, suite: 'unit')
 
-# 这个测试会真的开一个窗口，进而初始化 raylib/GL。无显示环境时保持测试目标存在，
-# 但让测试以成功状态报告 skipped，避免 Catch2 的 SKIP 返回码被 Meson 当作失败。
+# 真实 SDL3 窗口测试；wrapper 将 Catch2 的全跳过码 4 映射为 Meson 的 77。
 window_tests_option = get_option('window_tests')
-window_display_available = run_command('printenv', 'DISPLAY', check: false).stdout().strip() != '' or \
+window_display_available = host_machine.system() == 'windows' or \
+    run_command('printenv', 'DISPLAY', check: false).stdout().strip() != '' or \
     run_command('printenv', 'WAYLAND_DISPLAY', check: false).stdout().strip() != ''
-window_tests_enabled = window_tests_option.enabled() or \
-    (window_tests_option.auto() and window_display_available)
+if window_tests_option.enabled() and not sdl3_dep.found()
+    error('window_tests=enabled requires sdl_backend=enabled')
+endif
+window_tests_enabled = sdl3_dep.found() and (window_tests_option.enabled() or \
+    (window_tests_option.auto() and window_display_available))
 window_tests_optional = window_tests_option.auto() and window_display_available
 window_test_cpp_args = []
 if not window_tests_enabled
@@ -373,7 +376,32 @@ window_lifecycle_tests = executable(
     cpp_args : window_test_cpp_args,
     dependencies : [nandina_dep, catch2_with_main_dep],
 )
-test('window-lifecycle', window_lifecycle_tests, suite: 'unit')
+test(
+    'window-lifecycle',
+    python,
+    args: [files('../tools/run_window_test.py'), window_lifecycle_tests],
+    suite: 'unit',
+)
+test(
+    'window-test-runner',
+    python,
+    args: [files('window_test_runner_test.py'), files('../tools/run_window_test.py')],
+    suite: 'integration',
+)
+test(
+    'windows-runtime-dlls',
+    python,
+    args: [files('copy_runtime_dlls_test.py'), files('../tools/copy_runtime_dlls.py')],
+    suite: 'integration',
+)
+
+window_backend_tests = executable(
+    'window_backend_tests',
+    files('window_backend_tests.cpp'),
+    cpp_args: sdl3_dep.found() ? ['-DNANDINA_TEST_HAS_SDL=1'] : [],
+    dependencies: [nandina_dep, catch2_with_main_dep],
+)
+test('window-backend', window_backend_tests, suite: 'unit')
 
 drag_controller_tests = executable(
     'drag_controller_tests',
@@ -699,19 +727,6 @@ test(
     ],
     suite: 'integration',
 )
-nandina_subproject_fixture_test = find_program('nandina_subproject_fixture_test.py')
-test(
-    'nandina-subproject-fixture',
-    nandina_subproject_fixture_test,
-    args: [
-        meson.project_source_root(),
-        meson.project_source_root() / 'tools' / 'sdk_bundle.py',
-    ],
-    # 打包现在把依赖源码（SDL3，约 53 MB）一起收进 SDK，且 fixture 会打包两次；
-    # 超时按实测留余量，不靠"重跑一次就过"。
-    timeout: 900,
-    suite: 'integration',
-)
 # 页面 golden 清单完整性（候选层）：文件存在、哈希/尺寸匹配、状态合法。
 # 像素比较是手动工具（tools/compare_backend_golden.py），approved 条目才判失败。
 test(
@@ -734,32 +749,54 @@ test(
     timeout: 300,
     suite: 'integration',
 )
-# 共享依赖的运行时分发：vendored SDL3 是共享库，且 CMake 子项目没有 install 规则，
-# 所以"只装可执行文件"在运行期会找不到 libSDL3_shared.so.0。这个测试同时守卫反例与
-# "bin/ + lib/ + $ORIGIN/../lib" 便携布局（无显示器，读 ldd/readelf）。
-portable_bundle_test = find_program('portable_bundle_test.py')
-test(
-    'portable-bundle',
-    portable_bundle_test,
-    args: [meson.project_build_root()],
-    timeout: 120,
-    suite: 'integration',
-)
-# SDK 下游 vendored SDL 消费：解压到全新目录、断网配置/编译/链接/运行。
-# 与资源 fixture 分开，因为后者用 sdl_backend=disabled 控制时长，不覆盖 SDL 交付路径；
-# 这里跑一次完整 SDK 打包 + 带 SDL3 的下游构建（实测见 docs/references/dependency_policy.md §2.5）。
-sdk_vendored_consumer_test = find_program('sdk_vendored_consumer_test.py')
-test(
-    'sdk-vendored-consumer',
-    sdk_vendored_consumer_test,
-    args: [
-        meson.project_source_root(),
-        meson.project_source_root() / 'tools' / 'sdk_bundle.py',
-    ],
-    timeout: 1500,
-    is_parallel: false,
-    suite: 'integration',
-)
+
+# SDK 打包测试需要 vendored SDL3 源码树（subprojects/SDL3 与 wrap 检出）：
+# 无后端（sdl_backend=disabled）或系统 SDL 构建没有这份源码，跳过并给出理由，
+# 而不是让 `sdk_bundle` 在缺 wrap 检出时以异常中断整套集成测试。
+if sdl3_origin == 'vendored'
+    nandina_subproject_fixture_test = find_program('nandina_subproject_fixture_test.py')
+    test(
+        'nandina-subproject-fixture',
+        nandina_subproject_fixture_test,
+        args: [
+            meson.project_source_root(),
+            meson.project_source_root() / 'tools' / 'sdk_bundle.py',
+        ],
+        # 打包现在把依赖源码（SDL3，约 53 MB）一起收进 SDK，且 fixture 会打包两次；
+        # 超时按实测留余量，不靠"重跑一次就过"。
+        timeout: 900,
+        suite: 'integration',
+    )
+    # 静态 SDL3 检查无 SDL3 DSO 依赖；共享模式检查便携布局（ldd/readelf）。
+    if host_machine.system() == 'linux' and get_option('showcase')
+        portable_bundle_test = find_program('portable_bundle_test.py')
+        test(
+            'portable-bundle',
+            portable_bundle_test,
+            args: [meson.project_build_root()],
+            timeout: 120,
+            suite: 'integration',
+        )
+    endif
+    # SDK 下游 vendored SDL 消费：解压到全新目录、断网配置/编译/链接/运行。
+    # 与资源 fixture 分开，因为后者用 sdl_backend=disabled 控制时长，不覆盖 SDL 交付路径；
+    # 这里跑一次完整 SDK 打包 + 带 SDL3 的下游构建（实测见 docs/references/dependency_policy.md §2.5）。
+    sdk_vendored_consumer_test = find_program('sdk_vendored_consumer_test.py')
+    test(
+        'sdk-vendored-consumer',
+        sdk_vendored_consumer_test,
+        args: [
+            meson.project_source_root(),
+            meson.project_source_root() / 'tools' / 'sdk_bundle.py',
+        ],
+        timeout: 1500,
+        is_parallel: false,
+        suite: 'integration',
+    )
+else
+    message('SDK archive fixtures not registered: SDL3 source is not vendored')
+endif
+
 test(
     'ci-test-suites',
     python,

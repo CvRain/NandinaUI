@@ -1,7 +1,7 @@
 //
 // widget/key_codes.hpp — 键盘键码常量（单一定义处）。
 //
-// 这些值是 GLFW 的键码（raylib 直接透传）。此前 editable_text / slider / select /
+// 这些值是 GLFW 的键码（历史 raylib 后端曾直接透传）。此前 editable_text / slider / select /
 // tabs / radio_button / chip / text_field 各自抄了一份局部常量，既重复又容易出现
 // 不一致（例如 home/end/page 各写各的）。新增导航与 typeahead 需要更多键码，统一收
 // 到这里。

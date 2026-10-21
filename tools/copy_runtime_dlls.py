@@ -2,7 +2,7 @@
 """把 Windows 运行时 DLL 复制到构建目录中各可执行文件旁。
 
 Windows 的 DLL 搜索顺序不包含构建目录：MSYS2 的 gcc 动态链接 libstdc++/libgcc/
-libwinpthread，freetype 又动态链接 zlib/bz2/png/brotli，SDL3 也是共享库，所以直接运行
+libwinpthread，freetype 又动态链接 zlib/bz2/png/brotli，SDL3 可选共享模式，所以直接运行
 `buildDir\\tests\\xxx.exe` 或 `buildDir\\showcase\\nandina_showcase.exe` 会以
 0xC0000135 (STATUS_DLL_NOT_FOUND) 退出（终端里看起来“什么都没发生”）。
 
@@ -14,6 +14,7 @@ DLL，不复制整个 MSYS2 bin 目录。
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import shutil
 import sys
@@ -57,7 +58,26 @@ def locate(name: str, roots: list[Path]) -> Path | None:
     return None
 
 
-def find_sdl_dll(build_dir: Path) -> Path | None:
+def sdl_dependency(build_dir: Path) -> dict | None:
+    report = build_dir / "deps.json"
+    if report.is_file():
+        dependencies = json.loads(report.read_text(encoding="utf-8"))["deps"]
+        return next((item for item in dependencies if item["name"] == "sdl3"), None)
+    return None
+
+
+def find_sdl_dll(build_dir: Path, roots: list[Path]) -> Path | None:
+    sdl3 = sdl_dependency(build_dir)
+    if sdl3 is not None:
+        if not sdl3["enabled"] or sdl3["linkage"] == "static":
+            return None
+        if sdl3["source"] == "system":
+            for root in roots:
+                for name in SDL_DLL_NAMES:
+                    candidate = root / name
+                    if candidate.is_file():
+                        return candidate
+            return None
     for name in SDL_DLL_NAMES:
         known = build_dir / "subprojects" / "SDL3" / name
         if known.is_file():
@@ -98,11 +118,21 @@ def main() -> int:
         candidate = locate(name, roots)
         if candidate is not None:
             sources[name] = candidate
-    sdl = find_sdl_dll(build_dir)
+    sdl3 = sdl_dependency(build_dir)
+    sdl = find_sdl_dll(build_dir, roots)
     if sdl is not None:
         sources[sdl.name] = sdl
 
-    if sdl is None:
+    if sdl3 is not None and (not sdl3["enabled"] or sdl3["linkage"] == "static"):
+        print("windows runtime: SDL3 disabled or statically linked; no SDL3 DLL required")
+    elif sdl is None and sdl3 is not None and sdl3["source"] == "system":
+        print(
+            "windows runtime: system SDL3 linkage is unknown and no SDL3 DLL was found in "
+            "the compiler directory or PATH; verify static linkage or provide SDL3.dll "
+            "with --compiler-dir/PATH before distributing the application",
+            file=sys.stderr,
+        )
+    elif sdl is None:
         print(
             "windows runtime: SDL3 共享库还没生成，下次构建会补上（SDL3 链接完成之前本步骤会跳过）",
             file=sys.stderr,

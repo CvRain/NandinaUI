@@ -1,12 +1,9 @@
 //
 // Created by cvrain on 2026/7/4.
 //
-// raylib-backed implementation of NanWindow. raylib is included ONLY here.
-//
 
 #include "nan_window.hpp"
 
-#include "detail/raylib_platform_window.hpp"
 #if defined(NANDINA_HAS_SDL_BACKEND)
     #include "detail/sdl_platform_window.hpp"
 #endif
@@ -18,14 +15,11 @@
 
 #include "../foundation/nan_logger.hpp"
 #include "../foundation/utf8.hpp"
-#include "../render/backends/raylib_device.hpp"
 #include "../render/draw_context.hpp"
 #include "../scene/clipboard.hpp"
 #include "../scene/control.hpp"
 #include "../scene/input_event.hpp"
 #include "../scene/overlay_host.hpp"
-
-#include <raylib.h>
 
 #include <cstdlib>
 #include <stdexcept>
@@ -40,7 +34,7 @@ namespace nandina::app
         ///
         /// 行为与搬迁前一致：Linux/Wayland 会话下先走项目自己的 Wayland 细节实现
         /// （`app/detail/linux_clipboard`），失败或非 Wayland 时回退到平台实现。
-        /// 平台实现由各自后端提供（raylib → GLFW；SDL → SDL 的原生剪贴板）。
+        /// 平台实现提供原生剪贴板。
         class PlatformClipboard final: public scene::IClipboard {
         public:
             explicit PlatformClipboard(IPlatformWindow& platform): platform_(&platform) {}
@@ -91,11 +85,10 @@ namespace nandina::app
                         "NanWindow: sdl3 backend requested but this build has no SDL3 support"
                     );
 #endif
-                case WindowBackend::raylib:
                 case WindowBackend::automatic:
-                    break;
+                    return nullptr;
             }
-            return std::make_unique<detail::RaylibPlatformWindow>();
+            throw std::invalid_argument("NanWindow: unsupported window backend");
         }
     } // namespace
 
@@ -253,7 +246,12 @@ namespace nandina::app
         drag_controller_.install(tree_, overlay_host_.get());
 
         if (platform_ == nullptr) {
-            platform_ = std::make_unique<detail::RaylibPlatformWindow>();
+            platform_ = make_platform(config_.backend);
+        }
+        if (platform_ == nullptr) {
+            throw std::runtime_error(
+                "NanWindow: no window backend; enable SDL3 or inject IPlatformWindow"
+            );
         }
         if (!platform_->create(config_)) {
             log::get("app.window")
@@ -267,7 +265,7 @@ namespace nandina::app
             // 平台没给出可用窗口时不要进入清理路径：headless 启动失败可能根本没有 GL 上下文。
             throw std::runtime_error("NanWindow: failed to initialize native window");
         }
-        // From this point on the native window owns a live raylib/GL context. Mark
+        // From this point on the native window owns a live rendering context. Mark
         // it opened before constructing framework resources so an exception during
         // device/font setup can be recovered by the destructor's normal close path.
         opened_ = true;
@@ -309,10 +307,6 @@ namespace nandina::app
         const auto pipeline = font_pipeline_cache_->get({});
         if (!pipeline) {
             const auto reason = pipeline.error().message;
-            // 错误路径的释放顺序与 close() 一致，且有一条硬约束：`CloseWindow()`
-            // 必须在 render device 销毁**之前**调用 —— 它内部会走 raylib 的
-            // `rlglClose()`，若此时 GL 上下文已被 device 析构带走，会在
-            // `rlUnloadRenderBatch` 解引用空指针（实测无 RTTI 配置下 SIGSEGV）。
             tree_.set_root(nullptr);
             tree_.clear_default_text_pipeline();
             tree_.clear_font_context();
@@ -320,8 +314,8 @@ namespace nandina::app
             font_pipeline_cache_.reset();
             tree_.clear_texture_cache();
             texture_cache_.reset();
-            platform_->destroy();
             device_.reset();
+            platform_->destroy();
             tree_.clear_clipboard();
             opened_ = false;
             close_pending_ = false;
@@ -351,8 +345,7 @@ namespace nandina::app
         if (opened_) {
             throw std::logic_error("NanWindow::set_platform_window: window already opened");
         }
-        platform_ = platform != nullptr ? std::move(platform)
-                                        : std::make_unique<detail::RaylibPlatformWindow>();
+        platform_ = platform != nullptr ? std::move(platform) : make_platform(config_.backend);
     }
 
     auto NanWindow::platform_name() const -> std::string_view {
@@ -362,7 +355,7 @@ namespace nandina::app
     auto NanWindow::platform_backend() const -> WindowBackend {
         const auto resolved = config_.backend == WindowBackend::automatic ? default_window_backend()
                                                                           : config_.backend;
-        return resolved == WindowBackend::automatic ? WindowBackend::raylib : resolved;
+        return resolved;
     }
 
     auto NanWindow::should_close() const -> bool {
@@ -530,7 +523,6 @@ namespace nandina::app
             tree_.render(ctx);
         }
         device_->end_frame();
-        // 平台呈现：raylib 平台的 EndDrawing 在设备里（no-op），SDL 平台在这里 present。
         platform_->present();
 
         {

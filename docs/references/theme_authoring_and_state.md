@@ -454,7 +454,7 @@ muted_foreground → muted → card → background
 
 色域处理必须成为共享、显式策略。当前
 [颜色转换](../../nandina/foundation/nandina_color_space.hpp) 在 OKLab → linear RGB 时裁剪通道，
-[raylib 适配器](../../nandina/render/backends/raylib_device.cpp) 的普通颜色转换还会进入 8-bit
+[SDL3 适配器](../../nandina/render/backends/sdl_device.cpp) 的普通颜色转换还会进入 8-bit
 `NanHexRgb`；这说明浮点颜色、量化颜色和屏幕读回不能混为同一个输入。
 首版是否沿用当前裁剪与各绘制路径如何纳入量化，需与后端核对后定形；不能为校验器单独换一套
 更“理想”的色域映射而不修改渲染契约。
@@ -487,10 +487,9 @@ alpha 与预乘规则。默认 GPU blend 的 RGB 结果也不自动证明其 alp
 
 ### 6.8 后端合成空间：源码依据与端到端验收
 
-当前 [raylib_device.cpp](../../nandina/render/backends/raylib_device.cpp) 未显式设置 blend mode
-或 framebuffer sRGB；仓库中的 [rlgl.h](../../subprojects/raylib/src/rlgl.h) 初始化及默认 alpha
-模式使用 `SRC_ALPHA / ONE_MINUS_SRC_ALPHA`。结合目前未见 framebuffer sRGB 启用路径，
-**编码 sRGB 值上的合成是当前普通绘制路径有源码依据的候选配置**，不是因为“线性才正确”
+当前 [sdl_device.cpp](../../nandina/render/backends/sdl_device.cpp) 显式设置 `SDL_BLENDMODE_BLEND`，
+普通颜色先量化到 `NanHexRgb`。旧 raylib/rlgl 源码已退役，不能再作为当前后端的依据。
+**编码 sRGB 值上的合成仍需按 SDL 实际输出路径验收**，不是因为“线性才正确”
 就应被替换的权宜实现。
 
 但单个文件没有设置不等于已经证明所有运行环境、渲染目标与宿主状态；以上记录是源码核对，

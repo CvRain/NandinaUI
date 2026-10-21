@@ -22,17 +22,15 @@ namespace nandina::app
 
     /// 窗口与输入的平台后端。
     ///
-    /// `sdl3` 是 D4 的目标平台层（SDL3 窗口 + 输入 + 帧驱动 + SDL 渲染设备）；
-    /// `raylib` 是历史生产路径，保留给离线/录制与对照验收。
+    /// `sdl3` 提供窗口、输入、帧驱动与渲染设备。
     enum class WindowBackend {
-        /// 编译期装了 SDL3 就用 SDL3，否则回退 raylib（见 `default_window_backend()`）。
+        /// 使用本构建的默认后端；无内置后端时需注入 IPlatformWindow。
         automatic,
-        raylib,
-        sdl3,
+        sdl3 = 2,
     };
 
-    /// 本构建的默认平台后端：装了 SDL3 后端就是 `sdl3`，否则 `raylib`。
-    /// 运行时可用环境变量 `NANDINA_WINDOW_BACKEND=raylib|sdl3` 覆盖（诊断与对照用）。
+    /// 本构建有 SDL3 时返回 `sdl3`，否则返回 `automatic`（无内置后端）。
+    /// 环境变量 NANDINA_WINDOW_BACKEND 可指定 sdl3/auto；无效名称抛出异常。
     [[nodiscard]] auto default_window_backend() -> WindowBackend;
     /// 按名字解析后端（不区分大小写）；无法识别时返回 nullopt。
     [[nodiscard]] auto parse_window_backend(std::string_view name) -> std::optional<WindowBackend>;

@@ -155,7 +155,6 @@ DEPENDENCY_EXCLUDED_DIRS = {
     "*": {".git", ".github"},
     "SDL3": {".git", ".github", "test", "examples", "Xcode", "VisualC", "VisualC-GDK", "android-project"},
     "harfbuzz": {".git", ".github", "test", "perf", "docs"},
-    "raylib": {".git", ".github", "examples", "projects"},
     "fribidi": {".git", ".github", "test"},
     "nlohmann_json": {".git", ".github", "docs", "tests"},
     "Catch2": {".git", ".github", "tests"},

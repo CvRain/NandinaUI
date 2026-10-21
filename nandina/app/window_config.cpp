@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cstdlib>
+#include <stdexcept>
 #include <string>
 
 namespace nandina::app
@@ -32,9 +33,6 @@ namespace nandina::app
 
     auto parse_window_backend(const std::string_view name) -> std::optional<WindowBackend> {
         const auto normalized = lowercase(name);
-        if (normalized == "raylib") {
-            return WindowBackend::raylib;
-        }
         if (normalized == "sdl3" || normalized == "sdl") {
             return WindowBackend::sdl3;
         }
@@ -45,17 +43,22 @@ namespace nandina::app
     }
 
     auto default_window_backend() -> WindowBackend {
-        // 环境变量优先：覆盖只在「本构建有这个后端」时才生效，见 NanWindow 的解析。
         const auto from_env = env_backend_name();
         if (!from_env.empty()) {
-            if (const auto parsed = parse_window_backend(from_env); parsed.has_value()) {
+            const auto parsed = parse_window_backend(from_env);
+            if (!parsed) {
+                throw std::invalid_argument(
+                    "NANDINA_WINDOW_BACKEND: unsupported backend " + from_env
+                );
+            }
+            if (*parsed != WindowBackend::automatic) {
                 return *parsed;
             }
         }
 #if defined(NANDINA_HAS_SDL_BACKEND)
         return WindowBackend::sdl3;
 #else
-        return WindowBackend::raylib;
+        return WindowBackend::automatic;
 #endif
     }
 } // namespace nandina::app

@@ -130,8 +130,6 @@ module_render = files(
     'render/draw_context.hpp',
     'render/backends/sdf_primitive_geometry.hpp',
     'render/recording_device.hpp',
-    'render/backends/raylib_device.hpp',
-    'render/backends/raylib_device.cpp',
 )
 
 module_theme = files(
@@ -337,8 +335,6 @@ module_app = files(
 module_app += files(
     'app/platform_window.hpp',
     'app/window_config.cpp',
-    'app/detail/raylib_platform_window.hpp',
-    'app/detail/raylib_platform_window.cpp',
 )
 if host_machine.system() == 'linux'
     module_app += files(
@@ -366,7 +362,7 @@ if box2d_dep.found()
 endif
 
 # 创建静态库
-nandina_dependencies = [spdlog_dep, raylib_dep, freetype_dep, harfbuzz_dep, fribidi_dep, utf8proc_dep, sqlite3_dep, tomlplusplus_dep, nlohmann_json_dep, stb_dep]
+nandina_dependencies = [spdlog_dep, freetype_dep, harfbuzz_dep, fribidi_dep, utf8proc_dep, sqlite3_dep, tomlplusplus_dep, nlohmann_json_dep, stb_dep]
 nandina_cpp_args = [
     '-DNANDINA_BUILTIN_DEFAULT_FONT_SIZE=' + builtin_font_size.to_string(),
     '-DNANDINA_BUILTIN_DEFAULT_FONT_LICENSE_SIZE=' + builtin_font_license_size.to_string(),

@@ -4,7 +4,7 @@
 // app/nan_window — 窗口与主循环封装。
 //
 // NanWindow 吸收掉此前 example 里手写的全部底层样板:
-//   - raylib 窗口生命周期 (InitWindow / CloseWindow / WindowShouldClose);
+//   - 原生窗口生命周期；
 //   - 渲染设备构造 + 每帧 begin/clear/draw/end;
 //   - 输入轮询 → 翻译成 scene::InputEvent → 派发给 SceneTree;
 //   - per-frame process(dt)。
@@ -17,8 +17,6 @@
 // 可继承覆写:
 //   - on_setup():  窗口就绪后调用一次, 用于注册页面 / 搭建全局框架 (未来接 Router)。
 //   - on_frame(dt): 每帧 process 之后、绘制之前调用, 用于动画驱动等。
-//
-// raylib 类型不出现在本头文件; 全部收敛在 nan_window.cpp。
 //
 
 #ifndef NANDINA_EXPERIMENT_APP_NAN_WINDOW_HPP
@@ -63,7 +61,7 @@ namespace nandina::app
     public:
         NanWindow(NanApplication& app, WindowConfig config);
 
-        /// 平台后端注入点（P4）：默认是 raylib + GLFW 实现，可以在 open() 之前替换成
+        /// 平台后端注入点（P4）：默认是 SDL3 实现，可以在 open() 之前替换成
         /// 别的平台（例如 SDL3）。传 nullptr 会退回默认实现。
         void set_platform_window(std::unique_ptr<IPlatformWindow> platform);
 
@@ -137,7 +135,7 @@ namespace nandina::app
 
         // ── 由 NanApplication::run 驱动 ─────────────────────────────────────────────
 
-        /// 打开 raylib 窗口 + 创建渲染设备。run 开始时调用一次。
+        /// 打开原生窗口 + 创建渲染设备。run 开始时调用一次。
         void open();
 
         /// 是否收到关闭请求 (点 X / Alt-F4 / request_close)。
@@ -146,7 +144,7 @@ namespace nandina::app
         /// 执行一帧: 轮询输入 → 派发 → process(dt) → on_frame → 绘制。
         void tick();
 
-        /// 关闭 raylib 窗口。run 结束时调用。
+        /// 关闭原生窗口。run 结束时调用。
         void close();
 
         /**
@@ -198,7 +196,7 @@ namespace nandina::app
         std::unique_ptr<NanRouter> router_;
         std::unique_ptr<reactive::ReactiveScope> shell_scope_;
         bool shell_installed_ = false;
-        /// 平台后端：窗口 + 输入 + 呈现 + 设备工厂。默认在构造函数里装 raylib 实现。
+        /// 平台后端：窗口 + 输入 + 呈现 + 设备工厂。无内置后端时等待应用注入。
         std::unique_ptr<IPlatformWindow> platform_;
         /// 平台设备到手后的包装钩子（见 set_render_device_wrapper）。
         std::move_only_function<

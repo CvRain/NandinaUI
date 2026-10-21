@@ -1,19 +1,30 @@
 # Linux 窗口后端与缩放
 
-NandinaUI 在 Linux 上支持 Wayland 和 X11，但每个构建目录只编译其中一个 GLFW 窗口后端。Meson 默认根据配置时的桌面会话自动选择，也可以显式指定：
+> **历史勘误（2026-10-20）**：raylib/GLFW 已退役。下面关于旧实现“每个构建目录只编译一个
+> GLFW 后端”的描述保留为历史记录，不适用于当前 SDL3 构建。当前行为见下文。
+
+NandinaUI 在 Linux 上支持 Wayland 与 X11，窗口/输入/帧驱动由 SDL3 提供。
+
+## 构建期选择与运行期驱动
+
+vendored SDL3 可以**在同一个二进制里同时编译 X11 与 Wayland 驱动**，运行时由 SDL 根据
+环境选择（`WAYLAND_DISPLAY` 可用时通常选 Wayland，否则 X11/XWayland）。
+
+`-Dlinux_window_system=` 只控制**vendored SDL3 编译哪些驱动**：
+
+- `auto`（默认）：交给 SDL 的 CMake 探测，按环境里可用的开发包构建；
+- `x11` / `wayland`：只启用指定驱动，可用来说明“必须走某条路径”，或减少依赖面；
+- system SDL3（`-Dsdl3_source=system`）的驱动由发行版构建决定，本选项不重编译它。
+
+切换该选项需要**重新配置并重编 SDL3**：
 
 ```bash
-meson setup buildDir -Dlinux_window_system=wayland
-meson setup buildDir -Dlinux_window_system=x11
+meson configure buildDir -Dlinux_window_system=wayland
+meson compile -C buildDir
 ```
 
-已有构建目录可以使用 `meson configure buildDir -Dlinux_window_system=wayland` 切换，随后重新编译。
-
-## 为什么不同时编译两个后端
-
-当前随项目提供的 raylib/GLFW 可以在一个二进制中编译 Wayland 与 X11，但 raylib 的部分高 DPI 输入回调仍使用编译期平台宏。双后端构建运行在 X11 或 XWayland 时，窗口从一个缩放比例不同的显示器移动到另一个显示器后，绘制比例会更新，鼠标比例却可能继续使用原来的值，最终表现为控件绘制区域与命中区域错位。
-
-为避免把上游后端细节泄漏到 NandinaUI 的输入 API，项目在配置阶段确定实际窗口系统。这样 raylib 的窗口尺寸、帧缓冲尺寸和鼠标坐标始终采用同一平台分支。
+运行期可以用 `SDL_VIDEODRIVER=wayland` / `SDL_VIDEODRIVER=x11` 临时强制驱动；应用内可用
+`SDL_GetCurrentVideoDriver()` 查询实际驱动，或看窗口初始化日志。
 
 ## 多显示器验证
 
@@ -23,6 +34,9 @@ meson setup buildDir -Dlinux_window_system=x11
 - 不同缩放比例的显示器之间双向移动窗口；
 - 移动后按钮边缘、文本输入光标和滚动区域的命中；
 - 调整窗口尺寸后再次跨屏；
-- Wayland 原生与 X11/Xorg 分别建立独立构建目录测试。
+- Wayland 原生与 X11/Xorg 分别建立独立构建目录测试（`-Dlinux_window_system=x11` / `wayland`）。
 
-日志中的 `PLATFORM: DESKTOP (GLFW - Wayland)` 或 `PLATFORM: DESKTOP (GLFW - X11)` 可以确认实际后端。处于 Wayland 桌面时看到 Xorg/XWayland 标识，通常表示构建目录选择了 X11；重新以 `-Dlinux_window_system=wayland` 配置即可。
+历史记录（仅作背景，不适用于 SDL3）：旧 raylib/GLFW 构建每个目录只编译一个窗口系统，
+且其高 DPI 输入回调使用编译期平台宏；当时建议在配置阶段固定窗口系统以避免“绘制比例更新、
+鼠标比例不更新”的错位。该缺陷与限制随 raylib 退役一起退出，SDL3 的 DPI/输入一致性仍需按
+上面的矩阵重新实测。

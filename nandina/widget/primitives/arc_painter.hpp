@@ -6,7 +6,7 @@
 // rendering (outer radius / thickness / start angle / sweep) lives in one place.
 //
 // Geometry notes: the ring is submitted as one `IRenderDevice::draw_arc` call,
-// which the raylib backend renders as a native antialiased annular sector (SDF).
+// which the SDL3 backend renders as an antialiased annular sector (SDF).
 // A single primitive avoids the double-blending a polyline of translucent
 // capsules produced where neighbouring chords overlapped. `radius` is the outer
 // radius and `thickness` the band width; angles follow the device convention

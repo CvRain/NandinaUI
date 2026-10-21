@@ -72,9 +72,7 @@ namespace
 
 TEST_CASE("request_close from on_frame shuts the window down cleanly", "[app][window][lifecycle]") {
 #ifdef NANDINA_SKIP_WINDOW_TESTS
-    // 无显示环境时保持测试目标存在，但以成功状态报告 skipped；Catch2 的 SKIP
-    // 返回码会被 Meson 当作失败。
-    SUCCEED("window tests are disabled because no native display is available");
+    SKIP("window tests are disabled because no native display is available");
 #else
     #ifdef NANDINA_OPTIONAL_WINDOW_TESTS
     try {
@@ -90,10 +88,12 @@ TEST_CASE("request_close from on_frame shuts the window down cleanly", "[app][wi
                 .title = "lifecycle test",
                 .width = 320,
                 .height = 240,
+                .backend = app::WindowBackend::sdl3,
             },
             3,
         };
 
+        REQUIRE(window.platform_name() == "sdl3");
         const auto exit_code = application.run(window);
 
         REQUIRE(exit_code == 0);
@@ -106,7 +106,7 @@ TEST_CASE("request_close from on_frame shuts the window down cleanly", "[app][wi
         // Meson auto 模式只能根据环境变量判断显示环境是否可能存在；容器或
         // sandbox 中 socket 可能存在但不可连接，此时仍应把窗口测试视为不可用。
         if (std::string_view(error.what()) == "NanWindow: failed to initialize native window") {
-            SUCCEED("window tests are unavailable because the native display cannot be opened");
+            SKIP("window tests are unavailable because the native display cannot be opened");
         }
         else {
             throw;
