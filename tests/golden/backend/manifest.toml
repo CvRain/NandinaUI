@@ -57,8 +57,11 @@ image = "candidates/anchors-sdf-windows.png"
 width = 1200
 height = 800
 sha256 = "a66d34ae7246b32cd299c13bb68cbfd3f7b0058d9e5a581629fa50cb4ec61406"
-status = "candidate"
+status = "approved"
 captured = "2026-10-19"
+reviewed_by = "agent review, per maintainer request 2026-10-22"
+reviewed_on = "2026-10-22"
+review_note = "Windows desktop-session SDF capture (home/label/anchors, 1200x800 x 30 frames, DXIL shader artifact); all three visually reviewed; second capture byte-identical (repeated=True) and the uploaded repeat files hash-match the repo candidates; home sha equals the CPU baseline because that page has no SDF primitives; cross-platform pixel differences are informational only and never gated"
 
 [[entries]]
 page = "home"
@@ -110,8 +113,11 @@ image = "candidates/home-sdf-windows.png"
 width = 1200
 height = 800
 sha256 = "f57917165eb20927c03d8e800fccdb9b0a336a9a891b1fc7976dcb92a61f43e9"
-status = "candidate"
+status = "approved"
 captured = "2026-10-19"
+reviewed_by = "agent review, per maintainer request 2026-10-22"
+reviewed_on = "2026-10-22"
+review_note = "Windows desktop-session SDF capture (home/label/anchors, 1200x800 x 30 frames, DXIL shader artifact); all three visually reviewed; second capture byte-identical (repeated=True) and the uploaded repeat files hash-match the repo candidates; home sha equals the CPU baseline because that page has no SDF primitives; cross-platform pixel differences are informational only and never gated"
 
 [[entries]]
 page = "label"
@@ -163,5 +169,8 @@ image = "candidates/label-sdf-windows.png"
 width = 1200
 height = 800
 sha256 = "63b5380cae0ccb8be61cf4d5f7c4b95897aeaa752714b5116d5de8c431ae74e3"
-status = "candidate"
+status = "approved"
 captured = "2026-10-19"
+reviewed_by = "agent review, per maintainer request 2026-10-22"
+reviewed_on = "2026-10-22"
+review_note = "Windows desktop-session SDF capture (home/label/anchors, 1200x800 x 30 frames, DXIL shader artifact); all three visually reviewed; second capture byte-identical (repeated=True) and the uploaded repeat files hash-match the repo candidates; home sha equals the CPU baseline because that page has no SDF primitives; cross-platform pixel differences are informational only and never gated"
