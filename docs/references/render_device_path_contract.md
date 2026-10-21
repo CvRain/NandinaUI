@@ -27,7 +27,7 @@
 | --- | --- | --- |
 | `supports_analytic_aa()` | 当前路径是否提供解析抗锯齿 | **是**（GPU renderer 上的 SDF；默认 false 的接口方法 `analytic_antialiasing()`） |
 | `supports_rounded_clip()` | 是否按圆角轮廓裁剪 | false（只到矩形） |
-| `supports_soft_shadows()` | 是否提供软阴影 | false |
+| `supports_soft_shadows()` | 是否提供软阴影 | SDF 路径可用时 true（2026-10-21 起） |
 | `render_path()` | `sdf` / `cpu` + 原因 | `sdf`（GPU renderer）或 `cpu`；原因见 `sdf_unavailable_reason()` |
 
 已有的 `supports_rounded_rect()` / `supports_alpha_textures()` 保持语义不变。
@@ -226,7 +226,7 @@ clang-format 23.1.1、suite 门禁、文档相对链接/锚点和 diff 检查通
 
 缓存规则（已实现）：
 
-- key = 参数块的**按位**内容（探针 64 字节，当前生产填充/描边/圆为 32 字节；`-0.0` 与 `+0.0` 视为不同，不做归一化，
+- key = 参数块的**按位**内容（探针 64 字节，当前生产填充/描边/圆/线段/弧/阴影/裁剪为 48 字节；`-0.0` 与 `+0.0` 视为不同，不做归一化，
   以免掩盖上游不一致）；
 - 容量有界（初定 256，LRU 淘汰并销毁 state），**跨帧保留**（按钮/列表行参数稳定，命中率高）；
   设备重建或上下文丢失时整体清空；
@@ -253,14 +253,18 @@ clang-format 23.1.1、suite 门禁、文档相对链接/锚点和 diff 检查通
 
 ## 10. 生产接入审查（2026-10-19）
 
-**图元范围（2026-10-20 更新）**：SDF 模式 0 填充 / 1 中心线描边 / 2 线段（圆头）/
-5 环形扇区（含整环）已接入生产设备；arc/线段复用同一 32 字节参数块（bounds.xy /
-bounds.zw / style.x / style.y / style.z），不新增 cbuffer 或 state 容量。线段与弧的
-覆盖 quad 分别由 `sdf_segment_bounds()` / `sdf_arc_bounds()` 计算；CPU 回落保留
-（`draw_line` 四边带、`draw_arc` 环扇三角带），并修正了 SDL CPU 弧的角度约定
-（+Y 为 0、向 +X 增大，与 `IRenderDevice::draw_arc` 文档和 raylib 一致）。角向 SDF
-使用环绕角差而不是"两半平面之交"的 sine 公式：后者在 sweep > π 时会把扇区画成补集。
-阴影（mode 4）与圆角裁剪仍走 CPU/未实现。
+**图元范围（2026-10-21 更新）**：SDF 模式 0 填充 / 1 中心线描边 / 2 线段（圆头）/
+3 圆 ∩ 圆角矩形 / 4 软阴影 / 5 环形扇区（含整环）已接入生产设备。参数块从 32 字节扩为
+**48 字节**（3 个 float4：bounds / style / extra），extra.xy 供模式 3 携带圆心；缓存键、
+state 埋点与产物同步更新，仍不引入第二条 cbuffer。线段与弧的覆盖 quad 分别由
+`sdf_segment_bounds()` / `sdf_arc_bounds()` 计算；阴影覆盖 quad 额外扩 spread，裁剪覆盖
+quad 取裁剪矩形；CPU 回落保留（`draw_line` 四边带、`draw_arc` 环扇三角带、阴影硬边圆角、
+裁剪退化为方角），并修正了 SDL CPU 弧的角度约定（+Y 为 0、向 +X 增大，与
+`IRenderDevice::draw_arc` 文档和 raylib 一致）。角向 SDF 使用环绕角差而不是"两半平面之交"
+的 sine 公式：后者在 sweep > π 时会把扇区画成补集。软阴影为圆角矩形 SDF + spread 内的
+smoothstep 衰减（内部不透明、spread 之外为 0）；圆角裁剪为两个 SDF 取 max（交集），
+因此涟漪在圆角处不会外溢。`supports_soft_shadows()` / `supports_rounded_clip()` 只在
+SDF 路径可用时返回 true（无 SDF 的 SDL 2D 路径仍如实降级）。
 
 
 当前生产覆盖填充、描边与圆。审查修复非等比缩放回落及帧结束未恢复默认 state、

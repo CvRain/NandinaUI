@@ -29,7 +29,8 @@
 - [SDK 表面：头文件分类与门禁](sdk_surface.md)：**已实施**。区分构建闭包与公共表面；182 个头文件（10 internal）分类、包含方向与独立包含三类门禁已落地。图片解码钩子与 raylib 后端已删除，公开签名检查仍需评审。
 - [视觉回归：golden、容差与更新流程](visual_regression.md)：**6 条 approved 基线已交付（Linux，debug 与 release 渲染逐像素一致）**。两层预期、`tests/golden/backend/` 图与 manifest（`golden-manifest` 校验清单与审阅元数据）、比较器与审批工具手动运行；跨平台基线另行归档。
 - [性能预算：采样协议与候选阈值](performance_budget.md)：**已实施（release 基线 + 确定性门禁）**。固定采样协议（预热 300/采样 1200/重复 5 次、p50/p95）、release 基线（8 配置）、确定性门禁（布局 0、稳态 miss 0、binds 上限）与候选计时阈值（`--enforce` 启用）；CI 无 GPU，属发布/本地门禁。
-- [渲染设备路径契约](render_device_path_contract.md)：**生产接入（填充/描边/圆/线段/弧）已完成并验收**。64 字节参数、4 KiB uniform 边界、三档缩放与纹理/字形交错、失败注入、嵌入产物、"不可变参数 state + 有界缓存"（§9）、审查修复（§10）、交互/性能协议（§11）、页面 golden（§12）、预算门禁（§13）、平台验收清单（§14）；阴影/裁剪与 MSL 仍待验收；图片解码已迁到后端无关的 vendored stb。
+- [渲染设备路径契约](render_device_path_contract.md)：**生产接入（填充/描边/圆/线段/弧）已完成并验收**。64 字节参数、4 KiB uniform 边界、三档缩放与纹理/字形交错、失败注入、嵌入产物、"不可变参数 state + 有界缓存"（§9）、审查修复（§10）、交互/性能协议（§11）、页面 golden（§12）、预算门禁（§13）、平台验收清单（§14）；阴影（mode 4）与涟漪圆角交集（mode 3）已实现并通过设备级测试；MSL 仍待实机验收；图片解码已迁到后端无关的 vendored stb。
+- [Windows 人工验收清单](windows_acceptance.md)：**需要交互式桌面会话的 GUI/GPU 项**。真实窗口回归、butter 主题软阴影与涟漪圆角裁剪目检、DXIL 设备级验收、Windows SDF 路径页面 golden 采集、Windows 性能基线（P1.3）；含逐项命令与回报方式。
 - [第三方依赖策略](dependency_policy.md)：**批次 2 已完成，raylib 已退役**。10 个 wrap、字体 submodule、SDL3 三态来源、静态/共享选择、pin/dirty 与 SDK 消费门禁；GitHub 首次下载与逐平台应用打包仍需对应环境验收。
 - [D6：作者 DSL、文本能力与内容测量](authoring_dsl_and_content_measurement.md)：**讨论汇总，待审阅，未实施**。Label 能力表、共享属性归属、builder 子项简写、有限宽度自然长高，以及 border / Section 的阶段边界；过程见 [story 014](../../stories/014-the-dsl-that-kept-sending-authors-to-configure.md)。
 - [待决设计草案](reference_draft.md)：**工作稿**。D2 的后续讨论已汇总到[主题方案、作者入口与状态订阅](theme_authoring_and_state.md)；D3 的 `nav_group` 空值与合并语义已收敛、未实施；**D4 已归档**（P3 已把默认后端换成 SDL3）；**D7** 补齐混合独立预期、生产 SDF 参数/状态、共享图片和分层裁剪；**D8** 补齐物理/逻辑键、事件快照和保序。两者方向已接受、精确接口分批定形、尚未实施。D1 已定案为[统一输入、焦点与文本编辑](focus_and_input.md)。

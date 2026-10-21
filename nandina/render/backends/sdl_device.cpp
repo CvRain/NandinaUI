@@ -90,7 +90,7 @@ namespace nandina::render
     // SDF 路径（不可变参数 state + 有界 LRU，策略见
     // docs/references/render_device_path_contract.md §9）。
     struct SdlRenderDevice::SdfPath {
-        using Cache = detail::ParameterStateCache<SDL_GPURenderState*, 8>;
+        using Cache = detail::ParameterStateCache<SDL_GPURenderState*, 12>;
         using Key = Cache::Key;
         static constexpr std::size_t kCacheCapacity = 256;
 
@@ -413,7 +413,7 @@ namespace nandina::render
 
     auto SdlRenderDevice::submit_sdf(
         const foundation::NanRect& cover,
-        const std::array<float, 8>& values,
+        const std::array<float, 12>& values,
         const foundation::NanColor& color
     ) -> bool {
         if (!sdf_) {
@@ -462,9 +462,9 @@ namespace nandina::render
         }
         // 覆盖 quad 要包住 AA 过渡区：设备空间 1px（逻辑坐标 1/scale）。
         const auto cover = bounds.expanded(std::max(half_width, 0.0F) + 1.0F / scale);
-        // 参数块（目标像素）：中心、半尺寸、圆角半径、半线宽、模式。
+        // 参数块（目标像素）：中心、半尺寸、圆角半径、半线宽、模式；extra 供模式 3 使用。
         const auto center = bounds.get_center();
-        const std::array<float, 8> values {
+        const std::array<float, 12> values {
             center.get_x() * scale + origin_x,
             center.get_y() * scale + origin_y,
             bounds.get_width() * 0.5F * scale,
@@ -472,6 +472,10 @@ namespace nandina::render
             radius * scale,
             half_width * scale,
             static_cast<float>(mode),
+            0.0F,
+            0.0F,
+            0.0F,
+            0.0F,
             0.0F,
         };
         return submit_sdf(cover, values, color);
@@ -491,7 +495,7 @@ namespace nandina::render
         }
         const auto cover = detail::sdf_segment_bounds(a, b, half_width);
         // segment：bounds.xy = A，bounds.zw = B - A（方向），style.x = 半宽。
-        const std::array<float, 8> values {
+        const std::array<float, 12> values {
             a.get_x() * scale + origin_x,
             a.get_y() * scale + origin_y,
             (b.get_x() - a.get_x()) * scale,
@@ -499,6 +503,10 @@ namespace nandina::render
             half_width * scale,
             0.0F,
             static_cast<float>(detail::SdfPrimitiveMode::segment),
+            0.0F,
+            0.0F,
+            0.0F,
+            0.0F,
             0.0F,
         };
         return submit_sdf(cover, values, color);
@@ -523,7 +531,7 @@ namespace nandina::render
         const auto cover = detail::sdf_arc_bounds(center, outer_radius);
         // arc：bounds.xy = 圆心，bounds.zw = (内半径, 外半径)，
         // style.x = 起始角 + 半张角，style.y = 半张角（整环时跳过角向切割）。
-        const std::array<float, 8> values {
+        const std::array<float, 12> values {
             center.get_x() * scale + origin_x,
             center.get_y() * scale + origin_y,
             inner_radius * scale,
@@ -531,6 +539,10 @@ namespace nandina::render
             begin + sweep * 0.5F,
             sweep * 0.5F,
             static_cast<float>(detail::SdfPrimitiveMode::arc),
+            0.0F,
+            0.0F,
+            0.0F,
+            0.0F,
             0.0F,
         };
         return submit_sdf(cover, values, color);
@@ -1051,12 +1063,79 @@ namespace nandina::render
         const float clip_radius,
         const foundation::NanColor& color
     ) {
-        // 生产后端用 SDF 求解析交集；这里用「矩形裁剪 + 圆」的组合近似。差异是**能力差异**，
-        // 不是等价实现：圆角处的裁剪会退化成方角。探测记录已把这条列为待比对项。
+        if (sdf_ != nullptr && circle_radius > 0.0F) {
+            float scale = 0.0F;
+            float origin_x = 0.0F;
+            float origin_y = 0.0F;
+            if (sdf_scale_and_origin(scale, origin_x, origin_y)) {
+                // 交集一定落在裁剪矩形内：覆盖 quad 取裁剪矩形 + 1 设备像素 AA。
+                const auto cover = clip_rect.expanded(1.0F / scale);
+                const auto clip_center = clip_rect.get_center();
+                const std::array<float, 12> values {
+                    clip_center.get_x() * scale + origin_x,
+                    clip_center.get_y() * scale + origin_y,
+                    clip_rect.get_width() * 0.5F * scale,
+                    clip_rect.get_height() * 0.5F * scale,
+                    clip_radius * scale,
+                    circle_radius * scale,
+                    static_cast<float>(detail::SdfPrimitiveMode::clipped_circle),
+                    0.0F,
+                    center.get_x() * scale + origin_x,
+                    center.get_y() * scale + origin_y,
+                    0.0F,
+                    0.0F,
+                };
+                if (submit_sdf(cover, values, color)) {
+                    return;
+                }
+            }
+        }
+        // 回退：矩形裁剪 + 圆。圆角处退化为方角，这是**能力差异**（platform_backend_contract.md §3）。
         set_clip(clip_rect);
         draw_circle(center, circle_radius, color);
         clear_clip();
-        (void)clip_radius;
+    }
+
+    void SdlRenderDevice::draw_rounded_rect_shadow(
+        const foundation::NanRect& rect,
+        const float radius,
+        const float spread,
+        const foundation::NanColor& color
+    ) {
+        if (sdf_ != nullptr && spread > 0.0F) {
+            float scale = 0.0F;
+            float origin_x = 0.0F;
+            float origin_y = 0.0F;
+            if (sdf_scale_and_origin(scale, origin_x, origin_y)) {
+                // 软边衰减落在矩形外侧：覆盖 quad 额外扩 spread + 1 设备像素。
+                const auto cover = rect.expanded(spread + 1.0F / scale);
+                const auto center = rect.get_center();
+                const std::array<float, 12> values {
+                    center.get_x() * scale + origin_x,
+                    center.get_y() * scale + origin_y,
+                    rect.get_width() * 0.5F * scale,
+                    rect.get_height() * 0.5F * scale,
+                    radius * scale,
+                    spread * scale,
+                    static_cast<float>(detail::SdfPrimitiveMode::shadow),
+                    0.0F,
+                    0.0F,
+                    0.0F,
+                    0.0F,
+                    0.0F,
+                };
+                if (submit_sdf(cover, values, color)) {
+                    return;
+                }
+            }
+        }
+        // 回退：至少保留"偏移的暗色圆角"信息，硬边；alpha 保持原值，不假装能算出等效柔化。
+        if (radius > 0.0F) {
+            draw_rounded_rect(rect, radius, color);
+        }
+        else {
+            draw_rect(rect, color);
+        }
     }
 
     void SdlRenderDevice::draw_text(
@@ -1263,10 +1342,9 @@ namespace nandina::render
     }
 
     auto SdlRenderDevice::supports_rounded_clip() const -> bool {
-        // 圆角矩形是用三角形扇画出来的，绘制本身没问题；但**裁剪**只能交给
-        // SDL_SetRenderClipRect，那是矩形 —— 圆角处的裁剪会退化成方角。所以这里如实
-        // 返回 false，让 RipplePainter 走「自己 set_clip + 画圆」的降级路径。
-        return false;
+        // SDF 路径用「圆 ∩ 圆角矩形」的解析 SDF 求交，能真正按圆角轮廓裁剪；
+        // 没有 SDF 时只有 SDL_SetRenderClipRect 的矩形裁剪，圆角处会退化成方角。
+        return sdf_ != nullptr;
     }
 
     auto SdlRenderDevice::supports_direct_image_loading() const -> bool {
@@ -1313,8 +1391,7 @@ namespace nandina::render
     }
 
     auto SdlRenderDevice::supports_soft_shadows() const -> bool {
-        // draw_rounded_rect_shadow 未实现（接口默认是 no-op），因此不能声称支持软阴影；
-        // ShadowPainter 会退化成硬边圆角阴影。
-        return false;
+        // SDF 路径用圆角矩形 SDF + spread 平滑衰减画软边；没有 SDF 时退化为硬边阴影。
+        return sdf_ != nullptr;
     }
 } // namespace nandina::render

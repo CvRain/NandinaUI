@@ -52,7 +52,7 @@
 - 每个后端必须给出自己的能力表，并由测试或探测证据支撑。
 
 下面保留退役前的差异取证（SDL 2D 设备 vs 当时的 raylib 后端，见探测记录 §2.3）。
-raylib 不再可构建；当前 SDF 已覆盖填充/描边/圆/线段/弧，阴影与圆角裁剪仍缺。
+raylib 不再可构建；当前 SDF 已覆盖填充/描边/圆/线段/弧/软阴影/涟漪圆角交集（2026-10-21）。通用子树圆角裁剪不在本轮范围。
 **"已被查询覆盖"** 列表示
 这条差异已经有代码分支、并有会红的测试；其余是待办。
 
@@ -61,8 +61,8 @@ raylib 不再可构建；当前 SDF 已覆盖填充/描边/圆/线段/弧，阴�
 | 矩形圆角绘制 | SDF | CPU 三角形扇 | `supports_rounded_rect()`（`BoxPainter`） | D7 生产 SDF 路径 |
 | 圆角/圆抗锯齿 | SDF + `fwidth` | 硬边缘 | —（质量差异，无离散路径） | D7 SDF。历史单页静止帧差异见探测记录 §2.3.2，不代表其他页面或交互态 |
 | 几何**半透明混合** | 正常 | **已修复（2026-10-17）**：设备构造启用 `SDL_BLENDMODE_BLEND`，`check_sdl` 处理失败 | — | 回归已落地：`tests/sdl_visual_tests.cpp` 用软件渲染器 + 解析合成预期覆盖半透明圆角矩形、按下态、涟漪中间态、Dialog 遮罩；删除设置 4 用例全红（见[视觉回归](visual_regression.md) §5） |
-| 软阴影 | SDF 软阴影 | 未实现 | **`supports_soft_shadows()`**（`ShadowPainter` 退化为硬边圆角阴影，`tests/card_tests.cpp`） | D7 SDF 软阴影，基础路径继续明确降级 |
-| 涟漪专用圆角交集 | SDF 解析交集 | 只能矩形裁剪 | **`supports_rounded_clip()`**（`RipplePainter` 自己 `set_clip` + 画圆，`tests/button_tests.cpp`） | D7 专用交集先行；图片/子树通用裁剪另批定形 |
+| 软阴影 | SDF 软阴影 | 未实现（硬边圆角降级） | **`supports_soft_shadows()`**（`ShadowPainter` 按能力选路，`tests/card_tests.cpp`）；SDF 路径已实现（mode 4，`sdf-device` 覆盖内部/软边衰减/缓存） | 已完成（2026-10-21）；无 SDF 设备继续明确降级 |
+| 涟漪专用圆角交集 | SDF 解析交集 | 只能矩形裁剪 | **`supports_rounded_clip()`**（`RipplePainter` 按能力选路，`tests/button_tests.cpp`）；SDF 路径实现 mode 3 交集（`sdf-device` 覆盖矩形/圆/圆角三种裁剪方向） | 已完成（2026-10-21）；图片/子树通用裁剪另批定形 |
 | 圆角**描边** | SDF | 已实现（四条直边 + 四个同心环扇） | —（不需要查询，设备必须覆写） | **接口默认会退化成方框描边**，新后端必须覆写；消费者回归在 anchors 页面扫到过（探测记录 §2.3.3） |
 | `draw_arc` | SDF 环 | **已实现**（同心环扇，按张角取 6–96 段） | —（不需要查询，设备必须覆写） | 当前 showcase 没有页面用到 Spinner/ProgressBar，因此只有设备级证据、没有页面级证据 |
 | 文本 | HarfBuzz + `GlyphAtlasTexture` | 已跑通（真实图集、真实页面） | `supports_alpha_textures()` | 保持 |

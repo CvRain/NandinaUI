@@ -136,6 +136,12 @@ namespace nandina::render
             float clip_radius,
             const foundation::NanColor& color
         ) override;
+        void draw_rounded_rect_shadow(
+            const foundation::NanRect& rect,
+            float radius,
+            float spread,
+            const foundation::NanColor& color
+        ) override;
         void draw_text(
             std::string_view text,
             const foundation::NanPoint& pos,
@@ -173,9 +179,9 @@ namespace nandina::render
 
         // ---- capabilities ----
         [[nodiscard]] auto supports_rounded_rect() const -> bool override;
-        /// 只能按外接矩形裁剪（圆角处退化为方角），返回 false。
+        /// SDF 路径可用时按圆角轮廓解析裁剪（圆 ∩ 圆角矩形）；否则退化为方角裁剪。
         [[nodiscard]] auto supports_rounded_clip() const -> bool override;
-        /// 未实现软阴影，返回 false，消费者退化为硬边阴影。
+        /// SDF 路径可用时绘制软边阴影；否则返回 false，消费者退化为硬边阴影。
         [[nodiscard]] auto supports_soft_shadows() const -> bool override;
         /// 不能加载图片（无解码器/loader），返回 false。
         [[nodiscard]] auto supports_direct_image_loading() const -> bool override;
@@ -199,10 +205,11 @@ namespace nandina::render
         auto sdf_scale(float& scale) const -> bool;
         /// scale 与设备像素原点（含 letterbox 偏移）：参数块按设备像素编码。
         auto sdf_scale_and_origin(float& scale, float& origin_x, float& origin_y) const -> bool;
-        /// 提交一次 SDF 图元：cover 为逻辑坐标覆盖 quad，values 为 32 字节参数块。
+        /// 提交一次 SDF 图元：cover 为逻辑坐标覆盖 quad，values 为 48 字节参数块
+        /// （3 个 float4：bounds / style / extra，编码见 sdf_rounded.frag.hlsl 头注释）。
         auto submit_sdf(
             const foundation::NanRect& cover,
-            const std::array<float, 8>& values,
+            const std::array<float, 12>& values,
             const foundation::NanColor& color
         ) -> bool;
         /// 线段与圆环扇区的 SDF 编码；失败时调用方回落到 CPU 几何。

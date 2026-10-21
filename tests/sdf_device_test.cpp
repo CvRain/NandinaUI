@@ -617,6 +617,163 @@ namespace
         return ok;
     }
 
+    /// 软阴影与「圆 ∩ 圆角矩形」裁剪。SDF 路径验证解析覆盖率与圆角裁剪；CPU 路径验证
+    /// 能力回退（方角裁剪 / 硬边阴影）以及两个 capability 查询与渲染路径一致。
+    auto check_shadow_clip(SDL_Renderer* renderer, const bool sdf) -> bool {
+        using nandina::foundation::NanColor;
+        using nandina::foundation::NanPoint;
+        using nandina::foundation::NanRect;
+        using nandina::render::SdlRenderDevice;
+        const auto white = NanColor::from_hex(0xFFFFFF);
+        const auto black = NanColor::from_hex(0x000000);
+        const auto device_coordinate = [](const float logical, const float scale) {
+            return static_cast<int>(std::lround(logical * scale));
+        };
+        const auto smoothstep = [](const double edge0, const double edge1, const double value) {
+            const double t = std::clamp((value - edge0) / (edge1 - edge0), 0.0, 1.0);
+            return t * t * (3.0 - 2.0 * t);
+        };
+        const auto shadow_rect = NanRect::from_ltrb(10.0F, 10.0F, 30.0F, 30.0F);
+        const auto clip_rect = NanRect::from_ltrb(10.0F, 10.0F, 40.0F, 40.0F);
+        bool ok = true;
+        auto device = SdlRenderDevice(*renderer);
+        ok &= require(
+            device.supports_soft_shadows() == sdf,
+            "soft shadow capability reports the active path"
+        );
+        ok &= require(
+            device.supports_rounded_clip() == sdf,
+            "rounded clip capability reports the active path"
+        );
+        const auto read_frame = [&](SdlRenderDevice& target, const auto& draw) -> SDL_Surface* {
+            target.begin_frame();
+            target.clear(black);
+            draw(target);
+            target.end_frame();
+            return SDL_RenderReadPixels(renderer, nullptr);
+        };
+        for (const float scale: {1.0F, 1.25F, 1.5F}) {
+            SDL_SetRenderScale(renderer, scale, scale);
+            const auto sample = [&](SDL_Surface* surface,
+                                    const float logical_x,
+                                    const float logical_y,
+                                    Rgba expected,
+                                    const char* label) {
+                return expect_pixel(
+                    surface,
+                    device_coordinate(logical_x, scale),
+                    device_coordinate(logical_y, scale),
+                    expected,
+                    label
+                );
+            };
+            // 帧 A：只有软阴影 —— 内部不透明，spread 之外回到背景，中间按解析覆盖率衰减。
+            if (auto* surface = read_frame(
+                    device,
+                    [&](SdlRenderDevice& target) {
+                        target.draw_rounded_rect_shadow(shadow_rect, 6.0F, 8.0F, white);
+                    }
+                );
+                require(surface != nullptr, "read shadow frame"))
+            {
+                ok &= sample(surface, 20.0F, 20.0F, {255, 255, 255}, "shadow interior");
+                ok &= sample(surface, 20.0F, 42.0F, {0, 0, 0}, "shadow past spread");
+                if (sdf) {
+                    for (const float logical_y: {32.0F, 34.0F, 36.0F}) {
+                        const int row = device_coordinate(logical_y, scale);
+                        const double distance =
+                            (static_cast<double>(row) + 0.5) - 30.0 * static_cast<double>(scale);
+                        const double coverage = 1.0 - smoothstep(0.0, 8.0 * scale, distance);
+                        const auto value = static_cast<int>(std::lround(255.0 * coverage));
+                        ok &= sample(
+                            surface,
+                            20.0F,
+                            logical_y,
+                            {value, value, value},
+                            "shadow soft band"
+                        );
+                    }
+                }
+                SDL_DestroySurface(surface);
+            }
+            // 帧 B：大圆 ∩ 圆角矩形 —— 矩形外与圆角外都应被裁掉。
+            if (auto* surface = read_frame(
+                    device,
+                    [&](SdlRenderDevice& target) {
+                        target.draw_circle_clipped_rounded_rect(
+                            NanPoint(25.0F, 25.0F),
+                            30.0F,
+                            clip_rect,
+                            8.0F,
+                            white
+                        );
+                    }
+                );
+                require(surface != nullptr, "read clipped circle frame"))
+            {
+                ok &= sample(surface, 25.0F, 25.0F, {255, 255, 255}, "clip interior");
+                ok &= sample(surface, 25.0F, 12.0F, {255, 255, 255}, "clip rect edge interior");
+                ok &= sample(surface, 25.0F, 44.0F, {0, 0, 0}, "rect clip cuts circle");
+                if (sdf) {
+                    ok &= sample(surface, 38.0F, 38.0F, {0, 0, 0}, "rounded corner cuts circle");
+                }
+                else {
+                    // CPU 回退：矩形裁剪 + 圆，圆角处退化为方角（能力差异，非等价实现）。
+                    ok &=
+                        sample(surface, 38.0F, 38.0F, {255, 255, 255}, "cpu square clip fallback");
+                }
+                SDL_DestroySurface(surface);
+            }
+            // 帧 C：小圆在矩形内部 —— 验证圆本身被裁剪（而非只裁矩形）。
+            if (auto* surface = read_frame(
+                    device,
+                    [&](SdlRenderDevice& target) {
+                        target.draw_circle_clipped_rounded_rect(
+                            NanPoint(12.0F, 12.0F),
+                            10.0F,
+                            NanRect::from_ltrb(5.0F, 5.0F, 45.0F, 45.0F),
+                            6.0F,
+                            white
+                        );
+                    }
+                );
+                require(surface != nullptr, "read small clipped circle frame"))
+            {
+                ok &= sample(surface, 12.0F, 12.0F, {255, 255, 255}, "small circle interior");
+                ok &= sample(surface, 25.0F, 25.0F, {0, 0, 0}, "circle edge cuts fill");
+                SDL_DestroySurface(surface);
+            }
+        }
+        SDL_SetRenderScale(renderer, 1, 1);
+        if (sdf) {
+            // 两个新参数块各建一次 state；重画必须命中且不重复上传。
+            auto cache_device = SdlRenderDevice(*renderer);
+            const auto draw_pair = [&] {
+                cache_device.begin_frame();
+                cache_device.clear(black);
+                cache_device.draw_rounded_rect_shadow(shadow_rect, 6.0F, 8.0F, white);
+                cache_device.draw_circle_clipped_rounded_rect(
+                    NanPoint(25.0F, 25.0F),
+                    30.0F,
+                    clip_rect,
+                    8.0F,
+                    white
+                );
+                cache_device.end_frame();
+            };
+            draw_pair();
+            const auto first = cache_device.sdf_diagnostics();
+            ok &= require(first.misses == 2, "shadow and clip create two parameter states");
+            ok &= require(first.binds == 2, "shadow and clip bind once each");
+            draw_pair();
+            const auto second = cache_device.sdf_diagnostics();
+            ok &= require(second.misses == 2, "redraw creates no new states");
+            ok &= require(second.hits == 2, "redraw hits both cached states");
+            ok &= require(second.binds == 4, "redraw binds once per primitive");
+        }
+        return ok;
+    }
+
     auto check_antialiasing(SDL_Renderer* renderer) -> bool {
         using nandina::foundation::NanPoint;
         using nandina::foundation::NanRect;
@@ -833,6 +990,7 @@ auto main(int argc, char** argv) -> int {
         ok &= check_font_interleave(renderer);
         ok &= check_antialiasing(renderer);
         ok &= check_line_arc(renderer, true);
+        ok &= check_shadow_clip(renderer, true);
         {
             nandina::render::SdlRenderDevice device(*renderer);
             if (!require(device.analytic_antialiasing(), "GPU renderer must use the SDF path")) {
@@ -1103,6 +1261,7 @@ auto main(int argc, char** argv) -> int {
         if (cpu_renderer != nullptr) {
             ok &= check_coordinates(cpu_renderer, false);
             ok &= check_line_arc(cpu_renderer, false);
+            ok &= check_shadow_clip(cpu_renderer, false);
             nandina::render::SdlRenderDevice device(*cpu_renderer);
             ok &=
                 require(!device.analytic_antialiasing(), "software renderer must fall back to CPU");

@@ -1,11 +1,16 @@
 // 生产 SDF 图元的 fragment shader（SDL_GPURenderState 路径）。
 //
-// 参数块是 2 个 float4（32 字节），由 SdlRenderDevice 以"不可变 state"缓存。
-// 按 style.z（模式）区分三种编码，模式值与 sdf_primitive_geometry.hpp 的
+// 参数块是 3 个 float4（48 字节），由 SdlRenderDevice 以"不可变 state"缓存。
+// 按 style.z（模式）区分编码，模式值与 sdf_primitive_geometry.hpp 的
 // SdfPrimitiveMode 对齐：
 //   0 填充 / 1 中心线描边：bounds.xy = 中心、bounds.zw = 半尺寸（目标像素），
 //                           style.x = 圆角半径、style.y = 描边半宽
 //   2 线段：               bounds.xy = A、bounds.zw = B - A（方向），style.x = 半宽
+//   3 圆 ∩ 圆角矩形：      bounds.xy = 裁剪矩形中心、bounds.zw = 半尺寸，
+//                           style.x = 裁剪圆角半径、style.y = 圆半径，
+//                           extra.xy = 圆心（目标像素）
+//   4 软阴影：             bounds.xy = 阴影矩形中心、bounds.zw = 半尺寸，
+//                           style.x = 圆角半径、style.y = 软边衰减宽度（目标像素）
 //   5 环形扇区：           bounds.xy = 圆心、bounds.zw = (内半径, 外半径)，
 //                           style.x = 起始角 + 半张角、style.y = 半张角
 // 角度约定与 IRenderDevice::draw_arc 一致：以 +Y 为 0、向 +X 增大。
@@ -19,6 +24,7 @@ SamplerState source_sampler : register(s0, space2);
 cbuffer ShapeParameters : register(b0, space3) {
     float4 bounds;
     float4 style;
+    float4 extra;
 };
 
 struct FragmentInput {
@@ -58,6 +64,25 @@ float4 main(FragmentInput input) : SV_Target {
         if (style.y < 3.14159265 - 1e-3) {
             distance = max(distance, sdArcAngle(offset, style.x, style.y));
         }
+        float antialias_width = max(fwidth(distance), 1e-4);
+        coverage = 1.0 - smoothstep(-antialias_width * 0.5, antialias_width * 0.5, distance);
+    }
+    else if (style.z > 3.5 && style.z < 4.5) {
+        // 软阴影：圆角矩形 SDF，形状内部不透明，外部按 spread 平滑衰减到 0。
+        // 没有 fwidth：柔化宽度由 spread 定义，不是 1px 抗锯齿带。
+        float2 shadow_offset = abs(position - bounds.xy) - bounds.zw + style.x;
+        float shadow_distance =
+            min(max(shadow_offset.x, shadow_offset.y), 0.0) + length(max(shadow_offset, 0.0)) - style.x;
+        coverage = 1.0 - smoothstep(0.0, max(style.y, 1e-4), shadow_distance);
+    }
+    else if (style.z > 2.5 && style.z < 3.5) {
+        // 圆 ∩ 圆角矩形：两个有符号距离取 max 得到交集。圆角裁剪必须解析计算：
+        // 用矩形裁剪近似会把圆角切成方角（ripple 溢出）。
+        float2 clip_offset = abs(position - bounds.xy) - bounds.zw + style.x;
+        float clip_distance =
+            min(max(clip_offset.x, clip_offset.y), 0.0) + length(max(clip_offset, 0.0)) - style.x;
+        float circle_distance = length(position - extra.xy) - style.y;
+        float distance = max(clip_distance, circle_distance);
         float antialias_width = max(fwidth(distance), 1e-4);
         coverage = 1.0 - smoothstep(-antialias_width * 0.5, antialias_width * 0.5, distance);
     }
