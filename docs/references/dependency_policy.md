@@ -30,6 +30,10 @@
 
 - **stb（vendored，非 wrap）**：`third_party/stb/stb_image.h` 与 `stb_image_resize2.h`
   （Public Domain）用于后端无关的 CPU 图片解码，见 `third_party/stb/README.md`。
+- **升级既有构建目录**：这次退役改变了库目标集合。若直接复用旧 `buildDir`，GNU thin archive
+  `buildDir/nandina/libnandina.a` 可能仍引用已删除的 raylib 对象，`ar` 会报
+  “No such file or directory”。删除该归档（或干净重建构建目录）一次即可；本仓库的 Windows
+  静态复验就遇到了这个升级坑。
 - **raylib 已退役**：后端源码、工厂、窗口枚举项、wrap、构建依赖均删除，不保留 opt-in 开关。
   窗口生命周期测试显式使用 SDL3；原 raylib CI 改为无窗口后端的库/工具测试。
 - **10 个依赖全部是 `wrap-git`**（SDL3、spdlog、box2d、utf8proc、tomlplusplus、freetype、
