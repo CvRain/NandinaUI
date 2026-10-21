@@ -110,7 +110,20 @@ python3 tools/backend_performance.py --probe buildDir-release\probe\cross_platfo
 - **回报**：告诉我「报告已生成」，我通过 SSH 拉取并归档到 `probe/baselines/`，在
   `performance_budget.md` 记录 Windows 基线（标明 CPU/SDF 路径与采集环境）。
 
-## 7. 已知边界
+## 7. 已验证记录（2026-10-21，桌面会话）
+
+| 项 | 结果 | 证据 |
+| --- | --- | --- |
+| 1. 真实窗口回归 | 通过 | 维护者桌面截图：home / label / anchors（含暗色）布局、滚动、hover、dialog 正常 |
+| 2. 软阴影 | 通过 | butter 主题下卡片阴影为柔和渐变；`NANDINA_SDL_SDF=off` 对照出现硬边与锯齿 |
+| 3. 涟漪圆角裁剪 | 通过 | butter 主题按钮点击无溢出；`NANDINA_SDL_SDF=off` 退化为方角（符合能力差异） |
+| 4. DXIL 设备测试 | 通过 | `--require-gpu --expect-format dxil` 退出 0；末尾 `SDF device pixels, viewport scales, fallback, frame restore and eviction passed`。直线 AA 的 MAE 0.048/0.078/0.081 与 Linux 记录一致；圆面积参考 max ≤17；新增 shadow/clip 断言通过 |
+| 5. Windows SDF 页面 golden | 候选已采集 | home/label/anchors 三条 candidate；home 的 sha 与 CPU 基线相同（该页无 SDF 图元），label/anchors 目检通过；**待第二次采集确认确定性后批准** |
+| 6. 性能基线 | 未跑 | 可选（P1.3） |
+
+> 注意：第一次 DXIL 运行曾因终端残留 `NANDINA_SDL_SDF=off` 在 CPU 回退路径上失败；清掉环境变量后通过。测试现已对这种情况快速失败并给出可操作提示。
+
+## 8. 已知边界
 
 - SSH 会话（session 0）只能跑 CPU 路径（`--renderer sdl2d`）与单元测试；GPU/SDF 相关一律走
   桌面会话；

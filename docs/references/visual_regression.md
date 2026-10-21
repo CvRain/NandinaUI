@@ -128,7 +128,7 @@ Linux 图不能当 Windows/macOS 的预期。跨平台只比较**结构性**结�
 | 平台 | 状态 | 说明 |
 | --- | --- | --- |
 | Linux | **6 条 approved**（2026-10-20） | 1200×800、30 帧、隐藏窗口、单机；debug 与 release 采集逐像素一致，候选图 380 KB |
-| Windows | **3 条 approved（2026-10-21，CPU 路径）** | 1200×800、30 帧、隐藏窗口；经 SSH 无桌面会话采集，无法创建 GPU swapchain，因此用 `--renderer sdl2d` 走 SDL 2D 的 CPU 几何路径。SDF 路径基线需要交互式 GPU 会话，尚未采集 |
+| Windows | **3 条 approved（CPU 路径）+ 3 条 SDF candidate（2026-10-21）** | CPU 路径经 SSH（无 GPU swapchain）用 `--renderer sdl2d` 采集并已批准；SDF 路径在桌面会话采集，home/label/anchors 已目检通过，待第二次采集确认确定性后批准。DXIL 设备级验收已通过 |
 | macOS | **不支持** | 没有硬件与测试环境，不提供构建/运行承诺；不复制 Linux 基线充数 |
 
 **新平台落地步骤**（Windows 可用时）：

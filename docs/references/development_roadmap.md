@@ -33,7 +33,7 @@
 | 编号 | 交付 | 前置 | 退出条件 |
 | --- | --- | --- | --- |
 | P1.1 | **发布检查脚本**：把 format、header、artifact、golden 清单、budget 确定性门禁串成一条 `tools/release_check.py`（本地/发布用，CI 可复用无 GPU 部分） | 各门禁已就绪 | **已完成（2026-10-20）**：8 项逐条 PASS/SKIP/FAIL、失败非零退出；`--ci` 跳过 GPU 项，`--report` 追加性能预算；已写进[开发流程](development_loop.md) §2 |
-| P1.2 | **Windows 页面 golden 候选**：`capture_backend_golden.py --platform windows` 采集 → 人工审阅 → 批准（不替换 Linux 基线） | Windows 构建可跑（已满足） | **CPU 路径已交付（2026-10-21）**：3 条 approved（home/label/anchors cpu，`--renderer sdl2d`，SSH 会话无 swapchain）；候选图带平台标签；策略文档与路线图已同步。**SDF 路径基线未交付**：需交互式 GPU 会话，按[视觉回归](visual_regression.md) §7 步骤补采；P1.3 性能基线仍可选未做 |
+| P1.2 | **Windows 页面 golden 候选**：`capture_backend_golden.py --platform windows` 采集 → 人工审阅 → 批准（不替换 Linux 基线） | Windows 构建可跑（已满足） | **CPU 路径已交付（2026-10-21）**：3 条 approved（home/label/anchors cpu，`--renderer sdl2d`，SSH 会话无 swapchain）；候选图带平台标签；策略文档与路线图已同步。**SDF 路径候选已采集（2026-10-21，桌面会话）**：home/label/anchors 三条 candidate 目检通过，待第二次采集确认确定性后批准；DXIL 设备级验收通过（含新增 shadow/clip 断言）。P1.3 性能基线仍可选未做 |
 | P1.3 | **Windows 性能基线（可选）**：同协议在 Windows release 构建采样，作为对照而非跨平台比较 | P1.2 同前置 | 报告归档；不要求与 Linux 可比 |
 | P1.4 | **CLI 端到端**（**已移出本仓库**：CLI 由独立仓库 NandinaCLI 承担，主仓库只保留库、模板契约与框架开发工具） | — | 本仓库不再构建/测试 CLI；`new/build/run` 的端到端与 SDK 获取在 NandinaCLI 验收。2026-10-20 移除 `tools/nandina`、`nandina-cli` 集成测试与 `NANDINA_SOURCE_ROOT` 注入 |
 | P1.5a | **SDF 线段 + 环形扇区**：复用 32 字节参数块（模式 2/5），修正 CPU 弧角度约定与 sweep>π 的角向公式 | 现有 SDF 参数策略与产物链 | **已完成（2026-10-20）**：`sdf-device` 覆盖内部/圆头/整环 seam/270° 缺口/立方 AA/缓存命中（misses==2→hits==2）；golden 逐字节不变；release 预算 0 失败；产物三格式再生并经固定工具链验证 |
