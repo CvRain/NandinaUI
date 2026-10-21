@@ -50,6 +50,10 @@ class RuntimeDllTests(unittest.TestCase):
     def test_static_and_disabled_ignore_old_shared_artifacts(self):
         self.dll(self.build / "subprojects" / "SDL3", "libSDL3_shared.dll")
         self.dll(self.compiler)
+        application = self.build / "showcase"
+        application.mkdir()
+        (application / "app.exe").write_bytes(b"fixture executable")
+        stale = self.dll(application, "libSDL3_shared.dll")
         for enabled, linkage in ((True, "static"), (False, "none")):
             self.report(linkage=linkage, enabled=enabled)
             self.assertIsNone(runtime.find_sdl_dll(self.build, [self.compiler]))
@@ -57,6 +61,9 @@ class RuntimeDllTests(unittest.TestCase):
             self.assertEqual(status, 0)
             self.assertIn("no SDL3 DLL required", output)
             self.assertNotIn("SDL3", errors)
+            # 静态/关闭模式下，旧共享构建残留的 DLL 不能留在 exe 旁边。
+            self.assertFalse(stale.exists())
+            self.assertTrue((application / "app.exe").exists())
 
     def test_vendored_shared_uses_build_artifact(self):
         self.report(linkage="shared")

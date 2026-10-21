@@ -123,8 +123,22 @@ def main() -> int:
     if sdl is not None:
         sources[sdl.name] = sdl
 
-    if sdl3 is not None and (not sdl3["enabled"] or sdl3["linkage"] == "static"):
-        print("windows runtime: SDL3 disabled or statically linked; no SDL3 DLL required")
+    destinations = executable_dirs(build_dir)
+    static_sdl = sdl3 is not None and (not sdl3["enabled"] or sdl3["linkage"] == "static")
+    if static_sdl:
+        # 从共享 SDL3 切换到静态/关闭后，旧构建目录里可能还留着上一轮复制的 SDL DLL。
+        # Windows 会优先从 exe 同目录加载，残留的旧 DLL 会掩盖静态链接状态，必须清掉。
+        removed = 0
+        for destination in destinations:
+            for name in SDL_DLL_NAMES:
+                stale = destination / name
+                if stale.is_file():
+                    stale.unlink()
+                    removed += 1
+        print(
+            "windows runtime: SDL3 disabled or statically linked; no SDL3 DLL required"
+            + (f" (removed {removed} stale copy)" if removed else "")
+        )
     elif sdl is None and sdl3 is not None and sdl3["source"] == "system":
         print(
             "windows runtime: system SDL3 linkage is unknown and no SDL3 DLL was found in "
@@ -142,7 +156,6 @@ def main() -> int:
         return 0
 
     copied = 0
-    destinations = executable_dirs(build_dir)
     for destination in destinations:
         for name, source in sources.items():
             target = destination / name
