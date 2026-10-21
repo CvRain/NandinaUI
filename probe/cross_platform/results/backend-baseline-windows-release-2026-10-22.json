@@ -1,0 +1,67 @@
+{
+  "schema": 1,
+  "approved": false,
+  "enforce_timing": false,
+  "buildtype": "release",
+  "platform": "windows",
+  "path": "cpu: SDL 2D renderer (NANDINA_PROBE_RENDERER=sdl2d), SSH session 0, no GPU swapchain",
+  "protocol": {
+    "warmup": 300,
+    "samples": 1200,
+    "repeats": 5,
+    "stress": 0,
+    "interaction": "none",
+    "overlay": false
+  },
+  "note": "Windows release CPU-path reference (2026-10-22). Captured over SSH because session 0 cannot create a GPU swapchain, so this covers only the CPU geometry path; SDF-path numbers require an interactive desktop session. Timing is never enforced across platforms and this file is not a gate baseline (approved=false).",
+  "entries": [
+    {
+      "page": "home",
+      "mode": "cpu",
+      "interaction": "none",
+      "p50_ms": 0.1769,
+      "p95_ms": 0.2137,
+      "binds_per_frame": 0.0,
+      "misses_per_frame": 0.0,
+      "hits_per_frame": 0.0,
+      "cached": 0.0,
+      "layout_passes_per_frame": 0.0
+    },
+    {
+      "page": "label",
+      "mode": "cpu",
+      "interaction": "none",
+      "p50_ms": 0.752,
+      "p95_ms": 0.8297,
+      "binds_per_frame": 0.0,
+      "misses_per_frame": 0.0,
+      "hits_per_frame": 0.0,
+      "cached": 0.0,
+      "layout_passes_per_frame": 0.0
+    },
+    {
+      "page": "anchors",
+      "mode": "cpu",
+      "interaction": "none",
+      "p50_ms": 0.051,
+      "p95_ms": 0.0791,
+      "binds_per_frame": 0.0,
+      "misses_per_frame": 0.0,
+      "hits_per_frame": 0.0,
+      "cached": 0.0,
+      "layout_passes_per_frame": 0.0
+    },
+    {
+      "page": "label",
+      "mode": "cpu",
+      "interaction": "cycle",
+      "p50_ms": 0.7228,
+      "p95_ms": 8.9928,
+      "binds_per_frame": 0.0,
+      "misses_per_frame": 0.0,
+      "hits_per_frame": 0.0,
+      "cached": 0.0,
+      "layout_passes_per_frame": 0.06694560669456066
+    }
+  ]
+}
