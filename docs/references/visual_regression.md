@@ -128,18 +128,24 @@ Linux 图不能当 Windows/macOS 的预期。跨平台只比较**结构性**结�
 | 平台 | 状态 | 说明 |
 | --- | --- | --- |
 | Linux | **6 条 approved**（2026-10-20） | 1200×800、30 帧、隐藏窗口、单机；debug 与 release 采集逐像素一致，候选图 380 KB |
-| Windows | 未开始（低优先级） | 构建说明见 README“在 Windows 上构建”；有可用机器时按下面的步骤落地 |
+| Windows | **3 条 approved（2026-10-21，CPU 路径）** | 1200×800、30 帧、隐藏窗口；经 SSH 无桌面会话采集，无法创建 GPU swapchain，因此用 `--renderer sdl2d` 走 SDL 2D 的 CPU 几何路径。SDF 路径基线需要交互式 GPU 会话，尚未采集 |
 | macOS | **不支持** | 没有硬件与测试环境，不提供构建/运行承诺；不复制 Linux 基线充数 |
 
 **新平台落地步骤**（Windows 可用时）：
 
 1. 按 README 构建 `nandina_sdl_page_probe`；
-2. `python3 tools/capture_backend_golden.py --platform windows --pages home,label,anchors --modes sdf,cpu`；
+2. 采集：有交互式 GPU 会话时用
+   `python3 tools/capture_backend_golden.py --platform windows --pages home,label,anchors --modes sdf,cpu`；
+   只能通过 SSH（无桌面、无 swapchain）时只采 CPU 路径：
+   `python3 tools/capture_backend_golden.py --platform windows --pages home,label,anchors --modes cpu --renderer sdl2d`；
+   候选文件名带平台标签（`<page>-<backend>-<platform>.png`），不会覆盖其它平台的候选图；
 3. `python3 tools/compare_backend_golden.py --platform windows --page label --backend sdf`
    （首轮与自己的候选比较应为 0 差异，确认采集确定性）；
 4. 人工审阅候选（可另存缩略图/差异图）后
    `python3 tools/approve_backend_golden.py --entries all --reviewer <name> --note ...`；
 5. 提交候选图与 manifest；**不要**复制 Linux 图或修改 `platform` 来“复用”基线。
+
+Windows CPU 基线与 Linux 的跨平台像素差（home 11.9%、label 24.9%、anchors 1.3% 像素）只作信息记录、**从不参与门禁**：差异来自字体栅格化与 DPI，页面结构与内容一致；同一平台内仍按各平台自己的容差判失败。
 
 **CI**：无 GPU/显示，像素比较不进 CI；`golden-manifest`（含 `platform` 校验）仍在 CI。
 设备级测试（坐标矩阵、真实字形、AA 面积积分、产物格式）是跨平台契约；页面 golden 是

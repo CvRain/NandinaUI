@@ -23,6 +23,20 @@ review_note = "visual review of all six candidates; cross-backend diff home 0, l
 
 [[entries]]
 page = "anchors"
+backend = "cpu"
+platform = "windows"
+image = "candidates/anchors-cpu-windows.png"
+width = 1200
+height = 800
+sha256 = "1ab3db6acd9c03e78a409ac7f7bc623de12b9a717f6d98be4db874cdfb9baef3"
+status = "approved"
+captured = "2026-10-19"
+reviewed_by = "agent review, per maintainer request 2026-10-21"
+reviewed_on = "2026-10-21"
+review_note = "Windows CPU path captured with --renderer sdl2d (SSH session cannot create a GPU swapchain); all three candidates visually reviewed; cross-platform pixel difference is informational only and never gated: home 11.9%, label 24.9%, anchors 1.3% of pixels differ, due to font rasterization/DPI, not layout or content"
+
+[[entries]]
+page = "anchors"
 backend = "sdf"
 platform = "linux"
 image = "candidates/anchors-sdf-linux.png"
@@ -51,6 +65,20 @@ review_note = "visual review of all six candidates; cross-backend diff home 0, l
 
 [[entries]]
 page = "home"
+backend = "cpu"
+platform = "windows"
+image = "candidates/home-cpu-windows.png"
+width = 1200
+height = 800
+sha256 = "f57917165eb20927c03d8e800fccdb9b0a336a9a891b1fc7976dcb92a61f43e9"
+status = "approved"
+captured = "2026-10-19"
+reviewed_by = "agent review, per maintainer request 2026-10-21"
+reviewed_on = "2026-10-21"
+review_note = "Windows CPU path captured with --renderer sdl2d (SSH session cannot create a GPU swapchain); all three candidates visually reviewed; cross-platform pixel difference is informational only and never gated: home 11.9%, label 24.9%, anchors 1.3% of pixels differ, due to font rasterization/DPI, not layout or content"
+
+[[entries]]
+page = "home"
 backend = "sdf"
 platform = "linux"
 image = "candidates/home-sdf-linux.png"
@@ -76,6 +104,20 @@ captured = "2026-10-19"
 reviewed_by = "agent review, per maintainer request"
 reviewed_on = "2026-10-20"
 review_note = "visual review of all six candidates; cross-backend diff home 0, label 0.0111%, anchors 0.0244% (max 55)"
+
+[[entries]]
+page = "label"
+backend = "cpu"
+platform = "windows"
+image = "candidates/label-cpu-windows.png"
+width = 1200
+height = 800
+sha256 = "acf528fd7abae01e6f9000084e5affc767819dcddee0b5207f0fae9934d5eddf"
+status = "approved"
+captured = "2026-10-19"
+reviewed_by = "agent review, per maintainer request 2026-10-21"
+reviewed_on = "2026-10-21"
+review_note = "Windows CPU path captured with --renderer sdl2d (SSH session cannot create a GPU swapchain); all three candidates visually reviewed; cross-platform pixel difference is informational only and never gated: home 11.9%, label 24.9%, anchors 1.3% of pixels differ, due to font rasterization/DPI, not layout or content"
 
 [[entries]]
 page = "label"
