@@ -15,7 +15,7 @@
 | 动画 | 值级 motion 在 `foundation/motion`，节点 endpoint、宿主与组调度在 `scene`；旧 `animation/` 入口已退出；L2 opacity/translate/scale 可用 | `NodeBuilder::group` 仅开放同节点、扁平 Tween 组合；跨节点、组内 Spring、Keyframes 作者入口与浮层自动过渡未完成，见 [节点表现层 §6.1](node_presentation.md) |
 | 布局与文本成本 | 排列容器及 `NanControl::layout_to` 已用在生产路径；anchors 内核与作者入口已落地；**布局收敛**（Label 页 80.4 ms/帧 → 2.5 ms、稳态 0 次布局）与**两个文本 O(n²)** 已修复，见 [布局收敛](layout_convergence_and_text_measurement.md) 与 [整形成本](text_shaping_cost.md) | `fill` 画布无法占据排列容器剩余空间（见 [Anchors §5.3](anchors.md#53-剩余验收)）；`max_width` 仍会被父级紧约束压过；Label 页打开约 271 ms（构建 159 ms，[整形成本 §5.1](text_shaping_cost.md)）；一次完整布局仍约 55 ms |
 | 分发 | Linux 桌面源码分发 profile 已有构建与 SDK 流程；Windows 为实验性构建（无安装器承诺） | macOS 不支持；Modules、CMake package 与跨平台应用交付仍待重新评估 |
-| 资源构建与运行时 | 四类后端、nanres 与构建 helper 已有实现；SQLite 已 vendored，但依赖无条件启用，工具仍链接完整框架；查询结果不带挂载身份 | [D5](resource_build_and_deployment.md) 已冻结（含 2026-10-22 P2 实施契约 §8）、未实施：先解耦，再独立交付作用域与身份；声明式构建和部署定位随后汇合 |
+| 资源构建与运行时 | 四类后端、nanres 与构建 helper 已有实现；SQLite 已 vendored，但依赖无条件启用，工具仍链接完整框架；查询结果不带挂载身份 | [D5](resource_build_and_deployment.md) 已冻结（含 2026-10-22 P2 实施契约 §8）；P2.1a/P2.1b 已实施（解耦 + 启动策略），P2.2/P2.3 作用域与身份、P2.4 示例应用未实施；声明式构建和部署定位随后汇合 |
 | 工程门禁 | 代码格式统一（固定 clang-format 23.1.1）、header-surface 182/10、shader artifact 校验、golden 清单、backend budget 确定性门禁均已接入；GPU 相关检查留在本地/发布检查 | D5 关闭组合与纯工具依赖门禁尚未实现；无 GPU 的 CI 不覆盖页面 golden 与性能采样 |
 
 ## D1–D8 与依赖工程的状态

@@ -300,10 +300,34 @@ if build_ui
 endif
 nanres_build_helper = [python, files('tools/nanres_build_helper.py')]
 nandina_portable_stage_helper = [python, files('tools/portable_stage.py')]
+external_nanres = get_option('external_nanres')
+toolchain_nanres = disabler()
 if resource_tools
-    nanres = executable('nanres', 'tools/nanres_main.cpp', dependencies: resource_build_dep)
+    nanres = executable(
+        'nanres',
+        'tools/nanres_main.cpp',
+        dependencies: resource_build_dep,
+        cpp_args: ['-DNANRES_VERSION="' + meson.project_version() + '"'],
+    )
+    toolchain_nanres = nanres
+elif external_nanres != ''
+    # 关闭本地工具时允许使用外部 nanres；先做格式 schema/版本握手，避免构建到一半才发现不兼容。
+    toolchain_nanres = find_program(external_nanres, required: true)
+    probe_schema = run_command(toolchain_nanres, 'schema', check: false)
+    if probe_schema.returncode() != 0 or probe_schema.stdout().strip() != '1'
+        error('external_nanres: expected package schema 1, got ' + probe_schema.stdout().strip() + ' (exit ' + probe_schema.returncode().to_string() + ')')
+    endif
+    probe_version = run_command(toolchain_nanres, '--version', check: false)
+    if probe_version.returncode() != 0 or probe_version.stdout().strip() == ''
+        error('external_nanres: --version failed; tool must be executable and report a version')
+    endif
+    message('external_nanres: ' + probe_version.stdout().strip())
+else
+    warning('resource_tools=false and external_nanres is empty: nandina_resource_toolchain is unavailable')
+endif
+if resource_tools or external_nanres != ''
     nandina_resource_toolchain = {
-        'nanres': nanres,
+        'nanres': toolchain_nanres,
         'build_helper': nanres_build_helper,
         'stage_helper': nandina_portable_stage_helper,
         'template': files('meson/nandina_resources.build'),

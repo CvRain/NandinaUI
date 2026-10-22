@@ -65,6 +65,36 @@ def main():
             print(f"PASS tools={tools} sqlite={sqlite}: clean configure/build/resource tests", flush=True)
         invalid = subprocess.run([meson, "setup", str(root / "invalid"), str(clean), "--wrap-mode=nodownload", "-Dbuild_ui=false", "-Dexamples=true"], capture_output=True, text=True)
         assert invalid.returncode and "examples=true requires build_ui=true" in invalid.stdout
+
+        # 外部工具：关闭本地工具时，兼容的 external_nanres 通过配置握手；不兼容的必须在配置期失败。
+        good = root / "good-nanres"
+        good.write_text(
+            "#!/bin/sh\n"
+            "case \"$1\" in\n"
+            "  schema) echo 1 ;;\n"
+            "  --version) echo 'nanres external-test' ;;\n"
+            "  *) exit 9 ;;\n"
+            "esac\n",
+            encoding="ascii",
+        )
+        good.chmod(0o755)
+        external = root / "external"
+        run([meson, "setup", str(external), str(clean), "--wrap-mode=nodownload",
+             "-Dbuild_ui=false", "-Dresource_tools=false",
+             f"-Dexternal_nanres={good}"])
+        names = {target["name"] for target in json.loads(run([meson, "introspect", "--targets", str(external)]))}
+        assert "nanres" not in names and "resource_build" not in names, names
+
+        bad = root / "bad-nanres"
+        bad.write_text("#!/bin/sh\necho 2\n", encoding="ascii")
+        bad.chmod(0o755)
+        incompatible = subprocess.run(
+            [meson, "setup", str(root / "incompatible"), str(clean), "--wrap-mode=nodownload",
+             "-Dbuild_ui=false", "-Dresource_tools=false", f"-Dexternal_nanres={bad}"],
+            capture_output=True,
+            text=True,
+        )
+        assert incompatible.returncode and "schema 1" in incompatible.stdout, incompatible.stdout
     print("resource option matrix passed without UI wrap checkouts")
 
 

@@ -116,7 +116,20 @@ meson compile -C build-resources nanres
 运行时 SQLite 后端，打包工具仍可使用 SQLite。两者同时关闭时不构建 SQLite，仍可运行
 内存/目录/内置资源后端。`resource_sqlite=auto` 在当前 vendored 策略下等价于 enabled。
 纯资源配置自动排除 showcase、playground 和窗口探针；`examples` 默认 false，应用示例在
-P2.4 实现前显式开启会报错。启动默认不开包及外部工具握手尚属 P2.1b，未在本批改变。
+P2.4 实现前显式开启会报错。
+
+**启动策略（P2.1b）**：`NanApplicationConfig::resource_package` 默认为空，启动不自动发现或
+打开资源包；需要自动开包时显式设为 `"resources.db"`，否则用
+`NanApplication::mount_resource_backend()` 在创建窗口/消费字体图片之前注入后端。
+`resource_sqlite=disabled` 时自动开包路径不参与编译，缺后端会得到明确的 `backend_unavailable`
+诊断。`resource_tools=false` 时可显式提供外部工具：
+
+```bash
+meson setup build-app --wrap-mode=nodownload -Dresource_tools=false \
+  -Dexternal_nanres=/opt/nandina/bin/nanres
+```
+
+配置期会执行 `nanres schema`（必须为 1）与 `nanres --version` 握手；不兼容工具直接配置失败。
 
 ### 在 Debian / Ubuntu 上准备环境
 

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import json
+import os
 import pathlib
 import sqlite3
 import subprocess
@@ -48,6 +49,21 @@ def main() -> int:
         with sqlite3.connect(output / "resources.db") as database:
             keys = [row[0] for row in database.execute("select resource_key from resources order by 1")]
         assert keys == ["first.txt", "second.txt"]
+
+        if os.name == "posix":
+            # helper 在动手前握手：不兼容 schema 的外部工具必须被拒绝，而不是打包到一半失败。
+            bad = root / "bad-nanres"
+            bad.write_text("#!/bin/sh\necho 2\n", encoding="ascii")
+            bad.chmod(0o755)
+            rejected = subprocess.run(
+                [sys.executable, helper, "build", str(bad), str(policy), str(root / "bad-output")],
+                check=False,
+                text=True,
+                capture_output=True,
+            )
+            assert rejected.returncode != 0 and "schema 1" in rejected.stderr, (
+                rejected.stdout + rejected.stderr
+            )
 
     return 0
 

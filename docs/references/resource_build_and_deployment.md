@@ -808,3 +808,19 @@ P2.1b 的默认不开包、外部工具入口/握手尚未实施，不将它们�
 独立输出根比较既有 ID、别名、存储类别、media type、内嵌/外置内容摘要，拒绝重复 key。
 检查器和等价测试都进入 Meson integration suite；release check 增加工具依赖门禁。
 CI 增设只预热 toml++/Catch2、只安装工具所需系统开发包的资源配置矩阵。
+
+### 8.12 P2.1b 实施记录（2026-10-22）
+
+- **默认不开包**：`NanApplicationConfig::resource_package` 默认改为空；只有显式配置才创建平台
+  定位并自动挂载包。默认启动不再因为可执行文件旁恰好存在 `resources.db` 而改变资源可见性。
+- **显式注入**：新增 `NanApplication::mount_resource_backend(backend, priority)`；后端由应用
+  保活，要求窗口/字体/图片首次消费前调用。与自动发现可共存，priority 语义沿用管理器。
+- **SQLite 关闭组合**：`resource_sqlite=disabled` 时自动开包分支不参与编译，配置了包名会得到
+  `backend_unavailable` 诊断而不是静默跳过。
+- **外部工具入口**：`resource_tools=false` 时可用 `-Dexternal_nanres=<path>`；配置期执行
+  `nanres schema`（必须为 1）与 `nanres --version`，失败即配置失败。`resource_tools=false`
+  且未提供外部工具时 `nandina_resource_toolchain` 不存在并给出 warning，消费方会在取变量时
+  明确失败。helper 在每次构建前也做 schema 握手，防止外部工具在打包中途才暴露不兼容。
+- **验证**：`-Dbuild_ui=false` 的 5 种组合（工具/后端/auto）在固定 Meson 1.7.2 下完成干净
+  配置、构建与测试；外部工具的正常/不兼容/已关闭三种路径有 fixture 覆盖；默认启动与注入的
+  应用级测试通过；主套件 104/104。

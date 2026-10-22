@@ -1,4 +1,5 @@
 #include <nandina/resource/resource_manifest.hpp>
+#include <nandina/resource/resource_package_format.hpp>
 #include <nandina/resource/resource_scanner.hpp>
 
 #include <filesystem>
@@ -24,7 +25,7 @@ namespace
     };
 
     void usage() {
-        std::cerr << "usage: nanres <init|scan|validate|pack|watch> [options]\n"
+        std::cerr << "usage: nanres <init|scan|validate|pack|watch|schema|--version> [options]\n"
                      "  --root <path>[:key-prefix]\n"
                      "  --exclude <glob>\n"
                      "  --type <glob>=<media-type>\n"
@@ -166,6 +167,19 @@ namespace
 } // namespace
 
 auto main(int argc, char** argv) -> int {
+    // 构建期工具握手：外部 nanres 与本地 helper 都先确认包格式 schema，避免把不兼容工具
+    // 用到一半才失败。`--version` 同时证明可执行文件可运行（交叉编译时不能执行目标架构工具）。
+    if (argc >= 2) {
+        const std::string_view command(argv[1]);
+        if (command == "schema") {
+            std::cout << resource::package_format::schema_version << '\n';
+            return 0;
+        }
+        if (command == "--version" || command == "version") {
+            std::cout << "nanres " << NANRES_VERSION << '\n';
+            return 0;
+        }
+    }
     const auto arguments = parse_arguments(argc, argv);
     if (!arguments) {
         usage();

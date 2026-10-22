@@ -105,6 +105,10 @@ experimental**，理由与后续动作写进清单——两个枚举是公开 wi
 | 删除 `make_raylib_device()` 与 `raylib_device.hpp` | `render/backends`（experimental） | 使用 SDL3，或实现并注入自己的 `IPlatformWindow` / `IRenderDevice` |
 | 删除 `WindowBackend::raylib` | `app/window_config.hpp`（experimental） | 改为 `automatic` / `sdl3`；`sdl3` 保留原数值 2。环境变量中的 raylib/未知值明确报错，不能静默选择另一路径 |
 | 默认 SDL3 静态链接 | Meson / SDK | `sdl3_linkage=shared` 可恢复共享模式；关闭 SDL3 时无内置窗口后端，`showcase=false`，应用在 `open()` 前注入平台 |
+| `NanApplicationConfig::resource_package` 默认值 | `app`（experimental public） | 默认从 `"resources.db"` 改为**空**：启动不再自动发现/打开包；需要自动开包时显式设置。迁移：依赖旧默认值的应用显式写 `"resources.db"`，或改用注入 |
+| 新增 `NanApplication::mount_resource_backend()` | `app`（experimental public） | 在窗口/字体/图片首次消费前注入自定义后端；后端由应用保活 |
+| `resource_tools=false` / `external_nanres` | Meson 构建表面 | 关闭本地工具时 `nandina_resource_toolchain` 仅在提供外部工具时存在；外部工具须通过 `nanres schema`（值 1）与 `--version` 握手，否则配置期失败 |
+| 新增 `nanres schema` / `nanres --version` | `nanres` CLI（构建期工具） | 供外部工具握手与诊断；不属于应用运行时 API |
 | `supports_image_loading()` 收窄 + 新增 RGBA 上传查询 | `IRenderDevice`（设备实现方接口） | 原先判断"能不能显示图片"的调用方，改为分别查询解码服务、设备直载、设备 RGBA 上传三项，见 [D7](reference_draft.md#三项能力分开表达2026-10-17-定) |
 
 项目处于 alpha、源码集成、不承诺旧入口长期兼容，因此：

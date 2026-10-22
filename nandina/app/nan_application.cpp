@@ -72,63 +72,71 @@ namespace nandina::app
         image_decoder_(render::make_cpu_image_decoder()) {
         log::initialize({.name = application_id_.empty() ? "nandina" : application_id_});
         install_builtin_services(resources_, resource_backends_, font_families_);
-        auto locator = resource::PlatformResourceLocator::create({
-            .application_id = application_id_,
-            .executable_path = std::move(config.executable_path),
-            .environment = std::move(config.environment),
-        });
-        if (!locator) {
-            throw std::invalid_argument("NanApplication: " + locator.error());
-        }
-        platform_paths_ = std::move(*locator);
-        [[maybe_unused]] int priority = 1000;
-        for (const auto& location: platform_paths_->resource_roots()) {
-            // 开发期：优先消费 build-tree 元数据 resource-location.json，挂载其指向的
-            // 构建树包；release/portable staging 无此文件时回落直查 `<root>/resources.db`。
-            std::filesystem::path database = location.root / config.resource_package;
-            std::filesystem::path external_root = location.root;
-            const auto metadata_path = location.root / "resource-location.json";
-            std::error_code metadata_error;
-            if (std::filesystem::exists(metadata_path, metadata_error) && !metadata_error) {
-                if (const auto metadata = resource::read_build_location_metadata(metadata_path)) {
-                    database = metadata->package_root / metadata->database;
-                    external_root = metadata->package_root;
-                }
-                else {
-                    log::get("app.application")
-                        .warn("NanApplication: {}: {}", metadata_path.string(), metadata.error());
-                }
+        // 默认不发现包：只有显式配置 resource_package 才建立平台定位并自动开包。
+        // 其他场景由应用通过 mount_resource_backend() 注入后端。
+        if (!config.resource_package.empty()) {
+            auto locator = resource::PlatformResourceLocator::create({
+                .application_id = application_id_,
+                .executable_path = std::move(config.executable_path),
+                .environment = std::move(config.environment),
+            });
+            if (!locator) {
+                throw std::invalid_argument("NanApplication: " + locator.error());
             }
-            std::error_code error;
-            if (!std::filesystem::exists(database, error)) {
-                if (error) {
+            platform_paths_ = std::move(*locator);
+            int priority = 1000;
+            for (const auto& location: platform_paths_->resource_roots()) {
+                // 开发期：优先消费 build-tree 元数据 resource-location.json，挂载其指向的
+                // 构建树包；release/portable staging 无此文件时回落直查 `<root>/resources.db`。
+                std::filesystem::path database = location.root / config.resource_package;
+                std::filesystem::path external_root = location.root;
+                const auto metadata_path = location.root / "resource-location.json";
+                std::error_code metadata_error;
+                if (std::filesystem::exists(metadata_path, metadata_error) && !metadata_error) {
+                    if (const auto metadata = resource::read_build_location_metadata(metadata_path))
+                    {
+                        database = metadata->package_root / metadata->database;
+                        external_root = metadata->package_root;
+                    }
+                    else {
+                        log::get("app.application")
+                            .warn(
+                                "NanApplication: {}: {}",
+                                metadata_path.string(),
+                                metadata.error()
+                            );
+                    }
+                }
+                std::error_code error;
+                if (!std::filesystem::exists(database, error)) {
+                    if (error) {
+                        throw std::runtime_error(
+                            "NanApplication: cannot inspect resource package path"
+                        );
+                    }
+                    --priority;
+                    continue;
+                }
+#ifdef NANDINA_HAS_RESOURCE_SQLITE
+                auto backend = resource::SQLiteBackend::open({
+                    .name = "package:" + database.string(),
+                    .database = database,
+                    .external_root = external_root,
+                });
+                if (!backend) {
                     throw std::runtime_error(
-                        "NanApplication: cannot inspect resource package path"
+                        "NanApplication: cannot mount resource package " + database.string() + ": "
+                        + backend.error().message
                     );
                 }
-                --priority;
-                continue;
-            }
-#ifdef NANDINA_HAS_RESOURCE_SQLITE
-            auto backend = resource::SQLiteBackend::open({
-                .name = "package:" + database.string(),
-                .database = database,
-                .external_root = external_root,
-            });
-            if (!backend) {
-                throw std::runtime_error(
-                    "NanApplication: cannot mount resource package " + database.string() + ": "
-                    + backend.error().message
-                );
-            }
-            (void)resources_.mount(*backend, priority);
-            resource_backends_.push_back(std::move(*backend));
+                (void)resources_.mount(*backend, priority);
+                resource_backends_.push_back(std::move(*backend));
 #else
-            throw std::runtime_error(
-                "NanApplication: backend_unavailable: resource package requires resource_sqlite"
-            );
-#endif
-            --priority;
+                throw std::runtime_error(
+                    "NanApplication: backend_unavailable: resource package requires resource_sqlite"
+                );
+#endif-- priority;
+            }
         }
         font_loader_ = std::make_unique<text::FontLoader>(resources_);
         log::get("app.application").info("NanApplication: initialized {}", application_id_);
@@ -179,6 +187,17 @@ namespace nandina::app
     auto NanApplication::resources() const -> const resource::ResourceManager& {
         return resources_;
     }
+
+    void NanApplication::mount_resource_backend(
+        std::shared_ptr<resource::IResourceBackend> backend,
+        const int priority
+    ) {
+        if (!backend) {
+            throw std::invalid_argument("NanApplication::mount_resource_backend: null backend");
+        }
+        (void)resources_.mount(backend, priority);
+        resource_backends_.push_back(std::move(backend));
+    }
     auto NanApplication::font_loader() -> text::FontLoader& {
         return *font_loader_;
     }
@@ -200,7 +219,7 @@ namespace nandina::app
     auto NanApplication::platform_paths() const -> const resource::PlatformResourceLocator& {
         if (!platform_paths_) {
             throw std::logic_error(
-                "NanApplication::platform_paths: application was not created with process paths"
+                "NanApplication::platform_paths: no resource package is configured (resource_package is empty)"
             );
         }
         return *platform_paths_;

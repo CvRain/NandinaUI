@@ -1,5 +1,6 @@
 #include <nandina/app/nan_application.hpp>
 #include <nandina/app/nan_router.hpp>
+#include <nandina/resource/backends/memory_backend.hpp>
 #include <nandina/resource/build_location.hpp>
 #include <nandina/resource/resource.hpp>
 #include <nandina/scene/control.hpp>
@@ -189,6 +190,7 @@ TEST_CASE("NanApplication rejects malformed discovered packages", "[app][resourc
                 .application_id = "org.nandina.invalid",
                 .executable_path = root / "application",
                 .environment = {{"HOME", nonexistent_home().string()}},
+                .resource_package = "resources.db",
             }
         ),
         std::runtime_error
@@ -255,6 +257,7 @@ TEST_CASE(
             .application_id = "org.nandina.d2",
             .executable_path = root / "application",
             .environment = {{"HOME", nonexistent_home().string()}},
+            .resource_package = "resources.db",
         }
     );
 
@@ -262,6 +265,45 @@ TEST_CASE(
     REQUIRE(hello.has_value());
     REQUIRE((*hello)->size() == 5);
     REQUIRE((*hello)->bytes()[0] == 'h');
+
+    std::error_code error;
+    std::filesystem::remove_all(root, error);
+}
+
+TEST_CASE(
+    "default startup does not discover packages and accepts an injected backend",
+    "[app][resource]"
+) {
+    const auto root = std::filesystem::temp_directory_path()
+        / ("nandina-app-default-" + resource::ResourceId::random().to_string());
+    std::filesystem::create_directories(root / "resources");
+    create_package_database(root / "resources" / "resources.db");
+
+    // 默认 resource_package 为空：即使可执行文件旁有 resources.db 也不自动开包。
+    app::NanApplication application(
+        app::NanApplicationConfig {
+            .application_id = "org.nandina.default",
+            .executable_path = root / "application",
+            .environment = {{"HOME", nonexistent_home().string()}},
+        }
+    );
+    REQUIRE_FALSE(
+        application.resources().require(resource::ResourceKey("assets/hello")).has_value()
+    );
+
+    auto backend = std::make_shared<resource::MemoryBackend>("injected");
+    const std::vector<std::uint8_t> bytes {'o', 'k'};
+    const auto inserted = backend->insert(
+        resource::ResourceId::random(),
+        resource::ResourceKey("assets/injected"),
+        "text/plain",
+        bytes
+    );
+    REQUIRE(inserted.has_value());
+    application.mount_resource_backend(backend);
+    const auto found = application.resources().require(resource::ResourceKey("assets/injected"));
+    REQUIRE(found.has_value());
+    REQUIRE((*found)->size() == 2);
 
     std::error_code error;
     std::filesystem::remove_all(root, error);

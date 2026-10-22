@@ -31,12 +31,25 @@ def run(
     return True
 
 
+def probe_tool(nanres: str) -> None:
+    """确认工具可执行且包格式 schema 兼容（本地或外部 nanres 都走同一条检查）。"""
+    schema = subprocess.run(
+        [nanres, "schema"], check=False, text=True, capture_output=True
+    )
+    if schema.returncode != 0 or schema.stdout.strip() != "1":
+        raise SystemExit(
+            "nanres helper: incompatible resource tool; expected package schema 1, got "
+            f"{schema.stdout.strip()!r} (exit {schema.returncode})"
+        )
+
+
 def main() -> int:
     mode, nanres, policy_text, output_text = sys.argv[1:5]
     policy = pathlib.Path(policy_text).resolve()
     output = pathlib.Path(output_text).resolve()
     if policy.name != "resources.toml":
         raise SystemExit("nanres helper requires a resources.toml policy")
+    probe_tool(nanres)
 
     if mode != "build":
         raise SystemExit(f"unknown nanres helper mode: {mode}")

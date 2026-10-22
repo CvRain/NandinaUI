@@ -21,6 +21,10 @@ def run(nanres: str, cwd: pathlib.Path, *args: str) -> subprocess.CompletedProce
 def main() -> int:
     nanres = str(pathlib.Path(sys.argv[1]).resolve())
     package_probe = str(pathlib.Path(sys.argv[2]).resolve())
+    schema = run(nanres, pathlib.Path.cwd(), "schema")
+    assert schema.returncode == 0 and schema.stdout.strip() == "1", schema
+    version = run(nanres, pathlib.Path.cwd(), "--version")
+    assert version.returncode == 0 and version.stdout.startswith("nanres "), version
     with tempfile.TemporaryDirectory(prefix="nandina-nanres-") as directory:
         root = pathlib.Path(directory)
         resources = root / "assets"

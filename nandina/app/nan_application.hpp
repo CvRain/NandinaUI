@@ -74,6 +74,14 @@ namespace nandina::app
             -> std::expected<void, std::string>;
         [[nodiscard]] auto resources() -> resource::ResourceManager&;
         [[nodiscard]] auto resources() const -> const resource::ResourceManager&;
+
+        /// 挂载应用自带的资源后端（例如 MemoryBackend/DirectoryBackend/自定义后端）。
+        /// 必须在窗口创建与第一次字体/图片/主题资源消费之前调用；后端由应用保活。
+        /// 已配置 resource_package 的自动发现与本入口互不排斥，priority 高者优先。
+        void mount_resource_backend(
+            std::shared_ptr<resource::IResourceBackend> backend,
+            int priority = 0
+        );
         [[nodiscard]] auto font_loader() -> text::FontLoader&;
         [[nodiscard]] auto font_families() -> text::FontFamilyRegistry&;
         [[nodiscard]] auto application_id() const noexcept -> std::string_view;
