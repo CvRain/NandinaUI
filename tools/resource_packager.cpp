@@ -1,6 +1,6 @@
 #include <nandina/resource/resource_manifest.hpp>
 
-#include <nandina/resource/backends/sqlite_backend.hpp>
+#include <nandina/resource/resource_package_format.hpp>
 
 #include <openssl/evp.h>
 #include <sqlite3.h>
@@ -36,10 +36,10 @@ namespace nandina::resource
             return std::string(operation) + ": " + sqlite3_errmsg(database);
         }
 
-        [[nodiscard]] auto exec(sqlite3* database, const char* sql)
+        [[nodiscard]] auto exec(sqlite3* database, const std::string& sql)
             -> std::expected<void, std::string> {
             char* message = nullptr;
-            const auto result = sqlite3_exec(database, sql, nullptr, nullptr, &message);
+            const auto result = sqlite3_exec(database, sql.c_str(), nullptr, nullptr, &message);
             std::string detail = message ? message : "SQLite operation failed";
             sqlite3_free(message);
             if (result != SQLITE_OK) {
@@ -259,7 +259,9 @@ namespace nandina::resource
         Database database(raw_database);
         auto schema = exec(
             database.get(),
-            "PRAGMA application_id=1312902724; PRAGMA user_version=1; PRAGMA journal_mode=DELETE;"
+            "PRAGMA application_id=" + std::to_string(package_format::application_id)
+                + "; PRAGMA user_version=" + std::to_string(package_format::schema_version)
+                + "; PRAGMA journal_mode=DELETE;"
             "PRAGMA synchronous=FULL; BEGIN IMMEDIATE;"
             "CREATE TABLE resources(id BLOB PRIMARY KEY, resource_key TEXT NOT NULL UNIQUE,"
             "media_type TEXT NOT NULL, storage INTEGER NOT NULL, data BLOB, external_path TEXT,"

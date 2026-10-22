@@ -18,6 +18,13 @@
 
 ## 2. 三档分类
 
+2026-10-22 P2.1a 构建表面变更：资源运行时通过 `resource_runtime_dep` 链接，协议核心可单独使用
+`resource_core_dep`；扫描/manifest/packager 属于可选 `resource_build_dep`，不再由 `nandina_dep`
+传递提供 scanner 实现。直接调用构建 API 的消费者须开启 `resource_tools` 并显式链接
+`resource_build_dep`。`resource_package_format.hpp` 为 experimental 共享格式协议；旧
+`SQLiteBackend::application_id/schema_version` 保留为同一常量的转发，包格式不变。
+`NanApplicationConfig::resource_package` 默认值与外部 nanres 接入将在 P2.1b 单独迁移。
+
 | 等级 | 含义 | 稳定性承诺 | 谁可以包含 |
 | --- | --- | --- | --- |
 | `public` | 推荐使用的接口 | alpha 内也尽量不破坏；破坏时给迁移说明 | 应用代码、示例、下游宿主 |

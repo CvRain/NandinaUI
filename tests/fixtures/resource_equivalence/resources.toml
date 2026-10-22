@@ -1,0 +1,16 @@
+package_id = "org.nandina.equivalence"
+package_directory = "package"
+embed_threshold = 6
+
+[[roots]]
+path = "assets"
+key_prefix = "app"
+
+[aliases]
+"app/default" = "app/small.txt"
+"app/media" = "app/large.txt"
+
+[[rules]]
+glob = "app/large.txt"
+storage = "external"
+streaming = true

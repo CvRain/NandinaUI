@@ -687,46 +687,6 @@ if host_machine.system() == 'linux'
     test('system-fonts', system_fonts_tests, suite: 'unit')
 endif
 
-resource_tests = executable(
-    'resource_tests',
-    files('resource_tests.cpp'),
-    dependencies : [nandina_dep, sqlite3_dep, catch2_with_main_dep],
-)
-test('resource', resource_tests, suite: 'unit')
-
-nanres_cli_test = find_program('nanres_cli_test.py')
-nanres_package_probe = executable(
-    'nanres_package_probe',
-    files('nanres_package_probe.cpp'),
-    dependencies: [nandina_dep, sqlite3_dep],
-)
-test(
-    'nanres-cli',
-    nanres_cli_test,
-    args: [nanres, nanres_package_probe],
-    suite: 'integration',
-)
-portable_stage_test = find_program('portable_stage_test.py')
-test(
-    'portable-stage',
-    portable_stage_test,
-    args: [
-        meson.project_source_root() / 'tools' / 'portable_stage.py',
-        nanres,
-        nanres_package_probe,
-    ],
-    suite: 'integration',
-)
-nanres_build_workflow_test = find_program('nanres_build_workflow_test.py')
-test(
-    'nanres-build-workflow',
-    nanres_build_workflow_test,
-    args: [
-        meson.project_source_root() / 'tools' / 'nanres_build_helper.py',
-        nanres,
-    ],
-    suite: 'integration',
-)
 # 页面 golden 清单完整性（候选层）：文件存在、哈希/尺寸匹配、状态合法。
 # 像素比较是手动工具（tools/compare_backend_golden.py），approved 条目才判失败。
 test(
@@ -830,9 +790,11 @@ font_resource_tests = executable(
 )
 test('font-resource', font_resource_tests, suite: 'unit')
 
-application_resource_tests = executable(
-    'application_resource_tests',
-    files('application_resource_tests.cpp'),
-    dependencies: [nandina_dep, catch2_with_main_dep],
-)
-test('application-resource', application_resource_tests, suite: 'unit')
+if resource_sqlite
+    application_resource_tests = executable(
+        'application_resource_tests',
+        files('application_resource_tests.cpp'),
+        dependencies: [nandina_dep, catch2_with_main_dep],
+    )
+    test('application-resource', application_resource_tests, suite: 'unit')
+endif

@@ -16,6 +16,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import pathlib
 import re
 import shutil
@@ -108,6 +109,19 @@ def check_whitespace() -> Result:
     return Result("ok")
 
 
+def check_tool_boundary(build_dir: pathlib.Path) -> Result:
+    try:
+        options = json.loads((build_dir / 'meson-info/intro-buildoptions.json').read_text())
+        tools_enabled = next(item['value'] for item in options if item['name'] == 'resource_tools')
+    except (OSError, ValueError, KeyError, StopIteration) as error:
+        return Result('fail', f'无法确认 resource_tools 配置：{error}')
+    if tools_enabled is False:
+        return Result('skip', 'resource_tools=false：本配置无本地 nanres')
+    if tools_enabled is not True:
+        return Result('fail', 'resource_tools 配置不是 boolean')
+    return run([PYTHON, 'tools/check_tool_dependencies.py', str(build_dir)])
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--build-dir", type=pathlib.Path, default=ROOT / "buildDir")
@@ -160,6 +174,7 @@ def main() -> int:
         )
     )
     checks.append(("docs", "文档链接与锚点", check_docs))
+    checks.append(("tool-dependencies", "nanres 目标与实际归档输入边界", lambda: check_tool_boundary(build_dir)))
     checks.append(("whitespace", "git diff --check", check_whitespace))
     if not options.ci:
         checks.append(

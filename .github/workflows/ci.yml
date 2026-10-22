@@ -15,6 +15,26 @@ env:
   MESON_VERSION: 1.7.2
 
 jobs:
+  resource-tools:
+    name: resource tools without UI dependencies
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    container: gcc:16
+    steps:
+      - name: Install native tool dependencies only
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            ca-certificates git python3 python3-pip ninja-build pkg-config cmake libssl-dev
+          python3 -m pip install --break-system-packages --no-cache-dir "meson==${MESON_VERSION}"
+      - uses: actions/checkout@v5
+      - name: Configure git
+        run: git config --global --add safe.directory '*'
+      - name: Prewarm tool and test dependencies only
+        run: meson subprojects download tomlplusplus Catch2
+      - name: Build and run the clean resource option matrix
+        run: python3 tests/resource_build_matrix_test.py .
+
   format:
     name: format (clang-format 23.1.1)
     runs-on: ubuntu-latest

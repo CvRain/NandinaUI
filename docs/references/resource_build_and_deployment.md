@@ -787,3 +787,24 @@ SHA-256 后截断 128 bit，小写十六进制输出；固定测试向量入库�
 
 每个可独立验收的子批一个提交；会红测试先在本地证明旧实现失败，再与修复一起提交；公开 API
 迁移提交同时迁移消费者，保持可构建、可回滚；完整验证矩阵在子批收口执行，日常修改先跑相关测试。
+
+### 8.11 P2.1a 实施记录（2026-10-22）
+
+目标拆分已实现：`nandina/resource/meson.build` 定义核心、运行时后端和构建核心，`nanres`
+只链接 `resource_build_dep`。BuiltinBackend 的字体是内嵌字节，不引入字体引擎；应用专用的
+开发定位 JSON 读取仍在 UI 集成侧。共享包格式头为读写两侧提供 application/schema 常量。
+
+四个选项已注册；`examples` 仅预留，P2.4 前开启明确报错。`build_ui=false` 强制排除 UI
+目标及其配置期依赖。`resource_sqlite=auto` 等价 enabled；SQLite 引擎由工具或运行时任一
+消费者启用。工具关闭时不会查找 OpenSSL；运行时与工具都关闭时不编译 SQLite。
+P2.1b 的默认不开包、外部工具入口/握手尚未实施，不将它们算作本批交付。
+
+门禁使用 Meson 目标、外部依赖元数据和 Ninja 实际输入图，核对归档成员与对象来源；
+不以链接器是否抽取 UI 符号判断依赖。固定 Meson 1.7.2 的真实 fixture 证明正常路径通过，
+直接/间接 UI 库、缺失 introspection、缺失 response file、额外归档成员均被拒绝。
+旧 nanres 被该 checker 拒绝；旧配置的 `build_ui=false` 因选项不存在失败，均在重构前确认。
+
+逻辑等价基线由重构前保存的 nanres 生成并入库于 `tests/fixtures/resource_equivalence/`；
+独立输出根比较既有 ID、别名、存储类别、media type、内嵌/外置内容摘要，拒绝重复 key。
+检查器和等价测试都进入 Meson integration suite；release check 增加工具依赖门禁。
+CI 增设只预热 toml++/Catch2、只安装工具所需系统开发包的资源配置矩阵。

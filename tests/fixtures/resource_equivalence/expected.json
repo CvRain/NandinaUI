@@ -1,0 +1,40 @@
+{
+  "application_id": 1312902724,
+  "schema": 1,
+  "resources": [
+    {
+      "id": "07F33B2B73F94BFD92BEBE5B11691962",
+      "key": "app/copy.txt",
+      "media_type": "text/plain",
+      "storage": 0,
+      "size": 6,
+      "sha256": "5891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03"
+    },
+    {
+      "id": "E468F17B3E3B448DB332F5559BC4D25E",
+      "key": "app/large.txt",
+      "media_type": "text/plain",
+      "storage": 1,
+      "size": 24,
+      "sha256": "aa2530beae16908e0d7dfcb1fc0947ed365b6152d83a4412e8850a3a4280de71"
+    },
+    {
+      "id": "5BD922E692AD47C7BAC5532853AEF915",
+      "key": "app/small.txt",
+      "media_type": "text/plain",
+      "storage": 0,
+      "size": 6,
+      "sha256": "5891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03"
+    }
+  ],
+  "aliases": [
+    [
+      "app/default",
+      "app/small.txt"
+    ],
+    [
+      "app/media",
+      "app/large.txt"
+    ]
+  ]
+}

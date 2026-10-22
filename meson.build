@@ -8,6 +8,19 @@ project(
     default_options: ['default_library=static', 'cpp_std=c++26'],
 )
 
+build_ui = get_option('build_ui')
+resource_tools = get_option('resource_tools')
+resource_sqlite = not get_option('resource_sqlite').disabled()
+if get_option('examples')
+    if not build_ui
+        error('examples=true requires build_ui=true')
+    endif
+    error('examples/notes is planned for P2.4; no example target is available yet')
+endif
+if meson.is_cross_build() and resource_tools
+    error('Local nanres currently requires a native build; use resource_tools=false for cross builds')
+endif
+
 fs = import('fs')
 python = import('python').find_installation('python3')
 
@@ -20,83 +33,85 @@ embed_binary = executable(
 # 使用 cmake subproject 集成第三方库
 cmake = import('cmake')
 
-# 配置 spdlog 的 CMake选项
-spdlog_options = cmake.subproject_options()
-spdlog_options.add_cmake_defines({})
-spdlog_options.set_install(false)
+if build_ui or resource_tools
+    # toml++ 使用固定 commit 的 CMake wrap；仅 UI 样式或资源工具需要它。
+    tomlplusplus_options = cmake.subproject_options()
+    tomlplusplus_options.add_cmake_defines({
+        'TOMLPLUSPLUS_BUILD_MODULES': 'OFF',
+        'tomlplusplus_INSTALL': 'OFF',
+    })
+    tomlplusplus_options.set_install(false)
 
-# 配置 utf8proc 的 CMake 选项
-utf8proc_options = cmake.subproject_options()
-utf8proc_options.add_cmake_defines({
-    'BUILD_SHARED_LIBS': 'OFF',
-    'UTF8PROC_INSTALL': 'OFF',
-    'UTF8PROC_ENABLE_TESTING': 'OFF',
-})
-utf8proc_options.set_install(false)
+    tomlplusplus_subproj = cmake.subproject('tomlplusplus', options: tomlplusplus_options)
+    tomlplusplus_dep = tomlplusplus_subproj.dependency('tomlplusplus_tomlplusplus')
+endif
 
-# toml++ 是 header-only CMake 项目。固定为 Git submodule 后，Meson 和未来的
-# 顶层 CMake 构建都消费同一份官方源码，不依赖系统安装或 WrapDB 下载。
-tomlplusplus_options = cmake.subproject_options()
-tomlplusplus_options.add_cmake_defines({
-    'TOMLPLUSPLUS_BUILD_MODULES': 'OFF',
-    'tomlplusplus_INSTALL': 'OFF',
-})
-tomlplusplus_options.set_install(false)
+if build_ui
+    # 配置 spdlog 的 CMake选项
+    spdlog_options = cmake.subproject_options()
+    spdlog_options.add_cmake_defines({})
+    spdlog_options.set_install(false)
 
-# 配置 subproject
-spdlog_subproj = cmake.subproject('spdlog', options: spdlog_options)
-utf8proc_subproj = cmake.subproject('utf8proc', options: utf8proc_options)
-tomlplusplus_subproj = cmake.subproject('tomlplusplus', options: tomlplusplus_options)
-freetype_subproj = subproject(
-    'freetype',
-    default_options: ['tests=disabled', 'harfbuzz=disabled'],
-)
-harfbuzz_subproj = subproject(
-    'harfbuzz',
-    default_options: [
-        'tests=disabled',
-        'docs=disabled',
-        # 基准目录（perf/）不随 SDK 交付；不开这个选项，meson 会 subdir('perf') 并因缺目录失败。
-        'benchmark=disabled',
-        'utilities=disabled',
-        'introspection=disabled',
-        'glib=disabled',
-        'gobject=disabled',
-        'cairo=disabled',
-        'chafa=disabled',
-        'png=disabled',
-        'icu=disabled',
-        'graphite2=disabled',
-        'raster=disabled',
-        'vector=disabled',
-        'gpu=disabled',
-        'subset=disabled',
-        'freetype=enabled',
-    ],
-)
-fribidi_subproj = subproject(
-    'fribidi',
-    default_options: [
-        'default_library=static',
-        'deprecated=false',
-        'docs=false',
-        'bin=false',
-        'tests=false',
-    ],
-)
-# nlohmann/json 是 header-only meson 项目（Git submodule，见 .gitmodules）。
-nlohmann_json_subproj = subproject('nlohmann_json')
+    # 配置 utf8proc 的 CMake 选项
+    utf8proc_options = cmake.subproject_options()
+    utf8proc_options.add_cmake_defines({
+        'BUILD_SHARED_LIBS': 'OFF',
+        'UTF8PROC_INSTALL': 'OFF',
+        'UTF8PROC_ENABLE_TESTING': 'OFF',
+    })
+    utf8proc_options.set_install(false)
 
-# 获取依赖（静态库）
-spdlog_dep = spdlog_subproj.dependency('spdlog')
-utf8proc_dep = utf8proc_subproj.dependency('utf8proc')
-# Meson 的 CMake 适配器将命名空间 target `tomlplusplus::tomlplusplus`
-# 规范化为底层实际 target 名。
-tomlplusplus_dep = tomlplusplus_subproj.dependency('tomlplusplus_tomlplusplus')
-freetype_dep = freetype_subproj.get_variable('freetype_dep')
-harfbuzz_dep = harfbuzz_subproj.get_variable('libharfbuzz_dep')
-fribidi_dep = fribidi_subproj.get_variable('libfribidi_dep')
-nlohmann_json_dep = nlohmann_json_subproj.get_variable('nlohmann_json_dep')
+    # 配置 subproject
+    spdlog_subproj = cmake.subproject('spdlog', options: spdlog_options)
+    utf8proc_subproj = cmake.subproject('utf8proc', options: utf8proc_options)
+    freetype_subproj = subproject(
+        'freetype',
+        default_options: ['tests=disabled', 'harfbuzz=disabled'],
+    )
+    harfbuzz_subproj = subproject(
+        'harfbuzz',
+        default_options: [
+            'tests=disabled',
+            'docs=disabled',
+            # 基准目录（perf/）不随 SDK 交付；不开这个选项，meson 会 subdir('perf') 并因缺目录失败。
+            'benchmark=disabled',
+            'utilities=disabled',
+            'introspection=disabled',
+            'glib=disabled',
+            'gobject=disabled',
+            'cairo=disabled',
+            'chafa=disabled',
+            'png=disabled',
+            'icu=disabled',
+            'graphite2=disabled',
+            'raster=disabled',
+            'vector=disabled',
+            'gpu=disabled',
+            'subset=disabled',
+            'freetype=enabled',
+        ],
+    )
+    fribidi_subproj = subproject(
+        'fribidi',
+        default_options: [
+            'default_library=static',
+            'deprecated=false',
+            'docs=false',
+            'bin=false',
+            'tests=false',
+        ],
+    )
+    # nlohmann/json 使用原生 Meson wrap，供 UI 配置与开发定位元数据使用。
+    nlohmann_json_subproj = subproject('nlohmann_json')
+
+    # 获取依赖（静态库）
+    spdlog_dep = spdlog_subproj.dependency('spdlog')
+    utf8proc_dep = utf8proc_subproj.dependency('utf8proc')
+    freetype_dep = freetype_subproj.get_variable('freetype_dep')
+    harfbuzz_dep = harfbuzz_subproj.get_variable('libharfbuzz_dep')
+    fribidi_dep = fribidi_subproj.get_variable('libfribidi_dep')
+    nlohmann_json_dep = nlohmann_json_subproj.get_variable('nlohmann_json_dep')
+endif
 # SDL3 是 P3/P4 的平台层：窗口/输入/帧驱动 + SDL 2D 渲染设备。
 #
 # 来源解析按 docs/references/dependency_policy.md §2.4 的实测结论写成**显式三态**：
@@ -129,7 +144,7 @@ sdl3_revision_json = 'null'
 sdl3_path = ''
 sdl3_resolved_by = 'none'
 
-if not sdl_backend_option.disabled()
+if build_ui and not sdl_backend_option.disabled()
     if sdl3_source_option != 'vendored'
         # `method: 'pkg-config'` 只查系统副本：wrap 存在时依赖名会被遮蔽（实测），
         # 显式限定 method 才能让 system 状态真的只看系统。
@@ -224,7 +239,7 @@ configure_file(
 
 physics2d_option = get_option('physics2d')
 box2d_dep = disabler()
-if not physics2d_option.disabled()
+if build_ui and not physics2d_option.disabled()
     box2d_options = cmake.subproject_options()
     box2d_options.add_cmake_defines({
         'BUILD_SHARED_LIBS': 'OFF',
@@ -255,52 +270,61 @@ sqlite3_c_args = [
 ]
 stb_include = include_directories('third_party/stb')
 stb_dep = declare_dependency(include_directories: stb_include)
-sqlite3_include = include_directories('third_party/sqlite3')
-sqlite3_dep = declare_dependency(
-    link_with: static_library(
-        'sqlite3',
-        'third_party/sqlite3/sqlite3.c',
-        c_args: sqlite3_c_args,
+if resource_tools or resource_sqlite
+    sqlite3_include = include_directories('third_party/sqlite3')
+    sqlite3_dep = declare_dependency(
+        link_with: static_library(
+            'sqlite3',
+            'third_party/sqlite3/sqlite3.c',
+            c_args: sqlite3_c_args,
+            include_directories: sqlite3_include,
+            install: false,
+        ),
         include_directories: sqlite3_include,
-        install: false,
-    ),
-    include_directories: sqlite3_include,
-)
-openssl_dep = dependency('openssl', version: '>=3.0')
+    )
+endif
+if resource_tools
+    openssl_dep = dependency('openssl', version: '>=3.0')
+endif
 
 # Catch2 是原生 meson 项目，直接作为 subproject 引入，用于单元测试。
 # catch2_with_main 自带 Catch2 默认 main，测试文件无需自己写 main。
-catch2_subproj = subproject('Catch2', default_options: ['install=false', 'tests=false'])
-catch2_with_main_dep = catch2_subproj.get_variable('catch2_with_main_dep')
+if get_option('build_tests') and not meson.is_subproject()
+    catch2_subproj = subproject('Catch2', default_options: ['install=false', 'tests=false'])
+    catch2_with_main_dep = catch2_subproj.get_variable('catch2_with_main_dep')
+endif
 
-# 引入子项目
-subdir('nandina')
-nanres = executable(
-    'nanres',
-    ['tools/nanres_main.cpp', 'tools/resource_manifest.cpp', 'tools/resource_packager.cpp'],
-    dependencies: [nandina_dep, tomlplusplus_dep, openssl_dep],
-)
+subdir('nandina/resource')
+if build_ui
+    subdir('nandina')
+endif
 nanres_build_helper = [python, files('tools/nanres_build_helper.py')]
 nandina_portable_stage_helper = [python, files('tools/portable_stage.py')]
-nandina_resource_toolchain = {
-    'nanres': nanres,
-    'build_helper': nanres_build_helper,
-    'stage_helper': nandina_portable_stage_helper,
-    'template': files('meson/nandina_resources.build'),
-}
+if resource_tools
+    nanres = executable('nanres', 'tools/nanres_main.cpp', dependencies: resource_build_dep)
+    nandina_resource_toolchain = {
+        'nanres': nanres,
+        'build_helper': nanres_build_helper,
+        'stage_helper': nandina_portable_stage_helper,
+        'template': files('meson/nandina_resources.build'),
+    }
+endif
 if not meson.is_subproject()
     if get_option('build_tests')
-        subdir('tests')
+        if build_ui
+            subdir('tests')
+        endif
+        subdir('tests/resource')
     endif
 
     # 本地 playground 不随仓库发布；目录存在时才加入开发构建。
-    if get_option('playground') and fs.exists('playground/meson.build')
+    if build_ui and get_option('playground') and fs.exists('playground/meson.build')
         subdir('playground')
     endif
 
     # 组件展示子项目：只作为主项目时构建。放在 subproject 保护之外会让下游消费者
     # 连带编译这个演示程序（见 showcase/meson.build），所以必须留在本块内。
-    if get_option('showcase') and fs.exists('showcase/meson.build')
+    if build_ui and get_option('showcase') and fs.exists('showcase/meson.build')
         if not sdl3_dep.found()
             error('showcase requires SDL3; use -Dshowcase=false for a build without a window backend')
         endif
@@ -309,7 +333,7 @@ if not meson.is_subproject()
 
     # 跨平台探测里「真实页面走 SDL 设备」的那一个：需要 libnandina 与 showcase 的页面源码，
     # 所以它属于本构建（而不是 CMake 的独立探测）。默认关闭：它需要 SDL3 与一个真窗口。
-    if get_option('sdl_page_probe') and fs.exists('probe/cross_platform/desktop/meson.build')
+    if build_ui and get_option('sdl_page_probe') and fs.exists('probe/cross_platform/desktop/meson.build')
         subdir('probe/cross_platform/desktop')
     endif
 endif

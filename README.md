@@ -104,6 +104,20 @@ raylib 已完整退出源码和依赖闭包，不提供 `raylib_backend` 开关�
 无窗口后端构建使用 `-Dsdl_backend=disabled -Dshowcase=false`；打开窗口须自行注入平台。
 未追踪的本地 playground 仅在 `-Dplayground=true` 时构建；旧 raylib bench 已从本地目标移除，源码保留作历史记录。
 
+资源工具可独立于 UI 构建：
+
+```bash
+meson setup build-resources --wrap-mode=nodownload -Dbuild_ui=false
+meson compile -C build-resources nanres
+```
+
+此配置不查找 SDL 或字体引擎；需预热 toml++，默认开启测试时还需 Catch2。
+`resource_tools=false` 关闭本地工具及其 OpenSSL 依赖；`resource_sqlite=disabled` 只关闭
+运行时 SQLite 后端，打包工具仍可使用 SQLite。两者同时关闭时不构建 SQLite，仍可运行
+内存/目录/内置资源后端。`resource_sqlite=auto` 在当前 vendored 策略下等价于 enabled。
+纯资源配置自动排除 showcase、playground 和窗口探针；`examples` 默认 false，应用示例在
+P2.4 实现前显式开启会报错。启动默认不开包及外部工具握手尚属 P2.1b，未在本批改变。
+
 ### 在 Debian / Ubuntu 上准备环境
 
 发行版自带的编译器通常达不到上面的版本要求，所以分四步：装系统库、装合规工具链、装 Meson、再配置构建。

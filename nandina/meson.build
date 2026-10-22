@@ -1,22 +1,3 @@
-# nandina 库
-
-builtin_font_source = files('assets/default_font/default-ui.ttf')
-builtin_font_license_source = files('assets/default_font/default-ui-license.txt')
-builtin_font_data = custom_target(
-    'nandina-builtin-default-font',
-    input : builtin_font_source,
-    output : 'builtin_default_font_data.cpp',
-    command : [embed_binary, '@INPUT@', '@OUTPUT@', 'builtin_default_font_bytes'],
-)
-builtin_font_license_data = custom_target(
-    'nandina-builtin-default-font-license',
-    input : builtin_font_license_source,
-    output : 'builtin_default_font_license_data.cpp',
-    command : [embed_binary, '@INPUT@', '@OUTPUT@', 'builtin_default_font_license_bytes'],
-)
-builtin_font_size = fs.size(builtin_font_source)
-builtin_font_license_size = fs.size(builtin_font_license_source)
-
 module_fundation = files(
     'foundation/nandina_color.hpp',
     'foundation/nandina_color.cpp',
@@ -56,34 +37,8 @@ module_reactive = files(
     'reactive/reactive.hpp',
 )
 
-module_resource = files(
-    'resource/resource.hpp',
-    'resource/resource.cpp',
-    'resource/resource_backend.hpp',
-    'resource/resource_backend.cpp',
-    'resource/resource_stream.hpp',
-    'resource/resource_stream.cpp',
-    'resource/file_resource_stream.hpp',
-    'resource/file_resource_stream.cpp',
-    'resource/resource_manager.hpp',
-    'resource/resource_manager.cpp',
-    'resource/resource_uri.hpp',
-    'resource/resource_uri.cpp',
-    'resource/resource_scanner.hpp',
-    'resource/resource_scanner.cpp',
-    'resource/platform_resource_locator.hpp',
-    'resource/platform_resource_locator.cpp',
-    'resource/build_location.hpp',
-    'resource/build_location.cpp',
-    'resource/backends/memory_backend.hpp',
-    'resource/backends/memory_backend.cpp',
-    'resource/backends/builtin_backend.hpp',
-    'resource/backends/builtin_backend.cpp',
-    'resource/backends/directory_backend.hpp',
-    'resource/backends/directory_backend.cpp',
-    'resource/backends/sqlite_backend.hpp',
-    'resource/backends/sqlite_backend.cpp',
-)
+# Application build-tree metadata belongs to runtime integration, not the tool core.
+module_resource = files('resource/build_location.cpp')
 
 module_scene = files(
     'scene/anchors.hpp',
@@ -362,11 +317,8 @@ if box2d_dep.found()
 endif
 
 # 创建静态库
-nandina_dependencies = [spdlog_dep, freetype_dep, harfbuzz_dep, fribidi_dep, utf8proc_dep, sqlite3_dep, tomlplusplus_dep, nlohmann_json_dep, stb_dep]
-nandina_cpp_args = [
-    '-DNANDINA_BUILTIN_DEFAULT_FONT_SIZE=' + builtin_font_size.to_string(),
-    '-DNANDINA_BUILTIN_DEFAULT_FONT_LICENSE_SIZE=' + builtin_font_license_size.to_string(),
-]
+nandina_dependencies = [spdlog_dep, freetype_dep, harfbuzz_dep, fribidi_dep, utf8proc_dep, resource_runtime_dep, tomlplusplus_dep, nlohmann_json_dep, stb_dep]
+nandina_cpp_args = []
 if box2d_dep.found()
     nandina_dependencies += box2d_dep
     nandina_cpp_args += '-DNANDINA_HAS_PHYSICS2D=1'
@@ -378,7 +330,7 @@ endif
 
 nandina_lib = static_library(
     'nandina',
-    [module_fundation, module_reactive, module_resource, module_scene, module_semantics, module_render, module_sdl_backend, module_theme, module_text, module_widget, module_app, module_physics2d, builtin_font_data, builtin_font_license_data],
+    [module_fundation, module_reactive, module_resource, module_scene, module_semantics, module_render, module_sdl_backend, module_theme, module_text, module_widget, module_app, module_physics2d],
     cpp_args : nandina_cpp_args,
     dependencies : nandina_dependencies,
 )

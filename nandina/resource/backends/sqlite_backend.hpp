@@ -2,6 +2,7 @@
 #define NANDINA_EXPERIMENT_RESOURCE_BACKENDS_SQLITE_BACKEND_HPP
 
 #include "../resource_backend.hpp"
+#include "../resource_package_format.hpp"
 #include <filesystem>
 #include <memory>
 
@@ -18,8 +19,8 @@ namespace nandina::resource
 
     class SQLiteBackend final: public IResourceBackend {
     public:
-        static constexpr int application_id = 0x4e414e44;
-        static constexpr int schema_version = 1;
+        static constexpr int application_id = package_format::application_id;
+        static constexpr int schema_version = package_format::schema_version;
         [[nodiscard]] static auto open(SQLiteBackendOptions options)
             -> ResourceResult<std::shared_ptr<SQLiteBackend>>;
         ~SQLiteBackend() override;

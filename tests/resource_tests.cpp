@@ -3,13 +3,14 @@
 #include <nandina/resource/backends/builtin_backend.hpp>
 #include <nandina/resource/backends/directory_backend.hpp>
 #include <nandina/resource/backends/memory_backend.hpp>
-#include <nandina/resource/backends/sqlite_backend.hpp>
+#ifdef NANDINA_HAS_RESOURCE_SQLITE
+    #include <nandina/resource/backends/sqlite_backend.hpp>
+    #include <sqlite3.h>
+#endif
 #include <nandina/resource/platform_resource_locator.hpp>
 #include <nandina/resource/resource_manager.hpp>
 #include <nandina/resource/resource_scanner.hpp>
 #include <nandina/resource/resource_uri.hpp>
-
-#include <sqlite3.h>
 
 #include <algorithm>
 #include <filesystem>
@@ -35,6 +36,7 @@ namespace
         }
     };
 
+#ifdef NANDINA_HAS_RESOURCE_SQLITE
     void exec(sqlite3* db, const char* sql) {
         char* message = nullptr;
         const int result = sqlite3_exec(db, sql, nullptr, nullptr, &message);
@@ -65,6 +67,7 @@ namespace
         );
         REQUIRE(sqlite3_close(db) == SQLITE_OK);
     }
+#endif
 } // namespace
 
 TEST_CASE("resource identity and keys are canonical", "[resource]") {
@@ -178,6 +181,7 @@ TEST_CASE("Linux locator uses HOME and default system data directories", "[resou
 
 #endif // !defined(_WIN32)
 
+#ifdef NANDINA_TEST_RESOURCE_TOOLS
 TEST_CASE(
     "resource scanner is deterministic and follows media type precedence",
     "[resource][scan]"
@@ -225,7 +229,7 @@ TEST_CASE("resource scanner rejects unsafe paths and normalized collisions", "[r
         std::ofstream file(temp.path / "assets/valid.txt");
         file << "ok";
     }
-#if !defined(_WIN32)
+    #if !defined(_WIN32)
     // NTFS 默认大小写不敏感：Upper.txt / upper.txt 会落到同一个文件，碰撞场景无法构造。
     {
         std::ofstream file(temp.path / "assets/Upper.txt");
@@ -235,7 +239,7 @@ TEST_CASE("resource scanner rejects unsafe paths and normalized collisions", "[r
         std::ofstream file(temp.path / "assets/upper.txt");
         file << "b";
     }
-#endif
+    #endif
     {
         std::ofstream file(temp.path / "assets/.hidden/secret.txt");
         file << "secret";
@@ -260,11 +264,11 @@ TEST_CASE("resource scanner rejects unsafe paths and normalized collisions", "[r
         .output_paths = {temp.path / "assets/package"},
     });
     REQUIRE_FALSE(result.valid());
-#if !defined(_WIN32)
+    #if !defined(_WIN32)
     REQUIRE(std::ranges::any_of(result.diagnostics, [](const auto& diagnostic) {
         return diagnostic.code == resource::ScanDiagnosticCode::normalized_key_collision;
     }));
-#endif
+    #endif
     REQUIRE(std::ranges::any_of(result.diagnostics, [](const auto& diagnostic) {
         return diagnostic.code == resource::ScanDiagnosticCode::output_recursion;
     }));
@@ -278,6 +282,8 @@ TEST_CASE("resource scanner rejects unsafe paths and normalized collisions", "[r
             || item.key.value().contains("package");
     }));
 }
+
+#endif
 
 TEST_CASE("memory resources survive replacement and manager overlays", "[resource]") {
     const auto resource_id = id("00112233-4455-4677-8899-aabbccddeeff");
@@ -426,6 +432,7 @@ TEST_CASE("directory streams are bounded and survive backend removal", "[resourc
     REQUIRE(std::string(buffer.begin(), buffer.end()) == "abcd");
 }
 
+#ifdef NANDINA_HAS_RESOURCE_SQLITE
 TEST_CASE("SQLite backend resolves blobs aliases and external files", "[resource][sqlite]") {
     TempDirectory temp;
     const auto database = temp.path / "resources.db";
@@ -481,3 +488,4 @@ TEST_CASE("SQLite backend rejects non-Nandina databases", "[resource][sqlite]") 
     REQUIRE_FALSE(backend.has_value());
     REQUIRE(backend.error().code == resource::ResourceErrorCode::malformed_backend);
 }
+#endif

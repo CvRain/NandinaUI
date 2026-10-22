@@ -9,7 +9,9 @@
 
 #include "../foundation/nan_logger.hpp"
 #include "../resource/backends/builtin_backend.hpp"
-#include "../resource/backends/sqlite_backend.hpp"
+#ifdef NANDINA_HAS_RESOURCE_SQLITE
+    #include "../resource/backends/sqlite_backend.hpp"
+#endif
 #include "../resource/build_location.hpp"
 #include "../resource/platform_resource_locator.hpp"
 #include "../text/system_fonts.hpp"
@@ -79,7 +81,7 @@ namespace nandina::app
             throw std::invalid_argument("NanApplication: " + locator.error());
         }
         platform_paths_ = std::move(*locator);
-        int priority = 1000;
+        [[maybe_unused]] int priority = 1000;
         for (const auto& location: platform_paths_->resource_roots()) {
             // 开发期：优先消费 build-tree 元数据 resource-location.json，挂载其指向的
             // 构建树包；release/portable staging 无此文件时回落直查 `<root>/resources.db`。
@@ -107,6 +109,7 @@ namespace nandina::app
                 --priority;
                 continue;
             }
+#ifdef NANDINA_HAS_RESOURCE_SQLITE
             auto backend = resource::SQLiteBackend::open({
                 .name = "package:" + database.string(),
                 .database = database,
@@ -120,6 +123,11 @@ namespace nandina::app
             }
             (void)resources_.mount(*backend, priority);
             resource_backends_.push_back(std::move(*backend));
+#else
+            throw std::runtime_error(
+                "NanApplication: backend_unavailable: resource package requires resource_sqlite"
+            );
+#endif
             --priority;
         }
         font_loader_ = std::make_unique<text::FontLoader>(resources_);

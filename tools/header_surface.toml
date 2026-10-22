@@ -7,6 +7,11 @@
 schema = 1
 
 [[headers]]
+path = "nandina/resource/resource_package_format.hpp"
+level = "experimental"
+reason = "Shared SQLite package protocol for runtime readers and resource build tools"
+
+[[headers]]
 path = "nandina/app/application_config.hpp"
 level = "experimental"
 
