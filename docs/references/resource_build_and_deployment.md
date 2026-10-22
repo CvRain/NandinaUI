@@ -635,3 +635,155 @@ D5 范围已冻结。以下为 D5 内部实施顺序；项目总排序仍见 [�
 
 本次只冻结设计并同步计划、README、模块/构建边界与故事；不修改运行时代码，不启用新构建
 路径，不替换 SQLite，不将待实现接口写成入门教程中的可用功能。
+
+## 8. P2 实施契约（2026-10-22 定稿，未实现）
+
+> 本节把 2026-10-22 的评审结论固化为执行契约。P2 代码按此实施；未写入本节的行为不提前承诺。
+> 路线图 P2 的子批划分与状态见[开发路线](development_roadmap.md)。
+
+### 8.0 评审决策
+
+| 议题 | 决定 |
+| --- | --- |
+| 示例应用 | `examples/notes/`，默认关闭；场景限定为浏览笔记、编辑表单、预览图片、确认弹窗；本轮不做数据库持久化与富文本编辑 |
+| 资源开关 | 不增加笼统 `resources`；按 8.2 的 `build_ui` / `resource_sqlite` / `resource_tools` / `examples` 四个选项 |
+| API 命名 | `ResolvedResource` / `ResolvedStream`；`ResourceDomainToken` 只是不透明身份，调用方不能取得可保活域的强令牌；歧义走既有错误通道 `ambiguous_resource_id` |
+| key 与 ID | 大小写敏感、`/` 分隔、不做 NFC；记录 ID 由包身份 + 逻辑 key 派生；编码/算法版本/截断/迁移按 8.4 冻结 |
+| 常量头 | 在 P2.3 完成最小版（只含逻辑 key，删除声明后编译失败） |
+| smoke 底线 | 构建检查与运行检查分别记录；环境不可用允许 SKIP；P2.4 最终完成必须有至少一份实际运行与交互验收证据 |
+
+### 8.1 四层目标与依赖图
+
+| 目标 | 职责 | 允许依赖 | 禁止依赖 |
+| --- | --- | --- | --- |
+| `resource_core` | key/ID、`Resource`、流、错误、`IResourceBackend` 协议、`ResourceManager` | C++ 标准库；仅 logger 等 foundation 的最小部分 | SQLite、OpenSSL、toml++、字体、渲染、场景、窗口 |
+| 运行时后端 | memory / builtin / directory；可选 SQLite | `resource_core`；SQLite 后端额外依赖 vendored `sqlite3` 与包格式协议头 | 构建工具侧库、UI 目标 |
+| `resource_build` | scanner、manifest、摘要、校验、packager | `resource_core`、toml++、OpenSSL；SQLite 存储时依赖 `sqlite3` + 包格式协议头 | UI 目标、窗口/字体 |
+| `nanres` | CLI 解析、诊断、调用 `resource_build` | `resource_build` | 任何 UI / 运行时后端实现（SQLite 运行时后端也不得成为其依赖） |
+
+**包格式协议头**：新增 `nandina/resource/resource_package_format.hpp`，承载读写共享的包常量与
+schema 约定；`tools/resource_packager.cpp` 不再包含 `backends/sqlite_backend.hpp`，SQLite 运行时
+后端关闭时打包器仍可独立构建。格式常量只定义一次，读写两侧不各自复制。
+
+依赖边只能自上而下；`nanres` 的目标依赖闭包中不得出现 render/text/widget/scene/app 等 UI 目标
+（由 8.9 的 checker 机械校验）。
+
+### 8.2 选项真值表
+
+| 选项 | 形状/默认 | 打开 | 关闭 |
+| --- | --- | --- | --- |
+| `build_ui` | boolean，true | 构建 UI 框架、showcase、窗口/GPU 探针与相关测试 | 不配置 SDL、freetype、harfbuzz、fribidi 等 UI 依赖；`showcase`/窗口探针强制关闭；只构建资源核心、运行时后端（按开关）与工具 |
+| `resource_sqlite` | feature，enabled | 构建 SQLite 运行时后端，应用启动可按配置打开包 | 不编译该后端与自动开包路径；应用必须显式注入后端，缺后端时报 `backend_unavailable` |
+| `resource_tools` | boolean，true | 构建本机 `nanres`、helper 与模板约定 | 不构建 `nanres`；需要包的应用必须通过外部工具路径提供兼容版本，并在使用前检查版本/schema |
+| `examples` | boolean，false | 构建 `examples/notes`（要求 `build_ui=true`） | 不进入构建图；`examples=true + build_ui=false` 配置期报错 |
+
+**SQLite 引擎是否构建**由“工具侧打包器或运行时后端是否需要”共同决定：`resource_sqlite=disabled`
+不取消工具侧打包；`resource_tools=true` 仍需 SQLite 引擎。`auto` 语义：当前 vendored SQLite 始终
+可用，`auto` 等价 `enabled`；将来引入系统来源（`sqlite_source`）时再细化三态，不在本批增加
+`resource_storage`。
+
+**纯工具配置入口**：`-Dbuild_ui=false -Dresource_tools=true` 必须在没有 SDL/字体/图形依赖的环境
+完成配置与构建；这是 P2.1 的机械门禁，不靠“关了 sdl_backend”推断。
+
+### 8.3 启动策略契约
+
+- `NanApplicationConfig::resource_package` 的默认值改为空：只有显式配置包时启动才查找并挂载；
+  “默认 resources.db”不再是隐含行为（破坏性变更记入 `sdk_surface.md`）。
+- 后端注入发生在第一次字体/图片/主题消费之前；`resource_sqlite` 关闭时包路径代码不参与编译，
+  应用改用显式注入或得到 `backend_unavailable` 诊断，不静默跳过。
+- 平台定位只在使用包配置时执行；不支持的平台明确报错，不继续强制 HOME/XDG。
+- `build_ui=false` 时 `app`/窗口目标不进入构建图，因此启动策略只在 `build_ui=true` 的配置下验收。
+
+### 8.4 生成数据归属、身份与三种 revision
+
+**归属**：源码目录只保存 `resources.toml`、显式 key 映射与别名；生成的 lock、摘要与扫描缓存
+放到各自 build 目录。P2.1 保留旧行为（`resources.lock.toml` 写在策略目录），P2.3 显式迁移，
+并保证普通构建不再向源码目录回写生成数据。
+
+| 概念 | 决定 | 不稳定因素 |
+| --- | --- | --- |
+| 记录 ID | 由包身份 + 逻辑 key 派生；内容变化不改变 ID | 算法版本升级需迁移 |
+| 构建 revision | 有上一份 lock 时可递增；删除缓存后不承诺恢复历史计数 | 缓存丢失 |
+| 运行时发布代次 | 后端生命周期内的缓存一致性身份；不从构建 revision 推导 | 进程/挂载生命周期 |
+
+**碰撞规则**：同一 ID 对应**不同逻辑记录**（key 不同，或同 key 内容与记录不一致）才是碰撞，
+构建失败并给出冲突诊断；相同 key 的内容变化是正常更新并推进 revision；不同 key 的相同内容
+保留两条独立记录。
+
+**ID 编码冻结**（P2.3 实施）：输入带版本前缀与长度编码，例如
+`"nandina.resource.id.v1\0" + u32(len(package_id)) + package_id + u32(len(key)) + key`，对输入取
+SHA-256 后截断 128 bit，小写十六进制输出；固定测试向量入库。碰撞时不随机换 ID，而是失败。
+旧 lock（随机 ID）需通过显式命令（如 `nanres scan --rewrite-lock`）迁移；普通构建检测到不匹配
+时提示迁移，不静默改写。
+
+### 8.5 一致性分类与缓存资格
+
+| 来源 | 一致性类别 | 可进入共享内容缓存 |
+| --- | --- | --- |
+| 内存/内置后端 | 不可变快照 | 可 |
+| SQLite 内嵌字节 | 包代次内不可变 | 可（键含域/挂载/代次/ID） |
+| 目录后端 | 仅显式发布/不可变声明的内容按快照 | 仅快照 |
+| 已打开文件流 | 非快照（外部可改） | 不可 |
+
+目录后端的资源结果同样携带一致性类别；相同路径在同一代次返回不同字节不得被缓存复用。
+首版不承诺文件监听；非快照内容不得仅凭作用域键进入共享内容缓存。
+
+### 8.6 错误通道
+
+沿用 `ResourceErrorCode` + `expected`，新增：
+
+- `ambiguous_resource_id`：裸 ID 多重命中，消息必须列出冲突挂载（MountId/后端名）；
+- `expired_scope`：域已销毁、挂载已卸载或发布代次过期后的重新解析；
+- 既有 `duplicate_id` / `alias_conflict` 保留后端配置语义，不混用为查询歧义。
+
+不引入第二套异常类型；结构化冲突信息进消息字段（后续如需结构化类型再单独加，不阻塞本批）。
+
+### 8.7 缓存回收
+
+首版采用**有限容量淘汰 + expired 域清扫**：缓存条目持域弱令牌与代次；manager 存活但旧挂载/
+旧代次的关联由定向失效或容量淘汰清理。暂不实现 manager 向所有缓存广播失效的通知系统。
+直接加载未挂载 `ResourceHandle` 的入口绕过共享缓存，不伪造挂载身份。
+
+### 8.8 增量与发布义务分配
+
+| 工作 | 批次 |
+| --- | --- |
+| 工具关闭时的外部 nanres 入口、版本/schema 兼容检查 | P2.1 |
+| `validate` 区分“过期”与“策略错误/损坏”；只有过期自动重扫 | P2.3 |
+| 常量头的符号冲突、删除再生成、真实编译依赖测试 | P2.3 |
+| 目录新增/删除发现；无变化不重写包/定位描述/时间戳 | P2.4a |
+| 数据库、外置资源与定位描述成套发布；失败保留旧产物但返回失败 | P2.4a |
+| 定向构建应用即资源就绪；portable stage 重定位后可运行 | P2.4a |
+
+### 8.9 门禁、fixture 与跨编译
+
+- **依赖闭包 checker**（新 `tools/check_tool_dependencies.py`）：先用项目固定的 Meson 版本建立
+  真实小型 fixture，再解析 `meson introspect --targets`；同时使用外部 `dependencies` 与内部目标
+  `depends`，递归闭包，拒绝 UI 目标；查询失败/目标缺失/输入为空必须报错（fail-closed）。
+  `ninja -t commands` 只作诊断附加证据。故障注入：直接链入 UI 库、经中间目标间接引入、
+  introspection 缺失，三种都必须变红。
+- **纯工具构建 job**：无 SDL/字体依赖环境配置并构建 `nanres`；与现有无后端 job 分开。
+- **交叉编译**：只正式验收原生构建；`nanres` 是构建期工具，交叉编译时不得执行目标架构的
+  `nanres` 作为本机工具。跨编译支持留待独立批次。
+- **外部工具兼容**：`nanres` 提供可解析的版本/schema 输出（如 `nanres --version` /
+  `nanres schema`），helper 在使用外部工具前检查；不兼容时明确失败。
+
+### 8.10 子批、提交与验收节奏
+
+| 子批 | 内容 | 会红测试/门禁 |
+| --- | --- | --- |
+| P2.1a | 目标拆分（core/runtime/build/CLI）+ 包格式协议头 + 选项真值表 | 纯工具配置构建；依赖闭包 checker + 三种故障注入 |
+| P2.1b | 启动策略（默认不开包、注入时机、SQLite 关闭诊断）+ 外部工具兼容 | 关闭组合运行；无包/缺后端诊断；`sdk_surface` 更新 |
+| P2.2a | 后端发布代次与快照一致性 | 并发发布/快照一致性测试 |
+| P2.2b | 管理器 8 入口作用域 + 域令牌 + 歧义/过期错误 | 跨挂载/跨 manager/歧义/过期用例 |
+| P2.2c | FontLoader 与图片/流消费者迁移 | 缓存身份测试 + ASan |
+| P2.2d | 缓存回收与并发 | 淘汰/清扫/重叠卸载用例 |
+| P2.3a | 策略 key 映射 + 生成算法 + ID 编码测试向量 | 重命名/大小写/固定向量 |
+| P2.3b | lock 迁移、碰撞、revision、无变化不重写 | 碰撞注入/重建确定性/迁移 |
+| P2.3c | 最小常量头 + 编译依赖测试 | 删除声明后编译失败 |
+| P2.4a | 示例资源链路与增量/成套发布 | 干净检出/离线/定向构建/portable stage |
+| P2.4b | 示例应用功能（导航/表单/图片/滚动/弹窗） | 运行 smoke + 人工交互证据 |
+| P2.4c | 测试脚本、失败可复现证据、README | 构建检查与运行检查分别记录 |
+
+每个可独立验收的子批一个提交；会红测试先在本地证明旧实现失败，再与修复一起提交；公开 API
+迁移提交同时迁移消费者，保持可构建、可回滚；完整验证矩阵在子批收口执行，日常修改先跑相关测试。
