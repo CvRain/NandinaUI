@@ -17,6 +17,7 @@
 #include <condition_variable>
 #include <cstring>
 #include <filesystem>
+#include <format>
 #include <fstream>
 #include <limits>
 #include <mutex>
@@ -86,6 +87,39 @@ namespace
         mutable std::condition_variable condition_;
         mutable bool entered_ = false;
         mutable bool released_ = false;
+    };
+
+    /// 所有查询都失败的后端，用来证明 ID 扫描不会忽略错误后宣称唯一命中。
+    class FailingLookupBackend final: public resource::IResourceBackend {
+    public:
+        [[nodiscard]] auto name() const noexcept -> std::string_view override {
+            return "failing";
+        }
+        [[nodiscard]] auto find(const resource::ResourceKey&) const
+            -> resource::ResourceSnapshotLookup override {
+            return std::unexpected(failure());
+        }
+        [[nodiscard]] auto find(resource::ResourceId) const
+            -> resource::ResourceSnapshotLookup override {
+            return std::unexpected(failure());
+        }
+        [[nodiscard]] auto open_stream(const resource::ResourceKey&) const
+            -> resource::ResourceStreamSnapshotLookup override {
+            return std::unexpected(failure());
+        }
+        [[nodiscard]] auto open_stream(resource::ResourceId) const
+            -> resource::ResourceStreamSnapshotLookup override {
+            return std::unexpected(failure());
+        }
+
+    private:
+        [[nodiscard]] static auto failure() -> resource::ResourceError {
+            return {
+                resource::ResourceErrorCode::integrity_error,
+                "find",
+                "injected backend failure",
+            };
+        }
     };
 
 #ifdef NANDINA_HAS_RESOURCE_SQLITE
@@ -351,10 +385,10 @@ TEST_CASE("memory resources survive replacement and manager overlays", "[resourc
     resource::ResourceManager manager;
     const auto base_mount = manager.mount(base, 0);
     const auto override_mount = manager.mount(override, 10);
-    REQUIRE(manager.require(resource::ResourceKey("fonts/default"))->get()->bytes()[0] == 9);
-    REQUIRE(manager.require(resource::ResourceKey("fonts/ui"))->get()->bytes()[0] == 1);
+    REQUIRE(manager.require(resource::ResourceKey("fonts/default"))->resource->bytes()[0] == 9);
+    REQUIRE(manager.require(resource::ResourceKey("fonts/ui"))->resource->bytes()[0] == 1);
     REQUIRE(manager.unmount(override_mount));
-    REQUIRE(manager.require(resource::ResourceKey("fonts/default"))->get()->bytes()[0] == 1);
+    REQUIRE(manager.require(resource::ResourceKey("fonts/default"))->resource->bytes()[0] == 1);
 
     REQUIRE(base->insert(
                     resource_id,
@@ -498,7 +532,7 @@ TEST_CASE(
     REQUIRE(left->generation == right->generation);
     REQUIRE(left->generation.value() == 1);
     REQUIRE(manager.require(key).has_value());
-    REQUIRE((*manager.require(key))->bytes()[0] == 4);
+    REQUIRE(manager.require(key)->resource->bytes()[0] == 4);
 }
 
 TEST_CASE(
@@ -595,7 +629,7 @@ TEST_CASE(
     resource::ResourceManager manager;
     const auto mount = manager.mount(backend);
 
-    std::optional<resource::ResourceLookup> lookup;
+    std::optional<resource::ResolvedResourceLookup> lookup;
     std::jthread finder([&] { lookup = manager.find(key); });
     backend->wait_until_entered();
     // 查询停在后端期间管理器必须仍可卸载；否则说明后端调用发生在管理器锁内。
@@ -605,12 +639,326 @@ TEST_CASE(
 
     REQUIRE(lookup.has_value());
     REQUIRE(lookup->has_value());
-    REQUIRE((***lookup)->bytes()[0] == 7);
+    const auto pinned = ***lookup;
+    REQUIRE(pinned.resource->bytes()[0] == 7);
 
-    // 卸载完成后新发起的解析不得成功；已经固定的旧结果继续可用。
+    // 卸载完成后新发起的解析不得成功；已经固定的旧结果继续可用，但旧作用域重新解析失败。
     const auto after = manager.find(key);
     REQUIRE(after.has_value());
     REQUIRE_FALSE(after->has_value());
+    const auto expired = manager.resolve(pinned);
+    REQUIRE_FALSE(expired.has_value());
+    REQUIRE(expired.error().code == resource::ResourceErrorCode::expired_scope);
+}
+
+TEST_CASE("resolved results carry domain mount generation and identity", "[resource][scope]") {
+    const auto key = resource::ResourceKey("data/value");
+    const auto resource_id = id("50112233-4455-4677-8899-aabbccddeeff");
+    auto backend = std::make_shared<resource::MemoryBackend>("scope");
+    REQUIRE(backend->insert(resource_id, key, "application/octet-stream", {5}).has_value());
+
+    resource::ResourceManager manager;
+    const auto mount = manager.mount(backend);
+
+    const auto by_key = manager.require(key);
+    REQUIRE(by_key.has_value());
+    REQUIRE_FALSE(by_key->domain.expired());
+    REQUIRE(by_key->mount_id == mount);
+    REQUIRE(by_key->generation.value() == 1);
+    REQUIRE(by_key->consistency == resource::ResourceConsistency::immutable_snapshot);
+    REQUIRE(by_key->id == resource_id);
+    REQUIRE(by_key->resource->id() == resource_id);
+
+    const auto by_id = manager.find(resource_id);
+    REQUIRE(by_id.has_value());
+    REQUIRE(by_id->has_value());
+    REQUIRE((*by_id)->domain == by_key->domain);
+    REQUIRE((*by_id)->mount_id == mount);
+    REQUIRE((*by_id)->generation == by_key->generation);
+
+    const auto stream = manager.require_stream(key);
+    REQUIRE(stream.has_value());
+    REQUIRE(stream->domain == by_key->domain);
+    REQUIRE(stream->mount_id == mount);
+    REQUIRE(stream->generation == by_key->generation);
+    REQUIRE(stream->consistency == resource::ResourceConsistency::immutable_snapshot);
+    REQUIRE(stream->id == resource_id);
+}
+
+TEST_CASE("bare resource ids are ambiguous across mounts", "[resource][scope][ambiguity]") {
+    const auto resource_id = id("51112233-4455-4677-8899-aabbccddeeff");
+    auto first = std::make_shared<resource::MemoryBackend>("first");
+    auto second = std::make_shared<resource::MemoryBackend>("second");
+    REQUIRE(first->insert(resource_id, resource::ResourceKey("data/first"), "text/plain", {1})
+                .has_value());
+    REQUIRE(second->insert(resource_id, resource::ResourceKey("data/second"), "text/plain", {2})
+                .has_value());
+
+    resource::ResourceManager manager;
+    const auto first_mount = manager.mount(first);
+    const auto second_mount = manager.mount(second);
+
+    const auto found = manager.find(resource_id);
+    REQUIRE_FALSE(found.has_value());
+    REQUIRE(found.error().code == resource::ResourceErrorCode::ambiguous_resource_id);
+    REQUIRE(found.error().message.contains(std::format("mount {} (first)", first_mount)));
+    REQUIRE(found.error().message.contains(std::format("mount {} (second)", second_mount)));
+
+    REQUIRE(
+        manager.require(resource_id).error().code
+        == resource::ResourceErrorCode::ambiguous_resource_id
+    );
+    REQUIRE(
+        manager.open_stream(resource_id).error().code
+        == resource::ResourceErrorCode::ambiguous_resource_id
+    );
+    REQUIRE(
+        manager.require_stream(resource_id).error().code
+        == resource::ResourceErrorCode::ambiguous_resource_id
+    );
+
+    // 同一后端挂两次也是两个挂载命中，不能按指针去重成“唯一”。
+    resource::ResourceManager duplicated;
+    const auto duplicate_first = duplicated.mount(first);
+    const auto duplicate_second = duplicated.mount(first);
+    const auto duplicated_hit = duplicated.find(resource_id);
+    REQUIRE_FALSE(duplicated_hit.has_value());
+    REQUIRE(duplicated_hit.error().code == resource::ResourceErrorCode::ambiguous_resource_id);
+    REQUIRE(
+        duplicated_hit.error().message.contains(std::format("mount {} (first)", duplicate_first))
+    );
+    REQUIRE(
+        duplicated_hit.error().message.contains(std::format("mount {} (first)", duplicate_second))
+    );
+
+    // 单一命中的 ID 查询继续可用。
+    REQUIRE(duplicated.unmount(duplicate_second));
+    const auto unique = duplicated.find(resource_id);
+    REQUIRE(unique.has_value());
+    REQUIRE(unique->has_value());
+    REQUIRE((*unique)->mount_id == duplicate_first);
+
+    // 扫描全部挂载，但只有一个挂载真正持有该 ID：这是唯一命中，不是歧义。
+    auto empty = std::make_shared<resource::MemoryBackend>("empty");
+    resource::ResourceManager partial;
+    const auto partial_hit = partial.mount(first);
+    (void)partial.mount(empty);
+    const auto only_one = partial.find(resource_id);
+    REQUIRE(only_one.has_value());
+    REQUIRE(only_one->has_value());
+    REQUIRE((*only_one)->mount_id == partial_hit);
+}
+
+TEST_CASE(
+    "alias resolution follows mount priority inside the key path",
+    "[resource][scope][alias]"
+) {
+    const auto low_id = id("52112233-4455-4677-8899-aabbccddeeff");
+    const auto high_id = id("53112233-4455-4677-8899-aabbccddeeff");
+    const auto canonical = resource::ResourceKey("fonts/default");
+    const auto low_only = resource::ResourceKey("app/logo");
+
+    auto low = std::make_shared<resource::MemoryBackend>("low");
+    auto high = std::make_shared<resource::MemoryBackend>("high");
+    REQUIRE(low->insert(low_id, canonical, "font/ttf", {1}).has_value());
+    REQUIRE(
+        high->insert(high_id, resource::ResourceKey("fonts/override"), "font/ttf", {2}).has_value()
+    );
+    REQUIRE(high->add_alias(canonical, high_id).has_value());
+    REQUIRE(low->add_alias(low_only, low_id).has_value());
+
+    resource::ResourceManager manager;
+    const auto low_mount = manager.mount(low, 0);
+    const auto high_mount = manager.mount(high, 10);
+
+    // 高优先级后端的别名参与 key 路径，压过低优先级的同 key 资源。
+    const auto aliased = manager.require(canonical);
+    REQUIRE(aliased->mount_id == high_mount);
+    REQUIRE(aliased->resource->bytes()[0] == 2);
+
+    // 别名只在所属后端内解析，不会跨挂载搜索目标。
+    const auto low_alias = manager.require(low_only);
+    REQUIRE(low_alias->mount_id == low_mount);
+    REQUIRE(low_alias->resource->bytes()[0] == 1);
+
+    REQUIRE(manager.unmount(high_mount));
+    const auto canonical_again = manager.require(canonical);
+    REQUIRE(canonical_again->mount_id == low_mount);
+    REQUIRE(canonical_again->resource->bytes()[0] == 1);
+}
+
+TEST_CASE("an id scan never ignores a backend error to claim a unique hit", "[resource][scope]") {
+    const auto resource_id = id("54112233-4455-4677-8899-aabbccddeeff");
+    auto hit = std::make_shared<resource::MemoryBackend>("hit");
+    REQUIRE(
+        hit->insert(resource_id, resource::ResourceKey("data/hit"), "text/plain", {1}).has_value()
+    );
+    auto failing = std::make_shared<FailingLookupBackend>();
+
+    resource::ResourceManager manager;
+    (void)manager.mount(hit, 10);
+    (void)manager.mount(failing, 0);
+    const auto found = manager.find(resource_id);
+    REQUIRE_FALSE(found.has_value());
+    REQUIRE(found.error().code == resource::ResourceErrorCode::integrity_error);
+
+    // key 查询按优先级短路：更高优先级已有命中的后端不会被低优先级错误干扰。
+    REQUIRE(manager.require(resource::ResourceKey("data/hit"))->resource->bytes()[0] == 1);
+
+    // 反过来，高优先级错误不能被低优先级命中忽略。
+    resource::ResourceManager failing_first;
+    (void)failing_first.mount(hit, 0);
+    (void)failing_first.mount(failing, 10);
+    const auto key_error = failing_first.find(resource::ResourceKey("data/hit"));
+    REQUIRE_FALSE(key_error.has_value());
+    REQUIRE(key_error.error().code == resource::ResourceErrorCode::integrity_error);
+}
+
+TEST_CASE(
+    "resolved references fail after publish unmount or domain loss",
+    "[resource][scope][expired]"
+) {
+    const auto key = resource::ResourceKey("data/value");
+    const auto resource_id = id("55112233-4455-4677-8899-aabbccddeeff");
+    auto backend = std::make_shared<resource::MemoryBackend>("scope");
+    REQUIRE(backend->insert(resource_id, key, "text/plain", {1}).has_value());
+
+    resource::ResourceManager manager;
+    const auto mount = manager.mount(backend);
+
+    const auto first = manager.require(key);
+    REQUIRE(first.has_value());
+    const auto reopened = manager.resolve(*first);
+    REQUIRE(reopened.has_value());
+    REQUIRE((*reopened)->generation == first->generation);
+    REQUIRE((*reopened)->mount_id == first->mount_id);
+    REQUIRE((*reopened)->resource->bytes()[0] == 1);
+
+    const auto stream = manager.require_stream(key);
+    REQUIRE(stream.has_value());
+    const auto reopened_stream = manager.resolve(*stream);
+    REQUIRE(reopened_stream.has_value());
+    REQUIRE((*reopened_stream)->generation == stream->generation);
+
+    // 发布推进代次后，旧引用不能重新解析到新内容。
+    REQUIRE(backend->insert(resource_id, key, "text/plain", {2}, resource::InsertMode::replace)
+                .has_value());
+    const auto stale = manager.resolve(*first);
+    REQUIRE_FALSE(stale.has_value());
+    REQUIRE(stale.error().code == resource::ResourceErrorCode::expired_scope);
+    const auto stale_stream = manager.resolve(*stream);
+    REQUIRE_FALSE(stale_stream.has_value());
+    REQUIRE(stale_stream.error().code == resource::ResourceErrorCode::expired_scope);
+
+    const auto fresh = manager.require(key);
+    REQUIRE(fresh->generation.value() == 2);
+    REQUIRE(fresh->resource->bytes()[0] == 2);
+    const auto fresh_stream = manager.require_stream(key);
+    REQUIRE(fresh_stream.has_value());
+
+    // 卸载后即使另一个挂载提供相同 ID/key，旧引用也不得回退到全树搜索。
+    REQUIRE(manager.unmount(mount));
+    auto replacement = std::make_shared<resource::MemoryBackend>("replacement");
+    REQUIRE(replacement->insert(resource_id, key, "text/plain", {9}).has_value());
+    (void)manager.mount(replacement);
+    REQUIRE(manager.require(key)->resource->bytes()[0] == 9);
+    const auto unmounted = manager.resolve(*fresh);
+    REQUIRE_FALSE(unmounted.has_value());
+    REQUIRE(unmounted.error().code == resource::ResourceErrorCode::expired_scope);
+    const auto unmounted_stream = manager.resolve(*fresh_stream);
+    REQUIRE_FALSE(unmounted_stream.has_value());
+    REQUIRE(unmounted_stream.error().code == resource::ResourceErrorCode::expired_scope);
+
+    // clear() 等价于卸载全部挂载：新引用也会在 clear 后过期。
+    const auto replacement_reference = manager.require(key);
+    REQUIRE(replacement_reference.has_value());
+    const auto replacement_stream = manager.require_stream(key);
+    REQUIRE(replacement_stream.has_value());
+    manager.clear();
+    REQUIRE(manager.require(key).error().code == resource::ResourceErrorCode::not_found);
+    const auto cleared = manager.resolve(*replacement_reference);
+    REQUIRE_FALSE(cleared.has_value());
+    REQUIRE(cleared.error().code == resource::ResourceErrorCode::expired_scope);
+    const auto cleared_stream = manager.resolve(*replacement_stream);
+    REQUIRE_FALSE(cleared_stream.has_value());
+    REQUIRE(cleared_stream.error().code == resource::ResourceErrorCode::expired_scope);
+}
+
+TEST_CASE(
+    "domain tokens are ownership identities and never keep the manager alive",
+    "[resource][scope][domain]"
+) {
+    const auto key = resource::ResourceKey("data/value");
+    auto backend = std::make_shared<resource::MemoryBackend>("domain");
+    REQUIRE(backend->insert(id("56112233-4455-4677-8899-aabbccddeeff"), key, "text/plain", {1})
+                .has_value());
+
+    std::optional<resource::ResolvedResource> reference;
+    resource::ResourceDomainToken first_domain;
+    {
+        resource::ResourceManager owner;
+        (void)owner.mount(backend);
+        auto resolved = owner.require(key);
+        REQUIRE(resolved.has_value());
+        reference = *resolved;
+        first_domain = resolved->domain;
+        REQUIRE_FALSE(first_domain.expired());
+    }
+    REQUIRE(first_domain.expired());
+    REQUIRE(reference.has_value());
+    REQUIRE(reference->domain.expired());
+
+    resource::ResourceDomainToken second_destroyed;
+    {
+        resource::ResourceManager temp;
+        (void)temp.mount(backend);
+        auto resolved = temp.require(key);
+        REQUIRE(resolved.has_value());
+        second_destroyed = resolved->domain;
+    }
+    // 两个已销毁域仍是不同身份，不能把所有 expired 令牌当成同一个空值。
+    REQUIRE(second_destroyed.expired());
+    REQUIRE_FALSE(first_domain == second_destroyed);
+
+    resource::ResourceManager other;
+    (void)other.mount(backend);
+    const auto foreign = other.resolve(*reference);
+    REQUIRE_FALSE(foreign.has_value());
+    REQUIRE(foreign.error().code == resource::ResourceErrorCode::expired_scope);
+    auto other_reference = other.require(key);
+    REQUIRE_FALSE(other_reference->domain == first_domain);
+
+    // 移动构造/赋值转移同一逻辑域。
+    auto before_move = other.require(key);
+    resource::ResourceManager moved(std::move(other));
+    const auto after_move = moved.resolve(*before_move);
+    REQUIRE(after_move.has_value());
+    REQUIRE((*after_move)->domain == before_move->domain);
+
+    resource::ResourceManager assigned;
+    assigned = std::move(moved);
+    const auto after_assignment = assigned.resolve(*before_move);
+    REQUIRE(after_assignment.has_value());
+    REQUIRE((*after_assignment)->mount_id == before_move->mount_id);
+
+    // 未绑定任何域的默认引用不能被当成当前域成员。
+    const resource::ResolvedResource unbound {};
+    const auto unbound_result = assigned.resolve(unbound);
+    REQUIRE_FALSE(unbound_result.has_value());
+    REQUIRE(unbound_result.error().code == resource::ResourceErrorCode::expired_scope);
+}
+
+TEST_CASE("mount ids are unique within a domain and never reused", "[resource][scope][domain]") {
+    auto backend = std::make_shared<resource::MemoryBackend>("mounts");
+    resource::ResourceManager manager;
+    const auto first = manager.mount(backend);
+    REQUIRE(manager.unmount(first));
+    const auto second = manager.mount(backend);
+    REQUIRE(second != first);
+    manager.clear();
+    const auto third = manager.mount(backend);
+    REQUIRE(third != first);
+    REQUIRE(third != second);
 }
 
 TEST_CASE(
@@ -653,7 +1001,7 @@ TEST_CASE(
                 )
                 .has_value());
     (void)manager.mount(override, 0);
-    REQUIRE(manager.require(resource::ResourceKey("fonts/default"))->get()->size() == 3);
+    REQUIRE(manager.require(resource::ResourceKey("fonts/default"))->resource->size() == 3);
 }
 
 TEST_CASE("directory backend loads manifest resources into owned handles", "[resource]") {
@@ -725,25 +1073,25 @@ TEST_CASE("directory streams are bounded and survive backend removal", "[resourc
 
     auto stream = manager.require_stream(resource::ResourceKey("media/default"));
     REQUIRE(stream.has_value());
-    REQUIRE((*stream)->id() == resource_id);
-    REQUIRE((*stream)->size() == 6);
-    REQUIRE((*stream)->seekable());
+    REQUIRE(stream->stream->id() == resource_id);
+    REQUIRE(stream->stream->size() == 6);
+    REQUIRE(stream->stream->seekable());
     std::array<std::uint8_t, 4> buffer {};
-    REQUIRE((*stream)->read(buffer) == 4);
+    REQUIRE(stream->stream->read(buffer) == 4);
     REQUIRE(std::string(buffer.begin(), buffer.end()) == "abcd");
-    REQUIRE((*stream)->seek(2).has_value());
-    REQUIRE((*stream)->read(buffer) == 4);
+    REQUIRE(stream->stream->seek(2).has_value());
+    REQUIRE(stream->stream->read(buffer) == 4);
     REQUIRE(std::string(buffer.begin(), buffer.end()) == "cdef");
-    REQUIRE((*stream)->read(buffer) == 0);
-    REQUIRE_FALSE((*stream)->seek(7).has_value());
+    REQUIRE(stream->stream->read(buffer) == 0);
+    REQUIRE_FALSE(stream->stream->seek(7).has_value());
 
     REQUIRE(manager.unmount(mount));
     (*backend).reset();
     // Windows 不允许删除仍被打开的文件；用 error_code 容忍，测试意图是“流在删除后仍可读”。
     std::error_code remove_error;
     std::filesystem::remove(temp.path / "large.bin", remove_error);
-    REQUIRE((*stream)->seek(0).has_value());
-    REQUIRE((*stream)->read(buffer) == 4);
+    REQUIRE(stream->stream->seek(0).has_value());
+    REQUIRE(stream->stream->read(buffer) == 4);
     REQUIRE(std::string(buffer.begin(), buffer.end()) == "abcd");
 }
 

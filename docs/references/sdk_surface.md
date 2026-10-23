@@ -32,6 +32,14 @@
 （`ResolvedResource`/`ResolvedStream`、域令牌、歧义/过期错误）按 P2.2b 迁移。自定义后端
 须返回一致的结果与代次；`non_snapshot` 结果不得仅凭作用域键进入共享内容缓存。
 
+2026-10-23 P2.2b 作用域结果（experimental，破坏性）：`ResourceManager` 八入口改为返回
+`ResolvedResource` / `ResolvedStream`，携带 `ResourceDomainToken`、`ResourceMountId`、
+发布代次、一致性类别、记录 ID 与句柄；旧 `ResourceLookup`/`ResourceStreamLookup` 裸句柄别名
+删除，消费者改用 `.resource` / `.stream`。新增 `resolve(const ResolvedResource&)` /
+`resolve(const ResolvedStream&)`，只按原作用域重解析，过期返回 `expired_scope`；裸 ID 多重
+挂载命中返回 `ambiguous_resource_id`，消息列出冲突挂载。缓存身份迁移（字体/图片/流）在
+P2.2c，本批只做编译级消费者迁移。
+
 | 等级 | 含义 | 稳定性承诺 | 谁可以包含 |
 | --- | --- | --- | --- |
 | `public` | 推荐使用的接口 | alpha 内也尽量不破坏；破坏时给迁移说明 | 应用代码、示例、下游宿主 |

@@ -333,10 +333,12 @@ namespace nandina::render
                     -> DecodedImage {
                     for (std::size_t attempt = 0; attempt < attempts; ++attempt) {
                         auto loaded = resources.require(key);
-                        if (loaded && *loaded && (*loaded)->media_type().starts_with("image/")) {
+                        if (loaded && loaded->resource
+                            && loaded->resource->media_type().starts_with("image/"))
+                        {
                             auto decoded = decoder->decode_memory(
-                                (*loaded)->bytes(),
-                                (*loaded)->media_type(),
+                                loaded->resource->bytes(),
+                                loaded->resource->media_type(),
                                 options
                             );
                             if (decoded.valid()) {

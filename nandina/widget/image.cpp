@@ -288,33 +288,33 @@ namespace nandina::widget
                 load_state_ = ImageLoadState::failed;
                 return;
             }
-            if (!*loaded) {
+            if (!loaded->resource) {
                 log::get("widget.image").warn("Image: resource not found for {}", source_);
                 load_state_ = ImageLoadState::failed;
                 return;
             }
-            if (!(*loaded)->media_type().starts_with("image/")) {
+            if (!loaded->resource->media_type().starts_with("image/")) {
                 log::get("widget.image")
                     .warn(
                         "Image: resource is not an image {} ({})",
                         source_,
-                        (*loaded)->media_type()
+                        loaded->resource->media_type()
                     );
                 load_state_ = ImageLoadState::failed;
                 return;
             }
             if (texture_cache_ != nullptr) {
                 texture_ = texture_cache_->load_memory(
-                    (*loaded)->id().to_string(),
-                    (*loaded)->bytes(),
-                    (*loaded)->media_type(),
+                    loaded->resource->id().to_string(),
+                    loaded->resource->bytes(),
+                    loaded->resource->media_type(),
                     load_options_
                 );
             }
             else {
                 const auto handle = device.load_texture_from_memory(
-                    (*loaded)->bytes(),
-                    (*loaded)->media_type(),
+                    loaded->resource->bytes(),
+                    loaded->resource->media_type(),
                     load_options_
                 );
                 if (handle) {

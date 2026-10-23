@@ -178,7 +178,7 @@ TEST_CASE("register_system_cjk_fallback loads a discovered symlink", "[text][sys
         // the linked bytes, rather than merely announcing a discovered filename.
         const auto font = resources.require(resource::ResourceKey("fonts/system-cjk"));
         REQUIRE(font.has_value());
-        const auto bytes = (*font)->bytes();
+        const auto bytes = font->resource->bytes();
         REQUIRE(std::string(bytes.begin(), bytes.end()) == "dummy-font-bytes");
     }
     REQUIRE(home_value() == previous_home);

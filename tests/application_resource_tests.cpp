@@ -96,7 +96,7 @@ TEST_CASE("NanApplication always installs builtin resource and font services", "
     app::NanApplication application;
     auto font = application.resources().require(resource::ResourceKey("fonts/default"));
     REQUIRE(font.has_value());
-    REQUIRE((*font)->storage() == resource::ResourceStorage::embedded_blob);
+    REQUIRE(font->resource->storage() == resource::ResourceStorage::embedded_blob);
     auto family = application.font_families().resolve({}, application.font_loader());
     REQUIRE(family.has_value());
     // 默认族首位必须是内置拉丁字体；系统 CJK 回退（若存在）追加在后。
@@ -263,8 +263,8 @@ TEST_CASE(
 
     const auto hello = application.resources().require(resource::ResourceKey("assets/hello"));
     REQUIRE(hello.has_value());
-    REQUIRE((*hello)->size() == 5);
-    REQUIRE((*hello)->bytes()[0] == 'h');
+    REQUIRE(hello->resource->size() == 5);
+    REQUIRE(hello->resource->bytes()[0] == 'h');
 
     std::error_code error;
     std::filesystem::remove_all(root, error);
@@ -303,7 +303,7 @@ TEST_CASE(
     application.mount_resource_backend(backend);
     const auto found = application.resources().require(resource::ResourceKey("assets/injected"));
     REQUIRE(found.has_value());
-    REQUIRE((*found)->size() == 2);
+    REQUIRE(found->resource->size() == 2);
 
     std::error_code error;
     std::filesystem::remove_all(root, error);

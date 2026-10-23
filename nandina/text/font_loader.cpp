@@ -20,7 +20,7 @@ namespace nandina::text
         if (!found) {
             return std::unexpected(resource_failure(found.error()));
         }
-        return load(*found, face_index);
+        return load(found->resource, face_index);
     }
 
     auto FontLoader::load(const resource::ResourceId id, const std::uint32_t face_index)
@@ -29,7 +29,7 @@ namespace nandina::text
         if (!found) {
             return std::unexpected(resource_failure(found.error()));
         }
-        return load(*found, face_index);
+        return load(found->resource, face_index);
     }
 
     auto FontLoader::load(resource::ResourceHandle resource, const std::uint32_t face_index)

@@ -27,6 +27,8 @@ namespace nandina::resource
         integrity_error,
         backend_unavailable,
         generation_exhausted,
+        ambiguous_resource_id,
+        expired_scope,
     };
 
     struct ResourceError {
