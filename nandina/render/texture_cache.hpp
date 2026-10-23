@@ -8,7 +8,7 @@
 #include "image_decoder.hpp"
 #include "render_device.hpp"
 
-#include "../resource/resource.hpp"
+#include "../resource/resource_manager.hpp"
 
 #include <atomic>
 #include <cstddef>
@@ -17,15 +17,11 @@
 #include <functional>
 #include <list>
 #include <memory>
+#include <optional>
 #include <span>
 #include <string>
 #include <string_view>
 #include <vector>
-
-namespace nandina::resource
-{
-    class ResourceManager;
-}
 
 namespace nandina::render
 {
@@ -93,6 +89,13 @@ namespace nandina::render
             const ImageLoadOptions& options = {}
         ) -> std::shared_ptr<CachedTexture>;
 
+        /// Synchronous load of a resolved resource. The cache key is the resolution's scope
+        /// identity + options; `non_snapshot` content is never indexed or retained.
+        [[nodiscard]] auto load_resolved(
+            const resource::ResolvedResource& resolved,
+            const ImageLoadOptions& options = {}
+        ) -> std::shared_ptr<CachedTexture>;
+
         using AsyncCompletion = std::move_only_function<void(std::shared_ptr<CachedTexture>)>;
 
         /// Decode packaged bytes on a worker, then upload/cache on the UI thread.
@@ -132,7 +135,7 @@ namespace nandina::render
         [[nodiscard]] auto retained_bytes() const noexcept -> std::size_t;
 
     private:
-        enum class SourceKind { file, memory };
+        enum class SourceKind { file, memory, resource };
         enum class PendingSubmitResult { submitted, blocked, rejected };
 
         struct Key {
@@ -140,6 +143,12 @@ namespace nandina::render
             std::string source;
             std::string media_type;
             ImageLoadOptions options;
+            resource::ResourceScopeIdentity resource;
+        };
+
+        struct DecodeResult {
+            DecodedImage decoded;
+            std::optional<resource::ResolvedResource> resolved;
         };
 
         struct IndexedEntry {
@@ -155,8 +164,8 @@ namespace nandina::render
         struct PendingEntry {
             Key key;
             std::vector<AsyncCompletion> completions;
-            /// 后台读取 + 解码 + 重试，产出 RGBA（后台线程执行）。
-            std::shared_ptr<std::move_only_function<DecodedImage()>> load;
+            /// 后台读取 + 解码 + 重试，产出 RGBA 与解析作用域（后台线程执行）。
+            std::shared_ptr<std::move_only_function<DecodeResult()>> load;
             std::size_t encoded_bytes = 0;
             bool submitted = false;
             /// C5.6 加载优先级（低值先提交解码；0 = 可见）。
@@ -169,6 +178,7 @@ namespace nandina::render
             std::size_t decoded_bytes = 0;
             std::uint64_t generation = 0;
             std::vector<AsyncCompletion> completions;
+            bool cacheable = true;
         };
 
         [[nodiscard]] auto find(const Key& key) -> std::shared_ptr<CachedTexture>;
@@ -180,8 +190,11 @@ namespace nandina::render
         [[nodiscard]] auto submit_pending(PendingEntry& entry) -> PendingSubmitResult;
         void drain_pending();
         void drain_uploads();
-        void finish_async(Key key, DecodedImage decoded, std::uint64_t generation);
+        void finish_async(Key request_key, DecodeResult result, std::uint64_t generation);
         [[nodiscard]] static auto same_key(const Key& lhs, const Key& rhs) -> bool;
+        [[nodiscard]] static auto
+        resource_key(const resource::ResolvedResource& resolved, const ImageLoadOptions& options)
+            -> Key;
 
         IRenderDevice* device_;
         TextureCacheLimits limits_;

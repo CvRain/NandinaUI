@@ -304,12 +304,7 @@ namespace nandina::widget
                 return;
             }
             if (texture_cache_ != nullptr) {
-                texture_ = texture_cache_->load_memory(
-                    loaded->resource->id().to_string(),
-                    loaded->resource->bytes(),
-                    loaded->resource->media_type(),
-                    load_options_
-                );
+                texture_ = texture_cache_->load_resolved(*loaded, load_options_);
             }
             else {
                 const auto handle = device.load_texture_from_memory(

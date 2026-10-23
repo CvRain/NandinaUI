@@ -44,8 +44,8 @@
 ### P2 应用闭环（资源与工具）
 
 > 实施契约（目标依赖图、选项真值表、启动策略、lock/revision/ID 语义、子批与门禁）见
-> [D5 §8](resource_build_and_deployment.md#8-p2-实施契约2026-10-22-定稿p21ap21bp22ap22b-已实施)。
-> **状态：P2.1a/P2.1b/P2.2a/P2.2b 已实施（2026-10-22 至 10-23）；P2.2c/P2.2d、P2.3–P2.4 未实施。**
+> [D5 §8](resource_build_and_deployment.md#8-p2-实施契约2026-10-22-定稿p21ap21bp22ap22bp22c-已实施)。
+> **状态：P2.1a/P2.1b/P2.2a/P2.2b/P2.2c 已实施（2026-10-22 至 10-23）；P2.2d、P2.3–P2.4 未实施。**
 
 | 编号 | 交付 | 前置 | 退出条件 |
 | --- | --- | --- | --- |
@@ -53,7 +53,7 @@
 | P2.1b | 启动策略：默认不自动开包、注入时机、SQLite 关闭诊断、外部 `nanres` 版本/schema 兼容检查 | P2.1a | **已完成（2026-10-22）**：`resource_package` 默认空 + `mount_resource_backend()`；`resource_sqlite=disabled` 时自动开包分支不编译并给出 `backend_unavailable`；`-Dexternal_nanres` 配置期 schema/version 握手、helper 构建期二次握手；`sdk_surface` 记录破坏性变更；主套件 104/104、无 SQLite 的 UI 构建单元套件 81/81、Windows 构建与 unit 通过（需按升级说明清理一次 stale thin archive） |
 | P2.2a | 后端发布代次与快照一致性（结果与代次同一临界区，失败不发布半份状态） | P2.1 | **已完成（2026-10-23）**：后端协议返回 `ResourceSnapshot`/`ResourceStreamSnapshot`（代次 + 一致性类别 + 可选句柄）；MemoryBackend 在同一锁内读取结果与代次，成功发布才推进 64 位代次且拒绝回绕；失败路径不推进、不改映射；内存/内置、SQLite 内嵌/外置与目录来源分别标注快照类别；管理器公开八入口保持裸句柄，只在内部解包。并发配对用例在拆开读锁时稳定失败，恢复后主套件 104/104；ASan 配置 83/83 + window-lifecycle SKIP（真实 GPU 窗口触发驱动侧 LSan 泄漏，非项目代码） |
 | P2.2b | 管理器八入口作用域：`ResolvedResource`/`ResolvedStream`、不透明域令牌、歧义/过期错误 | P2.1 | **已完成（2026-10-23）**：八入口返回域令牌 + MountId + 发布代次 + 一致性类别 + 记录 ID + 句柄；`ResourceDomainToken` 只弱引用域并按控制块所有权比较，manager 移动保持同一域；MountId 域内不复用、耗尽抛诊断；裸 ID 扫描全部挂载并报 `ambiguous_resource_id`（消息列出冲突挂载），同一后端挂两次也不去重，后端错误不被忽略；key/别名按挂载优先级解析；新增 `resolve(...)` 只按原作用域重解析，域/挂载/代次过期返回 `expired_scope`；消费者完成编译级迁移。红测：ID 扫描短路与令牌 `lock()` 比较分别使歧义/域身份用例失败。主套件 104/104、ASan 单元 83/83 + window-lifecycle SKIP（驱动侧 LSan）、Windows 构建与 unit 通过 |
-| P2.2c | 消费者迁移：FontLoader 缓存键、图片/流/主题消费者 | P2.2b | 缓存身份测试 + ASan；不再用裸 ID 串缓存 |
+| P2.2c | 消费者迁移：FontLoader 缓存键、图片/流/主题消费者 | P2.2b | **已完成（2026-10-23）**：`ResourceScopeIdentity` + `scope_identity(...)`；FontLoader 键为作用域 + face_index，非快照与直接句柄绕过缓存，失效分 scoped/wide；TextureCache 资源键为作用域 + options，新增 `load_resolved`，异步路径在后台解析后再定键，非快照上传但不索引/保留；Image 同步/异步均使用作用域身份。先写六条红测确认旧实现失败，修复后转绿；作用域失效只影响自身 scope。验证：主套件 104/104、无 SQLite UI 单元 81/81（+1 SKIP）、纯工具 7/7、ASan 83/83 + window SKIP、no-RTTI 84/84、release check 8/8 |
 | P2.2d | 缓存回收与并发：有限容量淘汰 + expired 域清扫 | P2.2c | 淘汰/清扫/卸载重叠用例；不要求 manager 广播失效 |
 | P2.3a | 策略 key 映射与生成算法、ID 编码（版本前缀/长度编码/固定测试向量） | P2.2 | 重命名/大小写/固定向量 |
 | P2.3b | lock 迁移（生成数据移入 build 目录）、碰撞（同 ID 不同逻辑记录）、revision、无变化不重写 | P2.3a | 碰撞注入、重建确定性、迁移与不回写源码 |

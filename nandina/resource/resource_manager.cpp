@@ -278,7 +278,7 @@ namespace nandina::resource
     ResourceManager::ResourceManager(ResourceManager&&) noexcept = default;
     auto ResourceManager::operator=(ResourceManager&&) noexcept -> ResourceManager& = default;
 
-    auto ResourceManager::domain_token() const -> ResourceDomainToken {
+    auto ResourceManager::domain() const -> ResourceDomainToken {
         return ResourceDomainToken {std::weak_ptr<const void> {impl_->domain}};
     }
 
@@ -309,10 +309,10 @@ namespace nandina::resource
     }
 
     auto ResourceManager::find(const ResourceKey& key) const -> ResolvedResourceLookup {
-        return impl_->find_key(key, domain_token());
+        return impl_->find_key(key, domain());
     }
     auto ResourceManager::find(const ResourceId id) const -> ResolvedResourceLookup {
-        return impl_->find_id(id, domain_token());
+        return impl_->find_id(id, domain());
     }
     auto ResourceManager::require(const ResourceKey& key) const
         -> ResourceResult<ResolvedResource> {
@@ -336,10 +336,10 @@ namespace nandina::resource
         return std::move(**found);
     }
     auto ResourceManager::open_stream(const ResourceKey& key) const -> ResolvedStreamLookup {
-        return impl_->open_key(key, domain_token());
+        return impl_->open_key(key, domain());
     }
     auto ResourceManager::open_stream(const ResourceId id) const -> ResolvedStreamLookup {
-        return impl_->open_id(id, domain_token());
+        return impl_->open_id(id, domain());
     }
     auto ResourceManager::require_stream(const ResourceKey& key) const
         -> ResourceResult<ResolvedStream> {
@@ -366,9 +366,9 @@ namespace nandina::resource
 
     auto ResourceManager::resolve(const ResolvedResource& reference) const
         -> ResolvedResourceLookup {
-        return impl_->resolve_resource(domain_token(), reference);
+        return impl_->resolve_resource(domain(), reference);
     }
     auto ResourceManager::resolve(const ResolvedStream& reference) const -> ResolvedStreamLookup {
-        return impl_->resolve_stream(domain_token(), reference);
+        return impl_->resolve_stream(domain(), reference);
     }
 } // namespace nandina::resource

@@ -1,6 +1,6 @@
 # D5：资源构建、部署与运行时定位
 
-> **状态：D5 范围与目标契约已冻结；P2.1a/P2.1b/P2.2a/P2.2b 已实施，其余子批按路线图推进。** 2026-10-11 定案。
+> **状态：D5 范围与目标契约已冻结；P2.1a/P2.1b/P2.2a/P2.2b/P2.2c 已实施，其余子批按路线图推进。** 2026-10-11 定案。
 > 本文汇总 nanres 模块边界、资源自动构建、SQLite 可选依赖以及跨部署布局的定位设计。
 > “目标契约”是实施依据，不表示当前代码已经满足；具体类型名、构建选项名与算法按批次定形。
 > 示例为伪代码，不是现有公开接口，也不表示项目已经支持 CMake、Windows/macOS 安装或 Web 资源加载。
@@ -330,7 +330,7 @@ priority 只裁决 key 查询，不能用于裸 ID 的平手裁决。同一 back
 必须转移同一逻辑域，不能因对象地址改变而换域。manager 销毁后，旧引用的重新解析失败；已取得
 内容按 §6.2.4 继续使用。MountId 在域内不复用，卸载重挂分配新 ID；溢出须诊断，不回绕复用。
 
-字体缓存身份形状为 `(域所有权身份, MountId, 发布代次, ResourceId, face_index)`。
+字体缓存身份形状为 `(域所有权身份, MountId, 发布代次, ResourceId, face_index)`（P2.2c 已实施）。
 失效使用与 lookup 同源的作用域；广域操作单独命名，并明确只作用于接收该操作的缓存实例。
 失效移除关联，不销毁使用者仍持有的字体或资源。
 
@@ -636,7 +636,7 @@ D5 范围已冻结。以下为 D5 内部实施顺序；项目总排序仍见 [�
 本次只冻结设计并同步计划、README、模块/构建边界与故事；不修改运行时代码，不启用新构建
 路径，不替换 SQLite，不将待实现接口写成入门教程中的可用功能。
 
-## 8. P2 实施契约（2026-10-22 定稿；P2.1a/P2.1b/P2.2a/P2.2b 已实施）
+## 8. P2 实施契约（2026-10-22 定稿；P2.1a/P2.1b/P2.2a/P2.2b/P2.2c 已实施）
 
 > 本节把 2026-10-22 的评审结论固化为执行契约。P2 代码按此实施；未写入本节的行为不提前承诺。
 > 路线图 P2 的子批划分与状态见[开发路线](development_roadmap.md)。
@@ -879,3 +879,26 @@ CI 增设只预热 toml++/Catch2、只安装工具所需系统开发包的资源
   时“两个已销毁域不同”失败。验证：主套件 104/104、无 SQLite UI 单元 81/81、纯工具套件 7/7、
   ASan 83/83 + window SKIP、release check 8/8、Windows 构建与 unit 通过。完整结果见
   [开发路线](development_roadmap.md) 的 P2.2b 行。
+
+### 8.15 P2.2c 实施记录（2026-10-23）
+
+- **共享身份**：`ResourceScopeIdentity` 固定为 `(域所有权身份, MountId, 发布代次, ResourceId)`；
+  `scope_identity(ResolvedResource/ResolvedStream)` 供消费者派生缓存键。
+  `ResourceManager::domain()` 暴露弱域令牌，供解析前的 pending/缓存范围区分。
+- **FontLoader**：`FontFaceKey` 改为 `(ResourceScopeIdentity, face_index)`；同一挂载的新代次、
+  跨挂载同 ID 均产生新 face。`non_snapshot` 来源不进入共享缓存；直接
+  `ResourceHandle` 入口绕过缓存、不伪造挂载身份。失效拆为
+  `invalidate(const ResolvedResource&)`（同源作用域）与 `invalidate_wide(ResourceId)`
+  （广域、只作用于本实例）。
+- **TextureCache**：资源来源新增 `SourceKind::resource`，缓存键为
+  `(ResourceScopeIdentity, options)`；新增同步 `load_resolved(const ResolvedResource&, options)`。
+  异步 `load_resource_async` 仍把 `require` 与解码留在后台，pending 去重按
+  `(域, 逻辑 key, options)`，解析完成后才形成最终缓存键；`non_snapshot` 上传后不索引、不进
+  保留列表。文本 key 的 `load_memory` 仍只服务调用方显式提供的非资源内存，不参与资源作用域。
+- **Image**：同步 res:// 路径改用 `load_resolved`；异步路径保持 API，但缓存决策移到解析后。
+- **测试**：先写六条红测并确认旧实现失败：FontLoader 的旧代次/跨挂载同 ID/非快照目录/直接句柄，
+  以及 Image 同步旧代次、目录非快照、异步旧代次；实现后转绿。另加作用域失效只影响自身 scope、
+  异步不同逻辑 key 不合并；复核补充同步同代次缓存命中、异步非快照上传后不索引/不保留。
+- **验证**：主套件 104/104；无 SQLite UI 单元 81/81（+1 SKIP）；纯工具套件 7/7；
+  ASan 单元 83/83（+ `window-lifecycle` SKIP，驱动侧 LSan）；no-RTTI 单元 84/84；
+  release check 8/8。完整结果见[开发路线](development_roadmap.md) 的 P2.2c 行。

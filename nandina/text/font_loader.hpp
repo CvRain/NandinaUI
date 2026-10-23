@@ -33,7 +33,7 @@ namespace nandina::text
     using FontResult = std::expected<T, FontError>;
 
     struct FontFaceKey {
-        resource::ResourceId resource_id;
+        resource::ResourceScopeIdentity identity;
         std::uint32_t face_index = 0;
         auto operator<=>(const FontFaceKey&) const = default;
     };
@@ -46,6 +46,7 @@ namespace nandina::text
             -> FontResult<std::shared_ptr<FreeTypeFontFace>>;
         [[nodiscard]] auto load(resource::ResourceId id, std::uint32_t face_index = 0)
             -> FontResult<std::shared_ptr<FreeTypeFontFace>>;
+        /// 直接句柄没有挂载身份：绕过共享缓存，每次创建独立 face。
         [[nodiscard]] auto load(resource::ResourceHandle resource, std::uint32_t face_index = 0)
             -> FontResult<std::shared_ptr<FreeTypeFontFace>>;
 
@@ -54,10 +55,20 @@ namespace nandina::text
         load_file(const std::filesystem::path& path, std::uint32_t face_index = 0)
             -> FontResult<std::shared_ptr<FreeTypeFontFace>>;
 
-        void invalidate(resource::ResourceId id);
+        /// 使用与 lookup 同源的作用域失效该资源在本实例中的全部 face。
+        void invalidate(const resource::ResolvedResource& reference);
+        /// 广域操作：按裸记录 ID 失效本实例中的所有作用域，不跨缓存实例广播。
+        void invalidate_wide(resource::ResourceId resource_id);
         void clear();
 
     private:
+        [[nodiscard]] auto
+        load_resolved(const resource::ResolvedResource& resolved, std::uint32_t face_index)
+            -> FontResult<std::shared_ptr<FreeTypeFontFace>>;
+        [[nodiscard]] static auto
+        create_face(resource::ResourceHandle resource, std::uint32_t face_index)
+            -> FontResult<std::shared_ptr<FreeTypeFontFace>>;
+
         const resource::ResourceManager* resources_;
         std::mutex mutex_;
         std::map<FontFaceKey, std::weak_ptr<FreeTypeFontFace>> cache_;

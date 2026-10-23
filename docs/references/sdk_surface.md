@@ -40,6 +40,15 @@
 挂载命中返回 `ambiguous_resource_id`，消息列出冲突挂载。缓存身份迁移（字体/图片/流）在
 P2.2c，本批只做编译级消费者迁移。
 
+2026-10-23 P2.2c 缓存身份（experimental，破坏性）：新增 `ResourceScopeIdentity`、
+`scope_identity(...)` 与 `ResourceManager::domain()`。`text::FontFaceKey` 改为
+`(ResourceScopeIdentity, face_index)`；`FontLoader::invalidate(ResourceId)` 改名为
+`invalidate_wide(ResourceId)`，新增 `invalidate(const ResolvedResource&)`；直接
+`ResourceHandle` 加载绕过共享 face 缓存，`non_snapshot` 来源不进入共享缓存。
+`render::TextureCache` 新增 `load_resolved(const ResolvedResource&, options)`；资源异步加载在
+后台解析后才形成作用域缓存键，`non_snapshot` 内容可上传但不索引、不保留。文本 key 的
+`load_memory` 仍只用于调用方显式提供的非资源内存。
+
 | 等级 | 含义 | 稳定性承诺 | 谁可以包含 |
 | --- | --- | --- | --- |
 | `public` | 推荐使用的接口 | alpha 内也尽量不破坏；破坏时给迁移说明 | 应用代码、示例、下游宿主 |

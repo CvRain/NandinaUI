@@ -72,6 +72,39 @@ namespace nandina::resource
     using ResolvedResourceLookup = ResourceResult<std::optional<ResolvedResource>>;
     using ResolvedStreamLookup = ResourceResult<std::optional<ResolvedStream>>;
 
+    /// Cache identity of one successful resolution.
+    ///
+    /// Shape: domain ownership identity + MountId + publish generation + record ID. Equality on
+    /// two destroyed domains still distinguishes their control blocks. Callers add their own
+    /// media/face/options fields around this value.
+    struct ResourceScopeIdentity {
+        ResourceDomainToken domain;
+        ResourceMountId mount_id = 0;
+        PublishGeneration generation;
+        ResourceId id;
+        auto operator<=>(const ResourceScopeIdentity&) const = default;
+    };
+
+    [[nodiscard]] inline auto scope_identity(const ResolvedResource& resolved)
+        -> ResourceScopeIdentity {
+        return {
+            .domain = resolved.domain,
+            .mount_id = resolved.mount_id,
+            .generation = resolved.generation,
+            .id = resolved.id,
+        };
+    }
+
+    [[nodiscard]] inline auto scope_identity(const ResolvedStream& resolved)
+        -> ResourceScopeIdentity {
+        return {
+            .domain = resolved.domain,
+            .mount_id = resolved.mount_id,
+            .generation = resolved.generation,
+            .id = resolved.id,
+        };
+    }
+
     class ResourceManager {
     public:
         using MountId = ResourceMountId;
@@ -85,6 +118,9 @@ namespace nandina::resource
             -> MountId;
         [[nodiscard]] auto unmount(MountId id) noexcept -> bool;
         void clear() noexcept;
+
+        /// Opaque weak identity of this manager's domain, usable as a cache-key component.
+        [[nodiscard]] auto domain() const -> ResourceDomainToken;
 
         [[nodiscard]] auto find(const ResourceKey& key) const -> ResolvedResourceLookup;
         [[nodiscard]] auto find(ResourceId id) const -> ResolvedResourceLookup;
@@ -107,8 +143,6 @@ namespace nandina::resource
         [[nodiscard]] auto resolve(const ResolvedStream& reference) const -> ResolvedStreamLookup;
 
     private:
-        [[nodiscard]] auto domain_token() const -> ResourceDomainToken;
-
         class Impl;
         std::unique_ptr<Impl> impl_;
     };

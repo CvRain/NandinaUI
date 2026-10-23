@@ -6,6 +6,7 @@
 #include <nandina/foundation/nandina_color.hpp>
 #include <nandina/render/render_device.hpp>
 #include <nandina/render/texture_cache.hpp>
+#include <nandina/resource/backends/directory_backend.hpp>
 #include <nandina/resource/backends/memory_backend.hpp>
 #include <nandina/resource/resource_manager.hpp>
 #include <nandina/scene/scene_tree.hpp>
@@ -16,6 +17,8 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <deque>
+#include <filesystem>
+#include <fstream>
 #include <memory>
 #include <string>
 #include <vector>
@@ -27,6 +30,18 @@ namespace
     [[nodiscard]] auto resource_id(std::string_view value) -> resource::ResourceId {
         return *resource::ResourceId::parse(value);
     }
+
+    struct TempDirectory {
+        std::filesystem::path path = std::filesystem::temp_directory_path()
+            / ("nandina-image-cache-" + resource::ResourceId::random().to_string());
+        TempDirectory() {
+            std::filesystem::create_directories(path);
+        }
+        ~TempDirectory() {
+            std::error_code error;
+            std::filesystem::remove_all(path, error);
+        }
+    };
 
     /// 记录纹理调用，验证 load / size / draw_texture_region 的调用序与参数。
     class TextureRecordingDevice final: public render::IRenderDevice {
@@ -550,6 +565,160 @@ TEST_CASE("window texture cache reuses a packaged image across node lifetimes", 
 }
 
 TEST_CASE(
+    "packaged image cache identity follows mount and publish generation",
+    "[image][resource][cache]"
+) {
+    const auto shared_id = resource_id("10213243-5465-4768-899a-abbccddeeff1");
+    const auto key = resource::ResourceKey("logo.png");
+    auto first_backend = std::make_shared<resource::MemoryBackend>("first");
+    REQUIRE(first_backend->insert(shared_id, key, "image/png", {1}).has_value());
+    resource::ResourceManager resources;
+    const auto first_mount = resources.mount(first_backend);
+
+    TextureRecordingDevice device;
+    render::TextureCache cache(device);
+    scene::NanSceneTree tree;
+    tree.set_texture_cache(cache);
+    const auto draw = [&] {
+        auto image = widget::Image::create("res://logo.png");
+        image->set_resource_manager(&resources);
+        tree.set_root(image);
+        tree.draw(device);
+    };
+
+    draw();
+    REQUIRE(device.memory_loads == 1);
+    // 同一作用域、同一代次的再次绘制必须命中缓存，不能重复解码/上传。
+    draw();
+    REQUIRE(device.memory_loads == 1);
+
+    // 同一挂载、同一 ID 的新发布不能命中上一代纹理。
+    REQUIRE(first_backend->insert(shared_id, key, "image/png", {2}, resource::InsertMode::replace)
+                .has_value());
+    draw();
+    REQUIRE(device.memory_loads == 2);
+
+    // 跨挂载复用同一 ID 也必须使用新挂载的身份。
+    REQUIRE(resources.unmount(first_mount));
+    auto second_backend = std::make_shared<resource::MemoryBackend>("second");
+    REQUIRE(second_backend->insert(shared_id, key, "image/png", {3}).has_value());
+    (void)resources.mount(second_backend);
+    draw();
+    REQUIRE(device.memory_loads == 3);
+}
+
+TEST_CASE(
+    "non-snapshot directory images are not reused after external rewrites",
+    "[image][resource][cache]"
+) {
+    TempDirectory temp;
+    const auto file = temp.path / "logo.bin";
+    {
+        std::ofstream output(file, std::ios::binary);
+        output.write("\x01", 1);
+    }
+    const auto image_id = resource_id("11213243-5465-4768-899a-abbccddeeff1");
+    auto backend = resource::DirectoryBackend::open({
+        .root = temp.path,
+        .resources = {{
+            .id = image_id,
+            .key = resource::ResourceKey("logo.png"),
+            .relative_path = "logo.bin",
+            .media_type = "image/png",
+        }},
+    });
+    REQUIRE(backend.has_value());
+    resource::ResourceManager resources;
+    (void)resources.mount(*backend);
+
+    TextureRecordingDevice device;
+    render::TextureCache cache(device);
+    scene::NanSceneTree tree;
+    tree.set_texture_cache(cache);
+    const auto draw = [&] {
+        auto image = widget::Image::create("res://logo.png");
+        image->set_resource_manager(&resources);
+        tree.set_root(image);
+        tree.draw(device);
+    };
+
+    draw();
+    REQUIRE(device.memory_loads == 1);
+
+    // 目录后端没有发布入口；外部改写后不能把同代次的旧纹理当作快照复用。
+    {
+        std::ofstream output(file, std::ios::binary | std::ios::trunc);
+        output.write("\x02", 1);
+    }
+    draw();
+    REQUIRE(device.memory_loads == 2);
+}
+
+TEST_CASE(
+    "async packaged image cache identity follows mount and generation",
+    "[image][resource][cache][async]"
+) {
+    const auto first_id = resource_id("12213243-5465-4768-899a-abbccddeeff1");
+    const auto second_id = resource_id("13213243-5465-4768-899a-abbccddeeff1");
+    const auto key = resource::ResourceKey("hero.png");
+    auto first_backend = std::make_shared<resource::MemoryBackend>("first");
+    REQUIRE(first_backend->insert(first_id, key, "image/png", {1}).has_value());
+    resource::ResourceManager resources;
+    const auto first_mount = resources.mount(first_backend);
+
+    TextureRecordingDevice device;
+    auto decoder = std::make_shared<RecordingDecoder>();
+    ManualTaskQueue background;
+    ManualTaskQueue ui;
+    render::TextureCache cache(
+        device,
+        {},
+        render::TextureCacheAsyncServices {
+            .decoder = decoder,
+            .submit_background = [&background](
+                                     std::move_only_function<void()> task
+                                 ) { return background.submit(std::move(task)); },
+            .post_ui =
+                [&ui](std::move_only_function<void()> task) { return ui.submit(std::move(task)); },
+        }
+    );
+    scene::NanSceneTree tree;
+    tree.set_texture_cache(cache);
+    const auto draw = [&] {
+        auto image = widget::Image::create("res://hero.png");
+        image->set_resource_manager(&resources);
+        image->set_size(foundation::NanSize(100.0F, 50.0F));
+        image->set_load_mode(widget::ImageLoadMode::asynchronous);
+        image->set_placeholder_color(foundation::NanColor::from_hex(0x808080));
+        tree.set_root(image);
+        (void)tree.layout_root(foundation::NanSize(100.0F, 50.0F));
+        tree.draw(device);
+        background.drain();
+        ui.drain();
+    };
+
+    draw();
+    REQUIRE(decoder->calls == 1);
+    REQUIRE(device.rgba_uploads == 1);
+
+    // 旧代次不能被文本 key 的同名缓存命中。
+    REQUIRE(first_backend->insert(first_id, key, "image/png", {2}, resource::InsertMode::replace)
+                .has_value());
+    draw();
+    REQUIRE(decoder->calls == 2);
+    REQUIRE(device.rgba_uploads == 2);
+
+    // 跨挂载同 key、不同 ID 也要重新解析。
+    REQUIRE(resources.unmount(first_mount));
+    auto second_backend = std::make_shared<resource::MemoryBackend>("second");
+    REQUIRE(second_backend->insert(second_id, key, "image/png", {3}).has_value());
+    (void)resources.mount(second_backend);
+    draw();
+    REQUIRE(decoder->calls == 3);
+    REQUIRE(device.rgba_uploads == 3);
+}
+
+TEST_CASE(
     "async packaged image shows a placeholder before UI-thread upload",
     "[image][cache][async]"
 ) {
@@ -672,6 +841,145 @@ TEST_CASE(
     ui.drain();
     REQUIRE(image->load_state() == widget::ImageLoadState::ready);
     REQUIRE(device.rgba_uploads == 1);
+}
+
+TEST_CASE(
+    "async resource loads keep distinct logical keys separate in pending",
+    "[image][cache][async][resource]"
+) {
+    auto backend = std::make_shared<resource::MemoryBackend>("images");
+    REQUIRE(backend
+                ->insert(
+                    resource_id("14213243-5465-4768-899a-abbccddeeff1"),
+                    resource::ResourceKey("a.png"),
+                    "image/png",
+                    {1}
+                )
+                .has_value());
+    REQUIRE(backend
+                ->insert(
+                    resource_id("15213243-5465-4768-899a-abbccddeeff1"),
+                    resource::ResourceKey("b.png"),
+                    "image/png",
+                    {2}
+                )
+                .has_value());
+    resource::ResourceManager resources;
+    (void)resources.mount(backend);
+
+    TextureRecordingDevice device;
+    auto decoder = std::make_shared<RecordingDecoder>();
+    ManualTaskQueue background;
+    ManualTaskQueue ui;
+    render::TextureCache cache(
+        device,
+        {},
+        render::TextureCacheAsyncServices {
+            .decoder = decoder,
+            .submit_background = [&background](
+                                     std::move_only_function<void()> task
+                                 ) { return background.submit(std::move(task)); },
+            .post_ui =
+                [&ui](std::move_only_function<void()> task) { return ui.submit(std::move(task)); },
+        }
+    );
+
+    int completions = 0;
+    REQUIRE(cache.load_resource_async(
+        resources,
+        resource::ResourceKey("a.png"),
+        {},
+        [&completions](auto texture) {
+            ++completions;
+            REQUIRE(texture);
+        }
+    ));
+    REQUIRE(cache.load_resource_async(
+        resources,
+        resource::ResourceKey("b.png"),
+        {},
+        [&completions](auto texture) {
+            ++completions;
+            REQUIRE(texture);
+        }
+    ));
+    REQUIRE(background.tasks.size() == 2);
+    background.drain();
+    REQUIRE(decoder->calls == 2);
+    ui.drain();
+    REQUIRE(completions == 2);
+    REQUIRE(device.rgba_uploads == 2);
+}
+
+TEST_CASE(
+    "async non-snapshot images are uploaded but not retained",
+    "[image][resource][cache][async]"
+) {
+    TempDirectory temp;
+    const auto file = temp.path / "logo.bin";
+    {
+        std::ofstream output(file, std::ios::binary);
+        output.write("\x01", 1);
+    }
+    const auto image_id = resource_id("16213243-5465-4768-899a-abbccddeeff1");
+    auto backend = resource::DirectoryBackend::open({
+        .root = temp.path,
+        .resources = {{
+            .id = image_id,
+            .key = resource::ResourceKey("logo.png"),
+            .relative_path = "logo.bin",
+            .media_type = "image/png",
+        }},
+    });
+    REQUIRE(backend.has_value());
+    resource::ResourceManager resources;
+    (void)resources.mount(*backend);
+
+    TextureRecordingDevice device;
+    auto decoder = std::make_shared<RecordingDecoder>();
+    ManualTaskQueue background;
+    ManualTaskQueue ui;
+    render::TextureCache cache(
+        device,
+        {},
+        render::TextureCacheAsyncServices {
+            .decoder = decoder,
+            .submit_background = [&background](
+                                     std::move_only_function<void()> task
+                                 ) { return background.submit(std::move(task)); },
+            .post_ui =
+                [&ui](std::move_only_function<void()> task) { return ui.submit(std::move(task)); },
+        }
+    );
+    scene::NanSceneTree tree;
+    tree.set_texture_cache(cache);
+    const auto draw = [&] {
+        auto image = widget::Image::create("res://logo.png");
+        image->set_resource_manager(&resources);
+        image->set_size(foundation::NanSize(100.0F, 50.0F));
+        image->set_load_mode(widget::ImageLoadMode::asynchronous);
+        image->set_placeholder_color(foundation::NanColor::from_hex(0x808080));
+        tree.set_root(image);
+        (void)tree.layout_root(foundation::NanSize(100.0F, 50.0F));
+        tree.draw(device);
+        background.drain();
+        ui.drain();
+    };
+
+    draw();
+    REQUIRE(decoder->calls == 1);
+    REQUIRE(device.rgba_uploads == 1);
+    // 非快照内容上传后不得进入索引/保留列表。
+    REQUIRE(cache.retained_entries() == 0);
+
+    {
+        std::ofstream output(file, std::ios::binary | std::ios::trunc);
+        output.write("\x02", 1);
+    }
+    draw();
+    REQUIRE(decoder->calls == 2);
+    REQUIRE(device.rgba_uploads == 2);
+    REQUIRE(cache.retained_entries() == 0);
 }
 
 TEST_CASE("async texture cache merges matching pending decodes", "[image][cache][async]") {

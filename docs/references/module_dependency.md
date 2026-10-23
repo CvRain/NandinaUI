@@ -111,7 +111,7 @@ FontRequest / FontSlant 的唯一类型定义归 `theme/font_request.hpp`；迁�
 设计、值语义、ABI 与 include 兼容边界及验证记录见 [轻量字体请求](font_request.md)。
 这只完成描述值的拆分，StyleDocument 的实际文本引擎应用仍列在当前偏离表中。
 
-## D5 资源构建边界（已冻结；解耦、后端代次与作用域已实施）
+## D5 资源构建边界（已冻结；解耦、后端代次、作用域与消费者键已实施）
 
 解耦前 `nanres` 链接完整 `nandina_dep`，SQLite 依赖无条件进入库；manifest/packager 的部分
 实现在 tools，公开声明在 resource。这是构建目标的耦合，不能仅凭基础层的源码 include 方向
@@ -124,9 +124,9 @@ FontRequest / FontSlant 的唯一类型定义归 `theme/font_request.hpp`；迁�
 这不是新增 C++ Modules 或独立发布项目的承诺。
 
 先解耦且保持 ID/包格式/扫描行为，作用域批随后独立迁移：后端交付本地结果及一致的发布代次
-（P2.2a），manager 已包装域身份与 MountId（P2.2b），上层字体等缓存消费完整作用域仍待
-P2.2c。后端不认识 manager 的挂载身份，挂载字段不写进包格式。身份生成算法另批定形；
-方向与八入口契约见 D5 §6.2、§11。
+（P2.2a），manager 包装域身份与 MountId（P2.2b），FontLoader/纹理缓存的键使用完整作用域
+（P2.2c）；缓存回收与 expired 域清扫仍待 P2.2d。后端不认识 manager 的挂载身份，挂载字段
+不写进包格式。身份生成算法另批定形；方向与八入口契约见 D5 §6.2、§11。
 
 ## 判断一次改动是否越界
 

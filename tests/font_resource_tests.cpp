@@ -1,6 +1,7 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <nandina/resource/backends/builtin_backend.hpp>
+#include <nandina/resource/backends/directory_backend.hpp>
 #include <nandina/resource/backends/memory_backend.hpp>
 #include <nandina/resource/resource_manager.hpp>
 #include <nandina/scene/scene_tree.hpp>
@@ -57,8 +58,7 @@ namespace
         std::size_t destroyed_textures = 0;
     };
 
-    [[nodiscard]] auto read_font() -> std::vector<std::uint8_t> {
-        const std::filesystem::path path(NANDINA_TEST_FONT_PATH);
+    [[nodiscard]] auto read_font(const std::filesystem::path& path) -> std::vector<std::uint8_t> {
         std::ifstream stream(path, std::ios::binary | std::ios::ate);
         REQUIRE(stream.good());
         const auto size = stream.tellg();
@@ -68,9 +68,25 @@ namespace
         return bytes;
     }
 
+    [[nodiscard]] auto read_font() -> std::vector<std::uint8_t> {
+        return read_font(std::filesystem::path(NANDINA_TEST_FONT_PATH));
+    }
+
     [[nodiscard]] auto id(std::string_view value) -> resource::ResourceId {
         return *resource::ResourceId::parse(value);
     }
+
+    struct TempDirectory {
+        std::filesystem::path path = std::filesystem::temp_directory_path()
+            / ("nandina-font-cache-" + resource::ResourceId::random().to_string());
+        TempDirectory() {
+            std::filesystem::create_directories(path);
+        }
+        ~TempDirectory() {
+            std::error_code error;
+            std::filesystem::remove_all(path, error);
+        }
+    };
 } // namespace
 
 TEST_CASE("resource-backed FreeType faces retain font bytes", "[resource][font]") {
@@ -124,8 +140,136 @@ TEST_CASE(
                     resource::InsertMode::replace
                 )
                 .has_value());
-    loader.invalidate(font_id);
+    loader.invalidate_wide(font_id);
     REQUIRE(loader.load(font_id).has_value());
+}
+
+TEST_CASE(
+    "FontLoader cache identity includes mount and publish generation",
+    "[resource][font][cache]"
+) {
+    const auto font_id = id("00112233-4455-4677-8899-aabbccddeeff");
+    const auto key = resource::ResourceKey("fonts/shared");
+    const auto regular_bytes = read_font();
+    const auto bold_bytes = read_font(std::filesystem::path(NANDINA_BOLD_TEST_FONT_PATH));
+
+    resource::ResourceManager resources;
+    text::FontLoader loader(resources);
+    auto first_backend = std::make_shared<resource::MemoryBackend>("first");
+    REQUIRE(first_backend->insert(font_id, key, "font/ttf", regular_bytes).has_value());
+    const auto first_mount = resources.mount(first_backend);
+
+    const auto first = loader.load(key);
+    REQUIRE(first.has_value());
+    const auto first_family = (*first)->family_name();
+
+    // 同一挂载、同一 ID 的新发布必须得到新 face，而不是旧代次的缓存。
+    REQUIRE(first_backend
+                ->insert(font_id, key, "font/ttf", bold_bytes, resource::InsertMode::replace)
+                .has_value());
+    const auto replacement = loader.load(key);
+    REQUIRE(replacement.has_value());
+    REQUIRE(replacement->get() != first->get());
+    REQUIRE((*replacement)->family_name() != first_family);
+
+    // 跨挂载复用同一 ID 也必须重新解析，而不是按裸 ID 命中旧 face。
+    REQUIRE(resources.unmount(first_mount));
+    auto second_backend = std::make_shared<resource::MemoryBackend>("second");
+    REQUIRE(second_backend->insert(font_id, key, "font/ttf", regular_bytes).has_value());
+    (void)resources.mount(second_backend);
+    const auto second = loader.load(key);
+    REQUIRE(second.has_value());
+    REQUIRE(second->get() != replacement->get());
+    REQUIRE((*second)->family_name() == first_family);
+}
+
+TEST_CASE("FontLoader does not share non-snapshot directory content", "[resource][font][cache]") {
+    TempDirectory temp;
+    const auto file = temp.path / "font.ttf";
+    std::filesystem::copy_file(NANDINA_TEST_FONT_PATH, file);
+    const auto font_id = id("01112233-4455-4677-8899-aabbccddeeff");
+    const auto key = resource::ResourceKey("fonts/directory");
+    auto backend = resource::DirectoryBackend::open({
+        .root = temp.path,
+        .resources = {{
+            .id = font_id,
+            .key = key,
+            .relative_path = "font.ttf",
+            .media_type = "font/ttf",
+        }},
+    });
+    REQUIRE(backend.has_value());
+
+    resource::ResourceManager resources;
+    (void)resources.mount(*backend);
+    text::FontLoader loader(resources);
+    const auto first = loader.load(key);
+    REQUIRE(first.has_value());
+    const auto first_family = (*first)->family_name();
+
+    // 非快照来源没有发布入口；文件被外部改写后不得复用按作用域键缓存的旧 face。
+    std::filesystem::copy_file(
+        NANDINA_BOLD_TEST_FONT_PATH,
+        file,
+        std::filesystem::copy_options::overwrite_existing
+    );
+    const auto second = loader.load(key);
+    REQUIRE(second.has_value());
+    REQUIRE((*second)->family_name() != first_family);
+}
+
+TEST_CASE("FontLoader direct handles bypass the shared face cache", "[resource][font][cache]") {
+    const auto font_id = id("02112233-4455-4677-8899-aabbccddeeff");
+    const auto key = resource::ResourceKey("fonts/direct");
+    const auto handle = std::make_shared<const resource::Resource>(
+        font_id,
+        key,
+        "font/ttf",
+        resource::ResourceStorage::memory,
+        read_font()
+    );
+    resource::ResourceManager resources;
+    text::FontLoader loader(resources);
+
+    const auto first = loader.load(handle);
+    const auto second = loader.load(handle);
+    REQUIRE(first.has_value());
+    REQUIRE(second.has_value());
+    REQUIRE(first->get() != second->get());
+}
+
+TEST_CASE("FontLoader scoped invalidation only drops its own scope", "[resource][font][cache]") {
+    const auto key_a = resource::ResourceKey("fonts/a");
+    const auto key_b = resource::ResourceKey("fonts/b");
+    const auto bytes = read_font();
+    auto backend_a = std::make_shared<resource::MemoryBackend>("a");
+    auto backend_b = std::make_shared<resource::MemoryBackend>("b");
+    REQUIRE(backend_a->insert(id("03112233-4455-4677-8899-aabbccddeeff"), key_a, "font/ttf", bytes)
+                .has_value());
+    REQUIRE(backend_b->insert(id("04112233-4455-4677-8899-aabbccddeeff"), key_b, "font/ttf", bytes)
+                .has_value());
+    resource::ResourceManager resources;
+    (void)resources.mount(backend_a);
+    (void)resources.mount(backend_b);
+    text::FontLoader loader(resources);
+
+    const auto reference_a = resources.require(key_a);
+    const auto reference_b = resources.require(key_b);
+    REQUIRE(reference_a.has_value());
+    REQUIRE(reference_b.has_value());
+    const auto face_a = loader.load(key_a);
+    const auto face_b = loader.load(key_b);
+    REQUIRE(face_a.has_value());
+    REQUIRE(face_b.has_value());
+    REQUIRE(face_a->get() == loader.load(key_a).value().get());
+
+    loader.invalidate(*reference_a);
+    const auto reloaded_a = loader.load(key_a);
+    const auto reloaded_b = loader.load(key_b);
+    REQUIRE(reloaded_a.has_value());
+    REQUIRE(reloaded_b.has_value());
+    REQUIRE(reloaded_a->get() != face_a->get());
+    REQUIRE(reloaded_b->get() == face_b->get());
 }
 
 TEST_CASE("FontFamily resolves weight aliases and ordered fallbacks", "[resource][font][family]") {

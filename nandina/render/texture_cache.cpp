@@ -222,6 +222,67 @@ namespace nandina::render
         return texture;
     }
 
+    auto TextureCache::load_resolved(
+        const resource::ResolvedResource& resolved,
+        const ImageLoadOptions& options
+    ) -> std::shared_ptr<CachedTexture> {
+        if (!resolved.resource) {
+            return {};
+        }
+        const auto bytes = resolved.resource->bytes();
+        const auto media_type = resolved.resource->media_type();
+        if (bytes.empty() || !media_type.starts_with("image/")) {
+            return {};
+        }
+        const auto cacheable = resource::is_snapshot(resolved.consistency);
+        const auto key = resource_key(resolved, options);
+        if (cacheable) {
+            if (auto cached = find(key)) {
+                retain(key, cached);
+                return cached;
+            }
+        }
+        if (can_upload_decoded()) {
+            const auto decoded = async_.decoder->decode_memory(bytes, media_type, options);
+            if (decoded.valid()) {
+                const auto handle =
+                    device_->create_rgba_texture(decoded.width, decoded.height, decoded.rgba);
+                if (handle) {
+                    auto texture = std::make_shared<CachedTexture>(
+                        *device_,
+                        handle,
+                        NanSize {
+                            static_cast<float>(decoded.width),
+                            static_cast<float>(decoded.height),
+                        }
+                    );
+                    if (cacheable) {
+                        index(key, texture);
+                        retain(key, texture);
+                    }
+                    return texture;
+                }
+            }
+            if (!device_->supports_direct_image_loading()) {
+                return {};
+            }
+        }
+        if (!device_->supports_direct_image_loading()) {
+            return {};
+        }
+        const auto handle = device_->load_texture_from_memory(bytes, media_type, options);
+        if (!handle) {
+            return {};
+        }
+        auto texture =
+            std::make_shared<CachedTexture>(*device_, handle, device_->texture_size(handle));
+        if (cacheable) {
+            index(key, texture);
+            retain(key, texture);
+        }
+        return texture;
+    }
+
     auto TextureCache::load_memory_async(
         const std::string_view cache_key,
         std::shared_ptr<const void> bytes_owner,
@@ -257,21 +318,24 @@ namespace nandina::render
         PendingEntry entry {
             .key = key,
             .completions = {},
-            .load = std::make_shared<std::move_only_function<DecodedImage()>>(
+            .load = std::make_shared<std::move_only_function<DecodeResult()>>(
                 [decoder = std::move(decoder),
                  bytes_owner = std::move(bytes_owner),
                  bytes,
                  media_type = std::string(media_type),
                  options,
-                 attempts]() mutable -> DecodedImage {
+                 attempts]() mutable -> DecodeResult {
                     (void)bytes_owner;
                     for (std::size_t attempt = 0; attempt < attempts; ++attempt) {
                         auto decoded = decoder->decode_memory(bytes, media_type, options);
                         if (decoded.valid()) {
-                            return decoded;
+                            return DecodeResult {
+                                .decoded = std::move(decoded),
+                                .resolved = std::nullopt,
+                            };
                         }
                     }
-                    return DecodedImage {};
+                    return DecodeResult {};
                 }
             ),
             .encoded_bytes = bytes.size(),
@@ -307,18 +371,15 @@ namespace nandina::render
         if (!supports_async_loading() || !completion) {
             return false;
         }
-        const Key cache_key {
-            .kind = SourceKind::memory,
+        // 解析前只知道逻辑 key；pending 去重按域 + key + options，最终缓存键在后台解析后取得。
+        const Key request_key {
+            .kind = SourceKind::resource,
             .source = std::string(key.value()),
             .media_type = {},
             .options = options,
+            .resource = {.domain = resources.domain()},
         };
-        if (auto cached = find(cache_key)) {
-            retain(cache_key, cached);
-            completion(std::move(cached));
-            return true;
-        }
-        if (auto* pending = find_pending(cache_key)) {
+        if (auto* pending = find_pending(request_key)) {
             pending->priority = std::min(pending->priority, priority);
             pending->completions.push_back(std::move(completion));
             return true;
@@ -326,11 +387,11 @@ namespace nandina::render
         auto decoder = async_.decoder;
         const auto attempts = async_.max_load_attempts;
         PendingEntry entry {
-            .key = cache_key,
+            .key = request_key,
             .completions = {},
-            .load = std::make_shared<std::move_only_function<DecodedImage()>>(
+            .load = std::make_shared<std::move_only_function<DecodeResult()>>(
                 [decoder = std::move(decoder), &resources, key, options, attempts]() mutable
-                    -> DecodedImage {
+                    -> DecodeResult {
                     for (std::size_t attempt = 0; attempt < attempts; ++attempt) {
                         auto loaded = resources.require(key);
                         if (loaded && loaded->resource
@@ -342,11 +403,14 @@ namespace nandina::render
                                 options
                             );
                             if (decoded.valid()) {
-                                return decoded;
+                                return DecodeResult {
+                                    .decoded = std::move(decoded),
+                                    .resolved = *loaded,
+                                };
                             }
                         }
                     }
-                    return DecodedImage {};
+                    return DecodeResult {};
                 }
             ),
             .encoded_bytes = 0,
@@ -542,8 +606,10 @@ namespace nandina::render
                             static_cast<float>(ready.decoded.height)
                         )
                     );
-                    index(ready.key, texture);
-                    retain(ready.key, texture);
+                    if (ready.cacheable) {
+                        index(ready.key, texture);
+                        retain(ready.key, texture);
+                    }
                 }
             }
             for (auto& completion: ready.completions) {
@@ -552,37 +618,82 @@ namespace nandina::render
         }
     }
 
-    void TextureCache::finish_async(Key key, DecodedImage decoded, const std::uint64_t generation) {
+    void TextureCache::finish_async(
+        Key request_key,
+        DecodeResult result,
+        const std::uint64_t generation
+    ) {
         if (generation != generation_)
             return;
-        const auto pending = std::ranges::find_if(pending_, [&key](const PendingEntry& entry) {
-            return same_key(entry.key, key);
-        });
+        const auto pending =
+            std::ranges::find_if(pending_, [&request_key](const PendingEntry& entry) {
+                return same_key(entry.key, request_key);
+            });
         if (pending == pending_.end())
             return;
         if (pending->submitted) {
             --inflight_decodes_;
             inflight_encoded_bytes_ -= pending->encoded_bytes;
         }
-        const auto decoded_bytes = decoded_byte_size(decoded);
+        auto completions = std::move(pending->completions);
+        pending_.erase(pending);
+
+        auto final_key = request_key;
+        auto cacheable = true;
+        if (result.resolved) {
+            final_key = resource_key(*result.resolved, request_key.options);
+            cacheable = resource::is_snapshot(result.resolved->consistency);
+            if (cacheable) {
+                if (auto cached = find(final_key)) {
+                    retain(final_key, cached);
+                    for (auto& completion: completions) {
+                        completion(cached);
+                    }
+                    drain_pending();
+                    return;
+                }
+            }
+        }
+
+        const auto decoded_bytes = decoded_byte_size(result.decoded);
         ready_uploads_.push_back(
             ReadyUpload {
-                .key = key,
-                .decoded = std::move(decoded),
+                .key = std::move(final_key),
+                .decoded = std::move(result.decoded),
                 .decoded_bytes = decoded_bytes,
                 .generation = generation,
-                .completions = std::move(pending->completions),
+                .completions = std::move(completions),
+                .cacheable = cacheable,
             }
         );
         ready_upload_bytes_ += ready_uploads_.back().decoded_bytes;
-        pending_.erase(pending);
 
         drain_uploads();
         drain_pending();
     }
 
     auto TextureCache::same_key(const Key& lhs, const Key& rhs) -> bool {
-        return lhs.kind == rhs.kind && lhs.source == rhs.source && lhs.media_type == rhs.media_type
+        if (lhs.kind != rhs.kind) {
+            return false;
+        }
+        if (lhs.kind == SourceKind::resource) {
+            return lhs.resource == rhs.resource && lhs.source == rhs.source
+                && same_options(lhs.options, rhs.options);
+        }
+        return lhs.source == rhs.source && lhs.media_type == rhs.media_type
             && same_options(lhs.options, rhs.options);
+    }
+
+    auto TextureCache::resource_key(
+        const resource::ResolvedResource& resolved,
+        const ImageLoadOptions& options
+    ) -> Key {
+        return {
+            .kind = SourceKind::resource,
+            .source = {},
+            .media_type = std::string(resolved.resource->media_type()),
+            .options = options,
+            .resource = resource::scope_identity(resolved),
+        };
     }
 } // namespace nandina::render

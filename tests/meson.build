@@ -785,7 +785,10 @@ test(
 font_resource_tests = executable(
     'font_resource_tests',
     files('font_resource_tests.cpp'),
-    cpp_args : ['-DNANDINA_TEST_FONT_PATH="' + font_test_path + '"'],
+    cpp_args : [
+        '-DNANDINA_TEST_FONT_PATH="' + font_test_path + '"',
+        '-DNANDINA_BOLD_TEST_FONT_PATH="' + bold_font_test_path + '"',
+    ],
     dependencies : [nandina_dep, catch2_with_main_dep],
 )
 test('font-resource', font_resource_tests, suite: 'unit')
