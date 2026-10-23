@@ -218,12 +218,12 @@ namespace
             return inner_->name();
         }
         [[nodiscard]] auto find(const resource::ResourceKey& key) const
-            -> resource::ResourceLookup override {
+            -> resource::ResourceSnapshotLookup override {
             ++key_finds;
             return inner_->find(key);
         }
         [[nodiscard]] auto find(resource::ResourceId id) const
-            -> resource::ResourceLookup override {
+            -> resource::ResourceSnapshotLookup override {
             return inner_->find(id);
         }
         [[nodiscard]] auto insert(

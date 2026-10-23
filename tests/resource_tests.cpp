@@ -13,8 +13,15 @@
 #include <nandina/resource/resource_uri.hpp>
 
 #include <algorithm>
+#include <atomic>
+#include <condition_variable>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
+#include <limits>
+#include <mutex>
+#include <thread>
+#include <vector>
 
 using namespace nandina;
 
@@ -34,6 +41,51 @@ namespace
             std::error_code error;
             std::filesystem::remove_all(path, error);
         }
+    };
+
+    /// 让一次后端查询停在中途，用来证明管理器不持全局锁调用后端，且卸载后旧快照仍被固定。
+    class BlockingLookupBackend final: public resource::IResourceBackend {
+    public:
+        explicit BlockingLookupBackend(std::shared_ptr<resource::MemoryBackend> inner):
+            inner_(std::move(inner)) {}
+
+        [[nodiscard]] auto name() const noexcept -> std::string_view override {
+            return inner_->name();
+        }
+        [[nodiscard]] auto find(const resource::ResourceKey& key) const
+            -> resource::ResourceSnapshotLookup override {
+            block();
+            return inner_->find(key);
+        }
+        [[nodiscard]] auto find(resource::ResourceId id) const
+            -> resource::ResourceSnapshotLookup override {
+            block();
+            return inner_->find(id);
+        }
+
+        void wait_until_entered() const {
+            std::unique_lock lock(mutex_);
+            condition_.wait(lock, [this] { return entered_; });
+        }
+        void release() const {
+            std::unique_lock lock(mutex_);
+            released_ = true;
+            condition_.notify_all();
+        }
+
+    private:
+        void block() const {
+            std::unique_lock lock(mutex_);
+            entered_ = true;
+            condition_.notify_all();
+            condition_.wait(lock, [this] { return released_; });
+        }
+
+        std::shared_ptr<resource::MemoryBackend> inner_;
+        mutable std::mutex mutex_;
+        mutable std::condition_variable condition_;
+        mutable bool entered_ = false;
+        mutable bool released_ = false;
     };
 
 #ifdef NANDINA_HAS_RESOURCE_SQLITE
@@ -317,6 +369,250 @@ TEST_CASE("memory resources survive replacement and manager overlays", "[resourc
     REQUIRE((*old)->bytes()[1] == 2);
 }
 
+TEST_CASE("publish generations advance monotonically and never wrap", "[resource][generation]") {
+    const resource::PublishGeneration initial;
+    REQUIRE(initial.value() == 0);
+    const auto first = initial.next();
+    REQUIRE(first.has_value());
+    REQUIRE(first->value() == 1);
+
+    const auto maximum = std::numeric_limits<std::uint64_t>::max();
+    const resource::PublishGeneration penultimate(maximum - 1);
+    const auto last = penultimate.next();
+    REQUIRE(last.has_value());
+    REQUIRE(last->value() == maximum);
+    // 回绕会让旧缓存身份与后来的发布相等，因此在最大值处拒绝前进。
+    REQUIRE_FALSE(last->next().has_value());
+    REQUIRE_FALSE(resource::PublishGeneration(maximum).next().has_value());
+}
+
+TEST_CASE(
+    "memory backend publishes a result and its generation together",
+    "[resource][generation]"
+) {
+    auto backend = std::make_shared<resource::MemoryBackend>("publish");
+    const auto key = resource::ResourceKey("data/current");
+    const auto alias = resource::ResourceKey("data/alias");
+    const auto missing = resource::ResourceKey("data/missing");
+    const auto resource_id = id("30112233-4455-4677-8899-aabbccddeeff");
+    const auto other_id = id("31112233-4455-4677-8899-aabbccddeeff");
+
+    const auto observed_generation = [&] {
+        const auto snapshot = backend->find(missing);
+        REQUIRE(snapshot.has_value());
+        REQUIRE_FALSE(snapshot->resource.has_value());
+        REQUIRE(snapshot->consistency == resource::ResourceConsistency::immutable_snapshot);
+        return snapshot->generation.value();
+    };
+
+    REQUIRE(observed_generation() == 0);
+    const auto missing_stream = backend->open_stream(missing);
+    REQUIRE(missing_stream.has_value());
+    REQUIRE(missing_stream->generation.value() == 0);
+    REQUIRE(missing_stream->consistency == resource::ResourceConsistency::immutable_snapshot);
+    REQUIRE_FALSE(missing_stream->stream.has_value());
+
+    REQUIRE(backend->insert(resource_id, key, "application/octet-stream", {1}).has_value());
+
+    auto published = backend->find(key);
+    REQUIRE(published.has_value());
+    REQUIRE(published->generation.value() == 1);
+    REQUIRE(published->consistency == resource::ResourceConsistency::immutable_snapshot);
+    REQUIRE(published->resource.has_value());
+    REQUIRE((*published->resource)->bytes()[0] == 1);
+
+    auto stream = backend->open_stream(key);
+    REQUIRE(stream.has_value());
+    REQUIRE(stream->generation.value() == 1);
+    REQUIRE(stream->consistency == resource::ResourceConsistency::immutable_snapshot);
+    REQUIRE(stream->stream.has_value());
+
+    // 失败的发布不推进代次，也不改变可观察结果。
+    REQUIRE_FALSE(backend->insert(resource_id, key, "application/octet-stream", {2}).has_value());
+    REQUIRE(observed_generation() == 1);
+    REQUIRE_FALSE(backend->insert(other_id, key, "application/octet-stream", {2}).has_value());
+    REQUIRE(observed_generation() == 1);
+    REQUIRE_FALSE(backend->add_alias(alias, other_id).has_value());
+    REQUIRE(observed_generation() == 1);
+
+    REQUIRE(backend->add_alias(alias, resource_id).has_value());
+    REQUIRE(observed_generation() == 2);
+    auto aliased = backend->find(alias);
+    REQUIRE(aliased.has_value());
+    REQUIRE(aliased->generation.value() == 2);
+    REQUIRE((*aliased->resource)->id() == resource_id);
+    REQUIRE_FALSE(backend->add_alias(alias, resource_id).has_value());
+    REQUIRE(observed_generation() == 2);
+
+    const auto previous = published->resource;
+    REQUIRE(backend
+                ->insert(
+                    resource_id,
+                    key,
+                    "application/octet-stream",
+                    {9},
+                    resource::InsertMode::replace
+                )
+                .has_value());
+    REQUIRE(observed_generation() == 3);
+    auto replaced = backend->find(key);
+    REQUIRE(replaced->generation.value() == 3);
+    REQUIRE((*replaced->resource)->bytes()[0] == 9);
+    // 旧句柄仍是旧快照，不会被新发布改写。
+    REQUIRE((*previous)->bytes()[0] == 1);
+
+    REQUIRE_FALSE(backend->erase(other_id));
+    REQUIRE(observed_generation() == 3);
+    REQUIRE(backend->erase(resource_id));
+    REQUIRE(observed_generation() == 4);
+    const auto erased = backend->find(key);
+    REQUIRE(erased.has_value());
+    REQUIRE(erased->generation.value() == 4);
+    REQUIRE_FALSE(erased->resource.has_value());
+}
+
+TEST_CASE(
+    "multiple mounts of one backend observe the same publish generation",
+    "[resource][generation]"
+) {
+    const auto key = resource::ResourceKey("data/shared");
+    auto backend = std::make_shared<resource::MemoryBackend>("shared");
+    REQUIRE(backend
+                ->insert(
+                    id("32112233-4455-4677-8899-aabbccddeeff"),
+                    key,
+                    "application/octet-stream",
+                    {4}
+                )
+                .has_value());
+
+    resource::ResourceManager manager;
+    const auto first_mount = manager.mount(backend, 0);
+    const auto second_mount = manager.mount(backend, 0);
+    REQUIRE(first_mount != second_mount);
+
+    const auto left = backend->find(key);
+    const auto right = backend->find(key);
+    REQUIRE(left.has_value());
+    REQUIRE(right.has_value());
+    REQUIRE(left->generation == right->generation);
+    REQUIRE(left->generation.value() == 1);
+    REQUIRE(manager.require(key).has_value());
+    REQUIRE((*manager.require(key))->bytes()[0] == 4);
+}
+
+TEST_CASE(
+    "concurrent publishes never pair old content with a new generation",
+    "[resource][generation][concurrency]"
+) {
+    constexpr std::uint64_t publish_count = 20'000;
+    const auto key = resource::ResourceKey("data/current");
+    const auto resource_id = id("33112233-4455-4677-8899-aabbccddeeff");
+    const auto encode = [](const std::uint64_t value) {
+        std::vector<std::uint8_t> bytes(sizeof(value));
+        std::memcpy(bytes.data(), &value, sizeof(value));
+        return bytes;
+    };
+    auto backend = std::make_shared<resource::MemoryBackend>("concurrent");
+    REQUIRE(backend->insert(resource_id, key, "application/octet-stream", encode(1)).has_value());
+
+    std::atomic<bool> start = false;
+    std::atomic<bool> failed = false;
+    std::jthread writer([&] {
+        while (!start.load(std::memory_order_acquire)) {}
+        for (std::uint64_t generation = 1; generation < publish_count; ++generation) {
+            const auto inserted = backend->insert(
+                resource_id,
+                key,
+                "application/octet-stream",
+                encode(generation + 1),
+                resource::InsertMode::replace
+            );
+            if (!inserted) {
+                failed.store(true, std::memory_order_relaxed);
+                return;
+            }
+        }
+    });
+
+    std::array<std::jthread, 3> readers;
+    for (auto& reader: readers) {
+        reader = std::jthread([&] {
+            while (!start.load(std::memory_order_acquire)) {}
+            std::uint64_t previous = 0;
+            for (int iteration = 0; iteration < 30'000; ++iteration) {
+                if (failed.load(std::memory_order_relaxed)) {
+                    return;
+                }
+                const auto snapshot = backend->find(key);
+                if (!snapshot || !snapshot->resource
+                    || snapshot->consistency != resource::ResourceConsistency::immutable_snapshot)
+                {
+                    failed.store(true, std::memory_order_relaxed);
+                    return;
+                }
+                const auto generation = snapshot->generation.value();
+                const auto bytes = (*snapshot->resource)->bytes();
+                if (generation < previous || bytes.size() != sizeof(std::uint64_t)) {
+                    failed.store(true, std::memory_order_relaxed);
+                    return;
+                }
+                std::uint64_t content = 0;
+                std::memcpy(&content, bytes.data(), sizeof(content));
+                if (content != generation) {
+                    failed.store(true, std::memory_order_relaxed);
+                    return;
+                }
+                previous = generation;
+            }
+        });
+    }
+
+    start.store(true, std::memory_order_release);
+    writer.join();
+    for (auto& reader: readers) {
+        reader.join();
+    }
+    REQUIRE_FALSE(failed.load());
+}
+
+TEST_CASE(
+    "manager pins a selected backend snapshot and does not call backends under its lock",
+    "[resource][generation][concurrency]"
+) {
+    const auto key = resource::ResourceKey("data/value");
+    auto inner = std::make_shared<resource::MemoryBackend>("blocking");
+    REQUIRE(inner
+                ->insert(
+                    id("34112233-4455-4677-8899-aabbccddeeff"),
+                    key,
+                    "application/octet-stream",
+                    {7}
+                )
+                .has_value());
+    auto backend = std::make_shared<BlockingLookupBackend>(std::move(inner));
+
+    resource::ResourceManager manager;
+    const auto mount = manager.mount(backend);
+
+    std::optional<resource::ResourceLookup> lookup;
+    std::jthread finder([&] { lookup = manager.find(key); });
+    backend->wait_until_entered();
+    // 查询停在后端期间管理器必须仍可卸载；否则说明后端调用发生在管理器锁内。
+    REQUIRE(manager.unmount(mount));
+    backend->release();
+    finder.join();
+
+    REQUIRE(lookup.has_value());
+    REQUIRE(lookup->has_value());
+    REQUIRE((***lookup)->bytes()[0] == 7);
+
+    // 卸载完成后新发起的解析不得成功；已经固定的旧结果继续可用。
+    const auto after = manager.find(key);
+    REQUIRE(after.has_value());
+    REQUIRE_FALSE(after->has_value());
+}
+
 TEST_CASE(
     "builtin resources provide an overridable default font and license",
     "[resource][builtin]"
@@ -326,17 +622,23 @@ TEST_CASE(
 
     const auto font = builtin->find(resource::ResourceKey("fonts/default"));
     REQUIRE(font.has_value());
-    REQUIRE(font->has_value());
-    REQUIRE((**font)->id() == id("737980c0-0000-4000-8000-000000000001"));
-    REQUIRE((**font)->media_type() == "font/ttf");
-    REQUIRE((**font)->storage() == resource::ResourceStorage::embedded_blob);
-    REQUIRE((**font)->size() > 100'000);
+    REQUIRE(font->resource.has_value());
+    REQUIRE(font->generation.value() == 0);
+    REQUIRE(font->consistency == resource::ResourceConsistency::immutable_snapshot);
+    REQUIRE(resource::is_snapshot(font->consistency));
+    REQUIRE((*font->resource)->id() == id("737980c0-0000-4000-8000-000000000001"));
+    REQUIRE((*font->resource)->media_type() == "font/ttf");
+    REQUIRE((*font->resource)->storage() == resource::ResourceStorage::embedded_blob);
+    REQUIRE((*font->resource)->size() > 100'000);
 
     const auto license = builtin->find(resource::ResourceKey("licenses/fonts/caskaydia-cove"));
     REQUIRE(license.has_value());
-    REQUIRE(license->has_value());
-    REQUIRE((**license)->media_type() == "text/plain");
-    const std::string license_text((**license)->bytes().begin(), (**license)->bytes().end());
+    REQUIRE(license->resource.has_value());
+    REQUIRE((*license->resource)->media_type() == "text/plain");
+    const std::string license_text(
+        (*license->resource)->bytes().begin(),
+        (*license->resource)->bytes().end()
+    );
     REQUIRE(license_text.contains("SIL OPEN FONT LICENSE Version 1.1"));
 
     resource::ResourceManager manager;
@@ -375,10 +677,23 @@ TEST_CASE("directory backend loads manifest resources into owned handles", "[res
     REQUIRE(backend.has_value());
     auto found = (*backend)->find(resource::ResourceKey("data/default"));
     REQUIRE(found.has_value());
-    REQUIRE((**found)->size() == 3);
+    REQUIRE(found->resource.has_value());
+    REQUIRE(found->consistency == resource::ResourceConsistency::non_snapshot);
+    REQUIRE_FALSE(resource::is_snapshot(found->consistency));
+    REQUIRE(found->generation.value() == 0);
+    REQUIRE((*found->resource)->size() == 3);
+    const auto missing = (*backend)->find(resource::ResourceKey("data/missing"));
+    REQUIRE(missing.has_value());
+    REQUIRE_FALSE(missing->resource.has_value());
+    REQUIRE(missing->generation.value() == 0);
+    REQUIRE(missing->consistency == resource::ResourceConsistency::non_snapshot);
+    const auto missing_stream = (*backend)->open_stream(resource::ResourceKey("data/missing"));
+    REQUIRE(missing_stream.has_value());
+    REQUIRE_FALSE(missing_stream->stream.has_value());
+    REQUIRE(missing_stream->consistency == resource::ResourceConsistency::non_snapshot);
     std::filesystem::remove(temp.path / "asset.bin");
     (*backend).reset();
-    REQUIRE((**found)->bytes()[2] == static_cast<std::uint8_t>('c'));
+    REQUIRE((*found->resource)->bytes()[2] == static_cast<std::uint8_t>('c'));
 }
 
 TEST_CASE("directory streams are bounded and survive backend removal", "[resource][stream]") {
@@ -446,35 +761,54 @@ TEST_CASE("SQLite backend resolves blobs aliases and external files", "[resource
 
     auto blob = (*backend)->find(resource::ResourceKey("fonts/ui"));
     REQUIRE(blob.has_value());
-    REQUIRE((**blob)->key().value() == "fonts/default");
-    REQUIRE((**blob)->storage() == resource::ResourceStorage::embedded_blob);
-    REQUIRE((**blob)->bytes()[2] == 3);
+    REQUIRE(blob->resource.has_value());
+    REQUIRE(blob->consistency == resource::ResourceConsistency::package_snapshot);
+    REQUIRE(resource::is_snapshot(blob->consistency));
+    REQUIRE(blob->generation.value() == 0);
+    REQUIRE((*blob->resource)->key().value() == "fonts/default");
+    REQUIRE((*blob->resource)->storage() == resource::ResourceStorage::embedded_blob);
+    REQUIRE((*blob->resource)->bytes()[2] == 3);
 
     auto external = (*backend)->find(resource::ResourceKey("shaders/basic"));
     REQUIRE(external.has_value());
-    REQUIRE((**external)->storage() == resource::ResourceStorage::external_file);
-    REQUIRE((**external)->size() == 4);
+    REQUIRE(external->resource.has_value());
+    REQUIRE(external->consistency == resource::ResourceConsistency::non_snapshot);
+    REQUIRE_FALSE(resource::is_snapshot(external->consistency));
+    REQUIRE((*external->resource)->storage() == resource::ResourceStorage::external_file);
+    REQUIRE((*external->resource)->size() == 4);
+
+    const auto absent = (*backend)->find(resource::ResourceKey("fonts/absent"));
+    REQUIRE(absent.has_value());
+    REQUIRE_FALSE(absent->resource.has_value());
+    REQUIRE(absent->generation.value() == 0);
+    REQUIRE(absent->consistency == resource::ResourceConsistency::package_snapshot);
+    const auto absent_stream = (*backend)->open_stream(resource::ResourceKey("fonts/absent"));
+    REQUIRE(absent_stream.has_value());
+    REQUIRE_FALSE(absent_stream->stream.has_value());
+    REQUIRE(absent_stream->consistency == resource::ResourceConsistency::package_snapshot);
 
     auto blob_stream = (*backend)->open_stream(resource::ResourceKey("fonts/ui"));
     REQUIRE(blob_stream.has_value());
-    REQUIRE(blob_stream->has_value());
+    REQUIRE(blob_stream->stream.has_value());
+    REQUIRE(blob_stream->consistency == resource::ResourceConsistency::package_snapshot);
     std::array<std::uint8_t, 8> bytes {};
-    REQUIRE((**blob_stream)->read(bytes) == 3);
+    REQUIRE((*blob_stream->stream)->read(bytes) == 3);
     REQUIRE(bytes[0] == 1);
     REQUIRE(bytes[2] == 3);
 
     auto external_stream = (*backend)->open_stream(id("10112233-4455-4677-8899-aabbccddeeff"));
     REQUIRE(external_stream.has_value());
-    REQUIRE(external_stream->has_value());
-    REQUIRE((**external_stream)->read(bytes) == 4);
+    REQUIRE(external_stream->stream.has_value());
+    REQUIRE(external_stream->consistency == resource::ResourceConsistency::non_snapshot);
+    REQUIRE((*external_stream->stream)->read(bytes) == 4);
     REQUIRE(std::string(bytes.begin(), bytes.begin() + 4) == "main");
 
     std::error_code remove_error;
     std::filesystem::remove(database, remove_error);
     (*backend).reset();
-    REQUIRE((**blob)->bytes()[0] == 1);
-    REQUIRE((**external_stream)->seek(0).has_value());
-    REQUIRE((**external_stream)->read(bytes) == 4);
+    REQUIRE((*blob->resource)->bytes()[0] == 1);
+    REQUIRE((*external_stream->stream)->seek(0).has_value());
+    REQUIRE((*external_stream->stream)->read(bytes) == 4);
 }
 
 TEST_CASE("SQLite backend rejects non-Nandina databases", "[resource][sqlite]") {

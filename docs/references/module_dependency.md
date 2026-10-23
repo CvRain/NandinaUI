@@ -111,20 +111,21 @@ FontRequest / FontSlant 的唯一类型定义归 `theme/font_request.hpp`；迁�
 设计、值语义、ABI 与 include 兼容边界及验证记录见 [轻量字体请求](font_request.md)。
 这只完成描述值的拆分，StyleDocument 的实际文本引擎应用仍列在当前偏离表中。
 
-## D5 资源构建边界（已冻结，未实施）
+## D5 资源构建边界（已冻结；解耦与后端代次已实施）
 
-当前 `nanres` 链接完整 `nandina_dep`，SQLite 依赖无条件进入库；manifest/packager 的部分
+解耦前 `nanres` 链接完整 `nandina_dep`，SQLite 依赖无条件进入库；manifest/packager 的部分
 实现在 tools，公开声明在 resource。这是构建目标的耦合，不能仅凭基础层的源码 include 方向
-认定工具已独立。具体证据与验收见 [D5 §2–4](resource_build_and_deployment.md)。
+认定工具已独立。P2.1a 已拆出 `resource_core`、运行时后端与 `resource_build`，`nanres` 只链
+`resource_build_dep` 并有依赖闭包门禁；具体证据与验收见 [D5 §2–4](resource_build_and_deployment.md)。
 
 目标分为资源核心、可选运行时后端、资源构建核心、CLI/构建部署适配四项职责。构建核心与
 后端复用资源核心，nanres 不依赖 render/text/scene/widget/app 或完整 UI 库；配置阶段也不能
 强制发现 UI/窗口依赖。目标依赖闭包与实际链接输入须有机械门禁，关闭组合须运行资源消费者。
 这不是新增 C++ Modules 或独立发布项目的承诺。
 
-先解耦且保持 ID/包格式/扫描行为，作用域批随后独立迁移：后端负责本地结果及发布代次的一致性，
-manager 负责包装域身份与 MountId，上层字体等缓存消费完整作用域。后端不认识 manager 的挂载
-身份，挂载字段不写进包格式。身份生成算法另批定形；方向与八入口契约见 D5 §6.2、§11。
+先解耦且保持 ID/包格式/扫描行为，作用域批随后独立迁移：后端已交付本地结果及一致的发布代次，
+manager 负责包装域身份与 MountId（P2.2b），上层字体等缓存消费完整作用域。后端不认识 manager
+的挂载身份，挂载字段不写进包格式。身份生成算法另批定形；方向与八入口契约见 D5 §6.2、§11。
 
 ## 判断一次改动是否越界
 

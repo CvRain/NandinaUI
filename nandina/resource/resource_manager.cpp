@@ -21,22 +21,29 @@ namespace nandina::resource
         MountId next_id = 1;
         std::uint64_t next_order = 0;
 
-        template<typename Lookup, typename Query>
-        [[nodiscard]] auto lookup(Query&& query) const -> Lookup {
+        template<typename T, typename Query, typename Project>
+        [[nodiscard]] auto lookup(Query&& query, Project&& project) const
+            -> ResourceResult<std::optional<T>> {
             std::vector<std::shared_ptr<IResourceBackend>> backends;
             {
                 std::shared_lock lock(mutex);
+                backends.reserve(mounts.size());
                 for (const auto& mount: mounts) {
                     backends.push_back(mount.backend);
                 }
             }
+            // 后端查询在管理器锁之外执行；结果带自己的发布代次。P2.2b 会把代次与
+            // 域/MountId 一起包装给消费者，本批只在内部解包为既有裸句柄形状。
             for (const auto& backend: backends) {
-                auto result = query(*backend);
-                if (!result || result->has_value()) {
-                    return result;
+                auto snapshot = query(*backend);
+                if (!snapshot) {
+                    return std::unexpected(snapshot.error());
+                }
+                if (auto selected = project(std::move(*snapshot)); selected.has_value()) {
+                    return std::optional<T> {std::move(selected)};
                 }
             }
-            return typename Lookup::value_type {};
+            return std::optional<T> {};
         }
     };
 
@@ -69,12 +76,16 @@ namespace nandina::resource
     }
 
     auto ResourceManager::find(const ResourceKey& key) const -> ResourceLookup {
-        return impl_->lookup<ResourceLookup>([&](const auto& backend) {
-            return backend.find(key);
-        });
+        return impl_->lookup<ResourceHandle>(
+            [&](const auto& backend) { return backend.find(key); },
+            [](ResourceSnapshot snapshot) { return std::move(snapshot.resource); }
+        );
     }
     auto ResourceManager::find(const ResourceId id) const -> ResourceLookup {
-        return impl_->lookup<ResourceLookup>([&](const auto& backend) { return backend.find(id); });
+        return impl_->lookup<ResourceHandle>(
+            [&](const auto& backend) { return backend.find(id); },
+            [](ResourceSnapshot snapshot) { return std::move(snapshot.resource); }
+        );
     }
     auto ResourceManager::require(const ResourceKey& key) const -> ResourceResult<ResourceHandle> {
         auto found = find(key);
@@ -105,14 +116,16 @@ namespace nandina::resource
         return **found;
     }
     auto ResourceManager::open_stream(const ResourceKey& key) const -> ResourceStreamLookup {
-        return impl_->lookup<ResourceStreamLookup>([&](const auto& backend) {
-            return backend.open_stream(key);
-        });
+        return impl_->lookup<ResourceStreamHandle>(
+            [&](const auto& backend) { return backend.open_stream(key); },
+            [](ResourceStreamSnapshot snapshot) { return std::move(snapshot.stream); }
+        );
     }
     auto ResourceManager::open_stream(const ResourceId id) const -> ResourceStreamLookup {
-        return impl_->lookup<ResourceStreamLookup>([&](const auto& backend) {
-            return backend.open_stream(id);
-        });
+        return impl_->lookup<ResourceStreamHandle>(
+            [&](const auto& backend) { return backend.open_stream(id); },
+            [](ResourceStreamSnapshot snapshot) { return std::move(snapshot.stream); }
+        );
     }
     auto ResourceManager::require_stream(const ResourceKey& key) const
         -> ResourceResult<ResourceStreamHandle> {

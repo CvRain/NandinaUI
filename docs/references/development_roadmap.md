@@ -44,14 +44,14 @@
 ### P2 应用闭环（资源与工具）
 
 > 实施契约（目标依赖图、选项真值表、启动策略、lock/revision/ID 语义、子批与门禁）见
-> [D5 §8](resource_build_and_deployment.md#8-p2-实施契约2026-10-22-定稿未实现)。
-> **状态：P2.1a/P2.1b 已实施（2026-10-22）；P2.2–P2.4 未实施。**
+> [D5 §8](resource_build_and_deployment.md#8-p2-实施契约2026-10-22-定稿p21ap21bp22a-已实施)。
+> **状态：P2.1a/P2.1b/P2.2a 已实施（2026-10-22 至 10-23）；P2.2b–P2.2d、P2.3–P2.4 未实施。**
 
 | 编号 | 交付 | 前置 | 退出条件 |
 | --- | --- | --- | --- |
 | P2.1a | 目标拆分：`resource_core` / 运行时后端 / `resource_build` / `nanres` + 包格式协议头 + 选项真值表（`build_ui`、`resource_sqlite`、`resource_tools`、`examples`） | 无 | **已完成（2026-10-22）**：`nandina/resource/meson.build` 四层目标，`nanres` 只链 `resource_build_dep`；`resource_package_format.hpp` 解除打包器对运行时 SQLite 后端的依赖；5 组 `build_ui=false` 组合在固定 Meson 1.7.2 下干净配置/构建/测试；checker 覆盖直接/间接 UI 注入、归档篡改、缺 introspection/response file；旧 nanres 被拒绝、旧配置因选项不存在失败 |
 | P2.1b | 启动策略：默认不自动开包、注入时机、SQLite 关闭诊断、外部 `nanres` 版本/schema 兼容检查 | P2.1a | **已完成（2026-10-22）**：`resource_package` 默认空 + `mount_resource_backend()`；`resource_sqlite=disabled` 时自动开包分支不编译并给出 `backend_unavailable`；`-Dexternal_nanres` 配置期 schema/version 握手、helper 构建期二次握手；`sdk_surface` 记录破坏性变更；主套件 104/104、无 SQLite 的 UI 构建单元套件 81/81、Windows 构建与 unit 通过（需按升级说明清理一次 stale thin archive） |
-| P2.2a | 后端发布代次与快照一致性（结果与代次同一临界区，失败不发布半份状态） | P2.1 | 并发发布/快照一致性测试 |
+| P2.2a | 后端发布代次与快照一致性（结果与代次同一临界区，失败不发布半份状态） | P2.1 | **已完成（2026-10-23）**：后端协议返回 `ResourceSnapshot`/`ResourceStreamSnapshot`（代次 + 一致性类别 + 可选句柄）；MemoryBackend 在同一锁内读取结果与代次，成功发布才推进 64 位代次且拒绝回绕；失败路径不推进、不改映射；内存/内置、SQLite 内嵌/外置与目录来源分别标注快照类别；管理器公开八入口保持裸句柄，只在内部解包。并发配对用例在拆开读锁时稳定失败，恢复后主套件 104/104；ASan 配置 83/83 + window-lifecycle SKIP（真实 GPU 窗口触发驱动侧 LSan 泄漏，非项目代码） |
 | P2.2b | 管理器八入口作用域：`ResolvedResource`/`ResolvedStream`、不透明域令牌、歧义/过期错误 | P2.1 | 跨挂载/跨 manager/裸 ID 歧义/过期引用用例；别名规则 |
 | P2.2c | 消费者迁移：FontLoader 缓存键、图片/流/主题消费者 | P2.2b | 缓存身份测试 + ASan；不再用裸 ID 串缓存 |
 | P2.2d | 缓存回收与并发：有限容量淘汰 + expired 域清扫 | P2.2c | 淘汰/清扫/卸载重叠用例；不要求 manager 广播失效 |

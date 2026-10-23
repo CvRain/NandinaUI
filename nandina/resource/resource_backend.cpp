@@ -2,25 +2,42 @@
 
 namespace nandina::resource
 {
-    auto IResourceBackend::open_stream(const ResourceKey& key) const -> ResourceStreamLookup {
-        auto resource = find(key);
-        if (!resource) {
-            return std::unexpected(resource.error());
+    auto IResourceBackend::open_stream(const ResourceKey& key) const
+        -> ResourceStreamSnapshotLookup {
+        auto snapshot = find(key);
+        if (!snapshot) {
+            return std::unexpected(snapshot.error());
         }
-        if (!*resource) {
-            return std::optional<ResourceStreamHandle> {};
+        if (!snapshot->resource) {
+            return ResourceStreamSnapshot {
+                snapshot->generation,
+                snapshot->consistency,
+                std::nullopt,
+            };
         }
-        return std::optional<ResourceStreamHandle> {make_memory_resource_stream(**resource)};
+        return ResourceStreamSnapshot {
+            snapshot->generation,
+            snapshot->consistency,
+            make_memory_resource_stream(*snapshot->resource),
+        };
     }
 
-    auto IResourceBackend::open_stream(const ResourceId id) const -> ResourceStreamLookup {
-        auto resource = find(id);
-        if (!resource) {
-            return std::unexpected(resource.error());
+    auto IResourceBackend::open_stream(const ResourceId id) const -> ResourceStreamSnapshotLookup {
+        auto snapshot = find(id);
+        if (!snapshot) {
+            return std::unexpected(snapshot.error());
         }
-        if (!*resource) {
-            return std::optional<ResourceStreamHandle> {};
+        if (!snapshot->resource) {
+            return ResourceStreamSnapshot {
+                snapshot->generation,
+                snapshot->consistency,
+                std::nullopt,
+            };
         }
-        return std::optional<ResourceStreamHandle> {make_memory_resource_stream(**resource)};
+        return ResourceStreamSnapshot {
+            snapshot->generation,
+            snapshot->consistency,
+            make_memory_resource_stream(*snapshot->resource),
+        };
     }
 } // namespace nandina::resource

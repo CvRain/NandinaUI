@@ -32,11 +32,12 @@ namespace nandina::resource
             -> ResourceResult<std::shared_ptr<DirectoryBackend>>;
         ~DirectoryBackend() override;
         [[nodiscard]] auto name() const noexcept -> std::string_view override;
-        [[nodiscard]] auto find(const ResourceKey& key) const -> ResourceLookup override;
-        [[nodiscard]] auto find(ResourceId id) const -> ResourceLookup override;
+        [[nodiscard]] auto find(const ResourceKey& key) const -> ResourceSnapshotLookup override;
+        [[nodiscard]] auto find(ResourceId id) const -> ResourceSnapshotLookup override;
         [[nodiscard]] auto open_stream(const ResourceKey& key) const
-            -> ResourceStreamLookup override;
-        [[nodiscard]] auto open_stream(ResourceId id) const -> ResourceStreamLookup override;
+            -> ResourceStreamSnapshotLookup override;
+        [[nodiscard]] auto open_stream(ResourceId id) const
+            -> ResourceStreamSnapshotLookup override;
 
     private:
         class Impl;

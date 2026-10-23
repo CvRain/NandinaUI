@@ -37,13 +37,15 @@ namespace nandina::resource
         SQLiteBackendOptions options;
         sqlite3* db = nullptr;
         mutable std::mutex mutex;
+        // 数据库以只读方式打开，进程内没有发布入口；代次恒为初始值 0。
+        PublishGeneration generation;
         ~Impl() {
             if (db) {
                 sqlite3_close_v2(db);
             }
         }
 
-        [[nodiscard]] auto materialize(sqlite3_stmt* row) const -> ResourceLookup {
+        [[nodiscard]] auto materialize(sqlite3_stmt* row) const -> ResourceSnapshotLookup {
             const auto* raw_id = static_cast<const std::uint8_t*>(sqlite3_column_blob(row, 0));
             if (!raw_id || sqlite3_column_bytes(row, 0) != 16) {
                 return std::unexpected(error("sqlite.lookup", "invalid resource id"));
@@ -145,17 +147,22 @@ namespace nandina::resource
             else {
                 return std::unexpected(error("sqlite.lookup", "unknown resource storage"));
             }
-            return std::optional<ResourceHandle> {std::make_shared<const Resource>(
-                ResourceId(id),
-                *parsed_key,
-                media ? media : "",
-                kind,
-                std::move(bytes)
-            )};
+            return ResourceSnapshot {
+                generation,
+                kind == ResourceStorage::embedded_blob ? ResourceConsistency::package_snapshot
+                                                       : ResourceConsistency::non_snapshot,
+                std::make_shared<const Resource>(
+                    ResourceId(id),
+                    *parsed_key,
+                    media ? media : "",
+                    kind,
+                    std::move(bytes)
+                ),
+            };
         }
 
         [[nodiscard]] auto query(const char* sql, const void* value, int size, bool text) const
-            -> ResourceLookup {
+            -> ResourceSnapshotLookup {
             std::lock_guard lock(mutex);
             Statement statement;
             if (sqlite3_prepare_v2(db, sql, -1, &statement.value, nullptr) != SQLITE_OK) {
@@ -177,7 +184,11 @@ namespace nandina::resource
             }
             const int step = sqlite3_step(statement.value);
             if (step == SQLITE_DONE) {
-                return std::optional<ResourceHandle> {};
+                return ResourceSnapshot {
+                    generation,
+                    ResourceConsistency::package_snapshot,
+                    std::nullopt,
+                };
             }
             if (step != SQLITE_ROW) {
                 return std::unexpected(error("sqlite.step", "resource query failed"));
@@ -185,7 +196,8 @@ namespace nandina::resource
             return materialize(statement.value);
         }
 
-        [[nodiscard]] auto stream_from_row(sqlite3_stmt* row) const -> ResourceStreamLookup {
+        [[nodiscard]] auto stream_from_row(sqlite3_stmt* row) const
+            -> ResourceStreamSnapshotLookup {
             const auto* raw_id = static_cast<const std::uint8_t*>(sqlite3_column_blob(row, 0));
             if (!raw_id || sqlite3_column_bytes(row, 0) != 16) {
                 return std::unexpected(error("sqlite.stream", "invalid resource id"));
@@ -235,8 +247,10 @@ namespace nandina::resource
                     ResourceStorage::embedded_blob,
                     std::move(bytes)
                 );
-                return std::optional<ResourceStreamHandle> {
-                    make_memory_resource_stream(std::move(resource))
+                return ResourceStreamSnapshot {
+                    generation,
+                    ResourceConsistency::package_snapshot,
+                    make_memory_resource_stream(std::move(resource)),
                 };
             }
             if (storage != 1) {
@@ -265,12 +279,16 @@ namespace nandina::resource
             if (!opened) {
                 return std::unexpected(opened.error());
             }
-            return std::optional<ResourceStreamHandle> {*opened};
+            return ResourceStreamSnapshot {
+                generation,
+                ResourceConsistency::non_snapshot,
+                *opened,
+            };
         }
 
         [[nodiscard]] auto
         stream_query(const char* sql, const void* value, int size, bool text) const
-            -> ResourceStreamLookup {
+            -> ResourceStreamSnapshotLookup {
             std::lock_guard lock(mutex);
             Statement statement;
             if (sqlite3_prepare_v2(db, sql, -1, &statement.value, nullptr) != SQLITE_OK) {
@@ -290,7 +308,11 @@ namespace nandina::resource
             }
             const int step = sqlite3_step(statement.value);
             if (step == SQLITE_DONE) {
-                return std::optional<ResourceStreamHandle> {};
+                return ResourceStreamSnapshot {
+                    generation,
+                    ResourceConsistency::package_snapshot,
+                    std::nullopt,
+                };
             }
             if (step != SQLITE_ROW) {
                 return std::unexpected(error("sqlite.step", "stream query failed"));
@@ -366,7 +388,7 @@ namespace nandina::resource
     auto SQLiteBackend::name() const noexcept -> std::string_view {
         return impl_->options.name;
     }
-    auto SQLiteBackend::find(const ResourceKey& key) const -> ResourceLookup {
+    auto SQLiteBackend::find(const ResourceKey& key) const -> ResourceSnapshotLookup {
         constexpr auto sql =
             "SELECT r.id,r.resource_key,r.media_type,r.storage,r.data,r.external_path,r.size "
             "FROM resources r "
@@ -376,14 +398,14 @@ namespace nandina::resource
         const auto value = key.value();
         return impl_->query(sql, value.data(), static_cast<int>(value.size()), true);
     }
-    auto SQLiteBackend::find(const ResourceId id) const -> ResourceLookup {
+    auto SQLiteBackend::find(const ResourceId id) const -> ResourceSnapshotLookup {
         constexpr auto sql =
             "SELECT id,resource_key,media_type,storage,data,external_path,size "
             "FROM resources "
             "WHERE id=?1";
         return impl_->query(sql, id.bytes().data(), static_cast<int>(id.bytes().size()), false);
     }
-    auto SQLiteBackend::open_stream(const ResourceKey& key) const -> ResourceStreamLookup {
+    auto SQLiteBackend::open_stream(const ResourceKey& key) const -> ResourceStreamSnapshotLookup {
         constexpr auto sql =
             "SELECT r.id,r.resource_key,r.media_type,r.storage,r.data,r.external_path,r.size "
             "FROM resources r "
@@ -392,7 +414,7 @@ namespace nandina::resource
         const auto value = key.value();
         return impl_->stream_query(sql, value.data(), static_cast<int>(value.size()), true);
     }
-    auto SQLiteBackend::open_stream(const ResourceId id) const -> ResourceStreamLookup {
+    auto SQLiteBackend::open_stream(const ResourceId id) const -> ResourceStreamSnapshotLookup {
         constexpr auto sql =
             "SELECT id,resource_key,media_type,storage,data,external_path,size "
             "FROM resources WHERE id=?1";

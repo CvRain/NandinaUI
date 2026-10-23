@@ -8,6 +8,10 @@
 
 namespace nandina::resource
 {
+    /// Manager-facing lookup results keep the bare handle shape until the scope batch (P2.2b).
+    using ResourceLookup = ResourceResult<std::optional<ResourceHandle>>;
+    using ResourceStreamLookup = ResourceResult<std::optional<ResourceStreamHandle>>;
+
     class ResourceManager {
     public:
         using MountId = std::uint64_t;

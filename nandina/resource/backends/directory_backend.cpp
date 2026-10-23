@@ -12,8 +12,20 @@ namespace nandina::resource
         std::map<ResourceId, DirectoryResource> ids;
         std::map<ResourceKey, ResourceId> keys;
         std::map<ResourceKey, ResourceId> aliases;
+        // 目录内容可在管理器之外被改写；后端没有发布入口，因此代次恒为初始值 0，
+        // 结果一律标记为非快照，不得仅凭作用域键进入共享内容缓存。
+        PublishGeneration generation;
 
-        [[nodiscard]] auto load(const DirectoryResource& entry) const -> ResourceLookup {
+        [[nodiscard]] auto snapshot(std::optional<ResourceHandle> resource) const
+            -> ResourceSnapshot {
+            return {generation, ResourceConsistency::non_snapshot, std::move(resource)};
+        }
+        [[nodiscard]] auto stream_snapshot(std::optional<ResourceStreamHandle> stream) const
+            -> ResourceStreamSnapshot {
+            return {generation, ResourceConsistency::non_snapshot, std::move(stream)};
+        }
+
+        [[nodiscard]] auto load(const DirectoryResource& entry) const -> ResourceSnapshotLookup {
             const auto path = options.root / entry.relative_path;
             std::error_code error;
             if (!options.allow_symlinks && std::filesystem::is_symlink(path, error)) {
@@ -78,16 +90,19 @@ namespace nandina::resource
                     }
                 );
             }
-            return std::optional<ResourceHandle> {std::make_shared<const Resource>(
-                entry.id,
-                entry.key,
-                entry.media_type,
-                ResourceStorage::external_file,
-                std::move(bytes)
-            )};
+            return snapshot(
+                std::make_shared<const Resource>(
+                    entry.id,
+                    entry.key,
+                    entry.media_type,
+                    ResourceStorage::external_file,
+                    std::move(bytes)
+                )
+            );
         }
 
-        [[nodiscard]] auto stream(const DirectoryResource& entry) const -> ResourceStreamLookup {
+        [[nodiscard]] auto stream(const DirectoryResource& entry) const
+            -> ResourceStreamSnapshotLookup {
             const auto path = options.root / entry.relative_path;
             std::error_code error;
             if (!options.allow_symlinks && std::filesystem::is_symlink(path, error)) {
@@ -137,7 +152,7 @@ namespace nandina::resource
             if (!opened) {
                 return std::unexpected(opened.error());
             }
-            return std::optional<ResourceStreamHandle> {*opened};
+            return stream_snapshot(*opened);
         }
     };
 
@@ -212,34 +227,35 @@ namespace nandina::resource
     auto DirectoryBackend::name() const noexcept -> std::string_view {
         return impl_->options.name;
     }
-    auto DirectoryBackend::find(const ResourceKey& key) const -> ResourceLookup {
+    auto DirectoryBackend::find(const ResourceKey& key) const -> ResourceSnapshotLookup {
         auto canonical = impl_->keys.find(key);
         if (canonical != impl_->keys.end()) {
             return impl_->load(impl_->ids.at(canonical->second));
         }
         const auto alias = impl_->aliases.find(key);
-        return alias == impl_->aliases.end() ? ResourceLookup(std::optional<ResourceHandle> {})
+        return alias == impl_->aliases.end() ? ResourceSnapshotLookup(impl_->snapshot(std::nullopt))
                                              : impl_->load(impl_->ids.at(alias->second));
     }
-    auto DirectoryBackend::find(const ResourceId id) const -> ResourceLookup {
+    auto DirectoryBackend::find(const ResourceId id) const -> ResourceSnapshotLookup {
         const auto found = impl_->ids.find(id);
-        return found == impl_->ids.end() ? ResourceLookup(std::optional<ResourceHandle> {})
+        return found == impl_->ids.end() ? ResourceSnapshotLookup(impl_->snapshot(std::nullopt))
                                          : impl_->load(found->second);
     }
-    auto DirectoryBackend::open_stream(const ResourceKey& key) const -> ResourceStreamLookup {
+    auto DirectoryBackend::open_stream(const ResourceKey& key) const
+        -> ResourceStreamSnapshotLookup {
         auto canonical = impl_->keys.find(key);
         if (canonical != impl_->keys.end()) {
             return impl_->stream(impl_->ids.at(canonical->second));
         }
         const auto alias = impl_->aliases.find(key);
         return alias == impl_->aliases.end()
-            ? ResourceStreamLookup(std::optional<ResourceStreamHandle> {})
+            ? ResourceStreamSnapshotLookup(impl_->stream_snapshot(std::nullopt))
             : impl_->stream(impl_->ids.at(alias->second));
     }
-    auto DirectoryBackend::open_stream(const ResourceId id) const -> ResourceStreamLookup {
+    auto DirectoryBackend::open_stream(const ResourceId id) const -> ResourceStreamSnapshotLookup {
         const auto found = impl_->ids.find(id);
         return found == impl_->ids.end()
-            ? ResourceStreamLookup(std::optional<ResourceStreamHandle> {})
+            ? ResourceStreamSnapshotLookup(impl_->stream_snapshot(std::nullopt))
             : impl_->stream(found->second);
     }
 } // namespace nandina::resource

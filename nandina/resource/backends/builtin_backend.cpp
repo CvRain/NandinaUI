@@ -54,23 +54,47 @@ namespace nandina::resource
         return "builtin";
     }
 
-    auto BuiltinBackend::find(const ResourceKey& key) const -> ResourceLookup {
+    auto BuiltinBackend::find(const ResourceKey& key) const -> ResourceSnapshotLookup {
         if (key == default_font_->key()) {
-            return std::optional<ResourceHandle>(default_font_);
+            return ResourceSnapshot {
+                PublishGeneration {},
+                ResourceConsistency::immutable_snapshot,
+                default_font_,
+            };
         }
         if (key == default_font_license_->key()) {
-            return std::optional<ResourceHandle>(default_font_license_);
+            return ResourceSnapshot {
+                PublishGeneration {},
+                ResourceConsistency::immutable_snapshot,
+                default_font_license_,
+            };
         }
-        return std::optional<ResourceHandle> {};
+        return ResourceSnapshot {
+            PublishGeneration {},
+            ResourceConsistency::immutable_snapshot,
+            std::nullopt,
+        };
     }
 
-    auto BuiltinBackend::find(const ResourceId id) const -> ResourceLookup {
+    auto BuiltinBackend::find(const ResourceId id) const -> ResourceSnapshotLookup {
         if (id == default_font_->id()) {
-            return std::optional<ResourceHandle>(default_font_);
+            return ResourceSnapshot {
+                PublishGeneration {},
+                ResourceConsistency::immutable_snapshot,
+                default_font_,
+            };
         }
         if (id == default_font_license_->id()) {
-            return std::optional<ResourceHandle>(default_font_license_);
+            return ResourceSnapshot {
+                PublishGeneration {},
+                ResourceConsistency::immutable_snapshot,
+                default_font_license_,
+            };
         }
-        return std::optional<ResourceHandle> {};
+        return ResourceSnapshot {
+            PublishGeneration {},
+            ResourceConsistency::immutable_snapshot,
+            std::nullopt,
+        };
     }
 } // namespace nandina::resource

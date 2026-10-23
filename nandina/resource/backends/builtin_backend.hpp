@@ -14,8 +14,8 @@ namespace nandina::resource
     public:
         [[nodiscard]] static auto create() -> std::shared_ptr<BuiltinBackend>;
         [[nodiscard]] auto name() const noexcept -> std::string_view override;
-        [[nodiscard]] auto find(const ResourceKey& key) const -> ResourceLookup override;
-        [[nodiscard]] auto find(ResourceId id) const -> ResourceLookup override;
+        [[nodiscard]] auto find(const ResourceKey& key) const -> ResourceSnapshotLookup override;
+        [[nodiscard]] auto find(ResourceId id) const -> ResourceSnapshotLookup override;
 
     private:
         BuiltinBackend();

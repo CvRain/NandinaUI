@@ -14,6 +14,7 @@ namespace nandina::resource
         std::map<ResourceId, ResourceHandle> ids;
         std::map<ResourceKey, ResourceId> keys;
         std::map<ResourceKey, ResourceId> aliases;
+        PublishGeneration generation;
     };
 
     MemoryBackend::MemoryBackend(std::string name):
@@ -70,17 +71,16 @@ namespace nandina::resource
                 );
             }
         }
-        if (id_entry != impl_->ids.end()) {
-            impl_->keys.erase(id_entry->second->key());
-        }
-        // 上面的 erase 可能已删除 key 对应的映射，须重新查询以避免悬空迭代器。
-        const auto key_entry = impl_->keys.find(key);
-        if (key_entry != impl_->keys.end() && key_entry->second != id) {
-            const auto replaced_id = key_entry->second;
-            std::erase_if(impl_->aliases, [replaced_id](const auto& entry) {
-                return entry.second == replaced_id;
-            });
-            impl_->ids.erase(key_entry->second);
+        // 代次在变更前取得：耗尽与分配失败都不留下半份状态，也不会发布错误代次。
+        const auto next_generation = impl_->generation.next();
+        if (!next_generation) {
+            return std::unexpected(
+                ResourceError {
+                    ResourceErrorCode::generation_exhausted,
+                    "insert",
+                    "publish generation is exhausted"
+                }
+            );
         }
         auto resource = std::make_shared<const Resource>(
             id,
@@ -89,8 +89,21 @@ namespace nandina::resource
             ResourceStorage::memory,
             std::move(bytes)
         );
+        if (id_entry != impl_->ids.end()) {
+            impl_->keys.erase(id_entry->second->key());
+        }
+        // 上面的 erase 可能已删除 key 对应的映射，须重新查询以避免悬空迭代器。
+        const auto key_entry = impl_->keys.find(resource->key());
+        if (key_entry != impl_->keys.end() && key_entry->second != id) {
+            const auto replaced_id = key_entry->second;
+            std::erase_if(impl_->aliases, [replaced_id](const auto& entry) {
+                return entry.second == replaced_id;
+            });
+            impl_->ids.erase(replaced_id);
+        }
         impl_->ids[id] = resource;
         impl_->keys[resource->key()] = id;
+        impl_->generation = *next_generation;
         return resource;
     }
 
@@ -115,7 +128,18 @@ namespace nandina::resource
                 }
             );
         }
+        const auto next_generation = impl_->generation.next();
+        if (!next_generation) {
+            return std::unexpected(
+                ResourceError {
+                    ResourceErrorCode::generation_exhausted,
+                    "add_alias",
+                    "publish generation is exhausted"
+                }
+            );
+        }
         impl_->aliases.emplace(std::move(alias), target);
+        impl_->generation = *next_generation;
         return {};
     }
 
@@ -125,14 +149,21 @@ namespace nandina::resource
         if (found == impl_->ids.end()) {
             return false;
         }
+        // 代次耗尽时不删除内容：失败与成功都不能留下“已变更但代次未变”的状态。
+        const auto next_generation = impl_->generation.next();
+        if (!next_generation) {
+            return false;
+        }
         impl_->keys.erase(found->second->key());
         std::erase_if(impl_->aliases, [id](const auto& entry) { return entry.second == id; });
         impl_->ids.erase(found);
+        impl_->generation = *next_generation;
         return true;
     }
 
-    auto MemoryBackend::find(const ResourceKey& key) const -> ResourceLookup {
+    auto MemoryBackend::find(const ResourceKey& key) const -> ResourceSnapshotLookup {
         std::shared_lock lock(impl_->mutex);
+        const auto generation = impl_->generation;
         auto canonical = impl_->keys.find(key);
         ResourceId id;
         if (canonical != impl_->keys.end()) {
@@ -141,17 +172,29 @@ namespace nandina::resource
         else {
             const auto alias = impl_->aliases.find(key);
             if (alias == impl_->aliases.end()) {
-                return std::optional<ResourceHandle> {};
+                return ResourceSnapshot {
+                    generation,
+                    ResourceConsistency::immutable_snapshot,
+                    std::nullopt,
+                };
             }
             id = alias->second;
         }
-        return std::optional<ResourceHandle> {impl_->ids.at(id)};
+        return ResourceSnapshot {
+            generation,
+            ResourceConsistency::immutable_snapshot,
+            impl_->ids.at(id),
+        };
     }
-    auto MemoryBackend::find(const ResourceId id) const -> ResourceLookup {
+    auto MemoryBackend::find(const ResourceId id) const -> ResourceSnapshotLookup {
         std::shared_lock lock(impl_->mutex);
+        const auto generation = impl_->generation;
         const auto found = impl_->ids.find(id);
-        return found == impl_->ids.end()
-            ? ResourceLookup(std::optional<ResourceHandle> {})
-            : ResourceLookup(std::optional<ResourceHandle> {found->second});
+        return ResourceSnapshot {
+            generation,
+            ResourceConsistency::immutable_snapshot,
+            found == impl_->ids.end() ? std::nullopt
+                                      : std::optional<ResourceHandle> {found->second},
+        };
     }
 } // namespace nandina::resource

@@ -23,8 +23,8 @@ namespace nandina::resource
         [[nodiscard]] auto add_alias(ResourceKey alias, ResourceId target) -> ResourceResult<void>;
         [[nodiscard]] auto erase(ResourceId id) -> bool;
         [[nodiscard]] auto name() const noexcept -> std::string_view override;
-        [[nodiscard]] auto find(const ResourceKey& key) const -> ResourceLookup override;
-        [[nodiscard]] auto find(ResourceId id) const -> ResourceLookup override;
+        [[nodiscard]] auto find(const ResourceKey& key) const -> ResourceSnapshotLookup override;
+        [[nodiscard]] auto find(ResourceId id) const -> ResourceSnapshotLookup override;
 
     private:
         class Impl;

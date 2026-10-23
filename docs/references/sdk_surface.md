@@ -25,6 +25,13 @@
 `SQLiteBackend::application_id/schema_version` 保留为同一常量的转发，包格式不变。
 `NanApplicationConfig::resource_package` 默认值与外部 nanres 接入将在 P2.1b 单独迁移。
 
+2026-10-23 P2.2a 后端协议变更（experimental）：`IResourceBackend::find()` / `open_stream()`
+改返回带 `PublishGeneration` 与 `ResourceConsistency` 的 `ResourceSnapshot` /
+`ResourceStreamSnapshot`，负结果也属于某个代次；新增 `generation_exhausted` 错误码。
+`ResourceManager` 八个公开入口在 P2.2a 保持裸句柄返回，只在内部解包；作用域结果
+（`ResolvedResource`/`ResolvedStream`、域令牌、歧义/过期错误）按 P2.2b 迁移。自定义后端
+须返回一致的结果与代次；`non_snapshot` 结果不得仅凭作用域键进入共享内容缓存。
+
 | 等级 | 含义 | 稳定性承诺 | 谁可以包含 |
 | --- | --- | --- | --- |
 | `public` | 推荐使用的接口 | alpha 内也尽量不破坏；破坏时给迁移说明 | 应用代码、示例、下游宿主 |
