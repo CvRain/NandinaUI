@@ -876,4 +876,6 @@ CI 增设只预热 toml++/Catch2、只安装工具所需系统开发包的资源
   MountId 不复用，并扩展阻塞后端用例验证固定结果过期。复核补充：多个挂载中只有一个持有
   目标 ID 时仍是唯一命中；`clear()` 后新引用过期；未绑定域的默认引用对活 manager 解析返回
   `expired_scope`。红测注入：ID 扫描短路时歧义用例失败；令牌相等退化为 `lock()` 指针比较
-  时“两个已销毁域不同”失败。完整结果见[开发路线](development_roadmap.md) 的 P2.2b 行。
+  时“两个已销毁域不同”失败。验证：主套件 104/104、无 SQLite UI 单元 81/81、纯工具套件 7/7、
+  ASan 83/83 + window SKIP、release check 8/8、Windows 构建与 unit 通过。完整结果见
+  [开发路线](development_roadmap.md) 的 P2.2b 行。
