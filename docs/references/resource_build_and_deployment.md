@@ -905,7 +905,7 @@ CI 增设只预热 toml++/Catch2、只安装工具所需系统开发包的资源
   异步不同逻辑 key 不合并；复核补充同步同代次缓存命中、异步非快照上传后不索引/不保留。
 - **验证**：主套件 104/104；无 SQLite UI 单元 81/81（+1 SKIP）；纯工具套件 7/7；
   ASan 单元 83/83（+ `window-lifecycle` SKIP，驱动侧 LSan）；no-RTTI 单元 84/84；
-  release check 8/8。完整结果见[开发路线](development_roadmap.md) 的 P2.2c 行。
+  release check 8/8、Windows 构建与 unit 82/82。完整结果见[开发路线](development_roadmap.md) 的 P2.2c 行。
 
 ### 8.16 P2.2d 实施记录（2026-10-24）
 
@@ -925,4 +925,4 @@ CI 增设只预热 toml++/Catch2、只安装工具所需系统开发包的资源
   `sweep_expired`、跳过命中检查分别使对应用例失败。
 - **验证**：主套件 104/104；无 SQLite UI 单元 81/81（+1 SKIP）；纯工具套件 7/7；
   ASan 单元 83/83（+ `window-lifecycle` SKIP，驱动侧 LSan）；no-RTTI 单元 84/84；
-  release check 8/8。完整结果见[开发路线](development_roadmap.md) 的 P2.2d 行。
+  release check 8/8、Windows 构建与 unit 82/82。完整结果见[开发路线](development_roadmap.md) 的 P2.2d 行。
