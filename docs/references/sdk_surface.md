@@ -56,6 +56,16 @@ weak face，淘汰不销毁调用方持有的 face。`render::TextureCache` 新�
 `max_retained_entries`/`max_retained_bytes` 继续负责容量淘汰。资源异步加载改为解析/解码
 两阶段，缓存命中不再解码或上传；pending 仍按域 + 逻辑 key + options 合并。
 
+2026-10-24 P2.3a 资源身份（experimental，构建侧）：`resources.toml` 的 `[[resources]]` 新增
+相对 `path`，与 `key` 一起构成显式 key→路径映射；显式映射优先于路径派生 key。资源构建核心
+新增 `derive_resource_key(prefix, relative)` 与 `derive_resource_id(package_id, key)`；
+后者使用版本前缀 + NUL + big-endian u32 长度 + package_id + key，SHA-256 截断 128 bit。
+同 key 的旧 lock 保留原 ID，新 key 使用派生 ID；同一 `(package_id, key)` 的派生 ID 跨构建、
+跨平台稳定（固定向量锁定），不同 key 即使内容相同也各得独立 ID。扫描新增
+`ResourceScanOptions::mapped_paths`：显式映射拥有的文件不再派生 key、不报扫描诊断；
+`resource_path_identity(...)` 统一路径身份比较（Windows 上按 ASCII 折叠大小写）。
+`--rewrite-lock`、构建目录迁移与碰撞注入在 P2.3b。
+
 | 等级 | 含义 | 稳定性承诺 | 谁可以包含 |
 | --- | --- | --- | --- |
 | `public` | 推荐使用的接口 | alpha 内也尽量不破坏；破坏时给迁移说明 | 应用代码、示例、下游宿主 |

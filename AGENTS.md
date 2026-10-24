@@ -17,9 +17,11 @@ application shell. Version `0.1.0-alpha.1`.
 
 ### Current milestone state (2026-10-24)
 
-- P1 is closed. The P2 resource closure is implemented through **P2.2d**: tool/UI split, startup
-  policy, scoped manager results, cache identity, and cache reclamation.
-- Next sub-batches: P2.3 (resource identity/key generation) and P2.4 (example application).
+- P1 is closed. The P2 resource closure is implemented through **P2.3a**: tool/UI split, startup
+  policy, scoped manager results, cache identity, cache reclamation, and resource identity
+  (explicit `key → path` mapping, frozen key derivation, versioned 128-bit derived IDs).
+- Next sub-batches: P2.3b (lock migration, collision injection, rebuild determinism, `--rewrite-lock`),
+  P2.3c (minimal constant header), and P2.4 (example application).
 - The plan and exit criteria are **not** owned by this file: read
   `docs/references/development_roadmap.md` and the D5 contract
   (`resource_build_and_deployment.md` §8) before claiming a sub-batch is complete.
@@ -260,6 +262,22 @@ meson test -C buildDir --suite unit --print-errorlogs
 - **Resources**: carry full `ResolvedResource`/`ResolvedStream` scope through consumers. Never key
   a shared cache by raw ID/key alone; use `scope_identity(...)`. Honor
   `ResourceConsistency` and `invalidate(resolved)` vs `invalidate_wide(...)`.
+- **Resource identity**: `[[resources]]` in `resources.toml` may declare `key` together with a
+  relative `path`; an explicit mapping wins over the path-derived key, the file may live outside
+  the scan roots, and directories, absolute/rooted paths or `.`/`..` are rejected. The scanner
+  receives those paths through `ResourceScanOptions::mapped_paths` and neither derives a key nor
+  reports diagnostics for them, so a root file whose path cannot form a canonical key can still be
+  mapped explicitly. Compare path identity with `resource_path_identity(...)` (absolute + normalized
+  generic string, ASCII case-folded on Windows); never compare raw `generic_string()` spellings.
+  Derived keys follow `derive_resource_key(prefix, relative)` = `prefix + "/" + relative`;
+  `ResourceKey` still only accepts lowercase canonical segments. New record IDs come from
+  `derive_resource_id(package_id, key)` (version prefix + NUL + big-endian u32 lengths +
+  package_id + key, SHA-256 truncated to 128 bit); it is implemented in
+  `tools/resource_manifest.cpp` (tools layer, OpenSSL) so keep it out of the runtime core. Never
+  invent random IDs for new keys. `build_resource_lock` matches the previous lock by key: the same
+  key keeps its ID (a content change only bumps `revision`), derived-key renames and new keys get
+  derived IDs, and legacy random IDs survive only for unchanged keys until the P2.3b migration.
+  Do not reintroduce content-hash identity inheritance.
 - **Components**: follow `docs/references/adding_a_component.md`; recipe/default/style edits span
   `theme/visual_state.hpp`, `design_system.hpp/.cpp`, and component code. Use semantic tokens.
 - **Formatting**: clang-format 23.1.1 only, column limit 100, 4-space indent, namespace

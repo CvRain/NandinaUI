@@ -106,8 +106,9 @@ def main() -> int:
         assert run(nanres, root, "scan").returncode == 0
         moved_lock = tomllib.loads(lock_path.read_text(encoding="utf-8"))
         moved = {item["key"]: item for item in moved_lock["resources"]}
-        assert moved["app/moved.txt"]["id"] == original_id
-        assert moved["app/moved.txt"]["revision"] == 2
+        # 派生 key 随源路径改变；ID 由 key 派生，不再按内容哈希继承旧身份。
+        assert moved["app/moved.txt"]["id"] != original_id
+        assert moved["app/moved.txt"]["revision"] == 1
 
         package_assets = root / "package-assets"
         package_assets.mkdir()
@@ -174,12 +175,32 @@ def main() -> int:
             encoding="utf-8",
         )
         assert run(nanres, root, "scan").returncode == 0
+        duplicate_lock = tomllib.loads((root / "resources.lock.toml").read_text(encoding="utf-8"))
+        duplicate = {item["key"]: item for item in duplicate_lock["resources"]}
+        assert duplicate["one.txt"]["id"] != duplicate["two.txt"]["id"]
         (duplicate_root / "one.txt").unlink()
         (duplicate_root / "two.txt").unlink()
         (duplicate_root / "moved.txt").write_text("same", encoding="ascii")
-        ambiguous = run(nanres, root, "scan")
-        assert ambiguous.returncode == 1
-        assert "ambiguous content-hash move" in ambiguous.stderr
+        assert run(nanres, root, "scan").returncode == 0
+        moved_duplicate_lock = tomllib.loads(
+            (root / "resources.lock.toml").read_text(encoding="utf-8")
+        )
+        moved_duplicate = {item["key"]: item for item in moved_duplicate_lock["resources"]}
+        assert "moved.txt" in moved_duplicate
+        assert moved_duplicate["moved.txt"]["id"] not in {
+            duplicate["one.txt"]["id"],
+            duplicate["two.txt"]["id"],
+        }
+        # 派生 ID 稳定：再次扫描无变化时不换 ID、不推进 revision。
+        assert run(nanres, root, "scan").returncode == 0
+        rescanned = {
+            item["key"]: item
+            for item in tomllib.loads((root / "resources.lock.toml").read_text(encoding="utf-8"))[
+                "resources"
+            ]
+        }
+        assert rescanned["moved.txt"]["id"] == moved_duplicate["moved.txt"]["id"]
+        assert rescanned["moved.txt"]["revision"] == 1
 
         # per-resource overrides（[[resources]]）：对单个 key 覆盖 media_type / storage，
         # 优先级高于 glob 规则与自动检测。
@@ -209,6 +230,225 @@ def main() -> int:
             encoding="utf-8",
         )
         assert run(nanres, override_root, "scan").returncode == 1
+
+        # 显式 key→路径映射：源文件重命名但 key 保持时，记录 ID 不变。
+        mapping_root = root / "mapping"
+        mapping_assets = mapping_root / "assets"
+        mapping_assets.mkdir(parents=True)
+        (mapping_assets / "first.txt").write_text("mapped", encoding="ascii")
+        mapping_policy = mapping_root / "resources.toml"
+        mapping_policy.write_text(
+            'package = "org.nandina.mapping"\n\n'
+            '[[roots]]\n'
+            'path = "assets"\n\n'
+            '[[resources]]\n'
+            'key = "app/stable"\n'
+            'path = "assets/first.txt"\n'
+            'media_type = "text/custom"\n',
+            encoding="utf-8",
+        )
+        assert run(nanres, mapping_root, "scan").returncode == 0
+        mapping_lock_path = mapping_root / "resources.lock.toml"
+        mapping_once = {
+            item["key"]: item
+            for item in tomllib.loads(mapping_lock_path.read_text(encoding="utf-8"))["resources"]
+        }
+        assert set(mapping_once) == {"app/stable"}
+        assert mapping_once["app/stable"]["source"] == "assets/first.txt"
+        assert mapping_once["app/stable"]["media_type"] == "text/custom"
+        stable_id = mapping_once["app/stable"]["id"]
+        assert stable_id == "c73735d1-eb2a-b655-1d26-f5891ba9eeb4"
+
+        (mapping_assets / "first.txt").rename(mapping_assets / "renamed.txt")
+        (mapping_root / "shared.txt").write_text("shared", encoding="ascii")
+        mapping_policy.write_text(
+            'package = "org.nandina.mapping"\n\n'
+            '[[roots]]\n'
+            'path = "assets"\n\n'
+            '[[rules]]\n'
+            'glob = "app/*"\n'
+            'storage = "external"\n'
+            'streaming = true\n\n'
+            '[[resources]]\n'
+            'key = "app/stable"\n'
+            'path = "assets/renamed.txt"\n'
+            'media_type = "text/custom"\n\n'
+            '[[resources]]\n'
+            'key = "app/shared"\n'
+            'path = "shared.txt"\n',
+            encoding="utf-8",
+        )
+        assert run(nanres, mapping_root, "scan").returncode == 0
+        mapping_moved = {
+            item["key"]: item
+            for item in tomllib.loads(mapping_lock_path.read_text(encoding="utf-8"))["resources"]
+        }
+        assert mapping_moved["app/stable"]["source"] == "assets/renamed.txt"
+        assert mapping_moved["app/stable"]["id"] == stable_id
+        # 映射源可以在扫描根之外（仍在 resources.toml 同目录）；media_type 按扩展名检测。
+        assert mapping_moved["app/shared"]["source"] == "shared.txt"
+        assert mapping_moved["app/shared"]["media_type"] == "text/plain"
+        assert mapping_moved["app/shared"]["id"] != stable_id
+        # [[rules]] 的 storage/streaming 也作用于显式映射条目。
+        assert mapping_moved["app/stable"]["storage"] == "external"
+        assert mapping_moved["app/stable"]["streaming"] is True
+        assert mapping_moved["app/shared"]["storage"] == "external"
+
+        # 同一个 key 的内容变化：ID 保持，revision 递增。
+        (mapping_assets / "renamed.txt").write_text("mapped-v2", encoding="ascii")
+        assert run(nanres, mapping_root, "scan").returncode == 0
+        mapping_changed = {
+            item["key"]: item
+            for item in tomllib.loads(mapping_lock_path.read_text(encoding="utf-8"))["resources"]
+        }
+        assert mapping_changed["app/stable"]["id"] == stable_id
+        assert mapping_changed["app/stable"]["revision"] == 2
+        assert mapping_changed["app/shared"]["revision"] == 1
+
+        mapping_policy.write_text(
+            'package = "org.nandina.mapping"\n\n'
+            '[[resources]]\n'
+            'key = "app/stable"\n'
+            'path = "assets/missing.txt"\n',
+            encoding="utf-8",
+        )
+        missing = run(nanres, mapping_root, "scan")
+        assert missing.returncode == 1
+        assert "not a readable file" in missing.stderr
+
+        # 映射错误路径：目录、绝对路径、上跳越界、空路径、同路径多 key、与派生 key 重复。
+        error_root = root / "mapping-errors"
+        error_assets = error_root / "assets"
+        error_assets.mkdir(parents=True)
+        (error_assets / "plain.txt").write_text("plain", encoding="ascii")
+        (error_root / "shared.txt").write_text("shared", encoding="ascii")
+        error_policy = error_root / "resources.toml"
+
+        def scan_mapping(policy_body: str) -> subprocess.CompletedProcess[str]:
+            error_policy.write_text(
+                'package = "org.nandina.errors"\n' + policy_body, encoding="utf-8"
+            )
+            return run(nanres, error_root, "scan")
+
+        directory = scan_mapping('[[resources]]\nkey = "app/dir"\npath = "assets"\n')
+        assert directory.returncode == 1
+        assert "not a readable file" in directory.stderr
+
+        absolute_path = str(error_assets / "plain.txt").replace("\\", "/")
+        absolute = scan_mapping(f'[[resources]]\nkey = "app/abs"\npath = "{absolute_path}"\n')
+        assert absolute.returncode == 1
+        assert "resources[].path must be relative" in absolute.stderr
+
+        (root / "outside.txt").write_text("outside", encoding="ascii")
+        traversal = scan_mapping('[[resources]]\nkey = "app/up"\npath = "../outside.txt"\n')
+        assert traversal.returncode == 1
+        assert "resources[].path contains traversal" in traversal.stderr
+
+        empty = scan_mapping('[[resources]]\nkey = "app/empty"\npath = ""\n')
+        assert empty.returncode == 1
+        assert "resources[].path must not be empty" in empty.stderr
+
+        same_path = scan_mapping(
+            '[[resources]]\nkey = "app/one"\npath = "shared.txt"\n\n'
+            '[[resources]]\nkey = "app/two"\npath = "shared.txt"\n'
+        )
+        assert same_path.returncode == 1
+        assert "same path" in same_path.stderr
+
+        derived_duplicate = scan_mapping(
+            '[[roots]]\npath = "assets"\n\n'
+            '[[resources]]\nkey = "plain.txt"\npath = "shared.txt"\n'
+        )
+        assert derived_duplicate.returncode == 1
+        assert "duplicate resource key" in derived_duplicate.stderr
+
+        if sys.platform != "win32":
+            link = error_root / "link.txt"
+            try:
+                link.symlink_to(error_assets / "plain.txt")
+            except OSError:
+                link = None
+            if link is not None:
+                symlink = scan_mapping('[[resources]]\nkey = "app/link"\npath = "link.txt"\n')
+                assert symlink.returncode == 1
+                assert "explicit resource path is a symlink" in symlink.stderr
+
+        if sys.platform == "win32":
+            # Windows 的 `C:foo` / `\foo` 是 rooted 但非绝对路径，必须同样拒绝。
+            rooted = scan_mapping('[[resources]]\nkey = "app/rooted"\npath = "\\\\foo"\n')
+            assert rooted.returncode == 1
+            assert "resources[].path must be relative" in rooted.stderr
+
+            # NTFS 大小写不敏感：不同大小写拼写的映射路径仍是同一物理文件，只产出一条记录。
+            case_root = root / "mapping-case"
+            case_assets = case_root / "assets"
+            case_assets.mkdir(parents=True)
+            (case_assets / "first.txt").write_text("first", encoding="ascii")
+            (case_root / "resources.toml").write_text(
+                'package = "org.nandina.case"\n\n'
+                '[[roots]]\n'
+                'path = "assets"\n\n'
+                '[[resources]]\n'
+                'key = "app/stable"\n'
+                'path = "assets/First.txt"\n',
+                encoding="utf-8",
+            )
+            assert run(nanres, case_root, "scan").returncode == 0
+            case_lock = {
+                item["key"]: item
+                for item in tomllib.loads(
+                    (case_root / "resources.lock.toml").read_text(encoding="utf-8")
+                )["resources"]
+            }
+            assert set(case_lock) == {"app/stable"}
+
+        # 扫描根内无法派生规范 key 的文件也可以由显式映射声明：映射优先于路径派生。
+        upper_root = root / "mapping-upper"
+        (upper_root / "assets" / "Fonts").mkdir(parents=True)
+        (upper_root / "assets" / "Fonts" / "Default.ttf").write_bytes(b"font")
+        (upper_root / "resources.toml").write_text(
+            'package = "org.nandina.upper"\n\n'
+            '[[roots]]\n'
+            'path = "assets"\n\n'
+            '[[resources]]\n'
+            'key = "app/default-font"\n'
+            'path = "assets/Fonts/Default.ttf"\n',
+            encoding="utf-8",
+        )
+        assert run(nanres, upper_root, "scan").returncode == 0
+        upper_lock = {
+            item["key"]: item
+            for item in tomllib.loads(
+                (upper_root / "resources.lock.toml").read_text(encoding="utf-8")
+            )["resources"]
+        }
+        assert set(upper_lock) == {"app/default-font"}
+        assert upper_lock["app/default-font"]["source"] == "assets/Fonts/Default.ttf"
+
+        # 旧 lock 的随机 ID：同 key 内容变化时保留旧 ID，只推进 revision（迁移留给 P2.3b）。
+        legacy_root = root / "legacy-id"
+        legacy_assets = legacy_root / "assets"
+        legacy_assets.mkdir(parents=True)
+        (legacy_assets / "keep.txt").write_text("v1", encoding="ascii")
+        (legacy_root / "resources.toml").write_text(
+            'package = "org.nandina.legacy"\n\n[[roots]]\npath = "assets"\n',
+            encoding="utf-8",
+        )
+        assert run(nanres, legacy_root, "scan").returncode == 0
+        legacy_lock_path = legacy_root / "resources.lock.toml"
+        legacy_entry = tomllib.loads(legacy_lock_path.read_text(encoding="utf-8"))["resources"][0]
+        fabricated = "00000000-1111-2222-3333-444444444444"
+        legacy_lock_path.write_text(
+            legacy_lock_path.read_text(encoding="utf-8").replace(
+                legacy_entry["id"], fabricated
+            ),
+            encoding="utf-8",
+        )
+        (legacy_assets / "keep.txt").write_text("v2", encoding="ascii")
+        assert run(nanres, legacy_root, "scan").returncode == 0
+        legacy_after = tomllib.loads(legacy_lock_path.read_text(encoding="utf-8"))["resources"][0]
+        assert legacy_after["id"] == fabricated
+        assert legacy_after["revision"] == 2
 
         deferred = run(nanres, root, "watch")
         assert deferred.returncode == 3

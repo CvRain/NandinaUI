@@ -1,6 +1,6 @@
 # D5：资源构建、部署与运行时定位
 
-> **状态：D5 范围与目标契约已冻结；P2.1a/P2.1b/P2.2a/P2.2b/P2.2c/P2.2d 已实施，其余子批按路线图推进。** 2026-10-11 定案。
+> **状态：D5 范围与目标契约已冻结；P2.1a/P2.1b/P2.2a–P2.2d/P2.3a 已实施，其余子批按路线图推进。** 2026-10-11 定案。
 > 本文汇总 nanres 模块边界、资源自动构建、SQLite 可选依赖以及跨部署布局的定位设计。
 > “目标契约”是实施依据，不表示当前代码已经满足；具体类型名、构建选项名与算法按批次定形。
 > 示例为伪代码，不是现有公开接口，也不表示项目已经支持 CMake、Windows/macOS 安装或 Web 资源加载。
@@ -55,7 +55,7 @@ nanres 是服务应用的资源构建工具，不是 UI 组件。它可以独立
 | 脚手架资源目标是 `build_by_default`，应用 executable 未显式依赖它 | 脚手架模板（NandinaCLI 消费），主仓库只保留 `nandina_resources.build` | 定向构建应用不能仅凭默认目标保证资源就绪 |
 | 模板设置 `build_always_stale: true` | [nandina_resources.build](../../meson/nandina_resources.build) | 每次运行 helper 是当前发现变化的方式，不是精确增量依赖模型 |
 | helper 在 validate 失败后 scan，并生成开发定位元数据 | [nanres_build_helper.py](../../tools/nanres_build_helper.py) | 缺少过期与真正错误的结构化区分，自动行为还会影响 lock |
-| scan 写策略目录下的 lock，新身份可由 `ResourceId::random()` 产生 | [nanres_main.cpp](../../tools/nanres_main.cpp)、[resource_manifest.cpp](../../tools/resource_manifest.cpp) | 不能不分析身份语义就将 lock 移进可随时删除的 build 目录 |
+| scan 写策略目录下的 lock，新身份由 `package_id + key` 派生（旧 lock 条目暂留随机 ID，P2.3b 迁移） | [nanres_main.cpp](../../tools/nanres_main.cpp)、[resource_manifest.cpp](../../tools/resource_manifest.cpp) | 不能不分析身份语义就将 lock 移进可随时删除的 build 目录 |
 | 开发元数据包含绝对 package_root，portable stage 只复制包与外置资源 | [build_location.hpp](../../nandina/resource/build_location.hpp)、[portable_stage.py](../../tools/portable_stage.py) | 开发定位与可重定位部署已有区分，可继续复用 |
 | 应用配置构造路径会自动寻找并打开 SQLite 包 | [nan_application.cpp](../../nandina/app/nan_application.cpp) | 可选后端需要同时调整启动策略，不能只删库依赖 |
 | 当前 locator 校验 HOME/XDG 并列举可执行文件旁、用户和系统目录 | [platform_resource_locator.cpp](../../nandina/resource/platform_resource_locator.cpp) | 这是现有 Linux 风格策略，不是通用跨平台安装协议 |
@@ -232,10 +232,10 @@ Meson 与未来 CMake 适配调用同一构建核心，不各写一套业务规�
 ## 6. 稳定资源身份与构建缓存：自动化前置，不阻塞解耦
 
 现有 lock 同时包含稳定 ID、资源 key、源文件位置、内容摘要等。helper 会在 validate 失败后
-scan；scan 可能写回源码侧 lock，新资源缺少历史身份时可使用随机 ID。
-
-因此“把所有自动生成内容搬进 build”不能机械执行：两个干净构建可能得到不同身份，
-重命名后的身份继承也可能变化。需要先确定消费者依赖 ResourceKey 还是跨构建稳定 ResourceId。
+scan；scan 可能写回源码侧 lock。P2.3a 起新 key 的 ID 由 `package_id + key` 版本化派生
+（§8.4），不再随机分配；已有 lock 中的旧随机 ID 按同 key 保留，直到 P2.3b 的显式迁移命令
+重写。因此“所有自动生成内容搬进 build”不能机械执行：旧 lock 的迁移顺序、重命名后的身份
+继承与碰撞策略仍是 P2.3b 的范围。需要先确定消费者依赖 ResourceKey 还是跨构建稳定 ResourceId。
 
 | 数据 | 性质 | 目标职责 |
 | --- | --- | --- |
@@ -251,6 +251,15 @@ scan；scan 可能写回源码侧 lock，新资源缺少历史身份时可使用
    key 的资源，即使源文件重命名也保持作者引用。跨包引用仍须确定命名空间/包作用域。
 2. 源码树只保存人可审阅的资源声明和显式 key→路径映射；摘要、内部 ID 和扫描缓存生成到
    build 目录，不回写源码树。现有 overrides 尚不等于已支持任意 key→路径重映射，入口需补齐。
+   P2.3a 已补：`[[resources]]` 可同时声明 `key` 与相对 `path`；显式映射优先于路径派生 key，
+   文件不必位于扫描根内；同一路径多个 key、缺失文件、与派生 key 冲突均报错。示例：
+
+   ```toml
+   [[resources]]
+   key = "app/config"
+   path = "assets/config-v2.toml"
+   media_type = "application/toml"
+   ```
 3. 用户配置、存档和业务数据库不持久化生成 ID；使用明确作用域的逻辑 key。修改或删除显式 key
    本身属于作者接口变更，需要明确别名/迁移，而不是靠内部 ID 自动恢复。
 
@@ -560,7 +569,7 @@ D5 范围已冻结。以下为 D5 内部实施顺序；项目总排序仍见 [�
 | 定向构建应用 | 只选应用目标也得到最新必需资源 | 仅保留 build_by_default，移除应用资源依赖 |
 | 新增/修改/删除 | 文件内容与目录成员变化均反映到包，删除旧副产物 | 只登记已存在文件，漏目录成员或清理 |
 | 无变化增量 | 不重写包及描述，不改变无关输出时间戳 | 无条件重新发布全部产物 |
-| 稳定身份（后续身份批） | 显式 key 跨源文件重命名保持，派生 key 按规则变化，用户引用不依赖内部 ID | 用源路径重写显式 key，或把持久数据仍指向内容派生 ID |
+| 稳定身份（P2.3a 已实施） | 显式 key 跨源文件重命名保持，派生 key 按规则变化，用户引用不依赖内部 ID | 用源路径重写显式 key，或把持久数据仍指向内容派生 ID |
 | 重复内容（身份批） | 相同字节的不同 key 可共存且各有记录身份 | 直接把纯字节摘要作为唯一资源记录主键 |
 | 跨挂载 ID 冲突（作用域批） | 带作用域引用各自解析正确；裸 ID 单一命中成功、多重命中报歧义；key 优先级覆盖保持 | ID 查询用 priority 裁决，或缓存跨挂载复用 |
 | 八入口与别名（作用域批） | find/require/open_stream/require_stream 的 key/ID 变体均保留作用域，别名无旁路 | require 返回裸句柄、流丢作用域或别名绕过解析 |
@@ -602,9 +611,11 @@ D5 范围已冻结。以下为 D5 内部实施顺序；项目总排序仍见 [�
 选择及 schema 行为独立比较，不能在归一时删掉。重复 key、别名重定向和存储方式改变均须使
 比较器失败；打乱读取顺序但保持逻辑记录不变应通过。
 
-新资源分配仍保留现有随机身份行为，单独验证唯一性与已有匹配规则，不要求两次独立生成的
-新 ID 数值相等。扫描排序只在影响公开结果、身份匹配或冲突诊断时属于语义；单纯交换不影响
-结果的遍历顺序，不应让集合等价测试失败。需守住的排序契约用专门断言，不靠 SQLite 行顺序。
+解耦批的等价基线记录的是 P2.3a 之前的行为：当时新资源分配随机身份，只验证唯一性与已有
+匹配规则。P2.3a 之后新 key 的 ID 由 `package_id + key` 派生，因此**同输入两次独立生成必须
+相等**，随机性只残留在既有 lock 的旧条目上（P2.3b 迁移后消失）。扫描排序只在影响公开结果、
+身份匹配或冲突诊断时属于语义；单纯交换不影响结果的遍历顺序，不应让集合等价测试失败。需
+守住的排序契约用专门断言，不靠 SQLite 行顺序。
 两个输出根能检验产物的输出根独立性，但两次顺序构建不能证明并行安全。并行/多配置另有
 实际同时构建的用例，检查临时文件与输出互不覆盖，见矩阵对应行。该基线补充既有读写/错误
 用例，不替代它们，也不扩大为跨 SQLite 版本的逐字节包一致性承诺。
@@ -637,7 +648,7 @@ D5 范围已冻结。以下为 D5 内部实施顺序；项目总排序仍见 [�
 本次只冻结设计并同步计划、README、模块/构建边界与故事；不修改运行时代码，不启用新构建
 路径，不替换 SQLite，不将待实现接口写成入门教程中的可用功能。
 
-## 8. P2 实施契约（2026-10-22 定稿；P2.1a/P2.1b/P2.2a/P2.2b/P2.2c/P2.2d 已实施）
+## 8. P2 实施契约（2026-10-22 定稿；P2.1a/P2.1b/P2.2a–P2.2d/P2.3a 已实施）
 
 > 本节把 2026-10-22 的评审结论固化为执行契约。P2 代码按此实施；未写入本节的行为不提前承诺。
 > 路线图 P2 的子批划分与状态见[开发路线](development_roadmap.md)。
@@ -698,7 +709,7 @@ schema 约定；`tools/resource_packager.cpp` 不再包含 `backends/sqlite_back
 ### 8.4 生成数据归属、身份与三种 revision
 
 **归属**：源码目录只保存 `resources.toml`、显式 key 映射与别名；生成的 lock、摘要与扫描缓存
-放到各自 build 目录。P2.1 保留旧行为（`resources.lock.toml` 写在策略目录），P2.3 显式迁移，
+放到各自 build 目录。P2.1 保留旧行为（`resources.lock.toml` 写在策略目录），P2.3b 显式迁移，
 并保证普通构建不再向源码目录回写生成数据。
 
 | 概念 | 决定 | 不稳定因素 |
@@ -711,11 +722,13 @@ schema 约定；`tools/resource_packager.cpp` 不再包含 `backends/sqlite_back
 构建失败并给出冲突诊断；相同 key 的内容变化是正常更新并推进 revision；不同 key 的相同内容
 保留两条独立记录。
 
-**ID 编码冻结**（P2.3 实施）：输入带版本前缀与长度编码，例如
-`"nandina.resource.id.v1\0" + u32(len(package_id)) + package_id + u32(len(key)) + key`，对输入取
-SHA-256 后截断 128 bit，小写十六进制输出；固定测试向量入库。碰撞时不随机换 ID，而是失败。
+**ID 编码冻结**（P2.3a 实施）：输入为
+`"nandina.resource.id.v1\0" + u32_be(len(package_id)) + package_id + u32_be(len(key)) + key`，
+对输入取 SHA-256 后取前 16 字节（128 bit），小写 UUID 形式输出；固定测试向量见
+`tests/resource_tests.cpp`。碰撞时不随机换 ID，而是失败。
 旧 lock（随机 ID）需通过显式命令（如 `nanres scan --rewrite-lock`）迁移；普通构建检测到不匹配
-时提示迁移，不静默改写。
+时提示迁移，不静默改写。P2.3a 先对**新 key** 使用派生 ID；已有 lock 条目按同 key 保留旧 ID，
+迁移与重建确定性留给 P2.3b。
 
 ### 8.5 一致性分类与缓存资格
 
@@ -926,3 +939,62 @@ CI 增设只预热 toml++/Catch2、只安装工具所需系统开发包的资源
 - **验证**：主套件 104/104；无 SQLite UI 单元 81/81（+1 SKIP）；纯工具套件 7/7；
   ASan 单元 83/83（+ `window-lifecycle` SKIP，驱动侧 LSan）；no-RTTI 单元 84/84；
   release check 8/8、Windows 构建与 unit 82/82。完整结果见[开发路线](development_roadmap.md) 的 P2.2d 行。
+
+### 8.17 P2.3a 实施记录（2026-10-24）
+
+- **显式 key 映射**：`[[resources]]` 支持相对 `path`，与 `key` 一起声明 key→源文件映射；
+  文件不必位于扫描根内。显式映射优先于路径派生 key：同一物理路径不会再生成派生记录——
+  扫描器通过 `ResourceScanOptions::mapped_paths` 直接跳过这些文件，既不派生 key 也不报诊断，
+  因此扫描根内无法形成规范 key 的文件（如 `Fonts/Default.ttf`）也能由映射声明。
+  缺失文件、非普通文件、被禁止的 symlink、同一路径映射多个 key、与派生记录重复 key 都返回
+  明确错误。`path` 必须是相对路径且不含 `.`/`..`；rooted 形式（Windows 的 `C:foo`、`\foo`）
+  与绝对路径同样拒绝。路径身份比较使用 `resource_path_identity(...)`（绝对化 +
+  `lexically_normal` 的 generic string；Windows 上再做 ASCII 大小写折叠），所以 NTFS 上大小写
+  不同的拼写仍视为同一物理文件。
+- **key 生成**：新增 `derive_resource_key(prefix, relative)`，冻结为
+  `prefix + "/" + 相对路径`（空前缀直接使用相对路径）；保留大小写、扩展名与 `/` 分隔。
+  `ResourceKey` 仍只接受小写规范段，因此大写路径被诊断为 `invalid_resource_key`。扫描器的
+  大小写归一化碰撞检查与槽位登记发生在 key 验证**之前**：非规范名也占住自己的归一化槽位，
+  所以 `Upper.txt`/`upper.txt` 这类碰撞的归属不取决于目录遍历先看到哪一个。
+- **ID 编码**：新增 `derive_resource_id(package_id, key)`，按 §8.4 的版本前缀 + NUL +
+  big-endian u32 长度 + package_id + key 取 SHA-256，截断前 128 bit 并格式化为小写 UUID。
+  `tests/resource_tests.cpp` 固定三组向量（已用独立实现复算校验）并覆盖同输入稳定、不同
+  package/key 不同 ID，以及长度前缀使 `("ab","c")` 与 `("a","bc")` 分离。
+- **lock 身份**：`build_resource_lock` 改为按 key 匹配上一份 lock；同 key 的内容变化保留 ID
+  并推进 revision，源文件重命名但 key 不变同样保留 ID；新 key 使用派生 ID，内容相同的不同
+  key 各自拥有独立 ID，不再按内容哈希继承旧身份。已有 lock 的旧随机 ID 暂按同 key 保留，
+  `--rewrite-lock` 与构建目录迁移留给 P2.3b。
+- **复核补充（2026-10-24 评审）**：
+  - 修复重构引入的一处语义变化：`normalized_keys` 的登记被误移到 key 验证之后，会让
+    “大写名先被遍历”时丢失归一化碰撞诊断（诊断随目录遍历顺序漂移）。已恢复“先查碰撞 →
+    登记槽位 → 再验证 key”的既有顺序，并新增 `scanner keeps case-insensitive slots for
+    non-canonical names` 用例（两个根固定顺序构造该场景；注入旧顺序时断言失败）。
+  - `merge_explicit_resources` 复用 `resource_scan_options(policy).type_rules`，不再复制
+    media-type 规则提取逻辑，避免 `[[rules]]` 两处漂移。
+  - 补充 CLI 边界：映射源在扫描根外（同 resources.toml 目录）、映射源在扫描根内但无法派生
+    规范 key、同 key 内容变化保 ID 且 revision 递增、无变化重扫不换 ID/不推进 revision、
+    缺失/目录/绝对路径/上跳越界/空路径/同路径多 key/与派生 key 重复/被禁止 symlink 全部报错。
+  - 旧 lock 随机 ID 的保留行为有独立用例：伪造一条随机 ID 的 lock 条目后修改内容，`scan`
+    仍保留该 ID 且 `revision` 推进到 2（模拟 P2.3b 迁移前的历史 lock）。
+  - 追加 `[[rules]]` 的 storage/streaming 对显式映射条目的优先级断言与
+    `derive_resource_key` 拒绝 `a/../b`、绝对输入的断言。
+- **已知边界**：单目录内同时存在 `Upper.txt` 与 `upper.txt` 时，拒绝成立（`normalized_key_
+  collision` 必报），但另一条 `invalid_resource_key` 的归属仍取决于遍历顺序；完整确定性
+  留给 P2.3b 的“重建确定性”项。Windows 路径身份只做 ASCII 大小写折叠，未覆盖 NTFS 逐目录
+  区分大小写、junction 与 8.3 短名别名；符号链接检查只针对路径最后一段（父目录为 junction
+  时未检测）。`[[resources]]` 的 `path` 不支持目录、绝对路径或 `./..`；目录声明与安装布局
+  按 P2.4 收口。
+- **测试**：先改 CLI 断言并确认旧实现失败（派生重命名仍复用旧 ID、显式 `path` 被忽略）；
+  实现后转绿。新增 C++ 固定向量/键派生/长度前缀/大小写槽位测试与上述 Python 边界用例。
+- **验证**：主套件 104/104；无 SQLite UI 单元 81/81（+1 SKIP）；纯工具套件 7/7；
+  ASan 单元 83/83（+ `window-lifecycle` SKIP，驱动侧 LSan）；no-RTTI 单元 84/84；
+  release check 8/8（format 23.1.1、headers、docs 79 篇等）。Windows（`8bb7fec`，bundle
+  同步、工作区干净）：reconfigure/构建 0 错误，`--suite unit` 82/82、0 失败；另用定向脚本
+  在 Windows 上复验：映射 key 的固定 ID 向量 `c73735d1-…`、扫描根内不可派生名的显式映射、
+  `\foo`/`C:foo` 拒绝、NTFS 大小写折叠身份（只产出一条记录）。
+- **Windows 已知失败（非本批引入）**：`nanres-cli` 集成套件在 Windows 的 `pack` 步骤失败
+  （`cannot install resource package: Permission denied`，位于
+  `tools/resource_packager.cpp` 的目录替换）。用不含任何 P2.3a 特性的纯派生 key policy 同样
+  失败，且该文件本批未改；此前 Windows 只跑 `--suite unit`，未覆盖到此路径。Windows 打包
+  修复应作为独立批次处理，不阻塞 P2.3a。
+- 完整结果见[开发路线](development_roadmap.md) 的 P2.3a 行。

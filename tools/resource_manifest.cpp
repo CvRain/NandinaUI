@@ -7,8 +7,10 @@
 #include <array>
 #include <fstream>
 #include <iomanip>
+#include <limits>
 #include <set>
 #include <sstream>
+#include <stdexcept>
 
 namespace nandina::resource
 {
@@ -128,6 +130,83 @@ namespace nandina::resource
                 .revision = static_cast<std::uint64_t>(*revision),
             };
         }
+
+        /// Merge explicit `key -> path` declarations with derived scan results.
+        /// An explicitly mapped file is not also emitted under its path-derived key; path identity
+        /// folds case on Windows, so a differently spelled mapping still shadows the scan record.
+        [[nodiscard]] auto
+        merge_explicit_resources(const ResourcePolicy& policy, const ResourceScanResult& scan)
+            -> std::expected<std::vector<ScannedResource>, std::string> {
+            std::map<std::string, const ResourceOverride*> explicit_by_path;
+            for (const auto& entry: policy.overrides) {
+                const auto& override = entry.second;
+                if (!override.path) {
+                    continue;
+                }
+                if (!explicit_by_path.emplace(resource_path_identity(*override.path), &override)
+                         .second)
+                {
+                    return std::unexpected(
+                        "multiple resource keys map the same path: "
+                        + override.path->generic_string()
+                    );
+                }
+            }
+
+            std::vector<ScannedResource> inputs;
+            inputs.reserve(scan.resources.size() + explicit_by_path.size());
+            for (const auto& resource: scan.resources) {
+                if (explicit_by_path.contains(resource_path_identity(resource.source_path))) {
+                    continue;
+                }
+                inputs.push_back(resource);
+            }
+
+            const auto type_rules = resource_scan_options(policy).type_rules;
+            for (const auto& [key, override]: policy.overrides) {
+                if (!override.path) {
+                    continue;
+                }
+                std::error_code error;
+                if (!policy.allow_symlinks && std::filesystem::is_symlink(*override.path, error)) {
+                    return std::unexpected(
+                        "explicit resource path is a symlink: " + override.path->generic_string()
+                    );
+                }
+                error.clear();
+                if (!std::filesystem::is_regular_file(*override.path, error) || error) {
+                    return std::unexpected(
+                        "explicit resource path is not a readable file: "
+                        + override.path->generic_string()
+                    );
+                }
+                const auto size = std::filesystem::file_size(*override.path, error);
+                if (error) {
+                    return std::unexpected(
+                        "explicit resource size cannot be read: " + override.path->generic_string()
+                    );
+                }
+                inputs.push_back({
+                    .key = key,
+                    .source_path = *override.path,
+                    .media_type =
+                        detect_resource_media_type(*override.path, key.value(), type_rules),
+                    .size = size,
+                });
+            }
+
+            std::ranges::sort(inputs, {}, [](const auto& item) { return item.key.value(); });
+            std::set<ResourceKey> keys;
+            for (const auto& item: inputs) {
+                if (!keys.insert(item.key).second) {
+                    return std::unexpected(
+                        "duplicate resource key after explicit mapping: "
+                        + std::string(item.key.value())
+                    );
+                }
+            }
+            return inputs;
+        }
     } // namespace
 
     auto load_resource_policy(const std::filesystem::path& path)
@@ -236,6 +315,25 @@ namespace nandina::resource
                         return std::unexpected("resources[].key must be a canonical key");
                     }
                     ResourceOverride override {};
+                    if (const auto path_text = (*table)["path"].value<std::string>()) {
+                        if (path_text->empty()) {
+                            return std::unexpected("resources[].path must not be empty");
+                        }
+                        const std::filesystem::path relative(*path_text);
+                        // Reject rooted forms as well as absolute ones: on Windows `C:foo` and
+                        // `\foo` are rooted but not absolute, and `base / rooted` would escape.
+                        if (relative.is_absolute() || relative.has_root_name()
+                            || relative.has_root_directory())
+                        {
+                            return std::unexpected("resources[].path must be relative");
+                        }
+                        for (const auto& part: relative) {
+                            if (part == "." || part == "..") {
+                                return std::unexpected("resources[].path contains traversal");
+                            }
+                        }
+                        override.path = (policy.base_directory / relative).lexically_normal();
+                    }
                     override.media_type = (*table)["media_type"].value<std::string>();
                     if (const auto storage = (*table)["storage"].value<std::string>()) {
                         override.storage = storage_from_string(*storage);
@@ -270,6 +368,52 @@ namespace nandina::resource
                 std::string("resources.toml parse error: ") + error.description().data()
             );
         }
+    }
+
+    auto derive_resource_id(const std::string_view package_id, const ResourceKey& key)
+        -> ResourceId {
+        const auto context = std::unique_ptr<EVP_MD_CTX, decltype(&EVP_MD_CTX_free)>(
+            EVP_MD_CTX_new(),
+            EVP_MD_CTX_free
+        );
+        if (!context || EVP_DigestInit_ex(context.get(), EVP_sha256(), nullptr) != 1) {
+            throw std::runtime_error("cannot initialize resource id digest");
+        }
+        const auto update = [&](const void* data, const std::size_t size) {
+            if (size > 0 && EVP_DigestUpdate(context.get(), data, size) != 1) {
+                throw std::runtime_error("cannot update resource id digest");
+            }
+        };
+        constexpr std::string_view version = "nandina.resource.id.v1";
+        update(version.data(), version.size());
+        const char terminator = '\0';
+        update(&terminator, 1);
+        const auto update_length = [&](const std::size_t size) {
+            if (size > std::numeric_limits<std::uint32_t>::max()) {
+                throw std::length_error("resource id component is too long");
+            }
+            const auto value = static_cast<std::uint32_t>(size);
+            const std::array<std::uint8_t, 4> bytes {
+                static_cast<std::uint8_t>(value >> 24U),
+                static_cast<std::uint8_t>(value >> 16U),
+                static_cast<std::uint8_t>(value >> 8U),
+                static_cast<std::uint8_t>(value),
+            };
+            update(bytes.data(), bytes.size());
+        };
+        update_length(package_id.size());
+        update(package_id.data(), package_id.size());
+        update_length(key.value().size());
+        update(key.value().data(), key.value().size());
+
+        std::array<unsigned char, EVP_MAX_MD_SIZE> digest {};
+        unsigned int size = 0;
+        if (EVP_DigestFinal_ex(context.get(), digest.data(), &size) != 1 || size < 16) {
+            throw std::runtime_error("cannot finalize resource id digest");
+        }
+        ResourceId::Bytes bytes {};
+        std::copy_n(digest.begin(), bytes.size(), bytes.begin());
+        return ResourceId(bytes);
     }
 
     auto load_resource_lock(const std::filesystem::path& path)
@@ -364,6 +508,11 @@ namespace nandina::resource
                 options.type_rules.push_back({rule.glob, *rule.media_type});
             }
         }
+        for (const auto& [key, override]: policy.overrides) {
+            if (override.path) {
+                options.mapped_paths.push_back(*override.path);
+            }
+        }
         return options;
     }
 
@@ -378,17 +527,19 @@ namespace nandina::resource
         if (previous && previous->package_id != policy.package_id) {
             return std::unexpected("lock package_id does not match resources.toml");
         }
-        std::map<std::string, const LockedResource*> by_source;
-        std::map<std::string, std::vector<const LockedResource*>> by_hash;
+        auto inputs = merge_explicit_resources(policy, scan);
+        if (!inputs) {
+            return std::unexpected(inputs.error());
+        }
+        std::map<ResourceKey, const LockedResource*> previous_by_key;
         if (previous) {
             for (const auto& item: previous->resources) {
-                by_source.emplace(item.source.generic_string(), &item);
-                by_hash[item.sha256].push_back(&item);
+                previous_by_key.emplace(item.key, &item);
             }
         }
         ResourceLockManifest result {.package_id = policy.package_id};
-        std::set<ResourceId> claimed;
-        for (const auto& scanned: scan.resources) {
+        std::map<ResourceId, ResourceKey> id_owners;
+        for (const auto& scanned: *inputs) {
             auto hash = sha256_file(scanned.source_path);
             if (!hash) {
                 return std::unexpected(hash.error());
@@ -424,33 +575,26 @@ namespace nandina::resource
                     media_type = *found->second.media_type;
                 }
             }
-            const LockedResource* identity = nullptr;
-            if (const auto found = by_source.find(relative.generic_string());
-                found != by_source.end())
+            const LockedResource* previous_item = nullptr;
+            if (const auto found = previous_by_key.find(scanned.key);
+                found != previous_by_key.end())
             {
-                identity = found->second;
+                previous_item = found->second;
             }
-            else if (const auto found = by_hash.find(*hash); found != by_hash.end()) {
-                std::vector<const LockedResource*> available;
-                std::ranges::copy_if(
-                    found->second,
-                    std::back_inserter(available),
-                    [&](const auto* item) { return !claimed.contains(item->id); }
+            // Existing locks keep their recorded ID until the P2.3b migration; new keys use the
+            // frozen package_id + key derivation.
+            const auto resource_id = previous_item
+                ? previous_item->id
+                : derive_resource_id(policy.package_id, scanned.key);
+            if (const auto [owner, inserted] = id_owners.emplace(resource_id, scanned.key);
+                !inserted)
+            {
+                return std::unexpected(
+                    "resource id collision between keys " + std::string(owner->second.value())
+                    + " and " + std::string(scanned.key.value())
                 );
-                if (available.size() > 1) {
-                    return std::unexpected(
-                        "ambiguous content-hash move for " + relative.generic_string()
-                    );
-                }
-                if (available.size() == 1) {
-                    identity = available.front();
-                }
             }
-            const auto resource_id = identity ? identity->id : ResourceId::random();
-            if (!claimed.insert(resource_id).second) {
-                return std::unexpected("one previous UUID matched multiple scanned resources");
-            }
-            const bool content_changed = identity && identity->sha256 != *hash;
+            const bool content_changed = previous_item && previous_item->sha256 != *hash;
             result.resources.push_back({
                 .id = resource_id,
                 .key = scanned.key,
@@ -460,7 +604,8 @@ namespace nandina::resource
                 .sha256 = *hash,
                 .storage = storage,
                 .streaming = streaming,
-                .revision = identity ? identity->revision + (content_changed ? 1U : 0U) : 1U,
+                .revision =
+                    previous_item ? previous_item->revision + (content_changed ? 1U : 0U) : 1U,
             });
         }
         const std::set<ResourceKey> generated_keys = [&] {

@@ -9,6 +9,7 @@
 #endif
 #include <nandina/resource/platform_resource_locator.hpp>
 #include <nandina/resource/resource_manager.hpp>
+#include <nandina/resource/resource_manifest.hpp>
 #include <nandina/resource/resource_scanner.hpp>
 #include <nandina/resource/resource_uri.hpp>
 
@@ -366,6 +367,112 @@ TEST_CASE("resource scanner rejects unsafe paths and normalized collisions", "[r
     REQUIRE(std::ranges::none_of(result.resources, [](const auto& item) {
         return item.key.value().contains("hidden") || item.key.value().contains("build-output")
             || item.key.value().contains("package");
+    }));
+}
+
+TEST_CASE("resource id derivation matches frozen vectors", "[resource][identity]") {
+    const auto small = resource::ResourceKey("app/small.txt");
+    REQUIRE(
+        resource::derive_resource_id("org.nandina.test", small).to_string()
+        == "2320d16a-80d2-4640-fb6a-afb242396aff"
+    );
+    REQUIRE(
+        resource::derive_resource_id("org.nandina.test", resource::ResourceKey("app/small2.txt"))
+            .to_string()
+        == "c742fdac-210f-b9ac-e68c-ced7380c4a8b"
+    );
+    REQUIRE(
+        resource::derive_resource_id("org.nandina.other", small).to_string()
+        == "65905463-1da5-dcc8-a0fb-5a0919451868"
+    );
+    REQUIRE(
+        resource::derive_resource_id("org.nandina.test", small)
+        == resource::derive_resource_id("org.nandina.test", small)
+    );
+    REQUIRE(
+        resource::derive_resource_id("org.nandina.test", small)
+        != resource::derive_resource_id("org.nandina.other", small)
+    );
+    // Length prefixes keep "ab"+"c" distinct from "a"+"bc"; plain concatenation would collide.
+    REQUIRE(
+        resource::derive_resource_id("ab", resource::ResourceKey("c"))
+        != resource::derive_resource_id("a", resource::ResourceKey("bc"))
+    );
+}
+
+TEST_CASE("scanner keeps case-insensitive slots for non-canonical names", "[resource][scan]") {
+    // 两个根按顺序访问，因此“大写名先被看到”的顺序是确定的：非规范名也必须占用其大小写
+    // 归一化槽位，否则碰撞诊断会随目录遍历顺序漂移。
+    TempDirectory temp;
+    std::filesystem::create_directories(temp.path / "first");
+    std::filesystem::create_directories(temp.path / "second");
+    {
+        std::ofstream file(temp.path / "first/Upper.txt");
+        file << "a";
+    }
+    {
+        std::ofstream file(temp.path / "second/upper.txt");
+        file << "b";
+    }
+    const auto result = resource::scan_resources({
+        .roots = {
+            {.path = temp.path / "first"},
+            {.path = temp.path / "second"},
+        },
+    });
+    REQUIRE_FALSE(result.valid());
+    REQUIRE(
+        std::ranges::count_if(
+            result.diagnostics,
+            [](const auto& diagnostic) {
+                return diagnostic.code == resource::ScanDiagnosticCode::normalized_key_collision;
+            }
+        )
+        == 1
+    );
+}
+
+TEST_CASE("resource key derivation preserves prefix and path", "[resource][identity]") {
+    const auto prefixed = resource::derive_resource_key("app", "dir/file.txt");
+    REQUIRE(prefixed.has_value());
+    REQUIRE(prefixed->value() == "app/dir/file.txt");
+    const auto bare = resource::derive_resource_key("", "file.txt");
+    REQUIRE(bare.has_value());
+    REQUIRE(bare->value() == "file.txt");
+    // ResourceKey 只允许小写规范段；大写路径不能成为隐式 key。
+    REQUIRE_FALSE(resource::derive_resource_key("app", "Fonts/Default.ttf"));
+    REQUIRE_FALSE(resource::derive_resource_key("Bad", "file.txt"));
+    REQUIRE_FALSE(resource::derive_resource_key("app", ""));
+    REQUIRE_FALSE(resource::derive_resource_key("app", "a/../b"));
+    REQUIRE_FALSE(resource::derive_resource_key("app", "/absolute/file.txt"));
+}
+
+TEST_CASE("scanner leaves explicitly mapped paths to the mapping", "[resource][scan]") {
+    TempDirectory temp;
+    std::filesystem::create_directories(temp.path / "assets");
+    {
+        std::ofstream file(temp.path / "assets/Upper.txt");
+        file << "a";
+    }
+    const auto mapped = temp.path / "assets/Upper.txt";
+    // 映射路径的身份归一化：`. /` 与直接拼写是同一个文件。
+    REQUIRE(
+        resource::resource_path_identity(temp.path / "assets" / "." / "Upper.txt")
+        == resource::resource_path_identity(mapped)
+    );
+    const auto skipped = resource::scan_resources({
+        .roots = {{.path = temp.path / "assets"}},
+        .mapped_paths = {mapped},
+    });
+    // 无法派生规范 key 的文件由显式映射拥有：扫描器不派生、不诊断。
+    REQUIRE(skipped.valid());
+    REQUIRE(skipped.resources.empty());
+    const auto derived = resource::scan_resources({
+        .roots = {{.path = temp.path / "assets"}},
+    });
+    REQUIRE_FALSE(derived.valid());
+    REQUIRE(std::ranges::any_of(derived.diagnostics, [](const auto& diagnostic) {
+        return diagnostic.code == resource::ScanDiagnosticCode::invalid_resource_key;
     }));
 }
 

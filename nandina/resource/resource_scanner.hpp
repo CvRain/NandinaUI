@@ -46,6 +46,9 @@ namespace nandina::resource
         std::vector<std::string> excludes;
         std::vector<ResourceTypeRule> type_rules;
         std::vector<std::filesystem::path> output_paths;
+        /// Paths whose identity is owned by an explicit `key -> path` mapping. The scanner
+        /// neither derives a key nor reports diagnostics for them; the mapping decides validity.
+        std::vector<std::filesystem::path> mapped_paths;
         bool include_hidden = false;
         bool allow_symlinks = false;
     };
@@ -65,6 +68,17 @@ namespace nandina::resource
     };
 
     [[nodiscard]] auto scan_resources(const ResourceScanOptions& options) -> ResourceScanResult;
+
+    /// Identity for comparing path spellings of the same file: absolute, lexically normalized
+    /// generic string; ASCII case-folded on Windows, where the filesystem is case-insensitive.
+    [[nodiscard]] auto resource_path_identity(const std::filesystem::path& path) -> std::string;
+
+    /// Key derivation rule: `key_prefix` + '/' + path relative to the scan root, preserving
+    /// path case and extension. Empty prefix uses the relative path unchanged.
+    [[nodiscard]] auto
+    derive_resource_key(std::string_view key_prefix, const std::filesystem::path& relative)
+        -> std::optional<ResourceKey>;
+
     [[nodiscard]] auto detect_resource_media_type(
         const std::filesystem::path& path,
         std::string_view logical_key,

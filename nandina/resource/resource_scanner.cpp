@@ -5,6 +5,7 @@
 #include <cctype>
 #include <fstream>
 #include <map>
+#include <set>
 
 namespace nandina::resource
 {
@@ -162,6 +163,31 @@ namespace nandina::resource
         });
     }
 
+    auto
+    derive_resource_key(const std::string_view key_prefix, const std::filesystem::path& relative)
+        -> std::optional<ResourceKey> {
+        const auto logical = relative.generic_string();
+        if (logical.empty()) {
+            return std::nullopt;
+        }
+        if (key_prefix.empty()) {
+            return ResourceKey::parse(logical);
+        }
+        if (!ResourceKey::parse(key_prefix)) {
+            return std::nullopt;
+        }
+        return ResourceKey::parse(std::string(key_prefix) + "/" + logical);
+    }
+
+    auto resource_path_identity(const std::filesystem::path& path) -> std::string {
+        auto identity = std::filesystem::absolute(path).lexically_normal().generic_string();
+#if defined(_WIN32)
+        // Windows 文件系统默认大小写不敏感：同一物理路径的不同大小写拼写必须比较为同一身份。
+        identity = ascii_lower(std::move(identity));
+#endif
+        return identity;
+    }
+
     auto detect_resource_media_type(
         const std::filesystem::path& path,
         const std::string_view logical_key,
@@ -184,6 +210,10 @@ namespace nandina::resource
     auto scan_resources(const ResourceScanOptions& options) -> ResourceScanResult {
         ResourceScanResult result;
         std::map<std::string, std::filesystem::path> normalized_keys;
+        std::set<std::string> mapped_identities;
+        for (const auto& mapped: options.mapped_paths) {
+            mapped_identities.insert(resource_path_identity(mapped));
+        }
         for (const auto& root: options.roots) {
             std::error_code error;
             if (!std::filesystem::is_directory(root.path, error) || error) {
@@ -225,6 +255,13 @@ namespace nandina::resource
                     continue;
                 }
                 const auto path = iterator->path();
+                if (!mapped_identities.empty()
+                    && mapped_identities.contains(resource_path_identity(path)))
+                {
+                    // 显式 key→路径映射拥有该文件的身份：不派生 key、不诊断，是否有效由映射层决定。
+                    iterator.increment(error);
+                    continue;
+                }
                 const auto relative = path.lexically_relative(root.path);
                 const auto logical_relative = relative.generic_string();
                 if (std::ranges::any_of(
@@ -290,8 +327,11 @@ namespace nandina::resource
                     iterator.increment(error);
                     continue;
                 }
+                // Register the normalized name before validating the key: a non-canonical name
+                // still occupies its case-insensitive slot, so the collision diagnostic does not
+                // depend on which of `Upper.txt`/`upper.txt` the iterator visits first.
                 normalized_keys.emplace(normalized, path);
-                const auto key = ResourceKey::parse(key_text);
+                const auto key = derive_resource_key(root.key_prefix, relative);
                 if (!key) {
                     diagnostic(
                         result,

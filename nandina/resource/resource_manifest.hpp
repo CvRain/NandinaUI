@@ -18,7 +18,9 @@ namespace nandina::resource
     };
 
     /// 针对单个资源 key 的显式覆盖（`[[resources]]`），优先级高于 glob 规则。
+    /// `path` 存在时同时声明显式 key→源文件映射；文件不必位于扫描根内。
     struct ResourceOverride {
+        std::optional<std::filesystem::path> path;
         std::optional<std::string> media_type;
         std::optional<ManifestStorage> storage;
         std::optional<bool> streaming;
@@ -57,6 +59,11 @@ namespace nandina::resource
 
     [[nodiscard]] auto load_resource_policy(const std::filesystem::path& path)
         -> std::expected<ResourcePolicy, std::string>;
+
+    /// Frozen P2.3a identity encoding: version prefix + NUL + big-endian u32 lengths +
+    /// package_id + key, SHA-256 truncated to 128 bit.
+    [[nodiscard]] auto derive_resource_id(std::string_view package_id, const ResourceKey& key)
+        -> ResourceId;
     [[nodiscard]] auto load_resource_lock(const std::filesystem::path& path)
         -> std::expected<ResourceLockManifest, std::string>;
     [[nodiscard]] auto build_resource_lock(
