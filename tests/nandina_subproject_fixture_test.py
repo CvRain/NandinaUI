@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import contextlib
 import hashlib
 import json
 import os
@@ -163,7 +164,7 @@ def main() -> int:
         assert metadata["package_id"] == "org.nandina.fixture"
         lock = source / "resources/resources.lock.toml"
         assert lock.is_file()
-        with sqlite3.connect(package) as database:
+        with contextlib.closing(sqlite3.connect(package)) as database:
             keys = [
                 row[0]
                 for row in database.execute(

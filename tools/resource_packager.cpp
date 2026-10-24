@@ -48,6 +48,23 @@ namespace nandina::resource
             return {};
         }
 
+        /// Close the package database and surface failures. Callers must destroy all prepared
+        /// statements first: `sqlite3_close_v2` would otherwise defer the close and keep the
+        /// file handle alive (directory rename fails on Windows).
+        [[nodiscard]] auto close_database(Database& database) -> std::expected<void, std::string> {
+            sqlite3* raw = database.release();
+            if (!raw) {
+                return {};
+            }
+            const int result = sqlite3_close(raw);
+            if (result != SQLITE_OK) {
+                const auto message = sql_error(raw, "close resource database");
+                database.reset(raw);
+                return std::unexpected(message);
+            }
+            return {};
+        }
+
         [[nodiscard]] auto
         read_bytes(const std::filesystem::path& path, std::uint64_t expected_size)
             -> std::expected<std::vector<std::uint8_t>, std::string> {
@@ -140,8 +157,13 @@ namespace nandina::resource
             -> std::optional<std::string> {
             std::ifstream input(path, std::ios::binary);
             std::string value;
-            return input && std::getline(input, value) ? std::optional<std::string>(value)
-                                                       : std::nullopt;
+            if (!input || !std::getline(input, value)) {
+                return std::nullopt;
+            }
+            if (!value.empty() && value.back() == '\r') {
+                value.pop_back();
+            }
+            return value;
         }
 
         [[nodiscard]] auto bind_resource(
@@ -271,131 +293,139 @@ namespace nandina::resource
         if (!schema) {
             return std::unexpected(schema.error());
         }
-        Statement insert_resource;
-        if (sqlite3_prepare_v2(
-                database.get(),
-                "INSERT INTO resources VALUES(?1,?2,?3,?4,?5,?6,?7)",
-                -1,
-                &insert_resource.value,
-                nullptr
-            )
-            != SQLITE_OK)
-        {
-            return std::unexpected(sql_error(database.get(), "prepare resource insert"));
-        }
         ResourcePackageResult result {database_path, external_root};
-        for (const auto& item: manifest.resources) {
-            const auto source = policy.base_directory / item.source;
-            auto actual_hash = sha256_file(source);
-            if (!actual_hash || *actual_hash != item.sha256) {
-                return std::unexpected(
-                    "resource changed after lock generation: " + item.source.string()
-                );
-            }
-            const auto storage = selected_storage(policy, item);
-            if (item.streaming && storage == ManifestStorage::embedded) {
-                return std::unexpected(
-                    "streaming resource cannot use embedded storage: "
-                    + std::string(item.key.value())
-                );
-            }
-            if (storage == ManifestStorage::embedded) {
-                auto bytes = read_bytes(source, item.size);
-                if (!bytes) {
-                    return std::unexpected(bytes.error());
-                }
-                auto inserted = bind_resource(
+        {
+            Statement insert_resource;
+            if (sqlite3_prepare_v2(
                     database.get(),
-                    insert_resource.value,
-                    item,
-                    storage,
-                    *bytes,
-                    std::nullopt
-                );
-                if (!inserted) {
-                    return std::unexpected(inserted.error());
-                }
-                ++result.embedded_count;
+                    "INSERT INTO resources VALUES(?1,?2,?3,?4,?5,?6,?7)",
+                    -1,
+                    &insert_resource.value,
+                    nullptr
+                )
+                != SQLITE_OK)
+            {
+                return std::unexpected(sql_error(database.get(), "prepare resource insert"));
             }
-            else {
-                const auto relative = std::filesystem::path("external") / item.id.to_string();
-                const auto destination = std::filesystem::path(temporary) / relative;
-                std::filesystem::copy_file(
-                    source,
-                    destination,
-                    std::filesystem::copy_options::overwrite_existing,
-                    filesystem_error
-                );
-                if (filesystem_error) {
+            for (const auto& item: manifest.resources) {
+                const auto source = policy.base_directory / item.source;
+                auto actual_hash = sha256_file(source);
+                if (!actual_hash || *actual_hash != item.sha256) {
                     return std::unexpected(
-                        "cannot copy external resource: " + filesystem_error.message()
+                        "resource changed after lock generation: " + item.source.string()
                     );
                 }
-                auto inserted = bind_resource(
-                    database.get(),
-                    insert_resource.value,
-                    item,
-                    storage,
-                    std::nullopt,
-                    relative
-                );
-                if (!inserted) {
-                    return std::unexpected(inserted.error());
+                const auto storage = selected_storage(policy, item);
+                if (item.streaming && storage == ManifestStorage::embedded) {
+                    return std::unexpected(
+                        "streaming resource cannot use embedded storage: "
+                        + std::string(item.key.value())
+                    );
                 }
-                ++result.external_count;
+                if (storage == ManifestStorage::embedded) {
+                    auto bytes = read_bytes(source, item.size);
+                    if (!bytes) {
+                        return std::unexpected(bytes.error());
+                    }
+                    auto inserted = bind_resource(
+                        database.get(),
+                        insert_resource.value,
+                        item,
+                        storage,
+                        *bytes,
+                        std::nullopt
+                    );
+                    if (!inserted) {
+                        return std::unexpected(inserted.error());
+                    }
+                    ++result.embedded_count;
+                }
+                else {
+                    const auto relative = std::filesystem::path("external") / item.id.to_string();
+                    const auto destination = std::filesystem::path(temporary) / relative;
+                    std::filesystem::copy_file(
+                        source,
+                        destination,
+                        std::filesystem::copy_options::overwrite_existing,
+                        filesystem_error
+                    );
+                    if (filesystem_error) {
+                        return std::unexpected(
+                            "cannot copy external resource: " + filesystem_error.message()
+                        );
+                    }
+                    auto inserted = bind_resource(
+                        database.get(),
+                        insert_resource.value,
+                        item,
+                        storage,
+                        std::nullopt,
+                        relative
+                    );
+                    if (!inserted) {
+                        return std::unexpected(inserted.error());
+                    }
+                    ++result.external_count;
+                }
             }
-        }
-        std::map<ResourceKey, ResourceId> ids;
-        for (const auto& item: manifest.resources) {
-            ids.emplace(item.key, item.id);
-        }
-        Statement insert_alias;
-        if (sqlite3_prepare_v2(
-                database.get(),
-                "INSERT INTO aliases VALUES(?1,?2)",
-                -1,
-                &insert_alias.value,
-                nullptr
-            )
-            != SQLITE_OK)
-        {
-            return std::unexpected(sql_error(database.get(), "prepare alias insert"));
-        }
-        for (const auto& [alias, target]: policy.aliases) {
-            const auto target_id = ids.find(target);
-            if (target_id == ids.end()) {
-                return std::unexpected("alias target is not in lock manifest");
+            std::map<ResourceKey, ResourceId> ids;
+            for (const auto& item: manifest.resources) {
+                ids.emplace(item.key, item.id);
             }
-            const auto alias_text = alias.value();
-            sqlite3_reset(insert_alias.value);
-            sqlite3_clear_bindings(insert_alias.value);
-            if (sqlite3_bind_text(
-                    insert_alias.value,
-                    1,
-                    alias_text.data(),
-                    alias_text.size(),
-                    SQLITE_TRANSIENT
-                ) != SQLITE_OK
-                || sqlite3_bind_blob(
-                       insert_alias.value,
-                       2,
-                       target_id->second.bytes().data(),
-                       target_id->second.bytes().size(),
-                       SQLITE_TRANSIENT
-                   ) != SQLITE_OK
-                || sqlite3_step(insert_alias.value) != SQLITE_DONE)
+            Statement insert_alias;
+            if (sqlite3_prepare_v2(
+                    database.get(),
+                    "INSERT INTO aliases VALUES(?1,?2)",
+                    -1,
+                    &insert_alias.value,
+                    nullptr
+                )
+                != SQLITE_OK)
             {
-                return std::unexpected(sql_error(database.get(), "insert alias"));
+                return std::unexpected(sql_error(database.get(), "prepare alias insert"));
+            }
+            for (const auto& [alias, target]: policy.aliases) {
+                const auto target_id = ids.find(target);
+                if (target_id == ids.end()) {
+                    return std::unexpected("alias target is not in lock manifest");
+                }
+                const auto alias_text = alias.value();
+                sqlite3_reset(insert_alias.value);
+                sqlite3_clear_bindings(insert_alias.value);
+                if (sqlite3_bind_text(
+                        insert_alias.value,
+                        1,
+                        alias_text.data(),
+                        alias_text.size(),
+                        SQLITE_TRANSIENT
+                    ) != SQLITE_OK
+                    || sqlite3_bind_blob(
+                           insert_alias.value,
+                           2,
+                           target_id->second.bytes().data(),
+                           target_id->second.bytes().size(),
+                           SQLITE_TRANSIENT
+                       ) != SQLITE_OK
+                    || sqlite3_step(insert_alias.value) != SQLITE_DONE)
+                {
+                    return std::unexpected(sql_error(database.get(), "insert alias"));
+                }
+            }
+            auto committed = exec(database.get(), "COMMIT; VACUUM;");
+            if (!committed) {
+                return std::unexpected(committed.error());
             }
         }
-        auto committed = exec(database.get(), "COMMIT; VACUUM;");
-        if (!committed) {
-            return std::unexpected(committed.error());
+        // Statements are finalized above; only now can the file handle be released so the
+        // temporary directory can be renamed on Windows.
+        auto closed = close_database(database);
+        if (!closed) {
+            return std::unexpected(closed.error());
         }
-        database.reset();
         {
             std::ofstream output_fingerprint(
-                std::filesystem::path(temporary) / ".nanres-pack.sha256"
+                std::filesystem::path(temporary) / ".nanres-pack.sha256",
+                std::ios::binary
             );
             output_fingerprint << *fingerprint << '\n';
             if (!output_fingerprint) {

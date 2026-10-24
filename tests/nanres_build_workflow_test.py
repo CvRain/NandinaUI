@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import contextlib
 import json
 import os
 import pathlib
@@ -46,7 +47,7 @@ def main() -> int:
         build(helper, nanres, policy, output)
         lock = tomllib.loads((root / "resources.lock.toml").read_text(encoding="utf-8"))
         assert [item["key"] for item in lock["resources"]] == ["first.txt", "second.txt"]
-        with sqlite3.connect(output / "resources.db") as database:
+        with contextlib.closing(sqlite3.connect(output / "resources.db")) as database:
             keys = [row[0] for row in database.execute("select resource_key from resources order by 1")]
         assert keys == ["first.txt", "second.txt"]
 

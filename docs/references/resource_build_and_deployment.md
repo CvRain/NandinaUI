@@ -992,9 +992,27 @@ CI 增设只预热 toml++/Catch2、只安装工具所需系统开发包的资源
   同步、工作区干净）：reconfigure/构建 0 错误，`--suite unit` 82/82、0 失败；另用定向脚本
   在 Windows 上复验：映射 key 的固定 ID 向量 `c73735d1-…`、扫描根内不可派生名的显式映射、
   `\foo`/`C:foo` 拒绝、NTFS 大小写折叠身份（只产出一条记录）。
-- **Windows 已知失败（非本批引入）**：`nanres-cli` 集成套件在 Windows 的 `pack` 步骤失败
-  （`cannot install resource package: Permission denied`，位于
-  `tools/resource_packager.cpp` 的目录替换）。用不含任何 P2.3a 特性的纯派生 key policy 同样
-  失败，且该文件本批未改；此前 Windows 只跑 `--suite unit`，未覆盖到此路径。Windows 打包
-  修复应作为独立批次处理，不阻塞 P2.3a。
+- **Windows 打包修复（后续独立批次，见 §8.18）**：原 `nanres-cli` 在 Windows 的 `pack` 步骤
+  因数据库语句未 finalize、目录重命名被拒而失败；同时 `unchanged` 指纹读写在 CRLF 上不一致。
+  §8.18 已修复并复验，Windows 打包套件现已通过。
 - 完整结果见[开发路线](development_roadmap.md) 的 P2.3a 行。
+
+### 8.18 Windows 资源包安装与指纹修复（2026-10-24）
+
+- **安装失败根因**：`pack_resource_package` 在 `sqlite3_close_v2` 时仍有
+  `insert_resource`/`insert_alias` prepared statement 存活，SQLite 转为 zombie 连接并保留
+  文件句柄；随后 `rename(temporary, output)` 在 Windows 上被拒绝。POSIX 允许带打开句柄重命名
+  目录，因此 Linux 未暴露。
+- **修复**：数据库写入与两条语句放入内层作用域，语句 finalize 后再显式 `close_database(...)`；
+  关闭改用 `sqlite3_close` 并把 `SQLITE_BUSY` 等失败转成错误，不再静默延迟关闭。
+- **指纹平台差异**：`.nanres-pack.sha256` 原先文本模式写入、二进制模式读取，Windows 的 CRLF
+  会让 `unchanged` 判定失败并反复重打包。现在写入使用二进制模式，读取时兼容并去除行尾 `\r`。
+- **测试夹具**：`tests/*.py` 中打开 SQLite 的临时目录改用 `contextlib.closing`，避免 Windows
+  上测试结束时连接仍持有 `resources.db` 导致临时目录清理失败。
+- **测试**：新增 CRLF 指纹回归（Linux 可运行；撤掉读取归一化时 `unchanged` 断言失败）；Windows
+  上 `nanres-cli` 的 `pack`、`unchanged`、外置文件、重建路径全部通过，另跑
+  `nanres-build-workflow`、`portable-stage` 与 `--suite unit`。
+- **验证**：主套件 104/104；无 SQLite UI 单元 81/81（+1 SKIP）；纯工具 7/7；ASan 83/83
+  （+ `window-lifecycle` SKIP）；no-RTTI 84/84；release check 8/8。Windows 在 `0c90d9f` 上
+  应用本批补丁后构建 0 错误，`nanres-cli` / `nanres-build-workflow` / `portable-stage` 通过，
+  `--suite unit` 82/82；测试后 Windows 工作区恢复干净。

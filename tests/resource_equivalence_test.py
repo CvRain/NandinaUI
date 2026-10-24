@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Compare against a pre-split nanres baseline, not a newly generated expectation."""
 
+import contextlib
 import copy
 import hashlib
 import json
@@ -23,7 +24,7 @@ def normalize(snapshot):
 
 
 def snapshot(package):
-    with sqlite3.connect(package / "resources.db") as db:
+    with contextlib.closing(sqlite3.connect(package / "resources.db")) as db:
         rows = db.execute("SELECT hex(id), resource_key, media_type, storage, data, external_path, size FROM resources").fetchall()
         resources = []
         for identity, key, media, storage, data, external, size in rows:

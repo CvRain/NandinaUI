@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import contextlib
 import pathlib
 import sqlite3
 import subprocess
@@ -136,7 +137,7 @@ def main() -> int:
         database = root / "dist/resources/resources.db"
         external_root = root / "dist/resources/external"
         assert database.is_file()
-        with sqlite3.connect(database) as connection:
+        with contextlib.closing(sqlite3.connect(database)) as connection:
             assert connection.execute("PRAGMA application_id").fetchone()[0] == 0x4E414E44
             assert connection.execute("PRAGMA user_version").fetchone()[0] == 1
             rows = connection.execute(
@@ -154,6 +155,10 @@ def main() -> int:
             capture_output=True,
         )
         assert probe.returncode == 0, probe.stderr
+        # Fingerprint files written by a text-mode Windows build carry CRLF; reading must
+        # normalize the line ending instead of forcing a full repack.
+        fingerprint = root / "dist/resources/.nanres-pack.sha256"
+        fingerprint.write_bytes(fingerprint.read_bytes().rstrip(b"\r\n") + b"\r\n")
         unchanged = run(nanres, root, "pack")
         assert unchanged.returncode == 0
         assert unchanged.stdout.startswith("unchanged\t")
