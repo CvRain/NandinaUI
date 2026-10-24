@@ -693,8 +693,10 @@ TEST_CASE(
         tree.set_root(image);
         (void)tree.layout_root(foundation::NanSize(100.0F, 50.0F));
         tree.draw(device);
-        background.drain();
-        ui.drain();
+        for (int round = 0; round < 2; ++round) {
+            background.drain();
+            ui.drain();
+        }
     };
 
     draw();
@@ -768,6 +770,15 @@ TEST_CASE(
     REQUIRE(decoder->calls == 0);
 
     background.drain();
+    REQUIRE(decoder->calls == 0);
+    REQUIRE(ui.tasks.size() == 1);
+
+    // 解析完成后的 UI 检查未命中缓存，才提交后台解码。
+    ui.drain();
+    REQUIRE(decoder->calls == 0);
+    REQUIRE(background.tasks.size() == 1);
+
+    background.drain();
     REQUIRE(decoder->calls == 1);
     REQUIRE(device.rgba_uploads == 0);
     REQUIRE(ui.tasks.size() == 1);
@@ -832,7 +843,18 @@ TEST_CASE(
     REQUIRE(device.rgba_uploads == 0);
 
     background.drain();
-    // 后台任务内完成 res:// 读取 + 解码，仍未上传 GPU。
+    // 第一阶段只在后台解析作用域，解码尚未开始。
+    REQUIRE(backend->key_finds == 1);
+    REQUIRE(decoder->calls == 0);
+    REQUIRE(device.rgba_uploads == 0);
+    REQUIRE(ui.tasks.size() == 1);
+
+    // UI 线程检查缓存未命中，提交第二阶段后台解码。
+    ui.drain();
+    REQUIRE(decoder->calls == 0);
+    REQUIRE(background.tasks.size() == 1);
+
+    background.drain();
     REQUIRE(backend->key_finds == 1);
     REQUIRE(decoder->calls == 1);
     REQUIRE(device.rgba_uploads == 0);
@@ -841,6 +863,76 @@ TEST_CASE(
     ui.drain();
     REQUIRE(image->load_state() == widget::ImageLoadState::ready);
     REQUIRE(device.rgba_uploads == 1);
+}
+
+TEST_CASE(
+    "async resource cache hits skip decode and upload after resolving",
+    "[image][cache][async][resource]"
+) {
+    auto backend = std::make_shared<RecordingBackend>("images");
+    REQUIRE(backend
+                ->insert(
+                    resource_id("16213243-5465-4768-899a-abbccddeeff1"),
+                    resource::ResourceKey("hero.png"),
+                    "image/png",
+                    {1, 2, 3}
+                )
+                .has_value());
+    resource::ResourceManager resources;
+    (void)resources.mount(backend);
+
+    TextureRecordingDevice device;
+    auto decoder = std::make_shared<RecordingDecoder>();
+    ManualTaskQueue background;
+    ManualTaskQueue ui;
+    render::TextureCache cache(
+        device,
+        {},
+        render::TextureCacheAsyncServices {
+            .decoder = decoder,
+            .submit_background = [&background](
+                                     std::move_only_function<void()> task
+                                 ) { return background.submit(std::move(task)); },
+            .post_ui =
+                [&ui](std::move_only_function<void()> task) { return ui.submit(std::move(task)); },
+        }
+    );
+
+    int completions = 0;
+    const auto request = [&] {
+        REQUIRE(cache.load_resource_async(
+            resources,
+            resource::ResourceKey("hero.png"),
+            {},
+            [&completions](auto texture) {
+                ++completions;
+                REQUIRE(texture);
+            }
+        ));
+    };
+
+    request();
+    for (int round = 0; round < 2; ++round) {
+        background.drain();
+        ui.drain();
+    }
+    REQUIRE(completions == 1);
+    REQUIRE(decoder->calls == 1);
+    REQUIRE(device.rgba_uploads == 1);
+    REQUIRE(backend->key_finds == 1);
+    REQUIRE(cache.retained_entries() == 1);
+
+    // 第二次请求仍需解析以确认作用域，但命中缓存后不得再解码或上传。
+    request();
+    background.drain();
+    REQUIRE(backend->key_finds == 2);
+    REQUIRE(decoder->calls == 1);
+    REQUIRE(ui.tasks.size() == 1);
+    ui.drain();
+    REQUIRE(completions == 2);
+    REQUIRE(decoder->calls == 1);
+    REQUIRE(device.rgba_uploads == 1);
+    REQUIRE(cache.retained_entries() == 1);
 }
 
 TEST_CASE(
@@ -905,6 +997,13 @@ TEST_CASE(
     ));
     REQUIRE(background.tasks.size() == 2);
     background.drain();
+    REQUIRE(decoder->calls == 0);
+    REQUIRE(ui.tasks.size() == 2);
+
+    ui.drain();
+    REQUIRE(background.tasks.size() == 2);
+
+    background.drain();
     REQUIRE(decoder->calls == 2);
     ui.drain();
     REQUIRE(completions == 2);
@@ -962,8 +1061,10 @@ TEST_CASE(
         tree.set_root(image);
         (void)tree.layout_root(foundation::NanSize(100.0F, 50.0F));
         tree.draw(device);
-        background.drain();
-        ui.drain();
+        for (int round = 0; round < 2; ++round) {
+            background.drain();
+            ui.drain();
+        }
     };
 
     draw();
@@ -1350,6 +1451,194 @@ TEST_CASE("texture cache evicts inactive least-recently-used textures", "[image]
     REQUIRE(first_weak.expired());
     REQUIRE(dev.destroyed.size() == 1);
     REQUIRE(cache.retained_entries() == 1);
+}
+
+TEST_CASE(
+    "async cache completion survives an overlapping unmount",
+    "[image][cache][async][reclaim]"
+) {
+    auto backend = std::make_shared<resource::MemoryBackend>("overlap");
+    REQUIRE(backend
+                ->insert(
+                    resource_id("22213243-5465-4768-899a-abbccddeeff1"),
+                    resource::ResourceKey("overlap.png"),
+                    "image/png",
+                    {1}
+                )
+                .has_value());
+    resource::ResourceManager resources;
+    const auto mount = resources.mount(backend);
+
+    TextureRecordingDevice device;
+    auto decoder = std::make_shared<RecordingDecoder>();
+    ManualTaskQueue background;
+    ManualTaskQueue ui;
+    render::TextureCache cache(
+        device,
+        {},
+        render::TextureCacheAsyncServices {
+            .decoder = decoder,
+            .submit_background = [&background](
+                                     std::move_only_function<void()> task
+                                 ) { return background.submit(std::move(task)); },
+            .post_ui =
+                [&ui](std::move_only_function<void()> task) { return ui.submit(std::move(task)); },
+        }
+    );
+
+    std::shared_ptr<render::CachedTexture> texture;
+    REQUIRE(cache.load_resource_async(
+        resources,
+        resource::ResourceKey("overlap.png"),
+        {},
+        [&texture](auto loaded) { texture = std::move(loaded); }
+    ));
+
+    // 解析已固定旧挂载结果后卸载；完成仍可用，缓存不因卸载回调而失效。
+    background.drain();
+    REQUIRE(resources.unmount(mount));
+    ui.drain();
+    background.drain();
+    ui.drain();
+
+    REQUIRE(texture != nullptr);
+    REQUIRE(device.rgba_uploads == 1);
+    REQUIRE(cache.retained_entries() == 1);
+    cache.begin_frame();
+    REQUIRE(cache.retained_entries() == 1);
+}
+
+TEST_CASE(
+    "texture cache sweeps entries from destroyed resource domains",
+    "[image][cache][reclaim]"
+) {
+    TextureRecordingDevice device;
+    render::TextureCache cache(device);
+    std::shared_ptr<render::CachedTexture> texture;
+    {
+        auto backend = std::make_shared<resource::MemoryBackend>("domain");
+        REQUIRE(backend
+                    ->insert(
+                        resource_id("17213243-5465-4768-899a-abbccddeeff1"),
+                        resource::ResourceKey("domain.png"),
+                        "image/png",
+                        {1}
+                    )
+                    .has_value());
+        resource::ResourceManager resources;
+        (void)resources.mount(backend);
+        const auto resolved = resources.require(resource::ResourceKey("domain.png"));
+        REQUIRE(resolved.has_value());
+        texture = cache.load_resolved(*resolved);
+        REQUIRE(texture != nullptr);
+        REQUIRE(cache.retained_entries() == 1);
+        // 域仍存活：清扫不删除关联。
+        cache.sweep_expired();
+        REQUIRE(cache.retained_entries() == 1);
+    }
+
+    // 域销毁不会回调缓存；下一次帧边界清扫删除关联。
+    REQUIRE(cache.retained_entries() == 1);
+    cache.begin_frame();
+    REQUIRE(cache.retained_entries() == 0);
+    REQUIRE(device.destroyed.empty());
+    texture.reset();
+    REQUIRE(device.destroyed.size() == 1);
+}
+
+TEST_CASE(
+    "texture cache keeps unmounted live-domain entries until capacity eviction",
+    "[image][cache][reclaim]"
+) {
+    TextureRecordingDevice device;
+    render::TextureCache cache(
+        device,
+        render::TextureCacheLimits {
+            .max_retained_entries = 1,
+            .max_retained_bytes = 1024U * 1024U,
+        }
+    );
+    auto backend = std::make_shared<resource::MemoryBackend>("live");
+    REQUIRE(backend
+                ->insert(
+                    resource_id("18213243-5465-4768-899a-abbccddeeff1"),
+                    resource::ResourceKey("a.png"),
+                    "image/png",
+                    {1}
+                )
+                .has_value());
+    REQUIRE(backend
+                ->insert(
+                    resource_id("19213243-5465-4768-899a-abbccddeeff1"),
+                    resource::ResourceKey("b.png"),
+                    "image/png",
+                    {2}
+                )
+                .has_value());
+    resource::ResourceManager resources;
+    const auto mount = resources.mount(backend);
+    const auto a = resources.require(resource::ResourceKey("a.png"));
+    const auto b = resources.require(resource::ResourceKey("b.png"));
+    REQUIRE(a.has_value());
+    REQUIRE(b.has_value());
+
+    auto first = cache.load_resolved(*a);
+    REQUIRE(first != nullptr);
+    REQUIRE(resources.unmount(mount));
+    cache.sweep_expired();
+    // 域仍存活：卸载本身不触发广播或隐式清理。
+    REQUIRE(cache.retained_entries() == 1);
+
+    auto second = cache.load_resolved(*b);
+    REQUIRE(second != nullptr);
+    REQUIRE(cache.retained_entries() == 1);
+    std::weak_ptr<render::CachedTexture> first_weak = first;
+    first.reset();
+    REQUIRE(first_weak.expired());
+    REQUIRE(device.destroyed.size() == 1);
+}
+
+TEST_CASE("texture cache invalidates a single resolution scope", "[image][cache][reclaim]") {
+    TextureRecordingDevice device;
+    render::TextureCache cache(device);
+    auto backend = std::make_shared<resource::MemoryBackend>("invalidate");
+    REQUIRE(backend
+                ->insert(
+                    resource_id("20213243-5465-4768-899a-abbccddeeff1"),
+                    resource::ResourceKey("a.png"),
+                    "image/png",
+                    {1}
+                )
+                .has_value());
+    REQUIRE(backend
+                ->insert(
+                    resource_id("21213243-5465-4768-899a-abbccddeeff1"),
+                    resource::ResourceKey("b.png"),
+                    "image/png",
+                    {2}
+                )
+                .has_value());
+    resource::ResourceManager resources;
+    (void)resources.mount(backend);
+    const auto a = resources.require(resource::ResourceKey("a.png"));
+    const auto b = resources.require(resource::ResourceKey("b.png"));
+    REQUIRE(a.has_value());
+    REQUIRE(b.has_value());
+
+    const auto first = cache.load_resolved(*a);
+    const auto second = cache.load_resolved(*b);
+    REQUIRE(first != nullptr);
+    REQUIRE(second != nullptr);
+    REQUIRE(cache.retained_entries() == 2);
+
+    cache.invalidate(*a);
+    REQUIRE(cache.retained_entries() == 1);
+    REQUIRE(first != nullptr);
+    const auto loads = device.memory_loads;
+    const auto reloaded = cache.load_resolved(*a);
+    REQUIRE(reloaded != nullptr);
+    REQUIRE(reloaded != first);
+    REQUIRE(device.memory_loads == loads + 1);
 }
 
 TEST_CASE(

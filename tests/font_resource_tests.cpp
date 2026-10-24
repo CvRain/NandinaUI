@@ -272,6 +272,105 @@ TEST_CASE("FontLoader scoped invalidation only drops its own scope", "[resource]
     REQUIRE(reloaded_b->get() == face_b->get());
 }
 
+TEST_CASE(
+    "FontLoader bounds retained faces and evicts least recently used",
+    "[resource][font][cache][reclaim]"
+) {
+    const auto key_a = resource::ResourceKey("fonts/reclaim/a");
+    const auto key_b = resource::ResourceKey("fonts/reclaim/b");
+    auto backend = std::make_shared<resource::MemoryBackend>("reclaim");
+    REQUIRE(backend
+                ->insert(id("05112233-4455-4677-8899-aabbccddeeff"), key_a, "font/ttf", read_font())
+                .has_value());
+    REQUIRE(backend
+                ->insert(id("06112233-4455-4677-8899-aabbccddeeff"), key_b, "font/ttf", read_font())
+                .has_value());
+    resource::ResourceManager resources;
+    (void)resources.mount(backend);
+    text::FontLoader loader(resources, text::FontLoaderLimits {.max_entries = 1});
+
+    const auto first = loader.load(key_a);
+    REQUIRE(first.has_value());
+    REQUIRE(loader.cached_entries() == 1);
+    const auto second = loader.load(key_b);
+    REQUIRE(second.has_value());
+    REQUIRE(loader.cached_entries() == 1);
+
+    // A 是最久未使用项，已被 B 挤出关联；旧 face 仍由调用方持有。
+    const auto first_again = loader.load(key_a);
+    REQUIRE(first_again.has_value());
+    REQUIRE(first_again->get() != first->get());
+    REQUIRE(loader.cached_entries() == 1);
+}
+
+TEST_CASE(
+    "FontLoader eviction follows recent use, not insertion order",
+    "[resource][font][cache][reclaim]"
+) {
+    const auto key_a = resource::ResourceKey("fonts/lru/a");
+    const auto key_b = resource::ResourceKey("fonts/lru/b");
+    const auto key_c = resource::ResourceKey("fonts/lru/c");
+    auto backend = std::make_shared<resource::MemoryBackend>("lru");
+    REQUIRE(backend
+                ->insert(id("09112233-4455-4677-8899-aabbccddeeff"), key_a, "font/ttf", read_font())
+                .has_value());
+    REQUIRE(backend
+                ->insert(id("0a112233-4455-4677-8899-aabbccddeeff"), key_b, "font/ttf", read_font())
+                .has_value());
+    REQUIRE(backend
+                ->insert(id("0b112233-4455-4677-8899-aabbccddeeff"), key_c, "font/ttf", read_font())
+                .has_value());
+    resource::ResourceManager resources;
+    (void)resources.mount(backend);
+    text::FontLoader loader(resources, text::FontLoaderLimits {.max_entries = 2});
+
+    const auto a = loader.load(key_a);
+    const auto b = loader.load(key_b);
+    REQUIRE(a.has_value());
+    REQUIRE(b.has_value());
+    // 访问 A 刷新其最近使用时间；随后插入 C 应淘汰 B，而不是 A。
+    REQUIRE(loader.load(key_a).value().get() == a->get());
+    const auto c = loader.load(key_c);
+    REQUIRE(c.has_value());
+    REQUIRE(loader.cached_entries() == 2);
+
+    // A 被命中刷新过，因此 C 插入时淘汰的是 B；A 与 C 仍可命中同一次创建的 face。
+    REQUIRE(loader.load(key_a).value().get() == a->get());
+    REQUIRE(loader.load(key_c).value().get() == c->get());
+
+    const auto b_again = loader.load(key_b);
+    REQUIRE(b_again.has_value());
+    REQUIRE(b_again->get() != b->get());
+    REQUIRE(loader.load(key_c).value().get() == c->get());
+    // 重新载入 B 后最久未使用的是 A，它应被挤出关联。
+    REQUIRE(loader.load(key_a).value().get() != a->get());
+}
+
+TEST_CASE("FontLoader sweeps expired face associations", "[resource][font][cache][reclaim]") {
+    const auto key_a = resource::ResourceKey("fonts/sweep/a");
+    const auto key_b = resource::ResourceKey("fonts/sweep/b");
+    auto backend = std::make_shared<resource::MemoryBackend>("sweep");
+    REQUIRE(backend
+                ->insert(id("07112233-4455-4677-8899-aabbccddeeff"), key_a, "font/ttf", read_font())
+                .has_value());
+    REQUIRE(backend
+                ->insert(id("08112233-4455-4677-8899-aabbccddeeff"), key_b, "font/ttf", read_font())
+                .has_value());
+    resource::ResourceManager resources;
+    (void)resources.mount(backend);
+    text::FontLoader loader(resources, text::FontLoaderLimits {.max_entries = 4});
+
+    {
+        const auto transient = loader.load(key_a);
+        REQUIRE(transient.has_value());
+    }
+    REQUIRE(loader.cached_entries() == 1);
+    // 下一次访问先清扫已释放的 weak face，再插入新关联。
+    const auto retained = loader.load(key_b);
+    REQUIRE(retained.has_value());
+    REQUIRE(loader.cached_entries() == 1);
+}
+
 TEST_CASE("FontFamily resolves weight aliases and ordered fallbacks", "[resource][font][family]") {
     resource::ResourceManager resources;
     auto memory = std::make_shared<resource::MemoryBackend>();

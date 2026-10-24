@@ -1,6 +1,6 @@
 # D5：资源构建、部署与运行时定位
 
-> **状态：D5 范围与目标契约已冻结；P2.1a/P2.1b/P2.2a/P2.2b/P2.2c 已实施，其余子批按路线图推进。** 2026-10-11 定案。
+> **状态：D5 范围与目标契约已冻结；P2.1a/P2.1b/P2.2a/P2.2b/P2.2c/P2.2d 已实施，其余子批按路线图推进。** 2026-10-11 定案。
 > 本文汇总 nanres 模块边界、资源自动构建、SQLite 可选依赖以及跨部署布局的定位设计。
 > “目标契约”是实施依据，不表示当前代码已经满足；具体类型名、构建选项名与算法按批次定形。
 > 示例为伪代码，不是现有公开接口，也不表示项目已经支持 CMake、Windows/macOS 安装或 Web 资源加载。
@@ -335,8 +335,9 @@ priority 只裁决 key 查询，不能用于裸 ID 的平手裁决。同一 back
 失效移除关联，不销毁使用者仍持有的字体或资源。
 
 回收分两类：清扫 expired 域令牌可删除已销毁 manager 的缓存关联；**仍存活 manager 的旧挂载、
-旧代次不会因此消失**，还需卸载/发布后的定向清理或缓存自身的淘汰机制。具体清扫时机在作用域批
-确定；改变缓存键只保证不错误复用，不等于自动回收。清理不得要求本已销毁的 manager 回调。
+旧代次不会因此消失**，还需卸载/发布后的定向清理或缓存自身的淘汰机制。P2.2d 定为：TextureCache
+在帧边界与保留列表裁剪时清扫 expired 域，FontLoader 在缓存访问时清扫；改变缓存键只保证不错误
+复用，不等于自动回收。清理不得要求本已销毁的 manager 回调。
 
 #### 6.2.3 后端发布代次与同快照义务
 
@@ -636,7 +637,7 @@ D5 范围已冻结。以下为 D5 内部实施顺序；项目总排序仍见 [�
 本次只冻结设计并同步计划、README、模块/构建边界与故事；不修改运行时代码，不启用新构建
 路径，不替换 SQLite，不将待实现接口写成入门教程中的可用功能。
 
-## 8. P2 实施契约（2026-10-22 定稿；P2.1a/P2.1b/P2.2a/P2.2b/P2.2c 已实施）
+## 8. P2 实施契约（2026-10-22 定稿；P2.1a/P2.1b/P2.2a/P2.2b/P2.2c/P2.2d 已实施）
 
 > 本节把 2026-10-22 的评审结论固化为执行契约。P2 代码按此实施；未写入本节的行为不提前承诺。
 > 路线图 P2 的子批划分与状态见[开发路线](development_roadmap.md)。
@@ -744,6 +745,9 @@ SHA-256 后截断 128 bit，小写十六进制输出；固定测试向量入库�
 首版采用**有限容量淘汰 + expired 域清扫**：缓存条目持域弱令牌与代次；manager 存活但旧挂载/
 旧代次的关联由定向失效或容量淘汰清理。暂不实现 manager 向所有缓存广播失效的通知系统。
 直接加载未挂载 `ResourceHandle` 的入口绕过共享缓存，不伪造挂载身份。
+P2.2d 实施：FontLoader 用 `FontLoaderLimits{max_entries}` + LRU，并在访问时清扫 expired 域/
+weak face；TextureCache 在 `begin_frame()`/`trim()` 清扫 expired 域，`invalidate(resolved)`
+做定向清理，既有 retained 容量限制负责存活域旧挂载/旧代次。
 
 ### 8.8 增量与发布义务分配
 
@@ -902,3 +906,23 @@ CI 增设只预热 toml++/Catch2、只安装工具所需系统开发包的资源
 - **验证**：主套件 104/104；无 SQLite UI 单元 81/81（+1 SKIP）；纯工具套件 7/7；
   ASan 单元 83/83（+ `window-lifecycle` SKIP，驱动侧 LSan）；no-RTTI 单元 84/84；
   release check 8/8。完整结果见[开发路线](development_roadmap.md) 的 P2.2c 行。
+
+### 8.16 P2.2d 实施记录（2026-10-24）
+
+- **FontLoader 回收**：新增 `FontLoaderLimits{max_entries = 64}`；缓存项记录 `last_used`，
+  访问时先清扫 expired 域与已释放的 weak face，再按 LRU 淘汰到上限；淘汰只删除关联，不销毁
+  使用者仍持有的 face。新增 `cached_entries()` 供诊断与测试。
+- **TextureCache 回收**：`sweep_expired()` 在 `begin_frame()` 与 `trim()` 时删除已销毁域的索引/
+  保留关联；`invalidate(const ResolvedResource&)` 定向删除单个作用域。既有
+  `max_retained_entries`/`max_retained_bytes` 继续负责存活域内的旧挂载/旧代次；卸载本身不广播、
+  不清扫，进行中的异步完成仍可交付（固定旧结果）。
+- **异步重复解码**：资源异步加载改为两阶段：后台只解析作用域 → UI 线程按作用域查缓存 →
+  未命中才提交后台解码 → UI 上传。缓存命中时不再解码/上传；pending 仍按
+  `(域, 逻辑 key, options)` 合并。C5.5 的“UI 线程不读资源、不解码”保持。
+- **测试**：FontLoader LRU 淘汰、weak face 清扫；TextureCache expired 域清扫、卸载后由容量
+  淘汰、定向失效、异步跨卸载完成、异步缓存命中不触发解码/上传。复核补充：FontLoader 命中
+  刷新最近使用时间后淘汰顺序跟随 LRU 而非插入序。红测注入：禁用容量循环、短路
+  `sweep_expired`、跳过命中检查分别使对应用例失败。
+- **验证**：主套件 104/104；无 SQLite UI 单元 81/81（+1 SKIP）；纯工具套件 7/7；
+  ASan 单元 83/83（+ `window-lifecycle` SKIP，驱动侧 LSan）；no-RTTI 单元 84/84；
+  release check 8/8。完整结果见[开发路线](development_roadmap.md) 的 P2.2d 行。

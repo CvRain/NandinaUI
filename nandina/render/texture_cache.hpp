@@ -131,6 +131,10 @@ namespace nandina::render
         void begin_frame();
 
         void clear();
+        /// 定向失效一个解析作用域在本缓存中的索引与保留关联；不销毁调用方仍持有的纹理。
+        void invalidate(const resource::ResolvedResource& reference);
+        /// 清扫已销毁域的关联（索引与保留列表）；不影响进行中的异步请求。
+        void sweep_expired();
         [[nodiscard]] auto retained_entries() const noexcept -> std::size_t;
         [[nodiscard]] auto retained_bytes() const noexcept -> std::size_t;
 
@@ -164,6 +168,9 @@ namespace nandina::render
         struct PendingEntry {
             Key key;
             std::vector<AsyncCompletion> completions;
+            /// 资源加载第一阶段：后台解析作用域；为空表示直接解码。
+            std::shared_ptr<std::move_only_function<std::optional<resource::ResolvedResource>()>>
+                resolve;
             /// 后台读取 + 解码 + 重试，产出 RGBA 与解析作用域（后台线程执行）。
             std::shared_ptr<std::move_only_function<DecodeResult()>> load;
             std::size_t encoded_bytes = 0;
@@ -191,6 +198,11 @@ namespace nandina::render
         void drain_pending();
         void drain_uploads();
         void finish_async(Key request_key, DecodeResult result, std::uint64_t generation);
+        void resolve_finished(
+            Key request_key,
+            std::optional<resource::ResolvedResource> resolved,
+            std::uint64_t generation
+        );
         [[nodiscard]] static auto same_key(const Key& lhs, const Key& rhs) -> bool;
         [[nodiscard]] static auto
         resource_key(const resource::ResolvedResource& resolved, const ImageLoadOptions& options)

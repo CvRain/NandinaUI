@@ -49,6 +49,13 @@ P2.2c，本批只做编译级消费者迁移。
 后台解析后才形成作用域缓存键，`non_snapshot` 内容可上传但不索引、不保留。文本 key 的
 `load_memory` 仍只用于调用方显式提供的非资源内存。
 
+2026-10-24 P2.2d 缓存回收（experimental，增量）：`text::FontLoaderLimits{max_entries}` 为
+FontLoader 提供有界 LRU，`cached_entries()` 返回当前关联数；访问时清扫 expired 域与已释放的
+weak face，淘汰不销毁调用方持有的 face。`render::TextureCache` 新增 `sweep_expired()` 与
+`invalidate(const ResolvedResource&)`；`begin_frame()`/`trim()` 执行 expired 域清扫，既有
+`max_retained_entries`/`max_retained_bytes` 继续负责容量淘汰。资源异步加载改为解析/解码
+两阶段，缓存命中不再解码或上传；pending 仍按域 + 逻辑 key + options 合并。
+
 | 等级 | 含义 | 稳定性承诺 | 谁可以包含 |
 | --- | --- | --- | --- |
 | `public` | 推荐使用的接口 | alpha 内也尽量不破坏；破坏时给迁移说明 | 应用代码、示例、下游宿主 |

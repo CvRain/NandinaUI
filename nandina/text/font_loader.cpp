@@ -1,5 +1,7 @@
 #include "font_loader.hpp"
 
+#include <iterator>
+
 namespace nandina::text
 {
     namespace
@@ -13,6 +15,13 @@ namespace nandina::text
             };
         }
     } // namespace
+
+    FontLoader::FontLoader(
+        const resource::ResourceManager& resources,
+        const FontLoaderLimits limits
+    ):
+        resources_(&resources),
+        limits_(limits) {}
 
     auto FontLoader::load(const resource::ResourceKey& key, const std::uint32_t face_index)
         -> FontResult<std::shared_ptr<FreeTypeFontFace>> {
@@ -51,8 +60,10 @@ namespace nandina::text
             .face_index = face_index,
         };
         std::lock_guard lock(mutex_);
+        trim_locked();
         if (const auto found = cache_.find(cache_key); found != cache_.end()) {
-            if (auto cached = found->second.lock()) {
+            if (auto cached = found->second.face.lock()) {
+                found->second.last_used = ++use_clock_;
                 return cached;
             }
         }
@@ -60,7 +71,11 @@ namespace nandina::text
         if (!created) {
             return std::unexpected(created.error());
         }
-        cache_[cache_key] = *created;
+        cache_[cache_key] = CachedFace {
+            .face = *created,
+            .last_used = ++use_clock_,
+        };
+        trim_locked();
         return *created;
     }
 
@@ -121,5 +136,26 @@ namespace nandina::text
     void FontLoader::clear() {
         std::lock_guard lock(mutex_);
         cache_.clear();
+    }
+
+    auto FontLoader::cached_entries() const -> std::size_t {
+        std::lock_guard lock(mutex_);
+        return cache_.size();
+    }
+
+    void FontLoader::trim_locked() {
+        // 先清扫已销毁域与已释放的 face；只删除关联，不销毁使用者仍持有的对象。
+        std::erase_if(cache_, [](const auto& entry) {
+            return entry.second.face.expired() || entry.first.identity.domain.expired();
+        });
+        while (cache_.size() > limits_.max_entries) {
+            auto victim = cache_.begin();
+            for (auto entry = std::next(cache_.begin()); entry != cache_.end(); ++entry) {
+                if (entry->second.last_used < victim->second.last_used) {
+                    victim = entry;
+                }
+            }
+            cache_.erase(victim);
+        }
     }
 } // namespace nandina::text

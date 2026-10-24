@@ -4,10 +4,13 @@
 #include "../resource/resource_manager.hpp"
 #include "font_face.hpp"
 
+#include <cstddef>
+#include <cstdint>
 #include <expected>
 #include <filesystem>
 #include <map>
 #include <mutex>
+#include <optional>
 
 namespace nandina::text
 {
@@ -38,9 +41,17 @@ namespace nandina::text
         auto operator<=>(const FontFaceKey&) const = default;
     };
 
+    struct FontLoaderLimits {
+        /// 最多保留的 face 关联数；0 表示不缓存。淘汰只删除关联，不销毁使用者持有的 face。
+        std::size_t max_entries = 64;
+    };
+
     class FontLoader {
     public:
-        explicit FontLoader(const resource::ResourceManager& resources): resources_(&resources) {}
+        explicit FontLoader(
+            const resource::ResourceManager& resources,
+            FontLoaderLimits limits = {}
+        );
 
         [[nodiscard]] auto load(const resource::ResourceKey& key, std::uint32_t face_index = 0)
             -> FontResult<std::shared_ptr<FreeTypeFontFace>>;
@@ -60,18 +71,28 @@ namespace nandina::text
         /// 广域操作：按裸记录 ID 失效本实例中的所有作用域，不跨缓存实例广播。
         void invalidate_wide(resource::ResourceId resource_id);
         void clear();
+        /// 当前保留的 face 关联数（包含尚未清扫的过期项）。
+        [[nodiscard]] auto cached_entries() const -> std::size_t;
 
     private:
+        struct CachedFace {
+            std::weak_ptr<FreeTypeFontFace> face;
+            std::uint64_t last_used = 0;
+        };
+
         [[nodiscard]] auto
         load_resolved(const resource::ResolvedResource& resolved, std::uint32_t face_index)
             -> FontResult<std::shared_ptr<FreeTypeFontFace>>;
         [[nodiscard]] static auto
         create_face(resource::ResourceHandle resource, std::uint32_t face_index)
             -> FontResult<std::shared_ptr<FreeTypeFontFace>>;
+        void trim_locked();
 
         const resource::ResourceManager* resources_;
-        std::mutex mutex_;
-        std::map<FontFaceKey, std::weak_ptr<FreeTypeFontFace>> cache_;
+        FontLoaderLimits limits_;
+        mutable std::mutex mutex_;
+        std::uint64_t use_clock_ = 0;
+        std::map<FontFaceKey, CachedFace> cache_;
     };
 } // namespace nandina::text
 #endif
