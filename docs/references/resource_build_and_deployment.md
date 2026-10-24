@@ -991,7 +991,8 @@ CI 增设只预热 toml++/Catch2、只安装工具所需系统开发包的资源
   release check 8/8（format 23.1.1、headers、docs 79 篇等）。Windows（`8bb7fec`，bundle
   同步、工作区干净）：reconfigure/构建 0 错误，`--suite unit` 82/82、0 失败；另用定向脚本
   在 Windows 上复验：映射 key 的固定 ID 向量 `c73735d1-…`、扫描根内不可派生名的显式映射、
-  `\foo`/`C:foo` 拒绝、NTFS 大小写折叠身份（只产出一条记录）。
+  `\foo`/`C:foo` 拒绝、NTFS 大小写折叠身份（只产出一条记录）；`3c86927` 起 `nanres-cli` 在
+  Windows 全绿，这些 Windows-only 断言随套件执行，不再依赖临时脚本。
 - **Windows 打包修复（后续独立批次，见 §8.18）**：原 `nanres-cli` 在 Windows 的 `pack` 步骤
   因数据库语句未 finalize、目录重命名被拒而失败；同时 `unchanged` 指纹读写在 CRLF 上不一致。
   §8.18 已修复并复验，Windows 打包套件现已通过。
@@ -1013,6 +1014,7 @@ CI 增设只预热 toml++/Catch2、只安装工具所需系统开发包的资源
   上 `nanres-cli` 的 `pack`、`unchanged`、外置文件、重建路径全部通过，另跑
   `nanres-build-workflow`、`portable-stage` 与 `--suite unit`。
 - **验证**：主套件 104/104；无 SQLite UI 单元 81/81（+1 SKIP）；纯工具 7/7；ASan 83/83
-  （+ `window-lifecycle` SKIP）；no-RTTI 84/84；release check 8/8。Windows 在 `0c90d9f` 上
-  应用本批补丁后构建 0 错误，`nanres-cli` / `nanres-build-workflow` / `portable-stage` 通过，
-  `--suite unit` 82/82；测试后 Windows 工作区恢复干净。
+  （+ `window-lifecycle` SKIP）；no-RTTI 84/84；release check 8/8。Windows 在 `3c86927`（bundle
+  同步）上构建 0 错误，`--suite unit` 82/82，`nanres-cli` / `nanres-build-workflow` /
+  `portable-stage` 3/3 通过；复核在 Linux 侧独立复跑主套件 104/104 与 no-SQLite/tools/ASan/
+  no-RTTI 矩阵（计数与基线一致）。

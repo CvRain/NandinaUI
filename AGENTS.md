@@ -224,6 +224,7 @@ git pull --ff-only            # or git fetch <bundle> refs/heads/main:refs/remot
 meson setup --reconfigure buildDir
 ninja -C buildDir
 meson test -C buildDir --suite unit --print-errorlogs
+meson test -C buildDir nanres-cli nanres-build-workflow portable-stage --print-errorlogs
 ```
 
 - A reused build directory may keep a stale thin archive after a target-set change; delete
@@ -231,6 +232,16 @@ meson test -C buildDir --suite unit --print-errorlogs
 - SSH runs in a non-interactive session: GPU/swapchain-dependent checks fail with
   `0x887A0022`. Run GPU device tests, SDF goldens, and any GUI interaction in an interactive
   desktop session; CPU paths can use `--renderer sdl2d` over SSH.
+- The CPU-only resource integration tests (`nanres-cli`, `nanres-build-workflow`, `portable-stage`)
+  do run over SSH and belong to Windows verification: they exercise `pack`, `unchanged`, external
+  files and portable staging. They found both Windows packaging defects fixed in `3c86927`, so do
+  not treat `--suite unit` alone as proof that packaging works.
+- Windows refuses to rename a directory while a file inside it is open. Finalize prepared
+  statements and close the SQLite connection with `sqlite3_close` (a `sqlite3_close_v2` with live
+  statements defers the close and keeps the handle) before renaming the package directory.
+- Keep format files byte-stable across platforms: write them with binary streams when a text-mode
+  CRLF would change the on-disk format, and tolerate a trailing `\r` when reading legacy files
+  (the package fingerprint is the current example).
 - Sync without network: on Linux create a bundle with `git bundle create <file> main --not <old>`,
   copy it over, fetch it to `refs/remotes/bundle/main`, and `git reset --hard` that ref.
 
