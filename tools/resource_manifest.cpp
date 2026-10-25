@@ -427,8 +427,8 @@ namespace nandina::resource
             }
             ResourceLockManifest result {.package_id = *package_id};
             if (const auto* resources = document["resources"].as_array()) {
-                std::set<ResourceId> ids;
-                std::set<ResourceKey> keys;
+                std::map<ResourceId, ResourceKey> ids;
+                std::map<ResourceKey, ResourceId> keys;
                 for (const auto& node: *resources) {
                     const auto* table = node.as_table();
                     if (!table) {
@@ -438,9 +438,22 @@ namespace nandina::resource
                     if (!resource) {
                         return std::unexpected(resource.error());
                     }
-                    if (!ids.insert(resource->id).second || !keys.insert(resource->key).second) {
-                        return std::unexpected("lock manifest contains duplicate identities");
+                    if (const auto found = ids.find(resource->id); found != ids.end()) {
+                        return std::unexpected(
+                            "lock manifest maps resource id " + resource->id.to_string()
+                            + " to keys " + std::string(found->second.value()) + " and "
+                            + std::string(resource->key.value())
+                        );
                     }
+                    if (const auto found = keys.find(resource->key); found != keys.end()) {
+                        return std::unexpected(
+                            "lock manifest maps resource key " + std::string(resource->key.value())
+                            + " to ids " + found->second.to_string() + " and "
+                            + resource->id.to_string()
+                        );
+                    }
+                    ids.emplace(resource->id, resource->key);
+                    keys.emplace(resource->key, resource->id);
                     result.resources.push_back(std::move(*resource));
                 }
             }
@@ -581,11 +594,8 @@ namespace nandina::resource
             {
                 previous_item = found->second;
             }
-            // Existing locks keep their recorded ID until the P2.3b migration; new keys use the
-            // frozen package_id + key derivation.
-            const auto resource_id = previous_item
-                ? previous_item->id
-                : derive_resource_id(policy.package_id, scanned.key);
+            // IDs are always derived; legacy random IDs are migrated explicitly by the CLI.
+            const auto resource_id = derive_resource_id(policy.package_id, scanned.key);
             if (const auto [owner, inserted] = id_owners.emplace(resource_id, scanned.key);
                 !inserted)
             {

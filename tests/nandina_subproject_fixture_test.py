@@ -162,8 +162,9 @@ def main() -> int:
         assert package.is_file()
         metadata = json.loads((build / "resources/resource-location.json").read_text())
         assert metadata["package_id"] == "org.nandina.fixture"
-        lock = source / "resources/resources.lock.toml"
+        lock = build / "resources.lock.toml"
         assert lock.is_file()
+        assert not (source / "resources/resources.lock.toml").exists()
         with contextlib.closing(sqlite3.connect(package)) as database:
             keys = [
                 row[0]

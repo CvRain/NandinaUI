@@ -450,10 +450,139 @@ def main() -> int:
             encoding="utf-8",
         )
         (legacy_assets / "keep.txt").write_text("v2", encoding="ascii")
-        assert run(nanres, legacy_root, "scan").returncode == 0
+        migration = run(nanres, legacy_root, "scan")
+        assert migration.returncode == 1
+        assert "rewrite-lock" in migration.stderr
+        legacy_validate = run(nanres, legacy_root, "validate")
+        assert legacy_validate.returncode == 1
+        assert "rewrite-lock" in legacy_validate.stderr
+        rewritten = run(nanres, legacy_root, "scan", "--rewrite-lock")
+        assert rewritten.returncode == 0
+        assert "rewrote" in rewritten.stderr
         legacy_after = tomllib.loads(legacy_lock_path.read_text(encoding="utf-8"))["resources"][0]
-        assert legacy_after["id"] == fabricated
+        assert legacy_after["id"] == "d63abd13-6861-bb00-2b51-88c24cc19288"
         assert legacy_after["revision"] == 2
+        assert run(nanres, legacy_root, "scan").returncode == 0
+        legacy_stable = tomllib.loads(legacy_lock_path.read_text(encoding="utf-8"))["resources"][0]
+        assert legacy_stable["id"] == legacy_after["id"]
+        assert legacy_stable["revision"] == 2
+
+        # --lock：lock 写入构建目录，源码树不出现生成文件；无变化重扫不重写。
+        lock_root = root / "lock-path"
+        lock_assets = lock_root / "assets"
+        lock_assets.mkdir(parents=True)
+        (lock_assets / "value.txt").write_text("value", encoding="ascii")
+        (lock_root / "resources.toml").write_text(
+            'package = "org.nandina.lock"\n\n[[roots]]\npath = "assets"\n',
+            encoding="utf-8",
+        )
+        lock_file = lock_root / "build/resources.lock.toml"
+        assert run(nanres, lock_root, "scan", "--lock", "build/resources.lock.toml").returncode == 0
+        assert lock_file.is_file()
+        assert not (lock_root / "resources.lock.toml").exists()
+        lock_bytes = lock_file.read_bytes()
+        lock_mtime = lock_file.stat().st_mtime_ns
+        assert run(nanres, lock_root, "scan", "--lock", "build/resources.lock.toml").returncode == 0
+        assert lock_file.read_bytes() == lock_bytes
+        assert lock_file.stat().st_mtime_ns == lock_mtime
+        assert run(nanres, lock_root, "validate", "--lock", "build/resources.lock.toml").returncode == 0
+        assert run(
+            nanres, lock_root, "pack", "--lock", "build/resources.lock.toml", "--output", "pkg"
+        ).returncode == 0
+
+        # --lock/--rewrite-lock 属于 manifest 模式：带 scan 覆盖参数时必须报错而不是静默忽略。
+        raw_lock = run(
+            nanres, lock_root, "scan", "--root", "assets", "--lock", "build/ignored.lock.toml"
+        )
+        assert raw_lock.returncode == 2
+        assert "require manifest mode" in raw_lock.stderr
+        raw_rewrite = run(nanres, lock_root, "scan", "--root", "assets", "--rewrite-lock")
+        assert raw_rewrite.returncode == 2
+        invalid_rewrite = run(nanres, lock_root, "validate", "--rewrite-lock")
+        assert invalid_rewrite.returncode == 2
+        assert "only valid with scan" in invalid_rewrite.stderr
+
+        # 重建确定性：相同 policy/assets 的独立目录得到逐字节相同的 lock。
+        determinant_locks = []
+        for name in ("determinism-a", "determinism-b"):
+            copy_root = root / name
+            copy_assets = copy_root / "assets"
+            copy_assets.mkdir(parents=True)
+            (copy_assets / "value.txt").write_text("value", encoding="ascii")
+            (copy_root / "resources.toml").write_text(
+                'package = "org.nandina.deterministic"\n\n[[roots]]\npath = "assets"\n',
+                encoding="utf-8",
+            )
+            assert run(nanres, copy_root, "scan").returncode == 0
+            determinant_locks.append((copy_root / "resources.lock.toml").read_bytes())
+        assert determinant_locks[0] == determinant_locks[1]
+
+        # 碰撞注入：同一 ID 对应两个不同 key 必须失败并列出冲突 key。
+        collision_root = root / "collision"
+        collision_assets = collision_root / "assets"
+        collision_assets.mkdir(parents=True)
+        (collision_assets / "a.txt").write_text("a", encoding="ascii")
+        (collision_assets / "b.txt").write_text("b", encoding="ascii")
+        (collision_root / "resources.toml").write_text(
+            'package = "org.nandina.collision"\n\n[[roots]]\npath = "assets"\n',
+            encoding="utf-8",
+        )
+        assert run(nanres, collision_root, "scan").returncode == 0
+        collision_lock = collision_root / "resources.lock.toml"
+        collision_entries = tomllib.loads(collision_lock.read_text(encoding="utf-8"))["resources"]
+        first_id = collision_entries[0]["id"]
+        second_id = collision_entries[1]["id"]
+        collision_lock.write_text(
+            collision_lock.read_text(encoding="utf-8").replace(second_id, first_id),
+            encoding="utf-8",
+        )
+        collision = run(nanres, collision_root, "scan")
+        assert collision.returncode == 1
+        assert collision_entries[0]["key"] in collision.stderr
+        assert collision_entries[1]["key"] in collision.stderr
+
+        # 碰撞的另一半：同一 key 对应两个不同 ID 也必须失败并列出冲突 ID。
+        key_collision_root = root / "collision-key"
+        (key_collision_root / "assets").mkdir(parents=True)
+        (key_collision_root / "assets" / "first.txt").write_text("first", encoding="ascii")
+        (key_collision_root / "assets" / "second.txt").write_text("second", encoding="ascii")
+        (key_collision_root / "resources.toml").write_text(
+            'package = "org.nandina.keycollision"\n\n[[roots]]\npath = "assets"\n',
+            encoding="utf-8",
+        )
+        assert run(nanres, key_collision_root, "scan").returncode == 0
+        key_lock = key_collision_root / "resources.lock.toml"
+        key_entries = tomllib.loads(key_lock.read_text(encoding="utf-8"))["resources"]
+        key_lock.write_text(
+            key_lock.read_text(encoding="utf-8").replace(
+                'key = "' + key_entries[1]["key"] + '"',
+                'key = "' + key_entries[0]["key"] + '"',
+            ),
+            encoding="utf-8",
+        )
+        key_collision = run(nanres, key_collision_root, "scan")
+        assert key_collision.returncode == 1
+        assert key_entries[0]["id"] in key_collision.stderr
+        assert key_entries[1]["id"] in key_collision.stderr
+
+        # lock 属于别的包：先报包不匹配，而不是误报“旧 ID 需要迁移”。
+        mismatch_root = root / "package-mismatch"
+        (mismatch_root / "assets").mkdir(parents=True)
+        (mismatch_root / "assets" / "item.txt").write_text("item", encoding="ascii")
+        mismatch_policy = mismatch_root / "resources.toml"
+        mismatch_policy.write_text(
+            'package = "org.nandina.packagea"\n\n[[roots]]\npath = "assets"\n',
+            encoding="utf-8",
+        )
+        assert run(nanres, mismatch_root, "scan").returncode == 0
+        mismatch_policy.write_text(
+            'package = "org.nandina.packageb"\n\n[[roots]]\npath = "assets"\n',
+            encoding="utf-8",
+        )
+        mismatch = run(nanres, mismatch_root, "scan")
+        assert mismatch.returncode == 1
+        assert "does not match resources.toml" in mismatch.stderr
+        assert "rewrite-lock" not in mismatch.stderr
 
         deferred = run(nanres, root, "watch")
         assert deferred.returncode == 3

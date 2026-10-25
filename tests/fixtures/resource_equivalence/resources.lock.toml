@@ -2,7 +2,7 @@ format = 1
 package_id = "org.nandina.equivalence"
 
 [[resources]]
-id = "07f33b2b-73f9-4bfd-92be-be5b11691962"
+id = "d889fd19-e0b9-4f21-32b4-affbdfe34d92"
 key = "app/copy.txt"
 source = "assets/copy.txt"
 media_type = "text/plain"
@@ -13,7 +13,7 @@ streaming = false
 revision = 1
 
 [[resources]]
-id = "e468f17b-3e3b-448d-b332-f5559bc4d25e"
+id = "de6d1301-a6a4-7be0-d280-c6591fd56d3e"
 key = "app/large.txt"
 source = "assets/large.txt"
 media_type = "text/plain"
@@ -24,7 +24,7 @@ streaming = true
 revision = 1
 
 [[resources]]
-id = "5bd922e6-92ad-47c7-bac5-532853aef915"
+id = "6a38e21b-050d-ee4b-a20d-98a0b8e64965"
 key = "app/small.txt"
 source = "assets/small.txt"
 media_type = "text/plain"

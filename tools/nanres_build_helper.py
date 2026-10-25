@@ -54,11 +54,14 @@ def main() -> int:
     if mode != "build":
         raise SystemExit(f"unknown nanres helper mode: {mode}")
 
-    if not run(nanres, policy, "validate", capture_failure=True):
-        run(nanres, policy, "scan")
-        run(nanres, policy, "validate")
+    lock = output.parent / (output.name + ".lock.toml")
+    lock_arg = os.path.relpath(lock, policy.parent)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    if not run(nanres, policy, "validate", "--lock", lock_arg, capture_failure=True):
+        run(nanres, policy, "scan", "--lock", lock_arg)
+        run(nanres, policy, "validate", "--lock", lock_arg)
     relative_output = os.path.relpath(output, policy.parent)
-    run(nanres, policy, "pack", "--output", relative_output)
+    run(nanres, policy, "pack", "--lock", lock_arg, "--output", relative_output)
     if not (output / "resources.db").is_file():
         raise SystemExit("nanres pack did not produce resources.db")
     metadata = {
@@ -73,9 +76,11 @@ def main() -> int:
     if not isinstance(metadata["package_id"], str) or not metadata["package_id"]:
         raise SystemExit("nanres metadata requires package_id or package in resources.toml")
     metadata_path = output / "resource-location.json"
-    temporary = metadata_path.with_suffix(".json.tmp")
-    temporary.write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
-    os.replace(temporary, metadata_path)
+    payload = json.dumps(metadata, indent=2) + "\n"
+    if not metadata_path.is_file() or metadata_path.read_text(encoding="utf-8") != payload:
+        temporary = metadata_path.with_suffix(".json.tmp")
+        temporary.write_text(payload, encoding="utf-8")
+        os.replace(temporary, metadata_path)
     return 0
 
 

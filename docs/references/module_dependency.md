@@ -126,8 +126,9 @@ FontRequest / FontSlant 的唯一类型定义归 `theme/font_request.hpp`；迁�
 先解耦且保持 ID/包格式/扫描行为，作用域批随后独立迁移：后端交付本地结果及一致的发布代次
 （P2.2a），manager 包装域身份与 MountId（P2.2b），FontLoader/纹理缓存的键使用完整作用域
 （P2.2c），并有界淘汰与 expired 域清扫（P2.2d）。`resources.toml` 的显式 key→路径映射、key
-生成规则与版本化 128-bit 派生 ID 已落地（P2.3a）；旧随机 ID 迁移与构建目录 lock 仍待 P2.3b。
-后端不认识 manager 的挂载身份，挂载字段不写进包格式。方向与八入口契约见 D5 §6.2、§11。
+生成规则与版本化 128-bit 派生 ID 已落地（P2.3a）；lock 写入 build 目录、旧 ID 显式迁移与
+重建确定性已完成（P2.3b）；生成常量头仍待 P2.3c。后端不认识 manager 的挂载身份，挂载字段
+不写进包格式。方向与八入口契约见 D5 §6.2、§11。
 
 ## 判断一次改动是否越界
 

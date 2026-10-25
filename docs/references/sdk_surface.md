@@ -66,6 +66,13 @@ weak face，淘汰不销毁调用方持有的 face。`render::TextureCache` 新�
 `resource_path_identity(...)` 统一路径身份比较（Windows 上按 ASCII 折叠大小写）。
 `--rewrite-lock`、构建目录迁移与碰撞注入在 P2.3b。
 
+2026-10-24 P2.3b lock 迁移（构建侧）：`nanres scan/validate/pack` 新增 `--lock <path>`；
+构建 helper 将 lock 写到 `<output>.lock.toml`，普通构建不再写源码树。旧随机 ID 的 lock 会被
+检测并失败，只有 `nanres scan --rewrite-lock` 显式迁移；两个标志仅在 manifest 模式生效，
+原始扫描覆盖下返回用法错误。加载 lock 遇到同 ID 不同 key 或同 key 不同 ID 会列出冲突；lock
+的包 ID 与 policy 不一致时先报包不匹配。相同策略/资产的独立重建得到逐字节相同的 lock，
+无变化不重写 lock 或 `resource-location.json`。
+
 | 等级 | 含义 | 稳定性承诺 | 谁可以包含 |
 | --- | --- | --- | --- |
 | `public` | 推荐使用的接口 | alpha 内也尽量不破坏；破坏时给迁移说明 | 应用代码、示例、下游宿主 |

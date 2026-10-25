@@ -1,6 +1,6 @@
 # D5：资源构建、部署与运行时定位
 
-> **状态：D5 范围与目标契约已冻结；P2.1a/P2.1b/P2.2a–P2.2d/P2.3a 已实施，其余子批按路线图推进。** 2026-10-11 定案。
+> **状态：D5 范围与目标契约已冻结；P2.1a/P2.1b/P2.2a–P2.2d/P2.3a/P2.3b 已实施，其余子批按路线图推进。** 2026-10-11 定案。
 > 本文汇总 nanres 模块边界、资源自动构建、SQLite 可选依赖以及跨部署布局的定位设计。
 > “目标契约”是实施依据，不表示当前代码已经满足；具体类型名、构建选项名与算法按批次定形。
 > 示例为伪代码，不是现有公开接口，也不表示项目已经支持 CMake、Windows/macOS 安装或 Web 资源加载。
@@ -648,7 +648,7 @@ D5 范围已冻结。以下为 D5 内部实施顺序；项目总排序仍见 [�
 本次只冻结设计并同步计划、README、模块/构建边界与故事；不修改运行时代码，不启用新构建
 路径，不替换 SQLite，不将待实现接口写成入门教程中的可用功能。
 
-## 8. P2 实施契约（2026-10-22 定稿；P2.1a/P2.1b/P2.2a–P2.2d/P2.3a 已实施）
+## 8. P2 实施契约（2026-10-22 定稿；P2.1a/P2.1b/P2.2a–P2.2d/P2.3a/P2.3b 已实施）
 
 > 本节把 2026-10-22 的评审结论固化为执行契约。P2 代码按此实施；未写入本节的行为不提前承诺。
 > 路线图 P2 的子批划分与状态见[开发路线](development_roadmap.md)。
@@ -710,7 +710,9 @@ schema 约定；`tools/resource_packager.cpp` 不再包含 `backends/sqlite_back
 
 **归属**：源码目录只保存 `resources.toml`、显式 key 映射与别名；生成的 lock、摘要与扫描缓存
 放到各自 build 目录。P2.1 保留旧行为（`resources.lock.toml` 写在策略目录），P2.3b 显式迁移，
-并保证普通构建不再向源码目录回写生成数据。
+并保证普通构建不再向源码目录回写生成数据。`nanres` 新增 `--lock <path>`；构建 helper 把 lock
+写到 package 输出旁的 `<output>.lock.toml`（例如 `build/resources.lock.toml`），不再在源码树
+生成 lock。没有 build 目录上下文的独立 CLI 仍默认读写策略目录的 `resources.lock.toml`。
 
 | 概念 | 决定 | 不稳定因素 |
 | --- | --- | --- |
@@ -729,6 +731,14 @@ schema 约定；`tools/resource_packager.cpp` 不再包含 `backends/sqlite_back
 旧 lock（随机 ID）需通过显式命令（如 `nanres scan --rewrite-lock`）迁移；普通构建检测到不匹配
 时提示迁移，不静默改写。P2.3a 先对**新 key** 使用派生 ID；已有 lock 条目按同 key 保留旧 ID，
 迁移与重建确定性留给 P2.3b。
+
+**P2.3b 迁移**：`build_resource_lock` 现在始终写派生 ID。`scan`/`validate`/`pack` 遇到与派生
+ID 不一致的 lock 会失败并提示 `nanres scan --rewrite-lock --lock <path>`；只有显式
+`--rewrite-lock`（仅 scan）才重写。`--lock`/`--rewrite-lock` 只在 manifest 模式生效：带
+`--root`/`--exclude`/`--type` 等原始扫描覆盖时它们是用法错误，不会静默忽略。lock 的
+`package_id` 与 policy 不一致时先报包不匹配，不把包错误误导成“旧 ID 需要迁移”。加载 lock 时
+同一 ID 对应不同 key、或同一 key 对应不同 ID 会列出冲突项并失败。无变化时 `scan` 不重写
+lock，helper 也不重写 `resource-location.json`；独立目录的同策略重建得到逐字节相同的 lock。
 
 ### 8.5 一致性分类与缓存资格
 
@@ -1018,3 +1028,28 @@ CI 增设只预热 toml++/Catch2、只安装工具所需系统开发包的资源
   同步）上构建 0 错误，`--suite unit` 82/82，`nanres-cli` / `nanres-build-workflow` /
   `portable-stage` 3/3 通过；复核在 Linux 侧独立复跑主套件 104/104 与 no-SQLite/tools/ASan/
   no-RTTI 矩阵（计数与基线一致）。
+
+### 8.19 P2.3b 实施记录（2026-10-24）
+
+- **lock 位置**：`nanres` 新增 `--lock <path>`，`scan`/`validate`/`pack` 统一读写该路径；
+  独立 CLI 未指定时仍默认策略目录的 `resources.lock.toml`。构建 helper 把 lock 写到
+  `<output>.lock.toml`（与 package 目录同级），源码树不再出现生成的 lock。
+- **迁移**：`build_resource_lock` 始终生成派生 ID。普通 `scan`/`validate`/`pack` 检测到旧 lock
+  的 ID 与派生结果不一致即失败，提示 `nanres scan --rewrite-lock --lock <path>`；只有显式
+  `--rewrite-lock`（仅 scan）才重写。迁移保留同 key 的 revision 与内容，别名/存储/记录不变。
+- **碰撞**：加载 lock 时同一 ID 对应不同 key、或同一 key 对应不同 ID 会列出冲突项并失败；
+  `build_resource_lock` 仍用 `id_owners` 检查派生 ID 碰撞。
+- **确定性/无变化**：相同策略与资产的独立目录得到逐字节相同 lock；`scan` 在
+  `same_lock(previous, generated)` 为真时跳过写入；helper 只在 `resource-location.json` 内容
+  变化时替换描述文件。`pack` 的无变化检测保持。
+- **测试**：先加 CLI 迁移/碰撞/确定性断言并确认旧实现失败（旧 lock 被静默保留、无 `--lock`）；
+  实现后转绿。新增 `--lock` 源码无回写、lock mtime 不变、独立目录 lock 字节一致、同 ID 不同 key
+  碰撞报错、旧随机 ID 迁移与 `--rewrite-lock` 限制；fixture lock/expected ID 迁移为派生值。
+- **复核补充（2026-10-25 评审）**：`--lock`/`--rewrite-lock` 在原始扫描模式下原本会被静默
+  忽略，现返回用法错误；lock 的 `package_id` 与 policy 不匹配时先报包不匹配再谈迁移。新增
+  “同 key 不同 ID”碰撞用例、legacy lock 的 `validate` 迁移提示、manifest-only 标志与包不匹配
+  断言，并各自注入失败确认红测成立。
+- **验证**：主套件 104/104；无 SQLite UI 单元 81/81（+1 SKIP）；纯工具 7/7；ASan 83/83
+  （+ `window-lifecycle` SKIP）；no-RTTI 84/84；release check 8/8。Windows（bundle 同步、工作区
+  干净）：构建 0 错误，`nanres-cli`/`nanres-build-workflow`/`portable-stage` 3/3，`--suite unit`
+  82/82。完整结果见[开发路线](development_roadmap.md) 的 P2.3b 行。

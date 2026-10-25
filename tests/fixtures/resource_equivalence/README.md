@@ -1,7 +1,9 @@
 # Pre-split resource baseline
 
-`resources.lock.toml` and `expected.json` were captured using the pre-refactor
-`buildDir/nanres` saved before P2.1a (source HEAD `1263099`). The fixture has two
+`resources.lock.toml` and `expected.json` originated from the pre-refactor
+`buildDir/nanres` saved before P2.1a (source HEAD `1263099`); P2.3b migrated the
+record IDs to the frozen `package_id + key` derivation while keeping the same
+logical records, aliases, storage classes and payloads. The fixture has two
 distinct records with identical bytes, an external record and two aliases.
 
 `resource_equivalence_test.py` copies the same policy, assets and existing lock

@@ -19,9 +19,11 @@ namespace
         std::vector<std::string> excludes;
         std::vector<resource::ResourceTypeRule> type_rules;
         std::vector<std::filesystem::path> outputs;
+        std::optional<std::filesystem::path> lock_path;
         bool include_hidden = false;
         bool allow_symlinks = false;
         bool has_scan_overrides = false;
+        bool rewrite_lock = false;
     };
 
     void usage() {
@@ -30,6 +32,8 @@ namespace
                      "  --exclude <glob>\n"
                      "  --type <glob>=<media-type>\n"
                      "  --output <path>\n"
+                     "  --lock <path>\n"
+                     "  --rewrite-lock\n"
                      "  --include-hidden\n"
                      "  --allow-symlinks\n";
     }
@@ -47,6 +51,10 @@ namespace
             }
             if (argument == "--allow-symlinks") {
                 result.allow_symlinks = true;
+                continue;
+            }
+            if (argument == "--rewrite-lock") {
+                result.rewrite_lock = true;
                 continue;
             }
             if (index + 1 >= argc) {
@@ -68,6 +76,12 @@ namespace
             else if (argument == "--output") {
                 result.has_scan_overrides = true;
                 result.outputs.emplace_back(value);
+            }
+            else if (argument == "--lock") {
+                if (value.empty()) {
+                    return std::nullopt;
+                }
+                result.lock_path = std::filesystem::path(value);
             }
             else if (argument == "--type") {
                 result.has_scan_overrides = true;
@@ -198,21 +212,31 @@ auto main(int argc, char** argv) -> int {
         usage();
         return 2;
     }
+    if (arguments->rewrite_lock && arguments->command != "scan") {
+        std::cerr << "nanres: --rewrite-lock is only valid with scan\n";
+        return 2;
+    }
 
     const bool manifest_mode = arguments->command == "pack"
         || (!arguments->has_scan_overrides && !arguments->include_hidden
             && !arguments->allow_symlinks);
+    if (!manifest_mode && (arguments->lock_path || arguments->rewrite_lock)) {
+        std::cerr << "nanres: --lock and --rewrite-lock require manifest mode (drop the scan "
+                     "overrides)\n";
+        return 2;
+    }
     if (manifest_mode) {
         if (arguments->command == "pack"
             && (!arguments->roots.empty() || !arguments->excludes.empty()
                 || !arguments->type_rules.empty() || arguments->include_hidden
                 || arguments->allow_symlinks))
         {
-            std::cerr << "nanres: pack only accepts --output as an override\n";
+            std::cerr << "nanres: pack only accepts --output and --lock as overrides\n";
             return 2;
         }
         const std::filesystem::path policy_path = "resources.toml";
-        const std::filesystem::path lock_path = "resources.lock.toml";
+        const std::filesystem::path lock_path =
+            arguments->lock_path.value_or("resources.lock.toml");
         auto policy = resource::load_resource_policy(policy_path);
         if (!policy) {
             std::cerr << "nanres: " << policy.error() << '\n';
@@ -232,6 +256,28 @@ auto main(int argc, char** argv) -> int {
             }
             previous = std::move(*loaded);
         }
+        // 先确认 lock 属于本包，再判断是否需要迁移：包不匹配时派生 ID 必然不同，
+        // 不能让用户误以为只是旧 ID 需要重写。
+        if (previous && previous->package_id != policy->package_id) {
+            std::cerr << "nanres: " << lock_path.generic_string()
+                      << " package_id does not match resources.toml\n";
+            return 1;
+        }
+        bool requires_migration = false;
+        if (previous) {
+            for (const auto& item: previous->resources) {
+                if (item.id != resource::derive_resource_id(policy->package_id, item.key)) {
+                    requires_migration = true;
+                    break;
+                }
+            }
+        }
+        if (requires_migration && !arguments->rewrite_lock) {
+            std::cerr << "nanres: " << lock_path.generic_string()
+                      << " contains legacy resource ids; run nanres scan --rewrite-lock --lock "
+                      << lock_path.generic_string() << '\n';
+            return 1;
+        }
         auto generated = resource::build_resource_lock(*policy, scan, previous);
         if (!generated) {
             std::cerr << "nanres: " << generated.error() << '\n';
@@ -239,7 +285,8 @@ auto main(int argc, char** argv) -> int {
         }
         if (arguments->command == "validate" || arguments->command == "pack") {
             if (!previous || !same_lock(*previous, *generated)) {
-                std::cerr << "nanres: resources.lock.toml is missing or stale; run nanres scan\n";
+                std::cerr << "nanres: " << lock_path.generic_string()
+                          << " is missing or stale; run nanres scan\n";
                 return 1;
             }
             if (arguments->command == "pack") {
@@ -261,10 +308,25 @@ auto main(int argc, char** argv) -> int {
             }
             return 0;
         }
-        auto written = resource::write_resource_lock_atomic(*generated, lock_path);
-        if (!written) {
-            std::cerr << "nanres: " << written.error() << '\n';
-            return 1;
+        if (!previous || !same_lock(*previous, *generated)) {
+            if (lock_path.has_parent_path()) {
+                std::error_code directory_error;
+                std::filesystem::create_directories(lock_path.parent_path(), directory_error);
+                if (directory_error) {
+                    std::cerr << "nanres: cannot create lock directory: "
+                              << directory_error.message() << '\n';
+                    return 1;
+                }
+            }
+            auto written = resource::write_resource_lock_atomic(*generated, lock_path);
+            if (!written) {
+                std::cerr << "nanres: " << written.error() << '\n';
+                return 1;
+            }
+            if (requires_migration) {
+                std::cerr << "nanres: rewrote " << lock_path.generic_string()
+                          << " with derived resource ids\n";
+            }
         }
         for (const auto& item: generated->resources) {
             std::cout << item.id.to_string() << '\t' << item.key.value() << '\t' << item.media_type

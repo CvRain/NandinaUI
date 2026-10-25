@@ -17,11 +17,12 @@ application shell. Version `0.1.0-alpha.1`.
 
 ### Current milestone state (2026-10-24)
 
-- P1 is closed. The P2 resource closure is implemented through **P2.3a**: tool/UI split, startup
-  policy, scoped manager results, cache identity, cache reclamation, and resource identity
-  (explicit `key → path` mapping, frozen key derivation, versioned 128-bit derived IDs).
-- Next sub-batches: P2.3b (lock migration, collision injection, rebuild determinism, `--rewrite-lock`),
-  P2.3c (minimal constant header), and P2.4 (example application).
+- P1 is closed. The P2 resource closure is implemented through **P2.3b**: tool/UI split, startup
+  policy, scoped manager results, cache identity, cache reclamation, resource identity
+  (explicit `key → path` mapping, frozen key derivation, versioned 128-bit derived IDs), and
+  lock migration (build-dir lock, explicit `--rewrite-lock`, collision diagnostics, no-rewrite
+  determinism).
+- Next sub-batches: P2.3c (minimal constant header) and P2.4 (example application).
 - The plan and exit criteria are **not** owned by this file: read
   `docs/references/development_roadmap.md` and the D5 contract
   (`resource_build_and_deployment.md` §8) before claiming a sub-batch is complete.
@@ -285,10 +286,13 @@ meson test -C buildDir nanres-cli nanres-build-workflow portable-stage --print-e
   `derive_resource_id(package_id, key)` (version prefix + NUL + big-endian u32 lengths +
   package_id + key, SHA-256 truncated to 128 bit); it is implemented in
   `tools/resource_manifest.cpp` (tools layer, OpenSSL) so keep it out of the runtime core. Never
-  invent random IDs for new keys. `build_resource_lock` matches the previous lock by key: the same
-  key keeps its ID (a content change only bumps `revision`), derived-key renames and new keys get
-  derived IDs, and legacy random IDs survive only for unchanged keys until the P2.3b migration.
-  Do not reintroduce content-hash identity inheritance.
+  invent random IDs for new keys. `build_resource_lock` always writes derived IDs; `scan` fails on
+  legacy random IDs unless `--rewrite-lock` is explicit, and lock loading lists duplicate-ID or
+  duplicate-key collisions. `--lock`/`--rewrite-lock` are manifest-mode only (raw scan overrides
+  reject them); a lock whose `package_id` differs from the policy fails before migration advice.
+  The build helper writes the lock to `<output>.lock.toml` in the build tree (`--lock <path>`); do
+  not reintroduce content-hash identity inheritance or source-tree lock writes from the normal
+  build.
 - **Components**: follow `docs/references/adding_a_component.md`; recipe/default/style edits span
   `theme/visual_state.hpp`, `design_system.hpp/.cpp`, and component code. Use semantic tokens.
 - **Formatting**: clang-format 23.1.1 only, column limit 100, 4-space indent, namespace
