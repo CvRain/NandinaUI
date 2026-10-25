@@ -5,6 +5,85 @@
 > 谁能改 golden"。第一批落地对象是 [D7](reference_draft.md#d7-渲染质量与后端视觉一致性) 的
 > 混合修复：按钮按下、涟漪中间态、Dialog 遮罩。
 
+## 0. 五分钟理解：golden 和 page_probe 到底在做什么
+
+> 这一节写给第一次接触视觉回归的人，用大白话解释概念；要动手请直接看 §2（采集）、§4（更新流程）
+> 和 §7（跨平台策略）。
+
+**一句话**：`page_probe` 负责把真实页面渲染出来"拍一张照"，`golden` 是那张照片经过人工
+批准后留下的"底片"；以后改了代码就重新拍一张，跟底片对比，像素变化超过容差就提醒人来看。
+
+### 0.1 `page_probe`：会拍照的探针
+
+`page_probe`（可执行文件 `nandina_sdl_page_probe`，源码 `probe/cross_platform/desktop/page_probe.cpp`）
+**不是测试，而是一个独立的小程序**：
+
+1. 创建一个隐藏的 1200×800 窗口（可见窗口会被合成器缩放，像素不可复现）；
+2. 起真实的 `NanApplication` → `NanRouter` → 场景树 → 字体管线 → `IRenderDevice`；
+3. 按 `NANDINA_PROBE_PAGE` 加载 showcase 的 `home` / `label` / `anchors` 页面之一；
+4. 跑固定 30 帧（dt = 1/60），在 `SDL_RenderPresent` **之前**读回像素（present 之后读到过空帧）；
+5. 按需把像素写成 BMP（`NANDINA_PROBE_CAPTURE`），或输出逐图元 trace、交互注入、性能采样。
+
+两条渲染路径：默认 GPU（生产 SDF 路径），`NANDINA_PROBE_RENDERER=sdl2d` 走 CPU 几何路径
+（无 swapchain 的 SSH 会话只能走这条）。它默认**不构建**，需要
+`meson setup buildDir-probe -Dsdl_page_probe=true`。
+
+### 0.2 `golden`：被批准过的页面截图
+
+`golden` 就是 `tests/golden/backend/candidates/` 里那些**被人工批准**的页面图。
+`tests/golden/backend/manifest.toml` 用 `(page, backend, platform)` 做键，记录图片哈希、
+尺寸、状态（`candidate` / `approved`）和审阅人/日期。比较器只把 `approved` 当基线；
+`candidate` 只是"候选"，不判失败。
+
+**为什么不能随便截一张就当预期？** 那会把当时的 bug 一起批准成"正确"。所以仓库把预期分两层：
+
+| 层 | 怎么判断 | 谁在跑 |
+| --- | --- | --- |
+| 基础正确性 | 数学解析值（如半透明合成色、裁剪边界），不取自任何后端当前输出 | `tests/sdl_visual_tests.cpp`（unit 套件，软件渲染，无窗口） |
+| 页面观感 | 与审核过的 golden 比"有没有异常变化" | `page_probe` + 本节的工具链（手动） |
+
+一句话：unit 测试证明"算得对"，golden 只证明"和上次一样"。
+
+### 0.3 三个工具串起来的流程
+
+```text
+capture_backend_golden.py  跑 probe → 候选图 + manifest 条目（status = candidate）
+        ↓  人看候选图 / 差异图，确认变化是想要的
+approve_backend_golden.py  校验哈希 → status = approved，写入 reviewed_by / reviewed_on
+        ↓  之后每次本地检查
+compare_backend_golden.py  重新渲染 → 逐像素比较；approved 超阈值退出 1 并输出差异图
+```
+
+默认容差是逐通道 ±3、变化像素比例 ≤ 0.1%（比较器参数）；超限才判失败。
+
+### 0.4 最容易误解的几点
+
+- **它不在 CI 里**：CI 只跑与显示器无关的 `golden-manifest` 清单校验（文件、哈希、状态、
+  approved 必须有审阅元数据）。像素比较需要真实窗口/GPU/桌面会话，是本地或发布机的手动命令。
+- **它不能跨平台复用**：字体栅格化、AA、DPI、像素格式都不同，Linux 基线不能当 Windows 预期；
+  `platform` 是清单键的一部分，跨平台差异只记录、不参与门禁。
+- **它不会自动变绿或自动更新**：`capture` 默认拒绝覆盖 approved 条目（要 `--force`）；
+  批准必须带审阅字段；改容差与改 golden 同等审批，不能当作让检查通过的手段。
+- **加页面不会自动获得基线**：还要在探针里注册路由、按平台/渲染路径各采一次、人工审阅、
+  写清容差理由并批准。例如 showcase 的 Image 页目前没有 golden：探针既没有注册该页，也没有
+  挂载 showcase 的资源包（`res://` 在探针里解析不了），这两步是加基线的前置。
+- **它不负责性能**：帧成本用 `tools/backend_performance.py` + `tools/check_backend_budget.py`
+  的另一套采样协议，两者数字不能混用。
+
+### 0.5 最常用的三条命令
+
+```bash
+# 采集候选（先构建 buildDir-probe；approved 默认拒绝被覆盖）
+python3 tools/capture_backend_golden.py --pages home,label,anchors --modes sdf,cpu
+
+# 与 approved 基线比较（首轮可与自己的候选比，应为 0 差异）
+python3 tools/compare_backend_golden.py --page label --backend sdf \
+  --diff /tmp/diff.png --json /tmp/stats.json
+
+# 人工审阅候选后批准（--revoke 可撤销）
+python3 tools/approve_backend_golden.py --entries all --reviewer <name> --note "..."
+```
+
 ## 1. 为什么不能"每个后端存一张自己画出来的图"
 
 那会把后端现存缺陷固化成预期：SDL 此前缺几何混合，如果 golden 直接取当时输出，"白底白字"就变成
