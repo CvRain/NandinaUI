@@ -1,0 +1,5 @@
+package = "com.nandina.showcase"
+
+[[roots]]
+path = "../assets"
+key_prefix = ""

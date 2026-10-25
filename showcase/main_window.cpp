@@ -7,6 +7,7 @@
 #include "components/sidebar.hpp"
 #include "pages/anchors_page.hpp"
 #include "pages/home_page.hpp"
+#include "pages/image_page.hpp"
 #include "pages/label_page.hpp"
 
 #include <nandina/widget/controls.hpp>
@@ -25,9 +26,16 @@ namespace nandina::showcase
             nandina::app::route<AnchorsPage>(
                 app::RouteOptions {.address = "anchors", .title = "锚点", .type = "手册"}
             ),
-            nandina::app::route<LabelPage>(
-                app::RouteOptions {.address = "form/label", .title = "Label", .type = "表单"}
-            ),
+            nandina::app::route<LabelPage>(app::RouteOptions {
+                .address = "content_and_display/label",
+                .title = "Label",
+                .type = "内容与展示"
+            }),
+            nandina::app::route<ImagePage>(app::RouteOptions {
+                .address = "content_and_display/image",
+                .title = "Image",
+                .type = "内容与展示"
+            })
         };
         auto& router = use_router(routes);
 
