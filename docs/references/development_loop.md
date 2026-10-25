@@ -38,6 +38,9 @@ meson compile -C buildDir && meson test -C buildDir
 # 注意：先编译再测试，且用 && 连起来
 meson compile -C buildDir-asan && \
   LSAN_OPTIONS=detect_leaks=0 meson test -C buildDir-asan --suite unit --print-errorlogs
+# 精简/sanitizer 配置若用 -Dresource_tools=false，必须同时加 -Dshowcase=false：
+# showcase 现在会构建资源包，没有资源工具链时配置阶段直接报错（或用
+# -Dexternal_nanres=<nanres> 保留 showcase）。
 
 meson compile -C buildDir-no-rtti && \
   meson test -C buildDir-no-rtti --suite unit --print-errorlogs

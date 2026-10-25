@@ -171,7 +171,7 @@ Useful options: `-Dbuild_ui=false` (resource tools only), `-Dresource_sqlite=dis
 `examples=true` is currently fatal (reserved). `resource_sqlite=auto` equals enabled.
 `showcase` builds a resource package through the helper, so `-Dresource_tools=false` without
 `-Dexternal_nanres` requires `-Dshowcase=false` (otherwise configure stops with an explanatory
-error).
+error). Keep that in mind when configuring a tools-free sanitizer or minimal build directory.
 
 Gotchas: `meson test` does not rebuild; do not edit the workspace while the full suite runs
 (`nandina-subproject-fixture` packages the tree twice and byte-compares). After target-set
