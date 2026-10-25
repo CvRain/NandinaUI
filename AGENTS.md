@@ -15,14 +15,15 @@ application shell. Version `0.1.0-alpha.1`.
 - Experimental: Windows (MSYS2 UCRT64). Unsupported: macOS.
 - Not a Node/Bun project; there is no JavaScript runtime or package manager.
 
-### Current milestone state (2026-10-24)
+### Current milestone state (2026-10-25)
 
-- P1 is closed. The P2 resource closure is implemented through **P2.3b**: tool/UI split, startup
+- P1 is closed. The P2 resource closure is implemented through **P2.3c**: tool/UI split, startup
   policy, scoped manager results, cache identity, cache reclamation, resource identity
-  (explicit `key → path` mapping, frozen key derivation, versioned 128-bit derived IDs), and
-  lock migration (build-dir lock, explicit `--rewrite-lock`, collision diagnostics, no-rewrite
-  determinism).
-- Next sub-batches: P2.3c (minimal constant header) and P2.4 (example application).
+  (explicit `key → path` mapping, frozen key derivation, versioned 128-bit derived IDs), lock
+  migration (build-dir lock, explicit `--rewrite-lock`, collision diagnostics, no-rewrite
+  determinism), and the minimal author constant header (`nanres keys --header`, logical keys
+  only, collision diagnostics, real compile-dependency test).
+- Next sub-batch: P2.4 (example application).
 - The plan and exit criteria are **not** owned by this file: read
   `docs/references/development_roadmap.md` and the D5 contract
   (`resource_build_and_deployment.md` §8) before claiming a sub-batch is complete.
@@ -228,7 +229,7 @@ git pull --ff-only            # or git fetch <bundle> refs/heads/main:refs/remot
 meson setup --reconfigure buildDir
 ninja -C buildDir
 meson test -C buildDir --suite unit --print-errorlogs
-meson test -C buildDir nanres-cli nanres-build-workflow portable-stage --print-errorlogs
+meson test -C buildDir nanres-cli nanres-build-workflow portable-stage nanres-keys --print-errorlogs
 ```
 
 - A reused build directory may keep a stale thin archive after a target-set change; delete
@@ -236,10 +237,11 @@ meson test -C buildDir nanres-cli nanres-build-workflow portable-stage --print-e
 - SSH runs in a non-interactive session: GPU/swapchain-dependent checks fail with
   `0x887A0022`. Run GPU device tests, SDF goldens, and any GUI interaction in an interactive
   desktop session; CPU paths can use `--renderer sdl2d` over SSH.
-- The CPU-only resource integration tests (`nanres-cli`, `nanres-build-workflow`, `portable-stage`)
-  do run over SSH and belong to Windows verification: they exercise `pack`, `unchanged`, external
-  files and portable staging. They found both Windows packaging defects fixed in `3c86927`, so do
-  not treat `--suite unit` alone as proof that packaging works.
+- The CPU-only resource integration tests (`nanres-cli`, `nanres-build-workflow`, `portable-stage`,
+  `nanres-keys`) do run over SSH and belong to Windows verification: they exercise `pack`,
+  `unchanged`, external files, portable staging and the generated key header with a real C++
+  compile. They found both Windows packaging defects fixed in `3c86927`, so do not treat
+  `--suite unit` alone as proof that packaging works.
 - Windows refuses to rename a directory while a file inside it is open. Finalize prepared
   statements and close the SQLite connection with `sqlite3_close` (a `sqlite3_close_v2` with live
   statements defers the close and keeps the handle) before renaming the package directory.
@@ -295,7 +297,11 @@ meson test -C buildDir nanres-cli nanres-build-workflow portable-stage --print-e
   reject them); a lock whose `package_id` differs from the policy fails before migration advice.
   The build helper writes the lock to `<output>.lock.toml` in the build tree (`--lock <path>`); do
   not reintroduce content-hash identity inheritance or source-tree lock writes from the normal
-  build.
+  build. `nanres keys --header <path>` emits the optional author constant header: logical keys
+  only, `RESOURCE_*` symbols inside `nandina::resource_keys::pkg_*` (package-id `.`/`-`/`_` are
+  escaped as `DOT`/`DASH`/`UNDERSCORE`), alias constants included, symbol collisions fail loudly,
+  and an unchanged header is not rewritten. Treat it as a build-side generated input, never as a
+  hand-maintained source of truth.
 - **Components**: follow `docs/references/adding_a_component.md`; recipe/default/style edits span
   `theme/visual_state.hpp`, `design_system.hpp/.cpp`, and component code. Use semantic tokens.
 - **Formatting**: clang-format 23.1.1 only, column limit 100, 4-space indent, namespace
@@ -359,7 +365,10 @@ meson test -C buildDir nanres-cli nanres-build-workflow portable-stage --print-e
   driver-side LeakSanitizer. GPU/page-golden and performance work are local/release checks, not CI.
 - **Golden/visual**: page goldens compare per-channel tolerances against approved entries; capture
   never overwrites approved baselines, and approval needs human review metadata. Never copy
-  baselines across platforms.
+  baselines across platforms. The plain-language overview and the full capture/approve workflow
+  live in `docs/references/visual_regression.md` §0; a new page only gets a baseline after it is
+  registered in `probe/cross_platform/desktop/page_probe.cpp` (with a mounted resource package
+  when it uses `res://`), captured per platform/render path, reviewed and approved.
 - **Coverage expectation**: no numeric percentage gate; require behavioral coverage of new public
   API/boundaries and configuration-specific builds. Do not edit tracked files during a full suite
   run, and do not trust a green `release_check` that reports SKIPs for unavailable tools.

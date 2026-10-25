@@ -90,6 +90,19 @@ namespace nandina::resource
     [[nodiscard]] auto
     pack_resource_package(const ResourcePolicy& policy, const ResourceLockManifest& manifest)
         -> std::expected<ResourcePackageResult, std::string>;
+
+    /// P2.3c minimal author header: `inline constexpr std::string_view` constants for every
+    /// canonical key and alias. Only logical keys are emitted; ids, source paths, content
+    /// digests and installation locations never enter the header.
+    [[nodiscard]] auto
+    generate_resource_key_header(const ResourcePolicy& policy, const ResourceLockManifest& manifest)
+        -> std::expected<std::string, std::string>;
+
+    /// Writes only when the content changes, so a no-op build preserves the header mtime.
+    /// Returns true when the file was written.
+    [[nodiscard]] auto
+    write_resource_key_header_atomic(std::string_view content, const std::filesystem::path& path)
+        -> std::expected<bool, std::string>;
 } // namespace nandina::resource
 
 #endif

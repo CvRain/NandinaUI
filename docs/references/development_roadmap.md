@@ -44,8 +44,8 @@
 ### P2 应用闭环（资源与工具）
 
 > 实施契约（目标依赖图、选项真值表、启动策略、lock/revision/ID 语义、子批与门禁）见
-> [D5 §8](resource_build_and_deployment.md#8-p2-实施契约2026-10-22-定稿p21ap21bp22ap22dp23ap23b-已实施)。
-> **状态：P2.1a/P2.1b/P2.2a–P2.2d/P2.3a/P2.3b 已实施（2026-10-22 至 10-24）；P2.3c、P2.4 未实施。**
+> [D5 §8](resource_build_and_deployment.md#8-p2-实施契约2026-10-22-定稿p21ap23c-已实施)。
+> **状态：P2.1a/P2.1b/P2.2a–P2.2d/P2.3a–P2.3c 已实施（2026-10-22 至 10-25）；P2.4 未实施。**
 
 | 编号 | 交付 | 前置 | 退出条件 |
 | --- | --- | --- | --- |
@@ -57,7 +57,7 @@
 | P2.2d | 缓存回收与并发：有限容量淘汰 + expired 域清扫 | P2.2c | **已完成（2026-10-24）**：FontLoader 新增 `FontLoaderLimits` + LRU，访问时清扫 expired 域/weak face，淘汰不销毁外部持有 face；TextureCache 在帧边界与 trim 清扫 expired 域，新增 `invalidate(resolved)` 定向清理，保留既有 retained 容量淘汰；卸载不广播，重叠中的异步完成可交付。异步资源加载改为“后台解析 → UI 查缓存 → 后台解码 → UI 上传”，命中不再解码/上传。红测注入：禁用容量循环/短路 sweep/跳过命中检查均使用例失败。验证：主套件 104/104、无 SQLite UI 单元 81/81（+1 SKIP）、纯工具 7/7、ASan 83/83 + window SKIP、no-RTTI 84/84、release check 8/8 |
 | P2.3a | 策略 key 映射与生成算法、ID 编码（版本前缀/长度编码/固定测试向量） | P2.2 | **已完成（2026-10-24）**：`[[resources]] key + path` 显式映射优先于派生 key；`derive_resource_key` 冻结前缀+相对路径规则；`derive_resource_id` 使用版本前缀 + NUL + big-endian u32 长度 + SHA-256 前 128 bit，固定三组向量；lock 按 key 匹配，内容变化保 ID、派生重命名换 ID，不同 key 同内容独立 ID；旧随机 ID 暂按同 key 保留。先改 CLI 断言确认旧实现失败，修复后转绿；复核修复扫描器把归一化槽位登记误移到 key 验证之后的顺序变化（大写名先遍历时丢失碰撞诊断），复用 `resource_scan_options` 的 media-type 规则；新增 `ResourceScanOptions::mapped_paths` 让显式映射文件不派生 key/不报诊断，路径身份统一走 `resource_path_identity`（Windows ASCII 折叠大小写），拒绝 rooted `path`；补映射错误路径、扫描根外/根内不可派生映射、同 key 保 ID/revision、旧随机 ID 保留与长度前缀测试。主套件 104/104、无 SQLite UI 单元 81/81（+1 SKIP）、纯工具 7/7、ASan 83/83 + window SKIP、no-RTTI 84/84、release check 8/8；Windows 在 `8bb7fec` 上构建 0 错误、unit 82/82，定向脚本复验映射 ID 向量/根内映射/rooted 拒绝/大小写折叠；Windows 打包曾因数据库句柄/CRLF 指纹失败，已由 D5 §8.18 修复，`nanres-cli`/`nanres-build-workflow`/`portable-stage` 通过 |
 | P2.3b | lock 迁移（生成数据移入 build 目录）、碰撞（同 ID 不同逻辑记录）、revision、无变化不重写 | P2.3a | **已完成（2026-10-24）**：`nanres --lock` 统一 lock 路径，helper 写到 `<output>.lock.toml`，源码树不再生成 lock；普通 scan/validate/pack 遇到旧随机 ID 失败并提示 `scan --rewrite-lock`，仅显式 flag（scan）重写；加载 lock 对同 ID 不同 key / 同 key 不同 ID 列出冲突；独立目录重建得到逐字节相同 lock；无变化跳过 lock 与 location 描述写入。先加迁移/碰撞/确定性断言确认旧实现失败，修复后转绿；fixture lock/expected ID 已迁移。复核补：`--lock`/`--rewrite-lock` 仅在 manifest 模式生效（原始扫描覆盖下报用法错误），lock 包不匹配先于迁移检查报错，新增同 key 不同 ID 碰撞与 legacy validate 迁移断言。验证：主套件 104/104、无 SQLite UI 81/81（+1 SKIP）、纯工具 7/7、ASan 83/83 + window SKIP、no-RTTI 84/84、release check 8/8；Windows（bundle 同步）构建 0 错误、packaging 3/3、unit 82/82 |
-| P2.3c | 最小常量头（只含逻辑 key）+ 编译依赖测试 | P2.3b | 删除声明后使用该符号编译失败；符号冲突处理 |
+| P2.3c | 最小常量头（只含逻辑 key）+ 编译依赖测试 | P2.3b | **已完成（2026-10-25）**：`nanres keys --header` 从 policy + scan 生成 `inline constexpr std::string_view`；只含规范 key 与别名，不含 ID/摘要/源路径/安装位置。符号规则 `RESOURCE_*`，包级命名空间可逆转义；符号碰撞列出双方并失败，不静默改名。删除 `[[resources]]` 后重生成移除符号，消费者编译失败；无变化不重写头文件。新增真实 C++ 编译 integration 测试，并先注入碰撞检查/无变化写入失败确认红测；复核补包名 `.`/`-`/`_` 转义编译断言、空 policy 与源路径缺失断言。验证：主套件 105/105、无 SQLite UI 81/81（+1 SKIP）、no-RTTI 84/84、纯工具 8/8、ASan 83/83 + window SKIP、release check 8/8；Windows（bundle 同步）构建 0 错误、unit 82/82、`nanres-keys` 与 packaging 测试 4/4 通过 |
 | P2.4a | 示例资源链路：`examples/notes` 的 resources.toml/资产；增量发现、成套发布、定向构建资源就绪、portable stage 重定位运行 | P2.1（完整验收在 P2.2/P2.3 后） | 干净检出 + 离线可构建；目录增删/无变化不重写；失败保留旧产物但返回失败 |
 | P2.4b | 示例应用功能：浏览笔记、编辑表单、预览图片、确认弹窗（导航/滚动贯穿） | P2.4a | 实际运行 + 人工交互验收证据（截图/描述） |
 | P2.4c | 测试脚本与文档：构建检查与运行检查分别记录，失败可复现证据入库 | P2.4b | smoke 脚本入库；showcase 保留组件验收职责 |

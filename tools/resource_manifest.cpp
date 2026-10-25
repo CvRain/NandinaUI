@@ -7,6 +7,7 @@
 #include <array>
 #include <fstream>
 #include <iomanip>
+#include <iterator>
 #include <limits>
 #include <set>
 #include <sstream>
@@ -206,6 +207,65 @@ namespace nandina::resource
                 }
             }
             return inputs;
+        }
+
+        [[nodiscard]] auto ascii_upper(std::string value) -> std::string {
+            for (auto& character: value) {
+                if (character >= 'a' && character <= 'z') {
+                    character = static_cast<char>(character - ('a' - 'A'));
+                }
+            }
+            return value;
+        }
+
+        /// Package ids are canonical lowercase single segments. Escape the three allowed
+        /// separators with uppercase words so `a.b`, `a-b` and `a_b` never share a namespace;
+        /// uppercase can never occur in the source package id, so the mapping is reversible.
+        /// The `pkg_` prefix keeps numeric-leading ids valid and avoids double underscores.
+        [[nodiscard]] auto package_namespace(std::string_view package_id) -> std::string {
+            std::string result = "pkg_";
+            result.reserve(package_id.size() + 12);
+            for (const char character: package_id) {
+                if (character == '.') {
+                    result += "DOT";
+                }
+                else if (character == '-') {
+                    result += "DASH";
+                }
+                else if (character == '_') {
+                    result += "UNDERSCORE";
+                }
+                else {
+                    result.push_back(character);
+                }
+            }
+            return result;
+        }
+
+        /// `images/nandina_cover_1.jpg` -> `RESOURCE_IMAGES_NANDINA_COVER_1_JPG`.
+        /// Separators intentionally collapse; two keys that collide are a generation error
+        /// rather than a silently disambiguated symbol.
+        [[nodiscard]] auto key_symbol(std::string_view key) -> std::string {
+            std::string result = "RESOURCE_";
+            for (const char character: key) {
+                const bool identifier = (character >= 'a' && character <= 'z')
+                    || (character >= 'A' && character <= 'Z')
+                    || (character >= '0' && character <= '9');
+                if (identifier) {
+                    result.push_back(
+                        character >= 'a' && character <= 'z'
+                            ? static_cast<char>(character - ('a' - 'A'))
+                            : character
+                    );
+                }
+                else if (result.back() != '_') {
+                    result.push_back('_');
+                }
+            }
+            if (result.back() == '_') {
+                result.pop_back();
+            }
+            return result;
         }
     } // namespace
 
@@ -676,5 +736,116 @@ namespace nandina::resource
             return std::unexpected("cannot replace lock manifest: " + error.message());
         }
         return {};
+    }
+
+    auto
+    generate_resource_key_header(const ResourcePolicy& policy, const ResourceLockManifest& manifest)
+        -> std::expected<std::string, std::string> {
+        if (manifest.package_id != policy.package_id) {
+            return std::unexpected("lock package_id does not match resources.toml");
+        }
+
+        std::map<ResourceKey, std::string> symbols;
+        std::map<std::string, ResourceKey> owners;
+        std::set<ResourceKey> canonical_keys;
+        const auto add_symbol = [&](const ResourceKey& key) -> std::optional<std::string> {
+            const auto symbol = key_symbol(key.value());
+            if (symbol == "RESOURCE") {
+                return "resource key cannot form a C++ constant: " + std::string(key.value());
+            }
+            if (const auto [owner, inserted] = owners.emplace(symbol, key); !inserted) {
+                return "resource key symbols collide: " + std::string(owner->second.value())
+                    + " and " + std::string(key.value()) + " both map to " + symbol;
+            }
+            symbols.emplace(key, symbol);
+            return std::nullopt;
+        };
+
+        for (const auto& item: manifest.resources) {
+            canonical_keys.insert(item.key);
+            if (auto error = add_symbol(item.key)) {
+                return std::unexpected(std::move(*error));
+            }
+        }
+        for (const auto& [alias, target]: policy.aliases) {
+            if (canonical_keys.contains(alias)) {
+                return std::unexpected(
+                    "alias collides with a canonical resource key: " + std::string(alias.value())
+                );
+            }
+            if (!canonical_keys.contains(target)) {
+                return std::unexpected(
+                    "alias target does not exist: " + std::string(target.value())
+                );
+            }
+            if (auto error = add_symbol(alias)) {
+                return std::unexpected(std::move(*error));
+            }
+        }
+
+        const auto namespace_name = package_namespace(policy.package_id);
+        const auto guard =
+            "NANDINA_GENERATED_RESOURCE_KEYS_" + ascii_upper(namespace_name) + "_HPP";
+        std::ostringstream output;
+        output << "// Generated by nanres from resources.toml. Do not edit.\n"
+               << "// Logical resource keys only; no ids, source paths, or installation "
+                  "locations.\n"
+               << "#ifndef " << guard << "\n#define " << guard << "\n\n"
+               << "#include <string_view>\n\n"
+               << "namespace nandina::resource_keys::" << namespace_name << "\n{\n";
+        for (const auto& [key, symbol]: symbols) {
+            output << "    inline constexpr std::string_view " << symbol << " = \"" << key.value()
+                   << "\";\n";
+        }
+        output << "} // namespace nandina::resource_keys::" << namespace_name << "\n\n"
+               << "#endif // " << guard << "\n";
+        return output.str();
+    }
+
+    auto write_resource_key_header_atomic(
+        const std::string_view content,
+        const std::filesystem::path& path
+    ) -> std::expected<bool, std::string> {
+        {
+            std::ifstream input(path, std::ios::binary);
+            if (input) {
+                const std::string existing(
+                    (std::istreambuf_iterator<char>(input)),
+                    std::istreambuf_iterator<char>()
+                );
+                if (!input.bad() && existing == content) {
+                    return false;
+                }
+            }
+        }
+        if (path.has_parent_path()) {
+            std::error_code directory_error;
+            std::filesystem::create_directories(path.parent_path(), directory_error);
+            if (directory_error) {
+                return std::unexpected(
+                    "cannot create key header directory: " + directory_error.message()
+                );
+            }
+        }
+        const auto temporary = path.string() + ".tmp";
+        {
+            std::ofstream output(temporary, std::ios::binary | std::ios::trunc);
+            if (!output) {
+                return std::unexpected("cannot create key header temporary file");
+            }
+            output.write(content.data(), static_cast<std::streamsize>(content.size()));
+            output.flush();
+            if (!output) {
+                std::filesystem::remove(temporary);
+                return std::unexpected("cannot write key header");
+            }
+        }
+        std::error_code error;
+        std::filesystem::rename(temporary, path, error);
+        if (error) {
+            std::filesystem::remove(temporary);
+            return std::unexpected("cannot replace key header: " + error.message());
+        }
+        return true;
     }
 } // namespace nandina::resource

@@ -73,6 +73,14 @@ weak face，淘汰不销毁调用方持有的 face。`render::TextureCache` 新�
 的包 ID 与 policy 不一致时先报包不匹配。相同策略/资产的独立重建得到逐字节相同的 lock，
 无变化不重写 lock 或 `resource-location.json`。
 
+2026-10-25 P2.3c 作者常量头（experimental，构建侧）：新增 `nanres keys --header <path>`，
+从 `resources.toml` 与扫描结果生成只含逻辑 key 的 `inline constexpr std::string_view`
+常量头；规范 key 与 `[aliases]` 都会生成，不含内部 ID、摘要、源路径或安装位置。命名空间为
+`nandina::resource_keys::pkg_<package-id>`（`.`/`-`/`_` 分别转义为大写
+`DOT`/`DASH`/`UNDERSCORE`），符号为 `RESOURCE_` 加大写 key。两个 key 折叠成同一符号时命令失败并列出双方，不静默改名；
+内容未变化时不重写文件。`keys` 只接受 `--header`，`--root` 等扫描覆盖和其它命令的
+`--header` 均返回用法错误。该头是可选构建输入，不影响只用运行时 key 的应用。
+
 | 等级 | 含义 | 稳定性承诺 | 谁可以包含 |
 | --- | --- | --- | --- |
 | `public` | 推荐使用的接口 | alpha 内也尽量不破坏；破坏时给迁移说明 | 应用代码、示例、下游宿主 |

@@ -20,6 +20,7 @@ namespace
         std::vector<resource::ResourceTypeRule> type_rules;
         std::vector<std::filesystem::path> outputs;
         std::optional<std::filesystem::path> lock_path;
+        std::optional<std::filesystem::path> header_path;
         bool include_hidden = false;
         bool allow_symlinks = false;
         bool has_scan_overrides = false;
@@ -27,12 +28,14 @@ namespace
     };
 
     void usage() {
-        std::cerr << "usage: nanres <init|scan|validate|pack|watch|schema|--version> [options]\n"
+        std::cerr << "usage: nanres <init|scan|validate|pack|keys|watch|schema|--version> "
+                     "[options]\n"
                      "  --root <path>[:key-prefix]\n"
                      "  --exclude <glob>\n"
                      "  --type <glob>=<media-type>\n"
                      "  --output <path>\n"
                      "  --lock <path>\n"
+                     "  --header <path>                 (keys)\n"
                      "  --rewrite-lock\n"
                      "  --include-hidden\n"
                      "  --allow-symlinks\n";
@@ -82,6 +85,12 @@ namespace
                     return std::nullopt;
                 }
                 result.lock_path = std::filesystem::path(value);
+            }
+            else if (argument == "--header") {
+                if (value.empty()) {
+                    return std::nullopt;
+                }
+                result.header_path = std::filesystem::path(value);
             }
             else if (argument == "--type") {
                 result.has_scan_overrides = true;
@@ -207,7 +216,7 @@ auto main(int argc, char** argv) -> int {
         return 3;
     }
     if (arguments->command != "scan" && arguments->command != "validate"
-        && arguments->command != "pack")
+        && arguments->command != "pack" && arguments->command != "keys")
     {
         usage();
         return 2;
@@ -216,8 +225,16 @@ auto main(int argc, char** argv) -> int {
         std::cerr << "nanres: --rewrite-lock is only valid with scan\n";
         return 2;
     }
+    if (arguments->header_path && arguments->command != "keys") {
+        std::cerr << "nanres: --header is only valid with keys\n";
+        return 2;
+    }
+    if (arguments->command == "keys" && !arguments->header_path) {
+        std::cerr << "nanres: keys requires --header <path>\n";
+        return 2;
+    }
 
-    const bool manifest_mode = arguments->command == "pack"
+    const bool manifest_mode = arguments->command == "pack" || arguments->command == "keys"
         || (!arguments->has_scan_overrides && !arguments->include_hidden
             && !arguments->allow_symlinks);
     if (!manifest_mode && (arguments->lock_path || arguments->rewrite_lock)) {
@@ -234,6 +251,15 @@ auto main(int argc, char** argv) -> int {
             std::cerr << "nanres: pack only accepts --output and --lock as overrides\n";
             return 2;
         }
+        if (arguments->command == "keys"
+            && (!arguments->roots.empty() || !arguments->excludes.empty()
+                || !arguments->type_rules.empty() || arguments->include_hidden
+                || arguments->allow_symlinks || !arguments->outputs.empty()
+                || arguments->lock_path))
+        {
+            std::cerr << "nanres: keys only accepts --header\n";
+            return 2;
+        }
         const std::filesystem::path policy_path = "resources.toml";
         const std::filesystem::path lock_path =
             arguments->lock_path.value_or("resources.lock.toml");
@@ -246,6 +272,27 @@ auto main(int argc, char** argv) -> int {
         print_diagnostics(scan);
         if (!scan.valid()) {
             return 1;
+        }
+        if (arguments->command == "keys") {
+            auto generated = resource::build_resource_lock(*policy, scan, std::nullopt);
+            if (!generated) {
+                std::cerr << "nanres: " << generated.error() << '\n';
+                return 1;
+            }
+            auto header = resource::generate_resource_key_header(*policy, *generated);
+            if (!header) {
+                std::cerr << "nanres: " << header.error() << '\n';
+                return 1;
+            }
+            auto written =
+                resource::write_resource_key_header_atomic(*header, *arguments->header_path);
+            if (!written) {
+                std::cerr << "nanres: " << written.error() << '\n';
+                return 1;
+            }
+            std::cout << (*written ? "generated" : "unchanged") << '\t'
+                      << arguments->header_path->generic_string() << '\n';
+            return 0;
         }
         std::optional<resource::ResourceLockManifest> previous;
         if (std::filesystem::exists(lock_path)) {

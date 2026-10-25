@@ -4,6 +4,13 @@ if resource_tools
     test('resource-equivalence', python,
         args: [files('../resource_equivalence_test.py'), nanres],
         suite: 'integration')
+    nanres_keys_test = find_program('../nanres_keys_test.py')
+    test(
+        'nanres-keys',
+        nanres_keys_test,
+        args: [nanres],
+        suite: 'integration',
+    )
     resource_test_dependencies += resource_build_dep
     resource_test_args += '-DNANDINA_TEST_RESOURCE_TOOLS=1'
 endif
