@@ -63,8 +63,13 @@ def main():
             run([meson, "compile", "-C", str(build), "-j", args.jobs])
             run([meson, "test", "-C", str(build), "--no-rebuild", "--print-errorlogs"])
             print(f"PASS tools={tools} sqlite={sqlite}: clean configure/build/resource tests", flush=True)
-        invalid = subprocess.run([meson, "setup", str(root / "invalid"), str(clean), "--wrap-mode=nodownload", "-Dbuild_ui=false", "-Dexamples=true"], capture_output=True, text=True)
-        assert invalid.returncode and "examples=true requires build_ui=true" in invalid.stdout
+        # build_ui=false ignores examples=true: no UI target and no example
+        # subdir is entered. This is the same lifecycle as showcase.
+        ignored = root / "examples-ignored"
+        run([meson, "setup", str(ignored), str(clean), "--wrap-mode=nodownload",
+             "-Dbuild_ui=false", "-Dexamples=true"])
+        names = {target["name"] for target in json.loads(run([meson, "introspect", "--targets", str(ignored)]))}
+        assert "nandina" not in names and "nandina_lab" not in names, names
 
         # 外部工具：关闭本地工具时，兼容的 external_nanres 通过配置握手；不兼容的必须在配置期失败。
         good = root / "good-nanres"

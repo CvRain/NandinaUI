@@ -17,13 +17,13 @@ application shell. Version `0.1.0-alpha.1`.
 
 ### Current milestone state (2026-10-25)
 
-- P1 is closed. The P2 resource closure is implemented through **P2.3c**: tool/UI split, startup
-  policy, scoped manager results, cache identity, cache reclamation, resource identity
-  (explicit `key → path` mapping, frozen key derivation, versioned 128-bit derived IDs), lock
-  migration (build-dir lock, explicit `--rewrite-lock`, collision diagnostics, no-rewrite
-  determinism), and the minimal author constant header (`nanres keys --header`, logical keys
-  only, collision diagnostics, real compile-dependency test).
-- Next sub-batch: P2.4 (example application).
+- P1 and P2 are closed. P2 covers the tool/UI split, startup policy, scoped manager results,
+  cache identity/reclamation, resource identity (explicit `key → path`, frozen key derivation,
+  versioned 128-bit IDs), lock migration (build-dir lock, explicit `--rewrite-lock`, collision
+  diagnostics, no-rewrite determinism), the minimal author constant header (`nanres keys`), and
+  the multi-route `examples/lab` application (login/register, notes, timer, preview, dialog;
+  resource package + generated key header + portable staging).
+- Next phase: P3 (input/focus); see the roadmap before starting.
 - The plan and exit criteria are **not** owned by this file: read
   `docs/references/development_roadmap.md` and the D5 contract
   (`resource_build_and_deployment.md` §8) before claiming a sub-batch is complete.
@@ -129,6 +129,7 @@ traversal. Use `defer_tree_mutation`, `queue_delete`, `post_layout`, or the anim
 | `docs/components/`, `docs/getting_started/`, `docs/guide/` | Component docs, tutorial, topic guides |
 | `stories/` | Narrative “why” and root-cause history |
 | `showcase/` | Reference application and visual acceptance target |
+| `examples/lab/` | P2.4 single-target multi-route example; resource chain and run smoke |
 | `subprojects/`, `third_party/` | Vendored dependencies; do not edit or reformat |
 
 ## Development Commands
@@ -152,6 +153,11 @@ meson compile -C buildDir-asan && \
   LSAN_OPTIONS=detect_leaks=0 meson test -C buildDir-asan --suite unit --print-errorlogs
 meson compile -C buildDir-no-rtti && \
   meson test -C buildDir-no-rtti --suite unit --print-errorlogs
+
+# P2.4 example participates in normal UI builds; disable with -Dexamples=false
+meson setup --reconfigure buildDir
+meson compile -C buildDir nandina_lab
+meson test -C buildDir example-lab-build example-lab-run example-lab-incremental --print-errorlogs
 meson compile -C buildDir-nosqlite && meson test -C buildDir-nosqlite --suite unit
 meson compile -C buildDir-tools && meson test -C buildDir-tools
 
@@ -166,13 +172,14 @@ python3 tools/check_test_suites.py buildDir
 python3 tools/release_check.py --ci --build-dir buildDir
 ```
 
-Useful options: `-Dbuild_ui=false` (resource tools only), `-Dresource_sqlite=disabled`,
+Useful options: `-Dbuild_ui=false` (resource tools only; examples are skipped), `-Dresource_sqlite=disabled`,
 `-Dresource_tools=false -Dexternal_nanres=/path/to/nanres`, `-Dsdl_backend=disabled
--Dshowcase=false` (headless), `-Dphysics2d=enabled`, `-Dcpp_rtti=false`.
-`examples=true` is currently fatal (reserved). `resource_sqlite=auto` equals enabled.
-`showcase` builds a resource package through the helper, so `-Dresource_tools=false` without
-`-Dexternal_nanres` requires `-Dshowcase=false` (otherwise configure stops with an explanatory
-error). Keep that in mind when configuring a tools-free sanitizer or minimal build directory.
+-Dshowcase=false -Dexamples=false` (headless), `-Dphysics2d=enabled`, `-Dcpp_rtti=false`.
+`examples` is true by default for UI builds and can be disabled explicitly; `build_ui=false`
+skips it. `resource_sqlite=auto` equals enabled. `showcase` and `examples` build resource
+packages, so `-Dresource_tools=false` without `-Dexternal_nanres` requires `-Dshowcase=false
+-Dexamples=false` (otherwise configure stops with an explanatory error). Keep that in mind when
+configuring a tools-free sanitizer or minimal build directory.
 
 Gotchas: `meson test` does not rebuild; do not edit the workspace while the full suite runs
 (`nandina-subproject-fixture` packages the tree twice and byte-compares). After target-set
@@ -229,7 +236,8 @@ git pull --ff-only            # or git fetch <bundle> refs/heads/main:refs/remot
 meson setup --reconfigure buildDir
 ninja -C buildDir
 meson test -C buildDir --suite unit --print-errorlogs
-meson test -C buildDir nanres-cli nanres-build-workflow portable-stage nanres-keys --print-errorlogs
+meson test -C buildDir nanres-cli nanres-build-workflow portable-stage nanres-keys \
+  example-lab-build example-lab-run example-lab-incremental --print-errorlogs
 ```
 
 - A reused build directory may keep a stale thin archive after a target-set change; delete
@@ -238,10 +246,11 @@ meson test -C buildDir nanres-cli nanres-build-workflow portable-stage nanres-ke
   `0x887A0022`. Run GPU device tests, SDF goldens, and any GUI interaction in an interactive
   desktop session; CPU paths can use `--renderer sdl2d` over SSH.
 - The CPU-only resource integration tests (`nanres-cli`, `nanres-build-workflow`, `portable-stage`,
-  `nanres-keys`) do run over SSH and belong to Windows verification: they exercise `pack`,
-  `unchanged`, external files, portable staging and the generated key header with a real C++
-  compile. They found both Windows packaging defects fixed in `3c86927`, so do not treat
-  `--suite unit` alone as proof that packaging works.
+  `nanres-keys`, `example-lab-build`, `example-lab-incremental`) do run over SSH and belong to
+  Windows verification: they exercise `pack`, `unchanged`, external files, portable staging, the
+  generated key header with a real C++ compile and the P2.4 lab package. `example-lab-run` returns
+  SKIP without a display. They found both Windows packaging defects fixed in `3c86927`, so do not
+  treat `--suite unit` alone as proof that packaging works.
 - Windows refuses to rename a directory while a file inside it is open. Finalize prepared
   statements and close the SQLite connection with `sqlite3_close` (a `sqlite3_close_v2` with live
   statements defers the close and keeps the handle) before renaming the package directory.

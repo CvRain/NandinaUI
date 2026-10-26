@@ -44,9 +44,9 @@ NandinaUI（南天竹）是一个用 **C++26** 编写、基于 **Meson** 构建�
 - **可选 2D 物理** —— 基于 Box2D 3.x 的轻量物理桥（默认关闭）。
 - **无障碍语义** —— 控件语义树导出，为可访问性工具铺路。
 
-资源构建已有 helper 和脚手架自动化，但 `nanres` 目前仍链接完整框架，SQLite 尚无工具/后端
-独立关闭选项。[D5 资源构建与部署](docs/references/resource_build_and_deployment.md) 已冻结设计，
-将分批补齐工具解耦、运行时查询作用域、身份生成及声明式构建/安装定位；这些能力尚未实施。
+资源构建工具已与 UI 目标解耦，P2 闭环（工具拆分、作用域查询、身份/常量头、构建 lock 与示例
+资源链）已落地；`examples/lab` 单可执行多路由示例随普通 UI 构建默认参与，可用 `-Dexamples=false` 关闭。
+[D5 资源构建与部署](docs/references/resource_build_and_deployment.md) 记录完整契约与剩余部署边界。
 
 ## 🧱 架构
 
@@ -101,7 +101,7 @@ NandinaUI（南天竹）是一个用 **C++26** 编写、基于 **Meson** 构建�
 raylib 已完整退出源码和依赖闭包，不提供 `raylib_backend` 开关。
 默认 `sdl_backend=enabled`、vendored SDL3 静态链接；`-Dsdl3_linkage=shared` 可选共享模式。
 静态 SDL3 只免除 SDL3 自身的 DSO 分发，不表示系统运行库或图形驱动也静态打包。
-无窗口后端构建使用 `-Dsdl_backend=disabled -Dshowcase=false`；打开窗口须自行注入平台。
+无窗口后端构建使用 `-Dsdl_backend=disabled -Dshowcase=false -Dexamples=false`；打开窗口须自行注入平台。
 未追踪的本地 playground 仅在 `-Dplayground=true` 时构建；旧 raylib bench 已从本地目标移除，源码保留作历史记录。
 
 资源工具可独立于 UI 构建：
@@ -115,8 +115,8 @@ meson compile -C build-resources nanres
 `resource_tools=false` 关闭本地工具及其 OpenSSL 依赖；`resource_sqlite=disabled` 只关闭
 运行时 SQLite 后端，打包工具仍可使用 SQLite。两者同时关闭时不构建 SQLite，仍可运行
 内存/目录/内置资源后端。`resource_sqlite=auto` 在当前 vendored 策略下等价于 enabled。
-纯资源配置自动排除 showcase、playground 和窗口探针；`examples` 默认 false，应用示例在
-P2.4 实现前显式开启会报错。
+纯资源配置自动排除 showcase、playground、窗口探针和 `examples/lab`；普通 UI 构建中
+`examples` 默认开启，要求 SDL3 与资源工具链；headless/无工具配置显式加 `-Dexamples=false`。
 
 **启动策略（P2.1b）**：`NanApplicationConfig::resource_package` 默认为空，启动不自动发现或
 打开资源包；需要自动开包时显式设为 `"resources.db"`，否则用
@@ -413,7 +413,7 @@ meson compile -C buildDir
 - [组件开发路线图](docs/references/component_roadmap.md)：当前差距、依赖关系与推荐实现顺序。
 - [开发路线](docs/references/development_roadmap.md)：**下一阶段 P1–P4 的排序、退出条件、近期切入点与非目标**。
 - [项目进度与下一步](docs/references/project_status.md)：当前能力边界、已完成批次、D1–D8 状态与验证关口。
-- [D5 资源构建、部署与运行时定位](docs/references/resource_build_and_deployment.md)：已冻结、未实施的资源模块边界、作用域契约与分批验收计划。
+- [D5 资源构建、部署与运行时定位](docs/references/resource_build_and_deployment.md)：P2.1a–P2.4c 已实施的资源边界、身份/lock 契约、示例应用与验证记录（§8）。
 - [D6 作者 DSL、文本能力与内容测量](docs/references/authoring_dsl_and_content_measurement.md)：待审阅设计；先定 Label 作者能力与有限宽度测量，再决定布局语法糖、border 和 Section 的实现。
 
 ## 🗺️ 开发计划
@@ -460,7 +460,7 @@ D1–D8 是设计编号，**不表示执行顺序**。设计接受、实现完�
 | D2 主题状态与作者模型 | 待审阅，未实施 | 先只读状态/通知，完整主题模型另批 |
 | D3 导航分组 | 方向已接受，未实施 | `type → nav_group`、空组与全局合并 |
 | D4 平台与后端 | 默认切换与 host seam 已落地，收尾中 | 逐平台交付；不把 Web 探测当作应用支持 |
-| D5 资源构建与部署 | 目标契约冻结，未实施 | 解耦 → 作用域 → 身份 → 构建/部署 → 下游验收 |
+| D5 资源构建与部署 | **已实施（P2.1a–P2.4c）**：解耦、作用域、身份/lock 迁移、常量头与 `examples/lab` | 后续声明式构建扩展与部署定位汇合 |
 | D6 DSL 与内容测量 | 方向已接受，详细契约待审阅 | Label 能力/绑定规则与有限宽度测量，随后组合入口 |
 | D7 渲染质量与图片 | 方向已接受，未实施 | 混合修复、生产 SDF、共享解码、分层裁剪 |
 | D8 键码与输入事件 | 方向已接受，未实施 | 物理/逻辑键与事件契约、平台映射、输入保序 |

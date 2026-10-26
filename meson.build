@@ -11,12 +11,10 @@ project(
 build_ui = get_option('build_ui')
 resource_tools = get_option('resource_tools')
 resource_sqlite = not get_option('resource_sqlite').disabled()
-if get_option('examples')
-    if not build_ui
-        error('examples=true requires build_ui=true')
-    endif
-    error('examples/notes is planned for P2.4; no example target is available yet')
-endif
+# Examples participate in normal UI builds by default, like showcase. They are
+# skipped entirely for build_ui=false configurations. Disable explicitly with
+# -Dexamples=false for headless or tools-only builds when SDL/tools are off.
+
 if meson.is_cross_build() and resource_tools
     error('Local nanres currently requires a native build; use resource_tools=false for cross builds')
 endif
@@ -321,6 +319,15 @@ elif external_nanres != ''
     if probe_version.returncode() != 0 or probe_version.stdout().strip() == ''
         error('external_nanres: --version failed; tool must be executable and report a version')
     endif
+    # P2.4 examples consume `nanres keys --header`; probe the subcommand at configure
+    # time so an older external tool fails here instead of halfway through the build.
+    if build_ui and get_option('examples')
+        probe_keys = run_command(toolchain_nanres, 'keys', check: false)
+        probe_keys_output = probe_keys.stdout() + probe_keys.stderr()
+        if probe_keys.returncode() != 2 or not probe_keys_output.contains('keys requires --header')
+            error('external_nanres: does not provide the `keys` command required by examples/lab')
+        endif
+    endif
     message('external_nanres: ' + probe_version.stdout().strip())
 else
     warning('resource_tools=false and external_nanres is empty: nandina_resource_toolchain is unavailable')
@@ -355,6 +362,14 @@ if not meson.is_subproject()
         subdir('showcase')
     endif
 
+    # P2.4 示例应用：单可执行文件、多路由、一套资源包与 portable stage。
+    if build_ui and get_option('examples')
+        if not sdl3_dep.found()
+            error('examples require SDL3; use -Dexamples=false or enable a window backend')
+        endif
+        subdir('examples/lab')
+    endif
+
     # 跨平台探测里「真实页面走 SDL 设备」的那一个：需要 libnandina 与 showcase 的页面源码，
     # 所以它属于本构建（而不是 CMake 的独立探测）。默认关闭：它需要 SDL3 与一个真窗口。
     if build_ui and get_option('sdl_page_probe') and fs.exists('probe/cross_platform/desktop/meson.build')
@@ -367,7 +382,7 @@ endif
 # 只在主项目构建时挂上；CMake 子项目自己的产物不动。
 if host_machine.system() == 'windows' and not meson.is_subproject()
     _windows_runtime_deps = []
-    foreach _target_name : ['playground_exe', 'sdf_device_tests', 'nandina']
+    foreach _target_name : ['playground_exe', 'lab_exe', 'sdf_device_tests', 'nandina']
         if is_variable(_target_name)
             _windows_runtime_deps += [get_variable(_target_name)]
         endif

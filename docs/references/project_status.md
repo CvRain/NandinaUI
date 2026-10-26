@@ -1,6 +1,6 @@
 # 项目进度与下一步
 
-> 2026-10-20 更新：本文是**已完成批次与设计议题状态的唯一入口**（下一阶段的排序见[开发路线](development_roadmap.md)）；D1–D8 是设计议题编号，不是执行顺序。批次 1、2 已完成；批次 3 的生产接入（填充/描边/圆/线段/圆环扇区）已完成，并通过 Vulkan(SPIR-V) 与 Windows D3D12(DXIL) 设备级像素验收；页面 golden、release 性能基线与预算门禁已落地（路径契约 §10–§14）。**下一阶段 P1–P4 的排序与退出条件见[开发路线](development_roadmap.md)**；本文保留已完成批次、D1–D8 状态与剩余边界。
+> 2026-10-25 更新：本文是**已完成批次与设计议题状态的唯一入口**（下一阶段的排序见[开发路线](development_roadmap.md)）；D1–D8 是设计议题编号，不是执行顺序。批次 1、2 已完成；批次 3 的生产接入（填充/描边/圆/线段/圆环扇区）已完成，并通过 Vulkan(SPIR-V) 与 Windows D3D12(DXIL) 设备级像素验收；页面 golden、release 性能基线与预算门禁已落地（路径契约 §10–§14）。**下一阶段 P1–P4 的排序与退出条件见[开发路线](development_roadmap.md)**；本文保留已完成批次、D1–D8 状态与剩余边界。
 
 ## 当前能力边界
 
@@ -15,8 +15,8 @@
 | 动画 | 值级 motion 在 `foundation/motion`，节点 endpoint、宿主与组调度在 `scene`；旧 `animation/` 入口已退出；L2 opacity/translate/scale 可用 | `NodeBuilder::group` 仅开放同节点、扁平 Tween 组合；跨节点、组内 Spring、Keyframes 作者入口与浮层自动过渡未完成，见 [节点表现层 §6.1](node_presentation.md) |
 | 布局与文本成本 | 排列容器及 `NanControl::layout_to` 已用在生产路径；anchors 内核与作者入口已落地；**布局收敛**（Label 页 80.4 ms/帧 → 2.5 ms、稳态 0 次布局）与**两个文本 O(n²)** 已修复，见 [布局收敛](layout_convergence_and_text_measurement.md) 与 [整形成本](text_shaping_cost.md) | `fill` 画布无法占据排列容器剩余空间（见 [Anchors §5.3](anchors.md#53-剩余验收)）；`max_width` 仍会被父级紧约束压过；Label 页打开约 271 ms（构建 159 ms，[整形成本 §5.1](text_shaping_cost.md)）；一次完整布局仍约 55 ms |
 | 分发 | Linux 桌面源码分发 profile 已有构建与 SDK 流程；Windows 为实验性构建（无安装器承诺） | macOS 不支持；Modules、CMake package 与跨平台应用交付仍待重新评估 |
-| 资源构建与运行时 | 四类后端、nanres 与构建 helper 已有实现；SQLite 已 vendored；后端结果携带发布代次与一致性类别，管理器八入口返回带域令牌/MountId/代次的作用域结果，字体与纹理缓存按作用域键控并有界淘汰/expired 域清扫，非快照内容不进入共享缓存；`resources.toml` 支持显式 key→路径映射，新 key 使用版本化派生 ID；构建 lock 写入 build 目录，旧随机 ID 可显式迁移，无变化不重写；`nanres keys --header` 生成只含逻辑 key 的 C++ 常量头，碰撞失败、无变化不重写 | [D5](resource_build_and_deployment.md) 已冻结（含 2026-10-22 P2 实施契约 §8）；P2.1a/P2.1b/P2.2a–P2.2d/P2.3a–P2.3c 已实施，P2.4 示例应用未实施；声明式构建和部署定位随后汇合 |
-| 工程门禁 | 代码格式统一（固定 clang-format 23.1.1）、header-surface 182/10、shader artifact 校验、golden 清单、backend budget 确定性门禁均已接入；GPU 相关检查留在本地/发布检查 | D5 关闭组合与纯工具依赖门禁尚未实现；无 GPU 的 CI 不覆盖页面 golden 与性能采样 |
+| 资源构建与运行时 | 四类后端、nanres 与构建 helper 已有实现；SQLite 已 vendored；后端结果携带发布代次与一致性类别，管理器八入口返回带域令牌/MountId/代次的作用域结果，字体与纹理缓存按作用域键控并有界淘汰/expired 域清扫，非快照内容不进入共享缓存；`resources.toml` 支持显式 key→路径映射，新 key 使用版本化派生 ID；构建 lock 写入 build 目录，旧随机 ID 可显式迁移，无变化不重写；`nanres keys --header` 生成只含逻辑 key 的 C++ 常量头，碰撞失败、无变化不重写 | [D5](resource_build_and_deployment.md) 已冻结（含 2026-10-22 P2 实施契约 §8）；P2.1a/P2.1b/P2.2a–P2.2d/P2.3a–P2.4c 已实施，`examples/lab` 单可执行多路由示例完成；声明式构建和部署定位随后汇合 |
+| 工程门禁 | 代码格式统一（固定 clang-format 23.1.1）、header-surface 182/10、shader artifact 校验、golden 清单、backend budget 确定性门禁均已接入；D5 关闭组合与纯工具依赖门禁（`check_tool_dependencies`、资源选项矩阵）已实现；GPU 相关检查留在本地/发布检查 | 无 GPU 的 CI 不覆盖页面 golden 与性能采样 |
 
 ## D1–D8 与依赖工程的状态
 
@@ -26,7 +26,7 @@
 | D2 主题方案与状态订阅 | 讨论已汇总；只读状态、事件和主题方案模型需定形 | 待审阅；[主题设计](theme_authoring_and_state.md)。先解决状态可观察性，完整主题作者模型另批 |
 | D3 导航分组 | `type → nav_group`、空值未分组、同值全局合并已接受 | 未实施；[D3](reference_draft.md#d3-路由身份与导航分组开放到哪一层)，独立小批 |
 | D4 平台与后端 | SDL3 默认路径与 host seam 已落地，raylib 已完整退役 | **已收尾**：生产 SDF 在 Vulkan 与 Windows D3D12 通过设备级验收；[阶段证据](platform_backend_contract.md)。Windows 为实验性支持，macOS 不支持，Web 不是交付面 |
-| D5 资源构建与部署 | 范围与目标契约冻结 | **部分实施**：P2.1a/P2.1b/P2.2a–P2.2d/P2.3a–P2.3c 已交付；后续见[正式契约](resource_build_and_deployment.md)，内部六批见下节 |
+| D5 资源构建与部署 | 范围与目标契约冻结 | **P2 已交付**：P2.1a/P2.1b/P2.2a–P2.2d/P2.3a–P2.4c；见[正式契约](resource_build_and_deployment.md) §8 与内部六批 |
 | D6 作者 DSL 与内容测量 | 方向已接受；Label 能力、绑定覆盖、测量详细契约待审阅 | 未实施；[D6](authoring_dsl_and_content_measurement.md)，测量先于 Section/语法糖 |
 | D7 渲染质量与图片 | 混合修复 → SDF 高质量路径；共享解码；分层处理圆角裁剪 | 混合修复、生产 SDF（填充/描边/圆/线段/弧）与设备级/页面级验收（Linux golden）、共享图片解码已落地；阴影/裁剪已交付（SDF mode 3/4），MSL 未验收，raylib 已退役，Windows 页面 CPU 基线已批 3 条，Windows 页面基线 6 条已批准（CPU 3 + SDF 3，2026-10-22）；Windows 性能参考基线（CPU + SDF 路径）已归档；[D7](reference_draft.md#d7-渲染质量与后端视觉一致性) |
 | D8 键码与输入事件 | 框架拥有键身份；物理位置、逻辑含义与提交文本分开 | 未实施；[D8](reference_draft.md#d8-键码与输入码空间)，不再按纯机械 rename 估算 |
@@ -77,7 +77,7 @@
 5. 用真实应用贯穿导航、表单、图片、滚动和弹窗。Showcase 保留组件验收职责，应用/示例正文仍由
    作者主导；正式验收所需 fixture、脚本和说明不得只存在于未追踪的 playground。
 
-## D5 资源工作线：已冻结，尚未实施
+## D5 资源工作线：P2 已实施（2026-10-22 至 2026-10-25）
 
 正式契约以 [资源构建、部署与运行时定位](resource_build_and_deployment.md) 为准。以下每批
 独立提交与验收；“解耦先行”描述 D5 的依赖，不要求把所有后续修改塞进一次重构。
@@ -94,7 +94,7 @@
 作用域批按 reference §13 定形六项 API 细节，身份算法已在 P2.3a 定形；不会重新开放纯内容 ID 或
 拆 blob 表作为本轮方案。CMake、Web、system SQLite 和新平台部署均须独立验证后才宣称支持。
 取舍及“头文件只有路径不等于流没有文件句柄”的证据纠正见
-[story 013](../../stories/013-resource-scope-before-identity.md)。本轮只同步文档，未执行上述验收。
+[story 013](../../stories/013-resource-scope-before-identity.md)。P2.1a–P2.4c 已按批次实施并验证；后续声明式构建扩展与部署定位按开发路线推进。
 
 ## Anchors 阶段记录与剩余边界
 
@@ -134,8 +134,8 @@ showcase 页面的小视口/零尺寸、反复换边和页面销毁回调测试�
 已验收基线与 P1–P4 的排序、退出条件、近期切入顺序和非目标见[开发路线](development_roadmap.md)。
 
 - **P1 收口与平台补齐**：发布检查脚本、Windows 页面 golden/性能基线、图片共享解码与 raylib 退役、SDF 阴影/裁剪（已完成，Windows GUI 项待人工）；
-- **P2 应用闭环**：D5 解耦 → 作用域 → 身份，真实示例应用贯穿导航/表单/图片/滚动/弹窗；
-- **P3 输入与焦点**：D8 键身份/事件保序 → D1 焦点提示 → 文本会话/IME；
+- **P2 应用闭环**：已完成；`examples/lab` 单可执行多路由贯穿登录/注册、笔记、计时器、图片、滚动与确认弹窗（2026-10-25）；
+- **P3 输入与焦点（下一步）**：D8 键身份/事件保序 → D1 焦点提示 → 文本会话/IME；
 - **P4 作者与组件**：D6 Label 能力与测量 → 阶段 5 数据组件 → D2/D3。
 
 P1.1 与 P1.6 核心实现已完成，raylib 后端、工厂、枚举项、wrap 与依赖已完整删除。

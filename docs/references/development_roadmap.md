@@ -44,8 +44,8 @@
 ### P2 应用闭环（资源与工具）
 
 > 实施契约（目标依赖图、选项真值表、启动策略、lock/revision/ID 语义、子批与门禁）见
-> [D5 §8](resource_build_and_deployment.md#8-p2-实施契约2026-10-22-定稿p21ap23c-已实施)。
-> **状态：P2.1a/P2.1b/P2.2a–P2.2d/P2.3a–P2.3c 已实施（2026-10-22 至 10-25）；P2.4 未实施。**
+> [D5 §8](resource_build_and_deployment.md#8-p2-实施契约2026-10-22-定稿p21ap24c-已实施)。
+> **状态：P2.1a/P2.1b/P2.2a–P2.2d/P2.3a–P2.4c 已实施（2026-10-22 至 10-25）；P2 应用闭环完成，后续进入 P3。**
 
 | 编号 | 交付 | 前置 | 退出条件 |
 | --- | --- | --- | --- |
@@ -58,9 +58,9 @@
 | P2.3a | 策略 key 映射与生成算法、ID 编码（版本前缀/长度编码/固定测试向量） | P2.2 | **已完成（2026-10-24）**：`[[resources]] key + path` 显式映射优先于派生 key；`derive_resource_key` 冻结前缀+相对路径规则；`derive_resource_id` 使用版本前缀 + NUL + big-endian u32 长度 + SHA-256 前 128 bit，固定三组向量；lock 按 key 匹配，内容变化保 ID、派生重命名换 ID，不同 key 同内容独立 ID；旧随机 ID 暂按同 key 保留。先改 CLI 断言确认旧实现失败，修复后转绿；复核修复扫描器把归一化槽位登记误移到 key 验证之后的顺序变化（大写名先遍历时丢失碰撞诊断），复用 `resource_scan_options` 的 media-type 规则；新增 `ResourceScanOptions::mapped_paths` 让显式映射文件不派生 key/不报诊断，路径身份统一走 `resource_path_identity`（Windows ASCII 折叠大小写），拒绝 rooted `path`；补映射错误路径、扫描根外/根内不可派生映射、同 key 保 ID/revision、旧随机 ID 保留与长度前缀测试。主套件 104/104、无 SQLite UI 单元 81/81（+1 SKIP）、纯工具 7/7、ASan 83/83 + window SKIP、no-RTTI 84/84、release check 8/8；Windows 在 `8bb7fec` 上构建 0 错误、unit 82/82，定向脚本复验映射 ID 向量/根内映射/rooted 拒绝/大小写折叠；Windows 打包曾因数据库句柄/CRLF 指纹失败，已由 D5 §8.18 修复，`nanres-cli`/`nanres-build-workflow`/`portable-stage` 通过 |
 | P2.3b | lock 迁移（生成数据移入 build 目录）、碰撞（同 ID 不同逻辑记录）、revision、无变化不重写 | P2.3a | **已完成（2026-10-24）**：`nanres --lock` 统一 lock 路径，helper 写到 `<output>.lock.toml`，源码树不再生成 lock；普通 scan/validate/pack 遇到旧随机 ID 失败并提示 `scan --rewrite-lock`，仅显式 flag（scan）重写；加载 lock 对同 ID 不同 key / 同 key 不同 ID 列出冲突；独立目录重建得到逐字节相同 lock；无变化跳过 lock 与 location 描述写入。先加迁移/碰撞/确定性断言确认旧实现失败，修复后转绿；fixture lock/expected ID 已迁移。复核补：`--lock`/`--rewrite-lock` 仅在 manifest 模式生效（原始扫描覆盖下报用法错误），lock 包不匹配先于迁移检查报错，新增同 key 不同 ID 碰撞与 legacy validate 迁移断言。验证：主套件 104/104、无 SQLite UI 81/81（+1 SKIP）、纯工具 7/7、ASan 83/83 + window SKIP、no-RTTI 84/84、release check 8/8；Windows（bundle 同步）构建 0 错误、packaging 3/3、unit 82/82 |
 | P2.3c | 最小常量头（只含逻辑 key）+ 编译依赖测试 | P2.3b | **已完成（2026-10-25）**：`nanres keys --header` 从 policy + scan 生成 `inline constexpr std::string_view`；只含规范 key 与别名，不含 ID/摘要/源路径/安装位置。符号规则 `RESOURCE_*`，包级命名空间可逆转义；符号碰撞列出双方并失败，不静默改名。删除 `[[resources]]` 后重生成移除符号，消费者编译失败；无变化不重写头文件。新增真实 C++ 编译 integration 测试，并先注入碰撞检查/无变化写入失败确认红测；复核补包名 `.`/`-`/`_` 转义编译断言、空 policy 与源路径缺失断言。验证：主套件 105/105、无 SQLite UI 81/81（+1 SKIP）、no-RTTI 84/84、纯工具 8/8、ASan 83/83 + window SKIP、release check 8/8；Windows（bundle 同步）构建 0 错误、unit 82/82、`nanres-keys` 与 packaging 测试 4/4 通过 |
-| P2.4a | 示例资源链路：`examples/notes` 的 resources.toml/资产；增量发现、成套发布、定向构建资源就绪、portable stage 重定位运行 | P2.1（完整验收在 P2.2/P2.3 后） | 干净检出 + 离线可构建；目录增删/无变化不重写；失败保留旧产物但返回失败 |
-| P2.4b | 示例应用功能：浏览笔记、编辑表单、预览图片、确认弹窗（导航/滚动贯穿） | P2.4a | 实际运行 + 人工交互验收证据（截图/描述） |
-| P2.4c | 测试脚本与文档：构建检查与运行检查分别记录，失败可复现证据入库 | P2.4b | smoke 脚本入库；showcase 保留组件验收职责 |
+| P2.4a | 示例资源链路：`examples/lab` 的 resources.toml/资产；增量发现、成套发布、定向构建资源就绪、portable stage 重定位运行 | P2.1（完整验收在 P2.2/P2.3 后） | **已完成（2026-10-25）**：单可执行多路由示例；`nanres_build_helper build/keys` 产出资源包与常量头，`link_depends` + generated header source 使定向构建就绪；新增 `example-lab-incremental` 覆盖新增/删除资源、无变化不重写、失败保留旧包；`example-lab-run` 先用构建树包运行 Preview，再 staging → 移动后四路由运行并断言无错误日志；干净 `buildDir-examples`（离线、`-Dshowcase=false`；仅为验收证据，不是独立配置要求）构建通过 |
+| P2.4b | 示例应用功能：登录/注册、番茄钟、笔记列表/编辑、预览图片、确认弹窗（导航/滚动贯穿） | P2.4a | **已完成（2026-10-25）**：Notes 起始页 + Account/Workspace 分组导航；登录/注册本地校验与 demo 预填；笔记 keyed list、TextArea 长文、保存/新增/删除与 AlertDialog；Focus 25/5 帧驱动计时（启动/暂停/重置/切换）；Preview 从 `res://` 加载生成常量 key；交互验收证据入库 `docs/images/lab/`（登录后会话行、长文编辑、删除弹窗、计时器、预览），合成指针（ydotool）+ 截图采集覆盖导航、笔记选择、新增/删除确认、倒计时/跳过、登录→Notes 状态传递；键盘文本输入未自动化，表单提交走 demo 预填 |
+| P2.4c | 测试脚本与文档：构建检查与运行检查分别记录，失败可复现证据入库 | P2.4b | **已完成（2026-10-25）**：`tests/example_lab_test.py` 分 build/run/incremental；`example-lab-build`、`example-lab-run`（无 display 返回 SKIP）、`example-lab-incremental` 入库；`examples/lab/README.md` 记录构建、资源链、portable stage、测试钩子与边界；showcase 保留组件视觉验收职责。复核补：run 断言错误标记并覆盖构建树+四路由、SQL `ORDER BY`/`closing`、lab-store 随 `build_ui` 注册、外部 nanres `keys` 握手、helper 跨盘符回退、Notes 选中同步与 demo invalid 清理。验证：主套件 109/109、release check 8/8；干净离线配置与定向重建通过；单元矩阵 ASan 84/84（+SKIP）、no-RTTI 85/85、no-SQLite 82/82（+1 SKIP），no-RTTI 下完整示例 app 亦编译通过。Windows（bundle 同步）：构建 0 错误（lab exe/包/头齐备）、unit 83/83、lab build/incremental 通过、资源 4/4、run 无 display 为 SKIP |
 
 ### P3 输入与焦点
 

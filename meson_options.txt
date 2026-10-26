@@ -64,5 +64,5 @@ option(
 option('build_ui', type: 'boolean', value: true, description: 'Build the UI framework and its dependencies')
 option('resource_sqlite', type: 'feature', value: 'enabled', description: 'Build the SQLite runtime backend (vendored auto equals enabled)')
 option('resource_tools', type: 'boolean', value: true, description: 'Build the native resource toolchain')
-option('examples', type: 'boolean', value: false, description: 'Build application examples (reserved for P2.4)')
+option('examples', type: 'boolean', value: true, description: 'Build the multi-route P2.4 lab example when build_ui is enabled')
 option('external_nanres', type: 'string', value: '', description: 'External nanres executable when resource_tools=false (must report schema 1)')

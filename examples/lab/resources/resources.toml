@@ -1,0 +1,12 @@
+package = "com.nandina.lab"
+source = "assets"
+
+# Explicit keys keep the generated C++ constants stable if the source files are
+# renamed later. Values are logical resource keys, not filesystem paths.
+[[resources]]
+key = "images/lab-cover.png"
+path = "assets/lab-cover.png"
+
+[[resources]]
+key = "images/lab-logo.png"
+path = "assets/lab-logo.png"

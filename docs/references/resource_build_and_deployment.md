@@ -1,6 +1,6 @@
 # D5：资源构建、部署与运行时定位
 
-> **状态：D5 范围与目标契约已冻结；P2.1a/P2.1b/P2.2a–P2.2d/P2.3a–P2.3c 已实施，其余子批按路线图推进。** 2026-10-11 定案。
+> **状态：D5 范围与目标契约已冻结；P2.1a/P2.1b/P2.2a–P2.2d/P2.3a–P2.4c 已实施。** 2026-10-11 定案。
 > 本文汇总 nanres 模块边界、资源自动构建、SQLite 可选依赖以及跨部署布局的定位设计。
 > “目标契约”是实施依据，不表示当前代码已经满足；具体类型名、构建选项名与算法按批次定形。
 > 示例为伪代码，不是现有公开接口，也不表示项目已经支持 CMake、Windows/macOS 安装或 Web 资源加载。
@@ -650,7 +650,7 @@ D5 范围已冻结。以下为 D5 内部实施顺序；项目总排序仍见 [�
 本次只冻结设计并同步计划、README、模块/构建边界与故事；不修改运行时代码，不启用新构建
 路径，不替换 SQLite，不将待实现接口写成入门教程中的可用功能。
 
-## 8. P2 实施契约（2026-10-22 定稿，P2.1a–P2.3c 已实施）
+## 8. P2 实施契约（2026-10-22 定稿，P2.1a–P2.4c 已实施）
 
 > 本节把 2026-10-22 的评审结论固化为执行契约。P2 代码按此实施；未写入本节的行为不提前承诺。
 > 路线图 P2 的子批划分与状态见[开发路线](development_roadmap.md)。
@@ -659,7 +659,7 @@ D5 范围已冻结。以下为 D5 内部实施顺序；项目总排序仍见 [�
 
 | 议题 | 决定 |
 | --- | --- |
-| 示例应用 | `examples/notes/`，默认关闭；场景限定为浏览笔记、编辑表单、预览图片、确认弹窗；本轮不做数据库持久化与富文本编辑 |
+| 示例应用 | `examples/lab/`，普通 UI 构建默认参与，可显式关闭；单可执行文件、多路由：登录/注册、番茄钟、笔记列表与编辑、图片预览、确认弹窗；本轮不做数据库持久化、富文本编辑、密码掩码或真实认证 |
 | 资源开关 | 不增加笼统 `resources`；按 8.2 的 `build_ui` / `resource_sqlite` / `resource_tools` / `examples` 四个选项 |
 | API 命名 | `ResolvedResource` / `ResolvedStream`；`ResourceDomainToken` 只是不透明身份，调用方不能取得可保活域的强令牌；歧义走既有错误通道 `ambiguous_resource_id` |
 | key 与 ID | 大小写敏感、`/` 分隔、不做 NFC；记录 ID 由包身份 + 逻辑 key 派生；编码/算法版本/截断/迁移按 8.4 冻结 |
@@ -686,10 +686,10 @@ schema 约定；`tools/resource_packager.cpp` 不再包含 `backends/sqlite_back
 
 | 选项 | 形状/默认 | 打开 | 关闭 |
 | --- | --- | --- | --- |
-| `build_ui` | boolean，true | 构建 UI 框架、showcase、窗口/GPU 探针与相关测试 | 不配置 SDL、freetype、harfbuzz、fribidi 等 UI 依赖；`showcase`/窗口探针强制关闭；只构建资源核心、运行时后端（按开关）与工具 |
+| `build_ui` | boolean，true | 构建 UI 框架、showcase、examples/lab、窗口/GPU 探针与相关测试 | 不配置 SDL、freetype、harfbuzz、fribidi 等 UI 依赖；`showcase`/窗口探针强制关闭；只构建资源核心、运行时后端（按开关）与工具 |
 | `resource_sqlite` | feature，enabled | 构建 SQLite 运行时后端，应用启动可按配置打开包 | 不编译该后端与自动开包路径；应用必须显式注入后端，缺后端时报 `backend_unavailable` |
 | `resource_tools` | boolean，true | 构建本机 `nanres`、helper 与模板约定 | 不构建 `nanres`；需要包的应用必须通过外部工具路径提供兼容版本，并在使用前检查版本/schema |
-| `examples` | boolean，false | 构建 `examples/notes`（要求 `build_ui=true`） | 不进入构建图；`examples=true + build_ui=false` 配置期报错 |
+| `examples` | boolean，true | 构建 `examples/lab` 多路由示例（要求 SDL3 与资源工具链） | 不进入构建图；`build_ui=false` 时自动跳过；显式 true 但缺 SDL/工具链时配置期报错 |
 
 **SQLite 引擎是否构建**由“工具侧打包器或运行时后端是否需要”共同决定：`resource_sqlite=disabled`
 不取消工具侧打包；`resource_tools=true` 仍需 SQLite 引擎。`auto` 语义：当前 vendored SQLite 始终
@@ -811,9 +811,9 @@ weak face；TextureCache 在 `begin_frame()`/`trim()` 清扫 expired 域，`inva
 | P2.3a | 策略 key 映射 + 生成算法 + ID 编码测试向量 | 重命名/大小写/固定向量 |
 | P2.3b | lock 迁移、碰撞、revision、无变化不重写 | 碰撞注入/重建确定性/迁移 |
 | P2.3c | 最小常量头 + 编译依赖测试（**已完成 2026-10-25**） | 删除声明后编译失败；符号冲突 |
-| P2.4a | 示例资源链路与增量/成套发布 | 干净检出/离线/定向构建/portable stage |
-| P2.4b | 示例应用功能（导航/表单/图片/滚动/弹窗） | 运行 smoke + 人工交互证据 |
-| P2.4c | 测试脚本、失败可复现证据、README | 构建检查与运行检查分别记录 |
+| P2.4a | 示例资源链路与增量/成套发布（**已完成 2026-10-25**） | 干净检出/离线/定向构建/portable stage |
+| P2.4b | 示例应用功能（导航/表单/图片/滚动/弹窗，**已完成 2026-10-25**） | 运行 smoke + 人工交互证据 |
+| P2.4c | 测试脚本、失败可复现证据、README（**已完成 2026-10-25**） | 构建检查与运行检查分别记录 |
 
 每个可独立验收的子批一个提交；会红测试先在本地证明旧实现失败，再与修复一起提交；公开 API
 迁移提交同时迁移消费者，保持可构建、可回滚；完整验证矩阵在子批收口执行，日常修改先跑相关测试。
@@ -824,7 +824,7 @@ weak face；TextureCache 在 `begin_frame()`/`trim()` 清扫 expired 域，`inva
 只链接 `resource_build_dep`。BuiltinBackend 的字体是内嵌字节，不引入字体引擎；应用专用的
 开发定位 JSON 读取仍在 UI 集成侧。共享包格式头为读写两侧提供 application/schema 常量。
 
-四个选项已注册；`examples` 仅预留，P2.4 前开启明确报错。`build_ui=false` 强制排除 UI
+四个选项已注册；`examples` 早期仅预留，P2.4 后随普通 UI 构建默认参与，`build_ui=false` 时跳过。`build_ui=false` 强制排除 UI
 目标及其配置期依赖。`resource_sqlite=auto` 等价 enabled；SQLite 引擎由工具或运行时任一
 消费者启用。工具关闭时不会查找 OpenSSL；运行时与工具都关闭时不编译 SQLite。
 P2.1b 的默认不开包、外部工具入口/握手尚未实施，不将它们算作本批交付。
@@ -1082,3 +1082,63 @@ CI 增设只预热 toml++/Catch2、只安装工具所需系统开发包的资源
   SKIP）；release check 8/8（format 23.1.1、headers、docs 79 篇等）。Windows（bundle 同步、
   工作区干净）：构建 0 错误，`--suite unit` 82/82，`nanres-keys`（真实 C++ 编译依赖测试）与
   `nanres-cli`/`nanres-build-workflow`/`portable-stage` 4/4 通过。
+
+### 8.21 P2.4 实施记录（2026-10-25）
+
+- **形态**：一个 `examples/lab` 可执行文件、五个路由（Account 的 Sign in/Register、Workspace
+  的 Notes/Focus/Preview）。没有拆成多个 target：多可执行文件会让资源包、定位描述与 portable
+  stage 的验收重复多份，P2.4a 的证据反而分散。示例随普通 UI 构建默认参与（`-Dexamples=false`
+  可关闭）；构建要求 `build_ui=true`、SDL3 与资源工具链。`buildDir-examples` 只是干净验收
+  目录，不是 Meson 配置要求；日常复用 `buildDir` 即可。
+- **P2.4a 资源链**：`resources/resources.toml` + 两张本地位图；Meson 同时运行
+  `nanres_build_helper.py build`（包与 `resource-location.json`）和 `keys`（生成常量头）。
+  `lab_resource_keys` 列入 executable sources，保证编译前生成；`link_depends: lab_resources`
+  保证定向 `meson compile ... nandina_lab` 也先产出包。运行期只依赖 exe 旁的 `resources/`。
+  新增 `example-lab-incremental`：复制 policy 后新增/删除资源、检查无变化不重写，并注入缺失
+  映射确认失败保留旧数据库。
+- **P2.4b 功能**：`LabStore` 保存本地会话与笔记；登录/注册表单用 `Signal` 双向绑定、computed
+  禁用态与 invalid 反馈，demo 按钮只做本地预填；Notes 用 `for_each` keyed list、TextArea
+  长文/滚动、保存/新增/删除与 `AlertDialog`；Focus 是 `NanControl::on_process` 驱动的 25/5
+  timer，支持启动/暂停/重置/跳过；Preview 用生成常量拼出 `res://` 加载资源图片。密码字段可见
+  且不持久化，README 明确标注。
+- **P2.4c 测试/文档**：`tests/example_lab_test.py` 分为 build、run、incremental 三种模式；
+  run 模式先用构建树包（`resource-location.json`）运行 Preview，再通过 `portable_stage.py`
+  暂存、移动后依次运行 login/notes/focus/preview 四个路由，断言退出码 0 且日志无页面错误、
+  resource lookup 或纹理解码失败标记；无 display 时退出 77（Meson SKIP）。`examples/lab/README.md`
+  记录构建、路由、测试钩子、portable stage 与边界；showcase 继续承担组件视觉验收，示例不新增
+  页面 golden。
+- **崩溃回归（2026-10-25）**：首次新建笔记时 `LabStore::next_note_id_` 从 1 起步，与种子笔记
+  id 1 冲突；`for_each` 以重复 key 抛出 `std::invalid_argument`，程序 SIGABRT。修复为从当前
+  `notes` 模型推导下一个 id（也覆盖调用方直接设置 notes 的情况），并新增 `lab-store` 单测：
+  旧实现下种子冲突与外部 id 50 两处断言变红，修复后转绿。
+- **复核补强（2026-10-26 评审）**：`example-lab-run` 从单路由 smoke 扩展为“构建树包 + 移动后
+  四路由”，并断言日志无 `NanWindow: page error`、`resource lookup failed`、
+  `texture decode/upload failed`、`[error]`（注入坏资源 key 时确认会变红）；SQL 查询补
+  `ORDER BY` 并改用 `contextlib.closing` 关闭连接（Windows 上目录替换需要句柄先释放）；
+  `lab-store` 不再依赖 `-Dexamples=true`，所有 UI 单元配置（含 sanitizer/no-RTTI/no-SQLite）
+  都会覆盖；外部 `nanres` 的配置期握手新增 `keys` 子命令探测，缺失时在配置阶段失败；helper
+  的相对路径在跨 Windows 盘符时回退为绝对路径；Notes 修复“fallback 选中但 store 未同步”的
+  静默保存失败（保存未命中时明确反馈），demo 预填清除 invalid 标记；`PreviewPage` 拆出独立
+  头文件，run 测试复用导出的 `stage_helper`。
+- **验证**：默认（`examples=true`）主套件 **109/109**；release check 8/8；干净离线配置
+  （`--wrap-mode=nodownload -Dexamples=true -Dshowcase=false -Dbuild_tests=false`）从零配置并
+  定向构建 `nandina_lab` 通过；删除 `resource_keys.hpp` 与 `resources/` 后
+  `meson compile nandina_lab` 重新生成常量头与包；无变化重建保持数据库 mtime；portable stage
+  移动后四路由启动、退出码 0 且无错误日志。单元矩阵（`-Dexamples=false` 目录）：no-RTTI
+  **85/85**、no-SQLite UI **82/82（+1 SKIP）**、ASan **84/84（+ `window-lifecycle` SKIP）**；
+  纯工具 8/8。`lab-store` 随 `build_ui` 始终注册，因此这些配置也覆盖示例 store。完整示例编译
+  另在 no-RTTI 目录以 `-Dexamples=true` 验证：7 个 TU 链接 `nandina_lab`，常量头与资源包均
+  生成，单元计数不变；no-SQLite 目录是 headless（`sdl_backend=disabled`），按现有配置无法
+  构建示例 app，只覆盖 `lab-store`。
+- **Windows（2026-10-26，bundle 同步）**：设备恢复后按 AGENTS 流程复跑。`meson setup
+  --reconfigure -Dexamples=true` 与 `ninja` 均 0 错误，生成 `nandina_lab.exe`、
+  `resource_keys.hpp`（678 B）与 `resources/resources.db`（352256 B）；`--suite unit`
+  **83/83**（`lab-store` 81/83 OK）；资源/示例集成 7 项中 **6 通过 + 1 SKIP**：
+  `example-lab-build`、`example-lab-incremental`、`nanres-cli`、`nanres-build-workflow`、
+  `portable-stage`、`nanres-keys` 全 OK，`example-lab-run` 因无 display 返回 77（SKIP）。
+- **交互验收证据**：`docs/images/lab/` 收录 `notes-signed-in.png`（登录后 Notes 会话行与列表）、
+  `notes-editor.png`（选中长文 + 保存/预览/删除）、`notes-dialog.png`（删除确认弹窗）、
+  `focus-timer.png`（运行中的倒计时）、`preview.png`（资源包图片）。交互由合成指针事件
+  （ydotool，本机绝对坐标按 2× 缩放折算）+ 截图采集，覆盖导航、笔记选择、新增/删除与弹窗确认、
+  计时器启动/倒计时/跳过、登录→Notes 状态传递与预览加载；键盘文本输入仍未自动化，表单提交走
+  demo 预填路径。真实 GPU 会话下运行，不构成页面 golden。

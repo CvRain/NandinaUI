@@ -31,6 +31,14 @@ def run(
     return True
 
 
+def path_argument(target: pathlib.Path, base: pathlib.Path) -> str:
+    """Relative when possible; absolute when the two paths live on different drives."""
+    try:
+        return os.path.relpath(target, base)
+    except ValueError:
+        return str(target)
+
+
 def probe_tool(nanres: str) -> None:
     """确认工具可执行且包格式 schema 兼容（本地或外部 nanres 都走同一条检查）。"""
     schema = subprocess.run(
@@ -51,16 +59,24 @@ def main() -> int:
         raise SystemExit("nanres helper requires a resources.toml policy")
     probe_tool(nanres)
 
+    if mode == "keys":
+        output.parent.mkdir(parents=True, exist_ok=True)
+        header_arg = path_argument(output, policy.parent)
+        run(nanres, policy, "keys", "--header", header_arg)
+        if not output.is_file():
+            raise SystemExit("nanres keys did not produce a header")
+        return 0
+
     if mode != "build":
         raise SystemExit(f"unknown nanres helper mode: {mode}")
 
     lock = output.parent / (output.name + ".lock.toml")
-    lock_arg = os.path.relpath(lock, policy.parent)
+    lock_arg = path_argument(lock, policy.parent)
     output.parent.mkdir(parents=True, exist_ok=True)
     if not run(nanres, policy, "validate", "--lock", lock_arg, capture_failure=True):
         run(nanres, policy, "scan", "--lock", lock_arg)
         run(nanres, policy, "validate", "--lock", lock_arg)
-    relative_output = os.path.relpath(output, policy.parent)
+    relative_output = path_argument(output, policy.parent)
     run(nanres, policy, "pack", "--lock", lock_arg, "--output", relative_output)
     if not (output / "resources.db").is_file():
         raise SystemExit("nanres pack did not produce resources.db")

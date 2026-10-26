@@ -63,7 +63,7 @@
 | --- | --- |
 | SDL3 静态主构建 | showcase、库与测试编译通过；真实 SDL3 GPU 窗口完成三帧关闭；构建 target 无 raylib |
 | 主套件 | 补充窗口 runner 与 DLL 搜索回归测试后，非 SDK 项 99/99；两个离线 SDK fixture 在前一轮分别通过，本次未重复执行 |
-| 无后端构建 | `sdl_backend=disabled, showcase=false`，全套 94 通过、1 SKIP（窗口生命周期）；target 无 SDL3/raylib，不能打开内置窗口 |
+| 无后端构建 | `sdl_backend=disabled, showcase=false`（历史配置；当前还需 `examples=false`），全套 94 通过、1 SKIP（窗口生命周期）；target 无 SDL3/raylib，不能打开内置窗口 |
 | ASan/UBSan | system SDL3 的前轮 84/84 unit；本轮 vendored 静态 SDL3 + Clang 21/lld 21 构建及 84/84 unit 通过；均沿用既有 `detect_leaks=0`，不代表泄漏检测通过 |
 | no-RTTI | vendored 静态 SDL3，84/84 unit |
 | GPU 设备验收 | 普通、ASan、no-RTTI 三种构建的既有验收通过；本轮 vendored 静态 SDL3 + ASan/lld 的 `sdf_device_test --require-gpu --expect-format spirv` 也通过 |
