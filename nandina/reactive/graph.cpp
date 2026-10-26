@@ -229,7 +229,12 @@ namespace nandina::reactive
             throw;
         }
         if (!outer_flush) {
-            pending_ = std::move(next_pending_);
+            // A new effect is created while the application tick's deferred batch may
+            // already hold queued effects (for example a page build after a signal
+            // write). Keep that queue and append only what this run invalidated:
+            // replacing it dropped effects whose in_queue flag stayed set, so the
+            // binding never ran again.
+            pending_.insert(pending_.end(), next_pending_.begin(), next_pending_.end());
             next_pending_.clear();
             ran_in_flush_.clear();
             flushing_ = false;

@@ -623,3 +623,27 @@ TEST_CASE("Undisposed effect is released by Graph destruction", "[reactive][life
     s.set(1);
     // Graph destructor runs here — must not crash.
 }
+
+TEST_CASE("creating an effect keeps deferred pending effects queued", "[reactive][graph]") {
+    nandina::reactive::Graph graph;
+    nandina::reactive::Signal<int> value(graph, 0);
+    nandina::reactive::ReactiveScope scope(graph);
+
+    int observed = -1;
+    scope.effect([&value, &observed] { observed = value.get(); });
+    REQUIRE(observed == 0);
+
+    int other = 0;
+    {
+        auto deferred = graph.defer_effects();
+        value.set(7);
+        REQUIRE(observed == 0);
+        // make_effect() runs its initial pass through Graph::run_effect_once().
+        // That must not discard the deferred effect queued above.
+        scope.effect([&value, &other] { other = value.peek(); });
+        REQUIRE(observed == 0);
+        deferred.commit();
+    }
+    REQUIRE(other == 7);
+    REQUIRE(observed == 7);
+}

@@ -48,6 +48,16 @@ anchors 作者测试还验证非法初始绑定不会在后续 source 更新时�
 
 `batch()` 用 RAII guard 递增 / 递减 `batch_depth_`，支持嵌套，只在最外层退出且延迟域也为空时 flush 一次；即使 fn 抛异常，guard 析构也保证退出批量模式。`flush()` 按索引遍历 pending 队列（执行过程中可能继续入队），同一波内每个 effect 最多执行一次：如果 effect 在执行中再次使自己失效，`enqueue()` 会把它放进 `next_pending_`，留到下一波。这条规则避免了自反馈 effect 在同一波里锁死 UI 线程，代价是这类更新要多一个波次才稳定。作为兜底，单次 flush 的执行数超过 10000 会抛出 `reactive effect cascade exceeded flush limit`，而不是静默卡死。
 
+`make_effect()` 的首次执行走 `run_effect_once()`：它不进入 flush 的循环，而是在隔离的
+flushing 状态下只跑这一个 effect。这里有一条必须在改动调度代码时守住的不变量：**创建
+effect 不能覆盖已有的 pending 队列**。窗口 tick 的延迟域里，输入回调写信号会把 effect
+排进 `pending_`，紧接着导航构建页面又会创建大量新 effect；若首次执行用本次运行产生的
+`next_pending_` 替换 `pending_`，先前排队的 effect 会被静默丢弃，而它的 `in_queue` 仍是
+`true`，此后同一个绑定再也不会入队——现象是“页面重建之后，外壳或旧页面上绑定 store 信号
+的标签永远不再更新”。正确做法是把 `next_pending_` **追加**到 `pending_` 尾部，保留延迟域
+中已经排队的效果；`tests/reactive_tests.cpp` 的
+`creating an effect keeps deferred pending effects queued` 锁定该回归。
+
 应用层还有更外层的提交点：`NanWindow::tick()` 在帧开始时通过 `graph.defer_effects()` 进入延迟域，在 `FramePhase::reactive` 阶段调用 `commit()`。整个 input / tasks / process 阶段写入的值仍然同步可读，但 effect 被合并到该阶段统一跑一波，随后才进入动画与布局。`DeferredEffects` 的析构不 flush，只恢复自动调度，因此中途放弃延迟域不会丢队列内容，只是留待下次写入或显式 `flush()` 处理。
 
 ## ReactiveScope 的持有与清理顺序
