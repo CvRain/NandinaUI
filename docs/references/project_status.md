@@ -138,6 +138,7 @@ P2.4 的 `examples/lab` 已退役，示例应用改为 `examples/notebook`：目
 - **测试分工**：数据层等确定性测试留在仓库（`examples/notebook/tests/`，`notebook-data`，CI/Windows 覆盖）；UI/交互与长跑测试放未跟踪的 `playground/`，不作为 CI 证据。
 - **构建前置**：notebook 需要 `build_ui`、资源工具链与 `resource_sqlite=enabled`；headless、关闭工具或关闭 SQLite 的配置用 `-Dexamples=false` 跳过它。
 - **历史证据**：P2.4 的验收记录与 `docs/images/lab/` 截图保留，不随 lab 退役删除。
+- **验证（2026-10-28）**：默认主套件 **106/106**（`notebook-data` 通过；lab 的 4 个测试随退役删除、notebook 数据层测试新增）；release check 8/8。干净离线配置（`--wrap-mode=nodownload -Dexamples=true -Dshowcase=false -Dbuild_tests=false`）从零构建 `nandina_examples_notebook` 通过并生成迁移包与常量头；`-Dresource_sqlite=disabled` 且 `examples` 默认开启时配置期报错 `examples/notebook needs the SQLite runtime backend`；headless 配方 `-Dsdl_backend=disabled -Dshowcase=false -Dexamples=false` 配置通过。交替矩阵：ASan **83/83（+1 SKIP）**、no-RTTI **85/85**（含 `notebook-data`）、no-SQLite **81/81（+1 SKIP）**、纯工具 8/8。Windows 设备本轮不可达（`No route to host`），未复跑；恢复后补验构建、`--suite unit` 与 `notebook-data`。
 
 ## 下一阶段路线（2026-10-20）
 
