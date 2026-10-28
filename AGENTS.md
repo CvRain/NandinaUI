@@ -15,15 +15,18 @@ application shell. Version `0.1.0-alpha.1`.
 - Experimental: Windows (MSYS2 UCRT64). Unsupported: macOS.
 - Not a Node/Bun project; there is no JavaScript runtime or package manager.
 
-### Current milestone state (2026-10-25)
+### Current milestone state (2026-10-28)
 
 - P1 and P2 are closed. P2 covers the tool/UI split, startup policy, scoped manager results,
   cache identity/reclamation, resource identity (explicit `key → path`, frozen key derivation,
   versioned 128-bit IDs), lock migration (build-dir lock, explicit `--rewrite-lock`, collision
   diagnostics, no-rewrite determinism), the minimal author constant header (`nanres keys`), and
-  the multi-route `examples/lab` application (login/register, notes, timer, preview, dialog;
-  resource package + generated key header + portable staging).
-- Next phase: P3 (input/focus); see the roadmap before starting.
+  the P2.4 multi-route lab example (retired 2026-10-28; kept in the docs as historical evidence).
+- The integrated example application is now `examples/notebook`: a personal notes app that grows
+  batch by batch. Its SQLite data layer (connection/statement/transactions, resource-driven
+  migrations, repositories, models) is in place; auth/user services and the UI are being written.
+  Components are authored in `showcase/`; UI tests live in the untracked `playground/`.
+- Next framework phase: P3 (input/focus); see the roadmap before starting.
 - The plan and exit criteria are **not** owned by this file: read
   `docs/references/development_roadmap.md` and the D5 contract
   (`resource_build_and_deployment.md` §8) before claiming a sub-batch is complete.
@@ -129,7 +132,7 @@ traversal. Use `defer_tree_mutation`, `queue_delete`, `post_layout`, or the anim
 | `docs/components/`, `docs/getting_started/`, `docs/guide/` | Component docs, tutorial, topic guides |
 | `stories/` | Narrative “why” and root-cause history |
 | `showcase/` | Reference application and visual acceptance target |
-| `examples/lab/` | P2.4 single-target multi-route example; resource chain and run smoke |
+| `examples/notebook/` | Integrated notebook example: SQLite data layer with resource-driven migrations, then services/UI. Data-layer tests sit beside it; UI tests live in untracked `playground/` |
 | `subprojects/`, `third_party/` | Vendored dependencies; do not edit or reformat |
 
 ## Development Commands
@@ -154,10 +157,10 @@ meson compile -C buildDir-asan && \
 meson compile -C buildDir-no-rtti && \
   meson test -C buildDir-no-rtti --suite unit --print-errorlogs
 
-# P2.4 example participates in normal UI builds; disable with -Dexamples=false
+# Notebook example participates in normal UI builds; disable with -Dexamples=false
 meson setup --reconfigure buildDir
-meson compile -C buildDir nandina_lab
-meson test -C buildDir example-lab-build example-lab-run example-lab-incremental --print-errorlogs
+meson compile -C buildDir nandina_examples_notebook
+meson test -C buildDir notebook-data --print-errorlogs
 meson compile -C buildDir-nosqlite && meson test -C buildDir-nosqlite --suite unit
 meson compile -C buildDir-tools && meson test -C buildDir-tools
 
@@ -176,8 +179,11 @@ Useful options: `-Dbuild_ui=false` (resource tools only; examples are skipped), 
 `-Dresource_tools=false -Dexternal_nanres=/path/to/nanres`, `-Dsdl_backend=disabled
 -Dshowcase=false -Dexamples=false` (headless), `-Dphysics2d=enabled`, `-Dcpp_rtti=false`.
 `examples` is true by default for UI builds and can be disabled explicitly; `build_ui=false`
-skips it. `resource_sqlite=auto` equals enabled. `showcase` and `examples` build resource
-packages, so `-Dresource_tools=false` without `-Dexternal_nanres` requires `-Dshowcase=false
+skips it. The notebook example needs the resource toolchain **and** `resource_sqlite=enabled`
+(it stores the app database and mounts the migration package through SQLite), so headless,
+tools-free and SQLite-disabled configurations pass `-Dexamples=false`. `resource_sqlite=auto`
+equals enabled. `showcase` and `examples` build resource packages, so
+`-Dresource_tools=false` without `-Dexternal_nanres` requires `-Dshowcase=false
 -Dexamples=false` (otherwise configure stops with an explanatory error). Keep that in mind when
 configuring a tools-free sanitizer or minimal build directory.
 
@@ -237,7 +243,7 @@ meson setup --reconfigure buildDir
 ninja -C buildDir
 meson test -C buildDir --suite unit --print-errorlogs
 meson test -C buildDir nanres-cli nanres-build-workflow portable-stage nanres-keys \
-  example-lab-build example-lab-run example-lab-incremental --print-errorlogs
+  notebook-data --print-errorlogs
 ```
 
 - A reused build directory may keep a stale thin archive after a target-set change; delete
@@ -245,12 +251,12 @@ meson test -C buildDir nanres-cli nanres-build-workflow portable-stage nanres-ke
 - SSH runs in a non-interactive session: GPU/swapchain-dependent checks fail with
   `0x887A0022`. Run GPU device tests, SDF goldens, and any GUI interaction in an interactive
   desktop session; CPU paths can use `--renderer sdl2d` over SSH.
-- The CPU-only resource integration tests (`nanres-cli`, `nanres-build-workflow`, `portable-stage`,
-  `nanres-keys`, `example-lab-build`, `example-lab-incremental`) do run over SSH and belong to
-  Windows verification: they exercise `pack`, `unchanged`, external files, portable staging, the
-  generated key header with a real C++ compile and the P2.4 lab package. `example-lab-run` returns
-  SKIP without a display. They found both Windows packaging defects fixed in `3c86927`, so do not
-  treat `--suite unit` alone as proof that packaging works.
+- The CPU-only tests (`nanres-cli`, `nanres-build-workflow`, `portable-stage`, `nanres-keys`,
+  `notebook-data`) do run over SSH and belong to Windows verification: they exercise `pack`,
+  `unchanged`, external files, portable staging, the generated key header with a real C++ compile
+  and the notebook data layer (resource-driven migrations + repositories). They found both Windows
+  packaging defects fixed in `3c86927`, so do not treat `--suite unit` alone as proof that
+  packaging works.
 - Windows refuses to rename a directory while a file inside it is open. Finalize prepared
   statements and close the SQLite connection with `sqlite3_close` (a `sqlite3_close_v2` with live
   statements defers the close and keeps the handle) before renaming the package directory.
@@ -381,3 +387,8 @@ meson test -C buildDir nanres-cli nanres-build-workflow portable-stage nanres-ke
 - **Coverage expectation**: no numeric percentage gate; require behavioral coverage of new public
   API/boundaries and configuration-specific builds. Do not edit tracked files during a full suite
   run, and do not trust a green `release_check` that reports SKIPs for unavailable tools.
+- **Example app test placement**: deterministic data-layer tests stay in the repository
+  (`examples/notebook/tests/`, registered as `notebook-data` on the `unit` suite so CI and Windows
+  cover them); UI/interaction and long-running app tests live in the untracked `playground/` and
+  are never cited as CI evidence. Reusable widgets are authored in `showcase/` with its visual
+  acceptance, then composed by the notebook.

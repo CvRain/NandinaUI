@@ -86,6 +86,12 @@ weak face，淘汰不销毁调用方持有的 face。`render::TextureCache` 新�
 SDL3 和资源工具链；资源包与生成常量头由 Meson 在链接/编译前生成。示例不是 SDK 安装内容，
 也不承诺密码掩码、持久化或真实认证。
 
+2026-10-28 示例应用演进（同样是构建侧变化，非 SDK API）：`examples/lab` 已退役，由
+`examples/notebook` 接替（个人笔记软件，数据层先行）。notebook 要求 `build_ui=true`、资源工具链
+和 `resource_sqlite=enabled`（应用数据库与迁移包都走 SQLite），因此在关闭 SQLite 或关闭工具的
+配置里用 `-Dexamples=false` 跳过；`notebook-data` 数据层测试随 `examples` 一起构建，Windows 上
+可正常运行。P2.4 的 `examples/lab` 验收记录保留为历史。
+
 | 等级 | 含义 | 稳定性承诺 | 谁可以包含 |
 | --- | --- | --- | --- |
 | `public` | 推荐使用的接口 | alpha 内也尽量不破坏；破坏时给迁移说明 | 应用代码、示例、下游宿主 |

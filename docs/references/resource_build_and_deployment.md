@@ -655,6 +655,11 @@ D5 范围已冻结。以下为 D5 内部实施顺序；项目总排序仍见 [�
 > 本节把 2026-10-22 的评审结论固化为执行契约。P2 代码按此实施；未写入本节的行为不提前承诺。
 > 路线图 P2 的子批划分与状态见[开发路线](development_roadmap.md)。
 
+> **2026-10-28 现状补充**：本节是 P2 定稿原文（保留历史）。示例应用其后已由 `examples/lab`
+> 改造为 `examples/notebook`：`examples` 打开时还需要 `resource_sqlite=enabled`（应用数据库与
+> 迁移包都走 SQLite），数据层测试为 `notebook-data`。下文 §8.0 的“示例应用”一行与 §8.2 的
+> `examples` 行以此补充为准，其余契约不变。
+
 ### 8.0 评审决策
 
 | 议题 | 决定 |
@@ -1136,6 +1141,10 @@ CI 增设只预热 toml++/Catch2、只安装工具所需系统开发包的资源
   **83/83**（`lab-store` 81/83 OK）；资源/示例集成 7 项中 **6 通过 + 1 SKIP**：
   `example-lab-build`、`example-lab-incremental`、`nanres-cli`、`nanres-build-workflow`、
   `portable-stage`、`nanres-keys` 全 OK，`example-lab-run` 因无 display 返回 77（SKIP）。
+- **示例应用演进（2026-10-28）**：P2.4 的 `examples/lab` 已退役，由 `examples/notebook`
+  （综合笔记软件）接替。notebook 已落地 SQLite 数据层与资源驱动迁移（`notebook-data` 为其
+  数据层测试）；`resources.toml` 用显式 key 把迁移 SQL 打包，运行时从挂载包读取。本节及
+  `docs/images/lab/` 的截图保留为 P2.4 历史验收证据，不再代表当前示例。
 - **交互验收证据**：`docs/images/lab/` 收录 `notes-signed-in.png`（登录后 Notes 会话行与列表）、
   `notes-editor.png`（选中长文 + 保存/预览/删除）、`notes-dialog.png`（删除确认弹窗）、
   `focus-timer.png`（运行中的倒计时）、`preview.png`（资源包图片）。交互由合成指针事件

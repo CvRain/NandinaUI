@@ -69,7 +69,7 @@ def main():
         run([meson, "setup", str(ignored), str(clean), "--wrap-mode=nodownload",
              "-Dbuild_ui=false", "-Dexamples=true"])
         names = {target["name"] for target in json.loads(run([meson, "introspect", "--targets", str(ignored)]))}
-        assert "nandina" not in names and "nandina_lab" not in names, names
+        assert "nandina" not in names and "nandina_examples_notebook" not in names, names
 
         # 外部工具：关闭本地工具时，兼容的 external_nanres 通过配置握手；不兼容的必须在配置期失败。
         good = root / "good-nanres"

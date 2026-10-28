@@ -1,0 +1,26 @@
+package = "com.nandina.notebook"
+source = "resources"
+
+# SQL lives beside the data layer so it is reviewed with the code, but it is
+# packaged as a resource: at runtime the migration runner reads these logical
+# keys through the mounted nanres package. Explicit keys keep the generated
+# resource_keys.hpp constants stable if the files move.
+[[resources]]
+key = "migrations/001_create_user.sql"
+path = "src/data/migrations/001_create_user.sql"
+media_type = "application/sql"
+
+[[resources]]
+key = "migrations/002_create_note_group.sql"
+path = "src/data/migrations/002_create_note_group.sql"
+media_type = "application/sql"
+
+[[resources]]
+key = "migrations/003_create_note.sql"
+path = "src/data/migrations/003_create_note.sql"
+media_type = "application/sql"
+
+[[resources]]
+key = "migrations/004_create_todo.sql"
+path = "src/data/migrations/004_create_todo.sql"
+media_type = "application/sql"

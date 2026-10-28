@@ -45,7 +45,9 @@ NandinaUI（南天竹）是一个用 **C++26** 编写、基于 **Meson** 构建�
 - **无障碍语义** —— 控件语义树导出，为可访问性工具铺路。
 
 资源构建工具已与 UI 目标解耦，P2 闭环（工具拆分、作用域查询、身份/常量头、构建 lock 与示例
-资源链）已落地；`examples/lab` 单可执行多路由示例随普通 UI 构建默认参与，可用 `-Dexamples=false` 关闭。
+资源链）已落地；综合示例应用 `examples/notebook` 随普通 UI 构建默认参与，可用 `-Dexamples=false`
+关闭。2026-10-28 起示例应用由 P2.4 的 `examples/lab` 改造为 notebook（个人笔记软件），当前已落地
+SQLite 数据层与资源驱动的迁移，UI 与服务层按批推进。
 [D5 资源构建与部署](docs/references/resource_build_and_deployment.md) 记录完整契约与剩余部署边界。
 
 ## 🧱 架构
@@ -115,8 +117,9 @@ meson compile -C build-resources nanres
 `resource_tools=false` 关闭本地工具及其 OpenSSL 依赖；`resource_sqlite=disabled` 只关闭
 运行时 SQLite 后端，打包工具仍可使用 SQLite。两者同时关闭时不构建 SQLite，仍可运行
 内存/目录/内置资源后端。`resource_sqlite=auto` 在当前 vendored 策略下等价于 enabled。
-纯资源配置自动排除 showcase、playground、窗口探针和 `examples/lab`；普通 UI 构建中
-`examples` 默认开启，要求 SDL3 与资源工具链；headless/无工具配置显式加 `-Dexamples=false`。
+纯资源配置自动排除 showcase、playground、窗口探针和 `examples/notebook`；普通 UI 构建中
+`examples` 默认开启，要求 SDL3、资源工具链与 `resource_sqlite=enabled`；headless、关闭工具或
+关闭 SQLite 的配置显式加 `-Dexamples=false`。
 
 **启动策略（P2.1b）**：`NanApplicationConfig::resource_package` 默认为空，启动不自动发现或
 打开资源包；需要自动开包时显式设为 `"resources.db"`，否则用
@@ -460,7 +463,7 @@ D1–D8 是设计编号，**不表示执行顺序**。设计接受、实现完�
 | D2 主题状态与作者模型 | 待审阅，未实施 | 先只读状态/通知，完整主题模型另批 |
 | D3 导航分组 | 方向已接受，未实施 | `type → nav_group`、空组与全局合并 |
 | D4 平台与后端 | 默认切换与 host seam 已落地，收尾中 | 逐平台交付；不把 Web 探测当作应用支持 |
-| D5 资源构建与部署 | **已实施（P2.1a–P2.4c）**：解耦、作用域、身份/lock 迁移、常量头与 `examples/lab` | 后续声明式构建扩展与部署定位汇合 |
+| D5 资源构建与部署 | **已实施（P2.1a–P2.4c）**：解耦、作用域、身份/lock 迁移、常量头与示例应用（lab → notebook） | 后续声明式构建扩展与部署定位汇合 |
 | D6 DSL 与内容测量 | 方向已接受，详细契约待审阅 | Label 能力/绑定规则与有限宽度测量，随后组合入口 |
 | D7 渲染质量与图片 | 方向已接受，未实施 | 混合修复、生产 SDF、共享解码、分层裁剪 |
 | D8 键码与输入事件 | 方向已接受，未实施 | 物理/逻辑键与事件契约、平台映射、输入保序 |

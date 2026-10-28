@@ -801,12 +801,3 @@ if resource_sqlite
     )
     test('application-resource', application_resource_tests, suite: 'unit')
 endif
-
-# The store is plain C++ (no resources/window), so it stays in every UI test build,
-# including -Dexamples=false sanitizer/configurations.
-lab_store_tests = executable(
-    'lab_store_tests',
-    files('lab_store_tests.cpp', '../examples/lab/lab_store.cpp'),
-    dependencies : [nandina_dep, catch2_with_main_dep],
-)
-test('lab-store', lab_store_tests, suite: 'unit')

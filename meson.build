@@ -325,7 +325,7 @@ elif external_nanres != ''
         probe_keys = run_command(toolchain_nanres, 'keys', check: false)
         probe_keys_output = probe_keys.stdout() + probe_keys.stderr()
         if probe_keys.returncode() != 2 or not probe_keys_output.contains('keys requires --header')
-            error('external_nanres: does not provide the `keys` command required by examples/lab')
+            error('external_nanres: does not provide the `keys` command required by examples/notebook')
         endif
     endif
     message('external_nanres: ' + probe_version.stdout().strip())
@@ -367,7 +367,7 @@ if not meson.is_subproject()
         if not sdl3_dep.found()
             error('examples require SDL3; use -Dexamples=false or enable a window backend')
         endif
-        subdir('examples/lab')
+        subdir('examples/notebook')
     endif
 
     # 跨平台探测里「真实页面走 SDL 设备」的那一个：需要 libnandina 与 showcase 的页面源码，
@@ -382,7 +382,7 @@ endif
 # 只在主项目构建时挂上；CMake 子项目自己的产物不动。
 if host_machine.system() == 'windows' and not meson.is_subproject()
     _windows_runtime_deps = []
-    foreach _target_name : ['playground_exe', 'lab_exe', 'sdf_device_tests', 'nandina']
+    foreach _target_name : ['playground_exe', 'notebook_exe', 'sdf_device_tests', 'nandina']
         if is_variable(_target_name)
             _windows_runtime_deps += [get_variable(_target_name)]
         endif
