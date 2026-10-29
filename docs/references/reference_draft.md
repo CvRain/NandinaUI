@@ -502,8 +502,8 @@ scancode、key、mod、down 和 repeat。mapper 应消费事件时快照，不�
   修饰键状态；所有 key-down/up（含未映射键和被过滤的 repeat）都先更新该状态。
 - 创建时初始化状态，跨帧保留；失焦清空，重新获得焦点时与平台当前状态同步。
   `FrameInput::modifiers` 仍是平台帧级当前状态，不回填历史事件。
-- 保留 move → buttons → wheel → keys → text 分组派发，不宣称跨类型保序；仍只转发
-  非 repeat 的 key-down。物理/逻辑键、release/repeat/unknown 分发和 IME 不在本批。
+- 保留 move → buttons → wheel → keys → text 分组派发，不宣称跨类型保序；本批仍只转发
+  非 repeat 的 key-down（P3.1b 同轮随后补上 release/repeat/unknown，此处保留 P3.1a 批次快照）。
 - 验收：真实 SDL 队列覆盖同帧修饰键转换、跨帧和过滤事件；真实 NanWindow tick 覆盖
   “A 处点击/滚轮后移动到 B”及缩放/letterbox 映射。故障注入须使对应回归失败。
 
