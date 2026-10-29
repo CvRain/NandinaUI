@@ -34,6 +34,7 @@ namespace nandina::app
     ///
     /// 容器语义：**追加**而不是替换 —— 宿主每帧先清空自己的缓冲，平台实现只负责把这一帧
     /// 发生的事件翻译进去。指针位置与修饰键单独给出，因为它们每帧都要读（而不只是变化时）。
+    /// 每事件坐标与修饰键是捕获时快照；独立的帧级状态不得覆盖历史事件字段。
     struct FrameInput {
         std::vector<scene::MouseMoveEvent> mouse_moves;
         std::vector<scene::MouseButtonEvent> mouse_buttons;
@@ -43,7 +44,7 @@ namespace nandina::app
 
         /// 指针是否有效（无指针设备时 false）。
         bool has_pointer = false;
-        /// 屏幕坐标（物理像素，未做 viewport 映射；映射属于宿主职责）。
+        /// 帧末屏幕坐标（物理像素，未做 viewport 映射；不替代事件坐标）。
         foundation::NanPoint pointer {};
         /// 当前修饰键状态（每帧读，不只在变化时）。
         scene::KeyModifiers modifiers {};

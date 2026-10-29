@@ -124,19 +124,29 @@ TEST_CASE("select keyboard opens, navigates, selects, and escapes", "[select][ke
     REQUIRE(tree.layout_root(foundation::NanSize(200.0F, 48.0F)) >= 1);
     tree.set_focus(select.get());
 
-    tree.dispatch_key(scene::KeyEvent(32, scene::KeyEvent::Action::press)); // space 打开
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::space, scene::KeyEvent::Action::press)
+    ); // space 打开
     REQUIRE(select->is_open());
 
-    tree.dispatch_key(scene::KeyEvent(264, scene::KeyEvent::Action::press)); // down
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::down, scene::KeyEvent::Action::press)
+    ); // down
     REQUIRE(select->selected_index() == 1);
 
-    tree.dispatch_key(scene::KeyEvent(257, scene::KeyEvent::Action::press)); // enter 选中
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::enter, scene::KeyEvent::Action::press)
+    ); // enter 选中
     REQUIRE(select->selected_index() == 1);
     REQUIRE_FALSE(select->is_open());
 
-    tree.dispatch_key(scene::KeyEvent(32, scene::KeyEvent::Action::press)); // 再打开
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::space, scene::KeyEvent::Action::press)
+    ); // 再打开
     REQUIRE(select->is_open());
-    tree.dispatch_key(scene::KeyEvent(256, scene::KeyEvent::Action::press)); // escape
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::escape, scene::KeyEvent::Action::press)
+    ); // escape
     REQUIRE_FALSE(select->is_open());
 }
 
@@ -441,13 +451,19 @@ TEST_CASE("select popup supports home, end and typeahead", "[select][keyboard]")
     REQUIRE(tree.layout_root(foundation::NanSize(220.0F, 48.0F)) >= 1);
     tree.set_focus(select.get());
 
-    tree.dispatch_key(scene::KeyEvent(32, scene::KeyEvent::Action::press)); // space 打开
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::space, scene::KeyEvent::Action::press)
+    ); // space 打开
     REQUIRE(select->is_open());
 
     // Home / End 由共享漫游设施提供。
-    tree.dispatch_key(scene::KeyEvent(269, scene::KeyEvent::Action::press)); // end
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::end, scene::KeyEvent::Action::press)
+    ); // end
     REQUIRE(select->selected_index() == 3);
-    tree.dispatch_key(scene::KeyEvent(268, scene::KeyEvent::Action::press)); // home
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::home, scene::KeyEvent::Action::press)
+    ); // home
     REQUIRE(select->selected_index() == 0);
 
     // typeahead：当前在 Alpha(0)，按 b 跳到 Bravo。
@@ -455,7 +471,9 @@ TEST_CASE("select popup supports home, end and typeahead", "[select][keyboard]")
     REQUIRE(select->selected_index() == 1);
 
     // 前缀累积：a + v 命中 Avocado。
-    tree.dispatch_key(scene::KeyEvent(268, scene::KeyEvent::Action::press)); // 回到 Alpha
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::home, scene::KeyEvent::Action::press)
+    ); // 回到 Alpha
     REQUIRE(select->selected_index() == 0);
     tree.dispatch_text_input(scene::TextInputEvent("a"));
     tree.dispatch_text_input(scene::TextInputEvent("v"));

@@ -4,7 +4,7 @@
 
 #include "context_menu.hpp"
 
-#include "key_codes.hpp"
+#include "../foundation/input.hpp"
 
 #include "../scene/input_event.hpp"
 
@@ -157,8 +157,8 @@ namespace nandina::widget
         if (event.type() == scene::EventType::key) {
             auto& key = static_cast<scene::KeyEvent&>(event);
             if (key.is_pressed()
-                && (key.keycode() == keys::menu
-                    || (key.keycode() == keys::f10 && key.modifiers().shift)))
+                && (key.logical_key() == foundation::LogicalKey::menu
+                    || (key.logical_key() == foundation::LogicalKey::f10 && key.modifiers().shift)))
             {
                 open_from_keyboard();
                 event.accept();

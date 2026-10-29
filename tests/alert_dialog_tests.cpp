@@ -69,7 +69,9 @@ namespace
                                                                 : nullptr;
         }
         void press_escape() {
-            tree.dispatch_key(scene::KeyEvent(256, scene::KeyEvent::Action::press));
+            tree.dispatch_key(
+                scene::KeyEvent(foundation::LogicalKey::escape, scene::KeyEvent::Action::press)
+            );
         }
         /// 按语义在浮层子树里找按钮：比写死节点层级耐改，也顺带验证按钮语义暴露正确。
         [[nodiscard]] static auto find_button(scene::NanControl* node, const std::string_view label)
@@ -231,7 +233,9 @@ TEST_CASE("a plain dialog in the same setup does dismiss", "[alert-dialog][inter
     (void)tree.layout_root(foundation::NanSize(640.0F, 400.0F));
     REQUIRE(dialog->is_open());
 
-    tree.dispatch_key(scene::KeyEvent(256, scene::KeyEvent::Action::press));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::escape, scene::KeyEvent::Action::press)
+    );
     for (int frame = 0; frame < 4; ++frame) {
         tree.advance_animations(0.5F);
         tree.process(0.5F);

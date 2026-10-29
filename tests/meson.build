@@ -108,6 +108,13 @@ scene_tests = executable(
 )
 test('scene', scene_tests, suite: 'unit')
 
+key_lifecycle_tests = executable(
+    'key_lifecycle_tests',
+    files('key_lifecycle_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('key-lifecycle', key_lifecycle_tests, suite: 'unit')
+
 # SDL 视觉回归：用**软件渲染器**做确定性像素断言（不需要窗口/显示器/GPU），
 # 期望值是解析计算出来的合成色，而不是某个后端某次画出来的图。
 # 没有 SDL3 后端时不注册：没有 SDL 设备可测，注册一个必然跳过的目标只会制造噪声。
@@ -118,6 +125,19 @@ if sdl3_dep.found()
         dependencies : [nandina_dep, catch2_with_main_dep],
     )
     test('sdl-visual', sdl_visual_tests, suite: 'unit')
+    sdl_platform_input_tests = executable(
+        'sdl_platform_input_tests',
+        files('sdl_platform_input_tests.cpp', 'window_input_tests.cpp'),
+        cpp_args: ['-DNANDINA_HAS_SDL_BACKEND=1'],
+        dependencies : [nandina_dep, sdl3_dep, catch2_with_main_dep],
+    )
+    test(
+        'sdl-platform-input',
+        sdl_platform_input_tests,
+        suite: 'unit',
+        is_parallel: false,
+        env: ['SDL_VIDEODRIVER=dummy', 'SDL_RENDER_DRIVER=software'],
+    )
     sdf_state_probe = executable(
         'sdf_state_probe',
         files('../probe/cross_platform/desktop/sdf_state_probe.cpp'),

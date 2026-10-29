@@ -132,11 +132,15 @@ TEST_CASE("switch supports keyboard activation and disabled state", "[switch][in
     tree.set_root(switch_control);
     REQUIRE(tree.layout_root(foundation::NanSize(240.0F, 48.0F)) >= 1);
     tree.set_focus(switch_control.get());
-    tree.dispatch_key(scene::KeyEvent(32, scene::KeyEvent::Action::press));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::space, scene::KeyEvent::Action::press)
+    );
     REQUIRE(switch_control->checked());
 
     switch_control->set_disabled(true);
-    tree.dispatch_key(scene::KeyEvent(32, scene::KeyEvent::Action::press));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::space, scene::KeyEvent::Action::press)
+    );
     REQUIRE(switch_control->checked());
     REQUIRE(tree.update_semantics());
     const auto* node = tree.semantics_tree().find(switch_control->semantics_id());

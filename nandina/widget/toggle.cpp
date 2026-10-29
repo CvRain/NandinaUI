@@ -309,7 +309,7 @@ namespace nandina::widget
                 // 设施按 orientation 过滤并回答"下一个是谁"，本类不自己算下一个是谁，
                 // 也不自己判断哪个方向键有效。
                 auto& key = static_cast<scene::KeyEvent&>(event);
-                if (key.is_pressed() && group_->handle_key(this, key)) {
+                if (group_->handle_key(this, key)) {
                     event.accept();
                     return true;
                 }

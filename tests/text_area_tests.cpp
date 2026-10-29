@@ -12,7 +12,6 @@
 #include <nandina/theme/theme_manager.hpp>
 #include <nandina/widget/build_context.hpp>
 #include <nandina/widget/controls.hpp>
-#include <nandina/widget/key_codes.hpp>
 #include <nandina/widget/text_area.hpp>
 
 #include <catch2/catch_approx.hpp>
@@ -84,7 +83,6 @@ namespace
         }
     };
 
-    constexpr int key_kp_enter = 335;
 } // namespace
 
 TEST_CASE("text area default measure follows the visible row count", "[text-area][measure]") {
@@ -148,8 +146,17 @@ TEST_CASE("text area Enter inserts a newline instead of submitting", "[text-area
     tree.set_focus(area.get());
 
     tree.dispatch_text_input(scene::TextInputEvent("a"));
-    tree.dispatch_key(scene::KeyEvent(widget::keys::enter, scene::KeyEvent::Action::press));
-    tree.dispatch_key(scene::KeyEvent(key_kp_enter, scene::KeyEvent::Action::press));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::enter, scene::KeyEvent::Action::press)
+    );
+    tree.dispatch_key(
+        scene::KeyEvent(
+            foundation::LogicalKey::enter,
+            scene::KeyEvent::Action::press,
+            {},
+            foundation::PhysicalKey::keypad_enter
+        )
+    );
     tree.dispatch_text_input(scene::TextInputEvent("b"));
 
     // 两次 Enter 都插入换行；不存在 TextField 那种 on_submit 提交路径。
@@ -159,7 +166,9 @@ TEST_CASE("text area Enter inserts a newline instead of submitting", "[text-area
     REQUIRE(area->editable_text().text_node().layout_result().lines.size() == 3);
 
     // Enter 的按下-抬起不产生额外字符。
-    tree.dispatch_key(scene::KeyEvent(widget::keys::enter, scene::KeyEvent::Action::release));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::enter, scene::KeyEvent::Action::release)
+    );
     REQUIRE(area->value() == "a\n\nb");
 }
 
@@ -279,31 +288,41 @@ TEST_CASE("text area arrow keys move the caret across visual lines", "[text-area
 
     // "abc" 占 [0, 3)，'\n' 在 3，"def" 占 [4, 7)。
     area->editable_text().set_caret(3);
-    tree.dispatch_key(scene::KeyEvent(widget::keys::right, scene::KeyEvent::Action::press));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::right, scene::KeyEvent::Action::press)
+    );
     REQUIRE(area->editable_text().caret() == 4);
-    tree.dispatch_key(scene::KeyEvent(widget::keys::left, scene::KeyEvent::Action::press));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::left, scene::KeyEvent::Action::press)
+    );
     REQUIRE(area->editable_text().caret() == 3);
 
     // 第二行内左右移动；Home / End 只作用于当前视觉行。
     area->editable_text().set_caret(5);
-    tree.dispatch_key(scene::KeyEvent(widget::keys::home, scene::KeyEvent::Action::press));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::home, scene::KeyEvent::Action::press)
+    );
     REQUIRE(area->editable_text().caret() == 4);
-    tree.dispatch_key(scene::KeyEvent(widget::keys::end, scene::KeyEvent::Action::press));
+    tree.dispatch_key(scene::KeyEvent(foundation::LogicalKey::end, scene::KeyEvent::Action::press));
     REQUIRE(area->editable_text().caret() == 7);
 
     // 上下移动保留视觉列，并夹到目标行长度内。
     area->editable_text().set_caret(5);
-    tree.dispatch_key(scene::KeyEvent(widget::keys::up, scene::KeyEvent::Action::press));
+    tree.dispatch_key(scene::KeyEvent(foundation::LogicalKey::up, scene::KeyEvent::Action::press));
     REQUIRE(area->editable_text().caret() == 1);
-    tree.dispatch_key(scene::KeyEvent(widget::keys::down, scene::KeyEvent::Action::press));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::down, scene::KeyEvent::Action::press)
+    );
     REQUIRE(area->editable_text().caret() == 5);
 
     // 第一行再向上、最后一行再向下都是空操作。
     area->editable_text().set_caret(1);
-    tree.dispatch_key(scene::KeyEvent(widget::keys::up, scene::KeyEvent::Action::press));
+    tree.dispatch_key(scene::KeyEvent(foundation::LogicalKey::up, scene::KeyEvent::Action::press));
     REQUIRE(area->editable_text().caret() == 1);
     area->editable_text().set_caret(5);
-    tree.dispatch_key(scene::KeyEvent(widget::keys::down, scene::KeyEvent::Action::press));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::down, scene::KeyEvent::Action::press)
+    );
     REQUIRE(area->editable_text().caret() == 5);
 }
 
@@ -394,7 +413,9 @@ TEST_CASE("text area disabled drops focus and ignores input", "[text-area][state
     REQUIRE(theme::has_text_area_state(area->visual_state(), theme::TextAreaVisualState::disabled));
 
     tree.dispatch_text_input(scene::TextInputEvent("x"));
-    tree.dispatch_key(scene::KeyEvent(widget::keys::enter, scene::KeyEvent::Action::press));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::enter, scene::KeyEvent::Action::press)
+    );
     REQUIRE(area->value() == "value");
 
     area->set_disabled(false);
@@ -418,7 +439,9 @@ TEST_CASE(
     REQUIRE_FALSE(area->resolved_style().container.fill.approx_equals(editable_fill));
 
     tree.dispatch_text_input(scene::TextInputEvent("x"));
-    tree.dispatch_key(scene::KeyEvent(widget::keys::enter, scene::KeyEvent::Action::press));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::enter, scene::KeyEvent::Action::press)
+    );
     REQUIRE(area->value() == "locked");
 
     area->set_read_only(false);

@@ -4,7 +4,7 @@
 
 #include "text_area.hpp"
 
-#include "key_codes.hpp"
+#include "../foundation/input.hpp"
 
 #include "../render/draw_context.hpp"
 #include "../scene/input_event.hpp"
@@ -22,7 +22,6 @@ namespace nandina::widget
 {
     namespace
     {
-        constexpr int key_kp_enter = 335;
         /// 鼠标滚轮一格滚动的逻辑像素数；与 ScrollView 的默认 wheel_step 对齐。
         constexpr float wheel_step = 40.0F;
     } // namespace
@@ -286,8 +285,7 @@ namespace nandina::widget
         }
         if (event.type() == scene::EventType::key) {
             const auto& key = static_cast<scene::KeyEvent&>(event);
-            if (key.is_pressed() && (key.keycode() == keys::enter || key.keycode() == key_kp_enter))
-            {
+            if (key.is_pressed() && (key.logical_key() == foundation::LogicalKey::enter)) {
                 // 多行输入：Enter 插入换行，不提交、不激活。
                 if (!read_only_) {
                     edit_.insert_text("\n");

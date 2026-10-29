@@ -4,7 +4,7 @@
 
 #include "roving_focus.hpp"
 
-#include "key_codes.hpp"
+#include "../foundation/input.hpp"
 
 #include "../scene/input_event.hpp"
 
@@ -183,35 +183,36 @@ namespace nandina::widget
     }
 
     auto RovingFocus::handle_key(const scene::KeyEvent& event) -> std::optional<Intent> {
-        if (!event.is_pressed() || !has_members()) {
+        // 方向键导航允许自动重复；释放不移动。
+        if (!event.is_press_or_repeat() || !has_members()) {
             return std::nullopt;
         }
         const bool vertical = orientation_ != RovingOrientation::horizontal;
         const bool horizontal = orientation_ != RovingOrientation::vertical;
 
         // 方向键：按 orientation 过滤，再交给与程序化入口共用的 step()。
-        switch (event.keycode()) {
-            case keys::up:
+        switch (event.logical_key()) {
+            case foundation::LogicalKey::up:
                 return vertical ? step(-1) : std::nullopt;
-            case keys::down:
+            case foundation::LogicalKey::down:
                 return vertical ? step(1) : std::nullopt;
-            case keys::left:
+            case foundation::LogicalKey::left:
                 return horizontal ? step(-1) : std::nullopt;
-            case keys::right:
+            case foundation::LogicalKey::right:
                 return horizontal ? step(1) : std::nullopt;
             default:
                 break;
         }
 
         int target = -1;
-        switch (event.keycode()) {
-            case keys::home:
-            case keys::page_up:
+        switch (event.logical_key()) {
+            case foundation::LogicalKey::home:
+            case foundation::LogicalKey::page_up:
                 // 没有可见项高度信息，用"跳到首个 / 末尾"作为等价语义。
                 target = edge_focusable(false);
                 break;
-            case keys::end:
-            case keys::page_down:
+            case foundation::LogicalKey::end:
+            case foundation::LogicalKey::page_down:
                 target = edge_focusable(true);
                 break;
             default:

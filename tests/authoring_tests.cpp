@@ -505,17 +505,20 @@ TEST_CASE("BuildContext callbacks expire with their owning scope", "[authoring][
     int calls = 0;
 
     auto first = ui.make<widget::Button>("First").on_click([&calls] { ++calls; }).build();
-    scene::KeyEvent activate_first {257, scene::KeyEvent::Action::press};
+    scene::KeyEvent activate_first {foundation::LogicalKey::enter, scene::KeyEvent::Action::press};
     REQUIRE(first->on_input(activate_first));
     REQUIRE(calls == 1);
 
     scope.clear();
-    scene::KeyEvent activate_expired {257, scene::KeyEvent::Action::press};
+    scene::KeyEvent activate_expired {
+        foundation::LogicalKey::enter,
+        scene::KeyEvent::Action::press
+    };
     REQUIRE(first->on_input(activate_expired));
     REQUIRE(calls == 1);
 
     auto second = ui.make<widget::Button>("Second").on_click([&calls] { ++calls; }).build();
-    scene::KeyEvent activate_second {257, scene::KeyEvent::Action::press};
+    scene::KeyEvent activate_second {foundation::LogicalKey::enter, scene::KeyEvent::Action::press};
     REQUIRE(second->on_input(activate_second));
     REQUIRE(calls == 2);
 }

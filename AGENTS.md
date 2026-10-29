@@ -26,7 +26,10 @@ application shell. Version `0.1.0-alpha.1`.
   batch by batch. Its SQLite data layer (connection/statement/transactions, resource-driven
   migrations, repositories, models) is in place; auth/user services and the UI are being written.
   Components are authored in `showcase/`; UI tests live in the untracked `playground/`.
-- Next framework phase: P3 (input/focus); see the roadmap before starting.
+- P3 is in progress: **P3.1a** (per-event pointer coordinates/modifier snapshots through the
+  host seam) and **P3.1b** (framework-owned `LogicalKey`/`PhysicalKey` identities, press/repeat/
+  release lifecycle, SDL scancode/keycode mapping, unknown identity counting) are implemented.
+  Cross-type event ordering (P3.1c) and D1 focus/text-session work remain; see the roadmap.
 - The plan and exit criteria are **not** owned by this file: read
   `docs/references/development_roadmap.md` and the D5 contract
   (`resource_build_and_deployment.md` §8) before claiming a sub-batch is complete.
@@ -328,6 +331,7 @@ meson test -C buildDir nanres-cli nanres-build-workflow portable-stage nanres-ke
 
 - `nandina/app/nan_application.hpp`, `nandina/app/nan_window.cpp` (frame loop, ~445-532),
   `nandina/app/nan_router.hpp`, `nandina/app/nan_page.hpp`
+- `nandina/foundation/input.hpp` (key identities), `nandina/scene/input_event.hpp`
 - `nandina/reactive/graph.hpp`, `signal.hpp`, `computed.hpp`, `effect.hpp`, `scope.hpp`, `property.hpp`
 - `nandina/scene/scene_tree.hpp`, `control.hpp`, `node.hpp`, `frame_scheduler.hpp`
 - `nandina/render/render_device.hpp`, `draw_context.hpp`, `texture_cache.hpp`, `image_decoder.hpp`

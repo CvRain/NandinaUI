@@ -162,16 +162,24 @@ TEST_CASE("tabs arrow keys navigate with wrap-around", "[tabs][keyboard]") {
     REQUIRE(tree.layout_root(foundation::NanSize(280.0F, 48.0F)) >= 1);
     tree.set_focus(tabs.get());
 
-    tree.dispatch_key(scene::KeyEvent(262, scene::KeyEvent::Action::press)); // right
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::right, scene::KeyEvent::Action::press)
+    ); // right
     REQUIRE(tabs->selected_index() == 1);
 
-    tree.dispatch_key(scene::KeyEvent(262, scene::KeyEvent::Action::press)); // right (wrap)
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::right, scene::KeyEvent::Action::press)
+    ); // right (wrap)
     REQUIRE(tabs->selected_index() == 2);
 
-    tree.dispatch_key(scene::KeyEvent(262, scene::KeyEvent::Action::press)); // right (wrap)
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::right, scene::KeyEvent::Action::press)
+    ); // right (wrap)
     REQUIRE(tabs->selected_index() == 0);
 
-    tree.dispatch_key(scene::KeyEvent(263, scene::KeyEvent::Action::press)); // left
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::left, scene::KeyEvent::Action::press)
+    ); // left
     REQUIRE(tabs->selected_index() == 2);
 }
 
@@ -261,9 +269,13 @@ TEST_CASE("tabs home and end jump to the edges", "[tabs][keyboard]") {
     tree.set_focus(tabs.get());
 
     // Home / End 由共享漫游设施提供。
-    tree.dispatch_key(scene::KeyEvent(269, scene::KeyEvent::Action::press)); // end
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::end, scene::KeyEvent::Action::press)
+    ); // end
     REQUIRE(tabs->selected_index() == 2);
-    tree.dispatch_key(scene::KeyEvent(268, scene::KeyEvent::Action::press)); // home
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::home, scene::KeyEvent::Action::press)
+    ); // home
     REQUIRE(tabs->selected_index() == 0);
 }
 

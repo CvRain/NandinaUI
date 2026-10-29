@@ -15,7 +15,7 @@
 
 #include "internal/text_style_bridge.hpp"
 
-#include "key_codes.hpp"
+#include "../foundation/input.hpp"
 #include "popover.hpp"
 #include "primitives/box_painter.hpp"
 #include "primitives/text.hpp"
@@ -679,10 +679,14 @@ namespace nandina::widget
             }
 
             auto handle_key(scene::KeyEvent& event) -> bool {
-                if (!event.is_pressed()) {
+                if (!event.is_press_or_repeat()) {
                     return false;
                 }
-                if (event.keycode() == keys::enter || event.keycode() == keys::space) {
+                // 激活与进入/退出子菜单只在初次按下发生；按住不放不重复提交。
+                if (event.is_pressed()
+                    && (event.logical_key() == foundation::LogicalKey::enter
+                        || event.logical_key() == foundation::LogicalKey::space))
+                {
                     const int active = focus_.active_index();
                     if (active < 0) {
                         return false;
@@ -691,18 +695,22 @@ namespace nandina::widget
                     event.accept();
                     return true;
                 }
-                if (event.keycode() == keys::right) {
+                if (event.logical_key() == foundation::LogicalKey::right) {
                     const int active = focus_.active_index();
                     if (active >= 0
                         && items_[static_cast<std::size_t>(active)].kind == MenuItemKind::submenu)
                     {
-                        activate_index(active);
+                        if (event.is_pressed()) {
+                            activate_index(active);
+                        }
                         event.accept();
                         return true;
                     }
                 }
-                if (event.keycode() == keys::left && on_close_level_) {
-                    on_close_level_();
+                if (event.logical_key() == foundation::LogicalKey::left && on_close_level_) {
+                    if (event.is_pressed()) {
+                        on_close_level_();
+                    }
                     event.accept();
                     return true;
                 }

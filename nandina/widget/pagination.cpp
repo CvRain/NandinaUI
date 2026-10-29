@@ -4,7 +4,7 @@
 
 #include "pagination.hpp"
 
-#include "key_codes.hpp"
+#include "../foundation/input.hpp"
 
 #include "../render/draw_context.hpp"
 #include "../scene/input_event.hpp"
@@ -459,11 +459,14 @@ namespace nandina::widget
         }
         if (event.type() == scene::EventType::key) {
             auto& key = static_cast<scene::KeyEvent&>(event);
-            if (!key.is_pressed()) {
+            if (!key.is_press_or_repeat()) {
                 return false;
             }
             ensure_model();
-            if (key.keycode() == keys::enter || key.keycode() == keys::space) {
+            if (key.is_pressed()
+                && (key.logical_key() == foundation::LogicalKey::enter
+                    || key.logical_key() == foundation::LogicalKey::space))
+            {
                 if (focus_index_ < 0) {
                     return false;
                 }

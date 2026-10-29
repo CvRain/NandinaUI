@@ -146,24 +146,24 @@ TEST_CASE(
     auto subscription = chip->removed().subscribe([&] { ++removed; });
 
     // Enter / Space 激活移除；Backspace / Delete 删除移除。
-    scene::KeyEvent enter(257, scene::KeyEvent::Action::press);
+    scene::KeyEvent enter(foundation::LogicalKey::enter, scene::KeyEvent::Action::press);
     REQUIRE(chip->on_input(enter));
     REQUIRE(removed == 1);
 
-    scene::KeyEvent space(32, scene::KeyEvent::Action::press);
+    scene::KeyEvent space(foundation::LogicalKey::space, scene::KeyEvent::Action::press);
     REQUIRE(chip->on_input(space));
     REQUIRE(removed == 2);
 
-    scene::KeyEvent backspace(259, scene::KeyEvent::Action::press);
+    scene::KeyEvent backspace(foundation::LogicalKey::backspace, scene::KeyEvent::Action::press);
     REQUIRE(chip->on_input(backspace));
     REQUIRE(removed == 3);
 
-    scene::KeyEvent del(261, scene::KeyEvent::Action::press);
+    scene::KeyEvent del(foundation::LogicalKey::delete_key, scene::KeyEvent::Action::press);
     REQUIRE(chip->on_input(del));
     REQUIRE(removed == 4);
 
     // 不可移除 chip 忽略键盘。
-    scene::KeyEvent press(257, scene::KeyEvent::Action::press);
+    scene::KeyEvent press(foundation::LogicalKey::enter, scene::KeyEvent::Action::press);
     REQUIRE_FALSE(plain->on_input(press));
 }
 

@@ -78,7 +78,8 @@ namespace
 
         auto on_input(scene::InputEvent& event) -> bool override {
             if (event.type() == scene::EventType::key
-                && static_cast<scene::KeyEvent&>(event).keycode() == 256)
+                && static_cast<scene::KeyEvent&>(event).logical_key()
+                    == foundation::LogicalKey::escape)
             {
                 ++escapes;
                 event.accept();
@@ -258,7 +259,11 @@ TEST_CASE("combobox typing filters case-insensitively on label", "[combobox][fil
 
     // 子串匹配（不是前缀匹配）：全选后替换查询。
     harness.tree.dispatch_key(
-        scene::KeyEvent(65, scene::KeyEvent::Action::press, scene::KeyModifiers {.ctrl = true})
+        scene::KeyEvent(
+            foundation::LogicalKey::a,
+            scene::KeyEvent::Action::press,
+            scene::KeyModifiers {.ctrl = true}
+        )
     );
     harness.tree.dispatch_text_input(scene::TextInputEvent("nan"));
     REQUIRE(harness.combo->text() == "nan");
@@ -285,29 +290,45 @@ TEST_CASE("combobox arrows walk the filtered list", "[combobox][keyboard]") {
     REQUIRE(harness.combo->active_index() == 0);
 
     // Down 跳过被排除的 separator / label：下标只属于过滤后的列表。
-    harness.tree.dispatch_key(scene::KeyEvent(264, scene::KeyEvent::Action::press));
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::down, scene::KeyEvent::Action::press)
+    );
     REQUIRE(harness.combo->active_index() == 1);
-    harness.tree.dispatch_key(scene::KeyEvent(264, scene::KeyEvent::Action::press));
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::down, scene::KeyEvent::Action::press)
+    );
     REQUIRE(harness.combo->active_index() == 2); // Cherry：禁用但仍可聚焦
 
     // 过滤后高亮重新落在首个匹配项。
     harness.combo->set_text("ap");
     REQUIRE(harness.combo->filtered_ids() == std::vector<std::string> {"apple", "apricot"});
     REQUIRE(harness.combo->active_index() == 0);
-    harness.tree.dispatch_key(scene::KeyEvent(264, scene::KeyEvent::Action::press));
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::down, scene::KeyEvent::Action::press)
+    );
     REQUIRE(harness.combo->active_index() == 1);
-    harness.tree.dispatch_key(scene::KeyEvent(265, scene::KeyEvent::Action::press));
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::up, scene::KeyEvent::Action::press)
+    );
     REQUIRE(harness.combo->active_index() == 0);
 
     // Home / End / PageUp / PageDown 由共享漫游设施回答。
     harness.combo->set_text("");
-    harness.tree.dispatch_key(scene::KeyEvent(269, scene::KeyEvent::Action::press)); // end
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::end, scene::KeyEvent::Action::press)
+    ); // end
     REQUIRE(harness.combo->active_index() == 3);
-    harness.tree.dispatch_key(scene::KeyEvent(268, scene::KeyEvent::Action::press)); // home
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::home, scene::KeyEvent::Action::press)
+    ); // home
     REQUIRE(harness.combo->active_index() == 0);
-    harness.tree.dispatch_key(scene::KeyEvent(267, scene::KeyEvent::Action::press)); // page down
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::page_down, scene::KeyEvent::Action::press)
+    ); // page down
     REQUIRE(harness.combo->active_index() == 3);
-    harness.tree.dispatch_key(scene::KeyEvent(266, scene::KeyEvent::Action::press)); // page up
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::page_up, scene::KeyEvent::Action::press)
+    ); // page up
     REQUIRE(harness.combo->active_index() == 0);
 }
 
@@ -318,20 +339,26 @@ TEST_CASE("combobox arrow opens the list when closed", "[combobox][keyboard]") {
 
     // 关闭时 Down：打开浮层并高亮**第一个**匹配项。这一次按键只负责落位，
     // 不再叠加一次移动（否则会落到第 2 项，与平台惯例不符）。
-    harness.tree.dispatch_key(scene::KeyEvent(264, scene::KeyEvent::Action::press));
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::down, scene::KeyEvent::Action::press)
+    );
     REQUIRE(harness.combo->is_open());
     REQUIRE(harness.combo->active_index() == 0);
     harness.layout();
     REQUIRE(harness.host->overlay_count() == 1);
 
     // 打开状态下 Down 继续移动高亮。
-    harness.tree.dispatch_key(scene::KeyEvent(264, scene::KeyEvent::Action::press));
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::down, scene::KeyEvent::Action::press)
+    );
     REQUIRE(harness.combo->active_index() == 1);
 
     // 关闭时 Up：打开并高亮**最后一个**匹配项。
     harness.combo->close();
     REQUIRE_FALSE(harness.combo->is_open());
-    harness.tree.dispatch_key(scene::KeyEvent(265, scene::KeyEvent::Action::press));
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::up, scene::KeyEvent::Action::press)
+    );
     REQUIRE(harness.combo->is_open());
     REQUIRE(harness.combo->active_index() == 3);
 
@@ -339,12 +366,20 @@ TEST_CASE("combobox arrow opens the list when closed", "[combobox][keyboard]") {
     harness.combo->close();
     REQUIRE_FALSE(harness.combo->is_open());
     harness.tree.dispatch_key(
-        scene::KeyEvent(264, scene::KeyEvent::Action::press, scene::KeyModifiers {.alt = true})
+        scene::KeyEvent(
+            foundation::LogicalKey::down,
+            scene::KeyEvent::Action::press,
+            scene::KeyModifiers {.alt = true}
+        )
     );
     REQUIRE(harness.combo->is_open());
     REQUIRE(harness.combo->active_index() == 0);
     harness.tree.dispatch_key(
-        scene::KeyEvent(265, scene::KeyEvent::Action::press, scene::KeyModifiers {.alt = true})
+        scene::KeyEvent(
+            foundation::LogicalKey::up,
+            scene::KeyEvent::Action::press,
+            scene::KeyModifiers {.alt = true}
+        )
     );
     REQUIRE_FALSE(harness.combo->is_open());
 }
@@ -365,8 +400,12 @@ TEST_CASE("combobox enter selects the highlighted item", "[combobox][keyboard][c
             selected.push_back(id);
         });
 
-    harness.tree.dispatch_key(scene::KeyEvent(264, scene::KeyEvent::Action::press)); // down → 1
-    harness.tree.dispatch_key(scene::KeyEvent(257, scene::KeyEvent::Action::press)); // enter
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::down, scene::KeyEvent::Action::press)
+    ); // down → 1
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::enter, scene::KeyEvent::Action::press)
+    ); // enter
     REQUIRE(harness.combo->text() == "Banana");
     REQUIRE(harness.combo->selected_id() == "banana");
     REQUIRE(changes == std::vector<std::pair<std::string, std::string>> {{"Banana", "banana"}});
@@ -384,7 +423,9 @@ TEST_CASE("combobox enter never activates a disabled item", "[combobox][keyboard
 
     harness.combo->set_text("cherry");
     REQUIRE(harness.combo->filtered_ids() == std::vector<std::string> {"cherry"});
-    harness.tree.dispatch_key(scene::KeyEvent(257, scene::KeyEvent::Action::press)); // enter
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::enter, scene::KeyEvent::Action::press)
+    ); // enter
     REQUIRE(selected == 0);
     REQUIRE(harness.combo->selected_id().empty());
     REQUIRE(harness.combo->is_open());
@@ -396,14 +437,18 @@ TEST_CASE("combobox escape closes and bubbles when closed", "[combobox][keyboard
     int closes = 0;
     harness.combo->set_on_close([&closes] { ++closes; });
 
-    harness.tree.dispatch_key(scene::KeyEvent(256, scene::KeyEvent::Action::press)); // escape
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::escape, scene::KeyEvent::Action::press)
+    ); // escape
     REQUIRE_FALSE(harness.combo->is_open());
     REQUIRE(closes == 1);
     REQUIRE(harness.host->overlay_count() == 0);
     REQUIRE(harness.body->escapes == 0);
 
     // 关闭状态下 Escape 继续冒泡到祖先。
-    harness.tree.dispatch_key(scene::KeyEvent(256, scene::KeyEvent::Action::press));
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::escape, scene::KeyEvent::Action::press)
+    );
     REQUIRE(harness.body->escapes == 1);
 }
 
@@ -413,7 +458,9 @@ TEST_CASE("combobox printable text falls through to the field", "[combobox][inpu
     harness.tree.dispatch_text_input(scene::TextInputEvent("App"));
     REQUIRE(harness.combo->text() == "App");
     // 空格字符由 TextInputEvent 送达，不被键码拦截吞掉。
-    harness.tree.dispatch_key(scene::KeyEvent(32, scene::KeyEvent::Action::press));
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::space, scene::KeyEvent::Action::press)
+    );
     harness.tree.dispatch_text_input(scene::TextInputEvent(" "));
     REQUIRE(harness.combo->text() == "App ");
     REQUIRE_FALSE(harness.combo->is_open());
@@ -491,7 +538,11 @@ TEST_CASE("combobox keeps text and selection consistent while typing", "[combobo
     harness.focus_field();
     // 全选后输入自定义文本：不再是任何条目的标签 -> 选中被清空。
     harness.tree.dispatch_key(
-        scene::KeyEvent(65, scene::KeyEvent::Action::press, scene::KeyModifiers {.ctrl = true})
+        scene::KeyEvent(
+            foundation::LogicalKey::a,
+            scene::KeyEvent::Action::press,
+            scene::KeyModifiers {.ctrl = true}
+        )
     );
     harness.tree.dispatch_text_input(scene::TextInputEvent("apricot"));
     REQUIRE(harness.combo->text() == "apricot");
@@ -540,7 +591,9 @@ TEST_CASE("combobox commits custom text only when allowed", "[combobox][value][c
         ComboboxHarness first;
         first.focus_field();
         first.combo->set_text("Alpha");
-        first.tree.dispatch_key(scene::KeyEvent(257, scene::KeyEvent::Action::press));
+        first.tree.dispatch_key(
+            scene::KeyEvent(foundation::LogicalKey::enter, scene::KeyEvent::Action::press)
+        );
         REQUIRE_FALSE(first.combo->is_open());
 
         std::vector<std::string> committed;
@@ -549,7 +602,9 @@ TEST_CASE("combobox commits custom text only when allowed", "[combobox][value][c
                 committed.emplace_back(text);
             }
         );
-        first.tree.dispatch_key(scene::KeyEvent(257, scene::KeyEvent::Action::press));
+        first.tree.dispatch_key(
+            scene::KeyEvent(foundation::LogicalKey::enter, scene::KeyEvent::Action::press)
+        );
         REQUIRE(committed.empty()); // 默认不允许自由文本
 
         ComboboxHarness second;
@@ -563,7 +618,9 @@ TEST_CASE("combobox commits custom text only when allowed", "[combobox][value][c
             }
         );
         second.tree.dispatch_text_input(scene::TextInputEvent("Alpha"));
-        second.tree.dispatch_key(scene::KeyEvent(257, scene::KeyEvent::Action::press));
+        second.tree.dispatch_key(
+            scene::KeyEvent(foundation::LogicalKey::enter, scene::KeyEvent::Action::press)
+        );
         REQUIRE(custom == std::vector<std::string> {"Alpha"});
     }
 }
@@ -615,8 +672,12 @@ TEST_CASE("combobox set_items while open re-filters in place", "[combobox][mutat
     int selected = 0;
     auto subscription =
         harness.combo->item_selected().subscribe([&selected](const std::string&) { ++selected; });
-    harness.tree.dispatch_key(scene::KeyEvent(264, scene::KeyEvent::Action::press)); // down → 1
-    harness.tree.dispatch_key(scene::KeyEvent(257, scene::KeyEvent::Action::press)); // enter
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::down, scene::KeyEvent::Action::press)
+    ); // down → 1
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::enter, scene::KeyEvent::Action::press)
+    ); // enter
     REQUIRE(selected == 0);
     REQUIRE(harness.combo->is_open());
 }
@@ -635,7 +696,9 @@ TEST_CASE("combobox filters and selects inside an input phase", "[combobox][muta
     {
         auto phase = harness.tree.enter_phase(scene::FramePhase::input);
         harness.tree.dispatch_text_input(scene::TextInputEvent("ban"));
-        harness.tree.dispatch_key(scene::KeyEvent(257, scene::KeyEvent::Action::press)); // enter
+        harness.tree.dispatch_key(
+            scene::KeyEvent(foundation::LogicalKey::enter, scene::KeyEvent::Action::press)
+        ); // enter
     }
     harness.tree.flush_tree_mutations();
     harness.layout();
@@ -655,7 +718,9 @@ TEST_CASE("combobox handles empty and oversized data", "[combobox][boundary]") {
     harness.combo->set_text("no-such-label");
     REQUIRE(harness.combo->filtered_ids().empty());
     REQUIRE(harness.combo->active_index() == -1);
-    harness.tree.dispatch_key(scene::KeyEvent(257, scene::KeyEvent::Action::press)); // enter
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::enter, scene::KeyEvent::Action::press)
+    ); // enter
     REQUIRE(harness.combo->selected_id().empty());
     REQUIRE(harness.combo->is_open());
 
@@ -665,9 +730,13 @@ TEST_CASE("combobox handles empty and oversized data", "[combobox][boundary]") {
     REQUIRE(harness.combo->item_count() == 0);
     REQUIRE(harness.combo->filtered_ids().empty());
     REQUIRE(harness.combo->active_index() == -1);
-    harness.tree.dispatch_key(scene::KeyEvent(264, scene::KeyEvent::Action::press)); // down
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::down, scene::KeyEvent::Action::press)
+    ); // down
     REQUIRE(harness.combo->active_index() == -1);
-    harness.tree.dispatch_key(scene::KeyEvent(257, scene::KeyEvent::Action::press)); // enter
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::enter, scene::KeyEvent::Action::press)
+    ); // enter
     REQUIRE(harness.combo->is_open());
 
     // 超长标签与超长查询也不改变行为。
@@ -706,7 +775,9 @@ TEST_CASE("combobox works without an overlay host", "[combobox][fallback]") {
     tree.dispatch_text_input(scene::TextInputEvent("ban"));
     REQUIRE(combo->filtered_ids() == std::vector<std::string> {"banana"});
     REQUIRE(combo->active_index() == 0);
-    tree.dispatch_key(scene::KeyEvent(257, scene::KeyEvent::Action::press)); // enter
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::enter, scene::KeyEvent::Action::press)
+    ); // enter
     REQUIRE(combo->text() == "Banana");
     REQUIRE(selected == std::vector<std::string> {"banana"});
     REQUIRE_FALSE(combo->is_open());

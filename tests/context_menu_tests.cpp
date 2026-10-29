@@ -17,7 +17,6 @@
 #include <nandina/widget/button.hpp>
 #include <nandina/widget/context_menu.hpp>
 #include <nandina/widget/dropdown_menu.hpp>
-#include <nandina/widget/key_codes.hpp>
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
@@ -195,7 +194,9 @@ TEST_CASE("menu key opens a context menu at the target corner", "[context-menu][
     REQUIRE(harness.tree.focus_first_within(*harness.target));
     const auto corner = harness.target->global_bounds().get_bottom_left();
 
-    harness.tree.dispatch_key(scene::KeyEvent(widget::keys::menu, scene::KeyEvent::Action::press));
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::menu, scene::KeyEvent::Action::press)
+    );
     REQUIRE(harness.menu->is_open());
 
     harness.layout();
@@ -214,13 +215,15 @@ TEST_CASE(
     REQUIRE(harness.tree.focus_first_within(*harness.target));
 
     // 裸 F10 不是上下文菜单手势。
-    harness.tree.dispatch_key(scene::KeyEvent(widget::keys::f10, scene::KeyEvent::Action::press));
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::f10, scene::KeyEvent::Action::press)
+    );
     CHECK_FALSE(harness.menu->is_open());
 
     scene::KeyModifiers shift;
     shift.shift = true;
     harness.tree.dispatch_key(
-        scene::KeyEvent(widget::keys::f10, scene::KeyEvent::Action::press, shift)
+        scene::KeyEvent(foundation::LogicalKey::f10, scene::KeyEvent::Action::press, shift)
     );
     CHECK(harness.menu->is_open());
 }
@@ -279,7 +282,9 @@ TEST_CASE("activating an item fires on_select and closes the tree", "[context-me
 
     // 打开时高亮落在第一个可聚焦条目（rename）。
     REQUIRE(harness.menu->active_index() == 0);
-    harness.tree.dispatch_key(scene::KeyEvent(widget::keys::enter, scene::KeyEvent::Action::press));
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::enter, scene::KeyEvent::Action::press)
+    );
 
     REQUIRE(picked == std::vector<std::string> {"rename"});
     CHECK_FALSE(harness.menu->is_open());

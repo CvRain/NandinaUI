@@ -20,7 +20,7 @@
 
 #include "internal/text_style_bridge.hpp"
 
-#include "key_codes.hpp"
+#include "../foundation/input.hpp"
 #include "popover.hpp"
 #include "primitives/box_painter.hpp"
 #include "primitives/text.hpp"
@@ -284,7 +284,7 @@ namespace nandina::widget
 
             /// 把导航键交给共享漫游设施；返回是否消费。
             auto handle_key(const scene::KeyEvent& event) -> bool {
-                if (!event.is_pressed()) {
+                if (!event.is_press_or_repeat()) {
                     return false;
                 }
                 if (!focus_.handle_key(event).has_value()) {
@@ -819,25 +819,25 @@ namespace nandina::widget
     }
 
     auto Combobox::handle_capture_key(scene::KeyEvent& event) -> bool {
-        if (!event.is_pressed()) {
+        if (!event.is_press_or_repeat()) {
             return false;
         }
-        const int code = event.keycode();
+        const auto code = event.logical_key();
         const bool alt = event.modifiers().alt;
 
-        if (code == keys::down || code == keys::up) {
-            if (alt) {
+        if (code == foundation::LogicalKey::down || code == foundation::LogicalKey::up) {
+            if (alt && event.is_pressed()) {
                 // Alt+Down / Alt+Up：显式开合，不移动高亮。
-                code == keys::down ? open() : close();
+                code == foundation::LogicalKey::down ? open() : close();
                 event.accept();
                 return true;
             }
-            if (!popover_->is_open()) {
+            if (!popover_->is_open() && event.is_pressed()) {
                 // 关闭状态下这一次按键只负责"打开并落在首/末项"。不再叠加一次移动，
                 // 否则从关闭按 Down 会落到第 2 个匹配项，与平台惯例（Down 打开并
                 // 高亮第一项、Up 打开并高亮最后一项）不符。
                 open();
-                surface_->set_highlight_edge(code == keys::up);
+                surface_->set_highlight_edge(code == foundation::LogicalKey::up);
                 event.accept();
                 return true;
             }
@@ -846,13 +846,13 @@ namespace nandina::widget
             return true;
         }
 
-        if (code == keys::enter) {
+        if (code == foundation::LogicalKey::enter && event.is_pressed()) {
             handle_capture_enter();
             event.accept();
             return true;
         }
 
-        if (code == keys::escape) {
+        if (code == foundation::LogicalKey::escape && event.is_pressed()) {
             if (popover_->is_open()) {
                 close();
                 event.accept();
@@ -862,8 +862,8 @@ namespace nandina::widget
             return false;
         }
 
-        if (code == keys::home || code == keys::end || code == keys::page_up
-            || code == keys::page_down)
+        if (code == foundation::LogicalKey::home || code == foundation::LogicalKey::end
+            || code == foundation::LogicalKey::page_up || code == foundation::LogicalKey::page_down)
         {
             if (popover_->is_open() && surface_->handle_key(event)) {
                 event.accept();
@@ -873,7 +873,7 @@ namespace nandina::widget
             return false;
         }
 
-        if (code == keys::space) {
+        if (code == foundation::LogicalKey::space && event.is_pressed()) {
             // 消费空格键码，阻止 Popover 的「触发键开合」把输入空格当成开关；空格字符
             // 本身由平台的 TextInputEvent 送达（EditableText 只从 text_input 插入文本）。
             event.accept();

@@ -18,106 +18,416 @@ namespace nandina::app::detail
 {
     namespace
     {
-        // ─── GLFW 键码空间（`widget/key_codes.hpp`）────────────────────────────
-        // 框架暂时沿用 GLFW 键码值，历史 raylib 后端曾直接透传。SDL 的键码不同，必须翻译。
-        // 下面这些值对应 GLFW_KEY_*，与 key_codes.hpp 一一对应。
-        constexpr int kGlfwEscape = 256;
-        constexpr int kGlfwEnter = 257;
-        constexpr int kGlfwTab = 258;
-        constexpr int kGlfwBackspace = 259;
-        constexpr int kGlfwInsert = 260;
-        constexpr int kGlfwDelete = 261;
-        constexpr int kGlfwRight = 262;
-        constexpr int kGlfwLeft = 263;
-        constexpr int kGlfwDown = 264;
-        constexpr int kGlfwUp = 265;
-        constexpr int kGlfwPageUp = 266;
-        constexpr int kGlfwPageDown = 267;
-        constexpr int kGlfwHome = 268;
-        constexpr int kGlfwEnd = 269;
-        constexpr int kGlfwF1 = 290;
-        constexpr int kGlfwShift = 340;
-        constexpr int kGlfwControl = 341;
-        constexpr int kGlfwAlt = 342;
-        constexpr int kGlfwSuper = 343;
-        constexpr int kGlfwMenu = 348; // GLFW_KEY_MENU，key_codes.hpp 的 `menu`。
-
-        /// 把 `SDL_Keycode` 翻译成 GLFW 键码；未覆盖返回 nullopt（调用方计数并丢弃）。
-        ///
-        /// ASCII 部分的分歧点只有一个：SDL 的字母是小写（`SDLK_A == 'a' == 97`），而 GLFW
-        /// 的字母是大写（`GLFW_KEY_A == 65`）。数字/标点/空格两边数值相同，直接透传；`[\]\``
-        /// 这些 GLFW 也定义了，但 `{|}~` 是它们的 Shift 变体、GLFW 没有对应键码，所以
-        /// 123..126 走「未映射」分支。
-        [[nodiscard]] auto translate_key(const SDL_Keycode key) -> std::optional<int> {
-            // SDL 的小写字母 -> GLFW 的大写字母键码。
-            if (key >= SDLK_A && key <= SDLK_Z) {
-                return static_cast<int>(key) - ('a' - 'A');
-            }
-            // 空格、数字与标点：两个键码空间数值相同（GLFW_KEY_SPACE == 32 ... GLFW_KEY_GRAVE_ACCENT == 96）。
-            if (key >= SDLK_SPACE && key <= SDLK_GRAVE) {
-                return static_cast<int>(key);
-            }
-
-            switch (key) {
-                case SDLK_ESCAPE:
-                    return kGlfwEscape;
-                case SDLK_RETURN:
-                    return kGlfwEnter;
-                case SDLK_TAB:
-                    return kGlfwTab;
-                case SDLK_BACKSPACE:
-                    return kGlfwBackspace;
-                case SDLK_INSERT:
-                    return kGlfwInsert;
-                case SDLK_DELETE:
-                    return kGlfwDelete;
-                case SDLK_RIGHT:
-                    return kGlfwRight;
-                case SDLK_LEFT:
-                    return kGlfwLeft;
-                case SDLK_DOWN:
-                    return kGlfwDown;
-                case SDLK_UP:
-                    return kGlfwUp;
-                case SDLK_PAGEUP:
-                    return kGlfwPageUp;
-                case SDLK_PAGEDOWN:
-                    return kGlfwPageDown;
-                case SDLK_HOME:
-                    return kGlfwHome;
-                case SDLK_END:
-                    return kGlfwEnd;
-                // SDLK_F1..SDLK_F12 连续，偏移量等于 GLFW 的偏移量（GLFW_KEY_F1 == 290）。
-                case SDLK_F1:
-                case SDLK_F2:
-                case SDLK_F3:
-                case SDLK_F4:
-                case SDLK_F5:
-                case SDLK_F6:
-                case SDLK_F7:
-                case SDLK_F8:
-                case SDLK_F9:
-                case SDLK_F10:
-                case SDLK_F11:
-                case SDLK_F12:
-                    return kGlfwF1 + static_cast<int>(key - SDLK_F1);
-                // 四个修饰键：GLFW 不分左右，SDL 分，都归到同一个键码。
-                case SDLK_LSHIFT:
-                case SDLK_RSHIFT:
-                    return kGlfwShift;
-                case SDLK_LCTRL:
-                case SDLK_RCTRL:
-                    return kGlfwControl;
-                case SDLK_LALT:
-                case SDLK_RALT:
-                    return kGlfwAlt;
-                case SDLK_LGUI:
-                case SDLK_RGUI:
-                    return kGlfwSuper;
-                case SDLK_APPLICATION:
-                    return kGlfwMenu;
+        [[nodiscard]] auto translate_physical_key(const SDL_Scancode code)
+            -> foundation::PhysicalKey {
+            using Key = foundation::PhysicalKey;
+            switch (code) {
+                case SDL_SCANCODE_A:
+                    return Key::a;
+                case SDL_SCANCODE_B:
+                    return Key::b;
+                case SDL_SCANCODE_C:
+                    return Key::c;
+                case SDL_SCANCODE_D:
+                    return Key::d;
+                case SDL_SCANCODE_E:
+                    return Key::e;
+                case SDL_SCANCODE_F:
+                    return Key::f;
+                case SDL_SCANCODE_G:
+                    return Key::g;
+                case SDL_SCANCODE_H:
+                    return Key::h;
+                case SDL_SCANCODE_I:
+                    return Key::i;
+                case SDL_SCANCODE_J:
+                    return Key::j;
+                case SDL_SCANCODE_K:
+                    return Key::k;
+                case SDL_SCANCODE_L:
+                    return Key::l;
+                case SDL_SCANCODE_M:
+                    return Key::m;
+                case SDL_SCANCODE_N:
+                    return Key::n;
+                case SDL_SCANCODE_O:
+                    return Key::o;
+                case SDL_SCANCODE_P:
+                    return Key::p;
+                case SDL_SCANCODE_Q:
+                    return Key::q;
+                case SDL_SCANCODE_R:
+                    return Key::r;
+                case SDL_SCANCODE_S:
+                    return Key::s;
+                case SDL_SCANCODE_T:
+                    return Key::t;
+                case SDL_SCANCODE_U:
+                    return Key::u;
+                case SDL_SCANCODE_V:
+                    return Key::v;
+                case SDL_SCANCODE_W:
+                    return Key::w;
+                case SDL_SCANCODE_X:
+                    return Key::x;
+                case SDL_SCANCODE_Y:
+                    return Key::y;
+                case SDL_SCANCODE_Z:
+                    return Key::z;
+                case SDL_SCANCODE_0:
+                    return Key::num_0;
+                case SDL_SCANCODE_1:
+                    return Key::num_1;
+                case SDL_SCANCODE_2:
+                    return Key::num_2;
+                case SDL_SCANCODE_3:
+                    return Key::num_3;
+                case SDL_SCANCODE_4:
+                    return Key::num_4;
+                case SDL_SCANCODE_5:
+                    return Key::num_5;
+                case SDL_SCANCODE_6:
+                    return Key::num_6;
+                case SDL_SCANCODE_7:
+                    return Key::num_7;
+                case SDL_SCANCODE_8:
+                    return Key::num_8;
+                case SDL_SCANCODE_9:
+                    return Key::num_9;
+                case SDL_SCANCODE_SPACE:
+                    return Key::space;
+                case SDL_SCANCODE_APOSTROPHE:
+                    return Key::apostrophe;
+                case SDL_SCANCODE_COMMA:
+                    return Key::comma;
+                case SDL_SCANCODE_MINUS:
+                    return Key::minus;
+                case SDL_SCANCODE_PERIOD:
+                    return Key::period;
+                case SDL_SCANCODE_SLASH:
+                    return Key::slash;
+                case SDL_SCANCODE_SEMICOLON:
+                    return Key::semicolon;
+                case SDL_SCANCODE_EQUALS:
+                    return Key::equal;
+                case SDL_SCANCODE_LEFTBRACKET:
+                    return Key::left_bracket;
+                case SDL_SCANCODE_BACKSLASH:
+                    return Key::backslash;
+                case SDL_SCANCODE_RIGHTBRACKET:
+                    return Key::right_bracket;
+                case SDL_SCANCODE_GRAVE:
+                    return Key::grave_accent;
+                case SDL_SCANCODE_ESCAPE:
+                    return Key::escape;
+                case SDL_SCANCODE_RETURN:
+                    return Key::enter;
+                case SDL_SCANCODE_TAB:
+                    return Key::tab;
+                case SDL_SCANCODE_BACKSPACE:
+                    return Key::backspace;
+                case SDL_SCANCODE_INSERT:
+                    return Key::insert;
+                case SDL_SCANCODE_DELETE:
+                    return Key::delete_key;
+                case SDL_SCANCODE_RIGHT:
+                    return Key::right;
+                case SDL_SCANCODE_LEFT:
+                    return Key::left;
+                case SDL_SCANCODE_DOWN:
+                    return Key::down;
+                case SDL_SCANCODE_UP:
+                    return Key::up;
+                case SDL_SCANCODE_PAGEUP:
+                    return Key::page_up;
+                case SDL_SCANCODE_PAGEDOWN:
+                    return Key::page_down;
+                case SDL_SCANCODE_HOME:
+                    return Key::home;
+                case SDL_SCANCODE_END:
+                    return Key::end;
+                case SDL_SCANCODE_F1:
+                    return Key::f1;
+                case SDL_SCANCODE_F2:
+                    return Key::f2;
+                case SDL_SCANCODE_F3:
+                    return Key::f3;
+                case SDL_SCANCODE_F4:
+                    return Key::f4;
+                case SDL_SCANCODE_F5:
+                    return Key::f5;
+                case SDL_SCANCODE_F6:
+                    return Key::f6;
+                case SDL_SCANCODE_F7:
+                    return Key::f7;
+                case SDL_SCANCODE_F8:
+                    return Key::f8;
+                case SDL_SCANCODE_F9:
+                    return Key::f9;
+                case SDL_SCANCODE_F10:
+                    return Key::f10;
+                case SDL_SCANCODE_F11:
+                    return Key::f11;
+                case SDL_SCANCODE_F12:
+                    return Key::f12;
+                case SDL_SCANCODE_F13:
+                    return Key::f13;
+                case SDL_SCANCODE_F14:
+                    return Key::f14;
+                case SDL_SCANCODE_F15:
+                    return Key::f15;
+                case SDL_SCANCODE_F16:
+                    return Key::f16;
+                case SDL_SCANCODE_F17:
+                    return Key::f17;
+                case SDL_SCANCODE_F18:
+                    return Key::f18;
+                case SDL_SCANCODE_F19:
+                    return Key::f19;
+                case SDL_SCANCODE_F20:
+                    return Key::f20;
+                case SDL_SCANCODE_F21:
+                    return Key::f21;
+                case SDL_SCANCODE_F22:
+                    return Key::f22;
+                case SDL_SCANCODE_F23:
+                    return Key::f23;
+                case SDL_SCANCODE_F24:
+                    return Key::f24;
+                case SDL_SCANCODE_APPLICATION:
+                    return Key::menu;
+                case SDL_SCANCODE_LSHIFT:
+                    return Key::left_shift;
+                case SDL_SCANCODE_RSHIFT:
+                    return Key::right_shift;
+                case SDL_SCANCODE_LCTRL:
+                    return Key::left_ctrl;
+                case SDL_SCANCODE_RCTRL:
+                    return Key::right_ctrl;
+                case SDL_SCANCODE_LALT:
+                    return Key::left_alt;
+                case SDL_SCANCODE_RALT:
+                    return Key::right_alt;
+                case SDL_SCANCODE_LGUI:
+                    return Key::left_super;
+                case SDL_SCANCODE_RGUI:
+                    return Key::right_super;
+                case SDL_SCANCODE_CAPSLOCK:
+                    return Key::caps_lock;
+                case SDL_SCANCODE_NUMLOCKCLEAR:
+                    return Key::num_lock;
+                case SDL_SCANCODE_SCROLLLOCK:
+                    return Key::scroll_lock;
+                case SDL_SCANCODE_PRINTSCREEN:
+                    return Key::print_screen;
+                case SDL_SCANCODE_PAUSE:
+                    return Key::pause;
+                case SDL_SCANCODE_KP_0:
+                    return Key::keypad_0;
+                case SDL_SCANCODE_KP_1:
+                    return Key::keypad_1;
+                case SDL_SCANCODE_KP_2:
+                    return Key::keypad_2;
+                case SDL_SCANCODE_KP_3:
+                    return Key::keypad_3;
+                case SDL_SCANCODE_KP_4:
+                    return Key::keypad_4;
+                case SDL_SCANCODE_KP_5:
+                    return Key::keypad_5;
+                case SDL_SCANCODE_KP_6:
+                    return Key::keypad_6;
+                case SDL_SCANCODE_KP_7:
+                    return Key::keypad_7;
+                case SDL_SCANCODE_KP_8:
+                    return Key::keypad_8;
+                case SDL_SCANCODE_KP_9:
+                    return Key::keypad_9;
+                case SDL_SCANCODE_KP_ENTER:
+                    return Key::keypad_enter;
+                case SDL_SCANCODE_KP_PLUS:
+                    return Key::keypad_add;
+                case SDL_SCANCODE_KP_MINUS:
+                    return Key::keypad_subtract;
+                case SDL_SCANCODE_KP_MULTIPLY:
+                    return Key::keypad_multiply;
+                case SDL_SCANCODE_KP_DIVIDE:
+                    return Key::keypad_divide;
+                case SDL_SCANCODE_KP_PERIOD:
+                    return Key::keypad_decimal;
+                case SDL_SCANCODE_KP_EQUALS:
+                    return Key::keypad_equal;
+                case SDL_SCANCODE_KP_COMMA:
+                    return Key::keypad_comma;
+                case SDL_SCANCODE_NONUSHASH:
+                    return Key::non_us_hash;
+                case SDL_SCANCODE_NONUSBACKSLASH:
+                    return Key::non_us_backslash;
+                case SDL_SCANCODE_MENU:
+                    return Key::menu;
+                case SDL_SCANCODE_KP_EQUALSAS400:
+                    return Key::keypad_equal;
                 default:
-                    return std::nullopt;
+                    return Key::unknown;
+            }
+        }
+
+        [[nodiscard]] auto translate_logical_key(const SDL_Keycode code, const SDL_Keymod mods)
+            -> foundation::LogicalKey {
+            using Key = foundation::LogicalKey;
+            const bool num_lock = (mods & SDL_KMOD_NUM) != 0;
+            switch (code) {
+                case SDLK_ESCAPE:
+                    return Key::escape;
+                case SDLK_RETURN:
+                    return Key::enter;
+                case SDLK_TAB:
+                    return Key::tab;
+                case SDLK_BACKSPACE:
+                    return Key::backspace;
+                case SDLK_INSERT:
+                    return Key::insert;
+                case SDLK_DELETE:
+                    return Key::delete_key;
+                case SDLK_RIGHT:
+                    return Key::right;
+                case SDLK_LEFT:
+                    return Key::left;
+                case SDLK_DOWN:
+                    return Key::down;
+                case SDLK_UP:
+                    return Key::up;
+                case SDLK_PAGEUP:
+                    return Key::page_up;
+                case SDLK_PAGEDOWN:
+                    return Key::page_down;
+                case SDLK_HOME:
+                    return Key::home;
+                case SDLK_END:
+                    return Key::end;
+                case SDLK_F1:
+                    return Key::f1;
+                case SDLK_F2:
+                    return Key::f2;
+                case SDLK_F3:
+                    return Key::f3;
+                case SDLK_F4:
+                    return Key::f4;
+                case SDLK_F5:
+                    return Key::f5;
+                case SDLK_F6:
+                    return Key::f6;
+                case SDLK_F7:
+                    return Key::f7;
+                case SDLK_F8:
+                    return Key::f8;
+                case SDLK_F9:
+                    return Key::f9;
+                case SDLK_F10:
+                    return Key::f10;
+                case SDLK_F11:
+                    return Key::f11;
+                case SDLK_F12:
+                    return Key::f12;
+                case SDLK_F13:
+                    return Key::f13;
+                case SDLK_F14:
+                    return Key::f14;
+                case SDLK_F15:
+                    return Key::f15;
+                case SDLK_F16:
+                    return Key::f16;
+                case SDLK_F17:
+                    return Key::f17;
+                case SDLK_F18:
+                    return Key::f18;
+                case SDLK_F19:
+                    return Key::f19;
+                case SDLK_F20:
+                    return Key::f20;
+                case SDLK_F21:
+                    return Key::f21;
+                case SDLK_F22:
+                    return Key::f22;
+                case SDLK_F23:
+                    return Key::f23;
+                case SDLK_F24:
+                    return Key::f24;
+                case SDLK_APPLICATION:
+                    return Key::menu;
+                case SDLK_LSHIFT:
+                    return Key::left_shift;
+                case SDLK_RSHIFT:
+                    return Key::right_shift;
+                case SDLK_LCTRL:
+                    return Key::left_ctrl;
+                case SDLK_RCTRL:
+                    return Key::right_ctrl;
+                case SDLK_LALT:
+                    return Key::left_alt;
+                case SDLK_RALT:
+                    return Key::right_alt;
+                case SDLK_LGUI:
+                    return Key::left_super;
+                case SDLK_RGUI:
+                    return Key::right_super;
+                case SDLK_CAPSLOCK:
+                    return Key::caps_lock;
+                case SDLK_NUMLOCKCLEAR:
+                    return Key::num_lock;
+                case SDLK_SCROLLLOCK:
+                    return Key::scroll_lock;
+                case SDLK_PRINTSCREEN:
+                    return Key::print_screen;
+                case SDLK_PAUSE:
+                    return Key::pause;
+                case SDLK_MENU:
+                    return Key::menu;
+                case SDLK_RETURN2:
+                case SDLK_KP_ENTER:
+                    return Key::enter;
+                case SDLK_KP_PLUS:
+                    return static_cast<Key>('+');
+                case SDLK_KP_MINUS:
+                    return Key::minus;
+                case SDLK_KP_MULTIPLY:
+                    return static_cast<Key>('*');
+                case SDLK_KP_DIVIDE:
+                    return Key::slash;
+                case SDLK_KP_EQUALS:
+                case SDLK_KP_EQUALSAS400:
+                    return Key::equal;
+                case SDLK_KP_COMMA:
+                    return Key::comma;
+                case SDLK_KP_0:
+                    return num_lock ? Key::num_0 : Key::insert;
+                case SDLK_KP_1:
+                    return num_lock ? Key::num_1 : Key::end;
+                case SDLK_KP_2:
+                    return num_lock ? Key::num_2 : Key::down;
+                case SDLK_KP_3:
+                    return num_lock ? Key::num_3 : Key::page_down;
+                case SDLK_KP_4:
+                    return num_lock ? Key::num_4 : Key::left;
+                case SDLK_KP_5:
+                    return num_lock ? Key::num_5 : Key::unknown;
+                case SDLK_KP_6:
+                    return num_lock ? Key::num_6 : Key::right;
+                case SDLK_KP_7:
+                    return num_lock ? Key::num_7 : Key::home;
+                case SDLK_KP_8:
+                    return num_lock ? Key::num_8 : Key::up;
+                case SDLK_KP_9:
+                    return num_lock ? Key::num_9 : Key::page_up;
+                case SDLK_KP_PERIOD:
+                    return num_lock ? Key::period : Key::delete_key;
+                default:
+                    // SDL character keycodes are Unicode, not scancode-derived keycodes.
+                    if (code >= 0x20 && code <= 0x10FFFF && !(code >= 0xD800 && code <= 0xDFFF)
+                        && !(code >= 0x7F && code <= 0x9F))
+                    {
+                        return static_cast<Key>(code);
+                    }
+                    return Key::unknown;
             }
         }
 
@@ -136,14 +446,12 @@ namespace nandina::app::detail
             }
         }
 
-        /// 每帧读一次当前修饰键状态（与 `NanWindow::current_modifiers()` 的语义一致：状态，
-        /// 不是变化）。
-        [[nodiscard]] auto current_modifiers() -> scene::KeyModifiers {
-            const SDL_Keymod mods = SDL_GetModState();
+        /// 将 SDL 事件或边界状态翻译为框架修饰键快照。
+        [[nodiscard]] auto translate_modifiers(const SDL_Keymod mods) -> scene::KeyModifiers {
             return scene::KeyModifiers {
                 .shift = (mods & SDL_KMOD_SHIFT) != 0,
                 .ctrl = (mods & SDL_KMOD_CTRL) != 0,
-                .alt = (mods & SDL_KMOD_ALT) != 0,
+                .alt = (mods & (SDL_KMOD_ALT | SDL_KMOD_MODE)) != 0,
                 .super = (mods & SDL_KMOD_GUI) != 0,
             };
         }
@@ -226,6 +534,7 @@ namespace nandina::app::detail
         should_close_ = false;
         has_pointer_ = false;
         pointer_ = foundation::NanPoint::zero();
+        modifiers_ = translate_modifiers(SDL_GetModState());
         has_frame_tick_ = false;
         last_frame_ns_ = 0;
         ready_ = true;
@@ -263,6 +572,8 @@ namespace nandina::app::detail
         pace_frames_ = false;
         target_fps_ = 0;
         last_present_ns_ = 0;
+        modifiers_ = {};
+        held_keys_.fill({});
     }
 
     auto SdlPlatformWindow::is_ready() const -> bool {
@@ -332,6 +643,19 @@ namespace nandina::app::detail
                     should_close_ = true;
                     break;
 
+                case SDL_EVENT_WINDOW_FOCUS_LOST:
+                    if (event.window.windowID == SDL_GetWindowID(window_)) {
+                        modifiers_ = {};
+                        held_keys_.fill({});
+                    }
+                    break;
+
+                case SDL_EVENT_WINDOW_FOCUS_GAINED:
+                    if (event.window.windowID == SDL_GetWindowID(window_)) {
+                        modifiers_ = translate_modifiers(SDL_GetModState());
+                    }
+                    break;
+
                 case SDL_EVENT_MOUSE_MOTION: {
                     pointer_ = foundation::NanPoint(event.motion.x, event.motion.y);
                     has_pointer_ = true;
@@ -356,7 +680,7 @@ namespace nandina::app::detail
                             ? scene::MouseButtonEvent::Action::press
                             : scene::MouseButtonEvent::Action::release,
                         pointer_,
-                        current_modifiers()
+                        modifiers_
                     );
                     break;
                 }
@@ -364,29 +688,43 @@ namespace nandina::app::detail
                 case SDL_EVENT_MOUSE_WHEEL: {
                     pointer_ = foundation::NanPoint(event.wheel.mouse_x, event.wheel.mouse_y);
                     has_pointer_ = true;
-                    // 符号约定：SDL3 的 `wheel.y` 正值表示「远离用户」（向上滚），与 GLFW 的
-                    // yoffset 以及 `scene::MouseWheelEvent` 的「y > 0 向上」一致 —— 不翻转。
+                    // SDL wheel.y and MouseWheelEvent both use positive y for upward scroll.
                     out.mouse_wheels.emplace_back(
                         pointer_,
                         foundation::NanPoint(event.wheel.x, event.wheel.y),
-                        current_modifiers()
+                        modifiers_
                     );
                     break;
                 }
 
-                case SDL_EVENT_KEY_DOWN: {
-                    // 只发按下、跳过自动重复：延续旧输入模型的按下队列语义。
-                    if (event.key.repeat) {
-                        break;
+                case SDL_EVENT_KEY_DOWN:
+                case SDL_EVENT_KEY_UP: {
+                    // SDL_PollEvent pumps the whole queue; use this event's modifier snapshot.
+                    modifiers_ = translate_modifiers(event.key.mod);
+                    const auto physical = translate_physical_key(event.key.scancode);
+                    auto logical = translate_logical_key(event.key.key, event.key.mod);
+                    const auto action = event.type == SDL_EVENT_KEY_UP
+                        ? scene::KeyEvent::Action::release
+                        : event.key.repeat ? scene::KeyEvent::Action::repeat
+                                           : scene::KeyEvent::Action::press;
+                    if (physical != foundation::PhysicalKey::unknown) {
+                        auto& held = held_keys_[static_cast<std::size_t>(physical)];
+                        if (held.down) {
+                            logical = held.logical;
+                        }
+                        if (action == scene::KeyEvent::Action::press && !held.down) {
+                            held = HeldKey {logical, true};
+                        }
+                        else if (action == scene::KeyEvent::Action::release) {
+                            held = {};
+                        }
                     }
-                    const auto key = translate_key(event.key.key);
-                    if (!key.has_value()) {
-                        // 未映射的键绝不写进事件流；计数让缺口可观测。
-                        ++skipped_keys_;
-                        break;
+                    if (logical == foundation::LogicalKey::unknown
+                        && physical == foundation::PhysicalKey::unknown)
+                    {
+                        ++unknown_keys_;
                     }
-                    out.keys
-                        .emplace_back(*key, scene::KeyEvent::Action::press, current_modifiers());
+                    out.keys.emplace_back(logical, action, modifiers_, physical);
                     break;
                 }
 
@@ -410,7 +748,8 @@ namespace nandina::app::detail
         static_cast<void>(SDL_GetMouseState(&queried_x, &queried_y));
         out.has_pointer = true;
         out.pointer = has_pointer_ ? pointer_ : foundation::NanPoint(queried_x, queried_y);
-        out.modifiers = current_modifiers();
+        // 帧级状态与事件快照不同：保留 SDL 当前状态，不能反向覆盖排队事件的快照。
+        out.modifiers = translate_modifiers(SDL_GetModState());
     }
 
     void SdlPlatformWindow::present() {
@@ -455,8 +794,8 @@ namespace nandina::app::detail
         return "sdl3";
     }
 
-    auto SdlPlatformWindow::skipped_key_count() const -> std::uint64_t {
-        return skipped_keys_;
+    auto SdlPlatformWindow::unknown_key_count() const -> std::uint64_t {
+        return unknown_keys_;
     }
 
 } // namespace nandina::app::detail

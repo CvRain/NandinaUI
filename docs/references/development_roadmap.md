@@ -1,19 +1,19 @@
 # 开发路线（2026-10-20 重估）
 
-> 本文是**下一阶段 P1–P4 的排序与退出条件**。已完成批次、设计议题与历史证据仍以
+> 本文记录 **P1–P4 的排序与退出条件，当前推进 P3 输入与焦点**。已完成批次、设计议题与历史证据仍以
 > [项目进度与下一步](project_status.md) 为准；组件之间的依赖顺序见
 > [组件开发路线图](component_roadmap.md)；性能和视觉的门禁细节见
 > [性能预算](performance_budget.md) 与 [视觉回归](visual_regression.md)。
 > 本文不承诺日期，也不把"计划"写成"已实现"。
 
-## 1. 当前基线（截至 2026-10-20，已验收）
+## 1. 当前基线（截至 2026-10-28；沿用已归档验收证据）
 
 | 方向 | 结论 | 证据入口 |
 | --- | --- | --- |
 | 平台 | **Linux 正式支持**（Wayland/X11，主套件 98/98）；**Windows 实验性**（release 构建通过、`--suite unit` 80/80、showcase 可运行、DXIL 设备级验收通过）；**macOS 不支持**（无硬件，不承诺） | README“在 Windows 上构建”、路径契约 §14 |
 | 渲染 | SDL3 为默认后端；生产 SDF 已接入**填充/描边/圆/线段/圆环扇区**，Vulkan(SPIR-V) 与 Windows D3D12(DXIL) 均通过设备级像素验收，直线 AA 数值逐位一致；其余图元仍走 CPU 几何 | 路径契约 §10、§14 |
-| 视觉回归 | 6 条页面 golden 已批准（Linux，平台隔离）；比较器与审批工具就绪；Windows 基线未建立 | [视觉回归](visual_regression.md) |
-| 性能 | release 基线 8 配置 + 确定性门禁（布局 0、稳态 miss 0、binds 上限）+ 候选计时阈值（`--enforce` 启用） | [性能预算](performance_budget.md) |
+| 视觉回归 | Linux 6 条页面 golden 已批准；Windows 6 条已批准（CPU 3 + SDF 3，2026-10-22），平台隔离；比较器与审批工具就绪 | [视觉回归](visual_regression.md) |
+| 性能 | Linux release 基线 8 配置 + 确定性门禁（布局 0、稳态 miss 0、binds 上限）+ 候选计时阈值（`--enforce` 启用）；Windows CPU/SDF 各 4 组参考基线已归档，不参与跨平台比较或计时门禁 | [性能预算](performance_budget.md) |
 | 依赖与分发 | 10 个 wrap + 字体 submodule + SQLite/stb 入库源码；raylib 已删除；vendored SDL3 默认静态、可选共享；头文件门禁 182 个（10 internal） | [依赖策略](dependency_policy.md)、[SDK 表面](sdk_surface.md) |
 | 工程门禁 | format / suite / header / shader artifact / golden manifest / backend budget；CI 无 GPU | README、路径契约 §13 |
 
@@ -28,27 +28,27 @@
 
 ## 3. 阶段划分
 
-### P1 收口与平台补齐（当前阶段）
+### P1 收口与平台补齐（已交付；剩余平台边界单列）
 
 | 编号 | 交付 | 前置 | 退出条件 |
 | --- | --- | --- | --- |
 | P1.1 | **发布检查脚本**：把 format、header、artifact、golden 清单、budget 确定性门禁串成一条 `tools/release_check.py`（本地/发布用，CI 可复用无 GPU 部分） | 各门禁已就绪 | **已完成（2026-10-20）**：8 项逐条 PASS/SKIP/FAIL、失败非零退出；`--ci` 跳过 GPU 项，`--report` 追加性能预算；已写进[开发流程](development_loop.md) §2 |
-| P1.2 | **Windows 页面 golden 候选**：`capture_backend_golden.py --platform windows` 采集 → 人工审阅 → 批准（不替换 Linux 基线） | Windows 构建可跑（已满足） | **CPU 路径已交付（2026-10-21）**：3 条 approved（home/label/anchors cpu，`--renderer sdl2d`，SSH 会话无 swapchain）；候选图带平台标签；策略文档与路线图已同步。**已完成（2026-10-22）**：Windows 6 条 approved（CPU 3 + SDF 3），SDF 路径两次采集逐字节一致；DXIL 设备级验收通过（含新增 shadow/clip 断言）。P1.3 性能基线仍为可选项 |
-| P1.3 | **Windows 性能基线（可选）**：同协议在 Windows release 构建采样，作为对照而非跨平台比较 | P1.2 同前置 | **已完成（2026-10-22，参考基线）**：CPU 路径（SSH + `--renderer sdl2d`）与 SDF 路径（桌面会话 + DXIL）各 4 组配置；8 条参考基线在 `probe/cross_platform/results/backend-baseline-windows-release-2026-10-22.json`，不跨平台比较、不参与计时门禁；SDF 能力行确认软阴影/圆角裁剪生效 |
+| P1.2 | **Windows 页面 golden**：`capture_backend_golden.py --platform windows` 采集 → 人工审阅 → 批准（不替换 Linux 基线） | Windows 构建可跑（已满足） | **已完成（2026-10-22）**：Windows 6 条 approved（home/label/anchors，CPU 3 + SDF 3）；CPU 路径在 SSH 会话以 `--renderer sdl2d` 采集，SDF 路径两次采集逐字节一致；DXIL 设备级验收通过（含新增 shadow/clip 断言） |
+| P1.3 | **Windows 性能参考基线**：同协议在 Windows release 构建采样，作为对照而非跨平台比较 | P1.2 同前置 | **已完成（2026-10-22，参考基线）**：CPU 路径（SSH + `--renderer sdl2d`）与 SDF 路径（桌面会话 + DXIL）各 4 组配置；8 条参考基线在 `probe/cross_platform/results/backend-baseline-windows-release-2026-10-22.json`，不跨平台比较、不参与计时门禁；SDF 能力行确认软阴影/圆角裁剪生效 |
 | P1.4 | **CLI 端到端**（**已移出本仓库**：CLI 由独立仓库 NandinaCLI 承担，主仓库只保留库、模板契约与框架开发工具） | — | 本仓库不再构建/测试 CLI；`new/build/run` 的端到端与 SDK 获取在 NandinaCLI 验收。2026-10-20 移除 `tools/nandina`、`nandina-cli` 集成测试与 `NANDINA_SOURCE_ROOT` 注入 |
 | P1.5a | **SDF 线段 + 环形扇区**：复用 32 字节参数块（模式 2/5），修正 CPU 弧角度约定与 sweep>π 的角向公式 | 现有 SDF 参数策略与产物链 | **已完成（2026-10-20）**：`sdf-device` 覆盖内部/圆头/整环 seam/270° 缺口/立方 AA/缓存命中（misses==2→hits==2）；golden 逐字节不变；release 预算 0 失败；产物三格式再生并经固定工具链验证 |
 | P1.5b | **阴影（mode 4）+ 涟漪圆角裁剪**：先做 D7 批次 6 的涟漪专用圆角交集，再按用例定形通用裁剪 | P1.5a 已落地 | **已完成（2026-10-21）**：48 字节参数块（bounds/style/extra），mode 3 = 圆 ∩ 圆角矩形、mode 4 = 圆角矩形 SDF + spread 衰减；`sdf-device` 覆盖软边解析覆盖率、矩形/圆/圆角三向裁剪、缓存命中和 CPU 降级；页面 golden 逐字节不变（当前页面没有启用阴影的卡片）；MSL 产物同步再生但未实机验收 |
 | P1.6 | **图片路径**：共享 CPU 解码器、SDL RGBA 上传、删除 `IPlatformWindow::make_image_decoder()`（破坏性，按 SDK 表面记录） | 解码库来源定形 | **已完成（2026-10-20）**：vendored stb 解码（PNG/JPEG/BMP/GIF/TGA + crop/resize/tint）、`make_cpu_image_decoder()` + 应用注入、SDL `create_rgba_texture`、三项能力拆分、旧钩子删除；`image-decoder` 8 用例 + `sdl-visual` 上传像素断言；套件 98/98。**未做**：SDL 页面级 Image 端到端采样 |
 | P1.7 | **raylib 完整退役**：窗口测试宿主换 SDL3；删除旧后端、工厂、枚举项、wrap 与依赖，不保留临时开关；vendored SDL3 默认静态、可选共享 | P1.6 已完成（图像路径不再依赖 raylib） | **实现与 Linux 验收已完成（2026-10-20）**：本轮非 SDK 99/99；两个离线 SDK fixture 前轮通过；静态 ASan/lld 84/84 与 GPU 设备验收通过，no-RTTI 前轮 84/84；无后端全套 94 通过、1 SKIP。原 raylib CI 改为无后端全套门禁，窗口跳过、系统 SDL DLL 搜索补充回归测试。Windows 静态模式仍须真机复验，详见[依赖策略](dependency_policy.md) |
 
-### P2 应用闭环（资源与工具）
+### P2 应用闭环（资源与工具，已交付）
 
 > 实施契约（目标依赖图、选项真值表、启动策略、lock/revision/ID 语义、子批与门禁）见
 > [D5 §8](resource_build_and_deployment.md#8-p2-实施契约2026-10-22-定稿p21ap24c-已实施)。
 > **状态：P2.1a/P2.1b/P2.2a–P2.2d/P2.3a–P2.4c 已实施（2026-10-22 至 10-25）；P2 应用闭环完成，后续进入 P3。**
 > **2026-10-28 方向调整**：示例应用由 P2.4 的 `examples/lab` 改造为 `examples/notebook`（综合笔记软件）。
-> 数据层（SQLite + 资源驱动迁移 + 仓储）已落地，UI/服务按批推进；组件先在 `showcase/` 编写，UI 测试在
-> 本地未跟踪的 `playground/`，仓库内只保留数据层等确定性测试。P2.4 的验收记录保留为历史证据。
+> 数据层（SQLite + 资源驱动迁移 + 仓储）已落地；notebook 的服务与 UI、showcase 组件由维护者手工编写，
+> 不属于本轮框架实现代写范围。UI 测试在本地未跟踪的 `playground/`，仓库内保留数据层等确定性测试；P2.4 的验收记录保留为历史证据。
 
 | 编号 | 交付 | 前置 | 退出条件 |
 | --- | --- | --- | --- |
@@ -65,16 +65,21 @@
 | P2.4b | 示例应用功能：登录/注册、番茄钟、笔记列表/编辑、预览图片、确认弹窗（导航/滚动贯穿） | P2.4a | **已完成（2026-10-25）**：Notes 起始页 + Account/Workspace 分组导航；登录/注册本地校验与 demo 预填；笔记 keyed list、TextArea 长文、保存/新增/删除与 AlertDialog；Focus 25/5 帧驱动计时（启动/暂停/重置/切换）；Preview 从 `res://` 加载生成常量 key；交互验收证据入库 `docs/images/lab/`（登录后会话行、长文编辑、删除弹窗、计时器、预览），合成指针（ydotool）+ 截图采集覆盖导航、笔记选择、新增/删除确认、倒计时/跳过、登录→Notes 状态传递；键盘文本输入未自动化，表单提交走 demo 预填 |
 | P2.4c | 测试脚本与文档：构建检查与运行检查分别记录，失败可复现证据入库 | P2.4b | **已完成（2026-10-25）**：`tests/example_lab_test.py` 分 build/run/incremental；`example-lab-build`、`example-lab-run`（无 display 返回 SKIP）、`example-lab-incremental` 入库；`examples/lab/README.md` 记录构建、资源链、portable stage、测试钩子与边界；showcase 保留组件视觉验收职责。复核补：run 断言错误标记并覆盖构建树+四路由、SQL `ORDER BY`/`closing`、lab-store 随 `build_ui` 注册、外部 nanres `keys` 握手、helper 跨盘符回退、Notes 选中同步与 demo invalid 清理。验证：主套件 109/109、release check 8/8；干净离线配置与定向重建通过；单元矩阵 ASan 84/84（+SKIP）、no-RTTI 85/85、no-SQLite 82/82（+1 SKIP），no-RTTI 下完整示例 app 亦编译通过。Windows（bundle 同步）：构建 0 错误（lab exe/包/头齐备）、unit 83/83、lab build/incremental 通过、资源 4/4、run 无 display 为 SKIP |
 
-### P3 输入与焦点
+### P3 输入与焦点（当前阶段）
+
+当前批次按维护者安排只做 Linux 验证；Windows 调试设备可用后另行通知并恢复对应验收。
+已有 Windows 历史证据保留，不作为本批变更的验证结果，也不阻塞当前 Linux 施工。
 
 | 编号 | 交付 | 前置 | 退出条件 |
 | --- | --- | --- | --- |
-| P3.1 | **D8 输入基础**：先修“宿主用帧级字段覆盖每事件坐标/修饰键”，再定形物理/逻辑键、事件快照、release/repeat/unknown、保序分发 | 无 | 同帧“在 A 按下、移到 B”派发到 A；事件时修饰键；US/非 US 布局；跨后端规范事件对照 |
-| P3.2 | **D1 第一阶段**：统一焦点提示策略（paint-only 失效、程序化恢复、窗口失活/激活） | P3.1 事件语义 | 同节点模态变化、两种 roving 模型、文本能力矩阵 |
-| P3.3 | **D1 文本会话**：注入式 `ITextInputService`、IME/软键盘、会话生命周期 | P3.1 | 真实 IME 分别记录平台状态；不另造第二套 host |
+| P3.1a | **D8 每事件坐标与修饰键快照**（已实施，2026-10-29）：按钮/滚轮使用事件坐标，经 viewport 映射派发；SDL 键盘使用事件 mod，鼠标使用按队列推进的修饰键状态；帧级状态保留 | 无 | `sdl-platform-input` 4 用例/160 断言通过，覆盖 A 处点击/滚轮后移动到 B、2×/letterbox、同帧与跨帧修饰键及过滤事件；红测与验证矩阵见 [D8](reference_draft.md#p31a事件快照2026-10-28) |
+| P3.1b | **D8 键身份与键生命周期**（已实施，2026-10-29）：`LogicalKey`/`PhysicalKey`、press/repeat/release、独立 unknown 计数，SDL scancode/keycode 映射，全部消费者迁移 | 精确键契约已定形 | `sdl-platform-input` 覆盖合成布局差异、左右修饰键、小键盘、unknown 与身份稳定；`key-lifecycle` 覆盖重复/单次激活；红测与验证矩阵见 [D8](reference_draft.md#p31b键身份与生命周期2026-10-29-已实施)。实机布局与 Windows 未验收；不并入 P3.1a |
+| P3.1c | **D8 跨类型事件保序**（后续独立批）：指针、键盘与文本等事件统一按收集顺序派发 | 有序事件契约定形 | 点击切焦点与输入同帧仍按原序消费；P3.1a 不改变现有跨类型分发顺序 |
+| P3.2 | **D1 第一阶段**：统一焦点提示策略（paint-only 失效、程序化恢复、窗口失活/激活） | 所需 D8 事件语义定形 | 同节点模态变化、两种 roving 模型、文本能力矩阵；不并入 P3.1a |
+| P3.3 | **D1 文本会话**：注入式 `ITextInputService`、IME/软键盘、会话生命周期 | 所需 D8 键语义与有序事件 | 真实 IME 分别记录平台状态；不另造第二套 host，不并入 P3.1a |
 
-应用侧并行：`examples/notebook` 按批演进（数据层已完成；服务与 UI 后续），不改变 P3 的框架优先级；
-组件先在 `showcase/` 编写并通过视觉验收，再由 notebook 组合。
+应用侧并行：维护者手工编写 `examples/notebook`（数据层已完成；服务与 UI 后续）及 `showcase/` 组件，
+不改变 P3 的框架优先级；组件先在 showcase 进行视觉验收，再由 notebook 组合。
 
 ### P4 作者与组件
 
@@ -87,11 +92,10 @@
 
 ## 4. 建议的近期切入顺序
 
-1. **退役后的 Windows 复验**：静态构建、窗口生命周期与 DXIL。Linux 的静态/共享 SDK、窗口与无后端验收已完成。
-2. **P1.6 页面补验**：SDL 完整 Image 页面端到端采样，不能用解码/上传单测替代。
-3. **P1.5b 阴影与涟漪圆角裁剪**：已完成（2026-10-21）。
-4. **P1.2 Windows golden**：已完成（2026-10-22，CPU+SDF 共 6 条 approved）；P1.3 性能基线可选。
-5. P2/P3/P4 按应用需求插入；D8 与 D1 在组件扩张前推进。P1.1/P1.5a/P1.6 核心实现已完成，P1.4 归 NandinaCLI。
+1. **P3.1a 事件快照**：先修每事件坐标/修饰键被帧级状态覆盖；本批不扩展键身份、跨类型顺序、焦点策略或 IME。
+2. **P3.1b/P3.1c 与 D1**：各自定形并分批验收，在组件扩张前推进；P4 按具体前置安排。
+3. **保留的 P1 边界**：退役后的 Windows 静态构建/窗口生命周期复验、P1.6 完整 Image 页面端到端采样仍分别记录；不把它们混同于已交付的 Windows golden 与参考性能基线。
+4. **已交付记录**：P1.2 Windows CPU/SDF 共 6 条 approved、P1.3 Windows 参考性能基线、P1.5b 阴影/圆角裁剪及 P2 应用闭环均已归档；P1.4 归 NandinaCLI。
 
 模板唯一归属 NandinaCLI，并按兼容 SDK 版本发布。框架仅维护
 [`tests/fixtures/sdk_app`](../../tests/fixtures/sdk_app/README.md) 的消费契约 fixture；

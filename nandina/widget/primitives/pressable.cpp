@@ -4,9 +4,9 @@
 
 #include "pressable.hpp"
 
+#include "../../foundation/input.hpp"
 #include "../../scene/input_event.hpp"
 #include "../../scene/scene_tree.hpp"
-#include "../key_codes.hpp"
 
 namespace nandina::widget::primitives
 {
@@ -117,7 +117,8 @@ namespace nandina::widget::primitives
             case scene::EventType::key: {
                 auto& key = static_cast<scene::KeyEvent&>(event);
                 if (key.is_pressed()
-                    && (key.keycode() == keys::enter || key.keycode() == keys::space))
+                    && (key.logical_key() == foundation::LogicalKey::enter
+                        || key.logical_key() == foundation::LogicalKey::space))
                 {
                     emit_click();
                     event.accept();

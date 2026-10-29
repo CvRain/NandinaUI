@@ -4,16 +4,10 @@
 // 职责边界严格按 `platform_window.hpp`：窗口 + 输入翻译 + 呈现 + 剪贴板 + 用本窗口上下文
 // 创建设备。它不持有场景树、不驱动帧、不认识主题 —— 那些是宿主（`NanWindow`）的事。
 //
-// 两个刻意的设计选择：
-//
-//   1. **输入翻译到 GLFW 键码空间**。框架的 `widget::keys`（`widget/key_codes.hpp`）是 GLFW
-//      的键码，历史 raylib 后端曾直接透传。SDL 的 `SDL_Keycode` 不同（字母是小写 ASCII，导航/功能键在
-//      另一个区间），所以这里做一次显式翻译，控件才能原样工作。无法翻译的键不写进事件流
-//      （避免把垃圾键码喂给控件），而是计入 `skipped_key_count()` —— 让缺口可观测，而不是
-//      静默丢弃。
-//
-//   2. **键只发按下，不发抬起**。框架旧输入模型源自 raylib 的 `GetKeyPressed()` 队列，那条队列只有
-//      按下；要不要抬起是宿主/控件的模型问题。这里保持同样的语义，不在平台层偷偷加新事件。
+// Keyboard identities belong to foundation/input.hpp. SDL scancodes describe physical
+// positions; keycodes describe layout-resolved logical keys. Press, repeat and release
+// retain the initial logical identity while a physical key is held. Focus loss clears
+// held identities without synthesizing releases. Modifier snapshots follow queue order.
 //
 // 只有在 `-Dsdl_backend=enabled|auto` 且 SDL3 >= 3.4.0 时本文件才参与编译；否则整个头文件
 // 与实现都退化为空（`NANDINA_HAS_SDL_BACKEND` 由 nandina/meson.build 定义）。
@@ -28,6 +22,8 @@
 
     #include <SDL3/SDL.h>
 
+    #include <array>
+    #include <cstddef>
     #include <cstdint>
     #include <memory>
     #include <string>
@@ -77,11 +73,8 @@ namespace nandina::app::detail
 
         [[nodiscard]] auto name() const -> std::string_view override;
 
-        /// 翻译表未覆盖、因而被跳过的 `SDL_EVENT_KEY_DOWN` 次数。
-        ///
-        /// 存在的理由：GLFW 键码空间比 SDL 的窄，缺哪个键不该靠「按了没反应」去猜。诊断可以
-        /// 直接读这个计数，再决定要不要补映射。
-        [[nodiscard]] auto skipped_key_count() const -> std::uint64_t;
+        /// Number of dispatched key events with both identities unknown.
+        [[nodiscard]] auto unknown_key_count() const -> std::uint64_t;
 
     private:
         SDL_Window* window_ = nullptr;
@@ -97,11 +90,21 @@ namespace nandina::app::detail
         mutable std::uint64_t last_frame_ns_ = 0;
         mutable bool has_frame_tick_ = false;
 
-        /// 最近一次鼠标位置（窗口坐标）。按钮/滚轮事件也用它，避免位置字段缺失时闪回原点。
+        /// 最近一次鼠标事件的位置（窗口坐标），仅作帧尾指针状态。
         foundation::NanPoint pointer_ {};
         bool has_pointer_ = false;
 
-        std::uint64_t skipped_keys_ = 0;
+        /// 按 SDL 队列顺序推进；不能在每帧开始用全局状态覆盖先前事件的修饰键。
+        scene::KeyModifiers modifiers_ {};
+
+        struct HeldKey {
+            foundation::LogicalKey logical = foundation::LogicalKey::unknown;
+            bool down = false;
+        };
+        static constexpr std::size_t physical_key_count_ =
+            static_cast<std::size_t>(foundation::PhysicalKey::non_us_backslash) + 1;
+        std::array<HeldKey, physical_key_count_> held_keys_ {};
+        std::uint64_t unknown_keys_ = 0;
 
         /// vsync 关闭时 `present()` 自己数拍子用的目标帧率（0 = 不节流）。
         std::uint64_t target_fps_ = 0;

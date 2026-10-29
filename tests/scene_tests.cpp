@@ -567,7 +567,7 @@ TEST_CASE(
     REQUIRE(tree.pointer_capture() == front_target.get());
 
     front->set_input_mode(scene::LayerInputMode::disabled);
-    tree.dispatch_key(scene::KeyEvent(65, scene::KeyEvent::Action::press));
+    tree.dispatch_key(scene::KeyEvent(foundation::LogicalKey::a, scene::KeyEvent::Action::press));
     REQUIRE(tree.focused_node() == nullptr);
     tree.dispatch_mouse_move(
         scene::MouseMoveEvent(foundation::NanPoint::zero(), foundation::NanPoint::zero())
@@ -670,7 +670,7 @@ TEST_CASE("modifiers propagate through button and key events", "[scene][modifier
     mods.ctrl = true;
     mods.shift = true;
 
-    scene::KeyEvent key(65, scene::KeyEvent::Action::press, mods);
+    scene::KeyEvent key(foundation::LogicalKey::a, scene::KeyEvent::Action::press, mods);
     REQUIRE(key.modifiers().ctrl);
     REQUIRE(key.modifiers().shift);
     REQUIRE_FALSE(key.modifiers().alt);

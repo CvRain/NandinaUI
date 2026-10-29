@@ -107,6 +107,6 @@ typeahead 文本由容器通过 `sync()` 的 `label` 回调提供，通常是成
 ## 相关代码
 
 - `nandina/widget/roving_focus.hpp` / `.cpp` —— 漫游与 typeahead 设施；
-- `nandina/widget/key_codes.hpp` —— 全项目**唯一**的键码常量定义处（此前 7 个文件各抄一份）；
+- `nandina/foundation/input.hpp` —— 框架物理/逻辑键身份；组件导航按逻辑键匹配，typeahead 仍消费提交文本；
 - `tests/roving_focus_tests.cpp` —— 漫游 / typeahead 契约与边界；
 - `nandina/widget/radio_group.hpp`、`tabs.cpp`、`select.cpp`、`toggle_group.cpp` —— 接入方。

@@ -1,6 +1,6 @@
 #include "focus_scope.hpp"
 
-#include "../key_codes.hpp"
+#include "../../foundation/input.hpp"
 
 #include "../../scene/input_event.hpp"
 #include "../../scene/scene_tree.hpp"
@@ -59,7 +59,9 @@ namespace nandina::widget::internal
             return false;
         }
         auto& key = static_cast<scene::KeyEvent&>(event);
-        if (!key.is_pressed() || key.keycode() != keys::tab || get_tree() == nullptr) {
+        if (!key.is_pressed() || key.logical_key() != foundation::LogicalKey::tab
+            || get_tree() == nullptr)
+        {
             return false;
         }
         const bool moved = key.modifiers().shift ? get_tree()->focus_previous_within(*this)

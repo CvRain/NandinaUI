@@ -8,7 +8,6 @@
 #include <nandina/theme/theme_manager.hpp>
 #include <nandina/widget/build_context.hpp>
 #include <nandina/widget/controls.hpp>
-#include <nandina/widget/key_codes.hpp>
 #include <nandina/widget/pagination.hpp>
 
 #include <catch2/catch_approx.hpp>
@@ -294,24 +293,24 @@ TEST_CASE("pagination roams page slots through the real key path", "[pagination]
     REQUIRE(pagination->focused_item_index() == 4);
     REQUIRE(pagination->roving_member_count() == pagination->visible_item_count());
 
-    const auto press = [&](const int keycode) {
+    const auto press = [&](foundation::LogicalKey keycode) {
         tree.dispatch_key(scene::KeyEvent(keycode, scene::KeyEvent::Action::press));
     };
 
-    press(widget::keys::right);
+    press(foundation::LogicalKey::right);
     REQUIRE(pagination->focused_item_index() == 5);
     // 跳过省略号槽位（6）。
-    press(widget::keys::right);
+    press(foundation::LogicalKey::right);
     REQUIRE(pagination->focused_item_index() == 7);
-    press(widget::keys::right);
+    press(foundation::LogicalKey::right);
     REQUIRE(pagination->focused_item_index() == 8);
     // 复用 RovingFocus 的环绕语义。
-    press(widget::keys::right);
+    press(foundation::LogicalKey::right);
     REQUIRE(pagination->focused_item_index() == 0);
 
-    press(widget::keys::end);
+    press(foundation::LogicalKey::end);
     REQUIRE(pagination->focused_item_index() == 8);
-    press(widget::keys::home);
+    press(foundation::LogicalKey::home);
     REQUIRE(pagination->focused_item_index() == 0);
 }
 
@@ -330,10 +329,12 @@ TEST_CASE(
 
     // 当前页在末尾：槽位 0 prev / 1 page1 / 2 … / 3 page9 / 4 page10 / 5 next(禁用)
     REQUIRE(pagination->focused_item_index() == 4);
-    tree.dispatch_key(scene::KeyEvent(widget::keys::end, scene::KeyEvent::Action::press));
+    tree.dispatch_key(scene::KeyEvent(foundation::LogicalKey::end, scene::KeyEvent::Action::press));
     REQUIRE(pagination->focused_item_index() == 4);
     const int before = pagination->focused_item_index();
-    tree.dispatch_key(scene::KeyEvent(widget::keys::right, scene::KeyEvent::Action::press));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::right, scene::KeyEvent::Action::press)
+    );
     REQUIRE(pagination->focused_item_index() != before);
     REQUIRE(pagination->focused_item_index() != 5); // next 禁用，不会被选中
 }
@@ -351,15 +352,21 @@ TEST_CASE("pagination Enter activates the focused slot", "[pagination][keyboard]
     REQUIRE(tree.layout_root(foundation::NanSize(480.0F, 80.0F)) >= 1);
     tree.set_focus(pagination.get());
 
-    tree.dispatch_key(scene::KeyEvent(widget::keys::right, scene::KeyEvent::Action::press));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::right, scene::KeyEvent::Action::press)
+    );
     REQUIRE(pagination->focused_item_index() == 5); // page 6
-    tree.dispatch_key(scene::KeyEvent(widget::keys::enter, scene::KeyEvent::Action::press));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::enter, scene::KeyEvent::Action::press)
+    );
     REQUIRE(pagination->current_page() == 6);
     REQUIRE(event_count == 1);
 
     // 当前页变化后窗口重建，漫游焦点回到当前页槽位。
     REQUIRE(pagination->focused_item_index() == 4);
-    tree.dispatch_key(scene::KeyEvent(widget::keys::space, scene::KeyEvent::Action::press));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::space, scene::KeyEvent::Action::press)
+    );
     REQUIRE(pagination->current_page() == 6); // 激活当前页是 no-op
     REQUIRE(event_count == 1);
 }

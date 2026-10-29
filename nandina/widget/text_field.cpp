@@ -4,7 +4,7 @@
 
 #include "text_field.hpp"
 
-#include "key_codes.hpp"
+#include "../foundation/input.hpp"
 
 #include "../render/draw_context.hpp"
 #include "../scene/input_event.hpp"
@@ -22,7 +22,6 @@ namespace nandina::widget
 {
     namespace
     {
-        constexpr int key_kp_enter = 335;
         constexpr float caret_width = 1.0F;
     } // namespace
 
@@ -277,8 +276,7 @@ namespace nandina::widget
         }
         if (event.type() == scene::EventType::key) {
             const auto& key = static_cast<scene::KeyEvent&>(event);
-            if (key.is_pressed() && (key.keycode() == keys::enter || key.keycode() == key_kp_enter))
-            {
+            if (key.is_pressed() && (key.logical_key() == foundation::LogicalKey::enter)) {
                 if (on_submit_) {
                     on_submit_(value());
                 }

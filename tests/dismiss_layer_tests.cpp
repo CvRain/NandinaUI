@@ -28,7 +28,7 @@ TEST_CASE("dismiss layer reports left pointer dismissal", "[overlay][dismiss]") 
 TEST_CASE("dismiss layer reports escape dismissal", "[overlay][dismiss]") {
     widget::internal::DismissReason reason {};
     widget::internal::DismissLayer layer([&](const auto value) { reason = value; });
-    scene::KeyEvent event(256, scene::KeyEvent::Action::press);
+    scene::KeyEvent event(foundation::LogicalKey::escape, scene::KeyEvent::Action::press);
 
     REQUIRE(layer.on_input(event));
     REQUIRE(event.is_accepted());
@@ -48,7 +48,7 @@ TEST_CASE("dismiss layer ignores non-dismiss input", "[overlay][dismiss]") {
         scene::MouseButtonEvent::Action::press,
         foundation::NanPoint(10.0F, 20.0F)
     );
-    scene::KeyEvent other(65, scene::KeyEvent::Action::press);
+    scene::KeyEvent other(foundation::LogicalKey::a, scene::KeyEvent::Action::press);
 
     REQUIRE_FALSE(layer.on_input(release));
     REQUIRE_FALSE(layer.on_input(right));
@@ -100,7 +100,9 @@ TEST_CASE(
     auto focusable = std::make_shared<Focusable>();
     content->add_child(focusable);
     tree.set_focus(focusable.get());
-    tree.dispatch_key(scene::KeyEvent(256, scene::KeyEvent::Action::press));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::escape, scene::KeyEvent::Action::press)
+    );
     REQUIRE(calls == 2);
     REQUIRE(reason == widget::internal::DismissReason::escape);
 }

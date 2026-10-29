@@ -690,11 +690,15 @@ TEST_CASE("EditableText moves visually through RTL caret stops", "[text][harfbuz
     tree.set_focus(edit.get());
 
     edit->set_caret(0);
-    tree.dispatch_key(scene::KeyEvent(263, scene::KeyEvent::Action::press));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::left, scene::KeyEvent::Action::press)
+    );
     REQUIRE(edit->caret() > 0);
 
     edit->set_caret(source.size());
-    tree.dispatch_key(scene::KeyEvent(262, scene::KeyEvent::Action::press));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::right, scene::KeyEvent::Action::press)
+    );
     REQUIRE(edit->caret() < source.size());
 }
 

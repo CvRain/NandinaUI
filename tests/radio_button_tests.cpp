@@ -214,19 +214,25 @@ TEST_CASE("radio group arrow keys move focus and selection", "[radio][keyboard]"
     REQUIRE(tree.focused_node() == b.get());
 
     // 右箭头：选中下一个并移动焦点。
-    tree.dispatch_key(scene::KeyEvent(262, scene::KeyEvent::Action::press));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::right, scene::KeyEvent::Action::press)
+    );
     REQUIRE(tree.flush_post_layout_actions());
     REQUIRE(c->checked());
     REQUIRE(tree.focused_node() == c.get());
 
     // 末尾循环到首项。
-    tree.dispatch_key(scene::KeyEvent(262, scene::KeyEvent::Action::press));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::right, scene::KeyEvent::Action::press)
+    );
     REQUIRE(tree.flush_post_layout_actions());
     REQUIRE(a->checked());
     REQUIRE(tree.focused_node() == a.get());
 
     // 左箭头回到末尾。
-    tree.dispatch_key(scene::KeyEvent(263, scene::KeyEvent::Action::press));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::left, scene::KeyEvent::Action::press)
+    );
     REQUIRE(tree.flush_post_layout_actions());
     REQUIRE(c->checked());
     REQUIRE(tree.focused_node() == c.get());

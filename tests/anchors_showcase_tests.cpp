@@ -3,7 +3,6 @@
 
 #include <nandina/scene/input_event.hpp>
 #include <nandina/scene/scene_tree.hpp>
-#include <nandina/widget/key_codes.hpp>
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
@@ -15,7 +14,7 @@ using namespace nandina;
 namespace
 {
     void activate(widget::Button& button) {
-        scene::KeyEvent event(widget::keys::enter, scene::KeyEvent::Action::press);
+        scene::KeyEvent event(foundation::LogicalKey::enter, scene::KeyEvent::Action::press);
         REQUIRE(button.on_input(event));
     }
     auto find_named(scene::NanNode& node, std::string_view name) -> scene::NanNode* {

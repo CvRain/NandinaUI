@@ -186,7 +186,9 @@ TEST_CASE("dialog escape and scrim click dismiss it", "[dialog][input]") {
     harness.tree.set_focus(harness.dialog.get());
 
     // Escape 关闭。
-    harness.tree.dispatch_key(scene::KeyEvent(256, scene::KeyEvent::Action::press));
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::escape, scene::KeyEvent::Action::press)
+    );
     REQUIRE_FALSE(harness.dialog->is_open());
 
     // 遮罩（面板外）点击关闭；面板内点击不关闭。
@@ -218,7 +220,9 @@ TEST_CASE("non-dismissible dialog ignores escape and scrim click", "[dialog][inp
     harness.layout();
     harness.tree.set_focus(harness.dialog.get());
 
-    harness.tree.dispatch_key(scene::KeyEvent(256, scene::KeyEvent::Action::press));
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::escape, scene::KeyEvent::Action::press)
+    );
     REQUIRE(harness.dialog->is_open());
 
     harness.tree.dispatch_mouse_button(
@@ -245,12 +249,18 @@ TEST_CASE("dialog traps focus within its panel", "[dialog][focus]") {
     REQUIRE(harness.tree.focused_node() == first.get());
 
     // Tab 前进到第二个按钮。
-    harness.tree.dispatch_key(scene::KeyEvent(258, scene::KeyEvent::Action::press));
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::tab, scene::KeyEvent::Action::press)
+    );
     REQUIRE(harness.tree.focused_node() == second.get());
 
     // Shift+Tab 回到第一个。
     harness.tree.dispatch_key(
-        scene::KeyEvent(258, scene::KeyEvent::Action::press, {.shift = true})
+        scene::KeyEvent(
+            foundation::LogicalKey::tab,
+            scene::KeyEvent::Action::press,
+            {.shift = true}
+        )
     );
     REQUIRE(harness.tree.focused_node() == first.get());
 }
@@ -456,7 +466,9 @@ TEST_CASE(
     harness.dialog->open();
     harness.layout();
     REQUIRE(harness.dialog->is_open());
-    harness.tree.dispatch_key(scene::KeyEvent(256, scene::KeyEvent::Action::press));
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::escape, scene::KeyEvent::Action::press)
+    );
     REQUIRE_FALSE(harness.dialog->is_open());
 }
 
@@ -473,7 +485,9 @@ TEST_CASE("non-dismissible dialog swallows escape and scrim clicks", "[dialog][o
     harness.body->add_child(behind);
     harness.layout();
 
-    harness.tree.dispatch_key(scene::KeyEvent(256, scene::KeyEvent::Action::press));
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::escape, scene::KeyEvent::Action::press)
+    );
     REQUIRE(harness.dialog->is_open());
 
     harness.tree.dispatch_mouse_button(

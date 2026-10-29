@@ -6,7 +6,7 @@
 
 ## 1. 模块与命名空间
 
-框架按 12 个模块组织：`foundation`、`reactive`、`animation`、`text`、`render`、`resource`、`scene`、`widget`、`theme`、`app`、`semantics`、`physics2d`。目录名就是模块名，命名空间与之一一对应：模块 `scene` 中的代码位于 `namespace nandina::scene`。所有公共类型都必须落在 `nandina` 之下，不在全局命名空间引入任何名字。
+框架按 11 个模块组织：`foundation`、`reactive`、`text`、`render`、`resource`、`scene`、`widget`、`theme`、`app`、`semantics`、`physics2d`。动画不是独立的第十二模块：纯值 motion 与声明式规格归 `foundation/motion/`，节点 endpoint、动画宿主与组调度归 `scene/`；旧 `animation/` 模块及转发入口已退出。目录名就是模块名，命名空间与之一一对应：模块 `scene` 中的代码位于 `namespace nandina::scene`。所有公共类型都必须落在 `nandina` 之下，不在全局命名空间引入任何名字。
 
 模块内部可以再划分更细的子命名空间，例如 `nandina::widget::primitives`、`nandina::widget::authoring`、`nandina::foundation::utf8`。当上层模块需要在自己的命名空间中简化对下层类型的引用时，应使用 `using` 声明（如 `using foundation::NanColor;`）把**具体的名字**引入，而不是 `using namespace` 整个下层命名空间：前者让依赖关系在头文件里显式可查，后者会让包含顺序影响重载解析。因此库内头文件不出现 `using namespace`。
 
@@ -29,7 +29,7 @@
 头文件内的 `#include` 分为三组，组间空行分隔、组内按字典序排列（`.clang-format` 的 `SortIncludes` 与 `IncludeBlocks: Preserve` 会维持这一顺序）：
 
 1. 框架内部头文件，使用相对路径，如 `"../foundation/geometry.hpp"`；
-2. 第三方依赖，如 `<raylib.h>`、`<catch2/catch_test_macros.hpp>`；
+2. 第三方依赖，如 `<SDL3/SDL.h>`、`<catch2/catch_test_macros.hpp>`；
 3. 标准库，如 `<memory>`、`<string_view>`。
 
 模块**外部**使用者（应用、测试、playground）则通过仓库根包含，如 `<nandina/scene/scene_tree.hpp>`、`<nandina/widget/controls.hpp>`；不要从外部依赖库内相对路径。头文件应当自包含：只引入自身声明所需的类型，需要完整定义时优先用前向声明，并把前向声明集中放在对应的 `namespace` 块内。`.clangd` 打开了 `UnusedIncludes: Strict`，多余和缺失的包含都会在编辑期暴露，因此不要靠传递依赖掩盖真实的依赖关系。

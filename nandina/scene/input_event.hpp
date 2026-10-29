@@ -6,6 +6,7 @@
 #define NANDINA_EXPERIMENT_INPUT_EVENT_HPP
 
 #include "../foundation/geometry.hpp"
+#include "../foundation/input.hpp"
 
 #include <cstdint>
 #include <string>
@@ -171,19 +172,28 @@ namespace nandina::scene
         KeyModifiers mods_;
     };
 
-    /// Physical / logical key press or release.
+    /// Layout-resolved logical identity and optional physical keyboard position.
     class KeyEvent final: public InputEvent {
     public:
-        enum class Action { press, release };
+        enum class Action { press, release, repeat };
 
-        KeyEvent(int keycode, Action action, KeyModifiers mods = {}):
+        KeyEvent(
+            foundation::LogicalKey logical_key,
+            Action action,
+            KeyModifiers mods = {},
+            foundation::PhysicalKey physical_key = foundation::PhysicalKey::unknown
+        ):
             InputEvent(EventType::key),
-            keycode_(keycode),
+            logical_key_(logical_key),
+            physical_key_(physical_key),
             action_(action),
             mods_(mods) {}
 
-        [[nodiscard]] auto keycode() const -> int {
-            return keycode_;
+        [[nodiscard]] auto logical_key() const -> foundation::LogicalKey {
+            return logical_key_;
+        }
+        [[nodiscard]] auto physical_key() const -> foundation::PhysicalKey {
+            return physical_key_;
         }
         [[nodiscard]] auto action() const -> Action {
             return action_;
@@ -191,12 +201,16 @@ namespace nandina::scene
         [[nodiscard]] auto is_pressed() const -> bool {
             return action_ == Action::press;
         }
+        [[nodiscard]] auto is_press_or_repeat() const -> bool {
+            return action_ != Action::release;
+        }
         [[nodiscard]] auto modifiers() const -> KeyModifiers {
             return mods_;
         }
 
     private:
-        int keycode_;
+        foundation::LogicalKey logical_key_;
+        foundation::PhysicalKey physical_key_;
         Action action_;
         KeyModifiers mods_;
     };

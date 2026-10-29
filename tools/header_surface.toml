@@ -89,6 +89,11 @@ path = "nandina/foundation/geometry.hpp"
 level = "experimental"
 
 [[headers]]
+path = "nandina/foundation/input.hpp"
+level = "experimental"
+reason = "Framework-owned physical and logical keyboard identities; P3.1b breaking input contract"
+
+[[headers]]
 path = "nandina/foundation/json.hpp"
 level = "experimental"
 
@@ -598,10 +603,6 @@ level = "internal"
 [[headers]]
 path = "nandina/widget/internal/text_style_bridge.hpp"
 level = "internal"
-
-[[headers]]
-path = "nandina/widget/key_codes.hpp"
-level = "experimental"
 
 [[headers]]
 path = "nandina/widget/label.hpp"

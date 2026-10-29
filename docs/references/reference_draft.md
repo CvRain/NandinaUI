@@ -16,7 +16,7 @@
 | **D3** | 路由元数据应保持多大开放性 | route identity 已由页面类型表达；导航分组改为开放、可选值 | 应用路由配置与可选导航分组呈现 |
 | ~~D4~~ | ~~先跨平台、再扩展平台集成的后端路线~~ → **已归档** | 见 [平台与后端契约](platform_backend_contract.md)；P3 已把默认后端换成 SDL3 | — |
 | **D7** | 后端替换后的**视觉质量一致性**（抗锯齿、半透明、圆角裁剪、图片解码器） | SDL 设备用 CPU 三角形扇、**无抗锯齿**，且几何绘制**未启用混合**；raylib 侧是 SDF + 解析 AA | 所有"细腻度"相关的观感结论；SDF 路线与着色器产物打包 |
-| **D8** | **键码与输入码空间的归属** | 框架键码就是 GLFW 码（`widget/key_codes.hpp`）；SDL 平台临时把它翻译过来 | 快捷键、编辑键、输入法边界；跨后端输入对照 |
+| **D8** | **键码与输入码空间的归属** | P3.1a 每事件坐标/修饰键快照与 P3.1b 物理/逻辑键身份已实施（`foundation/input.hpp`）；跨类型保序（P3.1c）与真实布局/IME 仍待后续 | 快捷键、编辑键、输入法边界；跨后端输入对照 |
 
 **D5 已于 2026-10-11 冻结范围与目标契约，未实施**，不加入本稿的待决表：见
 [资源构建、部署与运行时定位](resource_build_and_deployment.md)。解耦、作用域、身份独立交付，
@@ -457,20 +457,19 @@ SDF 只等待混合正确、SDL3 来源与 shader 交付定形，不等待整个
 
 # D8 键码与输入码空间
 
-> 方向已接受、未实施；2026-10-17 修订。此前“统一物理键枚举 + 机械替换”的方案已调整为
-> 分清物理位置、逻辑含义与提交文本，再迁移平台映射与消费者。精确类型/签名在首批定形。
+> P3.1a 事件快照与 P3.1b 键身份/生命周期已实施（2026-10-29）；跨类型保序仍属 P3.1c。
+> 分清物理位置、逻辑含义与提交文本，再迁移平台映射与消费者；键身份的精确类型/签名另批定形。
 
 ## 当前实现
 
-- `scene::KeyEvent` 使用 int；`widget/key_codes.hpp` 是 GLFW 码空间，SDL 临时翻译到它。
-- 旧记录的 16 文件/56 处仅统计当时的 keys 引用，不包含完整事件与消费者改造；实施前重查。
-- SDL 当前只转发非 repeat 的 key-down；key-up 未转发，修饰键从轮询时全局状态取得
-  （SDL 的 `SDL_KeyboardEvent.mod` 已经带了**事件时**的修饰键，现在被忽略）。
-- **已核实的两处事件字段丢失**（与保序批次独立，应先修）：平台把每个按钮/滚轮事件的
-  `event.button.x/y`、`event.wheel.mouse_x/y` 都填进了事件，但 `NanWindow` 派发时统一用
-  `frame_input_.pointer`（帧末位置）覆盖 —— 同一帧内"在 A 按下、移到 B"会把按下派发到 B。
-- `FrameInput` 目前只有帧级 `pointer` 与帧级修饰键快照；按事件字段要一路带到消费者，
-  不能只在平台侧填好再被宿主丢弃。
+- `scene::KeyEvent` 使用 `foundation::LogicalKey` + `PhysicalKey`（P3.1b 已实施）；
+  旧 int 键码、`keycode()` 与 `widget/key_codes.hpp` 已删除。
+- SDL 转发 press/repeat/release；键事件用 `SDL_KeyboardEvent.mod`，按钮/滚轮用队列修饰键
+  快照。unknown 身份照样派发，两者皆未知时计入 `unknown_key_count()`。
+- P3.1a 已修复字段丢失：`NanWindow` 用按钮/滚轮各自坐标经 viewport 映射后派发，
+  不再以帧末 `frame_input_.pointer` 替换。同帧“在 A 按下、移到 B”仍命中 A。
+- `FrameInput` 的事件已有坐标和修饰键字段；独立的帧级 `pointer` / `modifiers` 是当前状态，
+  不得用它们替换历史事件字段。
 - `FrameInput` 按事件类型分多个数组，`NanWindow` 分组派发，不能保持跨类型事件原始先后顺序。
 - 提交文本单独使用 UTF-8 `TextInputEvent`；组合输入会话仍属 D1 第二阶段。
 
@@ -495,12 +494,89 @@ SDL 官方 [KeyboardEvent](https://wiki.libsdl.org/SDL3/SDL_KeyboardEvent) 同�
 scancode、key、mod、down 和 repeat。mapper 应消费事件时快照，不能把稍后的全局状态
 套到更早的事件。raylib/GLFW 可获得的字段必须实际核对，不能凭供应商键码名字推断语义一致。
 
+### P3.1a：事件快照（2026-10-28）
+
+- 不改公开事件类型。按钮和滚轮按各自 `screen_pos()` 经窗口 viewport 映射后派发；
+  move 的位置和 delta 继续按同一映射转换。帧末指针不能决定先前点击或滚轮的命中目标。
+- SDL 键事件取 `event.key.mod`。鼠标事件没有 mod 字段，使用窗口按 SDL 队列顺序维护的
+  修饰键状态；所有 key-down/up（含未映射键和被过滤的 repeat）都先更新该状态。
+- 创建时初始化状态，跨帧保留；失焦清空，重新获得焦点时与平台当前状态同步。
+  `FrameInput::modifiers` 仍是平台帧级当前状态，不回填历史事件。
+- 保留 move → buttons → wheel → keys → text 分组派发，不宣称跨类型保序；仍只转发
+  非 repeat 的 key-down。物理/逻辑键、release/repeat/unknown 分发和 IME 不在本批。
+- 验收：真实 SDL 队列覆盖同帧修饰键转换、跨帧和过滤事件；真实 NanWindow tick 覆盖
+  “A 处点击/滚轮后移动到 B”及缩放/letterbox 映射。故障注入须使对应回归失败。
+
+#### 实施与验证记录（2026-10-29）
+
+- 实现：`app/nan_window.cpp`、`app/detail/sdl_platform_window.*`；公开事件类型未变。
+- 回归：`tests/sdl_platform_input_tests.cpp` 和 `tests/window_input_tests.cpp`，注册为
+  unit `sdl-platform-input`；SDL dummy/software 环境运行真实 poller 与 NanWindow tick，
+  4 用例/160 断言。不是实际键鼠设备或 Windows 实机验收。
+- 红测：旧宿主使无缩放/2× 两支点击目标断言失败（A 收到 0 个按钮事件而非 2 个）；
+  将键事件状态更新改回 `SDL_GetModState()` 后，2 用例/16 断言失败，恢复后全绿。
+- 独立 smoke：临时无 Catch 可执行程序运行真实 SDL → NanWindow tick，
+  2× + letterbox 下 A 收到按下/释放/滚轮，帧末指针位于 B；退出 0，临时文件已清理。
+- Linux 验证：主套件 107/107；ASan/UBSan unit 84 通过 + window-lifecycle SKIP
+  （`LSAN_OPTIONS=detect_leaks=0`）；no-RTTI unit 86/86；no-SQLite/headless unit
+  81 通过 + 1 SKIP；纯工具 8/8；release check 8/8，无 SKIP。
+- 工具环境：Meson 1.12.1、clang-format 23.1.1；不是 CI 固定 Meson 1.7.2 复验。
+  Windows 本轮未验证；实际键鼠、跨类型保序和多布局键身份留给相应后续验收。
+
+### P3.1b：键身份与生命周期（2026-10-29 已实施）
+
+- 低层值归属 `foundation/input.hpp`：`PhysicalKey` 是具名物理位置，`LogicalKey` 是
+  Unicode scalar 值及独立命名键（命名键值在 Unicode 范围外）；unknown 为 0。
+  字符逻辑身份取布局结果，不以物理位置或 ASCII 大小写算术代替；提交文本仍只走 UTF-8 文本事件。
+- `scene::KeyEvent(LogicalKey, Action, KeyModifiers = {}, PhysicalKey = unknown)`；
+  查询 `logical_key()` / `physical_key()`，删除旧 int 构造与 `keycode()`，不保留兼容别名。
+  `Action` 为 press/release/repeat；`is_pressed()` 仅初次 press，新增
+  `is_press_or_repeat()` 供可重复编辑/导航消费，release 不触发组件动作。
+- 左右修饰键物理/逻辑身份各自保留；`KeyModifiers` 仍为四个聚合布尔值。
+  小键盘物理身份独立；Enter/数字/运算符的逻辑含义与主键区相同，NumLock 导航含义由 SDL 提供。
+- 两种身份分别可 unknown；保留任一已知身份。两者均未知也派发 unknown，不伪造其他键，
+  SDL 的缺口计数只计两者均未知的事件，旧 skipped 计数入口随清理删除。
+- SDL 按 scancode 映射物理位置，按 keycode 映射逻辑身份；已知物理键从初次 press 到
+  repeat/release 保留初始逻辑身份，防止按住期间布局/修饰键变化造成释放身份不匹配。
+  没有先前 press 的 release 仍按事件自身字段派发；失焦清除身份记录，不合成 release。
+- 桌面编辑快捷键按逻辑键匹配，本轮 Linux 主修饰键为 Ctrl，不把 Super 当作 Ctrl；
+  Alt/AltGr 组合不触发 Ctrl 编辑快捷键。平台文本组合/抑制规则仍归 P3.3，不承诺 IME。
+- 编辑删除/光标、方向导航与 slider 支持 repeat；激活、开合、提交、撤销重做和焦点 Tab
+  仅初次 press。typeahead 继续使用提交文本，不从键身份生成字符。
+- SDL poller 仍消费进程级事件队列，现有实现只对焦点事件按 windowID 过滤；单窗口宿主是当前
+  前提，多窗口同时打开需要后续批次统一按 windowID 分发，不在本批改变。
+- 全部框架消费者与测试一次迁移，删除 `widget/key_codes.hpp` 和局部 GLFW 魔数。
+  验收用真实 SDL 合成 US/非 US 布局事件、左右修饰键、小键盘、未知身份和键生命周期；
+  明确这是 mapper/宿主行为验证，不冒充真实布局设备验收。跨类型保序仍留给 P3.1c。
+
+#### 实施与验证记录（2026-10-29）
+
+- 实现：`foundation/input.hpp`（新公开头，experimental）、`scene/input_event.hpp`、
+  `app/detail/sdl_platform_window.*`、`app/nan_window.cpp`；全部 widget 消费者与测试迁移，
+  `widget/key_codes.hpp` 删除并从 Meson/header-surface 清单移除。
+- 映射：scancode → 物理位置；keycode/NumLock → 逻辑键。NumLock 关闭的小键盘 5 保留
+  `physical_keypad_5`，逻辑 unknown（逻辑枚举没有 Clear）；Enter 主键区与小键盘逻辑相同、
+  物理不同。AltGr 的 `SDL_KMOD_MODE` 聚合进 Alt，因此不触发 Ctrl 编辑命令。
+- 生命周期：只派发有身份区分的 press/repeat/release；初次 press 到 release 之间按物理键
+  保留初始逻辑身份；失焦清空且不合成 release。
+- 回归：`sdl-platform-input` 10 用例/348 断言覆盖同帧快照、布局差异、Unicode 逻辑字符、
+  独立 unknown、左右修饰键、小键盘、身份稳定与失焦清理，以及真实窗口 tick 把重复删除、
+  提交文本与释放送进聚焦编辑器；新增 unit `key-lifecycle`
+  （5 用例/14 断言）覆盖删除/光标/方向/滑杆接受重复，而激活、开合、提交与撤销只接受
+  初次按下，以及 AltGr 不触发命令。
+- 红测：编辑删除改回 `is_pressed()`、Pressable 改为接受 repeat 时 `key-lifecycle` 分别失败；
+  恢复后通过。
+- Linux 验证：主套件 108/108（含新 `key-lifecycle`）；ASan/UBSan unit 85 + window-lifecycle
+  SKIP；no-RTTI unit 87/87；no-SQLite/headless unit 82 + 1 SKIP；纯工具 8/8；release check
+  8/8，无 SKIP。实际物理键鼠、非 US 实机布局与 Windows 仍未验收；跨类型保序留在 P3.1c。
+
+
 ## 实施与验收
 
 | 批次 | 交付 | 验收 |
 | --- | --- | --- |
 | 语义定形 | 物理/逻辑身份、修饰键、press/release/repeat、unknown 与原生诊断归属 | US 与至少一种非 US 布局的映射期望表；明确左右修饰键、小键盘及快捷键匹配策略 |
-| 平台映射 | SDL 与 raylib/GLFW 分别适配现有可取得的信息 | 表驱动测试及错误映射故障注入；按下/释放身份一致；重复按键不丢失、不重复触发单次动作 |
+| 平台映射 | SDL 适配现有可取得的信息；其他后端若新增须独立验收 | 表驱动测试及错误映射故障注入；按下/释放身份一致；重复按键不丢失、不重复触发单次动作 |
 | 事件与控件迁移 | KeyEvent 使用框架类型；删除 widget 键码定义及局部魔数 | 编辑、菜单、导航、typeahead 消费者回归；文本继续走提交事件 |
 | 输入保序 | 单独小批将跨类型事件保存并按捕获顺序分发；保留每事件坐标/修饰键 | 同帧“点击 A → 文本 → 点击 B”中正文到达 A；按键/文本/释放顺序不被分组重排 |
 | 真实后端对照 | 同布局下比较规范事件与用户行为 | 明确自动/模拟/实际设备覆盖；不同布局的逻辑差异应符合契约，不盲目要求所有字段相等 |

@@ -191,7 +191,9 @@ TEST_CASE("popover trigger toggles from pointer and keyboard activation", "[popo
 
     harness.popover->close();
     REQUIRE(harness.tree.focused_node() == harness.trigger.get());
-    harness.tree.dispatch_key(scene::KeyEvent(257, scene::KeyEvent::Action::press));
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::enter, scene::KeyEvent::Action::press)
+    );
     REQUIRE(harness.popover->is_open());
 }
 
@@ -387,7 +389,9 @@ TEST_CASE("escape closes a dismissible popover", "[popover][overlay][input]") {
     // 焦点进入浮层，Escape 才沿浮层路径冒泡。
     REQUIRE(harness.tree.focused_node() != nullptr);
 
-    harness.tree.dispatch_key(scene::KeyEvent(256, scene::KeyEvent::Action::press));
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::escape, scene::KeyEvent::Action::press)
+    );
     REQUIRE_FALSE(harness.popover->is_open());
     REQUIRE(harness.host->overlay_count() == 0);
 }
@@ -411,7 +415,9 @@ TEST_CASE(
     );
     REQUIRE(harness.popover->is_open());
 
-    harness.tree.dispatch_key(scene::KeyEvent(256, scene::KeyEvent::Action::press));
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::escape, scene::KeyEvent::Action::press)
+    );
     REQUIRE(harness.popover->is_open());
 
     // 仍然可以程序化关闭。
@@ -439,7 +445,9 @@ TEST_CASE("popover fires on_open and on_close once per transition", "[popover][c
     // 用户关闭路径同样触发 on_close。
     harness.popover->open();
     harness.layout();
-    harness.tree.dispatch_key(scene::KeyEvent(256, scene::KeyEvent::Action::press));
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::escape, scene::KeyEvent::Action::press)
+    );
     REQUIRE_FALSE(harness.popover->is_open());
     REQUIRE(closes == 2);
 }
@@ -583,10 +591,14 @@ TEST_CASE("popover traps tab focus inside its content", "[popover][overlay][focu
 
     harness.tree.set_focus(first.get());
     REQUIRE(harness.tree.focused_node() == first.get());
-    harness.tree.dispatch_key(scene::KeyEvent(258, scene::KeyEvent::Action::press));
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::tab, scene::KeyEvent::Action::press)
+    );
     REQUIRE(harness.tree.focused_node() == second.get());
     // Tab 循环留在浮层内部，不会跑到页面其它控件。
-    harness.tree.dispatch_key(scene::KeyEvent(258, scene::KeyEvent::Action::press));
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::tab, scene::KeyEvent::Action::press)
+    );
     REQUIRE(harness.tree.focused_node() == first.get());
 }
 

@@ -147,7 +147,7 @@ namespace
             palette->open();
             layout();
         }
-        void key(const int code) {
+        void key(foundation::LogicalKey code) {
             tree.dispatch_key(scene::KeyEvent(code, scene::KeyEvent::Action::press));
         }
     };
@@ -212,25 +212,25 @@ TEST_CASE(
     });
 
     REQUIRE(harness.palette->active_id() == "file.new");
-    harness.key(264); // down
+    harness.key(foundation::LogicalKey::down); // down
     REQUIRE(harness.palette->active_id() == "file.open");
     // 禁用条目**仍然可聚焦**：方向键要能走到它，否则键盘用户不知道它存在。
-    harness.key(264); // down
+    harness.key(foundation::LogicalKey::down); // down
     REQUIRE(harness.palette->active_id() == "file.saveas");
     // 再按一次跨过分隔线与组标题，落到下一组第一个可聚焦条目。
-    harness.key(264); // down
+    harness.key(foundation::LogicalKey::down); // down
     REQUIRE(harness.palette->active_id() == "view.zoom");
-    harness.key(265); // up
+    harness.key(foundation::LogicalKey::up); // up
     REQUIRE(harness.palette->active_id() == "file.saveas");
 
     // 禁用条目不可激活：Enter 不产生回调。
-    harness.key(257); // enter
+    harness.key(foundation::LogicalKey::enter); // enter
     REQUIRE(selected.empty());
     REQUIRE(harness.palette->is_open());
 
-    harness.key(268); // home
+    harness.key(foundation::LogicalKey::home); // home
     REQUIRE(harness.palette->active_id() == "file.new");
-    harness.key(257); // enter
+    harness.key(foundation::LogicalKey::enter); // enter
     REQUIRE(selected.size() == 1);
     REQUIRE(selected[0] == "file.new");
     // 动作条目激活后关闭面板。
@@ -251,7 +251,7 @@ TEST_CASE("command palette checkbox items toggle without closing", "[command-pal
 
     int selects = 0;
     harness.palette->set_on_select([&selects](std::string_view) { ++selects; });
-    harness.key(257); // enter
+    harness.key(foundation::LogicalKey::enter); // enter
 
     REQUIRE(selects == 1);
     REQUIRE(harness.palette->is_open()); // 勾选类条目保持打开（同 DropdownMenu）
@@ -273,7 +273,7 @@ TEST_CASE(
     REQUIRE(harness.palette->hidden_result_count() == 2);
 
     // 高亮不会落到被裁掉的结果上。
-    harness.key(269); // end
+    harness.key(foundation::LogicalKey::end); // end
     REQUIRE(harness.palette->active_id() == "file.open");
 
     harness.palette->set_max_visible_results(8);

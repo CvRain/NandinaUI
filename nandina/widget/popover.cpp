@@ -4,6 +4,7 @@
 
 #include "popover.hpp"
 
+#include "../foundation/input.hpp"
 #include "../render/draw_context.hpp"
 #include "../scene/input_event.hpp"
 #include "../scene/overlay_host.hpp"
@@ -11,7 +12,6 @@
 #include "../theme/theme_manager.hpp"
 #include "internal/dismiss_layer.hpp"
 #include "internal/focus_scope.hpp"
-#include "key_codes.hpp"
 #include "primitives/box_painter.hpp"
 
 #include <algorithm>
@@ -408,7 +408,8 @@ namespace nandina::widget
         if (event.type() == scene::EventType::key) {
             auto& key = static_cast<scene::KeyEvent&>(event);
             if (key.is_pressed() && !trigger_disabled()
-                && (key.keycode() == keys::enter || key.keycode() == keys::space))
+                && (key.logical_key() == foundation::LogicalKey::enter
+                    || key.logical_key() == foundation::LogicalKey::space))
             {
                 toggle();
             }

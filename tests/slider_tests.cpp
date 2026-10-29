@@ -136,7 +136,9 @@ TEST_CASE("slider keyboard and semantic actions emit user changes", "[slider][se
     tree.set_root(slider);
     REQUIRE(tree.layout_root(foundation::NanSize(300.0F, 40.0F)) >= 1);
     tree.set_focus(slider.get());
-    tree.dispatch_key(scene::KeyEvent(262, scene::KeyEvent::Action::press));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::right, scene::KeyEvent::Action::press)
+    );
     REQUIRE(slider->value() == Catch::Approx(1.1F));
 
     REQUIRE(tree.update_semantics());

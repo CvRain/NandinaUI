@@ -4,7 +4,7 @@
 
 #include "editable_text.hpp"
 
-#include "../key_codes.hpp"
+#include "../../foundation/input.hpp"
 
 #include "../../foundation/utf8.hpp"
 #include "../../render/draw_context.hpp"
@@ -333,26 +333,28 @@ namespace nandina::widget::primitives
             case scene::EventType::key: {
                 auto& key_event = static_cast<scene::KeyEvent&>(event);
                 const auto modifiers = key_event.modifiers();
-                const bool primary = modifiers.ctrl || modifiers.super;
+                // 桌面编辑命令按主修饰键（Linux 上为 Ctrl）匹配；AltGr 的 Alt 聚合
+                // 不能让普通字符键入变成命令，Super 组合留给桌面环境。
+                const bool primary = modifiers.ctrl && !modifiers.alt && !modifiers.super;
                 if (key_event.is_pressed() && primary) {
                     std::optional<scene::EditCommand> command;
-                    switch (key_event.keycode()) {
-                        case keys::a:
+                    switch (key_event.logical_key()) {
+                        case foundation::LogicalKey::a:
                             command = scene::EditCommand::select_all;
                             break;
-                        case keys::c:
+                        case foundation::LogicalKey::c:
                             command = scene::EditCommand::copy;
                             break;
-                        case keys::x:
+                        case foundation::LogicalKey::x:
                             command = scene::EditCommand::cut;
                             break;
-                        case keys::v:
+                        case foundation::LogicalKey::v:
                             command = scene::EditCommand::paste;
                             break;
-                        case keys::y:
+                        case foundation::LogicalKey::y:
                             command = scene::EditCommand::redo;
                             break;
-                        case keys::z:
+                        case foundation::LogicalKey::z:
                             command = modifiers.shift ? scene::EditCommand::redo
                                                       : scene::EditCommand::undo;
                             break;
@@ -365,39 +367,42 @@ namespace nandina::widget::primitives
                         return true;
                     }
                 }
-                if (key_event.is_pressed() && key_event.keycode() == keys::backspace) {
+                // 删除与光标移动允许自动重复；命令、撤销重做只在初次按下执行。
+                if (key_event.logical_key() == foundation::LogicalKey::backspace
+                    && key_event.is_press_or_repeat())
+                {
                     if (!read_only_) {
                         has_selection() ? erase_selection() : erase_before_caret();
                     }
                     event.accept();
                     return true;
                 }
-                if (!key_event.is_pressed()) {
+                if (!key_event.is_press_or_repeat()) {
                     return false;
                 }
                 const bool extend = key_event.modifiers().shift;
-                switch (key_event.keycode()) {
-                    case keys::delete_key:
+                switch (key_event.logical_key()) {
+                    case foundation::LogicalKey::delete_key:
                         if (!read_only_) {
                             has_selection() ? erase_selection() : erase_after_caret();
                         }
                         break;
-                    case keys::left:
+                    case foundation::LogicalKey::left:
                         move_caret_visual(-1, extend);
                         break;
-                    case keys::right:
+                    case foundation::LogicalKey::right:
                         move_caret_visual(1, extend);
                         break;
-                    case keys::up:
+                    case foundation::LogicalKey::up:
                         move_caret_vertical(-1, extend);
                         break;
-                    case keys::down:
+                    case foundation::LogicalKey::down:
                         move_caret_vertical(1, extend);
                         break;
-                    case keys::home:
+                    case foundation::LogicalKey::home:
                         move_caret_to_visual_edge(false, extend);
                         break;
-                    case keys::end:
+                    case foundation::LogicalKey::end:
                         move_caret_to_visual_edge(true, extend);
                         break;
                     default:

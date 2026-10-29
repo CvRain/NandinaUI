@@ -10,7 +10,6 @@
 #include <nandina/widget/build_context.hpp>
 #include <nandina/widget/checkbox.hpp>
 #include <nandina/widget/controls.hpp>
-#include <nandina/widget/key_codes.hpp>
 #include <nandina/widget/toggle.hpp>
 #include <nandina/widget/toggle_group.hpp>
 
@@ -150,10 +149,14 @@ TEST_CASE("toggle toggles with space and enter", "[toggle][input]") {
     tree.set_focus(toggle.get());
     REQUIRE(tree.focused_node() == toggle.get());
 
-    tree.dispatch_key(scene::KeyEvent(widget::keys::space, scene::KeyEvent::Action::press));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::space, scene::KeyEvent::Action::press)
+    );
     REQUIRE(toggle->checked());
 
-    tree.dispatch_key(scene::KeyEvent(widget::keys::enter, scene::KeyEvent::Action::press));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::enter, scene::KeyEvent::Action::press)
+    );
     REQUIRE_FALSE(toggle->checked());
 }
 
@@ -218,7 +221,9 @@ TEST_CASE("disabled toggle is not focusable and emits nothing", "[toggle][input]
     toggle->set_disabled(true);
     // Checkbox / Pressable 同款：禁用时立刻清空焦点。
     REQUIRE(tree.focused_node() == nullptr);
-    tree.dispatch_key(scene::KeyEvent(widget::keys::space, scene::KeyEvent::Action::press));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::space, scene::KeyEvent::Action::press)
+    );
     REQUIRE_FALSE(toggle->checked());
     REQUIRE(changes == 0);
 
@@ -251,7 +256,9 @@ TEST_CASE("toggle fires change notifications once per change", "[toggle][events]
     REQUIRE(tree.layout_root(foundation::NanSize(240.0F, 48.0F)) >= 1);
     tree.set_focus(toggle.get());
 
-    tree.dispatch_key(scene::KeyEvent(widget::keys::space, scene::KeyEvent::Action::press));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::space, scene::KeyEvent::Action::press)
+    );
     REQUIRE(toggle->checked());
     REQUIRE(callbacks == 1);
     REQUIRE(observed.size() == 1);
@@ -263,7 +270,9 @@ TEST_CASE("toggle fires change notifications once per change", "[toggle][events]
     REQUIRE(callbacks == 1);
     REQUIRE(observed.size() == 1);
 
-    tree.dispatch_key(scene::KeyEvent(widget::keys::enter, scene::KeyEvent::Action::press));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::enter, scene::KeyEvent::Action::press)
+    );
     REQUIRE_FALSE(toggle->checked());
     REQUIRE(callbacks == 2);
     REQUIRE(observed.size() == 2);

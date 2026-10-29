@@ -250,7 +250,7 @@ namespace nandina::widget
         }
         if (event.type() == scene::EventType::key) {
             auto& key = static_cast<scene::KeyEvent&>(event);
-            if (!key.is_pressed()) {
+            if (!key.is_press_or_repeat()) {
                 return false;
             }
             // 方向键 / Home / End / PageUp / PageDown 统一交给共享漫游设施。

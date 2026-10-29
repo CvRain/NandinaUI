@@ -1235,13 +1235,13 @@ TEST_CASE("retained page roots cannot invoke callbacks after pop", "[app][router
         .destroyed = &destroyed,
     }));
 
-    scene::KeyEvent active_click {257, scene::KeyEvent::Action::press};
+    scene::KeyEvent active_click {foundation::LogicalKey::enter, scene::KeyEvent::Action::press};
     REQUIRE(retained->on_input(active_click));
     REQUIRE(calls == 1);
 
     REQUIRE(navigation.navigate<HomePage>(HomeParams {.user_id = 2}));
     REQUIRE(destroyed);
-    scene::KeyEvent stale_click {257, scene::KeyEvent::Action::press};
+    scene::KeyEvent stale_click {foundation::LogicalKey::enter, scene::KeyEvent::Action::press};
     REQUIRE(retained->on_input(stale_click));
     REQUIRE(calls == 1);
 }

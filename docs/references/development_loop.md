@@ -6,13 +6,17 @@
 
 ## 0. 选批次与记录状态
 
-跨专题排期统一见[项目进度与下一步](project_status.md)。D 编号标识设计议题，P 编号标识
-D4 的历史阶段；都不能直接当作下一轮任务顺序。每轮先选一个可验收批次，列出前置与非目标，
-再读对应 reference 和实际消费者链路。
+跨专题排期与当前阶段见[开发路线](development_roadmap.md)（P2 已交付，当前 P3），已完成批次与
+设计议题状态见[项目进度与下一步](project_status.md)。D 编号标识设计议题；P 编号须按所属文档区分：
+路线图 P1–P4 是当前工作线，D4 契约的 P0–P4 是历史后端阶段，不能混为同一排期。每轮先选一个
+可验收批次，列出前置与非目标，再读对应 reference 和实际消费者链路。
 
 状态分开记录：方向已接受、精确契约已定形、实现存在、自动验收通过、指定平台实机验收通过。
 文档提交只推进文档状态；历史日志不计为本轮测试，shader 生成也不计为目标设备加载。
 未定行为先收敛，未具备设备的验收保留限制，不能勾选为全部完成。
+
+`examples/notebook` 的服务与 UI、`showcase/` 的组件由维护者手工编写；框架改动不代写这些正文。
+Showcase 仍承担组件视觉验收职责，历史 `examples/lab` 记录不代表当前 notebook UI 已完成。
 
 纯文档轮检查相对链接/锚点、专题状态与主排期一致性、`git diff --check` 和提交范围；
 不为计划变更重跑整套 C++ 构建。代码轮继续遵守下列三套验证与专项关口。
@@ -72,13 +76,13 @@ for p in home label anchors; do
 done
 
 # 2) 逐图元对照：像素相同不代表图元相同（圆角画成方框时像素差异可能只有几个像素）
-NANDINA_BENCH_TRACE=/tmp/raylib.txt  ./buildDir/playground/label_bench <page>
+NANDINA_BENCH_TRACE=/tmp/bench.txt  ./buildDir/playground/label_bench <page>
 NANDINA_PROBE_TRACE=/tmp/sdl.txt NANDINA_PROBE_PAGE=<page> \
   ./buildDir-probe/probe/cross_platform/desktop/nandina_sdl_page_probe
-python3 tools/compare_render_traces.py /tmp/raylib.txt /tmp/sdl.txt
+python3 tools/compare_render_traces.py /tmp/bench.txt /tmp/sdl.txt
 
-# 3) deps.json 实现后再执行：换过依赖时核对实际版本、来源和路径
-cat buildDir/deps.json        # 目标形态，见 dependency_policy.md §6
+# 3) 换过依赖时核对实际版本、来源和路径
+cat buildDir/deps.json        # 已交付的依赖来源报告，见 dependency_policy.md §6
 
 # 4) 新增/移动框架头文件时：分类完整性 + 包含方向 + 独立可包含
 python3 tools/check_headers.py --source . --build-dir buildDir
@@ -181,13 +185,13 @@ painter 家族写好了但停在 `primitives/` 里当不了应用依赖、
 3. **半透明 + 混合**：几何与纹理的混合模式是两套 API（例如 SDL 的 `SDL_SetRenderDrawBlendMode` 与
    `SDL_SetTextureBlendMode`）。只设一个，症状是"某个交互看起来怪"，而静止帧的像素对照**完全看不到**。
    → 状态类观感（hover/pressed/ripple/遮罩）必须有专门的截图回归，不能只对静止帧。
-4. **关闭/销毁后的语义**：`should_close()` 在窗口销毁后必须报真（raylib 的 `WindowShouldClose()` 语义），
+4. **关闭/销毁后的语义**：`should_close()` 在窗口销毁后必须报真，
    否则主循环会 tick 已销毁的窗口并读到 0×0 尺寸。
-5. **未知输入不要伪造**：键码映射不到时**不发事件**并计数，不要退化成"发一个相近的键"。
+5. **未知输入不要伪造**：身份映射不到时不要把事件伪造成"相近的键"；保留 unknown 身份派发并计数（P3.1b 起不再静默丢弃）。
 
 ## 9. 后端与输入的专项验收
 
-- 混合测试有已知背景与颜色的独立预期；raylib 对照之外，固定时间采样按钮按下、涟漪和遮罩。
+- 混合测试有已知背景与颜色的独立预期；不把已退役 raylib 的历史对照当作当前基准，固定时间采样按钮按下、涟漪和遮罩。
 - SDF 测试同帧不同参数与文字/纹理交错；检查 uniforms、状态恢复、alpha 和裁剪。
   故意漏一次更新/恢复应失败；探测单一形状不替代生产路径。
 - 像素容差在比较前声明，固定字体/尺寸/缩放/动画时刻；按区域和交互状态记录，

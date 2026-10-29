@@ -37,11 +37,17 @@ TEST_CASE("focus scope traps tab and restores previous focus", "[overlay][focus]
 
     REQUIRE(tree.focused_node() == first.get());
 
-    tree.dispatch_key(scene::KeyEvent(258, scene::KeyEvent::Action::press));
+    tree.dispatch_key(scene::KeyEvent(foundation::LogicalKey::tab, scene::KeyEvent::Action::press));
     REQUIRE(tree.focused_node() == second.get());
-    tree.dispatch_key(scene::KeyEvent(258, scene::KeyEvent::Action::press));
+    tree.dispatch_key(scene::KeyEvent(foundation::LogicalKey::tab, scene::KeyEvent::Action::press));
     REQUIRE(tree.focused_node() == first.get());
-    tree.dispatch_key(scene::KeyEvent(258, scene::KeyEvent::Action::press, {.shift = true}));
+    tree.dispatch_key(
+        scene::KeyEvent(
+            foundation::LogicalKey::tab,
+            scene::KeyEvent::Action::press,
+            {.shift = true}
+        )
+    );
     REQUIRE(tree.focused_node() == second.get());
 
     root->remove_and_delete(*scope);
@@ -66,7 +72,7 @@ TEST_CASE("focus scope falls back to itself without focusable descendants", "[ov
     REQUIRE(scope->is_focusable());
 
     // Tab 由作用域自行消化，不会把焦点交回页面。
-    tree.dispatch_key(scene::KeyEvent(258, scene::KeyEvent::Action::press));
+    tree.dispatch_key(scene::KeyEvent(foundation::LogicalKey::tab, scene::KeyEvent::Action::press));
     REQUIRE(tree.focused_node() == scope.get());
 
     root->remove_and_delete(*scope);

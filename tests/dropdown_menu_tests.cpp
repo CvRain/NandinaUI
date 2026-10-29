@@ -278,25 +278,39 @@ TEST_CASE(
     REQUIRE(harness.menu->active_index() == 0);
 
     // Down 跳过 separator(1) 与 label(2)，落到 Word Wrap(3)。
-    harness.tree.dispatch_key(scene::KeyEvent(264, scene::KeyEvent::Action::press));
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::down, scene::KeyEvent::Action::press)
+    );
     REQUIRE(harness.menu->active_index() == 3);
-    harness.tree.dispatch_key(scene::KeyEvent(264, scene::KeyEvent::Action::press));
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::down, scene::KeyEvent::Action::press)
+    );
     REQUIRE(harness.menu->active_index() == 4);
 
     // Up 回到 Word Wrap；方向键绝不能改动任何勾选状态。
-    harness.tree.dispatch_key(scene::KeyEvent(265, scene::KeyEvent::Action::press));
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::up, scene::KeyEvent::Action::press)
+    );
     REQUIRE(harness.menu->active_index() == 3);
     REQUIRE(harness.menu->items()[3].checked);
     REQUIRE(harness.menu->items()[5].checked);
 
     // End / Home / PageDown / PageUp 都由共享漫游设施回答。
-    harness.tree.dispatch_key(scene::KeyEvent(269, scene::KeyEvent::Action::press)); // end
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::end, scene::KeyEvent::Action::press)
+    ); // end
     REQUIRE(harness.menu->active_index() == 7); // disabled 条目仍可聚焦
-    harness.tree.dispatch_key(scene::KeyEvent(268, scene::KeyEvent::Action::press)); // home
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::home, scene::KeyEvent::Action::press)
+    ); // home
     REQUIRE(harness.menu->active_index() == 0);
-    harness.tree.dispatch_key(scene::KeyEvent(267, scene::KeyEvent::Action::press)); // page down
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::page_down, scene::KeyEvent::Action::press)
+    ); // page down
     REQUIRE(harness.menu->active_index() == 7);
-    harness.tree.dispatch_key(scene::KeyEvent(266, scene::KeyEvent::Action::press)); // page up
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::page_up, scene::KeyEvent::Action::press)
+    ); // page up
     REQUIRE(harness.menu->active_index() == 0);
 }
 
@@ -331,7 +345,9 @@ TEST_CASE(
         harness.menu->item_selected().subscribe([&events](const std::string&) { ++events; });
     (void)harness.open_and_layout();
 
-    harness.tree.dispatch_key(scene::KeyEvent(257, scene::KeyEvent::Action::press)); // enter
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::enter, scene::KeyEvent::Action::press)
+    ); // enter
     REQUIRE(selected == std::vector<std::string> {"new"});
     REQUIRE(events == 1);
     // action 选中即关闭。
@@ -340,7 +356,9 @@ TEST_CASE(
     // Space 同样激活。
     (void)harness.open_and_layout();
     REQUIRE(harness.menu->active_index() == 0);
-    harness.tree.dispatch_key(scene::KeyEvent(32, scene::KeyEvent::Action::press)); // space
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::space, scene::KeyEvent::Action::press)
+    ); // space
     REQUIRE(selected.size() == 2);
     REQUIRE(selected.back() == "new");
     REQUIRE_FALSE(harness.menu->is_open());
@@ -354,9 +372,13 @@ TEST_CASE("dropdown menu does not activate a disabled item", "[dropdown-menu][ke
     });
     (void)harness.open_and_layout();
 
-    harness.tree.dispatch_key(scene::KeyEvent(269, scene::KeyEvent::Action::press)); // end
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::end, scene::KeyEvent::Action::press)
+    ); // end
     REQUIRE(harness.menu->active_index() == 7); // disabled 可聚焦
-    harness.tree.dispatch_key(scene::KeyEvent(257, scene::KeyEvent::Action::press)); // enter
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::enter, scene::KeyEvent::Action::press)
+    ); // enter
     REQUIRE(selected.empty());
     REQUIRE(harness.menu->is_open());
 }
@@ -371,15 +393,21 @@ TEST_CASE("dropdown menu checkbox toggles and stays open", "[dropdown-menu][sele
     (void)harness.open_and_layout();
 
     // Word Wrap 初始为 checked。
-    harness.tree.dispatch_key(scene::KeyEvent(264, scene::KeyEvent::Action::press)); // down → 3
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::down, scene::KeyEvent::Action::press)
+    ); // down → 3
     REQUIRE(harness.menu->active_index() == 3);
-    harness.tree.dispatch_key(scene::KeyEvent(257, scene::KeyEvent::Action::press)); // enter
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::enter, scene::KeyEvent::Action::press)
+    ); // enter
     REQUIRE_FALSE(harness.menu->items()[3].checked);
     REQUIRE(selected == std::vector<std::string> {"wrap"});
     // 勾选菜单不关闭。
     REQUIRE(harness.menu->is_open());
 
-    harness.tree.dispatch_key(scene::KeyEvent(257, scene::KeyEvent::Action::press)); // enter 再切回
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::enter, scene::KeyEvent::Action::press)
+    ); // enter 再切回
     REQUIRE(harness.menu->items()[3].checked);
     REQUIRE(harness.menu->checked_ids() == std::vector<std::string> {"wrap", "pro"});
 }
@@ -394,10 +422,16 @@ TEST_CASE(
     REQUIRE(harness.menu->items()[5].checked); // Pro Mode 初始选中
 
     // Down 两次到 ASCII Mode(4)，Enter 选中它。
-    harness.tree.dispatch_key(scene::KeyEvent(264, scene::KeyEvent::Action::press));
-    harness.tree.dispatch_key(scene::KeyEvent(264, scene::KeyEvent::Action::press));
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::down, scene::KeyEvent::Action::press)
+    );
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::down, scene::KeyEvent::Action::press)
+    );
     REQUIRE(harness.menu->active_index() == 4);
-    harness.tree.dispatch_key(scene::KeyEvent(257, scene::KeyEvent::Action::press));
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::enter, scene::KeyEvent::Action::press)
+    );
 
     REQUIRE(harness.menu->items()[4].checked);
     REQUIRE_FALSE(harness.menu->items()[5].checked);
@@ -420,8 +454,12 @@ TEST_CASE(
     });
     (void)harness.open_and_layout();
 
-    harness.tree.dispatch_key(scene::KeyEvent(264, scene::KeyEvent::Action::press)); // → Word Wrap
-    harness.tree.dispatch_key(scene::KeyEvent(257, scene::KeyEvent::Action::press));
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::down, scene::KeyEvent::Action::press)
+    ); // → Word Wrap
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::enter, scene::KeyEvent::Action::press)
+    );
     // none 模式不改变勾选状态，但条目的用户激活仍然通知。
     REQUIRE(harness.menu->items()[3].checked);
     REQUIRE(selected == std::vector<std::string> {"wrap"});
@@ -438,10 +476,16 @@ TEST_CASE(
     auto* parent_surface = harness.open_and_layout();
 
     // End 前先移到 submenu（More Tools 在索引 6）。
-    harness.tree.dispatch_key(scene::KeyEvent(269, scene::KeyEvent::Action::press)); // end → 7
-    harness.tree.dispatch_key(scene::KeyEvent(265, scene::KeyEvent::Action::press)); // up → 6
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::end, scene::KeyEvent::Action::press)
+    ); // end → 7
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::up, scene::KeyEvent::Action::press)
+    ); // up → 6
     REQUIRE(harness.menu->active_index() == 6);
-    harness.tree.dispatch_key(scene::KeyEvent(262, scene::KeyEvent::Action::press)); // right
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::right, scene::KeyEvent::Action::press)
+    ); // right
     harness.layout();
     REQUIRE(opened == std::vector<std::string> {"more"});
     REQUIRE(harness.menu->is_open());
@@ -450,17 +494,23 @@ TEST_CASE(
     REQUIRE(child_surface != nullptr);
     REQUIRE(harness.tree.focused_node() == child_surface);
 
-    harness.tree.dispatch_key(scene::KeyEvent(263, scene::KeyEvent::Action::press)); // left
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::left, scene::KeyEvent::Action::press)
+    ); // left
     REQUIRE(harness.host->overlay_count() == 1);
     REQUIRE(harness.tree.focused_node() == parent_surface);
     REQUIRE(harness.menu->is_open());
 
     // Enter 同样展开；Escape 只关闭当前层并把焦点还给父菜单。
-    harness.tree.dispatch_key(scene::KeyEvent(257, scene::KeyEvent::Action::press));
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::enter, scene::KeyEvent::Action::press)
+    );
     harness.layout();
     REQUIRE(harness.host->overlay_count() == 2);
     REQUIRE(opened == std::vector<std::string> {"more", "more"});
-    harness.tree.dispatch_key(scene::KeyEvent(256, scene::KeyEvent::Action::press));
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::escape, scene::KeyEvent::Action::press)
+    );
     REQUIRE(harness.host->overlay_count() == 1);
     REQUIRE(harness.tree.focused_node() == parent_surface);
 }
@@ -476,20 +526,34 @@ TEST_CASE(
     });
     (void)harness.open_and_layout();
 
-    harness.tree.dispatch_key(scene::KeyEvent(269, scene::KeyEvent::Action::press)); // end → 7
-    harness.tree.dispatch_key(scene::KeyEvent(265, scene::KeyEvent::Action::press)); // up → 6
-    harness.tree.dispatch_key(scene::KeyEvent(262, scene::KeyEvent::Action::press)); // child
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::end, scene::KeyEvent::Action::press)
+    ); // end → 7
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::up, scene::KeyEvent::Action::press)
+    ); // up → 6
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::right, scene::KeyEvent::Action::press)
+    ); // child
     harness.layout();
     REQUIRE(harness.host->overlay_count() == 2);
 
-    harness.tree.dispatch_key(scene::KeyEvent(264, scene::KeyEvent::Action::press)); // pin
-    harness.tree.dispatch_key(scene::KeyEvent(264, scene::KeyEvent::Action::press)); // advanced
-    harness.tree.dispatch_key(scene::KeyEvent(262, scene::KeyEvent::Action::press)); // grandchild
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::down, scene::KeyEvent::Action::press)
+    ); // pin
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::down, scene::KeyEvent::Action::press)
+    ); // advanced
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::right, scene::KeyEvent::Action::press)
+    ); // grandchild
     harness.layout();
     REQUIRE(harness.host->overlay_count() == 3);
     REQUIRE(harness.tree.focused_node() == harness.surface(2));
 
-    harness.tree.dispatch_key(scene::KeyEvent(257, scene::KeyEvent::Action::press));
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::enter, scene::KeyEvent::Action::press)
+    );
     REQUIRE(selected == std::vector<std::string> {"deep-action"});
     REQUIRE_FALSE(harness.menu->is_open());
     REQUIRE(harness.host->overlay_count() == 0);
@@ -507,12 +571,22 @@ TEST_CASE(
     });
     (void)harness.open_and_layout();
 
-    harness.tree.dispatch_key(scene::KeyEvent(269, scene::KeyEvent::Action::press));
-    harness.tree.dispatch_key(scene::KeyEvent(265, scene::KeyEvent::Action::press));
-    harness.tree.dispatch_key(scene::KeyEvent(262, scene::KeyEvent::Action::press));
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::end, scene::KeyEvent::Action::press)
+    );
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::up, scene::KeyEvent::Action::press)
+    );
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::right, scene::KeyEvent::Action::press)
+    );
     harness.layout();
-    harness.tree.dispatch_key(scene::KeyEvent(264, scene::KeyEvent::Action::press)); // pin
-    harness.tree.dispatch_key(scene::KeyEvent(257, scene::KeyEvent::Action::press));
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::down, scene::KeyEvent::Action::press)
+    ); // pin
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::enter, scene::KeyEvent::Action::press)
+    );
 
     REQUIRE(selected == std::vector<std::string> {"pin"});
     REQUIRE(harness.menu->items()[6].children[1].checked);
@@ -566,12 +640,18 @@ TEST_CASE("dropdown menu does not open disabled or empty submenus", "[dropdown-m
             foundation::NanPoint(1.0F, 0.0F)
         )
     );
-    harness.tree.dispatch_key(scene::KeyEvent(262, scene::KeyEvent::Action::press));
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::right, scene::KeyEvent::Action::press)
+    );
     REQUIRE(harness.host->overlay_count() == 1);
 
-    harness.tree.dispatch_key(scene::KeyEvent(264, scene::KeyEvent::Action::press));
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::down, scene::KeyEvent::Action::press)
+    );
     REQUIRE(harness.menu->active_index() == 1);
-    harness.tree.dispatch_key(scene::KeyEvent(262, scene::KeyEvent::Action::press));
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::right, scene::KeyEvent::Action::press)
+    );
     REQUIRE(harness.host->overlay_count() == 1);
 }
 
@@ -637,7 +717,9 @@ TEST_CASE("dropdown menu escape closes through the dismiss layer", "[dropdown-me
     (void)harness.open_and_layout();
     REQUIRE(harness.menu->is_open());
 
-    harness.tree.dispatch_key(scene::KeyEvent(256, scene::KeyEvent::Action::press)); // escape
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::escape, scene::KeyEvent::Action::press)
+    ); // escape
     REQUIRE_FALSE(harness.menu->is_open());
     REQUIRE(harness.host->overlay_count() == 0);
     REQUIRE(closes == 1);
@@ -718,9 +800,13 @@ TEST_CASE(
     harness.menu->set_on_select([&selected](const std::string_view id) {
         selected.emplace_back(id);
     });
-    harness.tree.dispatch_key(scene::KeyEvent(264, scene::KeyEvent::Action::press)); // down → 1
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::down, scene::KeyEvent::Action::press)
+    ); // down → 1
     REQUIRE(harness.menu->active_index() == 1);
-    harness.tree.dispatch_key(scene::KeyEvent(257, scene::KeyEvent::Action::press)); // disabled
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::enter, scene::KeyEvent::Action::press)
+    ); // disabled
     REQUIRE(selected.empty());
     REQUIRE(harness.menu->is_open());
 }
@@ -745,10 +831,10 @@ TEST_CASE(
     {
         auto phase = harness.tree.enter_phase(scene::FramePhase::input);
         harness.tree.dispatch_key(
-            scene::KeyEvent(264, scene::KeyEvent::Action::press)
+            scene::KeyEvent(foundation::LogicalKey::down, scene::KeyEvent::Action::press)
         ); // down → Word Wrap
         harness.tree.dispatch_key(
-            scene::KeyEvent(257, scene::KeyEvent::Action::press)
+            scene::KeyEvent(foundation::LogicalKey::enter, scene::KeyEvent::Action::press)
         ); // 回调里 set_items
     }
     REQUIRE(replaced);
@@ -801,11 +887,17 @@ TEST_CASE("dropdown menu works without an overlay host", "[dropdown-menu][fallba
     REQUIRE(menu->active_index() == 0);
 
     // 高亮与激活在回退模式下同样工作。
-    tree.dispatch_key(scene::KeyEvent(264, scene::KeyEvent::Action::press)); // down → 3
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::down, scene::KeyEvent::Action::press)
+    ); // down → 3
     REQUIRE(menu->active_index() == 3);
-    tree.dispatch_key(scene::KeyEvent(265, scene::KeyEvent::Action::press)); // up → 0
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::up, scene::KeyEvent::Action::press)
+    ); // up → 0
     REQUIRE(menu->active_index() == 0);
-    tree.dispatch_key(scene::KeyEvent(257, scene::KeyEvent::Action::press)); // enter → action 关闭
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::enter, scene::KeyEvent::Action::press)
+    ); // enter → action 关闭
     REQUIRE_FALSE(menu->is_open());
     REQUIRE(selected == std::vector<std::string> {"new"});
 }

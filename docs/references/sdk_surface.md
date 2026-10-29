@@ -18,6 +18,20 @@
 
 ## 2. 三档分类
 
+2026-10-29 P3.1b 键身份（experimental，破坏性，已实施）：新增
+`foundation/input.hpp` 的 `LogicalKey` / `PhysicalKey`。`scene::KeyEvent` 改用类型化
+逻辑键构造，增加物理键参数与查询；删除 int 构造、`keycode()` 和
+`widget/key_codes.hpp`。自定义平台必须分别提供可用的两种身份与 press/release/repeat；
+无法映射时使用 unknown，不伪造键。`is_pressed()` 仅初次按下，可重复导航/编辑使用
+`is_press_or_repeat()`；单次激活/开合/提交不消费 repeat。完整行为见
+[D8 P3.1b](reference_draft.md#p31b键身份与生命周期2026-10-29-已实施)。
+
+2026-10-29 P3.1a 输入快照（行为修复，无签名变更）：`FrameInput` 中的事件坐标与
+修饰键是捕获时快照，独立 `pointer` / `modifiers` 是帧级当前状态。自定义平台仍按现有
+接口填充事件；宿主将按钮/滚轮自己的坐标映射到逻辑空间，不再用帧末指针覆盖。
+SDL 键事件消费原生 mod，鼠标事件消费队列修饰键状态。键身份、键生命周期和跨类型
+保序未改变；实施证据见 [D8](reference_draft.md#p31a事件快照2026-10-28)。
+
 2026-10-22 P2.1a 构建表面变更：资源运行时通过 `resource_runtime_dep` 链接，协议核心可单独使用
 `resource_core_dep`；扫描/manifest/packager 属于可选 `resource_build_dep`，不再由 `nandina_dep`
 传递提供 scanner 实现。直接调用构建 API 的消费者须开启 `resource_tools` 并显式链接

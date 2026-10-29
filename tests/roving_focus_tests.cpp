@@ -7,7 +7,6 @@
 //
 
 #include <nandina/scene/input_event.hpp>
-#include <nandina/widget/key_codes.hpp>
 #include <nandina/widget/roving_focus.hpp>
 
 #include <catch2/catch_test_macros.hpp>
@@ -22,11 +21,11 @@ namespace
 {
     constexpr int kItemCount = 5;
 
-    [[nodiscard]] auto press(int keycode) -> scene::KeyEvent {
+    [[nodiscard]] auto press(foundation::LogicalKey keycode) -> scene::KeyEvent {
         return scene::KeyEvent(keycode, scene::KeyEvent::Action::press);
     }
 
-    [[nodiscard]] auto released(int keycode) -> scene::KeyEvent {
+    [[nodiscard]] auto released(foundation::LogicalKey keycode) -> scene::KeyEvent {
         return scene::KeyEvent(keycode, scene::KeyEvent::Action::release);
     }
 
@@ -51,7 +50,7 @@ namespace
         }
 
         /// 按一次键并返回目标索引；未被识别时返回 -1。
-        [[nodiscard]] auto key(int keycode) -> int {
+        [[nodiscard]] auto key(foundation::LogicalKey keycode) -> int {
             const auto intent = focus.handle_key(press(keycode));
             return intent.has_value() ? intent->index : -1;
         }
@@ -73,16 +72,16 @@ TEST_CASE("arrow keys roam and wrap across members", "[widget][roving]") {
     Fixture f;
 
     REQUIRE(f.focus.active_index() == 0);
-    REQUIRE(f.key(widget::keys::down) == 1);
-    REQUIRE(f.key(widget::keys::down) == 2);
-    REQUIRE(f.key(widget::keys::up) == 1);
+    REQUIRE(f.key(foundation::LogicalKey::down) == 1);
+    REQUIRE(f.key(foundation::LogicalKey::down) == 2);
+    REQUIRE(f.key(foundation::LogicalKey::up) == 1);
 
     // 末尾继续向下：环绕到首个成员。
     f.focus.set_active_index(kItemCount - 1);
-    REQUIRE(f.key(widget::keys::down) == 0);
+    REQUIRE(f.key(foundation::LogicalKey::down) == 0);
     // 首个继续向上：环绕到末尾。
     f.focus.set_active_index(0);
-    REQUIRE(f.key(widget::keys::up) == kItemCount - 1);
+    REQUIRE(f.key(foundation::LogicalKey::up) == kItemCount - 1);
 }
 
 TEST_CASE("loop can be disabled at the boundary", "[widget][roving]") {
@@ -90,11 +89,11 @@ TEST_CASE("loop can be disabled at the boundary", "[widget][roving]") {
     f.focus.set_loop(false);
 
     f.focus.set_active_index(0);
-    REQUIRE(f.key(widget::keys::up) == -1);
+    REQUIRE(f.key(foundation::LogicalKey::up) == -1);
     REQUIRE(f.focus.active_index() == 0);
 
     f.focus.set_active_index(kItemCount - 1);
-    REQUIRE(f.key(widget::keys::down) == -1);
+    REQUIRE(f.key(foundation::LogicalKey::down) == -1);
     REQUIRE(f.focus.active_index() == kItemCount - 1);
 }
 
@@ -102,26 +101,26 @@ TEST_CASE("orientation filters which arrows are accepted", "[widget][roving]") {
     SECTION("horizontal ignores up and down") {
         Fixture f;
         f.focus.set_orientation(widget::RovingOrientation::horizontal);
-        REQUIRE(f.key(widget::keys::up) == -1);
-        REQUIRE(f.key(widget::keys::down) == -1);
-        REQUIRE(f.key(widget::keys::right) == 1);
+        REQUIRE(f.key(foundation::LogicalKey::up) == -1);
+        REQUIRE(f.key(foundation::LogicalKey::down) == -1);
+        REQUIRE(f.key(foundation::LogicalKey::right) == 1);
     }
 
     SECTION("vertical ignores left and right") {
         Fixture f;
         f.focus.set_orientation(widget::RovingOrientation::vertical);
-        REQUIRE(f.key(widget::keys::left) == -1);
-        REQUIRE(f.key(widget::keys::right) == -1);
-        REQUIRE(f.key(widget::keys::down) == 1);
+        REQUIRE(f.key(foundation::LogicalKey::left) == -1);
+        REQUIRE(f.key(foundation::LogicalKey::right) == -1);
+        REQUIRE(f.key(foundation::LogicalKey::down) == 1);
     }
 
     SECTION("both accepts every arrow") {
         Fixture f;
         f.focus.set_orientation(widget::RovingOrientation::both);
-        REQUIRE(f.key(widget::keys::right) == 1);
-        REQUIRE(f.key(widget::keys::down) == 2);
-        REQUIRE(f.key(widget::keys::left) == 1);
-        REQUIRE(f.key(widget::keys::up) == 0);
+        REQUIRE(f.key(foundation::LogicalKey::right) == 1);
+        REQUIRE(f.key(foundation::LogicalKey::down) == 2);
+        REQUIRE(f.key(foundation::LogicalKey::left) == 1);
+        REQUIRE(f.key(foundation::LogicalKey::up) == 0);
     }
 }
 
@@ -129,7 +128,7 @@ TEST_CASE("movement mode decides whether widget focus follows", "[widget][roving
     SECTION("selection only") {
         Fixture f;
         f.focus.set_movement(widget::RovingMovement::selection_only);
-        const auto intent = f.focus.handle_key(press(widget::keys::down));
+        const auto intent = f.focus.handle_key(press(foundation::LogicalKey::down));
         REQUIRE(intent.has_value());
         REQUIRE(intent->index == 1);
         REQUIRE_FALSE(intent->move_widget_focus);
@@ -139,7 +138,7 @@ TEST_CASE("movement mode decides whether widget focus follows", "[widget][roving
     SECTION("focus and selection") {
         Fixture f;
         f.focus.set_movement(widget::RovingMovement::focus_and_selection);
-        const auto intent = f.focus.handle_key(press(widget::keys::down));
+        const auto intent = f.focus.handle_key(press(foundation::LogicalKey::down));
         REQUIRE(intent.has_value());
         REQUIRE(intent->index == 1);
         REQUIRE(intent->move_widget_focus);
@@ -251,10 +250,10 @@ TEST_CASE("movement decisions are independently observable", "[widget][roving]")
 TEST_CASE("home, end and page keys jump to the edges", "[widget][roving]") {
     Fixture f;
 
-    REQUIRE(f.key(widget::keys::end) == kItemCount - 1);
-    REQUIRE(f.key(widget::keys::home) == 0);
-    REQUIRE(f.key(widget::keys::page_down) == kItemCount - 1);
-    REQUIRE(f.key(widget::keys::page_up) == 0);
+    REQUIRE(f.key(foundation::LogicalKey::end) == kItemCount - 1);
+    REQUIRE(f.key(foundation::LogicalKey::home) == 0);
+    REQUIRE(f.key(foundation::LogicalKey::page_down) == kItemCount - 1);
+    REQUIRE(f.key(foundation::LogicalKey::page_up) == 0);
 }
 
 TEST_CASE("disabled members are skipped", "[widget][roving]") {
@@ -268,11 +267,11 @@ TEST_CASE("disabled members are skipped", "[widget][roving]") {
         });
     }
 
-    REQUIRE(f.key(widget::keys::down) == 3);
-    REQUIRE(f.key(widget::keys::up) == 0);
+    REQUIRE(f.key(foundation::LogicalKey::down) == 3);
+    REQUIRE(f.key(foundation::LogicalKey::up) == 0);
     // 首尾跳转也要跳过禁用项。
-    REQUIRE(f.key(widget::keys::end) == 4);
-    REQUIRE(f.key(widget::keys::home) == 0);
+    REQUIRE(f.key(foundation::LogicalKey::end) == 4);
+    REQUIRE(f.key(foundation::LogicalKey::home) == 0);
     REQUIRE(f.focus.active_index() == 0);
 }
 
@@ -318,7 +317,7 @@ TEST_CASE("member churn keeps the active index valid", "[widget][roving]") {
     // 清空：没有可用成员。
     f.focus.sync(0);
     REQUIRE(f.focus.active_index() == -1);
-    REQUIRE(f.focus.handle_key(press(widget::keys::down)) == std::nullopt);
+    REQUIRE(f.focus.handle_key(press(foundation::LogicalKey::down)) == std::nullopt);
     REQUIRE(f.focus.handle_text(typed("a")) == std::nullopt);
 }
 
@@ -326,13 +325,13 @@ TEST_CASE("non navigation keys are not consumed", "[widget][roving]") {
     Fixture f;
 
     // Enter / Space / Escape 归组件自己，roving focus 不得吞掉。
-    REQUIRE(f.focus.handle_key(press(widget::keys::enter)) == std::nullopt);
-    REQUIRE(f.focus.handle_key(press(widget::keys::space)) == std::nullopt);
-    REQUIRE(f.focus.handle_key(press(widget::keys::escape)) == std::nullopt);
-    REQUIRE(f.focus.handle_key(press(widget::keys::tab)) == std::nullopt);
+    REQUIRE(f.focus.handle_key(press(foundation::LogicalKey::enter)) == std::nullopt);
+    REQUIRE(f.focus.handle_key(press(foundation::LogicalKey::space)) == std::nullopt);
+    REQUIRE(f.focus.handle_key(press(foundation::LogicalKey::escape)) == std::nullopt);
+    REQUIRE(f.focus.handle_key(press(foundation::LogicalKey::tab)) == std::nullopt);
     // 未识别的字符不移动活动项。
     REQUIRE(f.focus.handle_text(typed("z")) == std::nullopt);
     REQUIRE(f.focus.active_index() == 0);
     // 释放事件不触发导航。
-    REQUIRE(f.focus.handle_key(released(widget::keys::down)) == std::nullopt);
+    REQUIRE(f.focus.handle_key(released(foundation::LogicalKey::down)) == std::nullopt);
 }

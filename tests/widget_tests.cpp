@@ -1543,7 +1543,9 @@ TEST_CASE("EditableText accepts focused text input and backspace", "[widget][edi
     REQUIRE(edit->caret() == 2);
     REQUIRE(changes.back() == "Ax");
 
-    tree.dispatch_key(scene::KeyEvent(259, scene::KeyEvent::Action::press));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::backspace, scene::KeyEvent::Action::press)
+    );
     REQUIRE(edit->value() == "A");
     REQUIRE(edit->caret() == 1);
     REQUIRE(changes.back() == "A");
@@ -1563,11 +1565,15 @@ TEST_CASE(
     REQUIRE(edit->caret() == 1);
     edit->set_caret(edit->value().size());
 
-    tree.dispatch_key(scene::KeyEvent(259, scene::KeyEvent::Action::press));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::backspace, scene::KeyEvent::Action::press)
+    );
     REQUIRE(edit->value() == "A中");
     REQUIRE(edit->caret() == std::string("A中").size());
 
-    tree.dispatch_key(scene::KeyEvent(259, scene::KeyEvent::Action::press));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::backspace, scene::KeyEvent::Action::press)
+    );
     REQUIRE(edit->value() == "A");
     REQUIRE(edit->caret() == 1);
 }
@@ -1584,17 +1590,23 @@ TEST_CASE("EditableText deletes complete grapheme clusters", "[widget][editable-
     edit->set_caret(2);
     REQUIRE(edit->caret() == 0);
     edit->set_caret(edit->value().size());
-    tree.dispatch_key(scene::KeyEvent(259, scene::KeyEvent::Action::press));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::backspace, scene::KeyEvent::Action::press)
+    );
     REQUIRE(edit->value() == "a\xCC\x81");
     REQUIRE(edit->caret() == 3);
 
-    tree.dispatch_key(scene::KeyEvent(259, scene::KeyEvent::Action::press));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::backspace, scene::KeyEvent::Action::press)
+    );
     REQUIRE(edit->value().empty());
     REQUIRE(edit->caret() == 0);
 
     edit->set_value(std::string(combined));
     edit->set_caret(0);
-    tree.dispatch_key(scene::KeyEvent(261, scene::KeyEvent::Action::press));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::delete_key, scene::KeyEvent::Action::press)
+    );
     REQUIRE(edit->value() == "b");
     REQUIRE(edit->caret() == 0);
 }
@@ -1605,15 +1617,23 @@ TEST_CASE("EditableText moves through visual caret stops", "[widget][editable-te
     tree.set_root(edit);
     tree.set_focus(edit.get());
 
-    tree.dispatch_key(scene::KeyEvent(263, scene::KeyEvent::Action::press));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::left, scene::KeyEvent::Action::press)
+    );
     REQUIRE(edit->caret() == 2);
-    tree.dispatch_key(scene::KeyEvent(263, scene::KeyEvent::Action::press));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::left, scene::KeyEvent::Action::press)
+    );
     REQUIRE(edit->caret() == 1);
-    tree.dispatch_key(scene::KeyEvent(262, scene::KeyEvent::Action::press));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::right, scene::KeyEvent::Action::press)
+    );
     REQUIRE(edit->caret() == 2);
-    tree.dispatch_key(scene::KeyEvent(268, scene::KeyEvent::Action::press));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::home, scene::KeyEvent::Action::press)
+    );
     REQUIRE(edit->caret() == 0);
-    tree.dispatch_key(scene::KeyEvent(269, scene::KeyEvent::Action::press));
+    tree.dispatch_key(scene::KeyEvent(foundation::LogicalKey::end, scene::KeyEvent::Action::press));
     REQUIRE(edit->caret() == 3);
 }
 
@@ -1646,7 +1666,9 @@ TEST_CASE(
     tree.set_focus(edit.get());
 
     scene::KeyModifiers shift {.shift = true};
-    tree.dispatch_key(scene::KeyEvent(263, scene::KeyEvent::Action::press, shift));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::left, scene::KeyEvent::Action::press, shift)
+    );
     REQUIRE(edit->has_selection());
     REQUIRE(edit->selection().anchor == 3);
     REQUIRE(edit->selection().focus == 2);
@@ -1655,10 +1677,14 @@ TEST_CASE(
     REQUIRE(changes.size() == 1);
 
     scene::KeyModifiers ctrl {.ctrl = true};
-    tree.dispatch_key(scene::KeyEvent(65, scene::KeyEvent::Action::press, ctrl));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::a, scene::KeyEvent::Action::press, ctrl)
+    );
     REQUIRE(edit->selection().anchor == 0);
     REQUIRE(edit->selection().focus == 3);
-    tree.dispatch_key(scene::KeyEvent(261, scene::KeyEvent::Action::press));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::delete_key, scene::KeyEvent::Action::press)
+    );
     REQUIRE(edit->value().empty());
     REQUIRE(changes.size() == 2);
 }
@@ -1681,21 +1707,33 @@ TEST_CASE(
     tree.set_focus(edit.get());
     const scene::KeyModifiers primary {.ctrl = true};
 
-    tree.dispatch_key(scene::KeyEvent(67, scene::KeyEvent::Action::press, primary));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::c, scene::KeyEvent::Action::press, primary)
+    );
     REQUIRE(clipboard.text == "中文");
     REQUIRE(edit->value() == "A中文B");
 
-    tree.dispatch_key(scene::KeyEvent(88, scene::KeyEvent::Action::press, primary));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::x, scene::KeyEvent::Action::press, primary)
+    );
     REQUIRE(edit->value() == "AB");
     REQUIRE(edit->caret() == 1);
 
-    tree.dispatch_key(scene::KeyEvent(86, scene::KeyEvent::Action::press, primary));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::v, scene::KeyEvent::Action::press, primary)
+    );
     REQUIRE(edit->value() == "A中文B");
 
-    tree.dispatch_key(scene::KeyEvent(90, scene::KeyEvent::Action::press, primary));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::z, scene::KeyEvent::Action::press, primary)
+    );
     REQUIRE(edit->value() == "AB");
     tree.dispatch_key(
-        scene::KeyEvent(90, scene::KeyEvent::Action::press, {.shift = true, .ctrl = true})
+        scene::KeyEvent(
+            foundation::LogicalKey::z,
+            scene::KeyEvent::Action::press,
+            {.shift = true, .ctrl = true}
+        )
     );
     REQUIRE(edit->value() == "A中文B");
 }
@@ -1718,16 +1756,22 @@ TEST_CASE(
     tree.set_focus(field.get());
     const scene::KeyModifiers primary {.ctrl = true};
 
-    tree.dispatch_key(scene::KeyEvent(67, scene::KeyEvent::Action::press, primary));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::c, scene::KeyEvent::Action::press, primary)
+    );
     REQUIRE(clipboard.text == "中文");
     REQUIRE(field->value() == "A中文B");
 
-    tree.dispatch_key(scene::KeyEvent(88, scene::KeyEvent::Action::press, primary));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::x, scene::KeyEvent::Action::press, primary)
+    );
     REQUIRE(clipboard.text == "中文");
     REQUIRE(field->value() == "AB");
 
     clipboard.text = "替换";
-    tree.dispatch_key(scene::KeyEvent(86, scene::KeyEvent::Action::press, primary));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::v, scene::KeyEvent::Action::press, primary)
+    );
     REQUIRE(field->value() == "A替换B");
 }
 
@@ -1739,7 +1783,7 @@ TEST_CASE(
     scene::NanSceneTree tree;
     tree.set_root(edit);
     tree.set_focus(edit.get());
-    const scene::KeyModifiers command {.super = true};
+    const scene::KeyModifiers command {.ctrl = true};
 
     tree.dispatch_text_input(scene::TextInputEvent("中文"));
     tree.dispatch_text_input(scene::TextInputEvent("输入"));
@@ -1748,17 +1792,25 @@ TEST_CASE(
     edit->set_value(std::string(edit->value()));
     REQUIRE(edit->can_undo());
 
-    tree.dispatch_key(scene::KeyEvent(90, scene::KeyEvent::Action::press, command));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::z, scene::KeyEvent::Action::press, command)
+    );
     REQUIRE(edit->value() == "中文");
     REQUIRE(edit->can_redo());
-    tree.dispatch_key(scene::KeyEvent(89, scene::KeyEvent::Action::press, command));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::y, scene::KeyEvent::Action::press, command)
+    );
     REQUIRE(edit->value() == "中文输入");
 
-    tree.dispatch_key(scene::KeyEvent(90, scene::KeyEvent::Action::press, command));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::z, scene::KeyEvent::Action::press, command)
+    );
     tree.dispatch_text_input(scene::TextInputEvent("测试"));
     REQUIRE(edit->value() == "中文测试");
     REQUIRE_FALSE(edit->can_redo());
-    tree.dispatch_key(scene::KeyEvent(89, scene::KeyEvent::Action::press, command));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::y, scene::KeyEvent::Action::press, command)
+    );
     REQUIRE(edit->value() == "中文测试");
 }
 
@@ -1777,13 +1829,23 @@ TEST_CASE(
     tree.dispatch_text_input(scene::TextInputEvent("历史"));
     edit->set_read_only(true);
     const scene::KeyModifiers primary {.ctrl = true};
-    tree.dispatch_key(scene::KeyEvent(65, scene::KeyEvent::Action::press, primary));
-    tree.dispatch_key(scene::KeyEvent(67, scene::KeyEvent::Action::press, primary));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::a, scene::KeyEvent::Action::press, primary)
+    );
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::c, scene::KeyEvent::Action::press, primary)
+    );
     REQUIRE(clipboard.text == "只读历史");
 
-    tree.dispatch_key(scene::KeyEvent(88, scene::KeyEvent::Action::press, primary));
-    tree.dispatch_key(scene::KeyEvent(86, scene::KeyEvent::Action::press, primary));
-    tree.dispatch_key(scene::KeyEvent(90, scene::KeyEvent::Action::press, primary));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::x, scene::KeyEvent::Action::press, primary)
+    );
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::v, scene::KeyEvent::Action::press, primary)
+    );
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::z, scene::KeyEvent::Action::press, primary)
+    );
     REQUIRE(edit->value() == "只读历史");
 }
 
@@ -1805,7 +1867,9 @@ TEST_CASE(
     tree.set_focus(edit.get());
 
     tree.dispatch_text_input(scene::TextInputEvent("x"));
-    tree.dispatch_key(scene::KeyEvent(259, scene::KeyEvent::Action::press));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::backspace, scene::KeyEvent::Action::press)
+    );
     REQUIRE(edit->value() == "value");
     REQUIRE(edit->composition().has_value());
     REQUIRE(edit->composition()->selection_end == 4);
@@ -1921,7 +1985,9 @@ TEST_CASE("TextField exposes semantic states and submit", "[widget][text-field][
     tree.set_clipboard(clipboard);
     tree.set_root(field);
     tree.set_focus(field.get());
-    tree.dispatch_key(scene::KeyEvent(257, scene::KeyEvent::Action::press));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::enter, scene::KeyEvent::Action::press)
+    );
     REQUIRE(submissions == std::vector<std::string> {"value"});
     (void)tree.update_semantics();
     REQUIRE_FALSE(tree.perform_semantics_action(
@@ -1934,7 +2000,9 @@ TEST_CASE("TextField exposes semantic states and submit", "[widget][text-field][
     REQUIRE_FALSE(field->is_focusable());
     REQUIRE(tree.focused_node() == nullptr);
     tree.dispatch_text_input(scene::TextInputEvent("x"));
-    tree.dispatch_key(scene::KeyEvent(86, scene::KeyEvent::Action::press, {.ctrl = true}));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::v, scene::KeyEvent::Action::press, {.ctrl = true})
+    );
     REQUIRE(field->value() == "value");
 
     RecordingDevice dev;

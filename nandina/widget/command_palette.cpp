@@ -15,10 +15,10 @@
 
 #include "internal/text_style_bridge.hpp"
 
+#include "../foundation/input.hpp"
 #include "../semantics/semantics.hpp"
 #include "internal/dismiss_layer.hpp"
 #include "internal/focus_scope.hpp"
-#include "key_codes.hpp"
 #include "menu_item.hpp"
 #include "primitives/box_painter.hpp"
 #include "primitives/text.hpp"
@@ -1263,21 +1263,22 @@ namespace nandina::widget
             return false;
         }
         auto& key = static_cast<scene::KeyEvent&>(event);
-        if (!key.is_pressed()) {
+        if (!key.is_press_or_repeat()) {
             return false;
         }
-        const int code = key.keycode();
+        const auto code = key.logical_key();
 
         // Escape 归 DismissLayer（它在浮层里包着面板，先收到捕获事件），这里不重复处理。
-        if (code == keys::enter) {
+        if (key.is_pressed() && code == foundation::LogicalKey::enter) {
             if (const auto id = surface_->active_id(); !id.empty()) {
                 activate_id(id);
             }
             event.accept();
             return true;
         }
-        if (code == keys::up || code == keys::down || code == keys::home || code == keys::end
-            || code == keys::page_up || code == keys::page_down)
+        if (code == foundation::LogicalKey::up || code == foundation::LogicalKey::down
+            || code == foundation::LogicalKey::home || code == foundation::LogicalKey::end
+            || code == foundation::LogicalKey::page_up || code == foundation::LogicalKey::page_down)
         {
             if (surface_->handle_navigation_key(key)) {
                 event.accept();

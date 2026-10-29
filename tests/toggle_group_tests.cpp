@@ -9,7 +9,6 @@
 #include <nandina/theme/theme_manager.hpp>
 #include <nandina/widget/build_context.hpp>
 #include <nandina/widget/controls.hpp>
-#include <nandina/widget/key_codes.hpp>
 #include <nandina/widget/layout.hpp>
 #include <nandina/widget/roving_focus.hpp>
 #include <nandina/widget/toggle.hpp>
@@ -151,37 +150,45 @@ TEST_CASE("toggle group arrow keys roam focus and wrap", "[toggle-group][keyboar
     REQUIRE(tree.focused_node() == italic.get());
 
     // 默认纵向：下键移到下一个成员。漫游只移动焦点，不改选中值。
-    tree.dispatch_key(scene::KeyEvent(widget::keys::down, scene::KeyEvent::Action::press));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::down, scene::KeyEvent::Action::press)
+    );
     REQUIRE(tree.flush_post_layout_actions());
     REQUIRE(tree.focused_node() == mute.get());
     REQUIRE(group->checked_indices().empty());
 
     // 末尾环绕到首个成员。
-    tree.dispatch_key(scene::KeyEvent(widget::keys::down, scene::KeyEvent::Action::press));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::down, scene::KeyEvent::Action::press)
+    );
     REQUIRE(tree.flush_post_layout_actions());
     REQUIRE(tree.focused_node() == bold.get());
 
     // 反方向同样环绕。
-    tree.dispatch_key(scene::KeyEvent(widget::keys::up, scene::KeyEvent::Action::press));
+    tree.dispatch_key(scene::KeyEvent(foundation::LogicalKey::up, scene::KeyEvent::Action::press));
     REQUIRE(tree.flush_post_layout_actions());
     REQUIRE(tree.focused_node() == mute.get());
 
     // 切到横向：左右键漫游，上下键不再是导航键（共享设施按 orientation 过滤）。
     group->set_orientation(widget::RovingOrientation::horizontal);
-    tree.dispatch_key(scene::KeyEvent(widget::keys::right, scene::KeyEvent::Action::press));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::right, scene::KeyEvent::Action::press)
+    );
     REQUIRE(tree.flush_post_layout_actions());
     REQUIRE(tree.focused_node() == bold.get());
 
     // 横向组里上键不参与漫游：焦点不动，也没有产生 post-layout 动作。
-    tree.dispatch_key(scene::KeyEvent(widget::keys::up, scene::KeyEvent::Action::press));
+    tree.dispatch_key(scene::KeyEvent(foundation::LogicalKey::up, scene::KeyEvent::Action::press));
     REQUIRE_FALSE(tree.flush_post_layout_actions());
     REQUIRE(tree.focused_node() == bold.get());
 
     // Home / End 也由共享设施回答。
-    tree.dispatch_key(scene::KeyEvent(widget::keys::end, scene::KeyEvent::Action::press));
+    tree.dispatch_key(scene::KeyEvent(foundation::LogicalKey::end, scene::KeyEvent::Action::press));
     REQUIRE(tree.flush_post_layout_actions());
     REQUIRE(tree.focused_node() == mute.get());
-    tree.dispatch_key(scene::KeyEvent(widget::keys::home, scene::KeyEvent::Action::press));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::home, scene::KeyEvent::Action::press)
+    );
     REQUIRE(tree.flush_post_layout_actions());
     REQUIRE(tree.focused_node() == bold.get());
 }
@@ -202,7 +209,9 @@ TEST_CASE("toggle group roaming skips disabled members", "[toggle-group][keyboar
     tree.set_focus(first.get());
     REQUIRE(tree.focused_node() == first.get());
 
-    tree.dispatch_key(scene::KeyEvent(widget::keys::down, scene::KeyEvent::Action::press));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::down, scene::KeyEvent::Action::press)
+    );
     REQUIRE(tree.flush_post_layout_actions());
     REQUIRE(tree.focused_node() == last.get());
 }
@@ -220,11 +229,15 @@ TEST_CASE("toggle group members still activate with space and enter", "[toggle-g
     tree.set_focus(italic.get());
 
     // 成员把按键先交给组，但激活键必须仍然落到成员自己身上。
-    tree.dispatch_key(scene::KeyEvent(widget::keys::space, scene::KeyEvent::Action::press));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::space, scene::KeyEvent::Action::press)
+    );
     REQUIRE(italic->checked());
     REQUIRE(group->checked_indices() == std::vector<int> {1});
 
-    tree.dispatch_key(scene::KeyEvent(widget::keys::enter, scene::KeyEvent::Action::press));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::enter, scene::KeyEvent::Action::press)
+    );
     REQUIRE_FALSE(italic->checked());
     REQUIRE(group->checked_indices().empty());
 }

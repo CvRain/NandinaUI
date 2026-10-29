@@ -33,7 +33,7 @@ NandinaUI 按模块组织，模块之间的方向决定了改动会扩散到哪�
 2. **禁止循环依赖**：若 A 依赖 B，则 B 及其所有子依赖都不得反过来依赖 A。
 3. **`foundation` 没有上游依赖**，只提供与框架无关的基础类型。
 4. **`reactive` 保持纯逻辑**：它不依赖 `render` / `scene` / `widget`，因此可以完全脱离窗口做单元测试。
-5. **第三方库只出现在实现单元**：raylib、SQLite、toml++、spdlog 等只被 `.cpp` 或它们自己的包装头引用，不进入面向上层的接口头文件。`foundation/json.hpp` 是 nlohmann/json 的包装，属于有意暴露的接口。
+5. **第三方库只出现在实现单元**：SDL3、SQLite、toml++、spdlog 等只被 `.cpp` 或它们自己的包装头引用，不进入面向上层的接口头文件。`foundation/json.hpp` 是 nlohmann/json 的包装，属于有意暴露的接口。
 6. **每层可单测**：纯逻辑层应有不依赖窗口的 Catch2 测试；新增公共 API 时同步补测试。
 
 违反上述方向的提交按项目约定视为**技术债**，需要在进入下一个里程碑前收口。如果因为阶段安排暂时保留，必须在文档或提交里写清原因与收口方向，不能默认接受。
@@ -111,7 +111,7 @@ FontRequest / FontSlant 的唯一类型定义归 `theme/font_request.hpp`；迁�
 设计、值语义、ABI 与 include 兼容边界及验证记录见 [轻量字体请求](font_request.md)。
 这只完成描述值的拆分，StyleDocument 的实际文本引擎应用仍列在当前偏离表中。
 
-## D5 资源构建边界（已冻结；解耦、作用域、消费者键与回收已实施）
+## D5 资源构建边界（P2 已交付）
 
 解耦前 `nanres` 链接完整 `nandina_dep`，SQLite 依赖无条件进入库；manifest/packager 的部分
 实现在 tools，公开声明在 resource。这是构建目标的耦合，不能仅凭基础层的源码 include 方向
@@ -129,6 +129,10 @@ FontRequest / FontSlant 的唯一类型定义归 `theme/font_request.hpp`；迁�
 生成规则与版本化 128-bit 派生 ID 已落地（P2.3a）；lock 写入 build 目录、旧 ID 显式迁移与
 重建确定性已完成（P2.3b）；生成常量头已完成（P2.3c，`nanres keys --header`，只含逻辑
 key）。后端不认识 manager 的挂载身份，挂载字段不写进包格式。方向与八入口契约见 D5 §6.2、§11。
+
+声明式构建、portable/当前平台 prefix 部署定位与下游资源消费者验收已随 P2.4a–P2.4c 交付；
+实施契约与历史证据见 [D5 §8](resource_build_and_deployment.md#8-p2-实施契约2026-10-22-定稿p21ap24c-已实施)。
+这不扩大为 CMake、Web 或其他平台部署支持。
 
 ## 判断一次改动是否越界
 

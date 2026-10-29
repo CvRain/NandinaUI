@@ -4,7 +4,7 @@
 
 #include "chip.hpp"
 
-#include "key_codes.hpp"
+#include "../foundation/input.hpp"
 
 #include "../render/draw_context.hpp"
 #include "../scene/input_event.hpp"
@@ -138,8 +138,10 @@ namespace nandina::widget
             if (!key.is_pressed() || !removable_) {
                 return false;
             }
-            if (key.keycode() == keys::enter || key.keycode() == keys::space
-                || key.keycode() == keys::backspace || key.keycode() == keys::delete_key)
+            if (key.logical_key() == foundation::LogicalKey::enter
+                || key.logical_key() == foundation::LogicalKey::space
+                || key.logical_key() == foundation::LogicalKey::backspace
+                || key.logical_key() == foundation::LogicalKey::delete_key)
             {
                 remove();
                 event.accept();

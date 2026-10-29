@@ -4,7 +4,7 @@
 
 #include "radio_button.hpp"
 
-#include "key_codes.hpp"
+#include "../foundation/input.hpp"
 
 #include "../render/draw_context.hpp"
 #include "../scene/input_event.hpp"
@@ -195,16 +195,16 @@ namespace nandina::widget
     auto RadioButton::on_input(scene::InputEvent& event) -> bool {
         if (event.type() == scene::EventType::key && group_) {
             auto& key = static_cast<scene::KeyEvent&>(event);
-            if (key.is_pressed()) {
+            if (key.is_press_or_repeat()) {
                 int direction = 0;
-                if (key.keycode() == nandina::widget::keys::left
-                    || key.keycode() == nandina::widget::keys::up)
+                if (key.logical_key() == nandina::foundation::LogicalKey::left
+                    || key.logical_key() == nandina::foundation::LogicalKey::up)
                 {
                     direction = -1;
                 }
                 else if (
-                    key.keycode() == nandina::widget::keys::right
-                    || key.keycode() == nandina::widget::keys::down
+                    key.logical_key() == nandina::foundation::LogicalKey::right
+                    || key.logical_key() == nandina::foundation::LogicalKey::down
                 )
                 {
                     direction = 1;

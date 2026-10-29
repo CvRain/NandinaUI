@@ -385,7 +385,6 @@ namespace nandina::app
             return viewport_mapping_ ? viewport_mapping_->screen_to_logical(screen_pos)
                                      : screen_pos;
         };
-        const auto pos = to_logical(frame_input_.pointer);
 
         for (const auto& screen_ev: frame_input_.mouse_moves) {
             const auto logical = to_logical(screen_ev.screen_pos());
@@ -408,22 +407,27 @@ namespace nandina::app
             scene::MouseButtonEvent ev {
                 screen_ev.button(),
                 screen_ev.action(),
-                pos,
+                to_logical(screen_ev.screen_pos()),
                 screen_ev.modifiers(),
             };
             tree_.dispatch_mouse_button(ev);
         }
 
         for (const auto& screen_ev: frame_input_.mouse_wheels) {
-            scene::MouseWheelEvent ev {pos, screen_ev.delta(), screen_ev.modifiers()};
+            scene::MouseWheelEvent ev {
+                to_logical(screen_ev.screen_pos()),
+                screen_ev.delta(),
+                screen_ev.modifiers()
+            };
             tree_.dispatch_mouse_wheel(ev);
         }
 
         for (const auto& screen_ev: frame_input_.keys) {
             scene::KeyEvent ev {
-                screen_ev.keycode(),
+                screen_ev.logical_key(),
                 screen_ev.action(),
                 screen_ev.modifiers(),
+                screen_ev.physical_key(),
             };
             tree_.dispatch_key(ev);
         }

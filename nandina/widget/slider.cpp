@@ -4,7 +4,7 @@
 
 #include "slider.hpp"
 
-#include "key_codes.hpp"
+#include "../foundation/input.hpp"
 
 #include "../render/draw_context.hpp"
 #include "../scene/input_event.hpp"
@@ -336,19 +336,25 @@ namespace nandina::widget
                 return false;
             case scene::EventType::key: {
                 const auto& key = static_cast<scene::KeyEvent&>(event);
-                if (!key.is_pressed()) {
+                if (!key.is_press_or_repeat()) {
                     return false;
                 }
-                if (key.keycode() == keys::left || key.keycode() == keys::down) {
+                if (key.logical_key() == foundation::LogicalKey::left
+                    || key.logical_key() == foundation::LogicalKey::down)
+                {
                     set_user_value(value_ - step_);
                 }
-                else if (key.keycode() == keys::right || key.keycode() == keys::up) {
+                else if (
+                    key.logical_key() == foundation::LogicalKey::right
+                    || key.logical_key() == foundation::LogicalKey::up
+                )
+                {
                     set_user_value(value_ + step_);
                 }
-                else if (key.keycode() == keys::home) {
+                else if (key.logical_key() == foundation::LogicalKey::home) {
                     set_user_value(minimum_);
                 }
-                else if (key.keycode() == keys::end) {
+                else if (key.logical_key() == foundation::LogicalKey::end) {
                     set_user_value(maximum_);
                 }
                 else {

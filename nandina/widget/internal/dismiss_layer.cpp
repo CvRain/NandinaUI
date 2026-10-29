@@ -72,7 +72,7 @@ namespace nandina::widget::internal
         }
         else if (event.type() == scene::EventType::key) {
             auto& key = static_cast<scene::KeyEvent&>(event);
-            if (key.is_pressed() && key.keycode() == 256) {
+            if (key.is_pressed() && key.logical_key() == foundation::LogicalKey::escape) {
                 if (callback_) {
                     callback_(DismissReason::escape);
                 }

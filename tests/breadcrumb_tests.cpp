@@ -9,7 +9,6 @@
 #include <nandina/widget/breadcrumb.hpp>
 #include <nandina/widget/build_context.hpp>
 #include <nandina/widget/controls.hpp>
-#include <nandina/widget/key_codes.hpp>
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
@@ -128,9 +127,13 @@ TEST_CASE(
     REQUIRE(tree.focused_node() == crumb->get_child(1)->as_node2d());
 
     tree.set_focus(crumb->get_child(0)->as_control());
-    tree.dispatch_key(scene::KeyEvent(widget::keys::enter, scene::KeyEvent::Action::press));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::enter, scene::KeyEvent::Action::press)
+    );
     REQUIRE(clicks == 1);
-    tree.dispatch_key(scene::KeyEvent(widget::keys::space, scene::KeyEvent::Action::press));
+    tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::space, scene::KeyEvent::Action::press)
+    );
     REQUIRE(clicks == 2);
 }
 
