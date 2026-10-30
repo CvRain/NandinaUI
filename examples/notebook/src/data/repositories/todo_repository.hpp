@@ -12,7 +12,7 @@
 #include <string_view>
 #include <vector>
 
-namespace nandina::examples::notebook::data
+namespace nan_example::notebook::data
 {
     class TodoRepository {
     public:

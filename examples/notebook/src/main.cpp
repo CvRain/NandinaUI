@@ -1,43 +1,51 @@
+#include "app/main_window.hpp"
+#include "app/notebook_store.hpp"
 #include "data/migration.hpp"
-#include "nandina/foundation/nan_logger.hpp"
+#include "showcase/main_window.hpp"
 
 #include <nandina/app/nan_application.hpp>
+#include <nandina/foundation/nan_logger.hpp>
 
-#include <filesystem>
 #include <print>
 #include <utility>
 
-using namespace nandina;
-
 int main() {
-    auto config = app::NanApplicationConfig::for_process("com.nandina.notebook");
-    // Meson writes the resource package beside the executable. The migration SQL is
-    // read from this package before any repository is constructed.
+    auto config = nandina::app::NanApplicationConfig::for_process("com.nandina.notebook");
+    // This is a repository demo, not an installed application: keep its database in the
+    // disposable build tree instead of polluting the user's data directory. The path is
+    // derived from the executable so the app behaves the same from any working directory.
+    const auto database_path = config.executable_path.parent_path() / "notebook.db";
+    // Meson writes the resource package beside the executable. Migration SQL is read
+    // from that package before the application store is built.
     config.resource_package = "resources.db";
 
-    app::NanApplication application(std::move(config));
-
-    // TODO(notebook): move under the platform data root once the app-data helper lands;
-    // a CWD-relative file keeps the first data-layer batch easy to inspect.
-    const auto database_path = std::filesystem::path {"./notebook.db"};
+    nandina::app::NanApplication application(std::move(config));
     auto bootstrap =
-        examples::notebook::data::bootstrap_database(database_path, application.resources());
-
-    log::info("current database located in {}", database_path);
-
+        nan_example::notebook::data::bootstrap_database(database_path, application.resources());
     if (!bootstrap) {
-        std::println("notebook: {}", examples::notebook::data::describe(bootstrap.error()));
+        std::println("notebook: {}", nan_example::notebook::data::describe(bootstrap.error()));
         return 1;
     }
 
-    log::info(
-        "notebook: database {} (schema v{}, {} migration(s) applied)",
+    nandina::log::info(
+        "notebook: database {} at {} (schema v{}, {} migration(s) applied)",
         bootstrap->created ? "created" : "opened",
+        database_path.string(),
         bootstrap->migrations.current_version,
         bootstrap->migrations.applied.size()
     );
 
-    // Upper layers (auth/user services and the window) receive bootstrap->database.
-    // The window is intentionally not opened until those layers exist.
-    return 0;
+    // Composition root: the application owns the store for the whole process.
+    // Pages resolve NotebookStore through PageContext instead of constructing services.
+    application.use_store<nan_example::notebook::app::NotebookStore>(std::move(bootstrap->database));
+
+    const auto window_info = nandina::app::WindowConfig {
+        .title = "Nandina Notebook",
+        .width = 1100,
+        .height = 760,
+    };
+
+    auto window = nan_example::notebook::app::MainWindow(application, window_info);
+
+    return application.run(window);
 }

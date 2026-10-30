@@ -8,12 +8,9 @@
 #include <string>
 #include <vector>
 
-namespace nandina::resource
-{
-    class ResourceManager;
-} // namespace nandina::resource
+#include <nandina/resource/resource_manager.hpp>
 
-namespace nandina::examples::notebook::data
+namespace nan_example::notebook::data
 {
     /// One SQL migration loaded from the resource package.
     struct Migration {
@@ -39,7 +36,7 @@ namespace nandina::examples::notebook::data
     ///
     /// The generated resource key header is the compile-time link between the policy and this
     /// code: renaming or deleting a migration declaration fails the build at the call site.
-    [[nodiscard]] auto load_migrations(const resource::ResourceManager& resources)
+    [[nodiscard]] auto load_migrations(const nandina::resource::ResourceManager& resources)
         -> DataResult<std::vector<Migration>>;
 
     /// Require ascending, contiguous versions starting at 1 with unique names and non-empty SQL.
@@ -55,8 +52,8 @@ namespace nandina::examples::notebook::data
     /// Open (or create) the app database, load the SQL from nanres resources, and migrate it.
     [[nodiscard]] auto bootstrap_database(
         const std::filesystem::path& path,
-        const resource::ResourceManager& resources
+        const nandina::resource::ResourceManager& resources
     ) -> DataResult<DatabaseBootstrap>;
-} // namespace nandina::examples::notebook::data
+} // namespace nan_example::notebook::data
 
 #endif // NANDINA_EXAMPLES_NOTEBOOK_DATA_MIGRATION_HPP

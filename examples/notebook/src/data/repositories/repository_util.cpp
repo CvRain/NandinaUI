@@ -2,7 +2,7 @@
 
 #include <utility>
 
-namespace nandina::examples::notebook::data
+namespace nan_example::notebook::data
 {
     auto invalid_argument(std::string operation, std::string message) -> DataError {
         return {

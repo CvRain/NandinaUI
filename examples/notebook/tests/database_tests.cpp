@@ -1,5 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 
+#include "app/notebook_store.hpp"
 #include "data/database.hpp"
 #include "data/migration.hpp"
 #include "data/repositories/note_group_repository.hpp"
@@ -7,6 +8,7 @@
 #include "data/repositories/todo_repository.hpp"
 #include "data/repositories/user_repository.hpp"
 
+#include <nandina/reactive/graph.hpp>
 #include <nandina/resource/backends/sqlite_backend.hpp>
 #include <nandina/resource/resource_manager.hpp>
 
@@ -310,4 +312,46 @@ TEST_CASE("migration runner rejects gaps, duplicates and newer schemas", "[noteb
     auto name_report = data::apply_migrations(fixture.database, renamed);
     REQUIRE_FALSE(name_report.has_value());
     CHECK(name_report.error().code == data::DataErrorCode::migration_name_mismatch);
+}
+
+TEST_CASE("NotebookStore wires UserService to the migrated database", "[notebook][data]") {
+    auto manager = package_manager();
+    auto migrations = data::load_migrations(manager);
+    REQUIRE(migrations.has_value());
+
+    auto database = data::Database::open_memory();
+    REQUIRE(database.has_value());
+    auto report = data::apply_migrations(*database, *migrations);
+    REQUIRE(report.has_value());
+
+    nandina::reactive::Graph graph;
+    nandina::examples::notebook::app::NotebookStore store(graph, std::move(*database));
+    auto& service = store.user_service();
+
+    auto count = service.user_count();
+    REQUIRE(count.has_value());
+    CHECK(*count == 0);
+    auto exists = service.user_exist();
+    REQUIRE(exists.has_value());
+    CHECK_FALSE(*exists);
+
+    auto created = service.create_user("demo", "demo-password-hash");
+    REQUIRE(created.has_value());
+    CHECK(created->username == "demo");
+
+    auto populated = service.user_count();
+    REQUIRE(populated.has_value());
+    CHECK(*populated == 1);
+    auto now_exists = service.user_exist();
+    REQUIRE(now_exists.has_value());
+    CHECK(*now_exists);
+
+    auto fetched = service.get_user_by_name("demo");
+    REQUIRE(fetched.has_value());
+    REQUIRE(fetched->has_value());
+    CHECK((*fetched)->id == created->id);
+
+    auto duplicate = service.create_user("demo", "another-hash");
+    REQUIRE_FALSE(duplicate.has_value());
+    CHECK(duplicate.error().code == data::DataErrorCode::constraint_violation);
 }

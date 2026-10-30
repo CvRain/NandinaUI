@@ -10,7 +10,7 @@
 
 struct sqlite3;
 
-namespace nandina::examples::notebook::data
+namespace nan_example::notebook::data
 {
     /// RAII owner of one SQLite connection.
     ///

@@ -6,7 +6,7 @@
 #include <string_view>
 #include <utility>
 
-namespace nandina::examples::notebook::data
+namespace nan_example::notebook::data
 {
     namespace
     {

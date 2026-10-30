@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-namespace nandina::examples::notebook::data
+namespace nan_example::notebook::data
 {
     [[nodiscard]] auto
     bind_optional_int64(Statement& statement, int index, const std::optional<std::int64_t>& value)

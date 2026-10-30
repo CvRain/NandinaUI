@@ -12,7 +12,7 @@
 
 struct sqlite3_stmt;
 
-namespace nandina::examples::notebook::data
+namespace nan_example::notebook::data
 {
     enum class StepResult : std::uint8_t { row, done };
 

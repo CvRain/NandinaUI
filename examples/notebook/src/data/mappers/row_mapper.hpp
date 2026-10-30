@@ -8,7 +8,7 @@
 #include "../../core/models/todo.hpp"
 #include "../../core/models/user.hpp"
 
-namespace nandina::examples::notebook::data
+namespace nan_example::notebook::data
 {
     // Each mapper assumes the statement is positioned on one row whose selected columns match
     // the documented order in the owning repository.

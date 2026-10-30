@@ -14,11 +14,13 @@ meson compile -C buildDir nandina_examples_notebook
 ```
 
 The executable locates `resources/resources.db` beside itself, mounts it through
-`NanApplication`, then opens `./notebook.db` (working-directory relative). The first run
-creates the app database and applies every declared migration; later runs report
-`0 migration(s) applied`. Moving the database under the platform data root
-(`PlatformResourceLocator::data_root()`) is a planned follow-up once the app-data helper
-lands; the CWD-relative path keeps the first data-layer batch easy to inspect.
+`NanApplication`, then opens `notebook.db` in that same executable directory
+(`buildDir/examples/notebook/notebook.db`). The first run creates the app database
+and applies every declared migration; later runs report `0 migration(s) applied`.
+
+This is a repository demo, so its database is intentionally disposable build output:
+the path is derived from the executable (not the working directory), and deleting
+`buildDir` resets the demo without leaving files in the user's data directory.
 
 ## Data layer
 
@@ -31,6 +33,8 @@ lands; the CWD-relative path keeps the first data-layer batch easy to inspect.
 | `src/data/mappers/` | Explicit table column to model mapping |
 | `src/data/repositories/` | User, note-group, note and todo persistence APIs |
 | `src/data/migrations/` | Canonical SQL migrations |
+| `src/app/notebook_store.*` | Composition root: owns Database, repository and services |
+| `src/ui/user_service_demo_page.*` | Demo page resolving UserService from PageContext |
 
 `Database` enables foreign keys, WAL, a five-second busy timeout and normal
 synchronous mode. Each migration runs in its own `BEGIN IMMEDIATE` transaction and is
@@ -113,6 +117,45 @@ auto note = notes.create(alice.id, "Title", "Body", group->id);
 auto todo = todos.create(alice.id, "Buy milk");
 auto visible_notes = notes.list_all();               // anonymous read
 ```
+
+## Composition root and page injection
+
+`main()` creates the database, then installs one application-owned store:
+
+```cpp
+namespace notebook_app = nandina::examples::notebook::app;
+namespace notebook_ui = nandina::examples::notebook::ui;
+
+application.use_store<notebook_app::NotebookStore>(std::move(bootstrap->database));
+return application.run_page<notebook_ui::UserServiceDemoPage>(window_info);
+```
+
+`NotebookStore` is the Angular/.NET-style root container for this example. It owns
+the dependency graph in lifetime order:
+
+```text
+Database
+ └─ UserRepository
+     └─ UserService
+```
+
+Pages do not construct services. They resolve the store from the page context:
+
+```cpp
+auto& store = context.store<nandina::examples::notebook::app::NotebookStore>();
+auto& service = store.user_service();
+
+auto total = service.user_count();
+```
+
+The demo page at `src/ui/user_service_demo_page.cpp` shows the current user count,
+refreshes it, and creates a `demo` user through `UserService`. Real registration
+should call `AuthService` first so the stored value is a password hash, not a
+literal demo string.
+
+`UserService` is not a singleton: it takes `UserRepository&` in its constructor.
+The application store owns the single instance, so pages share it through
+`PageContext` without any global access point.
 
 ## Migrations and nanres
 

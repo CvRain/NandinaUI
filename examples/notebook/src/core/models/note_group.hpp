@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <string>
 
-namespace nandina::examples::notebook::models
+namespace nan_example::notebook::models
 {
     struct NoteGroup {
         std::int64_t id = 0;

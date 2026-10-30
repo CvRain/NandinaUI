@@ -10,7 +10,7 @@
 #include <string_view>
 #include <utility>
 
-namespace nandina::examples::notebook::data
+namespace nan_example::notebook::data
 {
     namespace
     {
@@ -52,7 +52,7 @@ namespace nandina::examples::notebook::data
             std::string name;
         };
 
-        [[nodiscard]] auto resource_error_message(const resource::ResourceError& error)
+        [[nodiscard]] auto resource_error_message(const nandina::resource::ResourceError& error)
             -> std::string {
             if (error.operation.empty()) {
                 return error.message;
@@ -86,12 +86,12 @@ namespace nandina::examples::notebook::data
         }
     } // namespace
 
-    auto load_migrations(const resource::ResourceManager& resources)
+    auto load_migrations(const nandina::resource::ResourceManager& resources)
         -> DataResult<std::vector<Migration>> {
         std::vector<Migration> migrations;
         migrations.reserve(kMigrationResources.size());
         for (const auto& source: kMigrationResources) {
-            const auto key = resource::ResourceKey::parse(source.key);
+            const auto key = nandina::resource::ResourceKey::parse(source.key);
             if (!key) {
                 return std::unexpected(
                     DataError {
@@ -338,7 +338,7 @@ namespace nandina::examples::notebook::data
 
     auto bootstrap_database(
         const std::filesystem::path& path,
-        const resource::ResourceManager& resources
+        const nandina::resource::ResourceManager& resources
     ) -> DataResult<DatabaseBootstrap> {
         if (path.empty()) {
             return std::unexpected(

@@ -5,7 +5,7 @@
 #include <string>
 #include <string_view>
 
-namespace nandina::examples::notebook::data
+namespace nan_example::notebook::data
 {
     enum class DataErrorCode {
         invalid_argument,

@@ -45,7 +45,7 @@ notebook_exe = executable(
     'nandina_examples_notebook',
     notebook_sources,
     notebook_resource_keys,
-    dependencies: [core_dep],
+    dependencies: [app_dep],
     include_directories: [notebook_src_include, notebook_root_include],
     link_depends: notebook_resources,
     install: false,
@@ -55,7 +55,7 @@ if is_variable('catch2_with_main_dep')
     notebook_data_tests = executable(
         'notebook_data_tests',
         files('tests/database_tests.cpp'),
-        dependencies: [data_dep, catch2_with_main_dep],
+        dependencies: [app_dep, catch2_with_main_dep],
     )
     notebook_test_env = environment()
     notebook_test_env.set(
