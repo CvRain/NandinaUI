@@ -1,10 +1,14 @@
 package = "com.nandina.notebook"
-source = "resources"
+# The scan root is the migration directory itself: an empty placeholder directory
+# does not survive a clean checkout, and a missing root makes nanres refuse to build.
+# Future non-SQL assets either join this root or get explicit key -> path mappings.
+source = "src/data/migrations"
 
 # SQL lives beside the data layer so it is reviewed with the code, but it is
 # packaged as a resource: at runtime the migration runner reads these logical
 # keys through the mounted nanres package. Explicit keys keep the generated
-# resource_keys.hpp constants stable if the files move.
+# resource_keys.hpp constants stable if the files move, and the scanner skips
+# mapped paths so they are not derived twice.
 [[resources]]
 key = "migrations/001_create_user.sql"
 path = "src/data/migrations/001_create_user.sql"
