@@ -593,7 +593,12 @@ scancode、key、mod、down 和 repeat。mapper 应消费事件时快照，不�
   红测见上一节。
 - Linux 验证：主套件 108/108（`notebook-data` 在作者命名空间迁移后通过）；ASan/UBSan
   unit 85 + window-lifecycle SKIP；no-RTTI 87/87；no-SQLite/headless 82 + 1 SKIP；
-  纯工具 8/8；release check 8/8。Windows 待设备地址与凭据后补验。
+  纯工具 8/8；release check 8/8。
+- Windows 验证（2026-10-31，bundle 同步到 `2d01fb0`）：`meson setup --reconfigure` 与
+  `ninja` 0 错误；`--suite unit` **85/85**（含 `notebook-data`）；`key-lifecycle`、
+  `sdl-platform-input`（11 用例，dummy 视频 + 软件渲染器）、`notebook-data` 全部通过。
+  这次干净检出暴露并修复了 notebook 的三个构建缺陷（扫描根、测试命名空间、`std::println`
+  终端符号），单独提交，不改变本批输入语义。
 
 
 ## 实施与验收

@@ -74,7 +74,7 @@
 | --- | --- | --- | --- |
 | P3.1a | **D8 每事件坐标与修饰键快照**（已实施，2026-10-29）：按钮/滚轮使用事件坐标，经 viewport 映射派发；SDL 键盘使用事件 mod，鼠标使用按队列推进的修饰键状态；帧级状态保留 | 无 | `sdl-platform-input` 4 用例/160 断言通过，覆盖 A 处点击/滚轮后移动到 B、2×/letterbox、同帧与跨帧修饰键及过滤事件；红测与验证矩阵见 [D8](reference_draft.md#p31a事件快照2026-10-28) |
 | P3.1b | **D8 键身份与键生命周期**（已实施，2026-10-29）：`LogicalKey`/`PhysicalKey`、press/repeat/release、独立 unknown 计数，SDL scancode/keycode 映射，全部消费者迁移 | 精确键契约已定形 | `sdl-platform-input` 覆盖合成布局差异、左右修饰键、小键盘、unknown 与身份稳定；`key-lifecycle` 覆盖重复/单次激活；红测与验证矩阵见 [D8](reference_draft.md#p31b键身份与生命周期2026-10-29-已实施)。实机布局与 Windows 未验收；不并入 P3.1a |
-| P3.1c | **D8 跨类型事件保序**（已实施，2026-10-31）：`FrameInput::events` 按平台队列顺序保存变体事件，宿主顺序派发，不再按类型分组 | 有序事件契约已定形 | 同帧“点击 A → 文本 → 点击 B”中文本到达 A；SDL 顺序断言与真实 `NanWindow::tick()` 回归通过，红测见 [D8](reference_draft.md#p31c跨类型事件保序2026-10-31-已实施)。Windows 待补验 |
+| P3.1c | **D8 跨类型事件保序**（已实施，2026-10-31）：`FrameInput::events` 按平台队列顺序保存变体事件，宿主顺序派发，不再按类型分组 | 有序事件契约已定形 | 同帧“点击 A → 文本 → 点击 B”中文本到达 A；SDL 顺序断言与真实 `NanWindow::tick()` 回归通过，红测见 [D8](reference_draft.md#p31c跨类型事件保序2026-10-31-已实施)。Windows 已补验（2026-10-31：构建 0 错误、unit 85/85、输入测试通过） |
 | P3.2 | **D1 第一阶段**：统一焦点提示策略（paint-only 失效、程序化恢复、窗口失活/激活） | 所需 D8 事件语义定形 | 同节点模态变化、两种 roving 模型、文本能力矩阵；不并入 P3.1a |
 | P3.3 | **D1 文本会话**：注入式 `ITextInputService`、IME/软键盘、会话生命周期 | 所需 D8 键语义与有序事件 | 真实 IME 分别记录平台状态；不另造第二套 host，不并入 P3.1a |
 

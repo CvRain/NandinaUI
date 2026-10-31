@@ -138,6 +138,7 @@ P2.4 的 `examples/lab` 已退役，示例应用改为 `examples/notebook`：目
 - **测试分工**：数据层等确定性测试留在仓库（`examples/notebook/tests/`，`notebook-data`，CI/Windows 覆盖）；UI/交互与长跑测试放未跟踪的 `playground/`，不作为 CI 证据。
 - **构建前置**：notebook 需要 `build_ui`、资源工具链与 `resource_sqlite=enabled`；headless、关闭工具或关闭 SQLite 的配置用 `-Dexamples=false` 跳过它。
 - **历史证据**：P2.4 的验收记录与 `docs/images/lab/` 截图保留，不随 lab 退役删除。
+- **干净检出修复（2026-10-31，Windows 补验时发现）**：`resources.toml` 的扫描根改为已跟踪的 `src/data/migrations`（空占位目录不会进入 Git）；数据层测试与 README 完成 `nan_example::notebook` 命名空间迁移；启动错误改用框架 logger，避免 Windows 工具链缺少 `std::println` 的终端符号。
 - **验证（2026-10-28）**：默认主套件 **106/106**（`notebook-data` 通过；lab 的 4 个测试随退役删除、notebook 数据层测试新增）；release check 8/8。干净离线配置（`--wrap-mode=nodownload -Dexamples=true -Dshowcase=false -Dbuild_tests=false`）从零构建 `nandina_examples_notebook` 通过并生成迁移包与常量头；`-Dresource_sqlite=disabled` 且 `examples` 默认开启时配置期报错 `examples/notebook needs the SQLite runtime backend`；headless 配方 `-Dsdl_backend=disabled -Dshowcase=false -Dexamples=false` 配置通过。交替矩阵：ASan **83/83（+1 SKIP）**、no-RTTI **85/85**（含 `notebook-data`）、no-SQLite **81/81（+1 SKIP）**、纯工具 8/8。Windows 设备本轮不可达（`No route to host`），未复跑；恢复后补验构建、`--suite unit` 与 `notebook-data`。
 
 ## 下一阶段路线（2026-10-20）
@@ -146,7 +147,7 @@ P2.4 的 `examples/lab` 已退役，示例应用改为 `examples/notebook`：目
 
 - **P1 收口与平台补齐**：发布检查脚本、Windows 页面 golden/性能基线、图片共享解码与 raylib 退役、SDF 阴影/裁剪（已完成，Windows GUI 项待人工）；
 - **P2 应用闭环**：已完成；P2.4 的 `examples/lab` 单可执行多路由贯穿登录/注册、笔记、计时器、图片、滚动与确认弹窗（2026-10-25），已于 2026-10-28 退役并由 `examples/notebook` 接替；
-- **P3 输入与焦点（当前阶段）**：P3.1a/b/c 已交付，下一步 D1 焦点提示（P3.2）→ 文本会话/IME（P3.3）；Windows 设备已上线，待完整地址与凭据后补验。
+- **P3 输入与焦点（当前阶段）**：P3.1a/b/c 已交付，下一步 D1 焦点提示（P3.2）→ 文本会话/IME（P3.3）；Windows 已补验（构建 0 错误、unit 85/85，`key-lifecycle`/`sdl-platform-input`/`notebook-data` 通过）。
 - **P4 作者与组件**：D6 Label 能力与测量 → 阶段 5 数据组件 → D2/D3。
 
 P1.1 与 P1.6 核心实现已完成，raylib 后端、工厂、枚举项、wrap 与依赖已完整删除。
