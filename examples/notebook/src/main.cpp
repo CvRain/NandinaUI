@@ -6,7 +6,6 @@
 #include <nandina/app/nan_application.hpp>
 #include <nandina/foundation/nan_logger.hpp>
 
-#include <print>
 #include <utility>
 
 int main() {
@@ -23,7 +22,12 @@ int main() {
     auto bootstrap =
         nan_example::notebook::data::bootstrap_database(database_path, application.resources());
     if (!bootstrap) {
-        std::println("notebook: {}", nan_example::notebook::data::describe(bootstrap.error()));
+        // Keep startup errors on the framework logger: std::println pulls terminal
+        // symbols that are not available from every Windows toolchain link line.
+        nandina::log::error(
+            "notebook: {}",
+            nan_example::notebook::data::describe(bootstrap.error())
+        );
         return 1;
     }
 
@@ -37,7 +41,9 @@ int main() {
 
     // Composition root: the application owns the store for the whole process.
     // Pages resolve NotebookStore through PageContext instead of constructing services.
-    application.use_store<nan_example::notebook::app::NotebookStore>(std::move(bootstrap->database));
+    application.use_store<nan_example::notebook::app::NotebookStore>(
+        std::move(bootstrap->database)
+    );
 
     const auto window_info = nandina::app::WindowConfig {
         .title = "Nandina Notebook",
