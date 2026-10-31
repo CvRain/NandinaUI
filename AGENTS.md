@@ -28,8 +28,9 @@ application shell. Version `0.1.0-alpha.1`.
   Components are authored in `showcase/`; UI tests live in the untracked `playground/`.
 - P3 is in progress: **P3.1a** (per-event pointer coordinates/modifier snapshots through the
   host seam) and **P3.1b** (framework-owned `LogicalKey`/`PhysicalKey` identities, press/repeat/
-  release lifecycle, SDL scancode/keycode mapping, unknown identity counting) are implemented.
-  Cross-type event ordering (P3.1c) and D1 focus/text-session work remain; see the roadmap.
+  release lifecycle, SDL scancode/keycode mapping, unknown identity counting) and **P3.1c**
+  (ordered cross-type `FrameInput::events` dispatched in capture order) are implemented.
+  D1 focus/text-session work remains; see the roadmap.
 - The plan and exit criteria are **not** owned by this file: read
   `docs/references/development_roadmap.md` and the D5 contract
   (`resource_build_and_deployment.md` §8) before claiming a sub-batch is complete.

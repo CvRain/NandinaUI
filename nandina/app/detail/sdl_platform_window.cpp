@@ -659,9 +659,11 @@ namespace nandina::app::detail
                 case SDL_EVENT_MOUSE_MOTION: {
                     pointer_ = foundation::NanPoint(event.motion.x, event.motion.y);
                     has_pointer_ = true;
-                    out.mouse_moves.emplace_back(
-                        pointer_,
-                        foundation::NanPoint(event.motion.xrel, event.motion.yrel)
+                    out.events.emplace_back(
+                        scene::MouseMoveEvent {
+                            pointer_,
+                            foundation::NanPoint(event.motion.xrel, event.motion.yrel),
+                        }
                     );
                     break;
                 }
@@ -674,13 +676,15 @@ namespace nandina::app::detail
                     }
                     pointer_ = foundation::NanPoint(event.button.x, event.button.y);
                     has_pointer_ = true;
-                    out.mouse_buttons.emplace_back(
-                        *button,
-                        event.type == SDL_EVENT_MOUSE_BUTTON_DOWN
-                            ? scene::MouseButtonEvent::Action::press
-                            : scene::MouseButtonEvent::Action::release,
-                        pointer_,
-                        modifiers_
+                    out.events.emplace_back(
+                        scene::MouseButtonEvent {
+                            *button,
+                            event.type == SDL_EVENT_MOUSE_BUTTON_DOWN
+                                ? scene::MouseButtonEvent::Action::press
+                                : scene::MouseButtonEvent::Action::release,
+                            pointer_,
+                            modifiers_,
+                        }
                     );
                     break;
                 }
@@ -689,10 +693,12 @@ namespace nandina::app::detail
                     pointer_ = foundation::NanPoint(event.wheel.mouse_x, event.wheel.mouse_y);
                     has_pointer_ = true;
                     // SDL wheel.y and MouseWheelEvent both use positive y for upward scroll.
-                    out.mouse_wheels.emplace_back(
-                        pointer_,
-                        foundation::NanPoint(event.wheel.x, event.wheel.y),
-                        modifiers_
+                    out.events.emplace_back(
+                        scene::MouseWheelEvent {
+                            pointer_,
+                            foundation::NanPoint(event.wheel.x, event.wheel.y),
+                            modifiers_,
+                        }
                     );
                     break;
                 }
@@ -724,14 +730,18 @@ namespace nandina::app::detail
                     {
                         ++unknown_keys_;
                     }
-                    out.keys.emplace_back(logical, action, modifiers_, physical);
+                    out.events.emplace_back(
+                        scene::KeyEvent {logical, action, modifiers_, physical}
+                    );
                     break;
                 }
 
                 case SDL_EVENT_TEXT_INPUT: {
                     // SDL 给的已经是合成好的 UTF-8，框架的 TextInputEvent 正好要这个。
                     if (event.text.text != nullptr && event.text.text[0] != '\0') {
-                        out.text_inputs.emplace_back(std::string(event.text.text));
+                        out.events.emplace_back(
+                            scene::TextInputEvent {std::string(event.text.text)}
+                        );
                     }
                     break;
                 }

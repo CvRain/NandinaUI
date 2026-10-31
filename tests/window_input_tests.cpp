@@ -39,6 +39,43 @@ namespace
     void push(SDL_Event event) {
         REQUIRE(SDL_PushEvent(&event));
     }
+
+    /// Focusable target that records the order in which it receives input.
+    class OrderedTarget final: public scene::NanNode2D {
+    public:
+        explicit OrderedTarget(std::vector<std::string>* trace): trace_(trace) {}
+
+        [[nodiscard]] auto contains_point(foundation::NanPoint point) const -> bool override {
+            return point.get_x() >= 0 && point.get_x() < 100 && point.get_y() >= 0
+                && point.get_y() < 100;
+        }
+        [[nodiscard]] auto is_focusable() const -> bool override {
+            return true;
+        }
+        auto on_input(scene::InputEvent& event) -> bool override {
+            switch (event.type()) {
+                case scene::EventType::mouse_button:
+                    trace_->push_back(
+                        static_cast<scene::MouseButtonEvent&>(event).is_pressed() ? "press"
+                                                                                  : "release"
+                    );
+                    return true;
+                case scene::EventType::text_input:
+                    trace_->push_back(
+                        "text:" + std::string(static_cast<scene::TextInputEvent&>(event).text())
+                    );
+                    return true;
+                case scene::EventType::focus_enter:
+                    trace_->push_back("focus");
+                    return false;
+                default:
+                    return false;
+            }
+        }
+
+    private:
+        std::vector<std::string>* trace_;
+    };
 } // namespace
 
 TEST_CASE(
@@ -157,5 +194,68 @@ TEST_CASE("window forwards typed key lifecycle to the focused editor", "[app][in
     // 先释放测试持有的控件：窗口关闭后 device 已销毁，而 FontPipeline 析构会回访
     // device（已知关闭顺序缺陷，见 design_tokens.md）；应用级内容在 close() 内释放。
     edit.reset();
+    window.close();
+}
+
+TEST_CASE(
+    "window dispatches same-frame pointer and text events in capture order",
+    "[app][input][order]"
+) {
+    using namespace nandina;
+    app::NanApplication application;
+    app::WindowConfig config;
+    config.width = 400;
+    config.height = 240;
+    config.vsync = false;
+    config.target_fps = 0;
+    config.backend = app::WindowBackend::sdl3;
+    app::NanWindow window(application, config);
+    window.open();
+    std::vector<std::string> first_trace;
+    std::vector<std::string> second_trace;
+    auto root = std::make_shared<scene::NanControl>();
+    auto first = std::make_shared<OrderedTarget>(&first_trace);
+    auto second = std::make_shared<OrderedTarget>(&second_trace);
+    second->set_position(foundation::NanPoint(100.0F, 0.0F));
+    root->add_child(first);
+    root->add_child(second);
+    window.set_content(root);
+    window.tick();
+    SDL_FlushEvents(SDL_EVENT_FIRST, SDL_EVENT_LAST);
+
+    int window_count = 0;
+    SDL_Window** windows = SDL_GetWindows(&window_count);
+    REQUIRE(windows != nullptr);
+    REQUIRE(window_count == 1);
+    const auto window_id = SDL_GetWindowID(windows[0]);
+    SDL_free(windows);
+
+    const auto click = [window_id](const float x) {
+        for (const auto type: {SDL_EVENT_MOUSE_BUTTON_DOWN, SDL_EVENT_MOUSE_BUTTON_UP}) {
+            SDL_Event event {};
+            event.type = type;
+            event.button.windowID = window_id;
+            event.button.button = SDL_BUTTON_LEFT;
+            event.button.down = type == SDL_EVENT_MOUSE_BUTTON_DOWN;
+            event.button.x = x;
+            event.button.y = 30.0F;
+            push(event);
+        }
+    };
+    click(20.0F);
+    SDL_Event text {};
+    text.type = SDL_EVENT_TEXT_INPUT;
+    text.text.windowID = window_id;
+    text.text.text = "x";
+    push(text);
+    click(120.0F);
+    window.tick();
+
+    // 文本必须到达点击 A 时的焦点；不能被排到点击 B 之后。
+    REQUIRE(first_trace == std::vector<std::string> {"focus", "press", "release", "text:x"});
+    REQUIRE(second_trace == std::vector<std::string> {"focus", "press", "release"});
+    REQUIRE(window.scene_tree().focused_node() == second.get());
+    first.reset();
+    second.reset();
     window.close();
 }

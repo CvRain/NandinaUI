@@ -457,7 +457,7 @@ SDF 只等待混合正确、SDL3 来源与 shader 交付定形，不等待整个
 
 # D8 键码与输入码空间
 
-> P3.1a 事件快照与 P3.1b 键身份/生命周期已实施（2026-10-29）；跨类型保序仍属 P3.1c。
+> P3.1a 事件快照、P3.1b 键身份/生命周期与 P3.1c 跨类型保序均已实施（2026-10-29/31）。
 > 分清物理位置、逻辑含义与提交文本，再迁移平台映射与消费者；键身份的精确类型/签名另批定形。
 
 ## 当前实现
@@ -470,7 +470,7 @@ SDF 只等待混合正确、SDL3 来源与 shader 交付定形，不等待整个
   不再以帧末 `frame_input_.pointer` 替换。同帧“在 A 按下、移到 B”仍命中 A。
 - `FrameInput` 的事件已有坐标和修饰键字段；独立的帧级 `pointer` / `modifiers` 是当前状态，
   不得用它们替换历史事件字段。
-- `FrameInput` 按事件类型分多个数组，`NanWindow` 分组派发，不能保持跨类型事件原始先后顺序。
+- `FrameInput::events` 按平台队列顺序保存跨类型事件，`NanWindow` 顺序派发（P3.1c）。
 - 提交文本单独使用 UTF-8 `TextInputEvent`；组合输入会话仍属 D1 第二阶段。
 
 ## 键身份与事件契约
@@ -568,7 +568,32 @@ scancode、key、mod、down 和 repeat。mapper 应消费事件时快照，不�
   恢复后通过。
 - Linux 验证：主套件 108/108（含新 `key-lifecycle`）；ASan/UBSan unit 85 + window-lifecycle
   SKIP；no-RTTI unit 87/87；no-SQLite/headless unit 82 + 1 SKIP；纯工具 8/8；release check
-  8/8，无 SKIP。实际物理键鼠、非 US 实机布局与 Windows 仍未验收；跨类型保序留在 P3.1c。
+  8/8，无 SKIP。实际物理键鼠、非 US 实机布局与 Windows 仍未验收。
+
+### P3.1c：跨类型事件保序（2026-10-31 已实施）
+
+- `FrameInput` 不再按类型分数组，而是一个 `std::variant` 事件序列，平台按
+  `SDL_PumpEvents` 顺序追加。宿主 `NanWindow` 按同一顺序派发，不重新分组。
+- 每事件仍携带自己的坐标、修饰键与键身份；帧级 `pointer` / `modifiers` 只作当前状态。
+  viewport 映射在每个指针事件派发前应用，move 的 delta 仍按映射后坐标计算。
+- 文本事件不再延迟到所有指针/键事件之后：同帧“点击 A → 文本 → 点击 B”中，文本到达
+  点击 A 时的焦点；点击 B 之后才改变焦点。
+- 不在本批：`MouseEnter` / `MouseLeave` 仍由场景命中测试派发，不是平台事件；IME 组合
+  会话仍属 P3.3。
+- 验收：SDL 队列测试断言跨类型顺序；新增真实 `NanWindow::tick()` 用例记录两个可聚焦
+  目标的 press/release/text 顺序，要求文本只到达第一个目标。故障注入把文本改成末尾
+  分组派发时该用例失败。
+
+#### 实施与验证记录（2026-10-31）
+
+- 实现：`app/platform_window.hpp`（`FrameEvent` 变体与 `events`）、
+  `app/detail/sdl_platform_window.cpp`（按队列追加）、`app/nan_window.cpp`（`std::visit`
+  顺序派发）。
+- 回归：`sdl-platform-input` 11 用例/366 断言，含跨类型顺序断言与同帧焦点/文本/点击顺序；
+  红测见上一节。
+- Linux 验证：主套件 108/108（`notebook-data` 在作者命名空间迁移后通过）；ASan/UBSan
+  unit 85 + window-lifecycle SKIP；no-RTTI 87/87；no-SQLite/headless 82 + 1 SKIP；
+  纯工具 8/8；release check 8/8。Windows 待设备地址与凭据后补验。
 
 
 ## 实施与验收

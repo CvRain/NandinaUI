@@ -25,10 +25,20 @@
 #include <memory>
 #include <string>
 #include <string_view>
+#include <variant>
 #include <vector>
 
 namespace nandina::app
 {
+
+    /// 平台在 SDL/PumpEvents 顺序中捕获的一个输入事件。顺序是契约的一部分：
+    /// 宿主按这个顺序派发，不按类型重新分组。
+    using FrameEvent = std::variant<
+        scene::MouseMoveEvent,
+        scene::MouseButtonEvent,
+        scene::MouseWheelEvent,
+        scene::KeyEvent,
+        scene::TextInputEvent>;
 
     /// 平台层翻译好的一帧输入。
     ///
@@ -36,11 +46,8 @@ namespace nandina::app
     /// 发生的事件翻译进去。指针位置与修饰键单独给出，因为它们每帧都要读（而不只是变化时）。
     /// 每事件坐标与修饰键是捕获时快照；独立的帧级状态不得覆盖历史事件字段。
     struct FrameInput {
-        std::vector<scene::MouseMoveEvent> mouse_moves;
-        std::vector<scene::MouseButtonEvent> mouse_buttons;
-        std::vector<scene::MouseWheelEvent> mouse_wheels;
-        std::vector<scene::KeyEvent> keys;
-        std::vector<scene::TextInputEvent> text_inputs;
+        /// 跨类型事件按平台队列顺序排列；宿主必须按同一顺序派发。
+        std::vector<FrameEvent> events;
 
         /// 指针是否有效（无指针设备时 false）。
         bool has_pointer = false;

@@ -18,6 +18,13 @@
 
 ## 2. 三档分类
 
+2026-10-31 P3.1c 有序输入帧（experimental，破坏性，已实施）：`app::FrameInput`
+由按类型分数组改为 `std::vector<FrameEvent> events`，`FrameEvent` 是鼠标移动/按钮/滚轮、
+键与提交文本的 `std::variant`。自定义平台按捕获顺序追加事件；宿主按同一顺序派发。
+帧级 `pointer` / `modifiers` 保留为当前状态，不替代事件字段。逐事件 viewport 映射与
+坐标/修饰键快照不变；`MouseEnter`/`MouseLeave` 仍由场景命中测试产生。证据见
+[D8 P3.1c](reference_draft.md#p31c跨类型事件保序2026-10-31-已实施)。
+
 2026-10-29 P3.1b 键身份（experimental，破坏性，已实施）：新增
 `foundation/input.hpp` 的 `LogicalKey` / `PhysicalKey`。`scene::KeyEvent` 改用类型化
 逻辑键构造，增加物理键参数与查询；删除 int 构造、`keycode()` 和

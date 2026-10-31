@@ -1,6 +1,6 @@
 # 项目进度与下一步
 
-> 2026-10-29 文档同步：本文是**已完成批次与设计议题状态的唯一入口**；D1–D8 是设计议题编号，不是执行顺序。批次 1、2 已完成；批次 3 的生产接入（填充/描边/圆/线段/圆环扇区）已完成，并通过 Vulkan(SPIR-V) 与 Windows D3D12(DXIL) 设备级像素验收；Linux 与 Windows 页面 golden、release 性能基线与预算门禁已落地（路径契约 §10–§14；Windows 性能为参考数据）。**P2 已交付；P3.1a 事件快照与 P3.1b 键身份/生命周期已交付，当前推进 P3（下一步 P3.1c 跨类型保序）**；排序与退出条件见[开发路线](development_roadmap.md)。本文沿用历史验收记录，不声称本轮新增实现或验证。
+> 2026-10-29 文档同步：本文是**已完成批次与设计议题状态的唯一入口**；D1–D8 是设计议题编号，不是执行顺序。批次 1、2 已完成；批次 3 的生产接入（填充/描边/圆/线段/圆环扇区）已完成，并通过 Vulkan(SPIR-V) 与 Windows D3D12(DXIL) 设备级像素验收；Linux 与 Windows 页面 golden、release 性能基线与预算门禁已落地（路径契约 §10–§14；Windows 性能为参考数据）。**P2 已交付；P3.1a/b/c 事件快照、键身份/生命周期与跨类型保序均已交付，当前进入 D1 焦点提示**；排序与退出条件见[开发路线](development_roadmap.md)。本文沿用历史验收记录，不声称本轮新增实现或验证。
 
 ## 当前能力边界
 
@@ -29,7 +29,7 @@
 | D5 资源构建与部署 | 范围与目标契约冻结 | **P2 已交付**：P2.1a/P2.1b/P2.2a–P2.2d/P2.3a–P2.4c；见[正式契约](resource_build_and_deployment.md) §8 与内部六批。示例应用已转入 notebook 改造（数据层先落地），服务/UI 与 showcase 组件由维护者手工编写 |
 | D6 作者 DSL 与内容测量 | 方向已接受；Label 能力、绑定覆盖、测量详细契约待审阅 | 未实施；[D6](authoring_dsl_and_content_measurement.md)，测量先于 Section/语法糖 |
 | D7 渲染质量与图片 | 混合修复 → SDF 高质量路径；共享解码；分层处理圆角裁剪 | 混合修复、生产 SDF（填充/描边/圆/线段/弧）与设备级/页面级验收（Linux golden）、共享图片解码已落地；阴影/裁剪已交付（SDF mode 3/4），MSL 未验收，raylib 已退役，Windows 页面 CPU 基线已批 3 条，Windows 页面基线 6 条已批准（CPU 3 + SDF 3，2026-10-22）；Windows 性能参考基线（CPU + SDF 路径）已归档；[D7](reference_draft.md#d7-渲染质量与后端视觉一致性) |
-| D8 键码与输入事件 | 框架拥有键身份；物理位置、逻辑含义与提交文本分开 | **P3.1a 事件快照与 P3.1b 键身份/生命周期已实施（2026-10-29）**：类型化逻辑/物理键、press/repeat/release、独立 unknown；跨类型事件保序留给 P3.1c。见[路线图](development_roadmap.md#p3-输入与焦点当前阶段) 与 [D8](reference_draft.md#d8-键码与输入码空间) |
+| D8 键码与输入事件 | 框架拥有键身份；物理位置、逻辑含义与提交文本分开 | **P3.1a/b/c 均已实施（2026-10-29/31）**：事件快照、类型化逻辑/物理键与键生命周期、跨类型事件保序。见[路线图](development_roadmap.md#p3-输入与焦点当前阶段) 与 [D8](reference_draft.md#d8-键码与输入码空间) |
 | 依赖工程 | wrap-git；默认 vendored，system/auto 显式选择；功能与来源开关分离 | **已完成迁移**（§2.5–§2.7）：11 个依赖全部 wrap-git + 完整 commit pin（只剩字体包为 submodule、SQLite 仍为 amalgamation），SDL3 三态解析与 `deps.json`、pin/dirty 校验、SDK 依赖源码收集与裁剪、vendored 消费 fixture、CI 三条显式路径、`portable-bundle` 守卫、`header-surface` 门禁均已落地。**仍未完成**：OS 包层面的 DSO 打包（暂无应用安装路径）、内部类型进公开签名的评审项、后端拆库 |
 
 ## 推进顺序与批次关口
@@ -44,7 +44,7 @@
 | 2 SDL3 来源与交付（**已完成**） | 实测 CMake wrap、固定版本、三态来源和解析报告；接 CI/SDK；建立[头文件分类](sdk_surface.md)门禁 | **最小实验已完成**（[依赖策略 §2.4](dependency_policy.md)）：`SDL3-static`、`subproject_options()`、三态显式解析、离线与全新检出均实测；结论是不用 `[provide]` 变量名、失败必须 `error()`、随后已用 CI 固定的 Meson 1.7.2 复跑（§2.5）。正式接入已落地（[依赖策略 §2.5](dependency_policy.md)）：`sdl3_source` 三态默认 vendored、`deps.json` 报告、`.gitignore`、SDK 收集依赖源码并记录 manifest、fixture 断言依赖随包；**静态 SDL3 与 raylib 内置 GLFW 的 Wayland 协议符号冲突，vendored 改用共享库**。已交付：11 个依赖 wrap 化、三态来源与 `deps.json`、pin/dirty 校验、SDK 依赖源码收集与裁剪、两个 SDK 消费 fixture、CI 三条显式路径 + 预热/缓存、`portable-bundle` 与 `header-surface` 门禁、Meson 1.7.2 复跑。**明确不在本批**：OS 包/安装器层面的 DSO 打包（当前没有应用安装路径）、内部类型进公开签名的评审项、后端拆库（长期）。**ASan 构建目录例外**：vendored 共享 SDL3 撞 `ld.bfd` DWARF bug，该目录显式用系统 SDL3（81/81 通过）；CI 另有非阻断的 lld 实验任务 | 三态、关闭后端不获取、干净检出与预热后断网构建通过；SDL 路径被显式启用并验证；SDK 包含所需依赖。`.gitignore` 覆盖 wrap 检出目录、SDK 显式收集依赖源码与许可证、打包在 nodownload 下可重复（fixture 逐字节断言不失真） |
 | 3 D7 生产 SDF（**填充/描边/圆/线段/弧已完成并验收；其余图元与未验平台在范围外**） | 同帧多参数实验 → 产物交付 → 逐图元实现；保留有能力说明的基础降级路径。实验已有 64 字节参数、4 KiB 尾部读取、三档缩放/细描边/纹理与 SDL 字形交错、两条失败注入，并已定下**不可变参数 state + 有界缓存**的提交策略（[路径契约 §9](render_device_path_contract.md#9-参数提交策略2026-10-19-决定)）。生产设备已接入 SDF 填充/描边/圆/线段/弧（`analytic_antialiasing()`、`sdf_diagnostics()`、CPU 回落），由 `sdf-device` 设备级测试与 `parameter-state-cache` 单测覆盖。**已交付**：Linux 6 条页面 golden approved、release 性能基线（8 配置）与预算门禁；Windows D3D12/DXIL 实机设备级验收（与 Linux 直线 AA 逐位一致），Windows 6 条 approved（CPU 3 + SDF 3，2026-10-22）及 CPU/SDF 各 4 组性能参考基线；线段与圆环扇区（设备级像素/AA/seam/缓存断言，PC 基准 binds 不变且性能在预算内）。**未交付**：MSL 实机验收；Windows 复验方式见[验收清单](windows_acceptance.md)，已交付基线不再列为待采集 | 批次 1、2 已完成；Vulkan 与 DXIL 已分别实机验收，MSL 未验收；Linux/Windows 页面基线平台隔离，Windows 性能不跨平台比较、不参与计时门禁 | 生产图元/文字/图片纹理交错时参数和状态正确；分数缩放、细描边与半透明叠加通过；质量达标且像素差异有界可解释；报告稳态与交互成本（按[性能预算](performance_budget.md)协议采样，先报告模式），**每帧状态设置与 uniform 更新次数**、内存一并记录，新路径经审核建立自己的基线；驱动级逃生舱可用 |
 | 4 D7 共享图片解码（**已完成 2026-10-20**） | 应用服务提供默认 CPU 解码器，两后端复用；删除 `IPlatformWindow::make_image_decoder()`（破坏性变更，已按 [SDK 表面](sdk_surface.md) 记录）；SDL 补 `create_rgba_texture`；保持 crop/resize/tint | 解码库来源与行为定形；不依赖 SDF | **已交付**：vendored stb 解码（PNG/JPEG/BMP/GIF/TGA，crop/resize/tint）、`make_cpu_image_decoder()`、`NanApplication::set_image_decoder()`、三项能力（`can_decode`/`supports_direct_image_loading`/`supports_rgba_texture_upload`）、SDL 上传 + `draw_texture_region` 像素断言、`image-decoder` 8 用例（含损坏输入与后台线程）。**未做**：SDL 上完整 `Image` 页面的端到端采样（服务路径已由上传测试与能力矩阵覆盖）；WebP/QOI 不再支持（stb 无对应解码，原 raylib 路径也未启用 WebP） |
-| 5 D8 输入基础 | **P3.1a 已实施**：按钮/滚轮保留事件坐标，SDL 使用事件时修饰键快照；物理/逻辑键及 release/repeat/unknown 留给 P3.1b，跨类型保序留给 P3.1c，不扩展焦点策略或 IME | 无渲染前置；独立推进 | `sdl-platform-input` 4 用例/160 断言与独立 SDL → NanWindow smoke 通过；主套件 107/107、ASan 84 + 1 SKIP、no-RTTI 86/86，完整记录见 [D8](reference_draft.md#p31a事件快照2026-10-28)。后续另验多布局、键生命周期及跨类型顺序 |
+| 5 D8 输入基础 | **P3.1a/b/c 已实施**：事件坐标/修饰键快照、类型化逻辑/物理键与 press/repeat/release、跨类型事件保序；不扩展焦点策略或 IME | 无渲染前置；独立推进 | `sdl-platform-input` 11 用例/366 断言、`key-lifecycle` 5 用例通过；主套件 108/108、ASan 85 + 1 SKIP、no-RTTI 87/87，记录见 [D8](reference_draft.md#p31c跨类型事件保序2026-10-31-已实施)。后续另验真实布局与 Windows |
 | 6 D7 裁剪收口 | 先涟漪专用圆角交集，再按实际用例定形图片/子树嵌套裁剪 | 高质量图元路径；通用裁剪需单独协议 | 不外溢、状态恢复、能力为 false 的降级；绘制/命中遵循既有裁剪契约，不用专用图元冒充通用能力 |
 | 7 D1 第一阶段 | scene 统一焦点提示策略，widget/theme 消费结果 | 默认排在 D8 后复用事件语义；技术上不依赖完整 D8 或 D2 | 同节点模态变化、程序化恢复、窗口失活/激活、文本能力矩阵、两种 roving 模型与 paint-only 失效 |
 | 8 D6 首批 | 定形 Label 作者能力与绑定覆盖；完善有限宽度自然长高及缓存契约 | 详细 API 审阅；已有布局收敛回归保持 | Label 页面与 ComponentInfoTable 验收；宽度/内容/字体变动重测，纯绘制变动不无谓整形；无界 anchors 不靠固定高度掩盖 |
@@ -146,7 +146,7 @@ P2.4 的 `examples/lab` 已退役，示例应用改为 `examples/notebook`：目
 
 - **P1 收口与平台补齐**：发布检查脚本、Windows 页面 golden/性能基线、图片共享解码与 raylib 退役、SDF 阴影/裁剪（已完成，Windows GUI 项待人工）；
 - **P2 应用闭环**：已完成；P2.4 的 `examples/lab` 单可执行多路由贯穿登录/注册、笔记、计时器、图片、滚动与确认弹窗（2026-10-25），已于 2026-10-28 退役并由 `examples/notebook` 接替；
-- **P3 输入与焦点（当前阶段）**：P3.1a 事件快照与 P3.1b 键身份/生命周期已交付，下一步 P3.1c 跨类型保序 → D1 焦点提示 → 文本会话/IME；当前只做 Linux 验证，Windows 等维护者通知设备可用后恢复。
+- **P3 输入与焦点（当前阶段）**：P3.1a/b/c 已交付，下一步 D1 焦点提示（P3.2）→ 文本会话/IME（P3.3）；Windows 设备已上线，待完整地址与凭据后补验。
 - **P4 作者与组件**：D6 Label 能力与测量 → 阶段 5 数据组件 → D2/D3。
 
 P1.1 与 P1.6 核心实现已完成，raylib 后端、工厂、枚举项、wrap 与依赖已完整删除。

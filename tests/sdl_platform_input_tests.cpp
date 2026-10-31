@@ -4,6 +4,9 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <variant>
+#include <vector>
+
 namespace
 {
     using namespace nandina;
@@ -87,6 +90,27 @@ namespace
         SDL_WindowID window_id = 0;
     };
 
+    template<typename T>
+    auto events_of(const app::FrameInput& input) -> std::vector<T> {
+        std::vector<T> result;
+        for (const auto& frame_event: input.events) {
+            if (const auto* typed = std::get_if<T>(&frame_event)) {
+                result.push_back(*typed);
+            }
+        }
+        return result;
+    }
+
+    auto keys_of(const app::FrameInput& input) -> std::vector<scene::KeyEvent> {
+        return events_of<scene::KeyEvent>(input);
+    }
+    auto buttons_of(const app::FrameInput& input) -> std::vector<scene::MouseButtonEvent> {
+        return events_of<scene::MouseButtonEvent>(input);
+    }
+    auto wheels_of(const app::FrameInput& input) -> std::vector<scene::MouseWheelEvent> {
+        return events_of<scene::MouseWheelEvent>(input);
+    }
+
     void require_modifiers(
         const scene::KeyModifiers actual,
         const bool shift = false,
@@ -118,26 +142,35 @@ TEST_CASE("SDL input preserves same-frame event positions and modifier snapshots
     fixture.key(SDL_EVENT_KEY_UP, SDLK_B, SDL_KMOD_NONE);
 
     const auto input = fixture.poll();
-    REQUIRE(input.keys.size() == 3);
-    REQUIRE(input.mouse_buttons.size() == 2);
-    REQUIRE(input.mouse_wheels.size() == 2);
-    CHECK(input.keys[0].logical_key() == foundation::LogicalKey::a);
-    CHECK(input.keys[1].logical_key() == foundation::LogicalKey::b);
-    CHECK(input.keys[2].logical_key() == foundation::LogicalKey::b);
-    CHECK_FALSE(input.keys[2].is_pressed());
-    CHECK_FALSE(input.keys[2].is_press_or_repeat());
-    require_modifiers(input.keys[2].modifiers());
-    require_modifiers(input.keys[0].modifiers(), true);
-    require_modifiers(input.keys[1].modifiers(), false, true);
-    require_modifiers(input.mouse_buttons[0].modifiers(), true);
-    require_modifiers(input.mouse_buttons[1].modifiers(), false, true);
-    require_modifiers(input.mouse_wheels[0].modifiers(), true);
-    require_modifiers(input.mouse_wheels[1].modifiers(), false, true);
-    require_position(input.mouse_buttons[0], 12.0F, 23.0F);
-    require_position(input.mouse_buttons[1], 56.0F, 67.0F);
-    require_position(input.mouse_wheels[0], 34.0F, 45.0F);
-    require_position(input.mouse_wheels[1], 78.0F, 89.0F);
-    CHECK_FALSE(input.mouse_buttons[1].is_pressed());
+    REQUIRE(keys_of(input).size() == 3);
+    REQUIRE(buttons_of(input).size() == 2);
+    REQUIRE(wheels_of(input).size() == 2);
+    // 跨类型事件保留 SDL 队列顺序，不按类型重新分组。
+    REQUIRE(input.events.size() == 7);
+    CHECK(std::holds_alternative<scene::KeyEvent>(input.events[0]));
+    CHECK(std::holds_alternative<scene::MouseButtonEvent>(input.events[1]));
+    CHECK(std::holds_alternative<scene::MouseWheelEvent>(input.events[2]));
+    CHECK(std::holds_alternative<scene::KeyEvent>(input.events[3]));
+    CHECK(std::holds_alternative<scene::MouseButtonEvent>(input.events[4]));
+    CHECK(std::holds_alternative<scene::MouseWheelEvent>(input.events[5]));
+    CHECK(std::holds_alternative<scene::KeyEvent>(input.events[6]));
+    CHECK(keys_of(input)[0].logical_key() == foundation::LogicalKey::a);
+    CHECK(keys_of(input)[1].logical_key() == foundation::LogicalKey::b);
+    CHECK(keys_of(input)[2].logical_key() == foundation::LogicalKey::b);
+    CHECK_FALSE(keys_of(input)[2].is_pressed());
+    CHECK_FALSE(keys_of(input)[2].is_press_or_repeat());
+    require_modifiers(keys_of(input)[2].modifiers());
+    require_modifiers(keys_of(input)[0].modifiers(), true);
+    require_modifiers(keys_of(input)[1].modifiers(), false, true);
+    require_modifiers(buttons_of(input)[0].modifiers(), true);
+    require_modifiers(buttons_of(input)[1].modifiers(), false, true);
+    require_modifiers(wheels_of(input)[0].modifiers(), true);
+    require_modifiers(wheels_of(input)[1].modifiers(), false, true);
+    require_position(buttons_of(input)[0], 12.0F, 23.0F);
+    require_position(buttons_of(input)[1], 56.0F, 67.0F);
+    require_position(wheels_of(input)[0], 34.0F, 45.0F);
+    require_position(wheels_of(input)[1], 78.0F, 89.0F);
+    CHECK_FALSE(buttons_of(input)[1].is_pressed());
     CHECK(input.pointer.get_x() == 78.0F);
     CHECK(input.pointer.get_y() == 89.0F);
     // The frame summary remains current SDL state, not the last queued key snapshot.
@@ -151,15 +184,15 @@ TEST_CASE(
     PlatformInputFixture fixture;
     fixture.key(SDL_EVENT_KEY_DOWN, SDLK_A, SDL_KMOD_SHIFT);
     const auto first = fixture.poll();
-    REQUIRE(first.keys.size() == 1);
+    REQUIRE(keys_of(first).size() == 1);
     SDL_SetModState(SDL_KMOD_NONE);
     fixture.button(1.0F, 2.0F);
     fixture.wheel(3.0F, 4.0F);
     const auto second = fixture.poll();
-    REQUIRE(second.mouse_buttons.size() == 1);
-    REQUIRE(second.mouse_wheels.size() == 1);
-    require_modifiers(second.mouse_buttons[0].modifiers(), true);
-    require_modifiers(second.mouse_wheels[0].modifiers(), true);
+    REQUIRE(buttons_of(second).size() == 1);
+    REQUIRE(wheels_of(second).size() == 1);
+    require_modifiers(buttons_of(second)[0].modifiers(), true);
+    require_modifiers(wheels_of(second)[0].modifiers(), true);
     require_modifiers(second.modifiers);
 
     const auto unknown_before = fixture.window.unknown_key_count();
@@ -170,25 +203,25 @@ TEST_CASE(
     fixture.key(SDL_EVENT_KEY_UP, SDLK_UNKNOWN, SDL_KMOD_NONE);
     fixture.button(9.0F, 10.0F, false);
     const auto third = fixture.poll();
-    REQUIRE(third.keys.size() == 3);
-    CHECK(third.keys[0].logical_key() == foundation::LogicalKey::unknown);
-    CHECK(third.keys[0].physical_key() == foundation::PhysicalKey::unknown);
-    CHECK(third.keys[0].is_pressed());
-    CHECK(third.keys[1].logical_key() == foundation::LogicalKey::a);
-    CHECK_FALSE(third.keys[1].is_pressed());
-    CHECK(third.keys[1].is_press_or_repeat());
-    CHECK_FALSE(third.keys[2].is_press_or_repeat());
+    REQUIRE(keys_of(third).size() == 3);
+    CHECK(keys_of(third)[0].logical_key() == foundation::LogicalKey::unknown);
+    CHECK(keys_of(third)[0].physical_key() == foundation::PhysicalKey::unknown);
+    CHECK(keys_of(third)[0].is_pressed());
+    CHECK(keys_of(third)[1].logical_key() == foundation::LogicalKey::a);
+    CHECK_FALSE(keys_of(third)[1].is_pressed());
+    CHECK(keys_of(third)[1].is_press_or_repeat());
+    CHECK_FALSE(keys_of(third)[2].is_press_or_repeat());
     CHECK(fixture.window.unknown_key_count() == unknown_before + 2);
-    REQUIRE(third.mouse_buttons.size() == 2);
-    REQUIRE(third.mouse_wheels.size() == 1);
-    require_modifiers(third.mouse_buttons[0].modifiers(), false, true);
-    require_modifiers(third.mouse_wheels[0].modifiers(), false, false, false, true);
-    require_modifiers(third.mouse_buttons[1].modifiers());
+    REQUIRE(buttons_of(third).size() == 2);
+    REQUIRE(wheels_of(third).size() == 1);
+    require_modifiers(buttons_of(third)[0].modifiers(), false, true);
+    require_modifiers(wheels_of(third)[0].modifiers(), false, false, false, true);
+    require_modifiers(buttons_of(third)[1].modifiers());
 
     fixture.wheel(11.0F, 12.0F);
     const auto fourth = fixture.poll();
-    REQUIRE(fourth.mouse_wheels.size() == 1);
-    require_modifiers(fourth.mouse_wheels[0].modifiers());
+    REQUIRE(wheels_of(fourth).size() == 1);
+    require_modifiers(wheels_of(fourth)[0].modifiers());
 }
 
 TEST_CASE("SDL modifier snapshots synchronize at creation and focus boundaries", "[sdl][input]") {
@@ -196,27 +229,27 @@ TEST_CASE("SDL modifier snapshots synchronize at creation and focus boundaries",
     SDL_SetModState(SDL_KMOD_NONE);
     fixture.button(1.0F, 2.0F);
     auto input = fixture.poll();
-    REQUIRE(input.mouse_buttons.size() == 1);
-    require_modifiers(input.mouse_buttons[0].modifiers(), false, true);
+    REQUIRE(buttons_of(input).size() == 1);
+    require_modifiers(buttons_of(input)[0].modifiers(), false, true);
 
     fixture.focus(SDL_EVENT_WINDOW_FOCUS_LOST, fixture.window_id);
     fixture.button(3.0F, 4.0F);
     input = fixture.poll();
-    REQUIRE(input.mouse_buttons.size() == 1);
-    require_modifiers(input.mouse_buttons[0].modifiers());
+    REQUIRE(buttons_of(input).size() == 1);
+    require_modifiers(buttons_of(input)[0].modifiers());
 
     SDL_SetModState(SDL_KMOD_ALT);
     fixture.focus(SDL_EVENT_WINDOW_FOCUS_GAINED, fixture.window_id);
     fixture.wheel(5.0F, 6.0F);
     input = fixture.poll();
-    REQUIRE(input.mouse_wheels.size() == 1);
-    require_modifiers(input.mouse_wheels[0].modifiers(), false, false, true);
+    REQUIRE(wheels_of(input).size() == 1);
+    require_modifiers(wheels_of(input)[0].modifiers(), false, false, true);
 
     fixture.focus(SDL_EVENT_WINDOW_FOCUS_LOST, fixture.window_id + 1);
     fixture.button(7.0F, 8.0F);
     input = fixture.poll();
-    REQUIRE(input.mouse_buttons.size() == 1);
-    require_modifiers(input.mouse_buttons[0].modifiers(), false, false, true);
+    REQUIRE(buttons_of(input).size() == 1);
+    require_modifiers(buttons_of(input)[0].modifiers(), false, false, true);
 }
 
 TEST_CASE(
@@ -232,17 +265,17 @@ TEST_CASE(
     fixture.key(SDL_EVENT_KEY_DOWN, 0x00E9, SDL_KMOD_NONE, false, SDL_SCANCODE_2);
     fixture.key(SDL_EVENT_KEY_DOWN, 0x1F642, SDL_KMOD_NONE);
     const auto input = fixture.poll();
-    REQUIRE(input.keys.size() == 6);
-    CHECK(input.keys[0].logical_key() == foundation::LogicalKey::q);
-    CHECK(input.keys[2].logical_key() == foundation::LogicalKey::a);
-    CHECK(input.keys[0].physical_key() == foundation::PhysicalKey::q);
-    CHECK(input.keys[2].physical_key() == foundation::PhysicalKey::q);
-    CHECK(input.keys[3].logical_key() == foundation::LogicalKey::z);
-    CHECK(input.keys[3].physical_key() == foundation::PhysicalKey::y);
-    CHECK(input.keys[4].logical_key() == static_cast<foundation::LogicalKey>(0x00E9));
-    CHECK(input.keys[4].physical_key() == foundation::PhysicalKey::num_2);
-    CHECK(input.keys[5].logical_key() == static_cast<foundation::LogicalKey>(0x1F642));
-    CHECK(input.keys[5].physical_key() == foundation::PhysicalKey::unknown);
+    REQUIRE(keys_of(input).size() == 6);
+    CHECK(keys_of(input)[0].logical_key() == foundation::LogicalKey::q);
+    CHECK(keys_of(input)[2].logical_key() == foundation::LogicalKey::a);
+    CHECK(keys_of(input)[0].physical_key() == foundation::PhysicalKey::q);
+    CHECK(keys_of(input)[2].physical_key() == foundation::PhysicalKey::q);
+    CHECK(keys_of(input)[3].logical_key() == foundation::LogicalKey::z);
+    CHECK(keys_of(input)[3].physical_key() == foundation::PhysicalKey::y);
+    CHECK(keys_of(input)[4].logical_key() == static_cast<foundation::LogicalKey>(0x00E9));
+    CHECK(keys_of(input)[4].physical_key() == foundation::PhysicalKey::num_2);
+    CHECK(keys_of(input)[5].logical_key() == static_cast<foundation::LogicalKey>(0x1F642));
+    CHECK(keys_of(input)[5].physical_key() == foundation::PhysicalKey::unknown);
     CHECK(fixture.window.unknown_key_count() == 0);
 }
 
@@ -256,14 +289,14 @@ TEST_CASE(
     fixture.key(SDL_EVENT_KEY_DOWN, SDLK_UNKNOWN, SDL_KMOD_NONE);
     fixture.key(SDL_EVENT_KEY_UP, SDLK_UNKNOWN, SDL_KMOD_NONE);
     const auto input = fixture.poll();
-    REQUIRE(input.keys.size() == 4);
-    CHECK(input.keys[0].logical_key() == foundation::LogicalKey::unknown);
-    CHECK(input.keys[0].physical_key() == foundation::PhysicalKey::a);
-    CHECK(input.keys[1].logical_key() == foundation::LogicalKey::b);
-    CHECK(input.keys[1].physical_key() == foundation::PhysicalKey::unknown);
+    REQUIRE(keys_of(input).size() == 4);
+    CHECK(keys_of(input)[0].logical_key() == foundation::LogicalKey::unknown);
+    CHECK(keys_of(input)[0].physical_key() == foundation::PhysicalKey::a);
+    CHECK(keys_of(input)[1].logical_key() == foundation::LogicalKey::b);
+    CHECK(keys_of(input)[1].physical_key() == foundation::PhysicalKey::unknown);
     for (const auto index: {2, 3}) {
-        CHECK(input.keys[index].logical_key() == foundation::LogicalKey::unknown);
-        CHECK(input.keys[index].physical_key() == foundation::PhysicalKey::unknown);
+        CHECK(keys_of(input)[index].logical_key() == foundation::LogicalKey::unknown);
+        CHECK(keys_of(input)[index].physical_key() == foundation::PhysicalKey::unknown);
     }
     CHECK(fixture.window.unknown_key_count() == 2);
 }
@@ -333,19 +366,19 @@ TEST_CASE(
         SDL_SCANCODE_A
     );
     const auto input = fixture.poll();
-    REQUIRE(input.keys.size() == 9);
+    REQUIRE(keys_of(input).size() == 9);
     for (unsigned i = 0; i < 8; ++i) {
-        CHECK(input.keys[i].logical_key() == cases[i].logical);
-        CHECK(input.keys[i].physical_key() == cases[i].physical);
+        CHECK(keys_of(input)[i].logical_key() == cases[i].logical);
+        CHECK(keys_of(input)[i].physical_key() == cases[i].physical);
         require_modifiers(
-            input.keys[i].modifiers(),
+            keys_of(input)[i].modifiers(),
             i < 2,
             i >= 2 && i < 4,
             i >= 4 && i < 6,
             i >= 6
         );
     }
-    require_modifiers(input.keys[8].modifiers(), false, true, true);
+    require_modifiers(keys_of(input)[8].modifiers(), false, true, true);
 }
 
 TEST_CASE(
@@ -360,17 +393,17 @@ TEST_CASE(
     fixture.key(SDL_EVENT_KEY_DOWN, SDLK_END, SDL_KMOD_NONE, false, SDL_SCANCODE_KP_1);
     fixture.key(SDL_EVENT_KEY_DOWN, SDLK_KP_PLUS, SDL_KMOD_NONE, false, SDL_SCANCODE_KP_PLUS);
     const auto input = fixture.poll();
-    REQUIRE(input.keys.size() == 6);
-    CHECK(input.keys[0].logical_key() == foundation::LogicalKey::enter);
-    CHECK(input.keys[1].logical_key() == foundation::LogicalKey::enter);
-    CHECK(input.keys[0].physical_key() == foundation::PhysicalKey::enter);
-    CHECK(input.keys[1].physical_key() == foundation::PhysicalKey::keypad_enter);
-    CHECK(input.keys[2].logical_key() == foundation::LogicalKey::num_1);
-    CHECK(input.keys[4].logical_key() == foundation::LogicalKey::end);
-    CHECK(input.keys[2].physical_key() == foundation::PhysicalKey::keypad_1);
-    CHECK(input.keys[4].physical_key() == foundation::PhysicalKey::keypad_1);
-    CHECK(input.keys[5].logical_key() == static_cast<foundation::LogicalKey>('+'));
-    CHECK(input.keys[5].physical_key() == foundation::PhysicalKey::keypad_add);
+    REQUIRE(keys_of(input).size() == 6);
+    CHECK(keys_of(input)[0].logical_key() == foundation::LogicalKey::enter);
+    CHECK(keys_of(input)[1].logical_key() == foundation::LogicalKey::enter);
+    CHECK(keys_of(input)[0].physical_key() == foundation::PhysicalKey::enter);
+    CHECK(keys_of(input)[1].physical_key() == foundation::PhysicalKey::keypad_enter);
+    CHECK(keys_of(input)[2].logical_key() == foundation::LogicalKey::num_1);
+    CHECK(keys_of(input)[4].logical_key() == foundation::LogicalKey::end);
+    CHECK(keys_of(input)[2].physical_key() == foundation::PhysicalKey::keypad_1);
+    CHECK(keys_of(input)[4].physical_key() == foundation::PhysicalKey::keypad_1);
+    CHECK(keys_of(input)[5].logical_key() == static_cast<foundation::LogicalKey>('+'));
+    CHECK(keys_of(input)[5].physical_key() == foundation::PhysicalKey::keypad_add);
 }
 
 TEST_CASE(
@@ -380,39 +413,39 @@ TEST_CASE(
     PlatformInputFixture fixture;
     fixture.key(SDL_EVENT_KEY_DOWN, SDLK_A, SDL_KMOD_NONE, false, SDL_SCANCODE_Q);
     auto input = fixture.poll();
-    REQUIRE(input.keys.size() == 1);
-    CHECK(input.keys[0].is_pressed());
+    REQUIRE(keys_of(input).size() == 1);
+    CHECK(keys_of(input)[0].is_pressed());
     fixture.key(SDL_EVENT_KEY_DOWN, SDLK_Q, SDL_KMOD_SHIFT, true, SDL_SCANCODE_Q);
     fixture.key(SDL_EVENT_KEY_UP, SDLK_Q, SDL_KMOD_CTRL, false, SDL_SCANCODE_Q);
     input = fixture.poll();
-    REQUIRE(input.keys.size() == 2);
-    for (const auto& event: input.keys) {
+    REQUIRE(keys_of(input).size() == 2);
+    for (const auto& event: keys_of(input)) {
         CHECK(event.logical_key() == foundation::LogicalKey::a);
         CHECK(event.physical_key() == foundation::PhysicalKey::q);
         CHECK_FALSE(event.is_pressed());
     }
-    CHECK(input.keys[0].is_press_or_repeat());
-    CHECK_FALSE(input.keys[1].is_press_or_repeat());
-    require_modifiers(input.keys[0].modifiers(), true);
-    require_modifiers(input.keys[1].modifiers(), false, true);
+    CHECK(keys_of(input)[0].is_press_or_repeat());
+    CHECK_FALSE(keys_of(input)[1].is_press_or_repeat());
+    require_modifiers(keys_of(input)[0].modifiers(), true);
+    require_modifiers(keys_of(input)[1].modifiers(), false, true);
     fixture.key(SDL_EVENT_KEY_UP, SDLK_Z, SDL_KMOD_NONE, false, SDL_SCANCODE_Q);
     input = fixture.poll();
-    REQUIRE(input.keys.size() == 1);
-    CHECK(input.keys[0].logical_key() == foundation::LogicalKey::z);
+    REQUIRE(keys_of(input).size() == 1);
+    CHECK(keys_of(input)[0].logical_key() == foundation::LogicalKey::z);
 
     fixture.key(SDL_EVENT_KEY_DOWN, SDLK_A, SDL_KMOD_NONE, false, SDL_SCANCODE_Q);
     (void)fixture.poll();
     fixture.focus(SDL_EVENT_WINDOW_FOCUS_LOST, fixture.window_id + 1);
     fixture.key(SDL_EVENT_KEY_DOWN, SDLK_Q, SDL_KMOD_NONE, true, SDL_SCANCODE_Q);
     input = fixture.poll();
-    REQUIRE(input.keys.size() == 1);
-    CHECK(input.keys[0].logical_key() == foundation::LogicalKey::a);
+    REQUIRE(keys_of(input).size() == 1);
+    CHECK(keys_of(input)[0].logical_key() == foundation::LogicalKey::a);
     fixture.focus(SDL_EVENT_WINDOW_FOCUS_LOST, fixture.window_id);
     input = fixture.poll();
-    CHECK(input.keys.empty()); // Focus loss clears state without synthesizing releases.
+    CHECK(keys_of(input).empty()); // Focus loss clears state without synthesizing releases.
     fixture.key(SDL_EVENT_KEY_UP, SDLK_Q, SDL_KMOD_NONE, false, SDL_SCANCODE_Q);
     input = fixture.poll();
-    REQUIRE(input.keys.size() == 1);
-    CHECK(input.keys[0].logical_key() == foundation::LogicalKey::q);
-    CHECK_FALSE(input.keys[0].is_press_or_repeat());
+    REQUIRE(keys_of(input).size() == 1);
+    CHECK(keys_of(input)[0].logical_key() == foundation::LogicalKey::q);
+    CHECK_FALSE(keys_of(input)[0].is_press_or_repeat());
 }
