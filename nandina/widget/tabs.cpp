@@ -329,7 +329,9 @@ namespace nandina::widget
             );
         }
 
-        if (focused_ && !disabled_ && style.focus.width > 0.0F) {
+        if (focused_ && !disabled_ && style.focus.width > 0.0F
+            && primitives::focus_hint_visible(*this))
+        {
             primitives::FocusRingPainter::paint(
                 context,
                 world,

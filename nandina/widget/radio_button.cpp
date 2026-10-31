@@ -248,7 +248,9 @@ namespace nandina::widget
         );
         text_.draw_at(context, text_position);
 
-        if (focused() && !disabled() && style.focus.width > 0.0F) {
+        if (focused() && !disabled() && style.focus.width > 0.0F
+            && primitives::focus_hint_visible(*this))
+        {
             primitives::FocusRingPainter::paint(
                 context,
                 world,

@@ -29,8 +29,11 @@ application shell. Version `0.1.0-alpha.1`.
 - P3 is in progress: **P3.1a** (per-event pointer coordinates/modifier snapshots through the
   host seam) and **P3.1b** (framework-owned `LogicalKey`/`PhysicalKey` identities, press/repeat/
   release lifecycle, SDL scancode/keycode mapping, unknown identity counting) and **P3.1c**
-  (ordered cross-type `FrameInput::events` dispatched in capture order) are implemented.
-  D1 focus/text-session work remains; see the roadmap.
+  (ordered cross-type `FrameInput::events` dispatched in capture order) are implemented, and
+  **P3.2a** (D1 focus-hint core: `InputModality`/request context, `should_show_focus_hint()`,
+  window activation gate, paint-only invalidation, widget ring migration) has landed.
+  P3.2b (showcase page, roving-model/popup-restore/read-only acceptance) and the D1 text session
+  remain; see the roadmap.
 - The plan and exit criteria are **not** owned by this file: read
   `docs/references/development_roadmap.md` and the D5 contract
   (`resource_build_and_deployment.md` §8) before claiming a sub-batch is complete.

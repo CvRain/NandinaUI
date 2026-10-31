@@ -97,6 +97,9 @@ namespace nandina::widget::primitives
         void draw_at(render::DrawContext& ctx, foundation::NanPoint position);
 
         [[nodiscard]] auto is_focusable() const -> bool override;
+
+        /// Editable targets keep a visible hint even for pointer focus (D1 phase 1).
+        [[nodiscard]] auto focus_hint_requirement() const -> scene::FocusHintRequirement override;
         auto handle_input(scene::InputEvent& event, scene::IClipboard* clipboard) -> bool;
         auto on_input(scene::InputEvent& event) -> bool override;
         auto on_draw(render::DrawContext& ctx) -> void override;

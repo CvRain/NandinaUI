@@ -380,6 +380,10 @@ namespace nandina::app
         frame_input_.has_pointer = false;
         platform_->poll_input(frame_input_);
 
+        if (frame_input_.window_active.has_value()) {
+            tree_.set_window_active(*frame_input_.window_active);
+        }
+
         const auto to_logical = [this](const foundation::NanPoint screen_pos) {
             return viewport_mapping_ ? viewport_mapping_->screen_to_logical(screen_pos)
                                      : screen_pos;

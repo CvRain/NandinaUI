@@ -93,6 +93,7 @@ namespace nandina::app::detail
         /// 最近一次鼠标事件的位置（窗口坐标），仅作帧尾指针状态。
         foundation::NanPoint pointer_ {};
         bool has_pointer_ = false;
+        bool window_active_ = false;
 
         /// 按 SDL 队列顺序推进；不能在每帧开始用全局状态覆盖先前事件的修饰键。
         scene::KeyModifiers modifiers_ {};

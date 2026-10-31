@@ -324,6 +324,10 @@ path = "nandina/scene/frame_scheduler.hpp"
 level = "experimental"
 
 [[headers]]
+path = "nandina/scene/focus_hint.hpp"
+level = "experimental"
+
+[[headers]]
 path = "nandina/scene/input_event.hpp"
 level = "experimental"
 

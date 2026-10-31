@@ -534,6 +534,7 @@ namespace nandina::app::detail
         should_close_ = false;
         has_pointer_ = false;
         pointer_ = foundation::NanPoint::zero();
+        window_active_ = (SDL_GetWindowFlags(window_) & SDL_WINDOW_INPUT_FOCUS) != 0;
         modifiers_ = translate_modifiers(SDL_GetModState());
         has_frame_tick_ = false;
         last_frame_ns_ = 0;
@@ -574,6 +575,7 @@ namespace nandina::app::detail
         last_present_ns_ = 0;
         modifiers_ = {};
         held_keys_.fill({});
+        window_active_ = false;
     }
 
     auto SdlPlatformWindow::is_ready() const -> bool {
@@ -645,6 +647,7 @@ namespace nandina::app::detail
 
                 case SDL_EVENT_WINDOW_FOCUS_LOST:
                     if (event.window.windowID == SDL_GetWindowID(window_)) {
+                        window_active_ = false;
                         modifiers_ = {};
                         held_keys_.fill({});
                     }
@@ -652,6 +655,7 @@ namespace nandina::app::detail
 
                 case SDL_EVENT_WINDOW_FOCUS_GAINED:
                     if (event.window.windowID == SDL_GetWindowID(window_)) {
+                        window_active_ = true;
                         modifiers_ = translate_modifiers(SDL_GetModState());
                     }
                     break;
@@ -760,6 +764,7 @@ namespace nandina::app::detail
         out.pointer = has_pointer_ ? pointer_ : foundation::NanPoint(queried_x, queried_y);
         // 帧级状态与事件快照不同：保留 SDL 当前状态，不能反向覆盖排队事件的快照。
         out.modifiers = translate_modifiers(SDL_GetModState());
+        out.window_active = window_active_;
     }
 
     void SdlPlatformWindow::present() {

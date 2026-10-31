@@ -443,6 +443,10 @@ namespace nandina::scene
         return nullptr;
     }
 
+    auto NanNode::focus_hint_requirement() const -> FocusHintRequirement {
+        return FocusHintRequirement::context_dependent;
+    }
+
     auto NanNode::is_visible_in_tree() const -> bool {
         auto* p = parent();
         return p == nullptr || p->is_visible_in_tree();

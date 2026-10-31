@@ -8,7 +8,7 @@
 | --- | --- | --- |
 | 作者 DSL 与文本 | builder/`configure`、Text/Label 与多种文本溢出策略可用；D6 已归档为待审阅设计 | Label 作者能力、样式绑定优先级、有限宽度内容测量与 Section 顺序均待按 [D6](authoring_dsl_and_content_measurement.md) 定形 |
 | 组件与浮层 | 阶段 1–4 的基础设施与清单已经落地；阶段 5 未开始 | 复合数据组件需要稳定的布局、选择和虚拟化契约 |
-| 输入与焦点 | 现有鼠标/键盘、输入焦点与作用域可用；D1 统一交互语义、焦点提示和文本会话的设计已接受 | [焦点与输入](focus_and_input.md) 为 planned：先实现鼠标/键盘提示策略，再接文本输入会话与其他设备 |
+| 输入与焦点 | 现有鼠标/键盘、输入焦点与作用域可用；焦点提示策略（模态、窗口门槛、paint-only）已接入 scene 与组件的焦点环绘制 | D1 第二阶段文本会话/软键盘与触摸/笔/手柄适配仍待；Showcase 输入与焦点页、roving 专项与弹窗恢复专项未完成，见[焦点与输入](focus_and_input.md) |
 | 文本与分层 | 纯布局约束在 `foundation`，文本布局协议在 `text`，字体请求值在 `theme`；旧布局、文本与字体转发入口已退出 | `theme::StyleDocument` 对字体注册的依赖仍待收口 |
 | 路由元数据 | 路由身份由页面类型 `PageKey` 确定；当前 `type` 字段既分组也作为标题 | D3 初步方案已接受、未实施：重命名 `nav_group`；空值是不分组、无标题，route 仍可见；分组按值全局合并 |
 | 平台与渲染 | 默认启用 SDL3（唯一内置后端），raylib 已删除；显式关闭 SDL3 时须注入平台才能打开窗口；`IPlatformWindow`、设备包装入口和三页 trace 对照已存在。生产 SDL 的填充/描边/圆/线段/弧已有 SDF：Linux Vulkan(SPIR-V) 与 Windows D3D12(DXIL) 均通过设备级像素验收，其余图元仍走 CPU 几何 | 混合/AA/图片/裁剪见 D7，键码见 D8；Windows 为实验性（构建/单元/doctor/DXIL 已验收，无应用交付承诺），macOS 不支持，Web 非交付路径。D4 历史 P3 落地不等于其 P0–P4 全部验收完成 |
@@ -22,7 +22,7 @@
 
 | 议题 | 当前结论 | 实施状态与入口 |
 | --- | --- | --- |
-| D1 输入、焦点与文本会话 | 设计方向已接受；焦点事实、提示策略、文本会话分离 | 未实施；[正式契约](focus_and_input.md)。先焦点提示，随后组合输入/软键盘，再其他设备 |
+| D1 输入、焦点与文本会话 | 焦点事实、提示策略、文本会话分离 | **第一阶段核心已实施（P3.2a，2026-10-31）**：输入模态/请求上下文、统一 `should_show_focus_hint()`、窗口激活门槛、paint-only 失效与组件绘制迁移；Showcase 页、roving 专项、弹窗恢复与文本会话仍待后续。见[正式契约](focus_and_input.md) |
 | D2 主题方案与状态订阅 | 讨论已汇总；只读状态、事件和主题方案模型需定形 | 待审阅；[主题设计](theme_authoring_and_state.md)。先解决状态可观察性，完整主题作者模型另批 |
 | D3 导航分组 | `type → nav_group`、空值未分组、同值全局合并已接受 | 未实施；[D3](reference_draft.md#d3-路由身份与导航分组开放到哪一层)，独立小批 |
 | D4 平台与后端 | SDL3 默认路径与 host seam 已落地，raylib 已完整退役 | **已收尾**：生产 SDF 在 Vulkan 与 Windows D3D12 通过设备级验收；[阶段证据](platform_backend_contract.md)。Windows 为实验性支持，macOS 不支持，Web 不是交付面 |
@@ -147,7 +147,7 @@ P2.4 的 `examples/lab` 已退役，示例应用改为 `examples/notebook`：目
 
 - **P1 收口与平台补齐**：发布检查脚本、Windows 页面 golden/性能基线、图片共享解码与 raylib 退役、SDF 阴影/裁剪（已完成，Windows GUI 项待人工）；
 - **P2 应用闭环**：已完成；P2.4 的 `examples/lab` 单可执行多路由贯穿登录/注册、笔记、计时器、图片、滚动与确认弹窗（2026-10-25），已于 2026-10-28 退役并由 `examples/notebook` 接替；
-- **P3 输入与焦点（当前阶段）**：P3.1a/b/c 已交付，下一步 D1 焦点提示（P3.2）→ 文本会话/IME（P3.3）；Windows 已补验（构建 0 错误、unit 85/85，`key-lifecycle`/`sdl-platform-input`/`notebook-data` 通过）。
+- **P3 输入与焦点（当前阶段）**：P3.1a/b/c 与 D1 第一阶段核心（P3.2a）已交付；下一步 P3.2b 收尾（Showcase 页、roving 专项、弹窗恢复、只读能力）→ 文本会话/IME（P3.3）。
 - **P4 作者与组件**：D6 Label 能力与测量 → 阶段 5 数据组件 → D2/D3。
 
 P1.1 与 P1.6 核心实现已完成，raylib 后端、工厂、枚举项、wrap 与依赖已完整删除。

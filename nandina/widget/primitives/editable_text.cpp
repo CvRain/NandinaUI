@@ -309,6 +309,10 @@ namespace nandina::widget::primitives
         return true;
     }
 
+    auto EditableText::focus_hint_requirement() const -> scene::FocusHintRequirement {
+        return scene::FocusHintRequirement::always_required;
+    }
+
     auto EditableText::handle_input(scene::InputEvent& event, scene::IClipboard* clipboard)
         -> bool {
         switch (event.type()) {

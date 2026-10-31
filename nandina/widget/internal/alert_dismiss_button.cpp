@@ -100,7 +100,7 @@ namespace nandina::widget::internal
             );
         }
 
-        if (focused()) {
+        if (focused() && primitives::focus_hint_visible(*this)) {
             primitives::FocusRingPainter::paint(
                 context,
                 world,

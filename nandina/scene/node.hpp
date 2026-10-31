@@ -8,6 +8,7 @@
 #include "../foundation/transform2d.hpp"
 #include "../render/clip_stack.hpp"
 #include "../semantics/semantics.hpp"
+#include "focus_hint.hpp"
 
 #include <memory>
 #include <optional>
@@ -273,6 +274,10 @@ namespace nandina::scene
 
         /// True if this node can become the focus target.
         [[nodiscard]] virtual auto is_focusable() const -> bool;
+
+        /// Whether this target always needs a visible focus hint (editable fields), or only
+        /// when the recent meaningful interaction is not pointing (default).
+        [[nodiscard]] virtual auto focus_hint_requirement() const -> FocusHintRequirement;
 
         /**
          * Focus target to use when a click lands on this node or its subtree.

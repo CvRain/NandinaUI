@@ -752,9 +752,9 @@ TEST_CASE(
     REQUIRE(dev.ripples[0].circle_radius == Catch::Approx(std::hypot(far_x, far_y) * 0.875F));
     REQUIRE(dev.ripples[0].alpha == Catch::Approx(style.ripple.color.alpha() * 0.5F));
     REQUIRE(dev.ripples[0].clip_radius == Catch::Approx(style.container.radius));
-    REQUIRE(
-        dev.operations == std::vector<std::string> {"fill", "fill", "ripple", "text", "outline"}
-    );
+    // Pointer focus hides the hint for ordinary buttons (D1 phase 1), so this frame has
+    // no focus-ring outline; the keyboard-context ring is covered by the focus-hint case.
+    REQUIRE(dev.operations == std::vector<std::string> {"fill", "fill", "ripple", "text"});
 
     tree.process(style.ripple.duration);
     REQUIRE_FALSE(button->ripple_active());
@@ -979,6 +979,69 @@ TEST_CASE(
 
     // 环确实在控件外一圈。
     REQUIRE(ring->rect.get_width() > button->width());
+}
+
+TEST_CASE("focus hint policy gates the button focus ring", "[widget][button][focus][hint]") {
+    auto ring_count = [](RecordingDevice& dev) {
+        return std::ranges::count_if(dev.rects, [](const RecordingDevice::RectCall& call) {
+            return call.outline;
+        });
+    };
+
+    {
+        RecordingDevice dev;
+        scene::NanSceneTree tree;
+        auto button = std::make_shared<widget::Button>("Ring");
+        tree.set_root(button);
+        (void)tree.layout_root(foundation::NanSize(200.0F, 60.0F));
+        tree.set_focus(button.get());
+        tree.draw(dev);
+        // Programmatic/unknown history defaults to a visible hint.
+        REQUIRE(ring_count(dev) == 1);
+    }
+    {
+        RecordingDevice dev;
+        scene::NanSceneTree tree;
+        auto button = std::make_shared<widget::Button>("Ring");
+        tree.set_root(button);
+        (void)tree.layout_root(foundation::NanSize(200.0F, 60.0F));
+        tree.set_focus(button.get());
+        tree.record_input_modality(scene::InputModality::pointer);
+        tree.draw(dev);
+        REQUIRE(ring_count(dev) == 0);
+        REQUIRE(tree.should_show_focus_hint() == false);
+
+        tree.record_input_modality(scene::InputModality::keyboard);
+        RecordingDevice keyboard;
+        tree.draw(keyboard);
+        REQUIRE(ring_count(keyboard) == 1);
+    }
+    {
+        RecordingDevice dev;
+        scene::NanSceneTree tree;
+        auto button = std::make_shared<widget::Button>("Ring");
+        tree.set_root(button);
+        (void)tree.layout_root(foundation::NanSize(200.0F, 60.0F));
+        tree.set_focus(button.get());
+        tree.set_focus_hint_always_visible(true);
+        tree.set_window_active(false);
+        tree.draw(dev);
+        // The always-visible preference never bypasses the inactive-window gate.
+        REQUIRE(ring_count(dev) == 0);
+    }
+    {
+        RecordingDevice dev;
+        scene::NanSceneTree tree;
+        auto field = std::make_shared<widget::TextField>("Text", "focus");
+        tree.set_root(field);
+        (void)tree.layout_root(foundation::NanSize(240.0F, 60.0F));
+        tree.set_focus(field.get());
+        tree.record_input_modality(scene::InputModality::pointer);
+        tree.draw(dev);
+        // Editable targets keep the hint for pointer focus.
+        REQUIRE(ring_count(dev) >= 1);
+        REQUIRE(tree.should_show_focus_hint());
+    }
 }
 
 TEST_CASE("button interaction state invalidates layout paint and semantics", "[widget][button]") {

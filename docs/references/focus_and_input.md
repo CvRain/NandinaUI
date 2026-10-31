@@ -1,6 +1,7 @@
 # 统一输入、焦点与文本编辑
 
-> **状态：planned，设计方向已接受，实现尚未开始。** 2026-10-09 的 D1 讨论结论。
+> **状态：第一阶段核心已实施（2026-10-31，P3.2a）；文本会话（第二阶段）与设备适配仍为 planned。**
+> 2026-10-09 的 D1 讨论结论；2026-10-31 补记第一阶段实现范围与剩余项（§6）。
 > 本文是后续实施依据，取代旧 D1 工作稿中“只有键盘才显示环”“手柄归 pointer”及
 > “立即增加 `.focus_ring(false)`”的建议。D2 主题订阅、D3 导航分组、D4 平台后端不在本次决策范围。
 > 下文的查询名与动作名表达目标语义，不代表现有公开 API；每个阶段落代码前仍须确定类型、
@@ -312,6 +313,43 @@ D4 的 `IPlatformWindow` 已存在；第二阶段注入文本服务应扩展这�
 - Showcase 增加“输入与焦点”注册表单，显示当前目标、交互方式、聚焦原因与提示状态。
 - 本阶段不承诺触摸、笔、手柄或软键盘后端已支持，不增加未接入生产路径的设备实现。
 
+#### 第一阶段实施记录（2026-10-31，P3.2a 核心批次）
+
+已实施：
+
+- `scene/focus_hint.hpp`：`InputModality`（unknown/pointer/keyboard）、`FocusRequestReason`、
+  `FocusRequestContext` 与 `FocusHintRequirement`（context_dependent / always_required）。
+- `NanNode::focus_hint_requirement()`：默认按上下文；`EditableText`/`TextField`/`TextArea`
+  覆盖为 `always_required`，指向聚焦仍显示编辑提示。
+- `NanSceneTree`：`input_modality()`、`record_input_modality()`、`window_active()` /
+  `set_window_active()`、`focus_hint_always_visible()` / `set_focus_hint_always_visible()`、
+  `should_show_focus_hint()`、`focus_hint_context_visible()`，以及携带上下文的
+  `set_focus(node, FocusRequestContext)`；`focus_next`/`focus_previous` 及 scope 变体统一建立
+  keyboard 上下文。
+- 事件映射：鼠标按下在焦点回调前建立 pointer；Tab、方向键、Home/End/PageUp/PageDown、
+  Enter/Space、Escape 建立 keyboard；移动/悬停/滚轮/单独修饰键/提交文本不改变策略。
+- 窗口激活：`FrameInput::window_active` 由 SDL 焦点事件提供，宿主转交 scene；失活期间保留
+  合法逻辑焦点但暂停提示，重新激活重新计算且不重复发送 focus-enter、不改写最近交互。
+- paint-only：有效提示结果变化只对焦点目标加 `DirtyFlags::paint`；不清除既有脏标记，不新增
+  measure/layout/transform/semantics 标记，树级语义快照 revision 不变。
+- 组件绘制：14 处 `FocusRingPainter` 调用统一经 `primitives::focus_hint_visible(node)` 分支，
+  绘制只消费 scene 的统一查询结果。
+- 测试：unit `focus-hint`（8 用例/45 断言）覆盖无历史默认、指向隐藏、键盘恢复、被动事件、
+  编辑目标例外、窗口门槛、always-visible 优先级、显式上下文、paint-only、无重复 focus 事件；
+  真实 SDL 窗口用例覆盖失活/激活；button 绘制用例覆盖环的实际出现/消失。
+- 红测：去掉按下事件的 pointer 映射、或把提示刷新误标成 semantics，分别使 4 个用例失败；
+  恢复后通过。
+- 验证（Linux）：主套件 109/109、release check 8/8；ASan/no-RTTI/no-SQLite/tools 见路线图与
+  D8/矩阵记录。Windows 另批补验。
+
+仍未完成（P3.2 后续批次，不把本批当整阶段完成）：
+
+- Showcase「输入与焦点」演示页与注册表单（showcase 组件由维护者编写）。
+- Tabs / DropdownMenu 内部活动项提示的失效范围，以及两种 roving 模型的专项验收。
+- 弹窗进入/恢复的显式原因携带；Escape 路径当前依赖键盘映射隐式生效，仍需专项回归。
+- 只读可键盘选择字段的能力协议，以及“始终显示”偏好的配置入口（当前只有 scene setter seam）。
+- 真实指针/键盘设备与非 US 布局、Windows 实机验收。
+
 ### 第二阶段：文本输入会话
 
 - 落平台中立的编辑目标与会话协议，接实际可用的平台实现。
@@ -330,7 +368,8 @@ D4 的 `IPlatformWindow` 已存在；第二阶段注入文本服务应扩展这�
 
 ## 7. 验收与“证明会红”
 
-以下是**待实施的验收要求**，不是已经跑过的测试结果。
+以下是**验收要求**。2026-10-31 的 P3.2a 核心批次覆盖了其中策略、窗口、标脏与无历史默认等
+自动用例；roving 模型、弹窗恢复、showcase 页与真实设备仍待后续批次逐条补齐。
 
 | 阶段 | 组合断言 | 故障注入方向 |
 | --- | --- | --- |

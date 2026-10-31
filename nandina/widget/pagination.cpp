@@ -572,7 +572,9 @@ namespace nandina::widget
 
         const bool focus_slot_valid =
             focus_index_ >= 0 && static_cast<std::size_t>(focus_index_) < items_.size();
-        if (focused_ && focus_slot_valid && style.focus.width > 0.0F) {
+        if (focused_ && focus_slot_valid && style.focus.width > 0.0F
+            && primitives::focus_hint_visible(*this))
+        {
             primitives::FocusRingPainter::paint(
                 context,
                 render::world_bounds_from_local(

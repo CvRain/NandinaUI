@@ -75,7 +75,8 @@
 | P3.1a | **D8 每事件坐标与修饰键快照**（已实施，2026-10-29）：按钮/滚轮使用事件坐标，经 viewport 映射派发；SDL 键盘使用事件 mod，鼠标使用按队列推进的修饰键状态；帧级状态保留 | 无 | `sdl-platform-input` 4 用例/160 断言通过，覆盖 A 处点击/滚轮后移动到 B、2×/letterbox、同帧与跨帧修饰键及过滤事件；红测与验证矩阵见 [D8](reference_draft.md#p31a事件快照2026-10-28) |
 | P3.1b | **D8 键身份与键生命周期**（已实施，2026-10-29）：`LogicalKey`/`PhysicalKey`、press/repeat/release、独立 unknown 计数，SDL scancode/keycode 映射，全部消费者迁移 | 精确键契约已定形 | `sdl-platform-input` 覆盖合成布局差异、左右修饰键、小键盘、unknown 与身份稳定；`key-lifecycle` 覆盖重复/单次激活；红测与验证矩阵见 [D8](reference_draft.md#p31b键身份与生命周期2026-10-29-已实施)。实机布局与 Windows 未验收；不并入 P3.1a |
 | P3.1c | **D8 跨类型事件保序**（已实施，2026-10-31）：`FrameInput::events` 按平台队列顺序保存变体事件，宿主顺序派发，不再按类型分组 | 有序事件契约已定形 | 同帧“点击 A → 文本 → 点击 B”中文本到达 A；SDL 顺序断言与真实 `NanWindow::tick()` 回归通过，红测见 [D8](reference_draft.md#p31c跨类型事件保序2026-10-31-已实施)。Windows 已补验（2026-10-31：构建 0 错误、unit 85/85、输入测试通过） |
-| P3.2 | **D1 第一阶段**：统一焦点提示策略（paint-only 失效、程序化恢复、窗口失活/激活） | 所需 D8 事件语义定形 | 同节点模态变化、两种 roving 模型、文本能力矩阵；不并入 P3.1a |
+| P3.2a | **D1 焦点核心与提示策略（已实施，2026-10-31）**：`InputModality`/请求上下文、`should_show_focus_hint()`、窗口失活/激活、paint-only、组件绘制迁移 | P3.1 事件语义 | `focus-hint` 8 用例/45 断言 + 真实窗口激活与 button 绘制用例通过；红测见 [D1 §6](focus_and_input.md#第一阶段实施记录2026-10-31p32a-核心批次) |
+| P3.2b | **D1 第一阶段收尾（后续批次）**：Showcase 输入与焦点页、Tabs/DropdownMenu 内部活动项提示与两种 roving 模型、弹窗进入/恢复显式原因、只读选择字段能力与偏好配置入口 | P3.2a | 同节点模态、程序化恢复、文本能力矩阵与 roving 专项验收；不并入 P3.2a |
 | P3.3 | **D1 文本会话**：注入式 `ITextInputService`、IME/软键盘、会话生命周期 | 所需 D8 键语义与有序事件 | 真实 IME 分别记录平台状态；不另造第二套 host，不并入 P3.1a |
 
 应用侧并行：维护者手工编写 `examples/notebook`（数据层已完成；服务与 UI 后续）及 `showcase/` 组件，
@@ -93,7 +94,7 @@
 ## 4. 建议的近期切入顺序
 
 1. **P3.1a 事件快照**：先修每事件坐标/修饰键被帧级状态覆盖；本批不扩展键身份、跨类型顺序、焦点策略或 IME。
-2. **D1 与 P4**：D1 焦点/文本会话在组件扩张前推进；P4 按具体前置安排。
+2. **D1 与 P4**：P3.2a 焦点提示核心已交付，P3.2b 剩余项与文本会话（P3.3）在组件扩张前推进；P4 按具体前置安排。
 3. **保留的 P1 边界**：退役后的 Windows 静态构建/窗口生命周期复验、P1.6 完整 Image 页面端到端采样仍分别记录；不把它们混同于已交付的 Windows golden 与参考性能基线。
 4. **已交付记录**：P1.2 Windows CPU/SDF 共 6 条 approved、P1.3 Windows 参考性能基线、P1.5b 阴影/圆角裁剪及 P2 应用闭环均已归档；P1.4 归 NandinaCLI。
 

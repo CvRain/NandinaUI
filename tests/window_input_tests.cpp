@@ -1,6 +1,7 @@
 #include <nandina/app/nan_application.hpp>
 #include <nandina/app/nan_window.hpp>
 #include <nandina/scene/control.hpp>
+#include <nandina/widget/button.hpp>
 #include <nandina/widget/primitives/editable_text.hpp>
 
 #include <SDL3/SDL.h>
@@ -194,6 +195,52 @@ TEST_CASE("window forwards typed key lifecycle to the focused editor", "[app][in
     // 先释放测试持有的控件：窗口关闭后 device 已销毁，而 FontPipeline 析构会回访
     // device（已知关闭顺序缺陷，见 design_tokens.md）；应用级内容在 close() 内释放。
     edit.reset();
+    window.close();
+}
+
+TEST_CASE("window focus events gate the scene focus hint", "[app][input][focus]") {
+    using namespace nandina;
+    app::NanApplication application;
+    app::WindowConfig config;
+    config.width = 320;
+    config.height = 200;
+    config.vsync = false;
+    config.target_fps = 0;
+    config.backend = app::WindowBackend::sdl3;
+    app::NanWindow window(application, config);
+    window.open();
+    auto button = std::make_shared<widget::Button>("Focus");
+    window.set_content(button);
+    window.tick();
+    window.scene_tree().set_focus(button.get());
+    window.tick();
+    // Programmatic focus before any input must be visible.
+    REQUIRE(window.scene_tree().should_show_focus_hint());
+
+    int window_count = 0;
+    SDL_Window** windows = SDL_GetWindows(&window_count);
+    REQUIRE(windows != nullptr);
+    REQUIRE(window_count == 1);
+    const auto window_id = SDL_GetWindowID(windows[0]);
+    SDL_free(windows);
+
+    SDL_Event lost {};
+    lost.type = SDL_EVENT_WINDOW_FOCUS_LOST;
+    lost.window.windowID = window_id;
+    push(lost);
+    window.tick();
+    REQUIRE_FALSE(window.scene_tree().window_active());
+    REQUIRE_FALSE(window.scene_tree().should_show_focus_hint());
+    REQUIRE(window.scene_tree().focused_node() == button.get());
+
+    SDL_Event gained {};
+    gained.type = SDL_EVENT_WINDOW_FOCUS_GAINED;
+    gained.window.windowID = window_id;
+    push(gained);
+    window.tick();
+    REQUIRE(window.scene_tree().window_active());
+    REQUIRE(window.scene_tree().should_show_focus_hint());
+    button.reset();
     window.close();
 }
 

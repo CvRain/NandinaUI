@@ -76,6 +76,9 @@ namespace nandina::widget
         void set_font_slant(theme::FontSlant slant);
 
         [[nodiscard]] auto is_focusable() const -> bool override;
+
+        /// Editable targets keep a visible hint even for pointer focus (D1 phase 1).
+        [[nodiscard]] auto focus_hint_requirement() const -> scene::FocusHintRequirement override;
         auto on_input(scene::InputEvent& event) -> bool override;
         auto on_draw(render::DrawContext& ctx) -> void override;
 

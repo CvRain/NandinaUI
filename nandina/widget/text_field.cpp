@@ -234,6 +234,10 @@ namespace nandina::widget
         return !disabled_;
     }
 
+    auto TextField::focus_hint_requirement() const -> scene::FocusHintRequirement {
+        return scene::FocusHintRequirement::always_required;
+    }
+
     auto TextField::on_input(scene::InputEvent& event) -> bool {
         auto* clipboard = is_inside_tree() ? get_tree()->clipboard() : nullptr;
         if (event.type() == scene::EventType::focus_enter) {
@@ -291,7 +295,9 @@ namespace nandina::widget
         const auto world = render::world_bounds_from_local(ctx.world_transform(), local_rect());
         const auto style = resolved_style();
         primitives::BoxPainter::paint(ctx, world, style.container, ctx.opacity());
-        if (style.focus.width > 0.0F && style.focus.color.alpha() > 0.0F) {
+        if (focused_ && style.focus.width > 0.0F && style.focus.color.alpha() > 0.0F
+            && primitives::focus_hint_visible(*this))
+        {
             primitives::FocusRingPainter::paint(
                 ctx,
                 world,

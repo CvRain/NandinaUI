@@ -115,6 +115,13 @@ key_lifecycle_tests = executable(
 )
 test('key-lifecycle', key_lifecycle_tests, suite: 'unit')
 
+focus_hint_tests = executable(
+    'focus_hint_tests',
+    files('focus_hint_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('focus-hint', focus_hint_tests, suite: 'unit')
+
 # SDL 视觉回归：用**软件渲染器**做确定性像素断言（不需要窗口/显示器/GPU），
 # 期望值是解析计算出来的合成色，而不是某个后端某次画出来的图。
 # 没有 SDL3 后端时不注册：没有 SDL 设备可测，注册一个必然跳过的目标只会制造噪声。

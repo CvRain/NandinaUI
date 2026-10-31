@@ -13,10 +13,18 @@
 #define NANDINA_EXPERIMENT_WIDGET_PRIMITIVES_FOCUS_RING_PAINTER_HPP
 
 #include "../../render/draw_context.hpp"
+#include "../../scene/scene_tree.hpp"
 #include "../../theme/design_system.hpp"
 
 namespace nandina::widget::primitives
 {
+    /// Unified focus-hint gate (D1 phase 1). Call only for the node that owns the real
+    /// focus; delegated component items use `NanSceneTree::focus_hint_context_visible()`.
+    [[nodiscard]] inline auto focus_hint_visible(const scene::NanNode2D& node) -> bool {
+        const auto* tree = node.is_inside_tree() ? node.get_tree() : nullptr;
+        return tree != nullptr && tree->should_show_focus_hint();
+    }
+
     class FocusRingPainter {
     public:
         static auto paint(

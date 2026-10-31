@@ -23,6 +23,7 @@
 #include "window_config.hpp"
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <variant>
@@ -55,6 +56,9 @@ namespace nandina::app
         foundation::NanPoint pointer {};
         /// 当前修饰键状态（每帧读，不只在变化时）。
         scene::KeyModifiers modifiers {};
+        /// 平台窗口当前的键盘活动状态；宿主据此暂停/恢复焦点提示。
+        /// nullopt 表示该平台未提供状态，宿主保持现有值。
+        std::optional<bool> window_active {};
     };
 
     /// 一个平台实现 = 窗口 + 输入 + 呈现 + 剪贴板 + 匹配的绘制设备。

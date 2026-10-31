@@ -18,6 +18,16 @@
 
 ## 2. 三档分类
 
+2026-10-31 P3.2a 焦点提示策略（experimental，已实施）：新增 `scene/focus_hint.hpp`
+（`InputModality` / `FocusRequestReason` / `FocusRequestContext` / `FocusHintRequirement`）；
+`NanNode` 新增虚查询 `focus_hint_requirement()`；`NanSceneTree` 新增 `input_modality()` /
+`record_input_modality()`、`window_active()` / `set_window_active()`、
+`focus_hint_always_visible()` / `set_focus_hint_always_visible()`、`should_show_focus_hint()`、
+`focus_hint_context_visible()` 与 `set_focus(node, FocusRequestContext)`。
+`FrameInput` 新增 `std::optional<bool> window_active`（平台窗口活动状态，宿主转交 scene）。
+自定义宿主/平台应把 window focus 事件映射到该字段；焦点提示绘制应只消费 scene 的统一查询，
+不要各自维护设备状态。证据与剩余边界见 [D1 第一阶段记录](focus_and_input.md#第一阶段实施记录2026-10-31p32a-核心批次)。
+
 2026-10-31 P3.1c 有序输入帧（experimental，破坏性，已实施）：`app::FrameInput`
 由按类型分数组改为 `std::vector<FrameEvent> events`，`FrameEvent` 是鼠标移动/按钮/滚轮、
 键与提交文本的 `std::variant`。自定义平台按捕获顺序追加事件；宿主按同一顺序派发。

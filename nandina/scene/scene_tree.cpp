@@ -14,6 +14,31 @@
 
 namespace nandina::scene
 {
+    namespace
+    {
+        /// Keys that establish a keyboard/navigation intent per the D1 event-mapping table.
+        /// Passive keys (bare modifiers, unrecognized keys) and editing keys do not switch
+        /// modality; text editing targets already require a visible hint.
+        [[nodiscard]] auto is_meaningful_keyboard_key(const foundation::LogicalKey key) -> bool {
+            switch (key) {
+                case foundation::LogicalKey::tab:
+                case foundation::LogicalKey::left:
+                case foundation::LogicalKey::right:
+                case foundation::LogicalKey::up:
+                case foundation::LogicalKey::down:
+                case foundation::LogicalKey::home:
+                case foundation::LogicalKey::end:
+                case foundation::LogicalKey::page_up:
+                case foundation::LogicalKey::page_down:
+                case foundation::LogicalKey::enter:
+                case foundation::LogicalKey::space:
+                case foundation::LogicalKey::escape:
+                    return true;
+                default:
+                    return false;
+            }
+        }
+    } // namespace
 
     namespace
     {
@@ -586,6 +611,9 @@ namespace nandina::scene
         // the user actually clicked: a Select closes on focus loss, so its popup
         // would be torn down at button-up before an option could be picked.
         if (copy.is_pressed()) {
+            // Pointer interaction is established before callbacks can move focus, so a
+            // focus request inside the press handler observes the pointing context.
+            record_input_modality(InputModality::pointer);
             set_focus(_find_focus_target(hit));
         }
         _bubble_input(hit, copy);
@@ -626,6 +654,10 @@ namespace nandina::scene
         if (!_input_enabled_for(focused)) {
             _transition_focus(nullptr);
             return;
+        }
+
+        if (event.is_press_or_repeat() && is_meaningful_keyboard_key(event.logical_key())) {
+            record_input_modality(InputModality::keyboard);
         }
 
         auto copy = event;
@@ -679,6 +711,10 @@ namespace nandina::scene
     }
 
     auto NanSceneTree::set_focus(NanNode2D* node) -> void {
+        set_focus(node, FocusRequestContext {});
+    }
+
+    auto NanSceneTree::set_focus(NanNode2D* node, const FocusRequestContext& context) -> void {
         if (node
             && (!node->is_inside_tree() || node->get_tree() != this || !node->is_visible_in_tree()
                 || !node->is_focusable() || !_input_enabled_for(node)))
@@ -686,6 +722,90 @@ namespace nandina::scene
             return;
         }
 
+        if (context.modality.has_value()) {
+            input_modality_ = *context.modality;
+        }
+        else if (context.reason == FocusRequestReason::pointer) {
+            input_modality_ = InputModality::pointer;
+        }
+        else if (context.reason == FocusRequestReason::navigation) {
+            input_modality_ = InputModality::keyboard;
+        }
+        // programmatic / restore / popup / accessibility keep the recent meaningful
+        // modality; with no history the hint defaults to visible.
+
+        _transition_focus(node);
+    }
+
+    auto NanSceneTree::input_modality() const noexcept -> InputModality {
+        return input_modality_;
+    }
+
+    void NanSceneTree::record_input_modality(const InputModality modality) noexcept {
+        if (input_modality_ == modality) {
+            return;
+        }
+        input_modality_ = modality;
+        _refresh_focus_hint();
+    }
+
+    auto NanSceneTree::window_active() const noexcept -> bool {
+        return window_active_;
+    }
+
+    void NanSceneTree::set_window_active(const bool active) noexcept {
+        if (window_active_ == active) {
+            return;
+        }
+        window_active_ = active;
+        _refresh_focus_hint();
+    }
+
+    auto NanSceneTree::focus_hint_always_visible() const noexcept -> bool {
+        return focus_hint_always_visible_;
+    }
+
+    void NanSceneTree::set_focus_hint_always_visible(const bool always) noexcept {
+        if (focus_hint_always_visible_ == always) {
+            return;
+        }
+        focus_hint_always_visible_ = always;
+        _refresh_focus_hint();
+    }
+
+    auto NanSceneTree::should_show_focus_hint() const -> bool {
+        const auto* focused = focused_node_.lock().get();
+        if (focused == nullptr || !window_active_) {
+            return false;
+        }
+        if (focus_hint_always_visible_
+            || focused->focus_hint_requirement() == FocusHintRequirement::always_required)
+        {
+            return true;
+        }
+        return input_modality_ != InputModality::pointer;
+    }
+
+    auto NanSceneTree::focus_hint_context_visible() const noexcept -> bool {
+        return window_active_
+            && (focus_hint_always_visible_ || input_modality_ != InputModality::pointer);
+    }
+
+    void NanSceneTree::_refresh_focus_hint() {
+        const bool next = should_show_focus_hint();
+        if (next == focus_hint_visible_) {
+            return;
+        }
+        focus_hint_visible_ = next;
+        if (auto* focused = focused_node_.lock().get()) {
+            // Hint visibility is paint-only: focus, semantics, layout and transform do not
+            // change when only the modality gate flips.
+            focused->mark_dirty(DirtyFlags::paint);
+        }
+    }
+
+    auto NanSceneTree::_focus_with_navigation(NanNode2D* node) -> void {
+        input_modality_ = InputModality::keyboard;
         _transition_focus(node);
     }
 
@@ -697,23 +817,23 @@ namespace nandina::scene
         std::vector<NanNode2D*> nodes;
         _collect_focusable_nodes(root_.get(), nodes);
         if (nodes.empty()) {
-            _transition_focus(nullptr);
+            _focus_with_navigation(nullptr);
             return;
         }
 
         auto* focused = focused_node_.lock().get();
         if (!focused) {
-            _transition_focus(nodes.front());
+            _focus_with_navigation(nodes.front());
             return;
         }
 
         const auto it = std::ranges::find(nodes, focused);
         if (it == nodes.end() || std::next(it) == nodes.end()) {
-            _transition_focus(nodes.front());
+            _focus_with_navigation(nodes.front());
             return;
         }
 
-        _transition_focus(*std::next(it));
+        _focus_with_navigation(*std::next(it));
     }
 
     auto NanSceneTree::focus_previous() -> void {
@@ -724,23 +844,23 @@ namespace nandina::scene
         std::vector<NanNode2D*> nodes;
         _collect_focusable_nodes(root_.get(), nodes);
         if (nodes.empty()) {
-            _transition_focus(nullptr);
+            _focus_with_navigation(nullptr);
             return;
         }
 
         auto* focused = focused_node_.lock().get();
         if (!focused) {
-            _transition_focus(nodes.back());
+            _focus_with_navigation(nodes.back());
             return;
         }
 
         const auto it = std::ranges::find(nodes, focused);
         if (it == nodes.end() || it == nodes.begin()) {
-            _transition_focus(nodes.back());
+            _focus_with_navigation(nodes.back());
             return;
         }
 
-        _transition_focus(*std::prev(it));
+        _focus_with_navigation(*std::prev(it));
     }
 
     auto NanSceneTree::focus_first_within(NanNode& scope) -> bool {
@@ -752,7 +872,7 @@ namespace nandina::scene
         if (nodes.empty()) {
             return false;
         }
-        _transition_focus(nodes.front());
+        _focus_with_navigation(nodes.front());
         return true;
     }
 
@@ -766,7 +886,7 @@ namespace nandina::scene
             return false;
         }
         const auto found = std::ranges::find(nodes, focused_node_.lock().get());
-        _transition_focus(
+        _focus_with_navigation(
             found == nodes.end() || std::next(found) == nodes.end() ? nodes.front()
                                                                     : *std::next(found)
         );
@@ -783,7 +903,7 @@ namespace nandina::scene
             return false;
         }
         const auto found = std::ranges::find(nodes, focused_node_.lock().get());
-        _transition_focus(
+        _focus_with_navigation(
             found == nodes.end() || found == nodes.begin() ? nodes.back() : *std::prev(found)
         );
         return true;
@@ -1115,6 +1235,7 @@ namespace nandina::scene
             _bubble_input(next_focus, enter_event, common_ancestor);
         }
         mark_semantics_dirty();
+        _refresh_focus_hint();
     }
 
     auto NanSceneTree::_sync_hover_after_tree_change() -> void {

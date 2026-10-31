@@ -181,6 +181,39 @@ namespace nandina::scene
         /// Assign focus to a node inside this tree, or clear focus with nullptr.
         auto set_focus(NanNode2D* node) -> void;
 
+        /// Assign focus with an explicit request reason/interaction context. The context
+        /// updates the tree's recent meaningful modality before the focus transition, so
+        /// callbacks and the subsequent hint decision see this interaction.
+        auto set_focus(NanNode2D* node, const FocusRequestContext& context) -> void;
+
+        // ---- focus hint policy (D1 phase 1) ----
+
+        /// Recent meaningful interaction modality (pointer / keyboard / unknown).
+        [[nodiscard]] auto input_modality() const noexcept -> InputModality;
+
+        /// Record a meaningful interaction. Passive events (move/hover/wheel/bare modifiers/
+        /// committed text) must not call this. A change repaints the focused target only when
+        /// the effective hint result changes.
+        void record_input_modality(InputModality modality) noexcept;
+
+        /// Window activation gate: inactive windows keep logical focus but pause hints.
+        [[nodiscard]] auto window_active() const noexcept -> bool;
+        void set_window_active(bool active) noexcept;
+
+        /// User preference "always show hints" for the active window; never bypasses the
+        /// inactive-window gate.
+        [[nodiscard]] auto focus_hint_always_visible() const noexcept -> bool;
+        void set_focus_hint_always_visible(bool always) noexcept;
+
+        /// Whether the current focus target should paint its focus hint. Returns false when
+        /// nothing is focused or the window is inactive; editable targets override pointer
+        /// hiding through NanNode::focus_hint_requirement().
+        [[nodiscard]] auto should_show_focus_hint() const -> bool;
+
+        /// Context-only answer for components that delegate painting to an internal active
+        /// item (Tabs / DropdownMenu). It does not inspect the focused node's requirement.
+        [[nodiscard]] auto focus_hint_context_visible() const noexcept -> bool;
+
         /// Move focus forward through the tree's focusable nodes.
         auto focus_next() -> void;
 
@@ -237,6 +270,11 @@ namespace nandina::scene
         [[nodiscard]] auto _find_focus_target(NanNode* start) const -> NanNode2D*;
         auto _transition_hover(NanNode2D* next_hover, foundation::NanPoint screen_pos) -> void;
         auto _transition_focus(NanNode2D* next_focus) -> void;
+        /// Recompute the cached hint result for the current focus target. A changed result
+        /// marks only DirtyFlags::paint on that target (no layout/semantics/transform flags).
+        auto _refresh_focus_hint() -> void;
+        /// Focus navigation helper: navigation is keyboard interaction.
+        auto _focus_with_navigation(NanNode2D* node) -> void;
         auto _sync_hover_after_tree_change() -> void;
         auto _hovered_is_inside(const NanNode& node) const -> bool;
         auto _focused_is_inside(const NanNode& node) const -> bool;
@@ -270,6 +308,10 @@ namespace nandina::scene
         std::weak_ptr<NanNode2D> pointer_capture_;
         foundation::NanPoint last_mouse_pos_ {};
         bool has_mouse_pos_ = false;
+        InputModality input_modality_ = InputModality::unknown;
+        bool window_active_ = true;
+        bool focus_hint_always_visible_ = false;
+        bool focus_hint_visible_ = false;
         std::optional<text::TextPipeline> default_text_pipeline_;
         text::FontPipelineCache* font_context_ = nullptr;
         render::TextureCache* texture_cache_ = nullptr;

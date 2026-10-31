@@ -116,7 +116,7 @@ namespace nandina::widget::internal
         }
         text_.draw_at(context, world.get_top_left());
 
-        if (focused()) {
+        if (focused() && primitives::focus_hint_visible(*this)) {
             // 直角：它自己的 pressed 底色也是方的（radius = 0），环保持同一形状。
             primitives::FocusRingPainter::paint(context, world, focus_, context.opacity(), 0.0F);
         }

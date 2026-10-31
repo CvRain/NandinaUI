@@ -58,6 +58,7 @@ module_scene = files(
     'scene/node_presentation.hpp',
     'scene/node_presentation.cpp',
     'scene/clipboard.hpp',
+    'scene/focus_hint.hpp',
     'scene/input_event.hpp',
     'scene/node.hpp',
     'scene/node.cpp',
