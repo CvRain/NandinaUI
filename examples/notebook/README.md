@@ -123,8 +123,8 @@ auto visible_notes = notes.list_all();               // anonymous read
 `main()` creates the database, then installs one application-owned store:
 
 ```cpp
-namespace notebook_app = nandina::examples::notebook::app;
-namespace notebook_ui = nandina::examples::notebook::ui;
+namespace notebook_app = nan_example::notebook::app;
+namespace notebook_ui = nan_example::notebook::ui;
 
 application.use_store<notebook_app::NotebookStore>(std::move(bootstrap->database));
 return application.run_page<notebook_ui::UserServiceDemoPage>(window_info);
@@ -142,7 +142,7 @@ Database
 Pages do not construct services. They resolve the store from the page context:
 
 ```cpp
-auto& store = context.store<nandina::examples::notebook::app::NotebookStore>();
+auto& store = context.store<nan_example::notebook::app::NotebookStore>();
 auto& service = store.user_service();
 
 auto total = service.user_count();

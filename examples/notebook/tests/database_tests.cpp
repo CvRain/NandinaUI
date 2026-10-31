@@ -21,8 +21,8 @@
 
 namespace
 {
-    namespace data = nandina::examples::notebook::data;
-    namespace models = nandina::examples::notebook::models;
+    namespace data = nan_example::notebook::data;
+    namespace models = nan_example::notebook::models;
 
     [[nodiscard]] auto package_directory() -> std::filesystem::path {
         const auto* directory = std::getenv("NOTEBOOK_RESOURCE_DIR");
@@ -325,7 +325,7 @@ TEST_CASE("NotebookStore wires UserService to the migrated database", "[notebook
     REQUIRE(report.has_value());
 
     nandina::reactive::Graph graph;
-    nandina::examples::notebook::app::NotebookStore store(graph, std::move(*database));
+    nan_example::notebook::app::NotebookStore store(graph, std::move(*database));
     auto& service = store.user_service();
 
     auto count = service.user_count();
