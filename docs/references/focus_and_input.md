@@ -339,8 +339,12 @@ D4 的 `IPlatformWindow` 已存在；第二阶段注入文本服务应扩展这�
   真实 SDL 窗口用例覆盖失活/激活；button 绘制用例覆盖环的实际出现/消失。
 - 红测：去掉按下事件的 pointer 映射、或把提示刷新误标成 semantics，分别使 4 个用例失败；
   恢复后通过。
-- 验证（Linux）：主套件 109/109、release check 8/8；ASan/no-RTTI/no-SQLite/tools 见路线图与
-  D8/矩阵记录。Windows 另批补验。
+- 验证（Linux）：主套件 109/109、release check 8/8；ASan/UBSan unit **86 通过 +
+  `window-lifecycle` SKIP**、no-RTTI **88/88**、no-SQLite/headless **83 通过 + 1 SKIP**、
+  纯工具 **8/8**；`sdl-platform-input` 在启用 SDL 的配置为 12 用例/376 断言。
+- Windows 验证（2026-10-31，bundle 同步到 `5bdaa96`）：构建 0 错误；`--suite unit`
+  **86/86**；`focus-hint`、`key-lifecycle`、`sdl-platform-input`（12 用例/376 断言，
+  dummy 视频 + 软件渲染器，含窗口失活/激活用例）与 `notebook-data` 全部通过。
 
 仍未完成（P3.2 后续批次，不把本批当整阶段完成）：
 

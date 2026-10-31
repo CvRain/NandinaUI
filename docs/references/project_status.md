@@ -22,7 +22,7 @@
 
 | 议题 | 当前结论 | 实施状态与入口 |
 | --- | --- | --- |
-| D1 输入、焦点与文本会话 | 焦点事实、提示策略、文本会话分离 | **第一阶段核心已实施（P3.2a，2026-10-31）**：输入模态/请求上下文、统一 `should_show_focus_hint()`、窗口激活门槛、paint-only 失效与组件绘制迁移；Showcase 页、roving 专项、弹窗恢复与文本会话仍待后续。见[正式契约](focus_and_input.md) |
+| D1 输入、焦点与文本会话 | 焦点事实、提示策略、文本会话分离 | **第一阶段核心已实施（P3.2a，2026-10-31）**：输入模态/请求上下文、统一 `should_show_focus_hint()`、窗口激活门槛、paint-only 失效与组件绘制迁移；Linux 主套件 109/109、Windows unit 86/86。Showcase 页、roving 专项、弹窗恢复与文本会话仍待后续。见[正式契约](focus_and_input.md) |
 | D2 主题方案与状态订阅 | 讨论已汇总；只读状态、事件和主题方案模型需定形 | 待审阅；[主题设计](theme_authoring_and_state.md)。先解决状态可观察性，完整主题作者模型另批 |
 | D3 导航分组 | `type → nav_group`、空值未分组、同值全局合并已接受 | 未实施；[D3](reference_draft.md#d3-路由身份与导航分组开放到哪一层)，独立小批 |
 | D4 平台与后端 | SDL3 默认路径与 host seam 已落地，raylib 已完整退役 | **已收尾**：生产 SDF 在 Vulkan 与 Windows D3D12 通过设备级验收；[阶段证据](platform_backend_contract.md)。Windows 为实验性支持，macOS 不支持，Web 不是交付面 |
