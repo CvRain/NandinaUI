@@ -10,6 +10,7 @@
 #include <nandina/scene/control.hpp>
 #include <nandina/scene/node2d.hpp>
 #include <nandina/scene/scene_tree.hpp>
+#include <nandina/widget/text_field.hpp>
 
 #include <memory>
 
@@ -154,6 +155,22 @@ TEST_CASE("editable targets keep a visible hint for pointer focus", "[focus][hin
     REQUIRE(tree.should_show_focus_hint());
 }
 
+TEST_CASE("read-only text fields keep the editing hint capability", "[focus][hint]") {
+    scene::NanSceneTree tree;
+    auto field = std::make_shared<widget::TextField>("read only");
+    field->set_read_only(true);
+    tree.set_root(field);
+    REQUIRE(tree.layout_root(foundation::NanSize(320.0F, 48.0F)) >= 1);
+    tree.set_window_active(true);
+
+    click(tree, foundation::NanPoint(20.0F, 20.0F));
+    REQUIRE(tree.focused_node() == field.get());
+    REQUIRE(tree.input_modality() == scene::InputModality::pointer);
+    // Read-only does not mean "not an editing capability": pointer focus still shows the
+    // hint so keyboard selection/copy has a visible target. It does not start a session.
+    REQUIRE(tree.should_show_focus_hint());
+}
+
 TEST_CASE("window inactivity gates hints and preserves logical focus", "[focus][hint]") {
     Fixture fixture;
     auto& tree = fixture.tree;
@@ -262,6 +279,40 @@ TEST_CASE("context changes with an unchanged hint result do not repaint", "[focu
     tree.record_input_modality(scene::InputModality::keyboard);
     REQUIRE(tree.should_show_focus_hint());
     REQUIRE_FALSE(editable->is_dirty(scene::DirtyFlags::paint));
+}
+
+TEST_CASE("re-focusing the same node with a new context still repaints", "[focus][hint]") {
+    Fixture fixture;
+    auto& tree = fixture.tree;
+    auto* target = fixture.first.get();
+    tree.set_window_active(true);
+    tree.set_focus(target);
+    REQUIRE(tree.should_show_focus_hint());
+
+    target->clear_dirty(
+        scene::DirtyFlags::paint | scene::DirtyFlags::measure | scene::DirtyFlags::layout
+        | scene::DirtyFlags::semantics | scene::DirtyFlags::transform
+    );
+    (void)tree.update_semantics();
+    const auto revision = tree.semantics_tree().revision;
+
+    // The target is already focused; only the request context changes the hint result.
+    tree.set_focus(
+        target,
+        scene::FocusRequestContext {
+            .reason = scene::FocusRequestReason::restore,
+            .modality = scene::InputModality::pointer
+        }
+    );
+
+    REQUIRE(tree.focused_node() == target);
+    REQUIRE_FALSE(tree.should_show_focus_hint());
+    REQUIRE(target->is_dirty(scene::DirtyFlags::paint));
+    REQUIRE_FALSE(target->is_dirty(scene::DirtyFlags::layout));
+    REQUIRE_FALSE(target->is_dirty(scene::DirtyFlags::measure));
+    REQUIRE_FALSE(target->is_dirty(scene::DirtyFlags::transform));
+    REQUIRE_FALSE(tree.semantics_dirty());
+    REQUIRE(tree.semantics_tree().revision == revision);
 }
 
 TEST_CASE("hint changes never re-send focus events", "[focus][hint]") {

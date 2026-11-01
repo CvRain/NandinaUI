@@ -31,9 +31,10 @@ application shell. Version `0.1.0-alpha.1`.
   release lifecycle, SDL scancode/keycode mapping, unknown identity counting) and **P3.1c**
   (ordered cross-type `FrameInput::events` dispatched in capture order) are implemented, and
   **P3.2a** (D1 focus-hint core: `InputModality`/request context, `should_show_focus_hint()`,
-  window activation gate, paint-only invalidation, widget ring migration) has landed.
-  P3.2b (showcase page, roving-model/popup-restore/read-only acceptance) and the D1 text session
-  remain; see the roadmap.
+  window activation gate, paint-only invalidation, widget ring migration) and **P3.2b**
+  (showcase acceptance page, active-tab hint, popup enter/restore reasons, read-only field
+  capability, always-visible switch) are implemented. The D1 text session remains; see the
+  roadmap.
 - The plan and exit criteria are **not** owned by this file: read
   `docs/references/development_roadmap.md` and the D5 contract
   (`resource_build_and_deployment.md` §8) before claiming a sub-batch is complete.

@@ -8,6 +8,7 @@
 #include "pages/anchors_page.hpp"
 #include "pages/home_page.hpp"
 #include "pages/image_page.hpp"
+#include "pages/input_focus_page.hpp"
 #include "pages/label_page.hpp"
 
 #include <nandina/widget/controls.hpp>
@@ -35,6 +36,11 @@ namespace nandina::showcase
                 .address = "content_and_display/image",
                 .title = "Image",
                 .type = "内容与展示"
+            }),
+            nandina::app::route<InputFocusPage>(app::RouteOptions {
+                .address = "input_and_focus/focus",
+                .title = "输入与焦点",
+                .type = "输入与焦点"
             })
         };
         auto& router = use_router(routes);

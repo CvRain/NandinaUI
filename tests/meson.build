@@ -115,6 +115,13 @@ key_lifecycle_tests = executable(
 )
 test('key-lifecycle', key_lifecycle_tests, suite: 'unit')
 
+input_focus_showcase_tests = executable(
+    'input_focus_showcase_tests',
+    files('input_focus_showcase_tests.cpp', '../showcase/pages/input_focus_page.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('input-focus-showcase', input_focus_showcase_tests, suite: 'unit')
+
 focus_hint_tests = executable(
     'focus_hint_tests',
     files('focus_hint_tests.cpp'),

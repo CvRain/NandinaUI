@@ -666,7 +666,10 @@ namespace nandina::widget
             // 这里只在焦点没有落点时兜底到触发控件，避免焦点留在已消失的浮层里。
             if (auto* tree = get_tree(); tree != nullptr && tree->focused_node() == nullptr) {
                 if (auto anchor = anchor_.lock(); anchor != nullptr && anchor->is_inside_tree()) {
-                    (void)tree->focus_first_within(*anchor);
+                    (void)tree->focus_first_within(
+                        *anchor,
+                        scene::FocusRequestContext {.reason = scene::FocusRequestReason::restore}
+                    );
                 }
             }
             if (on_close_) {

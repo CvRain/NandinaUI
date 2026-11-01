@@ -329,16 +329,29 @@ namespace nandina::widget
             );
         }
 
-        if (focused_ && !disabled_ && style.focus.width > 0.0F
-            && primitives::focus_hint_visible(*this))
-        {
-            primitives::FocusRingPainter::paint(
-                context,
-                world,
-                style.focus,
-                opacity,
-                style.container.radius
-            );
+        // 5. 焦点提示（D1）：容器持有真实焦点、活动项漫游。提示环画在当前活动标签上，
+        // 而不是整个标签条；纯模态切换由 scene 只标本节点 paint，因此这里无需另存状态。
+        if (focused_ && !disabled_ && style.focus.width > 0.0F) {
+            if (const auto* tree = get_tree();
+                tree != nullptr && tree->focus_hint_context_visible())
+            {
+                foundation::NanRect hint = world;
+                float radius = style.container.radius;
+                if (has_selected) {
+                    const std::size_t selected = static_cast<std::size_t>(selected_index_);
+                    const float selected_x = context.logical_to_screen(tab_offsets_[selected]);
+                    const float selected_width =
+                        context.logical_to_screen(label_texts_[selected]->measured_text_width());
+                    hint = foundation::NanRect::from_xywh(
+                        world.get_left() + selected_x - padding,
+                        world.get_top() + padding,
+                        selected_width + padding * 2.0F,
+                        std::max(0.0F, world.get_height() - padding * 2.0F)
+                    );
+                    radius = style.selected_background.radius;
+                }
+                primitives::FocusRingPainter::paint(context, hint, style.focus, opacity, radius);
+            }
         }
     }
 

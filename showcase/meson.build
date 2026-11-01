@@ -6,7 +6,9 @@ page_files = [
     'pages/label_page.hpp',
     'pages/label_page.cpp',
     'pages/image_page.hpp',
-    'pages/image_page.cpp'
+    'pages/image_page.cpp',
+    'pages/input_focus_page.hpp',
+    'pages/input_focus_page.cpp'
 ]
 
 components = [

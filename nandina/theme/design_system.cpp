@@ -3495,7 +3495,8 @@ namespace nandina::theme
             .focus =
                 FocusRingStyle {
                     .color = ThemeColor::token(ColorToken::ring),
-                    .width = ThemeScalar::literal(0.0F), // focused 规则按需开启
+                    // 容器持有真实焦点时，提示环画在当前活动标签上（D1）。
+                    .width = ThemeScalar::literal(2.0F),
                 },
             .metrics = ControlMetrics {
                 .height = ThemeScalar::literal(0.0F),

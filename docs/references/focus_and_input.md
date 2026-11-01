@@ -1,6 +1,6 @@
 # 统一输入、焦点与文本编辑
 
-> **状态：第一阶段核心已实施（2026-10-31，P3.2a）；文本会话（第二阶段）与设备适配仍为 planned。**
+> **状态：第一阶段已实施（P3.2a 核心 + P3.2b 收尾，2026-10-31/11-01）；文本会话（第二阶段）与设备适配仍为 planned。**
 > 2026-10-09 的 D1 讨论结论；2026-10-31 补记第一阶段实现范围与剩余项（§6）。
 > 本文是后续实施依据，取代旧 D1 工作稿中“只有键盘才显示环”“手柄归 pointer”及
 > “立即增加 `.focus_ring(false)`”的建议。D2 主题订阅、D3 导航分组、D4 平台后端不在本次决策范围。
@@ -346,13 +346,35 @@ D4 的 `IPlatformWindow` 已存在；第二阶段注入文本服务应扩展这�
   **86/86**；`focus-hint`、`key-lifecycle`、`sdl-platform-input`（12 用例/376 断言，
   dummy 视频 + 软件渲染器，含窗口失活/激活用例）与 `notebook-data` 全部通过。
 
-仍未完成（P3.2 后续批次，不把本批当整阶段完成）：
+P3.2b 收尾（2026-11-01）已实施：
 
-- Showcase「输入与焦点」演示页与注册表单（showcase 组件由维护者编写）。
-- Tabs / DropdownMenu 内部活动项提示的失效范围，以及两种 roving 模型的专项验收。
-- 弹窗进入/恢复的显式原因携带；Escape 路径当前依赖键盘映射隐式生效，仍需专项回归。
-- 只读可键盘选择字段的能力协议，以及“始终显示”偏好的配置入口（当前只有 scene setter seam）。
-- 真实指针/键盘设备与非 US 布局、Windows 实机验收。
+- Showcase「输入与焦点」页（`showcase/pages/input_focus_page.cpp`）覆盖普通按钮、可编辑与
+  只读字段、“始终显示”开关、RadioGroup、Tabs、DropdownMenu 与对话框恢复；页面注册到
+  `showcase/main_window.cpp` 和桌面 page probe，并有 `input-focus-showcase` 构建/布局回归。
+- Tabs 的提示环改画在当前活动标签上，并默认开启 `focus_ring` 宽度；纯模态切换只由 scene
+  标记容器 paint，不新增内部状态。RadioGroup 仍由成员持有真实焦点；DropdownMenu 的内部
+  活动项沿用既有高亮（不是独立焦点环），不复制一份焦点事实。
+- 弹窗进入/恢复携带显式原因：`FocusScope::on_ready` 使用 programmatic，Dialog 的显式入口
+  分支与 Popover 兜底入口携带 popup，退出恢复使用 restore；Dialog 在树内回退模式也保存并在
+  关闭完成后恢复打开前的焦点目标（目标失效时按既有合法性规则忽略）。
+- 只读文本字段仍声明 editing-hint 能力，指针聚焦也显示提示；new `focus-hint` 用例覆盖。
+- 同节点再次 `set_focus(node, context)` 现在也会刷新提示缓存并只标 paint（此前 transition
+  早退会漏掉该失效）。
+- 验证：主套件 110/110；`focus-hint` 10 用例/58 断言、`tabs` 15 用例、`dialog` 22 用例；
+  `input-focus-showcase` 通过。ASan/UBSan unit 87 通过 + `window-lifecycle` SKIP、
+  no-RTTI 89/89、no-SQLite/headless 84 通过 + 1 SKIP、纯工具 8/8。红测：把 Tabs 提示
+  条件改为无条件绘制、移除 Dialog 恢复调用，分别使对应用例失败。
+- Windows（2026-11-01，`192.168.1.109`，MSYS2 UCRT64）：增量补丁后重新配置/构建 0 错误，
+  `--suite unit` **87/87**（含 `focus-hint`、`tabs`、`dialog`、`input-focus-showcase` 与
+  `notebook-data`）。
+- 页面已用 `NANDINA_PROBE_PAGE=input_focus NANDINA_PROBE_RENDERER=sdl2d` 无头渲染成功；
+  仍需维护者在真实窗口用鼠标/键盘/实际布局设备目检，不把无头截图当设备验收。
+
+仍未完成：
+
+- 真实指针/键盘设备、非 US 布局与 IME 平台验收；Windows 窗口/GUI 项需交互桌面。
+- DropdownMenu 若后续引入独立焦点环而不是活动项高亮，需按 §4.3 补委托绘制的纯提示失效。
+- “始终显示”目前只有 scene setter seam + showcase 开关，没有持久化配置 API。
 
 ### 第二阶段：文本输入会话
 

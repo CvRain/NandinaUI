@@ -103,6 +103,14 @@ namespace nandina::widget
         //   会为这个零高子节点多算一个 gap。
         set_visible(mount_mode_ == MountMode::tree);
         dismiss_layer_->set_visible(true);
+        // Capture the focus target before mounting: FocusScope::on_ready() moves focus into
+        // the dialog during mount, so reading it afterwards would only see the inner target.
+        if (auto* tree = get_tree(); tree != nullptr) {
+            auto* focused = tree->focused_node();
+            if (focused != nullptr && focused != this && !focus_scope_->is_ancestor_of(*focused)) {
+                previous_focus_ = focused->weak_from_this();
+            }
+        }
         if (!mount()) {
             dismiss_layer_->set_visible(false);
             set_visible(false);
@@ -116,7 +124,13 @@ namespace nandina::widget
         if (auto* tree = get_tree(); tree != nullptr) {
             auto* focused = tree->focused_node();
             if (focused == nullptr || !focus_scope_->is_ancestor_of(*focused)) {
-                (void)tree->focus_first_within(*focus_scope_);
+                if (focused != nullptr && focused != this) {
+                    previous_focus_ = focused->weak_from_this();
+                }
+                (void)tree->focus_first_within(
+                    *focus_scope_,
+                    scene::FocusRequestContext {.reason = scene::FocusRequestReason::popup}
+                );
             }
         }
 
@@ -255,6 +269,7 @@ namespace nandina::widget
             dismiss_layer_->set_visible(false);
             unmount();
             set_visible(false);
+            restore_previous_focus();
             if (on_close_) {
                 on_close_();
             }
@@ -337,6 +352,23 @@ namespace nandina::widget
         if (portal_handle_ != nullptr) {
             portal_handle_->close();
             portal_handle_.reset();
+        }
+    }
+
+    void Dialog::restore_previous_focus() {
+        auto previous = previous_focus_.lock();
+        previous_focus_.reset();
+        if (previous == nullptr) {
+            return;
+        }
+        auto* tree = get_tree();
+        auto* target = previous->as_node2d();
+        if (tree != nullptr && target != nullptr) {
+            // restore reason itself does not decide the hint; the recent modality does.
+            tree->set_focus(
+                target,
+                scene::FocusRequestContext {.reason = scene::FocusRequestReason::restore}
+            );
         }
     }
 

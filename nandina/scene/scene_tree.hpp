@@ -220,8 +220,14 @@ namespace nandina::scene
         /// Move focus backward through the tree's focusable nodes.
         auto focus_previous() -> void;
 
-        /// Focus the first focusable node contained by `scope`.
+        /// Focus the first focusable node contained by `scope`. This is a navigation entry
+        /// point and records a keyboard context.
         auto focus_first_within(NanNode& scope) -> bool;
+
+        /// Focus the first focusable node with an explicit request context. Popup entry and
+        /// focus restoration use this form so they preserve the recent modality instead of
+        /// claiming the user navigated with the keyboard.
+        auto focus_first_within(NanNode& scope, const FocusRequestContext& context) -> bool;
 
         /// Move focus forward within `scope`, wrapping at its boundary.
         auto focus_next_within(NanNode& scope) -> bool;

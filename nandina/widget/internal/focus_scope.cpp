@@ -87,7 +87,12 @@ namespace nandina::widget::internal
         {
             previous_focus_ = focused->weak_from_this();
         }
-        (void)tree->focus_first_within(*this);
+        // Mounting a scope (dialog/popover entry) is programmatic: preserve the modality
+        // that caused the open instead of claiming keyboard navigation.
+        (void)tree->focus_first_within(
+            *this,
+            scene::FocusRequestContext {.reason = scene::FocusRequestReason::programmatic}
+        );
     }
 
     void FocusScope::on_exit_tree() {
@@ -95,7 +100,10 @@ namespace nandina::widget::internal
         auto previous = previous_focus_.lock();
         auto* target = previous != nullptr ? previous->as_node2d() : nullptr;
         if (tree != nullptr && target != nullptr) {
-            tree->set_focus(target);
+            tree->set_focus(
+                target,
+                scene::FocusRequestContext {.reason = scene::FocusRequestReason::restore}
+            );
         }
         previous_focus_.reset();
     }

@@ -113,6 +113,8 @@ namespace nandina::widget
         void install_dismiss_callback();
         void apply_style();
         void start_fade(float target);
+        /// Restore the focus target captured before opening (validated by set_focus).
+        void restore_previous_focus();
         [[nodiscard]] auto active() const noexcept -> bool {
             return phase_ != DialogPhase::closed;
         }
@@ -125,6 +127,8 @@ namespace nandina::widget
         MountMode mount_mode_ = MountMode::unmounted;
         DialogPhase phase_ = DialogPhase::closed;
         bool dismissible_ = true;
+        /// Focus target outside the dialog when it opened; restored after closing.
+        std::weak_ptr<scene::NanNode> previous_focus_;
         std::function<void()> on_close_;
         std::shared_ptr<const theme::DesignSystem> system_;
         theme::ColorAppearance appearance_ = theme::ColorAppearance::light;

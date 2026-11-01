@@ -735,6 +735,10 @@ namespace nandina::scene
         // modality; with no history the hint defaults to visible.
 
         _transition_focus(node);
+        // Re-focusing the current node does not run the transition body, but the request
+        // context may have changed the effective hint. Refresh unconditionally (no-op when
+        // the result is unchanged) so paint invalidation is never skipped in that case.
+        _refresh_focus_hint();
     }
 
     auto NanSceneTree::input_modality() const noexcept -> InputModality {
@@ -807,6 +811,10 @@ namespace nandina::scene
     auto NanSceneTree::_focus_with_navigation(NanNode2D* node) -> void {
         input_modality_ = InputModality::keyboard;
         _transition_focus(node);
+        // Re-focusing the current node does not run the transition body, but the request
+        // context may have changed the effective hint. Refresh unconditionally (no-op when
+        // the result is unchanged) so paint invalidation is never skipped in that case.
+        _refresh_focus_hint();
     }
 
     auto NanSceneTree::focus_next() -> void {
@@ -874,6 +882,20 @@ namespace nandina::scene
         }
         _focus_with_navigation(nodes.front());
         return true;
+    }
+
+    auto NanSceneTree::focus_first_within(NanNode& scope, const FocusRequestContext& context)
+        -> bool {
+        if (!scope.is_inside_tree() || scope.get_tree() != this) {
+            return false;
+        }
+        std::vector<NanNode2D*> nodes;
+        _collect_focusable_nodes(&scope, nodes);
+        if (nodes.empty()) {
+            return false;
+        }
+        set_focus(nodes.front(), context);
+        return focused_node() == nodes.front();
     }
 
     auto NanSceneTree::focus_next_within(NanNode& scope) -> bool {

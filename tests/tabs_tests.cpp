@@ -24,6 +24,7 @@ namespace
     public:
         int rounded_rects = 0;
         int text_calls = 0;
+        int outlines = 0;
 
         void begin_frame() override {}
         void end_frame() override {}
@@ -32,10 +33,19 @@ namespace
         void draw_rect(const foundation::NanRect&, const foundation::NanColor&) override {}
         void
         draw_rect_outline(const foundation::NanRect&, float, const foundation::NanColor&) override {
+            ++outlines;
         }
         void
         draw_rounded_rect(const foundation::NanRect&, float, const foundation::NanColor&) override {
             ++rounded_rects;
+        }
+        void draw_rounded_rect_outline(
+            const foundation::NanRect&,
+            float,
+            float,
+            const foundation::NanColor&
+        ) override {
+            ++outlines;
         }
         void draw_line(
             const foundation::NanPoint&,
@@ -155,6 +165,22 @@ TEST_CASE("tabs indicator animation advances via the animation host", "[tabs][an
     REQUIRE(tabs->selected_index() == 1);
 }
 
+TEST_CASE("tabs indicator animation ignores focus hint visibility", "[tabs][animation][hint]") {
+    auto tabs = widget::Tabs::create({"A", "BB", "CCC"});
+    scene::NanSceneTree tree;
+    tree.set_root(tabs);
+    REQUIRE(tree.layout_root(foundation::NanSize(280.0F, 48.0F)) >= 1);
+    tree.set_window_active(true);
+    tree.set_focus(tabs.get());
+    tree.record_input_modality(scene::InputModality::pointer);
+    REQUIRE_FALSE(tree.should_show_focus_hint());
+
+    // Selection feedback belongs to the component, not to hint visibility: a pointer-driven
+    // selection must still animate the indicator through the animation host.
+    tabs->select(1);
+    REQUIRE(tree.animation_host().active_count() == 2);
+}
+
 TEST_CASE("tabs arrow keys navigate with wrap-around", "[tabs][keyboard]") {
     auto tabs = widget::Tabs::create({"A", "B", "C"});
     scene::NanSceneTree tree;
@@ -234,6 +260,46 @@ TEST_CASE("tabs draws container, pill, and indicator when configured", "[tabs][p
     tree.draw(dev);
     REQUIRE(dev.text_calls == 2);
     REQUIRE(dev.rounded_rects == 3); // 容器 + 选中 pill + 下划线
+}
+
+TEST_CASE("tabs hint follows modality on the active item", "[tabs][focus][hint]") {
+    auto tabs = widget::Tabs::create({"A", "B", "C"});
+    scene::NanSceneTree tree;
+    tree.set_root(tabs);
+    REQUIRE(tree.layout_root(foundation::NanSize(280.0F, 48.0F)) >= 1);
+    tree.set_window_active(true);
+    tree.set_focus(tabs.get());
+    REQUIRE(tree.focused_node() == tabs.get());
+    REQUIRE(tree.should_show_focus_hint());
+    REQUIRE(tabs->visual_state() == theme::TabsVisualState::focused);
+    REQUIRE(tabs->resolved_style().focus.width > 0.0F);
+    REQUIRE(tabs->resolved_style().focus.color.alpha() > 0.0F);
+    // No interaction history: accepted default is a visible hint.
+    RecordingDevice visible;
+    tree.draw(visible);
+    REQUIRE(visible.outlines == 1);
+
+    tree.record_input_modality(scene::InputModality::pointer);
+    RecordingDevice hidden;
+    tree.draw(hidden);
+    REQUIRE(hidden.outlines == 0);
+
+    // Pointer-focusing the same node must not leave a stale ring.
+    tree.dispatch_mouse_button(
+        scene::MouseButtonEvent(
+            scene::MouseButtonEvent::Button::left,
+            scene::MouseButtonEvent::Action::press,
+            foundation::NanPoint(20.0F, 20.0F)
+        )
+    );
+    RecordingDevice still_hidden;
+    tree.draw(still_hidden);
+    REQUIRE(still_hidden.outlines == 0);
+
+    tree.record_input_modality(scene::InputModality::keyboard);
+    RecordingDevice again;
+    tree.draw(again);
+    REQUIRE(again.outlines == 1);
 }
 
 TEST_CASE("tabs default recipe keeps container and pill transparent", "[tabs][theme]") {

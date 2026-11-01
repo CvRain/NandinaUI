@@ -51,6 +51,7 @@
 #include <showcase/components/sidebar.hpp>
 #include <showcase/pages/anchors_page.hpp>
 #include <showcase/pages/home_page.hpp>
+#include <showcase/pages/input_focus_page.hpp>
 #include <showcase/pages/label_page.hpp>
 
 #include <memory>
@@ -241,6 +242,11 @@ int main() {
                 .title = "Label",
                 .type = "表单",
             }),
+            nandina::app::route<nandina::showcase::InputFocusPage>(nandina::app::RouteOptions {
+                .address = "input_and_focus/focus",
+                .title = "输入与焦点",
+                .type = "输入与焦点",
+            }),
         };
         if (const auto configured = router.configure(routes); !configured) {
             throw std::runtime_error("router.configure failed");
@@ -290,6 +296,9 @@ int main() {
         }
         else if (page == "label") {
             started = router.start<nandina::showcase::LabelPage>();
+        }
+        else if (page == "input_focus") {
+            started = router.start<nandina::showcase::InputFocusPage>();
         }
         else {
             throw std::runtime_error("unknown NANDINA_PROBE_PAGE: " + std::string(page));

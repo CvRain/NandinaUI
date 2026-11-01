@@ -265,6 +265,46 @@ TEST_CASE("dialog traps focus within its panel", "[dialog][focus]") {
     REQUIRE(harness.tree.focused_node() == first.get());
 }
 
+TEST_CASE(
+    "pointer-opened dialog keeps the pointer context and restores on escape",
+    "[dialog][focus][hint]"
+) {
+    DialogHarness harness;
+    auto trigger = widget::Button::create("Open");
+    harness.root->add_child(trigger);
+
+    auto content = widget::Button::create("Inside");
+    (void)harness.dialog->set_content(content);
+
+    // Pointer context established before the popup request.
+    harness.tree.set_focus(trigger.get());
+    harness.tree.record_input_modality(scene::InputModality::pointer);
+    REQUIRE(harness.tree.focused_node() == trigger.get());
+
+    harness.dialog->open();
+    harness.layout();
+    // Popup entry is programmatic: it must not claim keyboard navigation.
+    REQUIRE(harness.tree.input_modality() == scene::InputModality::pointer);
+    REQUIRE(harness.tree.focused_node() != trigger.get());
+    REQUIRE_FALSE(harness.tree.should_show_focus_hint());
+
+    // Escape establishes keyboard context before dismissal and restoration.
+    harness.tree.dispatch_key(
+        scene::KeyEvent(foundation::LogicalKey::escape, scene::KeyEvent::Action::press)
+    );
+    REQUIRE(harness.tree.input_modality() == scene::InputModality::keyboard);
+    for (int frame = 0; frame < 120 && harness.dialog->is_open(); ++frame) {
+        tick(harness, 1.0F / 60.0F);
+    }
+    // Fade may complete without an explicit close callback tick in this harness.
+    for (int frame = 0; frame < 120 && harness.tree.focused_node() != trigger.get(); ++frame) {
+        tick(harness, 1.0F / 60.0F);
+    }
+    REQUIRE(harness.tree.focused_node() == trigger.get());
+    REQUIRE(harness.tree.input_modality() == scene::InputModality::keyboard);
+    REQUIRE(harness.tree.should_show_focus_hint());
+}
+
 TEST_CASE("dialog override adjusts scrim and close callback fires", "[dialog][override]") {
     DialogHarness harness;
     int closes = 0;
