@@ -87,8 +87,7 @@ namespace nan_example::notebook::core
             std::array<unsigned char, kHashBytes> digest {};
         };
 
-        [[nodiscard]] auto parse_hash(const std::string_view encoded)
-            -> std::optional<ParsedHash> {
+        [[nodiscard]] auto parse_hash(const std::string_view encoded) -> std::optional<ParsedHash> {
             std::array<std::string_view, 4> parts {};
             std::size_t start = 0;
             for (std::size_t index = 0; index + 1 < parts.size(); ++index) {
@@ -133,13 +132,12 @@ namespace nan_example::notebook::core
         }
 
         return std::string(kAlgorithm) + '$' + std::to_string(hash_iterations) + '$'
-             + encode_hex(salt) + '$' + encode_hex(digest);
+            + encode_hex(salt) + '$' + encode_hex(digest);
     }
 
-    auto AuthService::verify_password(
-        const std::string_view password,
-        const std::string_view encoded
-    ) -> std::optional<bool> {
+    auto
+    AuthService::verify_password(const std::string_view password, const std::string_view encoded)
+        -> std::optional<bool> {
         const auto parsed = parse_hash(encoded);
         if (!parsed) {
             return std::nullopt;

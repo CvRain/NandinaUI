@@ -16,24 +16,24 @@ namespace nan_example::notebook::ui
         const auto user = store->current_user().peek();
 
         auto title = ui.make<nandina::widget::Label>(
-                             user ? "Welcome back, " + user->username : "No active account"
+                           user ? "Welcome back, " + user->username : "No active account"
         )
                          .width(nandina::widget::authoring::fill)
                          .font_size(28)
                          .color_token(nandina::theme::ColorToken::card_foreground)
                          .build();
-        auto detail = ui.make<nandina::widget::Label>(
-                              user ? "Your notebook session is active."
-                                   : "Sign in to open your notebook."
-        )
-                          .width(nandina::widget::authoring::fill)
-                          .font_size(16)
-                          .color_token(nandina::theme::ColorToken::muted_foreground)
-                          .configure([](nandina::widget::Label& label) {
-                              label.set_overflow(nandina::text::TextOverflow::wrap);
-                              label.set_max_lines(2);
-                          })
-                          .build();
+        auto detail =
+            ui.make<nandina::widget::Label>(
+                  user ? "Your notebook session is active." : "Sign in to open your notebook."
+            )
+                .width(nandina::widget::authoring::fill)
+                .font_size(16)
+                .color_token(nandina::theme::ColorToken::muted_foreground)
+                .configure([](nandina::widget::Label& label) {
+                    label.set_overflow(nandina::text::TextOverflow::wrap);
+                    label.set_max_lines(2);
+                })
+                .build();
 
         auto action = user
             ? ui.make<nandina::widget::Button>("Sign out")
@@ -56,12 +56,11 @@ namespace nan_example::notebook::ui
                            .children(action);
 
         return ui.center()
-            .child(ui.make<nandina::widget::Card>()
-                       .width(560)
-                       .height(300)
-                       .child(ui.padding(nandina::foundation::NanInsets::all(32))
-                                  .width(nandina::widget::authoring::fill)
-                                  .child(content)))
+            .child(ui.make<nandina::widget::Card>().width(560).height(300).child(
+                ui.padding(nandina::foundation::NanInsets::all(32))
+                    .width(nandina::widget::authoring::fill)
+                    .child(content)
+            ))
             .build();
     }
 } // namespace nan_example::notebook::ui

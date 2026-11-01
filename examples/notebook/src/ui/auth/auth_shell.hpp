@@ -10,10 +10,9 @@
 
 namespace nan_example::notebook::ui::auth
 {
-    [[nodiscard]] inline auto form_label(
-        const nandina::widget::BuildContext& ui,
-        const std::string_view text
-    ) -> std::shared_ptr<nandina::widget::Label> {
+    [[nodiscard]] inline auto
+    form_label(const nandina::widget::BuildContext& ui, const std::string_view text)
+        -> std::shared_ptr<nandina::widget::Label> {
         return ui.make<nandina::widget::Label>(std::string(text))
             .width(nandina::widget::authoring::fill)
             .height(20)
@@ -68,20 +67,17 @@ namespace nan_example::notebook::ui::auth
                                .height(nandina::scene::percent(100))
                                .children(std::move(form_area));
 
-        auto cover =
-            ui.make<nandina::widget::Image>("res://images/nandina_cover_1.jpg")
-                .width(nandina::scene::percent(50))
-                .height(nandina::scene::percent(100))
-                .configure([](nandina::widget::Image& image) {
-                    image.set_scale_mode(nandina::widget::ImageScale::cover);
-                    image.set_alignment(nandina::widget::ImageAlignment::end);
-                });
+        auto cover = ui.make<nandina::widget::Image>("res://images/nandina_cover_1.jpg")
+                         .width(nandina::scene::percent(50))
+                         .height(nandina::scene::percent(100))
+                         .configure([](nandina::widget::Image& image) {
+                             image.set_scale_mode(nandina::widget::ImageScale::cover);
+                             image.set_alignment(nandina::widget::ImageAlignment::end);
+                         });
 
         auto columns = ui.row().children(std::move(form_column)).children(std::move(cover));
-        auto card = ui.make<nandina::widget::Card>()
-                        .width(894)
-                        .height(528.25)
-                        .child(std::move(columns));
+        auto card =
+            ui.make<nandina::widget::Card>().width(894).height(528.25).child(std::move(columns));
         return ui.center().child(std::move(card)).build();
     }
 } // namespace nan_example::notebook::ui::auth

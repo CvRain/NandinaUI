@@ -29,10 +29,8 @@ namespace nan_example::notebook::core
         /// Verify a password against an encoded hash.
         /// `nullopt` means the stored value is malformed or unsupported; `false`
         /// means the password does not match.
-        [[nodiscard]] static auto verify_password(
-            std::string_view password,
-            std::string_view encoded
-        ) -> std::optional<bool>;
+        [[nodiscard]] static auto
+        verify_password(std::string_view password, std::string_view encoded) -> std::optional<bool>;
     };
 } // namespace nan_example::notebook::core
 

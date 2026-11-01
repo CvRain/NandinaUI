@@ -26,9 +26,8 @@ namespace nan_example::notebook::ui
         auto& feedback = ui.signal_value(std::string {});
         auto& feedback_error = ui.signal_value(false);
 
-        const auto password_hint =
-            "at least " + std::to_string(core::AuthService::minimum_password_length)
-            + " characters";
+        const auto password_hint = "at least "
+            + std::to_string(core::AuthService::minimum_password_length) + " characters";
         const auto user_name_input =
             ui.make<nandina::widget::TextField>(user_name, "input your name")
                 .width(nandina::widget::authoring::fill)
@@ -37,14 +36,13 @@ namespace nan_example::notebook::ui
                     field.set_name("register-username");
                 })
                 .build();
-        const auto password_input =
-            ui.make<nandina::widget::TextField>(password, password_hint)
-                .width(nandina::widget::authoring::fill)
-                .height(36)
-                .configure([](nandina::widget::TextField& field) {
-                    field.set_name("register-password");
-                })
-                .build();
+        const auto password_input = ui.make<nandina::widget::TextField>(password, password_hint)
+                                        .width(nandina::widget::authoring::fill)
+                                        .height(36)
+                                        .configure([](nandina::widget::TextField& field) {
+                                            field.set_name("register-password");
+                                        })
+                                        .build();
         const auto confirmation_input =
             ui.make<nandina::widget::TextField>(confirmation, "repeat the password")
                 .width(nandina::widget::authoring::fill)
@@ -79,8 +77,7 @@ namespace nan_example::notebook::ui
                 }
                 else if (!password_ok) {
                     feedback.set(
-                        "Use at least "
-                        + std::to_string(core::AuthService::minimum_password_length)
+                        "Use at least " + std::to_string(core::AuthService::minimum_password_length)
                         + " characters for the password."
                     );
                 }
@@ -112,27 +109,25 @@ namespace nan_example::notebook::ui
             }
         };
 
-        const auto submit_button =
-            ui.make<nandina::widget::Button>("Create account")
-                .width(nandina::widget::authoring::fill)
-                .on_click(submit_registration)
-                .build();
-        user_name_input->set_on_submit(
-            [submit_registration](std::string_view) { submit_registration(); }
-        );
-        password_input->set_on_submit(
-            [submit_registration](std::string_view) { submit_registration(); }
-        );
-        confirmation_input->set_on_submit(
-            [submit_registration](std::string_view) { submit_registration(); }
-        );
+        const auto submit_button = ui.make<nandina::widget::Button>("Create account")
+                                       .width(nandina::widget::authoring::fill)
+                                       .on_click(submit_registration)
+                                       .build();
+        user_name_input->set_on_submit([submit_registration](std::string_view) {
+            submit_registration();
+        });
+        password_input->set_on_submit([submit_registration](std::string_view) {
+            submit_registration();
+        });
+        confirmation_input->set_on_submit([submit_registration](std::string_view) {
+            submit_registration();
+        });
 
-        const auto sign_in_tip =
-            ui.make<nandina::widget::Label>("Already have an account?")
-                .height(20)
-                .font_size(14)
-                .color_token(nandina::theme::ColorToken::accent_foreground)
-                .build();
+        const auto sign_in_tip = ui.make<nandina::widget::Label>("Already have an account?")
+                                     .height(20)
+                                     .font_size(14)
+                                     .color_token(nandina::theme::ColorToken::accent_foreground)
+                                     .build();
         const auto sign_in_button =
             ui.make<nandina::widget::Button>("Sign in")
                 .treatment(nandina::theme::ButtonTreatment::link)

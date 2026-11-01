@@ -54,22 +54,19 @@ namespace nan_example::notebook::core
         return user_repository_.find_by_username(user_name);
     }
 
-    auto UserService::register_user(
-        const std::string_view username,
-        const std::string_view password
-    ) -> data::DataResult<models::User> {
+    auto
+    UserService::register_user(const std::string_view username, const std::string_view password)
+        -> data::DataResult<models::User> {
         const auto normalized = trim(username);
         if (normalized.empty()) {
             return std::unexpected(invalid_argument("register user", "username is empty"));
         }
         if (password.size() < AuthService::minimum_password_length) {
-            return std::unexpected(
-                invalid_argument(
-                    "register user",
-                    "password must be at least "
-                        + std::to_string(AuthService::minimum_password_length) + " characters"
-                )
-            );
+            return std::unexpected(invalid_argument(
+                "register user",
+                "password must be at least " + std::to_string(AuthService::minimum_password_length)
+                    + " characters"
+            ));
         }
 
         auto password_hash = AuthService::hash_password(password);
@@ -92,10 +89,9 @@ namespace nan_example::notebook::core
         return created;
     }
 
-    auto UserService::user_login(
-        const std::string_view username,
-        const std::string_view password
-    ) const -> data::DataResult<std::optional<models::User>> {
+    auto
+    UserService::user_login(const std::string_view username, const std::string_view password) const
+        -> data::DataResult<std::optional<models::User>> {
         const auto normalized = trim(username);
         if (normalized.empty() || password.empty()) {
             return std::optional<models::User> {};
@@ -114,8 +110,7 @@ namespace nan_example::notebook::core
             return std::optional<models::User> {};
         }
 
-        const auto verified =
-            AuthService::verify_password(password, (*found)->password_hash);
+        const auto verified = AuthService::verify_password(password, (*found)->password_hash);
         if (!verified) {
             nandina::log::error("user login failed: stored password hash is invalid");
             return std::optional<models::User> {};

@@ -21,21 +21,15 @@ namespace nan_example::notebook::app
         NanWindow::on_setup();
 
         const auto routers = nandina::app::Routes {
-            nandina::app::route<ui::UserLoginPage>(
-                nandina::app::RouteOptions {.title = "Sign in"}
-            ),
-            nandina::app::route<ui::UserRegisterPage>(
-                nandina::app::RouteOptions {
-                    .title = "Create account",
-                    .show_in_nav = false,
-                }
-            ),
-            nandina::app::route<ui::HomePage>(
-                nandina::app::RouteOptions {
-                    .title = "Notebook",
-                    .show_in_nav = false,
-                }
-            ),
+            nandina::app::route<ui::UserLoginPage>(nandina::app::RouteOptions {.title = "Sign in"}),
+            nandina::app::route<ui::UserRegisterPage>(nandina::app::RouteOptions {
+                .title = "Create account",
+                .show_in_nav = false,
+            }),
+            nandina::app::route<ui::HomePage>(nandina::app::RouteOptions {
+                .title = "Notebook",
+                .show_in_nav = false,
+            }),
         };
 
         auto& router = this->use_router(routers);
