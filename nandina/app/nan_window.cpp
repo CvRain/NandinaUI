@@ -273,6 +273,11 @@ namespace nandina::app
         opened_ = true;
         clipboard_ = std::make_unique<PlatformClipboard>(*platform_);
         tree_.set_clipboard(*clipboard_);
+        // The platform owns the text input service; the scene owns session identity and
+        // target routing. Backends without the protocol keep the legacy committed-text path.
+        if (auto* text_service = platform_->text_input_service(); text_service != nullptr) {
+            tree_.set_text_input_service(text_service);
+        }
 
         device_ = platform_->make_render_device();
         if (device_ != nullptr && device_wrapper_) {
@@ -432,8 +437,25 @@ namespace nandina::app
                     else if constexpr (std::is_same_v<Event, scene::KeyEvent>) {
                         tree_.dispatch_key(screen_ev);
                     }
+                    else if constexpr (std::is_same_v<Event, scene::TextEditingEvent>) {
+                        tree_.apply_text_input_event(
+                            scene::TextInputPlatformEvent {
+                                .type = screen_ev.text.empty()
+                                    ? scene::TextInputEventType::composition_cancelled
+                                    : scene::TextInputEventType::composition_updated,
+                                .text = screen_ev.text,
+                                .selection_start = screen_ev.selection_start,
+                                .selection_end = screen_ev.selection_end,
+                            }
+                        );
+                    }
                     else if constexpr (std::is_same_v<Event, scene::TextInputEvent>) {
-                        tree_.dispatch_text_input(screen_ev);
+                        tree_.apply_text_input_event(
+                            scene::TextInputPlatformEvent {
+                                .type = scene::TextInputEventType::composition_committed,
+                                .text = std::string(screen_ev.text()),
+                            }
+                        );
                     }
                 },
                 frame_event
@@ -505,6 +527,7 @@ namespace nandina::app
         const auto logical_size =
             viewport_mapping_ ? viewport_mapping_->logical_size : metrics.screen_size;
         (void)tree_.layout_root(logical_size);
+        tree_.update_text_input_area();
 
         {
             auto phase = tree_.enter_phase(scene::FramePhase::semantics);
@@ -581,6 +604,7 @@ namespace nandina::app
         device_.reset();
         tree_.clear_clipboard();
         clipboard_.reset();
+        tree_.set_text_input_service(nullptr);
         platform_->destroy();
         opened_ = false;
         close_pending_ = false;

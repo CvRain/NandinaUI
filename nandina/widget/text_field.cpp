@@ -234,6 +234,14 @@ namespace nandina::widget
         return !disabled_;
     }
 
+    auto TextField::text_input_target() -> scene::ITextInputTarget* {
+        return disabled_ ? nullptr : &edit_;
+    }
+
+    void TextField::set_input_purpose(const scene::TextInputPurpose purpose) {
+        edit_.set_text_input_purpose(purpose);
+    }
+
     auto TextField::focus_hint_requirement() const -> scene::FocusHintRequirement {
         return scene::FocusHintRequirement::always_required;
     }

@@ -33,8 +33,11 @@ application shell. Version `0.1.0-alpha.1`.
   **P3.2a** (D1 focus-hint core: `InputModality`/request context, `should_show_focus_hint()`,
   window activation gate, paint-only invalidation, widget ring migration) and **P3.2b**
   (showcase acceptance page, active-tab hint, popup enter/restore reasons, read-only field
-  capability, always-visible switch) are implemented. The D1 text session remains; see the
-  roadmap.
+  capability, always-visible switch) and **P3.3a** (text input session protocol:
+  `ITextInputService`/`ITextInputTarget`, session identity + late-event filtering, single
+  committed-text path, SDL composition events into the frame stream) are implemented.
+  P3.3b (real IME acceptance, preedit painting, soft keyboard/occlusion/caret area) remains;
+  see the roadmap.
 - The plan and exit criteria are **not** owned by this file: read
   `docs/references/development_roadmap.md` and the D5 contract
   (`resource_build_and_deployment.md` §8) before claiming a sub-batch is complete.

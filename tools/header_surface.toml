@@ -28,6 +28,10 @@ path = "nandina/app/detail/sdl_platform_window.hpp"
 level = "internal"
 
 [[headers]]
+path = "nandina/app/detail/sdl_text_input_service.hpp"
+level = "internal"
+
+[[headers]]
 path = "nandina/app/nan_application.hpp"
 level = "experimental"
 
@@ -329,6 +333,10 @@ level = "experimental"
 
 [[headers]]
 path = "nandina/scene/input_event.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/scene/text_input_service.hpp"
 level = "experimental"
 
 [[headers]]

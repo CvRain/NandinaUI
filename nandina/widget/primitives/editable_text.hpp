@@ -7,6 +7,7 @@
 
 #include "../../scene/clipboard.hpp"
 #include "../../scene/control.hpp"
+#include "../../scene/text_input_service.hpp"
 #include "text.hpp"
 
 #include <functional>
@@ -43,7 +44,7 @@ namespace nandina::widget::primitives
         float height = 0.0F; // 所在行高
     };
 
-    class EditableText: public scene::NanControl {
+    class EditableText: public scene::NanControl, public scene::ITextInputTarget {
     public:
         explicit EditableText(std::string value = {});
 
@@ -98,6 +99,26 @@ namespace nandina::widget::primitives
 
         [[nodiscard]] auto is_focusable() const -> bool override;
 
+        // ---- text input session target (D1 phase 2) ----
+
+        [[nodiscard]] auto text_input_target() -> scene::ITextInputTarget* override;
+        [[nodiscard]] auto text_input_purpose() const -> scene::TextInputPurpose override;
+        [[nodiscard]] auto text_input_multiline() const -> bool override;
+        [[nodiscard]] auto text_input_read_only() const -> bool override;
+        [[nodiscard]] auto text_input_caret_area() const -> foundation::NanRect override;
+        void text_input_set_composition(
+            std::string_view text,
+            std::size_t selection_start,
+            std::size_t selection_end
+        ) override;
+        void text_input_commit(std::string_view text) override;
+        void text_input_cancel_composition() override;
+
+        /// Purpose/multiline flow to the text session begin request; they do not change
+        /// committed-text routing or masking.
+        void set_text_input_purpose(scene::TextInputPurpose purpose);
+        void set_text_input_multiline(bool multiline);
+
         /// Editable targets keep a visible hint even for pointer focus (D1 phase 1).
         [[nodiscard]] auto focus_hint_requirement() const -> scene::FocusHintRequirement override;
         auto handle_input(scene::InputEvent& event, scene::IClipboard* clipboard) -> bool;
@@ -145,6 +166,8 @@ namespace nandina::widget::primitives
         TextSelection selection_ {};
         bool read_only_ = false;
         bool focused_ = false;
+        scene::TextInputPurpose text_input_purpose_ = scene::TextInputPurpose::text;
+        bool text_input_multiline_ = false;
         foundation::NanColor selection_color_ = foundation::NanColor::from(
             foundation::NanHexRgb {.red = 80, .green = 130, .blue = 220, .alpha = 96}
         );

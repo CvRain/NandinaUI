@@ -20,6 +20,7 @@
 #include "../foundation/geometry.hpp"
 #include "../render/render_device.hpp"
 #include "../scene/input_event.hpp"
+#include "../scene/text_input_service.hpp"
 #include "window_config.hpp"
 
 #include <memory>
@@ -39,6 +40,7 @@ namespace nandina::app
         scene::MouseButtonEvent,
         scene::MouseWheelEvent,
         scene::KeyEvent,
+        scene::TextEditingEvent,
         scene::TextInputEvent>;
 
     /// 平台层翻译好的一帧输入。
@@ -92,6 +94,14 @@ namespace nandina::app
         // ---- 呈现 ----
         /// 呈现这一帧；设备不持有 swap。
         virtual void present() = 0;
+
+        // ---- 文本输入 ----
+
+        /// 本平台提供的文本输入会话服务；空表示该后端未接入会话协议（提交文本仍走
+        /// FrameInput::events 的 TextInputEvent 兼容路径）。
+        [[nodiscard]] virtual auto text_input_service() -> scene::ITextInputService* {
+            return nullptr;
+        }
 
         // ---- 剪贴板 ----
         virtual void set_clipboard_text(std::string_view text) = 0;

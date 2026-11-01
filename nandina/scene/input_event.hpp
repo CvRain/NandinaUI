@@ -215,6 +215,15 @@ namespace nandina::scene
         KeyModifiers mods_;
     };
 
+    /// Platform composition update (IME preedit), captured in frame order. This is a
+    /// platform-frame value rather than a dispatched scene InputEvent: the text session
+    /// protocol decides which editing target receives it.
+    struct TextEditingEvent {
+        std::string text;
+        std::size_t selection_start = 0;
+        std::size_t selection_end = 0;
+    };
+
     /// Committed text input (already composed; may be multiple UTF-8 bytes).
     /// Distinct from KeyEvent: this carries the resulting characters, not keycodes.
     class TextInputEvent final: public InputEvent {

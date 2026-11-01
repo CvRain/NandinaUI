@@ -18,6 +18,16 @@
 
 ## 2. 三档分类
 
+2026-11-01 P3.3a 文本输入会话协议（experimental，已实施）：新增
+`scene/text_input_service.hpp`（`TextInputPurpose`/能力位/`TextInputSession`/
+`ITextInputTarget`/`ITextInputService`/`ITextInputSessionSink`/`TextInputPlatformEvent`）。
+`NanNode` 新增 `text_input_target()`；`NanSceneTree` 新增 `set_text_input_service()`、
+`active_text_input_session()`、`text_input_session_active()`、`apply_text_input_event()` 与
+`update_text_input_area()`；`FrameEvent` 新增 `scene::TextEditingEvent`（IME 组合更新）；
+`IPlatformWindow` 新增带默认 nullptr 的 `text_input_service()`，自定义平台可继续不为文本
+会话提供实现（committed text 走既有 `TextInputEvent` 路径）。当前能力只覆盖 SDL 桌面的
+composition；软键盘/遮挡/输入区域未支持，真实 IME 验收与预编辑绘制见后续批次。
+
 2026-10-31 P3.2a 焦点提示策略（experimental，已实施）：新增 `scene/focus_hint.hpp`
 （`InputModality` / `FocusRequestReason` / `FocusRequestContext` / `FocusHintRequirement`）；
 `NanNode` 新增虚查询 `focus_hint_requirement()`；`NanSceneTree` 新增 `input_modality()` /

@@ -27,6 +27,7 @@ namespace nandina::scene
     class NanNode2D;
     class CanvasLayer;
     class LayerStack;
+    class ITextInputTarget;
 } // namespace nandina::scene
 
 namespace nandina::render
@@ -278,6 +279,11 @@ namespace nandina::scene
         /// Whether this target always needs a visible focus hint (editable fields), or only
         /// when the recent meaningful interaction is not pointing (default).
         [[nodiscard]] virtual auto focus_hint_requirement() const -> FocusHintRequirement;
+
+        /// Editing target for the text input session protocol, or nullptr when this node
+        /// cannot host an editing session (read-only targets still return their capability
+        /// object; the session manager decides whether to open a session).
+        [[nodiscard]] virtual auto text_input_target() -> ITextInputTarget*;
 
         /**
          * Focus target to use when a click lands on this node or its subtree.

@@ -80,6 +80,17 @@ namespace
             REQUIRE(SDL_PushEvent(&event));
         }
 
+        void editing(const std::string& text, const int start, const int length) {
+            editing_text = text; // SDL keeps the pointer until the event is pumped.
+            SDL_Event event {};
+            event.type = SDL_EVENT_TEXT_EDITING;
+            event.edit.windowID = window_id;
+            event.edit.text = editing_text.c_str();
+            event.edit.start = start;
+            event.edit.length = length;
+            REQUIRE(SDL_PushEvent(&event));
+        }
+
         [[nodiscard]] auto poll() -> app::FrameInput {
             app::FrameInput input;
             window.poll_input(input);
@@ -88,6 +99,7 @@ namespace
 
         app::detail::SdlPlatformWindow window;
         SDL_WindowID window_id = 0;
+        std::string editing_text;
     };
 
     template<typename T>
@@ -457,4 +469,130 @@ TEST_CASE("SDL platform window starts text input for the keyboard", "[sdl][input
     // SDL3 默认不投递 SDL_EVENT_TEXT_INPUT；没有 SDL_StartTextInput 时键入只产生键事件，
     // TextField/TextArea 永远收不到字符。
     CHECK(SDL_TextInputActive(window));
+}
+
+TEST_CASE("SDL text editing events preserve composition order and ranges", "[sdl][input][text]") {
+    PlatformInputFixture fixture;
+    fixture.editing("にほ", 1, 2);
+    SDL_Event text {};
+    text.type = SDL_EVENT_TEXT_INPUT;
+    text.text.windowID = fixture.window_id;
+    text.text.text = "日本";
+    REQUIRE(SDL_PushEvent(&text));
+
+    const auto input = fixture.poll();
+    REQUIRE(input.events.size() == 2);
+    const auto* editing = std::get_if<scene::TextEditingEvent>(&input.events[0]);
+    REQUIRE(editing != nullptr);
+    CHECK(editing->text == "にほ");
+    CHECK(editing->selection_start == 1);
+    CHECK(editing->selection_end == 3);
+    const auto* committed_event = std::get_if<scene::TextInputEvent>(&input.events[1]);
+    REQUIRE(committed_event != nullptr);
+    CHECK(committed_event->text() == "日本");
+}
+
+namespace
+{
+    class RecordingTextInputSink final: public scene::ITextInputSessionSink {
+    public:
+        void on_composition_updated(
+            const scene::TextInputSession session,
+            const std::string_view text,
+            const std::size_t start,
+            const std::size_t end
+        ) override {
+            last_session = session;
+            composition = std::string(text);
+            selection_start = start;
+            selection_end = end;
+            ++updates;
+        }
+        void on_text_committed(
+            const scene::TextInputSession session,
+            const std::string_view text
+        ) override {
+            last_session = session;
+            commit = std::string(text);
+            ++commits;
+        }
+        void on_composition_cancelled(const scene::TextInputSession session) override {
+            last_session = session;
+            ++cancels;
+        }
+        void on_keyboard_visibility_changed(
+            const scene::TextInputSession session,
+            const scene::TextInputKeyboardVisibility visibility
+        ) override {
+            last_session = session;
+            last_visibility = visibility;
+        }
+
+        scene::TextInputSession last_session {};
+        std::string composition;
+        std::string commit;
+        std::size_t selection_start = 0;
+        std::size_t selection_end = 0;
+        scene::TextInputKeyboardVisibility last_visibility =
+            scene::TextInputKeyboardVisibility::unknown;
+        int updates = 0;
+        int commits = 0;
+        int cancels = 0;
+    };
+} // namespace
+
+TEST_CASE(
+    "SDL text input service tags session events and drops them after ending",
+    "[sdl][input][text]"
+) {
+    PlatformInputFixture fixture;
+    auto* service = fixture.window.text_input_service();
+    REQUIRE(service != nullptr);
+    CHECK(
+        scene::has_capability(service->capabilities(), scene::TextInputCapabilities::composition)
+    );
+    CHECK_FALSE(
+        scene::has_capability(service->capabilities(), scene::TextInputCapabilities::input_area)
+    );
+
+    RecordingTextInputSink sink;
+    service->set_sink(&sink);
+    const scene::TextInputSession session {.id = 7};
+    REQUIRE(
+        service->begin_session(
+            scene::TextInputBeginRequest {
+                .session = session,
+                .purpose = scene::TextInputPurpose::text
+            }
+        )
+        == scene::TextInputRequestResult::accepted
+    );
+    service->dispatch(
+        scene::TextInputPlatformEvent {
+            .type = scene::TextInputEventType::composition_updated,
+            .text = "にほ",
+            .selection_start = 1,
+            .selection_end = 2,
+        }
+    );
+    REQUIRE(sink.updates == 1);
+    CHECK(sink.last_session == session);
+    CHECK(sink.composition == "にほ");
+    service->dispatch(
+        scene::TextInputPlatformEvent {
+            .type = scene::TextInputEventType::composition_committed,
+            .text = "日本",
+        }
+    );
+    REQUIRE(sink.commits == 1);
+    CHECK(sink.commit == "日本");
+
+    service->end_session(session, scene::TextInputEndReason::focus_lost);
+    service->dispatch(
+        scene::TextInputPlatformEvent {
+            .type = scene::TextInputEventType::composition_committed,
+            .text = "late",
+        }
+    );
+    REQUIRE(sink.commits == 1); // no active session: late events dropped
 }

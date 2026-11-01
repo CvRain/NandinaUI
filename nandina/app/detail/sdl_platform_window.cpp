@@ -499,6 +499,7 @@ namespace nandina::app::detail
         if (!SDL_StartTextInput(window_)) {
             SDL_Log("SdlPlatformWindow: SDL_StartTextInput failed: %s", SDL_GetError());
         }
+        text_input_service_ = std::make_unique<SdlTextInputService>(window_);
 
         // 渲染器：先走 GPU 路径（与 probe/cross_platform/desktop/page_probe.cpp 一致），
         // 失败再退回 SDL 的默认 2D 渲染器。GPU 设备的唯一用途就是喂 GPU 渲染器，所以
@@ -559,6 +560,8 @@ namespace nandina::app::detail
     }
 
     void SdlPlatformWindow::destroy() {
+        // Stop IME/text input before the SDL window goes away.
+        text_input_service_.reset();
         if (renderer_ != nullptr) {
             SDL_DestroyRenderer(renderer_);
             renderer_ = nullptr;
@@ -748,6 +751,25 @@ namespace nandina::app::detail
                     break;
                 }
 
+                case SDL_EVENT_TEXT_EDITING: {
+                    // SDL positions are UTF-8 character offsets into the editing text; keep
+                    // them as the protocol's selection range and let the target clamp.
+                    const auto* text = event.edit.text;
+                    const auto start =
+                        event.edit.start >= 0 ? static_cast<std::size_t>(event.edit.start) : 0U;
+                    const auto end = event.edit.length >= 0
+                        ? static_cast<std::size_t>(event.edit.start + event.edit.length)
+                        : start;
+                    out.events.emplace_back(
+                        scene::TextEditingEvent {
+                            .text = text != nullptr ? std::string(text) : std::string {},
+                            .selection_start = start,
+                            .selection_end = end,
+                        }
+                    );
+                    break;
+                }
+
                 case SDL_EVENT_TEXT_INPUT: {
                     // SDL 给的已经是合成好的 UTF-8，框架的 TextInputEvent 正好要这个。
                     if (event.text.text != nullptr && event.text.text[0] != '\0') {
@@ -811,6 +833,10 @@ namespace nandina::app::detail
             return nullptr;
         }
         return std::make_unique<render::SdlRenderDevice>(*renderer_);
+    }
+
+    auto SdlPlatformWindow::text_input_service() -> scene::ITextInputService* {
+        return text_input_service_.get();
     }
 
     auto SdlPlatformWindow::name() const -> std::string_view {

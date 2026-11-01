@@ -309,6 +309,64 @@ namespace nandina::widget::primitives
         return true;
     }
 
+    auto EditableText::text_input_target() -> scene::ITextInputTarget* {
+        return this;
+    }
+
+    auto EditableText::text_input_purpose() const -> scene::TextInputPurpose {
+        return text_input_purpose_;
+    }
+
+    auto EditableText::text_input_multiline() const -> bool {
+        return text_input_multiline_;
+    }
+
+    auto EditableText::text_input_read_only() const -> bool {
+        return read_only_;
+    }
+
+    auto EditableText::text_input_caret_area() const -> foundation::NanRect {
+        // Local logical coordinates; the scene converts them once a platform advertises the
+        // input_area capability. Keeping this local avoids duplicating the layout mapping here.
+        const auto geometry = caret_geometry();
+        return foundation::NanRect::from_xywh(geometry.x, geometry.top, 1.0F, geometry.height);
+    }
+
+    void EditableText::text_input_set_composition(
+        const std::string_view text,
+        const std::size_t selection_start,
+        const std::size_t selection_end
+    ) {
+        set_composition(
+            TextComposition {
+                .text = std::string(text),
+                .selection_start = selection_start,
+                .selection_end = selection_end,
+            }
+        );
+    }
+
+    void EditableText::text_input_commit(const std::string_view text) {
+        if (read_only_) {
+            clear_composition();
+            return;
+        }
+        insert_text(text);
+        clear_composition();
+    }
+
+    void EditableText::text_input_cancel_composition() {
+        clear_composition();
+    }
+
+    void EditableText::set_text_input_purpose(const scene::TextInputPurpose purpose) {
+        text_input_purpose_ = purpose;
+    }
+
+    void EditableText::set_text_input_multiline(const bool multiline) {
+        text_input_multiline_ = multiline;
+    }
+
     auto EditableText::focus_hint_requirement() const -> scene::FocusHintRequirement {
         return scene::FocusHintRequirement::always_required;
     }

@@ -1,6 +1,6 @@
 # 统一输入、焦点与文本编辑
 
-> **状态：第一阶段已实施（P3.2a 核心 + P3.2b 收尾，2026-10-31/11-01）；文本会话（第二阶段）与设备适配仍为 planned。**
+> **状态：第一阶段已实施（P3.2a/b，2026-10-31/11-01）；第二阶段协议与 SDL 合成事件路径已实施（P3.3a，2026-11-01），真实 IME/软键盘/遮挡与预编辑显示仍待 P3.3b。**
 > 2026-10-09 的 D1 讨论结论；2026-10-31 补记第一阶段实现范围与剩余项（§6）。
 > 本文是后续实施依据，取代旧 D1 工作稿中“只有键盘才显示环”“手柄归 pointer”及
 > “立即增加 `.focus_ring(false)`”的建议。D2 主题订阅、D3 导航分组、D4 平台后端不在本次决策范围。
@@ -288,6 +288,45 @@ Escape 的上下文必须在关闭/恢复回调前生效；已有“始终显示
 “什么在何平台、用什么方式验证过”，不对应“协议桩/组合实现/键盘实现”三种固定服务类型。
 能力查询属于运行时协议，验证记录属于交付证据，不把后者再做成一份全局运行时状态。
 
+### 5.3 P3.3a 实施记录（2026-11-01，协议与合成事件路径）
+
+已实施：
+
+- `scene/text_input_service.hpp`：`TextInputPurpose`、能力位、请求结果、会话身份
+  `TextInputSession`、`ITextInputTarget`（编辑目标协议）、`TextInputPlatformEvent`、
+  `ITextInputSessionSink` 与窗口注入的 `ITextInputService`。公开值不出现 SDL 类型。
+- `NanSceneTree` 持有会话管理器：焦点进入可编辑目标（target 非只读）时向服务
+  `begin_session`；焦点离开、窗口失活、服务拆除、目标失效时 `end_session` 并取消预编辑；
+  会话身份由 scene 分配，sink 回调按身份与“目标仍是焦点节点”双重过滤，迟到旧会话事件
+  不得写入新目标。
+- committed text 只有一条路径：有活动会话时经服务→sink→target commit；无服务/无会话时
+  回退到既有 `TextInputEvent` 派发，避免新旧适配重复提交。组合更新（空文本视作取消）、
+  取消、键盘可见性回报均有协议入口。
+- `IPlatformWindow::text_input_service()` 为窗口注入服务；SDL 实现
+  `app/detail/sdl_text_input_service` 报告 `composition` 能力，start/stop 平台文本输入、
+  标注会话身份并转发事件。`FrameEvent` 新增 `scene::TextEditingEvent`，SDL
+  `SDL_EVENT_TEXT_EDITING` 按队列顺序进入帧事件（start/length 保留为选区范围）。
+- 编辑目标由 `EditableText` 实现并转发到 `TextField`/`TextArea`（只读目标不发会话；
+  purpose/multiline 进入 begin 请求）；`text_input_commit` 复用 `insert_text` 的唯一写入路径。
+- 回归：unit `text-input-session` 10 用例/48 断言覆盖会话开启/结束、组合/提交/取消路由、
+  committed 只提交一次、迟到会话丢弃、窗口失活与新会话、只读目标、purpose 传递、无服务
+  legacy 回退、服务拆除与 caret-area 能力门控。`sdl-platform-input` 增加到 16 用例/417
+  断言，覆盖 `SDL_EVENT_TEXT_EDITING` 顺序/范围与 SDL 服务会话标注、结束后丢弃；真实
+  `NanWindow::tick()` 用例覆盖“组合事件 → committed 文本只插入一次”。
+- 红测：让所有 committed 文本绕过会话（始终 legacy）或忽略会话身份时，session 用例分别
+  失败；恢复后通过。
+- 验证（Linux）：主套件 111/111、release check 8/8；交替矩阵与 Windows 在提交后复跑。
+
+仍未完成（P3.3b，真实平台验收）：
+
+- 真实 IME 组合/提交/取消在 Linux 与 Windows 交互桌面上的手工验收（当前只用合成 SDL
+  事件与 mock 服务证明协议和宿主路径）。
+- 预编辑文本的实际绘制：`EditableText` 已保存 composition，但尚未把 preedit/inline 绘制
+  接入文本管线，因此真实 IME 下用户暂时看不到组合串。
+- 软键盘请求/可见性/遮挡、caret 输入区域（服务能力位当前为 false，`update_text_input_area`
+  不发送平台请求）、输入用途的密码掩码呈现。
+- 会话身份在手写平台适配、服务重连以及页面销毁竞争下的专项回归（当前依赖焦点清理）。
+
 ## 6. 当前实现与实施顺序
 
 2026-10-17 排期同步：下面是 D1 内部阶段，跨专题顺序以[项目进度与下一步](project_status.md)
@@ -376,7 +415,7 @@ P3.2b 收尾（2026-11-01）已实施：
 - DropdownMenu 若后续引入独立焦点环而不是活动项高亮，需按 §4.3 补委托绘制的纯提示失效。
 - “始终显示”目前只有 scene setter seam + showcase 开关，没有持久化配置 API。
 
-### 第二阶段：文本输入会话
+### 第二阶段：文本输入会话（P3.3a 协议与 SDL 合成路径已实施；真实 IME/软键盘待 P3.3b）
 
 - 落平台中立的编辑目标与会话协议，接实际可用的平台实现。
 - 按 §5.1 定形窗口注入的 `ITextInputService`、受保护的事件入口、会话身份与解绑次序；不提前锁定平台。
@@ -394,8 +433,9 @@ P3.2b 收尾（2026-11-01）已实施：
 
 ## 7. 验收与“证明会红”
 
-以下是**验收要求**。2026-10-31 的 P3.2a 核心批次覆盖了其中策略、窗口、标脏与无历史默认等
-自动用例；roving 模型、弹窗恢复、showcase 页与真实设备仍待后续批次逐条补齐。
+以下是**验收要求**。2026-10-31 的 P3.2a、2026-11-01 的 P3.2b 与 P3.3a 已覆盖第一阶段策略/
+窗口/标脏/roving/弹窗恢复，以及第二阶段协议、会话身份、提交唯一路径与 SDL 合成事件路径的
+自动用例；真实 IME、软键盘、遮挡、预编辑显示与真实设备仍待 P3.3b 逐条补齐。
 
 | 阶段 | 组合断言 | 故障注入方向 |
 | --- | --- | --- |

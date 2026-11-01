@@ -198,6 +198,59 @@ TEST_CASE("window forwards typed key lifecycle to the focused editor", "[app][in
     window.close();
 }
 
+TEST_CASE("window routes IME composition through the text session", "[app][input][text-session]") {
+    using namespace nandina;
+    app::NanApplication application;
+    app::WindowConfig config;
+    config.width = 320;
+    config.height = 200;
+    config.vsync = false;
+    config.target_fps = 0;
+    config.backend = app::WindowBackend::sdl3;
+    app::NanWindow window(application, config);
+    window.open();
+    auto edit = std::make_shared<widget::primitives::EditableText>("");
+    window.set_content(edit);
+    window.tick();
+    window.scene_tree().set_focus(edit.get());
+    SDL_FlushEvents(SDL_EVENT_FIRST, SDL_EVENT_LAST);
+
+    int window_count = 0;
+    SDL_Window** windows = SDL_GetWindows(&window_count);
+    REQUIRE(windows != nullptr);
+    REQUIRE(window_count == 1);
+    const auto window_id = SDL_GetWindowID(windows[0]);
+    SDL_free(windows);
+
+    SDL_Event gained {};
+    gained.type = SDL_EVENT_WINDOW_FOCUS_GAINED;
+    gained.window.windowID = window_id;
+    push(gained);
+    window.tick();
+    REQUIRE(window.scene_tree().text_input_session_active());
+
+    std::string preedit = "にほ";
+    SDL_Event editing {};
+    editing.type = SDL_EVENT_TEXT_EDITING;
+    editing.edit.windowID = window_id;
+    editing.edit.text = preedit.c_str();
+    editing.edit.start = 1;
+    editing.edit.length = 1;
+    push(editing);
+
+    SDL_Event committed {};
+    committed.type = SDL_EVENT_TEXT_INPUT;
+    committed.text.windowID = window_id;
+    committed.text.text = "日本";
+    push(committed);
+    window.tick();
+
+    REQUIRE(edit->value() == "日本"); // committed exactly once through the session
+    REQUIRE_FALSE(edit->composition().has_value());
+    edit.reset();
+    window.close();
+}
+
 TEST_CASE("window focus events gate the scene focus hint", "[app][input][focus]") {
     using namespace nandina;
     app::NanApplication application;

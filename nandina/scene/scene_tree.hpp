@@ -12,6 +12,7 @@
 #include "frame_scheduler.hpp"
 #include "input_event.hpp"
 #include "node2d.hpp"
+#include "text_input_service.hpp"
 
 #include <functional>
 #include <memory>
@@ -43,7 +44,7 @@ namespace nandina::scene
      * Also provides front-to-back hit-testing, hover tracking, and focus dispatch.
      * Hit-testing may use a world-space bounds coarse pass before local-space fine tests.
      */
-    class NanSceneTree: private theme::ThemeObserver {
+    class NanSceneTree: private theme::ThemeObserver, private ITextInputSessionSink {
     public:
         class PhaseScope {
         public:
@@ -214,6 +215,26 @@ namespace nandina::scene
         /// item (Tabs / DropdownMenu). It does not inspect the focused node's requirement.
         [[nodiscard]] auto focus_hint_context_visible() const noexcept -> bool;
 
+        // ---- text input session (D1 phase 2) ----
+
+        /// Attach/detach the window-owned text input service. Attaching syncs the session to
+        /// the current focus; detaching ends it and clears composition without touching focus.
+        void set_text_input_service(ITextInputService* service);
+        [[nodiscard]] auto text_input_service() const noexcept -> ITextInputService*;
+
+        /// Active session id, or `{0}` when no editable target owns a session.
+        [[nodiscard]] auto active_text_input_session() const noexcept -> TextInputSession;
+        [[nodiscard]] auto text_input_session_active() const noexcept -> bool;
+
+        /// Host entry for platform text events. With an active session the event goes through
+        /// the service (which tags it with the session id); otherwise committed text falls
+        /// back to the legacy `TextInputEvent` dispatch and composition updates are ignored.
+        void apply_text_input_event(const TextInputPlatformEvent& event);
+
+        /// Refresh the platform caret/input area after layout. No-op when the platform does
+        /// not advertise the `input_area` capability.
+        void update_text_input_area();
+
         /// Move focus forward through the tree's focusable nodes.
         auto focus_next() -> void;
 
@@ -279,6 +300,26 @@ namespace nandina::scene
         /// Recompute the cached hint result for the current focus target. A changed result
         /// marks only DirtyFlags::paint on that target (no layout/semantics/transform flags).
         auto _refresh_focus_hint() -> void;
+        /// Keep the text session aligned with focus/window state. Ending uses the given reason
+        /// when the session is actually closed.
+        void _sync_text_input_session(TextInputEndReason reason);
+        void _end_text_input_session(TextInputEndReason reason);
+        [[nodiscard]] auto _session_target_valid(TextInputSession session) -> ITextInputTarget*;
+
+        // ITextInputSessionSink: platform events are filtered by session identity and by the
+        // target still being the focused node before any widget state changes.
+        void on_composition_updated(
+            TextInputSession session,
+            std::string_view text,
+            std::size_t selection_start,
+            std::size_t selection_end
+        ) override;
+        void on_text_committed(TextInputSession session, std::string_view text) override;
+        void on_composition_cancelled(TextInputSession session) override;
+        void on_keyboard_visibility_changed(
+            TextInputSession session,
+            TextInputKeyboardVisibility visibility
+        ) override;
         /// Focus navigation helper: navigation is keyboard interaction.
         auto _focus_with_navigation(NanNode2D* node) -> void;
         auto _sync_hover_after_tree_change() -> void;
@@ -318,6 +359,11 @@ namespace nandina::scene
         bool window_active_ = true;
         bool focus_hint_always_visible_ = false;
         bool focus_hint_visible_ = false;
+        ITextInputService* text_input_service_ = nullptr;
+        ITextInputTarget* text_input_target_ = nullptr;
+        std::weak_ptr<NanNode> text_input_target_node_;
+        TextInputSession text_input_session_ {};
+        std::uint64_t next_text_input_session_ = 0;
         std::optional<text::TextPipeline> default_text_pipeline_;
         text::FontPipelineCache* font_context_ = nullptr;
         render::TextureCache* texture_cache_ = nullptr;

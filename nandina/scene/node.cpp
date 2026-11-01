@@ -447,6 +447,10 @@ namespace nandina::scene
         return FocusHintRequirement::context_dependent;
     }
 
+    auto NanNode::text_input_target() -> ITextInputTarget* {
+        return nullptr;
+    }
+
     auto NanNode::is_visible_in_tree() const -> bool {
         auto* p = parent();
         return p == nullptr || p->is_visible_in_tree();

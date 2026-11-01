@@ -763,6 +763,7 @@ namespace nandina::scene
         }
         window_active_ = active;
         _refresh_focus_hint();
+        _sync_text_input_session(TextInputEndReason::window_inactive);
     }
 
     auto NanSceneTree::focus_hint_always_visible() const noexcept -> bool {
@@ -815,6 +816,171 @@ namespace nandina::scene
         // context may have changed the effective hint. Refresh unconditionally (no-op when
         // the result is unchanged) so paint invalidation is never skipped in that case.
         _refresh_focus_hint();
+    }
+
+    auto NanSceneTree::set_text_input_service(ITextInputService* service) -> void {
+        if (text_input_service_ == service) {
+            return;
+        }
+        if (text_input_service_ != nullptr) {
+            _end_text_input_session(TextInputEndReason::service_detached);
+            text_input_service_->set_sink(nullptr);
+        }
+        text_input_service_ = service;
+        if (text_input_service_ != nullptr) {
+            text_input_service_->set_sink(this);
+            _sync_text_input_session(TextInputEndReason::target_invalid);
+        }
+    }
+
+    auto NanSceneTree::text_input_service() const noexcept -> ITextInputService* {
+        return text_input_service_;
+    }
+
+    auto NanSceneTree::active_text_input_session() const noexcept -> TextInputSession {
+        return text_input_session_;
+    }
+
+    auto NanSceneTree::text_input_session_active() const noexcept -> bool {
+        return text_input_session_.operator bool() && text_input_target_ != nullptr;
+    }
+
+    auto NanSceneTree::_session_target_valid(const TextInputSession session) -> ITextInputTarget* {
+        if (!text_input_session_active() || session != text_input_session_) {
+            return nullptr;
+        }
+        const auto node = text_input_target_node_.lock();
+        if (!node || focused_node_.lock().get() != node.get()) {
+            return nullptr;
+        }
+        return text_input_target_;
+    }
+
+    void NanSceneTree::_end_text_input_session(const TextInputEndReason reason) {
+        if (text_input_target_ != nullptr) {
+            text_input_target_->text_input_cancel_composition();
+        }
+        if (text_input_service_ != nullptr && text_input_session_.operator bool()) {
+            text_input_service_->end_session(text_input_session_, reason);
+        }
+        text_input_target_ = nullptr;
+        text_input_target_node_.reset();
+        text_input_session_ = {};
+    }
+
+    void NanSceneTree::_sync_text_input_session(const TextInputEndReason reason) {
+        ITextInputTarget* desired = nullptr;
+        if (window_active_ && text_input_service_ != nullptr) {
+            if (auto* focused = focused_node(); focused != nullptr) {
+                auto* target = focused->text_input_target();
+                if (target != nullptr && !target->text_input_read_only()) {
+                    desired = target;
+                }
+            }
+        }
+        if (desired != nullptr && desired == text_input_target_
+            && text_input_session_.operator bool())
+        {
+            return;
+        }
+
+        _end_text_input_session(reason);
+        if (desired == nullptr) {
+            return;
+        }
+
+        auto* focused = focused_node();
+        if (focused == nullptr) {
+            return;
+        }
+        const TextInputSession session {.id = ++next_text_input_session_};
+        const auto result = text_input_service_->begin_session(
+            TextInputBeginRequest {
+                .session = session,
+                .purpose = desired->text_input_purpose(),
+                .multiline = desired->text_input_multiline(),
+            }
+        );
+        if (result != TextInputRequestResult::accepted) {
+            return;
+        }
+        text_input_session_ = session;
+        text_input_target_ = desired;
+        text_input_target_node_ = focused->weak_from_this();
+    }
+
+    void NanSceneTree::apply_text_input_event(const TextInputPlatformEvent& event) {
+        if (text_input_service_ != nullptr && text_input_session_active()) {
+            text_input_service_->dispatch(event);
+            return;
+        }
+        if (event.type == TextInputEventType::composition_committed) {
+            dispatch_text_input(TextInputEvent {event.text});
+        }
+        // Composition events without a session/service have no editing target to update.
+    }
+
+    void NanSceneTree::update_text_input_area() {
+        if (!text_input_session_active() || text_input_service_ == nullptr) {
+            return;
+        }
+        if (!has_capability(text_input_service_->capabilities(), TextInputCapabilities::input_area))
+        {
+            return;
+        }
+        auto* target = _session_target_valid(text_input_session_);
+        if (target == nullptr) {
+            return;
+        }
+        (void)text_input_service_->update_caret_area(
+            text_input_session_,
+            TextInputArea {
+                .caret = target->text_input_caret_area(),
+                .window = foundation::NanRect::empty(),
+            }
+        );
+    }
+
+    void NanSceneTree::on_composition_updated(
+        const TextInputSession session,
+        const std::string_view text,
+        const std::size_t selection_start,
+        const std::size_t selection_end
+    ) {
+        auto* target = _session_target_valid(session);
+        if (target == nullptr) {
+            return;
+        }
+        if (text.empty()) {
+            target->text_input_cancel_composition();
+            return;
+        }
+        target->text_input_set_composition(text, selection_start, selection_end);
+    }
+
+    void
+    NanSceneTree::on_text_committed(const TextInputSession session, const std::string_view text) {
+        auto* target = _session_target_valid(session);
+        if (target == nullptr || text.empty()) {
+            return;
+        }
+        target->text_input_commit(text);
+    }
+
+    void NanSceneTree::on_composition_cancelled(const TextInputSession session) {
+        if (auto* target = _session_target_valid(session); target != nullptr) {
+            target->text_input_cancel_composition();
+        }
+    }
+
+    void NanSceneTree::on_keyboard_visibility_changed(
+        const TextInputSession session,
+        const TextInputKeyboardVisibility visibility
+    ) {
+        // The hint policy must not depend on soft-keyboard visibility; phase 2 only records
+        // that the platform reported it. No consumer exists until a session UI needs it.
+        (void)session;
+        (void)visibility;
     }
 
     auto NanSceneTree::focus_next() -> void {
@@ -1258,6 +1424,7 @@ namespace nandina::scene
         }
         mark_semantics_dirty();
         _refresh_focus_hint();
+        _sync_text_input_session(TextInputEndReason::focus_lost);
     }
 
     auto NanSceneTree::_sync_hover_after_tree_change() -> void {

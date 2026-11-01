@@ -27,6 +27,7 @@ namespace nandina::widget
     } // namespace
 
     TextArea::TextArea(std::string value, theme::NanTheme theme): edit_(std::move(value)) {
+        edit_.set_text_input_multiline(true);
         system_ =
             std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
         theme_view_ = theme;
@@ -226,6 +227,10 @@ namespace nandina::widget
 
     auto TextArea::is_focusable() const -> bool {
         return !disabled_;
+    }
+
+    auto TextArea::text_input_target() -> scene::ITextInputTarget* {
+        return disabled_ ? nullptr : &edit_;
     }
 
     auto TextArea::focus_hint_requirement() const -> scene::FocusHintRequirement {
