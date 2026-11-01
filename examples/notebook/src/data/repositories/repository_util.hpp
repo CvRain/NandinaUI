@@ -31,6 +31,6 @@ namespace nan_example::notebook::data
         -> DataResult<void>;
 
     [[nodiscard]] auto invalid_argument(std::string operation, std::string message) -> DataError;
-} // namespace nandina::examples::notebook::data
+} // namespace nan_example::notebook::data
 
 #endif // NANDINA_EXAMPLES_NOTEBOOK_DATA_REPOSITORIES_REPOSITORY_UTIL_HPP

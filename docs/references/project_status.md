@@ -133,10 +133,10 @@ showcase 页面的小视口/零尺寸、反复换边和页面销毁回调测试�
 
 P2.4 的 `examples/lab` 已退役，示例应用改为 `examples/notebook`：目标是一个较完整的个人笔记软件，按批持续演进，而不是一次交付完整产品。
 
-- **已落地**：SQLite 数据层（连接/statement/事务、`schema_migrations` 与 `PRAGMA user_version`、资源驱动迁移、user/note-group/note/todo 模型与仓储、`DataError` + `std::expected` 错误约定）；`notebook-data` 单元测试覆盖迁移顺序/缺口/重命名、CRUD、所有权与级联。
-- **进行中**：auth/user 服务与 UI 页面；页面组件先在 `showcase/` 编写并做视觉验收，notebook 负责组合。
+- **已落地**：SQLite 数据层（连接/statement/事务、`schema_migrations` 与 `PRAGMA user_version`、资源驱动迁移、user/note-group/note/todo 模型与仓储、`DataError` + `std::expected` 错误约定）；`notebook-data` 单元测试覆盖迁移顺序/缺口/重命名、CRUD、所有权与级联。账户侧已接入 `AuthService`（PBKDF2-HMAC-SHA256，版本化盐/迭代参数）、`UserService` 注册与登录校验、`NotebookStore` 当前用户信号，以及登录/注册/占位工作区三条路由；`notebook-data` 同时覆盖哈希、错误口令、未知账户与重复注册。
+- **进行中**：笔记工作区 UI 与业务页面；页面组件先在 `showcase/` 编写并做视觉验收，notebook 负责组合。
 - **测试分工**：数据层等确定性测试留在仓库（`examples/notebook/tests/`，`notebook-data`，CI/Windows 覆盖）；UI/交互与长跑测试放未跟踪的 `playground/`，不作为 CI 证据。
-- **构建前置**：notebook 需要 `build_ui`、资源工具链与 `resource_sqlite=enabled`；headless、关闭工具或关闭 SQLite 的配置用 `-Dexamples=false` 跳过它。
+- **构建前置**：notebook 需要 `build_ui`、资源工具链、`resource_sqlite=enabled` 与系统 OpenSSL ≥ 3.0（应用侧口令哈希）；headless、关闭工具或关闭 SQLite 的配置用 `-Dexamples=false` 跳过它。
 - **历史证据**：P2.4 的验收记录与 `docs/images/lab/` 截图保留，不随 lab 退役删除。
 - **干净检出修复（2026-10-31，Windows 补验时发现）**：`resources.toml` 的扫描根改为已跟踪的 `src/data/migrations`（空占位目录不会进入 Git）；数据层测试与 README 完成 `nan_example::notebook` 命名空间迁移；启动错误改用框架 logger，避免 Windows 工具链缺少 `std::println` 的终端符号。
 - **验证（2026-10-28）**：默认主套件 **106/106**（`notebook-data` 通过；lab 的 4 个测试随退役删除、notebook 数据层测试新增）；release check 8/8。干净离线配置（`--wrap-mode=nodownload -Dexamples=true -Dshowcase=false -Dbuild_tests=false`）从零构建 `nandina_examples_notebook` 通过并生成迁移包与常量头；`-Dresource_sqlite=disabled` 且 `examples` 默认开启时配置期报错 `examples/notebook needs the SQLite runtime backend`；headless 配方 `-Dsdl_backend=disabled -Dshowcase=false -Dexamples=false` 配置通过。交替矩阵：ASan **83/83（+1 SKIP）**、no-RTTI **85/85**（含 `notebook-data`）、no-SQLite **81/81（+1 SKIP）**、纯工具 8/8。Windows 设备本轮不可达（`No route to host`），未复跑；恢复后补验构建、`--suite unit` 与 `notebook-data`。

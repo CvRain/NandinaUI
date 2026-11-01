@@ -1,6 +1,8 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include "app/notebook_store.hpp"
+#include "core/services/auth_service.hpp"
+#include "core/services/user_service.hpp"
 #include "data/database.hpp"
 #include "data/migration.hpp"
 #include "data/repositories/note_group_repository.hpp"
@@ -16,6 +18,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <filesystem>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -331,18 +334,19 @@ TEST_CASE("NotebookStore wires UserService to the migrated database", "[notebook
     auto count = service.user_count();
     REQUIRE(count.has_value());
     CHECK(*count == 0);
-    auto exists = service.user_exist();
+    auto exists = service.have_user();
     REQUIRE(exists.has_value());
     CHECK_FALSE(*exists);
 
-    auto created = service.create_user("demo", "demo-password-hash");
+    auto created = service.register_user("demo", "demo-password");
     REQUIRE(created.has_value());
     CHECK(created->username == "demo");
+    CHECK(created->password_hash != "demo-password");
 
     auto populated = service.user_count();
     REQUIRE(populated.has_value());
     CHECK(*populated == 1);
-    auto now_exists = service.user_exist();
+    auto now_exists = service.have_user();
     REQUIRE(now_exists.has_value());
     CHECK(*now_exists);
 
@@ -351,7 +355,84 @@ TEST_CASE("NotebookStore wires UserService to the migrated database", "[notebook
     REQUIRE(fetched->has_value());
     CHECK((*fetched)->id == created->id);
 
-    auto duplicate = service.create_user("demo", "another-hash");
+    auto duplicate = service.register_user("demo", "another-password");
     REQUIRE_FALSE(duplicate.has_value());
     CHECK(duplicate.error().code == data::DataErrorCode::constraint_violation);
+
+    auto signed_in = service.user_login("demo", "demo-password");
+    REQUIRE(signed_in.has_value());
+    REQUIRE(signed_in->has_value());
+    CHECK((*signed_in)->id == created->id);
+
+    store.sign_in(**signed_in);
+    REQUIRE(store.current_user().peek().has_value());
+    CHECK(store.current_user().peek()->username == "demo");
+    store.sign_out();
+    CHECK_FALSE(store.current_user().peek().has_value());
+}
+
+TEST_CASE("AuthService hashes and verifies passwords", "[notebook][auth]") {
+    using nan_example::notebook::core::AuthService;
+
+    const auto first = AuthService::hash_password("correct horse battery staple");
+    REQUIRE(first.has_value());
+    CHECK(first->starts_with("pbkdf2-sha256$"));
+    CHECK(first->find("correct horse") == std::string::npos);
+
+    const auto matched = AuthService::verify_password("correct horse battery staple", *first);
+    REQUIRE(matched.has_value());
+    CHECK(*matched);
+
+    const auto rejected = AuthService::verify_password("wrong password", *first);
+    REQUIRE(rejected.has_value());
+    CHECK_FALSE(*rejected);
+
+    const auto second = AuthService::hash_password("correct horse battery staple");
+    REQUIRE(second.has_value());
+    CHECK(*second != *first);
+
+    CHECK_FALSE(AuthService::verify_password("x", "pbkdf2-sha256$1$zz$zz").has_value());
+}
+
+TEST_CASE("UserService registers accounts and rejects bad credentials", "[notebook][auth]") {
+    auto fixture = migrated_database();
+    data::UserRepository users(fixture.database);
+    nan_example::notebook::core::UserService service(users);
+
+    auto too_short = service.register_user("alice", "short");
+    REQUIRE_FALSE(too_short.has_value());
+    CHECK(too_short.error().code == data::DataErrorCode::invalid_argument);
+
+    auto created = service.register_user("  alice  ", "correct horse");
+    REQUIRE(created.has_value());
+    CHECK(created->username == "alice");
+    CHECK(created->password_hash != "correct horse");
+
+    auto signed_in = service.user_login("alice", "correct horse");
+    REQUIRE(signed_in.has_value());
+    REQUIRE(signed_in->has_value());
+    CHECK((*signed_in)->id == created->id);
+
+    auto wrong_password = service.user_login("alice", "wrong password");
+    REQUIRE(wrong_password.has_value());
+    CHECK_FALSE(wrong_password->has_value());
+
+    auto unknown_user = service.user_login("nobody", "correct horse");
+    REQUIRE(unknown_user.has_value());
+    CHECK_FALSE(unknown_user->has_value());
+
+    auto duplicate = service.register_user("alice", "another password");
+    REQUIRE_FALSE(duplicate.has_value());
+    CHECK(duplicate.error().code == data::DataErrorCode::constraint_violation);
+
+    auto malformed = users.create({
+        .username = "broken",
+        .password_hash = "not-a-supported-hash",
+        .email = std::nullopt,
+        .avatar = std::nullopt,
+    });
+    REQUIRE(malformed.has_value());
+    auto rejected_hash = service.user_login("broken", "not-a-supported-hash");
+    REQUIRE(rejected_hash.has_value());
+    CHECK_FALSE(rejected_hash->has_value());
 }

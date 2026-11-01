@@ -18,6 +18,10 @@ if resource_tools
     notebook_resource_depends += [nanres]
 endif
 
+# Account passwords are hashed with PBKDF2-HMAC-SHA256. OpenSSL is already a
+# prerequisite for the resource toolchain; this makes the app-side requirement explicit.
+notebook_openssl_dep = dependency('openssl', version: '>=3.0')
+
 notebook_resources = custom_target(
     'nandina-notebook-resources',
     input: files('resources.toml'),

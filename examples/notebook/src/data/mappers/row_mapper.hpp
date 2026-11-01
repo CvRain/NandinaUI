@@ -16,6 +16,6 @@ namespace nan_example::notebook::data
     [[nodiscard]] auto read_note_group(const Statement& row) -> models::NoteGroup;
     [[nodiscard]] auto read_note(const Statement& row) -> models::Note;
     [[nodiscard]] auto read_todo(const Statement& row) -> models::Todo;
-} // namespace nandina::examples::notebook::data
+} // namespace nan_example::notebook::data
 
 #endif // NANDINA_EXAMPLES_NOTEBOOK_DATA_MAPPERS_ROW_MAPPER_HPP

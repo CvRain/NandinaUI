@@ -275,4 +275,4 @@ namespace nan_example::notebook::data
         const auto view = column_blob(index);
         return std::vector<std::byte>(view.begin(), view.end());
     }
-} // namespace nandina::examples::notebook::data
+} // namespace nan_example::notebook::data

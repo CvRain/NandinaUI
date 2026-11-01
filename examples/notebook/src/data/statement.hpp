@@ -59,6 +59,6 @@ namespace nan_example::notebook::data
 
         sqlite3_stmt* statement_ = nullptr;
     };
-} // namespace nandina::examples::notebook::data
+} // namespace nan_example::notebook::data
 
 #endif // NANDINA_EXAMPLES_NOTEBOOK_DATA_STATEMENT_HPP

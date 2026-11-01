@@ -35,6 +35,6 @@ namespace nan_example::notebook::data
     using DataResult = std::expected<T, DataError>;
 
     [[nodiscard]] auto describe(const DataError& error) -> std::string;
-} // namespace nandina::examples::notebook::data
+} // namespace nan_example::notebook::data
 
 #endif // NANDINA_EXAMPLES_NOTEBOOK_DATA_DATA_ERROR_HPP

@@ -16,6 +16,6 @@ namespace nan_example::notebook::models
 
         friend auto operator==(const NoteGroup&, const NoteGroup&) -> bool = default;
     };
-} // namespace nandina::examples::notebook::models
+} // namespace nan_example::notebook::models
 
 #endif // NANDINA_EXAMPLES_NOTEBOOK_CORE_MODELS_NOTE_GROUP_HPP

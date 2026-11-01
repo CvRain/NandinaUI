@@ -20,7 +20,7 @@ namespace nan_example::notebook::ui
             if (!total) {
                 return "读取用户数量失败: " + data::describe(total.error());
             }
-            auto exists = service.user_exist();
+            auto exists = service.have_user();
             if (!exists) {
                 return "读取用户状态失败: " + data::describe(exists.error());
             }
@@ -72,7 +72,7 @@ namespace nan_example::notebook::ui
             ui.make<nandina::widget::Button>("创建 demo 用户")
                 .treatment(nandina::theme::ButtonTreatment::filled)
                 .on_click([&service, &status] {
-                    auto created = service.create_user("demo", "demo-password-hash");
+                    auto created = service.register_user("demo", "demo-password");
                     if (!created) {
                         if (created.error().code == data::DataErrorCode::constraint_violation) {
                             status.set("demo 用户已存在；点击「刷新」查看数量。");
@@ -84,7 +84,7 @@ namespace nan_example::notebook::ui
                     }
                     status.set(
                         std::format(
-                            "已创建用户 {}（id={}）。真实注册流程应由 AuthService 先哈希密码。",
+                            "已创建用户 {}（id={}，密码由 AuthService 哈希）。",
                             created->username,
                             created->id
                         )

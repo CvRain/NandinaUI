@@ -63,4 +63,4 @@ namespace nan_example::notebook::data
             .updated_at = std::string(row.column_text(7)),
         };
     }
-} // namespace nandina::examples::notebook::data
+} // namespace nan_example::notebook::data

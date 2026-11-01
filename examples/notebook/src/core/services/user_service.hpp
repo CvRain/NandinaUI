@@ -11,7 +11,7 @@
 
 namespace nan_example::notebook::core
 {
-    /// User-facing operations over the persistence repository.
+    /// User-facing account operations over the persistence repository.
     ///
     /// The service does not create or own the database. The composition root
     /// (`NotebookStore`) constructs the repository and injects it here, so tests and
@@ -21,20 +21,30 @@ namespace nan_example::notebook::core
         explicit UserService(data::UserRepository& user_repository) noexcept;
 
         [[nodiscard]] auto user_count() const -> data::DataResult<int>;
-        [[nodiscard]] auto user_exist() const -> data::DataResult<bool>;
+
+        /// Whether the database already contains at least one account.
+        [[nodiscard]] auto have_user() const -> data::DataResult<bool>;
         [[nodiscard]] auto get_user_by_id(std::int64_t user_id) const
             -> data::DataResult<std::optional<models::User>>;
         [[nodiscard]] auto get_user_by_name(std::string_view user_name) const
             -> data::DataResult<std::optional<models::User>>;
 
-        /// Create a user record. Password hashing belongs to AuthService; this method
-        /// deliberately receives the already-hashed value.
-        [[nodiscard]] auto create_user(std::string username, std::string password_hash)
+        /// Register an account. The password is hashed by `AuthService`; callers never
+        /// see or provide the stored hash.
+        [[nodiscard]] auto register_user(std::string_view username, std::string_view password)
             -> data::DataResult<models::User>;
+
+        /// Authenticate an account.
+        ///
+        /// The outer error is a database/verification failure. An empty optional means
+        /// the credentials were rejected, deliberately without distinguishing an
+        /// unknown username from a wrong password.
+        [[nodiscard]] auto user_login(std::string_view username, std::string_view password) const
+            -> data::DataResult<std::optional<models::User>>;
 
     private:
         data::UserRepository& user_repository_;
     };
-} // namespace nandina::examples::notebook::core
+} // namespace nan_example::notebook::core
 
 #endif // NANDINA_EXAMPLES_NOTEBOOK_CORE_SERVICES_USER_SERVICE_HPP

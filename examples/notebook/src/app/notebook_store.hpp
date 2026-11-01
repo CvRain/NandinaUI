@@ -7,6 +7,9 @@
 
 #include <nandina/app/nan_store.hpp>
 #include <nandina/reactive/graph.hpp>
+#include <nandina/reactive/signal.hpp>
+
+#include <optional>
 
 namespace nan_example::notebook::app
 {
@@ -16,8 +19,9 @@ namespace nan_example::notebook::app
     /// initialized the database. It owns the long-lived database and exposes the
     /// repository/service graph to every page through `PageContext::store()`.
     ///
-    /// Lifetime: database -> repository -> service. Destructors run in reverse, so
-    /// the service and repository never outlive the connection they reference.
+    /// Lifetime: database -> repository -> service -> session. Destructors run in
+    /// reverse, so the service and repository never outlive the connection they
+    /// reference.
     class NotebookStore final: public nandina::app::NanStore {
     public:
         NotebookStore(nandina::reactive::Graph& graph, data::Database database);
@@ -26,10 +30,20 @@ namespace nan_example::notebook::app
         [[nodiscard]] auto users() noexcept -> data::UserRepository&;
         [[nodiscard]] auto user_service() noexcept -> core::UserService&;
 
+        /// The account signed in for this process. `nullopt` means no active session.
+        [[nodiscard]] auto current_user() noexcept
+            -> nandina::reactive::Signal<std::optional<models::User>>&;
+        [[nodiscard]] auto current_user() const noexcept
+            -> const nandina::reactive::Signal<std::optional<models::User>>&;
+
+        void sign_in(models::User user);
+        void sign_out();
+
     private:
         data::Database database_;
         data::UserRepository user_repository_;
         core::UserService user_service_;
+        nandina::reactive::Signal<std::optional<models::User>> current_user_;
     };
 } // namespace nan_example::notebook::app
 

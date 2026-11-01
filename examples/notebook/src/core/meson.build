@@ -16,13 +16,13 @@ lib_core = static_library(
     'notebook_core',
     [model_sources, service_sources],
     notebook_resource_keys,
-    dependencies: [nandina_dep, data_dep],
+    dependencies: [nandina_dep, data_dep, notebook_openssl_dep],
     include_directories: [notebook_src_include, notebook_root_include],
     install: false,
 )
 
 core_dep = declare_dependency(
     link_with: lib_core,
-    dependencies: [nandina_dep, data_dep],
+    dependencies: [nandina_dep, data_dep, notebook_openssl_dep],
     include_directories: notebook_src_include,
 )

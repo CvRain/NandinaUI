@@ -83,6 +83,6 @@ namespace nan_example::notebook::data
 
         Database* database_ = nullptr;
     };
-} // namespace nandina::examples::notebook::data
+} // namespace nan_example::notebook::data
 
 #endif // NANDINA_EXAMPLES_NOTEBOOK_DATA_DATABASE_HPP

@@ -19,4 +19,4 @@ namespace nan_example::notebook::app
     protected:
         void on_setup() override;
     };
-} // namespace nandina::examples::notebook::app
+} // namespace nan_example::notebook::app

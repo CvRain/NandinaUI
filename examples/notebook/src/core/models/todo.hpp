@@ -20,6 +20,6 @@ namespace nan_example::notebook::models
 
         friend auto operator==(const Todo&, const Todo&) -> bool = default;
     };
-} // namespace nandina::examples::notebook::models
+} // namespace nan_example::notebook::models
 
 #endif // NANDINA_EXAMPLES_NOTEBOOK_CORE_MODELS_TODO_HPP

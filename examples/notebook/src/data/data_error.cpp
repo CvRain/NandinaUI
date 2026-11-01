@@ -54,4 +54,4 @@ namespace nan_example::notebook::data
         }
         return result;
     }
-} // namespace nandina::examples::notebook::data
+} // namespace nan_example::notebook::data

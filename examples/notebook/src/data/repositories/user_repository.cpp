@@ -202,4 +202,4 @@ namespace nan_example::notebook::data
         }
         return database_.changes() > 0;
     }
-} // namespace nandina::examples::notebook::data
+} // namespace nan_example::notebook::data

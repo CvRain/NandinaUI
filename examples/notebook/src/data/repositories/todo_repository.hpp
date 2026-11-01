@@ -41,6 +41,6 @@ namespace nan_example::notebook::data
     private:
         Database& database_;
     };
-} // namespace nandina::examples::notebook::data
+} // namespace nan_example::notebook::data
 
 #endif // NANDINA_EXAMPLES_NOTEBOOK_DATA_REPOSITORIES_TODO_REPOSITORY_HPP

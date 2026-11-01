@@ -1,11 +1,14 @@
 # Notebook example
 
 A notes/todo desktop application used as the end-to-end example for application
-architecture, resources, and persistence. The upper UI and service layers are still
-being written; this document describes the completed data layer and its startup
-contract.
+architecture, resources, and persistence. The data layer, account service, and
+login/registration pages are implemented; the signed-in workspace is currently a
+placeholder for the notes UI.
 
 ## Build and run
+
+Requirements mirror the resource toolchain: Meson, SQLite, and system OpenSSL
+3.0 or newer (password hashing uses PBKDF2-HMAC-SHA256).
 
 ```bash
 meson setup buildDir --wrap-mode=nodownload
@@ -33,7 +36,11 @@ the path is derived from the executable (not the working directory), and deletin
 | `src/data/mappers/` | Explicit table column to model mapping |
 | `src/data/repositories/` | User, note-group, note and todo persistence APIs |
 | `src/data/migrations/` | Canonical SQL migrations |
-| `src/app/notebook_store.*` | Composition root: owns Database, repository and services |
+| `src/core/services/auth_service.*` | PBKDF2 password hashing and constant-time verification |
+| `src/core/services/user_service.*` | Registration and credential checks over the user repository |
+| `src/app/notebook_store.*` | Composition root: owns Database, repository, service and the current session |
+| `src/ui/auth/` | Login and registration pages plus their shared split-card shell |
+| `src/ui/home_page.*` | Signed-in placeholder with the logout path |
 | `src/ui/user_service_demo_page.*` | Demo page resolving UserService from PageContext |
 
 `Database` enables foreign keys, WAL, a five-second busy timeout and normal
@@ -127,7 +134,8 @@ namespace notebook_app = nan_example::notebook::app;
 namespace notebook_ui = nan_example::notebook::ui;
 
 application.use_store<notebook_app::NotebookStore>(std::move(bootstrap->database));
-return application.run_page<notebook_ui::UserServiceDemoPage>(window_info);
+auto window = notebook_app::MainWindow(application, window_info);
+return application.run(window);
 ```
 
 `NotebookStore` is the Angular/.NET-style root container for this example. It owns
@@ -137,6 +145,7 @@ the dependency graph in lifetime order:
 Database
  └─ UserRepository
      └─ UserService
+          └─ current_user signal
 ```
 
 Pages do not construct services. They resolve the store from the page context:
@@ -149,13 +158,42 @@ auto total = service.user_count();
 ```
 
 The demo page at `src/ui/user_service_demo_page.cpp` shows the current user count,
-refreshes it, and creates a `demo` user through `UserService`. Real registration
-should call `AuthService` first so the stored value is a password hash, not a
-literal demo string.
+refreshes it, and registers a `demo` account through `UserService`. Registration
+always hashes the password inside the service; callers cannot provide a raw hash.
 
 `UserService` is not a singleton: it takes `UserRepository&` in its constructor.
 The application store owns the single instance, so pages share it through
 `PageContext` without any global access point.
+
+## Accounts and sign-in
+
+The application starts on `UserLoginPage`; `UserRegisterPage` and `HomePage` are
+registered routes as well. The flow is deliberately local and synchronous:
+
+1. `AuthService::hash_password` derives a 32-byte key with PBKDF2-HMAC-SHA256
+   (600,000 iterations) and stores `pbkdf2-sha256$<iterations>$<salt>$<hash>`.
+2. `UserService::register_user` trims the user name, enforces the password policy,
+   hashes the password, and inserts the account. A duplicate name returns
+   `DataErrorCode::constraint_violation`.
+3. `UserService::user_login` returns the signed-in user, or an empty optional for
+   both unknown names and wrong passwords. The pages show one generic message so the
+   UI does not reveal which case occurred.
+4. A successful login or registration writes the user into
+   `NotebookStore::current_user()` and navigates to `HomePage`. Signing out clears the
+   signal and returns to the login page.
+
+```cpp
+auto signed_in = context.store<NotebookStore>().user_service().user_login(name, password);
+if (signed_in && signed_in->has_value()) {
+    context.store<NotebookStore>().sign_in(**signed_in);
+}
+```
+
+The version-checked hash format lets `hash_iterations` be raised later without
+invalidating existing accounts. Password fields are still visible: the framework has
+no masking API yet, so the UI documents that limitation rather than pretending it is
+secure against shoulder surfing. Failed verification of a malformed stored hash is
+logged and treated as invalid credentials (fail closed).
 
 ## Migrations and nanres
 

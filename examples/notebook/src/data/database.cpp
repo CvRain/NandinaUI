@@ -276,4 +276,4 @@ namespace nan_example::notebook::data
             database_ = nullptr;
         }
     }
-} // namespace nandina::examples::notebook::data
+} // namespace nan_example::notebook::data

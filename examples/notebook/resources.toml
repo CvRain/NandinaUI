@@ -28,3 +28,7 @@ media_type = "application/sql"
 key = "migrations/004_create_todo.sql"
 path = "src/data/migrations/004_create_todo.sql"
 media_type = "application/sql"
+
+[[roots]]
+path = "resources/images"
+key_prefix = "images"
