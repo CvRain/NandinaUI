@@ -315,7 +315,18 @@ Escape 的上下文必须在关闭/恢复回调前生效；已有“始终显示
   `NanWindow::tick()` 用例覆盖“组合事件 → committed 文本只插入一次”。
 - 红测：让所有 committed 文本绕过会话（始终 legacy）或忽略会话身份时，session 用例分别
   失败；恢复后通过。
-- 验证（Linux）：主套件 111/111、release check 8/8；交替矩阵与 Windows 在提交后复跑。
+- 验证（Linux，`e3833ac`）：主套件 111/111、release check 8/8；交替矩阵 ASan/UBSan **88
+  通过 + `window-lifecycle` SKIP**、no-RTTI（gcc）**90/90**、no-SQLite/headless（gcc）**85
+  通过 + 1 SKIP**、纯工具 **8/8**；`sdl-platform-input` 在启用 SDL 的配置为 16 用例/417
+  断言。
+- 复核修复（GCC debug 暴露）：`NanSceneTree` 析构时仍可能通过已被 owner 销毁的
+  `ITextInputService` 结束会话，GCC 16.2.1 报 `pure virtual method called`（clang 未触发）。
+  修复为析构开头直接清空会话状态、不再调用服务；取消预编辑前检查目标节点 weak 是否仍存活；
+  单测 fixture 也改为服务先声明、晚于树销毁，记录所需生命周期顺序。修复后 GCC 两个配置全绿，
+  见提交 `e3833ac`。
+- Windows：本轮验证期间设备不可达（`No route to host`，SSH 在同步到 P3.3a 后中断），未完成
+  单元套件复跑；文档不把模拟/协议测试当 Windows 实机验收，恢复后补跑 `--suite unit` 与
+  `text-input-session`/`sdl-platform-input`。
 
 仍未完成（P3.3b，真实平台验收）：
 
