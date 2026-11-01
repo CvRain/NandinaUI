@@ -492,6 +492,14 @@ namespace nandina::app::detail
             return false;
         }
 
+        // SDL3 默认不投递文本输入（`SDL_StartTextInput` 文档：Text input events are not
+        // received by default）。缺这一步时键盘事件照常到达，但 `SDL_EVENT_TEXT_INPUT`
+        // 永远为空，TextField/TextArea 只能删除和移动光标，不能键入字符。
+        // 文本输入是窗口级开关，与具体焦点目标无关；焦点是否可编辑仍由场景派发决定。
+        if (!SDL_StartTextInput(window_)) {
+            SDL_Log("SdlPlatformWindow: SDL_StartTextInput failed: %s", SDL_GetError());
+        }
+
         // 渲染器：先走 GPU 路径（与 probe/cross_platform/desktop/page_probe.cpp 一致），
         // 失败再退回 SDL 的默认 2D 渲染器。GPU 设备的唯一用途就是喂 GPU 渲染器，所以
         // GPU 渲染器建不起来时立刻释放它，不在窗口生命周期里留一个悬空的设备。

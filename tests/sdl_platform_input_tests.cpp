@@ -449,3 +449,12 @@ TEST_CASE(
     CHECK(keys_of(input)[0].logical_key() == foundation::LogicalKey::q);
     CHECK_FALSE(keys_of(input)[0].is_press_or_repeat());
 }
+
+TEST_CASE("SDL platform window starts text input for the keyboard", "[sdl][input][text]") {
+    PlatformInputFixture fixture;
+    SDL_Window* window = SDL_GetWindowFromID(fixture.window_id);
+    REQUIRE(window != nullptr);
+    // SDL3 默认不投递 SDL_EVENT_TEXT_INPUT；没有 SDL_StartTextInput 时键入只产生键事件，
+    // TextField/TextArea 永远收不到字符。
+    CHECK(SDL_TextInputActive(window));
+}
