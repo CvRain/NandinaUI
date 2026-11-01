@@ -174,11 +174,13 @@ namespace
     };
 
     struct Fixture {
+        // The service must outlive the tree; the tree destructor clears the session without
+        // calling a destroyed service.
+        FakeTextInputService service;
         scene::NanSceneTree tree;
         std::shared_ptr<scene::NanControl> root = std::make_shared<scene::NanControl>();
         std::shared_ptr<FakeTarget> editable = std::make_shared<FakeTarget>("editable");
         std::shared_ptr<FakeTarget> button = std::make_shared<FakeTarget>("button");
-        FakeTextInputService service;
 
         Fixture() {
             button->read_only = true; // focusable but not an editing target

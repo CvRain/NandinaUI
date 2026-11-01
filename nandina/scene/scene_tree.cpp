@@ -177,6 +177,13 @@ namespace nandina::scene
     }
 
     NanSceneTree::~NanSceneTree() {
+        // The injected text input service may already be destroyed (the window normally
+        // detaches it first, but tests/owners may not). Clear the session without calling
+        // through the pointer; the remaining focus transition then has no session to end.
+        text_input_service_ = nullptr;
+        text_input_target_ = nullptr;
+        text_input_target_node_.reset();
+        text_input_session_ = {};
         clear_theme_manager();
         pointer_capture_.reset();
         _transition_hover(nullptr, has_mouse_pos_ ? last_mouse_pos_ : foundation::NanPoint {});
@@ -857,7 +864,9 @@ namespace nandina::scene
     }
 
     void NanSceneTree::_end_text_input_session(const TextInputEndReason reason) {
-        if (text_input_target_ != nullptr) {
+        // Cancel only while the target node is still alive: a weak-expired node means the raw
+        // target pointer is dangling and a virtual call would be undefined behaviour.
+        if (text_input_target_ != nullptr && !text_input_target_node_.expired()) {
             text_input_target_->text_input_cancel_composition();
         }
         if (text_input_service_ != nullptr && text_input_session_.operator bool()) {
