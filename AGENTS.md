@@ -15,7 +15,7 @@ application shell. Version `0.1.0-alpha.1`.
 - Experimental: Windows (MSYS2 UCRT64). Unsupported: macOS.
 - Not a Node/Bun project; there is no JavaScript runtime or package manager.
 
-### Current milestone state (2026-10-28)
+### Current milestone state (2026-11-02)
 
 - P1 and P2 are closed. P2 covers the tool/UI split, startup policy, scoped manager results,
   cache identity/reclamation, resource identity (explicit `key → path`, frozen key derivation,
@@ -23,9 +23,9 @@ application shell. Version `0.1.0-alpha.1`.
   diagnostics, no-rewrite determinism), the minimal author constant header (`nanres keys`), and
   the P2.4 multi-route lab example (retired 2026-10-28; kept in the docs as historical evidence).
 - The integrated example application is now `examples/notebook`: a personal notes app that grows
-  batch by batch. Its SQLite data layer (connection/statement/transactions, resource-driven
-  migrations, repositories, models) is in place; auth/user services and the UI are being written.
-  Components are authored in `showcase/`; UI tests live in the untracked `playground/`.
+  batch by batch. Its SQLite data layer, account service (PBKDF2 hashing, registration, login)
+  and login/registration/home routes are in place; the signed-in notebook workspace is still a
+  placeholder. Components are authored in `showcase/`; UI tests live in the untracked `playground/`.
 - P3 is in progress: **P3.1a** (per-event pointer coordinates/modifier snapshots through the
   host seam) and **P3.1b** (framework-owned `LogicalKey`/`PhysicalKey` identities, press/repeat/
   release lifecycle, SDL scancode/keycode mapping, unknown identity counting) and **P3.1c**
@@ -35,8 +35,9 @@ application shell. Version `0.1.0-alpha.1`.
   (showcase acceptance page, active-tab hint, popup enter/restore reasons, read-only field
   capability, always-visible switch) and **P3.3a** (text input session protocol:
   `ITextInputService`/`ITextInputTarget`, session identity + late-event filtering, single
-  committed-text path, SDL composition events into the frame stream) are implemented.
-  P3.3b (real IME acceptance, preedit painting, soft keyboard/occlusion/caret area) remains;
+  committed-text path, SDL composition events into the frame stream) are implemented, and
+  **P3.3b1** adds inline preedit painting, password-purpose masking and value<->visual caret
+  mapping. P3.3b2 (caret input area, real IME acceptance, soft keyboard/occlusion) remains;
   see the roadmap.
 - The plan and exit criteria are **not** owned by this file: read
   `docs/references/development_roadmap.md` and the D5 contract

@@ -131,4 +131,4 @@
 
 - <!-- TODO: 语义 role：`semantics::Role` 枚举没有多行文本成员，当前沿用 `Role::text_field`。 -->
 - <!-- TODO: 未绘制滚动条，`TextAreaRecipe` 也没有 scrollbar 字段。 -->
-- <!-- TODO: IME 组合文本（`primitives::TextComposition`）只保存不改变布局，与 `TextField` 同一已知空白。 -->
+- IME 组合文本已由 `EditableText` 的视觉文本 inline 绘制（P3.3b1）；`TextArea` 尚未暴露输入用途/密码掩码入口。

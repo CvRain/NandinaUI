@@ -18,6 +18,12 @@
 
 ## 2. 三档分类
 
+2026-11-02 P3.3b1 预编辑与密码用途显示（experimental，已实施）：`EditableText` 新增
+`caret_at()`（布局局部点 → 提交值 caret，自动处理 composition/密码视觉映射）；
+`TextInputPurpose::password` 现在把视觉文本按 grapheme 折叠为 `U+2022`，而 `value()`、剪贴板
+与提交路径保持原始文本。`TextField`/`TextArea` 的指针命中改经该入口。真实 IME、caret 区域与
+软键盘/遮挡仍归 P3.3b2。
+
 2026-11-01 P3.3a 文本输入会话协议（experimental，已实施）：新增
 `scene/text_input_service.hpp`（`TextInputPurpose`/能力位/`TextInputSession`/
 `ITextInputTarget`/`ITextInputService`/`ITextInputSessionSink`/`TextInputPlatformEvent`）。
@@ -26,7 +32,7 @@
 `update_text_input_area()`；`FrameEvent` 新增 `scene::TextEditingEvent`（IME 组合更新）；
 `IPlatformWindow` 新增带默认 nullptr 的 `text_input_service()`，自定义平台可继续不为文本
 会话提供实现（committed text 走既有 `TextInputEvent` 路径）。当前能力只覆盖 SDL 桌面的
-composition；软键盘/遮挡/输入区域未支持，真实 IME 验收与预编辑绘制见后续批次。
+composition；软键盘/遮挡/输入区域未支持，真实 IME 验收与 caret 区域见 P3.3b2。
 
 2026-10-31 P3.2a 焦点提示策略（experimental，已实施）：新增 `scene/focus_hint.hpp`
 （`InputModality` / `FocusRequestReason` / `FocusRequestContext` / `FocusHintRequirement`）；
@@ -124,8 +130,9 @@ weak face，淘汰不销毁调用方持有的 face。`render::TextureCache` 新�
 
 2026-10-25 P2.4 示例应用（构建侧，非 SDK API）：`examples/lab` 随普通 UI 构建默认参与，
 一个可执行文件包含登录/注册、笔记、Focus 计时器、图片预览与确认弹窗。它要求 `build_ui=true`、
-SDL3 和资源工具链；资源包与生成常量头由 Meson 在链接/编译前生成。示例不是 SDK 安装内容，
-也不承诺密码掩码、持久化或真实认证。
+SDL3 和资源工具链；资源包与生成常量头由 Meson 在链接/编译前生成。示例不是 SDK 安装内容；
+lab 本身不承诺密码掩码，notebook 在 P3.3b1 后已通过 `TextInputPurpose::password` 显示掩码，
+但示例仍不承诺真实认证或跨会话持久化。
 
 2026-10-28 示例应用演进（同样是构建侧变化，非 SDK API）：`examples/lab` 已退役，由
 `examples/notebook` 接替（个人笔记软件，数据层先行）。notebook 要求 `build_ui=true`、资源工具链

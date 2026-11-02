@@ -22,7 +22,7 @@
 
 | 议题 | 当前结论 | 实施状态与入口 |
 | --- | --- | --- |
-| D1 输入、焦点与文本会话 | 焦点事实、提示策略、文本会话分离 | **第一阶段已实施（P3.2a/b，2026-10-31/11-01）**；**第二阶段协议与 SDL 合成路径已实施（P3.3a，2026-11-01）**：注入式 `ITextInputService`、编辑目标协议、会话身份/迟到过滤、committed 唯一路径、SDL 组合事件入帧。真实 IME/软键盘/遮挡/预编辑绘制与真实设备验收仍待 P3.3b。Linux 主套件 111/111；矩阵 ASan 88（+SKIP）、no-RTTI 90/90、no-SQLite 85（+1 SKIP）、纯工具 8/8。见[正式契约](focus_and_input.md) |
+| D1 输入、焦点与文本会话 | 焦点事实、提示策略、文本会话分离 | **第一阶段已实施（P3.2a/b，2026-10-31/11-01）**；**第二阶段协议与 SDL 合成路径已实施（P3.3a，2026-11-01）**：注入式 `ITextInputService`、编辑目标协议、会话身份/迟到过滤、committed 唯一路径、SDL 组合事件入帧；**P3.3b1（2026-11-02）**补 inline 预编辑/下划线、password purpose 掩码与 value↔visual 命中映射。P3.3b2 的 caret 输入区域、真实 IME 与软键盘/遮挡验收仍待完成。P3.3a Linux 主套件 111/111；矩阵 ASan 88（+SKIP）、no-RTTI 90/90、no-SQLite 85（+1 SKIP）、纯工具 8/8；P3.3b1 unit 90/90。见[正式契约](focus_and_input.md) |
 | D2 主题方案与状态订阅 | 讨论已汇总；只读状态、事件和主题方案模型需定形 | 待审阅；[主题设计](theme_authoring_and_state.md)。先解决状态可观察性，完整主题作者模型另批 |
 | D3 导航分组 | `type → nav_group`、空值未分组、同值全局合并已接受 | 未实施；[D3](reference_draft.md#d3-路由身份与导航分组开放到哪一层)，独立小批 |
 | D4 平台与后端 | SDL3 默认路径与 host seam 已落地，raylib 已完整退役 | **已收尾**：生产 SDF 在 Vulkan 与 Windows D3D12 通过设备级验收；[阶段证据](platform_backend_contract.md)。Windows 为实验性支持，macOS 不支持，Web 不是交付面 |
@@ -147,8 +147,8 @@ P2.4 的 `examples/lab` 已退役，示例应用改为 `examples/notebook`：目
 
 - **P1 收口与平台补齐**：发布检查脚本、Windows 页面 golden/性能基线、图片共享解码与 raylib 退役、SDF 阴影/裁剪（已完成，Windows GUI 项待人工）；
 - **P2 应用闭环**：已完成；P2.4 的 `examples/lab` 单可执行多路由贯穿登录/注册、笔记、计时器、图片、滚动与确认弹窗（2026-10-25），已于 2026-10-28 退役并由 `examples/notebook` 接替；
-- **P3 输入与焦点（当前阶段）**：P3.1a/b/c、D1 第一阶段（P3.2a/b）、文本会话协议（P3.3a）与预编辑/密码用途显示（P3.3b1）已交付；下一步 P3.3b2 真实 IME、caret 输入区域与软键盘/遮挡平台验收。
-- **P4 作者与组件**：D6 Label 能力与测量 → 阶段 5 数据组件 → D2/D3。
+- **P3 输入与焦点（当前阶段）**：P3.1a/b/c、D1 第一阶段（P3.2a/b）、文本会话协议（P3.3a）与预编辑/密码用途显示（P3.3b1）已交付；下一步按 P3.3b2a caret 输入区域 → P3.3b2b 真实 IME/软键盘/遮挡验收推进。
+- **P4 作者与组件**：P4.1 D6 Label（含垂直对齐）→ P4.1b Surface/Card inset 与 Image cover 裁剪锚点 → P4.2 阶段 5 数据组件 → P4.3 D2/D3 与作者颜色入口。
 
 P1.1 与 P1.6 核心实现已完成，raylib 后端、工厂、枚举项、wrap 与依赖已完整删除。
 当前 vendored SDL3 默认静态、可选共享；无后端构建需关闭 showcase，并在打开窗口前注入平台。

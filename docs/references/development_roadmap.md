@@ -77,9 +77,10 @@
 | P3.1c | **D8 跨类型事件保序**（已实施，2026-10-31）：`FrameInput::events` 按平台队列顺序保存变体事件，宿主顺序派发，不再按类型分组 | 有序事件契约已定形 | 同帧“点击 A → 文本 → 点击 B”中文本到达 A；SDL 顺序断言与真实 `NanWindow::tick()` 回归通过，红测见 [D8](reference_draft.md#p31c跨类型事件保序2026-10-31-已实施)。Windows 已补验（2026-10-31：构建 0 错误、unit 85/85、输入测试通过） |
 | P3.2a | **D1 焦点核心与提示策略（已实施，2026-10-31）**：`InputModality`/请求上下文、`should_show_focus_hint()`、窗口失活/激活、paint-only、组件绘制迁移 | P3.1 事件语义 | `focus-hint` 8 用例/45 断言 + 真实窗口激活与 button 绘制用例通过；红测见 [D1 §6](focus_and_input.md#第一阶段实施记录2026-10-31p32a-核心批次) |
 | P3.2b | **D1 第一阶段收尾（已实施，2026-11-01）**：Showcase 输入与焦点页、Tabs 活动项提示、弹窗进入/恢复显式原因、只读字段能力与“始终显示”开关 | P3.2a | `input-focus-showcase` 构建/布局回归与页面 probe 渲染通过；`focus-hint`/`tabs`/`dialog` 回归覆盖同节点模态、恢复与只读能力；红测见 [D1](focus_and_input.md#第一阶段实施记录2026-10-31p32a-核心批次)。真实设备与 IME 仍待验收 |
-| P3.3a | **D1 文本会话协议与 SDL 合成路径（已实施，2026-11-01）**：`ITextInputService`/`ITextInputTarget`、会话身份与迟到过滤、committed 唯一路径、SDL_TEXT_EDITING 入帧事件 | P3.2 事件语义 | `text-input-session` 10 用例/48 断言、`sdl-platform-input` 16 用例/417 断言与真实窗口 tick 用例通过；真实 IME 与预编辑绘制留给 P3.3b |
+| P3.3a | **D1 文本会话协议与 SDL 合成路径（已实施，2026-11-01）**：`ITextInputService`/`ITextInputTarget`、会话身份与迟到过滤、committed 唯一路径、SDL_TEXT_EDITING 入帧事件 | P3.2 事件语义 | `text-input-session` 10 用例/48 断言、`sdl-platform-input` 16 用例/417 断言与真实窗口 tick 用例通过；预编辑绘制由 P3.3b1 补齐，真实 IME/caret 区域留给 P3.3b2 |
 | P3.3b1 | **D1 预编辑与密码用途显示（已实施，2026-11-02）**：`EditableText` 视觉文本映射、inline preedit/下划线、password purpose 掩码、组合期占位符抑制、指针命中回映射 | P3.3a | `widget` 新增组合/掩码用例通过；红测：关闭掩码后密码用例失败；真实 IME 仍待 P3.3b2 |
-| P3.3b2 | **D1 文本会话平台验收（后续批次）**：真实 IME 组合/提交/取消、caret 输入区域、软键盘/可见性/遮挡 | P3.3b1 | 真实 IME 分别记录 Linux/Windows 平台状态；无能力时返回可诊断 unsupported，不把模拟值伪装成实机结果 |
+| P3.3b2a | **D1 caret 输入区域（下一批）**：编辑目标局部 caret → 外层控件/viewport → 窗口逻辑坐标；SDL 声明 `input_area` 并转发 | P3.3b1 | mock 服务断言窗口坐标；无能力时保持 unsupported；不新增 widget 专用平台旁路 |
+| P3.3b2b | **D1 真实 IME/软键盘/遮挡平台验收**：Linux 与 Windows 交互桌面上的组合/提交/取消、可见性与遮挡 | P3.3b2a | 实机记录分开填写；无能力时返回可诊断 unsupported，不把模拟值伪装成实机结果 |
 
 应用侧并行：维护者手工编写 `examples/notebook`（数据层已完成；服务与 UI 后续）及 `showcase/` 组件，
 不改变 P3 的框架优先级；组件先在 showcase 进行视觉验收，再由 notebook 组合。
@@ -97,7 +98,7 @@
 ## 4. 建议的近期切入顺序
 
 1. **P3.1a 事件快照**：先修每事件坐标/修饰键被帧级状态覆盖；本批不扩展键身份、跨类型顺序、焦点策略或 IME。
-2. **D1 与 P4**：P3.2a/P3.2b 与 P3.3a 已交付；P3.3b 的真实 IME/软键盘验收在组件扩张前推进，P4 按具体前置安排。
+2. **D1 与 P4（已确认顺序）**：P3.3b2a caret 输入区域 → P3.3b2b 真实 IME/软键盘/遮挡验收 → P4.1 Label 垂直对齐（并入 D6 首批）→ P4.1b Surface/Card inset 与 Image cover 裁剪锚点 → P4.3 作者颜色入口。P3.3b1 已把预编辑与密码用途合并交付。
 3. **保留的 P1 边界**：退役后的 Windows 静态构建/窗口生命周期复验、P1.6 完整 Image 页面端到端采样仍分别记录；不把它们混同于已交付的 Windows golden 与参考性能基线。
 4. **已交付记录**：P1.2 Windows CPU/SDF 共 6 条 approved、P1.3 Windows 参考性能基线、P1.5b 阴影/圆角裁剪及 P2 应用闭环均已归档；P1.4 归 NandinaCLI。
 
