@@ -477,6 +477,23 @@ TEST_CASE(
 }
 
 TEST_CASE(
+    "empty text field still publishes a usable caret area",
+    "[input][text-session][area]"
+) {
+    Fixture fixture;
+    fixture.service.input_area = true;
+    auto field = widget::TextField::create("");
+    fixture.root->add_child(field);
+    field->layout_to(foundation::NanRect::from_xywh(20, 30, 90, 40));
+    fixture.tree.set_focus(field.get());
+
+    REQUIRE(fixture.tree.update_text_input_area() == scene::TextInputRequestResult::accepted);
+    CHECK(fixture.service.last_area.caret.get_width() == 1.0F);
+    CHECK(fixture.service.last_area.caret.get_height() > 0.0F);
+    CHECK(fixture.service.last_area.caret.get_top() >= 30.0F);
+}
+
+TEST_CASE(
     "text area publishes scrolled multiline caret before paint",
     "[input][text-session][area]"
 ) {

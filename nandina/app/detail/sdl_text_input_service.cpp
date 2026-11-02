@@ -84,6 +84,7 @@ namespace nandina::app::detail
             return;
         }
         SDL_StopTextInput(window_);
+        (void)SDL_SetTextInputArea(window_, nullptr, 0);
         active_session_ = {};
     }
 

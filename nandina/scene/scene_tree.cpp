@@ -944,6 +944,9 @@ namespace nandina::scene
             return TextInputRequestResult::unavailable;
         }
         auto* focused = focused_node();
+        if (focused == nullptr) {
+            return TextInputRequestResult::unavailable;
+        }
         const auto caret = focused->text_input_caret_rect();
         return text_input_service_->update_caret_area(
             text_input_session_,

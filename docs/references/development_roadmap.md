@@ -80,7 +80,7 @@
 | P3.3a | **D1 文本会话协议与 SDL 合成路径（已实施，2026-11-01）**：`ITextInputService`/`ITextInputTarget`、会话身份与迟到过滤、committed 唯一路径、SDL_TEXT_EDITING 入帧事件 | P3.2 事件语义 | `text-input-session` 10 用例/48 断言、`sdl-platform-input` 16 用例/417 断言与真实窗口 tick 用例通过；预编辑绘制由 P3.3b1 补齐，真实 IME/caret 区域留给 P3.3b2 |
 | P3.3b1 | **D1 预编辑与密码用途显示（已实施，2026-11-02）**：`EditableText` 视觉文本映射、inline preedit/下划线、password purpose 掩码、组合期占位符抑制、指针命中回映射 | P3.3a | `widget` 新增组合/掩码用例通过；红测：关闭掩码后密码用例失败；真实 IME 仍待 P3.3b2 |
 | P3.3b2a | **D1 caret 输入区域（已实施，2026-11-02）**：编辑目标局部 caret → 外层控件/viewport → 窗口逻辑坐标；SDL 声明 `input_area` 并转发 | P3.3b1 | mock 断言祖先/viewport/letterbox/滚动后的窗口坐标；SDL GetTextInputArea 回读与 resize 回归；无能力保持 unsupported；无 widget 平台旁路 |
-| P3.3b2b | **D1 真实 IME/软键盘/遮挡平台验收**：Linux 与 Windows 交互桌面上的组合/提交/取消、可见性与遮挡 | P3.3b2a | 实机记录分开填写；无能力时返回可诊断 unsupported，不把模拟值伪装成实机结果 |
+| P3.3b2b | **D1 真实 IME/软键盘/遮挡平台验收**：Linux 与 Windows 交互桌面上的组合/提交/取消、可见性与遮挡；SDL 输入用途/多行属性转发 | P3.3b2a | 实机记录分开填写；无能力时返回可诊断 unsupported，不把模拟值伪装成实机结果 |
 
 应用侧并行：维护者手工编写 `examples/notebook`（数据层已完成；服务与 UI 后续）及 `showcase/` 组件，
 不改变 P3 的框架优先级；组件先在 showcase 进行视觉验收，再由 notebook 组合。

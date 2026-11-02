@@ -662,4 +662,12 @@ TEST_CASE(
     );
     service->end_session(session, scene::TextInputEndReason::focus_lost);
     CHECK(service->update_caret_area(session, area) == scene::TextInputRequestResult::unavailable);
+    SDL_zero(rect);
+    cursor = -1;
+    REQUIRE(SDL_GetTextInputArea(window, &rect, &cursor));
+    CHECK(rect.x == 0);
+    CHECK(rect.y == 0);
+    CHECK(rect.w == 0);
+    CHECK(rect.h == 0);
+    CHECK(cursor == 0);
 }

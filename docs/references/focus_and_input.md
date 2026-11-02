@@ -383,6 +383,8 @@ P3.3b1 已补（2026-11-02）：
   事件与 mock 服务证明协议和宿主路径）。
 - 软键盘请求/可见性/遮挡：桌面 SDL 路径没有这些能力，服务如实返回 unsupported；移动端适配
   尚未开始。
+- SDL 目前仍调用 `SDL_StartTextInput` 的默认 text purpose；`TextInputPurpose`/multiline 到
+  `SDL_StartTextInputWithProperties` 的转发保留到 P3.3b2b。
 - 会话身份在手写平台适配、服务重连以及页面销毁竞争下的专项回归（当前依赖焦点清理）。
 
 ## 6. 当前实现与实施顺序
