@@ -190,9 +190,9 @@ if (signed_in && signed_in->has_value()) {
 ```
 
 The version-checked hash format lets `hash_iterations` be raised later without
-invalidating existing accounts. Password fields are still visible: the framework has
-no masking API yet, so the UI documents that limitation rather than pretending it is
-secure against shoulder surfing. Failed verification of a malformed stored hash is
+invalidating existing accounts. Login and registration password fields set
+`TextInputPurpose::password`, so `EditableText` renders bullets while the signal and
+database still hold the real value. Failed verification of a malformed stored hash is
 logged and treated as invalid credentials (fail closed).
 
 ## Migrations and nanres

@@ -337,7 +337,8 @@ namespace nandina::widget
             std::max(0.0F, world.get_height() - padding_y * 2.0F)
         );
         auto clip = ctx.clip().push(viewport);
-        if (edit_.value().empty() && !placeholder_.text().empty()) {
+        if (edit_.value().empty() && !edit_.composition().has_value()
+            && !placeholder_.text().empty()) {
             placeholder_.draw_at(
                 ctx,
                 foundation::NanPoint(viewport.get_left(), world.get_top() + padding_y)
@@ -482,8 +483,11 @@ namespace nandina::widget
     void TextArea::place_caret(const foundation::NanPoint screen_point, const bool extend) {
         const auto local = to_local(screen_point);
         // 与 TextField 同款：映射到局部坐标、补偿滚动偏移，再交给布局做命中测试。
-        const auto stop = edit_.text_node().layout_result().caret_for_point(
-            foundation::NanPoint(local.get_x() - padding_x_, local.get_y() - padding_y_ + scroll_y_)
+        const auto stop = edit_.caret_at(
+            foundation::NanPoint(
+                local.get_x() - padding_x_,
+                local.get_y() - padding_y_ + scroll_y_
+            )
         );
         if (extend) {
             auto selection = edit_.selection();

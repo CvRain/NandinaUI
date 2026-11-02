@@ -51,6 +51,8 @@ namespace nan_example::notebook::ui
                     field.set_name("register-password-confirmation");
                 })
                 .build();
+        password_input->set_input_purpose(nandina::scene::TextInputPurpose::password);
+        confirmation_input->set_input_purpose(nandina::scene::TextInputPurpose::password);
 
         auto submit_registration = [&user_name,
                                     &password,

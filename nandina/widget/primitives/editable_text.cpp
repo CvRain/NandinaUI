@@ -50,6 +50,55 @@ namespace nandina::widget::primitives
             }
             return text.size();
         }
+
+        /// A string plus mappings between its own byte offsets and the committed value.
+        struct MappedText {
+            std::string text;
+            std::vector<std::size_t> from_source;
+            std::vector<std::size_t> to_source;
+        };
+
+        /// Map one run of source text to what the text pipeline should see. Masked runs
+        /// collapse every grapheme to one bullet while keeping byte boundaries mappable.
+        [[nodiscard]] auto map_text(const std::string_view source, const bool masked)
+            -> MappedText {
+            MappedText mapped;
+            mapped.from_source.resize(source.size() + 1);
+            if (!masked) {
+                mapped.text.assign(source);
+                mapped.to_source.resize(source.size() + 1);
+                for (std::size_t index = 0; index <= source.size(); ++index) {
+                    mapped.from_source[index] = index;
+                    mapped.to_source[index] = index;
+                }
+                return mapped;
+            }
+
+            // U+2022 BULLET: one visual cell per grapheme, independent of its UTF-8 length.
+            constexpr std::string_view bullet = "\xE2\x80\xA2";
+            for (const auto& grapheme: foundation::utf8::grapheme_ranges(source)) {
+                const auto source_begin = grapheme.offset;
+                const auto source_end = grapheme.offset + grapheme.length;
+                const auto visual_begin = mapped.text.size();
+                mapped.text.append(bullet);
+                const auto visual_end = mapped.text.size();
+                mapped.to_source.resize(visual_end + 1, source_end);
+                mapped.from_source[source_begin] = visual_begin;
+                for (std::size_t index = source_begin + 1; index < source_end; ++index) {
+                    mapped.from_source[index] = visual_begin;
+                }
+                for (std::size_t index = visual_begin; index < visual_end; ++index) {
+                    mapped.to_source[index] = source_begin;
+                }
+                mapped.to_source[visual_end] = source_end;
+            }
+            mapped.from_source[source.size()] = mapped.text.size();
+            if (mapped.to_source.empty()) {
+                mapped.to_source.push_back(0);
+            }
+            return mapped;
+        }
+
     } // namespace
 
     EditableText::EditableText(std::string value):
@@ -57,6 +106,7 @@ namespace nandina::widget::primitives
         caret_(value_.size()),
         text_(value_) {
         clear_selection();
+        rebuild_visual();
     }
 
     void EditableText::set_value(std::string value) {
@@ -67,7 +117,7 @@ namespace nandina::widget::primitives
         caret_ = clamp_grapheme_boundary(value_, caret_);
         caret_affinity_ = text::TextAffinity::downstream;
         clear_selection();
-        clear_composition();
+        composition_.reset();
         undo_stack_.clear();
         redo_stack_.clear();
         sync_text();
@@ -160,12 +210,26 @@ namespace nandina::widget::primitives
             std::min(composition.selection_start, composition.text.size());
         composition.selection_end = std::min(composition.selection_end, composition.text.size());
         composition_ = std::move(composition);
+        sync_text();
     }
     void EditableText::clear_composition() {
+        if (!composition_) {
+            return;
+        }
         composition_.reset();
+        sync_text();
     }
     auto EditableText::composition() const -> const std::optional<TextComposition>& {
         return composition_;
+    }
+
+    auto EditableText::caret_at(const foundation::NanPoint point) const -> text::TextCaretStop {
+        const auto visual_stop = text_.layout_result().caret_for_point(point);
+        return text::TextCaretStop {
+            .source_offset = value_offset(visual_stop.source_offset),
+            .x = visual_stop.x,
+            .affinity = visual_stop.affinity,
+        };
     }
 
     void EditableText::set_on_change(std::function<void(std::string_view)> callback) {
@@ -258,8 +322,9 @@ namespace nandina::widget::primitives
     void EditableText::draw_at(render::DrawContext& ctx, foundation::NanPoint position) {
         const auto& layout = text_.layout_result();
         if (has_selection()) {
-            const auto lower = std::min(selection_.anchor, selection_.focus);
-            const auto upper = std::max(selection_.anchor, selection_.focus);
+            const auto visual = visual_selection();
+            const auto lower = std::min(visual.anchor, visual.focus);
+            const auto upper = std::max(visual.anchor, visual.focus);
             const auto color =
                 selection_color_.with_alpha(selection_color_.alpha() * ctx.opacity());
             float line_top = 0.0F;
@@ -289,6 +354,36 @@ namespace nandina::widget::primitives
 
         if (!focused_ || layout.lines.empty()) {
             return;
+        }
+
+        if (composing_) {
+            const auto begin =
+                line_stop_for_visual(composition_visual_begin_, text::TextAffinity::downstream);
+            const auto end =
+                line_stop_for_visual(composition_visual_end_, text::TextAffinity::downstream);
+            if (begin.line_index == end.line_index) {
+                float line_top = 0.0F;
+                for (std::size_t index = 0; index < begin.line_index; ++index) {
+                    line_top += layout.lines[index].size.get_height();
+                }
+                const float line_bottom =
+                    line_top + layout.lines[begin.line_index].size.get_height();
+                const auto color =
+                    text_.color().with_alpha(text_.color().alpha() * ctx.opacity());
+                const float y = position.get_y() + ctx.logical_to_screen(line_bottom - caret_width);
+                ctx.device().draw_line(
+                    foundation::NanPoint(
+                        position.get_x() + ctx.logical_to_screen(begin.stop.x),
+                        y
+                    ),
+                    foundation::NanPoint(
+                        position.get_x() + ctx.logical_to_screen(end.stop.x),
+                        y
+                    ),
+                    ctx.logical_to_screen(caret_width),
+                    color
+                );
+            }
         }
 
         const auto geometry = caret_geometry();
@@ -360,7 +455,11 @@ namespace nandina::widget::primitives
     }
 
     void EditableText::set_text_input_purpose(const scene::TextInputPurpose purpose) {
+        if (text_input_purpose_ == purpose) {
+            return;
+        }
         text_input_purpose_ = purpose;
+        sync_text();
     }
 
     void EditableText::set_text_input_multiline(const bool multiline) {
@@ -522,7 +621,7 @@ namespace nandina::widget::primitives
         caret_ = state.caret;
         caret_affinity_ = state.caret_affinity;
         selection_ = state.selection;
-        clear_composition();
+        composition_.reset();
         sync_text();
         emit_change();
     }
@@ -568,7 +667,7 @@ namespace nandina::widget::primitives
         caret_ = next_grapheme_boundary(value_, caret_);
         caret_affinity_ = text::TextAffinity::downstream;
         clear_selection();
-        clear_composition();
+        composition_.reset();
         sync_text();
         emit_change();
     }
@@ -623,7 +722,7 @@ namespace nandina::widget::primitives
         caret_ = lower;
         caret_affinity_ = text::TextAffinity::downstream;
         clear_selection();
-        clear_composition();
+        composition_.reset();
         sync_text();
         emit_change();
     }
@@ -631,6 +730,13 @@ namespace nandina::widget::primitives
     auto
     EditableText::line_stop_for(const std::size_t offset, const text::TextAffinity affinity) const
         -> LineStop {
+        return line_stop_for_visual(visual_offset(offset), affinity);
+    }
+
+    auto EditableText::line_stop_for_visual(
+        const std::size_t offset,
+        const text::TextAffinity affinity
+    ) const -> LineStop {
         const auto& layout = text_.layout_result();
         if (layout.lines.empty()) {
             return {};
@@ -670,7 +776,7 @@ namespace nandina::widget::primitives
         if (layout.lines.empty()) {
             return {};
         }
-        const auto located = line_stop_for(caret_, caret_affinity_);
+        const auto located = line_stop_for_visual(visual_caret(), caret_affinity_);
         float top = 0.0F;
         for (std::size_t index = 0; index < located.line_index; ++index) {
             top += layout.lines[index].size.get_height();
@@ -788,21 +894,100 @@ namespace nandina::widget::primitives
     }
 
     void EditableText::update_selection_focus(const text::TextCaretStop stop, const bool extend) {
+        const auto resolved = value_offset(stop.source_offset);
         if (!extend) {
-            selection_.anchor = stop.source_offset;
+            selection_.anchor = resolved;
             selection_.anchor_affinity = stop.affinity;
         }
-        selection_.focus = stop.source_offset;
+        selection_.focus = resolved;
         selection_.focus_affinity = stop.affinity;
-        caret_ = stop.source_offset;
+        caret_ = resolved;
         caret_affinity_ = stop.affinity;
     }
 
     void EditableText::sync_text() {
-        text_.set_text(value_);
+        rebuild_visual();
+        text_.set_text(visual_text_);
         mark_layout_dirty();
         (void)text_.measure_layout(last_layout_constraints());
         set_size(text_.size());
+    }
+
+    auto EditableText::masked() const noexcept -> bool {
+        return text_input_purpose_ == scene::TextInputPurpose::password;
+    }
+
+    auto EditableText::visual_offset(const std::size_t value_offset) const -> std::size_t {
+        if (value_to_visual_.empty()) {
+            return 0;
+        }
+        return value_to_visual_[std::min(value_offset, value_to_visual_.size() - 1)];
+    }
+
+    auto EditableText::value_offset(const std::size_t visual_offset) const -> std::size_t {
+        if (visual_to_value_.empty()) {
+            return 0;
+        }
+        return visual_to_value_[std::min(visual_offset, visual_to_value_.size() - 1)];
+    }
+
+    auto EditableText::visual_caret() const -> std::size_t {
+        return composing_ ? composition_visual_caret_ : visual_offset(caret_);
+    }
+
+    auto EditableText::visual_selection() const -> TextSelection {
+        return TextSelection {
+            .anchor = visual_offset(selection_.anchor),
+            .anchor_affinity = selection_.anchor_affinity,
+            .focus = visual_offset(selection_.focus),
+            .focus_affinity = selection_.focus_affinity,
+        };
+    }
+
+    void EditableText::rebuild_visual() {
+        const bool mask = masked();
+        const auto caret = std::min(caret_, value_.size());
+        const auto prefix = map_text(std::string_view(value_).substr(0, caret), mask);
+        const auto suffix = map_text(std::string_view(value_).substr(caret), mask);
+
+        const bool has_composition = composition_ && !composition_->text.empty();
+        const auto composition = has_composition
+            ? map_text(composition_->text, mask)
+            : MappedText {.text = {}, .from_source = {0}, .to_source = {0}};
+
+        visual_text_ = prefix.text + composition.text + suffix.text;
+        value_to_visual_.assign(value_.size() + 1, 0);
+        for (std::size_t index = 0; index < prefix.from_source.size(); ++index) {
+            value_to_visual_[index] = prefix.from_source[index];
+        }
+
+        const auto composition_begin = prefix.text.size();
+        const auto composition_end = composition_begin + composition.text.size();
+        value_to_visual_[caret] = composition_begin;
+        for (std::size_t index = 1; index < suffix.from_source.size(); ++index) {
+            value_to_visual_[caret + index] = composition_end + suffix.from_source[index];
+        }
+
+        visual_to_value_.assign(visual_text_.size() + 1, caret);
+        for (std::size_t index = 0; index < prefix.to_source.size(); ++index) {
+            visual_to_value_[index] = prefix.to_source[index];
+        }
+        for (std::size_t index = 0; index < composition.to_source.size(); ++index) {
+            visual_to_value_[composition_begin + index] = caret;
+        }
+        for (std::size_t index = 1; index < suffix.to_source.size(); ++index) {
+            visual_to_value_[composition_end + index] = caret + suffix.to_source[index];
+        }
+
+        composition_visual_begin_ = composition_begin;
+        composition_visual_end_ = composition_end;
+        composing_ = has_composition;
+        composition_visual_caret_ = composition_begin;
+        if (has_composition) {
+            const auto selection =
+                std::min(composition_->selection_start, composition_->text.size());
+            composition_visual_caret_ = composition_begin + composition.from_source[selection];
+        }
     }
 
     void EditableText::emit_change() {

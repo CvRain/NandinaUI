@@ -78,7 +78,8 @@
 | P3.2a | **D1 焦点核心与提示策略（已实施，2026-10-31）**：`InputModality`/请求上下文、`should_show_focus_hint()`、窗口失活/激活、paint-only、组件绘制迁移 | P3.1 事件语义 | `focus-hint` 8 用例/45 断言 + 真实窗口激活与 button 绘制用例通过；红测见 [D1 §6](focus_and_input.md#第一阶段实施记录2026-10-31p32a-核心批次) |
 | P3.2b | **D1 第一阶段收尾（已实施，2026-11-01）**：Showcase 输入与焦点页、Tabs 活动项提示、弹窗进入/恢复显式原因、只读字段能力与“始终显示”开关 | P3.2a | `input-focus-showcase` 构建/布局回归与页面 probe 渲染通过；`focus-hint`/`tabs`/`dialog` 回归覆盖同节点模态、恢复与只读能力；红测见 [D1](focus_and_input.md#第一阶段实施记录2026-10-31p32a-核心批次)。真实设备与 IME 仍待验收 |
 | P3.3a | **D1 文本会话协议与 SDL 合成路径（已实施，2026-11-01）**：`ITextInputService`/`ITextInputTarget`、会话身份与迟到过滤、committed 唯一路径、SDL_TEXT_EDITING 入帧事件 | P3.2 事件语义 | `text-input-session` 10 用例/48 断言、`sdl-platform-input` 16 用例/417 断言与真实窗口 tick 用例通过；真实 IME 与预编辑绘制留给 P3.3b |
-| P3.3b | **D1 文本会话平台验收（后续批次）**：真实 IME 组合/提交/取消、预编辑绘制、软键盘/可见性/遮挡、caret 输入区域、密码用途呈现 | P3.3a | 真实 IME 分别记录 Linux/Windows 平台状态；无能力时返回可诊断 unsupported，不把模拟值伪装成实机结果 |
+| P3.3b1 | **D1 预编辑与密码用途显示（已实施，2026-11-02）**：`EditableText` 视觉文本映射、inline preedit/下划线、password purpose 掩码、组合期占位符抑制、指针命中回映射 | P3.3a | `widget` 新增组合/掩码用例通过；红测：关闭掩码后密码用例失败；真实 IME 仍待 P3.3b2 |
+| P3.3b2 | **D1 文本会话平台验收（后续批次）**：真实 IME 组合/提交/取消、caret 输入区域、软键盘/可见性/遮挡 | P3.3b1 | 真实 IME 分别记录 Linux/Windows 平台状态；无能力时返回可诊断 unsupported，不把模拟值伪装成实机结果 |
 
 应用侧并行：维护者手工编写 `examples/notebook`（数据层已完成；服务与 UI 后续）及 `showcase/` 组件，
 不改变 P3 的框架优先级；组件先在 showcase 进行视觉验收，再由 notebook 组合。
@@ -87,9 +88,10 @@
 
 | 编号 | 交付 | 前置 | 退出条件 |
 | --- | --- | --- | --- |
-| P4.1 | **D6 首批**：Label 作者能力、绑定覆盖、有限宽度自然长高与缓存契约 | 详细 API 审阅 | Label 页与 ComponentInfoTable 验收；纯绘制变动不无谓整形 |
+| P4.1 | **D6 首批**：Label 作者能力、绑定覆盖、有限宽度自然长高、**文本在指派盒子内的垂直对齐**与缓存契约 | 详细 API 审阅 | Label 页与 ComponentInfoTable 验收；纯绘制变动不无谓整形 |
+| P4.1b | **视觉表面作者能力（新增，来源：notebook 登录页反馈）**：可设圆角/内容的 `Surface` 原语、Card content inset、Image cover 的百分比裁剪锚点 | P4.1 的测量稳定；不新增第二套绘制路径 | 登录页可让图片真正贴边；Image 可用百分比锚点裁剪 cover；showcase 视觉验收 |
 | P4.2 | **阶段 5 数据组件**：布局/选择/虚拟化依据 | P4.1 与布局稳定 | 复合数据组件有虚拟化与选择回归 |
-| P4.3 | **D2 主题状态订阅**、**D3 nav_group** | D2 通知与生命周期定形；D3 无跨专题前置 | Shell 无重复事实来源；空组/合并/顺序/typed navigation 回归 |
+| P4.3 | **D2 主题状态订阅**、**D3 nav_group**、**作者颜色入口（新增）**：显式 `NanColor` 覆盖与 primitive palette 访问，不为 red/blue 等追加语义 token | D2 通知与生命周期定形；D3 无跨专题前置 | Shell 无重复事实来源；自定义组件可设任意颜色；语义 token 仍是默认；空组/合并/顺序/typed navigation 回归 |
 | P4.4 | **视觉质量扩展**：页面 golden 覆盖面（更多页面/组件状态）、混合叠层验证 | P1.1 | 新页面有 approved 基线或明确不纳入的理由 |
 
 ## 4. 建议的近期切入顺序

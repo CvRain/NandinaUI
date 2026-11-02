@@ -74,6 +74,11 @@ namespace nandina::widget::primitives
         void clear_composition();
         [[nodiscard]] auto composition() const -> const std::optional<TextComposition>&;
 
+        /// Resolve a layout-local point to a caret offset in the committed value.
+        /// Composition text and password masking change the visual string, so callers must
+        /// not feed layout source offsets directly into `set_caret`.
+        [[nodiscard]] auto caret_at(foundation::NanPoint point) const -> text::TextCaretStop;
+
         /// 在插入符处插入文本（替换选区，记录撤销，发出 change）。
         /// 多行输入（TextArea 的 Enter）与单行输入共用这一条写入路径。
         void insert_text(std::string_view text);
@@ -146,6 +151,16 @@ namespace nandina::widget::primitives
         [[nodiscard]] auto snapshot() const -> EditSnapshot;
         [[nodiscard]] auto line_stop_for(std::size_t offset, text::TextAffinity affinity) const
             -> LineStop;
+        [[nodiscard]] auto line_stop_for_visual(
+            std::size_t visual_offset,
+            text::TextAffinity affinity
+        ) const -> LineStop;
+        [[nodiscard]] auto masked() const noexcept -> bool;
+        [[nodiscard]] auto visual_offset(std::size_t value_offset) const -> std::size_t;
+        [[nodiscard]] auto value_offset(std::size_t visual_offset) const -> std::size_t;
+        [[nodiscard]] auto visual_caret() const -> std::size_t;
+        [[nodiscard]] auto visual_selection() const -> TextSelection;
+        void rebuild_visual();
         void record_undo();
         void restore(EditSnapshot snapshot);
         void undo();
@@ -172,6 +187,16 @@ namespace nandina::widget::primitives
             foundation::NanHexRgb {.red = 80, .green = 130, .blue = 220, .alpha = 96}
         );
         std::optional<TextComposition> composition_;
+        /// Visual string used for layout/drawing. It equals `value_` unless a composition is
+        /// active or the purpose masks the password; the maps keep caret/selection in value
+        /// offsets while the text pipeline operates on the visual offsets.
+        std::string visual_text_;
+        std::vector<std::size_t> value_to_visual_;
+        std::vector<std::size_t> visual_to_value_;
+        std::size_t composition_visual_begin_ = 0;
+        std::size_t composition_visual_end_ = 0;
+        std::size_t composition_visual_caret_ = 0;
+        bool composing_ = false;
         Text text_;
         std::function<void(std::string_view)> on_change_;
         std::vector<EditSnapshot> undo_stack_;

@@ -331,7 +331,8 @@ namespace nandina::widget
             world.get_height()
         );
         auto clip = ctx.clip().push(viewport);
-        if (edit_.value().empty() && !placeholder_.text().empty()) {
+        if (edit_.value().empty() && !edit_.composition().has_value()
+            && !placeholder_.text().empty()) {
             placeholder_.draw_at(
                 ctx,
                 line_origin(
@@ -447,7 +448,7 @@ namespace nandina::widget
 
     void TextField::place_caret(const foundation::NanPoint screen_point, const bool extend) {
         const auto local = to_local(screen_point);
-        const auto stop = edit_.text_node().layout_result().caret_for_point(
+        const auto stop = edit_.caret_at(
             foundation::NanPoint(local.get_x() - padding_x_ + scroll_x_, 0.0F)
         );
         if (extend) {

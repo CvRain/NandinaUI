@@ -41,6 +41,7 @@ namespace nan_example::notebook::ui
                     field.set_name("login-password");
                 })
                 .build();
+        user_password_input->set_input_purpose(nandina::scene::TextInputPurpose::password);
 
         auto submit_login = [&user_name,
                              &user_password,

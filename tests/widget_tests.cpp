@@ -1877,6 +1877,69 @@ TEST_CASE(
     REQUIRE_FALSE(edit->composition().has_value());
 }
 
+TEST_CASE(
+    "EditableText renders inline composition and commits at the value caret",
+    "[widget][editable-text][composition]"
+) {
+    auto edit = std::make_shared<widget::primitives::EditableText>("abcd");
+    edit->set_caret(2);
+    edit->set_composition(
+        widget::primitives::TextComposition {
+            .text = "XY",
+            .selection_start = 0,
+            .selection_end = 0,
+        }
+    );
+
+    REQUIRE(edit->value() == "abcd");
+    REQUIRE(edit->text_node().text() == "abXYcd");
+    REQUIRE(edit->composition().has_value());
+
+    edit->text_input_commit("XY");
+    REQUIRE(edit->value() == "abXYcd");
+    REQUIRE(edit->text_node().text() == "abXYcd");
+    REQUIRE_FALSE(edit->composition().has_value());
+}
+
+TEST_CASE(
+    "EditableText masks password purpose without changing the value",
+    "[widget][editable-text][password]"
+) {
+    const std::string bullet = "\xE2\x80\xA2";
+    auto edit = std::make_shared<widget::primitives::EditableText>("abcd");
+    edit->set_text_input_purpose(scene::TextInputPurpose::password);
+
+    REQUIRE(edit->value() == "abcd");
+    REQUIRE(edit->text_node().text() == bullet + bullet + bullet + bullet);
+
+    edit->set_caret(2);
+    const auto geometry = edit->caret_geometry();
+    const auto hit = edit->caret_at(foundation::NanPoint(geometry.x, geometry.top));
+    CHECK(hit.source_offset == 2);
+
+    edit->insert_text("Z");
+    REQUIRE(edit->value() == "abZcd");
+    REQUIRE(
+        edit->text_node().text() == bullet + bullet + bullet + bullet + bullet
+    );
+}
+
+TEST_CASE("TextField draws masked password text", "[widget][text-field][password]") {
+    RecordingDevice dev;
+    scene::NanSceneTree tree;
+    auto field = std::make_shared<widget::TextField>("secret", "");
+    field->set_input_purpose(scene::TextInputPurpose::password);
+    tree.set_root(field);
+    tree.draw(dev);
+
+    const std::string bullet = "\xE2\x80\xA2";
+    REQUIRE(dev.texts.size() == 1);
+    CHECK(
+        dev.texts.front().text
+        == bullet + bullet + bullet + bullet + bullet + bullet
+    );
+}
+
 TEST_CASE("EditableText draws text and focused caret", "[widget][editable-text]") {
     RecordingDevice dev;
     scene::NanSceneTree tree;
