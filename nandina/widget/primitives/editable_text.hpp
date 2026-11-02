@@ -151,10 +151,9 @@ namespace nandina::widget::primitives
         [[nodiscard]] auto snapshot() const -> EditSnapshot;
         [[nodiscard]] auto line_stop_for(std::size_t offset, text::TextAffinity affinity) const
             -> LineStop;
-        [[nodiscard]] auto line_stop_for_visual(
-            std::size_t visual_offset,
-            text::TextAffinity affinity
-        ) const -> LineStop;
+        [[nodiscard]] auto
+        line_stop_for_visual(std::size_t visual_offset, text::TextAffinity affinity) const
+            -> LineStop;
         [[nodiscard]] auto masked() const noexcept -> bool;
         [[nodiscard]] auto visual_offset(std::size_t value_offset) const -> std::size_t;
         [[nodiscard]] auto value_offset(std::size_t visual_offset) const -> std::size_t;

@@ -9,6 +9,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
 
+#include <cmath>
 #include <memory>
 #include <vector>
 
@@ -357,5 +358,67 @@ TEST_CASE(
     REQUIRE(window.scene_tree().focused_node() == second.get());
     first.reset();
     second.reset();
+    window.close();
+}
+
+TEST_CASE(
+    "window tick publishes the viewport caret to SDL before drawing",
+    "[app][input][text-session][area]"
+) {
+    using namespace nandina;
+    const bool scaled = GENERATE(false, true);
+    app::NanApplication application;
+    app::WindowConfig config;
+    config.width = 600;
+    config.height = 400;
+    config.vsync = false;
+    config.target_fps = 0;
+    config.backend = app::WindowBackend::sdl3;
+    if (scaled) {
+        config.viewport = app::ViewportScalePolicy {.design_size = foundation::NanSize(200, 200)};
+    }
+    app::NanWindow window(application, config);
+    window.open();
+    auto root = std::make_shared<scene::NanControl>();
+    auto edit = std::make_shared<widget::primitives::EditableText>("ab");
+    edit->set_presentation_translate(foundation::NanPoint(20, 30));
+    edit->set_caret(1);
+    root->add_child(edit);
+    window.set_content(root);
+    window.tick();
+    window.scene_tree().set_focus(edit.get());
+    int count = 0;
+    SDL_Window** windows = SDL_GetWindows(&count);
+    REQUIRE(windows != nullptr);
+    REQUIRE(count == 1);
+    auto* native = windows[0];
+    SDL_free(windows);
+    SDL_Event gained {};
+    gained.type = SDL_EVENT_WINDOW_FOCUS_GAINED;
+    gained.window.windowID = SDL_GetWindowID(native);
+    push(gained);
+    window.tick();
+    REQUIRE(window.scene_tree().text_input_session_active());
+    auto check_area = [&](const float scale, const float offset_x) {
+        const auto caret = edit->text_input_caret_area();
+        SDL_Rect rect {};
+        int cursor = -1;
+        REQUIRE(SDL_GetTextInputArea(native, &rect, &cursor));
+        const auto left = std::floor(offset_x + scale * (20 + caret.get_left()));
+        const auto top = std::floor(scale * (30 + caret.get_top()));
+        CHECK(rect.x == left);
+        CHECK(rect.y == top);
+        CHECK(rect.w == std::ceil(offset_x + scale * (20 + caret.get_right())) - left);
+        CHECK(rect.h == std::ceil(scale * (30 + caret.get_bottom())) - top);
+        CHECK(cursor == 0);
+    };
+    check_area(scaled ? 2.0F : 1.0F, scaled ? 100.0F : 0.0F);
+    // Resize must refresh the viewport mapping, and changing the caret must not need layout.
+    REQUIRE(SDL_SetWindowSize(native, 800, 600));
+    edit->set_caret(2);
+    window.tick();
+    check_area(scaled ? 3.0F : 1.0F, scaled ? 100.0F : 0.0F);
+    edit.reset();
+    root.reset();
     window.close();
 }

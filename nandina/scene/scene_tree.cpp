@@ -929,23 +929,30 @@ namespace nandina::scene
         // Composition events without a session/service have no editing target to update.
     }
 
-    void NanSceneTree::update_text_input_area() {
+    auto NanSceneTree::update_text_input_area(
+        const foundation::NanTransform2D& world_to_window,
+        const foundation::NanRect window
+    ) -> TextInputRequestResult {
         if (!text_input_session_active() || text_input_service_ == nullptr) {
-            return;
+            return TextInputRequestResult::unavailable;
         }
         if (!has_capability(text_input_service_->capabilities(), TextInputCapabilities::input_area))
         {
-            return;
+            return TextInputRequestResult::unsupported;
         }
-        auto* target = _session_target_valid(text_input_session_);
-        if (target == nullptr) {
-            return;
+        if (_session_target_valid(text_input_session_) == nullptr) {
+            return TextInputRequestResult::unavailable;
         }
-        (void)text_input_service_->update_caret_area(
+        auto* focused = focused_node();
+        const auto caret = focused->text_input_caret_rect();
+        return text_input_service_->update_caret_area(
             text_input_session_,
             TextInputArea {
-                .caret = target->text_input_caret_area(),
-                .window = foundation::NanRect::empty(),
+                .caret = render::world_bounds_from_local(
+                    world_to_window * focused->global_transform(),
+                    caret
+                ),
+                .window = window,
             }
         );
     }

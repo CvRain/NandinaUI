@@ -231,9 +231,13 @@ namespace nandina::scene
         /// back to the legacy `TextInputEvent` dispatch and composition updates are ignored.
         void apply_text_input_event(const TextInputPlatformEvent& event);
 
-        /// Refresh the platform caret/input area after layout. No-op when the platform does
-        /// not advertise the `input_area` capability.
-        void update_text_input_area();
+        /// Publish the caret after layout, in window logical coordinates (never DPI pixels).
+        /// Defaults suit a headless host: identity mapping and unknown client bounds.
+        /// Returns unsupported without calling a service that lacks input_area.
+        auto update_text_input_area(
+            const foundation::NanTransform2D& world_to_window = {},
+            foundation::NanRect window = foundation::NanRect::empty()
+        ) -> TextInputRequestResult;
 
         /// Move focus forward through the tree's focusable nodes.
         auto focus_next() -> void;

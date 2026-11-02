@@ -1919,9 +1919,7 @@ TEST_CASE(
 
     edit->insert_text("Z");
     REQUIRE(edit->value() == "abZcd");
-    REQUIRE(
-        edit->text_node().text() == bullet + bullet + bullet + bullet + bullet
-    );
+    REQUIRE(edit->text_node().text() == bullet + bullet + bullet + bullet + bullet);
 }
 
 TEST_CASE("TextField draws masked password text", "[widget][text-field][password]") {
@@ -1934,10 +1932,7 @@ TEST_CASE("TextField draws masked password text", "[widget][text-field][password
 
     const std::string bullet = "\xE2\x80\xA2";
     REQUIRE(dev.texts.size() == 1);
-    CHECK(
-        dev.texts.front().text
-        == bullet + bullet + bullet + bullet + bullet + bullet
-    );
+    CHECK(dev.texts.front().text == bullet + bullet + bullet + bullet + bullet + bullet);
 }
 
 TEST_CASE("EditableText draws text and focused caret", "[widget][editable-text]") {

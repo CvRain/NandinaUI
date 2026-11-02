@@ -368,18 +368,11 @@ namespace nandina::widget::primitives
                 }
                 const float line_bottom =
                     line_top + layout.lines[begin.line_index].size.get_height();
-                const auto color =
-                    text_.color().with_alpha(text_.color().alpha() * ctx.opacity());
+                const auto color = text_.color().with_alpha(text_.color().alpha() * ctx.opacity());
                 const float y = position.get_y() + ctx.logical_to_screen(line_bottom - caret_width);
                 ctx.device().draw_line(
-                    foundation::NanPoint(
-                        position.get_x() + ctx.logical_to_screen(begin.stop.x),
-                        y
-                    ),
-                    foundation::NanPoint(
-                        position.get_x() + ctx.logical_to_screen(end.stop.x),
-                        y
-                    ),
+                    foundation::NanPoint(position.get_x() + ctx.logical_to_screen(begin.stop.x), y),
+                    foundation::NanPoint(position.get_x() + ctx.logical_to_screen(end.stop.x), y),
                     ctx.logical_to_screen(caret_width),
                     color
                 );

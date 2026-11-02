@@ -238,6 +238,23 @@ namespace nandina::widget
         return disabled_ ? nullptr : &edit_;
     }
 
+    auto TextField::text_input_caret_rect() -> foundation::NanRect {
+        update_scroll(std::max(0.0F, width() - padding_x_ * 2.0F));
+        const auto caret = edit_.text_input_caret_area();
+        const auto origin = line_origin(
+            local_rect(),
+            edit_.text_node().layout_result(),
+            padding_x_ - scroll_x_,
+            1.0F
+        );
+        return foundation::NanRect::from_xywh(
+            origin.get_x() + caret.get_left(),
+            origin.get_y() + caret.get_top(),
+            caret.get_width(),
+            caret.get_height()
+        );
+    }
+
     void TextField::set_input_purpose(const scene::TextInputPurpose purpose) {
         edit_.set_text_input_purpose(purpose);
     }
@@ -332,7 +349,8 @@ namespace nandina::widget
         );
         auto clip = ctx.clip().push(viewport);
         if (edit_.value().empty() && !edit_.composition().has_value()
-            && !placeholder_.text().empty()) {
+            && !placeholder_.text().empty())
+        {
             placeholder_.draw_at(
                 ctx,
                 line_origin(
@@ -448,9 +466,8 @@ namespace nandina::widget
 
     void TextField::place_caret(const foundation::NanPoint screen_point, const bool extend) {
         const auto local = to_local(screen_point);
-        const auto stop = edit_.caret_at(
-            foundation::NanPoint(local.get_x() - padding_x_ + scroll_x_, 0.0F)
-        );
+        const auto stop =
+            edit_.caret_at(foundation::NanPoint(local.get_x() - padding_x_ + scroll_x_, 0.0F));
         if (extend) {
             auto selection = edit_.selection();
             selection.focus = stop.source_offset;
@@ -468,8 +485,8 @@ namespace nandina::widget
             scroll_x_ = 0.0F;
             return;
         }
-        const auto caret =
-            layout.lines.front().caret_for_source(edit_.caret(), edit_.caret_affinity());
+        // Scroll follows the same visual caret as paint, including preedit and masking.
+        const auto caret = edit_.caret_geometry();
         if (caret.x < scroll_x_) {
             scroll_x_ = caret.x;
         }

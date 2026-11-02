@@ -82,6 +82,7 @@ namespace nandina::widget
         [[nodiscard]] auto is_focusable() const -> bool override;
 
         [[nodiscard]] auto text_input_target() -> scene::ITextInputTarget* override;
+        [[nodiscard]] auto text_input_caret_rect() -> foundation::NanRect override;
 
         /// Editable targets keep a visible hint even for pointer focus (D1 phase 1).
         [[nodiscard]] auto focus_hint_requirement() const -> scene::FocusHintRequirement override;

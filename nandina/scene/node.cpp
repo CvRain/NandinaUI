@@ -9,6 +9,7 @@
 #include "control.hpp"
 #include "node2d.hpp"
 #include "scene_tree.hpp"
+#include "text_input_service.hpp"
 
 #include <algorithm>
 #include <atomic>
@@ -449,6 +450,11 @@ namespace nandina::scene
 
     auto NanNode::text_input_target() -> ITextInputTarget* {
         return nullptr;
+    }
+
+    auto NanNode::text_input_caret_rect() -> foundation::NanRect {
+        auto* target = text_input_target();
+        return target != nullptr ? target->text_input_caret_area() : foundation::NanRect::empty();
     }
 
     auto NanNode::is_visible_in_tree() const -> bool {

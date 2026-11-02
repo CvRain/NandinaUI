@@ -233,6 +233,17 @@ namespace nandina::widget
         return disabled_ ? nullptr : &edit_;
     }
 
+    auto TextArea::text_input_caret_rect() -> foundation::NanRect {
+        update_scroll(viewport_height());
+        const auto caret = edit_.text_input_caret_area();
+        return foundation::NanRect::from_xywh(
+            padding_x_ + caret.get_left(),
+            padding_y_ - scroll_y_ + caret.get_top(),
+            caret.get_width(),
+            caret.get_height()
+        );
+    }
+
     auto TextArea::focus_hint_requirement() const -> scene::FocusHintRequirement {
         return scene::FocusHintRequirement::always_required;
     }
@@ -338,7 +349,8 @@ namespace nandina::widget
         );
         auto clip = ctx.clip().push(viewport);
         if (edit_.value().empty() && !edit_.composition().has_value()
-            && !placeholder_.text().empty()) {
+            && !placeholder_.text().empty())
+        {
             placeholder_.draw_at(
                 ctx,
                 foundation::NanPoint(viewport.get_left(), world.get_top() + padding_y)
@@ -484,10 +496,7 @@ namespace nandina::widget
         const auto local = to_local(screen_point);
         // 与 TextField 同款：映射到局部坐标、补偿滚动偏移，再交给布局做命中测试。
         const auto stop = edit_.caret_at(
-            foundation::NanPoint(
-                local.get_x() - padding_x_,
-                local.get_y() - padding_y_ + scroll_y_
-            )
+            foundation::NanPoint(local.get_x() - padding_x_, local.get_y() - padding_y_ + scroll_y_)
         );
         if (extend) {
             auto selection = edit_.selection();

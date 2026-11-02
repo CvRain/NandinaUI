@@ -1,6 +1,6 @@
 # 统一输入、焦点与文本编辑
 
-> **状态：第一阶段已实施（P3.2a/b，2026-10-31/11-01）；第二阶段协议与 SDL 合成事件路径已实施（P3.3a，2026-11-01），预编辑绘制与密码用途显示已实施（P3.3b1，2026-11-02）；真实 IME、caret 输入区域与软键盘/遮挡仍待 P3.3b2。**
+> **状态：第一阶段已实施（P3.2a/b，2026-10-31/11-01）；第二阶段协议与 SDL 合成事件路径已实施（P3.3a，2026-11-01），预编辑绘制与密码用途显示已实施（P3.3b1，2026-11-02）；caret 输入区域与 SDL input_area 已实施（P3.3b2a，2026-11-02）；真实 IME 与软键盘/遮挡平台验收仍待 P3.3b2b。**
 > 2026-10-09 的 D1 讨论结论；2026-10-31 补记第一阶段实现范围与剩余项（§6）。
 > 本文是后续实施依据，取代旧 D1 工作稿中“只有键盘才显示环”“手柄归 pointer”及
 > “立即增加 `.focus_ring(false)`”的建议。D2 主题订阅、D3 导航分组、D4 平台后端不在本次决策范围。
@@ -342,12 +342,45 @@ P3.3b1 已补（2026-11-02）：
 - 回归：`widget` 覆盖 inline composition 提交、密码掩码显示、`TextField` 掩码绘制与
   `EditableText::caret_at` 命中回映射；红测：把 `masked()` 固定为 false 后密码用例失败。
 
-仍未完成（P3.3b2，真实平台验收）：
+### 5.4 P3.3b2a caret 输入区域契约（2026-11-02）
+
+- `ITextInputTarget::text_input_caret_area()` 返回编辑目标局部逻辑矩形；焦点节点通过
+  `NanNode::text_input_caret_rect()` 将其映射到节点局部坐标。默认两者坐标相同；组合控件
+  `TextField`/`TextArea` 覆写此入口，计入内边距、单行垂直居中与编辑区滚动。
+  编辑目标继续复用 `EditableText`，不另造 widget 专用平台通道。
+- `NanSceneTree::update_text_input_area(world_to_window, window)` 在最终布局后、绘制前调用：
+  先刷新目标滚动，再将局部 caret 的四角经焦点节点 global transform 和宿主 viewport 映射，
+  取窗口逻辑坐标 AABB。`TextInputArea::window` 是窗口客户区边界，不是遮挡信息。
+  `NanWindow` 每帧传实际 viewport transform 和窗口逻辑尺寸；不乘 drawable/DPI 比例。
+  无参调用保留 identity 映射与未知窗口边界，供 headless/自定义宿主使用。
+- 更新结果为 `TextInputRequestResult`：无会话返回 unavailable，无 input_area 能力返回
+  unsupported 且不调用服务；其余透传平台结果。
+- SDL 声明 composition + input_area。仅当前活动会话可更新；无窗口/活动会话或旧会话返回
+  unavailable，非有限/空/超出 SDL 整数范围的 caret 返回 rejected。有效 caret 向外取整为
+  SDL_Rect，以该矩形为输入区、cursor offset 0 调用 SDL_SetTextInputArea，失败返回 rejected。
+  软键盘、可见性反馈与遮挡仍不支持，不能用此能力推断真实 IME 已验收。
+
+自动回归与红测（2026-11-02）：
+
+- `text-input-session`（13 用例/89 断言）的 mock 服务断言祖先变换、viewport/letterbox、窗口边界、单行内边距/
+  居中/水平滚动、多行垂直滚动与组合/密码视觉 caret；无能力返回 unsupported，平台拒绝结果透传。
+- `sdl-platform-input`（18 用例/481 断言）回读 `SDL_GetTextInputArea`，验证窗口单位、负数/小数向外取整、非法矩形/
+  过期会话拒绝，并通过真实 `NanWindow::tick()` 验证 viewport 与 resize 更新。
+  使用 dummy video + software renderer，不能当作真实 IME 或 Windows 桌面证据。
+- 六处逐一故障注入并恢复：移除 scene 变换（21 断言失败）、控件偏移（8）、多行滚动（2）、
+  视觉 caret 滚动（1）、SDL 转发（24）、host viewport（8），测试进程均返回 42；恢复后两项
+  Meson 测试通过。没有放宽断言或更改 gate。
+
+- Linux 配置验证：主套件 **111/111**；ASan/UBSan unit **88 通过 + window-lifecycle SKIP**（按本地约定
+  `LSAN_OPTIONS=detect_leaks=0`）、GCC no-RTTI unit **90/90**、无 SQLite/headless unit
+  **85 通过 + 1 SKIP**、纯工具 **8/8**；发布门禁 **8/8，0 SKIP**（固定 clang-format
+  23.1.1、头文件分类/依赖/独立包含均通过）。收口了 P3.3b1 编辑原语及测试的少量格式漂移。
+  本轮未执行 Windows 或真实 IME/软键盘/遮挡交互验收。
+
+仍未完成（P3.3b2b，真实平台验收）：
 
 - 真实 IME 组合/提交/取消在 Linux 与 Windows 交互桌面上的手工验收（当前只用合成 SDL
   事件与 mock 服务证明协议和宿主路径）。
-- caret 输入区域：目标目前只报告编辑原语局部坐标，scene 尚未把外层控件布局偏移与 viewport
-  映射成窗口坐标，SDL 服务也未声明 `input_area` 能力。
 - 软键盘请求/可见性/遮挡：桌面 SDL 路径没有这些能力，服务如实返回 unsupported；移动端适配
   尚未开始。
 - 会话身份在手写平台适配、服务重连以及页面销毁竞争下的专项回归（当前依赖焦点清理）。
@@ -440,7 +473,7 @@ P3.2b 收尾（2026-11-01）已实施：
 - DropdownMenu 若后续引入独立焦点环而不是活动项高亮，需按 §4.3 补委托绘制的纯提示失效。
 - “始终显示”目前只有 scene setter seam + showcase 开关，没有持久化配置 API。
 
-### 第二阶段：文本输入会话（P3.3a 协议与 SDL 合成路径、P3.3b1 预编辑/密码显示已实施；P3.3b2 平台验收待完成）
+### 第二阶段：文本输入会话（P3.3a 协议与 SDL 合成路径、P3.3b1 预编辑/密码显示已实施；P3.3b2a caret 输入区域已实施；P3.3b2b 平台验收待完成）
 
 - 落平台中立的编辑目标与会话协议，接实际可用的平台实现。
 - 按 §5.1 定形窗口注入的 `ITextInputService`、受保护的事件入口、会话身份与解绑次序；不提前锁定平台。
@@ -460,8 +493,8 @@ P3.2b 收尾（2026-11-01）已实施：
 
 以下是**验收要求**。2026-10-31 的 P3.2a、2026-11-01 的 P3.2b 与 P3.3a 已覆盖第一阶段策略/
 窗口/标脏/roving/弹窗恢复，以及第二阶段协议、会话身份、提交唯一路径与 SDL 合成事件路径的
-自动用例；P3.3b1 补了预编辑显示、密码掩码与视觉命中映射。真实 IME、caret 区域、软键盘、
-遮挡与真实设备仍待 P3.3b2 逐条补齐。
+自动用例；P3.3b1 补了预编辑显示、密码掩码与视觉命中映射，P3.3b2a 补了 caret 坐标链路与
+SDL 输入区域转发。真实 IME、软键盘、遮挡与真实设备仍待 P3.3b2b 逐条补齐。
 
 | 阶段 | 组合断言 | 故障注入方向 |
 | --- | --- | --- |

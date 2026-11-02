@@ -78,6 +78,7 @@ namespace nandina::widget
         [[nodiscard]] auto is_focusable() const -> bool override;
 
         [[nodiscard]] auto text_input_target() -> scene::ITextInputTarget* override;
+        [[nodiscard]] auto text_input_caret_rect() -> foundation::NanRect override;
         /// Forward the editing purpose (text/password/email/number) to the session request.
         void set_input_purpose(scene::TextInputPurpose purpose);
 

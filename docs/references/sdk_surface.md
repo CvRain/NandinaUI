@@ -18,11 +18,20 @@
 
 ## 2. 三档分类
 
+2026-11-02 P3.3b2a caret 输入区域（experimental，已实施）：`NanNode` 新增
+`text_input_caret_rect()`（焦点节点局部逻辑矩形，允许刷新编辑区滚动），默认转发编辑目标，
+`TextField`/`TextArea` 覆写以计入内边距/垂直居中/滚动。`ITextInputTarget` 的 caret 仍是
+编辑目标局部坐标。`NanSceneTree::update_text_input_area(world_to_window = identity,
+window = empty)` 新增可选宿主映射/窗口客户区边界，返回 `TextInputRequestResult`（原为 void）；
+普通无参调用仍兼容，保存旧成员函数指针签名的调用方需调整。`NanWindow` 在布局后每帧传
+viewport transform 与窗口逻辑尺寸，SDL 报告 composition + input_area 并调用
+`SDL_SetTextInputArea`。软键盘/可见性反馈/遮挡仍 unsupported；实机验收见 P3.3b2b。
+
 2026-11-02 P3.3b1 预编辑与密码用途显示（experimental，已实施）：`EditableText` 新增
 `caret_at()`（布局局部点 → 提交值 caret，自动处理 composition/密码视觉映射）；
 `TextInputPurpose::password` 现在把视觉文本按 grapheme 折叠为 `U+2022`，而 `value()`、剪贴板
-与提交路径保持原始文本。`TextField`/`TextArea` 的指针命中改经该入口。真实 IME、caret 区域与
-软键盘/遮挡仍归 P3.3b2。
+与提交路径保持原始文本。`TextField`/`TextArea` 的指针命中改经该入口。caret 区域由 P3.3b2a 补齐；真实 IME 与
+软键盘/遮挡平台验收仍归 P3.3b2b。
 
 2026-11-01 P3.3a 文本输入会话协议（experimental，已实施）：新增
 `scene/text_input_service.hpp`（`TextInputPurpose`/能力位/`TextInputSession`/
@@ -31,8 +40,8 @@
 `active_text_input_session()`、`text_input_session_active()`、`apply_text_input_event()` 与
 `update_text_input_area()`；`FrameEvent` 新增 `scene::TextEditingEvent`（IME 组合更新）；
 `IPlatformWindow` 新增带默认 nullptr 的 `text_input_service()`，自定义平台可继续不为文本
-会话提供实现（committed text 走既有 `TextInputEvent` 路径）。当前能力只覆盖 SDL 桌面的
-composition；软键盘/遮挡/输入区域未支持，真实 IME 验收与 caret 区域见 P3.3b2。
+会话提供实现（committed text 走既有 `TextInputEvent` 路径）。P3.3a 当时只覆盖 SDL 桌面的
+composition；P3.3b2a 增补 input_area。软键盘/遮挡仍未支持，真实 IME 验收见 P3.3b2b。
 
 2026-10-31 P3.2a 焦点提示策略（experimental，已实施）：新增 `scene/focus_hint.hpp`
 （`InputModality` / `FocusRequestReason` / `FocusRequestContext` / `FocusHintRequirement`）；

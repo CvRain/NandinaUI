@@ -4,6 +4,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <limits>
 #include <variant>
 #include <vector>
 
@@ -551,9 +552,7 @@ TEST_CASE(
     CHECK(
         scene::has_capability(service->capabilities(), scene::TextInputCapabilities::composition)
     );
-    CHECK_FALSE(
-        scene::has_capability(service->capabilities(), scene::TextInputCapabilities::input_area)
-    );
+    CHECK(scene::has_capability(service->capabilities(), scene::TextInputCapabilities::input_area));
 
     RecordingTextInputSink sink;
     service->set_sink(&sink);
@@ -595,4 +594,72 @@ TEST_CASE(
         }
     );
     REQUIRE(sink.commits == 1); // no active session: late events dropped
+}
+
+TEST_CASE(
+    "SDL caret area rounds outward and rejects invalid or stale updates",
+    "[sdl][input][text][area]"
+) {
+    PlatformInputFixture fixture;
+    auto* service = fixture.window.text_input_service();
+    const scene::TextInputSession session {.id = 11};
+    const scene::TextInputArea area {
+        .caret = foundation::NanRect::from_xywh(-2.25F, 7.75F, 1.0F, 18.5F),
+        .window = foundation::NanRect::from_xywh(0, 0, 160, 120)
+    };
+    CHECK(service->update_caret_area(session, area) == scene::TextInputRequestResult::unavailable);
+    REQUIRE(
+        service->begin_session({.session = session}) == scene::TextInputRequestResult::accepted
+    );
+    REQUIRE(service->update_caret_area(session, area) == scene::TextInputRequestResult::accepted);
+    auto* window = SDL_GetWindowFromID(fixture.window_id);
+    SDL_Rect rect {};
+    int cursor = -1;
+    REQUIRE(SDL_GetTextInputArea(window, &rect, &cursor));
+    CHECK(rect.x == -3);
+    CHECK(rect.y == 7);
+    CHECK(rect.w == 2);
+    CHECK(rect.h == 20);
+    CHECK(cursor == 0);
+    CHECK(
+        service->update_caret_area({.id = 12}, area) == scene::TextInputRequestResult::unavailable
+    );
+    for (const auto invalid:
+         {
+             foundation::NanRect::empty(),
+             foundation::NanRect::from_xywh(0, 0, 0, 10),
+             foundation::NanRect::from_xywh(std::numeric_limits<float>::infinity(), 0, 1, 10),
+             foundation::NanRect::from_xywh(std::numeric_limits<float>::quiet_NaN(), 0, 1, 10),
+             foundation::NanRect::from_xywh(1e20F, 0, 1, 10),
+             foundation::NanRect::from_xywh(-2e9F, 0, 4e9F, 10),
+         })
+    {
+        CHECK(
+            service->update_caret_area(session, {.caret = invalid})
+            == scene::TextInputRequestResult::rejected
+        );
+    }
+    REQUIRE(SDL_GetTextInputArea(window, &rect, &cursor));
+    CHECK(rect.x == -3);
+    CHECK(rect.y == 7);
+    CHECK(rect.w == 2);
+    CHECK(rect.h == 20);
+    CHECK(
+        service->request_keyboard_visibility(session, true)
+        == scene::TextInputRequestResult::unsupported
+    );
+    CHECK_FALSE(
+        scene::has_capability(service->capabilities(), scene::TextInputCapabilities::soft_keyboard)
+    );
+    CHECK_FALSE(
+        scene::has_capability(
+            service->capabilities(),
+            scene::TextInputCapabilities::visibility_feedback
+        )
+    );
+    CHECK_FALSE(
+        scene::has_capability(service->capabilities(), scene::TextInputCapabilities::occlusion)
+    );
+    service->end_session(session, scene::TextInputEndReason::focus_lost);
+    CHECK(service->update_caret_area(session, area) == scene::TextInputRequestResult::unavailable);
 }

@@ -6,11 +6,16 @@
 // legacy committed-text fallback and caret-area updates.
 //
 
+#include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
+#include <nandina/app/viewport_scaling.hpp>
 #include <nandina/scene/control.hpp>
 #include <nandina/scene/scene_tree.hpp>
 #include <nandina/scene/text_input_service.hpp>
+
+#include <nandina/widget/text_area.hpp>
+#include <nandina/widget/text_field.hpp>
 
 #include <memory>
 #include <string>
@@ -42,7 +47,7 @@ namespace
             ++area_updates;
             last_area_session = session;
             last_area = area;
-            return scene::TextInputRequestResult::accepted;
+            return area_result;
         }
 
         auto
@@ -99,6 +104,7 @@ namespace
         scene::TextInputArea last_area {};
         scene::TextInputBeginRequest last_request {};
         scene::TextInputRequestResult begin_result = scene::TextInputRequestResult::accepted;
+        scene::TextInputRequestResult area_result = scene::TextInputRequestResult::accepted;
         scene::TextInputEndReason last_end_reason = scene::TextInputEndReason::focus_lost;
         bool input_area = false;
         int begin_count = 0;
@@ -368,13 +374,141 @@ TEST_CASE(
     auto& service = fixture.service;
     tree.set_focus(fixture.editable.get());
 
-    tree.update_text_input_area();
+    REQUIRE(tree.update_text_input_area() == scene::TextInputRequestResult::unsupported);
     REQUIRE(service.area_updates == 0);
 
     service.input_area = true;
-    tree.update_text_input_area();
+    REQUIRE(tree.update_text_input_area() == scene::TextInputRequestResult::accepted);
     REQUIRE(service.area_updates == 1);
     REQUIRE(service.last_area_session == tree.active_text_input_session());
     REQUIRE(service.last_area.caret.get_left() == 12.0F);
     REQUIRE(service.last_area.caret.get_top() == 6.0F);
+    service.area_result = scene::TextInputRequestResult::rejected;
+    CHECK(tree.update_text_input_area() == scene::TextInputRequestResult::rejected);
+}
+
+TEST_CASE(
+    "caret area maps node ancestors and viewport into window units",
+    "[input][text-session][area]"
+) {
+    Fixture fixture;
+    fixture.service.input_area = true;
+    fixture.root->set_position(foundation::NanPoint(10, 20));
+    fixture.root->set_scale(2, 2);
+    fixture.editable->set_position(foundation::NanPoint(3, 4));
+    fixture.tree.set_focus(fixture.editable.get());
+    const auto mapping = app::make_viewport_mapping(
+        foundation::NanSize(600, 400),
+        {.design_size = foundation::NanSize(200, 200)}
+    );
+    const auto window = foundation::NanRect::from_xywh(0, 0, 600, 400);
+    REQUIRE(
+        fixture.tree.update_text_input_area(mapping.transform(), window)
+        == scene::TextInputRequestResult::accepted
+    );
+    // (12,6,1,18) -> ancestor scale 2 + (16,28) -> viewport scale 2 + (100,0).
+    const auto caret = fixture.service.last_area.caret;
+    CHECK(caret.get_left() == Catch::Approx(180));
+    CHECK(caret.get_top() == Catch::Approx(80));
+    CHECK(caret.get_width() == Catch::Approx(4));
+    CHECK(caret.get_height() == Catch::Approx(72));
+    CHECK(fixture.service.last_area.window == window);
+
+    // An ancestor scroll/animation can move the target without relayout or a new session.
+    const auto session = fixture.tree.active_text_input_session();
+    fixture.root->set_position(foundation::NanPoint(10, 5));
+    REQUIRE(
+        fixture.tree.update_text_input_area(mapping.transform(), window)
+        == scene::TextInputRequestResult::accepted
+    );
+    CHECK(fixture.service.last_area.caret.get_top() == Catch::Approx(50));
+    CHECK(fixture.tree.active_text_input_session() == session);
+    fixture.tree.set_focus(fixture.button.get());
+    CHECK(fixture.tree.update_text_input_area() == scene::TextInputRequestResult::unavailable);
+    CHECK(fixture.service.area_updates == 2);
+}
+
+TEST_CASE(
+    "text field publishes padding centering and visual horizontal scroll before paint",
+    "[input][text-session][area]"
+) {
+    Fixture fixture;
+    fixture.service.input_area = true;
+    auto field = widget::TextField::create("abcdefghijklmnopqrstuvwxyz");
+    field->set_override({.metrics_padding_x = theme::ThemeScalar::literal(7.0F)});
+    fixture.root->add_child(field);
+    field->layout_to(foundation::NanRect::from_xywh(20, 30, 90, 40));
+    fixture.tree.set_focus(field.get());
+    auto& edit = field->editable_text();
+    edit.set_caret(0);
+    REQUIRE(fixture.tree.update_text_input_area() == scene::TextInputRequestResult::accepted);
+    const auto height = edit.caret_geometry().height;
+    CHECK(fixture.service.last_area.caret.get_left() == Catch::Approx(27));
+    CHECK(fixture.service.last_area.caret.get_top() == Catch::Approx(30 + (40 - height) * 0.5F));
+    CHECK(fixture.service.last_area.caret.get_height() == Catch::Approx(height));
+
+    // End of a long line is at the right content edge even before the first draw.
+    edit.set_caret(20);
+    REQUIRE(fixture.tree.update_text_input_area() == scene::TextInputRequestResult::accepted);
+    CHECK(fixture.service.last_area.caret.get_left() == Catch::Approx(20 + 90 - 7 - 1));
+    CHECK(edit.caret_geometry().x > 90);
+
+    SECTION("composition scroll follows the visual caret") {
+        edit.set_caret(0);
+        (void)fixture.tree.update_text_input_area();
+        edit.set_composition(
+            {.text = "abcdefghijklmnopqrst", .selection_start = 20, .selection_end = 20}
+        );
+        (void)fixture.tree.update_text_input_area();
+        CHECK(fixture.service.last_area.caret.get_left() == Catch::Approx(102));
+    }
+    SECTION("password graphemes use their masked visual caret") {
+        field->set_value("éééééééééééééééééééééééééé");
+        field->set_input_purpose(scene::TextInputPurpose::password);
+        field->layout_to(foundation::NanRect::from_xywh(20, 30, 90, 40));
+        edit.set_caret(40);
+        (void)fixture.tree.update_text_input_area();
+        CHECK(fixture.service.last_area.caret.get_left() == Catch::Approx(102));
+    }
+    edit.clear_composition();
+    edit.set_caret(0);
+    (void)fixture.tree.update_text_input_area();
+    CHECK(fixture.service.last_area.caret.get_left() == Catch::Approx(27));
+}
+
+TEST_CASE(
+    "text area publishes scrolled multiline caret before paint",
+    "[input][text-session][area]"
+) {
+    Fixture fixture;
+    fixture.service.input_area = true;
+    auto area = widget::TextArea::create("a\nb\nc\nd\ne\nf");
+    area->set_override(
+        {.metrics_padding_x = theme::ThemeScalar::literal(7.0F),
+         .metrics_padding_y = theme::ThemeScalar::literal(5.0F)}
+    );
+    fixture.root->add_child(area);
+    area->layout_to(foundation::NanRect::from_xywh(20, 30, 100, 50));
+    fixture.tree.set_focus(area.get());
+    auto& edit = area->editable_text();
+    edit.set_caret(edit.value().size());
+    REQUIRE(fixture.tree.update_text_input_area() == scene::TextInputRequestResult::accepted);
+    CHECK(area->scroll_offset().get_y() > 0);
+    CHECK(
+        fixture.service.last_area.caret.get_left() == Catch::Approx(27 + edit.caret_geometry().x)
+    );
+    CHECK(fixture.service.last_area.caret.get_bottom() == Catch::Approx(30 + 50 - 5));
+    const auto mapping = app::make_viewport_mapping(
+        foundation::NanSize(600, 400),
+        {.design_size = foundation::NanSize(200, 200)}
+    );
+    const auto local_x = 27 + edit.caret_geometry().x;
+    (void)fixture.tree.update_text_input_area(mapping.transform());
+    CHECK(fixture.service.last_area.caret.get_left() == Catch::Approx(100 + 2 * local_x));
+    CHECK(fixture.service.last_area.caret.get_bottom() == Catch::Approx(150));
+    edit.set_caret(0);
+    (void)fixture.tree.update_text_input_area();
+    CHECK(area->scroll_offset().get_y() == 0);
+    CHECK(fixture.service.last_area.caret.get_left() == Catch::Approx(27));
+    CHECK(fixture.service.last_area.caret.get_top() == Catch::Approx(35));
 }

@@ -527,7 +527,10 @@ namespace nandina::app
         const auto logical_size =
             viewport_mapping_ ? viewport_mapping_->logical_size : metrics.screen_size;
         (void)tree_.layout_root(logical_size);
-        tree_.update_text_input_area();
+        (void)tree_.update_text_input_area(
+            viewport_mapping_ ? viewport_mapping_->transform() : foundation::NanTransform2D {},
+            foundation::NanRect::from_origin_size(foundation::NanPoint::zero(), metrics.screen_size)
+        );
 
         {
             auto phase = tree_.enter_phase(scene::FramePhase::semantics);

@@ -4,6 +4,9 @@
 
     #include <SDL3/SDL.h>
 
+    #include <cmath>
+    #include <limits>
+
 namespace nandina::app::detail
 {
     SdlTextInputService::SdlTextInputService(SDL_Window* window) noexcept: window_(window) {}
@@ -15,9 +18,9 @@ namespace nandina::app::detail
     }
 
     auto SdlTextInputService::capabilities() const -> scene::TextInputCapabilities {
-        // Desktop SDL exposes IME composition; soft keyboard, caret-area and occlusion
-        // feedback are not available on the desktop paths this framework ships.
-        return scene::TextInputCapabilities::composition;
+        // SDL accepts caret areas in window coordinates. Desktop keyboard visibility and
+        // occlusion feedback remain unsupported independently of this capability.
+        return scene::TextInputCapabilities::composition | scene::TextInputCapabilities::input_area;
     }
 
     auto SdlTextInputService::begin_session(const scene::TextInputBeginRequest& request)
@@ -36,10 +39,34 @@ namespace nandina::app::detail
     }
 
     auto SdlTextInputService::update_caret_area(
-        const scene::TextInputSession /*session*/,
-        const scene::TextInputArea& /*area*/
+        const scene::TextInputSession session,
+        const scene::TextInputArea& area
     ) -> scene::TextInputRequestResult {
-        return scene::TextInputRequestResult::unsupported;
+        if (window_ == nullptr || !active_session_ || session != active_session_) {
+            return scene::TextInputRequestResult::unavailable;
+        }
+        // Round outward so a fractional caret is never truncated to an empty SDL rectangle.
+        const double left = std::floor(area.caret.get_left());
+        const double top = std::floor(area.caret.get_top());
+        const double right = std::ceil(area.caret.get_right());
+        const double bottom = std::ceil(area.caret.get_bottom());
+        constexpr double min = std::numeric_limits<int>::min();
+        constexpr double max = std::numeric_limits<int>::max();
+        if (!std::isfinite(left) || !std::isfinite(top) || !std::isfinite(right)
+            || !std::isfinite(bottom) || area.caret.get_width() <= 0.0F
+            || area.caret.get_height() <= 0.0F || left < min || top < min || right > max
+            || bottom > max || right - left > max || bottom - top > max)
+        {
+            return scene::TextInputRequestResult::rejected;
+        }
+        const SDL_Rect rect {
+            static_cast<int>(left),
+            static_cast<int>(top),
+            static_cast<int>(right - left),
+            static_cast<int>(bottom - top)
+        };
+        return SDL_SetTextInputArea(window_, &rect, 0) ? scene::TextInputRequestResult::accepted
+                                                       : scene::TextInputRequestResult::rejected;
     }
 
     auto SdlTextInputService::request_keyboard_visibility(

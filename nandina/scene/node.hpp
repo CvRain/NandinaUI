@@ -285,6 +285,11 @@ namespace nandina::scene
         /// object; the session manager decides whether to open a session).
         [[nodiscard]] virtual auto text_input_target() -> ITextInputTarget*;
 
+        /// Caret in this focus node's local logical coordinates. The default forwards the
+        /// editing target's rect; shells override to apply content offsets and refresh scroll
+        /// before the host publishes the area, without depending on a draw pass.
+        [[nodiscard]] virtual auto text_input_caret_rect() -> foundation::NanRect;
+
         /**
          * Focus target to use when a click lands on this node or its subtree.
          * Floating content lives in another subtree than the control it belongs to;

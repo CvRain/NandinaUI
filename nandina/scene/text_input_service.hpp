@@ -88,7 +88,7 @@ namespace nandina::scene
         bool multiline = false;
     };
 
-    /// 输入区域（窗口逻辑坐标）。当前阶段服务可以不支持，能力位如实报告。
+    /// 输入区域（窗口客户区逻辑坐标，不是物理像素）。window 为空表示边界未知，非遮挡信息。
     struct TextInputArea {
         foundation::NanRect caret {};
         foundation::NanRect window {};
@@ -108,6 +108,7 @@ namespace nandina::scene
         [[nodiscard]] virtual auto text_input_read_only() const -> bool {
             return true;
         }
+        /// Editing-target local logical coordinates; the focus node maps to its own local space.
         [[nodiscard]] virtual auto text_input_caret_area() const -> foundation::NanRect {
             return foundation::NanRect::empty();
         }
