@@ -799,6 +799,8 @@ TEST_CASE(
         SDL_GetPropertyType(probe.last_properties, SDL_PROP_TEXTINPUT_TYPE_NUMBER)
         == SDL_PROPERTY_TYPE_INVALID
     );
+    // A failed typed start must leave the legacy committed-text bootstrap running.
+    CHECK(SDL_TextInputActive(window));
     service.dispatch({.type = scene::TextInputEventType::composition_committed, .text = "ignored"});
     CHECK(sink.commits == 0);
     probe.fail = false;

@@ -389,7 +389,8 @@ P3.3b1 已补（2026-11-02）：
 - 调用 `SDL_StartTextInputWithProperties`，SDL 在调用时消费/复制属性，返回后立即释放临时
   properties。分配、属性设置或启动失败返回 unavailable；无效会话/未知 purpose 返回 rejected，
   均不发布新会话身份。成功后才更新 active_session。属性是 begin 请求快照，控件应在聚焦前
-  配置用途；本批不新增活动会话动态改用途的 API。
+  配置用途；本批不新增活动会话动态改用途的 API。若启动前已停止 host 的 legacy 文本输入而
+  带属性启动失败，服务会恢复 `SDL_StartTextInput`，避免无会话 fallback 同时失去文本事件。
 - 首个会话先停止 host 为 legacy committed 路径预先开启的文本输入，再带属性启动；当前
   SDL Wayland 后端只有 stopped → started 才应用类型/多行属性。后续普通会话由 scene 先结束旧
   会话，再启动新会话。新增首会话状态断言在补丁前 16 组均失败（exit 42），补回后通过；

@@ -36,7 +36,10 @@ namespace nandina::app::detail
         if (!request.session) {
             return scene::TextInputRequestResult::rejected;
         }
-        SDL_TextInputType type;
+        if (start_text_input_ == nullptr) {
+            return scene::TextInputRequestResult::unavailable;
+        }
+        SDL_TextInputType type = SDL_TEXTINPUT_TYPE_TEXT;
         switch (request.purpose) {
             case scene::TextInputPurpose::text:
                 type = SDL_TEXTINPUT_TYPE_TEXT;
@@ -65,15 +68,29 @@ namespace nandina::app::detail
                 SDL_PROP_TEXTINPUT_MULTILINE_BOOLEAN,
                 request.multiline
             );
+        if (!configured) {
+            SDL_DestroyProperties(properties);
+            return scene::TextInputRequestResult::unavailable;
+        }
         // The host enables legacy committed text before any session exists. SDL's Wayland
         // backend applies properties only when transitioning from stopped to started. Take
         // ownership of that bootstrap input before starting the first typed session.
-        const bool ready = configured
-            && (active_session_ || !SDL_TextInputActive(window_) || SDL_StopTextInput(window_));
-        const bool started =
-            ready && start_text_input_ != nullptr && start_text_input_(window_, properties);
+        bool restore_bootstrap = false;
+        if (!active_session_ && SDL_TextInputActive(window_)) {
+            if (!SDL_StopTextInput(window_)) {
+                SDL_DestroyProperties(properties);
+                return scene::TextInputRequestResult::unavailable;
+            }
+            restore_bootstrap = true;
+        }
+        const bool started = start_text_input_(window_, properties);
         SDL_DestroyProperties(properties);
         if (!started) {
+            // A failed typed start must not leave the window without any text input: the
+            // scene falls back to legacy TextInputEvent when no session is published.
+            if (restore_bootstrap) {
+                (void)SDL_StartTextInput(window_);
+            }
             return scene::TextInputRequestResult::unavailable;
         }
         active_session_ = request.session;
