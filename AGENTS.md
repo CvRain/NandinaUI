@@ -38,8 +38,10 @@ application shell. Version `0.1.0-alpha.1`.
   committed-text path, SDL composition events into the frame stream) are implemented, and
   **P3.3b1** adds inline preedit painting, password-purpose masking and value<->visual caret
   mapping. **P3.3b2a** adds caret mapping through the focus node, world and viewport into
-  window logical coordinates, plus SDL input_area forwarding. P3.3b2b (real IME acceptance,
-  soft keyboard/occlusion) remains; see the roadmap.
+  window logical coordinates, plus SDL input_area forwarding. **P3.3b2b** partially delivers
+  SDL purpose/multiline properties and composition UI hints, with Linux Wayland IME acceptance.
+  X11 inline preedit/standalone Xorg, Windows and candidate placement acceptance remain;
+  desktop soft keyboard/visibility/occlusion are unsupported. See the roadmap.
 - The plan and exit criteria are **not** owned by this file: read
   `docs/references/development_roadmap.md` and the D5 contract
   (`resource_build_and_deployment.md` §8) before claiming a sub-batch is complete.

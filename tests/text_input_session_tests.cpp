@@ -476,10 +476,7 @@ TEST_CASE(
     CHECK(fixture.service.last_area.caret.get_left() == Catch::Approx(27));
 }
 
-TEST_CASE(
-    "empty text field still publishes a usable caret area",
-    "[input][text-session][area]"
-) {
+TEST_CASE("empty text field still publishes a usable caret area", "[input][text-session][area]") {
     Fixture fixture;
     fixture.service.input_area = true;
     auto field = widget::TextField::create("");

@@ -80,7 +80,7 @@
 | P3.3a | **D1 文本会话协议与 SDL 合成路径（已实施，2026-11-01）**：`ITextInputService`/`ITextInputTarget`、会话身份与迟到过滤、committed 唯一路径、SDL_TEXT_EDITING 入帧事件 | P3.2 事件语义 | `text-input-session` 10 用例/48 断言、`sdl-platform-input` 16 用例/417 断言与真实窗口 tick 用例通过；预编辑绘制由 P3.3b1 补齐，真实 IME/caret 区域留给 P3.3b2 |
 | P3.3b1 | **D1 预编辑与密码用途显示（已实施，2026-11-02）**：`EditableText` 视觉文本映射、inline preedit/下划线、password purpose 掩码、组合期占位符抑制、指针命中回映射 | P3.3a | `widget` 新增组合/掩码用例通过；红测：关闭掩码后密码用例失败；真实 IME 仍待 P3.3b2 |
 | P3.3b2a | **D1 caret 输入区域（已实施，2026-11-02）**：编辑目标局部 caret → 外层控件/viewport → 窗口逻辑坐标；SDL 声明 `input_area` 并转发 | P3.3b1 | mock 断言祖先/viewport/letterbox/滚动后的窗口坐标；SDL GetTextInputArea 回读与 resize 回归；无能力保持 unsupported；无 widget 平台旁路 |
-| P3.3b2b | **D1 真实 IME/软键盘/遮挡平台验收**：Linux 与 Windows 交互桌面上的组合/提交/取消、可见性与遮挡；SDL 输入用途/多行属性转发 | P3.3b2a | 实机记录分开填写；无能力时返回可诊断 unsupported，不把模拟值伪装成实机结果 |
+| P3.3b2b | **D1 平台验收（进行中，2026-11-03）**：SDL 用途/多行属性转发与 composition UI 声明已实施；Linux Wayland 真实 IME 组合/提交/取消、多行与密码策略已测 | P3.3b2a | X11（XWayland）提交/取消已测，inline preedit 受当前 XIM 配置限制；独立 Xorg/Windows 与候选窗位置视觉验收待补；桌面软键盘/遮挡仍 unsupported，见 D1 §5.5 |
 
 应用侧并行：维护者手工编写 `examples/notebook`（数据层已完成；服务与 UI 后续）及 `showcase/` 组件，
 不改变 P3 的框架优先级；组件先在 showcase 进行视觉验收，再由 notebook 组合。
@@ -98,7 +98,7 @@
 ## 4. 建议的近期切入顺序
 
 1. **P3.1a 事件快照**：先修每事件坐标/修饰键被帧级状态覆盖；本批不扩展键身份、跨类型顺序、焦点策略或 IME。
-2. **D1 与 P4（已确认顺序）**：P3.3b2a caret 输入区域 → P3.3b2b 真实 IME/软键盘/遮挡验收 → P4.1 Label 垂直对齐（并入 D6 首批）→ P4.1b Surface/Card inset 与 Image cover 裁剪锚点 → P4.3 作者颜色入口。P3.3b1 已把预编辑与密码用途合并交付，P3.3b2a 已接通 caret 窗口坐标与 SDL input_area；下一批为 P3.3b2b 实机验收。
+2. **D1 与 P4（已确认顺序）**：P3.3b2a caret 输入区域 → P3.3b2b 真实 IME/软键盘/遮挡验收 → P4.1 Label 垂直对齐（并入 D6 首批）→ P4.1b Surface/Card inset 与 Image cover 裁剪锚点 → P4.3 作者颜色入口。P3.3b1 已把预编辑与密码用途合并交付，P3.3b2a 已接通 caret 窗口坐标与 SDL input_area；P3.3b2b 已接通 SDL 属性并完成部分 Linux 实机检查，下一步补齐 X11 inline preedit/Windows 与候选窗位置验收。
 3. **保留的 P1 边界**：退役后的 Windows 静态构建/窗口生命周期复验、P1.6 完整 Image 页面端到端采样仍分别记录；不把它们混同于已交付的 Windows golden 与参考性能基线。
 4. **已交付记录**：P1.2 Windows CPU/SDF 共 6 条 approved、P1.3 Windows 参考性能基线、P1.5b 阴影/圆角裁剪及 P2 应用闭环均已归档；P1.4 归 NandinaCLI。
 

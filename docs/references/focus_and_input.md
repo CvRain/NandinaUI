@@ -1,6 +1,6 @@
 # 统一输入、焦点与文本编辑
 
-> **状态：第一阶段已实施（P3.2a/b，2026-10-31/11-01）；第二阶段协议与 SDL 合成事件路径已实施（P3.3a，2026-11-01），预编辑绘制与密码用途显示已实施（P3.3b1，2026-11-02）；caret 输入区域与 SDL input_area 已实施（P3.3b2a，2026-11-02）；真实 IME 与软键盘/遮挡平台验收仍待 P3.3b2b。**
+> **状态：第一阶段已实施（P3.2a/b，2026-10-31/11-01）；第二阶段协议与 SDL 合成事件路径已实施（P3.3a，2026-11-01），预编辑绘制与密码用途显示已实施（P3.3b1，2026-11-02）；caret 输入区域与 SDL input_area 已实施（P3.3b2a，2026-11-02）；P3.3b2b 已补 SDL 属性/preedit 声明与部分 Linux 实机验收；剩余平台/视觉验收待补。**
 > 2026-10-09 的 D1 讨论结论；2026-10-31 补记第一阶段实现范围与剩余项（§6）。
 > 本文是后续实施依据，取代旧 D1 工作稿中“只有键盘才显示环”“手柄归 pointer”及
 > “立即增加 `.focus_ring(false)`”的建议。D2 主题订阅、D3 导航分组、D4 平台后端不在本次决策范围。
@@ -377,14 +377,70 @@ P3.3b1 已补（2026-11-02）：
   23.1.1、头文件分类/依赖/独立包含均通过）。收口了 P3.3b1 编辑原语及测试的少量格式漂移。
   本轮未执行 Windows 或真实 IME/软键盘/遮挡交互验收。
 
+### 5.5 P3.3b2b SDL 会话属性与 Linux 验收（2026-11-02/03，部分交付）
+
+本批交付属性转发、preedit UI 声明与自动回归，并记录 Linux 真实输入结果；P3.3b2b 尚未全部关闭。
+
+- SDL 服务在 `begin_session` 中创建短生命周期的 SDL properties，将 `TextInputPurpose`
+  映射为 `SDL_PROP_TEXTINPUT_TYPE_NUMBER`：text → TEXT、password → TEXT_PASSWORD_HIDDEN、
+  email → TEXT_EMAIL、number → NUMBER。用途是平台提示，不是提交值过滤器。
+- 显式设置 `SDL_PROP_TEXTINPUT_MULTILINE_BOOLEAN`，按会话请求传 true/false；不使用
+  `SDL_HINT_RETURN_KEY_HIDES_IME` 等进程默认值替代控件请求。其余属性保留 SDL 默认策略。
+- 调用 `SDL_StartTextInputWithProperties`，SDL 在调用时消费/复制属性，返回后立即释放临时
+  properties。分配、属性设置或启动失败返回 unavailable；无效会话/未知 purpose 返回 rejected，
+  均不发布新会话身份。成功后才更新 active_session。属性是 begin 请求快照，控件应在聚焦前
+  配置用途；本批不新增活动会话动态改用途的 API。
+- 首个会话先停止 host 为 legacy committed 路径预先开启的文本输入，再带属性启动；当前
+  SDL Wayland 后端只有 stopped → started 才应用类型/多行属性。后续普通会话由 scene 先结束旧
+  会话，再启动新会话。新增首会话状态断言在补丁前 16 组均失败（exit 42），补回后通过；
+  Wayland 首焦点直接为密码框的实机检查也通过（`ni ` → 三个 bullet，退出 0）。
+- SDL host 在视频初始化前以 DEFAULT 优先级声明 `SDL_HINT_IME_IMPLEMENTED_UI=composition`，
+  告知输入法框架可消费/绘制 preedit；原生候选列表继续交给平台。显式环境/宿主覆盖仍优先。
+- 使用 SDL 服务内部的启动函数注入点记录真实调用的属性并转调 SDL，覆盖四种用途、两种
+  multiline、相邻会话的属性重置与启动失败；公开 scene/widget 协议不出现 SDL 类型。
+  自动测试不证明输入法候选窗、密码用途或多行策略在真实平台上已经生效。
+
+自动回归：
+
+- `sdl-platform-input` 为 21 用例/832 断言，新增四种用途 × 两种 multiline × 两种 SDL 默认
+  hint 的转发断言、临时属性释放、相邻会话重置、无效请求与启动失败的会话身份保护，及 IME
+  composition 声明/显式覆盖。`text-input-session` 为 14 用例/93 断言（含维护者补的空字段 caret）。
+- 新测试先在原实现失败：属性测试 24 断言失败，preedit 声明测试 1 断言失败。
+  四项单独故障注入：把类型固定 TEXT（12 断言失败）、multiline 固定 false（8）、删除
+  properties 释放（17）、忽略启动失败（6）；均返回 42，恢复后通过。自动测试不依赖真实输入法。
+
+最终验证（2026-11-03，包含首会话接管修复）：主套件 **111/111**；ASan/UBSan unit
+**88 通过 + window-lifecycle SKIP**（`LSAN_OPTIONS=detect_leaks=0`）；no-RTTI unit **90/90**；
+无 SQLite/headless unit **85 通过 + 1 SKIP**；纯工具 **8/8**。发布门禁 **8/8，0 SKIP**，
+使用 clang-format 23.1.1，并收口维护者新增空字段测试声明的一处格式漂移。
+Linux home/label/anchors 的 CPU/SDF 六张页面 golden 与各自已批准基线逐像素一致；
+三页两条路径的图元名称序列一致。中断后复跑的日志保存在本地
+`playground/ime_acceptance/verification/`，页面比较未修改批准基线。
+
+Linux 实机记录（2026-11-03；GNOME Shell 51.1、Fcitx5 5.1.23/Rime，SDL3）：
+
+| 宿主路径 | 真实操作与结果 | 验收范围 |
+| --- | --- | --- |
+| Wayland | 通过 ydotool 的系统键盘事件输入 `nihao`，收到 `SDL_EVENT_TEXT_EDITING`（`n` → `ni` → `ni hao`），提交得到一次“你好”；Escape 清空预编辑且保留原值 | TextField 组合/提交/取消通过 |
+| Wayland | 两次中文提交加 Enter，TextArea 值为 `你好\n你好`；待提交 `ni` 时转到按钮，session 清零，回到编辑器后无旧文本串入 | 多行输入、非编辑焦点与重新聚焦通过 |
+| Wayland | password purpose 触发当前输入法的密码策略，`ni` + Space 直接产生 `ni `，无组合文本，视觉值为三个 bullet；blur 后会话结束 | 密码用途在当前配置生效，不能要求密码字段一定允许中文 IME |
+| X11（XWayland） | 同一测试窗口与 Rime 的中文提交、Escape 取消可用，进程正常退出；当前 XIM 配置 `UseOnTheSpot=False`，即使声明 composition 也无非空 preedit 事件 | 提交/取消已测；inline preedit 待支持 on-the-spot 的 XIM 配置及独立 Xorg 桌面复验 |
+| 桌面能力 | Wayland 实机 `SDL_HasScreenKeyboardSupport() == false`；服务能力位为 5（composition + input_area）；keyboard request 仍返回 unsupported，无 visibility/occlusion 能力 | 未用 hidden/零遮挡伪装未知结果；不扩展移动端能力 |
+
+这些操作经过实际 Fcitx/Rime 与宿主事件路径，没有用 `SDL_PushEvent` 注入 composition。
+测试窗口源码和日志在未跟踪的 `playground/ime_acceptance/`，属于本地实机证据，
+不是 CI 测试。Wayland 九项检查通过，应用退出 0；X11 应用退出 0。输入法选择/激活状态
+已恢复为测试前的 keyboard-us/inactive。日志摘要：
+
+- `wayland-extended.log` SHA-256：`543dfa8c68d89c51e504a8bb8c2415171c6e80dfc6f7ab59a6d79bed94947610`。
+- `x11-final.log` SHA-256：`d8ddbfb82e5a5ac7c85da81e4a2ffa08bbfb47cff19c9eba644d2592cf6a1932`。
+
 仍未完成（P3.3b2b，真实平台验收）：
 
-- 真实 IME 组合/提交/取消在 Linux 与 Windows 交互桌面上的手工验收（当前只用合成 SDL
-  事件与 mock 服务证明协议和宿主路径）。
+- X11 inline preedit（本机 XIM 未启用 on-the-spot）与独立 Xorg 桌面复验；Windows 交互
+  桌面验收按维护者本轮指示留待后续。候选窗相对 caret 在缩放/滚动后的视觉位置尚未实机验收。
 - 软键盘请求/可见性/遮挡：桌面 SDL 路径没有这些能力，服务如实返回 unsupported；移动端适配
   尚未开始。
-- SDL 目前仍调用 `SDL_StartTextInput` 的默认 text purpose；`TextInputPurpose`/multiline 到
-  `SDL_StartTextInputWithProperties` 的转发保留到 P3.3b2b。
 - 会话身份在手写平台适配、服务重连以及页面销毁竞争下的专项回归（当前依赖焦点清理）。
 
 ## 6. 当前实现与实施顺序
@@ -496,7 +552,8 @@ P3.2b 收尾（2026-11-01）已实施：
 以下是**验收要求**。2026-10-31 的 P3.2a、2026-11-01 的 P3.2b 与 P3.3a 已覆盖第一阶段策略/
 窗口/标脏/roving/弹窗恢复，以及第二阶段协议、会话身份、提交唯一路径与 SDL 合成事件路径的
 自动用例；P3.3b1 补了预编辑显示、密码掩码与视觉命中映射，P3.3b2a 补了 caret 坐标链路与
-SDL 输入区域转发。真实 IME、软键盘、遮挡与真实设备仍待 P3.3b2b 逐条补齐。
+SDL 输入区域转发；P3.3b2b 已补用途/多行属性与 preedit 声明，以及上述 Linux 实机记录。
+剩余平台/视觉边界仍由 P3.3b2b 逐条收口。
 
 | 阶段 | 组合断言 | 故障注入方向 |
 | --- | --- | --- |

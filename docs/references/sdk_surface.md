@@ -18,6 +18,13 @@
 
 ## 2. 三档分类
 
+2026-11-03 P3.3b2b 部分交付（experimental）：公开 scene/widget 签名未变。
+SDL 服务现在把 begin 请求的 text/password/email/number 与 multiline 映射到
+`SDL_StartTextInputWithProperties`；SDL host 默认声明 `SDL_IME_IMPLEMENTED_UI=composition`，
+显式环境/宿主 hint 仍优先，候选列表由平台绘制。内部 SDL 服务新增可注入的启动函数用于验证
+真实调用属性，仍归 internal，不构成作者 API。用途是会话开始时的快照/平台提示，不过滤提交
+文本；活动会话中更改用途未增加动态刷新协议。Linux 实机结果与剩余边界见 D1 §5.5。
+
 2026-11-02 P3.3b2a caret 输入区域（experimental，已实施）：`NanNode` 新增
 `text_input_caret_rect()`（焦点节点局部逻辑矩形，允许刷新编辑区滚动），默认转发编辑目标，
 `TextField`/`TextArea` 覆写以计入内边距/垂直居中/滚动。`ITextInputTarget` 的 caret 仍是

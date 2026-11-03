@@ -46,7 +46,7 @@
 ### 组件与浮层
 
 - [组件公共契约](component_contract.md)：新组件在进入推荐 API 前必须满足的状态、事件、绑定、主题、输入和无障碍要求。
-- [统一输入、焦点与文本编辑](focus_and_input.md)：**第一阶段已实施（P3.2a/b），第二阶段协议与 SDL 合成事件路径已实施（P3.3a），预编辑/密码用途显示已实施（P3.3b1）**。事件映射、paint-only、无历史默认显示、窗口活动、roving 提示、弹窗恢复、注入式文本会话协议与视觉文本映射记录在案；caret 输入区域与 SDL input_area 已实施（P3.3b2a）；真实 IME/软键盘/遮挡与真实设备验收仍待 P3.3b2b。取舍过程见 [story 012](../../stories/012-from-focus-rings-to-input-sessions.md)。
+- [统一输入、焦点与文本编辑](focus_and_input.md)：**第一阶段已实施（P3.2a/b），第二阶段协议与 SDL 合成事件路径已实施（P3.3a），预编辑/密码用途显示已实施（P3.3b1）**。事件映射、paint-only、无历史默认显示、窗口活动、roving 提示、弹窗恢复、注入式文本会话协议与视觉文本映射记录在案；caret 输入区域与 SDL input_area 已实施（P3.3b2a）；P3.3b2b 已接通 SDL 用途/多行属性与 preedit 声明，并记录部分 Linux 实机验收；X11 inline preedit/独立 Xorg、Windows 与候选窗位置验收仍待完成。取舍过程见 [story 012](../../stories/012-from-focus-rings-to-input-sessions.md)。
 - [组件开发路线图](component_roadmap.md)：当前组件盘点、基础设施依赖和推荐开发顺序。
 - [浮层架构](overlay_architecture.md)：OverlayHost、portal 生命周期、分层规则与后续基础设施边界。
 - [菜单族条目模型](menu_model.md)：阶段 4 菜单组件共享的 MenuItem、聚焦/激活规则与勾选语义。

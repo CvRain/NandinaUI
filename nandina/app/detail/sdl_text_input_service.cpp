@@ -9,7 +9,12 @@
 
 namespace nandina::app::detail
 {
-    SdlTextInputService::SdlTextInputService(SDL_Window* window) noexcept: window_(window) {}
+    SdlTextInputService::SdlTextInputService(
+        SDL_Window* window,
+        const StartTextInput start_text_input
+    ) noexcept:
+        window_(window),
+        start_text_input_(start_text_input) {}
 
     SdlTextInputService::~SdlTextInputService() {
         if (window_ != nullptr && active_session_) {
@@ -31,7 +36,44 @@ namespace nandina::app::detail
         if (!request.session) {
             return scene::TextInputRequestResult::rejected;
         }
-        if (!SDL_StartTextInput(window_)) {
+        SDL_TextInputType type;
+        switch (request.purpose) {
+            case scene::TextInputPurpose::text:
+                type = SDL_TEXTINPUT_TYPE_TEXT;
+                break;
+            case scene::TextInputPurpose::password:
+                type = SDL_TEXTINPUT_TYPE_TEXT_PASSWORD_HIDDEN;
+                break;
+            case scene::TextInputPurpose::email:
+                type = SDL_TEXTINPUT_TYPE_TEXT_EMAIL;
+                break;
+            case scene::TextInputPurpose::number:
+                type = SDL_TEXTINPUT_TYPE_NUMBER;
+                break;
+            default:
+                return scene::TextInputRequestResult::rejected;
+        }
+        const auto properties = SDL_CreateProperties();
+        if (properties == 0) {
+            return scene::TextInputRequestResult::unavailable;
+        }
+        // SDL consumes/copies the properties during start; this group never outlives the call.
+        const bool configured =
+            SDL_SetNumberProperty(properties, SDL_PROP_TEXTINPUT_TYPE_NUMBER, type)
+            && SDL_SetBooleanProperty(
+                properties,
+                SDL_PROP_TEXTINPUT_MULTILINE_BOOLEAN,
+                request.multiline
+            );
+        // The host enables legacy committed text before any session exists. SDL's Wayland
+        // backend applies properties only when transitioning from stopped to started. Take
+        // ownership of that bootstrap input before starting the first typed session.
+        const bool ready = configured
+            && (active_session_ || !SDL_TextInputActive(window_) || SDL_StopTextInput(window_));
+        const bool started =
+            ready && start_text_input_ != nullptr && start_text_input_(window_, properties);
+        SDL_DestroyProperties(properties);
+        if (!started) {
             return scene::TextInputRequestResult::unavailable;
         }
         active_session_ = request.session;

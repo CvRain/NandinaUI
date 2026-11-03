@@ -466,6 +466,10 @@ namespace nandina::app::detail
             return true;
         }
 
+        // EditableText paints preedit from SDL_EVENT_TEXT_EDITING. Declare that capability
+        // before input contexts are created; native candidate UI remains platform-owned.
+        // Environment/host hints can explicitly override this framework default.
+        SDL_SetHintWithPriority(SDL_HINT_IME_IMPLEMENTED_UI, "composition", SDL_HINT_DEFAULT);
         if (!SDL_Init(SDL_INIT_VIDEO)) {
             SDL_Log("SdlPlatformWindow: SDL_Init(SDL_INIT_VIDEO) failed: %s", SDL_GetError());
             return false;

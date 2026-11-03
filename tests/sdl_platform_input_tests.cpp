@@ -1,10 +1,13 @@
 #include <nandina/app/detail/sdl_platform_window.hpp>
+#include <nandina/app/detail/sdl_text_input_service.hpp>
 
 #include <SDL3/SDL.h>
 
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/generators/catch_generators.hpp>
 
 #include <limits>
+#include <string_view>
 #include <variant>
 #include <vector>
 
@@ -670,4 +673,182 @@ TEST_CASE(
     CHECK(rect.w == 0);
     CHECK(rect.h == 0);
     CHECK(cursor == 0);
+}
+
+namespace
+{
+    struct TextInputStartProbe {
+        static constexpr const char* property = "nandina.test.text-input-start-probe";
+        int calls = 0;
+        SDL_PropertiesID last_properties = 0;
+        Sint64 type = -1;
+        bool multiline = false;
+        bool explicit_multiline = false;
+        bool active_before_start = false;
+        bool fail = false;
+
+        static auto SDLCALL start(SDL_Window* window, const SDL_PropertiesID properties) -> bool {
+            auto* probe = static_cast<TextInputStartProbe*>(
+                SDL_GetPointerProperty(SDL_GetWindowProperties(window), property, nullptr)
+            );
+            if (probe == nullptr) {
+                return false;
+            }
+            ++probe->calls;
+            probe->active_before_start = SDL_TextInputActive(window);
+            probe->last_properties = properties;
+            probe->type = SDL_GetNumberProperty(properties, SDL_PROP_TEXTINPUT_TYPE_NUMBER, -1);
+            probe->explicit_multiline =
+                SDL_HasProperty(properties, SDL_PROP_TEXTINPUT_MULTILINE_BOOLEAN);
+            probe->multiline =
+                SDL_GetBooleanProperty(properties, SDL_PROP_TEXTINPUT_MULTILINE_BOOLEAN, false);
+            return !probe->fail && SDL_StartTextInputWithProperties(window, properties);
+        }
+    };
+} // namespace
+
+TEST_CASE(
+    "SDL text sessions forward purpose and explicit multiline properties",
+    "[sdl][input][text][properties]"
+) {
+    PlatformInputFixture fixture;
+    const auto purpose = GENERATE(
+        scene::TextInputPurpose::text,
+        scene::TextInputPurpose::password,
+        scene::TextInputPurpose::email,
+        scene::TextInputPurpose::number
+    );
+    const bool multiline = GENERATE(false, true);
+    const bool conflicting_hint = GENERATE(false, true);
+    // The session request must win over either global SDL default.
+    SDL_SetHint(SDL_HINT_RETURN_KEY_HIDES_IME, conflicting_hint ? "1" : "0");
+    auto* window = SDL_GetWindowFromID(fixture.window_id);
+    TextInputStartProbe probe;
+    REQUIRE(SDL_SetPointerProperty(
+        SDL_GetWindowProperties(window),
+        TextInputStartProbe::property,
+        &probe
+    ));
+    app::detail::SdlTextInputService service(window, TextInputStartProbe::start);
+    const scene::TextInputSession session {.id = 19};
+    REQUIRE(
+        service.begin_session({.session = session, .purpose = purpose, .multiline = multiline})
+        == scene::TextInputRequestResult::accepted
+    );
+    REQUIRE(probe.calls == 1);
+    REQUIRE(probe.last_properties != 0);
+    CHECK_FALSE(probe.active_before_start);
+    const auto expected = purpose == scene::TextInputPurpose::text ? SDL_TEXTINPUT_TYPE_TEXT
+        : purpose == scene::TextInputPurpose::password ? SDL_TEXTINPUT_TYPE_TEXT_PASSWORD_HIDDEN
+        : purpose == scene::TextInputPurpose::email    ? SDL_TEXTINPUT_TYPE_TEXT_EMAIL
+                                                       : SDL_TEXTINPUT_TYPE_NUMBER;
+    CHECK(probe.type == expected);
+    CHECK(probe.explicit_multiline);
+    CHECK(probe.multiline == multiline);
+    CHECK(SDL_TextInputActive(window));
+    // The temporary group was released after SDL consumed it.
+    CHECK(
+        SDL_GetPropertyType(probe.last_properties, SDL_PROP_TEXTINPUT_TYPE_NUMBER)
+        == SDL_PROPERTY_TYPE_INVALID
+    );
+    service.end_session(session, scene::TextInputEndReason::focus_lost);
+    CHECK_FALSE(SDL_TextInputActive(window));
+    // A subsequent plain single-line editor must not inherit password/email/multiline settings.
+    REQUIRE(
+        service.begin_session({.session = {.id = 20}}) == scene::TextInputRequestResult::accepted
+    );
+    CHECK(probe.calls == 2);
+    CHECK(probe.type == SDL_TEXTINPUT_TYPE_TEXT);
+    CHECK(probe.explicit_multiline);
+    CHECK_FALSE(probe.multiline);
+    service.end_session({.id = 20}, scene::TextInputEndReason::focus_lost);
+    SDL_ResetHint(SDL_HINT_RETURN_KEY_HIDES_IME);
+    SDL_ClearProperty(SDL_GetWindowProperties(window), TextInputStartProbe::property);
+}
+
+TEST_CASE(
+    "SDL session start failures do not publish a new session",
+    "[sdl][input][text][properties]"
+) {
+    PlatformInputFixture fixture;
+    auto* window = SDL_GetWindowFromID(fixture.window_id);
+    TextInputStartProbe probe;
+    REQUIRE(SDL_SetPointerProperty(
+        SDL_GetWindowProperties(window),
+        TextInputStartProbe::property,
+        &probe
+    ));
+    app::detail::SdlTextInputService service(window, TextInputStartProbe::start);
+    RecordingTextInputSink sink;
+    service.set_sink(&sink);
+    const scene::TextInputSession session {.id = 21};
+    CHECK(service.begin_session({}) == scene::TextInputRequestResult::rejected);
+    CHECK(
+        service.begin_session(
+            {.session = session, .purpose = static_cast<scene::TextInputPurpose>(255)}
+        )
+        == scene::TextInputRequestResult::rejected
+    );
+    CHECK(probe.calls == 0);
+    probe.fail = true;
+    CHECK(
+        service.begin_session({.session = session}) == scene::TextInputRequestResult::unavailable
+    );
+    CHECK(probe.calls == 1);
+    CHECK(
+        SDL_GetPropertyType(probe.last_properties, SDL_PROP_TEXTINPUT_TYPE_NUMBER)
+        == SDL_PROPERTY_TYPE_INVALID
+    );
+    service.dispatch({.type = scene::TextInputEventType::composition_committed, .text = "ignored"});
+    CHECK(sink.commits == 0);
+    probe.fail = false;
+    REQUIRE(service.begin_session({.session = session}) == scene::TextInputRequestResult::accepted);
+    service.dispatch(
+        {.type = scene::TextInputEventType::composition_committed, .text = "accepted"}
+    );
+    CHECK(sink.commits == 1);
+    CHECK(sink.last_session == session);
+    probe.fail = true;
+    CHECK(
+        service.begin_session({.session = {.id = 22}}) == scene::TextInputRequestResult::unavailable
+    );
+    service.dispatch(
+        {.type = scene::TextInputEventType::composition_committed, .text = "existing session"}
+    );
+    CHECK(sink.commits == 2);
+    CHECK(sink.last_session == session);
+    service.end_session(session, scene::TextInputEndReason::focus_lost);
+    app::detail::SdlTextInputService missing_window(nullptr);
+    CHECK(
+        missing_window.begin_session({.session = session})
+        == scene::TextInputRequestResult::unavailable
+    );
+    SDL_ClearProperty(SDL_GetWindowProperties(window), TextInputStartProbe::property);
+}
+
+TEST_CASE(
+    "SDL host declares composition rendering before video setup",
+    "[sdl][input][text][ime-ui]"
+) {
+    SDL_ResetHint(SDL_HINT_IME_IMPLEMENTED_UI);
+    app::WindowConfig config;
+    config.width = 160;
+    config.height = 120;
+    config.vsync = false;
+    config.target_fps = 0;
+    {
+        app::detail::SdlPlatformWindow window;
+        REQUIRE(window.create(config));
+        const auto* hint = SDL_GetHint(SDL_HINT_IME_IMPLEMENTED_UI);
+        REQUIRE(hint != nullptr);
+        CHECK(std::string_view(hint) == "composition");
+    }
+    // Explicit host/operator settings still take precedence over the framework default.
+    REQUIRE(SDL_SetHint(SDL_HINT_IME_IMPLEMENTED_UI, "none"));
+    {
+        app::detail::SdlPlatformWindow window;
+        REQUIRE(window.create(config));
+        CHECK(std::string_view(SDL_GetHint(SDL_HINT_IME_IMPLEMENTED_UI)) == "none");
+    }
+    SDL_ResetHint(SDL_HINT_IME_IMPLEMENTED_UI);
 }

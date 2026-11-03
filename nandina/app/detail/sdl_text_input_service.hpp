@@ -13,13 +13,20 @@
 
 #if defined(NANDINA_HAS_SDL_BACKEND)
 
-struct SDL_Window;
+    #include <SDL3/SDL_keyboard.h>
 
 namespace nandina::app::detail
 {
     class SdlTextInputService final: public scene::ITextInputService {
     public:
-        explicit SdlTextInputService(SDL_Window* window) noexcept;
+        using StartTextInput = decltype(&SDL_StartTextInputWithProperties);
+
+        /// The internal call seam lets tests observe properties consumed by SDL without
+        /// depending on private SDL window fields or a particular desktop input method.
+        explicit SdlTextInputService(
+            SDL_Window* window,
+            StartTextInput start_text_input = SDL_StartTextInputWithProperties
+        ) noexcept;
         ~SdlTextInputService() override;
 
         SdlTextInputService(const SdlTextInputService&) = delete;
@@ -41,6 +48,7 @@ namespace nandina::app::detail
 
     private:
         SDL_Window* window_ = nullptr;
+        StartTextInput start_text_input_;
         scene::ITextInputSessionSink* sink_ = nullptr;
         scene::TextInputSession active_session_ {};
     };
