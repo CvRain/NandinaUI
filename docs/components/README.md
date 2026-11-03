@@ -17,7 +17,7 @@
 | 组件 | 用途 | 状态 |
 | --- | --- | --- |
 | [`Label`](label.md) | 展示文本、响应式文本绑定与盒内两轴对齐 | 可用（新增对齐入口 experimental；文档提纲） |
-| `Image` | 从资源系统加载和展示图片 | 可用 |
+| [`Image`](image.md) | 从资源系统加载和展示图片 | 可用（cover 锚点 experimental；文档提纲） |
 | `Avatar` | 展示头像占位与名称语义 | 可用 |
 | `Badge` | 展示轻量状态或分类 | 可用 |
 | `Chip` | 展示可移除标签 | 可用 |
@@ -26,7 +26,7 @@
 | [`Spinner`](spinner.md) | 未知时长的等待指示 | 可用 |
 | [`Skeleton`](skeleton.md) | 内容加载前占据最终版式的占位块 | 可用 |
 | [`EmptyState`](empty_state.md) | 列表或集合暂空时的占位与引导 | 可用 |
-| `Card` | 带主题外观的单子内容容器 | 可用，等待语义槽位 |
+| [`Card`](card.md) | 带主题外观的单子内容容器 | 可用（content insets experimental；文档提纲） |
 
 ### 输入与选择
 
@@ -73,7 +73,7 @@
 
 ### 布局与滚动
 
-当前提供 `Column`、`Row`、`Flex`、`FlexItem`、`Wrap`、`Stack`、`Padding`、`Center`、`Expanded`、`Grid`、`ScrollView` 与 `ListView`。布局系统将在独立专题中统一说明。
+当前提供 `Column`、`Row`、`Flex`、`FlexItem`、`Wrap`、`Stack`、`Padding`、`Center`、`Expanded`、`Grid`、`ScrollView` 与 `ListView`。布局系统将在独立专题中统一说明。新增 experimental 的 [`Surface`](surface.md) 是单子项布局/绘制原语，通过 `ui.surface()` 创建。
 
 ## 计划补充
 

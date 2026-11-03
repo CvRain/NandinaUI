@@ -19,7 +19,9 @@
 #include <deque>
 #include <filesystem>
 #include <fstream>
+#include <limits>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -1833,4 +1835,132 @@ TEST_CASE("texture cache falls back to direct loading only when declared", "[ima
         REQUIRE(device.memory_loads == 0);
         REQUIRE(device.rgba_uploads == 0);
     }
+}
+
+TEST_CASE(
+    "cover anchors select horizontal source excess without reloading",
+    "[image][cover-anchor]"
+) {
+    TextureRecordingDevice device;
+    scene::NanSceneTree tree;
+    auto image = widget::Image::create("hero.png");
+    image->set_scale_mode(widget::ImageScale::cover);
+    tree.set_root(image);
+    (void)tree.layout_root(foundation::NanSize(100, 100));
+    tree.draw(device);
+    REQUIRE(image->cover_anchor() == foundation::NanPoint(50, 50));
+    CHECK(device.regions.back().source.get_left() == Catch::Approx(16));
+    image->clear_layout_dirty();
+    image->clear_dirty(scene::DirtyFlags::paint);
+    image->set_cover_anchor(scene::percent(25), scene::percent(100));
+    CHECK_FALSE(image->layout_dirty());
+    CHECK(image->is_dirty(scene::DirtyFlags::paint));
+    tree.draw(device);
+    CHECK(device.regions.back().source == foundation::NanRect::from_xywh(8, 0, 32, 32));
+    image->set_cover_anchor(scene::percent(100), scene::percent(0));
+    tree.draw(device);
+    CHECK(device.regions.back().source == foundation::NanRect::from_xywh(32, 0, 32, 32));
+    image->set_cover_anchor(scene::percent(0), scene::percent(0));
+    tree.draw(device);
+    CHECK(device.regions.back().source == foundation::NanRect::from_xywh(0, 0, 32, 32));
+    image->clear_dirty(scene::DirtyFlags::paint);
+    image->set_cover_anchor(scene::percent(0), scene::percent(0));
+    CHECK_FALSE(image->is_dirty(scene::DirtyFlags::paint));
+    CHECK(device.loaded.size() == 1);
+    CHECK(image->natural_size() == foundation::NanSize(64, 32));
+}
+
+TEST_CASE(
+    "cover anchors use source_rect excess in texture pixels at viewport scale",
+    "[image][cover-anchor]"
+) {
+    TextureRecordingDevice device;
+    device.size_to_return = foundation::NanSize(80, 120);
+    scene::NanSceneTree tree;
+    auto image = widget::Image::create("portrait.png");
+    image->set_scale_mode(widget::ImageScale::cover);
+    image->set_source_rect(foundation::NanRect::from_xywh(8, 10, 40, 80));
+    image->set_cover_anchor(scene::percent(100), scene::percent(25));
+    tree.set_root(image);
+    (void)tree.layout_root(foundation::NanSize(100, 100));
+    render::DrawContext context(
+        device,
+        foundation::NanTransform2D::from_scale(2),
+        {.logical_to_screen = 2, .screen_to_physical = 3}
+    );
+    tree.render(context);
+    REQUIRE(device.regions.size() == 1);
+    CHECK(device.regions.back().source == foundation::NanRect::from_xywh(8, 20, 40, 40));
+    CHECK(device.regions.back().destination == foundation::NanRect::from_xywh(0, 0, 200, 200));
+    image->set_cover_anchor(scene::percent(0), scene::percent(100));
+    tree.render(context);
+    CHECK(device.regions.back().source == foundation::NanRect::from_xywh(8, 50, 40, 40));
+    image->set_scale_mode(widget::ImageScale::contain);
+    image->set_alignment(widget::ImageAlignment::start);
+    tree.render(context);
+    CHECK(device.regions.back().source == *image->source_rect());
+    CHECK(device.regions.back().destination == foundation::NanRect::from_xywh(0, 0, 100, 200));
+    image->set_scale_mode(widget::ImageScale::stretch);
+    tree.render(context);
+    CHECK(device.regions.back().source == *image->source_rect());
+    CHECK(device.regions.back().destination == foundation::NanRect::from_xywh(0, 0, 200, 200));
+    CHECK(device.loaded.size() == 1);
+}
+
+TEST_CASE(
+    "cover anchors reject invalid percentages without changing their state",
+    "[image][cover-anchor]"
+) {
+    auto image = widget::Image::create();
+    for (const auto value:
+         {-1.0F,
+          101.0F,
+          std::numeric_limits<float>::infinity(),
+          std::numeric_limits<float>::quiet_NaN()})
+    {
+        REQUIRE_THROWS_AS(
+            image->set_cover_anchor(scene::PercentLength {value}, scene::percent(20)),
+            std::invalid_argument
+        );
+        REQUIRE_THROWS_AS(
+            image->set_cover_anchor(scene::percent(20), scene::PercentLength {value}),
+            std::invalid_argument
+        );
+        CHECK(image->cover_anchor() == foundation::NanPoint(50, 50));
+    }
+}
+
+TEST_CASE(
+    "a zero-inset split Card lets its cover reach every assigned edge",
+    "[image][cover-anchor][surface-authoring]"
+) {
+    TextureRecordingDevice device;
+    reactive::Graph graph;
+    reactive::ReactiveScope scope(graph);
+    theme::ThemeManager themes;
+    widget::BuildContext ui(graph, scope, themes);
+    auto cover = ui.make<widget::Image>("hero.png")
+                     .width(scene::percent(50))
+                     .height(scene::fill)
+                     .image_scale(widget::ImageScale::cover)
+                     .cover_anchor(scene::percent(100), scene::percent(50))
+                     .build();
+    auto card =
+        ui.make<widget::Card>()
+            .width(scene::fill)
+            .height(scene::fill)
+            .content_insets(foundation::NanInsets::all(0))
+            .child(ui.row()
+                       .width(scene::fill)
+                       .height(scene::fill)
+                       .children(ui.column().width(scene::percent(50)).height(scene::fill), cover))
+            .build();
+    scene::NanSceneTree tree;
+    tree.set_root(card);
+    (void)tree.layout_root(foundation::NanSize(200, 100));
+    tree.draw(device);
+    REQUIRE(device.regions.size() == 1);
+    CHECK(device.regions.back().destination == foundation::NanRect::from_xywh(100, 0, 100, 100));
+    CHECK(device.regions.back().source == foundation::NanRect::from_xywh(32, 0, 32, 32));
+    CHECK(cover->global_bounds().get_right() == Catch::Approx(card->global_bounds().get_right()));
 }

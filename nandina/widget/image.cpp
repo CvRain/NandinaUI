@@ -11,6 +11,8 @@
 #include "../resource/resource_uri.hpp"
 
 #include <algorithm>
+#include <cmath>
+#include <stdexcept>
 #include <utility>
 
 namespace nandina::widget
@@ -96,6 +98,28 @@ namespace nandina::widget
 
     auto Image::alignment() const -> ImageAlignment {
         return alignment_;
+    }
+
+    void Image::set_cover_anchor(
+        const scene::PercentLength horizontal,
+        const scene::PercentLength vertical
+    ) {
+        for (const float value: {horizontal.value, vertical.value}) {
+            if (!std::isfinite(value) || value < 0.0F || value > 100.0F) {
+                throw std::invalid_argument(
+                    "Image cover anchor percentages must be finite and within [0,100]"
+                );
+            }
+        }
+        const foundation::NanPoint anchor(horizontal.value, vertical.value);
+        if (anchor != cover_anchor_) {
+            cover_anchor_ = anchor;
+            mark_dirty(scene::DirtyFlags::paint);
+        }
+    }
+
+    auto Image::cover_anchor() const noexcept -> foundation::NanPoint {
+        return cover_anchor_;
     }
 
     auto Image::natural_size() const -> foundation::NanSize {
@@ -430,8 +454,10 @@ namespace nandina::widget
             else {
                 crop_h = sw / dst_ratio; // 源更高：裁高度
             }
-            const float crop_x = source_base.get_left() + (sw - crop_w) * 0.5F;
-            const float crop_y = source_base.get_top() + (sh - crop_h) * 0.5F;
+            const float crop_x =
+                source_base.get_left() + (sw - crop_w) * (cover_anchor_.get_x() / 100.0F);
+            const float crop_y =
+                source_base.get_top() + (sh - crop_h) * (cover_anchor_.get_y() / 100.0F);
             return DrawRects {
                 foundation::NanRect::from_xywh(crop_x, crop_y, crop_w, crop_h),
                 world,

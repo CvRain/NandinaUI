@@ -6,6 +6,7 @@
 
 #include "../render/draw_context.hpp"
 #include "../theme/theme_manager.hpp"
+#include "internal/inset_validation.hpp"
 #include "primitives/box_painter.hpp"
 #include "primitives/shadow_painter.hpp"
 
@@ -36,6 +37,33 @@ namespace nandina::widget
         mark_layout_dirty();
         relayout();
         return *this;
+    }
+
+    void Card::set_content_insets(const foundation::NanInsets insets) {
+        internal::require_content_insets(insets);
+        if (content_insets_ && *content_insets_ == insets) {
+            return;
+        }
+        content_insets_ = insets;
+        mark_layout_dirty();
+        relayout();
+    }
+
+    void Card::clear_content_insets() {
+        if (!content_insets_) {
+            return;
+        }
+        content_insets_.reset();
+        mark_layout_dirty();
+        relayout();
+    }
+
+    auto Card::content_insets() const -> foundation::NanInsets {
+        if (content_insets_) {
+            return *content_insets_;
+        }
+        const auto style = resolved_style();
+        return foundation::NanInsets::symmetric(style.metrics.padding_x, style.metrics.padding_y);
     }
 
     void Card::set_theme(theme::NanTheme theme) {
@@ -95,8 +123,13 @@ namespace nandina::widget
 
     auto Card::on_measure(foundation::NanLayoutConstraints constraints) -> foundation::NanSize {
         const auto style = resolved_style();
-        const float horizontal = style.metrics.padding_x * 2.0F;
-        const float vertical = style.metrics.padding_y * 2.0F;
+        // Resolve the recipe once: content_insets() would resolve the same style again on
+        // every measure, which is a hot path during page construction and resize.
+        const auto insets = content_insets_.value_or(
+            foundation::NanInsets::symmetric(style.metrics.padding_x, style.metrics.padding_y)
+        );
+        const float horizontal = insets.horizontal_sum();
+        const float vertical = insets.vertical_sum();
         auto child = child_.lock();
         if (!child) {
             return constraints.constrain(
@@ -104,9 +137,7 @@ namespace nandina::widget
             );
         }
 
-        const auto measured = child->measure_layout(constraints.deflated(
-            foundation::NanInsets::symmetric(style.metrics.padding_x, style.metrics.padding_y)
-        ));
+        const auto measured = child->measure_layout(constraints.deflated(insets));
         return constraints.constrain(
             foundation::NanSize(
                 measured.get_width() + horizontal,
@@ -121,14 +152,14 @@ namespace nandina::widget
             return;
         }
 
-        const auto style = resolved_style();
-        const float content_width = std::max(0.0F, width() - style.metrics.padding_x * 2.0F);
-        const float content_height = std::max(0.0F, height() - style.metrics.padding_y * 2.0F);
+        const auto insets = content_insets();
+        const float content_width = std::max(0.0F, width() - insets.horizontal_sum());
+        const float content_height = std::max(0.0F, height() - insets.vertical_sum());
         const auto child_size = child->measured_size();
         child->layout_to(
             foundation::NanRect::from_xywh(
-                style.metrics.padding_x,
-                style.metrics.padding_y,
+                insets.get_left(),
+                insets.get_top(),
                 std::min(child_size.get_width(), content_width),
                 std::min(child_size.get_height(), content_height)
             )

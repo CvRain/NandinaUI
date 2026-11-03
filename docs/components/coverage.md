@@ -8,7 +8,7 @@
 ## 现状
 
 - 公开组件：**37**（有 `ComponentTraits`、可供应用直接使用）
-- 已有使用文档：**21**（其中 `PointerArea` 与 `GestureArea` 共用一篇，实际文档文件 20 篇；`Label`、`CommandPalette`、`HoverCard` 与 `AlertDialog` 的框架与符号表已核对、叙述正文待手写）
+- 已有使用文档：**23**（其中 `PointerArea` 与 `GestureArea` 共用一篇，实际组件文档文件 22 篇；Surface 作为布局原语另有提纲，不计入组件数；`Card`、`Image`、`Label`、`CommandPalette`、`HoverCard` 与 `AlertDialog` 的框架与符号表已核对、叙述正文待手写）
 
 > 计数口径：`公开组件` 只统计 `nandina/widget/builtin_component_traits.hpp` 中有 `ComponentTraits`
 > 特化的类型，它与 `showcase/component_catalog.hpp` 的编译期目录一一对应（该目录带
@@ -48,7 +48,7 @@
 | `TextField` | — | 高 |
 | `TextArea` | ✅ [text_area.md](text_area.md) | 高 |
 | `Select` | — | 高 |
-| `Card` | — | 高 |
+| `Card` | 🟡 [card.md](card.md)（接口/内容边距已核对，正文待写） | 高 |
 | `Badge` | — | 高 |
 | `Switch` | — | 高 |
 | `Checkbox` | — | 高 |
@@ -74,7 +74,7 @@
 | `Divider` | — | 中 |
 | `Chip` | — | 中 |
 | `Avatar` | — | 中 |
-| `Image` | — | 中 |
+| `Image` | 🟡 [image.md](image.md)（接口/cover 锚点已核对，正文待写） | 中 |
 | `RadioButton` | — | 中 |
 | `Toggle` | ✅ [toggle.md](toggle.md) | 高 |
 | `ToggleGroup` | ✅ [toggle_group.md](toggle_group.md) | 高 |
@@ -87,7 +87,7 @@
 
 ## 建议顺序
 
-1. **高优先级 7 个 + `Tabs`**（最高频、且当前完全无文档）：`TextField`、`Select`、`Card`、`Badge`、
+1. **高优先级正文 + `Tabs`**（最高频，尚需补齐手写正文）：`TextField`、`Select`、`Card`、`Badge`、
    `Switch`、`Checkbox`、`Label`，以及表格中标为中优先级、但使用频率同样很高的 `Tabs`；
 2. 中优先级按实际被示例程序用到的顺序补；
 3. 每补一个组件文档，同步更新本文件的 ✅ 与 `README.md` 索引表。

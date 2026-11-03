@@ -23,6 +23,11 @@ namespace nandina::widget
         /// 单子内容容器：替换既有子节点（空指针仅允许作为内部状态，公开接口拒绝）。
         auto set_child(std::shared_ptr<scene::NanControl> child) -> Card&;
 
+        /// Explicit four-sided content insets; defaults continue to follow the card recipe.
+        void set_content_insets(foundation::NanInsets insets);
+        void clear_content_insets();
+        [[nodiscard]] auto content_insets() const -> foundation::NanInsets;
+
         /// 高级接口：以完整 NanTheme 覆盖控件主题（不再跟随系统切换）。
         void set_theme(theme::NanTheme theme);
         /// 当前生效主题视图（tokens + 当前外观 palette），遗留读取兼容。
@@ -45,6 +50,7 @@ namespace nandina::widget
         void relayout();
 
         std::weak_ptr<scene::NanControl> child_;
+        std::optional<foundation::NanInsets> content_insets_;
         /// 解析用的设计系统快照（树内 = ThemeManager 的有效快照；detached = 回退）。
         std::shared_ptr<const theme::DesignSystem> system_;
         theme::ColorAppearance appearance_ = theme::ColorAppearance::light;

@@ -18,9 +18,11 @@
 #include "../theme/visual_state.hpp"
 #include "animation_authoring.hpp"
 #include "grid.hpp"
+#include "image.hpp"
 #include "layout.hpp"
 #include "list_view.hpp"
 #include "scroll_view.hpp"
+#include "surface.hpp"
 #include "visual_property.hpp"
 
 #include <concepts>
@@ -538,6 +540,42 @@ namespace nandina::widget::authoring
             return *this;
         }
 
+        auto box_style(theme::BoxStyle style) -> NodeBuilder&
+            requires requires(Node& node) { node.set_box_style(std::move(style)); }
+        {
+            node_->set_box_style(std::move(style));
+            return *this;
+        }
+
+        auto padding(foundation::NanInsets insets) -> NodeBuilder&
+            requires requires(Node& node) { node.set_padding(insets); }
+        {
+            node_->set_padding(insets);
+            return *this;
+        }
+
+        auto content_insets(foundation::NanInsets insets) -> NodeBuilder&
+            requires requires(Node& node) { node.set_content_insets(insets); }
+        {
+            node_->set_content_insets(insets);
+            return *this;
+        }
+
+        auto image_scale(ImageScale mode) -> NodeBuilder&
+            requires requires(Node& node) { node.set_scale_mode(mode); }
+        {
+            node_->set_scale_mode(mode);
+            return *this;
+        }
+
+        auto cover_anchor(scene::PercentLength horizontal, scene::PercentLength vertical)
+            -> NodeBuilder&
+            requires requires(Node& node) { node.set_cover_anchor(horizontal, vertical); }
+        {
+            node_->set_cover_anchor(horizontal, vertical);
+            return *this;
+        }
+
         auto font_size(float size) -> NodeBuilder&
             requires requires(Node& node) { node.set_font_size(size); }
         {
@@ -765,6 +803,11 @@ namespace nandina::widget::authoring
 
     [[nodiscard]] inline auto flex(LayoutAxis axis = LayoutAxis::horizontal) -> NodeBuilder<Flex> {
         return make<Flex>(axis);
+    }
+
+    [[nodiscard]] inline auto surface(theme::NanTheme theme = theme::default_theme())
+        -> NodeBuilder<Surface> {
+        return make<Surface>(std::move(theme));
     }
 
     [[nodiscard]] inline auto padding(foundation::NanInsets insets) -> NodeBuilder<Padding> {

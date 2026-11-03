@@ -18,6 +18,18 @@
 
 ## 2. 三档分类
 
+2026-11-03 P4.1b 视觉表面作者初稿（experimental，待维护者审阅）：新增
+`widget/surface.hpp`，Surface 复用 Padding/BoxPainter/BoxPresentation，使用 `ui.surface()` /
+`authoring::surface()` 工厂；不新增 ComponentTraits 或组件配方。`set_box_style()` / `.box_style()`
+设置 token 盒子，`set_padding()` / `.padding()` 设置有限非负边距，既有 container visual path
+用于实例/动画覆盖；默认零内边距，圆角不提供子内容 mask。
+Card 新增 `set_content_insets()` / `content_insets()` / `clear_content_insets()`，四侧显式覆盖
+与默认配方 padding 分开，`.content_insets()` 连接同一有效布局几何；默认 Card 行为不变。
+Image 新增 `set_cover_anchor(PercentLength, PercentLength)` / `cover_anchor()`，默认 50/50，
+范围 [0,100]，在 source_rect 可裁剪余量内定位，paint-only 且不改变缓存。builder
+`.image_scale()` / `.cover_anchor()` 按 setter 能力约束。新增 inset_validation.hpp 为 internal。
+依赖方向不变，圆角子树裁剪和任意节点变换均未扩展；正式边界见 D6 §18。
+
 2026-11-03 P4.1 文本作者/绑定子批（experimental，行为调整）：`Property<T>::bind()` 现在
 单源替代，`set()`（含同值）解除旧绑定；新增 `unbind()` / `is_bound()`、ReactiveScope 绑定
 重载，ReadProperty 可查询 is_bound。Property 显式禁用复制/移动，守卫绑定的目标地址与令牌；
@@ -214,7 +226,7 @@ lab 本身不承诺密码掩码，notebook 在 P3.3b1 后已通过 `TextInputPur
 | 不越界 | public/experimental 头不 `#include` internal 头（相对与 `<nandina/...>` 两种写法都解析） | 依赖方向倒置 → 失败 |
 | 独立可包含 | 每个 public/experimental 头用一个只包含它的 TU 做 `-fsyntax-only` | 缺依赖/隐式前置 → 失败 |
 
-落点：清单 `tools/header_surface.toml`（182 条，含 `level`、可选 `reason`、可选 `requires`），
+落点：清单 `tools/header_surface.toml`（188 条，含 `level`、可选 `reason`、可选 `requires`），
 脚本 `tools/check_headers.py`，注册为 `header-surface`（`integration`，实测约 16 s，8 路并行）。
 用法：
 

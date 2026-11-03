@@ -50,6 +50,10 @@ application shell. Version `0.1.0-alpha.1`.
   max-lines builders, current layout queries, and one managed text binding shared by Property,
   Label and BuildContext. Direct writes (even equal values) replace text bindings; tree exit
   or page-scope teardown stops them. Other component bindings and style reset remain separate.
+- **P4.1b initial implementation** (2026-11-03, awaiting maintainer review) adds a Surface
+  layout/paint primitive via `ui.surface()`, explicit Card content insets with recipe reset,
+  and percentage Image cover anchors. Surface/Card corners do not mask children: the existing
+  scene clip is rectangular. Keep this batch uncommitted through the maintainer review cycle.
 - The plan and exit criteria are **not** owned by this file: read
   `docs/references/development_roadmap.md` and the D5 contract
   (`resource_build_and_deployment.md` §8) before claiming a sub-batch is complete.
@@ -228,9 +232,12 @@ it, completes gaps, verifies, and commits. Follow this order:
 3. **Red-first for every fix**: temporarily break the line that implements the behavior and confirm
    the new test fails, then restore it. Do not weaken gates to make a change pass.
 4. **Run the verification matrix** (below) on the final tree, not on a stale binary.
-5. **Commit one reviewable sub-batch per commit**, with a conventional prefix (`feat/fix/refactor/`
-   `test/docs/perf/chore`) and a body that states behavior, verification numbers, and remaining
-   boundaries. Push; retry transient network failures instead of leaving an unpushed commit.
+5. **Keep the first implementation uncommitted for maintainer review.** The maintainer may add
+   fixes in the same working tree; then review hidden gaps and rerun affected verification.
+   Only after that review cycle is closed, commit the whole reviewable sub-batch once, with a
+   conventional prefix (`feat/fix/refactor/test/docs/perf/chore`) and a body stating behavior,
+   verification and remaining boundaries. Push that approved combined commit; retry transient
+   network failures. Do not auto-commit the first implementation or start the next batch early.
 6. **Sync docs in the same change**: roadmap status, project status, `sdk_surface.md` for
    experimental/breaking API changes, `module_dependency.md` for boundary changes, and the owning
    reference document's implementation record.

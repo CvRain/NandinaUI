@@ -104,3 +104,10 @@ ctx.world_ = ctx.root_transform_.compose(transform());
 - [浮层架构](overlay_architecture.md)
 - [组件公共契约](component_contract.md)
 - [开发参考目录](README.md)
+
+## P4.1b 表面边界（2026-11-03）
+
+Surface 的圆角只用于共享 BoxPainter 的背景/描边；默认不裁剪子项，显式 clip 仍是矩形。
+Card 的 content_insets 改变测量与排列，未改变 local_rect 裁剪区，更不会自动获得圆角图片 mask。
+零边距图片可以贴到 Card 的矩形边缘；需要圆角内容裁剪时仍需后续独立能力，不能把圆角背景
+当作已生效的子树遮罩。Surface 绘制次序是背景/描边先于子项，与现有遍历顺序一致。

@@ -11,5 +11,6 @@
 #include "gesture_area.hpp"
 #include "image.hpp"
 #include "pointer_area.hpp"
+#include "surface.hpp"
 
 #endif // NANDINA_EXPERIMENT_WIDGET_CONTROLS_HPP

@@ -142,3 +142,11 @@ key）。后端不认识 manager 的挂载身份，挂载字段不写进包格�
 - 新类型是否让某个底层模块获得了它不该有的职责（例如 `scene` 认识组件、`reactive` 认识窗口）？
 
 这些问题在提交前回答一次，比事后重构便宜得多。
+
+## P4.1b Surface 归属（2026-11-03）
+
+Surface 位于 widget，继承同层 Padding，复用 BoxPainter 与 BoxPresentation；theme 的 BoxStyle
+保持原有描述值，不新增 Surface recipe。BuildContext/authoring 仅导出工厂，不将其列入组件目录。
+内部 inset_validation 只依赖 foundation 几何与标准库，供 Surface/Card 共享参数边界；
+Image cover anchor 使用 scene 既有 PercentLength，无平台类型与新缓存身份，未新增向上依赖。
+圆角子项 mask 仍不属于当前 ClipStack 的矩形 scissor 能力。

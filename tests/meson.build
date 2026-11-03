@@ -227,6 +227,13 @@ render_tests = executable(
 )
 test('render', render_tests, suite: 'unit')
 
+surface_tests = executable(
+    'surface_tests',
+    files('surface_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('surface', surface_tests, suite: 'unit')
+
 image_tests = executable(
     'image_tests',
     files('image_tests.cpp'),

@@ -475,3 +475,58 @@ window-lifecycle SKIP**（`LSAN_OPTIONS=detect_leaks=0`）；no-RTTI unit **91/9
 使用 clang-format 23.1.1。home/label/anchors 的 CPU/SDF 六张页面 golden 与各自批准基线
 逐像素一致，三页图元名称序列一致。日志位于未跟踪的
 `playground/p41_authoring_verification/`；本轮未执行 Windows 验证，未改批准基线或 Showcase 正文。
+
+## 18. P4.1b 视觉表面与图片裁剪锚点契约（2026-11-03，实施中）
+
+- `widget::Surface` 是单子项布局/绘制原语，复用 Padding 的测量与排列、BoxPainter 的背景/
+  描边路径；通过 `ui.surface()` / `authoring::surface()` 创建，不新增组件配方或组件目录项。
+  默认零 padding、语义 surface 填充、border token、零描边宽/圆角。`set_box_style(BoxStyle)`
+  接受已有主题 token/字面量，`resolved_style()` 使用当前主题；不持有第二份已解析颜色事实。
+  `.set(visual::container.radius/fill/...)` 复用 BoxPresentation 的实例/动画入口。
+- Surface 的 `set_padding()` 与 builder `.padding()` 影响内容测量/排列，要求有限非负边距与
+  有限总和；背景、描边宽、圆角只改 paint，border 在盒子内部绘制，不另占布局空间。
+  `set_box_style()` 的圆角/描边解析值也须有限非负；主题变更重解析 token，实例 presentation
+  继续覆盖主题值。Surface 不引入交互语义，命中仍是矩形；子项可替换，所有权规则同 Padding。
+- Surface 不隐式打开裁剪。`set_overflow(ControlOverflow::clip)` 继续使用场景矩形子树裁剪：
+  圆角只作用于背景/描边，**没有圆角内容 mask**。背景/描边在子项之前绘制，内容可覆盖描边，
+  需要留白时显式 padding。缩放沿用现有 BoxPainter/scene 的 viewport 边界，不承诺新变换能力。
+- `Card::set_content_insets(NanInsets)` 显式覆盖四侧内容缩进，`content_insets()` 返回当前
+  有效边距；`clear_content_insets()` 恢复当前配方 padding_x/y（包括 theme 与 CardRecipeRule）。
+  默认行为不变。测量、最终排列复用同一边距，不能只改画出来的位置；零边距让图片贴到 Card
+  矩形边缘，Card 自身圆角仍不自动裁剪图片。边距要求有限非负、总和有限，过大时内容尺寸
+  归零。Card min_height、背景与阴影仍由配方控制。
+- `Image::set_cover_anchor(PercentLength x, PercentLength y)` 的两轴值范围为 [0,100]，默认
+  50/50，getter `cover_anchor()` 返回同口径的百分值点。锚定的是**可裁剪余量**：
+  source.left + (source.width - crop.width) * x/100，纵轴同理；不是纹理像素或目标位置。
+  在 source_rect 之内计算，contain 的 ImageAlignment 与 stretch 行为保持现状。
+  非有限/越界参数抛 invalid_argument，失败不修改原值。锚点变化只标 paint，不重解码/上传，
+  不改变缓存键/自然尺寸/布局。没有可裁剪余量的轴保持原点。
+- builder 新增 `.box_style()` / `.padding()` / `.content_insets()` / `.image_scale()` /
+  `.cover_anchor(percent(x), percent(y))`，按 setter 能力约束，不让不适用的组件获得空操作。
+  `controls.hpp`/BuildContext 导出 Surface 工厂；不把 primitive 计入 ComponentTraits 展示目录。
+- 回归覆盖单子项测量/替换、主题/显式 presentation、viewport 与 opacity、矩形 clip/命中、
+  Card 默认/四侧/零/reset/窄宽度、Image 水平/垂直余量与 source_rect/缓存不变。
+  notebook 与 Showcase 正文由维护者手写，本轮只验证已有页面及本地组合样本，不代写登录页。
+  视觉验收与完整 P4.1b 状态分开记录，不把源码接通等同于维护者已验收新页面。
+
+本批初稿专项：`surface` **9 用例/87 断言**，`image [cover-anchor]` **4 用例/35 断言**，
+以及原 image/widget/authoring/主题/布局用例。八项独立故障注入均退出 42：旁路 BoxPainter
+（1 断言失败）、遗漏主题更新（2）、遗漏 presentation 覆盖（3）、Card 测量忽略有效边距（3）、
+Card 排列忽略左边距（5）、cover 水平锚点固定居中（4）、垂直锚点固定居中（2）、取消百分比
+校验（1）；恢复后通过，未弱化 gate。非法边距测试含 NaN/无穷/负值及总和溢出。
+
+本地实际窗口样本为 `playground/p41b_verification/demo.cpp`：Surface 包裹零内边距 Card，
+三张真实 notebook 图片分别使用 0/50/100% cover 锚点；X11/GPU 路径应用正常退出 0，
+截图 `preview.png` 已检查，内容确实贴边且三档裁剪位置不同。它是本地组合证据，
+不是 CI 测试或新 Showcase 页面批准；正式 Showcase 示例与维护者视觉验收仍待审阅循环。
+
+初稿最终验证（2026-11-03）：Linux 主套件 **113/113**；ASan/UBSan unit **90 通过 +
+window-lifecycle SKIP**（`LSAN_OPTIONS=detect_leaks=0`）；no-RTTI unit **92/92**；
+无 SQLite/headless unit **87 通过 + 1 SKIP**；纯工具 **8/8**；发布门禁 **8/8，0 SKIP**，
+固定 clang-format 23.1.1、公共头分类/依赖/独立包含及新增测试 suite 均通过。
+home/label/anchors 的 CPU/SDF 六张页面 golden 与各自已批准基线逐像素一致，
+三页两条路径的图元名称序列一致。日志在未跟踪的 `playground/p41b_verification/`。
+
+本批按新审阅循环**保留未提交工作树**，待维护者补充修改后再复查隐藏问题、补齐受影响验证，
+统一提交。P4.1b 的新 Showcase 组合和 notebook 登录页采用仍待维护者手写/视觉验收；
+圆角子内容 mask、Windows 和其他 P3 平台剩余项未包含在本次结果中。

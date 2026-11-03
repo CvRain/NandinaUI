@@ -275,6 +275,10 @@ namespace nandina::widget
             return prepare_builder(authoring::flex(axis));
         }
 
+        [[nodiscard]] auto surface() const -> authoring::NodeBuilder<Surface> {
+            return prepare_builder(authoring::surface(theme()));
+        }
+
         [[nodiscard]] auto padding(foundation::NanInsets insets) const
             -> authoring::NodeBuilder<Padding> {
             return prepare_builder(authoring::padding(insets));

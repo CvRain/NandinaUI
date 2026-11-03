@@ -755,3 +755,13 @@ level = "experimental"
 [[headers]]
 path = "nandina/widget/visual_property.hpp"
 level = "experimental"
+
+[[headers]]
+path = "nandina/widget/surface.hpp"
+level = "experimental"
+reason = "Single-child surface layout primitive, available via BuildContext.surface"
+
+[[headers]]
+path = "nandina/widget/internal/inset_validation.hpp"
+level = "internal"
+reason = "Shared validation for author-controlled Surface/Card content insets"

@@ -148,6 +148,7 @@ P2.4 的 `examples/lab` 已退役，示例应用改为 `examples/notebook`：目
 - **P1 收口与平台补齐**：发布检查脚本、Windows 页面 golden/性能基线、图片共享解码与 raylib 退役、SDF 阴影/裁剪（已完成，Windows GUI 项待人工）；
 - **P2 应用闭环**：已完成；P2.4 的 `examples/lab` 单可执行多路由贯穿登录/注册、笔记、计时器、图片、滚动与确认弹窗（2026-10-25），已于 2026-10-28 退役并由 `examples/notebook` 接替；
 - **P3 输入与焦点（当前阶段）**：P3.1a/b/c、D1 第一阶段（P3.2a/b）、文本会话协议（P3.3a）、预编辑/密码用途显示（P3.3b1）与 caret 输入区域（P3.3b2a）已交付；P3.3b2b 已交付 SDL 用途/多行转发与 preedit 声明、部分 Linux 实机验收；下一步补齐 X11 inline preedit/独立 Xorg、Windows 与候选窗位置验收。
+- **P4.1b 初稿**：Surface 布局原语、Card 四侧 content insets 与 Image cover 百分比锚点已接通，初稿 Linux 主套件 113/113、发布门禁 8/8；等待维护者审阅/Showcase 视觉验收，尚未提交；
 - **P4 作者与组件**：P4.1 D6 Label（含垂直对齐）→ P4.1b Surface/Card inset 与 Image cover 裁剪锚点 → P4.2 阶段 5 数据组件 → P4.3 D2/D3 与作者颜色入口。
 
 P1.1 与 P1.6 核心实现已完成，raylib 后端、工厂、枚举项、wrap 与依赖已完整删除。

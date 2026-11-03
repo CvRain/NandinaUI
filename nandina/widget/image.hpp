@@ -80,6 +80,11 @@ namespace nandina::widget
         void set_alignment(ImageAlignment alignment);
         [[nodiscard]] auto alignment() const -> ImageAlignment;
 
+        /// Cover alignment within the excess source region, expressed as percentages [0,100].
+        /// Defaults to 50/50. Does not affect contain alignment or load/cache identity.
+        void set_cover_anchor(scene::PercentLength horizontal, scene::PercentLength vertical);
+        [[nodiscard]] auto cover_anchor() const noexcept -> foundation::NanPoint;
+
         /// 已加载纹理的自然像素尺寸；未加载时 {0,0}。
         [[nodiscard]] auto natural_size() const -> foundation::NanSize;
 
@@ -133,6 +138,7 @@ namespace nandina::widget
         std::optional<foundation::NanColor> placeholder_color_;
         ImageScale scale_mode_ = ImageScale::stretch;
         ImageAlignment alignment_ = ImageAlignment::center;
+        foundation::NanPoint cover_anchor_ {50.0F, 50.0F};
         ImageLoadMode load_mode_ = ImageLoadMode::automatic;
         ImageLoadState load_state_ = ImageLoadState::idle;
         float prefetch_distance_ = 0.0F;
