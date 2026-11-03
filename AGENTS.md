@@ -15,7 +15,7 @@ application shell. Version `0.1.0-alpha.1`.
 - Experimental: Windows (MSYS2 UCRT64). Unsupported: macOS.
 - Not a Node/Bun project; there is no JavaScript runtime or package manager.
 
-### Current milestone state (2026-11-02)
+### Current milestone state (2026-11-03)
 
 - P1 and P2 are closed. P2 covers the tool/UI split, startup policy, scoped manager results,
   cache identity/reclamation, resource identity (explicit `key → path`, frozen key derivation,

@@ -402,6 +402,10 @@ QML Text / Controls Label 的属性页说明了成熟文本控件通常包含哪
 - 有限宽度的自然行高仍源自布局结果；本批回归 resize 后 Label/Column/Card/ScrollView
   的行数、内容高与滚动范围、默认对齐下真实 Label 页/ComponentInfoTable 的收敛。
   不新增 Section/Surface、不重写绑定语义，不修改已批准 golden。
+- `draw_in()` 的对齐假设调用方给出**轴对齐的 screen-space 盒子**；节点局部旋转/非均匀缩放
+  以及动画 presentation transform 尚未折入逻辑宽高，属于后续文本变换边界。`draw_at()`
+  有意不应用两轴对齐；旧调用若依赖多行 `draw_at()` 的行内对齐，必须改用 `draw_in()`。
+  这两条不改变本批已验收的默认路径，避免把 viewport 修复误当成任意节点变换已支持。
 
 实施回归记录：`widget` 的 `[text-box]` 为 9 用例/154 断言，作者入口 1 用例/3 断言，
 真实 Label 页/ComponentInfoTable 2 用例/29 断言。六项逐一故障注入：移除垂直偏移（12 断言

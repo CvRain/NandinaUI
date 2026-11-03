@@ -37,7 +37,7 @@
 | 垂直中心/底部 | 整个已布局文本块按自然高度摆放；余量不足时偏移 0 |
 | 失效 | 两轴 setter 等值不标脏；修改只标 paint，不 reshape/measure/semantics |
 | 完整 style | 颜色/两轴对齐变化不重排；color/font_size/font 仍变成显式覆盖 |
-| 绘制坐标 | `draw_in` 是 screen-space 盒子；`draw_at` 不施加对齐；DPI 不参与偏移 |
+| 绘制坐标 | `draw_in` 是轴对齐的 screen-space 盒子；`draw_at` 不施加对齐；DPI 不参与偏移；节点局部旋转/非均匀缩放不在本批 |
 
 ## 测量与绑定
 
