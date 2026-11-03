@@ -35,7 +35,7 @@ namespace nandina::text
         ///                  `Text::draw_in()` 写入的水平对齐偏移；为 0 时行为与加入
         ///                  对齐之前完全一致，所以未对齐的调用方无需改动。
         /// @param context  绘制上下文，提供变换、裁剪栈与整体不透明度。
-        /// @param position 文本块左上角（逻辑坐标）；某行的实际起点 = 它 + 该行 `origin_x`。
+        /// @param position 文本块左上角（screen-space）；某行实际起点再加映射后的逻辑 `origin_x`。
         /// @param color    文字颜色，会再乘一次上下文不透明度。
         void draw(
             const TextLayoutResult& layout,

@@ -19,6 +19,8 @@ namespace nandina::text
     public:
         virtual ~ITextLayoutBackend() = default;
 
+        /// Shape/wrap logical text metrics. Color and both alignment fields are paint inputs;
+        /// backends must not use them to alter glyphs, line breaks, sizes or caret stops.
         [[nodiscard]] virtual auto layout(TextLayoutInput input) const -> TextLayoutResult = 0;
     };
 

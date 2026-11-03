@@ -8,6 +8,7 @@
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/generators/catch_generators.hpp>
 
 #include <nandina/reactive/reactive.hpp>
 #include <nandina/render/draw_context.hpp>
@@ -17,6 +18,7 @@
 #include <nandina/scene/scene_tree.hpp>
 #include <nandina/widget/bindable_rect.hpp>
 #include <nandina/widget/button.hpp>
+#include <nandina/widget/card.hpp>
 #include <nandina/widget/checkbox.hpp>
 #include <nandina/widget/declarative.hpp>
 #include <nandina/widget/label.hpp>
@@ -33,6 +35,7 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 using namespace nandina;
@@ -3020,4 +3023,274 @@ TEST_CASE("Text keeps a large layout correct while caching", "[widget][text][cac
         REQUIRE(text->width() == Catch::Approx(20.0F));
         REQUIRE(text->height() == Catch::Approx(20.0F));
     }
+}
+
+TEST_CASE("Text aligns and clips its screen-space box exactly once", "[widget][text-box][scale]") {
+    const auto scale = GENERATE(1.0F, 1.5F, 2.0F);
+    const auto dpi = GENERATE(1.0F, 2.0F);
+    FixedTextLayoutBackend backend;
+    RecordingDevice device;
+    render::DrawContext ctx(
+        device,
+        foundation::NanTransform2D::from_scale(scale),
+        {.logical_to_screen = scale, .screen_to_physical = dpi}
+    );
+    widget::primitives::Text value("fixed", backend);
+    value.set_overflow(text::TextOverflow::clip);
+    value.set_align(theme::TextAlign::center);
+    value.set_vertical_align(text::TextVerticalAlign::center);
+    value.draw_in(ctx, foundation::NanRect::from_xywh(50, 70, 100 * scale, 60 * scale));
+    REQUIRE(device.texts.size() == 1);
+    CHECK(device.texts[0].position.get_x() == Catch::Approx(50 + 29 * scale));
+    CHECK(device.texts[0].position.get_y() == Catch::Approx(70 + 21 * scale));
+    REQUIRE(device.clips.size() == 1);
+    CHECK(device.clips[0].get_left() == 50);
+    CHECK(device.clips[0].get_top() == 70);
+    CHECK(device.clips[0].get_width() == Catch::Approx(102 * scale));
+    CHECK(device.clips[0].get_height() == Catch::Approx(60 * scale));
+    CHECK(device.clip_clears == 1);
+    // An unboxed primitive keeps its specified origin at any viewport/DPI scale.
+    value.set_align(theme::TextAlign::end);
+    value.set_vertical_align(text::TextVerticalAlign::bottom);
+    value.draw_at(ctx, foundation::NanPoint(5, 7));
+    REQUIRE(device.texts.size() == 2);
+    CHECK(device.texts.back().position.get_x() == Catch::Approx(5));
+    CHECK(device.texts.back().position.get_y() == Catch::Approx(7));
+}
+
+TEST_CASE(
+    "Text aligns a multiline block without changing line geometry",
+    "[widget][text-box][multiline]"
+) {
+    RecordingDevice device;
+    render::DrawContext ctx(device);
+    widget::primitives::Text value("ab\ncd");
+    value.set_style({.font_size = 10, .overflow = text::TextOverflow::wrap, .max_lines = 3});
+    (void)value.measure_layout(foundation::NanLayoutConstraints {.max_width = 100});
+    REQUIRE(value.layout_result().lines.size() == 2);
+    REQUIRE(value.measured_text_height() == Catch::Approx(24));
+    const auto baseline = value.layout_result().lines.front().baseline;
+    const auto caret = value.layout_result().lines.back().caret_for_source(5);
+    for (const auto& [align, y]:
+         {std::pair {text::TextVerticalAlign::top, 0.0F},
+          std::pair {text::TextVerticalAlign::center, 18.0F},
+          std::pair {text::TextVerticalAlign::bottom, 36.0F}})
+    {
+        value.set_vertical_align(align);
+        device.texts.clear();
+        value.draw_in(ctx, foundation::NanRect::from_xywh(10, 20, 100, 60));
+        REQUIRE(device.texts.size() == 2);
+        CHECK(device.texts[0].position.get_y() == Catch::Approx(20 + y));
+        CHECK(device.texts[1].position.get_y() == Catch::Approx(32 + y));
+        CHECK(value.layout_result().lines.front().baseline == baseline);
+        CHECK(value.layout_result().lines.back().caret_for_source(5).x == caret.x);
+        CHECK(value.measured_text_height() == Catch::Approx(24));
+        device.texts.clear();
+        value.draw_in(ctx, foundation::NanRect::from_xywh(10, 20, 100, 10));
+        CHECK(device.texts[0].position.get_y() == Catch::Approx(20));
+    }
+}
+
+TEST_CASE(
+    "Label alignment changes only paint and preserves measured state",
+    "[widget][text-box][cache]"
+) {
+    reactive::Graph graph;
+    FixedTextLayoutBackend backend;
+    auto label = widget::Label::create(graph, "label");
+    label->set_layout_backend(backend);
+    scene::NanSceneTree tree;
+    tree.set_root(label);
+    REQUIRE(tree.layout_root(foundation::NanSize(200, 80)) == 1);
+    const auto calls = backend.calls;
+    const auto natural = label->layout_result().size;
+    label->clear_dirty(scene::DirtyFlags::paint | scene::DirtyFlags::semantics);
+    label->set_vertical_align(text::TextVerticalAlign::center);
+    label->set_align(theme::TextAlign::end);
+    CHECK(label->is_dirty(scene::DirtyFlags::paint));
+    CHECK_FALSE(label->layout_dirty());
+    CHECK_FALSE(label->is_dirty(scene::DirtyFlags::semantics));
+    CHECK(tree.layout_root(foundation::NanSize(200, 80)) == 0);
+    RecordingDevice device;
+    tree.draw(device);
+    REQUIRE(device.texts.size() == 1);
+    CHECK(device.texts[0].position.get_y() == Catch::Approx(31));
+    CHECK(device.texts[0].position.get_x() == Catch::Approx(158));
+    CHECK(label->layout_result().size == natural);
+    CHECK(backend.calls == calls);
+    label->clear_dirty(scene::DirtyFlags::paint);
+    label->set_vertical_align(text::TextVerticalAlign::center);
+    label->set_align(theme::TextAlign::end);
+    CHECK_FALSE(label->is_dirty(scene::DirtyFlags::paint));
+}
+
+TEST_CASE(
+    "Paint-only style replacement and remeasurement reuse shaped metrics",
+    "[widget][text-box][cache]"
+) {
+    FixedTextLayoutBackend backend;
+    auto value = std::make_shared<widget::primitives::Text>("text", backend);
+    scene::NanSceneTree tree;
+    tree.set_root(value);
+    const auto size = foundation::NanSize(200, 80);
+    (void)tree.layout_root(size);
+    const auto calls = backend.calls;
+    auto style = value->style();
+    style.align = theme::TextAlign::end;
+    style.vertical_align = text::TextVerticalAlign::bottom;
+    style.color =
+        foundation::NanColor::from(foundation::NanHexRgb {.red = 10, .green = 20, .blue = 30});
+    value->set_style(style);
+    CHECK_FALSE(value->layout_dirty());
+    CHECK(tree.layout_root(size) == 0);
+    CHECK(backend.calls == calls);
+    (void)value->measure_layout(foundation::NanLayoutConstraints::tight(size));
+    CHECK(backend.calls == calls);
+    value->set_align(theme::TextAlign::center);
+    value->set_vertical_align(text::TextVerticalAlign::center);
+    (void)value->measure_layout(foundation::NanLayoutConstraints::tight(size));
+    CHECK(backend.calls == calls);
+    auto changed = value->style();
+    changed.font_size += 2;
+    value->set_style(changed);
+    CHECK(value->layout_dirty());
+    CHECK(backend.calls > calls);
+}
+
+TEST_CASE("TextStyle comparison detects vertical alignment", "[widget][text-box][style]") {
+    text::TextStyle top;
+    auto centered = top;
+    centered.vertical_align = text::TextVerticalAlign::center;
+    CHECK_FALSE(top.approx_equals(centered));
+    CHECK(centered.approx_equals(centered));
+}
+
+TEST_CASE(
+    "Text layout renderers receive the vertically aligned block origin",
+    "[widget][text-box][renderer]"
+) {
+    class Renderer final: public text::ITextLayoutRenderer {
+    public:
+        foundation::NanPoint position;
+        float line_origin = 0;
+        float baseline = 0;
+        void draw(
+            const text::TextLayoutResult& layout,
+            render::DrawContext&,
+            foundation::NanPoint at,
+            foundation::NanColor
+        ) override {
+            position = at;
+            line_origin = layout.lines.front().origin_x;
+            baseline = layout.lines.front().baseline;
+        }
+    } renderer;
+    FixedTextLayoutBackend backend;
+    RecordingDevice device;
+    const float scale = 2;
+    render::DrawContext ctx(
+        device,
+        foundation::NanTransform2D::from_scale(scale),
+        {.logical_to_screen = scale, .screen_to_physical = 2}
+    );
+    widget::primitives::Text value("text", backend);
+    value.set_layout_renderer(&renderer);
+    value.set_align(theme::TextAlign::end);
+    value.set_vertical_align(text::TextVerticalAlign::bottom);
+    value.draw_in(ctx, foundation::NanRect::from_xywh(30, 40, 200, 120));
+    CHECK(renderer.position.get_x() == Catch::Approx(30));
+    CHECK(renderer.position.get_y() == Catch::Approx(124));
+    CHECK(renderer.line_origin == Catch::Approx(58));
+    CHECK(renderer.baseline == Catch::Approx(12));
+    CHECK(device.texts.empty());
+}
+
+TEST_CASE(
+    "Label wrapping preserves natural height through Card and ScrollView resize",
+    "[widget][text-box][natural-height]"
+) {
+    reactive::Graph graph;
+    auto label = widget::Label::create(
+        graph,
+        "Natural text height follows the available width. 中文 and 日本語 wrap with the same "
+        "constraints as the surrounding card, without a fixed label height."
+    );
+    label->set_font_size(10);
+    label->set_overflow(text::TextOverflow::wrap);
+    label->set_max_lines(100);
+    auto column = widget::Column::create();
+    column->set_cross_alignment(widget::LayoutAlignment::stretch).add(label);
+    auto card = widget::Card::create();
+    card->set_child(column);
+    auto scroll = widget::ScrollView::create();
+    scroll->set_child(card);
+    scene::NanSceneTree tree;
+    tree.set_root(scroll);
+    std::size_t wide_lines = 0;
+    float wide_height = 0;
+    for (const auto width: {360.0F, 140.0F, 360.0F}) {
+        const foundation::NanSize viewport(width, 40);
+        (void)tree.layout_root(viewport);
+        REQUIRE(tree.layout_root(viewport) == 0);
+        const auto lines = label->layout_result().lines.size();
+        CHECK(label->height() == Catch::Approx(label->measured_text_height()));
+        CHECK(column->height() == Catch::Approx(label->height()));
+        CHECK(scroll->content_size().get_height() == Catch::Approx(card->height()));
+        CHECK(
+            scroll->maximum_scroll_offset().get_y()
+            == Catch::Approx(std::max(0.0F, card->height() - 40))
+        );
+        if (wide_lines == 0) {
+            wide_lines = lines;
+            wide_height = label->height();
+        }
+        else if (width == 140) {
+            CHECK(lines > wide_lines);
+            CHECK(label->height() > wide_height);
+        }
+        else {
+            CHECK(lines == wide_lines);
+            CHECK(label->height() == Catch::Approx(wide_height));
+        }
+        label->set_vertical_align(text::TextVerticalAlign::bottom);
+        CHECK(tree.layout_root(viewport) == 0);
+    }
+}
+
+TEST_CASE(
+    "Unboxed multiline Text keeps short lines at the requested origin",
+    "[widget][text-box][draw-at]"
+) {
+    const float scale = GENERATE(1.0F, 2.0F);
+    RecordingDevice device;
+    render::DrawContext ctx(
+        device,
+        foundation::NanTransform2D::from_scale(scale),
+        {.logical_to_screen = scale}
+    );
+    widget::primitives::Text value("abcd\nx");
+    value.set_style({.font_size = 10, .overflow = text::TextOverflow::wrap, .max_lines = 3});
+    value.set_align(theme::TextAlign::end);
+    value.set_vertical_align(text::TextVerticalAlign::bottom);
+    value.draw_at(ctx, foundation::NanPoint(10, 20));
+    REQUIRE(device.texts.size() == 2);
+    CHECK(device.texts[0].position.get_x() == Catch::Approx(10));
+    CHECK(device.texts[1].position.get_x() == Catch::Approx(10));
+    CHECK(device.texts[1].position.get_y() == Catch::Approx(20 + 12 * scale));
+}
+// The deterministic backend constrains layout.size to the assigned height.
+// Vertical placement must use natural line heights rather than layout.size.
+TEST_CASE("a tightly assigned Label centers its natural line height", "[widget][text-box][tight]") {
+    reactive::Graph graph;
+    auto label = widget::Label::create(graph, "Natural line");
+    label->set_font_size(10);
+    label->set_vertical_align(text::TextVerticalAlign::center);
+    scene::NanSceneTree tree;
+    tree.set_root(label);
+    REQUIRE(tree.layout_root(foundation::NanSize(200, 80)) == 1);
+    REQUIRE(label->measured_text_height() == Catch::Approx(12));
+    RecordingDevice device;
+    tree.draw(device);
+    REQUIRE(device.texts.size() == 1);
+    CHECK(device.texts[0].position.get_y() == Catch::Approx(34));
 }

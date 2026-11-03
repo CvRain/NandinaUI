@@ -21,6 +21,15 @@
 scene 的 node/tree 与 app 的 NanWindow 使用 canonical text 名称；widget 组件通过旧头的
 别名继续使用相同类型，不作全库组件机械改名。
 
+## P4.1a 绘制输入边界（2026-11-03）
+
+`text::TextVerticalAlign` 与 `TextStyle::vertical_align` 同归 canonical text 协议，
+默认 top；两轴对齐与颜色是纯绘制输入，后端不得据此改变字形、换行、度量或 caret。
+widget/Text 在指派的 screen-space 盒子中计算行与文本块的偏移；renderer 的 position 为
+screen-space、line.origin_x 与 baseline 仍为逻辑单位。TextLayoutResult 不新增第二份垂直
+偏移状态。`draw_at` 不施加对齐，`draw_in` 使用盒子；DPI 留在纹理/设备出口处理。
+详见 [D6 对齐契约](authoring_dsl_and_content_measurement.md#16-p41a-文本盒内对齐契约2026-11-03首个实施子批)。
+
 ## 行为边界
 
 本步骤只改变归属、include 与名称解析，不改变布局或 caret 算法、style 比较、fallback

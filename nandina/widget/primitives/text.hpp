@@ -98,6 +98,10 @@ namespace nandina::widget::primitives
         void set_align(theme::TextAlign align);
         [[nodiscard]] auto align() const -> theme::TextAlign;
 
+        /// Place the natural text block inside its assigned height. Paint-only; draw_at ignores it.
+        void set_vertical_align(text::TextVerticalAlign align);
+        [[nodiscard]] auto vertical_align() const -> text::TextVerticalAlign;
+
         [[nodiscard]] auto measured_text_width() const -> float;
         [[nodiscard]] auto measured_text_height() const -> float;
         [[nodiscard]] auto laid_out_font_size() const -> float;
@@ -119,13 +123,13 @@ namespace nandina::widget::primitives
         void set_layout_renderer(text::ITextLayoutRenderer* renderer);
         [[nodiscard]] auto layout_renderer() const -> text::ITextLayoutRenderer*;
 
-        /// 在 `position` 处绘制（盒子 = 文本自身的测量尺寸，因此**不对齐**）。
+        /// 在 screen-space `position` 处绘制（自然尺寸盒子，两轴均不对齐）。
         void draw_at(render::DrawContext& ctx, foundation::NanPoint position);
 
-        /// 在 `rect` 内绘制，并按 `style().align` 把每一行摆到该矩形的对应位置。
+        /// 在 screen-space `rect` 内按 align/vertical_align 摆放每行与整个文本块。
         ///
         /// @param ctx  绘制上下文。
-        /// @param rect 目标矩形（逻辑坐标）。宽度决定每行的偏移量；高度只用于垂直摆放基线。
+        /// @param rect 已包含 viewport 变换的目标矩形；不要再次乘 DPI 或 viewport scale。
         ///
         /// 偏移是**绘制期**计算的，写进布局结果的 `text::TextLayoutLine::origin_x`；布局本身
         /// （`size` / `caret_stops`）不受影响，所以命中测试仍在未偏移的空间里。
@@ -141,6 +145,7 @@ namespace nandina::widget::primitives
         void clear_explicit_color() noexcept;
 
     private:
+        void draw_text_box(render::DrawContext& ctx, foundation::NanRect rect, bool align_to_box);
         void apply_text(const std::string& text);
         void update_metrics(
             foundation::NanLayoutConstraints constraints = foundation::NanLayoutConstraints::loose()

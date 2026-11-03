@@ -14,7 +14,7 @@ namespace nandina::text
         return color.approx_equals(other.color)
             && std::abs(font_size - other.font_size) <= foundation::nan_epsilon
             && font == other.font && overflow == other.overflow && align == other.align
-            && max_lines == other.max_lines;
+            && vertical_align == other.vertical_align && max_lines == other.max_lines;
     }
 
     auto TextLayoutLine::caret_for_source(

@@ -18,6 +18,16 @@
 
 ## 2. 三档分类
 
+2026-11-03 P4.1a 文本盒内对齐（experimental，增量）：新增 `text::TextVerticalAlign`
+（top/center/bottom）、`TextStyle::vertical_align`（默认 top）、`Text::set_vertical_align()` /
+`vertical_align()`，Label 继承共享实现；`NodeBuilder::text_align()` / `text_vertical_align()`
+按 setter 能力约束开放，不用于复合组件内部文本。`TextStyle::approx_equals()` 比较新字段，
+metrics cache 排除颜色与两轴对齐；纯绘制 `set_style` 不再标 layout 或重新整形，显式覆盖规则
+保持现状。自定义 ITextLayoutBackend 须忽略颜色/对齐字段对排版结果的影响。
+`Text::draw_in()` 明确使用已映射的 screen-space 盒子（修正文档误记的逻辑坐标），布局结果
+保持逻辑尺寸；`draw_at()` 不应用两轴对齐，viewport scale 只应用一次。D6 其余作者能力/绑定/
+测量设计仍在后续 P4.1，见 [P4.1a 契约](authoring_dsl_and_content_measurement.md#16-p41a-文本盒内对齐契约2026-11-03首个实施子批)。
+
 2026-11-03 P3.3b2b 部分交付（experimental）：公开 scene/widget 签名未变。
 SDL 服务现在把 begin 请求的 text/password/email/number 与 multiline 映射到
 `SDL_StartTextInputWithProperties`；SDL host 默认声明 `SDL_IME_IMPLEMENTED_UI=composition`，

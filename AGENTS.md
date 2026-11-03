@@ -42,6 +42,10 @@ application shell. Version `0.1.0-alpha.1`.
   SDL purpose/multiline properties and composition UI hints, with Linux Wayland IME acceptance.
   X11 inline preedit/standalone Xorg, Windows and candidate placement acceptance remain;
   desktop soft keyboard/visibility/occlusion are unsupported. See the roadmap.
+- **P4.1a** (2026-11-03) adds Text/Label vertical alignment, constrained two-axis authoring
+  entries, paint-only style/cache behavior, viewport alignment/clip fixes, and Label page /
+  ComponentInfoTable resize regression coverage. Remaining D6 API/binding/measurement decisions
+  stay in P4.1; this does not close the remaining P3 platform acceptance items.
 - The plan and exit criteria are **not** owned by this file: read
   `docs/references/development_roadmap.md` and the D5 contract
   (`resource_build_and_deployment.md` §8) before claiming a sub-batch is complete.

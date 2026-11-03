@@ -27,7 +27,7 @@
 | D3 导航分组 | `type → nav_group`、空值未分组、同值全局合并已接受 | 未实施；[D3](reference_draft.md#d3-路由身份与导航分组开放到哪一层)，独立小批 |
 | D4 平台与后端 | SDL3 默认路径与 host seam 已落地，raylib 已完整退役 | **已收尾**：生产 SDF 在 Vulkan 与 Windows D3D12 通过设备级验收；[阶段证据](platform_backend_contract.md)。Windows 为实验性支持，macOS 不支持，Web 不是交付面 |
 | D5 资源构建与部署 | 范围与目标契约冻结 | **P2 已交付**：P2.1a/P2.1b/P2.2a–P2.2d/P2.3a–P2.4c；见[正式契约](resource_build_and_deployment.md) §8 与内部六批。示例应用已转入 notebook 改造（数据层先落地），服务/UI 与 showcase 组件由维护者手工编写 |
-| D6 作者 DSL 与内容测量 | 方向已接受；Label 能力、绑定覆盖、测量详细契约待审阅 | 未实施；[D6](authoring_dsl_and_content_measurement.md)，测量先于 Section/语法糖 |
+| D6 作者 DSL 与内容测量 | 方向已接受；P4.1a 盒内对齐已定形，其他 Label 能力、绑定覆盖、完整测量契约待审阅 | **P4.1a 已实施（2026-11-03）**：Text/Label 垂直对齐、两轴 builder、paint-only/缓存与 viewport 缩放回归；真实 Label 页/ComponentInfoTable resize 测试；后续仍见 [D6](authoring_dsl_and_content_measurement.md) |
 | D7 渲染质量与图片 | 混合修复 → SDF 高质量路径；共享解码；分层处理圆角裁剪 | 混合修复、生产 SDF（填充/描边/圆/线段/弧）与设备级/页面级验收（Linux golden）、共享图片解码已落地；阴影/裁剪已交付（SDF mode 3/4），MSL 未验收，raylib 已退役，Windows 页面 CPU 基线已批 3 条，Windows 页面基线 6 条已批准（CPU 3 + SDF 3，2026-10-22）；Windows 性能参考基线（CPU + SDF 路径）已归档；[D7](reference_draft.md#d7-渲染质量与后端视觉一致性) |
 | D8 键码与输入事件 | 框架拥有键身份；物理位置、逻辑含义与提交文本分开 | **P3.1a/b/c 均已实施（2026-10-29/31）**：事件快照、类型化逻辑/物理键与键生命周期、跨类型事件保序。见[路线图](development_roadmap.md#p3-输入与焦点当前阶段) 与 [D8](reference_draft.md#d8-键码与输入码空间) |
 | 依赖工程 | wrap-git；默认 vendored，system/auto 显式选择；功能与来源开关分离 | **已完成迁移**（§2.5–§2.7）：11 个依赖全部 wrap-git + 完整 commit pin（只剩字体包为 submodule、SQLite 仍为 amalgamation），SDL3 三态解析与 `deps.json`、pin/dirty 校验、SDK 依赖源码收集与裁剪、vendored 消费 fixture、CI 三条显式路径、`portable-bundle` 守卫、`header-surface` 门禁均已落地。**仍未完成**：OS 包层面的 DSO 打包（暂无应用安装路径）、内部类型进公开签名的评审项、后端拆库 |

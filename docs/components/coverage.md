@@ -8,7 +8,7 @@
 ## 现状
 
 - 公开组件：**37**（有 `ComponentTraits`、可供应用直接使用）
-- 已有使用文档：**20**（其中 `PointerArea` 与 `GestureArea` 共用一篇，实际文档文件 19 篇；`CommandPalette`、`HoverCard` 与 `AlertDialog` 的框架与符号表已核对、叙述正文待手写）
+- 已有使用文档：**21**（其中 `PointerArea` 与 `GestureArea` 共用一篇，实际文档文件 20 篇；`Label`、`CommandPalette`、`HoverCard` 与 `AlertDialog` 的框架与符号表已核对、叙述正文待手写）
 
 > 计数口径：`公开组件` 只统计 `nandina/widget/builtin_component_traits.hpp` 中有 `ComponentTraits`
 > 特化的类型，它与 `showcase/component_catalog.hpp` 的编译期目录一一对应（该目录带
@@ -52,7 +52,7 @@
 | `Badge` | — | 高 |
 | `Switch` | — | 高 |
 | `Checkbox` | — | 高 |
-| `Label` | — | 高 |
+| `Label` | 🟡 [label.md](label.md)（能力表与对齐规则已核对，正文待写） | 高 |
 | `Spinner` | ✅ [spinner.md](spinner.md) | 中 |
 | `Skeleton` | ✅ [skeleton.md](skeleton.md) | 中 |
 | `EmptyState` | ✅ [empty_state.md](empty_state.md) | 中 |

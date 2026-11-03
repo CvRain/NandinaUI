@@ -48,6 +48,13 @@ namespace nandina::text
         return 0.0F;
     }
 
+    /// Placement of the whole text block inside its assigned box; does not change shaping.
+    enum class TextVerticalAlign {
+        top,
+        center,
+        bottom,
+    };
+
     enum class TextOverflow {
         clip,
         ellipsis,
@@ -75,6 +82,8 @@ namespace nandina::text
         int max_lines = 1;
         /// 在给定宽度内的水平对齐；见 text_align_offset()。默认 `start`，与加入之前的行为一致。
         TextAlign align = TextAlign::start;
+        /// Vertical placement of the natural text block; insufficient space keeps the top visible.
+        TextVerticalAlign vertical_align = TextVerticalAlign::top;
 
         /// 逐字段比较（浮点按 `nan_epsilon` 容差，颜色按 `NanColor::approx_equals`）。
         ///

@@ -925,3 +925,31 @@ TEST_CASE("grid with cross_alignment lays out children correctly", "[authoring][
         left_label->global_bounds().get_y() == Catch::Approx(right_label->global_bounds().get_y())
     );
 }
+
+namespace
+{
+    template<typename T>
+    concept TextBoxBuilder = requires(T& builder) {
+        builder.text_align(theme::TextAlign::end);
+        builder.text_vertical_align(text::TextVerticalAlign::bottom);
+    };
+    static_assert(TextBoxBuilder<widget::authoring::NodeBuilder<widget::Label>>);
+    static_assert(TextBoxBuilder<widget::authoring::NodeBuilder<widget::primitives::Text>>);
+    static_assert(!TextBoxBuilder<widget::authoring::NodeBuilder<widget::Button>>);
+    static_assert(!TextBoxBuilder<widget::authoring::NodeBuilder<widget::Column>>);
+} // namespace
+
+TEST_CASE("Label builder exposes both text alignment axes", "[authoring][text-box]") {
+    reactive::Graph graph;
+    reactive::ReactiveScope scope(graph);
+    theme::ThemeManager themes;
+    widget::BuildContext ui(graph, scope, themes);
+    const auto label = ui.make<widget::Label>("Aligned")
+                           .text_align(theme::TextAlign::end)
+                           .text_vertical_align(text::TextVerticalAlign::bottom)
+                           .height(60)
+                           .build();
+    CHECK(label->align() == theme::TextAlign::end);
+    CHECK(label->vertical_align() == text::TextVerticalAlign::bottom);
+    CHECK(label->style().vertical_align == text::TextVerticalAlign::bottom);
+}

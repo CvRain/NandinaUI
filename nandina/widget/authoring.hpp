@@ -12,6 +12,7 @@
 #include "../scene/anchor_canvas.hpp"
 #include "../scene/control.hpp"
 #include "../scene/node_ref.hpp"
+#include "../text/text_layout.hpp"
 #include "../theme/nan_style.hpp"
 #include "../theme/theme.hpp"
 #include "../theme/visual_state.hpp"
@@ -484,6 +485,21 @@ namespace nandina::widget::authoring
             requires requires(Node& node) { node.set_color_token(token); }
         {
             node_->set_color_token(token);
+            return *this;
+        }
+
+        /// Placement inside the assigned text box. Composite labels use their recipe API.
+        auto text_align(theme::TextAlign align) -> NodeBuilder&
+            requires requires(Node& node) { node.set_align(align); }
+        {
+            node_->set_align(align);
+            return *this;
+        }
+
+        auto text_vertical_align(text::TextVerticalAlign align) -> NodeBuilder&
+            requires requires(Node& node) { node.set_vertical_align(align); }
+        {
+            node_->set_vertical_align(align);
             return *this;
         }
 

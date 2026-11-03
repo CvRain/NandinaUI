@@ -13,6 +13,24 @@
 
 namespace nandina::widget::primitives
 {
+    namespace
+    {
+        /// 记忆化键的样式比较：只比**影响排版**的字段，并且用精确相等（不是
+        /// `TextStyle::approx_equals` 的容差比较）—— 缓存命中必须意味着结果一定相同。
+        [[nodiscard]] auto
+        same_layout_style(const text::TextStyle& left, const text::TextStyle& right) -> bool {
+            return left.font_size == right.font_size && left.font == right.font
+                && left.overflow == right.overflow && left.max_lines == right.max_lines;
+        }
+
+        [[nodiscard]] auto same_layout_constraints(
+            const foundation::NanLayoutConstraints& left,
+            const foundation::NanLayoutConstraints& right
+        ) -> bool {
+            return left.min_width == right.min_width && left.max_width == right.max_width
+                && left.min_height == right.min_height && left.max_height == right.max_height;
+        }
+    } // namespace
 
     void TextColorProperty::set(foundation::NanColor color) {
         text_->set_color(std::move(color));
@@ -92,6 +110,7 @@ namespace nandina::widget::primitives
         if (style.font.weight < 1 || style.font.weight > 1000) {
             throw std::invalid_argument("Text font weight must be between 1 and 1000");
         }
+        const bool metrics_changed = !same_layout_style(style_, style);
         const bool font_changed = style_.font != style.font;
         style_ = style;
         color_presentation_.set(style_.color);
@@ -102,8 +121,15 @@ namespace nandina::widget::primitives
         if (font_changed) {
             resolve_font();
         }
-        mark_layout_dirty();
-        update_metrics(last_layout_constraints());
+        if (metrics_changed) {
+            mark_layout_dirty();
+            update_metrics(last_layout_constraints());
+        }
+        else {
+            // A full style snapshot still declares explicit overrides, but changing only
+            // paint fields must not discard the assigned size or reshape the text.
+            mark_dirty(scene::DirtyFlags::paint);
+        }
     }
 
     auto Text::style() const -> const text::TextStyle& {
@@ -323,23 +349,62 @@ namespace nandina::widget::primitives
         return style_.align;
     }
 
+    void Text::set_vertical_align(const text::TextVerticalAlign align) {
+        if (style_.vertical_align == align) {
+            return;
+        }
+        style_.vertical_align = align;
+        mark_dirty(scene::DirtyFlags::paint);
+    }
+
+    auto Text::vertical_align() const -> text::TextVerticalAlign {
+        return style_.vertical_align;
+    }
+
     void Text::draw_at(render::DrawContext& ctx, foundation::NanPoint position) {
-        // 没有目标盒子就谈不上对齐：用文本自身的测量尺寸当盒子，
-        // 于是 start / center / end 的结果完全一致（见 text::text_align_offset 的定义域说明）。
-        draw_in(ctx, foundation::NanRect::from_origin_size(position, layout_.size));
+        // 无指派盒子时不施加对齐，包括多行中较短的行；仍用自然文本范围裁剪。
+        draw_text_box(
+            ctx,
+            foundation::NanRect::from_xywh(
+                position.get_x(),
+                position.get_y(),
+                ctx.logical_to_screen(measured_text_width()),
+                ctx.logical_to_screen(measured_text_height())
+            ),
+            false
+        );
     }
 
     void Text::draw_in(render::DrawContext& ctx, foundation::NanRect rect) {
+        draw_text_box(ctx, rect, true);
+    }
+
+    void Text::draw_text_box(
+        render::DrawContext& ctx,
+        const foundation::NanRect rect,
+        const bool align_to_box
+    ) {
         const auto& color = *color_presentation_.value();
         if (layout_.lines.empty() || color.alpha() <= 0.0F) {
             return;
         }
 
-        // 行起点在这里算：整形后端不知道盒子，对齐是绘制期的布局策略。
+        // The assigned rect is already in screen units. Shaped metrics/origin_x stay
+        // logical; convert the available box once, then scale only at the draw boundary.
+        const float scale = ctx.scale().logical_to_screen;
         for (auto& line: layout_.lines) {
-            line.origin_x =
-                text::text_align_offset(style_.align, rect.get_width(), line.size.get_width());
+            line.origin_x = text::text_align_offset(
+                align_to_box ? style_.align : theme::TextAlign::start,
+                rect.get_width() / scale,
+                line.size.get_width()
+            );
         }
+        const float vertical_slack =
+            std::max(0.0F, rect.get_height() - ctx.logical_to_screen(measured_text_height()));
+        const float offset_y = !align_to_box                           ? 0.0F
+            : style_.vertical_align == text::TextVerticalAlign::center ? vertical_slack * 0.5F
+            : style_.vertical_align == text::TextVerticalAlign::bottom ? vertical_slack
+                                                                       : 0.0F;
 
         auto clip = style_.overflow == text::TextOverflow::clip
             ? ctx.clip().push(
@@ -348,16 +413,17 @@ namespace nandina::widget::primitives
                       rect.get_top(),
                       // 测量 advance 之外允许字形墨迹悬垂 1~2px，否则最后一个字形的
                       // 右侧墨迹会被裁掉（见 text::glyph_overhang_allowance）。
-                      ctx.logical_to_screen(
-                          rect.get_width() + text::glyph_overhang_allowance(layout_.font_size)
-                      ),
-                      ctx.logical_to_screen(rect.get_height())
+                      rect.get_width()
+                          + ctx.logical_to_screen(
+                              text::glyph_overhang_allowance(layout_.font_size)
+                          ),
+                      rect.get_height()
                   )
               )
             : render::ClipStack::Guard {nullptr, false};
 
         const auto draw_color = color.with_alpha(color.alpha() * ctx.opacity());
-        const auto position = rect.get_top_left();
+        const auto position = foundation::NanPoint(rect.get_left(), rect.get_top() + offset_y);
         if (renderer_ != nullptr) {
             renderer_->draw(layout_, ctx, position, draw_color);
             return;
@@ -418,26 +484,6 @@ namespace nandina::widget::primitives
         font_size_presentation_.set(size);
         update_metrics(last_layout_constraints());
     }
-
-    namespace
-    {
-        /// 记忆化键的样式比较：只比**影响排版**的字段，并且用精确相等（不是
-        /// `TextStyle::approx_equals` 的容差比较）—— 缓存命中必须意味着结果一定相同。
-        [[nodiscard]] auto
-        same_layout_style(const text::TextStyle& left, const text::TextStyle& right) -> bool {
-            return left.font_size == right.font_size && left.font == right.font
-                && left.overflow == right.overflow && left.max_lines == right.max_lines
-                && left.align == right.align;
-        }
-
-        [[nodiscard]] auto same_layout_constraints(
-            const foundation::NanLayoutConstraints& left,
-            const foundation::NanLayoutConstraints& right
-        ) -> bool {
-            return left.min_width == right.min_width && left.max_width == right.max_width
-                && left.min_height == right.min_height && left.max_height == right.max_height;
-        }
-    } // namespace
 
     auto Text::find_metrics_cache(const text::TextLayoutInput& input) const
         -> const text::TextLayoutResult* {

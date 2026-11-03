@@ -1,7 +1,7 @@
 # 作者 DSL、文本能力与内容测量
 
-> 状态：**D6 讨论已汇总，设计方向已接受，详细 API 与测量契约待审阅；未实施。**
-> 本文是设计输入，不是当前用法文档。示例中的新入口均为提案，不能当作可编译 API。
+> 状态：**D6 设计方向已接受；P4.1a 盒内对齐子批定形见 §16，其余详细 API 与测量契约仍待审阅。**
+> §§1–15 保留设计输入；其中示例的新入口仍是提案，不能当作可编译 API。§16 单独记录已定形对齐入口。
 > 现有接口与已知边界以源码和组件文档为准。本设计不要求长期兼容旧 DSL；改变公共接口时，
 > 库内示例、测试和使用文档应同步迁移。
 >
@@ -377,3 +377,44 @@ QML Text / Controls Label 的属性页说明了成熟文本控件通常包含哪
 逻辑测试覆盖有限/无界约束与布局缓存；离屏渲染检查实际 clip/overflow；最后由作者在 showcase
 实机窗口检查排版节奏和手感。测试文件和 suite 仍按
 [开发流程](development_loop.md) 注册，并遵守“先冻结改动再全量验证”。
+
+## 16. P4.1a 文本盒内对齐契约（2026-11-03，首个实施子批）
+
+本子批冻结对齐 API 与绘制/缓存边界；D6 其余能力表、绑定替代、逐字段 reset 与溢出拆分仍按
+§14 单独定形，不把 P4.1 整批标为已完成。Label 页与 ComponentInfoTable 保留维护者正文，
+本轮通过它们现有的构建、窄宽度布局与页面采样验收默认行为。
+
+- 新增 `text::TextVerticalAlign { top, center, bottom }`，`TextStyle::vertical_align` 默认 top；
+  `Text::set_vertical_align()` / `vertical_align()` 为直接入口，Label 继承同一实现。
+  水平沿用 `set_align(theme::TextAlign)`，不增加第二套对齐状态。
+- `NodeBuilder::text_align()` 与 `text_vertical_align()` 只要求目标具备对应 setter；
+  Label/Text 可用，Button 等复合组件继续经现有配方入口 `label_align()`，不暴露内部文本。
+- 垂直对齐按**整个已排版文本块**的自然高度计算余量；center 偏移余量的一半，bottom 偏移
+  全部余量。盒子不够高时偏移 0，保持首行可见。多行行距/baseline/caret_stops 不改变；
+  编辑原语 `draw_at()` 无指派盒子，不施加两轴对齐，TextField/TextArea 的坐标映射保持原契约。
+- `draw_in()` 接收与 DrawContext 相同的 screen-space 盒子；文字布局/行起点保持逻辑单位，
+  只有绘制出口应用 logical_to_screen 一次。clip 保持指派盒子，仅右侧加既有 glyph overhang；
+  不把 DPI 的 screen_to_physical 混入对齐。`draw_at()` 先把自然尺寸映射到 screen-space 再绘制。
+- setter 等值调用不标脏；改变两轴对齐只标 paint，不触发 measure/layout/semantics 或整形。
+  两轴对齐和颜色均排除在 metrics cache 的排版键外。`TextStyle::approx_equals` 仍比较它们，
+  以让组件样式更新能发现视觉变化；`set_style` 仅改变这些字段时同样只标 paint。
+  完整 style 替换仍按当前约定将 color/font_size/font 标记为显式，不改变覆盖/绑定语义。
+- 有限宽度的自然行高仍源自布局结果；本批回归 resize 后 Label/Column/Card/ScrollView
+  的行数、内容高与滚动范围、默认对齐下真实 Label 页/ComponentInfoTable 的收敛。
+  不新增 Section/Surface、不重写绑定语义，不修改已批准 golden。
+
+实施回归记录：`widget` 的 `[text-box]` 为 9 用例/154 断言，作者入口 1 用例/3 断言，
+真实 Label 页/ComponentInfoTable 2 用例/29 断言。六项逐一故障注入：移除垂直偏移（12 断言
+失败）、重复 viewport 水平缩放（5）、重复 clip 高度缩放（4）、将水平对齐写回 metrics key
+（5）、强制纯 paint style 标 layout（2）、恢复 draw_at 行对齐（2），均退出 42；恢复后通过。
+补充真实 deterministic backend 的 tight(200×80) 回归：10px 字号自然行高为 12px，center
+应偏移 34px；使用被约束的 layout.size 高度时实际为 0（红测），改用共享自然行高查询后通过。
+该后端边界同时适用于 HarfBuzz 单行结果，不能用 stub 的 unconstrained size 代替生产契约。
+
+最终验证（2026-11-03，包含 tight box 自然行高修复）：Linux 主套件 **112/112**；
+ASan/UBSan unit **89 通过 + window-lifecycle SKIP**（`LSAN_OPTIONS=detect_leaks=0`）；
+no-RTTI unit **91/91**；无 SQLite/headless unit **86 通过 + 1 SKIP**；纯工具 **8/8**；
+发布门禁 **8/8，0 SKIP**，使用固定 clang-format 23.1.1。
+Linux home/label/anchors 的 CPU/SDF 六张页面 golden 与各自批准基线逐像素一致，
+三页两条路径的图元名称序列一致。日志保存在未跟踪的 `playground/p41_verification/`；
+本轮没有 Windows 验证，也没有修改批准基线或维护者的 Showcase 正文。

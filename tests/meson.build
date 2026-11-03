@@ -54,6 +54,14 @@ anchors_showcase_tests = executable(
 )
 test('anchors-showcase', anchors_showcase_tests, suite: 'unit')
 
+label_showcase_tests = executable(
+    'label_showcase_tests',
+    files('label_showcase_tests.cpp', '../showcase/pages/label_page.cpp',
+          '../showcase/components/component_info_table.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('label-showcase', label_showcase_tests, suite: 'unit')
+
 text_layout_header_tests = executable(
     'text_layout_header_tests',
     files('text_layout_header_tests.cpp'),
