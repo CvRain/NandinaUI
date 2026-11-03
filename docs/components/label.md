@@ -48,10 +48,10 @@
 | 项目 | 已核对规则（P4.1 第二子批） |
 | --- | --- |
 | 绑定 | `bind_text(source)` 立即更新；新源替代旧源 |
-| 页面绑定 | `bind_text(scope, source)`、`ui.make<Label>(source)`、`ui.bind(label, &Label::set_text, source)` |
+| 页面绑定 | `bind_text(scope, source)`、`ui.make<Label>(source)`、`ui.bind(label, &Label::set_text, source)`；页面所有源优先用这些入口，直接 `bind_text(source)` 使用控件作用域 |
 | 解绑 | `unbind_text()`、builder `.unbind_text()` 保留最后值；`text_is_bound()` 查询 |
 | 直接写入 | `set_text()`、Property.set、builder `.text()` 都先解绑；同值不额外 changed |
-| 生命周期 | 退出树或页面 scope 清理后无旧写入；重挂载不自动重新 bind |
+| 生命周期 | 退出树或页面 scope 清理后无旧写入；重挂载不自动重新 bind；直接 `bind_text(source)` 的 source 必须活到解绑/控件销毁 |
 | 输出 | `line_count()` / `overflowed()` 来自当前布局结果，不另外存状态 |
 
 ## 验证与边界

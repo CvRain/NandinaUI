@@ -440,8 +440,9 @@ Linux home/label/anchors 的 CPU/SDF 六张页面 golden 与各自批准基线�
   `text_is_bound()` 转发同一文本 Property，退出树一律解绑，无挂起绑定在重挂载时复活。
   page scope 清理使页面绑定立即失效，控件单独保留也不会访问已释放的 signal/computed。
 - `ui.make<Label>(source)`、`ui.bind(label, &Label::set_text, source)` 与 builder
-  `.bind_text(source)` 使用同一作用域绑定；泛型 BuildContext 按目标的 scoped bind_text
-  能力识别普通文本 setter，不改变其他组件/任意 setter 的 effect 语义。
+  `.bind_text(source)` 使用同一作用域绑定；BuildContext 仅对精确的 `&Label::set_text`
+  走 managed 分支。通过基类 `&Text::set_text`、包装 lambda 或其他组件的 setter 绑定仍是
+  原 effect 语义，不会自动获得直接写入解绑。
   builder `.text(string)` 和 `.unbind_text()` 为直接写入/解绑。纯 authoring::make 的
   `.bind_text()` 使用 Label 的控件作用域；绑定于页面时使用已注入的页面 scope。
 - 常用 builder：`.font(FontRequest)`、`.font_family(ResourceKey)`、`.font_weight(int)`、

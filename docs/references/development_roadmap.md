@@ -100,7 +100,7 @@
 ## 4. 建议的近期切入顺序
 
 1. **P3.1a 事件快照**：先修每事件坐标/修饰键被帧级状态覆盖；本批不扩展键身份、跨类型顺序、焦点策略或 IME。
-2. **D1 与 P4（已确认顺序）**：P3.3b2a caret 输入区域 → P3.3b2b 真实 IME/软键盘/遮挡验收 → P4.1 Label 垂直对齐（并入 D6 首批）→ P4.1b Surface/Card inset 与 Image cover 裁剪锚点 → P4.3 作者颜色入口。P3.3b1 已把预编辑与密码用途合并交付，P3.3b2a 已接通 caret 窗口坐标与 SDL input_area；P3.3b2b 已接通 SDL 属性并完成部分 Linux 实机检查，下一步补齐 X11 inline preedit/Windows 与候选窗位置验收。
+2. **D1 与 P4（已确认顺序）**：P3.3b2a caret 输入区域 → P3.3b2b 真实 IME/软键盘/遮挡验收 → P4.1 Label 垂直对齐（并入 D6 首批）→ P4.1b Surface/Card inset 与 Image cover 裁剪锚点 → P4.3 作者颜色入口。P3.3b1 已把预编辑与密码用途合并交付，P3.3b2a 已接通 caret 窗口坐标与 SDL input_area；P3.3b2b 已接通 SDL 属性并完成部分 Linux 实机检查，下一步补齐 X11 inline preedit/Windows 与候选窗位置验收。P4.1a 与 P4.1 文本作者/绑定子批已交付，P4.1b 可接续推进，P4.1 的样式 reset/完整作者体验仍单独保留。
 3. **保留的 P1 边界**：退役后的 Windows 静态构建/窗口生命周期复验、P1.6 完整 Image 页面端到端采样仍分别记录；不把它们混同于已交付的 Windows golden 与参考性能基线。
 4. **已交付记录**：P1.2 Windows CPU/SDF 共 6 条 approved、P1.3 Windows 参考性能基线、P1.5b 阴影/圆角裁剪及 P2 应用闭环均已归档；P1.4 归 NandinaCLI。
 
