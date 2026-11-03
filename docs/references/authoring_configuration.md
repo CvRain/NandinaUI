@@ -148,3 +148,13 @@ struct HandlerDispatch {
 D6 将重新审阅批量样式替换、字段级实例覆盖、主题派生值和响应式绑定的覆盖规则。目标是不同意图由
 不同、可发现的 API 表达，单字段覆盖不意外冻结其他字段，并能明确恢复主题值。详细能力表与待决项见
 [作者 DSL、文本能力与内容测量](authoring_dsl_and_content_measurement.md) §2.1、§3.3、§14。
+
+## P4.1 Label 文本写入与绑定（2026-11-03）
+
+Label 的 `text_property()` 是统一写入点。`set_text()` 或直接 Property.set（含同值）解除
+旧绑定；`bind_text()` 替换源并立即生效，`unbind_text()` 保留值，`text_is_bound()` 查询状态。
+BuildContext 的 Label source 工厂和普通文本 setter 绑定复用同一机制；页面清理或控件退出树
+会使 callback 失效，重新挂载不会复活旧绑定。源求值中的重入直接写入也优先于旧 effect。
+字体/溢出/最大行数有受约束 builder 入口；并不改变 set_style 的完整显式覆盖规则。
+其他组件字段与 typed visual bindings 仍按原作用域 effect 工作，不能从 Label 推断全框架
+setter 已有自动解绑。正式边界见 D6 §17，样式 reset 仍是后续决定。

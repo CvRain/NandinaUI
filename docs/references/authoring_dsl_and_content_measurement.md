@@ -1,7 +1,7 @@
 # 作者 DSL、文本能力与内容测量
 
-> 状态：**D6 设计方向已接受；P4.1a 盒内对齐子批定形见 §16，其余详细 API 与测量契约仍待审阅。**
-> §§1–15 保留设计输入；其中示例的新入口仍是提案，不能当作可编译 API。§16 单独记录已定形对齐入口。
+> 状态：**D6 设计方向已接受；盒内对齐与文本作者/绑定子批已定形（§§16–17），其余详细 API 与测量契约仍待审阅。**
+> §§1–15 保留设计输入；其中示例的新入口仍是提案，不能当作可编译 API。§§16–17 单独记录已定形入口。
 > 现有接口与已知边界以源码和组件文档为准。本设计不要求长期兼容旧 DSL；改变公共接口时，
 > 库内示例、测试和使用文档应同步迁移。
 >
@@ -422,3 +422,55 @@ no-RTTI unit **91/91**；无 SQLite/headless unit **86 通过 + 1 SKIP**；纯�
 Linux home/label/anchors 的 CPU/SDF 六张页面 golden 与各自批准基线逐像素一致，
 三页两条路径的图元名称序列一致。日志保存在未跟踪的 `playground/p41_verification/`；
 本轮没有 Windows 验证，也没有修改批准基线或维护者的 Showcase 正文。
+
+## 17. P4.1 文本作者入口与绑定替代契约（2026-11-03，第二个实施子批）
+
+本批冻结 Label 的文本绑定替代、常用字体/溢出入口和只读布局结果；不占用 P4.1b 的 Surface
+编号。P4.1 剩余逐字段样式 reset、wrap/overflow 拆分及完整作者体验验收仍独立保留。
+
+- `reactive::Property<T>` 的绑定为单源：`bind(scope, source)` 替换旧源并立即读取当前值；
+  `set(value)` 先解绑，即使 value 相等也解绑但不发 changed；`unbind()` 保留最后值，
+  `is_bound()` 查询当前有效绑定。绑定内写入走内部赋值，不触发解绑。
+  同时支持 EffectScope 与 ReactiveScope。scope 清理后查询为未绑定；目标销毁或绑定被替代后
+  迟到 effect 不得读取源或写入目标。取消只失效绑定令牌，effect 由原 scope 清理，不在自身回调
+  中销毁正在执行的 effect。source 仍须活到作用域清理/解绑，不新增全局 source 所有权。
+- Text 的 `text_property()` 与 `set_text()` 共用这一状态；生产 Property 目前只被 Text 使用。
+  Label 的 `bind_text(source)` 立即生效，由控件自己的 EffectScope 托管；新增
+  `bind_text(ReactiveScope&, source)` 供 BuildContext 使用。`unbind_text()` /
+  `text_is_bound()` 转发同一文本 Property，退出树一律解绑，无挂起绑定在重挂载时复活。
+  page scope 清理使页面绑定立即失效，控件单独保留也不会访问已释放的 signal/computed。
+- `ui.make<Label>(source)`、`ui.bind(label, &Label::set_text, source)` 与 builder
+  `.bind_text(source)` 使用同一作用域绑定；泛型 BuildContext 按目标的 scoped bind_text
+  能力识别普通文本 setter，不改变其他组件/任意 setter 的 effect 语义。
+  builder `.text(string)` 和 `.unbind_text()` 为直接写入/解绑。纯 authoring::make 的
+  `.bind_text()` 使用 Label 的控件作用域；绑定于页面时使用已注入的页面 scope。
+- 常用 builder：`.font(FontRequest)`、`.font_family(ResourceKey)`、`.font_weight(int)`、
+  `.font_slant(FontSlant)`、`.text_overflow(TextOverflow)`、`.max_lines(int)`，均按 setter
+  能力约束。既有字号/颜色 token/两轴对齐入口保留；不承诺新字体后端特性或分离换行策略。
+- Text/Label 新增 `line_count()` / `overflowed()`，直接查询当前 TextLayoutResult，不另存
+  行数/截断事实；未规定作者调用前自动执行完整父布局。颜色/对齐仍 paint-only，文本/字体/
+  宽度变化按已有测量契约更新。`set_style()` 的显式覆盖语义保持 P4.1a 的定义。
+- SDK 行为变化为 experimental：原 Property.bind 的直接 set 不解绑、原 Label.bind_text
+  等到首次挂载才生效的行为退出；需要动态文本的调用方应显式重新 bind。源更新的 effect
+  不再通过公开 setter，避免清掉自己。组件文档正文与 Showcase 继续由维护者手写，
+  本批只补核对表和已有真实页面验收，不重写示例。
+
+本批专项回归：reactive `[replacement]` **7 用例/37 断言**，widget `[author-contract]`
+**4 用例/25 断言**，authoring `[label-contract]` **5 用例/28 断言**，真实 Label 页的两项
+resize/metadata 测试保持通过。覆盖同值解绑、显式解绑、新源替代、延迟 effect 的源读取守卫、
+目标先销毁、scope 代际、初始化源异常、回调/源读取重入替代、跨作用域替代、原始 authoring
+入口、页面源销毁以及 BuildContext 空目标的原有 no-op。
+
+红测证据：去掉直接写入解绑（3 断言失败）、去掉读取前身份检查（1）、旁路页面 managed
+入口（2）、去掉 Label 退出树解绑（1）、遗漏 font-only context 失效（1），各退出 42；
+恢复后通过。另有独立红测：字体 setter 对注入 backend 不失效（1）、源求值期间旧写入覆盖
+新值（1）、新 managed 分支没有保留空目标 no-op（SIGSEGV，退出 139），均已修复并转绿。
+后两项读取守卫在 source.get 前后都检查目标寿命/绑定身份；静态文本未安装绑定时不分配
+寿命令牌。取消的 effect 仍由其原 scope 回收，不为支持重入而提前释放正在执行的函数对象。
+
+最终验证（2026-11-03）：Linux 主套件 **112/112**；ASan/UBSan unit **89 通过 +
+window-lifecycle SKIP**（`LSAN_OPTIONS=detect_leaks=0`）；no-RTTI unit **91/91**；
+无 SQLite/headless unit **86 通过 + 1 SKIP**；纯工具 **8/8**；发布门禁 **8/8，0 SKIP**，
+使用 clang-format 23.1.1。home/label/anchors 的 CPU/SDF 六张页面 golden 与各自批准基线
+逐像素一致，三页图元名称序列一致。日志位于未跟踪的
+`playground/p41_authoring_verification/`；本轮未执行 Windows 验证，未改批准基线或 Showcase 正文。

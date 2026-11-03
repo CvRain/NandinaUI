@@ -13,7 +13,6 @@
 #include "primitives/text.hpp"
 
 #include <concepts>
-#include <functional>
 #include <memory>
 #include <string>
 
@@ -37,31 +36,36 @@ namespace nandina::widget
         void set_color_token(theme::ColorToken token);
         [[nodiscard]] auto color_token() const noexcept -> theme::ColorToken;
 
+        /// Bind immediately. The source must outlive this binding; tree exit unbinds it.
         template<typename Source>
             requires requires(Source& source) {
                 { source.get() } -> std::convertible_to<const std::string&>;
             }
         void bind_text(Source& source) {
-            binding_ = [&source](reactive::EffectScope& scope, primitives::Text& text) {
-                text.text_property().bind(scope, source);
-            };
-            if (is_inside_tree()) {
-                activate_binding();
-            }
+            text_property().bind(scope_, source);
         }
 
+        /// Page-owned binding: scope clear also stops updates to a retained Label.
+        template<typename Source>
+            requires requires(Source& source) {
+                { source.get() } -> std::convertible_to<const std::string&>;
+            }
+        void bind_text(reactive::ReactiveScope& scope, Source& source) {
+            text_property().bind(scope, source);
+        }
+
+        void unbind_text() noexcept;
+        [[nodiscard]] auto text_is_bound() const noexcept -> bool;
+
     protected:
-        void on_ready() override;
         void on_exit_tree() override;
         void on_style_context_changed(const theme::ResolvedStyleContext& context) override;
         void on_theme_changed(const theme::ThemeManager& manager) override;
 
     private:
-        void activate_binding();
         void apply_color_token();
 
         reactive::EffectScope scope_;
-        std::function<void(reactive::EffectScope&, primitives::Text&)> binding_;
         theme::NanTheme theme_;
         theme::ColorToken color_token_ = theme::ColorToken::on_surface;
     };

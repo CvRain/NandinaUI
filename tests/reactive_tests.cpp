@@ -7,6 +7,7 @@
 
 #include <nandina/reactive/reactive.hpp>
 
+#include <memory>
 #include <stdexcept>
 
 using namespace nandina::reactive;
@@ -646,4 +647,180 @@ TEST_CASE("creating an effect keeps deferred pending effects queued", "[reactive
     }
     REQUIRE(other == 7);
     REQUIRE(observed == 7);
+}
+
+TEST_CASE(
+    "Property direct writes replace bindings even when equal",
+    "[reactive][property][replacement]"
+) {
+    Graph graph;
+    EffectScope scope(graph);
+    Signal<int> source(graph, 2);
+    Property<int> property(0);
+    int changes = 0;
+    auto watch = property.changed().subscribe([&](const int&) { ++changes; });
+    property.bind(scope, source);
+    REQUIRE(property.is_bound());
+    REQUIRE(property.as_readonly().is_bound());
+    REQUIRE(property.get() == 2);
+    REQUIRE(changes == 1);
+    REQUIRE_FALSE(property.set(2));
+    REQUIRE_FALSE(property.is_bound());
+    source.set(3);
+    REQUIRE(property.get() == 2);
+    REQUIRE(changes == 1);
+    property.bind(scope, source);
+    REQUIRE(property.get() == 3);
+    property.unbind();
+    source.set(4);
+    REQUIRE(property.get() == 3);
+    REQUIRE_FALSE(property.is_bound());
+}
+
+TEST_CASE(
+    "Property replacement guards queued effects before reading sources",
+    "[reactive][property][replacement]"
+) {
+    Graph graph;
+    EffectScope scope(graph);
+    Signal<int> first(graph, 1), second(graph, 10);
+    struct Source {
+        Signal<int>& signal;
+        int reads = 0;
+        auto get() -> const int& {
+            ++reads;
+            return signal.get();
+        }
+    } old {first}, current {second};
+    Property<int> property(0);
+    property.bind(scope, old);
+    const auto old_reads = old.reads;
+    auto deferred = graph.defer_effects();
+    first.set(2);
+    property.bind(scope, current);
+    deferred.commit();
+    REQUIRE(property.get() == 10);
+    REQUIRE(old.reads == old_reads);
+    second.set(20);
+    REQUIRE(property.get() == 20);
+    scope.clear();
+    REQUIRE_FALSE(property.is_bound());
+    second.set(30);
+    REQUIRE(property.get() == 20);
+}
+
+TEST_CASE(
+    "Property target destruction and scope generations stop bound callbacks",
+    "[reactive][property][replacement]"
+) {
+    Graph graph;
+    ReactiveScope scope(graph);
+    auto& source = scope.signal_value(1);
+    auto property = std::make_unique<Property<int>>(0);
+    property->bind(scope, source);
+    REQUIRE(property->get() == 1);
+    auto deferred = graph.defer_effects();
+    source.set(2);
+    property.reset();
+    REQUIRE_NOTHROW(deferred.commit());
+    Property<int> retained(0);
+    retained.bind(scope, source);
+    REQUIRE(retained.is_bound());
+    scope.clear(); // owns and destroys source after the effect
+    REQUIRE_FALSE(retained.is_bound());
+    auto& next = scope.signal_value(7);
+    retained.bind(scope, next);
+    REQUIRE(retained.get() == 7);
+    REQUIRE(retained.is_bound());
+}
+
+TEST_CASE(
+    "Property binding callbacks may directly replace their own write",
+    "[reactive][property][replacement]"
+) {
+    Graph graph;
+    EffectScope scope(graph);
+    Signal<int> source(graph, 1);
+    Property<int> property(0);
+    auto watch = property.changed().subscribe([&](const int& value) {
+        if (value == 2)
+            property.set(99);
+    });
+    property.bind(scope, source);
+    source.set(2);
+    REQUIRE(property.get() == 99);
+    REQUIRE_FALSE(property.is_bound());
+    source.set(3);
+    REQUIRE(property.get() == 99);
+}
+
+TEST_CASE(
+    "Property failed initial bindings leave their last value unbound",
+    "[reactive][property][replacement]"
+) {
+    Graph graph;
+    EffectScope scope(graph);
+    Signal<int> source(graph, 1);
+    Property<int> property(0);
+    property.bind(scope, source);
+    struct Broken {
+        auto get() -> const int& {
+            throw std::runtime_error("source failure");
+        }
+    } broken;
+    REQUIRE_THROWS_AS(property.bind(scope, broken), std::runtime_error);
+    REQUIRE_FALSE(property.is_bound());
+    source.set(2);
+    REQUIRE(property.get() == 1);
+    REQUIRE_FALSE(graph.has_pending_effects());
+    property.bind(scope, source);
+    REQUIRE(property.get() == 2);
+    REQUIRE(property.is_bound());
+}
+
+TEST_CASE(
+    "Property rechecks binding identity after evaluating a source",
+    "[reactive][property][replacement]"
+) {
+    Graph graph;
+    EffectScope scope(graph);
+    Signal<int> signal(graph, 1);
+    Property<int> property(0);
+    struct Source {
+        Signal<int>& signal;
+        Property<int>& property;
+        bool replace = false;
+        auto get() -> const int& {
+            const auto& value = signal.get();
+            if (replace) {
+                replace = false;
+                property.set(99);
+            }
+            return value;
+        }
+    } source {signal, property};
+    property.bind(scope, source);
+    source.replace = true;
+    signal.set(2);
+    REQUIRE(property.get() == 99);
+    REQUIRE_FALSE(property.is_bound());
+}
+
+TEST_CASE(
+    "clearing an old Property scope does not cancel the replacement scope",
+    "[reactive][property][replacement]"
+) {
+    Graph graph;
+    EffectScope first_scope(graph), second_scope(graph);
+    Signal<int> first(graph, 1), second(graph, 2);
+    Property<int> property(0);
+    property.bind(first_scope, first);
+    property.bind(second_scope, second);
+    first_scope.clear();
+    REQUIRE(property.is_bound());
+    second.set(3);
+    REQUIRE(property.get() == 3);
+    second_scope.clear();
+    REQUIRE_FALSE(property.is_bound());
+    REQUIRE(property.get() == 3);
 }

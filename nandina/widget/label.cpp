@@ -37,21 +37,17 @@ namespace nandina::widget
         return color_token_;
     }
 
-    void Label::activate_binding() {
-        scope_.clear();
-        if (binding_) {
-            binding_(scope_, *this);
-        }
+    void Label::unbind_text() noexcept {
+        text_property().unbind();
     }
 
-    void Label::on_ready() {
-        primitives::Text::on_ready();
-        activate_binding();
+    auto Label::text_is_bound() const noexcept -> bool {
+        return text_property().is_bound();
     }
 
     void Label::on_exit_tree() {
+        unbind_text();
         scope_.clear();
-        binding_ = {};
         primitives::Text::on_exit_tree();
     }
 

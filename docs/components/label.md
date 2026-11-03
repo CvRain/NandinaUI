@@ -17,14 +17,14 @@
 
 | 能力 | 当前入口 | 行为 |
 | --- | --- | --- |
-| 文本 | `set_text()` / `text()`、`bind_text(source)` | 文本变化更新测量、绘制与语义；source 的生命周期必须覆盖绑定 |
-| 字体 | `set_font()`、`set_font_family/weight/slant()` | 使用 framework FontRequest；改变字体重新解析、测量 |
+| 文本 | `set_text()` / `text()`、`bind_text(source)`、builder `.text()` / `.bind_text()` | 直接写入解除旧绑定（同值也解除）；重新绑定替代旧源；source 活到解绑/作用域清理 |
+| 字体 | `set_font()`、`set_font_family/weight/slant()`；builder `.font/font_family/font_weight/font_slant` | 使用 framework FontRequest；改变字体重新解析、测量 |
 | 字号 | `set_font_size()`、builder `.font_size()` | 逻辑字号；必须有限且为正 |
 | 颜色 | `set_color_token()`、builder `.color_token()`；继承的 `set_color()` | 颜色只影响绘制；token 跟随主题，显式颜色遵守实例覆盖 |
 | 水平对齐 | `set_align()` / `align()`、builder `.text_align()` | start / center / end，默认 start；每行在指派宽度内摆放 |
 | 垂直对齐 | `set_vertical_align()` / `vertical_align()`、builder `.text_vertical_align()` | top / center / bottom，默认 top；整个文本块在指派高度内摆放 |
-| 换行/溢出 | `set_overflow(text::TextOverflow)`、`set_max_lines()` | 当前仍共用 clip / ellipsis / wrap / scale 枚举；最大行数至少 1 |
-| 测量输出 | `measured_text_width/height()`、`layout_result()` | 当前布局的逻辑内容尺寸、行列表与 overflowed；不是指派盒子的尺寸 |
+| 换行/溢出 | `set_overflow(text::TextOverflow)`、`set_max_lines()`；builder `.text_overflow()` / `.max_lines()` | 当前仍共用 clip / ellipsis / wrap / scale 枚举；最大行数至少 1 |
+| 测量输出 | `measured_text_width/height()`、`layout_result()`、`line_count()` / `overflowed()` | 当前布局的逻辑内容尺寸、行列表与 overflowed；不是指派盒子的尺寸 |
 
 ## 盒内对齐
 
@@ -42,12 +42,21 @@
 ## 测量与绑定
 
 <!-- TODO: 手写有限宽度自然长高、Column/Card/ScrollView 与窄宽度示例；
-     当前 wrap/overflow 共用枚举，绑定直接写入不解除绑定，退出树清理；
-     不将 D6 后续 reset/绑定替代提案当作可用 API。 -->
+     当前 wrap/overflow 共用枚举；文本绑定替代规则见下表；
+     不将 D6 后续样式 reset/独立 wrap 提案当作可用 API。 -->
+
+| 项目 | 已核对规则（P4.1 第二子批） |
+| --- | --- |
+| 绑定 | `bind_text(source)` 立即更新；新源替代旧源 |
+| 页面绑定 | `bind_text(scope, source)`、`ui.make<Label>(source)`、`ui.bind(label, &Label::set_text, source)` |
+| 解绑 | `unbind_text()`、builder `.unbind_text()` 保留最后值；`text_is_bound()` 查询 |
+| 直接写入 | `set_text()`、Property.set、builder `.text()` 都先解绑；同值不额外 changed |
+| 生命周期 | 退出树或页面 scope 清理后无旧写入；重挂载不自动重新 bind |
+| 输出 | `line_count()` / `overflowed()` 来自当前布局结果，不另外存状态 |
 
 ## 验证与边界
 
 <!-- TODO: 补维护者的真实窗口使用体验与后续完整 P4.1 验收记录。 -->
 
 - 自动回归：两轴偏移、clip、viewport/DPI、缓存、有限宽度自然行高与真实 Label 页/ComponentInfoTable。
-- P4.1a 的实现与验证记录见 D6 §16；绑定/覆盖与完整能力表仍由 P4.1 后续批次定形。
+- P4.1a 的实现与验证记录见 D6 §16；文本绑定契约见 D6 §17；逐字段样式 reset、独立 wrap 与完整作者体验验收仍由 P4.1 后续批次定形。

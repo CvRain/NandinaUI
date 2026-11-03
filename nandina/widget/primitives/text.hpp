@@ -106,6 +106,8 @@ namespace nandina::widget::primitives
         [[nodiscard]] auto measured_text_height() const -> float;
         [[nodiscard]] auto laid_out_font_size() const -> float;
         [[nodiscard]] auto layout_result() const -> const text::TextLayoutResult&;
+        [[nodiscard]] auto line_count() const noexcept -> std::size_t;
+        [[nodiscard]] auto overflowed() const noexcept -> bool;
 
         void set_text_pipeline(text::TextPipeline pipeline);
 

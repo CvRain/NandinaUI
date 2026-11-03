@@ -46,6 +46,10 @@ application shell. Version `0.1.0-alpha.1`.
   entries, paint-only style/cache behavior, viewport alignment/clip fixes, and Label page /
   ComponentInfoTable resize regression coverage. Remaining D6 API/binding/measurement decisions
   stay in P4.1; this does not close the remaining P3 platform acceptance items.
+- The next **P4.1 text authoring/binding sub-batch** (2026-11-03) adds typography/overflow/
+  max-lines builders, current layout queries, and one managed text binding shared by Property,
+  Label and BuildContext. Direct writes (even equal values) replace text bindings; tree exit
+  or page-scope teardown stops them. Other component bindings and style reset remain separate.
 - The plan and exit criteria are **not** owned by this file: read
   `docs/references/development_roadmap.md` and the D5 contract
   (`resource_build_and_deployment.md` §8) before claiming a sub-batch is complete.

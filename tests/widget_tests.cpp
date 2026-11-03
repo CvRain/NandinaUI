@@ -3294,3 +3294,100 @@ TEST_CASE("a tightly assigned Label centers its natural line height", "[widget][
     REQUIRE(device.texts.size() == 1);
     CHECK(device.texts[0].position.get_y() == Catch::Approx(34));
 }
+
+TEST_CASE(
+    "Label text binding uses one writer across setter and property",
+    "[widget][label][author-contract]"
+) {
+    reactive::Graph graph;
+    reactive::Signal<std::string> first(graph, "first"), second(graph, "second");
+    auto label = widget::Label::create(graph);
+    label->bind_text(first);
+    REQUIRE(label->text() == "first"); // no mounting prerequisite
+    REQUIRE(label->text_is_bound());
+    label->set_text("first");
+    REQUIRE_FALSE(label->text_is_bound());
+    first.set("ignored");
+    REQUIRE(label->text() == "first");
+    label->bind_text(second);
+    REQUIRE(label->text() == "second");
+    REQUIRE_FALSE(label->text_property().set("second"));
+    second.set("ignored property");
+    REQUIRE(label->text() == "second");
+    label->bind_text(first);
+    label->unbind_text();
+    first.set("ignored explicit");
+    REQUIRE(label->text() == "ignored");
+    label->bind_text(second);
+    scene::NanSceneTree tree;
+    tree.set_root(label);
+    tree.set_root(nullptr);
+    REQUIRE_FALSE(label->text_is_bound());
+    second.set("after detach");
+    tree.set_root(label);
+    REQUIRE(label->text() == "ignored property");
+    REQUIRE_FALSE(label->text_is_bound());
+}
+
+TEST_CASE(
+    "Label layout queries follow current finite-width layout",
+    "[widget][label][author-contract]"
+) {
+    reactive::Graph graph;
+    auto label = widget::Label::create(graph, "one two three four five 中文 日本語");
+    label->set_overflow(text::TextOverflow::wrap);
+    label->set_font_size(10);
+    label->set_max_lines(20);
+    (void)label->measure_layout(foundation::NanLayoutConstraints {.max_width = 70});
+    REQUIRE(label->line_count() > 1);
+    REQUIRE(label->line_count() == label->layout_result().lines.size());
+    REQUIRE_FALSE(label->overflowed());
+    label->set_max_lines(1);
+    (void)label->measure_layout(foundation::NanLayoutConstraints {.max_width = 70});
+    REQUIRE(label->line_count() == 1);
+    REQUIRE(label->overflowed());
+    label->set_text("short");
+    REQUIRE(label->line_count() == 1);
+    REQUIRE_FALSE(label->overflowed());
+}
+
+TEST_CASE(
+    "Label font authoring invalidates injected layout without a font service",
+    "[widget][label][author-contract][font-input]"
+) {
+    reactive::Graph graph;
+    FixedTextLayoutBackend backend;
+    auto label = widget::Label::create(graph, "font input");
+    label->set_layout_backend(backend);
+    (void)label->measure_layout(foundation::NanLayoutConstraints::loose());
+    label->clear_layout_dirty();
+    const auto calls = backend.calls;
+    label->set_font_weight(700);
+    REQUIRE(label->layout_dirty());
+    REQUIRE(backend.calls > calls);
+    const auto after = backend.calls;
+    label->clear_layout_dirty();
+    label->set_font_weight(700);
+    REQUIRE_FALSE(label->layout_dirty());
+    REQUIRE(backend.calls == after);
+}
+
+TEST_CASE(
+    "Text context font changes invalidate an explicit layout backend",
+    "[widget][label][author-contract][font-input]"
+) {
+    FixedTextLayoutBackend backend;
+    auto value = std::make_shared<widget::primitives::Text>("context", backend);
+    theme::ResolvedStyleContext context;
+    context.font_size = value->font_size();
+    context.text_color = value->color();
+    context.font = value->font();
+    value->on_style_context_changed(context);
+    value->clear_layout_dirty();
+    const auto calls = backend.calls;
+    context.font.weight = 700;
+    value->on_style_context_changed(context);
+    REQUIRE(value->layout_dirty());
+    REQUIRE(backend.calls > calls);
+    REQUIRE(value->font().weight == 700);
+}

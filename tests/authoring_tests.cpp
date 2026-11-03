@@ -953,3 +953,131 @@ TEST_CASE("Label builder exposes both text alignment axes", "[authoring][text-bo
     CHECK(label->vertical_align() == text::TextVerticalAlign::bottom);
     CHECK(label->style().vertical_align == text::TextVerticalAlign::bottom);
 }
+
+TEST_CASE(
+    "Label authors replace text bindings through all supported entries",
+    "[authoring][label-contract]"
+) {
+    reactive::Graph graph;
+    reactive::ReactiveScope scope(graph);
+    theme::ThemeManager themes;
+    widget::BuildContext ui(graph, scope, themes);
+    reactive::Signal<std::string> first(graph, "source"), second(graph, "second");
+    auto builder = ui.make<widget::Label>(first);
+    auto label = builder.build();
+    REQUIRE(label->text_is_bound());
+    builder.text("source");
+    first.set("old source");
+    REQUIRE(label->text() == "source");
+    REQUIRE_FALSE(label->text_is_bound());
+    builder.bind_text(second);
+    REQUIRE(label->text() == "second");
+    ui.bind(label, &widget::Label::set_text, first);
+    REQUIRE(label->text() == "old source");
+    second.set("old second");
+    REQUIRE(label->text() == "old source");
+    label->text_property().set("literal");
+    first.set("never revived");
+    REQUIRE(label->text() == "literal");
+    builder.bind_text(second).unbind_text();
+    second.set("ignored after builder unbind");
+    REQUIRE(label->text() == "old second");
+    builder.bind_text(first);
+    scene::NanSceneTree tree;
+    tree.set_root(label);
+    tree.set_root(nullptr);
+    REQUIRE_FALSE(label->text_is_bound());
+    first.set("detached");
+    REQUIRE(label->text() == "never revived");
+}
+
+TEST_CASE(
+    "Label page bindings expire before page-owned source destruction",
+    "[authoring][label-contract]"
+) {
+    reactive::Graph graph;
+    reactive::ReactiveScope scope(graph);
+    theme::ThemeManager themes;
+    widget::BuildContext ui(graph, scope, themes);
+    auto& source = scope.signal_value(std::string("page"));
+    auto label = ui.make<widget::Label>(source).build();
+    REQUIRE(label->text_is_bound());
+    scope.clear();
+    REQUIRE_FALSE(label->text_is_bound());
+    label->set_text("retained");
+    auto& next = scope.signal_value(std::string("next"));
+    ui.bind(label, &widget::Label::set_text, next);
+    REQUIRE(label->text() == "next");
+    REQUIRE(label->text_is_bound());
+}
+
+TEST_CASE(
+    "Label typography authoring and layout results need no primitive header",
+    "[authoring][label-contract]"
+) {
+    reactive::Graph graph;
+    reactive::ReactiveScope scope(graph);
+    theme::ThemeManager themes;
+    widget::BuildContext ui(graph, scope, themes);
+    auto label = ui.make<widget::Label>("one two three four")
+                     .font(theme::FontRequest {})
+                     .font_weight(650)
+                     .font_slant(theme::FontSlant::italic)
+                     .font_family(resource::ResourceKey("fonts/body"))
+                     .font_size(12)
+                     .text_overflow(text::TextOverflow::wrap)
+                     .max_lines(2)
+                     .width(50)
+                     .build();
+    REQUIRE(label->font().weight == 650);
+    REQUIRE(label->font().slant == theme::FontSlant::italic);
+    REQUIRE(label->font().family == resource::ResourceKey("fonts/body"));
+    REQUIRE(label->overflow() == text::TextOverflow::wrap);
+    REQUIRE(label->max_lines() == 2);
+    (void)label->measure_layout(foundation::NanLayoutConstraints {.max_width = 50});
+    REQUIRE(label->line_count() == 2);
+    REQUIRE(label->overflowed());
+    REQUIRE_THROWS_AS(ui.make<widget::Label>().font_weight(0), std::invalid_argument);
+}
+
+namespace
+{
+    template<typename T>
+    concept LabelTypographyBuilder = requires(T& builder) {
+        builder.font_weight(400);
+        builder.font_slant(theme::FontSlant::normal);
+        builder.text_overflow(text::TextOverflow::wrap);
+        builder.max_lines(3);
+    };
+    static_assert(LabelTypographyBuilder<widget::authoring::NodeBuilder<widget::Label>>);
+    static_assert(!LabelTypographyBuilder<widget::authoring::NodeBuilder<widget::Column>>);
+    static_assert(!LabelTypographyBuilder<widget::authoring::NodeBuilder<widget::Button>>);
+} // namespace
+
+TEST_CASE("plain Label builders use the control binding scope", "[authoring][label-contract]") {
+    reactive::Graph graph;
+    reactive::Signal<std::string> source(graph, "initial");
+    auto builder = widget::authoring::make<widget::Label>(graph).bind_text(source);
+    auto label = builder.build();
+    REQUIRE(label->text() == "initial");
+    REQUIRE(label->text_is_bound());
+    source.set("next");
+    REQUIRE(label->text() == "next");
+    builder.text("literal");
+    source.set("ignored");
+    REQUIRE(label->text() == "literal");
+}
+
+TEST_CASE(
+    "managed Label binding preserves the null-target no-op",
+    "[authoring][label-contract][null-target]"
+) {
+    reactive::Graph graph;
+    reactive::ReactiveScope scope(graph);
+    theme::ThemeManager themes;
+    widget::BuildContext ui(graph, scope, themes);
+    reactive::Signal<std::string> source(graph, "text");
+    const std::shared_ptr<widget::Label> absent;
+    REQUIRE_NOTHROW(ui.bind(absent, &widget::Label::set_text, source));
+    REQUIRE_NOTHROW(source.set("next"));
+}

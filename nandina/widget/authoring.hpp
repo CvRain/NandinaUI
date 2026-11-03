@@ -467,6 +467,77 @@ namespace nandina::widget::authoring
             return *this;
         }
 
+        auto text(std::string value) -> NodeBuilder&
+            requires requires(Node& node) { node.set_text(std::move(value)); }
+        {
+            node_->set_text(std::move(value));
+            return *this;
+        }
+
+        template<typename Source>
+            requires requires(Node& node, reactive::ReactiveScope& scope, Source& source) {
+                node.bind_text(source);
+                node.bind_text(scope, source);
+            }
+        auto bind_text(Source& source) -> NodeBuilder& {
+            if (binding_scope_ != nullptr) {
+                node_->bind_text(*binding_scope_, source);
+            }
+            else {
+                node_->bind_text(source);
+            }
+            return *this;
+        }
+
+        auto unbind_text() -> NodeBuilder&
+            requires requires(Node& node) { node.unbind_text(); }
+        {
+            node_->unbind_text();
+            return *this;
+        }
+
+        auto font(theme::FontRequest request) -> NodeBuilder&
+            requires requires(Node& node) { node.set_font(std::move(request)); }
+        {
+            node_->set_font(std::move(request));
+            return *this;
+        }
+
+        auto font_family(resource::ResourceKey family) -> NodeBuilder&
+            requires requires(Node& node) { node.set_font_family(std::move(family)); }
+        {
+            node_->set_font_family(std::move(family));
+            return *this;
+        }
+
+        auto font_weight(int weight) -> NodeBuilder&
+            requires requires(Node& node) { node.set_font_weight(weight); }
+        {
+            node_->set_font_weight(weight);
+            return *this;
+        }
+
+        auto font_slant(theme::FontSlant slant) -> NodeBuilder&
+            requires requires(Node& node) { node.set_font_slant(slant); }
+        {
+            node_->set_font_slant(slant);
+            return *this;
+        }
+
+        auto text_overflow(text::TextOverflow overflow) -> NodeBuilder&
+            requires requires(Node& node) { node.set_overflow(overflow); }
+        {
+            node_->set_overflow(overflow);
+            return *this;
+        }
+
+        auto max_lines(int lines) -> NodeBuilder&
+            requires requires(Node& node) { node.set_max_lines(lines); }
+        {
+            node_->set_max_lines(lines);
+            return *this;
+        }
+
         auto font_size(float size) -> NodeBuilder&
             requires requires(Node& node) { node.set_font_size(size); }
         {

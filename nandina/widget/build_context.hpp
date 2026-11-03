@@ -148,6 +148,16 @@ namespace nandina::widget
                 std::invoke(setter, node, source.get());
             }
         void bind(const std::shared_ptr<Node>& target, Setter setter, Source& source) const {
+            if constexpr (requires {
+                              target->bind_text(*scope_, source);
+                              { setter == &Node::set_text } -> std::convertible_to<bool>;
+                          })
+            {
+                if (target && setter == &Node::set_text) {
+                    target->bind_text(*scope_, source);
+                    return;
+                }
+            }
             scope_->effect(
                 [weak = std::weak_ptr<Node>(target), setter = std::move(setter), &source] {
                     if (const auto current = weak.lock()) {

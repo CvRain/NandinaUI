@@ -100,7 +100,23 @@ Graph 的粒度最粗：它由应用持有并跨页面共享。`PageContext` 持
 
 `Event` 不属于依赖图：它没有 Source / Reactor，也不持有 Graph，只是一个共享状态里的订阅者列表。`subscribe()` 返回 move-only 的 `Subscription`，其析构即断开；`emit()` 先对订阅者取快照，再逐个确认订阅仍然存在后才调用，因此「回调里断开自己或别人」是安全的。订阅状态由 shared_ptr 持有，`Subscription` 晚于 `Event` 销毁也不会悬空。
 
-`Property` 是控件侧的适配层，同样不是图节点：它是一个普通值，加一个 `Apply` 落点和一个 `changed` 事件。`set()` 做等值检测，先应用落点再发出变更事件。它接入响应式的方式是 `bind(EffectScope&, Source&)`：注册一个 effect 去读 source 并调用 `set()`，也就是把「signal 驱动控件属性」变成一条普通依赖边。绑定捕获的 source 与 `Property` 自身一样是非拥有引用，调用方需保证生命周期覆盖。
+`Property` 是控件侧的适配层，同样不是图节点：它是一个普通值，加一个 `Apply` 落点和一个
+`changed` 事件。2026-11-03 P4.1 文本作者子批将绑定明确为单源：`bind(EffectScope&, source)`
+或 `bind(ReactiveScope&, source)` 替换旧源并立即读取；公开 `set()` 先解绑，再做等值检测，
+先应用落点再发变更事件。同值写入也解绑但不发事件。`unbind()` 保留值，`is_bound()` 查询
+有效绑定；ReadProperty 只提供状态查询。
+
+scope 持有 effect 与绑定令牌，Property 只弱持有当前令牌，并提供独立的目标寿命守卫。
+迟到回调在 source.get 前检查目标寿命/绑定身份，读取后再检查一次，避免源求值期间发生替代。
+绑定内部赋值绕过公开 setter，以免解除自己。解绑不在 effect 回调中删除正在执行的 effect，
+被取消的 callback 留到原 scope 清理（若再次运行，会停止读取源并清掉依赖）。scope 清理销毁
+令牌，因此 retained Property 能报告未绑定；目标先销毁时也不会被旧 effect 解引用。
+Property 因捕获自身地址而显式禁用复制/移动。source 为非拥有引用，活跃绑定期间须保持有效；
+source 为页面所有时，ReactiveScope 仍按 effects → computeds → signals 的顺序清理。
+
+Label 的文本 Property 是生产消费者：控件绑定、BuildContext 文本源、普通文本 setter 绑定
+统一落到它；退出树解绑、页面 scope 清理失效。其他 BuildContext 任意 setter/visual path
+仍是原有 effect 语义，不因此承诺所有组件字段都具备绑定替代机制。契约见 D6 §17。
 
 ## 已知限制与未收口点
 

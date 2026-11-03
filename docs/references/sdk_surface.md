@@ -18,6 +18,20 @@
 
 ## 2. 三档分类
 
+2026-11-03 P4.1 文本作者/绑定子批（experimental，行为调整）：`Property<T>::bind()` 现在
+单源替代，`set()`（含同值）解除旧绑定；新增 `unbind()` / `is_bound()`、ReactiveScope 绑定
+重载，ReadProperty 可查询 is_bound。Property 显式禁用复制/移动，守卫绑定的目标地址与令牌；
+scope 清理、目标销毁或 source 求值期间重入替代均使旧 callback 失效。
+`Label::bind_text(source)` 改为立即生效，新增页面 scope 重载与 `unbind_text()` /
+`text_is_bound()`；`ui.make<Label>(source)` 和 `ui.bind(label, &Label::set_text, source)`
+统一使用 managed 文本绑定，退出树解绑且不复活。普通直接写入后需要继续跟随源的旧调用必须
+显式重新 bind；其他组件/泛型 setter 的绑定语义不在本次调整范围。
+NodeBuilder 新增 `.text()` / `.bind_text()` / `.unbind_text()`、`.font()` / `.font_family()` /
+`.font_weight()` / `.font_slant()` / `.text_overflow()` / `.max_lines()`，均按 setter 能力约束。
+Text/Label 新增只读 `line_count()` / `overflowed()`；布局后端与字体服务未注入时，字体请求
+变化也会失效并传给自定义 backend。逐字段样式 reset、完整 D6 和文本节点变换边界仍保留。
+详见 [D6 §17](authoring_dsl_and_content_measurement.md#17-p41-文本作者入口与绑定替代契约2026-11-03第二个实施子批)。
+
 2026-11-03 P4.1a 文本盒内对齐（experimental，增量）：新增 `text::TextVerticalAlign`
 （top/center/bottom）、`TextStyle::vertical_align`（默认 top）、`Text::set_vertical_align()` /
 `vertical_align()`，Label 继承共享实现；`NodeBuilder::text_align()` / `text_vertical_align()`

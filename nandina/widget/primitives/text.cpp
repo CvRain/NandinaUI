@@ -181,7 +181,9 @@ namespace nandina::widget::primitives
             return;
         }
         style_.font = std::move(request);
+        mark_layout_dirty();
         resolve_font();
+        update_metrics(last_layout_constraints());
     }
 
     void Text::set_font_family(resource::ResourceKey family) {
@@ -256,6 +258,14 @@ namespace nandina::widget::primitives
         return layout_;
     }
 
+    auto Text::line_count() const noexcept -> std::size_t {
+        return layout_.lines.size();
+    }
+
+    auto Text::overflowed() const noexcept -> bool {
+        return layout_.overflowed;
+    }
+
     void Text::set_text_pipeline(text::TextPipeline pipeline) {
         if (pipeline.backend == nullptr) {
             throw std::invalid_argument("text::TextPipeline requires a layout backend");
@@ -310,7 +320,7 @@ namespace nandina::widget::primitives
         if (font_changed) {
             resolve_font();
         }
-        if (metrics_changed) {
+        if (metrics_changed || font_changed) {
             mark_layout_dirty();
             update_metrics(last_layout_constraints());
         }
