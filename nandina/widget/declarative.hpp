@@ -147,7 +147,11 @@ namespace nandina::widget
                     continue;
                 }
                 if (entries_[index].node && entries_[index].node->parent() == this) {
-                    (void)remove_child(*entries_[index].node);
+                    // remove_and_delete 而非 remove_child：set_items 可能在遍历期
+                    // （布局/post_layout 等 defers_tree_mutation 相位）被调用，
+                    // remove_child 在那里直接抛 logic_error，会让 entries_ 停在
+                    // 已移动一半的损坏状态。
+                    remove_and_delete(*entries_[index].node);
                 }
                 entries_[index].scope->clear();
             }

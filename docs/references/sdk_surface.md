@@ -18,7 +18,17 @@
 
 ## 2. 三档分类
 
-2026-11-03 P4.1b 视觉表面作者初稿（experimental，待维护者审阅）：新增
+2026-11-04 P4.2 阶段 5 第一批（experimental，维护者复核完成）：新增
+`widget/selection_model.hpp`（`SelectionMode` 枚举 + `SelectionModel<Key>` 模板：身份即键，
+single/multiple、范围选择与锚点、`retain()` 数据替换保留、`changed()` 无载荷事件，纯逻辑
+不依赖窗口）与 `widget/virtual_list_view.hpp`（`VirtualListView<Item, Key, NodeT>` 模板：
+统一行高窗口物化、自身为垂直滚动视口、点击/键盘选择、`activated()` 事件；内部持有一个
+`ForEach` 窗口区域，不继承 ForEach/Flex）。`VirtualListView` 与 `ListView` 同样不属于
+`ComponentTraits` 组件清单（声明式数据列表原语），入口是直接构造 + `set_source` /
+`set_model`。变高行、水平滚动、行内交互控件、无障碍语义与节点池回收不在本批；
+规则与边界见 [数据组件：选择模型与虚拟化依据](data_components_and_virtualization.md)。
+
+2026-11-03 P4.1b 视觉表面作者入口（experimental，代码已提交 `0e7fca1`，Showcase 正式视觉验收待完成）：新增
 `widget/surface.hpp`，Surface 复用 Padding/BoxPainter/BoxPresentation，使用 `ui.surface()` /
 `authoring::surface()` 工厂；不新增 ComponentTraits 或组件配方。`set_box_style()` / `.box_style()`
 设置 token 盒子，`set_padding()` / `.padding()` 设置有限非负边距，既有 container visual path

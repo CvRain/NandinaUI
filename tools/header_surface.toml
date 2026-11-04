@@ -709,6 +709,14 @@ path = "nandina/widget/scroll_view.hpp"
 level = "experimental"
 
 [[headers]]
+path = "nandina/widget/selection_model.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/virtual_list_view.hpp"
+level = "experimental"
+
+[[headers]]
 path = "nandina/widget/select.hpp"
 level = "experimental"
 

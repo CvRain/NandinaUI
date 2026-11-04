@@ -150,3 +150,11 @@ Surface 位于 widget，继承同层 Padding，复用 BoxPainter 与 BoxPresenta
 内部 inset_validation 只依赖 foundation 几何与标准库，供 Surface/Card 共享参数边界；
 Image cover anchor 使用 scene 既有 PercentLength，无平台类型与新缓存身份，未新增向上依赖。
 圆角子项 mask 仍不属于当前 ClipStack 的矩形 scissor 能力。
+
+## P4.2a 数据组件依据归属（2026-11-03）
+
+`SelectionModel<Key>` 位于 widget，只依赖 reactive::Event 与标准库（纯逻辑，可脱离窗口单测）；
+`VirtualListView` 位于 widget，内部持有一个 `ForEach` 窗口区域（declarative），并消费
+`RovingFocus` 与 `SelectionModel`，全部为同层依赖，未新增向上引用。VirtualListView 不继承
+ForEach/Flex：Flex::add 的 loose relayout 会把自尺寸列表撑到内容高并全量物化，窗口区域作为
+子控件吸收该 relayout。场景层不感知数据列表，reactive 仍保持纯逻辑。

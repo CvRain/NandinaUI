@@ -50,10 +50,20 @@ application shell. Version `0.1.0-alpha.1`.
   max-lines builders, current layout queries, and one managed text binding shared by Property,
   Label and BuildContext. Direct writes (even equal values) replace text bindings; tree exit
   or page-scope teardown stops them. Other component bindings and style reset remain separate.
-- **P4.1b initial implementation** (2026-11-03, awaiting maintainer review) adds a Surface
+- **P4.1b** (2026-11-03, implemented and pushed in `0e7fca1`) adds a Surface
   layout/paint primitive via `ui.surface()`, explicit Card content insets with recipe reset,
   and percentage Image cover anchors. Surface/Card corners do not mask children: the existing
-  scene clip is rectangular. Keep this batch uncommitted through the maintainer review cycle.
+  scene clip is rectangular. Showcase visual acceptance remains a separate check.
+- **P4.2 phase-5 first batch** (2026-11-04, maintainer review completed and pushed in
+  `e6d67e1`) establishes the data component basis: `widget::SelectionModel<Key>` (identity-based
+  single/multiple selection, range + anchor, retain-on-source-replacement) and
+  `widget::VirtualListView<Item, Key, NodeT>` (uniform-row virtualization via an internal
+  ForEach window region, own vertical scroll viewport, click/keyboard selection). The review
+  added source-generation pairing for same-window replacement, pre-layout pending scroll,
+  bottom-edge hit clamping, unconditional select_range scroll, typeahead buffer resets,
+  `ForEach::remove_and_delete` for traversal-safe window shrink, and by-value label callbacks
+  with an internal snapshot cache (ASan-clean). Contract:
+  `docs/references/data_components_and_virtualization.md`.
 - The plan and exit criteria are **not** owned by this file: read
   `docs/references/development_roadmap.md` and the D5 contract
   (`resource_build_and_deployment.md` §8) before claiming a sub-batch is complete.

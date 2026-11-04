@@ -259,6 +259,20 @@ reactive_tests = executable(
 )
 test('reactive', reactive_tests, suite: 'unit')
 
+selection_model_tests = executable(
+    'selection_model_tests',
+    files('selection_model_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('selection-model', selection_model_tests, suite: 'unit')
+
+virtual_list_tests = executable(
+    'virtual_list_tests',
+    files('virtual_list_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('virtual-list', virtual_list_tests, suite: 'unit')
+
 widget_tests = executable(
     'widget_tests',
     files('widget_tests.cpp'),
