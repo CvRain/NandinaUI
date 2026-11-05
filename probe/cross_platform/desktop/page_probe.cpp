@@ -221,31 +221,32 @@ int main() {
         // 三个 showcase 页面都注册，用 NANDINA_PROBE_PAGE 选择挂载哪一个 —— 消费者回归需要
         // 「每个页面都过一遍这个后端」，而不是只看一页。
         //
-        // title / type 与 showcase/main_window.cpp **逐字一致**：外壳的导航条目文字直接来自
-        // `RouteOptions::title`，分组来自 `type`。用英文标题会让 shell 截图与真实应用不同，
-        // 也会让「按标题找按钮」的交互回归找不到目标（踩过一次）。
+        // 导航条目的 title 与 Showcase 保持一致，供按标题定位按钮的交互回归使用。
+        // 此 probe 保留历史基准所用的路由表：Label 的 address=form/label、nav_group=表单，
+        // 与当前 Showcase 的 content_and_display/label、内容与展示不同；这里也未注册 Image。
+        // 对齐这些元数据会改变 shell 截图，须另行审阅并重新批准 golden。
         const auto* page_env = std::getenv("NANDINA_PROBE_PAGE");
         const std::string_view page = page_env != nullptr ? page_env : "label";
         const auto routes = nandina::app::Routes {
             nandina::app::route<nandina::showcase::ShowcaseHomePage>(nandina::app::RouteOptions {
                 .address = "home",
                 .title = "首页",
-                .type = "手册",
+                .nav_group = "手册",
             }),
             nandina::app::route<nandina::showcase::AnchorsPage>(nandina::app::RouteOptions {
                 .address = "anchors",
                 .title = "锚点",
-                .type = "手册",
+                .nav_group = "手册",
             }),
             nandina::app::route<nandina::showcase::LabelPage>(nandina::app::RouteOptions {
                 .address = "form/label",
                 .title = "Label",
-                .type = "表单",
+                .nav_group = "表单",
             }),
             nandina::app::route<nandina::showcase::InputFocusPage>(nandina::app::RouteOptions {
                 .address = "input_and_focus/focus",
                 .title = "输入与焦点",
-                .type = "输入与焦点",
+                .nav_group = "输入与焦点",
             }),
         };
         if (const auto configured = router.configure(routes); !configured) {

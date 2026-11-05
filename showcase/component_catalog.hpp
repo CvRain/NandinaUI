@@ -25,6 +25,7 @@ namespace nandina::showcase
         spinner,
         skeleton,
         empty_state,
+        collapsible,
         table,
         card,
         button,
@@ -128,6 +129,13 @@ namespace nandina::showcase
             ComponentCategory::content,
             "EmptyState",
             "为空集合提供占位与操作引导"
+        },
+        ComponentInfo {
+            ComponentId::collapsible,
+            ComponentCategory::content,
+            "Collapsible",
+            "折叠与展开保留状态的内容区域",
+            true
         },
         ComponentInfo {
             ComponentId::table,

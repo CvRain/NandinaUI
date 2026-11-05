@@ -7,10 +7,10 @@
 | 方向 | 当前状态 | 下一道边界 |
 | --- | --- | --- |
 | 作者 DSL 与文本 | builder/`configure`、Text/Label 与多种文本溢出策略可用；D6 已归档为待审阅设计 | Label 作者能力、样式绑定优先级、有限宽度内容测量与 Section 顺序均待按 [D6](authoring_dsl_and_content_measurement.md) 定形 |
-| 组件与浮层 | 阶段 1–4 基础设施已落地；**P4.2a 数据基础已提交（`5d91e01`）；P4.2b 静态 Table 布局代码于 2026-11-05 复核收口**，契约见 [数据组件：选择模型与虚拟化依据](data_components_and_virtualization.md) | 静态 Table 的 Showcase 视觉验收；之后 DataTable 选择/排序/虚拟化，及 Accordion 等阶段 5 组件 |
+| 组件与浮层 | 阶段 1–4 基础设施已落地；**P4.2a 数据基础已提交（`5d91e01`）；P4.2b 静态 Table 已提交 `14e22ff`；P4.2c Collapsible 实现初稿待维护者审阅**，契约见 [数据组件：选择模型与虚拟化依据](data_components_and_virtualization.md) | Table/Collapsible 的 Showcase 视觉验收；Accordion 及后续 DataTable 选择/排序/虚拟化 |
 | 输入与焦点 | 现有鼠标/键盘、输入焦点与作用域可用；焦点提示策略（模态、窗口门槛、paint-only）已接入 scene 与组件的焦点环绘制 | D1 第二阶段文本会话/软键盘与触摸/笔/手柄适配仍待；Showcase 输入与焦点页、roving 专项与弹窗恢复专项未完成，见[焦点与输入](focus_and_input.md) |
 | 文本与分层 | 纯布局约束在 `foundation`，文本布局协议在 `text`，字体请求值在 `theme`；旧布局、文本与字体转发入口已退出 | `theme::StyleDocument` 对字体注册的依赖仍待收口 |
-| 路由元数据 | 路由身份由页面类型 `PageKey` 确定；当前 `type` 字段既分组也作为标题 | D3 初步方案已接受、未实施：重命名 `nav_group`；空值是不分组、无标题，route 仍可见；分组按值全局合并 |
+| 路由元数据 | 路由身份由页面类型 `PageKey` 确定；P4.3 D3 已实现 `nav_group` / `NavSection::group`，空组无标题且全局合并 | 维护者复核完成、保持未提交；桌面/GPU 与视觉验收待补；组名开放、精确比较，顺序由首个可导航条目决定；契约见 [Page / Router](page_and_router.md) |
 | 平台与渲染 | 默认启用 SDL3（唯一内置后端），raylib 已删除；显式关闭 SDL3 时须注入平台才能打开窗口；`IPlatformWindow`、设备包装入口和三页 trace 对照已存在。生产 SDL 的填充/描边/圆/线段/弧已有 SDF：Linux Vulkan(SPIR-V) 与 Windows D3D12(DXIL) 均通过设备级像素验收，其余图元仍走 CPU 几何 | 混合/AA/图片/裁剪见 D7，键码见 D8；Windows 为实验性（构建/单元/doctor/DXIL 已验收，无应用交付承诺），macOS 不支持，Web 非交付路径。D4 历史 P3 落地不等于其 P0–P4 全部验收完成 |
 | 动画 | 值级 motion 在 `foundation/motion`，节点 endpoint、宿主与组调度在 `scene`；旧 `animation/` 入口已退出；L2 opacity/translate/scale 可用 | `NodeBuilder::group` 仅开放同节点、扁平 Tween 组合；跨节点、组内 Spring、Keyframes 作者入口与浮层自动过渡未完成，见 [节点表现层 §6.1](node_presentation.md) |
 | 布局与文本成本 | 排列容器及 `NanControl::layout_to` 已用在生产路径；anchors 内核与作者入口已落地；**布局收敛**（Label 页 80.4 ms/帧 → 2.5 ms、稳态 0 次布局）与**两个文本 O(n²)** 已修复，见 [布局收敛](layout_convergence_and_text_measurement.md) 与 [整形成本](text_shaping_cost.md) | `fill` 画布无法占据排列容器剩余空间（见 [Anchors §5.3](anchors.md#53-剩余验收)）；`max_width` 仍会被父级紧约束压过；Label 页打开约 271 ms（构建 159 ms，[整形成本 §5.1](text_shaping_cost.md)）；一次完整布局仍约 55 ms |
@@ -24,7 +24,7 @@
 | --- | --- | --- |
 | D1 输入、焦点与文本会话 | 焦点事实、提示策略、文本会话分离 | **第一阶段已实施（P3.2a/b，2026-10-31/11-01）**；**第二阶段协议与 SDL 合成路径已实施（P3.3a，2026-11-01）**：注入式 `ITextInputService`、编辑目标协议、会话身份/迟到过滤、committed 唯一路径、SDL 组合事件入帧；**P3.3b1（2026-11-02）**补 inline 预编辑/下划线、password purpose 掩码与 value↔visual 命中映射。**P3.3b2a（2026-11-02）**接通焦点节点局部 caret → 世界/viewport → 窗口逻辑坐标与 SDL input_area；**P3.3b2b 部分交付（2026-11-03）**：SDL purpose/multiline 属性与 preedit 声明已实施，Linux Wayland 真实组合/提交/取消、多行/密码策略与焦点切换通过；X11（XWayland）提交/取消已测，inline preedit/独立 Xorg、Windows 与候选窗位置视觉验收仍待完成；软键盘/遮挡维持 unsupported。P3.3a Linux 主套件 111/111；矩阵 ASan 88（+SKIP）、no-RTTI 90/90、no-SQLite 85（+1 SKIP）、纯工具 8/8；P3.3b1 unit 90/90。见[正式契约](focus_and_input.md) |
 | D2 主题方案与状态订阅 | 讨论已汇总；只读状态、事件和主题方案模型需定形 | 待审阅；[主题设计](theme_authoring_and_state.md)。先解决状态可观察性，完整主题作者模型另批 |
-| D3 导航分组 | `type → nav_group`、空值未分组、同值全局合并已接受 | 未实施；[D3](reference_draft.md#d3-路由身份与导航分组开放到哪一层)，独立小批 |
+| D3 导航分组 | `type → nav_group`、空值未分组、同值全局合并 | **P4.3 D3 已实施、维护者复核完成（2026-11-05），保持未提交**；[D3 契约与验证记录](reference_draft.md#d3-路由身份与导航分组开放到哪一层) |
 | D4 平台与后端 | SDL3 默认路径与 host seam 已落地，raylib 已完整退役 | **已收尾**：生产 SDF 在 Vulkan 与 Windows D3D12 通过设备级验收；[阶段证据](platform_backend_contract.md)。Windows 为实验性支持，macOS 不支持，Web 不是交付面 |
 | D5 资源构建与部署 | 范围与目标契约冻结 | **P2 已交付**：P2.1a/P2.1b/P2.2a–P2.2d/P2.3a–P2.4c；见[正式契约](resource_build_and_deployment.md) §8 与内部六批。示例应用已转入 notebook 改造（数据层先落地），服务/UI 与 showcase 组件由维护者手工编写 |
 | D6 作者 DSL 与内容测量 | 方向已接受；P4.1a 盒内对齐、文本作者入口与绑定替代已定形，其余样式 reset、完整测量契约待审阅 | **P4.1a 已实施（2026-11-03）**：Text/Label 垂直对齐、两轴 builder、paint-only/缓存与 viewport 缩放回归；真实 Label 页/ComponentInfoTable resize 测试；**文本作者/绑定子批（2026-11-03）**增加字体/溢出/行数 builder、布局输出与文本绑定单源替代/作用域清理；样式 reset 等后续仍见 [D6](authoring_dsl_and_content_measurement.md) |

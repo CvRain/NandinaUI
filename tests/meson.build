@@ -259,6 +259,13 @@ reactive_tests = executable(
 )
 test('reactive', reactive_tests, suite: 'unit')
 
+collapsible_tests = executable(
+    'collapsible_tests',
+    files('collapsible_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('collapsible', collapsible_tests, suite: 'unit')
+
 table_tests = executable(
     'table_tests',
     files('table_tests.cpp'),
@@ -314,6 +321,13 @@ router_tests = executable(
     dependencies : [nandina_dep, catch2_with_main_dep],
 )
 test('router', router_tests, suite: 'unit')
+
+sidebar_showcase_tests = executable(
+    'sidebar_showcase_tests',
+    files('sidebar_showcase_tests.cpp', '../showcase/components/sidebar.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('sidebar-showcase', sidebar_showcase_tests, suite: 'unit')
 
 async_tests = executable(
     'async_tests',

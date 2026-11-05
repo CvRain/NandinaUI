@@ -16,6 +16,7 @@
 #include "card.hpp"
 #include "checkbox.hpp"
 #include "chip.hpp"
+#include "collapsible.hpp"
 #include "combobox.hpp"
 #include "command_palette.hpp"
 #include "context_menu.hpp"
@@ -48,6 +49,27 @@
 
 namespace nandina::widget
 {
+    template<>
+    struct ComponentTraits<Collapsible> {
+        [[nodiscard]] static auto make(const BuildContext& ui, std::string text)
+            -> authoring::NodeBuilder<Collapsible> {
+            return authoring::make<Collapsible>(std::move(text), ui.theme());
+        }
+        [[nodiscard]] static auto
+        make(const BuildContext& ui, reactive::Signal<bool>& open, std::string text)
+            -> authoring::NodeBuilder<Collapsible> {
+            auto result = make(ui, std::move(text));
+            const auto control = result.build();
+            ui.bind(control, &Collapsible::set_open, open);
+            ui.connect(control->open_changed(), [&open](const bool current) {
+                if (open.peek() != current) {
+                    open.set(current);
+                }
+            });
+            return result;
+        }
+    };
+
     template<>
     struct ComponentTraits<Table> {
         [[nodiscard]] static auto

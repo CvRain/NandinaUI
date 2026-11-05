@@ -165,3 +165,10 @@ ForEach/Flex：Flex::add 的 loose relayout 会把自尺寸列表撑到内容高
 `semantics::Role` 增加平台无关的 table/row/column_header/cell 值，scene/render 不识别
 widget Table。单元格 Text/Label 通过既有 StyleContext 继承字体和颜色，不新增主题配方或
 颜色入口，未新增层间依赖。
+
+## P4.2c Collapsible 归属（2026-11-05）
+
+Collapsible 与内部 trigger/body 均属于 widget。触发器复用 Button，内容复用 NanControl
+树、StyleContext 与布局失效，输入/焦点通过 scene 现有 API；scene 只接入平台无关的
+State::expanded 合并规则，不引用 Collapsible。共享展开状态仅由 owner 持有，trigger 弱引用
+读取；没有第二份展开布尔值、独立 painter/配方或平台旁路。

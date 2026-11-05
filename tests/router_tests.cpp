@@ -1388,26 +1388,26 @@ TEST_CASE("routes expose read-only lookups and a navigation view", "[app][router
     REQUIRE(nav[1]->page_key == app::page_key<SecondPlainPage>());
 }
 
-TEST_CASE("nav sections keep first-appearance order of route types", "[app][router][nav]") {
-    // 刻意让两个 type **交错**出现：如果实现是"按 type 排序"或"只把相邻的同 type 切块"，
+TEST_CASE("nav sections keep first-appearance order of navigation groups", "[app][router][nav]") {
+    // 刻意让两个 group **交错**出现：如果实现是"按 group 排序"或"只把相邻的同 group 切块"，
     // 下面都会失败。
     const auto routes = app::Routes {
-        app::route<PlainPage>({.title = "面板 A", .type = "面板"}),
-        app::route<SecondPlainPage>({.title = "表单 A", .type = "表单"}),
-        // 没声明 type 的条目落在 `RouteOptions` 的默认值上，自己成一段。
+        app::route<PlainPage>({.title = "面板 A", .nav_group = "面板"}),
+        app::route<SecondPlainPage>({.title = "表单 A", .nav_group = "表单"}),
+        // 没声明 nav_group 的条目进入无标题组。
         app::route<FocusablePage>({.title = "未分类"}),
-        app::route<OverlayProbePage>({.title = "面板 B", .type = "面板"}),
+        app::route<OverlayProbePage>({.title = "面板 B", .nav_group = "面板"}),
         // 不在导航里的条目不参与分段（这里同时因为需要参数而被排除）。
-        app::route<DetailPage>({.title = "隐藏", .type = "面板", .show_in_nav = false}),
+        app::route<DetailPage>({.title = "隐藏", .nav_group = "面板", .show_in_nav = false}),
     };
 
     const auto sections = routes.nav_sections();
     REQUIRE(sections.size() == 3);
 
     // 顺序 = 首次出现顺序（"面板" 在 "表单" 之前），不是字典序。
-    REQUIRE(sections[0].type == "面板");
-    REQUIRE(sections[1].type == "表单");
-    REQUIRE(sections[2].type == "default");
+    REQUIRE(sections[0].group == "面板");
+    REQUIRE(sections[1].group == "表单");
+    REQUIRE(sections[2].group.empty());
 
     // 交错出现的同类条目要合并回同一段，且段内保持路由表顺序。
     REQUIRE(sections[0].entries.size() == 2);
@@ -1431,6 +1431,52 @@ TEST_CASE("nav sections keep first-appearance order of route types", "[app][rout
     // 空表与"全都不可导航"的表都得到空分段，而不是一段空标题。
     REQUIRE(app::Routes {}.nav_sections().empty());
     REQUIRE(app::Routes {app::route<DetailPage>({.show_in_nav = false})}.nav_sections().empty());
+}
+
+TEST_CASE("omitted and empty navigation groups merge across named groups", "[app][router][nav]") {
+    CHECK(app::RouteOptions {}.nav_group.empty());
+    const app::Routes routes {
+        // Hidden entries must not establish a section's first appearance.
+        app::route<OverlayHoldingPage>({.nav_group = "Tools", .show_in_nav = false}),
+        app::route<PlainPage>({.title = "First"}),
+        app::route<SecondPlainPage>({.title = "Named", .nav_group = "Tools"}),
+        app::route<FocusablePage>({.title = "Second", .nav_group = ""}),
+        app::route<OverlayProbePage>({.title = "Named again", .nav_group = "Tools"}),
+        // A visible route that needs parameters still has no navigation entry.
+        app::route<HomePage>({.nav_group = "Needs params"}),
+    };
+    REQUIRE(routes.validate());
+    const auto sections = routes.nav_sections();
+    REQUIRE(sections.size() == 2);
+    CHECK(sections[0].group.empty());
+    CHECK(sections[1].group == "Tools");
+    REQUIRE(sections[0].entries.size() == 2);
+    CHECK(sections[0].entries[0]->page_key == app::page_key<PlainPage>());
+    CHECK(sections[0].entries[1]->page_key == app::page_key<FocusablePage>());
+    REQUIRE(sections[1].entries.size() == 2);
+    CHECK(sections[1].entries[0]->page_key == app::page_key<SecondPlainPage>());
+    CHECK(sections[1].entries[1]->page_key == app::page_key<OverlayProbePage>());
+}
+
+TEST_CASE("navigation group names are open exact values", "[app][router][nav]") {
+    const app::Routes routes {
+        app::route<PlainPage>({.nav_group = "default"}),
+        app::route<SecondPlainPage>({.nav_group = "Tools"}),
+        app::route<FocusablePage>({.nav_group = "tools"}),
+        app::route<OverlayProbePage>({.nav_group = " Tools "}),
+        app::route<OverlayHoldingPage>({.nav_group = "app:9f38/自定义"}),
+    };
+    REQUIRE(routes.validate());
+    const auto sections = routes.nav_sections();
+    REQUIRE(sections.size() == 5);
+    CHECK(sections[0].group == "default");
+    CHECK(sections[1].group == "Tools");
+    CHECK(sections[2].group == "tools");
+    CHECK(sections[3].group == " Tools ");
+    CHECK(sections[4].group == "app:9f38/自定义");
+    for (const auto& section: sections) {
+        CHECK(section.entries.size() == 1);
+    }
 }
 
 TEST_CASE("route validation reports why a table is rejected", "[app][router][configure]") {

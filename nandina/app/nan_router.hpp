@@ -48,7 +48,8 @@ namespace nandina::app
         std::string address;
         std::string title;
         std::string icon;
-        std::string type {"default"};
+        /// 可选导航分组；空值为无标题组，不参与页面身份或地址匹配。
+        std::string nav_group;
         bool show_in_nav = true;
 
         friend auto operator==(const RouteOptions&, const RouteOptions&) -> bool = default;
@@ -105,16 +106,16 @@ namespace nandina::app
     /// 人类可读的失败描述，含条目下标，可直接用作异常信息或日志。
     [[nodiscard]] auto describe(const RoutesError& error) -> std::string;
 
-    /// 导航分组：同一 `options.type` 的条目归为一段。
+    /// 导航分组：同一 `options.nav_group` 的条目全局归为一段，空值为无标题组。
     ///
-    /// **分段顺序 = 各 type 首次出现的顺序**，也就是路由表的声明顺序；段内保持路由表顺序。
+    /// **分段顺序 = 各 group 首次出现的顺序**，也就是路由表的声明顺序；段内保持路由表顺序。
     ///
     /// 为什么不是 `unordered_map` 分组再拼接：哈希表的迭代顺序未指定，会把导航顺序变成
     /// 实现细节 —— 换一次标准库实现、加一条路由都可能让分组顺序变化，而导航顺序是用户
     /// 直接看得见的。有序单遍扫描既确定了顺序，也不必维护"map + 拼接"两步。
     struct NavSection {
-        /// 指向该段条目的 `options.type`，生存期跟随 `Routes`。
-        std::string_view type;
+        /// 指向该段首个条目的 `options.nav_group`，生存期跟随 `Routes`。
+        std::string_view group;
         std::vector<const RouteEntry*> entries;
 
         friend auto operator==(const NavSection&, const NavSection&) -> bool = default;
@@ -204,21 +205,21 @@ namespace nandina::app
             return visible;
         }
 
-        /// 把 `nav_entries()` 按 `options.type` 分段，供侧边栏这类"分组导航"消费。
+        /// 把 `nav_entries()` 按 `options.nav_group` 全局分组，供侧边栏消费。
         ///
         /// 用**线性扫描**而不是哈希表：段数是个位数，扫描更快；更重要的是它一眼就能看出
         /// "顺序 = 首次出现顺序"，不需要读者去推理哈希表的迭代顺序。要调整分组顺序，
-        /// 把同一 `type` 的路由在声明处写在一起即可 —— 顺序不在这里，也不在调用方。
+        /// 调整该组首个可导航条目的声明位置即可；空组同样按首次出现的位置排列。
         [[nodiscard]] auto nav_sections() const -> std::vector<NavSection> {
             std::vector<NavSection> sections;
             for (const auto* entry: nav_entries()) {
-                const std::string_view type {entry->options.type};
-                const auto found = std::ranges::find(sections, type, &NavSection::type);
+                const std::string_view group {entry->options.nav_group};
+                const auto found = std::ranges::find(sections, group, &NavSection::group);
                 if (found != sections.end()) {
                     found->entries.push_back(entry);
                     continue;
                 }
-                sections.push_back(NavSection {.type = type, .entries = {entry}});
+                sections.push_back(NavSection {.group = group, .entries = {entry}});
             }
             return sections;
         }

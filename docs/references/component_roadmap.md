@@ -101,7 +101,8 @@ Label 的推荐属性表、跨组件 part 规则，以及有限宽度下文字�
 
 ## 阶段 5：信息组织与数据展示
 
-- `Accordion`、`Collapsible`；
+- `Accordion`；`Collapsible` 的 P4.2c 实现初稿已完成，待维护者复核与 Showcase 视觉验收，见
+  [折叠内容组件契约](disclosure_components.md)；
 - `Sheet`、`Drawer`；
 - `Resizable`、`AspectRatio`；
 - 静态 `Table`（P4.2b 代码于 2026-11-05 复核完成，当前 experimental 并等待 Showcase 视觉验收；契约见

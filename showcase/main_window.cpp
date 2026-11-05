@@ -22,25 +22,25 @@ namespace nandina::showcase
         NanWindow::on_setup();
         const auto routes = app::Routes {
             nandina::app::route<ShowcaseHomePage>(
-                app::RouteOptions {.address = "home", .title = "首页", .type = "手册"}
+                app::RouteOptions {.address = "home", .title = "首页", .nav_group = "手册"}
             ),
             nandina::app::route<AnchorsPage>(
-                app::RouteOptions {.address = "anchors", .title = "锚点", .type = "手册"}
+                app::RouteOptions {.address = "anchors", .title = "锚点", .nav_group = "手册"}
             ),
             nandina::app::route<LabelPage>(app::RouteOptions {
                 .address = "content_and_display/label",
                 .title = "Label",
-                .type = "内容与展示"
+                .nav_group = "内容与展示"
             }),
             nandina::app::route<ImagePage>(app::RouteOptions {
                 .address = "content_and_display/image",
                 .title = "Image",
-                .type = "内容与展示"
+                .nav_group = "内容与展示"
             }),
             nandina::app::route<InputFocusPage>(app::RouteOptions {
                 .address = "input_and_focus/focus",
                 .title = "输入与焦点",
-                .type = "输入与焦点"
+                .nav_group = "输入与焦点"
             })
         };
         auto& router = use_router(routes);

@@ -84,6 +84,8 @@ namespace nandina::semantics
         bool invalid = false;
         std::optional<bool> checked;
         std::optional<bool> selected;
+        /// Disclosure state; absent for controls without expandable content.
+        std::optional<bool> expanded;
     };
 
     struct Properties {

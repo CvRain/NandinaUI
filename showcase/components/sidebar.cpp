@@ -10,8 +10,8 @@
 /// 圆角基值在构建时读一次。实例覆盖的本质是"接管这个字段"，所以主题在运行中改圆角令牌不会反映到已有条目上；
 /// 圆角令牌与明暗外观无关，实际不会变。
 ///
-/// 结构是纵向三段：标题 / 分组导航 / 外观切换。中间的导航按 `RouteOptions::type` 分段，
-/// 分段顺序由 `Routes::nav_sections()` 决定（= 各 type 首次出现的顺序），这里只负责画出来。
+/// 结构是纵向三段：标题 / 分组导航 / 外观切换。中间的导航按 `RouteOptions::nav_group` 分段，
+/// 分段顺序由 `Routes::nav_sections()` 决定（= 各 group 首次出现的顺序），这里只负责画出来。
 
 #include "sidebar.hpp"
 
@@ -95,13 +95,15 @@ namespace nandina::showcase
         const auto ui = context.ui();
         auto& current = context.current_page();
 
-        // 一段 = 段标题 + 该段的条目。段内用 `k_item_gap`，段与段之间由外层列的
+        // 一段 = 可选段标题 + 该段的条目。段内用 `k_item_gap`，段与段之间由外层列的
         // `k_section_gap` 拉开，这样"段落"在视觉上先于"条目"被读出来。
         auto items = ui.column().gap(k_item_gap).width(widget::authoring::fill);
 
-        items.children(ui.make<widget::Label>(std::string(section.type))
-                           .font_size(k_section_label_font_size)
-                           .color_token(theme::ColorToken::muted_foreground));
+        if (!section.group.empty()) {
+            items.children(ui.make<widget::Label>(std::string(section.group))
+                               .font_size(k_section_label_font_size)
+                               .color_token(theme::ColorToken::muted_foreground));
+        }
 
         for (const auto* entry: section.entries) {
             const auto page_key = entry->page_key;

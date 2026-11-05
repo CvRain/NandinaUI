@@ -336,6 +336,13 @@ namespace nandina::widget::authoring
             return *this;
         }
 
+        auto open(bool value) -> NodeBuilder&
+            requires requires(Node& node) { node.set_open(value); }
+        {
+            node_->set_open(value);
+            return *this;
+        }
+
         auto gap(float gap) -> NodeBuilder&
             requires requires(Node& node) { node.set_gap(gap); }
         {

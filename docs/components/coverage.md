@@ -7,8 +7,8 @@
 
 ## 现状
 
-- 公开组件：**38**（有 `ComponentTraits`、可供应用直接使用）
-- 已有使用文档：**24**（其中 `PointerArea` 与 `GestureArea` 共用一篇，实际组件文档文件 23 篇；Surface 作为布局原语另有提纲，不计入组件数；`Card`、`Image`、`Label`、`CommandPalette`、`HoverCard`、`AlertDialog` 与实验性 `Table` 的框架与符号表已核对、叙述正文待手写）
+- 公开组件：**39**（有 `ComponentTraits`、可供应用直接使用）
+- 已有使用文档：**25**（其中 `PointerArea` 与 `GestureArea` 共用一篇，实际组件文档文件 24 篇；Surface 作为布局原语另有提纲，不计入组件数；`Card`、`Image`、`Label`、`CommandPalette`、`HoverCard`、`AlertDialog` 与实验性 `Table`、`Collapsible` 的框架与符号表已核对、叙述正文待手写）
 
 > 计数口径：`公开组件` 只统计 `nandina/widget/builtin_component_traits.hpp` 中有 `ComponentTraits`
 > 特化的类型，它与 `showcase/component_catalog.hpp` 的编译期目录一一对应（该目录带
@@ -49,6 +49,7 @@
 | `TextArea` | ✅ [text_area.md](text_area.md) | 高 |
 | `Select` | — | 高 |
 | `Card` | 🟡 [card.md](card.md)（接口/内容边距已核对，正文待写） | 高 |
+| `Collapsible` | 🟡 [collapsible.md](collapsible.md)（P4.2c API/状态/语义已核对，正文待写） | 中 |
 | `Table` | 🟡 [table.md](table.md)（P4.2b API/轨道/语义已核对，正文待写） | 中 |
 | `Badge` | — | 高 |
 | `Switch` | — | 高 |

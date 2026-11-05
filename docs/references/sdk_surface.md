@@ -18,6 +18,20 @@
 
 ## 2. 三档分类
 
+2026-11-05 P4.3 D3 子批（破坏性字段迁移，维护者复核完成；保持未提交）：
+`RouteOptions::type` 改为 `nav_group`，默认从 `"default"` 改为空串；`NavSection::type`
+改为 `group`，不保留旧字段或别名。显式 `.nav_group = "default"` 仍创建普通有标题组；
+省略/空串全局合并为一个无标题组，组间分隔线保留。所有组按精确值比较与首次出现顺序排列，
+`PageKey` 路由身份、address 显示与 typed navigation 沿用既有规则。迁移调用方后须重新编译；
+正式契约见 [Page / Router](page_and_router.md)，验证见 [D3](reference_draft.md#d3-路由身份与导航分组开放到哪一层)。
+
+2026-11-05 P4.2c（experimental，初稿待维护者审阅）：新增 `widget/collapsible.hpp`，
+导出 Collapsible（Button trigger + retained 内容）；`ui.make<Collapsible>(text)` / Signal<bool>
+重载、`.child()` / `.open()` / `.on_change()` / `.gap()`。`set_open` 静默，用户 toggle 才发事件，
+trigger typed override 和 container/label visual part 沿用 Button；不新增配方。
+`semantics::State` 新增可选 expanded，合并语义迁移至同一规则；现有非折叠控件该值为空。
+契约与边界见 [折叠内容组件](disclosure_components.md)。
+
 2026-11-05 P4.2b（experimental，代码复核完成、视觉验收待完成）：新增 `widget/table.hpp`，
 导出 `Table` / `TableColumn` 与类型受限的 `.header_cells()` / `.row_cells()` Builder
 入口。Table 使用 NanControl 场景布局，cell/row/header 语义包装属于 widget，平台无关语义

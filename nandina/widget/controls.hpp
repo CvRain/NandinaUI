@@ -8,6 +8,7 @@
 
 #include "build_context.hpp"
 #include "builtin_component_traits.hpp"
+#include "collapsible.hpp"
 #include "gesture_area.hpp"
 #include "image.hpp"
 #include "pointer_area.hpp"

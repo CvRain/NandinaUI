@@ -83,6 +83,9 @@ namespace nandina::scene
             if (!target.selected && source.selected) {
                 target.selected = source.selected;
             }
+            if (!target.expanded && source.expanded) {
+                target.expanded = source.expanded;
+            }
         }
 
         void merge_semantics_node(semantics::Node& target, const semantics::Node& source) {

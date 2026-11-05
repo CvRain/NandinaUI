@@ -33,7 +33,7 @@
 - [Windows 人工验收清单](windows_acceptance.md)：**需要交互式桌面会话的 GUI/GPU 项与历史回报入口**。真实窗口回归、butter 主题软阴影与涟漪圆角裁剪目检；DXIL 设备级验收、Windows 6 条页面 golden（CPU 3 + SDF 3）及 CPU/SDF 性能参考基线已交付（2026-10-22），不是待采集项；含复验命令与回报方式。
 - [第三方依赖策略](dependency_policy.md)：**批次 2 已完成，raylib 已退役**。10 个 wrap、字体 submodule、SDL3 三态来源、静态/共享选择、pin/dirty 与 SDK 消费门禁；GitHub 首次下载与逐平台应用打包仍需对应环境验收。
 - [D6：作者 DSL、文本能力与内容测量](authoring_dsl_and_content_measurement.md)：**P4.1a 盒内对齐与文本作者/绑定子批已实施；P4.1b Surface、Card 内容边距与 Image cover 锚点代码已提交，Showcase 正式视觉验收待完成**。Text/Label 垂直对齐、paint-only 与 viewport 缩放回归；Label 能力表、共享属性归属、builder 子项简写、有限宽度自然长高，以及 border / Section 的阶段边界；过程见 [story 014](../../stories/014-the-dsl-that-kept-sending-authors-to-configure.md)。
-- [待决设计草案](reference_draft.md)：**工作稿与历史设计记录**。D2 已汇总到[主题方案、作者入口与状态订阅](theme_authoring_and_state.md)；D3 的 `nav_group` 语义已收敛、未实施；**D4 已归档**（历史 P3 默认后端换成 SDL3）；**D7** 混合、生产 SDF 与共享图片解码已交付，剩余边界见[项目状态](project_status.md)；**D8 P3.1a/b/c 已实施**：事件快照、键身份/生命周期与跨类型保序。D1 已定案为[统一输入、焦点与文本编辑](focus_and_input.md)。
+- [待决设计草案](reference_draft.md)：**工作稿与历史设计记录**。D2 已汇总到[主题方案、作者入口与状态订阅](theme_authoring_and_state.md)；D3 的 `nav_group` / `group` 已实施并完成维护者复核，保持未提交；**D4 已归档**（历史 P3 默认后端换成 SDL3）；**D7** 混合、生产 SDF 与共享图片解码已交付，剩余边界见[项目状态](project_status.md)；**D8 P3.1a/b/c 已实施**：事件快照、键身份/生命周期与跨类型保序。D1 已定案为[统一输入、焦点与文本编辑](focus_and_input.md)。
 - [布局收敛与文本测量](layout_convergence_and_text_measurement.md)：**已实施**。布局永不收敛的实测证据与四条根因（`Text` 写入原始尺寸、`ScrollView` 两个阶段跨轴契约不一致、`stretch` 越过子项显式尺寸、亚像素浮点噪声）、收敛契约、故障注入矩阵、未覆盖缺口与开放项（含整形成本与一次被实测否决的缓存方案）。
 - [文本整形与页面打开成本](text_shaping_cost.md)：**已实施**。页面打开时间（Label 858 ms 构建 / 5000 汉字 6.4 s）的两个 O(n²)（caret 停靠点去重、逐簇推进重新分段）、空闲 CPU（`Expanded` 子项尺寸抖动导致每帧全量布局，72% → 9% 单核）与常驻内存构成（4 条字体管线 × 1024² 图集 ≈ 40 MB）、整形成本曲线、一次被实测否决的整形缓存，构建期 1.4 万次重复测量与按输入键控的文本记忆化（构建 378 → 159 ms）、按词换行（断行机会），以及剩余目标。
 - [平台与后端契约（D4）](platform_backend_contract.md)：**后端替换已收尾，保留分平台能力与验收边界**（视觉质量剩余项见 [D7](reference_draft.md#d7-渲染质量与后端视觉一致性)）。目标平台与分层、`NanWindow` 所有权、capability 查询、shader 构建链契约及 D4 历史 P0–P4 阶段交付与验收；Windows 实验性、macOS 不支持，文本服务与规范键值仍独立推进。
@@ -48,6 +48,7 @@
 - [组件公共契约](component_contract.md)：新组件在进入推荐 API 前必须满足的状态、事件、绑定、主题、输入和无障碍要求。
 - [统一输入、焦点与文本编辑](focus_and_input.md)：**第一阶段已实施（P3.2a/b），第二阶段协议与 SDL 合成事件路径已实施（P3.3a），预编辑/密码用途显示已实施（P3.3b1）**。事件映射、paint-only、无历史默认显示、窗口活动、roving 提示、弹窗恢复、注入式文本会话协议与视觉文本映射记录在案；caret 输入区域与 SDL input_area 已实施（P3.3b2a）；P3.3b2b 已接通 SDL 用途/多行属性与 preedit 声明，并记录部分 Linux 实机验收；X11 inline preedit/独立 Xorg、Windows 与候选窗位置验收仍待完成。取舍过程见 [story 012](../../stories/012-from-focus-rings-to-input-sessions.md)。
 - [数据组件：选择模型与虚拟化依据](data_components_and_virtualization.md)：**P4.2a 已提交；P4.2b 静态 Table 代码复核收口，视觉验收待完成**：SelectionModel 身份/模式/范围/retain 规则，VirtualListView 窗口物化契约，以及 Table 共享列轨道、自然行高、语义结构和后续 DataTable 边界。
+- [折叠内容组件](disclosure_components.md)：**P4.2c Collapsible 初稿待维护者审阅**；保留内容的展开/收起、统一激活、焦点恢复、Signal 与页面作用域，以及 Accordion 后续边界。
 - [组件开发路线图](component_roadmap.md)：当前组件盘点、基础设施依赖和推荐开发顺序。
 - [浮层架构](overlay_architecture.md)：OverlayHost、portal 生命周期、分层规则与后续基础设施边界。
 - [菜单族条目模型](menu_model.md)：阶段 4 菜单组件共享的 MenuItem、聚焦/激活规则与勾选语义。

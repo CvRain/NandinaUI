@@ -185,6 +185,8 @@ module_widget = files(
     'widget/label.cpp',
     'widget/layout.hpp',
     'widget/layout.cpp',
+    'widget/collapsible.hpp',
+    'widget/collapsible.cpp',
     'widget/table.hpp',
     'widget/table.cpp',
     'widget/grid.hpp',

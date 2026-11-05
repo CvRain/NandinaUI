@@ -71,6 +71,18 @@ application shell. Version `0.1.0-alpha.1`.
   Showcase visual acceptance remains pending. It consumes ordinary controls and inherited text
   styles; selection, sorting and virtualization remain DataTable responsibilities. Contract:
   `docs/references/data_components_and_virtualization.md` §8.
+- **P4.2c Collapsible** (2026-11-05, initial implementation awaiting maintainer review) adds
+  a retained disclosure content slot composed with Button, silent set_open/user toggle events,
+  scoped Signal<bool> authoring, focus/capture restoration and optional semantics expanded.
+  State merging and content replacement reentry have regression coverage. Keep uncommitted
+  through maintainer review. Contract: `docs/references/disclosure_components.md`.
+- **P4.3 D3 navigation groups** (2026-11-05, maintainer review completed; uncommitted)
+  renames `RouteOptions::type` to `nav_group` (default empty) and `NavSection::type` to `group`,
+  without compatibility fields. Empty groups merge globally and omit headings; section dividers
+  remain. Real Sidebar semantics/activation and router grouping have regressions. D2 theme state
+  and author color APIs remain separate. Keep all changes uncommitted at the maintainer's request;
+  desktop/GPU and visual acceptance remain pending. Contract:
+  `docs/references/page_and_router.md`; evidence: `docs/references/reference_draft.md` D3.
 - The plan and exit criteria are **not** owned by this file: read
   `docs/references/development_roadmap.md` and the D5 contract
   (`resource_build_and_deployment.md` §8) before claiming a sub-batch is complete.

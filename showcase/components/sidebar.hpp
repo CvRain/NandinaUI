@@ -10,8 +10,8 @@ namespace nandina::showcase
 {
     /// 外壳侧边栏：标题 / 分组导航 / 外观切换三段。
     ///
-    /// 导航分组来自 `RouteOptions::type`，由 `Routes::nav_sections()` 一次算好 ——
-    /// 分段顺序 = 各 type 首次出现的顺序，所以调整顺序只需调整路由声明的位置，
+    /// 导航分组来自 `RouteOptions::nav_group`，由 `Routes::nav_sections()` 一次算好 ——
+    /// 分段顺序 = 各 group 首次出现的顺序，所以调整顺序只需调整路由声明的位置，
     /// 这里只负责"把段落画出来"。
     class Sidebar {
     public:
@@ -54,7 +54,7 @@ namespace nandina::showcase
             reactive::Signal<bool>& pressed
         ) const -> auto;
 
-        /// 一个分组：段标题 + 该段的条目列。
+        /// 一个分组：非空组名的标题 + 该段的条目列。
         ///
         /// 返回 `NanControl` 而不是 `widget::View`：这些结果要交给 `.child()` / `.children()`，
         /// 而容器的 `add()` 要求 `shared_ptr<NanControl>`（`View` 是 `shared_ptr<NanNode2D>`，

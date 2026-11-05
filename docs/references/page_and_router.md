@@ -55,6 +55,12 @@ void MainWindow::on_setup() {
 - 注册表校验在**声明期**一次性完成：`Routes::validate()` 与 `NanRouter::configure()` 返回 `std::expected<void, RoutesError>`。`RoutesError` 带 `kind` 与冲突条目下标，`describe()` 给出可直接用作日志/异常信息。它拒绝空表、无效条目、重复的**页面类型**、重复的**非空 `address`**，以及"已有当前页面时换表"。未注册页面的 `navigate<PageT>()` 不改变当前页面并返回失败，`start<PageT>()` 在表里没有该类型时同样失败。
 - 只读查询与遍历：`find()`（`noexcept`，未命中返回 `nullptr`）、`at()`（未命中抛 `std::out_of_range`）、`contains()`、`index_of()`、`begin()/end()`。`find()` 刻意不返回 `optional`/`expected`：唯一失败原因是"未注册"，套一层只会引入第二种"空"状态；需要说明失败原因的场合是 `navigate_to()`。
 - `nav_entries()` 返回"点一下就能进去"的只读视图（`show_in_nav` 且 `activate != nullptr`）。导航 UI 直接枚举它即可，不必各自重复这两条筛选规则，也就不会因为漏掉判空而留下点了没反应的死条目。Router 侧的 `current_entry()` / `is_current()` 是标题、图标与高亮的唯一依据。
+- `RouteOptions::nav_group` 是开放的导航分组字符串，默认空；不参与路由身份、地址校验或跳转。
+  `nav_sections()` 按精确值全局合并可导航条目，返回 `NavSection::group` 与条目视图；
+  section 按组值首次出现的顺序排列，段内保留声明顺序。省略与显式空串都进入同一个无标题组，
+  即使中间穿插有名分组，也合并到首个未分组项的位置。`"default"` 是普通有名分组，
+  不做大小写折叠、空白裁剪、白名单或独立标题映射。Sidebar 仅为非空 group 绘制标题，
+  分隔线始终按 section 边界绘制。旧 `RouteOptions::type` / `NavSection::type` 不保留兼容入口。
 - 路由表在启动后不可变。`show_in_nav = false` 只影响导航 UI 的默认筛选，不禁止程序跳转。
 - `title`、`icon` 属于路由表，Page 不再提供 `route_key()`、`title()`、`icon()`。应用可以自选导航布局和排序，但同一页面的标题与图标应从路由表读取。
 - 可选的 `address` 只是给应用显示的静态地址文字（窗口标题、面包屑末段之类），**不是路由身份**：留空时回退到 `title`，两者都空也合法，所以 `app::route<PageT>()` 这种最简写法可用。它刻意不叫 `key`，避免与 `RouteEntry::page_key` 混淆。`NanRouter::current_address()` 读它，`current_page_key()` 读身份，两者成对。

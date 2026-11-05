@@ -4,6 +4,9 @@
 > 方向已接受不等于精确 API 已冻结；未定项在各批实现前定形。跨专题顺序以[项目进度与下一步](project_status.md)为准。
 > 拍板之后：决定写进对应的 reference（`component_contract.md` / `theme` 相关 / `page_and_router.md`
 > / `platform_backend_contract.md`），过程补充到 stories；本文随之删除或降级为历史草案。
+
+2026-11-05 补充：D3 已实施并完成维护者复核，保持未提交；当前契约与实施记录见本节 D3 和
+[Page / Router](page_and_router.md)。上面的日期行保留当时状态。
 >
 > 文件名沿用当前叫法；若想改成 `open_decisions.md` 这类更直白的名字，改索引一行即可。
 
@@ -95,7 +98,7 @@ Angular 的 route config 把字符串 `path`、组件、`title` 和可选 `data`
 “用户声明路由元数据”的参考，但不表示 Nandina 当前 `address` 已经具备 URL 匹配语义，也不要求
 Nandina 移植 Angular 的路由模型。参见 [Angular: Define Routes](https://angular.dev/guide/routing/define-routes)。
 
-## 现状核实
+## 实施前核实
 
 | 事实 | 位置 |
 | --- | --- |
@@ -105,7 +108,7 @@ Nandina 移植 Angular 的路由模型。参见 [Angular: Define Routes](https:/
 | 分组值同时成为当前 UI 分组标题，且当前无空值语义 | `NavSection::type`、`showcase/components/sidebar.cpp` |
 | 分组顺序稳定，为首次出现顺序 | `Routes::nav_sections()` 与 `[app][router][nav]` 测试 |
 
-## 初步决定（方向已接受，尚未实施）
+## 已接受契约（2026-11-05 已实施，维护者复核完成；保持未提交）
 
 - 不把分组改成封闭枚举，不做框架级已知名字白名单，也不因陌生分组值拒绝 route。
 - 应用可以继续传任意字符串；其来源可以是 `constexpr`、用户自己的类型/UUID 序列化、manifest、
@@ -117,12 +120,12 @@ Nandina 移植 Angular 的路由模型。参见 [Angular: Define Routes](https:/
   该分组放在第一个未分组 route 的位置，后续未分组项加入该组；这是按值分组的既有语义，不是保留
   它们在原路由表中的交错位置。
 - 非空分组仍按首次出现顺序排列，段内保留路由顺序；不增加独立排序表。
-- `nav_sections()` 继续按值扫描，不需要 `"default"` 特判或组名校验。sidebar 在 `nav_group.empty()`
+- `nav_sections()` 继续按值扫描，不需要 `"default"` 特判或组名校验。sidebar 在 `section.group.empty()`
   时跳过标题 Label；组与组之间的分隔线仍按 section 边界绘制，不能跟着标题一起消失。
 
 ## 实施与验收
 
-按以下清单落地后，D3 可从初步决定转为已实施：
+本批按以下清单落地；实现与自动验证、维护者复核和视觉验收分别记状态：
 
 1. `RouteOptions::type` → `nav_group`、`NavSection::type` → `group`；不留旧字段/别名。更新构建器、注释、
    测试、`showcase/main_window.cpp` 中包括注释掉的占位 route，以及 Story 011 / 页面路由文档。
@@ -133,6 +136,68 @@ Nandina 移植 Angular 的路由模型。参见 [Angular: Define Routes](https:/
 
 本轮暂不把“字符串拼写可能产生意外分组”视为库级 bug；如果应用想防 typo，可在自己的 constants、
 manifest、route factory 或构建生成步骤中完成，而无需所有应用承担同一套机制。
+
+### P4.3 D3 实施记录（2026-11-05）
+
+- `RouteOptions::nav_group` 默认空，`NavSection::group` 为借用的组名视图；移除旧 type 字段。
+  `Routes` 继续按可导航条目首次出现的精确组值分组，组名不参与 PageKey 或 address 匹配。
+- 已迁移 Showcase 注册表/Sidebar、桌面页面 probe 和本地 playground bench；Sidebar 仅省略
+  空组标题，section 之间的分隔线不依赖标题。未增加层间依赖或路由历史能力。
+- `router` 回归覆盖默认/显式空组跨有名组全局合并、隐藏项不建立组顺序、需要参数的页面
+  不进入导航，以及大小写/空白/`default`/应用自定义组名精确保留。
+- 新增 `sidebar-showcase` unit 测试，直接构建真实 Sidebar；通过语义树检查标题、条目顺序和
+  分隔线，并用语义 activate 与 typed navigate 验证无标题组不会改变页面身份。
+- 专项：`router` 38 用例 / 393 断言，`sidebar-showcase` 4 用例 / 31 断言，均先编译再运行通过。
+- 故障注入均重新编译对应目标后触发 Catch2 exit 42，恢复后两个专项全绿：
+  1. 将 nav_group 默认值恢复为 `"default"`，省略/显式空串合并用例两处断言失败。
+  2. 禁止空组加入已存在 section，交错空组合并用例断言失败。
+  3. 无条件创建标题，三个真实 Sidebar 用例检测到多余空标题。
+  4. 将组间分隔线限制为非空组，未分组段两侧分隔线用例失败。
+- 首轮实现验证（每个配置先编译再测试；Linux，受限沙箱）：
+
+  | 范围 | 结果 |
+  | --- | --- |
+  | buildDir 全量 | 115 OK / 2 FAIL / 1 SKIP；两个 FAIL 均为 SDL 无法访问显示设备的 SDF 测试，详见下文 |
+  | buildDir-asan unit | 95 OK / 1 SKIP；ASan/UBSan 启用，构建与测试使用 `LSAN_OPTIONS=detect_leaks=0` |
+  | buildDir-no-rtti unit | 96 OK / 1 SKIP |
+  | buildDir-nosqlite unit | 92 OK / 1 SKIP |
+  | buildDir-tools（build_ui=false） | 8 OK |
+  | buildDir-probe 页面 probe | 重新配置与目标编译通过；未执行桌面渲染 |
+  | release_check --ci | 8/8，无 SKIP；clang-format 23.1.1；新增测试文件另行 dry-run 通过 |
+
+  SKIP 均为 window-lifecycle。主套件的 `sdf-device` / `sdf-state-probe` 在 SDL_Init 阶段
+  报 `No available video device`；SDK 子项目打包和 vendored 下游消费者均通过。尝试沙箱外补验时，
+  自动审批服务因模型不受支持返回 404，请求未执行，不能据此声称桌面/GPU 或视觉验收通过。
+  构建时字体嵌入工具也需 `LSAN_OPTIONS=detect_leaks=0`，避免受限环境的 LSan ptrace 失败；
+  ASan/UBSan unit 已完成，未发现该配置下的内存或未定义行为错误。审批服务恢复后，
+  桌面会话补跑 `meson compile -C buildDir && meson test -C buildDir sdf-device sdf-state-probe
+  window-lifecycle --print-errorlogs --logbase d3-desktop`；在真实成功前保留上述限制。
+- Windows、桌面/GPU 补验和人工视觉验收尚未执行。维护者复核已完成，按维护者要求保持未提交；
+  D2 主题状态与作者颜色入口仍是后续独立子批。
+
+### 维护者独立复核（2026-11-05）
+
+以下结果来自维护者提供的独立复核报告，不作为本次文档同步重新执行的测试：逐条核对 API
+迁移、分组/过滤/顺序、真实 Sidebar 标题与分隔线、语义激活和 typed navigation，未发现实现
+缺陷；维护者复核期间未修改工作树。旧字段仅在历史记录与迁移说明中保留文字。
+
+| 范围 | 维护者报告结果 |
+| --- | --- |
+| router / sidebar-showcase | 38 用例 / 393 断言、4 用例 / 31 断言，全绿 |
+| buildDir 全量 | 116 OK / 1 FAIL / 1 SKIP；sdf-state-probe 因无显示设备/GPU 失败，sdf-device 为 skip 77 |
+| buildDir-asan unit | 95 OK / 1 SKIP（window-lifecycle） |
+| buildDir-no-rtti unit | 97 OK；本机 window-lifecycle 未跳过 |
+| buildDir-nosqlite unit | 92 OK / 1 SKIP（window-lifecycle） |
+| buildDir-tools | 8 OK |
+| buildDir-probe | nandina_sdl_page_probe 已是最新，当前路由字段迁移可编译 |
+| release_check --ci | 8/8；clang-format 23.1.1，docs 87 篇；独立 header/suite/format 门禁通过 |
+
+两轮 SDF 失败/跳过与 window-lifecycle 的差异来自验证环境，分别保留实际结果；均不代表
+桌面/GPU 或视觉验收已经完成。probe 的 Label 路由仍使用历史基准元数据：`form/label` / `表单`，
+Showcase 使用 `content_and_display/label` / `内容与展示`。复核后的跟进仅修正“逐字一致”的
+不实注释，未改变路由值、渲染行为或 golden；今后若对齐值，须单独审阅并重新批准基准。
+
+维护者要求 P4.2c + D3 全部保持未提交，本轮不启动下一批。
 
 ---
 
@@ -642,7 +707,7 @@ D8。D1 第二阶段必须复用已有 host seam，并在实际平台上分别�
 | --- | --- |
 | D1 | [统一输入、焦点与文本编辑](focus_and_input.md)，设计已接受，未实施 |
 | D2 | [主题方案、作者入口与状态订阅](theme_authoring_and_state.md)，待审阅 |
-| D3 | 本稿定形分组语义，实施时同步 [Page / Router](page_and_router.md) |
+| D3 | 已实施并完成维护者复核，保持未提交；正式契约见 [Page / Router](page_and_router.md)，两轮验证见本稿 D3 实施记录 |
 | D4 | [平台与后端契约](platform_backend_contract.md)，默认切换与 seam 已落地，逐平台验收继续 |
 | D5 | [资源构建、部署与运行时定位](resource_build_and_deployment.md)，目标契约已冻结 |
 | D6 | [作者 DSL 与内容测量](authoring_dsl_and_content_measurement.md)，详细契约待审阅 |
