@@ -38,6 +38,7 @@
 #include "slider.hpp"
 #include "spinner.hpp"
 #include "switch.hpp"
+#include "table.hpp"
 #include "tabs.hpp"
 #include "text_area.hpp"
 #include "text_field.hpp"
@@ -47,6 +48,15 @@
 
 namespace nandina::widget
 {
+    template<>
+    struct ComponentTraits<Table> {
+        [[nodiscard]] static auto
+        make(const BuildContext&, std::vector<TableColumn> columns = {{}, {}})
+            -> authoring::NodeBuilder<Table> {
+            return authoring::make<Table>(std::move(columns));
+        }
+    };
+
     template<>
     struct ComponentTraits<PointerArea> {
         [[nodiscard]] static auto make(const BuildContext&) -> authoring::NodeBuilder<PointerArea> {

@@ -773,3 +773,7 @@ reason = "Single-child surface layout primitive, available via BuildContext.surf
 path = "nandina/widget/internal/inset_validation.hpp"
 level = "internal"
 reason = "Shared validation for author-controlled Surface/Card content insets"
+
+[[headers]]
+path = "nandina/widget/table.hpp"
+level = "experimental"

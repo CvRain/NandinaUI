@@ -20,7 +20,7 @@ Label 的推荐属性表、跨组件 part 规则，以及有限宽度下文字�
 嵌套浮层的父子关闭关系（`OverlayOptions::parent` + `OverlayCloseReason`，`Select` / `Tooltip` 已接入），
 键码常量也收敛到单一定义处。
 
-阶段 4 的 Popover、DropdownMenu、Combobox、CommandPalette 与 HoverCard 均已落地。D1 的鼠标/键盘焦点提示与文本输入会话已接入（P3.2/P3.3a），预编辑与密码用途显示已落地（P3.3b1）；caret 区域与真实 IME/软键盘验收归 P3.3b2。进入阶段 5 前仍需完成这些平台边界，并补 Label 垂直对齐、Surface/Card inset、Image cover 裁剪与作者颜色入口（见开发路线 P4.1/P4.1b/P4.3）。旧源码入口退出已有阶段成果，Anchors 剩余空间测量仍需独立设计；具体进度与后续排序见[项目进度与下一步](project_status.md)。
+阶段 4 的 Popover、DropdownMenu、Combobox、CommandPalette 与 HoverCard 均已落地。D1 的鼠标/键盘焦点提示与文本输入会话已接入（P3.2/P3.3a），预编辑与密码用途显示已落地（P3.3b1）；caret 区域与真实 IME/软键盘验收归 P3.3b2。P4.1/P4.1b 已交付代码批次；Showcase 视觉验收与作者颜色入口仍按开发路线单独跟踪。P4.2a 数据依据已交付，P4.2b 静态 Table 布局代码已复核收口，视觉验收仍待完成。旧源码入口退出已有阶段成果，Anchors 剩余空间测量仍需独立设计；具体进度与后续排序见[项目进度与下一步](project_status.md)。
 
 ## 阶段 0：稳定公共边界
 
@@ -104,7 +104,8 @@ Label 的推荐属性表、跨组件 part 规则，以及有限宽度下文字�
 - `Accordion`、`Collapsible`；
 - `Sheet`、`Drawer`；
 - `Resizable`、`AspectRatio`；
-- 静态 `Table`；
+- 静态 `Table`（P4.2b 代码于 2026-11-05 复核完成，当前 experimental 并等待 Showcase 视觉验收；契约见
+  [数据组件：选择模型与虚拟化依据](data_components_and_virtualization.md) §8）；
 - 在选择模型、虚拟化和排序能力成熟后再实现 `DataTable`。
 
 ## 暂不进入核心优先级

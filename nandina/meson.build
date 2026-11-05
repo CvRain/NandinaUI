@@ -185,6 +185,8 @@ module_widget = files(
     'widget/label.cpp',
     'widget/layout.hpp',
     'widget/layout.cpp',
+    'widget/table.hpp',
+    'widget/table.cpp',
     'widget/grid.hpp',
     'widget/grid.cpp',
     'widget/scroll_view.hpp',

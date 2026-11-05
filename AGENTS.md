@@ -55,7 +55,7 @@ application shell. Version `0.1.0-alpha.1`.
   and percentage Image cover anchors. Surface/Card corners do not mask children: the existing
   scene clip is rectangular. Showcase visual acceptance remains a separate check.
 - **P4.2 phase-5 first batch** (2026-11-04, maintainer review completed and pushed in
-  `e6d67e1`) establishes the data component basis: `widget::SelectionModel<Key>` (identity-based
+  `5d91e01`) establishes the data component basis: `widget::SelectionModel<Key>` (identity-based
   single/multiple selection, range + anchor, retain-on-source-replacement) and
   `widget::VirtualListView<Item, Key, NodeT>` (uniform-row virtualization via an internal
   ForEach window region, own vertical scroll viewport, click/keyboard selection). The review
@@ -64,6 +64,13 @@ application shell. Version `0.1.0-alpha.1`.
   `ForEach::remove_and_delete` for traversal-safe window shrink, and by-value label callbacks
   with an internal snapshot cache (ASan-clean). Contract:
   `docs/references/data_components_and_virtualization.md`.
+- **P4.2b static Table layout** (2026-11-05, maintainer and final code review completed)
+  adds shared fixed/weighted column tracks, natural row heights, table/row/header/cell semantics,
+  and typed Builder slots. Gap sums are validated before content changes; measured content
+  extents are accumulated in double and rejected before publishing non-finite geometry.
+  Showcase visual acceptance remains pending. It consumes ordinary controls and inherited text
+  styles; selection, sorting and virtualization remain DataTable responsibilities. Contract:
+  `docs/references/data_components_and_virtualization.md` §8.
 - The plan and exit criteria are **not** owned by this file: read
   `docs/references/development_roadmap.md` and the D5 contract
   (`resource_build_and_deployment.md` §8) before claiming a sub-batch is complete.

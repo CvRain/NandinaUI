@@ -726,6 +726,24 @@ namespace nandina::widget::authoring
             return NanAnimation<Node, Paths...>(std::weak_ptr<Node>(node_), std::move(spec));
         }
 
+        template<typename... Cell>
+            requires requires(Node& node, std::vector<std::shared_ptr<scene::NanControl>> cells) {
+                node.set_header(std::move(cells));
+            }
+        auto header_cells(Cell&&... cells) -> NodeBuilder& {
+            node_->set_header({detail::materialize(std::forward<Cell>(cells))...});
+            return *this;
+        }
+
+        template<typename... Cell>
+            requires requires(Node& node, std::vector<std::shared_ptr<scene::NanControl>> cells) {
+                node.add_row(std::move(cells));
+            }
+        auto row_cells(Cell&&... cells) -> NodeBuilder& {
+            node_->add_row({detail::materialize(std::forward<Cell>(cells))...});
+            return *this;
+        }
+
         template<typename... Child>
             requires(detail::AddableChild<Node, Child> && ...)
         auto children(Child&&... child) -> NodeBuilder& {

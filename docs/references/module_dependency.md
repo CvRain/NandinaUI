@@ -158,3 +158,10 @@ Image cover anchor 使用 scene 既有 PercentLength，无平台类型与新缓�
 `RovingFocus` 与 `SelectionModel`，全部为同层依赖，未新增向上引用。VirtualListView 不继承
 ForEach/Flex：Flex::add 的 loose relayout 会把自尺寸列表撑到内容高并全量物化，窗口区域作为
 子控件吸收该 relayout。场景层不感知数据列表，reactive 仍保持纯逻辑。
+
+## P4.2b Table 归属（2026-11-04）
+
+`Table` 与 row/cell/header 语义包装均位于 widget，复用 scene NanControl 树与布局失效；
+`semantics::Role` 增加平台无关的 table/row/column_header/cell 值，scene/render 不识别
+widget Table。单元格 Text/Label 通过既有 StyleContext 继承字体和颜色，不新增主题配方或
+颜色入口，未新增层间依赖。

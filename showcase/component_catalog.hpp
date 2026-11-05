@@ -25,6 +25,7 @@ namespace nandina::showcase
         spinner,
         skeleton,
         empty_state,
+        table,
         card,
         button,
         checkbox,
@@ -127,6 +128,13 @@ namespace nandina::showcase
             ComponentCategory::content,
             "EmptyState",
             "为空集合提供占位与操作引导"
+        },
+        ComponentInfo {
+            ComponentId::table,
+            ComponentCategory::content,
+            "Table",
+            "静态单元格共享列宽与自然行高",
+            true
         },
         ComponentInfo {ComponentId::card, ComponentCategory::content, "Card", "承载一组相关内容"},
         ComponentInfo {ComponentId::button, ComponentCategory::input, "Button", "触发一个语义操作"},

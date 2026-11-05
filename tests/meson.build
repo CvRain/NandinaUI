@@ -259,6 +259,13 @@ reactive_tests = executable(
 )
 test('reactive', reactive_tests, suite: 'unit')
 
+table_tests = executable(
+    'table_tests',
+    files('table_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('table', table_tests, suite: 'unit')
+
 selection_model_tests = executable(
     'selection_model_tests',
     files('selection_model_tests.cpp'),

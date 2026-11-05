@@ -68,6 +68,14 @@ namespace nandina::semantics
                 return "separator";
             case Role::dialog:
                 return "dialog";
+            case Role::table:
+                return "table";
+            case Role::row:
+                return "row";
+            case Role::column_header:
+                return "columnheader";
+            case Role::cell:
+                return "cell";
             case Role::alert_dialog:
                 return "alertdialog";
         }

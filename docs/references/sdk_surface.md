@@ -18,6 +18,13 @@
 
 ## 2. 三档分类
 
+2026-11-05 P4.2b（experimental，代码复核完成、视觉验收待完成）：新增 `widget/table.hpp`，
+导出 `Table` / `TableColumn` 与类型受限的 `.header_cells()` / `.row_cells()` Builder
+入口。Table 使用 NanControl 场景布局，cell/row/header 语义包装属于 widget，平台无关语义
+只新增 table/row/column_header/cell role；无排序、选择或数据模型，不新增主题配方，单元格
+内容沿用现有 StyleContext。使用前置条件、事务性与测量契约见
+[数据组件 §8](data_components_and_virtualization.md#8-p42b-静态-table布局契约)。
+
 2026-11-04 P4.2 阶段 5 第一批（experimental，维护者复核完成）：新增
 `widget/selection_model.hpp`（`SelectionMode` 枚举 + `SelectionModel<Key>` 模板：身份即键，
 single/multiple、范围选择与锚点、`retain()` 数据替换保留、`changed()` 无载荷事件，纯逻辑

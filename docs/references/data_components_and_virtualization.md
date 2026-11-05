@@ -1,6 +1,6 @@
 # 数据组件：选择模型与虚拟化依据（P4.2 阶段 5 第一批）
 
-> 状态：**2026-11-03 初稿已实施；2026-11-04 维护者复核完成（7 项修复 + 测试缺口补齐），并统一提交推送于 `e6d67e1`。**
+> 状态：**2026-11-03 初稿已实施；2026-11-04 维护者复核完成（7 项修复 + 测试缺口补齐），并统一提交推送于 `5d91e01`。**
 > 本文件是阶段 5 数据组件的「选择 / 虚拟化依据」契约：先定两块可复用的基础，
 > 再让复合数据组件在它们之上成长。静态 `Table`、`DataTable`、`Accordion` 等
 > 阶段 5 组件清单仍按 [组件开发路线图](component_roadmap.md#阶段-5信息组织与数据展示)
@@ -136,7 +136,7 @@ class VirtualListView`（[virtual_list_view.hpp](../../nandina/widget/virtual_li
   跨度仍滚动、首布局前挂起）、数据替换（同窗口刷新/换键、裁剪选中与活动项）、
   重复键拒绝、绑定源、脱离树构建、Expanded 组合视口、空数据惰性、退出树重入
   绑定不恢复。
-- 全量 unit 与门禁见维护者复核后的统一记录（本批仍未提交，等待关闭审阅循环）。
+- P4.2a 已于 `5d91e01` 提交；归档验证为主套件 115/115，ASan 0 失败 + 1 预期跳过、no-RTTI 94/94、no-SQLite 89 + 1 跳过、纯工具与发布门禁各 8/8。
 - 红测证据（修复前失败、修复后通过；均为新测试先行红测）：
   1. 初版继承 ForEach：`Flex::add` 的 loose relayout 把列表撑到内容高并全量物化，
      布局期 `remove_child` 抛 traversal 异常。改为包含窗口区域设计后
@@ -165,10 +165,90 @@ class VirtualListView`（[virtual_list_view.hpp](../../nandina/widget/virtual_li
      自然写法 `return item.label;` 把临时字符串转成 view——ASan 在既有 typeahead
      测试抓到 stack-use-after-return（roving_focus starts_with_ci）。回调改为按值
      返回 `std::string` 并快照进列表缓存后，buildDir-asan 下 28 用例全绿。
-- 本批已于 `e6d67e1` 统一提交推送；阶段 5 后续组件可接续推进。Windows/真实 IME 等平台验收不属本批。
+- 本批已于 `5d91e01` 统一提交推送；阶段 5 后续组件可接续推进。Windows/真实 IME 等平台验收不属本批。
 
 ## 7. 后续
 
-- 阶段 5 第一批验收关闭后：静态 `Table`（行选择直接消费 `SelectionModel`）、
-  `Accordion`/`Collapsible`、`Resizable`/`AspectRatio`，再按成熟度评估 `DataTable`。
-- 作者 DSL 入口（`ui.list(...)` 类）与 showcase 视觉验收在复合数据组件批次接入。
+- P4.2a 已提交（`5d91e01`）。静态 `Table` 不承担行选择；行选择/排序/虚拟化属于
+  后续 `DataTable`。`Accordion`/`Collapsible` 与 `Resizable`/`AspectRatio` 依阶段 5
+  组件路线分批。
+- `VirtualListView` 作者 DSL 入口与视觉验收随维护者编写的 Showcase 组合另行接入。
+
+
+## 8. P4.2b 静态 Table：布局契约
+
+> 2026-11-04 实现；2026-11-05 维护者与最终复核完成，代码批次收口。Showcase 视觉验收仍待完成。
+
+本子批交付非交互静态表格。行选择属于后续 DataTable 的
+职责：静态 Table 只协调有限数量的控件、共享列轨道和行高，不另存选中状态。数据源绑定、
+SelectionModel、RovingFocus、虚拟化与排序留给后续交互数据表；本批不关闭整个 P4.2。
+
+### 8.1 API 与归属
+
+- `widget::Table` 是 NanControl，`ui.make<Table>(columns)` / `Table::create(columns)`
+  创建（默认两列）。`TableColumn` 含可选逻辑宽度 `width` 与正数权重 `flex`。
+- `set_columns`、`set_header(Cells)`、`clear_header()`、`add_row(Cells)`、
+  `set_rows(vector<Cells>)`、`clear_rows()`；Cells 是普通 NanControl shared_ptr 的向量。
+  每行必须与列数相同；单元格必须非空、未挂载、在本次操作中唯一且无父级循环。
+  有内容时不能改变列数，须先清空表头和正文。非法操作不替换原内容。
+- `set_column_gap` / `set_row_gap` 默认零；列宽与 gap 有限非负、flex 有限正数。
+  gap 与轨道数的乘积/总和须在 float 内有限（`set_row_gap(FLT_MAX)` 后再加行、或
+  带大行距的表加表头/行会抛 `invalid_argument`，失败不改变现有内容）。
+  只标布局脏，不在 setter / on_ready 中按 loose 约束抢先布局。
+- Table 为布局/语义协调器，不新增配方、颜色或绘制路径；字体与颜色由内容节点的
+  StyleContext / Label token 处理，背景、边框和内边距用现有 Surface / Padding 组合。
+  ComponentTraits 仅导出普通构造，不要求 Graph 或平台服务。
+
+### 8.2 测量与排列
+
+- 有限宽度：固定列保留逻辑宽度，减掉固定列和列间距后的剩余空间按 flex 权重分给
+  非固定列（不足时为零）。固定列超出表格盒子时保持列宽，表格矩形裁剪负责限制外溢。
+- 无界宽度：非固定列取表头与所有正文在该列的自然宽度最大值；固定列仍按指定宽度测量。
+  有限与无界两种路径均全量测量，不宣称虚拟化。
+- 确定共享列宽后，以相同的紧宽度、无界高度测量各单元格；每行自然高度取该行最大值。
+  行高不因父级紧高度平均分摊；长文字自然长高。所有单元格安排为整列宽/整行高，
+  内容可用自身盒内对齐。排列使用实际指派宽度重新计算列轨道，保证 resize 后表头与正文对齐。
+- 单元格与表格默认矩形 clip；表格不滚动。需要滚动时使用既有 ScrollView。
+  重复相同视口布局应收敛，子内容变更沿现有场景布局失效链重新测量。
+- 自然列宽总和、内容行高与行间距总和必须可表示为有限 float；用 double 累计，
+  测量与排列在发布 geometry 前统一检查，超限抛 `invalid_argument`，不将 inf 传播给父布局。
+  此检查发生在测量/排列阶段；内容与间距 setter 的即时参数校验仍按 §8.1 执行。
+
+### 8.3 语义与边界
+
+- 添加平台无关 `Role::table / row / column_header / cell`，形成为
+  Table → row → column_header 或 cell → 内容节点的语义树；内容按钮等保留自身 action。
+  Table / row / cell 本身不可聚焦、不抢键盘、不添加选择/激活动作。
+- 行和单元格包装属于 widget 内部实现；semantics 只新增角色值与 role_name，
+  scene/render/theme 不认识 Table。行槽位变更使用已有延迟树变更通道。
+- 不含排序、选择、数据模型、虚拟化、合并单元格、粘性表头、列拖拽、按内容自适应后再
+  限宽的轨道算法。Showcase 页面与使用手册正文由维护者手写，初稿只提供 API 核对表。
+
+### 8.4 验证记录（2026-11-05，Linux）
+
+- `table`：18 用例 / 136 断言。覆盖固定/加权列、有限宽度换行与自然行高、无界自然宽度、
+  overflow 裁剪、轨道/单元格验证、失败事务性、锚点拒绝、表头替换、遍历期延迟替换、
+  Table/row/header/cell 语义树与单元格 action、收敛、滚动组合、行距溢出校验、
+  Builder 槽位入口与 callback 作用域。
+- 红测一：自然宽度测试确认测量得到 20/80 列宽后，`on_layout` 按有限宽度重算成 50/50，
+  自然宽内容被撑宽且行高变化；保留 `intrinsic_width_` 的 measure/arrange 模式后通过。
+- 红测二（本次复核补充）：`set_row_gap(FLT_MAX)` 之前不校验间距总和，三行把测量高度
+  推成 inf；新用例在 `require_row_gap_total` 缺失时 6 处断言失败，补齐
+  `set_row_gap` / `add_row` / `set_rows` / `set_header` 的有限和校验后通过。
+- 红测三（最终复核）：间距独立校验合法，但自然列宽、内容行高或“内容＋间距”之和
+  仍可能溢出。新增用例在修复前 4 处断言失败（exit 42），统一以 double 累计并在
+  转成 float 前经 `layout_extent` 校验后，18 用例 / 136 断言通过。
+- 最终矩阵（先 compile 后 test；Linux，2026-11-05）：
+
+  | 配置 | 结果 |
+  | --- | --- |
+  | `buildDir` 全量 | 116/116，0 失败、0 跳过；本次 `sdf-device` 与 `sdf-state-probe` 均通过 |
+  | `buildDir-asan` unit | 93 通过 + 1 个预期 `window-lifecycle` 跳过；`LSAN_OPTIONS=detect_leaks=0` |
+  | `buildDir-no-rtti` unit | 95/95 |
+  | `buildDir-nosqlite` unit | 90 通过 + 1 个配置预期跳过 |
+  | `buildDir-tools` | 8/8 |
+  | `release_check --ci` | 8/8，0 跳过；clang-format 23.1.1（`buildDir/fmt-venv`） |
+
+- 维护者复核时 `sdf-state-probe` 曾报 `SDL_CreateGPUDevice(vulkan): unsupported`；
+  最终复核环境中原测试通过，未修改探针、测试断言或跳过策略。
+- 本轮不声明 Windows 验证；Showcase 页面、正式视觉验收和组件使用文档正文仍由维护者手写。
