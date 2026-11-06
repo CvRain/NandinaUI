@@ -172,3 +172,15 @@ Collapsible 与内部 trigger/body 均属于 widget。触发器复用 Button，�
 树、StyleContext 与布局失效，输入/焦点通过 scene 现有 API；scene 只接入平台无关的
 State::expanded 合并规则，不引用 Collapsible。共享展开状态仅由 owner 持有，trigger 弱引用
 读取；没有第二份展开布尔值、独立 painter/配方或平台旁路。
+
+## P4.3 D2 主题呈现投影归属（2026-11-05）
+
+`theme::ThemePresentation` 位于 theme 模块，消费既有 `ThemeManager` 观察者并桥接到
+`reactive`（theme → reactive 是既有合法向下依赖，未新增层间依赖）。只读投影由
+`ReactiveScope::own<T>()` 持有、经 `BuildContext::theme_state()` 暴露；widget 依赖 theme
+的既有方向不变，scene/render 不感知该投影。没有第二份可写主题模型，写入仍统一经
+`ThemeManager`。
+
+2026-11-06 复核补修：ThemeObserver 在内部广播后返回仅由函数对象组成的临时投影更新任务，
+由 manager 分阶段提交；Graph 的延迟令牌只由 ThemePresentation 适配器持有，manager 不包含
+或保存 Graph。现有 SceneTree 只广播一次；通知阶段没有新增 widget/app 的上行引用。

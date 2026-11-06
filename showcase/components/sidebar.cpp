@@ -196,24 +196,26 @@ namespace nandina::showcase
                          .font_size(k_title_font_size)
                          .color_token(theme::ColorToken::foreground);
 
-        // 开关的初始状态直接读当前生效外观，所以切到暗色后再重建外壳不会回弹。
-        const bool dark_now = themes.appearance() == theme::ColorAppearance::dark;
+        // 开关跟随“当前有效外观”，不再只读一次构建期快照：外部入口（系统外观变化、
+        // 其他 set_preference 调用）改变外观时，投影更新经 computed 回写 checked。
+        // 投影由 ui.theme_state() 的作用域持有；manager 比外壳作用域活得久，所以
+        // 这里只存 manager 指针写偏好。
+        auto& theme_state = ui.theme_state();
+        auto& dark_now = ui.computed([&theme_state] {
+            return theme_state.get().appearance == theme::ColorAppearance::dark;
+        });
 
-        // 主题管理器归 NanApplication 所有，比外壳作用域活得久，所以这里存指针。
-        // 存引用捕获会让读代码的人以为它跟着某个局部作用域走 —— 本文件上面那些
-        // `[&]` 的教训就是这类误读的代价。
-        //
-        // 已知边界：这是**单向**的，开关只负责"写"偏好。外观若从别处改变（系统外观变化、
-        // 别处调 set_preference），开关的勾选状态不会跟着更新 —— ThemeManager 目前没有
-        // 可供订阅的外观信号（只有 `revision()` 与观察者接口），要跟随就得在外壳里挂一个
-        // ThemeObserver。先按"外壳只提供入口"实现。
         theme::ThemeManager* manager = &themes;
         auto appearance_switch =
-            ui.make<widget::Switch>("暗色模式", dark_now).on_change([manager](const bool dark) {
-                manager->set_preference(
-                    dark ? theme::ThemePreference::dark : theme::ThemePreference::light
-                );
-            });
+            ui.make<widget::Switch>("暗色模式", dark_now.get())
+                .on_change([manager](const bool dark) {
+                    manager->set_preference(
+                        dark ? theme::ThemePreference::dark : theme::ThemePreference::light
+                    );
+                })
+                .build();
+        // set_checked 是静默写入（不触发 on_change），外部变化不会回写成一次用户偏好。
+        ui.bind(appearance_switch, &widget::Switch::set_checked, dark_now);
 
         auto content = ui.column()
                            .gap(k_section_gap)

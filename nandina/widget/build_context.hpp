@@ -8,6 +8,7 @@
 #include "../reactive/graph.hpp"
 #include "../reactive/scope.hpp"
 #include "../theme/theme_manager.hpp"
+#include "../theme/theme_presentation.hpp"
 #include "authoring.hpp"
 #include "component_traits.hpp"
 #include "drag_controller.hpp"
@@ -69,6 +70,12 @@ namespace nandina::widget
 
         [[nodiscard]] auto theme_manager() const noexcept -> theme::ThemeManager& {
             return *themes_;
+        }
+
+        /// 本页作用域的只读主题呈现窄投影：同一页面内跨派生区域共享一个实例，
+        /// 随回调作用域销毁并注销观察者；作者不能通过它写回主题状态。
+        [[nodiscard]] auto theme_state() const -> theme::ThemePresentation& {
+            return callback_scope_->own<theme::ThemePresentation>(*themes_, *graph_);
         }
 
         [[nodiscard]] auto resource_manager() const noexcept -> resource::ResourceManager* {

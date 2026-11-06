@@ -1,7 +1,8 @@
 # D2：主题方案、作者入口与状态订阅
 
-> **状态：讨论汇总，待审阅，尚未实施。** 汇总截至 2026-10-10 的 D2 对话。
-> 本文用于下一轮审阅，不表示 API 已定稿或能力已经可用；实施顺序也只是建议。
+> **状态：§5.5 首批窄投影已实施（2026-11-05，初稿待维护者复核，未提交）；其余方案身份、
+> 选择解析、作者入口与颜色校验仍待审阅。** 汇总截至 2026-10-10 的 D2 对话；首批按 §8 第 1–2 步
+> 交付（见 §11），其余小节仍是讨论与建议，不表示对应 API 已定稿或能力已经可用。
 > 所有标注为伪代码的示例只表达作者体验，不可直接当成现有接口使用。
 > 当前实现以 [设计令牌与主题系统](design_tokens.md) 和源码为准；原始问题见
 > [D2 工作稿](reference_draft.md) 与 [story 010](../../stories/010-the-theme-signal-that-cannot-be-subscribed.md)。
@@ -636,4 +637,98 @@ D2 此次只保留边界，不承诺组件插件、动态库加载、任意自�
    作者入口；颜色合成与读回核对归第 4 步之后的独立校验子项。第三方配方扩展继续独立排期，
    不与主题创作入口混为一项。
 
-本次仅汇总讨论，不宣称未决项已经拍板，不改动运行时代码，也不把拟议 API 写入入门教程。
+以上保留原设计讨论；首批第 4–6 项中与窄投影有关的桥接、订阅和通知策略已按 §11 实施与
+复核补修，其余身份/选择/作者入口仍未实施，具体建议见 §12。不把未实施 API 写入入门教程。
+
+---
+
+## 11. 首批实施记录（P4.3 D2 窄投影，2026-11-05）
+
+### 2026-11-06 复核补充：首批通知协议
+
+本批采用 manager 不持有 Graph、作用域适配器桥接的方案。一次同步发布分为内部观察者通知、
+全部只读投影写入、响应式 effect 提交、外部订阅四段；内部观察者仍沿既有 SceneTree 路径，
+不新增第二轮组件广播。投影写入期间延迟 effect，因此同一事务中多个投影先形成一致载荷，
+订阅和 effect 才可读取；窗口 tick 的外层 deferred effects 仍在 reactive 阶段提交。
+
+发布期间允许读状态、订阅/解绑、销毁投影/作用域或 manager；新订阅不补发初始变化，已解绑
+或已失效的订阅不再回调。观察登记使用独立身份，移除后在相同地址新建的观察者不继承旧通知。
+销毁投影不会销毁正在通知的内部状态；`readonly()` 为借用视图，仅在投影所属作用域仍存活时
+可读，Graph 必须活过投影与本次发布。manager 先销毁时投影失效但保留最后载荷。
+
+通知期间通过 manager 再次写入（包括注册/样式/偏好等入口）在任何状态修改前抛
+`std::logic_error`；本批选择拒绝重入，不把新主题请求插入当前发布。某个内部观察者、effect
+或外部订阅抛异常时继续其他必要通知和订阅，发布结束后向调用方重抛首个异常，已提交状态不
+回滚。单个 effect 抛错时，该 Graph 当前队列仍按既有异常语义停止；本协议保证其他观察者、
+投影和外部订阅继续投递，不扩展为“图内所有 effect 异常后继续执行”的新响应式模型。
+
+按 §8 第 1–2 步交付；载荷、只读入口与桥接所有权按 §5.5 定形，不等待身份/选择/目录模型：
+
+- **载荷**：`theme::ThemePresentationState { ColorAppearance appearance; std::uint64_t revision; }`
+  ——有效外观 + 不透明呈现修订标记（含动效变化），不带方案身份、家族、偏好或假注册名。
+- **只读投影**：`theme::ThemePresentation`，由 `ThemeManager` 观察者驱动，内部 `Signal` 把状态
+  桥接给 reactive；`get()`/`appearance()`/`revision()` 是依赖追踪读取，`readonly()` 交给子组件，
+  `subscribe(handler)` 返回 RAII `Subscription`。订阅不补发初始变化；等价状态去重。
+- **归属与作用域**：`ReactiveScope::own<T>()` 提供作用域拥有的非响应式服务（按类型唯一，
+  先于 scope 信号销毁，便于释放外部观察者）；`BuildContext::theme_state()` 用页面回调作用域
+  暴露唯一实例，派生区域共享。`ThemeManager` 不依赖 `Graph`。
+- **生命周期**：manager 先销毁 → `valid()` 转 false，保留最后载荷；作用域先销毁 → 注销观察者；
+  两端任一先销毁均不悬垂访问、不再回调。
+- **发布点审计**：`apply`、具名 `activate`、遗留/全快照家族、`set_preference`、系统偏好与
+  动效入口均验证窄投影变化；具名同快照的显式/系统外观变化在生产者补发，活动家族替换提交
+  新内容；等价家族注册、相同生效快照切家族和只改未生效槽位不制造呈现 revision。
+- **应用验收**：Showcase 侧边栏亮暗开关跟随投影（外部外观变化回写 `checked`，静默 setter
+  不冒充用户 `on_change`）。
+
+首批不包含：选择状态、方案身份/目录、纯主题内容事件、`ThemeObserver` 退役、作者颜色入口、
+颜色合成与校验（§8 第 3–5 步与 4a）。上述形状待维护者定形后再扩展载荷；扩展仍须复核
+聚合初始化、比较与通知范围。实现与验证见
+[D2 实施记录](reference_draft.md#p43-d2-首批窄投影实施记录2026-11-05)。
+
+## 12. 第 3 步 API 建议（2026-11-06，未实施）
+
+本节是本次复核后的具体建议，供下一子批定形；不作为本批已交付能力，也不授权提前实现。
+
+| 议题 | 建议取舍 |
+| --- | --- |
+| 方案身份 | 强类型 `ThemeSchemeId`，规范文本为 `namespace:name`，例如 `org.example:midnight`、`nandina:default/light`；必须有命名空间，大小写敏感，仅接受规范小写 ASCII，不自动折叠或裁剪 |
+| 文本语法 | namespace 为点分段，每段 `[a-z][a-z0-9-]*`；name 为斜线分段，每段 `[a-z][a-z0-9_-]*`；总长不超过 255 字节，拒绝空段、`.`/`..`、空白和 Unicode。`parse` 返回带偏移的 typed error，`text()` 无损返回规范文本；持久化格式另带 schema 版本 |
+| 内容形状 | `ThemeSchemeContent` 只含一套 `NanColorScheme`，以及完整 tokens、typography、components；`ThemeScheme` 另持有 ID、显示名、固定 light/dark 分类与可选家族 ID。内容不可变，家族只分组，不隐式解析亮暗搭配 |
+| 选择形状 | 用 `std::variant<FixedThemeSelection, AppearanceThemeSelection>` 表达两种互斥模式；固定来源是 scheme ID 或显式未注册快照，按外观存 light/dark 两个注册 ID 和 `ThemePreference`。切换时提交完整选择值；记住另一模式的历史配置属于应用设置，不藏在 manager 中 |
+| 失败行为 | 先验证所有 ID 与槽位分类，再一次性提交；未知 ID、缺槽、分类不匹配均返回 `std::expected<void, ThemeSelectionError>`，目录、选择、生效快照和 revision 不变。系统变化在固定模式下不改方案或其外观分类 |
+| 注册/替换/移除 | `register_scheme` 仅新增，重复 ID 返回错误；`replace_scheme` 显式替换同一逻辑方案。当前内容替换必须发布，即使 ID/外观不变；非当前项变化只推进目录。正在被选择任一槽引用的项拒绝移除，先改选择再移除 |
+| 删除与恢复 | 框架不从内容哈希推断逻辑方案身份，不在内存中维护无界删除墓碑；ID 永远不得转配给另一方案由发布者保证。同方案重装可复用 ID；跨进程设置恢复到未知 ID 时诊断失败，由应用显式选择回退 |
+| 匿名来源 | `UnregisteredThemeSource { content, appearance }` 是固定模式的显式来源，与注册 ID 互斥；仍通过同一个 select 入口提交，不在已注册 selection 之外另藏一次 apply 状态。它没有 scheme ID，也不填充 `application` 等假 ID；匿名内容不作为可恢复的注册选择持久化 |
+| 通知基础 | 沿用本批 manager 无 Graph + 作用域投影；两字段窄投影语义保持不变。选择/目录/身份与纯主题事件另开通道，不往 revision 推断变更类型；沿用分阶段、拒绝重入和异常后完成必要通知的协议 |
+| legacy 收敛 | 在第 3 步同批迁移 register_theme/family、activate/family、set_theme 等旧入口与仓库消费者，最终只有 scheme 目录和 selection 一条可写状态链路。旧双 palette DesignSystem 先作为组件解析快照适配，不作为新独立方案的作者模型 |
+
+类型和入口示意（未实施）：
+
+```cpp
+struct UnregisteredThemeSource {
+    std::shared_ptr<const ThemeSchemeContent> content;
+    ColorAppearance appearance;
+};
+using FixedThemeSource = std::variant<ThemeSchemeId, UnregisteredThemeSource>;
+struct FixedThemeSelection {
+    FixedThemeSource source;
+};
+struct AppearanceThemeSelection {
+    ThemeSchemeId light;
+    ThemeSchemeId dark;
+    ThemePreference preference = ThemePreference::system;
+};
+using ThemeSelection = std::variant<FixedThemeSelection, AppearanceThemeSelection>;
+
+auto ThemeSchemeId::parse(std::string_view) -> std::expected<ThemeSchemeId, ThemeIdError>;
+auto ThemeSchemeId::text() const noexcept -> std::string_view;
+auto ThemeManager::select(ThemeSelection) -> std::expected<void, ThemeSelectionError>;
+auto ThemeManager::register_scheme(ThemeScheme) -> std::expected<void, ThemeCatalogError>;
+auto ThemeManager::replace_scheme(ThemeScheme) -> std::expected<void, ThemeCatalogError>;
+auto ThemeManager::remove_scheme(const ThemeSchemeId&) -> std::expected<void, ThemeCatalogError>;
+```
+
+以上 ID 文本是拟议公开兼容面，应先评审再开始写入应用设置。持久化只保存 schema、选择模式、
+规范 ID 和必要偏好，不保存 manager revision；家族 ID 的文本可复用同一语法，但使用不同强类型。
+同 ID 内容替换以显式不可变内容快照为依据，同快照重复提交幂等；框架不承诺深比较任意配方。
+颜色合成/色域/真实像素读回保持第 4a 子项，第 3 步只完成结构与引用校验。

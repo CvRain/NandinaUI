@@ -5,8 +5,8 @@
 > 拍板之后：决定写进对应的 reference（`component_contract.md` / `theme` 相关 / `page_and_router.md`
 > / `platform_backend_contract.md`），过程补充到 stories；本文随之删除或降级为历史草案。
 
-2026-11-05 补充：D3 已实施并完成维护者复核，保持未提交；当前契约与实施记录见本节 D3 和
-[Page / Router](page_and_router.md)。上面的日期行保留当时状态。
+2026-11-05 补充：D3 已复核并随 `095336b` 提交；D2 首批窄投影实现初稿待维护者复核。
+当前契约与实施记录见本节 D3/D2 与 [Page / Router](page_and_router.md)。上面的日期行保留当时状态。
 >
 > 文件名沿用当前叫法；若想改成 `open_decisions.md` 这类更直白的名字，改索引一行即可。
 
@@ -108,7 +108,7 @@ Nandina 移植 Angular 的路由模型。参见 [Angular: Define Routes](https:/
 | 分组值同时成为当前 UI 分组标题，且当前无空值语义 | `NavSection::type`、`showcase/components/sidebar.cpp` |
 | 分组顺序稳定，为首次出现顺序 | `Routes::nav_sections()` 与 `[app][router][nav]` 测试 |
 
-## 已接受契约（2026-11-05 已实施，维护者复核完成；保持未提交）
+## 已接受契约（2026-11-05 已实施、复核并随 `095336b` 提交）
 
 - 不把分组改成封闭枚举，不做框架级已知名字白名单，也不因陌生分组值拒绝 route。
 - 应用可以继续传任意字符串；其来源可以是 `constexpr`、用户自己的类型/UUID 序列化、manifest、
@@ -172,8 +172,8 @@ manifest、route factory 或构建生成步骤中完成，而无需所有应用�
   ASan/UBSan unit 已完成，未发现该配置下的内存或未定义行为错误。审批服务恢复后，
   桌面会话补跑 `meson compile -C buildDir && meson test -C buildDir sdf-device sdf-state-probe
   window-lifecycle --print-errorlogs --logbase d3-desktop`；在真实成功前保留上述限制。
-- Windows、桌面/GPU 补验和人工视觉验收尚未执行。维护者复核已完成，按维护者要求保持未提交；
-  D2 主题状态与作者颜色入口仍是后续独立子批。
+- Windows、桌面/GPU 补验和人工视觉验收尚未执行。P4.2c 与 D3 已随维护者统一提交 `095336b`
+  推送；D2 首批窄投影为此后新开的子批，方案身份/选择与作者颜色入口仍是后续独立子批。
 
 ### 维护者独立复核（2026-11-05）
 
@@ -197,7 +197,102 @@ manifest、route factory 或构建生成步骤中完成，而无需所有应用�
 Showcase 使用 `content_and_display/label` / `内容与展示`。复核后的跟进仅修正“逐字一致”的
 不实注释，未改变路由值、渲染行为或 golden；今后若对齐值，须单独审阅并重新批准基准。
 
-维护者要求 P4.2c + D3 全部保持未提交，本轮不启动下一批。
+P4.2c 与 D3 已随维护者统一提交 `095336b` 推送；D2 首批窄投影另起子批（见下）。
+
+---
+
+### P4.3 D2 首批窄投影实施记录（2026-11-05）
+
+按 [主题方案、作者入口与状态订阅](theme_authoring_and_state.md) §5.5 与 §8 第 1–2 步交付，
+不等待方案身份/选择解析/作者颜色入口定形：
+
+- 新增 `theme/theme_presentation.hpp/.cpp`：`ThemePresentationState { ColorAppearance appearance;
+  std::uint64_t revision; }` 为 §5.5 两项窄载荷；`ThemePresentation` 是只读投影，由 `ThemeManager`
+  的观察者回调驱动，内部 `Signal` 桥接 reactive（theme → reactive 为既有合法向下依赖）。
+- 读取参与依赖追踪（`get()`/`appearance()`/`revision()`），`readonly()` 返回 `ReadSignal`
+  供子组件消费，`subscribe(handler)` 返回 RAII `Subscription`；订阅本身不伪造初始变化。
+- 等价状态去重：观察值未变化不通知；`revision` 保留“不透明呈现修订”语义（动效变化也前进）。
+- 生命周期：`ThemeManager` 先销毁 → 投影 `valid()` 转 false，保留最后发布载荷、后续安全；
+  作用域先销毁 → 投影注销观察者，之后变化不再回调。任何一端先销毁都不悬垂访问。
+- 作用域归属：`ReactiveScope::own<T>()` 新增“作用域拥有的非响应式服务”（按类型唯一，
+  在 effects/computeds 之后、signals 之前销毁）；`BuildContext::theme_state()` 通过页面
+  回调作用域暴露同一实例，派生区域共享。
+- Showcase 侧边栏亮暗开关改为跟随投影：外部外观变化（系统外观、其他 `set_preference`）
+  经 `computed` 回写 `checked`，`Switch::set_checked` 静默写入，不会冒充用户 `on_change`。
+
+- 首版专项（维护者提供）：`theme-presentation` 10 用例 / 60 断言；`sidebar-showcase` 5 用例 / 41 断言
+  （新增外部外观变化跟随用例）。
+- 故障注入（重新编译后触发 Catch2 失败，恢复后全绿）：
+  1. 删除观察者注册 → 投影不再跟随，`theme-presentation` 9 个用例失败（20 断言）。
+  2. 删除侧边栏 `checked` 绑定 → 外部变化不再回写开关，新增侧边栏用例失败。
+  3. `ReactiveScope` 清理时不释放作用域服务 → 作用域销毁后仍回调，生命周期用例失败。
+- 首版发布点审计覆盖 `apply`/具名 `activate`/家族/系统偏好/动效入口；全快照族“同指针
+  只改 appearance”路径正常发布。复核发现具名同快照切外观与活动家族替换仍有遗漏，补修见下。
+- 未包含：方案身份/目录/选择状态、纯主题内容事件、`ThemeObserver` 退役、作者颜色入口、
+  颜色合成与校验（§8 第 3–5 步）；选择与身份待维护者定形后再扩展载荷。
+- 首版验证矩阵（维护者提供，Linux 无显示/GPU 沙箱）：buildDir 全量 117 OK / 1 FAIL（sdf-state-probe，
+  无显示设备）/ 1 SKIP（sdf-device 77）；asan 96 OK/1 skip（window-lifecycle）；no-RTTI 98 OK；
+  no-SQLite 93 OK/1 skip；tools 8 OK；release_check --ci 8/8（clang-format 23.1.1；headers 193；
+  docs 87 篇含新增锚点）。
+- 本轮保持未提交，等待维护者复核；D2 其余步骤与作者颜色入口另行排期。
+
+### D2 首批复核补修（2026-11-06，未提交）
+
+基线先编译并通过 `theme-presentation` / `sidebar-showcase` / `theme-switch`。随后新增边界用例，
+首轮五个非生命周期用例全部失败（32 断言中 16 失败），确认以下实现缺口：
+
+- 具名主题沿用同一快照时，外观已改变但 `commit` 指针短路，theme view 与投影未发布。
+- 活动 legacy 家族替换在移走 name 后才比较，未同步新映射；全快照家族替换仅刷新旧内容，
+  未提交新快照。两条路径均用独立 tokens 数值证明实际内容替换与 revision 更新。
+- 订阅重入可在同一次通知中再次改主题，载荷与 manager 事实不一致；订阅抛错会阻断后续
+  订阅和其他页面投影。内部广播/多个投影写入未分阶段，effect 可看到旧场景样式或另一投影旧值。
+
+补修使用独立观察登记身份和四段通知：内部广播 → 全部投影写入 → effect 提交 → 外部订阅。
+manager 不依赖 Graph；低层 `ThemeObserver` 增加有默认实现的 `prepare_theme_presentation`
+阶段，返回只拥有临时提交/通知任务的 `ThemeObserverUpdate`。投影在任务中保留内部状态，
+scope 清理仅断开后续通知；支持通知期间 scope 或 manager 销毁。完整协议见
+[D2 §11](theme_authoring_and_state.md#11-首批实施记录p43-d2-窄投影2026-11-05)。
+
+故障注入（每项重新编译，结束后恢复源码）：
+
+1. 恢复具名同快照短路：专项 exit 42，3 处断言失败。
+2. 去掉发布期间的写入守卫：重入专项 exit 42，3 处断言失败。
+3. 提前提交 effect 延迟令牌：多投影/场景一致性专项 exit 42，2 处断言失败。
+4. 把通知任务的内部状态强引用改为裸指针：清理 scope 用例触发 ASan heap-use-after-free
+   （`Event::emit` 的继续派发路径），exit 1；恢复保活后 ASan 专项通过。
+5. 新增等价家族注册/同生效快照切家族/只改未生效暗色映射的回归，修复前 exit 42，5 处
+   断言失败。外观变更只在生产者实际改变 appearance 且快照提交没有发布时补发，保留普通
+   同快照 commit 的幂等性；系统外观与显式偏好两条入口均覆盖。
+
+另补 `ReactiveScope::own<T>()` 的类型/代次唯一性、构造失败后重试、服务清理早于 signals 且
+晚于 scope reactors 的独立回归；只读视图追踪、manager 析构中移除观察者、同地址重新登记、
+异常隔离、全部写入口守卫与外层窗口 deferred effects 均有专项覆盖。Sidebar 补充系统驱动切换
+保持 preference=system 的断言，避免把程序同步冒充用户事件。
+
+第 3 步身份/选择 API 的具体建议已归档到 [D2 §12](theme_authoring_and_state.md#12-第-3-步-api-建议2026-11-06未实施)，
+本批未实施下一步。
+
+最终代码树验证（2026-11-06，每套先编译再运行，测试使用 `--no-rebuild`；未改写门禁）：
+
+| 范围 | 本轮实际结果 |
+| --- | --- |
+| theme-presentation | 26 用例 / 163 断言，通过 |
+| reactive（含独立 own 回归） | 44 用例 / 193 断言，通过 |
+| sidebar-showcase | 5 用例 / 45 断言，通过 |
+| buildDir 全量 | 116 OK / 2 FAIL / 1 SKIP；两个 FAIL 均为 SDL_Init 无显示设备的 sdf-device / sdf-state-probe |
+| buildDir-asan unit | 96 OK / 1 SKIP；构建与测试均设 LSAN_OPTIONS=detect_leaks=0，ASan/UBSan 启用 |
+| buildDir-no-rtti unit | 97 OK / 1 SKIP |
+| buildDir-nosqlite unit | 93 OK / 1 SKIP |
+| buildDir-tools（build_ui=false） | 8 OK；后续等价发布补修不涉及此构建闭包 |
+| buildDir-probe | 最新投影/Sidebar 的 nandina_sdl_page_probe 编译通过，未运行桌面渲染 |
+| release_check --ci | 8/8，无 SKIP；新增未跟踪的头/源码/测试另外使用 clang-format 23.1.1 dry-run |
+
+三套 unit 的 SKIP 与主套件的 SKIP 均为 window-lifecycle；与维护者先前在其他环境中的
+97/98 项结果差异分别保留，不把跳过写成通过。主套件的 SDK 子项目打包与 vendored 下游消费
+均通过。Windows、桌面/GPU 与人工视觉验收仍未执行，不由此矩阵代替。
+
+复核发现的行为缺口已补修并验证；保留未提交供维护者复验本轮新增通知协议和边界测试。
+复验后可按原约定统一提交本批，不将首版与补修拆开；本轮没有 commit/push。
 
 ---
 
@@ -706,8 +801,8 @@ D8。D1 第二阶段必须复用已有 host seam，并在实际平台上分别�
 | 议题 | 权威归属 |
 | --- | --- |
 | D1 | [统一输入、焦点与文本编辑](focus_and_input.md)，设计已接受，未实施 |
-| D2 | [主题方案、作者入口与状态订阅](theme_authoring_and_state.md)，待审阅 |
-| D3 | 已实施并完成维护者复核，保持未提交；正式契约见 [Page / Router](page_and_router.md)，两轮验证见本稿 D3 实施记录 |
+| D2 | [主题方案、作者入口与状态订阅](theme_authoring_and_state.md)：§5.5 首批窄投影已实施（初稿待维护者复核，未提交），见下文 D2 实施记录；其余待审阅 |
+| D3 | 已复核并随 `095336b` 提交；正式契约见 [Page / Router](page_and_router.md)，两轮验证见本稿 D3 实施记录 |
 | D4 | [平台与后端契约](platform_backend_contract.md)，默认切换与 seam 已落地，逐平台验收继续 |
 | D5 | [资源构建、部署与运行时定位](resource_build_and_deployment.md)，目标契约已冻结 |
 | D6 | [作者 DSL 与内容测量](authoring_dsl_and_content_measurement.md)，详细契约待审阅 |

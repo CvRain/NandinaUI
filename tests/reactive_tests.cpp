@@ -824,3 +824,74 @@ TEST_CASE(
     REQUIRE_FALSE(property.is_bound());
     REQUIRE(property.get() == 3);
 }
+
+TEST_CASE(
+    "scope owns one non-reactive service per exact type and generation",
+    "[reactive][scope][own]"
+) {
+    Graph graph;
+    ReactiveScope scope(graph);
+    struct First {
+        int value;
+        explicit First(int initial): value(initial) {}
+    };
+    struct Second {
+        int value;
+        explicit Second(int initial): value(initial) {}
+    };
+    auto& first = scope.own<First>(1);
+    CHECK(&first == &scope.own<First>(9));
+    CHECK(first.value == 1);
+    CHECK(scope.own<Second>(4).value == 4);
+    scope.clear();
+    CHECK(scope.own<First>(7).value == 7);
+}
+
+TEST_CASE(
+    "scope releases services after reactors and before owned signals",
+    "[reactive][scope][own]"
+) {
+    Graph graph;
+    ReactiveScope scope(graph);
+    auto& source = scope.signal_value(3);
+    int runs = 0;
+    scope.effect([&] {
+        (void)source.get();
+        ++runs;
+    });
+    struct Service {
+        Signal<int>& source;
+        std::weak_ptr<void> generation;
+        bool& released;
+        Service(Signal<int>& value, std::weak_ptr<void> lifetime, bool& flag):
+            source(value),
+            generation(std::move(lifetime)),
+            released(flag) {}
+        ~Service() {
+            CHECK(generation.expired());
+            CHECK(source.peek() == 3);
+            source.set(8); // Signals are alive; scope reactors must already be gone.
+            released = true;
+        }
+    };
+    bool released = false;
+    (void)scope.own<Service>(source, scope.lifetime(), released);
+    scope.clear();
+    CHECK(released);
+    CHECK(runs == 1);
+}
+
+TEST_CASE("failed service construction leaves the scope usable", "[reactive][scope][own]") {
+    Graph graph;
+    ReactiveScope scope(graph);
+    struct Service {
+        explicit Service(bool fail) {
+            if (fail) {
+                throw std::runtime_error("construction failure");
+            }
+        }
+    };
+    CHECK_THROWS_AS(scope.own<Service>(true), std::runtime_error);
+    REQUIRE_NOTHROW(scope.own<Service>(false));
+    REQUIRE_NOTHROW(scope.clear());
+}

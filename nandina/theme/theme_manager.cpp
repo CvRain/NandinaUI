@@ -8,11 +8,21 @@
 #include "theme_manager.hpp"
 
 #include <algorithm>
+#include <exception>
 #include <stdexcept>
 #include <utility>
 
 namespace nandina::theme
 {
+    struct ThemeManager::ObserverState {
+        struct Entry {
+            ThemeObserver* observer;
+        };
+        ThemeManager* manager = nullptr;
+        bool publishing = false;
+        std::vector<std::shared_ptr<Entry>> entries;
+    };
+
     namespace
     {
         /** 把遗留 NanTheme（tokens + 单调色板）包装成 DesignSystem 快照。 */
@@ -76,20 +86,33 @@ namespace nandina::theme
         }
     } // namespace
 
-    ThemeManager::ThemeManager() {
+    ThemeManager::ThemeManager(): observers_(std::make_shared<ObserverState>()) {
+        observers_->manager = this;
         system_ = std::make_shared<const DesignSystem>(default_design_system());
         effective_ = merge_style(system_, style_);
         theme_view_ = NanTheme {system_->tokens, system_->palette(appearance())};
     }
 
     ThemeManager::~ThemeManager() {
-        const auto observers = std::move(observers_);
-        for (auto* observer: observers) {
-            observer->on_theme_manager_destroyed(*this);
+        const auto observers = observers_;
+        observers->manager = nullptr;
+        const auto snapshot = observers->entries;
+        for (const auto& entry: snapshot) {
+            if (auto* observer = std::exchange(entry->observer, nullptr)) {
+                observer->on_theme_manager_destroyed(*this);
+            }
+        }
+        observers->entries.clear();
+    }
+
+    void ThemeManager::require_idle() const {
+        if (observers_->publishing || observers_->manager == nullptr) {
+            throw std::logic_error("ThemeManager cannot be changed during theme notification");
         }
     }
 
     void ThemeManager::apply(std::shared_ptr<const DesignSystem> system) {
+        require_idle();
         if (!system) {
             throw std::invalid_argument("ThemeManager design system cannot be null");
         }
@@ -108,6 +131,7 @@ namespace nandina::theme
     }
 
     auto ThemeManager::register_theme(std::string name, NanTheme theme) -> bool {
+        require_idle();
         if (name.empty()) {
             throw std::invalid_argument("ThemeManager theme name cannot be empty");
         }
@@ -125,6 +149,7 @@ namespace nandina::theme
     }
 
     auto ThemeManager::activate(const std::string_view name) -> bool {
+        require_idle();
         const auto found = themes_.find(name);
         if (found == themes_.end()) {
             return false;
@@ -139,12 +164,14 @@ namespace nandina::theme
     }
 
     void ThemeManager::set_theme(NanTheme theme) {
+        require_idle();
         apply(theme_to_design_system(theme));
     }
 
     auto
     ThemeManager::register_family(std::string name, std::string light_theme, std::string dark_theme)
         -> bool {
+        require_idle();
         if (name.empty()) {
             throw std::invalid_argument("ThemeManager family name cannot be empty");
         }
@@ -152,6 +179,7 @@ namespace nandina::theme
             throw std::invalid_argument("ThemeManager family variants must be registered themes");
         }
         const bool replaced = families_.contains(name);
+        const bool replaces_active = active_family_ == name;
         families_.insert_or_assign(
             std::move(name),
             ThemeFamily {
@@ -159,7 +187,7 @@ namespace nandina::theme
                 .dark_theme = std::move(dark_theme),
             }
         );
-        if (active_family_ == name) {
+        if (replaces_active) {
             sync_to_effective();
         }
         return !replaced;
@@ -170,6 +198,7 @@ namespace nandina::theme
     }
 
     auto ThemeManager::activate_family(const std::string_view name) -> bool {
+        require_idle();
         // 全快照族优先：整体 apply，外观翻转由 appearance() 在快照内完成。
         if (const auto found = system_families_.find(name); found != system_families_.end()) {
             if (active_family_ == name) {
@@ -192,29 +221,37 @@ namespace nandina::theme
     }
 
     void ThemeManager::register_theme_family(std::string name, DesignSystem system) {
+        require_idle();
         if (name.empty()) {
             throw std::invalid_argument("ThemeManager family name cannot be empty");
         }
         auto snapshot = std::make_shared<const DesignSystem>(std::move(system));
         const bool replaces_active = active_family_ == name;
-        system_families_.insert_or_assign(std::move(name), std::move(snapshot));
+        system_families_.insert_or_assign(std::move(name), snapshot);
         if (replaces_active) {
-            sync_to_effective();
+            commit(std::move(snapshot));
         }
     }
 
     void ThemeManager::set_preference(const ThemePreference preference) {
+        require_idle();
         if (preference_ == preference) {
             return;
         }
         const auto previous = appearance();
         preference_ = preference;
         if (appearance() != previous) {
+            const auto previous_revision = revision_;
+            const auto observers = observers_;
             sync_to_effective();
+            if (observers->manager && revision_ == previous_revision) {
+                refresh_theme_view(); // Same named snapshot, but a new effective appearance.
+            }
         }
     }
 
     void ThemeManager::set_system_preferences(const SystemPreferences preferences) {
+        require_idle();
         if (system_preferences_ == preferences) {
             return;
         }
@@ -227,9 +264,13 @@ namespace nandina::theme
 
         if (appearance_changed) {
             const auto previous_revision = revision_;
+            const auto observers = observers_;
             sync_to_effective();
-            if (motion_changed && revision_ == previous_revision) {
-                publish_revision();
+            if (observers->manager == nullptr) {
+                return; // A notification may have destroyed the manager.
+            }
+            if (revision_ == previous_revision) {
+                refresh_theme_view(); // Appearance changes publish even on the same snapshot.
             }
         }
         else if (motion_changed) {
@@ -242,6 +283,7 @@ namespace nandina::theme
     }
 
     void ThemeManager::set_system_appearance(const ColorAppearance appearance) {
+        require_idle();
         auto preferences = system_preferences_;
         preferences.appearance = appearance;
         set_system_preferences(preferences);
@@ -276,6 +318,7 @@ namespace nandina::theme
     }
 
     void ThemeManager::set_motion_preference(const MotionPreference preference) {
+        require_idle();
         const bool previous = reduced_motion();
         motion_preference_ = preference;
         if (reduced_motion() != previous) {
@@ -284,6 +327,7 @@ namespace nandina::theme
     }
 
     void ThemeManager::set_system_reduced_motion(const bool reduced) {
+        require_idle();
         auto preferences = system_preferences_;
         preferences.reduced_motion = reduced;
         set_system_preferences(preferences);
@@ -302,6 +346,7 @@ namespace nandina::theme
     }
 
     void ThemeManager::set_style(std::shared_ptr<const NanStyle> style) {
+        require_idle();
         if (!style) {
             throw std::invalid_argument("ThemeManager style cannot be null");
         }
@@ -314,13 +359,27 @@ namespace nandina::theme
     }
 
     void ThemeManager::add_observer(ThemeObserver& observer) {
-        if (std::ranges::find(observers_, &observer) == observers_.end()) {
-            observers_.push_back(&observer);
+        if (observers_->manager == nullptr) {
+            throw std::logic_error("Cannot observe a destroyed ThemeManager");
+        }
+        const auto found =
+            std::ranges::find_if(observers_->entries, [&observer](const auto& entry) {
+                return entry->observer == &observer;
+            });
+        if (found == observers_->entries.end()) {
+            observers_->entries.push_back(std::make_shared<ObserverState::Entry>(&observer));
         }
     }
 
     void ThemeManager::remove_observer(ThemeObserver& observer) noexcept {
-        std::erase(observers_, &observer);
+        for (const auto& entry: observers_->entries) {
+            if (entry->observer == &observer) {
+                entry->observer = nullptr;
+            }
+        }
+        std::erase_if(observers_->entries, [](const auto& entry) {
+            return entry->observer == nullptr;
+        });
     }
 
     auto ThemeManager::effective_theme_name() const noexcept -> std::string_view {
@@ -372,10 +431,54 @@ namespace nandina::theme
     void ThemeManager::publish_revision() {
         ++revision_;
         const auto observers = observers_;
-        for (auto* observer: observers) {
-            if (std::ranges::find(observers_, observer) != observers_.end()) {
-                observer->on_theme_revision_changed(*this);
+        struct PublishingGuard {
+            std::shared_ptr<ObserverState> state;
+            ~PublishingGuard() {
+                state->publishing = false;
             }
+        } guard {observers};
+        observers->publishing = true;
+        const auto snapshot = observers->entries;
+        std::exception_ptr failure;
+        const auto deliver = [&failure](const auto& callback) {
+            try {
+                callback();
+            }
+            catch (...) {
+                if (!failure) {
+                    failure = std::current_exception();
+                }
+            }
+        };
+        for (const auto& entry: snapshot) {
+            if (entry->observer && observers->manager) {
+                deliver([&] { entry->observer->on_theme_revision_changed(*observers->manager); });
+            }
+        }
+        std::vector<ThemeObserverUpdate> updates;
+        for (const auto& entry: snapshot) {
+            if (entry->observer && observers->manager) {
+                deliver([&] {
+                    updates.push_back(
+                        entry->observer->prepare_theme_presentation(*observers->manager)
+                    );
+                });
+            }
+        }
+        // All projections are staged before effects or application subscriptions run.
+        // Owned callbacks keep their staging state alive even if a scope is removed.
+        for (const auto& update: updates) {
+            if (update.commit) {
+                deliver(update.commit);
+            }
+        }
+        for (const auto& update: updates) {
+            if (update.notify) {
+                deliver(update.notify);
+            }
+        }
+        if (failure) {
+            std::rethrow_exception(failure);
         }
     }
 

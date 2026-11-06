@@ -15,6 +15,7 @@
 #include "nan_style.hpp"
 
 #include <cstdint>
+#include <functional>
 #include <map>
 #include <memory>
 #include <string>
@@ -39,14 +40,28 @@ namespace nandina::theme
 
     class ThemeManager;
 
+    /// Internal presentation staging: release deferred effects before notifying subscribers.
+    /// Callbacks own their temporary state and remain safe if the observer is disconnected.
+    struct ThemeObserverUpdate {
+        std::function<void()> commit;
+        std::function<void()> notify;
+    };
+
     /** 主题 revision 观察者（SceneTree 实现，向挂载节点广播 on_theme_changed）。 */
     class ThemeObserver {
     public:
         virtual ~ThemeObserver() = default;
         virtual void on_theme_revision_changed(const ThemeManager& manager) = 0;
         virtual void on_theme_manager_destroyed(const ThemeManager& manager) noexcept = 0;
+        /// Called after all internal observers; all projections stage before any commit/notify.
+        [[nodiscard]] virtual auto prepare_theme_presentation(const ThemeManager&)
+            -> ThemeObserverUpdate {
+            return {};
+        }
     };
 
+    /// Synchronous publication rejects reentrant writes before mutation. Delivery continues
+    /// after callback failures, then rethrows the first exception without reverting the commit.
     class ThemeManager {
     public:
         ThemeManager();
@@ -125,6 +140,8 @@ namespace nandina::theme
         void remove_observer(ThemeObserver& observer) noexcept;
 
     private:
+        struct ObserverState;
+        void require_idle() const;
         [[nodiscard]] auto effective_theme_name() const noexcept -> std::string_view;
         void commit(std::shared_ptr<const DesignSystem> system);
         void sync_to_effective();
@@ -145,7 +162,7 @@ namespace nandina::theme
         std::shared_ptr<const DesignSystem> system_;
         std::shared_ptr<const DesignSystem> effective_;
         NanTheme theme_view_;
-        std::vector<ThemeObserver*> observers_;
+        std::shared_ptr<ObserverState> observers_;
         std::uint64_t revision_ = 1;
     };
 

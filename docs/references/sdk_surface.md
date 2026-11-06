@@ -18,14 +18,28 @@
 
 ## 2. 三档分类
 
-2026-11-05 P4.3 D3 子批（破坏性字段迁移，维护者复核完成；保持未提交）：
+2026-11-05 P4.3 D3 子批（破坏性字段迁移，复核完成并随 `095336b` 提交）：
 `RouteOptions::type` 改为 `nav_group`，默认从 `"default"` 改为空串；`NavSection::type`
 改为 `group`，不保留旧字段或别名。显式 `.nav_group = "default"` 仍创建普通有标题组；
 省略/空串全局合并为一个无标题组，组间分隔线保留。所有组按精确值比较与首次出现顺序排列，
 `PageKey` 路由身份、address 显示与 typed navigation 沿用既有规则。迁移调用方后须重新编译；
 正式契约见 [Page / Router](page_and_router.md)，验证见 [D3](reference_draft.md#d3-路由身份与导航分组开放到哪一层)。
 
-2026-11-05 P4.2c（experimental，初稿待维护者审阅）：新增 `widget/collapsible.hpp`，
+2026-11-05 P4.3 D2 首批窄投影（experimental，初稿待维护者复核）：
+新增 `theme/theme_presentation.hpp/.cpp`：`ThemePresentationState { ColorAppearance appearance;
+std::uint64_t revision; }` 与作用域绑定的只读 `ThemePresentation`（`get()`/`readonly()`/`subscribe()`），
+`BuildContext::theme_state()` 返回本页唯一实例；`ReactiveScope::own<T>()` 提供作用域拥有的
+非响应式服务（同类唯一、随作用域先于信号销毁）。只提供读取与订阅，写入仍经 ThemeManager；
+首批不含选择状态、方案身份、目录或作者颜色入口。
+
+2026-11-06 D2 复核补修（未提交）：`ThemeObserver` 增加默认空的
+`prepare_theme_presentation` 阶段与 `ThemeObserverUpdate` 临时提交/通知任务；现有观察者
+仍实现原有内部广播，投影在其后统一写入，再提交 effects、最后调用外部订阅。
+通知期间所有主题写入口先抛 `logic_error`，单个通知异常不阻断后续必要投递，结束后重抛首个
+异常；原先依赖重入写主题的调用方须改为在通知返回后提交请求。manager 与投影的内部布局
+已调整，库与调用方须一起重编译。`readonly()` 仍为借用视图，不能在页面作用域销毁后读取。
+
+2026-11-05 P4.2c（experimental，已随 `095336b` 提交）：新增 `widget/collapsible.hpp`，
 导出 Collapsible（Button trigger + retained 内容）；`ui.make<Collapsible>(text)` / Signal<bool>
 重载、`.child()` / `.open()` / `.on_change()` / `.gap()`。`set_open` 静默，用户 toggle 才发事件，
 trigger typed override 和 container/label visual part 沿用 Button；不新增配方。

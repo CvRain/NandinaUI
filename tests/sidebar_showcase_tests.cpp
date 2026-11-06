@@ -200,3 +200,57 @@ TEST_CASE("sidebar adds no empty section for hidden routes", "[showcase][sidebar
     );
     CHECK(fixture.navigation_items().empty());
 }
+
+TEST_CASE(
+    "sidebar appearance switch follows external theme changes",
+    "[showcase][sidebar][theme]"
+) {
+    Fixture fixture(app::Routes {app::route<TestPage<0>>({.title = "Home"})});
+
+    const auto find_switch = [&]() -> const semantics::Node* {
+        const auto search = [](const semantics::Node& node,
+                               const auto& self) -> const semantics::Node* {
+            if (node.properties.role == semantics::Role::switch_control) {
+                return &node;
+            }
+            for (const auto& child: node.children) {
+                if (const auto* found = self(child, self)) {
+                    return found;
+                }
+            }
+            return nullptr;
+        };
+        for (const auto& root: fixture.tree.semantics_tree().roots) {
+            if (const auto* found = search(root, search)) {
+                return found;
+            }
+        }
+        return nullptr;
+    };
+
+    const auto* toggle = find_switch();
+    REQUIRE(toggle != nullptr);
+    CHECK(toggle->properties.state.checked == false);
+
+    // 外部入口改变外观：窄投影 → computed → 绑定回写 checked（不冒充用户 on_change）。
+    fixture.themes.set_preference(theme::ThemePreference::dark);
+    REQUIRE(fixture.tree.update_semantics());
+    toggle = find_switch();
+    REQUIRE(toggle != nullptr);
+    CHECK(toggle->properties.state.checked == true);
+
+    fixture.themes.set_preference(theme::ThemePreference::light);
+    REQUIRE(fixture.tree.update_semantics());
+    toggle = find_switch();
+    REQUIRE(toggle != nullptr);
+    CHECK(toggle->properties.state.checked == false);
+
+    // A system-driven update must stay a programmatic sync, without pinning user preference.
+    fixture.themes.set_preference(theme::ThemePreference::system);
+    fixture.themes.set_system_appearance(theme::ColorAppearance::dark);
+    REQUIRE(fixture.tree.update_semantics());
+    toggle = find_switch();
+    REQUIRE(toggle != nullptr);
+    CHECK(toggle->properties.state.checked == true);
+    CHECK(fixture.themes.preference() == theme::ThemePreference::system);
+}
