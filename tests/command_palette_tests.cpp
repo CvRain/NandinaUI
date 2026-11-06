@@ -1,3 +1,4 @@
+#include "theme_test_support.hpp"
 //
 // CommandPalette tests: modal command launcher over the shared MenuItem model.
 //
@@ -119,7 +120,7 @@ namespace
 
     struct PaletteHarness {
         reactive::Graph graph;
-        theme::ThemeManager themes;
+        theme_test::Manager themes;
         std::shared_ptr<scene::OverlayHost> host = scene::OverlayHost::create();
         std::shared_ptr<scene::NanControl> body =
             std::make_shared<scene::NanControl>(foundation::NanSize(720.0F, 480.0F));
@@ -327,7 +328,7 @@ TEST_CASE(
 TEST_CASE("command palette is reachable through BuildContext", "[command-palette][traits]") {
     reactive::Graph graph;
     reactive::ReactiveScope scope {graph};
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     auto host = scene::OverlayHost::create();
     widget::BuildContext ui {graph, scope, themes, nullptr, host.get()};
     auto builder = ui.make<widget::CommandPalette>(

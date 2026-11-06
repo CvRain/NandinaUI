@@ -1,3 +1,4 @@
+#include "theme_test_support.hpp"
 //
 // Dialog (modal overlay) tests.
 //
@@ -59,7 +60,7 @@ namespace
 
     struct DialogHarness {
         reactive::Graph graph;
-        theme::ThemeManager themes;
+        theme_test::Manager themes;
         std::shared_ptr<widget::Dialog> dialog = widget::Dialog::create();
         std::shared_ptr<scene::NanControl> root =
             std::make_shared<scene::NanControl>(foundation::NanSize(800.0F, 600.0F));
@@ -341,7 +342,7 @@ TEST_CASE("dialog paints without error when open", "[dialog][paint]") {
 TEST_CASE("dialog authoring via ComponentTraits", "[dialog][authoring]") {
     reactive::Graph graph;
     reactive::ReactiveScope scope(graph);
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     widget::BuildContext ui(graph, scope, themes);
 
     auto content = std::make_shared<widget::Button>("OK");
@@ -362,7 +363,7 @@ namespace
     /// 带窗口浮层的对话框宿主：内容层里放一个裁剪容器，对话框挂在其中。
     struct OverlayDialogHarness {
         reactive::Graph graph;
-        theme::ThemeManager themes;
+        theme_test::Manager themes;
         std::shared_ptr<scene::OverlayHost> host = scene::OverlayHost::create();
         std::shared_ptr<scene::NanControl> body =
             std::make_shared<scene::NanControl>(foundation::NanSize(800.0F, 600.0F));

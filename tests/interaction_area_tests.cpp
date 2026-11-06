@@ -1,3 +1,4 @@
+#include "theme_test_support.hpp"
 #include <nandina/scene/scene_tree.hpp>
 #include <nandina/widget/button.hpp>
 #include <nandina/widget/controls.hpp>
@@ -265,7 +266,7 @@ TEST_CASE(
 ) {
     reactive::Graph graph;
     reactive::ReactiveScope scope {graph};
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     widget::BuildContext ui {graph, scope, themes};
     int double_clicks = 0;
 

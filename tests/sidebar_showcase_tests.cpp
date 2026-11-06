@@ -1,3 +1,4 @@
+#include "theme_test_support.hpp"
 // Exercise real Sidebar grouping, separators and navigation through public semantics.
 #include "../showcase/components/sidebar.hpp"
 
@@ -50,7 +51,7 @@ namespace
     struct Fixture {
         reactive::Graph graph;
         reactive::ReactiveScope scope {graph};
-        theme::ThemeManager themes;
+        theme_test::Manager themes;
         app::NanRouter router {graph, themes};
         scene::NanSceneTree tree;
         widget::View root;
@@ -253,4 +254,49 @@ TEST_CASE(
     REQUIRE(toggle != nullptr);
     CHECK(toggle->properties.state.checked == true);
     CHECK(fixture.themes.preference() == theme::ThemePreference::system);
+}
+
+TEST_CASE(
+    "sidebar switch remains faithful to a fixed unregistered appearance",
+    "[showcase][sidebar][theme]"
+) {
+    Fixture fixture(app::Routes {app::route<TestPage<0>>({.title = "Home"})});
+    auto content =
+        std::make_shared<const theme::ThemeSchemeContent>(theme::ThemeSchemeContent::from(
+            theme::default_design_system(),
+            theme::ColorAppearance::dark
+        ));
+    REQUIRE(fixture.themes.select(
+        theme::FixedThemeSelection {
+            theme::UnregisteredThemeSource {content, theme::ColorAppearance::dark}
+        }
+    ));
+    REQUIRE(fixture.tree.update_semantics());
+    const auto find_toggle = [&](const auto& self,
+                                 const semantics::Node& node) -> const semantics::Node* {
+        if (node.properties.role == semantics::Role::switch_control) {
+            return &node;
+        }
+        for (const auto& child: node.children) {
+            if (const auto* found = self(self, child)) {
+                return found;
+            }
+        }
+        return nullptr;
+    };
+    for (const auto& root: fixture.tree.semantics_tree().roots) {
+        if (const auto* toggle = find_toggle(find_toggle, root)) {
+            const auto id = toggle->id;
+            CHECK(toggle->properties.state.checked == true);
+            REQUIRE(
+                fixture.tree.perform_semantics_action(id, {.action = semantics::Action::activate})
+            );
+            REQUIRE(fixture.tree.update_semantics());
+            CHECK(fixture.tree.semantics_tree().find(id)->properties.state.checked == true);
+            CHECK(fixture.themes.appearance() == theme::ColorAppearance::dark);
+            CHECK(std::holds_alternative<theme::FixedThemeSelection>(fixture.themes.selection()));
+            return;
+        }
+    }
+    FAIL("Sidebar has no appearance switch");
 }

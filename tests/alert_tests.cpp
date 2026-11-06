@@ -1,3 +1,4 @@
+#include "theme_test_support.hpp"
 //
 // Theme / Alert tests.
 //
@@ -248,7 +249,7 @@ TEST_CASE("alert set_tone switches the resolved tone colours", "[alert][theme]")
 }
 
 TEST_CASE("alert override patches fields and survives a system apply", "[alert][override]") {
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     auto alert = widget::Alert::create();
     alert->set_title("Saved");
     scene::NanSceneTree tree;
@@ -282,7 +283,7 @@ TEST_CASE("alert override patches fields and survives a system apply", "[alert][
 }
 
 TEST_CASE("alert re-resolves after an appearance switch", "[alert][theme]") {
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     auto alert = widget::Alert::create();
     alert->set_title("Saved");
     alert->set_tone(theme::AlertTone::info);
@@ -420,7 +421,7 @@ TEST_CASE("alert is buildable through BuildContext", "[alert][authoring]") {
     // ComponentTraits 是模板，不实例化就不会被编译；这里真实走一遍 ui.make<>。
     reactive::Graph graph;
     reactive::ReactiveScope scope {graph};
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     widget::BuildContext ui {graph, scope, themes};
 
     auto alert =

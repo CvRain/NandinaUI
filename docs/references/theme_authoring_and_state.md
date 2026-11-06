@@ -1,8 +1,8 @@
 # D2：主题方案、作者入口与状态订阅
 
-> **状态：§5.5 首批窄投影已实施（2026-11-05，初稿待维护者复核，未提交）；其余方案身份、
-> 选择解析、作者入口与颜色校验仍待审阅。** 汇总截至 2026-10-10 的 D2 对话；首批按 §8 第 1–2 步
-> 交付（见 §11），其余小节仍是讨论与建议，不表示对应 API 已定稿或能力已经可用。
+> **状态：首批窄投影已随 `8920f3a` 提交；第 3 步方案目录与选择在 2026-11-06
+> 复核补修后待维护者复验，保持未提交。** 第 4 步的观察通道/作者入口与第 4a 步颜色校验
+> 仍未实施。§12 为已接受契约，§13 记录当前实现；更早小节保留讨论语境。
 > 所有标注为伪代码的示例只表达作者体验，不可直接当成现有接口使用。
 > 当前实现以 [设计令牌与主题系统](design_tokens.md) 和源码为准；原始问题见
 > [D2 工作稿](reference_draft.md) 与 [story 010](../../stories/010-the-theme-signal-that-cannot-be-subscribed.md)。
@@ -685,9 +685,9 @@ D2 此次只保留边界，不承诺组件插件、动态库加载、任意自�
 聚合初始化、比较与通知范围。实现与验证见
 [D2 实施记录](reference_draft.md#p43-d2-首批窄投影实施记录2026-11-05)。
 
-## 12. 第 3 步 API 建议（2026-11-06，未实施）
+## 12. 第 3 步 API 建议（2026-11-06 定形，实现见 §13）
 
-本节是本次复核后的具体建议，供下一子批定形；不作为本批已交付能力，也不授权提前实现。
+本节建议已获维护者接受，并作为第 3 步实施契约；当前交付与补修边界见 §13，仍保持未提交。
 
 | 议题 | 建议取舍 |
 | --- | --- |
@@ -702,7 +702,7 @@ D2 此次只保留边界，不承诺组件插件、动态库加载、任意自�
 | 通知基础 | 沿用本批 manager 无 Graph + 作用域投影；两字段窄投影语义保持不变。选择/目录/身份与纯主题事件另开通道，不往 revision 推断变更类型；沿用分阶段、拒绝重入和异常后完成必要通知的协议 |
 | legacy 收敛 | 在第 3 步同批迁移 register_theme/family、activate/family、set_theme 等旧入口与仓库消费者，最终只有 scheme 目录和 selection 一条可写状态链路。旧双 palette DesignSystem 先作为组件解析快照适配，不作为新独立方案的作者模型 |
 
-类型和入口示意（未实施）：
+类型和入口形状（已按本批实现；具体错误类型名以公开头文件为准）：
 
 ```cpp
 struct UnregisteredThemeSource {
@@ -720,7 +720,7 @@ struct AppearanceThemeSelection {
 };
 using ThemeSelection = std::variant<FixedThemeSelection, AppearanceThemeSelection>;
 
-auto ThemeSchemeId::parse(std::string_view) -> std::expected<ThemeSchemeId, ThemeIdError>;
+auto ThemeSchemeId::parse(std::string_view) -> std::expected<ThemeSchemeId, ThemeSchemeIdError>;
 auto ThemeSchemeId::text() const noexcept -> std::string_view;
 auto ThemeManager::select(ThemeSelection) -> std::expected<void, ThemeSelectionError>;
 auto ThemeManager::register_scheme(ThemeScheme) -> std::expected<void, ThemeCatalogError>;
@@ -728,7 +728,57 @@ auto ThemeManager::replace_scheme(ThemeScheme) -> std::expected<void, ThemeCatal
 auto ThemeManager::remove_scheme(const ThemeSchemeId&) -> std::expected<void, ThemeCatalogError>;
 ```
 
-以上 ID 文本是拟议公开兼容面，应先评审再开始写入应用设置。持久化只保存 schema、选择模式、
+以上 ID 文本按本批接受的公开兼容面实施。框架不代写应用设置文件；持久化只保存 schema、选择模式、
 规范 ID 和必要偏好，不保存 manager revision；家族 ID 的文本可复用同一语法，但使用不同强类型。
 同 ID 内容替换以显式不可变内容快照为依据，同快照重复提交幂等；框架不承诺深比较任意配方。
 颜色合成/色域/真实像素读回保持第 4a 子项，第 3 步只完成结构与引用校验。
+
+---
+
+## 13. 第 3 步实施记录（P4.3 D2 方案目录与选择，2026-11-06，初稿待维护者复核）
+
+按 §12 建议实施并完成测试迁移；legacy 写入口（register_theme/activate/register_family/
+activate_family/register_theme_family/set_theme/apply）随本批从 ThemeManager 移除，仓库内
+调用点（showcase、desktop probe、notebook）与既有测试经测试兼容层迁移到 scheme 目录/选择。
+
+- **身份**：`ThemeSchemeId` / `ThemeFamilyId` 强类型，规范文本 `namespace:name`；namespace
+  点分段、name 斜线分段，只接受规范小写 ASCII，拒绝空段/`.`/`..`/空白/Unicode，总长 255 字节
+  上限；`parse` 返回带偏移的 typed error（空段指向空段起始分隔符，其他错误指向失效段起始），`text()` 无损返回。
+- **内容与目录**：`ThemeSchemeContent`（单套 palette + tokens/typography/components）是唯一
+  内容载体，`DesignSystem` 只是渲染器适配快照（同一 palette 放入两槽）；`ThemeSchemeCatalog`
+  是值目录，register/replace/remove_scheme、register/remove_family，注册前校验 ID/家族/内容，
+  移除受任一选择槽引用保护的方案。staged 拷贝提交：失败不改变目录、选择、生效快照或 revision。
+- **选择**：`ThemeSelection = variant<FixedThemeSelection, AppearanceThemeSelection>`；fixed
+  忽略系统外观，appearance 按 preference+系统外观选 light/dark 槽；槽位外观分类不匹配、
+  未知 ID、空内容均返回 typed error。`UnregisteredThemeSource` 是固定模式显式匿名来源，
+  无 scheme ID、不填充假注册名。
+- **发布**：当前激活内容替换（即使 ID/外观不变）必须发布；同快照重复提交幂等；只改选择
+  未生效项（亮色下改暗色槽位）只更新选择，不触发主题变化事件；系统外观变化经
+  `set_system_preferences` 重新 resolve 并只在实际有效外观变化时发布。
+- **文件导入**：`StyleDocument::apply` 暂存并验证所有文件主题与家族，再将目录、选择、style
+  规则一次提交；无效/过长别名返回 expected 错误而非抛 bad_expected_access。主题 ID 为
+  `styles:x<theme-hex>/light|dark`；家族 ID 为 `styles:x<family-hex>`；家族成员采用
+  `styles:x<theme-hex>/families/x<family-hex>/light|dark`。共享文件主题的家族成员有独立 ID，
+  共享不可变内容，不因激活变化改写其他家族归属。未激活家族同样校验并登记。
+  文件别名不成为 manager 身份；重复导入提供新快照，只发布一次完整状态。可选字体注册在
+  主题提交之后沿现有流程执行，不承诺字体失败回滚已经提交的主题与字体。
+- **兼容查询（仅测试层）**：`theme_test::Manager`（tests/theme_test_support.hpp）把历史双
+  调色板场景翻译成 scheme 选择，并复用 `require_idle` 通知守卫；active_name/active_family/
+  preference 从目录与选择推断。
+- 实现与验证记录见 [reference_draft](reference_draft.md#p43-d2-第-3-步方案目录与选择实施记录2026-11-06初稿待维护者复核)。
+
+### 第 3 步复核补修边界（2026-11-06）
+
+- 初稿的 6 个相关专项基线通过；追加直接使用生产 ThemeManager 的用例，避免只借测试兼容层
+  宣称新 API 行为已经验证。兼容层继续限于历史场景，其查询修正与 ID offset=17 均保留。
+- StyleDocument 原有逐项写入在长别名失败时部分提交、首次导入先发旧状态、只登记激活家族
+  并抢占共享成员归属，三组回归均先失败后补修；现在主题目录/选择/样式只走一次提交。
+- 替换方案与已选槽位的外观冲突返回 ThemeCatalogErrorKind::appearance_mismatch；所有失败
+  保持原目录、选择、快照指针和 revision。目录/选择查询是借用视图，成功写入可使旧引用失效；
+  长期保存方案须复制值或 shared content。ID 255 字节边界、目录复制后的独立身份、跨家族配对、
+  固定/匿名来源、未生效槽位与内容替换、同内容换 ID、异常与通知中销毁均有生产 API 回归。
+- Sidebar 在固定来源下没有可选另一槽位：用户切换后恢复实际 checked，不猜测另一方案或改写
+  固定身份；appearance 模式仍显式提交原配对与新 preference。本地 playground 的旧选择入口
+  也已迁移；其未跟踪源码不作为 CI 证据。
+
+完整红测与最终矩阵见 reference_draft 的第 3 步复核记录。作者颜色入口与第 4/4a 步未启动。

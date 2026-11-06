@@ -1,3 +1,4 @@
+#include "theme_test_support.hpp"
 //
 // Toggle interaction, semantics, theme, and authoring tests.
 //
@@ -310,7 +311,7 @@ TEST_CASE("toggle exposes checkbox semantics with checked state", "[toggle][sema
 
 TEST_CASE("toggle override survives a system apply", "[toggle][override]") {
     reactive::Graph graph;
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     auto toggle = widget::Toggle::create("Bold");
     scene::NanSceneTree tree;
     tree.set_theme_manager(themes);
@@ -334,7 +335,7 @@ TEST_CASE("toggle override survives a system apply", "[toggle][override]") {
 }
 
 TEST_CASE("toggle widget re-resolves when the appearance switches", "[toggle][theme]") {
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     auto toggle = widget::Toggle::create("Bold");
     scene::NanSceneTree tree;
     tree.set_theme_manager(themes);
@@ -358,7 +359,7 @@ TEST_CASE(
 ) {
     reactive::Graph graph;
     reactive::ReactiveScope scope {graph};
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     widget::BuildContext ui {graph, scope, themes};
 
     auto toggle = ui.make<widget::Toggle>("Bold").build();

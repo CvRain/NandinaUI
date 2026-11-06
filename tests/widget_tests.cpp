@@ -1,3 +1,4 @@
+#include "theme_test_support.hpp"
 //
 // Widget-layer unit tests (Catch2 v3).
 //
@@ -1173,7 +1174,7 @@ TEST_CASE(
     "[widget][label][style]"
 ) {
     reactive::Graph graph;
-    theme::ThemeManager manager;
+    theme_test::Manager manager;
     auto themed = theme::default_theme();
     themed.palette.on_surface = theme::nan_color(0.62F, 0.08F, 210.0F);
     themed.tokens.typography.label_lg = 21.0F;
@@ -1207,7 +1208,7 @@ TEST_CASE(
 
 TEST_CASE("semantic label and surface colors follow theme revisions", "[widget][theme][token]") {
     reactive::Graph graph;
-    theme::ThemeManager manager;
+    theme_test::Manager manager;
     auto initial = theme::default_theme();
     // 用规范名（shadcn 约定）赋值：别名只在构造时同步，直接改别名不会回写规范字段。
     initial.palette.muted_foreground = theme::nan_color(0.38F, 0.04F, 210.0F);

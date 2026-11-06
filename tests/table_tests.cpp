@@ -1,3 +1,4 @@
+#include "theme_test_support.hpp"
 // Static Table: track geometry, slot ownership, semantics and layout convergence.
 #include <nandina/scene/node_ref.hpp>
 #include <nandina/scene/scene_tree.hpp>
@@ -305,7 +306,7 @@ TEST_CASE(
 ) {
     reactive::Graph graph;
     reactive::ReactiveScope scope(graph);
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     widget::BuildContext ui(graph, scope, themes);
     auto table = ui.make<widget::Table>(std::vector<widget::TableColumn> {{}}).build();
     auto label = ui.make<widget::Label>("A long cell").build();
@@ -333,7 +334,7 @@ TEST_CASE(
 ) {
     reactive::Graph graph;
     reactive::ReactiveScope scope(graph);
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     widget::BuildContext ui(graph, scope, themes);
     int calls = 0;
     auto button = ui.make<widget::Button>("Open").on_click([&] { ++calls; }).build();

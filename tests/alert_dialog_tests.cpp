@@ -1,3 +1,4 @@
+#include "theme_test_support.hpp"
 //
 // AlertDialog tests: Dialog constrained to "the user must choose".
 //
@@ -25,7 +26,7 @@ namespace
 {
     struct AlertHarness {
         reactive::Graph graph;
-        theme::ThemeManager themes;
+        theme_test::Manager themes;
         std::shared_ptr<scene::OverlayHost> host = scene::OverlayHost::create();
         std::shared_ptr<scene::NanControl> body =
             std::make_shared<scene::NanControl>(foundation::NanSize(640.0F, 400.0F));
@@ -219,7 +220,7 @@ TEST_CASE("a plain dialog in the same setup does dismiss", "[alert-dialog][inter
     int plain_closes = 0;
     dialog->set_on_close([&plain_closes] { ++plain_closes; });
     reactive::Graph graph;
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     auto host = scene::OverlayHost::create();
     auto body = std::make_shared<scene::NanControl>(foundation::NanSize(640.0F, 400.0F));
     body->add_child(dialog);
@@ -357,7 +358,7 @@ TEST_CASE("alert dialog updates its title and description", "[alert-dialog][boun
 TEST_CASE("alert dialog is reachable through BuildContext", "[alert-dialog][traits]") {
     reactive::Graph graph;
     reactive::ReactiveScope scope {graph};
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     auto host = scene::OverlayHost::create();
     widget::BuildContext ui {graph, scope, themes, nullptr, host.get()};
 

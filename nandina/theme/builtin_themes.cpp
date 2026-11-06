@@ -6,6 +6,8 @@
 
 #include "theme_manager.hpp"
 
+#include <algorithm>
+#include <stdexcept>
 #include <utility>
 
 namespace nandina::theme
@@ -225,7 +227,37 @@ namespace nandina::theme
 
     void register_default_theme_families(ThemeManager& manager) {
         for (const auto& family: default_theme_families()) {
-            manager.register_theme_family(family.name, build_family_design_system(family));
+            const auto group = ThemeFamilyId::parse("nandina:" + family.name).value();
+            const auto exists =
+                std::ranges::any_of(manager.catalog().families(), [&group](const auto& entry) {
+                    return entry.id == group;
+                });
+            if (!exists) {
+                auto result = manager.register_family({group, family.name});
+                if (!result) {
+                    throw std::logic_error(describe(result.error()));
+                }
+            }
+            const auto system = build_family_design_system(family);
+            for (auto appearance: {ColorAppearance::light, ColorAppearance::dark}) {
+                const auto suffix = appearance == ColorAppearance::light ? "/light" : "/dark";
+                const auto id = ThemeSchemeId::parse("nandina:" + family.name + suffix).value();
+                if (manager.catalog().find(id)) {
+                    continue;
+                }
+                auto result = manager.register_scheme(
+                    {id,
+                     family.name + suffix,
+                     appearance,
+                     group,
+                     std::make_shared<const ThemeSchemeContent>(
+                         ThemeSchemeContent::from(system, appearance)
+                     )}
+                );
+                if (!result) {
+                    throw std::logic_error(describe(result.error()));
+                }
+            }
         }
     }
 } // namespace nandina::theme

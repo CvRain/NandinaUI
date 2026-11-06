@@ -1,3 +1,4 @@
+#include "theme_test_support.hpp"
 //
 // Built-in theme family tests.
 //
@@ -128,7 +129,7 @@ TEST_CASE(
     "register_theme_family activates a full snapshot and flips appearance",
     "[theme][families]"
 ) {
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     theme::register_default_theme_families(themes);
     REQUIRE(themes.contains_family("butter"));
 
@@ -163,7 +164,7 @@ TEST_CASE(
 }
 
 TEST_CASE("legacy named families coexist with full-snapshot families", "[theme][families]") {
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     auto light_theme = theme::default_theme();
     auto dark_theme = theme::default_theme();
     dark_theme.palette = theme::default_dark_palette();

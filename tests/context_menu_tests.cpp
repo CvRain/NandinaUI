@@ -1,3 +1,4 @@
+#include "theme_test_support.hpp"
 //
 // ContextMenu tests: right-click invocation policy over the wrapped DropdownMenu.
 //
@@ -59,7 +60,7 @@ namespace
     /// 这样内部 DropdownMenu 的 Popover 能沿祖先链找到浮层宿主（不依赖注入）。
     struct ContextHarness {
         reactive::Graph graph;
-        theme::ThemeManager themes;
+        theme_test::Manager themes;
         std::shared_ptr<scene::OverlayHost> host = scene::OverlayHost::create();
         std::shared_ptr<scene::NanControl> body =
             std::make_shared<scene::NanControl>(foundation::NanSize(400.0F, 300.0F));
@@ -342,7 +343,7 @@ TEST_CASE("theme override passes through to the wrapped menu", "[context-menu][t
 TEST_CASE("context menu authoring via ComponentTraits", "[context-menu][authoring]") {
     reactive::Graph graph;
     reactive::ReactiveScope scope {graph};
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     auto host = scene::OverlayHost::create();
     host->set_content(std::make_shared<scene::NanControl>(foundation::NanSize(320.0F, 240.0F)));
     scene::NanSceneTree host_tree;

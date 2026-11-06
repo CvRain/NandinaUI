@@ -1,3 +1,4 @@
+#include "theme_test_support.hpp"
 //
 // input_focus_showcase_tests — 验证随仓库发布的 D1 输入与焦点验收页能真实构建与布局。
 //
@@ -34,7 +35,7 @@ namespace
     struct PageFixture {
         reactive::Graph graph;
         reactive::ReactiveScope scope {graph};
-        theme::ThemeManager themes;
+        theme_test::Manager themes;
         app::PageContext context {
             graph,
             scope,

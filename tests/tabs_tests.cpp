@@ -1,3 +1,4 @@
+#include "theme_test_support.hpp"
 //
 // Theme / Tabs tests.
 //
@@ -108,7 +109,7 @@ TEST_CASE("tabs disabled state scales label and indicator alpha", "[tabs][theme]
 
 TEST_CASE("tabs override survives a system apply", "[tabs][override]") {
     reactive::Graph graph;
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     auto tabs = widget::Tabs::create({"A", "B"});
     scene::NanSceneTree tree;
     tree.set_theme_manager(themes);
@@ -314,7 +315,7 @@ TEST_CASE("tabs default recipe keeps container and pill transparent", "[tabs][th
 TEST_CASE("BuildContext tabs synchronizes a selected-index signal", "[tabs][authoring]") {
     reactive::Graph graph;
     reactive::ReactiveScope scope {graph};
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     widget::BuildContext ui {graph, scope, themes};
     auto& selected = ui.signal<int>(0);
     auto tabs = ui.make<widget::Tabs>(selected, std::vector<std::string> {"A", "B", "C"}).build();

@@ -1,3 +1,4 @@
+#include "theme_test_support.hpp"
 //
 // theme_switch_tests — 运行时切换主题族 / 外观不得崩溃，且已挂载控件要整体重解析。
 //
@@ -121,7 +122,7 @@ TEST_CASE(
     "switching theme family and appearance on a populated tree does not crash",
     "[theme][manager][widget][switch]"
 ) {
-    theme::ThemeManager manager;
+    theme_test::Manager manager;
     theme::register_default_theme_families(manager);
     manager.register_theme_family("default", theme::default_design_system());
 
@@ -171,7 +172,7 @@ TEST_CASE(
 }
 
 TEST_CASE("repeated appearance flips keep the tree drawable", "[theme][manager][widget][switch]") {
-    theme::ThemeManager manager;
+    theme_test::Manager manager;
     theme::register_default_theme_families(manager);
 
     reactive::Graph graph;

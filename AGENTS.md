@@ -87,12 +87,21 @@ application shell. Version `0.1.0-alpha.1`.
   opaque revision) with a scope-bound `ThemePresentation` adapter (`ui.theme_state()`), observer
   lifetime safety in both destruction orders, equivalent-state deduplication, and a showcase
   appearance switch that follows external changes. Author color entry and the wider scheme/
-  selection model remain separate. Keep uncommitted through maintainer review. Contract:
+  selection model remain separate. First-batch review was closed and pushed in `8920f3a`. Contract:
   `docs/references/theme_authoring_and_state.md`.
   The 2026-11-06 review fixes same-snapshot named appearance updates and active family replacement,
   stages internal observers/projections/effects/subscriptions, rejects reentrant writes before mutation,
   and completes necessary delivery before rethrowing callback failures. Notification state survives
-  scope/manager destruction; readonly views remain borrowed. Maintainer revalidation is pending.
+  scope/manager destruction; readonly views remain borrowed. Pushed in `8920f3a`.
+- **P4.3 D2 step 3 scheme catalog and selection** (2026-11-06, review fixes complete;
+  maintainer revalidation pending) adds strongly typed `ThemeSchemeId`/`ThemeFamilyId` (namespace:name text,
+  typed parse errors, 255-byte cap), `ThemeSchemeContent`/`ThemeSchemeCatalog` (register/replace/
+  remove with staged failure-atomic commits), `ThemeSelection` (fixed/appearance plus explicit
+  `UnregisteredThemeSource`), removes legacy ThemeManager write entries, and compiles styles.toml
+  themes/families into `styles:x<hex>` canonical IDs. Test compatibility layer (theme_test::Manager)
+  keeps historical dual-palette queries working. Author color entry and step 4a color validation
+  remain separate. Keep uncommitted through maintainer review. Contract:
+  `docs/references/theme_authoring_and_state.md` §12–§13.
 - The plan and exit criteria are **not** owned by this file: read
   `docs/references/development_roadmap.md` and the D5 contract
   (`resource_build_and_deployment.md` §8) before claiming a sub-batch is complete.
@@ -462,3 +471,12 @@ meson test -C buildDir nanres-cli nanres-build-workflow portable-stage nanres-ke
   cover them); UI/interaction and long-running app tests live in the untracked `playground/` and
   are never cited as CI evidence. Reusable widgets are authored in `showcase/` with its visual
   acceptance, then composed by the notebook.
+
+### D2 step-3 review follow-up (2026-11-06, still uncommitted)
+
+StyleDocument stages every alias/family and commits catalog, selection and style once. Family member
+IDs include `/families/x<family-hex>` so shared file themes do not change family ownership when
+selection changes. Long aliases return diagnostics. Production manager regressions cover canonical
+mutators, cross-family/fixed/anonymous selection, replacements, exceptions and lifetime; historical
+test compatibility remains test-only. A fixed-source Sidebar switch restores the actual appearance.
+Keep this whole batch uncommitted for maintainer revalidation; do not start step 4/4a yet.

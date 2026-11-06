@@ -1,3 +1,4 @@
+#include "theme_test_support.hpp"
 //
 // Theme / Badge tests.
 //
@@ -89,7 +90,7 @@ TEST_CASE("badge resolves light and dark surfaces from the same snapshot", "[bad
 
 TEST_CASE("badge override patches fields and survives a system apply", "[badge][override]") {
     reactive::Graph graph;
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     auto badge = widget::Badge::create("Beta");
     scene::NanSceneTree tree;
     tree.set_theme_manager(themes);

@@ -1,3 +1,4 @@
+#include "theme_test_support.hpp"
 //
 // ToggleGroup coordination, roaming, theme, and authoring tests.
 //
@@ -377,7 +378,7 @@ TEST_CASE("toggle group unregisters on member destruction", "[toggle-group][life
 }
 
 TEST_CASE("toggle group override survives a theme switch", "[toggle-group][theme]") {
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     auto group = widget::ToggleGroup::create();
     auto toggle = widget::Toggle::create("Bold", group);
 
@@ -410,7 +411,7 @@ TEST_CASE("toggle group override survives a theme switch", "[toggle-group][theme
 TEST_CASE("toggle group is creatable through its component traits", "[toggle-group][authoring]") {
     reactive::Graph graph;
     reactive::ReactiveScope scope {graph};
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     widget::BuildContext ui {graph, scope, themes};
 
     // ToggleGroup 不是场景节点（同 RadioGroup）：BuildContext::make<T>() 的约束是

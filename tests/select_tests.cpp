@@ -1,3 +1,4 @@
+#include "theme_test_support.hpp"
 //
 // Theme / Select tests.
 //
@@ -201,7 +202,7 @@ TEST_CASE("select extends hit area to the popup when open", "[select][hit-test]"
 TEST_CASE("BuildContext select synchronizes a selected-index signal", "[select][authoring]") {
     reactive::Graph graph;
     reactive::ReactiveScope scope {graph};
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     widget::BuildContext ui {graph, scope, themes};
     auto& selected = ui.signal<int>(0);
     auto select =
@@ -307,7 +308,7 @@ TEST_CASE("mounted select dismisses when clicking outside its popup", "[select][
 TEST_CASE("BuildContext injects the window overlay service into select", "[select][overlay]") {
     reactive::Graph graph;
     reactive::ReactiveScope scope {graph};
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     auto host = scene::OverlayHost::create();
     host->set_content(std::make_shared<scene::NanControl>());
     scene::NanSceneTree tree;

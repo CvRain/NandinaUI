@@ -1,3 +1,4 @@
+#include "theme_test_support.hpp"
 //
 // Animation easing + tween tests.
 //
@@ -524,7 +525,7 @@ TEST_CASE(
 ) {
     reactive::Graph graph;
     reactive::ReactiveScope scope {graph};
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     widget::BuildContext ui {graph, scope, themes};
 
     scene::NanSceneTree tree;
@@ -595,7 +596,7 @@ TEST_CASE(
 ) {
     reactive::Graph graph;
     reactive::ReactiveScope scope {graph};
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     widget::BuildContext ui {graph, scope, themes};
 
     scene::NanSceneTree tree;
@@ -830,7 +831,7 @@ TEST_CASE(
 ) {
     reactive::Graph graph;
     reactive::ReactiveScope scope {graph};
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     widget::BuildContext ui {graph, scope, themes};
 
     scene::NanSceneTree tree;
@@ -894,7 +895,7 @@ TEST_CASE(
 TEST_CASE("a zero-duration transition jumps without a track", "[animation][host][widget]") {
     reactive::Graph graph;
     reactive::ReactiveScope scope {graph};
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     widget::BuildContext ui {graph, scope, themes};
 
     scene::NanSceneTree tree;
@@ -927,7 +928,7 @@ TEST_CASE(
     "[animation][host][reduced-motion]"
 ) {
     scene::NanSceneTree tree;
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     themes.set_motion_preference(theme::MotionPreference::reduced);
     tree.set_theme_manager(themes);
 
@@ -947,7 +948,7 @@ TEST_CASE(
     "[animation][host][reduced-motion]"
 ) {
     scene::NanSceneTree tree;
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     tree.set_theme_manager(themes);
 
     auto probe = std::make_shared<AnimatedProbe>();
@@ -971,7 +972,7 @@ TEST_CASE(
     "[animation][host][reduced-motion]"
 ) {
     scene::NanSceneTree tree;
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     tree.set_theme_manager(themes);
     themes.set_system_reduced_motion(true);
 
@@ -996,7 +997,7 @@ TEST_CASE(
 ) {
     reactive::Graph graph;
     reactive::ReactiveScope scope {graph};
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     themes.set_motion_preference(theme::MotionPreference::reduced);
     widget::BuildContext ui {graph, scope, themes};
 
@@ -1026,7 +1027,7 @@ TEST_CASE(
 ) {
     reactive::Graph graph;
     reactive::ReactiveScope scope {graph};
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     widget::BuildContext ui {graph, scope, themes};
 
     const auto initial_color = foundation::NanColor::from_oklch(0.2F, 0.1F, 40.0F);
@@ -1628,7 +1629,7 @@ TEST_CASE(
     "[animation][group][reduced-motion]"
 ) {
     scene::NanSceneTree tree;
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     tree.set_theme_manager(themes);
     auto probe = std::make_shared<GroupProbe>();
     tree.set_root(probe);
@@ -2009,7 +2010,7 @@ TEST_CASE(
 ) {
     reactive::Graph graph;
     reactive::ReactiveScope scope {graph};
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     widget::BuildContext ui {graph, scope, themes};
 
     reactive::Signal<float> radius {graph, 4.0F};
@@ -2040,7 +2041,7 @@ TEST_CASE(
 ) {
     reactive::Graph graph;
     reactive::ReactiveScope scope {graph};
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     widget::BuildContext ui {graph, scope, themes};
 
     reactive::Signal<float> radius {graph, 4.0F};
@@ -2085,7 +2086,7 @@ TEST_CASE(
     // 回调只要写到了别的信号上，它立刻失败。
     reactive::Graph graph;
     reactive::ReactiveScope scope {graph};
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     widget::BuildContext ui {graph, scope, themes};
 
     scene::NanSceneTree tree;

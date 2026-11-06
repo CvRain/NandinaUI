@@ -1,3 +1,4 @@
+#include "theme_test_support.hpp"
 //
 // Theme / ProgressBar tests.
 //
@@ -121,7 +122,7 @@ TEST_CASE(
     "[progress-bar][override]"
 ) {
     reactive::Graph graph;
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     auto bar = widget::ProgressBar::create(0.5F);
     scene::NanSceneTree tree;
     tree.set_theme_manager(themes);
@@ -243,7 +244,7 @@ TEST_CASE(
 ) {
     reactive::Graph graph;
     reactive::ReactiveScope scope {graph};
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     widget::BuildContext ui {graph, scope, themes};
     auto& progress = ui.signal<float>(0.25F);
     auto bar = ui.make<widget::ProgressBar>(progress).build();

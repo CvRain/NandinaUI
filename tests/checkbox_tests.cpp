@@ -1,3 +1,4 @@
+#include "theme_test_support.hpp"
 //
 // Checkbox interaction, semantics, theme, and authoring tests.
 //
@@ -93,7 +94,7 @@ TEST_CASE("checkbox supports keyboard activation and disabled state", "[checkbox
 TEST_CASE("BuildContext checkbox synchronizes a boolean signal", "[checkbox][authoring]") {
     reactive::Graph graph;
     reactive::ReactiveScope scope {graph};
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     widget::BuildContext ui {graph, scope, themes};
     auto& enabled = ui.signal<bool>(false);
     auto checkbox = ui.make<widget::Checkbox>(enabled, "Enable sync").build();

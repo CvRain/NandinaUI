@@ -25,14 +25,23 @@
 `PageKey` 路由身份、address 显示与 typed navigation 沿用既有规则。迁移调用方后须重新编译；
 正式契约见 [Page / Router](page_and_router.md)，验证见 [D3](reference_draft.md#d3-路由身份与导航分组开放到哪一层)。
 
-2026-11-05 P4.3 D2 首批窄投影（experimental，初稿待维护者复核）：
+2026-11-06 P4.3 D2 第 3 步（experimental，复核补修后待维护者复验，未提交）：新增
+`ThemeSchemeId`/`ThemeFamilyId`（`namespace:name` 规范文本、typed parse 带偏移错误、255 字节
+上限）、`ThemeSchemeContent`/`ThemeSchemeCatalog`（register/replace/remove_scheme、family、
+staged 失败原子提交）、`ThemeSelection`（fixed/appearance + `UnregisteredThemeSource` 匿名
+来源）。`ThemeManager` 移除 legacy 写入口（register_theme/activate/register_family/
+activate_family/register_theme_family/set_theme/apply），只保留目录、select/selection、
+active_scheme_id 与偏好/系统外观入口；`StyleDocument::apply` 把文件主题/家族编译为
+`styles:x<hex>` 规范 ID。破坏性迁移：仓库内调用点与测试经 theme_test 兼容层迁移，需重新编译。
+
+2026-11-05 P4.3 D2 首批窄投影（experimental，已随 `8920f3a` 提交）：
 新增 `theme/theme_presentation.hpp/.cpp`：`ThemePresentationState { ColorAppearance appearance;
 std::uint64_t revision; }` 与作用域绑定的只读 `ThemePresentation`（`get()`/`readonly()`/`subscribe()`），
 `BuildContext::theme_state()` 返回本页唯一实例；`ReactiveScope::own<T>()` 提供作用域拥有的
 非响应式服务（同类唯一、随作用域先于信号销毁）。只提供读取与订阅，写入仍经 ThemeManager；
 首批不含选择状态、方案身份、目录或作者颜色入口。
 
-2026-11-06 D2 复核补修（未提交）：`ThemeObserver` 增加默认空的
+2026-11-06 D2 首批复核补修（已随 `8920f3a` 提交）：`ThemeObserver` 增加默认空的
 `prepare_theme_presentation` 阶段与 `ThemeObserverUpdate` 临时提交/通知任务；现有观察者
 仍实现原有内部广播，投影在其后统一写入，再提交 effects、最后调用外部订阅。
 通知期间所有主题写入口先抛 `logic_error`，单个通知异常不阻断后续必要投递，结束后重抛首个
@@ -339,3 +348,9 @@ experimental**，理由与后续动作写进清单——两个枚举是公开 wi
 - 不要用本清单代替构建闭包校验（SDK 仍必须包含构建所需的 internal 头）；
 - 提升等级是**决策**，不是 `--write` 的副作用：`--write` 只补默认值（`detail/`、`internal/` 归
   internal，其余 experimental），理由与例外必须人来写。
+
+2026-11-06 第 3 步复核补修（保持未提交）：文件导入采用同一 manager 提交的暂存目录/选择/
+style，member ID 增加 `/families/x<family-hex>`，各文件家族成员独立；家族切换不重归属。
+旧初稿的非家族 styles ID 拼写继续用于独立主题。过长别名 expected 诊断，槽位冲突显式
+appearance_mismatch。manager 的目录/选择/active ID 是借用视图，任何成功写入后需重新查询；
+读取跨写入的内容应持有复制值或 shared content。文件字体注册沿用主题提交后的独立流程。

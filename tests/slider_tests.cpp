@@ -1,3 +1,4 @@
+#include "theme_test_support.hpp"
 //
 // Slider range, input, semantics, theme, and authoring tests.
 //
@@ -197,7 +198,7 @@ TEST_CASE("slider pointer dragging uses capture outside its bounds", "[slider][i
 TEST_CASE("BuildContext slider synchronizes a float signal", "[slider][authoring]") {
     reactive::Graph graph;
     reactive::ReactiveScope scope {graph};
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     widget::BuildContext ui {graph, scope, themes};
     auto& scale = ui.signal<float>(1.0F);
     auto slider = ui.make<widget::Slider>(scale, "Scale", 0.5F, 2.0F, 0.1F).build();

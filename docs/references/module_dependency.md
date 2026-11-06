@@ -184,3 +184,15 @@ State::expanded 合并规则，不引用 Collapsible。共享展开状态仅由 
 2026-11-06 复核补修：ThemeObserver 在内部广播后返回仅由函数对象组成的临时投影更新任务，
 由 manager 分阶段提交；Graph 的延迟令牌只由 ThemePresentation 适配器持有，manager 不包含
 或保存 Graph。现有 SceneTree 只广播一次；通知阶段没有新增 widget/app 的上行引用。
+
+## P4.3 D2 第 3 步方案目录与选择归属（2026-11-06）
+
+`ThemeSchemeId`/`ThemeFamilyId`/`ThemeSchemeContent`/`ThemeSchemeCatalog`/`ThemeSelection`
+均位于 theme 模块，theme 依赖 reactive 与 foundation 的既有方向不变；widget 经
+`ThemeManager` 的公开目录/选择 API 消费，scene/render 不感知 scheme 身份。legacy 写入口
+已移除，唯一可写状态链路是 scheme 目录 + selection；`DesignSystem` 退化为当前方案的组件
+解析适配快照。`theme_test::Manager` 仅存在于 tests 层，不进入库。
+
+第 3 步再次复核：StyleDocument 作为 theme 内部编译器，通过受限 friend 通道提交暂存的
+目录/选择/style，沿用同一 manager 通知路径，不暴露第二份公开可写状态。字体注册仍使用
+既有 text seam，不扩大此批的 theme→text 历史依赖。

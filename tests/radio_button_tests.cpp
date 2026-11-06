@@ -1,3 +1,4 @@
+#include "theme_test_support.hpp"
 //
 // Theme / RadioButton tests.
 //
@@ -147,7 +148,7 @@ TEST_CASE("radio button disabled state scales colors", "[radio][theme]") {
 
 TEST_CASE("radio button override survives a system apply", "[radio][override]") {
     reactive::Graph graph;
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     auto radio = widget::RadioButton::create("Option");
     scene::NanSceneTree tree;
     tree.set_theme_manager(themes);
@@ -287,7 +288,7 @@ TEST_CASE("radio button paints a dot only when checked", "[radio][paint]") {
 TEST_CASE("BuildContext radio button constructs a grouped radio", "[radio][authoring]") {
     reactive::Graph graph;
     reactive::ReactiveScope scope {graph};
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     widget::BuildContext ui {graph, scope, themes};
     auto group = widget::RadioGroup::create();
     auto radio = ui.make<widget::RadioButton>("Light", group).build();

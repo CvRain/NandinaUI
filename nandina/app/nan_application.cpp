@@ -152,7 +152,16 @@ namespace nandina::app
     }
 
     void NanApplication::set_theme(theme::NanTheme theme) {
-        theme_manager_.set_theme(std::move(theme));
+        auto content =
+            std::make_shared<const theme::ThemeSchemeContent>(theme::ThemeSchemeContent::from(
+                theme::design_system_from_theme(theme),
+                theme::ColorAppearance::light
+            ));
+        (void)theme_manager_.select(
+            theme::FixedThemeSelection {
+                theme::UnregisteredThemeSource {std::move(content), theme::ColorAppearance::light}
+            }
+        );
     }
 
     auto NanApplication::theme() const -> const theme::NanTheme& {

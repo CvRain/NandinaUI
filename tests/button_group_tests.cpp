@@ -1,3 +1,4 @@
+#include "theme_test_support.hpp"
 //
 // Theme / ButtonGroup tests.
 //
@@ -140,7 +141,7 @@ TEST_CASE(
     "button group override patches fields and survives a system apply",
     "[button-group][override]"
 ) {
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     auto group = widget::ButtonGroup::create();
     group->add_button(widget::Button::create("A"));
     scene::NanSceneTree tree;
@@ -169,7 +170,7 @@ TEST_CASE(
 }
 
 TEST_CASE("button group re-resolves after an appearance switch", "[button-group][theme]") {
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     auto group = widget::ButtonGroup::create();
     group->add_button(widget::Button::create("A"));
     group->set_override(
@@ -218,7 +219,7 @@ TEST_CASE(
 TEST_CASE("button group is buildable through BuildContext", "[button-group][authoring]") {
     reactive::Graph graph;
     reactive::ReactiveScope scope {graph};
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     widget::BuildContext ui {graph, scope, themes};
 
     auto horizontal = ui.make<widget::ButtonGroup>().build();

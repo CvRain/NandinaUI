@@ -93,6 +93,8 @@ module_theme = files(
     'theme/tokens.hpp',
     'theme/motion.hpp',
     'theme/theme.hpp',
+    'theme/theme_scheme.hpp',
+    'theme/theme_scheme.cpp',
     'theme/theme.cpp',
     'theme/appearance.hpp',
     'theme/design_system.hpp',

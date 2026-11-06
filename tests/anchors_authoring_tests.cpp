@@ -1,3 +1,4 @@
+#include "theme_test_support.hpp"
 // Include the author-facing header directly, without the controls umbrella.
 #include <nandina/widget/build_context.hpp>
 
@@ -20,7 +21,7 @@ namespace
     struct Context {
         reactive::Graph graph;
         reactive::ReactiveScope scope {graph};
-        theme::ThemeManager themes;
+        theme_test::Manager themes;
         widget::BuildContext ui {graph, scope, themes};
     };
 

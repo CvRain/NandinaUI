@@ -1,3 +1,4 @@
+#include "theme_test_support.hpp"
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
@@ -247,7 +248,7 @@ TEST_CASE("ListView binds a structural model without inheritance", "[widget][lis
 TEST_CASE("BuildContext authors scoped conditional and keyed regions", "[authoring][region]") {
     reactive::Graph graph;
     reactive::ReactiveScope scope {graph};
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     widget::BuildContext ui {graph, scope, themes};
     reactive::Signal<bool> visible {graph, false};
     reactive::Event<int> selected;
@@ -437,7 +438,7 @@ TEST_CASE("BuildContext carries page services into context factories", "[authori
     reactive::Graph graph;
     reactive::ReactiveScope page_scope {graph};
     reactive::ReactiveScope item_scope {graph};
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     widget::BuildContext ui {graph, page_scope, themes};
 
     REQUIRE(&ui.graph() == &graph);
@@ -464,7 +465,7 @@ TEST_CASE("BuildContext owns custom component subscriptions", "[authoring][conte
     reactive::Graph graph;
     reactive::ReactiveScope page_scope {graph};
     reactive::Event<int> event;
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     widget::BuildContext ui {graph, page_scope, themes};
     int observed = 0;
 
@@ -483,7 +484,7 @@ TEST_CASE("BuildContext owns custom component subscriptions", "[authoring][conte
 TEST_CASE("BuildContext make uses typed built-in component traits", "[authoring][traits]") {
     reactive::Graph graph;
     reactive::ReactiveScope scope {graph};
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     widget::BuildContext ui {graph, scope, themes};
     reactive::Signal<std::string> text {graph, "Ready"};
 
@@ -500,7 +501,7 @@ TEST_CASE("BuildContext make uses typed built-in component traits", "[authoring]
 TEST_CASE("BuildContext callbacks expire with their owning scope", "[authoring][lifecycle]") {
     reactive::Graph graph;
     reactive::ReactiveScope scope {graph};
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     widget::BuildContext ui {graph, scope, themes};
     int calls = 0;
 
@@ -526,7 +527,7 @@ TEST_CASE("BuildContext callbacks expire with their owning scope", "[authoring][
 TEST_CASE("boolean component traits preserve two-way signal bindings", "[authoring][traits]") {
     reactive::Graph graph;
     reactive::ReactiveScope scope {graph};
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     widget::BuildContext ui {graph, scope, themes};
     reactive::Signal<bool> checked {graph, false};
 
@@ -547,7 +548,7 @@ TEST_CASE(
 ) {
     reactive::Graph graph;
     reactive::ReactiveScope scope {graph};
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     widget::BuildContext ui {graph, scope, themes};
     reactive::Signal<std::string> text {graph, "Ready"};
 
@@ -581,7 +582,7 @@ TEST_CASE(
 
     reactive::Graph graph;
     reactive::ReactiveScope scope {graph};
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     widget::BuildContext ui {graph, scope, themes};
 
     const auto initial = foundation::NanColor::from_oklch(0.62F, 0.12F, 255.0F);
@@ -612,7 +613,7 @@ TEST_CASE(
 TEST_CASE("BuildContext text fields synchronize writable string signals", "[authoring][binding]") {
     reactive::Graph graph;
     reactive::ReactiveScope scope {graph};
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     widget::BuildContext ui {graph, scope, themes};
     reactive::Signal<std::string> draft {graph, "Task"};
     auto field = ui.make<widget::TextField>(draft, "Add a task").build();
@@ -942,7 +943,7 @@ namespace
 TEST_CASE("Label builder exposes both text alignment axes", "[authoring][text-box]") {
     reactive::Graph graph;
     reactive::ReactiveScope scope(graph);
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     widget::BuildContext ui(graph, scope, themes);
     const auto label = ui.make<widget::Label>("Aligned")
                            .text_align(theme::TextAlign::end)
@@ -960,7 +961,7 @@ TEST_CASE(
 ) {
     reactive::Graph graph;
     reactive::ReactiveScope scope(graph);
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     widget::BuildContext ui(graph, scope, themes);
     reactive::Signal<std::string> first(graph, "source"), second(graph, "second");
     auto builder = ui.make<widget::Label>(first);
@@ -997,7 +998,7 @@ TEST_CASE(
 ) {
     reactive::Graph graph;
     reactive::ReactiveScope scope(graph);
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     widget::BuildContext ui(graph, scope, themes);
     auto& source = scope.signal_value(std::string("page"));
     auto label = ui.make<widget::Label>(source).build();
@@ -1017,7 +1018,7 @@ TEST_CASE(
 ) {
     reactive::Graph graph;
     reactive::ReactiveScope scope(graph);
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     widget::BuildContext ui(graph, scope, themes);
     auto label = ui.make<widget::Label>("one two three four")
                      .font(theme::FontRequest {})
@@ -1074,7 +1075,7 @@ TEST_CASE(
 ) {
     reactive::Graph graph;
     reactive::ReactiveScope scope(graph);
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     widget::BuildContext ui(graph, scope, themes);
     reactive::Signal<std::string> source(graph, "text");
     const std::shared_ptr<widget::Label> absent;

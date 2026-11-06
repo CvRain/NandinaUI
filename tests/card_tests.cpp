@@ -1,3 +1,4 @@
+#include "theme_test_support.hpp"
 //
 // Theme / Card tests.
 //
@@ -107,7 +108,7 @@ TEST_CASE("card resolves light and dark surfaces from the same snapshot", "[card
 
 TEST_CASE("card override patches fields and survives a system apply", "[card][override]") {
     reactive::Graph graph;
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     auto card = widget::Card::create();
     scene::NanSceneTree tree;
     tree.set_theme_manager(themes);

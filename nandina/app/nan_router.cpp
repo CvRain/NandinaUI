@@ -39,7 +39,16 @@ namespace nandina::app
         // too. Keep an internal manager only for BuildContext's theme service;
         // application windows use their own manager through the other overload.
         owned_theme_manager_ = std::make_unique<theme::ThemeManager>();
-        owned_theme_manager_->set_theme(theme);
+        auto content =
+            std::make_shared<const theme::ThemeSchemeContent>(theme::ThemeSchemeContent::from(
+                theme::design_system_from_theme(theme),
+                theme::ColorAppearance::light
+            ));
+        (void)owned_theme_manager_->select(
+            theme::FixedThemeSelection {
+                theme::UnregisteredThemeSource {std::move(content), theme::ColorAppearance::light}
+            }
+        );
         theme_manager_ = owned_theme_manager_.get();
         navigation_state_->submit =
             [this](PageKey page_key, std::unique_ptr<detail::PageBase> page) {

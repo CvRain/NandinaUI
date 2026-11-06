@@ -1,3 +1,4 @@
+#include "theme_test_support.hpp"
 //
 // tests/sdl_visual_tests — SDL 设备的确定性像素回归（基础正确性层）。
 //
@@ -392,7 +393,7 @@ TEST_CASE("dialog scrim composites over the background", "[visual][blend][sdl]")
     SoftwareCanvas canvas {800, 600};
     render::SdlRenderDevice device {canvas.renderer()};
     reactive::Graph graph;
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     const auto host = scene::OverlayHost::create();
     const auto body = std::make_shared<scene::NanControl>(foundation::NanSize(800.0F, 600.0F));
     const auto dialog = widget::Dialog::create();

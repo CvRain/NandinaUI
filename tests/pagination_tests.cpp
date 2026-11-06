@@ -1,3 +1,4 @@
+#include "theme_test_support.hpp"
 //
 // Theme / Pagination tests.
 //
@@ -402,7 +403,7 @@ TEST_CASE(
     "pagination override patches fields and survives a system apply",
     "[pagination][override]"
 ) {
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     auto pagination = widget::Pagination::create();
     pagination->set_page_count(10);
     pagination->set_current_page(3);
@@ -431,7 +432,7 @@ TEST_CASE(
 }
 
 TEST_CASE("pagination re-resolves after an appearance switch", "[pagination][theme]") {
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     auto pagination = widget::Pagination::create();
     pagination->set_page_count(5);
     pagination->set_override(
@@ -488,7 +489,7 @@ TEST_CASE("pagination paints one glyph per visible slot", "[pagination][paint]")
 TEST_CASE("pagination is buildable through BuildContext", "[pagination][authoring]") {
     reactive::Graph graph;
     reactive::ReactiveScope scope {graph};
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     widget::BuildContext ui {graph, scope, themes};
 
     auto pagination = ui.make<widget::Pagination>(10, 3).build();

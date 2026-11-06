@@ -1,3 +1,4 @@
+#include "theme_test_support.hpp"
 //
 // Image (texture) node tests — Stage 1 of the texture subsystem.
 //
@@ -1649,7 +1650,7 @@ TEST_CASE(
 ) {
     reactive::Graph graph;
     reactive::ReactiveScope scope(graph);
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     resource::ResourceManager resources;
     widget::BuildContext ui(graph, scope, themes, &resources);
 
@@ -1937,7 +1938,7 @@ TEST_CASE(
     TextureRecordingDevice device;
     reactive::Graph graph;
     reactive::ReactiveScope scope(graph);
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     widget::BuildContext ui(graph, scope, themes);
     auto cover = ui.make<widget::Image>("hero.png")
                      .width(scene::percent(50))

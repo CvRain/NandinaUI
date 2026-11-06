@@ -197,7 +197,7 @@ namespace nandina::showcase
                          .color_token(theme::ColorToken::foreground);
 
         // 开关跟随“当前有效外观”，不再只读一次构建期快照：外部入口（系统外观变化、
-        // 其他 set_preference 调用）改变外观时，投影更新经 computed 回写 checked。
+        // 其他 select 调用）改变外观时，投影更新经 computed 回写 checked。
         // 投影由 ui.theme_state() 的作用域持有；manager 比外壳作用域活得久，所以
         // 这里只存 manager 指针写偏好。
         auto& theme_state = ui.theme_state();
@@ -206,14 +206,25 @@ namespace nandina::showcase
         });
 
         theme::ThemeManager* manager = &themes;
-        auto appearance_switch =
-            ui.make<widget::Switch>("暗色模式", dark_now.get())
-                .on_change([manager](const bool dark) {
-                    manager->set_preference(
-                        dark ? theme::ThemePreference::dark : theme::ThemePreference::light
-                    );
-                })
-                .build();
+        auto switch_builder = ui.make<widget::Switch>("暗色模式", dark_now.get());
+        auto appearance_switch = switch_builder.build();
+        switch_builder.on_change(
+            [manager, weak = std::weak_ptr<widget::Switch>(appearance_switch)](const bool dark) {
+                const auto* pair =
+                    std::get_if<theme::AppearanceThemeSelection>(&manager->selection());
+                if (pair) {
+                    auto next = *pair;
+                    next.preference =
+                        dark ? theme::ThemePreference::dark : theme::ThemePreference::light;
+                    (void)manager->select(std::move(next));
+                }
+                else if (const auto control = weak.lock()) {
+                    // A fixed source has no alternate scheme to select. Preserve its
+                    // identity and restore the actual appearance after the user action.
+                    control->set_checked(manager->appearance() == theme::ColorAppearance::dark);
+                }
+            }
+        );
         // set_checked 是静默写入（不触发 on_change），外部变化不会回写成一次用户偏好。
         ui.bind(appearance_switch, &widget::Switch::set_checked, dark_now);
 

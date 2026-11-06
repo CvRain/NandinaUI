@@ -71,13 +71,13 @@ NanTokens（尺度）
 - 颜色还支持两类表达式。其一是随当前 tone 解析的引用：`ThemeColor::accent()` / `ThemeColor::on_accent()`，让 `filled` 之类的规则能表达「用当前强调色及其反色」。其二是浅层变换：`ThemeColor::with_alpha(source, factor)`、`ThemeColor::transparent(source)`、`ThemeColor::mix(lhs, rhs, factor)`。变换的操作数不嵌套表达式，保持可静态推导。
 - 解析入口是 `resolve_color(system, appearance, value, tone)` 与 `resolve_scalar(system, appearance, value)`；片段级还有 `resolve()` 重载。它们在内部构造 `NanTheme {tokens, palette(appearance)}` 后交给 `resolve_theme_color()` / `resolve_theme_scalar()`。
 
-这里也解释了 `DesignSystem` 与 `NanTheme` 的关系：`DesignSystem` 是**与外观无关**的不可变快照（同时内嵌 `light` 与 `dark` 两套 `NanColorScheme`），而 `NanTheme` 只是 `{ tokens, 单一 palette }` 的值对象，是某个外观下的解析视图。`ThemeManager::theme()` 返回的正是后者，供仍按旧接口读取令牌的代码使用。
+当前独立方案内容是 `ThemeSchemeContent { tokens, palette, typography, components }`，只持有一套 palette。`DesignSystem` 仍有 light/dark 两槽，用作现有组件的解析适配快照：manager 把当前方案的 palette 填入两槽，外观分类来自方案元数据。`NanTheme` 是 `{ tokens, 单一 palette }` 的解析视图，由 `ThemeManager::theme()` 提供。品牌编译工具仍可先生成双 palette 的 DesignSystem，再按外观提取两个独立方案。
 
 ## 外观选择与 ThemeManager 下发
 
-`ColorAppearance { light, dark }` 是解析后的外观，`ThemePreference { system, light, dark }` 是用户偏好。`ThemeManager::appearance()` 把二者统一：显式 light/dark 直接返回，`system` 则回退到宿主机通过 `set_system_preferences()` 提供的 `SystemPreferences::appearance`；ThemeManager 自身不观察操作系统，缺省为 light。`DesignSystem::palette(appearance)` 负责在快照内选调色板。
+`ColorAppearance { light, dark }` 是方案外观分类，`ThemePreference { system, light, dark }` 是按外观模式的用户偏好。`ThemeSelection` 互斥表达 fixed 与 appearance：前者固定注册 ID 或显式匿名内容，不随系统变；后者显式指定 light/dark 两槽并按 preference 与宿主的 `SystemPreferences::appearance` 解析。ThemeManager 不观察操作系统；主机通过 `set_system_preferences()` 注入状态。
 
-主题变更只有一条收敛路径：`apply(shared_ptr<const DesignSystem>)` 原子替换快照指针并发布一次 revision；`commit()` 之后重建有效快照（合并遗留 `NanStyle` 规则）、刷新 `theme()` 视图，再 `publish_revision()`。相同指针的重复提交不会产生额外 revision，`set_preference()` 也只在有效外观真正改变时才下发。命名的 `register_theme` / `register_family` / `activate` / `register_theme_family` 都是这套原子路径之上的选择器。
+主题变化由 scheme 目录与 `select(ThemeSelection)` 统一提交。先验证目录引用与槽位分类，再一次性换目录/选择、解析快照和 `theme()` 视图；当前身份、外观或内容指针改变才发布呈现 revision，未生效槽位变化不强制重解析组件。同快照提交幂等。`apply`、具名 activate/family 与单独 set_preference 等旧入口已在第 3 步移除；`set_style` 仍是既有规则覆盖入口。契约见 [D2 §13](theme_authoring_and_state.md#13-第-3-步实施记录p43-d2-方案目录与选择2026-11-06初稿待维护者复核)。
 
 下发采用观察者 + 虚函数广播，而不是响应式 Signal：`NanSceneTree` 私有实现 `theme::ThemeObserver`，在 `on_theme_revision_changed()` 后沿场景树调用每个节点的 `on_theme_changed(manager)`；节点在 `enter_tree` 时也会收到一次，离开场景树时收到 `on_theme_context_removed()`。控件在 `on_theme_changed()` 里重新解析自己的配方即可，不需要手动比较修订号。
 
@@ -119,7 +119,7 @@ DesignSystem 默认值（XRecipe.base）
 
 ## 主题族群与样式文档
 
-品牌主题以 `ThemeFamilyDefinition { name, reference, policy, tokens, card_rules }` 声明，由 `build_family_design_system()` 编译为内嵌 light/dark 的完整快照，再经 `register_theme_family()` 注册。框架内置 `butter`、`fluent`、`material` 三族；`activate_family()` 对全快照族执行整体原子 apply，此后外观翻转只刷新 `theme()` 视图，不再更换 DesignSystem。`register_default_theme_families()` 是幂等批量注册入口，但**框架不会自动激活任何族**——不调用时应用看到的是上面的默认主题。
+品牌主题以 `ThemeFamilyDefinition { name, reference, policy, tokens, card_rules }` 声明，由 `build_family_design_system()` 生成双 palette 的编译中间值，再提取两个独立 `ThemeSchemeContent`。`register_default_theme_families()` 幂等登记 butter/fluent/material 家族和各自 `nandina:<name>/light|dark` 方案，不改变当前选择；激活需显式提交 `AppearanceThemeSelection` 或 `FixedThemeSelection`，也可跨家族组合。manager 默认注册并选择 `nandina:default/light|dark`，不依赖目录顺序。
 
 三族的成熟度不同：`butter` 是本项目自研风格（暖奶油中性 + 琥珀品牌 + 软阴影卡片，已打磨过品牌档对比度），`fluent` 与 `material` 目前主要是「配色 + 圆角尺度」的迁移，缺少各自设计语言在几何、密度、状态层上的差异，可作为后续打磨对象。
 
@@ -132,7 +132,7 @@ DesignSystem 默认值（XRecipe.base）
 - `TypographyRoles`（`label_sm/md/lg`）已在默认快照中填充，但组件配方仍直接引用 `ScalarToken::typography_label_*`，尚未真正消费该角色层。
 - `tone` / `treatment` 这类平铺语义变体目前只有 Button 具备；其余控件以 `state`（Checkbox、Switch、RadioButton 另有 `checked`）为主。
 - 遗留 `NanStyle` 只支持 Button 与 TextField 两类规则，因此 `set_style()` 不是通用扩展点。
-- 主题通知是虚函数广播（`on_theme_changed` / `on_style_context_changed`），没有响应式主题绑定；部分控件（例如 `Label`）尚未暴露 `set_override`，只有 `on_theme_changed`。
+- 组件内部继续走虚函数主题广播；应用已有 `ui.theme_state()` 的有效外观/revision 只读响应式投影，方案身份/目录/选择的独立观察通道仍待第 4 步。
 - `motion` token 与 `reduced_motion` 偏好已存在，但动画侧尚未接入：浮层（Dialog / Tooltip / Select 弹层）目前没有打开/关闭过渡，缓动曲线也未与 token 对齐。这是明确的后续项，参考素材已归档在 skill 的上游仓库（transitions.dev）。
 - `chart-*`、`sidebar-*` 这类 shadcn 的角色**有意未引入**：框架还没有图表与侧边栏组件，等组件出现时再按同一命名约定补。
 - 参考色阶路径的 `error` 色阶明度跨度不足，状态色上的文字只能达到约 4.3:1（测试按大字级 3:1 放行）；直接声明路径没有这个限制。若要让三族也达到 4.5:1，需要重写这些状态色阶。
@@ -149,7 +149,7 @@ meson compile -C buildDir
 ```
 
 - 工具栏可在运行时切换**主题族**（默认主题 / butter）与**外观**（亮色 / 暗色）。切换不重建 UI 树：控件在 `on_theme_changed()` 里重新解析 `manager.design_system_shared()`，`SceneTree` 把 revision 广播给已挂载节点。
-- 默认主题也注册成一个族（`"default"`），因此两个主题走同一个 `activate_family()` 入口。
+- 默认与 butter 都使用明确的 `nandina:<name>/light|dark` ID 配对，通过同一个 `select` 入口切换。
 - `--family=<name>` 与 `--appearance=<light|dark|system>` 用于以指定状态启动，便于逐状态截图比对。
 - `--self-test` 在真实窗口里每 0.35s 轮换一次族/外观（3 轮共 12 次），覆盖工具栏点击走的那条代码路径，跑完用 `request_close()` 干净退出（退出码 0）。对应的回归测试是 `tests/theme_switch_tests.cpp` 与 `tests/window_lifecycle_tests.cpp`。
 

@@ -1,3 +1,4 @@
+#include "theme_test_support.hpp"
 // Public group authoring: declaration, input, presentation, and weak-owner playback.
 
 #include <nandina/scene/input_event.hpp>
@@ -20,7 +21,7 @@ namespace
     struct AuthoringContext {
         reactive::Graph graph;
         reactive::ReactiveScope scope {graph};
-        theme::ThemeManager themes;
+        theme_test::Manager themes;
         widget::BuildContext ui {graph, scope, themes};
         scene::NanSceneTree tree;
 

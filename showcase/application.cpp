@@ -27,7 +27,19 @@ int main() {
         requested != nullptr && *requested != '\0')
     {
         const std::string_view family {requested};
-        if (!application.theme_manager().activate_family(family)) {
+        const auto light =
+            nandina::theme::ThemeSchemeId::parse("nandina:" + std::string(family) + "/light");
+        const auto dark =
+            nandina::theme::ThemeSchemeId::parse("nandina:" + std::string(family) + "/dark");
+        if (!light || !dark
+            || !application.theme_manager().select(
+                nandina::theme::AppearanceThemeSelection {
+                    *light,
+                    *dark,
+                    nandina::theme::ThemePreference::system
+                }
+            ))
+        {
             nandina::log::get("showcase")
                 .warn(
                     "NANDINA_SHOWCASE_THEME: unknown theme family \"{}\" (known: butter, fluent, material)",

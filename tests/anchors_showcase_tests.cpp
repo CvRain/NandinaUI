@@ -1,3 +1,4 @@
+#include "theme_test_support.hpp"
 // Exercise the shipped page, not a similar tree recreated in a test.
 #include "../showcase/pages/anchors_page.hpp"
 
@@ -32,7 +33,7 @@ namespace
     struct PageFixture {
         reactive::Graph graph;
         reactive::ReactiveScope scope {graph};
-        theme::ThemeManager themes;
+        theme_test::Manager themes;
         app::PageContext context {
             graph,
             scope,

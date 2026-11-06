@@ -1,3 +1,4 @@
+#include "theme_test_support.hpp"
 //
 // Router + Store tests.
 //
@@ -1133,7 +1134,7 @@ TEST_CASE(
 
 TEST_CASE("router reads the active ThemeManager theme for new pages", "[app][router][theme]") {
     reactive::Graph graph;
-    theme::ThemeManager manager;
+    theme_test::Manager manager;
     auto first = theme::default_theme();
     first.palette.primary = theme::nan_color(0.41F, 0.12F, 120.0F);
     auto second = theme::default_theme();
@@ -1187,7 +1188,7 @@ TEST_CASE(
     reactive::Event<int> event;
     TestStore store {graph};
     int observed = 0;
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     app::NanRouter router {graph, themes, &store, app::store_key<TestStore>()};
 
     REQUIRE(router.configure(
@@ -1215,7 +1216,7 @@ TEST_CASE(
 TEST_CASE("retained page roots cannot invoke callbacks after pop", "[app][router][lifecycle]") {
     reactive::Graph graph;
     TestStore store {graph};
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     app::NanRouter router {graph, themes, &store, app::store_key<TestStore>()};
     std::shared_ptr<widget::Button> retained;
     int calls = 0;
@@ -1251,7 +1252,7 @@ TEST_CASE(
     "[app][router][overlay]"
 ) {
     reactive::Graph graph;
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     auto host = scene::OverlayHost::create();
     g_overlay_probe = {};
 

@@ -1,3 +1,4 @@
+#include "theme_test_support.hpp"
 // Surface/box authoring and Card content geometry are tested without a window.
 #include <nandina/reactive/scope.hpp>
 #include <nandina/render/draw_context.hpp>
@@ -160,7 +161,7 @@ TEST_CASE(
     "Surface box/presentation updates are paint-only and theme tokens stay live",
     "[surface][theme]"
 ) {
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     Device device;
     auto surface = widget::Surface::create();
     surface->set_box_style(box());
@@ -283,7 +284,7 @@ TEST_CASE(
 ) {
     reactive::Graph graph;
     reactive::ReactiveScope scope(graph);
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     widget::BuildContext ui(graph, scope, themes);
     auto surface = ui.surface()
                        .box_style(box())
@@ -305,7 +306,7 @@ TEST_CASE(
     "Surface scalar tokens re-resolve while presentation overrides survive",
     "[surface][theme]"
 ) {
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     auto surface = widget::Surface::create();
     auto style = box();
     style.radius = theme::ThemeScalar::token(theme::ScalarToken::radius_md);
@@ -332,7 +333,7 @@ TEST_CASE(
     "[surface][card][resize]"
 ) {
     reactive::Graph graph;
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     auto label = widget::Label::create(
         graph,
         "Content follows a finite width and grows naturally when a card becomes narrow. 中文 日本語."

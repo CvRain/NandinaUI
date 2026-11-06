@@ -269,7 +269,7 @@ scope 清理仅断开后续通知；支持通知期间 scope 或 manager 销毁�
 异常隔离、全部写入口守卫与外层窗口 deferred effects 均有专项覆盖。Sidebar 补充系统驱动切换
 保持 preference=system 的断言，避免把程序同步冒充用户事件。
 
-第 3 步身份/选择 API 的具体建议已归档到 [D2 §12](theme_authoring_and_state.md#12-第-3-步-api-建议2026-11-06未实施)，
+第 3 步身份/选择 API 的具体建议定形建议见 [D2 §12](theme_authoring_and_state.md#12-第-3-步-api-建议2026-11-06-定形实现见-13)，
 本批未实施下一步。
 
 最终代码树验证（2026-11-06，每套先编译再运行，测试使用 `--no-rebuild`；未改写门禁）：
@@ -293,6 +293,72 @@ scope 清理仅断开后续通知；支持通知期间 scope 或 manager 销毁�
 
 复核发现的行为缺口已补修并验证；保留未提交供维护者复验本轮新增通知协议和边界测试。
 复验后可按原约定统一提交本批，不将首版与补修拆开；本轮没有 commit/push。
+
+### P4.3 D2 第 3 步方案目录与选择实施记录（2026-11-06，初稿待维护者复核）
+
+维护者起草后由复核补齐：`ThemeSchemeId`/`ThemeFamilyId` 规范身份与 typed parse、
+`ThemeSchemeContent` + `ThemeSchemeCatalog` 值目录、`ThemeSelection`（fixed/appearance +
+匿名来源）与失败原子提交、legacy 写入口移除及仓库/测试迁移。补齐内容：
+
+- ID 空段 offset 语义统一（指向空段起始分隔符，`theme_scheme_tests` 断言修正）。
+- `theme_test::Manager`（测试兼容层）复用 `require_idle` 通知守卫；active_name/
+  active_family/preference 从目录与选择推断（style_document 编译 ID 解码）。
+- `StyleDocument::apply` 把文件家族注册进目录并标记 scheme 归属，使选择后的家族查询
+  可解码回文件级名字。
+- 通知协议（分阶段、拒绝重入、完成必要通知后重抛首个异常）与窄投影在迁移后保持通过。
+
+- 维护者补齐后首版专项：`theme-scheme` 9 用例 / 84 断言；`button` 33 / 221；`theme-presentation` 26 / 163；
+  `sidebar-showcase` 5 / 45；`theme-switch` 2 / 24。
+- 维护者补齐后首版矩阵（提供的独立记录，非本轮重跑）：buildDir 全量 118 OK / 1 FAIL（sdf-state-probe，
+  无显示设备）/ 1 SKIP（sdf-device 77）；asan 97 OK / 1 skip；no-RTTI 99 OK；
+  no-SQLite 94 OK / 1 skip；tools 8 OK；release_check --ci 8/8（clang-format 23.1.1；
+  headers 194；docs 87）。
+- 本轮保持未提交，等待维护者复验新增补修；作者颜色入口与第 4/4a 步仍待后续。
+
+#### 第 3 步再次复核（2026-11-06）
+
+先编译并通过 theme-scheme/theme-presentation/theme-switch/sidebar-showcase/theme-families/
+theme-design-system 六个专项基线。保留维护者的 ID 空段 offset=17、兼容查询与通知守卫补充；
+新增生产 ThemeManager 直接驱动的回归，不把测试兼容层代替新 API 验证。
+
+补修的失败证据：
+
+1. 长文件别名转换、首次导入完整通知、非激活家族校验/共享主题归属三组用例，补修前全红：
+   34 断言中 11 失败（含 .value() 抛 bad_expected_access）。现在暂存目录与选择并同 style
+   一次提交；所有家族登记，家族成员 ID 稳定且各自独立，共享不可变配色内容。
+2. 替换与已选外观槽位冲突的错误分类曾返回 invalid_id；新增断言先失败，改为明确的
+   appearance_mismatch 后通过。
+3. 固定/匿名方案下点击 Sidebar 开关，主题不变而 checked 改变：新增用例 1 处断言先失败。
+   现在保留固定方案并恢复实际外观，不从家族猜测备用槽位。
+4. 故障注入均重新编译后 exit 42：关闭 255 字节上限（1 断言失败）、关闭已选项移除保护
+   （2 断言失败）、删除 identity 对呈现变化的判定（1 断言失败）；恢复后专项全绿。
+
+生产 API 覆盖还包括：跨家族亮暗配对、独立暗色固定选择、匿名身份、目录复制与销毁、
+未生效槽位替换保持快照、同 ID 新内容发布/同快照幂等、同内容不同 ID 发布、失败原子性、
+全部 canonical 写入口重入守卫、异常后交付和通知中销毁。
+
+专项最终：theme-scheme 19 用例 / 230 断言，button 33 / 221，theme-presentation 26 / 163，
+sidebar-showcase 6 / 55，theme-switch 2 / 24。
+
+本轮最终树验证（每套先编译再测，meson test 使用 --no-rebuild）：
+
+| 范围 | 实际结果 |
+| --- | --- |
+| buildDir 全量 | 117 OK / 2 FAIL / 1 SKIP；两个 FAIL 为 sdf-device/sdf-state-probe，SDL_Init 报 No available video device |
+| buildDir-asan unit | 97 OK / 1 SKIP；ASan/UBSan 开启，构建与测试设 LSAN_OPTIONS=detect_leaks=0 |
+| buildDir-no-rtti unit | 98 OK / 1 SKIP |
+| buildDir-nosqlite unit | 94 OK / 1 SKIP |
+| buildDir-tools | 8 OK |
+| headers / suites | 194 headers classified（12 internal）；suite 门禁通过 |
+| release_check --ci | 8/8，无 SKIP，clang-format 23.1.1；未跟踪的新头/源码/测试另行 dry-run 通过 |
+| buildDir-probe | nandina_sdl_page_probe 与本地 playground 均编译成功；未执行窗口或 GPU 渲染 |
+
+本轮 unit 和主套件的 SKIP 均为 window-lifecycle；与维护者环境 sdf-device=skip/no-RTTI
+窗口测试通过的差异分别保留。SDK 子项目双次打包与 vendored 下游消费者通过。本地未跟踪
+playground 编译只作为迁移检查，不列为 CI 证明。Windows、GPU/桌面与人工视觉验收仍待补齐。
+
+已同步主题系统当前说明与索引，避免文档继续推荐移除的 apply/activate_family 等入口。
+全部保持未提交，待维护者复验后统一提交首版与补修；未启动第 4/4a 步。
 
 ---
 

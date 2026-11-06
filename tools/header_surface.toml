@@ -464,6 +464,10 @@ path = "nandina/theme/theme_presentation.hpp"
 level = "experimental"
 
 [[headers]]
+path = "nandina/theme/theme_scheme.hpp"
+level = "experimental"
+
+[[headers]]
 path = "nandina/theme/tokens.hpp"
 level = "experimental"
 

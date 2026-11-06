@@ -1,3 +1,4 @@
+#include "theme_test_support.hpp"
 // Disclosure composition: retained content, input, focus and scoped bindings.
 #include <nandina/scene/node_ref.hpp>
 #include <nandina/scene/scene_tree.hpp>
@@ -384,7 +385,7 @@ TEST_CASE(
     reactive::Graph graph;
     reactive::ReactiveScope scope(graph);
     reactive::Signal<bool> open(graph, true);
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     widget::BuildContext ui(graph, scope, themes);
     auto node = ui.make<widget::Collapsible>(open, "Details").build();
     CHECK(node->open());
@@ -403,7 +404,7 @@ TEST_CASE(
     reactive::Graph graph;
     reactive::ReactiveScope scope(graph);
     reactive::Signal<bool> open(graph, false);
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     widget::BuildContext ui(graph, scope, themes);
     int calls = 0;
     auto node = ui.make<widget::Collapsible>(open, "Details")
@@ -534,7 +535,7 @@ TEST_CASE(
     "Collapsible trigger style follows theme and typed override persists",
     "[collapsible][theme]"
 ) {
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     auto node = widget::Collapsible::create("Details");
     scene::NanSceneTree tree;
     tree.set_theme_manager(themes);
@@ -610,7 +611,7 @@ TEST_CASE(
 ) {
     reactive::Graph graph;
     reactive::ReactiveScope scope(graph);
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     widget::BuildContext ui(graph, scope, themes);
     auto node =
         ui.make<widget::Collapsible>("Details")

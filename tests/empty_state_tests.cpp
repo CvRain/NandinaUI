@@ -1,3 +1,4 @@
+#include "theme_test_support.hpp"
 //
 // Theme / EmptyState tests.
 //
@@ -196,7 +197,7 @@ TEST_CASE(
     "empty state override patches fields and survives a system apply",
     "[empty-state][override]"
 ) {
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     auto empty = widget::EmptyState::create();
     empty->set_title("No results");
     scene::NanSceneTree tree;
@@ -230,7 +231,7 @@ TEST_CASE(
 }
 
 TEST_CASE("empty state re-resolves after an appearance switch", "[empty-state][theme]") {
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     auto empty = widget::EmptyState::create();
     empty->set_title("No results");
     scene::NanSceneTree tree;
@@ -271,7 +272,7 @@ TEST_CASE("empty state is buildable through BuildContext", "[empty-state][author
     // ComponentTraits 是模板，不实例化就不会被编译；这里真实走一遍 ui.make<>。
     reactive::Graph graph;
     reactive::ReactiveScope scope {graph};
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     widget::BuildContext ui {graph, scope, themes};
 
     auto state = ui.make<widget::EmptyState>("暂无内容", "先添加一条记录").build();

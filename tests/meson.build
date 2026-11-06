@@ -429,6 +429,13 @@ theme_presentation_tests = executable(
 )
 test('theme-presentation', theme_presentation_tests, suite: 'unit')
 
+theme_scheme_tests = executable(
+    'theme_scheme_tests',
+    files('theme_scheme_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('theme-scheme', theme_scheme_tests, suite: 'unit')
+
 layout_overflow_tests = executable(
     'layout_overflow_tests',
     files('layout_overflow_tests.cpp'),

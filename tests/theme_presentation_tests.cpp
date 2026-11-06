@@ -1,3 +1,4 @@
+#include "theme_test_support.hpp"
 // D2 first delivery: read-only, scope-bound theme presentation projection.
 #include <nandina/reactive/graph.hpp>
 #include <nandina/reactive/scope.hpp>
@@ -50,7 +51,7 @@ TEST_CASE(
 ) {
     reactive::Graph graph;
     reactive::ReactiveScope scope(graph);
-    theme::ThemeManager manager;
+    theme_test::Manager manager;
     auto& state = scope.own<theme::ThemePresentation>(manager, graph);
 
     CHECK(state.valid());
@@ -75,7 +76,7 @@ TEST_CASE(
 TEST_CASE("theme presentation advances revision on motion-only changes", "[theme][presentation]") {
     reactive::Graph graph;
     reactive::ReactiveScope scope(graph);
-    theme::ThemeManager manager;
+    theme_test::Manager manager;
     auto& state = scope.own<theme::ThemePresentation>(manager, graph);
     const auto before = state.get();
 
@@ -98,7 +99,7 @@ TEST_CASE(
 ) {
     reactive::Graph graph;
     reactive::ReactiveScope scope(graph);
-    theme::ThemeManager manager;
+    theme_test::Manager manager;
     auto& state = scope.own<theme::ThemePresentation>(manager, graph);
     std::vector<std::uint64_t> revisions;
     auto subscription = state.subscribe([&](theme::ThemePresentationState next) {
@@ -139,7 +140,7 @@ TEST_CASE(
 ) {
     reactive::Graph graph;
     reactive::ReactiveScope scope(graph);
-    theme::ThemeManager manager;
+    theme_test::Manager manager;
     auto& state = scope.own<theme::ThemePresentation>(manager, graph);
     std::vector<theme::ThemePresentationState> events;
     auto subscription =
@@ -160,7 +161,7 @@ TEST_CASE(
 TEST_CASE("theme presentation deduplicates equivalent states", "[theme][presentation]") {
     reactive::Graph graph;
     reactive::ReactiveScope scope(graph);
-    theme::ThemeManager manager;
+    theme_test::Manager manager;
     auto& state = scope.own<theme::ThemePresentation>(manager, graph);
     int calls = 0;
     auto subscription = state.subscribe([&](theme::ThemePresentationState) { ++calls; });
@@ -183,7 +184,7 @@ TEST_CASE("theme presentation deduplicates equivalent states", "[theme][presenta
 TEST_CASE("theme presentation supports multiple independent subscribers", "[theme][presentation]") {
     reactive::Graph graph;
     reactive::ReactiveScope scope(graph);
-    theme::ThemeManager manager;
+    theme_test::Manager manager;
     auto& state = scope.own<theme::ThemePresentation>(manager, graph);
     int first = 0;
     int second = 0;
@@ -204,7 +205,7 @@ TEST_CASE("theme presentation supports multiple independent subscribers", "[them
 TEST_CASE("theme presentation is scope-owned and cleared with the scope", "[theme][presentation]") {
     reactive::Graph graph;
     reactive::ReactiveScope scope(graph);
-    theme::ThemeManager manager;
+    theme_test::Manager manager;
     auto& first = scope.own<theme::ThemePresentation>(manager, graph);
     auto& second = scope.own<theme::ThemePresentation>(manager, graph);
     CHECK(&first == &second);
@@ -236,7 +237,7 @@ TEST_CASE("theme presentation survives manager destruction first", "[theme][pres
     theme::ThemePresentation* state_ptr = nullptr;
     int calls = 0;
     {
-        theme::ThemeManager manager;
+        theme_test::Manager manager;
         auto& state = scope.own<theme::ThemePresentation>(manager, graph);
         state_ptr = &state;
         auto subscription = state.subscribe([&](theme::ThemePresentationState) { ++calls; });
@@ -268,7 +269,7 @@ TEST_CASE("theme presentation exposes no write or emit entry", "[theme][presenta
 TEST_CASE("build context shares one presentation per page scope", "[theme][presentation]") {
     reactive::Graph graph;
     reactive::ReactiveScope page_scope(graph);
-    theme::ThemeManager manager;
+    theme_test::Manager manager;
     widget::BuildContext ui(graph, page_scope, manager);
 
     auto& first = ui.theme_state();
@@ -291,7 +292,7 @@ TEST_CASE(
 ) {
     reactive::Graph graph;
     reactive::ReactiveScope scope(graph);
-    theme::ThemeManager manager;
+    theme_test::Manager manager;
     REQUIRE(manager.register_theme("named", theme::default_theme()));
     REQUIRE(manager.activate("named"));
     auto& state = scope.own<theme::ThemePresentation>(manager, graph);
@@ -318,7 +319,7 @@ TEST_CASE(
 ) {
     reactive::Graph graph;
     reactive::ReactiveScope scope(graph);
-    theme::ThemeManager manager;
+    theme_test::Manager manager;
     auto& state = scope.own<theme::ThemePresentation>(manager, graph);
     REQUIRE(manager.register_theme("first", theme::default_theme()));
     auto changed = theme::default_theme();
@@ -347,7 +348,7 @@ TEST_CASE(
 ) {
     reactive::Graph graph;
     reactive::ReactiveScope scope(graph);
-    theme::ThemeManager manager;
+    theme_test::Manager manager;
     auto& state = scope.own<theme::ThemePresentation>(manager, graph);
     auto sub = state.subscribe([&](theme::ThemePresentationState) {
         manager.set_preference(theme::ThemePreference::light);
@@ -364,7 +365,7 @@ TEST_CASE(
     reactive::Graph graph;
     reactive::ReactiveScope first_scope(graph);
     reactive::ReactiveScope second_scope(graph);
-    theme::ThemeManager manager;
+    theme_test::Manager manager;
     auto& first = first_scope.own<theme::ThemePresentation>(manager, graph);
     auto& second = second_scope.own<theme::ThemePresentation>(manager, graph);
     auto bad = first.subscribe([](theme::ThemePresentationState) {
@@ -391,7 +392,7 @@ TEST_CASE(
     reactive::Graph graph;
     reactive::ReactiveScope first_scope(graph);
     reactive::ReactiveScope second_scope(graph);
-    theme::ThemeManager manager;
+    theme_test::Manager manager;
     auto& first = first_scope.own<theme::ThemePresentation>(manager, graph);
     auto& second = second_scope.own<theme::ThemePresentation>(manager, graph);
     class Probe final: public nandina::scene::NanControl {
@@ -422,7 +423,7 @@ TEST_CASE(
 ) {
     reactive::Graph graph;
     reactive::ReactiveScope scope(graph);
-    theme::ThemeManager manager;
+    theme_test::Manager manager;
     auto& state = scope.own<theme::ThemePresentation>(manager, graph);
     int later = 0;
     auto clear = state.subscribe([&](theme::ThemePresentationState) { scope.clear(); });
@@ -439,7 +440,7 @@ TEST_CASE(
     reactive::Graph graph;
     reactive::ReactiveScope page_scope(graph);
     reactive::ReactiveScope consumer_scope(graph);
-    theme::ThemeManager manager;
+    theme_test::Manager manager;
     auto& state = page_scope.own<theme::ThemePresentation>(manager, graph);
     int callbacks = 0;
     auto sub = state.subscribe([&](theme::ThemePresentationState) { ++callbacks; });
@@ -460,7 +461,7 @@ TEST_CASE(
     reactive::Graph graph;
     reactive::ReactiveScope first_scope(graph);
     reactive::ReactiveScope second_scope(graph);
-    auto manager = std::make_unique<theme::ThemeManager>();
+    auto manager = std::make_unique<theme_test::Manager>();
     auto& first = first_scope.own<theme::ThemePresentation>(*manager, graph);
     auto& second = second_scope.own<theme::ThemePresentation>(*manager, graph);
     int later = 0;
@@ -481,7 +482,7 @@ TEST_CASE(
 TEST_CASE("throwing effects do not block presentation delivery", "[theme][presentation][review]") {
     reactive::Graph graph;
     reactive::ReactiveScope scope(graph);
-    theme::ThemeManager manager;
+    theme_test::Manager manager;
     auto& state = scope.own<theme::ThemePresentation>(manager, graph);
     int events = 0;
     auto sub = state.subscribe([&](theme::ThemePresentationState next) {
@@ -504,7 +505,7 @@ TEST_CASE(
     "revision delivery survives removing and replacing observers at the same address",
     "[theme][presentation][review]"
 ) {
-    theme::ThemeManager manager;
+    theme_test::Manager manager;
     class Observer final: public theme::ThemeObserver {
     public:
         int calls = 0;
@@ -540,7 +541,7 @@ TEST_CASE(
     "manager destruction skips observers removed by another destruction callback",
     "[theme][presentation][lifetime][review]"
 ) {
-    auto manager = std::make_unique<theme::ThemeManager>();
+    auto manager = std::make_unique<theme_test::Manager>();
     class Observer final: public theme::ThemeObserver {
     public:
         std::function<void()> destroyed;
@@ -565,7 +566,7 @@ TEST_CASE(
 ) {
     reactive::Graph graph;
     reactive::ReactiveScope scope(graph);
-    theme::ThemeManager manager;
+    theme_test::Manager manager;
     auto& state = scope.own<theme::ThemePresentation>(manager, graph);
     int runs = 0;
     scope.effect([&] {
@@ -586,7 +587,7 @@ TEST_CASE(
 ) {
     reactive::Graph graph;
     reactive::ReactiveScope scope(graph);
-    auto manager = std::make_unique<theme::ThemeManager>();
+    auto manager = std::make_unique<theme_test::Manager>();
     auto& state = scope.own<theme::ThemePresentation>(*manager, graph);
     const auto view = state.readonly();
     auto& dark =
@@ -605,7 +606,7 @@ TEST_CASE(
 ) {
     reactive::Graph graph;
     reactive::ReactiveScope scope(graph);
-    theme::ThemeManager manager;
+    theme_test::Manager manager;
     REQUIRE(manager.register_theme("named", theme::default_theme()));
     REQUIRE(manager.register_family("legacy", "named", "named"));
     manager.register_theme_family("full", theme::default_design_system());
@@ -651,7 +652,7 @@ TEST_CASE(
 ) {
     reactive::Graph graph;
     reactive::ReactiveScope scope(graph);
-    theme::ThemeManager manager;
+    theme_test::Manager manager;
     class Observer final: public theme::ThemeObserver {
     public:
         bool fail = false;
@@ -684,7 +685,7 @@ TEST_CASE(
 ) {
     reactive::Graph graph;
     reactive::ReactiveScope scope(graph);
-    theme::ThemeManager manager;
+    theme_test::Manager manager;
     REQUIRE(manager.register_theme("same", theme::default_theme()));
     auto dark = theme::default_theme();
     dark.tokens.radius.md += 3;

@@ -1,3 +1,4 @@
+#include "theme_test_support.hpp"
 #include <nandina/widget/build_context.hpp>
 
 #include <catch2/catch_test_macros.hpp>
@@ -25,7 +26,7 @@ TEST_CASE(
 ) {
     reactive::Graph graph;
     reactive::ReactiveScope scope {graph};
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     const widget::BuildContext ui {graph, scope, themes};
 
     const auto probe = ui.make<ScopedProbe>().build();

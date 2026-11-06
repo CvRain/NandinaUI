@@ -1,3 +1,4 @@
+#include "theme_test_support.hpp"
 // Exercise the maintained Label page and its real metadata table across widths.
 #include "../showcase/components/component_info_table.hpp"
 #include "../showcase/pages/label_page.hpp"
@@ -18,7 +19,7 @@ namespace
     struct Fixture {
         reactive::Graph graph;
         reactive::ReactiveScope scope {graph};
-        theme::ThemeManager themes;
+        theme_test::Manager themes;
         app::PageContext context {
             graph,
             scope,

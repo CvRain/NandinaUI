@@ -1,3 +1,4 @@
+#include "theme_test_support.hpp"
 //
 // Theme / Tooltip tests.
 //
@@ -84,7 +85,7 @@ TEST_CASE("tooltip resolves bubble tokens from the recipe", "[tooltip][theme]") 
 
 TEST_CASE("tooltip override survives a system apply", "[tooltip][override]") {
     reactive::Graph graph;
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     auto tooltip = widget::Tooltip::create("Hint");
     scene::NanSceneTree tree;
     tree.set_theme_manager(themes);
@@ -163,7 +164,7 @@ TEST_CASE("tooltip paints bubble only when visible", "[tooltip][paint]") {
 TEST_CASE("BuildContext tooltip wraps a trigger control", "[tooltip][authoring]") {
     reactive::Graph graph;
     reactive::ReactiveScope scope {graph};
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     widget::BuildContext ui {graph, scope, themes};
     auto trigger = ui.make<widget::Button>("Save").build();
     auto tooltip = ui.make<widget::Tooltip>("Saves preferences", trigger).build();
@@ -315,7 +316,7 @@ TEST_CASE(
 ) {
     reactive::Graph graph;
     reactive::ReactiveScope scope {graph};
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     auto host = scene::OverlayHost::create();
     host->set_content(std::make_shared<scene::NanControl>(foundation::NanSize(120.0F, 40.0F)));
     // Lay the portal out in its own tree so the injected service, not the ancestor
@@ -347,7 +348,7 @@ TEST_CASE(
 TEST_CASE("tooltip tolerates an expired injected overlay service", "[tooltip][overlay][lifetime]") {
     reactive::Graph graph;
     reactive::ReactiveScope scope {graph};
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     auto host = scene::OverlayHost::create();
     widget::BuildContext ui {graph, scope, themes, nullptr, host.get()};
     auto trigger = ui.make<widget::Button>("Save").build();

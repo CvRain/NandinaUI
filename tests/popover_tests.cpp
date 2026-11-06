@@ -1,3 +1,4 @@
+#include "theme_test_support.hpp"
 //
 // Popover (non-modal anchored floating container) tests.
 //
@@ -60,7 +61,7 @@ namespace
     /// 带窗口浮层的 Popover 宿主：内容层里放一个触发按钮，Popover 挂在内容层。
     struct PopoverHarness {
         reactive::Graph graph;
-        theme::ThemeManager themes;
+        theme_test::Manager themes;
         std::shared_ptr<scene::OverlayHost> host = scene::OverlayHost::create();
         std::shared_ptr<scene::NanControl> body =
             std::make_shared<scene::NanControl>(foundation::NanSize(320.0F, 240.0F));
@@ -621,7 +622,7 @@ TEST_CASE("destroying an open popover releases its overlay", "[popover][overlay]
 TEST_CASE("popover tolerates an expired injected overlay service", "[popover][overlay][lifetime]") {
     reactive::Graph graph;
     reactive::ReactiveScope scope {graph};
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     auto host = scene::OverlayHost::create();
     widget::BuildContext ui {graph, scope, themes, nullptr, host.get()};
     auto trigger = ui.make<widget::Button>("Open").build();
@@ -685,7 +686,7 @@ TEST_CASE("popover falls back to in-tree hosting without an overlay host", "[pop
 TEST_CASE("popover authoring via ComponentTraits", "[popover][authoring]") {
     reactive::Graph graph;
     reactive::ReactiveScope scope {graph};
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     auto host = scene::OverlayHost::create();
     host->set_content(std::make_shared<scene::NanControl>(foundation::NanSize(200.0F, 120.0F)));
     scene::NanSceneTree host_tree;

@@ -1,3 +1,4 @@
+#include "theme_test_support.hpp"
 //
 // Theme DesignSystem / shared-fragment tests.
 //
@@ -335,7 +336,7 @@ TEST_CASE(
 TEST_CASE("ThemeManager apply publishes exactly one revision", "[theme][manager][atomic]") {
     // probe 先于 manager 构造，保证 manager 析构时观察者仍存活。
     RevisionProbe probe;
-    theme::ThemeManager manager;
+    theme_test::Manager manager;
     manager.add_observer(probe);
     const auto before = manager.revision();
 
@@ -350,7 +351,7 @@ TEST_CASE("ThemeManager apply publishes exactly one revision", "[theme][manager]
 }
 
 TEST_CASE("motion preference resolves system and explicit reduced motion", "[theme][motion]") {
-    theme::ThemeManager manager;
+    theme_test::Manager manager;
     RevisionProbe probe;
     manager.add_observer(probe);
 
@@ -384,7 +385,7 @@ TEST_CASE(
     "system preference snapshot updates appearance and motion atomically",
     "[theme][manager][atomic][platform]"
 ) {
-    theme::ThemeManager manager;
+    theme_test::Manager manager;
     RevisionProbe probe;
     manager.add_observer(probe);
     const theme::SystemPreferences default_preferences {
@@ -414,7 +415,7 @@ TEST_CASE(
 }
 
 TEST_CASE("explicit preferences mask platform snapshot revisions", "[theme][manager][platform]") {
-    theme::ThemeManager manager;
+    theme_test::Manager manager;
     manager.set_preference(theme::ThemePreference::light);
     manager.set_motion_preference(theme::MotionPreference::full);
     RevisionProbe probe;
@@ -446,7 +447,7 @@ TEST_CASE(
     "equivalent explicit appearance does not publish a revision",
     "[theme][manager][appearance]"
 ) {
-    theme::ThemeManager manager;
+    theme_test::Manager manager;
     RevisionProbe probe;
     manager.add_observer(probe);
 
@@ -471,7 +472,7 @@ TEST_CASE(
     "one DesignSystem carries light and dark palettes switched by preference",
     "[theme][manager][appearance]"
 ) {
-    theme::ThemeManager manager;
+    theme_test::Manager manager;
     auto system = theme::default_design_system();
     system.light.primary = theme::nan_color(0.82F, 0.08F, 250.0F);
     system.dark.primary = theme::nan_color(0.38F, 0.08F, 250.0F);
@@ -634,7 +635,7 @@ TEST_CASE(
 }
 
 TEST_CASE("attached widget follows an atomic DesignSystem apply", "[theme][manager][widget]") {
-    theme::ThemeManager manager;
+    theme_test::Manager manager;
     auto system = theme::default_design_system();
     system.light.primary = theme::nan_color(0.61F, 0.12F, 200.0F);
     manager.apply(std::make_shared<const theme::DesignSystem>(std::move(system)));
@@ -652,7 +653,7 @@ TEST_CASE(
     "legacy named themes and families still route through the design system",
     "[theme][manager][compat]"
 ) {
-    theme::ThemeManager manager;
+    theme_test::Manager manager;
     auto light = theme::default_theme();
     light.palette.primary = theme::nan_color(0.72F, 0.12F, 120.0F);
     auto dark = theme::default_theme();
@@ -679,7 +680,7 @@ TEST_CASE(
 }
 
 TEST_CASE("Button set_override patches fields and survives a system apply", "[theme][override]") {
-    theme::ThemeManager manager;
+    theme_test::Manager manager;
     auto system = theme::default_design_system();
     system.light.primary = theme::nan_color(0.60F, 0.10F, 200.0F);
     manager.apply(std::make_shared<const theme::DesignSystem>(std::move(system)));

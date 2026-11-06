@@ -1,3 +1,4 @@
+#include "theme_test_support.hpp"
 //
 // Theme / Spinner tests.
 //
@@ -157,7 +158,7 @@ TEST_CASE("spinner exposes progress_bar semantics with its label", "[spinner][se
 
 TEST_CASE("spinner override patches fields and survives a system apply", "[spinner][override]") {
     reactive::Graph graph;
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     auto spinner = widget::Spinner::create();
     scene::NanSceneTree tree;
     tree.set_theme_manager(themes);
@@ -189,7 +190,7 @@ TEST_CASE("spinner override patches fields and survives a system apply", "[spinn
 
 TEST_CASE("spinner re-resolves its indicator on a theme switch", "[spinner][theme]") {
     reactive::Graph graph;
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     auto spinner = widget::Spinner::create();
     scene::NanSceneTree tree;
     tree.set_theme_manager(themes);
@@ -224,7 +225,7 @@ TEST_CASE("spinner paints an arc through the scene tree", "[spinner][paint]") {
 TEST_CASE("BuildContext spinner carries an optional label", "[spinner][authoring]") {
     reactive::Graph graph;
     reactive::ReactiveScope scope {graph};
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     widget::BuildContext ui {graph, scope, themes};
 
     auto spinner = ui.make<widget::Spinner>("Busy").build();
@@ -239,7 +240,7 @@ TEST_CASE("spinner is buildable through BuildContext", "[spinner][authoring]") {
     // 否则"Builder 支持"只是纸面存在（本会话新增的三个组件都只被 create() 覆盖过）。
     reactive::Graph graph;
     reactive::ReactiveScope scope {graph};
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     widget::BuildContext ui {graph, scope, themes};
 
     auto spinner = ui.make<widget::Spinner>("加载中").build();

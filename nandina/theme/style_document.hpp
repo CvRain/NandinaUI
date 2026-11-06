@@ -24,16 +24,24 @@ namespace nandina::theme
         bool is_default = false;
     };
 
+    /// File-format declaration; this pair is not runtime theme identity.
+    struct StyleThemePair {
+        std::string light_theme;
+        std::string dark_theme;
+    };
+
     struct StyleDocument {
         std::map<std::string, NanReferencePalette, std::less<>> reference_palettes;
         std::map<std::string, NanTheme, std::less<>> themes;
-        std::map<std::string, ThemeFamily, std::less<>> theme_families;
+        std::map<std::string, StyleThemePair, std::less<>> theme_families;
         std::string active_theme = "default";
         std::string active_family;
         ThemePreference preference = ThemePreference::system;
         std::shared_ptr<NanStyle> style = std::make_shared<NanStyle>();
         std::vector<FontFamilyDeclaration> font_families;
 
+        /// Theme aliases, directory, selection and style rules commit once after validation.
+        /// Optional font registration is a subsequent operation with its existing failure behavior.
         [[nodiscard]] auto
         apply(ThemeManager& manager, text::FontFamilyRegistry* fonts = nullptr) const
             -> std::expected<void, std::string>;

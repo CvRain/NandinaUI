@@ -1,3 +1,4 @@
+#include "theme_test_support.hpp"
 //
 // Combobox tests: filterable text input + Popover-backed option list over MenuItem.
 //
@@ -117,7 +118,7 @@ namespace
 
     struct ComboboxHarness {
         reactive::Graph graph;
-        theme::ThemeManager themes;
+        theme_test::Manager themes;
         std::shared_ptr<scene::OverlayHost> host = scene::OverlayHost::create();
         std::shared_ptr<RecordingRoot> body =
             std::make_shared<RecordingRoot>(foundation::NanSize(340.0F, 260.0F));
@@ -1040,7 +1041,7 @@ TEST_CASE("destroying an open combobox releases its overlay", "[combobox][lifeti
 TEST_CASE("combobox authoring via ComponentTraits", "[combobox][authoring]") {
     reactive::Graph graph;
     reactive::ReactiveScope scope {graph};
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     auto host = scene::OverlayHost::create();
     host->set_content(std::make_shared<scene::NanControl>(foundation::NanSize(240.0F, 160.0F)));
     scene::NanSceneTree host_tree;

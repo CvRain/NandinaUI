@@ -1,3 +1,4 @@
+#include "theme_test_support.hpp"
 //
 // Theme / primitives / Button tests.
 //
@@ -244,7 +245,7 @@ TEST_CASE("NanStyle rules bridge into the design system and resolve", "[theme][s
     rule.padding_x = theme::ThemeScalar::token(theme::ScalarToken::spacing_xl);
     style->add_button_rule(std::move(rule));
 
-    theme::ThemeManager manager;
+    theme_test::Manager manager;
     manager.set_style(style);
 
     auto first = theme::default_theme();
@@ -282,7 +283,7 @@ TEST_CASE("NanStyle rules bridge into the design system and resolve", "[theme][s
 }
 
 TEST_CASE("ThemeManager switches attached widget trees by revision", "[theme][manager]") {
-    theme::ThemeManager manager;
+    theme_test::Manager manager;
     auto light = theme::default_theme();
     light.palette.primary = theme::nan_color(0.72F, 0.12F, 120.0F);
     auto dark = theme::default_theme();
@@ -316,7 +317,7 @@ TEST_CASE("ThemeManager switches attached widget trees by revision", "[theme][ma
 }
 
 TEST_CASE("ThemeManager resolves family variants from appearance preference", "[theme][manager]") {
-    theme::ThemeManager manager;
+    theme_test::Manager manager;
     auto light = theme::default_theme();
     light.palette.primary = theme::nan_color(0.82F, 0.08F, 250.0F);
     auto dark = theme::default_theme();
@@ -358,7 +359,7 @@ TEST_CASE("reference color scales expose stable shade indices", "[theme][palette
 }
 
 TEST_CASE("TextField rules compose focused and invalid states", "[theme][text-field]") {
-    theme::ThemeManager manager;
+    theme_test::Manager manager;
     auto style = std::make_shared<theme::NanStyle>();
     theme::TextFieldStyleRule focused;
     focused.state = theme::TextFieldVisualState::focused;
@@ -396,7 +397,7 @@ TEST_CASE("SceneTree releases a destroyed ThemeManager", "[theme][manager][lifet
     auto button = std::make_shared<widget::Button>("Lifetime");
     tree.set_root(button);
     {
-        theme::ThemeManager manager;
+        theme_test::Manager manager;
         tree.set_theme_manager(manager);
         REQUIRE(tree.theme_manager() == &manager);
     }
@@ -442,7 +443,7 @@ faces = [{ resource = "fonts/fallback-ui/regular", weight = 400 }]
     REQUIRE(document->style->button_rules().size() == 1);
     REQUIRE(document->style->text_field_rules().size() == 1);
 
-    theme::ThemeManager manager;
+    theme_test::Manager manager;
     text::FontFamilyRegistry fonts;
     const auto applied = document->apply(manager, &fonts);
     REQUIRE(applied.has_value());
@@ -512,7 +513,7 @@ dark = "ocean-dark"
     REQUIRE(document->reference_palettes.size() == 1);
     REQUIRE(document->theme_families.size() == 1);
 
-    theme::ThemeManager manager;
+    theme_test::Manager manager;
     REQUIRE(document->apply(manager).has_value());
     REQUIRE(manager.active_family() == "ocean");
     REQUIRE(manager.preference() == theme::ThemePreference::dark);
@@ -590,7 +591,7 @@ TEST_CASE(
     "Button instance theme and StyleContext keep their cascade priority",
     "[theme][cascade]"
 ) {
-    theme::ThemeManager manager;
+    theme_test::Manager manager;
     auto application_theme = theme::default_theme();
     application_theme.palette.primary = theme::nan_color(0.35F, 0.1F, 40.0F);
     manager.set_theme(application_theme);
@@ -765,7 +766,7 @@ TEST_CASE(
     "button cancels ripple for reduced motion and disabled state",
     "[widget][button][ripple]"
 ) {
-    theme::ThemeManager manager;
+    theme_test::Manager manager;
     scene::NanSceneTree tree;
     tree.set_theme_manager(manager);
     auto button = std::make_shared<widget::Button>("Motion");

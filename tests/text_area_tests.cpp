@@ -1,3 +1,4 @@
+#include "theme_test_support.hpp"
 //
 // TextArea multi-line input, wrapping, scrolling, theme, and authoring tests.
 //
@@ -469,7 +470,7 @@ TEST_CASE("text area shows the placeholder only while empty", "[text-area][place
 }
 
 TEST_CASE("text area recipe override survives a theme switch", "[text-area][theme][override]") {
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     auto area = widget::TextArea::create();
     area->set_override(
         theme::TextAreaRecipeRule {
@@ -580,7 +581,7 @@ TEST_CASE(
 ) {
     reactive::Graph graph;
     reactive::ReactiveScope scope {graph};
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     widget::BuildContext ui {graph, scope, themes};
 
     reactive::Signal<std::string> draft {graph, "Task"};

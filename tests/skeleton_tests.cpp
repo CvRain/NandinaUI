@@ -1,3 +1,4 @@
+#include "theme_test_support.hpp"
 //
 // Theme / Skeleton tests.
 //
@@ -182,7 +183,7 @@ TEST_CASE(
 }
 
 TEST_CASE("skeleton override patches fields and survives a system apply", "[skeleton][override]") {
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     auto skeleton = widget::Skeleton::create();
     scene::NanSceneTree tree;
     tree.set_theme_manager(themes);
@@ -213,7 +214,7 @@ TEST_CASE("skeleton override patches fields and survives a system apply", "[skel
 }
 
 TEST_CASE("skeleton re-resolves after a theme switch", "[skeleton][theme]") {
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     auto skeleton = widget::Skeleton::create();
     scene::NanSceneTree tree;
     tree.set_theme_manager(themes);
@@ -274,7 +275,7 @@ TEST_CASE("skeleton is buildable through BuildContext", "[skeleton][authoring]")
     // ComponentTraits 是模板，不实例化就不会被编译；这里真实走一遍 ui.make<>。
     reactive::Graph graph;
     reactive::ReactiveScope scope {graph};
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     widget::BuildContext ui {graph, scope, themes};
 
     auto text = ui.make<widget::Skeleton>().build();

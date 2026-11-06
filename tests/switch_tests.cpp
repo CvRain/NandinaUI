@@ -1,3 +1,4 @@
+#include "theme_test_support.hpp"
 //
 // Theme / Switch tests.
 //
@@ -152,7 +153,7 @@ TEST_CASE("switch supports keyboard activation and disabled state", "[switch][in
 TEST_CASE("BuildContext switch synchronizes a boolean signal", "[switch][authoring]") {
     reactive::Graph graph;
     reactive::ReactiveScope scope {graph};
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     widget::BuildContext ui {graph, scope, themes};
     auto& enabled = ui.signal<bool>(false);
     auto switch_control = ui.make<widget::Switch>(enabled, "Enable sync").build();

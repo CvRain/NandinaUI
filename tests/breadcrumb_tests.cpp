@@ -1,3 +1,4 @@
+#include "theme_test_support.hpp"
 //
 // Theme / Breadcrumb tests.
 //
@@ -175,7 +176,7 @@ TEST_CASE(
     "breadcrumb override patches fields and survives an appearance switch",
     "[breadcrumb][override]"
 ) {
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     auto crumb = widget::Breadcrumb::create();
     crumb->add_item("Home", [] {});
     crumb->add_item("Current");
@@ -243,7 +244,7 @@ TEST_CASE(
 TEST_CASE("breadcrumb is buildable through BuildContext", "[breadcrumb][authoring]") {
     reactive::Graph graph;
     reactive::ReactiveScope scope {graph};
-    theme::ThemeManager themes;
+    theme_test::Manager themes;
     widget::BuildContext ui {graph, scope, themes};
 
     auto crumb = ui.make<widget::Breadcrumb>().build();

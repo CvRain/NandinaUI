@@ -6,6 +6,7 @@
 
 #include <toml++/toml.hpp>
 
+#include <algorithm>
 #include <array>
 #include <cstdint>
 #include <sstream>
@@ -607,29 +608,172 @@ namespace nandina::theme
 
     auto StyleDocument::apply(ThemeManager& manager, text::FontFamilyRegistry* fonts) const
         -> std::expected<void, std::string> {
-        for (const auto& [name, value]: themes) {
-            (void)manager.register_theme(name, value);
+        manager.require_idle();
+        if (!style) {
+            return std::unexpected("styles document has null style rules");
         }
-        try {
-            for (const auto& [name, family]: theme_families) {
-                (void)manager.register_family(name, family.light_theme, family.dark_theme);
+        // Compile file aliases before touching the live manager. IDs stay stable across
+        // repeated imports; a family gets its own member identity when themes are shared.
+        const auto encoded = [](std::string_view name) {
+            std::string text = "x";
+            constexpr char hex[] = "0123456789abcdef";
+            for (unsigned char value: name) {
+                text += hex[value >> 4];
+                text += hex[value & 15];
+            }
+            return text;
+        };
+        const auto scheme_key = [&](std::string_view name,
+                                    ColorAppearance appearance,
+                                    const std::optional<std::string_view> family =
+                                        std::nullopt) -> std::expected<ThemeSchemeId, std::string> {
+            std::string text = "styles:" + encoded(name);
+            if (family) {
+                text += "/families/" + encoded(*family);
+            }
+            text += appearance == ColorAppearance::light ? "/light" : "/dark";
+            auto result = ThemeSchemeId::parse(text);
+            if (!result) {
+                return std::unexpected(
+                    "styles theme alias cannot form an ID: " + std::string(name) + ": "
+                    + describe(result.error())
+                );
+            }
+            return std::move(*result);
+        };
+        const auto family_key =
+            [&](std::string_view name) -> std::expected<ThemeFamilyId, std::string> {
+            auto result = ThemeFamilyId::parse("styles:" + encoded(name));
+            if (!result) {
+                return std::unexpected(
+                    "styles family alias cannot form an ID: " + std::string(name) + ": "
+                    + describe(result.error())
+                );
+            }
+            return std::move(*result);
+        };
+        auto staged = manager.catalog();
+        const auto upsert = [&staged](ThemeScheme scheme) -> std::expected<void, std::string> {
+            auto result = staged.find(scheme.id) ? staged.replace_scheme(std::move(scheme))
+                                                 : staged.register_scheme(std::move(scheme));
+            if (!result) {
+                return std::unexpected(describe(result.error()));
+            }
+            return {};
+        };
+        for (const auto& [name, value]: themes) {
+            const auto system = design_system_from_theme(value);
+            for (auto appearance: {ColorAppearance::light, ColorAppearance::dark}) {
+                auto id = scheme_key(name, appearance);
+                if (!id) {
+                    return std::unexpected(id.error());
+                }
+                auto result = upsert(
+                    {*id,
+                     name,
+                     appearance,
+                     {},
+                     std::make_shared<const ThemeSchemeContent>(
+                         ThemeSchemeContent::from(system, appearance)
+                     )}
+                );
+                if (!result) {
+                    return result;
+                }
             }
         }
-        catch (const std::invalid_argument& error) {
-            return std::unexpected(error.what());
+        const auto resolve =
+            [&](std::string_view name,
+                ColorAppearance appearance) -> std::expected<ThemeScheme, std::string> {
+            ThemeSchemeId id;
+            if (themes.contains(std::string(name))) {
+                auto parsed = scheme_key(name, appearance);
+                if (!parsed) {
+                    return std::unexpected(parsed.error());
+                }
+                id = std::move(*parsed);
+            }
+            else if (name == "default") {
+                id = *ThemeSchemeId::parse(
+                    appearance == ColorAppearance::light ? "nandina:default/light"
+                                                         : "nandina:default/dark"
+                );
+            }
+            else {
+                return std::unexpected(
+                    "styles family references an unknown theme: " + std::string(name)
+                );
+            }
+            const auto* scheme = staged.find(id);
+            if (!scheme) {
+                return std::unexpected(
+                    "styles document references a missing scheme: " + std::string(id.text())
+                );
+            }
+            return *scheme;
+        };
+        for (const auto& [name, pair]: theme_families) {
+            auto id = family_key(name);
+            if (!id) {
+                return std::unexpected(id.error());
+            }
+            const auto exists = std::ranges::any_of(staged.families(), [&](const auto& entry) {
+                return entry.id == *id;
+            });
+            if (!exists) {
+                auto result = staged.register_family({*id, name});
+                if (!result) {
+                    return std::unexpected(describe(result.error()));
+                }
+            }
+            for (auto appearance: {ColorAppearance::light, ColorAppearance::dark}) {
+                const auto& alias =
+                    appearance == ColorAppearance::light ? pair.light_theme : pair.dark_theme;
+                auto member = resolve(alias, appearance);
+                auto member_id = scheme_key(alias, appearance, name);
+                if (!member) {
+                    return std::unexpected(member.error());
+                }
+                if (!member_id) {
+                    return std::unexpected(member_id.error());
+                }
+                member->id = std::move(*member_id);
+                member->family = *id;
+                if (auto result = upsert(std::move(*member)); !result) {
+                    return result;
+                }
+            }
         }
-        manager.set_style(style);
+        ThemeSelection selected;
         if (!active_family.empty()) {
-            manager.set_preference(preference);
-            if (!manager.activate_family(active_family)) {
+            const auto family = theme_families.find(active_family);
+            if (family == theme_families.end()) {
                 return std::unexpected(
                     "styles document selects an unknown theme family: " + active_family
                 );
             }
+            auto light =
+                scheme_key(family->second.light_theme, ColorAppearance::light, active_family);
+            auto dark = scheme_key(family->second.dark_theme, ColorAppearance::dark, active_family);
+            if (!light || !dark) {
+                return std::unexpected(!light ? light.error() : dark.error());
+            }
+            selected = AppearanceThemeSelection {*light, *dark, preference};
         }
-        else if (!manager.activate(active_theme)) {
-            return std::unexpected("styles document selects an unknown theme: " + active_theme);
+        else {
+            auto scheme = resolve(active_theme, ColorAppearance::light);
+            if (!scheme) {
+                return std::unexpected("styles document selects an unknown theme: " + active_theme);
+            }
+            selected = FixedThemeSelection {scheme->id};
         }
+        if (auto result =
+                staged.select(std::move(selected), manager.system_preferences().appearance);
+            !result)
+        {
+            return std::unexpected(describe(result.error()));
+        }
+        manager.commit_catalog(std::move(staged), false, std::nullopt, style);
         if (fonts == nullptr) {
             return {};
         }
@@ -711,7 +855,7 @@ namespace nandina::theme
                         throw std::runtime_error("theme family requires light and dark variants");
                     document.theme_families.emplace(
                         std::string(name.str()),
-                        ThemeFamily {.light_theme = *light, .dark_theme = *dark}
+                        StyleThemePair {.light_theme = *light, .dark_theme = *dark}
                     );
                 }
             }

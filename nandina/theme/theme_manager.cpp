@@ -1,8 +1,7 @@
 /**
- * theme/theme_manager — 以 DesignSystem 为单一事实来源的主题管理实现。
- *
- * 所有状态变更收敛到 commit()：换 system_ 指针 → 刷新 theme() 视图 → 发布一次
- * revision。遗留 named-theme / family / style API 是选择器层，不绕过原子路径。
+ * theme/theme_manager — stage catalog and selection changes, then publish one resolved snapshot.
+ * Scheme content is the source of truth; DesignSystem adapts one palette for existing widgets.
+ * Host appearance, motion and optional style overlays are committed before observers run.
  */
 
 #include "theme_manager.hpp"
@@ -25,12 +24,6 @@ namespace nandina::theme
 
     namespace
     {
-        /** 把遗留 NanTheme（tokens + 单调色板）包装成 DesignSystem 快照。 */
-        [[nodiscard]] auto theme_to_design_system(const NanTheme& theme)
-            -> std::shared_ptr<const DesignSystem> {
-            return std::make_shared<const DesignSystem>(design_system_from_theme(theme));
-        }
-
         /** 遗留 ButtonStyleRule → 配方规则（字段槽位映射）。 */
         [[nodiscard]] auto to_recipe_rule(const ButtonStyleRule& legacy) -> ButtonRecipeRule {
             ButtonRecipeRule rule;
@@ -88,9 +81,38 @@ namespace nandina::theme
 
     ThemeManager::ThemeManager(): observers_(std::make_shared<ObserverState>()) {
         observers_->manager = this;
-        system_ = std::make_shared<const DesignSystem>(default_design_system());
+        const auto system = default_design_system();
+        const auto light = ThemeSchemeId::parse("nandina:default/light").value();
+        const auto dark = ThemeSchemeId::parse("nandina:default/dark").value();
+        const auto family = ThemeFamilyId::parse("nandina:default").value();
+        (void)catalog_.register_family({family, "Nandina"});
+        (void)catalog_.register_scheme(
+            {light,
+             "Nandina Light",
+             ColorAppearance::light,
+             family,
+             std::make_shared<const ThemeSchemeContent>(
+                 ThemeSchemeContent::from(system, ColorAppearance::light)
+             )}
+        );
+        (void)catalog_.register_scheme(
+            {dark,
+             "Nandina Dark",
+             ColorAppearance::dark,
+             family,
+             std::make_shared<const ThemeSchemeContent>(
+                 ThemeSchemeContent::from(system, ColorAppearance::dark)
+             )}
+        );
+        (void)catalog_.select(
+            AppearanceThemeSelection {light, dark, ThemePreference::system},
+            system_preferences_.appearance
+        );
+        active_id_ = light;
+        active_content_ = catalog_.active()->content;
+        system_ = std::make_shared<const DesignSystem>(active_content_->design_system());
         effective_ = merge_style(system_, style_);
-        theme_view_ = NanTheme {system_->tokens, system_->palette(appearance())};
+        theme_view_ = NanTheme {active_content_->tokens, active_content_->palette};
     }
 
     ThemeManager::~ThemeManager() {
@@ -111,143 +133,135 @@ namespace nandina::theme
         }
     }
 
-    void ThemeManager::apply(std::shared_ptr<const DesignSystem> system) {
-        require_idle();
-        if (!system) {
-            throw std::invalid_argument("ThemeManager design system cannot be null");
+    void ThemeManager::commit_catalog(
+        ThemeSchemeCatalog catalog,
+        const bool motion_changed,
+        const std::optional<SystemPreferences> host,
+        std::shared_ptr<const NanStyle> style
+    ) {
+        const auto* current = catalog.active();
+        auto next_id = current ? std::optional(current->id) : std::nullopt;
+        const auto next_content = current
+            ? current->content
+            : std::get<UnregisteredThemeSource>(
+                  std::get<FixedThemeSelection>(*catalog.selection()).source
+              )
+                  .content;
+        const auto next_appearance = catalog.active_appearance();
+        if (!style) {
+            style = style_;
         }
-        active_family_.clear();
-        active_name_ = "application";
-        commit(std::move(system));
+        const bool changed = active_content_ != next_content || active_id_ != next_id
+            || active_appearance_ != next_appearance;
+        const bool style_changed = style_ != style;
+        // All allocation and resolution finish before the live selection or content is changed.
+        auto system = system_;
+        auto effective = effective_;
+        auto view = theme_view_;
+        if (changed) {
+            system = std::make_shared<const DesignSystem>(next_content->design_system());
+            view = NanTheme {next_content->tokens, next_content->palette};
+        }
+        if (changed || style_changed) {
+            effective = merge_style(system, style);
+        }
+        if (host) {
+            system_preferences_ = *host;
+        }
+        catalog_ = std::move(catalog);
+        active_content_ = next_content;
+        active_id_ = std::move(next_id);
+        active_appearance_ = next_appearance;
+        system_ = std::move(system);
+        effective_ = std::move(effective);
+        style_ = std::move(style);
+        theme_view_ = std::move(view);
+        if (changed || style_changed || motion_changed) {
+            publish_revision();
+        }
     }
 
+    auto ThemeManager::register_scheme(ThemeScheme scheme)
+        -> std::expected<void, ThemeCatalogError> {
+        require_idle();
+        auto staged = catalog_;
+        auto result = staged.register_scheme(std::move(scheme));
+        if (result) {
+            commit_catalog(std::move(staged));
+        }
+        return result;
+    }
+    auto ThemeManager::replace_scheme(ThemeScheme scheme)
+        -> std::expected<void, ThemeCatalogError> {
+        require_idle();
+        auto staged = catalog_;
+        auto result = staged.replace_scheme(std::move(scheme));
+        if (result) {
+            commit_catalog(std::move(staged));
+        }
+        return result;
+    }
+    auto ThemeManager::remove_scheme(const ThemeSchemeId& id)
+        -> std::expected<void, ThemeCatalogError> {
+        require_idle();
+        auto staged = catalog_;
+        auto result = staged.remove_scheme(id);
+        if (result) {
+            commit_catalog(std::move(staged));
+        }
+        return result;
+    }
+    auto ThemeManager::register_family(ThemeSchemeFamily family)
+        -> std::expected<void, ThemeCatalogError> {
+        require_idle();
+        auto staged = catalog_;
+        auto result = staged.register_family(std::move(family));
+        if (result) {
+            commit_catalog(std::move(staged));
+        }
+        return result;
+    }
+    auto ThemeManager::remove_family(const ThemeFamilyId& id)
+        -> std::expected<void, ThemeCatalogError> {
+        require_idle();
+        auto staged = catalog_;
+        auto result = staged.remove_family(id);
+        if (result) {
+            commit_catalog(std::move(staged));
+        }
+        return result;
+    }
+    auto ThemeManager::catalog() const noexcept -> const ThemeSchemeCatalog& {
+        return catalog_;
+    }
+    auto ThemeManager::selection() const noexcept -> const ThemeSelection& {
+        return *catalog_.selection();
+    }
+    auto ThemeManager::active_scheme_id() const noexcept -> const ThemeSchemeId* {
+        return active_id_ ? &*active_id_ : nullptr;
+    }
+    auto ThemeManager::select(ThemeSelection selection)
+        -> std::expected<void, ThemeSelectionError> {
+        require_idle();
+        auto staged = catalog_;
+        auto result = staged.select(std::move(selection), system_preferences_.appearance);
+        if (result) {
+            commit_catalog(std::move(staged));
+        }
+        return result;
+    }
     auto ThemeManager::design_system() const -> const DesignSystem& {
         return *effective_;
     }
-
     auto ThemeManager::design_system_shared() const noexcept
         -> std::shared_ptr<const DesignSystem> {
         return effective_;
     }
-
-    auto ThemeManager::register_theme(std::string name, NanTheme theme) -> bool {
-        require_idle();
-        if (name.empty()) {
-            throw std::invalid_argument("ThemeManager theme name cannot be empty");
-        }
-        const bool replaced = themes_.contains(name);
-        const bool replaces_active = active_name() == name;
-        themes_.insert_or_assign(std::move(name), theme_to_design_system(theme));
-        if (replaces_active) {
-            sync_to_effective();
-        }
-        return !replaced;
+    auto ThemeManager::theme() const -> const NanTheme& {
+        return theme_view_;
     }
-
-    auto ThemeManager::contains(const std::string_view name) const -> bool {
-        return themes_.contains(name);
-    }
-
-    auto ThemeManager::activate(const std::string_view name) -> bool {
-        require_idle();
-        const auto found = themes_.find(name);
-        if (found == themes_.end()) {
-            return false;
-        }
-        if (active_family_.empty() && active_name_ == name) {
-            return true;
-        }
-        active_family_.clear();
-        active_name_ = found->first;
-        commit(found->second);
-        return true;
-    }
-
-    void ThemeManager::set_theme(NanTheme theme) {
-        require_idle();
-        apply(theme_to_design_system(theme));
-    }
-
-    auto
-    ThemeManager::register_family(std::string name, std::string light_theme, std::string dark_theme)
-        -> bool {
-        require_idle();
-        if (name.empty()) {
-            throw std::invalid_argument("ThemeManager family name cannot be empty");
-        }
-        if (!themes_.contains(light_theme) || !themes_.contains(dark_theme)) {
-            throw std::invalid_argument("ThemeManager family variants must be registered themes");
-        }
-        const bool replaced = families_.contains(name);
-        const bool replaces_active = active_family_ == name;
-        families_.insert_or_assign(
-            std::move(name),
-            ThemeFamily {
-                .light_theme = std::move(light_theme),
-                .dark_theme = std::move(dark_theme),
-            }
-        );
-        if (replaces_active) {
-            sync_to_effective();
-        }
-        return !replaced;
-    }
-
-    auto ThemeManager::contains_family(const std::string_view name) const -> bool {
-        return families_.contains(name) || system_families_.contains(name);
-    }
-
-    auto ThemeManager::activate_family(const std::string_view name) -> bool {
-        require_idle();
-        // 全快照族优先：整体 apply，外观翻转由 appearance() 在快照内完成。
-        if (const auto found = system_families_.find(name); found != system_families_.end()) {
-            if (active_family_ == name) {
-                return true;
-            }
-            active_family_ = found->first;
-            commit(found->second);
-            return true;
-        }
-        const auto found = families_.find(name);
-        if (found == families_.end()) {
-            return false;
-        }
-        if (active_family_ == name) {
-            return true;
-        }
-        active_family_ = found->first;
-        sync_to_effective();
-        return true;
-    }
-
-    void ThemeManager::register_theme_family(std::string name, DesignSystem system) {
-        require_idle();
-        if (name.empty()) {
-            throw std::invalid_argument("ThemeManager family name cannot be empty");
-        }
-        auto snapshot = std::make_shared<const DesignSystem>(std::move(system));
-        const bool replaces_active = active_family_ == name;
-        system_families_.insert_or_assign(std::move(name), snapshot);
-        if (replaces_active) {
-            commit(std::move(snapshot));
-        }
-    }
-
-    void ThemeManager::set_preference(const ThemePreference preference) {
-        require_idle();
-        if (preference_ == preference) {
-            return;
-        }
-        const auto previous = appearance();
-        preference_ = preference;
-        if (appearance() != previous) {
-            const auto previous_revision = revision_;
-            const auto observers = observers_;
-            sync_to_effective();
-            if (observers->manager && revision_ == previous_revision) {
-                refresh_theme_view(); // Same named snapshot, but a new effective appearance.
-            }
-        }
+    auto ThemeManager::appearance() const noexcept -> ColorAppearance {
+        return active_appearance_;
     }
 
     void ThemeManager::set_system_preferences(const SystemPreferences preferences) {
@@ -255,68 +269,24 @@ namespace nandina::theme
         if (system_preferences_ == preferences) {
             return;
         }
-
-        const auto previous_appearance = appearance();
-        const bool previous_reduced_motion = reduced_motion();
-        system_preferences_ = preferences;
-        const bool appearance_changed = appearance() != previous_appearance;
-        const bool motion_changed = reduced_motion() != previous_reduced_motion;
-
-        if (appearance_changed) {
-            const auto previous_revision = revision_;
-            const auto observers = observers_;
-            sync_to_effective();
-            if (observers->manager == nullptr) {
-                return; // A notification may have destroyed the manager.
-            }
-            if (revision_ == previous_revision) {
-                refresh_theme_view(); // Appearance changes publish even on the same snapshot.
-            }
+        auto staged = catalog_;
+        const auto selected = staged.select(selection(), preferences.appearance);
+        if (!selected) {
+            throw std::logic_error("Invalid committed theme selection");
         }
-        else if (motion_changed) {
-            publish_revision();
-        }
+        const bool motion_changed = reduced_motion()
+            != resolve_reduced_motion(motion_preference_, preferences.reduced_motion);
+        commit_catalog(std::move(staged), motion_changed, preferences);
     }
-
     auto ThemeManager::system_preferences() const noexcept -> SystemPreferences {
         return system_preferences_;
     }
-
     void ThemeManager::set_system_appearance(const ColorAppearance appearance) {
         require_idle();
         auto preferences = system_preferences_;
         preferences.appearance = appearance;
         set_system_preferences(preferences);
     }
-
-    auto ThemeManager::theme() const -> const NanTheme& {
-        return theme_view_;
-    }
-
-    auto ThemeManager::active_name() const noexcept -> std::string_view {
-        return effective_theme_name();
-    }
-
-    auto ThemeManager::active_family() const noexcept -> std::string_view {
-        return active_family_;
-    }
-
-    auto ThemeManager::preference() const noexcept -> ThemePreference {
-        return preference_;
-    }
-
-    auto ThemeManager::appearance() const noexcept -> ColorAppearance {
-        switch (preference_) {
-            case ThemePreference::light:
-                return ColorAppearance::light;
-            case ThemePreference::dark:
-                return ColorAppearance::dark;
-            case ThemePreference::system:
-                return system_preferences_.appearance;
-        }
-        return system_preferences_.appearance;
-    }
-
     void ThemeManager::set_motion_preference(const MotionPreference preference) {
         require_idle();
         const bool previous = reduced_motion();
@@ -325,35 +295,34 @@ namespace nandina::theme
             publish_revision();
         }
     }
-
     void ThemeManager::set_system_reduced_motion(const bool reduced) {
         require_idle();
         auto preferences = system_preferences_;
         preferences.reduced_motion = reduced;
         set_system_preferences(preferences);
     }
-
     auto ThemeManager::motion_preference() const noexcept -> MotionPreference {
         return motion_preference_;
     }
-
     auto ThemeManager::reduced_motion() const noexcept -> bool {
         return resolve_reduced_motion(motion_preference_, system_preferences_.reduced_motion);
     }
-
     auto ThemeManager::revision() const noexcept -> std::uint64_t {
         return revision_;
     }
-
     void ThemeManager::set_style(std::shared_ptr<const NanStyle> style) {
         require_idle();
         if (!style) {
             throw std::invalid_argument("ThemeManager style cannot be null");
         }
+        if (style_ == style) {
+            return;
+        }
+        auto effective = merge_style(system_, style);
         style_ = std::move(style);
-        rebuild_effective();
+        effective_ = std::move(effective);
+        publish_revision();
     }
-
     auto ThemeManager::style() const -> const NanStyle& {
         return *style_;
     }
@@ -380,52 +349,6 @@ namespace nandina::theme
         std::erase_if(observers_->entries, [](const auto& entry) {
             return entry->observer == nullptr;
         });
-    }
-
-    auto ThemeManager::effective_theme_name() const noexcept -> std::string_view {
-        if (active_family_.empty()) {
-            return active_name_;
-        }
-        if (system_families_.contains(active_family_)) {
-            return active_family_; // 全快照族：不在 themes_ 中命中，外观翻转走 refresh_theme_view
-        }
-        const auto& family = families_.at(active_family_);
-        return appearance() == ColorAppearance::dark ? family.dark_theme : family.light_theme;
-    }
-
-    void ThemeManager::commit(std::shared_ptr<const DesignSystem> system) {
-        if (system_ == system) {
-            return; // 指针相同：无变化，不发布额外 revision
-        }
-        system_ = std::move(system);
-        rebuild_effective();
-    }
-
-    void ThemeManager::sync_to_effective() {
-        // 全快照族：快照已内嵌两套 palette，外观变化只需刷新 theme() 视图。
-        if (!active_family_.empty() && system_families_.contains(active_family_)) {
-            refresh_theme_view();
-            return;
-        }
-        const auto effective = effective_theme_name();
-        const auto found = themes_.find(effective);
-        if (found != themes_.end()) {
-            commit(found->second);
-        }
-        else {
-            refresh_theme_view(); // 无名主题路径（apply / set_theme）：仅外观变体可能变化
-        }
-    }
-
-    void ThemeManager::rebuild_effective() {
-        effective_ = merge_style(system_, style_);
-        theme_view_ = NanTheme {system_->tokens, system_->palette(appearance())};
-        publish_revision();
-    }
-
-    void ThemeManager::refresh_theme_view() {
-        theme_view_ = NanTheme {system_->tokens, system_->palette(appearance())};
-        publish_revision();
     }
 
     void ThemeManager::publish_revision() {
