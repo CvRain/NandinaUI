@@ -196,3 +196,15 @@ State::expanded 合并规则，不引用 Collapsible。共享展开状态仅由 
 第 3 步再次复核：StyleDocument 作为 theme 内部编译器，通过受限 friend 通道提交暂存的
 目录/选择/style，沿用同一 manager 通知路径，不暴露第二份公开可写状态。字体注册仍使用
 既有 text seam，不扩大此批的 theme→text 历史依赖。
+
+## P4.3 D2 第 4 步观察通道与作者入口归属（2026-11-07）
+
+选择/目录观察投影与变化事件位于 theme 模块（`theme_observation.*`），仍是 manager 无
+Graph、作用域适配器桥接的既有形状；`ThemeManager` 增加 staged-only 发布分类，不向组件
+广播无效失效。作者入口（派生、结构校验）属于 `theme_scheme.*` 的同一目录值模型，文件导入
+与 C++ 作者共用目录/选择提交语义。widget 仅经 `BuildContext` 便利入口消费，scene/render
+不感知观察通道；未新增层间依赖。
+
+2026-11-07 第 4 步复核：等价目录替换按同一内容快照与元数据去重，版本先判定再构建目录
+载荷；不增加 manager 对 Graph 的依赖。测试以真实 SceneTree 计数和生产 StyleDocument
+集成验证 staged-only 不广播与多投影一致性，未改变既有层间方向。

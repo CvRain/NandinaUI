@@ -33,7 +33,7 @@ namespace nandina::theme
 
     class ThemeManager;
 
-    /// Internal presentation staging: release deferred effects before notifying subscribers.
+    /// Internal publication staging: release deferred effects before notifying subscribers.
     /// Callbacks own their temporary state and remain safe if the observer is disconnected.
     struct ThemeObserverUpdate {
         std::function<void()> commit;
@@ -47,7 +47,9 @@ namespace nandina::theme
         virtual void on_theme_revision_changed(const ThemeManager& manager) = 0;
         virtual void on_theme_manager_destroyed(const ThemeManager& manager) noexcept = 0;
         /// Called after all internal observers; all projections stage before any commit/notify.
-        [[nodiscard]] virtual auto prepare_theme_presentation(const ThemeManager&)
+        /// Projections decide what changed for their own channel (presence, selection,
+        /// catalog, change events); equivalent states return an empty update.
+        [[nodiscard]] virtual auto prepare_theme_publication(const ThemeManager&)
             -> ThemeObserverUpdate {
             return {};
         }
@@ -128,6 +130,10 @@ namespace nandina::theme
         friend struct StyleDocument;
         struct ObserverState;
         void publish_revision();
+        /// Staged-only publication: selection or catalog changed while the effective theme
+        /// did not. No revision bump and no internal invalidation broadcast.
+        void publish_staged();
+        void publish_publication(bool invalidate_presentation);
         void commit_catalog(
             ThemeSchemeCatalog catalog,
             bool motion_changed = false,

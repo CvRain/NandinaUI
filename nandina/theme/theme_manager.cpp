@@ -148,6 +148,8 @@ namespace nandina::theme
               )
                   .content;
         const auto next_appearance = catalog.active_appearance();
+        const bool selection_changed = catalog.selection() != catalog_.selection();
+        const bool catalog_changed = catalog.version() != catalog_.version();
         if (!style) {
             style = style_;
         }
@@ -178,6 +180,11 @@ namespace nandina::theme
         theme_view_ = std::move(view);
         if (changed || style_changed || motion_changed) {
             publish_revision();
+        }
+        else if (selection_changed || catalog_changed) {
+            // Settings UIs and dynamic catalogs observe selection/directory changes even when
+            // the effective theme does not change; components are not invalidated.
+            publish_staged();
         }
     }
 
@@ -353,6 +360,14 @@ namespace nandina::theme
 
     void ThemeManager::publish_revision() {
         ++revision_;
+        publish_publication(true);
+    }
+
+    void ThemeManager::publish_staged() {
+        publish_publication(false);
+    }
+
+    void ThemeManager::publish_publication(const bool invalidate_presentation) {
         const auto observers = observers_;
         struct PublishingGuard {
             std::shared_ptr<ObserverState> state;
@@ -373,9 +388,13 @@ namespace nandina::theme
                 }
             }
         };
-        for (const auto& entry: snapshot) {
-            if (entry->observer && observers->manager) {
-                deliver([&] { entry->observer->on_theme_revision_changed(*observers->manager); });
+        if (invalidate_presentation) {
+            for (const auto& entry: snapshot) {
+                if (entry->observer && observers->manager) {
+                    deliver([&] {
+                        entry->observer->on_theme_revision_changed(*observers->manager);
+                    });
+                }
             }
         }
         std::vector<ThemeObserverUpdate> updates;
@@ -383,7 +402,7 @@ namespace nandina::theme
             if (entry->observer && observers->manager) {
                 deliver([&] {
                     updates.push_back(
-                        entry->observer->prepare_theme_presentation(*observers->manager)
+                        entry->observer->prepare_theme_publication(*observers->manager)
                     );
                 });
             }

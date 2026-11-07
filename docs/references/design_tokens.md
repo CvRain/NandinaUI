@@ -123,6 +123,16 @@ DesignSystem 默认值（XRecipe.base）
 
 三族的成熟度不同：`butter` 是本项目自研风格（暖奶油中性 + 琥珀品牌 + 软阴影卡片，已打磨过品牌档对比度），`fluent` 与 `material` 目前主要是「配色 + 圆角尺度」的迁移，缺少各自设计语言在几何、密度、状态层上的差异，可作为后续打磨对象。
 
+### 文件导入范围（2026-11-07 定形）
+
+`styles.toml` 已支持：`reference_palettes`（参考色阶）、`themes`（参考色阶派生或直接语义
+色板）、`theme_families`（light/dark 主题对）、`active_theme` / `active_family` /
+`appearance` 选择、遗留 `NanStyle` 规则（Button/TextField）与 `fonts`（字体族/回退/默认）。
+文件主题与家族编译为 `styles:x<hex>` 规范 ID（家族成员带 `/families/<hex>` 保持归属独立），
+`apply()` 先验证全部别名/家族并暂存目录与选择，成功后一次提交；长别名或未知引用返回错误
+且不留部分状态。尚未支持：Button/TextField 之外的配方覆盖、组件样式 reset、任意自定义
+token、主题包版本锁定与跨进程设置持久化；完整 schema 扩展另行分期。
+
 面向主题作者的外部入口是 TOML 样式文档：`StyleDocument` 可声明 `reference_palettes`、`themes`、`theme_families`、`active_theme`、`active_family`、`preference`、遗留 `NanStyle` 规则与字体族，`parse_style_document()` / `load_style_document()` 解析，`apply(ThemeManager&, FontFamilyRegistry*)` 以 `std::expected<void, std::string>` 报告失败。
 
 ## 当前已知空白

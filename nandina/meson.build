@@ -108,6 +108,8 @@ module_theme = files(
     'theme/theme_manager.cpp',
     'theme/theme_presentation.hpp',
     'theme/theme_presentation.cpp',
+    'theme/theme_observation.hpp',
+    'theme/theme_observation.cpp',
     'theme/builtin_themes.hpp',
     'theme/builtin_themes.cpp',
     'theme/style_document.hpp',

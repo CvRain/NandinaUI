@@ -1,8 +1,9 @@
 # D2：主题方案、作者入口与状态订阅
 
-> **状态：首批窄投影已随 `8920f3a` 提交；第 3 步方案目录与选择在 2026-11-06
-> 复核补修后待维护者复验，保持未提交。** 第 4 步的观察通道/作者入口与第 4a 步颜色校验
-> 仍未实施。§12 为已接受契约，§13 记录当前实现；更早小节保留讨论语境。
+> **状态：首批窄投影已随 `8920f3a`、第 3 步目录与选择已随 `995e6ae` 提交。
+> 第 4 步观察通道与作者入口在 2026-11-07 复核补修后待维护者复验，保持未提交。**
+> 第 4a 步颜色校验与真实后端像素读回尚未实施。§14 是本批契约，§15 记录实现和复核；
+> 更早小节保留讨论语境。
 > 所有标注为伪代码的示例只表达作者体验，不可直接当成现有接口使用。
 > 当前实现以 [设计令牌与主题系统](design_tokens.md) 和源码为准；原始问题见
 > [D2 工作稿](reference_draft.md) 与 [story 010](../../stories/010-the-theme-signal-that-cannot-be-subscribed.md)。
@@ -737,6 +738,8 @@ auto ThemeManager::remove_scheme(const ThemeSchemeId&) -> std::expected<void, Th
 
 ## 13. 第 3 步实施记录（P4.3 D2 方案目录与选择，2026-11-06，初稿待维护者复核）
 
+本节标题保留历史锚点；第 3 步已完成复验并随 `995e6ae` 提交，以下为该批实施与复核记录。
+
 按 §12 建议实施并完成测试迁移；legacy 写入口（register_theme/activate/register_family/
 activate_family/register_theme_family/set_theme/apply）随本批从 ThemeManager 移除，仓库内
 调用点（showcase、desktop probe、notebook）与既有测试经测试兼容层迁移到 scheme 目录/选择。
@@ -782,3 +785,120 @@ activate_family/register_theme_family/set_theme/apply）随本批从 ThemeManage
   也已迁移；其未跟踪源码不作为 CI 证据。
 
 完整红测与最终矩阵见 reference_draft 的第 3 步复核记录。作者颜色入口与第 4/4a 步未启动。
+
+---
+
+## 14. 第 4 步 API 定形（2026-11-07）
+
+本节把 §8 第 4 步拆成可实施的具体形状；实现记录见 §15。观察维度仍按 §5.1 区分，
+发布协议沿用 §5.4 的分阶段提交（内部广播 → 投影写入 → effect 提交 → 外部订阅）与
+§11/§13 的拒绝重入、异常隔离规则。
+
+### 14.1 观察通道
+
+| 通道 | 只读载荷 | 何时通知 | 何时不通知 |
+| --- | --- | --- | --- |
+| 呈现窄投影（§5.5，已交付） | `appearance` + 不透明 `revision` | 有效外观、有效内容、style 或动效发布 | 仅选择或仅目录变化 |
+| 选择投影 `ThemeSelectionPresentation` | `ThemeSelectionState = ThemeSelection` | 模式、亮暗槽位或偏好改变（即使生效内容不变） | 仅生效变化、仅目录变化 |
+| 目录投影 `ThemeCatalogPresentation` | `ThemeCatalogState {version, schemes, families}` | 注册/替换/移除方案或家族 | 仅选择变化、仅生效变化 |
+| 变化事件 `ThemeChangeHub` | `ThemeChange {before, after}`，端点为 `{optional<ThemeSchemeId>, ColorAppearance, shared_ptr<const DesignSystem>}` | 生效身份、外观或有效快照变化 | 动效-only、非生效选择编辑、目录-only 变化 |
+
+- **发布分类**：有效变更（内容/身份/外观/style/动效）走 revision 发布并保留既有内部广播；
+  仅选择或仅目录变化走 staged-only 发布——不递增 `revision`、不向组件广播失效，只把
+  已提交状态交给对应投影。目录事件以单调 `ThemeCatalogState::version`（只由目录项增删改
+  推进，选择不改）为依据；选择事件以 `ThemeSelection` 值比较。等价 replace 不推进目录版本，
+  相等定义为 ID、显示名、外观、家族相同且内容快照指针相同；不深比较任意配方。
+- **所有权**：三者都是作用域绑定的只读投影（`ReactiveScope::own<T>`），随作用域注销观察者；
+  manager 先销毁时 `valid()` 转 false 并保留最后载荷，任何一端先销毁都不悬垂访问。
+  订阅返回 RAII `Subscription`；`ThemeChangeHub` 只公开 `subscribe`，不暴露可发布 Event。
+- **便利入口**：`BuildContext::theme_selection()/theme_catalog()/theme_changes()` 每个页面
+  作用域共享一个实例；`on_theme_change(handler)` 通过新增的 `ReactiveScope::keep` 把连接
+  纳入作用域，作者无需手写注销。
+- **交付顺序**：事件在四段通知的 notify 阶段交付；回调抛错不阻断后续投影/订阅者，首个
+  异常在必要交付完成后重抛；订阅不伪造初始变化，初始状态一律通过读取获得。
+
+### 14.2 统一作者入口（派生、结构校验、注册）
+
+```cpp
+auto base = catalog.find(id);                       // 选择基础方案
+auto derived = theme::derive_scheme(*base, new_id, "Midnight");
+auto content = std::make_shared<theme::ThemeSchemeContent>(theme::derive_content(*base->content));
+content->tokens.radius.md = 10.0F;                  // 只改派生快照
+derived.content = content;
+if (auto ok = theme::validate_scheme(derived, catalog); !ok) { /* describe(ok.error()) */ }
+themes.register_scheme(std::move(derived));         // 与文件导入共用目录/选择提交语义
+```
+
+- `derive_content(base)` 深拷贝内容；`derive_scheme(base, id, name)` 内容独立深拷贝并继承
+  外观分类与家族归属。此后替换基础方案不会重写已注册派生方案（重新派生是显式动作）。
+- `validate_scheme(scheme, catalog)` 做**结构校验**：ID 有效、显示名非空、内容非空、
+  ID 未与目录冲突、家族存在。它不包含配色对比度/色域门槛（4a 子项），也不替代注册时
+  目录与选择的校验。
+- 注册入口仍是 `ThemeManager::register_scheme` / `replace_scheme`；`StyleDocument::apply`
+  与 C++ 作者走同一暂存目录 + 选择提交，失败不留部分状态。
+
+### 14.3 文件导入范围（styles.toml 子集）
+
+已支持：`reference_palettes`、`themes`（参考色阶或直接语义色板）、`theme_families`、
+`active_theme` / `active_family` / `appearance` 选择、遗留 `NanStyle` 规则、`fonts`。
+尚未支持：Button/TextField 之外的配方覆盖、组件样式 reset、任意自定义 token、主题包版本
+锁定与跨进程设置持久化。文件主题/家族编译为 `styles:x<hex>` 规范 ID，不成为 manager 身份；
+完整 TOML schema 扩展另行分期。
+
+### 14.4 不在第 4 步范围
+
+4a（唯一合成器、对比度/色域诊断与注册门槛、真实后端像素读回）、内部广播按外观/内容/动效
+维度收窄（本批保持保守广播，但选择/目录变化已不触发组件失效）、第三方配方扩展、设置
+持久化、Windows/GPU/人工视觉验收。
+
+---
+
+## 15. 第 4 步实施记录（2026-11-07，初稿待维护者复核）
+
+- **观察通道**：新增 `theme/theme_observation.{hpp,cpp}`：
+  `ThemeSelectionPresentation`、`ThemeCatalogPresentation`、`ThemeChangeHub`（含
+  `ThemeChange`/`ThemeChangeEndpoint`）。三者按 §14.1 分类接收通知。
+- **发布分类**：`ThemeManager` 的 `publish_revision()` 拆为 revision 发布 + `publish_staged()`
+  入口；`commit_catalog` 依据有效内容/身份/外观/style/动效与选择/目录差异选择通道。
+  `ThemeSchemeCatalog` 新增单调 `version()`（仅目录项增删改推进）。
+- **作者入口**：`theme_scheme.{hpp,cpp}` 新增 `derive_content`、`derive_scheme`、
+  `validate_scheme`、`ThemeSchemeError` + `describe`；`ThemeSchemeCatalog::contains_family`。
+- **作用域便利**：`ReactiveScope::keep(Subscription)`；`BuildContext` 新增
+  `theme_selection()/theme_catalog()/theme_changes()/on_theme_change()`。
+- **内置主题迁移**：`register_default_theme_families` 把 butter/fluent/material 编译为
+  `nandina:<family>/light|dark` 规范 scheme 与 `nandina:<family>` 家族；目录级回归验证
+  两个外观各自持有独立内容、规范 ID 可固定/按外观选择、重复注册幂等。
+- **契约边界**：文件导入范围按 §14.3 写入 `design_tokens.md`；4a 与广播收窄不在本批。
+
+故障注入（每项重新编译，恢复后全绿）：
+1. 关闭 staged-only 发布 → 选择/目录变化不再通知（目录投影用例 2 处断言失败）。
+2. 目录 `version` 不递增 → 目录投影无法感知注册（1 处断言失败）。
+3. 变化事件去掉端点去重 → 动效-only 发布误报事件（3 处断言失败）。
+4. `derive_scheme` 共享内容指针 → 派生修改污染基础（1 处断言失败）。
+5. 结构校验不拒空内容 → `null_content` 用例失败（1 处断言失败）。
+
+专项：`theme-scheme` 23 用例 / 333 断言；`theme-observation` 6 用例 / 124 断言；
+`theme-presentation` 26 / 163；`theme-families` 9 / 69；`theme-design-system` 25 / 637；
+`button` 33 / 221；`sidebar-showcase` 6 / 55。
+
+最终验证矩阵见 [reference_draft](reference_draft.md) 第 4 步实施记录；本轮保持未提交。
+
+### 第 4 步复核补修（2026-11-07，保持未提交）
+
+Git 基线为 `995e6ae`（第 3 步已提交并推送）。先编译并通过三个专项，再新增回归，确认
+等价目录替换仍递增 version 并触发订阅与 effect（16 断言中 8 失败）。现在等价替换幂等，
+显示名/家族/外观/内容快照实际变化仍推进目录版本；目录投影先比较版本再复制载荷，避免
+选择-only 或 motion-only 发布重复复制全部方案。
+
+补充三个通道在投递中清理 scope、销毁 manager、断开后续订阅、拒绝重入与隔离异常的回归；
+直接检查 SceneTree 内部通知计数，证明 staged-only 不广播、实际呈现变化只广播一次。
+选择 readonly 与目录 computed 均验证依赖追踪；文件导入同时更新目录/选择/主题时，effect
+与订阅读到同一完整状态；外层窗口 deferred effects 保持到 reactive 阶段才提交。
+
+事件端点验证匿名来源、style 变更、motion-only 去重和 manager 销毁后的快照所有权。
+页面 clear 后再次执行真实生效变更，两个 BuildContext 订阅均不再调用；派生则补充嵌套
+recipe vector 隔离、家族继承与替换基础后已注册派生内容保持独立。新通道无 set/emit 的
+编译期能力检查与结构校验 invalid_id 分支均已补齐。
+
+故障注入与本轮完整矩阵见 reference_draft 的第 4 步复核记录。第 4a 步、作者颜色入口与
+内部按维度收窄广播未并入本次补修；历史记录不作为桌面/GPU 或 Windows 验收。

@@ -6,6 +6,7 @@
 #include "design_system.hpp"
 
 #include <cstddef>
+#include <cstdint>
 #include <expected>
 #include <map>
 #include <memory>
@@ -103,6 +104,9 @@ namespace nandina::theme
         ColorAppearance appearance = ColorAppearance::light;
         std::optional<ThemeFamilyId> family;
         std::shared_ptr<const ThemeSchemeContent> content;
+
+        /// Content equality is immutable snapshot identity; recipes are not deep-compared.
+        friend auto operator==(const ThemeScheme&, const ThemeScheme&) -> bool = default;
     };
 
     struct FixedThemeSelection {
@@ -160,6 +164,7 @@ namespace nandina::theme
         [[nodiscard]] auto remove_family(const ThemeFamilyId& id)
             -> std::expected<void, ThemeCatalogError>;
         [[nodiscard]] auto families() const -> std::vector<ThemeSchemeFamily>;
+        [[nodiscard]] auto contains_family(const ThemeFamilyId& id) const -> bool;
 
         [[nodiscard]] auto register_scheme(ThemeScheme scheme)
             -> std::expected<void, ThemeCatalogError>;
@@ -172,6 +177,10 @@ namespace nandina::theme
         [[nodiscard]] auto schemes() const -> std::vector<ThemeScheme>;
         [[nodiscard]] auto schemes_in_family(const ThemeFamilyId& id) const
             -> std::vector<ThemeScheme>;
+
+        /// Directory revision advances for actual add/replace/remove operations.
+        /// Selection and equivalent entry replacement leave it unchanged.
+        [[nodiscard]] auto version() const noexcept -> std::uint64_t;
 
         [[nodiscard]] auto select(ThemeSelection selection, ColorAppearance system_appearance)
             -> std::expected<void, ThemeSelectionError>;
@@ -193,12 +202,42 @@ namespace nandina::theme
 
         std::map<std::string, ThemeSchemeFamily, std::less<>> families_;
         std::map<std::string, ThemeScheme, std::less<>> schemes_;
+        std::uint64_t version_ = 0;
         std::optional<ThemeSelection> selection_;
         std::optional<ThemeSchemeId> active_id_;
         std::shared_ptr<const ThemeSchemeContent> active_anonymous_content_;
         ColorAppearance active_appearance_ = ColorAppearance::light;
         ColorAppearance system_appearance_ = ColorAppearance::light;
     };
+
+    // ─── 统一作者入口：派生与结构校验（第 4 步） ────────────────────────────
+    //
+    // 派生总是深拷贝内容快照：修改派生方案不会污染基础方案，后续替换基础方案也不会
+    // 隐式重写已注册的派生方案（重新派生是显式动作，见 D2 §6.3）。
+    [[nodiscard]] auto derive_content(const ThemeSchemeContent& base) -> ThemeSchemeContent;
+    /// 继承基础方案的外观分类与家族归属，内容为独立深拷贝。
+    [[nodiscard]] auto
+    derive_scheme(const ThemeScheme& base, ThemeSchemeId id, std::string display_name)
+        -> ThemeScheme;
+
+    enum class ThemeSchemeErrorKind {
+        invalid_id,
+        empty_display_name,
+        null_content,
+        duplicate_id,
+        unknown_family,
+    };
+
+    struct ThemeSchemeError {
+        ThemeSchemeErrorKind kind = ThemeSchemeErrorKind::invalid_id;
+        ThemeSchemeId id;
+    };
+
+    /// 结构校验（不含配色对比度门槛，后者见 D2 §6.4/4a 子项）：
+    /// ID 有效、显示名非空、内容非空、未与目录既有项冲突、家族存在。
+    [[nodiscard]] auto validate_scheme(const ThemeScheme& scheme, const ThemeSchemeCatalog& catalog)
+        -> std::expected<void, ThemeSchemeError>;
+    [[nodiscard]] auto describe(const ThemeSchemeError& error) -> std::string;
 
     [[nodiscard]] auto describe(const ThemeSchemeIdError& error) -> std::string;
     [[nodiscard]] auto describe(const ThemeCatalogError& error) -> std::string;

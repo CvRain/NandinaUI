@@ -19,7 +19,7 @@
 - [编码与 API 规范](coding_conventions.md)：命名与命名空间、头文件与包含、API 形态、注释、格式化与测试门槛。
 - [响应式内部模型](reactive_model.md)：依赖图结构、推入失效与拉取求值、effect 调度、作用域清理顺序与已知限制。
 - [设计令牌与主题系统](design_tokens.md)：三层令牌模型、配方与解析优先级、外观切换，以及控件作者的样式规则。
-- [D2：主题方案、作者入口与状态订阅](theme_authoring_and_state.md)：**首批窄投影已提交 `8920f3a`；第 3 步方案目录/选择复核补修后待维护者复验，未提交**。规范身份、跨家族亮暗搭配、原子文件导入与只读投影；第 4/4a 步仍待实施。
+- [D2：主题方案、作者入口与状态订阅](theme_authoring_and_state.md)：**首批窄投影已提交 `8920f3a`；第 3 步已提交 `995e6ae`；第 4 步观察/作者入口补修后待复验，未提交**。规范身份、跨家族亮暗搭配、原子文件导入与只读投影；第 4a 步与作者颜色入口仍待实施。
 - [溢出与裁剪契约](overflow_and_clip.md)：容器如何声明裁剪、render 如何执行，以及绘制与命中如何共享同一份语义。
 - [节点表现层](node_presentation.md)：属性动画代价分级、已落地的 L2 `visual::Path`，以及形状家族与盒子模型规划；anchors 背景见 §2，规范见独立 reference。
 - [同一节点的组合动画作者入口](animation_authoring.md)：组合规格、弱句柄的声明与触发、属性策略、生命周期和仲裁契约。
@@ -33,7 +33,7 @@
 - [Windows 人工验收清单](windows_acceptance.md)：**需要交互式桌面会话的 GUI/GPU 项与历史回报入口**。真实窗口回归、butter 主题软阴影与涟漪圆角裁剪目检；DXIL 设备级验收、Windows 6 条页面 golden（CPU 3 + SDF 3）及 CPU/SDF 性能参考基线已交付（2026-10-22），不是待采集项；含复验命令与回报方式。
 - [第三方依赖策略](dependency_policy.md)：**批次 2 已完成，raylib 已退役**。10 个 wrap、字体 submodule、SDL3 三态来源、静态/共享选择、pin/dirty 与 SDK 消费门禁；GitHub 首次下载与逐平台应用打包仍需对应环境验收。
 - [D6：作者 DSL、文本能力与内容测量](authoring_dsl_and_content_measurement.md)：**P4.1a 盒内对齐与文本作者/绑定子批已实施；P4.1b Surface、Card 内容边距与 Image cover 锚点代码已提交，Showcase 正式视觉验收待完成**。Text/Label 垂直对齐、paint-only 与 viewport 缩放回归；Label 能力表、共享属性归属、builder 子项简写、有限宽度自然长高，以及 border / Section 的阶段边界；过程见 [story 014](../../stories/014-the-dsl-that-kept-sending-authors-to-configure.md)。
-- [待决设计草案](reference_draft.md)：**工作稿与历史设计记录**。D2 已汇总到[主题方案、作者入口与状态订阅](theme_authoring_and_state.md)；D3 的 `nav_group` / `group` 已复核并随 `095336b` 提交；D2 首批窄投影已提交 `8920f3a`，第 3 步待复验；**D4 已归档**（历史 P3 默认后端换成 SDL3）；**D7** 混合、生产 SDF 与共享图片解码已交付，剩余边界见[项目状态](project_status.md)；**D8 P3.1a/b/c 已实施**：事件快照、键身份/生命周期与跨类型保序。D1 已定案为[统一输入、焦点与文本编辑](focus_and_input.md)。
+- [待决设计草案](reference_draft.md)：**工作稿与历史设计记录**。D2 已汇总到[主题方案、作者入口与状态订阅](theme_authoring_and_state.md)；D3 的 `nav_group` / `group` 已复核并随 `095336b` 提交；D2 首批窄投影已提交 `8920f3a`，第 3 步已提交 `995e6ae`，第 4 步待复验；**D4 已归档**（历史 P3 默认后端换成 SDL3）；**D7** 混合、生产 SDF 与共享图片解码已交付，剩余边界见[项目状态](project_status.md)；**D8 P3.1a/b/c 已实施**：事件快照、键身份/生命周期与跨类型保序。D1 已定案为[统一输入、焦点与文本编辑](focus_and_input.md)。
 - [布局收敛与文本测量](layout_convergence_and_text_measurement.md)：**已实施**。布局永不收敛的实测证据与四条根因（`Text` 写入原始尺寸、`ScrollView` 两个阶段跨轴契约不一致、`stretch` 越过子项显式尺寸、亚像素浮点噪声）、收敛契约、故障注入矩阵、未覆盖缺口与开放项（含整形成本与一次被实测否决的缓存方案）。
 - [文本整形与页面打开成本](text_shaping_cost.md)：**已实施**。页面打开时间（Label 858 ms 构建 / 5000 汉字 6.4 s）的两个 O(n²)（caret 停靠点去重、逐簇推进重新分段）、空闲 CPU（`Expanded` 子项尺寸抖动导致每帧全量布局，72% → 9% 单核）与常驻内存构成（4 条字体管线 × 1024² 图集 ≈ 40 MB）、整形成本曲线、一次被实测否决的整形缓存，构建期 1.4 万次重复测量与按输入键控的文本记忆化（构建 378 → 159 ms）、按词换行（断行机会），以及剩余目标。
 - [平台与后端契约（D4）](platform_backend_contract.md)：**后端替换已收尾，保留分平台能力与验收边界**（视觉质量剩余项见 [D7](reference_draft.md#d7-渲染质量与后端视觉一致性)）。目标平台与分层、`NanWindow` 所有权、capability 查询、shader 构建链契约及 D4 历史 P0–P4 阶段交付与验收；Windows 实验性、macOS 不支持，文本服务与规范键值仍独立推进。

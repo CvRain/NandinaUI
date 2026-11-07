@@ -179,6 +179,7 @@ namespace nandina::theme
             );
         }
         families_.emplace(key, std::move(family));
+        ++version_;
         return {};
     }
 
@@ -206,6 +207,7 @@ namespace nandina::theme
             );
         }
         families_.erase(key);
+        ++version_;
         return {};
     }
 
@@ -217,6 +219,10 @@ namespace nandina::theme
             result.push_back(family);
         }
         return result;
+    }
+
+    auto ThemeSchemeCatalog::contains_family(const ThemeFamilyId& id) const -> bool {
+        return families_.contains(std::string(id.text()));
     }
 
     auto ThemeSchemeCatalog::register_scheme(ThemeScheme scheme)
@@ -250,6 +256,7 @@ namespace nandina::theme
             );
         }
         schemes_.emplace(key, std::move(scheme));
+        ++version_;
         return {};
     }
 
@@ -283,6 +290,9 @@ namespace nandina::theme
                 }
             );
         }
+        if (schemes_.at(key) == scheme) {
+            return {}; // Equivalent directory writes do not invalidate observers or effects.
+        }
         ThemeSchemeCatalog staged = *this;
         staged.schemes_.insert_or_assign(key, std::move(scheme));
         std::optional<Resolved> resolved;
@@ -299,6 +309,7 @@ namespace nandina::theme
             resolved = std::move(*result);
         }
         schemes_ = std::move(staged.schemes_);
+        ++version_;
         if (resolved) {
             active_id_ = resolved->scheme ? std::optional(resolved->scheme->id) : std::nullopt;
             active_anonymous_content_ = std::move(resolved->anonymous_content);
@@ -321,6 +332,7 @@ namespace nandina::theme
             );
         }
         schemes_.erase(key);
+        ++version_;
         return {};
     }
 
@@ -474,6 +486,10 @@ namespace nandina::theme
         return selection_;
     }
 
+    auto ThemeSchemeCatalog::version() const noexcept -> std::uint64_t {
+        return version_;
+    }
+
     auto ThemeSchemeCatalog::active() const noexcept -> const ThemeScheme* {
         return active_id_ ? find(*active_id_) : nullptr;
     }
@@ -486,4 +502,82 @@ namespace nandina::theme
     auto ThemeSchemeCatalog::active_appearance() const noexcept -> ColorAppearance {
         return active_appearance_;
     }
+
+    // ─── 统一作者入口：派生与结构校验 ─────────────────────────────────────────
+
+    auto derive_content(const ThemeSchemeContent& base) -> ThemeSchemeContent {
+        // 显式深拷贝：作者改派生内容不会污染基础方案。
+        return ThemeSchemeContent {base.tokens, base.palette, base.typography, base.components};
+    }
+
+    auto derive_scheme(const ThemeScheme& base, ThemeSchemeId id, std::string display_name)
+        -> ThemeScheme {
+        return ThemeScheme {
+            .id = std::move(id),
+            .display_name = std::move(display_name),
+            .appearance = base.appearance,
+            .family = base.family,
+            .content = base.content
+                ? std::make_shared<const ThemeSchemeContent>(derive_content(*base.content))
+                : nullptr,
+        };
+    }
+
+    auto validate_scheme(const ThemeScheme& scheme, const ThemeSchemeCatalog& catalog)
+        -> std::expected<void, ThemeSchemeError> {
+        if (!scheme.id.valid()) {
+            return std::unexpected(ThemeSchemeError {.kind = ThemeSchemeErrorKind::invalid_id});
+        }
+        if (scheme.display_name.empty()) {
+            return std::unexpected(
+                ThemeSchemeError {
+                    .kind = ThemeSchemeErrorKind::empty_display_name,
+                    .id = scheme.id,
+                }
+            );
+        }
+        if (!scheme.content) {
+            return std::unexpected(
+                ThemeSchemeError {
+                    .kind = ThemeSchemeErrorKind::null_content,
+                    .id = scheme.id,
+                }
+            );
+        }
+        if (catalog.find(scheme.id) != nullptr) {
+            return std::unexpected(
+                ThemeSchemeError {
+                    .kind = ThemeSchemeErrorKind::duplicate_id,
+                    .id = scheme.id,
+                }
+            );
+        }
+        if (scheme.family && !catalog.contains_family(*scheme.family)) {
+            return std::unexpected(
+                ThemeSchemeError {
+                    .kind = ThemeSchemeErrorKind::unknown_family,
+                    .id = scheme.id,
+                }
+            );
+        }
+        return {};
+    }
+
+    auto describe(const ThemeSchemeError& error) -> std::string {
+        const auto suffix = error.id.valid() ? ": " + std::string(error.id.text()) : std::string {};
+        switch (error.kind) {
+            case ThemeSchemeErrorKind::invalid_id:
+                return "theme scheme id is invalid" + suffix;
+            case ThemeSchemeErrorKind::empty_display_name:
+                return "theme scheme display name must not be empty" + suffix;
+            case ThemeSchemeErrorKind::null_content:
+                return "theme scheme content is null" + suffix;
+            case ThemeSchemeErrorKind::duplicate_id:
+                return "theme scheme id is already registered" + suffix;
+            case ThemeSchemeErrorKind::unknown_family:
+                return "theme scheme references an unknown family" + suffix;
+        }
+        return "invalid theme scheme" + suffix;
+    }
+
 } // namespace nandina::theme

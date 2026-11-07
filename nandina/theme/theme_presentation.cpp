@@ -34,8 +34,7 @@ namespace nandina::theme
             manager = nullptr;
         }
 
-        auto prepare_theme_presentation(const ThemeManager& source)
-            -> ThemeObserverUpdate override {
+        auto prepare_theme_publication(const ThemeManager& source) -> ThemeObserverUpdate override {
             const ThemePresentationState next {
                 .appearance = source.appearance(),
                 .revision = source.revision(),

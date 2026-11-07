@@ -8,6 +8,7 @@
 #include "../reactive/graph.hpp"
 #include "../reactive/scope.hpp"
 #include "../theme/theme_manager.hpp"
+#include "../theme/theme_observation.hpp"
 #include "../theme/theme_presentation.hpp"
 #include "authoring.hpp"
 #include "component_traits.hpp"
@@ -76,6 +77,26 @@ namespace nandina::widget
         /// 随回调作用域销毁并注销观察者；作者不能通过它写回主题状态。
         [[nodiscard]] auto theme_state() const -> theme::ThemePresentation& {
             return callback_scope_->own<theme::ThemePresentation>(*themes_, *graph_);
+        }
+
+        /// 选择状态投影：模式、亮暗槽位与偏好改变时更新，即使当前生效主题未变。
+        [[nodiscard]] auto theme_selection() const -> theme::ThemeSelectionPresentation& {
+            return callback_scope_->own<theme::ThemeSelectionPresentation>(*themes_, *graph_);
+        }
+
+        /// 目录投影：注册/替换/移除方案或家族时更新，未生效项也会通知。
+        [[nodiscard]] auto theme_catalog() const -> theme::ThemeCatalogPresentation& {
+            return callback_scope_->own<theme::ThemeCatalogPresentation>(*themes_, *graph_);
+        }
+
+        /// 明确的生效主题变化事件（身份/外观/有效快照）；仅选择或目录变化不触发。
+        [[nodiscard]] auto theme_changes() const -> theme::ThemeChangeHub& {
+            return callback_scope_->own<theme::ThemeChangeHub>(*themes_);
+        }
+
+        /// 作用域绑定的主题变化订阅：连接随回调作用域清理，无需手动注销。
+        void on_theme_change(std::function<void(const theme::ThemeChange&)> handler) const {
+            callback_scope_->keep(theme_changes().subscribe(std::move(handler)));
         }
 
         [[nodiscard]] auto resource_manager() const noexcept -> resource::ResourceManager* {

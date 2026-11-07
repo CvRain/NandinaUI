@@ -360,6 +360,100 @@ playground 编译只作为迁移检查，不列为 CI 证明。Windows、GPU/桌
 已同步主题系统当前说明与索引，避免文档继续推荐移除的 apply/activate_family 等入口。
 全部保持未提交，待维护者复验后统一提交首版与补修；未启动第 4/4a 步。
 
+### P4.3 D2 第 4 步观察通道与作者入口实施记录（2026-11-07，初稿待维护者复核）
+
+按 §8 第 4 步与 §14 定形实施；第 3 步批次已随 `995e6ae` 提交推送。
+
+- **观察通道**：新增 `theme/theme_observation.{hpp,cpp}`，提供选择投影
+  `ThemeSelectionPresentation`（`ThemeSelectionState = ThemeSelection`）、目录投影
+  `ThemeCatalogPresentation`（`ThemeCatalogState {version, schemes, families}`）与明确变化事件
+  `ThemeChangeHub`（`ThemeChange {before, after}`，端点为可选 scheme ID + 外观 + 有效
+  DesignSystem 快照）。三者沿用四段通知、拒绝重入、回调异常隔离与双端销毁安全。
+- **发布分类**：有效内容/身份/外观/style/动效变化仍走 revision 发布并广播组件；仅选择或
+  仅目录变化走 staged-only 发布，不递增 revision、不让组件失效。目录事件以单调
+  `ThemeSchemeCatalog::version()`（仅目录项增删改推进）为依据。
+- **作者入口**：`derive_content`（深拷贝）、`derive_scheme`（独立内容、继承外观/家族）、
+  `validate_scheme`（结构校验：ID/显示名/内容/冲突/家族）、`ThemeSchemeError`；
+  `ThemeSchemeCatalog::contains_family`。注册入口与文件导入共用目录/选择提交语义。
+- **作用域便利**：`ReactiveScope::keep(Subscription)`；`BuildContext::theme_selection()/
+  theme_catalog()/theme_changes()/on_theme_change()`；文件导入范围写入 `design_tokens.md`。
+- **内置主题迁移**：目录级回归确认 `nandina:<family>/light|dark` 规范方案与家族存在、
+  两个外观内容独立、可固定/按外观选择，重复注册幂等。
+
+故障注入（重新编译后恢复，均红转绿）：关闭 staged-only 发布（2 断言）、目录版本不推进
+（1 断言）、变化事件去掉端点去重（3 断言）、派生共享内容指针（1 断言）、结构校验不拒空
+内容（1 断言）。
+
+首版验证矩阵（维护者提供的独立记录，Linux 无显示/GPU 沙箱；非本轮复核重跑）：
+
+| 范围 | 实际结果 |
+| --- | --- |
+| theme-scheme / theme-observation | 23 用例 / 333 断言、6 用例 / 124 断言 |
+| theme-presentation / families / design-system | 26 / 163、9 / 69、25 / 637 |
+| buildDir 全量 | 119 OK / 1 FAIL / 1 SKIP；FAIL 为 sdf-state-probe（无显示设备），sdf-device skip 77 |
+| buildDir-asan unit | 98 OK / 1 SKIP（window-lifecycle） |
+| buildDir-no-rtti unit | 100 OK（本机窗口测试未跳过） |
+| buildDir-nosqlite unit | 95 OK / 1 SKIP |
+| buildDir-tools | 8 OK |
+| release_check --ci | 8/8；headers 195；docs 87；clang-format 23.1.1 |
+| probe | buildDir-probe 编译通过；未执行窗口/GPU |
+
+未提交、未推送；未启动 4a（合成器/对比度/色域与真实后端读回）与内部广播收窄。
+Windows、GPU/桌面与人工视觉验收仍待补齐。
+
+#### 第 4 步复核记录（2026-11-07，保持未提交）
+
+Git 历史确认 `995e6ae` 已在 HEAD 与 origin/main，第 3 步已统一提交；当前第 4 步首版为
+19 个已跟踪修改 + 3 个新增文件。先编译并通过 theme-observation/theme-scheme/
+theme-presentation 三个专项基线，未发现 RED-FIRST 残留。
+
+发现并补修：等价 replace_scheme 仍递增目录 version，产生重复订阅与 effect；新增回归
+先有 8 处断言失败，再在 ID/显示名/外观/家族/内容指针均相等时幂等返回。真实元数据或
+内容快照变更继续通知，不深比较配方。顺带将目录版本判断前移，避免无目录变化时复制载荷。
+
+新增边界覆盖：
+
+- 三个通道分别在回调中清理 scope、销毁 manager、断开其他订阅和写入重入；后续订阅
+  被失效时跳过，异常完成其他交付后重抛。ASan/UBSan 由完整矩阵复验。
+- 真实 SceneTree 计数守住仅选择/目录变化不广播，实际呈现变更只广播一次。
+- selection readonly/catalog computed 依赖追踪，多通道 effect 和 notify 一致性，文件导入
+  一次提交目录+选择+主题，以及窗口外层 effect 延迟不被投影提前提交。
+- ThemeChange 的 style/匿名来源端点、motion-only 去重、销毁后端点快照所有权；
+  页面 clear 后用真实生效变更证明 on_theme_change 的连接已注销。
+- 作者派生的嵌套配方隔离、继承家族与已注册派生不被基础替换影响，invalid_id 诊断，
+  三个新通道没有写入/发布权限的编译期检查。
+
+独立故障注入（对应目标每次重编译；恢复后三专项全绿）：
+
+1. 去掉等价替换短路 → 8 断言失败，Catch2 exit 42。
+2. 选择/目录投影提前提交 deferred token → 文件导入全通道一致性 10 断言失败，exit 42。
+3. 订阅守卫只保留 weak.lock、忽略 connected/manager → scope clear 三通道测试
+   6 断言失败，exit 42。
+
+专项：theme-observation 16 用例 / 296 断言，theme-scheme 25 / 357，theme-presentation
+26 / 163。
+
+本轮最终树验证（每套先编译，再 meson test --no-rebuild）：
+
+| 范围 | 本轮实际结果 |
+| --- | --- |
+| theme-observation / theme-scheme | 16 用例 / 296 断言、25 用例 / 357 断言，全绿 |
+| theme-presentation | 26 用例 / 163 断言，通过 |
+| buildDir 全量 | 118 OK / 2 FAIL / 1 SKIP；sdf-device 与 sdf-state-probe 均在 SDL_Init 报 No available video device |
+| buildDir-asan unit | 98 OK / 1 SKIP；启用 ASan/UBSan，构建与测试设 LSAN_OPTIONS=detect_leaks=0 |
+| buildDir-no-rtti unit | 99 OK / 1 SKIP |
+| buildDir-nosqlite unit | 95 OK / 1 SKIP |
+| buildDir-tools | 8 OK |
+| release_check --ci | 8/8，无 SKIP；headers 195，docs 87，clang-format 23.1.1 |
+| buildDir-probe | nandina_sdl_page_probe 编译通过，未执行窗口/GPU 渲染 |
+
+本轮四套的 SKIP 均为 window-lifecycle；与首版维护者环境 sdf-device=skip、no-RTTI
+窗口测试通过的差异分别保留。SDK 子项目双次打包与 vendored 下游消费者均通过。
+未跟踪的新观察头/源码/测试额外执行 clang-format 23.1.1 dry-run，文档收尾另查链接与空白。
+
+复核缺口已补修并验证，待维护者复验后统一提交首版与补修；本轮未 commit/push，
+未启动 4a 或作者颜色入口。Windows、桌面/GPU、真实像素读回和人工视觉验收仍待补齐。
+
 ---
 
 # D4 跨平台优先的窗口与渲染后端路线

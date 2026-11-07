@@ -25,7 +25,20 @@
 `PageKey` 路由身份、address 显示与 typed navigation 沿用既有规则。迁移调用方后须重新编译；
 正式契约见 [Page / Router](page_and_router.md)，验证见 [D3](reference_draft.md#d3-路由身份与导航分组开放到哪一层)。
 
-2026-11-06 P4.3 D2 第 3 步（experimental，复核补修后待维护者复验，未提交）：新增
+2026-11-07 P4.3 D2 第 4 步（experimental，复核补修后待维护者复验，未提交）：新增
+`theme/theme_observation.{hpp,cpp}`：`ThemeSelectionPresentation`（选择投影）、
+`ThemeCatalogPresentation`（目录投影，`ThemeCatalogState {version, schemes, families}`）、
+`ThemeChangeHub`（`ThemeChange {before, after}` 明确变化事件，仅生效身份/外观/有效快照变化）；
+`BuildContext::theme_selection()/theme_catalog()/theme_changes()/on_theme_change()`；
+`ReactiveScope::keep(Subscription)`。作者入口：`derive_content`/`derive_scheme`/
+`validate_scheme`/`ThemeSchemeError`、`ThemeSchemeCatalog::contains_family()`；
+`ThemeManager` 增加仅选择/目录变化的 staged-only 发布（不递增 revision、不广播组件）。
+`ThemeObserver::prepare_theme_presentation` 改名为 `prepare_theme_publication`，同时参与有效与
+staged-only 发布；自定义 observer 须迁移 override 并重新编译。`ThemeScheme` 的相等比较按
+元数据与不可变内容指针，等价替换不推进 version。新状态投影的 readonly 是借用句柄，须在
+其 scope 与 Graph 存活期间读取；保存 ThemeChange 的值可延长端点快照寿命。
+
+2026-11-06 P4.3 D2 第 3 步（experimental，已复验并随 `995e6ae` 提交）：新增
 `ThemeSchemeId`/`ThemeFamilyId`（`namespace:name` 规范文本、typed parse 带偏移错误、255 字节
 上限）、`ThemeSchemeContent`/`ThemeSchemeCatalog`（register/replace/remove_scheme、family、
 staged 失败原子提交）、`ThemeSelection`（fixed/appearance + `UnregisteredThemeSource` 匿名
@@ -349,7 +362,7 @@ experimental**，理由与后续动作写进清单——两个枚举是公开 wi
 - 提升等级是**决策**，不是 `--write` 的副作用：`--write` 只补默认值（`detail/`、`internal/` 归
   internal，其余 experimental），理由与例外必须人来写。
 
-2026-11-06 第 3 步复核补修（保持未提交）：文件导入采用同一 manager 提交的暂存目录/选择/
+2026-11-06 第 3 步复核补修（已随 `995e6ae` 提交）：文件导入采用同一 manager 提交的暂存目录/选择/
 style，member ID 增加 `/families/x<family-hex>`，各文件家族成员独立；家族切换不重归属。
 旧初稿的非家族 styles ID 拼写继续用于独立主题。过长别名 expected 诊断，槽位冲突显式
 appearance_mismatch。manager 的目录/选择/active ID 是借用视图，任何成功写入后需重新查询；

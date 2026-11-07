@@ -72,6 +72,12 @@ namespace nandina::reactive
             subscriptions_.push_back(event.subscribe(std::forward<Handler>(handler)));
         }
 
+        /// Keep an externally created subscription alive for this scope's lifetime.
+        /// Lets callers own RAII tokens for framework events without a manual member.
+        void keep(Subscription subscription) {
+            subscriptions_.push_back(std::move(subscription));
+        }
+
         /// Own a lifetime-bound non-reactive service: one instance per type per scope.
         /// The first construction arguments win until clear() starts a new generation.
         /// Services are destroyed after effects/computed values and before scope-owned

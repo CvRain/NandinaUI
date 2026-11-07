@@ -1,4 +1,5 @@
 #include <nandina/reactive/scope.hpp>
+#include <nandina/theme/builtin_themes.hpp>
 #include <nandina/theme/style_document.hpp>
 #include <nandina/theme/theme_manager.hpp>
 #include <nandina/theme/theme_presentation.hpp>
@@ -621,4 +622,223 @@ TEST_CASE(
     selection.preference = theme::ThemePreference::dark;
     REQUIRE(manager.select(selection));
     CHECK(manager.catalog().schemes().size() == before);
+}
+
+TEST_CASE(
+    "derived schemes deep-copy content and inherit classification",
+    "[theme][scheme][author]"
+) {
+    auto base = make_scheme("org.test:base", theme::ColorAppearance::dark);
+    auto base_content = std::make_shared<theme::ThemeSchemeContent>(*base.content);
+    base_content->tokens.radius.md = 17.0F;
+    base.content = base_content;
+    const auto derived = theme::derive_scheme(base, scheme_id("org.test:derived"), "Derived");
+    CHECK(derived.appearance == base.appearance);
+    CHECK(derived.display_name == "Derived");
+    CHECK(derived.content != base.content);
+    CHECK(derived.content->tokens.radius.md == 17.0F);
+
+    // Mutating the derived snapshot does not pollute the base scheme.
+    auto derived_content = std::make_shared<theme::ThemeSchemeContent>(*derived.content);
+    derived_content->tokens.radius.md = 99.0F;
+    CHECK(base.content->tokens.radius.md == 17.0F);
+    CHECK(derived.content->tokens.radius.md == 17.0F);
+
+    // Replacing the base content later does not rewrite the already derived snapshot.
+    auto replaced = std::make_shared<theme::ThemeSchemeContent>(*base.content);
+    replaced->tokens.radius.md = 3.0F;
+    base.content = replaced;
+    CHECK(derived.content->tokens.radius.md == 17.0F);
+}
+
+TEST_CASE(
+    "structural validation reports scheme setup errors before registration",
+    "[theme][scheme][author]"
+) {
+    theme::ThemeSchemeCatalog catalog;
+    const auto family = family_id("org.test:family");
+    REQUIRE(catalog.register_family({.id = family, .display_name = "Family"}));
+
+    auto valid = make_scheme("org.test:valid", theme::ColorAppearance::light);
+    valid.family = family;
+    auto validated = theme::validate_scheme(valid, catalog);
+    REQUIRE(validated);
+    REQUIRE(catalog.register_scheme(valid));
+
+    // Duplicate identity.
+    auto duplicate = theme::validate_scheme(valid, catalog);
+    REQUIRE_FALSE(duplicate);
+    CHECK(duplicate.error().kind == theme::ThemeSchemeErrorKind::duplicate_id);
+
+    // Empty display name.
+    auto unnamed = make_scheme("org.test:unnamed", theme::ColorAppearance::light);
+    unnamed.display_name.clear();
+    auto unnamed_result = theme::validate_scheme(unnamed, catalog);
+    REQUIRE_FALSE(unnamed_result);
+    CHECK(unnamed_result.error().kind == theme::ThemeSchemeErrorKind::empty_display_name);
+
+    // Null content.
+    auto empty = make_scheme("org.test:empty", theme::ColorAppearance::light, nullptr);
+    auto empty_result = theme::validate_scheme(empty, catalog);
+    REQUIRE_FALSE(empty_result);
+    CHECK(empty_result.error().kind == theme::ThemeSchemeErrorKind::null_content);
+
+    // Unknown family.
+    auto orphan = make_scheme("org.test:orphan", theme::ColorAppearance::light);
+    orphan.family = family_id("org.test:missing");
+    auto orphan_result = theme::validate_scheme(orphan, catalog);
+    REQUIRE_FALSE(orphan_result);
+    CHECK(orphan_result.error().kind == theme::ThemeSchemeErrorKind::unknown_family);
+
+    // Validation diagnostics stay descriptive.
+    CHECK(!theme::describe(empty_result.error()).empty());
+}
+
+TEST_CASE(
+    "catalog versions advance for entries but not for selection",
+    "[theme][scheme][catalog][version]"
+) {
+    theme::ThemeSchemeCatalog catalog;
+    const auto initial = catalog.version();
+    auto light = make_scheme("org.test:light", theme::ColorAppearance::light);
+    REQUIRE(catalog.register_scheme(light));
+    CHECK(catalog.version() > initial);
+    const auto after_registration = catalog.version();
+    REQUIRE(catalog.select(theme::FixedThemeSelection {light.id}, theme::ColorAppearance::light));
+    CHECK(catalog.version() == after_registration); // Selection is not a directory mutation.
+    auto replaced = make_scheme("org.test:light", theme::ColorAppearance::light);
+    replaced.content =
+        std::make_shared<const theme::ThemeSchemeContent>(theme::ThemeSchemeContent::from(
+            theme::default_design_system(),
+            theme::ColorAppearance::light
+        ));
+    REQUIRE(catalog.replace_scheme(replaced));
+    CHECK(catalog.version() > after_registration);
+    const auto after_replace = catalog.version();
+    // The replacement is still selected, so removal stays rejected; the version does not move.
+    CHECK_FALSE(catalog.remove_scheme(light.id));
+    CHECK(catalog.version() == after_replace);
+}
+
+TEST_CASE(
+    "built-in families are published as canonical catalog schemes",
+    "[theme][scheme][builtin]"
+) {
+    theme::ThemeManager manager;
+    theme::register_default_theme_families(manager);
+    const auto scheme_count = manager.catalog().schemes().size();
+    CHECK(scheme_count == 8); // nandina:default plus three families x two appearances.
+
+    for (const std::string_view name: {"butter", "fluent", "material"}) {
+        const auto prefix = "nandina:" + std::string(name);
+        const auto family = family_id(prefix);
+        CHECK(manager.catalog().contains_family(family));
+        const auto light = scheme_id(prefix + "/light");
+        const auto dark = scheme_id(prefix + "/dark");
+        const auto* light_scheme = manager.catalog().find(light);
+        REQUIRE(light_scheme != nullptr);
+        CHECK(light_scheme->appearance == theme::ColorAppearance::light);
+        CHECK(light_scheme->family == family);
+        CHECK(light_scheme->content != nullptr);
+        const auto* dark_scheme = manager.catalog().find(dark);
+        REQUIRE(dark_scheme != nullptr);
+        CHECK(dark_scheme->appearance == theme::ColorAppearance::dark);
+        CHECK(dark_scheme->family == family);
+        // Each appearance owns an independent content snapshot.
+        CHECK(light_scheme->content != dark_scheme->content);
+        CHECK(manager.catalog().schemes_in_family(family).size() == 2);
+
+        // Canonical selection works end to end through the new scheme API.
+        REQUIRE(manager.select(
+            theme::AppearanceThemeSelection {
+                light,
+                dark,
+                theme::ThemePreference::dark,
+            }
+        ));
+        REQUIRE(manager.active_scheme_id() != nullptr);
+        CHECK(*manager.active_scheme_id() == dark);
+        CHECK(manager.appearance() == theme::ColorAppearance::dark);
+        CHECK(manager.design_system().dark.primary.oklch().light > 0.0F);
+
+        // A fixed selection of the light scheme ignores the host appearance.
+        REQUIRE(manager.select(theme::FixedThemeSelection {light}));
+        manager.set_system_appearance(theme::ColorAppearance::dark);
+        CHECK(*manager.active_scheme_id() == light);
+        CHECK(manager.appearance() == theme::ColorAppearance::light);
+        manager.set_system_appearance(theme::ColorAppearance::light);
+    }
+
+    // Re-registration is idempotent: existing entries are skipped, not duplicated.
+    theme::register_default_theme_families(manager);
+    CHECK(manager.catalog().schemes().size() == scheme_count);
+    CHECK(manager.catalog().families().size() == 4); // default plus three built-in families.
+}
+
+TEST_CASE(
+    "author derivation isolates nested recipes and inherited family metadata",
+    "[theme][scheme][author][review]"
+) {
+    theme::ThemeManager manager;
+    const auto family = family_id("org.test:author");
+    REQUIRE(manager.register_family({family, "Author"}));
+    auto original = std::make_shared<theme::ThemeSchemeContent>(theme::ThemeSchemeContent::from(
+        theme::default_design_system(),
+        theme::ColorAppearance::dark
+    ));
+    original->components.button.rules.clear();
+    theme::ButtonRecipeRule first;
+    first.container_radius = theme::ThemeScalar::literal(13);
+    original->components.button.rules.push_back(first);
+    auto base = make_scheme("org.test:author/base", theme::ColorAppearance::dark, original, family);
+    auto derived = theme::derive_scheme(base, scheme_id("org.test:author/derived"), "Derived");
+    REQUIRE(derived.content);
+    CHECK(derived.family == family);
+    CHECK(derived.appearance == theme::ColorAppearance::dark);
+    auto separate = theme::derive_content(*original);
+    separate.components.button.rules[0].container_radius = theme::ThemeScalar::literal(27);
+    separate.components.button.rules.push_back(first);
+    CHECK(original->components.button.rules.size() == 1);
+    const auto radius = [](const theme::ThemeSchemeContent& content) {
+        return theme::resolve_button(
+                   content.design_system(),
+                   theme::ColorAppearance::dark,
+                   theme::ButtonTone::primary,
+                   theme::ButtonTreatment::filled,
+                   theme::ButtonSize::medium,
+                   theme::ButtonVisualState::normal
+        )
+            .container.radius;
+    };
+    CHECK(radius(*derived.content) == 13);
+    original->components.button.rules[0].container_radius = theme::ThemeScalar::literal(39);
+    CHECK(radius(*derived.content) == 13);
+    CHECK(radius(*original) == 39);
+    REQUIRE(theme::validate_scheme(derived, manager.catalog()));
+    REQUIRE(manager.register_scheme(base));
+    REQUIRE(manager.register_scheme(derived));
+    REQUIRE(manager.select(theme::FixedThemeSelection {derived.id}));
+    const auto revision = manager.revision();
+    auto updated = std::make_shared<theme::ThemeSchemeContent>(*original);
+    updated->components.button.rules[0].container_radius = theme::ThemeScalar::literal(51);
+    base.content = updated;
+    REQUIRE(manager.replace_scheme(base));
+    CHECK(manager.revision() == revision);
+    CHECK(radius(*manager.catalog().find(derived.id)->content) == 13);
+    CHECK(radius(*manager.catalog().find(base.id)->content) == 51);
+}
+
+TEST_CASE(
+    "author structural validation rejects an invalid ID without changing the directory",
+    "[theme][scheme][author][review]"
+) {
+    theme::ThemeManager manager;
+    const auto version = manager.catalog().version();
+    auto invalid = make_scheme("org.test:valid-first", theme::ColorAppearance::light);
+    invalid.id = {};
+    const auto result = theme::validate_scheme(invalid, manager.catalog());
+    REQUIRE_FALSE(result);
+    CHECK(result.error().kind == theme::ThemeSchemeErrorKind::invalid_id);
+    CHECK_FALSE(theme::describe(result.error()).empty());
+    CHECK(manager.catalog().version() == version);
 }
