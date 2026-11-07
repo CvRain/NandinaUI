@@ -102,15 +102,29 @@ application shell. Version `0.1.0-alpha.1`.
   keeps historical dual-palette queries working. Author color entry and step 4a color validation
   remain separate. The step-3 review cycle is closed. Contract:
   `docs/references/theme_authoring_and_state.md` §12–§13.
-- **P4.3 D2 step 4 observation channels and author entry** (2026-11-07, review fixes
-  complete; maintainer revalidation pending) adds scope-bound read-only selection and catalog
-  projections plus an explicit before/after theme change event, staged-only publication for
-  selection/directory edits (no revision bump, no component invalidation), and the unified author
-  entry (`derive_content`/`derive_scheme`/`validate_scheme` with structural diagnostics).
-  File-import scope is documented in `design_tokens.md`. Step 4a (synthesizer, contrast/gamut
-  diagnostics, backend pixel readback) and internal broadcast narrowing remain separate.
-  Keep uncommitted through maintainer review. Contract:
-  `docs/references/theme_authoring_and_state.md` §14–§15.
+- **P4.3 D2 step 4 observation channels and author entry** (2026-11-07, reviewed and pushed in
+  `4746173`) adds scope-bound read-only selection and catalog projections plus an explicit
+  before/after theme change event, staged-only publication for selection/directory edits (no
+  revision bump, no component invalidation), and the unified author entry (`derive_content`/
+  `derive_scheme`/`validate_scheme` with structural diagnostics). File-import scope is documented
+  in `design_tokens.md`. The step-4 review made equivalent catalog replacement idempotent, moved
+  the directory-version check ahead of payload copying, and added channel lifetime, reentry,
+  multi-projection, file-import and nested-derivation coverage. The step-4 review cycle is closed.
+  Contract: `docs/references/theme_authoring_and_state.md` §14–§15.
+- **P4.3 D2 step 4a CPU-side compositor and contrast diagnostics** (2026-11-07, initial
+  implementation reviewed with fixes, awaiting maintainer revalidation; uncommitted) adds the
+  single foundation CPU compositor
+  (`foundation/composition.hpp`: explicit encoded-sRGB strategy, background-stack early
+  termination, composition errors) and scenario-scoped contrast rules/profiles
+  (`theme/contrast_diagnostics.*`) with passed/failed/insufficient-context statuses, role paths,
+  measured ratios, thresholds and resolved OKLCH plus converted sRGB. Local test helpers now
+  consume the shared compositor. Rules require explicit tone context for tone references, diagnostics
+  retain config/tone and transform operand paths, and sampling stops at the first opaque endpoint.
+  Unresolved foreground samples are optional; reports state clipping and float/no-u8 policy.
+  Backend pixel readback, the registration contrast gate and style advisories remain pending
+  (GPU environment); do not claim the color gate passes. Keep this batch
+  uncommitted through maintainer review. Contract:
+  `docs/references/theme_authoring_and_state.md` §6.5–§6.8, §16.
 - The plan and exit criteria are **not** owned by this file: read
   `docs/references/development_roadmap.md` and the D5 contract
   (`resource_build_and_deployment.md` §8) before claiming a sub-batch is complete.
@@ -488,7 +502,15 @@ IDs include `/families/x<family-hex>` so shared file themes do not change family
 selection changes. Long aliases return diagnostics. Production manager regressions cover canonical
 mutators, cross-family/fixed/anonymous selection, replacements, exceptions and lifetime; historical
 test compatibility remains test-only. A fixed-source Sidebar switch restores the actual appearance.
-The step-3 review cycle is closed. Step 4 is under review; keep its whole batch uncommitted.
-The 2026-11-07 step-4 review fixes equivalent catalog replacement notifications and verifies staged
-publication, all channel lifetimes, exception/reentry isolation, owned event endpoints and deep
-author derivation. Do not start step 4a until step-4 maintainer revalidation and submission finish.
+The step-3 review cycle is closed.
+
+### D2 step-4 and 4a status (2026-11-07)
+
+The step-4 review cycle is closed and the batch is pushed in `4746173`: equivalent catalog
+replacement is idempotent, staged publication and all channel lifetimes/exception paths are
+covered, event endpoints own their snapshots and author derivation is deep. Step 4a's CPU side is
+the current uncommitted review batch: the single foundation compositor plus explicit contrast
+rules/profiles/diagnostics, with local helpers migrated. CPU review fixes explicit tone context,
+transform paths, opaque-endpoint sampling and policy reporting; maintainer revalidation is pending.
+Backend pixel readback, the registration contrast gate, style advisories and internal broadcast narrowing remain pending; do not start them
+or claim the color gate passes without a GPU environment and maintainer review.

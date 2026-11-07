@@ -13,6 +13,7 @@
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
+#include <nandina/foundation/composition.hpp>
 #include <nandina/foundation/contrast.hpp>
 #include <nandina/theme/builtin_themes.hpp>
 #include <nandina/theme/theme.hpp>
@@ -28,18 +29,11 @@ namespace
 {
     using namespace nandina;
 
-    /// 把前景按自身 alpha 合成到不透明背景上。
+    /// 前景按自身 alpha 合成到不透明背景：消费 foundation 的唯一合成实现（D2 §6.7）。
     [[nodiscard]] auto
     composite_over(const foundation::NanColor& foreground, const foundation::NanColor& background)
         -> foundation::NanColor {
-        const auto source = foreground.to<foundation::NanRgb>();
-        const auto backdrop = background.to<foundation::NanRgb>();
-        const auto alpha = source.alpha;
-        return foundation::NanColor::from_rgb(
-            source.red * alpha + backdrop.red * (1.0F - alpha),
-            source.green * alpha + backdrop.green * (1.0F - alpha),
-            source.blue * alpha + backdrop.blue * (1.0F - alpha)
-        );
+        return foundation::nan_composite_over(foreground, background);
     }
 
     [[nodiscard]] auto

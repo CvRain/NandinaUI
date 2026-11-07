@@ -234,6 +234,9 @@ namespace nandina::theme
     [[nodiscard]] auto button_accent(const NanColorScheme& palette, std::optional<ButtonTone> tone)
         -> std::pair<NanColor, NanColor>;
 
+    /// 语义颜色角色的规范名称（诊断与调试输出用；别名保留其自身拼写）。
+    [[nodiscard]] auto color_token_name(ColorToken token) -> std::string_view;
+
     [[nodiscard]] auto resolve_theme_color(
         const NanTheme& theme,
         const ThemeColor& value,

@@ -25,7 +25,19 @@
 `PageKey` 路由身份、address 显示与 typed navigation 沿用既有规则。迁移调用方后须重新编译；
 正式契约见 [Page / Router](page_and_router.md)，验证见 [D3](reference_draft.md#d3-路由身份与导航分组开放到哪一层)。
 
-2026-11-07 P4.3 D2 第 4 步（experimental，复核补修后待维护者复验，未提交）：新增
+2026-11-07 P4.3 D2 第 4a 步 CPU 侧（experimental，复核补修后待维护者复验、未提交；真实后端读回未执行）：
+新增 `foundation/composition.hpp`：唯一 CPU 合成器（显式 `CompositeSpace::encoded_srgb`
+策略、`nan_composite_over`/`nan_composite_background_stack`/`nan_composite_over_stack`
+与 `CompositionError`）；新增 `theme/contrast_diagnostics.{hpp,cpp}`：显式
+`ContrastRule`/`ContrastProfile`/`evaluate_contrast`/`ContrastDiagnostic`（三态状态、
+角色路径、实测比值、所需阈值、解析后 OKLCH 与转换后 sRGB）与 `default_contrast_profile()`。
+`ContrastRule::tone` 为 tone 引用（含变换操作数）提供显式上下文；缺少时报告上下文不足。
+诊断 `foreground` 为可选 sample，未解析时为空；背景在首个不透明终点停止，变换路径保留
+操作及操作数。`ContrastDiagnostic::config/tone` 记录计算上下文；报告注明现行通道裁剪与
+浮点、无 u8 量化策略。注册门槛接线等待真实后端像素读回（§6.8）。`color_token_name()`
+供角色路径诊断。
+
+2026-11-07 P4.3 D2 第 4 步（experimental，已随 `4746173` 提交）：新增
 `theme/theme_observation.{hpp,cpp}`：`ThemeSelectionPresentation`（选择投影）、
 `ThemeCatalogPresentation`（目录投影，`ThemeCatalogState {version, schemes, families}`）、
 `ThemeChangeHub`（`ThemeChange {before, after}` 明确变化事件，仅生效身份/外观/有效快照变化）；

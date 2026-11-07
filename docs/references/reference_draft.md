@@ -454,6 +454,78 @@ theme-presentation 三个专项基线，未发现 RED-FIRST 残留。
 复核缺口已补修并验证，待维护者复验后统一提交首版与补修；本轮未 commit/push，
 未启动 4a 或作者颜色入口。Windows、桌面/GPU、真实像素读回和人工视觉验收仍待补齐。
 
+### P4.3 D2 第 4a 步 CPU 侧实施记录（2026-11-07，初稿待维护者复核）
+
+第 4 步已随 `4746173` 提交推送。本批按 §6.5–§6.7 落地 CPU 侧，真实后端读回与注册门槛
+接线仍待有 GPU 的环境（§6.8 步骤 1–5 未执行）。
+
+- **foundation 唯一合成器**：`foundation/composition.hpp` 显式
+  `CompositeSpace::encoded_srgb` 策略，`nan_composite_over`（不透明背景 source-over）、
+  `nan_composite_background_stack`（由近及远、首个不透明终点提前终止）、
+  `nan_composite_over_stack`；错误以 `CompositionError` 区分不支持空间/非有限颜色/
+  无终点，不猜测底色。
+- **theme 诊断**：`theme/contrast_diagnostics.{hpp,cpp}` 的 `ContrastRule`/`ContrastProfile`/
+  `evaluate_contrast`/`ContrastDiagnostic`，显式规则（前景 + 背景栈 + 状态 + 阈值 +
+  required 级别），输出方案/外观/规则/角色路径/实测比值/所需阈值/解析后 OKLCH 与转换后
+  sRGB；`passed`/`failed`/`insufficient_context` 三态，必需失败与上下文不足分别查询。
+- **首批档案**：15 条与组件默认配方对应的显式规则；不做隐式整表断言与风格建议。
+- **helper 收敛**：两个既有测试的局部 `composite_over` 改为消费共享实现。
+
+故障注入（重新编译后恢复）：线性空间合成（3 断言失败）、背景栈不提前终止（1 断言）、
+上下文不足误报为通过（2 断言）。
+
+最终验证矩阵（Linux，无显示/GPU 沙箱）：composition 6/35、theme-contrast-diagnostics
+6/181、theme-palette-contrast 4/129、command-palette 15/105；buildDir 全量
+121 OK / 1 FAIL（sdf-state-probe 无显示设备）/ 1 SKIP（sdf-device 77）；
+ASan 100 OK / 1 skip；no-RTTI 102 OK；no-SQLite 97 OK / 1 skip；tools 8 OK；
+release_check --ci 8/8（headers 197、docs 87、clang-format 23.1.1）。
+未提交、未推送；真实像素读回、注册门槛、Windows/桌面/人工视觉验收仍待补齐。
+
+
+#### 第 4a 步 CPU 复核记录（2026-11-07，保持未提交）
+
+HEAD 与 origin/main 同为 `4746173`，第 4 步已提交。先编译并通过 composition /
+theme-contrast-diagnostics / theme-palette-contrast / command-palette 四个专项基线。
+
+补修四处：tone 引用缺少上下文时不再静默采用 primary，规则和诊断显式携带 tone；
+变换角色路径保留操作及操作数；解析/采样在首个不透明背景停止；诊断记录合成配置并声明
+现行 linear RGB 通道裁剪、浮点 sRGB、无 u8 量化策略。尚未解析的前景为可选 sample。
+新增测试先于补修运行，四类分别 6 / 2 / 2 / 3 断言失败（总计 13），日志：
+`buildDir/meson-logs/step4a-review-red.txt`。临界值显示的初步疑点经实际测试排除，现行输出
+能区分相邻 float；边界回归保留，未修改阈值或显示实现。
+
+补充基础错误分支、近不透明 alpha、NaN alpha、四种 tone 的亮暗解析、背景/变换 rhs
+缺少 tone 与遮挡终止、非法阈值和规范化 OKLCH / 裁剪后 sRGB 独立保留。合成器本体未改。
+专项：composition 7 用例 / 52 断言，theme-contrast-diagnostics 15 / 338，
+theme-palette-contrast 4 / 129，command-palette 15 / 105。
+
+独立故障注入：分别去掉前景 tone 守卫、退化 with_alpha 角色名、取消 theme 采样终止、
+删除报告中的合成空间标记，重编译后分别 5 / 1 / 2 / 1 断言失败（Catch2 exit 42）；
+全部恢复后四个专项全绿（step4a-review-restored 日志）。
+
+本轮最终代码树矩阵（每套先编译，再测试；主套件运行期间未修改工作树）：
+
+| 范围 | 本轮实际结果 |
+| --- | --- |
+| buildDir 全量 | 120 OK / 2 FAIL / 1 SKIP；sdf-device 与 sdf-state-probe 均在 SDL_Init 报 No available video device |
+| buildDir-asan unit | 100 OK / 1 SKIP；ASan/UBSan 启用，构建与测试均设 LSAN_OPTIONS=detect_leaks=0 |
+| buildDir-no-rtti unit | 101 OK / 1 SKIP |
+| buildDir-nosqlite unit | 97 OK / 1 SKIP |
+| buildDir-tools | 8 OK |
+| release_check --ci | 8/8，无 SKIP；headers 197，docs 87，clang-format 23.1.1 |
+
+四套窗口 SKIP 均为 window-lifecycle（exit 77）；与首版维护者环境 sdf-device 为 skip、
+no-RTTI 窗口测试通过的差异分别保留，不冒充硬件验收。SDK 双次打包与 vendored 下游
+消费者均通过。主日志为 `buildDir/meson-logs/step4a-review-full.txt`；三个变体目录的
+`meson-logs/step4a-review-unit.txt` 及 tools 的 `step4a-review-tools.txt` 保留实际结果。
+ASan 的本地 Ninja 构建记录恢复触发较大范围重编译，最终构建和单元验证均完成。
+
+五个未跟踪 C++ 文件另做固定版本格式 dry-run；故障注入源码与恢复备份逐字一致，无
+RED-FIRST 残留。文档结果收尾后复查 87 篇链接/锚点与 git diff --check。
+保持 15 项已跟踪修改 + 5 个新增文件，未提交、未推送；待维护者复验后统一提交首版与补修。
+本批不启用注册配色门槛；后端像素读回、最终色域/量化定形、Windows、桌面/GPU 与人工
+视觉验收仍未完成。
+
 ---
 
 # D4 跨平台优先的窗口与渲染后端路线
@@ -961,7 +1033,7 @@ D8。D1 第二阶段必须复用已有 host seam，并在实际平台上分别�
 | 议题 | 权威归属 |
 | --- | --- |
 | D1 | [统一输入、焦点与文本编辑](focus_and_input.md)，设计已接受，未实施 |
-| D2 | [主题方案、作者入口与状态订阅](theme_authoring_and_state.md)：§5.5 首批窄投影已实施（初稿待维护者复核，未提交），见下文 D2 实施记录；其余待审阅 |
+| D2 | [主题方案、作者入口与状态订阅](theme_authoring_and_state.md)：首批 `8920f3a`、第 3 步 `995e6ae`、第 4 步 `4746173` 已提交；第 4a 步 CPU 侧复核补修后待复验、未提交，见本稿实施记录 |
 | D3 | 已复核并随 `095336b` 提交；正式契约见 [Page / Router](page_and_router.md)，两轮验证见本稿 D3 实施记录 |
 | D4 | [平台与后端契约](platform_backend_contract.md)，默认切换与 seam 已落地，逐平台验收继续 |
 | D5 | [资源构建、部署与运行时定位](resource_build_and_deployment.md)，目标契约已冻结 |

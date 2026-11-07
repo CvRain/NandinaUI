@@ -436,6 +436,20 @@ theme_observation_tests = executable(
 )
 test('theme-observation', theme_observation_tests, suite: 'unit')
 
+composition_tests = executable(
+    'composition_tests',
+    files('composition_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('composition', composition_tests, suite: 'unit')
+
+theme_contrast_diagnostics_tests = executable(
+    'theme_contrast_diagnostics_tests',
+    files('theme_contrast_diagnostics_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('theme-contrast-diagnostics', theme_contrast_diagnostics_tests, suite: 'unit')
+
 theme_scheme_tests = executable(
     'theme_scheme_tests',
     files('theme_scheme_tests.cpp'),

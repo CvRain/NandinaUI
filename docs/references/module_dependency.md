@@ -197,7 +197,16 @@ State::expanded 合并规则，不引用 Collapsible。共享展开状态仅由 
 目录/选择/style，沿用同一 manager 通知路径，不暴露第二份公开可写状态。字体注册仍使用
 既有 text seam，不扩大此批的 theme→text 历史依赖。
 
-## P4.3 D2 第 4 步观察通道与作者入口归属（2026-11-07）
+## P4.3 D2 第 4a 步合成器与诊断归属（2026-11-07）
+
+纯颜色合成器位于 foundation（`foundation/composition.hpp`，与对比度计算同层），输入纯颜色与
+显式合成配置，不认识组件、token 或场景树；主题角色与背景场景的解释位于 theme
+（`theme/contrast_diagnostics.*`），先解析角色再调用 foundation，不存在第二份合成算法（既有
+测试 helper 已收敛）。真实后端像素读回属于 integration 验收，未改变层间依赖；scene/render
+不感知诊断结构。tone 上下文、变换角色路径和背景终止后的采样边界均在 theme 处理；
+foundation 仍只接收纯颜色与显式合成策略。
+
+## P4.3 D2 第 4 步观察通道与作者入口归属（2026-11-07，已随 `4746173` 提交）
 
 选择/目录观察投影与变化事件位于 theme 模块（`theme_observation.*`），仍是 manager 无
 Graph、作用域适配器桥接的既有形状；`ThemeManager` 增加 staged-only 发布分类，不向组件

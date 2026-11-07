@@ -3,6 +3,7 @@
 // CommandPalette tests: modal command launcher over the shared MenuItem model.
 //
 
+#include <nandina/foundation/composition.hpp>
 #include <nandina/foundation/contrast.hpp>
 #include <nandina/reactive/graph.hpp>
 #include <nandina/scene/input_event.hpp>
@@ -414,18 +415,11 @@ TEST_CASE("command palette click outside the panel dismisses it", "[command-pale
 
 namespace
 {
-    /// 把前景按自身 alpha 合成到不透明背景上（同 theme_palette_contrast_tests）。
+    /// 把前景按自身 alpha 合成到不透明背景上：消费 foundation 的唯一合成实现（D2 §6.7）。
     [[nodiscard]] auto
     composite_over(const foundation::NanColor& foreground, const foundation::NanColor& background)
         -> foundation::NanColor {
-        const auto source = foreground.to<foundation::NanRgb>();
-        const auto backdrop = background.to<foundation::NanRgb>();
-        const auto alpha = source.alpha;
-        return foundation::NanColor::from_rgb(
-            source.red * alpha + backdrop.red * (1.0F - alpha),
-            source.green * alpha + backdrop.green * (1.0F - alpha),
-            source.blue * alpha + backdrop.blue * (1.0F - alpha)
-        );
+        return foundation::nan_composite_over(foreground, background);
     }
 
     [[nodiscard]] auto

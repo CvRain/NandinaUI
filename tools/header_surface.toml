@@ -89,6 +89,10 @@ path = "nandina/foundation/contrast.hpp"
 level = "experimental"
 
 [[headers]]
+path = "nandina/foundation/composition.hpp"
+level = "experimental"
+
+[[headers]]
 path = "nandina/foundation/geometry.hpp"
 level = "experimental"
 
@@ -465,6 +469,10 @@ level = "experimental"
 
 [[headers]]
 path = "nandina/theme/theme_observation.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/theme/contrast_diagnostics.hpp"
 level = "experimental"
 
 [[headers]]

@@ -1,8 +1,9 @@
 # D2：主题方案、作者入口与状态订阅
 
 > **状态：首批窄投影已随 `8920f3a`、第 3 步目录与选择已随 `995e6ae` 提交。
-> 第 4 步观察通道与作者入口在 2026-11-07 复核补修后待维护者复验，保持未提交。**
-> 第 4a 步颜色校验与真实后端像素读回尚未实施。§14 是本批契约，§15 记录实现和复核；
+> 第 4 步观察通道与作者入口已随 `4746173` 提交推送。**
+> 第 4a 步 CPU 合成器与诊断已实施，复核补修后保持未提交、待维护者复验；
+> 真实后端像素读回和注册门槛尚未实施。§14–§16 记录契约、实现和复核；
 > 更早小节保留讨论语境。
 > 所有标注为伪代码的示例只表达作者体验，不可直接当成现有接口使用。
 > 当前实现以 [设计令牌与主题系统](design_tokens.md) 和源码为准；原始问题见
@@ -512,7 +513,8 @@ alpha 与预乘规则。默认 GPU blend 的 RGB 结果也不自动证明其 alp
    D4 更换后端或颜色配置时沿用该测试，失败应触发策略/后端契约复核，而非放宽门槛。
 
 每条核对记录后端、构建配置、渲染目标及声明的色彩配置，避免将一条环境的通过外推成所有
-平台通过。**本次没有执行上述测试，也不宣称新的共享合成器已经存在。**
+平台通过。**共享 CPU 合成器与诊断已按 §16 落地；真实后端像素读回尚未执行，因此
+diag 结论仍不能当作注册门槛已通过。**
 
 ## 7. 自定义组件与主题的边界
 
@@ -902,3 +904,78 @@ recipe vector 隔离、家族继承与替换基础后已注册派生内容保持
 
 故障注入与本轮完整矩阵见 reference_draft 的第 4 步复核记录。第 4a 步、作者颜色入口与
 内部按维度收窄广播未并入本次补修；历史记录不作为桌面/GPU 或 Windows 验收。
+
+---
+
+## 16. 第 4a 步 CPU 侧实施记录（2026-11-07，初稿待维护者复核；后端读回未执行）
+
+按 §6.5–§6.7 定形并落地 CPU 侧；真实后端像素读回（§6.8）与注册门槛接线仍待有 GPU 的
+环境，本批不宣称配色门槛已通过。
+
+- **foundation 唯一合成器**（`nandina/foundation/composition.hpp`）：
+  `CompositeSpace`/`CompositeConfig` 显式声明首版策略——编码 sRGB 通道上的
+  straight-alpha source-over，与当前 SDL 绘制路径源码核对一致；`nan_composite_over`
+  要求不透明背景（误用抛 `invalid_argument`，非有限颜色同样拒绝），
+  `nan_composite_background_stack` 按「由近及远」查找首个不透明终点并提前终止，
+  `nan_composite_over_stack` 先合成背景栈再覆盖前景；无有限终点/非有限层/不支持空间
+  返回 `CompositionError`，不猜测底色。
+- **theme 诊断**（`nandina/theme/contrast_diagnostics.hpp`）：
+  `ContrastRule` 显式声明前景、从近到远的背景栈、适用状态、所需阈值与 required 级别；
+  `evaluate_contrast` 用 `resolve_theme_color` 解析角色，交给 foundation 合成器判定
+  「有效前景/有效背景/对比度」，输出 `ContrastDiagnostic`（方案 id 或匿名来源、外观、
+  规则名与状态、实测比值、所需阈值、每层解析后 OKLCH 与转换后 sRGB、角色路径、状态）。
+  `ContrastStatus` 区分 passed/failed/insufficient_context：
+  `has_required_contrast_failure` 只统计必需规则的实测失败，
+  `has_insufficient_contrast_context` 单独报告上下文不足，不伪报为实测失败。
+- **首批显式档案**：`default_contrast_profile()` 15 条与组件默认配方对应的规则
+  （正文/卡片/浮层/次要文字/中性/强调/品牌/状态色/焦点环与信号色），状态色按 3:1、
+  文本按 4.5:1；不做隐式整表断言、不做风格建议，严格模式与显式例外留待注册门槛批次。
+- **局部 helper 收敛**：`theme_palette_contrast_tests` 与 `command_palette_tests` 的
+  `composite_over` 改为消费 foundation 唯一实现，不再复制生产算法。
+- **不在本批**：真实 RenderDevice 绘制 + framebuffer 读回（§6.8 步骤 1–5，需窗口/GPU）、
+  由此确定色域策略与合成空间最终结论、注册/替换前的配色门槛接线、内部广播收窄、
+  4b 风格建议与可访问性认证。
+
+故障注入（重新编译后恢复，均红转绿）：
+1. 合成改在线性通道 → 编码空间手算用例 3 处断言失败。
+2. 背景栈不提前终止（校验不透明终点之后的层）→ 提前终止用例 1 处断言失败。
+3. 诊断把上下文不足记为 passed → 上下文不足用例 2 处断言失败。
+
+专项：`composition` 6 用例 / 35 断言；`theme-contrast-diagnostics` 6 / 181；
+`theme-palette-contrast` 4 / 129；`command-palette` 15 / 105。
+
+首版维护者验证矩阵：buildDir 全量 121 OK / 1 FAIL（sdf-state-probe，无显示设备）/ 1 SKIP
+（sdf-device 77）；ASan 100 OK / 1 skip；no-RTTI 102 OK；no-SQLite 97 OK / 1 skip；
+tools 8 OK；release_check --ci 8/8（headers 197、docs 87、clang-format 23.1.1）。
+本轮保持未提交。
+
+### 第 4a 步 CPU 复核契约补充（2026-11-07，保持未提交）
+
+场景使用 `ThemeColor::accent()/on_accent()`（含变换操作数）时，必须显式提供
+`ContrastRule::tone`；缺少 tone 返回上下文不足，不沿用通用颜色解析器的 primary 回退。
+诊断保留该 tone 与 `CompositeConfig`；尚不能解析的前景使用空的可选 sample，避免伪造颜色。
+背景解析与采样同样在首个不透明终点停止，诊断只列出已检查的角色与已解析的颜色。
+变换角色路径保留操作及操作数；临界比值和阈值的现行显示精度经相邻 float 回归确认，
+判定仍直接使用未格式化值。
+
+本批 CPU 数值沿用 `NanColor` 的规范化存储值、现有 OKLab → linear RGB 通道裁剪和浮点
+sRGB 转换，不额外做 8-bit 量化；报告明确列出该策略。解析后 OKLCH 不是导入前作者原文，
+原文追溯与真实绘制路径的量化/色域定形仍属后续验收。
+
+本次复核先编译通过四个专项基线，再新增回归：缺少 tone 静默采用 primary（6 断言失败）、
+变换角色丢失操作数（2 断言）、不透明终点后仍采样（2 断言）、报告缺少合成/色域/量化策略
+（3 断言）。合成器本体未发现缺陷；补充未知空间、空栈、近不透明 alpha、非有限 alpha 与
+错误下标覆盖。主题侧补充四种显式 tone 的两个外观、背景/变换 rhs 的缺失 tone、遮挡层、
+非法阈值、相邻 float 边界、规范化 OKLCH 与裁剪后 sRGB 独立保留。
+
+`default_contrast_profile()` 中状态色文字的 3:1 保留既有参考色阶家族的历史下限，
+不代表普通小字满足 AA；默认主题仍由原有专项按 4.5:1 约束。正式注册档案及例外必须另行
+审阅，本批不会提高或降低既有门槛，也不把诊断通过当作真实后端或整套 UI 验收。
+
+专项：composition 7 用例 / 52 断言；theme-contrast-diagnostics 15 / 338；
+theme-palette-contrast 4 / 129；command-palette 15 / 105。
+本次最终矩阵：主套件 120 OK / 2 FAIL（sdf-device 与 sdf-state-probe 均无显示设备）/
+1 SKIP；ASan 100 OK / 1 SKIP，no-RTTI 101 OK / 1 SKIP，no-SQLite 97 OK / 1 SKIP，
+tools 8 OK；release_check --ci 8/8（headers 197、docs 87、clang-format 23.1.1）。
+各套 SKIP 为 window-lifecycle，环境差异与日志见 reference_draft 第 4a 步 CPU 复核记录。
+本批仍保持未提交，待维护者复验；真实读回与配色注册门槛未完成。
