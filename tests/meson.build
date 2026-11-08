@@ -446,6 +446,13 @@ theme_observation_tests = executable(
 )
 test('theme-observation', theme_observation_tests, suite: 'unit')
 
+theme_shell_flow_tests = executable(
+    'theme_shell_flow_tests',
+    files('theme_shell_flow_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('theme-shell-flow', theme_shell_flow_tests, suite: 'unit')
+
 composition_tests = executable(
     'composition_tests',
     files('composition_tests.cpp'),

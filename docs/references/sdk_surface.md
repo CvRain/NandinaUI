@@ -25,7 +25,14 @@
 `PageKey` 路由身份、address 显示与 typed navigation 沿用既有规则。迁移调用方后须重新编译；
 正式契约见 [Page / Router](page_and_router.md)，验证见 [D3](reference_draft.md#d3-路由身份与导航分组开放到哪一层)。
 
-2026-11-08 P4.3 D2 第 4d 步 TOML 命名颜色字面量（experimental，复核完成并随本批提交）：
+2026-11-08 P4.3 D2 Shell 多方案框架准备（experimental，初稿待维护者复核）：
+`ThemeCatalogErrorKind` 破坏性改为区分 scheme/family 的 operation-specific 值，
+`ThemeCatalogError {kind, optional<ThemeSchemeId> scheme, optional<ThemeFamilyId> family}`
+替代原 `{kind, ThemeSchemeId id}`；`BuildContext` 新增作用域绑定的
+`on_theme_selection_change()` 与 `on_theme_catalog_change()`。迁移调用方后须重新编译；
+错误消费应使用新的主体字段与 `describe()`，不要从 family 操作伪造 scheme ID。
+
+2026-11-08 P4.3 D2 第 4d 步 TOML 命名颜色字面量（experimental，已随 `5061b39` 提交）：
 `style_document` 的颜色字面量字段新增命名字符串写法（`primary = "SteelBlue"`、参考色阶
 档位与 Button/TextField 规则颜色字段），经 `foundation::nan_named_color` 解析；
 `$palette.*`/`$palettes.*` 引用语义不变、失败不回退成色名；配方颜色错误保留规则种类与

@@ -3,9 +3,9 @@
 > **状态：首批窄投影已随 `8920f3a`、第 3 步目录与选择已随 `995e6ae`、第 4 步观察
 > 通道与作者入口已随 `4746173`、第 4a 步 CPU 合成器与诊断已随 `fef829a`、第 4b 步
 > 作者颜色入口已随 `3e2542a`、第 4c 步 foundation 命名颜色字面量已随 `f383201`
-> 提交推送。**
-> 第 4d 步 TOML 命名颜色字面量复核补修完成，随本批统一提交；
-> 真实后端像素读回和注册门槛尚未实施。§14–§19 记录契约、实现和复核；
+> 提交推送、第 4d 步 TOML 命名颜色字面量已随 `5061b39` 提交推送。**
+> Shell 多方案闭环的框架准备（§20）已实现，保持未提交待复核；
+> 真实后端像素读回和注册门槛尚未实施。§14–§20 记录契约、实现和复核；
 > 更早小节保留讨论语境。
 > 所有标注为伪代码的示例只表达作者体验，不可直接当成现有接口使用。
 > 当前实现以 [设计令牌与主题系统](design_tokens.md) 和源码为准；原始问题见
@@ -1330,3 +1330,102 @@ reference_draft 第 4d 步复核记录；本批复核完成并统一提交。
 
 后续顺序：4d 维护者复验与统一提交 → Shell 多方案使用闭环（页面正文由维护者负责）→
 4a 软件 RenderDevice 读回补验；软件结果不代替 GPU 实测，不与注册配色门槛接线绑定。
+
+---
+
+## 20. Shell 多方案闭环的框架准备（2026-11-08）
+
+设置页直接消费既有 `ThemeManager`、`ThemeSelectionPresentation`、
+`ThemeCatalogPresentation`、`ThemePresentation` 和 `ThemeChangeHub`，不新增重复的
+`ThemeSettingsState` 或可写镜像。框架侧只补错误主体与订阅便利入口；页面正文、视觉布局和
+人工验收由维护者负责。
+
+### 20.1 目录错误主体
+
+目录同时容纳 `ThemeSchemeId` 与 `ThemeFamilyId`，错误不能把后者强转成前者。定形为：
+
+```cpp
+enum class ThemeCatalogErrorKind {
+    invalid_scheme_id,
+    invalid_family_id,
+    duplicate_scheme,
+    duplicate_family,
+    scheme_not_found,
+    family_not_found,
+    scheme_in_use,
+    family_in_use,
+    null_content,
+    unknown_family,
+    appearance_mismatch,
+};
+
+struct ThemeCatalogError {
+    ThemeCatalogErrorKind kind;
+    std::optional<ThemeSchemeId> scheme;
+    std::optional<ThemeFamilyId> family;
+};
+```
+
+- 方案操作填写 `scheme`；家族操作填写 `family`；方案引用不存在的家族时两者同时填写。
+- `scheme_in_use` 表示当前选择仍引用该方案；`family_in_use` 表示仍有方案归属于该家族。
+- `describe()` 按主体输出 scheme/family 及具体原因，设置页可以把结果直接作为失败反馈。
+- 这是 experimental 错误形状的破坏性收敛；本仓库调用点在同一批迁移，不保留同时具有
+  `kind + id` 的兼容结构。
+
+### 20.2 作用域订阅便利入口
+
+`BuildContext` 与现有 `on_theme_change()` 对称增加：
+
+```cpp
+void on_theme_selection_change(std::function<void(ThemeSelectionState)>);
+void on_theme_catalog_change(std::function<void(ThemeCatalogState)>);
+```
+
+两者把 RAII 订阅存入页面回调作用域；派生区域与页面共享同一投影。页面 clear 后连接注销，
+等价于现有 `on_theme_change()`。这些入口只订阅变化，不伪造初始事件；初值仍通过
+`theme_selection().get()` / `theme_catalog().get()` 读取。
+
+### 20.3 Shell 动作序列验收
+
+自动回归按设置页的实际调用顺序覆盖：
+
+1. system dark → fixed dark：选择更新但不发布主题变化，组件不重解析。
+2. 亮色下修改暗色槽位不改变当前快照；切到暗色时使用更新后的槽位。
+3. 同为暗色的两个方案切换时身份、内容与 `ThemeChange` 一起更新。
+4. 当前槽内容替换产生完整发布；非当前槽替换只更新目录/选择观察面。
+5. 外部 manager 改动同步到两个独立页面投影；scope 清理后停止回调。
+6. 无效 ID、错槽与受保护删除返回带主体的 typed error，且目录、选择、revision 和快照不变。
+7. 动态注册、替换、移除未使用方案与家族只发布目录变化；失败信息能区分 scheme/family。
+
+本步不改 showcase 页面正文，不新增设置持久化、注册配色门槛、真实后端读回或广播维度收窄。
+
+### 20.4 实施与复核记录（2026-11-08，保持未提交）
+
+- `ThemeCatalogError` 改为 operation-specific kind；scheme/family 以可选强类型主体输出，
+  scheme 引用未知 family 时同时保留两者。`describe()` 不再把 family 错误伪装成 scheme
+  错误，也不再把“家族仍含方案”描述成“当前选择引用”。
+- `BuildContext` 新增 `on_theme_selection_change()` 与 `on_theme_catalog_change()`；连接
+  进入页面回调作用域，派生区域共享投影，页面 clear 后不再回调。初值仍从 `get()` 读取，
+  便利订阅不伪造事件。
+- 新增 `theme-shell-flow`，按真实设置页组合顺序覆盖：system dark→fixed dark、
+  亮色下编辑暗色槽再切换、同外观换方案、当前/非当前槽替换、两个独立页面同步与解绑、
+  无效选择/受保护删除的 typed failure、目录动态变化。
+
+四项独立故障注入（均重新编译、恢复后六专项全绿）：
+
+1. selection 便利入口不 `keep` 订阅 → 生命周期用例 2 断言失败。
+2. catalog 便利入口不 `keep` 订阅 → 生命周期用例 3 断言失败。
+3. family-in-use 错误不填 `family` 主体 → 错误主体用例 1 断言失败。
+4. selection-only 改用 revision 发布 → Shell 组合用例 3 断言失败。
+
+专项：`theme-shell-flow` 5 用例 / 125 断言，`theme-scheme` 26 / 408，
+`theme-observation` 16 / 306，`sidebar-showcase` 6 / 55，
+`build-context-header` 1 / 1。
+
+在环境分类修复 `d9d234c` 之后的组合最终树矩阵：主套件 **128 OK / 0 FAIL / 0 SKIP**；
+ASan 104 OK / 1 SKIP（既有 window-lifecycle 配置），no-RTTI 106 OK，no-SQLite
+101 OK / 1 SKIP，tools 8 OK；release_check --ci 8/8（headers 198、docs 87、
+clang-format 23.1.1）。SDK 打包和 consumer 通过，6 条 Linux approved golden 在
+Hyprland/Wayland + RADV 下逐像素 0 差异。框架准备本身的无显示初次矩阵与原因见
+reference_draft 的 Shell 框架准备及环境更正记录；视觉人工验收仍留待页面批次。
+本批保持未提交，页面正文与视觉验收继续由维护者在独立批次处理。

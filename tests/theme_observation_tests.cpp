@@ -432,14 +432,28 @@ TEST_CASE(
     CHECK(&region.theme_changes() == &ui.theme_changes());
 
     int changes = 0;
+    int selection_changes = 0;
+    int catalog_changes = 0;
     ui.on_theme_change([&](const theme::ThemeChange&) { ++changes; });
+    region.on_theme_selection_change([&](auto) { ++selection_changes; });
+    region.on_theme_catalog_change([&](auto) { ++catalog_changes; });
     auto fixed = make_scheme("org.test:ui", theme::ColorAppearance::light);
     REQUIRE(manager.register_scheme(fixed));
+    CHECK(catalog_changes == 1);
+    CHECK(selection_changes == 0);
+    CHECK(changes == 0);
     REQUIRE(manager.select(theme::FixedThemeSelection {fixed.id}));
+    CHECK(catalog_changes == 1);
+    CHECK(selection_changes == 1);
     CHECK(changes == 1);
     page_scope.clear();
     manager.set_system_appearance(theme::ColorAppearance::dark);
+    const auto after_clear = make_scheme("org.test:after-clear", theme::ColorAppearance::light);
+    REQUIRE(manager.register_scheme(after_clear));
+    REQUIRE(manager.select(theme::FixedThemeSelection {after_clear.id}));
     CHECK(changes == 1); // Scope-owned subscription was released with the page scope.
+    CHECK(selection_changes == 1);
+    CHECK(catalog_changes == 1);
 }
 
 TEST_CASE(

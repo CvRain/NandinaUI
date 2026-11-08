@@ -295,6 +295,97 @@ TEST_CASE(
 }
 
 TEST_CASE(
+    "catalog failures distinguish scheme and family subjects",
+    "[theme][scheme][catalog][error]"
+) {
+    theme::ThemeSchemeCatalog catalog;
+    const auto family = family_id("org.example:diagnostics");
+    REQUIRE(catalog.register_family({family, "Diagnostics"}));
+
+    const auto duplicate_family = catalog.register_family({family, "Duplicate"});
+    REQUIRE_FALSE(duplicate_family);
+    CHECK(duplicate_family.error().kind == theme::ThemeCatalogErrorKind::duplicate_family);
+    CHECK(duplicate_family.error().family == family);
+    CHECK_FALSE(duplicate_family.error().scheme);
+    CHECK(theme::describe(duplicate_family.error()).find("family") != std::string::npos);
+
+    const auto missing_family = catalog.remove_family(family_id("org.example:missing-family"));
+    REQUIRE_FALSE(missing_family);
+    CHECK(missing_family.error().kind == theme::ThemeCatalogErrorKind::family_not_found);
+    CHECK(missing_family.error().family == family_id("org.example:missing-family"));
+    CHECK_FALSE(missing_family.error().scheme);
+
+    auto member = make_scheme(
+        "org.example:diagnostics/light",
+        theme::ColorAppearance::light,
+        std::make_shared<const theme::ThemeSchemeContent>(theme::ThemeSchemeContent::from(
+            theme::default_design_system(),
+            theme::ColorAppearance::light
+        )),
+        family
+    );
+    REQUIRE(catalog.register_scheme(member));
+    const auto family_in_use = catalog.remove_family(family);
+    REQUIRE_FALSE(family_in_use);
+    CHECK(family_in_use.error().kind == theme::ThemeCatalogErrorKind::family_in_use);
+    CHECK(family_in_use.error().family == family);
+    CHECK_FALSE(family_in_use.error().scheme);
+    CHECK(
+        theme::describe(family_in_use.error()).find("family still has registered schemes")
+        != std::string::npos
+    );
+
+    auto unknown_family = member;
+    unknown_family.id = scheme_id("org.example:diagnostics/unknown-family");
+    unknown_family.family = family_id("org.example:not-registered");
+    const auto unknown = catalog.register_scheme(unknown_family);
+    REQUIRE_FALSE(unknown);
+    CHECK(unknown.error().kind == theme::ThemeCatalogErrorKind::unknown_family);
+    CHECK(unknown.error().scheme == unknown_family.id);
+    CHECK(unknown.error().family == unknown_family.family);
+
+    const auto duplicate_scheme = catalog.register_scheme(member);
+    REQUIRE_FALSE(duplicate_scheme);
+    CHECK(duplicate_scheme.error().kind == theme::ThemeCatalogErrorKind::duplicate_scheme);
+    CHECK(duplicate_scheme.error().scheme == member.id);
+    CHECK_FALSE(duplicate_scheme.error().family);
+
+    auto null_content = member;
+    null_content.id = scheme_id("org.example:diagnostics/null");
+    null_content.content.reset();
+    const auto null = catalog.register_scheme(null_content);
+    REQUIRE_FALSE(null);
+    CHECK(null.error().kind == theme::ThemeCatalogErrorKind::null_content);
+    CHECK(null.error().scheme == null_content.id);
+
+    const auto missing_scheme = catalog.remove_scheme(scheme_id("org.example:diagnostics/missing"));
+    REQUIRE_FALSE(missing_scheme);
+    CHECK(missing_scheme.error().kind == theme::ThemeCatalogErrorKind::scheme_not_found);
+    CHECK_FALSE(missing_scheme.error().family);
+
+    REQUIRE(catalog.select(theme::FixedThemeSelection {member.id}, theme::ColorAppearance::light));
+    const auto scheme_in_use = catalog.remove_scheme(member.id);
+    REQUIRE_FALSE(scheme_in_use);
+    CHECK(scheme_in_use.error().kind == theme::ThemeCatalogErrorKind::scheme_in_use);
+    CHECK(scheme_in_use.error().scheme == member.id);
+    CHECK_FALSE(scheme_in_use.error().family);
+
+    theme::ThemeScheme invalid_scheme_value;
+    invalid_scheme_value.content = member.content;
+    const auto invalid_scheme = catalog.register_scheme(invalid_scheme_value);
+    REQUIRE_FALSE(invalid_scheme);
+    CHECK(invalid_scheme.error().kind == theme::ThemeCatalogErrorKind::invalid_scheme_id);
+    CHECK(invalid_scheme.error().scheme.has_value());
+    CHECK_FALSE(invalid_scheme.error().scheme->valid());
+
+    const auto invalid_family = catalog.register_family({});
+    REQUIRE_FALSE(invalid_family);
+    CHECK(invalid_family.error().kind == theme::ThemeCatalogErrorKind::invalid_family_id);
+    CHECK(invalid_family.error().family.has_value());
+    CHECK_FALSE(invalid_family.error().family->valid());
+}
+
+TEST_CASE(
     "production scheme manager resolves cross-family pairs and fixed anonymous sources",
     "[theme][scheme][manager]"
 ) {

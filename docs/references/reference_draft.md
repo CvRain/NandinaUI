@@ -825,6 +825,53 @@ RED-FIRST 残留，文档收尾再检查 87 篇链接/锚点与 git diff --check
 4a 软件路径读回放 Shell 之后，明确不代替 GPU 路径、不挂接注册门槛。Windows、GPU
 和人工视觉验收仍单独记录。
 
+### P4.3 D2 Shell 多方案框架准备实施记录（2026-11-08，初稿待维护者复核）
+
+4d 已随 `5061b39` 提交推送。本批只处理设置页依赖的框架准备，不修改 showcase 页面正文，
+也不新增 `ThemeSettingsState`；页面仍以 manager 为唯一写入口，从 selection/catalog/
+presentation/change 四个现有通道读取状态。
+
+- **目录错误主体**：`ThemeCatalogErrorKind` 改为 operation-specific。错误携带可选
+  `ThemeSchemeId scheme` 与 `ThemeFamilyId family`；方案引用未知家族时两者同时存在。
+  `scheme_in_use` 与 `family_in_use` 分别表示当前选择引用方案、家族仍含方案。
+  `describe()` 输出真实主体，不再把 family ID 强转成 scheme ID。
+- **BuildContext 便利入口**：新增 `on_theme_selection_change()` 与
+  `on_theme_catalog_change()`。它们与 `on_theme_change()` 一样将 RAII subscription 放入
+  页面回调作用域；初始值仍通过投影 `get()` 读取。
+- **Shell 组合回归**：新增 `tests/theme_shell_flow_tests.cpp`，按设置页动作顺序验证
+  fixed/pair/system 切换、未生效槽编辑、同外观换方案、当前/非当前替换、双页面外部同步、
+  scope 解绑、动态目录、typed failure 和失败状态不变。
+
+独立故障注入（每次重编译，恢复后六专项全绿）：
+
+1. selection 便利入口不保存 subscription → 生命周期用例 2 断言失败。
+2. catalog 便利入口不保存 subscription → 生命周期用例 3 断言失败。
+3. family-in-use 错误省略 `family` 主体 → 错误主体用例 1 断言失败。
+4. selection-only 路径改用 revision 发布 → Shell 组合用例 3 断言失败。
+
+专项：theme-shell-flow 5 用例 / 125 断言，theme-scheme 26 / 408，
+theme-observation 16 / 306，sidebar-showcase 6 / 55，build-context-header 1 / 1。
+
+本批首次矩阵在无显示/GPU 的工具会话中运行，之后 `d9d234c` 修复了环境分类。组合最终树
+矩阵（每套先编译再测试，完整套件运行期间工作树冻结）：
+
+| 范围 | 本轮实际结果 |
+| --- | --- |
+| buildDir 全量 | **128 OK / 0 FAIL / 0 SKIP** |
+| buildDir-asan unit | 104 OK / 1 SKIP；ASan/UBSan 启用，构建和测试均设 LSAN_OPTIONS=detect_leaks=0 |
+| buildDir-no-rtti unit | 106 OK / 0 SKIP |
+| buildDir-nosqlite unit | 101 OK / 1 SKIP |
+| buildDir-tools | 8 OK |
+| release_check --ci | 8/8，无 SKIP；headers 198，docs 87，clang-format 23.1.1 |
+
+主配置已实际运行 SDF、window-lifecycle 与 `sdf-display-skip`；ASan/no-SQLite 的 SKIP
+均为既有 window-lifecycle 配置。SDK 双次打包与 vendored 下游消费者通过；6 条 Linux
+approved golden 在 Hyprland/Wayland + RADV 下逐像素 0 差异。环境证据不自动完成 Shell
+页面的人工视觉验收。
+
+保持未提交；页面正文、持久化、注册配色门槛、真实后端像素读回及人工视觉验收均在后续
+独立批次。
+
 ### 环境更正记录：显示/GPU 可用性与测试分类（2026-11-08 晚，完全权限会话）
 
 此前多个会话的主套件显示 `sdf-device` SKIP、`sdf-state-probe` FAIL，早期记录写作

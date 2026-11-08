@@ -99,6 +99,17 @@ namespace nandina::widget
             callback_scope_->keep(theme_changes().subscribe(std::move(handler)));
         }
 
+        /// Scope-bound selection-change subscription; no synthetic initial event.
+        void
+        on_theme_selection_change(std::function<void(theme::ThemeSelectionState)> handler) const {
+            callback_scope_->keep(theme_selection().subscribe(std::move(handler)));
+        }
+
+        /// Scope-bound catalog-change subscription; no synthetic initial event.
+        void on_theme_catalog_change(std::function<void(theme::ThemeCatalogState)> handler) const {
+            callback_scope_->keep(theme_catalog().subscribe(std::move(handler)));
+        }
+
         [[nodiscard]] auto resource_manager() const noexcept -> resource::ResourceManager* {
             return resources_;
         }

@@ -177,19 +177,25 @@ namespace nandina::theme
     using ThemeSelection = std::variant<FixedThemeSelection, AppearanceThemeSelection>;
 
     enum class ThemeCatalogErrorKind {
-        invalid_id,
-        invalid_family,
-        duplicate_id,
+        invalid_scheme_id,
+        invalid_family_id,
+        duplicate_scheme,
         duplicate_family,
-        not_found,
-        in_use,
+        scheme_not_found,
+        family_not_found,
+        scheme_in_use,
+        family_in_use,
         null_content,
+        unknown_family,
         appearance_mismatch,
     };
 
     struct ThemeCatalogError {
-        ThemeCatalogErrorKind kind = ThemeCatalogErrorKind::invalid_id;
-        ThemeSchemeId id;
+        ThemeCatalogErrorKind kind = ThemeCatalogErrorKind::invalid_scheme_id;
+        /// Present for scheme operations and when a scheme references a missing family.
+        std::optional<ThemeSchemeId> scheme;
+        /// Present for family operations and when a scheme references an unknown family.
+        std::optional<ThemeFamilyId> family;
     };
 
     enum class ThemeSelectionErrorKind {

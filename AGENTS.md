@@ -147,8 +147,8 @@ application shell. Version `0.1.0-alpha.1`.
   document and all 148 in the fetched pinned CSS Color 4 snapshot; the former source-evidence gap
   is closed. Contract:
   `docs/references/theme_authoring_and_state.md` §18.
-- **P4.3 D2 step 4d TOML named color literals** (2026-11-08, reviewed with diagnostic-path fixes;
-  included in this batch) lets color-array fields accept a CSS named color string
+- **P4.3 D2 step 4d TOML named color literals** (2026-11-08, reviewed and pushed in `5061b39`)
+  lets color-array fields accept a CSS named color string
   (`"SteelBlue"`) resolved through `nan_named_color()` with the same case/whitespace/error
   rules. `$palette.*` stays a semantic token reference and `$palettes.*` a reference-scale
   value; a failed reference match errors instead of falling back to a name, canonical palette
@@ -156,8 +156,15 @@ application shell. Version `0.1.0-alpha.1`.
   live catalog/selection/style untouched. Only named colors are added; other reference forms
   are not widened. Review preserves complete palette-validation input paths and recipe kind/zero-
   based index paths, covers every name and recipe color slot, and checks real parse/apply failure
-  isolation after a successful import. Keep uncommitted through maintainer revalidation. Contract:
+  isolation after a successful import. Contract:
   `docs/references/theme_authoring_and_state.md` §19.
+- **P4.3 D2 Shell multi-scheme framework preparation** (2026-11-08, initial implementation
+  awaiting maintainer review; uncommitted) replaces catalog errors' single scheme ID with
+  operation-specific scheme/family subjects, adds scope-bound `on_theme_selection_change()` and
+  `on_theme_catalog_change()` to `BuildContext`, and adds a shell action-sequence regression
+  covering fixed/pair/system choices, inactive slot edits, replacements, dynamic catalogs,
+  external synchronization, scope teardown and typed failure feedback. The showcase page body
+  remains maintainer-owned. Contract: `docs/references/theme_authoring_and_state.md` §20.
 - The plan and exit criteria are **not** owned by this file: read
   `docs/references/development_roadmap.md` and the D5 contract
   (`resource_build_and_deployment.md` §8) before claiming a sub-batch is complete.
@@ -555,9 +562,10 @@ validator and covered every family/shade, role/alias, duplicate ordering and pro
 4c's foundation named color literals (148 CSS Color 4 names, typed/string entries, private table)
 are pushed as `f383201`; its review closed enum-identity test gaps and added exhaustive
 byte/string-view boundaries, and source evidence matches both the SVG 1.1 and pinned CSS Color 4
-snapshots. Step 4d's TOML named-color literals are included in this batch, with review fixes for
-complete error paths and tests for all literals, reference boundaries and actual apply failure
-atomicity.
-Backend pixel readback, the registration contrast gate, style advisories, Shell multi-scheme
-settings and internal broadcast narrowing remain pending; do not claim the color gate passes
-without a GPU environment and maintainer review.
+snapshots. Step 4d's TOML named-color literals are pushed as `5061b39`, with complete error paths
+and tests for all literals, reference boundaries and actual apply failure atomicity. The current
+uncommitted batch prepares the Shell multi-scheme page with typed catalog subjects, scope-bound
+selection/catalog subscriptions and end-to-end interaction regressions; maintainer revalidation
+is pending. Backend pixel readback, the registration contrast gate, style advisories, the Shell
+page body/visual acceptance and internal broadcast narrowing remain pending; do not claim the
+color gate passes without a GPU environment and maintainer review.

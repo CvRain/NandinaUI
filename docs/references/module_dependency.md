@@ -197,6 +197,13 @@ State::expanded 合并规则，不引用 Collapsible。共享展开状态仅由 
 目录/选择/style，沿用同一 manager 通知路径，不暴露第二份公开可写状态。字体注册仍使用
 既有 text seam，不扩大此批的 theme→text 历史依赖。
 
+## P4.3 D2 Shell 多方案框架准备归属（2026-11-08）
+
+目录错误的 scheme/family 主体属于 theme 值模型；`BuildContext` 的两个便利订阅只把
+已有的 `ThemeSelectionPresentation`/`ThemeCatalogPresentation` 连接交给页面回调作用域，
+没有新增 Graph 注入、可写镜像或层间依赖。Shell 页面继续通过 widget→theme 的现有方向消费，
+scene/render 不感知设置状态。
+
 ## P4.3 D2 第 4d 步文件导入命名颜色归属（2026-11-08）
 
 文件导入在 theme 层消费 foundation 的命名颜色字面量（既有 theme → foundation 向下依赖），
