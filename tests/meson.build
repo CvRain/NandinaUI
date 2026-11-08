@@ -443,6 +443,13 @@ composition_tests = executable(
 )
 test('composition', composition_tests, suite: 'unit')
 
+named_color_tests = executable(
+    'named_color_tests',
+    files('named_color_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('named-color', named_color_tests, suite: 'unit')
+
 theme_contrast_diagnostics_tests = executable(
     'theme_contrast_diagnostics_tests',
     files('theme_contrast_diagnostics_tests.cpp'),

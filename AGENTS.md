@@ -122,18 +122,31 @@ application shell. Version `0.1.0-alpha.1`.
   config with clipping/float-no-u8 policy. Backend pixel readback, the registration contrast gate
   and style advisories remain pending (GPU environment); do not claim the color gate passes.
   Contract: `docs/references/theme_authoring_and_state.md` §6.5–§6.8, §16.
-- **P4.3 D2 step 4b author color entry** (2026-11-07, reviewed with import-validation fixes;
-  maintainer revalidation pending, uncommitted) adds typed primitive-palette access
-  (`ReferenceColorFamily`,
-  `reference_scale`, `reference_color`, family/shade names), explicit `NanColor` semantic
-  overrides (`SemanticColorOverride`, `canonical_color_token`, `semantic_color`,
-  `set_semantic_color`, atomic `apply_semantic_colors`) and the
-  `ThemeSchemeContent::from_reference` / `from_semantic_colors` constructors with an optional
-  `reference` provenance record copied by derivation. File palette overrides reuse atomic `apply_semantic_colors` after canonical-key precedence.
-  No raw red/blue tokens are added and semantic tokens stay the default. Entry validation rejects
-  only non-finite OKLCH components (`NanColor` already normalizes light/hue/alpha). Keep
-  uncommitted through maintainer review. Contract:
+- **P4.3 D2 step 4b author color entry** (2026-11-07, reviewed and pushed in `3e2542a`) adds
+  typed primitive-palette access (`ReferenceColorFamily`, `reference_scale`, `reference_color`,
+  family/shade names), explicit `NanColor` semantic overrides (`SemanticColorOverride`,
+  `canonical_color_token`, `semantic_color`, `set_semantic_color`, atomic
+  `apply_semantic_colors`) and the `ThemeSchemeContent::from_reference` /
+  `from_semantic_colors` constructors with an optional `reference` provenance record copied by
+  derivation. File palette overrides reuse atomic `apply_semantic_colors` after canonical-key
+  precedence, so file import and C++ share validation, alias sync and commit semantics. No raw
+  red/blue tokens are added and semantic tokens stay the default. Contract:
   `docs/references/theme_authoring_and_state.md` §17.
+- **P4.3 D2 step 4c foundation named color literals** (2026-11-08, reviewed with stronger tests;
+  maintainer revalidation pending, uncommitted) adds `foundation/named_color.*`: `NanNamedColor` with
+  the 148 CSS Color 4 named colors (pinned CSS Color 4 CRD 2026-11-03 §6.1 = SVG 1.1's 147 +
+  rebeccapurple), typed `nan_named_color(NanNamedColor)`, case-insensitive
+  `nan_named_color(std::string_view)` and `nan_named_color_name()`. The single constexpr table is
+  private to the `.cpp`; aliases keep separate identities; enum ordinals are not stable (persist
+  names). Query rejects whitespace, embedded NUL, non-ASCII and unknown names; no full CSS color
+  syntax and no `transparent`/`currentColor`. Named colors are just explicit `NanColor` spellings,
+  not semantic tokens; default recipes must not hardcode colors. TOML shorthand remains a
+  separate batch. Review binds every expected color to its actual enumerator (ordinal-only tests
+  missed swapped names), verifies uniqueness and RGBA bytes, all-name case folding and bounded
+  string views. Source verification now matches all 147 entries in the maintainer-saved SVG 1.1
+  document and all 148 in the fetched pinned CSS Color 4 snapshot; the former source-evidence gap
+  is closed. Keep uncommitted through maintainer revalidation. Contract:
+  `docs/references/theme_authoring_and_state.md` §18.
 - The plan and exit criteria are **not** owned by this file: read
   `docs/references/development_roadmap.md` and the D5 contract
   (`resource_build_and_deployment.md` §8) before claiming a sub-batch is complete.
@@ -519,10 +532,14 @@ The step-4 review cycle is closed and the batch is pushed in `4746173`: equivale
 replacement is idempotent, staged publication and all channel lifetimes/exception paths are
 covered, event endpoints own their snapshots and author derivation is deep. Step 4a's CPU side is pushed as `fef829a`: the single foundation compositor plus explicit
 contrast rules/profiles/diagnostics, with local helpers migrated and the review fixes for tone
-context, transform paths, opaque-endpoint sampling and policy reporting. Step 4b's author color
-entry (typed primitive-palette access and explicit `NanColor` semantic overrides with file-import
-parity) is the current uncommitted review batch. Review closes non-finite file overrides through
-the shared validator and covers every family/shade, role/alias, duplicate ordering and provenance.
-Backend pixel readback, the registration contrast
-gate, style advisories, Shell multi-scheme settings and internal broadcast narrowing remain pending;
-do not claim the color gate passes without a GPU environment and maintainer review.
+context, transform paths, opaque-endpoint sampling and policy reporting. Step 4b's author color entry
+(typed primitive-palette access and explicit `NanColor` semantic overrides with file-import
+parity) is pushed as `3e2542a`; its review closed non-finite file overrides through the shared
+validator and covered every family/shade, role/alias, duplicate ordering and provenance. Step
+4c's foundation named color literals (148 CSS Color 4 names, typed/string entries, private table)
+are the current uncommitted review batch. Review found no runtime defect, closed enum-identity
+test gaps and added exhaustive byte/string-view boundaries. Maintainer revalidation is pending.
+Backend pixel readback, the registration contrast gate,
+style advisories, Shell multi-scheme settings, TOML named-color shorthand and internal broadcast
+narrowing remain pending; do not claim the color gate passes without a GPU environment and
+maintainer review.

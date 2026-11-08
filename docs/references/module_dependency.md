@@ -197,7 +197,13 @@ State::expanded 合并规则，不引用 Collapsible。共享展开状态仅由 
 目录/选择/style，沿用同一 manager 通知路径，不暴露第二份公开可写状态。字体注册仍使用
 既有 text seam，不扩大此批的 theme→text 历史依赖。
 
-## P4.3 D2 第 4b 步作者颜色入口归属（2026-11-07）
+## P4.3 D2 第 4c 步命名颜色字面量归属（2026-11-08）
+
+命名颜色表与查询位于 foundation（`foundation/named_color.*`），只依赖 `nandina_color` 的
+`from_hex`，不依赖 theme/widget；它提供的是显式 `NanColor` 的写法而非语义 token，因此
+不改变层间依赖，也不影响组件继续只消费语义角色。TOML 字符串简写后续在文件导入层单独定形。
+
+## P4.3 D2 第 4b 步作者颜色入口归属（2026-11-07，已随 `3e2542a` 提交）
 
 primitive 色阶访问（`ReferenceColorFamily`/`reference_scale`/`reference_color`）与显式
 `NanColor` 语义覆盖（`set_semantic_color`/`apply_semantic_colors`/`from_reference`/

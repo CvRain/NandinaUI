@@ -25,7 +25,14 @@
 `PageKey` 路由身份、address 显示与 typed navigation 沿用既有规则。迁移调用方后须重新编译；
 正式契约见 [Page / Router](page_and_router.md)，验证见 [D3](reference_draft.md#d3-路由身份与导航分组开放到哪一层)。
 
-2026-11-07 P4.3 D2 第 4b 步作者颜色入口（experimental，复核补修后待维护者复验、未提交）：`theme.hpp` 新增
+2026-11-08 P4.3 D2 第 4c 步命名颜色字面量（experimental，复核后待维护者复验、未提交）：新增
+`foundation/named_color.hpp`：`NanNamedColor`（CSS Color 4 2026-11-03 CRD §6.1 的 148 个
+命名颜色）+ `nan_named_color(NanNamedColor)` / `nan_named_color(std::string_view)` /
+`nan_named_color_name()`；字符串入口 ASCII 大小写不敏感并拒绝空白/NUL/非 ASCII/未知名称，
+私有 `constexpr` 表在 `.cpp`，别名保留独立身份，枚举序号不承诺持久化稳定；
+枚举入口要求已声明成员。复核补齐实际枚举成员与表的对应、名称/身份唯一性与有界查询回归。
+
+2026-11-07 P4.3 D2 第 4b 步作者颜色入口（experimental，已随 `3e2542a` 提交）：`theme.hpp` 新增
 `ReferenceColorFamily`、`reference_scale()`、`reference_color()`、`reference_family_name()`、
 `color_shade_name()`（primitive palette 类型化访问）；`theme_scheme.hpp` 新增
 `SemanticColorOverride`、`ThemeColorError`、`canonical_color_token()`、`semantic_color()`、

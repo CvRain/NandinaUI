@@ -5,6 +5,8 @@ module_fundation = files(
     'foundation/nandina_color_space.cpp',
     'foundation/contrast.hpp',
     'foundation/composition.hpp',
+    'foundation/named_color.hpp',
+    'foundation/named_color.cpp',
     'foundation/geometry.hpp',
     'foundation/geometry.cpp',
     'foundation/input.hpp',

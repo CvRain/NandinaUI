@@ -616,6 +616,135 @@ ASan 因本地 Ninja 记录恢复触发较大范围重编译，最终构建与�
 待维护者复验后统一提交首版与补修；未启动 Shell 多方案设置、真实后端像素读回、注册
 配色门槛、广播收窄或第三方配方注册；Windows 与人工视觉验收未完成。
 
+### P4.3 D2 第 4c 步 foundation 命名颜色字面量实施记录（2026-11-08，初稿待维护者复核）
+
+4b 已随 `3e2542a` 提交推送。本批按 [主题方案、作者入口与状态订阅](theme_authoring_and_state.md)
+§18 落地 foundation 命名颜色字面量，TOML 简写继续单独排期。
+
+- **范围快照**：CSS Color 4 候选推荐草案 2026-11-03 §6.1 的 148 个命名颜色
+  （SVG 1.1 的 147 个 + `rebeccapurple`），逐条采用规范固定 sRGB 整数原值；
+  `transparent` 是透明黑，`currentColor` 依赖上下文，均不属于本批不透明色值。
+- **API**：`NanNamedColor`（148 项小写字母序）+ 类型化 `nan_named_color(NanNamedColor)`、
+  字符串 `nan_named_color(std::string_view) -> optional`、规范名
+  `nan_named_color_name`；公开头只有枚举与三个声明，唯一 `constexpr` 数据表在
+  `.cpp` 内部，不给 `NanColor` 堆成员。别名各保留身份，枚举序号不承诺持久化稳定。
+- **查询规则**：ASCII 大小写不敏感且只折叠 `A–Z`（不依赖 locale）；拒绝空串、
+  首尾/内部空白、显式长度嵌入 NUL、非 ASCII 与未知名称；不支持完整 CSS 颜色语法。
+- **定位**：命名颜色只是显式 `NanColor` 的一种写法，不是新运行时覆盖顺序；默认配方
+  仍不得硬编码颜色，主题作者可把命名颜色赋给既有语义角色。
+
+故障注入（重新编译后恢复）：`green` 误写成 `lime` 值（3 断言失败）、表缺
+`rebeccapurple`（计数/往返多处失败）、查询放宽为 trim 空白（2 断言失败）。
+
+专项：named-color 5 用例 / 1095 断言；既有四专项保持通过。
+
+首版维护者矩阵（复核前，每个配置先编译再测试；Linux 无显示/GPU 沙箱）：
+
+| 范围 | 本轮实际结果 |
+| --- | --- |
+| buildDir 全量 | 123 OK / 1 FAIL / 1 SKIP；sdf-state-probe 在 SDL_Init 报无显示设备，sdf-device 为 skip 77 |
+| buildDir-asan unit | 102 OK / 1 SKIP；ASan/UBSan 启用，LSAN_OPTIONS=detect_leaks=0 |
+| buildDir-no-rtti unit | 104 OK / 0 SKIP（本机窗口测试未跳过） |
+| buildDir-nosqlite unit | 99 OK / 1 SKIP |
+| buildDir-tools | 8 OK |
+| release_check --ci | 8/8，无 SKIP；headers 198，docs 87，clang-format 23.1.1 |
+
+本批保持未提交，待维护者复核。
+
+
+#### 第 4c 步复核记录（2026-11-08，保持未提交）
+
+HEAD 与 origin/main 同为 `3e2542a`，确认 4b 已提交。先编译通过 named-color 和
+作者颜色入口基线，再以独立离线参考清单对照生产表与测试期望表的 148 个名称/RGB，
+未发现数值或查询实现缺陷。私有表恰为 148 个唯一名称，按字母序排列。该轮尚未取得
+固定规范网页原文；随后已完成本地 SVG 原文与 CSS Color 4 固定快照核对，见下文补验记录。
+
+补齐一处测试盲点：旧类型化测试只把整数强转成枚举，交换 `green`/`grey` 真实枚举名称后
+仍有 5 用例 / 1095 断言全绿（`/tmp/nandina-step4c-enum-baseline.log`）。现独立期望表
+直接引用所有枚举成员，去掉自查 contains，并验证名称与身份唯一、严格字母序和真正的
+别名成员身份；同样交换后 6 断言失败。生产查询/转换实现保持原样，仅修正头文件说明。
+
+补充全部色值回转 RGB 字节与 alpha、全表大小写、非 NUL 结尾 string_view 切片、每个
+0–255 字节前后/内部插入均拒绝、长未知名和排除关键词。完整 named-color 为
+6 用例 / 2916 断言；composition 7/52、theme-color-entry 14/1243、theme-scheme
+25/357、theme-contrast-diagnostics 15/338、theme-palette-contrast 4/129 通过。
+
+独立故障注入每次重编译，均 exit 42：
+
+| 注入 | 失败断言 |
+| --- | --- |
+| green/grey 枚举名称互换 | 6 |
+| green RGB 错用 lime | 3 |
+| rebeccapurple 表名失配 | 1 |
+| trim 首尾空白 | 2 |
+
+源码恢复后六专项全绿，日志 `buildDir/meson-logs/step4c-review-restored.txt`。
+本轮最终代码树矩阵（先编译再测试，完整套件运行期间未修改工作树）：
+
+| 范围 | 本轮实际结果 |
+| --- | --- |
+| buildDir 全量 | 122 OK / 2 FAIL / 1 SKIP；sdf-device 与 sdf-state-probe 均在 SDL_Init 报 No available video device |
+| buildDir-asan unit | 102 OK / 1 SKIP；启用 ASan/UBSan，构建和测试均设 LSAN_OPTIONS=detect_leaks=0 |
+| buildDir-no-rtti unit | 103 OK / 1 SKIP |
+| buildDir-nosqlite unit | 99 OK / 1 SKIP |
+| buildDir-tools | 8 OK |
+| release_check --ci | 8/8，无 SKIP；headers 198，docs 87，clang-format 23.1.1 |
+
+四个 UI 配置的 named-color 均为 6 用例 / 2916 断言；各套 SKIP 均为 window-lifecycle
+（exit 77）。与首版维护者环境 sdf-device=skip、no-RTTI 窗口测试通过的差异分别保留。
+SDK 双次打包与 vendored 下游消费者通过。ASan 本地 Ninja 记录恢复触发较大范围重编译，
+最终构建与单元验证均完成。
+
+主日志：`buildDir/meson-logs/step4c-review-full.txt`；变体目录为
+`meson-logs/step4c-review-unit.txt`，tools 为 `step4c-review-tools.txt`。
+`named_color.cpp` 与故障注入前备份逐字一致；头文件只澄清说明。三个未跟踪 C++ 文件
+额外做固定版本格式 dry-run，文档收尾后重查链接/锚点与 git diff --check。
+
+**规范来源复验边界（当时记录，已由下文补验关闭）**：该轮网页工具未返回固定日期规范页的可用正文；沙箱内只读抓取遇到
+DNS 解析失败，沙箱外只读抓取因自动审批服务 `codex-auto-review` 不受支持而报 404，
+动作未执行（不是 W3C 页面返回 404）。因此本轮仅确认离线固定清单、生产表与测试表
+一致，当时固定日期规范原文的在线复核未完成；前述进度中的原文核对表述在此更正。
+后续环境恢复后的实际原文核对见下文，不再将此前服务故障列为当前阻塞。
+
+保持 12 项已跟踪修改 + 3 个新增文件，HEAD 仍为 `3e2542a`，未提交、未推送；
+待维护者复验，不启动下一子批。TOML 简写、注册配色门槛、真实后端像素读回、Shell
+设置页、广播收窄和 Windows/人工视觉验收仍在本批范围外。
+
+
+#### 第 4c 步规范原文补验（2026-11-08，来源证据缺口已关闭；保持未提交）
+
+维护者提供 `/tmp/vscode` 中的 W3C SVG 1.1 Second Edition HTML。实际保存内容为
+SVG 1.1 §4.4，并非 CSS Color 4；从两张原文颜色表提取 147 个唯一名称与十进制 RGB，
+逐项与生产表和测试期望清单比较，全部一致。该文档没有 rebeccapurple，不能单独证明
+第 148 项或 CSS Color 4 快照版本。
+
+环境恢复后，另外通过 HTTPS 只读取得约定的
+[CSS Color 4 固定快照](https://www.w3.org/TR/2026/CRD-css-color-4-20261103/#named-colors)
+（HTTP 200）。HTML 自报 CRD、日期 `2026-11-03`、§6.1 Named Colors 与对应 This version
+地址均相符；解析原文 named-color-table 得到 148 项，逐项检查十六进制与十进制 RGB 一致。
+
+| 比较 | 实测结果 |
+| --- | --- |
+| SVG 1.1 原文与 CSS Color 4 共有项 | 147 项名称/RGB 全同 |
+| CSS Color 4 相对 SVG 1.1 的新增项 | 仅 rebeccapurple，#663399 |
+| CSS Color 4 原文与生产私有表 | 148 项键值完全一致，无遗漏/多余/重复 |
+| CSS Color 4 原文与独立测试清单 | 148 项键值完全一致 |
+| CSS Color 4 原文与 NanNamedColor | 148 个成员名称齐全，顺序与规范名字母序一致 |
+
+原文文件 SHA-256：
+
+- SVG：`7d8a1f6beb02f70c6a46be491b3f875a1fd06a3cb18eb1b5bf51492e74f31eea`
+- CSS Color 4：`b66ad2af540a7550fd34e0d95f8dce3f49b9d39e255fdfed56f0ec1de9c78000`
+
+补验脚本：`/tmp/nandina-step4c-w3c-source-audit.py`，结构化结果：
+`/tmp/nandina-step4c-w3c-source-audit.json`，CSS 快照副本：
+`/tmp/nandina-step4c-css-color4-20261103.html`。脚本直接从两份 HTML 表格读取名称和值，
+没有拿生产表或测试表反向生成期望。临时证据文件不作为仓库构建依赖。
+
+**更新结论**：规范原文来源核对通过，先前离线验证的证据边界已补齐；运行实现无需修改。
+本次仅补充证据与文档，未重跑无变化的 C++ 矩阵；前述主套件/变体/门禁结果保留原日期和
+环境差异。文档链接/锚点与 git diff --check 重新检查。HEAD 仍为 `3e2542a`，整批未提交。
+
 ---
 
 # D4 跨平台优先的窗口与渲染后端路线

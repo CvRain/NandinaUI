@@ -93,6 +93,10 @@ path = "nandina/foundation/composition.hpp"
 level = "experimental"
 
 [[headers]]
+path = "nandina/foundation/named_color.hpp"
+level = "experimental"
+
+[[headers]]
 path = "nandina/foundation/geometry.hpp"
 level = "experimental"
 

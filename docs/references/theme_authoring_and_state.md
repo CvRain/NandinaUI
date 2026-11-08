@@ -1,10 +1,11 @@
 # D2：主题方案、作者入口与状态订阅
 
 > **状态：首批窄投影已随 `8920f3a`、第 3 步目录与选择已随 `995e6ae`、第 4 步观察
-> 通道与作者入口已随 `4746173`、第 4a 步 CPU 合成器与诊断已随 `fef829a` 提交推送。**
-> 第 4b 步作者颜色入口（显式 `NanColor` 语义覆盖与 primitive palette 访问）复核补修后，
-> 保持未提交待维护者复验；真实后端像素读回和注册门槛尚未实施。
-> §14–§17 记录契约、实现和复核；更早小节保留讨论语境。
+> 通道与作者入口已随 `4746173`、第 4a 步 CPU 合成器与诊断已随 `fef829a`、第 4b 步
+> 作者颜色入口已随 `3e2542a` 提交推送。**
+> 第 4c 步 foundation 命名颜色字面量复核后补齐测试，保持未提交待维护者复验；
+> 真实后端像素读回和注册门槛尚未实施。§14–§18 记录契约、实现和复核；
+> 更早小节保留讨论语境。
 > 所有标注为伪代码的示例只表达作者体验，不可直接当成现有接口使用。
 > 当前实现以 [设计令牌与主题系统](design_tokens.md) 和源码为准；原始问题见
 > [D2 工作稿](reference_draft.md) 与 [story 010](../../stories/010-the-theme-signal-that-cannot-be-subscribed.md)。
@@ -1114,3 +1115,124 @@ ASan 101 OK / 1 SKIP，no-RTTI 102 OK / 1 SKIP，no-SQLite 98 OK / 1 SKIP，tool
 release_check --ci 8/8（headers 197、docs 87、clang-format 23.1.1）。各套 SKIP 均为
 window-lifecycle，SDK 双次打包与 vendored 消费者通过。实际日志与首版环境差异见
 reference_draft 第 4b 步复核记录。本轮保持未提交，待维护者复验。
+
+---
+
+## 18. 第 4c 步 foundation 命名颜色字面量：API 定形（2026-11-08）
+
+主题作者需要一个「固定色值」的便捷写法，但不应为此把 red/blue 等原始色升成语义 token。
+本步在 foundation 提供**命名颜色字面量**：它只是显式 `NanColor` 的一种写法，不是新的
+运行时覆盖顺序，也不改变组件继续只消费语义角色的默认路径。
+
+### 18.1 范围与规范快照
+
+- **148 个 CSS 命名颜色**：CSS Color 4 命名颜色表 = SVG 1.1 的 147 个 + `rebeccapurple`。
+  固定快照为 **CSS Color 4 候选推荐草案 2026-11-03 §6.1**
+  （<https://www.w3.org/TR/2026/CRD-css-color-4-20261103/#named-colors>），逐条采用规范
+  固定的 sRGB 整数值（例如 `green = #008000`、`lime = #00FF00`、`rebeccapurple = #663399`）。
+- **排除 `transparent` 与 `currentColor`**：前者是透明黑、后者依赖元素上下文，均不是
+  固定不透明色值，不适合纯查表入口。
+
+### 18.2 公开 API（foundation/named_color.hpp）
+
+```cpp
+enum class NanNamedColor { aliceblue, ..., yellowgreen };   // 148 项，小写、字母序
+[[nodiscard]] auto nan_named_color(NanNamedColor named) noexcept -> NanColor;
+[[nodiscard]] auto nan_named_color(std::string_view name) -> std::optional<NanColor>;
+[[nodiscard]] auto nan_named_color_name(NanNamedColor named) noexcept -> std::string_view;
+```
+
+- **双入口共用一张表**：公开头只放枚举与三个函数声明；唯一 `constexpr` 数据表
+  （`{整数 RGB, 规范名称}`）放 `.cpp` 内部，不暴露表结构，也不给 `NanColor` 堆成员。
+- **枚举与持久化**：148 个名称各有独立枚举成员与表项，RGB 相同的别名（`aqua`/`cyan`、
+  `fuchsia`/`magenta`、`gray`/`grey` 系列等）**不去重**；枚举序号**不承诺持久化稳定**，
+  需要保存时使用 `nan_named_color_name` 的规范名称。
+- **转换**：整数 RGB 经既有 `NanColor::from_hex` 规范化为 OKLCH，与作者写 hex 完全同一路径。
+
+### 18.3 查询规则
+
+- ASCII 大小写不敏感：只折叠 `A–Z`，不依赖 locale；`"SteelBlue"`、`"steelblue"`、
+  `"STEELBLUE"` 同值。
+- 拒绝：空串、首尾或内部空白、显式长度的嵌入 NUL、非 ASCII 输入、未知名称（返回
+  `nullopt`）。不扩展为完整 CSS 颜色语法（不支持 `#`、`rgb()`、`color()` 等）。
+- `nan_named_color_name` 返回规范小写拼写；`enum → 名称 → 字符串查询 → 同一颜色`
+  往返成立。
+- 枚举序号越界的防御值不构成公开契约（良好调用方只传声明值）。
+
+### 18.4 推荐使用方式与非目标
+
+- 命名颜色是**显式 `NanColor` 的写法**：主题作者可以合法地把 `steelblue` 赋给
+  `primary`，组件仍通过语义角色消费；默认配方不得直接硬编码颜色。
+- 不新增语义 token、不改组件默认配方、不改变既有样式优先级。
+- 本步不做 TOML 字符串简写（与 `$palette.*` / `$palettes.*` 的分派另行定形）；
+  不覆盖 `transparent`/`currentColor`/完整 CSS 语法。
+
+### 18.5 第 4c 步实施记录（2026-11-08，初稿待维护者复核）
+
+- 新增 `foundation/named_color.{hpp,cpp}`：148 项枚举 + 类型化/字符串/名称三个入口；
+  私有 `constexpr` 表按名称字母序，RGB 为规范快照整数原值，别名各保留身份。
+- 测试（`tests/named_color_tests.cpp`，unit）：测试内置**独立**的 148 条「名称 → 期望
+  hex」清单逐条比对（不拿生产表遍历自证）；覆盖全部名称/值、`green`/`lime` 等易混值、
+  同值别名身份、ASCII 大小写、空白/NUL/非 ASCII/未知/`transparent`/`currentColor` 拒绝、
+  往返一致与表项数恰为 148。
+- 头文件按 experimental 分类；TOML 简写与参考色阶规划保持独立。
+
+故障注入（重新编译后恢复，均红转绿）：`green` 误写成 `lime` 值（3 断言失败）、
+表缺 `rebeccapurple`（计数与往返多处失败）、查询放宽为 trim 空白（2 断言失败）。
+
+专项：named-color 5 用例 / 1095 断言；composition 7/52、theme-color-entry 14/1243、
+theme-scheme 25/357、theme-contrast-diagnostics 15/338、theme-palette-contrast 4/129
+保持通过。首版维护者矩阵（复核前，Linux 无显示/GPU 沙箱；每套先编译再测）：buildDir 全量
+123 OK / 1 FAIL（sdf-state-probe，无显示设备）/ 1 SKIP（sdf-device 77）；ASan 102 OK /
+1 SKIP；no-RTTI 104 OK / 0 SKIP；no-SQLite 99 OK / 1 SKIP；tools 8 OK；
+release_check --ci 8/8（headers 198、docs 87、clang-format 23.1.1）。
+本批保持未提交，待维护者复核。
+
+
+### 18.6 第 4c 步复核记录（2026-11-08，保持未提交）
+
+Git 基线 `3e2542a` 已包含 4b；先编译通过 named-color 与 theme-color-entry 基线。
+以独立离线参考清单对照，私有表与测试期望清单的 148 个名称及 RGB 原值一致；运行查询
+与转换实现未发现缺陷，未修改 `named_color.cpp`。该轮原文在线复核未完成，后续已通过
+本地 SVG 原文与 CSS Color 4 固定快照补验（§18.7），来源证据缺口已关闭。
+
+发现测试盲点：原类型化用例通过整数强转枚举，未实际绑定枚举成员。临时交换头文件
+`green`/`grey` 声明后，旧测试仍 5 用例 / 1095 断言全绿。现将独立期望清单逐项绑定
+`NanNamedColor::<name>`，直接验证成员的名称、颜色与往返；同样交换会触发 6 断言失败。
+删除自查 `contains`，实际验证 148 个名称与枚举身份唯一、名称严格递增；9 组同值别名
+直接使用独立枚举成员并核对各自名字，避免只比较测试字符串。
+
+补充全表转换回 RGBA 字节与不透明性、148 名称的全大写/交替大小写查询、非 NUL 结尾的
+有界 `string_view`、每个 0–255 字节在名称首/尾/中间的拒绝、长未知名和大小写排除词。
+头文件澄清 transparent 是透明黑、currentColor 才依赖上下文，以及枚举入口只接收声明值；
+未将非法枚举防御返回值升级为公开契约。
+
+独立故障注入（逐项重编译，恢复后通过）：枚举 green/grey 互换 6 断言失败、green 改为
+lime RGB 3 断言失败、rebeccapurple 表名失配 1 断言失败、放宽 trim 空白 2 断言失败，
+均为 Catch2 exit 42。专项：named-color 6 用例 / 2916 断言；composition 7/52、
+theme-color-entry 14/1243、theme-scheme 25/357、theme-contrast-diagnostics 15/338、
+theme-palette-contrast 4/129 保持通过。
+
+最终矩阵：主套件 122 OK / 2 FAIL / 1 SKIP（两个失败均无显示设备）；ASan
+102 OK / 1 SKIP，no-RTTI 103 OK / 1 SKIP，no-SQLite
+99 OK / 1 SKIP，tools 8 OK；release_check --ci 8/8
+（headers 198、docs 87、clang-format 23.1.1）。各套 SKIP 均为 window-lifecycle；
+SDK 打包与 vendored 消费者通过。日志与原文补验见 reference_draft 第 4c 步复核记录；
+保持未提交，待维护者复验。
+TOML 简写、语义 token、默认配方均未改动；真实像素读回与配色注册门槛仍未完成。
+
+
+### 18.7 第 4c 步规范原文补验（2026-11-08，保持未提交）
+
+维护者保存于 `/tmp/vscode` 的原文为 SVG 1.1 Second Edition §4.4，直接从原文表格
+提取 147 项名称/十进制 RGB，与生产表、测试清单全部一致。随后环境恢复，通过 HTTPS
+实际取得 §18.1 约定的 CSS Color 4 固定快照（HTTP 200），确认文档日期为 2026-11-03、
+§6.1 Named Colors；原文表格的 148 个十六进制与十进制 RGB 逐项相符。
+
+CSS 表与 SVG 表的 147 个共有项完全一致，仅增加 `rebeccapurple = #663399`；生产表与
+独立测试清单均与 CSS 原文 148 项键值完全一致，枚举成员名/数量/字母序亦相符。原文哈希、
+提取脚本与结构化结果见 reference_draft 第 4c 步规范原文补验记录。
+
+此前规范来源原文核对的证据缺口已关闭；无需修改运行代码。本次只更新证据和文档，不将
+前轮 C++ 矩阵冒充为本轮重跑结果。代码复核、自动验证和规范来源核对均已完成；整批仍
+保持未提交，后续按维护者复验与统一提交流程推进。GPU、Windows 与视觉验收仍属独立边界。

@@ -154,6 +154,24 @@ C++ 作者有两条等价路径，与文件导入同一提交语义：
 `$palettes` 引用的非有限存储值均返回解析错误。C++ 批量重复角色（含别名）最后一项
 生效；TOML 同时提供规范名和别名时仍以规范名为准。
 
+### 命名颜色字面量（2026-11-08，foundation experimental）
+
+[`foundation/named_color.hpp`](../../nandina/foundation/named_color.hpp) 提供 CSS Color 4
+候选推荐草案 2026-11-03 §6.1 的 148 个不透明命名颜色（SVG 1.1 的 147 个 +
+`rebeccapurple`；`transparent`/`currentColor` 不在范围）。双入口共用一张私有表：
+
+```cpp
+auto color = foundation::nan_named_color(foundation::NanNamedColor::steelblue);
+auto same = foundation::nan_named_color("SteelBlue");   // optional，ASCII 大小写不敏感
+auto name = foundation::nan_named_color_name(foundation::NanNamedColor::steelblue);
+```
+
+它只是**显式 `NanColor` 的写法**，不是语义 token，也不构成新的运行时覆盖顺序：默认配方
+不得硬编码颜色，主题作者可以把命名颜色赋给既有语义角色（组件仍通过语义角色消费）。
+查询拒绝空白、嵌入 NUL、非 ASCII 与未知名称；数值固定为规范 sRGB 原值（如
+`green = #008000`、`lime = #00FF00`），均不透明，别名各自保留身份。类型化入口要求
+已声明枚举成员；保存使用规范名称。TOML 字符串简写另行定形。
+
 面向主题作者的外部入口是 TOML 样式文档：`StyleDocument` 可声明 `reference_palettes`、`themes`、`theme_families`、`active_theme`、`active_family`、`preference`、遗留 `NanStyle` 规则与字体族，`parse_style_document()` / `load_style_document()` 解析，`apply(ThemeManager&, FontFamilyRegistry*)` 以 `std::expected<void, std::string>` 报告失败。
 
 ## 当前已知空白
