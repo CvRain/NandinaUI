@@ -916,16 +916,16 @@ auto main(int argc, char** argv) -> int {
             return 1;
         }
     }
-#if defined(__linux__)
-    // 只有 Linux 需要 X11/Wayland 会话；Windows/macOS 没有这两个变量。
-    if (SDL_getenv("DISPLAY") == nullptr && SDL_getenv("WAYLAND_DISPLAY") == nullptr) {
-        std::printf("SKIP: no desktop display\n");
-        return require_gpu ? 1 : 77;
-    }
-#endif
+    // 环境变量存在不等于显示可用：工具会话可能残留失效的 DISPLAY，或未把
+    // compositor socket 暴露给本进程。以 SDL_Init 的实际结果为准；无可用显示
+    // 服务器时按平台契约记录为跳过（77），只有 --require-gpu 才视为错误。
     if (!SDL_Init(SDL_INIT_VIDEO)) {
-        std::fprintf(stderr, "SDL_Init failed: %s\n", SDL_GetError());
-        return 1;
+        std::fprintf(
+            stderr,
+            "SKIP: no usable desktop display (SDL_Init(SDL_INIT_VIDEO): %s)\n",
+            SDL_GetError()
+        );
+        return require_gpu ? 1 : 77;
     }
     // 每个平台用驱动对应的着色器产物：Windows/D3D12→DXIL，macOS/Metal→MSL，Linux→SPIR-V。
 #if defined(_WIN32)

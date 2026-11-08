@@ -363,6 +363,11 @@ it, completes gaps, verifies, and commits. Follow this order:
 `window-lifecycle` is skipped in the ASan configuration because opening a real GPU window makes
 Mesa's LeakSanitizer report a 256-byte driver-side leak. That is expected; do not report it as a
 project leak. `release_check` may report SKIP for tools that are unavailable; a SKIP is not proof.
+Display/GPU-dependent integrations (`sdf-device`, `sdf-state-probe`, `sdf-display-skip`) classify
+an unusable session as SKIP (exit 77) by actually probing `SDL_Init`/`SDL_CreateGPUDevice`; do not
+reintroduce environment-variable heuristics such as "DISPLAY is set", because tool sandboxes can
+inherit dead display variables. `sdf-display-skip` forces a missing SDL video driver to verify the
+77/1 classification deterministically.
 
 ### Windows verification (experimental)
 

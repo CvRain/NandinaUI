@@ -659,11 +659,32 @@ auto main(int argc, char** argv) -> int {
             return 1;
         }
     }
-    if (!require_gpu && std::getenv("DISPLAY") == nullptr
-        && std::getenv("WAYLAND_DISPLAY") == nullptr)
+    // 环境变量存在不等于显示/GPU 可用；实测 SDL 初始化与 GPU 设备创建。
+    // 不可用的会话按平台契约 77 跳过；--require-gpu 时视为错误。
+    if (!SDL_Init(SDL_INIT_VIDEO)) {
+        const std::string message = std::string("SDL_Init(SDL_INIT_VIDEO): ") + SDL_GetError();
+        if (!require_gpu) {
+            std::cout << "SKIP: no usable desktop display (" << message << ")\n";
+            return 77;
+        }
+        std::cerr << message << '\n';
+        return 1;
+    }
+    if (auto* availability = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV, false, "vulkan");
+        availability == nullptr)
     {
-        std::cout << "SKIP: no desktop display; --require-gpu makes this an error\n";
-        return 77;
+        const std::string message = std::string("no usable GPU device (") + SDL_GetError() + ")";
+        SDL_Quit();
+        if (!require_gpu) {
+            std::cout << "SKIP: " << message << '\n';
+            return 77;
+        }
+        std::cerr << message << '\n';
+        return 1;
+    }
+    else {
+        SDL_DestroyGPUDevice(availability);
+        SDL_Quit();
     }
     try {
         Context context;

@@ -194,6 +194,16 @@ if sdl3_dep.found()
         is_parallel: false,
         timeout: 180,
     )
+    # 显示/GPU 不可用的会话按平台契约记录为跳过：用不存在的 SDL 视频驱动确定性
+    # 模拟「环境变量存在但显示不可用」，检查两个探针的 77/1 分类。
+    test(
+        'sdf-display-skip',
+        find_program('python3'),
+        args: [files('display_availability_skip_test.py'), sdf_device_tests, sdf_state_probe],
+        suite: 'integration',
+        is_parallel: false,
+        timeout: 60,
+    )
 endif
 
 # 着色器产物一致性是纯文件检查（不需要 SDL、不需要编译器）：放在 SDL 条件之外，

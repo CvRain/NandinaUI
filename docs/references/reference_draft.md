@@ -825,6 +825,47 @@ RED-FIRST 残留，文档收尾再检查 87 篇链接/锚点与 git diff --check
 4a 软件路径读回放 Shell 之后，明确不代替 GPU 路径、不挂接注册门槛。Windows、GPU
 和人工视觉验收仍单独记录。
 
+### 环境更正记录：显示/GPU 可用性与测试分类（2026-11-08 晚，完全权限会话）
+
+此前多个会话的主套件显示 `sdf-device` SKIP、`sdf-state-probe` FAIL，早期记录写作
+「SDL 无显示设备」。本轮在操作者授予完全权限后实测，确认真正原因并修复测试分类：
+
+- **实际原因**：受限工具会话没有把宿主显示/GPU 资源暴露给测试进程。旧会话中
+  `/dev/dri` 无 `card*/renderD*` 节点，Vulkan 只能枚举到 0 个物理设备；部分会话即便
+  `DISPLAY`/`WAYLAND_DISPLAY` 环境变量存在，compositor socket 也不可达。两个 SDF 探针
+  用「环境变量是否存在」判断桌面可用，于是残留变量导致 `SDL_Init` 失败被记为 FAIL，
+  而 `SDL_CreateGPUDevice` 失败只被 `sdf-device` 记成 SKIP。GNOME 的屏幕共享/portal
+  授权只影响门户截图工具，**不影响** SDL 视频初始化、GPU 设备创建或页面探针的 GPU
+  读回，不是本问题的原因。
+- **完全权限后的实测**：`/dev/dri` 出现 `card1`、`renderD128`；`vulkaninfo` 枚举到
+  AMD Radeon RX 6750 GRE 12GB（RADV NAVI22，Mesa 26.2.6）；SDL 探针 current video
+  driver = `wayland`，`SDL_CreateGPUDevice` 成功；主套件全绿（见下）。
+- **测试分类修复**：`tests/sdf_device_test.cpp` 与
+  `probe/cross_platform/desktop/sdf_state_probe.cpp` 不再用环境变量猜测显示可用性，
+  改为实际调用 `SDL_Init(SDL_INIT_VIDEO)` 与 `SDL_CreateGPUDevice`；不可用会话按平台
+  契约输出 `SKIP` 并以 77 退出（`--require-gpu` 时仍视为错误 1）。新增 integration
+  测试 `sdf-display-skip`（`tests/display_availability_skip_test.py`）用不存在的 SDL
+  视频驱动确定性模拟不可用环境，断言 77/1 分类与 SKIP 诊断；故障注入恢复验证通过。
+- **环境复验矩阵**（本机 Hyprland/Wayland + RADV，完全权限会话）：
+
+  | 范围 | 结果 |
+  | --- | --- |
+  | buildDir 全量（含 sdf-device、sdf-state-probe、window-lifecycle、sdf-display-skip） | **128 OK / 0 FAIL / 0 SKIP** |
+  | buildDir-asan unit | 104 OK / 1 SKIP（window-lifecycle，驱动侧 LSan 的既有配置） |
+  | buildDir-no-rtti unit | 106 OK / 0 SKIP |
+  | buildDir-nosqlite unit | 101 OK / 1 SKIP |
+  | buildDir-tools | 8 OK |
+  | release_check --ci | 8/8；headers 198，docs 87，clang-format 23.1.1 |
+
+- **页面 golden 复现**：对 manifest 中 6 条 Linux approved 基线
+  （home/label/anchors × cpu/sdf）重新渲染并比较，全部 **0 个差异像素、0 通道差**；
+  说明当前 Hyprland/Wayland + RADV 环境与批准基线环境逐像素一致。记录环境时应同时
+  标注 compositor/协议（Hyprland/Wayland），不要沿用 GNOME 会话的描述。
+
+**更正结论**：此前「沙箱无显示设备」应表述为「工具会话未暴露显示/GPU 资源，且探针用
+环境变量误判可用性」；权限调整后资源可用，SDK 与 golden 路径均恢复正常。文件/GPU
+权限之外的系统与仓库代码没有对应改动。
+
 ---
 
 # D4 跨平台优先的窗口与渲染后端路线
