@@ -526,6 +526,96 @@ RED-FIRST 残留。文档结果收尾后复查 87 篇链接/锚点与 git diff -
 本批不启用注册配色门槛；后端像素读回、最终色域/量化定形、Windows、桌面/GPU 与人工
 视觉验收仍未完成。
 
+### P4.3 D2 第 4b 步作者颜色入口实施记录（2026-11-07，初稿待维护者复核）
+
+第 4a 步已随 `fef829a` 提交推送。本批按 [主题方案、作者入口与状态订阅](theme_authoring_and_state.md)
+§17 落地 C++ 作者颜色入口，并与既有文件导入路径做相等性回归。
+
+- **primitive 色阶访问**：`ReferenceColorFamily` + `reference_scale`（const/非 const）+
+  `reference_color` + `reference_family_name` / `color_shade_name`，与
+  `$palettes.<name>.<scale>.<shade>` 字符串寻址一一对应；`ThemeSchemeContent` 新增可选
+  `reference` 来源记录（palette 仍是唯一权威语义事实）。
+- **显式 `NanColor` 覆盖**：`SemanticColorOverride`/`ThemeColorError`、
+  `canonical_color_token`（on_* / outline* / focus_ring → shadcn 规范名）、
+  `semantic_color`、`set_semantic_color`（同步兼容别名）、`apply_semantic_colors`
+  （先验证全部再一次性提交）。作者入口只拒绝非有限 OKLCH 分量：`NanColor` 构造已归一化
+  light/hue/alpha 并归零负 chroma，入口不重复裁剪也不把色域处理混进写入。
+- **构造入口**：`ThemeSchemeContent::from_reference`（色阶派生并记录来源）、
+  `from_semantic_colors`（显式语义声明，不伪造来源）；`derive_content` 深拷贝并保留
+  `reference`。
+- **文件导入收敛**：TOML 直接色值等价于逐角色 `set_semantic_color`，`$palettes.*` 等价于
+  `reference_color`；回归按全部规范角色比较，并验证 `StyleDocument::apply` 注册出的规范
+  方案 palette 与 C++ 构造一致。
+
+故障注入（重新编译后恢复，均红转绿）：别名不同步（1 断言）、批量边验证边写入破坏原子性
+（1 断言）、neutral 族错映 primary（1 断言）、派生丢弃来源（1 断言）、别名不规范化
+（2 断言）。
+
+专项：theme-color-entry 7 用例 / 432 断言；theme-palette-contrast 4/129、
+theme-contrast-diagnostics 15/338、theme-scheme 25/357 保持通过。
+
+首版维护者矩阵（复核前；每个配置先编译再测试；Linux 无显示/GPU 沙箱）：
+
+| 范围 | 本轮实际结果 |
+| --- | --- |
+| buildDir 全量 | 122 OK / 1 FAIL / 1 SKIP；sdf-state-probe 在 SDL_Init 报无显示设备，sdf-device 为 skip 77 |
+| buildDir-asan unit | 101 OK / 1 SKIP；ASan/UBSan 启用，LSAN_OPTIONS=detect_leaks=0 |
+| buildDir-no-rtti unit | 103 OK / 0 SKIP（本机窗口测试未跳过） |
+| buildDir-nosqlite unit | 98 OK / 1 SKIP |
+| buildDir-tools | 8 OK |
+| release_check --ci | 8/8，无 SKIP；headers 197，docs 87，clang-format 23.1.1 |
+
+未提交、未推送，待维护者复核；Shell 多方案设置、注册配色门槛、后端像素读回与视觉验收
+仍待补齐。
+
+
+#### 第 4b 步复核记录（2026-11-07，保持未提交）
+
+Git 基线 HEAD 与 origin/main 为 `fef829a`，确认 4a CPU 批次已提交。先编译并通过
+四个专项基线。新增文件/C++ 非有限颜色一致性回归，原实现 5 断言失败：四类非有限
+OKLCH 存储分量与 `$palettes` 非有限引用在 TOML 仍能解析成功。
+
+补修 `style_document.cpp`：将选中的角色/颜色先收集为 `SemanticColorOverride`，复用
+`apply_semantic_colors` 统一验证、同步别名并提交；TOML 规范名优先于别名的规则保留。
+新入口不替作者另做裁剪，也不启用配色注册门槛。
+
+新增边界：7 色族 × 11 档 const 访问及文件寻址、34 角色与既有组件颜色解析器一致、
+14 别名双向消费及规范名优先、重复覆盖声明顺序、失败时兼容字段不变、空批次、来源复制
+与语义色权威性。§17 删除不可达 alpha 错误项，修正实施记录编号并明确有效枚举前提。
+
+独立故障注入：去掉文件批量校验的错误传播，重新编译后 5 断言失败（Catch2 exit 42）；
+恢复后六个专项全绿，日志为 `step4b-review-restored`。最初红测记录为
+`buildDir/meson-logs/step4b-review-red.txt`。
+
+专项：theme-color-entry 14 用例 / 1243 断言，button 33 / 221，theme-scheme 25 / 357，
+theme-design-system 25 / 637，theme-contrast-diagnostics 15 / 338，theme-palette-contrast
+4 / 129。
+
+本轮最终代码树矩阵（先编译再测试，完整套件期间工作树保持冻结）：
+
+| 范围 | 本轮实际结果 |
+| --- | --- |
+| buildDir 全量 | 121 OK / 2 FAIL / 1 SKIP；sdf-device 与 sdf-state-probe 均在 SDL_Init 报 No available video device |
+| buildDir-asan unit | 101 OK / 1 SKIP；ASan/UBSan 启用，构建和测试均设 LSAN_OPTIONS=detect_leaks=0 |
+| buildDir-no-rtti unit | 102 OK / 1 SKIP |
+| buildDir-nosqlite unit | 98 OK / 1 SKIP |
+| buildDir-tools | 8 OK |
+| release_check --ci | 8/8，无 SKIP；headers 197，docs 87，clang-format 23.1.1 |
+
+四套的 SKIP 均为 window-lifecycle（exit 77）。首版维护者环境 sdf-device 为 skip、
+no-RTTI 窗口测试通过，本轮差异分别保留；SDL 初始化错误不作为配色代码失败，也不计为
+硬件验收通过。SDK 双次打包与 vendored 下游消费者通过。
+ASan 因本地 Ninja 记录恢复触发较大范围重编译，最终构建与单元验证均完成。
+
+主日志为 `buildDir/meson-logs/step4b-review-full.txt`；变体目录使用
+`meson-logs/step4b-review-unit.txt`，tools 使用 `step4b-review-tools.txt`。
+四个 UI 配置的 theme-color-entry 均为 14 用例 / 1243 断言；恢复源码与备份逐字一致，
+新测试文件另做固定版本格式 dry-run，文档结果收尾后复查 87 篇链接/锚点与空白。
+
+当前为 15 项已跟踪修改 + 1 个新增测试文件，未提交、未推送，HEAD 仍为 `fef829a`。
+待维护者复验后统一提交首版与补修；未启动 Shell 多方案设置、真实后端像素读回、注册
+配色门槛、广播收窄或第三方配方注册；Windows 与人工视觉验收未完成。
+
 ---
 
 # D4 跨平台优先的窗口与渲染后端路线

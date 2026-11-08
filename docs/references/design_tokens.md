@@ -71,7 +71,7 @@ NanTokens（尺度）
 - 颜色还支持两类表达式。其一是随当前 tone 解析的引用：`ThemeColor::accent()` / `ThemeColor::on_accent()`，让 `filled` 之类的规则能表达「用当前强调色及其反色」。其二是浅层变换：`ThemeColor::with_alpha(source, factor)`、`ThemeColor::transparent(source)`、`ThemeColor::mix(lhs, rhs, factor)`。变换的操作数不嵌套表达式，保持可静态推导。
 - 解析入口是 `resolve_color(system, appearance, value, tone)` 与 `resolve_scalar(system, appearance, value)`；片段级还有 `resolve()` 重载。它们在内部构造 `NanTheme {tokens, palette(appearance)}` 后交给 `resolve_theme_color()` / `resolve_theme_scalar()`。
 
-当前独立方案内容是 `ThemeSchemeContent { tokens, palette, typography, components }`，只持有一套 palette。`DesignSystem` 仍有 light/dark 两槽，用作现有组件的解析适配快照：manager 把当前方案的 palette 填入两槽，外观分类来自方案元数据。`NanTheme` 是 `{ tokens, 单一 palette }` 的解析视图，由 `ThemeManager::theme()` 提供。品牌编译工具仍可先生成双 palette 的 DesignSystem，再按外观提取两个独立方案。
+当前独立方案内容是 `ThemeSchemeContent { tokens, palette, typography, components, reference }`，只持有一套 palette；`reference` 是可选 primitive 来源记录。`DesignSystem` 仍有 light/dark 两槽，用作现有组件的解析适配快照：manager 把当前方案的 palette 填入两槽，外观分类来自方案元数据。`NanTheme` 是 `{ tokens, 单一 palette }` 的解析视图，由 `ThemeManager::theme()` 提供。品牌编译工具仍可先生成双 palette 的 DesignSystem，再按外观提取两个独立方案。
 
 ## 外观选择与 ThemeManager 下发
 
@@ -132,6 +132,27 @@ DesignSystem 默认值（XRecipe.base）
 `apply()` 先验证全部别名/家族并暂存目录与选择，成功后一次提交；长别名或未知引用返回错误
 且不留部分状态。尚未支持：Button/TextField 之外的配方覆盖、组件样式 reset、任意自定义
 token、主题包版本锁定与跨进程设置持久化；完整 schema 扩展另行分期。
+
+### 作者颜色入口（2026-11-07）
+
+C++ 作者有两条等价路径，与文件导入同一提交语义：
+
+- **参考色阶派生**：`ThemeSchemeContent::from_reference(reference, appearance, policy)`；
+  primitive 色阶用 `reference_scale()` / `reference_color()` 按
+  `ReferenceColorFamily` + `ColorShade` 读取（对应 `$palettes.<name>.<scale>.<shade>`），
+  `content.reference` 记录来源但不是第二份语义事实。
+- **显式 `NanColor` 覆盖**：`set_semantic_color()` / `apply_semantic_colors()` 以既有
+  `ColorToken`（shadcn 规范名）为键写入作者给定的 OKLCH 值，兼容别名同步；
+  批量覆盖先验证全部再提交。`canonical_color_token()` / `semantic_color()` 提供规范名
+  与别名的读写映射。不新增 red/blue 等原始色 token；需要固定色值时才用显式颜色或色阶档位，
+  语义 token 仍是默认。
+- `from_semantic_colors(SemanticColorSpec)` 直接构造显式色板内容；`derive_content` 深拷贝
+  并保留 primitive 来源。覆盖入口只拒绝非有限 OKLCH 分量（`NanColor` 构造已归一化
+  light/hue/alpha）；色域/量化策略仍由诊断与真实后端读回阶段决定。
+
+文件 palette 覆盖先按规范名优先选取输入，再复用 `apply_semantic_colors`；直接颜色和
+`$palettes` 引用的非有限存储值均返回解析错误。C++ 批量重复角色（含别名）最后一项
+生效；TOML 同时提供规范名和别名时仍以规范名为准。
 
 面向主题作者的外部入口是 TOML 样式文档：`StyleDocument` 可声明 `reference_palettes`、`themes`、`theme_families`、`active_theme`、`active_family`、`preference`、遗留 `NanStyle` 规则与字体族，`parse_style_document()` / `load_style_document()` 解析，`apply(ThemeManager&, FontFamilyRegistry*)` 以 `std::expected<void, std::string>` 报告失败。
 

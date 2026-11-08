@@ -189,107 +189,64 @@ namespace nandina::theme
             NanColorScheme& palette,
             const std::map<std::string, NanReferencePalette, std::less<>>& palettes
         ) {
-            const auto assign_synced = [&](std::string_view canonical_key,
-                                           NanColor& canonical,
-                                           std::string_view alias_key,
-                                           NanColor& alias) {
-                const bool has_canonical = table.contains(canonical_key);
-                const bool has_alias = table.contains(alias_key);
-                if (has_canonical) {
-                    assign_color(table, canonical_key, canonical, palettes);
-                    alias = canonical;
+            std::vector<SemanticColorOverride> overrides;
+            const auto assign = [&](ColorToken role,
+                                    std::optional<ColorToken> alias = std::nullopt) {
+                if (!table.contains(color_token_name(role)) && alias) {
+                    role = *alias;
                 }
-                else if (has_alias) {
-                    assign_color(table, alias_key, alias, palettes);
-                    canonical = alias;
+                const auto key = color_token_name(role);
+                if (!table.contains(key)) {
+                    return;
                 }
+                auto value = semantic_color(palette, role);
+                assign_color(table, key, value, palettes);
+                overrides.push_back({role, std::move(value)});
             };
 
-            // 规范名是唯一的存储来源；兼容别名只作为输入别名，并在解析后同步。
-            assign_color(table, "background", palette.background, palettes);
-            assign_synced("foreground", palette.foreground, "on_background", palette.on_background);
-            assign_color(table, "card", palette.card, palettes);
-            assign_color(table, "card_foreground", palette.card_foreground, palettes);
-            assign_color(table, "popover", palette.popover, palettes);
-            assign_color(table, "popover_foreground", palette.popover_foreground, palettes);
-            assign_color(table, "primary", palette.primary, palettes);
-            assign_synced(
-                "primary_foreground",
-                palette.primary_foreground,
-                "on_primary",
-                palette.on_primary
-            );
-            assign_color(table, "secondary", palette.secondary, palettes);
-            assign_synced(
-                "secondary_foreground",
-                palette.secondary_foreground,
-                "on_secondary",
-                palette.on_secondary
-            );
-            assign_color(table, "muted", palette.muted, palettes);
-            assign_synced(
-                "muted_foreground",
-                palette.muted_foreground,
-                "on_muted",
-                palette.on_muted
-            );
-            assign_color(table, "accent", palette.accent, palettes);
-            assign_color(table, "accent_foreground", palette.accent_foreground, palettes);
-            assign_color(table, "destructive", palette.destructive, palettes);
-            assign_color(table, "destructive_foreground", palette.destructive_foreground, palettes);
-            assign_synced("border", palette.border, "outline", palette.outline);
-            assign_color(table, "input", palette.input, palettes);
-            assign_synced("ring", palette.ring, "focus_ring", palette.focus_ring);
-            assign_color(table, "surface", palette.surface, palettes);
-            assign_synced(
-                "surface_foreground",
-                palette.surface_foreground,
-                "on_surface",
-                palette.on_surface
-            );
-            assign_synced(
-                "surface_variant",
-                palette.surface_variant,
-                "outline_variant",
-                palette.outline_variant
-            );
-            assign_synced(
-                "surface_variant_foreground",
-                palette.surface_variant_foreground,
-                "on_surface_variant",
-                palette.on_surface_variant
-            );
-            assign_color(table, "tertiary", palette.tertiary, palettes);
-            assign_synced(
-                "tertiary_foreground",
-                palette.tertiary_foreground,
-                "on_tertiary",
-                palette.on_tertiary
-            );
-            assign_color(table, "success", palette.success, palettes);
-            assign_synced(
-                "success_foreground",
-                palette.success_foreground,
-                "on_success",
-                palette.on_success
-            );
-            assign_color(table, "warning", palette.warning, palettes);
-            assign_synced(
-                "warning_foreground",
-                palette.warning_foreground,
-                "on_warning",
-                palette.on_warning
-            );
-            assign_color(table, "error", palette.error, palettes);
-            assign_synced(
-                "error_foreground",
-                palette.error_foreground,
-                "on_error",
-                palette.on_error
-            );
-            assign_color(table, "info", palette.info, palettes);
-            assign_synced("info_foreground", palette.info_foreground, "on_info", palette.on_info);
-            assign_color(table, "selection", palette.selection, palettes);
+            // TOML has no declaration order: canonical names take precedence over aliases.
+            // Every resolved override then shares the C++ validation and commit path.
+            assign(ColorToken::background);
+            assign(ColorToken::foreground, ColorToken::on_background);
+            assign(ColorToken::card);
+            assign(ColorToken::card_foreground);
+            assign(ColorToken::popover);
+            assign(ColorToken::popover_foreground);
+            assign(ColorToken::primary);
+            assign(ColorToken::primary_foreground, ColorToken::on_primary);
+            assign(ColorToken::secondary);
+            assign(ColorToken::secondary_foreground, ColorToken::on_secondary);
+            assign(ColorToken::muted);
+            assign(ColorToken::muted_foreground, ColorToken::on_muted);
+            assign(ColorToken::accent);
+            assign(ColorToken::accent_foreground);
+            assign(ColorToken::destructive);
+            assign(ColorToken::destructive_foreground);
+            assign(ColorToken::border, ColorToken::outline);
+            assign(ColorToken::input);
+            assign(ColorToken::ring, ColorToken::focus_ring);
+            assign(ColorToken::surface);
+            assign(ColorToken::surface_foreground, ColorToken::on_surface);
+            assign(ColorToken::surface_variant, ColorToken::outline_variant);
+            assign(ColorToken::surface_variant_foreground, ColorToken::on_surface_variant);
+            assign(ColorToken::tertiary);
+            assign(ColorToken::tertiary_foreground, ColorToken::on_tertiary);
+            assign(ColorToken::success);
+            assign(ColorToken::success_foreground, ColorToken::on_success);
+            assign(ColorToken::warning);
+            assign(ColorToken::warning_foreground, ColorToken::on_warning);
+            assign(ColorToken::error);
+            assign(ColorToken::error_foreground, ColorToken::on_error);
+            assign(ColorToken::info);
+            assign(ColorToken::info_foreground, ColorToken::on_info);
+            assign(ColorToken::selection);
+
+            if (const auto result = apply_semantic_colors(palette, overrides); !result) {
+                throw std::runtime_error(
+                    std::string(color_token_name(result.error().role)) + ": "
+                    + std::string(describe(result.error()))
+                );
+            }
         }
 
         void parse_tokens(const toml::table& table, NanTokens& tokens) {

@@ -25,7 +25,16 @@
 `PageKey` 路由身份、address 显示与 typed navigation 沿用既有规则。迁移调用方后须重新编译；
 正式契约见 [Page / Router](page_and_router.md)，验证见 [D3](reference_draft.md#d3-路由身份与导航分组开放到哪一层)。
 
-2026-11-07 P4.3 D2 第 4a 步 CPU 侧（experimental，复核补修后待维护者复验、未提交；真实后端读回未执行）：
+2026-11-07 P4.3 D2 第 4b 步作者颜色入口（experimental，复核补修后待维护者复验、未提交）：`theme.hpp` 新增
+`ReferenceColorFamily`、`reference_scale()`、`reference_color()`、`reference_family_name()`、
+`color_shade_name()`（primitive palette 类型化访问）；`theme_scheme.hpp` 新增
+`SemanticColorOverride`、`ThemeColorError`、`canonical_color_token()`、`semantic_color()`、
+`set_semantic_color()`、`apply_semantic_colors()`、`ThemeSchemeContent::from_reference()` /
+`from_semantic_colors()` 与可选 `reference` 来源记录；显式 `NanColor` 覆盖与文件导入同一提交语义，
+不新增原始色语义 token。文件 palette 覆盖复用 `apply_semantic_colors` 并拒绝非有限值；
+规范名优先规则保持不变。C++ 批量重复角色最后一项生效；查询要求已声明的枚举值。
+
+2026-11-07 P4.3 D2 第 4a 步 CPU 侧（experimental，已随 `fef829a` 提交；真实后端读回未执行）：
 新增 `foundation/composition.hpp`：唯一 CPU 合成器（显式 `CompositeSpace::encoded_srgb`
 策略、`nan_composite_over`/`nan_composite_background_stack`/`nan_composite_over_stack`
 与 `CompositionError`）；新增 `theme/contrast_diagnostics.{hpp,cpp}`：显式

@@ -197,7 +197,16 @@ State::expanded 合并规则，不引用 Collapsible。共享展开状态仅由 
 目录/选择/style，沿用同一 manager 通知路径，不暴露第二份公开可写状态。字体注册仍使用
 既有 text seam，不扩大此批的 theme→text 历史依赖。
 
-## P4.3 D2 第 4a 步合成器与诊断归属（2026-11-07）
+## P4.3 D2 第 4b 步作者颜色入口归属（2026-11-07）
+
+primitive 色阶访问（`ReferenceColorFamily`/`reference_scale`/`reference_color`）与显式
+`NanColor` 语义覆盖（`set_semantic_color`/`apply_semantic_colors`/`from_reference`/
+`from_semantic_colors`）都在 theme 层：写入的是 `ThemeSchemeContent`/`NanColorScheme` 的
+既有语义角色，不新增色值 token，也不建立运行时派生链；`NanColor` 归一化语义沿用
+foundation。文件 palette 覆盖由 style_document 先编译为 `SemanticColorOverride` 列表，
+复用同一批量校验与别名同步入口，再由原有路径提交目录/选择；不新增层间依赖。
+
+## P4.3 D2 第 4a 步合成器与诊断归属（2026-11-07，已随 `fef829a` 提交）
 
 纯颜色合成器位于 foundation（`foundation/composition.hpp`，与对比度计算同层），输入纯颜色与
 显式合成配置，不认识组件、token 或场景树；主题角色与背景场景的解释位于 theme

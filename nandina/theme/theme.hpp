@@ -12,6 +12,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <string_view>
 
 namespace nandina::theme
 {
@@ -271,6 +272,36 @@ namespace nandina::theme
     [[nodiscard]] auto default_dark_palette() -> NanColorScheme;
 
     [[nodiscard]] auto default_theme() -> NanTheme;
+
+    // ─── primitive palette（参考色阶）类型化访问 ──────────────────────────────
+    // 主题作者用它取「某色族某档」做显式 NanColor 覆盖；与文件导入的
+    // `$palettes.<name>.<scale>.<shade>` 字符串寻址一一对应，不新增语义 token。
+
+    enum class ReferenceColorFamily : std::size_t {
+        primary,
+        secondary,
+        tertiary,
+        neutral,
+        success,
+        warning,
+        error,
+    };
+
+    [[nodiscard]] auto
+    reference_scale(NanReferencePalette& palette, ReferenceColorFamily family) noexcept
+        -> NanColorScale&;
+    [[nodiscard]] auto
+    reference_scale(const NanReferencePalette& palette, ReferenceColorFamily family) noexcept
+        -> const NanColorScale&;
+    /// 取 primitive 档位；family/shade 须是已声明的枚举值（沿用 NanColorScale::at 前提）。
+    [[nodiscard]] auto reference_color(
+        const NanReferencePalette& palette,
+        ReferenceColorFamily family,
+        ColorShade shade
+    ) noexcept -> const NanColor&;
+    [[nodiscard]] auto reference_family_name(ReferenceColorFamily family) noexcept
+        -> std::string_view;
+    [[nodiscard]] auto color_shade_name(ColorShade shade) noexcept -> std::string_view;
 
 } // namespace nandina::theme
 

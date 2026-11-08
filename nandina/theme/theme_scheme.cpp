@@ -1,6 +1,8 @@
 // theme/theme_scheme — parsing and diagnostics for stable scheme identities.
 #include "theme_scheme.hpp"
 
+#include <cmath>
+
 #include <algorithm>
 
 namespace nandina::theme
@@ -12,6 +14,240 @@ namespace nandina::theme
 
     auto ThemeSchemeContent::design_system() const -> DesignSystem {
         return {tokens, palette, palette, typography, components};
+    }
+
+    auto ThemeSchemeContent::from_reference(
+        const NanReferencePalette& reference,
+        const ColorAppearance appearance,
+        const PaletteVariantPolicy policy
+    ) -> ThemeSchemeContent {
+        const auto template_system = default_design_system();
+        return {
+            template_system.tokens,
+            make_color_scheme(reference, appearance, policy),
+            template_system.typography,
+            template_system.components,
+            reference,
+        };
+    }
+
+    auto ThemeSchemeContent::from_semantic_colors(const SemanticColorSpec& spec)
+        -> ThemeSchemeContent {
+        const auto template_system = default_design_system();
+        return {
+            template_system.tokens,
+            NanColorScheme(spec),
+            template_system.typography,
+            template_system.components,
+            std::nullopt,
+        };
+    }
+
+    namespace
+    {
+        [[nodiscard]] auto finite_color(const NanColor& color) -> bool {
+            const auto value = color.oklch();
+            return std::isfinite(value.light) && std::isfinite(value.chroma)
+                && std::isfinite(value.hue) && std::isfinite(value.alpha);
+        }
+
+        using PaletteField = NanColor NanColorScheme::*;
+
+        /// 规范语义角色到 NanColorScheme 字段的唯一映射；别名先经 canonical_color_token。
+        [[nodiscard]] auto canonical_field(const ColorToken role) noexcept -> PaletteField {
+            switch (role) {
+                case ColorToken::background:
+                    return &NanColorScheme::background;
+                case ColorToken::foreground:
+                    return &NanColorScheme::foreground;
+                case ColorToken::card:
+                    return &NanColorScheme::card;
+                case ColorToken::card_foreground:
+                    return &NanColorScheme::card_foreground;
+                case ColorToken::popover:
+                    return &NanColorScheme::popover;
+                case ColorToken::popover_foreground:
+                    return &NanColorScheme::popover_foreground;
+                case ColorToken::primary:
+                    return &NanColorScheme::primary;
+                case ColorToken::primary_foreground:
+                    return &NanColorScheme::primary_foreground;
+                case ColorToken::secondary:
+                    return &NanColorScheme::secondary;
+                case ColorToken::secondary_foreground:
+                    return &NanColorScheme::secondary_foreground;
+                case ColorToken::muted:
+                    return &NanColorScheme::muted;
+                case ColorToken::muted_foreground:
+                    return &NanColorScheme::muted_foreground;
+                case ColorToken::accent:
+                    return &NanColorScheme::accent;
+                case ColorToken::accent_foreground:
+                    return &NanColorScheme::accent_foreground;
+                case ColorToken::destructive:
+                    return &NanColorScheme::destructive;
+                case ColorToken::destructive_foreground:
+                    return &NanColorScheme::destructive_foreground;
+                case ColorToken::border:
+                    return &NanColorScheme::border;
+                case ColorToken::input:
+                    return &NanColorScheme::input;
+                case ColorToken::ring:
+                    return &NanColorScheme::ring;
+                case ColorToken::surface:
+                    return &NanColorScheme::surface;
+                case ColorToken::surface_foreground:
+                    return &NanColorScheme::surface_foreground;
+                case ColorToken::surface_variant:
+                    return &NanColorScheme::surface_variant;
+                case ColorToken::surface_variant_foreground:
+                    return &NanColorScheme::surface_variant_foreground;
+                case ColorToken::tertiary:
+                    return &NanColorScheme::tertiary;
+                case ColorToken::tertiary_foreground:
+                    return &NanColorScheme::tertiary_foreground;
+                case ColorToken::success:
+                    return &NanColorScheme::success;
+                case ColorToken::success_foreground:
+                    return &NanColorScheme::success_foreground;
+                case ColorToken::warning:
+                    return &NanColorScheme::warning;
+                case ColorToken::warning_foreground:
+                    return &NanColorScheme::warning_foreground;
+                case ColorToken::error:
+                    return &NanColorScheme::error;
+                case ColorToken::error_foreground:
+                    return &NanColorScheme::error_foreground;
+                case ColorToken::info:
+                    return &NanColorScheme::info;
+                case ColorToken::info_foreground:
+                    return &NanColorScheme::info_foreground;
+                case ColorToken::selection:
+                    return &NanColorScheme::selection;
+                case ColorToken::on_background:
+                case ColorToken::on_primary:
+                case ColorToken::on_secondary:
+                case ColorToken::on_tertiary:
+                case ColorToken::on_surface:
+                case ColorToken::on_surface_variant:
+                case ColorToken::on_muted:
+                case ColorToken::outline:
+                case ColorToken::outline_variant:
+                case ColorToken::on_success:
+                case ColorToken::on_warning:
+                case ColorToken::on_error:
+                case ColorToken::on_info:
+                case ColorToken::focus_ring:
+                    break; // canonicalized before this lookup
+            }
+            return &NanColorScheme::background;
+        }
+
+        /// 兼容别名与规范字段同值；只有规范字段是存储来源。
+        void sync_color_aliases(NanColorScheme& palette) {
+            palette.on_background = palette.foreground;
+            palette.on_primary = palette.primary_foreground;
+            palette.on_secondary = palette.secondary_foreground;
+            palette.on_tertiary = palette.tertiary_foreground;
+            palette.on_surface = palette.surface_foreground;
+            palette.on_surface_variant = palette.surface_variant_foreground;
+            palette.on_muted = palette.muted_foreground;
+            palette.outline = palette.border;
+            palette.outline_variant = palette.surface_variant;
+            palette.on_success = palette.success_foreground;
+            palette.on_warning = palette.warning_foreground;
+            palette.on_error = palette.error_foreground;
+            palette.on_info = palette.info_foreground;
+            palette.focus_ring = palette.ring;
+        }
+
+        [[nodiscard]] auto validate_semantic_color(const ColorToken role, const NanColor& color)
+            -> std::expected<void, ThemeColorError> {
+            if (!finite_color(color)) {
+                return std::unexpected(
+                    ThemeColorError {.kind = ThemeColorErrorKind::non_finite_color, .role = role}
+                );
+            }
+            return {};
+        }
+    } // namespace
+
+    auto describe(const ThemeColorError& error) -> std::string_view {
+        switch (error.kind) {
+            case ThemeColorErrorKind::non_finite_color:
+                return "semantic color has non-finite OKLCH components";
+        }
+        return "invalid semantic color";
+    }
+
+    auto canonical_color_token(const ColorToken role) noexcept -> ColorToken {
+        switch (role) {
+            case ColorToken::on_background:
+                return ColorToken::foreground;
+            case ColorToken::on_primary:
+                return ColorToken::primary_foreground;
+            case ColorToken::on_secondary:
+                return ColorToken::secondary_foreground;
+            case ColorToken::on_tertiary:
+                return ColorToken::tertiary_foreground;
+            case ColorToken::on_surface:
+                return ColorToken::surface_foreground;
+            case ColorToken::on_surface_variant:
+                return ColorToken::surface_variant_foreground;
+            case ColorToken::on_muted:
+                return ColorToken::muted_foreground;
+            case ColorToken::outline:
+                return ColorToken::border;
+            case ColorToken::outline_variant:
+                return ColorToken::surface_variant;
+            case ColorToken::on_success:
+                return ColorToken::success_foreground;
+            case ColorToken::on_warning:
+                return ColorToken::warning_foreground;
+            case ColorToken::on_error:
+                return ColorToken::error_foreground;
+            case ColorToken::on_info:
+                return ColorToken::info_foreground;
+            case ColorToken::focus_ring:
+                return ColorToken::ring;
+            default:
+                return role;
+        }
+    }
+
+    auto semantic_color(const NanColorScheme& palette, const ColorToken role) noexcept
+        -> const NanColor& {
+        return palette.*canonical_field(canonical_color_token(role));
+    }
+
+    auto set_semantic_color(NanColorScheme& palette, const ColorToken role, NanColor color)
+        -> std::expected<void, ThemeColorError> {
+        auto result = validate_semantic_color(role, color);
+        if (!result) {
+            return std::unexpected(result.error());
+        }
+        palette.*canonical_field(canonical_color_token(role)) = std::move(color);
+        sync_color_aliases(palette);
+        return {};
+    }
+
+    auto apply_semantic_colors(
+        NanColorScheme& palette,
+        const std::span<const SemanticColorOverride> overrides
+    ) -> std::expected<void, ThemeColorError> {
+        for (const auto& override: overrides) {
+            auto result = validate_semantic_color(override.role, override.color);
+            if (!result) {
+                return std::unexpected(result.error());
+            }
+        }
+        auto staged = palette;
+        for (const auto& override: overrides) {
+            staged.*canonical_field(canonical_color_token(override.role)) = override.color;
+        }
+        sync_color_aliases(staged);
+        palette = std::move(staged);
+        return {};
     }
 
     auto ThemeFamilyId::parse(const std::string_view text)
@@ -506,8 +742,14 @@ namespace nandina::theme
     // ─── 统一作者入口：派生与结构校验 ─────────────────────────────────────────
 
     auto derive_content(const ThemeSchemeContent& base) -> ThemeSchemeContent {
-        // 显式深拷贝：作者改派生内容不会污染基础方案。
-        return ThemeSchemeContent {base.tokens, base.palette, base.typography, base.components};
+        // 显式深拷贝：作者改派生内容不会污染基础方案；primitive 来源记录一并保留。
+        return ThemeSchemeContent {
+            base.tokens,
+            base.palette,
+            base.typography,
+            base.components,
+            base.reference,
+        };
     }
 
     auto derive_scheme(const ThemeScheme& base, ThemeSchemeId id, std::string display_name)

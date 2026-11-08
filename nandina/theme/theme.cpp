@@ -151,6 +151,105 @@ namespace nandina::theme
         return NanColorScheme {reference, appearance, policy, NanColorScheme::GeneratedTag {}};
     }
 
+    auto reference_scale(NanReferencePalette& palette, const ReferenceColorFamily family) noexcept
+        -> NanColorScale& {
+        switch (family) {
+            case ReferenceColorFamily::primary:
+                return palette.primary;
+            case ReferenceColorFamily::secondary:
+                return palette.secondary;
+            case ReferenceColorFamily::tertiary:
+                return palette.tertiary;
+            case ReferenceColorFamily::neutral:
+                return palette.neutral;
+            case ReferenceColorFamily::success:
+                return palette.success;
+            case ReferenceColorFamily::warning:
+                return palette.warning;
+            case ReferenceColorFamily::error:
+                return palette.error;
+        }
+        return palette.primary;
+    }
+
+    auto
+    reference_scale(const NanReferencePalette& palette, const ReferenceColorFamily family) noexcept
+        -> const NanColorScale& {
+        switch (family) {
+            case ReferenceColorFamily::primary:
+                return palette.primary;
+            case ReferenceColorFamily::secondary:
+                return palette.secondary;
+            case ReferenceColorFamily::tertiary:
+                return palette.tertiary;
+            case ReferenceColorFamily::neutral:
+                return palette.neutral;
+            case ReferenceColorFamily::success:
+                return palette.success;
+            case ReferenceColorFamily::warning:
+                return palette.warning;
+            case ReferenceColorFamily::error:
+                return palette.error;
+        }
+        return palette.primary;
+    }
+
+    auto reference_color(
+        const NanReferencePalette& palette,
+        const ReferenceColorFamily family,
+        const ColorShade shade
+    ) noexcept -> const NanColor& {
+        return reference_scale(palette, family).at(shade);
+    }
+
+    auto reference_family_name(const ReferenceColorFamily family) noexcept -> std::string_view {
+        switch (family) {
+            case ReferenceColorFamily::primary:
+                return "primary";
+            case ReferenceColorFamily::secondary:
+                return "secondary";
+            case ReferenceColorFamily::tertiary:
+                return "tertiary";
+            case ReferenceColorFamily::neutral:
+                return "neutral";
+            case ReferenceColorFamily::success:
+                return "success";
+            case ReferenceColorFamily::warning:
+                return "warning";
+            case ReferenceColorFamily::error:
+                return "error";
+        }
+        return "unknown";
+    }
+
+    auto color_shade_name(const ColorShade shade) noexcept -> std::string_view {
+        switch (shade) {
+            case ColorShade::shade_50:
+                return "50";
+            case ColorShade::shade_100:
+                return "100";
+            case ColorShade::shade_200:
+                return "200";
+            case ColorShade::shade_300:
+                return "300";
+            case ColorShade::shade_400:
+                return "400";
+            case ColorShade::shade_500:
+                return "500";
+            case ColorShade::shade_600:
+                return "600";
+            case ColorShade::shade_700:
+                return "700";
+            case ColorShade::shade_800:
+                return "800";
+            case ColorShade::shade_900:
+                return "900";
+            case ColorShade::shade_950:
+                return "950";
+        }
+        return "unknown";
+    }
+
     NanColorScheme::NanColorScheme():
         NanColorScheme {
             default_reference_palette(),

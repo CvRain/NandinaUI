@@ -4,6 +4,7 @@
 
 #include "appearance.hpp"
 #include "design_system.hpp"
+#include "nan_style.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -11,6 +12,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <span>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -76,15 +78,62 @@ namespace nandina::theme
         std::string display_name;
     };
 
+    /// 显式语义色覆盖：键是既有语义角色，值是作者给定的 NanColor（OKLCH）。
+    /// 不新增 red/blue 等原始色 token；需要固定色值时使用本类型或参考色阶档位。
+    struct SemanticColorOverride {
+        ColorToken role;
+        NanColor color;
+    };
+
+    enum class ThemeColorErrorKind {
+        /// NanColor 构造已归一化 light/hue/alpha 并把负 chroma 归零，作者入口只需拒绝
+        /// 非有限分量（NaN/inf）——不在这里静默裁剪合法输入，也不冒充色域处理。
+        non_finite_color,
+    };
+
+    struct ThemeColorError {
+        ThemeColorErrorKind kind = ThemeColorErrorKind::non_finite_color;
+        ColorToken role = ColorToken::background;
+    };
+
+    [[nodiscard]] auto describe(const ThemeColorError& error) -> std::string_view;
+
+    /// 兼容别名（on_* / outline* / focus_ring）映射到 shadcn 规范名；规范名原样返回。
+    [[nodiscard]] auto canonical_color_token(ColorToken role) noexcept -> ColorToken;
+    /// 读取已声明的语义角色（规范名或别名）；别名读取规范字段。
+    [[nodiscard]] auto semantic_color(const NanColorScheme& palette, ColorToken role) noexcept
+        -> const NanColor&;
+    /// 写入已声明的语义角色并同步兼容别名；规范化存储值非有限时返回错误且不修改。
+    [[nodiscard]] auto set_semantic_color(NanColorScheme& palette, ColorToken role, NanColor color)
+        -> std::expected<void, ThemeColorError>;
+    /// 批量显式覆盖：先验证全部再一次性写入；失败不修改，重复角色（含别名）最后一项生效。
+    [[nodiscard]] auto
+    apply_semantic_colors(NanColorScheme& palette, std::span<const SemanticColorOverride> overrides)
+        -> std::expected<void, ThemeColorError>;
+
     /// One appearance's complete immutable content; DesignSystem is only a renderer adapter.
     struct ThemeSchemeContent {
         NanTokens tokens;
         NanColorScheme palette;
         TypographyRoles typography;
         ComponentRecipes components;
+        /// 派生来源的 primitive palette（可选）；palette 仍是唯一权威语义事实。
+        std::optional<NanReferencePalette> reference;
 
         [[nodiscard]] static auto from(const DesignSystem& system, ColorAppearance appearance)
             -> ThemeSchemeContent;
+
+        /// 从参考色阶派生完整内容：palette 由色阶生成、记录来源；其余字段取默认设计系统模板。
+        [[nodiscard]] static auto from_reference(
+            const NanReferencePalette& reference,
+            ColorAppearance appearance,
+            PaletteVariantPolicy policy = {}
+        ) -> ThemeSchemeContent;
+
+        /// 从显式语义色声明构造完整内容；不伪造参考色阶来源。
+        [[nodiscard]] static auto from_semantic_colors(const SemanticColorSpec& spec)
+            -> ThemeSchemeContent;
+
         [[nodiscard]] auto design_system() const -> DesignSystem;
     };
 

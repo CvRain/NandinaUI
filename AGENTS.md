@@ -111,20 +111,29 @@ application shell. Version `0.1.0-alpha.1`.
   the directory-version check ahead of payload copying, and added channel lifetime, reentry,
   multi-projection, file-import and nested-derivation coverage. The step-4 review cycle is closed.
   Contract: `docs/references/theme_authoring_and_state.md` §14–§15.
-- **P4.3 D2 step 4a CPU-side compositor and contrast diagnostics** (2026-11-07, initial
-  implementation reviewed with fixes, awaiting maintainer revalidation; uncommitted) adds the
-  single foundation CPU compositor
+- **P4.3 D2 step 4a CPU-side compositor and contrast diagnostics** (2026-11-07, reviewed and
+  pushed in `fef829a`) adds the single foundation CPU compositor
   (`foundation/composition.hpp`: explicit encoded-sRGB strategy, background-stack early
   termination, composition errors) and scenario-scoped contrast rules/profiles
   (`theme/contrast_diagnostics.*`) with passed/failed/insufficient-context statuses, role paths,
-  measured ratios, thresholds and resolved OKLCH plus converted sRGB. Local test helpers now
-  consume the shared compositor. Rules require explicit tone context for tone references, diagnostics
-  retain config/tone and transform operand paths, and sampling stops at the first opaque endpoint.
-  Unresolved foreground samples are optional; reports state clipping and float/no-u8 policy.
-  Backend pixel readback, the registration contrast gate and style advisories remain pending
-  (GPU environment); do not claim the color gate passes. Keep this batch
+  measured ratios, thresholds and resolved OKLCH plus converted sRGB. Local test helpers consume
+  the shared compositor. Review fixes require explicit tone context for tone references, keep
+  transform operand paths, stop sampling at the first opaque endpoint and report the composition
+  config with clipping/float-no-u8 policy. Backend pixel readback, the registration contrast gate
+  and style advisories remain pending (GPU environment); do not claim the color gate passes.
+  Contract: `docs/references/theme_authoring_and_state.md` §6.5–§6.8, §16.
+- **P4.3 D2 step 4b author color entry** (2026-11-07, reviewed with import-validation fixes;
+  maintainer revalidation pending, uncommitted) adds typed primitive-palette access
+  (`ReferenceColorFamily`,
+  `reference_scale`, `reference_color`, family/shade names), explicit `NanColor` semantic
+  overrides (`SemanticColorOverride`, `canonical_color_token`, `semantic_color`,
+  `set_semantic_color`, atomic `apply_semantic_colors`) and the
+  `ThemeSchemeContent::from_reference` / `from_semantic_colors` constructors with an optional
+  `reference` provenance record copied by derivation. File palette overrides reuse atomic `apply_semantic_colors` after canonical-key precedence.
+  No raw red/blue tokens are added and semantic tokens stay the default. Entry validation rejects
+  only non-finite OKLCH components (`NanColor` already normalizes light/hue/alpha). Keep
   uncommitted through maintainer review. Contract:
-  `docs/references/theme_authoring_and_state.md` §6.5–§6.8, §16.
+  `docs/references/theme_authoring_and_state.md` §17.
 - The plan and exit criteria are **not** owned by this file: read
   `docs/references/development_roadmap.md` and the D5 contract
   (`resource_build_and_deployment.md` §8) before claiming a sub-batch is complete.
@@ -508,9 +517,12 @@ The step-3 review cycle is closed.
 
 The step-4 review cycle is closed and the batch is pushed in `4746173`: equivalent catalog
 replacement is idempotent, staged publication and all channel lifetimes/exception paths are
-covered, event endpoints own their snapshots and author derivation is deep. Step 4a's CPU side is
-the current uncommitted review batch: the single foundation compositor plus explicit contrast
-rules/profiles/diagnostics, with local helpers migrated. CPU review fixes explicit tone context,
-transform paths, opaque-endpoint sampling and policy reporting; maintainer revalidation is pending.
-Backend pixel readback, the registration contrast gate, style advisories and internal broadcast narrowing remain pending; do not start them
-or claim the color gate passes without a GPU environment and maintainer review.
+covered, event endpoints own their snapshots and author derivation is deep. Step 4a's CPU side is pushed as `fef829a`: the single foundation compositor plus explicit
+contrast rules/profiles/diagnostics, with local helpers migrated and the review fixes for tone
+context, transform paths, opaque-endpoint sampling and policy reporting. Step 4b's author color
+entry (typed primitive-palette access and explicit `NanColor` semantic overrides with file-import
+parity) is the current uncommitted review batch. Review closes non-finite file overrides through
+the shared validator and covers every family/shade, role/alias, duplicate ordering and provenance.
+Backend pixel readback, the registration contrast
+gate, style advisories, Shell multi-scheme settings and internal broadcast narrowing remain pending;
+do not claim the color gate passes without a GPU environment and maintainer review.

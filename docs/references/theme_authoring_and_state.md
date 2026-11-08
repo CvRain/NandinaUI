@@ -1,10 +1,10 @@
 # D2：主题方案、作者入口与状态订阅
 
-> **状态：首批窄投影已随 `8920f3a`、第 3 步目录与选择已随 `995e6ae` 提交。
-> 第 4 步观察通道与作者入口已随 `4746173` 提交推送。**
-> 第 4a 步 CPU 合成器与诊断已实施，复核补修后保持未提交、待维护者复验；
-> 真实后端像素读回和注册门槛尚未实施。§14–§16 记录契约、实现和复核；
-> 更早小节保留讨论语境。
+> **状态：首批窄投影已随 `8920f3a`、第 3 步目录与选择已随 `995e6ae`、第 4 步观察
+> 通道与作者入口已随 `4746173`、第 4a 步 CPU 合成器与诊断已随 `fef829a` 提交推送。**
+> 第 4b 步作者颜色入口（显式 `NanColor` 语义覆盖与 primitive palette 访问）复核补修后，
+> 保持未提交待维护者复验；真实后端像素读回和注册门槛尚未实施。
+> §14–§17 记录契约、实现和复核；更早小节保留讨论语境。
 > 所有标注为伪代码的示例只表达作者体验，不可直接当成现有接口使用。
 > 当前实现以 [设计令牌与主题系统](design_tokens.md) 和源码为准；原始问题见
 > [D2 工作稿](reference_draft.md) 与 [story 010](../../stories/010-the-theme-signal-that-cannot-be-subscribed.md)。
@@ -565,6 +565,9 @@ D2 此次只保留边界，不承诺组件插件、动态库加载、任意自�
    入口，但不阻塞第 1–2 步的窄投影，也不并入第 3 步方案模型；完成前只声明结构校验可用，
    不把注册成功宣传成配色门槛已通过。
 
+   **4b：作者颜色入口。** 类型化 primitive 色阶访问、显式语义角色覆盖与文件导入的一致
+   校验/提交；具体 API 与复核记录见 §17，独立于 4a 尚未完成的真实后端验收与注册门槛。
+
 5. **完整应用验收与归档**：更新 showcase 多方案设置，覆盖真实组件切换；再更新教程与状态。
 
 可按风险细分，但不能先公开依赖“一家族两变体”的新 API，再把独立方案当后续补丁。
@@ -934,7 +937,7 @@ recipe vector 隔离、家族继承与替换基础后已注册派生内容保持
   `composite_over` 改为消费 foundation 唯一实现，不再复制生产算法。
 - **不在本批**：真实 RenderDevice 绘制 + framebuffer 读回（§6.8 步骤 1–5，需窗口/GPU）、
   由此确定色域策略与合成空间最终结论、注册/替换前的配色门槛接线、内部广播收窄、
-  4b 风格建议与可访问性认证。
+  风格建议与可访问性认证。
 
 故障注入（重新编译后恢复，均红转绿）：
 1. 合成改在线性通道 → 编码空间手算用例 3 处断言失败。
@@ -978,4 +981,136 @@ theme-palette-contrast 4 / 129；command-palette 15 / 105。
 1 SKIP；ASan 100 OK / 1 SKIP，no-RTTI 101 OK / 1 SKIP，no-SQLite 97 OK / 1 SKIP，
 tools 8 OK；release_check --ci 8/8（headers 197、docs 87、clang-format 23.1.1）。
 各套 SKIP 为 window-lifecycle，环境差异与日志见 reference_draft 第 4a 步 CPU 复核记录。
-本批仍保持未提交，待维护者复验；真实读回与配色注册门槛未完成。
+本批已随维护者统一提交 `fef829a` 推送；真实读回与配色注册门槛未完成。
+
+---
+
+## 17. 第 4b 步作者颜色入口：API 定形（2026-11-07）
+
+§6.2 的两条作者路径（参考色阶派生、直接语义色声明）已存在于 `theme.hpp`，但 C++ 侧缺少
+「在既有方案上显式覆盖单个语义角色」与「类型化读取 primitive 色阶」的入口；文件导入
+（`[themes.x.palette]` 直接色值、`$palettes.<name>.<scale>.<shade>` 引用）已支持同类语义。
+本节定形两侧收敛到同一提交语义的最小 API，不新增 red/blue 等语义 token。
+
+### 17.1 primitive palette 访问（theme.hpp）
+
+```cpp
+enum class ReferenceColorFamily : std::size_t {
+    primary, secondary, tertiary, neutral, success, warning, error,
+};
+[[nodiscard]] auto reference_scale(NanReferencePalette&, ReferenceColorFamily) noexcept -> NanColorScale&;
+[[nodiscard]] auto reference_scale(const NanReferencePalette&, ReferenceColorFamily) noexcept -> const NanColorScale&;
+[[nodiscard]] auto reference_color(const NanReferencePalette&, ReferenceColorFamily, ColorShade) noexcept -> const NanColor&;
+[[nodiscard]] auto reference_family_name(ReferenceColorFamily) noexcept -> std::string_view;
+[[nodiscard]] auto color_shade_name(ColorShade) noexcept -> std::string_view;
+```
+
+- 与 `$palettes.<name>.<scale>.<shade>` 的字符串寻址一一对应，C++ 作者不再手写字段名或下标。
+- `ThemeSchemeContent` 增加**可选** `std::optional<NanReferencePalette> reference`：只记录
+  「由哪个 primitive 色阶派生」的来源，`palette` 仍是唯一权威语义事实；从
+  `from(DesignSystem, ...)` 或直接语义色构造的方案不伪造来源（保持 `nullopt`）。
+
+### 17.2 显式 `NanColor` 语义覆盖（theme_scheme.hpp）
+
+```cpp
+struct SemanticColorOverride { ColorToken role; NanColor color; };
+enum class ThemeColorErrorKind { non_finite_color };
+struct ThemeColorError { ThemeColorErrorKind kind; ColorToken role; };
+[[nodiscard]] auto describe(const ThemeColorError&) -> std::string_view;
+
+[[nodiscard]] auto canonical_color_token(ColorToken) noexcept -> ColorToken;   // on_* / outline* 等别名 → 规范名
+[[nodiscard]] auto semantic_color(const NanColorScheme&, ColorToken) noexcept -> const NanColor&;
+[[nodiscard]] auto set_semantic_color(NanColorScheme&, ColorToken, NanColor) -> std::expected<void, ThemeColorError>;
+[[nodiscard]] auto apply_semantic_colors(NanColorScheme&, std::span<const SemanticColorOverride>)
+    -> std::expected<void, ThemeColorError>;
+
+struct ThemeSchemeContent {
+    ...
+    [[nodiscard]] static auto from_reference(const NanReferencePalette&, ColorAppearance,
+                                             PaletteVariantPolicy = {}) -> ThemeSchemeContent;
+    [[nodiscard]] static auto from_semantic_colors(const SemanticColorSpec&) -> ThemeSchemeContent;
+};
+```
+
+- 覆盖键是**既有语义角色**（`ColorToken`），别名映射到规范名并同步兼容字段，不引入
+  `red`/`blue` 之类原始色 token；作者要固定色值就用 `NanColor`（OKLCH）或参考色阶档位。
+- 校验针对 `NanColor` 规范化存储的 OKLCH 分量：只拒绝非有限值；构造已归一化
+  light/hue/alpha、将负 chroma 归零，入口不重复裁剪。批量先验证全部再写入，任一项失败
+  整体不修改（含兼容别名）。色域策略仍由诊断与后端读回阶段处理（§6.6）。
+- 两条构造便利入口只影响 palette 与来源记录，tokens/typography/components 取
+  `default_design_system()` 的模板；派生（`derive_content`）深拷贝并保留 `reference`，
+  修改派生方案不污染基础方案。
+- 文件导入与 C++ 必须产生同一语义：TOML 直接色值等价于 `set_semantic_color` 的逐角色写入，
+  TOML `$palettes.*` 引用等价于 `reference_color` 取值；本步以相等性回归与一次提交接线证明，
+  不新增第二套解析/归一化路径。
+
+### 17.3 本步不做
+
+Shell 多方案设置页与 showcase 视觉验收（§8 第 5 步）；内部广播按维度收窄；注册配色门槛与
+真实后端像素读回（仍待 GPU 环境）；第三方配方注册（§7.3 后续能力）；语义角色的增删。
+
+### 17.4 第 4b 步实施记录（2026-11-07，初稿待维护者复核）
+
+按 §17 定形落地 C++ 作者颜色入口，并与既有文件导入路径做相等性回归。
+
+- `theme.hpp`：`ReferenceColorFamily`、`reference_scale`（const/非 const）、
+  `reference_color`、`reference_family_name`、`color_shade_name`；与
+  `$palettes.<name>.<scale>.<shade>` 的字符串寻址一一对应。
+- `theme_scheme.hpp/.cpp`：`SemanticColorOverride`/`ThemeColorError`；
+  `canonical_color_token`（on_* / outline* / focus_ring 映射到 shadcn 规范名）、
+  `semantic_color`（规范或别名读取）、`set_semantic_color`（单角色写入并同步兼容别名）、
+  `apply_semantic_colors`（先验证全部再一次性提交）。作者入口只拒绝非有限 OKLCH 分量：
+  `NanColor` 构造本身已归一化 light/hue/alpha 并归零负 chroma，入口不重复裁剪，也不把
+  色域处理混进作者写入。
+- `ThemeSchemeContent`：新增可选 `reference` 来源记录（palette 仍是唯一权威语义事实）；
+  `from_reference` 从 primitive 色阶派生并记录来源，`from_semantic_colors` 从显式语义
+  声明构造且不伪造来源；`derive_content` 深拷贝并保留 `reference`。
+- 文件导入与 C++ 收敛：TOML 直接色值等价于逐角色 `set_semantic_color`，
+  `$palettes.*` 引用等价于 `reference_color`；回归按全部规范角色逐一比较，并验证
+  `StyleDocument::apply` 注册出的规范方案 palette 与 C++ 构造一致。
+
+故障注入（重新编译后恢复，均红转绿）：
+1. `set_semantic_color` 不同步兼容别名 → 别名同值用例 1 断言失败。
+2. 批量覆盖边验证边写入 → 原子性用例 1 断言失败（失败后 palette 已被部分修改）。
+3. `reference_scale` 的 neutral 错映到 primary → 类型化访问用例 1 断言失败。
+4. `derive_content` 丢弃 primitive 来源 → 派生保留来源用例 1 断言失败。
+5. `on_muted` 不做别名规范化 → 别名写读用例 2 断言失败。
+
+专项：theme-color-entry 7 用例 / 432 断言；既有 theme-palette-contrast 4/129、
+theme-contrast-diagnostics 15/338、theme-scheme 25/357 保持通过。
+首版维护者矩阵（复核前，Linux 无显示/GPU 沙箱；每套先编译再测）：buildDir 全量
+122 OK / 1 FAIL（sdf-state-probe，无显示设备）/ 1 SKIP（sdf-device 77）；ASan 101 OK /
+1 SKIP；no-RTTI 103 OK / 0 SKIP；no-SQLite 98 OK / 1 SKIP；tools 8 OK；
+release_check --ci 8/8（headers 197、docs 87、clang-format 23.1.1）。
+本批保持未提交，待维护者复核。
+
+
+### 17.5 第 4b 步复核补充（2026-11-07，保持未提交）
+
+文件 palette 覆盖与 C++ 覆盖复用 `apply_semantic_colors`：先解析为角色/颜色列表，再统一
+验证、同步别名并提交。非有限的直接色值或已引用的 primitive 值在解析阶段返回错误；
+未被引用的 primitive 来源不新增配色注册门槛。TOML 同时提供规范名和兼容别名时仍以
+规范名为准；C++ span 则按声明顺序应用，重复角色（含归一化别名）最后一项生效。
+primitive/语义查询 API 延续既有色阶查询的前提：调用方传入枚举中已声明的值。
+
+
+复核先通过四个专项基线，再新增 C++/TOML 非有限输入相等性回归，原实现 5 断言失败
+（light=NaN、chroma=inf、hue=inf、alpha=NaN，以及 `$palettes` 引用的非有限值）。
+`StyleDocument::parse_palette` 现复用批量覆盖，不再直接修改颜色字段或另做别名同步。
+独立故障注入去掉文件入口的错误传播，重新编译后同一用例 5 断言失败（exit 42）；
+恢复后六个受影响专项全绿。
+
+补充 const 访问与全部 7 族 × 11 档的字段/字符串对应、34 规范角色通过既有解析器消费、
+14 别名双向写读与 TOML 规范名优先级、批量重复角色的声明顺序、失败不触碰兼容字段、
+空批次与 primitive 来源的独立复制/不反向覆盖语义色。规范文档删除不可达的
+`alpha_out_of_range` 示例，并修正重复的 §17.2 实施记录编号。
+
+专项：theme-color-entry 14 用例 / 1243 断言；button 33 / 221，theme-scheme 25 / 357，
+theme-design-system 25 / 637，theme-contrast-diagnostics 15 / 338，theme-palette-contrast
+4 / 129 保持通过。
+
+最终矩阵：主套件 121 OK / 2 FAIL（sdf-device 与 sdf-state-probe 均无显示设备）/ 1 SKIP；
+ASan 101 OK / 1 SKIP，no-RTTI 102 OK / 1 SKIP，no-SQLite 98 OK / 1 SKIP，tools 8 OK；
+release_check --ci 8/8（headers 197、docs 87、clang-format 23.1.1）。各套 SKIP 均为
+window-lifecycle，SDK 双次打包与 vendored 消费者通过。实际日志与首版环境差异见
+reference_draft 第 4b 步复核记录。本轮保持未提交，待维护者复验。

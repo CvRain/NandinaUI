@@ -450,6 +450,13 @@ theme_contrast_diagnostics_tests = executable(
 )
 test('theme-contrast-diagnostics', theme_contrast_diagnostics_tests, suite: 'unit')
 
+theme_color_entry_tests = executable(
+    'theme_color_entry_tests',
+    files('theme_color_entry_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('theme-color-entry', theme_color_entry_tests, suite: 'unit')
+
 theme_scheme_tests = executable(
     'theme_scheme_tests',
     files('theme_scheme_tests.cpp'),
