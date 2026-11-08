@@ -158,8 +158,8 @@ application shell. Version `0.1.0-alpha.1`.
   based index paths, covers every name and recipe color slot, and checks real parse/apply failure
   isolation after a successful import. Contract:
   `docs/references/theme_authoring_and_state.md` §19.
-- **P4.3 D2 Shell multi-scheme framework preparation** (2026-11-08, initial implementation
-  awaiting maintainer review; uncommitted) replaces catalog errors' single scheme ID with
+- **P4.3 D2 Shell multi-scheme framework preparation** (2026-11-08, reviewed and pushed in
+  `f821f40`) replaces catalog errors' single scheme ID with
   operation-specific scheme/family subjects, adds scope-bound `on_theme_selection_change()` and
   `on_theme_catalog_change()` to `BuildContext`, and adds a shell action-sequence regression
   covering fixed/pair/system choices, inactive slot edits, replacements, dynamic catalogs,
@@ -563,9 +563,10 @@ validator and covered every family/shade, role/alias, duplicate ordering and pro
 are pushed as `f383201`; its review closed enum-identity test gaps and added exhaustive
 byte/string-view boundaries, and source evidence matches both the SVG 1.1 and pinned CSS Color 4
 snapshots. Step 4d's TOML named-color literals are pushed as `5061b39`, with complete error paths
-and tests for all literals, reference boundaries and actual apply failure atomicity. The current
-uncommitted batch prepares the Shell multi-scheme page with typed catalog subjects, scope-bound
-selection/catalog subscriptions and end-to-end interaction regressions; maintainer revalidation
-is pending. Backend pixel readback, the registration contrast gate, style advisories, the Shell
-page body/visual acceptance and internal broadcast narrowing remain pending; do not claim the
-color gate passes without a GPU environment and maintainer review.
+and tests for all literals, reference boundaries and actual apply failure atomicity. Shell
+multi-scheme framework preparation is pushed as `f821f40`, with typed catalog subjects,
+scope-bound selection/catalog subscriptions and end-to-end interaction regressions. Environment
+skip classification is pushed as `d9d234c`. Backend pixel readback, the registration contrast
+gate, style advisories, the Shell page body/visual acceptance and internal broadcast narrowing
+remain pending; do not claim the color gate passes without a GPU environment and maintainer
+review.

@@ -825,7 +825,7 @@ RED-FIRST 残留，文档收尾再检查 87 篇链接/锚点与 git diff --check
 4a 软件路径读回放 Shell 之后，明确不代替 GPU 路径、不挂接注册门槛。Windows、GPU
 和人工视觉验收仍单独记录。
 
-### P4.3 D2 Shell 多方案框架准备实施记录（2026-11-08，初稿待维护者复核）
+### P4.3 D2 Shell 多方案框架准备实施记录（2026-11-08，已随 `f821f40` 提交）
 
 4d 已随 `5061b39` 提交推送。本批只处理设置页依赖的框架准备，不修改 showcase 页面正文，
 也不新增 `ThemeSettingsState`；页面仍以 manager 为唯一写入口，从 selection/catalog/
@@ -869,10 +869,10 @@ theme-observation 16 / 306，sidebar-showcase 6 / 55，build-context-header 1 / 
 approved golden 在 Hyprland/Wayland + RADV 下逐像素 0 差异。环境证据不自动完成 Shell
 页面的人工视觉验收。
 
-保持未提交；页面正文、持久化、注册配色门槛、真实后端像素读回及人工视觉验收均在后续
-独立批次。
+本批已随 `f821f40` 提交推送；页面正文、持久化、注册配色门槛、真实后端像素读回及人工
+视觉验收均在后续独立批次。
 
-### 环境更正记录：显示/GPU 可用性与测试分类（2026-11-08 晚，完全权限会话）
+### 环境更正记录：显示/GPU 可用性与测试分类（2026-11-08 晚，已随 `d9d234c` 提交）
 
 此前多个会话的主套件显示 `sdf-device` SKIP、`sdf-state-probe` FAIL，早期记录写作
 「SDL 无显示设备」。本轮在操作者授予完全权限后实测，确认真正原因并修复测试分类：

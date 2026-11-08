@@ -25,7 +25,7 @@
 `PageKey` 路由身份、address 显示与 typed navigation 沿用既有规则。迁移调用方后须重新编译；
 正式契约见 [Page / Router](page_and_router.md)，验证见 [D3](reference_draft.md#d3-路由身份与导航分组开放到哪一层)。
 
-2026-11-08 P4.3 D2 Shell 多方案框架准备（experimental，初稿待维护者复核）：
+2026-11-08 P4.3 D2 Shell 多方案框架准备（experimental，已随 `f821f40` 提交）：
 `ThemeCatalogErrorKind` 破坏性改为区分 scheme/family 的 operation-specific 值，
 `ThemeCatalogError {kind, optional<ThemeSchemeId> scheme, optional<ThemeFamilyId> family}`
 替代原 `{kind, ThemeSchemeId id}`；`BuildContext` 新增作用域绑定的

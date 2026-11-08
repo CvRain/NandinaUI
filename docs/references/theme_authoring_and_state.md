@@ -4,7 +4,7 @@
 > 通道与作者入口已随 `4746173`、第 4a 步 CPU 合成器与诊断已随 `fef829a`、第 4b 步
 > 作者颜色入口已随 `3e2542a`、第 4c 步 foundation 命名颜色字面量已随 `f383201`
 > 提交推送、第 4d 步 TOML 命名颜色字面量已随 `5061b39` 提交推送。**
-> Shell 多方案闭环的框架准备（§20）已实现，保持未提交待复核；
+> Shell 多方案闭环的框架准备（§20）已随 `f821f40` 提交推送；
 > 真实后端像素读回和注册门槛尚未实施。§14–§20 记录契约、实现和复核；
 > 更早小节保留讨论语境。
 > 所有标注为伪代码的示例只表达作者体验，不可直接当成现有接口使用。
@@ -1399,7 +1399,7 @@ void on_theme_catalog_change(std::function<void(ThemeCatalogState)>);
 
 本步不改 showcase 页面正文，不新增设置持久化、注册配色门槛、真实后端读回或广播维度收窄。
 
-### 20.4 实施与复核记录（2026-11-08，保持未提交）
+### 20.4 实施与复核记录（2026-11-08，已随 `f821f40` 提交）
 
 - `ThemeCatalogError` 改为 operation-specific kind；scheme/family 以可选强类型主体输出，
   scheme 引用未知 family 时同时保留两者。`describe()` 不再把 family 错误伪装成 scheme
@@ -1428,4 +1428,4 @@ ASan 104 OK / 1 SKIP（既有 window-lifecycle 配置），no-RTTI 106 OK，no-S
 clang-format 23.1.1）。SDK 打包和 consumer 通过，6 条 Linux approved golden 在
 Hyprland/Wayland + RADV 下逐像素 0 差异。框架准备本身的无显示初次矩阵与原因见
 reference_draft 的 Shell 框架准备及环境更正记录；视觉人工验收仍留待页面批次。
-本批保持未提交，页面正文与视觉验收继续由维护者在独立批次处理。
+本批已随 `f821f40` 提交推送；页面正文与视觉验收继续由维护者在独立批次处理。
