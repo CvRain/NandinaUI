@@ -170,7 +170,15 @@ auto name = foundation::nan_named_color_name(foundation::NanNamedColor::steelblu
 不得硬编码颜色，主题作者可以把命名颜色赋给既有语义角色（组件仍通过语义角色消费）。
 查询拒绝空白、嵌入 NUL、非 ASCII 与未知名称；数值固定为规范 sRGB 原值（如
 `green = #008000`、`lime = #00FF00`），均不透明，别名各自保留身份。类型化入口要求
-已声明枚举成员；保存使用规范名称。TOML 字符串简写另行定形。
+已声明枚举成员；保存使用规范名称。
+
+**文件导入（2026-11-08）**：接受颜色数组的字段同时接受命名字符串——palette 覆盖
+（`primary = "SteelBlue"`）、参考色阶档位（`50 = "White"`）与 Button/TextField 规则的
+颜色字段；解析统一调用 `nan_named_color`，规则与 C++ 入口一致。`$palette.*` 仍是语义
+token 引用、`$palettes.*` 仍是参考色阶取值，匹配失败立即报错且不回退成色名；错误信息
+带完整路径（如 `themes.author.palette.primary`、`styles.button[1].foreground`，规则下标
+从 0 开始），palette 非有限值校验也保留该路径；解析失败不产生可 `apply` 的文档，
+不修改活动目录/选择/样式。
 
 面向主题作者的外部入口是 TOML 样式文档：`StyleDocument` 可声明 `reference_palettes`、`themes`、`theme_families`、`active_theme`、`active_family`、`preference`、遗留 `NanStyle` 规则与字体族，`parse_style_document()` / `load_style_document()` 解析，`apply(ThemeManager&, FontFamilyRegistry*)` 以 `std::expected<void, std::string>` 报告失败。
 

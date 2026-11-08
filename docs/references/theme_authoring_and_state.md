@@ -2,9 +2,10 @@
 
 > **状态：首批窄投影已随 `8920f3a`、第 3 步目录与选择已随 `995e6ae`、第 4 步观察
 > 通道与作者入口已随 `4746173`、第 4a 步 CPU 合成器与诊断已随 `fef829a`、第 4b 步
-> 作者颜色入口已随 `3e2542a` 提交推送。**
-> 第 4c 步 foundation 命名颜色字面量复核后补齐测试，保持未提交待维护者复验；
-> 真实后端像素读回和注册门槛尚未实施。§14–§18 记录契约、实现和复核；
+> 作者颜色入口已随 `3e2542a`、第 4c 步 foundation 命名颜色字面量已随 `f383201`
+> 提交推送。**
+> 第 4d 步 TOML 命名颜色字面量复核补修完成，随本批统一提交；
+> 真实后端像素读回和注册门槛尚未实施。§14–§19 记录契约、实现和复核；
 > 更早小节保留讨论语境。
 > 所有标注为伪代码的示例只表达作者体验，不可直接当成现有接口使用。
 > 当前实现以 [设计令牌与主题系统](design_tokens.md) 和源码为准；原始问题见
@@ -1218,7 +1219,7 @@ theme-palette-contrast 4/129 保持通过。
 99 OK / 1 SKIP，tools 8 OK；release_check --ci 8/8
 （headers 198、docs 87、clang-format 23.1.1）。各套 SKIP 均为 window-lifecycle；
 SDK 打包与 vendored 消费者通过。日志与原文补验见 reference_draft 第 4c 步复核记录；
-保持未提交，待维护者复验。
+当时保持未提交，随后已随 `f383201` 统一提交推送。
 TOML 简写、语义 token、默认配方均未改动；真实像素读回与配色注册门槛仍未完成。
 
 
@@ -1235,4 +1236,97 @@ CSS 表与 SVG 表的 147 个共有项完全一致，仅增加 `rebeccapurple = 
 
 此前规范来源原文核对的证据缺口已关闭；无需修改运行代码。本次只更新证据和文档，不将
 前轮 C++ 矩阵冒充为本轮重跑结果。代码复核、自动验证和规范来源核对均已完成；整批仍
-保持未提交，后续按维护者复验与统一提交流程推进。GPU、Windows 与视觉验收仍属独立边界。
+当时保持未提交，随后已随 `f383201` 统一提交推送。GPU、Windows 与视觉验收仍属独立边界。
+
+---
+
+## 19. 第 4d 步 TOML 命名颜色字面量：API 定形（2026-11-08）
+
+4c 已把 CSS Color 4 命名颜色做成 foundation 字面量；本步只把同一写法接到文件导入侧，
+不新增第二套颜色模型，也不扩展引用语法。
+
+### 19.1 契约：增加一种字面量写法，保留既有引用能力
+
+- **命名颜色是字面量写法**：当前接受颜色数组 `[light, chroma, hue(, alpha)]` 的字段，
+  同时接受 `"SteelBlue"` 这类命名字符串；解析统一调用 `nan_named_color()`，因此大小写、
+  空白、嵌入 NUL、非 ASCII 与未知名称规则与 C++ 入口完全一致。
+- **引用语义不变**：`$palette.*` 继续是语义 token 引用（配方颜色字段），`$palettes.*`
+  继续是参考色阶取值（palette 覆盖）。引用匹配失败立即报错，**不回退成色名**。
+- **不扩展引用形式**：palette 覆盖与 Button/TextField 配方的既有引用范围不同，本批只加
+  命名颜色字面量，不顺带让每个颜色字段接受所有引用形式。
+- **优先级不变**：palette 覆盖中 TOML 同时给规范名与兼容别名时仍以规范名为准；C++ 批量
+  覆盖仍按声明顺序。
+- **错误与原子性**：错误信息带字段路径（如 `themes.author.palette.primary`、
+  `palettes.brand.primary.50`）；任一颜色/引用失败使 `parse_style_document` 返回错误，
+  不产生可 `apply` 的文档，因此不会修改活动目录、选择或样式。
+
+### 19.2 解析入口对照
+
+| 字段位置 | 颜色数组 | 命名颜色 | 既有引用 |
+| --- | --- | --- | --- |
+| `[palettes.<name>.<scale>] <shade>` | 接受 | 接受（`"White"`） | 不接受（保持） |
+| `[themes.<name>.palette] <role>` | 接受 | 接受 | `$palettes.<p>.<scale>.<shade>` |
+| Button / TextField 规则颜色字段 | 接受 | 接受 | `$palette.<role>` |
+
+### 19.3 本步不做
+
+TOML 侧 `transparent`/`currentColor`、完整 CSS 颜色语法（`#hex`/`rgb()`）、新增引用形式、
+注册配色门槛与真实后端像素读回（另行排期）；Shell 多方案设置随后单独推进。
+
+### 19.4 第 4d 步实施记录（2026-11-08，复核完成并随本批提交）
+
+- `style_document.cpp` 增加 `literal_color()`：颜色字面量字段接受命名颜色字符串
+  （经 `foundation::nan_named_color`），数组路径保持不变；`$` 前缀不作为字面量。
+- palette 覆盖：`$palettes.*` 仍由 `palette_reference` 解析并立即报错（不回退成色名）；
+  其他字符串走命名颜色；错误信息带字段路径（`themes.<name>.palette.<role>`、
+  `palettes.<name>.<scale>.<shade>`）。配方颜色字段：`$palette.*` 保持语义 token，
+  其他字符串先查命名颜色；不扩展其他引用形式。规范名优先规则不变。
+- 引用 scale 的每个档位也可用命名颜色字面量，错误带完整档位路径。
+- 测试（`tests/style_document_named_color_tests.cpp`，unit）：文件 palette/参考色阶/配方
+  字段的命名颜色、`$palettes.*` 与原引用语义、`$palette.*` token 保持、未知名称/未知
+  palette/畸形引用错误、字段路径断言、失败导入不修改活动 manager、规范名优先。
+- 故障注入（重新编译后恢复）：palette 覆盖拒绝命名颜色（3 断言失败）、配方字段拒绝
+  命名颜色（1）、错误丢失字段路径（2）、别名优先破坏规范名优先（1）。
+- 专项：style-document-named-color 5 用例 / 50 断言；named-color 6/2916、
+  theme-color-entry 14/1243 等既有专项保持通过。首版维护者矩阵（复核前，Linux 无显示/GPU
+  沙箱；每套先编译再测）：buildDir 全量 124 OK / 1 FAIL（sdf-state-probe，无显示设备）/
+  1 SKIP（sdf-device 77）；ASan 103 OK / 1 SKIP；no-RTTI 105 OK / 0 SKIP；
+  no-SQLite 100 OK / 1 SKIP；tools 8 OK；release_check --ci 8/8（headers 198、
+  docs 87、clang-format 23.1.1）。本批保持未提交，待维护者复核。
+
+
+### 19.5 第 4d 步复核契约补充（2026-11-08，随本批提交）
+
+配方颜色错误使用含 0 起始数组下标的路径（如 `styles.button[1].foreground`、
+`styles.text_field[1].placeholder`）；palette 统一校验的非有限错误同样保留完整输入路径，
+包括作者使用的别名拼写，而不只输出 role 名。此项只完善错误定位，不改变引用支持范围、
+颜色规范化或校验策略。
+
+
+复核基线为 `f383201`，四专项先编译通过。新增回归先发现两类路径缺口（5 断言失败）：
+配方错误只输出字段名、不带规则位置；palette 非有限值通过统一校验返回时丢失主题路径。
+现分别补齐 `styles.<kind>[index].<field>` 和 `themes.<name>.palette.<input-role>`，
+别名路径保留作者拼写，运行引用范围/颜色规范化/提交顺序不变。
+
+补充全部 148 个色名的交替大小写在 palette、primitive 档位、Button/TextField 字面量中的
+等价性；10 个配方颜色槽位分别验证命名值/颜色数组/token 三种输入，token 在换 palette 后
+仍延迟解析；四种位置的空白、TOML 转义 NUL/非 ASCII、未知名/保留字/错误类型拒绝；
+跨位置引用与错误 scale/shade/额外分段的拒绝。删除只在失败 parse 后创建空 manager 的
+自证检查，改用实际导入入口：先应用具名色文档，再经历 parse 失败、未知主题与缺失家族
+成员的 apply 失败，验证目录内容/版本、选择、revision、样式与生效快照身份全部不变。
+
+独立故障注入每次重编译：去掉 Button 前景路径 1 断言失败、去掉 palette 校验路径前缀
+3 断言失败、把 token 提前解析为字面量 1 断言失败，均 Catch2 exit 42；恢复后六个专项
+通过。style-document-named-color 12 用例 / 1895 断言；named-color 6/2916、
+theme-color-entry 14/1243、button 33/221、theme-scheme 25/357、theme-contrast-diagnostics
+15/338 保持通过。
+
+本轮最终矩阵：主套件 126 OK（无失败/跳过），ASan 103 OK / 1 SKIP，
+no-RTTI 105 OK，no-SQLite 100 OK / 1 SKIP，tools 8 OK；
+release_check --ci 8/8（headers 198、docs 87、clang-format 23.1.1）。现有 SDF 两项
+设备/状态检查在 Vulkan/RADV 环境真实运行并通过；该结果不替代 4a 专项合成读回、
+Windows 或人工视觉验收。SDK 打包和消费者通过。实际日志与首版环境差异见
+reference_draft 第 4d 步复核记录；本批复核完成并统一提交。
+
+后续顺序：4d 维护者复验与统一提交 → Shell 多方案使用闭环（页面正文由维护者负责）→
+4a 软件 RenderDevice 读回补验；软件结果不代替 GPU 实测，不与注册配色门槛接线绑定。

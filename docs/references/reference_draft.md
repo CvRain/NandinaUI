@@ -745,6 +745,86 @@ SVG 1.1 §4.4，并非 CSS Color 4；从两张原文颜色表提取 147 个唯�
 本次仅补充证据与文档，未重跑无变化的 C++ 矩阵；前述主套件/变体/门禁结果保留原日期和
 环境差异。文档链接/锚点与 git diff --check 重新检查。HEAD 仍为 `3e2542a`，整批未提交。
 
+### P4.3 D2 第 4d 步 TOML 命名颜色字面量实施记录（2026-11-08，复核完成并随本批提交）
+
+4c 已随 `f383201` 提交推送；状态文档同步在本批一并完成。按
+[主题方案、作者入口与状态订阅](theme_authoring_and_state.md) §19 把命名颜色接到文件导入侧，
+范围保持「增加一种字面量写法，保留既有引用能力」。
+
+- 颜色字面量字段（palette 覆盖、参考色阶档位、Button/TextField 规则颜色）接受
+  `"SteelBlue"`，统一经 `foundation::nan_named_color`；大小写/空白/NUL/非 ASCII/未知名称
+  规则与 C++ 入口一致。
+- `$palette.*` 继续语义 token、`$palettes.*` 继续参考色阶取值；匹配失败立即报错、
+  不回退成色名；不扩展其他引用形式。规范名优先与 C++ 批量覆盖顺序不变。
+- 错误信息带字段路径（`themes.author.palette.primary`、`palettes.brand.primary.50`）；
+  解析失败不产生可 apply 文档，不修改活动目录/选择/样式。
+
+故障注入（重新编译后恢复）：palette 覆盖拒绝命名颜色（3 断言失败）、配方字段拒绝命名
+颜色（1）、错误丢失字段路径（2）、别名优先破坏规范名优先（1）。
+
+专项：style-document-named-color 5 用例 / 50 断言；named-color 6/2916、
+theme-color-entry 14/1243 等既有专项保持通过。
+
+首版维护者矩阵（复核前，Linux 无显示/GPU 沙箱；每套先编译再测）：buildDir 全量
+124 OK / 1 FAIL（sdf-state-probe，无显示设备）/ 1 SKIP（sdf-device 77）；
+ASan 103 OK / 1 SKIP；no-RTTI 105 OK / 0 SKIP；no-SQLite 100 OK / 1 SKIP；
+tools 8 OK；release_check --ci 8/8（headers 198、docs 87、clang-format 23.1.1）。
+本批保持未提交，待维护者复核；随后按约定转向 Shell 多方案使用闭环。
+
+
+#### 第 4d 步复核记录（2026-11-08，补修后随本批提交）
+
+HEAD 与 origin/main 同为 `f383201`，先编译通过文件色名、foundation 色名、作者颜色入口、
+Button 四专项。字面量/引用分派未见行为缺陷；新增错误定位回归先有 5 断言失败：
+配方错误丢失规则及下标（2），palette 非有限输入（规范名/别名/引用值）丢失主题路径（3）。
+现在配方色错误携带 0 起始的 `styles.button[1].foreground` / `styles.text_field[1].placeholder`
+路径，批量校验错误携带完整输入路径，保留别名拼写。未增加引用形式、注册配色门槛或裁剪。
+
+新增边界：148 色在四种位置与 C++ 同值、10 个配方槽位的命名值/数组/token 及 token 延迟
+解析、四种位置的空白/NUL/非 ASCII/保留名/错误类型拒绝、引用的上下文范围与畸形分段。
+原失败状态检查在 parse 失败后才创建 manager，现替换为实际 parse→apply 导入路径；
+先激活具名色方案，再触发 parse 与两种 apply 错误，检查目录内容/版本、选择、revision、
+样式和生效快照身份不变。
+
+独立故障注入每项重编译：Button foreground 丢路径 1 断言失败，palette 校验丢路径
+3 断言失败，token 提前烘焙 1 断言失败（Catch2 exit 42）；源码恢复后六专项全绿。
+初始红测日志 `buildDir/meson-logs/step4d-review-red.txt`，恢复日志
+`buildDir/meson-logs/step4d-review-restored.txt`。
+
+专项：style-document-named-color 12 用例 / 1895 断言，named-color 6/2916、
+theme-color-entry 14/1243、button 33/221、theme-scheme 25/357、theme-contrast-diagnostics
+15/338。本轮最终代码树矩阵（每套先编译再测试，全量套件运行期间工作树冻结）：
+
+| 范围 | 本轮实际结果 |
+| --- | --- |
+| buildDir 全量 | 126 OK / 0 FAIL / 0 SKIP |
+| buildDir-asan unit | 103 OK / 1 SKIP；ASan/UBSan 启用，构建和测试均设 LSAN_OPTIONS=detect_leaks=0 |
+| buildDir-no-rtti unit | 105 OK |
+| buildDir-nosqlite unit | 100 OK / 1 SKIP |
+| buildDir-tools | 8 OK |
+| release_check --ci | 8/8，无 SKIP；headers 198，docs 87，clang-format 23.1.1 |
+
+本轮运行环境与首版维护者无显示设备的记录不同：现有 sdf-device、sdf-state-probe 和主
+配置 window-lifecycle 均真实运行、exit 0。sdf-state-probe 记录 Vulkan，设备为 AMD
+Radeon RX 6750 GRE 12GB（RADV NAVI22），SDL=3004018；三档缩放、参数状态交错及
+故障注入分支通过。此证据仅属于既有 SDF 验收，不自动证明 4a 共享合成器与软件/GPU
+路径的专项读回一致，也不代表页面级人工视觉验收完成。ASan/no-SQLite 的 SKIP 均为
+各自配置下的 window-lifecycle（exit 77），no-RTTI 窗口检查实际通过。
+
+SDK 双次打包和 vendored 下游消费者通过。四个 UI 配置的文件色名专项均为
+12 用例 / 1895 断言。ASan 本地 Ninja 记录恢复触发较大范围重编译，最终编译和测试完成。
+主日志 `buildDir/meson-logs/step4d-review-full.txt`，变体目录
+`meson-logs/step4d-review-unit.txt`，tools 使用 `step4d-review-tools.txt`。
+
+故障注入源码恢复后与备份逐字一致；新测试另做固定版本格式 dry-run，代码无
+RED-FIRST 残留，文档收尾再检查 87 篇链接/锚点与 git diff --check。
+复核时基线为 `f383201`，共 11 项已跟踪修改 + 1 个新增测试文件；复核完成后随本批统一
+提交推送。未启动 Shell 或软件读回批次。
+
+后续顺序沿用维护者约定：本批复验/统一提交后转 Shell 多方案闭环，页面由维护者编写；
+4a 软件路径读回放 Shell 之后，明确不代替 GPU 路径、不挂接注册门槛。Windows、GPU
+和人工视觉验收仍单独记录。
+
 ---
 
 # D4 跨平台优先的窗口与渲染后端路线
@@ -1252,7 +1332,7 @@ D8。D1 第二阶段必须复用已有 host seam，并在实际平台上分别�
 | 议题 | 权威归属 |
 | --- | --- |
 | D1 | [统一输入、焦点与文本编辑](focus_and_input.md)，设计已接受，未实施 |
-| D2 | [主题方案、作者入口与状态订阅](theme_authoring_and_state.md)：首批 `8920f3a`、第 3 步 `995e6ae`、第 4 步 `4746173` 已提交；第 4a 步 CPU 侧复核补修后待复验、未提交，见本稿实施记录 |
+| D2 | [主题方案、作者入口与状态订阅](theme_authoring_and_state.md)：首批 `8920f3a`、第 3 步 `995e6ae`、第 4 步 `4746173`、4a `fef829a`、4b `3e2542a`、4c `f383201` 已提交；4d TOML 色名复核完成并随本批提交，见本稿实施记录 |
 | D3 | 已复核并随 `095336b` 提交；正式契约见 [Page / Router](page_and_router.md)，两轮验证见本稿 D3 实施记录 |
 | D4 | [平台与后端契约](platform_backend_contract.md)，默认切换与 seam 已落地，逐平台验收继续 |
 | D5 | [资源构建、部署与运行时定位](resource_build_and_deployment.md)，目标契约已冻结 |

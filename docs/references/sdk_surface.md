@@ -25,7 +25,13 @@
 `PageKey` 路由身份、address 显示与 typed navigation 沿用既有规则。迁移调用方后须重新编译；
 正式契约见 [Page / Router](page_and_router.md)，验证见 [D3](reference_draft.md#d3-路由身份与导航分组开放到哪一层)。
 
-2026-11-08 P4.3 D2 第 4c 步命名颜色字面量（experimental，复核后待维护者复验、未提交）：新增
+2026-11-08 P4.3 D2 第 4d 步 TOML 命名颜色字面量（experimental，复核完成并随本批提交）：
+`style_document` 的颜色字面量字段新增命名字符串写法（`primary = "SteelBlue"`、参考色阶
+档位与 Button/TextField 规则颜色字段），经 `foundation::nan_named_color` 解析；
+`$palette.*`/`$palettes.*` 引用语义不变、失败不回退成色名；配方颜色错误保留规则种类与
+0 起始下标，palette 统一校验错误也保留完整输入路径（含别名拼写）；失败不修改活动状态。
+
+2026-11-08 P4.3 D2 第 4c 步命名颜色字面量（experimental，已随 `f383201` 提交）：新增
 `foundation/named_color.hpp`：`NanNamedColor`（CSS Color 4 2026-11-03 CRD §6.1 的 148 个
 命名颜色）+ `nan_named_color(NanNamedColor)` / `nan_named_color(std::string_view)` /
 `nan_named_color_name()`；字符串入口 ASCII 大小写不敏感并拒绝空白/NUL/非 ASCII/未知名称，

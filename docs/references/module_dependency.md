@@ -197,6 +197,13 @@ State::expanded 合并规则，不引用 Collapsible。共享展开状态仅由 
 目录/选择/style，沿用同一 manager 通知路径，不暴露第二份公开可写状态。字体注册仍使用
 既有 text seam，不扩大此批的 theme→text 历史依赖。
 
+## P4.3 D2 第 4d 步文件导入命名颜色归属（2026-11-08）
+
+文件导入在 theme 层消费 foundation 的命名颜色字面量（既有 theme → foundation 向下依赖），
+不新增层间依赖：`$palette.*`/`$palettes.*` 引用仍由 theme 自己解析，命名字符串只作为
+`NanColor` 字面量来源；路径传播和规则数组下标在文件导入层处理，foundation 查询
+不感知 TOML 位置。widget/scene/render 不感知该写法。
+
 ## P4.3 D2 第 4c 步命名颜色字面量归属（2026-11-08）
 
 命名颜色表与查询位于 foundation（`foundation/named_color.*`），只依赖 `nandina_color` 的

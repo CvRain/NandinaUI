@@ -132,8 +132,8 @@ application shell. Version `0.1.0-alpha.1`.
   precedence, so file import and C++ share validation, alias sync and commit semantics. No raw
   red/blue tokens are added and semantic tokens stay the default. Contract:
   `docs/references/theme_authoring_and_state.md` §17.
-- **P4.3 D2 step 4c foundation named color literals** (2026-11-08, reviewed with stronger tests;
-  maintainer revalidation pending, uncommitted) adds `foundation/named_color.*`: `NanNamedColor` with
+- **P4.3 D2 step 4c foundation named color literals** (2026-11-08, reviewed and pushed in
+  `f383201`) adds `foundation/named_color.*`: `NanNamedColor` with
   the 148 CSS Color 4 named colors (pinned CSS Color 4 CRD 2026-11-03 §6.1 = SVG 1.1's 147 +
   rebeccapurple), typed `nan_named_color(NanNamedColor)`, case-insensitive
   `nan_named_color(std::string_view)` and `nan_named_color_name()`. The single constexpr table is
@@ -145,8 +145,19 @@ application shell. Version `0.1.0-alpha.1`.
   missed swapped names), verifies uniqueness and RGBA bytes, all-name case folding and bounded
   string views. Source verification now matches all 147 entries in the maintainer-saved SVG 1.1
   document and all 148 in the fetched pinned CSS Color 4 snapshot; the former source-evidence gap
-  is closed. Keep uncommitted through maintainer revalidation. Contract:
+  is closed. Contract:
   `docs/references/theme_authoring_and_state.md` §18.
+- **P4.3 D2 step 4d TOML named color literals** (2026-11-08, reviewed with diagnostic-path fixes;
+  included in this batch) lets color-array fields accept a CSS named color string
+  (`"SteelBlue"`) resolved through `nan_named_color()` with the same case/whitespace/error
+  rules. `$palette.*` stays a semantic token reference and `$palettes.*` a reference-scale
+  value; a failed reference match errors instead of falling back to a name, canonical palette
+  names still win over aliases, errors carry the field path, and a failed import leaves the
+  live catalog/selection/style untouched. Only named colors are added; other reference forms
+  are not widened. Review preserves complete palette-validation input paths and recipe kind/zero-
+  based index paths, covers every name and recipe color slot, and checks real parse/apply failure
+  isolation after a successful import. Keep uncommitted through maintainer revalidation. Contract:
+  `docs/references/theme_authoring_and_state.md` §19.
 - The plan and exit criteria are **not** owned by this file: read
   `docs/references/development_roadmap.md` and the D5 contract
   (`resource_build_and_deployment.md` §8) before claiming a sub-batch is complete.
@@ -537,9 +548,11 @@ context, transform paths, opaque-endpoint sampling and policy reporting. Step 4b
 parity) is pushed as `3e2542a`; its review closed non-finite file overrides through the shared
 validator and covered every family/shade, role/alias, duplicate ordering and provenance. Step
 4c's foundation named color literals (148 CSS Color 4 names, typed/string entries, private table)
-are the current uncommitted review batch. Review found no runtime defect, closed enum-identity
-test gaps and added exhaustive byte/string-view boundaries. Maintainer revalidation is pending.
-Backend pixel readback, the registration contrast gate,
-style advisories, Shell multi-scheme settings, TOML named-color shorthand and internal broadcast
-narrowing remain pending; do not claim the color gate passes without a GPU environment and
-maintainer review.
+are pushed as `f383201`; its review closed enum-identity test gaps and added exhaustive
+byte/string-view boundaries, and source evidence matches both the SVG 1.1 and pinned CSS Color 4
+snapshots. Step 4d's TOML named-color literals are included in this batch, with review fixes for
+complete error paths and tests for all literals, reference boundaries and actual apply failure
+atomicity.
+Backend pixel readback, the registration contrast gate, style advisories, Shell multi-scheme
+settings and internal broadcast narrowing remain pending; do not claim the color gate passes
+without a GPU environment and maintainer review.

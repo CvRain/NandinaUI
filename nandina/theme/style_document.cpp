@@ -4,6 +4,8 @@
 
 #include "style_document.hpp"
 
+#include "../foundation/named_color.hpp"
+
 #include <toml++/toml.hpp>
 
 #include <algorithm>
@@ -41,6 +43,26 @@ namespace nandina::theme
             );
         }
 
+        /// 颜色字面量：命名颜色字符串或 [light, chroma, hue(, alpha)] 数组。
+        /// 引用形式（`$palette.*` / `$palettes.*`）由各自调用点单独处理，不在这里回退。
+        [[nodiscard]] auto literal_color(const toml::node& node, std::string_view field)
+            -> NanColor {
+            if (const auto name = node.value<std::string_view>()) {
+                if (name->starts_with("$")) {
+                    throw std::runtime_error(
+                        std::string(field) + ": references are not accepted as a color literal"
+                    );
+                }
+                if (const auto named = foundation::nan_named_color(*name)) {
+                    return *named;
+                }
+                throw std::runtime_error(
+                    std::string(field) + ": unknown named color \"" + std::string(*name) + "\""
+                );
+            }
+            return color(node, field);
+        }
+
         constexpr std::array<std::pair<std::string_view, ColorShade>, NanColorScale::stop_count>
             color_shades {{
                 {"50", ColorShade::shade_50},
@@ -63,10 +85,11 @@ namespace nandina::theme
                 const auto* node = table.get(name);
                 if (node == nullptr) {
                     throw std::runtime_error(
-                        std::string(field) + " requires color stop " + std::string(name)
+                        std::string(field) + "." + std::string(name) + " is required"
                     );
                 }
-                scale.at(shade) = color(*node, field);
+                scale.at(shade) =
+                    literal_color(*node, std::string(field) + "." + std::string(name));
             }
             return scale;
         }
@@ -78,7 +101,7 @@ namespace nandina::theme
             std::string_view field
         ) {
             if (const auto* values = table[name].as_table()) {
-                scale = parse_color_scale(*values, field);
+                scale = parse_color_scale(*values, std::string(field) + "." + std::string(name));
             }
         }
 
@@ -125,28 +148,38 @@ namespace nandina::theme
 
         [[nodiscard]] auto palette_reference(
             std::string_view value,
-            const std::map<std::string, NanReferencePalette, std::less<>>& palettes
+            const std::map<std::string, NanReferencePalette, std::less<>>& palettes,
+            std::string_view field
         ) -> std::optional<NanColor> {
             constexpr std::string_view prefix = "$palettes.";
             if (!value.starts_with(prefix))
                 return std::nullopt;
+            const auto original = value;
             value.remove_prefix(prefix.size());
             const auto first = value.find('.');
             const auto second = first == std::string_view::npos ? std::string_view::npos
                                                                 : value.find('.', first + 1);
             if (first == std::string_view::npos || second == std::string_view::npos) {
                 throw std::runtime_error(
-                    "palette reference must include palette, scale, and shade"
+                    std::string(field) + ": palette reference \"" + std::string(original)
+                    + "\" must include palette, scale, and shade"
                 );
             }
             const auto found = palettes.find(value.substr(0, first));
-            if (found == palettes.end())
-                throw std::runtime_error("palette reference uses an unknown palette");
+            if (found == palettes.end()) {
+                throw std::runtime_error(
+                    std::string(field) + ": palette reference uses an unknown palette \""
+                    + std::string(value.substr(0, first)) + "\""
+                );
+            }
             const auto* scale =
                 reference_scale(found->second, value.substr(first + 1, second - first - 1));
             const auto shade = color_shade(value.substr(second + 1));
-            if (scale == nullptr || !shade)
-                throw std::runtime_error("palette reference uses an unknown scale or shade");
+            if (scale == nullptr || !shade) {
+                throw std::runtime_error(
+                    std::string(field) + ": palette reference uses an unknown scale or shade"
+                );
+            }
             return scale->at(*shade);
         }
 
@@ -154,21 +187,29 @@ namespace nandina::theme
             const toml::table& table,
             std::string_view key,
             NanColor& target,
-            const std::map<std::string, NanReferencePalette, std::less<>>& palettes
+            const std::map<std::string, NanReferencePalette, std::less<>>& palettes,
+            std::string_view path
         ) {
-            if (const auto* node = table.get(key)) {
-                if (const auto reference = node->value<std::string_view>()) {
-                    const auto resolved = palette_reference(*reference, palettes);
-                    if (!resolved)
+            const auto* node = table.get(key);
+            if (node == nullptr) {
+                return;
+            }
+            const std::string field = std::string(path) + "." + std::string(key);
+            if (const auto reference = node->value<std::string_view>()) {
+                // Reference forms keep their own semantics; a failed match never falls back
+                // to a named-color literal.
+                if (reference->starts_with("$")) {
+                    const auto resolved = palette_reference(*reference, palettes, field);
+                    if (!resolved) {
                         throw std::runtime_error(
-                            std::string(key) + " has an unknown color reference"
+                            field + ": unknown color reference \"" + std::string(*reference) + "\""
                         );
+                    }
                     target = *resolved;
-                }
-                else {
-                    target = color(*node, key);
+                    return;
                 }
             }
+            target = literal_color(*node, field);
         }
 
         void assign_scalar(const toml::table& table, std::string_view key, float& target) {
@@ -187,7 +228,8 @@ namespace nandina::theme
         void parse_palette(
             const toml::table& table,
             NanColorScheme& palette,
-            const std::map<std::string, NanReferencePalette, std::less<>>& palettes
+            const std::map<std::string, NanReferencePalette, std::less<>>& palettes,
+            std::string_view path
         ) {
             std::vector<SemanticColorOverride> overrides;
             const auto assign = [&](ColorToken role,
@@ -200,7 +242,7 @@ namespace nandina::theme
                     return;
                 }
                 auto value = semantic_color(palette, role);
-                assign_color(table, key, value, palettes);
+                assign_color(table, key, value, palettes, path);
                 overrides.push_back({role, std::move(value)});
             };
 
@@ -243,8 +285,8 @@ namespace nandina::theme
 
             if (const auto result = apply_semantic_colors(palette, overrides); !result) {
                 throw std::runtime_error(
-                    std::string(color_token_name(result.error().role)) + ": "
-                    + std::string(describe(result.error()))
+                    std::string(path) + "." + std::string(color_token_name(result.error().role))
+                    + ": " + std::string(describe(result.error()))
                 );
             }
         }
@@ -377,12 +419,32 @@ namespace nandina::theme
         [[nodiscard]] auto theme_color(const toml::node& node, std::string_view field)
             -> ThemeColor {
             if (const auto reference = node.value<std::string_view>()) {
-                if (const auto token = color_token(*reference)) {
-                    return ThemeColor::token(*token);
+                // `$palette.*` keeps its semantic-token meaning; other `$...` forms stay
+                // unsupported here rather than being reinterpreted as color names.
+                if (reference->starts_with("$palette.")) {
+                    if (const auto token = color_token(*reference)) {
+                        return ThemeColor::token(*token);
+                    }
+                    throw std::runtime_error(
+                        std::string(field) + ": unknown semantic color token \""
+                        + std::string(*reference) + "\""
+                    );
                 }
-                throw std::runtime_error(std::string(field) + " has an unknown color token");
+                if (reference->starts_with("$")) {
+                    throw std::runtime_error(
+                        std::string(field) + ": unknown color reference \""
+                        + std::string(*reference) + "\""
+                    );
+                }
+                if (const auto named = foundation::nan_named_color(*reference)) {
+                    return ThemeColor::literal(*named);
+                }
+                throw std::runtime_error(
+                    std::string(field) + ": unknown color token or named color \""
+                    + std::string(*reference) + "\""
+                );
             }
-            return ThemeColor::literal(color(node, field));
+            return ThemeColor::literal(literal_color(node, field));
         }
 
         [[nodiscard]] auto theme_scalar(const toml::node& node, std::string_view field)
@@ -412,7 +474,8 @@ namespace nandina::theme
             return values.at(*value);
         }
 
-        [[nodiscard]] auto parse_button_rule(const toml::table& table) -> ButtonStyleRule {
+        [[nodiscard]] auto parse_button_rule(const toml::table& table, std::string_view path)
+            -> ButtonStyleRule {
             ButtonStyleRule rule;
             rule.selector.tone = required_enum(
                 table,
@@ -457,13 +520,14 @@ namespace nandina::theme
             );
 
             if (const auto* value = table.get("background"))
-                rule.background = theme_color(*value, "background");
+                rule.background = theme_color(*value, std::string(path) + ".background");
             if (const auto* value = table.get("foreground"))
-                rule.foreground = theme_color(*value, "foreground");
+                rule.foreground = theme_color(*value, std::string(path) + ".foreground");
             if (const auto* value = table.get("border_color"))
-                rule.border_color = theme_color(*value, "border_color");
+                rule.border_color = theme_color(*value, std::string(path) + ".border_color");
             if (const auto* value = table.get("focus_ring_color"))
-                rule.focus_ring_color = theme_color(*value, "focus_ring_color");
+                rule.focus_ring_color =
+                    theme_color(*value, std::string(path) + ".focus_ring_color");
             if (const auto* value = table.get("border_width"))
                 rule.border_width = theme_scalar(*value, "border_width");
             if (const auto* value = table.get("radius"))
@@ -479,7 +543,8 @@ namespace nandina::theme
             return rule;
         }
 
-        [[nodiscard]] auto parse_text_field_rule(const toml::table& table) -> TextFieldStyleRule {
+        [[nodiscard]] auto parse_text_field_rule(const toml::table& table, std::string_view path)
+            -> TextFieldStyleRule {
             TextFieldStyleRule rule;
             rule.state = required_enum(
                 table,
@@ -492,17 +557,18 @@ namespace nandina::theme
                 }
             );
             if (const auto* value = table.get("background"))
-                rule.background = theme_color(*value, "background");
+                rule.background = theme_color(*value, std::string(path) + ".background");
             if (const auto* value = table.get("foreground"))
-                rule.foreground = theme_color(*value, "foreground");
+                rule.foreground = theme_color(*value, std::string(path) + ".foreground");
             if (const auto* value = table.get("placeholder"))
-                rule.placeholder = theme_color(*value, "placeholder");
+                rule.placeholder = theme_color(*value, std::string(path) + ".placeholder");
             if (const auto* value = table.get("border_color"))
-                rule.border_color = theme_color(*value, "border_color");
+                rule.border_color = theme_color(*value, std::string(path) + ".border_color");
             if (const auto* value = table.get("focus_ring_color"))
-                rule.focus_ring_color = theme_color(*value, "focus_ring_color");
+                rule.focus_ring_color =
+                    theme_color(*value, std::string(path) + ".focus_ring_color");
             if (const auto* value = table.get("selection"))
-                rule.selection = theme_color(*value, "selection");
+                rule.selection = theme_color(*value, std::string(path) + ".selection");
             if (const auto* value = table.get("border_width"))
                 rule.border_width = theme_scalar(*value, "border_width");
             if (const auto* value = table.get("radius"))
@@ -782,7 +848,7 @@ namespace nandina::theme
                         throw std::runtime_error("reference palette must be a table");
                     document.reference_palettes.emplace(
                         std::string(name.str()),
-                        parse_reference_palette(*table, name.str())
+                        parse_reference_palette(*table, "palettes." + std::string(name.str()))
                     );
                 }
             }
@@ -793,7 +859,12 @@ namespace nandina::theme
                         throw std::runtime_error("theme must be a table");
                     auto value = default_theme();
                     if (const auto* palette = (*table)["palette"].as_table()) {
-                        parse_palette(*palette, value.palette, document.reference_palettes);
+                        parse_palette(
+                            *palette,
+                            value.palette,
+                            document.reference_palettes,
+                            "themes." + std::string(name.str()) + ".palette"
+                        );
                     }
                     if (const auto* tokens = (*table)["tokens"].as_table()) {
                         parse_tokens(*tokens, value.tokens);
@@ -821,7 +892,11 @@ namespace nandina::theme
                     const auto* table = node.as_table();
                     if (table == nullptr)
                         throw std::runtime_error("button rule must be a table");
-                    document.style->add_button_rule(parse_button_rule(*table));
+                    document.style->add_button_rule(parse_button_rule(
+                        *table,
+                        "styles.button[" + std::to_string(document.style->button_rules().size())
+                            + "]"
+                    ));
                 }
             }
             if (const auto* rules = root["styles"]["text_field"].as_array()) {
@@ -830,7 +905,11 @@ namespace nandina::theme
                     if (table == nullptr) {
                         throw std::runtime_error("text_field rule must be a table");
                     }
-                    document.style->add_text_field_rule(parse_text_field_rule(*table));
+                    document.style->add_text_field_rule(parse_text_field_rule(
+                        *table,
+                        "styles.text_field["
+                            + std::to_string(document.style->text_field_rules().size()) + "]"
+                    ));
                 }
             }
             if (const auto* families = root["fonts"]["family"].as_array()) {

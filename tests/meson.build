@@ -450,6 +450,13 @@ named_color_tests = executable(
 )
 test('named-color', named_color_tests, suite: 'unit')
 
+style_document_named_color_tests = executable(
+    'style_document_named_color_tests',
+    files('style_document_named_color_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('style-document-named-color', style_document_named_color_tests, suite: 'unit')
+
 theme_contrast_diagnostics_tests = executable(
     'theme_contrast_diagnostics_tests',
     files('theme_contrast_diagnostics_tests.cpp'),
