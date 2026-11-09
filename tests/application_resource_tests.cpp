@@ -8,8 +8,11 @@
 
 #include <catch2/catch_test_macros.hpp>
 
+#include <cstdint>
 #include <filesystem>
 #include <fstream>
+#include <string_view>
+#include <vector>
 
 #include <sqlite3.h>
 
@@ -265,6 +268,73 @@ TEST_CASE(
     REQUIRE(hello.has_value());
     REQUIRE(hello->resource->size() == 5);
     REQUIRE(hello->resource->bytes()[0] == 'h');
+
+    std::error_code error;
+    std::filesystem::remove_all(root, error);
+}
+
+TEST_CASE("automatic package roots retain descending mount priority", "[app][resource][d2]") {
+    const auto root = std::filesystem::temp_directory_path()
+        / ("nandina-app-priority-" + resource::ResourceId::random().to_string());
+    const auto data_home = root / "data";
+    const auto application_id = std::string("org.nandina.priority");
+    std::filesystem::create_directories(root / "resources");
+    std::filesystem::create_directories(data_home / application_id);
+
+    create_package_database(root / "resources" / "resources.db");
+    create_package_database(data_home / application_id / "resources.db");
+    {
+        sqlite3* db = nullptr;
+        REQUIRE(
+            sqlite3_open((root / "resources" / "resources.db").string().c_str(), &db) == SQLITE_OK
+        );
+        exec(db, "UPDATE resources SET resource_key='assets/exec';");
+        REQUIRE(sqlite3_close(db) == SQLITE_OK);
+    }
+
+    app::NanApplication application(
+        app::NanApplicationConfig {
+            .application_id = application_id,
+            .executable_path = root / "application",
+            .environment =
+                {
+                    {"HOME", nonexistent_home().string()},
+                    {"XDG_DATA_HOME", data_home.string()},
+                },
+            .resource_package = "resources.db",
+        }
+    );
+
+    const auto discovered = application.resources().require(resource::ResourceKey("assets/hello"));
+    REQUIRE(discovered.has_value());
+    REQUIRE(
+        std::string_view(
+            reinterpret_cast<const char*>(discovered->resource->bytes().data()),
+            discovered->resource->bytes().size()
+        )
+        == "hello"
+    );
+
+    auto backend = std::make_shared<resource::MemoryBackend>("priority override");
+    const std::vector<std::uint8_t> bytes {'p', 'r', 'i', 'o', 'r'};
+    const auto inserted = backend->insert(
+        resource::ResourceId::random(),
+        resource::ResourceKey("assets/hello"),
+        "text/plain",
+        bytes
+    );
+    REQUIRE(inserted.has_value());
+    application.mount_resource_backend(backend, 1000);
+
+    const auto selected = application.resources().require(resource::ResourceKey("assets/hello"));
+    REQUIRE(selected.has_value());
+    REQUIRE(
+        std::string_view(
+            reinterpret_cast<const char*>(selected->resource->bytes().data()),
+            selected->resource->bytes().size()
+        )
+        == "prior"
+    );
 
     std::error_code error;
     std::filesystem::remove_all(root, error);

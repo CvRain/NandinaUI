@@ -84,7 +84,7 @@ namespace nandina::app
                 throw std::invalid_argument("NanApplication: " + locator.error());
             }
             platform_paths_ = std::move(*locator);
-            int priority = 1000;
+            [[maybe_unused]] int priority = 1000;
             for (const auto& location: platform_paths_->resource_roots()) {
                 // 开发期：优先消费 build-tree 元数据 resource-location.json，挂载其指向的
                 // 构建树包；release/portable staging 无此文件时回落直查 `<root>/resources.db`。
@@ -135,7 +135,8 @@ namespace nandina::app
                 throw std::runtime_error(
                     "NanApplication: backend_unavailable: resource package requires resource_sqlite"
                 );
-#endif-- priority;
+#endif
+                --priority;
             }
         }
         font_loader_ = std::make_unique<text::FontLoader>(resources_);
