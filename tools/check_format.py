@@ -94,7 +94,8 @@ def main(argv: list[str] | None = None) -> int:
             raise ValueError(f"no tracked C/C++ sources under {source_root}")
         offenders = unformatted(args.clang_format, sources)
         if offenders:
-            listing = "\n".join(f"  {path.relative_to(source_root)}" for path in offenders)
+            # POSIX spellings keep the failure text identical on every platform.
+            listing = "\n".join(f"  {path.relative_to(source_root).as_posix()}" for path in offenders)
             raise ValueError(
                 f"{len(offenders)} of {len(sources)} files are not clang-format "
                 f"{args.expected_version} clean:\n{listing}\n"

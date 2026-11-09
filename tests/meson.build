@@ -861,7 +861,7 @@ test(
 )
 
 # 头文件表面门禁（docs/references/sdk_surface.md §4）：分类完整性、包含方向、独立可包含。
-# 独立可包含检查会编译每个 public/experimental 头（182 个，约 16 s），可选功能关闭时按配置跳过。
+# 独立可包含检查会编译每个 public/experimental 头（198 个，约 50 s），可选功能关闭时按配置跳过。
 header_surface_gate = find_program('../tools/check_headers.py')
 test(
     'header-surface',
@@ -871,6 +871,19 @@ test(
         '--build-dir', meson.project_build_root(),
     ],
     timeout: 300,
+    suite: 'integration',
+)
+
+# `compile_commands.json` 的两种形状回归：Meson 在 Windows 上写带引号的单条 `command`
+# 字符串（反斜杠路径），其他平台可能写 `arguments` 数组。退回按空格拆分会在 Linux 上
+# 仍然通过、在 Windows 上静默丢掉全部 `-I`，因此单独锁住解析结果。
+test(
+    'header-flag-parsing',
+    python,
+    args: [
+        files('check_headers_test.py'),
+        meson.project_source_root() / 'tools' / 'check_headers.py',
+    ],
     suite: 'integration',
 )
 
@@ -905,18 +918,25 @@ if sdl3_origin == 'vendored'
     # SDK 下游 vendored SDL 消费：解压到全新目录、断网配置/编译/链接/运行。
     # 与资源 fixture 分开，因为后者用 sdl_backend=disabled 控制时长，不覆盖 SDL 交付路径；
     # 这里跑一次完整 SDK 打包 + 带 SDL3 的下游构建（实测见 docs/references/dependency_policy.md §2.5）。
-    sdk_vendored_consumer_test = find_program('sdk_vendored_consumer_test.py')
-    test(
-        'sdk-vendored-consumer',
-        sdk_vendored_consumer_test,
-        args: [
-            meson.project_source_root(),
-            meson.project_source_root() / 'tools' / 'sdk_bundle.py',
-        ],
-        timeout: 1500,
-        is_parallel: false,
-        suite: 'integration',
-    )
+    # 消费断言的核心是 Linux 加载器语义：`ldd` 期望 `libSDL3` 并核对共享 DSO 的 rpath
+    # 解析（sdk_vendored_consumer_test.py 的 loader 段）。Windows 上 MSYS2 虽可能带 `ldd`，
+    # 但 DLL 搜索不是 rpath 语义；同时深层临时构建路径会把 DLL 链接命令行推到 CreateProcess
+    # 的 32K 上限。夹具中与平台无关的 manifest/断网构建断言暂不单独拆出，Windows SDK 消费
+    # 交付仍是未验收边界，见 docs/references/windows_acceptance.md §9。这里只注册 Linux 变体。
+    if host_machine.system() == 'linux'
+        sdk_vendored_consumer_test = find_program('sdk_vendored_consumer_test.py')
+        test(
+            'sdk-vendored-consumer',
+            sdk_vendored_consumer_test,
+            args: [
+                meson.project_source_root(),
+                meson.project_source_root() / 'tools' / 'sdk_bundle.py',
+            ],
+            timeout: 1500,
+            is_parallel: false,
+            suite: 'integration',
+        )
+    endif
 else
     message('SDK archive fixtures not registered: SDL3 source is not vendored')
 endif

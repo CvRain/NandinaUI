@@ -5,8 +5,9 @@
 > 作者颜色入口已随 `3e2542a`、第 4c 步 foundation 命名颜色字面量已随 `f383201`
 > 提交推送、第 4d 步 TOML 命名颜色字面量已随 `5061b39` 提交推送。**
 > Shell 多方案闭环的框架准备（§20）已随 `f821f40` 提交推送；
-> §16.1 的软件与 Linux/Hyprland+RADV 离屏 GPU 读回已复核；注册门槛、默认
-> swapchain/Windows/其他驱动读回尚未实施。§14–§20 记录契约、实现和复核；
+> §16.1 的软件与 Linux/Hyprland+RADV 离屏 GPU 读回已复核，并在 Windows 11/D3D12
+> 离屏目标上复验（2026-11-09）；注册门槛、默认 swapchain 与其他驱动读回尚未实施。§14–§20
+> 记录契约、实现和复核；
 > 更早小节保留讨论语境。
 > 所有标注为伪代码的示例只表达作者体验，不可直接当成现有接口使用。
 > 当前实现以 [设计令牌与主题系统](design_tokens.md) 和源码为准；原始问题见
@@ -566,7 +567,7 @@ D2 此次只保留边界，不承诺组件插件、动态库加载、任意自�
    结构校验与注册入口，迁移内置主题，明确文件导入范围；内部按维度广播另行验证。
 
    **4a：独立主题校验子项。** foundation 合成器、局部 helper 收敛、按场景自动诊断与当前
-   软件/Linux GPU 离屏目标读回已落地；仍需覆盖默认 swapchain、Windows 与其他驱动后，
+   软件、Linux GPU 与 Windows/D3D12 离屏目标读回已落地；仍需覆盖默认 swapchain 与其他驱动后，
    才能完成色域策略和注册配色门槛。该子项依赖作者入口，但不阻塞第 1–2 步的窄投影，也不
    并入第 3 步方案模型；当前只声明结构校验与已读回目标可用，不把注册成功宣传成配色门槛
    已通过。
@@ -633,9 +634,9 @@ D2 此次只保留边界，不承诺组件插件、动态库加载、任意自�
 2. **注册与身份**：标识文本的命名空间、大小写/分隔符、parse/format 与迁移；同 ID 内容替换、
    删除后的禁止转用与同方案恢复、匿名来源、版本持久化边界。legacy 退出按“同一状态的入口
    收敛”估算，不按双状态迁移估算；独立方案模型的数据调整另列。
-3. **作者入口与颜色契约**：**合成空间**已由当前软件与 Linux/Hyprland+RADV 离屏目标读回
-   确认为编码 sRGB；默认 swapchain、Windows 与其他驱动仍需独立验证。**色域策略**仍需明确
-   当前裁剪是否保留，并与其余渲染路径的转换/量化核对。
+3. **作者入口与颜色契约**：**合成空间**已由当前软件、Linux/Hyprland+RADV 与
+   Windows/D3D12 离屏目标读回确认为编码 sRGB；默认 swapchain 与其他驱动仍需独立验证。
+   **色域策略**仍需明确当前裁剪是否保留，并与其余渲染路径的转换/量化核对。
    §6.5–6.7 的背景终点、上下文不足规则、空间职责分离、未格式化值判定和唯一合成器归属
    已确认，不再重复列为待选方案。既有作者 API 的构建时派生、首批校验档案/阈值与显式例外、
    严格模式对未知项的处理、TOML 范围仍在各自实施阶段定形，不因两项颜色决策而被视为已完成。
@@ -1008,22 +1009,30 @@ tools 8 OK；release_check --ci 8/8（headers 197、docs 87、clang-format 23.1.
   `SDL_PIXELFORMAT_RGBA32` 离屏 render target（8 位/通道），与 `nan_composite_over`
   比较；容差 ±4 覆盖 float→8 位与驱动舍入，负向对照（线性空间）同样必须被拒绝。
   入口颜色与 alpha 是 8 位量化值。无显示/无 GPU 会话沿用 77 跳过分类；本项不宣称默认
-  window swapchain 或 Windows 已覆盖。
+  window swapchain 已覆盖，Windows/D3D12 离屏目标复验见 2026-11-09 记录。
 - **实测结论**：Linux/Hyprland/Wayland + RADV（RX 6750 GRE）上软件与离屏 GPU 路径都与
   **编码 sRGB** 合成一致（GPU 线性期望偏差约 27/25 通道，远超容差；读回值与编码期望
-  在容差内）。该结论只覆盖本次目标路径与驱动，不外推到 Windows、其他 GPU 或默认
-  swapchain。
+  在容差内）。该结论只覆盖本次目标路径与驱动，不外推到其他 GPU 或默认 swapchain。
+- **Windows 复验（2026-11-09，Windows 11 26200 + AMD Radeon 660M / D3D12）**：同一构建在
+  真实桌面会话运行 `sdf_device_test --require-gpu --expect-format dxil`，D3D12/DXIL 路径
+  通过并输出 `composite readback matches the shared compositor (encoded sRGB, tolerance 4)`；
+  读回目标为 `SDL_PIXELFORMAT_RGBA32` 离屏 8 位/通道，线性空间负向对照同样被拒绝。同一
+  构建的软件路径 `sdl-visual`「software readback …」在 Windows 上 1 用例 / 11 断言通过。
+  该结论只覆盖 D3D12 离屏目标与驱动 31.0.21024.2004，不宣称默认 window swapchain、其他
+  驱动或其他平台。
 - **故障注入**：把共享合成器改为线性空间 → 软件读回用例失败、GPU 读回报
   `actual=(123,102,108) expected=(150,106,133)`；复核时把设备几何混合改为
   `SDL_BLENDMODE_NONE` → 软件首层采样与 GPU 既有半透明采样均失败。恢复后源码与 HEAD
   逐字节一致，重新编译后两条路径全绿，无 RED-FIRST 残留。
 - **仍未完成**：注册配色门槛接线（需先定默认档案/阈值/例外/上下文不足策略并审阅）、
-  默认 swapchain、Windows 与其他驱动/离屏目标的读回、色域量化策略的最终定形；本批不
+  默认 swapchain 与其他驱动/离屏目标的读回、色域量化策略的最终定形；本批不
   改变门槛状态。
 - 专项：`sdl-visual` 6 用例 / 219 断言；`sdf-device`（含读回）通过。最终矩阵（本机
   Hyprland/Wayland + RADV）：主套件 128 OK / 0 FAIL / 0 SKIP；ASan 104 OK / 1 SKIP；
   no-RTTI 106 OK；no-SQLite 101 OK / 1 SKIP；tools 8 OK；release_check --ci 8/8。
-  本批复核完成并随当前统一提交推送。
+  Windows 侧（2026-11-09）全量套件 125 OK / 0 FAIL（其中工具链 5 项可移植性缺陷修复后；
+  见 [Windows 验收清单](windows_acceptance.md#9-全量套件与工具链-windows-复验2026-11-09)），
+  `sdf-device` 含 D3D12 读回。本批复核完成并随当前统一提交推送。
 
 ---
 

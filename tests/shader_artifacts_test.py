@@ -38,6 +38,22 @@ class ArtifactChecks(unittest.TestCase):
                     with self.assertRaisesRegex(RuntimeError, "does not match its hash"):
                         artifacts.check_entry(local, config["toolchain"])
 
+    def test_source_hash_ignores_checkout_line_endings(self):
+        """A CRLF checkout is not a shader change; the byte surface is canonical LF."""
+        config = artifacts.load()
+        for entry in config["shaders"]:
+            canonical = (ROOT / entry["source"]).read_bytes().replace(b"\r\n", b"\n")
+            crlf = canonical.replace(b"\n", b"\r\n")
+            self.assertNotEqual(crlf, canonical, "shader fixture must contain newlines")
+            header = (ROOT / entry["header"]).read_text()
+            with tempfile.TemporaryDirectory() as directory:
+                root = pathlib.Path(directory)
+                local = dict(entry, source="shader.hlsl", header="shader.hpp")
+                (root / local["source"]).write_bytes(crlf)
+                (root / local["header"]).write_text(header)
+                with mock.patch.object(artifacts, "ROOT", root):
+                    artifacts.check_entry(local, config["toolchain"])
+
 
 if __name__ == "__main__":
     unittest.main()

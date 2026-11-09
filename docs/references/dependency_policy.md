@@ -54,7 +54,10 @@
 **退役后的交付边界**：静态 SDL3 不需要 SDL3 DSO，仍需要系统运行库与驱动。
 `portable-bundle` 按 `deps.json` 分别检查静态无 SDL3 动态依赖，以及共享便携布局；
 `sdk-vendored-consumer` 从归档离线构建真实应用契约 fixture，分别切换 static/shared 并运行，
-同时断言 SDK 和构建 target 不含 raylib。下面 §2.4–§2.7 的共享强制策略与计时属于历史证据，
+同时断言 SDK 和构建 target 不含 raylib（该 fixture 只在 Linux 注册：断言依赖 `ldd`/rpath 的
+Linux 加载器语义，Windows 的 DLL 搜索与深层临时路径的 32K 命令行限制另见
+[Windows 验收清单](windows_acceptance.md) §9，Windows 消费交付仍未验收）。下面 §2.4–§2.7 的
+共享强制策略与计时属于历史证据，
 其中 GLFW 符号冲突及“必须共享”的结论随 raylib 删除而失效。
 
 2026-10-20 本轮 Linux 验证：

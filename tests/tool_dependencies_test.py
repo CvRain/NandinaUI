@@ -8,6 +8,15 @@ import sys
 import tempfile
 
 
+def object_file(build: pathlib.Path) -> pathlib.Path:
+    """Return one compiled object file; the suffix is toolchain/platform dependent."""
+    for suffix in ("*.o", "*.obj"):
+        matches = sorted(build.rglob(suffix))
+        if matches:
+            return matches[0]
+    raise AssertionError(f"no object file under {build}")
+
+
 def main():
     checker = pathlib.Path(sys.argv[1]).resolve()
     meson = sys.argv[2] if len(sys.argv) > 2 else "meson"
@@ -33,7 +42,7 @@ def main():
                 response.write_text("\n")
                 # Actual archive tampering must not pass just because target metadata is clean.
                 extra = root / "extra.o"
-                shutil.copyfile(next(build.rglob("*.o")), extra)
+                shutil.copyfile(object_file(build), extra)
                 archive = next(build.glob("*.a"))
                 subprocess.run(["ar", "rT", str(archive), str(extra)], cwd=build, check=True, capture_output=True)
                 tampered = subprocess.run(command, capture_output=True, text=True)

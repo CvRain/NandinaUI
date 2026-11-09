@@ -33,6 +33,18 @@ def digest(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+def canonical_source_bytes(source: pathlib.Path) -> bytes:
+    """Read shader source bytes independent of the checkout's line endings.
+
+    Git checkouts on Windows may carry CRLF (`core.autocrlf`), and a
+    line-ending-only difference is not a shader change: the compiled SPIR-V is
+    the same program. Normalize CRLF and lone CR to LF before hashing so the
+    gate is checkout-configuration independent and cross-platform reproducible.
+    """
+    data = source.read_bytes()
+    return data.replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+
+
 def load() -> dict:
     return tomllib.loads(REGISTRY.read_text(encoding="utf-8"))
 
@@ -83,7 +95,7 @@ def render_header(entry: dict, toolchain: dict) -> str:
         "",
         f"namespace {entry['namespace']}",
         "{",
-        f'    inline constexpr char SOURCE_SHA256[] = "{digest(source.read_bytes())}";',
+        f'    inline constexpr char SOURCE_SHA256[] = "{digest(canonical_source_bytes(source))}";',
         f'    inline constexpr char COMPILER[] = "glslc {toolchain["glslc_version"]}; '
         f'SPIRV-Tools {toolchain["spirv_tools_version"]}; {toolchain["target_env"]}";',
     ]
@@ -151,7 +163,7 @@ def check_entry(entry: dict, toolchain: dict) -> None:
         raise RuntimeError(f"{entry['header']}: toolchain metadata differs from registry")
     source = ROOT / entry["source"]
     source_hash = re.search(r'SOURCE_SHA256\[\]\s*=\s*"([0-9a-f]{64})"', header)
-    if source_hash is None or source_hash[1] != digest(source.read_bytes()):
+    if source_hash is None or source_hash[1] != digest(canonical_source_bytes(source)):
         raise RuntimeError(
             f"{entry['source']}: shader source changed; regenerate with --emit {entry['name']} "
             "and review the artifact"
@@ -216,6 +228,10 @@ def main() -> int:
 
     if options.emit:
         check_toolchain(toolchain)
+        # Keep the emitted artifact byte-stable when stdout is redirected on a
+        # platform whose text mode would otherwise translate LF to CRLF.
+        if hasattr(sys.stdout, "reconfigure"):
+            sys.stdout.reconfigure(newline="")
         print(render_header(entry_by_name(config, options.emit), toolchain), end="")
         return 0
 

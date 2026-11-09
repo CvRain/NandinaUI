@@ -13,6 +13,7 @@ import io
 import pathlib
 import subprocess
 import sys
+import tempfile
 import unittest
 from unittest import mock
 
@@ -23,7 +24,9 @@ helper = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(helper)
 
 
-SOURCE_ROOT = "/repo"
+# The guard resolves its source root; mirror that so the fake repository is
+# absolute on every platform (a POSIX "/repo" has no drive on Windows).
+SOURCE_ROOT = pathlib.Path(tempfile.gettempdir()).resolve() / "nandina-format-guard" / "repo"
 TRACKED = ("nandina/alpha.cpp", "nandina/beta.hpp", "tests/gamma.cpp")
 
 
@@ -85,7 +88,7 @@ class FormatGuardTests(unittest.TestCase):
         ):
             errors = io.StringIO()
             with contextlib.redirect_stderr(errors):
-                status = helper.main([SOURCE_ROOT])
+                status = helper.main([str(SOURCE_ROOT)])
         return status, errors.getvalue()
 
     def test_clean_tree_passes_and_checks_every_tracked_source(self):
@@ -96,7 +99,7 @@ class FormatGuardTests(unittest.TestCase):
         self.assertEqual(toolchain.checked, list(TRACKED))
         git_calls = [call for call in toolchain.calls if call[0] == "git"]
         self.assertEqual(len(git_calls), 1)
-        self.assertEqual(git_calls[0][:5], ["git", "-C", SOURCE_ROOT, "ls-files", "-z"])
+        self.assertEqual(git_calls[0][:5], ["git", "-C", str(SOURCE_ROOT), "ls-files", "-z"])
         for suffix in helper.SOURCE_SUFFIXES:
             self.assertIn(f"*{suffix}", git_calls[0])
 

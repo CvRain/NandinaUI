@@ -25,6 +25,7 @@ import concurrent.futures
 import json
 import pathlib
 import re
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -117,6 +118,35 @@ def resolve_include(includer: str, spec: str) -> str | None:
     return resolved if resolved.startswith("nandina/") else None
 
 
+def command_tokens(entry: dict) -> list[str]:
+    """Recover one compile_commands entry's argv on every platform.
+
+    Meson emits an ``arguments`` array on some platforms and a single quoted
+    ``command`` string on others; the latter needs real shell-style splitting
+    because Windows paths contain backslashes and may contain spaces.
+    """
+    arguments = entry.get("arguments")
+    if arguments:
+        return [str(argument) for argument in arguments]
+    return shlex.split(entry.get("command", ""), posix=True)
+
+
+def mentions_nandina(token: str) -> bool:
+    # Windows command strings spell paths with backslashes; normalize for this
+    # repository-relative match only (POSIX paths in this repository never
+    # contain a literal backslash).
+    normalized = token.replace("\\", "/")
+    return normalized.endswith("nandina/meson.build") or "/nandina/" in normalized
+
+
+def absolute_include(directory: pathlib.Path, value: str) -> str:
+    """Resolve a compile-database relative include against the compile directory."""
+    include = pathlib.Path(value.replace("\\", "/"))
+    if not include.is_absolute():
+        include = directory / include
+    return include.as_posix()
+
+
 def compile_flags(build_dir: pathlib.Path) -> list[str]:
     commands_path = build_dir / "compile_commands.json"
     if not commands_path.is_file():
@@ -126,19 +156,23 @@ def compile_flags(build_dir: pathlib.Path) -> list[str]:
     flags: list[str] = []
     seen: set[str] = set()
     for entry in json.loads(commands_path.read_text(encoding="utf-8")):
-        tokens = entry.get("arguments") or entry.get("command", "").split()
-        if not any(token.endswith("nandina/meson.build") or "/nandina/" in token for token in tokens):
+        tokens = command_tokens(entry)
+        if not any(mentions_nandina(token) for token in tokens):
             continue
+        directory = pathlib.Path(entry.get("directory", build_dir))
         for index, token in enumerate(tokens):
-            keep = (
-                token.startswith(("-I", "-isystem", "-D", "-std="))
-                or token in ("-isystem",)
-            )
-            if not keep:
+            if token == "-isystem" and index + 1 < len(tokens):
+                value = f"-isystem{absolute_include(directory, tokens[index + 1])}"
+            elif token == "-I" and index + 1 < len(tokens):
+                value = f"-I{absolute_include(directory, tokens[index + 1])}"
+            elif token.startswith("-isystem"):
+                value = f"-isystem{absolute_include(directory, token[len('-isystem'):])}"
+            elif token.startswith("-I"):
+                value = f"-I{absolute_include(directory, token[2:])}"
+            elif token.startswith(("-D", "-std=")):
+                value = token
+            else:
                 continue
-            value = token
-            if token in ("-isystem",) and index + 1 < len(tokens):
-                value = f"{token}{tokens[index + 1]}"
             if value not in seen:
                 seen.add(value)
                 flags.append(value)
@@ -169,7 +203,9 @@ def syntax_check(
         units = []
         for index, relative in enumerate(headers):
             unit = work / f"unit_{index}.cpp"
-            unit.write_text(f'#include "{source / relative}"\n', encoding="utf-8")
+            # Header names are literal tokens; POSIX spelling keeps every platform's
+            # synthetic TU identical and avoids backslash escapes in the include name.
+            unit.write_text(f'#include "{(source / relative).as_posix()}"\n', encoding="utf-8")
             units.append((relative, unit))
 
         def run(item: tuple[str, pathlib.Path]) -> tuple[str, str | None]:

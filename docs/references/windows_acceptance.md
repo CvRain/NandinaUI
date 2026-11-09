@@ -12,8 +12,11 @@
 
 ```powershell
 $env:PATH = 'C:\msys64\ucrt64\bin;' + $env:PATH
-cd D:\playground\NandinaUI
+cd D:\CLang\NandinaUI
 git pull --ff-only
+# SDK 打包夹具（nandina-subproject-fixture / sdk-vendored-consumer）会收录全部 wrap 源码；
+# 默认构建关闭 physics2d 但 box2d 源码仍需先下载，否则夹具报 wrap dependency source missing。
+meson subprojects download
 ninja -C buildDir
 ```
 
@@ -132,3 +135,74 @@ python3 tools/backend_performance.py --probe buildDir-release\probe\cross_platfo
   桌面会话；
 - 跨平台 golden 像素差异（字体栅格化/DPI）是预期，不参与门禁；
 - macOS/MSL 没有测试机，不在本清单内。
+
+## 9. 全量套件与工具链 Windows 复验（2026-11-09）
+
+> 本节是**自动化层面**的 Windows 复验记录；§1–§5 的真实窗口观感与软阴影/涟漪目检，以及
+> P3.3b2b 的真实 IME/候选窗位置，仍由维护者在桌面会话人工验收，本节不替代那些项。
+
+**环境**：Windows 11 专业版 10.0.26200（64 位）；AMD Ryzen 5 6600H + Radeon 660M（驱动
+31.0.21024.2004）；MSYS2 UCRT64（GCC 16.2.0、Meson 1.12.1、Ninja 1.13.2；本机 Meson 与 CI
+固定的 1.7.2 不同，只作本机复验证据）；`buildDir` debug 配置；集成测试由 Meson 调用的
+MSYS2 Python 3.14 执行。
+
+**结论**：修复 5 项 Windows 可移植性缺陷后，全量套件 **125 OK / 0 FAIL**（unit 104 +
+integration 21；SDK 消费夹具按平台不注册，另新增 `header-flag-parsing` 回归）；`sdf-device`
+在真实 D3D12 上通过，并包含 §16.1 的离屏 framebuffer 合成读回；软件路径读回 1 用例 /
+11 断言通过。
+
+**复验前基线**：首轮 `--suite unit` 104/104 通过；首轮全量套件 117 OK / 8 FAIL。失败全部集中在
+工具链与集成测试脚本，不涉及框架运行时代码。
+
+| 失败项 | 根因 | 修复 | 红 → 绿证据 |
+| --- | --- | --- | --- |
+| `shader-artifacts` / `shader-artifacts-negative` | 产物头记录的是 shader 源文件 SHA-256；Windows `core.autocrlf` 检出为 CRLF，哈希与 LF 基线不符 | `tools/shader_artifacts.py` 哈希前把 CRLF/孤立 CR 归一化为 LF；`--emit` 时抑制 stdout 换行转写 | 修复前 negative 测试报 `shader source changed`；新增 `test_source_hash_ignores_checkout_line_endings` 先红后绿 |
+| `header-surface` | `compile_commands.json` 的 Windows `command` 是带引号字符串且路径用反斜杠；原解析按空格拆分、按 `/nandina/` 过滤，收集到 0 个 `-I`，`nlohmann/json.hpp` 找不到 | `command_tokens` 优先 `arguments`、否则 `shlex.split`；匹配与包含路径归一化分隔符，相对 include 按编译目录解析为绝对路径；合成 TU 使用 POSIX 头路径 | 修复前 0 个编译 flag、`json.hpp` 失败；修复后 51 个 flag、198 个分类（197 个独立编译 + 1 个 `physics2d` 特性跳过）通过；新增 `header-flag-parsing` 回归（4 用例）先红后绿 |
+| `format-gate` | 假仓库根使用 POSIX `/repo`（Windows 上无盘符），路径 `relative_to` 抛错；失败清单输出 `\` 分隔路径 | 测试根改为可解析的绝对临时路径；`check_format.py` 失败清单改 `as_posix()` | 修复前 3 个用例失败；修复后 8/8 通过 |
+| `tool-dependencies-fixture` | 夹具直接查找 `*.o`；Meson 在 Windows 上生成 `.obj` | 按平台接受 `*.o` / `*.obj` | 修复前 `StopIteration`；修复后通过 |
+| `resource-equivalence` | 夹具资源被 `core.autocrlf` 转成 CRLF，字节大小/哈希与锁和期望值不符（6→7、24→25） | 新增 `.gitattributes`：字节契约夹具 `tests/fixtures/resource_equivalence/assets/**` 设 `-text`，禁用 EOL 转换（提交对象为 LF） | 修复前 `nanres validate` 报 lock 过期；修复后通过 |
+| `nandina-subproject-fixture` / `sdk-vendored-consumer` | `subprojects/box2d` 未下载（默认构建关闭 physics2d，但 SDK 打包会收录全部 wrap 源码） | 环境侧执行 `meson subprojects download box2d` | 修复前报 `wrap dependency source missing`；下载后 fixture 通过 |
+| `sdk-vendored-consumer` | 下游消费断言使用 Linux 加载器语义（`ldd`、共享 DSO rpath），且深层临时构建路径把 DLL 链接命令行推到 Windows CreateProcess 的 32K 上限 | 按平台条件只在 Linux 注册（`tests/meson.build`）；Windows SDK 消费交付保留为未验收边界 | 修复后 Windows 全量套件不再包含该平台不适用项 |
+
+新增的 `header-flag-parsing` 回归固定两种 `compile_commands` 形状：把 `command_tokens`
+退回旧的按空格拆分时，该测试只剩 `-std=c++26`、断言失败；恢复 `shlex` 后 4 用例通过。
+`format-gate` 与 `shader-artifacts-negative` 的修复同样先在 Windows 上复现原失败再转绿。
+
+**D3D12 读回证据**（桌面会话，非 SSH；默认 GPU renderer）：
+
+```powershell
+.\buildDir\tests\sdf_device_test.exe --require-gpu --expect-format dxil
+.\buildDir\tests\sdl_visual_tests.exe "[compositor]"
+```
+
+前者退出 0，输出 `composite readback matches the shared compositor (encoded sRGB, tolerance 4)`
+与 `SDF device pixels, viewport scales, fallback, frame restore and eviction passed`；后者 1 用例 /
+11 断言通过。对 [主题契约](theme_authoring_and_state.md) §16.1 的意义：Windows/D3D12 离屏
+目标与共享编码 sRGB 合成器一致、线性空间负向对照被拒绝；默认 window swapchain 与其他驱动
+仍未验证。
+
+**建立复验的步骤**（当前签出 `D:\CLang\NandinaUI`）：
+
+```powershell
+$env:PATH = 'C:\msys64\ucrt64\bin;' + $env:PATH
+cd D:\CLang\NandinaUI
+git pull --ff-only
+# 已有克隆首次拉取 .gitattributes 后需一次性重检出字节契约夹具，否则资源仍是旧 CRLF：
+git checkout -- tests/fixtures/resource_equivalence/assets
+meson subprojects download          # SDK 打包夹具需要全部 wrap 源码（含可选 box2d）
+meson setup --reconfigure buildDir
+ninja -C buildDir
+meson test -C buildDir --print-errorlogs
+# 全量套件通过后跑发布门禁；clang-format 必须固定 23.1.1（MSYS2 自带的 23.1.3 会被门禁拒绝）：
+python -m venv buildDir\format-venv
+buildDir\format-venv\Scripts\pip install clang-format==23.1.1
+$env:PATH = (Resolve-Path buildDir\format-venv\Scripts).Path + ';' + $env:PATH
+python tools\release_check.py --ci --build-dir buildDir
+```
+
+> 全量套件运行期间不要编辑工作区：`nandina-subproject-fixture` 会把源码树打包两次并逐字节
+> 比较，编辑会制造假失败。
+
+**仍未覆盖**：§1–§5 的人工视觉项（真实窗口观感、软阴影与涟漪目检）、P3.3b2b 的真实 IME 与
+候选窗位置、默认 swapchain 读回、Windows 性能基线复采、真实物理键鼠布局、SDK 在 Windows 上的
+下游消费交付。Windows 仍为实验性平台，无应用交付承诺。

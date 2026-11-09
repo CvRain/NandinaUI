@@ -1,0 +1,11 @@
+# Checkout policy for bytes that are part of a contract.
+#
+# The resource package fixture below is compared by size and SHA-256, so a
+# Windows checkout with `core.autocrlf` must not transcode its LF endings to
+# CRLF: `-text` disables EOL conversion, keeping the working tree byte-identical
+# to the committed (LF) blob. Existing Windows clones need a one-time
+# `git checkout -- tests/fixtures/resource_equivalence/assets` after this rule
+# first appears (see docs/references/windows_acceptance.md §9).
+# (Shader sources are hashed after CRLF normalization in
+# tools/shader_artifacts.py, so they do not need a checkout rule.)
+tests/fixtures/resource_equivalence/assets/** -text

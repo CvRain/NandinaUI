@@ -202,6 +202,12 @@ namespace
             );
             ok = false;
         }
+        if (ok) {
+            std::printf(
+                "composite readback matches the shared compositor (encoded sRGB, tolerance %d)\n",
+                kTolerance
+            );
+        }
         SDL_DestroySurface(surface);
         return ok;
     }

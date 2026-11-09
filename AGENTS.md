@@ -123,8 +123,9 @@ application shell. Version `0.1.0-alpha.1`.
   draw paths now compares framebuffer samples against the shared compositor (unit `sdl-visual`
   with ±2 tolerance, integration `sdf-device` with ±4, both including a wrong-space negative
   control). This validates encoded-sRGB composition on the Linux/Hyprland/Wayland + RADV offscreen
-  target used by the test. The registration contrast gate is still not wired,
-  default-swapchain/cross-platform/other-driver readback and the final gamut policy remain pending;
+  target used by the test, and the same readback was re-verified on Windows 11 + D3D12 offscreen
+  (AMD Radeon 660M) on 2026-11-09. The registration contrast gate is still not wired,
+  default-swapchain/other-driver cross-platform readback and the final gamut policy remain pending;
   do not claim the color gate passes. Contract:
   `docs/references/theme_authoring_and_state.md` §6.5–§6.8, §16.
 - **P4.3 D2 step 4b author color entry** (2026-11-07, reviewed and pushed in `3e2542a`) adds
@@ -388,13 +389,12 @@ tokens. Keep the tree in sync (network, or a `git bundle` when the remote is unr
 
 ```powershell
 $env:PATH = 'C:\msys64\ucrt64\bin;' + $env:PATH
-cd D:\playground\NandinaUI
+cd D:\CLang\NandinaUI
 git pull --ff-only            # or git fetch <bundle> refs/heads/main:refs/remotes/bundle/main
+meson subprojects download    # SDK packaging fixtures bundle every wrap source (incl. optional box2d)
 meson setup --reconfigure buildDir
 ninja -C buildDir
-meson test -C buildDir --suite unit --print-errorlogs
-meson test -C buildDir nanres-cli nanres-build-workflow portable-stage nanres-keys \
-  notebook-data --print-errorlogs
+meson test -C buildDir --print-errorlogs   # full suite: unit + integration (125 OK as of 2026-11-09)
 ```
 
 - A reused build directory may keep a stale thin archive after a target-set change; delete
@@ -408,6 +408,15 @@ meson test -C buildDir nanres-cli nanres-build-workflow portable-stage nanres-ke
   and the notebook data layer (resource-driven migrations + repositories). They found both Windows
   packaging defects fixed in `3c86927`, so do not treat `--suite unit` alone as proof that
   packaging works.
+- As of 2026-11-09 the **full** Windows suite is green (125 OK / 0 FAIL) after fixing five tooling
+  portability defects: shader-artifact CRLF hashing, quoted/backslash `compile_commands` parsing in
+  the header gate, POSIX fake paths in the format gate, `.obj` object suffixes in the tool-dependency
+  fixture, and byte-exact fixture checkouts via `.gitattributes` (`-text`). Do not reintroduce a
+  raw-byte assumption on a text file without that attribute. The SDK consumer fixture
+  (`sdk-vendored-consumer`) is registered on Linux only: its `ldd`/rpath assertions are Linux
+  loader semantics, and a deep Windows temp build path hits the 32K `CreateProcess` command-line
+  limit. Windows SDK consumer delivery stays unverified. Record:
+  `docs/references/windows_acceptance.md` §9.
 - Windows refuses to rename a directory while a file inside it is open. Finalize prepared
   statements and close the SQLite connection with `sqlite3_close` (a `sqlite3_close_v2` with live
   statements defers the close and keeps the handle) before renaming the package directory.
@@ -416,6 +425,9 @@ meson test -C buildDir nanres-cli nanres-build-workflow portable-stage nanres-ke
   (the package fingerprint is the current example).
 - Sync without network: on Linux create a bundle with `git bundle create <file> main --not <old>`,
   copy it over, fetch it to `refs/remotes/bundle/main`, and `git reset --hard` that ref.
+- The Windows machine currently has MSYS2 clang-format 23.1.3, which the format gate rejects by
+  design. For `release_check`, install the pinned tool into a venv and put it first on `PATH`:
+  `python -m venv buildDir\format-venv; buildDir\format-venv\Scripts\pip install clang-format==23.1.1`.
 
 ## Code Conventions & Common Patterns
 
@@ -573,6 +585,10 @@ multi-scheme framework preparation is pushed as `f821f40`, with typed catalog su
 scope-bound selection/catalog subscriptions and end-to-end interaction regressions. Environment
 skip classification is pushed as `d9d234c`. The reviewed 4a follow-up adds software-renderer and
 Linux/Hyprland+RADV production-path framebuffer readback against the shared encoded-sRGB
-compositor, including wrong-space negative controls. The registration contrast gate, style
-advisories, the Shell page body/visual acceptance, default swapchain/Windows readback and internal
-broadcast narrowing remain pending; do not claim the full color gate passes.
+compositor, including wrong-space negative controls. **2026-11-09 Windows full verification**
+(Windows 11 26200 + Radeon 660M/D3D12) adds the same software readback and a D3D12 offscreen
+`composite readback matches the shared compositor (encoded sRGB, tolerance 4)` result, and the
+Windows suite is fully green after five tooling portability fixes (see the Windows verification
+section); the SDK consumer fixture is Linux-only. The registration contrast gate, style
+advisories, the Shell page body/visual acceptance, default swapchain/other-driver readback and
+internal broadcast narrowing remain pending; do not claim the full color gate passes.

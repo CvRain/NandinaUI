@@ -63,9 +63,9 @@
 `ContrastRule::tone` 为 tone 引用（含变换操作数）提供显式上下文；缺少时报告上下文不足。
 诊断 `foreground` 为可选 sample，未解析时为空；背景在首个不透明终点停止，变换路径保留
 操作及操作数。`ContrastDiagnostic::config/tone` 记录计算上下文；报告注明现行通道裁剪与
-浮点、无 u8 量化策略。软件 renderer 与 Linux/Hyprland+RADV 离屏 GPU renderer 的生产绘制
-路径已按 §6.8 读回，并与共享编码 sRGB 合成器及错误空间负向对照核对；默认 swapchain、
-Windows/其他驱动读回和注册门槛接线仍未完成。`color_token_name()` 供角色路径诊断。
+浮点、无 u8 量化策略。软件 renderer、Linux/Hyprland+RADV 与 Windows 11/D3D12 离屏 GPU
+renderer 的生产绘制路径已按 §6.8 读回，并与共享编码 sRGB 合成器及错误空间负向对照核对；
+默认 swapchain、其他驱动读回和注册门槛接线仍未完成。`color_token_name()` 供角色路径诊断。
 
 2026-11-07 P4.3 D2 第 4 步（experimental，已随 `4746173` 提交）：新增
 `theme/theme_observation.{hpp,cpp}`：`ThemeSelectionPresentation`（选择投影）、
@@ -393,7 +393,7 @@ experimental**，理由与后续动作写进清单——两个枚举是公开 wi
 - 迁移说明只表达一件事：原来由自定义平台 override 提供的解码器，改为应用服务注入；
 - 库内实现、测试替身、下游样例一次改完，要求重新编译。
 
-退役后清单为 182 个头文件，其中 10 个 internal。生成模板归 NandinaCLI；
+退役后清单为 182 个头文件，其中 10 个 internal（清单随后续批次增长，当前为 198/12）。生成模板归 NandinaCLI；
 框架维护 [`sdk_app` 消费 fixture](../../tests/fixtures/sdk_app/README.md)，不维护第二份模板。
 
 ## 6. 不要越界声明的事
