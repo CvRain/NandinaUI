@@ -79,16 +79,18 @@ namespace nandina::app
         [[nodiscard]] virtual auto should_close() const -> bool = 0;
 
         // ---- 指标 ----
-        /// 逻辑窗口尺寸（布局用）。
+        /// 逻辑窗口尺寸（作者/布局单位；Windows 175% 下的 1200 不会变成 2100）。
         [[nodiscard]] virtual auto screen_size() const -> foundation::NanSize = 0;
-        /// framebuffer / 可绘制尺寸（高 DPI 下与 screen_size 不同）。
+        /// framebuffer / 可绘制尺寸（物理像素；高 DPI 下与 screen_size 不同）。
         [[nodiscard]] virtual auto drawable_size() const -> foundation::NanSize = 0;
         [[nodiscard]] virtual auto frame_time() const -> float = 0;
-        /// 显示缩放（DPI）。无法查询时返回 1.0。
+        /// 物理像素 / 逻辑单位（Windows 175% = 1.75；Retina = 2；1× 模式 = 1）。
+        /// 无法查询时返回 1.0。渲染后端用它把逻辑绘制放大到 framebuffer，文本管线用它栅格化。
         [[nodiscard]] virtual auto display_scale() const -> float = 0;
 
         // ---- 输入 ----
         /// 把这一帧的平台输入翻译进 `out`（追加语义，见 FrameInput）。
+        /// 坐标统一为逻辑窗口坐标（与 `screen_size` 同一空间），物理/原生坐标由平台层折算。
         virtual void poll_input(FrameInput& out) = 0;
 
         // ---- 呈现 ----

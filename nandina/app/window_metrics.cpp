@@ -18,6 +18,16 @@ namespace nandina::app
             return std::isfinite(size.get_width()) && std::isfinite(size.get_height())
                 && size.is_valid();
         }
+
+        [[nodiscard]] auto sanitized_content_scale(const float content_scale) noexcept -> float {
+            return std::isfinite(content_scale) && content_scale > 0.0F ? content_scale : 1.0F;
+        }
+
+        void require_valid_size(const foundation::NanSize size, const char* message) {
+            if (!valid_size(size)) {
+                throw std::invalid_argument(message);
+            }
+        }
     } // namespace
 
     auto make_window_metrics(
@@ -50,6 +60,38 @@ namespace nandina::app
             .framebuffer_scale_is_uniform =
                 scale_difference <= largest_scale * uniform_scale_relative_tolerance,
         };
+    }
+
+    auto content_scale_from_display(const float display_scale, const float pixel_density) noexcept
+        -> float {
+        if (!std::isfinite(display_scale) || display_scale <= 0.0F || !std::isfinite(pixel_density)
+            || pixel_density <= 0.0F)
+        {
+            return 1.0F;
+        }
+        return sanitized_content_scale(display_scale / pixel_density);
+    }
+
+    auto
+    window_size_from_logical_size(const foundation::NanSize logical_size, const float content_scale)
+        -> foundation::NanSize {
+        require_valid_size(logical_size, "logical window size must be finite and positive");
+        const float scale = sanitized_content_scale(content_scale);
+        return foundation::NanSize(
+            logical_size.get_width() * scale,
+            logical_size.get_height() * scale
+        );
+    }
+
+    auto
+    logical_size_from_window_size(const foundation::NanSize window_size, const float content_scale)
+        -> foundation::NanSize {
+        require_valid_size(window_size, "native window size must be finite and positive");
+        const float scale = sanitized_content_scale(content_scale);
+        return foundation::NanSize(
+            window_size.get_width() / scale,
+            window_size.get_height() / scale
+        );
     }
 
 } // namespace nandina::app

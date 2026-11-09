@@ -351,7 +351,10 @@ P3.3b1 已补（2026-11-02）：
 - `NanSceneTree::update_text_input_area(world_to_window, window)` 在最终布局后、绘制前调用：
   先刷新目标滚动，再将局部 caret 的四角经焦点节点 global transform 和宿主 viewport 映射，
   取窗口逻辑坐标 AABB。`TextInputArea::window` 是窗口客户区边界，不是遮挡信息。
-  `NanWindow` 每帧传实际 viewport transform 和窗口逻辑尺寸；不乘 drawable/DPI 比例。
+  `NanWindow` 每帧传实际 viewport transform 和窗口逻辑尺寸；场景/协议层**不乘** drawable/DPI
+  比例。P4.5a 起由 SDL 平台适配器在调用 `SDL_SetTextInputArea` 前把逻辑坐标乘
+  `content_scale` 换成原生窗口坐标（Windows 175% = 1.75；1× 模式 = 1），见
+  [高 DPI 与多显示器](high_dpi_and_multi_display.md)。
   无参调用保留 identity 映射与未知窗口边界，供 headless/自定义宿主使用。
 - 更新结果为 `TextInputRequestResult`：无会话返回 unavailable，无 input_area 能力返回
   unsupported 且不调用服务；其余透传平台结果。

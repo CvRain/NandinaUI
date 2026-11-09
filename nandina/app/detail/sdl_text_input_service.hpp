@@ -46,11 +46,16 @@ namespace nandina::app::detail
         void set_sink(scene::ITextInputSessionSink* sink) noexcept override;
         void dispatch(const scene::TextInputPlatformEvent& event) override;
 
+        /// 场景协议用逻辑（作者）窗口坐标；SDL 期望原生窗口坐标，这里按内容缩放换算。
+        /// `high_dpi=false` 时平台传入 1.0。非有限/非正值回退 1.0。
+        void set_window_scale(float window_scale) noexcept;
+
     private:
         SDL_Window* window_ = nullptr;
         StartTextInput start_text_input_;
         scene::ITextInputSessionSink* sink_ = nullptr;
         scene::TextInputSession active_session_ {};
+        float window_scale_ = 1.0F;
     };
 } // namespace nandina::app::detail
 

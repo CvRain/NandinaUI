@@ -41,6 +41,7 @@ meson compile -C buildDir
 鼠标比例不更新”的错位。该缺陷与限制随 raylib 退役一起退出，SDL3 的 DPI/输入一致性仍需按
 上面的矩阵重新实测。
 
-> 跨平台（Windows/macOS/Linux）的内容缩放现状、已知缺陷与实施前必须定形的问题见
-> [高 DPI 与多显示器](high_dpi_and_multi_display.md)。本文只记录 Linux 窗口后端选择；
-> 当前框架尚未应用 OS 内容缩放，不得据此认为 Linux 高 DPI 已验收。
+> 跨平台（Windows/macOS/Linux）的内容缩放契约、P4.5a 实施记录与剩余边界见
+> [高 DPI 与多显示器](high_dpi_and_multi_display.md)。Linux 1× 行为在本批保持不变
+> （display scale = 1 时不缩放）；**Wayland 分数缩放（1.25/1.5）仍需在 Linux 机器上按该文档
+> 的矩阵复验**，不能据 Windows 证据推断 Linux 已验收。

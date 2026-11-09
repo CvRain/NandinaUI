@@ -18,6 +18,15 @@
 
 ## 2. 三档分类
 
+2026-11-09 P4.5a 高 DPI 内容缩放（experimental，行为语义迁移）：`WindowConfig::width/height`
+改为逻辑（DIP）单位；`high_dpi=false` 表示固定 1×（测试/探针/golden 用）。平台 seam 的坐标
+空间定形：`IPlatformWindow::screen_size()` 返回逻辑窗口尺寸、`drawable_size()` 仍为物理
+framebuffer、`display_scale()` 为物理/逻辑比、`poll_input()` 的指针坐标折回逻辑空间；
+`SdlTextInputService::set_window_scale()` 由平台层维护，场景 `TextInputArea` 仍为逻辑坐标。
+`app/window_metrics.hpp` 新增 `content_scale_from_display()`、`window_size_from_logical_size()`、
+`logical_size_from_window_size()`。注入平台或迁移 `WindowConfig` 调用方后须重新编译；契约见
+[高 DPI 与多显示器](high_dpi_and_multi_display.md)。
+
 2026-11-05 P4.3 D3 子批（破坏性字段迁移，复核完成并随 `095336b` 提交）：
 `RouteOptions::type` 改为 `nav_group`，默认从 `"default"` 改为空串；`NavSection::type`
 改为 `group`，不保留旧字段或别名。显式 `.nav_group = "default"` 仍创建普通有标题组；

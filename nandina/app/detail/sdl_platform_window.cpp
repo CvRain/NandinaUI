@@ -7,10 +7,13 @@
 #if defined(NANDINA_HAS_SDL_BACKEND)
 
     #include "../../render/backends/sdl_device.hpp"
+    #include "../window_metrics.hpp"
 
     #include <SDL3/SDL_gpu.h>
     #include <SDL3/SDL_render.h>
 
+    #include <algorithm>
+    #include <cmath>
     #include <optional>
     #include <string>
 
@@ -496,6 +499,19 @@ namespace nandina::app::detail
             return false;
         }
 
+        // `WindowConfig::width/height` 是逻辑（作者/布局）单位，而 SDL 的窗口尺寸是原生窗口
+        // 坐标：Windows 上就是物理像素（175% 时 1 逻辑单位 = 1.75 像素），Retina 上是点。
+        // 创建时按内容缩放把原生窗口放大到逻辑尺寸对应的物理尺寸；之后布局、输入与文本都
+        // 留在逻辑空间，只有渲染器的 scale 负责到物理像素的最后一步。
+        high_dpi_ = config.high_dpi;
+        logical_size_ = foundation::NanSize(
+            static_cast<float>(config.width),
+            static_cast<float>(config.height)
+        );
+        refresh_content_scale();
+        apply_logical_window_size();
+        ensure_window_visible();
+
         // SDL3 默认不投递文本输入（`SDL_StartTextInput` 文档：Text input events are not
         // received by default）。缺这一步时键盘事件照常到达，但 `SDL_EVENT_TEXT_INPUT`
         // 永远为空，TextField/TextArea 只能删除和移动光标，不能键入字符。
@@ -528,6 +544,9 @@ namespace nandina::app::detail
             return false;
         }
 
+        // 渲染器 scale 与文本输入区域换算依赖窗口与 renderer 都存在；创建路径末尾统一应用。
+        refresh_content_scale();
+
         // vsync / target_fps 只能尽力而为：vsync 走 SDL 的通用开关（驱动可能不支持，所以查
         // 返回值），target_fps 由 `present()` 在 vsync 关闭时自己数拍子 —— SDL 没有帧率上限 API。
         const int vsync = config.vsync ? 1 : 0;
@@ -554,10 +573,22 @@ namespace nandina::app::detail
         ready_ = true;
 
         const auto* renderer_name = SDL_GetRendererName(renderer_);
+        int native_width = 0;
+        int native_height = 0;
+        int pixel_width = 0;
+        int pixel_height = 0;
+        (void)SDL_GetWindowSize(window_, &native_width, &native_height);
+        (void)SDL_GetWindowSizeInPixels(window_, &pixel_width, &pixel_height);
         SDL_Log(
-            "SdlPlatformWindow: ready %dx%d renderer=%s",
+            "SdlPlatformWindow: ready %dx%d logical (%dx%d native, %dx%d pixels), "
+            "content_scale=%.2f renderer=%s",
             config.width,
             config.height,
+            native_width,
+            native_height,
+            pixel_width,
+            pixel_height,
+            content_scale(),
             renderer_name != nullptr ? renderer_name : "unknown"
         );
         return true;
@@ -591,6 +622,159 @@ namespace nandina::app::detail
         modifiers_ = {};
         held_keys_.fill({});
         window_active_ = false;
+        high_dpi_ = false;
+        content_scale_ = 1.0F;
+        logical_size_ = {};
+    }
+
+    auto SdlPlatformWindow::content_scale() const noexcept -> float {
+        return content_scale_ > 0.0F ? content_scale_ : 1.0F;
+    }
+
+    void SdlPlatformWindow::refresh_content_scale() {
+        float scale = 1.0F;
+        if (high_dpi_ && window_ != nullptr) {
+            // display_scale = 物理像素 / 原生窗口坐标；pixel_density = framebuffer 像素 /
+            // 原生窗口坐标。二者之比才是 OS 内容缩放（Windows 175% -> 1.75，Retina -> 1.0）。
+            const float display_scale = SDL_GetWindowDisplayScale(window_);
+            const float pixel_density = SDL_GetWindowPixelDensity(window_);
+            scale = app::content_scale_from_display(display_scale, pixel_density);
+        }
+        content_scale_ = scale;
+        apply_render_scale();
+        if (text_input_service_) {
+            text_input_service_->set_window_scale(scale);
+        }
+    }
+
+    void SdlPlatformWindow::apply_render_scale() {
+        if (renderer_ == nullptr) {
+            return;
+        }
+        // Scene/layout/text 坐标是逻辑单位；SDL 渲染器负责逻辑 -> 原生窗口 -> 物理像素。
+        // display scale 正好是物理像素 / 逻辑单位（Windows 175% = 1.75，Retina = 2）。
+        float scale = 1.0F;
+        if (high_dpi_ && window_ != nullptr) {
+            const float display_scale = SDL_GetWindowDisplayScale(window_);
+            if (std::isfinite(display_scale) && display_scale > 0.0F) {
+                scale = display_scale;
+            }
+        }
+        if (!SDL_SetRenderScale(renderer_, scale, scale)) {
+            SDL_Log(
+                "SdlPlatformWindow: SDL_SetRenderScale(%.2f) failed: %s",
+                scale,
+                SDL_GetError()
+            );
+        }
+    }
+
+    void SdlPlatformWindow::apply_logical_window_size() {
+        if (window_ == nullptr || !high_dpi_) {
+            return;
+        }
+        const auto native = app::window_size_from_logical_size(logical_size_, content_scale_);
+        const int width = static_cast<int>(std::lround(native.get_width()));
+        const int height = static_cast<int>(std::lround(native.get_height()));
+        int current_width = 0;
+        int current_height = 0;
+        if (!SDL_GetWindowSize(window_, &current_width, &current_height)) {
+            return;
+        }
+        if (current_width == width && current_height == height) {
+            return;
+        }
+        if (!SDL_SetWindowSize(window_, width, height)) {
+            SDL_Log(
+                "SdlPlatformWindow: SDL_SetWindowSize(%dx%d) failed: %s",
+                width,
+                height,
+                SDL_GetError()
+            );
+        }
+    }
+
+    void SdlPlatformWindow::ensure_window_visible() {
+        if (window_ == nullptr) {
+            return;
+        }
+        // 最大化/全屏由 OS 管理，不主动改位置。
+        const SDL_WindowFlags flags = SDL_GetWindowFlags(window_);
+        if ((flags & (SDL_WINDOW_MAXIMIZED | SDL_WINDOW_FULLSCREEN)) != 0) {
+            return;
+        }
+        const SDL_DisplayID display = SDL_GetDisplayForWindow(window_);
+        if (display == 0) {
+            return;
+        }
+        SDL_Rect usable {};
+        if (!SDL_GetDisplayUsableBounds(display, &usable)) {
+            return;
+        }
+        int x = 0;
+        int y = 0;
+        int width = 0;
+        int height = 0;
+        if (!SDL_GetWindowPosition(window_, &x, &y) || !SDL_GetWindowSize(window_, &width, &height))
+        {
+            return;
+        }
+        // SDL_SetWindowPosition 的坐标是客户区左上角；把非客户区边框也算进可用区域，避免
+        // 标题栏/右边框越界。窗口本身大于可用区域时贴住左上角，优先保证标题栏可见。
+        int top_border = 0;
+        int left_border = 0;
+        int bottom_border = 0;
+        int right_border = 0;
+        (void)SDL_GetWindowBordersSize(
+            window_,
+            &top_border,
+            &left_border,
+            &bottom_border,
+            &right_border
+        );
+        const int frame_width = left_border + right_border;
+        const int frame_height = top_border + bottom_border;
+        const int min_x = usable.x + left_border;
+        const int min_y = usable.y + top_border;
+        const int max_x = min_x + std::max(0, usable.w - width - frame_width);
+        const int max_y = min_y + std::max(0, usable.h - height - frame_height);
+        const int clamped_x = std::clamp(x, min_x, std::max(min_x, max_x));
+        const int clamped_y = std::clamp(y, min_y, std::max(min_y, max_y));
+        if (clamped_x == x && clamped_y == y) {
+            return;
+        }
+        if (!SDL_SetWindowPosition(window_, clamped_x, clamped_y)) {
+            SDL_Log(
+                "SdlPlatformWindow: SDL_SetWindowPosition(%d,%d) failed: %s",
+                clamped_x,
+                clamped_y,
+                SDL_GetError()
+            );
+        }
+    }
+
+    void SdlPlatformWindow::handle_display_scale_changed() {
+        const float previous_scale = content_scale();
+        refresh_content_scale();
+        if (content_scale() != previous_scale) {
+            // 作者的窗口请求是逻辑尺寸：系统/跨屏 DPI 变化后把它恢复到同一逻辑尺寸。
+            apply_logical_window_size();
+            ensure_window_visible();
+        }
+    }
+
+    void SdlPlatformWindow::remember_logical_size_from_window() {
+        int width = 0;
+        int height = 0;
+        if (window_ == nullptr || !SDL_GetWindowSize(window_, &width, &height) || width <= 0
+            || height <= 0)
+        {
+            return;
+        }
+        logical_size_ = app::logical_size_from_window_size(
+            foundation::NanSize(static_cast<float>(width), static_cast<float>(height)),
+            content_scale()
+        );
     }
 
     auto SdlPlatformWindow::is_ready() const -> bool {
@@ -611,10 +795,17 @@ namespace nandina::app::detail
     auto SdlPlatformWindow::screen_size() const -> foundation::NanSize {
         int width = 0;
         int height = 0;
-        if (window_ == nullptr || !SDL_GetWindowSize(window_, &width, &height)) {
+        if (window_ == nullptr || !SDL_GetWindowSize(window_, &width, &height) || width <= 0
+            || height <= 0)
+        {
             return foundation::NanSize::zero();
         }
-        return foundation::NanSize(static_cast<float>(width), static_cast<float>(height));
+        // 平台 seam 的 `screen_size` 是逻辑（作者/布局）尺寸；原生窗口坐标在 Windows 上
+        // 是物理像素、在 Retina 上是点，所以统一按内容缩放折算。
+        return app::logical_size_from_window_size(
+            foundation::NanSize(static_cast<float>(width), static_cast<float>(height)),
+            content_scale()
+        );
     }
 
     auto SdlPlatformWindow::drawable_size() const -> foundation::NanSize {
@@ -641,11 +832,12 @@ namespace nandina::app::detail
     }
 
     auto SdlPlatformWindow::display_scale() const -> float {
-        if (window_ == nullptr) {
+        // 物理像素 / 逻辑单位。1× 模式（high_dpi=false）固定为 1：窗口、输入与渲染都不缩。
+        if (window_ == nullptr || !high_dpi_) {
             return 1.0F;
         }
         const float scale = SDL_GetWindowDisplayScale(window_);
-        return scale > 0.0F ? scale : 1.0F;
+        return std::isfinite(scale) && scale > 0.0F ? scale : 1.0F;
     }
 
     void SdlPlatformWindow::poll_input(FrameInput& out) {
@@ -675,13 +867,29 @@ namespace nandina::app::detail
                     }
                     break;
 
+                case SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED:
+                    if (event.window.windowID == SDL_GetWindowID(window_)) {
+                        handle_display_scale_changed();
+                    }
+                    break;
+
+                case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
+                    if (event.window.windowID == SDL_GetWindowID(window_)) {
+                        remember_logical_size_from_window();
+                    }
+                    break;
+
                 case SDL_EVENT_MOUSE_MOTION: {
-                    pointer_ = foundation::NanPoint(event.motion.x, event.motion.y);
+                    const float scale = content_scale();
+                    pointer_ = foundation::NanPoint(event.motion.x / scale, event.motion.y / scale);
                     has_pointer_ = true;
                     out.events.emplace_back(
                         scene::MouseMoveEvent {
                             pointer_,
-                            foundation::NanPoint(event.motion.xrel, event.motion.yrel),
+                            foundation::NanPoint(
+                                event.motion.xrel / scale,
+                                event.motion.yrel / scale
+                            ),
                         }
                     );
                     break;
@@ -693,7 +901,8 @@ namespace nandina::app::detail
                     if (!button.has_value()) {
                         break;
                     }
-                    pointer_ = foundation::NanPoint(event.button.x, event.button.y);
+                    const float scale = content_scale();
+                    pointer_ = foundation::NanPoint(event.button.x / scale, event.button.y / scale);
                     has_pointer_ = true;
                     out.events.emplace_back(
                         scene::MouseButtonEvent {
@@ -709,7 +918,11 @@ namespace nandina::app::detail
                 }
 
                 case SDL_EVENT_MOUSE_WHEEL: {
-                    pointer_ = foundation::NanPoint(event.wheel.mouse_x, event.wheel.mouse_y);
+                    const float scale = content_scale();
+                    pointer_ = foundation::NanPoint(
+                        event.wheel.mouse_x / scale,
+                        event.wheel.mouse_y / scale
+                    );
                     has_pointer_ = true;
                     // SDL wheel.y and MouseWheelEvent both use positive y for upward scroll.
                     out.events.emplace_back(

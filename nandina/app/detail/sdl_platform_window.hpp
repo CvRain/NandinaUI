@@ -80,6 +80,21 @@ namespace nandina::app::detail
         [[nodiscard]] auto unknown_key_count() const -> std::uint64_t;
 
     private:
+        /// 逻辑（作者/布局）单位到 SDL 原生窗口坐标的内容缩放；`high_dpi=false` 时恒为 1。
+        [[nodiscard]] auto content_scale() const noexcept -> float;
+        /// 依据当前窗口的 display scale / pixel density 重算内容缩放、渲染 scale 与输入区比例。
+        void refresh_content_scale();
+        /// 把渲染器 scale 设为物理像素 / 逻辑单位（1× 模式下恒为 1）。
+        void apply_render_scale();
+        /// 按 `logical_size_ × content_scale()` 恢复原生窗口尺寸（窗口被缩放到其他 DPI 后）。
+        void apply_logical_window_size();
+        /// 把窗口收进当前显示器的可用区域：内容缩放后的窗口可能超出按原始尺寸放置的位置。
+        void ensure_window_visible();
+        /// 系统/跨屏缩放变化：重算缩放并恢复作者请求的逻辑窗口尺寸。
+        void handle_display_scale_changed();
+        /// 用户 resize 后回写逻辑尺寸，供后续缩放变化恢复。
+        void remember_logical_size_from_window();
+
         SDL_Window* window_ = nullptr;
         SDL_Renderer* renderer_ = nullptr;
         /// GPU 渲染器背后的设备；本类持有，`destroy()` 负责释放（渲染器不持有它）。
@@ -88,6 +103,12 @@ namespace nandina::app::detail
         bool sdl_initialized_ = false;
         bool ready_ = false;
         bool should_close_ = false;
+        /// `WindowConfig::high_dpi`：false = 固定 1×（不按 OS 内容缩放创建/映射/渲染）。
+        bool high_dpi_ = false;
+        /// 物理像素 / 逻辑单位（Windows 175% = 1.75；1× 模式 = 1）。
+        float content_scale_ = 1.0F;
+        /// 作者/布局单位下的窗口尺寸；resize 与缩放变化时维护。
+        foundation::NanSize logical_size_ {};
 
         // `frame_time()` 是 const，所以这两个游标必须是 mutable。
         mutable std::uint64_t last_frame_ns_ = 0;

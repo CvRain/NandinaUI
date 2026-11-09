@@ -104,11 +104,16 @@ namespace nandina::app::detail
         if (window_ == nullptr || !active_session_ || session != active_session_) {
             return scene::TextInputRequestResult::unavailable;
         }
+        // The scene protocol is in logical (author) window coordinates; SDL_SetTextInputArea
+        // takes native window coordinates. On a 175% Windows window that is 1.75x; 1x mode
+        // passes 1.0. Fallback to 1.0 for a missing platform query.
+        const double scale =
+            std::isfinite(window_scale_) && window_scale_ > 0.0F ? window_scale_ : 1.0;
         // Round outward so a fractional caret is never truncated to an empty SDL rectangle.
-        const double left = std::floor(area.caret.get_left());
-        const double top = std::floor(area.caret.get_top());
-        const double right = std::ceil(area.caret.get_right());
-        const double bottom = std::ceil(area.caret.get_bottom());
+        const double left = std::floor(area.caret.get_left() * scale);
+        const double top = std::floor(area.caret.get_top() * scale);
+        const double right = std::ceil(area.caret.get_right() * scale);
+        const double bottom = std::ceil(area.caret.get_bottom() * scale);
         constexpr double min = std::numeric_limits<int>::min();
         constexpr double max = std::numeric_limits<int>::max();
         if (!std::isfinite(left) || !std::isfinite(top) || !std::isfinite(right)
@@ -149,6 +154,10 @@ namespace nandina::app::detail
 
     void SdlTextInputService::set_sink(scene::ITextInputSessionSink* sink) noexcept {
         sink_ = sink;
+    }
+
+    void SdlTextInputService::set_window_scale(const float window_scale) noexcept {
+        window_scale_ = std::isfinite(window_scale) && window_scale > 0.0F ? window_scale : 1.0F;
     }
 
     void SdlTextInputService::dispatch(const scene::TextInputPlatformEvent& event) {

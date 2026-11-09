@@ -107,7 +107,7 @@
 | P4.3 D2 第 3 步 | **方案目录与选择（2026-11-06 复核补修，已随 `995e6ae` 提交）**：`ThemeSchemeId`/`ThemeSelection`/catalog、legacy 写入口移除与调用点迁移、styles.toml 编译为规范 ID | 已接受的 §12 API 形状；D2 首批窄投影 | 失败原子提交、槽位类型校验、in_use 移除保护、匿名来源、内容替换发布、家族目录与查询 |
 | P4.3 D3 子批 | **导航分组（2026-11-05，复核完成并随 `095336b` 提交）**：`nav_group` / `NavSection::group`、空组无标题、精确值全局合并 | 已接受的 D3 契约；既有 Routes/Sidebar | 默认/显式空串、交错合并、精确组名、导航过滤与真实 Sidebar 分隔线/typed navigation 回归；D2 与颜色入口仍独立待实施 |
 | P4.4 | **视觉质量扩展**：页面 golden 覆盖面（更多页面/组件状态）、混合叠层验证 | P1.1 | 新页面有 approved 基线或明确不纳入的理由 |
-| P4.5 | **高 DPI 与多显示器（已知缺陷，延后实施，2026-11-09 维护者报告）**：Windows/macOS/Linux 内容缩放、混合 DPI 多显示器、组件缩放模型、文字栅格与命中/IME 坐标 | 先定形单位/坐标模型、`ViewportScalePolicy` 组合与跨屏事件；不阻塞当前 P3/P4 批次 | 1.0/1.25/1.5/1.75/2.0 映射单测；Windows 175% 与 100/175 双屏、Linux 分数缩放真实窗口；按钮/滚动/光标命中无偏移，golden 基线仍按 1× 固定；见 [高 DPI 与多显示器](high_dpi_and_multi_display.md) |
+| P4.5 | **高 DPI 与多显示器（P4.5a 已实施 2026-11-09；P4.5b 待第二块显示器）**：P4.5a 定形逻辑单位契约、平台 seam 归一化（逻辑 screen_size/事件）、窗口按 content_scale 放大、渲染 scale、文本物理密度栅格、IME 输入区换算与固定 1× 模式；P4.5b 覆盖混合 DPI 跨屏 | P4.5a 依赖已存在的 `WindowMetrics`/`screen_to_physical` 与 SDL display scale；P4.5b 需维护者新增第二块显示器 | P4.5a：本机 175% 真实窗口（1200×800 逻辑 → 2100×1400 物理、文字清晰、命中正确）、1× 回归与映射单测；P4.5b：100%/175% 双屏双向移动、跨屏拖动无抖动/错位、候选窗跟随，Linux Wayland 分数缩放独立复验；见 [高 DPI 与多显示器](high_dpi_and_multi_display.md) |
 
 ## 4. 建议的近期切入顺序
 

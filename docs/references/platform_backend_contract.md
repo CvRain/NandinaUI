@@ -127,3 +127,19 @@ raylib 不再可构建；当前 SDF 已覆盖填充/描边/圆/线段/弧/软阴
 - 为什么不能拿旧数据做后端性能结论：[文本整形与页面打开成本](text_shaping_cost.md)
 - 布局收敛（跨后端的收敛性质对照）：[布局收敛与文本测量](layout_convergence_and_text_measurement.md)
 - 输入/焦点与文本会话（P4 的协调对象）：[统一输入、焦点与文本编辑](focus_and_input.md)
+
+## 9. P4.5a 平台 seam 的坐标语义（2026-11-09 实施）
+
+平台 seam 的三个空间在 P4.5a 定形并实现，后续后端不得混用：
+
+- `screen_size()`：逻辑（作者/布局）窗口尺寸，与 scene/文本/输入/`TextInputArea` 同一空间；
+- `drawable_size()`：framebuffer 物理像素；
+- `display_scale()`：物理像素 / 逻辑单位（Windows 175% = 1.75；Retina = 2；1× 模式 = 1）；
+- `poll_input()`：指针坐标已由平台层折回逻辑窗口坐标；`present()` 不变。
+
+SDL 实现按 `content_scale = display_scale / pixel_density` 创建原生窗口
+（`round(logical × content_scale)`），把渲染器 scale 设为 `display_scale`，并处理
+`WINDOW_DISPLAY_SCALE_CHANGED` / `WINDOW_PIXEL_SIZE_CHANGED` 的尺寸与缩放更新。
+`WindowConfig::high_dpi=false` 是固定 1× 模式（测试/探针/golden）。
+完整契约、验收证据与 P4.5b（混合 DPI 多显示器）矩阵见
+[高 DPI 与多显示器](high_dpi_and_multi_display.md)。
