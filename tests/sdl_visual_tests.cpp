@@ -14,6 +14,7 @@
 // 目标只在找到 SDL3 时注册（见 tests/meson.build）。
 //
 
+#include <nandina/foundation/composition.hpp>
 #include <nandina/foundation/nandina_color_space.hpp>
 #include <nandina/reactive/graph.hpp>
 #include <nandina/render/backends/sdl_device.hpp>
@@ -52,23 +53,47 @@ namespace
         int a = 255;
     };
 
-    [[nodiscard]] auto over(const Rgba dst, const Rgba src) -> Rgba {
-        const auto alpha = src.a;
-        const auto inverse = 255 - alpha;
-        const auto mix = [alpha, inverse](const int s, const int d) {
-            return (s * alpha + d * inverse + 127) / 255;
-        };
-        return Rgba {
-            .r = mix(src.r, dst.r),
-            .g = mix(src.g, dst.g),
-            .b = mix(src.b, dst.b),
-            .a = std::min(255, alpha + (dst.a * inverse + 127) / 255),
-        };
-    }
-
     [[nodiscard]] auto to_rgba(const foundation::NanColor& color) -> Rgba {
         const auto rgb = color.to<foundation::NanHexRgb>();
         return Rgba {.r = rgb.red, .g = rgb.green, .b = rgb.blue, .a = rgb.alpha};
+    }
+
+    /// 8 位采样值还原为作者颜色（编码 sRGB + 线性 alpha），作为共享合成器输入。
+    [[nodiscard]] auto rgba_to_color(const Rgba value) -> foundation::NanColor {
+        const auto packed = (static_cast<std::uint32_t>(value.r) << 16U)
+            | (static_cast<std::uint32_t>(value.g) << 8U) | static_cast<std::uint32_t>(value.b);
+        return foundation::NanColor::from_hex(packed, static_cast<float>(value.a) / 255.0F);
+    }
+
+    /// 把 src 覆盖到不透明 dst 上：消费 foundation 唯一合成器（编码 sRGB、straight alpha），
+    /// 再按设备路径量化到 8 位比较。整数舍入最多差一两级，断言统一给容差。
+    [[nodiscard]] auto over(const Rgba dst, const Rgba src) -> Rgba {
+        REQUIRE(dst.a == 255);
+        return to_rgba(foundation::nan_composite_over(rgba_to_color(src), rgba_to_color(dst)));
+    }
+
+    /// 负向对照：线性通道合成（错误空间）。只用于证明容差能拒绝另一种合成空间，
+    /// 不是生产算法。
+    [[nodiscard]] auto linear_over(const Rgba dst, const Rgba src) -> Rgba {
+        const auto decode = [](const int channel) {
+            const auto value = static_cast<double>(channel) / 255.0;
+            return value <= 0.04045 ? value / 12.92 : std::pow((value + 0.055) / 1.055, 2.4);
+        };
+        const auto encode = [](const double value) {
+            const auto encoded =
+                value <= 0.0031308 ? value * 12.92 : 1.055 * std::pow(value, 1.0 / 2.4) - 0.055;
+            return static_cast<int>(std::lround(std::clamp(encoded, 0.0, 1.0) * 255.0));
+        };
+        const auto alpha = static_cast<double>(src.a) / 255.0;
+        const auto mix = [&](const int s, const int d) {
+            return decode(s) * alpha + decode(d) * (1.0 - alpha);
+        };
+        return Rgba {
+            .r = encode(mix(src.r, dst.r)),
+            .g = encode(mix(src.g, dst.g)),
+            .b = encode(mix(src.b, dst.b)),
+            .a = 255,
+        };
     }
 
     [[nodiscard]] auto from_hex(const std::uint32_t packed) -> Rgba {
@@ -542,4 +567,47 @@ TEST_CASE("rgba texture upload draws with blend and scale", "[visual][texture][s
     // 非法尺寸 / 缓冲区不足：返回空 handle，不崩溃。
     REQUIRE_FALSE(device.create_rgba_texture(0, 2, pixels));
     REQUIRE_FALSE(device.create_rgba_texture(2, 2, std::span(pixels).first(8)));
+}
+
+TEST_CASE(
+    "software readback matches the shared compositor across transparent layers",
+    "[visual][blend][compositor][sdl]"
+) {
+    // §6.8 步骤 1–3（软件路径）：真实 SdlRenderDevice 绘制 → 读回 framebuffer →
+    // 与 foundation 唯一合成器对同一声明输入的结果比较。入口颜色/alpha 先量化为
+    // 8 位（设备路径），目标为 SDL_PIXELFORMAT_RGBA32 软件表面（8 位/通道）；
+    // 容差 ±2 覆盖 float→8 位舍入。
+    SoftwareCanvas canvas {240, 140};
+    render::SdlRenderDevice device {canvas.renderer()};
+    const auto background = foundation::NanColor::from_hex(0x202833U);
+    device.begin_frame();
+    device.clear(background);
+    // 第一层只覆盖左/上区域，第二层与其重叠，能同时采样「单层」与「两层」结果。
+    const auto first = foundation::NanColor::from_hex(
+        0x3366CCU,
+        static_cast<float>(0xB0U) / 255.0F
+    ); // 51,102,204, alpha 176
+    const auto second = foundation::NanColor::from_hex(
+        0xC8783CU,
+        static_cast<float>(0x80U) / 255.0F
+    ); // 200,120,60, alpha 128
+    device.draw_rect(foundation::NanRect::from_ltrb(20.0F, 20.0F, 220.0F, 90.0F), first);
+    device.draw_rect(foundation::NanRect::from_ltrb(60.0F, 40.0F, 180.0F, 110.0F), second);
+    device.end_frame();
+
+    const auto first_only = foundation::nan_composite_over(first, background);
+    const auto both = foundation::nan_composite_over(second, first_only);
+
+    require_pixel(canvas.pixel(40, 80), to_rgba(first_only), "single translucent layer", 40, 80);
+    require_pixel(canvas.pixel(100, 70), to_rgba(both), "two translucent layers", 100, 70);
+
+    // 负向对照：若在错误的线性空间合成，结果会明显偏离，容差必须能拒绝它。
+    const auto linear_both = linear_over(from_hex(kBackground), from_hex(0x3366CCB0U));
+    const auto linear_two = linear_over(linear_both, from_hex(0xC8783C80U));
+    const auto actual = canvas.pixel(100, 70);
+    // Overlap must differ from both the single-layer result and the wrong linear space.
+    CHECK(channels_differ(actual, to_rgba(first_only)));
+    CHECK(channels_differ(actual, linear_two));
+    INFO("linear-space expectation must be rejected by the tolerance");
+    CHECK(std::abs(actual.r - linear_two.r) > kChannelTolerance);
 }

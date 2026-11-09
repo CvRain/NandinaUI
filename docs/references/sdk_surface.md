@@ -54,7 +54,7 @@
 不新增原始色语义 token。文件 palette 覆盖复用 `apply_semantic_colors` 并拒绝非有限值；
 规范名优先规则保持不变。C++ 批量重复角色最后一项生效；查询要求已声明的枚举值。
 
-2026-11-07 P4.3 D2 第 4a 步 CPU 侧（experimental，已随 `fef829a` 提交；真实后端读回未执行）：
+2026-11-09 P4.3 D2 第 4a 步（experimental，CPU 侧已随 `fef829a` 提交，后端读回复核完成）：
 新增 `foundation/composition.hpp`：唯一 CPU 合成器（显式 `CompositeSpace::encoded_srgb`
 策略、`nan_composite_over`/`nan_composite_background_stack`/`nan_composite_over_stack`
 与 `CompositionError`）；新增 `theme/contrast_diagnostics.{hpp,cpp}`：显式
@@ -63,8 +63,9 @@
 `ContrastRule::tone` 为 tone 引用（含变换操作数）提供显式上下文；缺少时报告上下文不足。
 诊断 `foreground` 为可选 sample，未解析时为空；背景在首个不透明终点停止，变换路径保留
 操作及操作数。`ContrastDiagnostic::config/tone` 记录计算上下文；报告注明现行通道裁剪与
-浮点、无 u8 量化策略。注册门槛接线等待真实后端像素读回（§6.8）。`color_token_name()`
-供角色路径诊断。
+浮点、无 u8 量化策略。软件 renderer 与 Linux/Hyprland+RADV 离屏 GPU renderer 的生产绘制
+路径已按 §6.8 读回，并与共享编码 sRGB 合成器及错误空间负向对照核对；默认 swapchain、
+Windows/其他驱动读回和注册门槛接线仍未完成。`color_token_name()` 供角色路径诊断。
 
 2026-11-07 P4.3 D2 第 4 步（experimental，已随 `4746173` 提交）：新增
 `theme/theme_observation.{hpp,cpp}`：`ThemeSelectionPresentation`（选择投影）、

@@ -454,7 +454,7 @@ theme-presentation 三个专项基线，未发现 RED-FIRST 残留。
 复核缺口已补修并验证，待维护者复验后统一提交首版与补修；本轮未 commit/push，
 未启动 4a 或作者颜色入口。Windows、桌面/GPU、真实像素读回和人工视觉验收仍待补齐。
 
-### P4.3 D2 第 4a 步 CPU 侧实施记录（2026-11-07，初稿待维护者复核）
+### P4.3 D2 第 4a 步 CPU 侧实施记录（2026-11-07，随后已随 `fef829a` 提交）
 
 第 4 步已随 `4746173` 提交推送。本批按 §6.5–§6.7 落地 CPU 侧，真实后端读回与注册门槛
 接线仍待有 GPU 的环境（§6.8 步骤 1–5 未执行）。
@@ -479,10 +479,11 @@ theme-presentation 三个专项基线，未发现 RED-FIRST 残留。
 121 OK / 1 FAIL（sdf-state-probe 无显示设备）/ 1 SKIP（sdf-device 77）；
 ASan 100 OK / 1 skip；no-RTTI 102 OK；no-SQLite 97 OK / 1 skip；tools 8 OK；
 release_check --ci 8/8（headers 197、docs 87、clang-format 23.1.1）。
-未提交、未推送；真实像素读回、注册门槛、Windows/桌面/人工视觉验收仍待补齐。
+当时保持未提交；本批随后已随 `fef829a` 提交推送。真实像素读回、注册门槛、
+Windows/桌面/人工视觉验收当时仍待补齐。
 
 
-#### 第 4a 步 CPU 复核记录（2026-11-07，保持未提交）
+#### 第 4a 步 CPU 复核记录（2026-11-07，随后已随 `fef829a` 提交）
 
 HEAD 与 origin/main 同为 `4746173`，第 4 步已提交。先编译并通过 composition /
 theme-contrast-diagnostics / theme-palette-contrast / command-palette 四个专项基线。
@@ -522,9 +523,9 @@ ASan 的本地 Ninja 构建记录恢复触发较大范围重编译，最终构�
 
 五个未跟踪 C++ 文件另做固定版本格式 dry-run；故障注入源码与恢复备份逐字一致，无
 RED-FIRST 残留。文档结果收尾后复查 87 篇链接/锚点与 git diff --check。
-保持 15 项已跟踪修改 + 5 个新增文件，未提交、未推送；待维护者复验后统一提交首版与补修。
+当时保持 15 项已跟踪修改 + 5 个新增文件；随后首版与补修已统一提交并推送为 `fef829a`。
 本批不启用注册配色门槛；后端像素读回、最终色域/量化定形、Windows、桌面/GPU 与人工
-视觉验收仍未完成。
+视觉验收在当时仍未完成。
 
 ### P4.3 D2 第 4b 步作者颜色入口实施记录（2026-11-07，初稿待维护者复核）
 
@@ -822,8 +823,9 @@ RED-FIRST 残留，文档收尾再检查 87 篇链接/锚点与 git diff --check
 提交推送。未启动 Shell 或软件读回批次。
 
 后续顺序沿用维护者约定：本批复验/统一提交后转 Shell 多方案闭环，页面由维护者编写；
-4a 软件路径读回放 Shell 之后，明确不代替 GPU 路径、不挂接注册门槛。Windows、GPU
-和人工视觉验收仍单独记录。
+原始计划曾将 4a 软件路径读回放在 Shell 之后；实际已另批先行完成软件与
+Linux/Hyprland+RADV 离屏 GPU 读回，但仍不代替默认 swapchain 或 Windows 路径，
+也不挂接注册门槛。Windows、GPU 和人工视觉验收仍单独记录。
 
 ### P4.3 D2 Shell 多方案框架准备实施记录（2026-11-08，已随 `f821f40` 提交）
 
@@ -912,6 +914,34 @@ approved golden 在 Hyprland/Wayland + RADV 下逐像素 0 差异。环境证据
 **更正结论**：此前「沙箱无显示设备」应表述为「工具会话未暴露显示/GPU 资源，且探针用
 环境变量误判可用性」；权限调整后资源可用，SDK 与 golden 路径均恢复正常。文件/GPU
 权限之外的系统与仓库代码没有对应改动。
+
+### P4.3 D2 第 4a 步软件/GPU framebuffer 读回核对实施记录（2026-11-09 复核完成）
+
+Shell 框架准备与环境分类修复已分别提交为 `f821f40`、`d9d234c`（状态收尾 `32fc7ac`）。
+本批按 §6.8 步骤 1–3 补上真实后端像素读回（页面正文仍由维护者负责，本批不修改
+showcase）：
+
+- 软件路径（`sdl-visual`，unit）：真实 `SdlRenderDevice` + 软件 renderer 绘制单层/叠层
+  半透明矩形，读回 framebuffer，期望值来自 foundation 唯一合成器；容差 ±2，并含
+  「线性空间必须被拒绝」的负向对照。目标为 `SDL_PIXELFORMAT_RGBA32`、8 位/通道，
+  既有本地 `over` 收敛到共享实现。
+- GPU 路径（`sdf-device`，integration）：真实 GPU renderer + `SdlRenderDevice` 绘制
+  同样输入，读回 `SDL_PIXELFORMAT_RGBA32` 离屏 render target（8 位/通道）与共享合成器
+  比较；容差 ±4，负向对照同样生效。入口颜色/alpha 为 8 位量化值；无显示/无 GPU 会话
+  沿用 77 跳过分类。本项不宣称默认 window swapchain 或 Windows 已覆盖。
+- 实测：Hyprland/Wayland + RADV（RX 6750 GRE）软件与 GPU 路径都与编码 sRGB 合成一致
+  （线性空间偏差约 27/25 通道，远超容差）。
+- 故障注入：共享合成器改线性 → 软件用例失败、GPU 读回报
+  `actual=(123,102,108) expected=(150,106,133)`；复核时把设备混合改为
+  `SDL_BLENDMODE_NONE` → 软件首层采样与 GPU 既有半透明采样均失败。恢复后源码与 HEAD
+  逐字节一致，重新编译后两条路径全绿，无 RED-FIRST 残留。
+
+专项：`sdl-visual` 6 用例 / 219 断言；`sdf-device`（含读回）通过。最终矩阵（本机
+Hyprland/Wayland + RADV）：主套件 128 OK / 0 FAIL / 0 SKIP；ASan 104 OK / 1 SKIP
+（window-lifecycle，既有驱动 LSan 配置）；no-RTTI 106 OK / 0 SKIP；no-SQLite 101 OK /
+1 SKIP；tools 8 OK；release_check --ci 8/8（headers 198、docs 87、clang-format 23.1.1）。
+本批复核完成并随当前统一提交推送。注册配色门槛、默认 swapchain/Windows/其他驱动读回
+与色域策略最终定形仍待后续。
 
 ---
 

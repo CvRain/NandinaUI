@@ -119,9 +119,14 @@ application shell. Version `0.1.0-alpha.1`.
   measured ratios, thresholds and resolved OKLCH plus converted sRGB. Local test helpers consume
   the shared compositor. Review fixes require explicit tone context for tone references, keep
   transform operand paths, stop sampling at the first opaque endpoint and report the composition
-  config with clipping/float-no-u8 policy. Backend pixel readback, the registration contrast gate
-  and style advisories remain pending (GPU environment); do not claim the color gate passes.
-  Contract: `docs/references/theme_authoring_and_state.md` §6.5–§6.8, §16.
+  config with clipping/float-no-u8 policy. Real pixel readback on the production software and GPU
+  draw paths now compares framebuffer samples against the shared compositor (unit `sdl-visual`
+  with ±2 tolerance, integration `sdf-device` with ±4, both including a wrong-space negative
+  control). This validates encoded-sRGB composition on the Linux/Hyprland/Wayland + RADV offscreen
+  target used by the test. The registration contrast gate is still not wired,
+  default-swapchain/cross-platform/other-driver readback and the final gamut policy remain pending;
+  do not claim the color gate passes. Contract:
+  `docs/references/theme_authoring_and_state.md` §6.5–§6.8, §16.
 - **P4.3 D2 step 4b author color entry** (2026-11-07, reviewed and pushed in `3e2542a`) adds
   typed primitive-palette access (`ReferenceColorFamily`, `reference_scale`, `reference_color`,
   family/shade names), explicit `NanColor` semantic overrides (`SemanticColorOverride`,
@@ -549,7 +554,7 @@ mutators, cross-family/fixed/anonymous selection, replacements, exceptions and l
 test compatibility remains test-only. A fixed-source Sidebar switch restores the actual appearance.
 The step-3 review cycle is closed.
 
-### D2 step-4 and 4a status (2026-11-07)
+### D2 step-4 and 4a status (2026-11-09)
 
 The step-4 review cycle is closed and the batch is pushed in `4746173`: equivalent catalog
 replacement is idempotent, staged publication and all channel lifetimes/exception paths are
@@ -566,7 +571,8 @@ snapshots. Step 4d's TOML named-color literals are pushed as `5061b39`, with com
 and tests for all literals, reference boundaries and actual apply failure atomicity. Shell
 multi-scheme framework preparation is pushed as `f821f40`, with typed catalog subjects,
 scope-bound selection/catalog subscriptions and end-to-end interaction regressions. Environment
-skip classification is pushed as `d9d234c`. Backend pixel readback, the registration contrast
-gate, style advisories, the Shell page body/visual acceptance and internal broadcast narrowing
-remain pending; do not claim the color gate passes without a GPU environment and maintainer
-review.
+skip classification is pushed as `d9d234c`. The reviewed 4a follow-up adds software-renderer and
+Linux/Hyprland+RADV production-path framebuffer readback against the shared encoded-sRGB
+compositor, including wrong-space negative controls. The registration contrast gate, style
+advisories, the Shell page body/visual acceptance, default swapchain/Windows readback and internal
+broadcast narrowing remain pending; do not claim the full color gate passes.

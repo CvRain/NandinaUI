@@ -10,6 +10,7 @@
 //
 
 #include <nandina/app/nan_application.hpp>
+#include <nandina/foundation/composition.hpp>
 #include <nandina/foundation/nandina_color.hpp>
 #include <nandina/foundation/nandina_color_space.hpp>
 #include <nandina/render/backends/sdl_device.hpp>
@@ -20,6 +21,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <string>
@@ -42,16 +44,43 @@ namespace
         return {rgb.red, rgb.green, rgb.blue, rgb.alpha};
     }
 
-    /// 与 SDF shader 的 straight-alpha 合成一致（8 位、四舍五入）。
+    /// 8 位采样值还原为作者颜色（编码 sRGB + alpha），作为共享合成器输入。
+    [[nodiscard]] auto to_color(Rgba value) -> nandina::foundation::NanColor {
+        const auto packed = (static_cast<std::uint32_t>(value.red) << 16U)
+            | (static_cast<std::uint32_t>(value.green) << 8U)
+            | static_cast<std::uint32_t>(value.blue);
+        return nandina::foundation::NanColor::from_hex(
+            packed,
+            static_cast<float>(value.alpha) / 255.0F
+        );
+    }
+
+    /// 与设备路径一致：消费 foundation 唯一合成器，再量化为 8 位比较。
     [[nodiscard]] auto over(Rgba background, Rgba foreground) -> Rgba {
-        const auto alpha = static_cast<float>(foreground.alpha) / 255.0F;
-        const auto blend = [alpha](int base, int value) {
-            return static_cast<int>(std::lround(base * (1.0F - alpha) + value * alpha));
+        return to_rgba(
+            nandina::foundation::nan_composite_over(to_color(foreground), to_color(background))
+        );
+    }
+
+    /// 负向对照：线性通道合成（错误空间）。只用于证明读回容差能拒绝另一种合成空间。
+    [[nodiscard]] auto linear_over(Rgba background, Rgba foreground) -> Rgba {
+        const auto decode = [](int channel) {
+            const auto value = static_cast<double>(channel) / 255.0;
+            return value <= 0.04045 ? value / 12.92 : std::pow((value + 0.055) / 1.055, 2.4);
         };
-        return {
-            blend(background.red, foreground.red),
-            blend(background.green, foreground.green),
-            blend(background.blue, foreground.blue),
+        const auto encode = [](double value) {
+            const auto encoded =
+                value <= 0.0031308 ? value * 12.92 : 1.055 * std::pow(value, 1.0 / 2.4) - 0.055;
+            return static_cast<int>(std::lround(std::clamp(encoded, 0.0, 1.0) * 255.0));
+        };
+        const auto alpha = static_cast<double>(foreground.alpha) / 255.0;
+        const auto mix = [&](int source, int destination) {
+            return decode(source) * alpha + decode(destination) * (1.0 - alpha);
+        };
+        return Rgba {
+            encode(mix(foreground.red, background.red)),
+            encode(mix(foreground.green, background.green)),
+            encode(mix(foreground.blue, background.blue)),
             255,
         };
     }
@@ -115,6 +144,66 @@ namespace
             expected.blue
         );
         return false;
+    }
+
+    /// §6.8 步骤 1–3（GPU 路径）：真实 GPU renderer + SdlRenderDevice 绘制已知半透明层，
+    /// 读回目标 framebuffer，与 foundation 唯一合成器对同一声明输入的结果比较。
+    /// 入口颜色/alpha 先量化到 8 位（设备路径），目标为 SDL_PIXELFORMAT_RGBA32 离屏
+    /// render target（8 位/通道）；容差 ±4 覆盖 float→8 位与驱动舍入，且小于编码/线性
+    /// 两种合成空间的差异（负向对照证明）。
+    auto check_composite_readback(SDL_Renderer* renderer) -> bool {
+        const auto background = nandina::foundation::NanColor::from_hex(0x202833U);
+        const auto first =
+            nandina::foundation::NanColor::from_hex(0x3366CCU, static_cast<float>(0xB0U) / 255.0F);
+        const auto second =
+            nandina::foundation::NanColor::from_hex(0xC8783CU, static_cast<float>(0x80U) / 255.0F);
+        nandina::render::SdlRenderDevice device(*renderer);
+        device.begin_frame();
+        device.clear(background);
+        device.draw_rect(
+            nandina::foundation::NanRect::from_ltrb(20.0F, 20.0F, 220.0F, 90.0F),
+            first
+        );
+        device.draw_rect(
+            nandina::foundation::NanRect::from_ltrb(60.0F, 40.0F, 180.0F, 110.0F),
+            second
+        );
+        device.end_frame();
+        auto* surface = SDL_RenderReadPixels(renderer, nullptr);
+        if (!require(surface != nullptr, "read composite frame")) {
+            return false;
+        }
+        const auto first_only = nandina::foundation::nan_composite_over(first, background);
+        const auto both = nandina::foundation::nan_composite_over(second, first_only);
+        bool ok = true;
+        ok &= expect_pixel(surface, 40, 80, to_rgba(first_only), "composite: single layer");
+        ok &= expect_pixel(surface, 100, 70, to_rgba(both), "composite: layered");
+        // 负向对照：线性空间期望与读回必须超过容差（容差不能大到两种空间都通过）。
+        const auto actual = pixel(surface, 100, 70);
+        const auto linear =
+            linear_over(linear_over(to_rgba(background), to_rgba(first)), to_rgba(second));
+        const auto differs = [](Rgba lhs, Rgba rhs) {
+            return std::abs(lhs.red - rhs.red) > kTolerance
+                || std::abs(lhs.green - rhs.green) > kTolerance
+                || std::abs(lhs.blue - rhs.blue) > kTolerance;
+        };
+        ok &= require(differs(actual, linear), "composite: linear space must exceed tolerance");
+        if (differs(actual, to_rgba(both))) {
+            std::fprintf(
+                stderr,
+                "FAIL: composite readback does not match the shared compositor: "
+                "actual=(%d,%d,%d) expected=(%d,%d,%d)\n",
+                actual.red,
+                actual.green,
+                actual.blue,
+                to_rgba(both).red,
+                to_rgba(both).green,
+                to_rgba(both).blue
+            );
+            ok = false;
+        }
+        SDL_DestroySurface(surface);
+        return ok;
     }
 
     struct Scene {
@@ -1038,6 +1127,8 @@ auto main(int argc, char** argv) -> int {
                 ok &= check_pixels(surface, scene, "sdf");
                 SDL_DestroySurface(surface);
             }
+            // §6.8：真实 GPU framebuffer 读回与共享合成器的对应核对。
+            ok &= check_composite_readback(renderer);
             // 第二帧：同样的几何必须全部命中缓存，只有绑定次数增长。
             draw_scene(device, scene);
             const auto second = device.sdf_diagnostics();
