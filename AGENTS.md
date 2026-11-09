@@ -124,9 +124,10 @@ application shell. Version `0.1.0-alpha.1`.
   with ±2 tolerance, integration `sdf-device` with ±4, both including a wrong-space negative
   control). This validates encoded-sRGB composition on the Linux/Hyprland/Wayland + RADV offscreen
   target used by the test, and the same readback was re-verified on Windows 11 + D3D12 offscreen
-  (AMD Radeon 660M) on 2026-11-09. The registration contrast gate is still not wired,
-  default-swapchain/other-driver cross-platform readback and the final gamut policy remain pending;
-  do not claim the color gate passes. Contract:
+  and default-swapchain targets (8-bit SDR; search for the SKIP lines when readback is unavailable)
+  on 2026-11-09. The registration contrast gate is still not wired,
+  Linux default-swapchain/other-driver cross-platform readback and the final gamut policy remain
+  pending; do not claim the color gate passes. Contract:
   `docs/references/theme_authoring_and_state.md` §6.5–§6.8, §16.
 - **P4.3 D2 step 4b author color entry** (2026-11-07, reviewed and pushed in `3e2542a`) adds
   typed primitive-palette access (`ReferenceColorFamily`, `reference_scale`, `reference_color`,
@@ -417,6 +418,14 @@ meson test -C buildDir --print-errorlogs   # full suite: unit + integration (125
   loader semantics, and a deep Windows temp build path hits the 32K `CreateProcess` command-line
   limit. Windows SDK consumer delivery stays unverified. Record:
   `docs/references/windows_acceptance.md` §9.
+- **Known Windows gap (reported by the maintainer 2026-11-09, not implemented): high-DPI content
+  scaling.** On this 175% machine a requested 1200×800 window opens at 1200×800 physical pixels
+  (1224×864 outer frame) and everything renders 1×, so text/controls look physically small; the
+  framework never applies the OS content scale (`SDL_GetWindowDisplayScale`/`SDL_GetDisplayContentScale`)
+  and `screen_size`/`drawable_size` are both physical on Windows. Mixed-DPI multi-monitor, component
+  scaling, text rasterization and hit/IME coordinates are undecided; the P4.5 backlog record with
+  reproduction evidence and open questions is `docs/references/high_dpi_and_multi_display.md`.
+  Implementation is deferred per the maintainer; do not claim high-DPI support.
 - Windows refuses to rename a directory while a file inside it is open. Finalize prepared
   statements and close the SQLite connection with `sqlite3_close` (a `sqlite3_close_v2` with live
   statements defers the close and keeps the handle) before renaming the package directory.
@@ -586,9 +595,16 @@ scope-bound selection/catalog subscriptions and end-to-end interaction regressio
 skip classification is pushed as `d9d234c`. The reviewed 4a follow-up adds software-renderer and
 Linux/Hyprland+RADV production-path framebuffer readback against the shared encoded-sRGB
 compositor, including wrong-space negative controls. **2026-11-09 Windows full verification**
-(Windows 11 26200 + Radeon 660M/D3D12) adds the same software readback and a D3D12 offscreen
-`composite readback matches the shared compositor (encoded sRGB, tolerance 4)` result, and the
+(Windows 11 26200 + Radeon 660M/D3D12) adds the same software readback, a D3D12 offscreen
+`composite readback matches the shared compositor (encoded sRGB, tolerance 4)` result and a
+`default swapchain readback matches the shared compositor (encoded sRGB, tolerance 4)` result
+(8-bit SDR target; SKIP + reason when readback is unavailable or the target is HDR), and the
 Windows suite is fully green after five tooling portability fixes (see the Windows verification
-section); the SDK consumer fixture is Linux-only. The registration contrast gate, style
-advisories, the Shell page body/visual acceptance, default swapchain/other-driver readback and
-internal broadcast narrowing remain pending; do not claim the full color gate passes.
+section); the SDK consumer fixture is Linux-only. **Known Windows gap reported by the maintainer
+on 2026-11-09: high-DPI content scaling is not implemented** — on a 175% display the 1200×800
+window opens at 1200×800 physical pixels and everything renders 1×; mixed-DPI multi-monitor,
+component scaling, text rasterization and hit/IME coordinates are an undecided P4.5 batch
+(`docs/references/high_dpi_and_multi_display.md`), implementation deferred. The registration
+contrast gate, style advisories, the Shell page body/visual acceptance, Linux
+default-swapchain/other-driver readback and internal broadcast narrowing remain pending; do not
+claim the full color gate passes.

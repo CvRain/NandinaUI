@@ -928,30 +928,34 @@ showcase）：
 - GPU 路径（`sdf-device`，integration）：真实 GPU renderer + `SdlRenderDevice` 绘制
   同样输入，读回 `SDL_PIXELFORMAT_RGBA32` 离屏 render target（8 位/通道）与共享合成器
   比较；容差 ±4，负向对照同样生效。入口颜色/alpha 为 8 位量化值；无显示/无 GPU 会话
-  沿用 77 跳过分类。本项不宣称默认 window swapchain 已覆盖；Windows/D3D12 离屏目标
-  已另行复验（下条）。
+  沿用 77 跳过分类。
+- 默认 window swapchain（`sdf-device`，2026-11-09 补充）：在真实窗口的默认目标上绘制同一组
+  单层/叠层输入并读回；8 位 sRGB 目标必须与共享合成器一致且拒绝线性空间，读回不可用或
+  目标不是 8 位 sRGB（HDR/浮点）时打印 SKIP 原因、不把未覆盖目标伪装成通过。
 - 实测：Hyprland/Wayland + RADV（RX 6750 GRE）软件与 GPU 路径都与编码 sRGB 合成一致
   （线性空间偏差约 27/25 通道，远超容差）。
 - Windows 复验（2026-11-09，Windows 11 26200 + AMD Radeon 660M / D3D12，驱动
   31.0.21024.2004）：桌面会话内 `sdf_device_test --require-gpu --expect-format dxil`
-  通过并输出 `composite readback matches the shared compositor (encoded sRGB, tolerance 4)`；
-  同一构建的软件路径 `sdl-visual` 读回用例 1 用例 / 11 断言通过。该结论只覆盖 D3D12
-  离屏目标与本次驱动，不宣称默认 swapchain 或其他驱动。
+  通过并输出 `composite readback matches the shared compositor (encoded sRGB, tolerance 4)`
+  与 `default swapchain readback matches the shared compositor (encoded sRGB, tolerance 4)`；
+  同一构建的软件路径 `sdl-visual` 读回用例 1 用例 / 11 断言通过。该结论覆盖 D3D12 离屏
+  目标与默认 swapchain，仍不外推到 Linux 默认 swapchain 或其他驱动。
 - 故障注入：共享合成器改线性 → 软件用例失败、GPU 读回报
   `actual=(123,102,108) expected=(150,106,133)`；复核时把设备混合改为
-  `SDL_BLENDMODE_NONE` → 软件首层采样与 GPU 既有半透明采样均失败。恢复后源码与 HEAD
-  逐字节一致，重新编译后两条路径全绿，无 RED-FIRST 残留。
+  `SDL_BLENDMODE_NONE` → 软件首层采样与 GPU 既有半透明采样均失败；默认目标读回删掉第二层
+  绘制 → `actual=(45,83,157) expected=(123,101,108)` 并退出 1。恢复后源码与 HEAD 逐字节
+  一致，重新编译后全部路径全绿，无 RED-FIRST 残留。
 
-专项：`sdl-visual` 6 用例 / 219 断言；`sdf-device`（含读回）通过。最终矩阵（本机
-Hyprland/Wayland + RADV）：主套件 128 OK / 0 FAIL / 0 SKIP；ASan 104 OK / 1 SKIP
-（window-lifecycle，既有驱动 LSan 配置）；no-RTTI 106 OK / 0 SKIP；no-SQLite 101 OK /
+专项：`sdl-visual` 6 用例 / 219 断言；`sdf-device`（含离屏与默认 swapchain 读回）通过。
+最终矩阵（本机 Hyprland/Wayland + RADV）：主套件 128 OK / 0 FAIL / 0 SKIP；ASan 104 OK /
+1 SKIP（window-lifecycle，既有驱动 LSan 配置）；no-RTTI 106 OK / 0 SKIP；no-SQLite 101 OK /
 1 SKIP；tools 8 OK；release_check --ci 8/8（headers 198、docs 87、clang-format 23.1.1）。
 Windows 侧同日完成全量套件复验（125 OK / 0 FAIL，修复 shader 产物 CRLF 归一化、
 `compile_commands` Windows 引号/反斜杠解析、format-gate 的 POSIX 假路径、`.obj` 目标文件
 后缀与字节精确 fixture 检出这 5 项工具链可移植性缺陷后；并新增 `header-flag-parsing`
 回归）；GPU 读回证据见
 [Windows 验收清单](windows_acceptance.md#9-全量套件与工具链-windows-复验2026-11-09)。
-本批复核完成并随当前统一提交推送。注册配色门槛、默认 swapchain/其他驱动读回
+本批复核完成并随当前统一提交推送。注册配色门槛、Linux 默认 swapchain/其他驱动读回
 与色域策略最终定形仍待后续。
 
 ---

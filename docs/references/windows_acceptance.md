@@ -134,6 +134,11 @@ python3 tools/backend_performance.py --probe buildDir-release\probe\cross_platfo
 - SSH 会话（session 0）只能跑 CPU 路径（`--renderer sdl2d`）与单元测试；GPU/SDF 相关一律走
   桌面会话；
 - 跨平台 golden 像素差异（字体栅格化/DPI）是预期，不参与门禁；
+- **高 DPI 未实现（2026-11-09 维护者报告，本机 175% 复现）**：框架未应用 OS 内容缩放，
+  Windows 上窗口按物理像素 1× 打开（1200×800 逻辑 → 1200×800 物理），文字与控件在 175%
+  面板上明显偏小；混合 DPI 多屏、组件缩放、文字栅格与命中/IME 坐标均未定形。实现按维护者
+  安排延后，见 [高 DPI 与多显示器](high_dpi_and_multi_display.md)。不得把当前构建当作
+  “已支持高 DPI”。
 - macOS/MSL 没有测试机，不在本清单内。
 
 ## 9. 全量套件与工具链 Windows 复验（2026-11-09）
@@ -148,8 +153,8 @@ MSYS2 Python 3.14 执行。
 
 **结论**：修复 5 项 Windows 可移植性缺陷后，全量套件 **125 OK / 0 FAIL**（unit 104 +
 integration 21；SDK 消费夹具按平台不注册，另新增 `header-flag-parsing` 回归）；`sdf-device`
-在真实 D3D12 上通过，并包含 §16.1 的离屏 framebuffer 合成读回；软件路径读回 1 用例 /
-11 断言通过。
+在真实 D3D12 上通过，并包含 §16.1 的离屏 framebuffer 与**默认 window swapchain** 合成读回；
+软件路径读回 1 用例 / 11 断言通过。
 
 **复验前基线**：首轮 `--suite unit` 104/104 通过；首轮全量套件 117 OK / 8 FAIL。失败全部集中在
 工具链与集成测试脚本，不涉及框架运行时代码。
@@ -175,11 +180,15 @@ integration 21；SDK 消费夹具按平台不注册，另新增 `header-flag-par
 .\buildDir\tests\sdl_visual_tests.exe "[compositor]"
 ```
 
-前者退出 0，输出 `composite readback matches the shared compositor (encoded sRGB, tolerance 4)`
-与 `SDF device pixels, viewport scales, fallback, frame restore and eviction passed`；后者 1 用例 /
+前者退出 0，输出
+`composite readback matches the shared compositor (encoded sRGB, tolerance 4)`、
+`default swapchain readback matches the shared compositor (encoded sRGB, tolerance 4)` 与
+`SDF device pixels, viewport scales, fallback, frame restore and eviction passed`；后者 1 用例 /
 11 断言通过。对 [主题契约](theme_authoring_and_state.md) §16.1 的意义：Windows/D3D12 离屏
-目标与共享编码 sRGB 合成器一致、线性空间负向对照被拒绝；默认 window swapchain 与其他驱动
-仍未验证。
+目标与**默认 window swapchain（8 位 SDR 目标）**都与共享编码 sRGB 合成器一致、线性空间
+负向对照被拒绝；读回不可用或目标不是 8 位 sRGB 时测试打印 SKIP 原因、不伪装覆盖。默认目标
+检查的故障注入（删掉第二层绘制）报 `actual=(45,83,157) expected=(123,101,108)` 并退出 1，
+恢复后重新通过。Linux 默认 swapchain 与其他驱动仍未验证。
 
 **建立复验的步骤**（当前签出 `D:\CLang\NandinaUI`）：
 
@@ -204,5 +213,6 @@ python tools\release_check.py --ci --build-dir buildDir
 > 比较，编辑会制造假失败。
 
 **仍未覆盖**：§1–§5 的人工视觉项（真实窗口观感、软阴影与涟漪目检）、P3.3b2b 的真实 IME 与
-候选窗位置、默认 swapchain 读回、Windows 性能基线复采、真实物理键鼠布局、SDK 在 Windows 上的
-下游消费交付。Windows 仍为实验性平台，无应用交付承诺。
+候选窗位置、Linux 默认 swapchain 与其他驱动的读回、**高 DPI 内容缩放**（已知缺陷，见 §8 与
+[高 DPI 与多显示器](high_dpi_and_multi_display.md)）、Windows 性能基线复采、真实物理键鼠
+布局、SDK 在 Windows 上的下游消费交付。Windows 仍为实验性平台，无应用交付承诺。

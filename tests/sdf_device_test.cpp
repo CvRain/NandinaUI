@@ -109,6 +109,13 @@ namespace
         return result;
     }
 
+    /// 两个 8 位读回采样是否超出 §6.8 的合成容差；负向对照与正向断言共用。
+    [[nodiscard]] auto differs_beyond_tolerance(Rgba lhs, Rgba rhs) -> bool {
+        return std::abs(lhs.red - rhs.red) > kTolerance
+            || std::abs(lhs.green - rhs.green) > kTolerance
+            || std::abs(lhs.blue - rhs.blue) > kTolerance;
+    }
+
     auto require(bool condition, const char* message) -> bool {
         if (!condition) {
             std::fprintf(stderr, "FAIL: %s\n", message);
@@ -182,13 +189,11 @@ namespace
         const auto actual = pixel(surface, 100, 70);
         const auto linear =
             linear_over(linear_over(to_rgba(background), to_rgba(first)), to_rgba(second));
-        const auto differs = [](Rgba lhs, Rgba rhs) {
-            return std::abs(lhs.red - rhs.red) > kTolerance
-                || std::abs(lhs.green - rhs.green) > kTolerance
-                || std::abs(lhs.blue - rhs.blue) > kTolerance;
-        };
-        ok &= require(differs(actual, linear), "composite: linear space must exceed tolerance");
-        if (differs(actual, to_rgba(both))) {
+        ok &= require(
+            differs_beyond_tolerance(actual, linear),
+            "composite: linear space must exceed tolerance"
+        );
+        if (differs_beyond_tolerance(actual, to_rgba(both))) {
             std::fprintf(
                 stderr,
                 "FAIL: composite readback does not match the shared compositor: "
@@ -205,6 +210,89 @@ namespace
         if (ok) {
             std::printf(
                 "composite readback matches the shared compositor (encoded sRGB, tolerance %d)\n",
+                kTolerance
+            );
+        }
+        SDL_DestroySurface(surface);
+        return ok;
+    }
+
+    /// §6.8 补充（默认 window swapchain）：真实窗口的默认目标是可呈现的 swapchain 图像，
+    /// 不是离屏 render target，颜色空间/像素格式由平台与驱动决定。本实验的期望值使用
+    /// 编码 sRGB 8 位；因此：
+    /// - 读回不可用（隐藏窗口或后端不支持）打印 SKIP 原因并视为未覆盖，不判失败；
+    /// - 目标不是 8 位 sRGB（HDR/浮点）同样 SKIP——本实验不宣称覆盖 HDR 目标；
+    /// - 8 位 sRGB 目标必须与共享合成器一致，并拒绝线性空间负向对照。
+    auto check_default_target_readback(SDL_Renderer* renderer) -> bool {
+        if (!SDL_SetRenderTarget(renderer, nullptr)) {
+            std::printf("SKIP: default swapchain target unavailable: %s\n", SDL_GetError());
+            return true;
+        }
+        SDL_SetRenderScale(renderer, 1.0F, 1.0F);
+        const auto background = nandina::foundation::NanColor::from_hex(0x202833U);
+        const auto first =
+            nandina::foundation::NanColor::from_hex(0x3366CCU, static_cast<float>(0xB0U) / 255.0F);
+        const auto second =
+            nandina::foundation::NanColor::from_hex(0xC8783CU, static_cast<float>(0x80U) / 255.0F);
+        nandina::render::SdlRenderDevice device(*renderer);
+        device.begin_frame();
+        device.clear(background);
+        device.draw_rect(
+            nandina::foundation::NanRect::from_ltrb(20.0F, 20.0F, 220.0F, 90.0F),
+            first
+        );
+        device.draw_rect(
+            nandina::foundation::NanRect::from_ltrb(60.0F, 40.0F, 180.0F, 110.0F),
+            second
+        );
+        device.end_frame();
+        auto* surface = SDL_RenderReadPixels(renderer, nullptr);
+        if (surface == nullptr) {
+            std::printf("SKIP: default swapchain readback unavailable: %s\n", SDL_GetError());
+            return true;
+        }
+        const bool srgb8 = SDL_BITSPERPIXEL(surface->format) == 32
+            && SDL_ISPIXELFORMAT_ALPHA(surface->format)
+            && SDL_GetSurfaceColorspace(surface) == SDL_COLORSPACE_SRGB;
+        if (!srgb8) {
+            std::printf(
+                "SKIP: default swapchain target is not 8-bit sRGB (%s); the SDR readback "
+                "experiment does not cover HDR targets\n",
+                SDL_GetPixelFormatName(surface->format)
+            );
+            SDL_DestroySurface(surface);
+            return true;
+        }
+        const auto first_only = nandina::foundation::nan_composite_over(first, background);
+        const auto both = nandina::foundation::nan_composite_over(second, first_only);
+        bool ok = true;
+        ok &= expect_pixel(surface, 40, 80, to_rgba(first_only), "default target: single layer");
+        ok &= expect_pixel(surface, 100, 70, to_rgba(both), "default target: layered");
+        const auto actual = pixel(surface, 100, 70);
+        const auto linear =
+            linear_over(linear_over(to_rgba(background), to_rgba(first)), to_rgba(second));
+        ok &= require(
+            differs_beyond_tolerance(actual, linear),
+            "default target: linear space must exceed tolerance"
+        );
+        if (differs_beyond_tolerance(actual, to_rgba(both))) {
+            std::fprintf(
+                stderr,
+                "FAIL: default swapchain readback does not match the shared compositor: "
+                "actual=(%d,%d,%d) expected=(%d,%d,%d)\n",
+                actual.red,
+                actual.green,
+                actual.blue,
+                to_rgba(both).red,
+                to_rgba(both).green,
+                to_rgba(both).blue
+            );
+            ok = false;
+        }
+        if (ok) {
+            std::printf(
+                "default swapchain readback matches the shared compositor (encoded sRGB, "
+                "tolerance %d)\n",
                 kTolerance
             );
         }
@@ -1361,6 +1449,7 @@ auto main(int argc, char** argv) -> int {
         }
 
         SDL_SetRenderTarget(renderer, nullptr);
+        ok &= check_default_target_readback(renderer);
         SDL_DestroyTexture(target);
     }
 

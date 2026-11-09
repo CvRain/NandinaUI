@@ -19,7 +19,7 @@
 - [编码与 API 规范](coding_conventions.md)：命名与命名空间、头文件与包含、API 形态、注释、格式化与测试门槛。
 - [响应式内部模型](reactive_model.md)：依赖图结构、推入失效与拉取求值、effect 调度、作用域清理顺序与已知限制。
 - [设计令牌与主题系统](design_tokens.md)：三层令牌模型、配方与解析优先级、外观切换，以及控件作者的样式规则。
-- [D2：主题方案、作者入口与状态订阅](theme_authoring_and_state.md)：**首批窄投影已提交 `8920f3a`；第 3 步已提交 `995e6ae`；第 4 步观察/作者入口已提交 `4746173`；第 4a 步 CPU 合成器已提交 `fef829a`，软件、Linux/Hyprland+RADV 与 Windows 11/D3D12 离屏读回复核完成**。规范身份、跨家族亮暗搭配、原子文件导入与只读投影；第 4b 步 `3e2542a`；第 4c 步命名颜色字面量已提交 `f383201`；第 4d 步 TOML 命名颜色字面量已提交 `5061b39`；Shell 多方案框架准备已提交 `f821f40`；注册配色门槛、默认 swapchain/其他驱动读回仍待实施。
+- [D2：主题方案、作者入口与状态订阅](theme_authoring_and_state.md)：**首批窄投影已提交 `8920f3a`；第 3 步已提交 `995e6ae`；第 4 步观察/作者入口已提交 `4746173`；第 4a 步 CPU 合成器已提交 `fef829a`，软件、Linux/Hyprland+RADV 与 Windows 11/D3D12 离屏及默认 swapchain 读回复核完成**。规范身份、跨家族亮暗搭配、原子文件导入与只读投影；第 4b 步 `3e2542a`；第 4c 步命名颜色字面量已提交 `f383201`；第 4d 步 TOML 命名颜色字面量已提交 `5061b39`；Shell 多方案框架准备已提交 `f821f40`；注册配色门槛、Linux 默认 swapchain/其他驱动读回仍待实施。
 - [溢出与裁剪契约](overflow_and_clip.md)：容器如何声明裁剪、render 如何执行，以及绘制与命中如何共享同一份语义。
 - [节点表现层](node_presentation.md)：属性动画代价分级、已落地的 L2 `visual::Path`，以及形状家族与盒子模型规划；anchors 背景见 §2，规范见独立 reference。
 - [同一节点的组合动画作者入口](animation_authoring.md)：组合规格、弱句柄的声明与触发、属性策略、生命周期和仲裁契约。
@@ -30,7 +30,7 @@
 - [视觉回归：golden、容差与更新流程](visual_regression.md)：**Linux 6 条、Windows 6 条 approved 基线已交付（Windows CPU 3 + SDF 3，平台隔离）**。两层预期、`tests/golden/backend/` 图与 manifest（`golden-manifest` 校验清单与审阅元数据）、比较器与审批工具手动运行；Linux debug 与 release 渲染逐像素一致。
 - [性能预算：采样协议与候选阈值](performance_budget.md)：**已实施（Linux release 基线 + 确定性门禁；Windows CPU/SDF 参考基线已归档）**。固定采样协议（预热 300/采样 1200/重复 5 次、p50/p95）、release 基线（8 配置）、确定性门禁（布局 0、稳态 miss 0、binds 上限）与候选计时阈值（`--enforce` 启用）；Windows 参考数据不跨平台比较、不参与计时门禁；CI 无 GPU，属发布/本地门禁。
 - [渲染设备路径契约](render_device_path_contract.md)：**生产接入（填充/描边/圆/线段/弧）已完成并验收**。64 字节参数、4 KiB uniform 边界、三档缩放与纹理/字形交错、失败注入、嵌入产物、"不可变参数 state + 有界缓存"（§9）、审查修复（§10）、交互/性能协议（§11）、页面 golden（§12）、预算门禁（§13）、平台验收清单（§14）；阴影（mode 4）与涟漪圆角交集（mode 3）已实现并通过设备级测试；MSL 仍待实机验收；图片解码已迁到后端无关的 vendored stb。
-- [Windows 人工验收清单](windows_acceptance.md)：**需要交互式桌面会话的 GUI/GPU 项与历史回报入口**。真实窗口回归、butter 主题软阴影与涟漪圆角裁剪目检；DXIL 设备级验收、Windows 6 条页面 golden（CPU 3 + SDF 3）及 CPU/SDF 性能参考基线已交付（2026-10-22），不是待采集项；含复验命令与回报方式。**§9 记录 2026-11-09 全量套件复验**：修复 5 项 Windows 工具链可移植性缺陷后全量 125 OK / 0 FAIL，D3D12 离屏合成读回通过。
+- [Windows 人工验收清单](windows_acceptance.md)：**需要交互式桌面会话的 GUI/GPU 项与历史回报入口**。真实窗口回归、butter 主题软阴影与涟漪圆角裁剪目检；DXIL 设备级验收、Windows 6 条页面 golden（CPU 3 + SDF 3）及 CPU/SDF 性能参考基线已交付（2026-10-22），不是待采集项；含复验命令与回报方式。**§9 记录 2026-11-09 全量套件复验**：修复 5 项 Windows 工具链可移植性缺陷后全量 125 OK / 0 FAIL，D3D12 离屏与默认 swapchain 合成读回通过；**§8 记录高 DPI 未实现缺陷**（延后，见 [高 DPI 与多显示器](high_dpi_and_multi_display.md)）。
 - [第三方依赖策略](dependency_policy.md)：**批次 2 已完成，raylib 已退役**。10 个 wrap、字体 submodule、SDL3 三态来源、静态/共享选择、pin/dirty 与 SDK 消费门禁；GitHub 首次下载与逐平台应用打包仍需对应环境验收。
 - [D6：作者 DSL、文本能力与内容测量](authoring_dsl_and_content_measurement.md)：**P4.1a 盒内对齐与文本作者/绑定子批已实施；P4.1b Surface、Card 内容边距与 Image cover 锚点代码已提交，Showcase 正式视觉验收待完成**。Text/Label 垂直对齐、paint-only 与 viewport 缩放回归；Label 能力表、共享属性归属、builder 子项简写、有限宽度自然长高，以及 border / Section 的阶段边界；过程见 [story 014](../../stories/014-the-dsl-that-kept-sending-authors-to-configure.md)。
 - [待决设计草案](reference_draft.md)：**工作稿与历史设计记录**。D2 已汇总到[主题方案、作者入口与状态订阅](theme_authoring_and_state.md)；D3 的 `nav_group` / `group` 已复核并随 `095336b` 提交；D2 首批窄投影已提交 `8920f3a`，第 3 步 `995e6ae`，第 4 步 `4746173`，第 4a 步 `fef829a`，第 4b 步 `3e2542a`，第 4c 步命名颜色字面量 `f383201`，第 4d 步 TOML 命名颜色字面量 `5061b39`，Shell 多方案框架准备 `f821f40`；**D4 已归档**（历史 P3 默认后端换成 SDL3）；**D7** 混合、生产 SDF 与共享图片解码已交付，剩余边界见[项目状态](project_status.md)；**D8 P3.1a/b/c 已实施**：事件快照、键身份/生命周期与跨类型保序。D1 已定案为[统一输入、焦点与文本编辑](focus_and_input.md)。
@@ -58,6 +58,7 @@
 ### 平台
 
 - [Linux 窗口后端与缩放](linux_window_scaling.md)：Wayland/X11 选择与多显示器 DPI 验证。
+- [高 DPI 与多显示器](high_dpi_and_multi_display.md)：**已知缺陷，延后实施（2026-11-09）**。175% Windows 上按 1× 物理像素打开的现象与复现证据、当前实现事实、单位/坐标模型、组件缩放、文字栅格、混合 DPI 跨屏与命中/IME 坐标等实施前必须定形的问题。不是已接受契约，也不代表已支持高 DPI。
 
 ## 编写原则
 

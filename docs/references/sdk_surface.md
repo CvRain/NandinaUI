@@ -63,9 +63,10 @@
 `ContrastRule::tone` 为 tone 引用（含变换操作数）提供显式上下文；缺少时报告上下文不足。
 诊断 `foreground` 为可选 sample，未解析时为空；背景在首个不透明终点停止，变换路径保留
 操作及操作数。`ContrastDiagnostic::config/tone` 记录计算上下文；报告注明现行通道裁剪与
-浮点、无 u8 量化策略。软件 renderer、Linux/Hyprland+RADV 与 Windows 11/D3D12 离屏 GPU
-renderer 的生产绘制路径已按 §6.8 读回，并与共享编码 sRGB 合成器及错误空间负向对照核对；
-默认 swapchain、其他驱动读回和注册门槛接线仍未完成。`color_token_name()` 供角色路径诊断。
+浮点、无 u8 量化策略。软件 renderer、Linux/Hyprland+RADV 与 Windows 11/D3D12 离屏及默认
+swapchain GPU renderer 的生产绘制路径已按 §6.8 读回，并与共享编码 sRGB 合成器及错误空间
+负向对照核对（8 位 sRGB 目标；读回不可用或 HDR 目标打印 SKIP）；Linux 默认 swapchain、
+其他驱动读回和注册门槛接线仍未完成。`color_token_name()` 供角色路径诊断。
 
 2026-11-07 P4.3 D2 第 4 步（experimental，已随 `4746173` 提交）：新增
 `theme/theme_observation.{hpp,cpp}`：`ThemeSelectionPresentation`（选择投影）、

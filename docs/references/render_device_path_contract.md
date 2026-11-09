@@ -310,7 +310,9 @@ clear 记录的问题。修复后 home/label/anchors 在 GPU renderer 各运行 
   且 `SDL_RenderFillRect`/`SDL_RenderGeometry` 在最小 SDL-only 实验里的偏移与裁剪行为也不一致。
   该强断言已撤回，viewport/逻辑呈现分支**尚未被真实窗口路径独立验证**；生产宿主当前不设置
   viewport 或逻辑呈现，因此日常渲染不受影响。启用 HiDPI/letterbox 前必须用真实窗口重做这个实验，
-  再决定是否保留原点项。
+  再决定是否保留原点项。HiDPI 的现状、已知缺陷（2026-11-09 维护者报告）与实施前必须定形的
+  问题见 [高 DPI 与多显示器](high_dpi_and_multi_display.md)；默认 swapchain 的合成读回已由
+  `sdf-device` 在 Windows/D3D12 上覆盖（见 §16.1 与 `windows_acceptance.md` §9）。
 
 ### 10.2 viewport 取证修正（2026-10-19）
 
