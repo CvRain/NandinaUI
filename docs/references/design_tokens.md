@@ -187,6 +187,7 @@ token 引用、`$palettes.*` 仍是参考色阶取值，匹配失败立即报错
 以下现象都可在当前代码中直接确认，属于尚未收口的部分：
 
 - `TypographyRoles`（`label_sm/md/lg`）已在默认快照中填充，但组件配方仍直接引用 `ScalarToken::typography_label_*`，尚未真正消费该角色层。
+- 内置默认字体族 `families/default-ui` 只注册了一个 face（Caskaydia Cove Regular，`nandina/assets/default_font/default-ui.ttf`）；`set_font_weight()` / `set_font_slant()` 请求 500/700/italic 时注册表按“最近 face”解析，实际仍是同一字面，且管线没有合成字重/斜体。Showcase Label 页的 Font style 标本因此在当前默认字体下四行无视觉差异。多 face 资源或合成回退未实现，排入 P4.7；P4.6 的 Tailwind 字号尺度会复用同一角色层。
 - `tone` / `treatment` 这类平铺语义变体目前只有 Button 具备；其余控件以 `state`（Checkbox、Switch、RadioButton 另有 `checked`）为主。
 - 遗留 `NanStyle` 只支持 Button 与 TextField 两类规则，因此 `set_style()` 不是通用扩展点。
 - 组件内部继续走虚函数主题广播；应用已有 `ui.theme_state()` 的有效外观/revision 只读响应式投影，方案身份/目录/选择的独立观察通道仍待第 4 步。

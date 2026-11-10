@@ -18,7 +18,7 @@
 | 能力 | 当前入口 | 行为 |
 | --- | --- | --- |
 | 文本 | `set_text()` / `text()`、`bind_text(source)`、builder `.text()` / `.bind_text()` | 直接写入解除旧绑定（同值也解除）；重新绑定替代旧源；source 活到解绑/作用域清理 |
-| 字体 | `set_font()`、`set_font_family/weight/slant()`；builder `.font/font_family/font_weight/font_slant` | 使用 framework FontRequest；改变字体重新解析、测量 |
+| 字体 | `set_font()`、`set_font_family/weight/slant()`；builder `.font/font_family/font_weight/font_slant` | 使用 framework FontRequest；改变字体重新解析、测量。weight/slant 依赖字体族包含对应 face；内置默认族只有 Caskaydia Cove Regular，因此 500/700/italic 当前渲染同一字面（多 face/合成回退见 P4.7） |
 | 字号 | `set_font_size()`、builder `.font_size()` | 逻辑字号；必须有限且为正 |
 | 颜色 | `set_color_token()`、builder `.color_token()`；继承的 `set_color()` | 颜色只影响绘制；token 跟随主题，显式颜色遵守实例覆盖 |
 | 水平对齐 | `set_align()` / `align()`、builder `.text_align()` | start / center / end，默认 start；每行在指派宽度内摆放 |

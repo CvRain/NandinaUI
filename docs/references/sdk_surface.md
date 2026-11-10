@@ -18,6 +18,13 @@
 
 ## 2. 三档分类
 
+2026-11-10 TextField 悬停状态（experimental，行为增强）：`theme::TextFieldVisualState` 新增
+`hovered` 位，`widget::TextField::hovered()` 提供只读查询；`TextField` 在 `on_input` 处理
+`mouse_enter` / `mouse_leave`（paint-only，禁用时始终为 false）。默认配方新增 hovered 规则
+（`accent` 底 + `ring` 边框，focused 规则复位为页面底 + `input` 边框），`NanStyle` 的 TextField
+规则 `state` 名称新增 `"hovered"`。迁移无需改动；主题作者可覆盖/移除该规则。测试标签
+`[widget][text-field][hover]`、`[theme][text-field][hover]`。
+
 2026-11-09 P4.5a 高 DPI 内容缩放（experimental，行为语义迁移）：`WindowConfig::width/height`
 改为逻辑（DIP）单位；`high_dpi=false` 表示固定 1×（测试/探针/golden 用）。平台 seam 的坐标
 空间定形：`IPlatformWindow::screen_size()` 返回逻辑窗口尺寸、`drawable_size()` 仍为物理

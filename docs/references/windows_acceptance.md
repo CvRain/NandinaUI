@@ -144,6 +144,17 @@ python3 tools/backend_performance.py --probe buildDir-release\probe\cross_platfo
   显示器热插拔与系统缩放在线变化仍未验收。契约见
   [高 DPI 与多显示器](high_dpi_and_multi_display.md)。测试/探针/golden 用
   `WindowConfig::high_dpi=false` 保持固定 1×。
+- **人工视觉验收（2026-11-10，showcase 全页 @175%）**：5 个页面（首页 / 锚点 / Label / Image /
+  输入与焦点）× 亮/暗共 10 张，加 6 个交互状态（导航 hover、输入框 hover / focus、按钮 pressed、
+  对话框打开与 Esc 关闭焦点恢复），由维护者逐页审阅，结论全部通过。发现并处理两点：① Label 页
+  Font style 标本（Regular / Medium / Bold / Italic）当前无视觉差异——内置默认字体族只注册
+  Caskaydia Cove Regular 一个 face，请求按“最近 face”解析且无合成字重/斜体，已记录为 P4.7；
+  ② 「可编辑字段」缺少 hover 反馈——已补 TextField 默认 hover 配方（accent 底 + ring 边框，
+  focused 时复位），证据图中 hover / focus 已更新。采集时窗口移离屏幕边缘，避免系统通知污染截图；
+  每张页面图都经脚本校验侧栏选中项与页面一致。逐页清单、逐图与结论：
+  [windows_visual_2026-11-10](../images/windows_visual_2026-11-10/review.md)，
+  页面/状态总览：[contact-pages.png](../images/windows_visual_2026-11-10/contact-pages.png)、
+  [contact-states.png](../images/windows_visual_2026-11-10/contact-states.png)。
 - macOS/MSL 没有测试机，不在本清单内。
 
 ## 9. 全量套件与工具链 Windows 复验（2026-11-09）

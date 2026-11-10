@@ -451,6 +451,14 @@ meson test -C buildDir --print-errorlogs   # full suite: unit + integration (125
   goldens are unaffected; do not compare goldens across DPI. Contract, evidence and residual
   mixed-DPI items: `docs/references/high_dpi_and_multi_display.md`. Real IME candidate placement,
   Linux Wayland fractional scaling remain unverified; do not claim full high-DPI support.
+- **Manual visual acceptance (2026-11-10) passed for the showcase**: the maintainer reviewed
+  10 page captures (5 pages × light/dark) plus 6 interaction states at 175% (evidence:
+  `docs/images/windows_visual_2026-11-10/`, record in `windows_acceptance.md` §8). Two findings:
+  the Label page "Font style" specimens look identical because the builtin default family ships a
+  single face (Caskaydia Cove Regular) and there is no synthetic bold/italic — tracked as P4.7;
+  and editable `TextField`s had no hover feedback — the default recipe now paints an accent hover
+  fill plus a ring border (focused resets both), covered by `[widget][text-field][hover]` and
+  `[theme][text-field][hover]` tests. Re-check the visual evidence before changing that rule.
 - Windows refuses to rename a directory while a file inside it is open. Finalize prepared
   statements and close the SQLite connection with `sqlite3_close` (a `sqlite3_close_v2` with live
   statements defers the close and keeps the handle) before renaming the package directory.
