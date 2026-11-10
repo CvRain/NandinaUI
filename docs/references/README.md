@@ -13,6 +13,7 @@
 - [模块依赖规则](module_dependency.md)：五层十一模块的分层、单向依赖约束，以及源码中仍然存在的偏离与收口方向。
 - [文本布局协议](text_pipeline.md)：canonical text 类型、旧 widget 头的兼容入口、默认后端及迁移边界。
 - [轻量字体请求](font_request.md)：主题描述值、text 兼容别名、字段语义与字体引擎依赖边界。
+- [合成字重/斜体回退](font_synthesis.md)：**P4.7 已实施（2026-11-10）**：单 face 字体族按 500/600/700+ 分级合成加粗、italic/oblique 合成约 12° 倾斜，FreeType 栅格与 HarfBuzz advance 同步；不改默认字体资产，`NANDINA_PROBE_WIDTH/HEIGHT` 高视口人工采集，页面 golden 保持 0 差异。
 - [构建系统与 Modules 范围](build_system_scope.md)：为什么当前主线使用 Meson/include，以及 Modules 和 CMake package 的暂缓条件。
 - [D5：资源构建、部署与运行时定位](resource_build_and_deployment.md)：**P2 已交付（P2.1a–P2.4c）**。解耦/作用域/身份、管理器八入口、弱域令牌、后端发布与流生命周期，以及声明式构建、安装定位和故障注入；正式实施契约见 §8，过程见 [story 013](../../stories/013-resource-scope-before-identity.md)。
 - [开发流程](development_loop.md)：每轮改动的六步循环、三套验证关卡、"测试必须证明会红"，以及审核会重点看什么。

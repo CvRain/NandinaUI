@@ -1125,3 +1125,105 @@ TEST_CASE(
     // 起始尺寸小不影响正确性：图集仍然能长到放得下。
     REQUIRE(text::GlyphAtlas::kMaxDimension >= 1024);
 }
+
+TEST_CASE("synthetic font style follows request and resolved face", "[text][synthesis]") {
+    using theme::FontRequest;
+    using theme::FontSlant;
+
+    const FontRequest regular {.weight = 400, .slant = FontSlant::normal};
+    REQUIRE_FALSE(text::synthetic_font_style(regular, 400, FontSlant::normal).any());
+
+    const FontRequest semibold {.weight = 600, .slant = FontSlant::normal};
+    const auto synthesized_bold = text::synthetic_font_style(semibold, 400, FontSlant::normal);
+    REQUIRE(synthesized_bold.bold);
+    REQUIRE_FALSE(synthesized_bold.oblique);
+    REQUIRE(synthesized_bold.bold_em > 0.0F);
+    REQUIRE(synthesized_bold.bold_em <= text::synthetic_bold_em);
+    // A real medium face is still lighter than semibold; a real bold face needs no synthesis.
+    REQUIRE(text::synthetic_font_style(semibold, 500, FontSlant::normal).bold);
+    REQUIRE_FALSE(text::synthetic_font_style(semibold, 700, FontSlant::normal).bold);
+    // Thinning a heavier face is not supported.
+    REQUIRE_FALSE(text::synthetic_font_style(regular, 700, FontSlant::normal).bold);
+
+    // Medium gets a proportionally lighter synthetic stroke than Bold.
+    const FontRequest medium {.weight = 500, .slant = FontSlant::normal};
+    const auto synthesized_medium = text::synthetic_font_style(medium, 400, FontSlant::normal);
+    REQUIRE(synthesized_medium.bold);
+    REQUIRE(synthesized_medium.bold_em < synthesized_bold.bold_em);
+    const auto synthesized_heavy = text::synthetic_font_style(
+        FontRequest {.weight = 700, .slant = FontSlant::normal},
+        400,
+        FontSlant::normal
+    );
+    REQUIRE(synthesized_heavy.bold_em == Catch::Approx(text::synthetic_bold_em));
+
+    const FontRequest italic {.weight = 400, .slant = FontSlant::italic};
+    const auto synthesized_oblique = text::synthetic_font_style(italic, 400, FontSlant::normal);
+    REQUIRE(synthesized_oblique.oblique);
+    REQUIRE_FALSE(synthesized_oblique.bold);
+    REQUIRE_FALSE(text::synthetic_font_style(italic, 400, FontSlant::italic).oblique);
+
+    const FontRequest bold_italic {.weight = 700, .slant = FontSlant::italic};
+    const auto both = text::synthetic_font_style(bold_italic, 400, FontSlant::normal);
+    REQUIRE(both.bold);
+    REQUIRE(both.oblique);
+}
+
+TEST_CASE(
+    "FreeType synthetic bold and oblique change raster output",
+    "[text][synthesis][freetype]"
+) {
+    text::FreeTypeFontFace face(test_font_path());
+    const auto regular = face.rasterize(U'a', 32.0F);
+    const auto bold = face.rasterize(U'a', 32.0F, {.bold = true});
+    REQUIRE(bold.metrics.advance_x > regular.metrics.advance_x);
+    REQUIRE(bold.width >= regular.width);
+    REQUIRE(bold.alpha != regular.alpha);
+
+    // Shear changes the raster bounding box but intentionally keeps the advance.
+    const auto oblique = face.rasterize(U'a', 32.0F, {.oblique = true});
+    REQUIRE(oblique.metrics.advance_x == Catch::Approx(regular.metrics.advance_x));
+    REQUIRE(oblique.alpha != regular.alpha);
+}
+
+TEST_CASE("synthetic bold widens shaped HarfBuzz advances", "[text][synthesis][harfbuzz]") {
+    auto face = std::make_shared<text::FreeTypeFontFace>(test_font_path());
+    text::HarfBuzzTextLayoutBackend regular(face);
+    text::HarfBuzzTextLayoutBackend bold(face, {.bold = true});
+
+    const auto layout_text = [](const text::HarfBuzzTextLayoutBackend& backend) {
+        return backend.layout(
+            text::TextLayoutInput {
+                .text = "ab",
+                .style =
+                    text::TextStyle {
+                        .font_size = 32.0F,
+                        .overflow = text::TextOverflow::clip,
+                        .max_lines = 1,
+                    },
+                .constraints = foundation::NanLayoutConstraints::loose(),
+            }
+        );
+    };
+
+    const auto regular_layout = layout_text(regular);
+    const auto bold_layout = layout_text(bold);
+    REQUIRE(regular_layout.lines.size() == 1);
+    REQUIRE(bold_layout.lines.size() == 1);
+    REQUIRE(
+        bold_layout.lines.front().size.get_width() > regular_layout.lines.front().size.get_width()
+    );
+}
+
+TEST_CASE("GlyphAtlas applies synthesis to cached glyphs", "[text][synthesis][atlas]") {
+    auto face = std::make_shared<text::FreeTypeFontFace>(test_font_path());
+    text::GlyphAtlas regular(face, 64, 64);
+    text::GlyphAtlas
+        bold(face, 64, 64, 1, text::GlyphAtlas::kMaxDimension, text::FontSynthesis {.bold = true});
+
+    const auto glyph_index = face->glyph_index(U'a');
+    const auto& regular_glyph = regular.cache_glyph(glyph_index, 32.0F);
+    const auto& bold_glyph = bold.cache_glyph(glyph_index, 32.0F);
+    REQUIRE(bold_glyph.metrics.advance_x > regular_glyph.metrics.advance_x);
+    REQUIRE(bold_glyph.pixel_bounds.get_width() >= regular_glyph.pixel_bounds.get_width());
+}

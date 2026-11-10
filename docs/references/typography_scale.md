@@ -164,5 +164,7 @@ label->set_font_size(28.0F);
   视需要开放。
 - **Step 3**：rem/root 文字缩放——把 `root_base` 暴露为受“用户文字缩放”影响的量，并提供
   `fixed` / `cap` 策略（“最大 28px”的语义落在这里）；`em` 父字号相对链仍非目标。
-- **P4.7**：默认字体族只有 Caskaydia Cove Regular 一个 face，`medium/bold/italic` 无可见差异；
-  需要多 face 资源或合成回退，Step 2b 的 role/字重视觉验收依赖它。
+- **P4.7**：默认字体族只有 Caskaydia Cove Regular 一个 face；**P4.7 合成回退已于 2026-11-10
+  实施**（缺 face 时按 500/600/700+ 分级合成加粗、italic/oblique 合成约 12° 倾斜，HarfBuzz
+  advance 同步），因此 role 表的 500/600 字重现在在默认字体下可见；真实多 face 资源与许可
+  决策仍是后续增强。契约见 [合成字重/斜体回退](font_synthesis.md)。

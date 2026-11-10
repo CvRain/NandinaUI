@@ -129,6 +129,7 @@ module_text = files(
     'text/line_break.cpp',
     'text/text_layout_backend.cpp',
     'text/font_face.hpp',
+    'text/font_synthesis.hpp',
     'text/freetype_font_face.cpp',
     'text/font_loader.hpp',
     'text/font_loader.cpp',

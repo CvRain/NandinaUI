@@ -18,6 +18,14 @@
 
 ## 2. 三档分类
 
+2026-11-10 P4.7 合成字重/斜体回退（experimental）：新增 `nandina/text/font_synthesis.hpp`
+（`FontSynthesis { bold, oblique, bold_em }`、`synthetic_font_style()`、`synthetic_bold_em` /
+`synthetic_oblique_shear`；500/600/700+ 分级强度，缺 face 时生效）。`FreeTypeFontFace` 的
+`rasterize*()`、`GlyphAtlas`、`HarfBuzzTextLayoutBackend` 与 `FontPipeline` 增加带默认值的
+`FontSynthesis`/`FontRequest` 参数（旧调用保持源码兼容）；`page_probe` 新增
+`NANDINA_PROBE_WIDTH/HEIGHT` 仅供人工视觉验收，golden 仍固定 1200×800。契约见
+[合成字重/斜体回退](font_synthesis.md)。
+
 2026-11-10 P4.6 Step 2a 语义排版 role（experimental，新增作者 API）：`theme::TypographyRole`
 （display/heading/title/subtitle/body/label/caption）与 `theme::typography_role_style()` /
 `typography_role_name()`；`Label` 新增 `set_typography_role()` / `typography_role()` 与 builder

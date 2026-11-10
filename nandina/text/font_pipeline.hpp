@@ -32,7 +32,8 @@ namespace nandina::text
         FontPipeline(
             render::IRenderDevice& device,
             ResolvedFontFamily family,
-            FontPipelineOptions options = {}
+            FontPipelineOptions options = {},
+            theme::FontRequest request = {}
         );
 
         [[nodiscard]] auto pipeline() const -> TextPipeline;

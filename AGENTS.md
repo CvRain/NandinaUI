@@ -206,6 +206,18 @@ application shell. Version `0.1.0-alpha.1`.
   (themeable role table, component migration, body leading 1.5, showcase page, dual-platform
   golden re-batch) and Step 3 (rem/root text scale + accessibility cap) remain pending; font
   weight/slant needs P4.7. Contract: `docs/references/typography_scale.md`.
+- **P4.7 synthetic weight/slant fallback** (2026-11-10) makes `FontRequest` weight/slant visible on
+  single-face families: `text/font_synthesis.hpp` decides graded synthetic bold (500 ≈0.014em,
+  600 ≈0.028em, 700+ ≤0.0417em) and ~12° oblique; `FreeTypeFontFace::rasterize*()` applies
+  `FT_GlyphSlot_AdjustWeight`/`FT_GlyphSlot_Oblique`, `GlyphAtlas` carries the synthesis,
+  `HarfBuzzTextLayoutBackend` sets `hb_font_set_synthetic_bold(..., in_place=false)` so shaped
+  advances match the wider bitmaps, and `FontPipeline` computes per-face synthesis from
+  `FontRequest` + `FontFaceSpec`. Real faces still win; thinning is unsupported; bitmap/color
+  outlines are outside this batch. The default family/assets are unchanged; tests
+  `[text][synthesis]` (decision/graded strength/raster/HarfBuzz/atlas) pass, red-first recorded,
+  and page goldens remain 0-diff because the 1200×800 Label viewport only reaches the Regular
+  specimen. Use `page_probe` `NANDINA_PROBE_WIDTH/HEIGHT` for tall manual visual captures.
+  Contract: `docs/references/font_synthesis.md`.
 - **Dual-platform verification (2026-11-10) is operational**: the Linux machine (Arch, GNOME
   Wayland, RADV RX 6750 GRE 12GB, Mesa 26.2.6) is reachable over SSH with a dedicated key; the
   full Linux suite is 129 OK / 0 FAIL and all six Linux page goldens compare with 0 changed
@@ -481,10 +493,12 @@ meson test -C buildDir --print-errorlogs   # full suite: unit + integration (125
   10 page captures (5 pages × light/dark) plus 6 interaction states at 175% (evidence:
   `docs/images/windows_visual_2026-11-10/`, record in `windows_acceptance.md` §8). Two findings:
   the Label page "Font style" specimens look identical because the builtin default family ships a
-  single face (Caskaydia Cove Regular) and there is no synthetic bold/italic — tracked as P4.7;
-  and editable `TextField`s had no hover feedback — the default recipe now paints an accent hover
-  fill plus a ring border (focused resets both), covered by `[widget][text-field][hover]` and
-  `[theme][text-field][hover]` tests. Re-check the visual evidence before changing that rule.
+  single face (Caskaydia Cove Regular) and there is no synthetic bold/italic — **fixed by P4.7 on
+  2026-11-10** (graded synthetic bold + oblique, page goldens unchanged; see
+  `docs/references/font_synthesis.md`); and editable `TextField`s had no hover feedback — the
+  default recipe now paints an accent hover fill plus a ring border (focused resets both), covered
+  by `[widget][text-field][hover]` and `[theme][text-field][hover]` tests. Re-check the visual
+  evidence before changing that rule.
 - Windows refuses to rename a directory while a file inside it is open. Finalize prepared
   statements and close the SQLite connection with `sqlite3_close` (a `sqlite3_close_v2` with live
   statements defers the close and keeps the handle) before renaming the package directory.

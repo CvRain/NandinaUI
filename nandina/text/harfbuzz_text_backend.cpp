@@ -85,17 +85,27 @@ namespace nandina::text
 
         Impl(
             std::shared_ptr<FreeTypeFontFace> primary,
-            std::vector<std::shared_ptr<FreeTypeFontFace>> fallbacks
+            std::vector<std::shared_ptr<FreeTypeFontFace>> fallbacks,
+            std::vector<FontSynthesis> synthesis
         ) {
             if (!primary) {
                 throw std::invalid_argument("HarfBuzzTextLayoutBackend requires a font face");
             }
-            add_font(std::move(primary));
-            for (auto& fallback: fallbacks) {
+            if (synthesis.empty()) {
+                synthesis.resize(fallbacks.size() + 1);
+            }
+            if (synthesis.size() != fallbacks.size() + 1) {
+                throw std::invalid_argument(
+                    "HarfBuzzTextLayoutBackend synthesis count must match font count"
+                );
+            }
+            add_font(std::move(primary), synthesis.front());
+            for (std::size_t index = 0; index < fallbacks.size(); ++index) {
+                auto& fallback = fallbacks[index];
                 if (!fallback) {
                     throw std::invalid_argument("HarfBuzzTextLayoutBackend fallback face is null");
                 }
-                add_font(std::move(fallback));
+                add_font(std::move(fallback), synthesis[index + 1]);
             }
         }
 
@@ -105,11 +115,16 @@ namespace nandina::text
             }
         }
 
-        void add_font(std::shared_ptr<FreeTypeFontFace> face) {
+        void add_font(std::shared_ptr<FreeTypeFontFace> face, FontSynthesis synthesis) {
             auto* font =
                 hb_ft_font_create_referenced(static_cast<FT_Face>(face->native_face_handle()));
             if (font == nullptr) {
                 throw std::runtime_error("Failed to create HarfBuzz font from FreeType face");
+            }
+            if (synthesis.bold) {
+                // `in_place=false` widens advances by the same em fraction the FreeType outline
+                // emboldening adds, so shaped positions stay aligned with the wider bitmaps.
+                hb_font_set_synthetic_bold(font, synthesis.bold_em, synthesis.bold_em, false);
             }
             fonts.push_back(FontSlot {.face = std::move(face), .font = font});
         }
@@ -896,14 +911,20 @@ namespace nandina::text
         std::vector<FontSlot> fonts;
     };
 
-    HarfBuzzTextLayoutBackend::HarfBuzzTextLayoutBackend(std::shared_ptr<FreeTypeFontFace> face):
-        HarfBuzzTextLayoutBackend(std::move(face), {}) {}
+    HarfBuzzTextLayoutBackend::HarfBuzzTextLayoutBackend(
+        std::shared_ptr<FreeTypeFontFace> face,
+        FontSynthesis synthesis
+    ):
+        HarfBuzzTextLayoutBackend(std::move(face), {}, {synthesis}) {}
 
     HarfBuzzTextLayoutBackend::HarfBuzzTextLayoutBackend(
         std::shared_ptr<FreeTypeFontFace> primary,
-        std::vector<std::shared_ptr<FreeTypeFontFace>> fallbacks
+        std::vector<std::shared_ptr<FreeTypeFontFace>> fallbacks,
+        std::vector<FontSynthesis> synthesis
     ):
-        impl_(std::make_unique<Impl>(std::move(primary), std::move(fallbacks))) {}
+        impl_(
+            std::make_unique<Impl>(std::move(primary), std::move(fallbacks), std::move(synthesis))
+        ) {}
 
     HarfBuzzTextLayoutBackend::~HarfBuzzTextLayoutBackend() = default;
 

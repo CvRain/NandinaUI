@@ -149,6 +149,9 @@ python3 tools/backend_performance.py --probe buildDir-release\probe\cross_platfo
   对话框打开与 Esc 关闭焦点恢复），由维护者逐页审阅，结论全部通过。发现并处理两点：① Label 页
   Font style 标本（Regular / Medium / Bold / Italic）当前无视觉差异——内置默认字体族只注册
   Caskaydia Cove Regular 一个 face，请求按“最近 face”解析且无合成字重/斜体，已记录为 P4.7；
+  **后续：P4.7 合成回退已于 2026-11-10 实施**（分级 synthetic bold + 约 12° oblique，HarfBuzz
+  advance 同步；高视口重采确认 Medium/Bold/Italic 可见），默认 1200×800 页面 golden 仍保持
+  0 差异，详见 [合成字重/斜体回退](font_synthesis.md)；
   ② 「可编辑字段」缺少 hover 反馈——已补 TextField 默认 hover 配方（accent 底 + ring 边框，
   focused 时复位），证据图中 hover / focus 已更新。采集时窗口移离屏幕边缘，避免系统通知污染截图；
   每张页面图都经脚本校验侧栏选中项与页面一致。逐页清单、逐图与结论：

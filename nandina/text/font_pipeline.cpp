@@ -8,7 +8,8 @@ namespace nandina::text
     FontPipeline::FontPipeline(
         render::IRenderDevice& device,
         ResolvedFontFamily family,
-        const FontPipelineOptions options
+        const FontPipelineOptions options,
+        const theme::FontRequest request
     ):
         faces_(std::move(family.faces)) {
         if (faces_.empty() || options.atlas_width <= 0 || options.atlas_height <= 0
@@ -16,19 +17,30 @@ namespace nandina::text
         {
             throw std::invalid_argument("FontPipeline requires faces and valid atlas dimensions");
         }
+        std::vector<FontSynthesis> synthesis;
+        synthesis.reserve(faces_.size());
+        for (std::size_t index = 0; index < faces_.size(); ++index) {
+            const int face_weight = index < family.specs.size() ? family.specs[index].weight : 400;
+            const auto face_slant =
+                index < family.specs.size() ? family.specs[index].slant : theme::FontSlant::normal;
+            synthesis.push_back(synthetic_font_style(request, face_weight, face_slant));
+        }
         backend_ = std::make_unique<HarfBuzzTextLayoutBackend>(
             faces_.front(),
-            std::vector<std::shared_ptr<FreeTypeFontFace>>(faces_.begin() + 1, faces_.end())
+            std::vector<std::shared_ptr<FreeTypeFontFace>>(faces_.begin() + 1, faces_.end()),
+            synthesis
         );
         atlases_.reserve(faces_.size());
         textures_.reserve(faces_.size());
         bindings_.reserve(faces_.size());
-        for (const auto& face: faces_) {
+        for (std::size_t index = 0; index < faces_.size(); ++index) {
             auto atlas = std::make_unique<GlyphAtlas>(
-                face,
+                faces_[index],
                 options.atlas_width,
                 options.atlas_height,
-                options.atlas_padding
+                options.atlas_padding,
+                GlyphAtlas::kMaxDimension,
+                synthesis[index]
             );
             auto texture = std::make_unique<GlyphAtlasTexture>(device, *atlas);
             bindings_.push_back({.atlas = atlas.get(), .texture = texture.get()});
@@ -94,7 +106,8 @@ namespace nandina::text
             return std::unexpected(family.error());
         }
         try {
-            auto pipeline = std::make_shared<FontPipeline>(*device_, std::move(*family), options);
+            auto pipeline =
+                std::make_shared<FontPipeline>(*device_, std::move(*family), options, request);
             cache_[key] = pipeline;
             retain(key, pipeline, options);
             return pipeline;

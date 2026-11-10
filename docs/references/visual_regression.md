@@ -26,7 +26,9 @@
 
 两条渲染路径：默认 GPU（生产 SDF 路径），`NANDINA_PROBE_RENDERER=sdl2d` 走 CPU 几何路径
 （无 swapchain 的 SSH 会话只能走这条）。它默认**不构建**，需要
-`meson setup buildDir-probe -Dsdl_page_probe=true`。
+`meson setup buildDir-probe -Dsdl_page_probe=true`。人工视觉验收可以设
+`NANDINA_PROBE_WIDTH/HEIGHT` 渲染更高的隐藏视口（例如 1200×1400）查看首屏以下内容；
+golden 采集一律保持默认 1200×800，不随该环境变量变化。
 
 ### 0.2 `golden`：被批准过的页面截图
 

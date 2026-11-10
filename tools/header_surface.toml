@@ -384,6 +384,10 @@ path = "nandina/semantics/semantics.hpp"
 level = "experimental"
 
 [[headers]]
+path = "nandina/text/font_synthesis.hpp"
+level = "experimental"
+
+[[headers]]
 path = "nandina/text/font_face.hpp"
 level = "experimental"
 

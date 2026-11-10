@@ -6,6 +6,7 @@
 #define NANDINA_EXPERIMENT_TEXT_HARFBUZZ_TEXT_BACKEND_HPP
 
 #include "font_face.hpp"
+#include "font_synthesis.hpp"
 #include "text_layout_backend.hpp"
 
 #include <cstddef>
@@ -17,10 +18,14 @@ namespace nandina::text
 
     class HarfBuzzTextLayoutBackend final: public ITextLayoutBackend {
     public:
-        explicit HarfBuzzTextLayoutBackend(std::shared_ptr<FreeTypeFontFace> face);
+        explicit HarfBuzzTextLayoutBackend(
+            std::shared_ptr<FreeTypeFontFace> face,
+            FontSynthesis synthesis = {}
+        );
         HarfBuzzTextLayoutBackend(
             std::shared_ptr<FreeTypeFontFace> primary,
-            std::vector<std::shared_ptr<FreeTypeFontFace>> fallbacks
+            std::vector<std::shared_ptr<FreeTypeFontFace>> fallbacks,
+            std::vector<FontSynthesis> synthesis = {}
         );
         ~HarfBuzzTextLayoutBackend() override;
 

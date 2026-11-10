@@ -18,7 +18,7 @@
 | 能力 | 当前入口 | 行为 |
 | --- | --- | --- |
 | 文本 | `set_text()` / `text()`、`bind_text(source)`、builder `.text()` / `.bind_text()` | 直接写入解除旧绑定（同值也解除）；重新绑定替代旧源；source 活到解绑/作用域清理 |
-| 字体 | `set_font()`、`set_font_family/weight/slant()`；builder `.font/font_family/font_weight/font_slant` | 使用 framework FontRequest；改变字体重新解析、测量。weight/slant 依赖字体族包含对应 face；内置默认族只有 Caskaydia Cove Regular，因此 500/700/italic 当前渲染同一字面（多 face/合成回退见 P4.7） |
+| 字体 | `set_font()`、`set_font_family/weight/slant()`；builder `.font/font_family/font_weight/font_slant` | 使用 framework FontRequest；改变字体重新解析、测量。缺对应 face 时 **P4.7 合成回退**生效：500/600/700+ 分级合成加粗、italic/oblique 约 12° 倾斜，advance 同步；真实多 face 优先。见 [合成字重/斜体回退](../references/font_synthesis.md) |
 | 字号 | `set_font_size()`、builder `.font_size()` | 逻辑字号；必须有限且为正 |
 | 排版尺度 | `set_text_size(theme::TextSize)`、`set_leading(theme::Leading)`、`set_line_height(float)`；builder `.text_size()` / `.leading()` / `.line_height()` | Tailwind 兼容 13 档，经主题 `NanTypeScale`（root base × ratio）解析；显式字号 > 继承 style context > 尺度 token > role 字号 > 组件默认（18）；行高数值覆盖优先于 leading token，`0` 恢复 token/role/默认。见 [排版尺度与单位](../references/typography_scale.md) |
 | 语义 role | `set_typography_role(theme::TypographyRole)`；builder `.typography_role()` | display/heading/title/subtitle/body/label/caption 提供字号+行高+字重/斜体默认值；颜色仍由颜色 token 决定。显式尺寸/行高/字重覆盖对应 role 字段；role 表暂为固定 canonical 表（Step 2b 主题化）。见 [排版尺度与单位](../references/typography_scale.md) |

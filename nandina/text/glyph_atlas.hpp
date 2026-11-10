@@ -33,7 +33,8 @@ namespace nandina::text
             int width = 512,
             int height = 512,
             int padding = 1,
-            int max_dimension = kMaxDimension
+            int max_dimension = kMaxDimension,
+            FontSynthesis synthesis = {}
         );
 
         [[nodiscard]] auto cache(char32_t codepoint, float pixel_size) -> const GlyphAtlasEntry&;
@@ -89,6 +90,9 @@ namespace nandina::text
         int width_ = 0;
         int height_ = 0;
         int padding_ = 0;
+        /// Synthetic bold/oblique are constant for one atlas: the FontPipeline cache keys
+        /// pipelines by (family, weight, slant), so each style owns its own atlases.
+        FontSynthesis synthesis_ {};
         int cursor_x_ = 0;
         int cursor_y_ = 0;
         int row_height_ = 0;

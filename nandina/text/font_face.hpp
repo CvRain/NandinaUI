@@ -6,6 +6,7 @@
 #define NANDINA_EXPERIMENT_TEXT_FONT_FACE_HPP
 
 #include "../resource/resource.hpp"
+#include "font_synthesis.hpp"
 
 #include <cstdint>
 #include <filesystem>
@@ -58,9 +59,14 @@ namespace nandina::text
             -> GlyphMetrics;
         [[nodiscard]] auto glyph_metrics_by_index(std::uint32_t glyph_index, float pixel_size) const
             -> GlyphMetrics;
-        [[nodiscard]] auto rasterize(char32_t codepoint, float pixel_size) const -> GlyphBitmap;
-        [[nodiscard]] auto rasterize_glyph(std::uint32_t glyph_index, float pixel_size) const
+        [[nodiscard]] auto
+        rasterize(char32_t codepoint, float pixel_size, FontSynthesis synthesis = {}) const
             -> GlyphBitmap;
+        [[nodiscard]] auto rasterize_glyph(
+            std::uint32_t glyph_index,
+            float pixel_size,
+            FontSynthesis synthesis = {}
+        ) const -> GlyphBitmap;
 
         /// Internal integration handle for shaping backends. The pointer is an FT_Face.
         [[nodiscard]] auto native_face_handle() const -> void*;

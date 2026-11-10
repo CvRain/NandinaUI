@@ -6,6 +6,8 @@
 
 #include <ft2build.h>
 #include FT_FREETYPE_H
+#include FT_RENDER_H
+#include FT_SYNTHESIS_H
 
 #include <algorithm>
 #include <cmath>
@@ -98,12 +100,23 @@ namespace nandina::text
             }
         }
 
-        [[nodiscard]] auto
-        load_glyph(std::uint32_t glyph_index, float pixel_size, FT_Int32 flags) const
-            -> FT_GlyphSlot {
+        [[nodiscard]] auto load_glyph(
+            std::uint32_t glyph_index,
+            float pixel_size,
+            FT_Int32 flags,
+            FontSynthesis synthesis = {}
+        ) const -> FT_GlyphSlot {
             set_pixel_size(pixel_size);
             if (const auto error = FT_Load_Glyph(face, glyph_index, flags); error != 0) {
                 throw_freetype_error("FT_Load_Glyph", error);
+            }
+            if (synthesis.bold) {
+                const auto weight_delta =
+                    static_cast<FT_Fixed>(std::clamp(synthesis.bold_em, 0.0F, 0.2F) * 65536.0F);
+                FT_GlyphSlot_AdjustWeight(face->glyph, weight_delta, weight_delta);
+            }
+            if (synthesis.oblique) {
+                FT_GlyphSlot_Oblique(face->glyph);
             }
             return face->glyph;
         }
@@ -165,13 +178,23 @@ namespace nandina::text
         };
     }
 
-    auto FreeTypeFontFace::rasterize(char32_t codepoint, float pixel_size) const -> GlyphBitmap {
-        return rasterize_glyph(glyph_index(codepoint), pixel_size);
+    auto
+    FreeTypeFontFace::rasterize(char32_t codepoint, float pixel_size, FontSynthesis synthesis) const
+        -> GlyphBitmap {
+        return rasterize_glyph(glyph_index(codepoint), pixel_size, synthesis);
     }
 
-    auto FreeTypeFontFace::rasterize_glyph(std::uint32_t index, float pixel_size) const
-        -> GlyphBitmap {
-        const auto glyph = impl_->load_glyph(index, pixel_size, FT_LOAD_RENDER);
+    auto FreeTypeFontFace::rasterize_glyph(
+        std::uint32_t index,
+        float pixel_size,
+        FontSynthesis synthesis
+    ) const -> GlyphBitmap {
+        const auto glyph = impl_->load_glyph(index, pixel_size, FT_LOAD_DEFAULT, synthesis);
+        if (glyph->format == FT_GLYPH_FORMAT_OUTLINE) {
+            if (const auto error = FT_Render_Glyph(glyph, FT_RENDER_MODE_NORMAL); error != 0) {
+                throw_freetype_error("FT_Render_Glyph", error);
+            }
+        }
         const auto& bitmap = glyph->bitmap;
         if (bitmap.pixel_mode != FT_PIXEL_MODE_GRAY && bitmap.width > 0 && bitmap.rows > 0) {
             throw std::runtime_error("FreeType glyph bitmap is not 8-bit grayscale");

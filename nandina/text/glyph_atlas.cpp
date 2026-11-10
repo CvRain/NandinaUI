@@ -21,12 +21,14 @@ namespace nandina::text
         int width,
         int height,
         int padding,
-        int max_dimension
+        int max_dimension,
+        FontSynthesis synthesis
     ):
         face_(std::move(face)),
         width_(width),
         height_(height),
         padding_(padding),
+        synthesis_(synthesis),
         max_dimension_(std::max(1, max_dimension)) {
         if (!face_) {
             throw std::invalid_argument("GlyphAtlas requires a font face");
@@ -56,7 +58,8 @@ namespace nandina::text
             return found->second;
         }
 
-        const auto bitmap = face_->rasterize_glyph(glyph_index, static_cast<float>(key.pixel_size));
+        const auto bitmap =
+            face_->rasterize_glyph(glyph_index, static_cast<float>(key.pixel_size), synthesis_);
         auto bounds = foundation::NanRect::empty();
         if (bitmap.width > 0 && bitmap.height > 0) {
             bounds = allocate(bitmap.width, bitmap.height);

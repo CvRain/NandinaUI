@@ -117,6 +117,21 @@ namespace
         }
         return nullptr;
     }
+
+    /// Golden captures keep the historical 1200x800 viewport; manual visual acceptance can
+    /// request a taller hidden window to photograph content below the fold.
+    [[nodiscard]] auto probe_window_dimension(const char* name, const int fallback) -> int {
+        const char* value = SDL_getenv(name);
+        if (value == nullptr || *value == '\0') {
+            return fallback;
+        }
+        char* end = nullptr;
+        const long parsed = std::strtol(value, &end, 10);
+        if (end == value || *end != '\0' || parsed < 1 || parsed > 8192) {
+            throw std::runtime_error(std::string("invalid ") + name + ": " + value);
+        }
+        return static_cast<int>(parsed);
+    }
 } // namespace
 
 int main() {
@@ -129,10 +144,11 @@ int main() {
         check_sdl(SDL_Init(SDL_INIT_VIDEO), "SDL_Init");
         // 隐藏窗口：可见窗口会被合成器平铺成屏幕相关尺寸（实测 1269x1383），
         // 那样页面像素与性能采样都不可复现。探针只读回渲染结果，不需要显示。
+        // `NANDINA_PROBE_WIDTH/HEIGHT` 仅供人工视觉验收拉高视口；golden 始终用 1200x800。
         window = SDL_CreateWindow(
             "Nandina SDL page probe",
-            1200,
-            800,
+            probe_window_dimension("NANDINA_PROBE_WIDTH", 1200),
+            probe_window_dimension("NANDINA_PROBE_HEIGHT", 800),
             SDL_WINDOW_HIDDEN | SDL_WINDOW_HIGH_PIXEL_DENSITY
         );
         if (window == nullptr) {
