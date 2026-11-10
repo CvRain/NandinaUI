@@ -109,6 +109,9 @@ namespace nandina::widget
     void TextField::set_disabled(const bool value) {
         disabled_ = value;
         dragging_ = false;
+        if (disabled_) {
+            hovered_ = false;
+        }
         if (disabled_ && is_inside_tree() && get_tree()->focused_node() == this) {
             get_tree()->set_focus(nullptr);
         }
@@ -118,6 +121,10 @@ namespace nandina::widget
     }
     auto TextField::disabled() const -> bool {
         return disabled_;
+    }
+
+    auto TextField::hovered() const -> bool {
+        return hovered_;
     }
 
     void TextField::set_invalid(const bool value) {
@@ -131,6 +138,8 @@ namespace nandina::widget
 
     auto TextField::visual_state() const -> theme::TextFieldVisualState {
         auto state = theme::TextFieldVisualState::normal;
+        if (hovered_ && !disabled_)
+            state = state | theme::TextFieldVisualState::hovered;
         if (focused_)
             state = state | theme::TextFieldVisualState::focused;
         if (disabled_)
@@ -265,6 +274,22 @@ namespace nandina::widget
 
     auto TextField::on_input(scene::InputEvent& event) -> bool {
         auto* clipboard = is_inside_tree() ? get_tree()->clipboard() : nullptr;
+        // Hover 只影响容器底色（paint-only）：默认配方 hovered 规则给 accent 底，
+        // 让「可编辑字段」在指针悬停时有可见反馈，同时不改变焦点环与编辑行为。
+        if (event.type() == scene::EventType::mouse_enter) {
+            if (!hovered_) {
+                hovered_ = !disabled_;
+                mark_paint_dirty();
+            }
+            return false;
+        }
+        if (event.type() == scene::EventType::mouse_leave) {
+            if (hovered_) {
+                hovered_ = false;
+                mark_paint_dirty();
+            }
+            return false;
+        }
         if (event.type() == scene::EventType::focus_enter) {
             focused_ = !disabled_;
             apply_theme();

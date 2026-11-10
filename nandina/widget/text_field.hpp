@@ -56,6 +56,8 @@ namespace nandina::widget
         [[nodiscard]] auto disabled() const -> bool;
         void set_invalid(bool value);
         [[nodiscard]] auto invalid() const -> bool;
+        /// 指针是否悬停在输入框上（hover 视觉状态的来源；禁用时恒为 false）。
+        [[nodiscard]] auto hovered() const -> bool;
         [[nodiscard]] auto visual_state() const -> theme::TextFieldVisualState;
         [[nodiscard]] auto resolved_style() const -> theme::ResolvedTextFieldStyle;
 
@@ -126,6 +128,8 @@ namespace nandina::widget
         bool read_only_ = false;
         bool disabled_ = false;
         bool invalid_ = false;
+        /// 指针悬停（由 mouse_enter / mouse_leave 维护；禁用时清零）。
+        bool hovered_ = false;
         std::function<void(std::string_view)> on_change_;
         std::function<void(std::string_view)> on_submit_;
         reactive::Event<std::string_view> value_changed_;

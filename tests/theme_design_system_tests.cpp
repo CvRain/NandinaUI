@@ -786,6 +786,44 @@ TEST_CASE("text field draws rounded fill and outline through BoxPainter", "[them
 }
 
 TEST_CASE(
+    "default TextField recipe gives hovered state a visible fill",
+    "[theme][text-field][hover]"
+) {
+    const auto system = theme::default_design_system();
+    constexpr auto appearance = theme::ColorAppearance::light;
+    const auto normal =
+        theme::resolve_text_field(system, appearance, theme::TextFieldVisualState::normal);
+    const auto hovered =
+        theme::resolve_text_field(system, appearance, theme::TextFieldVisualState::hovered);
+    REQUIRE(hovered.container.fill != normal.container.fill);
+    REQUIRE(hovered.container.border != normal.container.border);
+
+    // 焦点优先：focused + hovered 不应保留 hover 底色与悬停边框（否则聚焦中的输入框仍是灰底暗边）。
+    const auto focused =
+        theme::resolve_text_field(system, appearance, theme::TextFieldVisualState::focused);
+    const auto focused_hovered = theme::resolve_text_field(
+        system,
+        appearance,
+        theme::TextFieldVisualState::focused | theme::TextFieldVisualState::hovered
+    );
+    REQUIRE(focused_hovered.container.fill == focused.container.fill);
+    REQUIRE(focused_hovered.container.border == focused.container.border);
+
+    // 暗色外观同样要有 hover 反馈。
+    const auto dark_normal = theme::resolve_text_field(
+        system,
+        theme::ColorAppearance::dark,
+        theme::TextFieldVisualState::normal
+    );
+    const auto dark_hovered = theme::resolve_text_field(
+        system,
+        theme::ColorAppearance::dark,
+        theme::TextFieldVisualState::hovered
+    );
+    REQUIRE(dark_hovered.container.fill != dark_normal.container.fill);
+}
+
+TEST_CASE(
     "disabled state scales slider and checkbox colors by disabled opacity",
     "[theme][design-system]"
 ) {

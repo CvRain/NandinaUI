@@ -29,12 +29,14 @@ namespace nandina::theme
         disabled,
     };
 
-    /** TextField 交互状态（位掩码：focused / disabled / invalid 可组合）。 */
+    /** TextField 交互状态（位掩码：hovered / focused / disabled / invalid 可组合）。 */
     enum class TextFieldVisualState : unsigned char {
         normal = 0,
         focused = 1 << 0,
         disabled = 1 << 1,
         invalid = 1 << 2,
+        /// 指针悬停。默认配方用 accent 底提供可见的 hover 反馈；禁用时不会置位。
+        hovered = 1 << 3,
     };
 
     [[nodiscard]] constexpr auto operator|(TextFieldVisualState lhs, TextFieldVisualState rhs)

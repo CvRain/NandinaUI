@@ -551,6 +551,7 @@ namespace nandina::theme
                 "state",
                 std::map<std::string_view, TextFieldVisualState> {
                     {"normal", TextFieldVisualState::normal},
+                    {"hovered", TextFieldVisualState::hovered},
                     {"focused", TextFieldVisualState::focused},
                     {"disabled", TextFieldVisualState::disabled},
                     {"invalid", TextFieldVisualState::invalid},

@@ -16,7 +16,9 @@
 #include <nandina/render/render_device.hpp>
 #include <nandina/scene/canvas_layer.hpp>
 #include <nandina/scene/control.hpp>
+#include <nandina/scene/input_event.hpp>
 #include <nandina/scene/scene_tree.hpp>
+#include <nandina/theme/visual_state.hpp>
 #include <nandina/widget/bindable_rect.hpp>
 #include <nandina/widget/button.hpp>
 #include <nandina/widget/card.hpp>
@@ -1366,6 +1368,40 @@ TEST_CASE(
     tree.draw(dev);
     REQUIRE(renderer.draws == 2);
     REQUIRE(dev.texts.empty());
+}
+
+TEST_CASE("TextField hover state follows pointer enter and leave", "[widget][text-field][hover]") {
+    auto field = std::make_shared<widget::TextField>("value");
+    scene::NanSceneTree tree;
+    tree.set_root(field);
+
+    REQUIRE_FALSE(field->hovered());
+    REQUIRE_FALSE(
+        theme::has_text_field_state(field->visual_state(), theme::TextFieldVisualState::hovered)
+    );
+
+    scene::MouseEnterEvent enter {foundation::NanPoint(4.0F, 4.0F)};
+    REQUIRE_FALSE(field->on_input(enter));
+    REQUIRE(field->hovered());
+    REQUIRE(
+        theme::has_text_field_state(field->visual_state(), theme::TextFieldVisualState::hovered)
+    );
+
+    scene::MouseLeaveEvent leave {foundation::NanPoint(4.0F, 4.0F)};
+    REQUIRE_FALSE(field->on_input(leave));
+    REQUIRE_FALSE(field->hovered());
+    REQUIRE_FALSE(
+        theme::has_text_field_state(field->visual_state(), theme::TextFieldVisualState::hovered)
+    );
+
+    // 禁用后进入悬停不产生 hover 状态。
+    field->set_disabled(true);
+    scene::MouseEnterEvent enter_disabled {foundation::NanPoint(4.0F, 4.0F)};
+    REQUIRE_FALSE(field->on_input(enter_disabled));
+    REQUIRE_FALSE(field->hovered());
+    REQUIRE_FALSE(
+        theme::has_text_field_state(field->visual_state(), theme::TextFieldVisualState::hovered)
+    );
 }
 
 TEST_CASE("Text exposes a layout result shared by measure and draw", "[widget][text][layout]") {

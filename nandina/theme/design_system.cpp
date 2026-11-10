@@ -4078,8 +4078,17 @@ namespace nandina::theme
                 .text_field = TextFieldRecipes {
                     .base = default_text_field_recipe(),
                     .rules = {
+                        // 指针悬停：用弱化底（accent）给输入框一个可见但克制的反馈；
+                        // focused 规则会把它复位成页面底色，避免聚焦时仍带灰底。
+                        TextFieldRecipeRule {
+                            .state = TextFieldVisualState::hovered,
+                            .container_fill = ThemeColor::token(ColorToken::accent),
+                            .container_border = ThemeColor::token(ColorToken::ring),
+                        },
                         TextFieldRecipeRule {
                             .state = TextFieldVisualState::focused,
+                            .container_fill = ThemeColor::token(ColorToken::background),
+                            .container_border = ThemeColor::token(ColorToken::input),
                             .focus_ring_width =
                                 ThemeScalar::token(ScalarToken::border_focus_ring),
                         },
