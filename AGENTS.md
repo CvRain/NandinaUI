@@ -1,4 +1,4 @@
-﻿# Repository Guidelines
+# Repository Guidelines
 
 > Fast orientation for AI assistants. Authoritative contracts live in `docs/references/`
 > (start at `README.md`, `development_loop.md`, `coding_conventions.md`); this file is the
@@ -200,6 +200,14 @@ application shell. Version `0.1.0-alpha.1`.
   line-height default 0 → backend default 1.2 fallback). Step 2 (semantic roles, body leading
   1.5, showcase page, golden re-batch) and Step 3 (rem/root text scale + accessibility cap)
   remain pending; font weight/slant needs P4.7. Contract: `docs/references/typography_scale.md`.
+- **Dual-platform verification (2026-11-10) is operational**: the Linux machine (Arch, GNOME
+  Wayland, RADV RX 6750 GRE 12GB, Mesa 26.2.6) is reachable over SSH with a dedicated key; the
+  full Linux suite is 129 OK / 0 FAIL and all six Linux page goldens compare with 0 changed
+  pixels. Workflow, session-environment exports (`XDG_RUNTIME_DIR`, `WAYLAND_DISPLAY`,
+  `XDG_SESSION_TYPE=wayland`), golden capture/approve rules and security boundaries are in
+  `docs/references/dual_platform_verification.md`. Linux Clang 23 immediately caught a
+  `logical_size_ = {}` portability issue (fixed in `d782729`) — Windows GCC success alone is not
+  proof. Never commit remote credentials; run commits from Windows and `git pull` on Linux.
 - The plan and exit criteria are **not** owned by this file: read
   `docs/references/development_roadmap.md` and the D5 contract
   (`resource_build_and_deployment.md` §8) before claiming a sub-batch is complete.
