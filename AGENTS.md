@@ -188,6 +188,18 @@ application shell. Version `0.1.0-alpha.1`.
   usable-area clamping. Real IME candidate placement, Linux Wayland fractional scaling, display
   hot-plug/system-scale changes and accessibility text scaling remain pending; contract:
   `docs/references/high_dpi_and_multi_display.md`.
+- **P4.6 Step 1 typography scale** (2026-11-10) adds a Tailwind-compatible
+  `theme::TextSize` (13 steps: xs…9xl) and `theme::Leading` (6 multipliers) plus a themeable
+  `NanTypeScale` (`root_base`, `ratios`, `leading`) under `NanTokens::typography.scale`;
+  `text::TextStyle` gains a `line_height` multiplier (0 keeps the backend default; HarfBuzz and
+  the deterministic backend both consume it) and `Label` gains
+  `set_text_size()`/`set_leading()`/`set_line_height()` with builder methods
+  (`text_size`/`leading`/`line_height`). Explicit `.font_size(px)` stays the absolute logical-px
+  override and wins over the token (CSS px vs rem semantics); OS content scale always applies and
+  no pt/physical-pixel font size exists. Current visuals are unchanged (Label default 18,
+  line-height default 0 → backend default 1.2 fallback). Step 2 (semantic roles, body leading
+  1.5, showcase page, golden re-batch) and Step 3 (rem/root text scale + accessibility cap)
+  remain pending; font weight/slant needs P4.7. Contract: `docs/references/typography_scale.md`.
 - The plan and exit criteria are **not** owned by this file: read
   `docs/references/development_roadmap.md` and the D5 contract
   (`resource_build_and_deployment.md` §8) before claiming a sub-batch is complete.

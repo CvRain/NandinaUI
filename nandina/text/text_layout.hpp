@@ -77,6 +77,10 @@ namespace nandina::text
             foundation::NanHexRgb {.red = 255, .green = 255, .blue = 255, .alpha = 255}
         );
         float font_size = 16.0F;
+        /// Line-height multiplier of `font_size`. `0` keeps the backend default (font metrics,
+        /// falling back to 1.2× for backends without metrics); a positive value overrides it.
+        /// Themes drive this through `theme::Leading` factors, not by rewriting font metrics.
+        float line_height = 0.0F;
         theme::FontRequest font;
         TextOverflow overflow = TextOverflow::ellipsis;
         int max_lines = 1;

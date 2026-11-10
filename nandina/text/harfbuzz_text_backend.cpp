@@ -935,8 +935,11 @@ namespace nandina::text
         }
 
         const auto metrics = impl_->combined_metrics(font_size);
-        const float line_height =
-            metrics.line_height > 0.0F ? metrics.line_height : font_size * 1.2F;
+        // TextStyle carries an explicit multiplier when a theme/author leading wins; otherwise
+        // keep the previous font-metric default (1.2x fallback) untouched.
+        const float line_height = input.style.line_height > 0.0F
+            ? font_size * input.style.line_height
+            : (metrics.line_height > 0.0F ? metrics.line_height : font_size * 1.2F);
         const float baseline = metrics.ascender;
         const auto max_lines = static_cast<std::size_t>(std::max(1, input.style.max_lines));
 

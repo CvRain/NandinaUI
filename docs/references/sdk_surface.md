@@ -18,6 +18,16 @@
 
 ## 2. 三档分类
 
+2026-11-10 P4.6 Step 1 排版尺度（experimental，新增作者 API）：新增
+`nandina/theme/typography_scale.hpp`：`TextSize`（xs…9xl，13 档 Tailwind 兼容）、
+`Leading`（none…loose，6 档）、`NanTypeScale`（`root_base` + ratios + leading，主题可覆盖）
+及纯函数 `text_size_px()` / `leading_factor()` / 名称查询。`NanTypographyTokens` 新增
+`scale`；`text::TextStyle` 新增 `line_height`（0 = 后端默认，>0 = 字号乘数）；
+`Label` 新增 `set_text_size()` / `set_leading()` / `set_line_height()` 与对应 builder 方法，
+`primitives::Text` 新增 `set_line_height()` / `line_height()`。既有 `.font_size(px)` 保持不变
+（绝对逻辑 px）；OS 内容缩放仍始终跟随，不引入 pt 或物理像素字号。契约见
+[排版尺度与单位](typography_scale.md)。
+
 2026-11-10 TextField 悬停状态（experimental，行为增强）：`theme::TextFieldVisualState` 新增
 `hovered` 位，`widget::TextField::hovered()` 提供只读查询；`TextField` 在 `on_input` 处理
 `mouse_enter` / `mouse_leave`（paint-only，禁用时始终为 false）。默认配方新增 hovered 规则

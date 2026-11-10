@@ -18,6 +18,7 @@
 #include <nandina/scene/control.hpp>
 #include <nandina/scene/input_event.hpp>
 #include <nandina/scene/scene_tree.hpp>
+#include <nandina/text/text_layout_backend.hpp>
 #include <nandina/theme/visual_state.hpp>
 #include <nandina/widget/bindable_rect.hpp>
 #include <nandina/widget/button.hpp>
@@ -1169,6 +1170,93 @@ TEST_CASE(
     REQUIRE(inherited->font().weight == 300);
     REQUIRE(explicit_text->font_size() == Catch::Approx(19.0F));
     REQUIRE(explicit_text->font().weight == 500);
+}
+
+TEST_CASE(
+    "Label text size and leading resolve through the theme scale",
+    "[widget][label][typography]"
+) {
+    reactive::Graph graph;
+    auto label = widget::Label::create(graph, "text");
+    REQUIRE_FALSE(label->text_size().has_value());
+    REQUIRE(label->font_size() == Catch::Approx(18.0F)); // typography.label_lg component default
+
+    label->set_text_size(theme::TextSize::sm);
+    REQUIRE(label->font_size() == Catch::Approx(14.0F));
+    label->set_text_size(theme::TextSize::xl3);
+    REQUIRE(label->font_size() == Catch::Approx(30.0F));
+
+    REQUIRE(label->line_height() == Catch::Approx(0.0F)); // backend default remains
+    label->set_leading(theme::Leading::normal);
+    REQUIRE(label->leading().has_value());
+    REQUIRE(label->line_height() == Catch::Approx(1.5F));
+
+    label->set_line_height(1.8F);
+    REQUIRE(label->line_height() == Catch::Approx(1.8F));
+    label->set_leading(theme::Leading::tight); // token call supersedes the numeric override
+    REQUIRE(label->line_height() == Catch::Approx(1.25F));
+    label->set_line_height(0.0F); // reset restores the leading token
+    REQUIRE(label->line_height() == Catch::Approx(1.25F));
+
+    // Explicit set_font_size is the highest-priority instance override (component semantics).
+    label->set_font_size(21.0F);
+    label->set_text_size(theme::TextSize::sm);
+    REQUIRE(label->font_size() == Catch::Approx(21.0F));
+}
+
+TEST_CASE(
+    "Label text size and leading follow a custom theme scale",
+    "[widget][label][typography]"
+) {
+    reactive::Graph graph;
+    auto custom = theme::default_theme();
+    custom.tokens.typography.scale.root_base = 20.0F;
+    custom.tokens.typography.scale.ratios[theme::text_size_index(theme::TextSize::xs)] = 0.5F;
+    custom.tokens.typography.scale.leading[theme::leading_index(theme::Leading::normal)] = 1.6F;
+
+    auto label = widget::Label::create(graph, "custom", custom);
+    label->set_text_size(theme::TextSize::xs);
+    REQUIRE(label->font_size() == Catch::Approx(10.0F));
+    label->set_text_size(theme::TextSize::base); // root base override applies to every step
+    REQUIRE(label->font_size() == Catch::Approx(20.0F));
+    label->set_leading(theme::Leading::normal);
+    REQUIRE(label->line_height() == Catch::Approx(1.6F));
+}
+
+TEST_CASE(
+    "deterministic text layout honors an explicit line-height multiplier",
+    "[text][layout][line-height]"
+) {
+    const auto& backend = text::deterministic_text_layout_backend();
+    text::TextLayoutInput input {
+        .text = "aa bb cc dd ee",
+        .style =
+            text::TextStyle {
+                .font_size = 20.0F,
+                .overflow = text::TextOverflow::wrap,
+                .max_lines = 3,
+            },
+        .constraints = foundation::NanLayoutConstraints {
+            .max_width = 60.0F,
+        },
+    };
+
+    const auto normal = backend.layout(input);
+    REQUIRE(normal.lines.size() >= 2);
+    REQUIRE(normal.lines.front().size.get_height() == Catch::Approx(20.0F * 1.2F));
+    REQUIRE(
+        normal.size.get_height()
+        == Catch::Approx(normal.lines.front().size.get_height() * normal.lines.size())
+    );
+
+    input.style.line_height = 2.0F;
+    const auto tall = backend.layout(input);
+    REQUIRE(tall.lines.size() == normal.lines.size());
+    REQUIRE(tall.lines.front().size.get_height() == Catch::Approx(40.0F));
+    REQUIRE(tall.size.get_height() == Catch::Approx(40.0F * tall.lines.size()));
+
+    widget::primitives::Text plain("x");
+    REQUIRE_THROWS_AS(plain.set_line_height(-1.0F), std::invalid_argument);
 }
 
 TEST_CASE(

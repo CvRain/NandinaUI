@@ -75,6 +75,10 @@ namespace nandina::widget::primitives
 
         void set_font_size(float size);
         [[nodiscard]] auto font_size() const -> float;
+        /// Line-height multiplier of `font_size`; `0` keeps the backend/font-metric default.
+        /// A positive value overrides it (themes resolve `theme::Leading` to this factor).
+        void set_line_height(float factor);
+        [[nodiscard]] auto line_height() const -> float;
         [[nodiscard]] auto visual_part(visual::label_t) noexcept -> Text&;
         [[nodiscard]] auto property(visual::color_t) noexcept -> TextColorProperty;
         [[nodiscard]] auto property(visual::font_size_t) noexcept -> TextFontSizeProperty;

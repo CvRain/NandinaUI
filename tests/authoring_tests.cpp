@@ -98,6 +98,24 @@ TEST_CASE("authoring builders preserve concrete widget identity", "[authoring][w
     REQUIRE(root->gap() == Catch::Approx(12.0F));
 }
 
+TEST_CASE("authoring text size and leading chain on Label", "[authoring][typography]") {
+    reactive::Graph graph;
+    auto label = widget::authoring::make<widget::Label>(graph, "text")
+                     .text_size(theme::TextSize::lg)
+                     .leading(theme::Leading::tight)
+                     .build();
+    REQUIRE(label->font_size() == Catch::Approx(18.0F));
+    REQUIRE(label->line_height() == Catch::Approx(1.25F));
+
+    auto overridden = widget::authoring::make<widget::Label>(graph, "text")
+                          .text_size(theme::TextSize::sm)
+                          .leading(theme::Leading::normal)
+                          .line_height(1.9F)
+                          .build();
+    REQUIRE(overridden->font_size() == Catch::Approx(14.0F));
+    REQUIRE(overridden->line_height() == Catch::Approx(1.9F));
+}
+
 TEST_CASE(
     "imperative and authored trees resolve equivalent layout and style",
     "[authoring][layout][style]"

@@ -597,6 +597,30 @@ namespace nandina::widget::authoring
             return *this;
         }
 
+        /// Tailwind-style size step resolved through the active theme scale (P4.6 Step 1).
+        auto text_size(theme::TextSize size) -> NodeBuilder&
+            requires requires(Node& node) { node.set_text_size(size); }
+        {
+            node_->set_text_size(size);
+            return *this;
+        }
+
+        /// Leading step resolved through the theme scale (line-height multiplier).
+        auto leading(theme::Leading leading) -> NodeBuilder&
+            requires requires(Node& node) { node.set_leading(leading); }
+        {
+            node_->set_leading(leading);
+            return *this;
+        }
+
+        /// Numeric line-height multiplier; overrides `leading()`.
+        auto line_height(float factor) -> NodeBuilder&
+            requires requires(Node& node) { node.set_line_height(factor); }
+        {
+            node_->set_line_height(factor);
+            return *this;
+        }
+
         auto color_token(theme::ColorToken token) -> NodeBuilder&
             requires requires(Node& node) { node.set_color_token(token); }
         {

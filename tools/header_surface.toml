@@ -488,6 +488,10 @@ path = "nandina/theme/tokens.hpp"
 level = "experimental"
 
 [[headers]]
+path = "nandina/theme/typography_scale.hpp"
+level = "experimental"
+
+[[headers]]
 path = "nandina/theme/visual_state.hpp"
 level = "experimental"
 

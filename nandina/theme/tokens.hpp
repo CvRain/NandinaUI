@@ -5,6 +5,8 @@
 #ifndef NANDINA_EXPERIMENT_THEME_TOKENS_HPP
 #define NANDINA_EXPERIMENT_THEME_TOKENS_HPP
 
+#include "typography_scale.hpp"
+
 namespace nandina::theme
 {
 
@@ -43,6 +45,10 @@ namespace nandina::theme
         float label_sm = 14.0F;
         float label_md = 16.0F;
         float label_lg = 18.0F;
+        /// Tailwind-compatible type scale + leading multipliers; themes override this table
+        /// (root base, individual ratios, individual leading factors). P4.6 Step 1 exposes it
+        /// to Label authors through `TextSize`/`Leading`; semantic roles consume it in Step 2.
+        NanTypeScale scale {};
     };
 
     struct NanMotionTokens {

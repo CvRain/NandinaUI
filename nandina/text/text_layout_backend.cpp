@@ -65,7 +65,8 @@ namespace nandina::text
                 result.baseline = result.font_size;
 
                 if (input.style.overflow == TextOverflow::wrap) {
-                    const float line_height = result.font_size * 1.2F;
+                    const float line_height = result.font_size
+                        * (input.style.line_height > 0.0F ? input.style.line_height : 1.2F);
                     const float char_width = std::max(1.0F, result.font_size * 0.56F);
                     const auto chars_per_line = has_width_constraint
                         ? std::max<std::size_t>(
@@ -180,7 +181,8 @@ namespace nandina::text
                 }
 
                 const float line_width = estimated_text_width(laid_out_text, result.font_size);
-                const float line_height = result.font_size * 1.2F;
+                const float line_height = result.font_size
+                    * (input.style.line_height > 0.0F ? input.style.line_height : 1.2F);
                 result.baseline = result.font_size;
 
                 result.size =

@@ -9,14 +9,17 @@
 #include <nandina/theme/design_system.hpp>
 #include <nandina/theme/theme.hpp>
 #include <nandina/theme/theme_manager.hpp>
+#include <nandina/theme/typography_scale.hpp>
 #include <nandina/widget/button.hpp>
 #include <nandina/widget/slider.hpp>
 #include <nandina/widget/text_field.hpp>
 
+#include <array>
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
 #include <cmath>
+#include <limits>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -840,4 +843,97 @@ TEST_CASE(
         theme::CheckboxVisualState::disabled
     );
     REQUIRE(checkbox.indicator.fill.alpha() == Catch::Approx(system.tokens.opacity.disabled));
+}
+
+TEST_CASE("Tailwind type scale maps every step to logical pixels", "[theme][typography]") {
+    const theme::NanTypeScale defaults;
+    constexpr std::array<float, theme::text_size_count> expected_px {
+        12.0F,
+        14.0F,
+        16.0F,
+        18.0F,
+        20.0F,
+        24.0F,
+        30.0F,
+        36.0F,
+        48.0F,
+        60.0F,
+        72.0F,
+        96.0F,
+        128.0F,
+    };
+    constexpr std::array<std::string_view, theme::text_size_count> expected_names {
+        "xs",
+        "sm",
+        "base",
+        "lg",
+        "xl",
+        "2xl",
+        "3xl",
+        "4xl",
+        "5xl",
+        "6xl",
+        "7xl",
+        "8xl",
+        "9xl",
+    };
+    constexpr std::array<float, theme::leading_count> expected_leading {
+        1.0F,
+        1.25F,
+        1.375F,
+        1.5F,
+        1.625F,
+        2.0F,
+    };
+    constexpr std::array<std::string_view, theme::leading_count> expected_leading_names {
+        "none",
+        "tight",
+        "snug",
+        "normal",
+        "relaxed",
+        "loose",
+    };
+
+    for (std::size_t index = 0; index < theme::text_size_count; ++index) {
+        const auto step = static_cast<theme::TextSize>(index);
+        REQUIRE(theme::text_size_name(step) == expected_names[index]);
+        REQUIRE(theme::text_size_ratio(step) == Catch::Approx(expected_px[index] / 16.0F));
+        REQUIRE(theme::text_size_px(defaults, step) == Catch::Approx(expected_px[index]));
+    }
+    for (std::size_t index = 0; index < theme::leading_count; ++index) {
+        const auto leading = static_cast<theme::Leading>(index);
+        REQUIRE(theme::leading_name(leading) == expected_leading_names[index]);
+        REQUIRE(theme::leading_multiplier(leading) == Catch::Approx(expected_leading[index]));
+        REQUIRE(theme::leading_factor(defaults, leading) == Catch::Approx(expected_leading[index]));
+    }
+
+    // The default design system carries the canonical scale, so theme-aware widgets can resolve
+    // TextSize/Leading without a separate configuration step.
+    const auto system = theme::default_design_system();
+    REQUIRE(system.tokens.typography.scale.root_base == Catch::Approx(theme::canonical_root_base));
+    REQUIRE(
+        theme::text_size_px(system.tokens.typography.scale, theme::TextSize::xl4)
+        == Catch::Approx(36.0F)
+    );
+}
+
+TEST_CASE("type scale honors theme overrides and sanitizes invalid values", "[theme][typography]") {
+    theme::NanTypeScale custom;
+    custom.root_base = 20.0F;
+    custom.ratios[theme::text_size_index(theme::TextSize::xs)] = 0.5F;
+    custom.leading[theme::leading_index(theme::Leading::normal)] = 1.6F;
+
+    REQUIRE(theme::text_size_px(custom, theme::TextSize::xs) == Catch::Approx(10.0F));
+    REQUIRE(theme::text_size_px(custom, theme::TextSize::base) == Catch::Approx(20.0F));
+    REQUIRE(theme::leading_factor(custom, theme::Leading::normal) == Catch::Approx(1.6F));
+
+    theme::NanTypeScale invalid;
+    invalid.root_base = 0.0F;
+    invalid.ratios[theme::text_size_index(theme::TextSize::sm)] = -1.0F;
+    invalid.leading[theme::leading_index(theme::Leading::tight)] =
+        std::numeric_limits<float>::quiet_NaN();
+
+    // Invalid theme values fall back to the canonical scale instead of producing NaN geometry.
+    REQUIRE(theme::text_size_px(invalid, theme::TextSize::sm) == Catch::Approx(14.0F));
+    REQUIRE(theme::leading_factor(invalid, theme::Leading::tight) == Catch::Approx(1.25F));
 }

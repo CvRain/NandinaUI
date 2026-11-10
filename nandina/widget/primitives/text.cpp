@@ -19,8 +19,9 @@ namespace nandina::widget::primitives
         /// `TextStyle::approx_equals` 的容差比较）—— 缓存命中必须意味着结果一定相同。
         [[nodiscard]] auto
         same_layout_style(const text::TextStyle& left, const text::TextStyle& right) -> bool {
-            return left.font_size == right.font_size && left.font == right.font
-                && left.overflow == right.overflow && left.max_lines == right.max_lines;
+            return left.font_size == right.font_size && left.line_height == right.line_height
+                && left.font == right.font && left.overflow == right.overflow
+                && left.max_lines == right.max_lines;
         }
 
         [[nodiscard]] auto same_layout_constraints(
@@ -158,6 +159,22 @@ namespace nandina::widget::primitives
 
     auto Text::font_size() const -> float {
         return style_.font_size;
+    }
+
+    void Text::set_line_height(const float factor) {
+        if (!std::isfinite(factor) || factor < 0.0F) {
+            throw std::invalid_argument("Text line height must be finite and non-negative");
+        }
+        if (style_.line_height == factor) {
+            return;
+        }
+        style_.line_height = factor;
+        mark_layout_dirty();
+        update_metrics(last_layout_constraints());
+    }
+
+    auto Text::line_height() const -> float {
+        return style_.line_height;
     }
 
     auto Text::visual_part(visual::label_t) noexcept -> Text& {
