@@ -134,11 +134,14 @@ python3 tools/backend_performance.py --probe buildDir-release\probe\cross_platfo
 - SSH 会话（session 0）只能跑 CPU 路径（`--renderer sdl2d`）与单元测试；GPU/SDF 相关一律走
   桌面会话；
 - 跨平台 golden 像素差异（字体栅格化/DPI）是预期，不参与门禁；
-- **高 DPI 内容缩放（P4.5a 已实现，2026-11-09）**：窗口/布局/事件/IME 输入区统一为逻辑单位，
-  平台按 `content_scale = display_scale / pixel_density` 放大原生窗口，SDL 渲染器与字形栅格按
-  display scale 到物理像素；本机 175% 实测 1200×800 逻辑 → 2100×1400 物理、文字清晰、指针命中
-  正确。**P4.5b 混合 DPI 多显示器**（100%/175% 跨屏双向移动、跨屏拖动、候选窗跟随）待维护者
-  新增第二块显示器后验收；真实 IME 与 Linux Wayland 分数缩放仍未验收。契约见
+- **高 DPI 内容缩放（P4.5a 已实现 2026-11-09；P4.5b 混合 DPI 已验收 2026-11-10）**：窗口/
+  布局/事件/IME 输入区统一为逻辑单位，平台按
+  `content_scale = display_scale / pixel_density` 放大原生窗口，SDL 渲染器与字形栅格按
+  display scale 到物理像素；本机 175% 实测 1200×800 逻辑 → 2100×1400 物理、文字清晰、指针
+  命中正确。混合 DPI 在真实双屏（2880×1800@175% + 2560×1440@125%）验收：双向跳转、真实
+  标题栏拖动跨屏、125% 下 resize 后回 175% 均保持逻辑尺寸并更新 framebuffer/render scale，
+  两个缩放下物理坐标命中与可用区域钳制正确。真实 IME 候选窗、Linux Wayland 分数缩放、
+  显示器热插拔与系统缩放在线变化仍未验收。契约见
   [高 DPI 与多显示器](high_dpi_and_multi_display.md)。测试/探针/golden 用
   `WindowConfig::high_dpi=false` 保持固定 1×。
 - macOS/MSL 没有测试机，不在本清单内。
@@ -215,7 +218,7 @@ python tools\release_check.py --ci --build-dir buildDir
 > 比较，编辑会制造假失败。
 
 **仍未覆盖**：§1–§5 的人工视觉项（真实窗口观感、软阴影与涟漪目检）、P3.3b2b 的真实 IME 与
-候选窗位置、Linux 默认 swapchain 与其他驱动的读回、**高 DPI 的 P4.5b 混合 DPI 跨屏与真实 IME
-候选窗跟随**（P4.5a 单显示器内容缩放已验收，见 §8 与
-[高 DPI 与多显示器](high_dpi_and_multi_display.md)）、Windows 性能基线复采、真实物理键鼠
-布局、SDK 在 Windows 上的下游消费交付。Windows 仍为实验性平台，无应用交付承诺。
+候选窗位置（含跨屏候选窗跟随）、Linux 默认 swapchain 与其他驱动的读回、高 DPI 的显示器
+热插拔/系统缩放在线变化与 Linux Wayland 分数缩放（Windows 单屏与混合 DPI 内容缩放已验收，
+见 §8 与 [高 DPI 与多显示器](high_dpi_and_multi_display.md)）、Windows 性能基线复采、
+真实物理键鼠布局、SDK 在 Windows 上的下游消费交付。Windows 仍为实验性平台，无应用交付承诺。

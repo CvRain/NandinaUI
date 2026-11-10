@@ -181,8 +181,12 @@ application shell. Version `0.1.0-alpha.1`.
   tests/probes/goldens. `window_metrics` gained pure `content_scale_from_display` /
   `window_size_from_logical_size` / `logical_size_from_window_size` helpers with unit tests.
   Verified on this machine at 175% (1200×800 logical → 2100×1400 physical, crisp text, correct
-  pointer hit) plus 1× regression. Mixed-DPI multi-monitor (P4.5b), real IME candidate placement
-  and Linux Wayland fractional scaling remain pending; contract:
+  pointer hit) plus 1× regression. **P4.5b mixed-DPI multi-monitor is verified (2026-11-10)** on
+  the real 2880×1800@175% + 2560×1440@125% pair: both-direction moves, a real title-bar drag
+  across the DPI boundary, carrying a 125%-monitor resize back to 175%, logical-size stability
+  with framebuffer/render-scale updates, physical-coordinate hit-testing at both scales, and
+  usable-area clamping. Real IME candidate placement, Linux Wayland fractional scaling, display
+  hot-plug/system-scale changes and accessibility text scaling remain pending; contract:
   `docs/references/high_dpi_and_multi_display.md`.
 - The plan and exit criteria are **not** owned by this file: read
   `docs/references/development_roadmap.md` and the D5 contract
@@ -430,16 +434,22 @@ meson test -C buildDir --print-errorlogs   # full suite: unit + integration (125
   loader semantics, and a deep Windows temp build path hits the 32K `CreateProcess` command-line
   limit. Windows SDK consumer delivery stays unverified. Record:
   `docs/references/windows_acceptance.md` §9.
-- **High-DPI content scaling (P4.5a, 2026-11-09) is implemented and verified on this 175%
-  machine; mixed-DPI multi-monitor (P4.5b) is pending the maintainer adding a second display.**
+- **High-DPI content scaling (P4.5a, 2026-11-09) and mixed-DPI multi-monitor (P4.5b, 2026-11-10)
+  are implemented and verified on this machine** (primary 2880×1800@175%, second 2560×1440@125%).
   `WindowConfig::width/height` and the whole scene/input/IME seam are logical units; the SDL
   platform layer sizes the native window by `content_scale = display_scale / pixel_density`
-  (1.75 here), sets the renderer scale to `display_scale`, converts pointer coordinates back to
-  logical space and scales `SDL_SetTextInputArea`; text rasterizes at physical density. Verified:
-  a 1200×800 logical window opens at 2100×1400 physical with crisp text and correct hit-testing.
-  Tests/probes/goldens must use `WindowConfig::high_dpi=false` (fixed 1×) — the page probe has its
-  own 1× host, so existing goldens are unaffected; do not compare goldens across DPI. Contract and
-  P4.5b matrix: `docs/references/high_dpi_and_multi_display.md`. Real IME candidate placement and
+  (1.75 / 1.25 here), sets the renderer scale to `display_scale`, converts pointer coordinates
+  back to logical space and scales `SDL_SetTextInputArea`; text rasterizes at physical density;
+  scale changes recompute all of the above, restore the author's logical window size and clamp
+  the frame into the target display's usable area. Verified: window opens at 2100×1400 physical
+  (175%); moving to the 125% display keeps logical 1200×800 with native 1500×1000 and
+  render_scale 1.25; a real title-bar drag across the boundary works; a resize on the 125%
+  display carries back as 2240×1540 at 175%; physical-coordinate sidebar clicks switch pages at
+  both scales. Diagnostic log line per scale event: `SdlPlatformWindow: display scale …
+  logical=… native=… pixels=… render_scale=…`. Tests/probes/goldens must use
+  `WindowConfig::high_dpi=false` (fixed 1×) — the page probe has its own 1× host, so existing
+  goldens are unaffected; do not compare goldens across DPI. Contract, evidence and residual
+  mixed-DPI items: `docs/references/high_dpi_and_multi_display.md`. Real IME candidate placement,
   Linux Wayland fractional scaling remain unverified; do not claim full high-DPI support.
 - Windows refuses to rename a directory while a file inside it is open. Finalize prepared
   statements and close the SQLite connection with `sqlite3_close` (a `sqlite3_close_v2` with live
@@ -619,8 +629,12 @@ section); the SDK consumer fixture is Linux-only. **P4.5a high-DPI content scali
 (2026-11-09)** — logical-unit window/input/IME seam, content-scaled native window (1200×800
 logical → 2100×1400 physical at 175%), renderer scale and physical-density text raster, verified
 on this 175% machine with crisp text and correct pointer hit; `WindowConfig::high_dpi=false` is
-the fixed 1× mode for tests/probes/goldens. Mixed-DPI multi-monitor (P4.5b), real IME candidate
-placement and Linux Wayland fractional scaling remain pending; contract:
+the fixed 1× mode for tests/probes/goldens. **P4.5b mixed-DPI multi-monitor is verified
+(2026-11-10)** on the real 2880×1800@175% + 2560×1440@125% pair: both-direction moves, a real
+title-bar drag across the DPI boundary, carrying a 125%-monitor resize back to 175%, logical-size
+stability with framebuffer/render-scale updates, physical-coordinate hit-testing at both scales
+and usable-area clamping. Real IME candidate placement, Linux Wayland fractional scaling,
+display hot-plug/system-scale changes and accessibility text scaling remain pending; contract:
 `docs/references/high_dpi_and_multi_display.md`. The registration
 contrast gate, style advisories, the Shell page body/visual acceptance, Linux
 default-swapchain/other-driver readback and internal broadcast narrowing remain pending; do not

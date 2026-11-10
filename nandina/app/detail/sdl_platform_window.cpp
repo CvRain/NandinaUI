@@ -743,6 +743,17 @@ namespace nandina::app::detail
         if (clamped_x == x && clamped_y == y) {
             return;
         }
+        SDL_Log(
+            "SdlPlatformWindow: clamp window position %d,%d -> %d,%d (usable %d,%d %dx%d)",
+            x,
+            y,
+            clamped_x,
+            clamped_y,
+            usable.x,
+            usable.y,
+            usable.w,
+            usable.h
+        );
         if (!SDL_SetWindowPosition(window_, clamped_x, clamped_y)) {
             SDL_Log(
                 "SdlPlatformWindow: SDL_SetWindowPosition(%d,%d) failed: %s",
@@ -761,6 +772,32 @@ namespace nandina::app::detail
             apply_logical_window_size();
             ensure_window_visible();
         }
+        // 跨屏/系统缩放变化是混合 DPI 验收的核心证据：每次事件只打一行，不做逐帧日志。
+        int native_width = 0;
+        int native_height = 0;
+        int pixel_width = 0;
+        int pixel_height = 0;
+        float render_scale_x = 0.0F;
+        float render_scale_y = 0.0F;
+        (void)SDL_GetWindowSize(window_, &native_width, &native_height);
+        (void)SDL_GetWindowSizeInPixels(window_, &pixel_width, &pixel_height);
+        if (renderer_ != nullptr) {
+            (void)SDL_GetRenderScale(renderer_, &render_scale_x, &render_scale_y);
+        }
+        const auto logical = screen_size();
+        SDL_Log(
+            "SdlPlatformWindow: display scale %.2f -> %.2f; logical=%dx%d native=%dx%d "
+            "pixels=%dx%d render_scale=%.2f",
+            previous_scale,
+            content_scale(),
+            static_cast<int>(std::lround(logical.get_width())),
+            static_cast<int>(std::lround(logical.get_height())),
+            native_width,
+            native_height,
+            pixel_width,
+            pixel_height,
+            render_scale_x
+        );
     }
 
     void SdlPlatformWindow::remember_logical_size_from_window() {

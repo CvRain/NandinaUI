@@ -1,11 +1,12 @@
 # 高 DPI 与多显示器：契约、实施记录与剩余边界
 
-> **状态（2026-11-09）**：维护者报告高 DPI 显示效果不佳后，本批完成 **P4.5a 内容缩放基础**：
-> 逻辑单位契约、平台 seam 归一化、窗口/渲染/输入/IME 输入区换算，以及测试与探针使用的
-> 固定 1× 模式；并在本机 175% 显示器上完成真实验收。
-> **P4.5b 混合 DPI 多显示器**（同机 100%/175% 双屏跨屏移动）仍待维护者新增第二块显示器后验收；
-> 真实 IME/候选窗位置、Linux Wayland 分数缩放与无障碍文本缩放不在本批。
-> 本文既是契约也是实施记录，未实施项明确标注，不得当作已支持。
+> **状态（2026-11-10）**：P4.5a 内容缩放基础已实施并在本机 175% 显示器验收（逻辑单位契约、
+> 平台 seam 归一化、窗口/渲染/输入/IME 输入区换算、固定 1× 模式）。
+> **P4.5b 混合 DPI 多显示器已在真实双屏上验收**：主屏 2880×1800 @175%、第二屏
+> 2560×1440 @125%（Windows 报告为横向），覆盖双向跳转、真实标题栏拖动跨屏、缩放后
+> resize 带回、两个缩放下物理坐标命中与可用区域钳制，见 §4。
+> 真实 IME/候选窗位置、Linux Wayland 分数缩放与无障碍文本缩放仍不在本批；不得当作已支持。
+> 本文既是契约也是实施记录，未实施项明确标注。
 
 ## 1. 修复前复现（2026-11-09）
 
@@ -100,23 +101,34 @@
 修复后对照图：[home（修复后，2124×1464）](../images/high_dpi_2026-11-09/showcase-home-175pct-scaled.png)、
 [label（修复后）](../images/high_dpi_2026-11-09/showcase-label-175pct-scaled.png)。
 
-## 4. P4.5b：混合 DPI 多显示器（待第二块显示器）
+## 4. P4.5b：混合 DPI 多显示器验收记录（2026-11-10）
 
-维护者将为本机新增第二块显示器用于不同缩放验收。实施/验收入口：
+维护者为当前系统新增第二块显示器：**主屏 2880×1800 @175%（工作区 2880×1716）+
+第二屏 2560×1440 @125%（工作区 2560×1380，Windows 报告为横向，位于主屏右侧
+x=2880）**。同一 showcase 窗口按下列场景实机验收，应用全程无崩溃：
 
-- 在 100% ↔ 175% 显示器之间**双向**移动同一窗口：逻辑尺寸保持不变，渲染 scale 与
-  framebuffer 跟随新显示器；无闪烁、无错位、无崩溃。
-- 移动后按钮/滚动条/文本光标/弹层定位的物理命中与视觉位置一致；`TextInputArea` 与
-  IME 候选窗跟随新缩放。
-- 窗口在跨屏拖动过程中（Windows `WM_GETDPISCALEDSIZE` 曲线）不出现布局抖动或光标偏移。
-- 第二显示器接入/拔出与系统缩放设置变化时的 `DISPLAY_SCALE_CHANGED` 处理；必要时补
-  `WINDOW_DISPLAY_CHANGED` 的回归。
+| 场景 | 操作 | 结果与证据 |
+| --- | --- | --- |
+| 初始化（175%） | 启动 | 日志 `ready 1200x800 logical (2100x1400 native, 2100x1400 pixels), content_scale=1.75`；外框 2124×1464、被钳入可用区域；[截图](../images/high_dpi_2026-11-09/showcase-primary-175pct.png) |
+| 175% → 125% 跳转 | `SetWindowPos` 跨屏 | `GetDpiForWindow=120`；日志 `display scale 1.75 -> 1.25; logical=1200x800 native=1500x1000 pixels=1500x1000 render_scale=1.25`；逻辑尺寸不变、framebuffer/render scale 跟随；[截图](../images/high_dpi_2026-11-09/showcase-secondary-125pct.png) |
+| 125% 物理坐标命中 | 点击侧栏 Label（客户区 160,282） | Label 页正确切换，坐标折回逻辑后命中一致；[截图](../images/high_dpi_2026-11-09/showcase-secondary-125pct-label.png) |
+| 真实标题栏拖动跨屏 | 按住标题栏分 14 步拖入第二屏 | 拖动过程中完成缩放切换：`display scale 1.75 -> 1.25; logical=1200x800 native=1500x1000 ... render_scale=1.25`；窗口被钳入第二屏可用区（日志 `clamp window position 3090,412 -> 3090,371 (usable 2880,0 2560x1380)`），无崩溃、无错位；[截图](../images/high_dpi_2026-11-09/showcase-after-drag-125pct.png) |
+| 125% 下 resize 后回 175% | 第二屏 resize 到客户区 1600×1100（逻辑 1280×880），再移回主屏 | 回主屏后 `native=2240x1540`（=1280×880×1.75）、`render_scale=1.75`，逻辑尺寸随用户 resize 更新并在跨屏后保持；[125% resize](../images/high_dpi_2026-11-09/showcase-resized-125pct.png)、[回 175%](../images/high_dpi_2026-11-09/showcase-resized-back-175pct.png) |
+| 125% → 175% 回跳 | `SetWindowPos` 回主屏 | `display scale 1.25 -> 1.75; logical=1200x800 native=2100x1400 ... render_scale=1.75`；物理坐标命中恢复；[截图](../images/high_dpi_2026-11-09/showcase-primary-175pct-restored.png) |
+
+**事件顺序观察**：真实拖动时“窗口位置钳制”可能先于 `DISPLAY_SCALE_CHANGED` 到达
+（钳制日志在 scale 日志之前），但随后按新 `content_scale` 恢复逻辑尺寸，最终状态正确；
+本轮未观察到此前担心的“逻辑尺寸被旧 scale 回写导致缩窗”问题。诊断日志固定在每次缩放
+事件打一行（`SdlPlatformWindow: display scale …`），便于后续平台复验。
+
+**仍未验收的混合 DPI 项**：
+
+- 显示器热插拔/拔出（会改变桌面布局，未在维护者机器上强制模拟）；
+- 系统缩放设置在线变化（需要改系统设置，未执行）；
+- 真实 IME 候选窗跨屏跟随（需真实输入法交互）；
+- 跨屏拖动期间最大化/全屏/贴边吸附组合；
 - Linux Wayland 分数缩放（1.25/1.5）在维护者 Linux 机上按相同矩阵复验；如 SDL 语义不同，
   回到本文第 2 节重新定形 `content_scale`，不得只在单一平台修补。
-- **已知实施风险（P4.5b 收敛）**：`WINDOW_PIXEL_SIZE_CHANGED` 与
-  `WINDOW_DISPLAY_SCALE_CHANGED` 的到达顺序会影响“逻辑尺寸回写→按新缩放恢复窗口”的结果；
-  当前按事件到达顺序更新，混合 DPI 首次移动时可能出现一次布局误差。P4.5b 用真实双屏确认
-  是否需要去抖或合并到帧边界处理。
 
 ## 5. 非目标与明确延后
 
@@ -124,4 +136,5 @@
 - 最大化/全屏与多屏工作区选择策略、窗口置顶/无边框组合尚未定形；创建与缩放变化已做
   工作区可见性钳制（见 §2 第 3 条），其余由 OS 决定。
 - macOS 仍无测试机；MSL 只保留静态产物。
-- 不把 P4.5a 当作“高 DPI 已完成”：混合 DPI、真实 IME 与 Linux 分数缩放仍待验收。
+- 不把 P4.5a/P4.5b 当作“高 DPI 全平台完成”：真实 IME 候选窗位置、Linux Wayland 分数缩放、
+  无障碍缩放、显示器热插拔与系统缩放在线变化仍未验收。
