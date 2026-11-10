@@ -1,4 +1,4 @@
-//
+﻿//
 // theme/typography_scale — Tailwind-compatible type scale and leading tokens.
 //
 // Authoring sizes are logical (DIP) pixels: the platform content scale always maps them to
@@ -20,20 +20,23 @@ namespace nandina::theme
 {
 
     /// Tailwind-compatible type steps. `base` is the reference step (1.0 ratio).
+    ///
+    /// C++ identifiers cannot contain `-`, so Tailwind's `2xl … 9xl` are spelled `xl_2 … xl_9`
+    /// here; the author-facing names (see `text_size_name`) stay `2xl … 9xl`.
     enum class TextSize : std::uint8_t {
         xs,
         sm,
         base,
         lg,
         xl,
-        xl2,
-        xl3,
-        xl4,
-        xl5,
-        xl6,
-        xl7,
-        xl8,
-        xl9,
+        xl_2,
+        xl_3,
+        xl_4,
+        xl_5,
+        xl_6,
+        xl_7,
+        xl_8,
+        xl_9,
     };
 
     /// Line-height multipliers. `normal` (1.5) is the CJK-first default for body roles;
@@ -110,21 +113,21 @@ namespace nandina::theme
                 return "lg";
             case TextSize::xl:
                 return "xl";
-            case TextSize::xl2:
+            case TextSize::xl_2:
                 return "2xl";
-            case TextSize::xl3:
+            case TextSize::xl_3:
                 return "3xl";
-            case TextSize::xl4:
+            case TextSize::xl_4:
                 return "4xl";
-            case TextSize::xl5:
+            case TextSize::xl_5:
                 return "5xl";
-            case TextSize::xl6:
+            case TextSize::xl_6:
                 return "6xl";
-            case TextSize::xl7:
+            case TextSize::xl_7:
                 return "7xl";
-            case TextSize::xl8:
+            case TextSize::xl_8:
                 return "8xl";
-            case TextSize::xl9:
+            case TextSize::xl_9:
                 return "9xl";
         }
         return "base";

@@ -35,16 +35,20 @@
 | `TextSize::base` | base | 1.0 | 16 | `text-base` |
 | `TextSize::lg` | lg | 1.125 | 18 | `text-lg` |
 | `TextSize::xl` | xl | 1.25 | 20 | `text-xl` |
-| `TextSize::xl2` | 2xl | 1.5 | 24 | `text-2xl` |
-| `TextSize::xl3` | 3xl | 1.875 | 30 | `text-3xl` |
-| `TextSize::xl4` | 4xl | 2.25 | 36 | `text-4xl` |
-| `TextSize::xl5` | 5xl | 3.0 | 48 | `text-5xl` |
-| `TextSize::xl6` | 6xl | 3.75 | 60 | `text-6xl` |
-| `TextSize::xl7` | 7xl | 4.5 | 72 | `text-7xl` |
-| `TextSize::xl8` | 8xl | 6.0 | 96 | `text-8xl` |
-| `TextSize::xl9` | 9xl | 8.0 | 128 | `text-9xl` |
+| `TextSize::xl_2` | 2xl | 1.5 | 24 | `text-2xl` |
+| `TextSize::xl_3` | 3xl | 1.875 | 30 | `text-3xl` |
+| `TextSize::xl_4` | 4xl | 2.25 | 36 | `text-4xl` |
+| `TextSize::xl_5` | 5xl | 3.0 | 48 | `text-5xl` |
+| `TextSize::xl_6` | 6xl | 3.75 | 60 | `text-6xl` |
+| `TextSize::xl_7` | 7xl | 4.5 | 72 | `text-7xl` |
+| `TextSize::xl_8` | 8xl | 6.0 | 96 | `text-8xl` |
+| `TextSize::xl_9` | 9xl | 8.0 | 128 | `text-9xl` |
 
-- 常用档位是 xs…xl5；xl6…xl9 面向展示级内容（桌面应用很少用），但一次写入，避免以后
+> **命名说明**：C++ 标识符不能包含 `-`（`xl-3` 会被解析成减法），所以 Tailwind 的 `2xl … 9xl`
+> 在代码里写作 `xl_2 … xl_9`；`text_size_name()` 与 Tailwind class 仍是 `2xl … 9xl`。
+> 不提供 `xl2` 这类紧凑拼写，避免两个名字并存。
+
+- 常用档位是 xs…xl_5；xl_6…xl_9 面向展示级内容（桌面应用很少用），但一次写入，避免以后
   因缺档位而破坏 API。
 - `NanTypeScale` 同时携带 `ratios[13]` 与 `leading[6]`；主题可改 `root_base`、任意单档
   ratio 或任意 leading 值。非法（非有限/≤0）的覆盖在解析时回退到标准值，不产生 NaN 布局。
@@ -75,7 +79,7 @@
 ```cpp
 // Token 路径：跟随主题 root base/ratio，以及未来的用户文字缩放。
 ui.make<widget::Label>(graph, "Title")
-    .text_size(theme::TextSize::xl3)    // 默认 30 逻辑 px
+    .text_size(theme::TextSize::xl_3)    // 默认 30 逻辑 px
     .leading(theme::Leading::tight)     // 1.25 × 字号
     .build();
 

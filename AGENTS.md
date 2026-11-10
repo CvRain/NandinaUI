@@ -1,4 +1,4 @@
-# Repository Guidelines
+﻿# Repository Guidelines
 
 > Fast orientation for AI assistants. Authoritative contracts live in `docs/references/`
 > (start at `README.md`, `development_loop.md`, `coding_conventions.md`); this file is the
@@ -189,7 +189,7 @@ application shell. Version `0.1.0-alpha.1`.
   hot-plug/system-scale changes and accessibility text scaling remain pending; contract:
   `docs/references/high_dpi_and_multi_display.md`.
 - **P4.6 Step 1 typography scale** (2026-11-10) adds a Tailwind-compatible
-  `theme::TextSize` (13 steps: xs…9xl) and `theme::Leading` (6 multipliers) plus a themeable
+  `theme::TextSize` (13 steps: xs…9xl, spelled `xl_2…xl_9` in C++ because identifiers cannot contain `-`) and `theme::Leading` (6 multipliers) plus a themeable
   `NanTypeScale` (`root_base`, `ratios`, `leading`) under `NanTokens::typography.scale`;
   `text::TextStyle` gains a `line_height` multiplier (0 keeps the backend default; HarfBuzz and
   the deterministic backend both consume it) and `Label` gains

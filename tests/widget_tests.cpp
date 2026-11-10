@@ -1,4 +1,4 @@
-#include "theme_test_support.hpp"
+﻿#include "theme_test_support.hpp"
 //
 // Widget-layer unit tests (Catch2 v3).
 //
@@ -1183,7 +1183,7 @@ TEST_CASE(
 
     label->set_text_size(theme::TextSize::sm);
     REQUIRE(label->font_size() == Catch::Approx(14.0F));
-    label->set_text_size(theme::TextSize::xl3);
+    label->set_text_size(theme::TextSize::xl_3);
     REQUIRE(label->font_size() == Catch::Approx(30.0F));
 
     REQUIRE(label->line_height() == Catch::Approx(0.0F)); // backend default remains

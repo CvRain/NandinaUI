@@ -1,4 +1,4 @@
-# 源码 SDK 的公共表面：头文件分类与门禁
+﻿# 源码 SDK 的公共表面：头文件分类与门禁
 
 > **状态：政策与三类门禁已落地（2026-10-18）；公开签名中的内部类型仍需评审。** 本文回答两件事：哪些头文件算**对外契约**、
 > 用什么机制保证这件事不被静默破坏。它不改变 [构建系统与 Modules 范围](build_system_scope.md)
@@ -19,7 +19,7 @@
 ## 2. 三档分类
 
 2026-11-10 P4.6 Step 1 排版尺度（experimental，新增作者 API）：新增
-`nandina/theme/typography_scale.hpp`：`TextSize`（xs…9xl，13 档 Tailwind 兼容）、
+`nandina/theme/typography_scale.hpp`：`TextSize`（xs…9xl，13 档 Tailwind 兼容；C++ 标识符不能含 `-`，因此代码拼写为 `xl_2 … xl_9`）、
 `Leading`（none…loose，6 档）、`NanTypeScale`（`root_base` + ratios + leading，主题可覆盖）
 及纯函数 `text_size_px()` / `leading_factor()` / 名称查询。`NanTypographyTokens` 新增
 `scale`；`text::TextStyle` 新增 `line_height`（0 = 后端默认，>0 = 字号乘数）；

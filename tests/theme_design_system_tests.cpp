@@ -1,4 +1,4 @@
-#include "theme_test_support.hpp"
+﻿#include "theme_test_support.hpp"
 //
 // Theme DesignSystem / shared-fragment tests.
 //
@@ -912,7 +912,7 @@ TEST_CASE("Tailwind type scale maps every step to logical pixels", "[theme][typo
     const auto system = theme::default_design_system();
     REQUIRE(system.tokens.typography.scale.root_base == Catch::Approx(theme::canonical_root_base));
     REQUIRE(
-        theme::text_size_px(system.tokens.typography.scale, theme::TextSize::xl4)
+        theme::text_size_px(system.tokens.typography.scale, theme::TextSize::xl_4)
         == Catch::Approx(36.0F)
     );
 }
