@@ -621,6 +621,14 @@ namespace nandina::widget::authoring
             return *this;
         }
 
+        /// Semantic typography role (size + leading + weight/slant defaults).
+        auto typography_role(theme::TypographyRole role) -> NodeBuilder&
+            requires requires(Node& node) { node.set_typography_role(role); }
+        {
+            node_->set_typography_role(role);
+            return *this;
+        }
+
         auto color_token(theme::ColorToken token) -> NodeBuilder&
             requires requires(Node& node) { node.set_color_token(token); }
         {

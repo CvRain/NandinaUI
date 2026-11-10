@@ -937,3 +937,61 @@ TEST_CASE("type scale honors theme overrides and sanitizes invalid values", "[th
     REQUIRE(theme::text_size_px(invalid, theme::TextSize::sm) == Catch::Approx(14.0F));
     REQUIRE(theme::leading_factor(invalid, theme::Leading::tight) == Catch::Approx(1.25F));
 }
+
+TEST_CASE("typography roles map to semantic type metrics", "[theme][typography]") {
+    constexpr std::array<std::string_view, theme::typography_role_count> expected_names {
+        "display",
+        "heading",
+        "title",
+        "subtitle",
+        "body",
+        "label",
+        "caption",
+    };
+    constexpr std::array<theme::TextSize, theme::typography_role_count> expected_size {
+        theme::TextSize::xl_4,
+        theme::TextSize::xl_2,
+        theme::TextSize::xl,
+        theme::TextSize::lg,
+        theme::TextSize::base,
+        theme::TextSize::sm,
+        theme::TextSize::xs,
+    };
+    constexpr std::array<theme::Leading, theme::typography_role_count> expected_leading {
+        theme::Leading::tight,
+        theme::Leading::snug,
+        theme::Leading::snug,
+        theme::Leading::normal,
+        theme::Leading::normal,
+        theme::Leading::tight,
+        theme::Leading::snug,
+    };
+    constexpr std::array<int, theme::typography_role_count> expected_weight {
+        600,
+        600,
+        600,
+        500,
+        400,
+        500,
+        400,
+    };
+
+    for (std::size_t index = 0; index < theme::typography_role_count; ++index) {
+        const auto role = static_cast<theme::TypographyRole>(index);
+        const auto style = theme::typography_role_style(role);
+        REQUIRE(theme::typography_role_name(role) == expected_names[index]);
+        REQUIRE(style.size == expected_size[index]);
+        REQUIRE(style.leading == expected_leading[index]);
+        REQUIRE(style.font_weight == expected_weight[index]);
+        REQUIRE(style.slant == theme::FontSlant::normal);
+    }
+
+    // Role metrics resolve through the active scale: default root base 16.
+    const theme::NanTypeScale scale;
+    const auto display = theme::typography_role_style(theme::TypographyRole::display);
+    REQUIRE(theme::text_size_px(scale, display.size) == Catch::Approx(36.0F));
+    REQUIRE(theme::leading_factor(scale, display.leading) == Catch::Approx(1.25F));
+    const auto body = theme::typography_role_style(theme::TypographyRole::body);
+    REQUIRE(theme::text_size_px(scale, body.size) == Catch::Approx(16.0F));
+    REQUIRE(theme::leading_factor(scale, body.leading) == Catch::Approx(1.5F));
+}

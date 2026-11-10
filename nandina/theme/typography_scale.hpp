@@ -1,4 +1,4 @@
-﻿//
+//
 // theme/typography_scale — Tailwind-compatible type scale and leading tokens.
 //
 // Authoring sizes are logical (DIP) pixels: the platform content scale always maps them to
@@ -9,6 +9,8 @@
 
 #ifndef NANDINA_EXPERIMENT_THEME_TYPOGRAPHY_SCALE_HPP
 #define NANDINA_EXPERIMENT_THEME_TYPOGRAPHY_SCALE_HPP
+
+#include "font_request.hpp"
 
 #include <array>
 #include <cmath>
@@ -52,6 +54,104 @@ namespace nandina::theme
 
     inline constexpr std::size_t text_size_count = 13;
     inline constexpr std::size_t leading_count = 6;
+
+    /**
+     * Semantic typography roles layered on the primitive scale/leading steps.
+     *
+     * A role names the *purpose* of a run of text (display/heading/body/...); components and
+     * pages use a role instead of hard-coding a step, and Step 2b will make the role table
+     * theme-overridable. Roles only describe type metrics (size, leading, weight, slant); color
+     * stays with the component's semantic color token.
+     */
+    enum class TypographyRole : std::uint8_t {
+        display,
+        heading,
+        title,
+        subtitle,
+        body,
+        label,
+        caption,
+    };
+
+    inline constexpr std::size_t typography_role_count = 7;
+
+    struct TypographyRoleStyle {
+        TextSize size = TextSize::base;
+        Leading leading = Leading::normal;
+        int font_weight = 400;
+        FontSlant slant = FontSlant::normal;
+    };
+
+    [[nodiscard]] constexpr auto typography_role_index(const TypographyRole role) noexcept
+        -> std::size_t {
+        return static_cast<std::size_t>(role);
+    }
+
+    [[nodiscard]] constexpr auto typography_role_name(const TypographyRole role) noexcept
+        -> std::string_view {
+        switch (role) {
+            case TypographyRole::display:
+                return "display";
+            case TypographyRole::heading:
+                return "heading";
+            case TypographyRole::title:
+                return "title";
+            case TypographyRole::subtitle:
+                return "subtitle";
+            case TypographyRole::body:
+                return "body";
+            case TypographyRole::label:
+                return "label";
+            case TypographyRole::caption:
+                return "caption";
+        }
+        return "body";
+    }
+
+    /// Canonical role table. Weight/slant have no visible effect until the default font family
+    /// carries those faces (P4.7); the mapping is recorded now so components can migrate in
+    /// Step 2b without another API change.
+    [[nodiscard]] constexpr auto typography_role_style(const TypographyRole role) noexcept
+        -> TypographyRoleStyle {
+        constexpr std::array<TypographyRoleStyle, typography_role_count> styles {
+            TypographyRoleStyle {
+                .size = TextSize::xl_4,
+                .leading = Leading::tight,
+                .font_weight = 600,
+            },
+            TypographyRoleStyle {
+                .size = TextSize::xl_2,
+                .leading = Leading::snug,
+                .font_weight = 600,
+            },
+            TypographyRoleStyle {
+                .size = TextSize::xl,
+                .leading = Leading::snug,
+                .font_weight = 600,
+            },
+            TypographyRoleStyle {
+                .size = TextSize::lg,
+                .leading = Leading::normal,
+                .font_weight = 500,
+            },
+            TypographyRoleStyle {
+                .size = TextSize::base,
+                .leading = Leading::normal,
+                .font_weight = 400,
+            },
+            TypographyRoleStyle {
+                .size = TextSize::sm,
+                .leading = Leading::tight,
+                .font_weight = 500,
+            },
+            TypographyRoleStyle {
+                .size = TextSize::xs,
+                .leading = Leading::snug,
+                .font_weight = 400,
+            },
+        };
+        return styles[typography_role_index(role)];
+    }
 
     /// Default root base: 1rem = 16 logical px.
     inline constexpr float canonical_root_base = 16.0F;

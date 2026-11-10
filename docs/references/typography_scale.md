@@ -1,9 +1,12 @@
-# 排版尺度与单位（P4.6 Step 1）
+# 排版尺度与单位（P4.6 Step 1 + Step 2a）
 
 > **状态（2026-11-10）**：Step 1 已实施——Tailwind 兼容的 13 档字号枚举、可主题覆盖的
 > `NanTypeScale`、`Leading` 行高 token、`TextStyle` 行高乘数与 `Label` 作者入口
-> （`text_size()` / `leading()` / `line_height()`）。Step 2（语义 role 消费、CJK 行高默认
-> 迁移、showcase 展示页与 golden 重批）与 Step 3（rem/root 文字缩放与无障碍 cap）仍未实施。
+> （`text_size()` / `leading()` / `line_height()`）。**Step 2a 已实施**：语义
+> `TypographyRole`（display/heading/title/subtitle/body/label/caption）与
+> `Label::set_typography_role()`；role 只提供字号/行高/字重/斜体默认值，颜色仍由组件语义色
+> token 决定，**现有组件与页面视觉不变**。Step 2b（role 表主题化、组件消费、CJK 行高默认
+> 1.5、showcase 展示页与双平台 golden 重批）与 Step 3（rem/root 文字缩放与无障碍 cap）仍未实施。
 > 本文是契约；`docs/components/label.md` 与 `docs/references/design_tokens.md` 记录用法。
 
 ## 1. 单位决定
@@ -74,16 +77,21 @@
 - `TextStyle::line_height` 语义：`0` = 后端默认；`>0` = `font_size × 该乘数`（HarfBuzz 与
   deterministic 后端都已消费）。数值必须是有限非负，非法值抛 `std::invalid_argument`。
 
-## 4. 作者 API（Step 1）
+## 4. 作者 API（Step 1 + Step 2a）
 
 ```cpp
+// 语义 role：一次给出字号 + 行高 + 字重/斜体默认值（颜色仍走组件的颜色 token）。
+ui.make<widget::Label>(graph, "Title")
+    .typography_role(theme::TypographyRole::heading)
+    .build();
+
 // Token 路径：跟随主题 root base/ratio，以及未来的用户文字缩放。
 ui.make<widget::Label>(graph, "Title")
     .text_size(theme::TextSize::xl_3)    // 默认 30 逻辑 px
     .leading(theme::Leading::tight)     // 1.25 × 字号
     .build();
 
-// 数值 override：覆盖 token；line_height(0) 恢复 token/后端默认。
+// 数值 override：覆盖 token；line_height(0) 恢复 token/role/后端默认。
 label->set_line_height(1.9F);
 
 // 绝对逻辑 px：不随 root base 变化，等价 CSS px（不是物理像素）。
@@ -94,13 +102,39 @@ label->set_font_size(28.0F);
 
 1. 显式 `set_font_size(px)` / `.font_size(px)`（实例覆盖）；
 2. 继承的 `StyleContext.font_size`（父级显式字号）；
-3. `set_text_size(TextSize)`（组件级 token）；
-4. 组件默认（Label 为 `typography.label_lg` = 18）。
-   行高：显式 `set_line_height()` > 最近一次 `set_leading()` token > 后端默认；主题变化时
-   token 会重新解析，显式数值保持不变。
-5. `set_leading()` / `set_line_height()` 都是布局相关变更：会重测文本（不是 paint-only）。
+3. `set_text_size(TextSize)`（组件级尺度 token）；
+4. `set_typography_role(role)` 的 role 字号；
+5. 组件默认（Label 为 `typography.label_lg` = 18）。
+   行高：显式 `set_line_height()` > `set_leading()` token > role 的 leading > 后端默认；
+   字重/斜体：显式 `set_font_weight/slant` 或继承 font context > role 的 weight/slant；
+   主题变化时 token/role 会重新解析，显式数值保持不变。
+6. `set_leading()` / `set_line_height()` 都是布局相关变更：会重测文本（不是 paint-only）。
 
-## 5. 主题覆盖入口
+## 5. 语义排版 role（Step 2a）
+
+`theme::TypographyRole` 在尺度/行高之上定义 7 个用途角色。role 只描述类型度量（字号、行高、
+字重、斜体），**颜色不属于 role**，仍由组件的语义色 token（如 `foreground`）决定，避免角色与
+配色耦合。默认映射（root base 16）：
+
+| role | TextSize | 默认逻辑 px | Leading | weight | 典型用途 |
+| --- | --- | --- | --- | --- | --- |
+| `display` | xl_4 | 36 | tight (1.25) | 600 | 页面主视觉标题 |
+| `heading` | xl_2 | 24 | snug (1.375) | 600 | 区块标题 |
+| `title` | xl | 20 | snug (1.375) | 600 | 卡片/列表标题 |
+| `subtitle` | lg | 18 | normal (1.5) | 500 | 次级标题 |
+| `body` | base | 16 | normal (1.5) | 400 | 正文（中文优先行高） |
+| `label` | sm | 14 | tight (1.25) | 500 | 控件标签 |
+| `caption` | xs | 12 | snug (1.375) | 400 | 说明/元数据 |
+
+- role 的 px 与 leading 仍经主题 `NanTypeScale` 解析：主题改 `root_base`、ratio 或 leading
+  factor，role 结果随之变化（见 `[widget][label][typography]` 的自定义主题用例）。
+- 字重/斜体映射现在即写入 role 表；默认字体族只有 Regular face（P4.7），所以**当前无可见
+  差异**。role 表本身暂时是固定 canonical 表，Step 2b 才把它提升为 `TypographyRoles` 的一部分
+  并允许主题覆盖；在此之前 `set_font_weight/slant` 的显式值优先于 role。
+- Step 2a 只新增 API/测试，不改任何组件默认字号与行高，也不改 showcase 页面；因此不触发
+  golden 变更。
+
+## 6. 主题覆盖入口
 
 - C++：`NanTokens::typography.scale`（`root_base` / `ratios` / `leading`）随
   `DesignSystem`/`ThemeSchemeContent` 快照进入主题；控件在 `on_theme_changed` 重新解析 token。
@@ -108,23 +142,27 @@ label->set_font_size(28.0F);
   **尚不支持任意 token 覆盖**（见 `design_tokens.md`“尚未支持”）；P4.6 Step 2 再决定是否
   把 scale 提到文件层。
 
-## 6. 验证（Step 1）
+## 7. 验证（Step 1 + Step 2a）
 
 - 单测：`[theme][typography]`（13 档映射/名称/ratio、自定义 root base 与单档覆盖、非法值回退、
-  leading 乘数、默认 DesignSystem 携带标准尺度）；`[widget][label][typography]`
-  （Label 默认 18、token 解析、主题变化重解析、显式字号优先、行高 token/数值优先级）；
+  leading 乘数、默认 DesignSystem 携带标准尺度、**7 个 role 的 size/leading/weight/slant 映射与
+  名称**）；`[widget][label][typography]`
+  （Label 默认 18、token 解析、主题变化重解析、显式字号优先、行高 token/数值优先级、
+  **role 字号/行高/字重、显式覆盖优先级、自定义主题 scale 下的 role 解析**）；
   `[text][layout][line-height]`（deterministic 后端在 `line_height=2` 时行高与总高翻倍，
-  `0` 恢复 1.2 默认）；`[authoring][typography]`（builder 链）。
-- 红先记录：临时把 `text_layout_backend.cpp` 的行高改回 `font_size * 1.2`，`[line-height]`
-  失败 `24.0f == Approx(40.0)`；恢复后通过。
-- 全量 Windows 套件与 release gates 在提交时运行；本批不改 showcase 页面与既有 golden。
+  `0` 恢复 1.2 默认）；`[authoring][typography]`（builder 链，含 `typography_role`）。
+- 红先记录：Step 1 临时把 `text_layout_backend.cpp` 的行高改回 `font_size * 1.2`，
+  `[line-height]` 失败 `24.0f == Approx(40.0)`；Step 2a 临时把 display role 的 size 改成
+  `xl_3`，`[theme][typography]` 失败 `style.size`（`6 == 7`）；恢复后均通过。
+- 全量 Windows/Linux 套件与 release gates 在提交时运行；本批不改 showcase 页面与既有 golden。
 
-## 7. 后续（未实施）
+## 8. 后续（未实施）
 
-- **Step 2**：`TypographyRoles` 扩展为 display/heading/title/body/label/caption；组件配方消费
-  role（title/body 等），正文默认 leading 切到 1.5；新增 showcase 排版展示页（新路由会改侧栏
-  命中所有页面 golden，需一次集中重批）；文件主题 token 覆盖视需要开放。
+- **Step 2b**：把 role 表提升为 `TypographyRoles` 的一部分并允许主题覆盖；组件配方/默认值消费
+  role（title/body/label 等），正文默认 leading 切到 1.5；新增 showcase 排版展示页（新路由会改
+  侧栏，命中所有页面 golden，需 Windows+Linux 一次集中重批并人工批准）；文件主题 token 覆盖
+  视需要开放。
 - **Step 3**：rem/root 文字缩放——把 `root_base` 暴露为受“用户文字缩放”影响的量，并提供
   `fixed` / `cap` 策略（“最大 28px”的语义落在这里）；`em` 父字号相对链仍非目标。
 - **P4.7**：默认字体族只有 Caskaydia Cove Regular 一个 face，`medium/bold/italic` 无可见差异；
-  需要多 face 资源或合成回退，Step 2 的 role/字重视觉验收依赖它。
+  需要多 face 资源或合成回退，Step 2b 的 role/字重视觉验收依赖它。

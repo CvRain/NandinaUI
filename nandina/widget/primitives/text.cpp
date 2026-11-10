@@ -512,6 +512,30 @@ namespace nandina::widget::primitives
         update_metrics(last_layout_constraints());
     }
 
+    void Text::apply_component_font_weight(const int weight) {
+        if (font_explicit_ || weight < 1 || weight > 1000 || style_.font.weight == weight) {
+            return;
+        }
+        style_.font.weight = weight;
+        mark_layout_dirty();
+        resolve_font();
+        update_metrics(last_layout_constraints());
+    }
+
+    void Text::apply_component_font_slant(const theme::FontSlant slant) {
+        if (font_explicit_ || style_.font.slant == slant) {
+            return;
+        }
+        style_.font.slant = slant;
+        mark_layout_dirty();
+        resolve_font();
+        update_metrics(last_layout_constraints());
+    }
+
+    auto Text::font_request_is_explicit() const noexcept -> bool {
+        return font_explicit_;
+    }
+
     auto Text::find_metrics_cache(const text::TextLayoutInput& input) const
         -> const text::TextLayoutResult* {
         for (std::size_t index = 0; index < metrics_cache_used_; ++index) {

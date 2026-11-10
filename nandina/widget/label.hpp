@@ -53,6 +53,13 @@ namespace nandina::widget
         void set_line_height(float factor);
         [[nodiscard]] auto line_height() const noexcept -> float;
 
+        /// Semantic typography role (display/heading/title/subtitle/body/label/caption). The role
+        /// supplies size + leading + weight/slant defaults; explicit size/leading setters override
+        /// the corresponding field, and color stays with the component color token. Role metrics
+        /// resolve through the active theme scale (root base/ratios/leading).
+        void set_typography_role(theme::TypographyRole role);
+        [[nodiscard]] auto typography_role() const noexcept -> std::optional<theme::TypographyRole>;
+
         /// Bind immediately. The source must outlive this binding; tree exit unbinds it.
         template<typename Source>
             requires requires(Source& source) {
@@ -87,12 +94,16 @@ namespace nandina::widget
         void apply_label_font_size();
         /// Re-resolve the leading token unless a numeric line height was set.
         void apply_leading();
+        /// Apply the role's weight/slant unless an explicit font request or inherited font
+        /// context is in charge.
+        void apply_role_font_style();
 
         reactive::EffectScope scope_;
         theme::NanTheme theme_;
         theme::ColorToken color_token_ = theme::ColorToken::on_surface;
         std::optional<theme::TextSize> text_size_;
         std::optional<theme::Leading> leading_;
+        std::optional<theme::TypographyRole> typography_role_;
         /// A numeric `set_line_height()` wins over the leading token until reset to 0.
         bool line_height_explicit_ = false;
     };

@@ -197,9 +197,15 @@ application shell. Version `0.1.0-alpha.1`.
   (`text_size`/`leading`/`line_height`). Explicit `.font_size(px)` stays the absolute logical-px
   override and wins over the token (CSS px vs rem semantics); OS content scale always applies and
   no pt/physical-pixel font size exists. Current visuals are unchanged (Label default 18,
-  line-height default 0 → backend default 1.2 fallback). Step 2 (semantic roles, body leading
-  1.5, showcase page, golden re-batch) and Step 3 (rem/root text scale + accessibility cap)
-  remain pending; font weight/slant needs P4.7. Contract: `docs/references/typography_scale.md`.
+  line-height default 0 → backend default 1.2 fallback). **P4.6 Step 2a** adds the semantic
+  `TypographyRole` set (display/heading/title/subtitle/body/label/caption) with
+  `Label::set_typography_role()` and builder `.typography_role()`: roles supply size/leading/
+  weight/slant defaults resolved through the theme scale while color stays with the component
+  color token, and explicit size/leading/font overrides win per field. Roles are still a fixed
+  canonical table and no component consumes them yet, so current visuals are unchanged. Step 2b
+  (themeable role table, component migration, body leading 1.5, showcase page, dual-platform
+  golden re-batch) and Step 3 (rem/root text scale + accessibility cap) remain pending; font
+  weight/slant needs P4.7. Contract: `docs/references/typography_scale.md`.
 - **Dual-platform verification (2026-11-10) is operational**: the Linux machine (Arch, GNOME
   Wayland, RADV RX 6750 GRE 12GB, Mesa 26.2.6) is reachable over SSH with a dedicated key; the
   full Linux suite is 129 OK / 0 FAIL and all six Linux page goldens compare with 0 changed

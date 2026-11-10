@@ -148,6 +148,12 @@ namespace nandina::widget::primitives
         [[nodiscard]] auto semantics_properties() const -> semantics::Properties override;
         void apply_component_color(foundation::NanColor color);
         void apply_component_font_size(float size);
+        /// Component-level role defaults: apply weight/slant without marking the font request as
+        /// an explicit author override, so explicit `set_font_weight()` still wins and theme
+        /// changes can re-apply the role.
+        void apply_component_font_weight(int weight);
+        void apply_component_font_slant(theme::FontSlant slant);
+        [[nodiscard]] auto font_request_is_explicit() const noexcept -> bool;
         void clear_explicit_color() noexcept;
 
     private:

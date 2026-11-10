@@ -1,4 +1,4 @@
-﻿# 源码 SDK 的公共表面：头文件分类与门禁
+# 源码 SDK 的公共表面：头文件分类与门禁
 
 > **状态：政策与三类门禁已落地（2026-10-18）；公开签名中的内部类型仍需评审。** 本文回答两件事：哪些头文件算**对外契约**、
 > 用什么机制保证这件事不被静默破坏。它不改变 [构建系统与 Modules 范围](build_system_scope.md)
@@ -17,6 +17,15 @@
 但不是一个过滤器。
 
 ## 2. 三档分类
+
+2026-11-10 P4.6 Step 2a 语义排版 role（experimental，新增作者 API）：`theme::TypographyRole`
+（display/heading/title/subtitle/body/label/caption）与 `theme::typography_role_style()` /
+`typography_role_name()`；`Label` 新增 `set_typography_role()` / `typography_role()` 与 builder
+`.typography_role()`。role 只携带 TextSize/Leading/weight/slant 默认值，颜色仍由组件颜色 token
+决定；显式字号/行高/字重优先于 role，role 的 px/leading 经主题 `NanTypeScale` 解析。role 表暂为
+固定 canonical 表，Step 2b 再主题化并让组件消费；现有页面视觉不变。另新增受保护的
+`Text::apply_component_font_weight/slant()` 与 `font_request_is_explicit()` 供组件角色实现使用。
+契约见 [排版尺度与单位](typography_scale.md) §5。
 
 2026-11-10 P4.6 Step 1 排版尺度（experimental，新增作者 API）：新增
 `nandina/theme/typography_scale.hpp`：`TextSize`（xs…9xl，13 档 Tailwind 兼容；C++ 标识符不能含 `-`，因此代码拼写为 `xl_2 … xl_9`）、

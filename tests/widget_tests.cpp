@@ -3516,3 +3516,52 @@ TEST_CASE(
     REQUIRE(backend.calls > calls);
     REQUIRE(value->font().weight == 700);
 }
+
+TEST_CASE("Label typography role supplies semantic type metrics", "[widget][label][typography]") {
+    reactive::Graph graph;
+    auto label = widget::Label::create(graph, "heading");
+    REQUIRE_FALSE(label->typography_role().has_value());
+
+    label->set_typography_role(theme::TypographyRole::display);
+    REQUIRE(label->typography_role() == theme::TypographyRole::display);
+    REQUIRE(label->font_size() == Catch::Approx(36.0F));
+    REQUIRE(label->line_height() == Catch::Approx(1.25F));
+    REQUIRE(label->font().weight == 600);
+
+    label->set_typography_role(theme::TypographyRole::body);
+    REQUIRE(label->font_size() == Catch::Approx(16.0F));
+    REQUIRE(label->line_height() == Catch::Approx(1.5F));
+    REQUIRE(label->font().weight == 400);
+
+    // Explicit size/leading overrides win over the role's corresponding field.
+    label->set_text_size(theme::TextSize::sm);
+    REQUIRE(label->font_size() == Catch::Approx(14.0F));
+    label->set_font_size(21.0F);
+    REQUIRE(label->font_size() == Catch::Approx(21.0F));
+    label->set_leading(theme::Leading::loose);
+    REQUIRE(label->line_height() == Catch::Approx(2.0F));
+    label->set_line_height(1.8F);
+    REQUIRE(label->line_height() == Catch::Approx(1.8F));
+
+    // An explicit font weight is not overwritten by later role changes.
+    label->set_typography_role(theme::TypographyRole::heading);
+    REQUIRE(label->font().weight == 600);
+    label->set_font_weight(300);
+    REQUIRE(label->font().weight == 300);
+    label->set_typography_role(theme::TypographyRole::display);
+    REQUIRE(label->font().weight == 300);
+}
+
+TEST_CASE("Label typography role follows a custom theme scale", "[widget][label][typography]") {
+    reactive::Graph graph;
+    auto custom = theme::default_theme();
+    custom.tokens.typography.scale.root_base = 20.0F;
+    custom.tokens.typography.scale.leading[theme::leading_index(theme::Leading::normal)] = 1.6F;
+
+    auto label = widget::Label::create(graph, "body", custom);
+    label->set_typography_role(theme::TypographyRole::display);
+    REQUIRE(label->font_size() == Catch::Approx(45.0F)); // 20 * 2.25
+    label->set_typography_role(theme::TypographyRole::body);
+    REQUIRE(label->font_size() == Catch::Approx(20.0F)); // 20 * 1.0
+    REQUIRE(label->line_height() == Catch::Approx(1.6F)); // theme leading override
+}

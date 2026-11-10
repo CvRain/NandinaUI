@@ -1100,3 +1100,14 @@ TEST_CASE(
     REQUIRE_NOTHROW(ui.bind(absent, &widget::Label::set_text, source));
     REQUIRE_NOTHROW(source.set("next"));
 }
+
+TEST_CASE("authoring typography role chains on Label", "[authoring][typography]") {
+    reactive::Graph graph;
+    auto label = widget::authoring::make<widget::Label>(graph, "title")
+                     .typography_role(theme::TypographyRole::heading)
+                     .build();
+    REQUIRE(label->typography_role() == theme::TypographyRole::heading);
+    REQUIRE(label->font_size() == Catch::Approx(24.0F));
+    REQUIRE(label->line_height() == Catch::Approx(1.375F));
+    REQUIRE(label->font().weight == 600);
+}

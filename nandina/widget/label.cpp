@@ -60,6 +60,7 @@ namespace nandina::widget
         }
         apply_label_font_size();
         apply_leading();
+        apply_role_font_style();
     }
 
     void Label::on_style_context_changed(const theme::ResolvedStyleContext& context) {
@@ -68,6 +69,7 @@ namespace nandina::widget
             apply_color_token();
         }
         apply_label_font_size();
+        apply_role_font_style();
     }
 
     void Label::set_text_size(const theme::TextSize size) {
@@ -105,6 +107,17 @@ namespace nandina::widget
         return primitives::Text::line_height();
     }
 
+    void Label::set_typography_role(const theme::TypographyRole role) {
+        typography_role_ = role;
+        apply_label_font_size();
+        apply_leading();
+        apply_role_font_style();
+    }
+
+    auto Label::typography_role() const noexcept -> std::optional<theme::TypographyRole> {
+        return typography_role_;
+    }
+
     void Label::apply_label_font_size() {
         const auto& context = resolved_style_context();
         if (context.font_size_from_context) {
@@ -116,16 +129,51 @@ namespace nandina::widget
             );
             return;
         }
+        if (typography_role_.has_value()) {
+            apply_component_font_size(
+                theme::text_size_px(
+                    theme_.tokens.typography.scale,
+                    theme::typography_role_style(*typography_role_).size
+                )
+            );
+            return;
+        }
         apply_component_font_size(theme_.tokens.typography.label_lg);
     }
 
     void Label::apply_leading() {
-        if (line_height_explicit_ || !leading_.has_value()) {
+        if (line_height_explicit_) {
             return;
         }
-        primitives::Text::set_line_height(
-            theme::leading_factor(theme_.tokens.typography.scale, *leading_)
-        );
+        if (leading_.has_value()) {
+            primitives::Text::set_line_height(
+                theme::leading_factor(theme_.tokens.typography.scale, *leading_)
+            );
+            return;
+        }
+        if (typography_role_.has_value()) {
+            primitives::Text::set_line_height(
+                theme::leading_factor(
+                    theme_.tokens.typography.scale,
+                    theme::typography_role_style(*typography_role_).leading
+                )
+            );
+            return;
+        }
+        // No leading source: restore the backend default (no-op when already 0).
+        primitives::Text::set_line_height(0.0F);
+    }
+
+    void Label::apply_role_font_style() {
+        if (!typography_role_.has_value() || font_request_is_explicit()) {
+            return;
+        }
+        if (resolved_style_context().font_from_context) {
+            return;
+        }
+        const auto role_style = theme::typography_role_style(*typography_role_);
+        apply_component_font_weight(role_style.font_weight);
+        apply_component_font_slant(role_style.slant);
     }
 
     void Label::apply_color_token() {
