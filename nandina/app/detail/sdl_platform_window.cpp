@@ -1,4 +1,4 @@
-//
+﻿//
 // app/detail/sdl_platform_window — SDL3 的 `IPlatformWindow` 实现。设计说明见同名头文件。
 //
 
@@ -624,7 +624,7 @@ namespace nandina::app::detail
         window_active_ = false;
         high_dpi_ = false;
         content_scale_ = 1.0F;
-        logical_size_ = {};
+        logical_size_ = foundation::NanSize::zero();
     }
 
     auto SdlPlatformWindow::content_scale() const noexcept -> float {
