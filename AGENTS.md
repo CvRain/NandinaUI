@@ -218,6 +218,18 @@ application shell. Version `0.1.0-alpha.1`.
   and page goldens remain 0-diff because the 1200×800 Label viewport only reaches the Regular
   specimen. Use `page_probe` `NANDINA_PROBE_WIDTH/HEIGHT` for tall manual visual captures.
   Contract: `docs/references/font_synthesis.md`.
+- **P4.8 page load responsiveness (diagnosed 2026-11-11, not implemented)**: navigating to a
+  text-heavy page (showcase Label) blocks the UI thread while `NanRouter::apply_navigation()`
+  synchronously calls `page->build()` and the first real shaping/layout completes; probe wall-clock
+  measurements show Label costing about 0.2–0.4 s more than the anchors page (Windows ~778 vs
+  ~371 ms, Linux ~352 vs ~121 ms process totals). Text measurement memoization and shaping-cost
+  fixes are already in place; do not re-add a shaping-result cache (rejected with data in
+  `text_shaping_cost.md` §4). Planned order: P4.8a timing baseline/bench → P4.8b progressive
+  section mounting (first frame shell, remaining sections per frame budget, cancellation,
+  placeholder/scroll stability, Label-page migration) → P4.8c opt-in build-time measurement
+  batching → long-term async/incremental shaping. It is recommended before P4.6 Step 2b's visual
+  migration because that adds another text-heavy showcase page. Contract:
+  `docs/references/page_load_responsiveness.md`.
 - **Dual-platform verification (2026-11-10) is operational**: the Linux machine (Arch, GNOME
   Wayland, RADV RX 6750 GRE 12GB, Mesa 26.2.6) is reachable over SSH with a dedicated key; the
   full Linux suite is 129 OK / 0 FAIL and all six Linux page goldens compare with 0 changed
