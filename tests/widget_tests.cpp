@@ -1,4 +1,4 @@
-﻿#include "theme_test_support.hpp"
+#include "theme_test_support.hpp"
 //
 // Widget-layer unit tests (Catch2 v3).
 //
@@ -1179,14 +1179,15 @@ TEST_CASE(
     reactive::Graph graph;
     auto label = widget::Label::create(graph, "text");
     REQUIRE_FALSE(label->text_size().has_value());
-    REQUIRE(label->font_size() == Catch::Approx(18.0F)); // typography.label_lg component default
+    REQUIRE(label->font_size() == Catch::Approx(16.0F)); // body role (base size)
+    REQUIRE(label->line_height() == Catch::Approx(1.5F)); // body role normal leading
 
     label->set_text_size(theme::TextSize::sm);
     REQUIRE(label->font_size() == Catch::Approx(14.0F));
     label->set_text_size(theme::TextSize::xl_3);
     REQUIRE(label->font_size() == Catch::Approx(30.0F));
 
-    REQUIRE(label->line_height() == Catch::Approx(0.0F)); // backend default remains
+    REQUIRE(label->line_height() == Catch::Approx(1.5F)); // body default persists
     label->set_leading(theme::Leading::normal);
     REQUIRE(label->leading().has_value());
     REQUIRE(label->line_height() == Catch::Approx(1.5F));
@@ -1267,7 +1268,8 @@ TEST_CASE(
     theme_test::Manager manager;
     auto themed = theme::default_theme();
     themed.palette.on_surface = theme::nan_color(0.62F, 0.08F, 210.0F);
-    themed.tokens.typography.label_lg = 21.0F;
+    // Label defaults to the semantic body role: override the root base so the body size follows.
+    themed.tokens.typography.scale.root_base = 21.0F;
     manager.set_theme(themed);
 
     scene::NanSceneTree tree;
@@ -3564,4 +3566,31 @@ TEST_CASE("Label typography role follows a custom theme scale", "[widget][label]
     label->set_typography_role(theme::TypographyRole::body);
     REQUIRE(label->font_size() == Catch::Approx(20.0F)); // 20 * 1.0
     REQUIRE(label->line_height() == Catch::Approx(1.6F)); // theme leading override
+}
+
+TEST_CASE(
+    "Label typography role uses the theme-overridden role table",
+    "[widget][label][typography]"
+) {
+    reactive::Graph graph;
+    auto custom = theme::default_theme();
+    auto& scale = custom.tokens.typography.scale;
+    scale.roles[theme::typography_role_index(theme::TypographyRole::heading)] =
+        theme::TypographyRoleStyle {
+            .size = theme::TextSize::xl_5,
+            .leading = theme::Leading::loose,
+            .font_weight = 700,
+    };
+
+    auto label = widget::Label::create(graph, "heading", custom);
+    label->set_typography_role(theme::TypographyRole::heading);
+    REQUIRE(label->font_size() == Catch::Approx(48.0F));
+    REQUIRE(label->line_height() == Catch::Approx(2.0F));
+    REQUIRE(label->font().weight == 700);
+
+    // The default role table is still the canonical one.
+    auto baseline = widget::Label::create(graph, "heading");
+    baseline->set_typography_role(theme::TypographyRole::heading);
+    REQUIRE(baseline->font_size() == Catch::Approx(24.0F));
+    REQUIRE(baseline->line_height() == Catch::Approx(1.375F));
 }

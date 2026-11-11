@@ -995,3 +995,29 @@ TEST_CASE("typography roles map to semantic type metrics", "[theme][typography]"
     REQUIRE(theme::text_size_px(scale, body.size) == Catch::Approx(16.0F));
     REQUIRE(theme::leading_factor(scale, body.leading) == Catch::Approx(1.5F));
 }
+
+TEST_CASE("typography roles are theme-overridable through the type scale", "[theme][typography]") {
+    theme::NanTypeScale scale;
+    const auto heading = theme::typography_role_index(theme::TypographyRole::heading);
+    scale.roles[heading] = theme::TypographyRoleStyle {
+        .size = theme::TextSize::xl_5,
+        .leading = theme::Leading::loose,
+        .font_weight = 700,
+    };
+
+    const auto style = theme::typography_role_style(scale, theme::TypographyRole::heading);
+    REQUIRE(style.size == theme::TextSize::xl_5);
+    REQUIRE(style.leading == theme::Leading::loose);
+    REQUIRE(style.font_weight == 700);
+    REQUIRE(theme::text_size_px(scale, style.size) == Catch::Approx(48.0F));
+    REQUIRE(theme::leading_factor(scale, style.leading) == Catch::Approx(2.0F));
+
+    // The canonical table stays untouched, and out-of-range role ordinals fall back to body.
+    REQUIRE(
+        theme::typography_role_style(theme::TypographyRole::heading).size == theme::TextSize::xl_2
+    );
+    const auto invalid = static_cast<theme::TypographyRole>(99);
+    REQUIRE(theme::typography_role_name(invalid) == "body");
+    REQUIRE(theme::typography_role_style(invalid).size == theme::TextSize::base);
+    REQUIRE(theme::typography_role_style(scale, invalid).size == theme::TextSize::base);
+}

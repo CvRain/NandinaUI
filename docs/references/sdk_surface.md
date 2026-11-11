@@ -18,6 +18,15 @@
 
 ## 2. 三档分类
 
+2026-11-11 P4.6 Step 2b role 表主题化与 Label 默认 body（experimental，默认行为变更）：
+`theme::NanTypeScale` 新增 `roles`（7 个 `TypographyRoleStyle`，C++ 主题可覆盖）；新增
+`typography_role_style(const NanTypeScale&, TypographyRole)` 重载，越界 role 回退 body。
+`Label` 未显式设置 role 时默认 `body`：base 16 px + normal 1.5 leading；显式 `set_font_size`/
+`set_text_size`/继承字号保留后端默认行高（除非显式 leading），`set_font_size` 会重新解析
+leading。新增 showcase Typography 展示页（`content_and_display/typography`）与 page_probe
+页面；Windows golden 候选已采集，Linux 候选与人工审批待。契约见
+[排版尺度与单位](typography_scale.md) §5。
+
 2026-11-11 P4.8b 页面渐进式分节挂载（experimental，新增作者 API）：`app::PageContext` 新增
 `DeferredSectionBuilder` / `supports_deferred_sections()` / `defer_section(widget::View
 placeholder, builder)`；页面把已入树的占位控件注册为延迟节，Router 在首帧之后每帧最多构建

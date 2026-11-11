@@ -23,7 +23,7 @@ NanTokens（尺度）
                                                           Resolved*Style（全是 NanColor / float 的具体值）→ painter
 ```
 
-- **Primitive tokens** 是 `NanTokens`：`spacing`（`xs/sm/md/lg/xl`）、`radius`（`sm/md/lg/full`）、`border`（`thin/medium/focus_ring`）、`opacity`（`disabled/hover_overlay/pressed_overlay`）、`typography`（`label_sm/md/lg` + `scale`：Tailwind 兼容 13 档比例与 6 档 leading，见 [排版尺度与单位](typography_scale.md)）、`motion`（`short/medium/long_duration`）。它们只提供尺度，不决定组件行为。圆角尺度对齐 shadcn 的 `--radius: 0.625rem` 派生关系（`sm = 6`、`md = 8`、`lg = 10`），改主题时三者要一起调。
+- **Primitive tokens** 是 `NanTokens`：`spacing`（`xs/sm/md/lg/xl`）、`radius`（`sm/md/lg/full`）、`border`（`thin/medium/focus_ring`）、`opacity`（`disabled/hover_overlay/pressed_overlay`）、`typography`（`label_sm/md/lg` + `scale`：Tailwind 兼容 13 档比例、6 档 leading 与 7 个可覆盖的语义 role，见 [排版尺度与单位](typography_scale.md)）、`motion`（`short/medium/long_duration`）。它们只提供尺度，不决定组件行为。圆角尺度对齐 shadcn 的 `--radius: 0.625rem` 派生关系（`sm = 6`、`md = 8`、`lg = 10`），改主题时三者要一起调。
 - **Reference palette** 是品牌方的着色输入：`NanReferencePalette` 持有 `primary/secondary/tertiary/neutral/success/warning/error` 七条 `NanColorScale`，每条 11 档（`ColorShade::shade_50`…`shade_950`）。主题作者通常用命名的 `NanHexScale` 书写，再由 `nan_color_scale()` 编译为内部 OKLCH 色阶。**注意 `error` 是唯一一条降序书写的色阶**（`shade_50` 最深），语义映射已按此适配，不要"顺手"改成升序。
 - **Semantic palette** 是组件唯一允许引用的颜色层：`NanColorScheme`。核心角色沿用 shadcn 的 `x` / `x_foreground` 命名约定，另有若干扩展角色，见下节。
 - **Component recipes** 是唯一事实来源：`ComponentRecipes` 为每个组件保存 `{ base, rules }`，`base` 完全指定所有片段，`rules` 是按 `tone/treatment/size/state` 等选择器匹配的增量覆盖。
@@ -186,7 +186,7 @@ token 引用、`$palettes.*` 仍是参考色阶取值，匹配失败立即报错
 
 以下现象都可在当前代码中直接确认，属于尚未收口的部分：
 
-- `TypographyRoles`（`label_sm/md/lg`）已在默认快照中填充，但组件配方仍直接引用 `ScalarToken::typography_label_*`，尚未真正消费该角色层。P4.6 Step 1 已先把 Tailwind 兼容尺度（`TextSize`/`Leading` + `NanTypeScale`）与 Label 作者入口落地；Step 2 才扩展/消费 role 并迁移组件视觉，见 [排版尺度与单位](typography_scale.md)。
+- `TypographyRoles`（`label_sm/md/lg`）已在默认快照中填充，但组件配方仍直接引用 `ScalarToken::typography_label_*`。P4.6 Step 2b 已把语义 role 表纳入 `NanTypeScale::roles`（C++ 主题可覆盖），并让 **Label 默认使用 body role（16 px / 1.5）**；配方级 role 对象/文件主题 role 覆盖仍待。见 [排版尺度与单位](typography_scale.md)。
 - 内置默认字体族 `families/default-ui` 只注册了一个 face（Caskaydia Cove Regular，`nandina/assets/default_font/default-ui.ttf`）；**P4.7 合成回退（2026-11-10）** 在缺 face 时按请求重量分级合成加粗、按 italic/oblique 请求做约 12° 倾斜，并用 HarfBuzz synthetic bold 同步 advance，因此 `set_font_weight()` / `set_font_slant()` 现在在默认字体下可见差异（Medium 较轻、Bold 较重、Italic 倾斜）；真实多 face 资源仍属后续增强。字体管线不变量另见 [合成字重/斜体回退](font_synthesis.md)；P4.6 的 Tailwind 字号尺度复用同一角色层。
 - `tone` / `treatment` 这类平铺语义变体目前只有 Button 具备；其余控件以 `state`（Checkbox、Switch、RadioButton 另有 `checked`）为主。
 - 遗留 `NanStyle` 只支持 Button 与 TextField 两类规则，因此 `set_style()` 不是通用扩展点。

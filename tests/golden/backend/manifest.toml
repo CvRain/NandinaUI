@@ -174,3 +174,25 @@ captured = "2026-10-19"
 reviewed_by = "agent review, per maintainer request 2026-10-22"
 reviewed_on = "2026-10-22"
 review_note = "Windows desktop-session SDF capture (home/label/anchors, 1200x800 x 30 frames, DXIL shader artifact); all three visually reviewed; second capture byte-identical (repeated=True) and the uploaded repeat files hash-match the repo candidates; home sha equals the CPU baseline because that page has no SDF primitives; cross-platform pixel differences are informational only and never gated"
+
+[[entries]]
+page = "typography"
+backend = "cpu"
+platform = "windows"
+image = "candidates/typography-cpu-windows.png"
+width = 1200
+height = 800
+sha256 = "90b4aa4a39705eafa871dd6946124dbfe1d67f8d1f856aa481dce4c358ea8ec2"
+status = "candidate"
+captured = "2026-10-19"
+
+[[entries]]
+page = "typography"
+backend = "sdf"
+platform = "windows"
+image = "candidates/typography-sdf-windows.png"
+width = 1200
+height = 800
+sha256 = "bd34ae6e68d3fb717392e97a06b33f1e3739f125a862e1acb7e701211bb935f8"
+status = "candidate"
+captured = "2026-10-19"

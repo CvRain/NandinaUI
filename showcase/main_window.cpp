@@ -10,6 +10,7 @@
 #include "pages/image_page.hpp"
 #include "pages/input_focus_page.hpp"
 #include "pages/label_page.hpp"
+#include "pages/typography_page.hpp"
 
 #include <nandina/widget/controls.hpp>
 
@@ -30,6 +31,11 @@ namespace nandina::showcase
             nandina::app::route<LabelPage>(app::RouteOptions {
                 .address = "content_and_display/label",
                 .title = "Label",
+                .nav_group = "内容与展示"
+            }),
+            nandina::app::route<TypographyPage>(app::RouteOptions {
+                .address = "content_and_display/typography",
+                .title = "Typography",
                 .nav_group = "内容与展示"
             }),
             nandina::app::route<ImagePage>(app::RouteOptions {

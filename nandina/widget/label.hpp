@@ -44,6 +44,11 @@ namespace nandina::widget
         void set_text_size(theme::TextSize size);
         [[nodiscard]] auto text_size() const noexcept -> std::optional<theme::TextSize>;
 
+        /// Absolute logical-px font size (inherited from Text). Label re-evaluates its leading:
+        /// an explicit size falls back to the backend default unless a leading token or numeric
+        /// line height is set.
+        void set_font_size(float size);
+
         /// Leading step resolved through the theme scale, applied as a line-height multiplier.
         /// A later explicit `set_line_height()` overrides it; theme changes re-resolve it.
         void set_leading(theme::Leading leading);

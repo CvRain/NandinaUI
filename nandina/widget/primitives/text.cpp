@@ -536,6 +536,10 @@ namespace nandina::widget::primitives
         return font_explicit_;
     }
 
+    auto Text::font_size_is_explicit() const noexcept -> bool {
+        return font_size_explicit_;
+    }
+
     auto Text::find_metrics_cache(const text::TextLayoutInput& input) const
         -> const text::TextLayoutResult* {
         for (std::size_t index = 0; index < metrics_cache_used_; ++index) {

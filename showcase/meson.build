@@ -5,6 +5,8 @@ page_files = [
     'pages/anchors_page.cpp',
     'pages/label_page.hpp',
     'pages/label_page.cpp',
+    'pages/typography_page.hpp',
+    'pages/typography_page.cpp',
     'pages/image_page.hpp',
     'pages/image_page.cpp',
     'pages/input_focus_page.hpp',

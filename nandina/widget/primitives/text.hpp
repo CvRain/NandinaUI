@@ -154,6 +154,8 @@ namespace nandina::widget::primitives
         void apply_component_font_weight(int weight);
         void apply_component_font_slant(theme::FontSlant slant);
         [[nodiscard]] auto font_request_is_explicit() const noexcept -> bool;
+        /// True when `set_font_size()` was called; component defaults must not override it.
+        [[nodiscard]] auto font_size_is_explicit() const noexcept -> bool;
         void clear_explicit_color() noexcept;
 
     private:

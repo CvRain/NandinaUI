@@ -18,6 +18,7 @@ namespace nandina::widget
         theme_(std::move(theme)) {
         apply_color_token();
         apply_label_font_size();
+        apply_leading();
     }
 
     auto Label::create(reactive::Graph& graph, std::string text, theme::NanTheme theme)
@@ -69,7 +70,13 @@ namespace nandina::widget
             apply_color_token();
         }
         apply_label_font_size();
+        apply_leading();
         apply_role_font_style();
+    }
+
+    void Label::set_font_size(const float size) {
+        primitives::Text::set_font_size(size);
+        apply_leading();
     }
 
     void Label::set_text_size(const theme::TextSize size) {
@@ -133,12 +140,17 @@ namespace nandina::widget
             apply_component_font_size(
                 theme::text_size_px(
                     theme_.tokens.typography.scale,
-                    theme::typography_role_style(*typography_role_).size
+                    theme::typography_role_style(theme_.tokens.typography.scale, *typography_role_)
+                        .size
                 )
             );
             return;
         }
-        apply_component_font_size(theme_.tokens.typography.label_lg);
+        const auto body = theme::typography_role_style(
+            theme_.tokens.typography.scale,
+            theme::TypographyRole::body
+        );
+        apply_component_font_size(theme::text_size_px(theme_.tokens.typography.scale, body.size));
     }
 
     void Label::apply_leading() {
@@ -155,8 +167,25 @@ namespace nandina::widget
             primitives::Text::set_line_height(
                 theme::leading_factor(
                     theme_.tokens.typography.scale,
-                    theme::typography_role_style(*typography_role_).leading
+                    theme::typography_role_style(theme_.tokens.typography.scale, *typography_role_)
+                        .leading
                 )
+            );
+            return;
+        }
+        // Step 2b body default: an unstyled Label is body text (base size + normal leading,
+        // 1.5 by default for CJK). Explicit/inherited sizes keep the previous backend-default
+        // leading unless the author chooses a token.
+        const auto& context = resolved_style_context();
+        const bool has_explicit_size =
+            text_size_.has_value() || font_size_is_explicit() || context.font_size_from_context;
+        if (!has_explicit_size) {
+            const auto body = theme::typography_role_style(
+                theme_.tokens.typography.scale,
+                theme::TypographyRole::body
+            );
+            primitives::Text::set_line_height(
+                theme::leading_factor(theme_.tokens.typography.scale, body.leading)
             );
             return;
         }
@@ -171,7 +200,8 @@ namespace nandina::widget
         if (resolved_style_context().font_from_context) {
             return;
         }
-        const auto role_style = theme::typography_role_style(*typography_role_);
+        const auto role_style =
+            theme::typography_role_style(theme_.tokens.typography.scale, *typography_role_);
         apply_component_font_weight(role_style.font_weight);
         apply_component_font_slant(role_style.slant);
     }

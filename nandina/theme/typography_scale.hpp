@@ -87,6 +87,13 @@ namespace nandina::theme
         return static_cast<std::size_t>(role);
     }
 
+    /// Role indexes outside the enum fall back to `body` instead of indexing out of bounds.
+    [[nodiscard]] constexpr auto sanitized_typography_role_index(const TypographyRole role) noexcept
+        -> std::size_t {
+        const auto index = typography_role_index(role);
+        return index < typography_role_count ? index : typography_role_index(TypographyRole::body);
+    }
+
     [[nodiscard]] constexpr auto typography_role_name(const TypographyRole role) noexcept
         -> std::string_view {
         switch (role) {
@@ -108,12 +115,10 @@ namespace nandina::theme
         return "body";
     }
 
-    /// Canonical role table. Weight/slant have no visible effect until the default font family
-    /// carries those faces (P4.7); the mapping is recorded now so components can migrate in
-    /// Step 2b without another API change.
-    [[nodiscard]] constexpr auto typography_role_style(const TypographyRole role) noexcept
-        -> TypographyRoleStyle {
-        constexpr std::array<TypographyRoleStyle, typography_role_count> styles {
+    /// Canonical role table. Weight/slant become visible through P4.7's synthetic fallback;
+    /// themes can override individual roles through `NanTypeScale::roles` (Step 2b).
+    inline constexpr std::array<TypographyRoleStyle, typography_role_count>
+        canonical_typography_role_styles {
             TypographyRoleStyle {
                 .size = TextSize::xl_4,
                 .leading = Leading::tight,
@@ -149,8 +154,11 @@ namespace nandina::theme
                 .leading = Leading::snug,
                 .font_weight = 400,
             },
-        };
-        return styles[typography_role_index(role)];
+    };
+
+    [[nodiscard]] constexpr auto typography_role_style(const TypographyRole role) noexcept
+        -> TypographyRoleStyle {
+        return canonical_typography_role_styles[sanitized_typography_role_index(role)];
     }
 
     /// Default root base: 1rem = 16 logical px.
@@ -191,6 +199,10 @@ namespace nandina::theme
         float root_base = canonical_root_base;
         std::array<float, text_size_count> ratios = canonical_text_size_ratios;
         std::array<float, leading_count> leading = canonical_leading_multipliers;
+        /// Step 2 semantic role table; themes may replace individual roles without changing the
+        /// primitive scale. Values stay in terms of TextSize/Leading so root-base overrides apply.
+        std::array<TypographyRoleStyle, typography_role_count> roles =
+            canonical_typography_role_styles;
     };
 
     [[nodiscard]] constexpr auto text_size_index(const TextSize size) noexcept -> std::size_t {
@@ -288,6 +300,13 @@ namespace nandina::theme
     leading_factor(const NanTypeScale& scale, const Leading leading) noexcept -> float {
         const auto index = leading_index(leading);
         return detail::valid_positive(scale.leading[index], canonical_leading_multipliers[index]);
+    }
+
+    /// Role lookup through a (possibly theme-overridden) type scale.
+    [[nodiscard]] constexpr auto
+    typography_role_style(const NanTypeScale& scale, const TypographyRole role) noexcept
+        -> TypographyRoleStyle {
+        return scale.roles[sanitized_typography_role_index(role)];
     }
 
 } // namespace nandina::theme

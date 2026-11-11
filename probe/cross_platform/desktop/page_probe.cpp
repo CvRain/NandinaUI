@@ -53,6 +53,7 @@
 #include <showcase/pages/home_page.hpp>
 #include <showcase/pages/input_focus_page.hpp>
 #include <showcase/pages/label_page.hpp>
+#include <showcase/pages/typography_page.hpp>
 
 #include <memory>
 #include <string_view>
@@ -259,6 +260,11 @@ int main() {
                 .title = "Label",
                 .nav_group = "表单",
             }),
+            nandina::app::route<nandina::showcase::TypographyPage>(nandina::app::RouteOptions {
+                .address = "content_and_display/typography",
+                .title = "Typography",
+                .nav_group = "内容与展示"
+            }),
             nandina::app::route<nandina::showcase::InputFocusPage>(nandina::app::RouteOptions {
                 .address = "input_and_focus/focus",
                 .title = "输入与焦点",
@@ -313,6 +319,9 @@ int main() {
         }
         else if (page == "label") {
             started = router.start<nandina::showcase::LabelPage>();
+        }
+        else if (page == "typography") {
+            started = router.start<nandina::showcase::TypographyPage>();
         }
         else if (page == "input_focus") {
             started = router.start<nandina::showcase::InputFocusPage>();
