@@ -272,22 +272,23 @@ namespace nandina::app
         auto async_scope = dispatcher_ && background_executor_
             ? std::make_unique<AsyncScope>(*dispatcher_, *background_executor_)
             : nullptr;
-        PageContext context {
-            *graph_,
+        std::vector<DeferredSection> deferred_sections;
+        auto context = make_page_context(
             *scope,
-            theme(),
-            store_,
-            store_key_,
-            resources_,
-            font_loader_,
-            font_families_,
             async_scope.get(),
-            theme_manager_,
-            dispatcher_,
-            overlay_host_,
-            drag_controller_,
-            navigation()
-        };
+            [&deferred_sections](
+                widget::View placeholder,
+                PageContext::DeferredSectionBuilder builder
+            ) -> bool {
+                deferred_sections.push_back(
+                    DeferredSection {
+                        .placeholder = std::move(placeholder),
+                        .builder = std::move(builder),
+                    }
+                );
+                return true;
+            }
+        );
         auto root = page->build(context);
         if (!root) {
             throw std::runtime_error("NanRouter::build_frame: page build returned null root");
@@ -310,7 +311,125 @@ namespace nandina::app
             .scope = std::move(scope),
             .async_scope = std::move(async_scope),
             .address = std::move(route_address),
+            .deferred_sections = std::move(deferred_sections),
         };
+    }
+
+    auto NanRouter::make_page_context(
+        reactive::ReactiveScope& scope,
+        AsyncScope* async_scope,
+        std::move_only_function<bool(widget::View, PageContext::DeferredSectionBuilder)>
+            defer_sections
+    ) -> PageContext {
+        return PageContext {
+            *graph_,
+            scope,
+            theme(),
+            store_,
+            store_key_,
+            resources_,
+            font_loader_,
+            font_families_,
+            async_scope,
+            theme_manager_,
+            dispatcher_,
+            overlay_host_,
+            drag_controller_,
+            navigation(),
+            std::move(defer_sections),
+        };
+    }
+
+    void NanRouter::schedule_deferred_pump() {
+        if (!current_ || current_->deferred_sections.empty()) {
+            return;
+        }
+        const auto root = current_->root;
+        if (!root) {
+            current_->deferred_sections.clear();
+            return;
+        }
+        if (dispatcher_ == nullptr) {
+            while (current_ && current_->root == root && !current_->deferred_sections.empty()) {
+                pump_deferred_sections(root, false);
+            }
+            return;
+        }
+        if (current_->deferred_pump_posted) {
+            return;
+        }
+        current_->deferred_pump_posted = true;
+        if (!post_ui_task([this, root] { pump_deferred_sections(root, true); })) {
+            if (current_ && current_->root == root) {
+                current_->deferred_pump_posted = false;
+            }
+        }
+    }
+
+    void NanRouter::pump_deferred_sections(
+        const std::shared_ptr<scene::NanNode2D>& root,
+        const bool schedule_next
+    ) {
+        if (!current_ || current_->root != root || root == nullptr) {
+            return;
+        }
+        current_->deferred_pump_posted = false;
+        if (current_->deferred_sections.empty()) {
+            return;
+        }
+        auto section = std::move(current_->deferred_sections.front());
+        current_->deferred_sections.erase(current_->deferred_sections.begin());
+        auto* placeholder = section.placeholder.get();
+        // The page may have been retired since this task was posted (and its placeholder
+        // detached); never build content for an unmounted tree.
+        if (placeholder == nullptr || placeholder->parent() == nullptr) {
+            if (schedule_next) {
+                schedule_deferred_pump();
+            }
+            return;
+        }
+        try {
+            auto submit = [this](
+                              widget::View next_placeholder,
+                              PageContext::DeferredSectionBuilder builder
+                          ) -> bool {
+                if (!current_) {
+                    return false;
+                }
+                current_->deferred_sections.push_back(
+                    DeferredSection {
+                        .placeholder = std::move(next_placeholder),
+                        .builder = std::move(builder),
+                    }
+                );
+                return true;
+            };
+            auto context =
+                make_page_context(*current_->scope, current_->async_scope.get(), std::move(submit));
+            auto view = section.builder(context);
+            if (!view) {
+                throw std::runtime_error("deferred page section builder returned null");
+            }
+            if (auto* parent = placeholder->parent(); parent != nullptr) {
+                // replace_child() removes the old node and appends the replacement; deferred
+                // sections must keep their original sibling position, so remove + insert at the
+                // captured index instead.
+                std::size_t index = 0;
+                while (index < parent->child_count() && parent->get_child(index) != placeholder) {
+                    ++index;
+                }
+                if (index < parent->child_count()) {
+                    (void)parent->remove_child(*placeholder);
+                    (void)parent->insert_child(index, std::move(view));
+                }
+            }
+        }
+        catch (...) {
+            report_page_error(current_->address, std::current_exception());
+        }
+        if (schedule_next) {
+            schedule_deferred_pump();
+        }
     }
 
     auto
@@ -390,6 +509,8 @@ namespace nandina::app
             current_ = std::move(next);
             // 换页成功后才发布当前路由：观察者（侧边栏 / 导航栏）据此更新高亮。
             current_page_->set(page_key);
+            // The shell paints this frame; deferred sections start on the next dispatcher drain.
+            schedule_deferred_pump();
         }
         catch (...) {
             // 失败必须保持当前页面与当前路由不变。这里**不重新抛出**：带 dispatcher
@@ -445,6 +566,10 @@ namespace nandina::app
     }
 
     void NanRouter::retire_frame(Frame& frame) {
+        // Deferred section builders can capture page nodes/state; drop them before the page
+        // scope/page object is torn down, and never build a section for a retired frame.
+        frame.deferred_sections.clear();
+        frame.deferred_pump_posted = false;
         // 退役顺序按 page_and_router.md §4：先让旧页面的回调失效并解除它的响应式
         // 订阅与异步任务，最后才拆根。反过来（先 detach_root）会让 on_exit_tree 在
         // 页面订阅仍然生效时运行，回调可能去操作正在拆除的子树。

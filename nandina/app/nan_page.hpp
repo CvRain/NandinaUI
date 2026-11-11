@@ -209,6 +209,10 @@ namespace nandina::app
 
     class PageContext {
     public:
+        /// Builds one deferred page section. The router invokes it after the page's first frame
+        /// with a fresh PageContext for the still-current page.
+        using DeferredSectionBuilder = std::move_only_function<widget::View(PageContext&)>;
+
         PageContext(
             reactive::Graph& graph,
             reactive::ReactiveScope& scope,
@@ -223,7 +227,8 @@ namespace nandina::app
             UiDispatcher* dispatcher = nullptr,
             scene::OverlayHost* overlay_host = nullptr,
             widget::DragController* drag_controller = nullptr,
-            Navigation navigation = {}
+            Navigation navigation = {},
+            std::move_only_function<bool(widget::View, DeferredSectionBuilder)> defer_sections = {}
         ):
             graph_(&graph),
             scope_(&scope),
@@ -238,7 +243,38 @@ namespace nandina::app
             dispatcher_(dispatcher),
             overlay_host_(overlay_host),
             drag_controller_(drag_controller),
-            navigation_(std::move(navigation)) {}
+            navigation_(std::move(navigation)),
+            defer_sections_(std::move(defer_sections)) {}
+
+        [[nodiscard]] auto supports_deferred_sections() const noexcept -> bool {
+            return static_cast<bool>(defer_sections_);
+        }
+
+        /// Register a section to be built after the current frame. `placeholder` must already be
+        /// part of the page tree; once this section's turn arrives the framework replaces it with
+        /// the builder's view (in the same sibling position). Page authors should prefer a
+        /// fixed-height placeholder so the first frame's scroll extent is stable.
+        ///
+        /// When the context is not driven by a router (no deferred scheduler), the builder runs
+        /// synchronously and its view is returned instead of the placeholder.
+        [[nodiscard]] auto defer_section(widget::View placeholder, DeferredSectionBuilder builder)
+            -> widget::View {
+            if (!placeholder || !builder) {
+                throw std::invalid_argument(
+                    "PageContext::defer_section requires a placeholder and a builder"
+                );
+            }
+            if (!defer_sections_) {
+                return builder(*this);
+            }
+            auto kept = placeholder;
+            if (!defer_sections_(placeholder, std::move(builder))) {
+                throw std::runtime_error(
+                    "PageContext::defer_section: deferred section scheduling is unavailable"
+                );
+            }
+            return kept;
+        }
 
         /// Copyable, non-owning navigation capability. Capture this value in
         /// callbacks; never capture PageContext itself by reference.
@@ -371,6 +407,7 @@ namespace nandina::app
         scene::OverlayHost* overlay_host_ = nullptr;
         widget::DragController* drag_controller_ = nullptr;
         Navigation navigation_;
+        std::move_only_function<bool(widget::View, DeferredSectionBuilder)> defer_sections_;
     };
 
     namespace detail

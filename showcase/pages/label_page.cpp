@@ -531,15 +531,45 @@ namespace nandina::showcase
                            .gap(chrome.block)
                            .cross_alignment(widget::LayoutAlignment::stretch);
 
+        // 文本密集型页面：首帧只构建页面壳、简介与 Typography，其余节按帧渐进挂载，
+        // 避免导航后整页同步构建+首次整形把 UI 冻住数百毫秒（见
+        // docs/references/page_load_responsiveness.md）。占位高度只影响首帧滚动范围，
+        // 真实节挂载后由布局自然收回。
+        auto defer_section = [&context, &content, &ui](
+                                 const float estimated_height,
+                                 std::move_only_function<widget::View(app::PageContext&)> builder
+                             ) -> void {
+            auto placeholder =
+                ui.column().width(widget::authoring::fill).height(estimated_height).build();
+            const auto slot = context.defer_section(placeholder, std::move(builder));
+            // Placeholder and every section builder in this page are controls; the deferred API
+            // returns the generic View so the router can replace any node.
+            content.children(std::static_pointer_cast<scene::NanControl>(slot));
+        };
+
         content.children(gen_brief_intro_section(context));
-        content.children(gen_typography_section(context));
-        content.children(gen_font_style_section(context));
-        content.children(gen_color_section(context));
-        content.children(gen_wrapping_section(context));
-        content.children(gen_overflow_section(context));
-        content.children(gen_alignment_section(context));
-        content.children(gen_reactive_section(context));
-        content.children(gen_semantics_section(context));
+        defer_section(320.0F, [](app::PageContext& ctx) {
+            return gen_typography_section(ctx).build();
+        });
+        defer_section(340.0F, [](app::PageContext& ctx) {
+            return gen_font_style_section(ctx).build();
+        });
+        defer_section(400.0F, [](app::PageContext& ctx) { return gen_color_section(ctx).build(); });
+        defer_section(260.0F, [](app::PageContext& ctx) {
+            return gen_wrapping_section(ctx).build();
+        });
+        defer_section(260.0F, [](app::PageContext& ctx) {
+            return gen_overflow_section(ctx).build();
+        });
+        defer_section(340.0F, [](app::PageContext& ctx) {
+            return gen_alignment_section(ctx).build();
+        });
+        defer_section(200.0F, [](app::PageContext& ctx) {
+            return gen_reactive_section(ctx).build();
+        });
+        defer_section(220.0F, [](app::PageContext& ctx) {
+            return gen_semantics_section(ctx).build();
+        });
 
         return ui.scroll_view()
             .width(widget::authoring::fill)

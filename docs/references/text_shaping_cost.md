@@ -272,13 +272,16 @@ CJK 段落照常逐字换行。测试在 `tests/text_layout_header_tests.cpp`（
 - 完整 UAX #14（属性表 + 收尾标点规则）与西文断词（hyphenation）：见 §8.4。
 - 绘制遍历的 z 序缓存与裁剪剔除：见 [跨平台后端探测](cross_platform_backend_probe.md)。
 
-## 10. 页面加载阻塞（2026-11-11 诊断）
+## 10. 页面加载阻塞（2026-11-11 诊断与 P4.8b 实施）
 
 用户反馈文本密集页面（showcase Label）进入时要等待加载完成，期间无法操作。实测页面成本
 （`page_probe` 进程墙钟差值，Windows/Linux）：Label 比 anchors 多约 **0.2–0.4 s**，与本文
 §5.1 的构建测量和首次真实整形同源。根因是 Router 在 UI 线程同步构建整页并在同一帧完成
 首次布局，没有先画外壳/骨架或让出帧。
 
-候选方案（渐进式分节挂载为推荐主路径、构建期批量模式与长期异步整形）、验收标准以及与
-P4.6 Step 2b 的排序建议见 [页面加载响应性](page_load_responsiveness.md)。本页保留测量与
-已否决缓存的历史结论，不重复设计。
+**P4.8b 已实施（2026-11-11）**：`PageContext::defer_section` 让页面把重节注册为“占位 +
+builder”，Router 在首帧后每帧最多构建一节并在原兄弟位置替换占位；showcase Label 页只在
+导航事务里构建简介节，Typography/Font style/颜色/Wrapping/Overflow/Alignment/Reactive/
+Semantics 在后续 8 个 dispatcher drain 中挂载。Windows probe 首帧页面成本从约 0.2–0.4 s
+降到约 **85 ms**，完整 1200×800 页面与迁移前 golden 为 0 像素差异。其余候选方案（构建期批量
+测量、长期异步整形）与验收见 [页面加载响应性](page_load_responsiveness.md)。

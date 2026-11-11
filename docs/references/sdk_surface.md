@@ -18,6 +18,12 @@
 
 ## 2. 三档分类
 
+2026-11-11 P4.8b 页面渐进式分节挂载（experimental，新增作者 API）：`app::PageContext` 新增
+`DeferredSectionBuilder` / `supports_deferred_sections()` / `defer_section(widget::View
+placeholder, builder)`；页面把已入树的占位控件注册为延迟节，Router 在首帧之后每帧最多构建
+一节并在原兄弟位置替换占位，换页/销毁丢弃未执行节，builder 异常走错误处理器；无 dispatcher
+的宿主同步执行。契约见 [页面与路由](page_and_router.md) §4.1、[页面加载响应性](page_load_responsiveness.md)。
+
 2026-11-10 P4.7 合成字重/斜体回退（experimental）：新增 `nandina/text/font_synthesis.hpp`
 （`FontSynthesis { bold, oblique, bold_em }`、`synthetic_font_style()`、`synthetic_bold_em` /
 `synthetic_oblique_shear`；500/600/700+ 分级强度，缺 face 时生效）。`FreeTypeFontFace` 的

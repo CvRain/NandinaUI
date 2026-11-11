@@ -22,7 +22,7 @@
 - [设计令牌与主题系统](design_tokens.md)：三层令牌模型、配方与解析优先级、外观切换，以及控件作者的样式规则。
 - [排版尺度与单位](typography_scale.md)：**P4.6 Step 1 已实施（2026-11-10）**：逻辑 px 单位决定（无 pt、无物理像素字号）、Tailwind 兼容 13 档 `TextSize` + 主题可覆盖 `NanTypeScale`、6 档 `Leading` 行高 token、`Label::text_size()/leading()/line_height()` 与 `TextStyle` 行高乘数；**Step 2a 已实施（2026-11-10）**：语义 `TypographyRole` 7 角色 + `Label::set_typography_role()`（无视觉变化）；Step 2b（role 主题化/组件消费、正文 1.5 行高、showcase 与双平台 golden 重批）与 Step 3（rem/root 文字缩放与无障碍 cap）待实施。
 - [双平台验证：Windows + Linux 协作流程](dual_platform_verification.md)：**2026-11-10 双平台链路已打通**：Linux（Arch、GNOME Wayland、RADV RX 6750 GRE）经 SSH 远程构建/测试，全量 129 OK、6 条页面 golden 0 差异；远程会话环境、采集/审批流程、安全边界与后续平台验证入口计划。
-- [页面加载响应性](page_load_responsiveness.md)：**诊断完成（2026-11-11，待实施）**：文本密集页面（showcase Label）在 UI 线程同步构建+首次整形导致导航阻塞，实测比轻页面多约 0.2–0.4 s；建议 P4.8a 计时基线 → P4.8b 渐进式分节挂载（首帧外壳、按帧预算挂载、取消/占位/滚动稳定）→ 构建期批量测量 → 长期异步整形；建议排在 P4.6 Step 2b 视觉迁移之前。
+- [页面加载响应性](page_load_responsiveness.md)：**P4.8b 渐进式分节挂载已实施（2026-11-11）**：`PageContext::defer_section` + Router 每帧最多构建一节、原位置替换占位、换页丢弃/异常上报/无 dispatcher 同步 fallback；showcase Label 页首帧页面成本从约 0.2–0.4 s 降到约 85 ms（Windows probe 口径），完整页面 golden 保持 0 差异；独立计时基线、P4.8c 构建期批量测量与长期异步整形仍待。
 - [D2：主题方案、作者入口与状态订阅](theme_authoring_and_state.md)：**首批窄投影已提交 `8920f3a`；第 3 步已提交 `995e6ae`；第 4 步观察/作者入口已提交 `4746173`；第 4a 步 CPU 合成器已提交 `fef829a`，软件、Linux/Hyprland+RADV 与 Windows 11/D3D12 离屏及默认 swapchain 读回复核完成**。规范身份、跨家族亮暗搭配、原子文件导入与只读投影；第 4b 步 `3e2542a`；第 4c 步命名颜色字面量已提交 `f383201`；第 4d 步 TOML 命名颜色字面量已提交 `5061b39`；Shell 多方案框架准备已提交 `f821f40`；注册配色门槛、Linux 默认 swapchain/其他驱动读回仍待实施。
 - [溢出与裁剪契约](overflow_and_clip.md)：容器如何声明裁剪、render 如何执行，以及绘制与命中如何共享同一份语义。
 - [节点表现层](node_presentation.md)：属性动画代价分级、已落地的 L2 `visual::Path`，以及形状家族与盒子模型规划；anchors 背景见 §2，规范见独立 reference。

@@ -29,6 +29,7 @@
 #include <string>
 #include <string_view>
 #include <thread>
+#include <vector>
 
 namespace
 {
@@ -1643,4 +1644,227 @@ TEST_CASE("the router publishes its current page reactively", "[app][router][sig
     app::NanRouter unconfigured {other_graph, theme};
     REQUIRE_FALSE(unconfigured.configure(app::Routes {}));
     REQUIRE_FALSE(unconfigured.current_page().get().valid());
+}
+
+namespace
+{
+    using namespace nandina;
+
+    struct DeferredProbeParams {
+        int* build_count = nullptr;
+        int* section_runs = nullptr;
+        std::vector<std::string>* built_names = nullptr;
+        bool fail_second = false;
+    };
+
+    class DeferredProbePage final: public app::Page<DeferredProbeParams> {
+    public:
+        explicit DeferredProbePage(DeferredProbeParams params): Page(params) {}
+
+        [[nodiscard]] auto build(app::PageContext& context) -> widget::View override {
+            ++*params().build_count;
+            auto root = std::make_shared<scene::NanControl>(foundation::NanSize(240, 180));
+            root->set_name("deferred-root");
+
+            const auto add_section = [&](const int index) {
+                auto slot = std::make_shared<scene::NanControl>(foundation::NanSize(40, 20));
+                slot->set_name("slot-" + std::to_string(index));
+                root->add_child(slot);
+
+                auto* runs = params().section_runs;
+                auto* names = params().built_names;
+                const bool fail = params().fail_second && index == 1;
+                const auto name = "section-" + std::to_string(index);
+                (void)context.defer_section(
+                    slot,
+                    [runs, names, name, fail](app::PageContext&) -> widget::View {
+                        ++*runs;
+                        if (names != nullptr) {
+                            names->push_back(name);
+                        }
+                        if (fail) {
+                            throw std::runtime_error("deferred section failed");
+                        }
+                        auto view =
+                            std::make_shared<scene::NanControl>(foundation::NanSize(40, 20));
+                        view->set_name(name);
+                        return view;
+                    }
+                );
+            };
+
+            add_section(0);
+            add_section(1);
+            add_section(2);
+            return root;
+        }
+    };
+} // namespace
+
+TEST_CASE("deferred page sections mount one per dispatcher drain", "[app][router][deferred]") {
+    reactive::Graph graph;
+    const auto theme = theme::default_theme();
+    app::UiDispatcher dispatcher;
+    scene::NanSceneTree tree;
+    app::NanRouter
+        router {graph, theme, nullptr, app::StoreKey {}, nullptr, nullptr, nullptr, &dispatcher};
+    tree.set_root(router.outlet());
+
+    int builds = 0;
+    int runs = 0;
+    std::vector<std::string> names;
+    REQUIRE(router.configure(
+        app::Routes {
+            app::route<DeferredProbePage>({.address = "deferred"}),
+        }
+    ));
+    REQUIRE(router.navigation().navigate<DeferredProbePage>(DeferredProbeParams {
+        .build_count = &builds,
+        .section_runs = &runs,
+        .built_names = &names,
+    }));
+
+    REQUIRE(dispatcher.drain() == 1);
+    REQUIRE(builds == 1);
+    REQUIRE(runs == 0);
+    auto* root = router.outlet()->page();
+    REQUIRE(root != nullptr);
+    REQUIRE(root->child_count() == 3);
+    REQUIRE(root->get_child(0)->name() == "slot-0");
+
+    REQUIRE(dispatcher.drain() == 1);
+    REQUIRE(runs == 1);
+    REQUIRE(root->child_count() == 3);
+    REQUIRE(root->get_child(0)->name() == "section-0");
+    REQUIRE(root->get_child(1)->name() == "slot-1");
+
+    REQUIRE(dispatcher.drain() == 1);
+    REQUIRE(runs == 2);
+    REQUIRE(root->get_child(1)->name() == "section-1");
+
+    REQUIRE(dispatcher.drain() == 1);
+    REQUIRE(runs == 3);
+    REQUIRE(root->get_child(2)->name() == "section-2");
+    REQUIRE(dispatcher.pending_count() == 0);
+    REQUIRE(names == std::vector<std::string> {"section-0", "section-1", "section-2"});
+}
+
+TEST_CASE("deferred sections mount synchronously without a dispatcher", "[app][router][deferred]") {
+    reactive::Graph graph;
+    const auto theme = theme::default_theme();
+    app::NanRouter router {graph, theme};
+    scene::NanSceneTree tree;
+    tree.set_root(router.outlet());
+
+    int builds = 0;
+    int runs = 0;
+    std::vector<std::string> names;
+    REQUIRE(router.configure(
+        app::Routes {
+            app::route<DeferredProbePage>({.address = "deferred"}),
+        }
+    ));
+    REQUIRE(router.navigation().navigate<DeferredProbePage>(DeferredProbeParams {
+        .build_count = &builds,
+        .section_runs = &runs,
+        .built_names = &names,
+    }));
+
+    REQUIRE(builds == 1);
+    REQUIRE(runs == 3);
+    auto* root = router.outlet()->page();
+    REQUIRE(root != nullptr);
+    REQUIRE(root->child_count() == 3);
+    REQUIRE(root->get_child(0)->name() == "section-0");
+    REQUIRE(root->get_child(1)->name() == "section-1");
+    REQUIRE(root->get_child(2)->name() == "section-2");
+}
+
+TEST_CASE("retiring a page drops pending deferred sections", "[app][router][deferred]") {
+    reactive::Graph graph;
+    const auto theme = theme::default_theme();
+    app::UiDispatcher dispatcher;
+    scene::NanSceneTree tree;
+    app::NanRouter
+        router {graph, theme, nullptr, app::StoreKey {}, nullptr, nullptr, nullptr, &dispatcher};
+    tree.set_root(router.outlet());
+
+    int builds = 0;
+    int runs = 0;
+    std::vector<std::string> names;
+    REQUIRE(router.configure(
+        app::Routes {
+            app::route<DeferredProbePage>({.address = "deferred"}),
+        }
+    ));
+    REQUIRE(router.navigation().navigate<DeferredProbePage>(DeferredProbeParams {
+        .build_count = &builds,
+        .section_runs = &runs,
+        .built_names = &names,
+    }));
+    REQUIRE(dispatcher.drain() == 1);
+    REQUIRE(runs == 0);
+
+    router.clear();
+    REQUIRE(router.outlet()->page() == nullptr);
+    // The already-posted pump must not build sections for the retired page.
+    while (dispatcher.pending_count() != 0) {
+        (void)dispatcher.drain();
+    }
+    REQUIRE(runs == 0);
+    REQUIRE(names.empty());
+}
+
+TEST_CASE(
+    "deferred section failures are reported without blocking later sections",
+    "[app][router][deferred]"
+) {
+    reactive::Graph graph;
+    const auto theme = theme::default_theme();
+    app::UiDispatcher dispatcher;
+    scene::NanSceneTree tree;
+    app::NanRouter
+        router {graph, theme, nullptr, app::StoreKey {}, nullptr, nullptr, nullptr, &dispatcher};
+    tree.set_root(router.outlet());
+
+    std::string reported_route;
+    std::exception_ptr reported_error;
+    router.set_page_error_handler(
+        [&reported_route, &reported_error](std::string_view route, std::exception_ptr error) {
+            reported_route = std::string(route);
+            reported_error = std::move(error);
+        }
+    );
+
+    int builds = 0;
+    int runs = 0;
+    std::vector<std::string> names;
+    REQUIRE(router.configure(
+        app::Routes {
+            app::route<DeferredProbePage>({.address = "deferred-failure"}),
+        }
+    ));
+    REQUIRE(router.navigation().navigate<DeferredProbePage>(DeferredProbeParams {
+        .build_count = &builds,
+        .section_runs = &runs,
+        .built_names = &names,
+        .fail_second = true,
+    }));
+    REQUIRE(dispatcher.drain() == 1);
+    auto* root = router.outlet()->page();
+    REQUIRE(root != nullptr);
+
+    REQUIRE(dispatcher.drain() == 1); // section-0
+    REQUIRE(runs == 1);
+    REQUIRE(reported_error == nullptr);
+
+    REQUIRE(dispatcher.drain() == 1); // section-1 throws
+    REQUIRE(runs == 2);
+    REQUIRE(reported_error != nullptr);
+    REQUIRE(reported_route == "deferred-failure");
+    REQUIRE(root->get_child(1)->name() == "slot-1");
+
+    REQUIRE(dispatcher.drain() == 1); // section-2 still runs
+    REQUIRE(runs == 3);
+    REQUIRE(root->get_child(2)->name() == "section-2");
 }

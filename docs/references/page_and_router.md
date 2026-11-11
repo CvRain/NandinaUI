@@ -102,6 +102,16 @@ public:
 
 `PageContext` 提供构建作用域、Store 和导航句柄；`BuildContext` 负责声明式控件构建，不认识 `app::NanRouter`。删去旧的 `build(BuildContext&)` 便利重载，避免 PageContext 被降级后丢失服务。参数存于新创建的 Page 实例，`params()` 在该实例寿命内有效；异步回调需要的值应自行复制。
 
+### 4.1 渐进式分节挂载（`PageContext::defer_section`）
+
+文本密集型页面不应在导航事务里同步构建全部节点。`PageContext::defer_section(placeholder, builder)` 注册一个延迟节：
+
+- `placeholder` 必须是已经加入页面树的控件（建议固定高度，让首帧滚动范围稳定）；`builder` 在页面首帧之后的 dispatcher 任务阶段运行，返回的 `widget::View` 在**原兄弟位置**替换占位，而不是追加到末尾。
+- 每帧最多构建一节。Router 在导航提交后投递泵任务，因此首帧只绘制页面壳与已构建节；页面换页/销毁时未执行的节被丢弃，已投递的泵任务按根节点身份失效。
+- builder 抛出的异常走 `set_page_error_handler`，后续节继续执行；builder 收到的 `PageContext&` 只在本次调用内有效，不得跨帧捕获。
+- 没有 dispatcher 的宿主（单元测试/离屏探针）在导航调用内同步执行所有节，行为确定；渐进性只影响有任务阶段的真实窗口。
+- 该流程不改变最终场景树：showcase Label 页迁移前后 1200×800 golden 为 0 像素差异。
+
 切换按事务处理：先验证目标并在独立页面作用域中构建新页面；成功后提交新根节点，再使旧页面回调失效、取消旧页面异步任务、关闭它拥有的浮层、解除焦点和响应式订阅，最后拆除旧根节点。Shell 与 Shell 作用域始终保留。若新页面构建失败，保留旧页面及当前路由，清理未提交的新作用域，并将错误交给窗口的错误处理路径；不可留下空白 Outlet 或静默吞掉异常。
 
 失败路径的实现：`NanRouter` 捕获构建期异常，回滚未提交的记账与作用域，然后调用已安装的错误处理器。`NanWindow` 在 `use_router()` 时把处理器接到 `on_error()`（默认实现记录 error 日志，覆写可接入自己的错误界面）；不继承窗口的场景与测试用 `NanRouter::set_page_error_handler()` 接管。因此 `navigate()` **不抛异常**：失败返回 `false`，错误另行上报——带 dispatcher 时调用点在 `UiDispatcher::drain()` 的任务里，异常抛出去会穿出主循环并终止进程。
@@ -161,6 +171,7 @@ Outlet 的换页是**原子**的：旧页面先摘、新页面后挂，任何时
 4. 回调按值捕获 Navigation 后可安全请求跳转；窗口关闭后旧句柄安全失败；事件期请求到任务阶段才切换。
 5. 未注册目标、重复注册、缺失初始路由、重复 Outlet、页面构建失败均有明确可测试的行为；失败不得破坏当前页面。
 6. 更新 `tests/router_tests.cpp`、playground、showcase 与 Getting Started 第 6 章；旧栈及转场 API 已删除，剩余工作集中在示例与教程表达统一。
+7. 渐进式分节：首帧只包含已构建节；每个 dispatcher drain 最多挂载一节；占位被替换后兄弟顺序不变；换页/销毁时未执行的 builder 不得运行；builder 异常上报且不阻塞后续节；无 dispatcher 宿主同步完成；迁移 showcase Label 页后 6 条页面 golden 保持 0 差异。
 7. 根据窗口真实运行验证焦点、Overlay 清理、异常路径和布局；无窗口单测覆盖路由模型与作用域释放。
 
 当前事实仍以源码为准。实施过程中若 API 形状调整，应先同步此合约和相关测试，再修改面向使用者的教程。Getting Started 由项目作者写正文，AI 只核对符号与可运行示例，遵守[文档分工](../components/coverage.md)。

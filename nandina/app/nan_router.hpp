@@ -428,6 +428,13 @@ namespace nandina::app
     private:
         /// 当前唯一页面。Router 只维护一个当前路由，所以这里是 optional 而不是栈；
         /// 页面身份（page_key）也只存在于此，避免出现第二个"当前"的说法。
+        /// One page section deferred to a later frame: the placeholder is already mounted and the
+        /// builder produces the view that replaces it in place.
+        struct DeferredSection {
+            widget::View placeholder;
+            PageContext::DeferredSectionBuilder builder;
+        };
+
         struct Frame {
             PageKey page_key = {};
             std::unique_ptr<detail::PageBase> page;
@@ -435,6 +442,9 @@ namespace nandina::app
             std::unique_ptr<reactive::ReactiveScope> scope;
             std::unique_ptr<AsyncScope> async_scope;
             std::string address;
+            /// Sections built one per frame after the first paint; cleared on retirement.
+            std::vector<DeferredSection> deferred_sections;
+            bool deferred_pump_posted = false;
         };
 
         /// 把构建期异常交给已安装的处理器；没有处理器时记 error 日志，绝不吞掉。
@@ -470,6 +480,21 @@ namespace nandina::app
         [[nodiscard]] auto
         apply_navigation(PageKey page_key, std::unique_ptr<detail::PageBase> page) -> bool;
         [[nodiscard]] auto post_ui_task(std::move_only_function<void()> task) -> bool;
+
+        /// Build a PageContext for the current frame; the deferred submit hook appends to the
+        /// frame's queue (or to the local build queue while the frame is being constructed).
+        [[nodiscard]] auto make_page_context(
+            reactive::ReactiveScope& scope,
+            AsyncScope* async_scope,
+            std::move_only_function<bool(widget::View, PageContext::DeferredSectionBuilder)>
+                defer_sections
+        ) -> PageContext;
+        /// Post one pump task for the current frame if deferred sections remain and none is posted.
+        void schedule_deferred_pump();
+        /// Build and mount at most one deferred section, then schedule the next pump. `root`
+        /// identifies the frame that scheduled the task; a navigation in between drops the work.
+        void
+        pump_deferred_sections(const std::shared_ptr<scene::NanNode2D>& root, bool schedule_next);
 
         reactive::Graph* graph_;
         /// 由构造函数创建（graph_ 就绪之后），见 current_page()。
