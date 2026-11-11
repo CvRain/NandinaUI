@@ -350,6 +350,19 @@ namespace nandina::widget
                 );
             }
 
+            /// MenuItemNode 不是 Text 节点，但持有两个 Text 成员；像 Button 一样把场景树的
+            /// 默认文本管线/字体上下文转发给它们，否则标签会走 IRenderDevice 的调试字体回退
+            /// （高 DPI 下还会把 renderer scale 重置成 1）。
+            void apply_default_text_pipeline(const text::TextPipeline& pipeline) override {
+                label_text_.apply_default_text_pipeline(pipeline);
+                shortcut_text_.apply_default_text_pipeline(pipeline);
+            }
+
+            void apply_font_context(text::FontPipelineCache& context) override {
+                label_text_.apply_font_context(context);
+                shortcut_text_.apply_font_context(context);
+            }
+
             MenuItemKind kind_ = MenuItemKind::action;
             std::string label_;
             std::string shortcut_;

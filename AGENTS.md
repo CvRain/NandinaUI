@@ -236,6 +236,15 @@ application shell. Version `0.1.0-alpha.1`.
   the page root weakly). Remaining: optional timing log/bench, P4.8c build-time measurement
   batching, long-term async/incremental shaping. Contracts:
   `docs/references/page_and_router.md` §4.1 and `docs/references/page_load_responsiveness.md`.
+- **High-DPI dropdown-menu regression (2026-11-11, fixed)**: opening a menu at 175% once shrank
+  the whole app because `MenuItemNode`'s embedded `Text` members never received the scene-tree
+  default text pipeline, so labels fell back to `SdlRenderDevice::draw_text()`'s debug font; that
+  path reset `SDL_SetRenderScale` to 1.0 instead of restoring the platform's 1.75. `MenuItemNode`
+  now forwards `apply_default_text_pipeline()`/`apply_font_context()` like Button, and
+  `draw_text()` saves/restores the caller render scale. Regressions:
+  `[dropdown-menu][render][text]` and `[visual][text][sdl][device]` (both red-first). At 175% the
+  menu now opens without any page resize and its Chinese labels render through the real glyph
+  pipeline. Contract: `docs/references/high_dpi_and_multi_display.md` §6.
 - **Showcase Chinese localization (2026-11-11)**: all user-facing showcase copy is now Simplified
   Chinese (component/API/token names stay English, page headings are bilingual like
   「标签（Label）」); multi-line descriptions use `theme::Leading::normal` (1.5) through

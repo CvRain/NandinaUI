@@ -138,3 +138,36 @@ x=2880）**。同一 showcase 窗口按下列场景实机验收，应用全程�
 - macOS 仍无测试机；MSL 只保留静态产物。
 - 不把 P4.5a/P4.5b 当作“高 DPI 全平台完成”：真实 IME 候选窗位置、Linux Wayland 分数缩放、
   无障碍缩放、显示器热插拔与系统缩放在线变化仍未验收。
+
+## 6. 高 DPI 回归：DropdownMenu 打开使整页缩小（2026-11-11，已修复）
+
+维护者在 175% 会话里点击输入与焦点页的「打开菜单」后，整个应用（含侧栏）瞬间缩小到约
+0.63 并锚在左上角，但命中坐标仍按原布局工作。复现与定位：
+
+- `MenuItemNode` 的 `primitives::Text` 成员没有转发场景树的默认文本管线/字体上下文，
+  菜单文字因此走 `Text::on_draw` 的调试字体回退；
+- `SdlRenderDevice::draw_text()` 在该回退路径里先 `SDL_SetRenderScale(font_size/8)`，
+  然后把 renderer scale 硬重置为 `1.0`，覆盖了平台在 175% 下设置的 `1.75`；
+- 逻辑布局/命中仍按 1200×800，而渲染 scale 变成 1，所以整页视觉缩小、交互位置错位。
+  1× 及既有 golden 不暴露该问题（scale 本来就是 1）。
+
+修复：
+
+- `MenuItemNode` 像 `Button`/`BreadcrumbLink` 一样实现
+  `apply_default_text_pipeline()` / `apply_font_context()`，把管线转发给
+  `label_text_` / `shortcut_text_`，菜单标签改走真实字形管线；
+- `SdlRenderDevice::draw_text()` 保存并恢复调用方的 renderer scale
+  （按当前 scale × 调试字号比例绘制），不再假设调用方是 1×。
+
+回归测试：
+
+- `[dropdown-menu][render][text]`：装载默认文本管线后，菜单打开时标签由
+  `ITextLayoutRenderer` 绘制，回退文本只剩预先挂载的触发按钮 "Open"（红先：修复前
+  renderer 0 次、fallback 9 次）；
+- `[visual][text][sdl][device]`：在 1.75 renderer scale 下调用调试字体回退，
+  `SDL_GetRenderScale` 仍为 1.75（红先：修复前 1.0）；
+- 真实 showcase 175% 会话复验：菜单打开后窗口/布局尺寸不变，中文菜单项清晰，
+  整页不再缩放。
+
+这是 P4.5 高 DPI 验收的一个新边界：**任何临时的 renderer scale 修改都必须成对恢复**，
+不能用“重置为 1”代替保存/恢复。

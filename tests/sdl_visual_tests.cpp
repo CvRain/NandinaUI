@@ -611,3 +611,30 @@ TEST_CASE(
     INFO("linear-space expectation must be rejected by the tolerance");
     CHECK(std::abs(actual.r - linear_two.r) > kChannelTolerance);
 }
+
+TEST_CASE(
+    "SDL render device draw_text preserves the caller render scale",
+    "[visual][text][sdl][device]"
+) {
+    SoftwareCanvas canvas {64, 64};
+    auto& renderer = canvas.renderer();
+    REQUIRE(SDL_SetRenderScale(&renderer, 1.75F, 1.75F));
+
+    render::SdlRenderDevice device {renderer};
+    device.begin_frame();
+    // The deterministic/debug-font fallback path is used when a Text node has no
+    // ITextLayoutRenderer; it must not leak its own scale into the renderer.
+    device.draw_text(
+        "x",
+        foundation::NanPoint(4.0F, 4.0F),
+        14.0F,
+        foundation::NanColor::from_hex(0xFFFFFFU)
+    );
+    device.end_frame();
+
+    float scale_x = 0.0F;
+    float scale_y = 0.0F;
+    REQUIRE(SDL_GetRenderScale(&renderer, &scale_x, &scale_y));
+    CHECK(scale_x == Catch::Approx(1.75F).margin(0.001F));
+    CHECK(scale_y == Catch::Approx(1.75F).margin(0.001F));
+}

@@ -10,6 +10,7 @@
 #include <nandina/scene/overlay_host.hpp>
 #include <nandina/scene/scene_tree.hpp>
 #include <nandina/semantics/semantics.hpp>
+#include <nandina/text/text_layout_backend.hpp>
 #include <nandina/theme/theme_manager.hpp>
 #include <nandina/widget/build_context.hpp>
 #include <nandina/widget/builtin_component_traits.hpp>
@@ -34,6 +35,7 @@ namespace
         int rounded_rects = 0;
         int text_calls = 0;
         int lines = 0;
+        std::vector<std::string> fallback_texts;
 
         void begin_frame() override {}
         void end_frame() override {}
@@ -58,12 +60,27 @@ namespace
         void draw_circle(const foundation::NanPoint&, float, const foundation::NanColor&) override {
         }
         void draw_text(
-            std::string_view,
+            std::string_view text,
             const foundation::NanPoint&,
             float,
             const foundation::NanColor&
         ) override {
             ++text_calls;
+            fallback_texts.emplace_back(text);
+        }
+    };
+
+    class FixedTextRenderer final: public text::ITextLayoutRenderer {
+    public:
+        int draws = 0;
+
+        void draw(
+            const text::TextLayoutResult&,
+            render::DrawContext&,
+            foundation::NanPoint,
+            foundation::NanColor
+        ) override {
+            ++draws;
         }
     };
 
@@ -265,6 +282,34 @@ TEST_CASE("dropdown menu renders every MenuItemKind", "[dropdown-menu][render]")
     REQUIRE(device.text_calls >= 7);
     REQUIRE(device.lines >= 1);
     REQUIRE(device.rounded_rects >= 1);
+}
+
+TEST_CASE(
+    "dropdown menu item text uses the tree text pipeline renderer",
+    "[dropdown-menu][render][text]"
+) {
+    FixedTextRenderer renderer;
+    MenuHarness harness;
+    harness.tree.set_default_text_pipeline(
+        text::TextPipeline {
+            .backend = &text::deterministic_text_layout_backend(),
+            .renderer = &renderer,
+        }
+    );
+    harness.menu->set_items(sample_items());
+    auto* surface = harness.open_and_layout();
+    REQUIRE(surface != nullptr);
+
+    RecordingDevice device;
+    harness.tree.draw(device);
+    // MenuItemNode must forward the tree pipeline to its embedded Text; otherwise the
+    // fallback debug-font path draws labels through IRenderDevice::draw_text. The trigger
+    // was mounted before the default pipeline was installed, so its "Open" label may
+    // still use that fallback; no menu label may reach it.
+    CHECK(renderer.draws > 0);
+    for (const auto& text: device.fallback_texts) {
+        CHECK(text == "Open");
+    }
 }
 
 TEST_CASE(

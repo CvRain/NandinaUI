@@ -1149,15 +1149,33 @@ namespace nandina::render
         set_color(*renderer_, color);
         // SDL 的内置 8x8 调试字体：能证明「文字能落到同一套坐标/裁剪里」，
         // 但**不是**真正的文本路径（真正的路径是 update_alpha_texture_region + draw_texture_region）。
-        // SDL_RenderDebugText 用当前 draw color 渲染，字号靠 render scale 缩放。
+        // 该回退路径只应在没有 ITextLayoutRenderer 时才被调用；它必须保存并恢复调用方的
+        // renderer scale，否则高 DPI（平台把 scale 设为 1.75）会被重置回 1，整个页面缩到左上角。
+        float saved_scale_x = 1.0F;
+        float saved_scale_y = 1.0F;
+        (void)SDL_GetRenderScale(renderer_, &saved_scale_x, &saved_scale_y);
+        if (!std::isfinite(saved_scale_x) || saved_scale_x <= 0.0F) {
+            saved_scale_x = 1.0F;
+        }
+        if (!std::isfinite(saved_scale_y) || saved_scale_y <= 0.0F) {
+            saved_scale_y = 1.0F;
+        }
         const auto scale = std::max(font_size / 8.0F, 0.5F);
-        check_sdl(SDL_SetRenderScale(renderer_, scale, scale), "SDL_SetRenderScale");
+        const float target_scale_x = saved_scale_x * scale;
+        const float target_scale_y = saved_scale_y * scale;
+        check_sdl(
+            SDL_SetRenderScale(renderer_, target_scale_x, target_scale_y),
+            "SDL_SetRenderScale"
+        );
         const std::string owned(text);
         check_sdl(
             SDL_RenderDebugText(renderer_, pos.get_x() / scale, pos.get_y() / scale, owned.c_str()),
             "SDL_RenderDebugText"
         );
-        check_sdl(SDL_SetRenderScale(renderer_, 1.0F, 1.0F), "SDL_SetRenderScale(reset)");
+        check_sdl(
+            SDL_SetRenderScale(renderer_, saved_scale_x, saved_scale_y),
+            "SDL_SetRenderScale(restore)"
+        );
     }
 
     auto SdlRenderDevice::supports_alpha_textures() const -> bool {
