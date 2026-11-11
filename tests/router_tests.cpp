@@ -1868,3 +1868,46 @@ TEST_CASE(
     REQUIRE(runs == 3);
     REQUIRE(root->get_child(2)->name() == "section-2");
 }
+TEST_CASE("pending deferred pumps do not extend the page lifetime", "[app][router][deferred]") {
+    reactive::Graph graph;
+    const auto theme = theme::default_theme();
+    app::UiDispatcher dispatcher;
+    scene::NanSceneTree tree;
+    app::NanRouter
+        router {graph, theme, nullptr, app::StoreKey {}, nullptr, nullptr, nullptr, &dispatcher};
+    tree.set_root(router.outlet());
+
+    int builds = 0;
+    int runs = 0;
+    std::vector<std::string> names;
+    REQUIRE(router.configure(
+        app::Routes {
+            app::route<DeferredProbePage>({.address = "deferred"}),
+        }
+    ));
+    REQUIRE(router.navigation().navigate<DeferredProbePage>(DeferredProbeParams {
+        .build_count = &builds,
+        .section_runs = &runs,
+        .built_names = &names,
+    }));
+    REQUIRE(dispatcher.drain() == 1);
+
+    std::weak_ptr<scene::NanNode> page_root;
+    {
+        auto* root = router.outlet()->page();
+        REQUIRE(root != nullptr);
+        page_root = root->weak_from_this();
+        REQUIRE_FALSE(page_root.expired());
+    }
+
+    // A pump task is still queued here (sections were not drained). Retiring the page must drop
+    // the last strong reference immediately: the queued task may only hold a weak reference, or
+    // the page tree would outlive the render device at teardown (probe FRAMES=1/3 crash).
+    router.clear();
+    REQUIRE(page_root.expired());
+    while (dispatcher.pending_count() != 0) {
+        (void)dispatcher.drain();
+    }
+    REQUIRE(page_root.expired());
+    REQUIRE(runs == 0);
+}

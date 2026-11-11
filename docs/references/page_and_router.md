@@ -107,7 +107,7 @@ public:
 文本密集型页面不应在导航事务里同步构建全部节点。`PageContext::defer_section(placeholder, builder)` 注册一个延迟节：
 
 - `placeholder` 必须是已经加入页面树的控件（建议固定高度，让首帧滚动范围稳定）；`builder` 在页面首帧之后的 dispatcher 任务阶段运行，返回的 `widget::View` 在**原兄弟位置**替换占位，而不是追加到末尾。
-- 每帧最多构建一节。Router 在导航提交后投递泵任务，因此首帧只绘制页面壳与已构建节；页面换页/销毁时未执行的节被丢弃，已投递的泵任务按根节点身份失效。
+- 每帧最多构建一节。Router 在导航提交后投递泵任务，因此首帧只绘制页面壳与已构建节；页面换页/销毁时未执行的节被丢弃，已投递的泵任务按根节点身份失效。**泵任务只捕获页面根的弱引用**（锁后使用），避免页面树在 render device 之后才析构；`pending deferred pumps do not extend the page lifetime` 固定这条生命周期。
 - builder 抛出的异常走 `set_page_error_handler`，后续节继续执行；builder 收到的 `PageContext&` 只在本次调用内有效，不得跨帧捕获。
 - 没有 dispatcher 的宿主（单元测试/离屏探针）在导航调用内同步执行所有节，行为确定；渐进性只影响有任务阶段的真实窗口。
 - 该流程不改变最终场景树：showcase Label 页迁移前后 1200×800 golden 为 0 像素差异。

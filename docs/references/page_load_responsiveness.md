@@ -68,7 +68,10 @@ anchors 的差值为 **~85 ms**（实施前按 `FRAMES=3` 口径约 ~408 ms）�
    换页/销毁丢弃未执行节；builder 异常上报；无 dispatcher 宿主同步完成。showcase Label 页
    只同步构建简介节，Typography/Font style/颜色/Wrapping/Overflow/Alignment/Reactive/
    Semantics 共 8 节按帧挂载。`[app][router][deferred]` 覆盖首帧、逐帧、同步 fallback、
-   换页丢弃与异常继续；红先把泵任务改成空实现，3 个用例失败（`runs` 停在 0）。
+   换页丢弃、异常继续与**页面生命周期**；红先把泵任务改成空实现，3 个用例失败（`runs` 停在
+   0）；生命周期修复前 Linux 短帧 probe（`FRAMES=1/3`）在退出时 SIGSEGV（泵任务强引用页面根，
+   页面树被拖到 render device 之后才析构），改为弱引用根 + 锁后使用，并加
+   `pending deferred pumps do not extend the page lifetime` 回归（红先恢复强引用后该用例失败）。
 3. **P4.8c 构建期测量收敛**（未实施）：样式原子应用 / opt-in 批量构建，先量后改，
    不破坏“构建后即有尺寸”的契约。
 4. **长期**：若分节后仍有单节超大文本，再评估异步整形或按需段落布局；

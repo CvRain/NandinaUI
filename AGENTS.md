@@ -228,9 +228,11 @@ application shell. Version `0.1.0-alpha.1`.
   overflow/alignment/reactive/semantics over the next 8 drains: first-frame page cost measured
   ~85 ms over anchors (was ~0.2–0.4 s blocking), full 1200×800 page golden remains 0-diff.
   Tests `[app][router][deferred]` cover first frame, per-drain mounting, ordering, retirement,
-  errors and the no-dispatcher fallback (red-first: disabling the pump failed 3 cases with runs=0).
-  Remaining: Linux same-metric re-measure, optional timing log/bench, P4.8c build-time measurement
-  batching, long-term async/incremental shaping. Contracts:
+  errors, the no-dispatcher fallback and page lifetime (red-first: disabling the pump failed 3
+  cases with runs=0; restoring a strong root capture in the queued pump failed the lifetime test
+  because the page tree outlived the render device on Linux `FRAMES=1/3` — the pump now captures
+  the page root weakly). Remaining: Linux same-metric re-measure, optional timing log/bench, P4.8c
+  build-time measurement batching, long-term async/incremental shaping. Contracts:
   `docs/references/page_and_router.md` §4.1 and `docs/references/page_load_responsiveness.md`.
 - **Dual-platform verification (2026-11-10) is operational**: the Linux machine (Arch, GNOME
   Wayland, RADV RX 6750 GRE 12GB, Mesa 26.2.6) is reachable over SSH with a dedicated key; the

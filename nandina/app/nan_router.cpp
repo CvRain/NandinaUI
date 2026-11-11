@@ -359,7 +359,17 @@ namespace nandina::app
             return;
         }
         current_->deferred_pump_posted = true;
-        if (!post_ui_task([this, root] { pump_deferred_sections(root, true); })) {
+        // Never extend the page root's lifetime past the router/device: a queued task that
+        // outlives the frame would otherwise keep the page tree alive until the dispatcher is
+        // destroyed (probe/window teardown can destroy the render device first). The frame keeps
+        // the root alive while the page is current; weak_ptr only re-locks for the pump itself.
+        const std::weak_ptr<scene::NanNode2D> root_weak = root;
+        if (!post_ui_task([this, root_weak] {
+                if (const auto locked = root_weak.lock()) {
+                    pump_deferred_sections(locked, true);
+                }
+            }))
+        {
             if (current_ && current_->root == root) {
                 current_->deferred_pump_posted = false;
             }
