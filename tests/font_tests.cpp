@@ -306,6 +306,22 @@ TEST_CASE("GlyphAtlas grows instead of failing when it runs out of space", "[tex
     REQUIRE(atlas.find(U'a', 24.0F) == &first);
 }
 
+TEST_CASE("GlyphAtlas grows in both axes when it runs out of height", "[text][atlas][growth]") {
+    auto face = std::make_shared<text::FreeTypeFontFace>(test_font_path());
+    text::GlyphAtlas atlas(face, 32, 32, 1, 128);
+
+    // 每个字形都窄于初始宽度，因此容量压力只来自纵向行数。扩容策略必须同时加宽，
+    // 否则图集会被用成 32×128 的长条，几十个普通字形就会触发 "does not fit"。
+    for (float size = 24.0F; size <= 33.0F; size += 1.0F) {
+        REQUIRE(atlas.cache(U'a', size).pixel_bounds.is_valid());
+    }
+
+    CHECK(atlas.width() > 32);
+    CHECK(atlas.height() > 32);
+    CHECK(atlas.width() <= text::GlyphAtlas::kMaxDimension);
+    CHECK(atlas.height() <= text::GlyphAtlas::kMaxDimension);
+}
+
 TEST_CASE("GlyphAtlas skips a glyph larger than the maximum atlas", "[text][atlas]") {
     auto face = std::make_shared<text::FreeTypeFontFace>(test_font_path());
     // 把上限收紧到 64，这样用一个中等字号就能造出超过上限的字形位图，

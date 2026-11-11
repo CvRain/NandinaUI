@@ -245,6 +245,13 @@ application shell. Version `0.1.0-alpha.1`.
   `[dropdown-menu][render][text]` and `[visual][text][sdl][device]` (both red-first). At 175% the
   menu now opens without any page resize and its Chinese labels render through the real glyph
   pipeline. Contract: `docs/references/high_dpi_and_multi_display.md` §6.
+- **GlyphAtlas narrow-growth fix (2026-11-11)**: `GlyphAtlas::grow_to_fit()` used to expand only
+  the axis required by the current allocation. After a row wrap the requirement looks purely
+  vertical, so the atlas grew from 256×256 into a 256×4096 strip while 94% of each row stayed
+  unused; visiting showcase pages in order then made normal 25×22 glyphs fail with
+  `does not fit a 4096x4096 atlas`, blanking Chinese text on the Input & Focus page. Growth now
+  doubles both axes together (still capped at `kMaxDimension`); the 32×32-to-128 regression
+  `[text][atlas][growth]` is red-first. Contract: `docs/references/text_shaping_cost.md` §11.
 - **Showcase Chinese localization (2026-11-11)**: all user-facing showcase copy is now Simplified
   Chinese (component/API/token names stay English, page headings are bilingual like
   「标签（Label）」); multi-line descriptions use `theme::Leading::normal` (1.5) through

@@ -200,11 +200,14 @@ namespace nandina::text
                 // GlyphAtlasTexture::draw 对无效 pixel_bounds 本来就会跳过，
                 // 代价只是这一个字形不显示，而不是整个应用崩掉。
                 log::error(
-                    "GlyphAtlas: glyph {}x{} does not fit a {}x{} atlas; skipping it",
+                    "GlyphAtlas: glyph {}x{} does not fit a {}x{} atlas (actual {}x{}); "
+                    "skipping it",
                     width,
                     height,
                     max_dimension_,
-                    max_dimension_
+                    max_dimension_,
+                    width_,
+                    height_
                 );
                 return foundation::NanRect::empty();
             }
@@ -240,13 +243,13 @@ namespace nandina::text
         }
         int next_width = width_;
         int next_height = height_;
+        // Grow both axes together. A row-wrap makes the requirement look purely vertical
+        // (required_width stays small), so growing only the required axis turns the atlas
+        // into a narrow strip (observed: 256x4096 full while 94% of each row was unused).
+        // Square-ish growth keeps the 2D packing capacity available.
         while (next_width < required_width || next_height < required_height) {
-            if (next_width < required_width) {
-                next_width = std::min(max_dimension_, next_width * 2);
-            }
-            if (next_height < required_height) {
-                next_height = std::min(max_dimension_, next_height * 2);
-            }
+            next_width = std::min(max_dimension_, next_width * 2);
+            next_height = std::min(max_dimension_, next_height * 2);
         }
         return resize(next_width, next_height);
     }
