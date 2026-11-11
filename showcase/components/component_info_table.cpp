@@ -51,6 +51,7 @@ namespace nandina::showcase
             ui.expanded().child(ui.make<widget::Label>(std::string(value))
                                     .color_token(theme::ColorToken::foreground)
                                     .font_size(chrome.body)
+                                    .leading(theme::Leading::normal)
                                     .width(widget::authoring::fill)
                                     .configure([](widget::Label& label) {
                                         label.set_overflow(text::TextOverflow::wrap);
@@ -73,8 +74,8 @@ namespace nandina::showcase
                         .gap(chrome.group)
                         .cross_alignment(widget::LayoutAlignment::stretch);
 
-        rows.children(field_row("File location", this->file_location_));
-        rows.children(field_row("Inherits", this->inherits_));
+        rows.children(field_row("文件位置", this->file_location_));
+        rows.children(field_row("继承", this->inherits_));
 
         if (not this->tips_.empty()) {
             auto bullets = ui.column()
@@ -101,7 +102,7 @@ namespace nandina::showcase
                               .width(widget::authoring::fill)
                               .gap(chrome.item)
                               .cross_alignment(widget::LayoutAlignment::stretch)
-                              .children(caption_text(ui, chrome, "Tips"))
+                              .children(caption_text(ui, chrome, "提示"))
                               .children(bullets));
         }
 

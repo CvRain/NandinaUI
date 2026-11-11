@@ -43,7 +43,7 @@ namespace nandina::showcase
                                    .color_token(theme::ColorToken::info)
                                    .font_size(13.0F)
                                    .build();
-            const auto note = ui.make<widget::Label>("header / list / footer 仍由 Column 排列")
+            const auto note = ui.make<widget::Label>("页眉/列表/页脚仍由 Column 排列")
                                   .color_token(theme::ColorToken::muted_foreground)
                                   .font_size(13.0F)
                                   .build();
@@ -164,7 +164,7 @@ namespace nandina::showcase
                                     .gap(kGap)
                                     .cross_alignment(widget::LayoutAlignment::center)
                                     .children(
-                                        ui.make<widget::Label>("Anchors 布局：侧边栏停靠切换")
+                                        ui.make<widget::Label>("锚点布局：侧边栏停靠切换")
                                             .color_token(theme::ColorToken::foreground)
                                             .font_size(20.0F),
                                         ui.expanded(),

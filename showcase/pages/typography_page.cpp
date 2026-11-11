@@ -60,13 +60,13 @@ namespace nandina::showcase
                 .width(widget::authoring::fill)
                 .gap(chrome.block)
                 .cross_alignment(widget::LayoutAlignment::stretch)
-                .children(page_heading(ui, chrome, "Typography"))
+                .children(page_heading(ui, chrome, "排版（Typography）"))
                 .children(supporting_text(
                     ui,
                     chrome,
-                    "P4.6 Step 2: the Tailwind-compatible TextSize scale, the Leading multipliers, "
-                    "and the semantic roles that map them onto purposes. Body text now defaults to "
-                    "1.5 leading through the body role; every role is theme-overridable.",
+                    "P4.6 第 2 步：兼容 Tailwind 的 TextSize 字号尺度、Leading 行高倍数，"
+                    "以及把两者映射到具体用途的语义角色。正文现在通过 body 角色默认使用 "
+                    "1.5 行高；每个角色都可以由主题覆盖。",
                     8
                 ));
         }
@@ -123,9 +123,9 @@ namespace nandina::showcase
             return section_block(
                 ui,
                 chrome,
-                "Type scale",
-                "Thirteen Tailwind-compatible steps; px values follow root base × ratio and stay "
-                "logical (the OS content scale is applied by the renderer).",
+                "字号尺度",
+                "十三个兼容 Tailwind 的字号档位；px 值按根基准 × 比例推导，始终为逻辑像素，"
+                "OS 内容缩放由渲染器施加。",
                 rows
             );
         }
@@ -144,8 +144,8 @@ namespace nandina::showcase
                 theme::Leading::loose,
             };
             constexpr std::string_view paragraph =
-                "行高决定多行正文的呼吸感。The quick brown fox jumps over the lazy dog, and the "
-                "second sentence keeps the sample long enough to wrap.";
+                "行高决定多行正文的呼吸感：同一段文字在六种行高下对照，只有行距变化，字号与字重"
+                "保持一致。样本长度足以折成多行，便于观察段落整体的疏密与节奏。";
 
             auto rows = ui.column()
                             .width(widget::authoring::fill)
@@ -185,9 +185,8 @@ namespace nandina::showcase
             return section_block(
                 ui,
                 chrome,
-                "Leading",
-                "Leading is a multiplier of the font size. The same paragraph is repeated so only "
-                "the line height changes; body text defaults to normal (1.5).",
+                "行高",
+                "行高是字号的比例倍数。同一段落重复出现，只改变行高；正文默认 normal（1.5）。",
                 rows
             );
         }
@@ -241,10 +240,9 @@ namespace nandina::showcase
             return section_block(
                 ui,
                 chrome,
-                "Semantic roles",
-                "display/heading/title/subtitle/body/label/caption resolve size + leading + weight "
-                "through the theme scale; colors stay independent. A theme may replace "
-                "scale.roles[role] without touching the primitive steps.",
+                "语义角色",
+                "display/heading/title/subtitle/body/label/caption 通过主题尺度解析字号、行高与"
+                "字重，颜色保持独立。主题可以替换 scale.roles[role]，而无须改动原始字号档位。",
                 rows
             );
         }
@@ -256,9 +254,8 @@ namespace nandina::showcase
             auto paragraph =
                 ui.make<widget::Label>(
                       "Label 的默认 role 现在是 body：base 字号 + normal 行高（1.5）。"
-                      "This paragraph has no explicit size, leading, or role; the body default is "
-                      "the only source. CJK paragraphs get the extra breathing room while explicit "
-                      "UI labels keep their tighter layout."
+                      "这段文字没有显式设置字号、行高或角色，正文默认值是唯一来源。CJK 段落因此"
+                      "获得更充足的呼吸空间，而显式设置的界面标签仍保持更紧凑的布局。"
                 )
                     .color_token(theme::ColorToken::foreground)
                     .width(640.0F)
@@ -267,16 +264,17 @@ namespace nandina::showcase
                         label.set_max_lines(6);
                     });
 
-            auto default_meta = ui.make<widget::Label>("Unstyled Label → body role (16 px / 1.5)")
-                                    .color_token(theme::ColorToken::muted_foreground)
-                                    .font_size(chrome.caption);
+            auto default_meta =
+                ui.make<widget::Label>("未设样式的 Label → body 角色（16 px / 1.5）")
+                    .color_token(theme::ColorToken::muted_foreground)
+                    .font_size(chrome.caption);
 
             return section_block(
                 ui,
                 chrome,
-                "Body default",
-                "Pages can rely on the semantic default for prose; explicit font sizes keep the "
-                "backend line height unless the author chooses a leading token.",
+                "正文默认",
+                "页面正文可以直接依赖语义默认值；显式字号在作者未选择行高 token 时沿用后端"
+                "默认行高。",
                 ui.column()
                     .width(widget::authoring::fill)
                     .gap(chrome.group)

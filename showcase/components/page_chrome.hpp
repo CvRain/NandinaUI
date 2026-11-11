@@ -78,7 +78,8 @@ namespace nandina::showcase
             .width(widget::authoring::fill);
     }
 
-    /// section 说明 / 页面导语：`muted_foreground` + 换行。
+    /// section 说明 / 页面导语：`muted_foreground` + 换行。中文正文统一使用 normal 行高（1.5），
+    /// 这也是 P4.6 Step 2b body default 的同一行高，避免多行中文显得拥挤。
     [[nodiscard]] inline auto supporting_text(
         const widget::BuildContext& ui,
         const PageChrome& chrome,
@@ -88,6 +89,7 @@ namespace nandina::showcase
         return ui.make<widget::Label>(std::string(text))
             .color_token(theme::ColorToken::muted_foreground)
             .font_size(chrome.supporting)
+            .leading(theme::Leading::normal)
             .width(widget::authoring::fill)
             .configure([max_lines](widget::Label& label) {
                 label.set_overflow(text::TextOverflow::wrap);

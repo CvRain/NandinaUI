@@ -236,6 +236,15 @@ application shell. Version `0.1.0-alpha.1`.
   the page root weakly). Remaining: optional timing log/bench, P4.8c build-time measurement
   batching, long-term async/incremental shaping. Contracts:
   `docs/references/page_and_router.md` §4.1 and `docs/references/page_load_responsiveness.md`.
+- **Showcase Chinese localization (2026-11-11)**: all user-facing showcase copy is now Simplified
+  Chinese (component/API/token names stay English, page headings are bilingual like
+  「标签（Label）」); multi-line descriptions use `theme::Leading::normal` (1.5) through
+  `supporting_text` and explicit paragraph builders so Chinese body text has breathing room. The
+  home page's previously empty 「组件速览」 heading now has quick-entry buttons that navigate by
+  `PageKey`; probe route titles changed to 标签/排版 and the interaction fallback clicks 「标签」.
+  The localized pages change all page goldens, so the existing six approved entries and the
+  Typography candidates need one dual-platform re-batch and maintainer approval before they are
+  updated; do not claim them approved early.
 - **Dual-platform verification (2026-11-10) is operational**: the Linux machine (Arch, GNOME
   Wayland, RADV RX 6750 GRE 12GB, Mesa 26.2.6) is reachable over SSH with a dedicated key; the
   full Linux suite is 129 OK / 0 FAIL and all six Linux page goldens compare with 0 changed

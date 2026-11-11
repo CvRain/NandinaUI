@@ -10,7 +10,7 @@
 
 int main() {
     const auto window_info = nandina::app::WindowConfig {
-        .title = "nandina showcase",
+        .title = "NandinaUI 组件展示",
         .width = 1200,
         .height = 800,
     };

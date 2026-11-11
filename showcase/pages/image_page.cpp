@@ -85,11 +85,9 @@ namespace nandina::showcase
                     .set_file_location("nandina/widget/image.hpp")
                     .set_inherits("scene::NanControl")
                     .set_tips({
-                        "res:// sources resolve through the page's ResourceManager; the package "
-                        "must be mounted before the first draw.",
-                        "The decoded texture keeps its natural size; width/height and the scale "
-                        "mode decide how it is fitted into the control.",
-                        "Image loads lazily on first draw and reuses the window texture cache.",
+                        "res:// 资源由页面的 ResourceManager 解析；资源包必须在首次绘制前挂载。",
+                        "解码后的纹理保留原始尺寸；控件宽高与缩放模式决定它如何适配。",
+                        "Image 在首次绘制时惰性加载，并复用窗口的纹理缓存。",
                     })
                     .build()
                     .width(widget::authoring::fill);
@@ -98,13 +96,12 @@ namespace nandina::showcase
                 .width(widget::authoring::fill)
                 .gap(chrome.group)
                 .cross_alignment(widget::LayoutAlignment::stretch)
-                .children(page_heading(ui, chrome, "Image"))
+                .children(page_heading(ui, chrome, "图片（Image）"))
                 .children(supporting_text(
                     ui,
                     chrome,
-                    "Image displays a texture loaded from a file path or a res:// resource. "
-                    "It supports stretch, contain and cover fitting, source-rect cropping, tint, "
-                    "and synchronous or asynchronous loading.",
+                    "Image 显示从文件路径或 res:// 资源加载的纹理，支持拉伸、包含、覆盖三种适配，"
+                    "以及源矩形裁剪、着色和同步或异步加载。",
                     4
                 ))
                 .children(info_table);
@@ -127,7 +124,7 @@ namespace nandina::showcase
                         .cross_alignment(widget::LayoutAlignment::stretch)
                         .children(scaled_image(ui, source, kHeroHeight, widget::ImageScale::cover))
                         .children(
-                            caption_text(ui, chrome, std::string(source) + " — cover, fixed height")
+                            caption_text(ui, chrome, std::string(source) + " —— 覆盖，固定高度")
                         )
                 );
             }
@@ -135,10 +132,9 @@ namespace nandina::showcase
             return section_block(
                 ui,
                 chrome,
-                "Basic usage",
-                "A res:// source is resolved by the resource manager injected by the page "
-                "context. The preview fixes the height and uses cover so the wide artwork fills "
-                "the card without changing its aspect ratio.",
+                "基础用法",
+                "res:// 资源由页面上下文注入的资源管理器解析。预览固定高度并使用覆盖模式，"
+                "让宽幅作品填满卡片且不改变宽高比。",
                 images
             );
         }
@@ -155,19 +151,19 @@ namespace nandina::showcase
             };
             constexpr std::array specimens {
                 ScaleSpecimen {
-                    .name = "Stretch",
+                    .name = "拉伸",
                     .mode = widget::ImageScale::stretch,
-                    .note = "Fills the control; the aspect ratio may change.",
+                    .note = "填满控件，宽高比可能改变。",
                 },
                 ScaleSpecimen {
-                    .name = "Contain",
+                    .name = "包含",
                     .mode = widget::ImageScale::contain,
-                    .note = "Fits the whole image; the empty space uses the card surface.",
+                    .note = "完整显示整张图片，空白处沿用卡片表面。",
                 },
                 ScaleSpecimen {
-                    .name = "Cover",
+                    .name = "覆盖",
                     .mode = widget::ImageScale::cover,
-                    .note = "Fills the control and crops the overflow.",
+                    .note = "填满控件并裁掉溢出部分。",
                 },
             };
 
@@ -190,9 +186,9 @@ namespace nandina::showcase
             return section_block(
                 ui,
                 chrome,
-                "Scale modes",
-                "The same square artwork at the same control size. Stretch ignores the aspect "
-                "ratio, contain letterboxes and cover crops; the choice is per instance.",
+                "缩放模式",
+                "同一张方形作品、同样的控件尺寸。拉伸忽略宽高比，包含会留出空白，"
+                "覆盖会裁掉多余部分；模式按实例设置。",
                 columns
             );
         }
@@ -207,9 +203,9 @@ namespace nandina::showcase
                 widget::ImageAlignment alignment;
             };
             constexpr std::array specimens {
-                AlignmentSpecimen {.name = "Start", .alignment = widget::ImageAlignment::start},
-                AlignmentSpecimen {.name = "Center", .alignment = widget::ImageAlignment::center},
-                AlignmentSpecimen {.name = "End", .alignment = widget::ImageAlignment::end},
+                AlignmentSpecimen {.name = "起始", .alignment = widget::ImageAlignment::start},
+                AlignmentSpecimen {.name = "居中", .alignment = widget::ImageAlignment::center},
+                AlignmentSpecimen {.name = "末尾", .alignment = widget::ImageAlignment::end},
             };
 
             auto columns = ui.row()
@@ -236,9 +232,9 @@ namespace nandina::showcase
             return section_block(
                 ui,
                 chrome,
-                "Contain alignment",
-                "Alignment only applies when contain leaves unused space. The same square logo "
-                "in a wide control makes the three positions visible without changing the image.",
+                "包含对齐",
+                "只有包含模式留下未用空间时对齐才生效。在宽控件里放同一张方形作品，"
+                "不更换图片也能看出三种位置。",
                 columns
             );
         }
@@ -253,9 +249,9 @@ namespace nandina::showcase
                 std::optional<foundation::NanColor> tint;
             };
             const std::array specimens {
-                TintSpecimen {.caption = "Default tint", .tint = std::nullopt},
+                TintSpecimen {.caption = "默认着色", .tint = std::nullopt},
                 TintSpecimen {
-                    .caption = "Tint #D8B4F0",
+                    .caption = "着色 #D8B4F0",
                     .tint = foundation::NanColor::from_hex(0xD8B4F0),
                 },
             };
@@ -285,9 +281,9 @@ namespace nandina::showcase
             return section_block(
                 ui,
                 chrome,
-                "Tint",
-                "Tint multiplies the sampled RGBA and composes with inherited opacity. It is "
-                "useful for monochrome icon sets without shipping a second asset.",
+                "着色",
+                "着色会把采样到的 RGBA 相乘，并与继承的不透明度叠加；适合单色图标集，"
+                "无需再准备第二份资源。",
                 columns
             );
         }

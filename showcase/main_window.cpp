@@ -30,17 +30,17 @@ namespace nandina::showcase
             ),
             nandina::app::route<LabelPage>(app::RouteOptions {
                 .address = "content_and_display/label",
-                .title = "Label",
+                .title = "标签",
                 .nav_group = "内容与展示"
             }),
             nandina::app::route<TypographyPage>(app::RouteOptions {
                 .address = "content_and_display/typography",
-                .title = "Typography",
+                .title = "排版",
                 .nav_group = "内容与展示"
             }),
             nandina::app::route<ImagePage>(app::RouteOptions {
                 .address = "content_and_display/image",
-                .title = "Image",
+                .title = "图片",
                 .nav_group = "内容与展示"
             }),
             nandina::app::route<InputFocusPage>(app::RouteOptions {

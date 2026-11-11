@@ -53,7 +53,7 @@ namespace nandina::showcase
         auto menu_items() -> std::vector<widget::MenuItem> {
             return {
                 widget::MenuItem {.id = "rename", .label = "重命名", .shortcut = "F2"},
-                widget::MenuItem {.id = "duplicate", .label = "创建副本"},
+                widget::MenuItem {.id = "duplicate", .label = "复制"},
                 widget::MenuItem {.id = "separator", .kind = widget::MenuItemKind::separator},
                 widget::MenuItem {.id = "delete", .label = "删除", .shortcut = "Del"},
             };
@@ -127,25 +127,29 @@ namespace nandina::showcase
                 .configure([](widget::DropdownMenu& widget) { widget.set_name("focus-menu"); })
                 .build();
 
-        const auto roving = ui.row()
-                                .gap(16.0F)
-                                .cross_alignment(widget::LayoutAlignment::start)
-                                .children(ui.column()
-                                              .gap(6.0F)
-                                              .children(hint_label(ui, "RadioGroup（成员焦点）"))
-                                              .children(radios)
-                                              .build())
-                                .children(ui.column()
-                                              .gap(6.0F)
-                                              .children(hint_label(ui, "Tabs（容器焦点）"))
-                                              .children(tabs)
-                                              .build())
-                                .children(ui.column()
-                                              .gap(6.0F)
-                                              .children(hint_label(ui, "下拉菜单（容器焦点）"))
-                                              .children(menu)
-                                              .build())
-                                .build();
+        const auto roving =
+            ui.row()
+                .width(widget::authoring::fill)
+                .gap(16.0F)
+                .cross_alignment(widget::LayoutAlignment::start)
+                .children(
+                    ui.expanded().child(ui.column()
+                                            .gap(6.0F)
+                                            .children(hint_label(ui, "RadioGroup（成员焦点）"))
+                                            .children(radios)
+                                            .build())
+                )
+                .children(ui.expanded().child(ui.column()
+                                                  .gap(6.0F)
+                                                  .children(hint_label(ui, "Tabs（容器焦点）"))
+                                                  .children(tabs)
+                                                  .build()))
+                .children(ui.expanded().child(ui.column()
+                                                  .gap(6.0F)
+                                                  .children(hint_label(ui, "下拉菜单（容器焦点）"))
+                                                  .children(menu)
+                                                  .build()))
+                .build();
 
         // Dialog：指针打开时不应伪装成键盘导航；Escape 关闭后恢复触发按钮。
         auto dialog_content = ui.make<widget::Label>(
@@ -153,6 +157,7 @@ namespace nandina::showcase
                                     "并显示键盘提示。"
         )
                                   .width(widget::authoring::fill)
+                                  .leading(theme::Leading::normal)
                                   .configure([](widget::Label& label) {
                                       label.set_overflow(text::TextOverflow::wrap);
                                       label.set_max_lines(4);

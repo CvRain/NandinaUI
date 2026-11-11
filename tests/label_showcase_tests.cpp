@@ -62,7 +62,7 @@ TEST_CASE(
     Fixture fixture;
     showcase::LabelPage page;
     auto root = page.build(fixture.context);
-    auto* paragraph = find_text(*root, "A Label can wrap naturally");
+    auto* paragraph = find_text(*root, "父级给出有限宽度时");
     auto* location = find_text(*root, "nandina/widget/label.hpp");
     REQUIRE(paragraph);
     REQUIRE(location);

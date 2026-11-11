@@ -102,28 +102,26 @@ namespace nandina::showcase
             const auto& ui = context.ui();
             const auto chrome = make_page_chrome(ui);
 
-            auto info_table =
-                ComponentInfoTable {context}
-                    .set_file_location("nandina/widget/label.hpp")
-                    .set_inherits("primitives::Text")
-                    .set_tips({
-                        "Uses the active theme unless an instance value overrides it.",
-                        "Text wrapping and overflow are configured independently.",
-                    })
-                    .build()
-                    .width(widget::authoring::fill);
+            auto info_table = ComponentInfoTable {context}
+                                  .set_file_location("nandina/widget/label.hpp")
+                                  .set_inherits("primitives::Text")
+                                  .set_tips({
+                                      "默认使用当前主题，实例上的取值可以覆盖。",
+                                      "换行与溢出各自独立配置。",
+                                  })
+                                  .build()
+                                  .width(widget::authoring::fill);
 
             return ui.column()
                 .width(widget::authoring::fill)
                 .gap(chrome.group)
                 .cross_alignment(widget::LayoutAlignment::stretch)
-                .children(page_heading(ui, chrome, "Label"))
+                .children(page_heading(ui, chrome, "标签（Label）"))
                 .children(supporting_text(
                     ui,
                     chrome,
-                    "Label displays non-interactive text with theme-aware color and typography. "
-                    "It also exposes static-text semantics; use TextField or TextArea when the "
-                    "user needs to edit text.",
+                    "Label 用于显示不可交互的文本，颜色与排版跟随主题。它同时导出静态文本语义；"
+                    "需要让用户编辑文本时，请改用 TextField 或 TextArea。",
                     4
                 ))
                 .children(info_table);
@@ -144,11 +142,11 @@ namespace nandina::showcase
             // 这一页自己使用的字号阶梯。文档页展示的尺度与它实际使用的尺度一致，
             // 读者不需要去猜"到底哪个才算 body"。
             const std::array specimens {
-                Specimen {"Display", chrome.page_title, "32 px", "Label"},
-                Specimen {"Section", chrome.section_title, "20 px", "Typography"},
-                Specimen {"Body", chrome.body, "16 px", "Default reading text"},
-                Specimen {"Supporting", chrome.supporting, "14 px", "Supporting text and detail"},
-                Specimen {"Caption", chrome.caption, "12 px", "Metadata and captions"},
+                Specimen {"展示", chrome.page_title, "32 px", "Label"},
+                Specimen {"章节", chrome.section_title, "20 px", "字号阶梯"},
+                Specimen {"正文", chrome.body, "16 px", "默认阅读文本"},
+                Specimen {"辅助", chrome.supporting, "14 px", "辅助信息与细节"},
+                Specimen {"图注", chrome.caption, "12 px", "元数据与图注"},
             };
 
             auto rows = ui.column()
@@ -162,10 +160,9 @@ namespace nandina::showcase
             return section_block(
                 ui,
                 chrome,
-                "Typography",
-                "Font size is an instance-level choice. The steps below are the ones this page "
-                "itself uses: the chrome reads them from theme tokens, and the larger display "
-                "sizes are page-level decisions.",
+                "字号阶梯",
+                "字号由实例决定。下面几档正是本页自己使用的字号：页面框架从主题令牌读取，"
+                "更大的展示字号则属于页面级决策。",
                 rows
             );
         }
@@ -182,12 +179,12 @@ namespace nandina::showcase
                 std::string_view meta;
             };
 
-            constexpr std::string_view kPangram = "Sphinx of black quartz, judge my vow";
+            constexpr std::string_view kPangram = "天地玄黄，宇宙洪荒。日月盈昃，辰宿列张。";
             const std::array specimens {
-                Specimen {"Regular", 400, theme::FontSlant::normal, "400"},
-                Specimen {"Medium", 500, theme::FontSlant::normal, "500"},
-                Specimen {"Bold", 700, theme::FontSlant::normal, "700"},
-                Specimen {"Italic", 400, theme::FontSlant::italic, "italic"},
+                Specimen {"常规", 400, theme::FontSlant::normal, "400"},
+                Specimen {"中等", 500, theme::FontSlant::normal, "500"},
+                Specimen {"粗体", 700, theme::FontSlant::normal, "700"},
+                Specimen {"斜体", 400, theme::FontSlant::italic, "italic"},
             };
 
             auto rows = ui.column()
@@ -227,9 +224,9 @@ namespace nandina::showcase
             return section_block(
                 ui,
                 chrome,
-                "Font style",
-                "Weight and slant are part of the font request. The same sentence is repeated so "
-                "the style difference is the only variable.",
+                "字体样式",
+                "字重与倾斜是字体请求的一部分。每行重复同一句话，"
+                "让样式差异成为唯一的变量。",
                 rows
             );
         }
@@ -246,24 +243,16 @@ namespace nandina::showcase
             };
 
             const std::array roles {
-                Role {
-                    "foreground",
-                    theme::ColorToken::foreground,
-                    "Default text on page and card surfaces"
-                },
+                Role {"foreground", theme::ColorToken::foreground, "页面与卡片表面上的默认文字"},
                 Role {
                     "muted foreground",
                     theme::ColorToken::muted_foreground,
-                    "Secondary text and supporting detail"
+                    "次要文字与辅助细节"
                 },
-                Role {"primary", theme::ColorToken::primary, "Primary actions and selected state"},
-                Role {"success", theme::ColorToken::success, "Confirmation and healthy state"},
-                Role {"warning", theme::ColorToken::warning, "Caution that still allows progress"},
-                Role {
-                    "destructive",
-                    theme::ColorToken::destructive,
-                    "Irreversible or destructive actions"
-                },
+                Role {"primary", theme::ColorToken::primary, "主要操作与选中状态"},
+                Role {"success", theme::ColorToken::success, "确认反馈与正常状态"},
+                Role {"warning", theme::ColorToken::warning, "提醒谨慎，但仍可继续操作"},
+                Role {"destructive", theme::ColorToken::destructive, "不可撤销或具破坏性的操作"},
             };
 
             auto cells = ui.grid()
@@ -294,9 +283,9 @@ namespace nandina::showcase
             return section_block(
                 ui,
                 chrome,
-                "Semantic colors",
-                "Color tokens follow the active theme. Prefer semantic roles to fixed color values "
-                "when the text should adapt to light and dark appearances.",
+                "语义颜色",
+                "颜色令牌跟随当前主题。当文字需要同时适配明暗外观时，"
+                "请优先使用语义角色，而不是固定色值。",
                 cells
             );
         }
@@ -311,15 +300,15 @@ namespace nandina::showcase
                     .width(widget::authoring::fill)
                     .gap(chrome.item)
                     .cross_alignment(widget::LayoutAlignment::stretch)
-                    .children(caption_text(ui, chrome, "Assigned width: 68% of the content column"))
+                    .children(caption_text(ui, chrome, "指定宽度：内容列的 68%"))
                     .children(ui.make<widget::Label>(
-                                    "A Label can wrap naturally when its parent provides a "
-                                    "finite width. This paragraph mixes English, 中文 and "
-                                    "日本語 to show how shaped text flows through a narrower "
-                                    "content area without a manually fixed height."
+                                    "父级给出有限宽度时，Label 便能自然换行。这段文字混排了 "
+                                    "English、中文与日本語，用来展示整形后的文本如何流入更窄的 "
+                                    "内容区域，而无需手动固定高度。"
                     )
                                   .width(widget::authoring::percent(kWrappingWidthPercent))
                                   .font_size(chrome.body)
+                                  .leading(theme::Leading::normal)
                                   .color_token(theme::ColorToken::foreground)
                                   .configure([](widget::Label& label) {
                                       label.set_overflow(text::TextOverflow::wrap);
@@ -329,9 +318,8 @@ namespace nandina::showcase
             return section_block(
                 ui,
                 chrome,
-                "Wrapping",
-                "Wrapping is constrained by the available width, and the label height follows the "
-                "resulting line count. Resize the window to inspect the change.",
+                "换行",
+                "换行受可用宽度约束，Label 的高度由实际行数决定。调整窗口大小即可观察变化。",
                 panel
             );
         }
@@ -342,7 +330,7 @@ namespace nandina::showcase
             const auto chrome = make_page_chrome(ui);
 
             constexpr std::string_view kSample {
-                "Long labels need a deliberate overflow policy when the available width is limited."
+                "当可用宽度不足时，较长的文本需要明确选择溢出策略。"
             };
 
             struct Policy {
@@ -354,9 +342,9 @@ namespace nandina::showcase
 
             // 三个策略共用同一段文字与同一个可用宽度，差异只来自 overflow 本身。
             const std::array policies {
-                Policy {"Clip", text::TextOverflow::clip, 1, "cut at the box edge, no marker"},
-                Policy {"Ellipsis", text::TextOverflow::ellipsis, 1, "cut with a trailing marker"},
-                Policy {"Wrap", text::TextOverflow::wrap, 3, "continued on following lines"},
+                Policy {"裁剪", text::TextOverflow::clip, 1, "在边界处直接截断，不留标记"},
+                Policy {"省略号", text::TextOverflow::ellipsis, 1, "截断后以尾部标记提示"},
+                Policy {"换行", text::TextOverflow::wrap, 3, "在后续行继续显示"},
             };
 
             auto rows = ui.column()
@@ -375,6 +363,7 @@ namespace nandina::showcase
                         .children(ui.make<widget::Label>(std::string(kSample))
                                       .width(widget::authoring::percent(kOverflowWidthPercent))
                                       .font_size(chrome.body)
+                                      .leading(theme::Leading::normal)
                                       .color_token(theme::ColorToken::foreground)
                                       .configure([overflow, lines](widget::Label& label) {
                                           label.set_overflow(overflow);
@@ -386,10 +375,9 @@ namespace nandina::showcase
             return section_block(
                 ui,
                 chrome,
-                "Overflow",
-                "All three rows use the same text and the same assigned width, so the only variable "
-                "is the policy: clip cuts, ellipsis marks the cut, and wrap continues on the next "
-                "line.",
+                "溢出",
+                "三行使用同一段文字和同一个指定宽度，唯一的变量是策略本身："
+                "裁剪直接截断，省略号标出截断位置，换行则延续到下一行。",
                 rows
             );
         }
@@ -405,9 +393,9 @@ namespace nandina::showcase
             };
 
             const std::array alignments {
-                Alignment {"Start", theme::TextAlign::start},
-                Alignment {"Center", theme::TextAlign::center},
-                Alignment {"End", theme::TextAlign::end},
+                Alignment {"起始", theme::TextAlign::start},
+                Alignment {"居中", theme::TextAlign::center},
+                Alignment {"末尾", theme::TextAlign::end},
             };
 
             auto rows = ui.column()
@@ -415,36 +403,33 @@ namespace nandina::showcase
                             .gap(chrome.item)
                             .cross_alignment(widget::LayoutAlignment::stretch);
             for (const auto& [name, align]: alignments) {
-                rows.children(
-                    ui.row()
-                        .width(widget::authoring::fill)
-                        .gap(chrome.group)
-                        .cross_alignment(widget::LayoutAlignment::center)
-                        .children(
-                            ui.make<widget::Label>(std::string(name))
-                                .color_token(theme::ColorToken::muted_foreground)
-                                .font_size(chrome.caption)
-                                .width(kAlignmentColumnWidth),
-                            ui.expanded().child(
-                                ui.make<widget::Label>(std::string(name) + " aligned text")
-                                    .width(widget::authoring::fill)
-                                    .height(32.0F)
-                                    .font_size(chrome.body)
-                                    .color_token(theme::ColorToken::foreground)
-                                    .configure([align](widget::Label& label) {
-                                        label.set_align(align);
-                                    })
-                            )
-                        )
-                );
+                rows.children(ui.row()
+                                  .width(widget::authoring::fill)
+                                  .gap(chrome.group)
+                                  .cross_alignment(widget::LayoutAlignment::center)
+                                  .children(
+                                      ui.make<widget::Label>(std::string(name))
+                                          .color_token(theme::ColorToken::muted_foreground)
+                                          .font_size(chrome.caption)
+                                          .width(kAlignmentColumnWidth),
+                                      ui.expanded().child(
+                                          ui.make<widget::Label>(std::string(name) + "对齐的文本")
+                                              .width(widget::authoring::fill)
+                                              .height(32.0F)
+                                              .font_size(chrome.body)
+                                              .color_token(theme::ColorToken::foreground)
+                                              .configure([align](widget::Label& label) {
+                                                  label.set_align(align);
+                                              })
+                                      )
+                                  ));
             }
 
             return section_block(
                 ui,
                 chrome,
-                "Alignment",
-                "Alignment affects line placement inside the wider box each label is given. It does "
-                "not change the text content or its semantics.",
+                "对齐",
+                "对齐只决定每行文字在 Label 给定宽度内的位置，不改变文本内容，也不改变语义。",
                 rows
             );
         }
@@ -454,8 +439,7 @@ namespace nandina::showcase
             const auto& ui = context.ui();
             const auto chrome = make_page_chrome(ui);
 
-            auto& message =
-                ui.signal_value(std::string {"The label is bound to a reactive string."});
+            auto& message = ui.signal_value(std::string {"这个 Label 绑定了一个响应式字符串。"});
 
             auto panel =
                 ui.row()
@@ -466,17 +450,18 @@ namespace nandina::showcase
                         ui.expanded().child(ui.make<widget::Label>(message)
                                                 .width(widget::authoring::fill)
                                                 .font_size(chrome.body)
+                                                .leading(theme::Leading::normal)
                                                 .color_token(theme::ColorToken::info)
                                                 .configure([](widget::Label& label) {
                                                     label.set_overflow(text::TextOverflow::wrap);
                                                     label.set_max_lines(4);
                                                 })),
-                        ui.make<widget::Button>("Update label")
+                        ui.make<widget::Button>("更新 Label")
                             .treatment(theme::ButtonTreatment::outlined)
                             .on_click([&message] {
-                                const std::string next = message.get().starts_with("The label")
-                                    ? "Reactive text updates without rebuilding the page."
-                                    : "The label is bound to a reactive string.";
+                                const std::string next = message.get().starts_with("这个 Label")
+                                    ? "响应式文本更新时无需重建页面。"
+                                    : "这个 Label 绑定了一个响应式字符串。";
                                 message.set(next);
                             })
                     );
@@ -484,9 +469,9 @@ namespace nandina::showcase
             return section_block(
                 ui,
                 chrome,
-                "Reactive text",
-                "Label accepts a string source through BuildContext and updates when that source "
-                "changes. The surrounding layout is not rebuilt.",
+                "响应式文本",
+                "Label 通过 BuildContext 接收字符串数据源，数据源变化时自动更新，"
+                "周围布局不会重建。",
                 panel
             );
         }
@@ -500,23 +485,16 @@ namespace nandina::showcase
                              .width(widget::authoring::fill)
                              .gap(chrome.group)
                              .cross_alignment(widget::LayoutAlignment::stretch)
-                             .children(definition_row(ui, chrome, "Semantics role", "static text"))
+                             .children(definition_row(ui, chrome, "语义角色", "静态文本"))
                              .children(supporting_text(
                                  ui,
                                  chrome,
-                                 "Label is not an interactive form label and does not forward "
-                                 "focus to another control; use TextField or TextArea for editable "
-                                 "content.",
+                                 "Label 不是可交互的表单标签，也不会把焦点转交给其他控件；"
+                                 "需要可编辑内容时，请使用 TextField 或 TextArea。",
                                  4
                              ));
 
-            return section_block(
-                ui,
-                chrome,
-                "Semantics",
-                "What assistive technology receives from this component.",
-                panel
-            );
+            return section_block(ui, chrome, "语义", "辅助技术能从该组件获取的信息。", panel);
         }
     } // namespace
 

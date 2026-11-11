@@ -257,12 +257,12 @@ int main() {
             }),
             nandina::app::route<nandina::showcase::LabelPage>(nandina::app::RouteOptions {
                 .address = "form/label",
-                .title = "Label",
+                .title = "标签",
                 .nav_group = "表单",
             }),
             nandina::app::route<nandina::showcase::TypographyPage>(nandina::app::RouteOptions {
                 .address = "content_and_display/typography",
-                .title = "Typography",
+                .title = "排版",
                 .nav_group = "内容与展示"
             }),
             nandina::app::route<nandina::showcase::InputFocusPage>(nandina::app::RouteOptions {
@@ -522,7 +522,7 @@ int main() {
             if (cycle_interaction) {
                 // 每 30 帧点一次导航，交替"锚点"/"Label"，保证每次都真的换页。
                 if (frame % 30 == 10) {
-                    click_navigation(interaction.presses % 2 == 0 ? "锚点" : "Label");
+                    click_navigation(interaction.presses % 2 == 0 ? "锚点" : "标签");
                     ++interaction.presses;
                     ++interaction.releases;
                     (void)application.dispatcher().drain();

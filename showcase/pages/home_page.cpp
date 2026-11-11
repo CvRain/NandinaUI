@@ -2,6 +2,11 @@
 
 #include "home_page.hpp"
 
+#include "image_page.hpp"
+#include "input_focus_page.hpp"
+#include "label_page.hpp"
+#include "typography_page.hpp"
+
 #include "nandina/foundation/nan_logger.hpp"
 
 #include <nandina/foundation/motion/behavior.hpp>
@@ -11,9 +16,11 @@
 #include <nandina/widget/controls.hpp>
 #include <nandina/widget/visual_property.hpp>
 
+#include <array>
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -35,12 +42,13 @@ namespace nandina::showcase
 
             const std::string intro_text {
                 "NandinaUI（南天竹）是一个用 C++26 编写、基于 Meson 构建的原生桌面 UI 框架。"
-                "旨在将简单而不失优雅的现代应用开发体验带进C++"
+                "旨在将简单而不失优雅的现代应用开发体验带进 C++，"
                 "让你用一套简洁、类型安全的 DSL 构建桌面界面，而无需在繁琐的样板代码之间来回穿梭。"
             };
             const auto intro = ui.make<widget::Label>(intro_text)
                                    .color_token(theme::ColorToken::info)
                                    .font_size(16.0F)
+                                   .leading(theme::Leading::normal)
                                    .width(widget::authoring::fill)
                                    .configure([](widget::Label& label) {
                                        label.set_overflow(text::TextOverflow::wrap);
@@ -108,6 +116,7 @@ namespace nandina::showcase
                 const auto intro =
                     ui.make<widget::Label>(it)
                         .font_size(14.0F)
+                        .leading(theme::Leading::normal)
                         .width(widget::authoring::fill)
                         .configure([](widget::Label& label) {
                             label.set_overflow(text::TextOverflow::wrap);
@@ -138,6 +147,35 @@ namespace nandina::showcase
                                         .width(widget::authoring::fill)
                                         .gap(12.0F)
                                         .cross_alignment(widget::LayoutAlignment::start);
+
+            // 组件速览只做导航入口：页面正文仍由各自的展示页负责，避免首页重复维护组件
+            // 清单。路由键通过 PageKey 提交，因此这里不依赖具体页面的构造参数。
+            struct Shortcut {
+                std::string_view label;
+                app::PageKey key;
+            };
+            const std::array shortcuts {
+                Shortcut {"标签", app::page_key<LabelPage>()},
+                Shortcut {"排版", app::page_key<TypographyPage>()},
+                Shortcut {"图片", app::page_key<ImagePage>()},
+                Shortcut {"输入与焦点", app::page_key<InputFocusPage>()},
+            };
+            auto shortcut_row = ui.row()
+                                    .width(widget::authoring::fill)
+                                    .gap(12.0F)
+                                    .cross_alignment(widget::LayoutAlignment::center);
+            for (const auto& shortcut: shortcuts) {
+                shortcut_row.children(ui.make<widget::Button>(std::string(shortcut.label))
+                                          .on_click([navigation, key = shortcut.key] {
+                                              (void)navigation.navigate_to(key);
+                                          }));
+            }
+            component_groups
+                .children(ui.make<widget::Label>("快速入口")
+                              .color_token(theme::ColorToken::muted_foreground)
+                              .font_size(14.0F)
+                              .leading(theme::Leading::normal))
+                .children(shortcut_row);
 
             auto layout = ui.column()
                               .width(widget::authoring::fill)
