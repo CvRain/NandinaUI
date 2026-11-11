@@ -26,11 +26,14 @@ Linux GNOME Wayland + RADV，各取两次稳定值）：
 但当前页面内容更多，实际用户感知为一帧到数帧的卡顿。进程墙钟包含启动公共成本，因此只看
 页面差值，不把它当作精确的页面耗时。
 
-**P4.8b 实施后（2026-11-11，Windows，同一 probe 口径）**：Label 页首帧（`FRAMES=1`）相对
-anchors 的差值为 **~85 ms**（实施前按 `FRAMES=3` 口径约 ~408 ms）；`FRAMES=1` 只显示页面壳
-+ 已构建的简介节，Typography 及之后的节在后续帧出现。完整 30 帧 PNG 与迁移前 golden 为
-**0 像素差异**；总整形工作仍是线性的，只是从“导航事务一次完成”分散到多帧。复测命令与
-首帧/完整截图记录见 §7。
+**P4.8b 实施后（2026-11-11，Windows/Linux 同一 probe 口径）**：Windows Label 页首帧
+（`FRAMES=1`）相对 anchors 的差值为 **~85 ms**（实施前按 `FRAMES=3` 口径约 ~408 ms）；
+Linux 同口径首发为 **~38 ms**（Label 165 ms vs anchors 127 ms，`FRAMES=1`）。`FRAMES=1`
+只显示页面壳 + 已构建的简介节，Typography 及之后的节在后续帧出现。完整 30 帧 PNG 与迁移前
+golden 为 **0 像素差异**；总整形工作仍是线性的，只是从“导航事务一次完成”分散到多帧。
+Linux 短帧 probe 曾在退出时 SIGSEGV（泵任务强引用页面根，页面树拖到 render device 之后
+析构），已改为弱引用并加回归测试；修复后 `FRAMES=1/3` 均正常退出。复测命令与首帧/完整截图
+记录见 §7。
 
 ## 2. 根因
 
