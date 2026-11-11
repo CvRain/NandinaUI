@@ -203,9 +203,9 @@ application shell. Version `0.1.0-alpha.1`.
   (16 px / normal 1.5; explicit size/text_size/inherited size keeps the backend line height), and
   adds the showcase Typography page (`content_and_display/typography`, also registered in
   page_probe) covering the 13-step scale, six leadings, seven roles and the body default. Component
-  recipes still use explicit ScalarToken sizes, TOML role overrides are not open, and the new
-  page's dual-platform golden approval is pending (Windows candidates captured); existing six page
-  goldens stayed 0-diff. Step 3 (rem/root text scale + accessibility cap) remains pending.
+  recipes still use explicit ScalarToken sizes and TOML role overrides are not open; the 2026-11-11
+  Chinese re-batch approved 8 baselines per platform (home/anchors/label/typography × SDF/CPU).
+  Step 3 (rem/root text scale + accessibility cap) remains pending.
   Contract: `docs/references/typography_scale.md`.
 - **P4.7 synthetic weight/slant fallback** (2026-11-10) makes `FontRequest` weight/slant visible on
   single-face families: `text/font_synthesis.hpp` decides graded synthetic bold (500 ≈0.014em,
@@ -258,9 +258,9 @@ application shell. Version `0.1.0-alpha.1`.
   `supporting_text` and explicit paragraph builders so Chinese body text has breathing room. The
   home page's previously empty 「组件速览」 heading now has quick-entry buttons that navigate by
   `PageKey`; probe route titles changed to 标签/排版 and the interaction fallback clicks 「标签」.
-  The localized pages change all page goldens, so the existing six approved entries and the
-  Typography candidates need one dual-platform re-batch and maintainer approval before they are
-  updated; do not claim them approved early.
+  The localized pages changed all page goldens; on 2026-11-11 the maintainer reviewed them and the
+  dual-platform SDF+CPU baselines were re-captured and approved (8 entries per platform, 0-diff
+  verification after approval).
 - **Dual-platform verification (2026-11-10) is operational**: the Linux machine (Arch, GNOME
   Wayland, RADV RX 6750 GRE 12GB, Mesa 26.2.6) is reachable over SSH with a dedicated key; the
   full Linux suite is 129 OK / 0 FAIL and all six Linux page goldens compare with 0 changed

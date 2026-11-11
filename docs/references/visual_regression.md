@@ -208,8 +208,8 @@ Linux 图不能当 Windows/macOS 的预期。跨平台只比较**结构性**结�
 
 | 平台 | 状态 | 说明 |
 | --- | --- | --- |
-| Linux | **6 条 approved**（2026-10-20） | 1200×800、30 帧、隐藏窗口、单机；debug 与 release 采集逐像素一致，候选图 380 KB。**2026-11-08 在 Hyprland/Wayland + RADV（RX 6750 GRE）会话复跑全部 6 条，逐像素 0 差异**（环境分类修复 `d9d234c`）；**2026-11-10 在 GNOME Wayland + RADV（RX 6750 GRE，Mesa 26.2.6）经 SSH 远程复跑 6 条，全部 0 像素差异**；记录环境时必须标注 compositor/协议 |
-| Windows | **6 条 approved（2026-10-21/22：CPU 3 + SDF 3）** | CPU 路径经 SSH（无 GPU swapchain）用 `--renderer sdl2d` 采集并批准；SDF 路径在桌面会话采集（DXIL 产物），两次采集逐字节一致，home 的 sha 与 CPU 基线相同（该页无 SDF 图元）。DXIL 设备级验收通过，含 shadow/clip 断言 |
+| Linux | **8 条 approved（2026-11-11 中文版重批）** | 1200×800、30 帧、SDF+CPU，覆盖 home/anchors/label/typography；中文版重批在 GNOME Wayland + RADV 会话完成。历史：2026-10-20 首批 6 条；2026-11-08 Hyprland/Wayland+RADV 复跑 6 条 0 差异；2026-11-10 GNOME Wayland 远程复跑 6 条 0 差异 |
+| Windows | **8 条 approved（2026-11-11 中文版重批）** | 1200×800、30 帧、SDF+CPU，SDF 桌面会话 + CPU 路径；中文版重批经维护者审阅。历史：2026-10-21/22 首批 6 条（CPU 3 + SDF 3，DXIL 产物），含 shadow/clip 断言 |
 | macOS | **不支持** | 没有硬件与测试环境，不提供构建/运行承诺；不复制 Linux 基线充数 |
 
 **新平台落地步骤**（Windows 可用时）：

@@ -7,7 +7,8 @@
 > **Label 默认 role 改为 body（16 px / normal 1.5）**，未显式设置字号/行高的文本获得中文优先
 > 的正文行高；显式字号仍保留后端默认行高。新增 showcase Typography 展示页（字号/行高/role/
 > body 默认四节）。组件配方仍使用既有显式字号 token（label/subtitle 等），配方级 role 对象与
-> 文件主题 role 覆盖、新页面 golden 审批仍待。Step 3（rem/root 文字缩放与无障碍 cap）未实施。
+> 文件主题 role 覆盖仍待；**Typography 展示页的双平台 golden 已于 2026-11-11 重批批准**
+> （每平台 8 条：4 页 × SDF/CPU）。Step 3（rem/root 文字缩放与无障碍 cap）未实施。
 > 本文是契约；`docs/components/label.md` 与 `docs/references/design_tokens.md` 记录用法。
 
 ## 1. 单位决定
@@ -157,15 +158,15 @@ label->set_font_size(28.0F);
   `[text][layout][line-height]`；`[authoring][typography]`。
 - 红先记录：Step 1 行高后端、Step 2a display role size；Step 2b 未新增可破坏行（role 覆盖是
   新增分支，测试固定 canonical 表与覆盖值）。
-- 全量 Windows/Linux 套件与 release gates 在提交时运行；Typography 展示页的 golden 候选已
-  采集（Windows），审批与 Linux 候选在后续批次完成；既有 6 条页面 golden 在 Windows/Linux
-  复测 0 差异。
+- 全量 Windows/Linux 套件与 release gates 在提交时运行；**2026-11-11 中文版重批**：showcase
+  中文化后 home/anchors/label/typography 四页在 Windows+Linux 各重采 SDF/CPU 8 条基线并批准
+  （维护者审阅通过），本机复测全部 0 像素差异。
+- 组件配方 role 对象与文件主题 role 覆盖仍待；正文行高的完整 CJK 页面审计按需扩展。
 
 ## 8. 后续（未实施）
 
 - **Step 2b 剩余**：组件配方的 `TypographyRoles`/`TypeStyle` 级 role 对象（当前配方继续使用
-  显式 ScalarToken 字号），文件主题 role 覆盖，Typography 展示页的双平台 golden 审批；
-  正文行高的完整 CJK 页面审计按需扩展。
+  显式 ScalarToken 字号），文件主题 role 覆盖；正文行高的完整 CJK 页面审计按需扩展。
 - **Step 3**：rem/root 文字缩放——把 `root_base` 暴露为受“用户文字缩放”影响的量，并提供
   `fixed` / `cap` 策略（“最大 28px”的语义落在这里）；`em` 父字号相对链仍非目标。
 - **P4.7**：默认字体族只有 Caskaydia Cove Regular 一个 face；合成回退已于 2026-11-10
