@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import argparse
+import datetime
 import hashlib
 import json
 import os
@@ -99,7 +100,7 @@ def main() -> int:
     candidates.mkdir(parents=True, exist_ok=True)
     entries = load_existing(manifest)
     platform = options.platform or current_platform()
-    captured = "2026-10-19"
+    captured = datetime.date.today().isoformat()
     for page in options.pages.split(","):
         for backend in options.modes.split(","):
             page, backend = page.strip(), backend.strip()

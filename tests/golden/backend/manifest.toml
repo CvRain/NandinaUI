@@ -178,13 +178,35 @@ review_note = "Windows desktop-session SDF capture (home/label/anchors, 1200x800
 [[entries]]
 page = "typography"
 backend = "cpu"
+platform = "linux"
+image = "candidates/typography-cpu-linux.png"
+width = 1200
+height = 800
+sha256 = "2d720151ab39b2440b8d7f483cf54f2787d21394685d20804c5ca7ef669eb175"
+status = "candidate"
+captured = "2026-11-11"
+
+[[entries]]
+page = "typography"
+backend = "cpu"
 platform = "windows"
 image = "candidates/typography-cpu-windows.png"
 width = 1200
 height = 800
 sha256 = "90b4aa4a39705eafa871dd6946124dbfe1d67f8d1f856aa481dce4c358ea8ec2"
 status = "candidate"
-captured = "2026-10-19"
+captured = "2026-11-11"
+
+[[entries]]
+page = "typography"
+backend = "sdf"
+platform = "linux"
+image = "candidates/typography-sdf-linux.png"
+width = 1200
+height = 800
+sha256 = "4b910327ea12d098844d180873110ecaf1040c5d297ece0c78808232ee30b681"
+status = "candidate"
+captured = "2026-11-11"
 
 [[entries]]
 page = "typography"
@@ -195,4 +217,4 @@ width = 1200
 height = 800
 sha256 = "bd34ae6e68d3fb717392e97a06b33f1e3739f125a862e1acb7e701211bb935f8"
 status = "candidate"
-captured = "2026-10-19"
+captured = "2026-11-11"
