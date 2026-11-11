@@ -28,12 +28,9 @@ platform = "windows"
 image = "candidates/anchors-cpu-windows.png"
 width = 1200
 height = 800
-sha256 = "1ab3db6acd9c03e78a409ac7f7bc623de12b9a717f6d98be4db874cdfb9baef3"
-status = "approved"
-captured = "2026-10-19"
-reviewed_by = "agent review, per maintainer request 2026-10-21"
-reviewed_on = "2026-10-21"
-review_note = "Windows CPU path captured with --renderer sdl2d (SSH session cannot create a GPU swapchain); all three candidates visually reviewed; cross-platform pixel difference is informational only and never gated: home 11.9%, label 24.9%, anchors 1.3% of pixels differ, due to font rasterization/DPI, not layout or content"
+sha256 = "d461ec351640793c25ea57b8940d0c416bce343603117fdacd18b313e4092681"
+status = "candidate"
+captured = "2026-11-11"
 
 [[entries]]
 page = "anchors"
@@ -56,12 +53,9 @@ platform = "windows"
 image = "candidates/anchors-sdf-windows.png"
 width = 1200
 height = 800
-sha256 = "a66d34ae7246b32cd299c13bb68cbfd3f7b0058d9e5a581629fa50cb4ec61406"
-status = "approved"
-captured = "2026-10-19"
-reviewed_by = "agent review, per maintainer request 2026-10-22"
-reviewed_on = "2026-10-22"
-review_note = "Windows desktop-session SDF capture (home/label/anchors, 1200x800 x 30 frames, DXIL shader artifact); all three visually reviewed; second capture byte-identical (repeated=True) and the uploaded repeat files hash-match the repo candidates; home sha equals the CPU baseline because that page has no SDF primitives; cross-platform pixel differences are informational only and never gated"
+sha256 = "759bd9d6898c7e9662d7c5b9c2309388de465309cfb9b67ec90d45b9d2f6524d"
+status = "candidate"
+captured = "2026-11-11"
 
 [[entries]]
 page = "home"
@@ -84,12 +78,9 @@ platform = "windows"
 image = "candidates/home-cpu-windows.png"
 width = 1200
 height = 800
-sha256 = "f57917165eb20927c03d8e800fccdb9b0a336a9a891b1fc7976dcb92a61f43e9"
-status = "approved"
-captured = "2026-10-19"
-reviewed_by = "agent review, per maintainer request 2026-10-21"
-reviewed_on = "2026-10-21"
-review_note = "Windows CPU path captured with --renderer sdl2d (SSH session cannot create a GPU swapchain); all three candidates visually reviewed; cross-platform pixel difference is informational only and never gated: home 11.9%, label 24.9%, anchors 1.3% of pixels differ, due to font rasterization/DPI, not layout or content"
+sha256 = "b9d26422da6f4f056e57357dd73d711a4b4f15386da5d4eccc4a8ee034ad3a15"
+status = "candidate"
+captured = "2026-11-11"
 
 [[entries]]
 page = "home"
@@ -112,12 +103,9 @@ platform = "windows"
 image = "candidates/home-sdf-windows.png"
 width = 1200
 height = 800
-sha256 = "f57917165eb20927c03d8e800fccdb9b0a336a9a891b1fc7976dcb92a61f43e9"
-status = "approved"
-captured = "2026-10-19"
-reviewed_by = "agent review, per maintainer request 2026-10-22"
-reviewed_on = "2026-10-22"
-review_note = "Windows desktop-session SDF capture (home/label/anchors, 1200x800 x 30 frames, DXIL shader artifact); all three visually reviewed; second capture byte-identical (repeated=True) and the uploaded repeat files hash-match the repo candidates; home sha equals the CPU baseline because that page has no SDF primitives; cross-platform pixel differences are informational only and never gated"
+sha256 = "e98623a78648bc9fbf1e89363ddb0aaf9a48a969115211e81f842ecf7066f682"
+status = "candidate"
+captured = "2026-11-11"
 
 [[entries]]
 page = "label"
@@ -140,12 +128,9 @@ platform = "windows"
 image = "candidates/label-cpu-windows.png"
 width = 1200
 height = 800
-sha256 = "acf528fd7abae01e6f9000084e5affc767819dcddee0b5207f0fae9934d5eddf"
-status = "approved"
-captured = "2026-10-19"
-reviewed_by = "agent review, per maintainer request 2026-10-21"
-reviewed_on = "2026-10-21"
-review_note = "Windows CPU path captured with --renderer sdl2d (SSH session cannot create a GPU swapchain); all three candidates visually reviewed; cross-platform pixel difference is informational only and never gated: home 11.9%, label 24.9%, anchors 1.3% of pixels differ, due to font rasterization/DPI, not layout or content"
+sha256 = "a1fbb4827c7150e9cf46f3c3340d83714d1e50a53ba58a67a2532e93564f7998"
+status = "candidate"
+captured = "2026-11-11"
 
 [[entries]]
 page = "label"
@@ -168,12 +153,9 @@ platform = "windows"
 image = "candidates/label-sdf-windows.png"
 width = 1200
 height = 800
-sha256 = "63b5380cae0ccb8be61cf4d5f7c4b95897aeaa752714b5116d5de8c431ae74e3"
-status = "approved"
-captured = "2026-10-19"
-reviewed_by = "agent review, per maintainer request 2026-10-22"
-reviewed_on = "2026-10-22"
-review_note = "Windows desktop-session SDF capture (home/label/anchors, 1200x800 x 30 frames, DXIL shader artifact); all three visually reviewed; second capture byte-identical (repeated=True) and the uploaded repeat files hash-match the repo candidates; home sha equals the CPU baseline because that page has no SDF primitives; cross-platform pixel differences are informational only and never gated"
+sha256 = "a5ee2a2df423bab2aac1f76b56d949b883fd1575f7e4ccd2b3cd71f43979fee2"
+status = "candidate"
+captured = "2026-11-11"
 
 [[entries]]
 page = "typography"
@@ -193,7 +175,7 @@ platform = "windows"
 image = "candidates/typography-cpu-windows.png"
 width = 1200
 height = 800
-sha256 = "90b4aa4a39705eafa871dd6946124dbfe1d67f8d1f856aa481dce4c358ea8ec2"
+sha256 = "017847e45c451c1636272742f9f3e95048f98df753b0e20b8b62ee3863d11947"
 status = "candidate"
 captured = "2026-11-11"
 
@@ -215,6 +197,6 @@ platform = "windows"
 image = "candidates/typography-sdf-windows.png"
 width = 1200
 height = 800
-sha256 = "bd34ae6e68d3fb717392e97a06b33f1e3739f125a862e1acb7e701211bb935f8"
+sha256 = "c5497dade83fe9c39dd5fd5cfd41927c80992c94f1ee0a25a9b0d9dfee889e34"
 status = "candidate"
 captured = "2026-11-11"
