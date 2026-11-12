@@ -24,8 +24,11 @@
 `Label` 未显式设置 role 时默认 `body`：base 16 px + normal 1.5 leading；显式 `set_font_size`/
 `set_text_size`/继承字号保留后端默认行高（除非显式 leading），`set_font_size` 会重新解析
 leading。新增 showcase Typography 展示页（`content_and_display/typography`）与 page_probe
-页面；Windows golden 候选已采集，Linux 候选与人工审批待。契约见
-[排版尺度与单位](typography_scale.md) §5。
+页面；中文版双平台 8 条 golden 已于 2026-11-11 批准。2026-11-12：`ScalarToken` 新增语义
+role 尺寸值 `typography_role_display…caption`，默认组件配方改用 role 尺寸 token
+（视觉不变；C++ 覆盖 `NanTypeScale::roles` 会改变组件字号），styles.toml 支持
+`$tokens.typography.role.*`；role 的 leading/weight/斜体尚未进入 `TypeStyle`，role 表的
+TOML 覆盖仍待。契约见 [排版尺度与单位](typography_scale.md) §5。
 
 2026-11-11 P4.8b 页面渐进式分节挂载（experimental，新增作者 API）：`app::PageContext` 新增
 `DeferredSectionBuilder` / `supports_deferred_sections()` / `defer_section(widget::View

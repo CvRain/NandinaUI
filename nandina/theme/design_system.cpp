@@ -2780,7 +2780,7 @@ namespace nandina::theme
             .label =
                 TypeStyle {
                     .color = ThemeColor::token(ColorToken::primary),
-                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_role_label),
                     // 按钮标签居中是这个组件的既有观感。在此之前它由 Button::on_draw 里的居中
                     // 算术实现；现在改由配方表达，于是可被主题与实例覆盖改成左 / 右对齐。
                     .align = TextAlign::center,
@@ -2828,7 +2828,7 @@ namespace nandina::theme
             .label =
                 TypeStyle {
                     .color = ThemeColor::token(ColorToken::foreground),
-                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_role_label),
                 },
             .focus =
                 FocusRingStyle {
@@ -2918,12 +2918,12 @@ namespace nandina::theme
             .value =
                 TypeStyle {
                     .color = ThemeColor::token(ColorToken::foreground),
-                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_role_label),
                 },
             .placeholder =
                 TypeStyle {
                     .color = ThemeColor::token(ColorToken::muted_foreground),
-                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_role_label),
                 },
             .selection = ThemeColor::token(ColorToken::selection),
             .focus =
@@ -2960,12 +2960,12 @@ namespace nandina::theme
             .value =
                 TypeStyle {
                     .color = ThemeColor::token(ColorToken::foreground),
-                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_role_label),
                 },
             .placeholder =
                 TypeStyle {
                     .color = ThemeColor::token(ColorToken::muted_foreground),
-                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_role_label),
                 },
             .selection = ThemeColor::token(ColorToken::selection),
             .focus =
@@ -3007,7 +3007,7 @@ namespace nandina::theme
             .label =
                 TypeStyle {
                     .color = ThemeColor::token(ColorToken::foreground),
-                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_role_label),
                 },
             .focus =
                 FocusRingStyle {
@@ -3038,7 +3038,7 @@ namespace nandina::theme
             .label =
                 TypeStyle {
                     .color = ThemeColor::token(ColorToken::secondary_foreground),
-                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_role_label),
                 },
             .metrics = ControlMetrics {
                 .height = ThemeScalar::literal(22.0F),
@@ -3159,12 +3159,12 @@ namespace nandina::theme
             .title =
                 TypeStyle {
                     .color = ThemeColor::token(ColorToken::foreground),
-                    .font_size = ThemeScalar::token(ScalarToken::typography_label_lg),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_role_subtitle),
                 },
             .description =
                 TypeStyle {
                     .color = ThemeColor::token(ColorToken::muted_foreground),
-                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_role_label),
                 },
             .metrics = EmptyStateMetrics {
                 .gap = ThemeScalar::token(ScalarToken::spacing_md),
@@ -3203,12 +3203,12 @@ namespace nandina::theme
             .title =
                 TypeStyle {
                     .color = ThemeColor::token(ColorToken::foreground),
-                    .font_size = ThemeScalar::token(ScalarToken::typography_label_lg),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_role_subtitle),
                 },
             .description =
                 TypeStyle {
                     .color = ThemeColor::token(ColorToken::muted_foreground),
-                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_role_label),
                 },
             .icon = ThemeColor::token(ColorToken::foreground),
             .metrics = AlertMetrics {
@@ -3237,7 +3237,7 @@ namespace nandina::theme
             .label =
                 TypeStyle {
                     .color = ThemeColor::token(ColorToken::foreground),
-                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_role_label),
                 },
             .focus =
                 FocusRingStyle {
@@ -3274,7 +3274,7 @@ namespace nandina::theme
             .label =
                 TypeStyle {
                     .color = ThemeColor::token(ColorToken::foreground),
-                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_role_label),
                 },
             .focus =
                 FocusRingStyle {
@@ -3374,13 +3374,13 @@ namespace nandina::theme
             .link =
                 TypeStyle {
                     .color = ThemeColor::token(ColorToken::muted_foreground),
-                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_role_label),
                 },
             .link_hover = ThemeColor::token(ColorToken::foreground),
             .current =
                 TypeStyle {
                     .color = ThemeColor::token(ColorToken::foreground),
-                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_role_label),
                 },
             .separator = ThemeColor::token(ColorToken::muted_foreground),
             .link_focus =
@@ -3437,12 +3437,12 @@ namespace nandina::theme
             .label =
                 TypeStyle {
                     .color = ThemeColor::token(ColorToken::foreground),
-                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_role_label),
                 },
             .label_active =
                 TypeStyle {
                     .color = ThemeColor::token(ColorToken::primary_foreground),
-                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_role_label),
                 },
             .ellipsis = ThemeColor::token(ColorToken::muted_foreground),
             .focus =
@@ -3483,12 +3483,12 @@ namespace nandina::theme
             .label =
                 TypeStyle {
                     .color = ThemeColor::token(ColorToken::muted_foreground),
-                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_role_label),
                 },
             .label_selected =
                 TypeStyle {
                     .color = ThemeColor::token(ColorToken::foreground),
-                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_role_label),
                 },
             .indicator = ThemeColor::token(ColorToken::primary),
             .indicator_thickness = ThemeScalar::literal(2.0F),
@@ -3524,7 +3524,7 @@ namespace nandina::theme
             .label =
                 TypeStyle {
                     .color = ThemeColor::token(ColorToken::popover_foreground),
-                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_role_label),
                 },
             .metrics = ControlMetrics {
                 .height = ThemeScalar::literal(0.0F),
@@ -3557,17 +3557,17 @@ namespace nandina::theme
             .value =
                 TypeStyle {
                     .color = ThemeColor::token(ColorToken::foreground),
-                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_role_label),
                 },
             .option =
                 TypeStyle {
                     .color = ThemeColor::token(ColorToken::foreground),
-                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_role_label),
                 },
             .option_selected =
                 TypeStyle {
                     .color = ThemeColor::token(ColorToken::accent_foreground),
-                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_role_label),
                 },
             .focus =
                 FocusRingStyle {
@@ -3607,7 +3607,7 @@ namespace nandina::theme
             .label =
                 TypeStyle {
                     .color = ThemeColor::token(ColorToken::muted_foreground),
-                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_role_label),
                 },
             .metrics = ControlMetrics {
                 .height = ThemeScalar::literal(0.0F),
@@ -3633,7 +3633,7 @@ namespace nandina::theme
             .label =
                 TypeStyle {
                     .color = ThemeColor::token(ColorToken::secondary_foreground),
-                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_role_label),
                 },
             .remove_color = ThemeColor::token(ColorToken::muted_foreground),
             .focus =
@@ -3667,12 +3667,12 @@ namespace nandina::theme
             .title =
                 TypeStyle {
                     .color = ThemeColor::token(ColorToken::foreground),
-                    .font_size = ThemeScalar::token(ScalarToken::typography_label_lg),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_role_subtitle),
                 },
             .description =
                 TypeStyle {
                     .color = ThemeColor::token(ColorToken::muted_foreground),
-                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_role_label),
                 },
             .metrics = DialogMetrics {
                 .panel_width = ThemeScalar::literal(360.0F),
@@ -3720,17 +3720,17 @@ namespace nandina::theme
             .item_label =
                 TypeStyle {
                     .color = ThemeColor::token(ColorToken::foreground),
-                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_role_label),
                 },
             .item_shortcut =
                 TypeStyle {
                     .color = ThemeColor::token(ColorToken::muted_foreground),
-                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_role_label),
                 },
             .group_label =
                 TypeStyle {
                     .color = ThemeColor::token(ColorToken::muted_foreground),
-                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_role_label),
                 },
             .disabled_label = ThemeColor::token(ColorToken::muted_foreground),
             .hover_fill = ThemeColor::token(ColorToken::muted),
@@ -3796,32 +3796,32 @@ namespace nandina::theme
             .query =
                 TypeStyle {
                     .color = ThemeColor::token(ColorToken::foreground),
-                    .font_size = ThemeScalar::token(ScalarToken::typography_label_md),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_role_body),
                 },
             .placeholder =
                 TypeStyle {
                     .color = ThemeColor::token(ColorToken::muted_foreground),
-                    .font_size = ThemeScalar::token(ScalarToken::typography_label_md),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_role_body),
                 },
             .item_label =
                 TypeStyle {
                     .color = ThemeColor::token(ColorToken::foreground),
-                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_role_label),
                 },
             .item_shortcut =
                 TypeStyle {
                     .color = ThemeColor::token(ColorToken::muted_foreground),
-                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_role_label),
                 },
             .group_label =
                 TypeStyle {
                     .color = ThemeColor::token(ColorToken::muted_foreground),
-                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_role_label),
                 },
             .empty =
                 TypeStyle {
                     .color = ThemeColor::token(ColorToken::muted_foreground),
-                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_role_label),
                 },
             .disabled_label = ThemeColor::token(ColorToken::muted_foreground),
             .hover_fill = ThemeColor::token(ColorToken::muted),
@@ -3869,12 +3869,12 @@ namespace nandina::theme
             .value =
                 TypeStyle {
                     .color = ThemeColor::token(ColorToken::foreground),
-                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_role_label),
                 },
             .placeholder =
                 TypeStyle {
                     .color = ThemeColor::token(ColorToken::muted_foreground),
-                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_role_label),
                 },
             .selection = ThemeColor::token(ColorToken::selection),
             .focus =
@@ -3885,7 +3885,7 @@ namespace nandina::theme
             .option =
                 TypeStyle {
                     .color = ThemeColor::token(ColorToken::foreground),
-                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_role_label),
                 },
             .disabled_label = ThemeColor::token(ColorToken::muted_foreground),
             .hover_fill = ThemeColor::token(ColorToken::muted),
@@ -3922,15 +3922,15 @@ namespace nandina::theme
             .typography = TypographyRoles {
                 .label_sm = TypeStyle {
                     .color = ThemeColor::token(ColorToken::foreground),
-                    .font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_role_label),
                 },
                 .label_md = TypeStyle {
                     .color = ThemeColor::token(ColorToken::foreground),
-                    .font_size = ThemeScalar::token(ScalarToken::typography_label_md),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_role_body),
                 },
                 .label_lg = TypeStyle {
                     .color = ThemeColor::token(ColorToken::foreground),
-                    .font_size = ThemeScalar::token(ScalarToken::typography_label_lg),
+                    .font_size = ThemeScalar::token(ScalarToken::typography_role_subtitle),
                 },
             },
             .components = ComponentRecipes {
@@ -3941,14 +3941,14 @@ namespace nandina::theme
                         // base 已经是 medium（36/16），这里只覆盖 small 与 large。
                         ButtonRecipeRule {
                             .selector = {.size = ButtonSize::small},
-                            .label_font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                            .label_font_size = ThemeScalar::token(ScalarToken::typography_role_label),
                             .metrics_height = ThemeScalar::literal(32.0F),
                             .metrics_padding_x = ThemeScalar::token(ScalarToken::spacing_md),
                         },
                         ButtonRecipeRule {
                             .selector = {.size = ButtonSize::large},
                             .container_radius = ThemeScalar::token(ScalarToken::radius_md),
-                            .label_font_size = ThemeScalar::token(ScalarToken::typography_label_sm),
+                            .label_font_size = ThemeScalar::token(ScalarToken::typography_role_label),
                             .metrics_height = ThemeScalar::literal(40.0F),
                             .metrics_padding_x = ThemeScalar::token(ScalarToken::spacing_xl),
                         },

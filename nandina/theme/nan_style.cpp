@@ -4,6 +4,8 @@
 
 #include "nan_style.hpp"
 
+#include "typography_scale.hpp"
+
 namespace nandina::theme
 {
     namespace
@@ -314,6 +316,45 @@ namespace nandina::theme
                 return theme.tokens.typography.label_md;
             case ScalarToken::typography_label_lg:
                 return theme.tokens.typography.label_lg;
+            case ScalarToken::typography_role_display:
+                return text_size_px(
+                    theme.tokens.typography.scale,
+                    typography_role_style(theme.tokens.typography.scale, TypographyRole::display)
+                        .size
+                );
+            case ScalarToken::typography_role_heading:
+                return text_size_px(
+                    theme.tokens.typography.scale,
+                    typography_role_style(theme.tokens.typography.scale, TypographyRole::heading)
+                        .size
+                );
+            case ScalarToken::typography_role_title:
+                return text_size_px(
+                    theme.tokens.typography.scale,
+                    typography_role_style(theme.tokens.typography.scale, TypographyRole::title).size
+                );
+            case ScalarToken::typography_role_subtitle:
+                return text_size_px(
+                    theme.tokens.typography.scale,
+                    typography_role_style(theme.tokens.typography.scale, TypographyRole::subtitle)
+                        .size
+                );
+            case ScalarToken::typography_role_body:
+                return text_size_px(
+                    theme.tokens.typography.scale,
+                    typography_role_style(theme.tokens.typography.scale, TypographyRole::body).size
+                );
+            case ScalarToken::typography_role_label:
+                return text_size_px(
+                    theme.tokens.typography.scale,
+                    typography_role_style(theme.tokens.typography.scale, TypographyRole::label).size
+                );
+            case ScalarToken::typography_role_caption:
+                return text_size_px(
+                    theme.tokens.typography.scale,
+                    typography_role_style(theme.tokens.typography.scale, TypographyRole::caption)
+                        .size
+                );
             case ScalarToken::motion_short_duration:
                 return theme.tokens.motion.short_duration;
             case ScalarToken::motion_medium_duration:

@@ -94,6 +94,15 @@ namespace nandina::theme
         typography_label_sm,
         typography_label_md,
         typography_label_lg,
+        /// Semantic role sizes resolved through NanTypeScale::roles; recipes consume these so a
+        /// theme override of the role table (not just the legacy label_* tokens) changes components.
+        typography_role_display,
+        typography_role_heading,
+        typography_role_title,
+        typography_role_subtitle,
+        typography_role_body,
+        typography_role_label,
+        typography_role_caption,
         motion_short_duration,
         motion_medium_duration,
         motion_long_duration,

@@ -477,6 +477,27 @@ background = "$palette.missing"
 }
 
 TEST_CASE(
+    "styles.toml recipes can reference semantic typography role tokens",
+    "[theme][toml][typography]"
+) {
+    constexpr std::string_view source = R"toml(
+[[styles.button]]
+font_size = "$tokens.typography.role.subtitle"
+)toml";
+    const auto document = theme::parse_style_document(source);
+    REQUIRE(document.has_value());
+    REQUIRE(document->style->button_rules().size() == 1);
+    const auto& rule = document->style->button_rules().front();
+    REQUIRE(rule.font_size.has_value());
+    const auto* token = std::get_if<theme::ScalarToken>(&rule.font_size->value());
+    REQUIRE(token != nullptr);
+    REQUIRE(*token == theme::ScalarToken::typography_role_subtitle);
+    REQUIRE(
+        theme::resolve_theme_scalar(theme::default_theme(), *rule.font_size) == Catch::Approx(18.0F)
+    );
+}
+
+TEST_CASE(
     "styles.toml resolves reference palettes and appearance-aware families",
     "[theme][toml]"
 ) {

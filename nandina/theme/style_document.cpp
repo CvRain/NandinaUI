@@ -407,6 +407,20 @@ namespace nandina::theme
                 return ScalarToken::typography_label_md;
             if (value == "$tokens.typography.label_lg")
                 return ScalarToken::typography_label_lg;
+            if (value == "$tokens.typography.role.display")
+                return ScalarToken::typography_role_display;
+            if (value == "$tokens.typography.role.heading")
+                return ScalarToken::typography_role_heading;
+            if (value == "$tokens.typography.role.title")
+                return ScalarToken::typography_role_title;
+            if (value == "$tokens.typography.role.subtitle")
+                return ScalarToken::typography_role_subtitle;
+            if (value == "$tokens.typography.role.body")
+                return ScalarToken::typography_role_body;
+            if (value == "$tokens.typography.role.label")
+                return ScalarToken::typography_role_label;
+            if (value == "$tokens.typography.role.caption")
+                return ScalarToken::typography_role_caption;
             if (value == "$tokens.motion.short_duration")
                 return ScalarToken::motion_short_duration;
             if (value == "$tokens.motion.medium_duration")

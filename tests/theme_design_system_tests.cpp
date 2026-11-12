@@ -1,4 +1,4 @@
-﻿#include "theme_test_support.hpp"
+#include "theme_test_support.hpp"
 //
 // Theme DesignSystem / shared-fragment tests.
 //
@@ -210,6 +210,38 @@ TEST_CASE(
     REQUIRE(resolved.label.font_size == Catch::Approx(system.tokens.typography.label_sm));
     // 焦点环始终开启（与遗留语义一致）
     REQUIRE(resolved.focus.width == Catch::Approx(system.tokens.border.focus_ring));
+}
+
+TEST_CASE(
+    "component recipes consume semantic typography role tokens",
+    "[theme][typography][recipe]"
+) {
+    auto custom = theme::default_theme();
+    auto& scale = custom.tokens.typography.scale;
+    scale.roles[theme::typography_role_index(theme::TypographyRole::label)] =
+        theme::TypographyRoleStyle {
+            .size = theme::TextSize::xl,
+            .leading = theme::Leading::tight,
+            .font_weight = 500,
+    };
+    const auto system = theme::design_system_from_theme(custom);
+
+    // The default Button recipe must reference the role token, not the legacy label_sm value.
+    const auto& font_size = system.components.button.base.label.font_size.value();
+    const auto* token = std::get_if<theme::ScalarToken>(&font_size);
+    REQUIRE(token != nullptr);
+    REQUIRE(*token == theme::ScalarToken::typography_role_label);
+
+    // Overriding the label role to xl (20 px) changes the component's resolved font size.
+    const auto resolved = theme::resolve_button(
+        system,
+        theme::ColorAppearance::light,
+        theme::ButtonTone::primary,
+        theme::ButtonTreatment::filled,
+        theme::ButtonSize::medium,
+        theme::ButtonVisualState::normal
+    );
+    REQUIRE(resolved.label.font_size == Catch::Approx(20.0F));
 }
 
 TEST_CASE(

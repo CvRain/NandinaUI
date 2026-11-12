@@ -202,8 +202,11 @@ application shell. Version `0.1.0-alpha.1`.
   theme-overridable through `NanTypeScale::roles`, changes the unstyled Label default to `body`
   (16 px / normal 1.5; explicit size/text_size/inherited size keeps the backend line height), and
   adds the showcase Typography page (`content_and_display/typography`, also registered in
-  page_probe) covering the 13-step scale, six leadings, seven roles and the body default. Component
-  recipes still use explicit ScalarToken sizes and TOML role overrides are not open; the 2026-11-11
+  page_probe) covering the 13-step scale, six leadings, seven roles and the body default. Default
+  component recipes now consume semantic role **size** scalar tokens
+  (`ScalarToken::typography_role_*`; styles.toml may reference `$tokens.typography.role.*`), so
+  overriding `NanTypeScale::roles` changes component font sizes; role leading/weight/slant are
+  not yet carried by `TypeStyle`, and a TOML role-table override is not open. The 2026-11-11
   Chinese re-batch approved 8 baselines per platform (home/anchors/label/typography × SDF/CPU).
   Step 3 (rem/root text scale + accessibility cap) remains pending.
   Contract: `docs/references/typography_scale.md`.
