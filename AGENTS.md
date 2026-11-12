@@ -23,8 +23,9 @@ application shell. Version `0.1.0-alpha.1`.
   explicit px, plus the runtime `ThemeManager::set_text_scaling()` host entry. The Chinese
   showcase is localized; Windows/Linux each have 8 approved page
   goldens (home/anchors/label/typography × SDF/CPU); the dropdown high-DPI and GlyphAtlas
-  narrow-growth regressions are fixed with red-first tests. Outstanding: role leading/weight/
-  slant into `TypeStyle`, OS accessibility text-scale source/persistence, P4.7 real
+  narrow-growth regressions are fixed with red-first tests. Outstanding: default component
+  recipe migration + visual acceptance for role leading/weight/slant (the TypeStyle plumbing is
+  in), OS accessibility text-scale source/persistence, P4.7 real
   multi-face assets, P4.8c. Linux is reachable through the current local SSH alias
   (`nandina-linux`), verified on 2026-11-12.
 - P1 and P2 are closed. P2 covers the tool/UI split, startup policy, scoped manager results,
@@ -215,8 +216,9 @@ application shell. Version `0.1.0-alpha.1`.
   page_probe) covering the 13-step scale, six leadings, seven roles and the body default. Default
   component recipes now consume semantic role **size** scalar tokens
   (`ScalarToken::typography_role_*`; styles.toml may reference `$tokens.typography.role.*`), so
-  overriding `NanTypeScale::roles` changes component font sizes; role leading/weight/slant are
-  not yet carried by `TypeStyle`, while styles.toml can override the role table per theme via
+  overriding `NanTypeScale::roles` changes component font sizes; role leading/weight/slant can be
+  carried by `TypeStyle::role` into `ResolvedTypeStyle` and the shared text bridge, while default
+  component recipes still consume size only. styles.toml can override the role table per theme via
   `[themes.<name>.roles.<role>]` (size/leading/weight/slant). **P4.6 Step 3**
   (2026-11-12) adds `NanTypeScale::text_scale` (rem-semantics user text scaling) and
   `max_text_px` (optional cap, 0 disabled): token/role sizes resolve as

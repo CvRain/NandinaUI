@@ -59,6 +59,10 @@ namespace nandina::theme
         /// 在被指派宽度内的水平对齐。默认 `start`；需要居中的组件在**自己的默认配方**里
         /// 显式写 `center`（例如 Button），这样"加入对齐之前的样子"由配方而不是硬编码决定。
         TextAlign align = TextAlign::start;
+        /// 可选语义 role：解析时把 role 的 leading/weight/斜体带进 ResolvedTypeStyle。
+        /// 字号仍由 `font_size` 显式决定（role 不偷偷改尺寸）；未给出 role 时保持旧行为
+        /// （line_height=0 / weight=400 / slant=normal）。
+        std::optional<TypographyRole> role;
     };
 
     /** 控件聚焦时绘制的焦点环。 */
@@ -134,6 +138,10 @@ namespace nandina::theme
         NanColor color;
         float font_size = 0.0F;
         TextAlign align = TextAlign::start;
+        /// role 的 leading 乘数；0 保持后端默认（与 TextStyle::line_height 同义）。
+        float line_height = 0.0F;
+        int font_weight = 400;
+        FontSlant font_slant = FontSlant::normal;
     };
 
     using ResolvedFocusRing = struct ResolvedFocusRing {
@@ -1873,12 +1881,21 @@ namespace nandina::theme
     [[nodiscard]] inline auto
     resolve(const DesignSystem& system, const ColorAppearance appearance, const TypeStyle& type)
         -> ResolvedTypeStyle {
+        const auto role = type.role
+            ? std::optional<TypographyRoleStyle>(
+                  typography_role_style(system.tokens.typography.scale, *type.role)
+              )
+            : std::nullopt;
         return {
             .color = resolve_color(system, appearance, type.color),
             .font_size = resolve_scalar(system, appearance, type.font_size),
             // 枚举不需要解析，直接透传；放在这里是为了让 TypeStyle → ResolvedTypeStyle
             // 的桥接是完整的（漏了它就又是一处静默失效）。
             .align = type.align,
+            .line_height =
+                role ? leading_factor(system.tokens.typography.scale, role->leading) : 0.0F,
+            .font_weight = role ? role->font_weight : 400,
+            .font_slant = role ? role->slant : FontSlant::normal,
         };
     }
 

@@ -27,8 +27,10 @@ leading。新增 showcase Typography 展示页（`content_and_display/typography
 页面；中文版双平台 8 条 golden 已于 2026-11-11 批准。2026-11-12：`ScalarToken` 新增语义
 role 尺寸值 `typography_role_display…caption`，默认组件配方改用 role 尺寸 token
 （视觉不变；C++ 覆盖 `NanTypeScale::roles` 会改变组件字号），styles.toml 支持
-`$tokens.typography.role.*`；role 的 leading/weight/斜体尚未进入 `TypeStyle`，role 表的
-TOML 覆盖仍待。契约见 [排版尺度与单位](typography_scale.md) §5。
+`$tokens.typography.role.*`，并可通过 `[themes.<name>.roles.<role>]` 覆盖 role 表
+（size/leading/weight/slant）；role 的 leading/weight/斜体已可经 `TypeStyle::role` 进入
+`ResolvedTypeStyle`，由统一文本桥消费（显式样式上下文字体优先；默认组件配方仍只消费尺寸）。
+契约见 [排版尺度与单位](typography_scale.md) §5。
 
 2026-11-12 P4.6 Step 3 用户文字缩放与 cap（experimental，新增主题字段）：
 `theme::NanTypeScale` 新增 `text_scale`（默认 1.0，rem 语义的用户文字缩放因子；非有限/非正

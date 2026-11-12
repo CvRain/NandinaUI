@@ -188,6 +188,10 @@ slant = "italic"   # normal / italic / oblique
   显式 21 px 保持 fixed，token 字号缩放，cap 18 生效）；`[theme][manager][typography][scaling]`
   （运行时 `set_text_scaling(1.25,28)` 发布 revision、DesignSystem/theme 同步缩放，Button
   标签 14→17.5 px；外观切换后保持；相同值不发布；NaN/-1 重置为 1.0/0）；
+  `[theme][typography][role-metrics]`（`TypeStyle::role` 把 leading/weight/slant 带入
+  `ResolvedTypeStyle`，role 表覆盖后 700/italic/2.0 生效）与
+  `[widget][typography][role-metrics]`（统一文本桥把行高/字重/斜体写入 `TextStyle`；
+  显式样式上下文字体仍优先）；
   `[theme][toml][typography][roles]`
   （styles.toml 的 `[themes.dark.roles.label]` 覆盖 size/leading/weight/slant，Button 标签
   随之变为 20 px；未知 role/尺寸名返回解析错误）；
@@ -197,7 +201,8 @@ slant = "italic"   # normal / italic / oblique
   role_label），恢复后通过；styles.toml role 表用例临时跳过 `parse_role_overrides()` 后
   label role 仍为 sm、测试失败；Step 3 临时让 `text_size_px()` 直接返回 `root × ratio` 后，
   `[theme][typography][scaling]` 的 `16 == 20` 失败；运行时入口用例把 `set_text_scaling()`
-  临时改成 no-op 后 revision 未变化而失败；恢复后均通过。
+  临时改成 no-op 后 revision 未变化而失败；role metrics 用例把解析结果临时改回默认
+  0/400/normal 后行高断言失败，文本桥用例把映射临时改回默认后同样失败；恢复后均通过。
 - 全量 Windows/Linux 套件与 release gates 在提交时运行；**2026-11-11 中文版重批**：showcase
   中文化后 home/anchors/label/typography 四页在 Windows+Linux 各重采 SDF/CPU 8 条基线并批准
   （维护者审阅通过），本机复测全部 0 像素差异。
@@ -236,8 +241,10 @@ text_size_px(scale, size)
 
 ## 9. 后续（未实施）
 
-- **Step 2b 剩余**：把 role 的 leading/weight/斜体带进 `TypeStyle`/配方解析（当前组件配方只
-  消费 role 的尺寸）；正文行高的完整 CJK 页面审计按需扩展。
+- **Step 2b 剩余**：默认组件配方仍只消费 role **尺寸**；`TypeStyle::role` → `ResolvedTypeStyle`
+  的 leading/weight/slant 已打通并由统一文本桥消费（select/dropdown/combobox/command palette），
+  Button/TextField/Alert 等手工构造文本样式的组件迁移、默认配方切换与双平台视觉验收仍待。
+  正文行高的完整 CJK 页面审计按需扩展。
 - **Step 3 剩余**：OS 无障碍文字缩放来源与运行时变更通知/持久化；如需要，再评估每角色
   独立 cap 或组件级 fixed 列表。`em` 父字号相对链仍非目标。
 - **P4.7**：默认字体族只有 Caskaydia Cove Regular 一个 face；合成回退已于 2026-11-10

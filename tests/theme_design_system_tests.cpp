@@ -1077,3 +1077,37 @@ TEST_CASE("typography roles are theme-overridable through the type scale", "[the
     REQUIRE(theme::typography_role_style(invalid).size == theme::TextSize::base);
     REQUIRE(theme::typography_role_style(scale, invalid).size == theme::TextSize::base);
 }
+
+TEST_CASE("TypeStyle role supplies leading weight and slant", "[theme][typography][role-metrics]") {
+    auto system = theme::default_design_system();
+    auto type = system.components.button.base.label;
+    REQUIRE_FALSE(type.role.has_value());
+
+    const auto plain = theme::resolve(system, theme::ColorAppearance::light, type);
+    REQUIRE(plain.line_height == Catch::Approx(0.0F));
+    REQUIRE(plain.font_weight == 400);
+    REQUIRE(plain.font_slant == theme::FontSlant::normal);
+
+    type.role = theme::TypographyRole::label;
+    const auto styled = theme::resolve(system, theme::ColorAppearance::light, type);
+    REQUIRE(styled.font_size == Catch::Approx(14.0F)); // explicit TypeStyle font_size wins
+    REQUIRE(styled.line_height == Catch::Approx(1.25F));
+    REQUIRE(styled.font_weight == 500);
+    REQUIRE(styled.font_slant == theme::FontSlant::normal);
+
+    // The role's leading/weight/slant resolve through the theme-overridable role table.
+    const auto label = theme::typography_role_index(theme::TypographyRole::label);
+    system.tokens.typography.scale.roles[label] = theme::TypographyRoleStyle {
+        .size = theme::TextSize::xl,
+        .leading = theme::Leading::loose,
+        .font_weight = 700,
+        .slant = theme::FontSlant::italic,
+    };
+    const auto overridden = theme::resolve(system, theme::ColorAppearance::light, type);
+    REQUIRE(overridden.line_height == Catch::Approx(2.0F));
+    REQUIRE(overridden.font_weight == 700);
+    REQUIRE(overridden.font_slant == theme::FontSlant::italic);
+    // The recipe's role-size scalar token follows the role table; an explicit px/token override
+    // would remain independent, but the default recipe intentionally uses the role token.
+    REQUIRE(overridden.font_size == Catch::Approx(20.0F));
+}

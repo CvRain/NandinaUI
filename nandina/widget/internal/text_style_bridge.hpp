@@ -35,10 +35,18 @@ namespace nandina::widget::internal
         const text::TextOverflow overflow = text::TextOverflow::clip,
         const int max_lines = 1
     ) -> text::TextStyle {
+        auto font = context.font_from_context ? context.font : fallback_font;
+        if (!context.font_from_context) {
+            // role metrics only apply to the inherited/fallback face; an explicit style-context
+            // font stays authoritative for weight/slant as well as family.
+            font.weight = type.font_weight;
+            font.slant = type.font_slant;
+        }
         return text::TextStyle {
             .color = context.text_color_from_context ? context.text_color : type.color,
             .font_size = context.font_size_from_context ? context.font_size : type.font_size,
-            .font = context.font_from_context ? context.font : fallback_font,
+            .line_height = type.line_height,
+            .font = font,
             .overflow = overflow,
             .max_lines = max_lines,
             // 对齐来自解析后的排版：组件的标签对齐因此可被主题 / 配方调，而不是写死的。

@@ -25,6 +25,7 @@
 #include <nandina/widget/card.hpp>
 #include <nandina/widget/checkbox.hpp>
 #include <nandina/widget/declarative.hpp>
+#include <nandina/widget/internal/text_style_bridge.hpp>
 #include <nandina/widget/label.hpp>
 #include <nandina/widget/layout.hpp>
 #include <nandina/widget/primitives/editable_text.hpp>
@@ -3543,6 +3544,35 @@ TEST_CASE(
     REQUIRE(value->layout_dirty());
     REQUIRE(backend.calls > calls);
     REQUIRE(value->font().weight == 700);
+}
+
+TEST_CASE(
+    "text style bridge applies resolved role line height and weight",
+    "[widget][typography][role-metrics]"
+) {
+    theme::ResolvedStyleContext context;
+    theme::ResolvedTypeStyle type;
+    type.font_size = 18.0F;
+    type.line_height = 1.5F;
+    type.font_weight = 700;
+    type.font_slant = theme::FontSlant::italic;
+
+    theme::FontRequest fallback;
+    fallback.weight = 400;
+    const auto style = widget::internal::make_text_style(context, type, fallback);
+    REQUIRE(style.font_size == Catch::Approx(18.0F));
+    REQUIRE(style.line_height == Catch::Approx(1.5F));
+    REQUIRE(style.font.weight == 700);
+    REQUIRE(style.font.slant == theme::FontSlant::italic);
+
+    // An explicit style-context font stays authoritative for weight/slant.
+    context.font_from_context = true;
+    context.font.weight = 300;
+    context.font.slant = theme::FontSlant::normal;
+    const auto explicit_style = widget::internal::make_text_style(context, type, fallback);
+    REQUIRE(explicit_style.font.weight == 300);
+    REQUIRE(explicit_style.font.slant == theme::FontSlant::normal);
+    REQUIRE(explicit_style.line_height == Catch::Approx(1.5F));
 }
 
 TEST_CASE("Label typography role supplies semantic type metrics", "[widget][label][typography]") {
