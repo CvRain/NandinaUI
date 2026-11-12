@@ -206,7 +206,8 @@ application shell. Version `0.1.0-alpha.1`.
   component recipes now consume semantic role **size** scalar tokens
   (`ScalarToken::typography_role_*`; styles.toml may reference `$tokens.typography.role.*`), so
   overriding `NanTypeScale::roles` changes component font sizes; role leading/weight/slant are
-  not yet carried by `TypeStyle`, and a TOML role-table override is not open. **P4.6 Step 3**
+  not yet carried by `TypeStyle`, while styles.toml can override the role table per theme via
+  `[themes.<name>.roles.<role>]` (size/leading/weight/slant). **P4.6 Step 3**
   (2026-11-12) adds `NanTypeScale::text_scale` (rem-semantics user text scaling) and
   `max_text_px` (optional cap, 0 disabled): token/role sizes resolve as
   `root_base × ratio × text_scale`, then cap; explicit `.font_size(px)` stays fixed. OS

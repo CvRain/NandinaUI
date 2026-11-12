@@ -322,6 +322,118 @@ namespace nandina::theme
             }
         }
 
+        [[nodiscard]] auto role_from_name(std::string_view name) -> std::optional<TypographyRole> {
+            for (std::size_t index = 0; index < typography_role_count; ++index) {
+                const auto role = static_cast<TypographyRole>(index);
+                if (typography_role_name(role) == name) {
+                    return role;
+                }
+            }
+            return std::nullopt;
+        }
+
+        [[nodiscard]] auto text_size_from_name(std::string_view name) -> std::optional<TextSize> {
+            for (std::size_t index = 0; index < text_size_count; ++index) {
+                const auto size = static_cast<TextSize>(index);
+                if (text_size_name(size) == name) {
+                    return size;
+                }
+            }
+            return std::nullopt;
+        }
+
+        [[nodiscard]] auto leading_from_name(std::string_view name) -> std::optional<Leading> {
+            for (std::size_t index = 0; index < leading_count; ++index) {
+                const auto leading = static_cast<Leading>(index);
+                if (leading_name(leading) == name) {
+                    return leading;
+                }
+            }
+            return std::nullopt;
+        }
+
+        [[nodiscard]] auto slant_from_name(std::string_view name) -> std::optional<FontSlant> {
+            if (name == "normal") {
+                return FontSlant::normal;
+            }
+            if (name == "italic") {
+                return FontSlant::italic;
+            }
+            if (name == "oblique") {
+                return FontSlant::oblique;
+            }
+            return std::nullopt;
+        }
+
+        /// Per-theme semantic role table override:
+        /// `[themes.<name>.roles.<role>]` with optional size/leading/weight/slant fields.
+        void parse_role_overrides(
+            const toml::table& table,
+            NanTypeScale& scale,
+            const std::string_view path
+        ) {
+            for (const auto& [name, node]: table) {
+                const std::string role_path = std::string(path) + "." + std::string(name.str());
+                const auto* role_table = node.as_table();
+                if (role_table == nullptr) {
+                    throw std::runtime_error(role_path + " must be a table");
+                }
+                const auto role = role_from_name(name.str());
+                if (!role) {
+                    throw std::runtime_error(role_path + ": unknown typography role");
+                }
+                auto& style = scale.roles[typography_role_index(*role)];
+                if (const auto value = (*role_table)["size"]) {
+                    const auto text = value.value<std::string_view>();
+                    if (!text) {
+                        throw std::runtime_error(role_path + ".size must be a string");
+                    }
+                    const auto size = text_size_from_name(*text);
+                    if (!size) {
+                        throw std::runtime_error(
+                            role_path + ".size: unknown TextSize \"" + std::string(*text) + "\""
+                        );
+                    }
+                    style.size = *size;
+                }
+                if (const auto value = (*role_table)["leading"]) {
+                    const auto text = value.value<std::string_view>();
+                    if (!text) {
+                        throw std::runtime_error(role_path + ".leading must be a string");
+                    }
+                    const auto leading = leading_from_name(*text);
+                    if (!leading) {
+                        throw std::runtime_error(
+                            role_path + ".leading: unknown Leading \"" + std::string(*text) + "\""
+                        );
+                    }
+                    style.leading = *leading;
+                }
+                if (const auto value = (*role_table)["weight"]) {
+                    const auto weight = value.value<std::int64_t>();
+                    if (!weight || *weight < 1 || *weight > 1000) {
+                        throw std::runtime_error(
+                            role_path + ".weight must be an integer in [1, 1000]"
+                        );
+                    }
+                    style.font_weight = static_cast<int>(*weight);
+                }
+                if (const auto value = (*role_table)["slant"]) {
+                    const auto text = value.value<std::string_view>();
+                    if (!text) {
+                        throw std::runtime_error(role_path + ".slant must be a string");
+                    }
+                    const auto slant = slant_from_name(*text);
+                    if (!slant) {
+                        throw std::runtime_error(
+                            role_path + ".slant must be normal, italic, or oblique"
+                        );
+                    }
+                    style.slant = *slant;
+                }
+            }
+        }
+
         [[nodiscard]] auto color_token(std::string_view value) -> std::optional<ColorToken> {
             if (value == "$palette.background")
                 return ColorToken::background;
@@ -883,6 +995,13 @@ namespace nandina::theme
                     }
                     if (const auto* tokens = (*table)["tokens"].as_table()) {
                         parse_tokens(*tokens, value.tokens);
+                    }
+                    if (const auto* roles = (*table)["roles"].as_table()) {
+                        parse_role_overrides(
+                            *roles,
+                            value.tokens.typography.scale,
+                            "themes." + std::string(name.str()) + ".roles"
+                        );
                     }
                     document.themes.emplace(std::string(name.str()), std::move(value));
                 }

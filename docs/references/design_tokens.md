@@ -67,7 +67,7 @@ NanTokens（尺度）
 配方字段不是裸值，而是「token 或字面量」的声明：
 
 - 标量用 `ThemeScalar`（即 `ThemeValue<float, ScalarToken>`）：`ThemeScalar::token(ScalarToken::spacing_md)` 或 `ThemeScalar::literal(40.0F)`。`ScalarToken` 枚举名与 `NanTokens` 的字段一一对应（`spacing_*`、`radius_*`、`border_*`、`opacity_*`、`typography_label_*`、**语义 role 尺寸 `typography_role_display…caption`**、`motion_*_duration`）；role 尺寸 token 解析到 `NanTypeScale::roles` 的当前 size，而不是 legacy `label_*` 值。
-- 文件主题的标量引用支持 `$tokens.spacing.*` / `$tokens.radius.*` / `$tokens.border.*` / `$tokens.opacity.*` / `$tokens.typography.label_*` / **`$tokens.typography.role.display…caption`** / `$tokens.motion.*`；role 表本身（size/leading/weight）暂不支持在 styles.toml 覆盖。
+- 文件主题的标量引用支持 `$tokens.spacing.*` / `$tokens.radius.*` / `$tokens.border.*` / `$tokens.opacity.*` / `$tokens.typography.label_*` / **`$tokens.typography.role.display…caption`** / `$tokens.motion.*`；role 表可通过 `[themes.<name>.roles.<role>]` 的 `size`/`leading`/`weight`/`slant` 字段按主题覆盖。
 - 颜色用 `ThemeColor`：`ThemeColor::token(ColorToken::primary)`、`ThemeColor::literal(nan_color(...))`。`ColorToken` 与 `NanColorScheme` 的语义字段一一对应（含上面的兼容别名）。
 - 颜色还支持两类表达式。其一是随当前 tone 解析的引用：`ThemeColor::accent()` / `ThemeColor::on_accent()`，让 `filled` 之类的规则能表达「用当前强调色及其反色」。其二是浅层变换：`ThemeColor::with_alpha(source, factor)`、`ThemeColor::transparent(source)`、`ThemeColor::mix(lhs, rhs, factor)`。变换的操作数不嵌套表达式，保持可静态推导。
 - 解析入口是 `resolve_color(system, appearance, value, tone)` 与 `resolve_scalar(system, appearance, value)`；片段级还有 `resolve()` 重载。它们在内部构造 `NanTheme {tokens, palette(appearance)}` 后交给 `resolve_theme_color()` / `resolve_theme_scalar()`。
@@ -187,7 +187,7 @@ token 引用、`$palettes.*` 仍是参考色阶取值，匹配失败立即报错
 
 以下现象都可在当前代码中直接确认，属于尚未收口的部分：
 
-- `TypographyRoles`（`label_sm/md/lg`）已在默认快照中填充；P4.6 Step 2b 已把语义 role 表纳入 `NanTypeScale::roles`（C++ 主题可覆盖），并让 **Label 默认使用 body role（16 px / 1.5）**。默认组件配方已改为引用语义 role 尺寸 token（`ScalarToken::typography_role_*`），因此覆盖 role 表会同步改变组件字号；role 的 **leading/weight/斜体**还没有进入 `TypeStyle`/配方解析（仅 Label 消费）。文件主题可引用 role 尺寸 token，但 role 表的 TOML 覆盖仍待。见 [排版尺度与单位](typography_scale.md)。
+- `TypographyRoles`（`label_sm/md/lg`）已在默认快照中填充；P4.6 Step 2b 已把语义 role 表纳入 `NanTypeScale::roles`（C++ 主题可覆盖），并让 **Label 默认使用 body role（16 px / 1.5）**。默认组件配方已改为引用语义 role 尺寸 token（`ScalarToken::typography_role_*`），因此覆盖 role 表会同步改变组件字号；role 的 **leading/weight/斜体**还没有进入 `TypeStyle`/配方解析（仅 Label 消费）。文件主题可通过 `[themes.<name>.roles.<role>]` 覆盖 role 表（size/leading/weight/slant）；组件配方目前只消费 role 尺寸，leading/weight/斜体尚未进入 `TypeStyle`。见 [排版尺度与单位](typography_scale.md)。
 - 内置默认字体族 `families/default-ui` 只注册了一个 face（Caskaydia Cove Regular，`nandina/assets/default_font/default-ui.ttf`）；**P4.7 合成回退（2026-11-10）** 在缺 face 时按请求重量分级合成加粗、按 italic/oblique 请求做约 12° 倾斜，并用 HarfBuzz synthetic bold 同步 advance，因此 `set_font_weight()` / `set_font_slant()` 现在在默认字体下可见差异（Medium 较轻、Bold 较重、Italic 倾斜）；真实多 face 资源仍属后续增强。字体管线不变量另见 [合成字重/斜体回退](font_synthesis.md)；P4.6 的 Tailwind 字号尺度复用同一角色层。
 - `tone` / `treatment` 这类平铺语义变体目前只有 Button 具备；其余控件以 `state`（Checkbox、Switch、RadioButton 另有 `checked`）为主。
 - 遗留 `NanStyle` 只支持 Button 与 TextField 两类规则，因此 `set_style()` 不是通用扩展点。

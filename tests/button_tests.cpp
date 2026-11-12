@@ -498,6 +498,59 @@ font_size = "$tokens.typography.role.subtitle"
 }
 
 TEST_CASE(
+    "styles.toml can override the semantic role table per theme",
+    "[theme][toml][typography][roles]"
+) {
+    constexpr std::string_view source = R"toml(
+active_theme = "dark"
+
+[themes.dark.palette]
+primary = [0.31, 0.12, 250.0, 1.0]
+
+[themes.dark.roles.label]
+size = "xl"
+leading = "loose"
+weight = 700
+slant = "italic"
+)toml";
+    const auto document = theme::parse_style_document(source);
+    REQUIRE(document.has_value());
+
+    theme_test::Manager manager;
+    const auto applied = document->apply(manager);
+    REQUIRE(applied.has_value());
+    const auto role = manager.theme()
+                          .tokens.typography.scale
+                          .roles[theme::typography_role_index(theme::TypographyRole::label)];
+    REQUIRE(role.size == theme::TextSize::xl);
+    REQUIRE(role.leading == theme::Leading::loose);
+    REQUIRE(role.font_weight == 700);
+    REQUIRE(role.slant == theme::FontSlant::italic);
+
+    const auto resolved = theme::resolve_button(
+        manager.design_system(),
+        manager.appearance(),
+        theme::ButtonTone::primary,
+        theme::ButtonTreatment::filled,
+        theme::ButtonSize::medium,
+        theme::ButtonVisualState::normal
+    );
+    REQUIRE(resolved.label.font_size == Catch::Approx(20.0F));
+
+    const auto invalid_role = theme::parse_style_document(R"toml(
+[themes.dark.roles.unknown]
+size = "base"
+)toml");
+    REQUIRE_FALSE(invalid_role.has_value());
+
+    const auto invalid_size = theme::parse_style_document(R"toml(
+[themes.dark.roles.body]
+size = "gigantic"
+)toml");
+    REQUIRE_FALSE(invalid_size.has_value());
+}
+
+TEST_CASE(
     "styles.toml resolves reference palettes and appearance-aware families",
     "[theme][toml]"
 ) {
