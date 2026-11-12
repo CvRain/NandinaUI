@@ -56,7 +56,7 @@ weight/slant）：
 ## 5. 视觉与 golden
 
 - 默认视口 1200×800 的 Label 页 golden 只覆盖到 Font style 的 **Regular** 行，Regular 无合成，
-  因此 6 条既有页面 golden **不变**（Windows 采集 `changed_pixels=0, max_channel_diff=0`；
+  因此 P4.7 当时 6 条既有页面 golden **不变**（2026-11-11 本地化重批后每平台 8 条）（Windows 采集 `changed_pixels=0, max_channel_diff=0`；
   Linux 同批复核）。无需为 P4.7 重批基线。
 - 为人工视觉验收，`page_probe` 新增 `NANDINA_PROBE_WIDTH/HEIGHT`（仅手动采集；golden 命令
   仍用默认 1200×800）。渲染 1200×1400 可见 Medium/Bold/Italic 三行差异。
@@ -69,4 +69,4 @@ weight/slant）：
   的不变 advance；HarfBuzz 加粗后 shaping 宽度增大；GlyphAtlas 带 synthesis 时缓存字形更宽。
 - 红先：临时关闭 FreeType 合成后，`GlyphAtlas applies synthesis to cached glyphs` 失败
   （`16.0f > 16.0f`）；恢复后通过。
-- 双平台全量套件与 release gates 在提交时运行；页面 golden 6 条保持 0 差异。
+- 双平台全量套件与 release gates 在提交时运行；P4.7 当时页面 golden 6 条保持 0 差异（现每平台 8 条）。

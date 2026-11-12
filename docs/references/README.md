@@ -4,7 +4,7 @@
 
 ## 当前文档
 
-- [开发路线](development_roadmap.md)：**P1–P4 的排序与退出条件；P2 已交付，当前推进 P3（先 P3.1a 每事件坐标/修饰键快照）**。已验收基线、推进原则、各阶段交付与验收、近期切入顺序、非目标与风险。
+- [开发路线](development_roadmap.md)：**P1–P4 的排序与退出条件；P1/P2 已交付，P3 设计已定案并落地主要批次，当前推进 P4（P4.6 排版 Step 2b/3 模型已完成，剩余见路线图）**。已验收基线、推进原则、各阶段交付与验收、近期切入顺序、非目标与风险。
 - [项目进度与下一步](project_status.md)：**统一实施排期与历史状态**。批次 1–3 的已完成范围、D1–D8 与依赖工程状态、剩余边界；下一阶段见[开发路线](development_roadmap.md)。
 
 ### 架构与约定
@@ -30,11 +30,11 @@
 - [Anchors 布局设计](anchors.md)：作者模型、布局边界与百分比；scene 内核、作者入口、已知边界与故障注入见 §5。
 - [锚点系统：历史草案](anchor_draft.md)：保留讨论脉络与旧建议；不是规范，冲突时以 [Anchors 布局设计](anchors.md) 为准。
 - [配置与开发体验](authoring_configuration.md)：**作者侧规则**。回调的两类与 `guarded()` 的能力边界、handler 的 concept 化设计、组件的公开 API 表面、样式优先级。
-- [SDK 表面：头文件分类与门禁](sdk_surface.md)：**已实施**。区分构建闭包与公共表面；198 个头文件（12 internal）分类、包含方向与独立包含三类门禁已落地（Windows 的 `command`/反斜杠解析同样通过，2026-11-09）。图片解码钩子与 raylib 后端已删除，公开签名检查仍需评审。
+- [SDK 表面：头文件分类与门禁](sdk_surface.md)：**已实施**。区分构建闭包与公共表面；200 个头文件（188 experimental + 12 internal）分类、包含方向与独立包含三类门禁已落地（Windows 的 `command`/反斜杠解析同样通过，2026-11-09）。图片解码钩子与 raylib 后端已删除，公开签名检查仍需评审。
 - [视觉回归：golden、容差与更新流程](visual_regression.md)：**Linux 8 条、Windows 8 条 approved 基线已交付（2026-11-11 中文版重批；平台隔离）**。两层预期、`tests/golden/backend/` 图与 manifest（`golden-manifest` 校验清单与审阅元数据）、比较器与审批工具手动运行；Linux debug 与 release 渲染逐像素一致。
 - [性能预算：采样协议与候选阈值](performance_budget.md)：**已实施（Linux release 基线 + 确定性门禁；Windows CPU/SDF 参考基线已归档）**。固定采样协议（预热 300/采样 1200/重复 5 次、p50/p95）、release 基线（8 配置）、确定性门禁（布局 0、稳态 miss 0、binds 上限）与候选计时阈值（`--enforce` 启用）；Windows 参考数据不跨平台比较、不参与计时门禁；CI 无 GPU，属发布/本地门禁。
 - [渲染设备路径契约](render_device_path_contract.md)：**生产接入（填充/描边/圆/线段/弧）已完成并验收**。64 字节参数、4 KiB uniform 边界、三档缩放与纹理/字形交错、失败注入、嵌入产物、"不可变参数 state + 有界缓存"（§9）、审查修复（§10）、交互/性能协议（§11）、页面 golden（§12）、预算门禁（§13）、平台验收清单（§14）；阴影（mode 4）与涟漪圆角交集（mode 3）已实现并通过设备级测试；MSL 仍待实机验收；图片解码已迁到后端无关的 vendored stb。
-- [Windows 人工验收清单](windows_acceptance.md)：**需要交互式桌面会话的 GUI/GPU 项与历史回报入口**。真实窗口回归、butter 主题软阴影与涟漪圆角裁剪目检；DXIL 设备级验收、Windows 6 条页面 golden（CPU 3 + SDF 3）及 CPU/SDF 性能参考基线已交付（2026-10-22），不是待采集项；含复验命令与回报方式。**§9 记录 2026-11-09 全量套件复验**：修复 5 项 Windows 工具链可移植性缺陷后全量 125 OK / 0 FAIL，D3D12 离屏与默认 swapchain 合成读回通过；**§8 记录高 DPI 内容缩放（P4.5a 单屏 + P4.5b 混合 DPI 双屏均已验收，2026-11-09/10）**；**人工视觉验收（2026-11-10）已由维护者逐页审阅通过**（5 页 × 亮暗 + 6 状态，证据见 [windows_visual_2026-11-10](../images/windows_visual_2026-11-10/review.md)），期间修复 TextField 缺 hover 反馈，并记录默认字体单 face 导致 Font style 标本无差异（见 P4.7）。真实 IME、Linux Wayland 分数缩放与热插拔仍未验收。
+- [Windows 人工验收清单](windows_acceptance.md)：**需要交互式桌面会话的 GUI/GPU 项与历史回报入口**。真实窗口回归、butter 主题软阴影与涟漪圆角裁剪目检；DXIL 设备级验收、Windows 8 条页面 golden（2026-11-11 中文版重批，SDF+CPU）及 CPU/SDF 性能参考基线已交付，不是待采集项；含复验命令与回报方式。**§9 记录 2026-11-09 全量套件复验**：修复 5 项 Windows 工具链可移植性缺陷后全量 125 OK / 0 FAIL，D3D12 离屏与默认 swapchain 合成读回通过；**§8 记录高 DPI 内容缩放（P4.5a 单屏 + P4.5b 混合 DPI 双屏均已验收，2026-11-09/10）**；**人工视觉验收（2026-11-10）已由维护者逐页审阅通过**（5 页 × 亮暗 + 6 状态，证据见 [windows_visual_2026-11-10](../images/windows_visual_2026-11-10/review.md)），期间修复 TextField 缺 hover 反馈，并记录默认字体单 face 导致 Font style 标本无差异（见 P4.7）。真实 IME、Linux Wayland 分数缩放与热插拔仍未验收。
 - [第三方依赖策略](dependency_policy.md)：**批次 2 已完成，raylib 已退役**。10 个 wrap、字体 submodule、SDL3 三态来源、静态/共享选择、pin/dirty 与 SDK 消费门禁；GitHub 首次下载与逐平台应用打包仍需对应环境验收。
 - [D6：作者 DSL、文本能力与内容测量](authoring_dsl_and_content_measurement.md)：**P4.1a 盒内对齐与文本作者/绑定子批已实施；P4.1b Surface、Card 内容边距与 Image cover 锚点代码已提交，Showcase 正式视觉验收待完成**。Text/Label 垂直对齐、paint-only 与 viewport 缩放回归；Label 能力表、共享属性归属、builder 子项简写、有限宽度自然长高，以及 border / Section 的阶段边界；过程见 [story 014](../../stories/014-the-dsl-that-kept-sending-authors-to-configure.md)。
 - [待决设计草案](reference_draft.md)：**工作稿与历史设计记录**。D2 已汇总到[主题方案、作者入口与状态订阅](theme_authoring_and_state.md)；D3 的 `nav_group` / `group` 已复核并随 `095336b` 提交；D2 首批窄投影已提交 `8920f3a`，第 3 步 `995e6ae`，第 4 步 `4746173`，第 4a 步 `fef829a`，第 4b 步 `3e2542a`，第 4c 步命名颜色字面量 `f383201`，第 4d 步 TOML 命名颜色字面量 `5061b39`，Shell 多方案框架准备 `f821f40`；**D4 已归档**（历史 P3 默认后端换成 SDL3）；**D7** 混合、生产 SDF 与共享图片解码已交付，剩余边界见[项目状态](project_status.md)；**D8 P3.1a/b/c 已实施**：事件快照、键身份/生命周期与跨类型保序。D1 已定案为[统一输入、焦点与文本编辑](focus_and_input.md)。

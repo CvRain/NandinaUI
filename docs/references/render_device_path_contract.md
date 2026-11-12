@@ -430,7 +430,7 @@ DXIL/MSL 本轮尝试生成并接入按设备格式选择；生成/静态检查�
 
 ## 12. 页面 golden 候选层（2026-10-19）
 
-`tests/golden/backend/manifest.toml` 记录 6 条**已批准**golden（home/label/anchors × SDF/CPU），
+`tests/golden/backend/manifest.toml` 当时记录 6 条**已批准**golden（home/label/anchors × SDF/CPU；2026-11-11 中文版重批后每平台 8 条），
 图像在 `candidates/*.png`（1200×800，640×480 缩略亦可，本目录总计约 0.4 MB）。manifest 字段：
 `page`、`backend`、`image`、`width`、`height`、`sha256`、`status`、`captured`。
 

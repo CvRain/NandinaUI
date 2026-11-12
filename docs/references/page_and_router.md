@@ -171,7 +171,7 @@ Outlet 的换页是**原子**的：旧页面先摘、新页面后挂，任何时
 4. 回调按值捕获 Navigation 后可安全请求跳转；窗口关闭后旧句柄安全失败；事件期请求到任务阶段才切换。
 5. 未注册目标、重复注册、缺失初始路由、重复 Outlet、页面构建失败均有明确可测试的行为；失败不得破坏当前页面。
 6. 更新 `tests/router_tests.cpp`、playground、showcase 与 Getting Started 第 6 章；旧栈及转场 API 已删除，剩余工作集中在示例与教程表达统一。
-7. 渐进式分节：首帧只包含已构建节；每个 dispatcher drain 最多挂载一节；占位被替换后兄弟顺序不变；换页/销毁时未执行的 builder 不得运行；builder 异常上报且不阻塞后续节；无 dispatcher 宿主同步完成；迁移 showcase Label 页后 6 条页面 golden 保持 0 差异。
+7. 渐进式分节：首帧只包含已构建节；每个 dispatcher drain 最多挂载一节；占位被替换后兄弟顺序不变；换页/销毁时未执行的 builder 不得运行；builder 异常上报且不阻塞后续节；无 dispatcher 宿主同步完成；迁移 showcase Label 页后 6 条页面 golden 保持 0 差异（当时基线；2026-11-11 本地化重批后每平台 8 条）。
 7. 根据窗口真实运行验证焦点、Overlay 清理、异常路径和布局；无窗口单测覆盖路由模型与作用域释放。
 
 当前事实仍以源码为准。实施过程中若 API 形状调整，应先同步此合约和相关测试，再修改面向使用者的教程。Getting Started 由项目作者写正文，AI 只核对符号与可运行示例，遵守[文档分工](../components/coverage.md)。
