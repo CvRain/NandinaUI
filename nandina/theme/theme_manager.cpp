@@ -7,6 +7,7 @@
 #include "theme_manager.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <exception>
 #include <stdexcept>
 #include <utility>
@@ -77,6 +78,24 @@ namespace nandina::theme
             }
             return merged;
         }
+
+        [[nodiscard]] auto sanitized_text_scale(const float value) noexcept -> float {
+            return std::isfinite(value) && value > 0.0F ? value : 1.0F;
+        }
+
+        [[nodiscard]] auto sanitized_text_cap(const float value) noexcept -> float {
+            return std::isfinite(value) && value > 0.0F ? value : 0.0F;
+        }
+
+        /// Copy a design system and apply the runtime text scaling override to its type scale.
+        [[nodiscard]] auto
+        scaled_system(const DesignSystem& base, const float text_scale, const float max_text_px)
+            -> std::shared_ptr<const DesignSystem> {
+            auto system = std::make_shared<DesignSystem>(base);
+            system->tokens.typography.scale.text_scale = text_scale;
+            system->tokens.typography.scale.max_text_px = max_text_px;
+            return system;
+        }
     } // namespace
 
     ThemeManager::ThemeManager(): observers_(std::make_shared<ObserverState>()) {
@@ -110,9 +129,9 @@ namespace nandina::theme
         );
         active_id_ = light;
         active_content_ = catalog_.active()->content;
-        system_ = std::make_shared<const DesignSystem>(active_content_->design_system());
+        system_ = scaled_system(active_content_->design_system(), text_scale_, max_text_px_);
         effective_ = merge_style(system_, style_);
-        theme_view_ = NanTheme {active_content_->tokens, active_content_->palette};
+        theme_view_ = NanTheme {system_->tokens, active_content_->palette};
     }
 
     ThemeManager::~ThemeManager() {
@@ -161,8 +180,8 @@ namespace nandina::theme
         auto effective = effective_;
         auto view = theme_view_;
         if (changed) {
-            system = std::make_shared<const DesignSystem>(next_content->design_system());
-            view = NanTheme {next_content->tokens, next_content->palette};
+            system = scaled_system(next_content->design_system(), text_scale_, max_text_px_);
+            view = NanTheme {system->tokens, next_content->palette};
         }
         if (changed || style_changed) {
             effective = merge_style(system, style);
@@ -293,6 +312,26 @@ namespace nandina::theme
         auto preferences = system_preferences_;
         preferences.appearance = appearance;
         set_system_preferences(preferences);
+    }
+    void ThemeManager::set_text_scaling(const float text_scale, const float max_text_px) {
+        require_idle();
+        const float next_scale = sanitized_text_scale(text_scale);
+        const float next_cap = sanitized_text_cap(max_text_px);
+        if (next_scale == text_scale_ && next_cap == max_text_px_) {
+            return;
+        }
+        text_scale_ = next_scale;
+        max_text_px_ = next_cap;
+        system_ = scaled_system(active_content_->design_system(), text_scale_, max_text_px_);
+        effective_ = merge_style(system_, style_);
+        theme_view_ = NanTheme {system_->tokens, active_content_->palette};
+        publish_revision();
+    }
+    auto ThemeManager::text_scale() const noexcept -> float {
+        return text_scale_;
+    }
+    auto ThemeManager::max_text_px() const noexcept -> float {
+        return max_text_px_;
     }
     void ThemeManager::set_motion_preference(const MotionPreference preference) {
         require_idle();

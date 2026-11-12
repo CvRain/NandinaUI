@@ -20,10 +20,11 @@ application shell. Version `0.1.0-alpha.1`.
 - **Latest (2026-11-12)**: P4.6 Step 2b/3 model is complete — themeable typography roles
   (C++ and styles.toml `[themes.<name>.roles.<role>]`), Label default body, component recipes
   consuming semantic role size tokens, and `NanTypeScale::text_scale`/`max_text_px` with fixed
-  explicit px. The Chinese showcase is localized; Windows/Linux each have 8 approved page
+  explicit px, plus the runtime `ThemeManager::set_text_scaling()` host entry. The Chinese
+  showcase is localized; Windows/Linux each have 8 approved page
   goldens (home/anchors/label/typography × SDF/CPU); the dropdown high-DPI and GlyphAtlas
   narrow-growth regressions are fixed with red-first tests. Outstanding: role leading/weight/
-  slant into `TypeStyle`, OS accessibility text-scale source/runtime integration, P4.7 real
+  slant into `TypeStyle`, OS accessibility text-scale source/persistence, P4.7 real
   multi-face assets, P4.8c. Linux is reachable through the current local SSH alias
   (`nandina-linux`), verified on 2026-11-12.
 - P1 and P2 are closed. P2 covers the tool/UI split, startup policy, scoped manager results,
@@ -219,8 +220,9 @@ application shell. Version `0.1.0-alpha.1`.
   `[themes.<name>.roles.<role>]` (size/leading/weight/slant). **P4.6 Step 3**
   (2026-11-12) adds `NanTypeScale::text_scale` (rem-semantics user text scaling) and
   `max_text_px` (optional cap, 0 disabled): token/role sizes resolve as
-  `root_base × ratio × text_scale`, then cap; explicit `.font_size(px)` stays fixed. OS
-  accessibility scale source/runtime notifications remain pending. The 2026-11-11 Chinese
+  `root_base × ratio × text_scale`, then cap; explicit `.font_size(px)` stays fixed, and
+  `ThemeManager::set_text_scaling()` provides the runtime host entry. OS accessibility scale
+  source/persistence remain pending. The 2026-11-11 Chinese
   re-batch approved 8 baselines per platform (home/anchors/label/typography × SDF/CPU).
   Contract: `docs/references/typography_scale.md`.
 - **P4.7 synthetic weight/slant fallback** (2026-11-10) makes `FontRequest` weight/slant visible on

@@ -14,8 +14,9 @@
 > golden 已于 2026-11-11 重批批准**（每平台 8 条：4 页 × SDF/CPU）。
 > **Step 3 模型已实施（2026-11-12）**：`NanTypeScale` 新增 `text_scale`（rem 语义的用户文字
 > 缩放因子）与 `max_text_px`（可选 cap，0 关闭）；token/role 字号按
-> `root × ratio × text_scale` 解析后再 cap，显式 `.font_size(px)` 保持 fixed。OS 无障碍
-> 文本缩放的宿主接入仍待。
+> `root × ratio × text_scale` 解析后再 cap，显式 `.font_size(px)` 保持 fixed；运行时宿主入口
+> `ThemeManager::set_text_scaling()` 已提供（重建快照 + 发布 revision）。OS 无障碍来源、系统
+> 设置变化通知与持久化仍待。
 > 本文是契约；`docs/components/label.md` 与 `docs/references/design_tokens.md` 记录用法。
 
 ## 1. 单位决定
@@ -184,7 +185,10 @@ slant = "italic"   # normal / italic / oblique
   `$tokens.typography.role.subtitle` 解析为 18 px）；`[theme][typography][scaling]`（用户缩放
   1.25× 下 base 16→20、caption 12→15、display 36→45；cap 28 后 display 被限制；非法因子/cap
   回退）；`[widget][label][typography][scaling]`（Label 默认 body 随 1.25× 变为 20 px，
-  显式 21 px 保持 fixed，token 字号缩放，cap 18 生效）；`[theme][toml][typography][roles]`
+  显式 21 px 保持 fixed，token 字号缩放，cap 18 生效）；`[theme][manager][typography][scaling]`
+  （运行时 `set_text_scaling(1.25,28)` 发布 revision、DesignSystem/theme 同步缩放，Button
+  标签 14→17.5 px；外观切换后保持；相同值不发布；NaN/-1 重置为 1.0/0）；
+  `[theme][toml][typography][roles]`
   （styles.toml 的 `[themes.dark.roles.label]` 覆盖 size/leading/weight/slant，Button 标签
   随之变为 20 px；未知 role/尺寸名返回解析错误）；
   `[text][layout][line-height]`；`[authoring][typography]`。
@@ -192,7 +196,8 @@ slant = "italic"   # normal / italic / oblique
   role 消费用例把 Button 配方临时改回 legacy 字号 token 后失败（`*token` 是 label_sm、不是
   role_label），恢复后通过；styles.toml role 表用例临时跳过 `parse_role_overrides()` 后
   label role 仍为 sm、测试失败；Step 3 临时让 `text_size_px()` 直接返回 `root × ratio` 后，
-  `[theme][typography][scaling]` 的 `16 == 20` 失败；恢复后均通过。
+  `[theme][typography][scaling]` 的 `16 == 20` 失败；运行时入口用例把 `set_text_scaling()`
+  临时改成 no-op 后 revision 未变化而失败；恢复后均通过。
 - 全量 Windows/Linux 套件与 release gates 在提交时运行；**2026-11-11 中文版重批**：showcase
   中文化后 home/anchors/label/typography 四页在 Windows+Linux 各重采 SDF/CPU 8 条基线并批准
   （维护者审阅通过），本机复测全部 0 像素差异。
@@ -221,9 +226,12 @@ text_size_px(scale, size)
   display role 的 36 px 结果被限制在 28 px；普通 body 16×1.5=24 px 不受影响。
 - **行高**：`leading` 仍是字号倍数，缩放过字号后行距自然跟随；role 的 leading/weight 消费
   限制同 §7。
-- **宿主接入边界**：本批只提供主题模型与测试，不读取 Windows/Linux 的系统文字缩放设置；
-  应用/宿主可通过修改主题 `tokens.typography.scale.text_scale`（以及可选 cap）接入自己的
-  无障碍设置。真正的 OS 无障碍来源、运行时变更通知与持久化仍待。
+- **宿主运行时入口**：`ThemeManager::set_text_scaling(scale, max_px)` 接受宿主/应用传入的用户
+  或无障碍文字缩放；它重建带缩放 token 的有效 `DesignSystem` 快照并发布一次 theme revision，
+  已挂载控件因此在 `on_theme_changed` 中重解析。覆盖值是宿主状态，切换外观/方案后仍保持；
+  相同值不重复发布，非法值重置为 1.0/0。应用可通过 `NanApplication::theme_manager()` 调用。
+  **仍待**：读取 Windows/Linux 系统无障碍设置、系统设置变化通知与持久化；本批不假装已接入
+  OS 来源。显式 `.font_size(px)` 仍 fixed。
 - `em` 父字号相对链、每组件独立 fixed 列表不是本批目标；“fixed/cap”指上述显式 px 与全局上限。
 
 ## 9. 后续（未实施）

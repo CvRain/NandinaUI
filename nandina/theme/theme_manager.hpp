@@ -109,6 +109,19 @@ namespace nandina::theme
 
         [[nodiscard]] auto theme() const -> const NanTheme&;
         [[nodiscard]] auto appearance() const noexcept -> ColorAppearance;
+
+        /**
+         * Step 3 host entry: apply a user/accessibility text scale on top of the selected scheme.
+         *
+         * Rebuilds the effective DesignSystem snapshot with the scaled `NanTypeScale` and
+         * publishes one theme revision, so mounted widgets re-resolve token/role sizes. The
+         * override survives scheme/appearance changes. `max_text_px <= 0` disables the cap;
+         * non-finite/non-positive factors reset to 1.0. Explicit `.font_size(px)` stays fixed.
+         */
+        void set_text_scaling(float text_scale, float max_text_px = 0.0F);
+        [[nodiscard]] auto text_scale() const noexcept -> float;
+        [[nodiscard]] auto max_text_px() const noexcept -> float;
+
         void set_motion_preference(MotionPreference preference);
         /// Convenience update for hosts that receive motion separately.
         void set_system_reduced_motion(bool reduced);
@@ -151,6 +164,8 @@ namespace nandina::theme
         std::shared_ptr<const DesignSystem> system_;
         std::shared_ptr<const DesignSystem> effective_;
         NanTheme theme_view_;
+        float text_scale_ = 1.0F;
+        float max_text_px_ = 0.0F;
         std::shared_ptr<ObserverState> observers_;
         std::uint64_t revision_ = 1;
     };

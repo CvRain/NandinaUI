@@ -1,3 +1,5 @@
+#include <limits>
+
 #include "theme_test_support.hpp"
 //
 // theme_switch_tests — 运行时切换主题族 / 外观不得崩溃，且已挂载控件要整体重解析。
@@ -190,4 +192,55 @@ TEST_CASE("repeated appearance flips keep the tree drawable", "[theme][manager][
         paint(tree);
         REQUIRE(manager.appearance() == theme::ColorAppearance::light);
     }
+}
+
+TEST_CASE(
+    "runtime text scaling survives appearance changes and resets invalid values",
+    "[theme][manager][typography][scaling]"
+) {
+    theme_test::Manager manager;
+    REQUIRE(manager.text_scale() == Catch::Approx(1.0F));
+    REQUIRE(manager.max_text_px() == Catch::Approx(0.0F));
+
+    const auto before = manager.revision();
+    manager.set_text_scaling(1.25F, 28.0F);
+    REQUIRE(manager.revision() > before);
+    REQUIRE(manager.text_scale() == Catch::Approx(1.25F));
+    REQUIRE(manager.max_text_px() == Catch::Approx(28.0F));
+
+    const auto& scale = manager.theme().tokens.typography.scale;
+    REQUIRE(scale.text_scale == Catch::Approx(1.25F));
+    REQUIRE(scale.max_text_px == Catch::Approx(28.0F));
+    REQUIRE(theme::text_size_px(scale, theme::TextSize::base) == Catch::Approx(20.0F));
+    // The cap applies to the scaled role/token sizes.
+    REQUIRE(theme::text_size_px(scale, theme::TextSize::xl_4) == Catch::Approx(28.0F));
+    REQUIRE(manager.design_system().tokens.typography.scale.text_scale == Catch::Approx(1.25F));
+
+    const auto resolved = theme::resolve_button(
+        manager.design_system(),
+        manager.appearance(),
+        theme::ButtonTone::primary,
+        theme::ButtonTreatment::filled,
+        theme::ButtonSize::medium,
+        theme::ButtonVisualState::normal
+    );
+    REQUIRE(resolved.label.font_size == Catch::Approx(17.5F)); // role label 14 * 1.25
+
+    // The override is host state, not scheme state: appearance switches keep it.
+    manager.set_system_appearance(theme::ColorAppearance::dark);
+    REQUIRE(manager.appearance() == theme::ColorAppearance::dark);
+    REQUIRE(manager.theme().tokens.typography.scale.text_scale == Catch::Approx(1.25F));
+    REQUIRE(manager.design_system().tokens.typography.scale.text_scale == Catch::Approx(1.25F));
+
+    // Equal values do not publish a redundant revision.
+    const auto stable = manager.revision();
+    manager.set_text_scaling(1.25F, 28.0F);
+    REQUIRE(manager.revision() == stable);
+
+    // Invalid values reset to unscaled/uncapped instead of propagating NaN.
+    manager.set_text_scaling(std::numeric_limits<float>::quiet_NaN(), -1.0F);
+    REQUIRE(manager.text_scale() == Catch::Approx(1.0F));
+    REQUIRE(manager.max_text_px() == Catch::Approx(0.0F));
+    REQUIRE(manager.theme().tokens.typography.scale.text_scale == Catch::Approx(1.0F));
+    REQUIRE(manager.design_system().tokens.typography.scale.max_text_px == Catch::Approx(0.0F));
 }
