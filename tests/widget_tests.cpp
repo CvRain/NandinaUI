@@ -1206,6 +1206,32 @@ TEST_CASE(
 }
 
 TEST_CASE(
+    "user text scaling affects Label token sizes but leaves explicit px fixed",
+    "[widget][label][typography][scaling]"
+) {
+    reactive::Graph graph;
+    auto custom = theme::default_theme();
+    custom.tokens.typography.scale.text_scale = 1.25F;
+
+    auto default_label = widget::Label::create(graph, "text", custom);
+    REQUIRE(default_label->font_size() == Catch::Approx(20.0F)); // body base 16 * 1.25
+    REQUIRE(default_label->line_height() == Catch::Approx(1.5F));
+
+    auto explicit_label = widget::Label::create(graph, "text", custom);
+    explicit_label->set_font_size(21.0F);
+    REQUIRE(explicit_label->font_size() == Catch::Approx(21.0F)); // CSS px stays fixed
+
+    auto token_label = widget::Label::create(graph, "text", custom);
+    token_label->set_text_size(theme::TextSize::base);
+    REQUIRE(token_label->font_size() == Catch::Approx(20.0F));
+
+    // Optional cap applies to token/role sizes after scaling.
+    custom.tokens.typography.scale.max_text_px = 18.0F;
+    auto capped = widget::Label::create(graph, "text", custom);
+    REQUIRE(capped->font_size() == Catch::Approx(18.0F));
+}
+
+TEST_CASE(
     "Label text size and leading follow a custom theme scale",
     "[widget][label][typography]"
 ) {

@@ -970,6 +970,30 @@ TEST_CASE("type scale honors theme overrides and sanitizes invalid values", "[th
     REQUIRE(theme::leading_factor(invalid, theme::Leading::tight) == Catch::Approx(1.25F));
 }
 
+TEST_CASE(
+    "type scale applies user text scaling and an optional maximum size",
+    "[theme][typography][scaling]"
+) {
+    theme::NanTypeScale scale;
+    scale.text_scale = 1.25F;
+    REQUIRE(theme::text_size_px(scale, theme::TextSize::base) == Catch::Approx(20.0F));
+    REQUIRE(theme::text_size_px(scale, theme::TextSize::xs) == Catch::Approx(15.0F));
+    REQUIRE(theme::text_size_px(scale, theme::TextSize::xl_4) == Catch::Approx(45.0F));
+
+    // Cap applies after scaling to scale/role-derived sizes only.
+    scale.max_text_px = 28.0F;
+    REQUIRE(theme::text_size_px(scale, theme::TextSize::base) == Catch::Approx(20.0F));
+    REQUIRE(theme::text_size_px(scale, theme::TextSize::xl_4) == Catch::Approx(28.0F));
+
+    // Invalid factor/cap fall back to "unscaled, uncapped".
+    scale.text_scale = std::numeric_limits<float>::quiet_NaN();
+    scale.max_text_px = -1.0F;
+    REQUIRE(theme::text_size_px(scale, theme::TextSize::base) == Catch::Approx(16.0F));
+    scale.text_scale = 1.5F;
+    scale.max_text_px = 0.0F;
+    REQUIRE(theme::text_size_px(scale, theme::TextSize::xl_4) == Catch::Approx(54.0F));
+}
+
 TEST_CASE("typography roles map to semantic type metrics", "[theme][typography]") {
     constexpr std::array<std::string_view, theme::typography_role_count> expected_names {
         "display",

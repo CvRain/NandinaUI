@@ -203,6 +203,14 @@ namespace nandina::theme
         /// primitive scale. Values stay in terms of TextSize/Leading so root-base overrides apply.
         std::array<TypographyRoleStyle, typography_role_count> roles =
             canonical_typography_role_styles;
+        /// Step 3 user/accessibility text scale (rem semantics): token- and role-derived sizes are
+        /// multiplied by this factor. Explicit `.font_size(px)` stays absolute/fixed and is not
+        /// multiplied. Non-finite/non-positive values fall back to 1.0.
+        float text_scale = 1.0F;
+        /// Optional cap (logical px) applied to token/role sizes after `text_scale`; 0 disables
+        /// the cap. This is where a "never larger than 28 px" policy lives. Applies only to
+        /// scale/role-derived sizes, never to explicit px.
+        float max_text_px = 0.0F;
     };
 
     [[nodiscard]] constexpr auto text_size_index(const TextSize size) noexcept -> std::size_t {
@@ -282,9 +290,10 @@ namespace nandina::theme
     } // namespace detail
 
     /**
-     * Logical-pixel size of a step under a scale's root base.
-     * Non-finite/non-positive root base or ratio falls back to the canonical value rather than
-     * producing a NaN size that would break layout.
+     * Logical-pixel size of a step under a scale's root base, user text scale and optional cap.
+     * Non-finite/non-positive root base, ratio or text scale falls back to the canonical/default
+     * value rather than producing a NaN size that would break layout. `max_text_px > 0` caps the
+     * scaled result; explicit `.font_size()` never goes through this function and stays fixed.
      */
     [[nodiscard]] constexpr auto
     text_size_px(const NanTypeScale& scale, const TextSize size) noexcept -> float {
@@ -292,7 +301,12 @@ namespace nandina::theme
         const float root = detail::valid_positive(scale.root_base, canonical_root_base);
         const float ratio =
             detail::valid_positive(scale.ratios[index], canonical_text_size_ratios[index]);
-        return root * ratio;
+        const float user_scale = detail::valid_positive(scale.text_scale, 1.0F);
+        const float scaled = root * ratio * user_scale;
+        if (std::isfinite(scale.max_text_px) && scale.max_text_px > 0.0F) {
+            return scaled < scale.max_text_px ? scaled : scale.max_text_px;
+        }
+        return scaled;
     }
 
     /// Line-height factor for a leading step under a scale (multiply by the font size).

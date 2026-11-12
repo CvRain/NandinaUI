@@ -23,7 +23,7 @@ NanTokens（尺度）
                                                           Resolved*Style（全是 NanColor / float 的具体值）→ painter
 ```
 
-- **Primitive tokens** 是 `NanTokens`：`spacing`（`xs/sm/md/lg/xl`）、`radius`（`sm/md/lg/full`）、`border`（`thin/medium/focus_ring`）、`opacity`（`disabled/hover_overlay/pressed_overlay`）、`typography`（`label_sm/md/lg` + `scale`：Tailwind 兼容 13 档比例、6 档 leading 与 7 个可覆盖的语义 role，见 [排版尺度与单位](typography_scale.md)）、`motion`（`short/medium/long_duration`）。它们只提供尺度，不决定组件行为。圆角尺度对齐 shadcn 的 `--radius: 0.625rem` 派生关系（`sm = 6`、`md = 8`、`lg = 10`），改主题时三者要一起调。
+- **Primitive tokens** 是 `NanTokens`：`spacing`（`xs/sm/md/lg/xl`）、`radius`（`sm/md/lg/full`）、`border`（`thin/medium/focus_ring`）、`opacity`（`disabled/hover_overlay/pressed_overlay`）、`typography`（`label_sm/md/lg` + `scale`：Tailwind 兼容 13 档比例、6 档 leading、7 个可覆盖的语义 role，以及 Step 3 的用户文字缩放 `text_scale` / 上限 `max_text_px`，见 [排版尺度与单位](typography_scale.md)）、`motion`（`short/medium/long_duration`）。它们只提供尺度，不决定组件行为。圆角尺度对齐 shadcn 的 `--radius: 0.625rem` 派生关系（`sm = 6`、`md = 8`、`lg = 10`），改主题时三者要一起调。
 - **Reference palette** 是品牌方的着色输入：`NanReferencePalette` 持有 `primary/secondary/tertiary/neutral/success/warning/error` 七条 `NanColorScale`，每条 11 档（`ColorShade::shade_50`…`shade_950`）。主题作者通常用命名的 `NanHexScale` 书写，再由 `nan_color_scale()` 编译为内部 OKLCH 色阶。**注意 `error` 是唯一一条降序书写的色阶**（`shade_50` 最深），语义映射已按此适配，不要"顺手"改成升序。
 - **Semantic palette** 是组件唯一允许引用的颜色层：`NanColorScheme`。核心角色沿用 shadcn 的 `x` / `x_foreground` 命名约定，另有若干扩展角色，见下节。
 - **Component recipes** 是唯一事实来源：`ComponentRecipes` 为每个组件保存 `{ base, rules }`，`base` 完全指定所有片段，`rules` 是按 `tone/treatment/size/state` 等选择器匹配的增量覆盖。

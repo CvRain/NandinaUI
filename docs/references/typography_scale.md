@@ -1,4 +1,4 @@
-# 排版尺度与单位（P4.6 Step 1 + Step 2a）
+# 排版尺度与单位（P4.6 Step 1 + Step 2a + Step 2b + Step 3）
 
 > **状态（2026-11-11）**：Step 1 已实施——Tailwind 兼容的 13 档字号枚举、可主题覆盖的
 > `NanTypeScale`、`Leading` 行高 token、`TextStyle` 行高乘数与 `Label` 作者入口。
@@ -10,8 +10,11 @@
 > 默认配方不再直接引用 `typography_label_*`；C++ 主题覆盖 role 表会同步改变组件字号），
 > styles.toml 也可引用 `$tokens.typography.role.*`。role 的 leading/weight/斜体尚未进入
 > `TypeStyle`（目前仅 Label 消费），role 表的 TOML 覆盖仍待；**Typography 展示页的双平台
-> golden 已于 2026-11-11 重批批准**（每平台 8 条：4 页 × SDF/CPU）。Step 3（rem/root 文字
-> 缩放与无障碍 cap）未实施。
+> golden 已于 2026-11-11 重批批准**（每平台 8 条：4 页 × SDF/CPU）。
+> **Step 3 模型已实施（2026-11-12）**：`NanTypeScale` 新增 `text_scale`（rem 语义的用户文字
+> 缩放因子）与 `max_text_px`（可选 cap，0 关闭）；token/role 字号按
+> `root × ratio × text_scale` 解析后再 cap，显式 `.font_size(px)` 保持 fixed。OS 无障碍
+> 文本缩放的宿主接入仍待。
 > 本文是契约；`docs/components/label.md` 与 `docs/references/design_tokens.md` 记录用法。
 
 ## 1. 单位决定
@@ -167,22 +170,54 @@ label->set_font_size(28.0F);
   显式字号优先、行高 token/数值优先级、role 字号/行高/字重、**主题覆盖 role 表**）；
   `[theme][typography][recipe]`（默认 `Button` 配方引用 role 尺寸 token；覆盖 label role
   为 xl 后解析字号 20 px）；`[theme][toml][typography]`（styles.toml 引用
-  `$tokens.typography.role.subtitle` 解析为 18 px）；
+  `$tokens.typography.role.subtitle` 解析为 18 px）；`[theme][typography][scaling]`（用户缩放
+  1.25× 下 base 16→20、caption 12→15、display 36→45；cap 28 后 display 被限制；非法因子/cap
+  回退）；`[widget][label][typography][scaling]`（Label 默认 body 随 1.25× 变为 20 px，
+  显式 21 px 保持 fixed，token 字号缩放，cap 18 生效）；
   `[text][layout][line-height]`；`[authoring][typography]`。
 - 红先记录：Step 1 行高后端、Step 2a display role size；Step 2b role 表覆盖/越界回退；组件
   role 消费用例把 Button 配方临时改回 legacy 字号 token 后失败（`*token` 是 label_sm、不是
-  role_label），恢复后通过。
+  role_label），恢复后通过；Step 3 临时让 `text_size_px()` 直接返回 `root × ratio` 后，
+  `[theme][typography][scaling]` 的 `16 == 20` 失败，恢复缩放后通过。
 - 全量 Windows/Linux 套件与 release gates 在提交时运行；**2026-11-11 中文版重批**：showcase
   中文化后 home/anchors/label/typography 四页在 Windows+Linux 各重采 SDF/CPU 8 条基线并批准
   （维护者审阅通过），本机复测全部 0 像素差异。
 - 组件配方的 role **leading/weight/斜体**消费、styles.toml 的 role 表覆盖仍待；正文行高的
   完整 CJK 页面审计按需扩展。
 
-## 8. 后续（未实施）
+## 8. Step 3：用户文字缩放与 cap（已实施 2026-11-12）
+
+`NanTypeScale` 新增两个字段，默认值保证现有视觉不变：
+
+| 字段 | 默认 | 语义 |
+| --- | --- | --- |
+| `text_scale` | `1.0` | 用户/无障碍文字缩放因子（rem 语义）；非有限/非正回退 1.0 |
+| `max_text_px` | `0.0` | 可选上限（逻辑 px），0 关闭；正有限值在缩放后对 token/role 结果取 min |
+
+解析规则（唯一入口 `text_size_px()`）：
+
+```text
+text_size_px(scale, size)
+  = min(root_base × ratio[size] × text_scale, max_text_px if > 0)
+```
+
+- **fixed**：显式 `.font_size(px)` / `set_font_size(px)` 是绝对逻辑 px，不乘 `text_scale`、
+  不受 cap 影响（CSS px 语义）；`TextSize`/role 派生字号才缩放。这保留“作者明确指定像素”
+  的稳定性，同时让正文/标题等 rem 语义文本跟随用户设置。
+- **cap**：`max_text_px` 是唯一 cap 入口。例如主题设 `text_scale=1.5, max_text_px=28`，
+  display role 的 36 px 结果被限制在 28 px；普通 body 16×1.5=24 px 不受影响。
+- **行高**：`leading` 仍是字号倍数，缩放过字号后行距自然跟随；role 的 leading/weight 消费
+  限制同 §7。
+- **宿主接入边界**：本批只提供主题模型与测试，不读取 Windows/Linux 的系统文字缩放设置；
+  应用/宿主可通过修改主题 `tokens.typography.scale.text_scale`（以及可选 cap）接入自己的
+  无障碍设置。真正的 OS 无障碍来源、运行时变更通知与持久化仍待。
+- `em` 父字号相对链、每组件独立 fixed 列表不是本批目标；“fixed/cap”指上述显式 px 与全局上限。
+
+## 9. 后续（未实施）
 
 - **Step 2b 剩余**：把 role 的 leading/weight/斜体带进 `TypeStyle`/配方解析（当前组件配方只
   消费 role 的尺寸），实现 styles.toml 的 role 表覆盖；正文行高的完整 CJK 页面审计按需扩展。
-- **Step 3**：rem/root 文字缩放——把 `root_base` 暴露为受“用户文字缩放”影响的量，并提供
-  `fixed` / `cap` 策略（“最大 28px”的语义落在这里）；`em` 父字号相对链仍非目标。
+- **Step 3 剩余**：OS 无障碍文字缩放来源与运行时变更通知/持久化；如需要，再评估每角色
+  独立 cap 或组件级 fixed 列表。`em` 父字号相对链仍非目标。
 - **P4.7**：默认字体族只有 Caskaydia Cove Regular 一个 face；合成回退已于 2026-11-10
   实施，因此 role 表的 500/600 字重现在可见；真实多 face 资源与许可决策仍是后续增强。

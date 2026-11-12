@@ -30,6 +30,13 @@ role 尺寸值 `typography_role_display…caption`，默认组件配方改用 ro
 `$tokens.typography.role.*`；role 的 leading/weight/斜体尚未进入 `TypeStyle`，role 表的
 TOML 覆盖仍待。契约见 [排版尺度与单位](typography_scale.md) §5。
 
+2026-11-12 P4.6 Step 3 用户文字缩放与 cap（experimental，新增主题字段）：
+`theme::NanTypeScale` 新增 `text_scale`（默认 1.0，rem 语义的用户文字缩放因子；非有限/非正
+回退 1.0）与 `max_text_px`（默认 0 关闭；正有限值在缩放后对 token/role 字号取 min）。
+`text_size_px()` 统一解析 `root_base × ratio × text_scale` 再 cap；显式 `.font_size(px)` /
+`set_font_size()` 保持 fixed，不缩放、不受 cap 影响。OS 无障碍文字缩放来源与运行时变更通知
+仍待接入。契约见 [排版尺度与单位](typography_scale.md) §8。
+
 2026-11-11 P4.8b 页面渐进式分节挂载（experimental，新增作者 API）：`app::PageContext` 新增
 `DeferredSectionBuilder` / `supports_deferred_sections()` / `defer_section(widget::View
 placeholder, builder)`；页面把已入树的占位控件注册为延迟节，Router 在首帧之后每帧最多构建
