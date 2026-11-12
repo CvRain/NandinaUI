@@ -17,8 +17,13 @@
 
 ## 2. 远程 Linux 操作（当前通道）
 
-Linux 机器与 Windows 处于同一局域网，通过 SSH 以普通用户操作仓库。约定：
+Linux 机器与 Windows **可能不在同一网段**，通过 SSH 以普通用户操作仓库。当前入口由维护者
+临时提供（`server.cloudvl.cn:15922`，NAT/端口转发后的地址，可能随网络环境变化）；本机使用
+`~/.ssh/nandina_linux` 专用密钥，2026-11-12 在新入口仍可直接密钥登录。地址、端口与密码只保存
+在本机会话中，不写入仓库、日志或文档正文。约定：
 
+- 远端默认 shell 为 **fish**；自动化脚本统一用 `ssh ... /usr/bin/bash -lc '...'` 或
+  `ssh ... /usr/bin/bash -s < script.sh` 执行，不要假设 POSIX shell 语法；
 - 只在 `/workspace/Cpp/NandinaUI` 与各 `buildDir*` 上工作；不改系统配置、不执行 `sudo`；
 - 使用**专用密钥**（不入库、不贴日志）；密码仅用于首次安装公钥，之后全部密钥认证，建议定期
   轮换原密码；
@@ -48,20 +53,23 @@ meson test -C buildDir --print-errorlogs        # 全量：unit + integration（
 ```
 
 2026-11-10 复验：**129 OK / 0 FAIL**（Windows 为 125 OK，差异来自 Linux-only 用例）。
+2026-11-12 经新 SSH 入口（端口转发）复验：同一台 `cvrain-workspace`（Arch、RX 6750 GRE、
+`/workspace/Cpp/NandinaUI`），**129 OK / 0 FAIL**，8 条页面 golden 全部 0 像素差异。
 
 ### 3.2 Linux 页面 golden 采集与比较
 
 ```bash
 meson setup buildDir-probe -Dsdl_page_probe=true --reconfigure
 meson compile -C buildDir-probe
-# approved 基线比较（当前 6 条：home/label/anchors × sdf/cpu）
+# approved 基线比较（当前 8 条：home/anchors/label/typography × sdf/cpu）
 python3 tools/compare_backend_golden.py --page home --backend sdf --json /tmp/g.json
 # 视觉变更后：先采集候选，再做差异图，人工审阅后 approve
 python3 tools/capture_backend_golden.py --pages home,label,anchors --modes sdf,cpu
 ```
 
-2026-11-10 复验：6 条 Linux approved 基线全部 **0 像素差异**（隐藏窗口 + RADV，与 2026-10-20
-记录一致），说明 GNOME Wayland 会话不影响离屏读回结果。
+2026-11-11 中文版重批：8 条 Linux approved 基线全部 **0 像素差异**（含 typography 新页；
+隐藏窗口 + RADV，与 2026-10-20 首批记录一致，说明 GNOME Wayland 会话不影响离屏读回结果）。
+2026-11-12 经新 SSH 入口再次复验仍为 0 差异。
 
 ### 3.3 Windows（本机）
 

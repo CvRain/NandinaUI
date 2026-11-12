@@ -263,9 +263,13 @@ application shell. Version `0.1.0-alpha.1`.
   verification after approval).
 - **Dual-platform verification (2026-11-10) is operational**: the Linux machine (Arch, GNOME
   Wayland, RADV RX 6750 GRE 12GB, Mesa 26.2.6) is reachable over SSH with a dedicated key; the
-  full Linux suite is 129 OK / 0 FAIL and all six Linux page goldens compare with 0 changed
-  pixels. Workflow, session-environment exports (`XDG_RUNTIME_DIR`, `WAYLAND_DISPLAY`,
-  `XDG_SESSION_TYPE=wayland`), golden capture/approve rules and security boundaries are in
+  full Linux suite is 129 OK / 0 FAIL and all eight Linux page goldens (home/anchors/label/
+  typography × SDF/CPU) compare with 0 changed pixels. The 2026-11-12 re-check went through a new
+  Network-address/port-forward entry and confirmed the same machine, repository path, key auth,
+  129/129 suite and 0-diff goldens; the address is temporary and only kept in the local session.
+  Workflow, session-environment exports (`XDG_RUNTIME_DIR`, `WAYLAND_DISPLAY`,
+  `XDG_SESSION_TYPE=wayland`), remote shell caveat (default fish; run scripts via
+  `/usr/bin/bash -s`), golden capture/approve rules and security boundaries are in
   `docs/references/dual_platform_verification.md`. Linux Clang 23 immediately caught a
   `logical_size_ = {}` portability issue (fixed in `d782729`) — Windows GCC success alone is not
   proof. Never commit remote credentials; run commits from Windows and `git pull` on Linux.
