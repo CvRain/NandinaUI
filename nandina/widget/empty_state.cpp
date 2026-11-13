@@ -4,6 +4,8 @@
 
 #include "empty_state.hpp"
 
+#include "internal/text_style_bridge.hpp"
+
 #include "../render/draw_context.hpp"
 #include "../theme/theme_manager.hpp"
 #include "primitives/box_painter.hpp"
@@ -287,13 +289,14 @@ namespace nandina::widget
                                const theme::ResolvedTypeStyle& type,
                                const text::TextOverflow overflow,
                                const int max_lines) {
-            const text::TextStyle text_style {
+            text::TextStyle text_style {
                 .color = context.text_color_from_context ? context.text_color : type.color,
                 .font_size = context.font_size_from_context ? context.font_size : type.font_size,
                 .font = context.font_from_context ? context.font : text.font(),
                 .overflow = overflow,
                 .max_lines = max_lines,
             };
+            internal::apply_type_metrics(text_style, type, context.font_from_context);
             if (!text.style().approx_equals(text_style)) {
                 text.set_style(text_style);
             }

@@ -52,6 +52,10 @@ weight/slant）：
   weight 轴仍走真实 face 解析）。
 - 非轮廓字形（bitmap/color）无法斜切；加粗对 bitmap 面的行为由 FreeType 决定，未单独验收。
 - 不做 synthetic small-caps 等其他合成。
+- **2026-11-12 决策：本轮不投资真实多 face 资产**（许可、包体积、CJK 覆盖与全部页面 golden
+  重批成本），合成回退继续作为默认路径。B1 收口后默认组件配方已在生产路径上消费 500/600
+  字重，因此合成加粗成为默认可见视觉（按钮标签为 500）；若后续引入真实 Medium/Bold/Italic，
+  需单独立批并重批页面 golden。
 
 ## 5. 视觉与 golden
 
@@ -60,7 +64,9 @@ weight/slant）：
   Linux 同批复核）。无需为 P4.7 重批基线。
 - 为人工视觉验收，`page_probe` 新增 `NANDINA_PROBE_WIDTH/HEIGHT`（仅手动采集；golden 命令
   仍用默认 1200×800）。渲染 1200×1400 可见 Medium/Bold/Italic 三行差异。
-- Step 2b 的 role 迁移会让组件真正消费 600/500 字重，届时按正常流程采集/审批页面 golden。
+- Step 2b 的 role 迁移会让组件真正消费 600/500 字重：**2026-11-12 B1 已在默认配方上完成**
+  （按钮 label role = 500），页面 golden 按正常流程重采并由维护者批准；label/typography 页
+  0 像素差异、home/anchors 差异集中在按钮文字，符合预期。
 
 ## 6. 验证（2026-11-10）
 

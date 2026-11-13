@@ -3,6 +3,9 @@
 //
 
 #include "button.hpp"
+
+#include "internal/text_style_bridge.hpp"
+
 #include "../render/draw_context.hpp"
 #include "../scene/input_event.hpp"
 #include "../theme/theme_manager.hpp"
@@ -475,6 +478,11 @@ namespace nandina::widget
             // 对齐来自配方（默认配方写的是 center，与加入对齐之前的样子一致）。
             .align = style.label.align,
         };
+        internal::apply_type_metrics(
+            text_style,
+            style.label,
+            context.font_from_context || font_explicit_
+        );
         label_presentation_.apply(text_style);
         if (text_.style().approx_equals(text_style)) {
             return;

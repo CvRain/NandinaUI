@@ -4,6 +4,8 @@
 
 #include "avatar.hpp"
 
+#include "internal/text_style_bridge.hpp"
+
 #include "../foundation/utf8.hpp"
 #include "../render/draw_context.hpp"
 #include "../theme/theme_manager.hpp"
@@ -150,13 +152,14 @@ namespace nandina::widget
     void Avatar::apply_text_style() {
         const auto style = resolved_style();
         const auto& context = resolved_style_context();
-        const text::TextStyle text_style {
+        text::TextStyle text_style {
             .color = context.text_color_from_context ? context.text_color : style.label.color,
             .font_size = context.font_size_from_context ? context.font_size : style.label.font_size,
             .font = context.font_from_context ? context.font : text_.font(),
             .overflow = text::TextOverflow::clip,
             .max_lines = 1,
         };
+        internal::apply_type_metrics(text_style, style.label, context.font_from_context);
         if (!text_.style().approx_equals(text_style)) {
             text_.set_style(text_style);
         }

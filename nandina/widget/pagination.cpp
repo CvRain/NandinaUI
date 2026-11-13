@@ -4,6 +4,8 @@
 
 #include "pagination.hpp"
 
+#include "internal/text_style_bridge.hpp"
+
 #include "../foundation/input.hpp"
 
 #include "../render/draw_context.hpp"
@@ -627,13 +629,14 @@ namespace nandina::widget
                 // 边界处不可用的上一页 / 下一页弱化（与 disabled 同一不透明度 token）。
                 color = color.with_alpha(color.alpha() * disabled_alpha);
             }
-            const text::TextStyle text_style {
+            text::TextStyle text_style {
                 .color = context.text_color_from_context ? context.text_color : color,
                 .font_size = context.font_size_from_context ? context.font_size : type.font_size,
                 .font = context.font_from_context ? context.font : item.text->font(),
                 .overflow = text::TextOverflow::clip,
                 .max_lines = 1,
             };
+            internal::apply_type_metrics(text_style, type, context.font_from_context);
             if (!item.text->style().approx_equals(text_style)) {
                 item.text->set_style(text_style);
             }

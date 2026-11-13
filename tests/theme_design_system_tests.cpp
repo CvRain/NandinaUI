@@ -1081,6 +1081,9 @@ TEST_CASE("typography roles are theme-overridable through the type scale", "[the
 TEST_CASE("TypeStyle role supplies leading weight and slant", "[theme][typography][role-metrics]") {
     auto system = theme::default_design_system();
     auto type = system.components.button.base.label;
+    // The resolver behaviour is tested in isolation here; the default recipes intentionally
+    // carry semantic roles (covered by "default component recipes carry semantic role metrics").
+    type.role.reset();
     REQUIRE_FALSE(type.role.has_value());
 
     const auto plain = theme::resolve(system, theme::ColorAppearance::light, type);
@@ -1110,4 +1113,61 @@ TEST_CASE("TypeStyle role supplies leading weight and slant", "[theme][typograph
     // The recipe's role-size scalar token follows the role table; an explicit px/token override
     // would remain independent, but the default recipe intentionally uses the role token.
     REQUIRE(overridden.font_size == Catch::Approx(20.0F));
+}
+
+TEST_CASE(
+    "default component recipes carry semantic role metrics",
+    "[theme][typography][recipe][role-metrics]"
+) {
+    const auto system = theme::default_design_system();
+    const auto appearance = theme::ColorAppearance::light;
+
+    const auto& button_label = system.components.button.base.label;
+    REQUIRE(button_label.role == theme::TypographyRole::label);
+    const auto resolved_button = theme::resolve(system, appearance, button_label);
+    REQUIRE(resolved_button.font_size == Catch::Approx(14.0F));
+    REQUIRE(resolved_button.line_height == Catch::Approx(1.25F));
+    REQUIRE(resolved_button.font_weight == 500);
+
+    REQUIRE(system.components.text_field.base.value.role == theme::TypographyRole::label);
+    REQUIRE(system.components.text_field.base.placeholder.role == theme::TypographyRole::label);
+    REQUIRE(system.components.text_area.base.value.role == theme::TypographyRole::body);
+    REQUIRE(system.components.alert.base.title.role == theme::TypographyRole::subtitle);
+    REQUIRE(system.components.alert.base.description.role == theme::TypographyRole::label);
+    REQUIRE(system.components.empty_state.base.title.role == theme::TypographyRole::subtitle);
+    REQUIRE(system.components.empty_state.base.description.role == theme::TypographyRole::label);
+    REQUIRE(system.components.dialog.base.title.role == theme::TypographyRole::subtitle);
+    REQUIRE(system.components.dialog.base.description.role == theme::TypographyRole::label);
+    REQUIRE(system.components.dropdown_menu.base.item_label.role == theme::TypographyRole::label);
+    REQUIRE(system.components.command_palette.base.query.role == theme::TypographyRole::body);
+    REQUIRE(system.components.breadcrumb.base.link.role == theme::TypographyRole::label);
+    REQUIRE(system.components.pagination.base.label.role == theme::TypographyRole::label);
+    REQUIRE(system.components.tabs.base.label.role == theme::TypographyRole::label);
+    REQUIRE(system.components.tooltip.base.label.role == theme::TypographyRole::label);
+    REQUIRE(system.components.select.base.value.role == theme::TypographyRole::label);
+    REQUIRE(system.components.combobox.base.value.role == theme::TypographyRole::label);
+    REQUIRE(system.components.chip.base.label.role == theme::TypographyRole::label);
+    REQUIRE(system.components.badge.base.label.role == theme::TypographyRole::label);
+    REQUIRE(system.components.avatar.base.label.role == theme::TypographyRole::label);
+    REQUIRE(system.components.switch_component.base.label.role == theme::TypographyRole::label);
+    REQUIRE(system.components.checkbox.base.label.role == theme::TypographyRole::label);
+    REQUIRE(system.components.radio_button.base.label.role == theme::TypographyRole::label);
+    REQUIRE(system.components.toggle.base.label.role == theme::TypographyRole::label);
+
+    // Overriding the role table changes both size and metrics for the default recipes: the
+    // recipes consume the semantic role instead of hard-coded metric values.
+    auto tuned = system;
+    tuned.tokens.typography.scale
+        .roles[theme::typography_role_index(theme::TypographyRole::label)] =
+        theme::TypographyRoleStyle {
+            .size = theme::TextSize::xl,
+            .leading = theme::Leading::loose,
+            .font_weight = 700,
+            .slant = theme::FontSlant::italic,
+    };
+    const auto tuned_button = theme::resolve(tuned, appearance, tuned.components.button.base.label);
+    REQUIRE(tuned_button.font_size == Catch::Approx(20.0F));
+    REQUIRE(tuned_button.line_height == Catch::Approx(2.0F));
+    REQUIRE(tuned_button.font_weight == 700);
+    REQUIRE(tuned_button.font_slant == theme::FontSlant::italic);
 }

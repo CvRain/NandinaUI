@@ -8,10 +8,12 @@
 > 的正文行高；显式字号仍保留后端默认行高。新增 showcase Typography 展示页（字号/行高/role/
 > body 默认四节）。**组件配方已迁移到语义 role 尺寸 token**（`ScalarToken::typography_role_*`，
 > 默认配方不再直接引用 `typography_label_*`；C++ 主题覆盖 role 表会同步改变组件字号），
-> styles.toml 也可引用 `$tokens.typography.role.*`。role 的 leading/weight/斜体尚未进入
-> `TypeStyle`（目前仅 Label 消费）；role 表可通过 styles.toml
-> `[themes.<name>.roles.<role>]` 覆盖；**Typography 展示页的双平台
-> golden 已于 2026-11-11 重批批准**（每平台 8 条：4 页 × SDF/CPU）。
+> styles.toml 也可引用 `$tokens.typography.role.*`；role 表可通过 styles.toml
+> `[themes.<name>.roles.<role>]` 覆盖。**Step 2b 收口已实施（2026-11-12）**：默认组件配方消费
+> role 的 leading/weight/slant（`TypeStyle::role` → `ResolvedTypeStyle` → 统一文本桥），
+> 手工构造文本样式的组件迁移到 `widget::internal::apply_type_metrics()`；双平台各 8 条
+> （共 16 条）SDF/CPU 页面 golden 重新采集并由维护者批准，label/typography 页 **0 像素差异**，
+> 差异集中在按钮文字的 500 合成字重与随后的 1–2 px 宽度调整。
 > **Step 3 模型已实施（2026-11-12）**：`NanTypeScale` 新增 `text_scale`（rem 语义的用户文字
 > 缩放因子）与 `max_text_px`（可选 cap，0 关闭）；token/role 字号按
 > `root × ratio × text_scale` 解析后再 cap，显式 `.font_size(px)` 保持 fixed；运行时宿主入口
@@ -146,12 +148,15 @@ label->set_font_size(28.0F);
   1.5 leading；`set_font_size()`、`set_text_size()` 或 StyleContext 字号会保留后端默认行高，
   除非作者显式给 leading/line-height。现有页面 golden 不受影响（showcase 文本大多显式指定
   字号）；Typography 展示页演示了这条默认。
-- **组件配方消费 role 尺寸**：默认 `Button`/`TextField`/`Alert`/`EmptyState`/菜单等配方改用
-  `ScalarToken::typography_role_*`（label/subtitle/body 等），按用途映射而不是继续硬编码
-  `label_sm/md/lg`；尺寸与迁移前一致，因此页面视觉不变。C++ 主题覆盖 `scale.roles[...]`
-  会同步改变这些组件的字号；styles.toml 也可引用 `$tokens.typography.role.*`。
-- role 的 **leading/weight/斜体**尚未进入 `TypeStyle`（配方只用 role 的 size；Label 路径消费
-  完整 role 度量），因此组件配方的 role 行高/字重仍待后续批次。
+- **组件配方消费 role 尺寸与度量（2026-11-12 收口）**：默认 `Button`/`TextField`/`TextArea`/
+  `Alert`/`EmptyState`/`Dialog`/`Tabs`/`Tooltip`/菜单与选择器族等配方改用
+  `ScalarToken::typography_role_*` 并给文本槽位带上语义 `role`；解析后 role 的 leading/
+  weight/slant 经 `TypeStyle::role` → `ResolvedTypeStyle` → 统一文本桥（手工构造路径用
+  `widget::internal::apply_type_metrics()`）进入控件。紧凑控件映射 label role（1.25 / 500），
+  多行 `TextArea` 用 body role（1.5）；字号 token 不变。显式样式上下文字体与组件级显式
+  weight/slant（如 `Button::set_font_weight()`）保持优先。
+- **豁免**：Slider 的数值标签沿用字面 12 px，没有配方 `TypeStyle`，本批不接入 role 度量；
+  正文行高的完整 CJK 页面审计按需扩展。
 - Step 2a 只新增 API/测试，不改任何组件默认；Step 2b 的 Label 默认变化不改变已批准的
   8 条页面 golden（Windows/Linux 复测 0 差异）。
 
@@ -203,10 +208,16 @@ slant = "italic"   # normal / italic / oblique
   `[theme][typography][scaling]` 的 `16 == 20` 失败；运行时入口用例把 `set_text_scaling()`
   临时改成 no-op 后 revision 未变化而失败；role metrics 用例把解析结果临时改回默认
   0/400/normal 后行高断言失败，文本桥用例把映射临时改回默认后同样失败；恢复后均通过。
-- 全量 Windows/Linux 套件与 release gates 在提交时运行；**2026-11-11 中文版重批**：showcase
-  中文化后 home/anchors/label/typography 四页在 Windows+Linux 各重采 SDF/CPU 8 条基线并批准
-  （维护者审阅通过），本机复测全部 0 像素差异。
-- 组件配方的 role **leading/weight/斜体**消费仍待；正文行高的完整 CJK 页面审计按需扩展。
+- **2026-11-12 B1 收口验证**：`[theme][typography][recipe][role-metrics]`（默认配方带 role；
+  覆盖 role 表同时改变字号/行高/字重/斜体）、`[widget][button][typography][role-metrics]`、
+  `[widget][text-field][typography][role-metrics]`。红先：默认配方去掉 `.role` 后断言失败，
+  组件侧移除 `apply_type_metrics()` 调用后行高/字重断言失败。Windows 全量 125/125（unit
+  104/104）、Linux 全量 129/129；矩阵 ASan unit 104（+1 预期 SKIP）、no-RTTI unit 106/106、
+  no-SQLite unit 101（+1 预期 SKIP）、纯 tools 8/8，`release_check --ci` 8/8；双平台各 8 条
+  页面 golden 按原始协议重采（CPU = GPU 设备 + SDF off，SDF = GPU 设备）后由维护者批准：
+  label/typography 8 条 0 像素差异，home/anchors 差异只落在按钮文字与 1–2 px 宽度调整。
+- 全量 Windows/Linux 套件与 release gates 在提交时运行；**2026-11-11 中文版重批**仍是
+  TextField hover/菜单高 DPI/图集修复后的历史基线记录。
 
 ## 8. Step 3：用户文字缩放与 cap（已实施 2026-11-12）
 
@@ -241,11 +252,12 @@ text_size_px(scale, size)
 
 ## 9. 后续（未实施）
 
-- **Step 2b 剩余**：默认组件配方仍只消费 role **尺寸**；`TypeStyle::role` → `ResolvedTypeStyle`
-  的 leading/weight/slant 已打通并由统一文本桥消费（select/dropdown/combobox/command palette），
-  Button/TextField/Alert 等手工构造文本样式的组件迁移、默认配方切换与双平台视觉验收仍待。
+- **Step 2b 已收口（2026-11-12）**：默认组件配方消费 role 的尺寸与 leading/weight/slant，
+  手工文本样式组件已迁移到统一 bridge；仅 Slider 数值标签按豁免保留字面字号。
   正文行高的完整 CJK 页面审计按需扩展。
 - **Step 3 剩余**：OS 无障碍文字缩放来源与运行时变更通知/持久化；如需要，再评估每角色
   独立 cap 或组件级 fixed 列表。`em` 父字号相对链仍非目标。
 - **P4.7**：默认字体族只有 Caskaydia Cove Regular 一个 face；合成回退已于 2026-11-10
-  实施，因此 role 表的 500/600 字重现在可见；真实多 face 资源与许可决策仍是后续增强。
+  实施，因此 role 表的 500/600 字重现在可见。**2026-11-12 决策：本轮不投资真实多 face
+  资产**（许可、包体积、CJK 覆盖与全部页面 golden 重批成本），合成回退继续作为默认路径；
+  若后续要做真实 Medium/Bold/Italic，按 P4.7 后续增强单独立批。

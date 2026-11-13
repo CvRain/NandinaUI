@@ -53,6 +53,31 @@ namespace nandina::widget::internal
             .align = type.align,
         };
     }
+
+    /**
+     * 把解析后的 role 度量补进组件**手工构造**的运行时样式。
+     *
+     * 组件存在自己的特殊构造路径（百分比字号、逐项颜色、组件级显式字体），不能一律走
+     * `make_text_style()`。这段"行高只补未显式给出的，显式字体不覆盖 weight/slant"的规则
+     * 如果各写一份，给 TextStyle 加字段时就会再次静默失效。
+     *
+     * @param style            已构造好的运行时样式，就地补齐
+     * @param type             解析后的配方排版
+     * @param font_is_explicit 调用方已显式决定字体（样式上下文或组件 API），保留其 weight/slant
+     */
+    inline void apply_type_metrics(
+        text::TextStyle& style,
+        const theme::ResolvedTypeStyle& type,
+        const bool font_is_explicit = false
+    ) {
+        if (style.line_height == 0.0F) {
+            style.line_height = type.line_height;
+        }
+        if (!font_is_explicit) {
+            style.font.weight = type.font_weight;
+            style.font.slant = type.font_slant;
+        }
+    }
 } // namespace nandina::widget::internal
 
 #endif // NANDINA_EXPERIMENT_WIDGET_INTERNAL_TEXT_STYLE_BRIDGE_HPP

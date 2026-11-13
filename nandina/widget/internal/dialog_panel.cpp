@@ -1,5 +1,7 @@
 #include "dialog_panel.hpp"
 
+#include "text_style_bridge.hpp"
+
 #include "../../render/draw_context.hpp"
 #include "../primitives/box_painter.hpp"
 
@@ -114,7 +116,7 @@ namespace nandina::widget::internal
             return;
         }
         const auto& context = resolved_style_context();
-        const text::TextStyle style {
+        text::TextStyle style {
             .color = context.text_color_from_context ? context.text_color : style_.title.color,
             .font_size =
                 context.font_size_from_context ? context.font_size : style_.title.font_size,
@@ -122,6 +124,7 @@ namespace nandina::widget::internal
             .overflow = text::TextOverflow::clip,
             .max_lines = 1,
         };
+        internal::apply_type_metrics(style, style_.title, context.font_from_context);
         if (!title_->style().approx_equals(style)) {
             title_->set_style(style);
             mark_layout_dirty();

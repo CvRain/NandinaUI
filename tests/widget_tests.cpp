@@ -3650,3 +3650,31 @@ TEST_CASE(
     REQUIRE(baseline->font_size() == Catch::Approx(24.0F));
     REQUIRE(baseline->line_height() == Catch::Approx(1.375F));
 }
+
+TEST_CASE(
+    "default Button label consumes the semantic role metrics",
+    "[widget][button][typography][role-metrics]"
+) {
+    auto button = widget::Button::create("button");
+    const auto& style = button->text_node().style();
+    REQUIRE(style.line_height == Catch::Approx(1.25F));
+    REQUIRE(style.font.weight == 500);
+    REQUIRE(style.font.slant == theme::FontSlant::normal);
+
+    // An explicit component font weight stays authoritative over the role weight.
+    auto explicit_button = widget::Button::create("button");
+    explicit_button->set_font_weight(700);
+    (void)explicit_button->measure_layout(foundation::NanLayoutConstraints::loose());
+    REQUIRE(explicit_button->text_node().style().font.weight == 700);
+}
+
+TEST_CASE(
+    "default TextField value and placeholder consume the semantic role metrics",
+    "[widget][text-field][typography][role-metrics]"
+) {
+    widget::TextField field("value", "placeholder");
+    REQUIRE(field.editable_text().text_node().style().line_height == Catch::Approx(1.25F));
+    REQUIRE(field.placeholder_text().style().line_height == Catch::Approx(1.25F));
+    REQUIRE(field.placeholder_text().style().font.weight == 500);
+    REQUIRE(field.placeholder_text().style().font_size == Catch::Approx(14.0F));
+}

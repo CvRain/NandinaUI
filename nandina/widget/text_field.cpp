@@ -4,6 +4,8 @@
 
 #include "text_field.hpp"
 
+#include "internal/text_style_bridge.hpp"
+
 #include "../foundation/input.hpp"
 
 #include "../render/draw_context.hpp"
@@ -458,20 +460,30 @@ namespace nandina::widget
             context.font_size_from_context ? context.font_size : style.value.font_size;
         const auto text_color =
             context.text_color_from_context ? context.text_color : style.value.color;
-        const text::TextStyle value_style {
+        text::TextStyle value_style {
             .color = text_color,
             .font_size = font_size,
             .font = font,
             .overflow = text::TextOverflow::clip,
             .max_lines = 1,
         };
-        const text::TextStyle placeholder_style {
+        text::TextStyle placeholder_style {
             .color = context.text_color_from_context ? context.text_color : style.placeholder.color,
             .font_size = font_size,
             .font = font,
             .overflow = text::TextOverflow::ellipsis,
             .max_lines = 1,
         };
+        internal::apply_type_metrics(
+            value_style,
+            style.value,
+            context.font_from_context || font_explicit_
+        );
+        internal::apply_type_metrics(
+            placeholder_style,
+            style.placeholder,
+            context.font_from_context || font_explicit_
+        );
         edit_.set_style(value_style);
         edit_.set_selection_color(style.selection);
         placeholder_.set_style(placeholder_style);

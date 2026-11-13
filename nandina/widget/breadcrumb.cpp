@@ -4,6 +4,8 @@
 
 #include "breadcrumb.hpp"
 
+#include "internal/text_style_bridge.hpp"
+
 #include "internal/breadcrumb_link.hpp"
 
 #include "../render/draw_context.hpp"
@@ -297,13 +299,15 @@ namespace nandina::widget
         const auto make_style = [&](const theme::ResolvedTypeStyle& type,
                                     const theme::FontRequest& font,
                                     const foundation::NanColor color) {
-            return text::TextStyle {
+            text::TextStyle text_style {
                 .color = context.text_color_from_context ? context.text_color : color,
                 .font_size = context.font_size_from_context ? context.font_size : type.font_size,
                 .font = context.font_from_context ? context.font : font,
                 .overflow = text::TextOverflow::clip,
                 .max_lines = 1,
             };
+            internal::apply_type_metrics(text_style, type, context.font_from_context);
+            return text_style;
         };
 
         // 分隔符复用当前页字号，只换颜色。

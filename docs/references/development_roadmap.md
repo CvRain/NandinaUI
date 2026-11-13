@@ -1,6 +1,7 @@
 # 开发路线（2026-10-20 重估）
 
-> 本文记录 **P1–P4 的排序与退出条件，当前推进 P3 输入与焦点**。已完成批次、设计议题与历史证据仍以
+> 本文记录 **P1–P4 的排序与退出条件，当前推进 P4 作者与组件**（P4.6 排版默认收口已于
+> 2026-11-12 完成，近期切入顺序见 §4）。已完成批次、设计议题与历史证据仍以
 > [项目进度与下一步](project_status.md) 为准；组件之间的依赖顺序见
 > [组件开发路线图](component_roadmap.md)；性能和视觉的门禁细节见
 > [性能预算](performance_budget.md) 与 [视觉回归](visual_regression.md)。
@@ -108,14 +109,20 @@
 | P4.3 D3 子批 | **导航分组（2026-11-05，复核完成并随 `095336b` 提交）**：`nav_group` / `NavSection::group`、空组无标题、精确值全局合并 | 已接受的 D3 契约；既有 Routes/Sidebar | 默认/显式空串、交错合并、精确组名、导航过滤与真实 Sidebar 分隔线/typed navigation 回归；D2 与颜色入口仍独立待实施 |
 | P4.4 | **视觉质量扩展**：页面 golden 覆盖面（更多页面/组件状态）、混合叠层验证 | P1.1 | 新页面有 approved 基线或明确不纳入的理由 |
 | P4.5 | **高 DPI 与多显示器（P4.5a 已实施 2026-11-09；P4.5b 已验收 2026-11-10）**：P4.5a 定形逻辑单位契约、平台 seam 归一化（逻辑 screen_size/事件）、窗口按 content_scale 放大、渲染 scale、文本物理密度栅格、IME 输入区换算与固定 1× 模式；P4.5b 在真实双屏（2880×1800@175% + 2560×1440@125%）验证混合 DPI 跨屏 | P4.5a 依赖已存在的 `WindowMetrics`/`screen_to_physical` 与 SDL display scale；P4.5b 需第二块显示器（已具备） | P4.5a：本机 175% 真实窗口（1200×800 逻辑 → 2100×1400 物理、文字清晰、命中正确）、1× 回归与映射单测；P4.5b：双向跳转、真实标题栏拖动跨屏、125% resize 后回 175% 均保持逻辑尺寸并更新 framebuffer/render scale，两个缩放下物理坐标命中正确、钳入各自可用区域；真实 IME 候选窗、Linux Wayland 分数缩放、热插拔与系统缩放在线变化仍待；见 [高 DPI 与多显示器](high_dpi_and_multi_display.md) |
-| P4.6 | **排版尺度与单位（Step 1 已实施 2026-11-10；Step 2a 已实施 2026-11-10；Step 2b 已实施 2026-11-11；Step 3 模型已实施 2026-11-12）**：Step 1 落地 Tailwind 兼容 13 档 `TextSize`、6 档 `Leading`、主题可覆盖 `NanTypeScale`（root_base/ratio/leading）、`TextStyle` 行高乘数与 `Label::text_size()/leading()/line_height()` 作者入口；Step 2a 增加语义 `TypographyRole`（display/heading/title/subtitle/body/label/caption）与 `Label::set_typography_role()`；**不提供 pt 糖，也不提供物理像素字号**，OS 内容缩放始终跟随；Step 2b 已实施：role 表纳入可覆盖 `NanTypeScale::roles`、Label 默认 body role（16 px/normal 1.5）、默认组件配方改为消费语义 role 尺寸 token（styles.toml 可引用 `$tokens.typography.role.*`）、新增 showcase Typography 展示页（字号/行高/role/body 默认四节）；role 的 leading/weight/斜体已进入 `TypeStyle`/`ResolvedTypeStyle` 并由统一文本桥消费；默认组件配方仍只消费尺寸，剩余组件迁移与视觉验收待；文件主题 role 表覆盖已支持；Step 3 已实施：`NanTypeScale::text_scale` 用户文字缩放 + `max_text_px` cap（显式 px fixed），以及 `ThemeManager::set_text_scaling()` 运行时宿主入口（重建 `DesignSystem`、发布 revision、跨外观保持）；OS 无障碍来源/持久化待接入 | 依赖 P4.5 逻辑单位契约与 P4.1/D6 文本作者入口；Label 默认 body 与 role 尺寸 token 迁移保持 8 条页面 golden 0 差异；中文版展示页 golden 已批准 | Step 1/2a：13 档映射/非法值/主题覆盖/行高后端/role 映射单测（含红先）、Label 与 builder 测试、全量套件；Step 2b：role 表覆盖/越界回退、Label body 默认与显式字号行为、组件 role 尺寸消费、styles.toml role 尺寸引用与 role 表覆盖；双平台 8 条页面 golden 重批与审批完成；Step 3：缩放/cap 与显式 px fixed 单测；OS 无障碍验收待；weight/slant 视觉差异依赖 P4.7，未完成时在验收中标注。契约见 [排版尺度与单位](typography_scale.md) |
+| P4.6 | **排版尺度与单位（Step 1 已实施 2026-11-10；Step 2a 已实施 2026-11-10；Step 2b 已实施 2026-11-11，收口 2026-11-12；Step 3 模型已实施 2026-11-12）**：Step 1 落地 Tailwind 兼容 13 档 `TextSize`、6 档 `Leading`、主题可覆盖 `NanTypeScale`（root_base/ratio/leading）、`TextStyle` 行高乘数与 `Label::text_size()/leading()/line_height()` 作者入口；Step 2a 增加语义 `TypographyRole`（display/heading/title/subtitle/body/label/caption）与 `Label::set_typography_role()`；**不提供 pt 糖，也不提供物理像素字号**，OS 内容缩放始终跟随；Step 2b 已实施：role 表纳入可覆盖 `NanTypeScale::roles`、Label 默认 body role（16 px/normal 1.5）、默认组件配方改为消费语义 role 尺寸 token（styles.toml 可引用 `$tokens.typography.role.*`）、新增 showcase Typography 展示页（字号/行高/role/body 默认四节）；role 的 leading/weight/斜体已进入 `TypeStyle`/`ResolvedTypeStyle` 并由统一文本桥消费；默认组件配方仍只消费尺寸，剩余组件迁移与视觉验收待；文件主题 role 表覆盖已支持；Step 3 已实施：`NanTypeScale::text_scale` 用户文字缩放 + `max_text_px` cap（显式 px fixed），以及 `ThemeManager::set_text_scaling()` 运行时宿主入口（重建 `DesignSystem`、发布 revision、跨外观保持）；OS 无障碍来源/持久化待接入 | 依赖 P4.5 逻辑单位契约与 P4.1/D6 文本作者入口；Label 默认 body 与 role 尺寸 token 迁移保持 8 条页面 golden 0 差异；中文版展示页 golden 已批准 | Step 1/2a：13 档映射/非法值/主题覆盖/行高后端/role 映射单测（含红先）、Label 与 builder 测试、全量套件；Step 2b：role 表覆盖/越界回退、Label body 默认与显式字号行为、组件 role 尺寸消费、styles.toml role 尺寸引用与 role 表覆盖；双平台 8 条页面 golden 重批与审批完成；Step 3：缩放/cap 与显式 px fixed 单测；OS 无障碍验收待；weight/slant 视觉差异依赖 P4.7，未完成时在验收中标注。契约见 [排版尺度与单位](typography_scale.md)；**2026-11-12 收口批**：默认组件配方消费 role 的 leading/weight/slant（手工文本样式组件迁移到 `widget::internal::apply_type_metrics()`），双平台各 8 条页面 golden 重采并由维护者批准（label/typography 0 像素差异），OS 无障碍字号来源与持久化仍待、真实多 face 资产按决策暂缓 |
 | P4.7 | **字体族字重/斜体覆盖（合成回退已实施 2026-11-10）**：内置默认字体族只有 Regular；现在缺 face 时用 FreeType 合成加粗/倾斜（分级强度 500/600/700+），并用 HarfBuzz synthetic bold 同步 advance；**不改默认字体资产/许可** | 合成质量不等同真实 face；不支持变细、bitmap/color 面倾斜；真实多 face 资源仍是后续增强 | 已实施：`[text][synthesis]` 决策/分级/栅格/HarfBuzz/图集测试（含红先）、Label 页高视口目检（Medium/Bold/Italic 可见）、P4.7 当时页面 golden 6 条保持 0 差异（现每平台 8 条，见视觉回归）；后续：真实多 face 资源与许可决策、bitmap/color 面边界验收 |
 | P4.8 | **页面加载响应性（P4.8b 渐进式分节挂载已实施 2026-11-11）**：文本密集型页面（showcase Label）导航时原本在 UI 线程一次同步完成整页构建+首次整形+布局，实测比轻页面多阻塞约 0.2–0.4 s；P4.8b 新增 `PageContext::defer_section` + Router 每帧最多构建一节、原位置替换占位、换页丢弃/异常上报/无 dispatcher 同步 fallback，showcase Label 页迁移后首帧页面成本 Windows 约 85 ms、Linux 约 38 ms（probe `FRAMES=1` 差值），完整页面 golden 0 差异；Linux 短帧 probe 暴露的“泵任务强引用页面根导致设备后析构”已修为弱引用并加回归。方案与验收见 [页面加载响应性](page_load_responsiveness.md)；P4.8a 的独立计时日志、P4.8c opt-in 构建期批量测量、长期异步整形仍待 | 依赖 Router/Page 与 dispatcher 任务阶段；分节 API 改变页面作者写法；异步整形受 FreeType/HarfBuzz 线程所有权与图集 UI 线程上传约束 | 已完成：`[app][router][deferred]` 首帧/逐帧/同步/退役/异常/页面生命周期用例（含红先）、Label 页迁移、Windows 首帧 ~85 ms + Linux ~38 ms、P4.8b 当时双平台 6 条 golden 0 差异（现每平台 8 条）；后续：可选计时基线、P4.8c 与异步整形（如需要） |
 
 ## 4. 建议的近期切入顺序
 
 1. **P3.1a 事件快照**：先修每事件坐标/修饰键被帧级状态覆盖；本批不扩展键身份、跨类型顺序、焦点策略或 IME。
-2. **D1 与 P4（已确认顺序）**：P3.3b2a caret 输入区域 → P3.3b2b 真实 IME/软键盘/遮挡验收 → P4.1 Label 垂直对齐（并入 D6 首批）→ P4.1b Surface/Card inset 与 Image cover 裁剪锚点 → P4.3 作者颜色入口。P3.3b1 已把预编辑与密码用途合并交付，P3.3b2a 已接通 caret 窗口坐标与 SDL input_area；P3.3b2b 已接通 SDL 属性并完成部分 Linux 实机检查，下一步补齐 X11 inline preedit/Windows 与候选窗位置验收。P4.1a 与 P4.1 文本作者/绑定子批已交付，P4.1b 可接续推进，P4.1 的样式 reset/完整作者体验仍单独保留。
+2. **P4 收口顺序（2026-11-12 重估）**：P4.6 排版默认收口已完成（默认配方消费 role 指标 +
+   双平台 16 条 golden 重批）→ P4.6 Step 3 的 OS 无障碍字号来源/持久化，以及 P4.7 后续
+   （真实多 face 暂缓，决策见 [font_synthesis.md](font_synthesis.md)）→ B2 showcase 视觉验收
+   清账（Table/Collapsible/Surface-Card/Shell 页 + probe/golden）→ notebook 最小垂直切片作为
+   集成证明。P3.3b2b 仍差 X11 inline preedit/Windows IME/候选窗位置，依赖真实桌面环境，作为
+   并行轨。CI CPU golden 门禁已非阻断落地（`visual-golden.yml`），首次真实 Actions 跑绿后
+   删掉 `continue-on-error` 即可升级为阻断门禁。
 3. **保留的 P1 边界**：退役后的 Windows 静态构建/窗口生命周期复验、P1.6 完整 Image 页面端到端采样仍分别记录；不把它们混同于已交付的 Windows golden 与参考性能基线。
 4. **已交付记录**：P1.2 Windows CPU/SDF 共 6 条 approved、P1.3 Windows 参考性能基线、P1.5b 阴影/圆角裁剪及 P2 应用闭环均已归档；P1.4 归 NandinaCLI。
 

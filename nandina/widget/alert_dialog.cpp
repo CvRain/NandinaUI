@@ -4,6 +4,8 @@
 
 #include "alert_dialog.hpp"
 
+#include "internal/text_style_bridge.hpp"
+
 #include "button.hpp"
 #include "dialog.hpp"
 #include "layout.hpp"
@@ -226,7 +228,7 @@ namespace nandina::widget
     void AlertDialog::apply_text_styles() {
         const auto style = resolved_style();
         const auto& context = resolved_style_context();
-        const text::TextStyle text_style {
+        text::TextStyle text_style {
             .color = context.text_color_from_context ? context.text_color : style.description.color,
             .font_size =
                 context.font_size_from_context ? context.font_size : style.description.font_size,
@@ -234,6 +236,7 @@ namespace nandina::widget
             .overflow = text::TextOverflow::wrap,
             .max_lines = kDescriptionMaxLines,
         };
+        internal::apply_type_metrics(text_style, style.description, context.font_from_context);
         if (!description_text_->style().approx_equals(text_style)) {
             description_text_->set_style(text_style);
             mark_layout_dirty();

@@ -14,12 +14,12 @@ platform = "linux"
 image = "candidates/anchors-cpu-linux.png"
 width = 1200
 height = 800
-sha256 = "bf1caa768fe841800f90bd4ec8ce5208e001a4b44a274fba954a45283969a4c2"
+sha256 = "72cdb3ceb1df1b8e95cfa41004152ff6b51332c6e0fc3b6d734d53e59e635ce6"
 status = "approved"
-captured = "2026-11-11"
-reviewed_by = "agent review, per maintainer request 2026-11-11"
-reviewed_on = "2026-11-11"
-review_note = "Maintainer reviewed the Chinese-localized home/anchors/label/typography pages at 1200x800 and in tall captures and confirmed checks pass after the menu high-DPI and glyph-atlas fixes. Approved dual-platform SDF+CPU recapture."
+captured = "2026-11-12"
+reviewed_by = "agent review, per maintainer request 2026-11-12"
+reviewed_on = "2026-11-12"
+review_note = "Maintainer approved the B1 typography-default recapture: only component label text weight/leading changed (synthetic medium 500 buttons); label/typography pages are 0-pixel diffs, all other diffs are confined to button glyphs/borders. Dual-platform CPU+SDF baselines recaptured from the same trees and reviewed."
 
 [[entries]]
 page = "anchors"
@@ -28,12 +28,12 @@ platform = "windows"
 image = "candidates/anchors-cpu-windows.png"
 width = 1200
 height = 800
-sha256 = "d461ec351640793c25ea57b8940d0c416bce343603117fdacd18b313e4092681"
+sha256 = "61a5b127cd3d7d2627db42974d70d966f5e341c255844f5dd1fec8d9b12dbd76"
 status = "approved"
-captured = "2026-11-11"
-reviewed_by = "agent review, per maintainer request 2026-11-11"
-reviewed_on = "2026-11-11"
-review_note = "Maintainer reviewed the Chinese-localized home/anchors/label/typography pages at 1200x800 and in tall captures and confirmed checks pass after the menu high-DPI and glyph-atlas fixes. Approved dual-platform SDF+CPU recapture."
+captured = "2026-11-12"
+reviewed_by = "agent review, per maintainer request 2026-11-12"
+reviewed_on = "2026-11-12"
+review_note = "Maintainer approved the B1 typography-default recapture: only component label text weight/leading changed (synthetic medium 500 buttons); label/typography pages are 0-pixel diffs, all other diffs are confined to button glyphs/borders. Dual-platform CPU+SDF baselines recaptured from the same trees and reviewed."
 
 [[entries]]
 page = "anchors"
@@ -42,12 +42,12 @@ platform = "linux"
 image = "candidates/anchors-sdf-linux.png"
 width = 1200
 height = 800
-sha256 = "405ccc0083cdfe04167ab2d1480c24f963ad93434bb382c2c9fa3933646d143b"
+sha256 = "a0ed4725b6aab1267c2902a512db54dfdfc2955ab9582ba50e9b7f7d9e5d3321"
 status = "approved"
-captured = "2026-11-11"
-reviewed_by = "agent review, per maintainer request 2026-11-11"
-reviewed_on = "2026-11-11"
-review_note = "Maintainer reviewed the Chinese-localized home/anchors/label/typography pages at 1200x800 and in tall captures and confirmed checks pass after the menu high-DPI and glyph-atlas fixes. Approved dual-platform SDF+CPU recapture."
+captured = "2026-11-12"
+reviewed_by = "agent review, per maintainer request 2026-11-12"
+reviewed_on = "2026-11-12"
+review_note = "Maintainer approved the B1 typography-default recapture: only component label text weight/leading changed (synthetic medium 500 buttons); label/typography pages are 0-pixel diffs, all other diffs are confined to button glyphs/borders. Dual-platform CPU+SDF baselines recaptured from the same trees and reviewed."
 
 [[entries]]
 page = "anchors"
@@ -56,12 +56,12 @@ platform = "windows"
 image = "candidates/anchors-sdf-windows.png"
 width = 1200
 height = 800
-sha256 = "759bd9d6898c7e9662d7c5b9c2309388de465309cfb9b67ec90d45b9d2f6524d"
+sha256 = "2c774a26528626adfc6400ada9993459638ddafbdb51542c88a7272bd4006b6b"
 status = "approved"
-captured = "2026-11-11"
-reviewed_by = "agent review, per maintainer request 2026-11-11"
-reviewed_on = "2026-11-11"
-review_note = "Maintainer reviewed the Chinese-localized home/anchors/label/typography pages at 1200x800 and in tall captures and confirmed checks pass after the menu high-DPI and glyph-atlas fixes. Approved dual-platform SDF+CPU recapture."
+captured = "2026-11-12"
+reviewed_by = "agent review, per maintainer request 2026-11-12"
+reviewed_on = "2026-11-12"
+review_note = "Maintainer approved the B1 typography-default recapture: only component label text weight/leading changed (synthetic medium 500 buttons); label/typography pages are 0-pixel diffs, all other diffs are confined to button glyphs/borders. Dual-platform CPU+SDF baselines recaptured from the same trees and reviewed."
 
 [[entries]]
 page = "home"
@@ -70,12 +70,12 @@ platform = "linux"
 image = "candidates/home-cpu-linux.png"
 width = 1200
 height = 800
-sha256 = "b36213c40f6436b5db51587aab3e63b7dbd1f59c73788877b3e1f603cbcad030"
+sha256 = "2a8009198381fae7fa5ead97bed451e0f1a3f6da5920c5e440d6ec8bf20e3cd3"
 status = "approved"
-captured = "2026-11-11"
-reviewed_by = "agent review, per maintainer request 2026-11-11"
-reviewed_on = "2026-11-11"
-review_note = "Maintainer reviewed the Chinese-localized home/anchors/label/typography pages at 1200x800 and in tall captures and confirmed checks pass after the menu high-DPI and glyph-atlas fixes. Approved dual-platform SDF+CPU recapture."
+captured = "2026-11-12"
+reviewed_by = "agent review, per maintainer request 2026-11-12"
+reviewed_on = "2026-11-12"
+review_note = "Maintainer approved the B1 typography-default recapture: only component label text weight/leading changed (synthetic medium 500 buttons); label/typography pages are 0-pixel diffs, all other diffs are confined to button glyphs/borders. Dual-platform CPU+SDF baselines recaptured from the same trees and reviewed."
 
 [[entries]]
 page = "home"
@@ -84,12 +84,12 @@ platform = "windows"
 image = "candidates/home-cpu-windows.png"
 width = 1200
 height = 800
-sha256 = "b9d26422da6f4f056e57357dd73d711a4b4f15386da5d4eccc4a8ee034ad3a15"
+sha256 = "5b6e0594923f5993485d0493f19d559d16ae40e6f8de8ea5e9ddb1e207274a90"
 status = "approved"
-captured = "2026-11-11"
-reviewed_by = "agent review, per maintainer request 2026-11-11"
-reviewed_on = "2026-11-11"
-review_note = "Maintainer reviewed the Chinese-localized home/anchors/label/typography pages at 1200x800 and in tall captures and confirmed checks pass after the menu high-DPI and glyph-atlas fixes. Approved dual-platform SDF+CPU recapture."
+captured = "2026-11-12"
+reviewed_by = "agent review, per maintainer request 2026-11-12"
+reviewed_on = "2026-11-12"
+review_note = "Maintainer approved the B1 typography-default recapture: only component label text weight/leading changed (synthetic medium 500 buttons); label/typography pages are 0-pixel diffs, all other diffs are confined to button glyphs/borders. Dual-platform CPU+SDF baselines recaptured from the same trees and reviewed."
 
 [[entries]]
 page = "home"
@@ -98,12 +98,12 @@ platform = "linux"
 image = "candidates/home-sdf-linux.png"
 width = 1200
 height = 800
-sha256 = "829132efad60c3385d47f484588cde1d9b441f46f41426a8b4b59ea2d1651fb7"
+sha256 = "5ee568e8dc2b3ae05ce6161568814ff049c6e9e4cc53757c3403960fa70f40a3"
 status = "approved"
-captured = "2026-11-11"
-reviewed_by = "agent review, per maintainer request 2026-11-11"
-reviewed_on = "2026-11-11"
-review_note = "Maintainer reviewed the Chinese-localized home/anchors/label/typography pages at 1200x800 and in tall captures and confirmed checks pass after the menu high-DPI and glyph-atlas fixes. Approved dual-platform SDF+CPU recapture."
+captured = "2026-11-12"
+reviewed_by = "agent review, per maintainer request 2026-11-12"
+reviewed_on = "2026-11-12"
+review_note = "Maintainer approved the B1 typography-default recapture: only component label text weight/leading changed (synthetic medium 500 buttons); label/typography pages are 0-pixel diffs, all other diffs are confined to button glyphs/borders. Dual-platform CPU+SDF baselines recaptured from the same trees and reviewed."
 
 [[entries]]
 page = "home"
@@ -112,12 +112,12 @@ platform = "windows"
 image = "candidates/home-sdf-windows.png"
 width = 1200
 height = 800
-sha256 = "e98623a78648bc9fbf1e89363ddb0aaf9a48a969115211e81f842ecf7066f682"
+sha256 = "8d591728a34e4c830a35cf1c4887233119586ff9ef9b7a30b2d24e2c95225de7"
 status = "approved"
-captured = "2026-11-11"
-reviewed_by = "agent review, per maintainer request 2026-11-11"
-reviewed_on = "2026-11-11"
-review_note = "Maintainer reviewed the Chinese-localized home/anchors/label/typography pages at 1200x800 and in tall captures and confirmed checks pass after the menu high-DPI and glyph-atlas fixes. Approved dual-platform SDF+CPU recapture."
+captured = "2026-11-12"
+reviewed_by = "agent review, per maintainer request 2026-11-12"
+reviewed_on = "2026-11-12"
+review_note = "Maintainer approved the B1 typography-default recapture: only component label text weight/leading changed (synthetic medium 500 buttons); label/typography pages are 0-pixel diffs, all other diffs are confined to button glyphs/borders. Dual-platform CPU+SDF baselines recaptured from the same trees and reviewed."
 
 [[entries]]
 page = "label"
@@ -128,10 +128,10 @@ width = 1200
 height = 800
 sha256 = "f7efa218c255aa5dee3596e150aeb6a9ce70778bd61ee08785f507a16411029d"
 status = "approved"
-captured = "2026-11-11"
-reviewed_by = "agent review, per maintainer request 2026-11-11"
-reviewed_on = "2026-11-11"
-review_note = "Maintainer reviewed the Chinese-localized home/anchors/label/typography pages at 1200x800 and in tall captures and confirmed checks pass after the menu high-DPI and glyph-atlas fixes. Approved dual-platform SDF+CPU recapture."
+captured = "2026-11-12"
+reviewed_by = "agent review, per maintainer request 2026-11-12"
+reviewed_on = "2026-11-12"
+review_note = "Maintainer approved the B1 typography-default recapture: only component label text weight/leading changed (synthetic medium 500 buttons); label/typography pages are 0-pixel diffs, all other diffs are confined to button glyphs/borders. Dual-platform CPU+SDF baselines recaptured from the same trees and reviewed."
 
 [[entries]]
 page = "label"
@@ -142,10 +142,10 @@ width = 1200
 height = 800
 sha256 = "a1fbb4827c7150e9cf46f3c3340d83714d1e50a53ba58a67a2532e93564f7998"
 status = "approved"
-captured = "2026-11-11"
-reviewed_by = "agent review, per maintainer request 2026-11-11"
-reviewed_on = "2026-11-11"
-review_note = "Maintainer reviewed the Chinese-localized home/anchors/label/typography pages at 1200x800 and in tall captures and confirmed checks pass after the menu high-DPI and glyph-atlas fixes. Approved dual-platform SDF+CPU recapture."
+captured = "2026-11-12"
+reviewed_by = "agent review, per maintainer request 2026-11-12"
+reviewed_on = "2026-11-12"
+review_note = "Maintainer approved the B1 typography-default recapture: only component label text weight/leading changed (synthetic medium 500 buttons); label/typography pages are 0-pixel diffs, all other diffs are confined to button glyphs/borders. Dual-platform CPU+SDF baselines recaptured from the same trees and reviewed."
 
 [[entries]]
 page = "label"
@@ -156,10 +156,10 @@ width = 1200
 height = 800
 sha256 = "9f73e3e80649ad1b0a35dc47babdb5bb5a3f9b5390cd10ba3a5f65f79ba9c91b"
 status = "approved"
-captured = "2026-11-11"
-reviewed_by = "agent review, per maintainer request 2026-11-11"
-reviewed_on = "2026-11-11"
-review_note = "Maintainer reviewed the Chinese-localized home/anchors/label/typography pages at 1200x800 and in tall captures and confirmed checks pass after the menu high-DPI and glyph-atlas fixes. Approved dual-platform SDF+CPU recapture."
+captured = "2026-11-12"
+reviewed_by = "agent review, per maintainer request 2026-11-12"
+reviewed_on = "2026-11-12"
+review_note = "Maintainer approved the B1 typography-default recapture: only component label text weight/leading changed (synthetic medium 500 buttons); label/typography pages are 0-pixel diffs, all other diffs are confined to button glyphs/borders. Dual-platform CPU+SDF baselines recaptured from the same trees and reviewed."
 
 [[entries]]
 page = "label"
@@ -170,10 +170,10 @@ width = 1200
 height = 800
 sha256 = "a5ee2a2df423bab2aac1f76b56d949b883fd1575f7e4ccd2b3cd71f43979fee2"
 status = "approved"
-captured = "2026-11-11"
-reviewed_by = "agent review, per maintainer request 2026-11-11"
-reviewed_on = "2026-11-11"
-review_note = "Maintainer reviewed the Chinese-localized home/anchors/label/typography pages at 1200x800 and in tall captures and confirmed checks pass after the menu high-DPI and glyph-atlas fixes. Approved dual-platform SDF+CPU recapture."
+captured = "2026-11-12"
+reviewed_by = "agent review, per maintainer request 2026-11-12"
+reviewed_on = "2026-11-12"
+review_note = "Maintainer approved the B1 typography-default recapture: only component label text weight/leading changed (synthetic medium 500 buttons); label/typography pages are 0-pixel diffs, all other diffs are confined to button glyphs/borders. Dual-platform CPU+SDF baselines recaptured from the same trees and reviewed."
 
 [[entries]]
 page = "typography"
@@ -184,10 +184,10 @@ width = 1200
 height = 800
 sha256 = "a457c7ad4445ffd62d3fc66d32e9302a6894e24395a23e2bbc7a7f4be6ba1f91"
 status = "approved"
-captured = "2026-11-11"
-reviewed_by = "agent review, per maintainer request 2026-11-11"
-reviewed_on = "2026-11-11"
-review_note = "Maintainer reviewed the Chinese-localized home/anchors/label/typography pages at 1200x800 and in tall captures and confirmed checks pass after the menu high-DPI and glyph-atlas fixes. Approved dual-platform SDF+CPU recapture."
+captured = "2026-11-12"
+reviewed_by = "agent review, per maintainer request 2026-11-12"
+reviewed_on = "2026-11-12"
+review_note = "Maintainer approved the B1 typography-default recapture: only component label text weight/leading changed (synthetic medium 500 buttons); label/typography pages are 0-pixel diffs, all other diffs are confined to button glyphs/borders. Dual-platform CPU+SDF baselines recaptured from the same trees and reviewed."
 
 [[entries]]
 page = "typography"
@@ -198,10 +198,10 @@ width = 1200
 height = 800
 sha256 = "017847e45c451c1636272742f9f3e95048f98df753b0e20b8b62ee3863d11947"
 status = "approved"
-captured = "2026-11-11"
-reviewed_by = "agent review, per maintainer request 2026-11-11"
-reviewed_on = "2026-11-11"
-review_note = "Maintainer reviewed the Chinese-localized home/anchors/label/typography pages at 1200x800 and in tall captures and confirmed checks pass after the menu high-DPI and glyph-atlas fixes. Approved dual-platform SDF+CPU recapture."
+captured = "2026-11-12"
+reviewed_by = "agent review, per maintainer request 2026-11-12"
+reviewed_on = "2026-11-12"
+review_note = "Maintainer approved the B1 typography-default recapture: only component label text weight/leading changed (synthetic medium 500 buttons); label/typography pages are 0-pixel diffs, all other diffs are confined to button glyphs/borders. Dual-platform CPU+SDF baselines recaptured from the same trees and reviewed."
 
 [[entries]]
 page = "typography"
@@ -212,10 +212,10 @@ width = 1200
 height = 800
 sha256 = "335371b0b1697fa971c24eedfc18120960b3bf04a0ef20c3cb31c770c33c0e69"
 status = "approved"
-captured = "2026-11-11"
-reviewed_by = "agent review, per maintainer request 2026-11-11"
-reviewed_on = "2026-11-11"
-review_note = "Maintainer reviewed the Chinese-localized home/anchors/label/typography pages at 1200x800 and in tall captures and confirmed checks pass after the menu high-DPI and glyph-atlas fixes. Approved dual-platform SDF+CPU recapture."
+captured = "2026-11-12"
+reviewed_by = "agent review, per maintainer request 2026-11-12"
+reviewed_on = "2026-11-12"
+review_note = "Maintainer approved the B1 typography-default recapture: only component label text weight/leading changed (synthetic medium 500 buttons); label/typography pages are 0-pixel diffs, all other diffs are confined to button glyphs/borders. Dual-platform CPU+SDF baselines recaptured from the same trees and reviewed."
 
 [[entries]]
 page = "typography"
@@ -226,7 +226,7 @@ width = 1200
 height = 800
 sha256 = "c5497dade83fe9c39dd5fd5cfd41927c80992c94f1ee0a25a9b0d9dfee889e34"
 status = "approved"
-captured = "2026-11-11"
-reviewed_by = "agent review, per maintainer request 2026-11-11"
-reviewed_on = "2026-11-11"
-review_note = "Maintainer reviewed the Chinese-localized home/anchors/label/typography pages at 1200x800 and in tall captures and confirmed checks pass after the menu high-DPI and glyph-atlas fixes. Approved dual-platform SDF+CPU recapture."
+captured = "2026-11-12"
+reviewed_by = "agent review, per maintainer request 2026-11-12"
+reviewed_on = "2026-11-12"
+review_note = "Maintainer approved the B1 typography-default recapture: only component label text weight/leading changed (synthetic medium 500 buttons); label/typography pages are 0-pixel diffs, all other diffs are confined to button glyphs/borders. Dual-platform CPU+SDF baselines recaptured from the same trees and reviewed."

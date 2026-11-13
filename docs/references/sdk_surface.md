@@ -18,6 +18,15 @@
 
 ## 2. 三档分类
 
+2026-11-12 P4.6 Step 2b 收口：默认组件配方消费 role leading/weight/slant（experimental，
+默认视觉变更）：默认 Button/TextField/TextArea/Alert/EmptyState/Dialog/Tabs/Tooltip/菜单与
+选择器族等配方的文本槽位带上语义 `role`，解析时把 role 的 leading/weight/slant 经
+`TypeStyle::role` → `ResolvedTypeStyle` → 统一文本桥送入控件；Button/TextField/Alert 等
+手工构造 `text::TextStyle` 的组件改用 `widget::internal::apply_type_metrics()`。显式样式上
+下文字体、组件级显式 weight/slant 保持优先；Slider 数值标签按豁免保留字面字号。视觉变化
+限于组件标签字重/行高，双平台各 8 条页面 golden 已于 2026-11-12 重新采集并由维护者批准
+（label/typography 页 0 像素差异）。契约见 [排版尺度与单位](typography_scale.md) §5/§7/§9。
+
 2026-11-11 P4.6 Step 2b role 表主题化与 Label 默认 body（experimental，默认行为变更）：
 `theme::NanTypeScale` 新增 `roles`（7 个 `TypographyRoleStyle`，C++ 主题可覆盖）；新增
 `typography_role_style(const NanTypeScale&, TypographyRole)` 重载，越界 role 回退 body。

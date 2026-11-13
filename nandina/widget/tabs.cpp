@@ -4,6 +4,8 @@
 
 #include "tabs.hpp"
 
+#include "internal/text_style_bridge.hpp"
+
 #include "../render/draw_context.hpp"
 #include "../scene/animation_host.hpp"
 #include "../scene/input_event.hpp"
@@ -416,13 +418,14 @@ namespace nandina::widget
         for (std::size_t i = 0; i < label_texts_.size(); ++i) {
             const auto& type =
                 static_cast<int>(i) == selected_index_ ? style.label_selected : style.label;
-            const text::TextStyle text_style {
+            text::TextStyle text_style {
                 .color = context.text_color_from_context ? context.text_color : type.color,
                 .font_size = context.font_size_from_context ? context.font_size : type.font_size,
                 .font = context.font_from_context ? context.font : label_texts_[i]->font(),
                 .overflow = text::TextOverflow::clip,
                 .max_lines = 1,
             };
+            internal::apply_type_metrics(text_style, type, context.font_from_context);
             if (!label_texts_[i]->style().approx_equals(text_style)) {
                 label_texts_[i]->set_style(text_style);
             }
