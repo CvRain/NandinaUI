@@ -129,9 +129,13 @@ jobs:
           meson test -C buildDir --print-errorlogs > /tmp/test.log 2>&1
           code=$?
           if [ "$code" -ne 0 ]; then
-            echo "--- test tail ---"
+            echo "--- failing tests ---"
             grep -E '(FAIL|Failed|ERROR|error:|Timeout)' /tmp/test.log | tail -n 40
-            echo "::error title=TEST-FAILURE::$(grep -E '(FAIL|Failed|ERROR|error:|Timeout)' /tmp/test.log | tail -n 60 | sed 's/%/%25/g; s/\r//g; s/::/:/g' | tr '\n' '|')"
+            echo "--- test log tail ---"
+            tail -n 80 /tmp/test.log
+            # 测试自身的断言文本只在 meson 完整日志的尾部；只 grep FAIL 行会把
+            # AssertionError/traceback 丢掉，公开 annotation 里就只剩一行 FAIL 汇总。
+            echo "::error title=TEST-FAILURE::$(tail -n 80 /tmp/test.log | sed 's/%/%25/g; s/\r//g; s/::/:/g' | tr '\n' '|')"
           fi
           exit "$code"
 

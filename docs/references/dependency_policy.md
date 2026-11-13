@@ -219,28 +219,37 @@ ASan 的职责是检查**本项目**代码，因此该构建目录显式 `-Dsdl3
 `buildDir-asan` 81/81 通过；默认构建与 no-RTTI 仍走 vendored 共享 SDL3。CI 若具备 lld，
 应改为 vendored + lld 以同时覆盖第三方构建。
 
-### 2.6 共享库的运行时分发（2026-10-18 实测）
+### 2.6 共享库的运行时分发（2026-10-18 初测；2026-11-13 复核 soname）
 
-vendored SDL3 是共享库，而 **CMake 子项目没有 Meson install 规则**：
+vendored SDL3 的共享产物由 `cmake.subproject` 构建，而 **CMake 子项目没有 Meson install 规则**：
 `meson introspect buildDir --installed` 共 120 条，其中 SDL3 条目 **0 条**；本仓库当前也
 不安装任何应用二进制（`bin/` 条目 0）。因此"只装可执行文件"的形态在运行期必然失败。
 
+**soname 实测为 `libSDL3_shared.so`，没有 `.so.0` 版本后缀。** Meson 按 CMake target 名给
+子项目产物命名（`SDL3-shared` → `libSDL3_shared.so`），CMake 的 `VERSION`/`SOVERSION` 不会传到
+Meson 的产物名；构建树里也不存在 `.so.0` 版本文件。2026-11-13 在 Clang + `-Dsdl3_linkage=shared`
+配置下用 `readelf -d` 复核：应用 `NEEDED` 与 DSO `SONAME` 都是 `libSDL3_shared.so`。因此守卫按
+产物记录的 SONAME 判断，**不要硬编码版本后缀**——旧写法要求 `.so.0` 会让共享配置的检查永远失败
+（此前 CI `build (clang-21)` 唯一的红灯即此断言）。
+
 | 场景 | 结果 |
 | --- | --- |
-| 只拷贝 `nandina_showcase` 到新目录运行 | **失败**：`error while loading shared libraries: libSDL3_shared.so.0: cannot open shared object file` |
+| 只拷贝 `nandina_showcase` 到新目录运行 | **失败**：`error while loading shared libraries: libSDL3_shared.so: cannot open shared object file` |
 | `app/bin` + `app/lib/libSDL3_shared.so*` + RUNPATH `$ORIGIN/../lib` | **成功**：`ldd` 解析到打包目录内的 DSO，应用以 `renderer=gpu` 启动 |
 | `meson install --destdir` | 成功，但安装内容不含 SDL3（也没有应用二进制） |
 
 **策略**：
 
-1. 应用以"便携目录"分发时，必须同时带上 `libSDL3_shared.so.0`（soname）与真实文件，并给可执行
-   文件设置 `$ORIGIN/../lib`（或等价）RUNPATH；`LD_LIBRARY_PATH` 不是解决方案。
+1. 应用以"便携目录"分发时，必须同时带上与 soname 同名的 DSO（当前 `libSDL3_shared.so`；若上游
+   未来带版本后缀，则同时带 soname 符号链接与真实文件），并给可执行文件设置 `$ORIGIN/../lib`
+   （或等价）RUNPATH；`LD_LIBRARY_PATH` 不是解决方案。
 2. 以系统包形式分发时，把 SDL3 声明为**运行期依赖**（`-Dsdl3_source=system` 与发行版包一致），
    不要把项目固定的源码版本与系统包混着用。
 3. 框架自身继续只分发**源码 SDK**；一旦开始分发应用二进制或 OS 包，必须同时把 DSO 纳入打包，
    并为此新增验收（当前 `portable-bundle` 只守卫 rpath 与打包目录解析）。
-4. **守卫**：`tests/portable_bundle_test.py`（`portable-bundle`，integration，无显示器）同时断言
-   反例（孤立二进制解析不到 soname）与正例（便携目录解析到 `lib/` 内）。
+4. **守卫**：`tests/portable_bundle_test.py`（`portable-bundle`，integration，无显示器）先从构建
+   出的 DSO 读取真实 SONAME，再断言反例（孤立二进制解析不到该 soname）与正例（便携目录解析到
+   `lib/` 内）；这样 Meson/上游产物命名变化时检查仍成立。
 
 ### 2.7 其余依赖迁移（2026-10-18）
 

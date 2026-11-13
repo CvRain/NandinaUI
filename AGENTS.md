@@ -50,6 +50,16 @@ application shell. Version `0.1.0-alpha.1`.
   from `std::string + std::string_view` (a GCC extension); the view is converted explicitly.
   CI configure/build/test steps keep failure-tail `::error` annotations so public check-run
   annotations carry the next failure without repository-admin log access.
+- **Latest (2026-11-13 CI green follow-up)**: the last remaining CI red was `build (clang-21)`
+  (vendored SDL3 with `-Dsdl3_linkage=shared`), where `portable-bundle` required a
+  `libSDL3_shared.so.0` file that Meson's CMake subproject never produces — the artifact and its
+  recorded SONAME are `libSDL3_shared.so` (CMake `SOVERSION` is not carried into the Meson output
+  name). `tests/portable_bundle_test.py` now reads the SONAME from the built DSO and asserts the
+  lone-binary negative case and the `bin/`+`lib/` positive case against it; never hardcode a
+  version suffix. Verified on the CI-equivalent local config (Clang + shared + Meson 1.7.2):
+  full suite 133/133, static config `portable-bundle` OK, red-first injections for both the
+  negative and positive branches. The Test step annotation now carries the unfiltered test-log
+  tail so assertion text is visible in public check-run annotations.
 - P4.6 Step 2b is closed — default component recipes consume the semantic role's
   leading/weight/slant through `TypeStyle::role` → `ResolvedTypeStyle` and the shared
   text-style bridge (manual `text::TextStyle` sites migrated to
