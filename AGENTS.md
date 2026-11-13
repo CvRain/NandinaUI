@@ -32,6 +32,21 @@ application shell. Version `0.1.0-alpha.1`.
   persistence pending), notebook workspace follow-ups (UI visual acceptance, todo/rich text),
   P4.8c. P4.7 real multi-face assets stay deferred.
   Linux is reachable through the current local SSH alias (`nandina-linux`).
+- **Latest (2026-11-13 follow-up)**: a maintainer-reported Collapsible showcase defect exposed
+  that `Flex`/`Row`/`Column` measure measured every child with the container's full main extent,
+  while arrange distributed flex space only later. Wrapped children therefore reported the
+  height they would have at the full width; expanded Collapsible content overflowed its example
+  Card at narrow widths and was clipped after a user toggle. `layout.cpp` now runs the same
+  flex distribution during measure (`measure_linear_container()`) and re-measures flex children
+  with their final main extent. Regressions: `[layout][flex][wrap]` (Row reserves wrapped
+  height; red-first) and `[collapsible][showcase][layout]` (900/1200 content containment,
+  runtime toggle, disabled no-op); Windows full suite 129/129, Linux full suite 133/133,
+  `layout-convergence` 75 assertions. The Linux `collapsible` CPU/SDF baselines changed (other
+  12 page baselines are 0-diff); Windows/Linux candidates were recaptured and await maintainer
+  approval before the manifest is marked approved. CI (red since 2026-10-11) is fixed by
+  installing `libxss-dev libxtst-dev` for SDL3's CMake X11 probe and reclassifying
+  `render/backends/sdl_device.hpp` as internal so the SDL-disabled header gate no longer compiles
+  it.
 - P4.6 Step 2b is closed — default component recipes consume the semantic role's
   leading/weight/slant through `TypeStyle::role` → `ResolvedTypeStyle` and the shared
   text-style bridge (manual `text::TextStyle` sites migrated to

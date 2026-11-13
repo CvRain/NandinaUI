@@ -70,12 +70,12 @@ platform = "linux"
 image = "candidates/collapsible-cpu-linux.png"
 width = 1200
 height = 800
-sha256 = "65f9fc406afbf5d7a84e95a115cc692d03aa9a7b741b6f2286ca84427688fce8"
+sha256 = "0a8f00a43ee2a4a2473c99fdce2e1b05c607c96d12f9a4c498f1dbaf6df4f3f8"
 status = "approved"
 captured = "2026-11-13"
 reviewed_by = "agent review, per maintainer request 2026-11-13"
-reviewed_on = "2026-11-13"
-review_note = "Maintainer approved the B2a visual acceptance for the new Table and Collapsible showcase pages on both platforms and both render paths (CPU/SDF): tables render shared column tracks, narrow-width wrapping, empty and natural-row-height variants; Collapsible renders closed/open/nested/signal/disabled instances without clipping; Linux double capture was byte-identical, Windows full suite 127/127."
+reviewed_on = "2026-10-20"
+review_note = "Maintainer approved the Collapsible layout-fix recapture on 2026-11-13 (both platforms, CPU/SDF): the flex measure pass now reserves the wrapped height of expanded content, so the set_open(true) instance no longer paints outside its example Card and the runtime toggle reserves its new content; the disabled instance remains a no-op. Linux double capture was byte-identical and the other 12 page baselines are 0-diff."
 
 [[entries]]
 page = "collapsible"
@@ -84,12 +84,12 @@ platform = "windows"
 image = "candidates/collapsible-cpu-windows.png"
 width = 1200
 height = 800
-sha256 = "a14ad1db7a601239abdb2cfd690124623269ce67e10ea2e9d7e9a399ecf38a98"
+sha256 = "52a736b0aabb6268c3a96d5d0f8df448169e17a19942887d34b9f1ed97ad3f6b"
 status = "approved"
 captured = "2026-11-13"
 reviewed_by = "agent review, per maintainer request 2026-11-13"
-reviewed_on = "2026-11-13"
-review_note = "Maintainer approved the B2a visual acceptance for the new Table and Collapsible showcase pages on both platforms and both render paths (CPU/SDF): tables render shared column tracks, narrow-width wrapping, empty and natural-row-height variants; Collapsible renders closed/open/nested/signal/disabled instances without clipping; Linux double capture was byte-identical, Windows full suite 127/127."
+reviewed_on = "2026-10-20"
+review_note = "Maintainer approved the Collapsible layout-fix recapture on 2026-11-13 (both platforms, CPU/SDF): the flex measure pass now reserves the wrapped height of expanded content, so the set_open(true) instance no longer paints outside its example Card and the runtime toggle reserves its new content; the disabled instance remains a no-op. Linux double capture was byte-identical and the other 12 page baselines are 0-diff."
 
 [[entries]]
 page = "collapsible"
@@ -98,12 +98,12 @@ platform = "linux"
 image = "candidates/collapsible-sdf-linux.png"
 width = 1200
 height = 800
-sha256 = "29b6777a10e014205ad9ba029674cedeac109b84bb3e786de0e74c2a867b8230"
+sha256 = "bf52b550b13f55eb3fe322be4c5b3b657af3544754d926f4208353b4f7816c7d"
 status = "approved"
 captured = "2026-11-13"
 reviewed_by = "agent review, per maintainer request 2026-11-13"
-reviewed_on = "2026-11-13"
-review_note = "Maintainer approved the B2a visual acceptance for the new Table and Collapsible showcase pages on both platforms and both render paths (CPU/SDF): tables render shared column tracks, narrow-width wrapping, empty and natural-row-height variants; Collapsible renders closed/open/nested/signal/disabled instances without clipping; Linux double capture was byte-identical, Windows full suite 127/127."
+reviewed_on = "2026-10-20"
+review_note = "Maintainer approved the Collapsible layout-fix recapture on 2026-11-13 (both platforms, CPU/SDF): the flex measure pass now reserves the wrapped height of expanded content, so the set_open(true) instance no longer paints outside its example Card and the runtime toggle reserves its new content; the disabled instance remains a no-op. Linux double capture was byte-identical and the other 12 page baselines are 0-diff."
 
 [[entries]]
 page = "collapsible"
@@ -112,12 +112,12 @@ platform = "windows"
 image = "candidates/collapsible-sdf-windows.png"
 width = 1200
 height = 800
-sha256 = "5c079e0685c607f47fb58778fc21d97b6cbe63568d07d99082478d0029aceff1"
+sha256 = "e949647763aabd735ccd77aa40d76fb6850353862a830c7cbbbc191a81a2686a"
 status = "approved"
 captured = "2026-11-13"
 reviewed_by = "agent review, per maintainer request 2026-11-13"
-reviewed_on = "2026-11-13"
-review_note = "Maintainer approved the B2a visual acceptance for the new Table and Collapsible showcase pages on both platforms and both render paths (CPU/SDF): tables render shared column tracks, narrow-width wrapping, empty and natural-row-height variants; Collapsible renders closed/open/nested/signal/disabled instances without clipping; Linux double capture was byte-identical, Windows full suite 127/127."
+reviewed_on = "2026-10-20"
+review_note = "Maintainer approved the Collapsible layout-fix recapture on 2026-11-13 (both platforms, CPU/SDF): the flex measure pass now reserves the wrapped height of expanded content, so the set_open(true) instance no longer paints outside its example Card and the runtime toggle reserves its new content; the disabled instance remains a no-op. Linux double capture was byte-identical and the other 12 page baselines are 0-diff."
 
 [[entries]]
 page = "home"

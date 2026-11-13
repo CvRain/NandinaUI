@@ -230,6 +230,88 @@ namespace nandina::widget
             }
         }
 
+        /// Measure a linear container the same way `layout_linear_items()` arranges it.
+        ///
+        /// The naive measure loop gives every child the container's full main extent. Flex
+        /// children (`Expanded`, `FlexItem`) then get their real share only during arrange, so a
+        /// wrapping child reports the height it would have at the full width — the container
+        /// reserves too little and the content paints/clips outside its box once the final width
+        /// rewraps it taller. This helper runs the same distribution in the measure pass and
+        /// re-measures flex children with their allocated main extent before the container
+        /// publishes its size.
+        [[nodiscard]] auto measure_linear_container(
+            std::vector<std::weak_ptr<scene::NanControl>>& refs,
+            LayoutAxis axis,
+            foundation::NanLayoutConstraints constraints,
+            float gap
+        ) -> foundation::NanSize {
+            prune_expired(refs);
+            std::vector<LinearItem> items;
+            for (auto& ref: refs) {
+                auto child = ref.lock();
+                if (!child || !child->visible()) {
+                    continue;
+                }
+                const auto policy = child->layout_flex_policy();
+                const auto measured = child->measure_layout(child_constraints(constraints));
+                const float min_main = std::max(0.0F, policy_limit(policy.limits, axis, true));
+                const float max_main = std::max(min_main, policy_limit(policy.limits, axis, false));
+                const float raw_base = policy.basis.value_or(main_extent(measured, axis));
+                const float base = std::clamp(raw_base, min_main, max_main);
+                items.push_back(
+                    LinearItem {
+                        .child = std::move(child),
+                        .policy = policy,
+                        .measured = measured,
+                        .base = base,
+                        .target = base,
+                        .min_main = min_main,
+                        .max_main = max_main,
+                    }
+                );
+            }
+            if (items.empty()) {
+                return constraints.constrain(foundation::NanSize::zero());
+            }
+
+            const float gaps = gap * static_cast<float>(items.size() - 1);
+            const float available_main = std::isfinite(effective_limit(max_main(constraints, axis)))
+                ? effective_limit(max_main(constraints, axis)) - gaps
+                : std::numeric_limits<float>::infinity();
+            if (std::isfinite(available_main) && available_main >= 0.0F) {
+                distribute_linear(items, available_main);
+                for (auto& item: items) {
+                    if (item.policy.grow <= 0.0F && item.policy.shrink <= 0.0F) {
+                        continue;
+                    }
+                    // Tight on the main axis, unchanged cross-axis limits: the child must
+                    // resolve its wrapping at the width/height it will actually occupy.
+                    const auto tight = axis == LayoutAxis::horizontal
+                        ? foundation::NanLayoutConstraints {
+                              .min_width = item.target,
+                              .max_width = item.target,
+                              .min_height = 0.0F,
+                              .max_height = constraints.max_height,
+                          }
+                        : foundation::NanLayoutConstraints {
+                              .min_width = constraints.max_width,
+                              .max_width = constraints.max_width,
+                              .min_height = item.target,
+                              .max_height = item.target,
+                          };
+                    item.measured = item.child->measure_layout(tight);
+                }
+            }
+
+            float used_main = gaps;
+            float used_cross = 0.0F;
+            for (const auto& item: items) {
+                used_main += main_extent(item.measured, axis);
+                used_cross = std::max(used_cross, cross_extent(item.measured, axis));
+            }
+            return constraints.constrain(size_from_extents(used_main, used_cross, axis));
+        }
+
         void layout_linear_items(
             std::vector<std::weak_ptr<scene::NanControl>>& refs,
             LayoutAxis axis,
@@ -437,25 +519,7 @@ namespace nandina::widget
 
     auto Flex::on_measure(foundation::NanLayoutConstraints constraints) -> foundation::NanSize {
         auto items = control_children(*this);
-
-        float used_main = 0.0F;
-        float used_cross = 0.0F;
-        std::size_t visible_count = 0;
-        for (auto& item: items) {
-            auto child = item.lock();
-            if (!child || !child->visible()) {
-                continue;
-            }
-            if (visible_count > 0) {
-                used_main += gap_;
-            }
-            const auto measured = child->measure_layout(child_constraints(constraints));
-            used_main += main_extent(measured, axis_);
-            used_cross = std::max(used_cross, cross_extent(measured, axis_));
-            ++visible_count;
-        }
-
-        return constraints.constrain(size_from_extents(used_main, used_cross, axis_));
+        return measure_linear_container(items, axis_, constraints, gap_);
     }
 
     auto Flex::on_layout() -> void {
@@ -722,25 +786,7 @@ namespace nandina::widget
 
     auto Column::on_measure(foundation::NanLayoutConstraints constraints) -> foundation::NanSize {
         auto items = control_children(*this);
-
-        float y = 0.0F;
-        float max_width = 0.0F;
-        std::size_t visible_count = 0;
-        for (auto& item: items) {
-            auto child = item.lock();
-            if (!child || !child->visible()) {
-                continue;
-            }
-            if (visible_count > 0) {
-                y += gap_;
-            }
-            const auto measured = child->measure_layout(child_constraints(constraints));
-            y += measured.get_height();
-            max_width = std::max(max_width, measured.get_width());
-            ++visible_count;
-        }
-
-        return constraints.constrain(foundation::NanSize(max_width, y));
+        return measure_linear_container(items, LayoutAxis::vertical, constraints, gap_);
     }
 
     auto Column::on_layout() -> void {
@@ -814,25 +860,7 @@ namespace nandina::widget
 
     auto Row::on_measure(foundation::NanLayoutConstraints constraints) -> foundation::NanSize {
         auto items = control_children(*this);
-
-        float x = 0.0F;
-        float max_height = 0.0F;
-        std::size_t visible_count = 0;
-        for (auto& item: items) {
-            auto child = item.lock();
-            if (!child || !child->visible()) {
-                continue;
-            }
-            if (visible_count > 0) {
-                x += gap_;
-            }
-            const auto measured = child->measure_layout(child_constraints(constraints));
-            x += measured.get_width();
-            max_height = std::max(max_height, measured.get_height());
-            ++visible_count;
-        }
-
-        return constraints.constrain(foundation::NanSize(x, max_height));
+        return measure_linear_container(items, LayoutAxis::horizontal, constraints, gap_);
     }
 
     auto Row::on_layout() -> void {

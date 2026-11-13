@@ -222,7 +222,8 @@ level = "experimental"
 
 [[headers]]
 path = "nandina/render/backends/sdl_device.hpp"
-level = "experimental"
+level = "internal"
+reason = "SDL3 backend implementation detail; it requires SDL3 headers and is only compiled when the SDL backend is enabled"
 
 [[headers]]
 path = "nandina/render/clip_stack.hpp"

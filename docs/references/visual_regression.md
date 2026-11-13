@@ -272,6 +272,22 @@ artifact 上传（保留 14 天）。规则：
 - **成本**：独立 job 要构建 vendored SDL3 + 库 + 探针，约 15–20 分钟，与主 `build` job 的
   完整构建同量级；它是独立 workflow，不改变现有 8 个 CI job 的行为。
 
+**2026-11-13 CI 修复记录**：`CI` 与 `visual-golden` 从 2026-10-11 起在 configure 阶段失败。
+根因有两个，都与 golden 内容无关：
+
+1. 容器镜像里的 SDL3 CMake `CheckX11` 现在需要 XScrnSaver / XTest 头；`gcc:16` 与
+   `clang:21-trixie` 镜像不再自带。所有配置 SDL 的 job（含 `visual-golden`）补装
+   `libxss-dev libxtst-dev`。
+2. SDL-disabled 的 `headless library and tools` job 在 `header-surface` 里把
+   `nandina/render/backends/sdl_device.hpp` 当独立 experimental 头编译，找不到 `SDL3/SDL.h`。
+   该头是后端实现细节，已改为 internal（只在 SDL 后端启用时编译）。
+
+定位方式：GitHub 的 job 日志下载 API 需要仓库 admin，公开页面也无法匿名读取完整日志；
+诊断分支在 configure/cmake/test 失败时把日志尾部作为 workflow `::error` annotation 输出，
+annotation 是公开 API 可读的（本次即靠它拿到 `Couldn't find dependency package for
+XSCRNSAVER/XTEST` 与 headless 的 `SDL3/SDL.h` 行）。诊断分支只用于定位，最终 main 只保留
+依赖安装与头文件分类修复。
+
 GPU/SDF 基线仍由真实 Linux 机器（GNOME/Wayland + RADV）人工采集审批；`golden-manifest`
 （含 `platform` 校验）仍在 CI。设备级测试（坐标矩阵、真实字形、AA 面积积分、产物格式）是
 跨平台契约；页面 golden 是平台相关观感基线——两者分开维护，互不替代。

@@ -184,3 +184,31 @@ Label 页的 "Wrapping" 一节标注 `Assigned width: 68% of the content column`
 - 绘制遍历的 z 序缓存与裁剪剔除：见 [跨平台后端探测](cross_platform_backend_probe.md) 的记录。
 - 无序绘制列表与后端无关的批处理：属于渲染后端迁移的独立工作线。
 - 两阶段 width-for-height 协议：D6 定案后再定形。
+
+## 10. 2026-11-13 Flex 测量内的主轴分配（修复）
+
+维护者在 Collapsible showcase 页发现两个宽度的布局缺陷：`收起与展开` 右侧 `set_open(true)`
+实例的内容按钮画到 example Card 之外；`Signal 与禁用` 中用户展开后内容被截断。根因不在
+Collapsible：`Flex`/`Row`/`Column` 的 `on_measure()` 把容器的**完整主轴尺寸**交给每个子项，
+而 arrange 阶段 `layout_linear_items()` 才按 `layout_flex_policy()` 把主轴空间分给 `Expanded`
+等 flex 子项。于是换行文本在 measure 时按「整行宽度」算出一行，arrange 时却拿到半行宽度换
+成两行；容器高度少算一行，内容越出自身与父 Card，运行时展开同样无法撑开。
+
+修复：把线性容器的 measure 收敛到与 arrange 相同的分配规则（`layout.cpp` 的
+`measure_linear_container()`）：
+
+- 先按原约束测量一遍得到自然尺寸与 flex policy；有限主轴空间减去 gap 后用
+  `distribute_linear()` 计算每个 flex 子项的目标主轴尺寸；
+- flex 子项用「主轴紧约束、交叉轴保持原约束」再测一次，换行/内容高度按最终宽度计入；
+- 非 flex 子项与无限主轴（居中/内容包络）保持原测量路径，不改变既有语义；
+- `Flex`、`Row`、`Column` 共用该入口，避免三套 measure 漂移。
+
+回归：`[layout][flex][wrap]` 用两个 `Expanded` 包裹换行 Label，断言 Row 高度
+≥ 文本在最终子宽度下的测量高度；红先时（临时移除此修复）该断言失败，恢复后
+`layout-convergence` 75 断言/10 用例全过。`[collapsible][showcase][layout]` 在 900/1200
+宽度检查展开内容底边不超过 Collapsible 底边，并在运行时 toggle 后复检；禁用实例的
+`toggle()` 必须是无操作且不请求布局。
+
+视觉影响：Linux `collapsible` 页 CPU/SDF 两条基线因内容不再越界、下方 section 下移而变化
+（其余 12 条基线 0 差异）；Windows 同页基线同步重采。候选图需维护者审阅后批准，审批记录见
+[视觉回归](visual_regression.md)。

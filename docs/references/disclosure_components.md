@@ -98,3 +98,17 @@
   Windows、Showcase 页面和视觉验收未在本轮执行；不由自动测试结果代替。
 - P4.2c 已随 `095336b` 统一提交推送；Showcase 视觉验收已于 2026-11-13 完成并批准双平台
   8 条页面基线（详见 [视觉回归](visual_regression.md)）。
+
+## 6. 2026-11-13 展开内容高度回归
+
+Collapsible 自身没有布局缺陷，但 showcase `收起与展开` / `Signal 与禁用` 暴露了父级线性
+容器在 measure 阶段不给 flex 子项分配主轴尺寸的问题：`set_open(true)` 的换行内容按整行
+宽度测量，最终半行宽度换行后高度少算一行，内容画到 example Card 之外；运行时用户展开
+则被截断，看起来像「禁用实例被误展开」（实际是溢出内容覆盖了下一行）。修复在布局层
+（`layout.cpp` 的 `measure_linear_container()`，见
+[布局收敛与文本测量](layout_convergence_and_text_measurement.md) §10）。
+
+本组件的契约不变：`set_open()` 静默、用户激活才发 Signal、禁用实例忽略激活并保留空内容槽。
+新增页面级回归 `[collapsible][showcase][layout]`：900/1200 宽度下展开内容底边必须落在
+Collapsible 底边之内；运行时 `toggle()` 后复检；禁用实例 `toggle()` 不改变状态且不请求
+布局。Linux `collapsible` CPU/SDF 基线重采（候选），待维护者审阅后批准。

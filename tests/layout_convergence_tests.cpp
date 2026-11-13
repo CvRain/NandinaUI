@@ -9,8 +9,10 @@
 //
 
 #include <nandina/foundation/layout_constraints.hpp>
+#include <nandina/reactive/graph.hpp>
 #include <nandina/scene/control.hpp>
 #include <nandina/scene/scene_tree.hpp>
+#include <nandina/widget/label.hpp>
 #include <nandina/widget/layout.hpp>
 #include <nandina/widget/primitives/text.hpp>
 #include <nandina/widget/scroll_view.hpp>
@@ -18,7 +20,7 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
-#include <memory>
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -361,4 +363,55 @@ TEST_CASE("a scroll view measures its content on its own width", "[layout][conve
     tree.set_root(scroll);
     require_converged(tree);
     REQUIRE(content->size().get_width() == Catch::Approx(scroll->size().get_width()));
+}
+
+TEST_CASE(
+    "a Row reserves the wrapped height of expanded children at their final width",
+    "[layout][flex][wrap]"
+) {
+    reactive::Graph graph;
+    auto row = widget::Row::create();
+    row->set_gap(8.0F);
+    row->set_width(scene::fill);
+    for (int index = 0; index < 2; ++index) {
+        auto label = widget::Label::create(graph, std::string(kLongText));
+        label->set_overflow(text::TextOverflow::wrap);
+        label->set_max_lines(8);
+        label->set_width(scene::fill);
+        auto expanded = widget::Expanded::create();
+        expanded->set_child(label);
+        row->add(expanded);
+    }
+
+    // The Row is content-height inside a Column root: the tight viewport height must not
+    // clamp the container we are asserting about.
+    auto root = widget::Column::create();
+    root->set_width(scene::fill);
+    root->add(row);
+
+    scene::NanSceneTree tree;
+    tree.set_root(root);
+    const auto viewport = foundation::NanSize(400.0F, 300.0F);
+    (void)tree.layout_root(viewport);
+    (void)tree.layout_root(viewport);
+
+    // Each Expanded child ends up with half the row width; the text must be measured at that
+    // width, not at the full row width used by the naive first measure pass.
+    const float child_width = (viewport.get_width() - 8.0F) / 2.0F;
+    auto probe = widget::Label::create(graph, std::string(kLongText));
+    probe->set_overflow(text::TextOverflow::wrap);
+    probe->set_max_lines(8);
+    const auto required = probe
+                              ->measure_layout(
+                                  foundation::NanLayoutConstraints {
+                                      .min_width = child_width,
+                                      .max_width = child_width,
+                                      .min_height = 0.0F,
+                                      .max_height = std::numeric_limits<float>::infinity(),
+                                  }
+                              )
+                              .get_height();
+
+    REQUIRE(required > 0.0F);
+    REQUIRE(row->height() >= required - foundation::nan_epsilon);
 }
