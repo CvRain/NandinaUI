@@ -1,9 +1,9 @@
 # Notebook example
 
 A notes/todo desktop application used as the end-to-end example for application
-architecture, resources, and persistence. The data layer, account service, and
-login/registration pages are implemented; the signed-in workspace is currently a
-placeholder for the notes UI.
+architecture, resources, and persistence. The data layer, account service,
+login/registration pages and the first signed-in workspace slice (group filter,
+note list, title/body editor and note CRUD) are implemented.
 
 ## Build and run
 
@@ -38,9 +38,9 @@ the path is derived from the executable (not the working directory), and deletin
 | `src/data/migrations/` | Canonical SQL migrations |
 | `src/core/services/auth_service.*` | PBKDF2 password hashing and constant-time verification |
 | `src/core/services/user_service.*` | Registration and credential checks over the user repository |
-| `src/app/notebook_store.*` | Composition root: owns Database, repository, service and the current session |
+| `src/app/notebook_store.*` | Composition root: owns Database, repositories, services, current session and workspace signals (groups, notes, selection) with note/group CRUD |
 | `src/ui/auth/` | Login and registration pages plus their shared split-card shell |
-| `src/ui/home_page.*` | Signed-in placeholder with the logout path |
+| `src/ui/home_page.*` | Signed-in notebook workspace: group filter + creation, note list, title/body editor with new/save/delete |
 | `src/ui/user_service_demo_page.*` | Demo page resolving UserService from PageContext |
 
 `Database` enables foreign keys, WAL, a five-second busy timeout and normal
@@ -54,6 +54,23 @@ optional/bool result, not an exception. Mutating note and todo operations requir
 owning `user_id`; note groups are additionally checked to belong to that user. SQL
 triggers enforce the same group ownership for direct SQL. Deleting a user cascades to
 their notes, groups and todos; deleting a group leaves its notes ungrouped.
+
+## Signed-in workspace (B3 first slice)
+
+`home_page` renders three columns over `NotebookStore`: group filter/creation,
+the note list of the active filter, and a title/body editor. The store owns the
+workspace signals, so the page binds list widgets to `group_list()` /
+`note_list()` instead of running SQL; group switches, note creation, saving and
+deletion all go through store methods that reload the signals consistently.
+`selected_group()` / `selected_note()` keep the editor selection in one place,
+and signing out clears the workspace state.
+
+Coverage: `notebook-data` (unit suite) includes a `[notebook][store]` case for
+list/selection/CRUD/sign-out behavior; the workspace page itself was smoke-run
+against the real SQLite database. UI interaction/visual acceptance is a
+maintainer follow-up (per project rules it lives in the untracked `playground/`
+unless promoted), as are the todo UI, rich text, group rename/delete and delete
+confirmation.
 
 ## Using the repositories
 

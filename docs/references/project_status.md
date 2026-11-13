@@ -137,7 +137,7 @@ showcase 页面的小视口/零尺寸、反复换边和页面销毁回调测试�
 P2.4 的 `examples/lab` 已退役，示例应用改为 `examples/notebook`：目标是一个较完整的个人笔记软件，按批持续演进，而不是一次交付完整产品。
 
 - **已落地**：SQLite 数据层（连接/statement/事务、`schema_migrations` 与 `PRAGMA user_version`、资源驱动迁移、user/note-group/note/todo 模型与仓储、`DataError` + `std::expected` 错误约定）；`notebook-data` 单元测试覆盖迁移顺序/缺口/重命名、CRUD、所有权与级联。账户侧已接入 `AuthService`（PBKDF2-HMAC-SHA256，版本化盐/迭代参数）、`UserService` 注册与登录校验、`NotebookStore` 当前用户信号，以及登录/注册/占位工作区三条路由；`notebook-data` 同时覆盖哈希、错误口令、未知账户与重复注册。
-- **进行中**：笔记工作区 UI 与业务页面；页面组件先在 `showcase/` 编写并做视觉验收，notebook 负责组合。
+- **已落地（B3 最小垂直切片，2026-11-13）**：签入工作区三栏（分组筛选/新建、笔记列表、标题/正文编辑器、新建/保存/删除），`NotebookStore` 暴露 `group_list()`/`note_list()`/`selected_group()`/`selected_note()` 与笔记/分组 CRUD；`notebook-data` 新增 `[notebook][store]` 覆盖列表、选择、CRUD 与登出清理。**后续**：UI 交互/视觉验收（playground）、todo UI、富文本、分组改名/删除、删除确认与错误重试；页面组件先在 `showcase/` 编写并做视觉验收，notebook 负责组合。
 - **测试分工**：数据层等确定性测试留在仓库（`examples/notebook/tests/`，`notebook-data`，CI/Windows 覆盖）；UI/交互与长跑测试放未跟踪的 `playground/`，不作为 CI 证据。
 - **构建前置**：notebook 需要 `build_ui`、资源工具链、`resource_sqlite=enabled` 与系统 OpenSSL ≥ 3.0（应用侧口令哈希）；headless、关闭工具或关闭 SQLite 的配置用 `-Dexamples=false` 跳过它。
 - **历史证据**：P2.4 的验收记录与 `docs/images/lab/` 截图保留，不随 lab 退役删除。

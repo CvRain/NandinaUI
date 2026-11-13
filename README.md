@@ -46,8 +46,9 @@ NandinaUI（南天竹）是一个用 **C++26** 编写、基于 **Meson** 构建�
 
 资源构建工具已与 UI 目标解耦，P2 闭环（工具拆分、作用域查询、身份/常量头、构建 lock 与示例
 资源链）已落地；综合示例应用 `examples/notebook` 随普通 UI 构建默认参与，可用 `-Dexamples=false`
-关闭。2026-10-28 起示例应用由 P2.4 的 `examples/lab` 改造为 notebook（个人笔记软件），当前已落地
-SQLite 数据层与资源驱动的迁移，UI 与服务层按批推进。
+关闭。2026-10-28 起示例应用由 P2.4 的 `examples/lab` 改造为 notebook（个人笔记软件）；当前已落地
+SQLite 数据层与资源驱动的迁移、账户服务与登录/注册，以及签入工作区第一切片（分组筛选、笔记
+列表与标题/正文编辑器 CRUD）。UI 视觉验收与更多业务页按批推进。
 [D5 资源构建与部署](docs/references/resource_build_and_deployment.md) 记录完整契约与剩余部署边界。
 
 ## 🧱 架构

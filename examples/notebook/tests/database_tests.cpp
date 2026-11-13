@@ -24,6 +24,7 @@
 
 namespace
 {
+    namespace app = nan_example::notebook::app;
     namespace data = nan_example::notebook::data;
     namespace models = nan_example::notebook::models;
 
@@ -85,6 +86,65 @@ TEST_CASE("nanres package carries ordered notebook migrations", "[notebook][data
     );
     CHECK(migrations->at(2).sql.find("CREATE TABLE IF NOT EXISTS notes") != std::string::npos);
     CHECK(migrations->at(3).sql.find("CREATE TABLE IF NOT EXISTS todos") != std::string::npos);
+}
+
+TEST_CASE("notebook store keeps workspace lists and note CRUD in sync", "[notebook][store]") {
+    auto fixture = migrated_database();
+    nandina::reactive::Graph graph;
+    app::NotebookStore store(graph, std::move(fixture.database));
+
+    auto user = store.users().create({.username = "writer", .password_hash = "hash"});
+    REQUIRE(user.has_value());
+    store.sign_in(*user);
+
+    // Signed-in load: no groups or notes yet.
+    REQUIRE(store.load_workspace().has_value());
+    CHECK(store.group_list().peek().empty());
+    CHECK(store.note_list().peek().empty());
+
+    // Group creation refreshes the list and returns the created row.
+    auto group = store.create_group("工作");
+    REQUIRE(group.has_value());
+    REQUIRE(store.group_list().peek().size() == 1);
+    CHECK(store.group_list().peek().front().name == "工作");
+
+    // Create a note in the group filter; the selection follows the new note.
+    REQUIRE(store.select_group(group->id).has_value());
+    auto note = store.create_note("第一条笔记", "内容");
+    REQUIRE(note.has_value());
+    REQUIRE(store.note_list().peek().size() == 1);
+    REQUIRE(store.selected_note().peek() == note->id);
+    REQUIRE(store.current_note().has_value());
+    CHECK(store.current_note()->title == "第一条笔记");
+
+    // Saving updates both the list row and the resolved current note.
+    REQUIRE(store.save_note(note->id, "改过的标题", "新内容").has_value());
+    REQUIRE(store.current_note().has_value());
+    CHECK(store.current_note()->title == "改过的标题");
+    CHECK(store.current_note()->content == "新内容");
+
+    // Switching to "all notes" keeps the note visible and preserves selection.
+    REQUIRE(store.select_group(std::nullopt).has_value());
+    CHECK(store.note_list().peek().size() == 1);
+    CHECK(store.selected_note().peek() == note->id);
+
+    // Deleting the note clears the list and the selection.
+    REQUIRE(store.delete_note(note->id).has_value());
+    CHECK(store.note_list().peek().empty());
+    CHECK_FALSE(store.selected_note().peek().has_value());
+
+    // Sign out clears workspace state; CRUD without a session fails cleanly.
+    store.sign_out();
+    CHECK(store.group_list().peek().empty());
+    CHECK(store.note_list().peek().empty());
+    CHECK_FALSE(store.create_note("x", "y").has_value());
+
+    // Signing back in starts empty and reloads persisted rows on demand.
+    store.sign_in(*user);
+    CHECK(store.note_list().peek().empty());
+    REQUIRE(store.load_workspace().has_value());
+    CHECK(store.group_list().peek().size() == 1);
+    CHECK(store.note_list().peek().empty());
 }
 
 TEST_CASE("bootstrap creates the database once and records schema versions", "[notebook][data]") {

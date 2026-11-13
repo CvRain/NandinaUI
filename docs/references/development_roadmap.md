@@ -120,9 +120,7 @@
    双平台 16 条 golden 重批）→ P4.6 Step 3 的 OS 无障碍字号来源/持久化，以及 P4.7 后续
    （真实多 face 暂缓，决策见 [font_synthesis.md](font_synthesis.md)）→ **B2 showcase 视觉验收
    清账**：B2a Table/Collapsible 已完成（2026-11-13，新页面 + 双平台 8 条 golden 批准），
-   B2b Surface/Card 页面随后，Theme Shell 页另排 → notebook 最小垂直切片作为
-   集成证明。P3.3b2b 仍差 X11 inline preedit/Windows IME/候选窗位置，依赖真实桌面环境，作为
-   并行轨。CI CPU golden 门禁已非阻断落地（`visual-golden.yml`），首次真实 Actions 跑绿后
+   B2b Surface/Card 页面随后完成（2026-11-13，新页面 + 双平台 4 条 golden 批准），Theme Shell 页另排；notebook 最小垂直切片已实现（2026-11-13：工作区列表/编辑器/CRUD + `[notebook][store]`），UI 视觉验收与后续业务页另批。CI CPU golden 门禁已非阻断落地（`visual-golden.yml`），首次真实 Actions 跑绿后
    删掉 `continue-on-error` 即可升级为阻断门禁。
 3. **保留的 P1 边界**：退役后的 Windows 静态构建/窗口生命周期复验、P1.6 完整 Image 页面端到端采样仍分别记录；不把它们混同于已交付的 Windows golden 与参考性能基线。
 4. **已交付记录**：P1.2 Windows CPU/SDF 共 6 条 approved、P1.3 Windows 参考性能基线、P1.5b 阴影/圆角裁剪及 P2 应用闭环均已归档；P1.4 归 NandinaCLI。

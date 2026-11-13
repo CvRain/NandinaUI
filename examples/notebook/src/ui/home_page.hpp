@@ -6,10 +6,11 @@
 
 namespace nan_example::notebook::ui
 {
-    /// Placeholder for the signed-in notebook workspace.
+    /// Signed-in notebook workspace (B3 minimal vertical slice).
     ///
-    /// It exists so the authentication flow has a real destination and a logout path;
-    /// the notes UI will replace its body in a later batch.
+    /// Three columns over `NotebookStore`: group filter + creation, note list, and a
+    /// title/body editor with new/save/delete actions. The page only reads and writes
+    /// store signals/repositories; SQL stays in the data layer.
     class HomePage final: public nandina::app::Page<> {
     public:
         [[nodiscard]] auto build(nandina::app::PageContext& context)

@@ -29,8 +29,8 @@ application shell. Version `0.1.0-alpha.1`.
   typography batch and the CI CPU-golden workflow were committed and pushed (`e690c0f`, `762c251`)
   after Linux pull verification (129/129 + 8 golden compares clean). Outstanding: OS
   accessibility text-scale source (Windows source landed on 2026-11-13; Linux source and
-  persistence pending), notebook workspace slice, P4.8c. P4.7 real multi-face assets stay
-  deferred.
+  persistence pending), notebook workspace follow-ups (UI visual acceptance, todo/rich text),
+  P4.8c. P4.7 real multi-face assets stay deferred.
   Linux is reachable through the current local SSH alias (`nandina-linux`).
 - P4.6 Step 2b is closed — default component recipes consume the semantic role's
   leading/weight/slant through `TypeStyle::role` → `ResolvedTypeStyle` and the shared
@@ -57,8 +57,12 @@ application shell. Version `0.1.0-alpha.1`.
   the P2.4 multi-route lab example (retired 2026-10-28; kept in the docs as historical evidence).
 - The integrated example application is now `examples/notebook`: a personal notes app that grows
   batch by batch. Its SQLite data layer, account service (PBKDF2 hashing, registration, login)
-  and login/registration/home routes are in place; the signed-in notebook workspace is still a
-  placeholder. Components are authored in `showcase/`; UI tests live in the untracked `playground/`.
+  and login/registration/home routes are in place. The 2026-11-13 B3 minimal vertical slice turns
+  the signed-in page into a real workspace: `NotebookStore` exposes group/note lists, group filter
+  and selection signals plus note/group CRUD; `home_page` renders group filter + note list + a
+  title/body editor with new/save/delete; `notebook-data` covers the store contract (228
+  assertions). UI interaction/visual acceptance, todo UI, group rename/delete and rich text remain
+  follow-ups. Components are authored in `showcase/`; UI tests live in the untracked `playground/`.
 - P3 is in progress: **P3.1a** (per-event pointer coordinates/modifier snapshots through the
   host seam) and **P3.1b** (framework-owned `LogicalKey`/`PhysicalKey` identities, press/repeat/
   release lifecycle, SDL scancode/keycode mapping, unknown identity counting) and **P3.1c**
