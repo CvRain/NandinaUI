@@ -10,7 +10,9 @@
 #include <catch2/catch_test_macros.hpp>
 
 #include <cstdint>
+#include <cstdlib>
 #include <optional>
+#include <string>
 
 using namespace nandina;
 
@@ -143,6 +145,29 @@ TEST_CASE("Windows OS text-scale source reads a plausible value", "[app][windows
     if (second.has_value() && second->text_scale.has_value()) {
         REQUIRE(*second->text_scale >= 1.0F);
         REQUIRE(*second->text_scale <= 2.25F);
+    }
+}
+
+TEST_CASE(
+    "the real Windows source drives the application text scale",
+    "[app][windows][text-scale]"
+) {
+    app::detail::WindowsSystemTextScaleSource source;
+    const auto snapshot = source.snapshot();
+
+    app::NanApplication application;
+    application.attach_system_preferences(&source);
+    REQUIRE(application.sync_system_preferences());
+    const float expected = snapshot.text_scale.value_or(1.0F);
+    REQUIRE(application.effective_text_scale() == Catch::Approx(expected));
+    REQUIRE(scaled_tokens(application.theme_manager()).text_scale == Catch::Approx(expected));
+
+    // Manual-acceptance hook: change the Windows accessibility text size (e.g. 150%), then run
+    // with NANDINA_EXPECT_TEXT_SCALE=1.5 to prove the OS -> source -> app -> theme chain.
+    if (const char* expected_env = std::getenv("NANDINA_EXPECT_TEXT_SCALE");
+        expected_env != nullptr)
+    {
+        REQUIRE(application.effective_text_scale() == Catch::Approx(std::stof(expected_env)));
     }
 }
 #endif

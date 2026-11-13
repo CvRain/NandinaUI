@@ -223,10 +223,13 @@ slant = "italic"   # normal / italic / oblique
 - **2026-11-13 OS 来源子批验证**：`[app][system-text-scale]` 覆盖 percent 映射边界（100/125/
   150/225/0/99/226/0xFFFFFFFF）、override > OS > 1.0 仲裁、同值不重复发布 theme revision、
   非法值回退、首个来源生效与 detach；`[app][windows][text-scale]` 在 Windows 上真实读取注册表
-  并只断言文档范围 1.0–2.25。红先：临时忽略 override 后 23 条断言中 1 条失败；临时放宽
-  percent 上界后 32 条断言中 1 条失败，恢复后通过。Windows 全量 129/129；Linux 全量 133/133，
-  矩阵 ASan unit 108（+1 预期 SKIP）、no-RTTI 110、no-SQLite 105（+1 预期 SKIP）、纯 tools
-  通过，`release_check --ci` 8/8。
+  并只断言文档范围 1.0–2.25。**2026-11-13 端到端验收**：临时将注册表设为 150 后以
+  `NANDINA_EXPECT_TEXT_SCALE=1.5` 运行真实来源用例，OS→`WindowsSystemTextScaleSource`→
+  `NanApplication`→`ThemeManager` 全链路通过（39 断言），随后恢复原值并复跑通过（详见
+  [Windows 验收](windows_acceptance.md) §10）；窗口内文字重排的人工目检仍待。红先：临时忽略
+  override 后 23 条断言中 1 条失败；临时放宽 percent 上界后 32 条断言中 1 条失败，恢复后通过。
+  Windows 全量 129/129；Linux 全量 133/133，矩阵 ASan unit 108（+1 预期 SKIP）、no-RTTI 110、
+  no-SQLite 105（+1 预期 SKIP）、纯 tools 通过，`release_check --ci` 8/8。
 - 全量 Windows/Linux 套件与 release gates 在提交时运行；**2026-11-11 中文版重批**仍是
   TextField hover/菜单高 DPI/图集修复后的历史基线记录。
 

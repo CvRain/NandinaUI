@@ -236,3 +236,15 @@ python tools\release_check.py --ci --build-dir buildDir
 热插拔/系统缩放在线变化与 Linux Wayland 分数缩放（Windows 单屏与混合 DPI 内容缩放已验收，
 见 §8 与 [高 DPI 与多显示器](high_dpi_and_multi_display.md)）、Windows 性能基线复采、
 真实物理键鼠布局、SDK 在 Windows 上的下游消费交付。Windows 仍为实验性平台，无应用交付承诺。
+
+## 10. OS 无障碍文字缩放的端到端验收（2026-11-13）
+
+- 在 Windows 上临时将 `HKCU\Software\Microsoft\Accessibility\TextScaleFactor` 设为 150
+  （验收前该值缺失，验收后已删除恢复），运行
+  `NANDINA_EXPECT_TEXT_SCALE=1.5 buildDir\tests\system_text_scale_tests.exe`：真实注册表 →
+  `WindowsSystemTextScaleSource` → `NanApplication` → `ThemeManager` 的
+  `[app][windows][text-scale]` 用例全绿（39 断言 / 4 用例，其中断言有效缩放为 1.5）。
+  恢复原值后再次运行通过（36 断言）。
+- 说明：本轮用「环境变量指定期望值」代替 GUI 截图，因为当前会话无法可靠捕获窗口。证据覆盖
+  OS → app → theme 链路，**不代替**“用户在系统设置里改文字大小后窗口文字重排”的人工目检；
+  后者仍是 `typography_scale.md` §8/§9 记录的剩余验收项。
