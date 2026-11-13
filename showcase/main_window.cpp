@@ -11,6 +11,7 @@
 #include "pages/image_page.hpp"
 #include "pages/input_focus_page.hpp"
 #include "pages/label_page.hpp"
+#include "pages/surface_page.hpp"
 #include "pages/table_page.hpp"
 #include "pages/typography_page.hpp"
 
@@ -53,6 +54,11 @@ namespace nandina::showcase
             nandina::app::route<CollapsiblePage>(app::RouteOptions {
                 .address = "content_and_display/collapsible",
                 .title = "折叠内容",
+                .nav_group = "内容与展示"
+            }),
+            nandina::app::route<SurfacePage>(app::RouteOptions {
+                .address = "content_and_display/surface",
+                .title = "表面与卡片",
                 .nav_group = "内容与展示"
             }),
             nandina::app::route<InputFocusPage>(app::RouteOptions {

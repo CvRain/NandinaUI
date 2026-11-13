@@ -20,13 +20,15 @@ application shell. Version `0.1.0-alpha.1`.
 - **Latest (2026-11-13)**: B2a is complete — new showcase pages `table_page` (fixed/weighted
   tracks, finite-width wrapping, empty table, natural row heights) and `collapsible_page`
   (closed/open, nested, Signal sync, disabled) are registered in the app and page probe, covered
-  by `[table][showcase]` / `[collapsible][showcase]` page tests, and their 8 new page goldens
-  (2 pages × CPU/SDF × Windows/Linux) were approved by the maintainer on 2026-11-13; the Windows
-  full suite is 127/127 and Linux double capture was byte-identical. The CI CPU gate now covers
-  six pages (home/anchors/label/typography/table/collapsible). Earlier on 2026-11-13 the B1
+  by `[table][showcase]` / `[collapsible][showcase]` / `[surface][showcase]` page tests. B2a
+  added table_page + collapsible_page with 8 new page goldens, and B2b added surface_page (Card
+  content insets, Surface box styles, nested rounded-corner clip boundary) with 4 more; all were
+  approved by the maintainer on 2026-11-13. The Windows full suite is 128/128 and Linux double
+  captures were byte-identical. The CI CPU gate now covers seven pages
+  (home/anchors/label/typography/table/collapsible/surface). Earlier on 2026-11-13 the B1
   typography batch and the CI CPU-golden workflow were committed and pushed (`e690c0f`, `762c251`)
-  after Linux pull verification (129/129 + 8 golden compares clean). Outstanding: B2b
-  (Surface/Card page + goldens), OS accessibility text-scale source/persistence (host-injected
+  after Linux pull verification (129/129 + 8 golden compares clean). Outstanding: OS
+  accessibility text-scale source/persistence (host-injected
   design ready), notebook workspace slice, P4.8c. P4.7 real multi-face assets stay deferred.
   Linux is reachable through the current local SSH alias (`nandina-linux`).
 - P4.6 Step 2b is closed — default component recipes consume the semantic role's
@@ -83,7 +85,8 @@ application shell. Version `0.1.0-alpha.1`.
 - **P4.1b** (2026-11-03, implemented and pushed in `0e7fca1`) adds a Surface
   layout/paint primitive via `ui.surface()`, explicit Card content insets with recipe reset,
   and percentage Image cover anchors. Surface/Card corners do not mask children: the existing
-  scene clip is rectangular. Showcase visual acceptance remains a separate check.
+  scene clip is rectangular. Showcase visual acceptance was completed on 2026-11-13 by the new
+  `surface_page` plus its dual-platform CPU/SDF page goldens.
 - **P4.2 phase-5 first batch** (2026-11-04, maintainer review completed and pushed in
   `5d91e01`) establishes the data component basis: `widget::SelectionModel<Key>` (identity-based
   single/multiple selection, range + anchor, retain-on-source-replacement) and
@@ -306,9 +309,9 @@ application shell. Version `0.1.0-alpha.1`.
   verification after approval).
 - **Dual-platform verification (2026-11-10) is operational**: the Linux machine (Arch, GNOME
   Wayland, RADV RX 6750 GRE 12GB, Mesa 26.2.6) is reachable over SSH with a dedicated key; the
-  full Linux suite is 129 OK / 0 FAIL (131 with the B2a page tests) and all ten Linux page
-  goldens (home/anchors/label/typography/table/collapsible × SDF/CPU) compare clean. The
-  2026-11-12 re-check went through a new
+  full Linux suite is 129 OK / 0 FAIL (132 with the B2a/B2b page tests) and all fourteen Linux
+  page goldens (home/anchors/label/typography/table/collapsible/surface × SDF/CPU) compare clean.
+  The 2026-11-12 re-check went through a new
   Network-address/port-forward entry and confirmed the same machine, repository path, key auth,
   129/129 suite and 0-diff goldens; the address is temporary and only kept in the local session.
   Workflow, session-environment exports (`XDG_RUNTIME_DIR`, `WAYLAND_DISPLAY`,

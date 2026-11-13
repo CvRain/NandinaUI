@@ -76,6 +76,13 @@ collapsible_showcase_tests = executable(
 )
 test('collapsible-showcase', collapsible_showcase_tests, suite: 'unit')
 
+surface_showcase_tests = executable(
+    'surface_showcase_tests',
+    files('surface_showcase_tests.cpp', '../showcase/pages/surface_page.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('surface-showcase', surface_showcase_tests, suite: 'unit')
+
 text_layout_header_tests = executable(
     'text_layout_header_tests',
     files('text_layout_header_tests.cpp'),

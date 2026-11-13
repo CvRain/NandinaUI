@@ -232,6 +232,62 @@ reviewed_on = "2026-11-12"
 review_note = "Maintainer approved the B1 typography-default recapture: only component label text weight/leading changed (synthetic medium 500 buttons); label/typography pages are 0-pixel diffs, all other diffs are confined to button glyphs/borders. Dual-platform CPU+SDF baselines recaptured from the same trees and reviewed."
 
 [[entries]]
+page = "surface"
+backend = "cpu"
+platform = "linux"
+image = "candidates/surface-cpu-linux.png"
+width = 1200
+height = 800
+sha256 = "a3a4b9e1e79c20103be8c9cd71257bcfcd8d11f3dd677f299cc2f66ff40805ed"
+status = "approved"
+captured = "2026-11-13"
+reviewed_by = "agent review, per maintainer request 2026-11-13"
+reviewed_on = "2026-11-13"
+review_note = "Maintainer approved the B2b Surface/Card acceptance page on both platforms and both render paths: three card content-inset variants (recipe default / 8 / 24 px), Surface box styles (filled card token + border + radius; transparent background + accent border + square corners) and the documented nested rounded-corner clip boundary all render without clipping or overlap. Linux double capture was byte-identical."
+
+[[entries]]
+page = "surface"
+backend = "cpu"
+platform = "windows"
+image = "candidates/surface-cpu-windows.png"
+width = 1200
+height = 800
+sha256 = "046545700d99cf85023d24c1db228aba8a06a7d8b858443e80f11c5ad3f10caa"
+status = "approved"
+captured = "2026-11-13"
+reviewed_by = "agent review, per maintainer request 2026-11-13"
+reviewed_on = "2026-11-13"
+review_note = "Maintainer approved the B2b Surface/Card acceptance page on both platforms and both render paths: three card content-inset variants (recipe default / 8 / 24 px), Surface box styles (filled card token + border + radius; transparent background + accent border + square corners) and the documented nested rounded-corner clip boundary all render without clipping or overlap. Linux double capture was byte-identical."
+
+[[entries]]
+page = "surface"
+backend = "sdf"
+platform = "linux"
+image = "candidates/surface-sdf-linux.png"
+width = 1200
+height = 800
+sha256 = "de79ad7016e29fffefa604be774a417538e76ad8261ccc9f3a2988a56c222d6c"
+status = "approved"
+captured = "2026-11-13"
+reviewed_by = "agent review, per maintainer request 2026-11-13"
+reviewed_on = "2026-11-13"
+review_note = "Maintainer approved the B2b Surface/Card acceptance page on both platforms and both render paths: three card content-inset variants (recipe default / 8 / 24 px), Surface box styles (filled card token + border + radius; transparent background + accent border + square corners) and the documented nested rounded-corner clip boundary all render without clipping or overlap. Linux double capture was byte-identical."
+
+[[entries]]
+page = "surface"
+backend = "sdf"
+platform = "windows"
+image = "candidates/surface-sdf-windows.png"
+width = 1200
+height = 800
+sha256 = "251c9310595bda1e669155e939301e0736b741af82a0156f37c782b68a27fc63"
+status = "approved"
+captured = "2026-11-13"
+reviewed_by = "agent review, per maintainer request 2026-11-13"
+reviewed_on = "2026-11-13"
+review_note = "Maintainer approved the B2b Surface/Card acceptance page on both platforms and both render paths: three card content-inset variants (recipe default / 8 / 24 px), Surface box styles (filled card token + border + radius; transparent background + accent border + square corners) and the documented nested rounded-corner clip boundary all render without clipping or overlap. Linux double capture was byte-identical."
+
+[[entries]]
 page = "table"
 backend = "cpu"
 platform = "linux"

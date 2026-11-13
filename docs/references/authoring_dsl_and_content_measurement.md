@@ -530,3 +530,8 @@ home/label/anchors 的 CPU/SDF 六张页面 golden 与各自已批准基线逐�
 本批按新审阅循环**保留未提交工作树**，待维护者补充修改后再复查隐藏问题、补齐受影响验证，
 统一提交。P4.1b 的新 Showcase 组合和 notebook 登录页采用仍待维护者手写/视觉验收；
 圆角子内容 mask、Windows 和其他 P3 平台剩余项未包含在本次结果中。
+
+**2026-11-13 Showcase 视觉验收完成**：新增 `showcase/pages/surface_page.cpp`（三档 Card
+内容边距 配方默认/8/24 px、两种 Surface 盒样式、嵌套圆角边界），页面测试 `[surface][showcase]`
+断言各变体存在、按名定位四张卡片，并在 1200×800 与 520×800 下布局收敛；双平台 CPU+SDF
+共 4 条新页面 golden 由维护者批准。圆角不裁剪子内容仍作为已登记边界在页面中如实展示。

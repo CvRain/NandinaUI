@@ -14,7 +14,9 @@ page_files = [
     'pages/table_page.hpp',
     'pages/table_page.cpp',
     'pages/collapsible_page.hpp',
-    'pages/collapsible_page.cpp'
+    'pages/collapsible_page.cpp',
+    'pages/surface_page.hpp',
+    'pages/surface_page.cpp'
 ]
 
 components = [

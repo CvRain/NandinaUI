@@ -7,7 +7,7 @@
 | 方向 | 当前状态 | 下一道边界 |
 | --- | --- | --- |
 | 作者 DSL 与文本 | builder/`configure`、Text/Label 与多种文本溢出策略可用；D6 已归档为待审阅设计 | Label 作者能力、样式绑定优先级、有限宽度内容测量与 Section 顺序均待按 [D6](authoring_dsl_and_content_measurement.md) 定形 |
-| 组件与浮层 | 阶段 1–4 基础设施已落地；**P4.2a 数据基础已提交（`5d91e01`）；P4.2b 静态 Table 已提交 `14e22ff`；P4.2c Collapsible 与 P4.3 D3 已提交 `095336b`；2026-11-13 B2a 完成 Table/Collapsible 的 Showcase 视觉验收（新页面 + 双平台 8 条 golden）**，契约见 [数据组件：选择模型与虚拟化依据](data_components_and_virtualization.md) | 剩余 B2b（Surface/Card 页面）；Accordion 及后续 DataTable 选择/排序/虚拟化 |
+| 组件与浮层 | 阶段 1–4 基础设施已落地；**P4.2a 数据基础已提交（`5d91e01`）；P4.2b 静态 Table 已提交 `14e22ff`；P4.2c Collapsible 与 P4.3 D3 已提交 `095336b`；2026-11-13 B2a/B2b 完成 Table/Collapsible/Surface-Card 的 Showcase 视觉验收（新页面 + 双平台 12 条新 golden）**，契约见 [数据组件：选择模型与虚拟化依据](data_components_and_virtualization.md) | Accordion 及后续 DataTable 选择/排序/虚拟化 |
 | 输入与焦点 | 现有鼠标/键盘、输入焦点与作用域可用；焦点提示策略（模态、窗口门槛、paint-only）已接入 scene 与组件的焦点环绘制 | D1 第二阶段文本会话/软键盘与触摸/笔/手柄适配仍待；Showcase 输入与焦点页、roving 专项与弹窗恢复专项未完成，见[焦点与输入](focus_and_input.md) |
 | 文本与分层 | 纯布局约束在 `foundation`，文本布局协议在 `text`，字体请求值在 `theme`；旧布局、文本与字体转发入口已退出 | `theme::StyleDocument` 对字体注册的依赖仍待收口；内置默认字体族只有 Caskaydia Cove Regular 一个 face，但 **P4.7 合成回退（2026-11-10）** 已让 500/600/700+ 与 italic 请求在缺 face 时可见（分级合成 bold + 约 12° oblique，HarfBuzz advance 同步）；真实多 face 资源仍属后续增强；Tailwind 字号尺度见 P4.6 |
 | 路由元数据 | 路由身份由页面类型 `PageKey` 确定；P4.3 D3 已实现 `nav_group` / `NavSection::group`，空组无标题且全局合并 | 已复核并随 `095336b` 提交；桌面/GPU 与视觉验收待补；组名开放、精确比较，顺序由首个可导航条目决定；契约见 [Page / Router](page_and_router.md) |

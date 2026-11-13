@@ -54,6 +54,7 @@
 #include <showcase/pages/home_page.hpp>
 #include <showcase/pages/input_focus_page.hpp>
 #include <showcase/pages/label_page.hpp>
+#include <showcase/pages/surface_page.hpp>
 #include <showcase/pages/table_page.hpp>
 #include <showcase/pages/typography_page.hpp>
 
@@ -282,6 +283,11 @@ int main() {
                 .title = "折叠内容",
                 .nav_group = "内容与展示",
             }),
+            nandina::app::route<nandina::showcase::SurfacePage>(nandina::app::RouteOptions {
+                .address = "content_and_display/surface",
+                .title = "表面与卡片",
+                .nav_group = "内容与展示",
+            }),
         };
         if (const auto configured = router.configure(routes); !configured) {
             throw std::runtime_error("router.configure failed");
@@ -343,6 +349,9 @@ int main() {
         }
         else if (page == "collapsible") {
             started = router.start<nandina::showcase::CollapsiblePage>();
+        }
+        else if (page == "surface") {
+            started = router.start<nandina::showcase::SurfacePage>();
         }
         else {
             throw std::runtime_error("unknown NANDINA_PROBE_PAGE: " + std::string(page));
