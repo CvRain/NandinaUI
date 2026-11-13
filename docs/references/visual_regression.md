@@ -5,6 +5,7 @@
 > manifest、比较器与审批工具在 [路径契约](render_device_path_contract.md#12-页面-golden-候选层2026-10-19) §12；
 > 谁能改 golden"。第一批落地对象是 [D7](reference_draft.md#d7-渲染质量与后端视觉一致性) 的
 > 混合修复：按钮按下、涟漪中间态、Dialog 遮罩。
+> 2026-11-12 起 Linux 的 **CPU 路径**由 CI 的 `visual-golden` workflow 自动采集并比较（§7）。
 
 ## 0. 五分钟理解：golden 和 page_probe 到底在做什么
 
@@ -61,8 +62,11 @@ compare_backend_golden.py  重新渲染 → 逐像素比较；approved 超阈值
 
 ### 0.4 最容易误解的几点
 
-- **它不在 CI 里**：CI 只跑与显示器无关的 `golden-manifest` 清单校验（文件、哈希、状态、
-  approved 必须有审阅元数据）。像素比较需要真实窗口/GPU/桌面会话，是本地或发布机的手动命令。
+- **CI 只跑得动 CPU 路径**：`visual-golden` workflow 用 `SDL_VIDEODRIVER=dummy` +
+  `NANDINA_PROBE_RENDERER=sdl2d`（软件渲染，不需要窗口/GPU/swapchain）采集 Linux 的
+  home/anchors/label/typography CPU 页面，先断言两次采集逐字节一致，再与 approved 基线
+  比较（§7）。SDF/GPU 像素比较仍需要真实桌面/GPU，是本地或发布机的手动命令；CI 照旧跑
+  与显示器无关的 `golden-manifest` 清单校验（文件、哈希、状态、approved 必须有审阅元数据）。
 - **它不能跨平台复用**：字体栅格化、AA、DPI、像素格式都不同，Linux 基线不能当 Windows 预期；
   `platform` 是清单键的一部分，跨平台差异只记录、不参与门禁。
 - **它不会自动变绿或自动更新**：`capture` 默认拒绝覆盖 approved 条目（要 `--force`）；
@@ -85,6 +89,9 @@ python3 tools/compare_backend_golden.py --page label --backend sdf \
 
 # 人工审阅候选后批准（--revoke 可撤销）
 python3 tools/approve_backend_golden.py --entries all --reviewer <name> --note "..."
+
+# CI 同款 headless CPU 门禁（两次采集确定性 + 与当前平台 approved CPU 基线比较；只读 manifest）
+SDL_VIDEODRIVER=dummy python3 tools/visual_golden_ci.py --renderer sdl2d
 ```
 
 ## 1. 为什么不能"每个后端存一张自己画出来的图"
@@ -209,9 +216,15 @@ Linux 图不能当 Windows/macOS 的预期。跨平台只比较**结构性**结�
 
 | 平台 | 状态 | 说明 |
 | --- | --- | --- |
-| Linux | **8 条 approved（2026-11-11 中文版重批）** | 1200×800、30 帧、SDF+CPU，覆盖 home/anchors/label/typography；中文版重批在 GNOME Wayland + RADV 会话完成。历史：2026-10-20 首批 6 条；2026-11-08 Hyprland/Wayland+RADV 复跑 6 条 0 差异；2026-11-10 GNOME Wayland 远程复跑 6 条 0 差异 |
-| Windows | **8 条 approved（2026-11-11 中文版重批）** | 1200×800、30 帧、SDF+CPU，SDF 桌面会话 + CPU 路径；中文版重批经维护者审阅。历史：2026-10-21/22 首批 6 条（CPU 3 + SDF 3，DXIL 产物），含 shadow/clip 断言 |
+| Linux | **8 条 approved（2026-11-12 B1 排版重批）** | 1200×800、30 帧、SDF+CPU，覆盖 home/anchors/label/typography；B1 重批在 GNOME Wayland + RADV 会话完成，与 2026-11-11 中文版重批的差异只有组件标签字重/行高。历史：2026-10-20 首批 6 条；2026-11-08 Hyprland/Wayland+RADV 复跑 6 条 0 差异；2026-11-10 GNOME Wayland 远程复跑 6 条 0 差异 |
+| Windows | **8 条 approved（2026-11-12 B1 排版重批）** | 1200×800、30 帧、SDF+CPU，SDF 桌面会话 + CPU 路径（GPU 设备 + SDF off）；B1 重批经维护者审阅。历史：2026-10-21/22 首批 6 条（CPU 3 + SDF 3，DXIL 产物），含 shadow/clip 断言 |
 | macOS | **不支持** | 没有硬件与测试环境，不提供构建/运行承诺；不复制 Linux 基线充数 |
+
+**2026-11-12 B1 重批记录**：默认组件配方消费 role leading/weight/slant 后，双平台各 8 条按
+原始采集协议重采（CPU = GPU 设备 + SDF off；SDF = GPU 设备），候选图与 manifest 由维护者
+审阅并批准。重采前后 label/typography 共 8 条 **0 像素差异**；home/anchors 的差异只来自按钮
+标签的 500 合成字重与随之的 1–2 px 宽度调整（home CPU/SDF 在 Windows 1601/1834 px、Linux
+2222/2463 px；anchors Linux 1036/1106 px；anchors Windows 691/761 px，阈值 960 px）。
 
 **新平台落地步骤**（Windows 可用时）：
 
@@ -229,6 +242,25 @@ Linux 图不能当 Windows/macOS 的预期。跨平台只比较**结构性**结�
 
 Windows CPU 基线与 Linux 的跨平台像素差（home 11.9%、label 24.9%、anchors 1.3% 像素）只作信息记录、**从不参与门禁**：差异来自字体栅格化与 DPI，页面结构与内容一致；同一平台内仍按各平台自己的容差判失败。
 
-**CI**：无 GPU/显示，像素比较不进 CI；`golden-manifest`（含 `platform` 校验）仍在 CI。
-设备级测试（坐标矩阵、真实字形、AA 面积积分、产物格式）是跨平台契约；页面 golden 是
-平台相关观感基线——两者分开维护，互不替代。
+**CI（2026-11-12 起，CPU 路径）**：`.github/workflows/visual-golden.yml` 在 ubuntu 容器里
+构建 `nandina_sdl_page_probe`，用 `SDL_VIDEODRIVER=dummy` + `--renderer sdl2d`（软件渲染）
+对 Linux 的 4 条 CPU 基线先做两遍采集并断言逐字节一致，再交给
+`tools/visual_golden_ci.py` 与 approved 基线逐像素比较；候选图、差异图、统计 JSON 作为
+artifact 上传（保留 14 天）。规则：
+
+- **只比当前平台**：harness 拒绝与检测平台不同的 `--platform`；不复制、不比较跨平台像素。
+- **不自动 approve**：CI 只读 manifest 与基线图，永不修改状态；视觉变化须由维护者审阅
+  artifact 后显式运行 `approve_backend_golden.py` 批准。
+- **失败非零退出**：两次采集不一致、probe 失败、manifest 缺条目、approved 超阈值都会让
+  job 失败。当前以 `continue-on-error` **非阻断**起步；首次在真实 Actions 环境确认能复现
+  已批准基线后，删掉该行即成为阻断门禁。
+- **采集环境要钉住**：中文回退字体由 `nandina/text/system_fonts.cpp` 从系统字体目录发现，
+  所以 workflow 下载固定 sha256 的 NotoSansCJK-Black（与批准基线所用字体字节相同）到
+  `$HOME/.fonts`，并用 `--expect-cjk-font-sha256` 核验实际发现结果；不要改成 apt 安装
+  `fonts-noto-cjk`（包版本随 runner 镜像漂移，基线会静默失配）。
+- **成本**：独立 job 要构建 vendored SDL3 + 库 + 探针，约 15–20 分钟，与主 `build` job 的
+  完整构建同量级；它是独立 workflow，不改变现有 8 个 CI job 的行为。
+
+GPU/SDF 基线仍由真实 Linux 机器（GNOME/Wayland + RADV）人工采集审批；`golden-manifest`
+（含 `platform` 校验）仍在 CI。设备级测试（坐标矩阵、真实字形、AA 面积积分、产物格式）是
+跨平台契约；页面 golden 是平台相关观感基线——两者分开维护，互不替代。

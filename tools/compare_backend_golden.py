@@ -5,12 +5,17 @@
 - `status = "candidate"`：只报告，不判失败（候选还不是基线）；
 - `status = "approved"`：差异像素比例超过 `--max-changed-fraction` 时退出码 1；
 - 差异图把变化像素标红，其余保留 golden 的灰度，便于人工审阅。
+
+本模块也被 tools/visual_golden_ci.py 复用：`probe_environment()` / `capture()` 是采集
+环境的唯一实现，`compare_images()` 是逐像素比较的唯一实现，避免 CI harness 与人工命令
+的采样/比较口径分叉。
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import os
 import pathlib
 import subprocess
 import sys
@@ -41,19 +46,46 @@ def load_entries(manifest: pathlib.Path) -> dict[tuple[str, str, str], dict[str,
     }
 
 
-def capture(probe: pathlib.Path, page: str, backend: str, frames: int) -> pathlib.Path:
-    directory = pathlib.Path(tempfile.mkdtemp(prefix="nandina-compare-"))
-    bmp = directory / "capture.bmp"
+def probe_environment(
+    page: str,
+    backend: str,
+    frames: int,
+    capture_path: pathlib.Path,
+    renderer: str = "gpu",
+) -> dict[str, str]:
+    """Build the probe environment for one capture; shared by the CLI and CI harness.
+
+    `renderer="sdl2d"` selects SDL's 2D renderer instead of the GPU renderer. With
+    `SDL_VIDEODRIVER=dummy` that is the software path, which is the only one available
+    on a headless CI runner without a GPU swapchain.
+    """
     environment = {
-        **__import__("os").environ,
+        **os.environ,
         "NANDINA_PROBE_PAGE": page,
         "NANDINA_PROBE_FRAMES": str(frames),
-        "NANDINA_PROBE_CAPTURE": str(bmp),
+        "NANDINA_PROBE_CAPTURE": str(capture_path),
     }
     if backend == "cpu":
         environment["NANDINA_SDL_SDF"] = "off"
     else:
         environment.pop("NANDINA_SDL_SDF", None)
+    if renderer == "sdl2d":
+        environment["NANDINA_PROBE_RENDERER"] = "sdl2d"
+    else:
+        environment.pop("NANDINA_PROBE_RENDERER", None)
+    return environment
+
+
+def capture(
+    probe: pathlib.Path,
+    page: str,
+    backend: str,
+    frames: int,
+    renderer: str = "gpu",
+) -> pathlib.Path:
+    directory = pathlib.Path(tempfile.mkdtemp(prefix="nandina-compare-"))
+    bmp = directory / "capture.bmp"
+    environment = probe_environment(page, backend, frames, bmp, renderer)
     result = subprocess.run(
         [str(probe)], capture_output=True, text=True, timeout=300, env=environment
     )
@@ -62,35 +94,12 @@ def capture(probe: pathlib.Path, page: str, backend: str, frames: int) -> pathli
     return bmp
 
 
-def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--manifest", type=pathlib.Path, default=ROOT / "tests/golden/backend/manifest.toml")
-    parser.add_argument("--page", default="label")
-    parser.add_argument("--backend", default="sdf")
-    parser.add_argument("--platform", default="", help="defaults to the current platform")
-    parser.add_argument("--capture", type=pathlib.Path, help="use an existing screenshot")
-    parser.add_argument("--probe", type=pathlib.Path, default=DEFAULT_PROBE)
-    parser.add_argument("--frames", type=int, default=30)
-    parser.add_argument("--tolerance", type=int, default=3, help="per-channel threshold")
-    parser.add_argument("--max-changed-fraction", type=float, default=0.001)
-    parser.add_argument("--diff", type=pathlib.Path, help="write a diff PNG here")
-    parser.add_argument("--json", type=pathlib.Path, help="write stats JSON here")
-    parser.add_argument("--strict", action="store_true", help="fail for candidates too")
-    options = parser.parse_args()
-
-    platform = options.platform or current_platform()
-    entries = load_entries(options.manifest)
-    entry = entries.get((options.page, options.backend, platform))
-    if entry is None:
-        raise SystemExit(f"no golden entry for {options.page}/{options.backend} on {platform}")
-    golden = golden_image.load(str(options.manifest.parent / str(entry["image"])))
-    captured = options.capture or capture(options.probe, options.page, options.backend, options.frames)
-    image = golden_image.load(str(captured))
-    if (golden.width, golden.height) != (image.width, image.height):
-        raise SystemExit(
-            f"size mismatch: golden {golden.width}x{golden.height} vs capture {image.width}x{image.height}"
-        )
-
+def compare_images(
+    golden: golden_image.Image,
+    image: golden_image.Image,
+    tolerance: int,
+) -> tuple[dict[str, float], golden_image.Image]:
+    """Compare two same-sized images and return (stats, red-marked diff image)."""
     changed = 0
     total = golden.width * golden.height
     max_diff = 0
@@ -105,30 +114,75 @@ def main() -> int:
             max_diff = max(max_diff, pixel_max)
             absolute_sum += sum(differences)
             offset = (y * golden.width + x) * 4
-            if pixel_max > options.tolerance:
+            if pixel_max > tolerance:
                 changed += 1
                 diff.pixels[offset : offset + 4] = bytes((255, 0, 0, 255))
             else:
                 grey = (golden_pixel[0] + golden_pixel[1] + golden_pixel[2]) // 3
                 diff.pixels[offset : offset + 4] = bytes((grey, grey, grey, 255))
+    stats: dict[str, float] = {
+        "changed_pixels": changed,
+        "changed_fraction": changed / total,
+        "max_channel_diff": max_diff,
+        "mean_abs_diff": absolute_sum / (total * 3),
+        "tolerance": tolerance,
+    }
+    return stats, diff
 
-    fraction = changed / total
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--manifest", type=pathlib.Path, default=ROOT / "tests/golden/backend/manifest.toml")
+    parser.add_argument("--page", default="label")
+    parser.add_argument("--backend", default="sdf")
+    parser.add_argument("--platform", default="", help="defaults to the current platform")
+    parser.add_argument("--capture", type=pathlib.Path, help="use an existing screenshot")
+    parser.add_argument("--probe", type=pathlib.Path, default=DEFAULT_PROBE)
+    parser.add_argument("--frames", type=int, default=30)
+    parser.add_argument(
+        "--renderer",
+        choices=("gpu", "sdl2d"),
+        default="gpu",
+        help="probe renderer for capture; sdl2d uses SDL's 2D path (needed on headless "
+        "sessions without a GPU swapchain); ignored when --capture is given",
+    )
+    parser.add_argument("--tolerance", type=int, default=3, help="per-channel threshold")
+    parser.add_argument("--max-changed-fraction", type=float, default=0.001)
+    parser.add_argument("--diff", type=pathlib.Path, help="write a diff PNG here")
+    parser.add_argument("--json", type=pathlib.Path, help="write stats JSON here")
+    parser.add_argument("--strict", action="store_true", help="fail for candidates too")
+    options = parser.parse_args()
+
+    platform = options.platform or current_platform()
+    entries = load_entries(options.manifest)
+    entry = entries.get((options.page, options.backend, platform))
+    if entry is None:
+        raise SystemExit(f"no golden entry for {options.page}/{options.backend} on {platform}")
+    golden = golden_image.load(str(options.manifest.parent / str(entry["image"])))
+    captured = options.capture or capture(
+        options.probe, options.page, options.backend, options.frames, options.renderer
+    )
+    image = golden_image.load(str(captured))
+    if (golden.width, golden.height) != (image.width, image.height):
+        raise SystemExit(
+            f"size mismatch: golden {golden.width}x{golden.height} vs capture {image.width}x{image.height}"
+        )
+
+    comparison, diff = compare_images(golden, image, options.tolerance)
     stats = {
         "page": options.page,
         "backend": options.backend,
         "status": entry["status"],
         "width": golden.width,
         "height": golden.height,
-        "changed_pixels": changed,
-        "changed_fraction": fraction,
-        "max_channel_diff": max_diff,
-        "mean_abs_diff": absolute_sum / (total * 3),
-        "tolerance": options.tolerance,
+        **comparison,
         "max_changed_fraction": options.max_changed_fraction,
     }
     print(json.dumps(stats, indent=2))
     if options.json:
         options.json.write_text(json.dumps(stats, indent=2) + "\n", encoding="utf-8")
+
+    fraction = float(comparison["changed_fraction"])
     if options.diff:
         golden_image.write_png(str(options.diff), diff)
         print(f"wrote {options.diff}")

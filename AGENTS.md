@@ -17,17 +17,24 @@ application shell. Version `0.1.0-alpha.1`.
 
 ### Current milestone state (2026-11-12)
 
-- **Latest (2026-11-12)**: P4.6 Step 2b/3 model is complete — themeable typography roles
-  (C++ and styles.toml `[themes.<name>.roles.<role>]`), Label default body, component recipes
-  consuming semantic role size tokens, and `NanTypeScale::text_scale`/`max_text_px` with fixed
-  explicit px, plus the runtime `ThemeManager::set_text_scaling()` host entry. The Chinese
-  showcase is localized; Windows/Linux each have 8 approved page
-  goldens (home/anchors/label/typography × SDF/CPU); the dropdown high-DPI and GlyphAtlas
-  narrow-growth regressions are fixed with red-first tests. Outstanding: default component
-  recipe migration + visual acceptance for role leading/weight/slant (the TypeStyle plumbing is
-  in), OS accessibility text-scale source/persistence, P4.7 real
-  multi-face assets, P4.8c. Linux is reachable through the current local SSH alias
-  (`nandina-linux`), verified on 2026-11-12.
+- **Latest (2026-11-12)**: P4.6 Step 2b is closed — default component recipes now consume the
+  semantic role's leading/weight/slant through `TypeStyle::role` → `ResolvedTypeStyle` and the
+  shared text-style bridge (manual `text::TextStyle` sites migrated to
+  `widget::internal::apply_type_metrics()`). Button/tab/menu labels render with the role's
+  medium (500) synthetic weight; multi-line TextArea uses body leading. Dual-platform page
+  goldens (8 per platform: home/anchors/label/typography × SDF/CPU) were recaptured with the
+  original protocol and approved by the maintainer on 2026-11-12: label/typography pages are
+  0-pixel diffs, the rest differ only in button glyphs/1–2 px widths. Windows full suite
+  125/125 (unit 104/104), Linux full suite 129/129, and the ASan unit (104 + 1 expected skip),
+  no-RTTI unit (106/106), no-SQLite unit (101 + 1 expected skip) and pure-tools (8/8) matrices
+  passed; `release_check --ci` is 8/8. A non-blocking Linux CI CPU-golden workflow
+  (`.github/workflows/visual-golden.yml` + `tools/visual_golden_ci.py`, headless `sdl2d`) is in
+  place and can become blocking after its first green Actions run. Outstanding: OS
+  accessibility text-scale source/persistence (host-injected design is ready), B2 visual
+  acceptance debt (Table/Collapsible/Surface-Card/Shell pages + probe/golden), notebook
+  workspace slice, P4.8c. P4.7 real multi-face assets are deliberately deferred (synthetic
+  fallback remains the default). Linux is reachable through the current local SSH alias
+  (`nandina-linux`).
 - P1 and P2 are closed. P2 covers the tool/UI split, startup policy, scoped manager results,
   cache identity/reclamation, resource identity (explicit `key → path`, frozen key derivation,
   versioned 128-bit IDs), lock migration (build-dir lock, explicit `--rewrite-lock`, collision
@@ -217,8 +224,9 @@ application shell. Version `0.1.0-alpha.1`.
   component recipes now consume semantic role **size** scalar tokens
   (`ScalarToken::typography_role_*`; styles.toml may reference `$tokens.typography.role.*`), so
   overriding `NanTypeScale::roles` changes component font sizes; role leading/weight/slant can be
-  carried by `TypeStyle::role` into `ResolvedTypeStyle` and the shared text bridge, while default
-  component recipes still consume size only. styles.toml can override the role table per theme via
+  carried by `TypeStyle::role` into `ResolvedTypeStyle` and the shared text bridge; **Step 2b was
+  closed on 2026-11-12** so default component recipes consume the role metrics too (see the latest
+  bullet). styles.toml can override the role table per theme via
   `[themes.<name>.roles.<role>]` (size/leading/weight/slant). **P4.6 Step 3**
   (2026-11-12) adds `NanTypeScale::text_scale` (rem-semantics user text scaling) and
   `max_text_px` (optional cap, 0 disabled): token/role sizes resolve as
@@ -690,7 +698,9 @@ meson test -C buildDir --print-errorlogs   # full suite: unit + integration (125
   window tests disabled (driver-side LSan); `LSAN_OPTIONS=detect_leaks=0` is available when a local
   font-pipeline allocation report needs to be separated from a real failure.
 - **Skips**: window tests map Catch2 skip to Meson 77; `window-lifecycle` is skipped in ASan on
-  driver-side LeakSanitizer. GPU/page-golden and performance work are local/release checks, not CI.
+  driver-side LeakSanitizer. GPU/SDF page-golden and performance work are local/release checks;
+  the CPU-path page-golden gate runs in CI as a non-blocking workflow (`visual-golden.yml`) until
+  its first green Actions run, after which it can become blocking.
 - **Golden/visual**: page goldens compare per-channel tolerances against approved entries; capture
   never overwrites approved baselines, and approval needs human review metadata. Never copy
   baselines across platforms. The plain-language overview and the full capture/approve workflow

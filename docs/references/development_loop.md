@@ -66,6 +66,10 @@ python3 tools/release_check.py --build-dir buildDir
 # 发布检查再带上性能采样报告（需要 GPU/窗口，本地或发布机执行）：
 python3 tools/release_check.py --build-dir buildDir --report <perf-report.json>
 
+# 无 GPU 的 CPU 页面 golden（与 CI visual-golden 同一入口；先构建 buildDir-probe 的探针）；
+# Windows PowerShell 先 `$env:SDL_VIDEODRIVER='dummy'`：
+SDL_VIDEODRIVER=dummy python3 tools/visual_golden_ci.py --renderer sdl2d
+
 ./buildDir/playground/playground --self-test      # 有窗口副作用时
 ./buildDir/showcase/nandina_showcase              # 视觉验收的对象是 showcase
 ```
@@ -205,7 +209,9 @@ painter 家族写好了但停在 `primitives/` 里当不了应用依赖、
   测试并纳入 golden 管理**（否则它只是手工命令，会腐烂）。C++ 测试注册进 `unit` 套件、
   脚本/构建工作流进 `integration`（文件收集规则见 `tests/meson.build` 顶部注释）。
   目录、manifest 与审批流程见
-  [视觉回归](visual_regression.md)。
+  [视觉回归](visual_regression.md)。该文档 §7 描述的 CI `visual-golden` workflow 已承担
+  Linux CPU 路径（headless `sdl2d` 采集 + 确定性复跑 + 基线比较，非阻断起步）；SDF/GPU
+  像素比较仍需真实桌面/GPU，不属于 CI 覆盖范围。
 - 状态切换也是成本：自定义 render state / 着色器切换会 flush 2D 批次，要统计每帧切换次数，
   不能只看总帧时间。采样协议、p50/p95 口径与候选阈值见[性能预算](performance_budget.md)；
   在稳定性实验完成前只报告、不阻断。

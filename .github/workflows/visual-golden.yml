@@ -1,0 +1,108 @@
+# 无 GPU 的 CPU 页面视觉门禁（spike，非阻断起步）。
+#
+# 背景：[visual_regression.md](../docs/references/visual_regression.md) §0 说明页面 golden
+# 一直是"本地/发布机人工命令"，CI 只校验清单。本 workflow 把 **CPU 几何路径**
+# （`NANDINA_PROBE_RENDERER=sdl2d` + `SDL_VIDEODRIVER=dummy`，无需窗口/GPU/swapchain）搬进
+# GitHub Actions：采集 → 两次采集逐字节一致（确定性）→ 与当前平台 approved 基线逐像素比较。
+#
+# 为什么可以在这里比：Linux 的 4 条 CPU 基线（home/anchors/label/typography）已批准；
+# 软件渲染路径在同一台机器上复跑为 0 差异、sdl2d 采集合规（见 visual_regression.md §7）。
+#
+# 规则边界：
+# - 只比较**当前平台**（linux）的基线：不复制、不比较跨平台像素；SDF/GPU 基线仍由真实
+#   Linux 机器人工采集；
+# - 绝不自动 approve：本 workflow 不写 manifest、不替换 approved 图；失败时把候选图、差异图、
+#   统计 JSON 上传 artifact 供维护者审阅；
+# - 比较失败非零退出（job 显示 failed）；`continue-on-error` 只是让它暂时不阻塞合并。
+#
+# 中文字形依赖：`nandina/text/system_fonts.cpp` 会扫描系统字体目录选 CJK 回退字体，同一次
+# 采集的像素因此依赖 runner 镜像里装了什么。这里把批准基线所用的 Noto Sans CJK Black 面
+# （上游 Sans2.004，sha256 固定）下载到 `$HOME/.fonts`，让回退发现优先选中它；随后
+# `visual_golden_ci.py --expect-cjk-font-sha256` 会核验实际发现结果。不要改成 apt 装
+# `fonts-noto-cjk`：包版本随镜像漂移，基线会静默失配。
+#
+# 启用阻断：首次运行绿了之后删除 `continue-on-error: true` 这一行即可；本次先以非阻断方式
+# 收集证据，因为"runner 的 gcc/freetype 构建是否与批准基线逐像素一致"只能在真实 Actions
+# 环境确认。
+
+name: visual-golden
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: visual-golden-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  MESON_VERSION: 1.7.2
+  CJK_FONT_URL: https://raw.githubusercontent.com/notofonts/noto-cjk/Sans2.004/Sans/OTC/NotoSansCJK-Black.ttc
+  CJK_FONT_SHA256: 3cffb10242b4b7e6edd439ebf3bd7e392345525e093ea08149e0a0158a1b5151
+
+jobs:
+  cpu-page-golden:
+    name: CPU page golden (headless sdl2d)
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    container: gcc:16
+    # 非阻断起步：首次确认真实 Actions 环境能复现已批准基线后，删除本行使其成为阻断门禁。
+    continue-on-error: true
+    steps:
+      - name: Install dependencies
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            ca-certificates git python3 python3-pip ninja-build pkg-config cmake curl \
+            zlib1g-dev \
+            libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev \
+            libgl1-mesa-dev libglu1-mesa-dev
+          python3 -m pip install --break-system-packages --no-cache-dir "meson==${MESON_VERSION}"
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+      - name: Configure git
+        run: git config --global --add safe.directory '*'
+      - name: Restore wrap dependency cache
+        uses: actions/cache@v4
+        with:
+          path: subprojects
+          key: wraps-${{ hashFiles('subprojects/*.wrap') }}
+      - name: Prewarm wrap dependencies
+        run: meson subprojects download
+      - name: Install the pinned CJK fallback font
+        run: |
+          mkdir -p "$HOME/.fonts"
+          curl -fsSL "$CJK_FONT_URL" -o "$HOME/.fonts/NotoSansCJK-Black.ttc"
+          echo "${CJK_FONT_SHA256}  $HOME/.fonts/NotoSansCJK-Black.ttc" | sha256sum -c -
+      - name: Configure (probe only, explicit vendored SDL3)
+        run: |
+          meson setup buildDir-visual --wrap-mode=nodownload \
+            -Dlinux_window_system=x11 -Dsdl_backend=enabled \
+            -Dsdl3_source=vendored -Dsdl3_linkage=static \
+            -Dsdl_page_probe=true -Dbuild_tests=false -Dshowcase=false \
+            -Dexamples=false -Dresource_tools=false -Dresource_sqlite=disabled
+      - name: Build the page probe
+        run: meson compile -C buildDir-visual nandina_sdl_page_probe
+      - name: Capture twice, check determinism and compare approved CPU goldens
+        env:
+          SDL_VIDEODRIVER: dummy
+        run: |
+          python3 tools/visual_golden_ci.py \
+            --probe buildDir-visual/probe/cross_platform/desktop/nandina_sdl_page_probe \
+            --renderer sdl2d \
+            --work-dir buildDir-visual/visual-golden \
+            --expect-cjk-font-sha256 "${CJK_FONT_SHA256}" \
+            --summary-file "${GITHUB_STEP_SUMMARY}"
+      - name: Upload captures, diff images and stats
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-golden-cpu
+          path: buildDir-visual/visual-golden/
+          if-no-files-found: warn
+          retention-days: 14

@@ -101,8 +101,12 @@ python tools/release_check.py --ci --build-dir buildDir
   格式与资源工具；Windows 以本机桌面会话为门禁。
 - 计划补一个**平台验证入口**（`tools/platform_verify.sh` / `.ps1`）：构建 → 单测 → 设备测试 →
   golden compare → 性能采样，统一输出平台/渲染器/合成器元数据，两个系统跑同一入口。
-- 评估在 CI 增加 **CPU 路径 golden** 作业（离屏 `sdl2d` 采集 home/label/anchors，与 Linux CPU
-  基线比较），让普通视觉改动在 CI 就能发现；GPU/SDF 基线仍由真实 Linux 机器采集。
+- **CPU 路径 golden 已进 CI（2026-11-12 实现，非阻断起步）**：新增
+  `.github/workflows/visual-golden.yml` + `tools/visual_golden_ci.py`，在 ubuntu 容器里
+  `SDL_VIDEODRIVER=dummy` + `--renderer sdl2d` 离屏采集 home/anchors/label/typography CPU 页，
+  先断言两次采集逐字节一致，再与当前平台 approved CPU 基线比较；artifact 上传采集/差异图/
+  统计。首次真实 Actions 跑绿后删除 workflow 里的 `continue-on-error` 即升级为阻断门禁；
+  GPU/SDF 基线仍由真实 Linux 机器采集，CJK 回退字体以固定 sha256 钉住。
 - 每批视觉验收在对应 reference 文档记录平台、驱动、合成器与协议，形成可追溯矩阵。
 
 ## 7. 安全与维护
