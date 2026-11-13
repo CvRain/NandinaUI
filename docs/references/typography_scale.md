@@ -17,8 +17,12 @@
 > **Step 3 模型已实施（2026-11-12）**：`NanTypeScale` 新增 `text_scale`（rem 语义的用户文字
 > 缩放因子）与 `max_text_px`（可选 cap，0 关闭）；token/role 字号按
 > `root × ratio × text_scale` 解析后再 cap，显式 `.font_size(px)` 保持 fixed；运行时宿主入口
-> `ThemeManager::set_text_scaling()` 已提供（重建快照 + 发布 revision）。OS 无障碍来源、系统
-> 设置变化通知与持久化仍待。
+> `ThemeManager::set_text_scaling()` 已提供（重建快照 + 发布 revision）。
+> **OS 来源子批已实施（2026-11-13）**：`app/system_preferences.hpp` 的
+> `ISystemPreferencesSource` 经 `IPlatformWindow::system_preferences_source()` 注入，
+> `NanApplication` 负责 attach/sync/poll 与 override 仲裁；Windows SDL 平台从注册表
+> `TextScaleFactor` 节流读取并在首帧前应用。Linux 首版没有 OS 来源（返回 nullptr，宿主可
+> 注入自己的来源）；系统变化通知的具体实现与持久化决策仍待。
 > 本文是契约；`docs/components/label.md` 与 `docs/references/design_tokens.md` 记录用法。
 
 ## 1. 单位决定
@@ -216,6 +220,13 @@ slant = "italic"   # normal / italic / oblique
   no-SQLite unit 101（+1 预期 SKIP）、纯 tools 8/8，`release_check --ci` 8/8；双平台各 8 条
   页面 golden 按原始协议重采（CPU = GPU 设备 + SDF off，SDF = GPU 设备）后由维护者批准：
   label/typography 8 条 0 像素差异，home/anchors 差异只落在按钮文字与 1–2 px 宽度调整。
+- **2026-11-13 OS 来源子批验证**：`[app][system-text-scale]` 覆盖 percent 映射边界（100/125/
+  150/225/0/99/226/0xFFFFFFFF）、override > OS > 1.0 仲裁、同值不重复发布 theme revision、
+  非法值回退、首个来源生效与 detach；`[app][windows][text-scale]` 在 Windows 上真实读取注册表
+  并只断言文档范围 1.0–2.25。红先：临时忽略 override 后 23 条断言中 1 条失败；临时放宽
+  percent 上界后 32 条断言中 1 条失败，恢复后通过。Windows 全量 129/129；Linux 全量 133/133，
+  矩阵 ASan unit 108（+1 预期 SKIP）、no-RTTI 110、no-SQLite 105（+1 预期 SKIP）、纯 tools
+  通过，`release_check --ci` 8/8。
 - 全量 Windows/Linux 套件与 release gates 在提交时运行；**2026-11-11 中文版重批**仍是
   TextField hover/菜单高 DPI/图集修复后的历史基线记录。
 
@@ -246,8 +257,17 @@ text_size_px(scale, size)
   或无障碍文字缩放；它重建带缩放 token 的有效 `DesignSystem` 快照并发布一次 theme revision，
   已挂载控件因此在 `on_theme_changed` 中重解析。覆盖值是宿主状态，切换外观/方案后仍保持；
   相同值不重复发布，非法值重置为 1.0/0。应用可通过 `NanApplication::theme_manager()` 调用。
-  **仍待**：读取 Windows/Linux 系统无障碍设置、系统设置变化通知与持久化；本批不假装已接入
-  OS 来源。显式 `.font_size(px)` 仍 fixed。
+  显式 `.font_size(px)` 仍 fixed。
+- **OS 来源子批（2026-11-13）**：`nandina/app/system_preferences.hpp` 定义
+  `SystemPreferencesSnapshot`、`ISystemPreferencesSource`（`snapshot()` + 自节流的
+  `poll_changes()`）与纯函数 `text_scale_from_percent()`（Windows 100–225 → 因子，越界
+  视为无来源）。`IPlatformWindow::system_preferences_source()` 默认返回 nullptr；
+  `NanWindow::open()` 在首帧构建前 attach 平台来源并 sync 一次，`tick()` 在输入阶段前
+  `poll_system_preferences()`。仲裁顺序为 **应用 override > OS 快照 > 1.0**，非法值按 1.0；
+  同一有效值/ cap 不重复发布 theme revision。Windows SDL 平台读取
+  `HKCU\Software\Microsoft\Accessibility\TextScaleFactor`（REG_DWORD，约 500 ms 节流）；
+  Linux 首版没有来源，宿主可注入自己的 `ISystemPreferencesSource`。持久化归应用（框架不写
+  配置/注册表）；显式 `.font_size(px)` 仍 fixed。
 - `em` 父字号相对链、每组件独立 fixed 列表不是本批目标；“fixed/cap”指上述显式 px 与全局上限。
 
 ## 9. 后续（未实施）
@@ -255,8 +275,9 @@ text_size_px(scale, size)
 - **Step 2b 已收口（2026-11-12）**：默认组件配方消费 role 的尺寸与 leading/weight/slant，
   手工文本样式组件已迁移到统一 bridge；仅 Slider 数值标签按豁免保留字面字号。
   正文行高的完整 CJK 页面审计按需扩展。
-- **Step 3 剩余**：OS 无障碍文字缩放来源与运行时变更通知/持久化；如需要，再评估每角色
-  独立 cap 或组件级 fixed 列表。`em` 父字号相对链仍非目标。
+- **Step 3 剩余**：OS 来源在 Windows 已接（2026-11-13 子批），Linux 平台来源、系统设置变化
+  通知的具体实现（当前为轮询）与持久化决策仍待；如需要，再评估每角色独立 cap 或组件级
+  fixed 列表。`em` 父字号相对链仍非目标。
 - **P4.7**：默认字体族只有 Caskaydia Cove Regular 一个 face；合成回退已于 2026-11-10
   实施，因此 role 表的 500/600 字重现在可见。**2026-11-12 决策：本轮不投资真实多 face
   资产**（许可、包体积、CJK 覆盖与全部页面 golden 重批成本），合成回退继续作为默认路径；

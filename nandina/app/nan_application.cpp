@@ -6,6 +6,7 @@
 
 #include "../render/image_decoder.hpp"
 #include "nan_window.hpp"
+#include "system_preferences.hpp"
 
 #include "../foundation/nan_logger.hpp"
 #include "../resource/backends/builtin_backend.hpp"
@@ -15,6 +16,8 @@
 #include "../resource/build_location.hpp"
 #include "../resource/platform_resource_locator.hpp"
 #include "../text/system_fonts.hpp"
+
+#include <cmath>
 
 namespace nandina::app
 {
@@ -249,6 +252,97 @@ namespace nandina::app
 
     auto NanApplication::store_type_key() const -> StoreKey {
         return store_key_;
+    }
+
+    namespace
+    {
+        [[nodiscard]] auto normalized_text_scale(const std::optional<float> value) noexcept
+            -> float {
+            if (!value.has_value()) {
+                return 1.0F;
+            }
+            const float scale = *value;
+            return std::isfinite(scale) && scale > 0.0F ? scale : 1.0F;
+        }
+    } // namespace
+
+    void NanApplication::attach_system_preferences(ISystemPreferencesSource* source) {
+        if (source == nullptr) {
+            return;
+        }
+        // 首个非空来源生效：应用在窗口打开前注入的来源优先于平台窗口随后自动接入的来源。
+        if (system_preferences_ != nullptr) {
+            return;
+        }
+        system_preferences_ = source;
+    }
+
+    void NanApplication::detach_system_preferences() noexcept {
+        system_preferences_ = nullptr;
+        os_text_scale_.reset();
+        (void)apply_effective_text_scale();
+    }
+
+    auto NanApplication::system_preferences_source() const noexcept -> ISystemPreferencesSource* {
+        return system_preferences_;
+    }
+
+    auto NanApplication::sync_system_preferences() -> bool {
+        if (system_preferences_ == nullptr) {
+            os_text_scale_.reset();
+        }
+        else {
+            os_text_scale_ = system_preferences_->snapshot().text_scale;
+        }
+        return apply_effective_text_scale();
+    }
+
+    auto NanApplication::poll_system_preferences() -> bool {
+        if (system_preferences_ == nullptr) {
+            return false;
+        }
+        // 平台来源自己节流；未变化时不会产生 theme revision。
+        const auto changed = system_preferences_->poll_changes();
+        if (!changed.has_value()) {
+            return false;
+        }
+        os_text_scale_ = changed->text_scale;
+        return apply_effective_text_scale();
+    }
+
+    void NanApplication::set_text_scale_override(
+        const std::optional<float> scale,
+        const float max_text_px
+    ) {
+        // 显式给出但非法的值按 1.0 处理；nullopt 表示"跟随 OS 来源"。
+        text_scale_override_ =
+            scale.has_value() ? std::optional<float>(normalized_text_scale(scale)) : std::nullopt;
+        text_scale_max_px_ = std::isfinite(max_text_px) && max_text_px >= 0.0F ? max_text_px : 0.0F;
+        (void)apply_effective_text_scale();
+    }
+
+    auto NanApplication::text_scale_override() const noexcept -> std::optional<float> {
+        return text_scale_override_;
+    }
+
+    auto NanApplication::effective_text_scale() const noexcept -> float {
+        return effective_text_scale_;
+    }
+
+    auto NanApplication::apply_effective_text_scale() -> bool {
+        const float desired = text_scale_override_.has_value()
+            ? *text_scale_override_
+            : normalized_text_scale(os_text_scale_);
+        if (applied_text_scale_.has_value() && *applied_text_scale_ == desired
+            && applied_max_text_px_ == text_scale_max_px_)
+        {
+            return false;
+        }
+        applied_text_scale_ = desired;
+        applied_max_text_px_ = text_scale_max_px_;
+        effective_text_scale_ = desired;
+        theme_manager_.set_text_scaling(desired, text_scale_max_px_);
+        return true;
     }
 
     auto NanApplication::run(NanWindow& window) -> int {

@@ -57,6 +57,16 @@ level = "experimental"
 reason = "自定义宿主与平台适配器的注入点；D8 会调整输入模型"
 
 [[headers]]
+path = "nandina/app/detail/windows_system_text_scale.hpp"
+level = "internal"
+reason = "Windows registry-backed OS preference source; only meaningful on _WIN32"
+
+[[headers]]
+path = "nandina/app/system_preferences.hpp"
+level = "experimental"
+reason = "Host-injected OS preferences (accessibility text scale); the source protocol may grow"
+
+[[headers]]
 path = "nandina/app/root_view.hpp"
 level = "experimental"
 

@@ -49,6 +49,7 @@ namespace nandina::app
 {
 
     class NanWindow;
+    class ISystemPreferencesSource;
 
     class NanApplication {
     public:
@@ -113,6 +114,24 @@ namespace nandina::app
 
         [[nodiscard]] auto store_base() -> NanStore*;
         [[nodiscard]] auto store_type_key() const -> StoreKey;
+
+        // ---- OS 偏好（无障碍文字缩放，P4.6 Step 3） ----
+
+        /// 注入 OS 偏好来源。仅在尚未注入时生效（应用注入优先于窗口打开时自动接入的平台
+        /// 来源）；传 nullptr 是空操作，解除用 `detach_system_preferences()`。不接管所有权。
+        void attach_system_preferences(ISystemPreferencesSource* source);
+        /// 解除 OS 偏好来源并回到 1.0（保留显式 override）。
+        void detach_system_preferences() noexcept;
+        [[nodiscard]] auto system_preferences_source() const noexcept -> ISystemPreferencesSource*;
+        /// 立即读取来源快照并应用（窗口打开、首帧构建前调用）。返回有效缩放是否改变。
+        auto sync_system_preferences() -> bool;
+        /// 节流轮询来源变化并应用（宿主在帧首调用；未变化时无 theme revision）。
+        auto poll_system_preferences() -> bool;
+        /// 运行时/应用级文字缩放覆盖：nullopt = 跟随 OS 来源（无来源回退 1.0）；非法值按
+        /// 1.0 处理。`max_text_px` 是主题字号 cap（逻辑 px，0 = 关闭），与 OS 无关。
+        void set_text_scale_override(std::optional<float> scale, float max_text_px = 0.0F);
+        [[nodiscard]] auto text_scale_override() const noexcept -> std::optional<float>;
+        [[nodiscard]] auto effective_text_scale() const noexcept -> float;
 
         /// 进入阻塞主循环: 打开窗口, 每帧 tick, 直到窗口关闭。返回进程退出码。
         auto run(NanWindow& window) -> int;
@@ -182,6 +201,8 @@ namespace nandina::app
         using WindowSetup = std::move_only_function<void(NanRouter&)>;
 
         auto run_configured(WindowConfig config, WindowSetup setup) -> int;
+        /// override > OS > 1.0 的实际应用点：只在有效值/cap 变化时发布 theme revision。
+        auto apply_effective_text_scale() -> bool;
 
         UiDispatcher dispatcher_;
         BackgroundExecutor background_executor_;
@@ -196,6 +217,14 @@ namespace nandina::app
         std::vector<std::shared_ptr<resource::IResourceBackend>> resource_backends_;
         std::unique_ptr<NanStore> store_;
         StoreKey store_key_ = {};
+
+        ISystemPreferencesSource* system_preferences_ = nullptr;
+        std::optional<float> os_text_scale_;
+        std::optional<float> text_scale_override_;
+        float text_scale_max_px_ = 0.0F;
+        float effective_text_scale_ = 1.0F;
+        std::optional<float> applied_text_scale_;
+        float applied_max_text_px_ = 0.0F;
     };
 
     struct RunConfig {

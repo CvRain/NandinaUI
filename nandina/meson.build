@@ -312,7 +312,10 @@ module_app = files(
 )
 module_app += files(
     'app/platform_window.hpp',
+    'app/system_preferences.hpp',
     'app/window_config.cpp',
+    'app/detail/windows_system_text_scale.hpp',
+    'app/detail/windows_system_text_scale.cpp',
 )
 if host_machine.system() == 'linux'
     module_app += files(

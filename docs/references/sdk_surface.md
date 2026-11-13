@@ -18,6 +18,20 @@
 
 ## 2. 三档分类
 
+2026-11-13 P4.6 Step 3 OS 无障碍文字缩放来源（experimental，新增 app API）：
+新增 `nandina/app/system_preferences.hpp`：`SystemPreferencesSnapshot`、
+`ISystemPreferencesSource`（`snapshot()` / 自节流 `poll_changes()`）与纯函数
+`text_scale_from_percent()`（Windows 100–225 百分比 → 因子，越界视为无来源）。
+`IPlatformWindow` 新增默认空实现 `system_preferences_source()`；`NanApplication` 新增
+`attach_system_preferences()` / `detach_system_preferences()` / `sync_system_preferences()` /
+`poll_system_preferences()` / `set_text_scale_override(scale, max_text_px)` /
+`text_scale_override()` / `effective_text_scale()`。仲裁顺序 override > OS > 1.0，只有有效
+值/cap 变化时发布一次 theme revision；`NanWindow::open()` 在首帧前接入并同步，`tick()` 在
+输入阶段前节流轮询。Windows SDL 平台新增内部注册表来源
+（`HKCU\Software\Microsoft\Accessibility\TextScaleFactor`，约 500 ms 节流）；Linux 首版没有
+OS 来源，宿主可注入自己的实现。持久化归应用，框架不写配置。显式 `.font_size(px)` 仍 fixed。
+契约见 [排版尺度与单位](typography_scale.md) §8。
+
 2026-11-12 P4.6 Step 2b 收口：默认组件配方消费 role leading/weight/slant（experimental，
 默认视觉变更）：默认 Button/TextField/TextArea/Alert/EmptyState/Dialog/Tabs/Tooltip/菜单与
 选择器族等配方的文本槽位带上语义 `role`，解析时把 role 的 leading/weight/slant 经

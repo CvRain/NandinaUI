@@ -279,6 +279,11 @@ namespace nandina::app
             tree_.set_text_input_service(text_service);
         }
 
+        // OS 偏好（无障碍文字缩放）：在首帧构建之前接入平台来源并应用一次，保证第一帧
+        // 就已按系统设置排版。应用在窗口打开前注入的来源优先，平台来源不会覆盖它。
+        app_.attach_system_preferences(platform_->system_preferences_source());
+        (void)app_.sync_system_preferences();
+
         device_ = platform_->make_render_device();
         if (device_ != nullptr && device_wrapper_) {
             // trace / 其它观察者：包装后窗口用返回的设备，内层仍是平台设备。
@@ -486,6 +491,9 @@ namespace nandina::app
         if (texture_cache_) {
             texture_cache_->begin_frame();
         }
+
+        // OS 偏好变化在输入/布局之前落地：来源自己节流，未变化时不会产生 theme revision。
+        (void)app_.poll_system_preferences();
 
         {
             auto phase = tree_.enter_phase(scene::FramePhase::input);

@@ -1,4 +1,4 @@
-﻿//
+//
 // app/detail/sdl_platform_window — SDL3 的 `IPlatformWindow` 实现。设计说明见同名头文件。
 //
 
@@ -8,6 +8,7 @@
 
     #include "../../render/backends/sdl_device.hpp"
     #include "../window_metrics.hpp"
+    #include "windows_system_text_scale.hpp"
 
     #include <SDL3/SDL_gpu.h>
     #include <SDL3/SDL_render.h>
@@ -591,10 +592,17 @@ namespace nandina::app::detail
             content_scale(),
             renderer_name != nullptr ? renderer_name : "unknown"
         );
+
+        // OS preference source (Windows accessibility text scale today). Other platforms keep
+        // the base-class nullptr and the host falls back to a fixed 1.0 text scale.
+    #if defined(_WIN32)
+        system_preferences_ = std::make_unique<WindowsSystemTextScaleSource>();
+    #endif
         return true;
     }
 
     void SdlPlatformWindow::destroy() {
+        system_preferences_.reset();
         // Stop IME/text input before the SDL window goes away.
         text_input_service_.reset();
         if (renderer_ != nullptr) {
@@ -1091,6 +1099,10 @@ namespace nandina::app::detail
 
     auto SdlPlatformWindow::text_input_service() -> scene::ITextInputService* {
         return text_input_service_.get();
+    }
+
+    auto SdlPlatformWindow::system_preferences_source() -> ISystemPreferencesSource* {
+        return system_preferences_.get();
     }
 
     auto SdlPlatformWindow::name() const -> std::string_view {

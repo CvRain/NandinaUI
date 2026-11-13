@@ -453,6 +453,13 @@ theme_switch_tests = executable(
 )
 test('theme-switch', theme_switch_tests, suite: 'unit')
 
+system_text_scale_tests = executable(
+    'system_text_scale_tests',
+    files('system_text_scale_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('system-text-scale', system_text_scale_tests, suite: 'unit')
+
 theme_presentation_tests = executable(
     'theme_presentation_tests',
     files('theme_presentation_tests.cpp'),

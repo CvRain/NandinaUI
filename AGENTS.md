@@ -28,8 +28,9 @@ application shell. Version `0.1.0-alpha.1`.
   (home/anchors/label/typography/table/collapsible/surface). Earlier on 2026-11-13 the B1
   typography batch and the CI CPU-golden workflow were committed and pushed (`e690c0f`, `762c251`)
   after Linux pull verification (129/129 + 8 golden compares clean). Outstanding: OS
-  accessibility text-scale source/persistence (host-injected
-  design ready), notebook workspace slice, P4.8c. P4.7 real multi-face assets stay deferred.
+  accessibility text-scale source (Windows source landed on 2026-11-13; Linux source and
+  persistence pending), notebook workspace slice, P4.8c. P4.7 real multi-face assets stay
+  deferred.
   Linux is reachable through the current local SSH alias (`nandina-linux`).
 - P4.6 Step 2b is closed — default component recipes consume the semantic role's
   leading/weight/slant through `TypeStyle::role` → `ResolvedTypeStyle` and the shared
@@ -250,7 +251,10 @@ application shell. Version `0.1.0-alpha.1`.
   `max_text_px` (optional cap, 0 disabled): token/role sizes resolve as
   `root_base × ratio × text_scale`, then cap; explicit `.font_size(px)` stays fixed, and
   `ThemeManager::set_text_scaling()` provides the runtime host entry. OS accessibility scale
-  source/persistence remain pending. The 2026-11-11 Chinese
+  source: the 2026-11-13 sub-batch adds `app/system_preferences.hpp`,
+  `IPlatformWindow::system_preferences_source()`, `NanApplication` attach/sync/poll/override and
+  the Windows registry-backed source (applied before the first frame; Linux source and
+  persistence remain pending). The 2026-11-11 Chinese
   re-batch approved 8 baselines per platform (home/anchors/label/typography × SDF/CPU).
   Contract: `docs/references/typography_scale.md`.
 - **P4.7 synthetic weight/slant fallback** (2026-11-10) makes `FontRequest` weight/slant visible on
