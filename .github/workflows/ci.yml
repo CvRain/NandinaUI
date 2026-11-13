@@ -124,7 +124,16 @@ jobs:
       - name: Build
         run: meson compile -C buildDir
       - name: Test
-        run: meson test -C buildDir --print-errorlogs
+        run: |
+          set +e
+          meson test -C buildDir --print-errorlogs > /tmp/test.log 2>&1
+          code=$?
+          if [ "$code" -ne 0 ]; then
+            echo "--- test tail ---"
+            grep -E '(FAIL|Failed|ERROR|error:|Timeout)' /tmp/test.log | tail -n 40
+            echo "::error title=TEST-FAILURE::$(grep -E '(FAIL|Failed|ERROR|error:|Timeout)' /tmp/test.log | tail -n 60 | sed 's/%/%25/g; s/\r//g; s/::/:/g' | tr '\n' '|')"
+          fi
+          exit "$code"
 
   sanitize:
     name: sanitize (Clang 21, ASan + UBSan)

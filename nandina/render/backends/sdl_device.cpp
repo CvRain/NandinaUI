@@ -260,7 +260,8 @@ namespace nandina::render
                 shader_info.code_size = sizeof(detail::ROUNDED_MSL);
             }
             else {
-                sdf_reason_ = std::string("no SDF shader artifact for driver ") + driver_name;
+                sdf_reason_ =
+                    std::string("no SDF shader artifact for driver ") + std::string(driver_name);
             }
         }
         if (sdf_disabled) {

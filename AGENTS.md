@@ -46,7 +46,10 @@ application shell. Version `0.1.0-alpha.1`.
   approval before the manifest is marked approved. CI (red since 2026-10-11) is fixed by
   installing `libxss-dev libxtst-dev` for SDL3's CMake X11 probe and reclassifying
   `render/backends/sdl_device.hpp` as internal so the SDL-disabled header gate no longer compiles
-  it.
+  it. Clang 21's newly unblocked build also caught `sdl_device.cpp` building a reason string
+  from `std::string + std::string_view` (a GCC extension); the view is converted explicitly.
+  CI configure/build/test steps keep failure-tail `::error` annotations so public check-run
+  annotations carry the next failure without repository-admin log access.
 - P4.6 Step 2b is closed — default component recipes consume the semantic role's
   leading/weight/slant through `TypeStyle::role` → `ResolvedTypeStyle` and the shared
   text-style bridge (manual `text::TextStyle` sites migrated to

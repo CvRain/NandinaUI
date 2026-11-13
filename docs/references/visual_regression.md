@@ -285,8 +285,10 @@ artifact 上传（保留 14 天）。规则：
 定位方式：GitHub 的 job 日志下载 API 需要仓库 admin，公开页面也无法匿名读取完整日志；
 诊断分支在 configure/cmake/test 失败时把日志尾部作为 workflow `::error` annotation 输出，
 annotation 是公开 API 可读的（本次即靠它拿到 `Couldn't find dependency package for
-XSCRNSAVER/XTEST` 与 headless 的 `SDL3/SDL.h` 行）。诊断分支只用于定位，最终 main 只保留
-依赖安装与头文件分类修复。
+XSCRNSAVER/XTEST` 与 headless 的 `SDL3/SDL.h` 行）。诊断分支只用于定位，最终 main 保留依赖安装、头文件分类修复，以及在
+`sdl_device.cpp` 中发现的一处 Clang 移植性修复（`std::string + std::string_view` 是 GCC
+扩展，Clang 拒绝；改为显式转换）。main 的 configure/build/test 步骤保留失败尾部的
+`::error` annotation，后续 CI 失败无需 admin 日志即可定位。
 
 GPU/SDF 基线仍由真实 Linux 机器（GNOME/Wayland + RADV）人工采集审批；`golden-manifest`
 （含 `platform` 校验）仍在 CI。设备级测试（坐标矩阵、真实字形、AA 面积积分、产物格式）是
