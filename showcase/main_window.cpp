@@ -6,10 +6,12 @@
 
 #include "components/sidebar.hpp"
 #include "pages/anchors_page.hpp"
+#include "pages/collapsible_page.hpp"
 #include "pages/home_page.hpp"
 #include "pages/image_page.hpp"
 #include "pages/input_focus_page.hpp"
 #include "pages/label_page.hpp"
+#include "pages/table_page.hpp"
 #include "pages/typography_page.hpp"
 
 #include <nandina/widget/controls.hpp>
@@ -41,6 +43,16 @@ namespace nandina::showcase
             nandina::app::route<ImagePage>(app::RouteOptions {
                 .address = "content_and_display/image",
                 .title = "图片",
+                .nav_group = "内容与展示"
+            }),
+            nandina::app::route<TablePage>(app::RouteOptions {
+                .address = "content_and_display/table",
+                .title = "表格",
+                .nav_group = "内容与展示"
+            }),
+            nandina::app::route<CollapsiblePage>(app::RouteOptions {
+                .address = "content_and_display/collapsible",
+                .title = "折叠内容",
                 .nav_group = "内容与展示"
             }),
             nandina::app::route<InputFocusPage>(app::RouteOptions {

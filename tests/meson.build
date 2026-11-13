@@ -62,6 +62,20 @@ label_showcase_tests = executable(
 )
 test('label-showcase', label_showcase_tests, suite: 'unit')
 
+table_showcase_tests = executable(
+    'table_showcase_tests',
+    files('table_showcase_tests.cpp', '../showcase/pages/table_page.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('table-showcase', table_showcase_tests, suite: 'unit')
+
+collapsible_showcase_tests = executable(
+    'collapsible_showcase_tests',
+    files('collapsible_showcase_tests.cpp', '../showcase/pages/collapsible_page.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('collapsible-showcase', collapsible_showcase_tests, suite: 'unit')
+
 text_layout_header_tests = executable(
     'text_layout_header_tests',
     files('text_layout_header_tests.cpp'),

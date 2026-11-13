@@ -177,7 +177,10 @@ class VirtualListView`（[virtual_list_view.hpp](../../nandina/widget/virtual_li
 
 ## 8. P4.2b 静态 Table：布局契约
 
-> 2026-11-04 实现；2026-11-05 维护者与最终复核完成，代码批次收口。Showcase 视觉验收仍待完成。
+> 2026-11-04 实现；2026-11-05 维护者与最终复核完成，代码批次收口。**2026-11-13 Showcase
+> 视觉验收完成**：新增 `showcase/pages/table_page.cpp` 覆盖宽/窄列轨道、空表与自然行高四组
+> 场景；双平台 CPU+SDF 共 8 条 golden 由维护者批准，页面测试 `[table][showcase]` 断言四表
+> 语义计数（table/column_header/cell）与 1200×800、640×800 下的布局收敛与有界滚动根。
 
 本子批交付非交互静态表格。行选择属于后续 DataTable 的
 职责：静态 Table 只协调有限数量的控件、共享列轨道和行高，不另存选中状态。数据源绑定、

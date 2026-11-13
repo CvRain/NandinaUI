@@ -17,17 +17,29 @@ application shell. Version `0.1.0-alpha.1`.
 
 ### Current milestone state (2026-11-12)
 
-- **Latest (2026-11-12)**: P4.6 Step 2b is closed — default component recipes now consume the
-  semantic role's leading/weight/slant through `TypeStyle::role` → `ResolvedTypeStyle` and the
-  shared text-style bridge (manual `text::TextStyle` sites migrated to
+- **Latest (2026-11-13)**: B2a is complete — new showcase pages `table_page` (fixed/weighted
+  tracks, finite-width wrapping, empty table, natural row heights) and `collapsible_page`
+  (closed/open, nested, Signal sync, disabled) are registered in the app and page probe, covered
+  by `[table][showcase]` / `[collapsible][showcase]` page tests, and their 8 new page goldens
+  (2 pages × CPU/SDF × Windows/Linux) were approved by the maintainer on 2026-11-13; the Windows
+  full suite is 127/127 and Linux double capture was byte-identical. The CI CPU gate now covers
+  six pages (home/anchors/label/typography/table/collapsible). Earlier on 2026-11-13 the B1
+  typography batch and the CI CPU-golden workflow were committed and pushed (`e690c0f`, `762c251`)
+  after Linux pull verification (129/129 + 8 golden compares clean). Outstanding: B2b
+  (Surface/Card page + goldens), OS accessibility text-scale source/persistence (host-injected
+  design ready), notebook workspace slice, P4.8c. P4.7 real multi-face assets stay deferred.
+  Linux is reachable through the current local SSH alias (`nandina-linux`).
+- P4.6 Step 2b is closed — default component recipes consume the semantic role's
+  leading/weight/slant through `TypeStyle::role` → `ResolvedTypeStyle` and the shared
+  text-style bridge (manual `text::TextStyle` sites migrated to
   `widget::internal::apply_type_metrics()`). Button/tab/menu labels render with the role's
   medium (500) synthetic weight; multi-line TextArea uses body leading. Dual-platform page
-  goldens (8 per platform: home/anchors/label/typography × SDF/CPU) were recaptured with the
-  original protocol and approved by the maintainer on 2026-11-12: label/typography pages are
-  0-pixel diffs, the rest differ only in button glyphs/1–2 px widths. Windows full suite
-  125/125 (unit 104/104), Linux full suite 129/129, and the ASan unit (104 + 1 expected skip),
-  no-RTTI unit (106/106), no-SQLite unit (101 + 1 expected skip) and pure-tools (8/8) matrices
-  passed; `release_check --ci` is 8/8. A non-blocking Linux CI CPU-golden workflow
+  goldens were recaptured with the original protocol and approved by the maintainer on
+  2026-11-12: label/typography pages are 0-pixel diffs, the rest differ only in button
+  glyphs/1–2 px widths. Windows full suite 125/125, Linux full suite 129/129, ASan unit
+  (104 + 1 expected skip), no-RTTI unit (106/106), no-SQLite unit (101 + 1 expected skip) and
+  pure-tools (8/8) matrices passed; `release_check --ci` is 8/8. A non-blocking Linux CI
+  CPU-golden workflow
   (`.github/workflows/visual-golden.yml` + `tools/visual_golden_ci.py`, headless `sdl2d`) is in
   place and can become blocking after its first green Actions run. Outstanding: OS
   accessibility text-scale source/persistence (host-injected design is ready), B2 visual
@@ -86,13 +98,16 @@ application shell. Version `0.1.0-alpha.1`.
   adds shared fixed/weighted column tracks, natural row heights, table/row/header/cell semantics,
   and typed Builder slots. Gap sums are validated before content changes; measured content
   extents are accumulated in double and rejected before publishing non-finite geometry.
-  Showcase visual acceptance remains pending. It consumes ordinary controls and inherited text
+  Showcase visual acceptance was completed on 2026-11-13 by the new `table_page` plus its
+  dual-platform CPU/SDF page goldens. It consumes ordinary controls and inherited text
   styles; selection, sorting and virtualization remain DataTable responsibilities. Contract:
   `docs/references/data_components_and_virtualization.md` §8.
 - **P4.2c Collapsible** (2026-11-05, implemented and pushed in `095336b`) adds
   a retained disclosure content slot composed with Button, silent set_open/user toggle events,
   scoped Signal<bool> authoring, focus/capture restoration and optional semantics expanded.
-  State merging and content replacement reentry have regression coverage. Contract:
+  State merging and content replacement reentry have regression coverage. Showcase visual
+  acceptance was completed on 2026-11-13 by the new `collapsible_page` plus its dual-platform
+  CPU/SDF page goldens. Contract:
   `docs/references/disclosure_components.md`.
 - **P4.3 D3 navigation groups** (2026-11-05, maintainer review completed and pushed in
   `095336b`) renames `RouteOptions::type` to `nav_group` (default empty) and
@@ -291,8 +306,9 @@ application shell. Version `0.1.0-alpha.1`.
   verification after approval).
 - **Dual-platform verification (2026-11-10) is operational**: the Linux machine (Arch, GNOME
   Wayland, RADV RX 6750 GRE 12GB, Mesa 26.2.6) is reachable over SSH with a dedicated key; the
-  full Linux suite is 129 OK / 0 FAIL and all eight Linux page goldens (home/anchors/label/
-  typography × SDF/CPU) compare with 0 changed pixels. The 2026-11-12 re-check went through a new
+  full Linux suite is 129 OK / 0 FAIL (131 with the B2a page tests) and all ten Linux page
+  goldens (home/anchors/label/typography/table/collapsible × SDF/CPU) compare clean. The
+  2026-11-12 re-check went through a new
   Network-address/port-forward entry and confirmed the same machine, repository path, key auth,
   129/129 suite and 0-diff goldens; the address is temporary and only kept in the local session.
   Workflow, session-environment exports (`XDG_RUNTIME_DIR`, `WAYLAND_DISPLAY`,

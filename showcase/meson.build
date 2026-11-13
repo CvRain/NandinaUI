@@ -10,7 +10,11 @@ page_files = [
     'pages/image_page.hpp',
     'pages/image_page.cpp',
     'pages/input_focus_page.hpp',
-    'pages/input_focus_page.cpp'
+    'pages/input_focus_page.cpp',
+    'pages/table_page.hpp',
+    'pages/table_page.cpp',
+    'pages/collapsible_page.hpp',
+    'pages/collapsible_page.cpp'
 ]
 
 components = [

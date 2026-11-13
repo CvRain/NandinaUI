@@ -101,11 +101,12 @@ Label 的推荐属性表、跨组件 part 规则，以及有限宽度下文字�
 
 ## 阶段 5：信息组织与数据展示
 
-- `Accordion`；`Collapsible` 已随 `095336b` 提交，Showcase 视觉验收与 D2 主题窄投影另行跟踪，见
-  [折叠内容组件契约](disclosure_components.md)；
+- `Accordion`；`Collapsible` 已随 `095336b` 提交，**Showcase 视觉验收已于 2026-11-13 完成**
+  （双平台 CPU+SDF 8 条新基线批准，见 [折叠内容组件契约](disclosure_components.md)）；
 - `Sheet`、`Drawer`；
 - `Resizable`、`AspectRatio`；
-- 静态 `Table`（P4.2b 代码于 2026-11-05 复核完成，当前 experimental 并等待 Showcase 视觉验收；契约见
+- 静态 `Table`（P4.2b 代码于 2026-11-05 复核完成，**Showcase 视觉验收已于 2026-11-13 完成**；
+  当前保持 experimental，是否进入推荐级待组件契约评审；契约见
   [数据组件：选择模型与虚拟化依据](data_components_and_virtualization.md) §8）；
 - 在选择模型、虚拟化和排序能力成熟后再实现 `DataTable`。
 

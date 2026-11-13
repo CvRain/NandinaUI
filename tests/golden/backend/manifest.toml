@@ -64,6 +64,62 @@ reviewed_on = "2026-11-12"
 review_note = "Maintainer approved the B1 typography-default recapture: only component label text weight/leading changed (synthetic medium 500 buttons); label/typography pages are 0-pixel diffs, all other diffs are confined to button glyphs/borders. Dual-platform CPU+SDF baselines recaptured from the same trees and reviewed."
 
 [[entries]]
+page = "collapsible"
+backend = "cpu"
+platform = "linux"
+image = "candidates/collapsible-cpu-linux.png"
+width = 1200
+height = 800
+sha256 = "65f9fc406afbf5d7a84e95a115cc692d03aa9a7b741b6f2286ca84427688fce8"
+status = "approved"
+captured = "2026-11-13"
+reviewed_by = "agent review, per maintainer request 2026-11-13"
+reviewed_on = "2026-11-13"
+review_note = "Maintainer approved the B2a visual acceptance for the new Table and Collapsible showcase pages on both platforms and both render paths (CPU/SDF): tables render shared column tracks, narrow-width wrapping, empty and natural-row-height variants; Collapsible renders closed/open/nested/signal/disabled instances without clipping; Linux double capture was byte-identical, Windows full suite 127/127."
+
+[[entries]]
+page = "collapsible"
+backend = "cpu"
+platform = "windows"
+image = "candidates/collapsible-cpu-windows.png"
+width = 1200
+height = 800
+sha256 = "a14ad1db7a601239abdb2cfd690124623269ce67e10ea2e9d7e9a399ecf38a98"
+status = "approved"
+captured = "2026-11-13"
+reviewed_by = "agent review, per maintainer request 2026-11-13"
+reviewed_on = "2026-11-13"
+review_note = "Maintainer approved the B2a visual acceptance for the new Table and Collapsible showcase pages on both platforms and both render paths (CPU/SDF): tables render shared column tracks, narrow-width wrapping, empty and natural-row-height variants; Collapsible renders closed/open/nested/signal/disabled instances without clipping; Linux double capture was byte-identical, Windows full suite 127/127."
+
+[[entries]]
+page = "collapsible"
+backend = "sdf"
+platform = "linux"
+image = "candidates/collapsible-sdf-linux.png"
+width = 1200
+height = 800
+sha256 = "29b6777a10e014205ad9ba029674cedeac109b84bb3e786de0e74c2a867b8230"
+status = "approved"
+captured = "2026-11-13"
+reviewed_by = "agent review, per maintainer request 2026-11-13"
+reviewed_on = "2026-11-13"
+review_note = "Maintainer approved the B2a visual acceptance for the new Table and Collapsible showcase pages on both platforms and both render paths (CPU/SDF): tables render shared column tracks, narrow-width wrapping, empty and natural-row-height variants; Collapsible renders closed/open/nested/signal/disabled instances without clipping; Linux double capture was byte-identical, Windows full suite 127/127."
+
+[[entries]]
+page = "collapsible"
+backend = "sdf"
+platform = "windows"
+image = "candidates/collapsible-sdf-windows.png"
+width = 1200
+height = 800
+sha256 = "5c079e0685c607f47fb58778fc21d97b6cbe63568d07d99082478d0029aceff1"
+status = "approved"
+captured = "2026-11-13"
+reviewed_by = "agent review, per maintainer request 2026-11-13"
+reviewed_on = "2026-11-13"
+review_note = "Maintainer approved the B2a visual acceptance for the new Table and Collapsible showcase pages on both platforms and both render paths (CPU/SDF): tables render shared column tracks, narrow-width wrapping, empty and natural-row-height variants; Collapsible renders closed/open/nested/signal/disabled instances without clipping; Linux double capture was byte-identical, Windows full suite 127/127."
+
+[[entries]]
 page = "home"
 backend = "cpu"
 platform = "linux"
@@ -174,6 +230,62 @@ captured = "2026-11-12"
 reviewed_by = "agent review, per maintainer request 2026-11-12"
 reviewed_on = "2026-11-12"
 review_note = "Maintainer approved the B1 typography-default recapture: only component label text weight/leading changed (synthetic medium 500 buttons); label/typography pages are 0-pixel diffs, all other diffs are confined to button glyphs/borders. Dual-platform CPU+SDF baselines recaptured from the same trees and reviewed."
+
+[[entries]]
+page = "table"
+backend = "cpu"
+platform = "linux"
+image = "candidates/table-cpu-linux.png"
+width = 1200
+height = 800
+sha256 = "957593e05b368c42e14018944444db0811891e525a2146581f37d2fe5f77eed6"
+status = "approved"
+captured = "2026-11-13"
+reviewed_by = "agent review, per maintainer request 2026-11-13"
+reviewed_on = "2026-11-13"
+review_note = "Maintainer approved the B2a visual acceptance for the new Table and Collapsible showcase pages on both platforms and both render paths (CPU/SDF): tables render shared column tracks, narrow-width wrapping, empty and natural-row-height variants; Collapsible renders closed/open/nested/signal/disabled instances without clipping; Linux double capture was byte-identical, Windows full suite 127/127."
+
+[[entries]]
+page = "table"
+backend = "cpu"
+platform = "windows"
+image = "candidates/table-cpu-windows.png"
+width = 1200
+height = 800
+sha256 = "4c2915d6445d77ad5c03030eee8e9f7ca87733ca300002ee0ef6e657f5d903d2"
+status = "approved"
+captured = "2026-11-13"
+reviewed_by = "agent review, per maintainer request 2026-11-13"
+reviewed_on = "2026-11-13"
+review_note = "Maintainer approved the B2a visual acceptance for the new Table and Collapsible showcase pages on both platforms and both render paths (CPU/SDF): tables render shared column tracks, narrow-width wrapping, empty and natural-row-height variants; Collapsible renders closed/open/nested/signal/disabled instances without clipping; Linux double capture was byte-identical, Windows full suite 127/127."
+
+[[entries]]
+page = "table"
+backend = "sdf"
+platform = "linux"
+image = "candidates/table-sdf-linux.png"
+width = 1200
+height = 800
+sha256 = "4381086f5a120309ba8d73dd546da309aab15aece2160615f137b03dfc05868d"
+status = "approved"
+captured = "2026-11-13"
+reviewed_by = "agent review, per maintainer request 2026-11-13"
+reviewed_on = "2026-11-13"
+review_note = "Maintainer approved the B2a visual acceptance for the new Table and Collapsible showcase pages on both platforms and both render paths (CPU/SDF): tables render shared column tracks, narrow-width wrapping, empty and natural-row-height variants; Collapsible renders closed/open/nested/signal/disabled instances without clipping; Linux double capture was byte-identical, Windows full suite 127/127."
+
+[[entries]]
+page = "table"
+backend = "sdf"
+platform = "windows"
+image = "candidates/table-sdf-windows.png"
+width = 1200
+height = 800
+sha256 = "6c97d3cb218d0ed7934484712019506e08a186ca9dc89d069f2bda7ad907441e"
+status = "approved"
+captured = "2026-11-13"
+reviewed_by = "agent review, per maintainer request 2026-11-13"
+reviewed_on = "2026-11-13"
+review_note = "Maintainer approved the B2a visual acceptance for the new Table and Collapsible showcase pages on both platforms and both render paths (CPU/SDF): tables render shared column tracks, narrow-width wrapping, empty and natural-row-height variants; Collapsible renders closed/open/nested/signal/disabled instances without clipping; Linux double capture was byte-identical, Windows full suite 127/127."
 
 [[entries]]
 page = "typography"

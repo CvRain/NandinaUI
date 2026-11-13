@@ -216,8 +216,8 @@ Linux 图不能当 Windows/macOS 的预期。跨平台只比较**结构性**结�
 
 | 平台 | 状态 | 说明 |
 | --- | --- | --- |
-| Linux | **8 条 approved（2026-11-12 B1 排版重批）** | 1200×800、30 帧、SDF+CPU，覆盖 home/anchors/label/typography；B1 重批在 GNOME Wayland + RADV 会话完成，与 2026-11-11 中文版重批的差异只有组件标签字重/行高。历史：2026-10-20 首批 6 条；2026-11-08 Hyprland/Wayland+RADV 复跑 6 条 0 差异；2026-11-10 GNOME Wayland 远程复跑 6 条 0 差异 |
-| Windows | **8 条 approved（2026-11-12 B1 排版重批）** | 1200×800、30 帧、SDF+CPU，SDF 桌面会话 + CPU 路径（GPU 设备 + SDF off）；B1 重批经维护者审阅。历史：2026-10-21/22 首批 6 条（CPU 3 + SDF 3，DXIL 产物），含 shadow/clip 断言 |
+| Linux | **10 条 approved（2026-11-13 B2a 新增 Table/Collapsible）** | 1200×800、30 帧、SDF+CPU，覆盖 home/anchors/label/typography 与新增 table/collapsible；B1 排版重批在 GNOME Wayland + RADV 会话完成，B2a 两页的 CPU/SDF 各采一次且两次采集逐字节一致。历史：2026-10-20 首批 6 条；2026-11-08 Hyprland/Wayland+RADV 复跑 6 条 0 差异；2026-11-10 GNOME Wayland 远程复跑 6 条 0 差异；2026-11-12 B1 重批 |
+| Windows | **10 条 approved（2026-11-13 B2a 新增 Table/Collapsible）** | 1200×800、30 帧、SDF+CPU，SDF 桌面会话 + CPU 路径（GPU 设备 + SDF off）；B2a 新页经维护者审阅。历史：2026-10-21/22 首批 6 条（CPU 3 + SDF 3，DXIL 产物），含 shadow/clip 断言；2026-11-12 B1 重批 |
 | macOS | **不支持** | 没有硬件与测试环境，不提供构建/运行承诺；不复制 Linux 基线充数 |
 
 **2026-11-12 B1 重批记录**：默认组件配方消费 role leading/weight/slant 后，双平台各 8 条按
@@ -225,6 +225,11 @@ Linux 图不能当 Windows/macOS 的预期。跨平台只比较**结构性**结�
 审阅并批准。重采前后 label/typography 共 8 条 **0 像素差异**；home/anchors 的差异只来自按钮
 标签的 500 合成字重与随之的 1–2 px 宽度调整（home CPU/SDF 在 Windows 1601/1834 px、Linux
 2222/2463 px；anchors Linux 1036/1106 px；anchors Windows 691/761 px，阈值 960 px）。
+
+**2026-11-13 B2a 新增记录**：新增 `table` 与 `collapsible` 两个 showcase 页面（Table 的宽/窄
+列轨道、空表、自然行高；Collapsible 的收起/展开/嵌套/Signal/禁用），双平台各按 CPU（GPU 设备
++ SDF off）与 SDF 采集 4 条，合计 8 条新基线由维护者审阅并批准；每页的 CPU/SDF 渲染在
+1200×800 内一致，Linux 两次采集 sha256 相同。CI CPU 门禁因此从 4 条扩到 6 条页面基线。
 
 **新平台落地步骤**（Windows 可用时）：
 
@@ -244,7 +249,8 @@ Windows CPU 基线与 Linux 的跨平台像素差（home 11.9%、label 24.9%、a
 
 **CI（2026-11-12 起，CPU 路径）**：`.github/workflows/visual-golden.yml` 在 ubuntu 容器里
 构建 `nandina_sdl_page_probe`，用 `SDL_VIDEODRIVER=dummy` + `--renderer sdl2d`（软件渲染）
-对 Linux 的 4 条 CPU 基线先做两遍采集并断言逐字节一致，再交给
+对 Linux 的 6 条 CPU 基线（home/anchors/label/typography/table/collapsible）先做两遍采集并
+断言逐字节一致，再交给
 `tools/visual_golden_ci.py` 与 approved 基线逐像素比较；候选图、差异图、统计 JSON 作为
 artifact 上传（保留 14 天）。规则：
 

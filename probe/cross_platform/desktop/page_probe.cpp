@@ -50,9 +50,11 @@
 #include <nandina/widget/primitives/pressable.hpp>
 #include <showcase/components/sidebar.hpp>
 #include <showcase/pages/anchors_page.hpp>
+#include <showcase/pages/collapsible_page.hpp>
 #include <showcase/pages/home_page.hpp>
 #include <showcase/pages/input_focus_page.hpp>
 #include <showcase/pages/label_page.hpp>
+#include <showcase/pages/table_page.hpp>
 #include <showcase/pages/typography_page.hpp>
 
 #include <memory>
@@ -270,6 +272,16 @@ int main() {
                 .title = "输入与焦点",
                 .nav_group = "输入与焦点",
             }),
+            nandina::app::route<nandina::showcase::TablePage>(nandina::app::RouteOptions {
+                .address = "content_and_display/table",
+                .title = "表格",
+                .nav_group = "内容与展示",
+            }),
+            nandina::app::route<nandina::showcase::CollapsiblePage>(nandina::app::RouteOptions {
+                .address = "content_and_display/collapsible",
+                .title = "折叠内容",
+                .nav_group = "内容与展示",
+            }),
         };
         if (const auto configured = router.configure(routes); !configured) {
             throw std::runtime_error("router.configure failed");
@@ -325,6 +337,12 @@ int main() {
         }
         else if (page == "input_focus") {
             started = router.start<nandina::showcase::InputFocusPage>();
+        }
+        else if (page == "table") {
+            started = router.start<nandina::showcase::TablePage>();
+        }
+        else if (page == "collapsible") {
+            started = router.start<nandina::showcase::CollapsiblePage>();
         }
         else {
             throw std::runtime_error("unknown NANDINA_PROBE_PAGE: " + std::string(page));

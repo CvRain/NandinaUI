@@ -95,8 +95,8 @@
 | P4.1 文本作者/绑定子批 | **已实施（2026-11-03）**：字体/溢出/行数 builder，当前布局结果查询，单源文本绑定、直接写入替代与作用域/退出树清理 | D6 §17 | Property/Label/BuildContext 共用绑定身份；迟到/重入回调不会复活旧源；字体请求失效回归。逐字段 reset 与完整 D6 仍保留 |
 | P4.1b | **视觉表面作者能力（已提交 `0e7fca1`，代码复核完成，2026-11-03）**：可设圆角/内容的 `Surface` 原语、Card content inset、Image cover 的百分比裁剪锚点 | P4.1 的测量稳定；不新增第二套绘制路径 | 登录页可让图片真正贴边；Image 可用百分比锚点裁剪 cover；Showcase 正式视觉验收仍待完成 |
 | P4.2a | **阶段 5 数据基础（已提交 `5d91e01`，维护者复核完成，2026-11-04）**：SelectionModel + VirtualListView，布局/选择/虚拟化依据 | P4.1 与布局稳定 | 复合数据组件基础有虚拟化与选择回归；契约见 [数据组件：选择模型与虚拟化依据](data_components_and_virtualization.md) |
-| P4.2b | **静态 Table 布局（2026-11-05，代码复核收口）**：共享列宽、自然行高、表头/单元格语义与 Builder 槽位 | P4.2a 数据基础 | 有限宽度 wrap、列轨道一致、树语义与滚动组合回归；Showcase 视觉验收待维护者完成 |
-| P4.2c | **Collapsible（2026-11-05，已随 `095336b` 提交）**：保留内容的折叠、统一激活、焦点恢复、Signal 与语义 expanded | P4.2b 代码收口；既有 Button/布局/绑定 | 布局收敛、内容生命周期、键盘/语义/回调重入与作用域回归；Showcase 视觉验收待维护者完成 |
+| P4.2b | **静态 Table 布局（2026-11-05，代码复核收口；2026-11-13 Showcase 视觉验收完成）**：共享列宽、自然行高、表头/单元格语义与 Builder 槽位 | P4.2a 数据基础 | 有限宽度 wrap、列轨道一致、树语义与滚动组合回归；`showcase/pages/table_page.cpp` + `[table][showcase]` 页面测试；双平台 CPU+SDF 8 条新 golden 已批准（与 Collapsible 合并计数） |
+| P4.2c | **Collapsible（2026-11-05，已随 `095336b` 提交；2026-11-13 Showcase 视觉验收完成）**：保留内容的折叠、统一激活、焦点恢复、Signal 与语义 expanded | P4.2b 代码收口；既有 Button/布局/绑定 | 布局收敛、内容生命周期、键盘/语义/回调重入与作用域回归；`showcase/pages/collapsible_page.cpp` + `[collapsible][showcase]` 页面测试；双平台 CPU+SDF 8 条新 golden 已批准（与 Table 合并计数） |
 | P4.3 | **D2 主题状态订阅**、**D3 nav_group**、**作者颜色入口（新增）**：显式 `NanColor` 覆盖与 primitive palette 访问，不为 red/blue 等追加语义 token | D2 通知与生命周期定形；D3 无跨专题前置 | Shell 无重复事实来源；自定义组件可设任意颜色；语义 token 仍是默认；空组/合并/顺序/typed navigation 回归 |
 | P4.3 D2 首批 | **主题呈现窄投影（2026-11-05，已随 `8920f3a` 提交）**：§5.5 两字段只读投影、作用域绑定投影与 `ui.theme_state()`、showcase 开关跟随 | 已接受的 §5.5 契约；既有 ThemeManager 观察者 | 具名/家族发布修复、分阶段通知、重入拒绝、异常与通知中销毁、showcase 外部外观跟随 |
 | P4.3 D2 Shell 框架准备 | **多方案设置页依赖收敛（2026-11-08，已随 `f821f40` 提交）**：scheme/family typed errors、选择/目录作用域订阅便利入口、Shell 动作链回归 | 第 4 步观察通道；§20 定形 | 固定/双槽/system、当前与非当前替换、动态目录、外部同步、失败原子性与页面解绑；不改页面正文 |
@@ -118,8 +118,9 @@
 1. **P3.1a 事件快照**：先修每事件坐标/修饰键被帧级状态覆盖；本批不扩展键身份、跨类型顺序、焦点策略或 IME。
 2. **P4 收口顺序（2026-11-12 重估）**：P4.6 排版默认收口已完成（默认配方消费 role 指标 +
    双平台 16 条 golden 重批）→ P4.6 Step 3 的 OS 无障碍字号来源/持久化，以及 P4.7 后续
-   （真实多 face 暂缓，决策见 [font_synthesis.md](font_synthesis.md)）→ B2 showcase 视觉验收
-   清账（Table/Collapsible/Surface-Card/Shell 页 + probe/golden）→ notebook 最小垂直切片作为
+   （真实多 face 暂缓，决策见 [font_synthesis.md](font_synthesis.md)）→ **B2 showcase 视觉验收
+   清账**：B2a Table/Collapsible 已完成（2026-11-13，新页面 + 双平台 8 条 golden 批准），
+   B2b Surface/Card 页面随后，Theme Shell 页另排 → notebook 最小垂直切片作为
    集成证明。P3.3b2b 仍差 X11 inline preedit/Windows IME/候选窗位置，依赖真实桌面环境，作为
    并行轨。CI CPU golden 门禁已非阻断落地（`visual-golden.yml`），首次真实 Actions 跑绿后
    删掉 `continue-on-error` 即可升级为阻断门禁。

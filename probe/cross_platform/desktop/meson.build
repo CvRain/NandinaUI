@@ -18,6 +18,8 @@ showcase_page_sources = files(
     '../../../showcase/pages/label_page.cpp',
     '../../../showcase/pages/typography_page.cpp',
     '../../../showcase/pages/input_focus_page.cpp',
+    '../../../showcase/pages/table_page.cpp',
+    '../../../showcase/pages/collapsible_page.cpp',
     '../../../showcase/components/page_chrome.hpp',
     '../../../showcase/components/component_info_table.cpp',
     '../../../showcase/components/sidebar.cpp',
