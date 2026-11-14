@@ -51,7 +51,7 @@
 
 - [组件公共契约](component_contract.md)：新组件在进入推荐 API 前必须满足的状态、事件、绑定、主题、输入和无障碍要求。
 - [统一输入、焦点与文本编辑](focus_and_input.md)：**第一阶段已实施（P3.2a/b），第二阶段协议与 SDL 合成事件路径已实施（P3.3a），预编辑/密码用途显示已实施（P3.3b1）**。事件映射、paint-only、无历史默认显示、窗口活动、roving 提示、弹窗恢复、注入式文本会话协议与视觉文本映射记录在案；caret 输入区域与 SDL input_area 已实施（P3.3b2a）；P3.3b2b 已接通 SDL 用途/多行属性与 preedit 声明，并记录部分 Linux 实机验收；X11 inline preedit/独立 Xorg、Windows 与候选窗位置验收仍待完成。取舍过程见 [story 012](../../stories/012-from-focus-rings-to-input-sessions.md)。
-- [数据组件：选择模型与虚拟化依据](data_components_and_virtualization.md)：**P4.2a 已提交；P4.2b 静态 Table 已收口、2026-11-13 视觉验收完成**：SelectionModel 身份/模式/范围/retain 规则，VirtualListView 窗口物化契约，以及 Table 共享列轨道、自然行高、语义结构；**2026-11-14 新增 §9 `DataTable` 契约草案（未实现，待维护者审阅 Q1–Q8）**。
+- [数据组件：选择模型与虚拟化依据](data_components_and_virtualization.md)：**P4.2a 已提交；P4.2b 静态 Table 已收口、2026-11-13 视觉验收完成**：SelectionModel 身份/模式/范围/retain 规则，VirtualListView 窗口物化契约，以及 Table 共享列轨道、自然行高、语义结构；**2026-11-14 §9 升级为数据视图契约 v3 定稿（非模板 DataTable + `IRowModel`/`TableColumn`/`IItemDelegate` + 显式选择模型；未实现，按 §9.13 分批）**。
 - [折叠内容组件](disclosure_components.md)：**P4.2c Collapsible 已随 `095336b` 提交**；保留内容的展开/收起、统一激活、焦点恢复、Signal 与页面作用域，以及 Accordion 后续边界。
 - [组件开发路线图](component_roadmap.md)：当前组件盘点、基础设施依赖和推荐开发顺序。
 - [浮层架构](overlay_architecture.md)：OverlayHost、portal 生命周期、分层规则与后续基础设施边界。

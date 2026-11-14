@@ -133,8 +133,11 @@
 5. **视觉验收已清账（2026-11-13）**：B2a Table/Collapsible、B2b Surface/Card 均完成；notebook
    最小垂直切片已实现（2026-11-13：工作区列表/编辑器/CRUD + `[notebook][store]`），UI 视觉验收
    与后续业务页另批。仅 Theme Shell 页另排。
-6. **组件扩展**：先定 DataTable 契约（模型接口、排序归属、统一行高、选择保留规则）再实现；
-   随后 Accordion；Sheet/Drawer/Resizable/AspectRatio 按需。静态 Table 保持 experimental。
+6. **组件扩展**：DataTable/ListView 契约 v3 已于 2026-11-14 定稿
+   （[数据组件 §9](data_components_and_virtualization.md#9-p42d-数据视图契约datatable-与-listviewv3-定稿)：
+   `IRowModel`/`TableColumn`/`IItemDelegate`/选择模型；先提取内部虚拟窗口与轨道解算器，再按 §9.13
+   分 5 批实现，DataTable 虚拟化通过后才导出公共 API）；随后 Accordion；
+   Sheet/Drawer/Resizable/AspectRatio 按需。静态 Table 保持 experimental。
 7. **P4.4 视觉覆盖**：`input_focus` golden；`image` 页进 probe 并挂载 showcase 资源包（当前无
    golden）；新页面 approved 后自动进入 CI CPU 门禁。
 8. **P4.8a/P4.8c**：`NANDINA_PAGE_TIMING` 逐节计时日志与 opt-in 构建期批量测量，先量后改；

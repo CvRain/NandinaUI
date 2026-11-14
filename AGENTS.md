@@ -60,20 +60,20 @@ application shell. Version `0.1.0-alpha.1`.
   full suite 133/133, static config `portable-bundle` OK, red-first injections for both the
   negative and positive branches. The Test step annotation now carries the unfiltered test-log
   tail so assertion text is visible in public check-run annotations.
-- **Latest (2026-11-14)**: CI is green end to end and the CPU page-golden gate is blocking.
-  `visual-golden.yml` no longer sets `continue-on-error` (B0; promoted after five consecutive
-  green Actions runs, and the promotion run on `b35629f` is green), so a real Linux CPU baseline
-  drift now fails the merge instead of passing silently. B1 reconciled the current-state docs
-  with the tree (README, references index, roadmaps, status, visual regression, performance,
-  focus, page-load, SDK/window counts): 133 tests (110 unit + 23 integration), 202 headers
-  (188 experimental + 14 internal), 28 approved goldens (7 pages × CPU/SDF × 2 platforms =
-  14/platform), 39 public components, 7-page blocking CPU coverage. B5 contract draft landed in
-  `data_components_and_virtualization.md` §9 (DataTable API shape, sorting ownership, uniform row
-  height, selection retention, virtualization staging, 8 open questions Q1–Q8) — **not
-  implemented; close Q1–Q8 before starting code**. Verification for this docs/contracts batch:
-  `release_check --ci` 8/8 with pinned clang-format 23.1.1, docs link/anchor gate ok,
-  `git diff --check` clean; no code or test changes, so the suite evidence is the preceding
-  green CI run plus the blocking CPU-golden run.
+- **Latest (2026-11-14)**: CI is green end to end and the CPU page-golden gate is blocking
+  (`visual-golden.yml` lost `continue-on-error` after five green runs; promotion commit
+  `b35629f` green). B1 reconciled current-state docs with the tree: 133 tests (110 unit + 23
+  integration), 202 headers (188 experimental + 14 internal), 28 approved goldens (7 pages ×
+  CPU/SDF × 2 platforms = 14/platform), 39 public components, 7-page blocking CPU coverage.
+  **Data-view contract:** `data_components_and_virtualization.md` §9 is now the **v3 final
+  design**: non-template `DataTable`/`ListView` over a shared `IRowModel` (rows only),
+  `TableColumn` as the single column source, `IItemDelegate`/`TypedItemDelegate` with RTTI-free
+  tokens checked in every build mode, stable `RowId`/`ColumnId`/`CellId`, a separate
+  `TableSelectionModel`, `GridNavigation`, local/external sorting keyed by `ColumnId`,
+  delegate-owned visuals (no recipe), composition-only internals, and a virtualized `ListView`
+  replacing the old one (`ForEach` kept). **Not implemented; follow the §9.13 batch order.**
+  Verification: `release_check --ci` 8/8 (pinned clang-format 23.1.1), docs anchors ok, diff
+  clean; docs-only, so suite evidence is the preceding green CI run.
 - P4.6 Step 2b is closed — default component recipes consume the semantic role's
   leading/weight/slant through `TypeStyle::role` → `ResolvedTypeStyle` and the shared
   text-style bridge (manual `text::TextStyle` sites migrated to

@@ -110,9 +110,10 @@ P4.6 排版尺度与语义 role 指标已交付；剩余样式 reset、完整测
 - 静态 `Table`（P4.2b 代码于 2026-11-05 复核完成，**Showcase 视觉验收已于 2026-11-13 完成**；
   当前保持 experimental，是否进入推荐级待组件契约评审；契约见
   [数据组件：选择模型与虚拟化依据](data_components_and_virtualization.md) §8）；
-- 在选择模型、虚拟化和排序能力成熟后再实现 `DataTable`；**2026-11-14 已新增契约草案**
-  （[数据组件 §9](data_components_and_virtualization.md#9-p42d-datatable交互数据表契约草案待维护者审阅)：
-  API 形状、排序归属、统一行高、选择保留规则与 8 个待决问题），契约关闭后再开工。
+- `DataTable`/新 `ListView`：**2026-11-14 契约 v3 定稿**
+  （[数据组件 §9](data_components_and_virtualization.md#9-p42d-数据视图契约datatable-与-listviewv3-定稿)）：
+  非模板组件 + `IRowModel` + `TableColumn` + `IItemDelegate` + 显式选择模型；先提取内部虚拟窗口/
+  轨道解算器，再按 §9.13 的 5 批实现（DataTable 虚拟化通过后才导出公共 API）。
 
 ## 暂不进入核心优先级
 
