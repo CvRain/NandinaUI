@@ -1,6 +1,8 @@
 # 数据组件：选择模型与虚拟化依据（P4.2 阶段 5 第一批）
 
 > 状态：**2026-11-03 初稿已实施；2026-11-04 维护者复核完成（7 项修复 + 测试缺口补齐），并统一提交推送于 `5d91e01`。**
+> **2026-11-14：新增 §9 `DataTable` 交互数据表契约草案（未实现、未开工，待维护者审阅并关闭
+> §9.7 的开放问题）；§8 静态 Table 与 §3/§4 基础契约不变。**
 > 本文件是阶段 5 数据组件的「选择 / 虚拟化依据」契约：先定两块可复用的基础，
 > 再让复合数据组件在它们之上成长。静态 `Table`、`DataTable`、`Accordion` 等
 > 阶段 5 组件清单仍按 [组件开发路线图](component_roadmap.md#阶段-5信息组织与数据展示)
@@ -255,3 +257,166 @@ SelectionModel、RovingFocus、虚拟化与排序留给后续交互数据表；�
 - 维护者复核时 `sdf-state-probe` 曾报 `SDL_CreateGPUDevice(vulkan): unsupported`；
   最终复核环境中原测试通过，未修改探针、测试断言或跳过策略。
 - 本轮不声明 Windows 验证；Showcase 页面、正式视觉验收和组件使用文档正文仍由维护者手写。
+
+## 9. P4.2d DataTable：交互数据表契约（草案，待维护者审阅）
+
+> **状态：2026-11-14 草案。未实现、未开工。** 本节只定形状：API 归属、选择/排序/虚拟化的
+> 分工、非目标与开放问题。开工前必须先关闭 §9.7 的 Q1–Q8；与静态 Table 相同，先契约后代码。
+> 已交付的基础不在本草案内改动：[§3 选择模型](#3-selectionmodel-规则)、[§4 虚拟列表](#4-virtualistview-规则)、
+> [§8 静态 Table](#8-p42b-静态-table布局契约)。
+
+### 9.1 职责与不变量
+
+`DataTable` = 列轨道 + 固定表头 + 行选择 + 排序 + 统一行高虚拟化滚动 + 键盘漫游。
+它合成静态 Table 的布局规则与 VirtualListView 的窗口/选择规则。
+
+不变量（与既有契约一致）：
+
+- **静态 Table 不改**：§8 仍是非交互协调器；行选择/排序/虚拟化只属于 DataTable。
+- **选择事实唯一**：选中状态由 `SelectionModel<Key>` 拥有；DataTable 不另存第二份。
+- **行身份即 Key**：行控件按 Key 键控复用；数据替换经 `retain` 裁剪（§3）。
+- **自身是滚动视口**：与 VirtualListView 相同，视口大小由父布局决定；表头钉在视口顶部，
+  行窗口在表头以下。行高统一，变高行不在本批。
+- **Item 按值快照**：`set_source` 与 VirtualListView 同形（拷贝进表格内部有序数组）；
+  tracked 源经 `set_model` 绑定，绑定随退出树/销毁解除。
+- **无新增绘制路径**：DataTable 不新增 theme 配方；表头/行外观由内容节点 + 既有
+  Surface/Padding 组合表达。唯一例外是选中行视觉，见 Q8。
+
+### 9.2 提议的 API 形状
+
+```cpp
+template<typename Item, std::equality_comparable Key>
+struct DataTableColumn {
+    std::string header;              // 表头文本；或改用作者 cell 工厂，见 Q2
+    std::optional<float> width;      // 固定逻辑宽；空则按 flex 分权重
+    float flex = 1.0F;
+    std::function<std::shared_ptr<scene::NanControl>(reactive::ReactiveScope&,
+                                                     const Item&)> cell;
+    std::function<std::weak_ordering(const Item&, const Item&)> compare; // 空 = 不可排序
+};
+
+enum class SortDirection : std::uint8_t { ascending, descending };
+struct SortSpec {
+    std::size_t column = 0;
+    SortDirection direction = SortDirection::ascending;
+};
+
+template<typename Item, std::equality_comparable Key>
+class DataTable final: public scene::NanControl {
+public:
+    static auto create(reactive::Graph& graph,
+                       std::vector<DataTableColumn<Item, Key>> columns,
+                       std::function<Key(const Item&)> key,
+                       float row_height = 32.0F) -> std::shared_ptr<DataTable>;
+
+    // 列轨道（规则同 §8.1/§8.2；有内容时改列数须先清空，见 Q2）
+    void set_columns(std::vector<DataTableColumn<Item, Key>> columns);
+
+    // 数据源（同 VirtualListView §4.1/4.3）
+    void set_source(const std::vector<Item>& items);
+    void set_model(Source& source);
+
+    // 选择（同 VirtualListView §4.2）
+    void set_selection_mode(SelectionMode mode);
+    auto select(const Key& key) -> bool;
+    auto select_range(const Key& from, const Key& to) -> bool;
+    auto toggle(const Key& key) -> bool;
+    void clear_selection();
+    [[nodiscard]] auto is_selected(const Key& key) const -> bool;
+    [[nodiscard]] auto selected_keys() const -> const std::vector<Key>&;
+    [[nodiscard]] auto selection_changed() const -> const reactive::Event<>&;
+
+    // 排序（DataTable 拥有；触发与视图策略见 §9.4 与 Q2/Q5）
+    auto set_sort(std::size_t column, SortDirection direction) -> bool;
+    void clear_sort();
+    [[nodiscard]] auto sort_spec() const -> std::optional<SortSpec>;
+    [[nodiscard]] auto sort_changed() const -> const reactive::Event<>&;
+
+    // 滚动/程序化（同 VirtualListView §4.1 的首布局前挂起规则）
+    void scroll_to_key(const Key& key);
+    void scroll_to_row(std::size_t index);
+
+    // 行访问：测试与作者视觉钩子（Q8）
+    [[nodiscard]] auto row_node(const Key& key) const -> scene::NanControl*;
+    [[nodiscard]] auto item_count() const noexcept -> std::size_t;
+};
+```
+
+- `create` 需要 `reactive::Graph`（选择事件 + `RovingFocus`），且必须以 `shared_ptr` 持有：
+  行窗口延迟物化用 `shared_from_this()` 挂 `post_layout`（与 VirtualListView/ScrollView 同约定），
+  栈上实例首布局触发 `bad_weak_ptr`。
+- 作者入口：`ui.make<DataTable<Item, Key>>(…)` 是否作为唯一 Builder 入口，或另加
+  `NodeBuilder` 槽位，属 Q1。
+- 列头/单元格内容默认都是普通 `NanControl`；DataTable 只协调位置、共享列宽与行高。
+
+### 9.3 列轨道、行高与测量
+
+- **固定/权重规则复用 §8.2**：固定列保留逻辑宽度，剩余空间按 flex 权重分；不足为零。
+  建议抽一个 widget 内部 track solver 供静态 Table/DataTable 共用；静态 Table 行为与
+  页面 golden 必须保持 0 差异（共享实现属内部重构，见 Q1 的准备项）。
+- **有限宽度**：按上面规则分配；resize 后表头与正文用同一套轨道重算（§8.2 语义）。
+- **无界宽度**：**不按内容自动测**——那会强制把每一行的单元格都建出来，直接破坏虚拟化。
+  flex 列按可配置的 `flex basis`（默认 160 DIP）合成测量宽度，并在组件文档写明这不是
+  内容自适应；Q4 决定默认值与是否要求作者显式给宽度。
+- **行高**：统一 `row_height`（有限且 > 0，默认 32 DIP）；表头高度按表头内容自然测量，
+  不参与行窗口；正文高度 = 行数 × 行高 + 行间距。
+- **有限性**：总宽/总高用 double 累计、发布前统一校验（沿用 §8.2 的 `layout_extent` 模式），
+  不把 inf/NaN 传给父布局；参数 setter 的即时校验与布局期校验分开（§8.1/§8.2 已定的分工）。
+
+### 9.4 排序
+
+- **归属**：`DataTable` 持有内部有序快照；`std::stable_sort` 保证相等项维持数据源顺序；
+  `compare` 由列提供，没有 `compare` 的列不可排序。
+- **触发**：表头指针点击（循环规则见 Q2）；程序化 `set_sort`/`clear_sort`；事件
+  `sort_changed()` 无载荷，订阅方重新读 `sort_spec()`（与 `selection_changed()` 同形）。
+- **数据变化**：`set_source` 后重新应用当前 SortSpec；更改列集合（列数或列身份）时清空
+  排序并在文档写明（列索引不再有稳定含义）。
+- **选择不受排序影响**：选中集合按 Key 保留；排序后视图如何跟随见 Q5。
+- **排序是 DataTable 的职责**：静态 Table 与数据源都不排序（§8.3 不变）。
+
+### 9.5 选择、键盘与语义
+
+- **指针**：左键按下选择；plain 独占、ctrl 切换、shift 以锚点为起点的范围（同 §4.2）；
+  点击同时把焦点交给表格容器。
+- **键盘**：容器可聚焦；方向键/Home/End/PageUp/PageDown 走 `RovingFocus`；`Space` 切换
+  选中、`Enter` 激活（`activated(key)`）；按住重复只移动活动行、不重复提交（同 §4.2）。
+  typeahead 是否进第一批见 Q3。
+- **语义**：复用 `Role::table / row / column_header / cell`（静态 Table 已引入，§8.3）；
+  行 `selected` 状态从 SelectionModel 读取；行/单元格不可聚焦、焦点留在表格容器。
+- **虚拟化语义边界**：语义树只包含物化（可见）行，读屏无法一次浏览全表；Q7 决定是否
+  接受并在文档声明，或补一个只读的"总行数"信息。
+
+### 9.6 非目标（本批不做）
+
+变高行；按内容自动列宽（需要全量物化）；水平滚动；列拖拽/重排/合并；单元格内编辑；
+树形或分组行；粘性多表头/列固定；分页；行内交互控件（行默认只展示，交互由表格统一处理）；
+`ScrollView` 嵌套组合形态；DataTable 专属视觉配方（除非 Q8 选择 recipe 路线）。
+
+### 9.7 待维护者决定（开工前必须关闭）
+
+| 编号 | 问题 | 提议 / 取舍 |
+| --- | --- | --- |
+| Q1 | 模型形状：模板 `DataTable<Item, Key>`，还是类型擦除 `IDataTableModel` + 非模板组件？Builder 入口是什么？ | 提议模板（与 VirtualListView/ForEach 同族），但 `ui.make` 的模板实例化与文档成本要先确认；track solver 抽取属内部准备 |
+| Q2 | 表头：文本自动生成 Label（样式继承）还是作者 cell 工厂？点击循环 `none→asc→desc→none` 还是 `asc↔desc` 往返？ | 提议 header 文本 + 内部 Label 继承组件文本样式，循环 `none→asc→desc→none`；有内容时禁止改列数（同 Table §8.1） |
+| Q3 | typeahead / 行 label 函数是否进第一批？ | 提议进第一批，否则键盘可达性与 VirtualListView 不一致 |
+| Q4 | 无界宽度下的 flex basis：默认 160 DIP？还是要求作者显式宽度、无界时拒绝测量？ | 提议显式默认值 + 文档声明"非内容自适应"；拒绝会让嵌套布局更难用 |
+| Q5 | 排序后视图：保持选中首项可见、保持 scroll offset 行、还是保持活动行可见？ | 提议优先保持选中/活动行可见，否则夹取 offset |
+| Q6 | 语义：是否同批给 `semantics::State` 增加 `sort` 字段？表头键盘排序同批还是第二批？ | 提议先加 `sort` 字段（只增不改），表头键盘排序放第二批并如实声明缺口 |
+| Q7 | 虚拟化语义只含可见行是否可接受？ | 提议接受并在组件文档声明，同时给表格容器一个只读总行数 |
+| Q8 | 选中行视觉归属：行 update 回调带 `selected` 布尔由作者绘制 / 新增 SelectedRow 配方 / 作者用 `row_node` + `selection_changed` 自更新？ | 提议回调带 `selected`（不新增绘制路径，符合"无配方也能满足契约"）；若维护者要默认选中背景，则走配方四步同步 |
+
+### 9.8 分批与验证预案
+
+- **Step 1 模型与选择**：公共 API、列轨道、表头、全量物化（小数据集）、选择、语义、
+  指针/键盘；先红后绿。
+- **Step 2 排序**：stable sort、表头触发、事件与语义（按 Q6 结论）。
+- **Step 3 虚拟化**：把内部全量物化替换为窗口行（公共契约不变），沿用 §4.1 的窗口一致性、
+  同窗口数据替换、首布局前滚动规则；用创建/复用计数断言窗口物化边界。
+- 每步验证：新增 `data-table` 测试（`suite: 'unit'`，注册进 `tests/meson.build`）＋选择/
+  排序/窗口边界红测；ASan/no-RTTI/no-SQLite/纯工具矩阵；`release_check --ci`；若新增
+  showcase 页与 golden，按双平台采集→维护者审批流程。
+- 新增文件按 [新增一个组件](adding_a_component.md)：`nandina/widget/data_table.hpp/.cpp`、
+  `nandina/meson.build` 登记、`builtin_component_traits.hpp`（若提供 `ui.make`）、
+  `tests/data_table_tests.cpp` + 注册、`docs/components/data_table.md` + 索引、
+  `component_roadmap.md` 阶段 5 进度。
+- 预计不新增 theme 配方（同静态 Table）；若 Q8 选 recipe 路线，走配方四步同步。
