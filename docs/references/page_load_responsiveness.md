@@ -88,7 +88,8 @@ Linux 短帧 probe 曾在退出时 SIGSEGV（泵任务强引用页面根，页�
   deferred sections` 覆盖）；builder 抛错只影响该节并上报。
 - 占位替换保持兄弟顺序（`replace_child` 的“删除后追加”语义不满足，Router 用 remove +
   insert at index）；滚动位置在分节挂载后不回跳。
-- 语义树包含所有最终节点；6 条页面 golden 迁移前后 0 差异（当时基线；2026-11-11 本地化重批后每平台 8 条）。
+- 语义树包含所有最终节点；6 条页面 golden 迁移前后 0 差异（当时基线；2026-11-11 本地化重批后
+  每平台 8 条，2026-11-13 B2a/B2b 后每平台 14 条，见[视觉回归](visual_regression.md) §7）。
 - 文档记录 API、取消语义、占位策略，并更新本页与 `text_shaping_cost.md` 的交叉链接。
 
 ## 6. 与 P4.6 Step 2b 的关系
@@ -101,5 +102,7 @@ Step 2b 的视觉迁移之前（P4.7 字重/斜体已完成，视觉验收不受
 
 - Windows/Linux `page_probe` 墙钟测量：2026-11-11，见 §1；
 - 历史文本整形成本曲线与已否决缓存：`text_shaping_cost.md` §3–§5；
-- showcase Label 页包含 Typography / Font style / Semantic colors / Wrapping / Overflow /
-  Alignment 六节，构建期节点数与测量次数见 `text_shaping_cost.md` §5.1。
+- showcase Label 页当时包含 Typography / Font style / Semantic colors / Wrapping / Overflow /
+  Alignment 六节；P4.8b 迁移后为简介节同步构建 + Typography / Font style / Semantic colors /
+  Wrapping / Overflow / Alignment / Reactive / Semantics 共 8 个延迟节（各占一个 dispatcher
+  drain），构建期节点数与测量次数见 `text_shaping_cost.md` §5.1。

@@ -60,6 +60,20 @@ application shell. Version `0.1.0-alpha.1`.
   full suite 133/133, static config `portable-bundle` OK, red-first injections for both the
   negative and positive branches. The Test step annotation now carries the unfiltered test-log
   tail so assertion text is visible in public check-run annotations.
+- **Latest (2026-11-14)**: CI is green end to end and the CPU page-golden gate is blocking.
+  `visual-golden.yml` no longer sets `continue-on-error` (B0; promoted after five consecutive
+  green Actions runs, and the promotion run on `b35629f` is green), so a real Linux CPU baseline
+  drift now fails the merge instead of passing silently. B1 reconciled the current-state docs
+  with the tree (README, references index, roadmaps, status, visual regression, performance,
+  focus, page-load, SDK/window counts): 133 tests (110 unit + 23 integration), 202 headers
+  (188 experimental + 14 internal), 28 approved goldens (7 pages × CPU/SDF × 2 platforms =
+  14/platform), 39 public components, 7-page blocking CPU coverage. B5 contract draft landed in
+  `data_components_and_virtualization.md` §9 (DataTable API shape, sorting ownership, uniform row
+  height, selection retention, virtualization staging, 8 open questions Q1–Q8) — **not
+  implemented; close Q1–Q8 before starting code**. Verification for this docs/contracts batch:
+  `release_check --ci` 8/8 with pinned clang-format 23.1.1, docs link/anchor gate ok,
+  `git diff --check` clean; no code or test changes, so the suite evidence is the preceding
+  green CI run plus the blocking CPU-golden run.
 - P4.6 Step 2b is closed — default component recipes consume the semantic role's
   leading/weight/slant through `TypeStyle::role` → `ResolvedTypeStyle` and the shared
   text-style bridge (manual `text::TextStyle` sites migrated to
@@ -69,12 +83,13 @@ application shell. Version `0.1.0-alpha.1`.
   2026-11-12: label/typography pages are 0-pixel diffs, the rest differ only in button
   glyphs/1–2 px widths. Windows full suite 125/125, Linux full suite 129/129, ASan unit
   (104 + 1 expected skip), no-RTTI unit (106/106), no-SQLite unit (101 + 1 expected skip) and
-  pure-tools (8/8) matrices passed; `release_check --ci` is 8/8. A non-blocking Linux CI
-  CPU-golden workflow
+  pure-tools (8/8) matrices passed; `release_check --ci` is 8/8. A Linux CI CPU-golden
+  workflow
   (`.github/workflows/visual-golden.yml` + `tools/visual_golden_ci.py`, headless `sdl2d`) is in
-  place and can become blocking after its first green Actions run. Outstanding: OS
+  place; it became a **blocking** gate on 2026-11-14 after five consecutive green Actions runs.
+  Outstanding: OS
   accessibility text-scale source/persistence (host-injected design is ready), B2 visual
-  acceptance debt (Table/Collapsible/Surface-Card/Shell pages + probe/golden), notebook
+  acceptance debt (Theme Shell page + remaining probe/golden coverage), notebook
   workspace slice, P4.8c. P4.7 real multi-face assets are deliberately deferred (synthetic
   fallback remains the default). Linux is reachable through the current local SSH alias
   (`nandina-linux`).
@@ -579,7 +594,7 @@ git pull --ff-only            # or git fetch <bundle> refs/heads/main:refs/remot
 meson subprojects download    # SDK packaging fixtures bundle every wrap source (incl. optional box2d)
 meson setup --reconfigure buildDir
 ninja -C buildDir
-meson test -C buildDir --print-errorlogs   # full suite: unit + integration (125 OK as of 2026-11-09)
+meson test -C buildDir --print-errorlogs   # full suite: unit + integration (latest record 129/129 as of 2026-11-13)
 ```
 
 - A reused build directory may keep a stale thin archive after a target-set change; delete
@@ -754,8 +769,9 @@ meson test -C buildDir --print-errorlogs   # full suite: unit + integration (125
   font-pipeline allocation report needs to be separated from a real failure.
 - **Skips**: window tests map Catch2 skip to Meson 77; `window-lifecycle` is skipped in ASan on
   driver-side LeakSanitizer. GPU/SDF page-golden and performance work are local/release checks;
-  the CPU-path page-golden gate runs in CI as a non-blocking workflow (`visual-golden.yml`) until
-  its first green Actions run, after which it can become blocking.
+  the CPU-path page-golden gate is a **blocking** CI workflow (`visual-golden.yml`, promoted
+  2026-11-14) that auto-covers every approved Linux CPU page; do not add new pages to the
+  workflow's page list — approve their manifest entry instead.
 - **Golden/visual**: page goldens compare per-channel tolerances against approved entries; capture
   never overwrites approved baselines, and approval needs human review metadata. Never copy
   baselines across platforms. The plain-language overview and the full capture/approve workflow

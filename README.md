@@ -38,7 +38,7 @@ NandinaUI（南天竹）是一个用 **C++26** 编写、基于 **Meson** 构建�
 - **可组合组件库** —— 覆盖内容展示、输入选择、布局滚动、浮层反馈与通用指针手势，并通过统一主题和声明式构建器组合。
 - **动画系统** —— 值级 Tween、Spring、关键帧与缓动曲线；节点表现层支持 opacity、translate、scale 等 L2 属性动画，同一节点的扁平 Tween 组合提供实验性作者入口。跨节点组合、组内 Spring 与关键帧作者入口尚未开放。
 - **现代文本引擎** —— FreeType + HarfBuzz + FriBidi + utf8proc 组成的字形管线，支持多字体、系统字体发现、复杂文字整形与双向文本。
-- **主题与设计系统** —— 三层设计令牌（primitive → semantic → component）、明暗外观（Appearance）、内置主题与样式文档。默认主题对齐 shadcn 的语义角色集，开箱即用；对比度与层级由测试守住。
+- **主题与设计系统** —— 三层设计令牌（primitive → semantic → component）、明暗外观（Appearance）、内置主题与样式文档。默认主题对齐 shadcn 的语义角色集，开箱即用；对比度诊断与层级由测试覆盖，注册期强制门槛仍待后续批次。
 - **资源系统** —— 资源清单（manifest）+ 内置/目录/内存/SQLite 四类后端，配合 `nanres` 编译器与可移植打包流程。
 - **应用运行时** —— 窗口、Router/Page 导航、视口缩放、异步作用域与统一的输入/剪贴板分发。
 - **可选 2D 物理** —— 基于 Box2D 3.x 的轻量物理桥（默认关闭）。
@@ -73,13 +73,13 @@ SQLite 数据层与资源驱动的迁移、账户服务与登录/注册，以及
 
 | 类别 | 当前可用 |
 | --- | --- |
-| 内容与展示 | Label、Image、Avatar（首字母占位）、Badge、Chip、Divider、ProgressBar、Spinner、Skeleton、EmptyState、Card |
+| 内容与展示 | Label、Image、Avatar（首字母占位）、Badge、Chip、Divider、ProgressBar、Spinner、Skeleton、EmptyState、Card、Collapsible、Table |
 | 输入与选择 | Button、Checkbox、Switch、RadioButton/RadioGroup、Slider、TextField、TextArea、Select、Combobox、Tabs、Toggle、ToggleGroup、ButtonGroup、Breadcrumb、Pagination |
 | 浮层与反馈 | Dialog、AlertDialog、Popover、DropdownMenu、ContextMenu、CommandPalette、HoverCard、Tooltip、Alert |
 | 交互扩展 | PointerArea、GestureArea（实验性） |
 | 布局与滚动 | Column、Row、Flex、FlexItem、Wrap、Stack、Padding、Center、Expanded、Grid、ScrollView、ListView |
 
-表中前四类共 37 个公开组件（`RadioGroup` 与 `RadioButton` 同行记录）；"布局与滚动"一栏是声明式布局原语，不计入组件数。完整的用途、成熟度与计划组件见 [组件参考](docs/components/README.md)。
+表中前四类共 39 个公开组件（`RadioGroup` 与 `RadioButton` 同行记录；`Table` 当前为 experimental，`Collapsible` 于 P4.2c 加入）；"布局与滚动"一栏是声明式布局原语，不计入组件数。完整的用途、成熟度与计划组件见 [组件参考](docs/components/README.md) 与[组件文档覆盖看板](docs/components/coverage.md)。
 
 当前布局以 Column、Row、Flex、Grid 等排列容器为主。场景树 anchors 已落地 scene 内核（`NodeRef<T>`、`AnchorCanvas`、`set_anchors`）与作者入口（`ui.ref<T>()`、`ui.anchor_canvas()`、builder 的 `.anchor.*` / `.parent.anchor.*` 与 `.anchors(...)`），支持父级/兄弟关系、依赖排序、批量关系切换与冲突诊断；`showcase` 的 `anchors` 页面提供侧边栏停靠切换案例。当前边界是**画布需要确定尺寸，因此 `fill` 画布无法占据排列容器的剩余空间**（显式/百分比尺寸的画布可以嵌入排列容器），把画布放在布局根再用兄弟锚点表达剩余区域即可，见 [Anchors](docs/references/anchors.md)。它与浮层锚定定位器是两项独立能力。
 
@@ -311,11 +311,12 @@ meson test -C buildDir --suite unit
   补齐（不是官方 Windows 目录约定，只为让应用能启动）；`system-fonts` 测试在 Windows 上不注册
   （它依赖 Linux 字体目录与 `setenv`）。这些改动通过 zig 交叉编译 + Wine 实跑验证，但仍需 Windows 实机确认。
 - 路径含非 ASCII 字符尚未验收（环境变量按 ANSI 读取）。
-- 本轮静态 SDL3 的 Windows 构建、探针与页面 golden 尚未重新验收；golden 基线目前只有 Linux（见
-  [视觉回归](docs/references/visual_regression.md) 的跨平台策略）。
+- 静态 SDL3 的 Windows 构建与全量套件已在 2026-11-13 布局修复批复验（**129/129**）；页面 golden
+  双平台各 14 条 approved（7 页 × CPU/SDF，平台隔离；Windows 条目经探针按 SDF 桌面会话与
+  CPU 路径分别采集，见 [视觉回归](docs/references/visual_regression.md) 的跨平台策略）。
 - 字体数据包仍是 submodule（`git clone --recursive`）；其余依赖为 wrap，首次 `meson setup` 联网拉取。
 
-### 创建 C++ 项目### 创建 C++ 项目
+### 创建 C++ 项目
 ```bash
 # 建立项目目录
 mkdir nandina_playground
@@ -415,10 +416,10 @@ meson compile -C buildDir
 - [开发参考](docs/references/README.md)：组件契约、架构约束和维护流程。
 - [构建系统与 Modules 范围](docs/references/build_system_scope.md)：当前 Meson/include 主线，以及暂缓 C++ Modules 和 CMake package 的原因。
 - [组件开发路线图](docs/references/component_roadmap.md)：当前差距、依赖关系与推荐实现顺序。
-- [开发路线](docs/references/development_roadmap.md)：**下一阶段 P1–P4 的排序、退出条件、近期切入点与非目标**。
+- [开发路线](docs/references/development_roadmap.md)：**P3/P4 收口排序、退出条件、近期切入点与非目标**。
 - [项目进度与下一步](docs/references/project_status.md)：当前能力边界、已完成批次、D1–D8 状态与验证关口。
 - [D5 资源构建、部署与运行时定位](docs/references/resource_build_and_deployment.md)：P2.1a–P2.4c 已实施的资源边界、身份/lock 契约、示例应用与验证记录（§8）。
-- [D6 作者 DSL、文本能力与内容测量](docs/references/authoring_dsl_and_content_measurement.md)：待审阅设计；先定 Label 作者能力与有限宽度测量，再决定布局语法糖、border 和 Section 的实现。
+- [D6 作者 DSL、文本能力与内容测量](docs/references/authoring_dsl_and_content_measurement.md)：方向已接受；P4.1a 盒内对齐/文本作者入口、P4.1 文本绑定与 P4.6 排版尺度已交付，剩余样式 reset 与完整测量契约待审阅。
 
 ## 🗺️ 开发计划
 
@@ -448,9 +449,9 @@ meson compile -C buildDir
 - [x] **Anchors scene 内核**：类型化弱引用、显式锚定画布、父/同画布兄弟锚线、尺寸冲突诊断、依赖排序与环检测、批量关系切换；通过 `layout_to()` 交付布局结果。
 - [x] **Anchors 作者入口**：`ui.ref<T>()`、builder 绑定与只读锚线门面、`ui.anchor_canvas()`、`.anchors(spec|source)` 与 `AnchorCanvas::set_child_anchors()` 批量切换均已落地，由 `tests/anchors_authoring_tests.cpp` 覆盖。
 - [x] **D4 默认切换与平台接口**：编入 SDL3 时默认使用 SDL3；`IPlatformWindow`、设备包装和三页逐图元对照已落地。生产 SDL 的填充/描边/圆已走 SDF（Vulkan SPIR-V 与 Windows D3D12/DXIL 均通过设备级验收），其余图元仍是 CPU 几何。
-- [x] **页面 golden 与审批**：Windows/Linux 各 8 条 approved 基线（2026-11-11 中文版重批；平台隔离）、比较器、审批/撤销工具与清单门禁。
+- [x] **页面 golden 与审批**：双平台各 14 条 approved 基线（7 页 × CPU/SDF；2026-11-11 中文版重批、2026-11-13 新增 Table/Collapsible/Surface；平台隔离）、比较器、审批/撤销工具与清单门禁；Linux CPU 路径由 CI 的 `visual-golden` 阻断门禁自动采集比较（2026-11-14 起）。
 - [x] **release 性能基线与预算门禁**：8 配置 release 基线、确定性门禁（布局 0/稳态 miss 0/binds 上限）与候选计时阈值（`--enforce` 启用）。
-- [x] **Windows 实验性支持**：MSYS2 UCRT64 release 构建、全量套件 125/125、showcase 可运行、DXIL 设备级验收；macOS 明确不支持。
+- [x] **Windows 实验性支持**：MSYS2 UCRT64 release 构建、全量套件最近记录 129/129（2026-11-13 布局修复批）、showcase 可运行、DXIL 设备级验收；macOS 明确不支持。
 - [x] **后端无关图片解码**：vendored stb（PNG/JPEG/BMP/GIF/TGA）+ 应用可注入解码器 + SDL RGBA 上传；raylib 后端与依赖已删除。
 
 ### 当前议题与推进顺序
@@ -460,31 +461,32 @@ D1–D8 是设计编号，**不表示执行顺序**。设计接受、实现完�
 
 | 议题 | 当前状态 | 下一项交付 |
 | --- | --- | --- |
-| D1 输入与焦点 | 设计已接受，未实施 | 先统一焦点提示，再文本会话与其他设备 |
-| D2 主题状态与作者模型 | 待审阅，未实施 | 先只读状态/通知，完整主题模型另批 |
-| D3 导航分组 | 方向已接受，未实施 | `type → nav_group`、空组与全局合并 |
-| D4 平台与后端 | 默认切换与 host seam 已落地，收尾中 | 逐平台交付；不把 Web 探测当作应用支持 |
+| D1 输入与焦点 | 第一阶段（P3.2a/b）与文本会话协议/预编辑/caret（P3.3a–P3.3b2a）已交付 | P3.3b2b 平台/视觉验收：X11 inline preedit/独立 Xorg、Windows 交互桌面、候选窗位置；软键盘/遮挡不支持 |
+| D2 主题状态与作者模型 | 窄投影、方案目录/选择、观察通道、作者颜色入口、CPU 合成器/对比度诊断与 Shell 多方案框架已交付 | 注册期对比度门槛、Linux default-swapchain/其他驱动 readback、内部广播收窄、Shell 页正文 |
+| D3 导航分组 | 已交付（`095336b`）：`nav_group` / `NavSection::group`、空组无标题、全局合并 | 桌面/GPU 与视觉验收补记 |
+| D4 平台与后端 | SDL3 默认路径与 host seam 已落地，raylib 已完整退役 | 逐平台交付；不把 Web 探测当作应用支持 |
 | D5 资源构建与部署 | **已实施（P2.1a–P2.4c）**：解耦、作用域、身份/lock 迁移、常量头与示例应用（lab → notebook） | 后续声明式构建扩展与部署定位汇合 |
-| D6 DSL 与内容测量 | 方向已接受，详细契约待审阅 | Label 能力/绑定规则与有限宽度测量，随后组合入口 |
-| D7 渲染质量与图片 | 方向已接受，未实施 | 混合修复、生产 SDF、共享解码、分层裁剪 |
-| D8 键码与输入事件 | 方向已接受，未实施 | 物理/逻辑键与事件契约、平台映射、输入保序 |
-| 依赖工程 | 策略已接受，未实施 | SDL3 wrap 首批，逐项迁移并同步 CI/离线 SDK |
+| D6 DSL 与内容测量 | P4.1a 盒内对齐、文本作者入口/绑定、P4.6 排版尺度与 role 指标已交付 | 剩余样式 reset、完整测量契约与组合入口 |
+| D7 渲染质量与图片 | 混合修复、生产 SDF（填充/描边/圆/线段/弧）、共享图片解码、圆角裁剪（SDF mode 3/4）已交付；MSL 未验收 | 其余图元/AA/图片/裁剪扩展、MSL 实机验收 |
+| D8 键码与输入事件 | P3.1a/b/c 已交付：事件快照、类型化逻辑/物理键与生命周期、跨类型事件保序 | 真实布局与 Windows 复验 |
+| 依赖工程 | 已完成迁移：10 个 wrap + 字体 submodule + SQLite/stb 入库；SDL3 三态解析/`deps.json`/SDK fixture/CI 三条路径/`portable-bundle`/`header-surface` 门禁已落地 | OS 包 DSO 打包（长期）、内部类型进公开签名评审、后端拆库 |
 
-近期执行主线：
+近期执行主线（排序以[开发路线 §4](docs/references/development_roadmap.md#4-建议的近期切入顺序)为准）：
 
-1. **下一轮先修 D7 混合缺陷**，补独立预期像素和固定交互帧回归。
-2. **SDL3 单项依赖与交付**：wrap 最小实验、固定来源、来源/功能开关、CI 和离线 SDK。
-3. **生产 SDF**：多参数与状态恢复实验、受控产物交付、图元与质量验收；不等待全部依赖迁移。
-4. **共享图片解码**，保持既有预处理；不依赖 SDF，可按真实应用需求提前。
-5. **D8 输入基础**与**D7 裁剪收口**分别交付，之后推进 D1 焦点提示和 D6 作者测量。
-6. D2/D3、D5 按各自前置分批推进；其余依赖迁移贯穿上述过程。技术依赖与可插入批次以统一排期为准。
+1. **CI 门禁收尾**：CPU 页面 golden 已于 2026-11-14 升级为阻断门禁，保持 `CI` 全绿。
+2. **OS 无障碍文本缩放收口**：Linux 来源与持久化归属决策；Windows 来源已接（2026-11-13）。
+3. **平台验收清账**：P3.3b2b（X11/独立 Xorg/Windows/候选窗）与 P4.5 残余（Wayland 分数缩放、热插拔、在线缩放）。
+4. **D2 收口**：注册期对比度门槛、Linux 默认 swapchain/其他驱动 readback、内部广播收窄；Shell 页正文由维护者交付。
+5. **组件扩展**：先定 DataTable 契约再实现，随后 Accordion；Sheet/Drawer 按需。
+6. **视觉与性能补充**：P4.4（input_focus golden、image 页 probe 资源挂载）与 P4.8a/c（计时日志、opt-in 批量测量）。
+7. **单独立项**：布局契约（`max_width` 与 anchors `fill`/百分比占空间）需先改 anchors/layout 契约与全部页面 golden，不与组件批混做。
 
 后续仍保留 Anchors 与排列容器组合、真实窗口验收、浮层过渡、主题家族完善及阶段 5 复合组件。
 先用真实应用验证导航、表单、图片、滚动和弹窗，再扩充抽象；Modules、CMake package、
 shell/compositor 与新平台支持各自经过专门关口。
 
 议题细节见[开发参考索引](docs/references/README.md)、[D7/D8 设计](docs/references/reference_draft.md)与
-[依赖策略](docs/references/dependency_policy.md)。本轮仅同步计划，不新增这些 API 或能力。
+[依赖策略](docs/references/dependency_policy.md)；状态与计数以门禁输出、测试注册表与 golden manifest 为准。
 
 ## 外部依赖一览
 

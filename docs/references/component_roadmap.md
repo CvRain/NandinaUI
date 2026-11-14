@@ -9,9 +9,11 @@ NandinaUI 不以逐项复制其他组件库为目标。[shadcn/ui Components](ht
 不把新增组件数量作为这一阶段的完成指标。
 
 
-作者 DSL 与文本测量的 D6 设计已归档、待审阅。进入 Section 或扩充布局工厂之前，先把
-Label 的推荐属性表、跨组件 part 规则，以及有限宽度下文字自然长高的测量协议落到测试和 showcase；
-具体分期见[作者 DSL、文本能力与内容测量](authoring_dsl_and_content_measurement.md)。
+作者 DSL 与文本测量的 D6 方向已接受：P4.1a 盒内对齐与两轴作者入口、P4.1 文本作者/绑定、
+P4.6 排版尺度与语义 role 指标已交付；剩余样式 reset、完整测量契约与 Section/组合入口待审阅。
+进入 Section 或扩充布局工厂之前，先把 Label 的推荐属性表、跨组件 part 规则，以及有限宽度下
+文字自然长高的测量协议落到测试和 showcase；具体分期见
+[作者 DSL、文本能力与内容测量](authoring_dsl_and_content_measurement.md)。
 
 项目已经拥有一套可运行的内容、输入、布局、主题和响应式基础。阶段 1 的定位、关闭与焦点设施已经落地，阶段 2 的 Tooltip、Select 与 Dialog 也全部接入，因此「每个浮层组件各自处理定位与关闭」的重复逻辑已经消除。
 
@@ -20,7 +22,7 @@ Label 的推荐属性表、跨组件 part 规则，以及有限宽度下文字�
 嵌套浮层的父子关闭关系（`OverlayOptions::parent` + `OverlayCloseReason`，`Select` / `Tooltip` 已接入），
 键码常量也收敛到单一定义处。
 
-阶段 4 的 Popover、DropdownMenu、Combobox、CommandPalette 与 HoverCard 均已落地。D1 的鼠标/键盘焦点提示与文本输入会话已接入（P3.2/P3.3a），预编辑与密码用途显示已落地（P3.3b1）；caret 区域与真实 IME/软键盘验收归 P3.3b2。P4.1/P4.1b 已交付代码批次；Showcase 视觉验收与作者颜色入口仍按开发路线单独跟踪。P4.2a 数据依据已交付，P4.2b 静态 Table 布局代码已复核收口，视觉验收仍待完成。旧源码入口退出已有阶段成果，Anchors 剩余空间测量仍需独立设计；具体进度与后续排序见[项目进度与下一步](project_status.md)。
+阶段 4 的 Popover、DropdownMenu、Combobox、CommandPalette 与 HoverCard 均已落地。D1 的鼠标/键盘焦点提示与文本输入会话已接入（P3.2/P3.3a），预编辑与密码用途显示已落地（P3.3b1）；caret 区域与真实 IME/软键盘/候选窗验收归 P3.3b2b。P4.1/P4.1b 代码批次、D2 作者颜色入口（步骤 4b）与 P4.2a 数据依据均已交付；P4.1b Surface/Card 与 P4.2b 静态 Table 的 Showcase 视觉验收已于 2026-11-13 完成（B2a/B2b，新页面 + 双平台 CPU/SDF golden），仅 Theme Shell 页另排。旧源码入口退出已有阶段成果，Anchors 剩余空间测量仍需独立设计；具体进度与后续排序见[项目进度与下一步](project_status.md)。
 
 ## 阶段 0：稳定公共边界
 
@@ -108,7 +110,9 @@ Label 的推荐属性表、跨组件 part 规则，以及有限宽度下文字�
 - 静态 `Table`（P4.2b 代码于 2026-11-05 复核完成，**Showcase 视觉验收已于 2026-11-13 完成**；
   当前保持 experimental，是否进入推荐级待组件契约评审；契约见
   [数据组件：选择模型与虚拟化依据](data_components_and_virtualization.md) §8）；
-- 在选择模型、虚拟化和排序能力成熟后再实现 `DataTable`。
+- 在选择模型、虚拟化和排序能力成熟后再实现 `DataTable`；**2026-11-14 已新增契约草案**
+  （[数据组件 §9](data_components_and_virtualization.md#9-p42d-datatable交互数据表契约草案待维护者审阅)：
+  API 形状、排序归属、统一行高、选择保留规则与 8 个待决问题），契约关闭后再开工。
 
 ## 暂不进入核心优先级
 

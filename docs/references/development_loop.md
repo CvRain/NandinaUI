@@ -210,7 +210,8 @@ painter 家族写好了但停在 `primitives/` 里当不了应用依赖、
   脚本/构建工作流进 `integration`（文件收集规则见 `tests/meson.build` 顶部注释）。
   目录、manifest 与审批流程见
   [视觉回归](visual_regression.md)。该文档 §7 描述的 CI `visual-golden` workflow 已承担
-  Linux CPU 路径（headless `sdl2d` 采集 + 确定性复跑 + 基线比较，非阻断起步）；SDF/GPU
+  Linux CPU 路径（headless `sdl2d` 采集 + 确定性复跑 + 基线比较；2026-11-12 非阻断起步，
+  2026-11-14 连续 5 次 Actions 绿后升级为阻断门禁）；SDF/GPU
   像素比较仍需真实桌面/GPU，不属于 CI 覆盖范围。
 - 状态切换也是成本：自定义 render state / 着色器切换会 flush 2D 批次，要统计每帧切换次数，
   不能只看总帧时间。采样协议、p50/p95 口径与候选阈值见[性能预算](performance_budget.md)；

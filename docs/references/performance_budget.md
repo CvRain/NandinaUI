@@ -2,8 +2,9 @@
 
 > **状态：采样协议、release 基线与确定性门禁已实施（2026-10-20）。**
 > 确定性门禁（布局 0、稳态 miss 0、binds 上限）总是生效；计时阈值按本文候选规则执行，
-> 只有 `--enforce` **且**基线 `buildtype=release` 时才阻断。CI 无 GPU，页面探针进不了 CI，
-> 这是发布检查/本地门禁。本文只谈**测量与判定**；具体渲染质量的取舍见
+> 只有 `--enforce` **且**基线 `buildtype=release` 时才阻断。CI 无 GPU：CPU 路径页面 golden
+> 已由 `visual-golden` workflow 在 CI 阻断（见[视觉回归](visual_regression.md) §7），
+> 但**性能采样**仍需 GPU/真实桌面，是发布检查/本地门禁。本文只谈**测量与判定**；具体渲染质量的取舍见
 > [D7](reference_draft.md#d7-渲染质量与后端视觉一致性)。
 
 ## 1. 为什么现有数字不能直接当基线
@@ -77,7 +78,8 @@
 - release 实测（RADV RX 6750 GRE，1200×800）：label SDF 0.451 ms（CPU 0.481，−6.2%）、
   anchors SDF 0.019 ms（CPU 0.027，−30%）、home 0.109 ms；交互换页 p50 0.465 / p95 4.814 ms，
   Dialog 开关 0.493 / 0.651 ms。debug 构建的 label SDF 为 2.505 ms（约 5.5×），不能当基线；
-- Windows 尚无性能基线（实验性平台，非当前门禁）。
+- Windows 参考基线已归档（§9 的 CPU/SDF 各 4 组，`approved=false`、`enforce_timing=false`），
+  只作 Windows 自身参考，不参与跨平台比较或计时门禁。
 
 ## 9. Windows release 参考基线（2026-10-22）
 
@@ -117,5 +119,5 @@ p95 尖峰（8.1 / 9.0 ms）来自换页，与 Linux 记录同量级，不作为
 
 ## 8. 与发布检查的关系
 
-无 GPU 的 CI 只跑确定性部分之外的门禁（format/header/artifact/golden 清单）；完整预算检查在发布
-检查或本地运行。把各门禁串成一条命令属于 P1.1，见[开发路线](development_roadmap.md)。
+无 GPU 的 CI 跑 format/header/artifact/golden 清单与 CPU 页面 golden（阻断）；完整性能预算检查
+在发布检查或本地运行。各门禁已由 `release_check.py` 串联（P1.1），见[开发路线](development_roadmap.md)。

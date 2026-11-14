@@ -1,6 +1,6 @@
 # 视觉回归：golden、容差与更新流程
 
-> **状态：双平台各 8 条 approved 基线已交付（2026-11-11 中文版重批；平台隔离）。**
+> **状态：双平台各 14 条 approved 基线已交付（7 页 × CPU/SDF；2026-11-13 B2a/B2b 后；平台隔离）。**
 > 设备/页面 golden 的候选图、
 > manifest、比较器与审批工具在 [路径契约](render_device_path_contract.md#12-页面-golden-候选层2026-10-19) §12；
 > 谁能改 golden"。第一批落地对象是 [D7](reference_draft.md#d7-渲染质量与后端视觉一致性) 的
@@ -22,7 +22,9 @@
 
 1. 创建一个隐藏的 1200×800 窗口（可见窗口会被合成器缩放，像素不可复现）；
 2. 起真实的 `NanApplication` → `NanRouter` → 场景树 → 字体管线 → `IRenderDevice`；
-3. 按 `NANDINA_PROBE_PAGE` 加载 showcase 的 `home` / `label` / `anchors` 页面之一；
+3. 按 `NANDINA_PROBE_PAGE` 加载 showcase 的页面之一（当前注册 `home`/`anchors`/`label`/
+   `typography`/`input_focus`/`table`/`collapsible`/`surface` 共 8 条路由；`image` 页尚未注册、
+   也没有 golden）；
 4. 跑固定 30 帧（dt = 1/60），在 `SDL_RenderPresent` **之前**读回像素（present 之后读到过空帧）；
 5. 按需把像素写成 BMP（`NANDINA_PROBE_CAPTURE`），或输出逐图元 trace、交互注入、性能采样。
 
@@ -64,9 +66,10 @@ compare_backend_golden.py  重新渲染 → 逐像素比较；approved 超阈值
 
 - **CI 只跑得动 CPU 路径**：`visual-golden` workflow 用 `SDL_VIDEODRIVER=dummy` +
   `NANDINA_PROBE_RENDERER=sdl2d`（软件渲染，不需要窗口/GPU/swapchain）采集 Linux 的
-  home/anchors/label/typography CPU 页面，先断言两次采集逐字节一致，再与 approved 基线
-  比较（§7）。SDF/GPU 像素比较仍需要真实桌面/GPU，是本地或发布机的手动命令；CI 照旧跑
-  与显示器无关的 `golden-manifest` 清单校验（文件、哈希、状态、approved 必须有审阅元数据）。
+  home/anchors/label/typography/table/collapsible/surface 共 7 条 CPU 页面基线，先断言两次
+  采集逐字节一致，再与 approved 基线比较（§7）；该 job 自 2026-11-14 起阻断合并。SDF/GPU
+  像素比较仍需要真实桌面/GPU，是本地或发布机的手动命令；CI 另跑与显示器无关的
+  `golden-manifest` 清单校验（文件、哈希、状态、approved 必须有审阅元数据）。
 - **它不能跨平台复用**：字体栅格化、AA、DPI、像素格式都不同，Linux 基线不能当 Windows 预期；
   `platform` 是清单键的一部分，跨平台差异只记录、不参与门禁。
 - **它不会自动变绿或自动更新**：`capture` 默认拒绝覆盖 approved 条目（要 `--force`）；
@@ -240,9 +243,9 @@ Linux 图不能当 Windows/macOS 的预期。跨平台只比较**结构性**结�
 
 1. 按 README 构建 `nandina_sdl_page_probe`；
 2. 采集：有交互式 GPU 会话时用
-   `python3 tools/capture_backend_golden.py --platform windows --pages home,label,anchors --modes sdf,cpu`；
+   `python3 tools/capture_backend_golden.py --platform windows --pages home,anchors,label,typography,table,collapsible,surface --modes sdf,cpu`；
    只能通过 SSH（无桌面、无 swapchain）时只采 CPU 路径：
-   `python3 tools/capture_backend_golden.py --platform windows --pages home,label,anchors --modes cpu --renderer sdl2d`；
+   `python3 tools/capture_backend_golden.py --platform windows --pages home,anchors,label,typography,table,collapsible,surface --modes cpu --renderer sdl2d`；
    候选文件名带平台标签（`<page>-<backend>-<platform>.png`），不会覆盖其它平台的候选图；
 3. `python3 tools/compare_backend_golden.py --platform windows --page label --backend sdf`
    （首轮与自己的候选比较应为 0 差异，确认采集确定性）；
@@ -262,15 +265,15 @@ artifact 上传（保留 14 天）。规则：
 - **只比当前平台**：harness 拒绝与检测平台不同的 `--platform`；不复制、不比较跨平台像素。
 - **不自动 approve**：CI 只读 manifest 与基线图，永不修改状态；视觉变化须由维护者审阅
   artifact 后显式运行 `approve_backend_golden.py` 批准。
-- **失败非零退出**：两次采集不一致、probe 失败、manifest 缺条目、approved 超阈值都会让
-  job 失败。当前以 `continue-on-error` **非阻断**起步；首次在真实 Actions 环境确认能复现
-  已批准基线后，删掉该行即成为阻断门禁。
+- **失败非零退出（阻断）**：两次采集不一致、probe 失败、manifest 缺条目、approved 超阈值都会让
+  job 失败并阻断合并。2026-11-14 前用 `continue-on-error` 非阻断收集证据；连续 5 次真实
+  Actions 运行绿后已删除该行，升级为阻断门禁（升级依据见 workflow 头部注释）。
 - **采集环境要钉住**：中文回退字体由 `nandina/text/system_fonts.cpp` 从系统字体目录发现，
   所以 workflow 下载固定 sha256 的 NotoSansCJK-Black（与批准基线所用字体字节相同）到
   `$HOME/.fonts`，并用 `--expect-cjk-font-sha256` 核验实际发现结果；不要改成 apt 安装
   `fonts-noto-cjk`（包版本随 runner 镜像漂移，基线会静默失配）。
 - **成本**：独立 job 要构建 vendored SDL3 + 库 + 探针，约 15–20 分钟，与主 `build` job 的
-  完整构建同量级；它是独立 workflow，不改变现有 8 个 CI job 的行为。
+  完整构建同量级；它是独立 workflow，不改变现有 `CI` 作业的行为。
 
 **2026-11-13 CI 修复记录**：`CI` 与 `visual-golden` 从 2026-10-11 起在 configure 阶段失败。
 根因有两个，都与 golden 内容无关：
