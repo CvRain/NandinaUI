@@ -1,19 +1,22 @@
-# 无 GPU 的 CPU 页面视觉门禁（spike，非阻断起步）。
+# 无 GPU 的 CPU 页面视觉门禁（阻断门禁；2026-11-14 由非阻断 spike 升级）。
 #
 # 背景：[visual_regression.md](../docs/references/visual_regression.md) §0 说明页面 golden
 # 一直是"本地/发布机人工命令"，CI 只校验清单。本 workflow 把 **CPU 几何路径**
 # （`NANDINA_PROBE_RENDERER=sdl2d` + `SDL_VIDEODRIVER=dummy`，无需窗口/GPU/swapchain）搬进
 # GitHub Actions：采集 → 两次采集逐字节一致（确定性）→ 与当前平台 approved 基线逐像素比较。
 #
-# 为什么可以在这里比：Linux 的 4 条 CPU 基线（home/anchors/label/typography）已批准；
-# 软件渲染路径在同一台机器上复跑为 0 差异、sdl2d 采集合规（见 visual_regression.md §7）。
+# 为什么可以在这里比：Linux 的 7 条 CPU 基线（home/anchors/label/typography/table/
+# collapsible/surface）已批准且均为 approved；软件渲染路径在同一台机器上复跑为 0 差异、
+# sdl2d 采集合规（见 visual_regression.md §7）。新页面在 manifest 里 approved 后自动纳入，
+# 不需要改 workflow 的页面列表。
 #
 # 规则边界：
 # - 只比较**当前平台**（linux）的基线：不复制、不比较跨平台像素；SDF/GPU 基线仍由真实
 #   Linux 机器人工采集；
 # - 绝不自动 approve：本 workflow 不写 manifest、不替换 approved 图；失败时把候选图、差异图、
 #   统计 JSON 上传 artifact 供维护者审阅；
-# - 比较失败非零退出（job 显示 failed）；`continue-on-error` 只是让它暂时不阻塞合并。
+# - 比较失败非零退出并阻断（2026-11-14 前用 `continue-on-error` 收集证据；连续 5 次
+#   Actions 绿后删除该行，升级为阻断门禁）。
 #
 # 中文字形依赖：`nandina/text/system_fonts.cpp` 会扫描系统字体目录选 CJK 回退字体，同一次
 # 采集的像素因此依赖 runner 镜像里装了什么。这里把批准基线所用的 Noto Sans CJK Black 面
@@ -21,9 +24,9 @@
 # `visual_golden_ci.py --expect-cjk-font-sha256` 会核验实际发现结果。不要改成 apt 装
 # `fonts-noto-cjk`：包版本随镜像漂移，基线会静默失配。
 #
-# 启用阻断：首次运行绿了之后删除 `continue-on-error: true` 这一行即可；本次先以非阻断方式
-# 收集证据，因为"runner 的 gcc/freetype 构建是否与批准基线逐像素一致"只能在真实 Actions
-# 环境确认。
+# 升级依据（2026-11-14）：2026-11-13 的 CI 绿 follow-up 前后连续 5 次 Actions 运行均
+# success（d753922/f10849c/78c78ee/c1fe4bb/fa2c7ec），证明 runner 的 gcc/freetype 构建与
+# 已批准 CPU 基线逐像素一致；此后的失败即真实漂移，必须让合并失败而不是静默通过。
 
 name: visual-golden
 
@@ -50,8 +53,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 40
     container: gcc:16
-    # 非阻断起步：首次确认真实 Actions 环境能复现已批准基线后，删除本行使其成为阻断门禁。
-    continue-on-error: true
     steps:
       - name: Install dependencies
         run: |
