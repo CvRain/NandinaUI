@@ -60,20 +60,19 @@ application shell. Version `0.1.0-alpha.1`.
   full suite 133/133, static config `portable-bundle` OK, red-first injections for both the
   negative and positive branches. The Test step annotation now carries the unfiltered test-log
   tail so assertion text is visible in public check-run annotations.
-- **Latest (2026-11-14)**: CI is green end to end and the CPU page-golden gate is blocking
-  (`visual-golden.yml` lost `continue-on-error` after five green runs; promotion commit
-  `b35629f` green). B1 reconciled current-state docs with the tree: 133 tests (110 unit + 23
-  integration), 202 headers (188 experimental + 14 internal), 28 approved goldens (7 pages ×
-  CPU/SDF × 2 platforms = 14/platform), 39 public components, 7-page blocking CPU coverage.
-  **Data-view contract:** `data_components_and_virtualization.md` §9 is now the **v3 final
-  design**: non-template `DataTable`/`ListView` over a shared `IRowModel` (rows only),
-  `TableColumn` as the single column source, `IItemDelegate`/`TypedItemDelegate` with RTTI-free
-  tokens checked in every build mode, stable `RowId`/`ColumnId`/`CellId`, a separate
-  `TableSelectionModel`, `GridNavigation`, local/external sorting keyed by `ColumnId`,
-  delegate-owned visuals (no recipe), composition-only internals, and a virtualized `ListView`
-  replacing the old one (`ForEach` kept). **Not implemented; follow the §9.13 batch order.**
-  Verification: `release_check --ci` 8/8 (pinned clang-format 23.1.1), docs anchors ok, diff
-  clean; docs-only, so suite evidence is the preceding green CI run.
+- **Latest (2026-11-14)**: CI is green and the CPU page-golden gate is blocking (promoted
+  2026-11-14; `b35629f` green). Current counts: 134 tests (111 unit + 23 integration), 203
+  headers (188 experimental + 15 internal), 28 approved goldens (7 pages × CPU/SDF × 2
+  platforms = 14/platform), 39 public components, 7-page blocking CPU coverage.
+  **Data-view contract:** §9 is the **v3.1 final design** (v3 + 2026-11-15 errata):
+  non-template `DataTable`/`ListView` over a shared `IRowModel` (rows only), `DataTableColumn`
+  as the single column source, `IItemDelegate`/`TypedItemDelegate` with RTTI-free tokens checked
+  in every build mode, stable `RowId`/`ColumnId`/`CellId`, `TableSelectionModel`,
+  `GridNavigation`, local/external sorting by `ColumnId`, delegate-owned visuals (no recipe),
+  composition-only internals, virtualized `ListView` (`ForEach` kept). **Batch 1A (TrackSolver +
+  static Table) is committed; DataTable/ListView remain unimplemented (next: 1B).** Verification:
+  `release_check --ci` 8/8, full suite 134/134, ASan 109+1 skip, no-RTTI 111/111, CPU `table`
+  golden byte-identical to HEAD.
 - P4.6 Step 2b is closed — default component recipes consume the semantic role's
   leading/weight/slant through `TypeStyle::role` → `ResolvedTypeStyle` and the shared
   text-style bridge (manual `text::TextStyle` sites migrated to

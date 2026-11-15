@@ -7,6 +7,7 @@
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers.hpp>
 
 #include <cmath>
 #include <limits>
@@ -453,6 +454,18 @@ namespace
     static_assert(TableSlots<widget::authoring::NodeBuilder<widget::Table>>);
     static_assert(!TableSlots<widget::authoring::NodeBuilder<widget::Label>>);
 } // namespace
+
+TEST_CASE(
+    "Table reports the content-extent message for an unbounded infinite cell width",
+    "[table][validation]"
+) {
+    auto table = widget::Table::create({{}});
+    table->add_row({value(std::numeric_limits<float>::infinity())});
+    CHECK_THROWS_WITH(
+        table->measure_layout(foundation::NanLayoutConstraints::loose()),
+        "Table content extent must fit finite layout coordinates"
+    );
+}
 
 TEST_CASE("Table rejects content totals beyond finite layout coordinates", "[table][validation]") {
     const float large = std::numeric_limits<float>::max() * 0.75F;

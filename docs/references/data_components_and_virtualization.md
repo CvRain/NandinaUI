@@ -1,10 +1,12 @@
 # 数据组件：选择模型与虚拟化依据（P4.2 阶段 5 第一批）
 
 > 状态：**2026-11-03 初稿已实施；2026-11-04 维护者复核完成（7 项修复 + 测试缺口补齐），并统一提交推送于 `5d91e01`。**
-> **2026-11-14：§9 升级为 v3 定稿（维护者评审）：数据视图采用非模板组件 + `IRowModel` 行模型 +
-> `TableColumn` 列定义 + `IItemDelegate` + 显式选择模型；同日早先的模板草案作废。§9 未实现、
-> 未开工；§8 静态 Table 与 §3/§4 基础契约不变。**
-> 本文件是阶段 5 数据组件的契约入口：已完成批次见 §1–§8，后续数据视图见 §9（v3）。
+> **2026-11-14：§9 升级为 v3 定稿；2026-11-15 v3.1 勘误定稿（维护者评审）：数据视图采用非模板
+> 组件 + `IRowModel` 行模型 + `DataTableColumn` 列定义 + `IItemDelegate` + 显式选择模型；
+> v3.1 只修正接口矛盾（命名冲突/事件可见性/ItemBinding/typed 签名/哈希/动态列/`apply` 语义），
+> 不改变总体架构。**§9 的批 1A（TrackSolver + 静态 Table 接入）已完成并提交；DataTable/ListView
+> 仍未实现，按 §9.13 继续。** §8 静态 Table 与 §3/§4 基础契约不变。**
+> 本文件是阶段 5 数据组件的契约入口：已完成批次见 §1–§8，后续数据视图见 §9（v3.1）。
 > 静态 `Table`、`DataTable`、`Accordion` 等阶段 5 组件清单仍按
 > [组件开发路线图](component_roadmap.md#阶段-5信息组织与数据展示) 分批推进，不在本批。
 
@@ -171,7 +173,7 @@ class VirtualListView`（[virtual_list_view.hpp](../../nandina/widget/virtual_li
 
 ## 7. 后续
 
-- P4.2a 已提交（`5d91e01`）。静态 `Table` 不承担行选择；交互数据视图见 §9（v3 定稿）：
+- P4.2a 已提交（`5d91e01`）。静态 `Table` 不承担行选择；交互数据视图见 §9（v3.1 定稿；批 1A 已提交）：
   非模板 `DataTable` + `IRowModel`/`TableColumn`/`IItemDelegate`/`TableSelectionModel`，
   以及新虚拟化 `ListView` 的迁移计划（旧 `ListView` 退役、`ForEach` 保留）。
 - `VirtualListView` 作者 DSL 入口与视觉验收随维护者编写的 Showcase 组合另行接入；
@@ -259,11 +261,12 @@ SelectionModel、RovingFocus、虚拟化与排序留给后续交互数据表；�
   最终复核环境中原测试通过，未修改探针、测试断言或跳过策略。
 - 本轮不声明 Windows 验证；Showcase 页面、正式视觉验收和组件使用文档正文仍由维护者手写。
 
-## 9. P4.2d 数据视图契约：DataTable 与 ListView（v3 定稿）
+## 9. P4.2d 数据视图契约：DataTable 与 ListView（v3.1 定稿）
 
-> 状态：**2026-11-14 设计定稿（维护者评审）。未实现、未开工。** 本版取代同日早先的模板草案：
-> 数据视图采用**非模板组件 + 行模型 + 列定义 + delegate + 显式选择模型**；实现分 5+1 批（§9.13）。
-> §3/§4/§8 已交付契约不变；旧 `ListView` 只作 `ForEach` 薄包装的状态随 §9.11 回收。
+> 状态：**2026-11-14 v3 定稿；2026-11-15 v3.1 勘误定稿（维护者评审）；批 1A（TrackSolver +
+> 静态 Table 接入）已完成并提交。DataTable/ListView 尚未实现，按 §9.13 继续施工。**
+> 数据视图采用**非模板组件 + 行模型 + 列定义 + delegate + 显式选择模型**；v3.1 只修正接口矛盾，
+> 不改变总体架构。§3/§4/§8 已交付契约不变；旧 `ListView` 只作 `ForEach` 薄包装的状态随 §9.11 回收。
 >
 > 决策依据（参考实现阅读）：GTK4 `GtkColumnView`（模型 + 列 factory + `GtkSelectionModel` +
 > `GtkSorter`）、Qt `QAbstractItemModel`/`QStyledItemDelegate`/`QItemSelectionModel`、
@@ -275,21 +278,20 @@ SelectionModel、RovingFocus、虚拟化与排序留给后续交互数据表；�
 
 1. **非模板组件**：`ui.make<DataTable>(columns)` / `ui.make<ListView>()`；数据经 `IRowModel` 注入，
    行对象类型不进入公共类模板。作者按模型类型写 typed delegate（§9.5），框架负责转换与校验。
-2. **列事实唯一**：行模型只负责行；列（`ColumnId`/标题/宽度/取值器/delegate/比较器）只由
-   `TableColumn` 定义。DataTable 不要求模型再声明列。
+2. **列事实唯一**：行模型只负责行；列只由 `DataTableColumn`（含现有 `TableColumn` 轨道）定义。
 3. **稳定身份**：`RowId`/`ColumnId`/`CellId` 是排序、选择、增量更新的唯一身份；**行索引不是默认身份**。
 4. **不拷贝数据**：本地排序只重排显示索引；外部排序由应用重查后 `notify_reset()`。
 5. **视觉归属二选一**：本批选择「delegate 承担全部单元格视觉，DataTable 不新增绘制路径」——因此
    **不新增 `DataTableRecipe`**。若将来要 DataTable 自绘表头/分隔/选中底，必须同时引入配方并撤回
    「无绘制路径」声明，不能两者兼称（§9.10）。
-6. **组合优先**：内部提取 `UniformRowWindow`/`TrackSolver`/delegate host/滚动命中工具，由
-   DataTable/ListView 组合；不建 `UnitViewBase` 继承树，表头/二维导航/列轨道不进公共基类。
-7. **TreeView 只保留方向**：本契约为未来树形视图保留行模型/delegate/选择扩展点，但不承诺
-   兼容或本批实现（§9.12）。
+6. **组合优先**：内部提取 `UniformRowWindow`/`TrackSolver`/`ItemHost`/滚动命中工具，由
+   DataTable/ListView 组合；不建 `UnitViewBase` 继承树。
+7. **TreeView 只保留方向**：为未来树形视图保留行模型/delegate/选择扩展点，但不承诺兼容或本批实现。
 
-### 9.2 稳定身份
+### 9.2 稳定身份与哈希
 
 ```cpp
+namespace nandina::widget {
 struct RowId { std::uint64_t value = 0; };
 struct ColumnId { std::string value; };
 struct CellId {
@@ -297,92 +299,146 @@ struct CellId {
     ColumnId column;
     friend bool operator==(const CellId&, const CellId&) = default;
 };
-// 需要 std::hash<RowId/ColumnId/CellId> 的框架特化（选择集合与通知去重使用）
+} // namespace nandina::widget
+
+// 框架在同一头文件提供 std::hash<RowId> / std::hash<ColumnId> / std::hash<CellId>
+// 特化：用户可直接把它们用于 unordered_map/unordered_set；实现无 RTTI 依赖。
 ```
 
-- 模型负责 `row_id(row)` 在插入/排序/过滤后保持稳定且唯一；简单模型可用自增计数或主键，
-  但**不提供「行索引即身份」的默认实现**（避免选择漂移）。
-- `ColumnId` 用字符串：跨列插删、主题/文档持久化、排序状态都按 id 而不是索引。
+- 模型负责 `row_id(row)` 在插入/排序/过滤后保持稳定且唯一；**不提供「行索引即身份」的默认实现**。
+  ↑ 这是**稳定身份要求**，不提供兜底；简单模型可用自增计数或主键。
+- `ColumnId` 用字符串：跨列插删、持久化、排序状态都按 id 而不是索引。
 - 选择、当前单元、锚点、SortSpec 全部按 id 存储。
 
-### 9.3 数据层：`IRowModel`
+### 9.3 数据层：`IRowModel` 与 `TypedRowModelBase`
 
 ```cpp
+struct RowRange { std::size_t first = 0; std::size_t last_exclusive = 0; };
+
+// 类型令牌：无 RTTI 构建下也可用的静态地址令牌（与 framework 既有 type-token 模式一致）。
+// 必须先于使用它的类声明。
+template<typename T>
+struct ModelTypeToken { static inline const int value = 0; };
+template<typename T>
+[[nodiscard]] auto model_type_token_of() noexcept -> const void* {
+    return &ModelTypeToken<T>::value;
+}
+
 class IRowModel {
 public:
     virtual ~IRowModel() = default;
     [[nodiscard]] virtual auto row_count() const noexcept -> std::size_t = 0;
     [[nodiscard]] virtual auto row_id(std::size_t row) const -> RowId = 0;
-protected:
-    // 子类在数据/结构变化后调用；事件由 RowModelBase 实现
-    void notify_reset();                              // 行集合/行数/顺序变化
-    void notify_data_changed(std::size_t first_row,
-                             std::size_t last_row_exclusive); // 行内容变化（与列无关）
+    // 视图/typed delegate 配对校验用；直接实现 IRowModel 时作者自己返回令牌
+    [[nodiscard]] virtual auto model_type_token() const noexcept -> const void* = 0;
+    // 变更事件：视图订阅（Event::subscribe 返回 move-only Subscription）
+    [[nodiscard]] virtual auto reset_event() const noexcept -> const reactive::Event<>& = 0;
+    [[nodiscard]] virtual auto data_changed_event() const noexcept
+        -> const reactive::Event<RowRange>& = 0;
 };
 
 class RowModelBase: public IRowModel {
 public:
-    [[nodiscard]] auto reset_event() const -> const reactive::Event<>&;
-    [[nodiscard]] auto data_changed_event() const -> reactive::Event<RowRange>;
+    // public overrides：事件查询对视图可见
+    [[nodiscard]] auto reset_event() const noexcept -> const reactive::Event<>& override {
+        return reset_event_;
+    }
+    [[nodiscard]] auto data_changed_event() const noexcept
+        -> const reactive::Event<RowRange>& override {
+        return data_changed_event_;
+    }
+
+protected:
+    void notify_reset();                              // 行集合/行数/顺序变化
+    void notify_data_changed(RowRange range);         // 行内容变化（与列无关）
+
+private:
+    reactive::Event<> reset_event_;
+    reactive::Event<RowRange> data_changed_event_;
+};
+
+// 非模板 RowModelBase 无法自动知道最终派生类型；作者通常继承这个：
+template<typename Derived>
+class TypedRowModelBase: public RowModelBase {
+public:
+    [[nodiscard]] auto model_type_token() const noexcept -> const void* override {
+        return model_type_token_of<Derived>();
+    }
 };
 ```
 
-- DataTable/ListView 都只消费 `IRowModel`；`ListView` 等价于「一列」但不暴露列模型。
-- 通知在帧内合并、在安全相位应用（复用现有延迟变更规则；遍历期不得改树）。
-- 第一批只实现 `reset` + `data_changed`；插入/删除/移动通知随虚拟化的窗口复用一起加（接口不破坏）。
-- 所有权 `std::shared_ptr<IRowModel>`；视图在 `on_exit_tree`/析构解绑订阅。
-- 取数不走模型虚函数，而走列/条目取值器（§9.4/§9.5），避免给模型强加「文本」概念。
+**通知契约（同步事件）**：
 
-### 9.4 列定义：`TableColumn`（DataTable 二维结构唯一来源）
+- 只能在 **UI 线程**发出；事件同步回调，不承诺 `RowModelBase` 自身具有「帧」概念。
+- detached/idle 状态下，视图收到事件后**立即更新内部账本**（行列数、显示序索引、当前/滚动夹取）。
+- 遍历期（input/process/animation/layout/post_layout/paint 等 `defers_tree_mutation` 相位）只记录
+  **pending reset / range**，在安全相位合并应用（同窗口内多次通知合并成一次；树变更仍走延迟通道）。
+- 视图在退出树/析构时释放订阅；模型不得在通知回调中改视图树。
+- 第一批只实现 `reset` + `data_changed`；插入/删除/移动通知随虚拟化的窗口复用一起加（接口不破坏）。
+- 所有权 `std::shared_ptr<IRowModel>`；DataTable/ListView 都只消费 `IRowModel`（ListView 等价于一列）。
+- 取数不走模型虚函数，而走列/条目取值器（§9.4/§9.5）。
+
+### 9.4 列定义：`DataTableColumn`（二维结构唯一来源）
+
+现有静态 Table 的 `TableColumn`（[table.hpp:16](../../nandina/widget/table.hpp)）**保持不变**，
+作为纯轨道定义（`std::optional<float> width; float flex`）。新类型包含它，避免同名冲突：
 
 ```cpp
 enum class SortDirection: std::uint8_t { ascending, descending };
 enum class SortStrategy: std::uint8_t { none, local, external };
 struct SortSpec { ColumnId column; SortDirection direction; };
 
-struct TableColumn {
+// 列取值器：框架内部擦除存储。model_token 为空表示该列没有取值器（内容完全由 delegate 提供）。
+struct ColumnValue {
+    const void* model_token = nullptr;   // = model_type_token_of<ModelT>()
+    std::function<std::string(const IRowModel&, std::size_t model_row)> text;
+};
+
+struct DataTableColumn {
     ColumnId id;
     std::string title;
-    enum class Width: std::uint8_t { fixed, flex } width_kind = Width::flex;
-    float width = 1.0F;              // fixed: 逻辑 px；flex: 权重（有限 > 0）
-    bool visible = true;             // false 可作「隐藏排序键列」/隐藏列
+    TableColumn track;                        // 固定/权重轨道，复用静态 Table 定义
+    bool visible = true;                      // false：可排序、不参与布局/命中/选择/导航 universe
     SortStrategy sort = SortStrategy::none;
-    // local 排序比较器（模型行 → 强弱序，方向由 SortSpec 决定）；external/none 不用
     std::function<std::weak_ordering(const IRowModel&, std::size_t a, std::size_t b)> compare;
     std::shared_ptr<IItemDelegate> delegate;  // 空 = 表级默认 delegate（列级覆盖）
-    // 取值器：框架类型擦除 + 模型类型令牌（构造糖见 §9.5）
+    ColumnValue value;                        // 默认 delegate 的文本来源（构造糖填充）
 };
 ```
 
-- 类型化构造糖（框架负责擦除与令牌，作者不写 `static_cast`）：
+类型化构造糖（框架负责擦除与令牌，作者不写 `static_cast`；文本按值返回避免悬垂 view）：
 
 ```cpp
-// 文本列：默认 delegate 使用；自定义 delegate 仍可作为兜底文本
 template<typename ModelT>
 auto text_column(ColumnId id, std::string title,
-                 std::function<std::string_view(const ModelT&)> value,
-                 TableColumn::Width width_kind = TableColumn::Width::flex,
-                 float width = 1.0F) -> TableColumn;
+                 std::function<std::string(const ModelT&, std::size_t model_row)> value,
+                 TableColumn track = {}, bool visible = true) -> DataTableColumn;
 
-// 本地排序比较器（同样擦除 + 令牌）：覆盖创建时间/修改时间/id/业务排序/自然排序
 template<typename ModelT>
-void set_local_sort(TableColumn& column,
-                    std::function<std::weak_ordering(const ModelT&, const ModelT&)> compare);
+void set_local_sort(DataTableColumn& column,
+                    std::function<std::weak_ordering(const ModelT&, std::size_t lhs_row,
+                                                     std::size_t rhs_row)> compare);
 
-// 自定义单元格内容列：delegate 用 TypedItemDelegate<ModelT>（§9.5）
 template<typename ModelT>
-auto custom_column(ColumnId id, std::string title, ...) -> TableColumn;
+auto custom_column(ColumnId id, std::string title, TableColumn track,
+                   bool visible = true) -> DataTableColumn;
 ```
 
-- **令牌校验**：`TableColumn` 记录模型类型令牌；`DataTable::set_model` / `set_columns` 时校验
-  全部列（及 delegate）与模型一致；不一致在**所有构建模式**（含 release、no-RTTI）抛
-  `std::invalid_argument`，绝不进入未定义行为。
-- 列宽：`fixed`/`flex` 沿用 §8.2 的有限宽度分配；有限宽度下 flex 分剩余空间；无界宽度下
-  以可配置 flex basis 合成（默认 160 DIP），文档声明「非内容自适应」——内容自适应需要全量
-  物化，与虚拟化冲突。`visible=false` 不参与布局与命中，但保留排序/程序化访问能力。
+- **令牌校验协议**：`DataTable::set_model` / `set_columns` 时校验每个非空
+  `ColumnValue::model_token` 与 `delegate->accepted_model_type_token()` 是否等于模型令牌；
+  `nullptr` 表示“通用/不绑定具体模型”（通用 delegate 与无取值器列）。不一致在**所有构建模式**
+  （含 release、no-RTTI）抛 `std::invalid_argument`，绝不进入未定义行为。擦除后的取值器只在
+  令牌校验通过后由框架调用。
+- **`set_columns()` 规则**（事务性）：
+  1. 空列表或重复 `ColumnId` → `std::invalid_argument`，原状态不变；
+  2. 允许在数据存在时改列；**被移除的 `ColumnId`** 从排序状态、选择集合、current、anchor 中裁剪；
+  3. **隐藏列**仍可按 `ColumnId` 程序化排序（「隐藏排序键列」实现依据），但不进入布局、命中、
+     选择和导航 universe；把列变为隐藏时裁剪该列上的选择/current/anchor。
+- 列宽：`track` 的 fixed/flex 沿用 §8.2 的有限宽度分配；无界宽度下 flex 列用可配置 flex basis
+  （默认 160 DIP）合成测量宽，文档声明「非内容自适应」——内容自适应需要全量物化，与虚拟化冲突。
 - 行高：统一 `row_height`（有限 > 0，默认 32）；变高行后续。
 
-### 9.5 渲染层：`IItemDelegate` 与 typed delegate
+### 9.5 渲染层：`IItemDelegate` / `ItemBinding` / typed delegate
 
 ```cpp
 struct ModelIndex { std::size_t row = 0; std::size_t column = 0; };  // 显示序坐标
@@ -394,48 +450,64 @@ struct ItemState {
     std::uint64_t theme_revision = 0;
 };
 
+struct ItemBinding {                 // 同步借用，delegate 不得保存引用/指针
+    const IRowModel& model;
+    std::size_t model_row = 0;       // 模型行坐标
+    ModelIndex display_index;        // 显示序坐标（排序/过滤后；两者可能不同）
+    RowId row;                       // 稳定身份 = model.row_id(model_row)
+    std::optional<ColumnId> column;  // ListView 为 std::nullopt
+    ItemState state;
+};
+
 class IItemDelegate {
 public:
     virtual ~IItemDelegate() = default;
-    virtual auto create_item(const widget::BuildContext&, ModelIndex)
+    // 绑定的模型类型令牌：nullptr = 通用 delegate（接受任意 IRowModel），
+    // TypedItemDelegate<ModelT> 覆写为 model_type_token_of<ModelT>()。
+    [[nodiscard]] virtual auto accepted_model_type_token() const noexcept -> const void* {
+        return nullptr;
+    }
+    // create 才拿 item-scoped BuildContext（with_scope），用于建控件/effect/subscription
+    virtual auto create_item(const widget::BuildContext& ui, const ItemBinding& binding)
         -> std::shared_ptr<scene::NanControl> = 0;
-    virtual void update_item(scene::NanControl&, const widget::BuildContext&,
-                             ModelIndex, const ItemState&) = 0;
+    // update 会被反复调用：只更新控件，不得安装 effect/subscription（避免每次更新重复订阅）
+    virtual void update_item(scene::NanControl& control, const ItemBinding& binding) = 0;
 };
 
 template<typename ModelT>
 class TypedItemDelegate: public IItemDelegate {
 public:
-    // 框架唯一转换点：校验模型类型令牌后 static_cast，再分派到类型化虚函数
+    // 令牌校验通过后，框架只在这里做一次 static_cast
+    [[nodiscard]] auto accepted_model_type_token() const noexcept -> const void* override {
+        return model_type_token_of<ModelT>();
+    }
+
 protected:
-    virtual auto create_typed(const widget::BuildContext&, const ModelT&, ModelIndex)
+    virtual auto create_typed(const widget::BuildContext&, const ModelT&, const ItemBinding&)
         -> std::shared_ptr<scene::NanControl> = 0;
-    virtual void update_typed(scene::NanControl&, const ModelT&, ModelIndex,
-                              const ItemState&) = 0;
+    virtual void update_typed(scene::NanControl&, const ModelT&, const ItemBinding&) = 0;
 };
 ```
 
-- **约定**：`IItemDelegate` 的名称面向 list/table；表格列通过 `TableColumn::delegate` 持有同一个
-  接口（不再另立 `ICellDelegate`；若实现批证明列级语义需要更窄接口，再以派生/别名引入，不改变本契约）。
-- **delegate 生命周期**：创建 → 绑定（数据/状态）→ 复用（滚动/数据替换）→ 销毁；框架内部由
-  delegate host 管理 keyed 复用（复用规则与 `ForEach` 同族）。首批先 create/update 两阶段，
-  窗口复用在虚拟化批次接入，公共接口不变。
-- **自定义绘制**：`create_item` 返回任意 `NanControl`（组合 Label/Button/Surface，或自绘
-  `on_draw` 的轻量节点）。「开发者自己绘制」两种粒度都成立；文本请走文本管线/组合控件，
-  不要绕开风格与字体管线。
-- **默认 delegate**：`TextItemDelegate`（单元格）+ `TextHeaderDelegate`（表头），只用语义
-  token/typography role，不硬编码颜色；映射见 §9.10。作者可整体替换或按列覆盖。
-- **类型转换责任在框架**：作者不写 `static_cast`；`TypedItemDelegate<ModelT>` / 列构造糖 /
-  typed 取值器已封装转换与令牌校验（无 RTTI 构建同样生效，release 也检查）。
+- **约定**：`IItemDelegate` 名称面向 list/table；表格列通过 `DataTableColumn::delegate` 持有同一接口。
+- **生命周期**：create → bind/update → 复用（滚动/数据替换）→ 销毁；由内部 ItemHost 做 keyed 复用
+  （与 `ForEach` 同族）。首批 create/update 两阶段，窗口复用在虚拟化批次接入，公共接口不变。
+- **自定义绘制**：`create_item` 返回任意 `NanControl`（组合或自绘 `on_draw` 的轻量节点）；文本请走
+  文本管线/组合控件。
+- **默认 delegate**：`TextItemDelegate`（单元格）+ `TextHeaderDelegate`（表头），只用语义 token /
+  typography role；默认文本**单行、省略号、`max_lines=1`**（匹配统一行高）。作者可整体替换或按列覆盖。
+- **类型转换责任在框架**：作者不写 `static_cast`；`TypedItemDelegate<ModelT>` / 列构造糖 / typed
+  取值器封装转换与令牌校验（无 RTTI 构建同样生效，release 也检查）。通用 delegate（默认 delegate、
+  不读具体模型的展示 delegate）返回 `accepted_model_type_token() == nullptr`，可配任意模型。
+- `BuildContext` 与 `ItemBinding` 都是同步借用；delegate 不得把它们或其引用保存到控件之后使用。
 
 ### 9.6 选择层：`TableSelectionModel`
 
-现有 `SelectionModel<Key>` 的范围是一维有序向量（[selection_model.hpp:125](../../nandina/widget/selection_model.hpp)），
-**不能**表达 Excel 式矩形单元格选择；DataTable 新增独立模型（一维 ListView 仍用 `SelectionModel<RowId>`）。
+复用现有选择模式枚举（[selection_model.hpp:30](../../nandina/widget/selection_model.hpp) 的
+`widget::SelectionMode`），不再声明第二个；二维行为另用 `SelectionBehavior`：
 
 ```cpp
 enum class SelectionBehavior: std::uint8_t { cells, rows, columns };
-enum class SelectionMode: std::uint8_t { single, multiple };
 enum class SelectionOp: std::uint8_t { replace, toggle, extend };
 
 class ITableSelectionModel {
@@ -449,82 +521,94 @@ public:
     [[nodiscard]] virtual auto selected() const -> const std::vector<CellId>& = 0;
     [[nodiscard]] virtual auto changed() const -> const reactive::Event<>& = 0;
     virtual void clear() = 0;
+    // extent 由视图按显示序展开（矩形/整行/整列）；调用者保证身份已验证
+    virtual void apply(SelectionOp op, CellId target, std::span<const CellId> extent) = 0;
 };
 
-// 内置实现：身份集合 + 当前/锚点；模式与行为在构造时固定
 class TableSelectionModel final: public ITableSelectionModel { ... };
 ```
 
-- **操作入口由视图计算候选集合**：视图把指针/键盘落点解析为 `CellId`，按显示序把
-  `extend`（shift）展开成矩形身份集合，再调用选择模型的 `apply(SelectionOp, cells, target)`
-  （最终签名在实现批定稿，语义如下）；选择模型只存身份集合、当前、锚点。
-- 语义：`replace` 清空后选中；`toggle`（ctrl）翻转；`extend`（shift）以锚点为角的矩形；
-  `single` 模式任何操作只保留一个；`multiple` 模式累加/矩形替换。
-- 行为：首批只实现 `cells`（你确认的顺序：单元格 → 行 → 列）；`rows/columns` 由视图把整行/整列
-  展开成 cell 集合后进入同一模型，后续批次补便捷入口与查询。
-- **跨排序/过滤稳定**：选择按身份存；排序后选中集合不漂移，锚点仍在原身份上（该身份不存在时
-  下次 extend 前清空锚点）。
-- 选中视觉由 delegate 依据 `ItemState::selected` 表达，不由视图绘制（§9.10）。
+`apply()` 语义（定稿）：
+
+- 身份存在性由 **DataTable 程序化入口**负责校验；`apply()` 只处理已验证身份。
+- `extent` 为空 → 视为 `{target}`；**非空 extent 不含 target → `std::invalid_argument`**（调用违约）。
+- `replace`：清空 → 选中 extent；current=target；anchor=target。
+- `toggle`：target 已选则移除，否则加入；current=target；anchor=target（Ctrl 单击）。
+- `extend`：选中集合替换为 extent（含两端）；current=target；**anchor 保持不变**（无 anchor 时取 target）。
+- `SelectionMode::single`：忽略 extent，只保留 target。
+- `changed()` 在**选择集合、current、anchor 任一可观察状态变化**时触发，即使选中集合没变。
+- 行为：首批只实现 `cells`（单元格 → 行 → 列按后续批次）；跨排序/过滤按身份稳定；隐藏列不在 universe。
 
 ### 9.7 键盘导航：`GridNavigation`
-
-`RovingFocus` 是一维列表模型，**不能**把单元格 row-major 展平就称为表格导航。新增纯逻辑：
 
 ```cpp
 enum class GridDirection: std::uint8_t { up, down, left, right };
 class GridNavigation {
 public:
-    void set_shape(std::size_t rows, std::size_t columns) noexcept;  // 显示态
+    void set_shape(std::size_t rows, std::size_t columns) noexcept;  // 显示态；0 行/0 列 → 无 current
     void set_page_rows(std::size_t rows) noexcept;                   // 视口可见行数
-    void set_current(ModelIndex index) noexcept;                     // 夹取到合法范围
-    [[nodiscard]] auto current() const noexcept -> ModelIndex;
-    auto move(GridDirection) -> bool;        // 上下保持列，左右保持行
-    auto home() -> bool; auto end() -> bool; // 行首/行尾
-    auto page_up() -> bool; auto page_down() -> bool;  // 保持列
-    [[nodiscard]] auto scroll_to_index() const -> std::size_t; // 需要保证可见的行
+    void set_current(ModelIndex index) noexcept;   // 非空网格夹取；空网格清空 current
+    [[nodiscard]] auto current() const noexcept -> std::optional<ModelIndex>;
+    auto move(GridDirection) -> bool;        // 空网格恒 false；上下保持列，左右保持行
+    auto home() -> bool; auto end() -> bool; // 行首/行尾；空网格恒 false
+    auto page_up() -> bool; auto page_down() -> bool;  // 保持列；空网格恒 false
+    [[nodiscard]] auto scroll_to_index() const -> std::optional<std::size_t>; // 空网格 nullopt
 };
 ```
 
-- DataTable 把键盘事件映射为 GridNavigation 调用，并同步选择模型（move 更新 current；
-  `Space` 切换选中、`Enter` 激活、shift+方向由视图用 anchor 展开矩形）。
+- **空网格**：行数或可见列数任一为 0 时不存在合法坐标，不产生虚假 `(0,0)`：`current()` /
+  `scroll_to_index()` 返回 `std::nullopt`，所有移动/Home/End/Page 返回 false；`set_shape` 从非空
+  变空时清空 current。
+- **同步归属**：GridNavigation 只持有显示序 `ModelIndex`；`TableSelectionModel` 只持有身份
+  `CellId`。视图负责双向映射：移动时把 current 写入选择模型；reset/排序后按身份重算显示坐标
+  （身份消失则夹取）。两者都不持有对方的副本作为事实来源。
 - 表头键盘排序在批 3 实现：表头是独立 delegate host + 可聚焦单元，不与网格导航混用。
 
 ### 9.8 排序：本地 / 外部 / 不可排
 
 ```cpp
 enum class SortRequestReason: std::uint8_t { user_header_click, programmatic };
-struct SortRequest { ColumnId column; SortDirection direction; };
+struct SortRequest {
+    ColumnId column;
+    SortDirection direction;
+    SortRequestReason reason;   // 区分表头点击与程序化 set_sort
+};
 ```
 
-- **状态**：DataTable 持有 `std::optional<SortSpec>`（ColumnId + 方向），并维护**显示序索引表**
-  `std::vector<std::size_t>`（显示行 → 模型行）。排序只重排显示序，不改模型、不拷贝行数据。
+- **状态**：DataTable 持有 `std::optional<SortSpec>`（按 ColumnId），并维护**显示序索引表**
+  （显示行 → 模型行）。排序只重排显示序，不改模型、不拷贝行数据。
 - **本地**（`local`）：列提供比较器，`std::stable_sort` + 方向；相等项保持模型顺序；选择身份不变。
-- **外部**（`external`）：DataTable 不重排；发出 `sort_requested` 事件（含 reason），应用重新查询
-  数据库/分页后 `notify_reset()` 更新模型；DataTable 保留排序状态用于表头指示，显示顺序以模型为准。
+- **外部**（`external`）：DataTable 不重排；**`reactive::Event<SortRequest>` 是事实来源**，同时提供
+  `set_on_sort_requested()` 便捷入口（按现有 callback scope 生命周期守护）；应用重新查询后
+  `notify_reset()`；DataTable 保留排序状态用于表头指示，显示顺序以模型为准。
 - **不可排**（`none`）：表头不响应点击；程序化 `set_sort` 返回 false。
-- 自定义业务排序（创建时间/修改时间/id/自然排序/本地化）由 local 比较器闭包覆盖；非显示字段用
-  `visible=false` 的列承载；多列排序不在本批（SortSpec 设计成可扩展为数组，后续非破坏性加）。
-- 表头点击循环：`none → ascending → descending → none`（仅 sortable 且 visible 列）；程序化
-  `set_sort/clear_sort`；`sort_changed()` 事件无载荷。
-- 排序后视图：优先保持 `current`（否则首个选中）单元可见，否则把 scroll offset 夹到合法范围。
+- 自定义业务排序（创建时间/修改时间/id/业务规则/自然排序/本地化）由 local 比较器闭包覆盖,
+  比较器签名 `std::weak_ordering(const ModelT&, std::size_t lhs_row, std::size_t rhs_row)`；非显示字段
+  用 `visible=false` 的列承载；多列排序不在本批（SortSpec 预留可扩展）。
+- 表头点击循环：`none → ascending → descending → none`（仅 sortable 且 visible 列）；`sort_changed()`
+  无载荷；排序后视图优先保持 current（否则首个选中）单元可见，否则夹取 scroll offset。
 
 ### 9.9 视图与内部共享工具（组合，不建基类）
 
-```cpp
-namespace widget::detail {
-class UniformRowWindow;   // 统一行高窗口：offset↔可见行区间、scroll clamp、row key 复用账本
-class TrackSolver;        // 固定/权重列轨道解算（静态 Table 与 DataTable 共用）
-class ItemHost;           // delegate 控件 host：create/update/销毁/复用 keyed 子控件
-struct ScrollHitTest;     // 视口几何、滚动偏移、行列命中与可见性
-}
-```
+| 工具 | 职责 | 落地批次 |
+| --- | --- | --- |
+| `internal::TrackSolver`（`track_solver.hpp/.cpp`） | 纯轨道数学：固定/权重分配、无界 intrinsic、gap、有限性校验；**不测量节点** | **1A（已完成 2026-11-15）** |
+| `internal::UniformRowWindow` | 统一行高窗口：内容高度、offset 夹取、半开可见区间、滚动显现数学、行命中 | 1B |
+| `internal::ItemHost` | delegate 控件 host：create/update/销毁/keyed 复用、每项 scope | 2B（与真实消费者一起设计） |
+| 滚动/列命中 | 行命中并入 `UniformRowWindow`；列命中等 DataTable 出现后再提取 | 1B/2B |
 
-- `UniformRowWindow` + `ItemHost` 由 DataTable/ListView 组合；`TrackSolver` 同时服务静态 Table
-  （内部重构，**行为与页面 golden 保持 0 差异**）。
-- 表头、二维导航、列轨道不进入共享基类；DataTable 自己组合 header host + grid navigation。
+- `TrackSolver` 无状态，实现为内部纯函数（`validate_tracks` + `solve_tracks`），不建类/成员；
+  `Table` 的 `columns_` 仍是唯一事实来源，每次验证/求解做轻量 `TrackSpec` 转换，不缓存第二份。
+- 输入：`std::span<const TrackSpec>`、`std::optional<float> available_width`、`std::span<const float>
+  intrinsic_widths`（仅无界使用）、`gap`；输出 widths + total_width。
+- 约束：有界宽度下 intrinsic 不使用；无界时 intrinsic 数量必须等于轨道数；非有限 intrinsic 与旧
+  实现一致，在总宽检查处报 `Table content extent must fit finite layout coordinates`；负 intrinsic
+  照旧夹取为 0；`solve_tracks()` 自身执行验证，不依赖调用者先验证；`Table::set_columns()` 仍先
+  验证候选值保证失败不修改状态；固定列不测 intrinsic，flex 列保持「列外层、行内层」测量顺序；
+  保留现有 Table 对外异常类型与消息；`layout_extent()` 继续留在 `table.cpp` 处理行高与坐标。
 - 输入：复用场景树 capture/bubble（[scene_tree.cpp:1335](../../nandina/scene/scene_tree.cpp)）——
-  delegate 内的按钮等控件先消费事件；DataTable 只在冒泡到手时做命中→选择→回调。
-  回调建议：`on_cell_clicked/on_cell_double_clicked/on_cell_activated/on_row_activated/on_header_clicked`。
+  delegate 内控件先消费事件；DataTable 只在冒泡到手时做命中→选择→回调。回调建议：
+  `on_cell_clicked/on_cell_double_clicked/on_cell_activated/on_row_activated/on_header_clicked`。
 
 ### 9.10 默认视觉归属（本批：delegate-only，不新增配方）
 
@@ -536,18 +620,18 @@ struct ScrollHitTest;     // 视口几何、滚动偏移、行列命中与可见
 
 | 部位 | shadcn | 默认实现 |
 | --- | --- | --- |
-| 单元格文本 | `text-sm` + `p-2` | `TypographyRole::label` + `spacing_sm` 内边距 |
+| 单元格文本 | `text-sm` + `p-2` | `TypographyRole::label` + `spacing_sm` 内边距；单行省略号 |
 | 表头 | `text-muted-foreground font-medium h-10 border-b` | `muted_foreground` + `label` 角色 + 500 字重 + `spacing_sm`；底边 `border`/`border_thin` |
 | 行分隔 | `border-b` | 每格底边 `border`/`border_thin`（连续成行线） |
 | 行 hover | `bg-muted/50` | `muted` + `opacity_hover_overlay` |
 | 行选中 | `bg-muted` | `muted` 填充 |
 | 单元格选中 | — | `ColorToken::selection` 填充（主题可覆盖） |
 | 当前单元 | focus ring | 键盘模态下 `ring` token；复用 P3.2a 输入模态策略 |
-| 排序指示 | 图标箭头 | 默认 header delegate 用**线段/三角图元绘制**（现有 `DrawContext` 图元，参考 Select/Menu 的箭头绘制），不用 `▲/▼` 文本——避免字体覆盖、基线与测量耦合 |
+| 排序指示 | 图标箭头 | 默认 header delegate 用**线段/三角图元绘制**（参考 Select/Menu 箭头），不用 `▲/▼` 文本 |
 | 空表 | "No results." | DataTable 组合默认 `EmptyState` 子控件（组件组合，不是自绘）；作者可替换 |
 
-- 主题可覆盖路径：语义 token / 替换 delegate / 按列覆盖 delegate；如果将来主题作者需要更细粒度
-  的表头/分隔/选中底控制，再引进 `DataTableRecipe`（非破坏性增补，同时更新本节声明）。
+- 主题可覆盖路径：语义 token / 替换 delegate / 按列覆盖 delegate；若将来需要更细粒度控制，再引入
+  `DataTableRecipe`（非破坏性增补，同时更新本节声明）。
 - 不硬编码颜色；默认 delegate 解析 token 时跟随 `theme_revision`。
 
 ### 9.11 ListView 与 VirtualListView 迁移
@@ -556,7 +640,7 @@ struct ScrollHitTest;     // 视口几何、滚动偏移、行列命中与可见
 | --- | --- |
 | `ForEach` | **保留**：声明式全量键控区域（不是数据视图） |
 | 旧 `ListView`（`ForEach` 薄包装，[list_view.hpp:23](../../nandina/widget/list_view.hpp)） | **退役**；`BuildContext::for_each()`（[build_context.hpp:383](../../nandina/widget/build_context.hpp)）改为直接使用 `ForEach` |
-| 新 `ListView` | 基於 `IRowModel` + `IItemDelegate` + 虚拟窗口的 **1D 虚拟化数据视图**；行选择用 `SelectionModel<RowId>`；不再新增非虚拟化版本（该职责归 `ForEach`） |
+| 新 `ListView` | 基于 `IRowModel` + `IItemDelegate` + 虚拟窗口的 **1D 虚拟化数据视图**；行选择用 `SelectionModel<RowId>`；第一版统一行高；不再新增非虚拟化版本（该职责归 `ForEach`） |
 | `VirtualListView` | 暂时兼容；新 `ListView` 稳定后评估迁移或退役（其模板 API/913 行测试单独批次） |
 
 - 新 `ListView` 与 DataTable 共享 `IRowModel`、`IItemDelegate`、`UniformRowWindow`/`ItemHost`/
@@ -566,38 +650,46 @@ struct ScrollHitTest;     // 视口几何、滚动偏移、行列命中与可见
 
 ### 9.12 非目标
 
-列拖拽/重排/合并、单元格内编辑、变高行、水平滚动、粘性列、多列排序、分组/树形、
-分页组件（只提供外部排序请求事件）、选中视觉配方、TreeView 实现/兼容承诺、
-ListView 与 DataTable 共用同一选择模型类（只共享身份与 delegate 词汇）。
+列拖拽/重排/合并、单元格内编辑、变高行、水平滚动、粘性列、多列排序、分组/树形、分页组件
+（只提供外部排序请求事件）、选中视觉配方、TreeView 实现/兼容承诺、ListView 与 DataTable
+共用同一选择模型类（只共享身份与 delegate 词汇）。
 
 ### 9.13 实施批次与验收
 
 | 批 | 内容 | 闸门 |
 | --- | --- | --- |
-| 1 | 内部设施提取：`UniformRowWindow`、`TrackSolver`、`ItemHost`、滚动命中；静态 Table 复用 TrackSolver、VirtualListView 复用窗口工具 | 行为不变：静态 Table golden 0 差异、VirtualListView 913 行测试全绿、主套件/ASan |
-| 2 | `RowId/ColumnId/CellId`、`IRowModel/RowModelBase`、`TableColumn`+typed 构造糖/令牌、`IItemDelegate/TypedItemDelegate`、`TableSelectionModel`、`GridNavigation`、`DataTable`（虚拟化前：全量物化，公共头**不导出**，`header_surface.toml` 记为 internal） | 红先单测：身份/通知/令牌不匹配抛错/矩形选择/导航/本地排序/外部排序请求；主套件+ASan |
-| 3 | DataTable 虚拟化 + 表头键盘排序 + 公共导出（`header_surface.toml` 转 experimental）+ 组件文档/索引 | 窗口物化计数、复用、滚动边界、键盘/语义红先；双平台 Showcase 页 + golden 由维护者交付/审批 |
-| 4 | `BuildContext::for_each()` 改 `ForEach` 直接实现；相关测试/文档同步 | for_each 行为不变；authoring 测试全绿 |
-| 5 | 新虚拟化 `ListView` + notebook 迁移 + 旧 `ListView` 退役（sdk_surface 记录破坏性变更） | ListView 红先（窗口/行选择/delegate 复用）；notebook 构建；全矩阵 |
-| 6（另议） | `VirtualListView` 迁移/退役、TreeView | 单独立项 |
+| **1A ✅ 已完成（2026-11-15，`refactor(table): extract shared track solver`）** | `internal::track_solver.hpp/.cpp` 纯函数 + 静态 Table 接入（删除原 validate_tracks 与列宽分配代码） + 直接单测 | 主套件 134/134、ASan 109+1 skip、no-RTTI 111/111；CPU table golden 与 HEAD 逐字节一致（A/B）；`release_check --ci` 8/8 |
+| **1B** | 从 VirtualListView 提取 `UniformRowWindow`（内容高度/offset 夹取/半开可见区间/滚动显现/行命中）；pending 调度与 ForEach 复用留在 VirtualListView | VirtualListView 913 行测试全绿；行为不变 |
+| **2A** | 身份 + `std::hash`、`RowRange`、`IRowModel`/`RowModelBase`/`TypedRowModelBase`、类型令牌、`TableSelectionModel`、`GridNavigation`（纯协议，不建 DataTable 节点） | 红先单测：身份/通知合并/令牌不匹配/矩形选择/导航 |
+| **2B** | `DataTableColumn`、delegate/`ItemBinding`/`TypedItemDelegate`、`ItemHost`、全量物化、本地/外部排序；公共头标 `internal` 不导出 | 红先单测：列事务、排序状态迁移、delegate 生命周期、外部排序事件 |
+| **3** | DataTable 虚拟化 + 表头键盘排序 + 公共导出（`header_surface.toml` 转 experimental）+ 组件文档/索引 | 窗口物化计数、复用、滚动边界、键盘/语义红先；双平台 Showcase 页 + golden 由维护者交付/审批 |
+| **4** | `BuildContext::for_each()` 改 `ForEach` 直接实现；相关测试/文档同步 | for_each 行为不变；authoring 测试全绿 |
+| **5** | 新虚拟化 `ListView` + notebook 迁移 + 旧 `ListView` 退役（sdk_surface 记录破坏性变更） | ListView 红先（窗口/行选择/delegate 复用）；notebook 构建；全矩阵 |
+| **6（另议）** | `VirtualListView` 迁移/退役、TreeView | 单独立项 |
 
-**公共 API 闸门**：批 2 的 DataTable 头只作 internal 构建输入，不进入 `sdk_surface` 公共面；
+**公共 API 闸门**：2B 的 DataTable 头只作 internal 构建输入，不进入 `sdk_surface` 公共面；
 批 3 虚拟化验收通过后才转为 experimental 并在 `sdk_surface.md` 记录。
+
+**施工纪律（1A 起）**：每批先红先测试再实现；工作树保持未提交供维护者复核；本契约只随已证实的
+实现进度更新状态，不把计划写成已实现。
 
 ### 9.14 验证预案
 
-- 单测：identity/hash、模型通知合并、令牌校验（含 release/no-RTTI）、列轨道（复用 §8.2 断言）、
-  delegate 生命周期/复用、矩形选择（replace/toggle/extend、单选/多选、跨排序身份稳定）、
-  GridNavigation（上下左右/Home/End/PageUp/Down 保持列）、本地排序稳定性、外部排序请求事件、
+- 单测：TrackSolver 轨道数学；identity/hash；模型通知合并；令牌校验（含 release/no-RTTI）；
+  delegate 生命周期/复用；矩形选择（replace/toggle/extend、单选/多选、跨排序身份稳定）；
+  GridNavigation（上下左右/Home/End/PageUp/Down 保持列）；本地排序稳定性、外部排序请求事件；
   虚拟化窗口物化与滚动边界、表头键盘排序语义。
 - 矩阵：主套件 + ASan/UBSan + no-RTTI + no-SQLite + 纯工具 + `release_check --ci`（每批）。
 - 视觉：默认 delegate 的 token 解析与主题切换单测；Showcase 页面正文与双平台 golden 由维护者
   手写/审批（组件先在 showcase 验收）。
 - 性能：虚拟化窗口物化计数断言（不依赖墙钟）；页面加载成本按 P4.8b 口径可选报告。
 
-### 9.15 需要在实现批定稿的小项（不阻塞开工）
+### 9.15 已定项（v3.1，原 §9.15 开放项关闭）
 
-1. `TableSelectionModel::apply(...)` 的最终签名与矩形展开归属（视图 vs 模型）。
-2. 默认 delegate 的空值/换行/溢出策略（沿用 §8.2 与 Label 溢出策略的哪一档）。
-3. ListView 行高策略：统一行高 vs 内容自然高度（虚拟化下建议统一）。
-4. 外部排序的请求事件承载：`reactive::Event<SortRequest>` vs 回调 setter（与现有组件风格对齐）。
+1. **`TableSelectionModel::apply(SelectionOp, CellId target, std::span<const CellId> extent)`**：
+   矩形展开由视图负责；非空 extent 不含 target 抛 `invalid_argument`；身份有效性由 DataTable
+   程序化入口校验（§9.6）。
+2. **默认文本 delegate**：单行、省略号、`max_lines=1`，适配统一行高。
+3. **ListView 第一版**：统一行高。
+4. **外部排序**：`reactive::Event<SortRequest>` 为事实来源，同时提供 `set_on_sort_requested()`
+   便捷入口（按 callback scope 生命周期守护）。

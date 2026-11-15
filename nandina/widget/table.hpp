@@ -72,7 +72,6 @@ namespace nandina::widget
         [[nodiscard]] auto total_rows() const noexcept -> std::size_t;
         void order_rows();
         void content_changed();
-        void validate_tracks(const std::vector<TableColumn>& columns, float gap) const;
 
         std::vector<TableColumn> columns_;
         std::optional<Row> header_;

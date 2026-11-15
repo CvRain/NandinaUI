@@ -304,6 +304,13 @@ table_tests = executable(
 )
 test('table', table_tests, suite: 'unit')
 
+track_solver_tests = executable(
+    'track_solver_tests',
+    files('track_solver_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('track-solver', track_solver_tests, suite: 'unit')
+
 selection_model_tests = executable(
     'selection_model_tests',
     files('selection_model_tests.cpp'),

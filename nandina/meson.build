@@ -186,6 +186,8 @@ module_widget = files(
     'widget/internal/focus_scope.hpp',
     'widget/internal/text_style_bridge.hpp',
     'widget/internal/focus_scope.cpp',
+    'widget/internal/track_solver.hpp',
+    'widget/internal/track_solver.cpp',
     'widget/primitives/text.hpp',
     'widget/primitives/text.cpp',
     'widget/primitives/text_presentation.hpp',

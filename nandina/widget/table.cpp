@@ -2,10 +2,12 @@
 #include "table.hpp"
 
 #include "../scene/scene_tree.hpp"
+#include "internal/track_solver.hpp"
 
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <optional>
 #include <stdexcept>
 #include <unordered_set>
 #include <utility>
@@ -63,6 +65,16 @@ namespace nandina::widget
             }
         }
 
+        auto to_track_specs(const std::vector<TableColumn>& columns)
+            -> std::vector<internal::TrackSpec> {
+            std::vector<internal::TrackSpec> tracks;
+            tracks.reserve(columns.size());
+            for (const auto& column: columns) {
+                tracks.push_back({.width = column.width, .flex = column.flex});
+            }
+            return tracks;
+        }
+
         auto layout_extent(const double value) -> float {
             if (!std::isfinite(value) || value < 0.0
                 || value > static_cast<double>(std::numeric_limits<float>::max()))
@@ -84,26 +96,9 @@ namespace nandina::widget
         return std::make_shared<Table>(std::move(columns));
     }
 
-    void Table::validate_tracks(const std::vector<TableColumn>& columns, const float gap) const {
-        if (columns.empty()) {
-            throw std::invalid_argument("Table requires at least one column");
-        }
-        double total = static_cast<double>(gap) * static_cast<double>(columns.size() - 1);
-        for (const auto& column: columns) {
-            if (!std::isfinite(column.flex) || column.flex <= 0.0F
-                || (column.width && (!std::isfinite(*column.width) || *column.width < 0.0F)))
-            {
-                throw std::invalid_argument("Table widths must be non-negative and flex positive");
-            }
-            total += column.width.value_or(0.0F);
-        }
-        if (total > std::numeric_limits<float>::max()) {
-            throw std::invalid_argument("Table track widths and gaps must have a finite sum");
-        }
-    }
-
     void Table::set_columns(std::vector<TableColumn> columns) {
-        validate_tracks(columns, column_gap_);
+        const auto tracks = to_track_specs(columns);
+        internal::validate_tracks(tracks, column_gap_);
         if ((header_ || !rows_.empty()) && columns.size() != columns_.size()) {
             throw std::logic_error("Table column count cannot change while rows exist");
         }
@@ -227,7 +222,8 @@ namespace nandina::widget
 
     void Table::set_column_gap(const float gap) {
         require_gap(gap);
-        validate_tracks(columns_, gap);
+        const auto tracks = to_track_specs(columns_);
+        internal::validate_tracks(tracks, gap);
         column_gap_ = gap;
         mark_layout_dirty();
     }
@@ -272,7 +268,6 @@ namespace nandina::widget
 
     auto Table::geometry(const float available_width) -> Geometry {
         Geometry result;
-        result.widths.resize(columns_.size(), 0.0F);
         std::vector<const Row*> rows;
         if (header_) {
             rows.push_back(&*header_);
@@ -280,41 +275,33 @@ namespace nandina::widget
         for (const auto& row: rows_) {
             rows.push_back(&row);
         }
-        double reserved = static_cast<double>(column_gap_) * (columns_.size() - 1);
-        double weight = 0.0;
-        for (std::size_t column = 0; column < columns_.size(); ++column) {
-            if (columns_[column].width) {
-                result.widths[column] = *columns_[column].width;
-                reserved += result.widths[column];
-            }
-            else {
-                weight += columns_[column].flex;
-                if (!std::isfinite(available_width)) {
-                    for (const auto* row: rows) {
-                        result.widths[column] = std::max(
-                            result.widths[column],
-                            row->slots[column]
-                                ->measure_layout(foundation::NanLayoutConstraints::loose())
-                                .get_width()
-                        );
-                    }
-                }
-            }
+
+        const auto tracks = to_track_specs(columns_);
+        std::optional<float> bounded_width;
+        std::vector<float> intrinsic_widths;
+        if (std::isfinite(available_width)) {
+            bounded_width = available_width;
         }
-        if (std::isfinite(available_width) && weight > 0.0) {
-            const double free = std::max(0.0, static_cast<double>(available_width) - reserved);
+        else {
+            // 无界宽度：flex 列取「列外层、行内层」的 intrinsic 最大值；固定列不测。
+            intrinsic_widths.assign(columns_.size(), 0.0F);
             for (std::size_t column = 0; column < columns_.size(); ++column) {
-                if (!columns_[column].width) {
-                    result.widths[column] =
-                        static_cast<float>(free * columns_[column].flex / weight);
+                if (columns_[column].width) {
+                    continue;
+                }
+                for (const auto* row: rows) {
+                    intrinsic_widths[column] = std::max(
+                        intrinsic_widths[column],
+                        row->slots[column]
+                            ->measure_layout(foundation::NanLayoutConstraints::loose())
+                            .get_width()
+                    );
                 }
             }
         }
-        double total_width = static_cast<double>(column_gap_) * (columns_.size() - 1);
-        for (const auto width: result.widths) {
-            total_width += width;
-        }
-        result.width = layout_extent(total_width);
+        auto solved = internal::solve_tracks(tracks, bounded_width, intrinsic_widths, column_gap_);
+        result.widths = std::move(solved.widths);
+        result.width = solved.total_width;
         double total_height = 0.0;
         for (const auto* row: rows) {
             float height = 0.0F;

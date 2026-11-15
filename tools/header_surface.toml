@@ -660,6 +660,10 @@ path = "nandina/widget/internal/text_style_bridge.hpp"
 level = "internal"
 
 [[headers]]
+path = "nandina/widget/internal/track_solver.hpp"
+level = "internal"
+
+[[headers]]
 path = "nandina/widget/label.hpp"
 level = "experimental"
 
