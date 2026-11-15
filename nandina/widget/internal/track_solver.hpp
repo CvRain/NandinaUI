@@ -36,9 +36,11 @@ namespace nandina::widget::internal
 
     /// 求解列宽。
     ///
-    /// - `available_width` 有界时按固定列 + 剩余空间 flex 分配；`intrinsic_widths` 不使用。
+    /// - `available_width` 有界时必须有限非负，按固定列 + 剩余空间 flex 分配；
+    ///   `intrinsic_widths` 不使用。
     /// - `available_width` 无界时 flex 列取 `intrinsic_widths` 中的值；此时 `intrinsic_widths`
-    ///   数量必须等于轨道数，flex 列的值必须有限且非负（固定列的值被忽略）。
+    ///   数量必须等于轨道数。为保持静态 Table 旧行为，负值、负无穷和 NaN
+    ///   夹取为 0，正无穷拒绝；固定列的值被忽略。
     /// - 自身执行 `validate_tracks()` 与上述输入校验，不依赖调用者先验证。
     /// - 结果总宽不可表示为有限 float 时抛 `std::invalid_argument`（消息与 Table 的内容
     ///   范围检查一致）。

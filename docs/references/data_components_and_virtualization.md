@@ -174,7 +174,7 @@ class VirtualListView`（[virtual_list_view.hpp](../../nandina/widget/virtual_li
 ## 7. 后续
 
 - P4.2a 已提交（`5d91e01`）。静态 `Table` 不承担行选择；交互数据视图见 §9（v3.1 定稿；批 1A 已提交）：
-  非模板 `DataTable` + `IRowModel`/`TableColumn`/`IItemDelegate`/`TableSelectionModel`，
+  非模板 `DataTable` + `IRowModel`/`DataTableColumn`/`IItemDelegate`/`TableSelectionModel`，
   以及新虚拟化 `ListView` 的迁移计划（旧 `ListView` 退役、`ForEach` 保留）。
 - `VirtualListView` 作者 DSL 入口与视觉验收随维护者编写的 Showcase 组合另行接入；
   其迁移/退役在新 `ListView` 稳定后单独立项（§9.11）。
@@ -370,10 +370,14 @@ public:
 **通知契约（同步事件）**：
 
 - 只能在 **UI 线程**发出；事件同步回调，不承诺 `RowModelBase` 自身具有「帧」概念。
+- `notify_data_changed({first,last})` 要求 `first <= last <= row_count()`；空范围不发事件。
+  `data_changed` 不得改变行数、行顺序或 `RowId`；这些结构变化必须用 `notify_reset()`。
 - detached/idle 状态下，视图收到事件后**立即更新内部账本**（行列数、显示序索引、当前/滚动夹取）。
 - 遍历期（input/process/animation/layout/post_layout/paint 等 `defers_tree_mutation` 相位）只记录
   **pending reset / range**，在安全相位合并应用（同窗口内多次通知合并成一次；树变更仍走延迟通道）。
 - 视图在退出树/析构时释放订阅；模型不得在通知回调中改视图树。
+- 退出树只断开订阅，不丢弃 `shared_ptr<IRowModel>`；重新入树时自动重连并按
+  `reset` 语义完整对账，使脱树期间的模型变化不会漏掉。替换模型或析构则永久断开旧订阅。
 - 第一批只实现 `reset` + `data_changed`；插入/删除/移动通知随虚拟化的窗口复用一起加（接口不破坏）。
 - 所有权 `std::shared_ptr<IRowModel>`；DataTable/ListView 都只消费 `IRowModel`（ListView 等价于一列）。
 - 取数不走模型虚函数，而走列/条目取值器（§9.4/§9.5）。
@@ -394,13 +398,21 @@ struct ColumnValue {
     std::function<std::string(const IRowModel&, std::size_t model_row)> text;
 };
 
+// 本地排序比较器也必须携带独立令牌；不能借用 value/delegate 的令牌，
+// 因为隐藏排序列可以只有 comparator。
+struct ColumnComparator {
+    const void* model_token = nullptr;
+    std::function<std::weak_ordering(const IRowModel&, std::size_t lhs_row,
+                                     std::size_t rhs_row)> compare;
+};
+
 struct DataTableColumn {
     ColumnId id;
     std::string title;
     TableColumn track;                        // 固定/权重轨道，复用静态 Table 定义
     bool visible = true;                      // false：可排序、不参与布局/命中/选择/导航 universe
     SortStrategy sort = SortStrategy::none;
-    std::function<std::weak_ordering(const IRowModel&, std::size_t a, std::size_t b)> compare;
+    ColumnComparator comparator;              // local 使用；external/none 为空
     std::shared_ptr<IItemDelegate> delegate;  // 空 = 表级默认 delegate（列级覆盖）
     ColumnValue value;                        // 默认 delegate 的文本来源（构造糖填充）
 };
@@ -425,15 +437,19 @@ auto custom_column(ColumnId id, std::string title, TableColumn track,
 ```
 
 - **令牌校验协议**：`DataTable::set_model` / `set_columns` 时校验每个非空
-  `ColumnValue::model_token` 与 `delegate->accepted_model_type_token()` 是否等于模型令牌；
-  `nullptr` 表示“通用/不绑定具体模型”（通用 delegate 与无取值器列）。不一致在**所有构建模式**
+  `ColumnValue::model_token`、`ColumnComparator::model_token` 与
+  `delegate->accepted_model_type_token()` 是否等于模型令牌；`nullptr` 表示
+  “通用/不绑定具体模型”（通用 delegate 或缺少该能力）。不一致在**所有构建模式**
   （含 release、no-RTTI）抛 `std::invalid_argument`，绝不进入未定义行为。擦除后的取值器只在
   令牌校验通过后由框架调用。
 - **`set_columns()` 规则**（事务性）：
-  1. 空列表或重复 `ColumnId` → `std::invalid_argument`，原状态不变；
+  1. 空列表、空 `ColumnId::value` 或重复 `ColumnId` → `std::invalid_argument`，原状态不变；
   2. 允许在数据存在时改列；**被移除的 `ColumnId`** 从排序状态、选择集合、current、anchor 中裁剪；
   3. **隐藏列**仍可按 `ColumnId` 程序化排序（「隐藏排序键列」实现依据），但不进入布局、命中、
      选择和导航 universe；把列变为隐藏时裁剪该列上的选择/current/anchor。
+- **排序配置不静默降级**：`SortStrategy::local` 必须有非空 comparator；
+  `none`/`external` 必须不携带 comparator，否则 `set_columns()` 事务性拒绝。
+  `set_local_sort<ModelT>()` 同时写入 `sort=local`、比较函数和模型令牌。
 - 列宽：`track` 的 fixed/flex 沿用 §8.2 的有限宽度分配；无界宽度下 flex 列用可配置 flex basis
   （默认 160 DIP）合成测量宽，文档声明「非内容自适应」——内容自适应需要全量物化，与虚拟化冲突。
 - 行高：统一 `row_height`（有限 > 0，默认 32）；变高行后续。
@@ -455,7 +471,7 @@ struct ItemBinding {                 // 同步借用，delegate 不得保存引�
     std::size_t model_row = 0;       // 模型行坐标
     ModelIndex display_index;        // 显示序坐标（排序/过滤后；两者可能不同）
     RowId row;                       // 稳定身份 = model.row_id(model_row)
-    std::optional<ColumnId> column;  // ListView 为 std::nullopt
+    const ColumnId* column = nullptr; // DataTable 借用列 id；ListView 为 nullptr
     ItemState state;
 };
 
@@ -475,17 +491,34 @@ public:
 };
 
 template<typename ModelT>
+    requires std::derived_from<ModelT, IRowModel>
 class TypedItemDelegate: public IItemDelegate {
 public:
     // 令牌校验通过后，框架只在这里做一次 static_cast
-    [[nodiscard]] auto accepted_model_type_token() const noexcept -> const void* override {
+    [[nodiscard]] auto accepted_model_type_token() const noexcept -> const void* final {
         return model_type_token_of<ModelT>();
+    }
+
+    auto create_item(const widget::BuildContext& ui, const ItemBinding& binding)
+        -> std::shared_ptr<scene::NanControl> final {
+        return create_typed(ui, checked_model(binding.model), binding);
+    }
+    void update_item(scene::NanControl& control, const ItemBinding& binding) final {
+        update_typed(control, checked_model(binding.model), binding);
     }
 
 protected:
     virtual auto create_typed(const widget::BuildContext&, const ModelT&, const ItemBinding&)
         -> std::shared_ptr<scene::NanControl> = 0;
     virtual void update_typed(scene::NanControl&, const ModelT&, const ItemBinding&) = 0;
+
+private:
+    [[nodiscard]] static auto checked_model(const IRowModel& model) -> const ModelT& {
+        if (model.model_type_token() != model_type_token_of<ModelT>()) {
+            throw std::invalid_argument("Item delegate model type does not match");
+        }
+        return static_cast<const ModelT&>(model);
+    }
 };
 ```
 
@@ -499,7 +532,8 @@ protected:
 - **类型转换责任在框架**：作者不写 `static_cast`；`TypedItemDelegate<ModelT>` / 列构造糖 / typed
   取值器封装转换与令牌校验（无 RTTI 构建同样生效，release 也检查）。通用 delegate（默认 delegate、
   不读具体模型的展示 delegate）返回 `accepted_model_type_token() == nullptr`，可配任意模型。
-- `BuildContext` 与 `ItemBinding` 都是同步借用；delegate 不得把它们或其引用保存到控件之后使用。
+- `BuildContext` 与 `ItemBinding` 都是同步借用；`ItemBinding::column` 也只在当次调用
+  期间有效。delegate 不得把它们或其引用/指针保存到控件之后使用。
 
 ### 9.6 选择层：`TableSelectionModel`
 
@@ -520,7 +554,12 @@ public:
     [[nodiscard]] virtual auto is_selected(const CellId&) const -> bool = 0;
     [[nodiscard]] virtual auto selected() const -> const std::vector<CellId>& = 0;
     [[nodiscard]] virtual auto changed() const -> const reactive::Event<>& = 0;
-    virtual void clear() = 0;
+    // 清空选中集合和 anchor，保留 current（键盘游标）。
+    virtual void clear_selection() = 0;
+    // 只移动当前单元，不改选中集合或 anchor；空值清除 current。
+    virtual void set_current(std::optional<CellId> current) = 0;
+    // reset/列变更后裁剪 selected/current/anchor；keep 只在调用期间借用。
+    virtual void retain(const std::function<bool(const CellId&)>& keep) = 0;
     // extent 由视图按显示序展开（矩形/整行/整列）；调用者保证身份已验证
     virtual void apply(SelectionOp op, CellId target, std::span<const CellId> extent) = 0;
 };
@@ -536,7 +575,11 @@ class TableSelectionModel final: public ITableSelectionModel { ... };
 - `toggle`：target 已选则移除，否则加入；current=target；anchor=target（Ctrl 单击）。
 - `extend`：选中集合替换为 extent（含两端）；current=target；**anchor 保持不变**（无 anchor 时取 target）。
 - `SelectionMode::single`：忽略 extent，只保留 target。
+- `clear_selection()` 清空 selected + anchor，保留 current；需要清除键盘游标时显式调
+  `set_current(std::nullopt)`，避免“取消选中”意外丢失导航位置。
 - `changed()` 在**选择集合、current、anchor 任一可观察状态变化**时触发，即使选中集合没变。
+- `set_current()` 只服务键盘/程序化导航；`retain()` 只遍历已存储的选中/current/anchor，
+  不要求视图物化或构造整张表的 `CellId` universe。两者都按实际变化幂等发事件。
 - 行为：首批只实现 `cells`（单元格 → 行 → 列按后续批次）；跨排序/过滤按身份稳定；隐藏列不在 universe。
 
 ### 9.7 键盘导航：`GridNavigation`
@@ -569,9 +612,8 @@ public:
 ```cpp
 enum class SortRequestReason: std::uint8_t { user_header_click, programmatic };
 struct SortRequest {
-    ColumnId column;
-    SortDirection direction;
-    SortRequestReason reason;   // 区分表头点击与程序化 set_sort
+    std::optional<SortSpec> sort; // nullopt = 清除外部排序
+    SortRequestReason reason;     // 区分表头点击与程序化操作
 };
 ```
 
@@ -585,8 +627,11 @@ struct SortRequest {
 - 自定义业务排序（创建时间/修改时间/id/业务规则/自然排序/本地化）由 local 比较器闭包覆盖,
   比较器签名 `std::weak_ordering(const ModelT&, std::size_t lhs_row, std::size_t rhs_row)`；非显示字段
   用 `visible=false` 的列承载；多列排序不在本批（SortSpec 预留可扩展）。
-- 表头点击循环：`none → ascending → descending → none`（仅 sortable 且 visible 列）；`sort_changed()`
-  无载荷；排序后视图优先保持 current（否则首个选中）单元可见，否则夹取 scroll offset。
+- 表头点击循环：`none → ascending → descending → none`（仅 sortable 且 visible 列）；
+  外部排序的第三步发出 `SortRequest{.sort = std::nullopt}`，使应用能清除数据源排序。
+  `sort_changed()` 无载荷；排序后视图优先保持 current（否则首个选中）单元可见，
+  否则夹取 scroll offset。当存在 local sort 时，任何非空 `data_changed` 都重新应用
+  `stable_sort`（通知不携列信息，不能安全假定排序键未变）。
 
 ### 9.9 视图与内部共享工具（组合，不建基类）
 

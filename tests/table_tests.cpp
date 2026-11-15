@@ -467,6 +467,16 @@ TEST_CASE(
     );
 }
 
+TEST_CASE("Table preserves the historical zero width for a NaN intrinsic cell", "[table][layout]") {
+    auto table = widget::Table::create({{}});
+    auto cell = value(std::numeric_limits<float>::quiet_NaN());
+    table->add_row({cell});
+
+    const auto measured = table->measure_layout(foundation::NanLayoutConstraints::loose());
+    CHECK(measured.get_width() == 0.0F);
+    CHECK(std::isfinite(measured.get_height()));
+}
+
 TEST_CASE("Table rejects content totals beyond finite layout coordinates", "[table][validation]") {
     const float large = std::numeric_limits<float>::max() * 0.75F;
     SECTION("natural column widths") {

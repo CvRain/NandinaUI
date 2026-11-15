@@ -9,6 +9,7 @@
 #include <initializer_list>
 #include <limits>
 #include <optional>
+#include <span>
 #include <stdexcept>
 #include <vector>
 
@@ -156,6 +157,10 @@ TEST_CASE("track solver validates its own inputs", "[table][track-solver][valida
         solve(valid, std::optional<float>(std::numeric_limits<float>::infinity()), {}, 0.0F),
         std::invalid_argument
     );
+    CHECK_THROWS_WITH(
+        solve(valid, -1.0F, {}, 0.0F),
+        "Table available width must be finite and non-negative"
+    );
 }
 
 TEST_CASE("track solver checks unbounded intrinsic widths", "[table][track-solver][validation]") {
@@ -171,11 +176,20 @@ TEST_CASE("track solver checks unbounded intrinsic widths", "[table][track-solve
         "Table content extent must fit finite layout coordinates"
     );
 
-    // 旧实现用 max(0, measured) 初始化列宽：负 intrinsic 静默夹取为 0。
-    const std::vector<float> negative {0.0F, -1.0F};
-    const auto clamped = solve(tracks, std::nullopt, negative, 0.0F);
-    CHECK(clamped.widths[0] == Catch::Approx(10.0F));
-    CHECK(clamped.widths[1] == Catch::Approx(0.0F));
+    // 旧实现用 max(0, measured) 初始化列宽：负值、负无穷与 NaN
+    // 都静默夹取为 0。
+    for (const auto invalid_low:
+         {
+             -1.0F,
+             -std::numeric_limits<float>::infinity(),
+             std::numeric_limits<float>::quiet_NaN(),
+         })
+    {
+        const std::vector<float> intrinsic {0.0F, invalid_low};
+        const auto clamped = solve(tracks, std::nullopt, intrinsic, 0.0F);
+        CHECK(clamped.widths[0] == Catch::Approx(10.0F));
+        CHECK(clamped.widths[1] == Catch::Approx(0.0F));
+    }
 
     // 固定列的 intrinsic 不参与解算：即使给异常值也不应影响结果。
     const std::vector<float> fixed_ignored {-5.0F, 30.0F};

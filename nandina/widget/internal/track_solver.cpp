@@ -46,8 +46,10 @@ namespace nandina::widget::internal
             const std::optional<float> available_width,
             const std::span<const float> intrinsic_widths
         ) {
-            if (available_width && !std::isfinite(*available_width)) {
-                throw std::invalid_argument("Table available width must be finite");
+            if (available_width && (!std::isfinite(*available_width) || *available_width < 0.0F)) {
+                throw std::invalid_argument(
+                    "Table available width must be finite and non-negative"
+                );
             }
             if (available_width) {
                 return;
@@ -59,9 +61,10 @@ namespace nandina::widget::internal
                 if (tracks[index].width) {
                     continue; // fixed columns are not measured for intrinsic width
                 }
-                if (!std::isfinite(intrinsic_widths[index])) {
+                if (intrinsic_widths[index] == std::numeric_limits<float>::infinity()) {
                     // 保持旧实现的可观察行为：旧几何路径让非有限测量宽度进入
-                    // layout_extent()，因此这里报同一条内容范围消息。
+                    // layout_extent()，因此正无穷报同一条内容范围消息。NaN 与
+                    // 负无穷在旧 std::max(0, measured) 累积中都落为 0。
                     throw std::invalid_argument(
                         "Table content extent must fit finite layout coordinates"
                     );
@@ -93,8 +96,11 @@ namespace nandina::widget::internal
                 weight += tracks[column].flex;
                 if (!available_width) {
                     // Intrinsic widths are supplied by the caller; flex columns only.
-                    // 旧实现用 max(0, measured) 初始化列宽，负 intrinsic 静默夹取为 0。
-                    solution.widths[column] = std::max(0.0F, intrinsic_widths[column]);
+                    // 旧实现用 max(0, measured) 初始化列宽：负值、负无穷与
+                    // NaN 都静默夹取为 0。显式写出 NaN 分支，不把行为寄托给比较算法。
+                    const float intrinsic = intrinsic_widths[column];
+                    solution.widths[column] =
+                        std::isnan(intrinsic) ? 0.0F : std::max(0.0F, intrinsic);
                 }
             }
         }
