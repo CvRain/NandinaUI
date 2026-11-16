@@ -12,11 +12,11 @@
 
 | 方向 | 结论 | 证据入口 |
 | --- | --- | --- |
-| 平台 | **Linux 正式支持**（Wayland/X11，主套件最新 136/136，2026-11-13 CI 等价位）；**Windows 实验性**（release 构建通过、全量套件最近记录 129/129（2026-11-13 布局修复批）、showcase 可运行、DXIL 设备级验收通过）；**macOS 不支持**（无硬件，不承诺） | README“在 Windows 上构建”、路径契约 §14 |
+| 平台 | **Linux 正式支持**（Wayland/X11，主套件最新 137/137，2026-11-13 CI 等价位）；**Windows 实验性**（release 构建通过、全量套件最近记录 129/129（2026-11-13 布局修复批）、showcase 可运行、DXIL 设备级验收通过）；**macOS 不支持**（无硬件，不承诺） | README“在 Windows 上构建”、路径契约 §14 |
 | 渲染 | SDL3 为默认后端；生产 SDF 已接入**填充/描边/圆/线段/圆环扇区**，Vulkan(SPIR-V) 与 Windows D3D12(DXIL) 均通过设备级像素验收，直线 AA 数值逐位一致；其余图元仍走 CPU 几何 | 路径契约 §10、§14 |
 | 视觉回归 | 双平台各 14 条页面 golden 已批准（7 页 × CPU/SDF；2026-11-11 中文版重批、2026-11-13 B2a/B2b 增至每平台 14 条），平台隔离；Linux CPU 路径由 CI `visual-golden` 阻断门禁自动采集比较（2026-11-14 起）；比较器与审批工具就绪 | [视觉回归](visual_regression.md) |
 | 性能 | Linux release 基线 8 配置 + 确定性门禁（布局 0、稳态 miss 0、binds 上限）+ 候选计时阈值（`--enforce` 启用）；Windows CPU/SDF 各 4 组参考基线已归档，不参与跨平台比较或计时门禁 | [性能预算](performance_budget.md) |
-| 依赖与分发 | 10 个 wrap + 字体 submodule + SQLite/stb 入库源码；raylib 已删除；vendored SDL3 默认静态、可选共享；头文件门禁 208 个（189 experimental + 19 internal） | [依赖策略](dependency_policy.md)、[SDK 表面](sdk_surface.md) |
+| 依赖与分发 | 10 个 wrap + 字体 submodule + SQLite/stb 入库源码；raylib 已删除；vendored SDL3 默认静态、可选共享；头文件门禁 212 个（189 experimental + 23 internal） | [依赖策略](dependency_policy.md)、[SDK 表面](sdk_surface.md) |
 | 工程门禁 | format / suite / header / shader artifact / golden manifest / backend budget；CI 无 GPU（CPU 页面 golden 由独立 workflow 阻断，SDF/GPU 与性能采样仍在本地/发布检查） | README、路径契约 §13 |
 
 ## 2. 推进原则
@@ -135,8 +135,8 @@
    与后续业务页另批。仅 Theme Shell 页另排。
 6. **组件扩展**：DataTable/ListView 契约 v3.1 已于 2026-11-15 定稿，**1A TrackSolver + 静态
    Table 接入已完成并提交**（[数据组件 §9](data_components_and_virtualization.md#9-p42d-数据视图契约datatable-与-listviewv31-定稿)：
-   `IRowModel`/`DataTableColumn`/`IItemDelegate`/选择模型）；1B 行窗口已完成并提交（2026-11-16）；2A 数据视图协议已完成并提交（2026-11-16），再按
-   §9.13 的 2B… 分批实现（DataTable 虚拟化通过后才导出公共 API）；随后 Accordion；
+   `IRowModel`/`DataTableColumn`/`IItemDelegate`/选择模型）；1B 行窗口已完成并提交（2026-11-16）；2A 已完成并提交、2B 全量 DataTable 已完成并提交（2026-11-16），再按 §9.13 的批 3
+   继续（DataTable 虚拟化通过后才导出公共 API）；随后 Accordion；
    Sheet/Drawer/Resizable/AspectRatio 按需。静态 Table 保持 experimental。
 7. **P4.4 视觉覆盖**：`input_focus` golden；`image` 页进 probe 并挂载 showcase 资源包（当前无
    golden）；新页面 approved 后自动进入 CI CPU 门禁。

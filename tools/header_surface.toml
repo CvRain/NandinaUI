@@ -668,6 +668,22 @@ path = "nandina/widget/internal/grid_navigation.hpp"
 level = "internal"
 
 [[headers]]
+path = "nandina/widget/internal/data_table.hpp"
+level = "internal"
+
+[[headers]]
+path = "nandina/widget/internal/data_table_column.hpp"
+level = "internal"
+
+[[headers]]
+path = "nandina/widget/internal/item_delegate.hpp"
+level = "internal"
+
+[[headers]]
+path = "nandina/widget/internal/item_host.hpp"
+level = "internal"
+
+[[headers]]
 path = "nandina/widget/internal/row_model.hpp"
 level = "internal"
 

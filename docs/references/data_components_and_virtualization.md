@@ -7,7 +7,9 @@
 > 不改变总体架构。**§9 的批 1A（TrackSolver + 静态 Table 接入）已完成并提交；批 1B
 > （UniformRowWindow 提取）已完成并提交（2026-11-16，`refactor(data): extract uniform row window`）；
 > 批 2A（数据视图协议）已完成并提交（2026-11-16，`feat(data): add data-view protocol layer`）；
-> DataTable/ListView 仍未实现，按 §9.13 继续。** §8 静态 Table 与 §3/§4 基础契约不变。**
+> 批 2B（全量 DataTable/delegate/ItemHost/排序）已完成并提交（2026-11-16，
+> `feat(data): implement full DataTable (2B)`）。
+> DataTable/ListView 的虚拟化与公共导出按 §9.13 继续。** §8 静态 Table 与 §3/§4 基础契约不变。**
 > 本文件是阶段 5 数据组件的契约入口：已完成批次见 §1–§8，后续数据视图见 §9（v3.1）。
 > 静态 `Table`、`DataTable`、`Accordion` 等阶段 5 组件清单仍按
 > [组件开发路线图](component_roadmap.md#阶段-5信息组织与数据展示) 分批推进，不在本批。
@@ -268,7 +270,8 @@ SelectionModel、RovingFocus、虚拟化与排序留给后续交互数据表；�
 > 状态：**2026-11-14 v3 定稿；2026-11-15 v3.1 勘误定稿（维护者评审）；批 1A（TrackSolver +
 > 静态 Table 接入）已完成并提交；批 1B（UniformRowWindow 提取）已完成并提交（2026-11-16，
 > `refactor(data): extract uniform row window`）；批 2A（数据视图协议）已完成并提交（2026-11-16，
-> `feat(data): add data-view protocol layer`）。DataTable/ListView 尚未实现，按 §9.13 继续施工。**
+> `feat(data): add data-view protocol layer`）；批 2B（全量 DataTable/delegate/ItemHost/排序）已完成并提交
+> （2026-11-16，`feat(data): implement full DataTable (2B)`）。DataTable/ListView 的虚拟化与公共导出按 §9.13 继续施工。**
 > 数据视图采用**非模板组件 + 行模型 + 列定义 + delegate + 显式选择模型**；v3.1 只修正接口矛盾，
 > 不改变总体架构。§3/§4/§8 已交付契约不变；旧 `ListView` 只作 `ForEach` 薄包装的状态随 §9.11 回收。
 >
@@ -314,9 +317,11 @@ struct CellId {
 
 - 三个身份显式声明默认相等运算符：`CellId::operator== = default` 依赖成员的显式相等（不能依赖
   隐式聚合比较在未来的可读性变化）。
-- **批 2A 边界**：身份头暂放 `widget/internal/data_identity.hpp` 并登记为 internal，只承诺相等语义；
+- **批 2A/2B 边界**：身份头暂放 `widget/internal/data_identity.hpp` 并登记为 internal，只承诺相等语义；
   `std::hash<RowId/ColumnId/CellId>` 特化随批 3 导出 DataTable 时再提供并承诺稳定，避免提前固化
-  公共哈希 API。
+  公共哈希 API。内部协议提供 `namespace nandina::widget::internal` 的 `RowIdHash`/`ColumnIdHash`/
+  `CellIdHash`，供 TableSelectionModel 与 ItemHost 共用（不在各处私有重复实现）；批 3 导出时把它们
+  桥接为公共 `std::hash` 特化。
 
 - 模型负责 `row_id(row)` 在插入/排序/过滤后保持稳定且唯一；**不提供「行索引即身份」的默认实现**。
   ↑ 这是**稳定身份要求**，不提供兜底；简单模型可用自增计数或主键。
@@ -400,6 +405,9 @@ public:
   **pending reset / range**，在安全相位合并应用（同窗口内多次通知合并成一次；树变更仍走延迟通道）。
   **批 2A 不实现该合并**：合并依赖场景树相位与视图 pending 状态，2B/3 与真实消费者一起做；2A 只
   验证同步触发、空范围/非法范围语义与 `data_changed` 的结构不变量。
+- **批 2B 模型绑定状态机（DataTable 真实消费者）**：idle 相位立即应用 reset/data_changed；遍历相位
+  记录 pending（`reset` 优先于 range；多次 range 合并），在安全相位统一应用。退出树只断订阅、
+  不丢模型；重入树自动重连并执行一次完整 reset 对账（脱树期间的变化因此不会漏）。
 - **批 2A 令牌验证范围**：同一模型令牌稳定、`TypedRowModelBase<ModelT>` 返回
   `model_type_token_of<ModelT>()`、不同模型令牌不同；真正的「令牌不匹配抛错」在 2B 的
   value/comparator/delegate 调用点验证。
@@ -420,14 +428,14 @@ enum class SortDirection: std::uint8_t { ascending, descending };
 enum class SortStrategy: std::uint8_t { none, local, external };
 struct SortSpec { ColumnId column; SortDirection direction; };
 
-// 列取值器：框架内部擦除存储。model_token 为空表示该列没有取值器（内容完全由 delegate 提供）。
+// 列取值器：框架内部擦除存储。token 与 text 必须同时有值或同时为空。
 struct ColumnValue {
     const void* model_token = nullptr;   // = model_type_token_of<ModelT>()
     std::function<std::string(const IRowModel&, std::size_t model_row)> text;
 };
 
-// 本地排序比较器也必须携带独立令牌；不能借用 value/delegate 的令牌，
-// 因为隐藏排序列可以只有 comparator。
+// 本地排序比较器也必须携带独立令牌；token 与 compare 同样必须成对出现。
+// 不能借用 value/delegate 的令牌，因为隐藏排序列可以只有 comparator。
 struct ColumnComparator {
     const void* model_token = nullptr;
     std::function<std::weak_ordering(const IRowModel&, std::size_t lhs_row,
@@ -459,11 +467,18 @@ void set_local_sort(DataTableColumn& column,
                     std::function<std::weak_ordering(const ModelT&, std::size_t lhs_row,
                                                      std::size_t rhs_row)> compare);
 
-template<typename ModelT>
+// 自定义列不绑定具体模型：内容完全由 delegate 提供，类型由 delegate 的 token 表达。
 auto custom_column(ColumnId id, std::string title, TableColumn track,
+                   std::shared_ptr<IItemDelegate> delegate,
                    bool visible = true) -> DataTableColumn;
 ```
 
+- **列配置配对校验**：`ColumnValue` 的 token 与 callback、`ColumnComparator` 的 token 与
+  comparator 必须同时有值或同时为空；`none`/`external` 不得携带 comparator（或 token）；
+  `local` 必须有非空 comparator 与 token。违反者 `set_columns()` 事务性拒绝。
+- **`set_model()` / `set_columns()` 校验顺序**：columns 可先于 model 设置，此时只校验结构、轨道与
+  排序配置；已有 model 时，`set_columns()` 在提交前校验全部 value/comparator/delegate token。
+  `set_model()` 在替换旧模型前校验现有 columns，失败时旧 model、columns、排序状态与控件不变。
 - **令牌校验协议**：`DataTable::set_model` / `set_columns` 时校验每个非空
   `ColumnValue::model_token`、`ColumnComparator::model_token` 与
   `delegate->accepted_model_type_token()` 是否等于模型令牌；`nullptr` 表示
@@ -474,7 +489,9 @@ auto custom_column(ColumnId id, std::string title, TableColumn track,
   1. 空列表、空 `ColumnId::value` 或重复 `ColumnId` → `std::invalid_argument`，原状态不变；
   2. 允许在数据存在时改列；**被移除的 `ColumnId`** 从排序状态、选择集合、current、anchor 中裁剪；
   3. **隐藏列**仍可按 `ColumnId` 程序化排序（「隐藏排序键列」实现依据），但不进入布局、命中、
-     选择和导航 universe；把列变为隐藏时裁剪该列上的选择/current/anchor。
+     选择和导航 universe；把列变为隐藏时裁剪该列上的选择/current/anchor；
+  4. 所有候选列的 `TableColumn` 轨道在提交前统一经 `TrackSolver::validate_tracks()` 校验，
+     包括当前隐藏列，避免非法宽/权重潜伏到后续可见时再失败。
 - **排序配置不静默降级**：`SortStrategy::local` 必须有非空 comparator；
   `none`/`external` 必须不携带 comparator，否则 `set_columns()` 事务性拒绝。
   `set_local_sort<ModelT>()` 同时写入 `sort=local`、比较函数和模型令牌。
@@ -556,7 +573,10 @@ private:
 
 - **约定**：`IItemDelegate` 名称面向 list/table；表格列通过 `DataTableColumn::delegate` 持有同一接口。
 - **生命周期**：create → bind/update → 复用（滚动/数据替换）→ 销毁；由内部 ItemHost 做 keyed 复用
-  （与 `ForEach` 同族）。首批 create/update 两阶段，窗口复用在虚拟化批次接入，公共接口不变。
+  （与 `ForEach` 同族），2B 即以 `CellId` 为 key。create 失败不得留下半挂载节点或 scope；update
+  失败保持索引与所有权一致（delegate 已执行的控件写入不承诺回滚）；退出树清理 item scope，重入树
+  按完整 reset 重建。2B 同时交付默认 `TextItemDelegate`（默认文本来源为列取值器，单行省略号），
+  保证全量 DataTable 有默认可渲染路径；作者表头 delegate 留到批 3。
 - **自定义绘制**：`create_item` 返回任意 `NanControl`（组合或自绘 `on_draw` 的轻量节点）；文本请走
   文本管线/组合控件。
 - **默认 delegate**：`TextItemDelegate`（单元格）+ `TextHeaderDelegate`（表头），只用语义 token /
@@ -624,9 +644,9 @@ public:
 - **非拷贝/移动**：`TableSelectionModel` 与 `RowModelBase` 一样禁止拷贝/移动（`Event` 拷贝会共享
   订阅状态）；`STATIC_REQUIRE` 锁住。
 - **实现形态**：`selected()` 保持有序 `std::vector<CellId>`（首次出现顺序）；私有 membership
-  `std::unordered_set<CellId, InternalCellIdHash>` 提供 `is_selected()` O(1) 与 extent 去重 O(n)。
+  `std::unordered_set<CellId, internal::CellIdHash>` 提供 `is_selected()` O(1) 与 extent 去重 O(n)。
   `set_current()` 只改 current、不复制/重建选择集合；只有选择集合实际变化时才重建索引并发事件。
-  `InternalCellIdHash` 是私有 hasher，不是公共 `std::hash<CellId>` 承诺（批 3 再提供）。
+  `internal::CellIdHash` 是内部共享 hasher，不是公共 `std::hash<CellId>` 承诺（批 3 再提供）。
 - **非法枚举防御**：非法 `SelectionOp`（非 replace/toggle/extend）抛 `std::invalid_argument` 且
   不改状态、不发事件。
 - anchor 是 shift 起点，**可以指向未选中单元**；`retain()` 只裁剪 selected/current/anchor，不强制
@@ -636,6 +656,10 @@ public:
 - `set_current()` 只服务键盘/程序化导航；`retain()` 只遍历已存储的选中/current/anchor，
   不要求视图物化或构造整张表的 `CellId` universe。两者都按实际变化幂等发事件。
 - 行为：首批只实现 `cells`（单元格 → 行 → 列按后续批次）；跨排序/过滤按身份稳定；隐藏列不在 universe。
+- **DataTable 程序化入口**：默认构造为 `SelectionMode::multiple`（内部构造可传 mode）；对外只暴露
+  const 选择投影，写入口为 `apply_selection()`/`set_current_cell()`/`clear_selection()`。前者在调用
+  `TableSelectionModel::apply()` 前校验 target 与完整 extent 的行身份及可见列；未知身份返回 false，
+  不改变 selected/current/anchor。
 
 ### 9.7 键盘导航：`GridNavigation`
 
@@ -668,7 +692,10 @@ public:
 - **同步归属**：GridNavigation 只持有显示序 `ModelIndex`；`TableSelectionModel` 只持有身份
   `CellId`。视图负责双向映射：移动时把 current 写入选择模型；reset/排序后按身份重算显示坐标
   （身份消失则夹取）。两者都不持有对方的副本作为事实来源。
-- 表头键盘排序在批 3 实现：表头是独立 delegate host + 可聚焦单元，不与网格导航混用。
+- **批 2B 表头边界**：`ItemBinding` 无法自然表达「没有模型行的表头」，因此 2B 使用 DataTable 内部
+  HeaderHost（普通 Label + 排序指示图元组合），**不给表头伪造 `model_row`**。表头指针点击进入 2B，
+  触发 `SortRequestReason::user_header_click`；`TextHeaderDelegate`/作者表头 delegate、键盘排序、
+  表头语义留到批 3，届时表头改为独立可聚焦单元，不与网格导航混用。
 
 ### 9.8 排序：本地 / 外部 / 不可排
 
@@ -686,6 +713,11 @@ struct SortRequest {
 - **外部**（`external`）：DataTable 不重排；**`reactive::Event<SortRequest>` 是事实来源**，同时提供
   `set_on_sort_requested()` 便捷入口（按现有 callback scope 生命周期守护）；应用重新查询后
   `notify_reset()`；DataTable 保留排序状态用于表头指示，显示顺序以模型为准。
+- **排序 API 与事务**：`auto set_sort(std::optional<SortSpec>,
+  SortRequestReason = SortRequestReason::programmatic) -> bool;`。`SortSpec` 默认相等、方向默认
+  `ascending`，reason 默认 `programmatic`。相同状态幂等（不重复发事件）；external 先提交状态、
+  再同步发 `sort_requested`；local 在临时显示索引上 `stable_sort`，比较器抛异常时保留旧状态与旧
+  显示序；删列或列变为 `none` 时清排序；隐藏但仍 sortable 的列保留排序。
 - **不可排**（`none`）：表头不响应点击；程序化 `set_sort` 返回 false。
 - 自定义业务排序（创建时间/修改时间/id/业务规则/自然排序/本地化）由 local 比较器闭包覆盖,
   比较器签名 `std::weak_ordering(const ModelT&, std::size_t lhs_row, std::size_t rhs_row)`；非显示字段
@@ -702,7 +734,7 @@ struct SortRequest {
 | --- | --- | --- |
 | `internal::TrackSolver`（`track_solver.hpp/.cpp`） | 纯轨道数学：固定/权重分配、无界 intrinsic、gap、有限性校验；**不测量节点** | **1A（已完成 2026-11-15）** |
 | `internal::UniformRowWindow` | 统一行高窗口：内容高度、offset 夹取、半开可见区间 `[first,end)`、滚动显现数学、行命中；只依赖数值与索引 | **1B（已完成 2026-11-16，`refactor(data): extract uniform row window`）** |
-| `internal::ItemHost` | delegate 控件 host：create/update/销毁/keyed 复用、每项 scope | 2B（与真实消费者一起设计） |
+| `internal::ItemHost`（`item_host.hpp/.cpp`） | delegate 控件 host：以 `CellId` 为 key 的 create/update/销毁/keyed 复用、每项 scope；失败原子性、退出树清 scope、重入树完整 reset | **2B（已完成 2026-11-16）** |
 | 滚动/列命中 | 行命中并入 `UniformRowWindow`；列命中等 DataTable 出现后再提取 | 1B/2B |
 
 - `TrackSolver` 无状态，实现为内部纯函数（`validate_tracks` + `solve_tracks`），不建类/成员；
@@ -782,7 +814,7 @@ struct SortRequest {
 | **1A ✅ 已完成（2026-11-15，`refactor(table): extract shared track solver`）** | `internal::track_solver.hpp/.cpp` 纯函数 + 静态 Table 接入（删除原 validate_tracks 与列宽分配代码） + 直接单测 | 主套件 134/134、ASan 109+1 skip、no-RTTI 111/111；CPU table golden 与 HEAD 逐字节一致（A/B）；`release_check --ci` 8/8 |
 | **1B ✅ 已完成（2026-11-16，`refactor(data): extract uniform row window`）** | 从 VirtualListView 提取 `UniformRowWindow`（内容高度/offset 夹取/半开可见区间/滚动显现/行命中）；pending 调度与 ForEach 复用留在 VirtualListView | `uniform-row-window` 9 用例/116 断言；`virtual-list` 29 用例/154 断言。红先：半开末端、底边命中、NaN/illegal window 防御，以及遍历期数据收缩在修复前触发旧窗口索引 SIGABRT；主套件 135/135、ASan 110+1 skip、no-RTTI 112/112、no-SQLite 107+1 skip、纯工具 8/8 |
 | **2A ✅ 已完成（2026-11-16，`feat(data): add data-view protocol layer`）** | `internal::data_identity.hpp`（显式相等身份）、`internal::row_model.hpp`（`RowRange`/`IRowModel`/`RowModelBase`/`TypedRowModelBase`/类型令牌；通知不合并）、`internal::table_selection_model.hpp/.cpp`（仅 cells、extent 去重、retain 强异常保证）、`internal::grid_navigation.hpp/.cpp`（空网格 optional/不播种/不环绕/翻页）；四个头暂登记 `internal`，批 3 导出时转 experimental；2A 不承诺 `std::hash` 公共 API，令牌不匹配抛错留 2B | `data-view-protocol` 25 用例/163 断言；主套件 136/136、ASan 111+1 skip、no-RTTI 113/113、no-SQLite 108+1 skip、纯工具 8/8、`release_check --ci` 8/8；红先：空范围误发事件、非法范围不抛、extent 不去重、retain 非原子、空网格自动播种、单选取消清 anchor、非法 SelectionOp/GridDirection、membership 索引不重建均先红后绿 |
-| **2B** | `DataTableColumn`、delegate/`ItemBinding`/`TypedItemDelegate`、`ItemHost`、全量物化、本地/外部排序；公共头标 `internal` 不导出 | 红先单测：列事务、排序状态迁移、delegate 生命周期、外部排序事件 |
+| **2B ✅ 已完成（2026-11-16，`feat(data): implement full DataTable (2B)`）** | 文件边界：`internal/data_table_column.hpp`、`internal/item_delegate.hpp`、`internal/item_host.hpp/.cpp`、`internal/data_table.hpp/.cpp`；含 `DataTableColumn`、`IItemDelegate`/`ItemBinding`/`TypedItemDelegate`/默认 `TextItemDelegate`、以 `CellId` 为 key 的 `ItemHost`、内部 HeaderHost（Label + 排序图元、指针点击）、全量物化、模型绑定/通知状态机、本地/外部排序；公共头标 `internal` 不导出 | `data-table-2b` 29 用例/166 断言；主套件 137/137、ASan 112 OK +1 skip、no-RTTI 114/114、no-SQLite 109 OK +1 skip、纯工具 8/8、`release_check --ci` 8/8；红先：idle 不即时应用、local sort 先提交后比较、data_changed 不重排、表头 reason 退化、hidden 列不裁剪选择、非法轨道不拒绝、display_index.column 固定 0、delegate 变化错误复用、ItemHost create 半挂载、退出期 pending 未清均先红后绿 |
 | **3** | DataTable 虚拟化 + 表头键盘排序 + 公共导出（`header_surface.toml` 转 experimental）+ 组件文档/索引 | 窗口物化计数、复用、滚动边界、键盘/语义红先；双平台 Showcase 页 + golden 由维护者交付/审批 |
 | **4** | `BuildContext::for_each()` 改 `ForEach` 直接实现；相关测试/文档同步 | for_each 行为不变；authoring 测试全绿 |
 | **5** | 新虚拟化 `ListView` + notebook 迁移 + 旧 `ListView` 退役（sdk_surface 记录破坏性变更） | ListView 红先（窗口/行选择/delegate 复用）；notebook 构建；全矩阵 |

@@ -60,18 +60,18 @@ application shell. Version `0.1.0-alpha.1`.
   negative and positive branches. The Test step annotation now carries the unfiltered test-log
   tail so public check-run annotations show assertion text.
 - **Latest (2026-11-14)**: CI is green and the CPU page-golden gate is blocking (promoted
-  2026-11-14; `b35629f` green). Current counts: 136 tests (113 unit + 23 integration), 208
-  headers (189 experimental + 19 internal), 28 approved goldens (7 pages × CPU/SDF × 2
+  2026-11-14; `b35629f` green). Current counts: 137 tests (114 unit + 23 integration), 212
+  headers (189 experimental + 23 internal), 28 approved goldens (7 pages × CPU/SDF × 2
   platforms = 14/platform), 39 public components, 7-page blocking CPU coverage.
   **Data-view contract:** §9 is the **v3.1 final design** (v3 + 2026-11-15 errata):
   non-template `DataTable`/`ListView` over a shared `IRowModel` (rows only), `DataTableColumn`
   as the single column source, `IItemDelegate`/`TypedItemDelegate` with RTTI-free tokens checked
   in every build mode, stable `RowId`/`ColumnId`/`CellId`, `TableSelectionModel`,
   `GridNavigation`, local/external sorting by `ColumnId`, delegate-owned visuals (no recipe),
-  composition-only internals, virtualized `ListView` (`ForEach` kept). **Batches 1A/1B are committed; batch 2A (data-view protocol) is committed (2026-11-16); DataTable/ListView remain
-  unimplemented (next: 2B).** Verification: full suite 136/136, ASan 111+1 skip, no-RTTI
-  113/113, no-SQLite 108+1 skip, pure tools 8/8, release_check 8/8; 1B `UniformRowWindow`
-  9/116 and `virtual-list` 29/154, 2A `data-view-protocol` 25/163.
+  composition-only internals, virtualized `ListView` (`ForEach` kept). **Batches 1A/1B are committed; batch 2A committed (2026-11-16); batch 2B (full DataTable/delegate/ItemHost/sort) is
+  committed (2026-11-16); virtualization/export remain (next: 3).** Verification: full suite
+  137/137, ASan 112+1 skip, no-RTTI 114/114, no-SQLite 109+1 skip, pure tools 8/8,
+  release_check 8/8; 2B `data-table-2b` 29/166, 2A 25/163, 1B 9/116 + 29/154.
 - P4.6 Step 2b is closed — default component recipes consume the semantic role's
   leading/weight/slant through `TypeStyle::role` → `ResolvedTypeStyle` and the shared
   text-style bridge (manual `text::TextStyle` sites migrated to

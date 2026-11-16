@@ -318,6 +318,13 @@ data_view_protocol_tests = executable(
 )
 test('data-view-protocol', data_view_protocol_tests, suite: 'unit')
 
+data_table_2b_tests = executable(
+    'data_table_2b_tests',
+    files('data_table_2b_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('data-table-2b', data_table_2b_tests, suite: 'unit')
+
 selection_model_tests = executable(
     'selection_model_tests',
     files('selection_model_tests.cpp'),
