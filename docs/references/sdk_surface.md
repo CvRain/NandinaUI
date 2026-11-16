@@ -489,7 +489,7 @@ experimental**，理由与后续动作写进清单——两个枚举是公开 wi
 - 迁移说明只表达一件事：原来由自定义平台 override 提供的解码器，改为应用服务注入；
 - 库内实现、测试替身、下游样例一次改完，要求重新编译。
 
-退役后清单为 182 个头文件，其中 10 个 internal（清单随后续批次增长，当前为 203 个头文件（188 experimental + 15 internal））。生成模板归 NandinaCLI；
+退役后清单为 182 个头文件，其中 10 个 internal（清单随后续批次增长，当前为 204 个头文件（189 experimental + 15 internal；其中 internal/ 目录下的 anchored_positioner.hpp 与 uniform_row_window.hpp 因被实验性公共头内联包含而登记为 experimental））。生成模板归 NandinaCLI；
 框架维护 [`sdk_app` 消费 fixture](../../tests/fixtures/sdk_app/README.md)，不维护第二份模板。
 
 ## 6. 不要越界声明的事

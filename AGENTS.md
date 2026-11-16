@@ -31,7 +31,6 @@ application shell. Version `0.1.0-alpha.1`.
   accessibility text-scale source (Windows source landed on 2026-11-13; Linux source and
   persistence pending), notebook workspace follow-ups (UI visual acceptance, todo/rich text),
   P4.8c. P4.7 real multi-face assets stay deferred.
-  Linux is reachable through the current local SSH alias (`nandina-linux`).
 - **Latest (2026-11-13 follow-up)**: a maintainer-reported Collapsible showcase defect exposed
   that `Flex`/`Row`/`Column` measure measured every child with the container's full main extent,
   while arrange distributed flex space only later. Wrapped children therefore reported the
@@ -59,10 +58,10 @@ application shell. Version `0.1.0-alpha.1`.
   version suffix. Verified on the CI-equivalent local config (Clang + shared + Meson 1.7.2):
   full suite 133/133, static config `portable-bundle` OK, red-first injections for both the
   negative and positive branches. The Test step annotation now carries the unfiltered test-log
-  tail so assertion text is visible in public check-run annotations.
+  tail so public check-run annotations show assertion text.
 - **Latest (2026-11-14)**: CI is green and the CPU page-golden gate is blocking (promoted
-  2026-11-14; `b35629f` green). Current counts: 134 tests (111 unit + 23 integration), 203
-  headers (188 experimental + 15 internal), 28 approved goldens (7 pages × CPU/SDF × 2
+  2026-11-14; `b35629f` green). Current counts: 135 tests (112 unit + 23 integration), 204
+  headers (189 experimental + 15 internal), 28 approved goldens (7 pages × CPU/SDF × 2
   platforms = 14/platform), 39 public components, 7-page blocking CPU coverage.
   **Data-view contract:** §9 is the **v3.1 final design** (v3 + 2026-11-15 errata):
   non-template `DataTable`/`ListView` over a shared `IRowModel` (rows only), `DataTableColumn`
@@ -70,9 +69,12 @@ application shell. Version `0.1.0-alpha.1`.
   in every build mode, stable `RowId`/`ColumnId`/`CellId`, `TableSelectionModel`,
   `GridNavigation`, local/external sorting by `ColumnId`, delegate-owned visuals (no recipe),
   composition-only internals, virtualized `ListView` (`ForEach` kept). **Batch 1A (TrackSolver +
-  static Table) is committed; DataTable/ListView remain unimplemented (next: 1B).** Verification:
-  `release_check --ci` 8/8, full suite 134/134, ASan 109+1 skip, no-RTTI 111/111, CPU `table`
-  golden byte-identical to HEAD.
+  static Table) is committed; batch 1B (`UniformRowWindow` extraction) is committed (2026-11-16); DataTable/ListView
+  remain unimplemented (next: 2A).**
+  Verification: full suite 135/135, ASan 110+1 skip, no-RTTI 112/112, no-SQLite 107+1 skip,
+  pure tools 8/8; `UniformRowWindow` 9 cases/116 assertions and `virtual-list` 29 cases/154
+  assertions. Review added NaN/invalid-window defenses and a traversal-time source-shrink
+  regression (red-first SIGABRT before the fix).
 - P4.6 Step 2b is closed — default component recipes consume the semantic role's
   leading/weight/slant through `TypeStyle::role` → `ResolvedTypeStyle` and the shared
   text-style bridge (manual `text::TextStyle` sites migrated to
@@ -361,9 +363,8 @@ application shell. Version `0.1.0-alpha.1`.
   Wayland, RADV RX 6750 GRE 12GB, Mesa 26.2.6) is reachable over SSH with a dedicated key; the
   full Linux suite is 129 OK / 0 FAIL (132 with the B2a/B2b page tests) and all fourteen Linux
   page goldens (home/anchors/label/typography/table/collapsible/surface × SDF/CPU) compare clean.
-  The 2026-11-12 re-check went through a new
-  Network-address/port-forward entry and confirmed the same machine, repository path, key auth,
-  129/129 suite and 0-diff goldens; the address is temporary and only kept in the local session.
+  The 2026-11-12 re-check via a new temporary forward confirmed the same machine, path, key
+  auth, 129/129 suite and 0-diff goldens; the address stays local-only.
   Workflow, session-environment exports (`XDG_RUNTIME_DIR`, `WAYLAND_DISPLAY`,
   `XDG_SESSION_TYPE=wayland`), remote shell caveat (default fish; run scripts via
   `/usr/bin/bash -s`), golden capture/approve rules and security boundaries are in

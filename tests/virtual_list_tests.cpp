@@ -15,6 +15,7 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
+#include <limits>
 #include <memory>
 #include <string>
 #include <vector>
@@ -146,6 +147,13 @@ TEST_CASE(
     // 偏移被钳制在最大滚动位置。
     list->set_scroll_offset(foundation::NanPoint(0.0F, 99999.0F));
     REQUIRE(list->scroll_offset().get_y() == Catch::Approx(29700.0F));
+
+    // 非有限输入不得污染几何：NaN 防御性回到顶部，窗口仍可用。
+    list->set_scroll_offset(foundation::NanPoint(0.0F, std::numeric_limits<float>::quiet_NaN()));
+    REQUIRE(list->scroll_offset().get_y() == 0.0F);
+    REQUIRE(tree.layout_root(foundation::NanSize(300.0F, 300.0F)) >= 1);
+    REQUIRE(list->row_node(0) != nullptr);
+    REQUIRE(list->row_node(10) == nullptr);
 }
 
 TEST_CASE("VirtualListView wheel scrolls the window", "[widget][virtual-list][input]") {
@@ -820,6 +828,30 @@ TEST_CASE(
     );
     REQUIRE(list->row_node(0) == nullptr);
     REQUIRE(list->row_node(10) != nullptr);
+}
+
+TEST_CASE(
+    "VirtualListView traversal-time source shrink never positions stale window indexes",
+    "[widget][virtual-list]"
+) {
+    reactive::Graph graph;
+    auto list = make_list(graph);
+    list->set_source(make_items(100));
+
+    scene::NanSceneTree tree;
+    tree.set_root(list);
+    (void)tree.layout_root(foundation::NanSize(300.0F, 300.0F));
+    REQUIRE(list->row_node(9) != nullptr);
+
+    // process 相位不能立即改树：set_source 已替换全量数据，但物化窗口
+    // 依旧是 0..9。接下来的 layout 必须在 post_layout 同步前也不访问旧索引。
+    {
+        auto phase = tree.enter_phase(scene::FramePhase::process);
+        list->set_source({});
+    }
+    REQUIRE_NOTHROW(tree.layout_root(foundation::NanSize(300.0F, 300.0F)));
+    REQUIRE(list->item_count() == 0);
+    REQUIRE(list->row_node(0) == nullptr);
 }
 
 TEST_CASE(

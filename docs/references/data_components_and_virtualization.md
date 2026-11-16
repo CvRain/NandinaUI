@@ -4,8 +4,9 @@
 > **2026-11-14：§9 升级为 v3 定稿；2026-11-15 v3.1 勘误定稿（维护者评审）：数据视图采用非模板
 > 组件 + `IRowModel` 行模型 + `DataTableColumn` 列定义 + `IItemDelegate` + 显式选择模型；
 > v3.1 只修正接口矛盾（命名冲突/事件可见性/ItemBinding/typed 签名/哈希/动态列/`apply` 语义），
-> 不改变总体架构。**§9 的批 1A（TrackSolver + 静态 Table 接入）已完成并提交；DataTable/ListView
-> 仍未实现，按 §9.13 继续。** §8 静态 Table 与 §3/§4 基础契约不变。**
+> 不改变总体架构。**§9 的批 1A（TrackSolver + 静态 Table 接入）已完成并提交；批 1B
+> （UniformRowWindow 提取）已完成并提交（2026-11-16，`refactor(data): extract uniform row window`）；
+> DataTable/ListView 仍未实现，按 §9.13 继续。** §8 静态 Table 与 §3/§4 基础契约不变。**
 > 本文件是阶段 5 数据组件的契约入口：已完成批次见 §1–§8，后续数据视图见 §9（v3.1）。
 > 静态 `Table`、`DataTable`、`Accordion` 等阶段 5 组件清单仍按
 > [组件开发路线图](component_roadmap.md#阶段-5信息组织与数据展示) 分批推进，不在本批。
@@ -264,7 +265,8 @@ SelectionModel、RovingFocus、虚拟化与排序留给后续交互数据表；�
 ## 9. P4.2d 数据视图契约：DataTable 与 ListView（v3.1 定稿）
 
 > 状态：**2026-11-14 v3 定稿；2026-11-15 v3.1 勘误定稿（维护者评审）；批 1A（TrackSolver +
-> 静态 Table 接入）已完成并提交。DataTable/ListView 尚未实现，按 §9.13 继续施工。**
+> 静态 Table 接入）已完成并提交；批 1B（UniformRowWindow 提取）已完成并提交（2026-11-16，
+> `refactor(data): extract uniform row window`）。DataTable/ListView 尚未实现，按 §9.13 继续施工。**
 > 数据视图采用**非模板组件 + 行模型 + 列定义 + delegate + 显式选择模型**；v3.1 只修正接口矛盾，
 > 不改变总体架构。§3/§4/§8 已交付契约不变；旧 `ListView` 只作 `ForEach` 薄包装的状态随 §9.11 回收。
 >
@@ -638,14 +640,27 @@ struct SortRequest {
 | 工具 | 职责 | 落地批次 |
 | --- | --- | --- |
 | `internal::TrackSolver`（`track_solver.hpp/.cpp`） | 纯轨道数学：固定/权重分配、无界 intrinsic、gap、有限性校验；**不测量节点** | **1A（已完成 2026-11-15）** |
-| `internal::UniformRowWindow` | 统一行高窗口：内容高度、offset 夹取、半开可见区间、滚动显现数学、行命中 | 1B |
+| `internal::UniformRowWindow` | 统一行高窗口：内容高度、offset 夹取、半开可见区间 `[first,end)`、滚动显现数学、行命中；只依赖数值与索引 | **1B（已完成 2026-11-16，`refactor(data): extract uniform row window`）** |
 | `internal::ItemHost` | delegate 控件 host：create/update/销毁/keyed 复用、每项 scope | 2B（与真实消费者一起设计） |
 | 滚动/列命中 | 行命中并入 `UniformRowWindow`；列命中等 DataTable 出现后再提取 | 1B/2B |
 
 - `TrackSolver` 无状态，实现为内部纯函数（`validate_tracks` + `solve_tracks`），不建类/成员；
   `Table` 的 `columns_` 仍是唯一事实来源，每次验证/求解做轻量 `TrackSpec` 转换，不缓存第二份。
+- `UniformRowWindow` 仍是 widget 内部实现。由于 experimental 的模板头 `VirtualListView` 以值成员
+  持有 `RowWindow`，其头文件暂登记为 experimental（与 `anchored_positioner.hpp` 先例一致）；
+  2B/3 收口 DataTable/ListView 时再决定迁移为正式实验 API 或调整包含形状。
+- `content_height()` 保留旧 VirtualListView 的 float 累积语义；极大行数可能得到 `+inf`。后续
+  DataTable 必须在自己的参数/布局层按 §9.3 的有限性规则拒绝总高度，不能依赖本工具抛异常。
 - 输入：`std::span<const TrackSpec>`、`std::optional<float> available_width`、`std::span<const float>
   intrinsic_widths`（仅无界使用）、`gap`；输出 widths + total_width。
+- `UniformRowWindow` 只依赖数值与索引：pending-scroll 挂起、`source_generation_` 对账、
+  `sync_or_schedule()`/`post_layout`、`ForEach::set_items()`、节点定位与 wheel 输入（含 x 轴归零）
+  仍留在 `VirtualListView`；`scroll_to_index` 的纯数学返回新 offset，首布局前挂起由视图决定；
+  视口底边（`local_y == viewport_height`）命中最后一个已物化行的语义不变。
+  有效有限输入的可观察行为与提取前一致；额外将 NaN offset 防御性归零，避免
+  其进入浮点到整型转换或节点几何。
+- 遍历相位 `set_source()` 可先替换数据、再在 post-layout 对账物化窗口；这个间隙中
+  `position_window()` 只遍历旧窗口与当前数据的索引交集，防止数据收缩时用旧窗口越界读取新 key。
 - 约束：有界宽度下 intrinsic 不使用；无界时 intrinsic 数量必须等于轨道数；非有限 intrinsic 与旧
   实现一致，在总宽检查处报 `Table content extent must fit finite layout coordinates`；负 intrinsic
   照旧夹取为 0；`solve_tracks()` 自身执行验证，不依赖调用者先验证；`Table::set_columns()` 仍先
@@ -704,7 +719,7 @@ struct SortRequest {
 | 批 | 内容 | 闸门 |
 | --- | --- | --- |
 | **1A ✅ 已完成（2026-11-15，`refactor(table): extract shared track solver`）** | `internal::track_solver.hpp/.cpp` 纯函数 + 静态 Table 接入（删除原 validate_tracks 与列宽分配代码） + 直接单测 | 主套件 134/134、ASan 109+1 skip、no-RTTI 111/111；CPU table golden 与 HEAD 逐字节一致（A/B）；`release_check --ci` 8/8 |
-| **1B** | 从 VirtualListView 提取 `UniformRowWindow`（内容高度/offset 夹取/半开可见区间/滚动显现/行命中）；pending 调度与 ForEach 复用留在 VirtualListView | VirtualListView 913 行测试全绿；行为不变 |
+| **1B ✅ 已完成（2026-11-16，`refactor(data): extract uniform row window`）** | 从 VirtualListView 提取 `UniformRowWindow`（内容高度/offset 夹取/半开可见区间/滚动显现/行命中）；pending 调度与 ForEach 复用留在 VirtualListView | `uniform-row-window` 9 用例/116 断言；`virtual-list` 29 用例/154 断言。红先：半开末端、底边命中、NaN/illegal window 防御，以及遍历期数据收缩在修复前触发旧窗口索引 SIGABRT；主套件 135/135、ASan 110+1 skip、no-RTTI 112/112、no-SQLite 107+1 skip、纯工具 8/8 |
 | **2A** | 身份 + `std::hash`、`RowRange`、`IRowModel`/`RowModelBase`/`TypedRowModelBase`、类型令牌、`TableSelectionModel`、`GridNavigation`（纯协议，不建 DataTable 节点） | 红先单测：身份/通知合并/令牌不匹配/矩形选择/导航 |
 | **2B** | `DataTableColumn`、delegate/`ItemBinding`/`TypedItemDelegate`、`ItemHost`、全量物化、本地/外部排序；公共头标 `internal` 不导出 | 红先单测：列事务、排序状态迁移、delegate 生命周期、外部排序事件 |
 | **3** | DataTable 虚拟化 + 表头键盘排序 + 公共导出（`header_surface.toml` 转 experimental）+ 组件文档/索引 | 窗口物化计数、复用、滚动边界、键盘/语义红先；双平台 Showcase 页 + golden 由维护者交付/审批 |

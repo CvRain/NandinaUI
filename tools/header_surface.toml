@@ -664,6 +664,11 @@ path = "nandina/widget/internal/track_solver.hpp"
 level = "internal"
 
 [[headers]]
+path = "nandina/widget/internal/uniform_row_window.hpp"
+level = "experimental"
+reason = "RowWindow/UniformRowWindow 只依赖数值与索引，但被实验性模板头 virtual_list_view.hpp 内联包含（公共头无法只在前置声明中持值类型）；仍在 internal/ 目录下，后续 ListView/DataTable 收口时再决定移出或改 internal-only"
+
+[[headers]]
 path = "nandina/widget/label.hpp"
 level = "experimental"
 

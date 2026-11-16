@@ -325,6 +325,13 @@ virtual_list_tests = executable(
 )
 test('virtual-list', virtual_list_tests, suite: 'unit')
 
+uniform_row_window_tests = executable(
+    'uniform_row_window_tests',
+    files('uniform_row_window_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('uniform-row-window', uniform_row_window_tests, suite: 'unit')
+
 widget_tests = executable(
     'widget_tests',
     files('widget_tests.cpp'),

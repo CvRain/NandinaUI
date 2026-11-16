@@ -188,6 +188,8 @@ module_widget = files(
     'widget/internal/focus_scope.cpp',
     'widget/internal/track_solver.hpp',
     'widget/internal/track_solver.cpp',
+    'widget/internal/uniform_row_window.hpp',
+    'widget/internal/uniform_row_window.cpp',
     'widget/primitives/text.hpp',
     'widget/primitives/text.cpp',
     'widget/primitives/text_presentation.hpp',

@@ -25,6 +25,7 @@
 #include "../reactive/event.hpp"
 #include "../scene/input_event.hpp"
 #include "declarative.hpp"
+#include "internal/uniform_row_window.hpp"
 #include "list_view.hpp"
 #include "roving_focus.hpp"
 #include "selection_model.hpp"
@@ -33,7 +34,6 @@
 #include <cmath>
 #include <cstddef>
 #include <functional>
-#include <limits>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -205,17 +205,9 @@ namespace nandina::widget
                 return;
             }
             pending_scroll_index_.reset();
-            const float row_top = static_cast<float>(index) * row_height_;
-            const float row_bottom = row_top + row_height_;
-            const float viewport_bottom = offset_.get_y() + height();
-            float new_y = offset_.get_y();
-            if (row_top < offset_.get_y()) {
-                new_y = row_top;
+            if (const auto new_y = window_math().reveal_offset(index, offset_.get_y())) {
+                set_scroll_offset(foundation::NanPoint(0.0F, *new_y));
             }
-            else if (row_bottom > viewport_bottom) {
-                new_y = row_bottom - height();
-            }
-            set_scroll_offset(foundation::NanPoint(0.0F, new_y));
         }
 
         void set_wheel_step(const float step) {
@@ -231,11 +223,11 @@ namespace nandina::widget
             return offset_;
         }
         [[nodiscard]] auto maximum_scroll_offset() const -> foundation::NanPoint {
-            return foundation::NanPoint(0.0F, std::max(0.0F, content_height() - height()));
+            return foundation::NanPoint(0.0F, window_math().maximum_scroll_offset());
         }
         /// 全量内容高度（行数 × 行高），与父布局看到的盒子高度无关。
         [[nodiscard]] auto content_size() const -> foundation::NanSize {
-            return foundation::NanSize(std::max(0.0F, width()), content_height());
+            return foundation::NanSize(std::max(0.0F, width()), window_math().content_height());
         }
 
         // ─── 数据查询 ────────────────────────────────────────────────────
@@ -339,11 +331,11 @@ namespace nandina::widget
                     return false;
                 }
                 const auto local = to_local(mouse.screen_pos());
-                const int index = hit_row(local.get_y());
-                if (index < 0) {
+                const auto index = window_math().hit_row(local.get_y(), offset_.get_y(), window_);
+                if (!index.has_value()) {
                     return false;
                 }
-                handle_row_click(mouse, static_cast<std::size_t>(index), source_keys_[index]);
+                handle_row_click(mouse, *index, source_keys_[*index]);
                 event.accept();
                 return true;
             }
@@ -397,7 +389,9 @@ namespace nandina::widget
             const float cross_width = width() > 0.0F ? width() : constraints.max_width;
             const float measured_width =
                 std::isfinite(cross_width) ? cross_width : constraints.min_width;
-            return constraints.constrain(foundation::NanSize(measured_width, content_height()));
+            return constraints.constrain(
+                foundation::NanSize(measured_width, window_math().content_height())
+            );
         }
 
         auto on_layout() -> void override {
@@ -423,14 +417,12 @@ namespace nandina::widget
         }
 
     private:
-        static constexpr std::size_t k_no_window = std::numeric_limits<std::size_t>::max();
-
-        [[nodiscard]] auto content_height() const -> float {
-            return static_cast<float>(source_keys_.size()) * row_height_;
+        [[nodiscard]] auto window_math() const noexcept -> internal::UniformRowWindow {
+            return internal::UniformRowWindow {row_height_, height(), source_keys_.size()};
         }
 
-        [[nodiscard]] auto has_window() const -> bool {
-            return window_last_ != k_no_window;
+        [[nodiscard]] auto has_window() const noexcept -> bool {
+            return !window_.empty();
         }
 
         /// 把行标签快照进自有缓存：typeahead 匹配只读缓存，不读用户回调的
@@ -457,34 +449,8 @@ namespace nandina::widget
             };
         }
 
-        /// 把浮点行坐标夹进 [0, total-1]。
-        [[nodiscard]] auto clamp_row(float row) const -> std::size_t {
-            const std::size_t total = source_keys_.size();
-            if (total == 0) {
-                return 0;
-            }
-            const auto row_index = static_cast<std::size_t>(std::floor(row));
-            return std::min(row_index, total - 1);
-        }
-
-        [[nodiscard]] auto compute_window() const -> std::pair<std::size_t, std::size_t> {
-            const std::size_t total = source_keys_.size();
-            if (total == 0) {
-                return {0, k_no_window};
-            }
-            const float viewport = std::max(0.0F, height());
-            if (viewport <= 0.0F) {
-                return {0, k_no_window};
-            }
-            const std::size_t first = clamp_row(offset_.get_y() / row_height_);
-            const std::size_t last =
-                clamp_row(std::ceil((offset_.get_y() + viewport) / row_height_) - 1.0F);
-            return {first, std::max(first, last)};
-        }
-
         void clamp_offset() {
-            const float maximum = std::max(0.0F, content_height() - height());
-            offset_.set_y(std::clamp(offset_.get_y(), 0.0F, maximum));
+            offset_.set_y(window_math().clamp_offset(offset_.get_y()));
         }
 
         [[nodiscard]] auto find_index(const Key& key) const -> std::optional<std::size_t> {
@@ -500,8 +466,8 @@ namespace nandina::widget
         /// 窗口区间相同但数据代次变化时也必须推送 set_items（同窗口数据替换
         /// 要让 update_ 生效 / 换键），不能只按区间比较早退。
         void sync_or_schedule() {
-            const auto [first, last] = compute_window();
-            if (first == window_first_ && last == window_last_
+            const auto window = window_math().visible_window(offset_.get_y());
+            if (window.first == window_.first && window.end == window_.end
                 && source_generation_ == synced_generation_)
             {
                 return;
@@ -517,23 +483,22 @@ namespace nandina::widget
 
         /// 真正物化窗口：只把可见行交给窗口区域的 set_items（键控对账复用行控件）。
         void sync_window() {
-            const auto [first, last] = compute_window();
-            if (first == window_first_ && last == window_last_
+            const auto window = window_math().visible_window(offset_.get_y());
+            if (window.first == window_.first && window.end == window_.end
                 && source_generation_ == synced_generation_)
             {
                 position_window();
                 return;
             }
-            window_first_ = first;
-            window_last_ = last;
-            std::vector<Item> window;
+            window_ = window;
+            std::vector<Item> items;
             if (has_window()) {
-                window.reserve(window_last_ - window_first_ + 1);
-                for (std::size_t index = window_first_; index <= window_last_; ++index) {
-                    window.push_back(source_items_[index]);
+                items.reserve(window_.count());
+                for (std::size_t index = window_.first; index < window_.end; ++index) {
+                    items.push_back(source_items_[index]);
                 }
             }
-            region_->set_items(std::move(window));
+            region_->set_items(std::move(items));
             synced_generation_ = source_generation_;
             position_window();
         }
@@ -565,42 +530,28 @@ namespace nandina::widget
             region_->layout_to(
                 foundation::NanRect::from_xywh(
                     0.0F,
-                    static_cast<float>(window_first_) * row_height_ - offset_.get_y(),
+                    static_cast<float>(window_.first) * row_height_ - offset_.get_y(),
                     list_width,
-                    static_cast<float>(window_last_ - window_first_ + 1) * row_height_
+                    static_cast<float>(window_.count()) * row_height_
                 )
             );
-            for (std::size_t index = window_first_; index <= window_last_; ++index) {
+            // set_source() 可能在遍历相位先替换全量数据，而窗口对账要到
+            // post_layout 才能改树。这个间隙里 window_ 仍可能指向旧数据范围；
+            // 定位阶段只遍历它与新数据的交集，旧节点留给既有延迟对账删除。
+            const std::size_t position_end = std::min(window_.end, source_keys_.size());
+            for (std::size_t index = window_.first; index < position_end; ++index) {
                 auto* node = region_->node_for(source_keys_[index]);
                 if (node != nullptr) {
                     node->layout_to(
                         foundation::NanRect::from_xywh(
                             0.0F,
-                            static_cast<float>(index - window_first_) * row_height_,
+                            static_cast<float>(index - window_.first) * row_height_,
                             list_width,
                             row_height_
                         )
                     );
                 }
             }
-        }
-
-        [[nodiscard]] auto hit_row(float local_y) const -> int {
-            if (local_y < 0.0F || local_y > height()) {
-                return -1;
-            }
-            const int index =
-                static_cast<int>(std::floor((offset_.get_y() + local_y) / row_height_));
-            if (index < 0 || static_cast<std::size_t>(index) >= source_keys_.size()) {
-                return -1;
-            }
-            // 底边（local_y == height()，视口高为行高整数倍时）按未物化的下一行
-            // 命中：夹回窗口上界，避免点击底边选中不可见行。半可见行（视口高不是
-            // 行高整数倍）仍在窗口内，不受影响。
-            if (has_window() && static_cast<std::size_t>(index) > window_last_) {
-                return static_cast<int>(window_last_);
-            }
-            return index;
         }
 
         /// 点击落地：ctrl 切换、shift 范围、普通点击独占选中；同时把焦点交给列表。
@@ -677,8 +628,7 @@ namespace nandina::widget
         std::vector<Key> source_keys_;
         std::unordered_map<Key, std::size_t> source_index_;
         foundation::NanPoint offset_ {};
-        std::size_t window_first_ = 0;
-        std::size_t window_last_ = k_no_window;
+        internal::RowWindow window_ {};
         std::size_t source_generation_ = 0;
         std::size_t synced_generation_ = 0;
         std::optional<std::size_t> pending_scroll_index_ = std::nullopt;
