@@ -660,6 +660,22 @@ path = "nandina/widget/internal/text_style_bridge.hpp"
 level = "internal"
 
 [[headers]]
+path = "nandina/widget/internal/data_identity.hpp"
+level = "internal"
+
+[[headers]]
+path = "nandina/widget/internal/grid_navigation.hpp"
+level = "internal"
+
+[[headers]]
+path = "nandina/widget/internal/row_model.hpp"
+level = "internal"
+
+[[headers]]
+path = "nandina/widget/internal/table_selection_model.hpp"
+level = "internal"
+
+[[headers]]
 path = "nandina/widget/internal/track_solver.hpp"
 level = "internal"
 

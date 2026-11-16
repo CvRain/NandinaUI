@@ -311,6 +311,13 @@ track_solver_tests = executable(
 )
 test('track-solver', track_solver_tests, suite: 'unit')
 
+data_view_protocol_tests = executable(
+    'data_view_protocol_tests',
+    files('data_view_protocol_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('data-view-protocol', data_view_protocol_tests, suite: 'unit')
+
 selection_model_tests = executable(
     'selection_model_tests',
     files('selection_model_tests.cpp'),

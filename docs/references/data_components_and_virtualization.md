@@ -6,6 +6,7 @@
 > v3.1 只修正接口矛盾（命名冲突/事件可见性/ItemBinding/typed 签名/哈希/动态列/`apply` 语义），
 > 不改变总体架构。**§9 的批 1A（TrackSolver + 静态 Table 接入）已完成并提交；批 1B
 > （UniformRowWindow 提取）已完成并提交（2026-11-16，`refactor(data): extract uniform row window`）；
+> 批 2A（数据视图协议）已完成并提交（2026-11-16，`feat(data): add data-view protocol layer`）；
 > DataTable/ListView 仍未实现，按 §9.13 继续。** §8 静态 Table 与 §3/§4 基础契约不变。**
 > 本文件是阶段 5 数据组件的契约入口：已完成批次见 §1–§8，后续数据视图见 §9（v3.1）。
 > 静态 `Table`、`DataTable`、`Accordion` 等阶段 5 组件清单仍按
@@ -266,7 +267,8 @@ SelectionModel、RovingFocus、虚拟化与排序留给后续交互数据表；�
 
 > 状态：**2026-11-14 v3 定稿；2026-11-15 v3.1 勘误定稿（维护者评审）；批 1A（TrackSolver +
 > 静态 Table 接入）已完成并提交；批 1B（UniformRowWindow 提取）已完成并提交（2026-11-16，
-> `refactor(data): extract uniform row window`）。DataTable/ListView 尚未实现，按 §9.13 继续施工。**
+> `refactor(data): extract uniform row window`）；批 2A（数据视图协议）已完成并提交（2026-11-16，
+> `feat(data): add data-view protocol layer`）。DataTable/ListView 尚未实现，按 §9.13 继续施工。**
 > 数据视图采用**非模板组件 + 行模型 + 列定义 + delegate + 显式选择模型**；v3.1 只修正接口矛盾，
 > 不改变总体架构。§3/§4/§8 已交付契约不变；旧 `ListView` 只作 `ForEach` 薄包装的状态随 §9.11 回收。
 >
@@ -294,18 +296,27 @@ SelectionModel、RovingFocus、虚拟化与排序留给后续交互数据表；�
 
 ```cpp
 namespace nandina::widget {
-struct RowId { std::uint64_t value = 0; };
-struct ColumnId { std::string value; };
+struct RowId {
+    std::uint64_t value = 0;
+    friend bool operator==(const RowId&, const RowId&) = default;
+};
+struct ColumnId {
+    std::string value;
+    friend bool operator==(const ColumnId&, const ColumnId&) = default;
+};
 struct CellId {
     RowId row;
     ColumnId column;
     friend bool operator==(const CellId&, const CellId&) = default;
 };
 } // namespace nandina::widget
-
-// 框架在同一头文件提供 std::hash<RowId> / std::hash<ColumnId> / std::hash<CellId>
-// 特化：用户可直接把它们用于 unordered_map/unordered_set；实现无 RTTI 依赖。
 ```
+
+- 三个身份显式声明默认相等运算符：`CellId::operator== = default` 依赖成员的显式相等（不能依赖
+  隐式聚合比较在未来的可读性变化）。
+- **批 2A 边界**：身份头暂放 `widget/internal/data_identity.hpp` 并登记为 internal，只承诺相等语义；
+  `std::hash<RowId/ColumnId/CellId>` 特化随批 3 导出 DataTable 时再提供并承诺稳定，避免提前固化
+  公共哈希 API。
 
 - 模型负责 `row_id(row)` 在插入/排序/过滤后保持稳定且唯一；**不提供「行索引即身份」的默认实现**。
   ↑ 这是**稳定身份要求**，不提供兜底；简单模型可用自增计数或主键。
@@ -341,6 +352,15 @@ public:
 
 class RowModelBase: public IRowModel {
 public:
+    RowModelBase() = default;
+    ~RowModelBase() override = default;
+    // 禁止拷贝/移动：reactive::Event 的拷贝会共享订阅状态，两个模型副本会互相触发事件；
+    // 模型统一通过 shared_ptr<IRowModel> 持有，不需要拷贝/移动身份。
+    RowModelBase(const RowModelBase&) = delete;
+    auto operator=(const RowModelBase&) -> RowModelBase& = delete;
+    RowModelBase(RowModelBase&&) = delete;
+    auto operator=(RowModelBase&&) -> RowModelBase& = delete;
+
     // public overrides：事件查询对视图可见
     [[nodiscard]] auto reset_event() const noexcept -> const reactive::Event<>& override {
         return reset_event_;
@@ -372,11 +392,17 @@ public:
 **通知契约（同步事件）**：
 
 - 只能在 **UI 线程**发出；事件同步回调，不承诺 `RowModelBase` 自身具有「帧」概念。
-- `notify_data_changed({first,last})` 要求 `first <= last <= row_count()`；空范围不发事件。
-  `data_changed` 不得改变行数、行顺序或 `RowId`；这些结构变化必须用 `notify_reset()`。
+- `notify_data_changed({first,last_exclusive})` 要求 `first <= last_exclusive <= row_count()`；
+  非法范围抛 `std::invalid_argument` 且**不发事件**；空范围（`first == last_exclusive`）是合法 no-op、
+  不发事件。`data_changed` 不得改变行数、行顺序或 `RowId`；这些结构变化必须用 `notify_reset()`。
 - detached/idle 状态下，视图收到事件后**立即更新内部账本**（行列数、显示序索引、当前/滚动夹取）。
 - 遍历期（input/process/animation/layout/post_layout/paint 等 `defers_tree_mutation` 相位）只记录
   **pending reset / range**，在安全相位合并应用（同窗口内多次通知合并成一次；树变更仍走延迟通道）。
+  **批 2A 不实现该合并**：合并依赖场景树相位与视图 pending 状态，2B/3 与真实消费者一起做；2A 只
+  验证同步触发、空范围/非法范围语义与 `data_changed` 的结构不变量。
+- **批 2A 令牌验证范围**：同一模型令牌稳定、`TypedRowModelBase<ModelT>` 返回
+  `model_type_token_of<ModelT>()`、不同模型令牌不同；真正的「令牌不匹配抛错」在 2B 的
+  value/comparator/delegate 调用点验证。
 - 视图在退出树/析构时释放订阅；模型不得在通知回调中改视图树。
 - 退出树只断开订阅，不丢弃 `shared_ptr<IRowModel>`；重新入树时自动重连并按
   `reset` 语义完整对账，使脱树期间的模型变化不会漏掉。替换模型或析构则永久断开旧订阅。
@@ -459,7 +485,11 @@ auto custom_column(ColumnId id, std::string title, TableColumn track,
 ### 9.5 渲染层：`IItemDelegate` / `ItemBinding` / typed delegate
 
 ```cpp
-struct ModelIndex { std::size_t row = 0; std::size_t column = 0; };  // 显示序坐标
+struct ModelIndex {                 // 显示序坐标（不是身份）
+    std::size_t row = 0;
+    std::size_t column = 0;
+    friend bool operator==(const ModelIndex&, const ModelIndex&) = default;
+};
 struct ItemState {
     bool selected = false;
     bool current = false;      // 当前单元（键盘/程序化）
@@ -566,20 +596,43 @@ public:
     virtual void apply(SelectionOp op, CellId target, std::span<const CellId> extent) = 0;
 };
 
-class TableSelectionModel final: public ITableSelectionModel { ... };
+class TableSelectionModel final: public ITableSelectionModel {
+public:
+    explicit TableSelectionModel(
+        SelectionMode mode = SelectionMode::single,
+        SelectionBehavior behavior = SelectionBehavior::cells);
+    ...
+};
 ```
 
 `apply()` 语义（定稿）：
 
+- **批 2A 构造约束**：`SelectionBehavior::rows/columns` 在构造函数立即抛 `std::invalid_argument`，
+  避免构造成功却执行单元格语义；整行/整列随 DataTable 导航在后续批次交付。
 - 身份存在性由 **DataTable 程序化入口**负责校验；`apply()` 只处理已验证身份。
 - `extent` 为空 → 视为 `{target}`；**非空 extent 不含 target → `std::invalid_argument`**（调用违约）。
+- extent 在存储前**去重并保留首次出现顺序**；`selected()` 保持该顺序。
 - `replace`：清空 → 选中 extent；current=target；anchor=target。
 - `toggle`：target 已选则移除，否则加入；current=target；anchor=target（Ctrl 单击）。
 - `extend`：选中集合替换为 extent（含两端）；current=target；**anchor 保持不变**（无 anchor 时取 target）。
-- `SelectionMode::single`：忽略 extent，只保留 target。
+- `SelectionMode::single`：忽略 extent，只保留 target；单选的 toggle 对已选 target 做取消选中
+  （selected 清空，current 与 anchor 仍落在 target）。
 - `clear_selection()` 清空 selected + anchor，保留 current；需要清除键盘游标时显式调
   `set_current(std::nullopt)`，避免“取消选中”意外丢失导航位置。
-- `changed()` 在**选择集合、current、anchor 任一可观察状态变化**时触发，即使选中集合没变。
+- `changed()` 在**选择集合、current、anchor 任一可观察状态变化**时触发，且**每次操作至多一次**；
+  状态完全相同的幂等操作不发事件。
+- **非拷贝/移动**：`TableSelectionModel` 与 `RowModelBase` 一样禁止拷贝/移动（`Event` 拷贝会共享
+  订阅状态）；`STATIC_REQUIRE` 锁住。
+- **实现形态**：`selected()` 保持有序 `std::vector<CellId>`（首次出现顺序）；私有 membership
+  `std::unordered_set<CellId, InternalCellIdHash>` 提供 `is_selected()` O(1) 与 extent 去重 O(n)。
+  `set_current()` 只改 current、不复制/重建选择集合；只有选择集合实际变化时才重建索引并发事件。
+  `InternalCellIdHash` 是私有 hasher，不是公共 `std::hash<CellId>` 承诺（批 3 再提供）。
+- **非法枚举防御**：非法 `SelectionOp`（非 replace/toggle/extend）抛 `std::invalid_argument` 且
+  不改状态、不发事件。
+- anchor 是 shift 起点，**可以指向未选中单元**；`retain()` 只裁剪 selected/current/anchor，不强制
+  anchor ∈ selected。
+- `retain(keep)` 先计算完整新状态再提交：`keep` 抛异常时 selected/current/anchor 全部保持不变
+  （强异常保证）。
 - `set_current()` 只服务键盘/程序化导航；`retain()` 只遍历已存储的选中/current/anchor，
   不要求视图物化或构造整张表的 `CellId` universe。两者都按实际变化幂等发事件。
 - 行为：首批只实现 `cells`（单元格 → 行 → 列按后续批次）；跨排序/过滤按身份稳定；隐藏列不在 universe。
@@ -593,6 +646,7 @@ public:
     void set_shape(std::size_t rows, std::size_t columns) noexcept;  // 显示态；0 行/0 列 → 无 current
     void set_page_rows(std::size_t rows) noexcept;                   // 视口可见行数
     void set_current(ModelIndex index) noexcept;   // 非空网格夹取；空网格清空 current
+    void clear_current() noexcept;                 // 显式清除键盘游标
     [[nodiscard]] auto current() const noexcept -> std::optional<ModelIndex>;
     auto move(GridDirection) -> bool;        // 空网格恒 false；上下保持列，左右保持行
     auto home() -> bool; auto end() -> bool; // 行首/行尾；空网格恒 false
@@ -604,6 +658,13 @@ public:
 - **空网格**：行数或可见列数任一为 0 时不存在合法坐标，不产生虚假 `(0,0)`：`current()` /
   `scroll_to_index()` 返回 `std::nullopt`，所有移动/Home/End/Page 返回 false；`set_shape` 从非空
   变空时清空 current。
+- **播种规则**：空网格变非空**不会**自动播种 `(0,0)`，current 保持 `std::nullopt`；视图完成身份
+  映射后显式 `set_current()`（或 `clear_current()` 显式清除）。
+- **移动规则**：无 current 时 `move/home/end/page_up/page_down` 全部返回 false；方向键不环绕；
+  Home/End 是**当前行**首尾（有 current 即返回 true，即使已在端点）；PageUp/PageDown 保持列，
+  `page_rows == 0` 或无位移时返回 false。
+- `scroll_to_index()` 等价于 `current()->row`，无 current 时 `std::nullopt`。
+- **非法枚举防御**：`move()` 收到非四个枚举值的 `GridDirection` 返回 false（不移动、不报成功）。
 - **同步归属**：GridNavigation 只持有显示序 `ModelIndex`；`TableSelectionModel` 只持有身份
   `CellId`。视图负责双向映射：移动时把 current 写入选择模型；reset/排序后按身份重算显示坐标
   （身份消失则夹取）。两者都不持有对方的副本作为事实来源。
@@ -720,7 +781,7 @@ struct SortRequest {
 | --- | --- | --- |
 | **1A ✅ 已完成（2026-11-15，`refactor(table): extract shared track solver`）** | `internal::track_solver.hpp/.cpp` 纯函数 + 静态 Table 接入（删除原 validate_tracks 与列宽分配代码） + 直接单测 | 主套件 134/134、ASan 109+1 skip、no-RTTI 111/111；CPU table golden 与 HEAD 逐字节一致（A/B）；`release_check --ci` 8/8 |
 | **1B ✅ 已完成（2026-11-16，`refactor(data): extract uniform row window`）** | 从 VirtualListView 提取 `UniformRowWindow`（内容高度/offset 夹取/半开可见区间/滚动显现/行命中）；pending 调度与 ForEach 复用留在 VirtualListView | `uniform-row-window` 9 用例/116 断言；`virtual-list` 29 用例/154 断言。红先：半开末端、底边命中、NaN/illegal window 防御，以及遍历期数据收缩在修复前触发旧窗口索引 SIGABRT；主套件 135/135、ASan 110+1 skip、no-RTTI 112/112、no-SQLite 107+1 skip、纯工具 8/8 |
-| **2A** | 身份 + `std::hash`、`RowRange`、`IRowModel`/`RowModelBase`/`TypedRowModelBase`、类型令牌、`TableSelectionModel`、`GridNavigation`（纯协议，不建 DataTable 节点） | 红先单测：身份/通知合并/令牌不匹配/矩形选择/导航 |
+| **2A ✅ 已完成（2026-11-16，`feat(data): add data-view protocol layer`）** | `internal::data_identity.hpp`（显式相等身份）、`internal::row_model.hpp`（`RowRange`/`IRowModel`/`RowModelBase`/`TypedRowModelBase`/类型令牌；通知不合并）、`internal::table_selection_model.hpp/.cpp`（仅 cells、extent 去重、retain 强异常保证）、`internal::grid_navigation.hpp/.cpp`（空网格 optional/不播种/不环绕/翻页）；四个头暂登记 `internal`，批 3 导出时转 experimental；2A 不承诺 `std::hash` 公共 API，令牌不匹配抛错留 2B | `data-view-protocol` 25 用例/163 断言；主套件 136/136、ASan 111+1 skip、no-RTTI 113/113、no-SQLite 108+1 skip、纯工具 8/8、`release_check --ci` 8/8；红先：空范围误发事件、非法范围不抛、extent 不去重、retain 非原子、空网格自动播种、单选取消清 anchor、非法 SelectionOp/GridDirection、membership 索引不重建均先红后绿 |
 | **2B** | `DataTableColumn`、delegate/`ItemBinding`/`TypedItemDelegate`、`ItemHost`、全量物化、本地/外部排序；公共头标 `internal` 不导出 | 红先单测：列事务、排序状态迁移、delegate 生命周期、外部排序事件 |
 | **3** | DataTable 虚拟化 + 表头键盘排序 + 公共导出（`header_surface.toml` 转 experimental）+ 组件文档/索引 | 窗口物化计数、复用、滚动边界、键盘/语义红先；双平台 Showcase 页 + golden 由维护者交付/审批 |
 | **4** | `BuildContext::for_each()` 改 `ForEach` 直接实现；相关测试/文档同步 | for_each 行为不变；authoring 测试全绿 |
