@@ -305,3 +305,42 @@ Semantics 在后续 8 个 dispatcher drain 中挂载。Windows probe 首帧页�
 
 **上限仍然存在**：4096² 是刻意的内存上限（8 位 alpha 16 MB CPU + 后端 RGBA 展开），
 真正写满时仍会跳过字形而不是崩溃；长期方案是多图集页或字形淘汰，不在本批。
+
+## 12. 文本复杂度守卫：结构单测 + 手工 release benchmark（2026-11-16）
+
+**背景**：2026-11-16 的 CI ASan job 在 `tests/font_tests.cpp` 的
+`REQUIRE(elapsed < 500.0)` 上失败（实测 556.86 ms），但该提交没有文本实现改动，
+复跑即绿。单测在 ASan/UBSan 与共享 runner 上测量实际耗时不稳，不能作为门禁；
+同类的三处 wall-clock 上限都按同一原则处理。
+
+**单测只断言结构契约**（上限断言已删除）：
+
+| 单测 | 结构断言 |
+| --- | --- |
+| `[text][harfbuzz][caret]` `HarfBuzz caret stops dedupe a long line`（`font_tests.cpp`） | 一行 8000 簇 → 1 行；停靠点数 = 簇数 + 末尾停靠点；首尾 offset 正确；按 x 有序 |
+| `[foundation][utf8][grapheme]` `a long grapheme run advances one cluster at a time`（`foundation_tests.cpp`） | 每次 `next_grapheme_boundary` 必须前进；恰好 10000 个簇 |
+| `[text][header]` `deterministic wrap splits a long run into bounded lines`（`text_layout_header_tests.cpp`） | 5000 字长串换行后行数 > 1，每行有停靠点，总宽不超过约束 |
+
+**性能保护迁移到手工 release benchmark**：
+`tests/benchmarks/text_performance_benchmark.cpp`（Meson 目标
+`text_performance_benchmark`，**不注册为 `meson test`**，因此不进入 CI 矩阵）。
+程序对上述三个工作负载做预热（默认 2 次）+ 多次采样（默认 9 次），报告
+p50/p95/max，默认 p95 阈值 **2000 ms**（比原 500 ms 宽 4 倍）；阈值违规退出码 1，
+`--max-p95-ms 0` 关闭阈值。用法：
+
+```bash
+meson compile -C buildDir text_performance_benchmark
+./buildDir/tests/text_performance_benchmark
+./buildDir/tests/text_performance_benchmark --samples 15 --warmup 3 --max-p95-ms 3000
+```
+
+2026-11-16 本机实测（debug 构建，p95）：
+
+| 工作负载 | 普通构建 | ASan/UBSan 构建 |
+| --- | --- | --- |
+| caret 停靠点去重（8000 簇） | 30.9 ms | 102.8 ms |
+| grapheme 前进（10000 簇） | 1.05 ms | 4.50 ms |
+| deterministic 换行（5000 字） | 3.07 ms | 12.2 ms |
+
+结论：CI 不再用墙钟断言做性能门禁；benchmark 是发布前/手工回归检查，
+不声称存在稳定的 CI 性能门禁。GPU/SDF 与页面性能仍按既有约定留在本地/release 检查。

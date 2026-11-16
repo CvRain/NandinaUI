@@ -215,28 +215,25 @@ TEST_CASE(
     }
 }
 
-TEST_CASE("a long grapheme run advances in bounded time", "[foundation][utf8][grapheme][budget]") {
-    // 复杂度守卫：逐簇推进曾经是 O(n²)（每次对整段剩余文本重新分段并分配一个 vector），
-    // 5000 字的页面因此要数秒才打开。这里给一个宽松预算：O(n) 实现只需毫秒量级，
-    // 而 O(n²) 会明显越界。断言的是「没有退化」，不是精确性能。
+TEST_CASE("a long grapheme run advances one cluster at a time", "[foundation][utf8][grapheme]") {
+    // 逐簇推进曾经是 O(n²)（每次对整段剩余文本重新分段并分配一个 vector）。
+    // 这里只断言结构契约：每次调用都前进，并且恰好得到 10000 个簇。
+    // 墙钟保护已迁移到 tests/benchmarks/text_performance_benchmark.cpp。
     std::string run;
     run.reserve(30000);
     for (int index = 0; index < 10000; ++index) {
         run += "汉";
     }
 
-    const auto started = std::chrono::steady_clock::now();
     std::size_t clusters = 0;
     for (auto cursor = std::size_t {0}; cursor < run.size();) {
-        cursor = foundation::utf8::next_grapheme_boundary(run, cursor);
+        const auto next = foundation::utf8::next_grapheme_boundary(run, cursor);
+        REQUIRE(next > cursor); // 必须前进，否则调用方会死循环
+        cursor = next;
         ++clusters;
     }
-    const auto elapsed =
-        std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - started)
-            .count();
 
     REQUIRE(clusters == 10000);
-    REQUIRE(elapsed < 200.0); // O(n²) 在这个规模上要数秒
 }
 
 TEST_CASE("JSON wrapper parses documents and maps errors", "[foundation][json]") {

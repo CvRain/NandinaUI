@@ -130,6 +130,16 @@ font_tests = executable(
 )
 test('font', font_tests, suite: 'unit')
 
+# 手工/release 文本性能基准：不注册为 meson test，因此不进入 CI 矩阵。
+# 单测只断言结构契约；耗时用预热 + 多次采样 + p95 独立衡量（见程序头注释与
+# docs/references/text_shaping_cost.md）。
+text_performance_benchmark = executable(
+    'text_performance_benchmark',
+    files('benchmarks/text_performance_benchmark.cpp'),
+    cpp_args : ['-DNANDINA_TEST_FONT_PATH="' + font_test_path + '"'],
+    dependencies : [nandina_dep],
+)
+
 scene_tests = executable(
     'scene_tests',
     files('scene_tests.cpp'),
