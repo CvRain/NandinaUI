@@ -10,6 +10,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <string>
 
 namespace nandina::widget
@@ -44,5 +45,22 @@ namespace nandina::widget
         friend auto operator==(const ModelIndex&, const ModelIndex&) -> bool = default;
     };
 } // namespace nandina::widget
+
+namespace nandina::widget::internal
+{
+    /// 内部身份 hasher：TableSelectionModel / ItemHost 共用；批 3 导出时桥接为
+    /// 公共 std::hash 特化，2A/2B 不承诺公共哈希 API。
+    struct RowIdHash {
+        [[nodiscard]] auto operator()(const RowId& id) const noexcept -> std::size_t;
+    };
+
+    struct ColumnIdHash {
+        [[nodiscard]] auto operator()(const ColumnId& id) const noexcept -> std::size_t;
+    };
+
+    struct CellIdHash {
+        [[nodiscard]] auto operator()(const CellId& id) const noexcept -> std::size_t;
+    };
+} // namespace nandina::widget::internal
 
 #endif // NANDINA_EXPERIMENT_WIDGET_INTERNAL_DATA_IDENTITY_HPP

@@ -187,6 +187,7 @@ module_widget = files(
     'widget/internal/text_style_bridge.hpp',
     'widget/internal/focus_scope.cpp',
     'widget/internal/data_identity.hpp',
+    'widget/internal/data_identity.cpp',
     'widget/internal/grid_navigation.hpp',
     'widget/internal/grid_navigation.cpp',
     'widget/internal/row_model.hpp',

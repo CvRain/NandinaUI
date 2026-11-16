@@ -86,20 +86,12 @@ namespace nandina::widget
         void apply(SelectionOp op, CellId target, std::span<const CellId> extent) override;
 
     private:
-        /// 私有 membership 索引的 hasher；不是公共 std::hash<CellId> 承诺。
-        struct InternalCellIdHash {
-            [[nodiscard]] auto operator()(const CellId& cell) const noexcept -> std::size_t;
-        };
-
         /// 提交 next 状态；只有选择集合真正变化时才重建 membership 索引并发事件。
         void commit(
             std::vector<CellId> next_selected,
             std::optional<CellId> next_current,
             std::optional<CellId> next_anchor
         );
-
-        /// 重建 selected_ 对应的 membership 索引。
-        void rebuild_index();
 
         /// 空 extent → {target}；否则 O(n) 去重并保留首次出现顺序。
         [[nodiscard]] auto
@@ -109,7 +101,7 @@ namespace nandina::widget
         SelectionMode mode_;
         SelectionBehavior behavior_;
         std::vector<CellId> selected_;
-        std::unordered_set<CellId, InternalCellIdHash> selected_index_;
+        std::unordered_set<CellId, internal::CellIdHash> selected_index_;
         std::optional<CellId> current_;
         std::optional<CellId> anchor_;
         reactive::Event<> changed_;

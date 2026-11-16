@@ -7,15 +7,6 @@
 
 namespace nandina::widget
 {
-    auto TableSelectionModel::InternalCellIdHash::operator()(const CellId& cell) const noexcept
-        -> std::size_t {
-        std::size_t seed = std::hash<std::uint64_t> {}(cell.row.value);
-        const std::size_t column_hash = std::hash<std::string> {}(cell.column.value);
-        seed ^= column_hash + static_cast<std::size_t>(0x9e3779b97f4a7c15ULL) + (seed << 6)
-            + (seed >> 2);
-        return seed;
-    }
-
     TableSelectionModel::TableSelectionModel(
         const SelectionMode mode,
         const SelectionBehavior behavior
@@ -57,14 +48,6 @@ namespace nandina::widget
         return changed_;
     }
 
-    void TableSelectionModel::rebuild_index() {
-        selected_index_.clear();
-        selected_index_.reserve(selected_.size());
-        for (const auto& cell: selected_) {
-            selected_index_.insert(cell);
-        }
-    }
-
     void TableSelectionModel::commit(
         std::vector<CellId> next_selected,
         std::optional<CellId> next_current,
@@ -75,8 +58,15 @@ namespace nandina::widget
             return;
         }
         if (selection_changed) {
+            // Build the replacement membership index before mutating selected_; a failed
+            // allocation must leave the observable selection and index pair unchanged.
+            std::unordered_set<CellId, internal::CellIdHash> next_index;
+            next_index.reserve(next_selected.size());
+            for (const auto& cell: next_selected) {
+                next_index.insert(cell);
+            }
             selected_ = std::move(next_selected);
-            rebuild_index();
+            selected_index_ = std::move(next_index);
         }
         current_ = std::move(next_current);
         anchor_ = std::move(next_anchor);
@@ -132,7 +122,7 @@ namespace nandina::widget
             normalized.push_back(target);
             return normalized;
         }
-        std::unordered_set<CellId, InternalCellIdHash> seen;
+        std::unordered_set<CellId, internal::CellIdHash> seen;
         seen.reserve(extent.size());
         for (const auto& cell: extent) {
             if (seen.insert(cell).second) {
