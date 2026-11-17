@@ -333,6 +333,9 @@ TEST_CASE("DataTable validates column tokens on set_model", "[data-table][2b][co
     OtherModel other;
     auto table = widget::DataTable::create(fixture.ui, {name_column()});
     table->set_model(std::shared_ptr<widget::IRowModel>(&model, [](widget::IRowModel*) {}));
+    // 3a 起只有视口窗口内的单元格会被物化；脱树/未布局时窗口为空。
+    auto tree = mount(fixture, table);
+    (void)tree;
     auto* node_before = table->cell_node(cell(1, "name"));
     REQUIRE(node_before != nullptr);
 
@@ -723,6 +726,8 @@ TEST_CASE(
     );
     auto table = widget::DataTable::create(fixture.ui, {first, second});
     table->set_model(std::shared_ptr<widget::IRowModel>(&model, [](widget::IRowModel*) {}));
+    auto tree = mount(fixture, table);
+    (void)tree;
 
     REQUIRE_FALSE(seen.empty());
     bool saw_second = false;
@@ -964,6 +969,8 @@ TEST_CASE("DataTable custom delegate and custom_column", "[data-table][2b][deleg
     );
     auto table = widget::DataTable::create(fixture.ui, {column});
     table->set_model(std::shared_ptr<widget::IRowModel>(&model, [](widget::IRowModel*) {}));
+    auto tree = mount(fixture, table);
+    (void)tree;
     model.reset({"a", "b"}, 1);
     CHECK(table->item_count() == 2);
     auto* label = static_cast<widget::Label*>(table->cell_node(cell(1, "custom")));

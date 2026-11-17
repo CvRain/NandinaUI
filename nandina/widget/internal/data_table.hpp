@@ -1,16 +1,19 @@
 //
-// widget/internal/data_table — 全量物化 DataTable（批 2B 内部实现）。
+// widget/internal/data_table — 窗口化物化的 DataTable（批 2B/3a 内部实现）。
 //
 // 非模板类：行模型经 shared_ptr<IRowModel> 注入；列由 DataTableColumn 唯一定义；单元格
 // 视觉全部由 IItemDelegate 提供（内部 HeaderHost 是普通 Label + 排序图元组合，不伪造
-// model_row）。2B 做全量物化、模型绑定/通知状态机、表头指针点击排序、本地/外部排序与
-// 默认 TextItemDelegate；虚拟化、表头键盘/语义与公共导出留到批 3。
+// model_row）。2B 做模型绑定/通知状态机、表头指针点击排序、本地/外部排序与默认
+// TextItemDelegate；3a 让 DataTable 自持纵向 viewport：表头固定，body 只物化
+// UniformRowWindow 可见窗口内的单元格，支持滚轮、offset 夹取、滚动到行与遍历期
+// pending 窗口同步。表头键盘/作者 HeaderDelegate/主题重解析/公共导出留到 3b。
 //
 
 #ifndef NANDINA_EXPERIMENT_WIDGET_INTERNAL_DATA_TABLE_HPP
 #define NANDINA_EXPERIMENT_WIDGET_INTERNAL_DATA_TABLE_HPP
 
 #include "../../scene/control.hpp"
+#include "../../scene/input_event.hpp"
 #include "../../widget/build_context.hpp"
 #include "data_identity.hpp"
 #include "data_table_column.hpp"
@@ -19,6 +22,7 @@
 #include "item_host.hpp"
 #include "row_model.hpp"
 #include "table_selection_model.hpp"
+#include "uniform_row_window.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -83,7 +87,9 @@ namespace nandina::widget
         // ─── 查询 / 布局 ─────────────────────────────────────────────────
         [[nodiscard]] auto row_count() const noexcept -> std::size_t;
         [[nodiscard]] auto column_count() const noexcept -> std::size_t;
+        /// 已物化的单元格数（可见窗口行 × 可见列）；窗口外的行不创建节点。
         [[nodiscard]] auto item_count() const noexcept -> std::size_t;
+        /// 只对已物化单元格返回节点；窗口外返回 nullptr。
         [[nodiscard]] auto cell_node(const CellId& id) const -> scene::NanControl*;
         [[nodiscard]] auto header_node(const ColumnId& id) const -> scene::NanControl*;
         [[nodiscard]] auto model_row_for_display(std::size_t display_row) const
@@ -95,6 +101,16 @@ namespace nandina::widget
         void set_show_header(bool show_header) noexcept;
         [[nodiscard]] auto show_header() const noexcept -> bool;
 
+        // ─── 纵向视口（3a 内部；3b 接输入与键盘）────────────────────────
+        /// 当前纵向滚动偏移（已夹取到 [0, maximum_scroll_offset()]）。
+        [[nodiscard]] auto scroll_offset() const noexcept -> float;
+        /// 全量内容高度超出 body 视口时允许的最大偏移；无可见列时为 0。
+        [[nodiscard]] auto maximum_scroll_offset() const noexcept -> float;
+        /// 设置偏移（已夹取）；遍历期延迟窗口物化到 post_layout。
+        void set_scroll_offset(float offset);
+        /// 滚动到让 display_row 行完整可见；首布局前（视口高度未知）挂起到 on_layout。
+        void scroll_to_row(std::size_t display_row);
+
         // ─── 通知状态机（测试/观测）─────────────────────────────────────
         [[nodiscard]] auto has_pending_notifications() const noexcept -> bool;
 
@@ -102,6 +118,7 @@ namespace nandina::widget
         auto on_measure(foundation::NanLayoutConstraints constraints)
             -> foundation::NanSize override;
         auto on_layout() -> void override;
+        auto on_input(scene::InputEvent& event) -> bool override;
         void on_enter_tree() override;
         void on_ready() override;
         void on_exit_tree() override;
@@ -141,6 +158,20 @@ namespace nandina::widget
         void handle_header_click(const ColumnId& id);
         void emit_sort_request(std::optional<SortSpec> sort, SortRequestReason reason);
 
+        // ─── 窗口 / 视口────────────────────────────────────────────────
+        [[nodiscard]] auto header_height() const noexcept -> float;
+        [[nodiscard]] auto body_viewport_height() const noexcept -> float;
+        [[nodiscard]] auto window_math() const noexcept -> internal::UniformRowWindow;
+        /// 无可见列时没有 body 视口：offset 恒为 0（window_math 的零视口仍会算出
+        /// 内容高度，不能直接用于滚动）。
+        [[nodiscard]] auto clamped_offset(float offset) const noexcept -> float;
+        /// 按当前视口重算偏移/窗口并只物化窗口内单元格（idle 相位调用）。
+        void refresh_window();
+        /// 遍历期不能改树：挂到 post_layout 再物化窗口。
+        void schedule_window_sync();
+        void apply_window_sync();
+        void position_window();
+
         widget::BuildContext ui_;
         std::vector<DataTableColumn> columns_;
         std::vector<std::shared_ptr<IItemDelegate>> default_delegates_;
@@ -169,6 +200,12 @@ namespace nandina::widget
         bool pending_reset_ = false;
         std::vector<RowRange> pending_ranges_;
         bool pending_scheduled_ = false;
+
+        internal::RowWindow visible_window_ {};
+        float scroll_offset_ = 0.0F;
+        float wheel_step_ = 40.0F;
+        bool pending_window_sync_ = false;
+        std::optional<std::size_t> pending_scroll_row_;
 
         float row_height_ = 32.0F;
         bool show_header_ = true;

@@ -506,10 +506,17 @@ namespace nandina::widget
         if (!ranges.empty()) {
             apply_data_changes(ranges);
         }
+        // A window sync queued in the same post-layout batch was deferred until the model
+        // ledger was rebuilt; apply it now against the new display order.
+        if (pending_window_sync_) {
+            pending_window_sync_ = false;
+            refresh_window();
+        }
     }
 
     auto DataTable::has_pending_notifications() const noexcept -> bool {
-        return pending_reset_ || !pending_ranges_.empty() || pending_scheduled_;
+        return pending_reset_ || !pending_ranges_.empty() || pending_scheduled_
+            || pending_window_sync_;
     }
 
     // ─── 排序 ───────────────────────────────────────────────────────────────
@@ -759,6 +766,7 @@ namespace nandina::widget
             throw std::invalid_argument("DataTable row height must be finite and positive");
         }
         row_height_ = row_height;
+        scroll_offset_ = clamped_offset(scroll_offset_);
         mark_layout_dirty();
     }
 
@@ -771,11 +779,60 @@ namespace nandina::widget
             return;
         }
         show_header_ = show_header;
+        scroll_offset_ = clamped_offset(scroll_offset_);
         mark_layout_dirty();
     }
 
     auto DataTable::show_header() const noexcept -> bool {
         return show_header_;
+    }
+
+    // ─── 纵向视口 / 滚动 ────────────────────────────────────────────────────
+
+    auto DataTable::scroll_offset() const noexcept -> float {
+        return scroll_offset_;
+    }
+
+    auto DataTable::maximum_scroll_offset() const noexcept -> float {
+        if (visible_columns_.empty() || body_viewport_height() <= 0.0F) {
+            return 0.0F;
+        }
+        return window_math().maximum_scroll_offset();
+    }
+
+    void DataTable::set_scroll_offset(const float offset) {
+        // 显式 offset / 滚轮操作取消尚未落位的 scroll_to_row 目标。
+        pending_scroll_row_.reset();
+        const float clamped = clamped_offset(offset);
+        if (clamped == scroll_offset_) {
+            return;
+        }
+        scroll_offset_ = clamped;
+        if (traversal_phase()) {
+            // 当前帧先把已物化行平移到位；窗口的增删物化延迟到 post_layout。
+            position_window();
+            schedule_window_sync();
+            return;
+        }
+        refresh_window();
+    }
+
+    void DataTable::scroll_to_row(const std::size_t display_row) {
+        if (visible_columns_.empty()) {
+            pending_scroll_row_.reset();
+            return;
+        }
+        if (display_row >= display_order_.size()) {
+            return;
+        }
+        if (body_viewport_height() <= 0.0F) {
+            pending_scroll_row_ = display_row;
+            return;
+        }
+        pending_scroll_row_.reset();
+        if (const auto target = window_math().reveal_offset(display_row, scroll_offset_)) {
+            set_scroll_offset(*target);
+        }
     }
 
     // ─── 重建 / 布局 ────────────────────────────────────────────────────────
@@ -840,42 +897,44 @@ namespace nandina::widget
 
     void DataTable::materialize_cells() {
         std::vector<ItemHost::ItemRequest> requests;
-        if (!model_) {
-            host_->set_items(requests);
-            return;
-        }
-        const std::size_t rows = display_order_.size();
-        requests.reserve(rows * visible_columns_.size());
-        for (std::size_t display_row = 0; display_row < rows; ++display_row) {
-            const std::size_t model_row = display_order_[display_row];
-            const RowId row = model_->row_id(model_row);
-            for (std::size_t visible = 0; visible < visible_columns_.size(); ++visible) {
-                const std::size_t column_index = visible_columns_[visible];
-                const auto& column = columns_[column_index];
-                const CellId cell {.row = row, .column = column.id};
-                requests.push_back(
-                    ItemHost::ItemRequest {
-                        .id = cell,
-                        .model = model_.get(),
-                        .model_row = model_row,
-                        .display_index = ModelIndex {.row = display_row, .column = visible},
-                        .row = row,
-                        .column = &column.id,
-                        .state = item_state_for(cell),
-                        .delegate = default_delegates_[column_index],
-                    }
-                );
+        if (model_ != nullptr && !visible_columns_.empty()) {
+            const std::size_t end = std::min(visible_window_.end, display_order_.size());
+            if (end > visible_window_.first) {
+                requests.reserve((end - visible_window_.first) * visible_columns_.size());
+            }
+            for (std::size_t display_row = visible_window_.first; display_row < end; ++display_row)
+            {
+                const std::size_t model_row = display_order_[display_row];
+                const RowId row = model_->row_id(model_row);
+                for (std::size_t visible = 0; visible < visible_columns_.size(); ++visible) {
+                    const std::size_t column_index = visible_columns_[visible];
+                    const auto& column = columns_[column_index];
+                    const CellId cell {.row = row, .column = column.id};
+                    requests.push_back(
+                        ItemHost::ItemRequest {
+                            .id = cell,
+                            .model = model_.get(),
+                            .model_row = model_row,
+                            .display_index = ModelIndex {.row = display_row, .column = visible},
+                            .row = row,
+                            .column = &column.id,
+                            .state = item_state_for(cell),
+                            .delegate = default_delegates_[column_index],
+                        }
+                    );
+                }
             }
         }
         host_->set_items(requests);
     }
 
     void DataTable::update_cells_in_ranges(const std::vector<RowRange>& ranges) {
-        if (!model_ || ranges.empty()) {
+        if (model_ == nullptr || ranges.empty()) {
             return;
         }
         std::vector<ItemHost::ItemRequest> requests;
-        for (std::size_t display_row = 0; display_row < display_order_.size(); ++display_row) {
+        const std::size_t end = std::min(visible_window_.end, display_order_.size());
+        for (std::size_t display_row = visible_window_.first; display_row < end; ++display_row) {
             const std::size_t model_row = display_order_[display_row];
             if (!row_in_ranges(model_row, ranges)) {
                 continue;
@@ -954,12 +1013,15 @@ namespace nandina::widget
     }
 
     void DataTable::refresh_cell_states() {
-        if (!model_) {
+        if (model_ == nullptr) {
             return;
         }
         std::vector<ItemHost::ItemRequest> requests;
-        requests.reserve(display_order_.size() * visible_columns_.size());
-        for (std::size_t display_row = 0; display_row < display_order_.size(); ++display_row) {
+        const std::size_t end = std::min(visible_window_.end, display_order_.size());
+        if (end > visible_window_.first) {
+            requests.reserve((end - visible_window_.first) * visible_columns_.size());
+        }
+        for (std::size_t display_row = visible_window_.first; display_row < end; ++display_row) {
             const std::size_t model_row = display_order_[display_row];
             const RowId row = model_->row_id(model_row);
             for (std::size_t visible = 0; visible < visible_columns_.size(); ++visible) {
@@ -1002,7 +1064,7 @@ namespace nandina::widget
         retain_selection();
         updating_selection_ = false;
         sync_navigation();
-        materialize_cells();
+        refresh_window();
         if (header_) {
             std::vector<const DataTableColumn*> visible;
             visible.reserve(visible_columns_.size());
@@ -1021,10 +1083,14 @@ namespace nandina::widget
         pending_scheduled_ = false;
         pending_reset_ = false;
         pending_ranges_.clear();
+        pending_window_sync_ = false;
         if (!model_) {
             display_order_.clear();
             display_row_for_row_.clear();
             visible_columns_ = visible_column_indices();
+            visible_window_ = {};
+            scroll_offset_ = 0.0F;
+            pending_scroll_row_.reset();
             host_->reset_items();
             selection_.retain([](const CellId&) { return false; });
             navigation_.set_shape(0, visible_columns_.size());
@@ -1097,11 +1163,11 @@ namespace nandina::widget
         for (std::size_t index = 0; index < widths.size(); ++index) {
             column_offsets_[index + 1] = column_offsets_[index] + widths[index];
         }
-        const float header_height = show_header_ && !visible_columns_.empty() ? row_height_ : 0.0F;
-        if (header_height > 0.0F) {
-            header_->layout_to(
-                foundation::NanRect::from_xywh(0.0F, 0.0F, table_width, header_height)
-            );
+
+        // 表头固定在顶部，不参与滚动。
+        const float header = header_height();
+        if (header_ != nullptr && header > 0.0F) {
+            header_->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, table_width, header));
             std::vector<foundation::NanRect> rects;
             rects.reserve(widths.size());
             for (std::size_t visible = 0; visible < widths.size(); ++visible) {
@@ -1110,24 +1176,142 @@ namespace nandina::widget
                         column_offsets_[visible],
                         0.0F,
                         widths[visible],
-                        header_height
+                        header
                     )
                 );
             }
             header_->set_cell_rects(std::move(rects));
         }
-        else {
+        else if (header_ != nullptr) {
             header_->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 0.0F, 0.0F));
             header_->set_cell_rects({});
         }
-        const float host_height = visible_columns_.empty()
-            ? 0.0F
-            : static_cast<float>(display_order_.size()) * row_height_;
+
+        const auto math = window_math();
+        // 首布局前挂起的滚动目标在这里按真实视口高度落位。
+        if (pending_scroll_row_.has_value()) {
+            if (const auto target = math.reveal_offset(*pending_scroll_row_, scroll_offset_)) {
+                scroll_offset_ = *target;
+            }
+            pending_scroll_row_.reset();
+        }
+        scroll_offset_ = clamped_offset(scroll_offset_);
+        const auto window =
+            visible_columns_.empty() ? internal::RowWindow {} : math.visible_window(scroll_offset_);
+        const bool window_changed =
+            window.first != visible_window_.first || window.end != visible_window_.end;
+        position_window();
+        if (window_changed) {
+            // 布局遍历期不能增删节点；post_layout 物化后由第二次布局落位。
+            schedule_window_sync();
+        }
+    }
+
+    auto DataTable::on_input(scene::InputEvent& event) -> bool {
+        if (event.type() != scene::EventType::mouse_wheel) {
+            return false;
+        }
+        auto& wheel = static_cast<scene::MouseWheelEvent&>(event);
+        const float dy = -wheel.delta().get_y() * wheel_step_;
+        const float before = scroll_offset_;
+        set_scroll_offset(scroll_offset_ + dy);
+        if (scroll_offset_ == before) {
+            return false;
+        }
+        event.accept();
+        return true;
+    }
+
+    // ─── 窗口 / 视口辅助 ───────────────────────────────────────────────────
+
+    auto DataTable::header_height() const noexcept -> float {
+        return show_header_ && !visible_columns_.empty() ? row_height_ : 0.0F;
+    }
+
+    auto DataTable::body_viewport_height() const noexcept -> float {
+        if (visible_columns_.empty()) {
+            return 0.0F;
+        }
+        return std::max(0.0F, height() - header_height());
+    }
+
+    auto DataTable::window_math() const noexcept -> internal::UniformRowWindow {
+        return internal::UniformRowWindow {
+            row_height_,
+            body_viewport_height(),
+            display_order_.size(),
+        };
+    }
+
+    auto DataTable::clamped_offset(const float offset) const noexcept -> float {
+        if (visible_columns_.empty() || body_viewport_height() <= 0.0F) {
+            return 0.0F;
+        }
+        return window_math().clamp_offset(offset);
+    }
+
+    void DataTable::refresh_window() {
+        if (visible_columns_.empty()) {
+            pending_scroll_row_.reset();
+        }
+        const auto math = window_math();
+        scroll_offset_ = clamped_offset(scroll_offset_);
+        visible_window_ =
+            visible_columns_.empty() ? internal::RowWindow {} : math.visible_window(scroll_offset_);
+        materialize_cells();
+        position_window();
+        mark_layout_dirty();
+    }
+
+    void DataTable::schedule_window_sync() {
+        if (pending_window_sync_) {
+            return;
+        }
+        auto* tree = get_tree();
+        if (tree == nullptr) {
+            apply_window_sync();
+            return;
+        }
+        pending_window_sync_ = true;
+        std::weak_ptr<DataTable> weak = std::static_pointer_cast<DataTable>(shared_from_this());
+        tree->post_layout([weak, tree] {
+            if (auto table = weak.lock(); table != nullptr && table->get_tree() == tree) {
+                table->apply_window_sync();
+            }
+        });
+    }
+
+    void DataTable::apply_window_sync() {
+        // The model callback for the same frame may still be queued behind this action.
+        // Rebuild its display ledger first; otherwise a shrink can make this window sync
+        // read stale row indices.
+        if (pending_reset_ || !pending_ranges_.empty() || pending_scheduled_) {
+            return;
+        }
+        pending_window_sync_ = false;
+        refresh_window();
+    }
+
+    void DataTable::position_window() {
+        if (model_ == nullptr || host_ == nullptr) {
+            return;
+        }
+        const float table_width = std::max(0.0F, width());
         host_->layout_to(
-            foundation::NanRect::from_xywh(0.0F, header_height, table_width, host_height)
+            foundation::NanRect::from_xywh(
+                0.0F,
+                header_height(),
+                table_width,
+                body_viewport_height()
+            )
         );
-        for (std::size_t display_row = 0; display_row < display_order_.size(); ++display_row) {
-            const RowId row = model_->row_id(display_order_[display_row]);
+        if (visible_columns_.empty() || column_offsets_.size() != visible_columns_.size() + 1) {
+            return;
+        }
+        const std::size_t end = std::min(visible_window_.end, display_order_.size());
+        for (std::size_t display_row = visible_window_.first; display_row < end; ++display_row) {
+            const std::size_t model_row = display_order_[display_row];
+            const RowId row = model_->row_id(model_row);
             for (std::size_t visible = 0; visible < visible_columns_.size(); ++visible) {
                 const auto& column = columns_[visible_columns_[visible]];
                 if (auto* node = host_->node_for(CellId {.row = row, .column = column.id});
@@ -1135,8 +1319,8 @@ namespace nandina::widget
                 {
                     const auto rect = foundation::NanRect::from_xywh(
                         column_offsets_[visible],
-                        static_cast<float>(display_row) * row_height_,
-                        widths[visible],
+                        static_cast<float>(display_row) * row_height_ - scroll_offset_,
+                        column_offsets_[visible + 1] - column_offsets_[visible],
                         row_height_
                     );
                     (void)node->measure_layout(
@@ -1165,6 +1349,7 @@ namespace nandina::widget
         pending_scheduled_ = false;
         pending_reset_ = false;
         pending_ranges_.clear();
+        pending_window_sync_ = false;
         if (host_) {
             host_->release_scopes();
         }
