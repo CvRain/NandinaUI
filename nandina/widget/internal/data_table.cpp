@@ -17,7 +17,59 @@
 
 namespace nandina::widget
 {
-    // ─── 表头：普通 Label + 排序指示图元（不伪造 model_row）──────────────────
+    namespace
+    {
+        /// 表头语义单元：role = column_header，内含默认 Label；排序状态写入
+        /// semantics value（ascending/descending），便于读屏区分。
+        class HeaderCellHost final: public scene::NanControl {
+        public:
+            HeaderCellHost(
+                reactive::Graph& graph,
+                const theme::NanTheme& theme,
+                std::string title
+            ) {
+                set_overflow(scene::ControlOverflow::clip);
+                label_ = Label::create(graph, std::move(title), theme);
+                label_->set_typography_role(theme::TypographyRole::label);
+                label_->set_max_lines(1);
+                label_->set_overflow(text::TextOverflow::ellipsis);
+                add_child(label_);
+            }
+
+            void set_title(const std::string& title) {
+                label_->set_text(title);
+                mark_layout_dirty();
+            }
+
+            void set_sort_state(const std::optional<SortDirection> direction) {
+                if (sort_ == direction) {
+                    return;
+                }
+                sort_ = direction;
+                aria_sort_ = direction.has_value()
+                    ? (direction == SortDirection::ascending ? "ascending" : "descending")
+                    : std::string {};
+                mark_dirty(scene::DirtyFlags::paint | scene::DirtyFlags::semantics);
+            }
+
+        protected:
+            void on_layout() override {
+                (void)label_->measure_layout(foundation::NanLayoutConstraints::tight(size()));
+                label_->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, width(), height()));
+            }
+
+            [[nodiscard]] auto semantics_properties() const -> semantics::Properties override {
+                return {.role = semantics::Role::column_header, .value = aria_sort_};
+            }
+
+        private:
+            std::shared_ptr<Label> label_;
+            std::optional<SortDirection> sort_;
+            std::string aria_sort_;
+        };
+    } // namespace
+
+    // ─── 表头 host：固定、可聚焦、行语义；指针/键盘都触发排序 ────────────────
     class DataTableHeaderHost final: public scene::NanControl {
     public:
         using ClickHandler = std::function<void(const ColumnId&)>;
@@ -39,7 +91,9 @@ namespace nandina::widget
         }
 
         void set_columns(const std::vector<const DataTableColumn*>& columns) {
-            std::unordered_map<ColumnId, std::shared_ptr<Label>, internal::ColumnIdHash> next;
+            const auto previous_focus = focused_column();
+            std::unordered_map<ColumnId, std::shared_ptr<HeaderCellHost>, internal::ColumnIdHash>
+                next;
             std::vector<ColumnId> order;
             next.reserve(columns.size());
             order.reserve(columns.size());
@@ -47,30 +101,41 @@ namespace nandina::widget
                 if (column == nullptr) {
                     continue;
                 }
-                const auto found = labels_.find(column->id);
-                std::shared_ptr<Label> label;
-                if (found != labels_.end()) {
-                    label = found->second;
-                    label->set_text(column->title);
+                const auto found = cells_.find(column->id);
+                std::shared_ptr<HeaderCellHost> cell;
+                if (found != cells_.end()) {
+                    cell = found->second;
+                    cell->set_title(column->title);
                 }
                 else {
-                    label = Label::create(*graph_, column->title, theme_);
-                    label->set_typography_role(theme::TypographyRole::label);
-                    label->set_max_lines(1);
-                    label->set_overflow(text::TextOverflow::ellipsis);
-                    add_child(label);
+                    cell = std::make_shared<HeaderCellHost>(*graph_, theme_, column->title);
+                    add_child(cell);
                 }
                 order.push_back(column->id);
-                next.emplace(column->id, std::move(label));
+                next.emplace(column->id, std::move(cell));
             }
-            for (auto& [id, label]: labels_) {
-                if (!next.contains(id) && label->parent() == this) {
-                    remove_and_delete(*label);
+            for (auto& [id, cell]: cells_) {
+                if (!next.contains(id) && cell->parent() == this) {
+                    remove_and_delete(*cell);
                 }
             }
-            labels_ = std::move(next);
+            cells_ = std::move(next);
             order_ = std::move(order);
             cell_rects_.assign(order_.size(), foundation::NanRect {});
+            focused_index_ = 0;
+            if (previous_focus.has_value()) {
+                const auto found = std::find(order_.begin(), order_.end(), *previous_focus);
+                if (found != order_.end()) {
+                    focused_index_ = static_cast<std::size_t>(std::distance(order_.begin(), found));
+                }
+            }
+            for (std::size_t index = 0; index < order_.size(); ++index) {
+                const auto found = cells_.find(order_[index]);
+                if (found != cells_.end() && found->second->parent() == this) {
+                    (void)move_child(*found->second, index);
+                }
+            }
+            apply_sort_states();
             mark_layout_dirty();
         }
 
@@ -79,6 +144,7 @@ namespace nandina::widget
                 return;
             }
             sort_ = sort;
+            apply_sort_states();
             mark_dirty(scene::DirtyFlags::paint);
         }
 
@@ -87,64 +153,129 @@ namespace nandina::widget
             for (std::size_t index = 0; index < order_.size() && index < cell_rects_.size();
                  ++index)
             {
-                if (auto found = labels_.find(order_[index]); found != labels_.end()) {
-                    auto& label = *found->second;
-                    (void)label.measure_layout(
+                if (auto found = cells_.find(order_[index]); found != cells_.end()) {
+                    (void)found->second->measure_layout(
                         foundation::NanLayoutConstraints::tight(cell_rects_[index].get_size())
                     );
-                    label.layout_to(cell_rects_[index]);
+                    found->second->layout_to(cell_rects_[index]);
                 }
             }
         }
 
         [[nodiscard]] auto node_for(const ColumnId& id) const -> scene::NanControl* {
-            const auto found = labels_.find(id);
-            return found == labels_.end() ? nullptr : found->second.get();
+            const auto found = cells_.find(id);
+            return found == cells_.end() ? nullptr : found->second.get();
+        }
+
+        [[nodiscard]] auto focused_column() const noexcept -> std::optional<ColumnId> {
+            if (focused_index_ >= order_.size()) {
+                return std::nullopt;
+            }
+            return order_[focused_index_];
         }
 
     protected:
+        [[nodiscard]] auto is_focusable() const -> bool override {
+            return true;
+        }
+
+        [[nodiscard]] auto semantics_properties() const -> semantics::Properties override {
+            const bool focused_now = get_tree() != nullptr && get_tree()->focused_node() == this;
+            return {
+                .role = semantics::Role::row,
+                .state = {.focusable = true, .focused = focused_now},
+            };
+        }
+
         void on_layout() override {
-            // DataTable assigns each visible header label its exact column rectangle.
+            // DataTable assigns each header cell its exact column rectangle.
         }
 
         auto on_input(scene::InputEvent& event) -> bool override {
-            if (event.type() != scene::EventType::mouse_button || order_.empty()) {
+            if (order_.empty()) {
                 return false;
             }
-            auto& mouse = static_cast<scene::MouseButtonEvent&>(event);
-            if (mouse.button() != scene::MouseButtonEvent::Button::left || !mouse.is_pressed()) {
-                return false;
-            }
-            const auto local = to_local(mouse.screen_pos());
-            for (std::size_t index = 0; index < cell_rects_.size(); ++index) {
-                const auto rect = cell_rects_[index];
-                if (rect.get_width() <= 0.0F || rect.get_height() <= 0.0F) {
-                    continue;
-                }
-                if (local.get_x() < rect.get_left() || local.get_x() > rect.get_right()
-                    || local.get_y() < rect.get_top() || local.get_y() > rect.get_bottom())
+            if (event.type() == scene::EventType::mouse_button) {
+                auto& mouse = static_cast<scene::MouseButtonEvent&>(event);
+                if (mouse.button() != scene::MouseButtonEvent::Button::left || !mouse.is_pressed())
                 {
-                    continue;
+                    return false;
                 }
-                if (click_) {
-                    click_(order_[index]);
+                const auto local = to_local(mouse.screen_pos());
+                for (std::size_t index = 0; index < cell_rects_.size(); ++index) {
+                    const auto rect = cell_rects_[index];
+                    if (rect.get_width() <= 0.0F || rect.get_height() <= 0.0F) {
+                        continue;
+                    }
+                    if (local.get_x() < rect.get_left() || local.get_x() > rect.get_right()
+                        || local.get_y() < rect.get_top() || local.get_y() > rect.get_bottom())
+                    {
+                        continue;
+                    }
+                    focused_index_ = index;
+                    if (auto* tree = get_tree()) {
+                        tree->set_focus(this);
+                    }
+                    if (click_) {
+                        click_(order_[index]);
+                    }
+                    mark_dirty(scene::DirtyFlags::paint);
+                    event.accept();
+                    return true;
                 }
+                return false;
+            }
+            if (event.type() != scene::EventType::key) {
+                return false;
+            }
+            auto& key = static_cast<scene::KeyEvent&>(event);
+            if (!key.is_press_or_repeat()) {
+                return false;
+            }
+            using foundation::LogicalKey;
+            const auto logical = key.logical_key();
+            if (logical == LogicalKey::left || logical == LogicalKey::right
+                || logical == LogicalKey::home || logical == LogicalKey::end)
+            {
+                if (logical == LogicalKey::home) {
+                    focused_index_ = 0;
+                }
+                else if (logical == LogicalKey::end) {
+                    focused_index_ = order_.size() - 1;
+                }
+                else if (logical == LogicalKey::left) {
+                    focused_index_ = focused_index_ == 0 ? 0 : focused_index_ - 1;
+                }
+                else {
+                    focused_index_ = std::min(focused_index_ + 1, order_.size() - 1);
+                }
+                mark_dirty(scene::DirtyFlags::paint);
                 event.accept();
                 return true;
             }
-            return false;
+            const bool activate = logical == LogicalKey::enter || logical == LogicalKey::space;
+            if (!activate || !key.is_pressed()) {
+                return false;
+            }
+            if (focused_index_ >= order_.size()) {
+                return false;
+            }
+            if (click_) {
+                click_(order_[focused_index_]);
+            }
+            event.accept();
+            return true;
         }
 
         auto on_draw(render::DrawContext& ctx) -> void override {
             if (!sort_.has_value()) {
                 return;
             }
-            const auto found = labels_.find(sort_->column);
-            if (found == labels_.end()) {
+            const auto found = cells_.find(sort_->column);
+            if (found == cells_.end()) {
                 return;
             }
-            const auto* label = found->second.get();
-            const auto label_rect = label->local_rect();
+            const auto label_rect = found->second->local_rect();
             const float center_x = label_rect.get_right() - 10.0F;
             const float center_y = label_rect.get_top() + label_rect.get_height() * 0.5F;
             const float half = 3.5F;
@@ -172,14 +303,30 @@ namespace nandina::widget
         }
 
     private:
+        void apply_sort_states() {
+            for (const auto& id: order_) {
+                const auto found = cells_.find(id);
+                if (found == cells_.end()) {
+                    continue;
+                }
+                std::optional<SortDirection> direction;
+                if (sort_.has_value() && sort_->column == id) {
+                    direction = sort_->direction;
+                }
+                found->second->set_sort_state(direction);
+            }
+        }
+
         reactive::Graph* graph_ = nullptr;
         theme::NanTheme theme_;
         theme::NanColor indicator_color_ {};
         ClickHandler click_;
-        std::unordered_map<ColumnId, std::shared_ptr<Label>, internal::ColumnIdHash> labels_;
+        std::unordered_map<ColumnId, std::shared_ptr<HeaderCellHost>, internal::ColumnIdHash>
+            cells_;
         std::vector<ColumnId> order_;
         std::vector<foundation::NanRect> cell_rects_;
         std::optional<SortSpec> sort_;
+        std::size_t focused_index_ = 0;
     };
 
     namespace
@@ -745,6 +892,10 @@ namespace nandina::widget
         return header_ ? header_->node_for(id) : nullptr;
     }
 
+    auto DataTable::header_host() const -> scene::NanControl* {
+        return header_.get();
+    }
+
     auto DataTable::model_row_for_display(const std::size_t display_row) const
         -> std::optional<std::size_t> {
         if (display_row >= display_order_.size()) {
@@ -1201,13 +1352,221 @@ namespace nandina::widget
         const bool window_changed =
             window.first != visible_window_.first || window.end != visible_window_.end;
         position_window();
+        navigation_.set_page_rows(visible_window_.count());
         if (window_changed) {
             // 布局遍历期不能增删节点；post_layout 物化后由第二次布局落位。
             schedule_window_sync();
         }
     }
 
+    auto DataTable::is_focusable() const -> bool {
+        return true;
+    }
+
+    auto DataTable::semantics_properties() const -> semantics::Properties {
+        const bool focused_now = get_tree() != nullptr && get_tree()->focused_node() == this;
+        return {
+            .role = semantics::Role::table,
+            .state = {.focusable = true, .focused = focused_now},
+        };
+    }
+
+    auto DataTable::cell_at_display(
+        const std::size_t display_row,
+        const std::size_t visible_column
+    ) const -> std::optional<CellId> {
+        if (model_ == nullptr || display_row >= display_order_.size()
+            || visible_column >= visible_columns_.size())
+        {
+            return std::nullopt;
+        }
+        const std::size_t model_row = display_order_[display_row];
+        return CellId {
+            .row = model_->row_id(model_row),
+            .column = columns_[visible_columns_[visible_column]].id,
+        };
+    }
+
+    auto DataTable::display_index_of(const CellId& cell) const -> std::optional<ModelIndex> {
+        const auto found = display_row_for_row_.find(cell.row);
+        if (found == display_row_for_row_.end()) {
+            return std::nullopt;
+        }
+        for (std::size_t visible = 0; visible < visible_columns_.size(); ++visible) {
+            if (columns_[visible_columns_[visible]].id == cell.column) {
+                return ModelIndex {.row = found->second, .column = visible};
+            }
+        }
+        return std::nullopt;
+    }
+
+    auto DataTable::extent_between(const CellId& anchor, const CellId& target) const
+        -> std::vector<CellId> {
+        const auto from = display_index_of(anchor);
+        const auto to = display_index_of(target);
+        if (!from.has_value() || !to.has_value()) {
+            return {target};
+        }
+        const std::size_t row_begin = std::min(from->row, to->row);
+        const std::size_t row_end = std::max(from->row, to->row);
+        const std::size_t column_begin = std::min(from->column, to->column);
+        const std::size_t column_end = std::max(from->column, to->column);
+        std::vector<CellId> cells;
+        cells.reserve((row_end - row_begin + 1) * (column_end - column_begin + 1));
+        for (std::size_t display_row = row_begin; display_row <= row_end; ++display_row) {
+            const RowId row = model_->row_id(display_order_[display_row]);
+            for (std::size_t visible = column_begin; visible <= column_end; ++visible) {
+                cells.push_back(
+                    CellId {.row = row, .column = columns_[visible_columns_[visible]].id}
+                );
+            }
+        }
+        return cells;
+    }
+
+    auto DataTable::hit_cell(const foundation::NanPoint local) const -> std::optional<CellId> {
+        if (model_ == nullptr || visible_columns_.empty()
+            || column_offsets_.size() != visible_columns_.size() + 1)
+        {
+            return std::nullopt;
+        }
+        const float body_y = local.get_y() - header_height();
+        const auto display_row = window_math().hit_row(body_y, scroll_offset_, visible_window_);
+        if (!display_row.has_value() || display_row >= display_order_.size()) {
+            return std::nullopt;
+        }
+        const float x = local.get_x();
+        if (x < column_offsets_.front() || x > column_offsets_.back()) {
+            return std::nullopt;
+        }
+        for (std::size_t visible = 0; visible + 1 < column_offsets_.size(); ++visible) {
+            const float width = column_offsets_[visible + 1] - column_offsets_[visible];
+            if (width > 0.0F && x >= column_offsets_[visible] && x < column_offsets_[visible + 1]) {
+                return cell_at_display(*display_row, visible);
+            }
+        }
+        return std::nullopt;
+    }
+
+    void DataTable::focus_cell(const CellId& target, const bool extend) {
+        if (extend) {
+            const auto anchor = selection_.anchor().value_or(target);
+            selection_.apply(SelectionOp::extend, target, extent_between(anchor, target));
+            return;
+        }
+        if (selection_.mode() == SelectionMode::single) {
+            selection_.apply(SelectionOp::replace, target, {});
+            return;
+        }
+        selection_.set_current(target);
+    }
+
+    auto DataTable::handle_key(scene::KeyEvent& key_event) -> bool {
+        if (!key_event.is_press_or_repeat() || visible_window_.empty() || visible_columns_.empty())
+        {
+            return false;
+        }
+        using foundation::LogicalKey;
+        const auto logical = key_event.logical_key();
+        const bool directional = logical == LogicalKey::left || logical == LogicalKey::right
+            || logical == LogicalKey::up || logical == LogicalKey::down;
+        const bool navigation_key = directional || logical == LogicalKey::home
+            || logical == LogicalKey::end || logical == LogicalKey::page_up
+            || logical == LogicalKey::page_down;
+        if (!navigation_key) {
+            return false;
+        }
+        if (!navigation_.current().has_value()) {
+            if (!directional) {
+                return false;
+            }
+            const auto seed = cell_at_display(visible_window_.first, 0);
+            if (!seed.has_value()) {
+                return false;
+            }
+            navigation_.set_current(ModelIndex {.row = visible_window_.first, .column = 0});
+            selection_.apply(SelectionOp::replace, *seed, {});
+            scroll_to_row(visible_window_.first);
+            return true;
+        }
+        bool moved = false;
+        if (logical == LogicalKey::left) {
+            moved = navigation_.move(GridDirection::left);
+        }
+        else if (logical == LogicalKey::right) {
+            moved = navigation_.move(GridDirection::right);
+        }
+        else if (logical == LogicalKey::up) {
+            moved = navigation_.move(GridDirection::up);
+        }
+        else if (logical == LogicalKey::down) {
+            moved = navigation_.move(GridDirection::down);
+        }
+        else if (logical == LogicalKey::home) {
+            moved = navigation_.home();
+        }
+        else if (logical == LogicalKey::end) {
+            moved = navigation_.end();
+        }
+        else if (logical == LogicalKey::page_up) {
+            moved = navigation_.page_up();
+        }
+        else {
+            moved = navigation_.page_down();
+        }
+        if (!moved) {
+            // The key is in the navigation domain but has no movement at this boundary.
+            // Consume it without applying a stale current/anchor operation.
+            return true;
+        }
+        const auto current = navigation_.current();
+        if (!current.has_value()) {
+            return false;
+        }
+        const auto target = cell_at_display(current->row, current->column);
+        if (!target.has_value()) {
+            return false;
+        }
+        focus_cell(*target, key_event.modifiers().shift);
+        scroll_to_row(current->row);
+        return true;
+    }
+
     auto DataTable::on_input(scene::InputEvent& event) -> bool {
+        if (event.type() == scene::EventType::mouse_button) {
+            auto& mouse = static_cast<scene::MouseButtonEvent&>(event);
+            if (mouse.button() != scene::MouseButtonEvent::Button::left || !mouse.is_pressed()) {
+                return false;
+            }
+            const auto target = hit_cell(to_local(mouse.screen_pos()));
+            if (!target.has_value()) {
+                return false;
+            }
+            if (auto* tree = get_tree()) {
+                tree->set_focus(this);
+            }
+            const auto mods = mouse.modifiers();
+            if (mods.shift) {
+                const auto anchor = selection_.anchor().value_or(*target);
+                selection_.apply(SelectionOp::extend, *target, extent_between(anchor, *target));
+            }
+            else if (mods.ctrl && selection_.mode() != SelectionMode::single) {
+                selection_.apply(SelectionOp::toggle, *target, {});
+            }
+            else {
+                selection_.apply(SelectionOp::replace, *target, {});
+            }
+            event.accept();
+            return true;
+        }
+        if (event.type() == scene::EventType::key) {
+            auto& key = static_cast<scene::KeyEvent&>(event);
+            if (!handle_key(key)) {
+                return false;
+            }
+            event.accept();
+            return true;
+        }
         if (event.type() != scene::EventType::mouse_wheel) {
             return false;
         }
@@ -1258,6 +1617,7 @@ namespace nandina::widget
         scroll_offset_ = clamped_offset(scroll_offset_);
         visible_window_ =
             visible_columns_.empty() ? internal::RowWindow {} : math.visible_window(scroll_offset_);
+        navigation_.set_page_rows(visible_window_.count());
         materialize_cells();
         position_window();
         mark_layout_dirty();

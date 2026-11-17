@@ -110,10 +110,10 @@ P4.6 排版尺度与语义 role 指标已交付；剩余样式 reset、完整测
 - 静态 `Table`（P4.2b 代码于 2026-11-05 复核完成，**Showcase 视觉验收已于 2026-11-13 完成**；
   当前保持 experimental，是否进入推荐级待组件契约评审；契约见
   [数据组件：选择模型与虚拟化依据](data_components_and_virtualization.md) §8）；
-- `DataTable`/新 `ListView`：**2026-11-15 契约 v3.1 定稿；1A 已完成并提交；1B UniformRowWindow 已完成并提交（2026-11-16）；2A 已完成并提交（2026-11-16）；2B 全量 DataTable/delegate/ItemHost/排序已完成并提交（2026-11-16）；3a 内部虚拟化/窗口物化已完成并提交（2026-11-17）**
+- `DataTable`/新 `ListView`：**2026-11-15 契约 v3.1 定稿；1A 已完成并提交；1B UniformRowWindow 已完成并提交（2026-11-16）；2A 已完成并提交（2026-11-16）；2B 全量 DataTable/delegate/ItemHost/排序已完成并提交（2026-11-16）；3a 内部虚拟化/窗口物化已完成并提交（2026-11-17）；3b① 输入/导航/表头语义已完成并提交（2026-11-17）**
   （[数据组件 §9](data_components_and_virtualization.md#9-p42d-数据视图契约datatable-与-listviewv31-定稿)）：
   非模板组件 + `IRowModel` + `DataTableColumn` + `IItemDelegate` + 显式选择模型；再按 §9.13
-  的 3b 继续（DataTable 输入/表头/主题收口后才导出公共 API）。
+  的 3b②/③ 继续（DataTable 主题与公共导出收口后才转 experimental）。
 
 ## 暂不进入核心优先级
 

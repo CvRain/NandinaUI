@@ -92,6 +92,8 @@ namespace nandina::widget
         /// 只对已物化单元格返回节点；窗口外返回 nullptr。
         [[nodiscard]] auto cell_node(const CellId& id) const -> scene::NanControl*;
         [[nodiscard]] auto header_node(const ColumnId& id) const -> scene::NanControl*;
+        /// 表头 host 本身（可聚焦单元；库内部与测试用，不进入公共导出）。
+        [[nodiscard]] auto header_host() const -> scene::NanControl*;
         [[nodiscard]] auto model_row_for_display(std::size_t display_row) const
             -> std::optional<std::size_t>;
         [[nodiscard]] auto display_row_for(RowId row) const -> std::optional<std::size_t>;
@@ -115,6 +117,8 @@ namespace nandina::widget
         [[nodiscard]] auto has_pending_notifications() const noexcept -> bool;
 
     protected:
+        [[nodiscard]] auto is_focusable() const -> bool override;
+        [[nodiscard]] auto semantics_properties() const -> semantics::Properties override;
         auto on_measure(foundation::NanLayoutConstraints constraints)
             -> foundation::NanSize override;
         auto on_layout() -> void override;
@@ -171,6 +175,19 @@ namespace nandina::widget
         void schedule_window_sync();
         void apply_window_sync();
         void position_window();
+
+        // ─── 指针 / 键盘选择（3b）──────────────────────────────────────
+        [[nodiscard]] auto
+        cell_at_display(std::size_t display_row, std::size_t visible_column) const
+            -> std::optional<CellId>;
+        [[nodiscard]] auto display_index_of(const CellId& cell) const -> std::optional<ModelIndex>;
+        /// 以显示序展开 anchor→target 的矩形 extent（cells 行为）。
+        [[nodiscard]] auto extent_between(const CellId& anchor, const CellId& target) const
+            -> std::vector<CellId>;
+        /// body 局部坐标 → 单元格身份；表头/窗口外/列外返回 nullopt。
+        [[nodiscard]] auto hit_cell(foundation::NanPoint local) const -> std::optional<CellId>;
+        auto handle_key(scene::KeyEvent& key_event) -> bool;
+        void focus_cell(const CellId& target, bool extend);
 
         widget::BuildContext ui_;
         std::vector<DataTableColumn> columns_;

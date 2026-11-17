@@ -477,7 +477,7 @@ D1–D8 是设计编号，**不表示执行顺序**。设计接受、实现完�
 2. **OS 无障碍文本缩放收口**：Linux 来源与持久化归属决策；Windows 来源已接（2026-11-13）。
 3. **平台验收清账**：P3.3b2b（X11/独立 Xorg/Windows/候选窗）与 P4.5 残余（Wayland 分数缩放、热插拔、在线缩放）。
 4. **D2 收口**：注册期对比度门槛、Linux 默认 swapchain/其他驱动 readback、内部广播收窄；Shell 页正文由维护者交付。
-5. **组件扩展**：DataTable/ListView 契约 v3.1 已定稿，1A 轨道解算器已完成、1B 行窗口已完成并提交（2026-11-16）；2A 已完成并提交；2B 全量 DataTable 已完成并提交；3a 内部虚拟化已完成并提交（2026-11-17，见[数据组件 §9](docs/references/data_components_and_virtualization.md#9-p42d-数据视图契约datatable-与-listviewv31-定稿)）：下一步批 3b（输入/表头/主题）与公共导出，随后 Accordion；Sheet/Drawer 按需。
+5. **组件扩展**：DataTable/ListView 契约 v3.1 已定稿，1A 轨道解算器已完成、1B 行窗口已完成并提交（2026-11-16）；2A 已完成并提交；2B 全量 DataTable 已完成并提交；3a 内部虚拟化已完成并提交；3b① 输入/导航/表头语义已完成并提交（2026-11-17，见[数据组件 §9](docs/references/data_components_and_virtualization.md#9-p42d-数据视图契约datatable-与-listviewv31-定稿)）：下一步 3b②/③（HeaderDelegate/主题/公共导出），随后 Accordion；Sheet/Drawer 按需。
 6. **视觉与性能补充**：P4.4（input_focus golden、image 页 probe 资源挂载）与 P4.8a/c（计时日志、opt-in 批量测量）。
 7. **单独立项**：布局契约（`max_width` 与 anchors `fill`/百分比占空间）需先改 anchors/layout 契约与全部页面 golden，不与组件批混做。
 
