@@ -19,43 +19,82 @@ namespace nandina::widget
 {
     namespace
     {
-        /// 表头语义单元：role = column_header，内含默认 Label；排序状态写入
-        /// semantics value（ascending/descending），便于读屏区分。
+        /// 框架拥有的表头语义 wrapper（role=column_header + aria-sort）。视觉子节点由
+        /// IHeaderDelegate 创建/更新；delegate 只替换视觉，不接管焦点/排序/语义。
         class HeaderCellHost final: public scene::NanControl {
         public:
-            HeaderCellHost(
-                reactive::Graph& graph,
-                const theme::NanTheme& theme,
-                std::string title
-            ) {
+            HeaderCellHost() {
                 set_overflow(scene::ControlOverflow::clip);
-                label_ = Label::create(graph, std::move(title), theme);
-                label_->set_typography_role(theme::TypographyRole::label);
-                label_->set_max_lines(1);
-                label_->set_overflow(text::TextOverflow::ellipsis);
-                add_child(label_);
             }
 
-            void set_title(const std::string& title) {
-                label_->set_text(title);
+            /// delegate 身份变化或首次创建 → create_header；否则 update_header。
+            /// create/update 失败时保留旧视觉，不留下半挂载节点或 scope。
+            void sync(
+                const std::shared_ptr<IHeaderDelegate>& delegate,
+                const widget::BuildContext& ui,
+                const HeaderBinding& binding
+            ) {
+                if (!delegate) {
+                    throw std::invalid_argument("DataTable header delegate must not be null");
+                }
+                const std::string next_aria = binding.state.sort_direction.has_value()
+                    ? (*binding.state.sort_direction == SortDirection::ascending ? "ascending"
+                                                                                 : "descending")
+                    : std::string {};
+                if (aria_sort_ != next_aria) {
+                    aria_sort_ = next_aria;
+                    mark_dirty(scene::DirtyFlags::paint | scene::DirtyFlags::semantics);
+                }
+                if (!scope_released_ && delegate_ == delegate && visual_) {
+                    delegate_->update_header(*visual_, binding);
+                    mark_layout_dirty();
+                    return;
+                }
+                auto scope = std::make_unique<reactive::ReactiveScope>(ui.graph());
+                auto visual = delegate->create_header(ui.with_scope(*scope), binding);
+                if (!visual || visual.get() == this || visual->parent() != nullptr
+                    || visual->is_inside_tree() || visual->is_ancestor_of(*this))
+                {
+                    throw std::logic_error(
+                        "DataTable header delegate must return a unique detached control"
+                    );
+                }
+                visual->validate_anchor_parent(*this);
+                delegate->update_header(*visual, binding);
+                if (visual_) {
+                    if (visual_->parent() == this) {
+                        remove_and_delete(*visual_);
+                    }
+                    if (scope_) {
+                        scope_->clear();
+                    }
+                }
+                add_child(visual);
+                visual_ = std::move(visual);
+                scope_ = std::move(scope);
+                delegate_ = delegate;
+                scope_released_ = false;
                 mark_layout_dirty();
             }
 
-            void set_sort_state(const std::optional<SortDirection> direction) {
-                if (sort_ == direction) {
-                    return;
+            [[nodiscard]] auto visual() const -> scene::NanControl* {
+                return visual_.get();
+            }
+
+            void release_scope() {
+                if (scope_) {
+                    scope_->clear();
                 }
-                sort_ = direction;
-                aria_sort_ = direction.has_value()
-                    ? (direction == SortDirection::ascending ? "ascending" : "descending")
-                    : std::string {};
-                mark_dirty(scene::DirtyFlags::paint | scene::DirtyFlags::semantics);
+                scope_released_ = true;
             }
 
         protected:
             void on_layout() override {
-                (void)label_->measure_layout(foundation::NanLayoutConstraints::tight(size()));
-                label_->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, width(), height()));
+                if (visual_ == nullptr) {
+                    return;
+                }
+                (void)visual_->measure_layout(foundation::NanLayoutConstraints::tight(size()));
+                visual_->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, width(), height()));
             }
 
             [[nodiscard]] auto semantics_properties() const -> semantics::Properties override {
@@ -63,26 +102,27 @@ namespace nandina::widget
             }
 
         private:
-            std::shared_ptr<Label> label_;
-            std::optional<SortDirection> sort_;
+            std::shared_ptr<IHeaderDelegate> delegate_;
+            std::shared_ptr<scene::NanControl> visual_;
+            std::unique_ptr<reactive::ReactiveScope> scope_;
             std::string aria_sort_;
+            bool scope_released_ = false;
         };
     } // namespace
 
-    // ─── 表头 host：固定、可聚焦、行语义；指针/键盘都触发排序 ────────────────
+    // ─── 表头 host：固定、可聚焦、行语义；视觉由 IHeaderDelegate 提供 ─────────
     class DataTableHeaderHost final: public scene::NanControl {
     public:
         using ClickHandler = std::function<void(const ColumnId&)>;
 
-        explicit DataTableHeaderHost(const widget::BuildContext& ui):
-            graph_(&ui.graph()),
+        DataTableHeaderHost(
+            const widget::BuildContext& ui,
+            std::shared_ptr<IHeaderDelegate> default_delegate
+        ):
+            ui_(ui),
+            default_delegate_(std::move(default_delegate)),
             theme_(ui.theme()),
-            indicator_color_(
-                theme::resolve_theme_color(
-                    ui.theme(),
-                    theme::ThemeColor::token(theme::ColorToken::foreground)
-                )
-            ) {
+            revision_(ui.theme_manager().revision()) {
             set_overflow(scene::ControlOverflow::clip);
         }
 
@@ -105,10 +145,9 @@ namespace nandina::widget
                 std::shared_ptr<HeaderCellHost> cell;
                 if (found != cells_.end()) {
                     cell = found->second;
-                    cell->set_title(column->title);
                 }
                 else {
-                    cell = std::make_shared<HeaderCellHost>(*graph_, theme_, column->title);
+                    cell = std::make_shared<HeaderCellHost>();
                     add_child(cell);
                 }
                 order.push_back(column->id);
@@ -121,6 +160,12 @@ namespace nandina::widget
             }
             cells_ = std::move(next);
             order_ = std::move(order);
+            columns_.clear();
+            for (const auto* column: columns) {
+                if (column != nullptr) {
+                    columns_.emplace(column->id, column);
+                }
+            }
             cell_rects_.assign(order_.size(), foundation::NanRect {});
             focused_index_ = 0;
             if (previous_focus.has_value()) {
@@ -135,7 +180,7 @@ namespace nandina::widget
                     (void)move_child(*found->second, index);
                 }
             }
-            apply_sort_states();
+            sync_cells();
             mark_layout_dirty();
         }
 
@@ -144,8 +189,15 @@ namespace nandina::widget
                 return;
             }
             sort_ = sort;
-            apply_sort_states();
+            sync_cells();
             mark_dirty(scene::DirtyFlags::paint);
+        }
+
+        /// 主题 revision 变化：只 update 视觉（不重建），delegate 自行重解析 token。
+        void set_theme(const theme::NanTheme& theme, const std::uint64_t revision) {
+            theme_ = theme;
+            revision_ = revision;
+            sync_cells();
         }
 
         void set_cell_rects(std::vector<foundation::NanRect> rects) {
@@ -162,9 +214,24 @@ namespace nandina::widget
             }
         }
 
+        void on_exit_tree() override {
+            for (auto& [id, cell]: cells_) {
+                (void)id;
+                if (cell) {
+                    cell->release_scope();
+                }
+            }
+            scene::NanControl::on_exit_tree();
+        }
+
         [[nodiscard]] auto node_for(const ColumnId& id) const -> scene::NanControl* {
             const auto found = cells_.find(id);
             return found == cells_.end() ? nullptr : found->second.get();
+        }
+
+        [[nodiscard]] auto visible_node_for(const ColumnId& id) const -> scene::NanControl* {
+            const auto found = cells_.find(id);
+            return found == cells_.end() ? nullptr : found->second->visual();
         }
 
         [[nodiscard]] auto focused_column() const noexcept -> std::optional<ColumnId> {
@@ -195,6 +262,13 @@ namespace nandina::widget
             if (order_.empty()) {
                 return false;
             }
+            if (event.type() == scene::EventType::focus_enter
+                || event.type() == scene::EventType::focus_leave)
+            {
+                sync_cells();
+                mark_dirty(scene::DirtyFlags::paint);
+                return false;
+            }
             if (event.type() == scene::EventType::mouse_button) {
                 auto& mouse = static_cast<scene::MouseButtonEvent&>(event);
                 if (mouse.button() != scene::MouseButtonEvent::Button::left || !mouse.is_pressed())
@@ -216,6 +290,7 @@ namespace nandina::widget
                     if (auto* tree = get_tree()) {
                         tree->set_focus(this);
                     }
+                    sync_cells();
                     if (click_) {
                         click_(order_[index]);
                     }
@@ -249,6 +324,7 @@ namespace nandina::widget
                 else {
                     focused_index_ = std::min(focused_index_ + 1, order_.size() - 1);
                 }
+                sync_cells();
                 mark_dirty(scene::DirtyFlags::paint);
                 event.accept();
                 return true;
@@ -267,62 +343,47 @@ namespace nandina::widget
             return true;
         }
 
-        auto on_draw(render::DrawContext& ctx) -> void override {
-            if (!sort_.has_value()) {
-                return;
+    private:
+        [[nodiscard]] auto binding_for(const DataTableColumn& column) const -> HeaderBinding {
+            std::optional<SortDirection> direction;
+            if (sort_.has_value() && sort_->column == column.id) {
+                direction = sort_->direction;
             }
-            const auto found = cells_.find(sort_->column);
-            if (found == cells_.end()) {
-                return;
-            }
-            const auto label_rect = found->second->local_rect();
-            const float center_x = label_rect.get_right() - 10.0F;
-            const float center_y = label_rect.get_top() + label_rect.get_height() * 0.5F;
-            const float half = 3.5F;
-            const bool ascending = sort_->direction == SortDirection::ascending;
-            const auto apex =
-                foundation::NanPoint(center_x, ascending ? center_y - half : center_y + half);
-            const auto left = foundation::NanPoint(
-                center_x - half,
-                ascending ? center_y + half : center_y - half
-            );
-            const auto right = foundation::NanPoint(
-                center_x + half,
-                ascending ? center_y + half : center_y - half
-            );
-            const auto world = ctx.world_transform();
-            const auto color =
-                indicator_color_.with_alpha(indicator_color_.alpha() * ctx.opacity());
-            const float thickness = ctx.logical_to_screen(1.2F);
-            const auto a = world.transform_point(apex);
-            const auto b = world.transform_point(left);
-            const auto c = world.transform_point(right);
-            ctx.device().draw_line(a, b, thickness, color);
-            ctx.device().draw_line(b, c, thickness, color);
-            ctx.device().draw_line(c, a, thickness, color);
+            const auto focused = focused_column();
+            const bool header_focused = get_tree() != nullptr && get_tree()->focused_node() == this;
+            return HeaderBinding {
+                .column = column,
+                .theme = theme_,
+                .state = HeaderState {
+                    .sort_direction = direction,
+                    .focused = header_focused && focused.has_value() && *focused == column.id,
+                    .theme_revision = revision_,
+                },
+            };
         }
 
-    private:
-        void apply_sort_states() {
+        void sync_cells() {
             for (const auto& id: order_) {
-                const auto found = cells_.find(id);
-                if (found == cells_.end()) {
+                const auto found = columns_.find(id);
+                const auto cell = cells_.find(id);
+                if (found == columns_.end() || cell == cells_.end()) {
                     continue;
                 }
-                std::optional<SortDirection> direction;
-                if (sort_.has_value() && sort_->column == id) {
-                    direction = sort_->direction;
-                }
-                found->second->set_sort_state(direction);
+                const auto& delegate = found->second->header_delegate
+                    ? found->second->header_delegate
+                    : default_delegate_;
+                cell->second->sync(delegate, ui_, binding_for(*found->second));
             }
         }
 
-        reactive::Graph* graph_ = nullptr;
+        widget::BuildContext ui_;
+        std::shared_ptr<IHeaderDelegate> default_delegate_;
         theme::NanTheme theme_;
-        theme::NanColor indicator_color_ {};
+        std::uint64_t revision_ = 0;
         ClickHandler click_;
         std::unordered_map<ColumnId, std::shared_ptr<HeaderCellHost>, internal::ColumnIdHash>
             cells_;
+        std::unordered_map<ColumnId, const DataTableColumn*, internal::ColumnIdHash> columns_;
         std::vector<ColumnId> order_;
         std::vector<foundation::NanRect> cell_rects_;
         std::optional<SortSpec> sort_;
@@ -392,7 +453,8 @@ namespace nandina::widget
         columns_ = std::move(columns);
         default_delegates_ = std::move(delegates);
         host_ = std::make_shared<ItemHost>(ui_);
-        header_ = std::make_shared<DataTableHeaderHost>(ui_);
+        default_header_delegate_ = std::make_shared<TextHeaderDelegate>();
+        header_ = std::make_shared<DataTableHeaderHost>(ui_, default_header_delegate_);
         header_->set_click_handler([this](const ColumnId& id) { handle_header_click(id); });
         add_child(header_);
         add_child(host_);
@@ -1714,5 +1776,17 @@ namespace nandina::widget
             host_->release_scopes();
         }
         scene::NanControl::on_exit_tree();
+    }
+
+    void DataTable::on_theme_changed(const theme::ThemeManager& manager) {
+        const auto& theme = manager.theme();
+        if (header_) {
+            header_->set_theme(theme, manager.revision());
+            header_->set_sort(sort_);
+        }
+        // 作者单元格 delegate 通过新的 ItemState.theme_revision 感知主题变化；
+        // Label 等自带主题的控件由场景树自身的主题传播更新。
+        refresh_cell_states();
+        mark_layout_dirty();
     }
 } // namespace nandina::widget

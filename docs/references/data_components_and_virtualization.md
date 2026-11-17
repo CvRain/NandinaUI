@@ -11,8 +11,10 @@
 > `feat(data): implement full DataTable (2B)`）；批 3a（DataTable 自持 viewport + 窗口物化）
 > 已完成并提交（2026-11-17，`feat(data): add virtualized DataTable viewport (3a)`）；批 3b①
 > （指针/键盘选择、`GridNavigation` 映射、表头可聚焦语义）已完成并提交（2026-11-17，
-> `feat(data): add DataTable grid input and header semantics (3b①)`）。
-> 作者 HeaderDelegate/主题重解析/公共导出按 §9.13 继续。** §8 静态 Table 与 §3/§4 基础契约不变。**
+> `feat(data): add DataTable grid input and header semantics (3b①)`）；批 3b②（作者
+> HeaderDelegate + 主题重解析）已完成并提交（2026-11-17，
+> `feat(data): add author header delegate and theme refresh (3b②)`）。
+> 公共导出按 §9.13 继续。** §8 静态 Table 与 §3/§4 基础契约不变。**
 > 本文件是阶段 5 数据组件的契约入口：已完成批次见 §1–§8，后续数据视图见 §9（v3.1）。
 > 静态 `Table`、`DataTable`、`Accordion` 等阶段 5 组件清单仍按
 > [组件开发路线图](component_roadmap.md#阶段-5信息组织与数据展示) 分批推进，不在本批。
@@ -277,8 +279,10 @@ SelectionModel、RovingFocus、虚拟化与排序留给后续交互数据表；�
 > （2026-11-16，`feat(data): implement full DataTable (2B)`）；批 3a（DataTable 自持 viewport +
 > 窗口物化）已完成并提交（2026-11-17，`feat(data): add virtualized DataTable viewport (3a)`）；批 3b①
 > （指针/键盘选择、`GridNavigation` 映射、表头可聚焦语义）已完成并提交（2026-11-17，
-> `feat(data): add DataTable grid input and header semantics (3b①)`）。
-> 作者 HeaderDelegate/主题重解析/公共导出按 §9.13 继续施工。**
+> `feat(data): add DataTable grid input and header semantics (3b①)`）；批 3b②（作者
+> HeaderDelegate + 主题重解析）已完成并提交（2026-11-17，
+> `feat(data): add author header delegate and theme refresh (3b②)`）。
+> 公共导出按 §9.13 继续施工。**
 > 数据视图采用**非模板组件 + 行模型 + 列定义 + delegate + 显式选择模型**；v3.1 只修正接口矛盾，
 > 不改变总体架构。§3/§4/§8 已交付契约不变；旧 `ListView` 只作 `ForEach` 薄包装的状态随 §9.11 回收。
 >
@@ -583,7 +587,8 @@ private:
   （与 `ForEach` 同族），2B 即以 `CellId` 为 key。create 失败不得留下半挂载节点或 scope；update
   失败保持索引与所有权一致（delegate 已执行的控件写入不承诺回滚）；退出树清理 item scope，重入树
   按完整 reset 重建。2B 同时交付默认 `TextItemDelegate`（默认文本来源为列取值器，单行省略号），
-  保证全量 DataTable 有默认可渲染路径；作者表头 delegate 留到批 3b②。
+  保证全量 DataTable 有默认可渲染路径；批 3b② 已交付框架语义 wrapper + 作者
+  `IHeaderDelegate`/默认 `TextHeaderDelegate`，作者只替换视觉、不接管语义/焦点/排序。
 - **自定义绘制**：`create_item` 返回任意 `NanControl`（组合或自绘 `on_draw` 的轻量节点）；文本请走
   文本管线/组合控件。
 - **默认 delegate**：`TextItemDelegate`（单元格）+ `TextHeaderDelegate`（表头），只用语义 token /
@@ -702,7 +707,8 @@ public:
 - **批 2B 表头边界**：`ItemBinding` 无法自然表达「没有模型行的表头」，因此 2B 使用 DataTable 内部
   HeaderHost（普通 Label + 排序指示图元组合），**不给表头伪造 `model_row`**。表头指针点击进入 2B，
   触发 `SortRequestReason::user_header_click`；`TextHeaderDelegate`/作者表头 delegate、键盘排序、
-  表头可聚焦语义与键盘排序在 3b① 已实现（独立可聚焦单元，不与网格导航混用）；作者 HeaderDelegate 留 3b②。
+  表头可聚焦语义与键盘排序在 3b① 已实现（独立可聚焦单元，不与网格导航混用）；
+  作者 HeaderDelegate 与主题重解析在 3b② 已实现。
 
 ### 9.8 排序：本地 / 外部 / 不可排
 
@@ -832,7 +838,7 @@ struct SortRequest {
 | **2B ✅ 已完成（2026-11-16，`feat(data): implement full DataTable (2B)`）** | 文件边界：`internal/data_table_column.hpp`、`internal/item_delegate.hpp`、`internal/item_host.hpp/.cpp`、`internal/data_table.hpp/.cpp`；含 `DataTableColumn`、`IItemDelegate`/`ItemBinding`/`TypedItemDelegate`/默认 `TextItemDelegate`、以 `CellId` 为 key 的 `ItemHost`、内部 HeaderHost（Label + 排序图元、指针点击）、全量物化、模型绑定/通知状态机、本地/外部排序；公共头标 `internal` 不导出 | `data-table-2b` 29 用例/166 断言；主套件 137/137、ASan 112 OK +1 skip、no-RTTI 114/114、no-SQLite 109 OK +1 skip、纯工具 8/8、`release_check --ci` 8/8；红先：idle 不即时应用、local sort 先提交后比较、data_changed 不重排、表头 reason 退化、hidden 列不裁剪选择、非法轨道不拒绝、display_index.column 固定 0、delegate 变化错误复用、ItemHost create 半挂载、退出期 pending 未清均先红后绿 |
 | **3a ✅ 已完成（2026-11-17，`feat(data): add virtualized DataTable viewport (3a)`）** | DataTable 自持纵向 viewport（表头固定、body 只物化可见窗口、滚轮/offset 夹取/滚动到行/遍历期 pending 窗口同步）；不改公共 API，不做指针/键盘选择、HeaderDelegate 与主题重解析 | `data-table-3a` 18 用例/384 断言；主套件 135 OK +3 skip、ASan 113 OK +1 skip、no-RTTI 114 OK +1 skip、no-SQLite 110 OK +1 skip、纯工具 8/8、`release_check --ci` 8/8；红先：全量物化、忽略 offset、跳过夹取、滚动到行 no-op、表头随行滚动、滚轮 no-op、reset 保留旧窗口、无可见列 offset 未归零、零 body 暴露全内容高度、同帧 scroll/reset 读旧窗口、pending scroll 未被显式 offset 取消均先红后绿；复核补强：同帧 reset 顺序、零 body 视口、pending scroll 取消、窗口外 create 计数、header/row-height 变更立即夹取 |
 | **3b① 输入 + 导航 + 表头语义 ✅ 已完成（2026-11-17，`feat(data): add DataTable grid input and header semantics (3b①)`）** | 指针点击 / ctrl 切换 / shift 矩形选择；键盘方向 / Home / End / PageUp / PageDown 映射 `GridNavigation`，单选跟随 / 多选仅移动 current，shift extent，首个方向键播种；表头独立可聚焦单元（指针/键盘焦点、Enter/Space 排序）；DataTable/表头/列头的 table/row/column_header 语义 | `data-table-3b` 14 用例/98 断言；主套件 136 OK +3 skip、ASan 114 OK +1 skip、no-RTTI 115 OK +1 skip、no-SQLite 111 OK +1 skip、纯工具 8/8、`release_check --ci` 8/8；红先：指针 no-op、shift 退化为 replace、键盘 no-op、表头 Enter no-op、列头语义退化、方向播种边界、表头焦点/child 顺序跨列重排、零宽列误命中均先红后绿 |
-| **3b② 作者 HeaderDelegate + 主题重解析** | 作者表头 delegate、排序指示颜色与 delegate 样式随主题 revision 重解析 | 主题切换与 delegate 替换红先；窗口物化与滚动不退化 |
+| **3b② 作者 HeaderDelegate + 主题重解析 ✅ 已完成（2026-11-17，`feat(data): add author header delegate and theme refresh (3b②)`）** | 内部 `IHeaderDelegate`/`HeaderBinding`（借用 column+theme；`sort_direction`/`focused`/`theme_revision`）；框架 `HeaderCellHost` 保留 `column_header`/aria-sort 语义；HeaderHost 按 delegate 身份 keyed 化（变化重建、主题只 update、create 失败保留旧视觉）；默认 `TextHeaderDelegate`（Label + 排序三角，作者可替换）；`DataTable::on_theme_changed` 重解析表头与可见单元格 revision；退出/重入树释放并重建 header scopes | `data-table-3b2` 7 用例/61 断言；主套件 137 OK +3 skip、ASan 115 OK +1 skip、no-RTTI 116 OK +1 skip、no-SQLite 112 OK +1 skip、纯工具 8/8、`release_check --ci` 8/8；红先：忽略 delegate 身份（不重建）、主题不 update、单元格 revision 不刷新、create 失败半挂载、focused 状态丢失均先红后绿；复核补强：header scope 重入、无排序时焦点线、默认视觉 ring/foreground token 重解析 |
 | **3b③ / 3c 公共导出** | 4 个 DataTable 头转 experimental、`std::hash` 桥接、`sdk_surface.md`/组件文档；若 diff 超审查预算拆为 3c | 3b①/② 全绿后导出；公共 API 契约与迁移说明齐备 |
 | **4** | `BuildContext::for_each()` 改 `ForEach` 直接实现；相关测试/文档同步 | for_each 行为不变；authoring 测试全绿 |
 | **5** | 新虚拟化 `ListView` + notebook 迁移 + 旧 `ListView` 退役（sdk_surface 记录破坏性变更） | ListView 红先（窗口/行选择/delegate 复用）；notebook 构建；全矩阵 |

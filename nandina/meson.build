@@ -193,6 +193,8 @@ module_widget = files(
     'widget/internal/data_table_column.hpp',
     'widget/internal/grid_navigation.hpp',
     'widget/internal/grid_navigation.cpp',
+    'widget/internal/header_delegate.hpp',
+    'widget/internal/header_delegate.cpp',
     'widget/internal/item_delegate.hpp',
     'widget/internal/item_host.hpp',
     'widget/internal/item_host.cpp',

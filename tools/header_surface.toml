@@ -676,6 +676,10 @@ path = "nandina/widget/internal/data_table_column.hpp"
 level = "internal"
 
 [[headers]]
+path = "nandina/widget/internal/header_delegate.hpp"
+level = "internal"
+
+[[headers]]
 path = "nandina/widget/internal/item_delegate.hpp"
 level = "internal"
 

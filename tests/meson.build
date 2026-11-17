@@ -349,6 +349,13 @@ data_table_3b_tests = executable(
 )
 test('data-table-3b', data_table_3b_tests, suite: 'unit')
 
+data_table_3b2_tests = executable(
+    'data_table_3b2_tests',
+    files('data_table_3b2_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('data-table-3b2', data_table_3b2_tests, suite: 'unit')
+
 selection_model_tests = executable(
     'selection_model_tests',
     files('selection_model_tests.cpp'),

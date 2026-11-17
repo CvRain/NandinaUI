@@ -18,6 +18,7 @@
 #include "data_identity.hpp"
 #include "data_table_column.hpp"
 #include "grid_navigation.hpp"
+#include "header_delegate.hpp"
 #include "item_delegate.hpp"
 #include "item_host.hpp"
 #include "row_model.hpp"
@@ -126,6 +127,7 @@ namespace nandina::widget
         void on_enter_tree() override;
         void on_ready() override;
         void on_exit_tree() override;
+        void on_theme_changed(const theme::ThemeManager& manager) override;
 
     private:
         void
@@ -200,6 +202,7 @@ namespace nandina::widget
 
         std::shared_ptr<ItemHost> host_;
         std::shared_ptr<DataTableHeaderHost> header_;
+        std::shared_ptr<IHeaderDelegate> default_header_delegate_;
 
         TableSelectionModel selection_;
         GridNavigation navigation_;

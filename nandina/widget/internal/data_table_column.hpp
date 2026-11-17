@@ -25,6 +25,8 @@
 
 namespace nandina::widget
 {
+    class IHeaderDelegate;
+
     enum class SortDirection : std::uint8_t { ascending, descending };
     enum class SortStrategy : std::uint8_t { none, local, external };
 
@@ -66,6 +68,7 @@ namespace nandina::widget
         SortStrategy sort = SortStrategy::none;
         ColumnComparator comparator; // local 使用；external/none 为空
         std::shared_ptr<IItemDelegate> delegate; // 空 = 默认 TextItemDelegate
+        std::shared_ptr<IHeaderDelegate> header_delegate; // 空 = 默认 TextHeaderDelegate
         ColumnValue value; // 默认 delegate 的文本来源（构造糖填充）
     };
 
