@@ -12,6 +12,7 @@
 #include "../theme/theme_presentation.hpp"
 #include "authoring.hpp"
 #include "component_traits.hpp"
+#include "declarative.hpp"
 #include "drag_controller.hpp"
 
 #include <cmath>
@@ -404,7 +405,7 @@ namespace nandina::widget
                 decltype(authoring::detail::materialize(std::declval<CreateResult>()));
             using Node = typename NodePointer::element_type;
             static_assert(std::derived_from<Node, scene::NanControl>);
-            using View = ListView<Item, Key, Node>;
+            using View = ForEach<Item, Key, Node>;
 
             typename View::UpdateFunction update_node;
             if constexpr (!std::same_as<std::remove_cvref_t<UpdateFunction>, std::nullptr_t>) {
@@ -430,7 +431,7 @@ namespace nandina::widget
                 },
                 std::move(update_node)
             );
-            view->set_model(source);
+            view->bind(source);
             return prepare_builder(authoring::from(std::move(view)));
         }
 

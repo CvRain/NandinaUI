@@ -15,360 +15,66 @@ application shell. Version `0.1.0-alpha.1`.
 - Experimental: Windows (MSYS2 UCRT64). Unsupported: macOS.
 - Not a Node/Bun project; there is no JavaScript runtime or package manager.
 
-### Current milestone state (2026-11-12)
+### Current milestone state (2026-11-18)
 
-- **Latest (2026-11-13)**: B2a is complete — new showcase pages `table_page` (fixed/weighted
-  tracks, finite-width wrapping, empty table, natural row heights) and `collapsible_page`
-  (closed/open, nested, Signal sync, disabled) are registered in the app and page probe, covered
-  by `[table][showcase]` / `[collapsible][showcase]` / `[surface][showcase]` page tests. B2a
-  added table_page + collapsible_page with 8 new page goldens, and B2b added surface_page (Card
-  content insets, Surface box styles, nested rounded-corner clip boundary) with 4 more; all were
-  approved by the maintainer on 2026-11-13. The Windows full suite is 128/128 and Linux double
-  captures were byte-identical. The CI CPU gate now covers seven pages
-  (home/anchors/label/typography/table/collapsible/surface). Earlier on 2026-11-13 the B1
-  typography batch and the CI CPU-golden workflow were committed and pushed (`e690c0f`, `762c251`)
-  after Linux pull verification (129/129 + 8 golden compares clean). Outstanding: OS
-  accessibility text-scale source (Windows source landed on 2026-11-13; Linux source and
-  persistence pending), notebook workspace follow-ups (UI visual acceptance, todo/rich text),
-  P4.8c. P4.7 real multi-face assets stay deferred.
-- **Latest (2026-11-13 follow-up)**: a maintainer-reported Collapsible showcase defect exposed
-  that `Flex`/`Row`/`Column` measure measured every child with the container's full main extent,
-  while arrange distributed flex space only later. Wrapped children therefore reported the
-  height they would have at the full width; expanded Collapsible content overflowed its example
-  Card at narrow widths and was clipped after a user toggle. `layout.cpp` now runs the same
-  flex distribution during measure (`measure_linear_container()`) and re-measures flex children
-  with their final main extent. Regressions: `[layout][flex][wrap]` (Row reserves wrapped
-  height; red-first) and `[collapsible][showcase][layout]` (900/1200 content containment,
-  runtime toggle, disabled no-op); Windows full suite 129/129, Linux full suite 133/133,
-  `layout-convergence` 75 assertions. The Linux `collapsible` CPU/SDF baselines changed (other
-  12 page baselines are 0-diff); Windows/Linux candidates were recaptured and await maintainer
-  approval before the manifest is marked approved. CI (red since 2026-10-11) is fixed by
-  installing `libxss-dev libxtst-dev` for SDL3's CMake X11 probe and reclassifying
-  `render/backends/sdl_device.hpp` as internal so the SDL-disabled header gate no longer compiles
-  it. Clang 21's newly unblocked build also caught `sdl_device.cpp` building a reason string
-  from `std::string + std::string_view` (a GCC extension); the view is converted explicitly.
-  CI configure/build/test steps keep failure-tail `::error` annotations so public check-run
-  annotations carry the next failure without repository-admin log access.
-- **Latest (2026-11-13 CI green follow-up)**: the last remaining CI red was `build (clang-21)`
-  (vendored SDL3 with `-Dsdl3_linkage=shared`), where `portable-bundle` required a
-  `libSDL3_shared.so.0` file that Meson's CMake subproject never produces — the artifact and its
-  recorded SONAME are `libSDL3_shared.so` (CMake `SOVERSION` is not carried into the Meson output
-  name). `tests/portable_bundle_test.py` now reads the SONAME from the built DSO and asserts the
-  lone-binary negative case and the `bin/`+`lib/` positive case against it; never hardcode a
-  version suffix. Verified on the CI-equivalent local config (Clang + shared + Meson 1.7.2):
-  full suite 133/133, static config `portable-bundle` OK, red-first injections for both the
-  negative and positive branches. The Test step annotation now carries the unfiltered test-log
-  tail so public check-run annotations show assertion text.
-- **Latest (2026-11-14)**: CI is green and the CPU page-golden gate is blocking (promoted
-  2026-11-14; `b35629f` green). Current counts: 141 tests (118 unit + 23 integration), 213
-  headers (197 experimental + 16 internal), 28 approved goldens (7 pages × CPU/SDF × 2
-  platforms = 14/platform), 39 public components, 7-page blocking CPU coverage.
-  **Data-view contract:** §9 is the **v3.1 final design** (v3 + 2026-11-15 errata):
-  non-template `DataTable`/`ListView` over a shared `IRowModel` (rows only), `DataTableColumn`
-  as the single column source, `IItemDelegate`/`TypedItemDelegate` with RTTI-free tokens checked
-  in every build mode, stable `RowId`/`ColumnId`/`CellId`, `TableSelectionModel`,
-  `GridNavigation`, local/external sorting by `ColumnId`, delegate-owned visuals (no recipe),
-  composition-only internals, virtualized `ListView` (`ForEach` kept). **Batches
-  1A/1B/2A/2B/3a/3b①/3b②/3b③ committed.** Verification: full suite 138 OK +3 skip, ASan 116 OK +1 skip,
-  no-RTTI 117 OK +1 skip, no-SQLite 113 OK +1 skip, pure tools 8/8, release_check 8/8;
-  `data-public-api` 2/12; 3B2 7/62, 3B 14/101, 3A 18/384, 2B 29/166, 2A 25/163,
-  1B 9/116+29/154.
-- P4.6 Step 2b is closed — default component recipes consume the semantic role's
-  leading/weight/slant through `TypeStyle::role` → `ResolvedTypeStyle` and the shared
-  text-style bridge (manual `text::TextStyle` sites migrated to
-  `widget::internal::apply_type_metrics()`). Button/tab/menu labels render with the role's
-  medium (500) synthetic weight; multi-line TextArea uses body leading. Dual-platform page
-  goldens were recaptured with the original protocol and approved by the maintainer on
-  2026-11-12: label/typography pages are 0-pixel diffs, the rest differ only in button
-  glyphs/1–2 px widths. Windows full suite 125/125, Linux full suite 129/129, ASan unit
-  (104 + 1 expected skip), no-RTTI unit (106/106), no-SQLite unit (101 + 1 expected skip) and
-  pure-tools (8/8) matrices passed; `release_check --ci` is 8/8. A Linux CI CPU-golden
-  workflow
-  (`.github/workflows/visual-golden.yml` + `tools/visual_golden_ci.py`, headless `sdl2d`) is in
-  place; it became a **blocking** gate on 2026-11-14 after five consecutive green Actions runs.
-  Outstanding: OS
-  accessibility text-scale source/persistence (host-injected design is ready), B2 visual
-  acceptance debt (Theme Shell page + remaining probe/golden coverage), notebook
-  workspace slice, P4.8c. P4.7 real multi-face assets are deliberately deferred (synthetic
-  fallback remains the default). Linux is reachable through the current local SSH alias
-  (`nandina-linux`).
-- P1 and P2 are closed. P2 covers the tool/UI split, startup policy, scoped manager results,
-  cache identity/reclamation, resource identity (explicit `key → path`, frozen key derivation,
-  versioned 128-bit IDs), lock migration (build-dir lock, explicit `--rewrite-lock`, collision
-  diagnostics, no-rewrite determinism), the minimal author constant header (`nanres keys`), and
-  the P2.4 multi-route lab example (retired 2026-10-28; kept in the docs as historical evidence).
-- The integrated example application is now `examples/notebook`: a personal notes app that grows
-  batch by batch. Its SQLite data layer, account service (PBKDF2 hashing, registration, login)
-  and login/registration/home routes are in place. The 2026-11-13 B3 minimal vertical slice turns
-  the signed-in page into a real workspace: `NotebookStore` exposes group/note lists, group filter
-  and selection signals plus note/group CRUD; `home_page` renders group filter + note list + a
-  title/body editor with new/save/delete; `notebook-data` covers the store contract (228
-  assertions). UI interaction/visual acceptance, todo UI, group rename/delete and rich text remain
-  follow-ups. Components are authored in `showcase/`; UI tests live in the untracked `playground/`.
-- P3 is in progress: **P3.1a** (per-event pointer coordinates/modifier snapshots through the
-  host seam) and **P3.1b** (framework-owned `LogicalKey`/`PhysicalKey` identities, press/repeat/
-  release lifecycle, SDL scancode/keycode mapping, unknown identity counting) and **P3.1c**
-  (ordered cross-type `FrameInput::events` dispatched in capture order) are implemented, and
-  **P3.2a** (D1 focus-hint core: `InputModality`/request context, `should_show_focus_hint()`,
-  window activation gate, paint-only invalidation, widget ring migration) and **P3.2b**
-  (showcase acceptance page, active-tab hint, popup enter/restore reasons, read-only field
-  capability, always-visible switch) and **P3.3a** (text input session protocol:
-  `ITextInputService`/`ITextInputTarget`, session identity + late-event filtering, single
-  committed-text path, SDL composition events into the frame stream) are implemented, and
-  **P3.3b1** adds inline preedit painting, password-purpose masking and value<->visual caret
-  mapping. **P3.3b2a** adds caret mapping through the focus node, world and viewport into
-  window logical coordinates, plus SDL input_area forwarding. **P3.3b2b** partially delivers
-  SDL purpose/multiline properties and composition UI hints, with Linux Wayland IME acceptance.
-  X11 inline preedit/standalone Xorg, Windows and candidate placement acceptance remain;
-  desktop soft keyboard/visibility/occlusion are unsupported. See the roadmap.
-- **P4.1a** (2026-11-03) adds Text/Label vertical alignment, constrained two-axis authoring
-  entries, paint-only style/cache behavior, viewport alignment/clip fixes, and Label page /
-  ComponentInfoTable resize regression coverage. Remaining D6 API/binding/measurement decisions
-  stay in P4.1; this does not close the remaining P3 platform acceptance items.
-- The **P4.1 text authoring/binding sub-batch** (2026-11-03) adds typography/overflow/
-  max-lines builders, current layout queries, and one managed text binding shared by Property,
-  Label and BuildContext. Direct writes (even equal values) replace text bindings; tree exit
-  or page-scope teardown stops them. Other component bindings and style reset remain separate.
-- **P4.1b** (2026-11-03, implemented and pushed in `0e7fca1`) adds a Surface
-  layout/paint primitive via `ui.surface()`, explicit Card content insets with recipe reset,
-  and percentage Image cover anchors. Surface/Card corners do not mask children: the existing
-  scene clip is rectangular. Showcase visual acceptance was completed on 2026-11-13 by the new
-  `surface_page` plus its dual-platform CPU/SDF page goldens.
-- **P4.2 phase-5 first batch** (2026-11-04, maintainer review completed and pushed in
-  `5d91e01`) establishes the data component basis: `widget::SelectionModel<Key>` (identity-based
-  single/multiple selection, range + anchor, retain-on-source-replacement) and
-  `widget::VirtualListView<Item, Key, NodeT>` (uniform-row virtualization via an internal
-  ForEach window region, own vertical scroll viewport, click/keyboard selection). The review
-  added source-generation pairing for same-window replacement, pre-layout pending scroll,
-  bottom-edge hit clamping, unconditional select_range scroll, typeahead buffer resets,
-  `ForEach::remove_and_delete` for traversal-safe window shrink, and by-value label callbacks
-  with an internal snapshot cache (ASan-clean). Contract:
-  `docs/references/data_components_and_virtualization.md`.
-- **P4.2b static Table layout** (2026-11-05, maintainer and final code review completed)
-  adds shared fixed/weighted column tracks, natural row heights, table/row/header/cell semantics,
-  and typed Builder slots. Gap sums are validated before content changes; measured content
-  extents are accumulated in double and rejected before publishing non-finite geometry.
-  Showcase visual acceptance was completed on 2026-11-13 by the new `table_page` plus its
-  dual-platform CPU/SDF page goldens. It consumes ordinary controls and inherited text
-  styles; selection, sorting and virtualization remain DataTable responsibilities. Contract:
-  `docs/references/data_components_and_virtualization.md` §8.
-- **P4.2c Collapsible** (2026-11-05, implemented and pushed in `095336b`) adds
-  a retained disclosure content slot composed with Button, silent set_open/user toggle events,
-  scoped Signal<bool> authoring, focus/capture restoration and optional semantics expanded.
-  State merging and content replacement reentry have regression coverage. Showcase visual
-  acceptance was completed on 2026-11-13 by the new `collapsible_page` plus its dual-platform
-  CPU/SDF page goldens. Contract:
-  `docs/references/disclosure_components.md`.
-- **P4.3 D3 navigation groups** (2026-11-05, maintainer review completed and pushed in
-  `095336b`) renames `RouteOptions::type` to `nav_group` (default empty) and
-  `NavSection::type` to `group`, without compatibility fields. Empty groups merge globally
-  and omit headings; section dividers remain. Real Sidebar semantics/activation and router
-  grouping have regressions. Desktop/GPU and visual acceptance remain pending. Contract:
-  `docs/references/page_and_router.md`; evidence: `docs/references/reference_draft.md` D3.
-- **P4.3 D2 theme presentation** (2026-11-05, reviewed and pushed in `8920f3a`)
-  adds the §5.5 narrow read-only projection (`ThemePresentationState` = effective appearance +
-  opaque revision) with a scope-bound `ThemePresentation` adapter (`ui.theme_state()`), observer
-  lifetime safety in both destruction orders, equivalent-state deduplication, and a showcase
-  appearance switch that follows external changes. Author color entry and the wider scheme/
-  selection model remain separate. First-batch review was closed and pushed in `8920f3a`. Contract:
-  `docs/references/theme_authoring_and_state.md`.
-  The 2026-11-06 review fixes same-snapshot named appearance updates and active family replacement,
-  stages internal observers/projections/effects/subscriptions, rejects reentrant writes before mutation,
-  and completes necessary delivery before rethrowing callback failures. Notification state survives
-  scope/manager destruction; readonly views remain borrowed. Pushed in `8920f3a`.
-- **P4.3 D2 step 3 scheme catalog and selection** (2026-11-06, reviewed and pushed in
-  `995e6ae`) adds strongly typed `ThemeSchemeId`/`ThemeFamilyId` (namespace:name text,
-  typed parse errors, 255-byte cap), `ThemeSchemeContent`/`ThemeSchemeCatalog` (register/replace/
-  remove with staged failure-atomic commits), `ThemeSelection` (fixed/appearance plus explicit
-  `UnregisteredThemeSource`), removes legacy ThemeManager write entries, and compiles styles.toml
-  themes/families into `styles:x<hex>` canonical IDs. Test compatibility layer (theme_test::Manager)
-  keeps historical dual-palette queries working. Author color entry and step 4a color validation
-  remain separate. The step-3 review cycle is closed. Contract:
-  `docs/references/theme_authoring_and_state.md` §12–§13.
-- **P4.3 D2 step 4 observation channels and author entry** (2026-11-07, reviewed and pushed in
-  `4746173`) adds scope-bound read-only selection and catalog projections plus an explicit
-  before/after theme change event, staged-only publication for selection/directory edits (no
-  revision bump, no component invalidation), and the unified author entry (`derive_content`/
-  `derive_scheme`/`validate_scheme` with structural diagnostics). File-import scope is documented
-  in `design_tokens.md`. The step-4 review made equivalent catalog replacement idempotent, moved
-  the directory-version check ahead of payload copying, and added channel lifetime, reentry,
-  multi-projection, file-import and nested-derivation coverage. The step-4 review cycle is closed.
-  Contract: `docs/references/theme_authoring_and_state.md` §14–§15.
-- **P4.3 D2 step 4a CPU-side compositor and contrast diagnostics** (2026-11-07, reviewed and
-  pushed in `fef829a`) adds the single foundation CPU compositor
-  (`foundation/composition.hpp`: explicit encoded-sRGB strategy, background-stack early
-  termination, composition errors) and scenario-scoped contrast rules/profiles
-  (`theme/contrast_diagnostics.*`) with passed/failed/insufficient-context statuses, role paths,
-  measured ratios, thresholds and resolved OKLCH plus converted sRGB. Local test helpers consume
-  the shared compositor. Review fixes require explicit tone context for tone references, keep
-  transform operand paths, stop sampling at the first opaque endpoint and report the composition
-  config with clipping/float-no-u8 policy. Real pixel readback on the production software and GPU
-  draw paths now compares framebuffer samples against the shared compositor (unit `sdl-visual`
-  with ±2 tolerance, integration `sdf-device` with ±4, both including a wrong-space negative
-  control). This validates encoded-sRGB composition on the Linux/Hyprland/Wayland + RADV offscreen
-  target used by the test, and the same readback was re-verified on Windows 11 + D3D12 offscreen
-  and default-swapchain targets (8-bit SDR; search for the SKIP lines when readback is unavailable)
-  on 2026-11-09. The registration contrast gate is still not wired,
-  Linux default-swapchain/other-driver cross-platform readback and the final gamut policy remain
-  pending; do not claim the color gate passes. Contract:
-  `docs/references/theme_authoring_and_state.md` §6.5–§6.8, §16.
-- **P4.3 D2 step 4b author color entry** (2026-11-07, reviewed and pushed in `3e2542a`) adds
-  typed primitive-palette access (`ReferenceColorFamily`, `reference_scale`, `reference_color`,
-  family/shade names), explicit `NanColor` semantic overrides (`SemanticColorOverride`,
-  `canonical_color_token`, `semantic_color`, `set_semantic_color`, atomic
-  `apply_semantic_colors`) and the `ThemeSchemeContent::from_reference` /
-  `from_semantic_colors` constructors with an optional `reference` provenance record copied by
-  derivation. File palette overrides reuse atomic `apply_semantic_colors` after canonical-key
-  precedence, so file import and C++ share validation, alias sync and commit semantics. No raw
-  red/blue tokens are added and semantic tokens stay the default. Contract:
-  `docs/references/theme_authoring_and_state.md` §17.
-- **P4.3 D2 step 4c foundation named color literals** (2026-11-08, reviewed and pushed in
-  `f383201`) adds `foundation/named_color.*`: `NanNamedColor` with
-  the 148 CSS Color 4 named colors (pinned CSS Color 4 CRD 2026-11-03 §6.1 = SVG 1.1's 147 +
-  rebeccapurple), typed `nan_named_color(NanNamedColor)`, case-insensitive
-  `nan_named_color(std::string_view)` and `nan_named_color_name()`. The single constexpr table is
-  private to the `.cpp`; aliases keep separate identities; enum ordinals are not stable (persist
-  names). Query rejects whitespace, embedded NUL, non-ASCII and unknown names; no full CSS color
-  syntax and no `transparent`/`currentColor`. Named colors are just explicit `NanColor` spellings,
-  not semantic tokens; default recipes must not hardcode colors. TOML shorthand remains a
-  separate batch. Review binds every expected color to its actual enumerator (ordinal-only tests
-  missed swapped names), verifies uniqueness and RGBA bytes, all-name case folding and bounded
-  string views. Source verification now matches all 147 entries in the maintainer-saved SVG 1.1
-  document and all 148 in the fetched pinned CSS Color 4 snapshot; the former source-evidence gap
-  is closed. Contract:
-  `docs/references/theme_authoring_and_state.md` §18.
-- **P4.3 D2 step 4d TOML named color literals** (2026-11-08, reviewed and pushed in `5061b39`)
-  lets color-array fields accept a CSS named color string
-  (`"SteelBlue"`) resolved through `nan_named_color()` with the same case/whitespace/error
-  rules. `$palette.*` stays a semantic token reference and `$palettes.*` a reference-scale
-  value; a failed reference match errors instead of falling back to a name, canonical palette
-  names still win over aliases, errors carry the field path, and a failed import leaves the
-  live catalog/selection/style untouched. Only named colors are added; other reference forms
-  are not widened. Review preserves complete palette-validation input paths and recipe kind/zero-
-  based index paths, covers every name and recipe color slot, and checks real parse/apply failure
-  isolation after a successful import. Contract:
-  `docs/references/theme_authoring_and_state.md` §19.
-- **P4.3 D2 Shell multi-scheme framework preparation** (2026-11-08, reviewed and pushed in
-  `f821f40`) replaces catalog errors' single scheme ID with
-  operation-specific scheme/family subjects, adds scope-bound `on_theme_selection_change()` and
-  `on_theme_catalog_change()` to `BuildContext`, and adds a shell action-sequence regression
-  covering fixed/pair/system choices, inactive slot edits, replacements, dynamic catalogs,
-  external synchronization, scope teardown and typed failure feedback. The showcase page body
-  remains maintainer-owned. Contract: `docs/references/theme_authoring_and_state.md` §20.
-- **P4.5a high-DPI content scaling** (2026-11-09, first increment of the maintainer-reported
-  high-DPI defect) normalizes the platform seam to logical units: `WindowConfig` sizes are DIPs,
-  `screen_size()`/pointer events/`TextInputArea` are logical, `drawable_size()` is physical,
-  `display_scale()` is physical/logical, and the SDL platform layer creates the native window at
-  `logical × content_scale`, sets the renderer scale, rasterizes text at physical density and
-  handles display-scale change events. `WindowConfig::high_dpi=false` is the fixed 1× mode for
-  tests/probes/goldens. `window_metrics` gained pure `content_scale_from_display` /
-  `window_size_from_logical_size` / `logical_size_from_window_size` helpers with unit tests.
-  Verified on this machine at 175% (1200×800 logical → 2100×1400 physical, crisp text, correct
-  pointer hit) plus 1× regression. **P4.5b mixed-DPI multi-monitor is verified (2026-11-10)** on
-  the real 2880×1800@175% + 2560×1440@125% pair: both-direction moves, a real title-bar drag
-  across the DPI boundary, carrying a 125%-monitor resize back to 175%, logical-size stability
-  with framebuffer/render-scale updates, physical-coordinate hit-testing at both scales, and
-  usable-area clamping. Real IME candidate placement, Linux Wayland fractional scaling, display
-  hot-plug/system-scale changes and accessibility text scaling remain pending; contract:
-  `docs/references/high_dpi_and_multi_display.md`.
-- **P4.6 Step 1 typography scale** (2026-11-10) adds a Tailwind-compatible
-  `theme::TextSize` (13 steps: xs…9xl, spelled `xl_2…xl_9` in C++ because identifiers cannot contain `-`) and `theme::Leading` (6 multipliers) plus a themeable
-  `NanTypeScale` (`root_base`, `ratios`, `leading`) under `NanTokens::typography.scale`;
-  `text::TextStyle` gains a `line_height` multiplier (0 keeps the backend default; HarfBuzz and
-  the deterministic backend both consume it) and `Label` gains
-  `set_text_size()`/`set_leading()`/`set_line_height()` with builder methods
-  (`text_size`/`leading`/`line_height`). Explicit `.font_size(px)` stays the absolute logical-px
-  override and wins over the token (CSS px vs rem semantics); OS content scale always applies and
-  no pt/physical-pixel font size exists. **P4.6 Step 2a** adds the semantic
-  `TypographyRole` set (display/heading/title/subtitle/body/label/caption) with
-  `Label::set_typography_role()` and builder `.typography_role()`. **Step 2b** makes the role table
-  theme-overridable through `NanTypeScale::roles`, changes the unstyled Label default to `body`
-  (16 px / normal 1.5; explicit size/text_size/inherited size keeps the backend line height), and
-  adds the showcase Typography page (`content_and_display/typography`, also registered in
-  page_probe) covering the 13-step scale, six leadings, seven roles and the body default. Default
-  component recipes now consume semantic role **size** scalar tokens
-  (`ScalarToken::typography_role_*`; styles.toml may reference `$tokens.typography.role.*`), so
-  overriding `NanTypeScale::roles` changes component font sizes; role leading/weight/slant can be
-  carried by `TypeStyle::role` into `ResolvedTypeStyle` and the shared text bridge; **Step 2b was
-  closed on 2026-11-12** so default component recipes consume the role metrics too (see the latest
-  bullet). styles.toml can override the role table per theme via
-  `[themes.<name>.roles.<role>]` (size/leading/weight/slant). **P4.6 Step 3**
-  (2026-11-12) adds `NanTypeScale::text_scale` (rem-semantics user text scaling) and
-  `max_text_px` (optional cap, 0 disabled): token/role sizes resolve as
-  `root_base × ratio × text_scale`, then cap; explicit `.font_size(px)` stays fixed, and
-  `ThemeManager::set_text_scaling()` provides the runtime host entry. OS accessibility scale
-  source: the 2026-11-13 sub-batch adds `app/system_preferences.hpp`,
-  `IPlatformWindow::system_preferences_source()`, `NanApplication` attach/sync/poll/override and
-  the Windows registry-backed source (applied before the first frame; Linux source and
-  persistence remain pending). The 2026-11-11 Chinese
-  re-batch approved 8 baselines per platform (home/anchors/label/typography × SDF/CPU).
-  Contract: `docs/references/typography_scale.md`.
-- **P4.7 synthetic weight/slant fallback** (2026-11-10) makes `FontRequest` weight/slant visible on
-  single-face families: `text/font_synthesis.hpp` decides graded synthetic bold (500 ≈0.014em,
-  600 ≈0.028em, 700+ ≤0.0417em) and ~12° oblique; `FreeTypeFontFace::rasterize*()` applies
-  `FT_GlyphSlot_AdjustWeight`/`FT_GlyphSlot_Oblique`, `GlyphAtlas` carries the synthesis,
-  `HarfBuzzTextLayoutBackend` sets `hb_font_set_synthetic_bold(..., in_place=false)` so shaped
-  advances match the wider bitmaps, and `FontPipeline` computes per-face synthesis from
-  `FontRequest` + `FontFaceSpec`. Real faces still win; thinning is unsupported; bitmap/color
-  outlines are outside this batch. The default family/assets are unchanged; tests
-  `[text][synthesis]` (decision/graded strength/raster/HarfBuzz/atlas) pass, red-first recorded,
-  and page goldens remain 0-diff because the 1200×800 Label viewport only reaches the Regular
-  specimen. Use `page_probe` `NANDINA_PROBE_WIDTH/HEIGHT` for tall manual visual captures.
-  Contract: `docs/references/font_synthesis.md`.
-- **P4.8 page load responsiveness (P4.8b implemented 2026-11-11)**: `PageContext::defer_section`
-  registers a placeholder + builder; after the first frame the router builds at most one section
-  per dispatcher drain and replaces the placeholder at its original sibling index (plain
-  `replace_child()` appends, so the router removes+inserts). Pages can keep heavy text sections
-  off the navigation transaction; retirement drops pending builders, builder errors go to the page
-  error handler, and dispatcher-less hosts run all sections synchronously. The showcase Label page
-  now builds only the intro synchronously and mounts Typography/Font style/colors/wrapping/
-  overflow/alignment/reactive/semantics over the next 8 drains: first-frame page cost measured
-  ~85 ms over anchors on Windows and ~38 ms on Linux (`FRAMES=1` probe deltas; was ~0.2–0.4 s
-  blocking), full 1200×800 page golden remains 0-diff on both platforms.
-  Tests `[app][router][deferred]` cover first frame, per-drain mounting, ordering, retirement,
-  errors, the no-dispatcher fallback and page lifetime (red-first: disabling the pump failed 3
-  cases with runs=0; restoring a strong root capture in the queued pump failed the lifetime test
-  because the page tree outlived the render device on Linux `FRAMES=1/3` — the pump now captures
-  the page root weakly). Remaining: optional timing log/bench, P4.8c build-time measurement
-  batching, long-term async/incremental shaping. Contracts:
-  `docs/references/page_and_router.md` §4.1 and `docs/references/page_load_responsiveness.md`.
-- **High-DPI dropdown-menu regression (2026-11-11, fixed)**: opening a menu at 175% once shrank
-  the whole app because `MenuItemNode`'s embedded `Text` members never received the scene-tree
-  default text pipeline, so labels fell back to `SdlRenderDevice::draw_text()`'s debug font; that
-  path reset `SDL_SetRenderScale` to 1.0 instead of restoring the platform's 1.75. `MenuItemNode`
-  now forwards `apply_default_text_pipeline()`/`apply_font_context()` like Button, and
-  `draw_text()` saves/restores the caller render scale. Regressions:
-  `[dropdown-menu][render][text]` and `[visual][text][sdl][device]` (both red-first). At 175% the
-  menu now opens without any page resize and its Chinese labels render through the real glyph
-  pipeline. Contract: `docs/references/high_dpi_and_multi_display.md` §6.
-- **GlyphAtlas narrow-growth fix (2026-11-11)**: `GlyphAtlas::grow_to_fit()` used to expand only
-  the axis required by the current allocation. After a row wrap the requirement looks purely
-  vertical, so the atlas grew from 256×256 into a 256×4096 strip while 94% of each row stayed
-  unused; visiting showcase pages in order then made normal 25×22 glyphs fail with
-  `does not fit a 4096x4096 atlas`, blanking Chinese text on the Input & Focus page. Growth now
-  doubles both axes together (still capped at `kMaxDimension`); the 32×32-to-128 regression
-  `[text][atlas][growth]` is red-first. Contract: `docs/references/text_shaping_cost.md` §11.
-- **Showcase Chinese localization (2026-11-11)**: all user-facing showcase copy is now Simplified
-  Chinese (component/API/token names stay English, page headings are bilingual like
-  「标签（Label）」); multi-line descriptions use `theme::Leading::normal` (1.5) through
-  `supporting_text` and explicit paragraph builders so Chinese body text has breathing room. The
-  home page's previously empty 「组件速览」 heading now has quick-entry buttons that navigate by
-  `PageKey`; probe route titles changed to 标签/排版 and the interaction fallback clicks 「标签」.
-  The localized pages changed all page goldens; on 2026-11-11 the maintainer reviewed them and the
-  dual-platform SDF+CPU baselines were re-captured and approved (8 entries per platform, 0-diff
-  verification after approval).
-- **Dual-platform verification (2026-11-10) is operational**: the Linux machine (Arch, GNOME
-  Wayland, RADV RX 6750 GRE 12GB, Mesa 26.2.6) is reachable over SSH with a dedicated key; the
-  full Linux suite is 129 OK / 0 FAIL (132 with the B2a/B2b page tests) and all fourteen Linux
-  page goldens (home/anchors/label/typography/table/collapsible/surface × SDF/CPU) compare clean.
-  The 2026-11-12 re-check via a new temporary forward confirmed the same machine, path, key
-  auth, 129/129 suite and 0-diff goldens; the address stays local-only.
-  Workflow, session-environment exports (`XDG_RUNTIME_DIR`, `WAYLAND_DISPLAY`,
-  `XDG_SESSION_TYPE=wayland`), remote shell caveat (default fish; run scripts via
-  `/usr/bin/bash -s`), golden capture/approve rules and security boundaries are in
-  `docs/references/dual_platform_verification.md`. Linux Clang 23 immediately caught a
-  `logical_size_ = {}` portability issue (fixed in `d782729`) — Windows GCC success alone is not
-  proof. Never commit remote credentials; run commits from Windows and `git pull` on Linux.
+- **Phase state**: P1/P2 closed; P3 body delivered (P3.3b2b platform IME / standalone Xorg /
+  Windows candidate-window acceptance still open); P4 in progress. Authoritative per-batch
+  status, contracts and evidence live in `docs/references/` — start at
+  `development_roadmap.md`, `project_status.md`, `component_roadmap.md`; `stories/` keeps
+  root-cause narratives.
+- **Data-view contract (§9 v3.1, `data_components_and_virtualization.md`)**: non-template
+  `DataTable` / new `ListView` over `IRowModel` + `DataTableColumn` + `IItemDelegate` +
+  explicit selection; `ForEach` stays as the declarative full-list region. Batches
+  1A/1B/2A/2B/3a/3b①/3b②/3b③ committed. **Batch 4 implemented and verified, uncommitted
+  pending maintainer review**: `BuildContext::for_each()` constructs `ForEach<Item, Key, Node>`
+  directly, `build_context.hpp` includes `declarative.hpp` directly, and `authoring_tests`
+  locks the return type with `STATIC_REQUIRE`. Verification: `authoring` 39 cases/201
+  assertions, `[authoring][region]` 1/16; unit 117 OK +1 skip (118), full suite 138 OK +3 skip
+  (141), ASan 116 OK +1 skip, no-RTTI 117 OK +1 skip, no-SQLite 113 OK +1 skip, pure tools
+  8/8, `release_check --ci` 8/8. **Next: batch 5 — virtualized `ListView` + notebook migration
+  + old `ListView` retirement.**
+- **Baseline counts**: 141 tests (118 unit + 23 integration), 213 headers (197 experimental +
+  16 internal), 28 approved page goldens (7 pages × CPU/SDF × 2 platforms), 39 public
+  components; the CPU page-golden CI gate is blocking (7 pages).
+- **Do not over-claim**: Windows is experimental (only real exit codes/logs count; GPU/SDF and
+  GUI checks need an interactive desktop, CPU paths can use `--renderer sdl2d` over SSH);
+  macOS unsupported. Open: real IME candidate placement / standalone Xorg / Windows
+  interaction, Wayland fractional scaling, display hot-plug and online scale changes,
+  accessibility text-scale Linux source/persistence, Theme Shell page and remaining
+  probe/golden coverage, notebook UI visual acceptance / todo / rich text, P4.8c build-time
+  measurement batching. The registration contrast gate is not wired — never claim the full
+  color gate passes. P4.7 real multi-face assets are deferred (synthetic fallback is the
+  default). Page goldens are platform-isolated; never copy baselines across platforms.
+- **Linux verification**: the second machine is reachable via the local SSH alias
+  (`nandina-linux`); session setup, golden capture/approval rules and security boundaries live
+  in `docs/references/dual_platform_verification.md`. Run commits from Windows and `git pull`
+  on Linux; never commit remote credentials.
+- **Capability snapshot** (review records and exact evidence live in the linked docs):
+  - Text/label: typography scale (`TextSize`/`Leading`/`NanTypeScale`), `TypographyRole`,
+    user text scaling + cap, overflow/max-lines, box vertical alignment, and one managed text
+    binding shared by Property/Label/BuildContext. See `typography_scale.md`,
+    `authoring_dsl_and_content_measurement.md` §16–§17.
+  - Surfaces/layout: `ui.surface()`, Card content insets, Image cover anchors (rounded corners
+    do not mask children — rectangular scene clip); Table shared tracks/natural row
+    heights/semantics (selection/sort/virtualization belong to DataTable); Collapsible retained
+    content + Signal + focus restore. See `data_components_and_virtualization.md` §8,
+    `disclosure_components.md`.
+  - Theme: presentation/selection/catalog projections, before/after change events, scheme
+    catalog + typed IDs, author color entry, 148 named colors (C++/TOML), CPU compositor +
+    contrast diagnostics. See `theme_authoring_and_state.md` §5–§20.
+  - Platform/fonts/pages: high-DPI logical-unit seam (`high_dpi=false` for tests/probes/
+    goldens); mixed-DPI multi-monitor verified; synthetic weight/slant fallback;
+    `PageContext::defer_section` progressive page mounting. See
+    `high_dpi_and_multi_display.md`, `font_synthesis.md`, `page_load_responsiveness.md`.
+  - Visual: Simplified-Chinese showcase, 28 approved page goldens (7 pages × CPU/SDF × 2
+    platforms) with a blocking CPU gate; fixed measure-time flex distribution, GlyphAtlas
+    two-axis growth and 175% dropdown-menu text regressions. See `visual_regression.md`,
+    `text_shaping_cost.md` §11.
+- **Data/resources and examples**: P1/P2 closed (scoped manager results, cache identity and
+  reclamation, resource identity/lock, `nanres keys` header). `examples/notebook` has its SQLite
+  data layer, account service, login/registration/home routes and a real workspace (group
+  filter + note list + editor; `notebook-data` 228 assertions). See
+  `resource_build_and_deployment.md` §8.
 - The plan and exit criteria are **not** owned by this file: read
   `docs/references/development_roadmap.md` and the D5 contract
   (`resource_build_and_deployment.md` §8) before claiming a sub-batch is complete.
@@ -785,51 +491,10 @@ meson test -C buildDir --print-errorlogs   # full suite: unit + integration (lat
   are never cited as CI evidence. Reusable widgets are authored in `showcase/` with its visual
   acceptance, then composed by the notebook.
 
-### D2 step-3 review follow-up (2026-11-06, pushed in `995e6ae`)
+### D2 review history
 
-StyleDocument stages every alias/family and commits catalog, selection and style once. Family member
-IDs include `/families/x<family-hex>` so shared file themes do not change family ownership when
-selection changes. Long aliases return diagnostics. Production manager regressions cover canonical
-mutators, cross-family/fixed/anonymous selection, replacements, exceptions and lifetime; historical
-test compatibility remains test-only. A fixed-source Sidebar switch restores the actual appearance.
-The step-3 review cycle is closed.
-
-### D2 step-4 and 4a status (2026-11-09)
-
-The step-4 review cycle is closed and the batch is pushed in `4746173`: equivalent catalog
-replacement is idempotent, staged publication and all channel lifetimes/exception paths are
-covered, event endpoints own their snapshots and author derivation is deep. Step 4a's CPU side is pushed as `fef829a`: the single foundation compositor plus explicit
-contrast rules/profiles/diagnostics, with local helpers migrated and the review fixes for tone
-context, transform paths, opaque-endpoint sampling and policy reporting. Step 4b's author color entry
-(typed primitive-palette access and explicit `NanColor` semantic overrides with file-import
-parity) is pushed as `3e2542a`; its review closed non-finite file overrides through the shared
-validator and covered every family/shade, role/alias, duplicate ordering and provenance. Step
-4c's foundation named color literals (148 CSS Color 4 names, typed/string entries, private table)
-are pushed as `f383201`; its review closed enum-identity test gaps and added exhaustive
-byte/string-view boundaries, and source evidence matches both the SVG 1.1 and pinned CSS Color 4
-snapshots. Step 4d's TOML named-color literals are pushed as `5061b39`, with complete error paths
-and tests for all literals, reference boundaries and actual apply failure atomicity. Shell
-multi-scheme framework preparation is pushed as `f821f40`, with typed catalog subjects,
-scope-bound selection/catalog subscriptions and end-to-end interaction regressions. Environment
-skip classification is pushed as `d9d234c`. The reviewed 4a follow-up adds software-renderer and
-Linux/Hyprland+RADV production-path framebuffer readback against the shared encoded-sRGB
-compositor, including wrong-space negative controls. **2026-11-09 Windows full verification**
-(Windows 11 26200 + Radeon 660M/D3D12) adds the same software readback, a D3D12 offscreen
-`composite readback matches the shared compositor (encoded sRGB, tolerance 4)` result and a
-`default swapchain readback matches the shared compositor (encoded sRGB, tolerance 4)` result
-(8-bit SDR target; SKIP + reason when readback is unavailable or the target is HDR), and the
-Windows suite is fully green after five tooling portability fixes (see the Windows verification
-section); the SDK consumer fixture is Linux-only. **P4.5a high-DPI content scaling is implemented
-(2026-11-09)** — logical-unit window/input/IME seam, content-scaled native window (1200×800
-logical → 2100×1400 physical at 175%), renderer scale and physical-density text raster, verified
-on this 175% machine with crisp text and correct pointer hit; `WindowConfig::high_dpi=false` is
-the fixed 1× mode for tests/probes/goldens. **P4.5b mixed-DPI multi-monitor is verified
-(2026-11-10)** on the real 2880×1800@175% + 2560×1440@125% pair: both-direction moves, a real
-title-bar drag across the DPI boundary, carrying a 125%-monitor resize back to 175%, logical-size
-stability with framebuffer/render-scale updates, physical-coordinate hit-testing at both scales
-and usable-area clamping. Real IME candidate placement, Linux Wayland fractional scaling,
-display hot-plug/system-scale changes and accessibility text scaling remain pending; contract:
-`docs/references/high_dpi_and_multi_display.md`. The registration
-contrast gate, style advisories, the Shell page body/visual acceptance, Linux
-default-swapchain/other-driver readback and internal broadcast narrowing remain pending; do not
-claim the full color gate passes.
+D2 step-3/4/4a–4d/Shell review cycles are closed (commits `995e6ae`, `4746173`, `fef829a`,
+`3e2542a`, `f383201`, `5061b39`, `f821f40`, `d9d234c`). Per-step evidence, Windows readback and
+the remaining color-gate boundaries live in
+[theme_authoring_and_state.md](docs/references/theme_authoring_and_state.md); the registration
+contrast gate is not wired — do not claim the full color gate passes.

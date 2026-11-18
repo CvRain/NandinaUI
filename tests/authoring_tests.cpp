@@ -18,6 +18,7 @@
 #include <nandina/widget/layout.hpp>
 #include <nandina/widget/text_field.hpp>
 
+#include <concepts>
 #include <memory>
 #include <string>
 #include <type_traits>
@@ -318,6 +319,9 @@ TEST_CASE("BuildContext authors scoped conditional and keyed regions", "[authori
                       },
                       [](ScopedItemControl& row, const Item& value) { row.value = value.value; }
     ).build();
+    STATIC_REQUIRE(
+        std::same_as<decltype(rows), std::shared_ptr<widget::ForEach<Item, int, ScopedItemControl>>>
+    );
     scene::NanSceneTree rows_tree;
     rows_tree.set_root(rows);
     auto* retained = rows->node_for(1);

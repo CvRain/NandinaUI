@@ -513,7 +513,8 @@ experimental**，理由与后续动作写进清单——两个枚举是公开 wi
 | 新增 `NanApplication::mount_resource_backend()` | `app`（experimental public） | 在窗口/字体/图片首次消费前注入自定义后端；后端由应用保活 |
 | `resource_tools=false` / `external_nanres` | Meson 构建表面 | 关闭本地工具时 `nandina_resource_toolchain` 仅在提供外部工具时存在；外部工具须通过 `nanres schema`（值 1）与 `--version` 握手，否则配置期失败 |
 | 新增 `nanres schema` / `nanres --version` | `nanres` CLI（构建期工具） | 供外部工具握手与诊断；不属于应用运行时 API |
-| `supports_image_loading()` 收窄 + 新增 RGBA 上传查询 | `IRenderDevice`（设备实现方接口） | 原先判断"能不能显示图片"的调用方，改为分别查询解码服务、设备直载、设备 RGBA 上传三项，见 [D7](reference_draft.md#三项能力分开表达2026-10-17-定) |
+| `supports_image_loading()` 收窄 + 新增 RGBA 上传查询 | `IRenderDevice`（设备实现方接口） | 原先判断"能不能显示图片"的调用方，改为分别查询解码服务、设备直载、设备 RGBA 上传三项，见 [D7](reference_draft.md#三项能力分开表达2026-10-17-定)。 |
+| `BuildContext::for_each()` 返回类型（批 4） | `widget/build_context.hpp`（experimental public） | 改为直接构造 `ForEach<Item, Key, Node>`；`.build()` 返回 `std::shared_ptr<ForEach<...>>`（原 `ListView<...>`）。参数、约束、key/create/update 回调与行为不变；`auto` 调用无需迁移，显式声明 `ListView`/`NodeBuilder<ListView<...>>` 的下游代码需改为 `ForEach`。旧 `ListView` 保留至批 5 退役 |
 
 项目处于 alpha、源码集成、不承诺旧入口长期兼容，因此：
 
