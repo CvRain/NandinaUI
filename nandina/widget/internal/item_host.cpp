@@ -34,7 +34,7 @@ namespace nandina::widget
 
     void ItemHost::set_items(const std::vector<ItemRequest>& items) {
         // 先把请求整体校验完，避免后一项非法时前面的 create/update 已经产生副作用。
-        std::unordered_set<CellId, internal::CellIdHash> request_ids;
+        std::unordered_set<CellId> request_ids;
         request_ids.reserve(items.size());
         for (const auto& request: items) {
             if (!request_ids.insert(request.id).second) {
@@ -50,7 +50,7 @@ namespace nandina::widget
         std::vector<std::unique_ptr<Entry>> created(items.size());
         std::unordered_set<const scene::NanControl*> created_nodes;
         created_nodes.reserve(items.size());
-        std::unordered_map<CellId, std::size_t, internal::CellIdHash> next_index;
+        std::unordered_map<CellId, std::size_t> next_index;
         next_index.reserve(items.size());
         for (std::size_t item = 0; item < items.size(); ++item) {
             next_index.emplace(items[item].id, item);

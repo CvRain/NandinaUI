@@ -426,7 +426,9 @@ TEST_CASE(
     auto table = make_table(fixture, model, {column, second});
     auto tree = mount(fixture, table);
 
-    auto* header = table->header_host();
+    auto* header_cell = table->header_node(column_id("name"));
+    REQUIRE(header_cell != nullptr);
+    auto* header = static_cast<scene::NanControl*>(header_cell->parent());
     REQUIRE(header != nullptr);
     tree->set_focus(header);
     tree->dispatch_key(

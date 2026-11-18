@@ -60,19 +60,19 @@ application shell. Version `0.1.0-alpha.1`.
   negative and positive branches. The Test step annotation now carries the unfiltered test-log
   tail so public check-run annotations show assertion text.
 - **Latest (2026-11-14)**: CI is green and the CPU page-golden gate is blocking (promoted
-  2026-11-14; `b35629f` green). Current counts: 140 tests (117 unit + 23 integration), 213
-  headers (189 experimental + 24 internal), 28 approved goldens (7 pages × CPU/SDF × 2
+  2026-11-14; `b35629f` green). Current counts: 141 tests (118 unit + 23 integration), 213
+  headers (197 experimental + 16 internal), 28 approved goldens (7 pages × CPU/SDF × 2
   platforms = 14/platform), 39 public components, 7-page blocking CPU coverage.
   **Data-view contract:** §9 is the **v3.1 final design** (v3 + 2026-11-15 errata):
   non-template `DataTable`/`ListView` over a shared `IRowModel` (rows only), `DataTableColumn`
   as the single column source, `IItemDelegate`/`TypedItemDelegate` with RTTI-free tokens checked
   in every build mode, stable `RowId`/`ColumnId`/`CellId`, `TableSelectionModel`,
   `GridNavigation`, local/external sorting by `ColumnId`, delegate-owned visuals (no recipe),
-  composition-only internals, virtualized `ListView` (`ForEach` kept). **Batches 1A/1B/2A/2B/3a/3b①/3b② committed; public export remains
-  (3b③).** Verification: full suite 137 OK +3 skip, ASan 115 OK +1 skip,
-  no-RTTI 116 OK +1 skip, no-SQLite 112 OK +1 skip, pure tools 8/8, release_check 8/8;
-  3B2 `data-table-3b2` 7/61,
-  3B 14/98, 3A 18/384, 2B 29/166, 2A 25/163, 1B 9/116+29/154.
+  composition-only internals, virtualized `ListView` (`ForEach` kept). **Batches
+  1A/1B/2A/2B/3a/3b①/3b②/3b③ committed.** Verification: full suite 138 OK +3 skip, ASan 116 OK +1 skip,
+  no-RTTI 117 OK +1 skip, no-SQLite 113 OK +1 skip, pure tools 8/8, release_check 8/8;
+  `data-public-api` 2/12; 3B2 7/62, 3B 14/101, 3A 18/384, 2B 29/166, 2A 25/163,
+  1B 9/116+29/154.
 - P4.6 Step 2b is closed — default component recipes consume the semantic role's
   leading/weight/slant through `TypeStyle::role` → `ResolvedTypeStyle` and the shared
   text-style bridge (manual `text::TextStyle` sites migrated to

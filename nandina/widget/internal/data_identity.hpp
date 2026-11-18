@@ -1,8 +1,8 @@
 //
-// widget/internal/data_identity — 数据视图的稳定身份与显示序坐标（批 2A 内部协议）。
+// widget/internal/data_identity — 数据视图的稳定身份与显示序坐标（experimental）。
 //
-// 2A 先放在 internal/ 且头文件表面登记为 internal；批 3 导出 DataTable 时再一起转为
-// experimental，因此当前不承诺 std::hash 是稳定的公共 API（2A 只提供相等语义）。
+// 文件暂留在 internal/ 目录，但 3b③ 起按 experimental 公共头像作者开放。身份值本身
+// 是容器语义的稳定身份；std::hash 数值只用于当前进程内哈希容器，不是可持久化的标识。
 //
 
 #ifndef NANDINA_EXPERIMENT_WIDGET_INTERNAL_DATA_IDENTITY_HPP
@@ -46,21 +46,35 @@ namespace nandina::widget
     };
 } // namespace nandina::widget
 
+namespace std
+{
+    /// 公共哈希承诺：相等身份得到相等哈希，可直接用于 unordered_* 容器。哈希数值
+    /// 不承诺跨进程、跨标准库版本或跨框架版本稳定，也不是序列化身份。
+    template<>
+    struct hash<nandina::widget::RowId> {
+        [[nodiscard]] auto operator()(const nandina::widget::RowId& id) const noexcept
+            -> std::size_t;
+    };
+
+    template<>
+    struct hash<nandina::widget::ColumnId> {
+        [[nodiscard]] auto operator()(const nandina::widget::ColumnId& id) const noexcept
+            -> std::size_t;
+    };
+
+    template<>
+    struct hash<nandina::widget::CellId> {
+        [[nodiscard]] auto operator()(const nandina::widget::CellId& id) const noexcept
+            -> std::size_t;
+    };
+} // namespace std
+
 namespace nandina::widget::internal
 {
-    /// 内部身份 hasher：TableSelectionModel / ItemHost 共用；批 3 导出时桥接为
-    /// 公共 std::hash 特化，2A/2B 不承诺公共哈希 API。
-    struct RowIdHash {
-        [[nodiscard]] auto operator()(const RowId& id) const noexcept -> std::size_t;
-    };
-
-    struct ColumnIdHash {
-        [[nodiscard]] auto operator()(const ColumnId& id) const noexcept -> std::size_t;
-    };
-
-    struct CellIdHash {
-        [[nodiscard]] auto operator()(const CellId& id) const noexcept -> std::size_t;
-    };
+    /// 内部兼容别名：统一指向公共 std::hash，避免内部与作者容器出现两套哈希语义。
+    using RowIdHash = std::hash<RowId>;
+    using ColumnIdHash = std::hash<ColumnId>;
+    using CellIdHash = std::hash<CellId>;
 } // namespace nandina::widget::internal
 
 #endif // NANDINA_EXPERIMENT_WIDGET_INTERNAL_DATA_IDENTITY_HPP

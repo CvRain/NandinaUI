@@ -1,10 +1,10 @@
 //
-// widget/internal/table_selection_model — 二维单元格选择模型（批 2A 内部协议）。
+// widget/internal/table_selection_model — 二维单元格选择模型（experimental）。
 //
-// 身份用 CellId（RowId + ColumnId）；显示序矩形由视图展开成 extent 后传入。2A 只实现
-// SelectionBehavior::cells：rows/columns 构造函数立即抛 invalid_argument，避免构造成功
-// 却执行单元格语义。选择集合按「首次出现顺序」保存为有序 vector；私有成员索引
-// （unordered_set + 内部 hasher）保证 is_selected() O(1) 与 extent 去重 O(n)。
+// 文件暂留在 internal/ 目录，但 3b③ 起按 experimental 公共头开放。身份用 CellId
+// （RowId + ColumnId）；显示序矩形由视图展开成 extent 后传入。首批只实现
+// SelectionBehavior::cells：rows/columns 构造函数立即抛 invalid_argument。选择集合按
+// 「首次出现顺序」保存为有序 vector；私有成员索引保证 is_selected() O(1) 与 extent 去重。
 //
 
 #ifndef NANDINA_EXPERIMENT_WIDGET_INTERNAL_TABLE_SELECTION_MODEL_HPP
@@ -101,7 +101,7 @@ namespace nandina::widget
         SelectionMode mode_;
         SelectionBehavior behavior_;
         std::vector<CellId> selected_;
-        std::unordered_set<CellId, internal::CellIdHash> selected_index_;
+        std::unordered_set<CellId> selected_index_;
         std::optional<CellId> current_;
         std::optional<CellId> anchor_;
         reactive::Event<> changed_;

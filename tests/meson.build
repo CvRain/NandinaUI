@@ -328,6 +328,13 @@ data_view_protocol_tests = executable(
 )
 test('data-view-protocol', data_view_protocol_tests, suite: 'unit')
 
+data_public_api_tests = executable(
+    'data_public_api_tests',
+    files('data_public_api_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('data-public-api', data_public_api_tests, suite: 'unit')
+
 data_table_2b_tests = executable(
     'data_table_2b_tests',
     files('data_table_2b_tests.cpp'),
@@ -948,7 +955,7 @@ test(
 )
 
 # 头文件表面门禁（docs/references/sdk_surface.md §4）：分类完整性、包含方向、独立可包含。
-# 独立可包含检查会编译每个 public/experimental 头（198 个，约 50 s），可选功能关闭时按配置跳过。
+# 独立可包含检查会编译每个 public/experimental 头（当前 197 个），可选功能关闭时按配置跳过。
 header_surface_gate = find_program('../tools/check_headers.py')
 test(
     'header-surface',

@@ -431,7 +431,8 @@ lab 本身不承诺密码掩码，notebook 在 P3.3b1 后已通过 `TextInputPur
 | 不越界 | public/experimental 头不 `#include` internal 头（相对与 `<nandina/...>` 两种写法都解析） | 依赖方向倒置 → 失败 |
 | 独立可包含 | 每个 public/experimental 头用一个只包含它的 TU 做 `-fsyntax-only` | 缺依赖/隐式前置 → 失败 |
 
-落点：清单 `tools/header_surface.toml`（188 条，含 `level`、可选 `reason`、可选 `requires`），
+落点：清单 `tools/header_surface.toml`（当前 213 条，含 `level`、可选 `reason`、可选 `requires`；
+首次落地时为 188 条），
 脚本 `tools/check_headers.py`，注册为 `header-surface`（`integration`，实测约 16 s，8 路并行）。
 用法：
 
@@ -463,6 +464,37 @@ experimental**，理由与后续动作写进清单——两个枚举是公开 wi
 **清单描述支持范围，`sdk_bundle.py` 描述构建闭包。** 将来提供安装式 SDK 时，由这份清单生成
 公共 include 树，而不是再维护第二份"安装头列表"。
 
+### 4.2 DataTable 公共导出（3b③）
+
+3b③ 将下列八个数据视图头从 `internal` 提升为 `experimental`：
+
+| 头文件 | 公共内容 |
+| --- | --- |
+| `widget/internal/data_identity.hpp` | `RowId`/`ColumnId`/`CellId`/`ModelIndex` 与三个 `std::hash` 特化 |
+| `widget/internal/row_model.hpp` | `RowRange`、`IRowModel`、`RowModelBase`、`TypedRowModelBase`、类型令牌 |
+| `widget/internal/data_table_column.hpp` | `DataTableColumn`、排序策略/状态、typed 列构造糖 |
+| `widget/internal/item_delegate.hpp` | `IItemDelegate`、`ItemBinding`、`TypedItemDelegate`、默认文本 delegate |
+| `widget/internal/header_delegate.hpp` | `IHeaderDelegate`、`HeaderBinding`、默认表头 delegate |
+| `widget/internal/table_selection_model.hpp` | 二维单元格选择协议与实现 |
+| `widget/internal/grid_navigation.hpp` | 二维键盘导航数学 |
+| `widget/internal/data_table.hpp` | 虚拟化 `DataTable` 组件 |
+
+这些文件暂时仍位于 `internal/` 目录，原因与 `anchored_positioner.hpp` 相同：先锁定公共语义和测试，
+再单独做路径迁移，避免本批同时制造大量 include 噪声。等级以清单为准，目录名不代表 internal 权限。
+后续应在不改变命名空间的前提下移动到正式 widget 路径，并删除对应 TOML 例外。
+
+`item_host.hpp` 继续为 `internal`：它是 delegate 控件组合工具，不进入公共参数或返回值。
+`data_table.hpp` 只把它前置声明为私有成员类型，并在 `.cpp` 中持有完整定义和 out-of-line 析构；
+测试专用的表头宿主访问器已从公共类移除，测试改由 `header_node(id)->parent()` 观察框架 wrapper。
+
+公共哈希承诺是容器语义，不是数值稳定性：相等身份必须得到相等哈希，并可直接用于
+`unordered_map`/`unordered_set`；不得把哈希值序列化、跨进程比较或当作身份。身份持久化仍使用
+`RowId::value`、`ColumnId::value` 与 `CellId` 字段。内部 hasher 只保留为公共 `std::hash` 的薄包装。
+
+验收使用三层证据：`header-surface` 检查分类、包含方向和八个头独立可编译；`data-public-api`
+由作者路径定义 typed model/item/header delegate 并通过 `ui.make<DataTable>()` 创建组件；
+`sdk-vendored-consumer` 在打包后的下游 SDK 中运行 `data-api=1` 消费探针。
+
 ## 5. 破坏性变更的记录方式
 
 图片批同时有两处**破坏性 API 变更**，都要登记：
@@ -489,7 +521,12 @@ experimental**，理由与后续动作写进清单——两个枚举是公开 wi
 - 迁移说明只表达一件事：原来由自定义平台 override 提供的解码器，改为应用服务注入；
 - 库内实现、测试替身、下游样例一次改完，要求重新编译。
 
-退役后清单为 182 个头文件，其中 10 个 internal（清单随后续批次增长，当前为 213 个头文件（189 experimental + 24 internal；其中 internal/ 目录下的 data_identity/row_model/table_selection_model/grid_navigation 四个 2A 协议头、data_table/data_table_column/item_delegate/item_host 四个 2B 头与 header_delegate 3b② 头暂登记 internal，anchored_positioner.hpp 与 uniform_row_window.hpp 因被实验性公共头内联包含而登记为 experimental））。生成模板归 NandinaCLI；
+退役后清单为 182 个头文件，其中 10 个 internal（清单随后续批次增长，当前为 213 个头文件：
+**197 experimental + 16 internal**。其中 data_identity、row_model、table_selection_model、
+grid_navigation、data_table、data_table_column、item_delegate 与 header_delegate 八个数据视图头
+在 3b③ 提升为 experimental，但仍暂留 `internal/` 路径；item_host 保持 internal；
+anchored_positioner.hpp 与 uniform_row_window.hpp 因被实验性公共头内联包含而登记为
+experimental）。生成模板归 NandinaCLI；
 框架维护 [`sdk_app` 消费 fixture](../../tests/fixtures/sdk_app/README.md)，不维护第二份模板。
 
 ## 6. 不要越界声明的事

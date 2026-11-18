@@ -1,15 +1,17 @@
 //
-// widget/internal/header_delegate — DataTable 表头视觉 delegate（批 3b②，internal）。
+// widget/internal/header_delegate — DataTable 表头视觉 delegate（experimental）。
 //
-// 表头语义/焦点/指针/键盘/排序事实仍由框架的 HeaderCellHost + HeaderHost 拥有；delegate
-// 只创建/更新"视觉根节点"，不能替换 semantics wrapper，也不能自行接管排序或焦点。
-// HeaderBinding 只在当次 create/update 回调期间有效，作者不得保存 column/theme 引用。
-// 主题变化走 update_header（携带新的 NanTheme 快照与 revision），delegate 自行重解析 token。
+// 文件暂留在 internal/ 目录，但 3b③ 起按 experimental 公共头开放。表头语义/焦点/指针/
+// 键盘/排序事实仍由框架的 HeaderCellHost + HeaderHost 拥有；delegate 只创建/更新视觉根
+// 节点，不能替换 semantics wrapper，也不能自行接管排序或焦点。HeaderBinding 只在当次
+// create/update 回调期间有效，作者不得保存 column/theme 引用。主题变化走 update_header
+// （携带新的 NanTheme 快照与 revision），delegate 自行重解析 token。
 //
 
 #ifndef NANDINA_EXPERIMENT_WIDGET_INTERNAL_HEADER_DELEGATE_HPP
 #define NANDINA_EXPERIMENT_WIDGET_INTERNAL_HEADER_DELEGATE_HPP
 
+#include "../../scene/control.hpp"
 #include "../../theme/nan_style.hpp"
 #include "../../widget/build_context.hpp"
 #include "data_table_column.hpp"

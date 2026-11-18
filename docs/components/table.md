@@ -1,6 +1,7 @@
 # Table
 
-> 🟡 P4.2b experimental 使用手册提纲；API、列规则和语义结构按实现核对，叙述正文与 Showcase 页面待维护者手写。
+> 🟡 P4.2b experimental 使用手册提纲；API、列规则和语义结构按实现核对。Showcase 视觉验收已于
+> 2026-11-13 完成。
 
 ## 核对表
 
@@ -31,5 +32,7 @@
 
 <!-- TODO: 维护者补充读屏顺序和静态 Table 与 DataTable 的选用说明。 -->
 
+需要行模型、虚拟化、选择或排序时使用 [`DataTable`](data_table.md)；`Table` 保持静态、全量物化，
+适合内容数量和结构在构建时已知的小型表格。
+
 实现契约见 [数据组件 §8](../references/data_components_and_virtualization.md#8-p42b-静态-table布局契约)。
-Showcase 视觉验收尚未完成。

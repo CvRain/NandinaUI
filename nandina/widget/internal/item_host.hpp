@@ -76,7 +76,7 @@ namespace nandina::widget
 
         widget::BuildContext ui_;
         std::vector<Entry> entries_;
-        std::unordered_map<CellId, std::size_t, internal::CellIdHash> index_;
+        std::unordered_map<CellId, std::size_t> index_;
         /// on_exit_tree() clears per-item reactive scopes. A later set_items() must recreate
         /// delegate items, because update_item() is not allowed to install effects/subscriptions.
         bool scopes_released_ = false;

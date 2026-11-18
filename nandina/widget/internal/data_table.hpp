@@ -1,12 +1,11 @@
 //
-// widget/internal/data_table — 窗口化物化的 DataTable（批 2B/3a 内部实现）。
+// widget/internal/data_table — 窗口化物化的 DataTable（experimental）。
 //
-// 非模板类：行模型经 shared_ptr<IRowModel> 注入；列由 DataTableColumn 唯一定义；单元格
-// 视觉全部由 IItemDelegate 提供（内部 HeaderHost 是普通 Label + 排序图元组合，不伪造
-// model_row）。2B 做模型绑定/通知状态机、表头指针点击排序、本地/外部排序与默认
-// TextItemDelegate；3a 让 DataTable 自持纵向 viewport：表头固定，body 只物化
-// UniformRowWindow 可见窗口内的单元格，支持滚轮、offset 夹取、滚动到行与遍历期
-// pending 窗口同步。表头键盘/作者 HeaderDelegate/主题重解析/公共导出留到 3b。
+// 文件暂留在 internal/ 目录，但 3b③ 起按 experimental 公共头开放。非模板类：行模型经
+// shared_ptr<IRowModel> 注入；列由 DataTableColumn 唯一定义；单元格视觉全部由
+// IItemDelegate 提供。表头固定，body 只物化 UniformRowWindow 可见窗口内的单元格。
+// ItemHost/DataTableHeaderHost 是实现细节，不进入公共签名；析构函数必须在 .cpp 中完成，
+// 以允许本头只前置声明它们。
 //
 
 #ifndef NANDINA_EXPERIMENT_WIDGET_INTERNAL_DATA_TABLE_HPP
@@ -20,7 +19,6 @@
 #include "grid_navigation.hpp"
 #include "header_delegate.hpp"
 #include "item_delegate.hpp"
-#include "item_host.hpp"
 #include "row_model.hpp"
 #include "table_selection_model.hpp"
 #include "uniform_row_window.hpp"
@@ -38,6 +36,7 @@
 namespace nandina::widget
 {
     class DataTableHeaderHost;
+    class ItemHost;
 
     class DataTable final: public scene::NanControl {
     public:
@@ -93,8 +92,6 @@ namespace nandina::widget
         /// 只对已物化单元格返回节点；窗口外返回 nullptr。
         [[nodiscard]] auto cell_node(const CellId& id) const -> scene::NanControl*;
         [[nodiscard]] auto header_node(const ColumnId& id) const -> scene::NanControl*;
-        /// 表头 host 本身（可聚焦单元；库内部与测试用，不进入公共导出）。
-        [[nodiscard]] auto header_host() const -> scene::NanControl*;
         [[nodiscard]] auto model_row_for_display(std::size_t display_row) const
             -> std::optional<std::size_t>;
         [[nodiscard]] auto display_row_for(RowId row) const -> std::optional<std::size_t>;
@@ -114,7 +111,7 @@ namespace nandina::widget
         /// 滚动到让 display_row 行完整可见；首布局前（视口高度未知）挂起到 on_layout。
         void scroll_to_row(std::size_t display_row);
 
-        // ─── 通知状态机（测试/观测）─────────────────────────────────────
+        // ─── 通知状态机（诊断）─────────────────────────────────────────
         [[nodiscard]] auto has_pending_notifications() const noexcept -> bool;
 
     protected:
@@ -196,7 +193,7 @@ namespace nandina::widget
         std::vector<std::shared_ptr<IItemDelegate>> default_delegates_;
         std::shared_ptr<IRowModel> model_;
         std::vector<std::size_t> display_order_;
-        std::unordered_map<RowId, std::size_t, internal::RowIdHash> display_row_for_row_;
+        std::unordered_map<RowId, std::size_t> display_row_for_row_;
         std::vector<std::size_t> visible_columns_;
         std::vector<float> column_offsets_;
 

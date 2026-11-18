@@ -1,9 +1,10 @@
 //
-// widget/internal/data_table_column — DataTable 列定义（批 2B 内部协议）。
+// widget/internal/data_table_column — DataTable 列定义（experimental）。
 //
-// 现有静态 Table 的 TableColumn 保持不变，只作为轨道定义嵌入。列是 DataTable 的
-// 二维结构唯一来源：轨道、可见性、排序策略/比较器、delegate 与默认文本取值器都在这里。
-// 所有模型类型相关字段都携带无 RTTI 令牌，set_columns/set_model 在提交前统一校验。
+// 文件暂留在 internal/ 目录，但 3b③ 起按 experimental 公共头开放。现有静态 Table 的
+// TableColumn 保持不变，只作为轨道定义嵌入。列是 DataTable 的二维结构唯一来源：轨道、
+// 可见性、排序策略/比较器、delegate 与默认文本取值器都在这里。所有模型类型相关字段都
+// 携带无 RTTI 令牌，set_columns/set_model 在提交前统一校验。
 //
 
 #ifndef NANDINA_EXPERIMENT_WIDGET_INTERNAL_DATA_TABLE_COLUMN_HPP

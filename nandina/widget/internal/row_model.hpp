@@ -1,12 +1,10 @@
 //
-// widget/internal/row_model — 非模板行模型契约（批 2A 内部协议）。
+// widget/internal/row_model — 非模板行模型契约（experimental）。
 //
-// IRowModel 只描述「行」：行数、稳定行身份、类型令牌与两个同步变更事件；列/单元格视觉
-// 由 DataTableColumn + delegate 负责（批 2B）。RowModelBase 提供事件存储与通知工具，
-// 派生模型通过 TypedRowModelBase<Derived> 获得无 RTTI 的类型令牌。
-//
-// 2A 边界：只验证同步触发、空范围不发事件、非法范围抛 invalid_argument、data_changed
-// 不改变行数/顺序/RowId。遍历期 pending 合并依赖场景树相位与视图状态，移到 2B/3。
+// 文件暂留在 internal/ 目录，但 3b③ 起按 experimental 公共头开放。IRowModel 只描述
+// 「行」：行数、稳定行身份、类型令牌与两个同步变更事件；列/单元格视觉由
+// DataTableColumn + delegate 负责。RowModelBase 提供事件存储与通知工具，派生模型通过
+// TypedRowModelBase<Derived> 获得无 RTTI 的类型令牌。
 //
 
 #ifndef NANDINA_EXPERIMENT_WIDGET_INTERNAL_ROW_MODEL_HPP

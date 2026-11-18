@@ -28,7 +28,8 @@
 | [`EmptyState`](empty_state.md) | 列表或集合暂空时的占位与引导 | 可用 |
 | [`Card`](card.md) | 带主题外观的单子内容容器 | 可用（content insets experimental；文档提纲） |
 | [`Collapsible`](collapsible.md) | 保留内容状态的折叠区域 | 实验性（P4.2c 初稿，视觉验收待完成） |
-| [`Table`](table.md) | 静态内容表格，共享列宽并按行自然增长 | 实验性（P4.2b 代码复核完成；视觉验收待完成；无选择/排序/虚拟化） |
+| [`Table`](table.md) | 静态内容表格，共享列宽并按行自然增长 | 实验性（P4.2b 代码复核与 2026-11-13 视觉验收完成；无选择/排序/虚拟化） |
+| [`DataTable`](data_table.md) | 行模型驱动的虚拟化数据表格，含选择、排序、delegate 与固定表头 | 实验性（3b③ 公共导出已完成；键盘/指针/主题已接入） |
 
 ### 输入与选择
 
@@ -83,8 +84,7 @@
 `Combobox`、`CommandPalette`、`HoverCard` 与 `AlertDialog`
 （见 [菜单族条目模型](../references/menu_model.md)）。
 
-仍待实现的信息组织组件：`Accordion`、`Sheet`；`DataTable`
-待选择模型、虚拟化与排序契约成熟后再排期。
+仍待实现的信息组织组件：`Accordion`、`Sheet`；新虚拟化 `ListView` 按数据视图契约继续。
 
 计划顺序与依赖关系见 [组件开发路线图](../references/component_roadmap.md)。
 

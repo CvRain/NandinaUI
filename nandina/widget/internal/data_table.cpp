@@ -4,6 +4,7 @@
 #include "../../scene/scene_tree.hpp"
 #include "../../theme/nan_style.hpp"
 #include "../table.hpp"
+#include "item_host.hpp"
 #include "track_solver.hpp"
 
 #include <algorithm>
@@ -132,8 +133,7 @@ namespace nandina::widget
 
         void set_columns(const std::vector<const DataTableColumn*>& columns) {
             const auto previous_focus = focused_column();
-            std::unordered_map<ColumnId, std::shared_ptr<HeaderCellHost>, internal::ColumnIdHash>
-                next;
+            std::unordered_map<ColumnId, std::shared_ptr<HeaderCellHost>> next;
             std::vector<ColumnId> order;
             next.reserve(columns.size());
             order.reserve(columns.size());
@@ -381,9 +381,8 @@ namespace nandina::widget
         theme::NanTheme theme_;
         std::uint64_t revision_ = 0;
         ClickHandler click_;
-        std::unordered_map<ColumnId, std::shared_ptr<HeaderCellHost>, internal::ColumnIdHash>
-            cells_;
-        std::unordered_map<ColumnId, const DataTableColumn*, internal::ColumnIdHash> columns_;
+        std::unordered_map<ColumnId, std::shared_ptr<HeaderCellHost>> cells_;
+        std::unordered_map<ColumnId, const DataTableColumn*> columns_;
         std::vector<ColumnId> order_;
         std::vector<foundation::NanRect> cell_rects_;
         std::optional<SortSpec> sort_;
@@ -954,10 +953,6 @@ namespace nandina::widget
         return header_ ? header_->node_for(id) : nullptr;
     }
 
-    auto DataTable::header_host() const -> scene::NanControl* {
-        return header_.get();
-    }
-
     auto DataTable::model_row_for_display(const std::size_t display_row) const
         -> std::optional<std::size_t> {
         if (display_row >= display_order_.size()) {
@@ -1051,14 +1046,14 @@ namespace nandina::widget
     // ─── 重建 / 布局 ────────────────────────────────────────────────────────
 
     void DataTable::retain_selection() {
-        std::unordered_set<RowId, internal::RowIdHash> rows;
+        std::unordered_set<RowId> rows;
         rows.reserve(model_ ? model_->row_count() : 0);
         if (model_) {
             for (std::size_t row = 0; row < model_->row_count(); ++row) {
                 rows.insert(model_->row_id(row));
             }
         }
-        std::unordered_set<ColumnId, internal::ColumnIdHash> visible;
+        std::unordered_set<ColumnId> visible;
         visible.reserve(visible_columns_.size());
         for (const auto index: visible_columns_) {
             visible.insert(columns_[index].id);

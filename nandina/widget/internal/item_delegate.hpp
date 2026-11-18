@@ -1,9 +1,10 @@
 //
-// widget/internal/item_delegate — DataTable/ListView 的单元格创建与更新协议（批 2B）。
+// widget/internal/item_delegate — DataTable/ListView 的单元格创建与更新协议（experimental）。
 //
-// create_item 才拿 item-scoped BuildContext（with_scope），可用于建控件/effect/subscription；
-// update_item 会被反复调用，只能更新控件，不得安装 effect/subscription。所有借用引用只在
-// 当次调用期间有效。TypedItemDelegate 在每次转换前重新校验无 RTTI 令牌。
+// 文件暂留在 internal/ 目录，但 3b③ 起按 experimental 公共头开放。create_item 才拿
+// item-scoped BuildContext（with_scope），可用于建控件/effect/subscription；update_item
+// 会被反复调用，只能更新控件，不得安装 effect/subscription。所有借用引用只在当次调用
+// 期间有效。TypedItemDelegate 在每次转换前重新校验无 RTTI 令牌。
 //
 
 #ifndef NANDINA_EXPERIMENT_WIDGET_INTERNAL_ITEM_DELEGATE_HPP

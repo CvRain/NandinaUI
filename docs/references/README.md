@@ -30,7 +30,7 @@
 - [Anchors 布局设计](anchors.md)：作者模型、布局边界与百分比；scene 内核、作者入口、已知边界与故障注入见 §5。
 - [锚点系统：历史草案](anchor_draft.md)：保留讨论脉络与旧建议；不是规范，冲突时以 [Anchors 布局设计](anchors.md) 为准。
 - [配置与开发体验](authoring_configuration.md)：**作者侧规则**。回调的两类与 `guarded()` 的能力边界、handler 的 concept 化设计、组件的公开 API 表面、样式优先级。
-- [SDK 表面：头文件分类与门禁](sdk_surface.md)：**已实施**。区分构建闭包与公共表面；213 个头文件（189 experimental + 24 internal）分类、包含方向与独立包含三类门禁已落地（Windows 的 `command`/反斜杠解析同样通过，2026-11-09）。图片解码钩子与 raylib 后端已删除，公开签名检查仍需评审。
+- [SDK 表面：头文件分类与门禁](sdk_surface.md)：**已实施**。区分构建闭包与公共表面；213 个头文件（197 experimental + 16 internal）分类、包含方向与独立包含三类门禁已落地（Windows 的 `command`/反斜杠解析同样通过，2026-11-09）。3b③ 将八个 DataTable 作者/组件头提升为 experimental，仍暂留 `internal/` 路径；图片解码钩子与 raylib 后端已删除，公开签名检查仍需评审。
 - [视觉回归：golden、容差与更新流程](visual_regression.md)：**Linux 14 条、Windows 14 条 approved 基线已交付（2026-11-13 B2b 新增 surface；平台隔离）**。两层预期、`tests/golden/backend/` 图与 manifest（`golden-manifest` 校验清单与审阅元数据）、比较器与审批工具手动运行；Linux debug 与 release 渲染逐像素一致；CPU 路径 golden 由 CI 阻断门禁自动采集比较（2026-11-14 起，见 §7）。
 - [性能预算：采样协议与候选阈值](performance_budget.md)：**已实施（Linux release 基线 + 确定性门禁；Windows CPU/SDF 参考基线已归档）**。固定采样协议（预热 300/采样 1200/重复 5 次、p50/p95）、release 基线（8 配置）、确定性门禁（布局 0、稳态 miss 0、binds 上限）与候选计时阈值（`--enforce` 启用）；Windows 参考数据不跨平台比较、不参与计时门禁；CI 无 GPU，属发布/本地门禁。
 - [渲染设备路径契约](render_device_path_contract.md)：**生产接入（填充/描边/圆/线段/弧）已完成并验收**。64 字节参数、4 KiB uniform 边界、三档缩放与纹理/字形交错、失败注入、嵌入产物、"不可变参数 state + 有界缓存"（§9）、审查修复（§10）、交互/性能协议（§11）、页面 golden（§12）、预算门禁（§13）、平台验收清单（§14）；阴影（mode 4）与涟漪圆角交集（mode 3）已实现并通过设备级测试；MSL 仍待实机验收；图片解码已迁到后端无关的 vendored stb。
@@ -51,7 +51,7 @@
 
 - [组件公共契约](component_contract.md)：新组件在进入推荐 API 前必须满足的状态、事件、绑定、主题、输入和无障碍要求。
 - [统一输入、焦点与文本编辑](focus_and_input.md)：**第一阶段已实施（P3.2a/b），第二阶段协议与 SDL 合成事件路径已实施（P3.3a），预编辑/密码用途显示已实施（P3.3b1）**。事件映射、paint-only、无历史默认显示、窗口活动、roving 提示、弹窗恢复、注入式文本会话协议与视觉文本映射记录在案；caret 输入区域与 SDL input_area 已实施（P3.3b2a）；P3.3b2b 已接通 SDL 用途/多行属性与 preedit 声明，并记录部分 Linux 实机验收；X11 inline preedit/独立 Xorg、Windows 与候选窗位置验收仍待完成。取舍过程见 [story 012](../../stories/012-from-focus-rings-to-input-sessions.md)。
-- [数据组件：选择模型与虚拟化依据](data_components_and_virtualization.md)：**P4.2a 已提交；P4.2b 静态 Table 已收口、2026-11-13 视觉验收完成**：SelectionModel 身份/模式/范围/retain 规则，VirtualListView 窗口物化契约，以及 Table 共享列轨道、自然行高、语义结构；**2026-11-15 §9 升级为数据视图契约 v3.1 定稿；批 1A（TrackSolver + 静态 Table 接入）已完成并提交；批 1B（UniformRowWindow 提取）已完成并提交（2026-11-16）；批 2A（数据视图协议）已完成并提交（2026-11-16）；2B（全量 DataTable/delegate/ItemHost/排序）已完成并提交（2026-11-16）；3a 内部虚拟化已完成并提交（2026-11-17）；3b① 输入/导航/表头语义已完成并提交（2026-11-17）；3b② 作者 HeaderDelegate/主题重解析已完成并提交（2026-11-17），公共导出按 §9.13 继续**。
+- [数据组件：选择模型与虚拟化依据](data_components_and_virtualization.md)：**P4.2a 已提交；P4.2b 静态 Table 已收口、2026-11-13 视觉验收完成**：SelectionModel 身份/模式/范围/retain 规则，VirtualListView 窗口物化契约，以及 Table 共享列轨道、自然行高、语义结构；**2026-11-15 §9 升级为数据视图契约 v3.1 定稿；1A/1B/2A/2B/3a/3b①/3b② 已提交；3b③ DataTable 公共导出（8 头 experimental、公共 hash、下游消费）已完成并提交（2026-11-18）**。
 - [折叠内容组件](disclosure_components.md)：**P4.2c Collapsible 已随 `095336b` 提交**；保留内容的展开/收起、统一激活、焦点恢复、Signal 与页面作用域，以及 Accordion 后续边界。
 - [组件开发路线图](component_roadmap.md)：当前组件盘点、基础设施依赖和推荐开发顺序。
 - [浮层架构](overlay_architecture.md)：OverlayHost、portal 生命周期、分层规则与后续基础设施边界。

@@ -1,9 +1,10 @@
 //
-// widget/internal/grid_navigation — 二维网格键盘导航（批 2A 内部协议）。
+// widget/internal/grid_navigation — 二维网格键盘导航（experimental）。
 //
-// 只持有显示序 ModelIndex，不持有身份、不映射到 CellId；视图负责身份映射与把 current
-// 写入选择模型。2A 规则：空网格不产生虚假 (0,0)；空→非空不自动播种；无 current 时所有
-// 移动返回 false；方向键不环绕；Home/End 为当前行首尾；PageUp/Down 保持列。
+// 文件暂留在 internal/ 目录，但 3b③ 起按 experimental 公共头开放。只持有显示序
+// ModelIndex，不持有身份、不映射到 CellId；视图负责身份映射与把 current 写入选择模型。
+// 空网格不产生虚假 (0,0)；空→非空不自动播种；无 current 时所有移动返回 false；方向键
+// 不环绕；Home/End 为当前行首尾；PageUp/Down 保持列。
 //
 
 #ifndef NANDINA_EXPERIMENT_WIDGET_INTERNAL_GRID_NAVIGATION_HPP

@@ -14,7 +14,9 @@
 > `feat(data): add DataTable grid input and header semantics (3b①)`）；批 3b②（作者
 > HeaderDelegate + 主题重解析）已完成并提交（2026-11-17，
 > `feat(data): add author header delegate and theme refresh (3b②)`）。
-> 公共导出按 §9.13 继续。** §8 静态 Table 与 §3/§4 基础契约不变。**
+> 批 3b③（DataTable 公共导出、公共哈希与下游消费）已完成并提交（2026-11-18，
+> `feat(data): export experimental DataTable surface (3b③)`）。
+> ** §8 静态 Table 与 §3/§4 基础契约不变。**
 > 本文件是阶段 5 数据组件的契约入口：已完成批次见 §1–§8，后续数据视图见 §9（v3.1）。
 > 静态 `Table`、`DataTable`、`Accordion` 等阶段 5 组件清单仍按
 > [组件开发路线图](component_roadmap.md#阶段-5信息组织与数据展示) 分批推进，不在本批。
@@ -282,7 +284,8 @@ SelectionModel、RovingFocus、虚拟化与排序留给后续交互数据表；�
 > `feat(data): add DataTable grid input and header semantics (3b①)`）；批 3b②（作者
 > HeaderDelegate + 主题重解析）已完成并提交（2026-11-17，
 > `feat(data): add author header delegate and theme refresh (3b②)`）。
-> 公共导出按 §9.13 继续施工。**
+> 批 3b③（DataTable 公共导出、公共哈希与下游消费）已完成并提交（2026-11-18，
+> `feat(data): export experimental DataTable surface (3b③)`）。**
 > 数据视图采用**非模板组件 + 行模型 + 列定义 + delegate + 显式选择模型**；v3.1 只修正接口矛盾，
 > 不改变总体架构。§3/§4/§8 已交付契约不变；旧 `ListView` 只作 `ForEach` 薄包装的状态随 §9.11 回收。
 >
@@ -328,11 +331,12 @@ struct CellId {
 
 - 三个身份显式声明默认相等运算符：`CellId::operator== = default` 依赖成员的显式相等（不能依赖
   隐式聚合比较在未来的可读性变化）。
-- **批 2A/2B 边界**：身份头暂放 `widget/internal/data_identity.hpp` 并登记为 internal，只承诺相等语义；
-  `std::hash<RowId/ColumnId/CellId>` 特化随批 3 导出 DataTable 时再提供并承诺稳定，避免提前固化
-  公共哈希 API。内部协议提供 `namespace nandina::widget::internal` 的 `RowIdHash`/`ColumnIdHash`/
-  `CellIdHash`，供 TableSelectionModel 与 ItemHost 共用（不在各处私有重复实现）；批 3 导出时把它们
-  桥接为公共 `std::hash` 特化。
+- **3b③ 公共边界**：身份头暂放 `widget/internal/data_identity.hpp`，但登记为 experimental；
+  `std::hash<RowId>`、`std::hash<ColumnId>`、`std::hash<CellId>` 已提供，可直接用于
+  `unordered_map`/`unordered_set`。公共承诺只有“相等身份得到相等哈希、可用于容器”；哈希数值不承诺
+  跨进程、标准库版本、框架版本或序列化持久化稳定，身份本身仍只能序列化 `value`/字段。
+- 内部 `namespace nandina::widget::internal` 的 `RowIdHash`/`ColumnIdHash`/`CellIdHash` 保留为
+  公共 `std::hash` 的兼容别名，生产容器默认使用公共特化，避免内部与作者容器出现两套语义。
 
 - 模型负责 `row_id(row)` 在插入/排序/过滤后保持稳定且唯一；**不提供「行索引即身份」的默认实现**。
   ↑ 这是**稳定身份要求**，不提供兜底；简单模型可用自增计数或主键。
@@ -461,6 +465,7 @@ struct DataTableColumn {
     SortStrategy sort = SortStrategy::none;
     ColumnComparator comparator;              // local 使用；external/none 为空
     std::shared_ptr<IItemDelegate> delegate;  // 空 = 表级默认 delegate（列级覆盖）
+    std::shared_ptr<IHeaderDelegate> header_delegate; // 空 = 默认 TextHeaderDelegate
     ColumnValue value;                        // 默认 delegate 的文本来源（构造糖填充）
 };
 ```
@@ -599,6 +604,35 @@ private:
 - `BuildContext` 与 `ItemBinding` 都是同步借用；`ItemBinding::column` 也只在当次调用
   期间有效。delegate 不得把它们或其引用/指针保存到控件之后使用。
 
+表头 delegate 的公开绑定形状与单元格不同：没有模型行，视觉仍由框架的
+`column_header` wrapper 持有语义、焦点与排序事实：
+
+```cpp
+struct HeaderState {
+    std::optional<SortDirection> sort_direction; // 本列是否为当前排序列及方向
+    bool focused = false;                        // 表头持有焦点且本列是焦点列
+    std::uint64_t theme_revision = 0;             // 当前主题快照 revision
+};
+
+struct HeaderBinding {
+    const DataTableColumn& column; // 同步借用；只在 create/update 期间有效
+    const theme::NanTheme& theme;  // 同步借用；主题 revision 变化时重新解析
+    HeaderState state;
+};
+
+class IHeaderDelegate {
+public:
+    virtual ~IHeaderDelegate() = default;
+    virtual auto create_header(const BuildContext&, const HeaderBinding&)
+        -> std::shared_ptr<scene::NanControl> = 0;
+    virtual void update_header(scene::NanControl&, const HeaderBinding&) = 0;
+};
+```
+
+`header_delegate` 只替换视觉根节点，不能替换 semantics wrapper、接管焦点或自行排序；
+`update_header()` 每次主题 revision 变化都必须重新解析 token。默认
+`TextHeaderDelegate` 使用 Label 与排序三角图元。
+
 ### 9.6 选择层：`TableSelectionModel`
 
 复用现有选择模式枚举（[selection_model.hpp:30](../../nandina/widget/selection_model.hpp) 的
@@ -656,9 +690,10 @@ public:
 - **非拷贝/移动**：`TableSelectionModel` 与 `RowModelBase` 一样禁止拷贝/移动（`Event` 拷贝会共享
   订阅状态）；`STATIC_REQUIRE` 锁住。
 - **实现形态**：`selected()` 保持有序 `std::vector<CellId>`（首次出现顺序）；私有 membership
-  `std::unordered_set<CellId, internal::CellIdHash>` 提供 `is_selected()` O(1) 与 extent 去重 O(n)。
+  `std::unordered_set<CellId>` 使用公共 `std::hash<CellId>`，提供 `is_selected()` O(1) 与
+  extent 去重 O(n)。
   `set_current()` 只改 current、不复制/重建选择集合；只有选择集合实际变化时才重建索引并发事件。
-  `internal::CellIdHash` 是内部共享 hasher，不是公共 `std::hash<CellId>` 承诺（批 3 再提供）。
+- 内部 `CellIdHash` 只保留为公共 `std::hash<CellId>` 的兼容别名，不是第二套算法。
 - **非法枚举防御**：非法 `SelectionOp`（非 replace/toggle/extend）抛 `std::invalid_argument` 且
   不改状态、不发事件。
 - anchor 是 shift 起点，**可以指向未选中单元**；`retain()` 只裁剪 selected/current/anchor，不强制
@@ -747,7 +782,7 @@ struct SortRequest {
 | --- | --- | --- |
 | `internal::TrackSolver`（`track_solver.hpp/.cpp`） | 纯轨道数学：固定/权重分配、无界 intrinsic、gap、有限性校验；**不测量节点** | **1A（已完成 2026-11-15）** |
 | `internal::UniformRowWindow` | 统一行高窗口：内容高度、offset 夹取、半开可见区间 `[first,end)`、滚动显现数学、行命中；只依赖数值与索引 | **1B（已完成 2026-11-16，`refactor(data): extract uniform row window`）** |
-| `internal::ItemHost`（`item_host.hpp/.cpp`） | delegate 控件 host：以 `CellId` 为 key 的 create/update/销毁/keyed 复用、每项 scope；失败原子性、退出树清 scope、重入树完整 reset；**不拥有滚动状态**，只接收当前窗口内的单元格 | **2B（已完成 2026-11-16）；3a 起只物化窗口内单元格** |
+| `internal::ItemHost`（`item_host.hpp/.cpp`） | delegate 控件 host：以 `CellId` 为 key 的 create/update/销毁/keyed 复用、每项 scope；失败原子性、退出树清 scope、重入树完整 reset；**不拥有滚动状态**，只接收当前窗口内的单元格；3b③ 后仍保持 internal，DataTable 仅前置声明为 `.cpp` 实现细节 | **2B（已完成 2026-11-16）；3a 起只物化窗口内单元格** |
 | 滚动/列命中 | 行命中并入 `UniformRowWindow`；**3a**：DataTable 自持纵向 viewport（窗口物化、offset 夹取、滚轮、滚动到行、表头固定）；**指针/键盘列命中与选择留 3b** | **3a（已完成 2026-11-17）** |
 
 - `TrackSolver` 无状态，实现为内部纯函数（`validate_tracks` + `solve_tracks`），不建类/成员；
@@ -839,13 +874,15 @@ struct SortRequest {
 | **3a ✅ 已完成（2026-11-17，`feat(data): add virtualized DataTable viewport (3a)`）** | DataTable 自持纵向 viewport（表头固定、body 只物化可见窗口、滚轮/offset 夹取/滚动到行/遍历期 pending 窗口同步）；不改公共 API，不做指针/键盘选择、HeaderDelegate 与主题重解析 | `data-table-3a` 18 用例/384 断言；主套件 135 OK +3 skip、ASan 113 OK +1 skip、no-RTTI 114 OK +1 skip、no-SQLite 110 OK +1 skip、纯工具 8/8、`release_check --ci` 8/8；红先：全量物化、忽略 offset、跳过夹取、滚动到行 no-op、表头随行滚动、滚轮 no-op、reset 保留旧窗口、无可见列 offset 未归零、零 body 暴露全内容高度、同帧 scroll/reset 读旧窗口、pending scroll 未被显式 offset 取消均先红后绿；复核补强：同帧 reset 顺序、零 body 视口、pending scroll 取消、窗口外 create 计数、header/row-height 变更立即夹取 |
 | **3b① 输入 + 导航 + 表头语义 ✅ 已完成（2026-11-17，`feat(data): add DataTable grid input and header semantics (3b①)`）** | 指针点击 / ctrl 切换 / shift 矩形选择；键盘方向 / Home / End / PageUp / PageDown 映射 `GridNavigation`，单选跟随 / 多选仅移动 current，shift extent，首个方向键播种；表头独立可聚焦单元（指针/键盘焦点、Enter/Space 排序）；DataTable/表头/列头的 table/row/column_header 语义 | `data-table-3b` 14 用例/98 断言；主套件 136 OK +3 skip、ASan 114 OK +1 skip、no-RTTI 115 OK +1 skip、no-SQLite 111 OK +1 skip、纯工具 8/8、`release_check --ci` 8/8；红先：指针 no-op、shift 退化为 replace、键盘 no-op、表头 Enter no-op、列头语义退化、方向播种边界、表头焦点/child 顺序跨列重排、零宽列误命中均先红后绿 |
 | **3b② 作者 HeaderDelegate + 主题重解析 ✅ 已完成（2026-11-17，`feat(data): add author header delegate and theme refresh (3b②)`）** | 内部 `IHeaderDelegate`/`HeaderBinding`（借用 column+theme；`sort_direction`/`focused`/`theme_revision`）；框架 `HeaderCellHost` 保留 `column_header`/aria-sort 语义；HeaderHost 按 delegate 身份 keyed 化（变化重建、主题只 update、create 失败保留旧视觉）；默认 `TextHeaderDelegate`（Label + 排序三角，作者可替换）；`DataTable::on_theme_changed` 重解析表头与可见单元格 revision；退出/重入树释放并重建 header scopes | `data-table-3b2` 7 用例/61 断言；主套件 137 OK +3 skip、ASan 115 OK +1 skip、no-RTTI 116 OK +1 skip、no-SQLite 112 OK +1 skip、纯工具 8/8、`release_check --ci` 8/8；红先：忽略 delegate 身份（不重建）、主题不 update、单元格 revision 不刷新、create 失败半挂载、focused 状态丢失均先红后绿；复核补强：header scope 重入、无排序时焦点线、默认视觉 ring/foreground token 重解析 |
-| **3b③ / 3c 公共导出** | 4 个 DataTable 头转 experimental、`std::hash` 桥接、`sdk_surface.md`/组件文档；若 diff 超审查预算拆为 3c | 3b①/② 全绿后导出；公共 API 契约与迁移说明齐备 |
+| **3b③ 公共导出 ✅ 已完成（2026-11-18，`feat(data): export experimental DataTable surface (3b③)`）** | 八个数据视图头转 experimental（`data_identity`、`row_model`、`data_table_column`、`item_delegate`、`header_delegate`、`table_selection_model`、`grid_navigation`、`data_table`）；`item_host` 保持 internal 并通过前置声明隔离；公共 `std::hash<RowId/ColumnId/CellId>`；移除测试专用 `header_host()` 公共入口；新增 `data-public-api` 2 用例/12 断言与 SDK `data-api=1` 下游探针 | `header-surface` 213 头分类通过（197 experimental + 16 internal）；主套件 138 OK +3 skip、ASan 116 OK +1 skip、no-RTTI 117 OK +1 skip、no-SQLite 113 OK +1 skip、纯工具 8/8、`release_check --ci` 8/8；打包 SDK 消费通过 |
 | **4** | `BuildContext::for_each()` 改 `ForEach` 直接实现；相关测试/文档同步 | for_each 行为不变；authoring 测试全绿 |
 | **5** | 新虚拟化 `ListView` + notebook 迁移 + 旧 `ListView` 退役（sdk_surface 记录破坏性变更） | ListView 红先（窗口/行选择/delegate 复用）；notebook 构建；全矩阵 |
 | **6（另议）** | `VirtualListView` 迁移/退役、TreeView | 单独立项 |
 
-**公共 API 闸门**：2B 的 DataTable 头只作 internal 构建输入，不进入 `sdk_surface` 公共面；
-3a 虚拟化验收通过、3b（及拆出的 3c）输入/表头/主题收口后才转为 experimental 并在 `sdk_surface.md` 记录。
+**公共 API 闸门**：3b③ 已将 DataTable 作者协议与组件转 experimental，并在
+`sdk_surface.md` 记录八个临时路径例外；公共 API 只承诺 `std::hash` 的容器语义，不承诺哈希数值
+跨进程/版本稳定。`item_host.hpp` 仍为 internal，不能出现在作者签名中。后续迁移文件路径时必须保持
+`nandina::widget` 命名空间和现有 include 迁移说明。
 
 **施工纪律（1A 起）**：每批先红先测试再实现；工作树保持未提交供维护者复核；本契约只随已证实的
 实现进度更新状态，不把计划写成已实现。

@@ -60,7 +60,7 @@ namespace nandina::widget
         if (selection_changed) {
             // Build the replacement membership index before mutating selected_; a failed
             // allocation must leave the observable selection and index pair unchanged.
-            std::unordered_set<CellId, internal::CellIdHash> next_index;
+            std::unordered_set<CellId> next_index;
             next_index.reserve(next_selected.size());
             for (const auto& cell: next_selected) {
                 next_index.insert(cell);
@@ -122,7 +122,7 @@ namespace nandina::widget
             normalized.push_back(target);
             return normalized;
         }
-        std::unordered_set<CellId, internal::CellIdHash> seen;
+        std::unordered_set<CellId> seen;
         seen.reserve(extent.size());
         for (const auto& cell: extent) {
             if (seen.insert(cell).second) {

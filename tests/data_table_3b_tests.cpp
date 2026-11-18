@@ -390,7 +390,9 @@ TEST_CASE(
             requests.push_back(request);
         });
 
-    auto* header = table->header_host();
+    auto* header_cell = table->header_node(column_id("name"));
+    REQUIRE(header_cell != nullptr);
+    auto* header = static_cast<scene::NanControl*>(header_cell->parent());
     REQUIRE(header != nullptr);
     tree->set_focus(header);
     REQUIRE(tree->focused_node() == header);
@@ -427,7 +429,9 @@ TEST_CASE(
     table->set_model(std::shared_ptr<widget::IRowModel>(&model, [](widget::IRowModel*) {}));
     auto tree = mount(fixture, table);
 
-    auto* header = table->header_host();
+    auto* header_cell = table->header_node(column_id("kind"));
+    REQUIRE(header_cell != nullptr);
+    auto* header = static_cast<scene::NanControl*>(header_cell->parent());
     REQUIRE(header != nullptr);
     tree->set_focus(header);
     press_key(*tree, foundation::LogicalKey::right);
@@ -480,7 +484,9 @@ TEST_CASE("DataTable exposes table and header-column semantics", "[data-table][3
     CHECK(header_row->children[0].properties.role == semantics::Role::column_header);
     CHECK(header_row->children[1].properties.role == semantics::Role::column_header);
 
-    tree->set_focus(table->header_host());
+    auto* header_cell = table->header_node(column_id("name"));
+    REQUIRE(header_cell != nullptr);
+    tree->set_focus(static_cast<scene::NanControl*>(header_cell->parent()));
     REQUIRE(tree->update_semantics());
     root = tree->semantics_tree().find(table->semantics_id());
     REQUIRE(root != nullptr);

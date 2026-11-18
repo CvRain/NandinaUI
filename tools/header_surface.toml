@@ -661,27 +661,33 @@ level = "internal"
 
 [[headers]]
 path = "nandina/widget/internal/data_identity.hpp"
-level = "internal"
+level = "experimental"
+reason = "RowId/ColumnId/CellId、ModelIndex 与 std::hash 是 DataTable/ListView 作者 API；文件暂留在 internal/ 目录，后续移动到正式 widget 路径"
 
 [[headers]]
 path = "nandina/widget/internal/grid_navigation.hpp"
-level = "internal"
+level = "experimental"
+reason = "GridNavigation 是二维数据视图的 experimental 作者/宿主协议；文件暂留在 internal/ 目录，后续移动到正式 widget 路径"
 
 [[headers]]
 path = "nandina/widget/internal/data_table.hpp"
-level = "internal"
+level = "experimental"
+reason = "DataTable 是 experimental 数据视图组件；ItemHost/DataTableHeaderHost 仅前置声明为 .cpp 实现细节，文件暂留在 internal/ 目录"
 
 [[headers]]
 path = "nandina/widget/internal/data_table_column.hpp"
-level = "internal"
+level = "experimental"
+reason = "DataTableColumn/SortSpec 是 experimental 列作者 API；文件暂留在 internal/ 目录，后续移动到正式 widget 路径"
 
 [[headers]]
 path = "nandina/widget/internal/header_delegate.hpp"
-level = "internal"
+level = "experimental"
+reason = "IHeaderDelegate/HeaderBinding 是 experimental 表头作者扩展点；文件暂留在 internal/ 目录，后续移动到正式 widget 路径"
 
 [[headers]]
 path = "nandina/widget/internal/item_delegate.hpp"
-level = "internal"
+level = "experimental"
+reason = "IItemDelegate/ItemBinding/TypedItemDelegate 是 experimental 单元格作者扩展点；文件暂留在 internal/ 目录，后续移动到正式 widget 路径"
 
 [[headers]]
 path = "nandina/widget/internal/item_host.hpp"
@@ -689,11 +695,13 @@ level = "internal"
 
 [[headers]]
 path = "nandina/widget/internal/row_model.hpp"
-level = "internal"
+level = "experimental"
+reason = "IRowModel/RowModelBase/TypedRowModelBase 是 experimental 行模型作者协议；文件暂留在 internal/ 目录，后续移动到正式 widget 路径"
 
 [[headers]]
 path = "nandina/widget/internal/table_selection_model.hpp"
-level = "internal"
+level = "experimental"
+reason = "TableSelectionModel 是 experimental 二维选择作者/宿主协议；文件暂留在 internal/ 目录，后续移动到正式 widget 路径"
 
 [[headers]]
 path = "nandina/widget/internal/track_solver.hpp"
