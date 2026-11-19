@@ -113,15 +113,13 @@ namespace
 
     class OtherDelegate final: public widget::TypedItemDelegate<OtherModel> {
     protected:
-        auto create_typed(
-            const widget::BuildContext& ui,
-            const OtherModel&,
-            const widget::ItemBinding&
-        ) -> std::shared_ptr<scene::NanControl> override {
+        auto
+        create_typed(const widget::BuildContext& ui, const OtherModel&, const widget::ItemBinding&)
+            -> std::shared_ptr<scene::NanControl> override {
             return widget::Label::create(ui.graph(), "", ui.theme());
         }
-        void update_typed(scene::NanControl&, const OtherModel&, const widget::ItemBinding&)
-            override {}
+        void
+        update_typed(scene::NanControl&, const OtherModel&, const widget::ItemBinding&) override {}
     };
 
     struct Fixture {
@@ -302,7 +300,10 @@ TEST_CASE("ListView pointer selection replaces, toggles and extends", "[list-vie
     CHECK(harness.list->selection().contains(row_id(5)));
 }
 
-TEST_CASE("ListView programmatic selection validates identity and scrolls", "[list-view][selection]") {
+TEST_CASE(
+    "ListView programmatic selection validates identity and scrolls",
+    "[list-view][selection]"
+) {
     Fixture fixture;
     TestModel model;
     auto harness = make_harness(fixture, model, 1000);
@@ -360,7 +361,10 @@ TEST_CASE("ListView keyboard moves current and single selection follows", "[list
     CHECK(harness.list->row_node(row_id(1000)) != nullptr);
 }
 
-TEST_CASE("ListView keyboard keeps multiple selection while moving current", "[list-view][keyboard]") {
+TEST_CASE(
+    "ListView keyboard keeps multiple selection while moving current",
+    "[list-view][keyboard]"
+) {
     Fixture fixture;
     TestModel model;
     auto harness = make_harness(fixture, model, 1000);

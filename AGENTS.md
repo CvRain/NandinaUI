@@ -25,8 +25,8 @@ application shell. Version `0.1.0-alpha.1`.
 - **Data-view contract (§9 v3.1, `data_components_and_virtualization.md`)**: non-template
   `DataTable` / `ListView` over `IRowModel` + `DataTableColumn` + `IItemDelegate` +
   explicit selection; `ForEach` stays as the declarative full-list region. Batches
-  1A/1B/2A/2B/3a/3b①/3b②/3b③ committed; batch 4 committed (`03783cf`). **Batch 5 implemented
-  and verified**: non-template `ListView` (`IRowModel` + `IItemDelegate` +
+  1A/1B/2A/2B/3a/3b①/3b②/3b③ committed; batch 4 committed (`03783cf`). **Batch 5 committed
+  (2026-11-19, `e96542f`)**: non-template `ListView` (`IRowModel` + `IItemDelegate` +
   `SelectionModel<RowId>`, uniform row height, own vertical viewport, `ItemHost` window
   materialization), notebook migrated (`VectorRowModel` + lambda delegate), old template
   `ListView` retired (`ListDataModelSource` moved to `declarative.hpp`). Verification:

@@ -189,8 +189,7 @@ namespace nandina::widget
         return found->second;
     }
 
-    auto ListView::row_id_for_display(const std::size_t display_row) const
-        -> std::optional<RowId> {
+    auto ListView::row_id_for_display(const std::size_t display_row) const -> std::optional<RowId> {
         if (model_ == nullptr || display_row >= model_->row_count()) {
             return std::nullopt;
         }
@@ -517,8 +516,8 @@ namespace nandina::widget
         if (model_ == nullptr || row_count() == 0) {
             return false;
         }
-        const bool directional = logical == foundation::LogicalKey::up
-            || logical == foundation::LogicalKey::down;
+        const bool directional =
+            logical == foundation::LogicalKey::up || logical == foundation::LogicalKey::down;
         const bool navigation_key = directional || logical == foundation::LogicalKey::home
             || logical == foundation::LogicalKey::end || logical == foundation::LogicalKey::page_up
             || logical == foundation::LogicalKey::page_down;
@@ -538,8 +537,9 @@ namespace nandina::widget
             if (logical == foundation::LogicalKey::end) {
                 seed = count - 1;
             }
-            else if (logical == foundation::LogicalKey::up
-                     || logical == foundation::LogicalKey::page_up)
+            else if (
+                logical == foundation::LogicalKey::up || logical == foundation::LogicalKey::page_up
+            )
             {
                 seed = visible_window_.empty() ? 0 : visible_window_.end - 1;
                 seed = std::min(seed, count - 1);
@@ -707,7 +707,8 @@ namespace nandina::widget
     auto ListView::on_measure(const foundation::NanLayoutConstraints constraints)
         -> foundation::NanSize {
         const float cross_width = width() > 0.0F ? width() : constraints.max_width;
-        const float measured_width = std::isfinite(cross_width) ? cross_width : constraints.min_width;
+        const float measured_width =
+            std::isfinite(cross_width) ? cross_width : constraints.min_width;
         const double content_height =
             static_cast<double>(row_count()) * static_cast<double>(row_height_);
         if (!std::isfinite(measured_width) || measured_width < 0.0F
