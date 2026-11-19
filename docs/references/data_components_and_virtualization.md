@@ -16,7 +16,7 @@
 > `feat(data): add author header delegate and theme refresh (3b②)`）。
 > 批 3b③（DataTable 公共导出、公共哈希与下游消费）已完成并提交（2026-11-18，
 > `feat(data): export experimental DataTable surface (3b③)`）。
-> 批 4（`BuildContext::for_each()` 改 `ForEach` 直接实现）已完成（实现 + 验证，工作树未提交，待维护者复核）。
+> 批 4（`BuildContext::for_each()` 改 `ForEach` 直接实现）已完成并提交（2026-11-19，`03783cf`）。
 > ** §8 静态 Table 与 §3/§4 基础契约不变。**
 > 本文件是阶段 5 数据组件的契约入口：已完成批次见 §1–§8，后续数据视图见 §9（v3.1）。
 > 静态 `Table`、`DataTable`、`Accordion` 等阶段 5 组件清单仍按
@@ -287,7 +287,7 @@ SelectionModel、RovingFocus、虚拟化与排序留给后续交互数据表；�
 > `feat(data): add author header delegate and theme refresh (3b②)`）。
 > 批 3b③（DataTable 公共导出、公共哈希与下游消费）已完成并提交（2026-11-18，
 > `feat(data): export experimental DataTable surface (3b③)`）。
-> 批 4（`BuildContext::for_each()` 改 `ForEach` 直接实现）已完成（实现 + 验证，工作树未提交，待维护者复核）。**
+> 批 4（`BuildContext::for_each()` 改 `ForEach` 直接实现）已完成并提交（2026-11-19，`03783cf`）。**
 > 数据视图采用**非模板组件 + 行模型 + 列定义 + delegate + 显式选择模型**；v3.1 只修正接口矛盾，
 > 不改变总体架构。§3/§4/§8 已交付契约不变；旧 `ListView` 只作 `ForEach` 薄包装的状态随 §9.11 回收。
 >
@@ -877,7 +877,7 @@ struct SortRequest {
 | **3b① 输入 + 导航 + 表头语义 ✅ 已完成（2026-11-17，`feat(data): add DataTable grid input and header semantics (3b①)`）** | 指针点击 / ctrl 切换 / shift 矩形选择；键盘方向 / Home / End / PageUp / PageDown 映射 `GridNavigation`，单选跟随 / 多选仅移动 current，shift extent，首个方向键播种；表头独立可聚焦单元（指针/键盘焦点、Enter/Space 排序）；DataTable/表头/列头的 table/row/column_header 语义 | `data-table-3b` 14 用例/98 断言；主套件 136 OK +3 skip、ASan 114 OK +1 skip、no-RTTI 115 OK +1 skip、no-SQLite 111 OK +1 skip、纯工具 8/8、`release_check --ci` 8/8；红先：指针 no-op、shift 退化为 replace、键盘 no-op、表头 Enter no-op、列头语义退化、方向播种边界、表头焦点/child 顺序跨列重排、零宽列误命中均先红后绿 |
 | **3b② 作者 HeaderDelegate + 主题重解析 ✅ 已完成（2026-11-17，`feat(data): add author header delegate and theme refresh (3b②)`）** | 内部 `IHeaderDelegate`/`HeaderBinding`（借用 column+theme；`sort_direction`/`focused`/`theme_revision`）；框架 `HeaderCellHost` 保留 `column_header`/aria-sort 语义；HeaderHost 按 delegate 身份 keyed 化（变化重建、主题只 update、create 失败保留旧视觉）；默认 `TextHeaderDelegate`（Label + 排序三角，作者可替换）；`DataTable::on_theme_changed` 重解析表头与可见单元格 revision；退出/重入树释放并重建 header scopes | `data-table-3b2` 7 用例/61 断言；主套件 137 OK +3 skip、ASan 115 OK +1 skip、no-RTTI 116 OK +1 skip、no-SQLite 112 OK +1 skip、纯工具 8/8、`release_check --ci` 8/8；红先：忽略 delegate 身份（不重建）、主题不 update、单元格 revision 不刷新、create 失败半挂载、focused 状态丢失均先红后绿；复核补强：header scope 重入、无排序时焦点线、默认视觉 ring/foreground token 重解析 |
 | **3b③ 公共导出 ✅ 已完成（2026-11-18，`feat(data): export experimental DataTable surface (3b③)`）** | 八个数据视图头转 experimental（`data_identity`、`row_model`、`data_table_column`、`item_delegate`、`header_delegate`、`table_selection_model`、`grid_navigation`、`data_table`）；`item_host` 保持 internal 并通过前置声明隔离；公共 `std::hash<RowId/ColumnId/CellId>`；移除测试专用 `header_host()` 公共入口；新增 `data-public-api` 2 用例/12 断言与 SDK `data-api=1` 下游探针 | `header-surface` 213 头分类通过（197 experimental + 16 internal）；主套件 138 OK +3 skip、ASan 116 OK +1 skip、no-RTTI 117 OK +1 skip、no-SQLite 113 OK +1 skip、纯工具 8/8、`release_check --ci` 8/8；打包 SDK 消费通过 |
-| **4 ✅ 已完成（2026-11-18，实现 + 验证；工作树未提交，待维护者复核）** | `BuildContext::for_each()` 改 `ForEach` 直接实现（`ListView<Item,Key,Node>` → `ForEach<Item,Key,Node>`、`set_model` → `bind`）；`build_context.hpp` 直接包含 `declarative.hpp`；`authoring_tests` 新增返回类型 `STATIC_REQUIRE` 锁定 `shared_ptr<ForEach<...>>`；`ListView`/`list_view.hpp` 本批保留（notebook 仍直接使用，退役留批 5） | `authoring` 全量 39 用例/201 断言、`[authoring][region]` 过滤 1 用例/16 断言；维护者复核矩阵：unit 117 OK + 1 skip（共 118）、完整套件 138 OK + 3 skip（共 141）、ASan 116 OK + 1 skip、no-RTTI 117 OK + 1 skip、no-SQLite 113 OK + 1 skip、纯工具 8/8、`release_check --ci` 8/8；红先：移除 `view->bind(source)` 后 `[authoring][region]` 在 `REQUIRE(retained != nullptr)` 失败；退回 `ListView` 时返回类型静态断言编译失败 |
+| **4 ✅ 已完成并提交（2026-11-19，`03783cf`）** | `BuildContext::for_each()` 改 `ForEach` 直接实现（`ListView<Item,Key,Node>` → `ForEach<Item,Key,Node>`、`set_model` → `bind`）；`build_context.hpp` 直接包含 `declarative.hpp`；`authoring_tests` 新增返回类型 `STATIC_REQUIRE` 锁定 `shared_ptr<ForEach<...>>`；`ListView`/`list_view.hpp` 本批保留（notebook 仍直接使用，退役留批 5） | `authoring` 全量 39 用例/201 断言、`[authoring][region]` 过滤 1 用例/16 断言；维护者复核矩阵：unit 117 OK + 1 skip（共 118）、完整套件 138 OK + 3 skip（共 141）、ASan 116 OK + 1 skip、no-RTTI 117 OK + 1 skip、no-SQLite 113 OK + 1 skip、纯工具 8/8、`release_check --ci` 8/8；红先：移除 `view->bind(source)` 后 `[authoring][region]` 在 `REQUIRE(retained != nullptr)` 失败；退回 `ListView` 时返回类型静态断言编译失败 |
 | **5** | 新虚拟化 `ListView` + notebook 迁移 + 旧 `ListView` 退役（sdk_surface 记录破坏性变更） | ListView 红先（窗口/行选择/delegate 复用）；notebook 构建；全矩阵 |
 | **6（另议）** | `VirtualListView` 迁移/退役、TreeView | 单独立项 |
 

@@ -25,8 +25,8 @@ application shell. Version `0.1.0-alpha.1`.
 - **Data-view contract (§9 v3.1, `data_components_and_virtualization.md`)**: non-template
   `DataTable` / new `ListView` over `IRowModel` + `DataTableColumn` + `IItemDelegate` +
   explicit selection; `ForEach` stays as the declarative full-list region. Batches
-  1A/1B/2A/2B/3a/3b①/3b②/3b③ committed. **Batch 4 implemented and verified, uncommitted
-  pending maintainer review**: `BuildContext::for_each()` constructs `ForEach<Item, Key, Node>`
+  1A/1B/2A/2B/3a/3b①/3b②/3b③ committed. **Batch 4 committed (2026-11-19, `03783cf`)**:
+  `BuildContext::for_each()` constructs `ForEach<Item, Key, Node>`
   directly, `build_context.hpp` includes `declarative.hpp` directly, and `authoring_tests`
   locks the return type with `STATIC_REQUIRE`. Verification: `authoring` 39 cases/201
   assertions, `[authoring][region]` 1/16; unit 117 OK +1 skip (118), full suite 138 OK +3 skip
