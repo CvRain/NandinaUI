@@ -20,7 +20,6 @@
 #include "grid.hpp"
 #include "image.hpp"
 #include "layout.hpp"
-#include "list_view.hpp"
 #include "scroll_view.hpp"
 #include "surface.hpp"
 #include "visual_property.hpp"

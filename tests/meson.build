@@ -384,6 +384,13 @@ uniform_row_window_tests = executable(
 )
 test('uniform-row-window', uniform_row_window_tests, suite: 'unit')
 
+list_view_tests = executable(
+    'list_view_tests',
+    files('list_view_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('list-view', list_view_tests, suite: 'unit')
+
 widget_tests = executable(
     'widget_tests',
     files('widget_tests.cpp'),

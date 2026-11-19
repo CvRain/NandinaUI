@@ -135,7 +135,7 @@
    与后续业务页另批。仅 Theme Shell 页另排。
 6. **组件扩展**：DataTable/ListView 契约 v3.1 已于 2026-11-15 定稿，**1A TrackSolver + 静态
    Table 接入已完成并提交**（[数据组件 §9](data_components_and_virtualization.md#9-p42d-数据视图契约datatable-与-listviewv31-定稿)：
-   `IRowModel`/`DataTableColumn`/`IItemDelegate`/选择模型）；1B 行窗口已完成并提交（2026-11-16）；2A/2B 已完成并提交（2026-11-16）、3a 内部虚拟化已完成并提交（2026-11-17）、3b① 输入/导航/表头语义已完成并提交（2026-11-17）、3b② 作者 HeaderDelegate/主题重解析已完成并提交（2026-11-17）、3b③ DataTable 公共导出已完成并提交（2026-11-18）、批 4 `BuildContext::for_each()` 改 `ForEach` 直接实现已完成并提交（2026-11-19，`03783cf`）；随后 Accordion；
+   `IRowModel`/`DataTableColumn`/`IItemDelegate`/选择模型）；1B 行窗口已完成并提交（2026-11-16）；2A/2B 已完成并提交（2026-11-16）、3a 内部虚拟化已完成并提交（2026-11-17）、3b① 输入/导航/表头语义已完成并提交（2026-11-17）、3b② 作者 HeaderDelegate/主题重解析已完成并提交（2026-11-17）、3b③ DataTable 公共导出已完成并提交（2026-11-18）、批 4 `BuildContext::for_each()` 改 `ForEach` 直接实现已完成并提交（2026-11-19，`03783cf`）、批 5 新虚拟化 `ListView` + notebook 迁移 + 旧 `ListView` 退役已完成（实现 + 验证）；随后 Accordion；
    Sheet/Drawer/Resizable/AspectRatio 按需。静态 Table 保持 experimental。
 7. **P4.4 视觉覆盖**：`input_focus` golden；`image` 页进 probe 并挂载 showcase 资源包（当前无
    golden）；新页面 approved 后自动进入 CI CPU 门禁。

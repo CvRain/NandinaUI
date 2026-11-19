@@ -13,6 +13,7 @@
 #include <nandina/widget/internal/row_model.hpp>
 #include <nandina/widget/internal/table_selection_model.hpp>
 #include <nandina/widget/label.hpp>
+#include <nandina/widget/list_view.hpp>
 
 #include <catch2/catch_test_macros.hpp>
 
@@ -151,4 +152,21 @@ TEST_CASE("authors can define typed item and header delegates", "[data][public-a
         )
         != nullptr
     );
+}
+
+TEST_CASE("authors can create the public virtualized ListView", "[data][public-api][list-view]") {
+    Fixture fixture;
+    PublicModel model;
+    auto list = widget::ListView::create(fixture.ui);
+    list->set_delegate(std::make_shared<PublicItemDelegate>());
+    list->set_model(std::shared_ptr<widget::IRowModel>(&model, [](widget::IRowModel*) {}));
+
+    scene::NanSceneTree tree;
+    tree.set_root(list);
+    (void)tree.layout_root(foundation::NanSize(320.0F, 200.0F));
+
+    CHECK(list->row_count() == 2);
+    CHECK(list->item_count() == 2);
+    CHECK(list->select(widget::RowId {.value = 20}));
+    CHECK(list->selection().contains(widget::RowId {.value = 20}));
 }

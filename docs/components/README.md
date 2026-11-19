@@ -84,7 +84,8 @@
 `Combobox`、`CommandPalette`、`HoverCard` 与 `AlertDialog`
 （见 [菜单族条目模型](../references/menu_model.md)）。
 
-仍待实现的信息组织组件：`Accordion`、`Sheet`；新虚拟化 `ListView` 按数据视图契约继续。
+仍待实现的信息组织组件：`Accordion`、`Sheet`；新虚拟化 `ListView` 已在批 5 交付（`IRowModel` +
+`IItemDelegate` + `SelectionModel<RowId>`），`VirtualListView` 的迁移/退役另列批 6。
 
 计划顺序与依赖关系见 [组件开发路线图](../references/component_roadmap.md)。
 

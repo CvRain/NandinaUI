@@ -22,6 +22,12 @@
 
 namespace nandina::widget
 {
+    /// 追踪源协议：`source.get()` 返回 `const std::vector<Item>&`。
+    /// 供 ForEach::bind、BuildContext::for_each 与 VirtualListView::set_model 共用。
+    template<typename Source, typename Item>
+    concept ListDataModelSource = requires(Source& source) {
+        { source.get() } -> std::same_as<const std::vector<Item>&>;
+    };
 
     /// Keyed list region. Each key owns one concrete control and one reactive scope.
     /// Reordering preserves the node, its focus/edit state, and its mounted lifecycle.

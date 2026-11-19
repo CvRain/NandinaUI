@@ -156,6 +156,7 @@ module_widget = files(
     'widget/bindable_rect.hpp',
     'widget/declarative.hpp',
     'widget/list_view.hpp',
+    'widget/list_view.cpp',
     'widget/selection_model.hpp',
     'widget/virtual_list_view.hpp',
     'widget/primitives/arc_painter.hpp',

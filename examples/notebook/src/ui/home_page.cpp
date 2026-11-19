@@ -12,7 +12,9 @@
 #include <nandina/widget/text_area.hpp>
 #include <nandina/widget/text_field.hpp>
 
+#include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <string>
 #include <utility>
@@ -26,9 +28,77 @@ namespace nan_example::notebook::ui
         using models::Note;
         using models::NoteGroup;
 
-        using NoteList = nandina::widget::ListView<Note, std::int64_t, nandina::widget::Button>;
-        using GroupList =
-            nandina::widget::ListView<NoteGroup, std::int64_t, nandina::widget::Button>;
+        /// 行模型：把 store 的 vector 信号快照进 IRowModel，RowId = 数据库主键。
+        template<typename Item>
+        class VectorRowModel final:
+            public nandina::widget::TypedRowModelBase<VectorRowModel<Item>> {
+        public:
+            using IdFunction = std::function<std::int64_t(const Item&)>;
+
+            explicit VectorRowModel(IdFunction id): id_(std::move(id)) {}
+
+            void set_items(std::vector<Item> next) {
+                items_ = std::move(next);
+                this->notify_reset();
+            }
+
+            [[nodiscard]] auto row_count() const noexcept -> std::size_t override {
+                return items_.size();
+            }
+            [[nodiscard]] auto row_id(const std::size_t row) const
+                -> nandina::widget::RowId override {
+                return nandina::widget::RowId {
+                    .value = static_cast<std::uint64_t>(id_(items_.at(row))),
+                };
+            }
+            [[nodiscard]] auto at(const std::size_t row) const -> const Item& {
+                return items_.at(row);
+            }
+
+        private:
+            IdFunction id_;
+            std::vector<Item> items_;
+        };
+
+        /// ListView 行 delegate 的 lambda 适配器：create/update 保持页面内的组合逻辑。
+        template<typename ModelT>
+        class LambdaRowDelegate final: public nandina::widget::TypedItemDelegate<ModelT> {
+        public:
+            using Create = std::function<std::shared_ptr<nandina::scene::NanControl>(
+                const nandina::widget::BuildContext&,
+                const ModelT&,
+                const nandina::widget::ItemBinding&
+            )>;
+            using Update = std::function<void(
+                nandina::scene::NanControl&,
+                const ModelT&,
+                const nandina::widget::ItemBinding&
+            )>;
+
+            LambdaRowDelegate(Create create, Update update):
+                create_(std::move(create)),
+                update_(std::move(update)) {}
+
+        protected:
+            auto create_typed(
+                const nandina::widget::BuildContext& ui,
+                const ModelT& model,
+                const nandina::widget::ItemBinding& binding
+            ) -> std::shared_ptr<nandina::scene::NanControl> override {
+                return create_(ui, model, binding);
+            }
+            void update_typed(
+                nandina::scene::NanControl& control,
+                const ModelT& model,
+                const nandina::widget::ItemBinding& binding
+            ) override {
+                update_(control, model, binding);
+            }
+
+        private:
+            Create create_;
+            Update update_;
+        };
 
         [[nodiscard]] auto row_title(const Note& note) -> std::string {
             return note.title.empty() ? "(未命名笔记)" : note.title;
@@ -197,35 +267,59 @@ namespace nan_example::notebook::ui
                               .build();
 
         // ---- Note list ----
-        auto note_row_factory = [ui, store, fill_editor, feedback](
-                                    nandina::reactive::ReactiveScope&,
-                                    const Note& note
-                                ) -> std::shared_ptr<nandina::widget::Button> {
-            const auto note_id = note.id;
-            return ui.make<nandina::widget::Button>(row_title(note))
-                .treatment(nandina::theme::ButtonTreatment::ghost)
-                .label_align(nandina::theme::TextAlign::start)
-                .width(nandina::widget::authoring::fill)
-                .height(38)
-                .on_click([store, fill_editor, feedback, note_id] {
-                    store->select_note(note_id);
-                    if (const auto current = store->current_note(); current.has_value()) {
-                        fill_editor(*current);
-                        set_feedback(*feedback, "正在编辑：" + row_title(*current), false);
-                    }
-                })
-                .build();
-        };
-        auto note_update = [](nandina::widget::Button& button, const Note& note) {
-            button.set_text(row_title(note));
-        };
-        auto notes_list = NoteList::create(
-            context.graph(),
-            [](const Note& note) { return note.id; },
-            note_row_factory,
-            note_update
+        auto note_model =
+            std::make_shared<VectorRowModel<Note>>([](const Note& note) { return note.id; });
+        auto notes_list =
+            nandina::widget::ListView::create(ui, nandina::widget::SelectionMode::single, 38.0F);
+        notes_list->set_delegate(
+            std::make_shared<LambdaRowDelegate<VectorRowModel<Note>>>(
+                [store, fill_editor, feedback](
+                    const nandina::widget::BuildContext& item_ui,
+                    const VectorRowModel<Note>& model,
+                    const nandina::widget::ItemBinding& binding
+                ) -> std::shared_ptr<nandina::scene::NanControl> {
+                    const auto note_id = model.at(binding.model_row).id;
+                    return item_ui
+                        .make<nandina::widget::Button>(row_title(model.at(binding.model_row)))
+                        .treatment(nandina::theme::ButtonTreatment::ghost)
+                        .label_align(nandina::theme::TextAlign::start)
+                        .width(nandina::widget::authoring::fill)
+                        .height(38)
+                        .on_click([store, fill_editor, feedback, note_id] {
+                            store->select_note(note_id);
+                            if (const auto current = store->current_note(); current.has_value()) {
+                                fill_editor(*current);
+                                set_feedback(*feedback, "正在编辑：" + row_title(*current), false);
+                            }
+                        })
+                        .build();
+                },
+                [](nandina::scene::NanControl& control,
+                   const VectorRowModel<Note>& model,
+                   const nandina::widget::ItemBinding& binding) {
+                    auto& button = static_cast<nandina::widget::Button&>(control);
+                    button.set_text(row_title(model.at(binding.model_row)));
+                    button.set_treatment(
+                        binding.state.selected ? nandina::theme::ButtonTreatment::tonal
+                                               : nandina::theme::ButtonTreatment::ghost
+                    );
+                }
+            )
         );
-        notes_list->set_model(store->note_list());
+        notes_list->set_model(note_model);
+        (void)ui.effect([note_model, store] { note_model->set_items(store->note_list().get()); });
+        (void)ui.effect([notes_list, store] {
+            if (const auto selected = store->selected_note().get(); selected.has_value()) {
+                (void)notes_list->select(
+                    nandina::widget::RowId {
+                        .value = static_cast<std::uint64_t>(*selected),
+                    }
+                );
+            }
+            else {
+                notes_list->clear_selection();
+            }
+        });
         auto notes_list_node = nandina::widget::authoring::from(notes_list)
                                    .width(nandina::widget::authoring::fill)
                                    .height(nandina::widget::authoring::fill)
@@ -274,41 +368,67 @@ namespace nan_example::notebook::ui
                 })
                 .build();
 
-        auto group_row_factory = [ui, store, feedback, refresh_notes_hint, clear_editor](
-                                     nandina::reactive::ReactiveScope&,
-                                     const NoteGroup& group
-                                 ) -> std::shared_ptr<nandina::widget::Button> {
-            const auto group_id = group.id;
-            return ui.make<nandina::widget::Button>(group.name)
-                .treatment(nandina::theme::ButtonTreatment::ghost)
-                .label_align(nandina::theme::TextAlign::start)
-                .width(nandina::widget::authoring::fill)
-                .height(32)
-                .on_click([store, feedback, refresh_notes_hint, clear_editor, group_id] {
-                    auto selected = store->select_group(group_id);
-                    if (!selected) {
-                        set_feedback(
-                            *feedback,
-                            "切换分组失败：" + data::describe(selected.error()),
-                            true
-                        );
-                        return;
-                    }
-                    clear_editor();
-                    refresh_notes_hint();
-                })
-                .build();
-        };
-        auto group_update = [](nandina::widget::Button& button, const NoteGroup& group) {
-            button.set_text(group.name);
-        };
-        auto groups_list = GroupList::create(
-            context.graph(),
-            [](const NoteGroup& group) { return group.id; },
-            group_row_factory,
-            group_update
+        auto group_model = std::make_shared<VectorRowModel<NoteGroup>>([](const NoteGroup& group) {
+            return group.id;
+        });
+        auto groups_list =
+            nandina::widget::ListView::create(ui, nandina::widget::SelectionMode::single, 32.0F);
+        groups_list->set_delegate(
+            std::make_shared<LambdaRowDelegate<VectorRowModel<NoteGroup>>>(
+                [store, feedback, refresh_notes_hint, clear_editor](
+                    const nandina::widget::BuildContext& item_ui,
+                    const VectorRowModel<NoteGroup>& model,
+                    const nandina::widget::ItemBinding& binding
+                ) -> std::shared_ptr<nandina::scene::NanControl> {
+                    const auto group_id = model.at(binding.model_row).id;
+                    return item_ui.make<nandina::widget::Button>(model.at(binding.model_row).name)
+                        .treatment(nandina::theme::ButtonTreatment::ghost)
+                        .label_align(nandina::theme::TextAlign::start)
+                        .width(nandina::widget::authoring::fill)
+                        .height(32)
+                        .on_click([store, feedback, refresh_notes_hint, clear_editor, group_id] {
+                            auto selected = store->select_group(group_id);
+                            if (!selected) {
+                                set_feedback(
+                                    *feedback,
+                                    "切换分组失败：" + data::describe(selected.error()),
+                                    true
+                                );
+                                return;
+                            }
+                            clear_editor();
+                            refresh_notes_hint();
+                        })
+                        .build();
+                },
+                [](nandina::scene::NanControl& control,
+                   const VectorRowModel<NoteGroup>& model,
+                   const nandina::widget::ItemBinding& binding) {
+                    auto& button = static_cast<nandina::widget::Button&>(control);
+                    button.set_text(model.at(binding.model_row).name);
+                    button.set_treatment(
+                        binding.state.selected ? nandina::theme::ButtonTreatment::tonal
+                                               : nandina::theme::ButtonTreatment::ghost
+                    );
+                }
+            )
         );
-        groups_list->set_model(store->group_list());
+        groups_list->set_model(group_model);
+        (void)ui.effect([group_model, store] {
+            group_model->set_items(store->group_list().get());
+        });
+        (void)ui.effect([groups_list, store] {
+            if (const auto selected = store->selected_group().get(); selected.has_value()) {
+                (void)groups_list->select(
+                    nandina::widget::RowId {
+                        .value = static_cast<std::uint64_t>(*selected),
+                    }
+                );
+            }
+            else {
+                groups_list->clear_selection();
+            }
+        });
         auto groups_list_node = nandina::widget::authoring::from(groups_list)
                                     .width(nandina::widget::authoring::fill)
                                     .height(nandina::widget::authoring::fill)

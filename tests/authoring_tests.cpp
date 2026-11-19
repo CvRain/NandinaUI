@@ -236,34 +236,6 @@ TEST_CASE("authoring wraps keyed regions without changing reuse", "[authoring][d
     REQUIRE(region->get_child(1) == first);
 }
 
-TEST_CASE("ListView binds a structural model without inheritance", "[widget][list][model]") {
-    reactive::Graph graph;
-    reactive::Signal<std::vector<Item>> items {
-        graph,
-        {{.key = 1, .value = "one"}, {.key = 2, .value = "two"}},
-    };
-    using View = widget::ListView<Item, int, ItemControl>;
-    auto view = View::create(
-        graph,
-        [](const Item& item) { return item.key; },
-        [](reactive::ReactiveScope&, const Item& item) {
-            return std::make_shared<ItemControl>(item.key);
-        },
-        [](ItemControl& control, const Item& item) { control.value = item.value; }
-    );
-    view->set_model(items);
-
-    scene::NanSceneTree tree;
-    tree.set_root(view);
-    REQUIRE(view->item_count() == 2);
-    auto* retained = view->node_for(1);
-
-    items.set({{.key = 2, .value = "updated"}, {.key = 1, .value = "retained"}});
-    REQUIRE(view->node_for(1) == retained);
-    REQUIRE(retained->value == "retained");
-    REQUIRE(view->get_child(1) == retained);
-}
-
 TEST_CASE("BuildContext authors scoped conditional and keyed regions", "[authoring][region]") {
     reactive::Graph graph;
     reactive::ReactiveScope scope {graph};

@@ -26,7 +26,6 @@
 #include "../scene/input_event.hpp"
 #include "declarative.hpp"
 #include "internal/uniform_row_window.hpp"
-#include "list_view.hpp"
 #include "roving_focus.hpp"
 #include "selection_model.hpp"
 

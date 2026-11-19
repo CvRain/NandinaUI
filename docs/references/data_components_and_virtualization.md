@@ -17,6 +17,7 @@
 > 批 3b③（DataTable 公共导出、公共哈希与下游消费）已完成并提交（2026-11-18，
 > `feat(data): export experimental DataTable surface (3b③)`）。
 > 批 4（`BuildContext::for_each()` 改 `ForEach` 直接实现）已完成并提交（2026-11-19，`03783cf`）。
+> 批 5（新虚拟化 `ListView` + notebook 迁移 + 旧 `ListView` 退役）已完成（2026-11-19，实现 + 验证）。
 > ** §8 静态 Table 与 §3/§4 基础契约不变。**
 > 本文件是阶段 5 数据组件的契约入口：已完成批次见 §1–§8，后续数据视图见 §9（v3.1）。
 > 静态 `Table`、`DataTable`、`Accordion` 等阶段 5 组件清单仍按
@@ -44,7 +45,7 @@
 | 设施 | 本批的关系 |
 | --- | --- |
 | `ForEach` | 键控对账内核。`VirtualListView` 内部持有一个 `ForEach` 窗口区域，只把**可见窗口**交给 `region->set_items()`；全量数据保留在列表自己的 `source_items_` 中 |
-| `ListView` | 仍是 ForEach 的全量 typed 包装；不虚拟化。`VirtualListView` 复用其 `ListDataModelSource` 绑定概念 |
+| `ListView` | **批 5 起为非模板虚拟化数据视图**（`IRowModel` + `IItemDelegate` + `SelectionModel<RowId>`）；旧的“ForEach 全量 typed 包装”模板已退役。`VirtualListView` 复用 `declarative.hpp` 的 `ListDataModelSource` 绑定概念 |
 | `ScrollView` | `VirtualListView` 自己是滚动视口（垂直单列），不套 ScrollView：父布局给的盒子就是视口，偏移驱动窗口重算 |
 | `RovingFocus` | 键盘漫游：方向键/Home/End/PageUp/PageDown/typeahead 全部复用；`VirtualListView` 只落地 Intent |
 | `MenuSelection` | 菜单专用（checkbox/radio kind、disabled 规则、`MenuItem::checked` 唯一事实来源）。`SelectionModel` 面向数据行：身份是键、承担范围选择与 retain |
@@ -185,9 +186,9 @@ class VirtualListView`（[virtual_list_view.hpp](../../nandina/widget/virtual_li
 
 ## 7. 后续
 
-- P4.2a 已提交（`5d91e01`）。静态 `Table` 不承担行选择；交互数据视图见 §9（v3.1 定稿；批 1A 已提交）：
-  非模板 `DataTable` + `IRowModel`/`DataTableColumn`/`IItemDelegate`/`TableSelectionModel`，
-  以及新虚拟化 `ListView` 的迁移计划（旧 `ListView` 退役、`ForEach` 保留）。
+- P4.2a 已提交（`5d91e01`）。静态 `Table` 不承担行选择；交互数据视图见 §9（v3.1 定稿）：
+  非模板 `DataTable` + `IRowModel`/`DataTableColumn`/`IItemDelegate`/`TableSelectionModel`；
+  新虚拟化 `ListView` 已于批 5 交付，旧 `ListView` 退役、`ForEach` 保留（见 §9.11）。
 - `VirtualListView` 作者 DSL 入口与视觉验收随维护者编写的 Showcase 组合另行接入；
   其迁移/退役在新 `ListView` 稳定后单独立项（§9.11）。
 
@@ -287,7 +288,8 @@ SelectionModel、RovingFocus、虚拟化与排序留给后续交互数据表；�
 > `feat(data): add author header delegate and theme refresh (3b②)`）。
 > 批 3b③（DataTable 公共导出、公共哈希与下游消费）已完成并提交（2026-11-18，
 > `feat(data): export experimental DataTable surface (3b③)`）。
-> 批 4（`BuildContext::for_each()` 改 `ForEach` 直接实现）已完成并提交（2026-11-19，`03783cf`）。**
+> 批 4（`BuildContext::for_each()` 改 `ForEach` 直接实现）已完成并提交（2026-11-19，`03783cf`）。
+> 批 5（新虚拟化 `ListView` + notebook 迁移 + 旧 `ListView` 退役）已完成（2026-11-19，实现 + 验证）。**
 > 数据视图采用**非模板组件 + 行模型 + 列定义 + delegate + 显式选择模型**；v3.1 只修正接口矛盾，
 > 不改变总体架构。§3/§4/§8 已交付契约不变；旧 `ListView` 只作 `ForEach` 薄包装的状态随 §9.11 回收。
 >
@@ -850,12 +852,14 @@ struct SortRequest {
 | 设施 | 去向 |
 | --- | --- |
 | `ForEach` | **保留**：声明式全量键控区域（不是数据视图） |
-| 旧 `ListView`（`ForEach` 薄包装，[list_view.hpp:23](../../nandina/widget/list_view.hpp)） | **退役**；`BuildContext::for_each()`（[build_context.hpp:395](../../nandina/widget/build_context.hpp)）改为直接使用 `ForEach` |
-| 新 `ListView` | 基于 `IRowModel` + `IItemDelegate` + 虚拟窗口的 **1D 虚拟化数据视图**；行选择用 `SelectionModel<RowId>`；第一版统一行高；不再新增非虚拟化版本（该职责归 `ForEach`） |
+| 旧 `ListView`（`ForEach` 薄包装） | **已退役（批 5，2026-11-19）**；`BuildContext::for_each()` 已在批 4 改为直接使用 `ForEach`；`ListDataModelSource` 概念移到 `declarative.hpp` |
+| 新 `ListView`（[list_view.hpp](../../nandina/widget/list_view.hpp) / [list_view.cpp](../../nandina/widget/list_view.cpp)） | **已交付（批 5）**：非模板 `ListView`，基于 `IRowModel` + `IItemDelegate` + `UniformRowWindow`/`ItemHost` 的 **1D 虚拟化数据视图**；行选择用 `SelectionModel<RowId>`；统一行高；自持纵向视口；不再新增非虚拟化版本（该职责归 `ForEach`） |
 | `VirtualListView` | 暂时兼容；新 `ListView` 稳定后评估迁移或退役（其模板 API/913 行测试单独批次） |
 
 - 新 `ListView` 与 DataTable 共享 `IRowModel`、`IItemDelegate`、`UniformRowWindow`/`ItemHost`/
   滚动命中工具，但**不要求**共用选择模型类（1D 用 `SelectionModel<RowId>`）。
+- 默认行高：新 `ListView` **36 DIP**，DataTable **32 DIP**。列表行通常承载按钮/双行内容，
+  数据表面向紧凑单元格；两者都可用 `set_row_height()` 覆盖。
 - notebook 的 NoteList/GroupList 在迁移批改为新 ListView（delegate 产出 Button）；数据层测试不变。
 - 未来 TreeView：只保留 `IRowModel` 扩展方向（父子查询/展开状态），本契约不承诺兼容。
 
@@ -878,7 +882,7 @@ struct SortRequest {
 | **3b② 作者 HeaderDelegate + 主题重解析 ✅ 已完成（2026-11-17，`feat(data): add author header delegate and theme refresh (3b②)`）** | 内部 `IHeaderDelegate`/`HeaderBinding`（借用 column+theme；`sort_direction`/`focused`/`theme_revision`）；框架 `HeaderCellHost` 保留 `column_header`/aria-sort 语义；HeaderHost 按 delegate 身份 keyed 化（变化重建、主题只 update、create 失败保留旧视觉）；默认 `TextHeaderDelegate`（Label + 排序三角，作者可替换）；`DataTable::on_theme_changed` 重解析表头与可见单元格 revision；退出/重入树释放并重建 header scopes | `data-table-3b2` 7 用例/61 断言；主套件 137 OK +3 skip、ASan 115 OK +1 skip、no-RTTI 116 OK +1 skip、no-SQLite 112 OK +1 skip、纯工具 8/8、`release_check --ci` 8/8；红先：忽略 delegate 身份（不重建）、主题不 update、单元格 revision 不刷新、create 失败半挂载、focused 状态丢失均先红后绿；复核补强：header scope 重入、无排序时焦点线、默认视觉 ring/foreground token 重解析 |
 | **3b③ 公共导出 ✅ 已完成（2026-11-18，`feat(data): export experimental DataTable surface (3b③)`）** | 八个数据视图头转 experimental（`data_identity`、`row_model`、`data_table_column`、`item_delegate`、`header_delegate`、`table_selection_model`、`grid_navigation`、`data_table`）；`item_host` 保持 internal 并通过前置声明隔离；公共 `std::hash<RowId/ColumnId/CellId>`；移除测试专用 `header_host()` 公共入口；新增 `data-public-api` 2 用例/12 断言与 SDK `data-api=1` 下游探针 | `header-surface` 213 头分类通过（197 experimental + 16 internal）；主套件 138 OK +3 skip、ASan 116 OK +1 skip、no-RTTI 117 OK +1 skip、no-SQLite 113 OK +1 skip、纯工具 8/8、`release_check --ci` 8/8；打包 SDK 消费通过 |
 | **4 ✅ 已完成并提交（2026-11-19，`03783cf`）** | `BuildContext::for_each()` 改 `ForEach` 直接实现（`ListView<Item,Key,Node>` → `ForEach<Item,Key,Node>`、`set_model` → `bind`）；`build_context.hpp` 直接包含 `declarative.hpp`；`authoring_tests` 新增返回类型 `STATIC_REQUIRE` 锁定 `shared_ptr<ForEach<...>>`；`ListView`/`list_view.hpp` 本批保留（notebook 仍直接使用，退役留批 5） | `authoring` 全量 39 用例/201 断言、`[authoring][region]` 过滤 1 用例/16 断言；维护者复核矩阵：unit 117 OK + 1 skip（共 118）、完整套件 138 OK + 3 skip（共 141）、ASan 116 OK + 1 skip、no-RTTI 117 OK + 1 skip、no-SQLite 113 OK + 1 skip、纯工具 8/8、`release_check --ci` 8/8；红先：移除 `view->bind(source)` 后 `[authoring][region]` 在 `REQUIRE(retained != nullptr)` 失败；退回 `ListView` 时返回类型静态断言编译失败 |
-| **5** | 新虚拟化 `ListView` + notebook 迁移 + 旧 `ListView` 退役（sdk_surface 记录破坏性变更） | ListView 红先（窗口/行选择/delegate 复用）；notebook 构建；全矩阵 |
+| **5 ✅ 已完成（2026-11-19，实现 + 验证）** | 新非模板 `widget/list_view.hpp/.cpp`（`IRowModel` + `IItemDelegate` + `UniformRowWindow`/`ItemHost` + `SelectionModel<RowId>`；统一行高、自持纵向视口、窗口物化、指针/键盘选择、Enter 激活、主题 revision）；`ListDataModelSource` 移到 `declarative.hpp`；`authoring.hpp` 不再包含 `list_view.hpp`；notebook 的 NoteList/GroupList 改 `VectorRowModel` + lambda delegate；旧模板 `ListView` 退役并在 `sdk_surface.md` 记录破坏性变更 | `list-view` 15 用例/68 断言；`data-public-api` 3 用例/16 断言（含新 ListView）；`authoring` 38 用例/197 断言；主套件 118 OK + 1 skip（共 119）；完整套件 139 OK + 3 skip（共 142；skip 为 `sdf-device`/`sdf-state-probe`/`window-lifecycle`，环境相关；含 SDK `list-api=1` 下游探针）；ASan 117 OK + 1 skip、no-RTTI 119 OK、no-SQLite 114 OK + 1 skip、纯工具 8/8、`release_check --ci` 8/8；红先：全量物化、禁用指针选择、跳过 `data_changed` delegate 更新均先红后绿；`MALLOC_PERTURB_=102` 下 ListView 套件仍全绿；notebook 构建 + `notebook-data` 通过 |
 | **6（另议）** | `VirtualListView` 迁移/退役、TreeView | 单独立项 |
 
 **公共 API 闸门**：3b③ 已将 DataTable 作者协议与组件转 experimental，并在

@@ -23,17 +23,20 @@ application shell. Version `0.1.0-alpha.1`.
   `development_roadmap.md`, `project_status.md`, `component_roadmap.md`; `stories/` keeps
   root-cause narratives.
 - **Data-view contract (§9 v3.1, `data_components_and_virtualization.md`)**: non-template
-  `DataTable` / new `ListView` over `IRowModel` + `DataTableColumn` + `IItemDelegate` +
+  `DataTable` / `ListView` over `IRowModel` + `DataTableColumn` + `IItemDelegate` +
   explicit selection; `ForEach` stays as the declarative full-list region. Batches
-  1A/1B/2A/2B/3a/3b①/3b②/3b③ committed. **Batch 4 committed (2026-11-19, `03783cf`)**:
-  `BuildContext::for_each()` constructs `ForEach<Item, Key, Node>`
-  directly, `build_context.hpp` includes `declarative.hpp` directly, and `authoring_tests`
-  locks the return type with `STATIC_REQUIRE`. Verification: `authoring` 39 cases/201
-  assertions, `[authoring][region]` 1/16; unit 117 OK +1 skip (118), full suite 138 OK +3 skip
-  (141), ASan 116 OK +1 skip, no-RTTI 117 OK +1 skip, no-SQLite 113 OK +1 skip, pure tools
-  8/8, `release_check --ci` 8/8. **Next: batch 5 — virtualized `ListView` + notebook migration
-  + old `ListView` retirement.**
-- **Baseline counts**: 141 tests (118 unit + 23 integration), 213 headers (197 experimental +
+  1A/1B/2A/2B/3a/3b①/3b②/3b③ committed; batch 4 committed (`03783cf`). **Batch 5 implemented
+  and verified**: non-template `ListView` (`IRowModel` + `IItemDelegate` +
+  `SelectionModel<RowId>`, uniform row height, own vertical viewport, `ItemHost` window
+  materialization), notebook migrated (`VectorRowModel` + lambda delegate), old template
+  `ListView` retired (`ListDataModelSource` moved to `declarative.hpp`). Verification:
+  `list-view` 15 cases/68 assertions; `data-public-api` 3/16; `authoring` 38/197,
+  `[authoring][region]` 1/16; unit 118 OK +1 skip (119); full suite 139 OK +3 skip (142;
+  skips are environment-dependent `sdf-device`/`sdf-state-probe`/`window-lifecycle`); ASan
+  117 OK +1 skip, no-RTTI 119/119, no-SQLite 114 OK +1 skip, pure tools 8/8,
+  `release_check --ci` 8/8. **Next: batch 6 — `VirtualListView` migration/retirement,
+  TreeView.**
+- **Baseline counts**: 142 tests (119 unit + 23 integration), 213 headers (197 experimental +
   16 internal), 28 approved page goldens (7 pages × CPU/SDF × 2 platforms), 39 public
   components; the CPU page-golden CI gate is blocking (7 pages).
 - **Do not over-claim**: Windows is experimental (only real exit codes/logs count; GPU/SDF and
