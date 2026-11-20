@@ -1,12 +1,12 @@
 //
 // widget/internal/uniform_row_window — 统一行高虚拟列表的纯窗口数学。
 //
-// 从 VirtualListView 提取：内容高度、滚动偏移夹取、半开可见窗口、scroll-to-reveal
-// 与行命中。这里只依赖数值和索引，不依赖场景树、ForEach、Key、节点或 reactive 类型；
-// VirtualListView 仍负责 pending-scroll 挂起、数据代次对账、延迟物化与控件定位。
+// 内容高度、滚动偏移夹取、半开可见窗口、scroll-to-reveal 与行命中。这里只依赖数值和
+// 索引，不依赖场景树、ForEach、Key、节点或 reactive 类型；pending-scroll 挂起、数据代次
+// 对账、延迟物化与控件定位由 DataTable/ListView 负责。
 //
 // 可见窗口统一用半开区间 [first, end)：空窗口自然表示为 first == end。
-// 语义保持与提取前的 VirtualListView 逐位一致（含视口底边命中已物化上界的行为）。
+// 语义与提取前逐位一致（含视口底边命中已物化上界的行为）。
 //
 
 #ifndef NANDINA_EXPERIMENT_WIDGET_INTERNAL_UNIFORM_ROW_WINDOW_HPP
@@ -34,7 +34,7 @@ namespace nandina::widget::internal
     ///
     /// 调用方保证 `row_height` 有限且 > 0，`viewport_height` 有限且 >= 0；
     /// `item_count` 是数据源全量行数（窗口外的行尚未物化）。本类不拥有任何状态，构造后
-    /// 只读；VirtualListView 每次布局/滚动时按当前几何构造一个临时实例。
+    /// 只读；DataTable/ListView 每次布局/滚动时按当前几何构造一个临时实例。
     class UniformRowWindow {
     public:
         constexpr UniformRowWindow(

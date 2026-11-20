@@ -128,6 +128,7 @@ def main() -> int:
         assert "decoder=1" in output, output
         assert "data-api=1" in output, output
         assert "list-api=1" in output, output
+        assert "tree-api=1" in output, output
 
         loader = run("ldd", str(probe), cwd=source, capture=True)
         assert "libSDL3" not in loader and "raylib" not in loader, loader
@@ -143,6 +144,7 @@ def main() -> int:
         assert "backend=sdl3" in output and "decoder=1" in output, output
         assert "data-api=1" in output, output
         assert "list-api=1" in output, output
+        assert "tree-api=1" in output, output
         loader = run("ldd", str(probe), cwd=source, capture=True)
         assert "libSDL3" in loader, loader
         resolved = [line for line in loader.splitlines() if "libSDL3" in line]

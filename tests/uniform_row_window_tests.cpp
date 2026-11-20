@@ -1,4 +1,4 @@
-// Direct unit tests for the pure uniform-row window maths shared by VirtualListView.
+// Direct unit tests for the pure uniform-row window maths shared by DataTable and ListView.
 #include <nandina/widget/internal/uniform_row_window.hpp>
 
 #include <catch2/catch_test_macros.hpp>

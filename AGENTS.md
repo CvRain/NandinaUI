@@ -23,20 +23,20 @@ application shell. Version `0.1.0-alpha.1`.
   `development_roadmap.md`, `project_status.md`, `component_roadmap.md`; `stories/` keeps
   root-cause narratives.
 - **Data-view contract (§9 v3.1, `data_components_and_virtualization.md`)**: non-template
-  `DataTable` / `ListView` over `IRowModel` + `DataTableColumn` + `IItemDelegate` +
-  explicit selection; `ForEach` stays as the declarative full-list region. Batches
-  1A/1B/2A/2B/3a/3b①/3b②/3b③ committed; batch 4 committed (`03783cf`). **Batch 5 committed
-  (2026-11-19, `e96542f`)**: non-template `ListView` (`IRowModel` + `IItemDelegate` +
-  `SelectionModel<RowId>`, uniform row height, own vertical viewport, `ItemHost` window
-  materialization), notebook migrated (`VectorRowModel` + lambda delegate), old template
-  `ListView` retired (`ListDataModelSource` moved to `declarative.hpp`). Verification:
-  `list-view` 15 cases/68 assertions; `data-public-api` 3/16; `authoring` 38/197,
-  `[authoring][region]` 1/16; unit 118 OK +1 skip (119); full suite 139 OK +3 skip (142;
-  skips are environment-dependent `sdf-device`/`sdf-state-probe`/`window-lifecycle`); ASan
-  117 OK +1 skip, no-RTTI 119/119, no-SQLite 114 OK +1 skip, pure tools 8/8,
-  `release_check --ci` 8/8. **Next: batch 6 — `VirtualListView` migration/retirement,
-  TreeView.**
-- **Baseline counts**: 142 tests (119 unit + 23 integration), 213 headers (197 experimental +
+  `DataTable` / `ListView` / `TreeView` over `IRowModel` + `DataTableColumn` +
+  `IItemDelegate` + explicit selection; `ForEach` stays as the declarative full-list region.
+  Batches 1A/1B/2A/2B/3a/3b①/3b②/3b③/4/5 committed. **Batch 6 implemented and verified**:
+  legacy `VirtualListView` retired (`virtual_list_view.hpp` + dedicated tests removed);
+  `TreeView` v1 added (`ITreeModel : IRowModel`, view-owned expansion, uniform-row
+  virtualization, `SelectionModel<RowId>`, `ItemState` depth/has_children/expanded,
+  framework-drawn expander; contract §10). Verification: `tree-view` 21 cases/136
+  assertions; `list-view` 15/68; `data-public-api` 4/22; `authoring` 38/197,
+  `[authoring][region]` 1/16. Operator desktop record: unit 119/119 and full suite
+  142/142; current headless recheck: unit 118 OK +1 environment skip, full suite 139 OK
+  +3 environment skips (`sdf-device`/`sdf-state-probe`/`window-lifecycle`), ASan 117 OK
+  +1 skip, no-RTTI 118 OK +1 skip, no-SQLite 114 OK +1 skip, pure tools 8/8,
+  `release_check --ci` 8/8. **Next: Accordion (component roadmap).**
+- **Baseline counts**: 142 tests (119 unit + 23 integration), 214 headers (198 experimental +
   16 internal), 28 approved page goldens (7 pages × CPU/SDF × 2 platforms), 39 public
   components; the CPU page-golden CI gate is blocking (7 pages).
 - **Do not over-claim**: Windows is experimental (only real exit codes/logs count; GPU/SDF and

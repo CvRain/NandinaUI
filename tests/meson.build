@@ -370,13 +370,6 @@ selection_model_tests = executable(
 )
 test('selection-model', selection_model_tests, suite: 'unit')
 
-virtual_list_tests = executable(
-    'virtual_list_tests',
-    files('virtual_list_tests.cpp'),
-    dependencies : [nandina_dep, catch2_with_main_dep],
-)
-test('virtual-list', virtual_list_tests, suite: 'unit')
-
 uniform_row_window_tests = executable(
     'uniform_row_window_tests',
     files('uniform_row_window_tests.cpp'),
@@ -390,6 +383,13 @@ list_view_tests = executable(
     dependencies : [nandina_dep, catch2_with_main_dep],
 )
 test('list-view', list_view_tests, suite: 'unit')
+
+tree_view_tests = executable(
+    'tree_view_tests',
+    files('tree_view_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('tree-view', tree_view_tests, suite: 'unit')
 
 widget_tests = executable(
     'widget_tests',

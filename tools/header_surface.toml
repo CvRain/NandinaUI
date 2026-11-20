@@ -699,6 +699,11 @@ level = "experimental"
 reason = "IRowModel/RowModelBase/TypedRowModelBase 是 experimental 行模型作者协议；文件暂留在 internal/ 目录，后续移动到正式 widget 路径"
 
 [[headers]]
+path = "nandina/widget/internal/tree_model.hpp"
+level = "experimental"
+reason = "ITreeModel/TypedTreeModelBase 是 experimental 树形行模型作者协议；文件暂留在 internal/ 目录，后续移动到正式 widget 路径"
+
+[[headers]]
 path = "nandina/widget/internal/table_selection_model.hpp"
 level = "experimental"
 reason = "TableSelectionModel 是 experimental 二维选择作者/宿主协议；文件暂留在 internal/ 目录，后续移动到正式 widget 路径"
@@ -710,7 +715,7 @@ level = "internal"
 [[headers]]
 path = "nandina/widget/internal/uniform_row_window.hpp"
 level = "experimental"
-reason = "RowWindow/UniformRowWindow 只依赖数值与索引，但被实验性模板头 virtual_list_view.hpp 内联包含（公共头无法只在前置声明中持值类型）；仍在 internal/ 目录下，后续 ListView/DataTable 收口时再决定移出或改 internal-only"
+reason = "RowWindow/UniformRowWindow 只依赖数值与索引，但被实验性 DataTable/ListView/TreeView 头内联包含（公共头无法只在前置声明中持值类型）；仍在 internal/ 目录下，后续收口时再决定移出或改 internal-only"
 
 [[headers]]
 path = "nandina/widget/label.hpp"
@@ -722,6 +727,10 @@ level = "experimental"
 
 [[headers]]
 path = "nandina/widget/list_view.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/tree_view.hpp"
 level = "experimental"
 
 [[headers]]
@@ -806,10 +815,6 @@ level = "experimental"
 
 [[headers]]
 path = "nandina/widget/selection_model.hpp"
-level = "experimental"
-
-[[headers]]
-path = "nandina/widget/virtual_list_view.hpp"
 level = "experimental"
 
 [[headers]]

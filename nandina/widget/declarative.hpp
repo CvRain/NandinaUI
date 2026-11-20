@@ -23,7 +23,7 @@
 namespace nandina::widget
 {
     /// 追踪源协议：`source.get()` 返回 `const std::vector<Item>&`。
-    /// 供 ForEach::bind、BuildContext::for_each 与 VirtualListView::set_model 共用。
+    /// 供 ForEach::bind 与 BuildContext::for_each 共用。
     template<typename Source, typename Item>
     concept ListDataModelSource = requires(Source& source) {
         { source.get() } -> std::same_as<const std::vector<Item>&>;

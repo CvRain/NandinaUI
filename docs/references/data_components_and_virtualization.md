@@ -18,6 +18,7 @@
 > `feat(data): export experimental DataTable surface (3b③)`）。
 > 批 4（`BuildContext::for_each()` 改 `ForEach` 直接实现）已完成并提交（2026-11-19，`03783cf`）。
 > 批 5（新虚拟化 `ListView` + notebook 迁移 + 旧 `ListView` 退役）已完成并提交（2026-11-19，`e96542f`）。
+> 批 6（`VirtualListView` 退役 + TreeView v1）已完成（2026-11-19，实现 + 验证）。
 > ** §8 静态 Table 与 §3/§4 基础契约不变。**
 > 本文件是阶段 5 数据组件的契约入口：已完成批次见 §1–§8，后续数据视图见 §9（v3.1）。
 > 静态 `Table`、`DataTable`、`Accordion` 等阶段 5 组件清单仍按
@@ -41,6 +42,9 @@
 3. 一套针对虚拟化窗口、滚动、点击/键盘选择、绑定与数据替换的回归测试。
 
 ## 2. 与既有设施的分工
+
+> **历史说明（批 6，2026-11-19）**：`VirtualListView` 已退役；下表保留 P4.2a 的分工记录，
+> 现行 1D 虚拟化列表见 §9.11 的 `ListView`（`IRowModel` + `IItemDelegate` + `ItemHost`）。
 
 | 设施 | 本批的关系 |
 | --- | --- |
@@ -74,8 +78,11 @@
 
 ## 4. VirtualListView 规则
 
+> **已退役（批 6，2026-11-19）**：本节保留 P4.2a 的历史契约；现行 1D 虚拟化列表见
+> §9.11 的 `ListView`。
+
 `template<typename Item, std::equality_comparable Key, typename NodeT = scene::NanControl>
-class VirtualListView`（[virtual_list_view.hpp](../../nandina/widget/virtual_list_view.hpp)）。
+class VirtualListView`（原 `nandina/widget/virtual_list_view.hpp`，批 6 已删除）。
 
 ### 4.1 虚拟化
 
@@ -189,8 +196,8 @@ class VirtualListView`（[virtual_list_view.hpp](../../nandina/widget/virtual_li
 - P4.2a 已提交（`5d91e01`）。静态 `Table` 不承担行选择；交互数据视图见 §9（v3.1 定稿）：
   非模板 `DataTable` + `IRowModel`/`DataTableColumn`/`IItemDelegate`/`TableSelectionModel`；
   新虚拟化 `ListView` 已于批 5 交付，旧 `ListView` 退役、`ForEach` 保留（见 §9.11）。
-- `VirtualListView` 作者 DSL 入口与视觉验收随维护者编写的 Showcase 组合另行接入；
-  其迁移/退役在新 `ListView` 稳定后单独立项（§9.11）。
+- `VirtualListView` 已于批 6 退役（`virtual_list_view.hpp` 与 `virtual-list` 测试移除）；
+  其作者 DSL/视觉验收不再推进，现行列表见 §9.11 `ListView`。
 
 
 ## 8. P4.2b 静态 Table：布局契约
@@ -289,7 +296,8 @@ SelectionModel、RovingFocus、虚拟化与排序留给后续交互数据表；�
 > 批 3b③（DataTable 公共导出、公共哈希与下游消费）已完成并提交（2026-11-18，
 > `feat(data): export experimental DataTable surface (3b③)`）。
 > 批 4（`BuildContext::for_each()` 改 `ForEach` 直接实现）已完成并提交（2026-11-19，`03783cf`）。
-> 批 5（新虚拟化 `ListView` + notebook 迁移 + 旧 `ListView` 退役）已完成并提交（2026-11-19，`e96542f`）。**
+> 批 5（新虚拟化 `ListView` + notebook 迁移 + 旧 `ListView` 退役）已完成并提交（2026-11-19，`e96542f`）。
+> 批 6（`VirtualListView` 退役 + TreeView v1）已完成（2026-11-19，实现 + 验证）。**
 > 数据视图采用**非模板组件 + 行模型 + 列定义 + delegate + 显式选择模型**；v3.1 只修正接口矛盾，
 > 不改变总体架构。§3/§4/§8 已交付契约不变；旧 `ListView` 只作 `ForEach` 薄包装的状态随 §9.11 回收。
 >
@@ -311,7 +319,7 @@ SelectionModel、RovingFocus、虚拟化与排序留给后续交互数据表；�
    「无绘制路径」声明，不能两者兼称（§9.10）。
 6. **组合优先**：内部提取 `UniformRowWindow`/`TrackSolver`/`ItemHost`/滚动命中工具，由
    DataTable/ListView 组合；不建 `UnitViewBase` 继承树。
-7. **TreeView 只保留方向**：为未来树形视图保留行模型/delegate/选择扩展点，但不承诺兼容或本批实现。
+7. **TreeView**：批 6 已按独立契约交付 v1（§10）；沿用行模型/delegate/选择扩展点。
 
 ### 9.2 稳定身份与哈希
 
@@ -786,21 +794,21 @@ struct SortRequest {
 | --- | --- | --- |
 | `internal::TrackSolver`（`track_solver.hpp/.cpp`） | 纯轨道数学：固定/权重分配、无界 intrinsic、gap、有限性校验；**不测量节点** | **1A（已完成 2026-11-15）** |
 | `internal::UniformRowWindow` | 统一行高窗口：内容高度、offset 夹取、半开可见区间 `[first,end)`、滚动显现数学、行命中；只依赖数值与索引 | **1B（已完成 2026-11-16，`refactor(data): extract uniform row window`）** |
-| `internal::ItemHost`（`item_host.hpp/.cpp`） | delegate 控件 host：以 `CellId` 为 key 的 create/update/销毁/keyed 复用、每项 scope；失败原子性、退出树清 scope、重入树完整 reset；**不拥有滚动状态**，只接收当前窗口内的单元格；3b③ 后仍保持 internal，DataTable 仅前置声明为 `.cpp` 实现细节 | **2B（已完成 2026-11-16）；3a 起只物化窗口内单元格** |
-| 滚动/列命中 | 行命中并入 `UniformRowWindow`；**3a**：DataTable 自持纵向 viewport（窗口物化、offset 夹取、滚轮、滚动到行、表头固定）；**指针/键盘列命中与选择留 3b** | **3a（已完成 2026-11-17）** |
+| `internal::ItemHost`（`item_host.hpp/.cpp`） | delegate 控件 host：以 `CellId` 为 key 的 create/update/销毁/keyed 复用、每项 scope；失败原子性、退出树清 scope、重入树完整 reset；**不拥有滚动状态**，只接收当前窗口内的项目；3b③ 后仍保持 internal，DataTable 仅前置声明为 `.cpp` 实现细节；ListView/TreeView 复用同一 host | **2B（已完成 2026-11-16）；3a 起只物化窗口内项目** |
+| 滚动/列命中 | 行命中并入 `UniformRowWindow`；**3a**：DataTable 自持纵向 viewport（窗口物化、offset 夹取、滚轮、滚动到行、表头固定）；ListView/TreeView 在批 5/6 以同一工具自持 viewport；**指针/键盘列命中与选择留 3b** | **3a（已完成 2026-11-17）** |
 
 - `TrackSolver` 无状态，实现为内部纯函数（`validate_tracks` + `solve_tracks`），不建类/成员；
   `Table` 的 `columns_` 仍是唯一事实来源，每次验证/求解做轻量 `TrackSpec` 转换，不缓存第二份。
-- `UniformRowWindow` 仍是 widget 内部实现。由于 experimental 的模板头 `VirtualListView` 以值成员
-  持有 `RowWindow`，其头文件暂登记为 experimental（与 `anchored_positioner.hpp` 先例一致）；
-  2B/3 收口 DataTable/ListView 时再决定迁移为正式实验 API 或调整包含形状。
+- `UniformRowWindow` 仍是 widget 内部实现。由于 experimental 的 DataTable/ListView/TreeView
+  公共头以值成员持有 `RowWindow`，其头文件暂登记为 experimental（与
+  `anchored_positioner.hpp` 先例一致）；后续再决定迁移为正式实验 API 或调整包含形状。
 - `content_height()` 保留旧 VirtualListView 的 float 累积语义；极大行数可能得到 `+inf`。后续
   DataTable 必须在自己的参数/布局层按 §9.3 的有限性规则拒绝总高度，不能依赖本工具抛异常。
 - 输入：`std::span<const TrackSpec>`、`std::optional<float> available_width`、`std::span<const float>
   intrinsic_widths`（仅无界使用）、`gap`；输出 widths + total_width。
-- `UniformRowWindow` 只依赖数值与索引：pending-scroll 挂起、`source_generation_` 对账、
-  `sync_or_schedule()`/`post_layout`、`ForEach::set_items()`、节点定位与 wheel 输入（含 x 轴归零）
-  仍留在 `VirtualListView`；`scroll_to_index` 的纯数学返回新 offset，首布局前挂起由视图决定；
+- `UniformRowWindow` 只依赖数值与索引：pending-scroll 挂起、数据代次对账、
+  `post_layout` 调度、节点物化与定位、wheel 输入等仍由 DataTable/ListView/TreeView 持有；
+  `scroll_to_index` 的纯数学返回新 offset，首布局前挂起由视图决定；
   视口底边（`local_y == viewport_height`）命中最后一个已物化行的语义不变。
   有效有限输入的可观察行为与提取前一致；额外将 NaN offset 防御性归零，避免
   其进入浮点到整型转换或节点几何。
@@ -854,20 +862,21 @@ struct SortRequest {
 | `ForEach` | **保留**：声明式全量键控区域（不是数据视图） |
 | 旧 `ListView`（`ForEach` 薄包装） | **已退役（批 5，2026-11-19）**；`BuildContext::for_each()` 已在批 4 改为直接使用 `ForEach`；`ListDataModelSource` 概念移到 `declarative.hpp` |
 | 新 `ListView`（[list_view.hpp](../../nandina/widget/list_view.hpp) / [list_view.cpp](../../nandina/widget/list_view.cpp)） | **已交付（批 5）**：非模板 `ListView`，基于 `IRowModel` + `IItemDelegate` + `UniformRowWindow`/`ItemHost` 的 **1D 虚拟化数据视图**；行选择用 `SelectionModel<RowId>`；统一行高；自持纵向视口；不再新增非虚拟化版本（该职责归 `ForEach`） |
-| `VirtualListView` | 暂时兼容；新 `ListView` 稳定后评估迁移或退役（其模板 API/913 行测试单独批次） |
+| `VirtualListView` | **已退役（批 6，2026-11-19）**；`virtual_list_view.hpp` 与 `virtual-list` 测试移除，由本节的 `ListView` 取代 |
 
 - 新 `ListView` 与 DataTable 共享 `IRowModel`、`IItemDelegate`、`UniformRowWindow`/`ItemHost`/
   滚动命中工具，但**不要求**共用选择模型类（1D 用 `SelectionModel<RowId>`）。
 - 默认行高：新 `ListView` **36 DIP**，DataTable **32 DIP**。列表行通常承载按钮/双行内容，
   数据表面向紧凑单元格；两者都可用 `set_row_height()` 覆盖。
 - notebook 的 NoteList/GroupList 在迁移批改为新 ListView（delegate 产出 Button）；数据层测试不变。
-- 未来 TreeView：只保留 `IRowModel` 扩展方向（父子查询/展开状态），本契约不承诺兼容。
+- TreeView 已在批 6 按独立契约交付 v1（`ITreeModel : IRowModel`、视图持有展开、统一行高
+  虚拟化），见 §10。
 
 ### 9.12 非目标
 
 列拖拽/重排/合并、单元格内编辑、变高行、水平滚动、粘性列、多列排序、分组/树形、分页组件
-（只提供外部排序请求事件）、选中视觉配方、TreeView 实现/兼容承诺、ListView 与 DataTable
-共用同一选择模型类（只共享身份与 delegate 词汇）。
+（只提供外部排序请求事件）、选中视觉配方、ListView 与 DataTable 共用同一选择模型类
+（只共享身份与 delegate 词汇）；TreeView v1 的非目标见 §10.3。
 
 ### 9.13 实施批次与验收
 
@@ -883,7 +892,7 @@ struct SortRequest {
 | **3b③ 公共导出 ✅ 已完成（2026-11-18，`feat(data): export experimental DataTable surface (3b③)`）** | 八个数据视图头转 experimental（`data_identity`、`row_model`、`data_table_column`、`item_delegate`、`header_delegate`、`table_selection_model`、`grid_navigation`、`data_table`）；`item_host` 保持 internal 并通过前置声明隔离；公共 `std::hash<RowId/ColumnId/CellId>`；移除测试专用 `header_host()` 公共入口；新增 `data-public-api` 2 用例/12 断言与 SDK `data-api=1` 下游探针 | `header-surface` 213 头分类通过（197 experimental + 16 internal）；主套件 138 OK +3 skip、ASan 116 OK +1 skip、no-RTTI 117 OK +1 skip、no-SQLite 113 OK +1 skip、纯工具 8/8、`release_check --ci` 8/8；打包 SDK 消费通过 |
 | **4 ✅ 已完成并提交（2026-11-19，`03783cf`）** | `BuildContext::for_each()` 改 `ForEach` 直接实现（`ListView<Item,Key,Node>` → `ForEach<Item,Key,Node>`、`set_model` → `bind`）；`build_context.hpp` 直接包含 `declarative.hpp`；`authoring_tests` 新增返回类型 `STATIC_REQUIRE` 锁定 `shared_ptr<ForEach<...>>`；`ListView`/`list_view.hpp` 本批保留（notebook 仍直接使用，退役留批 5） | `authoring` 全量 39 用例/201 断言、`[authoring][region]` 过滤 1 用例/16 断言；维护者复核矩阵：unit 117 OK + 1 skip（共 118）、完整套件 138 OK + 3 skip（共 141）、ASan 116 OK + 1 skip、no-RTTI 117 OK + 1 skip、no-SQLite 113 OK + 1 skip、纯工具 8/8、`release_check --ci` 8/8；红先：移除 `view->bind(source)` 后 `[authoring][region]` 在 `REQUIRE(retained != nullptr)` 失败；退回 `ListView` 时返回类型静态断言编译失败 |
 | **5 ✅ 已完成并提交（2026-11-19，`e96542f`）** | 新非模板 `widget/list_view.hpp/.cpp`（`IRowModel` + `IItemDelegate` + `UniformRowWindow`/`ItemHost` + `SelectionModel<RowId>`；统一行高、自持纵向视口、窗口物化、指针/键盘选择、Enter 激活、主题 revision）；`ListDataModelSource` 移到 `declarative.hpp`；`authoring.hpp` 不再包含 `list_view.hpp`；notebook 的 NoteList/GroupList 改 `VectorRowModel` + lambda delegate；旧模板 `ListView` 退役并在 `sdk_surface.md` 记录破坏性变更 | `list-view` 15 用例/68 断言；`data-public-api` 3 用例/16 断言（含新 ListView）；`authoring` 38 用例/197 断言；主套件 118 OK + 1 skip（共 119）；完整套件 139 OK + 3 skip（共 142；skip 为 `sdf-device`/`sdf-state-probe`/`window-lifecycle`，环境相关；含 SDK `list-api=1` 下游探针）；ASan 117 OK + 1 skip、no-RTTI 119 OK、no-SQLite 114 OK + 1 skip、纯工具 8/8、`release_check --ci` 8/8；红先：全量物化、禁用指针选择、跳过 `data_changed` delegate 更新均先红后绿；`MALLOC_PERTURB_=102` 下 ListView 套件仍全绿；notebook 构建 + `notebook-data` 通过 |
-| **6（另议）** | `VirtualListView` 迁移/退役、TreeView | 单独立项 |
+| **6 ✅ 已完成（2026-11-19）** | `VirtualListView` 退役（删除 `virtual_list_view.hpp` 与 `virtual-list` 测试；`sdk_surface.md` 记录破坏性变更）；TreeView v1（`ITreeModel` + 视图持有展开 + `UniformRowWindow`/`ItemHost` + `SelectionModel<RowId>`；`ItemState` 增量 depth/has_children/expanded；框架绘制展开器，见 §10） | `tree-view` 21 用例/136 断言；`data-public-api` 4 用例/22 断言（含 TreeView）；`list-view` 15/68、`uniform-row-window` 9/116；操作员桌面环境主套件 119/119、完整套件 142/142；当前无显示环境复核为 unit 118 OK +1 skip、完整套件 139 OK +3 skip（GPU/window 门控）；红先：始终展开子树、展开后不重建窗口、程序化选择不展开祖先、expand 回调异常前未提交可见账本、隐藏 current 仍可 Enter/Space、同帧 reset 后新 delegate 读取旧 model_row、selection 回调异常后刷新抑制未恢复均先红后绿 |
 
 **公共 API 闸门**：3b③ 已将 DataTable 作者协议与组件转 experimental，并在
 `sdk_surface.md` 记录八个临时路径例外；公共 API 只承诺 `std::hash` 的容器语义，不承诺哈希数值
@@ -913,3 +922,59 @@ struct SortRequest {
 3. **ListView 第一版**：统一行高。
 4. **外部排序**：`reactive::Event<SortRequest>` 为事实来源，同时提供 `set_on_sort_requested()`
    便捷入口（按 callback scope 生命周期守护）。
+
+## 10. TreeView 契约（批 6，v1）
+
+> 状态：2026-11-19 定稿（维护者决策）。`ITreeModel : IRowModel`；展开状态由视图持有；首版
+> 统一行高 + 虚拟化 + 展开/折叠 + 选择 + 缩进，不做懒加载；复用 `IItemDelegate`，
+> `ItemState` 增量 `depth`/`has_children`/`expanded`，框架绘制展开器。
+
+### 10.1 树模型：`ITreeModel`
+
+`IRowModel::row_count()/row_id()` 以**先序**枚举全部节点（含折叠子树）；`ITreeModel` 补充
+结构查询：
+
+- `parent(RowId) -> std::optional<RowId>`：根返回 `nullopt`；模型必须无环。
+- `child_count(RowId)` / `child(RowId, index)`：子节点按模型顺序排列。
+- `has_children(RowId)`：默认 `child_count > 0`（首批不做懒加载，模型可覆盖）。
+- `depth(RowId)`：默认沿 `parent` 行走；模型可覆盖为 O(1)。**v1 的视图按递归层数计算深度
+  （用于缩进与 `ItemState.depth`），不读取模型覆盖的 `depth()`**；该接口保留给作者侧查询与
+  后续可选优化。
+
+通知沿用 `IRowModel`：结构/行数变化用 `notify_reset()`；内容变化用
+`notify_data_changed(RowRange)`（行号是模型的先序行号，不改变结构）。
+`TypedTreeModelBase<Derived>` 提供事件存储与无 RTTI 类型令牌。
+
+### 10.2 视图：`TreeView`
+
+- **可见行**：根节点 + 已展开子树，按模型先序展开；折叠子树不物化。`row_count()` 是可见行数，
+  `node_count()` 是模型全部节点数。
+- **展开归属**：视图持有 `unordered_set<RowId>`；`expand/collapse/toggle_expanded/expand_all/
+  collapse_all` 与无载荷 `expansion_changed()`；遍历期展开变化延迟到 `post_layout` 重建窗口。
+- **程序化选择**：`select(RowId)` 未知身份返回 false；合法身份展开全部祖先使目标可见并滚动到该行。
+- **指针**：行内容点击选择（ctrl 切换 / shift 沿可见行序扩展）；展开器 gutter 点击只切换展开。
+- **键盘**：Up/Down/Home/End/PageUp/PageDown 移动；Right 展开或进入首子；Left 折叠或回到父；
+  Space 切换选择；Enter 激活（仅初次按下）。
+- **布局**：行内容从 `depth × indent_width + expander_gutter` 开始；框架在 gutter 绘制展开三角；
+  `ItemState.depth/has_children/expanded` 供作者 delegate 使用（DataTable/ListView 恒为 0/false）。
+- **虚拟化**：`UniformRowWindow` + `ItemHost`（`CellId{RowId, 空 ColumnId}`）只物化可见窗口；
+  `ItemBinding::column == nullptr`。
+- **主题**：`on_theme_changed` 重解析展开器颜色并刷新可见行 `theme_revision`；退出树释放 item
+  scope，重入树完整 reset 重建。
+
+### 10.3 非目标（v1）
+
+懒加载子节点、变高行、水平滚动、多列树、拖放、树形无障碍 role（暂用 `Role::list`）、typeahead、
+粘性/多选层次语义。后续按需增补，不改变现有接口语义。
+
+### 10.4 验证
+
+`tree-view` 21 用例/136 断言：折叠子树不物化、展开/折叠窗口、叶子拒绝、程序化 select 展开祖先、
+指针选择与展开器点击、键盘导航、隐藏 current 不响应 Enter/Space、data_changed 与 delegate
+替换复用/重建、遍历期 reset 后安全换 delegate、reset 保留/裁剪展开与选择、selection 回调
+异常后的刷新状态恢复、`ItemState` 三个字段与主题 revision 刷新、宽根列表虚拟化、脱离树构建、
+行高/缩进校验、typed model 令牌事务性拒绝、模型不可拷贝/移动、折叠后 shift 锚点回退。
+红先：始终展开子树、展开后不重建窗口、程序化选择不展开祖先均先红后绿；本轮另验证
+expand 回调抛出时可见账本提交顺序（2 断言红）、隐藏 current 的 Enter/Space 防护（2 断言红）、
+同帧 reset 后 materialize 新 delegate（旧 `model_row` 越界并多创建 2 个旧窗口项）、
+selection retain 回调抛出后刷新抑制标志恢复（1 断言红）。

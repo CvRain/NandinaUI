@@ -7,6 +7,7 @@
 #include <nandina/widget/internal/data_table.hpp>
 #include <nandina/widget/label.hpp>
 #include <nandina/widget/list_view.hpp>
+#include <nandina/widget/tree_view.hpp>
 
 #include <SDL3/SDL.h>
 
@@ -50,6 +51,51 @@ namespace
         ) override {}
     };
 
+    class SdkTreeModel final: public nandina::widget::TypedTreeModelBase<SdkTreeModel> {
+    public:
+        [[nodiscard]] auto row_count() const noexcept -> std::size_t override {
+            return 2;
+        }
+        [[nodiscard]] auto row_id(const std::size_t row) const -> nandina::widget::RowId override {
+            return nandina::widget::RowId {.value = row + 1};
+        }
+        [[nodiscard]] auto parent(const nandina::widget::RowId row) const
+            -> std::optional<nandina::widget::RowId> override {
+            if (row.value == 2) {
+                return nandina::widget::RowId {.value = 1};
+            }
+            return std::nullopt;
+        }
+        [[nodiscard]] auto child_count(const nandina::widget::RowId row) const
+            -> std::size_t override {
+            return row.value == 1 ? 1 : 0;
+        }
+        [[nodiscard]] auto child(const nandina::widget::RowId, const std::size_t) const
+            -> nandina::widget::RowId override {
+            return nandina::widget::RowId {.value = 2};
+        }
+    };
+
+    class SdkTreeDelegate final: public nandina::widget::TypedItemDelegate<SdkTreeModel> {
+    protected:
+        auto create_typed(
+            const nandina::widget::BuildContext& ui,
+            const SdkTreeModel&,
+            const nandina::widget::ItemBinding& binding
+        ) -> std::shared_ptr<nandina::scene::NanControl> override {
+            return nandina::widget::Label::create(
+                ui.graph(),
+                "node-" + std::to_string(binding.row.value),
+                ui.theme()
+            );
+        }
+        void update_typed(
+            nandina::scene::NanControl&,
+            const SdkTreeModel&,
+            const nandina::widget::ItemBinding&
+        ) override {}
+    };
+
     auto data_api_works(nandina::app::NanApplication& application) -> bool {
         nandina::reactive::ReactiveScope scope {application.graph()};
         nandina::widget::BuildContext ui {application.graph(), scope, application.theme_manager()};
@@ -88,6 +134,24 @@ namespace
         return list->row_count() == 2 && list->item_count() == 2
             && list->select(nandina::widget::RowId {.value = 2});
     }
+
+    auto tree_api_works(nandina::app::NanApplication& application) -> bool {
+        nandina::reactive::ReactiveScope scope {application.graph()};
+        nandina::widget::BuildContext ui {application.graph(), scope, application.theme_manager()};
+        SdkTreeModel model;
+        auto view = nandina::widget::TreeView::create(ui);
+        view->set_delegate(std::make_shared<SdkTreeDelegate>());
+        view->set_model(
+            std::shared_ptr<nandina::widget::ITreeModel>(&model, [](nandina::widget::ITreeModel*) {
+            })
+        );
+        nandina::scene::NanSceneTree tree;
+        tree.set_root(view);
+        (void)tree.layout_root(nandina::foundation::NanSize(320.0F, 200.0F));
+        return view->node_count() == 2 && view->row_count() == 1
+            && view->expand(nandina::widget::RowId {.value = 1}) && view->row_count() == 2
+            && view->select(nandina::widget::RowId {.value = 2});
+    }
 } // namespace
 
 int main() {
@@ -100,9 +164,10 @@ int main() {
     const auto decoder = application.image_decoder();
     const bool data_api = data_api_works(application);
     const bool list_api = list_api_works(application);
+    const bool tree_api = tree_api_works(application);
     const auto version = SDL_GetVersion();
     std::printf(
-        "backend=%.*s sdl=%d.%d.%d decoder=%d data-api=%d list-api=%d\n",
+        "backend=%.*s sdl=%d.%d.%d decoder=%d data-api=%d list-api=%d tree-api=%d\n",
         static_cast<int>(backend.size()),
         backend.data(),
         SDL_VERSIONNUM_MAJOR(version),
@@ -110,7 +175,8 @@ int main() {
         SDL_VERSIONNUM_MICRO(version),
         decoder != nullptr,
         data_api,
-        list_api
+        list_api,
+        tree_api
     );
-    return backend == "sdl3" && decoder != nullptr && data_api && list_api ? 0 : 1;
+    return backend == "sdl3" && decoder != nullptr && data_api && list_api && tree_api ? 0 : 1;
 }

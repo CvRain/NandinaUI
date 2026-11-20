@@ -222,9 +222,9 @@ single/multiple、范围选择与锚点、`retain()` 数据替换保留、`chang
 `ComponentTraits` 组件清单（声明式数据列表原语），入口是直接构造 + `set_source` /
 `set_model`。变高行、水平滚动、行内交互控件、无障碍语义与节点池回收不在本批；
 规则与边界见 [数据组件：选择模型与虚拟化依据](data_components_and_virtualization.md)。
-以上为 P4.2a 历史形态：旧模板 `ListView` 已在批 5 退役；当前 `widget/list_view.hpp` 是
-非模板虚拟化 `ListView`（`IRowModel` + `IItemDelegate` + `SelectionModel<RowId>`），入口为
-`ListView::create(...)` + `set_model` / `set_delegate`。`VirtualListView` 仍暂留到批 6。
+以上为 P4.2a 历史形态：旧模板 `ListView` 与 `VirtualListView` 已分别在批 5/批 6 退役；
+当前 `widget/list_view.hpp` 是非模板虚拟化 `ListView`（`IRowModel` + `IItemDelegate` +
+`SelectionModel<RowId>`），入口为 `ListView::create(...)` + `set_model` / `set_delegate`。
 
 2026-11-03 P4.1b 视觉表面作者入口（experimental，代码已提交 `0e7fca1`，Showcase 正式视觉验收待完成）：新增
 `widget/surface.hpp`，Surface 复用 Padding/BoxPainter/BoxPresentation，使用 `ui.surface()` /
@@ -498,6 +498,21 @@ experimental**，理由与后续动作写进清单——两个枚举是公开 wi
 由作者路径定义 typed model/item/header delegate 并通过 `ui.make<DataTable>()` 创建组件；
 `sdk-vendored-consumer` 在打包后的下游 SDK 中运行 `data-api=1` 消费探针。
 
+### 4.3 TreeView（批 6）
+
+批 6 新增两个 experimental 头：
+
+| 头文件 | 公共内容 |
+| --- | --- |
+| `widget/internal/tree_model.hpp` | `ITreeModel`、`TypedTreeModelBase`（先序行 + parent/child 查询；暂留 `internal/` 路径） |
+| `widget/tree_view.hpp` | 非模板 `TreeView`（视图持有展开、统一行高虚拟化、选择、缩进与框架展开器） |
+
+`ItemState` 增量 `depth`/`has_children`/`expanded`（DataTable/ListView 恒为 0/false）。
+`TreeView` 复用 `IItemDelegate`，不进入 `ComponentTraits` 清单（直接
+`TreeView::create(...)` + `set_model` / `set_delegate`）。契约见
+[数据组件](data_components_and_virtualization.md) §10。公共消费由 `data-public-api` 的
+TreeView 用例与 SDK consumer 的 `tree-api=1` 探针覆盖。
+
 ## 5. 破坏性变更的记录方式
 
 图片批同时有两处**破坏性 API 变更**，都要登记：
@@ -518,7 +533,8 @@ experimental**，理由与后续动作写进清单——两个枚举是公开 wi
 | 新增 `nanres schema` / `nanres --version` | `nanres` CLI（构建期工具） | 供外部工具握手与诊断；不属于应用运行时 API |
 | `supports_image_loading()` 收窄 + 新增 RGBA 上传查询 | `IRenderDevice`（设备实现方接口） | 原先判断"能不能显示图片"的调用方，改为分别查询解码服务、设备直载、设备 RGBA 上传三项，见 [D7](reference_draft.md#三项能力分开表达2026-10-17-定)。 |
 | `BuildContext::for_each()` 返回类型（批 4） | `widget/build_context.hpp`（experimental public） | 改为直接构造 `ForEach<Item, Key, Node>`；`.build()` 返回 `std::shared_ptr<ForEach<...>>`（原 `ListView<...>`）。参数、约束、key/create/update 回调与行为不变；`auto` 调用无需迁移，显式声明 `ListView`/`NodeBuilder<ListView<...>>` 的下游代码需改为 `ForEach`。旧 `ListView` 保留至批 5 退役 |
-| `widget/list_view.hpp` 模板 `ListView<Item, Key, NodeT>` 退役（批 5） | `widget/list_view.hpp`（experimental public） | 改为非模板 `ListView`（`IRowModel` + `IItemDelegate` + `SelectionModel<RowId>`；统一行高、自持纵向视口）。`BuildContext::for_each()` 保持批 4 的 `ForEach` 实现；`ListDataModelSource` 概念移到 `declarative.hpp`；`authoring.hpp` 不再传递包含 `list_view.hpp`，下游需显式包含。`VirtualListView` 暂留到批 6 |
+| `widget/list_view.hpp` 模板 `ListView<Item, Key, NodeT>` 退役（批 5） | `widget/list_view.hpp`（experimental public） | 改为非模板 `ListView`（`IRowModel` + `IItemDelegate` + `SelectionModel<RowId>`；统一行高、自持纵向视口）。`BuildContext::for_each()` 保持批 4 的 `ForEach` 实现；`ListDataModelSource` 概念移到 `declarative.hpp`；`authoring.hpp` 不再传递包含 `list_view.hpp`，下游需显式包含。`VirtualListView` 已在批 6 退役 |
+| `widget/virtual_list_view.hpp` 与模板 `VirtualListView<Item, Key, NodeT>` 移除（批 6） | `widget/virtual_list_view.hpp`（experimental public） | 改用非模板 `ListView`（`IRowModel` + `IItemDelegate` + `SelectionModel<RowId>`；统一行高、自持纵向视口）。原有虚拟化/选择行为由 `list-view` 与 `uniform-row-window` 测试覆盖；`set_source`/typeahead 等模板入口不再提供 |
 
 项目处于 alpha、源码集成、不承诺旧入口长期兼容，因此：
 
@@ -526,8 +542,8 @@ experimental**，理由与后续动作写进清单——两个枚举是公开 wi
 - 迁移说明只表达一件事：原来由自定义平台 override 提供的解码器，改为应用服务注入；
 - 库内实现、测试替身、下游样例一次改完，要求重新编译。
 
-退役后清单为 182 个头文件，其中 10 个 internal（清单随后续批次增长，当前为 213 个头文件：
-**197 experimental + 16 internal**。其中 data_identity、row_model、table_selection_model、
+退役后清单为 182 个头文件，其中 10 个 internal（清单随后续批次增长，当前为 214 个头文件：
+**198 experimental + 16 internal**。其中 data_identity、row_model、table_selection_model、
 grid_navigation、data_table、data_table_column、item_delegate 与 header_delegate 八个数据视图头
 在 3b③ 提升为 experimental，但仍暂留 `internal/` 路径；item_host 保持 internal；
 anchored_positioner.hpp 与 uniform_row_window.hpp 因被实验性公共头内联包含而登记为

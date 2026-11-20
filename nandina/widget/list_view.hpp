@@ -8,7 +8,6 @@
 // Relationship to the other list facilities:
 //   * ForEach stays the declarative full-list keyed region.
 //   * ListView (this class) is the virtualized data view; it does not wrap ForEach.
-//   * VirtualListView is the legacy template list and stays until its own migration batch.
 //
 // Rules and boundaries: docs/references/data_components_and_virtualization.md §9.
 //

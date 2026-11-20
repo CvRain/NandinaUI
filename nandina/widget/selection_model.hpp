@@ -129,7 +129,7 @@ namespace nandina::widget
          * 全部成员（跨度按 ordered 位置展开，保持行序）。from / to 不在 ordered 中
          * 时返回 false 且不改动任何状态。更新锚点为 to。
          *
-         * ordered 的键应当唯一（VirtualListView::set_source 已保证）；含重复键时
+         * ordered 的键应当唯一（模型契约保证 RowId 唯一）；含重复键时
          * 跨度会防御性去重（保留首次出现序），维持「selected() 是无重复的身份集合」
          * 不变量。返回值只表示选中集合是否变化：幂等重复的范围选择不触发事件，
          * 但锚点仍更新为 to。

@@ -96,7 +96,7 @@
 | P4.1a | **D6 盒内对齐子批（2026-11-03，已实施）**：Text/Label top/center/bottom、两轴构建器入口、paint-only/缓存与 viewport 单次缩放 | 对齐契约见 D6 §16 | 多行/短盒/renderer/缓存回归；Label 页和 ComponentInfoTable 默认行为/宽度变化验收。P4.1 其余绑定覆盖、作者能力表与完整测量契约仍待定形 |
 | P4.1 文本作者/绑定子批 | **已实施（2026-11-03）**：字体/溢出/行数 builder，当前布局结果查询，单源文本绑定、直接写入替代与作用域/退出树清理 | D6 §17 | Property/Label/BuildContext 共用绑定身份；迟到/重入回调不会复活旧源；字体请求失效回归。逐字段 reset 与完整 D6 仍保留 |
 | P4.1b | **视觉表面作者能力（已提交 `0e7fca1`，代码复核完成，2026-11-03；2026-11-13 Showcase 视觉验收完成）**：可设圆角/内容的 `Surface` 原语、Card content inset、Image cover 的百分比裁剪锚点 | P4.1 的测量稳定；不新增第二套绘制路径 | 登录页可让图片真正贴边；Image 可用百分比锚点裁剪 cover；`showcase/pages/surface_page.cpp` + `[surface][showcase]` 页面测试 + 双平台 CPU/SDF 4 条新 golden 已批准（圆角不裁剪子内容如实展示） |
-| P4.2a | **阶段 5 数据基础（已提交 `5d91e01`，维护者复核完成，2026-11-04）**：SelectionModel + VirtualListView，布局/选择/虚拟化依据 | P4.1 与布局稳定 | 复合数据组件基础有虚拟化与选择回归；契约见 [数据组件：选择模型与虚拟化依据](data_components_and_virtualization.md) |
+| P4.2a | **阶段 5 数据基础（已提交 `5d91e01`，维护者复核完成，2026-11-04）**：SelectionModel + VirtualListView（后者已于批 6 退役），布局/选择/虚拟化依据 | P4.1 与布局稳定 | 复合数据组件基础有虚拟化与选择回归；契约见 [数据组件：选择模型与虚拟化依据](data_components_and_virtualization.md) |
 | P4.2b | **静态 Table 布局（2026-11-05，代码复核收口；2026-11-13 Showcase 视觉验收完成）**：共享列宽、自然行高、表头/单元格语义与 Builder 槽位 | P4.2a 数据基础 | 有限宽度 wrap、列轨道一致、树语义与滚动组合回归；`showcase/pages/table_page.cpp` + `[table][showcase]` 页面测试；双平台 CPU+SDF 8 条新 golden 已批准（与 Collapsible 合并计数） |
 | P4.2c | **Collapsible（2026-11-05，已随 `095336b` 提交；2026-11-13 Showcase 视觉验收完成）**：保留内容的折叠、统一激活、焦点恢复、Signal 与语义 expanded | P4.2b 代码收口；既有 Button/布局/绑定 | 布局收敛、内容生命周期、键盘/语义/回调重入与作用域回归；`showcase/pages/collapsible_page.cpp` + `[collapsible][showcase]` 页面测试；双平台 CPU+SDF 8 条新 golden 已批准（与 Table 合并计数） |
 | P4.3 | **D2 主题状态订阅**、**D3 nav_group**、**作者颜色入口（新增）**：显式 `NanColor` 覆盖与 primitive palette 访问，不为 red/blue 等追加语义 token | D2 通知与生命周期定形；D3 无跨专题前置 | Shell 无重复事实来源；自定义组件可设任意颜色；语义 token 仍是默认；空组/合并/顺序/typed navigation 回归 |
@@ -135,7 +135,7 @@
    与后续业务页另批。仅 Theme Shell 页另排。
 6. **组件扩展**：DataTable/ListView 契约 v3.1 已于 2026-11-15 定稿，**1A TrackSolver + 静态
    Table 接入已完成并提交**（[数据组件 §9](data_components_and_virtualization.md#9-p42d-数据视图契约datatable-与-listviewv31-定稿)：
-   `IRowModel`/`DataTableColumn`/`IItemDelegate`/选择模型）；1B 行窗口已完成并提交（2026-11-16）；2A/2B 已完成并提交（2026-11-16）、3a 内部虚拟化已完成并提交（2026-11-17）、3b① 输入/导航/表头语义已完成并提交（2026-11-17）、3b② 作者 HeaderDelegate/主题重解析已完成并提交（2026-11-17）、3b③ DataTable 公共导出已完成并提交（2026-11-18）、批 4 `BuildContext::for_each()` 改 `ForEach` 直接实现已完成并提交（2026-11-19，`03783cf`）、批 5 新虚拟化 `ListView` + notebook 迁移 + 旧 `ListView` 退役已完成并提交（2026-11-19，`e96542f`）；随后 Accordion；
+   `IRowModel`/`DataTableColumn`/`IItemDelegate`/选择模型）；1B 行窗口已完成并提交（2026-11-16）；2A/2B 已完成并提交（2026-11-16）、3a 内部虚拟化已完成并提交（2026-11-17）、3b① 输入/导航/表头语义已完成并提交（2026-11-17）、3b② 作者 HeaderDelegate/主题重解析已完成并提交（2026-11-17）、3b③ DataTable 公共导出已完成并提交（2026-11-18）、批 4 `BuildContext::for_each()` 改 `ForEach` 直接实现已完成并提交（2026-11-19，`03783cf`）、批 5 新虚拟化 `ListView` + notebook 迁移 + 旧 `ListView` 退役已完成并提交（2026-11-19，`e96542f`）、批 6 `VirtualListView` 退役 + TreeView v1 已完成（实现 + 验证）；随后 Accordion；
    Sheet/Drawer/Resizable/AspectRatio 按需。静态 Table 保持 experimental。
 7. **P4.4 视觉覆盖**：`input_focus` golden；`image` 页进 probe 并挂载 showcase 资源包（当前无
    golden）；新页面 approved 后自动进入 CI CPU 门禁。

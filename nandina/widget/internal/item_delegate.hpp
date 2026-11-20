@@ -33,6 +33,11 @@ namespace nandina::widget
         bool hovered = false;
         bool enabled = true;
         std::uint64_t theme_revision = 0;
+
+        // TreeView 行结构；DataTable/ListView 恒为 0/false。
+        std::size_t depth = 0;
+        bool has_children = false;
+        bool expanded = false;
     };
 
     /// 同步借用；delegate 不得保存引用/指针到控件生命周期之后。

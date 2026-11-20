@@ -85,7 +85,8 @@
 （见 [菜单族条目模型](../references/menu_model.md)）。
 
 仍待实现的信息组织组件：`Accordion`、`Sheet`；新虚拟化 `ListView` 已在批 5 交付（`IRowModel` +
-`IItemDelegate` + `SelectionModel<RowId>`），`VirtualListView` 的迁移/退役另列批 6。
+`IItemDelegate` + `SelectionModel<RowId>`），`TreeView` v1 已在批 6 交付（`ITreeModel` +
+视图持有展开 + 统一行高虚拟化），旧模板 `VirtualListView` 已退役。
 
 计划顺序与依赖关系见 [组件开发路线图](../references/component_roadmap.md)。
 
