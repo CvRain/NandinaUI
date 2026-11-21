@@ -882,3 +882,7 @@ level = "experimental"
 [[headers]]
 path = "nandina/widget/collapsible.hpp"
 level = "experimental"
+
+[[headers]]
+path = "nandina/widget/accordion.hpp"
+level = "experimental"

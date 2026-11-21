@@ -35,9 +35,21 @@ application shell. Version `0.1.0-alpha.1`.
   142/142; current headless recheck: unit 118 OK +1 environment skip, full suite 139 OK
   +3 environment skips (`sdf-device`/`sdf-state-probe`/`window-lifecycle`), ASan 117 OK
   +1 skip, no-RTTI 118 OK +1 skip, no-SQLite 114 OK +1 skip, pure tools 8/8,
-  `release_check --ci` 8/8. **Next: Accordion (component roadmap).**
-- **Baseline counts**: 142 tests (119 unit + 23 integration), 214 headers (198 experimental +
-  16 internal), 28 approved page goldens (7 pages × CPU/SDF × 2 platforms), 39 public
+  `release_check --ci` 8/8.
+- **Batch 7 (Accordion) implemented and verified**: composes `Collapsible` sections
+  (`AccordionSection` id/title/content/disabled); single/multiple open state (single allows
+  empty), view-owned state, Up/Down/Home/End focus roaming (skips disabled), transactional
+  `set_sections` retaining same-id open state; `focus_section()` for the narrow trigger-focus
+  path; no new recipe (`Surface`/`Divider` compose separators). Contract
+  `disclosure_components.md` §7. Verification: `accordion` 18 cases/129 assertions.
+  Operator desktop record: unit 120/120, full suite 143/143, no-RTTI 120/120. Current
+  headless recheck: unit 119 OK +1 environment skip, full suite 140 OK +3 environment
+  skips (`sdf-device`/`sdf-state-probe`/`window-lifecycle`), ASan 118 OK +1 skip,
+  no-RTTI 119 OK +1 skip, no-SQLite 115 OK +1 skip, pure tools 8/8,
+  `release_check --ci` 8/8 (headers 215 = 199 experimental + 16 internal, docs 97).
+  **Next: Sheet (component roadmap).**
+- **Baseline counts**: 143 tests (120 unit + 23 integration), 215 headers (199 experimental +
+  16 internal), 28 approved page goldens (7 pages × CPU/SDF × 2 platforms), 40 public
   components; the CPU page-golden CI gate is blocking (7 pages).
 - **Do not over-claim**: Windows is experimental (only real exit codes/logs count; GPU/SDF and
   GUI checks need an interactive desktop, CPU paths can use `--renderer sdl2d` over SSH);
@@ -60,8 +72,9 @@ application shell. Version `0.1.0-alpha.1`.
   - Surfaces/layout: `ui.surface()`, Card content insets, Image cover anchors (rounded corners
     do not mask children — rectangular scene clip); Table shared tracks/natural row
     heights/semantics (selection/sort/virtualization belong to DataTable); Collapsible retained
-    content + Signal + focus restore. See `data_components_and_virtualization.md` §8,
-    `disclosure_components.md`.
+    content + Signal + focus restore; Accordion v1 composes Collapsible sections (single/multiple,
+    view-owned open state, Up/Down/Home/End roaming, no new recipe). See
+    `data_components_and_virtualization.md` §8, `disclosure_components.md` §7.
   - Theme: presentation/selection/catalog projections, before/after change events, scheme
     catalog + typed IDs, author color entry, 148 named colors (C++/TOML), CPU compositor +
     contrast diagnostics. See `theme_authoring_and_state.md` §5–§20.

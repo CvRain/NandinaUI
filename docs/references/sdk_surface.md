@@ -513,6 +513,14 @@ experimental**，理由与后续动作写进清单——两个枚举是公开 wi
 [数据组件](data_components_and_virtualization.md) §10。公共消费由 `data-public-api` 的
 TreeView 用例与 SDK consumer 的 `tree-api=1` 探针覆盖。
 
+### 4.4 Accordion（批 7）
+
+批 7 新增 `widget/accordion.hpp`（experimental）：`Accordion`、`AccordionMode`、
+`AccordionSection`。组合 `Collapsible`（触发器 Button + 内容宿主），无新配方；
+`ui.make<Accordion>()` 入口，`set_sections` 事务性替换并保留同 id 的 open 状态。契约见
+[折叠内容组件](disclosure_components.md) §7。打包 SDK consumer 通过静态/共享 SDL3
+两种链接运行 `accordion-api=1` 探针。
+
 ## 5. 破坏性变更的记录方式
 
 图片批同时有两处**破坏性 API 变更**，都要登记：
@@ -542,8 +550,8 @@ TreeView 用例与 SDK consumer 的 `tree-api=1` 探针覆盖。
 - 迁移说明只表达一件事：原来由自定义平台 override 提供的解码器，改为应用服务注入；
 - 库内实现、测试替身、下游样例一次改完，要求重新编译。
 
-退役后清单为 182 个头文件，其中 10 个 internal（清单随后续批次增长，当前为 214 个头文件：
-**198 experimental + 16 internal**。其中 data_identity、row_model、table_selection_model、
+退役后清单为 182 个头文件，其中 10 个 internal（清单随后续批次增长，当前为 215 个头文件：
+**199 experimental + 16 internal**。其中 data_identity、row_model、table_selection_model、
 grid_navigation、data_table、data_table_column、item_delegate 与 header_delegate 八个数据视图头
 在 3b③ 提升为 experimental，但仍暂留 `internal/` 路径；item_host 保持 internal；
 anchored_positioner.hpp 与 uniform_row_window.hpp 因被实验性公共头内联包含而登记为

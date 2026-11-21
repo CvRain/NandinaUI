@@ -13,6 +13,8 @@
 
 namespace nandina::widget
 {
+    class Accordion;
+
     /// A disclosure reuses Button input/style and hides its retained content host.
     /// Programmatic set_open is silent; user toggle emits open_changed and on_change.
     class Collapsible final: public scene::NanControl {
@@ -51,6 +53,8 @@ namespace nandina::widget
         [[nodiscard]] auto semantics_properties() const -> semantics::Properties override;
 
     private:
+        friend class Accordion;
+
         struct State;
         class Trigger;
         struct Geometry {
@@ -61,6 +65,7 @@ namespace nandina::widget
         };
         [[nodiscard]] auto geometry(float width) -> Geometry;
         void release_content_input();
+        [[nodiscard]] auto trigger_control() noexcept -> Button&;
 
         std::shared_ptr<State> state_;
         std::shared_ptr<Trigger> trigger_;

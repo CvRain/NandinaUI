@@ -73,13 +73,16 @@ SQLite 数据层与资源驱动的迁移、账户服务与登录/注册，以及
 
 | 类别 | 当前可用 |
 | --- | --- |
-| 内容与展示 | Label、Image、Avatar（首字母占位）、Badge、Chip、Divider、ProgressBar、Spinner、Skeleton、EmptyState、Card、Collapsible、Table |
+| 内容与展示 | Label、Image、Avatar（首字母占位）、Badge、Chip、Divider、ProgressBar、Spinner、Skeleton、EmptyState、Card、Collapsible、Accordion、Table |
 | 输入与选择 | Button、Checkbox、Switch、RadioButton/RadioGroup、Slider、TextField、TextArea、Select、Combobox、Tabs、Toggle、ToggleGroup、ButtonGroup、Breadcrumb、Pagination |
 | 浮层与反馈 | Dialog、AlertDialog、Popover、DropdownMenu、ContextMenu、CommandPalette、HoverCard、Tooltip、Alert |
 | 交互扩展 | PointerArea、GestureArea（实验性） |
 | 布局与滚动 | Column、Row、Flex、FlexItem、Wrap、Stack、Padding、Center、Expanded、Grid、ScrollView、ListView |
 
-表中前四类共 39 个公开组件（`RadioGroup` 与 `RadioButton` 同行记录；`Table` 当前为 experimental，`Collapsible` 于 P4.2c 加入）；"布局与滚动"一栏是声明式布局原语，不计入组件数。完整的用途、成熟度与计划组件见 [组件参考](docs/components/README.md) 与[组件文档覆盖看板](docs/components/coverage.md)。
+表中前四类共 40 个公开组件（`RadioGroup` 与 `RadioButton` 同行记录；`Table`/`Collapsible`/`Accordion`
+当前为 experimental，`Collapsible` 于 P4.2c、`Accordion` 于批 7 加入）；"布局与滚动"一栏是
+声明式布局原语，不计入组件数。完整的用途、成熟度与计划组件见
+[组件参考](docs/components/README.md) 与[组件文档覆盖看板](docs/components/coverage.md)。
 
 当前布局以 Column、Row、Flex、Grid 等排列容器为主。场景树 anchors 已落地 scene 内核（`NodeRef<T>`、`AnchorCanvas`、`set_anchors`）与作者入口（`ui.ref<T>()`、`ui.anchor_canvas()`、builder 的 `.anchor.*` / `.parent.anchor.*` 与 `.anchors(...)`），支持父级/兄弟关系、依赖排序、批量关系切换与冲突诊断；`showcase` 的 `anchors` 页面提供侧边栏停靠切换案例。当前边界是**画布需要确定尺寸，因此 `fill` 画布无法占据排列容器的剩余空间**（显式/百分比尺寸的画布可以嵌入排列容器），把画布放在布局根再用兄弟锚点表达剩余区域即可，见 [Anchors](docs/references/anchors.md)。它与浮层锚定定位器是两项独立能力。
 
@@ -477,7 +480,7 @@ D1–D8 是设计编号，**不表示执行顺序**。设计接受、实现完�
 2. **OS 无障碍文本缩放收口**：Linux 来源与持久化归属决策；Windows 来源已接（2026-11-13）。
 3. **平台验收清账**：P3.3b2b（X11/独立 Xorg/Windows/候选窗）与 P4.5 残余（Wayland 分数缩放、热插拔、在线缩放）。
 4. **D2 收口**：注册期对比度门槛、Linux 默认 swapchain/其他驱动 readback、内部广播收窄；Shell 页正文由维护者交付。
-5. **组件扩展**：DataTable/ListView 契约 v3.1 已定稿，1A 轨道解算器、1B 行窗口、2A 数据视图协议、2B 全量 DataTable、3a 内部虚拟化、3b① 输入/导航/表头语义、3b② 作者 HeaderDelegate/主题重解析均已提交；3b③ DataTable 公共导出（8 个 experimental 头、公共 hash、下游消费探针）已完成并提交（2026-11-18，见[数据组件 §9](docs/references/data_components_and_virtualization.md#9-p42d-数据视图契约datatable-与-listviewv31-定稿)）；批 4 `BuildContext::for_each()` 改 `ForEach` 直接实现已完成并提交（2026-11-19，`03783cf`）；批 5 新虚拟化 `ListView` + notebook 迁移 + 旧 `ListView` 退役已完成并提交（2026-11-19，`e96542f`）；批 6 `VirtualListView` 退役 + TreeView v1 已完成（实现 + 验证）。随后 Accordion；Sheet/Drawer 按需。
+5. **组件扩展**：DataTable/ListView 契约 v3.1 已定稿，1A 轨道解算器、1B 行窗口、2A 数据视图协议、2B 全量 DataTable、3a 内部虚拟化、3b① 输入/导航/表头语义、3b② 作者 HeaderDelegate/主题重解析均已提交；3b③ DataTable 公共导出（8 个 experimental 头、公共 hash、下游消费探针）已完成并提交（2026-11-18，见[数据组件 §9](docs/references/data_components_and_virtualization.md#9-p42d-数据视图契约datatable-与-listviewv31-定稿)）；批 4 `BuildContext::for_each()` 改 `ForEach` 直接实现已完成并提交（2026-11-19，`03783cf`）；批 5 新虚拟化 `ListView` + notebook 迁移 + 旧 `ListView` 退役已完成并提交（2026-11-19，`e96542f`）；批 6 `VirtualListView` 退役 + TreeView v1 已完成（实现 + 验证）；批 7 Accordion 已完成（实现 + 验证）。随后 Sheet/Drawer 按需。
 6. **视觉与性能补充**：P4.4（input_focus golden、image 页 probe 资源挂载）与 P4.8a/c（计时日志、opt-in 批量测量）。
 7. **单独立项**：布局契约（`max_width` 与 anchors `fill`/百分比占空间）需先改 anchors/layout 契约与全部页面 golden，不与组件批混做。
 

@@ -207,6 +207,10 @@ namespace nandina::widget
         return *trigger_;
     }
 
+    auto Collapsible::trigger_control() noexcept -> Button& {
+        return *trigger_;
+    }
+
     void Collapsible::set_trigger_override(theme::ButtonRecipeRule rule) {
         trigger_->set_override(std::move(rule));
         mark_layout_dirty();

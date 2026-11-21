@@ -112,3 +112,67 @@ Collapsible 自身没有布局缺陷，但 showcase `收起与展开` / `Signal 
 新增页面级回归 `[collapsible][showcase][layout]`：900/1200 宽度下展开内容底边必须落在
 Collapsible 底边之内；运行时 `toggle()` 后复检；禁用实例 `toggle()` 不改变状态且不请求
 布局。Linux `collapsible` CPU/SDF 基线重采（候选），待维护者审阅后批准。
+
+## 7. Accordion（批 7，v1）
+
+> 状态：2026-11-20 实现 + 验证。**组合 Collapsible，不新增配方**；维护者决策：single +
+> multiple、single 允许全部收起、Up/Down/Home/End 漫游、分隔线由作者组合。
+
+### 7.1 API 与状态
+
+- `Accordion(theme)` / `Accordion::create(theme)`；`ui.make<Accordion>()`（ComponentTraits）。
+- `AccordionSection { id, title, content, disabled }`。`set_sections` 事务性校验：id 非空唯一、
+  title 非空、content 非空且已脱离树、未设置 anchors、不得与 Accordion 形成祖先/后代环、
+  内容指针不得重复。
+  所有新 Collapsible/content staging 成功后才排队提交；遍历期作者输入错误仍在 `set_sections()`
+  调用点同步抛出，不留给 frame mutation flush。同 id 保留 open 状态；程序化替换不发
+  `open_changed`。
+- `AccordionMode::single`（默认；至多一个展开，允许全部收起）/ `multiple`。
+- `set_open` / `set_open_ids` 是静默程序同步：未知 id 返回 false，`set_open_ids` 任一未知整体
+  失败且不改状态；single 模式下打开一项静默关闭其它项（`set_open_ids` 保留 section 序首个）。
+- `toggle` 是用户式切换：经 `Collapsible::toggle` 发出 `open_changed`；未知 id 返回 false。
+  `open_changed()` 无载荷，订阅方读取 `open_ids()`（按 section 顺序）。
+- `set_section_disabled` / `set_section_title`（空标题抛 invalid_argument）；`set_gap`（有限
+  非负）；`set_label`；`section_node` / `trigger_node` / `sections()` 只读查询；
+  `focus_section(id)` 提供不暴露可写 Button 的聚焦入口。状态与描述更新必须走 Accordion setter。
+- 遍历期 `set_sections` 经 `defer_tree_mutation` 延迟；`shared_ptr` 持有约定同 ScrollView
+  （布局期/遍历期延迟动作使用 `shared_from_this()`）。
+
+### 7.2 组合与输入
+
+- 每节组合既有 `Collapsible`：触发器 Button 的点击、Enter/Space 与语义 activate 汇聚到
+  toggle；焦点、语义 expanded、禁用、内容保留与焦点恢复沿用 Collapsible 契约。
+- single 模式：任一 section 打开时静默关闭其它；`set_mode(single)` 保留 section 序首个。
+- 键盘：Accordion 在冒泡阶段处理 Up/Down/Home/End，在 section 触发器间移动焦点；Home/End
+  首尾，跳过 disabled，边界不环绕；触发器自身的 Enter/Space 先于漫游。
+- 无障碍：Accordion 为 generic 容器 + 可选 `label`；触发器是 button + expanded；不新增
+  ARIA controls/labelledby（语义协议尚无该字段）。
+
+### 7.3 布局与视觉
+
+- 纵向堆叠：有限宽度下每节 tight 宽度、无界高度；无界宽度取各节自然宽最大值；`gap` 只加在
+  节间。自然高度与间距总和在 float 内校验，超限抛 invalid_argument。
+- 无新配方：section 复用 Collapsible/Button 视觉；分隔线/边框由作者用 Surface、Divider 或
+  自定义节点组合；默认矩形裁剪。
+
+### 7.4 非目标
+
+动画、model/delegate 驱动、多列、typeahead、多级嵌套、ARIA controls/labelledby、section
+拖拽/重排。
+
+### 7.5 验证（2026-11-20，Linux）
+
+- `accordion` 18 用例 / 129 断言：组合/布局、事务性校验（重复 id、空 id/title、空/重复内容、
+  已挂载/自引用/祖先内容、anchored staging）、遍历期延迟与同步拒绝、single/multiple、
+  程序化静默与未知 id、同 id 状态保留、disabled、点击/Enter/Space 互斥、焦点漫游、
+  aggregate 回调释放 owner/后续订阅者、焦点回调中重入替换 section、标题更新、gap、语义、
+  BuildContext 入口。
+- 红先（均先失败后恢复）：
+  1. 移除 single 互斥 → `open_ids` 不再唯一、全部收起断言失败；
+  2. 移除焦点移动 → Up/Down/Home/End 漫游断言失败；
+  3. 跳过重复 id 校验 → 重复 id 不再抛错；
+  4. 移除 content 祖先/自引用校验 → 循环 content 被接受，回归进程 `SIGSEGV`；
+  5. staging 跳过 `Collapsible::set_child` → anchored content 未在调用点抛错，旧 section
+     计数与 open 状态断言失败；
+  6. 移除 aggregate owner 保活 → ASan 在 `reactive/event.hpp:76` 检出 heap-use-after-free；
+     保活后回调内释放 owner、后续订阅者仍各执行一次。

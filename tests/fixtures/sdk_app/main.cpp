@@ -4,6 +4,7 @@
 #include <nandina/reactive/scope.hpp>
 #include <nandina/scene/scene_tree.hpp>
 #include <nandina/widget/build_context.hpp>
+#include <nandina/widget/controls.hpp>
 #include <nandina/widget/internal/data_table.hpp>
 #include <nandina/widget/label.hpp>
 #include <nandina/widget/list_view.hpp>
@@ -152,6 +153,26 @@ namespace
             && view->expand(nandina::widget::RowId {.value = 1}) && view->row_count() == 2
             && view->select(nandina::widget::RowId {.value = 2});
     }
+
+    auto accordion_api_works(nandina::app::NanApplication& application) -> bool {
+        nandina::reactive::ReactiveScope scope {application.graph()};
+        nandina::widget::BuildContext ui {application.graph(), scope, application.theme_manager()};
+        auto accordion = ui.make<nandina::widget::Accordion>().build();
+        auto content = nandina::widget::Label::create(
+            application.graph(),
+            "section body",
+            application.theme()
+        );
+        accordion->set_sections({
+            {.id = "first", .title = "First", .content = std::move(content)},
+        });
+        nandina::scene::NanSceneTree tree;
+        tree.set_root(accordion);
+        (void)tree.layout_root(nandina::foundation::NanSize(320.0F, 200.0F));
+        return accordion->section_count() == 1
+            && accordion->trigger_node("first")->text() == "First" && accordion->toggle("first")
+            && accordion->is_open("first");
+    }
 } // namespace
 
 int main() {
@@ -165,9 +186,11 @@ int main() {
     const bool data_api = data_api_works(application);
     const bool list_api = list_api_works(application);
     const bool tree_api = tree_api_works(application);
+    const bool accordion_api = accordion_api_works(application);
     const auto version = SDL_GetVersion();
     std::printf(
-        "backend=%.*s sdl=%d.%d.%d decoder=%d data-api=%d list-api=%d tree-api=%d\n",
+        "backend=%.*s sdl=%d.%d.%d decoder=%d data-api=%d list-api=%d tree-api=%d "
+        "accordion-api=%d\n",
         static_cast<int>(backend.size()),
         backend.data(),
         SDL_VERSIONNUM_MAJOR(version),
@@ -176,7 +199,11 @@ int main() {
         decoder != nullptr,
         data_api,
         list_api,
-        tree_api
+        tree_api,
+        accordion_api
     );
-    return backend == "sdl3" && decoder != nullptr && data_api && list_api && tree_api ? 0 : 1;
+    return backend == "sdl3" && decoder != nullptr && data_api && list_api && tree_api
+            && accordion_api
+        ? 0
+        : 1;
 }

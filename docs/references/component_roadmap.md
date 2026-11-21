@@ -103,7 +103,10 @@ P4.6 排版尺度与语义 role 指标已交付；剩余样式 reset、完整测
 
 ## 阶段 5：信息组织与数据展示
 
-- `Accordion`；`Collapsible` 已随 `095336b` 提交，**Showcase 视觉验收已于 2026-11-13 完成**
+- `Accordion`（批 7，experimental，已实现）：组合 `Collapsible` 的 single/multiple、
+  Up/Down/Home/End 漫游、section 身份与静默程序状态；契约见
+  [折叠内容组件](disclosure_components.md) §7；`Collapsible` 已随 `095336b` 提交，
+  **Showcase 视觉验收已于 2026-11-13 完成**
   （双平台 CPU+SDF 8 条新基线批准，见 [折叠内容组件契约](disclosure_components.md)）；
 - `Sheet`、`Drawer`；
 - `Resizable`、`AspectRatio`；
@@ -114,7 +117,7 @@ P4.6 排版尺度与语义 role 指标已交付；剩余样式 reset、完整测
   （[数据组件 §9](data_components_and_virtualization.md#9-p42d-数据视图契约datatable-与-listviewv31-定稿)）：
   非模板组件 + `IRowModel` + `DataTableColumn` + `IItemDelegate` + 显式选择模型；八个作者/
   组件头已转 experimental，`ItemHost` 保持 internal；新 `ListView` 与 TreeView v1 已交付，
-  后续 Accordion。
+  后续 Sheet/Drawer。
 
 ## 暂不进入核心优先级
 

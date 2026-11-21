@@ -28,6 +28,7 @@
 | [`EmptyState`](empty_state.md) | 列表或集合暂空时的占位与引导 | 可用 |
 | [`Card`](card.md) | 带主题外观的单子内容容器 | 可用（content insets experimental；文档提纲） |
 | [`Collapsible`](collapsible.md) | 保留内容状态的折叠区域 | 实验性（P4.2c 初稿，视觉验收待完成） |
+| [`Accordion`](accordion.md) | 协调多个 Collapsible 区段的 single/multiple 展开状态 | 实验性（批 7 v1；Up/Down/Home/End 漫游） |
 | [`Table`](table.md) | 静态内容表格，共享列宽并按行自然增长 | 实验性（P4.2b 代码复核与 2026-11-13 视觉验收完成；无选择/排序/虚拟化） |
 | [`DataTable`](data_table.md) | 行模型驱动的虚拟化数据表格，含选择、排序、delegate 与固定表头 | 实验性（3b③ 公共导出已完成；键盘/指针/主题已接入） |
 
@@ -84,9 +85,10 @@
 `Combobox`、`CommandPalette`、`HoverCard` 与 `AlertDialog`
 （见 [菜单族条目模型](../references/menu_model.md)）。
 
-仍待实现的信息组织组件：`Accordion`、`Sheet`；新虚拟化 `ListView` 已在批 5 交付（`IRowModel` +
-`IItemDelegate` + `SelectionModel<RowId>`），`TreeView` v1 已在批 6 交付（`ITreeModel` +
-视图持有展开 + 统一行高虚拟化），旧模板 `VirtualListView` 已退役。
+仍待实现的组件：`Sheet`；`Accordion` v1 已在批 7 交付（组合 `Collapsible`、single/multiple、
+Up/Down/Home/End 漫游；见 [Accordion](accordion.md)），新虚拟化 `ListView` 已在批 5 交付
+（`IRowModel` + `IItemDelegate` + `SelectionModel<RowId>`），`TreeView` v1 已在批 6 交付
+（`ITreeModel` + 视图持有展开 + 统一行高虚拟化），旧模板 `VirtualListView` 已退役。
 
 计划顺序与依赖关系见 [组件开发路线图](../references/component_roadmap.md)。
 

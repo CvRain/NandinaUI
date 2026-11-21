@@ -155,6 +155,8 @@ module_widget = files(
     'widget/reactive_control.hpp',
     'widget/bindable_rect.hpp',
     'widget/declarative.hpp',
+    'widget/accordion.hpp',
+    'widget/accordion.cpp',
     'widget/list_view.hpp',
     'widget/list_view.cpp',
     'widget/tree_view.hpp',

@@ -26,6 +26,7 @@ namespace nandina::showcase
         skeleton,
         empty_state,
         collapsible,
+        accordion,
         table,
         card,
         button,
@@ -135,6 +136,13 @@ namespace nandina::showcase
             ComponentCategory::content,
             "Collapsible",
             "折叠与展开保留状态的内容区域",
+            true
+        },
+        ComponentInfo {
+            ComponentId::accordion,
+            ComponentCategory::content,
+            "Accordion",
+            "协调多个保留内容的折叠区段与展开状态",
             true
         },
         ComponentInfo {

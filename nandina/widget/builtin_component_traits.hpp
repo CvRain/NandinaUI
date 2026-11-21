@@ -5,6 +5,7 @@
 #ifndef NANDINA_EXPERIMENT_WIDGET_BUILTIN_COMPONENT_TRAITS_HPP
 #define NANDINA_EXPERIMENT_WIDGET_BUILTIN_COMPONENT_TRAITS_HPP
 
+#include "accordion.hpp"
 #include "alert.hpp"
 #include "alert_dialog.hpp"
 #include "avatar.hpp"
@@ -49,6 +50,14 @@
 
 namespace nandina::widget
 {
+    template<>
+    struct ComponentTraits<Accordion> {
+        [[nodiscard]] static auto make(const BuildContext& ui)
+            -> authoring::NodeBuilder<Accordion> {
+            return authoring::make<Accordion>(ui.theme());
+        }
+    };
+
     template<>
     struct ComponentTraits<Collapsible> {
         [[nodiscard]] static auto make(const BuildContext& ui, std::string text)

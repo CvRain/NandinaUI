@@ -391,6 +391,13 @@ tree_view_tests = executable(
 )
 test('tree-view', tree_view_tests, suite: 'unit')
 
+accordion_tests = executable(
+    'accordion_tests',
+    files('accordion_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('accordion', accordion_tests, suite: 'unit')
+
 widget_tests = executable(
     'widget_tests',
     files('widget_tests.cpp'),
