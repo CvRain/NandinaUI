@@ -9,8 +9,8 @@
 #include <nandina/scene/scene_tree.hpp>
 #include <nandina/theme/theme_manager.hpp>
 #include <nandina/widget/build_context.hpp>
-#include <nandina/widget/internal/tree_model.hpp>
 #include <nandina/widget/label.hpp>
+#include <nandina/widget/tree_model.hpp>
 #include <nandina/widget/tree_view.hpp>
 
 #include <catch2/catch_test_macros.hpp>

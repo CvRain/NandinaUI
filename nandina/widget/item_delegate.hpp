@@ -1,18 +1,16 @@
 //
-// widget/internal/item_delegate — DataTable/ListView 的单元格创建与更新协议（experimental）。
+// widget/item_delegate — DataTable/ListView/TreeView 的单元格创建与更新协议（experimental）。
 //
-// 文件暂留在 internal/ 目录，但 3b③ 起按 experimental 公共头开放。create_item 才拿
-// item-scoped BuildContext（with_scope），可用于建控件/effect/subscription；update_item
-// 会被反复调用，只能更新控件，不得安装 effect/subscription。所有借用引用只在当次调用
-// 期间有效。TypedItemDelegate 在每次转换前重新校验无 RTTI 令牌。
+// create_item 才拿 item-scoped BuildContext（with_scope），可用于建控件/effect/subscription；
+// update_item 会被反复调用，只能更新控件，不得安装 effect/subscription。所有借用引用只在
+// 当次调用期间有效。TypedItemDelegate 在每次转换前重新校验无 RTTI 令牌。
 //
 
-#ifndef NANDINA_EXPERIMENT_WIDGET_INTERNAL_ITEM_DELEGATE_HPP
-#define NANDINA_EXPERIMENT_WIDGET_INTERNAL_ITEM_DELEGATE_HPP
+#ifndef NANDINA_EXPERIMENT_WIDGET_ITEM_DELEGATE_HPP
+#define NANDINA_EXPERIMENT_WIDGET_ITEM_DELEGATE_HPP
 
-#include "../../scene/control.hpp"
-#include "../../widget/build_context.hpp"
-#include "../../widget/label.hpp"
+#include "../scene/control.hpp"
+#include "build_context.hpp"
 #include "data_identity.hpp"
 #include "row_model.hpp"
 
@@ -93,7 +91,8 @@ namespace nandina::widget
         }
     };
 
-    /// 2B 默认单元格视觉：单行 Label，文本来自列取值器（按值返回，避免悬垂 view）。
+    /// 默认单元格视觉：基于 Label 的单行省略文本，并消费 ItemState::selected / current
+    /// 绘制主题语义选中背景（accent / accent_foreground）与当前单元边框（ring）。
     /// 内容为空时渲染空 Label；token 为 nullptr（通用 delegate）。
     class TextItemDelegate final: public IItemDelegate {
     public:
@@ -110,29 +109,6 @@ namespace nandina::widget
 
         TextFunction text_;
     };
-
-    inline TextItemDelegate::TextItemDelegate(TextFunction text): text_(std::move(text)) {}
-
-    inline auto TextItemDelegate::text_for(const ItemBinding& binding) const -> std::string {
-        return text_ ? text_(binding.model, binding.model_row) : std::string {};
-    }
-
-    inline auto
-    TextItemDelegate::create_item(const widget::BuildContext& ui, const ItemBinding& binding)
-        -> std::shared_ptr<scene::NanControl> {
-        auto label = Label::create(ui.graph(), text_for(binding), ui.theme());
-        label->set_typography_role(theme::TypographyRole::label);
-        label->set_max_lines(1);
-        label->set_overflow(text::TextOverflow::ellipsis);
-        return label;
-    }
-
-    inline void
-    TextItemDelegate::update_item(scene::NanControl& control, const ItemBinding& binding) {
-        // 只由本 delegate 创建 Label；无 RTTI 构建下用静态转换（所有权在宿主侧）。
-        auto& label = static_cast<Label&>(control);
-        label.set_text(text_for(binding));
-    }
 } // namespace nandina::widget
 
-#endif // NANDINA_EXPERIMENT_WIDGET_INTERNAL_ITEM_DELEGATE_HPP
+#endif // NANDINA_EXPERIMENT_WIDGET_ITEM_DELEGATE_HPP

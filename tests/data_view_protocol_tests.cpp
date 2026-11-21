@@ -1,9 +1,9 @@
 // Direct unit tests for the batch 2A data-view protocol layer:
 // identities, row model notifications/tokens, table selection model, grid navigation.
-#include <nandina/widget/internal/data_identity.hpp>
-#include <nandina/widget/internal/grid_navigation.hpp>
-#include <nandina/widget/internal/row_model.hpp>
-#include <nandina/widget/internal/table_selection_model.hpp>
+#include <nandina/widget/data_identity.hpp>
+#include <nandina/widget/grid_navigation.hpp>
+#include <nandina/widget/row_model.hpp>
+#include <nandina/widget/table_selection_model.hpp>
 
 #include <catch2/catch_test_macros.hpp>
 

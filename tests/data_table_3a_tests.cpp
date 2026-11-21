@@ -10,7 +10,7 @@
 #include <nandina/scene/scene_tree.hpp>
 #include <nandina/theme/theme_manager.hpp>
 #include <nandina/widget/build_context.hpp>
-#include <nandina/widget/internal/data_table.hpp>
+#include <nandina/widget/data_table.hpp>
 #include <nandina/widget/label.hpp>
 
 #include <catch2/catch_approx.hpp>

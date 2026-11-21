@@ -1,14 +1,13 @@
 //
-// widget/internal/grid_navigation — 二维网格键盘导航（experimental）。
+// widget/grid_navigation — 二维网格键盘导航（experimental）。
 //
-// 文件暂留在 internal/ 目录，但 3b③ 起按 experimental 公共头开放。只持有显示序
-// ModelIndex，不持有身份、不映射到 CellId；视图负责身份映射与把 current 写入选择模型。
-// 空网格不产生虚假 (0,0)；空→非空不自动播种；无 current 时所有移动返回 false；方向键
-// 不环绕；Home/End 为当前行首尾；PageUp/Down 保持列。
+// 只持有显示序 ModelIndex，不持有身份、不映射到 CellId；视图负责身份映射与把 current
+// 写入选择模型。空网格不产生虚假 (0,0)；空→非空不自动播种；无 current 时所有移动返回
+// false；方向键不环绕；Home/End 为当前行首尾；PageUp/Down 保持列。
 //
 
-#ifndef NANDINA_EXPERIMENT_WIDGET_INTERNAL_GRID_NAVIGATION_HPP
-#define NANDINA_EXPERIMENT_WIDGET_INTERNAL_GRID_NAVIGATION_HPP
+#ifndef NANDINA_EXPERIMENT_WIDGET_GRID_NAVIGATION_HPP
+#define NANDINA_EXPERIMENT_WIDGET_GRID_NAVIGATION_HPP
 
 #include "data_identity.hpp"
 
@@ -64,4 +63,4 @@ namespace nandina::widget
     };
 } // namespace nandina::widget
 
-#endif // NANDINA_EXPERIMENT_WIDGET_INTERNAL_GRID_NAVIGATION_HPP
+#endif // NANDINA_EXPERIMENT_WIDGET_GRID_NAVIGATION_HPP

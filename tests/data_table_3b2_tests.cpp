@@ -1,13 +1,16 @@
 // data_table_3b2_tests — 批 3b②：作者 HeaderDelegate、框架语义 wrapper 与主题重解析。
 #include <nandina/reactive/graph.hpp>
 #include <nandina/reactive/scope.hpp>
+#include <nandina/render/draw_context.hpp>
+#include <nandina/render/render_device.hpp>
 #include <nandina/scene/input_event.hpp>
 #include <nandina/scene/scene_tree.hpp>
 #include <nandina/semantics/semantics.hpp>
+#include <nandina/theme/builtin_themes.hpp>
 #include <nandina/theme/theme_manager.hpp>
 #include <nandina/widget/build_context.hpp>
-#include <nandina/widget/internal/data_table.hpp>
-#include <nandina/widget/internal/header_delegate.hpp>
+#include <nandina/widget/data_table.hpp>
+#include <nandina/widget/header_delegate.hpp>
 #include <nandina/widget/label.hpp>
 
 #include <catch2/catch_test_macros.hpp>
@@ -440,4 +443,271 @@ TEST_CASE(
     REQUIRE_FALSE(kind_delegate->snapshots.empty());
     CHECK(name_delegate->snapshots.back().focused == false);
     CHECK(kind_delegate->snapshots.back().focused == true);
+}
+
+namespace
+{
+    class CellPaintSpy final: public render::IRenderDevice {
+    public:
+        std::vector<foundation::NanColor> rounded_fills;
+        std::vector<foundation::NanColor> rounded_outlines;
+
+        void begin_frame() override {}
+        void end_frame() override {}
+        void clear(const foundation::NanColor&) override {}
+        void set_clip(const foundation::NanRect&) override {}
+        void clear_clip() override {}
+        void draw_rect(const foundation::NanRect&, const foundation::NanColor&) override {}
+        void
+        draw_rect_outline(const foundation::NanRect&, float, const foundation::NanColor&) override {
+        }
+        void draw_rounded_rect(
+            const foundation::NanRect&,
+            float,
+            const foundation::NanColor& color
+        ) override {
+            rounded_fills.push_back(color);
+        }
+        void draw_rounded_rect_outline(
+            const foundation::NanRect&,
+            float,
+            float,
+            const foundation::NanColor& color
+        ) override {
+            rounded_outlines.push_back(color);
+        }
+        void draw_line(
+            const foundation::NanPoint&,
+            const foundation::NanPoint&,
+            float,
+            const foundation::NanColor&
+        ) override {}
+        void draw_circle(const foundation::NanPoint&, float, const foundation::NanColor&) override {
+        }
+        void draw_arc(
+            const foundation::NanPoint&,
+            float,
+            float,
+            float,
+            float,
+            const foundation::NanColor&
+        ) override {}
+        void draw_texture_region(
+            render::TextureHandle,
+            const foundation::NanRect&,
+            const foundation::NanRect&,
+            const foundation::NanColor&
+        ) override {}
+        void draw_text(
+            std::string_view,
+            const foundation::NanPoint&,
+            float,
+            const foundation::NanColor&
+        ) override {}
+        void destroy_texture(render::TextureHandle) override {}
+    };
+} // namespace
+
+TEST_CASE(
+    "TextItemDelegate draws themed selection fill and current ring",
+    "[data-table][3b2][delegate][visual]"
+) {
+    Fixture fixture;
+    theme::register_default_theme_families(fixture.themes);
+    TestModel model;
+    auto table = make_table(fixture, model, {make_name_column(), make_second_column()});
+    auto tree = mount(fixture, table, true);
+
+    const auto target =
+        widget::CellId {.row = widget::RowId {.value = 1}, .column = column_id("name")};
+    auto* cell = table->cell_node(target);
+    REQUIRE(cell != nullptr);
+    auto* label = static_cast<widget::Label*>(cell);
+    CHECK(label->text() == "a");
+    CHECK(label->color_token() == theme::ColorToken::on_surface);
+
+    // 未选中且非当前格：不绘制选中背景与当前边框。
+    {
+        CellPaintSpy spy;
+        render::DrawContext ctx {spy};
+        cell->on_draw(ctx);
+        CHECK(spy.rounded_fills.empty());
+        CHECK(spy.rounded_outlines.empty());
+    }
+
+    // 选中并设为当前格：绘制 accent 背景 + accent_foreground 文本色 + ring 边框。
+    REQUIRE(table->apply_selection(widget::SelectionOp::replace, target));
+    CHECK(label->color_token() == theme::ColorToken::accent_foreground);
+    const auto light_accent = theme::resolve_theme_color(
+        fixture.themes.theme(),
+        theme::ThemeColor::token(theme::ColorToken::accent)
+    );
+    const auto light_ring = theme::resolve_theme_color(
+        fixture.themes.theme(),
+        theme::ThemeColor::token(theme::ColorToken::ring)
+    );
+    {
+        CellPaintSpy spy;
+        render::DrawContext ctx {spy};
+        cell->on_draw(ctx);
+        REQUIRE(spy.rounded_fills.size() == 1);
+        REQUIRE(spy.rounded_outlines.size() == 1);
+        CHECK(spy.rounded_fills.front() == light_accent);
+        CHECK(spy.rounded_outlines.front() == light_ring);
+    }
+
+    // 切暗色主题后，单元格重解析 accent 与 ring。
+    const auto dark_id = theme::ThemeSchemeId::parse("nandina:default/dark");
+    REQUIRE(dark_id.has_value());
+    REQUIRE(fixture.themes.select(theme::FixedThemeSelection {*dark_id}).has_value());
+    const auto dark_accent = theme::resolve_theme_color(
+        fixture.themes.theme(),
+        theme::ThemeColor::token(theme::ColorToken::accent)
+    );
+    const auto dark_ring = theme::resolve_theme_color(
+        fixture.themes.theme(),
+        theme::ThemeColor::token(theme::ColorToken::ring)
+    );
+    REQUIRE(dark_accent != light_accent);
+    {
+        CellPaintSpy spy;
+        render::DrawContext ctx {spy};
+        cell->on_draw(ctx);
+        REQUIRE(spy.rounded_fills.size() == 1);
+        REQUIRE(spy.rounded_outlines.size() == 1);
+        CHECK(spy.rounded_fills.front() == dark_accent);
+        CHECK(spy.rounded_outlines.front() == dark_ring);
+    }
+
+    // 仅保留 current（清空 selection）：不再画填充背景，仍保留 ring 边框与普通前景色。
+    table->clear_selection();
+    CHECK(label->color_token() == theme::ColorToken::on_surface);
+    {
+        CellPaintSpy spy;
+        render::DrawContext ctx {spy};
+        cell->on_draw(ctx);
+        CHECK(spy.rounded_fills.empty());
+        REQUIRE(spy.rounded_outlines.size() == 1);
+    }
+}
+
+TEST_CASE(
+    "DataTable exposes top-level selection_changed and sort_changed events",
+    "[data-table][3b2][events]"
+) {
+    Fixture fixture;
+    TestModel model;
+    auto sortable = make_name_column();
+    widget::set_local_sort<TestModel>(
+        sortable,
+        [](const TestModel& m, const std::size_t a, const std::size_t b) {
+            return m.names.at(a) <=> m.names.at(b);
+        }
+    );
+    auto table = make_table(fixture, model, {sortable, make_second_column()});
+    auto tree = mount(fixture, table);
+
+    int selection_events = 0;
+    int selection_callbacks = 0;
+    auto sel_sub =
+        table->selection_changed().subscribe([&selection_events] { ++selection_events; });
+    table->set_on_selection_changed([&selection_callbacks] { ++selection_callbacks; });
+
+    const auto cell1 =
+        widget::CellId {.row = widget::RowId {.value = 1}, .column = column_id("name")};
+    REQUIRE(table->apply_selection(widget::SelectionOp::replace, cell1));
+    CHECK(selection_events == 1);
+    CHECK(selection_callbacks == 1);
+    table->clear_selection();
+    CHECK(selection_events == 2);
+    CHECK(selection_callbacks == 2);
+
+    int sort_events = 0;
+    int sort_callbacks = 0;
+    auto sort_sub = table->sort_changed().subscribe([&sort_events] { ++sort_events; });
+    table->set_on_sort_changed([&sort_callbacks] { ++sort_callbacks; });
+
+    const auto asc = widget::SortSpec {
+        .column = column_id("name"),
+        .direction = widget::SortDirection::ascending
+    };
+    REQUIRE(table->set_sort(asc));
+    CHECK(sort_events == 1);
+    CHECK(sort_callbacks == 1);
+    // 幂等排序不重复发事件。
+    CHECK_FALSE(table->set_sort(asc));
+    CHECK(sort_events == 1);
+
+    // set_columns 移除已排序列时清理排序并通知 sort_changed。
+    table->set_columns({make_second_column()});
+    CHECK_FALSE(table->sort_spec().has_value());
+    CHECK(sort_events == 2);
+    CHECK(sort_callbacks == 2);
+
+    // External sort follows the same notification contract, including explicit clearing.
+    auto external_column = make_name_column();
+    external_column.sort = widget::SortStrategy::external;
+    auto external = make_table(fixture, model, {external_column});
+    int external_events = 0;
+    auto external_sub =
+        external->sort_changed().subscribe([&external_events] { ++external_events; });
+    REQUIRE(external->set_sort(asc));
+    CHECK(external_events == 1);
+    CHECK_FALSE(external->set_sort(asc));
+    CHECK(external_events == 1);
+    REQUIRE(external->set_sort(std::nullopt));
+    CHECK(external_events == 2);
+
+    // 回调释放 owner 时不产生 use-after-free。
+    auto owned = make_table(fixture, model, {sortable});
+    int trailing = 0;
+    owned->set_on_sort_changed([&owned] { owned.reset(); });
+    auto extra = owned->sort_changed().subscribe([&trailing] { ++trailing; });
+    CHECK(owned->set_sort(asc));
+    CHECK(owned == nullptr);
+    CHECK(trailing == 1);
+
+    // set_columns clearing a sort also survives owner release.
+    auto columns_sorted = make_table(fixture, model, {sortable, make_second_column()});
+    REQUIRE(columns_sorted->set_sort(asc));
+    int columns_sort_events = 0;
+    columns_sorted->set_on_sort_changed([&columns_sorted] { columns_sorted.reset(); });
+    auto columns_sort_extra =
+        columns_sorted->sort_changed().subscribe([&columns_sort_events] { ++columns_sort_events; });
+    columns_sorted->set_columns({make_second_column()});
+    CHECK(columns_sorted == nullptr);
+    CHECK(columns_sort_events == 1);
+
+    // selection_changed follows the same release-owner contract as sort_changed.
+    auto selection_owned = make_table(fixture, model, {make_name_column()});
+    int selection_trailing = 0;
+    selection_owned->set_on_selection_changed([&selection_owned] { selection_owned.reset(); });
+    auto selection_extra = selection_owned->selection_changed().subscribe([&selection_trailing] {
+        ++selection_trailing;
+    });
+    CHECK(selection_owned->apply_selection(widget::SelectionOp::replace, cell1));
+    CHECK(selection_owned == nullptr);
+    CHECK(selection_trailing == 1);
+
+    // A column replacement can remove selected cells through retain while notifying.
+    auto columns_owned = make_table(fixture, model, {make_name_column(), make_second_column()});
+    REQUIRE(columns_owned->apply_selection(widget::SelectionOp::replace, cell1));
+    int columns_trailing = 0;
+    columns_owned->set_on_selection_changed([&columns_owned] { columns_owned.reset(); });
+    auto columns_extra =
+        columns_owned->selection_changed().subscribe([&columns_trailing] { ++columns_trailing; });
+    columns_owned->set_columns({make_second_column()});
+    CHECK(columns_owned == nullptr);
+    CHECK(columns_trailing == 1);
+
+    // A model reset can likewise prune the selected identity during rebuild.
+    auto model_owned = make_table(fixture, model, {make_name_column()});
+    REQUIRE(model_owned->apply_selection(widget::SelectionOp::replace, cell1));
+    int model_trailing = 0;
+    model_owned->set_on_selection_changed([&model_owned] { model_owned.reset(); });
+    auto model_extra =
+        model_owned->selection_changed().subscribe([&model_trailing] { ++model_trailing; });
+    model.reset({"replacement"}, 100);
+    CHECK(model_owned == nullptr);
+    CHECK(model_trailing == 1);
 }

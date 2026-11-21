@@ -28,6 +28,9 @@ namespace nandina::showcase
         collapsible,
         accordion,
         table,
+        data_table,
+        list_view,
+        tree_view,
         card,
         button,
         checkbox,
@@ -150,6 +153,27 @@ namespace nandina::showcase
             ComponentCategory::content,
             "Table",
             "静态单元格共享列宽与自然行高",
+            true
+        },
+        ComponentInfo {
+            ComponentId::data_table,
+            ComponentCategory::content,
+            "DataTable",
+            "行模型驱动的虚拟化数据表格，支持选择、排序与表头代理",
+            true
+        },
+        ComponentInfo {
+            ComponentId::list_view,
+            ComponentCategory::content,
+            "ListView",
+            "行模型驱动的一维虚拟化数据列表",
+            true
+        },
+        ComponentInfo {
+            ComponentId::tree_view,
+            ComponentCategory::content,
+            "TreeView",
+            "树模型驱动的虚拟化层级数据视图",
             true
         },
         ComponentInfo {ComponentId::card, ComponentCategory::content, "Card", "承载一组相关内容"},

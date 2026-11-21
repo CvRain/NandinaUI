@@ -1,8 +1,9 @@
 # DataTable（experimental）
 
-> 3b③ 公共导出已完成并提交（2026-11-18）。当前头文件仍位于
-> `nandina/widget/internal/`，但按 experimental 公共表面维护；路径迁移不会改变
-> `nandina::widget` 命名空间。
+> 3b③ 公共导出已完成（2026-11-18）；数据视图作者体验批（2026-11-21）已将全部 9 个
+> experimental 公开头从 `nandina/widget/internal/` 迁至 `nandina/widget/`，并为
+> `TextItemDelegate` 补齐默认选中/当前格视觉、为 `DataTable` 补齐 `selection_changed()` /
+> `sort_changed()` 与 `ComponentTraits`。
 
 `DataTable` 是**虚拟化**的数据表格：行数据由 `IRowModel` 提供，列由
 `DataTableColumn` 定义，单元格视觉由 `IItemDelegate` 创建和更新。表头固定，body 只物化
@@ -11,7 +12,7 @@
 ## 最小用法
 
 ```cpp
-#include <nandina/widget/internal/data_table.hpp>
+#include <nandina/widget/data_table.hpp>
 #include <nandina/widget/label.hpp>
 
 #include <cstddef>
@@ -66,8 +67,9 @@ table->set_model(model);
 
 ## Delegate
 
-默认 `TextItemDelegate` 从列取值器取得 `std::string`，渲染单行省略文本。需要自定义卡片、
-徽标或多控件组合时，继承 `TypedItemDelegate<ModelT>`：
+默认 `TextItemDelegate` 从列取值器取得 `std::string`，渲染基于 `Label` 的单行省略文本，
+并消费 `ItemState::selected` / `current` 绘制主题语义选中背景（`accent` / `accent_foreground`）
+与当前格边框（`ring`）。需要自定义卡片、徽标或多控件组合时，继承 `TypedItemDelegate<ModelT>`：
 
 ```cpp
 class NoteDelegate final: public nandina::widget::TypedItemDelegate<NotesModel> {
@@ -104,7 +106,10 @@ protected:
 - `SortStrategy::local`：列需通过 `set_local_sort<ModelT>()` 提供弱序比较器，框架只重排显示索引。
 - `SortStrategy::external`：`sort_requested()` 发出 `SortRequest`，应用重查数据后调用
   `notify_reset()`；也可用 `set_on_sort_requested()` 安装便捷回调。
-- `selection()` 是按 `CellId` 的身份选择；`current`/`anchor` 不是第二个选择事实。
+- `sort_changed()` / `set_on_sort_changed()`：排序状态变化（`local` / `external` / 清除 /
+  `set_columns` 移除已排序列）提交后触发，订阅方读取 `sort_spec()`。
+- `selection()` 是按 `CellId` 的身份选择；`selection_changed()` / `set_on_selection_changed()`
+  直接转发选择变更事件；`current`/`anchor` 不是第二个选择事实。
 - `apply_selection()`、`set_current_cell()` 只接受当前模型中存在的可见单元格身份；未知身份返回
   `false` 且不改状态。
 - `scroll_to_row()` 让显示序行进入视口；`set_scroll_offset()` 自动夹取到合法范围。

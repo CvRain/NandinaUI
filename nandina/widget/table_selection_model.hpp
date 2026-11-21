@@ -1,18 +1,17 @@
 //
-// widget/internal/table_selection_model — 二维单元格选择模型（experimental）。
+// widget/table_selection_model — 二维单元格选择模型（experimental）。
 //
-// 文件暂留在 internal/ 目录，但 3b③ 起按 experimental 公共头开放。身份用 CellId
-// （RowId + ColumnId）；显示序矩形由视图展开成 extent 后传入。首批只实现
+// 身份用 CellId（RowId + ColumnId）；显示序矩形由视图展开成 extent 后传入。首批只实现
 // SelectionBehavior::cells：rows/columns 构造函数立即抛 invalid_argument。选择集合按
 // 「首次出现顺序」保存为有序 vector；私有成员索引保证 is_selected() O(1) 与 extent 去重。
 //
 
-#ifndef NANDINA_EXPERIMENT_WIDGET_INTERNAL_TABLE_SELECTION_MODEL_HPP
-#define NANDINA_EXPERIMENT_WIDGET_INTERNAL_TABLE_SELECTION_MODEL_HPP
+#ifndef NANDINA_EXPERIMENT_WIDGET_TABLE_SELECTION_MODEL_HPP
+#define NANDINA_EXPERIMENT_WIDGET_TABLE_SELECTION_MODEL_HPP
 
-#include "../../reactive/event.hpp"
-#include "../selection_model.hpp"
+#include "../reactive/event.hpp"
 #include "data_identity.hpp"
+#include "selection_model.hpp"
 
 #include <cstdint>
 #include <functional>
@@ -108,4 +107,4 @@ namespace nandina::widget
     };
 } // namespace nandina::widget
 
-#endif // NANDINA_EXPERIMENT_WIDGET_INTERNAL_TABLE_SELECTION_MODEL_HPP
+#endif // NANDINA_EXPERIMENT_WIDGET_TABLE_SELECTION_MODEL_HPP

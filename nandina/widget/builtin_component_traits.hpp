@@ -21,6 +21,7 @@
 #include "combobox.hpp"
 #include "command_palette.hpp"
 #include "context_menu.hpp"
+#include "data_table.hpp"
 #include "dialog.hpp"
 #include "divider.hpp"
 #include "dropdown_menu.hpp"
@@ -29,6 +30,7 @@
 #include "hover_card.hpp"
 #include "image.hpp"
 #include "label.hpp"
+#include "list_view.hpp"
 #include "pagination.hpp"
 #include "pointer_area.hpp"
 #include "popover.hpp"
@@ -47,6 +49,7 @@
 #include "toggle.hpp"
 #include "toggle_group.hpp"
 #include "tooltip.hpp"
+#include "tree_view.hpp"
 
 namespace nandina::widget
 {
@@ -85,6 +88,39 @@ namespace nandina::widget
         make(const BuildContext&, std::vector<TableColumn> columns = {{}, {}})
             -> authoring::NodeBuilder<Table> {
             return authoring::make<Table>(std::move(columns));
+        }
+    };
+
+    template<>
+    struct ComponentTraits<DataTable> {
+        [[nodiscard]] static auto make(
+            const BuildContext& ui,
+            std::vector<DataTableColumn> columns = {},
+            const SelectionMode selection_mode = SelectionMode::multiple
+        ) -> authoring::NodeBuilder<DataTable> {
+            return authoring::make<DataTable>(ui, std::move(columns), selection_mode);
+        }
+    };
+
+    template<>
+    struct ComponentTraits<ListView> {
+        [[nodiscard]] static auto make(
+            const BuildContext& ui,
+            const SelectionMode selection_mode = SelectionMode::multiple,
+            const float row_height = 36.0F
+        ) -> authoring::NodeBuilder<ListView> {
+            return authoring::make<ListView>(ui, selection_mode, row_height);
+        }
+    };
+
+    template<>
+    struct ComponentTraits<TreeView> {
+        [[nodiscard]] static auto make(
+            const BuildContext& ui,
+            const SelectionMode selection_mode = SelectionMode::multiple,
+            const float row_height = 36.0F
+        ) -> authoring::NodeBuilder<TreeView> {
+            return authoring::make<TreeView>(ui, selection_mode, row_height);
         }
     };
 

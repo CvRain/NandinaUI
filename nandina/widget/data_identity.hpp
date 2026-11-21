@@ -1,12 +1,12 @@
 //
-// widget/internal/data_identity — 数据视图的稳定身份与显示序坐标（experimental）。
+// widget/data_identity — 数据视图的稳定身份与显示序坐标（experimental）。
 //
-// 文件暂留在 internal/ 目录，但 3b③ 起按 experimental 公共头像作者开放。身份值本身
-// 是容器语义的稳定身份；std::hash 数值只用于当前进程内哈希容器，不是可持久化的标识。
+// 身份值本身是容器语义的稳定身份；std::hash 数值只用于当前进程内哈希容器，
+// 不是可持久化的标识。
 //
 
-#ifndef NANDINA_EXPERIMENT_WIDGET_INTERNAL_DATA_IDENTITY_HPP
-#define NANDINA_EXPERIMENT_WIDGET_INTERNAL_DATA_IDENTITY_HPP
+#ifndef NANDINA_EXPERIMENT_WIDGET_DATA_IDENTITY_HPP
+#define NANDINA_EXPERIMENT_WIDGET_DATA_IDENTITY_HPP
 
 #include <cstddef>
 #include <cstdint>
@@ -77,4 +77,4 @@ namespace nandina::widget::internal
     using CellIdHash = std::hash<CellId>;
 } // namespace nandina::widget::internal
 
-#endif // NANDINA_EXPERIMENT_WIDGET_INTERNAL_DATA_IDENTITY_HPP
+#endif // NANDINA_EXPERIMENT_WIDGET_DATA_IDENTITY_HPP

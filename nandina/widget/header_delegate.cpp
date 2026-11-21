@@ -1,8 +1,8 @@
 #include "header_delegate.hpp"
 
-#include "../../render/draw_context.hpp"
-#include "../../scene/control.hpp"
-#include "../../widget/label.hpp"
+#include "../render/draw_context.hpp"
+#include "../scene/control.hpp"
+#include "label.hpp"
 
 #include <cmath>
 #include <stdexcept>

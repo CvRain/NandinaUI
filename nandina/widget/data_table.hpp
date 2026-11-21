@@ -1,27 +1,26 @@
 //
-// widget/internal/data_table — 窗口化物化的 DataTable（experimental）。
+// widget/data_table — 窗口化物化的 DataTable（experimental）。
 //
-// 文件暂留在 internal/ 目录，但 3b③ 起按 experimental 公共头开放。非模板类：行模型经
-// shared_ptr<IRowModel> 注入；列由 DataTableColumn 唯一定义；单元格视觉全部由
-// IItemDelegate 提供。表头固定，body 只物化 UniformRowWindow 可见窗口内的单元格。
+// 非模板类：行模型经 shared_ptr<IRowModel> 注入；列由 DataTableColumn 唯一定义；单元格视觉
+// 全部由 IItemDelegate 提供。表头固定，body 只物化 UniformRowWindow 可见窗口内的单元格。
 // ItemHost/DataTableHeaderHost 是实现细节，不进入公共签名；析构函数必须在 .cpp 中完成，
 // 以允许本头只前置声明它们。
 //
 
-#ifndef NANDINA_EXPERIMENT_WIDGET_INTERNAL_DATA_TABLE_HPP
-#define NANDINA_EXPERIMENT_WIDGET_INTERNAL_DATA_TABLE_HPP
+#ifndef NANDINA_EXPERIMENT_WIDGET_DATA_TABLE_HPP
+#define NANDINA_EXPERIMENT_WIDGET_DATA_TABLE_HPP
 
-#include "../../scene/control.hpp"
-#include "../../scene/input_event.hpp"
-#include "../../widget/build_context.hpp"
+#include "../scene/control.hpp"
+#include "../scene/input_event.hpp"
+#include "build_context.hpp"
 #include "data_identity.hpp"
 #include "data_table_column.hpp"
 #include "grid_navigation.hpp"
 #include "header_delegate.hpp"
+#include "internal/uniform_row_window.hpp"
 #include "item_delegate.hpp"
 #include "row_model.hpp"
 #include "table_selection_model.hpp"
-#include "uniform_row_window.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -74,9 +73,14 @@ namespace nandina::widget
         [[nodiscard]] auto sort_spec() const noexcept -> const std::optional<SortSpec>&;
         [[nodiscard]] auto sort_requested() noexcept -> reactive::Event<SortRequest>&;
         void set_on_sort_requested(std::function<void(const SortRequest&)> callback);
+        /// 排序状态变更事件（local/external 排序或清除排序生效后发出）；订阅方读取 sort_spec()。
+        [[nodiscard]] auto sort_changed() const noexcept -> const reactive::Event<>&;
+        void set_on_sort_changed(std::function<void()> callback);
 
         // ─── 选择 / 导航 ─────────────────────────────────────────────────
         [[nodiscard]] auto selection() const noexcept -> const TableSelectionModel&;
+        [[nodiscard]] auto selection_changed() const noexcept -> const reactive::Event<>&;
+        void set_on_selection_changed(std::function<void()> callback);
         [[nodiscard]] auto navigation() const noexcept -> const GridNavigation&;
         /// 程序化入口先校验行/可见列身份；任一未知身份返回 false 且不改选择状态。
         auto apply_selection(SelectionOp op, CellId target, std::span<const CellId> extent = {})
@@ -206,11 +210,14 @@ namespace nandina::widget
         std::optional<SortSpec> sort_;
 
         reactive::Event<SortRequest> sort_requested_;
+        reactive::Event<> sort_changed_;
         reactive::Subscription sort_callback_sub_;
+        reactive::Subscription user_sort_changed_sub_;
         std::function<void(const SortRequest&)> user_sort_callback_;
         reactive::Subscription reset_sub_;
         reactive::Subscription changed_sub_;
         reactive::Subscription selection_sub_;
+        reactive::Subscription user_selection_sub_;
         bool subscribed_ = false;
         bool updating_selection_ = false;
 
@@ -229,4 +236,4 @@ namespace nandina::widget
     };
 } // namespace nandina::widget
 
-#endif // NANDINA_EXPERIMENT_WIDGET_INTERNAL_DATA_TABLE_HPP
+#endif // NANDINA_EXPERIMENT_WIDGET_DATA_TABLE_HPP

@@ -467,24 +467,23 @@ experimental**，理由与后续动作写进清单——两个枚举是公开 wi
 **清单描述支持范围，`sdk_bundle.py` 描述构建闭包。** 将来提供安装式 SDK 时，由这份清单生成
 公共 include 树，而不是再维护第二份"安装头列表"。
 
-### 4.2 DataTable 公共导出（3b③）
+### 4.2 DataTable 公共导出（3b③ + 2026-11-21 路径收口）
 
-3b③ 将下列八个数据视图头从 `internal` 提升为 `experimental`：
+3b③ 将下列八个数据视图头从 `internal` 提升为 `experimental`，2026-11-21 数据视图作者体验批
+将其与批 6 的 `tree_model.hpp` 一并从 `nandina/widget/internal/` 迁至正式 `nandina/widget/`
+路径（不保留 `internal/` 转发别名）：
 
 | 头文件 | 公共内容 |
 | --- | --- |
-| `widget/internal/data_identity.hpp` | `RowId`/`ColumnId`/`CellId`/`ModelIndex` 与三个 `std::hash` 特化 |
-| `widget/internal/row_model.hpp` | `RowRange`、`IRowModel`、`RowModelBase`、`TypedRowModelBase`、类型令牌 |
-| `widget/internal/data_table_column.hpp` | `DataTableColumn`、排序策略/状态、typed 列构造糖 |
-| `widget/internal/item_delegate.hpp` | `IItemDelegate`、`ItemBinding`、`TypedItemDelegate`、默认文本 delegate |
-| `widget/internal/header_delegate.hpp` | `IHeaderDelegate`、`HeaderBinding`、默认表头 delegate |
-| `widget/internal/table_selection_model.hpp` | 二维单元格选择协议与实现 |
-| `widget/internal/grid_navigation.hpp` | 二维键盘导航数学 |
-| `widget/internal/data_table.hpp` | 虚拟化 `DataTable` 组件 |
-
-这些文件暂时仍位于 `internal/` 目录，原因与 `anchored_positioner.hpp` 相同：先锁定公共语义和测试，
-再单独做路径迁移，避免本批同时制造大量 include 噪声。等级以清单为准，目录名不代表 internal 权限。
-后续应在不改变命名空间的前提下移动到正式 widget 路径，并删除对应 TOML 例外。
+| `widget/data_identity.hpp` | `RowId`/`ColumnId`/`CellId`/`ModelIndex` 与三个 `std::hash` 特化 |
+| `widget/row_model.hpp` | `RowRange`、`IRowModel`、`RowModelBase`、`TypedRowModelBase`、类型令牌 |
+| `widget/data_table_column.hpp` | `DataTableColumn`、排序策略/状态、typed 列构造糖 |
+| `widget/item_delegate.hpp` | `IItemDelegate`、`ItemBinding`、`TypedItemDelegate`、带选中/当前格视觉的 `TextItemDelegate` |
+| `widget/header_delegate.hpp` | `IHeaderDelegate`、`HeaderBinding`、默认表头 delegate |
+| `widget/table_selection_model.hpp` | 二维单元格选择协议与实现 |
+| `widget/grid_navigation.hpp` | 二维键盘导航数学 |
+| `widget/data_table.hpp` | 虚拟化 `DataTable` 组件（含 `selection_changed()`、`sort_changed()`） |
+| `widget/tree_model.hpp` | `ITreeModel`、`TypedTreeModelBase`（批 6 新增） |
 
 `item_host.hpp` 继续为 `internal`：它是 delegate 控件组合工具，不进入公共参数或返回值。
 `data_table.hpp` 只把它前置声明为私有成员类型，并在 `.cpp` 中持有完整定义和 out-of-line 析构；
@@ -494,22 +493,17 @@ experimental**，理由与后续动作写进清单——两个枚举是公开 wi
 `unordered_map`/`unordered_set`；不得把哈希值序列化、跨进程比较或当作身份。身份持久化仍使用
 `RowId::value`、`ColumnId::value` 与 `CellId` 字段。内部 hasher 只保留为公共 `std::hash` 的薄包装。
 
-验收使用三层证据：`header-surface` 检查分类、包含方向和八个头独立可编译；`data-public-api`
-由作者路径定义 typed model/item/header delegate 并通过 `ui.make<DataTable>()` 创建组件；
-`sdk-vendored-consumer` 在打包后的下游 SDK 中运行 `data-api=1` 消费探针。
+验收使用三层证据：`header-surface` 检查分类、包含方向和九个头独立可编译；`data-public-api`
+由作者路径定义 typed model/item/header delegate 并通过 `ui.make<DataTable/ListView/TreeView>()`
+创建组件；`sdk-vendored-consumer` 在打包后的下游 SDK 中运行 `data-api=1`/`list-api=1`/`tree-api=1`
+消费探针。
 
 ### 4.3 TreeView（批 6）
 
-批 6 新增两个 experimental 头：
-
-| 头文件 | 公共内容 |
-| --- | --- |
-| `widget/internal/tree_model.hpp` | `ITreeModel`、`TypedTreeModelBase`（先序行 + parent/child 查询；暂留 `internal/` 路径） |
-| `widget/tree_view.hpp` | 非模板 `TreeView`（视图持有展开、统一行高虚拟化、选择、缩进与框架展开器） |
-
-`ItemState` 增量 `depth`/`has_children`/`expanded`（DataTable/ListView 恒为 0/false）。
-`TreeView` 复用 `IItemDelegate`，不进入 `ComponentTraits` 清单（直接
-`TreeView::create(...)` + `set_model` / `set_delegate`）。契约见
+批 6 新增 `widget/tree_model.hpp` 与 `widget/tree_view.hpp`（均已在 `widget/` 下按 experimental
+导出）。`ItemState` 增量 `depth`/`has_children`/`expanded`（DataTable/ListView 恒为 0/false）。
+2026-11-21 作者体验批已为 `DataTable`、`ListView`、`TreeView` 补齐 `ComponentTraits`（通过
+`ui.make<...>()` 构造，`controls.hpp` 与 `showcase/component_catalog.hpp` 同步收录）。契约见
 [数据组件](data_components_and_virtualization.md) §10。公共消费由 `data-public-api` 的
 TreeView 用例与 SDK consumer 的 `tree-api=1` 探针覆盖。
 
@@ -543,6 +537,7 @@ TreeView 用例与 SDK consumer 的 `tree-api=1` 探针覆盖。
 | `BuildContext::for_each()` 返回类型（批 4） | `widget/build_context.hpp`（experimental public） | 改为直接构造 `ForEach<Item, Key, Node>`；`.build()` 返回 `std::shared_ptr<ForEach<...>>`（原 `ListView<...>`）。参数、约束、key/create/update 回调与行为不变；`auto` 调用无需迁移，显式声明 `ListView`/`NodeBuilder<ListView<...>>` 的下游代码需改为 `ForEach`。旧 `ListView` 保留至批 5 退役 |
 | `widget/list_view.hpp` 模板 `ListView<Item, Key, NodeT>` 退役（批 5） | `widget/list_view.hpp`（experimental public） | 改为非模板 `ListView`（`IRowModel` + `IItemDelegate` + `SelectionModel<RowId>`；统一行高、自持纵向视口）。`BuildContext::for_each()` 保持批 4 的 `ForEach` 实现；`ListDataModelSource` 概念移到 `declarative.hpp`；`authoring.hpp` 不再传递包含 `list_view.hpp`，下游需显式包含。`VirtualListView` 已在批 6 退役 |
 | `widget/virtual_list_view.hpp` 与模板 `VirtualListView<Item, Key, NodeT>` 移除（批 6） | `widget/virtual_list_view.hpp`（experimental public） | 改用非模板 `ListView`（`IRowModel` + `IItemDelegate` + `SelectionModel<RowId>`；统一行高、自持纵向视口）。原有虚拟化/选择行为由 `list-view` 与 `uniform-row-window` 测试覆盖；`set_source`/typeahead 等模板入口不再提供 |
+| 9 个数据视图 experimental 头从 `widget/internal/` 迁至 `widget/`（2026-11-21） | `widget/{data_identity,row_model,tree_model,item_delegate,header_delegate,data_table_column,table_selection_model,grid_navigation,data_table}.hpp`（experimental public） | 将 `#include <nandina/widget/internal/...>` 改为 `#include <nandina/widget/...>`；命名空间与符号不变，不保留 `internal/` 转发别名 |
 
 项目处于 alpha、源码集成、不承诺旧入口长期兼容，因此：
 
@@ -551,11 +546,9 @@ TreeView 用例与 SDK consumer 的 `tree-api=1` 探针覆盖。
 - 库内实现、测试替身、下游样例一次改完，要求重新编译。
 
 退役后清单为 182 个头文件，其中 10 个 internal（清单随后续批次增长，当前为 215 个头文件：
-**199 experimental + 16 internal**。其中 data_identity、row_model、table_selection_model、
-grid_navigation、data_table、data_table_column、item_delegate 与 header_delegate 八个数据视图头
-在 3b③ 提升为 experimental，但仍暂留 `internal/` 路径；item_host 保持 internal；
-anchored_positioner.hpp 与 uniform_row_window.hpp 因被实验性公共头内联包含而登记为
-experimental）。生成模板归 NandinaCLI；
+**199 experimental + 16 internal**。九个数据视图头均已位于正式 `widget/` 路径；`item_host`
+保持 internal；`anchored_positioner.hpp` 与 `uniform_row_window.hpp` 因被实验性公共头内联包含
+而登记为 experimental）。生成模板归 NandinaCLI；
 框架维护 [`sdk_app` 消费 fixture](../../tests/fixtures/sdk_app/README.md)，不维护第二份模板。
 
 ## 6. 不要越界声明的事

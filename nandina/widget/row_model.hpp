@@ -1,16 +1,15 @@
 //
-// widget/internal/row_model — 非模板行模型契约（experimental）。
+// widget/row_model — 非模板行模型契约（experimental）。
 //
-// 文件暂留在 internal/ 目录，但 3b③ 起按 experimental 公共头开放。IRowModel 只描述
-// 「行」：行数、稳定行身份、类型令牌与两个同步变更事件；列/单元格视觉由
+// IRowModel 只描述「行」：行数、稳定行身份、类型令牌与两个同步变更事件；列/单元格视觉由
 // DataTableColumn + delegate 负责。RowModelBase 提供事件存储与通知工具，派生模型通过
 // TypedRowModelBase<Derived> 获得无 RTTI 的类型令牌。
 //
 
-#ifndef NANDINA_EXPERIMENT_WIDGET_INTERNAL_ROW_MODEL_HPP
-#define NANDINA_EXPERIMENT_WIDGET_INTERNAL_ROW_MODEL_HPP
+#ifndef NANDINA_EXPERIMENT_WIDGET_ROW_MODEL_HPP
+#define NANDINA_EXPERIMENT_WIDGET_ROW_MODEL_HPP
 
-#include "../../reactive/event.hpp"
+#include "../reactive/event.hpp"
 #include "data_identity.hpp"
 
 #include <cstddef>
@@ -114,4 +113,4 @@ namespace nandina::widget
     };
 } // namespace nandina::widget
 
-#endif // NANDINA_EXPERIMENT_WIDGET_INTERNAL_ROW_MODEL_HPP
+#endif // NANDINA_EXPERIMENT_WIDGET_ROW_MODEL_HPP

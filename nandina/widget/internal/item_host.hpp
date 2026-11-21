@@ -13,9 +13,9 @@
 #include "../../reactive/scope.hpp"
 #include "../../scene/control.hpp"
 #include "../../widget/build_context.hpp"
-#include "data_identity.hpp"
-#include "item_delegate.hpp"
-#include "row_model.hpp"
+#include "../data_identity.hpp"
+#include "../item_delegate.hpp"
+#include "../row_model.hpp"
 
 #include <cstddef>
 #include <memory>

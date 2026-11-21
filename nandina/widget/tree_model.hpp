@@ -1,15 +1,15 @@
 //
-// widget/internal/tree_model — 树形行模型契约（experimental，批 6）。
+// widget/tree_model — 树形行模型契约（experimental，批 6）。
 //
 // ITreeModel 在 IRowModel 之上补充父子结构：IRowModel::row_count()/row_id() 以先序
 // 枚举**全部节点**（不要求节点连续排列），本接口提供 parent/child 查询。展开状态由
 // TreeView 持有（视图拥有），模型只描述结构，首批不做懒加载。
 //
 
-#ifndef NANDINA_EXPERIMENT_WIDGET_INTERNAL_TREE_MODEL_HPP
-#define NANDINA_EXPERIMENT_WIDGET_INTERNAL_TREE_MODEL_HPP
+#ifndef NANDINA_EXPERIMENT_WIDGET_TREE_MODEL_HPP
+#define NANDINA_EXPERIMENT_WIDGET_TREE_MODEL_HPP
 
-#include "../../reactive/event.hpp"
+#include "../reactive/event.hpp"
 #include "row_model.hpp"
 
 #include <cstddef>
@@ -90,4 +90,4 @@ namespace nandina::widget
     };
 } // namespace nandina::widget
 
-#endif // NANDINA_EXPERIMENT_WIDGET_INTERNAL_TREE_MODEL_HPP
+#endif // NANDINA_EXPERIMENT_WIDGET_TREE_MODEL_HPP

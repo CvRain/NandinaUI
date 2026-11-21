@@ -343,7 +343,7 @@ struct CellId {
 
 - 三个身份显式声明默认相等运算符：`CellId::operator== = default` 依赖成员的显式相等（不能依赖
   隐式聚合比较在未来的可读性变化）。
-- **3b③ 公共边界**：身份头暂放 `widget/internal/data_identity.hpp`，但登记为 experimental；
+- **公共边界**：身份头位于 `widget/data_identity.hpp`，登记为 experimental；
   `std::hash<RowId>`、`std::hash<ColumnId>`、`std::hash<CellId>` 已提供，可直接用于
   `unordered_map`/`unordered_set`。公共承诺只有“相等身份得到相等哈希、可用于容器”；哈希数值不承诺
   跨进程、标准库版本、框架版本或序列化持久化稳定，身份本身仍只能序列化 `value`/字段。
@@ -911,10 +911,9 @@ struct SortRequest {
 | **5 ✅ 已完成并提交（2026-11-19，`e96542f`）** | 新非模板 `widget/list_view.hpp/.cpp`（`IRowModel` + `IItemDelegate` + `UniformRowWindow`/`ItemHost` + `SelectionModel<RowId>`；统一行高、自持纵向视口、窗口物化、指针/键盘选择、Enter 激活、主题 revision）；`ListDataModelSource` 移到 `declarative.hpp`；`authoring.hpp` 不再包含 `list_view.hpp`；notebook 的 NoteList/GroupList 改 `VectorRowModel` + lambda delegate；旧模板 `ListView` 退役并在 `sdk_surface.md` 记录破坏性变更 | `list-view` 15 用例/68 断言；`data-public-api` 3 用例/16 断言（含新 ListView）；`authoring` 38 用例/197 断言；主套件 118 OK + 1 skip（共 119）；完整套件 139 OK + 3 skip（共 142；skip 为 `sdf-device`/`sdf-state-probe`/`window-lifecycle`，环境相关；含 SDK `list-api=1` 下游探针）；ASan 117 OK + 1 skip、no-RTTI 119 OK、no-SQLite 114 OK + 1 skip、纯工具 8/8、`release_check --ci` 8/8；红先：全量物化、禁用指针选择、跳过 `data_changed` delegate 更新均先红后绿；`MALLOC_PERTURB_=102` 下 ListView 套件仍全绿；notebook 构建 + `notebook-data` 通过 |
 | **6 ✅ 已完成（2026-11-19）** | `VirtualListView` 退役（删除 `virtual_list_view.hpp` 与 `virtual-list` 测试；`sdk_surface.md` 记录破坏性变更）；TreeView v1（`ITreeModel` + 视图持有展开 + `UniformRowWindow`/`ItemHost` + `SelectionModel<RowId>`；`ItemState` 增量 depth/has_children/expanded；框架绘制展开器，见 §10） | `tree-view` 21 用例/136 断言；`data-public-api` 4 用例/22 断言（含 TreeView）；`list-view` 15/68、`uniform-row-window` 9/116；操作员桌面环境主套件 119/119、完整套件 142/142；当前无显示环境复核为 unit 118 OK +1 skip、完整套件 139 OK +3 skip（GPU/window 门控）；红先：始终展开子树、展开后不重建窗口、程序化选择不展开祖先、expand 回调异常前未提交可见账本、隐藏 current 仍可 Enter/Space、同帧 reset 后新 delegate 读取旧 model_row、selection 回调异常后刷新抑制未恢复均先红后绿 |
 
-**公共 API 闸门**：3b③ 已将 DataTable 作者协议与组件转 experimental，并在
-`sdk_surface.md` 记录八个临时路径例外；公共 API 只承诺 `std::hash` 的容器语义，不承诺哈希数值
-跨进程/版本稳定。`item_host.hpp` 仍为 internal，不能出现在作者签名中。后续迁移文件路径时必须保持
-`nandina::widget` 命名空间和现有 include 迁移说明。
+**公共 API 闸门**：DataTable 作者协议与组件已是 experimental，九个数据视图头均位于正式
+`widget/` 路径；`sdk_surface.md` 记录本次无 shim 的 include 迁移。公共 API 只承诺 `std::hash`
+的容器语义，不承诺哈希数值跨进程/版本稳定。`item_host.hpp` 仍为 internal，不能出现在作者签名中。
 
 **施工纪律（1A 起）**：每批先红先测试再实现；工作树保持未提交供维护者复核；本契约只随已证实的
 实现进度更新状态，不把计划写成已实现。
@@ -995,3 +994,29 @@ struct SortRequest {
 expand 回调抛出时可见账本提交顺序（2 断言红）、隐藏 current 的 Enter/Space 防护（2 断言红）、
 同帧 reset 后 materialize 新 delegate（旧 `model_row` 越界并多创建 2 个旧窗口项）、
 selection retain 回调抛出后刷新抑制标志恢复（1 断言红）。
+
+## 11. 数据视图作者体验收口（2026-11-21）
+
+针对 `playground/` 四组件数据工作台集成检查点暴露的高频摩擦，收口如下（不扩充二维行选/悬停等新契约）：
+
+- **公开头路径收口**：将 9 个已标 `experimental` 的数据视图头（`data_identity.hpp`、
+  `row_model.hpp`、`tree_model.hpp`、`item_delegate.hpp`、`header_delegate.hpp`、
+  `data_table_column.hpp`、`table_selection_model.hpp`、`grid_navigation.hpp`、
+  `data_table.hpp`）及对应实现从 `nandina/widget/internal/` 迁至 `nandina/widget/`，
+  不保留 `internal/` 转发别名；`item_host` / `track_solver` / `uniform_row_window` 保持在 `internal/`。
+- **默认文本单元格视觉**：`TextItemDelegate` 的实现迁入 `widget/item_delegate.cpp`，返回私有
+  `TextItemCell : public Label`（保留 `cell_node()` 到 `Label*` 兼容与单节点开销），消费
+  `ItemState::selected` / `current` 绘制主题语义选中背景（`ColorToken::accent` +
+  `accent_foreground`）与当前格边框（`ColorToken::ring`），并在 `on_theme_changed` 重解析颜色。
+- **`DataTable` 顶层事件对称性**：新增 `selection_changed()` / `set_on_selection_changed()`
+  （转发 `selection_.changed()`）与 `sort_changed()` / `set_on_sort_changed()`（在 `set_sort`
+  发生实际状态变化以及 `set_columns` 移除已排序列时发出）。两条事件路径都在完整外层操作期间
+  以 `weak_from_this().lock()` 保活；程序化选择、指针/键盘输入、列/模型重建与 retain 回调可在
+  同步通知中释放最后一个外部 owner 而不产生 use-after-free。
+- **`ComponentTraits` 与目录同步**：在 `builtin_component_traits.hpp` 登记 `DataTable`、
+  `ListView`、`TreeView`（支持通过 `controls.hpp` + `ui.make<...>()` 构造，参数与 `::create()`
+  保持一致并直接透传 `BuildContext`），`showcase/component_catalog.hpp` 同步收录（公开组件数 43）。
+- **验证**：`data-table-3b2` 9 用例/117 断言；其中 owner-release 覆盖直接选择、列 retain、
+  模型 reset、`set_sort` 与 `set_columns` 清排序。删除 selection 外层保活时 ASan 在
+  `Event<>::emit()` 报告 heap-use-after-free；恢复后 ASan 用例全绿。`data-public-api`
+  4 用例/22 断言；header 独立包含与 `ui.make` 消费路径通过。

@@ -18,11 +18,11 @@
 #include "../scene/control.hpp"
 #include "../scene/input_event.hpp"
 #include "build_context.hpp"
-#include "internal/data_identity.hpp"
-#include "internal/item_delegate.hpp"
-#include "internal/tree_model.hpp"
+#include "data_identity.hpp"
 #include "internal/uniform_row_window.hpp"
+#include "item_delegate.hpp"
 #include "selection_model.hpp"
+#include "tree_model.hpp"
 
 #include <cstddef>
 #include <functional>

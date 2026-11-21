@@ -4,17 +4,18 @@
 #include <nandina/scene/scene_tree.hpp>
 #include <nandina/theme/theme_manager.hpp>
 #include <nandina/widget/build_context.hpp>
-#include <nandina/widget/internal/data_identity.hpp>
-#include <nandina/widget/internal/data_table.hpp>
-#include <nandina/widget/internal/data_table_column.hpp>
-#include <nandina/widget/internal/grid_navigation.hpp>
-#include <nandina/widget/internal/header_delegate.hpp>
-#include <nandina/widget/internal/item_delegate.hpp>
-#include <nandina/widget/internal/row_model.hpp>
-#include <nandina/widget/internal/table_selection_model.hpp>
-#include <nandina/widget/internal/tree_model.hpp>
+#include <nandina/widget/controls.hpp>
+#include <nandina/widget/data_identity.hpp>
+#include <nandina/widget/data_table.hpp>
+#include <nandina/widget/data_table_column.hpp>
+#include <nandina/widget/grid_navigation.hpp>
+#include <nandina/widget/header_delegate.hpp>
+#include <nandina/widget/item_delegate.hpp>
 #include <nandina/widget/label.hpp>
 #include <nandina/widget/list_view.hpp>
+#include <nandina/widget/row_model.hpp>
+#include <nandina/widget/table_selection_model.hpp>
+#include <nandina/widget/tree_model.hpp>
 #include <nandina/widget/tree_view.hpp>
 
 #include <catch2/catch_test_macros.hpp>
@@ -245,7 +246,7 @@ TEST_CASE("authors can define typed item and header delegates", "[data][public-a
 TEST_CASE("authors can create the public virtualized ListView", "[data][public-api][list-view]") {
     Fixture fixture;
     PublicModel model;
-    auto list = widget::ListView::create(fixture.ui);
+    auto list = fixture.ui.make<widget::ListView>().build();
     list->set_delegate(std::make_shared<PublicItemDelegate>());
     list->set_model(std::shared_ptr<widget::IRowModel>(&model, [](widget::IRowModel*) {}));
 
@@ -262,7 +263,7 @@ TEST_CASE("authors can create the public virtualized ListView", "[data][public-a
 TEST_CASE("authors can create the public TreeView", "[data][public-api][tree-view]") {
     Fixture fixture;
     PublicTreeModel model;
-    auto view = widget::TreeView::create(fixture.ui, widget::SelectionMode::single);
+    auto view = fixture.ui.make<widget::TreeView>(widget::SelectionMode::single).build();
     view->set_delegate(std::make_shared<PublicTreeDelegate>());
     view->set_model(std::shared_ptr<widget::ITreeModel>(&model, [](widget::ITreeModel*) {}));
 

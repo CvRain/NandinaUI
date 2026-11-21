@@ -5,7 +5,7 @@
 #include <nandina/scene/scene_tree.hpp>
 #include <nandina/widget/build_context.hpp>
 #include <nandina/widget/controls.hpp>
-#include <nandina/widget/internal/data_table.hpp>
+#include <nandina/widget/data_table.hpp>
 #include <nandina/widget/label.hpp>
 #include <nandina/widget/list_view.hpp>
 #include <nandina/widget/tree_view.hpp>
@@ -109,22 +109,46 @@ namespace
             },
             nandina::widget::TableColumn {.flex = 1.0F}
         );
+        nandina::widget::set_local_sort<SdkRowModel>(
+            column,
+            [](const SdkRowModel&, const std::size_t lhs, const std::size_t rhs) {
+                return lhs <=> rhs;
+            }
+        );
         std::vector<nandina::widget::DataTableColumn> columns {std::move(column)};
         auto table = ui.make<nandina::widget::DataTable>(std::move(columns)).build();
+        int selection_events = 0;
+        int sort_events = 0;
+        table->set_on_selection_changed([&selection_events] { ++selection_events; });
+        table->set_on_sort_changed([&sort_events] { ++sort_events; });
         table->set_model(
             std::shared_ptr<nandina::widget::IRowModel>(&model, [](nandina::widget::IRowModel*) {})
         );
         nandina::scene::NanSceneTree tree;
         tree.set_root(table);
         (void)tree.layout_root(nandina::foundation::NanSize(320.0F, 200.0F));
-        return table->row_count() == 2 && table->column_count() == 1;
+        const bool selected = table->apply_selection(
+            nandina::widget::SelectionOp::replace,
+            nandina::widget::CellId {
+                .row = nandina::widget::RowId {.value = 1},
+                .column = nandina::widget::ColumnId {.value = "value"},
+            }
+        );
+        const bool sorted = table->set_sort(
+            nandina::widget::SortSpec {
+                .column = nandina::widget::ColumnId {.value = "value"},
+                .direction = nandina::widget::SortDirection::descending,
+            }
+        );
+        return table->row_count() == 2 && table->column_count() == 1 && selected && sorted
+            && selection_events == 1 && sort_events == 1;
     }
 
     auto list_api_works(nandina::app::NanApplication& application) -> bool {
         nandina::reactive::ReactiveScope scope {application.graph()};
         nandina::widget::BuildContext ui {application.graph(), scope, application.theme_manager()};
         SdkRowModel model;
-        auto list = nandina::widget::ListView::create(ui);
+        auto list = ui.make<nandina::widget::ListView>().build();
         list->set_delegate(std::make_shared<SdkListDelegate>());
         list->set_model(
             std::shared_ptr<nandina::widget::IRowModel>(&model, [](nandina::widget::IRowModel*) {})
@@ -140,7 +164,7 @@ namespace
         nandina::reactive::ReactiveScope scope {application.graph()};
         nandina::widget::BuildContext ui {application.graph(), scope, application.theme_manager()};
         SdkTreeModel model;
-        auto view = nandina::widget::TreeView::create(ui);
+        auto view = ui.make<nandina::widget::TreeView>().build();
         view->set_delegate(std::make_shared<SdkTreeDelegate>());
         view->set_model(
             std::shared_ptr<nandina::widget::ITreeModel>(&model, [](nandina::widget::ITreeModel*) {

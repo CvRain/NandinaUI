@@ -30,7 +30,9 @@
 | [`Collapsible`](collapsible.md) | 保留内容状态的折叠区域 | 实验性（P4.2c 初稿，视觉验收待完成） |
 | [`Accordion`](accordion.md) | 协调多个 Collapsible 区段的 single/multiple 展开状态 | 实验性（批 7 v1；Up/Down/Home/End 漫游） |
 | [`Table`](table.md) | 静态内容表格，共享列宽并按行自然增长 | 实验性（P4.2b 代码复核与 2026-11-13 视觉验收完成；无选择/排序/虚拟化） |
-| [`DataTable`](data_table.md) | 行模型驱动的虚拟化数据表格，含选择、排序、delegate 与固定表头 | 实验性（3b③ 公共导出已完成；键盘/指针/主题已接入） |
+| [`DataTable`](data_table.md) | 行模型驱动的虚拟化数据表格，含选择、排序、delegate 与固定表头 | 实验性（公开头已迁至 `widget/`；默认文本选中视觉与 `selection_changed`/`sort_changed` 已接入） |
+| `ListView` | 行模型驱动的一维虚拟化数据列表 | 实验性（批 5 交付；`ui.make<ListView>()` 可用） |
+| `TreeView` | 树模型驱动的虚拟化层级数据视图 | 实验性（批 6 交付；`ui.make<TreeView>()` 可用） |
 
 ### 输入与选择
 

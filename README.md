@@ -73,14 +73,15 @@ SQLite 数据层与资源驱动的迁移、账户服务与登录/注册，以及
 
 | 类别 | 当前可用 |
 | --- | --- |
-| 内容与展示 | Label、Image、Avatar（首字母占位）、Badge、Chip、Divider、ProgressBar、Spinner、Skeleton、EmptyState、Card、Collapsible、Accordion、Table |
+| 内容与展示 | Label、Image、Avatar（首字母占位）、Badge、Chip、Divider、ProgressBar、Spinner、Skeleton、EmptyState、Card、Collapsible、Accordion、Table、DataTable、ListView、TreeView |
 | 输入与选择 | Button、Checkbox、Switch、RadioButton/RadioGroup、Slider、TextField、TextArea、Select、Combobox、Tabs、Toggle、ToggleGroup、ButtonGroup、Breadcrumb、Pagination |
 | 浮层与反馈 | Dialog、AlertDialog、Popover、DropdownMenu、ContextMenu、CommandPalette、HoverCard、Tooltip、Alert |
 | 交互扩展 | PointerArea、GestureArea（实验性） |
-| 布局与滚动 | Column、Row、Flex、FlexItem、Wrap、Stack、Padding、Center、Expanded、Grid、ScrollView、ListView |
+| 布局与滚动 | Column、Row、Flex、FlexItem、Wrap、Stack、Padding、Center、Expanded、Grid、ScrollView |
 
-表中前四类共 40 个公开组件（`RadioGroup` 与 `RadioButton` 同行记录；`Table`/`Collapsible`/`Accordion`
-当前为 experimental，`Collapsible` 于 P4.2c、`Accordion` 于批 7 加入）；"布局与滚动"一栏是
+表中前四类共 43 个公开组件（`RadioGroup` 与 `RadioButton` 同行记录；`Table`/`Collapsible`/`Accordion`/
+`DataTable`/`ListView`/`TreeView` 当前为 experimental，`DataTable`/`ListView`/`TreeView` 于
+2026-11-21 作者体验批补齐 `ComponentTraits`）；"布局与滚动"一栏是
 声明式布局原语，不计入组件数。完整的用途、成熟度与计划组件见
 [组件参考](docs/components/README.md) 与[组件文档覆盖看板](docs/components/coverage.md)。
 

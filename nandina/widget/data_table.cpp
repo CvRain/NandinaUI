@@ -1,11 +1,11 @@
 #include "data_table.hpp"
 
-#include "../../render/draw_context.hpp"
-#include "../../scene/scene_tree.hpp"
-#include "../../theme/nan_style.hpp"
-#include "../table.hpp"
-#include "item_host.hpp"
-#include "track_solver.hpp"
+#include "../render/draw_context.hpp"
+#include "../scene/scene_tree.hpp"
+#include "../theme/nan_style.hpp"
+#include "internal/item_host.hpp"
+#include "internal/track_solver.hpp"
+#include "table.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -585,17 +585,24 @@ namespace nandina::widget
         auto next_delegates = build_default_delegates(columns);
         columns_ = std::move(columns);
         default_delegates_ = std::move(next_delegates);
+        bool sort_cleared = false;
         if (sort_.has_value()) {
             const auto* sorted_column = find_column(sort_->column);
             if (sorted_column == nullptr || sorted_column->sort == SortStrategy::none) {
                 sort_.reset();
+                sort_cleared = true;
             }
         }
         visible_columns_ = visible_column_indices();
         rebuild_all();
+        if (sort_cleared) {
+            const auto keep_alive = weak_from_this().lock();
+            sort_changed_.emit();
+        }
     }
 
     void DataTable::set_columns(std::vector<DataTableColumn> columns) {
+        const auto keep_alive = weak_from_this().lock();
         if (columns.empty()) {
             throw std::invalid_argument("DataTable requires at least one column");
         }
@@ -612,6 +619,7 @@ namespace nandina::widget
     }
 
     void DataTable::set_model(std::shared_ptr<IRowModel> model) {
+        const auto keep_alive = weak_from_this().lock();
         if (model.get() == model_.get()) {
             return;
         }
@@ -702,6 +710,7 @@ namespace nandina::widget
     }
 
     void DataTable::apply_pending() {
+        const auto keep_alive = weak_from_this().lock();
         pending_scheduled_ = false;
         if (pending_reset_) {
             pending_reset_ = false;
@@ -730,6 +739,7 @@ namespace nandina::widget
     // ─── 排序 ───────────────────────────────────────────────────────────────
 
     auto DataTable::set_sort(std::optional<SortSpec> sort, const SortRequestReason reason) -> bool {
+        const auto keep_alive = weak_from_this().lock();
         if (!valid_sort_reason(reason)) {
             throw std::invalid_argument("DataTable sort request reason is invalid");
         }
@@ -751,6 +761,7 @@ namespace nandina::widget
             if (external) {
                 emit_sort_request(std::nullopt, reason);
             }
+            sort_changed_.emit();
             return true;
         }
 
@@ -772,6 +783,7 @@ namespace nandina::widget
             if (!model_) {
                 sort_ = *sort;
                 sync_derived();
+                sort_changed_.emit();
                 return true;
             }
             std::vector<std::size_t> order(model_->row_count());
@@ -792,6 +804,7 @@ namespace nandina::widget
             sort_ = *sort;
             display_order_ = std::move(order);
             sync_derived();
+            sort_changed_.emit();
             return true;
         }
 
@@ -804,6 +817,7 @@ namespace nandina::widget
         }
         sync_derived();
         emit_sort_request(*sort_, reason);
+        sort_changed_.emit();
         return true;
     }
 
@@ -827,6 +841,17 @@ namespace nandina::widget
                 callback(request);
             }
         };
+    }
+
+    auto DataTable::sort_changed() const noexcept -> const reactive::Event<>& {
+        return sort_changed_;
+    }
+
+    void DataTable::set_on_sort_changed(std::function<void()> callback) {
+        user_sort_changed_sub_.disconnect();
+        if (callback) {
+            user_sort_changed_sub_ = sort_changed_.subscribe(std::move(callback));
+        }
     }
 
     void
@@ -860,6 +885,17 @@ namespace nandina::widget
         return selection_;
     }
 
+    auto DataTable::selection_changed() const noexcept -> const reactive::Event<>& {
+        return selection_.changed();
+    }
+
+    void DataTable::set_on_selection_changed(std::function<void()> callback) {
+        user_selection_sub_.disconnect();
+        if (callback) {
+            user_selection_sub_ = selection_.changed().subscribe(std::move(callback));
+        }
+    }
+
     auto DataTable::navigation() const noexcept -> const GridNavigation& {
         return navigation_;
     }
@@ -869,6 +905,7 @@ namespace nandina::widget
         CellId target,
         const std::span<const CellId> extent
     ) -> bool {
+        const auto keep_alive = weak_from_this().lock();
         switch (op) {
             case SelectionOp::replace:
             case SelectionOp::toggle:
@@ -893,6 +930,7 @@ namespace nandina::widget
     }
 
     auto DataTable::set_current_cell(std::optional<CellId> current) -> bool {
+        const auto keep_alive = weak_from_this().lock();
         if (current.has_value() && !contains_cell(*current)) {
             return false;
         }
@@ -901,6 +939,7 @@ namespace nandina::widget
     }
 
     void DataTable::clear_selection() {
+        const auto keep_alive = weak_from_this().lock();
         selection_.clear_selection();
     }
 
@@ -1173,6 +1212,7 @@ namespace nandina::widget
     }
 
     void DataTable::apply_data_changes(const std::vector<RowRange>& ranges) {
+        const auto keep_alive = weak_from_this().lock();
         if (!model_ || ranges.empty()) {
             return;
         }
@@ -1286,6 +1326,7 @@ namespace nandina::widget
     }
 
     void DataTable::rebuild_all() {
+        const auto keep_alive = weak_from_this().lock();
         // A structural rebuild reads the model's current state. Any older queued range/reset
         // belongs to the previous snapshot; discard it rather than applying stale row indexes.
         pending_scheduled_ = false;
@@ -1597,6 +1638,7 @@ namespace nandina::widget
     }
 
     auto DataTable::on_input(scene::InputEvent& event) -> bool {
+        const auto keep_alive = weak_from_this().lock();
         if (event.type() == scene::EventType::mouse_button) {
             auto& mouse = static_cast<scene::MouseButtonEvent&>(event);
             if (mouse.button() != scene::MouseButtonEvent::Button::left || !mouse.is_pressed()) {
