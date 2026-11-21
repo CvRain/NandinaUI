@@ -463,7 +463,8 @@ namespace nandina::widget
     }
 
     void ListView::refresh_item_states() {
-        if (model_ == nullptr || delegate_ == nullptr || visible_window_.empty()) {
+        if (model_ == nullptr || delegate_ == nullptr || pending_reset_ || visible_window_.empty())
+        {
             return;
         }
         std::vector<ItemHost::ItemRequest> requests;
@@ -486,14 +487,14 @@ namespace nandina::widget
             return std::nullopt;
         }
         const auto row = window_math().hit_row(local.get_y(), scroll_offset_, visible_window_);
-        if (!row.has_value() || *row >= model_->row_count()) {
+        if (pending_reset_ || !row.has_value() || *row >= model_->row_count()) {
             return std::nullopt;
         }
         return model_->row_id(*row);
     }
 
     auto ListView::handle_key(scene::KeyEvent& key_event) -> bool {
-        if (!key_event.is_press_or_repeat()) {
+        if (!key_event.is_press_or_repeat() || pending_reset_) {
             return false;
         }
         const auto logical = key_event.logical_key();
@@ -616,12 +617,12 @@ namespace nandina::widget
         if (pending_window_sync_) {
             return;
         }
+        pending_window_sync_ = true;
         auto* tree = get_tree();
         if (tree == nullptr) {
             apply_window_sync();
             return;
         }
-        pending_window_sync_ = true;
         std::weak_ptr<ListView> weak = std::static_pointer_cast<ListView>(shared_from_this());
         tree->post_layout([weak, tree] {
             if (auto list = weak.lock(); list != nullptr && list->get_tree() == tree) {
@@ -631,8 +632,11 @@ namespace nandina::widget
     }
 
     void ListView::apply_window_sync() {
-        // 同一帧内模型回调可能还排在窗口动作之后：先重建账本，避免数据收缩时读旧索引。
-        if (pending_reset_ || !pending_ranges_.empty() || pending_scheduled_) {
+        // 同一帧内模型回调可能还排在窗口动作之后：先重建账本，避免数据收缩时读旧索引；
+        // 若前面的 rebuild_all 已消费并清掉 pending_window_sync_，则不重复物化。
+        if (!pending_window_sync_ || pending_reset_ || !pending_ranges_.empty()
+            || pending_scheduled_)
+        {
             return;
         }
         pending_window_sync_ = false;
@@ -667,7 +671,7 @@ namespace nandina::widget
         host_->layout_to(
             foundation::NanRect::from_xywh(0.0F, 0.0F, viewport_width, viewport_height)
         );
-        if (model_ == nullptr || delegate_ == nullptr) {
+        if (model_ == nullptr || delegate_ == nullptr || pending_reset_) {
             return;
         }
         const std::size_t end = std::min(visible_window_.end, model_->row_count());

@@ -476,3 +476,48 @@ TEST_CASE("ListView rejects delegate model token mismatches", "[list-view][valid
     );
     CHECK(with_other_model->delegate() == nullptr);
 }
+
+TEST_CASE(
+    "ListView survives layout pass before deferred shrinking reset flushes",
+    "[list-view][virtualization][binding][regression]"
+) {
+    Fixture fixture;
+    TestModel model;
+    auto harness = make_harness(fixture, model, 50);
+    auto tree = mount(harness.list);
+    REQUIRE(harness.list->item_count() == kVisibleRows);
+    click_node(*tree, *harness.list->row_node(row_id(2)));
+    REQUIRE(harness.list->selection().selected() == std::vector<widget::RowId> {row_id(2)});
+
+    {
+        auto phase = tree->enter_phase(scene::FramePhase::input);
+        model.reset(make_names(3), 100);
+        harness.list->mark_layout_dirty();
+        REQUIRE(harness.list->has_pending_notifications());
+        // Pointer input must not translate stale visible coordinates through the new model.
+        click_node(*tree, *harness.list->row_node(row_id(2)));
+        CHECK(harness.list->selection().selected() == std::vector<widget::RowId> {row_id(2)});
+    }
+
+    REQUIRE_NOTHROW((void)tree->layout_root(foundation::NanSize(360.0F, 300.0F)));
+    CHECK_FALSE(harness.list->has_pending_notifications());
+    CHECK(harness.list->row_count() == 3);
+    CHECK(harness.list->item_count() == 3);
+    CHECK(harness.list->row_node(row_id(100)) != nullptr);
+    CHECK(harness.list->row_node(row_id(1)) == nullptr);
+    CHECK_FALSE(harness.delegate->states.at(100).current);
+}
+
+TEST_CASE(
+    "ListView detached layout_to materializes a newly visible window",
+    "[list-view][virtualization][detached]"
+) {
+    Fixture fixture;
+    TestModel model;
+    auto harness = make_harness(fixture, model, 50);
+    REQUIRE(harness.list->item_count() == 0);
+
+    harness.list->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 400.0F, 300.0F));
+    CHECK(harness.list->item_count() == kVisibleRows);
+    CHECK(harness.list->row_node(row_id(1)) != nullptr);
+}

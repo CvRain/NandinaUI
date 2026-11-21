@@ -55,6 +55,22 @@ namespace
         }
     };
 
+    class UpdateCountingDelegate final: public widget::IItemDelegate {
+    public:
+        std::size_t create_calls = 0;
+        std::size_t update_calls = 0;
+
+        auto create_item(const widget::BuildContext& ui, const widget::ItemBinding&)
+            -> std::shared_ptr<scene::NanControl> override {
+            ++create_calls;
+            return widget::Label::create(ui.graph());
+        }
+
+        void update_item(scene::NanControl&, const widget::ItemBinding&) override {
+            ++update_calls;
+        }
+    };
+
     struct Fixture {
         reactive::Graph graph;
         reactive::ReactiveScope scope {graph};
@@ -654,4 +670,68 @@ TEST_CASE(
     CHECK(table->scroll_offset() <= table->maximum_scroll_offset());
     (void)tree->layout_root(foundation::NanSize(400.0F, 300.0F));
     CHECK(table->scroll_offset() <= table->maximum_scroll_offset());
+}
+
+TEST_CASE(
+    "DataTable survives layout pass before deferred shrinking reset flushes",
+    "[data-table][3a][virtualization][binding][regression]"
+) {
+    Fixture fixture;
+    TestModel model;
+    model.reset(make_names(9), 1);
+    auto delegate = std::make_shared<UpdateCountingDelegate>();
+    auto table = widget::DataTable::create(
+        fixture.ui,
+        {
+            widget::custom_column(
+                column_id("name"),
+                "Name",
+                widget::TableColumn {.flex = 1.0F},
+                delegate
+            ),
+        }
+    );
+    table->set_model(std::shared_ptr<widget::IRowModel>(&model, [](widget::IRowModel*) {}));
+    auto tree = mount(fixture, table);
+    tree->set_theme_manager(fixture.themes);
+    REQUIRE(table->item_count() == 9);
+    delegate->create_calls = 0;
+    delegate->update_calls = 0;
+
+    {
+        auto phase = tree->enter_phase(scene::FramePhase::input);
+        // Shrink model below the materialized window (9 rows -> 4 rows) during input traversal
+        // while the same frame also marks layout dirty (e.g. sibling/inspector update).
+        model.reset(make_names(4), 100);
+        table->mark_layout_dirty();
+        REQUIRE(table->has_pending_notifications());
+        // Theme refresh during the pending reset must not index old display rows in the new model.
+        fixture.themes.set_text_scaling(1.25F);
+    }
+
+    // Pass 1 of layout_root() runs DataTable::on_layout() BEFORE post_layout() flushes the
+    // deferred reset; stale display_order_ must not index into the shrunken model.
+    REQUIRE_NOTHROW((void)tree->layout_root(foundation::NanSize(300.0F, 200.0F)));
+    CHECK_FALSE(table->has_pending_notifications());
+    CHECK(table->row_count() == 4);
+    CHECK(table->item_count() == 4);
+    CHECK(table->cell_node(cell(100, "name")) != nullptr);
+    CHECK(table->cell_node(cell(1, "name")) == nullptr);
+    // The consumed reset must not run a second stale window-sync materialization.
+    CHECK(delegate->create_calls == 4);
+    CHECK(delegate->update_calls == 4);
+}
+
+TEST_CASE(
+    "DataTable detached layout_to materializes a newly visible window",
+    "[data-table][3a][virtualization][detached]"
+) {
+    Fixture fixture;
+    TestModel model;
+    auto table = make_large_table(fixture, model);
+    REQUIRE(table->item_count() == 0);
+
+    table->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 400.0F, 300.0F));
+    CHECK(table->item_count() == kVisibleCells);
+    CHECK(table->cell_node(cell(1, "name")) != nullptr);
 }

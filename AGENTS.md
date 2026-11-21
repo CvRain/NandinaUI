@@ -29,12 +29,12 @@ application shell. Version `0.1.0-alpha.1`.
   legacy `VirtualListView` retired (`virtual_list_view.hpp` + dedicated tests removed);
   `TreeView` v1 added (`ITreeModel : IRowModel`, view-owned expansion, uniform-row
   virtualization, `SelectionModel<RowId>`, `ItemState` depth/has_children/expanded,
-  framework-drawn expander; contract §10). Verification: `tree-view` 21 cases/136
-  assertions; `list-view` 15/68; `data-public-api` 4/22; `authoring` 38/197,
-  `[authoring][region]` 1/16. Operator desktop record: unit 119/119 and full suite
-  142/142; current headless recheck: unit 118 OK +1 environment skip, full suite 139 OK
-  +3 environment skips (`sdf-device`/`sdf-state-probe`/`window-lifecycle`), ASan 117 OK
-  +1 skip, no-RTTI 118 OK +1 skip, no-SQLite 114 OK +1 skip, pure tools 8/8,
+  framework-drawn expander; contract §10). Verification: `tree-view` 23 cases/152
+  assertions; `list-view` 17/82; `data-table-3a` 20/397; `data-public-api` 4/22;
+  `authoring` 38/197, `[authoring][region]` 1/16. Operator desktop record: unit 119/119
+  and full suite 142/142; current headless recheck: unit 118 OK +1 environment skip, full
+  suite 139 OK +3 environment skips (`sdf-device`/`sdf-state-probe`/`window-lifecycle`),
+  ASan 117 OK +1 skip, no-RTTI 118 OK +1 skip, no-SQLite 114 OK +1 skip, pure tools 8/8,
   `release_check --ci` 8/8.
 - **Batch 7 (Accordion) implemented and verified**: composes `Collapsible` sections
   (`AccordionSection` id/title/content/disabled); single/multiple open state (single allows

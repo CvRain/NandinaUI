@@ -1221,7 +1221,7 @@ namespace nandina::widget
     }
 
     void DataTable::refresh_cell_states() {
-        if (model_ == nullptr) {
+        if (model_ == nullptr || pending_reset_) {
             return;
         }
         std::vector<ItemHost::ItemRequest> requests;
@@ -1432,12 +1432,15 @@ namespace nandina::widget
         const std::size_t display_row,
         const std::size_t visible_column
     ) const -> std::optional<CellId> {
-        if (model_ == nullptr || display_row >= display_order_.size()
+        if (model_ == nullptr || pending_reset_ || display_row >= display_order_.size()
             || visible_column >= visible_columns_.size())
         {
             return std::nullopt;
         }
         const std::size_t model_row = display_order_[display_row];
+        if (model_row >= model_->row_count()) {
+            return std::nullopt;
+        }
         return CellId {
             .row = model_->row_id(model_row),
             .column = columns_[visible_columns_[visible_column]].id,
@@ -1459,6 +1462,9 @@ namespace nandina::widget
 
     auto DataTable::extent_between(const CellId& anchor, const CellId& target) const
         -> std::vector<CellId> {
+        if (model_ == nullptr || pending_reset_) {
+            return {target};
+        }
         const auto from = display_index_of(anchor);
         const auto to = display_index_of(target);
         if (!from.has_value() || !to.has_value()) {
@@ -1482,7 +1488,7 @@ namespace nandina::widget
     }
 
     auto DataTable::hit_cell(const foundation::NanPoint local) const -> std::optional<CellId> {
-        if (model_ == nullptr || visible_columns_.empty()
+        if (model_ == nullptr || pending_reset_ || visible_columns_.empty()
             || column_offsets_.size() != visible_columns_.size() + 1)
         {
             return std::nullopt;
@@ -1519,7 +1525,8 @@ namespace nandina::widget
     }
 
     auto DataTable::handle_key(scene::KeyEvent& key_event) -> bool {
-        if (!key_event.is_press_or_repeat() || visible_window_.empty() || visible_columns_.empty())
+        if (!key_event.is_press_or_repeat() || pending_reset_ || visible_window_.empty()
+            || visible_columns_.empty())
         {
             return false;
         }
@@ -1684,12 +1691,12 @@ namespace nandina::widget
         if (pending_window_sync_) {
             return;
         }
+        pending_window_sync_ = true;
         auto* tree = get_tree();
         if (tree == nullptr) {
             apply_window_sync();
             return;
         }
-        pending_window_sync_ = true;
         std::weak_ptr<DataTable> weak = std::static_pointer_cast<DataTable>(shared_from_this());
         tree->post_layout([weak, tree] {
             if (auto table = weak.lock(); table != nullptr && table->get_tree() == tree) {
@@ -1701,8 +1708,10 @@ namespace nandina::widget
     void DataTable::apply_window_sync() {
         // The model callback for the same frame may still be queued behind this action.
         // Rebuild its display ledger first; otherwise a shrink can make this window sync
-        // read stale row indices.
-        if (pending_reset_ || !pending_ranges_.empty() || pending_scheduled_) {
+        // read stale row indices. Also skip when an earlier rebuild already consumed sync.
+        if (!pending_window_sync_ || pending_reset_ || !pending_ranges_.empty()
+            || pending_scheduled_)
+        {
             return;
         }
         pending_window_sync_ = false;
@@ -1722,12 +1731,18 @@ namespace nandina::widget
                 body_viewport_height()
             )
         );
-        if (visible_columns_.empty() || column_offsets_.size() != visible_columns_.size() + 1) {
+        if (pending_reset_ || visible_columns_.empty()
+            || column_offsets_.size() != visible_columns_.size() + 1)
+        {
             return;
         }
+        const std::size_t model_count = model_->row_count();
         const std::size_t end = std::min(visible_window_.end, display_order_.size());
         for (std::size_t display_row = visible_window_.first; display_row < end; ++display_row) {
             const std::size_t model_row = display_order_[display_row];
+            if (model_row >= model_count) {
+                continue;
+            }
             const RowId row = model_->row_id(model_row);
             for (std::size_t visible = 0; visible < visible_columns_.size(); ++visible) {
                 const auto& column = columns_[visible_columns_[visible]];

@@ -172,6 +172,63 @@ namespace
         }
     };
 
+    using LayoutCounts = std::unordered_map<std::uint64_t, std::size_t>;
+
+    class LayoutCountingLabel final: public widget::Label {
+    public:
+        LayoutCountingLabel(
+            reactive::Graph& graph,
+            std::string text,
+            theme::NanTheme theme,
+            const widget::RowId row,
+            std::shared_ptr<LayoutCounts> counts
+        ):
+            Label(graph, std::move(text), std::move(theme)),
+            row_(row),
+            counts_(std::move(counts)) {}
+
+    protected:
+        void on_layout() override {
+            ++(*counts_)[row_.value];
+            Label::on_layout();
+        }
+
+    private:
+        widget::RowId row_;
+        std::shared_ptr<LayoutCounts> counts_;
+    };
+
+    class LayoutCountingDelegate final: public widget::TypedItemDelegate<TestTreeModel> {
+    public:
+        std::shared_ptr<LayoutCounts> layout_counts = std::make_shared<LayoutCounts>();
+        std::size_t create_calls = 0;
+        std::size_t update_calls = 0;
+
+    protected:
+        auto create_typed(
+            const widget::BuildContext& ui,
+            const TestTreeModel& model,
+            const widget::ItemBinding& binding
+        ) -> std::shared_ptr<scene::NanControl> override {
+            ++create_calls;
+            return std::make_shared<LayoutCountingLabel>(
+                ui.graph(),
+                model.name_of(binding.model_row),
+                ui.theme(),
+                binding.row,
+                layout_counts
+            );
+        }
+        void update_typed(
+            scene::NanControl& control,
+            const TestTreeModel& model,
+            const widget::ItemBinding& binding
+        ) override {
+            ++update_calls;
+            static_cast<widget::Label&>(control).set_text(model.name_of(binding.model_row));
+        }
+    };
+
     class OtherTreeModel final: public widget::TypedTreeModelBase<OtherTreeModel> {
     public:
         [[nodiscard]] auto row_count() const noexcept -> std::size_t override {
@@ -749,4 +806,63 @@ TEST_CASE(
         std::invalid_argument
     );
     CHECK(with_other_model->delegate() == nullptr);
+}
+
+TEST_CASE(
+    "TreeView survives layout pass before deferred shrinking reset flushes",
+    "[tree-view][virtualization][binding][regression]"
+) {
+    Fixture fixture;
+    TestTreeModel model;
+    model.reset_roots(50);
+    auto view = widget::TreeView::create(fixture.ui);
+    auto delegate = std::make_shared<LayoutCountingDelegate>();
+    view->set_delegate(delegate);
+    view->set_model(std::shared_ptr<widget::ITreeModel>(&model, [](widget::ITreeModel*) {}));
+    auto tree = mount(view);
+    tree->set_theme_manager(fixture.themes);
+    REQUIRE(view->row_count() == 50);
+    REQUIRE(view->select(row_id(2)));
+    const auto row_one_layouts = delegate->layout_counts->at(1);
+    delegate->create_calls = 0;
+    delegate->update_calls = 0;
+
+    {
+        auto phase = tree->enter_phase(scene::FramePhase::input);
+        model.reset({
+            {.id = row_id(100), .name = "Only", .parent_index = std::nullopt},
+        });
+        view->mark_layout_dirty();
+        REQUIRE(view->has_pending_notifications());
+        // Pointer input must not operate on the old visible-row ledger during the pending reset.
+        click_at(*tree, *view, 30.0F, 16.0F);
+        CHECK(view->selection().selected() == std::vector<widget::RowId> {row_id(2)});
+        // Theme propagation during the pending reset must not update old model_row bindings.
+        fixture.themes.set_text_scaling(1.25F);
+    }
+
+    REQUIRE_NOTHROW((void)tree->layout_root(foundation::NanSize(360.0F, 200.0F)));
+    CHECK_FALSE(view->has_pending_notifications());
+    CHECK(view->row_count() == 1);
+    CHECK(view->item_count() == 1);
+    CHECK(view->row_node(row_id(100)) != nullptr);
+    CHECK(view->row_node(row_id(1)) == nullptr);
+    CHECK(delegate->layout_counts->at(1) == row_one_layouts);
+    CHECK(delegate->create_calls == 1);
+    CHECK(delegate->update_calls == 1);
+}
+
+TEST_CASE(
+    "TreeView detached layout_to materializes a newly visible window",
+    "[tree-view][virtualization][detached]"
+) {
+    Fixture fixture;
+    TestTreeModel model;
+    model.reset_roots(50);
+    auto harness = make_harness(fixture, model);
+    REQUIRE(harness.view->item_count() == 0);
+
+    harness.view->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 400.0F, 300.0F));
+    CHECK(harness.view->item_count() == 10);
+    CHECK(harness.view->row_node(row_id(1)) != nullptr);
 }

@@ -831,6 +831,23 @@ struct SortRequest {
   视口高度取父级最终分配高度，3a 不新增 `set_viewport_height()`；无界父级下仍按内容高度
   测量（作者应通过固定高度或 `fill` 提供视口）。
 
+#### 9.9.1 pending reset / window sync 硬化（2026-11-21）
+
+- 遍历期收到 `reset` 后，旧 `display_order_`/`ordered_rows_`/`visible_rows_` 只作为待对账快照：
+  DataTable、ListView、TreeView 不据此刷新主题/选择视觉、命中指针或处理键盘导航；DataTable 的
+  `cell_at_display()` 与 positioning 额外校验 `model_row < model()->row_count()`，防止异常模型
+  收缩越界。
+- `position_window()` 仍更新 host 几何，但在 pending reset 期间不把旧行映射到新模型；TreeView
+  也不对旧可见节点重复 arrange。
+- `schedule_window_sync()` 先置 pending 再区分“树内 post_layout”与“detached 立即执行”；
+  `apply_window_sync()` 仅在 `pending_window_sync_` 仍存在时消费。这样同一个 reset 的
+  `rebuild_all()` 已清掉窗口动作后，旧回调不会二次物化并重复挂载。
+- 回归：`data-table-3a` 20 用例/397 断言、`list-view` 17/82、`tree-view` 23/152；三者均覆盖
+  detached `layout_to()` 首次物化。红先：移除 DataTable row-index 防御得到
+  `vector::_M_range_check`；移除 DataTable/ListView/TreeView 的 pending-window 消费守卫均得到
+  `NanNode::insert_child: child already has a parent`；TreeView 移除 refresh/position 守卫分别命中
+  旧 `model_row` / 旧节点重复 layout。
+
 ### 9.10 默认视觉归属（本批：delegate-only，不新增配方）
 
 **决定**：所有单元格视觉（背景、hover、选中、当前环、行分隔线）由默认/作者 delegate 依据
