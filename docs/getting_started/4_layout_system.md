@@ -6,11 +6,11 @@
 
 ## 本章目标
 
-- 使用 `ui.row()`、`ui.column()`、`ui.center()` 和 `ui.padding()` 组合控件。
-- 使用 `.child()` 与 `.children()` 建立清晰的父子结构。
+- 使用 `ui.row(...)`、`ui.column(...)`、`ui.wrap(...)`、`ui.center(...)` 和 `ui.padding(insets, child)` 组合控件。
+- 使用构造期子项简写（如 `ui.column(title, body)`、`ui.expanded(child)`）或分步 `.child()` / `.children()` 建立清晰的父子结构。
 - 配置间距、主轴方向与交叉轴对齐。
-- 理解内容尺寸、填充尺寸、百分比尺寸以及最小/最大约束。
-- 知道何时使用 `Expanded`、`FlexItem`、`Grid`、`Stack` 或 `ScrollView`。
+- 理解内容尺寸、填充尺寸、百分比尺寸以及最小/最大约束，区分 `fill`（占满父容器该轴 100% 约束上限）与 `Expanded`（在 `Row`/`Column` 主轴上分摊剩余空间）。
+- 知道何时使用 `Expanded`、`FlexItem`、`Wrap`、`Grid`、`Stack` 或 `ScrollView`。
 
 ## 建议覆盖的知识点
 

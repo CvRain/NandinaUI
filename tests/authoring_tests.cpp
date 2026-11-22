@@ -1087,3 +1087,350 @@ TEST_CASE("authoring typography role chains on Label", "[authoring][typography]"
     REQUIRE(label->line_height() == Catch::Approx(1.375F));
     REQUIRE(label->font().weight == 600);
 }
+
+namespace
+{
+    template<typename Arg>
+    concept RowAcceptsArg = requires(widget::BuildContext& ui, Arg&& arg) {
+        ui.row(std::forward<Arg>(arg));
+        widget::authoring::row(std::forward<Arg>(arg));
+    };
+
+    template<typename Arg>
+    concept ColumnAcceptsArg = requires(widget::BuildContext& ui, Arg&& arg) {
+        ui.column(std::forward<Arg>(arg));
+        widget::authoring::column(std::forward<Arg>(arg));
+    };
+
+    template<typename Arg>
+    concept CenterAcceptsArg = requires(widget::BuildContext& ui, Arg&& arg) {
+        ui.center(std::forward<Arg>(arg));
+        widget::authoring::center(std::forward<Arg>(arg));
+    };
+
+    template<typename Arg>
+    concept SurfaceAcceptsArg = requires(widget::BuildContext& ui, Arg&& arg) {
+        ui.surface(std::forward<Arg>(arg));
+        widget::authoring::surface(std::forward<Arg>(arg));
+    };
+
+    template<typename Arg>
+    concept PaddingAcceptsArg =
+        requires(widget::BuildContext& ui, foundation::NanInsets insets, Arg&& arg) {
+            ui.padding(insets, std::forward<Arg>(arg));
+            widget::authoring::padding(insets, std::forward<Arg>(arg));
+        };
+
+    template<typename Arg>
+    concept GridChildAcceptsArg = requires(widget::BuildContext& ui, Arg&& arg) {
+        ui.grid(2, std::forward<Arg>(arg));
+        widget::authoring::grid(2, std::forward<Arg>(arg));
+    };
+
+    static_assert(RowAcceptsArg<std::shared_ptr<widget::Label>>);
+    static_assert(RowAcceptsArg<widget::authoring::NodeBuilder<widget::Button>>);
+    static_assert(!RowAcceptsArg<int>);
+    static_assert(!RowAcceptsArg<float>);
+    static_assert(!RowAcceptsArg<std::string_view>);
+
+    static_assert(ColumnAcceptsArg<std::shared_ptr<widget::Label>>);
+    static_assert(!ColumnAcceptsArg<int>);
+    static_assert(!ColumnAcceptsArg<widget::LayoutAxis>);
+
+    static_assert(CenterAcceptsArg<std::shared_ptr<widget::Label>>);
+    static_assert(CenterAcceptsArg<widget::authoring::NodeBuilder<widget::Label>>);
+    static_assert(!CenterAcceptsArg<int>);
+    static_assert(!CenterAcceptsArg<foundation::NanInsets>);
+
+    static_assert(SurfaceAcceptsArg<std::shared_ptr<widget::Label>>);
+    static_assert(SurfaceAcceptsArg<widget::authoring::NodeBuilder<widget::Label>>);
+    static_assert(!SurfaceAcceptsArg<int>);
+    static_assert(!SurfaceAcceptsArg<theme::BoxStyle>);
+
+    static_assert(PaddingAcceptsArg<std::shared_ptr<widget::Label>>);
+    static_assert(!PaddingAcceptsArg<float>);
+
+    static_assert(GridChildAcceptsArg<std::shared_ptr<widget::Label>>);
+    static_assert(!GridChildAcceptsArg<int>);
+} // namespace
+
+TEST_CASE(
+    "multi-child factory shorthands preserve child order layout and post-insertion configuration",
+    "[authoring][factory][shorthand]"
+) {
+    reactive::Graph graph;
+    reactive::ReactiveScope scope(graph);
+    theme_test::Manager themes;
+    widget::BuildContext ui(graph, scope, themes);
+
+    std::shared_ptr<widget::Label> first;
+    std::shared_ptr<widget::Label> second;
+    std::shared_ptr<widget::Button> third;
+    auto shorthand_col = ui.column(
+                               ui.make<widget::Label>("First").expose(first),
+                               ui.make<widget::Label>("Second").expose(second),
+                               ui.make<widget::Button>("Third").expose(third)
+    )
+                             .gap(10.0F)
+                             .cross_alignment(widget::LayoutAlignment::stretch)
+                             .width(240.0F)
+                             .build();
+
+    auto chained_col = ui.column()
+                           .gap(10.0F)
+                           .cross_alignment(widget::LayoutAlignment::stretch)
+                           .width(240.0F)
+                           .children(
+                               ui.make<widget::Label>("First"),
+                               ui.make<widget::Label>("Second"),
+                               ui.make<widget::Button>("Third")
+                           )
+                           .build();
+
+    REQUIRE(shorthand_col->child_count() == 3);
+    CHECK(shorthand_col->get_child(0) == first.get());
+    CHECK(shorthand_col->get_child(1) == second.get());
+    CHECK(shorthand_col->get_child(2) == third.get());
+    CHECK(shorthand_col->gap() == Catch::Approx(10.0F));
+    CHECK(shorthand_col->cross_alignment() == widget::LayoutAlignment::stretch);
+
+    scene::NanSceneTree tree_a;
+    tree_a.set_root(shorthand_col);
+    scene::NanSceneTree tree_b;
+    tree_b.set_root(chained_col);
+    REQUIRE(tree_a.layout_root(foundation::NanSize(240.0F, 180.0F)) == 1);
+    REQUIRE(tree_b.layout_root(foundation::NanSize(240.0F, 180.0F)) == 1);
+    for (std::size_t i = 0; i < 3; ++i) {
+        CHECK(
+            shorthand_col->get_child(i)->as_control()->global_bounds()
+            == chained_col->get_child(i)->as_control()->global_bounds()
+        );
+    }
+
+    auto row_node =
+        ui.row(ui.make<widget::Label>("Left"), ui.make<widget::Button>("Right")).gap(6.0F).build();
+    REQUIRE(row_node->child_count() == 2);
+    CHECK(row_node->gap() == Catch::Approx(6.0F));
+
+    auto stack_node = ui.stack(ui.make<widget::Label>("Back"), ui.make<widget::Label>("Front"))
+                          .width(120.0F)
+                          .height(40.0F)
+                          .build();
+    REQUIRE(stack_node->child_count() == 2);
+
+    auto canvas_node = ui.anchor_canvas(ui.make<widget::Label>("A"), ui.make<widget::Label>("B"))
+                           .width(160.0F)
+                           .height(90.0F)
+                           .build();
+    REQUIRE(canvas_node->child_count() == 2);
+
+    auto flex_h = ui.flex(ui.make<widget::Label>("H1"), ui.make<widget::Label>("H2")).build();
+    REQUIRE(flex_h->axis() == widget::LayoutAxis::horizontal);
+    REQUIRE(flex_h->child_count() == 2);
+
+    auto flex_v = ui.flex(
+                        widget::LayoutAxis::vertical,
+                        ui.make<widget::Label>("V1"),
+                        ui.make<widget::Label>("V2")
+    )
+                      .gap(4.0F)
+                      .build();
+    REQUIRE(flex_v->axis() == widget::LayoutAxis::vertical);
+    REQUIRE(flex_v->child_count() == 2);
+    CHECK(flex_v->gap() == Catch::Approx(4.0F));
+
+    auto wrap_default = ui.wrap().build();
+    CHECK(wrap_default->axis() == widget::LayoutAxis::horizontal);
+    CHECK(wrap_default->child_count() == 0);
+
+    auto wrap_h =
+        ui.wrap(ui.make<widget::Button>("A"), ui.make<widget::Button>("B")).gap(5.0F).build();
+    REQUIRE(wrap_h->axis() == widget::LayoutAxis::horizontal);
+    REQUIRE(wrap_h->child_count() == 2);
+    CHECK(wrap_h->gap() == Catch::Approx(5.0F));
+
+    auto wrap_v = ui.wrap(
+                        widget::LayoutAxis::vertical,
+                        ui.make<widget::Button>("A"),
+                        ui.make<widget::Button>("B")
+    )
+                      .build();
+    REQUIRE(wrap_v->axis() == widget::LayoutAxis::vertical);
+    REQUIRE(wrap_v->child_count() == 2);
+
+    auto grid_node = ui.grid(
+                           2,
+                           ui.make<widget::Label>("1"),
+                           ui.make<widget::Label>("2"),
+                           ui.make<widget::Label>("3")
+    )
+                         .build();
+    REQUIRE(grid_node->columns() == 2);
+    REQUIRE(grid_node->child_count() == 3);
+
+    // Free-function counterparts in widget::authoring.
+    auto free_row = widget::authoring::row(
+                        widget::authoring::make<widget::Label>(graph, "L"),
+                        widget::authoring::make<widget::Button>("R")
+    )
+                        .build();
+    auto free_wrap = widget::authoring::wrap(
+                         widget::authoring::make<widget::Button>("W1"),
+                         widget::authoring::make<widget::Button>("W2")
+    )
+                         .build();
+    auto free_grid = widget::authoring::grid(
+                         3,
+                         widget::authoring::make<widget::Label>(graph, "G1"),
+                         widget::authoring::make<widget::Label>(graph, "G2")
+    )
+                         .build();
+    CHECK(free_row->child_count() == 2);
+    CHECK(free_wrap->child_count() == 2);
+    CHECK(free_grid->columns() == 3);
+    CHECK(free_grid->child_count() == 2);
+}
+
+TEST_CASE(
+    "single-child factory shorthands and child accessors stay symmetric and prepared",
+    "[authoring][factory][shorthand]"
+) {
+    reactive::Graph graph;
+    reactive::ReactiveScope scope(graph);
+    theme_test::Manager themes;
+    widget::BuildContext ui(graph, scope, themes);
+
+    // Empty single-child containers report nullptr from child().
+    CHECK(ui.padding(foundation::NanInsets::all(4.0F)).build()->child() == nullptr);
+    CHECK(ui.surface().build()->child() == nullptr);
+    CHECK(ui.center().build()->child() == nullptr);
+    CHECK(ui.expanded().build()->child() == nullptr);
+    CHECK(ui.flex_item().build()->child() == nullptr);
+    CHECK(ui.scroll_view().build()->child() == nullptr);
+
+    std::shared_ptr<widget::Label> padded_label;
+    auto padded = ui.padding(
+                        foundation::NanInsets::symmetric(4.0F, 8.0F),
+                        ui.make<widget::Label>("Padded").expose(padded_label)
+    )
+                      .build();
+    REQUIRE(padded->child_count() == 1);
+    CHECK(padded->child() == padded_label.get());
+
+    reactive::Signal<float> radius(graph, 6.0F);
+    std::shared_ptr<widget::Label> surface_label;
+    auto surfaced = ui.surface(ui.make<widget::Label>("Surfaced").expose(surface_label))
+                        .padding(foundation::NanInsets::all(6.0F))
+                        .bind(widget::visual::container.radius, radius)
+                        .build();
+    REQUIRE(surfaced->child_count() == 1);
+    CHECK(surfaced->child() == surface_label.get());
+    CHECK(surfaced->resolved_style().radius == Catch::Approx(6.0F));
+    radius.set(14.0F);
+    CHECK(surfaced->resolved_style().radius == Catch::Approx(14.0F));
+
+    auto replacement = ui.make<widget::Label>("Replaced").build();
+    surfaced->set_child(replacement);
+    CHECK(surfaced->child_count() == 1);
+    CHECK(surfaced->child() == replacement.get());
+    CHECK(surface_label->parent() == nullptr);
+
+    std::shared_ptr<widget::Label> centered_label;
+    auto centered = ui.center(ui.make<widget::Label>("Centered").expose(centered_label)).build();
+    CHECK(centered->child() == centered_label.get());
+
+    std::shared_ptr<widget::Label> exp1_label;
+    std::shared_ptr<widget::Label> exp2_label;
+    auto exp1 = ui.expanded(ui.make<widget::Label>("Flex1").expose(exp1_label)).build();
+    auto exp2 = ui.expanded(3, ui.make<widget::Label>("Flex3").expose(exp2_label)).build();
+    CHECK(exp1->flex() == 1);
+    CHECK(exp1->child() == exp1_label.get());
+    CHECK(exp2->flex() == 3);
+    CHECK(exp2->child() == exp2_label.get());
+
+    std::shared_ptr<widget::Label> flex_default_label;
+    std::shared_ptr<widget::Label> flex_policy_label;
+    auto item_default =
+        ui.flex_item(ui.make<widget::Label>("Item1").expose(flex_default_label)).build();
+    auto item_policy = ui.flex_item(
+                             scene::LayoutFlexPolicy {.grow = 2.0F, .shrink = 0.5F},
+                             ui.make<widget::Label>("Item2").expose(flex_policy_label)
+    )
+                           .build();
+    CHECK(item_default->child() == flex_default_label.get());
+    CHECK(item_policy->child() == flex_policy_label.get());
+    CHECK(item_policy->policy().grow == Catch::Approx(2.0F));
+
+    std::shared_ptr<widget::Column> scroll_v_body;
+    std::shared_ptr<widget::Row> scroll_h_body;
+    auto scroll_v =
+        ui.scroll_view(ui.column(ui.make<widget::Label>("RowA")).expose(scroll_v_body)).build();
+    auto scroll_h = ui.scroll_view(
+                          widget::ScrollAxis::horizontal,
+                          ui.row(ui.make<widget::Label>("ColA")).expose(scroll_h_body)
+    )
+                        .build();
+    CHECK(scroll_v->axis() == widget::ScrollAxis::vertical);
+    CHECK(scroll_v->child() == scroll_v_body.get());
+    CHECK(scroll_h->axis() == widget::ScrollAxis::horizontal);
+    CHECK(scroll_h->child() == scroll_h_body.get());
+
+    // Free-function single-child overloads in widget::authoring.
+    auto free_surface_default =
+        widget::authoring::surface(widget::authoring::make<widget::Label>(graph, "S1")).build();
+    auto free_surface_themed = widget::authoring::surface(
+                                   themes.theme(),
+                                   widget::authoring::make<widget::Label>(graph, "S2")
+    )
+                                   .build();
+    auto free_expanded =
+        widget::authoring::expanded(2, widget::authoring::make<widget::Label>(graph, "E2")).build();
+    CHECK(free_surface_default->child() != nullptr);
+    CHECK(free_surface_themed->child() != nullptr);
+    CHECK(free_expanded->flex() == 2);
+    CHECK(free_expanded->child() != nullptr);
+}
+
+TEST_CASE(
+    "fill consumes the full main-axis limit while expanded shares remaining space",
+    "[authoring][factory][shorthand][layout]"
+) {
+    reactive::Graph graph;
+    reactive::ReactiveScope scope(graph);
+    theme_test::Manager themes;
+    widget::BuildContext ui(graph, scope, themes);
+
+    auto fill_row = ui.row(
+                          ui.make<widget::Label>("Title").width(scene::fill),
+                          ui.make<widget::Button>("Tail").width(40.0F)
+    )
+                        .width(200.0F)
+                        .height(40.0F)
+                        .build();
+    auto expanded_row = ui.row(
+                              ui.expanded(ui.make<widget::Label>("Title")),
+                              ui.make<widget::Button>("Tail").width(40.0F)
+    )
+                            .width(200.0F)
+                            .height(40.0F)
+                            .build();
+
+    scene::NanSceneTree fill_tree;
+    fill_tree.set_root(fill_row);
+    fill_row->mark_layout_dirty();
+    REQUIRE(fill_tree.layout_root(foundation::NanSize(200.0F, 40.0F)) == 1);
+    scene::NanSceneTree expanded_tree;
+    expanded_tree.set_root(expanded_row);
+    expanded_row->mark_layout_dirty();
+    REQUIRE(expanded_tree.layout_root(foundation::NanSize(200.0F, 40.0F)) == 1);
+
+    auto* fill_tail = fill_row->get_child(1)->as_control();
+    auto* expanded_label = expanded_row->get_child(0)->as_control();
+    auto* expanded_tail = expanded_row->get_child(1)->as_control();
+    REQUIRE(fill_tail != nullptr);
+    REQUIRE(expanded_label != nullptr);
+    REQUIRE(expanded_tail != nullptr);
+    CHECK(fill_tail->global_bounds().get_left() == Catch::Approx(200.0F));
+    CHECK(expanded_label->global_bounds().get_width() == Catch::Approx(160.0F));
+    CHECK(expanded_tail->global_bounds().get_left() == Catch::Approx(160.0F));
+}

@@ -104,9 +104,11 @@ namespace
 TEST_CASE("Surface shares single-child inset measurement and replacement", "[surface][layout]") {
     auto surface = widget::Surface::create();
     CHECK(surface->padding().is_zero());
+    CHECK(surface->child() == nullptr);
     auto first = std::make_shared<scene::NanControl>(foundation::NanSize(30, 20));
     surface->set_padding(foundation::NanInsets(3, 5, 7, 11));
     surface->set_child(first);
+    CHECK(surface->child() == first.get());
     auto measured = surface->measure_layout(foundation::NanLayoutConstraints::loose());
     CHECK(measured == foundation::NanSize(38, 38));
     surface->layout_to(foundation::NanRect::from_xywh(0, 0, 38, 38));
@@ -115,6 +117,7 @@ TEST_CASE("Surface shares single-child inset measurement and replacement", "[sur
     auto next = std::make_shared<scene::NanControl>(foundation::NanSize(10, 5));
     surface->set_child(next);
     CHECK(surface->child_count() == 1);
+    CHECK(surface->child() == next.get());
     CHECK(first->parent() == nullptr);
     CHECK(next->parent() == surface.get());
     CHECK(
@@ -286,20 +289,22 @@ TEST_CASE(
     reactive::ReactiveScope scope(graph);
     theme_test::Manager themes;
     widget::BuildContext ui(graph, scope, themes);
-    auto surface = ui.surface()
+    std::shared_ptr<widget::Label> label;
+    auto surface = ui.surface(ui.make<widget::Label>("surface").expose(label))
                        .box_style(box())
                        .padding(foundation::NanInsets::all(5))
                        .set(widget::visual::container.radius, 12.0F)
-                       .child(ui.make<widget::Label>("surface"))
                        .build();
     CHECK(surface->resolved_style().radius == 12);
     CHECK(surface->padding() == foundation::NanInsets::all(5));
     CHECK(surface->child_count() == 1);
+    CHECK(surface->child() == label.get());
     static_assert(
         widget::property::Writable<widget::Surface, decltype(widget::visual::container.radius)>
     );
     const auto bare = widget::authoring::surface().build();
     CHECK(bare->padding().is_zero());
+    CHECK(bare->child() == nullptr);
 }
 
 TEST_CASE(

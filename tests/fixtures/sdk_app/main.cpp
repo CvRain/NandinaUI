@@ -182,18 +182,18 @@ namespace
         nandina::reactive::ReactiveScope scope {application.graph()};
         nandina::widget::BuildContext ui {application.graph(), scope, application.theme_manager()};
         auto accordion = ui.make<nandina::widget::Accordion>().build();
-        auto content = nandina::widget::Label::create(
-            application.graph(),
-            "section body",
-            application.theme()
-        );
+        auto content = ui.surface(ui.column(ui.row(
+                                      ui.expanded(ui.make<nandina::widget::Label>("section body")),
+                                      ui.wrap(ui.make<nandina::widget::Label>("tag"))
+                                  )))
+                           .build();
         accordion->set_sections({
-            {.id = "first", .title = "First", .content = std::move(content)},
+            {.id = "first", .title = "First", .content = content},
         });
         nandina::scene::NanSceneTree tree;
         tree.set_root(accordion);
         (void)tree.layout_root(nandina::foundation::NanSize(320.0F, 200.0F));
-        return accordion->section_count() == 1
+        return content->child() != nullptr && accordion->section_count() == 1
             && accordion->trigger_node("first")->text() == "First" && accordion->toggle("first")
             && accordion->is_open("first");
     }

@@ -8,8 +8,8 @@
 | 项目 | 当前接口/规则 |
 | --- | --- |
 | 类型 | `widget::Surface`，`<nandina/widget/surface.hpp>`，继承 Padding |
-| 作者工厂 | `ui.surface()` / `authoring::surface()`；不提供 ComponentTraits/组件目录项 |
-| 内容 | 继承的 `set_child()`；builder `.child()`，拒绝 null，替换原单子项 |
+| 作者工厂 | `ui.surface()` / `ui.surface(child)` / `authoring::surface()` / `authoring::surface(child)` / `authoring::surface(theme, child)`；不提供 ComponentTraits/组件目录项 |
+| 内容 | 继承的 `set_child()` 与 `child()`；builder `.child()` 或工厂 `ui.surface(child)`，拒绝 null，替换原单子项 |
 | 内容边距 | `set_padding()` / `padding()`、builder `.padding()`；默认零，有限非负 |
 | 盒子 | `set_box_style(BoxStyle)` / `box_style()` / `resolved_style()`、builder `.box_style()` |
 | 默认样式 | surface 填充、border 描边 token，描边宽/圆角均为 0 |

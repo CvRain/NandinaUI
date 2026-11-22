@@ -186,6 +186,7 @@ namespace nandina::widget
             -> std::shared_ptr<Padding>;
 
         auto set_child(std::shared_ptr<scene::NanControl> child) -> Padding&;
+        [[nodiscard]] auto child() const -> scene::NanControl*;
         auto set_padding(foundation::NanInsets insets) -> Padding&;
         [[nodiscard]] auto padding() const -> foundation::NanInsets;
 
@@ -207,6 +208,7 @@ namespace nandina::widget
         [[nodiscard]] static auto create() -> std::shared_ptr<Center>;
 
         auto set_child(std::shared_ptr<scene::NanControl> child) -> Center&;
+        [[nodiscard]] auto child() const -> scene::NanControl*;
         void relayout();
 
     protected:
@@ -226,6 +228,7 @@ namespace nandina::widget
         [[nodiscard]] static auto create(int flex = 1) -> std::shared_ptr<Expanded>;
 
         auto set_child(std::shared_ptr<scene::NanControl> child) -> Expanded&;
+        [[nodiscard]] auto child() const -> scene::NanControl*;
         auto set_flex(int flex) -> Expanded&;
         [[nodiscard]] auto flex() const -> int;
         [[nodiscard]] auto layout_flex_factor() const -> int override;
@@ -250,6 +253,7 @@ namespace nandina::widget
             -> std::shared_ptr<FlexItem>;
 
         auto set_child(std::shared_ptr<scene::NanControl> child) -> FlexItem&;
+        [[nodiscard]] auto child() const -> scene::NanControl*;
         auto set_policy(scene::LayoutFlexPolicy policy) -> FlexItem&;
         [[nodiscard]] auto policy() const -> scene::LayoutFlexPolicy;
         [[nodiscard]] auto layout_flex_policy() const -> scene::LayoutFlexPolicy override;

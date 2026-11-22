@@ -79,7 +79,7 @@
 
 ### 布局与滚动
 
-当前提供 `Column`、`Row`、`Flex`、`FlexItem`、`Wrap`、`Stack`、`Padding`、`Center`、`Expanded`、`Grid`、`ScrollView` 与 `ListView`。布局系统将在独立专题中统一说明。新增 experimental 的 [`Surface`](surface.md) 是单子项布局/绘制原语，通过 `ui.surface()` 创建。
+当前提供 `Column`、`Row`、`Flex`、`FlexItem`、`Wrap`、`Stack`、`Padding`、`Center`、`Expanded`、`Grid`、`ScrollView` 与 `ListView`。除数据视图 `ListView` 外的上述布局容器支持构造期子项简写（如 `ui.row(a, b)`、`ui.column(a, b)`、`ui.wrap(a, b)`、`ui.grid(2, a, b)`、`ui.center(child)`、`ui.padding(insets, child)`、`ui.expanded(child)`、`ui.scroll_view(child)`），与分步 `.children(...)` / `.child(...)` 等价；本轮补齐的单子项容器提供只读 `child()` 查询。注意：`width(fill)` / `height(fill)` 表示占满父容器对应轴的 100% 约束上限；在 `Row` / `Column` 主轴上分配剩余空间应使用 `ui.expanded(child)`。新增 experimental 的 [`Surface`](surface.md) 是单子项布局/绘制原语，通过 `ui.surface()` / `ui.surface(child)` 创建。
 
 ## 计划补充
 

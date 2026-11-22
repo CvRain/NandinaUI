@@ -57,8 +57,16 @@ application shell. Version `0.1.0-alpha.1`.
   `ComponentTraits` + `showcase/component_catalog.hpp` entries (`data_components_and_virtualization.md`
   §11). Verification: `data-table-3b2` 9 cases/117 assertions, `data-public-api` 4/22; operator
   desktop unit 120/120, full suite 143/143, no-RTTI 120/120, ASan 118 OK +1 skip, no-SQLite
-  115 OK +1 skip, pure tools 8/8, `release_check --ci` 8/8. **Next: layout DSL shorthand
-  sub-batch 2, then Sheet.**
+  115 OK +1 skip, pure tools 8/8, `release_check --ci` 8/8.
+- **Layout DSL shorthand sub-batch 2 implemented and verified**: added `ui.wrap()` /
+  `authoring::wrap()`, multi-child (`row`/`column`/`stack`/`anchor_canvas`/`wrap`/`flex`/`grid`)
+  and single-child (`center`/`padding`/`surface`/`expanded`/`flex_item`/`scroll_view`) factory
+  child shorthands on `BuildContext` and `widget::authoring`, read-only `child()` accessors on
+  `Padding`/`Surface`/`Center`/`Expanded`/`FlexItem`, and `fill` (100% of parent axis) vs
+  `Expanded` (remaining main-axis space) contract notes (`authoring_dsl_and_content_measurement.md`
+  §§7, 19). Verification: `authoring` 41 cases/269 assertions, `surface` 9/92; operator desktop
+  unit 120/120, full suite 143/143, no-RTTI 120/120, ASan 118 OK +1 skip, no-SQLite 115 OK +1
+  skip, pure tools 8/8, `release_check --ci` 8/8. **Next: Sheet (component roadmap).**
 - **Baseline counts**: 143 tests (120 unit + 23 integration), 215 headers (199 experimental +
   16 internal), 28 approved page goldens (7 pages × CPU/SDF × 2 platforms), 43 public
   components; the CPU page-golden CI gate is blocking (7 pages).

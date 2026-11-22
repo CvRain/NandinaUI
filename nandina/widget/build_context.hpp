@@ -296,6 +296,12 @@ namespace nandina::widget
             return prepare_builder(authoring::row());
         }
 
+        template<typename... Child>
+            requires(sizeof...(Child) > 0) && (authoring::detail::AddableChild<Row, Child> && ...)
+        [[nodiscard]] auto row(Child&&... children) const -> authoring::NodeBuilder<Row> {
+            return row().children(std::forward<Child>(children)...);
+        }
+
         template<typename T>
             requires std::derived_from<T, scene::NanControl>
         [[nodiscard]] auto ref() const -> scene::NodeRef<T> {
@@ -306,8 +312,23 @@ namespace nandina::widget
             return prepare_builder(authoring::anchor_canvas());
         }
 
+        template<typename... Child>
+            requires(sizeof...(Child) > 0)
+            && (authoring::detail::AddableChild<scene::AnchorCanvas, Child> && ...)
+        [[nodiscard]] auto anchor_canvas(Child&&... children) const
+            -> authoring::NodeBuilder<scene::AnchorCanvas> {
+            return anchor_canvas().children(std::forward<Child>(children)...);
+        }
+
         [[nodiscard]] auto column() const -> authoring::NodeBuilder<Column> {
             return prepare_builder(authoring::column());
+        }
+
+        template<typename... Child>
+            requires(sizeof...(Child) > 0)
+            && (authoring::detail::AddableChild<Column, Child> && ...)
+        [[nodiscard]] auto column(Child&&... children) const -> authoring::NodeBuilder<Column> {
+            return column().children(std::forward<Child>(children)...);
         }
 
         [[nodiscard]] auto flex(LayoutAxis axis = LayoutAxis::horizontal) const
@@ -315,8 +336,45 @@ namespace nandina::widget
             return prepare_builder(authoring::flex(axis));
         }
 
+        template<typename... Child>
+            requires(sizeof...(Child) > 0) && (authoring::detail::AddableChild<Flex, Child> && ...)
+        [[nodiscard]] auto flex(Child&&... children) const -> authoring::NodeBuilder<Flex> {
+            return flex().children(std::forward<Child>(children)...);
+        }
+
+        template<typename... Child>
+            requires(sizeof...(Child) > 0) && (authoring::detail::AddableChild<Flex, Child> && ...)
+        [[nodiscard]] auto flex(LayoutAxis axis, Child&&... children) const
+            -> authoring::NodeBuilder<Flex> {
+            return flex(axis).children(std::forward<Child>(children)...);
+        }
+
+        [[nodiscard]] auto wrap(LayoutAxis axis = LayoutAxis::horizontal) const
+            -> authoring::NodeBuilder<Wrap> {
+            return prepare_builder(authoring::wrap(axis));
+        }
+
+        template<typename... Child>
+            requires(sizeof...(Child) > 0) && (authoring::detail::AddableChild<Wrap, Child> && ...)
+        [[nodiscard]] auto wrap(Child&&... children) const -> authoring::NodeBuilder<Wrap> {
+            return wrap().children(std::forward<Child>(children)...);
+        }
+
+        template<typename... Child>
+            requires(sizeof...(Child) > 0) && (authoring::detail::AddableChild<Wrap, Child> && ...)
+        [[nodiscard]] auto wrap(LayoutAxis axis, Child&&... children) const
+            -> authoring::NodeBuilder<Wrap> {
+            return wrap(axis).children(std::forward<Child>(children)...);
+        }
+
         [[nodiscard]] auto surface() const -> authoring::NodeBuilder<Surface> {
             return prepare_builder(authoring::surface(theme()));
+        }
+
+        template<typename Child>
+            requires authoring::detail::SettableChild<Surface, Child>
+        [[nodiscard]] auto surface(Child&& child) const -> authoring::NodeBuilder<Surface> {
+            return surface().child(std::forward<Child>(child));
         }
 
         [[nodiscard]] auto padding(foundation::NanInsets insets) const
@@ -324,12 +382,38 @@ namespace nandina::widget
             return prepare_builder(authoring::padding(insets));
         }
 
+        template<typename Child>
+            requires authoring::detail::SettableChild<Padding, Child>
+        [[nodiscard]] auto padding(foundation::NanInsets insets, Child&& child) const
+            -> authoring::NodeBuilder<Padding> {
+            return padding(insets).child(std::forward<Child>(child));
+        }
+
         [[nodiscard]] auto center() const -> authoring::NodeBuilder<Center> {
             return prepare_builder(authoring::center());
         }
 
+        template<typename Child>
+            requires authoring::detail::SettableChild<Center, Child>
+        [[nodiscard]] auto center(Child&& child) const -> authoring::NodeBuilder<Center> {
+            return center().child(std::forward<Child>(child));
+        }
+
         [[nodiscard]] auto expanded(int flex_factor = 1) const -> authoring::NodeBuilder<Expanded> {
             return prepare_builder(authoring::expanded(flex_factor));
+        }
+
+        template<typename Child>
+            requires authoring::detail::SettableChild<Expanded, Child>
+        [[nodiscard]] auto expanded(Child&& child) const -> authoring::NodeBuilder<Expanded> {
+            return expanded().child(std::forward<Child>(child));
+        }
+
+        template<typename Child>
+            requires authoring::detail::SettableChild<Expanded, Child>
+        [[nodiscard]] auto expanded(int flex_factor, Child&& child) const
+            -> authoring::NodeBuilder<Expanded> {
+            return expanded(flex_factor).child(std::forward<Child>(child));
         }
 
         [[nodiscard]] auto flex_item(scene::LayoutFlexPolicy policy = {}) const
@@ -337,17 +421,56 @@ namespace nandina::widget
             return prepare_builder(authoring::flex_item(policy));
         }
 
+        template<typename Child>
+            requires authoring::detail::SettableChild<FlexItem, Child>
+        [[nodiscard]] auto flex_item(Child&& child) const -> authoring::NodeBuilder<FlexItem> {
+            return flex_item().child(std::forward<Child>(child));
+        }
+
+        template<typename Child>
+            requires authoring::detail::SettableChild<FlexItem, Child>
+        [[nodiscard]] auto flex_item(scene::LayoutFlexPolicy policy, Child&& child) const
+            -> authoring::NodeBuilder<FlexItem> {
+            return flex_item(policy).child(std::forward<Child>(child));
+        }
+
         [[nodiscard]] auto scroll_view(ScrollAxis axis = ScrollAxis::vertical) const
             -> authoring::NodeBuilder<ScrollView> {
             return prepare_builder(authoring::scroll_view(axis));
+        }
+
+        template<typename Child>
+            requires authoring::detail::SettableChild<ScrollView, Child>
+        [[nodiscard]] auto scroll_view(Child&& child) const -> authoring::NodeBuilder<ScrollView> {
+            return scroll_view().child(std::forward<Child>(child));
+        }
+
+        template<typename Child>
+            requires authoring::detail::SettableChild<ScrollView, Child>
+        [[nodiscard]] auto scroll_view(ScrollAxis axis, Child&& child) const
+            -> authoring::NodeBuilder<ScrollView> {
+            return scroll_view(axis).child(std::forward<Child>(child));
         }
 
         [[nodiscard]] auto grid(int columns = 2) const -> authoring::NodeBuilder<Grid> {
             return prepare_builder(authoring::grid(columns));
         }
 
+        template<typename... Child>
+            requires(sizeof...(Child) > 0) && (authoring::detail::AddableChild<Grid, Child> && ...)
+        [[nodiscard]] auto grid(int columns, Child&&... children) const
+            -> authoring::NodeBuilder<Grid> {
+            return grid(columns).children(std::forward<Child>(children)...);
+        }
+
         [[nodiscard]] auto stack() const -> authoring::NodeBuilder<Stack> {
             return prepare_builder(authoring::stack());
+        }
+
+        template<typename... Child>
+            requires(sizeof...(Child) > 0) && (authoring::detail::AddableChild<Stack, Child> && ...)
+        [[nodiscard]] auto stack(Child&&... children) const -> authoring::NodeBuilder<Stack> {
+            return stack().children(std::forward<Child>(children)...);
         }
 
         template<typename Source, typename TrueFactory>

@@ -948,6 +948,10 @@ namespace nandina::widget
         return *this;
     }
 
+    auto Padding::child() const -> scene::NanControl* {
+        return child_.lock().get();
+    }
+
     auto Padding::set_padding(foundation::NanInsets insets) -> Padding& {
         insets_ = insets;
         mark_layout_dirty();
@@ -1021,6 +1025,10 @@ namespace nandina::widget
         return *this;
     }
 
+    auto Center::child() const -> scene::NanControl* {
+        return child_.lock().get();
+    }
+
     void Center::relayout() {
         (void)measure_layout(foundation::NanLayoutConstraints::loose());
         layout_to(foundation::NanRect::from_origin_size(position(), measured_size()));
@@ -1076,6 +1084,10 @@ namespace nandina::widget
         mark_layout_dirty();
         relayout();
         return *this;
+    }
+
+    auto Expanded::child() const -> scene::NanControl* {
+        return child_.lock().get();
     }
 
     auto Expanded::set_flex(int flex) -> Expanded& {
@@ -1137,6 +1149,10 @@ namespace nandina::widget
         replace_child(current.get(), std::move(child));
         mark_layout_dirty();
         return *this;
+    }
+
+    auto FlexItem::child() const -> scene::NanControl* {
+        return child_.lock().get();
     }
 
     auto FlexItem::set_policy(scene::LayoutFlexPolicy policy) -> FlexItem& {

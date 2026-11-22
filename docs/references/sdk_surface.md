@@ -515,6 +515,18 @@ TreeView 用例与 SDK consumer 的 `tree-api=1` 探针覆盖。
 [折叠内容组件](disclosure_components.md) §7。打包 SDK consumer 通过静态/共享 SDL3
 两种链接运行 `accordion-api=1` 探针。
 
+### 4.5 布局工厂子项简写与单子项 `child()` 查询（2026-11-21）
+
+在既有 experimental 头 `widget/authoring.hpp`、`widget/build_context.hpp` 与 `widget/layout.hpp`
+上做纯增量扩展（头文件计数维持 215 = 199 experimental + 16 internal）：
+
+- `BuildContext` 与 `widget::authoring` 新增 `wrap(axis = LayoutAxis::horizontal)`，以及多子项
+  （`row`/`column`/`stack`/`anchor_canvas`/`wrap`/`flex`/`grid(columns, ...)`）和单子项
+  （`center`/`padding(insets, ...)`/`surface`/`expanded`/`flex_item`/`scroll_view`）的构造期子项
+  简写重载（契约见 [D6 §7、§19](authoring_dsl_and_content_measurement.md#7-布局工厂的子项简写2026-11-21-已实施)）。
+- `Padding`（含子类 `Surface`）、`Center`、`Expanded`、`FlexItem` 新增只读
+  `child() const -> scene::NanControl*`，与 `ScrollView::child()` 的查询语义对齐。
+
 ## 5. 破坏性变更的记录方式
 
 图片批同时有两处**破坏性 API 变更**，都要登记：

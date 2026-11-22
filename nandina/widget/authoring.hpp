@@ -849,16 +849,63 @@ namespace nandina::widget::authoring
         return make<Row>();
     }
 
+    template<typename... Child>
+        requires(sizeof...(Child) > 0) && (detail::AddableChild<Row, Child> && ...)
+    [[nodiscard]] inline auto row(Child&&... children) -> NodeBuilder<Row> {
+        return row().children(std::forward<Child>(children)...);
+    }
+
     [[nodiscard]] inline auto column() -> NodeBuilder<Column> {
         return make<Column>();
+    }
+
+    template<typename... Child>
+        requires(sizeof...(Child) > 0) && (detail::AddableChild<Column, Child> && ...)
+    [[nodiscard]] inline auto column(Child&&... children) -> NodeBuilder<Column> {
+        return column().children(std::forward<Child>(children)...);
     }
 
     [[nodiscard]] inline auto anchor_canvas() -> NodeBuilder<scene::AnchorCanvas> {
         return make<scene::AnchorCanvas>();
     }
 
+    template<typename... Child>
+        requires(sizeof...(Child) > 0) && (detail::AddableChild<scene::AnchorCanvas, Child> && ...)
+    [[nodiscard]] inline auto anchor_canvas(Child&&... children)
+        -> NodeBuilder<scene::AnchorCanvas> {
+        return anchor_canvas().children(std::forward<Child>(children)...);
+    }
+
     [[nodiscard]] inline auto flex(LayoutAxis axis = LayoutAxis::horizontal) -> NodeBuilder<Flex> {
         return make<Flex>(axis);
+    }
+
+    template<typename... Child>
+        requires(sizeof...(Child) > 0) && (detail::AddableChild<Flex, Child> && ...)
+    [[nodiscard]] inline auto flex(Child&&... children) -> NodeBuilder<Flex> {
+        return flex().children(std::forward<Child>(children)...);
+    }
+
+    template<typename... Child>
+        requires(sizeof...(Child) > 0) && (detail::AddableChild<Flex, Child> && ...)
+    [[nodiscard]] inline auto flex(LayoutAxis axis, Child&&... children) -> NodeBuilder<Flex> {
+        return flex(axis).children(std::forward<Child>(children)...);
+    }
+
+    [[nodiscard]] inline auto wrap(LayoutAxis axis = LayoutAxis::horizontal) -> NodeBuilder<Wrap> {
+        return make<Wrap>(axis);
+    }
+
+    template<typename... Child>
+        requires(sizeof...(Child) > 0) && (detail::AddableChild<Wrap, Child> && ...)
+    [[nodiscard]] inline auto wrap(Child&&... children) -> NodeBuilder<Wrap> {
+        return wrap().children(std::forward<Child>(children)...);
+    }
+
+    template<typename... Child>
+        requires(sizeof...(Child) > 0) && (detail::AddableChild<Wrap, Child> && ...)
+    [[nodiscard]] inline auto wrap(LayoutAxis axis, Child&&... children) -> NodeBuilder<Wrap> {
+        return wrap(axis).children(std::forward<Child>(children)...);
     }
 
     [[nodiscard]] inline auto surface(theme::NanTheme theme = theme::default_theme())
@@ -866,16 +913,54 @@ namespace nandina::widget::authoring
         return make<Surface>(std::move(theme));
     }
 
+    template<typename Child>
+        requires detail::SettableChild<Surface, Child>
+    [[nodiscard]] inline auto surface(Child&& child) -> NodeBuilder<Surface> {
+        return surface().child(std::forward<Child>(child));
+    }
+
+    template<typename Child>
+        requires detail::SettableChild<Surface, Child>
+    [[nodiscard]] inline auto surface(theme::NanTheme theme, Child&& child)
+        -> NodeBuilder<Surface> {
+        return surface(std::move(theme)).child(std::forward<Child>(child));
+    }
+
     [[nodiscard]] inline auto padding(foundation::NanInsets insets) -> NodeBuilder<Padding> {
         return make<Padding>(insets);
+    }
+
+    template<typename Child>
+        requires detail::SettableChild<Padding, Child>
+    [[nodiscard]] inline auto padding(foundation::NanInsets insets, Child&& child)
+        -> NodeBuilder<Padding> {
+        return padding(insets).child(std::forward<Child>(child));
     }
 
     [[nodiscard]] inline auto center() -> NodeBuilder<Center> {
         return make<Center>();
     }
 
+    template<typename Child>
+        requires detail::SettableChild<Center, Child>
+    [[nodiscard]] inline auto center(Child&& child) -> NodeBuilder<Center> {
+        return center().child(std::forward<Child>(child));
+    }
+
     [[nodiscard]] inline auto expanded(int flex_factor = 1) -> NodeBuilder<Expanded> {
         return make<Expanded>(flex_factor);
+    }
+
+    template<typename Child>
+        requires detail::SettableChild<Expanded, Child>
+    [[nodiscard]] inline auto expanded(Child&& child) -> NodeBuilder<Expanded> {
+        return expanded().child(std::forward<Child>(child));
+    }
+
+    template<typename Child>
+        requires detail::SettableChild<Expanded, Child>
+    [[nodiscard]] inline auto expanded(int flex_factor, Child&& child) -> NodeBuilder<Expanded> {
+        return expanded(flex_factor).child(std::forward<Child>(child));
     }
 
     [[nodiscard]] inline auto flex_item(scene::LayoutFlexPolicy policy = {})
@@ -883,17 +968,55 @@ namespace nandina::widget::authoring
         return make<FlexItem>(policy);
     }
 
+    template<typename Child>
+        requires detail::SettableChild<FlexItem, Child>
+    [[nodiscard]] inline auto flex_item(Child&& child) -> NodeBuilder<FlexItem> {
+        return flex_item().child(std::forward<Child>(child));
+    }
+
+    template<typename Child>
+        requires detail::SettableChild<FlexItem, Child>
+    [[nodiscard]] inline auto flex_item(scene::LayoutFlexPolicy policy, Child&& child)
+        -> NodeBuilder<FlexItem> {
+        return flex_item(policy).child(std::forward<Child>(child));
+    }
+
     [[nodiscard]] inline auto scroll_view(ScrollAxis axis = ScrollAxis::vertical)
         -> NodeBuilder<ScrollView> {
         return make<ScrollView>(axis);
+    }
+
+    template<typename Child>
+        requires detail::SettableChild<ScrollView, Child>
+    [[nodiscard]] inline auto scroll_view(Child&& child) -> NodeBuilder<ScrollView> {
+        return scroll_view().child(std::forward<Child>(child));
+    }
+
+    template<typename Child>
+        requires detail::SettableChild<ScrollView, Child>
+    [[nodiscard]] inline auto scroll_view(ScrollAxis axis, Child&& child)
+        -> NodeBuilder<ScrollView> {
+        return scroll_view(axis).child(std::forward<Child>(child));
     }
 
     [[nodiscard]] inline auto grid(int columns = 2) -> NodeBuilder<Grid> {
         return make<Grid>(columns);
     }
 
+    template<typename... Child>
+        requires(sizeof...(Child) > 0) && (detail::AddableChild<Grid, Child> && ...)
+    [[nodiscard]] inline auto grid(int columns, Child&&... children) -> NodeBuilder<Grid> {
+        return grid(columns).children(std::forward<Child>(children)...);
+    }
+
     [[nodiscard]] inline auto stack() -> NodeBuilder<Stack> {
         return make<Stack>();
+    }
+
+    template<typename... Child>
+        requires(sizeof...(Child) > 0) && (detail::AddableChild<Stack, Child> && ...)
+    [[nodiscard]] inline auto stack(Child&&... children) -> NodeBuilder<Stack> {
+        return stack().children(std::forward<Child>(children)...);
     }
 
 } // namespace nandina::widget::authoring

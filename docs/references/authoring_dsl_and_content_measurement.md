@@ -1,7 +1,8 @@
 # 作者 DSL、文本能力与内容测量
 
-> 状态：**D6 设计方向已接受；盒内对齐与文本作者/绑定子批已定形（§§16–17），其余详细 API 与测量契约仍待审阅。**
-> §§1–15 保留设计输入；其中示例的新入口仍是提案，不能当作可编译 API。§§16–17 单独记录已定形入口。
+> 状态：**D6 设计方向已接受；盒内对齐、文本作者/绑定、视觉表面与布局工厂子项简写子批已定形（§7、§§16–19），其余详细 API 与测量契约仍待审阅。**
+> §§1–15 保留设计输入；其中尚未在 §7 或 §§16–19 定形的提案不能当作可编译 API。§7 与
+> §§16–19 单独记录已定形入口。
 > 现有接口与已知边界以源码和组件文档为准。本设计不要求长期兼容旧 DSL；改变公共接口时，
 > 库内示例、测试和使用文档应同步迁移。
 >
@@ -163,20 +164,27 @@ wrap、elide、alignment、padding、截断与内容尺寸；其 base URL、富�
 公共头或不满足容器 child 契约时给出局部的编译诊断；不能通过一个任意 `std::shared_ptr` 转换
 抹掉组件类型或绑定上下文。
 
-## 7. 布局工厂的子项简写
+## 7. 布局工厂的子项简写（2026-11-21 已实施）
 
-接受的方向是为常见容器工厂增加接收子项的重载，而不是为 Row/Column 引入不同的子项构造语义：
+已为常见容器工厂在 `BuildContext` 与 `widget::authoring` 上同步增加接收子项的重载，以及 `wrap(...)` 工厂与单子项容器只读 `child()` 查询，不引入第二套子项构造语义：
 
 ```cpp
 ui.row(a, b)
 ui.column(title, body)
 ui.stack(background, content)
+ui.anchor_canvas(a, b)
+ui.wrap(a, b) / ui.wrap(LayoutAxis::vertical, a, b)
+ui.flex(a, b) / ui.flex(LayoutAxis::vertical, a, b)
+ui.grid(2, a, b, c, d)
 ui.center(child)
 ui.padding(insets, child)
-ui.grid(2, a, b, c, d)
+ui.surface(child)
+ui.expanded(child) / ui.expanded(2, child)
+ui.flex_item(child) / ui.flex_item(policy, child)
+ui.scroll_view(child) / ui.scroll_view(ScrollAxis::horizontal, child)
 ```
 
-以上都是**目标形状示意**，不是已存在的重载。规则建议如下：
+规则与契约（实施记录见 §19）：
 
 - `ui.row()` 与 `ui.row(a, b)` 并存，前者供循环追加和分步配置，后者用于已知的短子树；
 - N 子项重载复用当前 `AddableChild`、`materialize()` 和 builder context 准备流程；单槽复用
@@ -535,3 +543,24 @@ home/label/anchors 的 CPU/SDF 六张页面 golden 与各自已批准基线逐�
 内容边距 配方默认/8/24 px、两种 Surface 盒样式、嵌套圆角边界），页面测试 `[surface][showcase]`
 断言各变体存在、按名定位四张卡片，并在 1200×800 与 520×800 下布局收敛；双平台 CPU+SDF
 共 4 条新页面 golden 由维护者批准。圆角不裁剪子内容仍作为已登记边界在页面中如实展示。
+
+## 19. 布局工厂子项简写、单子项 `child()` 与 `fill` / `Expanded` 边界（2026-11-21）
+
+针对 `playground/` 数据工作台集成检查点暴露的容器装配样板与尺寸误用，落地第 13 节阶段 4 的布局工厂子项简写与容器查询对齐：
+
+- **多子项容器工厂重载**（`BuildContext` 与 `widget::authoring` 同步提供，受 `sizeof...(Child) > 0 && (detail::AddableChild<Container, Child> && ...)` 约束）：
+  - `row(children...)`、`column(children...)`、`stack(children...)`、`anchor_canvas(children...)`
+  - `wrap(axis = LayoutAxis::horizontal)`、`wrap(children...)`、`wrap(axis, children...)`
+  - `flex(axis = LayoutAxis::horizontal)`、`flex(children...)`、`flex(axis, children...)`
+  - `grid(columns = 2)`、`grid(columns, children...)`
+  - 重载内部先走无参/配置工厂（在 `BuildContext` 中先完成 `prepare_builder` 的 `guard_callbacks` 与 `bind_scope`），再转发 `.children(...)`，与分步 `.children(...)` 完全等价；非子节点参数（如 `int`、`float`、`LayoutAxis`）在编译期被 `AddableChild` 拒绝。
+- **单子项容器工厂重载与 `child()` 查询对称性**（受 `detail::SettableChild<Container, Child>` 约束）：
+  - `center(child)`、`padding(insets, child)`、`surface(child)`（`widget::authoring` 另含 `surface(theme, child)`）
+  - `expanded(child)`、`expanded(flex_factor, child)`、`flex_item(child)`、`flex_item(policy, child)`
+  - `scroll_view(child)`、`scroll_view(axis, child)`
+  - `Padding`（及继承它的 `Surface`）、`Center`、`Expanded`、`FlexItem` 新增只读 `child() const -> scene::NanControl*`（无子项返回 `nullptr`，替换后返回新子项指针），与既有 `ScrollView::child()` 的查询语义保持一致。
+- **`fill` 与 `Expanded` 的职责边界**：
+  - `width(fill)` / `height(fill)` 表示**在父容器提供的紧/有界轴上限内占满 100%**（`constraints.max_width` / `max_height`），不是“在 `Row`/`Column` 主轴分摊剩余空间”。
+  - 在 `Row`/`Column`/`Flex` 主轴上，若某个子项需要占据除固定兄弟外的**剩余空间**（例如列表行左侧自适应长文本标题 + 右侧状态 `Badge` 或操作按钮），必须用 `ui.expanded(child)`（或 `ui.flex_item(...)`）包裹该子项；直接给主轴子项设 `width(fill)` 会令其请求整条父容器主轴宽度，把后续兄弟推到容器右边界之外。
+  - `AnchorCanvas` 的 `fill`/百分比与排列容器剩余空间交互属于独立布局契约议题（见 [Anchors §5.3](anchors.md#53-剩余验收)），不在本批改动。
+- **验证**：`authoring` 新增 `[authoring][factory][shorthand]` 3 用例及编译期 concept 负向 `static_assert`（共 41 用例 / 269 断言），其中 Row 布局回归锁定 `fill` 使右侧兄弟从 x=200 开始、`Expanded` 仅占剩余 160 DIP；`surface` 9 用例 / 92 断言，SDK consumer `accordion-api=1` 探针覆盖 `ui.surface` / `ui.column` / `ui.row` / `ui.expanded` / `ui.wrap` 与 `surface->child()`。红先：注释 `column(children...)` 中的 `.children(...)` 转发或令 `Padding::child()` 返回 `nullptr` 均使新增断言失败（退出 42），恢复后全矩阵通过。
