@@ -38,6 +38,7 @@
 #include "radio_button.hpp"
 #include "radio_group.hpp"
 #include "select.hpp"
+#include "sheet.hpp"
 #include "skeleton.hpp"
 #include "slider.hpp"
 #include "spinner.hpp"
@@ -731,6 +732,37 @@ namespace nandina::widget
                     dialog.set_overlay_service(
                         ui.has_overlay_host() ? &ui.overlay_host() : nullptr
                     );
+                });
+        }
+    };
+
+    template<>
+    struct ComponentTraits<Sheet> {
+        [[nodiscard]] static auto make(
+            const BuildContext& ui,
+            std::string title = {},
+            std::shared_ptr<scene::NanControl> content = nullptr
+        ) -> authoring::NodeBuilder<Sheet> {
+            return make(ui, SheetSide::right, std::move(title), std::move(content));
+        }
+
+        [[nodiscard]] static auto make(
+            const BuildContext& ui,
+            const SheetSide side,
+            std::string title = {},
+            std::shared_ptr<scene::NanControl> content = nullptr
+        ) -> authoring::NodeBuilder<Sheet> {
+            return authoring::make<Sheet>(side, ui.theme())
+                .configure([&ui,
+                            title = std::move(title),
+                            content = std::move(content)](Sheet& sheet) mutable {
+                    if (!title.empty()) {
+                        sheet.set_title(std::move(title));
+                    }
+                    if (content) {
+                        (void)sheet.set_content(std::move(content));
+                    }
+                    sheet.set_overlay_service(ui.has_overlay_host() ? &ui.overlay_host() : nullptr);
                 });
         }
     };

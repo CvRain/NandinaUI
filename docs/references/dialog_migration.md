@@ -138,3 +138,41 @@ Dialog（页面锚点，打开时铺满父容器）
 5. `ComponentTraits<Dialog>` 注入浮层服务，`create()` 回退到最近的祖先 `OverlayHost`；
 6. 测试：现有 10 个用例保持语义，新增浮层托管、裁剪容器逃逸、模态阻断、遮罩 / Escape 关闭、`dismissible` 吞输入、焦点恢复与重复开关用例；
 7. `docs/components/dialog.md` 记录应用层用法。
+
+## Sheet（贴边模态抽屉，v1）
+
+> 状态：2026-11-22 实现 + 验证。**复用统一模态浮层设施与 `DialogRecipe` / `DialogRecipeRule`**；
+> 支持 `SheetSide { top, right, bottom, left }`（默认 `right`），在桌面端统一覆盖侧边/顶底
+> Sheet 与 Drawer 场景，不另拆重复的 `Drawer` 组件。
+
+### 1. API 与归属
+
+- 公开头：`<nandina/widget/sheet.hpp>`（`experimental`），实现：`nandina/widget/sheet.cpp`（内部面板 `internal::SheetPanel` 封装于 `.cpp`，不新增 `internal/` 头）。
+- 方向与主轴厚度：
+  - `enum class SheetSide { top, right, bottom, left }`（默认 `SheetSide::right`）；`set_side(SheetSide)` / `side()` 对非法枚举值抛 `std::invalid_argument`。
+  - `set_extent(float)` / `clear_extent()` / `has_explicit_extent()` / `extent()`：控制抽屉主轴厚度（`left`/`right` 为面板宽度，`top`/`bottom` 为显式面板高度）；非有限或 `<= 0.0F` 抛 `std::invalid_argument`。未显式设置时，`left`/`right` 默认取 `resolved_style().metrics.panel_width`（`360.0F` DIP），`top`/`bottom` 默认取三槽位自然总高（不低于 `metrics.min_height`）。
+    `extent()` 返回显式值；未显式设置时返回 recipe 的 `metrics.panel_width` 配置回退值。`top`/`bottom` 清除显式值后的实际自然高度属于布局结果，不承诺等于 `extent()`。
+- 标题、说明与三槽位：
+  - `set_title(string)` / `title()`、`set_description(string)` / `description()` 为内置 header 区域的便捷入口（标题单行省略，说明最多 4 行自动换行，二者间距 `4.0F`）。
+  - `set_header(control)` / `header()`、`set_content(control)` / `content()`、`set_footer(control)` / `footer()`：自定义 `set_header` 与内置 `set_title`/`set_description` 互斥，后设置者生效；槽位校验非空、未挂载在其他父节点下，且拒绝自引用或包含所属 `Sheet` 的祖先环。
+- 生命周期与事件：
+  - `open()` / `close()` / `set_open(bool)` / `is_open()`、`set_dismissible(bool)` / `dismissible()`（默认 `true`）。
+  - `set_on_close(callback)` 与 `closed() -> const reactive::Event<>&` 共用同一事件源，在退场淡出结束、浮层卸载并恢复焦点后触发；触发期间以 `weak_from_this().lock()` 保活，允许回调释放最后一个外部 `shared_ptr<Sheet>`。
+- 作者入口：`ComponentTraits<Sheet>` 支持 `ui.make<Sheet>(title, content)` 与 `ui.make<Sheet>(side, title, content)`，自动注入主题与窗口 `OverlayHost`，并支持 builder `.open(bool)`；收录入 `showcase/component_catalog.hpp`（公开组件数 44）。
+
+### 2. 浮层承载、几何布局与配方复用
+
+- 承载链路与 `Dialog` 同构：`DismissLayer → FocusScope → SheetPanel`（`OverlayLevel::modal`，`block_below = true`；无 `OverlayHost` 时回退为树内模态）。`DismissLayer` 新增 `set_origin_resolver(...)` 按 `SheetSide` 与面板测量尺寸计算贴边原点：
+  - `right`：`(max(0, W - panel_w), 0, panel_w, H)`
+  - `left`：`(0, 0, panel_w, H)`
+  - `top`：`(0, 0, W, panel_h)`
+  - `bottom`：`(0, max(0, H - panel_h), W, panel_h)`
+- 面板内部纵向布局：`header` 置于顶部内边距处；`footer` 贴齐面板底部内边距（`max(after_content_y, panel_h - pad_y - footer_h)`）；`content` 获得 `header` 与 `footer` 之间的剩余可用高度（子项设 `height(fill)` 或 `ScrollView` 时自动填满中段）。
+- 主题与配方：复用 `DialogRecipe` / `DialogRecipeRule`；`Sheet::resolved_style()` 默认将 `panel.radius` 置为 `0.0F`（贴边直角），若作者通过 `set_override(DialogRecipeRule)` 显式提供 `panel_radius` 等字段则按规则覆盖。
+- 无障碍：浮层模式下页面内 `Sheet` 锚点保持不可见且不占父布局 `gap`；可见面板节点暴露 `semantics::Role::dialog` 与 `.label = title()`。抽屉内打开的 `Select` 等弹层自动走 `OverlayLevel::nested_popup` 浮于遮罩之上。
+
+### 3. 验证记录（2026-11-22）
+
+- `sheet` 单测（`tests/sheet_tests.cpp`，注册于 `unit` 套件）：11 用例 / 118 断言，覆盖 `DialogRecipe` 复用与直角默认/覆盖、`set_extent`/`clear_extent`、四边停靠几何（`right`/`left`/`top`/`bottom`）、`footer` 贴底与 `content` 剩余高度分配、`set_header` 与 `set_title`/`set_description` 互斥切换、裁剪容器逃逸与下层输入阻断、遮罩点击/Escape 关闭与 `dismissible=false` 吞输入、Tab/Shift+Tab 焦点陷阱与关闭恢复、`closed()` / `set_on_close` 回调内释放最后一个 owner、面板 `Role::dialog` 语义与父容器零额外间距、抽屉内嵌套 `Select` 弹层、非法 `side`/`extent`/空槽位/已挂载节点/祖先环、跨槽复用事务性拒绝，以及关闭后退出树不再恢复陈旧焦点。
+- 红先：将 `Sheet::install_origin_resolver` 中 `SheetSide::right` 的 x 坐标固定为 `0.0F` 或移除 `Sheet::resolved_style()` 的 `style.panel.radius = 0.0F` 默认直角设置，均使 `sheet_tests` 对应断言失败（退出 42），恢复后全矩阵通过。
+- 下游 SDK：`tests/fixtures/sdk_app/main.cpp` 新增 `sheet-api=1` 探针。

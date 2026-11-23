@@ -108,16 +108,20 @@ P4.6 排版尺度与语义 role 指标已交付；剩余样式 reset、完整测
   [折叠内容组件](disclosure_components.md) §7；`Collapsible` 已随 `095336b` 提交，
   **Showcase 视觉验收已于 2026-11-13 完成**
   （双平台 CPU+SDF 8 条新基线批准，见 [折叠内容组件契约](disclosure_components.md)）；
-- `Sheet`、`Drawer`；
+- `Sheet`（批 8，experimental，已实现）：四边停靠（`SheetSide { top, right, bottom, left }`，
+  默认 `right`）模态抽屉面板，桌面端统一覆盖 Sheet 与 Drawer 场景；复用 `OverlayHost` /
+  `DismissLayer` / `FocusScope` 与 `DialogRecipe`（默认直角贴边），提供 `header`（或
+  `set_title`/`set_description`）/ `content` / `footer`（贴底）三槽位与 `set_extent(float)`；
+  契约见 [Dialog 与 Sheet 契约](dialog_migration.md#sheet贴边模态抽屉v1)；
 - `Resizable`、`AspectRatio`；
 - 静态 `Table`（P4.2b 代码于 2026-11-05 复核完成，**Showcase 视觉验收已于 2026-11-13 完成**；
   当前保持 experimental，是否进入推荐级待组件契约评审；契约见
   [数据组件：选择模型与虚拟化依据](data_components_and_virtualization.md) §8）；
 - `DataTable`/新 `ListView`：**2026-11-15 契约 v3.1 定稿；1A、1B、2A、2B、3a、3b①、3b② 均已提交；3b③ DataTable 公共导出已完成并提交（2026-11-18）；批 4 `BuildContext::for_each()` 改 `ForEach` 直接实现已完成并提交（2026-11-19，`03783cf`）；批 5 新虚拟化 `ListView` + notebook 迁移 + 旧 `ListView` 退役已完成并提交（2026-11-19，`e96542f`）；批 6 `VirtualListView` 退役 + TreeView v1 已完成（2026-11-19，实现 + 验证）**
   （[数据组件 §9](data_components_and_virtualization.md#9-p42d-数据视图契约datatable-与-listviewv31-定稿)）：
-  非模板组件 + `IRowModel` + `DataTableColumn` + `IItemDelegate` + 显式选择模型；八个作者/
-  组件头已转 experimental，`ItemHost` 保持 internal；新 `ListView` 与 TreeView v1 已交付，
-  后续 Sheet/Drawer。
+  非模板组件 + `IRowModel` + `DataTableColumn` + `IItemDelegate` + 显式选择模型；九个作者/
+  组件头已迁入正式 `widget/` 路径并标 experimental，`ItemHost` 保持 internal；新 `ListView`、
+  TreeView v1、Accordion v1 与 Sheet v1 均已交付。
 
 ## 暂不进入核心优先级
 

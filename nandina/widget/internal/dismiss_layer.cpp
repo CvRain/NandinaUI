@@ -114,9 +114,12 @@ namespace nandina::widget::internal
             .max_height = height(),
         };
         const auto measured = current->measure_layout(constraints);
-        const auto origin = content_centered_
-            ? foundation::NanRect::from_center(local_rect().get_center(), measured).get_top_left()
-            : current->position();
+        const auto origin = origin_resolver_
+            ? origin_resolver_(size(), measured)
+            : (content_centered_
+                   ? foundation::NanRect::from_center(local_rect().get_center(), measured)
+                         .get_top_left()
+                   : current->position());
         current->layout_to(foundation::NanRect::from_origin_size(origin, measured));
     }
 } // namespace nandina::widget::internal

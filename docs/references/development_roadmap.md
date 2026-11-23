@@ -16,7 +16,7 @@
 | 渲染 | SDL3 为默认后端；生产 SDF 已接入**填充/描边/圆/线段/圆环扇区**，Vulkan(SPIR-V) 与 Windows D3D12(DXIL) 均通过设备级像素验收，直线 AA 数值逐位一致；其余图元仍走 CPU 几何 | 路径契约 §10、§14 |
 | 视觉回归 | 双平台各 14 条页面 golden 已批准（7 页 × CPU/SDF；2026-11-11 中文版重批、2026-11-13 B2a/B2b 增至每平台 14 条），平台隔离；Linux CPU 路径由 CI `visual-golden` 阻断门禁自动采集比较（2026-11-14 起）；比较器与审批工具就绪 | [视觉回归](visual_regression.md) |
 | 性能 | Linux release 基线 8 配置 + 确定性门禁（布局 0、稳态 miss 0、binds 上限）+ 候选计时阈值（`--enforce` 启用）；Windows CPU/SDF 各 4 组参考基线已归档，不参与跨平台比较或计时门禁 | [性能预算](performance_budget.md) |
-| 依赖与分发 | 10 个 wrap + 字体 submodule + SQLite/stb 入库源码；raylib 已删除；vendored SDL3 默认静态、可选共享；头文件门禁 213 个（197 experimental + 16 internal） | [依赖策略](dependency_policy.md)、[SDK 表面](sdk_surface.md) |
+| 依赖与分发 | 10 个 wrap + 字体 submodule + SQLite/stb 入库源码；raylib 已删除；vendored SDL3 默认静态、可选共享；头文件门禁 216 个（200 experimental + 16 internal） | [依赖策略](dependency_policy.md)、[SDK 表面](sdk_surface.md) |
 | 工程门禁 | format / suite / header / shader artifact / golden manifest / backend budget；CI 无 GPU（CPU 页面 golden 由独立 workflow 阻断，SDF/GPU 与性能采样仍在本地/发布检查） | README、路径契约 §13 |
 
 ## 2. 推进原则
@@ -135,8 +135,8 @@
    与后续业务页另批。仅 Theme Shell 页另排。
 6. **组件扩展**：DataTable/ListView 契约 v3.1 已于 2026-11-15 定稿，**1A TrackSolver + 静态
    Table 接入已完成并提交**（[数据组件 §9](data_components_and_virtualization.md#9-p42d-数据视图契约datatable-与-listviewv31-定稿)：
-   `IRowModel`/`DataTableColumn`/`IItemDelegate`/选择模型）；1B 行窗口已完成并提交（2026-11-16）；2A/2B 已完成并提交（2026-11-16）、3a 内部虚拟化已完成并提交（2026-11-17）、3b① 输入/导航/表头语义已完成并提交（2026-11-17）、3b② 作者 HeaderDelegate/主题重解析已完成并提交（2026-11-17）、3b③ DataTable 公共导出已完成并提交（2026-11-18）、批 4 `BuildContext::for_each()` 改 `ForEach` 直接实现已完成并提交（2026-11-19，`03783cf`）、批 5 新虚拟化 `ListView` + notebook 迁移 + 旧 `ListView` 退役已完成并提交（2026-11-19，`e96542f`）、批 6 `VirtualListView` 退役 + TreeView v1 已完成（实现 + 验证）、批 7 Accordion 已完成（实现 + 验证）；随后 Sheet/Drawer；
-   Sheet/Drawer/Resizable/AspectRatio 按需。静态 Table 保持 experimental。
+   `IRowModel`/`DataTableColumn`/`IItemDelegate`/选择模型）；1B 行窗口已完成并提交（2026-11-16）；2A/2B 已完成并提交（2026-11-16）、3a 内部虚拟化已完成并提交（2026-11-17）、3b① 输入/导航/表头语义已完成并提交（2026-11-17）、3b② 作者 HeaderDelegate/主题重解析已完成并提交（2026-11-17）、3b③ DataTable 公共导出已完成并提交（2026-11-18）、批 4 `BuildContext::for_each()` 改 `ForEach` 直接实现已完成并提交（2026-11-19，`03783cf`）、批 5 新虚拟化 `ListView` + notebook 迁移 + 旧 `ListView` 退役已完成并提交（2026-11-19，`e96542f`）、批 6 `VirtualListView` 退役 + TreeView v1 已完成（实现 + 验证）、批 7 Accordion 已完成（实现 + 验证，`6c3d73a`）、数据视图与布局 DSL 作者体验两子批已提交（`cf72dec`、`ec14e8c`）、批 8 Sheet v1（四边贴靠模态抽屉，覆盖桌面 Sheet/Drawer）已完成（实现 + 验证）；
+   Resizable/AspectRatio 按需。静态 Table 保持 experimental。
 7. **P4.4 视觉覆盖**：`input_focus` golden；`image` 页进 probe 并挂载 showcase 资源包（当前无
    golden）；新页面 approved 后自动进入 CI CPU 门禁。
 8. **P4.8a/P4.8c**：`NANDINA_PAGE_TIMING` 逐节计时日志与 opt-in 构建期批量测量，先量后改；

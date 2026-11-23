@@ -48,6 +48,7 @@ namespace nandina::showcase
         breadcrumb,
         pagination,
         dialog,
+        sheet,
         popover,
         dropdown_menu,
         context_menu,
@@ -267,6 +268,13 @@ namespace nandina::showcase
             ComponentCategory::overlay,
             "Dialog",
             "展示模态内容并限制焦点"
+        },
+        ComponentInfo {
+            ComponentId::sheet,
+            ComponentCategory::overlay,
+            "Sheet",
+            "从视口四边停靠展示模态抽屉面板",
+            true
         },
         ComponentInfo {
             ComponentId::popover,

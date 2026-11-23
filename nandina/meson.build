@@ -290,6 +290,8 @@ module_widget = files(
     'widget/chip.cpp',
     'widget/dialog.hpp',
     'widget/dialog.cpp',
+    'widget/sheet.hpp',
+    'widget/sheet.cpp',
     'widget/menu_item.hpp',
     'widget/menu_item.cpp',
     'widget/popover.hpp',

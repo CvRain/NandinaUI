@@ -26,6 +26,8 @@ namespace nandina::widget::internal
     class DismissLayer final: public scene::NanControl {
     public:
         using Callback = std::function<void(DismissReason)>;
+        using OriginResolver = std::function<
+            foundation::NanPoint(foundation::NanSize viewport, foundation::NanSize content)>;
 
         explicit DismissLayer(Callback callback = {}): callback_(std::move(callback)) {}
 
@@ -35,6 +37,17 @@ namespace nandina::widget::internal
         /// 内容在自己的边界内居中摆放。未开启时按内容自身的位置布局（下拉等锚定浮层用）。
         void set_content_centered(bool centered) {
             content_centered_ = centered;
+        }
+
+        /// 自定义内容原点求解器（例如 Sheet 的四边贴靠）；设置后优先于 content_centered_。
+        void set_origin_resolver(OriginResolver resolver) {
+            origin_resolver_ = std::move(resolver);
+            mark_layout_dirty();
+        }
+
+        void clear_origin_resolver() {
+            origin_resolver_ = {};
+            mark_layout_dirty();
         }
 
         /**
@@ -105,6 +118,7 @@ namespace nandina::widget::internal
 
     private:
         Callback callback_;
+        OriginResolver origin_resolver_;
         std::weak_ptr<scene::NanControl> content_;
         bool content_centered_ = false;
         bool pointer_passthrough_outside_ = false;

@@ -7,8 +7,8 @@
 
 ## 现状
 
-- 公开组件：**43**（有 `ComponentTraits`、可供应用直接使用）
-- 已有使用文档：**27**（其中 `PointerArea` 与 `GestureArea` 共用一篇，实际组件文档文件 26 篇；Surface 作为布局原语另有提纲，不计入组件数；`Card`、`Image`、`Label`、`CommandPalette`、`HoverCard`、`AlertDialog` 与实验性 `Table`、`Collapsible`、`Accordion`、`DataTable` 的框架与符号表已核对、叙述正文待手写）
+- 公开组件：**44**（有 `ComponentTraits`、可供应用直接使用）
+- 已有使用文档：**28**（其中 `PointerArea` 与 `GestureArea` 共用一篇，实际组件文档文件 27 篇；Surface 作为布局原语另有提纲，不计入组件数；`Card`、`Image`、`Label`、`CommandPalette`、`HoverCard`、`AlertDialog` 与实验性 `Table`、`Collapsible`、`Accordion`、`DataTable`、`Sheet` 的框架与符号表已核对、叙述正文待手写）
 
 > 计数口径：`公开组件` 只统计 `nandina/widget/builtin_component_traits.hpp` 中有 `ComponentTraits`
 > 特化的类型，它与 `showcase/component_catalog.hpp` 的编译期目录一一对应（该目录带
@@ -65,6 +65,7 @@
 | `Alert` | ✅ [alert.md](alert.md) | 中 |
 | `Slider` | ✅ [slider.md](slider.md) | 中 |
 | `Dialog` | ✅ [dialog.md](dialog.md) | 中 |
+| `Sheet` | 🟡 [sheet.md](sheet.md)（批 8 四边停靠/槽位/模态接口已核对，正文待写） | 中 |
 | `Popover` | ✅ [popover.md](popover.md) | 高 |
 | `DropdownMenu` | ✅ [dropdown_menu.md](dropdown_menu.md) | 高 |
 | `ContextMenu` | — | 高 |

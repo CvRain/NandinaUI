@@ -59,6 +59,7 @@
 | 组件 | 用途 | 状态 |
 | --- | --- | --- |
 | [`Dialog`](dialog.md) | 模态内容、遮罩与焦点限制 | 可用，已接入统一浮层 |
+| [`Sheet`](sheet.md) | 从视口四边停靠的模态抽屉面板（覆盖侧边/顶底 Drawer 场景） | 实验性（批 8 v1；已接入统一浮层与 `DialogRecipe`） |
 | [`Popover`](popover.md) | 锚定在触发控件旁的非模态浮层容器（内容为任意控件） | 可用，已接入统一浮层 |
 | [`DropdownMenu`](dropdown_menu.md) | 锚定菜单：动作 / 勾选 / 单选条目，键盘漫游与 typeahead | 可用，基于 Popover |
 | `ContextMenu` | 右键 / 菜单键在指针处打开的上下文菜单 | 可用，包装 DropdownMenu |
@@ -87,10 +88,11 @@
 `Combobox`、`CommandPalette`、`HoverCard` 与 `AlertDialog`
 （见 [菜单族条目模型](../references/menu_model.md)）。
 
-仍待实现的组件：`Sheet`；`Accordion` v1 已在批 7 交付（组合 `Collapsible`、single/multiple、
-Up/Down/Home/End 漫游；见 [Accordion](accordion.md)），新虚拟化 `ListView` 已在批 5 交付
-（`IRowModel` + `IItemDelegate` + `SelectionModel<RowId>`），`TreeView` v1 已在批 6 交付
-（`ITreeModel` + 视图持有展开 + 统一行高虚拟化），旧模板 `VirtualListView` 已退役。
+已落地的阶段 5 组件：[`Sheet`](sheet.md)（批 8 v1，四边停靠模态抽屉，统一覆盖桌面 Sheet/Drawer 场景）、
+[`Accordion`](accordion.md)（批 7 v1，组合 `Collapsible`、single/multiple、Up/Down/Home/End 漫游）、
+新虚拟化 `ListView`（批 5，`IRowModel` + `IItemDelegate` + `SelectionModel<RowId>`）、
+`TreeView`（批 6 v1，`ITreeModel` + 视图持有展开 + 统一行高虚拟化）与 [`DataTable`](data_table.md)
+（公开头已迁至 `widget/`）；旧模板 `VirtualListView` 已退役。后续按需扩展：`Resizable`、`AspectRatio`。
 
 计划顺序与依赖关系见 [组件开发路线图](../references/component_roadmap.md)。
 

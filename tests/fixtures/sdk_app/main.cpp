@@ -197,6 +197,24 @@ namespace
             && accordion->trigger_node("first")->text() == "First" && accordion->toggle("first")
             && accordion->is_open("first");
     }
+
+    auto sheet_api_works(nandina::app::NanApplication& application) -> bool {
+        nandina::reactive::ReactiveScope scope {application.graph()};
+        nandina::widget::BuildContext ui {application.graph(), scope, application.theme_manager()};
+        auto body = ui.make<nandina::widget::Label>("drawer content").build();
+        auto sheet =
+            ui.make<nandina::widget::Sheet>(nandina::widget::SheetSide::left, "Drawer", body)
+                .build();
+        sheet->set_description("Edge-docked modal drawer");
+        sheet->set_extent(280.0F);
+        nandina::scene::NanSceneTree tree;
+        tree.set_root(sheet);
+        sheet->open();
+        (void)tree.layout_root(nandina::foundation::NanSize(640.0F, 480.0F));
+        return sheet->is_open() && sheet->side() == nandina::widget::SheetSide::left
+            && sheet->title() == "Drawer" && sheet->extent() == 280.0F
+            && sheet->content() == body.get();
+    }
 } // namespace
 
 int main() {
@@ -211,10 +229,11 @@ int main() {
     const bool list_api = list_api_works(application);
     const bool tree_api = tree_api_works(application);
     const bool accordion_api = accordion_api_works(application);
+    const bool sheet_api = sheet_api_works(application);
     const auto version = SDL_GetVersion();
     std::printf(
         "backend=%.*s sdl=%d.%d.%d decoder=%d data-api=%d list-api=%d tree-api=%d "
-        "accordion-api=%d\n",
+        "accordion-api=%d sheet-api=%d\n",
         static_cast<int>(backend.size()),
         backend.data(),
         SDL_VERSIONNUM_MAJOR(version),
@@ -224,10 +243,11 @@ int main() {
         data_api,
         list_api,
         tree_api,
-        accordion_api
+        accordion_api,
+        sheet_api
     );
     return backend == "sdl3" && decoder != nullptr && data_api && list_api && tree_api
-            && accordion_api
+            && accordion_api && sheet_api
         ? 0
         : 1;
 }

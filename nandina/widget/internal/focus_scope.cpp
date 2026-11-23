@@ -99,7 +99,10 @@ namespace nandina::widget::internal
         auto* tree = get_tree();
         auto previous = previous_focus_.lock();
         auto* target = previous != nullptr ? previous->as_node2d() : nullptr;
-        if (tree != nullptr && target != nullptr) {
+        auto* focused = tree != nullptr ? tree->focused_node() : nullptr;
+        const bool owns_current_focus = focused == nullptr || focused == this
+            || (focused != nullptr && is_ancestor_of(*focused));
+        if (tree != nullptr && target != nullptr && owns_current_focus) {
             tree->set_focus(
                 target,
                 scene::FocusRequestContext {.reason = scene::FocusRequestReason::restore}

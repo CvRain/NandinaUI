@@ -66,9 +66,22 @@ application shell. Version `0.1.0-alpha.1`.
   `Expanded` (remaining main-axis space) contract notes (`authoring_dsl_and_content_measurement.md`
   §§7, 19). Verification: `authoring` 41 cases/269 assertions, `surface` 9/92; operator desktop
   unit 120/120, full suite 143/143, no-RTTI 120/120, ASan 118 OK +1 skip, no-SQLite 115 OK +1
-  skip, pure tools 8/8, `release_check --ci` 8/8. **Next: Sheet (component roadmap).**
-- **Baseline counts**: 143 tests (120 unit + 23 integration), 215 headers (199 experimental +
-  16 internal), 28 approved page goldens (7 pages × CPU/SDF × 2 platforms), 43 public
+  skip, pure tools 8/8, `release_check --ci` 8/8.
+- **Batch 8 (Sheet v1) implemented and verified**: edge-docked modal drawer
+  (`nandina/widget/sheet.hpp` / `.cpp`, `SheetSide { top, right, bottom, left }` default `right`,
+  covering desktop Sheet/Drawer scenarios without a separate duplicate widget); reuses
+  `OverlayHost` (`OverlayLevel::modal`, `block_below=true` + detached in-tree fallback),
+  `DismissLayer` (`OriginResolver`), `FocusScope`, and `DialogRecipe`/`DialogRecipeRule` (flush
+  `panel.radius = 0` by default, overrideable); `header` (`set_title`/`set_description` or custom
+  `set_header`), `content` (middle remaining height), and bottom-pinned `footer` slots plus
+  `set_extent(float)`/`clear_extent()`; owner-release-safe `closed()`/`set_on_close()`;
+  `ComponentTraits<Sheet>` + `showcase/component_catalog.hpp` (`dialog_migration.md`).
+  Verification: `sheet` 11 cases/118 assertions; operator desktop unit 121/121, full suite
+  144/144, no-RTTI 121/121; headless unit 120 OK +1 skip, full suite 141 OK +3 skips, ASan 119 OK
+  +1 skip, no-RTTI 120 OK +1 skip, no-SQLite 116 OK +1 skip, pure tools 8/8, `release_check --ci`
+  8/8 (headers 216 = 200 experimental + 16 internal, docs 98).
+- **Baseline counts**: 144 tests (121 unit + 23 integration), 216 headers (200 experimental +
+  16 internal), 28 approved page goldens (7 pages × CPU/SDF × 2 platforms), 44 public
   components; the CPU page-golden CI gate is blocking (7 pages).
 - **Do not over-claim**: Windows is experimental (only real exit codes/logs count; GPU/SDF and
   GUI checks need an interactive desktop, CPU paths can use `--renderer sdl2d` over SSH);

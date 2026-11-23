@@ -527,6 +527,16 @@ TreeView 用例与 SDK consumer 的 `tree-api=1` 探针覆盖。
 - `Padding`（含子类 `Surface`）、`Center`、`Expanded`、`FlexItem` 新增只读
   `child() const -> scene::NanControl*`，与 `ScrollView::child()` 的查询语义对齐。
 
+### 4.6 Sheet（批 8，v1）
+
+批 8 新增 `widget/sheet.hpp`（experimental；头文件总数 216 = 200 experimental + 16 internal）：
+`Sheet`、`SheetSide { top, right, bottom, left }`。复用 `OverlayHost` / `DismissLayer` /
+`FocusScope` 与 `DialogRecipe` / `DialogRecipeRule`（无新配方，贴边默认直角 `radius = 0`），
+内部面板 `internal::SheetPanel` 封装在 `widget/sheet.cpp` 中，不暴露到公共签名。提供
+`ComponentTraits<Sheet>`（`ui.make<Sheet>(...)`）并收录于 `showcase/component_catalog.hpp`
+（公开组件数 44）。契约见 [Dialog 与 Sheet 契约](dialog_migration.md#sheet贴边模态抽屉v1)；
+打包 SDK consumer 静态/共享 SDL3 均运行 `sheet-api=1` 探针。
+
 ## 5. 破坏性变更的记录方式
 
 图片批同时有两处**破坏性 API 变更**，都要登记：

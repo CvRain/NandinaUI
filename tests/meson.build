@@ -892,6 +892,13 @@ dialog_tests = executable(
 )
 test('dialog', dialog_tests, suite: 'unit')
 
+sheet_tests = executable(
+    'sheet_tests',
+    files('sheet_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('sheet', sheet_tests, suite: 'unit')
+
 popover_tests = executable(
     'popover_tests',
     files('popover_tests.cpp'),

@@ -886,3 +886,7 @@ level = "experimental"
 [[headers]]
 path = "nandina/widget/accordion.hpp"
 level = "experimental"
+
+[[headers]]
+path = "nandina/widget/sheet.hpp"
+level = "experimental"
