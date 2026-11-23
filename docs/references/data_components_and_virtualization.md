@@ -828,8 +828,9 @@ struct SortRequest {
   持有 `offset_`、可见窗口、pending 窗口同步与滚动目标，`ItemHost` 不拥有滚动状态。
   `UniformRowWindow` 仍只是纯数学工具。3a 不引入 `VerticalScrollHost`/`UniformViewport`
   这类通用类；等批 5 新 `ListView` 成为第二个真实消费者后再评估是否提取。
-  视口高度取父级最终分配高度，3a 不新增 `set_viewport_height()`；无界父级下仍按内容高度
-  测量（作者应通过固定高度或 `fill` 提供视口）。
+  视口高度取父级最终分配高度，3a 不新增 `set_viewport_height()`；**真实布局 pass 内**
+  无界父级下仍按内容高度测量（作者应通过固定高度或 `fill` 提供视口）。预排阶段的例外见
+  §9.9.2。
 
 #### 9.9.1 pending reset / window sync 硬化（2026-11-21）
 
@@ -842,11 +843,38 @@ struct SortRequest {
 - `schedule_window_sync()` 先置 pending 再区分“树内 post_layout”与“detached 立即执行”；
   `apply_window_sync()` 仅在 `pending_window_sync_` 仍存在时消费。这样同一个 reset 的
   `rebuild_all()` 已清掉窗口动作后，旧回调不会二次物化并重复挂载。
-- 回归：`data-table-3a` 20 用例/397 断言、`list-view` 17/82、`tree-view` 23/152；三者均覆盖
-  detached `layout_to()` 首次物化。红先：移除 DataTable row-index 防御得到
+- 回归：`data-table-3a` 22 用例/404 断言、`list-view` 20/106、`tree-view` 25/160；三者均覆盖
+  detached `layout_to()` 首次物化与 §9.9.2 的预排保护。红先：移除 DataTable row-index 防御得到
   `vector::_M_range_check`；移除 DataTable/ListView/TreeView 的 pending-window 消费守卫均得到
   `NanNode::insert_child: child already has a parent`；TreeView 移除 refresh/position 守卫分别命中
   旧 `model_row` / 旧节点重复 layout。
+
+#### 9.9.2 预排阶段的虚拟化视口保护（2026-11-23）
+
+`ListView` / `DataTable` / `TreeView` 的 `on_measure()` 在同时满足以下三条时返回
+`constraints.constrain(NanSize(width, constraints.min_height))`，不按全量行数/全表撑开：
+
+1. `size_spec().height` 是 `FillLength` 或 `PercentLength`（父级决定高度，自身没有自然内容高）；
+2. `constraints.max_height` 无界（`loose()`）；
+3. 处于**预排**：`get_tree() == nullptr || !get_tree()->layout_pass_active()`。离树
+   `Padding`/`Surface`/`Column` 的 `relayout()` 与树内 `on_ready()` 的 loose relayout 都算预排。
+
+边界与不变量：
+
+- **真实布局 pass 内的无界父容器不受影响**：`ScrollView` 的内容测量、`Stack` 的 loose 子测量
+  仍按内容高度测量（保持既有组合语义；虚拟化视图不应嵌进 `ScrollView`，见 §2/§9.9）；
+  若不区分会把视口在布局期塌陷为 0 行。
+- `ContentLength`（默认高度）路径不变；离树显式 `layout_to(rect)` 仍按 rect 物化可见窗口。
+- `min_height` 在预排返回值中被保留（`min_height = 120` → 视口 120 px）。
+- 根因：数据页在离树包装容器中先 `relayout()`，`on_layout()` 在 `get_tree() == nullptr`
+  且视口高度 = 全量内容高时同步物化全部行；预排返回 `min_height` 后首帧真实布局前不再物化。
+
+回归（红先均已验证）：`[list-view][virtualization][off-tree]`（含 `set_root()` 后、
+`layout_root()` 前不得物化、`min_height`、`ContentLength`、离树 `layout_to`）、
+`[data-table][3a][virtualization][off-tree]`、`[tree-view][virtualization][off-tree]`，
+以及真实布局 pass 保留语义的 `[*-view][virtualization][pre-layout]`（`ScrollView` 直接子项与
+`Column` 嵌套）。红先：把条件退化为“只按无界判断”时 `pre-layout` 用例塌陷为 0 行；
+退化为 `get_tree() == nullptr` 时 `set_root()` 前的 `measured_size` 断言（12 px）变为内容高。
 
 ### 9.10 默认视觉归属（本批：delegate-only，不新增配方）
 

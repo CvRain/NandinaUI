@@ -713,6 +713,20 @@ namespace nandina::widget
         const float cross_width = width() > 0.0F ? width() : constraints.max_width;
         const float measured_width =
             std::isfinite(cross_width) ? cross_width : constraints.min_width;
+        // 声明了 fill/percent 高度的虚拟化视口在**预排**阶段不按全量行数撑开，避免离树
+        // 包裹容器（Padding/Surface/Column）或树内 on_ready 的 loose relayout 触发全模型物化。
+        // 真实布局 pass 里的无界父容器（ScrollView/Column 等）保持既有“按内容高度测量”
+        // 语义，否则视口会在布局期塌陷为 0（见 data_components_and_virtualization.md §9.9）。
+        const bool parent_sized_height =
+            std::holds_alternative<scene::FillLength>(size_spec().height)
+            || std::holds_alternative<scene::PercentLength>(size_spec().height);
+        const auto* tree = get_tree();
+        const bool pre_layout_measure = tree == nullptr || !tree->layout_pass_active();
+        if (pre_layout_measure && !std::isfinite(constraints.max_height) && parent_sized_height) {
+            return constraints.constrain(
+                foundation::NanSize(measured_width, constraints.min_height)
+            );
+        }
         const double content_height =
             static_cast<double>(row_count()) * static_cast<double>(row_height_);
         if (!std::isfinite(measured_width) || measured_width < 0.0F

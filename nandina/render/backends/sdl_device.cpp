@@ -93,6 +93,10 @@ namespace nandina::render
         using Cache = detail::ParameterStateCache<SDL_GPURenderState*, 12>;
         using Key = Cache::Key;
         static constexpr std::size_t kCacheCapacity = 256;
+        // 延迟销毁队列的硬上限：容量取缓存容量的 4 倍。到达上限时在帧内批量释放一次
+        // （SDL 只有在 state 属于当前未 flush 的 command generation 时才 flush，所以
+        // 这是一次有界 flush 而不是逐图元 flush）；同时保证峰值内存有界。
+        static constexpr std::size_t kMaxDeferredDestroys = 4 * kCacheCapacity;
 
         SDL_Renderer* renderer = nullptr;
         SDL_GPUShader* shader = nullptr;
@@ -105,6 +109,7 @@ namespace nandina::render
         std::uint64_t created = 0;
         std::uint64_t fail_after = 0;
         Cache cache;
+        std::vector<SDL_GPURenderState*> retired_states;
 
         SdfPath(
             SDL_Renderer* target,
@@ -120,14 +125,25 @@ namespace nandina::render
                 kCacheCapacity,
                 [this](const Key& key) { return create_state(key); },
                 [this](SDL_GPURenderState* state) {
-                    if (state != nullptr) {
-                        if (bound == state) {
-                            unbind();
-                        }
-                        SDL_DestroyGPURenderState(state);
+                    if (state == nullptr) {
+                        return;
+                    }
+                    if (bound == state) {
+                        unbind();
+                    }
+                    // SDL 3.4.18 的 SDL_DestroyGPURenderState 只在该 state 属于当前未 flush 的
+                    // command generation 时先 flush 命令队列；帧内淘汰常常正好命中这种 state，
+                    // 于是缩放期会反复刷管线。改为挂进 retired 队列，等下一帧 begin_frame()
+                    // （上一帧已 present/flush）批量释放，正常路径 0 次 flush。
+                    retired_states.push_back(state);
+                    if (retired_states.size() >= kMaxDeferredDestroys) {
+                        drain_retired();
                     }
                 }
             ) {
+            // 预留到上限：淘汰回调在 cache 的 acquire/clear 路径里执行，push_back 若在
+            // 那里分配失败会逃进帧循环（析构路径则直接 terminate）。预留后指针拷贝不抛。
+            retired_states.reserve(kMaxDeferredDestroys);
             // 仅供设备级测试注入运行期失败；生产路径不设置这个变量。
             if (const char* inject = SDL_getenv("NANDINA_SDL_SDF_TEST_FAIL_AFTER");
                 inject != nullptr)
@@ -136,10 +152,20 @@ namespace nandina::render
             }
         }
 
+        void drain_retired() {
+            for (auto* state: retired_states) {
+                if (state != nullptr) {
+                    SDL_DestroyGPURenderState(state);
+                }
+            }
+            retired_states.clear();
+        }
+
         ~SdfPath() {
             (void)SDL_SetGPURenderState(renderer, nullptr);
             bound = nullptr;
             cache.clear();
+            drain_retired();
             if (white != nullptr) {
                 SDL_DestroyTexture(white);
             }
@@ -552,6 +578,7 @@ namespace nandina::render
     void SdlRenderDevice::begin_frame() {
         ++stats_.frames;
         if (sdf_) {
+            sdf_->drain_retired();
             sdf_->frame_binds = 0;
             sdf_->frame_unbinds = 0;
         }

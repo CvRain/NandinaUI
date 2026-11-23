@@ -63,8 +63,15 @@
    用它；默认仍为 `true`。页面探针自带 1× 主机（`page_probe.cpp` 不经过 `NanWindow`），
    现有 golden 基线不受影响；golden 仍按 platform 隔离，**不跨 DPI 比较**。
 9. **缩放变化**：`SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED` 时重算内容缩放、渲染 scale 与
-   IME 输入区比例，并按作者逻辑尺寸恢复窗口；`SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED` 回写
-   用户 resize 后的逻辑尺寸。单显示器系统缩放变化已覆盖；跨屏混合 DPI 见 P4.5b。
+   IME 输入区比例，并按作者逻辑尺寸恢复窗口；`SDL_EVENT_WINDOW_RESIZED` 与
+   `SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED` 都回写用户 resize 后的逻辑尺寸（固定 SDL 3.4.18
+   在有效 resize 时两者都会发出，先处理 RESIZED 是防御性冗余，不改变数值）。单显示器系统缩放
+   变化已覆盖；跨屏混合 DPI 见 P4.5b。
+9a. **帧内采样时序**：平台事件在 input 阶段经 `poll_input()` 处理，宿主必须在本帧
+   `layout_root()` 之前重新采样 `screen_size()`/`drawable_size()`，再用同一份尺寸做布局、
+   语义与绘制；缩放帧不得使用轮询前的旧尺寸排版。`NanWindow::tick()` 自 2026-11-23 起按此
+   顺序执行（`nandina/app/nan_window.cpp`），并有 mock 平台的 `[app][resize][timing]` 结构回归；
+   真实窗口的顺滑度仍是人工验收。
 10. **`ViewportScalePolicy` 组合**：DPI scale 是独立乘数，不进入设计视口的 mapping。顺序固定为
     `logical → (viewport logical_to_screen) → screen → (display_scale) → physical`。
 11. **平台范围**：Windows（本机 175%）已验收；Linux 1× 行为不变，Wayland 分数缩放需要维护者
@@ -78,8 +85,8 @@
   1.0/1.75/2.0 与无效值、往返转换。
 - `nandina/app/detail/sdl_platform_window.{hpp,cpp}`：创建时按内容缩放设置原生窗口；
   `screen_size()` 返回逻辑尺寸；渲染器 scale 与文本输入区比例随窗口刷新；
-  指针/滚轮坐标折回逻辑空间；处理 `WINDOW_DISPLAY_SCALE_CHANGED` 与
-  `WINDOW_PIXEL_SIZE_CHANGED`；日志记录
+  指针/滚轮坐标折回逻辑空间；处理 `WINDOW_DISPLAY_SCALE_CHANGED`、
+  `WINDOW_PIXEL_SIZE_CHANGED` 与 `WINDOW_RESIZED`；日志记录
   `ready 1200x800 logical (2100x1400 native, 2100x1400 pixels), content_scale=1.75`。
 - `nandina/app/detail/sdl_text_input_service.{hpp,cpp}`：新增 `set_window_scale()`，
   caret 区域从逻辑坐标换算到原生窗口坐标后交给 SDL。

@@ -767,8 +767,7 @@ namespace nandina::widget
         std::vector<MenuItem> items,
         theme::NanTheme theme
     ) {
-        system_ =
-            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ = theme::design_system_shared_from_theme(theme);
         theme_view_ = theme;
 
         // 浮层基座：面板配方由 Popover 自己解析，本组件只负责条目列表。
@@ -919,8 +918,7 @@ namespace nandina::widget
     }
 
     void DropdownMenu::set_theme(theme::NanTheme theme) {
-        system_ =
-            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ = theme::design_system_shared_from_theme(theme);
         system_explicit_ = true;
         theme_view_ = theme;
         // 面板与条目同属一个菜单：显式整份主题一并下发给 Popover，避免面板跟随系统而

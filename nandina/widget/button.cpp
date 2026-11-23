@@ -33,8 +33,7 @@ namespace nandina::widget
         text_(std::move(text)),
         label_presentation_(*this),
         container_presentation_(*this) {
-        system_ =
-            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ = theme::design_system_shared_from_theme(theme);
         theme_view_ = theme;
         apply_metrics();
     }
@@ -180,8 +179,7 @@ namespace nandina::widget
     }
 
     void Button::set_theme(theme::NanTheme theme) {
-        system_ =
-            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ = theme::design_system_shared_from_theme(theme);
         system_explicit_ = true;
         theme_view_ = theme;
         mark_layout_dirty();

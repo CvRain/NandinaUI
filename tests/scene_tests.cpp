@@ -801,6 +801,189 @@ TEST_CASE("StyleContext changes propagate through the scene hierarchy", "[scene]
     REQUIRE(detached->resolved_style_context().locale == "en-GB");
 }
 
+TEST_CASE(
+    "StyleContext skips no-op cascades on insert/enter and skips detached style work on delete",
+    "[scene][style][perf]"
+) {
+    class StyleSpy final: public scene::NanNode2D {
+    public:
+        int style_changes = 0;
+
+    protected:
+        void on_style_context_changed(const theme::ResolvedStyleContext&) override {
+            ++style_changes;
+        }
+    };
+
+    auto root = std::make_shared<StyleSpy>();
+    auto branch = std::make_shared<StyleSpy>();
+    auto leaf = std::make_shared<StyleSpy>();
+    branch->add_child(leaf);
+    root->add_child(branch);
+
+    // Default StyleContext across insert_child and enter_tree must not fire redundant callbacks.
+    scene::NanSceneTree tree;
+    tree.set_root(root);
+    CHECK(root->style_changes == 0);
+    CHECK(branch->style_changes == 0);
+    CHECK(leaf->style_changes == 0);
+
+    // Explicit root override notifies each descendant exactly once.
+    theme::StyleContext custom;
+    custom.font_size = theme::StyleValue<float>::explicit_value(22.0F);
+    root->set_style_context(custom);
+    CHECK(root->style_changes == 1);
+    CHECK(branch->style_changes == 1);
+    CHECK(leaf->style_changes == 1);
+
+    // Re-applying an identical StyleContext is a no-op.
+    root->set_style_context(custom);
+    CHECK(root->style_changes == 1);
+    CHECK(branch->style_changes == 1);
+    CHECK(leaf->style_changes == 1);
+
+    // remove_and_delete must not waste style-context recomputation on nodes being destroyed.
+    const auto branch_raw = branch;
+    const auto leaf_raw = leaf;
+    root->remove_and_delete(*branch);
+    CHECK(branch_raw->style_changes == 1);
+    CHECK(leaf_raw->style_changes == 1);
+}
+
+TEST_CASE(
+    "detached-but-retained nodes re-resolve their style context on re-attach",
+    "[scene][style][detach]"
+) {
+    class StyleSpy final: public scene::NanNode2D {
+    public:
+        int style_changes = 0;
+        int exits = 0;
+
+    protected:
+        void on_style_context_changed(const theme::ResolvedStyleContext&) override {
+            ++style_changes;
+        }
+        void on_exit_tree() override {
+            ++exits;
+        }
+    };
+
+    const auto style = [](const char* locale, const float font_size) {
+        theme::StyleContext context;
+        context.locale = theme::StyleValue<std::string>::explicit_value(locale);
+        context.font_size = theme::StyleValue<float>::explicit_value(font_size);
+        return context;
+    };
+    const auto make_branch = []() {
+        auto branch = std::make_shared<StyleSpy>();
+        auto leaf = std::make_shared<StyleSpy>();
+        branch->add_child(leaf);
+        return std::pair {branch, leaf};
+    };
+    const auto attach_to_new_parent = [&style](const std::shared_ptr<StyleSpy>& node) {
+        auto parent = std::make_shared<StyleSpy>();
+        parent->set_style_context(style("en-GB", 30.0F));
+        parent->add_child(node);
+        return parent;
+    };
+
+    // remove_and_delete 跳过离树样式重算；若外部 shared_ptr 把节点留住并重新挂到
+    // 新父节点下，insert_child() 必须重新解析整棵子树，不能把旧父链的上下文带过去。
+    SECTION("remove_and_delete") {
+        auto old_parent = std::make_shared<StyleSpy>();
+        old_parent->set_style_context(style("zh-CN", 22.0F));
+        auto [branch, leaf] = make_branch();
+        old_parent->add_child(branch);
+        // 退出树通知只在旧父节点确实在树内时传播：先把旧父挂树。
+        scene::NanSceneTree old_tree;
+        old_tree.set_root(old_parent);
+        REQUIRE(branch->resolved_style_context().locale == "zh-CN");
+        REQUIRE(leaf->resolved_style_context().locale == "zh-CN");
+        const auto branch_changes = branch->style_changes;
+        const auto leaf_changes = leaf->style_changes;
+
+        old_parent->remove_and_delete(*branch);
+        CHECK_FALSE(branch->is_inside_tree());
+        CHECK(branch->style_changes == branch_changes);
+        CHECK(leaf->style_changes == leaf_changes);
+        // 跳过的是离树样式重算，退出树通知仍必须传播。
+        CHECK(branch->exits == 1);
+        CHECK(leaf->exits == 1);
+
+        const auto new_parent = attach_to_new_parent(branch);
+        REQUIRE(new_parent->child_count() == 1);
+        CHECK(branch->resolved_style_context().locale == "en-GB");
+        CHECK(branch->resolved_style_context().font_size == Catch::Approx(30.0F));
+        CHECK(leaf->resolved_style_context().locale == "en-GB");
+        CHECK(leaf->resolved_style_context().font_size == Catch::Approx(30.0F));
+        CHECK(branch->style_changes == branch_changes + 1);
+        CHECK(leaf->style_changes == leaf_changes + 1);
+    }
+
+    // replace_child 内部同样走 remove_and_delete：被替换（但被外部持有）的节点
+    // 重新插入时也必须重新解析。
+    SECTION("replace_child") {
+        auto old_parent = std::make_shared<StyleSpy>();
+        old_parent->set_style_context(style("zh-CN", 22.0F));
+        auto [branch, leaf] = make_branch();
+        old_parent->add_child(branch);
+        scene::NanSceneTree old_tree;
+        old_tree.set_root(old_parent);
+        REQUIRE(branch->resolved_style_context().locale == "zh-CN");
+
+        auto replacement = std::make_shared<StyleSpy>();
+        old_parent->replace_child(branch.get(), replacement);
+        CHECK_FALSE(branch->is_inside_tree());
+        CHECK(branch->exits == 1);
+        CHECK(leaf->exits == 1);
+        REQUIRE(old_parent->child_count() == 1);
+        CHECK(old_parent->get_child(0) == replacement.get());
+
+        (void)attach_to_new_parent(branch);
+        CHECK(branch->resolved_style_context().locale == "en-GB");
+        CHECK(leaf->resolved_style_context().locale == "en-GB");
+    }
+}
+
+TEST_CASE(
+    "changing an interior node style re-resolves only its own subtree",
+    "[scene][style][perf]"
+) {
+    class StyleSpy final: public scene::NanNode2D {
+    public:
+        int style_changes = 0;
+
+    protected:
+        void on_style_context_changed(const theme::ResolvedStyleContext&) override {
+            ++style_changes;
+        }
+    };
+
+    auto root = std::make_shared<StyleSpy>();
+    auto branch = std::make_shared<StyleSpy>();
+    auto leaf = std::make_shared<StyleSpy>();
+    auto sibling = std::make_shared<StyleSpy>();
+    branch->add_child(leaf);
+    root->add_child(branch);
+    root->add_child(sibling);
+
+    scene::NanSceneTree tree;
+    tree.set_root(root);
+    REQUIRE(root->style_changes == 0);
+    REQUIRE(sibling->style_changes == 0);
+
+    theme::StyleContext context;
+    context.font_size = theme::StyleValue<float>::explicit_value(28.0F);
+    branch->set_style_context(context);
+
+    // 祖先与兄弟节点的已解析值不可能受影响，剪枝不得触碰它们。
+    CHECK(root->style_changes == 0);
+    CHECK(sibling->style_changes == 0);
+    CHECK(branch->style_changes == 1);
+    CHECK(leaf->style_changes == 1);
+    CHECK(leaf->resolved_style_context().font_size == Catch::Approx(28.0F));
+}
+
 TEST_CASE("semantics snapshots merge and hide composed descendants", "[scene][semantics]") {
     auto root = std::make_shared<scene::NanControl>(foundation::NanSize(240.0F, 120.0F));
     root->set_semantics_composition(semantics::Composition::merge_descendants);

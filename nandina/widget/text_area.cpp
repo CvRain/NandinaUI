@@ -30,8 +30,7 @@ namespace nandina::widget
 
     TextArea::TextArea(std::string value, theme::NanTheme theme): edit_(std::move(value)) {
         edit_.set_text_input_multiline(true);
-        system_ =
-            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ = theme::design_system_shared_from_theme(theme);
         theme_view_ = theme;
         edit_.set_on_change([this](std::string_view value) {
             if (on_change_) {
@@ -114,8 +113,7 @@ namespace nandina::widget
     }
 
     void TextArea::set_theme(theme::NanTheme theme) {
-        system_ =
-            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ = theme::design_system_shared_from_theme(theme);
         system_explicit_ = true;
         theme_view_ = theme;
         apply_theme();

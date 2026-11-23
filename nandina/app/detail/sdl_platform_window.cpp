@@ -918,6 +918,7 @@ namespace nandina::app::detail
                     }
                     break;
 
+                case SDL_EVENT_WINDOW_RESIZED:
                 case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
                     if (event.window.windowID == SDL_GetWindowID(window_)) {
                         remember_logical_size_from_window();

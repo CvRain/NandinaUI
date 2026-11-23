@@ -32,6 +32,7 @@
 #include "theme.hpp"
 #include "visual_state.hpp"
 
+#include <memory>
 #include <optional>
 #include <vector>
 
@@ -2455,9 +2456,22 @@ namespace nandina::theme
 
     /**
      * 从遗留 NanTheme（tokens + 单调色板）构建 DesignSystem 快照，配方沿用框架默认。
-     * 供 set_theme(NanTheme) 兼容路径与 widget 回退快照使用。
+     * 供 set_theme(NanTheme) 兼容路径、ThemeManager 的文档/方案构建与测试支持使用；
+     * 控件构造路径请用 `design_system_shared_from_theme()` 复用不可变快照。
      */
     [[nodiscard]] auto design_system_from_theme(const NanTheme& theme) -> DesignSystem;
+
+    /**
+     * 与 `design_system_from_theme()` 值等价，但对相同 `NanTheme` 返回同一份不可变
+     * 共享快照，避免每个控件构造时重复拷贝整张默认配方表。
+     *
+     * - 快照是 `shared_ptr<const DesignSystem>`，可跨控件/窗口安全共享，不得修改；
+     * - 值相等（含 `-0.0`/`+0.0` 混写）的主题命中同一指针；含 NaN 的非法主题不入缓存，
+     *   每次返回独立快照；
+     * - 内部是 8 槽有界环形缓存（UI 线程为主用途，互斥保护并发调用）。
+     */
+    [[nodiscard]] auto design_system_shared_from_theme(const NanTheme& theme)
+        -> std::shared_ptr<const DesignSystem>;
 
 } // namespace nandina::theme
 

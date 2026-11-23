@@ -662,8 +662,7 @@ namespace nandina::widget
 
     Sheet::Sheet(const SheetSide side, theme::NanTheme theme): side_(side) {
         require_valid_side(side);
-        system_ =
-            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ = theme::design_system_shared_from_theme(theme);
         theme_view_ = theme;
 
         panel_ = std::make_shared<internal::SheetPanel>();
@@ -883,8 +882,7 @@ namespace nandina::widget
     }
 
     void Sheet::set_theme(theme::NanTheme theme) {
-        system_ =
-            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ = theme::design_system_shared_from_theme(theme);
         system_explicit_ = true;
         theme_view_ = theme;
         apply_style();

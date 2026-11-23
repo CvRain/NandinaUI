@@ -1,5 +1,6 @@
 #include <nandina/app/nan_application.hpp>
 #include <nandina/app/nan_window.hpp>
+#include <nandina/app/platform_window.hpp>
 #include <nandina/scene/control.hpp>
 #include <nandina/widget/button.hpp>
 #include <nandina/widget/primitives/editable_text.hpp>
@@ -11,6 +12,7 @@
 
 #include <cmath>
 #include <memory>
+#include <optional>
 #include <vector>
 
 namespace
@@ -77,6 +79,136 @@ namespace
 
     private:
         std::vector<std::string>* trace_;
+    };
+
+    /// 只记录调用的设备替身：窗口测试只关心帧序与布局尺寸，不做像素断言。
+    class NoopDevice final: public render::IRenderDevice {
+    public:
+        void begin_frame() override {}
+        void end_frame() override {}
+        void set_clip(const foundation::NanRect&) override {}
+        void clear_clip() override {}
+        void draw_rect(const foundation::NanRect&, const foundation::NanColor&) override {}
+        void
+        draw_rect_outline(const foundation::NanRect&, float, const foundation::NanColor&) override {
+        }
+        void
+        draw_rounded_rect(const foundation::NanRect&, float, const foundation::NanColor&) override {
+        }
+        void draw_line(
+            const foundation::NanPoint&,
+            const foundation::NanPoint&,
+            float,
+            const foundation::NanColor&
+        ) override {}
+        void draw_circle(const foundation::NanPoint&, float, const foundation::NanColor&) override {
+        }
+        void draw_text(
+            std::string_view,
+            const foundation::NanPoint&,
+            float,
+            const foundation::NanColor&
+        ) override {}
+        [[nodiscard]] auto supports_alpha_textures() const -> bool override {
+            return true;
+        }
+        [[nodiscard]] auto create_alpha_texture(int, int, std::span<const std::uint8_t>)
+            -> render::TextureHandle override {
+            return render::TextureHandle {++next_texture_};
+        }
+
+    private:
+        std::uint64_t next_texture_ = 0;
+    };
+
+    /// 可在 `poll_input()` 内改变窗口尺寸、并可顺带投递一次指针按下的平台替身：
+    /// 模拟「OS 把 resize 事件交给本次 poll」的时序，锁定 tick 的尺寸重采样。
+    class ResizeOnPollPlatform final: public app::IPlatformWindow {
+    public:
+        foundation::NanSize pending_size {640.0F, 360.0F};
+        bool apply_resize_on_next_poll = false;
+        std::optional<foundation::NanPoint> pending_press_screen_pos;
+
+        auto create(const app::WindowConfig& config) -> bool override {
+            size_ = foundation::NanSize(
+                static_cast<float>(config.width),
+                static_cast<float>(config.height)
+            );
+            ready_ = true;
+            return true;
+        }
+        void destroy() override {
+            ready_ = false;
+        }
+        [[nodiscard]] auto is_ready() const -> bool override {
+            return ready_;
+        }
+        [[nodiscard]] auto should_close() const -> bool override {
+            return !ready_;
+        }
+        [[nodiscard]] auto screen_size() const -> foundation::NanSize override {
+            return size_;
+        }
+        [[nodiscard]] auto drawable_size() const -> foundation::NanSize override {
+            return size_;
+        }
+        [[nodiscard]] auto frame_time() const -> float override {
+            return 1.0F / 60.0F;
+        }
+        [[nodiscard]] auto display_scale() const -> float override {
+            return 1.0F;
+        }
+        void poll_input(app::FrameInput& out) override {
+            if (apply_resize_on_next_poll) {
+                size_ = pending_size;
+                apply_resize_on_next_poll = false;
+            }
+            if (pending_press_screen_pos.has_value()) {
+                out.events.emplace_back(
+                    scene::MouseButtonEvent {
+                        scene::MouseButtonEvent::Button::left,
+                        scene::MouseButtonEvent::Action::press,
+                        *pending_press_screen_pos,
+                        {},
+                    }
+                );
+                pending_press_screen_pos.reset();
+            }
+            out.has_pointer = true;
+            out.pointer = foundation::NanPoint::zero();
+        }
+        void present() override {}
+        void set_clipboard_text(std::string_view) override {}
+        [[nodiscard]] auto clipboard_text() const -> std::string override {
+            return {};
+        }
+        [[nodiscard]] auto make_render_device() -> std::unique_ptr<render::IRenderDevice> override {
+            return std::make_unique<NoopDevice>();
+        }
+        [[nodiscard]] auto name() const -> std::string_view override {
+            return "resize-on-poll-mock";
+        }
+
+    private:
+        foundation::NanSize size_ {400.0F, 240.0F};
+        bool ready_ = false;
+    };
+
+    /// 内容根：记录派发到它身上的指针按下位置（逻辑坐标）。
+    class RecordingContent final: public scene::NanControl {
+    public:
+        [[nodiscard]] auto contains_point(foundation::NanPoint) const -> bool override {
+            return true;
+        }
+        auto on_input(scene::InputEvent& event) -> bool override {
+            if (event.type() == scene::EventType::mouse_button) {
+                presses.push_back(static_cast<scene::MouseButtonEvent&>(event).screen_pos());
+                return true;
+            }
+            return false;
+        }
+
+        std::vector<foundation::NanPoint> presses;
     };
 } // namespace
 
@@ -514,5 +646,190 @@ TEST_CASE(
     CHECK(node->move_deltas[1].get_y() == Catch::Approx(5.0F));
 
     node.reset();
+    window.close();
+}
+
+TEST_CASE(
+    "window tick lays out using the resized screen_size produced during poll_input",
+    "[app][resize][timing]"
+) {
+    using namespace nandina;
+
+    app::NanApplication application;
+    app::WindowConfig config;
+    config.width = 400;
+    config.height = 240;
+    config.vsync = false;
+    config.target_fps = 0;
+
+    auto platform = std::make_unique<ResizeOnPollPlatform>();
+    auto* raw_platform = platform.get();
+    app::NanWindow window(application, config);
+    window.set_platform_window(std::move(platform));
+    window.open();
+
+    auto content = std::make_shared<scene::NanControl>();
+    content->set_width(scene::fill);
+    content->set_height(scene::fill);
+    window.set_content(content);
+
+    window.tick();
+    REQUIRE(content->width() == Catch::Approx(400.0F));
+    REQUIRE(content->height() == Catch::Approx(240.0F));
+
+    // Simulate OS resize delivered inside poll_input(): this exact tick must lay out to 640x360.
+    raw_platform->apply_resize_on_next_poll = true;
+    window.tick();
+    CHECK(content->width() == Catch::Approx(640.0F));
+    CHECK(content->height() == Catch::Approx(360.0F));
+
+    content.reset();
+    window.close();
+}
+
+TEST_CASE(
+    "window maps pointer input with the viewport refreshed during poll_input",
+    "[app][resize][viewport]"
+) {
+    using namespace nandina;
+
+    app::NanApplication application;
+    app::WindowConfig config;
+    config.width = 400;
+    config.height = 240;
+    config.vsync = false;
+    config.target_fps = 0;
+    // 固定 200x200 设计视口 contain：400x240 窗口下 scale=1.2、offset.x=80。
+    config.viewport = app::ViewportScalePolicy {
+        .design_size = foundation::NanSize(200.0F, 200.0F),
+        .fit = app::ViewportFit::contain,
+        .horizontal_anchor = app::ViewportAnchor::center,
+        .vertical_anchor = app::ViewportAnchor::center,
+    };
+
+    auto platform = std::make_unique<ResizeOnPollPlatform>();
+    auto* raw_platform = platform.get();
+    app::NanWindow window(application, config);
+    window.set_platform_window(std::move(platform));
+    window.open();
+
+    auto content = std::make_shared<RecordingContent>();
+    content->set_width(scene::fill);
+    content->set_height(scene::fill);
+    window.set_content(content);
+
+    window.tick();
+    REQUIRE(content->width() == Catch::Approx(200.0F));
+    REQUIRE(content->height() == Catch::Approx(200.0F));
+
+    // poll_input 内先 resize 到 800x600（scale=3、offset.x=100），再投递同一帧的指针按下。
+    // 该事件必须按新映射换算：(400,300) -> (100,100)，而不是沿用上一帧的 scale=1.2/offset=80。
+    raw_platform->apply_resize_on_next_poll = true;
+    raw_platform->pending_size = foundation::NanSize(800.0F, 600.0F);
+    raw_platform->pending_press_screen_pos = foundation::NanPoint(400.0F, 300.0F);
+    window.tick();
+
+    REQUIRE(content->presses.size() == 1);
+    CHECK(content->presses.front().get_x() == Catch::Approx(100.0F));
+    CHECK(content->presses.front().get_y() == Catch::Approx(100.0F));
+
+    content.reset();
+    window.close();
+}
+
+TEST_CASE(
+    "window tick tolerates a zero-sized window reported during poll_input",
+    "[app][resize][invalid-size]"
+) {
+    using namespace nandina;
+
+    app::NanApplication application;
+    app::WindowConfig config;
+    config.width = 400;
+    config.height = 240;
+    config.vsync = false;
+    config.target_fps = 0;
+
+    auto platform = std::make_unique<ResizeOnPollPlatform>();
+    auto* raw_platform = platform.get();
+    app::NanWindow window(application, config);
+    window.set_platform_window(std::move(platform));
+    window.open();
+
+    auto content = std::make_shared<scene::NanControl>();
+    content->set_width(scene::fill);
+    content->set_height(scene::fill);
+    window.set_content(content);
+
+    window.tick();
+    REQUIRE(content->width() == Catch::Approx(400.0F));
+    REQUIRE(content->height() == Catch::Approx(240.0F));
+
+    // Windows 允许把 client 区域拖成零高；平台契约此时返回零尺寸。tick 不能把
+    // make_window_metrics() 的 invalid_argument 抛进宿主主循环，也不能用 0 尺寸排版。
+    raw_platform->apply_resize_on_next_poll = true;
+    raw_platform->pending_size = foundation::NanSize(400.0F, 0.0F);
+    CHECK_NOTHROW(window.tick());
+    CHECK(content->width() == Catch::Approx(400.0F));
+    CHECK(content->height() == Catch::Approx(240.0F));
+
+    // 尺寸恢复后同一帧重新排版（保留的上一帧结果不应粘住）。
+    raw_platform->apply_resize_on_next_poll = true;
+    raw_platform->pending_size = foundation::NanSize(640.0F, 360.0F);
+    window.tick();
+    CHECK(content->width() == Catch::Approx(640.0F));
+    CHECK(content->height() == Catch::Approx(360.0F));
+
+    content.reset();
+    window.close();
+}
+
+TEST_CASE(
+    "window tick tolerates a zero-sized window when a fixed viewport is configured",
+    "[app][resize][invalid-size]"
+) {
+    using namespace nandina;
+
+    app::NanApplication application;
+    app::WindowConfig config;
+    config.width = 400;
+    config.height = 240;
+    config.vsync = false;
+    config.target_fps = 0;
+    config.viewport = app::ViewportScalePolicy {
+        .design_size = foundation::NanSize(200.0F, 200.0F),
+        .fit = app::ViewportFit::contain,
+        .horizontal_anchor = app::ViewportAnchor::center,
+        .vertical_anchor = app::ViewportAnchor::center,
+    };
+
+    auto platform = std::make_unique<ResizeOnPollPlatform>();
+    auto* raw_platform = platform.get();
+    app::NanWindow window(application, config);
+    window.set_platform_window(std::move(platform));
+    window.open();
+
+    auto content = std::make_shared<scene::NanControl>();
+    content->set_width(scene::fill);
+    content->set_height(scene::fill);
+    window.set_content(content);
+
+    window.tick();
+    REQUIRE(content->width() == Catch::Approx(200.0F));
+
+    // viewport 配置下旧的 update_viewport_mapping() 会对 0 尺寸抛错：
+    // 采样必须在把尺寸交给 make_viewport_mapping() 之前完成合法性判定。
+    raw_platform->apply_resize_on_next_poll = true;
+    raw_platform->pending_size = foundation::NanSize(0.0F, 0.0F);
+    CHECK_NOTHROW(window.tick());
+    CHECK(content->width() == Catch::Approx(200.0F));
+    CHECK(content->height() == Catch::Approx(200.0F));
+
+    raw_platform->apply_resize_on_next_poll = true;
+    raw_platform->pending_size = foundation::NanSize(800.0F, 600.0F);
+    CHECK_NOTHROW(window.tick());
+    CHECK(content->width() == Catch::Approx(200.0F));
+
+    content.reset();
     window.close();
 }

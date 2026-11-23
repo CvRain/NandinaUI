@@ -200,6 +200,11 @@ namespace nandina::scene
 
         /**
          * Remove a child node and return ownership to the caller.
+         *
+         * The detached subtree's resolved style context is reset as if it had no
+         * inherited context (every descendant is re-resolved), so the returned node
+         * is directly usable detached or under a new parent.
+         *
          * @return The removed child as shared_ptr, or nullptr if not found.
          */
         auto remove_child(NanNode& child) -> std::shared_ptr<NanNode>;
@@ -208,7 +213,20 @@ namespace nandina::scene
         /// traversal the complete replacement is deferred to the next safe commit.
         auto replace_child(NanNode* current, std::shared_ptr<NanNode> replacement) -> NanNode&;
 
-        /// Remove and immediately destroy a child.
+        /**
+         * Remove and immediately destroy a child.
+         *
+         * Unlike remove_child(), the detached subtree skips style-context recomputation:
+         * every node would otherwise be re-resolved and receive one more
+         * on_style_context_changed() call just before destruction. (When an ancestor
+         * StyleContext overrides font/size that callback can also re-shape text, but
+         * that is only reachable when the application sets a StyleContext; the framework
+         * itself does not.) An external `shared_ptr` can still keep a node alive (that is
+         * not the intended contract); re-attaching such a node through
+         * insert_child()/add_child() re-resolves its style context, so no stale inherited
+         * value can leak into a new parent. If the detached node is inspected before
+         * re-attachment, its `resolved_style_context()` may still reflect the old parent.
+         */
         void remove_and_delete(NanNode& child);
 
         // ---- name ----
@@ -370,6 +388,8 @@ namespace nandina::scene
         /// Internal: process this node then recursively process children.
         void _propagate_process(float dt);
         void _propagate_physics(float dt);
+        /// Internal: resolve this node's own style context; true when the value changed.
+        auto _apply_style_context(const theme::ResolvedStyleContext* inherited) -> bool;
         void _resolve_style_context(const theme::ResolvedStyleContext* inherited);
         void _propagate_theme_changed(const theme::ThemeManager& manager);
         void _propagate_theme_context_removed();
@@ -393,6 +413,8 @@ namespace nandina::scene
             -> render::ClipStack::Guard;
 
     private:
+        auto detach_child(NanNode& child, bool resolve_detached_style) -> std::shared_ptr<NanNode>;
+
         // parent is a non-owning back-reference (children own parent would be a
         // cycle); weak_ptr expires gracefully if a detached child outlives its parent.
         std::weak_ptr<NanNode> parent_;

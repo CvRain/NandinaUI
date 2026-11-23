@@ -48,8 +48,7 @@ namespace nandina::widget
         minimum_(minimum),
         maximum_(maximum),
         step_(step) {
-        system_ =
-            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ = theme::design_system_shared_from_theme(theme);
         theme_view_ = theme;
         if (!(minimum_ < maximum_)) {
             throw std::invalid_argument("Slider minimum must be less than maximum");
@@ -229,8 +228,7 @@ namespace nandina::widget
     }
 
     void Slider::set_theme(theme::NanTheme theme) {
-        system_ =
-            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ = theme::design_system_shared_from_theme(theme);
         system_explicit_ = true;
         theme_view_ = theme;
         mark_layout_dirty();

@@ -369,8 +369,9 @@ P3.3b1 已补（2026-11-02）：
 
 - `text-input-session`（13 用例/89 断言）的 mock 服务断言祖先变换、viewport/letterbox、窗口边界、单行内边距/
   居中/水平滚动、多行垂直滚动与组合/密码视觉 caret；无能力返回 unsupported，平台拒绝结果透传。
-- `sdl-platform-input`（18 用例/481 断言）回读 `SDL_GetTextInputArea`，验证窗口单位、负数/小数向外取整、非法矩形/
-  过期会话拒绝，并通过真实 `NanWindow::tick()` 验证 viewport 与 resize 更新。
+- `sdl-platform-input`（26 用例/872 断言，2026-11-23 复核口径；数字随测试增补更新）回读
+  `SDL_GetTextInputArea`，验证窗口单位、负数/小数向外取整、非法矩形/过期会话拒绝，并通过真实
+  `NanWindow::tick()` 与注入平台验证 viewport、resize 与零尺寸帧更新。
   使用 dummy video + software renderer，不能当作真实 IME 或 Windows 桌面证据。
 - 六处逐一故障注入并恢复：移除 scene 变换（21 断言失败）、控件偏移（8）、多行滚动（2）、
   视觉 caret 滚动（1）、SDL 转发（24）、host viewport（8），测试进程均返回 42；恢复后两项

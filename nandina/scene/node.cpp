@@ -276,7 +276,8 @@ namespace nandina::scene
         return true;
     }
 
-    auto NanNode::remove_child(NanNode& child) -> std::shared_ptr<NanNode> {
+    auto NanNode::detach_child(NanNode& child, const bool resolve_detached_style)
+        -> std::shared_ptr<NanNode> {
         if (tree_ != nullptr && tree_->defers_tree_mutation()) {
             throw std::logic_error(
                 "NanNode::remove_child cannot return ownership during tree traversal; "
@@ -290,7 +291,13 @@ namespace nandina::scene
                     child._propagate_exit_tree();
                 }
                 child.parent_.reset();
-                child._resolve_style_context(nullptr);
+                // 即将立即销毁的节点（remove_and_delete）跳过离树样式重算：否则整棵
+                // 子树会逐个重解析 ResolvedStyleContext 并再回调一次
+                // on_style_context_changed()。框架自身不设置 StyleContext；只有作者覆盖
+                // 字体/字号时该回调才可能触发 Text 重整形。
+                if (resolve_detached_style) {
+                    child._resolve_style_context(nullptr);
+                }
                 auto result = std::move(*it);
                 children_.erase(it);
                 if (auto* control = as_control(); control != nullptr) {
@@ -301,6 +308,10 @@ namespace nandina::scene
             }
         }
         return nullptr;
+    }
+
+    auto NanNode::remove_child(NanNode& child) -> std::shared_ptr<NanNode> {
+        return detach_child(child, true);
     }
 
     auto NanNode::replace_child(NanNode* current, std::shared_ptr<NanNode> replacement)
@@ -345,7 +356,7 @@ namespace nandina::scene
             });
             return;
         }
-        remove_child(child); // unique_ptr goes out of scope, child is destroyed.
+        (void)detach_child(child, false); // shared_ptr goes out of scope, child is destroyed.
     }
 
     auto NanNode::name() const -> std::string_view {
@@ -503,8 +514,10 @@ namespace nandina::scene
             child->parent_ = self;
         }
         tree_ = tree;
+        // 只解析本节点自身上下文：下方循环已按自顶向下顺序遍历所有子节点，
+        // 若这里整棵子树递归解析会退化成 O(depth * N)。
         const auto* inherited = parent() != nullptr ? &parent()->resolved_style_context_ : nullptr;
-        _resolve_style_context(inherited);
+        (void)_apply_style_context(inherited);
         if (const auto* pipeline = tree->default_text_pipeline(); pipeline != nullptr) {
             apply_default_text_pipeline(*pipeline);
         }
@@ -563,9 +576,22 @@ namespace nandina::scene
         }
     }
 
-    void NanNode::_resolve_style_context(const theme::ResolvedStyleContext* inherited) {
-        resolved_style_context_ = theme::resolve_style_context(style_context_, inherited);
+    auto NanNode::_apply_style_context(const theme::ResolvedStyleContext* inherited) -> bool {
+        const auto next = theme::resolve_style_context(style_context_, inherited);
+        if (next == resolved_style_context_) {
+            return false;
+        }
+        resolved_style_context_ = next;
         on_style_context_changed(resolved_style_context_);
+        return true;
+    }
+
+    void NanNode::_resolve_style_context(const theme::ResolvedStyleContext* inherited) {
+        if (!_apply_style_context(inherited)) {
+            return;
+        }
+        // 值未变时整棵子树都不需要重算：子节点的解析结果是
+        // (自身 StyleContext, 本节点已解析值) 的纯函数，本节点值不变即结果不变。
         for (auto& child: children_) {
             child->_resolve_style_context(&resolved_style_context_);
         }

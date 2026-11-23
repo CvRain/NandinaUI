@@ -26,8 +26,7 @@ namespace nandina::widget
     Chip::Chip(std::string text, const bool removable, theme::NanTheme theme):
         text_string_(std::move(text)),
         removable_(removable) {
-        system_ =
-            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ = theme::design_system_shared_from_theme(theme);
         theme_view_ = theme;
         text_.set_text(text_string_);
         apply_text_style();
@@ -68,8 +67,7 @@ namespace nandina::widget
     }
 
     void Chip::set_theme(theme::NanTheme theme) {
-        system_ =
-            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ = theme::design_system_shared_from_theme(theme);
         system_explicit_ = true;
         theme_view_ = theme;
         apply_text_style();

@@ -22,8 +22,7 @@ namespace nandina::widget
     {} // namespace
 
     Avatar::Avatar(std::string name, theme::NanTheme theme): name_(std::move(name)) {
-        system_ =
-            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ = theme::design_system_shared_from_theme(theme);
         theme_view_ = theme;
         text_.set_text(initials());
         apply_text_style();
@@ -63,8 +62,7 @@ namespace nandina::widget
     }
 
     void Avatar::set_theme(theme::NanTheme theme) {
-        system_ =
-            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ = theme::design_system_shared_from_theme(theme);
         system_explicit_ = true;
         theme_view_ = theme;
         apply_text_style();

@@ -154,8 +154,7 @@ namespace nandina::widget
         std::shared_ptr<scene::NanControl> content,
         theme::NanTheme theme
     ) {
-        system_ =
-            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ = theme::design_system_shared_from_theme(theme);
         theme_view_ = theme;
 
         surface_ = std::make_shared<internal::HoverCardSurface>();
@@ -344,8 +343,7 @@ namespace nandina::widget
 
     void HoverCard::set_theme(theme::NanTheme theme) {
         theme_view_ = theme;
-        system_ =
-            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ = theme::design_system_shared_from_theme(theme);
         system_explicit_ = true;
         apply_style();
         mark_layout_dirty();

@@ -50,6 +50,9 @@
   修改已被入队命令引用的 state 的 uniform 则会触发 `FlushRenderCommandsIfGPURenderStateNeeded`。
   因此必须分别统计状态设置和 uniform 更新，不能把 flush 成本全部归因于设置/恢复。Label 页几何与文字交错，
   因此**每帧状态切换次数**是必须报告的指标（见[性能预算](performance_budget.md)），不能只看总帧时间。
+- **销毁同样可能 flush**：`SDL_DestroyGPURenderState()` 内部先调用
+  `FlushRenderCommandsIfGPURenderStateNeeded()`；销毁仍属于当前未 flush 命令队列的 state 会同步
+  flush。因此"何时淘汰/销毁 state"是性能决策而非纯内存决策，生产实现见 §10.4。
 
 ## 4. 参数布局（待最小实验定形）
 
@@ -228,8 +231,8 @@ clang-format 23.1.1、suite 门禁、文档相对链接/锚点和 diff 检查通
 
 - key = 参数块的**按位**内容（探针 64 字节，当前生产填充/描边/圆/线段/弧/阴影/裁剪为 48 字节；`-0.0` 与 `+0.0` 视为不同，不做归一化，
   以免掩盖上游不一致）；
-- 容量有界（初定 256，LRU 淘汰并销毁 state），**跨帧保留**（按钮/列表行参数稳定，命中率高）；
-  设备重建或上下文丢失时整体清空；
+- 容量有界（256，LRU 淘汰；淘汰的 state 延迟到帧边界销毁，见 §10.4），**跨帧保留**
+  （按钮/列表行参数稳定，命中率高）；设备重建或上下文丢失时整体清空；
 - 每帧计数 `binds` / `hits` / `misses` 并进入性能报告；
 - **不做跨图元重排**：画家顺序与半透明合成不可交换，只允许把"连续且同块"的图元视为一段；
 - 文字/纹理/图片绘制仍绑定默认 state，这部分切换由场景顺序决定，不在设备层重排。
@@ -269,8 +272,9 @@ SDF 路径可用时返回 true（无 SDF 的 SDL 2D 路径仍如实降级）。
 
 当前生产覆盖填充、描边与圆。审查修复非等比缩放回落及帧结束未恢复默认 state、
 viewport/逻辑呈现偏移未进入 uniform、uniform 上传失败的 state 泄漏与运行期降级，
-以及缓存分配失败时的所有权清理。SDL 3.4.18 销毁 state 时会 flush 引用它的命令队列，
-正常 LRU 淘汰不要求额外延迟销毁；代价是超容量流量可能触发 flush，256 的容量仍待页面校准。
+以及缓存分配失败时的所有权清理。SDL 3.4.18 销毁被当前命令队列引用的 state 时会 flush；
+2026-11-23 的实时缩放复核确认这条 flush 在"窗口改宽 → 屏幕坐标键大面积失配 → 帧内频繁淘汰"
+时会被反复触发，因此生产实现改为帧边界延迟销毁（见 §10.4），256 的容量仍待页面校准。
 
 生产设备回归增加三档缩放下的非零 viewport、logical presentation、非等比回落、
 帧结束后的默认绘制及 300 参数块淘汰。能力查询在非等比缩放下返回 false；
@@ -351,6 +355,32 @@ SDF（后者仅 GPU），覆盖 1/1.25/1.5 render scale、letterbox 开关及 vi
 边界：**平台必须用同一格式创建 GPU device**，否则 `SDL_CreateGPUShader` 失败（原因进
 `sdf_unavailable_reason()`）。Linux 只能实机验证 Vulkan；DXIL/MSL 只做到"生成 + 静态校验 +
 按驱动选择的代码路径"，Windows D3D12 与 macOS Metal 的目标设备加载验收仍未做。
+
+### 10.4 参数 state 延迟销毁（2026-11-23）
+
+**动机**：窗口实时缩放会让 SDF 参数块（屏幕坐标 key）大面积变化，帧内 LRU 淘汰的 state
+往往仍属于当前未 flush 的 command generation；`SDL_DestroyGPURenderState()` 的
+flush-before-free 于是变成每帧多次管线 flush，表现为缩放抽搐/停滞。
+
+**实现**（`nandina/render/backends/sdl_device.cpp` 的 `SdfPath`）：
+
+- 淘汰回调不再直接销毁，而是先把 state 从当前绑定解绑（若正绑定），再推入 `retired_states`；
+- `begin_frame()` 在上一帧 `present()`（`SDL_RenderPresent` 会无条件 flush 并推进
+  `render_command_generation`）之后统一 `drain_retired()`，此时被淘汰 state 的 generation 已
+  落后，销毁不再触发 flush；
+- `~SdfPath()` 先解绑 renderer、`cache.clear()` 把剩余 state 全部退休，再 `drain_retired()`，
+  然后才销毁白色纹理与 shader，保证失败注入路径（`submit_sdf()` 异常 → `sdf_.reset()`）与
+  设备析构都不会留下悬空 state；
+- 延迟队列硬上限 `kMaxDeferredDestroys = 4 * 256 = 1024`；到达上限时在帧内批量 drain 一次
+  （有界残余 flush，不是逐图元 flush）。构造时 `reserve`，避免淘汰回调在 `acquire()` /
+  `~ParameterStateCache()` 里分配失败把异常带进帧循环。
+- 诊断语义：`sdf_diagnostics().cached` 仍是**缓存条目数**（≤256），不含 retired；峰值存活
+  `SDL_GPURenderState` 可达 256 + 1024 个纯 CPU 小对象（约百 KB 量级），不是 GPU 内存。
+
+**证据边界**：本地 Debug `-O0` + 真实窗口实时缩放的手工观察；`tests/sdf_device_test.cpp`
+现有断言（`cached == 256`、`frame_binds/frame_unbinds`、300 参数块淘汰、失败注入回落）仍通过，
+但**没有**自动化断言覆盖"延迟到下一帧"或"单帧 >1024 淘汰"分支；Windows/D3D12 未复验。
+Vulkan（Linux）是唯一实测驱动。
 
 ## 11. 页面性能 harness（2026-10-19）
 

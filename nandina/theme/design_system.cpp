@@ -14,6 +14,10 @@
 
 #include "design_system.hpp"
 
+#include <array>
+#include <cstddef>
+#include <mutex>
+
 namespace nandina::theme
 {
     namespace
@@ -3953,7 +3957,7 @@ namespace nandina::theme
      * @return 与遗留 default_theme() 语义对齐的默认快照
      */
     auto default_design_system() -> DesignSystem {
-        return DesignSystem {
+        static const DesignSystem kDefault = DesignSystem {
             .tokens = NanTokens {},
             // 框架默认亮/暗两套语义色（Skeleton 参考，见 phase7 文档 Step 2）：
             // 品牌色两模式同值，明暗差异集中在中性色。
@@ -4505,6 +4509,7 @@ namespace nandina::theme
                 },
             },
         };
+        return kDefault;
     }
 
     /**
@@ -4517,6 +4522,56 @@ namespace nandina::theme
         system.light = theme.palette;
         system.dark = theme.palette;
         return system;
+    }
+
+    auto design_system_shared_from_theme(const NanTheme& theme)
+        -> std::shared_ptr<const DesignSystem> {
+        struct Entry {
+            NanTheme key;
+            std::shared_ptr<const DesignSystem> value;
+            bool valid = false;
+        };
+        static constexpr std::size_t kCacheSlots = 8;
+        static std::mutex mutex;
+        static std::array<Entry, kCacheSlots> cache {};
+        static std::size_t next_slot = 0;
+
+        // 含 NaN 的非法主题值会让 `operator==` 失去自反性：这类主题永远不可能命中缓存，
+        // 若仍写入槽位，每次构造都会挤掉一个有效快照、静默抵消本优化。检测到非自反时
+        // 只构建独立快照、不写缓存（NaN 主题本身属于非法输入，渲染结果不在契约内）。
+        // 注意 `-0.0 == +0.0`，两种写法共用同一快照；OKLCH 分量的符号零没有视觉差异。
+        if (theme != theme) {
+            return std::make_shared<const DesignSystem>(design_system_from_theme(theme));
+        }
+
+        const auto find_cached = [&theme]() -> std::shared_ptr<const DesignSystem> {
+            for (const auto& entry: cache) {
+                if (entry.valid && entry.key == theme) {
+                    return entry.value;
+                }
+            }
+            return nullptr;
+        };
+
+        {
+            std::scoped_lock lock(mutex);
+            if (auto cached = find_cached(); cached != nullptr) {
+                return cached;
+            }
+        }
+        // 整表拷贝较重：放在锁外构建，避免所有主题的首次控件构造串行化，也避免未来
+        // 构造路径重入本函数时撞上非递归 mutex。
+        auto created = std::make_shared<const DesignSystem>(design_system_from_theme(theme));
+        {
+            std::scoped_lock lock(mutex);
+            // 并发下可能有另一个线程已为同一主题完成构建：复用它，避免重复插入。
+            if (auto cached = find_cached(); cached != nullptr) {
+                return cached;
+            }
+            cache[next_slot] = Entry {.key = theme, .value = created, .valid = true};
+            next_slot = (next_slot + 1) % kCacheSlots;
+        }
+        return created;
     }
 
 } // namespace nandina::theme

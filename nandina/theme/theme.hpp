@@ -233,6 +233,8 @@ namespace nandina::theme
         NanColor on_error;
         NanColor on_info;
 
+        [[nodiscard]] auto operator==(const NanColorScheme&) const -> bool = default;
+
     private:
         struct GeneratedTag {};
 
@@ -256,6 +258,8 @@ namespace nandina::theme
     struct NanTheme {
         NanTokens tokens;
         NanColorScheme palette;
+
+        [[nodiscard]] auto operator==(const NanTheme&) const -> bool = default;
     };
 
     /** @return 框架内置的七组 11 档参考色阶。 */

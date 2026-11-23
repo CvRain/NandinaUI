@@ -82,7 +82,9 @@ NanTokens（尺度）
 
 下发采用观察者 + 虚函数广播，而不是响应式 Signal：`NanSceneTree` 私有实现 `theme::ThemeObserver`，在 `on_theme_revision_changed()` 后沿场景树调用每个节点的 `on_theme_changed(manager)`；节点在 `enter_tree` 时也会收到一次，离开场景树时收到 `on_theme_context_removed()`。控件在 `on_theme_changed()` 里重新解析自己的配方即可，不需要手动比较修订号。
 
-与配方解析并行的是 `StyleContext`：它承载可继承的文本向值（`font`、`font_size`、`text_color`、`locale`、`direction`），每个字段是带 `unset/inherit/initial/explicit_value` 四态的 `StyleValue<T>`，自顶向下解析为 `ResolvedStyleContext` 并通过 `on_style_context_changed()` 通知。它解决「继承」问题，不替代令牌解析。
+与配方解析并行的是 `StyleContext`：它承载可继承的文本向值（`font`、`font_size`、`text_color`、`locale`、`direction`），每个字段是带 `unset/inherit/initial/explicit_value` 四态的 `StyleValue<T>`，自顶向下解析为 `ResolvedStyleContext`。
+
+通知约定（2026-11-23 收窄）：只有**解析值真正变化**时才调用 `on_style_context_changed()`；值未变的节点会短路整棵子树（子节点结果是"自身 StyleContext × 父节点已解析值"的纯函数）。`enter_tree` 只解析当前节点，随后按自顶向下顺序逐个节点解析子树，不再每层递归解析整棵子树（$O(	ext{depth}	imes N)$ 的重复工作）。因此自定义控件不能假设"入树必收到一次回调"：需要在入树时同步状态就实现 `on_enter_tree()` 并直接读 `resolved_style_context()`。框架自身不设置 `StyleContext`（它来自作者/测试），默认路径下所有节点都是默认解析值。`remove_and_delete()` 对即将销毁的子树跳过离树重算；被外部 `shared_ptr` 保留的节点在重新插入时由 `insert_child()` 重解析（`remove_child()` 仍重置）。它解决「继承」问题，不替代令牌解析。
 
 ## 组件如何声明配方与解析
 

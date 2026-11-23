@@ -24,8 +24,7 @@ namespace nandina::widget
     {} // namespace
 
     Tabs::Tabs(std::vector<std::string> labels, theme::NanTheme theme): labels_(std::move(labels)) {
-        system_ =
-            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ = theme::design_system_shared_from_theme(theme);
         theme_view_ = theme;
         rebuild_texts();
         apply_text_styles();
@@ -122,8 +121,7 @@ namespace nandina::widget
     }
 
     void Tabs::set_theme(theme::NanTheme theme) {
-        system_ =
-            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ = theme::design_system_shared_from_theme(theme);
         system_explicit_ = true;
         theme_view_ = theme;
         apply_text_styles();

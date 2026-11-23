@@ -14,8 +14,7 @@
 namespace nandina::widget
 {
     Spinner::Spinner(theme::NanTheme theme) {
-        system_ =
-            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ = theme::design_system_shared_from_theme(theme);
         theme_view_ = theme;
         const auto style = resolved_style();
         set_size(foundation::NanSize(style.metrics.diameter, style.metrics.diameter));
@@ -47,8 +46,7 @@ namespace nandina::widget
     }
 
     void Spinner::set_theme(theme::NanTheme theme) {
-        system_ =
-            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ = theme::design_system_shared_from_theme(theme);
         system_explicit_ = true;
         theme_view_ = theme;
         mark_layout_dirty();

@@ -221,8 +221,10 @@ raylib 后端目前把 1 字节 alpha 展开成 RGBA8（`alpha_to_rgba`）。改
 1. **减少构建期测量次数**（§5.1）：同时省时间与约 19 MB 分配器驻留。
 2. **单通道图集 + 专用字形着色器**：显存减半，随后端迁移做。
 3. **同一 face 的图集跨管线共享**：现在 4 条管线各持 2 个 face 的图集，同 face 被重复分配。
-4. **`DesignSystem` 按主题共享一份**：现在每个控件 15 KB，一个页面就有上百次构造
-   （实测单次 0.024 ms，所以这是内存项而不是 CPU 项）。
+4. **`DesignSystem` 按主题共享一份 —— 已实施（2026-11-23，§14）**：`default_design_system()`
+   的基线改为进程级静态构建一次，新增 `design_system_shared_from_theme()` 的 8 槽有界缓存，
+   33 类控件共 67 处构造/主题路径改用共享不可变快照；控件不再各持 15 KB 副本（每主题最多
+   8 份）。单次 0.024 ms 仍是内存项而非 CPU 项的结论不变；实例数放大后的切页贡献见 §14.1/§14.3。
 
 ## 8. 断行机会（已实施）
 
@@ -381,3 +383,116 @@ meson compile -C buildDir text_performance_benchmark
 - `[widget][resizable][perf]`（`tests/resizable_tests.cpp`）：锁定嵌套 `Resizable` 在 `FramePhase::input` 连续 10 次 `set_ratio()` 期间 0 次子项排版、帧末 `layout_root()` 后各仅 1 次 measure + 1 次 layout（红先退化为 23 次 measure / 11 次 layout）。
 - `[widget][text][cache]`（`tests/widget_tests.cpp`）：锁定 `min_width`/`min_height`/`max_height` 变动、未换行文本宽上限变化零额外整形，窄化触发换行与后端切换正确失效重算（红先 5 次宽变动产生 6 次多余后端调用）。
 - Linux CPU 7 页 golden 门禁（`tools/visual_golden_ci.py --renderer sdl2d`）：7/7 PASS，`deterministic=true`，所有页面文本字形无回归。
+
+## 14. 切页阻塞与窗口实时缩放顺滑度优化（2026-11-23）
+
+### 14.1 现象与五处根因
+
+在完成 §13 的 `Resizable` 分栏拖拽优化后，桌面复核继续暴露两个问题：(a) 从其他页切换到
+`playground` 数据工作台（`page=data`）阻塞约 0.7 秒（本地插桩 Debug `-O0` 实测首次 704.9 ms、
+二次热图集 656.1 ms，离开也耗时 173–180 ms）；(b) 拖拽系统窗口边框改变宽度时，普通页面
+出现抽搐感，`page=data` 出现快缩漂移与快拉大停滞瞬移。
+
+1. **虚拟化视口在预排阶段按全量内容撑开**：`ListView` / `DataTable` / `TreeView` 声明
+   `height(fill)` 后，离树被 `Padding`/`Surface` 包裹触发 `relayout()`（`loose()` 无界约束），
+   `on_measure()` 仍按全量行数返回 8,000+ px，导致 `on_layout()` 在 `get_tree() == nullptr`
+   下同步物化全部 240 行（~2,640 个节点），首帧真实布局后再裁掉 95%。树内 `on_ready()` 的
+   loose relayout 属于同一类**预排**（预排 = `get_tree() == nullptr || !layout_pass_active()`）。
+2. **`StyleContext` 无变化级联与销毁期重算**：`NanNode::_resolve_style_context()` 未对未变化
+   上下文剪枝；`_propagate_enter_tree()` 在每层递归整棵子树（$O(\text{depth} \times N)$）；
+   `remove_and_delete()` 经 `remove_child()` 对即将析构的子树逐个重算
+   `ResolvedStyleContext` 并回调 `on_style_context_changed()`。框架自身不设置 `StyleContext`，
+   所以默认页面里省掉的是解析与逐节点回调（值不变时 `Text` 不会重新整形）；只有作者通过
+   `StyleContext` 覆盖字体/字号时该回调才会触发文本重整形。
+3. **`default_design_system()` 按控件实例重复构造**：33 类控件构造/主题路径共 67 处调用
+   `design_system_from_theme(theme)`；该函数每次按值拷贝整张默认配方表（§5.2/§7.4 实测
+   约 0.024 ms/次、每个快照约 15 KB），数据页在虚拟化修复前还会物化数千节点、每实例至少
+   一次调用，挂树后又被 `ThemeManager::design_system_shared()` 的权威快照覆盖。
+4. **`NanWindow::tick()` 窗口尺寸 1 帧错拍**：原实现在 `poll_and_dispatch_input()`
+   （调用 `SDL_PollEvent()`）之前采样 `screen_size()`/`drawable_size()`，缩放帧用事件前的
+   旧尺寸排版却提交到新尺寸表面。另补两处防御：`SdlPlatformWindow` 同时处理
+   `SDL_EVENT_WINDOW_RESIZED`（固定 SDL 3.4.18 在有效 resize 时也会发
+   `PIXEL_SIZE_CHANGED`，此为冗余保护）；零尺寸（最小化/零高窗口）帧跳过布局/绘制，
+   而不是把 `make_window_metrics()` 的 `invalid_argument` 抛进宿主主循环。
+5. **SDF 状态缓存帧内淘汰刷队列**：SDL 3.4.18 销毁仍属于当前未 flush 命令队列的
+   `SDL_GPURenderState` 时会先 flush；窗口改宽使屏幕坐标键大面积失配，引发帧内频繁淘汰与
+   flush，表现为缩放抽搐。
+
+### 14.2 修复摘要
+
+| 领域 | 文件 | 改动 |
+| --- | --- | --- |
+| 虚拟化视口预排保护 | `list_view.cpp`、`data_table.cpp`、`tree_view.cpp` | `size_spec().height` 为 `FillLength`/`PercentLength` 且 `max_height` 无界且处于预排时返回 `constraints.min_height`；真实布局 pass 内的无界父容器（`ScrollView`/`Stack`）保持既有内容高语义，避免视口在布局期塌陷为 0 行（见 [数据组件 §9.9.2](data_components_and_virtualization.md#992-预排阶段的虚拟化视口保护2026-11-23)） |
+| 样式上下文剪枝与销毁免重算 | `style_context.hpp`、`node.hpp`、`node.cpp` | `ResolvedStyleContext` 默认 `operator==`；抽 `_apply_style_context()` 并在值未变时短路**整棵子树**（这才是 $O(\text{depth}\times N)$ 重复工作的来源）；`_propagate_enter_tree()` 只解析本节点并依赖自顶向下子遍历；`remove_and_delete()` 经 `detach_child(child, false)` 跳过离树重算（`remove_child()` 仍重置；被外部 `shared_ptr` 保留的节点重新挂载时由 `insert_child()` 重解析） |
+| 设计系统快照共享 | `typography_scale.hpp`、`tokens.hpp`、`theme.hpp`、`design_system.hpp`/`.cpp`、`widget/*.cpp`（33 文件） | `default_design_system()` 静态基线只构建一次；新增 `design_system_shared_from_theme(const NanTheme&)`（8 槽互斥有界缓存、锁外构建、NaN 非法主题不入缓存）复用不可变快照；33 类控件共 67 处改用共享快照，`system_explicit_`/`on_theme_changed()` 行为不变 |
+| 缩放采样时序与零尺寸防御 | `nan_window.cpp`、`sdl_platform_window.cpp` | `poll_input()` 后立即刷新视口映射（本帧输入坐标）；动画后、`layout_root()` 前重新采样 `screen_size()`/`drawable_size()` 并同步映射（布局/语义/绘制同源）；零尺寸帧安全跳过；`SdlPlatformWindow` 同时处理 `SDL_EVENT_WINDOW_RESIZED` |
+| SDF 参数 state 延迟销毁 | `sdl_device.cpp` | 淘汰的 `SDL_GPURenderState` 先解绑、入 `retired_states`（上限 4×缓存容量 = 1024），下一帧 `begin_frame()`/析构批量销毁；构造时 `reserve` 防止淘汰回调分配失败；`cached` 仍是缓存条目数（≤256） |
+
+### 14.3 实测与回归验证
+
+**证据性质**：`playground/` 被 `.gitignore` 忽略、不入库；下表计时来自本地临时插桩
+（Debug `-O0`、`SDL_VIDEODRIVER=dummy`、同机前后对比），不是 CI 证据，也没有可复现的
+tracked benchmark。真实窗口的缩放顺滑度同样只有人工观察，见 §14.4。
+
+| 场景 | 优化前 | 优化后 | 加速 |
+| --- | --- | --- | --- |
+| 首次进入 `page=data`（含 2 次 512² 图集扩容） | 704.9 ms | 61.3 ms | **11.5×** |
+| 二次进入 `page=data`（热图集） | 656.1 ms | 33.1 ms | **19.8×** |
+| 离开 `page=data` → `content` | 173.5 ms | 30.7 ms | **5.7×** |
+| 离开 `page=data` → `loading` | 179.8 ms | 32.0 ms | **5.6×** |
+| 12 次切页总耗时 | 1,892.8 ms | 332.8 ms | **5.7×** |
+
+新增/补强的确定性结构回归（每条均做过红先验证）：
+
+- `[list-view|data-table|tree-view][virtualization][off-tree]`：离树预排不物化全模型；
+  补强 `tree.set_root()` 之后、`layout_root()` 之前的 `measured_size() == 12 px`（insets）
+  断言，锁住"预排"包含树内 `on_ready()` loose relayout；`list-view` 另覆盖 `percent` 高度、
+  `min_height` 保留、`ContentLength` 全量测量不变、离树显式 `layout_to(rect)` 仍物化可见窗口。
+- `[list-view|data-table|tree-view][virtualization][pre-layout]`：真实布局 pass 中的无界父容器
+  （`ScrollView` 直接子项 / `Column` 嵌套）仍按内容高测量、不塌陷为 0 行；红先：把条件退化
+  为"仅按 `max_height` 无界判断"即返回 0 行失败。
+- `[scene][style][perf]`：默认上下文的 insert/enter 零回调、显式覆盖每节点恰好一次、
+  相同 `StyleContext` 重放零回调、`remove_and_delete()` 不触发离树回调、修改中间节点只重算
+  自身子树；红先：去掉值相等剪枝后 leaf 多出 5 次回调。
+- `[scene][style][detach]`：被外部 `shared_ptr` 保留的节点重新挂载必须重解析整棵子树、
+  退出树通知仍传播。
+- `[theme][design-system][cache]`：同值不同对象命中同一指针、palette 维度参与键、
+  与 `design_system_from_theme()` 的 tokens/light/dark 值等价、NaN 非法主题不污染缓存、
+  `default_design_system()` 返回独立副本。
+- `[app][resize][timing]`：`poll_input()` 内 resize 后同一 tick 用新尺寸排版；
+  `[app][resize][viewport]`：同一 tick 的指针事件用 poll 后的新视口映射；
+  `[app][resize][invalid-size]`：0×0/零高窗口（含固定 viewport 配置）跳过布局不抛异常、
+  尺寸恢复后继续排版。
+
+验证矩阵（2026-11-23，Linux x86_64，本机；全部在最终代码树上重跑）：
+
+| 范围 | 命令 / 证据 | 结果 |
+| --- | --- | --- |
+| 主套件 | `meson compile -C buildDir && meson test -C buildDir` | **146 OK / 0 FAIL** |
+| ASan/UBSan unit | `meson compile -C buildDir-asan && LSAN_OPTIONS=detect_leaks=0 meson test -C buildDir-asan --suite unit` | 121 OK + 1 skip（`window-lifecycle` 既有驱动侧 LSan skip） |
+| no-RTTI unit | `meson test -C buildDir-no-rtti --suite unit` | 123 OK / 0 FAIL |
+| no-SQLite unit | `meson test -C buildDir-nosqlite --suite unit` | 118 OK + 1 skip |
+| 纯工具 | `meson compile -C buildDir-tools && meson test -C buildDir-tools` | 8/8 OK |
+| 门禁 | `python3 tools/release_check.py --ci --build-dir buildDir` | **8/8**（format/headers/artifacts/golden-manifest/test-suites/docs/tool-dependencies/whitespace） |
+| Linux CPU 7 页 golden | `SDL_VIDEODRIVER=dummy python3 tools/visual_golden_ci.py --renderer sdl2d ...` | **7/7 pass**、`deterministic=true`，最大 changed fraction 0.0347%（单通道容差 ±3）；CJK 回退 = `NotoSansCJK-Black`，sha256 `3cffb102…`（与 CI 固定面一致） |
+
+格式：仅对变更文件用固定 clang-format **23.1.1** 格式化，`tools/check_format.py` 通过。
+
+
+### 14.4 剩余边界
+
+- SDF 延迟销毁只有本地手工观察（Debug `-O0`、真实窗口实时缩放）；`retired_states` 队列与
+  单帧 >1024 淘汰的帧内 drain 分支没有自动断言，Windows/D3D12 未复验，Linux/Vulkan 是唯一
+  实测驱动。契约更新见 [渲染路径契约 §9.2/§10.4](render_device_path_contract.md#104-参数-state-延迟销毁2026-11-23)。
+- 真实窗口实时缩放顺滑度、`SdlPlatformWindow` 的 `SDL_EVENT_WINDOW_RESIZED` 分支属于人工验收；
+  dummy 驱动与 mock 平台都测不到内容缩放变化。
+- 零尺寸帧防御只覆盖 `NanWindow::tick()` 的布局/绘制跳过；平台层事件语义仍由各后端负责。
+- 8 槽共享快照是有界 FIFO（非 LRU、无失效入口）：超过 8 个不同主题轮换会抖动；含 NaN 的
+  非法主题每次返回独立快照、不写缓存。
+- `remove_and_delete()` 后仍被外部持有的节点，在重新挂载前 `resolved_style_context()` 可能
+  仍反映旧父链（已写入 `nandina/scene/node.hpp` 的头注释）。
+- Windows 最大化经 `RESIZED` 更新 `logical_size_` 后，再触发 `DISPLAY_SCALE_CHANGED` 时
+  "按逻辑尺寸恢复窗口"的语义未定义/未验（低风险，属既有平台记账行为）。
+- 同类残余拷贝：`internal::DialogPanel`/`SheetPanel` 每次浮层构造仍按值调
+  `default_design_system()`；它们不是控件构造热点，本批未迁移（可作为后续统一到共享快照）。
+- 本批未改动 SDF/GPU 页面 golden 路径；GPU golden 需要真实桌面交换机，仍归人工/发布检查。

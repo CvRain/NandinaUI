@@ -49,8 +49,7 @@ namespace nandina::widget
     } // namespace
 
     Alert::Alert(theme::NanTheme theme) {
-        system_ =
-            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ = theme::design_system_shared_from_theme(theme);
         theme_view_ = theme;
         relayout();
     }
@@ -154,8 +153,7 @@ namespace nandina::widget
     }
 
     void Alert::set_theme(theme::NanTheme theme) {
-        system_ =
-            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ = theme::design_system_shared_from_theme(theme);
         system_explicit_ = true;
         theme_view_ = theme;
         apply_text_styles();

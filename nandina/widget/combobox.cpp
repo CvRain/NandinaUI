@@ -518,8 +518,7 @@ namespace nandina::widget
         theme::NanTheme theme
     ):
         items_(std::move(items)) {
-        system_ =
-            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ = theme::design_system_shared_from_theme(theme);
         theme_view_ = theme;
 
         // 可编辑文本：光标 / 选区 / 输入法 / 文本绘制全部复用 TextField。它的语义节点
@@ -730,8 +729,7 @@ namespace nandina::widget
     // ─── 主题 ────────────────────────────────────────────────────────────
 
     void Combobox::set_theme(theme::NanTheme theme) {
-        system_ =
-            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ = theme::design_system_shared_from_theme(theme);
         system_explicit_ = true;
         theme_view_ = theme;
         // 输入框与面板同属一个控件：显式整份主题一并下发，避免外壳跟随系统而面板不跟随。

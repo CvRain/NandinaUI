@@ -161,8 +161,7 @@ namespace nandina::widget
         theme::NanTheme theme
     ):
         content_(std::move(content)) {
-        system_ =
-            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ = theme::design_system_shared_from_theme(theme);
         theme_view_ = theme;
         dismiss_layer_ = std::make_shared<internal::DismissLayer>();
         focus_scope_ = std::make_shared<internal::FocusScope>();
@@ -326,8 +325,7 @@ namespace nandina::widget
     }
 
     void Popover::set_theme(theme::NanTheme theme) {
-        system_ =
-            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ = theme::design_system_shared_from_theme(theme);
         system_explicit_ = true;
         theme_view_ = theme;
         surface_->set_style(resolved_style());

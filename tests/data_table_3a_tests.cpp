@@ -12,6 +12,8 @@
 #include <nandina/widget/build_context.hpp>
 #include <nandina/widget/data_table.hpp>
 #include <nandina/widget/label.hpp>
+#include <nandina/widget/layout.hpp>
+#include <nandina/widget/scroll_view.hpp>
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
@@ -734,4 +736,52 @@ TEST_CASE(
     table->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 400.0F, 300.0F));
     CHECK(table->item_count() == kVisibleCells);
     CHECK(table->cell_node(cell(1, "name")) != nullptr);
+}
+
+TEST_CASE(
+    "fill-height DataTable wrapped in detached Padding does not materialize full model",
+    "[data-table][3a][virtualization][off-tree]"
+) {
+    Fixture fixture;
+    TestModel model;
+    auto table = make_large_table(fixture, model, 1000);
+    table->set_width(scene::fill);
+    table->set_height(scene::fill);
+
+    auto frame = widget::Padding::create(foundation::NanInsets::all(6.0F));
+    frame->set_child(table);
+
+    CHECK(table->item_count() == 0);
+
+    scene::NanSceneTree tree;
+    tree.set_root(frame);
+    // on_ready() 的 loose relayout 仍属预排：首次真实布局前不得物化整表
+    // （6px 上下 inset → 12px，而不是 1000 行 × 32px + 表头）。
+    CHECK(table->item_count() == 0);
+    CHECK(frame->measured_size().get_height() == Catch::Approx(12.0F));
+    (void)tree.layout_root(foundation::NanSize(412.0F, 312.0F));
+    CHECK(table->item_count() == kVisibleCells);
+    CHECK(table->cell_node(cell(1, "name")) != nullptr);
+    CHECK(table->cell_node(cell(1000, "name")) == nullptr);
+}
+
+TEST_CASE(
+    "in-tree unbounded parents keep the fill-height DataTable measured from content",
+    "[data-table][3a][virtualization][pre-layout]"
+) {
+    Fixture fixture;
+    TestModel model;
+    auto table = make_large_table(fixture, model, 100);
+    table->set_width(scene::fill);
+    table->set_height(scene::fill);
+
+    // 真实布局 pass 里的无界纵向测量（ScrollView）必须保持既有内容高语义，
+    // 不能把 fill 高度在布局期收缩成 min_height（见 data_components_and_virtualization.md §9.9）。
+    auto scroll = widget::ScrollView::create();
+    scroll->set_child(table);
+    scene::NanSceneTree tree;
+    tree.set_root(scroll);
+    (void)tree.layout_root(foundation::NanSize(400.0F, 300.0F));
+    CHECK(table->item_count() == 100 * 2);
+    CHECK(table->cell_node(cell(100, "name")) != nullptr);
 }

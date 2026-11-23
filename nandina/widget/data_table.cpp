@@ -1384,6 +1384,20 @@ namespace nandina::widget
         -> foundation::NanSize {
         const auto widths = column_widths(constraints.max_width);
         const float content_width = std::accumulate(widths.begin(), widths.end(), 0.0F);
+        // 声明了 fill/percent 高度的虚拟化表格在**预排**阶段不按全量行数撑开，避免离树
+        // 包裹容器（Padding/Surface/Column）或树内 on_ready 的 loose relayout 一次性物化整表；
+        // 真实布局 pass 里的无界父容器（ScrollView/Column 等）保持既有“按内容高度测量”语义，
+        // 否则表格会在布局期塌陷为 0 行（见 data_components_and_virtualization.md §9.9）。
+        const bool parent_sized_height =
+            std::holds_alternative<scene::FillLength>(size_spec().height)
+            || std::holds_alternative<scene::PercentLength>(size_spec().height);
+        const auto* tree = get_tree();
+        const bool pre_layout_measure = tree == nullptr || !tree->layout_pass_active();
+        if (pre_layout_measure && !std::isfinite(constraints.max_height) && parent_sized_height) {
+            return constraints.constrain(
+                foundation::NanSize(content_width, constraints.min_height)
+            );
+        }
         double content_height = 0.0;
         if (!visible_columns_.empty()) {
             if (show_header_) {

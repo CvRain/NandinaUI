@@ -139,7 +139,9 @@ raylib 不再可构建；当前 SDF 已覆盖填充/描边/圆/线段/弧/软阴
 
 SDL 实现按 `content_scale = display_scale / pixel_density` 创建原生窗口
 （`round(logical × content_scale)`），把渲染器 scale 设为 `display_scale`，并处理
-`WINDOW_DISPLAY_SCALE_CHANGED` / `WINDOW_PIXEL_SIZE_CHANGED` 的尺寸与缩放更新。
+`WINDOW_DISPLAY_SCALE_CHANGED` / `WINDOW_RESIZED` / `WINDOW_PIXEL_SIZE_CHANGED` 的尺寸与
+缩放更新。宿主在 input 阶段之后、`layout_root()` 之前重新采样这两个尺寸（见
+[高 DPI 与多显示器](high_dpi_and_multi_display.md) §2.9/§2.9a）。
 `WindowConfig::high_dpi=false` 是固定 1× 模式（测试/探针/golden）。
 完整契约、验收证据与 P4.5b（混合 DPI 多显示器）矩阵见
 [高 DPI 与多显示器](high_dpi_and_multi_display.md)。

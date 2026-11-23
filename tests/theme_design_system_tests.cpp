@@ -1171,3 +1171,80 @@ TEST_CASE(
     REQUIRE(tuned_button.font_weight == 700);
     REQUIRE(tuned_button.font_slant == theme::FontSlant::italic);
 }
+
+TEST_CASE(
+    "design_system_shared_from_theme reuses immutable snapshots for identical themes",
+    "[theme][design-system][cache]"
+) {
+    const auto base_theme = theme::default_theme();
+    const auto first = theme::design_system_shared_from_theme(base_theme);
+    const auto second = theme::design_system_shared_from_theme(base_theme);
+    REQUIRE(first != nullptr);
+    CHECK(first.get() == second.get());
+
+    auto custom_theme = base_theme;
+    custom_theme.tokens.radius.md = 14.0F;
+    const auto custom_first = theme::design_system_shared_from_theme(custom_theme);
+    const auto custom_second = theme::design_system_shared_from_theme(custom_theme);
+    REQUIRE(custom_first != nullptr);
+    CHECK(custom_first.get() == custom_second.get());
+    CHECK(custom_first.get() != first.get());
+    CHECK(custom_first->tokens.radius.md == Catch::Approx(14.0F));
+    CHECK(first->tokens.radius.md == Catch::Approx(base_theme.tokens.radius.md));
+}
+
+TEST_CASE(
+    "design_system_shared_from_theme keys on theme value and matches design_system_from_theme",
+    "[theme][design-system][cache]"
+) {
+    const auto base = theme::default_theme();
+    const auto first = theme::design_system_shared_from_theme(base);
+    REQUIRE(first != nullptr);
+
+    // 值相等但地址不同的主题必须命中同一快照：缓存键是主题值，不是对象地址。
+    auto equal_copy = base;
+    CHECK(theme::design_system_shared_from_theme(equal_copy).get() == first.get());
+
+    // 只有 palette 不同的主题必须区分：键不能漏掉调色板维度。
+    auto palette_theme = base;
+    palette_theme.palette.primary = foundation::NanColor::from_hex(0x123456);
+    const auto palette_snapshot = theme::design_system_shared_from_theme(palette_theme);
+    REQUIRE(palette_snapshot != nullptr);
+    CHECK(palette_snapshot.get() != first.get());
+    CHECK(palette_snapshot->light.primary == palette_theme.palette.primary);
+    CHECK(palette_snapshot->dark.primary == palette_theme.palette.primary);
+
+    // 与 design_system_from_theme() 值等价（头文件契约“等价”）。
+    const auto expected = theme::design_system_from_theme(base);
+    CHECK(first->tokens == expected.tokens);
+    CHECK(first->light == expected.light);
+    CHECK(first->dark == expected.dark);
+
+    // 含 NaN 的非法主题不写入缓存：连续查询不得挤掉有效快照（否则缓存退化为每次重建）。
+    auto unique_theme = base;
+    unique_theme.tokens.motion.short_duration = 0.0111F;
+    const auto unique_snapshot = theme::design_system_shared_from_theme(unique_theme);
+    REQUIRE(unique_snapshot != nullptr);
+
+    auto nan_theme = base;
+    nan_theme.tokens.spacing.md = std::numeric_limits<float>::quiet_NaN();
+    for (int attempt = 0; attempt < 12; ++attempt) {
+        CHECK(theme::design_system_shared_from_theme(nan_theme) != nullptr);
+    }
+    CHECK(theme::design_system_shared_from_theme(unique_theme).get() == unique_snapshot.get());
+}
+
+TEST_CASE(
+    "default_design_system returns independent copies of its static baseline",
+    "[theme][design-system][cache]"
+) {
+    auto first = theme::default_design_system();
+    const auto radius = first.tokens.radius.md;
+    const auto background = first.light.background;
+    first.tokens.radius.md = radius + 7.0F;
+    first.light.background = foundation::NanColor::from_hex(0x000000, 0.0F);
+
+    const auto second = theme::default_design_system();
+    CHECK(second.tokens.radius.md == Catch::Approx(radius));
+    CHECK(second.light.background == background);
+}

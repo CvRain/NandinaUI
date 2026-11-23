@@ -18,6 +18,23 @@
 
 ## 2. 三档分类
 
+2026-11-23 切页阻塞与窗口实时缩放批（experimental，新增 theme API 与相等性；头文件总数不变，
+仍为 218 = 202 experimental + 16 internal）：
+`nandina/theme/design_system.hpp`（experimental）新增
+`design_system_shared_from_theme(const NanTheme&) -> std::shared_ptr<const DesignSystem>`：
+与 `design_system_from_theme()` 值等价，但对相同的 `NanTheme` 复用同一份不可变共享快照
+（8 槽互斥有界缓存，`-0.0`/`+0.0` 视为同一主题；含 NaN 的非法主题不入缓存）。**不承诺指针身份
+稳定**：第 9 个不同主题会轮转淘汰，指针只用于"同一快照"的观测，不应被下游当作身份。
+同时为公共值类型补齐默认 `operator==`（源兼容增量）：`NanTheme`、`NanColorScheme`、
+`NanTokens` 及 `NanSpacingTokens`/`NanRadiusTokens`/`NanBorderTokens`/`NanOpacityTokens`/
+`NanTypographyTokens`/`NanMotionTokens`、`NanTypeScale`、`TypographyRoleStyle`、
+`ResolvedStyleContext`。控件构造路径（33 类控件/67 处）改用共享快照，语义不变。
+另：`NanNode::remove_and_delete()` 的既有"立即销毁"语义补入边界——被外部 `shared_ptr`
+保留的节点不再重置 `resolved_style_context()`，重新挂到新父节点时由 `insert_child()` 重解析
+（`nandina/scene/node.hpp` 注释；`remove_child()` 仍重置）。契约见
+[`text_shaping_cost.md` §14](text_shaping_cost.md#14-切页阻塞与窗口实时缩放顺滑度优化2026-11-23)
+与 [`data_components_and_virtualization.md` §9.9.2](data_components_and_virtualization.md#992-预排阶段的虚拟化视口保护2026-11-23)。
+
 2026-11-13 P4.6 Step 3 OS 无障碍文字缩放来源（experimental，新增 app API）：
 新增 `nandina/app/system_preferences.hpp`：`SystemPreferencesSnapshot`、
 `ISystemPreferencesSource`（`snapshot()` / 自节流 `poll_changes()`）与纯函数

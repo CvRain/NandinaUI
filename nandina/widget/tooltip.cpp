@@ -100,8 +100,7 @@ namespace nandina::widget
         theme::NanTheme theme
     ):
         text_(std::move(text)) {
-        system_ =
-            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ = theme::design_system_shared_from_theme(theme);
         theme_view_ = theme;
         if (trigger) {
             set_trigger(std::move(trigger));
@@ -195,8 +194,7 @@ namespace nandina::widget
     }
 
     void Tooltip::set_theme(theme::NanTheme theme) {
-        system_ =
-            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ = theme::design_system_shared_from_theme(theme);
         system_explicit_ = true;
         theme_view_ = theme;
         apply_text_style();

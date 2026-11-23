@@ -21,6 +21,7 @@
 #include "../scene/input_event.hpp"
 #include "../scene/overlay_host.hpp"
 
+#include <cmath>
 #include <cstdlib>
 #include <stdexcept>
 #include <type_traits>
@@ -31,6 +32,13 @@ namespace nandina::app
 {
     namespace
     {
+        /// 窗口尺寸是否可当作布局/绘制目标。最小化或把窗口拖成零高（Windows 允许
+        /// client 区域零高）时平台会返回零尺寸；`make_window_metrics()` 按契约拒绝
+        /// 非正尺寸，因此帧循环必须先判定再采样，不能让它抛进宿主主循环。
+        [[nodiscard]] auto is_drawable_window_size(const foundation::NanSize size) -> bool {
+            return std::isfinite(size.get_width()) && std::isfinite(size.get_height())
+                && size.is_valid();
+        }
 
         /// 把 `IPlatformWindow` 的剪贴板接成 `scene::IClipboard`。
         ///
@@ -389,6 +397,9 @@ namespace nandina::app
         frame_input_.events.clear();
         frame_input_.has_pointer = false;
         platform_->poll_input(frame_input_);
+        // 平台轮询可能刚刚处理了窗口缩放或 DPI 变化事件：立刻同步视口映射，
+        // 保证本帧输入坐标换算与随后的布局/绘制使用同一份最新窗口尺寸。
+        update_viewport_mapping(platform_->screen_size());
 
         if (frame_input_.window_active.has_value()) {
             tree_.set_window_active(*frame_input_.window_active);
@@ -505,6 +516,11 @@ namespace nandina::app
             viewport_mapping_.reset();
             return;
         }
+        // 尺寸无效（最小化 / 零高窗口）时没有可计算的映射：保留上一份，恢复尺寸后
+        // 由下一次采样覆盖；不能把非法尺寸交给 make_viewport_mapping()（它会抛错）。
+        if (!is_drawable_window_size(screen_size)) {
+            return;
+        }
         viewport_mapping_ = make_viewport_mapping(screen_size, *config_.viewport);
     }
 
@@ -516,9 +532,6 @@ namespace nandina::app
             return;
         }
         const float dt = platform_->frame_time();
-        const auto metrics =
-            make_window_metrics(platform_->screen_size(), platform_->drawable_size());
-        update_viewport_mapping(metrics.screen_size);
         auto deferred_effects = app_.graph().defer_effects();
         if (texture_cache_) {
             texture_cache_->begin_frame();
@@ -564,6 +577,20 @@ namespace nandina::app
             tree_.advance_animations(dt);
         }
 
+        // 在输入轮询（SDL_PollEvent）与本帧逻辑之后重新采样窗口/帧缓冲尺寸：
+        // 避免缩放帧里用事件前的旧尺寸排版却提交到新尺寸表面，消除 1 帧尺寸错拍。
+        const auto screen_size = platform_->screen_size();
+        const auto drawable_size = platform_->drawable_size();
+        if (!is_drawable_window_size(screen_size) || !is_drawable_window_size(drawable_size)) {
+            // 最小化或拖到零尺寸：本帧没有可布局/可绘制的目标。保留上一帧画面，
+            // 但仍执行帧末关窗，避免尺寸校验异常终止宿主主循环。
+            if (close_pending_) {
+                close();
+            }
+            return;
+        }
+        const auto metrics = make_window_metrics(screen_size, drawable_size);
+        update_viewport_mapping(metrics.screen_size);
         const auto logical_size =
             viewport_mapping_ ? viewport_mapping_->logical_size : metrics.screen_size;
         (void)tree_.layout_root(logical_size);

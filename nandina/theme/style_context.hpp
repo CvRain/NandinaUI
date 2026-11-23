@@ -77,6 +77,8 @@ namespace nandina::theme
         bool text_color_from_context = false;
         bool locale_from_context = false;
         bool direction_from_context = false;
+
+        [[nodiscard]] auto operator==(const ResolvedStyleContext&) const -> bool = default;
     };
 
     [[nodiscard]] inline auto

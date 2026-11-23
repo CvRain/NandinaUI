@@ -16,6 +16,9 @@ namespace nandina::theme
         float md = 12.0F;
         float lg = 16.0F;
         float xl = 24.0F;
+
+        [[nodiscard]] constexpr auto operator==(const NanSpacingTokens&) const noexcept
+            -> bool = default;
     };
 
     /**
@@ -27,18 +30,27 @@ namespace nandina::theme
         float md = 8.0F;
         float lg = 10.0F;
         float full = 9999.0F;
+
+        [[nodiscard]] constexpr auto operator==(const NanRadiusTokens&) const noexcept
+            -> bool = default;
     };
 
     struct NanBorderTokens {
         float thin = 1.0F;
         float medium = 2.0F;
         float focus_ring = 2.0F;
+
+        [[nodiscard]] constexpr auto operator==(const NanBorderTokens&) const noexcept
+            -> bool = default;
     };
 
     struct NanOpacityTokens {
         float disabled = 0.45F;
         float hover_overlay = 0.10F;
         float pressed_overlay = 0.16F;
+
+        [[nodiscard]] constexpr auto operator==(const NanOpacityTokens&) const noexcept
+            -> bool = default;
     };
 
     struct NanTypographyTokens {
@@ -49,12 +61,18 @@ namespace nandina::theme
         /// (root base, individual ratios, individual leading factors). P4.6 Step 1 exposes it
         /// to Label authors through `TextSize`/`Leading`; semantic roles consume it in Step 2.
         NanTypeScale scale {};
+
+        [[nodiscard]] constexpr auto operator==(const NanTypographyTokens&) const noexcept
+            -> bool = default;
     };
 
     struct NanMotionTokens {
         float short_duration = 0.12F;
         float medium_duration = 0.20F;
         float long_duration = 0.32F;
+
+        [[nodiscard]] constexpr auto operator==(const NanMotionTokens&) const noexcept
+            -> bool = default;
     };
 
     struct NanTokens {
@@ -64,6 +82,8 @@ namespace nandina::theme
         NanOpacityTokens opacity;
         NanTypographyTokens typography;
         NanMotionTokens motion;
+
+        [[nodiscard]] constexpr auto operator==(const NanTokens&) const noexcept -> bool = default;
     };
 
 } // namespace nandina::theme

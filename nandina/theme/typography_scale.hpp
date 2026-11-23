@@ -80,6 +80,9 @@ namespace nandina::theme
         Leading leading = Leading::normal;
         int font_weight = 400;
         FontSlant slant = FontSlant::normal;
+
+        [[nodiscard]] constexpr auto operator==(const TypographyRoleStyle&) const noexcept
+            -> bool = default;
     };
 
     [[nodiscard]] constexpr auto typography_role_index(const TypographyRole role) noexcept
@@ -211,6 +214,9 @@ namespace nandina::theme
         /// the cap. This is where a "never larger than 28 px" policy lives. Applies only to
         /// scale/role-derived sizes, never to explicit px.
         float max_text_px = 0.0F;
+
+        [[nodiscard]] constexpr auto operator==(const NanTypeScale&) const noexcept
+            -> bool = default;
     };
 
     [[nodiscard]] constexpr auto text_size_index(const TextSize size) noexcept -> std::size_t {

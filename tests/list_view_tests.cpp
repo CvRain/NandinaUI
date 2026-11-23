@@ -10,7 +10,9 @@
 #include <nandina/theme/theme_manager.hpp>
 #include <nandina/widget/build_context.hpp>
 #include <nandina/widget/label.hpp>
+#include <nandina/widget/layout.hpp>
 #include <nandina/widget/list_view.hpp>
+#include <nandina/widget/scroll_view.hpp>
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
@@ -520,4 +522,133 @@ TEST_CASE(
     harness.list->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 400.0F, 300.0F));
     CHECK(harness.list->item_count() == kVisibleRows);
     CHECK(harness.list->row_node(row_id(1)) != nullptr);
+}
+
+TEST_CASE(
+    "fill-height ListView wrapped in detached Padding does not materialize full model",
+    "[list-view][virtualization][off-tree]"
+) {
+    Fixture fixture;
+    TestModel model;
+    auto harness = make_harness(fixture, model, 1000);
+    harness.list->set_width(scene::fill);
+    harness.list->set_height(scene::fill);
+
+    auto frame = widget::Padding::create(foundation::NanInsets::all(6.0F));
+    frame->set_child(harness.list);
+
+    CHECK(harness.list->item_count() == 0);
+    CHECK(harness.delegate->created == 0);
+
+    scene::NanSceneTree tree;
+    tree.set_root(frame);
+    // 挂树会触发 on_ready() 的 loose relayout：它仍属预排，必须保持收缩，
+    // 不能在首次真实布局前物化全模型（6px 上下 inset → 12px，而不是 100 行 × 32px）。
+    CHECK(harness.list->item_count() == 0);
+    CHECK(harness.delegate->created == 0);
+    CHECK(frame->measured_size().get_height() == Catch::Approx(12.0F));
+    (void)tree.layout_root(foundation::NanSize(400.0F, 312.0F));
+    CHECK(harness.list->item_count() == kVisibleRows);
+    CHECK(harness.delegate->created == kVisibleRows);
+}
+
+TEST_CASE(
+    "in-tree unbounded parents keep the fill-height ListView measured from content",
+    "[list-view][virtualization][pre-layout]"
+) {
+    Fixture fixture;
+    TestModel model;
+
+    // ScrollView 的纵向内容测量是无界（loose）的。真实布局 pass 不能把 fill 高度记成
+    // min_height，否则视口会在布局期塌陷为 0 行；既有语义是按内容高度测量
+    // （见 data_components_and_virtualization.md §9.9，只推荐固定高度或 fill 提供视口）。
+    // 预排（离树 relayout / on_ready 的 loose relayout）才允许返回 min_height。
+    SECTION("direct ScrollView child") {
+        auto harness = make_harness(fixture, model, 100);
+        harness.list->set_width(scene::fill);
+        harness.list->set_height(scene::fill);
+
+        auto scroll = widget::ScrollView::create();
+        scroll->set_child(harness.list);
+        scene::NanSceneTree tree;
+        tree.set_root(scroll);
+        (void)tree.layout_root(foundation::NanSize(400.0F, 300.0F));
+        CHECK(harness.list->item_count() == 100);
+        CHECK(harness.delegate->created == 100);
+    }
+
+    SECTION("Column inside ScrollView") {
+        auto harness = make_harness(fixture, model, 100);
+        harness.list->set_width(scene::fill);
+        harness.list->set_height(scene::fill);
+
+        auto column = widget::Column::create();
+        column->add(harness.list);
+        auto scroll = widget::ScrollView::create();
+        scroll->set_child(column);
+        scene::NanSceneTree tree;
+        tree.set_root(scroll);
+        (void)tree.layout_root(foundation::NanSize(400.0F, 300.0F));
+        CHECK(harness.list->item_count() == 100);
+        CHECK(harness.delegate->created == 100);
+    }
+}
+
+TEST_CASE(
+    "pre-layout virtualization covers percent height, min_height, content length and layout_to",
+    "[list-view][virtualization][off-tree]"
+) {
+    Fixture fixture;
+    TestModel model;
+
+    SECTION("percent height collapses only during pre-layout") {
+        auto harness = make_harness(fixture, model, 100);
+        harness.list->set_width(scene::fill);
+        harness.list->set_height(scene::percent(50.0F));
+        auto frame = widget::Padding::create(foundation::NanInsets::all(0.0F));
+        frame->set_child(harness.list);
+        CHECK(harness.list->item_count() == 0);
+        CHECK(harness.list->measured_size().get_height() == Catch::Approx(0.0F));
+
+        scene::NanSceneTree tree;
+        tree.set_root(frame);
+        CHECK(harness.list->item_count() == 0);
+        (void)tree.layout_root(foundation::NanSize(400.0F, 300.0F));
+        // 有界父级下 percent 高度按父级紧约束落位为 300px → 10 个可见行；
+        // 关键契约只是“预排收缩、真实布局恢复”，不把内容高带进布局。
+        CHECK(harness.list->item_count() == kVisibleRows);
+        CHECK(harness.delegate->created == kVisibleRows);
+    }
+
+    SECTION("min_height is preserved by the pre-layout early return") {
+        auto harness = make_harness(fixture, model, 100);
+        harness.list->set_width(scene::fill);
+        harness.list->set_height(scene::fill);
+        harness.list->set_min_height(120.0F);
+        auto frame = widget::Padding::create(foundation::NanInsets::all(0.0F));
+        frame->set_child(harness.list);
+        CHECK(harness.list->measured_size().get_height() == Catch::Approx(120.0F));
+        // 预排返回值保留 min_height：离树预排后视口就是 120px（3.75 行 → 4 个可见行），
+        // 该布局由 Padding::relayout() 落位，不属于全模型物化。
+        CHECK(harness.list->item_count() == 4);
+        CHECK(harness.delegate->created == 4);
+    }
+
+    SECTION("content-length height still measures the full model off-tree") {
+        auto harness = make_harness(fixture, model, 100);
+        auto frame = widget::Padding::create(foundation::NanInsets::all(0.0F));
+        frame->set_child(harness.list);
+        CHECK(harness.list->measured_size().get_height() == Catch::Approx(100.0F * kRowHeight));
+        CHECK(harness.list->item_count() == 100);
+        CHECK(harness.delegate->created == 100);
+    }
+
+    SECTION("off-tree explicit layout_to still materializes the visible window") {
+        auto harness = make_harness(fixture, model, 100);
+        harness.list->set_width(scene::fill);
+        harness.list->set_height(scene::fill);
+        harness.list->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 400.0F, 300.0F));
+        CHECK(harness.list->item_count() == kVisibleRows);
+        CHECK(harness.delegate->created == kVisibleRows);
+    }
 }

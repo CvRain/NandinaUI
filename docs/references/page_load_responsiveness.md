@@ -102,6 +102,8 @@ Step 2b 的视觉迁移之前（P4.7 字重/斜体已完成，视觉验收不受
 
 - Windows/Linux `page_probe` 墙钟测量：2026-11-11，见 §1；
 - 历史文本整形成本曲线与已否决缓存：`text_shaping_cost.md` §3–§5；
+- 2026-11-23 数据工作台切页阻塞（离树虚拟化预排/样式上下文/DesignSystem 快照，本地临时插桩、
+  非 CI 证据）：`text_shaping_cost.md` §14；
 - showcase Label 页当时包含 Typography / Font style / Semantic colors / Wrapping / Overflow /
   Alignment 六节；P4.8b 迁移后为简介节同步构建 + Typography / Font style / Semantic colors /
   Wrapping / Overflow / Alignment / Reactive / Semantics 共 8 个延迟节（各占一个 dispatcher

@@ -17,9 +17,7 @@ namespace nandina::widget
 {
     ToggleGroup::ToggleGroup() {
         theme_view_ = theme::default_theme();
-        system_ = std::make_shared<const theme::DesignSystem>(
-            theme::design_system_from_theme(theme_view_)
-        );
+        system_ = theme::design_system_shared_from_theme(theme_view_);
     }
 
     auto ToggleGroup::create() -> std::shared_ptr<ToggleGroup> {
@@ -282,8 +280,7 @@ namespace nandina::widget
     }
 
     void ToggleGroup::set_theme(theme::NanTheme theme) {
-        system_ =
-            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ = theme::design_system_shared_from_theme(theme);
         system_explicit_ = true;
         theme_view_ = theme;
     }

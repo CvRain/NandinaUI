@@ -417,9 +417,7 @@ namespace nandina::widget
 
     Resizable::Resizable(const LayoutAxis axis, theme::NanTheme theme):
         axis_(axis),
-        system_(
-            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme))
-        ),
+        system_(theme::design_system_shared_from_theme(theme)),
         theme_view_(std::move(theme)),
         handle_(std::make_shared<Handle>(*this)) {
         validate_axis(axis);
@@ -787,8 +785,7 @@ namespace nandina::widget
     }
 
     void Resizable::set_theme(theme::NanTheme theme) {
-        system_ =
-            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ = theme::design_system_shared_from_theme(theme);
         system_explicit_ = true;
         theme_view_ = std::move(theme);
         mark_dirty(scene::DirtyFlags::paint);

@@ -15,7 +15,7 @@ application shell. Version `0.1.0-alpha.1`.
 - Experimental: Windows (MSYS2 UCRT64). Unsupported: macOS.
 - Not a Node/Bun project; there is no JavaScript runtime or package manager.
 
-### Current milestone state (2026-11-18)
+### Current milestone state (2026-11-23)
 
 - **Phase state**: P1/P2 closed; P3 body delivered (P3.3b2b platform IME / standalone Xorg /
   Windows candidate-window acceptance still open); P4 in progress. Authoritative per-batch
@@ -56,6 +56,34 @@ application shell. Version `0.1.0-alpha.1`.
   `next_grapheme_boundary()` + flat cluster vectors, and skips FriBidi for pure-LTR text.
   `playground --resize-bench` (Debug `-O0`) pure drag overhead: +12.28 → +3.82 ms (1 move/frame,
   3.2×), +95.64 → +3.55 ms (10 moves/frame, 26.9×); 7/7 Linux CPU page goldens PASS.
+- **Page-switch stall & live window-resize smoothness (committed,
+  `text_shaping_cost.md` §14, `data_components_and_virtualization.md` §9.9.2)**: (1)
+  `ListView`/`DataTable`/`TreeView` with `fill`/`percent` height return `min_height` under
+  unbounded (`loose()`) **pre-layout** measurement (`get_tree() == nullptr` or
+  `!layout_pass_active()`, covering detached wrappers and in-tree `on_ready()` relayouts),
+  preventing full-model materialization; a real layout pass keeps the existing
+  content-height semantics for unbounded parents (`ScrollView`/`Stack`), so viewports do not
+  collapse to 0 rows; (2) `ResolvedStyleContext::operator==` lets
+  `_resolve_style_context()` prune unchanged subtrees (this is what removes the
+  $O(\text{depth} \times N)$ repeat work), `_propagate_enter_tree()` now resolves only the
+  current node and relies on the top-down child walk, and `remove_and_delete()` skips detached
+  style resolution (`remove_child()` still resets); (3) `default_design_system()` caches its
+  baseline once and `design_system_shared_from_theme()` reuses immutable 8-slot snapshots across
+  33 widget files / 67 construction/theme sites; (4) `NanWindow::tick()` re-samples
+  `screen_size()`/`drawable_size()` after input polling and before `layout_root()` (removing the
+  stale-size tick ordering; mocked by `[app][resize][timing]`, real-window smoothness still
+  needs manual acceptance), treats zero-sized (minimized/zero-height) windows as a skipped
+  layout/render frame instead of throwing, `SdlPlatformWindow` also handles
+  `SDL_EVENT_WINDOW_RESIZED` (defensive; fixed SDL 3.4.18 already emits
+  `PIXEL_SIZE_CHANGED` on resize), and `SdlRenderDevice::SdfPath` defers evicted
+  `SDL_GPURenderState` destruction to `begin_frame()`/`~SdfPath()` (reduces in-frame
+  state-destruction flushes; local manual observation only, no automated GPU gate, `cached`
+  still counts cache entries ≤256). `playground --self-test` (local Debug `-O0`,
+  `SDL_VIDEODRIVER=dummy`, temporary untracked instrumentation — not CI evidence): `page=data`
+  entry 704.9 → 61.3 ms cold (11.5×) / 656.1 → 33.1 ms warm (19.8×); leaving `page=data`
+  173.5 → 30.7 ms (5.7×). Verification matrix (2026-11-23, final tree): main suite 146 OK /
+  0 FAIL; ASan 121 OK +1 skip; no-RTTI 123 OK; no-SQLite 118 OK +1 skip; pure tools 8/8;
+  `release_check --ci` 8/8; Linux CPU 7-page golden 7/7 PASS (`deterministic=true`).
 - **Baseline counts**: 146 tests (123 unit + 23 integration), 218 headers (202 experimental +
   16 internal), 28 approved page goldens (7 pages × CPU/SDF × 2 platforms), 46 public
   components; the CPU page-golden CI gate is blocking (7 pages).
@@ -444,7 +472,7 @@ meson test -C buildDir --print-errorlogs   # full suite: unit + integration (lat
 
 ## Important Files
 
-- `nandina/app/nan_application.hpp`, `nandina/app/nan_window.cpp` (frame loop, ~445-532),
+- `nandina/app/nan_application.hpp`, `nandina/app/nan_window.cpp` (frame loop, `tick()` ~514-640),
   `nandina/app/nan_router.hpp`, `nandina/app/nan_page.hpp`
 - `nandina/foundation/input.hpp` (key identities), `nandina/scene/input_event.hpp`
 - `nandina/reactive/graph.hpp`, `signal.hpp`, `computed.hpp`, `effect.hpp`, `scope.hpp`, `property.hpp`

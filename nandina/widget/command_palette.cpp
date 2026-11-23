@@ -953,8 +953,7 @@ namespace nandina::widget
         theme::NanTheme theme
     ):
         items_(std::move(items)) {
-        system_ =
-            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ = theme::design_system_shared_from_theme(theme);
         theme_view_ = theme;
 
         text_field_ = std::make_shared<TextField>(std::string {}, std::move(placeholder), theme);
@@ -1186,8 +1185,7 @@ namespace nandina::widget
 
     void CommandPalette::set_theme(theme::NanTheme theme) {
         theme_view_ = theme;
-        system_ =
-            std::make_shared<const theme::DesignSystem>(theme::design_system_from_theme(theme));
+        system_ = theme::design_system_shared_from_theme(theme);
         system_explicit_ = true;
         sync_field_style();
         apply_style();
