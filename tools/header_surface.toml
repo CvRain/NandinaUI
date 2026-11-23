@@ -890,3 +890,11 @@ level = "experimental"
 [[headers]]
 path = "nandina/widget/sheet.hpp"
 level = "experimental"
+
+[[headers]]
+path = "nandina/widget/aspect_ratio.hpp"
+level = "experimental"
+
+[[headers]]
+path = "nandina/widget/resizable.hpp"
+level = "experimental"

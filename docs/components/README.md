@@ -29,6 +29,8 @@
 | [`Card`](card.md) | 带主题外观的单子内容容器 | 可用（content insets experimental；文档提纲） |
 | [`Collapsible`](collapsible.md) | 保留内容状态的折叠区域 | 实验性（P4.2c 初稿，视觉验收待完成） |
 | [`Accordion`](accordion.md) | 协调多个 Collapsible 区段的 single/multiple 展开状态 | 实验性（批 7 v1；Up/Down/Home/End 漫游） |
+| [`AspectRatio`](aspect_ratio.md) | 在父约束与紧槽位内按固定宽高比测量并布局单个子控件 | 实验性（批 9 v1；`ui.aspect_ratio` / `ui.make<AspectRatio>`） |
+| [`Resizable`](resizable.md) | 通过可拖拽、双击重置与键盘可调分隔条分配双栏容器空间 | 实验性（批 9 v1；`ui.resizable` / `ui.make<Resizable>`） |
 | [`Table`](table.md) | 静态内容表格，共享列宽并按行自然增长 | 实验性（P4.2b 代码复核与 2026-11-13 视觉验收完成；无选择/排序/虚拟化） |
 | [`DataTable`](data_table.md) | 行模型驱动的虚拟化数据表格，含选择、排序、delegate 与固定表头 | 实验性（公开头已迁至 `widget/`；默认文本选中视觉与 `selection_changed`/`sort_changed` 已接入） |
 | `ListView` | 行模型驱动的一维虚拟化数据列表 | 实验性（批 5 交付；`ui.make<ListView>()` 可用） |
@@ -80,7 +82,7 @@
 
 ### 布局与滚动
 
-当前提供 `Column`、`Row`、`Flex`、`FlexItem`、`Wrap`、`Stack`、`Padding`、`Center`、`Expanded`、`Grid`、`ScrollView` 与 `ListView`。除数据视图 `ListView` 外的上述布局容器支持构造期子项简写（如 `ui.row(a, b)`、`ui.column(a, b)`、`ui.wrap(a, b)`、`ui.grid(2, a, b)`、`ui.center(child)`、`ui.padding(insets, child)`、`ui.expanded(child)`、`ui.scroll_view(child)`），与分步 `.children(...)` / `.child(...)` 等价；本轮补齐的单子项容器提供只读 `child()` 查询。注意：`width(fill)` / `height(fill)` 表示占满父容器对应轴的 100% 约束上限；在 `Row` / `Column` 主轴上分配剩余空间应使用 `ui.expanded(child)`。新增 experimental 的 [`Surface`](surface.md) 是单子项布局/绘制原语，通过 `ui.surface()` / `ui.surface(child)` 创建。
+当前提供 `Column`、`Row`、`Flex`、`FlexItem`、`Wrap`、`Stack`、`Padding`、`Center`、`Expanded`、`AspectRatio`、`Resizable`、`Grid`、`ScrollView` 与 `ListView`。除数据视图 `ListView` 外的上述布局容器支持构造期子项简写（如 `ui.row(a, b)`、`ui.column(a, b)`、`ui.wrap(a, b)`、`ui.grid(2, a, b)`、`ui.center(child)`、`ui.padding(insets, child)`、`ui.expanded(child)`、`ui.aspect_ratio(ratio, child)`、`ui.resizable(first, second)`、`ui.scroll_view(child)`），与分步 `.children(...)` / `.child(...)` 等价；单子项容器提供只读 `child()` 查询（`Resizable` 提供 `first_child()` / `second_child()`）。注意：`width(fill)` / `height(fill)` 表示占满父容器对应轴的 100% 约束上限；在 `Row` / `Column` 主轴上分配剩余空间应使用 `ui.expanded(child)`。新增 experimental 的 [`Surface`](surface.md) 是单子项布局/绘制原语，通过 `ui.surface()` / `ui.surface(child)` 创建。
 
 ## 计划补充
 
@@ -88,11 +90,12 @@
 `Combobox`、`CommandPalette`、`HoverCard` 与 `AlertDialog`
 （见 [菜单族条目模型](../references/menu_model.md)）。
 
-已落地的阶段 5 组件：[`Sheet`](sheet.md)（批 8 v1，四边停靠模态抽屉，统一覆盖桌面 Sheet/Drawer 场景）、
+已落地的阶段 5 组件：[`AspectRatio`](aspect_ratio.md) 与 [`Resizable`](resizable.md)（批 9 v1，固定宽高比单子项容器与双栏可调分割容器）、
+[`Sheet`](sheet.md)（批 8 v1，四边停靠模态抽屉，统一覆盖桌面 Sheet/Drawer 场景）、
 [`Accordion`](accordion.md)（批 7 v1，组合 `Collapsible`、single/multiple、Up/Down/Home/End 漫游）、
 新虚拟化 `ListView`（批 5，`IRowModel` + `IItemDelegate` + `SelectionModel<RowId>`）、
 `TreeView`（批 6 v1，`ITreeModel` + 视图持有展开 + 统一行高虚拟化）与 [`DataTable`](data_table.md)
-（公开头已迁至 `widget/`）；旧模板 `VirtualListView` 已退役。后续按需扩展：`Resizable`、`AspectRatio`。
+（公开头已迁至 `widget/`）；旧模板 `VirtualListView` 已退役。阶段 5 规划组件已全部落地。
 
 计划顺序与依赖关系见 [组件开发路线图](../references/component_roadmap.md)。
 

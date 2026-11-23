@@ -113,7 +113,10 @@ P4.6 排版尺度与语义 role 指标已交付；剩余样式 reset、完整测
   `DismissLayer` / `FocusScope` 与 `DialogRecipe`（默认直角贴边），提供 `header`（或
   `set_title`/`set_description`）/ `content` / `footer`（贴底）三槽位与 `set_extent(float)`；
   契约见 [Dialog 与 Sheet 契约](dialog_migration.md#sheet贴边模态抽屉v1)；
-- `Resizable`、`AspectRatio`；
+- `AspectRatio` 与 `Resizable`（批 9，experimental，已实现）：
+  - `AspectRatio`：单子项固定宽高比容器（`ratio = width / height`），在 `on_layout()` 内吸收父容器紧槽位并按 `LayoutAlignment` 将子控件布局于最大内接 `ratio` 矩形中，同时提供 `ui.aspect_ratio(...)` 布局简写与 `ComponentTraits<AspectRatio>`；
+  - `Resizable`：双栏（`first` / `second`）比例驱动可调分割容器（`LayoutAxis::horizontal` / `vertical`，三栏通过嵌套组合），带 `min_first_extent` / `min_second_extent` 钳制与窄容器回退、指针拖拽（记录抓取偏移无跳变）、双击分隔条重置 `default_ratio`、键盘 `Left`/`Right`/`Up`/`Down`/`Home`/`End` 调节与无障碍 `Role::slider` 语义，直接复用语义色不新增配方，同时提供 `ui.resizable(...)` 简写与 `ComponentTraits<Resizable>`（含 `Signal<float>` 双向绑定）；
+  - 契约与实现记录见 [D6 §20](authoring_dsl_and_content_measurement.md#20-批-9aspectratio-与-resizable-容器2026-11-23)；
 - 静态 `Table`（P4.2b 代码于 2026-11-05 复核完成，**Showcase 视觉验收已于 2026-11-13 完成**；
   当前保持 experimental，是否进入推荐级待组件契约评审；契约见
   [数据组件：选择模型与虚拟化依据](data_components_and_virtualization.md) §8）；
@@ -121,7 +124,7 @@ P4.6 排版尺度与语义 role 指标已交付；剩余样式 reset、完整测
   （[数据组件 §9](data_components_and_virtualization.md#9-p42d-数据视图契约datatable-与-listviewv31-定稿)）：
   非模板组件 + `IRowModel` + `DataTableColumn` + `IItemDelegate` + 显式选择模型；九个作者/
   组件头已迁入正式 `widget/` 路径并标 experimental，`ItemHost` 保持 internal；新 `ListView`、
-  TreeView v1、Accordion v1 与 Sheet v1 均已交付。
+  TreeView v1、Accordion v1、Sheet v1、AspectRatio v1 与 Resizable v1 均已交付。
 
 ## 暂不进入核心优先级
 

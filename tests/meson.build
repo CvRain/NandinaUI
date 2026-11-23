@@ -899,6 +899,20 @@ sheet_tests = executable(
 )
 test('sheet', sheet_tests, suite: 'unit')
 
+aspect_ratio_tests = executable(
+    'aspect_ratio_tests',
+    files('aspect_ratio_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('aspect-ratio', aspect_ratio_tests, suite: 'unit')
+
+resizable_tests = executable(
+    'resizable_tests',
+    files('resizable_tests.cpp'),
+    dependencies : [nandina_dep, catch2_with_main_dep],
+)
+test('resizable', resizable_tests, suite: 'unit')
+
 popover_tests = executable(
     'popover_tests',
     files('popover_tests.cpp'),

@@ -6,12 +6,14 @@
 #ifndef NANDINA_EXPERIMENT_WIDGET_CONTROLS_HPP
 #define NANDINA_EXPERIMENT_WIDGET_CONTROLS_HPP
 
+#include "aspect_ratio.hpp"
 #include "build_context.hpp"
 #include "builtin_component_traits.hpp"
 #include "collapsible.hpp"
 #include "gesture_area.hpp"
 #include "image.hpp"
 #include "pointer_area.hpp"
+#include "resizable.hpp"
 #include "surface.hpp"
 #include "table.hpp"
 

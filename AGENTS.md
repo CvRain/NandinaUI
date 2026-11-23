@@ -80,8 +80,23 @@ application shell. Version `0.1.0-alpha.1`.
   144/144, no-RTTI 121/121; headless unit 120 OK +1 skip, full suite 141 OK +3 skips, ASan 119 OK
   +1 skip, no-RTTI 120 OK +1 skip, no-SQLite 116 OK +1 skip, pure tools 8/8, `release_check --ci`
   8/8 (headers 216 = 200 experimental + 16 internal, docs 98).
-- **Baseline counts**: 144 tests (121 unit + 23 integration), 216 headers (200 experimental +
-  16 internal), 28 approved page goldens (7 pages × CPU/SDF × 2 platforms), 44 public
+- **Batch 9 (AspectRatio v1 + Resizable v1) implemented and verified**:
+  `AspectRatio` (`nandina/widget/aspect_ratio.hpp` / `.cpp`, single-child container inscribing a
+  fixed `width / height` box in `on_layout()` even under tight parent slots, with `LayoutAlignment`
+  and `content_rect()`) and `Resizable` (`nandina/widget/resizable.hpp` / `.cpp`, two-pane
+  ratio-driven split container along `LayoutAxis::horizontal`/`vertical` with `min_first_extent`/
+  `min_second_extent` clamping and small-container fallback, pointer drag without initial jump,
+  double-click reset to `default_ratio`, keyboard arrow/Home/End adjustment, internal focusable
+  `Handle` child with `Role::slider` semantics and semantic token drawing without a new recipe,
+  and owner-release-safe `ratio_changed()`/`set_on_ratio_changed()`); both expose
+  `ui.aspect_ratio(...)` / `ui.resizable(...)` DSL shorthands and `ComponentTraits` +
+  `showcase/component_catalog.hpp` (`authoring_dsl_and_content_measurement.md` §20). Verification:
+  `aspect-ratio` 4 cases/53 assertions, `resizable` 7 cases/116 assertions; operator desktop unit
+  123/123, full suite 146/146, no-RTTI 123/123; headless unit 122 OK +1 skip, full suite 143 OK +3
+  skips, ASan 121 OK +1 skip, no-RTTI 122 OK +1 skip, no-SQLite 118 OK +1 skip, pure tools 8/8,
+  `release_check --ci` 8/8 (headers 218 = 202 experimental + 16 internal, docs 100).
+- **Baseline counts**: 146 tests (123 unit + 23 integration), 218 headers (202 experimental +
+  16 internal), 28 approved page goldens (7 pages × CPU/SDF × 2 platforms), 46 public
   components; the CPU page-golden CI gate is blocking (7 pages).
 - **Do not over-claim**: Windows is experimental (only real exit codes/logs count; GPU/SDF and
   GUI checks need an interactive desktop, CPU paths can use `--renderer sdl2d` over SSH);

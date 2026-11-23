@@ -564,3 +564,19 @@ home/label/anchors 的 CPU/SDF 六张页面 golden 与各自已批准基线逐�
   - 在 `Row`/`Column`/`Flex` 主轴上，若某个子项需要占据除固定兄弟外的**剩余空间**（例如列表行左侧自适应长文本标题 + 右侧状态 `Badge` 或操作按钮），必须用 `ui.expanded(child)`（或 `ui.flex_item(...)`）包裹该子项；直接给主轴子项设 `width(fill)` 会令其请求整条父容器主轴宽度，把后续兄弟推到容器右边界之外。
   - `AnchorCanvas` 的 `fill`/百分比与排列容器剩余空间交互属于独立布局契约议题（见 [Anchors §5.3](anchors.md#53-剩余验收)），不在本批改动。
 - **验证**：`authoring` 新增 `[authoring][factory][shorthand]` 3 用例及编译期 concept 负向 `static_assert`（共 41 用例 / 269 断言），其中 Row 布局回归锁定 `fill` 使右侧兄弟从 x=200 开始、`Expanded` 仅占剩余 160 DIP；`surface` 9 用例 / 92 断言，SDK consumer `accordion-api=1` 探针覆盖 `ui.surface` / `ui.column` / `ui.row` / `ui.expanded` / `ui.wrap` 与 `surface->child()`。红先：注释 `column(children...)` 中的 `.children(...)` 转发或令 `Padding::child()` 返回 `nullptr` 均使新增断言失败（退出 42），恢复后全矩阵通过。
+
+## 20. 批 9：`AspectRatio` 与 `Resizable` 容器（2026-11-23）
+
+补齐阶段 5 剩余的两类布局/容器组件，同时提供声明式布局工厂简写（`ui.aspect_ratio` / `ui.resizable`）与组件入口（`ui.make<AspectRatio>` / `ui.make<Resizable>`，均收录于 `showcase/component_catalog.hpp`，公开组件数 46）：
+
+- **`AspectRatio`（`<nandina/widget/aspect_ratio.hpp>`，experimental）**：
+  - 解决的问题：节点级 `NanControl::set_aspect_ratio(float)` 仅约束控件自身的 `measure_layout_with_basis`，当父容器（如 `Expanded`、`Stack`、`Grid`、`Resizable`）在 `layout_to(rect)` 阶段分配非同比例的紧槽位时，节点最终 `size()` 会被父槽位覆盖。`AspectRatio` 在 `on_layout()` 中吸收外层 `size()`，始终在槽位内求解满足 `width / height == ratio()` 的最大内接矩形（`content_rect()`），按 `alignment()`（`start` / `center` / `end`，默认 `center`）定位并以紧约束布局唯一 `child()`。
+  - 测量规则：单轴有界时由有界轴与 `ratio()` 推导另一轴；双轴有界时取 `max_width × max_height` 内最大内接 `ratio()` 盒子并按 `min_width`/`min_height` 夹紧；双轴无界（`loose()`）时先测量子项自然尺寸，取包络子项的最小 `ratio()` 盒子。
+  - 校验与清理：`ratio` 要求有限且 `> 0.0F`；`set_child` 拒绝空指针、自身/祖先环与已挂载节点；替换或 `clear_child()` 时释放落入旧子项的指针捕获与焦点。
+- **`Resizable`（`<nandina/widget/resizable.hpp>`，experimental）**：
+  - 双栏比例分割模型：沿 `LayoutAxis::horizontal`（左右分栏）或 `LayoutAxis::vertical`（上下分栏）将主轴空间（扣除 `handle_thickness()`，默认 `8.0F` DIP）按 `ratio() ∈ [0.0F, 1.0F]`（默认 `0.5F`）分配给 `first_child()` 与 `second_child()`。三栏及以上工作台通过嵌套 `Resizable` 表达；同时支持 `.first_child()` / `.second_child()` 与 `.children(first, second)` / `ui.resizable(first, second)`（`add()` 超过两栏抛 `std::logic_error`；跨槽复用同一节点在修改前事务性拒绝并抛 `std::invalid_argument`）。
+  - 测量：双轴有界时按最终分栏尺寸紧测两栏；仅主轴有界、交叉轴无界时，先按最终主轴分栏尺寸紧测每个子项，再由测量结果推导交叉轴自然尺寸，避免宽高依赖型内容被低估。
+  - 最小尺寸钳制与窄容器回退：`min_first_extent()` / `min_second_extent()`（默认 `48.0F` DIP）将第一栏主轴尺寸夹紧于 `[min_first, available - min_second]`，`effective_ratio()` 返回钳制后的实际比例；当外层容器缩小至 `available < min_first + min_second` 时，按两侧最小尺寸权重比例平滑缩减，保证 `first + handle + second == total_main` 且不产生负值或溢出。
+  - 内部分隔条节点与焦点/命中隔离：内部分隔条 `Handle` 作为直接子节点恒居于 `[first_child, handle, second_child]` 中间且 `z_index_hint() == 1`。焦点位于组件子树内时，捕获阶段 Tab / Shift+Tab 调用树级上一/下一焦点遍历，严格按第一栏 → 分隔条 → 第二栏流转，并在边界继续走到组件外，不形成额外焦点陷阱。点击任一分栏内的非聚焦控件不会通过 `_find_focus_target` 误聚焦分隔条；分隔条暴露 `semantics::Role::slider`（支持 `focus`、`increment`、`decrement`、`set_value`）。
+  - 交互、主题与事件保活：支持左键按住拖拽（记录按下点偏移，点击不跳变）、双击分隔条重置 `default_ratio()`（`reset_on_double_click()` 默认 `true`）、键盘方向键（水平 `Left`/`Right`，垂直 `Up`/`Down`，步长 `keyboard_step()` 默认 `0.05F`）与 `Home`/`End`。程序化 `set_ratio()` / `reset_ratio()` 静默；用户交互改变 `effective_ratio()` 时以 `weak_from_this().lock()` 保活触发 `set_on_ratio_changed()` 与 `ratio_changed()`。不新增独立配方，直接消费主题语义色（`border`、`surface_variant`、`accent`、`on_surface_variant`、`primary`、`ring`）。
+- **验证**：`aspect-ratio` 4 用例 / 53 断言 PASS，`resizable` 7 用例 / 116 断言 PASS；红先：`AspectRatio` 对无定义的 `stretch`/`space_between` 对齐静默居中、在 `resolve_child_rect` 令 `target_h = target_w`、在 `Resizable::compute_split_geometry` 移除 `min_first_extent_` 钳制，以及交叉轴无界时恢复 loose 测量，均使对应断言先红；恢复后全矩阵通过。窄容器回退另锁定 100:120 最小权重在 110 DIP 可用空间下得到 50/60。SDK consumer 静态/共享 SDL3 均断言 `aspect-ratio-api=1` 与 `resizable-api=1`。

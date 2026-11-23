@@ -473,6 +473,57 @@ namespace nandina::widget
             return stack().children(std::forward<Child>(children)...);
         }
 
+        [[nodiscard]] auto
+        aspect_ratio(float ratio = 1.0F, LayoutAlignment alignment = LayoutAlignment::center) const
+            -> authoring::NodeBuilder<AspectRatio> {
+            return prepare_builder(authoring::aspect_ratio(ratio, alignment));
+        }
+
+        template<typename Child>
+            requires authoring::detail::SettableChild<AspectRatio, Child>
+        [[nodiscard]] auto aspect_ratio(Child&& child) const
+            -> authoring::NodeBuilder<AspectRatio> {
+            return aspect_ratio().child(std::forward<Child>(child));
+        }
+
+        template<typename Child>
+            requires authoring::detail::SettableChild<AspectRatio, Child>
+        [[nodiscard]] auto aspect_ratio(float ratio, Child&& child) const
+            -> authoring::NodeBuilder<AspectRatio> {
+            return aspect_ratio(ratio).child(std::forward<Child>(child));
+        }
+
+        template<typename Child>
+            requires authoring::detail::SettableChild<AspectRatio, Child>
+        [[nodiscard]] auto aspect_ratio(float ratio, LayoutAlignment alignment, Child&& child) const
+            -> authoring::NodeBuilder<AspectRatio> {
+            return aspect_ratio(ratio, alignment).child(std::forward<Child>(child));
+        }
+
+        [[nodiscard]] auto resizable(LayoutAxis axis = LayoutAxis::horizontal) const
+            -> authoring::NodeBuilder<Resizable> {
+            return prepare_builder(authoring::resizable(axis, theme()));
+        }
+
+        template<typename First, typename Second>
+            requires authoring::detail::AddableChild<Resizable, First>
+            && authoring::detail::AddableChild<Resizable, Second>
+        [[nodiscard]] auto resizable(First&& first, Second&& second) const
+            -> authoring::NodeBuilder<Resizable> {
+            return resizable().children(std::forward<First>(first), std::forward<Second>(second));
+        }
+
+        template<typename First, typename Second>
+            requires authoring::detail::AddableChild<Resizable, First>
+            && authoring::detail::AddableChild<Resizable, Second>
+        [[nodiscard]] auto resizable(LayoutAxis axis, First&& first, Second&& second) const
+            -> authoring::NodeBuilder<Resizable> {
+            return resizable(axis).children(
+                std::forward<First>(first),
+                std::forward<Second>(second)
+            );
+        }
+
         template<typename Source, typename TrueFactory>
             requires requires(Source& source) {
                 { source.get() } -> std::convertible_to<bool>;

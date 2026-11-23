@@ -73,16 +73,16 @@ SQLite 数据层与资源驱动的迁移、账户服务与登录/注册，以及
 
 | 类别 | 当前可用 |
 | --- | --- |
-| 内容与展示 | Label、Image、Avatar（首字母占位）、Badge、Chip、Divider、ProgressBar、Spinner、Skeleton、EmptyState、Card、Collapsible、Accordion、Table、DataTable、ListView、TreeView |
+| 内容与展示 | Label、Image、Avatar（首字母占位）、Badge、Chip、Divider、ProgressBar、Spinner、Skeleton、EmptyState、Card、Collapsible、Accordion、AspectRatio、Resizable、Table、DataTable、ListView、TreeView |
 | 输入与选择 | Button、Checkbox、Switch、RadioButton/RadioGroup、Slider、TextField、TextArea、Select、Combobox、Tabs、Toggle、ToggleGroup、ButtonGroup、Breadcrumb、Pagination |
 | 浮层与反馈 | Dialog、AlertDialog、Sheet、Popover、DropdownMenu、ContextMenu、CommandPalette、HoverCard、Tooltip、Alert |
 | 交互扩展 | PointerArea、GestureArea（实验性） |
-| 布局与滚动 | Column、Row、Flex、FlexItem、Wrap、Stack、Padding、Center、Expanded、Grid、ScrollView |
+| 布局与滚动 | Column、Row、Flex、FlexItem、Wrap、Stack、Padding、Center、Expanded、AspectRatio、Resizable、Grid、ScrollView |
 
-表中前四类共 44 个公开组件（`RadioGroup` 与 `RadioButton` 同行记录；`Table`/`Collapsible`/`Accordion`/
-`DataTable`/`ListView`/`TreeView`/`Sheet` 当前为 experimental，`DataTable`/`ListView`/`TreeView` 于
-2026-11-21 作者体验批补齐 `ComponentTraits`，`Sheet` 于批 8 交付并统一覆盖桌面 Sheet/Drawer 场景）；"布局与滚动"一栏是
-声明式布局原语，不计入组件数。完整的用途、成熟度与计划组件见
+表中前四类共 46 个公开组件（`RadioGroup` 与 `RadioButton` 同行记录；`Table`/`Collapsible`/`Accordion`/
+`AspectRatio`/`Resizable`/`DataTable`/`ListView`/`TreeView`/`Sheet` 当前为 experimental，其中
+`AspectRatio` 与 `Resizable` 同时提供 `ui.aspect_ratio`/`ui.resizable` 布局简写与 `ComponentTraits`）；"布局与滚动"一栏中其余项是
+声明式布局原语，不单独重复计入组件数。完整的用途、成熟度与计划组件见
 [组件参考](docs/components/README.md) 与[组件文档覆盖看板](docs/components/coverage.md)。
 
 当前布局以 Column、Row、Flex、Grid 等排列容器为主。场景树 anchors 已落地 scene 内核（`NodeRef<T>`、`AnchorCanvas`、`set_anchors`）与作者入口（`ui.ref<T>()`、`ui.anchor_canvas()`、builder 的 `.anchor.*` / `.parent.anchor.*` 与 `.anchors(...)`），支持父级/兄弟关系、依赖排序、批量关系切换与冲突诊断；`showcase` 的 `anchors` 页面提供侧边栏停靠切换案例。当前边界是**画布需要确定尺寸，因此 `fill` 画布无法占据排列容器的剩余空间**（显式/百分比尺寸的画布可以嵌入排列容器），把画布放在布局根再用兄弟锚点表达剩余区域即可，见 [Anchors](docs/references/anchors.md)。它与浮层锚定定位器是两项独立能力。

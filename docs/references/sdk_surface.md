@@ -537,6 +537,21 @@ TreeView 用例与 SDK consumer 的 `tree-api=1` 探针覆盖。
 （公开组件数 44）。契约见 [Dialog 与 Sheet 契约](dialog_migration.md#sheet贴边模态抽屉v1)；
 打包 SDK consumer 静态/共享 SDL3 均运行 `sheet-api=1` 探针。
 
+### 4.7 AspectRatio 与 Resizable（批 9，v1）
+
+批 9 新增 `widget/aspect_ratio.hpp` 与 `widget/resizable.hpp`（均为 experimental；头文件总数
+218 = 202 experimental + 16 internal）：
+
+- `AspectRatio`：单子项固定宽高比布局容器，在 `on_layout()` 中吸收父级紧槽位并按 `LayoutAlignment`
+  将子控件布局于最大内接 `ratio()` 矩形；提供 `ui.aspect_ratio(...)` / `authoring::aspect_ratio(...)`
+  与 `ComponentTraits<AspectRatio>`。
+- `Resizable`：双栏比例驱动可调分割容器（`first_child` / `second_child`，内部分隔条 `Handle` 封装于
+  `widget/resizable.cpp`，不暴露 `internal/` 头；不新增主题配方，直接复用语义色），支持拖拽、双击重置、
+  键盘方向键/Home/End 与 `Role::slider` 无障碍动作；提供 `ui.resizable(...)` / `authoring::resizable(...)`
+  与 `ComponentTraits<Resizable>`（含 `Signal<float>` 双向绑定）；收录入 `showcase/component_catalog.hpp`
+  （公开组件数 46）。契约见 [D6 §20](authoring_dsl_and_content_measurement.md#20-批-9aspectratio-与-resizable-容器2026-11-23)；
+  打包 SDK consumer 静态/共享 SDL3 均运行 `aspect-ratio-api=1` 与 `resizable-api=1` 探针。
+
 ## 5. 破坏性变更的记录方式
 
 图片批同时有两处**破坏性 API 变更**，都要登记：
@@ -567,8 +582,8 @@ TreeView 用例与 SDK consumer 的 `tree-api=1` 探针覆盖。
 - 迁移说明只表达一件事：原来由自定义平台 override 提供的解码器，改为应用服务注入；
 - 库内实现、测试替身、下游样例一次改完，要求重新编译。
 
-退役后清单为 182 个头文件，其中 10 个 internal（清单随后续批次增长，当前为 215 个头文件：
-**199 experimental + 16 internal**。九个数据视图头均已位于正式 `widget/` 路径；`item_host`
+退役后清单为 182 个头文件，其中 10 个 internal（清单随后续批次增长，当前为 218 个头文件：
+**202 experimental + 16 internal**。九个数据视图头均已位于正式 `widget/` 路径；`item_host`
 保持 internal；`anchored_positioner.hpp` 与 `uniform_row_window.hpp` 因被实验性公共头内联包含
 而登记为 experimental）。生成模板归 NandinaCLI；
 框架维护 [`sdk_app` 消费 fixture](../../tests/fixtures/sdk_app/README.md)，不维护第二份模板。

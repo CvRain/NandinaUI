@@ -17,9 +17,11 @@
 #include "../theme/theme.hpp"
 #include "../theme/visual_state.hpp"
 #include "animation_authoring.hpp"
+#include "aspect_ratio.hpp"
 #include "grid.hpp"
 #include "image.hpp"
 #include "layout.hpp"
+#include "resizable.hpp"
 #include "scroll_view.hpp"
 #include "surface.hpp"
 #include "visual_property.hpp"
@@ -290,6 +292,112 @@ namespace nandina::widget::authoring
             }
         auto on_change(Handler&& handler) -> NodeBuilder& {
             node_->set_on_change(guarded(std::forward<Handler>(handler)));
+            return *this;
+        }
+
+        template<typename Handler>
+            requires requires(Node& node, Handler&& handler) {
+                node.set_on_ratio_changed(std::forward<Handler>(handler));
+            }
+        auto on_ratio_changed(Handler&& handler) -> NodeBuilder& {
+            node_->set_on_ratio_changed(guarded(std::forward<Handler>(handler)));
+            return *this;
+        }
+
+        auto ratio(float value) -> NodeBuilder&
+            requires requires(Node& node) { node.set_ratio(value); }
+        {
+            node_->set_ratio(value);
+            return *this;
+        }
+
+        auto default_ratio(float value) -> NodeBuilder&
+            requires requires(Node& node) { node.set_default_ratio(value); }
+        {
+            node_->set_default_ratio(value);
+            return *this;
+        }
+
+        auto min_first_extent(float extent) -> NodeBuilder&
+            requires requires(Node& node) { node.set_min_first_extent(extent); }
+        {
+            node_->set_min_first_extent(extent);
+            return *this;
+        }
+
+        auto min_second_extent(float extent) -> NodeBuilder&
+            requires requires(Node& node) { node.set_min_second_extent(extent); }
+        {
+            node_->set_min_second_extent(extent);
+            return *this;
+        }
+
+        auto min_panes_extent(float first_extent, float second_extent) -> NodeBuilder&
+            requires requires(Node& node) {
+                node.set_min_panes_extent(first_extent, second_extent);
+            }
+        {
+            node_->set_min_panes_extent(first_extent, second_extent);
+            return *this;
+        }
+
+        auto handle_thickness(float thickness) -> NodeBuilder&
+            requires requires(Node& node) { node.set_handle_thickness(thickness); }
+        {
+            node_->set_handle_thickness(thickness);
+            return *this;
+        }
+
+        auto keyboard_step(float step) -> NodeBuilder&
+            requires requires(Node& node) { node.set_keyboard_step(step); }
+        {
+            node_->set_keyboard_step(step);
+            return *this;
+        }
+
+        auto reset_on_double_click(bool enabled) -> NodeBuilder&
+            requires requires(Node& node) { node.set_reset_on_double_click(enabled); }
+        {
+            node_->set_reset_on_double_click(enabled);
+            return *this;
+        }
+
+        auto alignment(LayoutAlignment value) -> NodeBuilder&
+            requires requires(Node& node) { node.set_alignment(value); }
+        {
+            node_->set_alignment(value);
+            return *this;
+        }
+
+        auto axis(LayoutAxis value) -> NodeBuilder&
+            requires requires(Node& node) { node.set_axis(value); }
+        {
+            node_->set_axis(value);
+            return *this;
+        }
+
+        auto disabled(bool value) -> NodeBuilder&
+            requires requires(Node& node) { node.set_disabled(value); }
+        {
+            node_->set_disabled(value);
+            return *this;
+        }
+
+        template<typename Child>
+            requires requires(Node& node, Child&& child) {
+                node.set_first_child(detail::materialize(std::forward<Child>(child)));
+            }
+        auto first_child(Child&& child) -> NodeBuilder& {
+            node_->set_first_child(detail::materialize(std::forward<Child>(child)));
+            return *this;
+        }
+
+        template<typename Child>
+            requires requires(Node& node, Child&& child) {
+                node.set_second_child(detail::materialize(std::forward<Child>(child)));
+            }
+        auto second_child(Child&& child) -> NodeBuilder& {
+            node_->set_second_child(detail::materialize(std::forward<Child>(child)));
             return *this;
         }
 
@@ -1017,6 +1125,51 @@ namespace nandina::widget::authoring
         requires(sizeof...(Child) > 0) && (detail::AddableChild<Stack, Child> && ...)
     [[nodiscard]] inline auto stack(Child&&... children) -> NodeBuilder<Stack> {
         return stack().children(std::forward<Child>(children)...);
+    }
+
+    [[nodiscard]] inline auto
+    aspect_ratio(float ratio = 1.0F, LayoutAlignment alignment = LayoutAlignment::center)
+        -> NodeBuilder<AspectRatio> {
+        return make<AspectRatio>(ratio, alignment);
+    }
+
+    template<typename Child>
+        requires detail::SettableChild<AspectRatio, Child>
+    [[nodiscard]] inline auto aspect_ratio(Child&& child) -> NodeBuilder<AspectRatio> {
+        return aspect_ratio().child(std::forward<Child>(child));
+    }
+
+    template<typename Child>
+        requires detail::SettableChild<AspectRatio, Child>
+    [[nodiscard]] inline auto aspect_ratio(float ratio, Child&& child) -> NodeBuilder<AspectRatio> {
+        return aspect_ratio(ratio).child(std::forward<Child>(child));
+    }
+
+    template<typename Child>
+        requires detail::SettableChild<AspectRatio, Child>
+    [[nodiscard]] inline auto aspect_ratio(float ratio, LayoutAlignment alignment, Child&& child)
+        -> NodeBuilder<AspectRatio> {
+        return aspect_ratio(ratio, alignment).child(std::forward<Child>(child));
+    }
+
+    [[nodiscard]] inline auto resizable(
+        LayoutAxis axis = LayoutAxis::horizontal,
+        theme::NanTheme theme = theme::default_theme()
+    ) -> NodeBuilder<Resizable> {
+        return make<Resizable>(axis, std::move(theme));
+    }
+
+    template<typename First, typename Second>
+        requires detail::AddableChild<Resizable, First> && detail::AddableChild<Resizable, Second>
+    [[nodiscard]] inline auto resizable(First&& first, Second&& second) -> NodeBuilder<Resizable> {
+        return resizable().children(std::forward<First>(first), std::forward<Second>(second));
+    }
+
+    template<typename First, typename Second>
+        requires detail::AddableChild<Resizable, First> && detail::AddableChild<Resizable, Second>
+    [[nodiscard]] inline auto resizable(LayoutAxis axis, First&& first, Second&& second)
+        -> NodeBuilder<Resizable> {
+        return resizable(axis).children(std::forward<First>(first), std::forward<Second>(second));
     }
 
 } // namespace nandina::widget::authoring

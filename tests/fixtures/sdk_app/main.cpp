@@ -215,6 +215,30 @@ namespace
             && sheet->title() == "Drawer" && sheet->extent() == 280.0F
             && sheet->content() == body.get();
     }
+
+    auto aspect_ratio_api_works(nandina::app::NanApplication& application) -> bool {
+        nandina::reactive::ReactiveScope scope {application.graph()};
+        nandina::widget::BuildContext ui {application.graph(), scope, application.theme_manager()};
+        auto inner = ui.make<nandina::widget::Label>("16:9").build();
+        auto box = ui.aspect_ratio(16.0F / 9.0F, inner).build();
+        nandina::scene::NanSceneTree tree;
+        tree.set_root(box);
+        (void)tree.layout_root(nandina::foundation::NanSize(320.0F, 320.0F));
+        return box->child() == inner.get() && inner->width() == 320.0F && inner->height() == 180.0F;
+    }
+
+    auto resizable_api_works(nandina::app::NanApplication& application) -> bool {
+        nandina::reactive::ReactiveScope scope {application.graph()};
+        nandina::widget::BuildContext ui {application.graph(), scope, application.theme_manager()};
+        auto left = ui.make<nandina::widget::Label>("left").build();
+        auto right = ui.make<nandina::widget::Label>("right").build();
+        auto split = ui.resizable(left, right).handle_thickness(8.0F).ratio(0.25F).build();
+        nandina::scene::NanSceneTree tree;
+        tree.set_root(split);
+        (void)tree.layout_root(nandina::foundation::NanSize(408.0F, 200.0F));
+        return split->first_child() == left.get() && split->second_child() == right.get()
+            && left->width() == 100.0F && right->width() == 300.0F;
+    }
 } // namespace
 
 int main() {
@@ -230,10 +254,12 @@ int main() {
     const bool tree_api = tree_api_works(application);
     const bool accordion_api = accordion_api_works(application);
     const bool sheet_api = sheet_api_works(application);
+    const bool aspect_ratio_api = aspect_ratio_api_works(application);
+    const bool resizable_api = resizable_api_works(application);
     const auto version = SDL_GetVersion();
     std::printf(
         "backend=%.*s sdl=%d.%d.%d decoder=%d data-api=%d list-api=%d tree-api=%d "
-        "accordion-api=%d sheet-api=%d\n",
+        "accordion-api=%d sheet-api=%d aspect-ratio-api=%d resizable-api=%d\n",
         static_cast<int>(backend.size()),
         backend.data(),
         SDL_VERSIONNUM_MAJOR(version),
@@ -244,10 +270,12 @@ int main() {
         list_api,
         tree_api,
         accordion_api,
-        sheet_api
+        sheet_api,
+        aspect_ratio_api,
+        resizable_api
     );
     return backend == "sdl3" && decoder != nullptr && data_api && list_api && tree_api
-            && accordion_api && sheet_api
+            && accordion_api && sheet_api && aspect_ratio_api && resizable_api
         ? 0
         : 1;
 }

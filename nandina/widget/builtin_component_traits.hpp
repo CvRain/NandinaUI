@@ -8,6 +8,7 @@
 #include "accordion.hpp"
 #include "alert.hpp"
 #include "alert_dialog.hpp"
+#include "aspect_ratio.hpp"
 #include "avatar.hpp"
 #include "badge.hpp"
 #include "breadcrumb.hpp"
@@ -37,6 +38,7 @@
 #include "progress_bar.hpp"
 #include "radio_button.hpp"
 #include "radio_group.hpp"
+#include "resizable.hpp"
 #include "select.hpp"
 #include "sheet.hpp"
 #include "skeleton.hpp"
@@ -809,6 +811,70 @@ namespace nandina::widget
             ui.connect(control->page_changed(), [&current_page](const int page) {
                 if (current_page.peek() != page) {
                     current_page.set(page);
+                }
+            });
+            return result;
+        }
+    };
+
+    template<>
+    struct ComponentTraits<AspectRatio> {
+        [[nodiscard]] static auto make(
+            const BuildContext&,
+            const float ratio = 1.0F,
+            const LayoutAlignment alignment = LayoutAlignment::center
+        ) -> authoring::NodeBuilder<AspectRatio> {
+            return authoring::make<AspectRatio>(ratio, alignment);
+        }
+
+        [[nodiscard]] static auto
+        make(const BuildContext& ui, const float ratio, std::shared_ptr<scene::NanControl> child)
+            -> authoring::NodeBuilder<AspectRatio> {
+            auto builder = make(ui, ratio);
+            if (child) {
+                (void)builder.child(std::move(child));
+            }
+            return builder;
+        }
+    };
+
+    template<>
+    struct ComponentTraits<Resizable> {
+        [[nodiscard]] static auto
+        make(const BuildContext& ui, const LayoutAxis axis = LayoutAxis::horizontal)
+            -> authoring::NodeBuilder<Resizable> {
+            return authoring::make<Resizable>(axis, ui.theme());
+        }
+
+        [[nodiscard]] static auto make(
+            const BuildContext& ui,
+            const LayoutAxis axis,
+            std::shared_ptr<scene::NanControl> first,
+            std::shared_ptr<scene::NanControl> second = nullptr
+        ) -> authoring::NodeBuilder<Resizable> {
+            return make(ui, axis).configure([first = std::move(first),
+                                             second =
+                                                 std::move(second)](Resizable& resizable) mutable {
+                if (first) {
+                    (void)resizable.set_first_child(std::move(first));
+                }
+                if (second) {
+                    (void)resizable.set_second_child(std::move(second));
+                }
+            });
+        }
+
+        [[nodiscard]] static auto make(
+            const BuildContext& ui,
+            reactive::Signal<float>& ratio,
+            const LayoutAxis axis = LayoutAxis::horizontal
+        ) -> authoring::NodeBuilder<Resizable> {
+            auto result = make(ui, axis).ratio(ratio.get());
+            const auto control = result.build();
+            ui.bind(control, &Resizable::set_ratio, ratio);
+            ui.connect(control->ratio_changed(), [&ratio](const float next) {
+                if (std::abs(ratio.peek() - next) > foundation::nan_epsilon) {
+                    ratio.set(next);
                 }
             });
             return result;

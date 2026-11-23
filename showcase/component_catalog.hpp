@@ -27,6 +27,8 @@ namespace nandina::showcase
         empty_state,
         collapsible,
         accordion,
+        aspect_ratio,
+        resizable,
         table,
         data_table,
         list_view,
@@ -147,6 +149,20 @@ namespace nandina::showcase
             ComponentCategory::content,
             "Accordion",
             "协调多个保留内容的折叠区段与展开状态",
+            true
+        },
+        ComponentInfo {
+            ComponentId::aspect_ratio,
+            ComponentCategory::content,
+            "AspectRatio",
+            "在父约束内按固定宽高比测量并布局单个子控件",
+            true
+        },
+        ComponentInfo {
+            ComponentId::resizable,
+            ComponentCategory::content,
+            "Resizable",
+            "通过可拖拽与键盘可调分隔条分配双栏容器空间",
             true
         },
         ComponentInfo {
