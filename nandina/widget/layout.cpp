@@ -1111,6 +1111,18 @@ namespace nandina::widget
     }
 
     auto Expanded::on_measure(foundation::NanLayoutConstraints constraints) -> foundation::NanSize {
+        const bool tight_w = std::isfinite(constraints.max_width)
+            && std::abs(constraints.min_width - constraints.max_width) <= foundation::nan_epsilon;
+        const bool tight_h = std::isfinite(constraints.max_height)
+            && std::abs(constraints.min_height - constraints.max_height) <= foundation::nan_epsilon;
+        if (tight_w && tight_h) {
+            return constraints.constrain(
+                foundation::NanSize(
+                    std::max(0.0F, constraints.max_width),
+                    std::max(0.0F, constraints.max_height)
+                )
+            );
+        }
         auto child = child_.lock();
         if (!child) {
             return constraints.constrain(foundation::NanSize::zero());

@@ -399,6 +399,38 @@ namespace nandina::app
                                      : screen_pos;
         };
 
+        // 合并同帧内相邻的 MouseMoveEvent（保留与其他事件类型的严格相对顺序）：
+        // 高回报率鼠标在一帧内可能产生 10+ 条连续移动，合批后只派发最终坐标与累计位移。
+        std::size_t coalesced_count = 0;
+        for (std::size_t read = 0; read < frame_input_.events.size(); ++read) {
+            if (coalesced_count > 0
+                && std::holds_alternative<scene::MouseMoveEvent>(
+                    frame_input_.events[coalesced_count - 1]
+                )
+                && std::holds_alternative<scene::MouseMoveEvent>(frame_input_.events[read]))
+            {
+                const auto& prev =
+                    std::get<scene::MouseMoveEvent>(frame_input_.events[coalesced_count - 1]);
+                const auto& next = std::get<scene::MouseMoveEvent>(frame_input_.events[read]);
+                frame_input_.events[coalesced_count - 1] = scene::MouseMoveEvent {
+                    next.screen_pos(),
+                    foundation::NanPoint {
+                        prev.delta().get_x() + next.delta().get_x(),
+                        prev.delta().get_y() + next.delta().get_y(),
+                    },
+                };
+                continue;
+            }
+            if (coalesced_count != read) {
+                frame_input_.events[coalesced_count] = std::move(frame_input_.events[read]);
+            }
+            ++coalesced_count;
+        }
+        frame_input_.events.erase(
+            frame_input_.events.begin() + static_cast<std::ptrdiff_t>(coalesced_count),
+            frame_input_.events.end()
+        );
+
         for (const auto& frame_event: frame_input_.events) {
             std::visit(
                 [this, &to_logical](const auto& screen_ev) {

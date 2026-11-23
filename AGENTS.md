@@ -25,76 +25,37 @@ application shell. Version `0.1.0-alpha.1`.
 - **Data-view contract (§9 v3.1, `data_components_and_virtualization.md`)**: non-template
   `DataTable` / `ListView` / `TreeView` over `IRowModel` + `DataTableColumn` +
   `IItemDelegate` + explicit selection; `ForEach` stays as the declarative full-list region.
-  Batches 1A/1B/2A/2B/3a/3b①/3b②/3b③/4/5 committed. **Batch 6 implemented and verified**:
-  legacy `VirtualListView` retired (`virtual_list_view.hpp` + dedicated tests removed);
-  `TreeView` v1 added (`ITreeModel : IRowModel`, view-owned expansion, uniform-row
-  virtualization, `SelectionModel<RowId>`, `ItemState` depth/has_children/expanded,
-  framework-drawn expander; contract §10). Verification: `tree-view` 23 cases/152
-  assertions; `list-view` 17/82; `data-table-3a` 20/397; `data-public-api` 4/22;
-  `authoring` 38/197, `[authoring][region]` 1/16. Operator desktop record: unit 119/119
-  and full suite 142/142; current headless recheck: unit 118 OK +1 environment skip, full
-  suite 139 OK +3 environment skips (`sdf-device`/`sdf-state-probe`/`window-lifecycle`),
-  ASan 117 OK +1 skip, no-RTTI 118 OK +1 skip, no-SQLite 114 OK +1 skip, pure tools 8/8,
-  `release_check --ci` 8/8.
-- **Batch 7 (Accordion) implemented and verified**: composes `Collapsible` sections
-  (`AccordionSection` id/title/content/disabled); single/multiple open state (single allows
-  empty), view-owned state, Up/Down/Home/End focus roaming (skips disabled), transactional
-  `set_sections` retaining same-id open state; `focus_section()` for the narrow trigger-focus
-  path; no new recipe (`Surface`/`Divider` compose separators). Contract
-  `disclosure_components.md` §7. Verification: `accordion` 18 cases/129 assertions.
-  Operator desktop record: unit 120/120, full suite 143/143, no-RTTI 120/120. Current
-  headless recheck: unit 119 OK +1 environment skip, full suite 140 OK +3 environment
-  skips (`sdf-device`/`sdf-state-probe`/`window-lifecycle`), ASan 118 OK +1 skip,
-  no-RTTI 119 OK +1 skip, no-SQLite 115 OK +1 skip, pure tools 8/8,
-  `release_check --ci` 8/8 (headers 215 = 199 experimental + 16 internal, docs 97).
-- **Data-view author-ergonomics sub-batch 1 implemented and verified**: moved the 9
-  experimental data-view headers from `nandina/widget/internal/` to `nandina/widget/` (no
-  `internal/` shims; `sdk_surface.md` records the path move); `TextItemDelegate` now draws
-  themed selection fill (`accent`/`accent_foreground`) and current-cell ring (`ring`) on a
-  `Label` subclass; `DataTable` adds top-level `selection_changed()`/`set_on_selection_changed()`
-  and `sort_changed()`/`set_on_sort_changed()` with owner-release-safe dispatch across programmatic,
-  input and retain/rebuild paths; `DataTable`/`ListView`/`TreeView` gain
-  `ComponentTraits` + `showcase/component_catalog.hpp` entries (`data_components_and_virtualization.md`
-  §11). Verification: `data-table-3b2` 9 cases/117 assertions, `data-public-api` 4/22; operator
-  desktop unit 120/120, full suite 143/143, no-RTTI 120/120, ASan 118 OK +1 skip, no-SQLite
-  115 OK +1 skip, pure tools 8/8, `release_check --ci` 8/8.
-- **Layout DSL shorthand sub-batch 2 implemented and verified**: added `ui.wrap()` /
-  `authoring::wrap()`, multi-child (`row`/`column`/`stack`/`anchor_canvas`/`wrap`/`flex`/`grid`)
-  and single-child (`center`/`padding`/`surface`/`expanded`/`flex_item`/`scroll_view`) factory
-  child shorthands on `BuildContext` and `widget::authoring`, read-only `child()` accessors on
-  `Padding`/`Surface`/`Center`/`Expanded`/`FlexItem`, and `fill` (100% of parent axis) vs
-  `Expanded` (remaining main-axis space) contract notes (`authoring_dsl_and_content_measurement.md`
-  §§7, 19). Verification: `authoring` 41 cases/269 assertions, `surface` 9/92; operator desktop
-  unit 120/120, full suite 143/143, no-RTTI 120/120, ASan 118 OK +1 skip, no-SQLite 115 OK +1
-  skip, pure tools 8/8, `release_check --ci` 8/8.
-- **Batch 8 (Sheet v1) implemented and verified**: edge-docked modal drawer
-  (`nandina/widget/sheet.hpp` / `.cpp`, `SheetSide { top, right, bottom, left }` default `right`,
-  covering desktop Sheet/Drawer scenarios without a separate duplicate widget); reuses
-  `OverlayHost` (`OverlayLevel::modal`, `block_below=true` + detached in-tree fallback),
-  `DismissLayer` (`OriginResolver`), `FocusScope`, and `DialogRecipe`/`DialogRecipeRule` (flush
-  `panel.radius = 0` by default, overrideable); `header` (`set_title`/`set_description` or custom
-  `set_header`), `content` (middle remaining height), and bottom-pinned `footer` slots plus
-  `set_extent(float)`/`clear_extent()`; owner-release-safe `closed()`/`set_on_close()`;
-  `ComponentTraits<Sheet>` + `showcase/component_catalog.hpp` (`dialog_migration.md`).
-  Verification: `sheet` 11 cases/118 assertions; operator desktop unit 121/121, full suite
-  144/144, no-RTTI 121/121; headless unit 120 OK +1 skip, full suite 141 OK +3 skips, ASan 119 OK
-  +1 skip, no-RTTI 120 OK +1 skip, no-SQLite 116 OK +1 skip, pure tools 8/8, `release_check --ci`
-  8/8 (headers 216 = 200 experimental + 16 internal, docs 98).
-- **Batch 9 (AspectRatio v1 + Resizable v1) implemented and verified**:
-  `AspectRatio` (`nandina/widget/aspect_ratio.hpp` / `.cpp`, single-child container inscribing a
-  fixed `width / height` box in `on_layout()` even under tight parent slots, with `LayoutAlignment`
-  and `content_rect()`) and `Resizable` (`nandina/widget/resizable.hpp` / `.cpp`, two-pane
-  ratio-driven split container along `LayoutAxis::horizontal`/`vertical` with `min_first_extent`/
-  `min_second_extent` clamping and small-container fallback, pointer drag without initial jump,
-  double-click reset to `default_ratio`, keyboard arrow/Home/End adjustment, internal focusable
-  `Handle` child with `Role::slider` semantics and semantic token drawing without a new recipe,
-  and owner-release-safe `ratio_changed()`/`set_on_ratio_changed()`); both expose
-  `ui.aspect_ratio(...)` / `ui.resizable(...)` DSL shorthands and `ComponentTraits` +
-  `showcase/component_catalog.hpp` (`authoring_dsl_and_content_measurement.md` §20). Verification:
-  `aspect-ratio` 4 cases/53 assertions, `resizable` 7 cases/116 assertions; operator desktop unit
-  123/123, full suite 146/146, no-RTTI 123/123; headless unit 122 OK +1 skip, full suite 143 OK +3
-  skips, ASan 121 OK +1 skip, no-RTTI 122 OK +1 skip, no-SQLite 118 OK +1 skip, pure tools 8/8,
-  `release_check --ci` 8/8 (headers 218 = 202 experimental + 16 internal, docs 100).
+  Batches 1A–6 committed (`VirtualListView` retired; `TreeView` v1 with `ITreeModel`, view-owned
+  expansion, uniform-row virtualization, `SelectionModel<RowId>`, framework-drawn expander; §10).
+  Author-ergonomics sub-batch 1 committed (9 headers promoted from `widget/internal/` to
+  `widget/`, themed `TextItemDelegate` selection/current-cell painting, owner-release-safe
+  `DataTable` `selection_changed`/`sort_changed`, `ComponentTraits` + catalog entries; §11).
+- **Disclosure, DSL, overlay & layout batches committed**:
+  - **Batch 7 (Accordion)**: composes `Collapsible` sections (`disclosure_components.md` §7),
+    single/multiple open state, Up/Down/Home/End roaming, transactional `set_sections`.
+  - **Layout DSL shorthand sub-batch 2**: `ui.wrap()` / `authoring::wrap()`, multi- and
+    single-child factory shorthands, `child()` accessors on `Padding`/`Surface`/`Center`/
+    `Expanded`/`FlexItem`, `fill` vs `Expanded` notes (`authoring_dsl_and_content_measurement.md`
+    §§7, 19).
+  - **Batch 8 (Sheet v1)**: edge-docked modal drawer (`SheetSide`, `OverlayHost`/`DismissLayer`/
+    `FocusScope`/`DialogRecipe`, header/content/footer slots, `set_extent`, owner-release-safe
+    `closed`; `dialog_migration.md`).
+  - **Batch 9 (AspectRatio v1 + Resizable v1)**: `AspectRatio` (`width/height` inscription,
+    `LayoutAlignment`, `content_rect()`) and `Resizable` (ratio-driven two-pane split, min-extent
+    clamping/fallback, drag without jump, double-click reset, keyboard handle with `Role::slider`,
+    owner-release-safe `ratio_changed`), both with DSL shorthands + catalog
+    (`authoring_dsl_and_content_measurement.md` §20; `aspect-ratio` 4/53, `resizable` 8/135).
+- **Drag-resize & text-shaping optimization (committed, `text_shaping_cost.md` §13)**: (1) `NanWindow::poll_and_dispatch_input()` coalesces adjacent same-frame
+  `MouseMoveEvent`s while preserving ordering across other events; (2) `Resizable::set_ratio()`
+  defers pane layout during `FramePhase::input` and `Resizable`/`Expanded` short-circuit tight
+  two-axis `on_measure()`; (3) `Text` caches width-invariant unwrapped results, ignores
+  `min_width`/`min_height`/`max_height` in shaping keys, skips redundant same-slot copies, and
+  clears cache on backend switches; (4) `FreeTypeFontFace` caches `active_pixel_height` and
+  `HarfBuzzTextLayoutBackend` reuses `scratch_buffer`, tracks per-slot `hb_ft_font_changed`,
+  fast-paths single-codepoint fallback (`single_cp_font_cache_` + `glyph_index`), uses
+  `next_grapheme_boundary()` + flat cluster vectors, and skips FriBidi for pure-LTR text.
+  `playground --resize-bench` (Debug `-O0`) pure drag overhead: +12.28 → +3.82 ms (1 move/frame,
+  3.2×), +95.64 → +3.55 ms (10 moves/frame, 26.9×); 7/7 Linux CPU page goldens PASS.
 - **Baseline counts**: 146 tests (123 unit + 23 integration), 218 headers (202 experimental +
   16 internal), 28 approved page goldens (7 pages × CPU/SDF × 2 platforms), 46 public
   components; the CPU page-golden CI gate is blocking (7 pages).

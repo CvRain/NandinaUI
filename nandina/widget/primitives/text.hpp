@@ -190,14 +190,19 @@ namespace nandina::widget::primitives
             text::TextStyle style;
             foundation::NanLayoutConstraints constraints;
             text::TextLayoutResult result;
+            float natural_width = 0.0F;
+            float natural_height = 0.0F;
+            bool unwrapped = false;
+            std::uint64_t generation = 0;
         };
         static constexpr std::size_t kMetricsCacheEntries = 8;
         /// 单个 Text 节点允许的缓存字节上限；超过它的结果只保留一条。
         static constexpr std::size_t kMetricsCacheByteBudget = 64 * 1024;
 
         [[nodiscard]] auto find_metrics_cache(const text::TextLayoutInput& input) const
-            -> const text::TextLayoutResult*;
-        void store_metrics_cache(const text::TextLayoutInput& input, text::TextLayoutResult result);
+            -> std::optional<std::size_t>;
+        auto store_metrics_cache(const text::TextLayoutInput& input, text::TextLayoutResult result)
+            -> std::size_t;
         /// 后端换了（resolve_font / set_text_pipeline）就必须清：后端不在键里。
         void clear_metrics_cache() noexcept;
 
@@ -209,6 +214,9 @@ namespace nandina::widget::primitives
         std::size_t metrics_cache_used_ = 0;
         std::size_t metrics_cache_next_ = 0;
         std::size_t metrics_cache_bytes_ = 0;
+        std::size_t active_cache_slot_ = kMetricsCacheEntries;
+        std::uint64_t active_cache_generation_ = 0;
+        std::uint64_t metrics_cache_generation_ = 0;
         long metrics_cache_hits_ = 0;
         long metrics_cache_misses_ = 0;
 

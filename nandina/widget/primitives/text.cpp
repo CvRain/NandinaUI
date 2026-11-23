@@ -305,8 +305,12 @@ namespace nandina::widget::primitives
         if (pipeline_explicit_) {
             return;
         }
+        const bool backend_changed = backend_ != pipeline.backend;
         backend_ = pipeline.backend;
         renderer_ = pipeline.renderer;
+        if (backend_changed) {
+            clear_metrics_cache();
+        }
         mark_layout_dirty();
         update_metrics(last_layout_constraints());
     }
@@ -344,8 +348,12 @@ namespace nandina::widget::primitives
     }
 
     void Text::set_layout_backend(const text::ITextLayoutBackend& backend) {
+        const bool backend_changed = backend_ != &backend;
         backend_ = &backend;
         pipeline_explicit_ = true;
+        if (backend_changed) {
+            clear_metrics_cache();
+        }
         mark_layout_dirty();
         update_metrics(last_layout_constraints());
     }
@@ -541,16 +549,29 @@ namespace nandina::widget::primitives
     }
 
     auto Text::find_metrics_cache(const text::TextLayoutInput& input) const
-        -> const text::TextLayoutResult* {
+        -> std::optional<std::size_t> {
+        std::optional<std::size_t> width_invariant_match;
         for (std::size_t index = 0; index < metrics_cache_used_; ++index) {
             const auto& entry = metrics_cache_[index];
-            if (entry.text == input.text && same_layout_style(entry.style, input.style)
-                && same_layout_constraints(entry.constraints, input.constraints))
-            {
-                return &entry.result;
+            if (entry.text != input.text || !same_layout_style(entry.style, input.style)) {
+                continue;
+            }
+            if (same_layout_constraints(entry.constraints, input.constraints)) {
+                return index;
+            }
+            // 后端整形与断行只依赖 max_width，不依赖 min_width/min_height/max_height；
+            // 且当文本未换行、未溢出且自然宽度远小于新 max_width 时，结果与宽上限无关。
+            const bool same_max_w = entry.constraints.max_width == input.constraints.max_width;
+            const bool fits_unwrapped = entry.unwrapped
+                && (!std::isfinite(input.constraints.max_width)
+                    || entry.natural_width + 1.0F <= input.constraints.max_width);
+            if (same_max_w || fits_unwrapped) {
+                if (!width_invariant_match.has_value() || index == active_cache_slot_) {
+                    width_invariant_match = index;
+                }
             }
         }
-        return nullptr;
+        return width_invariant_match;
     }
 
     auto Text::metrics_entry_bytes(std::string_view text, const text::TextLayoutResult& result)
@@ -564,8 +585,21 @@ namespace nandina::widget::primitives
         return bytes;
     }
 
-    void
-    Text::store_metrics_cache(const text::TextLayoutInput& input, text::TextLayoutResult result) {
+    auto
+    Text::store_metrics_cache(const text::TextLayoutInput& input, text::TextLayoutResult result)
+        -> std::size_t {
+        float natural_width = 0.0F;
+        float natural_height = 0.0F;
+        for (const auto& line: result.lines) {
+            natural_width = std::max(natural_width, line.size.get_width());
+            natural_height += line.size.get_height();
+        }
+        const auto newline_count = static_cast<std::size_t>(std::ranges::count(input.text, '\n'));
+        const bool unwrapped = !result.overflowed && result.lines.size() == newline_count + 1
+            && (!std::isfinite(input.constraints.max_width)
+                || natural_width + 1.0F <= input.constraints.max_width);
+        const std::uint64_t generation = ++metrics_cache_generation_;
+
         const auto bytes = metrics_entry_bytes(input.text, result);
         if (bytes > kMetricsCacheByteBudget) {
             // 大结果：只留这一条，避免 8 份长文本排版结果同时驻留。
@@ -575,32 +609,48 @@ namespace nandina::widget::primitives
             entry.style = input.style;
             entry.constraints = input.constraints;
             entry.result = std::move(result);
+            entry.natural_width = natural_width;
+            entry.natural_height = natural_height;
+            entry.unwrapped = unwrapped;
+            entry.generation = generation;
             metrics_cache_used_ = 1;
             metrics_cache_next_ = 1 % kMetricsCacheEntries;
             metrics_cache_bytes_ = bytes;
-            return;
+            return 0;
         }
 
-        auto& entry = metrics_cache_[metrics_cache_next_];
+        const std::size_t slot = metrics_cache_next_;
+        auto& entry = metrics_cache_[slot];
         metrics_cache_bytes_ -=
             std::min(metrics_cache_bytes_, metrics_entry_bytes(entry.text, entry.result));
         entry.text = std::string(input.text);
         entry.style = input.style;
         entry.constraints = input.constraints;
         entry.result = std::move(result);
+        entry.natural_width = natural_width;
+        entry.natural_height = natural_height;
+        entry.unwrapped = unwrapped;
+        entry.generation = generation;
         metrics_cache_bytes_ += bytes;
         metrics_cache_next_ = (metrics_cache_next_ + 1) % kMetricsCacheEntries;
         metrics_cache_used_ = std::min(metrics_cache_used_ + 1, kMetricsCacheEntries);
+        return slot;
     }
 
     void Text::clear_metrics_cache() noexcept {
         for (auto& entry: metrics_cache_) {
             entry.text.clear();
             entry.result = {};
+            entry.natural_width = 0.0F;
+            entry.natural_height = 0.0F;
+            entry.unwrapped = false;
+            entry.generation = 0;
         }
         metrics_cache_used_ = 0;
         metrics_cache_next_ = 0;
         metrics_cache_bytes_ = 0;
+        active_cache_slot_ = kMetricsCacheEntries;
+        active_cache_generation_ = 0;
     }
 
     auto Text::metrics_cache_hits() const noexcept -> long {
@@ -619,16 +669,31 @@ namespace nandina::widget::primitives
             .style = std::move(presentation_style),
             .constraints = constraints,
         };
-        if (const auto* cached = find_metrics_cache(input); cached != nullptr) {
+        if (const auto hit_index = find_metrics_cache(input); hit_index.has_value()) {
             ++metrics_cache_hits_;
-            // 命中：直接复用上次的排版结果，跳过整形（比拷贝结果贵两个数量级）。
-            layout_ = *cached;
+            const auto& entry = metrics_cache_[*hit_index];
+            // 当前 layout_ 若已持有同一缓存槽位的结果，直接更新尺寸即可，避免重复拷贝 glyph/caret 数组。
+            if (active_cache_slot_ != *hit_index || active_cache_generation_ != entry.generation) {
+                layout_ = entry.result;
+                active_cache_slot_ = *hit_index;
+                active_cache_generation_ = entry.generation;
+            }
+            if (same_layout_constraints(entry.constraints, input.constraints)) {
+                layout_.size = entry.result.size;
+            }
+            else {
+                layout_.size = constraints.constrain(
+                    foundation::NanSize(entry.natural_width, entry.natural_height)
+                );
+            }
         }
         else {
             ++metrics_cache_misses_;
             auto result = backend_->layout(input);
             layout_ = result;
-            store_metrics_cache(input, std::move(result));
+            const std::size_t slot = store_metrics_cache(input, std::move(result));
+            active_cache_slot_ = slot;
+            active_cache_generation_ = metrics_cache_[slot].generation;
         }
         // 节点尺寸必须等于本次 measure 契约报告的值：整形结果的原始尺寸要**先收敛到约束内**
         // 再写入。否则在紧约束（fill / percent 宽度）配 wrap 的情况下，size_ 记录的是最长行的

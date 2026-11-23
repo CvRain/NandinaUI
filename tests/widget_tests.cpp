@@ -3161,6 +3161,53 @@ TEST_CASE("Text memoizes layout for identical inputs", "[widget][text][cache]") 
     REQUIRE(other.calls == after_switch);
 }
 
+TEST_CASE(
+    "Text reuses cached shaping across min/height changes, wider unwrapped widths and backend switches",
+    "[widget][text][cache]"
+) {
+    FixedTextLayoutBackend backend;
+    auto text = std::make_shared<widget::primitives::Text>("short", backend);
+
+    (void)text->measure_layout(
+        foundation::NanLayoutConstraints {.min_width = 0.0F, .max_width = 300.0F}
+    );
+    const int calls_after_initial = backend.calls;
+    REQUIRE(calls_after_initial >= 1);
+
+    // Changing only min_width / min_height / max_height reuses the cached shaping result.
+    (void)text->measure_layout(
+        foundation::NanLayoutConstraints::tight(foundation::NanSize(300.0F, 40.0F))
+    );
+    CHECK(backend.calls == calls_after_initial);
+    CHECK(text->width() == Catch::Approx(300.0F));
+    CHECK(text->height() == Catch::Approx(40.0F));
+
+    // Varying max_width while the unwrapped text (42 DIP) still fits reuses cached shaping.
+    for (const float w: {299.0F, 240.0F, 180.0F, 100.0F, 50.0F}) {
+        (void)text->measure_layout(
+            foundation::NanLayoutConstraints {.min_width = 0.0F, .max_width = w}
+        );
+        CHECK(text->width() == Catch::Approx(42.0F));
+    }
+    CHECK(backend.calls == calls_after_initial);
+
+    // Narrowing max_width below natural width + 1 DIP must re-shape.
+    (void)text->measure_layout(
+        foundation::NanLayoutConstraints {.min_width = 0.0F, .max_width = 30.0F}
+    );
+    CHECK(backend.calls == calls_after_initial + 1);
+
+    // set_layout_backend and apply_default_text_pipeline must invalidate stale backend cache.
+    FixedTextLayoutBackend second_backend;
+    text->set_layout_backend(second_backend);
+    const int second_calls = second_backend.calls;
+    REQUIRE(second_calls >= 1);
+    (void)text->measure_layout(
+        foundation::NanLayoutConstraints {.min_width = 0.0F, .max_width = 300.0F}
+    );
+    CHECK(second_backend.calls >= second_calls);
+}
+
 TEST_CASE("Text keeps a large layout correct while caching", "[widget][text][cache]") {
     // 大结果只留一条（字节预算）：无论命中与否，尺寸都必须与后端报告的一致。
     FixedTextLayoutBackend backend;

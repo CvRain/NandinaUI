@@ -344,3 +344,40 @@ meson compile -C buildDir text_performance_benchmark
 
 结论：CI 不再用墙钟断言做性能门禁；benchmark 是发布前/手工回归检查，
 不声称存在稳定的 CI 性能门禁。GPU/SDF 与页面性能仍按既有约定留在本地/release 检查。
+
+## 13. 拖拽分栏（Resizable）与文本整形热路径响应性优化（2026-11-23）
+
+### 13.1 现象与四层乘法根因
+
+在包含 `TreeView` + `ListView` + `DataTable` + `Accordion` 的多栏数据工作台（`playground` `data` 页）中拖拽外层 `Resizable` 横向分隔柄时，桌面交互帧率骤降至约 20 FPS。复现排查定位到四层叠加瓶颈：
+
+1. **同帧高频 `MouseMoveEvent` 未合批**：`NanWindow::poll_and_dispatch_input()` 将一帧内来自高回报率鼠标的 10+ 条相邻移动事件逐条派发。
+2. **输入期同步重排 + 双轴紧约束递归重测**：`Resizable::set_ratio()` 在 `FramePhase::input` 内每收到一次移动事件就立即执行一次 `layout_panes()`，同时 `mark_layout_dirty()` 在帧末 `layout_root()` 又再重排一次（10 次移动触发 11 次全子树重排）；嵌套 `Resizable` 与 `Expanded` 在双轴紧约束下 `on_measure()` 仍递归重测子项，引发 `2^depth` 倍增测量。
+3. **`Text` 指标缓存对无关约束过严**：`Text::find_metrics_cache()` 原先要求 `(min_width, max_width, min_height, max_height)` 四元组完全相等，导致 measure 与 layout 之间每帧必然失配，拖拽每变动 1 px 宽度即使短文本完全不换行也会全部重整形；同时 `set_layout_backend()` / `apply_default_text_pipeline()` 切换后端时遗漏 `clear_metrics_cache()`。
+4. **`HarfBuzzTextLayoutBackend` 回退选字逐字整形**：存在回退字体时，`font_for_text()` 为**每一个字符/字素簇**构造新 `hb_buffer_t`、调用 `FT_Set_Pixel_Sizes` / `hb_ft_font_changed` 并完整执行一次 `hb_shape()`，且在 `shape_fallback_run()` 与 `clusters()` 中频繁分配临时容器；纯 LTR 段落（ASCII / CJK）也无条件经过 FriBidi 分配与重排。
+
+### 13.2 四层优化方案
+
+| 层级 | 文件 | 改动摘要 |
+| --- | --- | --- |
+| 输入合批 | `nandina/app/nan_window.cpp` | `poll_and_dispatch_input()` 合并同帧内相邻 `MouseMoveEvent`（保留最终 `screen_pos` 并累加 `delta`），严格保持与按下/抬起/滚轮/键盘/IME 事件的相对顺序 |
+| 延迟排版与去递归 | `nandina/widget/resizable.cpp`、`nandina/widget/layout.cpp` | `Resizable::set_ratio()` 在 `FramePhase::input` 中仅 O(1) 刷新 `last_geometry_` 并标脏，由帧末 `layout_root()` 统一排版一次（树外与非输入期维持即时落位）；`Resizable::on_measure()` 与 `Expanded::on_measure()` 在双轴紧约束下直接返回约束尺寸，消除嵌套重测 |
+| 宽无关文本缓存 | `nandina/widget/primitives/text.hpp` / `.cpp` | `MetricsCacheEntry` 记录 `natural_width` / `natural_height` / `unwrapped` / `generation`；匹配时忽略仅作用于最终 `constrain()` 的 `min_width`/`min_height`/`max_height`，并对未换行且自然宽 + 1 px ≤ 新 `max_width` 的条目直接复用，同槽命中跳过 glyph/caret 向量拷贝；补齐 `set_layout_backend()` 与 `apply_default_text_pipeline()` 的缓存清理 |
+| FreeType / HarfBuzz 热路径 | `nandina/text/freetype_font_face.cpp`、`nandina/text/harfbuzz_text_backend.cpp` | `FreeTypeFontFace` 缓存 `active_pixel_height` 避免重复 `FT_Set_Pixel_Sizes`；`HarfBuzzTextLayoutBackend` 复用持久 `scratch_buffer`、按槽位 `last_pixel_height` 延迟调用 `hb_ft_font_changed`、单码点簇走内联 UTF-8 解码 + 4096 上限 `single_cp_font_cache_` + `glyph_index()` 快速选字（多码点 ZWJ/变体选择符/组合标记保持完整整形优选）、`shape_fallback_run()` 改用零分配 `next_grapheme_boundary()`、`clusters()` 改用扁平排序 `std::vector` 替代 `std::map`、纯 LTR 段落跳过 FriBidi |
+
+### 13.3 实测数据与回归验证
+
+使用 `playground --resize-bench`（Debug `-O0`，`1240×940`，`SDL_VIDEODRIVER=dummy` 软件光栅化基线约 13.5–13.7 ms/帧）在优化前后对比：
+
+| 场景 | 优化前（总耗时 / 纯拖拽增量） | 优化后（总耗时 / 纯拖拽增量） | 拖拽增量加速 |
+| --- | --- | --- | --- |
+| `steady-idle`（0 次移动/帧） | 13.47 ms/帧 | 13.62 ms/帧（3 次均值） | 基线持平 |
+| `drag-1-move-per-frame`（1 次/帧，+15 px） | 25.75 ms（+12.28 ms） | 17.44 ms（+3.82 ms） | **3.2×** |
+| `drag-10-moves-per-frame`（10 次/帧，模拟高回报率鼠标） | 109.11 ms（+95.64 ms） | 17.17 ms（+3.55 ms） | **26.9×** |
+
+新增确定性结构回归（不含墙钟断言，均完成红先验证）：
+
+- `[app][input][coalesce]`（`tests/window_input_tests.cpp`）：锁定同帧相邻 `MouseMoveEvent` 合并、累计 `delta` 与跨按钮事件保序（红先退化为逐条 7 事件失败）。
+- `[widget][resizable][perf]`（`tests/resizable_tests.cpp`）：锁定嵌套 `Resizable` 在 `FramePhase::input` 连续 10 次 `set_ratio()` 期间 0 次子项排版、帧末 `layout_root()` 后各仅 1 次 measure + 1 次 layout（红先退化为 23 次 measure / 11 次 layout）。
+- `[widget][text][cache]`（`tests/widget_tests.cpp`）：锁定 `min_width`/`min_height`/`max_height` 变动、未换行文本宽上限变化零额外整形，窄化触发换行与后端切换正确失效重算（红先 5 次宽变动产生 6 次多余后端调用）。
+- Linux CPU 7 页 golden 门禁（`tools/visual_golden_ci.py --renderer sdl2d`）：7/7 PASS，`deterministic=true`，所有页面文本字形无回归。

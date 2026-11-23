@@ -568,7 +568,19 @@ namespace nandina::widget
             return *this;
         }
         ratio_ = clamped;
-        layout_panes();
+        // 在窗口输入阶段只更新 O(1) 几何缓存并标脏，由本帧末尾的 layout_root() 统一排版一次；
+        // 脱离窗口或空闲态（如单测直接调用）保持立即落位，不破坏既有即时几何断言。
+        if (is_inside_tree() && get_tree()->phase() == scene::FramePhase::input) {
+            if (width() > 0.0F || height() > 0.0F) {
+                last_geometry_ = compute_split_geometry(size());
+            }
+            else {
+                last_geometry_ = {};
+            }
+        }
+        else {
+            layout_panes();
+        }
         mark_layout_dirty();
         mark_dirty(scene::DirtyFlags::paint | scene::DirtyFlags::semantics);
         handle_->mark_dirty(scene::DirtyFlags::paint | scene::DirtyFlags::semantics);
@@ -863,6 +875,19 @@ namespace nandina::widget
         const auto second = second_child_.lock();
         const bool finite_w = std::isfinite(constraints.max_width);
         const bool finite_h = std::isfinite(constraints.max_height);
+        const bool tight_w = finite_w
+            && std::abs(constraints.min_width - constraints.max_width) <= foundation::nan_epsilon;
+        const bool tight_h = finite_h
+            && std::abs(constraints.min_height - constraints.max_height) <= foundation::nan_epsilon;
+        // 双轴紧约束下自身尺寸已完全确定，跳过测量期递归，避免嵌套 Resizable 在 measure+layout 间指数级重测。
+        if (tight_w && tight_h) {
+            return constraints.constrain(
+                foundation::NanSize(
+                    std::max(0.0F, constraints.max_width),
+                    std::max(0.0F, constraints.max_height)
+                )
+            );
+        }
         const bool finite_main = horizontal ? finite_w : finite_h;
 
         const auto measure_pane = [](const std::shared_ptr<scene::NanControl>& pane,

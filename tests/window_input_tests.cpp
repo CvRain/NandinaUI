@@ -422,3 +422,97 @@ TEST_CASE(
     root.reset();
     window.close();
 }
+
+TEST_CASE(
+    "window coalesces consecutive same-frame MouseMoveEvents while preserving button ordering",
+    "[app][input][coalesce]"
+) {
+    using namespace nandina;
+    class TraceNode final: public scene::NanControl {
+    public:
+        std::vector<std::string> events;
+        std::vector<foundation::NanPoint> move_positions;
+        std::vector<foundation::NanPoint> move_deltas;
+
+        explicit TraceNode(const foundation::NanSize size): scene::NanControl(size) {}
+
+        auto on_input(scene::InputEvent& event) -> bool override {
+            if (event.type() == scene::EventType::mouse_move) {
+                const auto& move = static_cast<const scene::MouseMoveEvent&>(event);
+                events.emplace_back("move");
+                move_positions.push_back(move.screen_pos());
+                move_deltas.push_back(move.delta());
+                event.accept();
+                return true;
+            }
+            if (event.type() == scene::EventType::mouse_button) {
+                const auto& button = static_cast<const scene::MouseButtonEvent&>(event);
+                events.emplace_back(button.is_pressed() ? "press" : "release");
+                event.accept();
+                return true;
+            }
+            return false;
+        }
+    };
+
+    app::NanApplication application;
+    app::WindowConfig config;
+    config.width = 400;
+    config.height = 240;
+    config.vsync = false;
+    config.target_fps = 0;
+    config.backend = app::WindowBackend::sdl3;
+    app::NanWindow window(application, config);
+    window.open();
+
+    auto node = std::make_shared<TraceNode>(foundation::NanSize(400.0F, 240.0F));
+    window.set_content(node);
+    window.tick();
+    SDL_FlushEvents(SDL_EVENT_FIRST, SDL_EVENT_LAST);
+    node->events.clear();
+    node->move_positions.clear();
+    node->move_deltas.clear();
+
+    auto push_motion = [](const float x, const float y, const float dx, const float dy) {
+        SDL_Event motion {};
+        motion.type = SDL_EVENT_MOUSE_MOTION;
+        motion.motion.x = x;
+        motion.motion.y = y;
+        motion.motion.xrel = dx;
+        motion.motion.yrel = dy;
+        push(motion);
+    };
+    auto push_button = [](const bool down, const float x, const float y) {
+        SDL_Event button {};
+        button.type = down ? SDL_EVENT_MOUSE_BUTTON_DOWN : SDL_EVENT_MOUSE_BUTTON_UP;
+        button.button.button = SDL_BUTTON_LEFT;
+        button.button.x = x;
+        button.button.y = y;
+        push(button);
+    };
+
+    // Three back-to-back motions coalesce into a single MouseMoveEvent with summed delta.
+    push_motion(10.0F, 20.0F, 5.0F, 0.0F);
+    push_motion(20.0F, 20.0F, 10.0F, 0.0F);
+    push_motion(35.0F, 25.0F, 15.0F, 5.0F);
+    // Button press breaks coalescing; subsequent motions coalesce separately before release.
+    push_button(true, 35.0F, 25.0F);
+    push_motion(45.0F, 25.0F, 10.0F, 0.0F);
+    push_motion(60.0F, 30.0F, 15.0F, 5.0F);
+    push_button(false, 60.0F, 30.0F);
+    window.tick();
+
+    REQUIRE(node->events == std::vector<std::string> {"move", "press", "move", "release"});
+    REQUIRE(node->move_positions.size() == 2);
+    CHECK(node->move_positions[0].get_x() == Catch::Approx(35.0F));
+    CHECK(node->move_positions[0].get_y() == Catch::Approx(25.0F));
+    CHECK(node->move_deltas[0].get_x() == Catch::Approx(30.0F));
+    CHECK(node->move_deltas[0].get_y() == Catch::Approx(5.0F));
+    CHECK(node->move_positions[1].get_x() == Catch::Approx(60.0F));
+    CHECK(node->move_positions[1].get_y() == Catch::Approx(30.0F));
+    CHECK(node->move_deltas[1].get_x() == Catch::Approx(25.0F));
+    CHECK(node->move_deltas[1].get_y() == Catch::Approx(5.0F));
+
+    node.reset();
+    window.close();
+}

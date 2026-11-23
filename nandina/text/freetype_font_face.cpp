@@ -93,11 +93,14 @@ namespace nandina::text
         }
 
         void set_pixel_size(float pixel_size) const {
-            if (const auto error = FT_Set_Pixel_Sizes(face, 0, pixel_height(pixel_size));
-                error != 0)
-            {
+            const auto target = pixel_height(pixel_size);
+            if (active_pixel_height == target) {
+                return;
+            }
+            if (const auto error = FT_Set_Pixel_Sizes(face, 0, target); error != 0) {
                 throw_freetype_error("FT_Set_Pixel_Sizes", error);
             }
+            active_pixel_height = target;
         }
 
         [[nodiscard]] auto load_glyph(
@@ -123,6 +126,7 @@ namespace nandina::text
 
         FT_Library library = nullptr;
         FT_Face face = nullptr;
+        mutable FT_UInt active_pixel_height = 0;
         resource::ResourceHandle resource;
     };
 

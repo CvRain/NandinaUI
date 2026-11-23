@@ -535,3 +535,97 @@ TEST_CASE(
     );
     CHECK(ratio_sig.get() == Catch::Approx(0.55F));
 }
+
+TEST_CASE(
+    "Resizable defers pane layout during input phase and avoids tight-measure recursion",
+    "[widget][resizable][perf]"
+) {
+    class CountingPane final: public scene::NanControl {
+    public:
+        int measure_count = 0;
+        int layout_count = 0;
+
+    protected:
+        [[nodiscard]] auto on_measure(const foundation::NanLayoutConstraints constraints)
+            -> foundation::NanSize override {
+            ++measure_count;
+            return constraints.constrain(foundation::NanSize(100.0F, 100.0F));
+        }
+        auto on_layout() -> void override {
+            ++layout_count;
+        }
+    };
+
+    auto left = std::make_shared<CountingPane>();
+    auto mid_top = std::make_shared<CountingPane>();
+    auto mid_bottom = std::make_shared<CountingPane>();
+
+    auto inner = widget::Resizable::create(widget::LayoutAxis::vertical);
+    inner->set_handle_thickness(8.0F);
+    inner->set_first_child(mid_top);
+    inner->set_second_child(mid_bottom);
+
+    auto outer = widget::Resizable::create(widget::LayoutAxis::horizontal);
+    outer->set_handle_thickness(8.0F);
+    outer->set_first_child(left);
+    outer->set_second_child(inner);
+
+    scene::NanSceneTree tree;
+    tree.set_root(outer);
+    (void)tree.layout_root(foundation::NanSize(508.0F, 308.0F));
+
+    // Under tight constraints, nested Resizables must measure each leaf pane once per layout pass.
+    CHECK(left->measure_count == 1);
+    CHECK(left->layout_count == 1);
+    CHECK(mid_top->measure_count == 1);
+    CHECK(mid_top->layout_count == 1);
+    CHECK(mid_bottom->measure_count == 1);
+    CHECK(mid_bottom->layout_count == 1);
+
+    left->measure_count = 0;
+    left->layout_count = 0;
+    mid_top->measure_count = 0;
+    mid_top->layout_count = 0;
+    mid_bottom->measure_count = 0;
+    mid_bottom->layout_count = 0;
+
+    // During FramePhase::input, repeated drag moves update geometry/ratio immediately
+    // without triggering synchronous full-subtree layout_panes() on every event.
+    {
+        auto phase = tree.enter_phase(scene::FramePhase::input);
+        const auto start = outer->handle().global_bounds().get_center();
+        tree.dispatch_mouse_button(
+            scene::MouseButtonEvent(
+                scene::MouseButtonEvent::Button::left,
+                scene::MouseButtonEvent::Action::press,
+                start
+            )
+        );
+        for (int step = 1; step <= 10; ++step) {
+            tree.dispatch_mouse_move(
+                scene::MouseMoveEvent(
+                    foundation::NanPoint(
+                        start.get_x() + static_cast<float>(step) * 5.0F,
+                        start.get_y()
+                    ),
+                    foundation::NanPoint(5.0F, 0.0F)
+                )
+            );
+        }
+        CHECK(outer->effective_ratio() == Catch::Approx(0.60F));
+        CHECK(left->measure_count == 0);
+        CHECK(left->layout_count == 0);
+        CHECK(mid_top->measure_count == 0);
+        CHECK(mid_top->layout_count == 0);
+    }
+
+    // One layout_root() at frame layout phase lays out every pane exactly once.
+    REQUIRE(tree.layout_root(foundation::NanSize(508.0F, 308.0F)) == 1);
+    CHECK(left->width() == Catch::Approx(300.0F));
+    CHECK(left->measure_count == 1);
+    CHECK(left->layout_count == 1);
+    CHECK(mid_top->measure_count == 1);
+    CHECK(mid_top->layout_count == 1);
+    CHECK(mid_bottom->measure_count == 1);
+    CHECK(mid_bottom->layout_count == 1);
+}

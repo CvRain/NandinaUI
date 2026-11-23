@@ -24,6 +24,7 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -33,6 +34,72 @@ namespace nandina::text
     {
         [[nodiscard]] auto pixels(hb_position_t value) -> float {
             return static_cast<float>(value) / 64.0F;
+        }
+
+        [[nodiscard]] auto may_require_bidi(const char32_t cp) noexcept -> bool {
+            if (cp < 0x0590U) {
+                return false;
+            }
+            if (cp <= 0x08FFU) {
+                return true;
+            }
+            if (cp >= 0x3000U && cp <= 0xA4CFU) {
+                return false;
+            }
+            return (cp >= 0x200EU && cp <= 0x200FU) || (cp >= 0x202AU && cp <= 0x202EU)
+                || (cp >= 0x2066U && cp <= 0x2069U) || (cp >= 0xFB1DU && cp <= 0xFDFFU)
+                || (cp >= 0xFE70U && cp <= 0xFEFFU) || (cp >= 0x10800U && cp <= 0x10FFFU)
+                || (cp >= 0x1E800U && cp <= 0x1EFFFU);
+        }
+
+        /// Decode one UTF-8 codepoint if `text` contains exactly one valid codepoint;
+        /// returns `std::nullopt` for empty or multi-codepoint strings.
+        [[nodiscard]] auto decode_single_codepoint(const std::string_view text) noexcept
+            -> std::optional<char32_t> {
+            if (text.empty()) {
+                return std::nullopt;
+            }
+            const auto b0 = static_cast<unsigned char>(text[0]);
+            if (b0 < 0x80U) {
+                return text.size() == 1 ? std::optional<char32_t>(static_cast<char32_t>(b0))
+                                        : std::nullopt;
+            }
+            if ((b0 & 0xE0U) == 0xC0U && text.size() == 2) {
+                const auto b1 = static_cast<unsigned char>(text[1]);
+                if ((b1 & 0xC0U) != 0x80U) {
+                    return std::nullopt;
+                }
+                const auto cp = static_cast<char32_t>(((b0 & 0x1FU) << 6U) | (b1 & 0x3FU));
+                return cp >= 0x80U ? std::optional<char32_t>(cp) : std::nullopt;
+            }
+            if ((b0 & 0xF0U) == 0xE0U && text.size() == 3) {
+                const auto b1 = static_cast<unsigned char>(text[1]);
+                const auto b2 = static_cast<unsigned char>(text[2]);
+                if ((b1 & 0xC0U) != 0x80U || (b2 & 0xC0U) != 0x80U) {
+                    return std::nullopt;
+                }
+                const auto cp = static_cast<char32_t>(
+                    ((b0 & 0x0FU) << 12U) | ((b1 & 0x3FU) << 6U) | (b2 & 0x3FU)
+                );
+                return (cp >= 0x800U && (cp < 0xD800U || cp > 0xDFFFU))
+                    ? std::optional<char32_t>(cp)
+                    : std::nullopt;
+            }
+            if ((b0 & 0xF8U) == 0xF0U && text.size() == 4) {
+                const auto b1 = static_cast<unsigned char>(text[1]);
+                const auto b2 = static_cast<unsigned char>(text[2]);
+                const auto b3 = static_cast<unsigned char>(text[3]);
+                if ((b1 & 0xC0U) != 0x80U || (b2 & 0xC0U) != 0x80U || (b3 & 0xC0U) != 0x80U) {
+                    return std::nullopt;
+                }
+                const auto cp = static_cast<char32_t>(
+                    ((b0 & 0x07U) << 18U) | ((b1 & 0x3FU) << 12U) | ((b2 & 0x3FU) << 6U)
+                    | (b3 & 0x3FU)
+                );
+                return (cp >= 0x10000U && cp <= 0x10FFFFU) ? std::optional<char32_t>(cp)
+                                                           : std::nullopt;
+            }
+            return std::nullopt;
         }
     } // namespace
 
@@ -58,6 +125,7 @@ namespace nandina::text
             std::vector<FriBidiCharType> types;
             std::vector<FriBidiLevel> levels;
             FriBidiParType base_direction = FRIBIDI_PAR_LTR;
+            bool simple_ltr = false;
         };
 
         struct ClusterRange {
@@ -81,20 +149,26 @@ namespace nandina::text
         struct FontSlot {
             std::shared_ptr<FreeTypeFontFace> face;
             hb_font_t* font = nullptr;
+            mutable FT_UInt last_pixel_height = 0;
         };
 
         Impl(
             std::shared_ptr<FreeTypeFontFace> primary,
             std::vector<std::shared_ptr<FreeTypeFontFace>> fallbacks,
             std::vector<FontSynthesis> synthesis
-        ) {
+        ):
+            scratch_buffer(hb_buffer_create()) {
             if (!primary) {
+                hb_buffer_destroy(scratch_buffer);
+                scratch_buffer = nullptr;
                 throw std::invalid_argument("HarfBuzzTextLayoutBackend requires a font face");
             }
             if (synthesis.empty()) {
                 synthesis.resize(fallbacks.size() + 1);
             }
             if (synthesis.size() != fallbacks.size() + 1) {
+                hb_buffer_destroy(scratch_buffer);
+                scratch_buffer = nullptr;
                 throw std::invalid_argument(
                     "HarfBuzzTextLayoutBackend synthesis count must match font count"
                 );
@@ -103,6 +177,8 @@ namespace nandina::text
             for (std::size_t index = 0; index < fallbacks.size(); ++index) {
                 auto& fallback = fallbacks[index];
                 if (!fallback) {
+                    hb_buffer_destroy(scratch_buffer);
+                    scratch_buffer = nullptr;
                     throw std::invalid_argument("HarfBuzzTextLayoutBackend fallback face is null");
                 }
                 add_font(std::move(fallback), synthesis[index + 1]);
@@ -110,6 +186,9 @@ namespace nandina::text
         }
 
         ~Impl() {
+            if (scratch_buffer != nullptr) {
+                hb_buffer_destroy(scratch_buffer);
+            }
             for (const auto& slot: fonts) {
                 hb_font_destroy(slot.font);
             }
@@ -156,34 +235,36 @@ namespace nandina::text
             }
 
             const auto& slot = fonts.at(font_index);
+            const auto target_height = static_cast<FT_UInt>(std::max(1.0F, std::round(pixel_size)));
             (void)slot.face->metrics(pixel_size);
-            hb_ft_font_changed(slot.font);
+            if (slot.last_pixel_height != target_height) {
+                hb_ft_font_changed(slot.font);
+                slot.last_pixel_height = target_height;
+            }
 
-            const std::unique_ptr<hb_buffer_t, decltype(&hb_buffer_destroy)> buffer(
-                hb_buffer_create(),
-                &hb_buffer_destroy
-            );
+            hb_buffer_t* buffer = scratch_buffer;
+            hb_buffer_clear_contents(buffer);
             hb_buffer_add_utf8(
-                buffer.get(),
+                buffer,
                 text.data(),
                 static_cast<int>(text.size()),
                 0,
                 static_cast<int>(text.size())
             );
-            hb_buffer_set_cluster_level(buffer.get(), HB_BUFFER_CLUSTER_LEVEL_MONOTONE_GRAPHEMES);
+            hb_buffer_set_cluster_level(buffer, HB_BUFFER_CLUSTER_LEVEL_MONOTONE_GRAPHEMES);
             if (right_to_left.has_value()) {
                 hb_buffer_set_direction(
-                    buffer.get(),
+                    buffer,
                     *right_to_left ? HB_DIRECTION_RTL : HB_DIRECTION_LTR
                 );
             }
-            hb_buffer_guess_segment_properties(buffer.get());
-            const auto direction = hb_buffer_get_direction(buffer.get());
-            hb_shape(slot.font, buffer.get(), nullptr, 0);
+            hb_buffer_guess_segment_properties(buffer);
+            const auto direction = hb_buffer_get_direction(buffer);
+            hb_shape(slot.font, buffer, nullptr, 0);
 
             unsigned int glyph_count = 0;
-            const auto* infos = hb_buffer_get_glyph_infos(buffer.get(), &glyph_count);
-            const auto* positions = hb_buffer_get_glyph_positions(buffer.get(), &glyph_count);
+            const auto* infos = hb_buffer_get_glyph_infos(buffer, &glyph_count);
+            const auto* positions = hb_buffer_get_glyph_positions(buffer, &glyph_count);
 
             TextLayoutLine line {
                 .text_offset = source_offset,
@@ -224,10 +305,51 @@ namespace nandina::text
             std::optional<bool> paragraph_right_to_left = std::nullopt
         ) const -> BidiParagraph {
             BidiParagraph result;
-            result.decoded = foundation::utf8::decode(text);
             result.base_direction = paragraph_right_to_left.has_value()
                 ? (*paragraph_right_to_left ? FRIBIDI_PAR_RTL : FRIBIDI_PAR_LTR)
                 : FRIBIDI_PAR_ON;
+            if (text.empty()) {
+                return result;
+            }
+
+            // 纯 LTR 段落（无 RTL/双向控制字符且未强制 RTL）：跳过 FriBidi 分配与重排。
+            if (!paragraph_right_to_left.value_or(false)) {
+                bool needs_bidi = false;
+                for (std::size_t i = 0; i < text.size();) {
+                    const auto b0 = static_cast<unsigned char>(text[i]);
+                    if (b0 < 0x80U) {
+                        ++i;
+                        continue;
+                    }
+                    std::size_t len = 1;
+                    if ((b0 & 0xE0U) == 0xC0U) {
+                        len = 2;
+                    }
+                    else if ((b0 & 0xF0U) == 0xE0U) {
+                        len = 3;
+                    }
+                    else if ((b0 & 0xF8U) == 0xF0U) {
+                        len = 4;
+                    }
+                    if (i + len > text.size()) {
+                        needs_bidi = true;
+                        break;
+                    }
+                    const auto cp = decode_single_codepoint(text.substr(i, len));
+                    if (!cp.has_value() || may_require_bidi(*cp)) {
+                        needs_bidi = true;
+                        break;
+                    }
+                    i += len;
+                }
+                if (!needs_bidi) {
+                    result.base_direction = FRIBIDI_PAR_LTR;
+                    result.simple_ltr = true;
+                    return result;
+                }
+            }
+
+            result.decoded = foundation::utf8::decode(text);
             if (result.decoded.empty()) {
                 return result;
             }
@@ -274,7 +396,26 @@ namespace nandina::text
             std::size_t line_offset,
             std::size_t line_length
         ) const -> BidiRuns {
-            if (paragraph.decoded.empty() || line_length == 0) {
+            if (line_length == 0) {
+                return {
+                    .visual = {},
+                    .paragraph_right_to_left = FRIBIDI_IS_RTL(paragraph.base_direction) != 0,
+                };
+            }
+            if (paragraph.simple_ltr) {
+                return {
+                    .visual =
+                        {
+                            BidiRun {
+                                .offset = line_offset,
+                                .length = line_length,
+                                .level = 0,
+                            },
+                        },
+                    .paragraph_right_to_left = false,
+                };
+            }
+            if (paragraph.decoded.empty()) {
                 return {
                     .visual = {},
                     .paragraph_right_to_left = FRIBIDI_IS_RTL(paragraph.base_direction) != 0,
@@ -390,6 +531,33 @@ namespace nandina::text
         [[nodiscard]] auto
         font_for_text(std::string_view text, float pixel_size, bool right_to_left) const
             -> FontChoice {
+            // 单码点簇（绝大多数 ASCII 与 CJK 字符）直接内联解码并查单码点字体缓存，
+            // 避免逐字 vector 分配与 hb_shape() 调用；多码点簇仍走完整整形优选。
+            if (const auto single_cp = decode_single_codepoint(text); single_cp.has_value()) {
+                const char32_t cp = *single_cp;
+                if (const auto cached = single_cp_font_cache_.find(cp);
+                    cached != single_cp_font_cache_.end())
+                {
+                    return cached->second;
+                }
+                const bool default_ignorable = cp == U'\u200C' || cp == U'\u200D'
+                    || (cp >= U'\uFE00' && cp <= U'\uFE0F')
+                    || (cp >= U'\U000E0100' && cp <= U'\U000E01EF');
+                FontChoice resolved {.index = 0, .supported = default_ignorable};
+                if (!default_ignorable) {
+                    for (std::size_t font_index = 0; font_index < fonts.size(); ++font_index) {
+                        if (fonts[font_index].face->glyph_index(cp) != 0) {
+                            resolved = FontChoice {.index = font_index, .supported = true};
+                            break;
+                        }
+                    }
+                }
+                if (single_cp_font_cache_.size() >= kSingleCpFontCacheLimit) {
+                    single_cp_font_cache_.clear();
+                }
+                single_cp_font_cache_.emplace(cp, resolved);
+                return resolved;
+            }
             const auto decoded = foundation::utf8::decode(text);
             const bool has_zwj = std::ranges::any_of(decoded, [](const auto& codepoint) {
                 return codepoint.value == U'\u200D';
@@ -476,29 +644,34 @@ namespace nandina::text
             }
 
             std::vector<FontRange> ranges;
-            for (const auto& grapheme: foundation::utf8::grapheme_ranges(text)) {
+            std::size_t grapheme_offset = 0;
+            while (grapheme_offset < text.size()) {
+                const std::size_t grapheme_end =
+                    foundation::utf8::next_grapheme_boundary(text, grapheme_offset);
+                const std::size_t grapheme_length = grapheme_end - grapheme_offset;
                 const auto choice = font_for_text(
-                    text.substr(grapheme.offset, grapheme.length),
+                    text.substr(grapheme_offset, grapheme_length),
                     pixel_size,
                     right_to_left
                 );
-                const auto absolute_offset = source_offset + grapheme.offset;
+                const auto absolute_offset = source_offset + grapheme_offset;
                 if (!ranges.empty() && ranges.back().font_index == choice.index
                     && ranges.back().supported == choice.supported
                     && ranges.back().offset + ranges.back().length == absolute_offset)
                 {
-                    ranges.back().length += grapheme.length;
+                    ranges.back().length += grapheme_length;
                 }
                 else {
                     ranges.push_back(
                         FontRange {
                             .offset = absolute_offset,
-                            .length = grapheme.length,
+                            .length = grapheme_length,
                             .font_index = choice.index,
                             .supported = choice.supported,
                         }
                     );
                 }
+                grapheme_offset = grapheme_end;
             }
             if (right_to_left) {
                 std::ranges::reverse(ranges);
@@ -782,20 +955,35 @@ namespace nandina::text
                 return result;
             }
 
-            std::map<std::size_t, float> cluster_widths;
+            std::vector<std::pair<std::size_t, float>> cluster_widths;
+            cluster_widths.reserve(line.glyphs.size());
             for (const auto& glyph: line.glyphs) {
-                cluster_widths[glyph.cluster] += glyph.x_advance;
+                cluster_widths.emplace_back(glyph.cluster, glyph.x_advance);
             }
-            for (auto current = cluster_widths.begin(); current != cluster_widths.end(); ++current)
-            {
-                const auto next_entry = std::next(current);
+            std::ranges::sort(cluster_widths, [](const auto& lhs, const auto& rhs) {
+                return lhs.first < rhs.first;
+            });
+
+            std::vector<std::pair<std::size_t, float>> merged;
+            merged.reserve(cluster_widths.size());
+            for (const auto& [cluster, advance]: cluster_widths) {
+                if (!merged.empty() && merged.back().first == cluster) {
+                    merged.back().second += advance;
+                }
+                else {
+                    merged.emplace_back(cluster, advance);
+                }
+            }
+
+            result.reserve(merged.size());
+            for (std::size_t index = 0; index < merged.size(); ++index) {
                 const auto next =
-                    next_entry != cluster_widths.end() ? next_entry->first : paragraph_end;
+                    index + 1 < merged.size() ? merged[index + 1].first : paragraph_end;
                 result.push_back(
                     ClusterRange {
-                        .offset = current->first,
-                        .length = next - current->first,
-                        .width = std::abs(current->second),
+                        .offset = merged[index].first,
+                        .length = next - merged[index].first,
+                        .width = std::abs(merged[index].second),
                     }
                 );
             }
@@ -908,7 +1096,11 @@ namespace nandina::text
             return result;
         }
 
+        static constexpr std::size_t kSingleCpFontCacheLimit = 4096;
+
         std::vector<FontSlot> fonts;
+        hb_buffer_t* scratch_buffer = nullptr;
+        mutable std::unordered_map<char32_t, FontChoice> single_cp_font_cache_;
     };
 
     HarfBuzzTextLayoutBackend::HarfBuzzTextLayoutBackend(
