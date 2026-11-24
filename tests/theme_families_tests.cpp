@@ -20,22 +20,64 @@ TEST_CASE("default theme families include butter fluent and material", "[theme][
     REQUIRE(families[2].name == "material");
 }
 
-TEST_CASE("butter family compiles to a warm cream design system", "[theme][families]") {
+TEST_CASE("butter family compiles to a warm cream clay design system", "[theme][families]") {
     const auto families = theme::default_theme_families();
     const auto design = theme::build_family_design_system(families[0]);
 
-    // 卡片风格 tokens：圆角 12/16/24、边框 2。
-    REQUIRE(design.tokens.radius.sm == Catch::Approx(12.0F));
-    REQUIRE(design.tokens.radius.md == Catch::Approx(16.0F));
-    REQUIRE(design.tokens.radius.lg == Catch::Approx(24.0F));
-    REQUIRE(design.tokens.border.thin == Catch::Approx(2.0F));
+    // 黏土卡片风格 tokens：饱满 squircle 圆角 8/12/20、轻柔细边 1.25/2.25。
+    REQUIRE(design.tokens.radius.sm == Catch::Approx(8.0F));
+    REQUIRE(design.tokens.radius.md == Catch::Approx(12.0F));
+    REQUIRE(design.tokens.radius.lg == Catch::Approx(20.0F));
+    REQUIRE(design.tokens.border.thin == Catch::Approx(1.25F));
+    REQUIRE(design.tokens.border.medium == Catch::Approx(2.25F));
+
+    // 黏土物理层次：亮色下纯白卡片轻浮于阳光浅奶油画布之上（card 更亮），暗色下可可卡片抬升。
+    REQUIRE(design.light.card.oklch().light > design.light.background.oklch().light + 0.02F);
+    REQUIRE(design.dark.card.oklch().light > design.dark.background.oklch().light + 0.03F);
+    REQUIRE(design.dark.border.alpha() < 1.0F);
 
     // 亮暗中性翻转：暗底更暗、暗文字更亮。
     REQUIRE(design.dark.background.oklch().light < design.light.background.oklch().light);
     REQUIRE(design.dark.on_background.oklch().light > design.light.on_background.oklch().light);
 
-    // 暗色品牌提升到更亮档位（dark_brand = shade_300）。
+    // 品牌高光：亮色阳光蜜橙 + 深墨字、暗色发光黄油金 + 深可可字（亮/暗均保持高可读深墨前景）。
     REQUIRE(design.dark.primary.oklch().light > design.light.primary.oklch().light);
+    REQUIRE(design.light.on_primary.oklch().light < design.light.primary.oklch().light);
+    REQUIRE(design.dark.on_primary.oklch().light < design.dark.primary.oklch().light);
+
+    // 黏土组件配方：outlined 按钮带实心卡片底，tonal 用柔粉彩底配正文色，Badge 带贴片边，Dialog 用暖遮罩。
+    const auto outlined = theme::resolve_button(
+        design,
+        theme::ColorAppearance::light,
+        theme::ButtonTone::primary,
+        theme::ButtonTreatment::outlined,
+        theme::ButtonSize::medium,
+        theme::ButtonVisualState::normal
+    );
+    REQUIRE(outlined.container.fill == design.light.card);
+    REQUIRE(outlined.container.border_width == Catch::Approx(1.25F));
+
+    const auto tonal = theme::resolve_button(
+        design,
+        theme::ColorAppearance::light,
+        theme::ButtonTone::primary,
+        theme::ButtonTreatment::tonal,
+        theme::ButtonSize::medium,
+        theme::ButtonVisualState::normal
+    );
+    REQUIRE(tonal.container.border_width == Catch::Approx(1.0F));
+    REQUIRE(
+        foundation::nan_contrast_ratio(tonal.label.color, tonal.container.fill)
+        >= foundation::nan_contrast_aa_text
+    );
+
+    const auto badge = theme::resolve_badge(design, theme::ColorAppearance::light);
+    REQUIRE(badge.container.border_width == Catch::Approx(1.0F));
+    REQUIRE(badge.container.border.alpha() > 0.0F);
+
+    const auto dialog = theme::resolve_dialog(design, theme::ColorAppearance::light);
+    REQUIRE(dialog.panel.fill == design.light.popover);
+    REQUIRE(dialog.scrim.alpha() > 0.3F);
 }
 
 TEST_CASE(
@@ -155,8 +197,8 @@ TEST_CASE(
     const auto butter_card = theme::resolve_card(butter, theme::ColorAppearance::light);
     const auto flat_card = theme::resolve_card(default_system, theme::ColorAppearance::light);
 
-    REQUIRE(butter_card.shadow.spread > 0.0F);
-    REQUIRE(butter_card.shadow.offset_y == Catch::Approx(4.0F));
+    REQUIRE(butter_card.shadow.spread == Catch::Approx(8.0F));
+    REQUIRE(butter_card.shadow.offset_y == Catch::Approx(3.0F));
     REQUIRE(butter_card.shadow.color.alpha() > 0.0F);
 
     REQUIRE(flat_card.shadow.spread == Catch::Approx(0.0F));

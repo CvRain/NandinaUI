@@ -447,34 +447,33 @@ namespace nandina::theme
     namespace
     {
         /**
-         * 框架默认主题（shadcn/ui 对齐）—— 亮色语义色板。
+         * 框架默认主题（基于 shadcn/ui 中性体系，针对桌面端对比度与层级微调）—— 亮色语义色板。
          *
-         * 逐角色取值，基准是 shadcn/ui 的 **neutral 基色 + blue primary**：
-         * 中性阶带一点紫调（hue ≈ 285.8），primary 取 shadcn blue-600。
-         *
-         * 与 shadcn 的两点有意差异：
-         *  - shadcn 的 `border` / `input` 与 `muted` 同值（默认主题里都是 gray-200
-         *    oklch(0.922 0.004 286.32)）；NandinaUI 把 `border` 调亮一档，因为 Card
-         *    的默认边框直接用它，同值会让卡片和 muted 容器糊在一起。
-         *  - 多出 `surface` 家族：`surface` = `card`，`surface_variant` = `muted`，
-         *    用于通用次级容器，避免所有容器都挤在同一个角色上。
+         * 相对原始 shadcn/ui 的有意桌面微调：
+         *  - 把原本同值的 `muted` / `secondary` / `accent` 拆成三档递进中性层：
+         *    `muted` (0.946) 用于弱化区与表头、`secondary` (0.916) 用于 Badge 标签与次按钮、
+         *    `accent` (0.882, 略带冷石板色相) 用于列表/树/表格选中态与菜单高亮，保证白底、
+         *    卡片内以及选中行内的 Badge 均清晰可辨，不再融成白底白块；
+         *  - `border` / `input` 压深至 0.872（桌面 1px 细边清晰可见），`ring` 调至 0.54 强化
+         *    键盘焦点环可见度；
+         *  - `primary` 保持无色相近黑中性色，确保换肤时任意品牌色变化一眼可辨。
          *
          * @return 默认亮色语义色板
          */
         [[nodiscard]] auto default_light_spec() -> SemanticColorSpec {
             const auto background = NanColor::from(NanOklch {.light = 1.0F});
-            // 卡片比页面低 2.5% 明度：既能与 page 分开，又比 muted 块亮，靠 border 收边。
+            // 卡片比页面低 2.8% 明度：与 page 拉开层次，又明显亮于 muted/secondary/accent。
             const auto card = NanColor::from(
                 NanOklch {
-                    .light = 0.975F,
-                    .chroma = 0.001F,
-                    .hue = 286.375F,
+                    .light = 0.972F,
+                    .chroma = 0.002F,
+                    .hue = 286.0F,
                 }
             );
             const auto foreground = NanColor::from(
                 NanOklch {
-                    .light = 0.141F,
-                    .chroma = 0.005F,
+                    .light = 0.145F,
+                    .chroma = 0.006F,
                     .hue = 285.823F,
                 }
             );
@@ -495,25 +494,48 @@ namespace nandina::theme
                     .hue = 0.0F,
                 }
             );
-            const auto subtle = NanColor::from(
+            const auto muted = NanColor::from(
                 NanOklch {
-                    .light = 0.967F,
-                    .chroma = 0.001F,
-                    .hue = 286.375F,
-                }
-            );
-            const auto subtle_foreground = NanColor::from(
-                NanOklch {
-                    .light = 0.21F,
-                    .chroma = 0.006F,
-                    .hue = 285.885F,
+                    .light = 0.946F,
+                    .chroma = 0.004F,
+                    .hue = 286.0F,
                 }
             );
             const auto muted_foreground = NanColor::from(
                 NanOklch {
-                    .light = 0.52F,
+                    .light = 0.465F,
                     .chroma = 0.016F,
                     .hue = 285.938F,
+                }
+            );
+            // Badge 与次按钮底色：在白底、卡片底以及选中行内都保持清晰边界。
+            const auto secondary = NanColor::from(
+                NanOklch {
+                    .light = 0.916F,
+                    .chroma = 0.006F,
+                    .hue = 286.0F,
+                }
+            );
+            const auto secondary_foreground = NanColor::from(
+                NanOklch {
+                    .light = 0.205F,
+                    .chroma = 0.006F,
+                    .hue = 285.885F,
+                }
+            );
+            // 列表/表格/树选中与菜单高亮：略带冷石板色相，与 secondary 徽章明显错层。
+            const auto accent = NanColor::from(
+                NanOklch {
+                    .light = 0.882F,
+                    .chroma = 0.014F,
+                    .hue = 260.0F,
+                }
+            );
+            const auto accent_foreground = NanColor::from(
+                NanOklch {
+                    .light = 0.165F,
+                    .chroma = 0.008F,
+                    .hue = 265.0F,
                 }
             );
             const auto destructive = NanColor::from(
@@ -525,17 +547,17 @@ namespace nandina::theme
             );
             const auto border = NanColor::from(
                 NanOklch {
-                    .light = 0.94F,
-                    .chroma = 0.004F,
-                    .hue = 286.32F,
+                    .light = 0.872F,
+                    .chroma = 0.007F,
+                    .hue = 286.0F,
                 }
             );
-            // 焦点环要在白底和卡片上都看得见（≥ 3:1），shadcn 原来那档偏浅。
+            // 焦点环要在白底和卡片上都干脆可见（≥ 4.5:1）。
             const auto ring = NanColor::from(
                 NanOklch {
-                    .light = 0.64F,
-                    .chroma = 0.015F,
-                    .hue = 286.067F,
+                    .light = 0.54F,
+                    .chroma = 0.018F,
+                    .hue = 264.0F,
                 }
             );
 
@@ -549,20 +571,20 @@ namespace nandina::theme
                 .popover_foreground = foreground,
                 .primary = primary,
                 .primary_foreground = primary_foreground,
-                .secondary = subtle,
-                .secondary_foreground = subtle_foreground,
-                .muted = subtle,
+                .secondary = secondary,
+                .secondary_foreground = secondary_foreground,
+                .muted = muted,
                 .muted_foreground = muted_foreground,
-                .accent = subtle,
-                .accent_foreground = subtle_foreground,
+                .accent = accent,
+                .accent_foreground = accent_foreground,
                 .destructive = destructive,
-                .destructive_foreground = NanColor::from(NanOklch {.light = 0.98F}),
+                .destructive_foreground = NanColor::from(NanOklch {.light = 0.985F}),
                 .border = border,
                 .input = border,
                 .ring = ring,
                 .surface = background,
                 .surface_foreground = foreground,
-                .surface_variant = subtle,
+                .surface_variant = muted,
                 .surface_variant_foreground = muted_foreground,
                 .tertiary = NanColor::from(
                     NanOklch {
@@ -627,16 +649,20 @@ namespace nandina::theme
                 }
             );
             const auto foreground = NanColor::from(NanOklch {.light = 0.985F});
-            const auto elevated = NanColor::from(
+            const auto card = NanColor::from(
                 NanOklch {
-                    .light = 0.21F,
+                    .light = 0.205F,
                     .chroma = 0.006F,
                     .hue = 285.885F,
                 }
             );
-            // 暗色品牌色提亮到 0.72：与深底拉开 8:1（作为信号色足够），
-            // 品牌面上的文字改用深色前景（与 butter / fluent / material 同一约定：
-            // 暗色下亮品牌配深字，实测 7:1 以上，远优于亮字方案的 3.3:1）。
+            const auto popover = NanColor::from(
+                NanOklch {
+                    .light = 0.230F,
+                    .chroma = 0.006F,
+                    .hue = 285.885F,
+                }
+            );
             // 暗色对应 shadcn 的 oklch(0.922 0 0)：亮灰底 + 近黑字。
             const auto primary = NanColor::from(
                 NanOklch {
@@ -652,22 +678,44 @@ namespace nandina::theme
                     .hue = 0.0F,
                 }
             );
-            const auto subtle = NanColor::from(
+            // 与亮色对称地拆开 muted / secondary / accent，避免选中行内 Badge 与选中底融色。
+            const auto muted = NanColor::from(
                 NanOklch {
-                    .light = 0.274F,
+                    .light = 0.248F,
                     .chroma = 0.006F,
-                    .hue = 286.033F,
+                    .hue = 286.0F,
                 }
             );
             const auto muted_foreground = NanColor::from(
                 NanOklch {
-                    .light = 0.705F,
+                    .light = 0.715F,
                     .chroma = 0.015F,
                     .hue = 286.067F,
                 }
             );
+            const auto secondary = NanColor::from(
+                NanOklch {
+                    .light = 0.296F,
+                    .chroma = 0.008F,
+                    .hue = 286.0F,
+                }
+            );
+            const auto secondary_foreground = NanColor::from(
+                NanOklch {
+                    .light = 0.965F,
+                    .chroma = 0.002F,
+                    .hue = 286.0F,
+                }
+            );
+            const auto accent = NanColor::from(
+                NanOklch {
+                    .light = 0.342F,
+                    .chroma = 0.016F,
+                    .hue = 260.0F,
+                }
+            );
             // 危险色在暗色下取 0.58：与深底拉开 4.15:1（作为信号色足够醒目），
-            // 同时浅色文字仍达 4.52:1。再亮一档就会让文字掉到 4.5 以下。
+            // 同时浅色文字仍达 4.59:1。再亮一档就会让文字掉到 4.5 以下。
             const auto destructive = NanColor::from(
                 NanOklch {
                     .light = 0.58F,
@@ -677,38 +725,38 @@ namespace nandina::theme
             );
             const auto ring = NanColor::from(
                 NanOklch {
-                    .light = 0.552F,
-                    .chroma = 0.016F,
-                    .hue = 285.938F,
+                    .light = 0.60F,
+                    .chroma = 0.018F,
+                    .hue = 264.0F,
                 }
             );
-            // 半透明边框：在任意层级的表面上都保持相对亮度。
-            const auto border = NanColor::from(NanOklch {.light = 1.0F, .alpha = 0.10F});
-            const auto input = NanColor::from(NanOklch {.light = 1.0F, .alpha = 0.15F});
+            // 半透明边框：在任意层级的表面上都保持清晰相对亮度。
+            const auto border = NanColor::from(NanOklch {.light = 1.0F, .alpha = 0.14F});
+            const auto input = NanColor::from(NanOklch {.light = 1.0F, .alpha = 0.18F});
 
             return SemanticColorSpec {
                 .background = background,
                 .foreground = foreground,
-                .card = elevated,
+                .card = card,
                 .card_foreground = foreground,
-                .popover = elevated,
+                .popover = popover,
                 .popover_foreground = foreground,
                 .primary = primary,
                 .primary_foreground = primary_foreground,
-                .secondary = subtle,
-                .secondary_foreground = foreground,
-                .muted = subtle,
+                .secondary = secondary,
+                .secondary_foreground = secondary_foreground,
+                .muted = muted,
                 .muted_foreground = muted_foreground,
-                .accent = subtle,
+                .accent = accent,
                 .accent_foreground = foreground,
                 .destructive = destructive,
-                .destructive_foreground = NanColor::from(NanOklch {.light = 0.98F}),
+                .destructive_foreground = NanColor::from(NanOklch {.light = 0.985F}),
                 .border = border,
                 .input = input,
                 .ring = ring,
                 .surface = background,
                 .surface_foreground = foreground,
-                .surface_variant = subtle,
+                .surface_variant = muted,
                 .surface_variant_foreground = muted_foreground,
                 .tertiary = NanColor::from(
                     NanOklch {

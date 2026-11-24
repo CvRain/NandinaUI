@@ -13,6 +13,7 @@
 #include "design_system.hpp"
 #include "theme.hpp"
 
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -20,14 +21,21 @@ namespace nandina::theme
 {
     class ThemeManager;
 
-    /** 内置主题族定义：一组参考色阶 + 变体策略 + tokens + 配方规则定制。 */
+    /** 内置主题族定义：一组参考色阶 + 变体策略 + 可选直接语义色板 + tokens + 配方规则定制。 */
     struct ThemeFamilyDefinition {
         std::string name;
         NanReferencePalette reference;
         PaletteVariantPolicy policy;
         NanTokens tokens;
-        /// 追加到 Card 配方的规则（如 butter 的软阴影）；后续可扩展其它组件。
+        /// 可选直接语义色板（亮/暗独立）；设置后替代 `make_color_scheme(reference, ...)`，
+        /// 允许主题族表达非对称表面层次（例如黏土卡片在亮色画布之上抬升变亮）。
+        std::optional<SemanticColorSpec> light_palette;
+        std::optional<SemanticColorSpec> dark_palette;
+        /// 追加到各组件默认配方之后的主题族定制规则。
         std::vector<CardRecipeRule> card_rules;
+        std::vector<ButtonRecipeRule> button_rules;
+        std::vector<BadgeRecipeRule> badge_rules;
+        std::vector<DialogRecipeRule> dialog_rules;
     };
 
     /** @return 框架内置主题族目录（butter / fluent / material）。 */

@@ -47,20 +47,20 @@ NanTokens（尺度）
 
 ### 两条作者路径
 
-1. **参考色阶路径**：`make_color_scheme(reference, appearance, policy)`，适合「一族色阶派生明暗两套」的品牌主题（`butter` / `fluent` / `material` 走这条）。色阶里承载了角色分配，因此它保持既有观感：`border`/`input` 取中性 500/600 档，`muted`/`accent`/`secondary` 取 200/800 档，`ring`/`focus_ring` 与 `primary` 同色。状态色（`success`/`warning`/`error`）上的前景会在中性色阶里挑对比度最高的一档——这三条色阶的明度跨度不足以固定档位达标。
-2. **直接声明路径**：`SemanticColorSpec` + `NanColorScheme{spec}`，逐角色手写语义值，不需要先编出 7×11 色阶。**框架默认主题走这条**（`default_light_palette()` / `default_dark_palette()`）。
+1. **参考色阶路径**：`make_color_scheme(reference, appearance, policy)`，适合「一族色阶派生明暗两套」的品牌主题（`fluent` / `material` 走这条，`butter` 保留兼容色阶并额外提供直接黏土语义色板）。色阶里承载了角色分配，因此它保持既有观感：`border`/`input` 取中性 500/600 档，`muted`/`accent`/`secondary` 取 200/800 档，`ring`/`focus_ring` 与 `primary` 同色。状态色（`success`/`warning`/`error`）上的前景会在中性色阶里挑对比度最高的一档——这三条色阶的明度跨度不足以固定档位达标。
+2. **直接声明路径**：`SemanticColorSpec` + `NanColorScheme{spec}`，逐角色手写语义值，不需要先编出 7×11 色阶。**框架默认主题与 `butter` 黏土卡片主题均走这条**（`default_light_palette()` / `default_dark_palette()` 与 `ThemeFamilyDefinition::light_palette/dark_palette`）。
 
 ### 框架默认主题
 
-默认快照（`default_design_system()`，也就是 `ThemeManager` 构造时应用的快照）对齐 **shadcn/ui 的经典中性默认**（neutral 基色 + 近黑 primary，即 `oklch(0.205 0 0)` / 暗色 `oklch(0.922 0 0)`）：
+默认快照（`default_design_system()`，也就是 `ThemeManager` 构造时应用的快照）以 **shadcn/ui 经典中性默认** 为基准（neutral 基色 + 无色相近黑 primary `oklch(0.205 0 0)` / 暗色 `oklch(0.922 0 0)`），并针对桌面端原生可读性做了分层微调：
 
 > 默认 primary **不带任何色相**（`chroma == 0`）。这是刻意的：框架不替用户决定品牌色，同时主题作者改动任何一处带色相的值时，在界面上都非常显眼，便于对照"哪里被改了"。要品牌色请走主题族或 `SemanticColorSpec`。
 
-- 亮色：`background` 纯白、`card` 低 2.5% 明度、`popover` 纯白，均以 `border` 收边；`border` / `input` 为浅灰。
-- 暗色：`background` 深灰、`card` / `popover` 提亮一档；`border` / `input` 用**半透明白**（10% / 15%），在任何堆叠层级上都保持相对亮度，不会在更亮的卡片上"消失"。
-- 暗色品牌色提亮、状态色上的文字按底色明度选中性极端档；`ring` 是中性档而不是品牌色——焦点环需要 ≥ 3:1 才能看见，而边框本就该低调（对底色 ~1.2:1 正常），两者定位不同。
+- 亮色：`background` 纯白、`card` 低 2.8% 明度（`0.972`）、`popover` 纯白；将原同值的浅灰拆成三档递进中性层——`muted`（`0.946`，弱化底/表头）、`secondary`（`0.916`，Badge 徽章/次按钮）、`accent`（`0.882`，略带冷石板色相的列表/树/表格选中高亮），避免徽章在白底或选中行内融色；`border` / `input` 为桌面清晰细边（`0.872`）。
+- 暗色：`background` 深灰（`0.141`）、`card`（`0.205`）/ `popover`（`0.230`）逐档抬升；`muted`（`0.248`）/ `secondary`（`0.296`）/ `accent`（`0.342`）对称错层；`border` / `input` 用**半透明白**（14% / 18%），在任何堆叠层级上都保持清晰边界。
+- 暗色品牌色提亮、状态色上的文字按底色明度选中性极端档；`ring` 是中性档而不是品牌色——焦点环需要 ≥ 3:1（实际 ≥ 4.5:1），边框保持克制轮廓（≥ 1.3:1）。
 
-默认主题的对比度与层级门槛由 `tests/theme_palette_contrast_tests.cpp` 固化：正文与各表面文字 ≥ 4.5:1、焦点环与语义信号色 ≥ 3:1、卡片/浮层与页面至少差 2% 明度。改默认色值前先跑它。
+默认主题与内置主题族（含 `butter` 暖奶油/可可黏土卡片）的对比度与层级门槛由 `tests/theme_palette_contrast_tests.cpp` 与 `default_contrast_profile()` 固化：正文与各表面文字 ≥ 4.5:1、焦点环与语义信号色 ≥ 3:1、徽章/选中态/边框相对表面具备清晰区分度。改默认色值前先跑它。
 
 ## 令牌的引用形式
 

@@ -18,6 +18,23 @@
 
 ## 2. 三档分类
 
+2026-11-24 默认主题对比度微调与 `butter` 黏土卡片主题重塑（experimental 增量，默认视觉变更；
+头文件总数不变，仍为 220 = 202 experimental + 18 internal）：
+- `nandina/theme/theme.cpp`（默认亮/暗语义色板）：把原同值的 `muted`/`secondary`/`accent`
+  拆为三档递进中性层（亮色 `0.946 / 0.916 / 0.882`、暗色 `0.248 / 0.296 / 0.342`），并强化
+  `border`（亮色 `0.872`、暗色白 14%）与 `ring`（`0.54 / 0.60`），解决白底与选中行内 Badge
+  / 选中高亮偏轻融色的问题；`primary` 保持无色相中性默认。Linux 14 条页面 golden（7 页 × CPU/SDF）
+  已于 2026-11-25 经逐页归因与实拍审阅后重采批准（0 布局/字形核心漂移）；Windows 14 条基线保持未动，
+  待 Windows 真机同步重采。
+- `nandina/theme/builtin_themes.hpp`（experimental）：`ThemeFamilyDefinition` 新增可选
+  `light_palette` / `dark_palette`（`std::optional<SemanticColorSpec>`）与 `button_rules` /
+  `badge_rules` / `dialog_rules`（源兼容增量）。`butter` 族重塑为清爽阳光暖奶油/可可黏土卡片风格
+  （圆角 `8/12/20`、轻柔边 `1.25/2.25`、含蓄深可可卡片柔影 `offset_y=3 / spread=8`、实心卡片底
+  outlined 按钮、粉彩高可读 tonal 按钮、贴片边 Badge 与暖可可 Dialog 遮罩），亮暗双外观均满足
+  WCAG AA 正文 ≥ 4.5:1 与信号色 ≥ 3:1。
+- 对比度诊断门禁测试扩展到 `default` 与全部内置主题族（`default_contrast_profile()` + 表面/徽章/
+  选中/边框可见度下限）。契约见 [设计令牌与主题系统](design_tokens.md)。
+
 2026-11-23 Linux 桌面设置与跨平台系统偏好桥接（experimental 增量，新增 2 个 internal 平台头；
 头文件总数 220 = 202 experimental + 18 internal）：
 `nandina/app/system_preferences.hpp`（experimental）扩展 `SystemPreferencesSnapshot`（新增

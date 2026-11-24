@@ -97,8 +97,7 @@ TEST_CASE("chip resolves recipe and reports removable semantics", "[chip][theme]
     auto design = theme::default_design_system();
     const auto style = theme::resolve_chip(design, theme::ColorAppearance::light);
     REQUIRE(
-        style.container.fill.oklch().light
-        == Catch::Approx(design.light.surface_variant.oklch().light)
+        style.container.fill.oklch().light == Catch::Approx(design.light.secondary.oklch().light)
     );
     REQUIRE(style.metrics.height == Catch::Approx(28.0F));
 

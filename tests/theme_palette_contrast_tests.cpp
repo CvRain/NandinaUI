@@ -16,6 +16,7 @@
 #include <nandina/foundation/composition.hpp>
 #include <nandina/foundation/contrast.hpp>
 #include <nandina/theme/builtin_themes.hpp>
+#include <nandina/theme/contrast_diagnostics.hpp>
 #include <nandina/theme/theme.hpp>
 
 #include <algorithm>
@@ -254,5 +255,64 @@ TEST_CASE(
             /*require_ring_on_card=*/false,
             /*strict_status_text=*/false
         );
+    }
+}
+
+TEST_CASE(
+    "default and butter palettes separate badge, selection, and borders visibly",
+    "[theme][palette][contrast]"
+) {
+    const auto require_separation = [](const std::string_view name,
+                                       const theme::NanColorScheme& scheme) {
+        INFO("palette separation: " << name);
+        // Badge / 次级贴片（secondary）相对所在表面必须肉眼可辨，不能糊成白底白块。
+        REQUIRE(contrast_of(scheme.secondary, scheme.surface) >= 1.25F);
+        // 选中高亮（accent）相对表面必须清晰可见，且不能与 Badge（secondary）同值融合。
+        REQUIRE(contrast_of(scheme.accent, scheme.surface) >= 1.30F);
+        REQUIRE(scheme.secondary != scheme.accent);
+        // 边框合成到背景后在桌面屏幕上需有足够轮廓分离。
+        REQUIRE(contrast_of(scheme.border, scheme.background) >= 1.30F);
+    };
+
+    require_separation("default/light", theme::default_light_palette());
+    require_separation("default/dark", theme::default_dark_palette());
+
+    const auto families = theme::default_theme_families();
+    const auto butter = theme::build_family_design_system(families[0]);
+    require_palette_readable(
+        butter.light,
+        /*require_ring_on_card=*/true,
+        /*strict_status_text=*/true
+    );
+    require_palette_readable(
+        butter.dark,
+        /*require_ring_on_card=*/true,
+        /*strict_status_text=*/true
+    );
+    require_separation("butter/light", butter.light);
+    require_separation("butter/dark", butter.dark);
+}
+
+TEST_CASE(
+    "default and built-in theme families pass the contrast diagnostics profile",
+    "[theme][palette][contrast]"
+) {
+    const auto profile = theme::default_contrast_profile();
+    const auto check_system = [&](const std::string_view name, const theme::DesignSystem& system) {
+        for (const auto appearance: {theme::ColorAppearance::light, theme::ColorAppearance::dark}) {
+            INFO(
+                "diagnostics for "
+                << name << (appearance == theme::ColorAppearance::dark ? "/dark" : "/light")
+            );
+            const auto content = theme::ThemeSchemeContent::from(system, appearance);
+            const auto diagnostics = theme::evaluate_contrast(content, appearance, profile);
+            REQUIRE_FALSE(theme::has_insufficient_contrast_context(diagnostics));
+            REQUIRE_FALSE(theme::has_required_contrast_failure(diagnostics));
+        }
+    };
+
+    check_system("default", theme::default_design_system());
+    for (const auto& family: theme::default_theme_families()) {
+        check_system(family.name, theme::build_family_design_system(family));
     }
 }

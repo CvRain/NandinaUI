@@ -15,80 +15,213 @@ namespace nandina::theme
     auto default_theme_families() -> std::vector<ThemeFamilyDefinition> {
         std::vector<ThemeFamilyDefinition> families;
 
-        // ─── butter：黄油卡片 + Catppuccin（暖奶油中性 + 琥珀主色 + 暖粉辅色）───
-        // 色阶按 50 → 950（浅 → 深）命名；950 档 = base，实现「On Accent = Base」。
-        // 主色/辅色以 Catppuccin Peach/Rosewater、Flamingo/Maroon 为参考做暖调微调。
+        // ─── butter：清爽暖奶油黏土（Sunlit Butter Clay / Warm Cocoa Clay）────────
+        // 参考柔光黏土卡片（Claymorphism / Soft UI）美学：
+        // - 亮色采用纯暖黄油色相（H≈89°）的通透浅奶油桌面 #FCF7EA（彻底消除偏粉/发灰感），
+        //   上方浮起纯白黏土卡片 #FFFFFF + 暖蜜糖弥散柔影 + 轻浅奶油细边（1.25px）；
+        // - 品牌主色采用明快活泼的阳光蜜橙 #E0640D 配深炭墨字（借鉴高可读暖色卡片实践，
+        //   避免为迁就白字而压暗成焦褐），辅以舒缓薄荷绿、信任天蓝与柔薰衣草点缀；
+        // - 暗色转为温润烘焙可可黏土 + 发光黄油金高光与半透明奶油柔边。
         {
             auto reference = default_reference_palette();
             reference.neutral = nan_color_scale({
-                .shade_50 = 0xFAF6EC, // 奶白（背景）
-                .shade_100 = 0xF2EAD9, // 米黄（表面）
-                .shade_200 = 0xE8DCC4, // 浅米（表面变体）
-                .shade_300 = 0xD9C8A8, // 米
-                .shade_400 = 0xB3A184, // 暖灰
-                .shade_500 = 0x96856A, // 暖灰（outline）
-                .shade_600 = 0x7A6B54, // 暖灰深
-                .shade_700 = 0x5A4F3E, // 暖深灰（次文本）
-                .shade_800 = 0x3F372B, // 深暖
-                .shade_900 = 0x2A241B, // 近黑暖（暗表面）
-                .shade_950 = 0x1C1811, // 最深暖（文字 / base）
+                .shade_50 = 0xFFFFFF, // 纯白黏土卡片
+                .shade_100 = 0xFCF7EA, // 阳光浅奶油画布（H≈89°，不偏粉）
+                .shade_200 = 0xEDE3CE, // 饼干贴片（secondary）
+                .shade_300 = 0xE5D9C3, // 浅奶油细边
+                .shade_400 = 0xC2B1A0, // 暗色次文本
+                .shade_500 = 0x9C9286, // 中暖石
+                .shade_600 = 0x7A7167, // 暖石
+                .shade_700 = 0x5C554E, // 亮色次文本
+                .shade_800 = 0x413730, // 暗色饼干可可
+                .shade_900 = 0x2A231F, // 暗色可可黏土卡片
+                .shade_950 = 0x1E1916, // 暗色深烘焙可可画布
             });
             reference.primary = nan_color_scale({
-                .shade_50 = 0xFFF6E2, // 奶油
-                .shade_100 = 0xFFEBC4, // 浅黄
-                .shade_200 = 0xFFD997,
-                .shade_300 = 0xFCC36C, // 暗色品牌（Peach 提亮）
-                .shade_400 = 0xF5A845,
-                .shade_500 = 0xE78D28, // 亮色品牌（琥珀）
-                .shade_600 = 0xC97217,
-                .shade_700 = 0xA15710,
-                .shade_800 = 0x7A3E0A,
-                .shade_900 = 0x522804,
-                .shade_950 = 0x1C1811, // on-primary（= base）
+                .shade_50 = 0xFFF9F0,
+                .shade_100 = 0xFFEDD5,
+                .shade_200 = 0xFED7AA,
+                .shade_300 = 0xF5B959, // 暗色发光黄油金
+                .shade_400 = 0xF59638,
+                .shade_500 = 0xEB771C,
+                .shade_600 = 0xE0640D, // 亮色阳光蜜橙（配深墨字 ≥ 5.2:1，对底色 ≥ 3.2:1）
+                .shade_700 = 0xB84D08,
+                .shade_800 = 0x8C3A06,
+                .shade_900 = 0x5C2504,
+                .shade_950 = 0x1C140E, // 深炭可可 on-primary（亮/暗同源）
             });
             reference.tertiary = nan_color_scale({
-                .shade_50 = 0xF9E4E0,
-                .shade_100 = 0xF4CCCC,
-                .shade_200 = 0xEBA5AE,
-                .shade_300 = 0xDD7F8A, // 暗色辅色（Flamingo 提亮）
-                .shade_400 = 0xD45A68,
-                .shade_500 = 0xC23A4E, // 亮色辅色（Maroon）
-                .shade_600 = 0xA62A3C,
-                .shade_700 = 0x841F2F,
-                .shade_800 = 0x61151F,
-                .shade_900 = 0x3E0C12,
-                .shade_950 = 0x24060A,
+                .shade_50 = 0xFAF5FF,
+                .shade_100 = 0xEDE9FE,
+                .shade_200 = 0xDDD6FE,
+                .shade_300 = 0xB794F4, // 暗色舒缓薰衣草
+                .shade_400 = 0x9F7AEA,
+                .shade_500 = 0x8B5CF6,
+                .shade_600 = 0x7454D9, // 亮色柔薰衣草
+                .shade_700 = 0x5B3EB5,
+                .shade_800 = 0x452D8C,
+                .shade_900 = 0x2F1E63,
+                .shade_950 = 0x1D123D,
             });
 
-            NanTokens tokens {};
-            tokens.radius.sm = 12.0F;
-            tokens.radius.md = 16.0F;
-            tokens.radius.lg = 24.0F;
-            tokens.border.thin = 2.0F;
-            tokens.border.medium = 3.0F;
+            const auto butter_light = SemanticColorSpec {
+                .background = NanColor::from_hex(0xFCF7EA),
+                .foreground = NanColor::from_hex(0x231F1D),
+                .card = NanColor::from_hex(0xFFFFFF),
+                .card_foreground = NanColor::from_hex(0x231F1D),
+                .popover = NanColor::from_hex(0xFFFFFF),
+                .popover_foreground = NanColor::from_hex(0x231F1D),
+                .primary = NanColor::from_hex(0xE0640D),
+                .primary_foreground = NanColor::from_hex(0x1C140E),
+                .secondary = NanColor::from_hex(0xEDE3CE),
+                .secondary_foreground = NanColor::from_hex(0x2B241E),
+                .muted = NanColor::from_hex(0xF3ECE0),
+                .muted_foreground = NanColor::from_hex(0x5C554E),
+                .accent = NanColor::from_hex(0xFCD694),
+                .accent_foreground = NanColor::from_hex(0x24190E),
+                .destructive = NanColor::from_hex(0xD63B49),
+                .destructive_foreground = NanColor::from_hex(0xFFFFFF),
+                .border = NanColor::from_hex(0xE5D9C3),
+                .input = NanColor::from_hex(0xDCCCB0),
+                .ring = NanColor::from_hex(0xE0640D),
+                // surface 与 card 统一为清透纯白黏土：让面板在浅黄油画布上柔和浮起。
+                .surface = NanColor::from_hex(0xFFFFFF),
+                .surface_foreground = NanColor::from_hex(0x231F1D),
+                .surface_variant = NanColor::from_hex(0xF3ECE0),
+                .surface_variant_foreground = NanColor::from_hex(0x5C554E),
+                .tertiary = NanColor::from_hex(0x7454D9),
+                .tertiary_foreground = NanColor::from_hex(0xFFFFFF),
+                .success = NanColor::from_hex(0x0E855B),
+                .success_foreground = NanColor::from_hex(0xFFFFFF),
+                .warning = NanColor::from_hex(0xF0AD24),
+                .warning_foreground = NanColor::from_hex(0x1F1810),
+                .error = NanColor::from_hex(0xD63B49),
+                .error_foreground = NanColor::from_hex(0xFFFFFF),
+                .info = NanColor::from_hex(0x2563EB),
+                .info_foreground = NanColor::from_hex(0xFFFFFF),
+                .selection = NanColor::from_hex(0xF59E0B, 0.30F),
+            };
 
+            const auto butter_dark = SemanticColorSpec {
+                .background = NanColor::from_hex(0x1E1916),
+                .foreground = NanColor::from_hex(0xFAF2E6),
+                .card = NanColor::from_hex(0x2A231F),
+                .card_foreground = NanColor::from_hex(0xFAF2E6),
+                .popover = NanColor::from_hex(0x332B26),
+                .popover_foreground = NanColor::from_hex(0xFAF2E6),
+                .primary = NanColor::from_hex(0xF5B959),
+                .primary_foreground = NanColor::from_hex(0x231911),
+                .secondary = NanColor::from_hex(0x413730),
+                .secondary_foreground = NanColor::from_hex(0xF6EBDC),
+                .muted = NanColor::from_hex(0x241D1A),
+                .muted_foreground = NanColor::from_hex(0xC2B1A0),
+                .accent = NanColor::from_hex(0x56412C),
+                .accent_foreground = NanColor::from_hex(0xFFF5E6),
+                .destructive = NanColor::from_hex(0xE86A74),
+                .destructive_foreground = NanColor::from_hex(0x231315),
+                // 暗色用低透明暖奶油细边：在任意可可表面层级上保持柔润边界，彻底告别亮褐线框。
+                .border = NanColor::from_hex(0xFFF0D9, 0.14F),
+                .input = NanColor::from_hex(0xFFF0D9, 0.20F),
+                .ring = NanColor::from_hex(0xF5B959),
+                .surface = NanColor::from_hex(0x2A231F),
+                .surface_foreground = NanColor::from_hex(0xFAF2E6),
+                .surface_variant = NanColor::from_hex(0x241D1A),
+                .surface_variant_foreground = NanColor::from_hex(0xC2B1A0),
+                .tertiary = NanColor::from_hex(0xB794F4),
+                .tertiary_foreground = NanColor::from_hex(0x1E1338),
+                .success = NanColor::from_hex(0x4ADE9A),
+                .success_foreground = NanColor::from_hex(0x11271C),
+                .warning = NanColor::from_hex(0xF5C453),
+                .warning_foreground = NanColor::from_hex(0x261C0E),
+                .error = NanColor::from_hex(0xE86A74),
+                .error_foreground = NanColor::from_hex(0x231315),
+                .info = NanColor::from_hex(0x60A5FA),
+                .info_foreground = NanColor::from_hex(0x0E1F38),
+                .selection = NanColor::from_hex(0xF5B959, 0.30F),
+            };
+
+            NanTokens tokens {};
+            // 饱满 squircle 圆角（8/12/20）：卡片温润圆角 20px，按钮饱满友好而不成香肠胶囊。
+            tokens.radius.sm = 8.0F;
+            tokens.radius.md = 12.0F;
+            tokens.radius.lg = 20.0F;
+            // 轻柔细边（1.25/2.25）：既保留黏土描边收口，又不让侧栏 outlined 列表显得像粗方框。
+            tokens.border.thin = 1.25F;
+            tokens.border.medium = 2.25F;
+
+            const auto accent_ref = ColorOperand {ToneAccentRef {.on_accent = false}};
             families.push_back(
                 ThemeFamilyDefinition {
                     .name = "butter",
                     .reference = std::move(reference),
                     .policy =
                         {
-                            // 亮色品牌取 600 档而不是 500：500 档（L≈0.72）对奶白底只有
-                            // 2.36:1，作为按钮/焦点环等信号色达不到 3:1；600 档为 3.30:1，
-                            // 且与深色前景仍有 4.97:1。
                             .light_brand = ColorShade::shade_600,
                             .dark_brand = ColorShade::shade_300,
                             .light_on_brand = ColorShade::shade_950,
                             .dark_on_brand = ColorShade::shade_950,
                         },
                     .tokens = tokens,
-                    .card_rules = {
-                        // 卡片软阴影：暖棕、向下偏移、柔和衰减（claymorphism elevation）。
-                        CardRecipeRule {
-                            .shadow_color =
-                                ThemeColor::literal(NanColor::from_hex(0x1C1811, 0.16F)),
-                            .shadow_offset_y = ThemeScalar::literal(4.0F),
-                            .shadow_spread = ThemeScalar::literal(10.0F),
+                    .light_palette = butter_light,
+                    .dark_palette = butter_dark,
+                    .card_rules =
+                        {
+                            // 含蓄的深可可柔影（低透明 + 紧凑弥散）：亮色下呈细腻暖影不脏边，
+                            // 暗色下比可可背景更深（真正接地阴影，不会在暗底上泛出橙色外发光），
+                            // 嵌套多张卡片时边缘也保持利落不杂乱。
+                            CardRecipeRule {
+                                .shadow_color =
+                                    ThemeColor::literal(NanColor::from_hex(0x1A1008, 0.09F)),
+                                .shadow_offset_y = ThemeScalar::literal(3.0F),
+                                .shadow_spread = ThemeScalar::literal(8.0F),
+                            },
+                        },
+                    .button_rules =
+                        {
+                            // outlined 按钮采用实心卡片底 + 柔淡半透明描边，作为导航项或次级瓷片均轻盈干净。
+                            ButtonRecipeRule {
+                                .selector = {.treatment = ButtonTreatment::outlined},
+                                .container_fill = ThemeColor::token(ColorToken::card),
+                                .container_border = ThemeColor::with_alpha(
+                                    ColorToken::border,
+                                    ThemeScalar::literal(0.82F)
+                                ),
+                                .container_border_width =
+                                    ThemeScalar::token(ScalarToken::border_thin),
+                                .label_color = ThemeColor::token(ColorToken::foreground),
+                            },
+                            // tonal 按钮采用柔粉彩蜜糖底 + 正文深墨/奶油字，兼顾糖果感与极高可读性。
+                            ButtonRecipeRule {
+                                .selector = {.treatment = ButtonTreatment::tonal},
+                                .container_fill = ThemeColor::mix(
+                                    ColorOperand {ColorToken::card},
+                                    accent_ref,
+                                    ThemeScalar::literal(0.22F)
+                                ),
+                                .container_border =
+                                    ThemeColor::with_alpha(accent_ref, ThemeScalar::literal(0.24F)),
+                                .container_border_width = ThemeScalar::literal(1.0F),
+                                .label_color = ThemeColor::token(ColorToken::foreground),
+                            },
+                        },
+                    .badge_rules =
+                        {
+                            // 徽章加一圈轻柔贴片边，确保落入蜜桃高亮选中行时仍像可爱黏土贴纸一样分明。
+                            BadgeRecipeRule {
+                                .container_border = ThemeColor::with_alpha(
+                                    ColorToken::border,
+                                    ThemeScalar::literal(0.80F)
+                                ),
+                                .container_border_width = ThemeScalar::literal(1.0F),
+                            },
+                        },
+                    .dialog_rules = {
+                        // 暖可可遮罩 + 柔和卡片描边，让 Dialog / Sheet 与黄油黏土氛围统一。
+                        DialogRecipeRule {
+                            .scrim = ThemeColor::literal(NanColor::from_hex(0x1C140E, 0.42F)),
+                            .panel_fill = ThemeColor::token(ColorToken::popover),
+                            .panel_border = ThemeColor::token(ColorToken::border),
+                            .panel_border_width = ThemeScalar::token(ScalarToken::border_thin),
                         },
                     },
                 }
@@ -217,10 +350,23 @@ namespace nandina::theme
     auto build_family_design_system(const ThemeFamilyDefinition& family) -> DesignSystem {
         auto system = default_design_system();
         system.tokens = family.tokens;
-        system.light = make_color_scheme(family.reference, ColorAppearance::light, family.policy);
-        system.dark = make_color_scheme(family.reference, ColorAppearance::dark, family.policy);
+        system.light = family.light_palette.has_value()
+            ? NanColorScheme {*family.light_palette}
+            : make_color_scheme(family.reference, ColorAppearance::light, family.policy);
+        system.dark = family.dark_palette.has_value()
+            ? NanColorScheme {*family.dark_palette}
+            : make_color_scheme(family.reference, ColorAppearance::dark, family.policy);
         for (const auto& rule: family.card_rules) {
             system.components.card.rules.push_back(rule);
+        }
+        for (const auto& rule: family.button_rules) {
+            system.components.button.rules.push_back(rule);
+        }
+        for (const auto& rule: family.badge_rules) {
+            system.components.badge.rules.push_back(rule);
+        }
+        for (const auto& rule: family.dialog_rules) {
+            system.components.dialog.rules.push_back(rule);
         }
         return system;
     }
