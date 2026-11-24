@@ -115,15 +115,16 @@ namespace nandina::app
         [[nodiscard]] auto store_base() -> NanStore*;
         [[nodiscard]] auto store_type_key() const -> StoreKey;
 
-        // ---- OS 偏好（无障碍文字缩放，P4.6 Step 3） ----
+        // ---- OS 偏好（无障碍文字缩放、系统亮暗外观与减弱动效） ----
 
         /// 注入 OS 偏好来源。仅在尚未注入时生效（应用注入优先于窗口打开时自动接入的平台
         /// 来源）；传 nullptr 是空操作，解除用 `detach_system_preferences()`。不接管所有权。
         void attach_system_preferences(ISystemPreferencesSource* source);
-        /// 解除 OS 偏好来源并回到 1.0（保留显式 override）。
+        /// 解除 OS 偏好来源并回到默认值（text_scale 1.0、light、reduced_motion=false；
+        /// 保留显式 text_scale_override）。
         void detach_system_preferences() noexcept;
         [[nodiscard]] auto system_preferences_source() const noexcept -> ISystemPreferencesSource*;
-        /// 立即读取来源快照并应用（窗口打开、首帧构建前调用）。返回有效缩放是否改变。
+        /// 立即读取来源快照并应用（窗口打开、首帧构建前调用）。返回有效偏好是否改变。
         auto sync_system_preferences() -> bool;
         /// 节流轮询来源变化并应用（宿主在帧首调用；未变化时无 theme revision）。
         auto poll_system_preferences() -> bool;
@@ -201,6 +202,8 @@ namespace nandina::app
         using WindowSetup = std::move_only_function<void(NanRouter&)>;
 
         auto run_configured(WindowConfig config, WindowSetup setup) -> int;
+        /// 把当前 OS 快照（外观、减弱动效、文字缩放）统一提交给 ThemeManager。
+        auto apply_system_preferences() -> bool;
         /// override > OS > 1.0 的实际应用点：只在有效值/cap 变化时发布 theme revision。
         auto apply_effective_text_scale() -> bool;
 
@@ -220,6 +223,8 @@ namespace nandina::app
 
         ISystemPreferencesSource* system_preferences_ = nullptr;
         std::optional<float> os_text_scale_;
+        std::optional<theme::ColorAppearance> os_appearance_;
+        std::optional<bool> os_reduced_motion_;
         std::optional<float> text_scale_override_;
         float text_scale_max_px_ = 0.0F;
         float effective_text_scale_ = 1.0F;

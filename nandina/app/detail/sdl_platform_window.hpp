@@ -19,6 +19,7 @@
 #if defined(NANDINA_HAS_SDL_BACKEND)
 
     #include "../platform_window.hpp"
+    #include "sdl_system_preferences.hpp"
     #include "sdl_text_input_service.hpp"
 
     #include <SDL3/SDL.h>
@@ -76,7 +77,7 @@ namespace nandina::app::detail
 
         [[nodiscard]] auto text_input_service() -> scene::ITextInputService* override;
 
-        /// Windows 下提供无障碍文字缩放来源；其它平台没有来源（返回 nullptr）。
+        /// 提供 OS 偏好来源（跨平台 SDL3 系统亮暗外观 + Linux/Windows 平台无障碍设置）。
         [[nodiscard]] auto system_preferences_source() -> ISystemPreferencesSource* override;
 
         /// Number of dispatched key events with both identities unknown.
@@ -137,8 +138,8 @@ namespace nandina::app::detail
         /// vsync 关闭时 `present()` 自己数拍子用的目标帧率（0 = 不节流）。
         std::uint64_t target_fps_ = 0;
         std::unique_ptr<SdlTextInputService> text_input_service_;
-        /// OS 偏好来源（当前只有 Windows 无障碍文字缩放）；其它平台保持空指针。
-        std::unique_ptr<ISystemPreferencesSource> system_preferences_;
+        /// OS 偏好来源（SDL3 系统外观 + 平台无障碍文字缩放/减弱动效）。
+        std::unique_ptr<SdlSystemPreferencesSource> system_preferences_;
         bool pace_frames_ = false;
         std::uint64_t last_present_ns_ = 0;
     };

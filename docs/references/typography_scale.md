@@ -21,8 +21,17 @@
 > **OS 来源子批已实施（2026-11-13）**：`app/system_preferences.hpp` 的
 > `ISystemPreferencesSource` 经 `IPlatformWindow::system_preferences_source()` 注入，
 > `NanApplication` 负责 attach/sync/poll 与 override 仲裁；Windows SDL 平台从注册表
-> `TextScaleFactor` 节流读取并在首帧前应用。Linux 首版没有 OS 来源（返回 nullptr，宿主可
-> 注入自己的来源）；系统变化通知的具体实现与持久化决策仍待。
+> `TextScaleFactor` 节流读取并在首帧前应用。
+> **Linux 桌面设置与跨平台外观/减弱动效桥接已实施并复核（2026-11-24）**：
+> `SystemPreferencesSnapshot` 新增 `appearance` / `reduced_motion` 与纯校验函数
+> `text_scale_from_factor()` / `text_scale_from_dpi()`；`NanApplication` 将三项 OS 偏好
+> 桥接到 `ThemeManager::set_system_preferences()` 与 `set_text_scaling()`（异常安全解绑与缓存回滚），
+> `NanWindow` 在关闭、析构及打开失败路径自动解除平台来源；`SdlPlatformWindow` 组合跨平台
+> `SDL_GetSystemTheme()` / `SDL_EVENT_SYSTEM_THEME_CHANGED` 与平台子源（Linux：
+> `LinuxSystemPreferencesSource` 按 XDG Desktop Portal `busctl` → `gsettings` / KDE
+> `kcmfonts`/`kdeglobals` / GTK `settings.ini` 顺序读取，子进程带 150 ms 超时，稳态由配置文件
+> `stat()` 门控不拉起子进程；Windows 沿用注册表来源，待 Windows 实机复验）。GNOME Wayland
+> 实机启动同步与运行期亮暗/辅助功能实时切换已验收通过；持久化归应用（框架不写用户配置）。
 > 本文是契约；`docs/components/label.md` 与 `docs/references/design_tokens.md` 记录用法。
 
 ## 1. 单位决定
@@ -269,8 +278,27 @@ text_size_px(scale, size)
   `poll_system_preferences()`。仲裁顺序为 **应用 override > OS 快照 > 1.0**，非法值按 1.0；
   同一有效值/ cap 不重复发布 theme revision。Windows SDL 平台读取
   `HKCU\Software\Microsoft\Accessibility\TextScaleFactor`（REG_DWORD，约 500 ms 节流）；
-  Linux 首版没有来源，宿主可注入自己的 `ISystemPreferencesSource`。持久化归应用（框架不写
-  配置/注册表）；显式 `.font_size(px)` 仍 fixed。
+  持久化归应用（框架不写配置/注册表）；显式 `.font_size(px)` 仍 fixed。
+- **Linux 桌面设置与跨平台系统偏好桥接（2026-11-24 已复核提交）**：
+  - `SystemPreferencesSnapshot` 扩展 `appearance`（`std::optional<theme::ColorAppearance>`）与
+    `reduced_motion`（`std::optional<bool>`），并新增纯函数 `text_scale_from_factor(double)`
+    （接受有限 `[0.5, 3.0]`，越界返回 `nullopt` 不静默钳位）与 `text_scale_from_dpi(double)`
+    （按 `dpi / 96.0` 经前者校验，`0` 视为未设置）。
+  - `NanApplication::sync_system_preferences()` / `poll_system_preferences()` 将 `appearance`
+    （回退 `light`）与 `reduced_motion`（回退 `false`）合并成一次
+    `ThemeManager::set_system_preferences()` 提交，使 `ThemePreference::system` 与
+    `MotionPreference::system` 跟随系统；显式 `light`/`dark` 或固定方案仍受用户优先保护。
+    `NanWindow::close()` 与 `open()` 失败路径会在 `platform_->destroy()` 之前自动解除由窗口
+    接入的平台来源（应用显式注入的自定义来源不受影响）。
+  - `SdlPlatformWindow` 使用 `SdlSystemPreferencesSource` 组合 SDL3 原生 `SDL_GetSystemTheme()`
+    + `SDL_EVENT_SYSTEM_THEME_CHANGED`（事件驱动、跨 Linux/Windows，返回 `UNKNOWN` 时回退
+    平台子源）与平台子源。Linux 下 `LinuxSystemPreferencesSource` 不新增硬编译依赖：优先在
+    会话 D-Bus 可用时用 `busctl --user --json=short` 一次读取 XDG Desktop Portal
+    （`org.freedesktop.appearance` + `org.gnome.desktop.interface`），按桌面环境顺序回退
+    `gsettings` 与纯文件读取（KDE `kcmfonts`/`kdeglobals`、GTK4/GTK3 `settings.ini`）；
+    外部命令统一带 150 ms 超时与输出上限；`poll_changes()` 先按 500 ms 节流再对用户配置文件
+    做 `stat()` 门控，稳态零子进程。`page_probe` 不经 `NanWindow`，28 条页面 golden 与宿主
+    桌面完全隔离。
 - `em` 父字号相对链、每组件独立 fixed 列表不是本批目标；“fixed/cap”指上述显式 px 与全局上限。
 
 ## 9. 后续（未实施）
@@ -278,9 +306,9 @@ text_size_px(scale, size)
 - **Step 2b 已收口（2026-11-12）**：默认组件配方消费 role 的尺寸与 leading/weight/slant，
   手工文本样式组件已迁移到统一 bridge；仅 Slider 数值标签按豁免保留字面字号。
   正文行高的完整 CJK 页面审计按需扩展。
-- **Step 3 剩余**：OS 来源在 Windows 已接（2026-11-13 子批），Linux 平台来源、系统设置变化
-  通知的具体实现（当前为轮询）与持久化决策仍待；如需要，再评估每角色独立 cap 或组件级
-  fixed 列表。`em` 父字号相对链仍非目标。
+- **Step 3 剩余**：Windows 与 Linux OS 来源均已接（2026-11-13 / 2026-11-23；Windows 跨平台
+  外观联动仍待 Windows 实机复验）；应用级持久化决策仍归应用层；如需要，再评估纯 D-Bus 信号
+  监听替代 500 ms `stat()` 门控轮询、每角色独立 cap 或组件级 fixed 列表。`em` 父字号相对链仍非目标。
 - **P4.7**：默认字体族只有 Caskaydia Cove Regular 一个 face；合成回退已于 2026-11-10
   实施，因此 role 表的 500/600 字重现在可见。**2026-11-12 决策：本轮不投资真实多 face
   资产**（许可、包体积、CJK 覆盖与全部页面 golden 重批成本），合成回退继续作为默认路径；

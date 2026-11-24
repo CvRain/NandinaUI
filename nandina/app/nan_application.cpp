@@ -280,7 +280,50 @@ namespace nandina::app
     void NanApplication::detach_system_preferences() noexcept {
         system_preferences_ = nullptr;
         os_text_scale_.reset();
-        (void)apply_effective_text_scale();
+        os_appearance_.reset();
+        os_reduced_motion_.reset();
+        // detach 是 noexcept（且会在窗口析构与打开失败路径调用），不能让 ThemeManager 的
+        // require_idle() 或观察者异常触发 std::terminate()。两项复位各自隔离，尽量收敛状态。
+        const theme::SystemPreferences default_host {
+            .appearance = theme::ColorAppearance::light,
+            .reduced_motion = false,
+        };
+        try {
+            if (theme_manager_.system_preferences() != default_host) {
+                theme_manager_.set_system_preferences(default_host);
+            }
+        }
+        catch (const std::exception& error) {
+            try {
+                log::get("app.application")
+                    .warn(
+                        "NanApplication::detach_system_preferences: failed to reset host "
+                        "preferences: {}",
+                        error.what()
+                    );
+            }
+            catch (...) {
+            }
+        }
+        catch (...) {
+        }
+        try {
+            (void)apply_effective_text_scale();
+        }
+        catch (const std::exception& error) {
+            try {
+                log::get("app.application")
+                    .warn(
+                        "NanApplication::detach_system_preferences: failed to reset text "
+                        "scaling: {}",
+                        error.what()
+                    );
+            }
+            catch (...) {
+            }
+        }
+        catch (...) {
+        }
     }
 
     auto NanApplication::system_preferences_source() const noexcept -> ISystemPreferencesSource* {
@@ -290,11 +333,16 @@ namespace nandina::app
     auto NanApplication::sync_system_preferences() -> bool {
         if (system_preferences_ == nullptr) {
             os_text_scale_.reset();
+            os_appearance_.reset();
+            os_reduced_motion_.reset();
         }
         else {
-            os_text_scale_ = system_preferences_->snapshot().text_scale;
+            const auto snapshot = system_preferences_->snapshot();
+            os_text_scale_ = snapshot.text_scale;
+            os_appearance_ = snapshot.appearance;
+            os_reduced_motion_ = snapshot.reduced_motion;
         }
-        return apply_effective_text_scale();
+        return apply_system_preferences();
     }
 
     auto NanApplication::poll_system_preferences() -> bool {
@@ -307,7 +355,9 @@ namespace nandina::app
             return false;
         }
         os_text_scale_ = changed->text_scale;
-        return apply_effective_text_scale();
+        os_appearance_ = changed->appearance;
+        os_reduced_motion_ = changed->reduced_motion;
+        return apply_system_preferences();
     }
 
     void NanApplication::set_text_scale_override(
@@ -329,6 +379,22 @@ namespace nandina::app
         return effective_text_scale_;
     }
 
+    auto NanApplication::apply_system_preferences() -> bool {
+        const theme::SystemPreferences desired_host {
+            .appearance = os_appearance_.value_or(theme::ColorAppearance::light),
+            .reduced_motion = os_reduced_motion_.value_or(false),
+        };
+        bool changed = false;
+        if (theme_manager_.system_preferences() != desired_host) {
+            theme_manager_.set_system_preferences(desired_host);
+            changed = true;
+        }
+        if (apply_effective_text_scale()) {
+            changed = true;
+        }
+        return changed;
+    }
+
     auto NanApplication::apply_effective_text_scale() -> bool {
         const float desired = text_scale_override_.has_value()
             ? *text_scale_override_
@@ -338,10 +404,27 @@ namespace nandina::app
         {
             return false;
         }
+        const auto previous_applied = applied_text_scale_;
+        const float previous_max_px = applied_max_text_px_;
+        const float previous_effective = effective_text_scale_;
         applied_text_scale_ = desired;
         applied_max_text_px_ = text_scale_max_px_;
         effective_text_scale_ = desired;
-        theme_manager_.set_text_scaling(desired, text_scale_max_px_);
+        try {
+            theme_manager_.set_text_scaling(desired, text_scale_max_px_);
+        }
+        catch (...) {
+            // 若 ThemeManager 在 require_idle() 处拒绝提交（状态未变更），回滚本地缓存，
+            // 避免下次同步误判为“已生效”而与 ThemeManager 永久失步。
+            if (theme_manager_.text_scale() != desired
+                || theme_manager_.max_text_px() != text_scale_max_px_)
+            {
+                applied_text_scale_ = previous_applied;
+                applied_max_text_px_ = previous_max_px;
+                effective_text_scale_ = previous_effective;
+            }
+            throw;
+        }
         return true;
     }
 

@@ -84,14 +84,15 @@ application shell. Version `0.1.0-alpha.1`.
   173.5 → 30.7 ms (5.7×). Verification matrix (2026-11-23, final tree): main suite 146 OK /
   0 FAIL; ASan 121 OK +1 skip; no-RTTI 123 OK; no-SQLite 118 OK +1 skip; pure tools 8/8;
   `release_check --ci` 8/8; Linux CPU 7-page golden 7/7 PASS (`deterministic=true`).
-- **Baseline counts**: 146 tests (123 unit + 23 integration), 218 headers (202 experimental +
-  16 internal), 28 approved page goldens (7 pages × CPU/SDF × 2 platforms), 46 public
+- **Linux desktop settings & cross-platform OS preferences bridge (committed 2026-11-24; `typography_scale.md` §8)**: (1) `SystemPreferencesSnapshot` adds `appearance` (`ColorAppearance`) and `reduced_motion` (`bool`) plus pure validators `text_scale_from_factor()` (`[0.5, 3.0]`) and `text_scale_from_dpi()`; (2) `NanApplication` forwards all three OS signals into `ThemeManager::set_system_preferences()` (batched in one call) and `set_text_scaling()` with rollback on `require_idle()` throw and exception-safe `noexcept` `detach_system_preferences()`, while `NanWindow` detaches auto-attached platform sources across `close()`, `~NanWindow()`, and failed `open()` before `platform_->destroy()`; (3) `SdlPlatformWindow` wires `SdlSystemPreferencesSource` (event-driven `SDL_GetSystemTheme()` + `SDL_EVENT_SYSTEM_THEME_CHANGED`, cross-platform) over platform backends (`LinuxSystemPreferencesSource` on Linux: XDG Desktop Portal `busctl` → `gsettings` / KDE `kcmfonts`/`kdeglobals` / GTK `settings.ini` with last-wins INI + UTF-8 BOM, 150 ms bounded command timeout, 500 ms `stat()`-gated polling with zero steady-state subprocesses including headless/no-`HOME`, zero new build deps; Windows keeps registry text scale + gains SDL3 appearance, pending Windows re-verification). Default font and 28 page goldens are untouched (`page_probe` bypasses `NanWindow`); GNOME Wayland startup & runtime live switching accepted interactively; full matrix + 7/7 CPU goldens PASS.
+- **Baseline counts**: 146 tests (123 unit + 23 integration), 220 headers (202 experimental +
+  18 internal), 28 approved page goldens (7 pages × CPU/SDF × 2 platforms), 46 public
   components; the CPU page-golden CI gate is blocking (7 pages).
 - **Do not over-claim**: Windows is experimental (only real exit codes/logs count; GPU/SDF and
   GUI checks need an interactive desktop, CPU paths can use `--renderer sdl2d` over SSH);
   macOS unsupported. Open: real IME candidate placement / standalone Xorg / Windows
   interaction, Wayland fractional scaling, display hot-plug and online scale changes,
-  accessibility text-scale Linux source/persistence, Theme Shell page and remaining
+  app-level text-scale persistence & Windows appearance live re-verification, Theme Shell page and remaining
   probe/golden coverage, notebook UI visual acceptance / todo / rich text, P4.8c build-time
   measurement batching. The registration contrast gate is not wired — never claim the full
   color gate passes. P4.7 real multi-face assets are deferred (synthetic fallback is the

@@ -8,6 +8,9 @@
 
     #include "../../render/backends/sdl_device.hpp"
     #include "../window_metrics.hpp"
+    #if defined(__linux__)
+        #include "linux_system_preferences.hpp"
+    #endif
     #include "windows_system_text_scale.hpp"
 
     #include <SDL3/SDL_gpu.h>
@@ -593,11 +596,16 @@ namespace nandina::app::detail
             renderer_name != nullptr ? renderer_name : "unknown"
         );
 
-        // OS preference source (Windows accessibility text scale today). Other platforms keep
-        // the base-class nullptr and the host falls back to a fixed 1.0 text scale.
+        // OS 偏好来源：SDL3 原生系统亮暗外观（事件驱动，Linux/Windows 通用）叠加平台无障碍
+        // 文字缩放与减弱动效来源。
+        std::unique_ptr<ISystemPreferencesSource> platform_preferences;
     #if defined(_WIN32)
-        system_preferences_ = std::make_unique<WindowsSystemTextScaleSource>();
+        platform_preferences = std::make_unique<WindowsSystemTextScaleSource>();
+    #elif defined(__linux__)
+        platform_preferences = std::make_unique<LinuxSystemPreferencesSource>();
     #endif
+        system_preferences_ =
+            std::make_unique<SdlSystemPreferencesSource>(std::move(platform_preferences));
         return true;
     }
 
@@ -895,6 +903,12 @@ namespace nandina::app::detail
             switch (event.type) {
                 case SDL_EVENT_QUIT:
                     should_close_ = true;
+                    break;
+
+                case SDL_EVENT_SYSTEM_THEME_CHANGED:
+                    if (system_preferences_ != nullptr) {
+                        system_preferences_->notify_theme_changed();
+                    }
                     break;
 
                 case SDL_EVENT_WINDOW_FOCUS_LOST:

@@ -352,6 +352,8 @@ if host_machine.system() == 'linux'
     module_app += files(
         'app/detail/linux_clipboard.hpp',
         'app/detail/linux_clipboard.cpp',
+        'app/detail/linux_system_preferences.hpp',
+        'app/detail/linux_system_preferences.cpp',
     )
 endif
 
@@ -360,6 +362,8 @@ if sdl3_dep.found()
     module_sdl_backend = files(
         'app/detail/sdl_platform_window.hpp',
         'app/detail/sdl_platform_window.cpp',
+        'app/detail/sdl_system_preferences.hpp',
+        'app/detail/sdl_system_preferences.cpp',
         'app/detail/sdl_text_input_service.hpp',
         'app/detail/sdl_text_input_service.cpp',
         'render/backends/sdl_device.hpp',

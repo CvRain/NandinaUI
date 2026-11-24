@@ -829,6 +829,138 @@ TEST_CASE(
 }
 
 TEST_CASE(
+    "SDL system theme adapter merges appearance and reacts to theme events",
+    "[sdl][system-preferences]"
+) {
+    REQUIRE(
+        app::detail::appearance_from_sdl_theme(SDL_SYSTEM_THEME_LIGHT)
+        == theme::ColorAppearance::light
+    );
+    REQUIRE(
+        app::detail::appearance_from_sdl_theme(SDL_SYSTEM_THEME_DARK)
+        == theme::ColorAppearance::dark
+    );
+    REQUIRE_FALSE(app::detail::appearance_from_sdl_theme(SDL_SYSTEM_THEME_UNKNOWN).has_value());
+
+    class FakePlatformPrefs final: public app::ISystemPreferencesSource {
+    public:
+        [[nodiscard]] auto snapshot() const -> app::SystemPreferencesSnapshot override {
+            return current;
+        }
+        [[nodiscard]] auto poll_changes()
+            -> std::optional<app::SystemPreferencesSnapshot> override {
+            if (!pending) {
+                return std::nullopt;
+            }
+            pending = false;
+            return current;
+        }
+
+        app::SystemPreferencesSnapshot current;
+        bool pending = false;
+    };
+
+    SDL_SystemTheme current_sdl = SDL_SYSTEM_THEME_UNKNOWN;
+    auto backend = std::make_unique<FakePlatformPrefs>();
+    auto* raw_backend = backend.get();
+    raw_backend->current = {
+        .text_scale = 1.25F,
+        .appearance = theme::ColorAppearance::dark,
+        .reduced_motion = true,
+    };
+
+    app::detail::SdlSystemPreferencesSource source(std::move(backend), [&] { return current_sdl; });
+
+    // When SDL reports UNKNOWN, platform fallback appearance is preserved.
+    const auto initial = source.snapshot();
+    REQUIRE(initial.text_scale == 1.25F);
+    REQUIRE(initial.appearance == theme::ColorAppearance::dark);
+    REQUIRE(initial.reduced_motion == true);
+    REQUIRE_FALSE(source.poll_changes().has_value());
+
+    // SDL theme change event overrides platform appearance immediately on next poll.
+    current_sdl = SDL_SYSTEM_THEME_LIGHT;
+    source.notify_theme_changed();
+    const auto after_sdl = source.poll_changes();
+    REQUIRE(after_sdl.has_value());
+    REQUIRE(after_sdl->appearance == theme::ColorAppearance::light);
+    REQUIRE(after_sdl->text_scale == 1.25F);
+    REQUIRE(after_sdl->reduced_motion == true);
+
+    // Repeated notification with unchanged SDL theme emits nothing.
+    source.notify_theme_changed();
+    REQUIRE_FALSE(source.poll_changes().has_value());
+
+    // Platform update for text_scale keeps SDL's active light appearance.
+    raw_backend->current.text_scale = 1.5F;
+    raw_backend->current.appearance = theme::ColorAppearance::dark;
+    raw_backend->pending = true;
+    const auto after_platform = source.poll_changes();
+    REQUIRE(after_platform.has_value());
+    REQUIRE(after_platform->appearance == theme::ColorAppearance::light);
+    REQUIRE(after_platform->text_scale == 1.5F);
+
+    // Transitioning SDL theme from LIGHT/DARK back to UNKNOWN falls back to platform appearance.
+    current_sdl = SDL_SYSTEM_THEME_DARK;
+    source.notify_theme_changed();
+    const auto to_dark = source.poll_changes();
+    REQUIRE(to_dark.has_value());
+    REQUIRE(to_dark->appearance == theme::ColorAppearance::dark);
+
+    raw_backend->current.appearance = theme::ColorAppearance::light;
+    raw_backend->pending = true;
+    REQUIRE_FALSE(source.poll_changes().has_value());
+
+    current_sdl = SDL_SYSTEM_THEME_UNKNOWN;
+    source.notify_theme_changed();
+    const auto back_to_platform = source.poll_changes();
+    REQUIRE(back_to_platform.has_value());
+    REQUIRE(back_to_platform->appearance == theme::ColorAppearance::light);
+
+    // Calling poll_changes() before snapshot() must still capture the initial platform baseline.
+    auto fresh_backend = std::make_unique<FakePlatformPrefs>();
+    fresh_backend->current = {
+        .text_scale = 1.5F,
+        .appearance = theme::ColorAppearance::dark,
+        .reduced_motion = true,
+    };
+    app::detail::SdlSystemPreferencesSource unbaselined(std::move(fresh_backend), [] {
+        return SDL_SYSTEM_THEME_UNKNOWN;
+    });
+    const auto first_poll = unbaselined.poll_changes();
+    REQUIRE(first_poll.has_value());
+    REQUIRE(first_poll->text_scale == 1.5F);
+    REQUIRE(first_poll->appearance == theme::ColorAppearance::dark);
+    REQUIRE(first_poll->reduced_motion == true);
+}
+
+TEST_CASE(
+    "SdlPlatformWindow exposes a system preferences source and processes theme events",
+    "[sdl][system-preferences]"
+) {
+    app::WindowConfig config;
+    config.width = 160;
+    config.height = 120;
+    config.vsync = false;
+    config.target_fps = 0;
+
+    app::detail::SdlPlatformWindow window;
+    REQUIRE(window.create(config));
+    REQUIRE(window.system_preferences_source() != nullptr);
+
+    SDL_Event event {};
+    event.type = SDL_EVENT_SYSTEM_THEME_CHANGED;
+    REQUIRE(SDL_PushEvent(&event));
+    app::FrameInput input {};
+    window.poll_input(input);
+
+    // Under dummy video driver SDL_GetSystemTheme stays UNKNOWN, so poll must remain safe.
+    (void)window.system_preferences_source()->poll_changes();
+    window.destroy();
+    REQUIRE(window.system_preferences_source() == nullptr);
+}
+
+TEST_CASE(
     "SDL host declares composition rendering before video setup",
     "[sdl][input][text][ime-ui]"
 ) {

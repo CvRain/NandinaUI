@@ -18,6 +18,18 @@
 
 ## 2. 三档分类
 
+2026-11-23 Linux 桌面设置与跨平台系统偏好桥接（experimental 增量，新增 2 个 internal 平台头；
+头文件总数 220 = 202 experimental + 18 internal）：
+`nandina/app/system_preferences.hpp`（experimental）扩展 `SystemPreferencesSnapshot`（新增
+`appearance`、`reduced_motion` 与默认 `operator==`）及纯函数 `text_scale_from_factor(double)`
+（`[0.5, 3.0]`）/ `text_scale_from_dpi(double)`（按 96 DPI 换算）。`NanApplication` 将三项 OS
+偏好桥接到 `ThemeManager::set_system_preferences()` 与 `set_text_scaling()`；`NanWindow` 在
+关闭及打开失败时自动解除平台自带来源，避免悬空指针。新增两个 `internal` 平台实现头：
+`nandina/app/detail/linux_system_preferences.hpp`（XDG Desktop Portal / `gsettings` / KDE /
+GTK 读取、150 ms 超时与 `stat()` 稳态门控）与 `nandina/app/detail/sdl_system_preferences.hpp`
+（SDL3 `SDL_GetSystemTheme()` + `SDL_EVENT_SYSTEM_THEME_CHANGED` 与平台子源组合）。不新增硬编译
+依赖，默认字体与 28 条页面 golden 不变。契约见 [排版尺度与单位](typography_scale.md) §8。
+
 2026-11-23 切页阻塞与窗口实时缩放批（experimental，新增 theme API 与相等性；头文件总数不变，
 仍为 218 = 202 experimental + 16 internal）：
 `nandina/theme/design_system.hpp`（experimental）新增
@@ -599,8 +611,8 @@ TreeView 用例与 SDK consumer 的 `tree-api=1` 探针覆盖。
 - 迁移说明只表达一件事：原来由自定义平台 override 提供的解码器，改为应用服务注入；
 - 库内实现、测试替身、下游样例一次改完，要求重新编译。
 
-退役后清单为 182 个头文件，其中 10 个 internal（清单随后续批次增长，当前为 218 个头文件：
-**202 experimental + 16 internal**。九个数据视图头均已位于正式 `widget/` 路径；`item_host`
+退役后清单为 182 个头文件，其中 10 个 internal（清单随后续批次增长，当前为 220 个头文件：
+**202 experimental + 18 internal**。九个数据视图头均已位于正式 `widget/` 路径；`item_host`
 保持 internal；`anchored_positioner.hpp` 与 `uniform_row_window.hpp` 因被实验性公共头内联包含
 而登记为 experimental）。生成模板归 NandinaCLI；
 框架维护 [`sdk_app` 消费 fixture](../../tests/fixtures/sdk_app/README.md)，不维护第二份模板。

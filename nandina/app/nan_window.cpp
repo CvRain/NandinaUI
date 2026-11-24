@@ -100,6 +100,19 @@ namespace nandina::app
             }
             throw std::invalid_argument("NanWindow: unsupported window backend");
         }
+
+        /// 若应用当前绑定的是本窗口平台对象提供的偏好来源，在平台销毁前解除绑定，
+        /// 避免 NanApplication 持有悬空指针；应用显式注入的自定义来源不受影响。
+        void detach_platform_preferences(NanApplication& app, IPlatformWindow* platform) noexcept {
+            if (platform == nullptr) {
+                return;
+            }
+            if (auto* source = platform->system_preferences_source();
+                source != nullptr && app.system_preferences_source() == source)
+            {
+                app.detach_system_preferences();
+            }
+        }
     } // namespace
 
     NanWindow::NanWindow(NanApplication& app, WindowConfig config):
@@ -111,9 +124,13 @@ namespace nandina::app
     }
 
     NanWindow::~NanWindow() {
-        // 若 run 未显式 close (异常路径), 兜底关闭窗口。
+        // 若 run 未显式 close (异常路径), 兜底关闭窗口；即使平台已提前标记为非就绪，
+        // 也要解除其偏好来源，防止 platform_ 析构后 NanApplication 持有悬空指针。
         if (opened_ && platform_ != nullptr && platform_->is_ready()) {
             close();
+        }
+        else {
+            detach_platform_preferences(app_, platform_.get());
         }
     }
 
@@ -298,6 +315,10 @@ namespace nandina::app
             device_ = device_wrapper_(std::move(device_));
         }
         if (device_ == nullptr) {
+            tree_.clear_clipboard();
+            clipboard_.reset();
+            tree_.set_text_input_service(nullptr);
+            detach_platform_preferences(app_, platform_.get());
             platform_->destroy();
             opened_ = false;
             throw std::runtime_error("NanWindow: platform failed to create a render device");
@@ -335,8 +356,11 @@ namespace nandina::app
             tree_.clear_texture_cache();
             texture_cache_.reset();
             device_.reset();
-            platform_->destroy();
             tree_.clear_clipboard();
+            clipboard_.reset();
+            tree_.set_text_input_service(nullptr);
+            detach_platform_preferences(app_, platform_.get());
+            platform_->destroy();
             opened_ = false;
             close_pending_ = false;
             log::get("app.window")
@@ -675,6 +699,7 @@ namespace nandina::app
         tree_.clear_clipboard();
         clipboard_.reset();
         tree_.set_text_input_service(nullptr);
+        detach_platform_preferences(app_, platform_.get());
         platform_->destroy();
         opened_ = false;
         close_pending_ = false;
