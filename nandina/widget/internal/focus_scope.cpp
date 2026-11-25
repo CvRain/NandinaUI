@@ -111,6 +111,13 @@ namespace nandina::widget::internal
         previous_focus_.reset();
     }
 
+    auto FocusScope::
+        child_axis_assignment(const scene::NanControl& target, const bool /*horizontal*/) const
+        -> scene::ChildAxisAssignment {
+        return content_.lock().get() == &target ? scene::ChildAxisAssignment::pass_through
+                                                : scene::ChildAxisAssignment::none;
+    }
+
     auto FocusScope::on_measure(const foundation::NanLayoutConstraints constraints)
         -> foundation::NanSize {
         auto current = content_.lock();
@@ -120,6 +127,7 @@ namespace nandina::widget::internal
 
     void FocusScope::on_layout() {
         if (auto current = content_.lock()) {
+            (void)current->measure_layout(foundation::NanLayoutConstraints::tight(size()));
             current->layout_to(local_rect());
         }
     }

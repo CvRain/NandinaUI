@@ -142,9 +142,10 @@
    golden）；新页面 approved 后自动进入 CI CPU 门禁。
 8. **P4.8a/P4.8c**：`NANDINA_PAGE_TIMING` 逐节计时日志与 opt-in 构建期批量测量，先量后改；
    长期异步整形按需。
-9. **单独立项**：布局契约（`max_width` 被父级紧约束压过、anchors `fill`/百分比占排列容器剩余
-   空间）需先改 [Anchors §5.1/§5.3](anchors.md) 与 layout §7.1 契约，牵动全部页面 golden，
-   不与组件批混做。
+9. **单独立项**：`AnchorCanvas` 嵌入排列容器（`Expanded` / `fill` / `percent`）与非循环 `content`
+   内容自适应已于 2026-11-25 落地（见 [Anchors §5.1/§5.3](anchors.md)，0 张页面 golden 变动）；
+   `NanControl` 的 `max_width` 被父级紧约束压过（[布局收敛 §7.1](layout_convergence_and_text_measurement.md)）
+   会牵动多个 showcase 页面 golden，仍保持独立下一小批，不与组件批混做。
 10. **保留的 P1 边界**：退役后的 Windows 静态构建/窗口生命周期复验、P1.6 完整 Image 页面
     端到端采样仍分别记录；不把它们混同于已交付的 Windows golden 与参考性能基线。
 11. **已交付记录**：P1.2 Windows CPU/SDF 首批 6 条 approved（现每平台 14 条）、P1.3 Windows

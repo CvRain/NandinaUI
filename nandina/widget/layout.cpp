@@ -150,6 +150,44 @@ namespace nandina::widget
             return std::isfinite(limit) ? limit : std::numeric_limits<float>::infinity();
         }
 
+        [[nodiscard]] auto linear_child_axis_assignment(
+            const scene::NanControl& container,
+            const scene::NanControl& child,
+            const LayoutAxis axis,
+            const LayoutAlignment cross_alignment,
+            const bool horizontal
+        ) -> scene::ChildAxisAssignment {
+            const auto constraints = container.last_layout_constraints();
+            const auto policy = child.layout_flex_policy();
+            const bool assigns_main = policy.grow > 0.0F || policy.basis.has_value();
+            const bool is_main_axis = (axis == LayoutAxis::horizontal) == horizontal;
+            if (is_main_axis) {
+                if (policy.basis.has_value()) {
+                    return scene::ChildAxisAssignment::assigned;
+                }
+                const float main_max =
+                    axis == LayoutAxis::horizontal ? constraints.max_width : constraints.max_height;
+                return (policy.grow > 0.0F && std::isfinite(main_max) && main_max >= 0.0F)
+                    ? scene::ChildAxisAssignment::assigned
+                    : scene::ChildAxisAssignment::none;
+            }
+            if (assigns_main && axis == LayoutAxis::vertical && std::isfinite(constraints.max_width)
+                && constraints.max_width >= 0.0F
+                && (policy.basis.has_value()
+                    || (std::isfinite(constraints.max_height) && constraints.max_height >= 0.0F)))
+            {
+                // measure_linear_container Pass 2 gives vertical flex items tight min_width == max_width.
+                return scene::ChildAxisAssignment::assigned;
+            }
+            const auto cross_axis = perpendicular_axis(axis);
+            if (cross_alignment == LayoutAlignment::stretch
+                && !has_explicit_extent(child, cross_axis))
+            {
+                return scene::ChildAxisAssignment::pass_through;
+            }
+            return scene::ChildAxisAssignment::none;
+        }
+
         struct LinearItem {
             std::shared_ptr<scene::NanControl> child;
             scene::LayoutFlexPolicy policy;
@@ -243,9 +281,19 @@ namespace nandina::widget
             std::vector<std::weak_ptr<scene::NanControl>>& refs,
             LayoutAxis axis,
             foundation::NanLayoutConstraints constraints,
-            float gap
+            float gap,
+            LayoutAlignment cross_alignment
         ) -> foundation::NanSize {
             prune_expired(refs);
+            const auto cross_axis = perpendicular_axis(axis);
+            const float cross_min =
+                axis == LayoutAxis::vertical ? constraints.min_width : constraints.min_height;
+            const float cross_max =
+                axis == LayoutAxis::vertical ? constraints.max_width : constraints.max_height;
+            const bool tight_stretched_cross = cross_alignment == LayoutAlignment::stretch
+                && std::isfinite(cross_max) && cross_max >= 0.0F
+                && std::abs(cross_min - cross_max) <= foundation::nan_epsilon;
+
             std::vector<LinearItem> items;
             for (auto& ref: refs) {
                 auto child = ref.lock();
@@ -253,7 +301,23 @@ namespace nandina::widget
                     continue;
                 }
                 const auto policy = child->layout_flex_policy();
-                const auto measured = child->measure_layout(child_constraints(constraints));
+                auto item_constraints = child_constraints(constraints);
+                if (tight_stretched_cross && !has_explicit_extent(*child, cross_axis)) {
+                    const float min_cross_lim =
+                        std::max(0.0F, policy_limit(policy.limits, cross_axis, true));
+                    const float max_cross_lim =
+                        std::max(min_cross_lim, policy_limit(policy.limits, cross_axis, false));
+                    const float stretched = std::clamp(cross_max, min_cross_lim, max_cross_lim);
+                    if (axis == LayoutAxis::vertical) {
+                        item_constraints.min_width = stretched;
+                        item_constraints.max_width = stretched;
+                    }
+                    else {
+                        item_constraints.min_height = stretched;
+                        item_constraints.max_height = stretched;
+                    }
+                }
+                const auto measured = child->measure_layout(item_constraints);
                 const float min_main = std::max(0.0F, policy_limit(policy.limits, axis, true));
                 const float max_main = std::max(min_main, policy_limit(policy.limits, axis, false));
                 const float raw_base = policy.basis.value_or(main_extent(measured, axis));
@@ -275,32 +339,47 @@ namespace nandina::widget
             }
 
             const float gaps = gap * static_cast<float>(items.size() - 1);
-            const float available_main = std::isfinite(effective_limit(max_main(constraints, axis)))
-                ? effective_limit(max_main(constraints, axis)) - gaps
+            const bool finite_main = std::isfinite(effective_limit(max_main(constraints, axis)));
+            const float available_main = finite_main
+                ? std::max(0.0F, effective_limit(max_main(constraints, axis)) - gaps)
                 : std::numeric_limits<float>::infinity();
-            if (std::isfinite(available_main) && available_main >= 0.0F) {
+            if (finite_main) {
                 distribute_linear(items, available_main);
-                for (auto& item: items) {
-                    if (item.policy.grow <= 0.0F && item.policy.shrink <= 0.0F) {
-                        continue;
-                    }
-                    // Tight on the main axis, unchanged cross-axis limits: the child must
-                    // resolve its wrapping at the width/height it will actually occupy.
-                    const auto tight = axis == LayoutAxis::horizontal
-                        ? foundation::NanLayoutConstraints {
-                              .min_width = item.target,
-                              .max_width = item.target,
-                              .min_height = 0.0F,
-                              .max_height = constraints.max_height,
-                          }
-                        : foundation::NanLayoutConstraints {
-                              .min_width = constraints.max_width,
-                              .max_width = constraints.max_width,
-                              .min_height = item.target,
-                              .max_height = item.target,
-                          };
-                    item.measured = item.child->measure_layout(tight);
+            }
+            for (auto& item: items) {
+                const bool needs_pass2 = item.policy.basis.has_value()
+                    || (finite_main && (item.policy.grow > 0.0F || item.policy.shrink > 0.0F));
+                if (!needs_pass2) {
+                    continue;
                 }
+                const float min_cross_lim =
+                    std::max(0.0F, policy_limit(item.policy.limits, cross_axis, true));
+                const float max_cross_lim =
+                    std::max(min_cross_lim, policy_limit(item.policy.limits, cross_axis, false));
+                const float stretched_h_cross =
+                    tight_stretched_cross && !has_explicit_extent(*item.child, cross_axis)
+                    ? std::clamp(constraints.max_height, min_cross_lim, max_cross_lim)
+                    : 0.0F;
+                // Tight on the main axis, unchanged cross-axis limits: the child must
+                // resolve its wrapping at the width/height it will actually occupy.
+                const auto tight = axis == LayoutAxis::horizontal
+                    ? foundation::NanLayoutConstraints {
+                          .min_width = item.target,
+                          .max_width = item.target,
+                          .min_height = stretched_h_cross,
+                          .max_height = tight_stretched_cross
+                                  && !has_explicit_extent(*item.child, cross_axis)
+                              ? stretched_h_cross
+                              : constraints.max_height,
+                      }
+                    : foundation::NanLayoutConstraints {
+                          .min_width =
+                              std::isfinite(constraints.max_width) ? constraints.max_width : 0.0F,
+                          .max_width = constraints.max_width,
+                          .min_height = item.target,
+                          .max_height = item.target,
+                      };
+                item.measured = item.child->measure_layout(tight);
             }
 
             float used_main = gaps;
@@ -512,14 +591,20 @@ namespace nandina::widget
         return cross_alignment_;
     }
 
+    auto Flex::child_axis_assignment(const scene::NanControl& child, const bool horizontal) const
+        -> scene::ChildAxisAssignment {
+        return linear_child_axis_assignment(*this, child, axis_, cross_alignment_, horizontal);
+    }
+
     void Flex::relayout() {
+        scene::NanControl::ProvisionalRelayoutScope provisional;
         (void)measure_layout(foundation::NanLayoutConstraints::loose());
         layout_to(foundation::NanRect::from_origin_size(position(), measured_size()));
     }
 
     auto Flex::on_measure(foundation::NanLayoutConstraints constraints) -> foundation::NanSize {
         auto items = control_children(*this);
-        return measure_linear_container(items, axis_, constraints, gap_);
+        return measure_linear_container(items, axis_, constraints, gap_, cross_alignment_);
     }
 
     auto Flex::on_layout() -> void {
@@ -650,6 +735,7 @@ namespace nandina::widget
     }
 
     void Wrap::relayout() {
+        scene::NanControl::ProvisionalRelayoutScope provisional;
         (void)measure_layout(foundation::NanLayoutConstraints::loose());
         layout_to(foundation::NanRect::from_origin_size(position(), measured_size()));
     }
@@ -779,14 +865,32 @@ namespace nandina::widget
         return cross_alignment_;
     }
 
+    auto Column::child_axis_assignment(const scene::NanControl& child, const bool horizontal) const
+        -> scene::ChildAxisAssignment {
+        return linear_child_axis_assignment(
+            *this,
+            child,
+            LayoutAxis::vertical,
+            cross_alignment_,
+            horizontal
+        );
+    }
+
     void Column::relayout() {
+        scene::NanControl::ProvisionalRelayoutScope provisional;
         (void)measure_layout(foundation::NanLayoutConstraints::loose());
         layout_to(foundation::NanRect::from_origin_size(position(), measured_size()));
     }
 
     auto Column::on_measure(foundation::NanLayoutConstraints constraints) -> foundation::NanSize {
         auto items = control_children(*this);
-        return measure_linear_container(items, LayoutAxis::vertical, constraints, gap_);
+        return measure_linear_container(
+            items,
+            LayoutAxis::vertical,
+            constraints,
+            gap_,
+            cross_alignment_
+        );
     }
 
     auto Column::on_layout() -> void {
@@ -853,14 +957,32 @@ namespace nandina::widget
         return cross_alignment_;
     }
 
+    auto Row::child_axis_assignment(const scene::NanControl& child, const bool horizontal) const
+        -> scene::ChildAxisAssignment {
+        return linear_child_axis_assignment(
+            *this,
+            child,
+            LayoutAxis::horizontal,
+            cross_alignment_,
+            horizontal
+        );
+    }
+
     void Row::relayout() {
+        scene::NanControl::ProvisionalRelayoutScope provisional;
         (void)measure_layout(foundation::NanLayoutConstraints::loose());
         layout_to(foundation::NanRect::from_origin_size(position(), measured_size()));
     }
 
     auto Row::on_measure(foundation::NanLayoutConstraints constraints) -> foundation::NanSize {
         auto items = control_children(*this);
-        return measure_linear_container(items, LayoutAxis::horizontal, constraints, gap_);
+        return measure_linear_container(
+            items,
+            LayoutAxis::horizontal,
+            constraints,
+            gap_,
+            cross_alignment_
+        );
     }
 
     auto Row::on_layout() -> void {
@@ -894,12 +1016,30 @@ namespace nandina::widget
         return *this;
     }
 
+    auto
+    Stack::child_axis_assignment(const scene::NanControl& child, const bool /*horizontal*/) const
+        -> scene::ChildAxisAssignment {
+        return child.parent() == this ? scene::ChildAxisAssignment::pass_through
+                                      : scene::ChildAxisAssignment::none;
+    }
+
     void Stack::relayout() {
+        scene::NanControl::ProvisionalRelayoutScope provisional;
         (void)measure_layout(foundation::NanLayoutConstraints::loose());
         layout_to(foundation::NanRect::from_origin_size(position(), measured_size()));
     }
 
     auto Stack::on_measure(foundation::NanLayoutConstraints constraints) -> foundation::NanSize {
+        const bool tight_w = std::isfinite(constraints.max_width)
+            && std::abs(constraints.min_width - constraints.max_width) <= foundation::nan_epsilon;
+        const bool tight_h = std::isfinite(constraints.max_height)
+            && std::abs(constraints.min_height - constraints.max_height) <= foundation::nan_epsilon;
+        const foundation::NanLayoutConstraints item_limits {
+            .min_width = tight_w ? constraints.min_width : 0.0F,
+            .max_width = constraints.max_width,
+            .min_height = tight_h ? constraints.min_height : 0.0F,
+            .max_height = constraints.max_height,
+        };
         float max_width = 0.0F;
         float max_height = 0.0F;
         for (std::size_t i = 0; i < child_count(); ++i) {
@@ -907,7 +1047,7 @@ namespace nandina::widget
             if (!child || !child->visible()) {
                 continue;
             }
-            const auto measured = child->measure_layout(foundation::NanLayoutConstraints::loose());
+            const auto measured = child->measure_layout(item_limits);
             max_width = std::max(max_width, measured.get_width());
             max_height = std::max(max_height, measured.get_height());
         }
@@ -963,7 +1103,15 @@ namespace nandina::widget
         return insets_;
     }
 
+    auto
+    Padding::child_axis_assignment(const scene::NanControl& target, const bool /*horizontal*/) const
+        -> scene::ChildAxisAssignment {
+        return child_.lock().get() == &target ? scene::ChildAxisAssignment::pass_through
+                                              : scene::ChildAxisAssignment::none;
+    }
+
     void Padding::relayout() {
+        scene::NanControl::ProvisionalRelayoutScope provisional;
         (void)measure_layout(foundation::NanLayoutConstraints::loose());
         layout_to(foundation::NanRect::from_origin_size(position(), measured_size()));
     }
@@ -1030,6 +1178,7 @@ namespace nandina::widget
     }
 
     void Center::relayout() {
+        scene::NanControl::ProvisionalRelayoutScope provisional;
         (void)measure_layout(foundation::NanLayoutConstraints::loose());
         layout_to(foundation::NanRect::from_origin_size(position(), measured_size()));
     }
@@ -1105,7 +1254,15 @@ namespace nandina::widget
         return flex_;
     }
 
+    auto Expanded::
+        child_axis_assignment(const scene::NanControl& target, const bool /*horizontal*/) const
+        -> scene::ChildAxisAssignment {
+        return child_.lock().get() == &target ? scene::ChildAxisAssignment::pass_through
+                                              : scene::ChildAxisAssignment::none;
+    }
+
     void Expanded::relayout() {
+        scene::NanControl::ProvisionalRelayoutScope provisional;
         (void)measure_layout(foundation::NanLayoutConstraints::loose());
         layout_to(foundation::NanRect::from_origin_size(position(), measured_size()));
     }
@@ -1127,7 +1284,7 @@ namespace nandina::widget
         if (!child) {
             return constraints.constrain(foundation::NanSize::zero());
         }
-        return constraints.constrain(child->measure_layout(child_constraints(constraints)));
+        return constraints.constrain(child->measure_layout(constraints));
     }
 
     auto Expanded::on_layout() -> void {
@@ -1188,6 +1345,13 @@ namespace nandina::widget
     }
     auto FlexItem::layout_flex_policy() const -> scene::LayoutFlexPolicy {
         return policy_;
+    }
+
+    auto FlexItem::
+        child_axis_assignment(const scene::NanControl& target, const bool /*horizontal*/) const
+        -> scene::ChildAxisAssignment {
+        return child_.lock().get() == &target ? scene::ChildAxisAssignment::pass_through
+                                              : scene::ChildAxisAssignment::none;
     }
 
     auto FlexItem::on_measure(foundation::NanLayoutConstraints constraints) -> foundation::NanSize {

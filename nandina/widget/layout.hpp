@@ -45,6 +45,9 @@ namespace nandina::widget
         [[nodiscard]] auto gap() const -> float;
         [[nodiscard]] auto main_alignment() const -> LayoutAlignment;
         [[nodiscard]] auto cross_alignment() const -> LayoutAlignment;
+        [[nodiscard]] auto
+        child_axis_assignment(const scene::NanControl& child, bool horizontal) const
+            -> scene::ChildAxisAssignment override;
 
         void relayout();
 
@@ -121,6 +124,9 @@ namespace nandina::widget
         [[nodiscard]] auto gap() const -> float;
         [[nodiscard]] auto main_alignment() const -> LayoutAlignment;
         [[nodiscard]] auto cross_alignment() const -> LayoutAlignment;
+        [[nodiscard]] auto
+        child_axis_assignment(const scene::NanControl& child, bool horizontal) const
+            -> scene::ChildAxisAssignment override;
 
         void relayout();
 
@@ -147,6 +153,9 @@ namespace nandina::widget
         [[nodiscard]] auto gap() const -> float;
         [[nodiscard]] auto main_alignment() const -> LayoutAlignment;
         [[nodiscard]] auto cross_alignment() const -> LayoutAlignment;
+        [[nodiscard]] auto
+        child_axis_assignment(const scene::NanControl& child, bool horizontal) const
+            -> scene::ChildAxisAssignment override;
 
         void relayout();
 
@@ -167,6 +176,9 @@ namespace nandina::widget
         [[nodiscard]] static auto create() -> std::shared_ptr<Stack>;
 
         auto add(std::shared_ptr<scene::NanControl> child) -> Stack&;
+        [[nodiscard]] auto
+        child_axis_assignment(const scene::NanControl& child, bool horizontal) const
+            -> scene::ChildAxisAssignment override;
 
         void relayout();
 
@@ -189,6 +201,9 @@ namespace nandina::widget
         [[nodiscard]] auto child() const -> scene::NanControl*;
         auto set_padding(foundation::NanInsets insets) -> Padding&;
         [[nodiscard]] auto padding() const -> foundation::NanInsets;
+        [[nodiscard]] auto
+        child_axis_assignment(const scene::NanControl& child, bool horizontal) const
+            -> scene::ChildAxisAssignment override;
 
         void relayout();
 
@@ -232,6 +247,9 @@ namespace nandina::widget
         auto set_flex(int flex) -> Expanded&;
         [[nodiscard]] auto flex() const -> int;
         [[nodiscard]] auto layout_flex_factor() const -> int override;
+        [[nodiscard]] auto
+        child_axis_assignment(const scene::NanControl& child, bool horizontal) const
+            -> scene::ChildAxisAssignment override;
 
         void relayout();
 
@@ -257,6 +275,9 @@ namespace nandina::widget
         auto set_policy(scene::LayoutFlexPolicy policy) -> FlexItem&;
         [[nodiscard]] auto policy() const -> scene::LayoutFlexPolicy;
         [[nodiscard]] auto layout_flex_policy() const -> scene::LayoutFlexPolicy override;
+        [[nodiscard]] auto
+        child_axis_assignment(const scene::NanControl& child, bool horizontal) const
+            -> scene::ChildAxisAssignment override;
 
     protected:
         [[nodiscard]] auto on_measure(foundation::NanLayoutConstraints constraints)

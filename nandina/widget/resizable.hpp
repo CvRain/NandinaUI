@@ -116,6 +116,9 @@ namespace nandina::widget
         void set_theme(theme::NanTheme theme);
         [[nodiscard]] auto theme_ref() const noexcept -> const theme::NanTheme&;
         void on_theme_changed(const theme::ThemeManager& manager) override;
+        [[nodiscard]] auto
+        child_axis_assignment(const scene::NanControl& child, bool horizontal) const
+            -> scene::ChildAxisAssignment override;
 
         void relayout();
 
@@ -144,7 +147,7 @@ namespace nandina::widget
 
         [[nodiscard]] auto compute_split_geometry(foundation::NanSize container_size) const
             -> SplitGeometry;
-        void layout_panes();
+        void layout_panes(bool from_on_layout = false);
         void apply_user_ratio(float requested_ratio);
         void validate_pane_node(
             const std::shared_ptr<scene::NanControl>& next,

@@ -81,6 +81,24 @@ namespace nandina::widget
         return wheel_step_;
     }
 
+    auto
+    ScrollView::child_axis_assignment(const scene::NanControl& target, const bool horizontal) const
+        -> scene::ChildAxisAssignment {
+        if (child_.lock().get() != &target) {
+            return scene::ChildAxisAssignment::none;
+        }
+        if (axis_ == ScrollAxis::vertical && horizontal) {
+            const auto constraints = last_layout_constraints();
+            const float hi = width() > 0.0F ? width() : constraints.max_width;
+            return (std::isfinite(hi) && hi >= 0.0F) ? scene::ChildAxisAssignment::assigned
+                                                     : scene::ChildAxisAssignment::pass_through;
+        }
+        if (axis_ == ScrollAxis::horizontal && !horizontal) {
+            return scene::ChildAxisAssignment::pass_through;
+        }
+        return scene::ChildAxisAssignment::none;
+    }
+
     auto ScrollView::maximum_scroll_offset() const -> foundation::NanPoint {
         return foundation::NanPoint(
             axis_ == ScrollAxis::vertical ? 0.0F
@@ -150,6 +168,12 @@ namespace nandina::widget
         }
         else if (axis_ == ScrollAxis::horizontal) {
             child_limits.max_height = constraints.max_height;
+            if (std::isfinite(constraints.max_height)
+                && std::abs(constraints.min_height - constraints.max_height)
+                    <= foundation::nan_epsilon)
+            {
+                child_limits.min_height = constraints.min_height;
+            }
         }
         // ScrollAxis::both：两轴都可滚动，两轴都保持 loose —— 这是既有契约
         // （见 tests/anchors_boundary_tests.cpp「scroll views constrain only their

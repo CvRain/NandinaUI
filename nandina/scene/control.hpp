@@ -44,6 +44,13 @@ namespace nandina::scene
         foundation::NanLayoutConstraints limits {};
     };
 
+    /// 父容器在布局阶段是否会独立于子项测量结果为其指派对应轴的确定尺寸。
+    enum class ChildAxisAssignment {
+        none, ///< 父容器直接使用子项自身测量的轴向尺寸。
+        pass_through, ///< 单子项包装容器（如 Padding/Card/Expanded）；沿父链继续判定。
+        assigned, ///< 父容器会在分配/排列阶段赋予有限紧尺寸（如 flex 主轴、Stack、交叉轴 stretch）。
+    };
+
     /// 组件尺寸的类型化表达。普通数字使用逻辑 UI 单位，百分比相对于父布局在
     /// 对应轴提供的有限上界；fill 与 flex 不同，它请求整个可用约束而不是分配余量。
     struct ContentLength {
@@ -141,6 +148,20 @@ namespace nandina::scene
         auto clear_layout_dirty() -> void;
         [[nodiscard]] virtual auto layout_flex_factor() const -> int;
         [[nodiscard]] virtual auto layout_flex_policy() const -> LayoutFlexPolicy;
+        [[nodiscard]] virtual auto
+        child_axis_assignment(const NanControl& child, bool horizontal) const
+            -> ChildAxisAssignment;
+
+        /// RAII scope marking eager container mutation/ready `relayout()` passes outside a real
+        /// `NanSceneTree::layout_root()` or caller-invoked `measure_layout` / `layout_to`.
+        class ProvisionalRelayoutScope {
+        public:
+            ProvisionalRelayoutScope() noexcept;
+            ~ProvisionalRelayoutScope() noexcept;
+            ProvisionalRelayoutScope(const ProvisionalRelayoutScope&) = delete;
+            auto operator=(const ProvisionalRelayoutScope&) -> ProvisionalRelayoutScope& = delete;
+        };
+        [[nodiscard]] static auto provisional_relayout_active() noexcept -> bool;
 
         [[nodiscard]] auto measure_layout(foundation::NanLayoutConstraints constraints)
             -> foundation::NanSize;

@@ -53,6 +53,7 @@ namespace nandina::widget
         }
         ratio_ = ratio;
         if (!is_inside_tree() && (width() > 0.0F || height() > 0.0F)) {
+            scene::NanControl::ProvisionalRelayoutScope provisional;
             on_layout();
         }
         mark_layout_dirty();
@@ -70,6 +71,7 @@ namespace nandina::widget
         }
         alignment_ = alignment;
         if (!is_inside_tree() && (width() > 0.0F || height() > 0.0F)) {
+            scene::NanControl::ProvisionalRelayoutScope provisional;
             on_layout();
         }
         mark_layout_dirty();
@@ -102,6 +104,7 @@ namespace nandina::widget
         replace_child(current.get(), child);
         child_ = std::move(child);
         if (!is_inside_tree() && (width() > 0.0F || height() > 0.0F)) {
+            scene::NanControl::ProvisionalRelayoutScope provisional;
             on_layout();
         }
         mark_layout_dirty();
@@ -127,7 +130,22 @@ namespace nandina::widget
         return content_rect_;
     }
 
+    auto AspectRatio::
+        child_axis_assignment(const scene::NanControl& target, const bool /*horizontal*/) const
+        -> scene::ChildAxisAssignment {
+        if (child_.lock().get() != &target) {
+            return scene::ChildAxisAssignment::none;
+        }
+        const auto constraints = last_layout_constraints();
+        const bool any_finite =
+            (std::isfinite(constraints.max_width) && constraints.max_width >= 0.0F)
+            || (std::isfinite(constraints.max_height) && constraints.max_height >= 0.0F);
+        return any_finite ? scene::ChildAxisAssignment::assigned
+                          : scene::ChildAxisAssignment::pass_through;
+    }
+
     void AspectRatio::relayout() {
+        scene::NanControl::ProvisionalRelayoutScope provisional;
         (void)measure_layout(foundation::NanLayoutConstraints::loose());
         layout_to(foundation::NanRect::from_origin_size(position(), measured_size()));
     }

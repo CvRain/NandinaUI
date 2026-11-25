@@ -304,6 +304,7 @@ namespace nandina::widget
     }
 
     void EmptyState::relayout() {
+        scene::NanControl::ProvisionalRelayoutScope provisional;
         (void)measure_layout(foundation::NanLayoutConstraints::loose());
         layout_to(foundation::NanRect::from_origin_size(position(), measured_size()));
     }

@@ -20,6 +20,9 @@ namespace nandina::widget::internal
         /// on_input_capture 处理，只有焦点位于作用域内部时它们才可达；内容存在可聚焦控件时
         /// 作用域不参与 Tab 循环，避免焦点停在不可见的容器上。
         [[nodiscard]] auto is_focusable() const -> bool override;
+        [[nodiscard]] auto
+        child_axis_assignment(const scene::NanControl& child, bool horizontal) const
+            -> scene::ChildAxisAssignment override;
 
     protected:
         [[nodiscard]] auto on_measure(foundation::NanLayoutConstraints constraints)

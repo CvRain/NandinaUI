@@ -46,6 +46,9 @@ namespace nandina::widget
 
         /// Local rectangle assigned to the child during the most recent layout pass.
         [[nodiscard]] auto content_rect() const noexcept -> foundation::NanRect;
+        [[nodiscard]] auto
+        child_axis_assignment(const scene::NanControl& child, bool horizontal) const
+            -> scene::ChildAxisAssignment override;
 
         void relayout();
 

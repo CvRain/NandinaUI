@@ -442,7 +442,10 @@ namespace nandina::widget
             return *this;
         }
         axis_ = axis;
-        layout_panes();
+        if (width() > 0.0F || height() > 0.0F) {
+            scene::NanControl::ProvisionalRelayoutScope provisional;
+            layout_panes();
+        }
         mark_layout_dirty();
         mark_dirty(scene::DirtyFlags::paint | scene::DirtyFlags::semantics);
         return *this;
@@ -496,7 +499,10 @@ namespace nandina::widget
             insert_child(0, child);
         }
         first_child_ = std::move(child);
-        layout_panes();
+        if (width() > 0.0F || height() > 0.0F) {
+            scene::NanControl::ProvisionalRelayoutScope provisional;
+            layout_panes();
+        }
         mark_layout_dirty();
         mark_semantics_dirty();
         return *this;
@@ -520,7 +526,10 @@ namespace nandina::widget
             add_child(child);
         }
         second_child_ = std::move(child);
-        layout_panes();
+        if (width() > 0.0F || height() > 0.0F) {
+            scene::NanControl::ProvisionalRelayoutScope provisional;
+            layout_panes();
+        }
         mark_layout_dirty();
         mark_semantics_dirty();
         return *this;
@@ -553,7 +562,13 @@ namespace nandina::widget
             remove_and_delete(*second);
             second_child_.reset();
         }
-        layout_panes();
+        if (width() > 0.0F || height() > 0.0F) {
+            scene::NanControl::ProvisionalRelayoutScope provisional;
+            layout_panes();
+        }
+        else {
+            last_geometry_ = {};
+        }
         mark_layout_dirty();
         mark_semantics_dirty();
         return *this;
@@ -806,7 +821,20 @@ namespace nandina::widget
         handle_->mark_dirty(scene::DirtyFlags::paint);
     }
 
+    auto
+    Resizable::child_axis_assignment(const scene::NanControl& child, const bool horizontal) const
+        -> scene::ChildAxisAssignment {
+        if (&child != first_child_.lock().get() && &child != second_child_.lock().get()) {
+            return scene::ChildAxisAssignment::none;
+        }
+        const auto constraints = last_layout_constraints();
+        const float hi = horizontal ? constraints.max_width : constraints.max_height;
+        return (std::isfinite(hi) && hi >= 0.0F) ? scene::ChildAxisAssignment::assigned
+                                                 : scene::ChildAxisAssignment::pass_through;
+    }
+
     void Resizable::relayout() {
+        scene::NanControl::ProvisionalRelayoutScope provisional;
         (void)measure_layout(foundation::NanLayoutConstraints::loose());
         layout_to(foundation::NanRect::from_origin_size(position(), measured_size()));
     }
@@ -955,8 +983,8 @@ namespace nandina::widget
         return constraints.constrain(measured);
     }
 
-    void Resizable::layout_panes() {
-        if (width() <= 0.0F && height() <= 0.0F) {
+    void Resizable::layout_panes(const bool from_on_layout) {
+        if (!from_on_layout && width() <= 0.0F && height() <= 0.0F) {
             last_geometry_ = {};
             return;
         }
@@ -980,7 +1008,7 @@ namespace nandina::widget
     }
 
     auto Resizable::on_layout() -> void {
-        layout_panes();
+        layout_panes(true);
     }
 
     auto Resizable::on_input_capture(scene::InputEvent& event) -> bool {

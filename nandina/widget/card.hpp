@@ -38,6 +38,9 @@ namespace nandina::widget
 
         void on_style_context_changed(const theme::ResolvedStyleContext& context) override;
         void on_theme_changed(const theme::ThemeManager& manager) override;
+        [[nodiscard]] auto
+        child_axis_assignment(const scene::NanControl& child, bool horizontal) const
+            -> scene::ChildAxisAssignment override;
 
         auto on_draw(render::DrawContext& context) -> void override;
 

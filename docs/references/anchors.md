@@ -155,7 +155,7 @@ auto page = ui.anchor_canvas()
 
 ## 5. 已验证边界与实现前检查
 
-### 5.1 内核落地契约（2026-10-08）
+### 5.1 内核落地契约（2026-10-08；2026-11-25 扩展排列容器与非循环内容尺寸）
 
 本轮先交付 `scene::NodeRef<T>`、`AnchorSpec` 和 `AnchorCanvas`，不把 builder 伪代码标为可用。
 `NodeRef<T>` 以共享身份槽保存弱节点引用；复制引用共享同一身份，只允许绑定一次（含节点销毁后），
@@ -164,9 +164,13 @@ auto page = ui.anchor_canvas()
 `ref.anchor.right + 12.0F` 与 `ref.parent.anchor.right` 是目标表达式；本轮用
 `node.set_anchors({.left = target, ...})` 完整替换描述；节点自身 `.anchor` 门面与 builder 入口由 §5.3 记录。
 
-画布实现位于 scene，只依赖现有布局协议。普通容器拒绝带锚点的子项（含 reparent 前置检查），
+画布实现位于 scene，只依赖现有布局协议（不反向依赖 `widget`）。普通容器拒绝带锚点的子项（含 reparent 前置检查），
 画布拒绝非 Control 子项；未写锚点的轴从零开始，尺寸仍由 `ControlSizeSpec` 解析。
-画布不由子项撑开，测量必须得到两轴有限上界；可通过显式尺寸在无界父约束中提供有限上界。
+画布两轴各自独立判定为**确定尺寸轴（definite）**或**非循环内容轴（content）**：
+- **确定尺寸轴**：显式逻辑像素、有界父约束下的 `fill`/`percent(...)`，或父容器施加的紧约束（`min == max` 且有限，如窗口根、`Expanded`/`FlexItem`、`Stack`、`Resizable`、`AspectRatio`、交叉轴 `stretch`）。该轴上六条父锚线、双边跨度与子项百分比均相对画布尺寸可用。
+- **非循环内容轴**：画布在该轴保持默认 `content` 且父约束非紧时，若所有直接子项在该轴均不引用画布远端/中心父锚线（X 轴 `parent.right`/`parent.horizontal_center`；Y 轴 `parent.bottom`/`parent.vertical_center`），且不在该轴声明 `PercentLength`（主尺寸及 `min`/`max`），求解器从原点（`parent.left == 0` / `parent.top == 0`）与同级兄弟关系求出子项矩形，以 `max(0, child_far_edge)` 包络并经当前轴约束钳制后作为画布测量尺寸。
+- **循环与无界拒绝**：在非紧且无父容器指派承诺的轴上引用远端/中心父锚线或子项百分比，或在无界父轴（`+inf`，如 `ScrollView` 滚动轴）上为画布自身声明 `fill`/`percent(...)`，均确定性抛错，绝不读取上一帧尺寸，也不静默塌陷为 `0`。
+- **预排（pre-layout）保护**：离树组装（`Column::add`、`Card::set_child`、`Expanded::set_child` 等）与入树 `on_ready()` 触发的容器 `loose()` 自重排期间，未决的父分配轴或尚未完成绑定的前向 `NodeRef` 不提前抛错，画布保持 `layout_dirty()` 并在真实布局周期求解。
 隐藏节点仍参与锚定求解，隐藏只影响绘制/命中，因此隐藏目标不会使引用悄悄失效。
 
 每轴允许单边、中心、或首尾双边；中心不能与边混用。双边与固定/百分比主尺寸冲突，
@@ -256,8 +260,8 @@ effect 并移除依赖/待执行队列，不允许留下尚未纳入 ReactiveSco
   新入口须覆盖复制 builder、离开 build 栈、scope 清理、节点销毁及无 RTTI 的消费者。
 
 
-v1 不包含文本 baseline、旋转、约束求解器、跨锚定画布引用、按百分比指定锚点偏移，以及由
-子项内容自动撑开的锚定画布。浮层 `AnchoredPositioner`、形状节点和盒模型也不属于本设计。
+v1 不包含文本 baseline、旋转、约束求解器、跨锚定画布引用、按百分比指定锚点偏移，以及含远端/中心
+父锚线循环依赖的内容反推（非循环 `content` 包络规则见 §5.1）。浮层 `AnchoredPositioner`、形状节点和盒模型也不属于本设计。
 
 现有布局基础已经通过 `tests/anchors_boundary_tests.cpp` 固化为以下规则，anchors 实现必须复用：
 
@@ -279,8 +283,9 @@ v1 不包含文本 baseline、旋转、约束求解器、跨锚定画布引用�
   `widget/build_context.hpp`，由 `tests/anchors_authoring_tests.cpp` 覆盖（11 用例，含审核补充）：
   复制 builder、离开 build 栈后的表达式、scope 清理、节点销毁后的弱绑定、无 BuildContext 报错。
 - 应用级组合回归：`[page-root]` 覆盖"画布作页面根 + header/侧边栏/编辑区依赖链 + 批量换边"，
-  `[scroll]` 覆盖画布在 ScrollView 中（无界轴必须显式尺寸），`[z-order]` 覆盖求解顺序不影响
-  绘制与命中 z 序，`[nested]` 覆盖嵌套画布与跨画布拒绝，`[reactive]` 覆盖响应式替换。
+  `[scroll]` 覆盖画布在 ScrollView 中（非循环内容高度自动撑开可滚动区域；远端父锚线或无界 `fill`/`percent` 确定性报错），`[z-order]` 覆盖求解顺序不影响
+  绘制与命中 z 序，`[nested]` 覆盖嵌套画布与跨画布拒绝，`[reactive]` 覆盖响应式替换，
+  `[arranged-parent]` 与 `[content-size]` 覆盖 `Column`/`Row`/`Card`/`Stack`/`Expanded` 组合及非循环内容自适应。
 - showcase 案例：`showcase/pages/anchors_page.cpp`（路由 `anchors`）以侧边栏停靠切换演示
   "树 ≠ 布局"，切换走 `set_child_anchors()`，先提交描述再发布状态，几何在下一次 layout 更新。
   侧栏宽度和页头高度分别最多占画布对应轴的 30%，不使用跨面板固定间隔（内容留白由 Card
@@ -291,25 +296,17 @@ v1 不包含文本 baseline、旋转、约束求解器、跨锚定画布引用�
 仍未完成：**真实窗口的人工体验验收**（含窗口缩放、快速重复点击与明暗切换下的手感），
 以及 playground 侧的同类案例。自动测试不能替代这一项。
 
-#### 已知边界：画布不能占据排列容器的剩余空间（2026-10-08）
+#### 排列容器组合与非循环内容自适应（2026-11-25 更新；取代原 2026-10-08 剩余空间限制）
 
-画布要求测量时两轴已有**确定尺寸**：`on_measure` 采用父级给出的可用空间，`measure_layout`
-会把已声明的确定尺寸（显式像素、可解析的百分比）收紧为有限上界，因此：
+2026-10-08 初版要求画布在任意 `on_measure`（含离树 `relayout()` 的 `loose()` 测量）中都拿到有限双轴上界，导致 `fill`、百分比画布与 `ui.expanded(ui.anchor_canvas(...))` 在挂载阶段即抛 `"finite"`。2026-11-25 按 §5.1 新契约解开该限制：
 
-- **两轴显式像素尺寸的画布可以嵌入排列容器。** 例如 Column / Card 的即时 relayout 使用
-  `measure_layout(loose())`，显式尺寸仍能把传给画布的上界收紧为有限值。
-- **百分比不是无条件的确定尺寸。** `PercentLength` 与 `FillLength` 都只有在父级基有限时才能
-  解析。单纯给画布设置百分比，在 `loose()` 下同样解析为 `nullopt`，因此会像 `fill` 一样报
-  “finite”；不能用最终窗口尺寸推断离树构建时已有百分比基。`[arranged-parent]` 已覆盖此分支。
-
-结论：**画布无法表达"占满排列容器剩下的空间"**。需要这种结构时，把画布放在布局根（页面根 /
-`CanvasLayer` 的 layout root），再用同层兄弟锚点表达"header 之下的剩余区域"——
-`showcase/pages/anchors_page.cpp` 就是这么写的。`ScrollView` 内容与浮层 surface 同样可用
-（无界轴必须给显式尺寸）。
-
-`tests/anchors_authoring_tests.cpp` 的 `[arranged-parent]` 用例锁定三支：显式尺寸正常求解，
-`fill` 与无界百分比都抛 “finite”。要支持剩余空间画布，应单独设计排列容器的测量阶段与约束
-传播（或明确非循环回退），不能从上一帧/未来窗口尺寸隐式取值；变更须先更新 §5.1 契约。
+- **父容器分配（`Expanded` / `FlexItem` / `fill` / `percent` / `Stack` / `Resizable`）**：
+  - `NanControl::child_axis_assignment()`（`none` / `pass_through` / `assigned`）在不引入 `scene → widget` 反向依赖的前提下声明父容器是否会在布局阶段指派子项轴向尺寸；`Padding` / `Surface` / `Card` / `Expanded` / `FlexItem` / `PointerArea` / `IfRegion` / `FocusScope` 透明传递父级指派关系，`Expanded::on_measure` 保留父级传入的非零最小约束（与 `FlexItem` 对齐，使 `Row` 第二遍紧主轴测量直达内层画布）。
+  - 容器突变/就绪阶段的内部预排通过 `NanControl::ProvisionalRelayoutScope` 显式标记，既让离树组装、运行时挂载与前向 `NodeRef` 延迟到真实布局求解且不覆写已落定画布尺寸，又不影响调用方直接发起的 `measure_layout(loose())` 或 `ScrollAxis::both` 求解；`NanControl::layout_to()` 在 `on_layout()` 抛异常时恢复整条祖先链的布局脏位。
+- **非循环内容自适应（`content` 轴）**：
+  - 未显式指定尺寸且父约束非紧的轴按非循环内容规则求解：例如 `Column` 或纵向 `ScrollView` 内 `.width(fill)` 的画布，子项可自由使用水平双边拉伸（如 `left = avatar.right + 12, right = parent.right`）完成有限宽度换行，再由纵向 `top` 与兄弟链自然撑开画布高度并一次收敛。
+  - 若 `content` 轴没有父级指派承诺，而子项引用了该轴的 `parent.right`/`bottom`/`center` 或百分比尺寸，或画布在无界轴请求 `fill`/`percent`，测量期确定性报错，杜绝静默塌陷为 `0` 或读取旧帧尺寸。
+  - `AnchorCanvas::set_child_anchors()` 按当前轴模式（确定尺寸 vs 内容自适应）做候选预校验，防止在内容自适应轴上通过运行时批量更新混入远端父锚线。
 
 #### 审核回归与可复现注入（2026-10-09）
 

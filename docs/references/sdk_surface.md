@@ -18,6 +18,18 @@
 
 ## 2. 三档分类
 
+2026-11-25 `AnchorCanvas` 排列容器组合与非循环内容自适应（experimental 增量，头文件总数不变，
+仍为 220 = 202 experimental + 18 internal）：
+- `nandina/scene/control.hpp`（experimental）：新增 `ChildAxisAssignment { none, pass_through, assigned }`、
+  虚查询 `NanControl::child_axis_assignment(const NanControl&, bool horizontal)`（默认 `none`）与
+  `NanControl::ProvisionalRelayoutScope` / `provisional_relayout_active()`，
+  供 `AnchorCanvas` 在不反向依赖 `widget` 的前提下区分父容器延迟分配轴、内部预排与真实无界/内容轴；
+  `AnchorCanvas`、`Column`、`Row`、`Flex`、`Stack`、`Padding`、`Card`、`Expanded`、`FlexItem`、
+  `PointerArea`、`IfRegion`、`FocusScope`、`Resizable`、`AspectRatio`、`ScrollView` 实现对应覆写（源兼容增量）。
+- `nandina/scene/anchor_canvas.hpp`（experimental）：解开排列容器 `Expanded`/`fill`/`percent` 嵌套限制，
+  支持无远端/中心父锚线与百分比依赖的 `content` 轴按 `max(0, child_far_edge)` 自适应测量，
+  `set_child_anchors()` 同步按当前轴模式预校验；28 条已批准页面 golden 0 变动。契约见 [Anchors §5.1/§5.3](anchors.md)。
+
 2026-11-24 默认主题对比度微调与 `butter` 黏土卡片主题重塑（experimental 增量，默认视觉变更；
 头文件总数不变，仍为 220 = 202 experimental + 18 internal）：
 - `nandina/theme/theme.cpp`（默认亮/暗语义色板）：把原同值的 `muted`/`secondary`/`accent`

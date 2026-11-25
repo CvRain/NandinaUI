@@ -36,6 +36,9 @@ namespace nandina::widget
         [[nodiscard]] auto maximum_scroll_offset() const -> foundation::NanPoint;
         [[nodiscard]] auto content_size() const -> foundation::NanSize;
         [[nodiscard]] auto wheel_step() const -> float;
+        [[nodiscard]] auto
+        child_axis_assignment(const scene::NanControl& child, bool horizontal) const
+            -> scene::ChildAxisAssignment override;
 
         auto on_input(scene::InputEvent& event) -> bool override;
 

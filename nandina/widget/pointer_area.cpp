@@ -81,6 +81,13 @@ namespace nandina::widget
         }
     }
 
+    auto PointerArea::
+        child_axis_assignment(const scene::NanControl& target, const bool /*horizontal*/) const
+        -> scene::ChildAxisAssignment {
+        return child_.lock().get() == &target ? scene::ChildAxisAssignment::pass_through
+                                              : scene::ChildAxisAssignment::none;
+    }
+
     auto PointerArea::on_measure(foundation::NanLayoutConstraints constraints)
         -> foundation::NanSize {
         auto child = child_.lock();

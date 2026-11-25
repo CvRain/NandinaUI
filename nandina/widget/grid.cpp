@@ -132,6 +132,7 @@ namespace nandina::widget
         // 来回打架，尺寸永远不收敛；`on_frame` 阶段做的断言正好看到塌缩后的那一帧。
         // 这就是 playground 菜单页绘制断言失败的根因（该页是唯一使用 Grid 的页面）。
         // 容器自查表见 Column / Row / Flex / Padding：它们都只重排自身。
+        scene::NanControl::ProvisionalRelayoutScope provisional;
         (void)measure_layout(foundation::NanLayoutConstraints::loose());
         layout_to(foundation::NanRect::from_origin_size(position(), measured_size()));
     }

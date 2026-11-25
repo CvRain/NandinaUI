@@ -22,6 +22,9 @@ namespace nandina::widget
         void set_on_pointer_leave(std::function<void(const scene::MouseLeaveEvent&)> callback);
 
         auto on_input_capture(scene::InputEvent& event) -> bool override;
+        [[nodiscard]] auto
+        child_axis_assignment(const scene::NanControl& child, bool horizontal) const
+            -> scene::ChildAxisAssignment override;
 
     protected:
         [[nodiscard]] auto on_measure(foundation::NanLayoutConstraints constraints)

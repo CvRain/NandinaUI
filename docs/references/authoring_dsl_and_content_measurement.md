@@ -562,7 +562,7 @@ home/label/anchors 的 CPU/SDF 六张页面 golden 与各自已批准基线逐�
 - **`fill` 与 `Expanded` 的职责边界**：
   - `width(fill)` / `height(fill)` 表示**在父容器提供的紧/有界轴上限内占满 100%**（`constraints.max_width` / `max_height`），不是“在 `Row`/`Column` 主轴分摊剩余空间”。
   - 在 `Row`/`Column`/`Flex` 主轴上，若某个子项需要占据除固定兄弟外的**剩余空间**（例如列表行左侧自适应长文本标题 + 右侧状态 `Badge` 或操作按钮），必须用 `ui.expanded(child)`（或 `ui.flex_item(...)`）包裹该子项；直接给主轴子项设 `width(fill)` 会令其请求整条父容器主轴宽度，把后续兄弟推到容器右边界之外。
-  - `AnchorCanvas` 的 `fill`/百分比与排列容器剩余空间交互属于独立布局契约议题（见 [Anchors §5.3](anchors.md#53-剩余验收)），不在本批改动。
+  - `AnchorCanvas` 的 `fill`/百分比、排列容器剩余空间（`ui.expanded(ui.anchor_canvas(...))`）与非循环 `content` 自适应已于 2026-11-25 独立收口（见 [Anchors §5.1/§5.3](anchors.md#53-剩余验收)）。
 - **验证**：`authoring` 新增 `[authoring][factory][shorthand]` 3 用例及编译期 concept 负向 `static_assert`（共 41 用例 / 269 断言），其中 Row 布局回归锁定 `fill` 使右侧兄弟从 x=200 开始、`Expanded` 仅占剩余 160 DIP；`surface` 9 用例 / 92 断言，SDK consumer `accordion-api=1` 探针覆盖 `ui.surface` / `ui.column` / `ui.row` / `ui.expanded` / `ui.wrap` 与 `surface->child()`。红先：注释 `column(children...)` 中的 `.children(...)` 转发或令 `Padding::child()` 返回 `nullptr` 均使新增断言失败（退出 42），恢复后全矩阵通过。
 
 ## 20. 批 9：`AspectRatio` 与 `Resizable` 容器（2026-11-23）

@@ -20,6 +20,8 @@ namespace nandina::scene
 
     namespace
     {
+        thread_local int g_provisional_relayout_depth = 0;
+
         void require_non_negative_finite(float value, const char* name) {
             if (!std::isfinite(value) || value < 0.0F) {
                 throw std::invalid_argument(std::string(name) + " must be finite and non-negative");
@@ -316,6 +318,24 @@ namespace nandina::scene
                           : LayoutFlexPolicy {};
     }
 
+    auto
+    NanControl::child_axis_assignment(const NanControl& /*child*/, const bool /*horizontal*/) const
+        -> ChildAxisAssignment {
+        return ChildAxisAssignment::none;
+    }
+
+    NanControl::ProvisionalRelayoutScope::ProvisionalRelayoutScope() noexcept {
+        ++g_provisional_relayout_depth;
+    }
+
+    NanControl::ProvisionalRelayoutScope::~ProvisionalRelayoutScope() noexcept {
+        --g_provisional_relayout_depth;
+    }
+
+    auto NanControl::provisional_relayout_active() noexcept -> bool {
+        return g_provisional_relayout_depth > 0;
+    }
+
     auto NanControl::measure_layout(foundation::NanLayoutConstraints constraints)
         -> foundation::NanSize {
         if (!anchors().empty() && is_inside_tree()) {
@@ -406,7 +426,13 @@ namespace nandina::scene
         clear_dirty(layout_dirty_flags);
         set_position(rect.get_top_left());
         set_size(rect.get_size());
-        on_layout();
+        try {
+            on_layout();
+        }
+        catch (...) {
+            mark_layout_dirty();
+            throw;
+        }
         clear_dirty(DirtyFlags::paint);
     }
 

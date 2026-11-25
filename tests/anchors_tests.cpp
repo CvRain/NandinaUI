@@ -212,13 +212,24 @@ TEST_CASE(
 }
 
 TEST_CASE(
-    "anchor canvas requires a finite viewport and composes with columns",
+    "anchor canvas resolves non-cyclic content under loose bounds and rejects unbounded parent basis",
     "[anchors][nested]"
 ) {
     auto canvas = std::make_shared<Canvas>();
+    REQUIRE(
+        canvas->measure_layout(foundation::NanLayoutConstraints::loose())
+        == foundation::NanSize(0.0F, 0.0F)
+    );
+
+    canvas->set_width(scene::fill);
     REQUIRE_THROWS_WITH(
         canvas->measure_layout(foundation::NanLayoutConstraints::loose()),
-        ContainsSubstring("finite")
+        ContainsSubstring("definite")
+    );
+    canvas->set_width(scene::percent(50.0F));
+    REQUIRE_THROWS_WITH(
+        canvas->measure_layout(foundation::NanLayoutConstraints::loose()),
+        ContainsSubstring("definite")
     );
     canvas->set_width(400.0F).set_height(200.0F);
     REQUIRE(
@@ -235,7 +246,201 @@ TEST_CASE(
     layout(*canvas);
     REQUIRE(column->size() == foundation::NanSize(400.0F, 200.0F));
     REQUIRE(second->position().get_y() == Catch::Approx(25.0F));
-    // An implicit content-sized canvas or writing presentation instead of layout_to fails here.
+    // Accepting fill/percent on an unbounded basis or writing presentation instead of layout_to fails here.
+}
+
+TEST_CASE(
+    "anchor canvas computes non-cyclic content bounds and rejects cyclic parent dependencies",
+    "[anchors][content-size]"
+) {
+    auto canvas = std::make_shared<Canvas>();
+    auto a = item(40.0F, 30.0F);
+    auto b = item(60.0F, 25.0F);
+    auto divider = item(2.0F, 0.0F);
+    Ref a_ref(a), b_ref(b), div_ref(divider);
+
+    a->set_anchors(
+        {.left = a_ref.parent.anchor.left + 10.0F, .top = a_ref.parent.anchor.top + 5.0F}
+    );
+    b->set_anchors({.left = a_ref.anchor.right + 8.0F, .top = a_ref.anchor.bottom + 10.0F});
+    divider->set_anchors(
+        {.left = a_ref.anchor.left - 4.0F, .top = a_ref.anchor.top, .bottom = b_ref.anchor.bottom}
+    );
+    canvas->add_child(b);
+    canvas->add_child(divider);
+    canvas->add_child(a);
+
+    const auto measured = canvas->measure_layout(foundation::NanLayoutConstraints::loose());
+    REQUIRE(measured.get_width() == Catch::Approx(118.0F));
+    REQUIRE(measured.get_height() == Catch::Approx(70.0F));
+    canvas->layout_to(
+        foundation::NanRect::from_xywh(0.0F, 0.0F, measured.get_width(), measured.get_height())
+    );
+    REQUIRE(a->position() == foundation::NanPoint(10.0F, 5.0F));
+    REQUIRE(b->position() == foundation::NanPoint(58.0F, 45.0F));
+    REQUIRE(divider->position() == foundation::NanPoint(6.0F, 5.0F));
+    REQUIRE(divider->height() == Catch::Approx(65.0F));
+
+    // Cyclic parent anchors on a content-sized axis are rejected deterministically.
+    auto probe_canvas = std::make_shared<Canvas>();
+    auto child = item(30.0F, 20.0F);
+    Ref child_ref(child);
+    probe_canvas->add_child(child);
+
+    child->set_anchors({.right = child_ref.parent.anchor.right});
+    REQUIRE_THROWS_WITH(
+        probe_canvas->measure_layout(foundation::NanLayoutConstraints::loose()),
+        ContainsSubstring("definite")
+    );
+    child->set_anchors({.horizontal_center = child_ref.parent.anchor.horizontal_center});
+    REQUIRE_THROWS_WITH(
+        probe_canvas->measure_layout(foundation::NanLayoutConstraints::loose()),
+        ContainsSubstring("definite")
+    );
+    child->set_anchors({.bottom = child_ref.parent.anchor.bottom});
+    REQUIRE_THROWS_WITH(
+        probe_canvas->measure_layout(foundation::NanLayoutConstraints::loose()),
+        ContainsSubstring("definite")
+    );
+    child->set_anchors({.vertical_center = child_ref.parent.anchor.vertical_center});
+    REQUIRE_THROWS_WITH(
+        probe_canvas->measure_layout(foundation::NanLayoutConstraints::loose()),
+        ContainsSubstring("definite")
+    );
+    child->set_anchors({});
+    child->set_width(scene::percent(50.0F));
+    REQUIRE_THROWS_WITH(
+        probe_canvas->measure_layout(foundation::NanLayoutConstraints::loose()),
+        ContainsSubstring("definite")
+    );
+    child->set_width(scene::content).set_max_height(scene::percent(80.0F));
+    REQUIRE_THROWS_WITH(
+        probe_canvas->measure_layout(foundation::NanLayoutConstraints::loose()),
+        ContainsSubstring("definite")
+    );
+
+    // Batch updates on a content-height canvas inside a Column reject parent.bottom before mutating.
+    auto col = widget::Column::create();
+    auto row_canvas = std::make_shared<Canvas>();
+    row_canvas->set_width(scene::fill);
+    auto row_item = item(50.0F, 24.0F);
+    auto tail_item = item(50.0F, 30.0F);
+    Ref row_ref(row_item), tail_ref(tail_item);
+    row_item->set_anchors({.left = row_ref.parent.anchor.left, .top = row_ref.parent.anchor.top});
+    tail_item->set_anchors(
+        {.left = row_ref.anchor.right + 10.0F, .top = tail_ref.parent.anchor.top}
+    );
+    row_canvas->add_child(row_item);
+    row_canvas->add_child(tail_item);
+    col->add(row_canvas);
+    const std::array invalid_batch {
+        Canvas::Update {tail_item, {.bottom = tail_ref.parent.anchor.bottom}}
+    };
+    // Before first measure_layout on col, set_child_anchors must already treat Y as content-sized.
+    REQUIRE_THROWS_WITH(
+        row_canvas->set_child_anchors(invalid_batch),
+        ContainsSubstring("definite")
+    );
+    (void)col->measure_layout(
+        foundation::NanLayoutConstraints::tight(foundation::NanSize(300.0F, 200.0F))
+    );
+    col->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 300.0F, 200.0F));
+    REQUIRE(row_canvas->height() == Catch::Approx(30.0F));
+
+    REQUIRE_THROWS_WITH(
+        row_canvas->set_child_anchors(invalid_batch),
+        ContainsSubstring("definite")
+    );
+    REQUIRE(tail_item->anchors().top.has_value());
+    REQUIRE_FALSE(tail_item->anchors().bottom.has_value());
+
+    // Resizing a Column to zero height must NOT treat max_height=0 as a parent-assigned tight slot.
+    auto zero_col = widget::Column::create();
+    auto zero_canvas = std::make_shared<Canvas>();
+    zero_canvas->set_width(scene::fill);
+    auto zero_item = item(50.0F, 24.0F);
+    zero_item->set_height(24.0F);
+    Ref zero_ref(zero_item);
+    zero_item->set_anchors(
+        {.left = zero_ref.parent.anchor.left, .top = zero_ref.parent.anchor.top}
+    );
+    zero_canvas->add_child(zero_item);
+    zero_col->add(zero_canvas);
+    (void)zero_col->measure_layout(
+        foundation::NanLayoutConstraints::tight(foundation::NanSize(300.0F, 0.0F))
+    );
+    zero_col->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 300.0F, 0.0F));
+    const std::array zero_invalid_batch {
+        Canvas::Update {zero_item, {.bottom = zero_ref.parent.anchor.bottom}}
+    };
+    REQUIRE_THROWS_WITH(
+        zero_canvas->set_child_anchors(zero_invalid_batch),
+        ContainsSubstring("definite")
+    );
+
+    // Switching from explicit height back to content invalidates definite Y immediately.
+    row_canvas->set_height(120.0F);
+    (void)col->measure_layout(
+        foundation::NanLayoutConstraints::tight(foundation::NanSize(300.0F, 200.0F))
+    );
+    col->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 300.0F, 200.0F));
+    row_canvas->set_height(scene::content);
+    REQUIRE_THROWS_WITH(
+        row_canvas->set_child_anchors(invalid_batch),
+        ContainsSubstring("definite")
+    );
+
+    // Loose off-tree measurement on a Column containing a content-sized canvas must solve, not defer.
+    auto loose_col = widget::Column::create();
+    auto loose_canvas = std::make_shared<Canvas>();
+    auto loose_child = item(90.0F, 44.0F);
+    Ref loose_ref(loose_child);
+    loose_child->set_anchors(
+        {.left = loose_ref.parent.anchor.left + 8.0F, .top = loose_ref.parent.anchor.top + 6.0F}
+    );
+    loose_canvas->add_child(loose_child);
+    loose_col->add(loose_canvas);
+    REQUIRE(
+        loose_col->measure_layout(foundation::NanLayoutConstraints::loose())
+        == foundation::NanSize(98.0F, 50.0F)
+    );
+    loose_child->set_anchors({.right = loose_ref.parent.anchor.right});
+    REQUIRE_THROWS_WITH(
+        loose_col->measure_layout(foundation::NanLayoutConstraints::loose()),
+        ContainsSubstring("definite")
+    );
+
+    const std::array valid_batch {Canvas::Update {
+        tail_item,
+        {.left = tail_ref.parent.anchor.left, .top = row_ref.anchor.bottom + 12.0F}
+    }};
+    row_canvas->set_child_anchors(valid_batch);
+    (void)col->measure_layout(
+        foundation::NanLayoutConstraints::tight(foundation::NanSize(300.0F, 200.0F))
+    );
+    col->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 300.0F, 200.0F));
+    REQUIRE(row_canvas->height() == Catch::Approx(66.0F));
+
+    // Moving a content-sized canvas from Column into Expanded clears content-axis restriction.
+    auto expanded = widget::Expanded::create();
+    auto host_col = widget::Column::create();
+    (void)col->remove_child(*row_canvas);
+    expanded->set_child(row_canvas);
+    host_col->add(expanded);
+    const std::array stretch_batch {Canvas::Update {
+        tail_item,
+        {.left = tail_ref.parent.anchor.left, .bottom = tail_ref.parent.anchor.bottom}
+    }};
+    (void)host_col->measure_layout(
+        foundation::NanLayoutConstraints::tight(foundation::NanSize(300.0F, 200.0F))
+    );
+    host_col->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 300.0F, 200.0F));
+    REQUIRE_NOTHROW(row_canvas->set_child_anchors(stretch_batch));
+    (void)host_col->measure_layout(
+        foundation::NanLayoutConstraints::tight(foundation::NanSize(300.0F, 200.0F))
+    );
+    host_col->layout_to(foundation::NanRect::from_xywh(0.0F, 0.0F, 300.0F, 200.0F));
+    REQUIRE(tail_item->position().get_y() == Catch::Approx(170.0F));
 }
 
 TEST_CASE("anchor and flow mixing is rejected before reparent detaches", "[anchors][mixing]") {

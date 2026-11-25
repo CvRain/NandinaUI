@@ -305,6 +305,13 @@ namespace nandina::widget
             return active_.get();
         }
 
+        [[nodiscard]] auto
+        child_axis_assignment(const scene::NanControl& target, const bool /*horizontal*/) const
+            -> scene::ChildAxisAssignment override {
+            return active_.get() == &target ? scene::ChildAxisAssignment::pass_through
+                                            : scene::ChildAxisAssignment::none;
+        }
+
     protected:
         [[nodiscard]] auto on_measure(foundation::NanLayoutConstraints constraints)
             -> foundation::NanSize override {

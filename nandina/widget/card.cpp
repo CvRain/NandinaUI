@@ -106,6 +106,13 @@ namespace nandina::widget
         relayout();
     }
 
+    auto
+    Card::child_axis_assignment(const scene::NanControl& target, const bool /*horizontal*/) const
+        -> scene::ChildAxisAssignment {
+        return child_.lock().get() == &target ? scene::ChildAxisAssignment::pass_through
+                                              : scene::ChildAxisAssignment::none;
+    }
+
     void Card::on_draw(render::DrawContext& context) {
         const auto style = resolved_style();
         const auto world = render::world_bounds_from_local(context.world_transform(), local_rect());
@@ -165,6 +172,7 @@ namespace nandina::widget
     }
 
     void Card::relayout() {
+        scene::NanControl::ProvisionalRelayoutScope provisional;
         (void)measure_layout(foundation::NanLayoutConstraints::loose());
         layout_to(foundation::NanRect::from_origin_size(position(), measured_size()));
     }

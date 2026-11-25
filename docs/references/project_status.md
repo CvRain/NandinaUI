@@ -15,7 +15,7 @@
 | 高 DPI 与多显示器 | **P4.5a 内容缩放基础已实施（2026-11-09）**：`WindowConfig` 尺寸改为逻辑单位，平台 seam 的 `screen_size`/事件坐标归一到逻辑空间，窗口按 `content_scale = display_scale / pixel_density` 放大，SDL 渲染器 scale 与文本框输入区按 display scale 换算，文本按物理密度栅格；本机 175% 实测窗口 1200×800 逻辑 → 2100×1400 物理、文字清晰、指针命中正确；`high_dpi=false` 提供固定 1× 模式供测试/探针/golden。**P4.5b 混合 DPI 多显示器已验收（2026-11-10）**：主屏 2880×1800@175% + 第二屏 2560×1440@125%，双向跳转、真实标题栏拖动跨屏、125% 下 resize 后回 175% 均保持逻辑尺寸并更新 framebuffer/render scale，两个缩放下物理坐标命中正确、窗口钳入各自可用区域 | 真实 IME 候选窗位置、Linux Wayland 分数缩放、无障碍文本缩放、显示器热插拔与系统缩放在线变化仍未验收；契约与实施记录见 [高 DPI 与多显示器](high_dpi_and_multi_display.md) |
 | 平台与渲染 | 默认启用 SDL3（唯一内置后端），raylib 已删除；显式关闭 SDL3 时须注入平台才能打开窗口；`IPlatformWindow`、设备包装入口和三页 trace 对照已存在。生产 SDL 的填充/描边/圆/线段/弧已有 SDF：Linux Vulkan(SPIR-V) 与 Windows D3D12(DXIL) 均通过设备级像素验收，其余图元仍走 CPU 几何 | 混合/AA/图片/裁剪见 D7，键码见 D8；Windows 为实验性（构建/单元/doctor/DXIL 已验收，无应用交付承诺），macOS 不支持，Web 非交付路径。D4 历史 P3 落地不等于其 P0–P4 全部验收完成 |
 | 动画 | 值级 motion 在 `foundation/motion`，节点 endpoint、宿主与组调度在 `scene`；旧 `animation/` 入口已退出；L2 opacity/translate/scale 可用 | `NodeBuilder::group` 仅开放同节点、扁平 Tween 组合；跨节点、组内 Spring、Keyframes 作者入口与浮层自动过渡未完成，见 [节点表现层 §6.1](node_presentation.md) |
-| 布局与文本成本 | 排列容器及 `NanControl::layout_to` 已用在生产路径；anchors 内核与作者入口已落地；**布局收敛**（Label 页 80.4 ms/帧 → 2.5 ms、稳态 0 次布局）与**两个文本 O(n²)** 已修复，见 [布局收敛](layout_convergence_and_text_measurement.md) 与 [整形成本](text_shaping_cost.md) | `fill` 画布无法占据排列容器剩余空间（见 [Anchors §5.3](anchors.md#53-剩余验收)）；`max_width` 仍会被父级紧约束压过；Label 页已迁移到 P4.8b 分节挂载，首帧页面成本 ~38 ms（Linux）/ ~85 ms（Windows），迁移前整页构建 159 ms 为历史数据（见[页面加载响应性](page_load_responsiveness.md)、[整形成本 §5.1](text_shaping_cost.md)）；一次完整布局仍约 55 ms。2026-11-23 数据工作台切页/实时缩放批（已提交）见 [整形成本 §14](text_shaping_cost.md) |
+| 布局与文本成本 | 排列容器及 `NanControl::layout_to` 已用在生产路径；anchors 内核、作者入口及排列容器组合（`Expanded`/`fill`/`percent` + 非循环 `content` 自适应，2026-11-25）已落地；**布局收敛**（Label 页 80.4 ms/帧 → 2.5 ms、稳态 0 次布局）与**两个文本 O(n²)** 已修复，见 [布局收敛](layout_convergence_and_text_measurement.md) 与 [整形成本](text_shaping_cost.md) | `max_width` 仍会被父级紧约束压过；Label 页已迁移到 P4.8b 分节挂载，首帧页面成本 ~38 ms（Linux）/ ~85 ms（Windows），迁移前整页构建 159 ms 为历史数据（见[页面加载响应性](page_load_responsiveness.md)、[整形成本 §5.1](text_shaping_cost.md)）；一次完整布局仍约 55 ms。2026-11-23 数据工作台切页/实时缩放批（已提交）见 [整形成本 §14](text_shaping_cost.md) |
 | 分发 | Linux 桌面源码分发 profile 已有构建与 SDK 流程；Windows 为实验性构建（无安装器承诺） | macOS 不支持；Modules、CMake package 与跨平台应用交付仍待重新评估 |
 | 资源构建与运行时 | 四类后端、nanres 与构建 helper 已有实现；SQLite 已 vendored；后端结果携带发布代次与一致性类别，管理器八入口返回带域令牌/MountId/代次的作用域结果，字体与纹理缓存按作用域键控并有界淘汰/expired 域清扫，非快照内容不进入共享缓存；`resources.toml` 支持显式 key→路径映射，新 key 使用版本化派生 ID；构建 lock 写入 build 目录，旧随机 ID 可显式迁移，无变化不重写；`nanres keys --header` 生成只含逻辑 key 的 C++ 常量头，碰撞失败、无变化不重写 | [D5](resource_build_and_deployment.md) P2 已交付（P2.1a/P2.1b/P2.2a–P2.2d/P2.3a–P2.4c，含声明式构建、部署定位与下游验收）；示例应用已由 P2.4 的 `examples/lab` 改造为 `examples/notebook`（2026-10-28 起），其 SQLite 数据层与资源驱动迁移已落地；notebook 服务/UI 与 showcase 组件由维护者手工编写 |
 | 工程门禁 | 代码格式统一（固定 clang-format 23.1.1）、header-surface 220（202 experimental + 18 internal）、shader artifact 校验、golden 清单（28 条 approved：7 页 × CPU/SDF × 2 平台）、backend budget 确定性门禁均已接入；D5 关闭组合与纯工具依赖门禁（`check_tool_dependencies`、资源选项矩阵）已实现；Windows 侧全量套件最近记录 129/129（2026-11-13 布局修复批）与工具链门禁复验通过（见 [Windows 验收清单](windows_acceptance.md#9-全量套件与工具链-windows-复验2026-11-09)）；CPU 页面 golden 已由 `visual-golden` 在 CI 阻断（2026-11-14 起）；SDF/GPU 页面与性能采样留在本地/发布检查 | 无 GPU 的 CI 不覆盖 SDF/GPU 页面 golden 与性能采样 |
@@ -104,8 +104,9 @@
 1. **边界验证已完成。** 作者模型已记录在 [Anchors 布局设计](anchors.md)：显式锚定画布、`.anchor.*` 与 `parent` 关系、`NodeRef<T>` 匿名目标、`ControlSizeSpec` 尺寸归属及同画布兄弟引用。`tests/anchors_boundary_tests.cpp` 已固定有限/无界百分比、百分比 min/max、隐藏排列项、ScrollView 轴向约束与 reparent 失效规则；其中修正了 `ScrollAxis::both` 错误限制两轴的问题。剩余工作转入 anchors 内核的引用生命周期、约束冲突、依赖排序与几何一致性测试。
 2. **锚定布局内核已落地。** `scene` 持有类型化弱引用、六条锚线、显式画布、尺寸冲突校验、兄弟拓扑排序与环检测；全部求解后经 `layout_to` 写入。10 个 unit 用例覆盖生命周期、模式批量切换及几何一致性，逐项故障注入记录见 anchors §5.2。不引入第二套几何或 presentation 位移。
 3. **作者入口与集成回归已落地。** `ui.ref<T>()`、builder 的 `.bind(ref)` / 只读 `.anchor.*` 与 `.parent.anchor.*` / `.anchors(spec | source)`、`ui.anchor_canvas()` 与批量 `set_child_anchors()` 已实现；`tests/anchors_authoring_tests.cpp`（11 用例）覆盖前向引用、builder 复制、离开 build 栈、scope 清理、节点销毁、响应式替换、嵌套画布、滚动、z 序、页面根依赖链与初始绑定失败清理。`showcase` 的 `anchors` 页面（`showcase/pages/anchors_page.cpp`）以侧边栏停靠切换演示“树 ≠ 布局”。
-4. **已知边界：无界预测量下 `fill` 和百分比画布都不能解析。** Column / Card 等容器的即时 relayout 使用 `measure_layout(loose())`；两轴显式像素尺寸能提供有限上界，`FillLength` / `PercentLength` 则都缺少有限基。`[arranged-parent]` 锁定显式尺寸通过、fill 与百分比报错三支。需要剩余区域时，可把画布放在布局根并用兄弟锚点表达；要支持排列容器剩余空间，须先设计测量阶段/约束传播或非循环回退，更新 [Anchors §5.1](anchors.md) 后再实现。
-5. **人工体验与再评估。** 真实窗口的缩放、快速重复切换与明暗切换手感由作者在 showcase 验收；Anchors 边界稳定后再重新排序阶段 5 复合组件与浮层过渡动效，它们不是 anchors 求解器的前置条件。
+4. **排列容器组合与非循环内容自适应（2026-11-25 收口）**：修复离树组装与 `on_ready()` 无界 `loose()` 预排误抛错，接入 `NanControl::child_axis_assignment` 与 `Expanded::on_measure` 最小约束保真，使 `AnchorCanvas` 可通过 `Expanded`/`FlexItem`/`fill`/`percent` 嵌入 `Column`/`Row`/`Card`/`Surface`/`Stack`/`Resizable`，并在子项不引用远端/中心父锚线或百分比的 `content` 轴上按 `max(right/bottom)` 自动撑开（循环与无界 `fill`/`percent` 仍确定性报错），见 [Anchors §5.1/§5.3](anchors.md#53-剩余验收)。
+
+5. **人工体验与再评估。** 真实窗口的缩放、快速重复切换与明暗切换手感由作者在 showcase / playground 验收；Anchors 边界稳定后再重新排序阶段 5 复合组件与浮层过渡动效，它们不是 anchors 求解器的前置条件。
 
 2026-10-09 审核补充：修复非法 anchors 初始绑定残留 effect 的生命周期问题；新增直接编译
 showcase 页面的小视口/零尺寸、反复换边和页面销毁回调测试。页面采用 30% 尺寸上限，并移除
@@ -126,7 +127,7 @@ showcase 页面的小视口/零尺寸、反复换边和页面销毁回调测试�
 
 作者模型和已达成的边界以 [Anchors 布局设计](anchors.md) 为准；[历史草案](anchor_draft.md)中的 Q1–Q7 已过期。基础边界、scene 内核与作者入口分别由 `anchors_boundary_tests` / `anchors_tests` / `anchors_authoring_tests` 验证；`scene::AnchorCanvas`、`NanControl::set_anchors`、`ui.ref` 与 `ui.anchor_canvas` 均已可用。场景树已有 z 序，anchors 复用而不再造一套。
 
-剩余关口只有一个：画布与排列容器的组合方式（见上方第 4 条）。在它定案前，不要在应用代码里把画布塞进 `Column` / `Card`；展示案例与页面根用法已经可用。
+剩余关口：真实窗口交互体验由维护者在 showcase / playground 人工验收（排列容器组合与非循环内容自适应已于 2026-11-25 落地）。
 
 ## 验证与交付
 
