@@ -99,7 +99,10 @@ namespace nandina::widget
         auto child = child_.lock();
         if (!child)
             return;
-        (void)child->measure_layout(foundation::NanLayoutConstraints::tight(size()));
-        child->layout_to(local_rect());
+        const auto measured =
+            child->measure_layout(foundation::NanLayoutConstraints::tight(size()));
+        child->layout_to(
+            foundation::NanRect::from_origin_size(foundation::NanPoint::zero(), measured)
+        );
     }
 } // namespace nandina::widget

@@ -260,10 +260,12 @@ namespace nandina::widget
     auto AspectRatio::on_layout() -> void {
         content_rect_ = resolve_child_rect(size());
         if (const auto current = child_.lock(); current && current->visible()) {
-            (void)current->measure_layout(
+            const auto measured = current->measure_layout(
                 foundation::NanLayoutConstraints::tight(content_rect_.get_size())
             );
-            current->layout_to(content_rect_);
+            current->layout_to(
+                foundation::NanRect::from_origin_size(content_rect_.get_top_left(), measured)
+            );
         }
     }
 

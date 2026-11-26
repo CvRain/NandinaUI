@@ -134,18 +134,12 @@ TEST_CASE(
     tree.set_root(fixture.scroll);
     require_converged(tree);
 
-    // 内容列宽 = 视口 - 两侧 padding；百分比子项必须停在它自己的百分比上，
-    // 而不是被父级的 stretch 拉满。
-    const auto content_width = kViewport.get_width() - kPadding * 2.0F;
-    REQUIRE(fixture.content->size().get_width() == Catch::Approx(content_width));
-    REQUIRE(fixture.percent_text->size().get_width() == Catch::Approx(content_width * 0.5F));
-    REQUIRE(fixture.fill_text->size().get_width() == Catch::Approx(content_width));
-    // 内容列自己的 max_width(200) 目前会被父级的紧约束压过（父级 min 胜）。这条断言记录
-    // 的是现状而不是理想值：将来若让子项自己的上限胜出，这里与 reference 的开放项一起改。
-    REQUIRE(fixture.content->size().get_width() == Catch::Approx(content_width));
+    // 内容列自己的 max_width(200) 优先于父级 Padding 传入的紧约束（368）：
+    // 内容列停在 200，内部 50% 子项停在 100，fill 子项停在 200，且一轮收敛不抖动。
+    REQUIRE(fixture.content->size().get_width() == Catch::Approx(200.0F));
+    REQUIRE(fixture.percent_text->size().get_width() == Catch::Approx(100.0F));
+    REQUIRE(fixture.fill_text->size().get_width() == Catch::Approx(200.0F));
 
-    // 修复前 percent 子项的 arrange 宽度会被 stretch 覆盖成 content_width，
-    // 与它 measure 得到的 50% 不一致 —— 上面两条断言与收敛断言会一起失败。
     REQUIRE(tree.layout_root(kViewport) == 0);
 }
 
@@ -414,4 +408,78 @@ TEST_CASE(
 
     REQUIRE(required > 0.0F);
     REQUIRE(row->height() >= required - foundation::nan_epsilon);
+}
+
+TEST_CASE(
+    "child max_width and max_height cap tight parent min across containers and converge",
+    "[layout][convergence][max-bounds]"
+) {
+    // 1. Column(stretch) child with pixel and percentage max_width stays capped and converges.
+    auto col = widget::Column::create();
+    col->set_width(scene::fill);
+    col->set_cross_alignment(widget::LayoutAlignment::stretch);
+    col->set_gap(6.0F);
+
+    auto px_capped = std::make_shared<widget::primitives::Text>(std::string(kLongText));
+    px_capped->set_overflow(text::TextOverflow::wrap);
+    px_capped->set_max_lines(8);
+    px_capped->set_max_width(180.0F);
+
+    auto pct_capped = std::make_shared<widget::primitives::Text>(std::string(kLongText));
+    pct_capped->set_overflow(text::TextOverflow::wrap);
+    pct_capped->set_max_lines(8);
+    pct_capped->set_max_width(scene::percent(40.0F));
+
+    // Own min_width still wins over own conflicting max_width (CSS max(min, min(val, max))).
+    auto own_min_wins = std::make_shared<scene::NanControl>(foundation::NanSize(40.0F, 20.0F));
+    own_min_wins->set_min_width(220.0F).set_max_width(150.0F);
+
+    col->add(px_capped);
+    col->add(pct_capped);
+    col->add(own_min_wins);
+
+    scene::NanSceneTree col_tree;
+    col_tree.set_root(col);
+    require_converged(col_tree);
+    REQUIRE(px_capped->size().get_width() == Catch::Approx(180.0F));
+    REQUIRE(pct_capped->size().get_width() == Catch::Approx(160.0F));
+    REQUIRE(own_min_wins->size().get_width() == Catch::Approx(220.0F));
+
+    // 2. Expanded with max_width caps its own main-axis share and lets sibling Expanded take the rest;
+    //    a child with max_width/max_height inside an uncapped Expanded / Stack also stays capped.
+    auto row = widget::Row::create();
+    row->set_width(scene::fill);
+    row->set_height(scene::fill);
+    row->set_gap(10.0F);
+
+    auto capped_expanded = widget::Expanded::create();
+    capped_expanded->set_max_width(120.0F);
+    auto capped_leaf = std::make_shared<scene::NanControl>(foundation::NanSize(20.0F, 20.0F));
+    capped_expanded->set_child(capped_leaf);
+
+    auto free_expanded = widget::Expanded::create();
+    auto inner_capped = std::make_shared<widget::primitives::Text>(std::string(kLongText));
+    inner_capped->set_overflow(text::TextOverflow::wrap);
+    inner_capped->set_max_lines(8);
+    inner_capped->set_max_width(140.0F);
+    inner_capped->set_max_height(90.0F);
+    free_expanded->set_child(inner_capped);
+
+    row->add(capped_expanded);
+    row->add(free_expanded);
+
+    auto stack = widget::Stack::create();
+    stack->add(row);
+    auto badge_box = std::make_shared<scene::NanControl>(foundation::NanSize(30.0F, 20.0F));
+    badge_box->set_max_width(80.0F).set_max_height(40.0F);
+    stack->add(badge_box);
+
+    scene::NanSceneTree stack_tree;
+    stack_tree.set_root(stack);
+    require_converged(stack_tree);
+    REQUIRE(capped_expanded->size().get_width() == Catch::Approx(120.0F));
+    REQUIRE(free_expanded->size().get_width() == Catch::Approx(270.0F));
+    REQUIRE(inner_capped->size().get_width() == Catch::Approx(140.0F));
+    REQUIRE(inner_capped->size().get_height() <= 90.0F + foundation::nan_epsilon);
+    REQUIRE(badge_box->size() == foundation::NanSize(80.0F, 40.0F));
 }

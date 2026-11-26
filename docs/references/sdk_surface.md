@@ -18,6 +18,14 @@
 
 ## 2. 三档分类
 
+2026-11-26 `NanControl` `max_width` / `max_height` 优先于父级紧约束（experimental 行为收口，头文件总数不变，
+仍为 220 = 202 experimental + 18 internal）：
+- `nandina/scene/control.hpp`、`nandina/scene/control.cpp`、`nandina/scene/scene_tree.cpp`、`nandina/widget/layout.cpp` 及单子项/分栏容器：
+  子项有限 `max_width` / `max_height` 封顶父级紧 `min` 约束（同一控件自身 `min` 仍优先于自身 `max`），
+  `NanControl::measure_layout_with_basis()` 提升为公开布局协议入口以保证线性容器二次/排列测量始终以父容器内尺寸为百分比基准，
+  measure 与 arrange 同步收敛；裸页 1200×800 下声明 `.max_width(960)` 的 showcase 页面内容列收口到 960 px，
+  Linux 10 条受影响页面 golden（5 页 × CPU/SDF）已于 2026-11-26 经维护者实机核验后重采批准（`anchors`/`home` 0 变化，Windows 14 条基线待 Windows 重采）。契约见 [布局收敛 §11](layout_convergence_and_text_measurement.md)。
+
 2026-11-25 `AnchorCanvas` 排列容器组合与非循环内容自适应（experimental 增量，头文件总数不变，
 仍为 220 = 202 experimental + 18 internal）：
 - `nandina/scene/control.hpp`（experimental）：新增 `ChildAxisAssignment { none, pass_through, assigned }`、

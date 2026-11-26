@@ -70,12 +70,12 @@ platform = "linux"
 image = "candidates/collapsible-cpu-linux.png"
 width = 1200
 height = 800
-sha256 = "f8d3f1635e0501afae00c09859f1ce5142a5dcd95a8e1493aaf392d554ea30a4"
+sha256 = "5b94f1fe7f8def982502a8b6856b87e27fafd49e843d70d115da9d4039e710d2"
 status = "approved"
-captured = "2026-11-25"
-reviewed_by = "cvrain (maintainer visual & harness review 2026-11-25)"
-reviewed_on = "2026-11-25"
-review_note = "Maintainer approved Linux CPU+SDF recapture after default light/dark desktop-contrast refinement (3-tier muted/secondary/accent separation, crisper border/ring/muted_foreground). Harness pixel attribution confirmed 0 background/glyph-core drift and 100% intentional token delta across all 14 captures. Windows 14 baselines untouched pending Windows recapture."
+captured = "2026-11-26"
+reviewed_by = "cvrain (maintainer interactive window review 2026-11-26)"
+reviewed_on = "2026-11-26"
+review_note = "Maintainer interactively verified and approved Linux CPU+SDF recapture for child max_width/max_height precedence over tight parent min (chrome.content_max 960px content column active on bare 1200x800 probes; anchors and home are 0-diff; Windows 14 baselines untouched pending Windows recapture)."
 
 [[entries]]
 page = "collapsible"
@@ -98,12 +98,12 @@ platform = "linux"
 image = "candidates/collapsible-sdf-linux.png"
 width = 1200
 height = 800
-sha256 = "92ae8043b278837880b96c4abebe20d4f1f6a13763de10ef63f942142b9140e7"
+sha256 = "d395cfe094c521b5d43bc53bef50916c3f5e9b166efd08826fd388b165a391d3"
 status = "approved"
-captured = "2026-11-25"
-reviewed_by = "cvrain (maintainer visual & harness review 2026-11-25)"
-reviewed_on = "2026-11-25"
-review_note = "Maintainer approved Linux CPU+SDF recapture after default light/dark desktop-contrast refinement (3-tier muted/secondary/accent separation, crisper border/ring/muted_foreground). Harness pixel attribution confirmed 0 background/glyph-core drift and 100% intentional token delta across all 14 captures. Windows 14 baselines untouched pending Windows recapture."
+captured = "2026-11-26"
+reviewed_by = "cvrain (maintainer interactive window review 2026-11-26)"
+reviewed_on = "2026-11-26"
+review_note = "Maintainer interactively verified and approved Linux CPU+SDF recapture for child max_width/max_height precedence over tight parent min (chrome.content_max 960px content column active on bare 1200x800 probes; anchors and home are 0-diff; Windows 14 baselines untouched pending Windows recapture)."
 
 [[entries]]
 page = "collapsible"
@@ -182,12 +182,12 @@ platform = "linux"
 image = "candidates/label-cpu-linux.png"
 width = 1200
 height = 800
-sha256 = "2d704cff906159d728557aabd222b5f6c15fe910ac490d60ac9beabe8d3d1166"
+sha256 = "72eeb088eff080968cbd536f586289882c099e8c546f318dee7ced825c24fb5e"
 status = "approved"
-captured = "2026-11-25"
-reviewed_by = "cvrain (maintainer visual & harness review 2026-11-25)"
-reviewed_on = "2026-11-25"
-review_note = "Maintainer approved Linux CPU+SDF recapture after default light/dark desktop-contrast refinement (3-tier muted/secondary/accent separation, crisper border/ring/muted_foreground). Harness pixel attribution confirmed 0 background/glyph-core drift and 100% intentional token delta across all 14 captures. Windows 14 baselines untouched pending Windows recapture."
+captured = "2026-11-26"
+reviewed_by = "cvrain (maintainer interactive window review 2026-11-26)"
+reviewed_on = "2026-11-26"
+review_note = "Maintainer interactively verified and approved Linux CPU+SDF recapture for child max_width/max_height precedence over tight parent min (chrome.content_max 960px content column active on bare 1200x800 probes; anchors and home are 0-diff; Windows 14 baselines untouched pending Windows recapture)."
 
 [[entries]]
 page = "label"
@@ -210,12 +210,12 @@ platform = "linux"
 image = "candidates/label-sdf-linux.png"
 width = 1200
 height = 800
-sha256 = "9ed63a3140a11db31e2e7badac292faf9ed09747d0b717a4f98100059dde63f1"
+sha256 = "996b48c5f3e85290ce48d95d909fb6ba45c22bcefeaa067afd759b7b6c03b5b0"
 status = "approved"
-captured = "2026-11-25"
-reviewed_by = "cvrain (maintainer visual & harness review 2026-11-25)"
-reviewed_on = "2026-11-25"
-review_note = "Maintainer approved Linux CPU+SDF recapture after default light/dark desktop-contrast refinement (3-tier muted/secondary/accent separation, crisper border/ring/muted_foreground). Harness pixel attribution confirmed 0 background/glyph-core drift and 100% intentional token delta across all 14 captures. Windows 14 baselines untouched pending Windows recapture."
+captured = "2026-11-26"
+reviewed_by = "cvrain (maintainer interactive window review 2026-11-26)"
+reviewed_on = "2026-11-26"
+review_note = "Maintainer interactively verified and approved Linux CPU+SDF recapture for child max_width/max_height precedence over tight parent min (chrome.content_max 960px content column active on bare 1200x800 probes; anchors and home are 0-diff; Windows 14 baselines untouched pending Windows recapture)."
 
 [[entries]]
 page = "label"
@@ -238,12 +238,12 @@ platform = "linux"
 image = "candidates/surface-cpu-linux.png"
 width = 1200
 height = 800
-sha256 = "bfa04d63512c176fc8824fe51223ec24c56bffe8125ae1fc925e479df8cdb82b"
+sha256 = "d4097fe54c2d6740480c22ad89aa261b8ee32d354a7f8ffa1e86207afc8a603e"
 status = "approved"
-captured = "2026-11-25"
-reviewed_by = "cvrain (maintainer visual & harness review 2026-11-25)"
-reviewed_on = "2026-11-25"
-review_note = "Maintainer approved Linux CPU+SDF recapture after default light/dark desktop-contrast refinement (3-tier muted/secondary/accent separation, crisper border/ring/muted_foreground). Harness pixel attribution confirmed 0 background/glyph-core drift and 100% intentional token delta across all 14 captures. Windows 14 baselines untouched pending Windows recapture."
+captured = "2026-11-26"
+reviewed_by = "cvrain (maintainer interactive window review 2026-11-26)"
+reviewed_on = "2026-11-26"
+review_note = "Maintainer interactively verified and approved Linux CPU+SDF recapture for child max_width/max_height precedence over tight parent min (chrome.content_max 960px content column active on bare 1200x800 probes; anchors and home are 0-diff; Windows 14 baselines untouched pending Windows recapture)."
 
 [[entries]]
 page = "surface"
@@ -266,12 +266,12 @@ platform = "linux"
 image = "candidates/surface-sdf-linux.png"
 width = 1200
 height = 800
-sha256 = "e857b27593dc95c8e42a2cab0d6c31730af82871e32defb8030bc80239250b6a"
+sha256 = "f0a2254b625fdb469a4c9856654f5046145813014532f6afb0e538a9c78bd851"
 status = "approved"
-captured = "2026-11-25"
-reviewed_by = "cvrain (maintainer visual & harness review 2026-11-25)"
-reviewed_on = "2026-11-25"
-review_note = "Maintainer approved Linux CPU+SDF recapture after default light/dark desktop-contrast refinement (3-tier muted/secondary/accent separation, crisper border/ring/muted_foreground). Harness pixel attribution confirmed 0 background/glyph-core drift and 100% intentional token delta across all 14 captures. Windows 14 baselines untouched pending Windows recapture."
+captured = "2026-11-26"
+reviewed_by = "cvrain (maintainer interactive window review 2026-11-26)"
+reviewed_on = "2026-11-26"
+review_note = "Maintainer interactively verified and approved Linux CPU+SDF recapture for child max_width/max_height precedence over tight parent min (chrome.content_max 960px content column active on bare 1200x800 probes; anchors and home are 0-diff; Windows 14 baselines untouched pending Windows recapture)."
 
 [[entries]]
 page = "surface"
@@ -294,12 +294,12 @@ platform = "linux"
 image = "candidates/table-cpu-linux.png"
 width = 1200
 height = 800
-sha256 = "1ce28934e6d13c2154b50c958d2b45e250a75b86b08cf91876a1d1bee8fd1204"
+sha256 = "925c17cbeea12c843b0870ec97b74b8fc36acfb7a6b465697f077107ecc660da"
 status = "approved"
-captured = "2026-11-25"
-reviewed_by = "cvrain (maintainer visual & harness review 2026-11-25)"
-reviewed_on = "2026-11-25"
-review_note = "Maintainer approved Linux CPU+SDF recapture after default light/dark desktop-contrast refinement (3-tier muted/secondary/accent separation, crisper border/ring/muted_foreground). Harness pixel attribution confirmed 0 background/glyph-core drift and 100% intentional token delta across all 14 captures. Windows 14 baselines untouched pending Windows recapture."
+captured = "2026-11-26"
+reviewed_by = "cvrain (maintainer interactive window review 2026-11-26)"
+reviewed_on = "2026-11-26"
+review_note = "Maintainer interactively verified and approved Linux CPU+SDF recapture for child max_width/max_height precedence over tight parent min (chrome.content_max 960px content column active on bare 1200x800 probes; anchors and home are 0-diff; Windows 14 baselines untouched pending Windows recapture)."
 
 [[entries]]
 page = "table"
@@ -322,12 +322,12 @@ platform = "linux"
 image = "candidates/table-sdf-linux.png"
 width = 1200
 height = 800
-sha256 = "1b1c41ff9f6512215e93078fd2afcc5f8402f239bb476aed1d72078b5133ce52"
+sha256 = "c63e8ec2e983ce150930458e1055b72bbed8bf26aef5a469eaf479725ea6a33f"
 status = "approved"
-captured = "2026-11-25"
-reviewed_by = "cvrain (maintainer visual & harness review 2026-11-25)"
-reviewed_on = "2026-11-25"
-review_note = "Maintainer approved Linux CPU+SDF recapture after default light/dark desktop-contrast refinement (3-tier muted/secondary/accent separation, crisper border/ring/muted_foreground). Harness pixel attribution confirmed 0 background/glyph-core drift and 100% intentional token delta across all 14 captures. Windows 14 baselines untouched pending Windows recapture."
+captured = "2026-11-26"
+reviewed_by = "cvrain (maintainer interactive window review 2026-11-26)"
+reviewed_on = "2026-11-26"
+review_note = "Maintainer interactively verified and approved Linux CPU+SDF recapture for child max_width/max_height precedence over tight parent min (chrome.content_max 960px content column active on bare 1200x800 probes; anchors and home are 0-diff; Windows 14 baselines untouched pending Windows recapture)."
 
 [[entries]]
 page = "table"
@@ -350,12 +350,12 @@ platform = "linux"
 image = "candidates/typography-cpu-linux.png"
 width = 1200
 height = 800
-sha256 = "fcf3027a3f50f119573e2d8c57865298b4a3174c1ed3e9812ecc75db0cbffb4a"
+sha256 = "ad65722bbd74c278892b2f765b9173b83a9aaafd3ba22a06955b560e0826bd6d"
 status = "approved"
-captured = "2026-11-25"
-reviewed_by = "cvrain (maintainer visual & harness review 2026-11-25)"
-reviewed_on = "2026-11-25"
-review_note = "Maintainer approved Linux CPU+SDF recapture after default light/dark desktop-contrast refinement (3-tier muted/secondary/accent separation, crisper border/ring/muted_foreground). Harness pixel attribution confirmed 0 background/glyph-core drift and 100% intentional token delta across all 14 captures. Windows 14 baselines untouched pending Windows recapture."
+captured = "2026-11-26"
+reviewed_by = "cvrain (maintainer interactive window review 2026-11-26)"
+reviewed_on = "2026-11-26"
+review_note = "Maintainer interactively verified and approved Linux CPU+SDF recapture for child max_width/max_height precedence over tight parent min (chrome.content_max 960px content column active on bare 1200x800 probes; anchors and home are 0-diff; Windows 14 baselines untouched pending Windows recapture)."
 
 [[entries]]
 page = "typography"
@@ -378,12 +378,12 @@ platform = "linux"
 image = "candidates/typography-sdf-linux.png"
 width = 1200
 height = 800
-sha256 = "5fc9635f631241299bf07064feaa92975dcfdeb4fafeabb0821307e7ae1bb04c"
+sha256 = "7fed8cfaf1f0d62e261227d92a841ffc66df6517fa23a3fee3192f6a9b001322"
 status = "approved"
-captured = "2026-11-25"
-reviewed_by = "cvrain (maintainer visual & harness review 2026-11-25)"
-reviewed_on = "2026-11-25"
-review_note = "Maintainer approved Linux CPU+SDF recapture after default light/dark desktop-contrast refinement (3-tier muted/secondary/accent separation, crisper border/ring/muted_foreground). Harness pixel attribution confirmed 0 background/glyph-core drift and 100% intentional token delta across all 14 captures. Windows 14 baselines untouched pending Windows recapture."
+captured = "2026-11-26"
+reviewed_by = "cvrain (maintainer interactive window review 2026-11-26)"
+reviewed_on = "2026-11-26"
+review_note = "Maintainer interactively verified and approved Linux CPU+SDF recapture for child max_width/max_height precedence over tight parent min (chrome.content_max 960px content column active on bare 1200x800 probes; anchors and home are 0-diff; Windows 14 baselines untouched pending Windows recapture)."
 
 [[entries]]
 page = "typography"

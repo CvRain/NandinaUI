@@ -165,6 +165,10 @@ namespace nandina::scene
 
         [[nodiscard]] auto measure_layout(foundation::NanLayoutConstraints constraints)
             -> foundation::NanSize;
+        [[nodiscard]] auto measure_layout_with_basis(
+            foundation::NanLayoutConstraints constraints,
+            foundation::NanSize percentage_basis
+        ) -> foundation::NanSize;
         auto layout_to(foundation::NanRect rect) -> void;
 
         // ---- background (可选) ----
@@ -205,10 +209,6 @@ namespace nandina::scene
             -> render::ClipStack::Guard override;
 
     private:
-        [[nodiscard]] auto measure_layout_with_basis(
-            foundation::NanLayoutConstraints constraints,
-            foundation::NanSize percentage_basis
-        ) -> foundation::NanSize;
         foundation::NanSize size_ {};
         foundation::NanSize measured_size_ {};
         foundation::NanLayoutConstraints last_layout_constraints_ {};

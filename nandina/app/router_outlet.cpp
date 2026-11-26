@@ -79,8 +79,11 @@ namespace nandina::app
             if (!child || !child->visible()) {
                 continue;
             }
-            (void)child->measure_layout(foundation::NanLayoutConstraints::tight(size()));
-            child->layout_to(local_rect());
+            const auto measured =
+                child->measure_layout(foundation::NanLayoutConstraints::tight(size()));
+            child->layout_to(
+                foundation::NanRect::from_origin_size(foundation::NanPoint::zero(), measured)
+            );
         }
     }
 } // namespace nandina::app

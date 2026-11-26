@@ -321,8 +321,11 @@ namespace nandina::widget
 
         auto on_layout() -> void override {
             if (active_ != nullptr) {
-                (void)active_->measure_layout(foundation::NanLayoutConstraints::tight(size()));
-                active_->layout_to(local_rect());
+                const auto measured =
+                    active_->measure_layout(foundation::NanLayoutConstraints::tight(size()));
+                active_->layout_to(
+                    foundation::NanRect::from_origin_size(foundation::NanPoint::zero(), measured)
+                );
             }
         }
 

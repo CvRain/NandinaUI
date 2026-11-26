@@ -990,20 +990,30 @@ namespace nandina::widget
         }
         last_geometry_ = compute_split_geometry(size());
         if (const auto first = first_child_.lock(); first && first->visible()) {
-            (void)first->measure_layout(
+            const auto measured = first->measure_layout(
                 foundation::NanLayoutConstraints::tight(last_geometry_.first_rect.get_size())
             );
-            first->layout_to(last_geometry_.first_rect);
+            first->layout_to(
+                foundation::NanRect::from_origin_size(
+                    last_geometry_.first_rect.get_top_left(),
+                    measured
+                )
+            );
         }
         (void)handle_->measure_layout(
             foundation::NanLayoutConstraints::tight(last_geometry_.handle_rect.get_size())
         );
         handle_->layout_to(last_geometry_.handle_rect);
         if (const auto second = second_child_.lock(); second && second->visible()) {
-            (void)second->measure_layout(
+            const auto measured = second->measure_layout(
                 foundation::NanLayoutConstraints::tight(last_geometry_.second_rect.get_size())
             );
-            second->layout_to(last_geometry_.second_rect);
+            second->layout_to(
+                foundation::NanRect::from_origin_size(
+                    last_geometry_.second_rect.get_top_left(),
+                    measured
+                )
+            );
         }
     }
 

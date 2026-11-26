@@ -127,8 +127,11 @@ namespace nandina::widget::internal
 
     void FocusScope::on_layout() {
         if (auto current = content_.lock()) {
-            (void)current->measure_layout(foundation::NanLayoutConstraints::tight(size()));
-            current->layout_to(local_rect());
+            const auto measured =
+                current->measure_layout(foundation::NanLayoutConstraints::tight(size()));
+            current->layout_to(
+                foundation::NanRect::from_origin_size(foundation::NanPoint::zero(), measured)
+            );
         }
     }
 } // namespace nandina::widget::internal

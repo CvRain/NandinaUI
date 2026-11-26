@@ -67,10 +67,15 @@ TEST_CASE(
     REQUIRE(paragraph);
     REQUIRE(location);
     fixture.tree.set_root(root);
+    require_settled(fixture.tree, foundation::NanSize(1600, 800));
+    const auto ultra_wide_width = paragraph->width();
     require_settled(fixture.tree, foundation::NanSize(1200, 800));
     const auto wide_width = paragraph->width();
     const auto wide_height = paragraph->height();
-    require_settled(fixture.tree, foundation::NanSize(640, 800));
+    // chrome.content_max (960px) caps the content column across wide viewports (>= 1024px).
+    CHECK(wide_width == Catch::Approx(ultra_wide_width));
+    CHECK(wide_width <= 960.0F * 0.68F + foundation::nan_epsilon);
+    require_settled(fixture.tree, foundation::NanSize(480, 800));
     CHECK(paragraph->width() < wide_width);
     CHECK(paragraph->height() > wide_height);
     CHECK(location->height() > 0);

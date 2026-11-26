@@ -96,9 +96,29 @@ namespace nandina::widget
                 || std::holds_alternative<scene::PercentLength>(length);
         }
 
-        /// 交叉轴上的目标尺寸。`stretch` 只在子项**没有**声明该轴尺寸时生效；
-        /// 子项声明了固定值或百分比时一律使用它自己的测量结果 —— 该结果已经在 measure
-        /// 阶段按同一份约束解析过（见 `NanControl::measure_layout`）。
+        [[nodiscard]] auto own_axis_bounds(
+            const scene::NanControl& child,
+            LayoutAxis target_axis,
+            float percentage_basis
+        ) -> std::pair<float, float> {
+            const auto& spec = child.size_spec();
+            const auto& own_min =
+                target_axis == LayoutAxis::horizontal ? spec.min_width : spec.min_height;
+            const auto& own_max =
+                target_axis == LayoutAxis::horizontal ? spec.max_width : spec.max_height;
+            const float low = own_min.has_value()
+                ? scene::resolve_layout_length(*own_min, percentage_basis).value_or(0.0F)
+                : 0.0F;
+            const float raw_high = own_max.has_value()
+                ? scene::resolve_layout_length(*own_max, percentage_basis)
+                      .value_or(std::numeric_limits<float>::infinity())
+                : std::numeric_limits<float>::infinity();
+            return {low, std::max(low, raw_high)};
+        }
+
+        /// 交叉轴上的目标尺寸。`stretch` 只在子项**没有**声明该轴尺寸时生效，且仍受子项自身的
+        /// `min/max` 规格钳制；子项声明了固定值或百分比时一律使用它自己的测量结果 —— 该结果已经在
+        /// measure 阶段按同一份约束解析过（见 `NanControl::measure_layout`）。
         ///
         /// 原因：arrange 若越过子项自己的尺寸规格，子项就会在「measure 得到的宽度」与
         /// 「arrange 指派的宽度」之间每个布局周期来回改写尺寸；`set_size()` 每次都会把
@@ -115,7 +135,9 @@ namespace nandina::widget
         ) -> float {
             const auto cross_axis = perpendicular_axis(axis);
             if (alignment == LayoutAlignment::stretch && !has_explicit_extent(child, cross_axis)) {
-                return std::max(0.0F, available_cross);
+                const auto [own_min, own_max] =
+                    own_axis_bounds(child, cross_axis, std::max(0.0F, available_cross));
+                return std::clamp(std::max(0.0F, available_cross), own_min, own_max);
             }
             return cross_extent(measured, axis);
         }
@@ -294,6 +316,7 @@ namespace nandina::widget
                 && std::isfinite(cross_max) && cross_max >= 0.0F
                 && std::abs(cross_min - cross_max) <= foundation::nan_epsilon;
 
+            const foundation::NanSize measure_basis(constraints.max_width, constraints.max_height);
             std::vector<LinearItem> items;
             for (auto& ref: refs) {
                 auto child = ref.lock();
@@ -317,9 +340,17 @@ namespace nandina::widget
                         item_constraints.max_height = stretched;
                     }
                 }
-                const auto measured = child->measure_layout(item_constraints);
-                const float min_main = std::max(0.0F, policy_limit(policy.limits, axis, true));
-                const float max_main = std::max(min_main, policy_limit(policy.limits, axis, false));
+                const auto measured =
+                    child->measure_layout_with_basis(item_constraints, measure_basis);
+                const float main_basis = max_main(constraints, axis);
+                const auto [own_min_m, own_max_m] = own_axis_bounds(*child, axis, main_basis);
+                const float policy_min_m = std::max(0.0F, policy_limit(policy.limits, axis, true));
+                const float policy_max_m =
+                    std::max(policy_min_m, policy_limit(policy.limits, axis, false));
+                const float capped_policy_min_m =
+                    std::isfinite(own_max_m) ? std::min(policy_min_m, own_max_m) : policy_min_m;
+                const float min_main = std::max(capped_policy_min_m, own_min_m);
+                const float max_main = std::max(min_main, std::min(policy_max_m, own_max_m));
                 const float raw_base = policy.basis.value_or(main_extent(measured, axis));
                 const float base = std::clamp(raw_base, min_main, max_main);
                 items.push_back(
@@ -379,7 +410,7 @@ namespace nandina::widget
                           .min_height = item.target,
                           .max_height = item.target,
                       };
-                item.measured = item.child->measure_layout(tight);
+                item.measured = item.child->measure_layout_with_basis(tight, measure_basis);
             }
 
             float used_main = gaps;
@@ -400,6 +431,8 @@ namespace nandina::widget
             foundation::NanSize container_size
         ) {
             prune_expired(refs);
+            const float available_main = main_extent(container_size, axis);
+            const float available_cross = cross_extent(container_size, axis);
             std::vector<LinearItem> items;
             for (auto& ref: refs) {
                 auto child = ref.lock();
@@ -408,8 +441,14 @@ namespace nandina::widget
                 }
                 auto policy = child->layout_flex_policy();
                 const auto measured = child->measured_size();
-                const float min_main = std::max(0.0F, policy_limit(policy.limits, axis, true));
-                const float max_main = std::max(min_main, policy_limit(policy.limits, axis, false));
+                const auto [own_min_m, own_max_m] = own_axis_bounds(*child, axis, available_main);
+                const float policy_min_m = std::max(0.0F, policy_limit(policy.limits, axis, true));
+                const float policy_max_m =
+                    std::max(policy_min_m, policy_limit(policy.limits, axis, false));
+                const float capped_policy_min_m =
+                    std::isfinite(own_max_m) ? std::min(policy_min_m, own_max_m) : policy_min_m;
+                const float min_main = std::max(capped_policy_min_m, own_min_m);
+                const float max_main = std::max(min_main, std::min(policy_max_m, own_max_m));
                 const float raw_base = policy.basis.value_or(main_extent(measured, axis));
                 const float base = std::clamp(raw_base, min_main, max_main);
                 items.push_back(
@@ -427,8 +466,6 @@ namespace nandina::widget
             if (items.empty()) {
                 return;
             }
-            const float available_main = main_extent(container_size, axis);
-            const float available_cross = cross_extent(container_size, axis);
             const float base_gaps = gap * static_cast<float>(items.size() - 1);
             distribute_linear(items, std::max(0.0F, available_main - base_gaps));
             float used_main = base_gaps;
@@ -451,15 +488,24 @@ namespace nandina::widget
                     available_cross,
                     item.measured
                 );
-                const float child_cross = std::clamp(desired_cross, min_cross, max_cross);
+                const auto [own_min_c, own_max_c] =
+                    own_axis_bounds(*item.child, cross_axis, std::max(0.0F, available_cross));
+                const float capped_policy_min_c =
+                    std::isfinite(own_max_c) ? std::min(min_cross, own_max_c) : min_cross;
+                const float eff_min_cross = std::max(capped_policy_min_c, own_min_c);
+                const float eff_max_cross = std::max(eff_min_cross, std::min(max_cross, own_max_c));
+                const float child_cross = std::clamp(desired_cross, eff_min_cross, eff_max_cross);
                 const float cross_pos =
                     alignment_offset(cross_alignment, available_cross, child_cross);
-                const auto rect =
+                const auto slot_rect =
                     rect_from_extents(main_pos, cross_pos, item.target, child_cross, axis);
-                (void)item.child->measure_layout(
-                    foundation::NanLayoutConstraints::tight(rect.get_size())
+                const auto final_measured = item.child->measure_layout_with_basis(
+                    foundation::NanLayoutConstraints::tight(slot_rect.get_size()),
+                    container_size
                 );
-                item.child->layout_to(rect);
+                item.child->layout_to(
+                    foundation::NanRect::from_origin_size(slot_rect.get_top_left(), final_measured)
+                );
                 main_pos += item.target + effective_gap;
             }
         }
@@ -1060,8 +1106,11 @@ namespace nandina::widget
             if (!child || !child->visible()) {
                 continue;
             }
-            (void)child->measure_layout(foundation::NanLayoutConstraints::tight(size()));
-            child->layout_to(local_rect());
+            const auto measured =
+                child->measure_layout(foundation::NanLayoutConstraints::tight(size()));
+            child->layout_to(
+                foundation::NanRect::from_origin_size(foundation::NanPoint::zero(), measured)
+            );
         }
     }
 
@@ -1292,8 +1341,11 @@ namespace nandina::widget
         if (!child) {
             return;
         }
-        (void)child->measure_layout(foundation::NanLayoutConstraints::tight(size()));
-        child->layout_to(local_rect());
+        const auto measured =
+            child->measure_layout(foundation::NanLayoutConstraints::tight(size()));
+        child->layout_to(
+            foundation::NanRect::from_origin_size(foundation::NanPoint::zero(), measured)
+        );
     }
 
     void Expanded::on_ready() {
@@ -1365,8 +1417,11 @@ namespace nandina::widget
         if (!child) {
             return;
         }
-        (void)child->measure_layout(foundation::NanLayoutConstraints::tight(size()));
-        child->layout_to(local_rect());
+        const auto measured =
+            child->measure_layout(foundation::NanLayoutConstraints::tight(size()));
+        child->layout_to(
+            foundation::NanRect::from_origin_size(foundation::NanPoint::zero(), measured)
+        );
     }
 
 } // namespace nandina::widget

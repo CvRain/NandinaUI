@@ -467,20 +467,39 @@ namespace nandina::scene
         animation_host_->advance(dt);
     }
 
+    namespace
+    {
+        [[nodiscard]] auto
+        root_settled_at_viewport(const NanControl& control, const foundation::NanSize viewport_size)
+            -> bool {
+            if (control.layout_dirty()) {
+                return false;
+            }
+            if (control.size() == viewport_size) {
+                return true;
+            }
+            const auto last = control.last_layout_constraints();
+            return control.size() == control.measured_size()
+                && last.min_width == viewport_size.get_width()
+                && last.max_width == viewport_size.get_width()
+                && last.min_height == viewport_size.get_height()
+                && last.max_height == viewport_size.get_height();
+        }
+    } // namespace
+
     auto
     NanSceneTree::_layout_layer_stack(LayerStack& stack, const foundation::NanSize viewport_size)
         -> bool {
         bool laid_out = false;
         for (auto* layer: stack.layers_in_order()) {
             auto* control = layer->space() == CanvasSpace::screen ? layer->layout_root() : nullptr;
-            if (control == nullptr
-                || (!control->layout_dirty() && control->size() == viewport_size))
-            {
+            if (control == nullptr || root_settled_at_viewport(*control, viewport_size)) {
                 continue;
             }
-            (void)control->measure_layout(foundation::NanLayoutConstraints::tight(viewport_size));
+            const auto measured =
+                control->measure_layout(foundation::NanLayoutConstraints::tight(viewport_size));
             control->layout_to(
-                foundation::NanRect::from_origin_size(foundation::NanPoint::zero(), viewport_size)
+                foundation::NanRect::from_origin_size(foundation::NanPoint::zero(), measured)
             );
             laid_out = true;
         }
@@ -523,10 +542,11 @@ namespace nandina::scene
 
         bool laid_out = false;
         auto* control = root_ != nullptr ? root_->as_control() : nullptr;
-        if (control != nullptr && (control->layout_dirty() || control->size() != viewport_size)) {
-            (void)control->measure_layout(foundation::NanLayoutConstraints::tight(viewport_size));
+        if (control != nullptr && !root_settled_at_viewport(*control, viewport_size)) {
+            const auto measured =
+                control->measure_layout(foundation::NanLayoutConstraints::tight(viewport_size));
             control->layout_to(
-                foundation::NanRect::from_origin_size(foundation::NanPoint::zero(), viewport_size)
+                foundation::NanRect::from_origin_size(foundation::NanPoint::zero(), measured)
             );
             laid_out = true;
         }

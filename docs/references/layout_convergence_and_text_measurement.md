@@ -143,11 +143,10 @@ Label 页的 "Wrapping" 一节标注 `Assigned width: 68% of the content column`
 
 ## 7. 开放项
 
-1. **`max_width` 会被父级紧约束压过。** `constrained_axis()` 里 `minimum = max(parent_min, own_min)`、
-   `maximum = max(minimum, min(parent_max, own_max))`，于是父级的紧 `min` 可以越过子项自己的 `max`。
-   当前 showcase 的 `.max_width(chrome.content_max)` 因此**不生效**（内容列仍按视口宽度排）；
-   测试里有一条断言记录了这个现状。要不要改成「子项自己的上限胜出」（CSS / Godot 的语义）
-   属于可见行为变更，需要单独定案后再改 reference 与断言。
+1. **`max_width` / `max_height` 优先于父级紧约束（已于 2026-11-26 收口，见 §11）。** 原 `constrained_axis()`
+   先取 `minimum = max(parent_min, own_min)`，导致父级紧约束压过子项显式 `max_width` / `max_height`；
+   现已按 CSS / Godot 语义定案并落地：子项自身 `min` 仍优先于自身 `max`，而子项有限 `max` 封顶父级传入的
+   `parent_min`，各排列/包裹容器在 arrange 阶段保持与 measure 一致的封顶尺寸并一轮收敛。
 2. **浮点噪声的根因没有消除。** 阈值只是让它不再引发无限重排；measure 与 arrange
    为什么会对同一个量算出 1.5e-5 的差异，尚未定位到具体算式。
 3. **整形本身很贵：约 2 µs/字符。** 实测（`playground/bench/label_bench.cpp` 的整形探针，
@@ -212,3 +211,28 @@ Collapsible：`Flex`/`Row`/`Column` 的 `on_measure()` 把容器的**完整主�
 视觉影响：Linux `collapsible` 页 CPU/SDF 两条基线因内容不再越界、下方 section 下移而变化
 （其余 12 条基线 0 差异）；Windows 同页基线同步重采。候选图需维护者审阅后批准，审批记录见
 [视觉回归](visual_regression.md)。
+
+## 11. 2026-11-26 子项 `max_width` / `max_height` 优先于父级紧约束（修复 §7.1）
+
+根因：`NanControl` 的 `constrained_axis()` 原先先将 `parent_min` 合入 `minimum`，再用 `minimum` 抬高
+`maximum`，且 `measure_layout_with_basis()` 末尾用原始 `constraints.constrain(measured)` 再次把测量结果
+拉回 `parent_min`；同时 `Column`/`Row`/`Flex`/`Wrap` 的 `stretch` 与单子项全槽容器（`Expanded`、`Stack`、
+`RouterOutlet` 等）在 arrange 阶段未按子项 `max` 封顶，导致 `.max_width(chrome.content_max)` 在紧父容器内静默失效。
+
+修复：
+
+- **优先级定案（CSS / Godot 对齐）**：同一控件自身冲突时 `own_min` 优先于 `own_max`
+  （`resolved_own_max = max(resolved_own_min, raw_own_max)`）；对父级传入的最小约束，有限的
+  `resolved_own_max` 先封顶 `capped_parent_min = min(parent_min, resolved_own_max)`，再合并到
+  `effective` 与最终 `parent_bounds.constrain(measured)`，使紧父容器不会将子项拉宽/拉高越过其 `max`。
+- **Measure 与 Arrange 同源收敛**：`Column`/`Row`/`Flex`/`Wrap` 的交叉轴 `stretch` 与主轴 flex 分配
+  同步纳入子项自身 `min/max` 规格；`Expanded`、`FlexItem`、`Stack`、`PointerArea`、`IfRegion`、
+  `FocusScope`、`RouterOutlet`、`Resizable`、`AspectRatio`、`NanControl` 默认单子项与 `NanSceneTree`
+  根布局均按 `measure_layout(tight(slot))` 返回的收敛尺寸落位，保证稳态 `layout_root() == 0`。
+- **回归**：`[layout][convergence][stretch]` 与 `[layout][convergence][max-bounds]`（红先失败确认后转绿）
+  锁住 `ScrollView > Padding > Column.max_width(200)`、`Column(stretch)` 像素/百分比上限、自身 `min > max`
+  优先级、`Row` 内带上限 `Expanded` 余量重分配及 `Stack` 内子项上限收敛。
+- **视觉影响**：裸页 1200×800 probe（无侧栏时内容区可用宽 1136 px > `chrome.content_max` 960 px）下，
+  声明了 `.max_width(chrome.content_max)` 的 showcase 页面（`label`、`typography`、`table`、
+  `collapsible`、`surface`）内容列宽度按预期收口到 960 px（`anchors`、`home` 保持 0 像素差异）；
+  Linux 10 条受影响 CPU+SDF 基线已于 2026-11-26 经维护者实机窗口核验后重采批准，Windows 14 条基线保持未动待 Windows 重采。

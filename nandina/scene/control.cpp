@@ -55,13 +55,19 @@ namespace nandina::scene
 
     namespace
     {
+        struct AxisBounds {
+            float minimum = 0.0F;
+            float maximum = std::numeric_limits<float>::infinity();
+            float capped_parent_min = 0.0F;
+        };
+
         [[nodiscard]] auto constrained_axis(
             float parent_min,
             float parent_max,
             float percentage_basis,
             const std::optional<LayoutLength>& own_min,
             const std::optional<LayoutLength>& own_max
-        ) -> std::pair<float, float> {
+        ) -> AxisBounds {
             const auto resolve = [percentage_basis](
                                      const std::optional<LayoutLength>& length,
                                      const float fallback
@@ -71,12 +77,21 @@ namespace nandina::scene
                 }
                 return resolve_layout_length(*length, percentage_basis).value_or(fallback);
             };
-            const float minimum = std::max(parent_min, resolve(own_min, 0.0F));
-            const float maximum = std::max(
-                minimum,
-                std::min(parent_max, resolve(own_max, std::numeric_limits<float>::infinity()))
+            const float resolved_own_min = resolve(own_min, 0.0F);
+            const float resolved_own_max = std::max(
+                resolved_own_min,
+                resolve(own_max, std::numeric_limits<float>::infinity())
             );
-            return {minimum, maximum};
+            const float capped_parent_min = std::isfinite(resolved_own_max)
+                ? std::min(parent_min, resolved_own_max)
+                : parent_min;
+            const float minimum = std::max(capped_parent_min, resolved_own_min);
+            const float maximum = std::max(minimum, std::min(parent_max, resolved_own_max));
+            return {
+                .minimum = minimum,
+                .maximum = maximum,
+                .capped_parent_min = capped_parent_min,
+            };
         }
     } // namespace
 
@@ -357,14 +372,14 @@ namespace nandina::scene
         foundation::NanSize percentage_basis
     ) -> foundation::NanSize {
         last_layout_constraints_ = constraints;
-        auto [min_width, max_width] = constrained_axis(
+        auto [min_width, max_width, capped_parent_min_w] = constrained_axis(
             constraints.min_width,
             constraints.max_width,
             percentage_basis.get_width(),
             size_spec_.min_width,
             size_spec_.max_width
         );
-        auto [min_height, max_height] = constrained_axis(
+        auto [min_height, max_height, capped_parent_min_h] = constrained_axis(
             constraints.min_height,
             constraints.max_height,
             percentage_basis.get_height(),
@@ -410,7 +425,13 @@ namespace nandina::scene
             measured = effective.constrain(foundation::NanSize(result_width, result_height));
         }
 
-        measured_size_ = constraints.constrain(measured);
+        const foundation::NanLayoutConstraints parent_bounds {
+            .min_width = capped_parent_min_w,
+            .max_width = constraints.max_width,
+            .min_height = capped_parent_min_h,
+            .max_height = constraints.max_height,
+        };
+        measured_size_ = parent_bounds.constrain(measured);
         return measured_size_;
     }
 
@@ -499,8 +520,11 @@ namespace nandina::scene
 
         if (visible_children.size() == 1) {
             auto* child = visible_children.front();
-            (void)child->measure_layout(foundation::NanLayoutConstraints::tight(size()));
-            child->layout_to(local_rect());
+            const auto measured =
+                child->measure_layout(foundation::NanLayoutConstraints::tight(size()));
+            child->layout_to(
+                foundation::NanRect::from_origin_size(foundation::NanPoint::zero(), measured)
+            );
             return;
         }
 
