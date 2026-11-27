@@ -6,6 +6,7 @@
 
 #if defined(NANDINA_HAS_SDL_BACKEND)
 
+    #include "../../foundation/nandina_color_space.hpp"
     #include "../../render/backends/sdl_device.hpp"
     #include "../window_metrics.hpp"
     #if defined(__linux__)
@@ -525,18 +526,107 @@ namespace nandina::app::detail
         }
         text_input_service_ = std::make_unique<SdlTextInputService>(window_);
 
-        // 渲染器：先走 GPU 路径（与 probe/cross_platform/desktop/page_probe.cpp 一致），
-        // 失败再退回 SDL 的默认 2D 渲染器。GPU 设备的唯一用途就是喂 GPU 渲染器，所以
-        // GPU 渲染器建不起来时立刻释放它，不在窗口生命周期里留一个悬空的设备。
+        // 渲染器：优先走由平台直接接管 swapchain 的无窗口 GPU 渲染器（`SDL_CreateGPURenderer(gpu,
+        // nullptr)` + 显式 `SDL_TEXTUREACCESS_TARGET` 离屏帧目标），避免 SDL 内置
+        // `GPU_RenderPresent` 在缩放帧先把上一尺寸 `backbuffer` 线性拉伸到新尺寸 swapchain、提交后
+        // 才重建 `backbuffer` 造成的固定组件抽搐；同时允许在连续缩放期临时切到 `MAILBOX` 消除
+        // Wayland `wp_fifo_v1` 队列积压。无窗口表面（如 dummy 驱动）上 `ClaimWindow` 失败则退回
+        // 默认 2D 渲染器。
         gpu_device_ = SDL_CreateGPUDevice(SDL_GPU_SHADERFORMAT_SPIRV, false, "vulkan");
         if (gpu_device_ != nullptr) {
-            renderer_ = SDL_CreateGPURenderer(gpu_device_, window_);
-        }
-        if (renderer_ == nullptr) {
-            if (gpu_device_ != nullptr) {
+            if (SDL_ClaimWindowForGPUDevice(gpu_device_, window_)) {
+                gpu_swapchain_claimed_ = true;
+                renderer_ = SDL_CreateGPURenderer(gpu_device_, nullptr);
+                if (renderer_ == nullptr) {
+                    SDL_ReleaseWindowFromGPUDevice(gpu_device_, window_);
+                    gpu_swapchain_claimed_ = false;
+                }
+            }
+            if (renderer_ == nullptr) {
                 SDL_DestroyGPUDevice(gpu_device_);
                 gpu_device_ = nullptr;
             }
+        }
+        if (gpu_swapchain_claimed_ && renderer_ != nullptr) {
+            const auto choose_non_vsync_mode = [](SDL_GPUDevice* dev, SDL_Window* win) {
+                if (SDL_WindowSupportsGPUPresentMode(dev, win, SDL_GPU_PRESENTMODE_MAILBOX)) {
+                    return SDL_GPU_PRESENTMODE_MAILBOX;
+                }
+                if (SDL_WindowSupportsGPUPresentMode(dev, win, SDL_GPU_PRESENTMODE_IMMEDIATE)) {
+                    return SDL_GPU_PRESENTMODE_IMMEDIATE;
+                }
+                return SDL_GPU_PRESENTMODE_VSYNC;
+            };
+            vsync_enabled_ = config.vsync;
+            if (config.vsync) {
+                steady_present_mode_ = SDL_GPU_PRESENTMODE_VSYNC;
+                if (SDL_WindowSupportsGPUPresentMode(
+                        gpu_device_,
+                        window_,
+                        SDL_GPU_PRESENTMODE_MAILBOX
+                    ))
+                {
+                    resize_present_mode_ = SDL_GPU_PRESENTMODE_MAILBOX;
+                }
+                else if (
+                    const char* video_driver = SDL_GetCurrentVideoDriver(); video_driver != nullptr
+                    && std::string_view(video_driver) == "wayland"
+                    && SDL_WindowSupportsGPUPresentMode(gpu_device_,
+                                                        window_,
+                                                        SDL_GPU_PRESENTMODE_IMMEDIATE)
+                )
+                {
+                    resize_present_mode_ = SDL_GPU_PRESENTMODE_IMMEDIATE;
+                }
+                else {
+                    resize_present_mode_ = SDL_GPU_PRESENTMODE_VSYNC;
+                }
+            }
+            else {
+                const auto non_vsync = choose_non_vsync_mode(gpu_device_, window_);
+                steady_present_mode_ = non_vsync;
+                resize_present_mode_ = non_vsync;
+            }
+            (void)SDL_SetGPUAllowedFramesInFlight(gpu_device_, 1);
+            if (SDL_SetGPUSwapchainParameters(
+                    gpu_device_,
+                    window_,
+                    SDL_GPU_SWAPCHAINCOMPOSITION_SDR,
+                    steady_present_mode_
+                ))
+            {
+                active_present_mode_ = steady_present_mode_;
+            }
+            else {
+                active_present_mode_ = SDL_GPU_PRESENTMODE_VSYNC;
+                SDL_Log(
+                    "SdlPlatformWindow: SDL_SetGPUSwapchainParameters(%d) failed: %s",
+                    static_cast<int>(steady_present_mode_),
+                    SDL_GetError()
+                );
+            }
+
+            const SDL_GPUTextureFormat swap_format =
+                SDL_GetGPUSwapchainTextureFormat(gpu_device_, window_);
+            const SDL_PixelFormat mapped_format =
+                SDL_GetPixelFormatFromGPUTextureFormat(swap_format);
+            frame_target_format_ =
+                (mapped_format == SDL_PIXELFORMAT_BGRA32 || mapped_format == SDL_PIXELFORMAT_RGBA32
+                 || mapped_format == SDL_PIXELFORMAT_BGRX32
+                 || mapped_format == SDL_PIXELFORMAT_RGBX32)
+                ? mapped_format
+                : SDL_PIXELFORMAT_RGBA32;
+
+            if (!ensure_gpu_frame_target()) {
+                SDL_DestroyRenderer(renderer_);
+                renderer_ = nullptr;
+                SDL_ReleaseWindowFromGPUDevice(gpu_device_, window_);
+                gpu_swapchain_claimed_ = false;
+                SDL_DestroyGPUDevice(gpu_device_);
+                gpu_device_ = nullptr;
+            }
+        }
+        if (renderer_ == nullptr) {
             renderer_ = SDL_CreateRenderer(window_, nullptr);
         }
         if (renderer_ == nullptr) {
@@ -551,15 +641,24 @@ namespace nandina::app::detail
         // 渲染器 scale 与文本输入区域换算依赖窗口与 renderer 都存在；创建路径末尾统一应用。
         refresh_content_scale();
 
-        // vsync / target_fps 只能尽力而为：vsync 走 SDL 的通用开关（驱动可能不支持，所以查
-        // 返回值），target_fps 由 `present()` 在 vsync 关闭时自己数拍子 —— SDL 没有帧率上限 API。
-        const int vsync = config.vsync ? 1 : 0;
-        if (!SDL_SetRenderVSync(renderer_, vsync)) {
-            SDL_Log("SdlPlatformWindow: SDL_SetRenderVSync(%d) failed: %s", vsync, SDL_GetError());
+        // vsync / target_fps：非 GPU 路径走 SDL_SetRenderVSync；GPU 路径已通过
+        // SDL_SetGPUSwapchainParameters 配置，target_fps 由 `present()` 在 vsync 关闭时自己数拍子。
+        vsync_enabled_ = config.vsync;
+        if (!gpu_swapchain_claimed_) {
+            const int vsync = config.vsync ? 1 : 0;
+            if (!SDL_SetRenderVSync(renderer_, vsync)) {
+                SDL_Log(
+                    "SdlPlatformWindow: SDL_SetRenderVSync(%d) failed: %s",
+                    vsync,
+                    SDL_GetError()
+                );
+            }
         }
         target_fps_ = config.target_fps > 0 ? static_cast<std::uint64_t>(config.target_fps) : 0;
         pace_frames_ = !config.vsync && target_fps_ > 0;
         last_present_ns_ = 0;
+        last_resize_ns_ = 0;
+        clear_color_ = config.background.value_or(foundation::NanColor {});
         if (pace_frames_) {
             SDL_Log(
                 "SdlPlatformWindow: vsync off, pacing present() to target_fps=%d",
@@ -613,10 +712,25 @@ namespace nandina::app::detail
         system_preferences_.reset();
         // Stop IME/text input before the SDL window goes away.
         text_input_service_.reset();
+        if (frame_target_ != nullptr) {
+            if (renderer_ != nullptr) {
+                (void)SDL_SetRenderTarget(renderer_, nullptr);
+            }
+            SDL_DestroyTexture(frame_target_);
+            frame_target_ = nullptr;
+        }
+        frame_target_gpu_ = nullptr;
+        frame_target_width_ = 0;
+        frame_target_height_ = 0;
+        frame_target_format_ = SDL_PIXELFORMAT_RGBA32;
         if (renderer_ != nullptr) {
             SDL_DestroyRenderer(renderer_);
             renderer_ = nullptr;
         }
+        if (gpu_swapchain_claimed_ && gpu_device_ != nullptr && window_ != nullptr) {
+            SDL_ReleaseWindowFromGPUDevice(gpu_device_, window_);
+        }
+        gpu_swapchain_claimed_ = false;
         if (gpu_device_ != nullptr) {
             SDL_DestroyGPUDevice(gpu_device_);
             gpu_device_ = nullptr;
@@ -635,6 +749,12 @@ namespace nandina::app::detail
         pace_frames_ = false;
         target_fps_ = 0;
         last_present_ns_ = 0;
+        vsync_enabled_ = true;
+        steady_present_mode_ = SDL_GPU_PRESENTMODE_VSYNC;
+        resize_present_mode_ = SDL_GPU_PRESENTMODE_VSYNC;
+        active_present_mode_ = SDL_GPU_PRESENTMODE_VSYNC;
+        last_resize_ns_ = 0;
+        clear_color_ = {};
         modifiers_ = {};
         held_keys_.fill({});
         window_active_ = false;
@@ -929,6 +1049,7 @@ namespace nandina::app::detail
                 case SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED:
                     if (event.window.windowID == SDL_GetWindowID(window_)) {
                         handle_display_scale_changed();
+                        last_resize_ns_ = SDL_GetTicksNS();
                     }
                     break;
 
@@ -936,6 +1057,7 @@ namespace nandina::app::detail
                 case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
                     if (event.window.windowID == SDL_GetWindowID(window_)) {
                         remember_logical_size_from_window();
+                        last_resize_ns_ = SDL_GetTicksNS();
                     }
                     break;
 
@@ -1074,15 +1196,232 @@ namespace nandina::app::detail
         out.window_active = window_active_;
     }
 
-    void SdlPlatformWindow::present() {
-        if (renderer_ != nullptr) {
-            static_cast<void>(SDL_RenderPresent(renderer_));
+    auto SdlPlatformWindow::ensure_gpu_frame_target() -> bool {
+        if (!gpu_swapchain_claimed_ || renderer_ == nullptr || window_ == nullptr) {
+            return true;
         }
-        if (!pace_frames_ || renderer_ == nullptr) {
+        int pixel_width = 0;
+        int pixel_height = 0;
+        if (!SDL_GetWindowSizeInPixels(window_, &pixel_width, &pixel_height)) {
+            return frame_target_ != nullptr;
+        }
+        if (pixel_width <= 0 || pixel_height <= 0) {
+            if (frame_target_ != nullptr) {
+                return true;
+            }
+            pixel_width = std::max(1, pixel_width);
+            pixel_height = std::max(1, pixel_height);
+        }
+        if (frame_target_ != nullptr && frame_target_gpu_ != nullptr
+            && frame_target_width_ == pixel_width && frame_target_height_ == pixel_height)
+        {
+            if (SDL_GetRenderTarget(renderer_) != frame_target_) {
+                (void)SDL_SetRenderTarget(renderer_, frame_target_);
+                apply_render_scale();
+            }
+            return true;
+        }
+        if (frame_target_width_ > 0 && frame_target_height_ > 0) {
+            last_resize_ns_ = SDL_GetTicksNS();
+        }
+        SDL_Texture* next_target = SDL_CreateTexture(
+            renderer_,
+            frame_target_format_,
+            SDL_TEXTUREACCESS_TARGET,
+            pixel_width,
+            pixel_height
+        );
+        if (next_target == nullptr) {
+            SDL_Log(
+                "SdlPlatformWindow: SDL_CreateTexture(target %dx%d) failed: %s",
+                pixel_width,
+                pixel_height,
+                SDL_GetError()
+            );
+            return false;
+        }
+        (void)SDL_SetTextureScaleMode(next_target, SDL_SCALEMODE_NEAREST);
+        (void)SDL_SetTextureBlendMode(next_target, SDL_BLENDMODE_NONE);
+        auto* next_gpu = static_cast<SDL_GPUTexture*>(SDL_GetPointerProperty(
+            SDL_GetTextureProperties(next_target),
+            SDL_PROP_TEXTURE_GPU_TEXTURE_POINTER,
+            nullptr
+        ));
+        // 先切换 render_target 再销毁旧纹理：SDL_DestroyTexture 在销毁正绑定目标时会把内部
+        // render_target 置空；若绑定新目标失败再销毁 next_target，需把旧 frame_target_ 重新绑回。
+        if (next_gpu == nullptr || !SDL_SetRenderTarget(renderer_, next_target)) {
+            SDL_Log(
+                "SdlPlatformWindow: failed to bind GPU frame target %dx%d: %s",
+                pixel_width,
+                pixel_height,
+                SDL_GetError()
+            );
+            SDL_DestroyTexture(next_target);
+            if (frame_target_ != nullptr) {
+                (void)SDL_SetRenderTarget(renderer_, frame_target_);
+                apply_render_scale();
+            }
+            return false;
+        }
+        if (frame_target_ != nullptr) {
+            SDL_DestroyTexture(frame_target_);
+        }
+        frame_target_ = next_target;
+        frame_target_gpu_ = next_gpu;
+        frame_target_width_ = pixel_width;
+        frame_target_height_ = pixel_height;
+        apply_render_scale();
+        return true;
+    }
+
+    auto SdlPlatformWindow::display_refresh_interval_ns() const noexcept -> std::uint64_t {
+        constexpr std::uint64_t kDefaultRefreshNs = 1'000'000'000ULL / 60ULL;
+        if (window_ == nullptr) {
+            return kDefaultRefreshNs;
+        }
+        const SDL_DisplayID display = SDL_GetDisplayForWindow(window_);
+        if (display == 0) {
+            return kDefaultRefreshNs;
+        }
+        const SDL_DisplayMode* mode = SDL_GetCurrentDisplayMode(display);
+        if (mode == nullptr) {
+            mode = SDL_GetDesktopDisplayMode(display);
+        }
+        if (mode == nullptr || !std::isfinite(mode->refresh_rate) || mode->refresh_rate <= 1.0F) {
+            return kDefaultRefreshNs;
+        }
+        const auto interval =
+            std::llround(1'000'000'000.0 / static_cast<double>(mode->refresh_rate));
+        return interval > 0 ? static_cast<std::uint64_t>(interval) : kDefaultRefreshNs;
+    }
+
+    void SdlPlatformWindow::prepare_frame(const foundation::NanColor& clear_color) {
+        clear_color_ = clear_color;
+        (void)ensure_gpu_frame_target();
+    }
+
+    void SdlPlatformWindow::present() {
+        if (renderer_ == nullptr) {
             return;
         }
-        // best-effort 帧率上限：只在 vsync 关闭时生效，且最多补足到下一帧的截止时间。
-        const std::uint64_t frame_ns = 1'000'000'000ULL / target_fps_;
+        if (!gpu_swapchain_claimed_) {
+            static_cast<void>(SDL_RenderPresent(renderer_));
+            if (!pace_frames_) {
+                return;
+            }
+            const std::uint64_t frame_ns = 1'000'000'000ULL / target_fps_;
+            const std::uint64_t now = SDL_GetTicksNS();
+            if (last_present_ns_ != 0 && now - last_present_ns_ < frame_ns) {
+                SDL_DelayNS(frame_ns - (now - last_present_ns_));
+            }
+            last_present_ns_ = SDL_GetTicksNS();
+            return;
+        }
+
+        // 连续缩放窗口期内切到 MAILBOX（或 Wayland IMMEDIATE），使新尺寸帧直接替换未上屏的旧帧，
+        // 避免 Vulkan FIFO / Wayland wp_fifo_v1 积压数十帧在停手后缓慢滑行；静止后恢复 VSYNC。
+        constexpr std::uint64_t kResizeSettleNs = 120'000'000ULL;
+        const std::uint64_t before_present_ns = SDL_GetTicksNS();
+        const bool active_resize = vsync_enabled_ && resize_present_mode_ != steady_present_mode_
+            && last_resize_ns_ != 0 && (before_present_ns - last_resize_ns_ <= kResizeSettleNs);
+        const SDL_GPUPresentMode desired_mode =
+            active_resize ? resize_present_mode_ : steady_present_mode_;
+        if (desired_mode != active_present_mode_) {
+            if (SDL_SetGPUSwapchainParameters(
+                    gpu_device_,
+                    window_,
+                    SDL_GPU_SWAPCHAINCOMPOSITION_SDR,
+                    desired_mode
+                ))
+            {
+                active_present_mode_ = desired_mode;
+            }
+        }
+
+        // 先把无窗口 GPU renderer 队列提交到 frame_target_gpu_，同时推进 render_command_generation。
+        static_cast<void>(SDL_RenderPresent(renderer_));
+
+        bool presented_swapchain = false;
+        if (frame_target_gpu_ != nullptr && frame_target_width_ > 0 && frame_target_height_ > 0) {
+            if (SDL_GPUCommandBuffer* present_cmd = SDL_AcquireGPUCommandBuffer(gpu_device_);
+                present_cmd != nullptr)
+            {
+                SDL_GPUTexture* swapchain = nullptr;
+                Uint32 swap_w = 0;
+                Uint32 swap_h = 0;
+                const bool acquired = SDL_WaitAndAcquireGPUSwapchainTexture(
+                    present_cmd,
+                    window_,
+                    &swapchain,
+                    &swap_w,
+                    &swap_h
+                );
+                if (!acquired) {
+                    SDL_Log(
+                        "SdlPlatformWindow: SDL_WaitAndAcquireGPUSwapchainTexture failed: %s",
+                        SDL_GetError()
+                    );
+                }
+                if (acquired && swapchain != nullptr && swap_w > 0 && swap_h > 0) {
+                    presented_swapchain = true;
+                    const auto plan = make_present_transfer_plan(
+                        static_cast<std::uint32_t>(frame_target_width_),
+                        static_cast<std::uint32_t>(frame_target_height_),
+                        swap_w,
+                        swap_h
+                    );
+                    if (plan.clear_uncovered_margin) {
+                        const auto rgb = clear_color_.to<foundation::NanHexRgb>();
+                        SDL_GPUColorTargetInfo clear_target {};
+                        clear_target.texture = swapchain;
+                        clear_target.clear_color = SDL_FColor {
+                            .r = static_cast<float>(rgb.red) / 255.0F,
+                            .g = static_cast<float>(rgb.green) / 255.0F,
+                            .b = static_cast<float>(rgb.blue) / 255.0F,
+                            .a = static_cast<float>(rgb.alpha) / 255.0F,
+                        };
+                        clear_target.load_op = SDL_GPU_LOADOP_CLEAR;
+                        clear_target.store_op = SDL_GPU_STOREOP_STORE;
+                        if (auto* pass =
+                                SDL_BeginGPURenderPass(present_cmd, &clear_target, 1, nullptr);
+                            pass != nullptr)
+                        {
+                            SDL_EndGPURenderPass(pass);
+                        }
+                    }
+                    if (plan.copy_width > 0 && plan.copy_height > 0) {
+                        SDL_GPUBlitInfo blit {};
+                        blit.source.texture = frame_target_gpu_;
+                        blit.source.x = 0;
+                        blit.source.y = 0;
+                        blit.source.w = plan.copy_width;
+                        blit.source.h = plan.copy_height;
+                        blit.destination.texture = swapchain;
+                        blit.destination.x = 0;
+                        blit.destination.y = 0;
+                        blit.destination.w = plan.copy_width;
+                        blit.destination.h = plan.copy_height;
+                        blit.load_op = plan.clear_uncovered_margin ? SDL_GPU_LOADOP_LOAD
+                                                                   : SDL_GPU_LOADOP_DONT_CARE;
+                        blit.filter = SDL_GPU_FILTER_NEAREST;
+                        SDL_BlitGPUTexture(present_cmd, &blit);
+                    }
+                }
+                static_cast<void>(SDL_SubmitGPUCommandBuffer(present_cmd));
+            }
+        }
+
+        // vsync 打开时，若处于 MAILBOX/IMMEDIATE 缩放期，或窗口隐藏/最小化导致未获得可上屏的
+        // swapchain 图像（SDL_WaitAndAcquireGPUSwapchainTexture 在 Wayland/X11 上 0ms 返回空纹理），
+        // 按显示器刷新周期做上限节流，避免离屏渲染空转占满 CPU/GPU。
+        const bool pace_display_refresh = vsync_enabled_
+            && (active_present_mode_ != SDL_GPU_PRESENTMODE_VSYNC || !presented_swapchain);
+        if (!pace_frames_ && !pace_display_refresh) {
+            last_present_ns_ = SDL_GetTicksNS();
+            return;
+        }
+        const std::uint64_t frame_ns =
+            pace_frames_ ? (1'000'000'000ULL / target_fps_) : display_refresh_interval_ns();
         const std::uint64_t now = SDL_GetTicksNS();
         if (last_present_ns_ != 0 && now - last_present_ns_ < frame_ns) {
             SDL_DelayNS(frame_ns - (now - last_present_ns_));

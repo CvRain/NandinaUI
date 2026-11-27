@@ -95,6 +95,9 @@ namespace nandina::app
         virtual void poll_input(FrameInput& out) = 0;
 
         // ---- 呈现 ----
+        /// 在设备 `begin_frame()` 之前准备本帧目标表面（例如将离屏目标纹理对齐到最新
+        /// `drawable_size` 并记录清屏色），避免缩放帧把新布局画进旧尺寸缓冲。
+        virtual void prepare_frame(const foundation::NanColor& /*clear_color*/) {}
         /// 呈现这一帧；设备不持有 swap。
         virtual void present() = 0;
 

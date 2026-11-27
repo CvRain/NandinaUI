@@ -82,7 +82,7 @@ namespace
     };
 
     /// 只记录调用的设备替身：窗口测试只关心帧序与布局尺寸，不做像素断言。
-    class NoopDevice final: public render::IRenderDevice {
+    class NoopDevice: public render::IRenderDevice {
     public:
         void begin_frame() override {}
         void end_frame() override {}
@@ -159,6 +159,7 @@ namespace
             return 1.0F;
         }
         void poll_input(app::FrameInput& out) override {
+            ++seq_;
             if (apply_resize_on_next_poll) {
                 size_ = pending_size;
                 apply_resize_on_next_poll = false;
@@ -177,19 +178,48 @@ namespace
             out.has_pointer = true;
             out.pointer = foundation::NanPoint::zero();
         }
+        void prepare_frame(const foundation::NanColor& clear_color) override {
+            prepare_order = ++seq_;
+            prepared_drawable_size = size_;
+            prepared_clear_color = clear_color;
+            ++prepare_calls;
+        }
         void present() override {}
         void set_clipboard_text(std::string_view) override {}
         [[nodiscard]] auto clipboard_text() const -> std::string override {
             return {};
         }
         [[nodiscard]] auto make_render_device() -> std::unique_ptr<render::IRenderDevice> override {
-            return std::make_unique<NoopDevice>();
+            struct OrderTrackingDevice final: public NoopDevice {
+                int* seq = nullptr;
+                int* begin_order = nullptr;
+                int* clear_order = nullptr;
+                explicit OrderTrackingDevice(int& s, int& b, int& c):
+                    seq(&s),
+                    begin_order(&b),
+                    clear_order(&c) {}
+                void begin_frame() override {
+                    *begin_order = ++(*seq);
+                }
+                void clear(const foundation::NanColor&) override {
+                    *clear_order = ++(*seq);
+                }
+            };
+            return std::make_unique<OrderTrackingDevice>(seq_, begin_frame_order, clear_order);
         }
         [[nodiscard]] auto name() const -> std::string_view override {
             return "resize-on-poll-mock";
         }
 
+        int prepare_calls = 0;
+        int prepare_order = 0;
+        int begin_frame_order = 0;
+        int clear_order = 0;
+        foundation::NanSize prepared_drawable_size {};
+        foundation::NanColor prepared_clear_color {};
+
     private:
+        int seq_ = 0;
         foundation::NanSize size_ {400.0F, 240.0F};
         bool ready_ = false;
     };
@@ -829,6 +859,55 @@ TEST_CASE(
     raw_platform->pending_size = foundation::NanSize(800.0F, 600.0F);
     CHECK_NOTHROW(window.tick());
     CHECK(content->width() == Catch::Approx(200.0F));
+
+    content.reset();
+    window.close();
+}
+
+TEST_CASE(
+    "window tick prepares platform frame target with resized dimensions before begin_frame",
+    "[app][resize][prepare-frame]"
+) {
+    using namespace nandina;
+
+    app::NanApplication application;
+    app::WindowConfig config;
+    config.width = 400;
+    config.height = 240;
+    config.vsync = false;
+    config.target_fps = 0;
+    const auto custom_bg = foundation::NanColor::from(
+        foundation::NanHexRgb {.red = 18, .green = 34, .blue = 56, .alpha = 255}
+    );
+    config.background = custom_bg;
+
+    auto platform = std::make_unique<ResizeOnPollPlatform>();
+    auto* raw_platform = platform.get();
+    app::NanWindow window(application, config);
+    window.set_platform_window(std::move(platform));
+    window.open();
+
+    auto content = std::make_shared<scene::NanControl>();
+    content->set_width(scene::fill);
+    content->set_height(scene::fill);
+    window.set_content(content);
+
+    raw_platform->apply_resize_on_next_poll = true;
+    raw_platform->pending_size = foundation::NanSize(640.0F, 360.0F);
+    window.tick();
+
+    REQUIRE(raw_platform->prepare_calls == 1);
+    CHECK(raw_platform->prepare_order < raw_platform->begin_frame_order);
+    CHECK(raw_platform->begin_frame_order < raw_platform->clear_order);
+    CHECK(raw_platform->prepared_drawable_size.get_width() == Catch::Approx(640.0F));
+    CHECK(raw_platform->prepared_drawable_size.get_height() == Catch::Approx(360.0F));
+    CHECK(raw_platform->prepared_clear_color.approx_equals(custom_bg));
+
+    // Zero-sized frame must skip prepare_frame and begin_frame altogether.
+    raw_platform->apply_resize_on_next_poll = true;
+    raw_platform->pending_size = foundation::NanSize(640.0F, 0.0F);
+    window.tick();
+    CHECK(raw_platform->prepare_calls == 1);
 
     content.reset();
     window.close();

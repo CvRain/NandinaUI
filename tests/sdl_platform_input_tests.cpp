@@ -986,3 +986,51 @@ TEST_CASE(
     }
     SDL_ResetHint(SDL_HINT_IME_IMPLEMENTED_UI);
 }
+
+TEST_CASE(
+    "make_present_transfer_plan preserves 1:1 unscaled copy dimensions across resize mismatches",
+    "[app][present][transfer]"
+) {
+    using app::detail::make_present_transfer_plan;
+
+    const auto matched = make_present_transfer_plan(800U, 600U, 800U, 600U);
+    CHECK(matched.copy_width == 800U);
+    CHECK(matched.copy_height == 600U);
+    CHECK_FALSE(matched.clear_uncovered_margin);
+
+    // Swapchain larger than rendered target (async expand): copy stays 1:1 at target size and
+    // uncovers right/bottom margin for background clear instead of stretching fixed widgets.
+    const auto expanded = make_present_transfer_plan(800U, 600U, 920U, 640U);
+    CHECK(expanded.copy_width == 800U);
+    CHECK(expanded.copy_height == 600U);
+    CHECK(expanded.clear_uncovered_margin);
+
+    // Swapchain smaller than rendered target (async shrink): copy clips 1:1 to swapchain bounds.
+    const auto shrunk = make_present_transfer_plan(920U, 640U, 800U, 600U);
+    CHECK(shrunk.copy_width == 800U);
+    CHECK(shrunk.copy_height == 600U);
+    CHECK_FALSE(shrunk.clear_uncovered_margin);
+
+    // Opposite-axis mismatches: any swapchain axis exceeding copy dimension requires margin clear.
+    const auto wider_target_taller_swap = make_present_transfer_plan(920U, 600U, 800U, 640U);
+    CHECK(wider_target_taller_swap.copy_width == 800U);
+    CHECK(wider_target_taller_swap.copy_height == 600U);
+    CHECK(wider_target_taller_swap.clear_uncovered_margin);
+
+    const auto taller_target_wider_swap = make_present_transfer_plan(800U, 640U, 920U, 600U);
+    CHECK(taller_target_wider_swap.copy_width == 800U);
+    CHECK(taller_target_wider_swap.copy_height == 600U);
+    CHECK(taller_target_wider_swap.clear_uncovered_margin);
+
+    // Zero dimensions: zero target clears non-zero swapchain without blitting; zero swapchain is a
+    // pure no-op.
+    const auto zero_target = make_present_transfer_plan(0U, 600U, 800U, 600U);
+    CHECK(zero_target.copy_width == 0U);
+    CHECK(zero_target.copy_height == 0U);
+    CHECK(zero_target.clear_uncovered_margin);
+
+    const auto zero_swapchain = make_present_transfer_plan(800U, 600U, 0U, 0U);
+    CHECK(zero_swapchain.copy_width == 0U);
+    CHECK(zero_swapchain.copy_height == 0U);
+    CHECK_FALSE(zero_swapchain.clear_uncovered_margin);
+}

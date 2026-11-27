@@ -632,9 +632,11 @@ namespace nandina::app
             (void)tree_.update_semantics();
         }
 
-        device_->begin_frame();
         // 清屏背景：显式配置优先，否则跟随当前外观的调色板背景（light/dark 实时切换）。
-        device_->clear(config_.background.value_or(theme().palette.background));
+        const auto clear_color = config_.background.value_or(theme().palette.background);
+        platform_->prepare_frame(clear_color);
+        device_->begin_frame();
+        device_->clear(clear_color);
         {
             render::DrawContext ctx {
                 *device_,

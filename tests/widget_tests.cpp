@@ -3208,6 +3208,142 @@ TEST_CASE(
     CHECK(second_backend.calls >= second_calls);
 }
 
+TEST_CASE(
+    "Text reuses cached wrapped layouts across certified width intervals during resize",
+    "[widget][text][cache][wrap]"
+) {
+    // 10px per ASCII byte word-wrap backend certifying exact [wrap_width_floor, wrap_width_ceiling).
+    struct WordWrapIntervalBackend final: public text::ITextLayoutBackend {
+        bool certify_intervals = true;
+        mutable int calls = 0;
+
+        [[nodiscard]] auto layout(text::TextLayoutInput input) const
+            -> text::TextLayoutResult override {
+            ++calls;
+            constexpr float kCharWidth = 10.0F;
+            constexpr float kLineHeight = 20.0F;
+            const float limit = std::isfinite(input.constraints.max_width)
+                ? input.constraints.max_width
+                : std::numeric_limits<float>::infinity();
+
+            text::TextLayoutResult out;
+            float floor_w = 0.0F;
+            float ceiling_w = std::numeric_limits<float>::infinity();
+            float max_line_w = 0.0F;
+
+            std::size_t cursor = 0;
+            while (cursor < input.text.size()) {
+                while (cursor < input.text.size() && input.text[cursor] == ' ') {
+                    ++cursor;
+                }
+                if (cursor >= input.text.size()) {
+                    break;
+                }
+                std::size_t line_end = cursor;
+                while (line_end < input.text.size() && input.text[line_end] != ' ') {
+                    ++line_end;
+                }
+                while (line_end < input.text.size()) {
+                    std::size_t next_start = line_end;
+                    while (next_start < input.text.size() && input.text[next_start] == ' ') {
+                        ++next_start;
+                    }
+                    if (next_start >= input.text.size()) {
+                        break;
+                    }
+                    std::size_t next_end = next_start;
+                    while (next_end < input.text.size() && input.text[next_end] != ' ') {
+                        ++next_end;
+                    }
+                    const float candidate_w = static_cast<float>(next_end - cursor) * kCharWidth;
+                    if (candidate_w <= limit) {
+                        line_end = next_end;
+                    }
+                    else {
+                        ceiling_w = std::min(ceiling_w, candidate_w);
+                        break;
+                    }
+                }
+                const float line_w = static_cast<float>(line_end - cursor) * kCharWidth;
+                floor_w = std::max(floor_w, line_w);
+                max_line_w = std::max(max_line_w, line_w);
+                out.lines.push_back(
+                    text::TextLayoutLine {
+                        .text_offset = cursor,
+                        .text_length = line_end - cursor,
+                        .visible_text = std::string(input.text.substr(cursor, line_end - cursor)),
+                        .size = foundation::NanSize(line_w, kLineHeight),
+                        .baseline = 16.0F,
+                    }
+                );
+                cursor = line_end;
+            }
+
+            out.size =
+                foundation::NanSize(max_line_w, static_cast<float>(out.lines.size()) * kLineHeight);
+            if (certify_intervals && std::isfinite(limit)) {
+                out.wrap_width_floor = floor_w;
+                out.wrap_width_ceiling = ceiling_w;
+            }
+            return out;
+        }
+    };
+
+    WordWrapIntervalBackend backend;
+    const std::string paragraph = "alpha beta gamma delta epsilon";
+    widget::primitives::Text text_node(paragraph, backend);
+    text_node.set_style(
+        text::TextStyle {
+            .font_size = 16.0F,
+            .overflow = text::TextOverflow::wrap,
+            .max_lines = 8,
+        }
+    );
+    const int baseline_calls = backend.calls;
+
+    WordWrapIntervalBackend reference_backend;
+    // Sweep 1px resize steps across 220..120 (101 steps): certified intervals cover multiple word
+    // break regimes while only re-shaping when max_width actually crosses a break threshold.
+    for (int w = 220; w >= 120; --w) {
+        const auto constraints = foundation::NanLayoutConstraints {
+            .min_width = static_cast<float>(w),
+            .max_width = static_cast<float>(w),
+        };
+        (void)text_node.measure_layout(constraints);
+        const auto uncached = reference_backend.layout(
+            text::TextLayoutInput {
+                .text = paragraph,
+                .style = text_node.style(),
+                .constraints = constraints,
+            }
+        );
+        CHECK(text_node.width() == Catch::Approx(static_cast<float>(w)));
+        CHECK(text_node.height() == Catch::Approx(uncached.size.get_height()));
+        REQUIRE(text_node.layout_result().lines.size() == uncached.lines.size());
+        for (std::size_t i = 0; i < uncached.lines.size(); ++i) {
+            CHECK(
+                text_node.layout_result().lines[i].visible_text == uncached.lines[i].visible_text
+            );
+        }
+    }
+    CHECK(backend.calls - baseline_calls <= 5);
+
+    // Without an interval certificate (default [0, 0)), Text must conservatively re-measure on
+    // distinct wrapped widths rather than returning stale line breaks.
+    WordWrapIntervalBackend uncertified_backend;
+    uncertified_backend.certify_intervals = false;
+    widget::primitives::Text uncertified(paragraph, uncertified_backend);
+    uncertified.set_style(text_node.style());
+    const int uncertified_base = uncertified_backend.calls;
+    (void)uncertified.measure_layout(
+        foundation::NanLayoutConstraints {.min_width = 0.0F, .max_width = 180.0F}
+    );
+    (void)uncertified.measure_layout(
+        foundation::NanLayoutConstraints {.min_width = 0.0F, .max_width = 179.0F}
+    );
+    CHECK(uncertified_backend.calls == uncertified_base + 2);
+}
+
 TEST_CASE("Text keeps a large layout correct while caching", "[widget][text][cache]") {
     // 大结果只留一条（字节预算）：无论命中与否，尺寸都必须与后端报告的一致。
     FixedTextLayoutBackend backend;

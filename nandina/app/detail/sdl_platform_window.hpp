@@ -33,6 +33,45 @@
 
 namespace nandina::app::detail
 {
+    /// 离屏帧目标向窗口交换链提交时的 1:1 无拉伸传输计划。
+    ///
+    /// SDL 内置的 `GPU_RenderPresent` 会把旧尺寸 `backbuffer` 线性拉伸到新尺寸 swapchain
+    /// 再重建 `backbuffer`，造成缩放帧固定尺寸组件先被放大/缩小再弹回（抽搐）。平台自己接管
+    /// swapchain 后始终按逐轴最小公共尺寸 `1:1` 传输，未覆盖的右/下边缘用背景色清屏补齐。
+    struct PresentTransferPlan {
+        std::uint32_t copy_width = 0;
+        std::uint32_t copy_height = 0;
+        bool clear_uncovered_margin = false;
+    };
+
+    [[nodiscard]] constexpr auto make_present_transfer_plan(
+        const std::uint32_t target_width,
+        const std::uint32_t target_height,
+        const std::uint32_t swapchain_width,
+        const std::uint32_t swapchain_height
+    ) noexcept -> PresentTransferPlan {
+        if (swapchain_width == 0U || swapchain_height == 0U) {
+            return PresentTransferPlan {};
+        }
+        if (target_width == 0U || target_height == 0U) {
+            return PresentTransferPlan {
+                .copy_width = 0U,
+                .copy_height = 0U,
+                .clear_uncovered_margin = true,
+            };
+        }
+        const std::uint32_t copy_width =
+            target_width < swapchain_width ? target_width : swapchain_width;
+        const std::uint32_t copy_height =
+            target_height < swapchain_height ? target_height : swapchain_height;
+        return PresentTransferPlan {
+            .copy_width = copy_width,
+            .copy_height = copy_height,
+            .clear_uncovered_margin =
+                swapchain_width > copy_width || swapchain_height > copy_height,
+        };
+    }
+
     /// SDL3 平台窗口 / 输入 / 呈现层。
     ///
     /// 生命周期：`create()` 成功后 `is_ready()` 为真；`destroy()` 必须可重复调用（析构也会
@@ -63,6 +102,7 @@ namespace nandina::app::detail
         void poll_input(FrameInput& out) override;
 
         // ---- 呈现 ----
+        void prepare_frame(const foundation::NanColor& clear_color) override;
         void present() override;
 
         // ---- 剪贴板 ----
@@ -83,6 +123,14 @@ namespace nandina::app::detail
         /// Number of dispatched key events with both identities unknown.
         [[nodiscard]] auto unknown_key_count() const -> std::uint64_t;
 
+        /// White-box accessors for SDL platform integration tests (`detail` namespace only).
+        [[nodiscard]] auto native_window() const noexcept -> SDL_Window* {
+            return window_;
+        }
+        [[nodiscard]] auto native_renderer() const noexcept -> SDL_Renderer* {
+            return renderer_;
+        }
+
     private:
         /// 逻辑（作者/布局）单位到 SDL 原生窗口坐标的内容缩放；`high_dpi=false` 时恒为 1。
         [[nodiscard]] auto content_scale() const noexcept -> float;
@@ -98,11 +146,28 @@ namespace nandina::app::detail
         void handle_display_scale_changed();
         /// 用户 resize 后回写逻辑尺寸，供后续缩放变化恢复。
         void remember_logical_size_from_window();
+        /// GPU 交换链路径：在绘制前确保离屏目标纹理与当前窗口像素尺寸一致并已绑定。
+        [[nodiscard]] auto ensure_gpu_frame_target() -> bool;
+        /// 当前窗口所在显示器的刷新周期（纳秒）；无法查询时回退 60Hz。
+        [[nodiscard]] auto display_refresh_interval_ns() const noexcept -> std::uint64_t;
 
         SDL_Window* window_ = nullptr;
         SDL_Renderer* renderer_ = nullptr;
         /// GPU 渲染器背后的设备；本类持有，`destroy()` 负责释放（渲染器不持有它）。
         SDL_GPUDevice* gpu_device_ = nullptr;
+        /// GPU 路径下由平台显式持有的离屏帧目标纹理（绘制前按最新像素尺寸对齐）。
+        SDL_Texture* frame_target_ = nullptr;
+        SDL_GPUTexture* frame_target_gpu_ = nullptr;
+        SDL_PixelFormat frame_target_format_ = SDL_PIXELFORMAT_RGBA32;
+        int frame_target_width_ = 0;
+        int frame_target_height_ = 0;
+        bool gpu_swapchain_claimed_ = false;
+        bool vsync_enabled_ = true;
+        SDL_GPUPresentMode steady_present_mode_ = SDL_GPU_PRESENTMODE_VSYNC;
+        SDL_GPUPresentMode resize_present_mode_ = SDL_GPU_PRESENTMODE_VSYNC;
+        SDL_GPUPresentMode active_present_mode_ = SDL_GPU_PRESENTMODE_VSYNC;
+        std::uint64_t last_resize_ns_ = 0;
+        foundation::NanColor clear_color_ {};
         /// `create()` 是否成功调用过 `SDL_Init`，用于让 `destroy()` 不误关别人的 SDL。
         bool sdl_initialized_ = false;
         bool ready_ = false;

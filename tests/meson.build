@@ -637,6 +637,11 @@ window_tests_enabled = sdl3_dep.found() and (window_tests_option.enabled() or \
     (window_tests_option.auto() and window_display_available))
 window_tests_optional = window_tests_option.auto() and window_display_available
 window_test_cpp_args = []
+window_test_deps = [nandina_dep, catch2_with_main_dep]
+if sdl3_dep.found()
+    window_test_cpp_args += ['-DNANDINA_HAS_SDL_BACKEND=1']
+    window_test_deps += [sdl3_dep]
+endif
 if not window_tests_enabled
     window_test_cpp_args += ['-DNANDINA_SKIP_WINDOW_TESTS']
 elif window_tests_optional
@@ -646,7 +651,7 @@ window_lifecycle_tests = executable(
     'window_lifecycle_tests',
     files('window_lifecycle_tests.cpp'),
     cpp_args : window_test_cpp_args,
-    dependencies : [nandina_dep, catch2_with_main_dep],
+    dependencies : window_test_deps,
 )
 test(
     'window-lifecycle',

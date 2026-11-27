@@ -496,3 +496,52 @@ tracked benchmark。真实窗口的缩放顺滑度同样只有人工观察，见
 - 同类残余拷贝：`internal::DialogPanel`/`SheetPanel` 每次浮层构造仍按值调
   `default_design_system()`；它们不是控件构造热点，本批未迁移（可作为后续统一到共享快照）。
 - 本批未改动 SDF/GPU 页面 golden 路径；GPU golden 需要真实桌面交换机，仍归人工/发布检查。
+
+## 15. 窗口边缘拖拽延迟、固定尺寸组件抽搐与快拖跳变修复（2026-11-26）
+
+### 15.1 现象与三条耦合根因
+
+在 Linux GNOME Wayland（`mutter 51.1`、`wp_fifo_manager_v1`、`libdecor 0.2.5`、Vulkan SDF）实机拖拽窗口边缘缩放时，存在三类耦合异常：
+
+1. **固定尺寸组件缩放抽搐**：vendored SDL 3.4.18 的 `SDL_CreateGPURenderer(device, window)` 在 `GPU_CreateRenderer` 中未注册 `WindowEvent`（`subprojects/SDL3/src/render/gpu/SDL_render_gpu.c`），窗口收到 `PIXEL_SIZE_CHANGED` 后 `data->backbuffer` 仍停留在上一帧尺寸 `(W_old, H_old)`，而 Vulkan swapchain 已重建为 `(W_new, H_new)`。`GPU_RenderPresent` 先把旧 `backbuffer` 按 `SDL_GPU_FILTER_LINEAR` 线性拉伸拷贝到新 swapchain 提交上屏，**随后**才调 `CreateBackbuffer(W_new, H_new)`，导致放大时固定尺寸组件先被拉伸变大一截、下一帧弹回原尺寸，缩小时先被压缩变小一截、下一帧弹回原尺寸。
+2. **多文字页面停手后窗口如平滑相机缓滑追赶**：`VULKAN_INTERNAL_RecreateSwapchain`（`SDL_gpu_vulkan.c`）只调 `vkDeviceWaitIdle()`（约 `0.3 ms` GPU 绘制耗时，不等合成器 vblank），同时清空 `inFlightFences` 并创建全新图像使 `vkAcquireNextImageKHR` `0 ms` 返回；叠加 `libdecor 0.2.5 < 0.3.0` 不置 `wind->resizing`、立即 ACK configure，主循环以高于刷新率的频率连续提交数十个中间尺寸帧进入 `VK_PRESENT_MODE_FIFO_KHR` + Mutter `wp_fifo_v1` 队列，鼠标停下后以每 vblank 1 帧严格排空（实测停手后首帧 present 阻塞达 `86–323 ms`）。
+3. **折行文本逐像素重塑与快拖跳变**：`Text::find_metrics_cache()` 此前只对**未发生折行的单行文本**做跨宽复用；一旦 `lines.size() >= 2`，窗口每改宽 `1 px` 就缓存失配重跑 `HarfBuzzTextLayoutBackend::layout()`，且 `HarfBuzzTextLayoutBackend` 在 `max_shaped_width()` 与整段预折行探测中重复构造 `std::string` 副本与 `caret_stops` / `visible_text` 元数据。前几帧同步排版 + `libdecor` Cairo 边框重绘 + swapchain 重建阻塞主线程期间，SDL 的 `RemoveSupersededWindowEvents`（`SDL_windowevents.c`）把积压的中间 `RESIZED` / `PIXEL_SIZE_CHANGED` 合并丢弃，表现为先慢挪一两帧随后直接跳到鼠标终点。
+
+### 15.2 分层归属与修复摘要
+
+不修改 `subprojects/SDL3`，全部在框架自有层按向下的依赖方向落地（`app → widget → text → foundation`）：
+
+| 层级与文件 | 契约形状与改动 |
+| --- | --- |
+| `app`：`platform_window.hpp`、`nan_window.cpp` | `IPlatformWindow` 新增默认空实现 `prepare_frame(const NanColor& clear_color)`；`NanWindow::tick()` 在输入轮询与动画推进后重采样窗口尺寸（零尺寸跳过不变），并在 `device_->begin_frame()` / `clear()` **之前**调用 `platform_->prepare_frame(clear_color)`。 |
+| `app`：`detail/sdl_platform_window.hpp`/`.cpp` | GPU 路径改为平台显式 `SDL_ClaimWindowForGPUDevice` + 无窗口 `SDL_CreateGPURenderer(gpu_device_, nullptr)`（claim 失败如 `SDL_VIDEODRIVER=dummy` 自动回落既有 `SDL_CreateRenderer(window_, nullptr)`）；平台自持 `SDL_TEXTUREACCESS_TARGET` 离屏纹理 `frame_target_` 并在绘制前由 `prepare_frame()` → `ensure_gpu_frame_target()` 按最新窗口像素尺寸对齐（初始零尺寸保底 `1×1`、绑定失败自动恢复旧目标，切换目标后立即重设 HiDPI `apply_render_scale()`）；`present()` 用纯函数 `make_present_transfer_plan()` 按逐轴最小公共尺寸 `1:1`（`SDL_GPU_FILTER_NEAREST`）blit 到 swapchain，未覆盖右/下边缘先按背景色清屏，彻底根除跨尺寸拉伸。同时设置 `SDL_SetGPUAllowedFramesInFlight(gpu_device_, 1)`，并在 `vsync=true` 的 `120 ms` 活跃缩放窗口期内临时切到 `MAILBOX`（Wayland 无 `MAILBOX` 时回退 `IMMEDIATE`）配合显示器刷新周期节流（窗口隐藏/最小化未能取得 swapchain 图像时同样按刷新周期节流防止离屏空转），新尺寸帧直接替换未上屏旧帧，静止超过 `120 ms` 后自动恢复 `VSYNC`。 |
+| `text`：`text_layout.hpp`、`harfbuzz_text_backend.cpp` | `TextLayoutResult` 新增 `wrap_width_floor` / `wrap_width_ceiling` 与 `has_wrap_width_range()`（默认 `[0, 0)` 表示未认证）；`HarfBuzzTextLayoutBackend` 为纯 LTR（无软连字符 `U+00AD`）常规折行段精确计算不改变任何词断点与溢出态的半开区间 `[wrap_floor, wrap_ceiling)`（下界取折行簇区间宽度与重塑后各行实测宽度的上界，上界取任意行吸纳下一不可拆词元或硬切簇所需宽度的最小值）；同时移除 `shape_line()` / `shape_fallback_run()` 无用 `std::string` 拷贝，并为 `max_shaped_width()` 与整段预探测引入 `include_metadata=false` 跳过废弃 `caret_stops` 排序与 `visible_text` 拷贝（若整段未超宽则在原位补齐单行元数据，避免二次 `hb_shape`）。 |
+| `widget`：`primitives/text.cpp` | `Text::find_metrics_cache()` 新增 `same_wrapped_lines` 分支：当缓存条目带有有效 `has_wrap_width_range()` 且有限 `max_width ∈ [wrap_width_floor, wrap_width_ceiling)` 时直接复用缓存字形与行度量。 |
+
+### 15.3 实测数据与回归验证
+
+真实桌面窗口实测（Linux GNOME Wayland `mutter 51.1`、RADV RX 6750 GRE、Debug `-O0`、`vsync=true`、40 帧连续 8px 拖拽缩放 + 停手后首帧静止提交延迟；采样后已回滚 `showcase/application.cpp` 临时插桩）：
+
+| Showcase 页面 | 修复前缩放 layout 均值 | 修复后缩放 layout 均值 | 修复前停手后首帧阻塞（积压排空） | 修复后停手后首帧耗时 |
+| --- | --- | --- | --- | --- |
+| `home` | 1.62 ms | **1.02 ms** | 234.6 ms | **13.4 ms**（75 Hz 单帧周期） |
+| `label` | 2.36 ms | **1.75 ms** | 159.1 ms | **13.4 ms** |
+| `typography` | 3.54 ms | **1.98 ms** | 85.9 ms | **13.4 ms** |
+| `surface` | 1.67 ms | **0.99 ms** | 112.4 ms | **13.4 ms** |
+| `collapsible` | 1.69 ms | **1.25 ms** | 189.2 ms | **13.4 ms** |
+| `anchors` | 0.42 ms | **0.38 ms** | 323.3 ms | **13.4 ms** |
+| `focus` | 0.89 ms | **0.64 ms** | 296.4 ms | **13.4 ms** |
+
+新增 5 条会红的回归测试：
+
+- `[app][present][transfer]`（`tests/sdl_platform_input_tests.cpp`）：验证 `make_present_transfer_plan()` 在等尺寸、swapchain 更大、swapchain 更小、反向轴错配与零尺寸下的 `1:1` 拷贝宽高与边缘清屏标志；改回按 swapchain 尺寸拉伸或漏判零面积/清屏标志即红。
+- `[app][resize][prepare-frame]`（`tests/window_input_tests.cpp`）：验证 `NanWindow::tick()` 在 `poll_input` 内 resize 后按 `prepare_frame → begin_frame → clear` 严格顺序传入新尺寸与背景色，且零尺寸帧跳过 `prepare_frame`；删掉 `NanWindow::tick()` 中的 `platform_->prepare_frame(clear_color)` 即红。
+- `[app][window][resize-target]`（`tests/window_lifecycle_tests.cpp`）：真实 SDL 窗口从 `320×240` 改大到 `440×300` 的当帧，`end_frame` 读回渲染目标尺寸即等于窗口新像素尺寸，且固定 `80×40` 控件在 `x=40` 保持前景、`x=90` 保持背景（不随窗口横向拉伸）；去掉 `NanWindow::tick()` 的 `prepare_frame()` 或 `ensure_gpu_frame_target()` 即退回旧尺寸失败。
+- `[text][harfbuzz][wrap-cache]`（`tests/font_tests.cpp`）：对真实字体的多行折行段遍历 `[ceil(floor), ceil(ceiling)-1]` 每一整数像素断言行切分、字形数与光标停靠点完全一致，词中查询宽度仍签发完整词断点区间（跨过 `wrap_width_ceiling` 或低于 `wrap_width_floor` 时断行真实改变），空行多段纯 LTR 正常签发、BiDi/RTL 与软连字符 `U+00AD` 段落按契约不签发，且单行 `wrap` 延迟补齐元数据的 `visible_text` 与 `caret_stops` 等价。
+- `[widget][text][cache][wrap]`（`tests/widget_tests.cpp`）：`101` 步逐像素缩放拖拽只在实际跨词断点处调用后端（`≤ 5` 次而非 `101` 次），每像素尺寸与行内容同无缓存排版一致，且未认证区间（默认 `[0, 0)`）的后端仍逐宽重测；删掉 `Text::find_metrics_cache()` 的 `same_wrapped_lines` 分支即红。
+
+### 15.4 剩余边界
+
+- Linux GNOME Wayland + Vulkan 已实机验证；Windows（Vulkan GPU 路径；`SdlPlatformWindow` 当前未接入原生 D3D12 `SDL_GPUDevice`，无 Vulkan 时回退 `SDL_CreateRenderer`）与独立 Xorg 会话下的窗口边缘拖拽手感和 `MAILBOX` 切换仍待实机人工复验。
+- `libdecor < 0.3.0` 客户端标题栏自身的 Cairo 缓冲分配与 SDL 上游 `RemoveSupersededWindowEvents` 合并队列中已被超越的历史尺寸事件属于窗口系统/SDL 正常最新尺寸折叠语义；主线程单帧耗时降入毫秒级后不再产生肉眼可见的起步卡顿跳变。
+- 折行宽度区间证书仅对 `TextOverflow::wrap`、纯 LTR 常规分析段（`simple_ltr`）且不含软连字符 `U+00AD` 的结果签发；含复杂 BiDi/RTL 混排或软连字符的段落保持默认 `[0, 0)` 不签发区间，按原路径精确重算。

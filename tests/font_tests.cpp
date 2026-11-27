@@ -1238,3 +1238,211 @@ TEST_CASE("GlyphAtlas applies synthesis to cached glyphs", "[text][synthesis][at
     REQUIRE(bold_glyph.metrics.advance_x > regular_glyph.metrics.advance_x);
     REQUIRE(bold_glyph.pixel_bounds.get_width() >= regular_glyph.pixel_bounds.get_width());
 }
+
+TEST_CASE(
+    "HarfBuzz wrapped layout certifies exact width intervals and preserves single-line metadata",
+    "[text][harfbuzz][wrap-cache]"
+) {
+    auto face = std::make_shared<text::FreeTypeFontFace>(test_font_path());
+    text::HarfBuzzTextLayoutBackend backend(face);
+
+    const std::string paragraph =
+        "Window resize keeps wrapped paragraphs cached across width steps until a real word break "
+        "actually moves between adjacent lines.";
+    const text::TextStyle wrap_style {
+        .font_size = 18.0F,
+        .overflow = text::TextOverflow::wrap,
+        .max_lines = 8,
+    };
+
+    const auto reference = backend.layout(
+        text::TextLayoutInput {
+            .text = paragraph,
+            .style = wrap_style,
+            .constraints =
+                foundation::NanLayoutConstraints {.min_width = 0.0F, .max_width = 280.0F},
+        }
+    );
+    REQUIRE(reference.lines.size() >= 2);
+    REQUIRE(reference.has_wrap_width_range());
+    CHECK(reference.wrap_width_floor <= 280.0F);
+    CHECK(reference.wrap_width_ceiling > 280.0F);
+    REQUIRE(std::isfinite(reference.wrap_width_ceiling));
+
+    // Every width inside [wrap_width_floor, wrap_width_ceiling) must produce identical lines/stops.
+    const int first_valid = static_cast<int>(std::ceil(reference.wrap_width_floor));
+    const int last_valid = static_cast<int>(std::ceil(reference.wrap_width_ceiling)) - 1;
+    for (int w = first_valid; w <= last_valid; ++w) {
+        const auto candidate = backend.layout(
+            text::TextLayoutInput {
+                .text = paragraph,
+                .style = wrap_style,
+                .constraints = foundation::NanLayoutConstraints {
+                    .min_width = 0.0F,
+                    .max_width = static_cast<float>(w),
+                },
+            }
+        );
+        REQUIRE(candidate.lines.size() == reference.lines.size());
+        CHECK(candidate.overflowed == reference.overflowed);
+        for (std::size_t i = 0; i < reference.lines.size(); ++i) {
+            CHECK(candidate.lines[i].text_offset == reference.lines[i].text_offset);
+            CHECK(candidate.lines[i].text_length == reference.lines[i].text_length);
+            CHECK(candidate.lines[i].visible_text == reference.lines[i].visible_text);
+            CHECK(candidate.lines[i].glyphs.size() == reference.lines[i].glyphs.size());
+            CHECK(candidate.lines[i].caret_stops.size() == reference.lines[i].caret_stops.size());
+        }
+    }
+
+    // Crossing wrap_width_ceiling must legitimately alter line breaks (tight upper bound).
+    const auto wider = backend.layout(
+        text::TextLayoutInput {
+            .text = paragraph,
+            .style = wrap_style,
+            .constraints = foundation::NanLayoutConstraints {
+                .min_width = 0.0F,
+                .max_width = reference.wrap_width_ceiling + 0.5F,
+            },
+        }
+    );
+    bool line_breaks_changed = wider.lines.size() != reference.lines.size();
+    for (std::size_t i = 0; !line_breaks_changed && i < reference.lines.size(); ++i) {
+        line_breaks_changed = wider.lines[i].text_length != reference.lines[i].text_length;
+    }
+    CHECK(line_breaks_changed);
+
+    // Narrowing below wrap_width_floor must also alter line breaks (tight lower bound).
+    const auto narrower = backend.layout(
+        text::TextLayoutInput {
+            .text = paragraph,
+            .style = wrap_style,
+            .constraints = foundation::NanLayoutConstraints {
+                .min_width = 0.0F,
+                .max_width = reference.wrap_width_floor - 0.5F,
+            },
+        }
+    );
+    bool narrower_changed = narrower.lines.size() != reference.lines.size();
+    for (std::size_t i = 0; !narrower_changed && i < reference.lines.size(); ++i) {
+        narrower_changed = narrower.lines[i].text_length != reference.lines[i].text_length;
+    }
+    CHECK(narrower_changed);
+
+    // Single-line wrap paragraph (deferred metadata fast path) must preserve visible_text & stops.
+    const auto single_line_wrap = backend.layout(
+        text::TextLayoutInput {
+            .text = "short wrap line",
+            .style = wrap_style,
+            .constraints =
+                foundation::NanLayoutConstraints {.min_width = 0.0F, .max_width = 500.0F},
+        }
+    );
+    const auto single_line_clip = backend.layout(
+        text::TextLayoutInput {
+            .text = "short wrap line",
+            .style =
+                text::TextStyle {
+                    .font_size = 18.0F,
+                    .overflow = text::TextOverflow::clip,
+                    .max_lines = 1,
+                },
+            .constraints =
+                foundation::NanLayoutConstraints {.min_width = 0.0F, .max_width = 500.0F},
+        }
+    );
+    REQUIRE(single_line_wrap.lines.size() == 1);
+    CHECK(single_line_wrap.lines[0].visible_text == "short wrap line");
+    CHECK(
+        single_line_wrap.lines[0].caret_stops.size() == single_line_clip.lines[0].caret_stops.size()
+    );
+
+    // Mid-word query width must still certify the full word-break interval rather than a
+    // single-grapheme slice, so ±0.5 px outside [floor, ceiling) genuinely shifts breaks.
+    const auto aa_width = backend
+                              .layout(
+                                  text::TextLayoutInput {
+                                      .text = "aaaa ",
+                                      .style = wrap_style,
+                                      .constraints = foundation::NanLayoutConstraints::loose(),
+                                  }
+                              )
+                              .size.get_width();
+    const auto bbb_width = backend
+                               .layout(
+                                   text::TextLayoutInput {
+                                       .text = "bbb",
+                                       .style = wrap_style,
+                                       .constraints = foundation::NanLayoutConstraints::loose(),
+                                   }
+                               )
+                               .size.get_width();
+    const float mid_word_query = aa_width + bbb_width * 0.45F;
+    const auto mid_word_ref = backend.layout(
+        text::TextLayoutInput {
+            .text = "aaaa bbb",
+            .style = wrap_style,
+            .constraints =
+                foundation::NanLayoutConstraints {.min_width = 0.0F, .max_width = mid_word_query},
+        }
+    );
+    REQUIRE(mid_word_ref.lines.size() == 2);
+    REQUIRE(mid_word_ref.has_wrap_width_range());
+    CHECK(mid_word_ref.wrap_width_floor == Catch::Approx(std::max(aa_width, bbb_width)));
+    const auto mid_word_wider = backend.layout(
+        text::TextLayoutInput {
+            .text = "aaaa bbb",
+            .style = wrap_style,
+            .constraints = foundation::NanLayoutConstraints {
+                .min_width = 0.0F,
+                .max_width = mid_word_ref.wrap_width_ceiling + 0.5F,
+            },
+        }
+    );
+    const auto mid_word_narrower = backend.layout(
+        text::TextLayoutInput {
+            .text = "aaaa bbb",
+            .style = wrap_style,
+            .constraints = foundation::NanLayoutConstraints {
+                .min_width = 0.0F,
+                .max_width = mid_word_ref.wrap_width_floor - 0.5F,
+            },
+        }
+    );
+    CHECK(mid_word_wider.lines.size() == 1);
+    const bool mid_word_narrower_changed =
+        mid_word_narrower.lines.size() != mid_word_ref.lines.size()
+        || mid_word_narrower.lines[0].text_length != mid_word_ref.lines[0].text_length;
+    CHECK(mid_word_narrower_changed);
+
+    // Blank-line multi-paragraph pure-LTR still certifies intervals; complex BiDi/RTL and soft
+    // hyphens (U+00AD) leave the interval uncertified per contract.
+    const auto blank_line_multi = backend.layout(
+        text::TextLayoutInput {
+            .text = "first line\n\nsecond wrapped paragraph with multiple words",
+            .style = wrap_style,
+            .constraints =
+                foundation::NanLayoutConstraints {.min_width = 0.0F, .max_width = 220.0F},
+        }
+    );
+    CHECK(blank_line_multi.has_wrap_width_range());
+
+    const auto bidi_wrapped = backend.layout(
+        text::TextLayoutInput {
+            .text = "שלום עולם hello world wrapped bidi paragraph",
+            .style = wrap_style,
+            .constraints =
+                foundation::NanLayoutConstraints {.min_width = 0.0F, .max_width = 180.0F},
+        }
+    );
+    CHECK_FALSE(bidi_wrapped.has_wrap_width_range());
+
+    const auto soft_hyphen_wrapped = backend.layout(
+        text::TextLayoutInput {
+            .text = "super\u00ADcalifragilisticexpialidocious word wrap",
+            .style = wrap_style,
+            .constraints =
+                foundation::NanLayoutConstraints {.min_width = 0.0F, .max_width = 180.0F},
+        }
+    );
+    CHECK_FALSE(soft_hyphen_wrapped.has_wrap_width_range());
+}

@@ -160,8 +160,17 @@ namespace nandina::text
         std::vector<TextLayoutLine> lines;
         float font_size = 16.0F;
         float baseline = 0.0F;
+        /// Half-open `constraints.max_width` interval `[wrap_width_floor, wrap_width_ceiling)`
+        /// certified by a `TextOverflow::wrap` backend to yield identical line breaks, glyphs,
+        /// caret stops, and `overflowed` state prior to `constraints.constrain()`.
+        float wrap_width_floor = 0.0F;
+        float wrap_width_ceiling = 0.0F;
         bool overflowed = false;
         bool missing_glyphs = false;
+
+        [[nodiscard]] constexpr auto has_wrap_width_range() const noexcept -> bool {
+            return wrap_width_floor >= 0.0F && wrap_width_floor < wrap_width_ceiling;
+        }
 
         /// Resolve a layout-local point to the nearest line and visual caret stop.
         [[nodiscard]] auto caret_for_point(foundation::NanPoint point) const -> TextCaretStop;

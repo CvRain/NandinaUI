@@ -560,12 +560,17 @@ namespace nandina::widget::primitives
                 return index;
             }
             // 后端整形与断行只依赖 max_width，不依赖 min_width/min_height/max_height；
-            // 且当文本未换行、未溢出且自然宽度远小于新 max_width 时，结果与宽上限无关。
+            // 当文本未换行且自然宽 + 1 px ≤ 新 max_width，或新 max_width 仍落在后端证明等价的
+            // 折行宽度区间 [wrap_width_floor, wrap_width_ceiling) 内时，断行与字形结果完全不变。
             const bool same_max_w = entry.constraints.max_width == input.constraints.max_width;
             const bool fits_unwrapped = entry.unwrapped
                 && (!std::isfinite(input.constraints.max_width)
                     || entry.natural_width + 1.0F <= input.constraints.max_width);
-            if (same_max_w || fits_unwrapped) {
+            const bool same_wrapped_lines = entry.result.has_wrap_width_range()
+                && std::isfinite(input.constraints.max_width)
+                && input.constraints.max_width >= entry.result.wrap_width_floor
+                && input.constraints.max_width < entry.result.wrap_width_ceiling;
+            if (same_max_w || fits_unwrapped || same_wrapped_lines) {
                 if (!width_invariant_match.has_value() || index == active_cache_slot_) {
                     width_invariant_match = index;
                 }

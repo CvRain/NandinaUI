@@ -380,7 +380,7 @@ flush-before-free 于是变成每帧多次管线 flush，表现为缩放抽搐/�
 **证据边界**：本地 Debug `-O0` + 真实窗口实时缩放的手工观察；`tests/sdf_device_test.cpp`
 现有断言（`cached == 256`、`frame_binds/frame_unbinds`、300 参数块淘汰、失败注入回落）仍通过，
 但**没有**自动化断言覆盖"延迟到下一帧"或"单帧 >1024 淘汰"分支；Windows/D3D12 未复验。
-Vulkan（Linux）是唯一实测驱动。
+Vulkan（Linux）是唯一实测驱动。2026-11-26 进一步将 `SdlPlatformWindow` 的 GPU 窗口呈现改为平台显式接管 swapchain + 无窗口 `SDL_CreateGPURenderer(gpu, nullptr)` 渲染到帧前等尺寸 `SDL_TEXTUREACCESS_TARGET` 纹理再 `1:1` blit 上屏（消除 SDL 内置 `GPU_RenderPresent` 旧尺寸 `backbuffer` 线性拉伸造成的缩放抽搐与 `wp_fifo_v1` 队列积压），详见[文本塑形与布局收敛成本 §15](text_shaping_cost.md#15-窗口边缘拖拽延迟固定尺寸组件抽搐与快拖跳变修复2026-11-26)。
 
 ## 11. 页面性能 harness（2026-10-19）
 
