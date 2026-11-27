@@ -18,6 +18,14 @@
 
 ## 2. 三档分类
 
+2026-11-27 模块单向依赖清债、Box2D 公开头隔离与默认快照共享（experimental 收口，头文件总数不变，
+仍为 220 = 202 experimental + 18 internal）：
+- `nandina/theme/font_request.hpp`、`nandina/theme/style_document.hpp`、`nandina/text/font_family.hpp`（experimental）：
+  新增纯值声明 `theme::FontFaceDeclaration` 与 `theme::FontFamilyDeclaration`（无字体引擎句柄），`StyleDocument::apply(ThemeManager&)` 移除 `text::FontFamilyRegistry*` 参数，解除 `theme → text` 向上依赖；新增 `text::apply_font_declarations(FontFamilyRegistry&, std::span<const theme::FontFamilyDeclaration>)` 由 `NanApplication::apply_styles` 组合调用。
+- `nandina/physics2d/physics_world2d.hpp`（experimental）：移除 `#include <box2d/box2d.h>`，Box2D 句柄经编译期大小/平凡拷贝静态断言封装在 `physics_world2d.cpp` 内；`physics2d` 归位于 `scene` 之上的扩展层（`physics2d → { foundation, scene }`）。
+- `nandina/theme/design_system.hpp`（experimental）：新增 `default_design_system_shared() -> const std::shared_ptr<const DesignSystem>&`，消除 `DialogPanel`、`SheetPanel`、`ThemeManager` 构造及 `ThemeSchemeContent` 模板路径对整张 `DesignSystem` 的按值拷贝。
+- `tools/check_headers.py`：新增全仓 `nandina/**/*.*pp` 的 11 模块单向 DAG 门禁（`ALLOWED_MODULE_DEPS`）与 `public`/`experimental` 头第三方 `<...>` 泄漏门禁（仅豁免有意暴露的 `nandina/foundation/json.hpp -> <nlohmann/json.hpp>`）。契约见 [模块依赖规则](module_dependency.md)。
+
 2026-11-26 `NanControl` `max_width` / `max_height` 优先于父级紧约束（experimental 行为收口，头文件总数不变，
 仍为 220 = 202 experimental + 18 internal）：
 - `nandina/scene/control.hpp`、`nandina/scene/control.cpp`、`nandina/scene/scene_tree.cpp`、`nandina/widget/layout.cpp` 及单子项/分栏容器：
@@ -492,12 +500,13 @@ lab 本身不承诺密码掩码，notebook 在 P3.3b1 后已通过 `TextInputPur
 而把 `recording_device.hpp` 提升为 public 会让一个取证格式变成长期负担。两者的正确等级不同，
 不能"统一处理"。
 
-## 4. 三类门禁（**已实施 2026-10-18**）
+## 4. 门禁体系（**2026-10-18 落地，2026-11-27 扩充模块 DAG 与第三方头隔离**）
 
 | 门禁 | 检查什么 | 失败表现 |
 | --- | --- | --- |
 | 分类完整 | `nandina/**/*.hpp` 每个都在清单里恰好一条 | 新头未分类 / 陈旧条目 / 非法等级 → 失败（不是警告） |
-| 不越界 | public/experimental 头不 `#include` internal 头（相对与 `<nandina/...>` 两种写法都解析） | 依赖方向倒置 → 失败 |
+| 表面不越界 | public/experimental 头不 `#include` internal 头（含相对路径、`-I../nandina` 模块根与 `<nandina/...>` 规范化解析），且不引入未豁免的第三方/目录外头（仅豁免 `foundation/json.hpp -> <nlohmann/json.hpp>`） | 内部头或第三方头泄漏 → 失败 |
+| 模块单向 DAG | 全仓 `nandina/**/*.{hpp,cpp}` 跨模块 `#include` 必须满足 `ALLOWED_MODULE_DEPS` 严格单向无环图 | 向上或环形模块依赖 → 失败 |
 | 独立可包含 | 每个 public/experimental 头用一个只包含它的 TU 做 `-fsyntax-only` | 缺依赖/隐式前置 → 失败 |
 
 落点：清单 `tools/header_surface.toml`（当前 213 条，含 `level`、可选 `reason`、可选 `requires`；

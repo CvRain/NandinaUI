@@ -306,4 +306,44 @@ namespace nandina::text
         }
         return true;
     }
+
+    auto apply_font_declarations(
+        FontFamilyRegistry& registry,
+        const std::span<const theme::FontFamilyDeclaration> declarations
+    ) -> FontResult<void> {
+        for (const auto& declaration: declarations) {
+            std::vector<FontFaceSpec> faces;
+            faces.reserve(declaration.faces.size());
+            for (const auto& face: declaration.faces) {
+                faces.push_back(
+                    FontFaceSpec {
+                        .resource = face.resource,
+                        .face_index = face.face_index,
+                        .weight = face.weight,
+                        .slant = face.slant,
+                    }
+                );
+            }
+            if (auto result = registry.register_family(declaration.family, std::move(faces));
+                !result)
+            {
+                return result;
+            }
+        }
+        for (const auto& declaration: declarations) {
+            if (!declaration.fallbacks.empty()) {
+                if (auto result = registry.set_fallbacks(declaration.family, declaration.fallbacks);
+                    !result)
+                {
+                    return result;
+                }
+            }
+            if (declaration.is_default) {
+                if (auto result = registry.set_default_family(declaration.family); !result) {
+                    return result;
+                }
+            }
+        }
+        return {};
+    }
 } // namespace nandina::text

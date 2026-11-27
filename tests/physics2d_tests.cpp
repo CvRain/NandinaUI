@@ -133,15 +133,30 @@ TEST_CASE("body and world teardown invalidate external handles", "[physics2d][li
         physics2d::PhysicsWorldConfig {.gravity = foundation::NanPoint::zero()}
     );
     auto first = world->create_body();
-    auto second = world->create_body();
+    auto second = world->create_body({.type = physics2d::PhysicsBodyType::dynamic_body});
+    auto second_shape = second->create_circle(6.0F);
     REQUIRE(world->body_count() == 2);
+    REQUIRE(second_shape->valid());
+    REQUIRE(second_shape->body() == second.get());
 
     world->destroy_body(*first);
     REQUIRE_FALSE(first->valid());
     REQUIRE(world->body_count() == 1);
 
+    second.reset();
     world.reset();
-    REQUIRE_FALSE(second->valid());
+    // Creating a second world reuses Box2D world slot 0; orphaned shapes from the destroyed world
+    // must stay invalid and clear their raw world/body pointers rather than aliasing the new world.
+    auto next_world = physics2d::PhysicsWorld2D::create(
+        physics2d::PhysicsWorldConfig {.gravity = foundation::NanPoint::zero()}
+    );
+    auto next_body = next_world->create_body({.type = physics2d::PhysicsBodyType::dynamic_body});
+    auto next_shape = next_body->create_circle(6.0F);
+    REQUIRE(next_shape->valid());
+
+    REQUIRE_FALSE(second_shape->valid());
+    REQUIRE(second_shape->body() == nullptr);
+    REQUIRE_THROWS_AS(second_shape->filter(), std::logic_error);
 }
 
 TEST_CASE("box and circle shapes expose filter and sensor contracts", "[physics2d][shape]") {

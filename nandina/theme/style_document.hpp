@@ -5,7 +5,7 @@
 #ifndef NANDINA_EXPERIMENT_THEME_STYLE_DOCUMENT_HPP
 #define NANDINA_EXPERIMENT_THEME_STYLE_DOCUMENT_HPP
 
-#include "../text/font_family.hpp"
+#include "font_request.hpp"
 #include "theme_manager.hpp"
 
 #include <expected>
@@ -17,13 +17,6 @@
 
 namespace nandina::theme
 {
-    struct FontFamilyDeclaration {
-        resource::ResourceKey family;
-        std::vector<text::FontFaceSpec> faces;
-        std::vector<resource::ResourceKey> fallbacks;
-        bool is_default = false;
-    };
-
     /// File-format declaration; this pair is not runtime theme identity.
     struct StyleThemePair {
         std::string light_theme;
@@ -41,10 +34,8 @@ namespace nandina::theme
         std::vector<FontFamilyDeclaration> font_families;
 
         /// Theme aliases, directory, selection and style rules commit once after validation.
-        /// Optional font registration is a subsequent operation with its existing failure behavior.
-        [[nodiscard]] auto
-        apply(ThemeManager& manager, text::FontFamilyRegistry* fonts = nullptr) const
-            -> std::expected<void, std::string>;
+        /// Declarative `font_families` are registered separately by upper-layer text/app hosts.
+        [[nodiscard]] auto apply(ThemeManager& manager) const -> std::expected<void, std::string>;
     };
 
     [[nodiscard]] auto

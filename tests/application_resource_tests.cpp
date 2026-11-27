@@ -411,3 +411,53 @@ TEST_CASE(
     std::error_code error;
     std::filesystem::remove_all(root, error);
 }
+
+TEST_CASE(
+    "NanApplication::apply_styles commits theme selection and declarative font families",
+    "[app][styles][font]"
+) {
+    app::NanApplication application;
+    const auto document = theme::parse_style_document(R"toml(
+active_theme = "custom"
+
+[themes.custom.palette]
+primary = "SteelBlue"
+
+[[fonts.family]]
+name = "families/app-custom"
+default = true
+fallbacks = ["families/app-fallback"]
+faces = [{ resource = "fonts/builtin/default-ui", weight = 500, slant = "normal" }]
+
+[[fonts.family]]
+name = "families/app-fallback"
+faces = [{ resource = "fonts/builtin/default-ui", weight = 400 }]
+)toml");
+    REQUIRE(document.has_value());
+
+    const auto applied = application.apply_styles(*document);
+    REQUIRE(applied.has_value());
+    REQUIRE(application.theme_manager().active_scheme_id() != nullptr);
+
+    const auto resolved_font = application.font_families().resolve(
+        theme::FontRequest {.family = resource::ResourceKey("families/app-custom"), .weight = 500},
+        application.font_loader()
+    );
+    REQUIRE(resolved_font.has_value());
+    CHECK_FALSE(resolved_font->faces.empty());
+
+    // Invalid fallback family in declarative font section surfaces an error through apply_styles.
+    const auto bad_fonts_doc = theme::parse_style_document(R"toml(
+active_theme = "custom"
+
+[themes.custom.palette]
+primary = "SteelBlue"
+
+[[fonts.family]]
+name = "families/broken-fallback"
+fallbacks = ["families/does-not-exist"]
+faces = [{ resource = "fonts/builtin/default-ui", weight = 400 }]
+)toml");
+    REQUIRE(bad_fonts_doc.has_value());
+    CHECK_FALSE(application.apply_styles(*bad_fonts_doc).has_value());
+}

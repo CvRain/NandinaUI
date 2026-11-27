@@ -493,8 +493,7 @@ tracked benchmark。真实窗口的缩放顺滑度同样只有人工观察，见
   仍反映旧父链（已写入 `nandina/scene/node.hpp` 的头注释）。
 - Windows 最大化经 `RESIZED` 更新 `logical_size_` 后，再触发 `DISPLAY_SCALE_CHANGED` 时
   "按逻辑尺寸恢复窗口"的语义未定义/未验（低风险，属既有平台记账行为）。
-- 同类残余拷贝：`internal::DialogPanel`/`SheetPanel` 每次浮层构造仍按值调
-  `default_design_system()`；它们不是控件构造热点，本批未迁移（可作为后续统一到共享快照）。
+- 同类残余拷贝：`internal::DialogPanel`/`SheetPanel` 现已于 2026-11-27 统一迁移到 `default_design_system_shared()` 进程级不可变共享快照（连同 `ThemeManager` 初始注册与 `ThemeSchemeContent` 只读模板）。
 - 本批未改动 SDF/GPU 页面 golden 路径；GPU golden 需要真实桌面交换机，仍归人工/发布检查。
 
 ## 15. 窗口边缘拖拽延迟、固定尺寸组件抽搐与快拖跳变修复（2026-11-26）

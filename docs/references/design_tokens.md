@@ -183,7 +183,7 @@ token 引用、`$palettes.*` 仍是参考色阶取值，匹配失败立即报错
 从 0 开始），palette 非有限值校验也保留该路径；解析失败不产生可 `apply` 的文档，
 不修改活动目录/选择/样式。
 
-面向主题作者的外部入口是 TOML 样式文档：`StyleDocument` 可声明 `reference_palettes`、`themes`、`theme_families`、`active_theme`、`active_family`、`preference`、遗留 `NanStyle` 规则与字体族，`parse_style_document()` / `load_style_document()` 解析，`apply(ThemeManager&, FontFamilyRegistry*)` 以 `std::expected<void, std::string>` 报告失败。
+面向主题作者的外部入口是 TOML 样式文档：`StyleDocument` 可声明 `reference_palettes`、`themes`、`theme_families`、`active_theme`、`active_family`、`preference`、遗留 `NanStyle` 规则与纯声明值 `font_families`（`FontFamilyDeclaration`），`parse_style_document()` / `load_style_document()` 解析，`StyleDocument::apply(ThemeManager&)` 提交主题状态，字体族声明由 `text::apply_font_declarations()` 注册（应用层通过 `NanApplication::apply_styles()` / `load_styles()` 一并组合执行，以 `std::expected<void, std::string>` 报告失败）。
 
 ## 当前已知空白
 

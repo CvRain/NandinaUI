@@ -60,13 +60,13 @@ SQLite 数据层与资源驱动的迁移、账户服务与登录/注册，以及
 | `foundation` | 颜色、几何、布局约束、纯值 motion、UTF-8、JSON、日志 |
 | `reactive` | 信号图、computed/effect、属性绑定 |
 | `resource` | 资源清单、多后端、运行时管理 |
-| `physics2d` | 可选 Box2D 物理桥（默认关闭） |
 | `theme` | 设计令牌、主题管理器、样式文档 |
 | `render` | SDL3 渲染设备、共享图片解码、纹理缓存、SDF 图元 |
 | `text` | 字体加载、字形图集、复杂文本整形 |
 | `scene` | 场景树、节点、控件、表现层、动画宿主与帧调度 |
 | `semantics` | 无障碍语义 |
 | `widget` | 组件库、声明式 DSL、布局原语 |
+| `physics2d` | 可选 Box2D 场景物理桥（默认关闭） |
 | `app` | 窗口、Router/Page、应用入口 |
 
 ## 🧩 组件支持

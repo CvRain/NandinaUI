@@ -1,6 +1,6 @@
 # 模块依赖规则
 
-NandinaUI 按模块组织，模块之间的方向决定了改动会扩散到哪里。只要依赖始终单向向下，底层修改就不会牵动上层，上层可以单独替换或测试，也不会出现互相等待的循环。本文记录当前仍然有效的依赖约束，以及源码里已经存在的偏离——它们按项目约定都算技术债，需要带着收口方向一起排期。
+NandinaUI 按模块组织，模块之间的方向决定了改动会扩散到哪里。只要依赖始终单向向下，底层修改就不会牵动上层，上层可以单独替换或测试，也不会出现互相等待的循环。本文记录当前生效的 11 模块单向无环依赖约束、机械门禁，以及历史偏离的收口记录。
 
 ## 分层与职责
 
@@ -11,16 +11,16 @@ NandinaUI 按模块组织，模块之间的方向决定了改动会扩散到哪�
 | 基础层 | `foundation` | 几何、纯布局约束、颜色、色彩空间、变换、纯值 motion、UTF-8、JSON、日志 |
 | | `reactive` | 信号图与依赖追踪，纯逻辑，不接触渲染与场景 |
 | | `resource` | 资源清单、多后端与运行时管理 |
-| | `physics2d` | 可选的 Box2D 物理桥（默认关闭） |
 | 主题层 | `theme` | 设计令牌、内置主题、样式文档 |
 | 呈现层 | `render` | 渲染设备、绘制上下文、纹理缓存与裁剪栈 |
 | | `text` | 文本布局协议、字体加载、整形、字形图集与文本绘制 |
 | | `scene` | 场景树、节点、控件、锚定布局内核、画布层、动画宿主与帧调度 |
 | | `semantics` | 无障碍语义树 |
-| 控件层 | `widget` | 布局原语、primitives 与组件库 |
+| 控件与扩展层 | `widget` | 布局原语、primitives 与组件库 |
+| | `physics2d` | 可选的 Box2D 场景物理桥（默认关闭；桥接 `scene::NanNode2D`） |
 | 应用层 | `app` | 窗口、Router / Page、异步作用域与入口 |
 
-依赖只允许沿这张表**向下**：上层可以使用下层的类型，下层不得反向引用上层。同一层之间的依赖应当是必要的、单向的。
+依赖只允许沿这张表**向下**（且同层之间禁止形成环，完整有向无环图由 `tools/check_headers.py` 在全部 `.hpp`/`.cpp` 上机械校验）：上层可以使用下层的类型，下层不得反向引用上层。
 
 > 原 `animation` 层的值实现已下移到 `foundation/motion/`，调度已下移到 `scene/`；
 > 旧命名空间和转发头现已退出。声明式规格由 `foundation/motion/spec.hpp` 定义，
@@ -38,14 +38,14 @@ NandinaUI 按模块组织，模块之间的方向决定了改动会扩散到哪�
 
 违反上述方向的提交按项目约定视为**技术债**，需要在进入下一个里程碑前收口。如果因为阶段安排暂时保留，必须在文档或提交里写清原因与收口方向，不能默认接受。
 
-## 当前偏离
+## 当前偏离（已于 2026-11-27 全部清零）
 
-下面这些边与上面的约束不一致。它们不是设计意图，而是分阶段推进过程中留下的债务：
+当前仓库 11 个模块在 `.hpp` 与 `.cpp` 两个层面上均已实现 **0 条向上或环形依赖**，并由 `tools/check_headers.py`（`ALLOWED_MODULE_DEPS` 与 `ALLOWED_PUBLIC_THIRD_PARTY_INCLUDES`）机械守门。历史两条偏离的收口记录保留如下：
 
-| 偏离 | 位置 | 收口方向 |
+| 历史偏离 | 原位置 | 收口方式（2026-11-27） |
 | --- | --- | --- |
-| `theme` 引用 `text` | `theme/style_document.hpp` 的 `text::FontFaceSpec` 与 `FontFamilyRegistry` 应用接口 | StyleContext 所需的请求描述已归 theme；StyleDocument 仍实际注册字体族、fallback 与默认值。后续需拆出上层应用适配器或最小注册接口，不能仅移动 FontRequest 就标记整条债务解决。 |
-| `physics2d` 引用 `scene` | `physics2d/physics_world2d.hpp` 公开引用 `scene::NanNode2D` | `physics2d` 被列在基础层，却直接绑定场景节点。可选：把它在分层表里上移到呈现层旁；或让它只接受一个最小适配接口，由上层完成节点绑定。 |
+| `theme` 引用 `text` | `theme/style_document.hpp` 的 `text::FontFaceSpec` 与 `FontFamilyRegistry` 应用接口 | 纯声明值 `FontFaceDeclaration` / `FontFamilyDeclaration` 下沉至 `theme/font_request.hpp`（仅依赖 `resource`），`StyleDocument::apply(ThemeManager&)` 只提交主题状态；字体族注册移至 `text::apply_font_declarations(FontFamilyRegistry&, std::span<const theme::FontFamilyDeclaration>)`（合法向下 `text → theme`），由 `NanApplication::apply_styles` 组合调用。 |
+| `physics2d` 引用 `scene` 及公开头暴露 `<box2d/box2d.h>` | `physics2d/physics_world2d.hpp` | `PhysicsWorld2D` 本质是 `scene::NanNode2D` 的可选场景物理桥（无任何下层模块反向依赖 `physics2d`），归位至 `scene` 之上的控件与扩展层（仅允许依赖 `foundation` 与 `scene`）；同时将 `<box2d/box2d.h>` 彻底隔离进 `physics_world2d.cpp`，公开/实验头不再泄漏 Box2D C 头。 |
 
 修改这些位置时，如果需要新增一条向上依赖，正确做法通常是**把被引用的类型下移**，而不是让下层头文件命名上层类型；`docs/references/component_contract.md` 第 8 节对类型识别访问器也给出了同一条规则。
 
@@ -109,7 +109,7 @@ FontRequest / FontSlant 的唯一类型定义归 `theme/font_request.hpp`；迁�
 直接放入 foundation 会新增反向边，故本步骤不作这项迁移。
 
 设计、值语义、ABI 与 include 兼容边界及验证记录见 [轻量字体请求](font_request.md)。
-这只完成描述值的拆分，StyleDocument 的实际文本引擎应用仍列在当前偏离表中。
+该步骤当时只完成请求描述值的拆分；`StyleDocument` 的字体声明与注册解耦随后于 2026-11-27 收口（见上文「当前偏离（已于 2026-11-27 全部清零）」）。
 
 ## D5 资源构建边界（P2 已交付）
 

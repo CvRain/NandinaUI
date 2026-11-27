@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
-"""头文件表面门禁：分类完整性、包含方向、独立可包含。
+"""头文件表面与模块分层门禁：分类完整性、包含方向、模块单向 DAG、第三方头隔离、独立可包含。
 
-对应 docs/references/sdk_surface.md §4 的三条门禁：
+对应 docs/references/sdk_surface.md §4 与 docs/references/module_dependency.md 的门禁：
 
 1. **分类完整**：`nandina/` 下每个头文件在 `tools/header_surface.toml` 里恰好一条；多陈述/漏列/
    陈旧条目都失败。
-2. **不越界**：public/experimental 头不得 `#include` internal 头（相对路径与 `<nandina/...>`
-   两种写法都解析）。
+2. **不越界**：public/experimental 头不得 `#include` internal 头（含相对路径、模块根路径与
+   `<nandina/...>` 规范化解析），也不得引入未豁免的第三方/目录外头文件；同时全仓 `nandina/`
+   的 `.hpp`/`.cpp` 必须满足 11 模块单向无环依赖图（`ALLOWED_MODULE_DEPS`）。
 3. **独立可包含**：public/experimental 头各用一个只包含它的 TU 做 `-fsyntax-only`；编译 flag 从
    `compile_commands.json` 汇总（`-I` / `-isystem` / `-D` / `-std=`），避免手写第二份。
 
@@ -38,7 +39,204 @@ except ModuleNotFoundError:  # pragma: no cover - Python < 3.11
 
 LEVELS = ("public", "experimental", "internal")
 HEADER_GLOB = "**/*.hpp"
+SOURCE_GLOBS = ("**/*.hpp", "**/*.cpp")
 INCLUDE_RE = re.compile(r'^\s*#\s*include\s*([<"])([^>"]+)[>"]', re.MULTILINE)
+
+# 严格单向模块依赖有向无环图（docs/references/module_dependency.md）：
+#   app -> { widget, physics2d } -> { scene, semantics, text, render }
+#       -> theme -> { foundation, reactive, resource }
+ALLOWED_MODULE_DEPS: dict[str, set[str]] = {
+    "foundation": set(),
+    "reactive": set(),
+    "resource": {"foundation"},
+    "theme": {"foundation", "reactive", "resource"},
+    "semantics": {"foundation"},
+    "render": {"foundation", "resource"},
+    "text": {"foundation", "resource", "theme", "render"},
+    "scene": {"foundation", "theme", "render", "text", "semantics"},
+    "widget": {
+        "foundation",
+        "reactive",
+        "resource",
+        "theme",
+        "render",
+        "text",
+        "semantics",
+        "scene",
+    },
+    "physics2d": {"foundation", "scene"},
+    "app": {
+        "foundation",
+        "reactive",
+        "resource",
+        "theme",
+        "render",
+        "text",
+        "semantics",
+        "scene",
+        "widget",
+        "physics2d",
+    },
+}
+
+# module_dependency.md §约束 5：第三方库头不得进入 public/experimental 公开头，
+# 唯一有意暴露的包装头为 foundation/json.hpp -> <nlohmann/json.hpp>。
+ALLOWED_PUBLIC_THIRD_PARTY_INCLUDES: dict[str, set[str]] = {
+    "nandina/foundation/json.hpp": {"nlohmann/json.hpp"},
+}
+
+# C++26 与 C23 标准库头闭集：public/experimental 头的非框架 `<...>` 包含必须落在此集合或显式豁免表内。
+STANDARD_HEADERS = {
+    # C++ standard headers (C++11..C++26)
+    "algorithm",
+    "any",
+    "array",
+    "atomic",
+    "barrier",
+    "bit",
+    "bitset",
+    "charconv",
+    "chrono",
+    "codecvt",
+    "compare",
+    "complex",
+    "concepts",
+    "condition_variable",
+    "coroutine",
+    "debugging",
+    "deque",
+    "exception",
+    "execution",
+    "expected",
+    "filesystem",
+    "flat_map",
+    "flat_set",
+    "format",
+    "forward_list",
+    "fstream",
+    "functional",
+    "future",
+    "generator",
+    "hazard_pointer",
+    "hive",
+    "initializer_list",
+    "inplace_vector",
+    "iomanip",
+    "ios",
+    "iosfwd",
+    "iostream",
+    "istream",
+    "iterator",
+    "latch",
+    "linalg",
+    "limits",
+    "list",
+    "locale",
+    "map",
+    "mdspan",
+    "memory",
+    "memory_resource",
+    "mutex",
+    "new",
+    "numbers",
+    "numeric",
+    "optional",
+    "ostream",
+    "print",
+    "queue",
+    "random",
+    "ranges",
+    "ratio",
+    "rcu",
+    "regex",
+    "scoped_allocator",
+    "semaphore",
+    "set",
+    "shared_mutex",
+    "simd",
+    "source_location",
+    "span",
+    "spanstream",
+    "sstream",
+    "stack",
+    "stacktrace",
+    "stdexcept",
+    "stdfloat",
+    "stop_token",
+    "streambuf",
+    "string",
+    "string_view",
+    "strstream",
+    "syncstream",
+    "system_error",
+    "text_encoding",
+    "thread",
+    "tuple",
+    "type_traits",
+    "typeindex",
+    "typeinfo",
+    "unordered_map",
+    "unordered_set",
+    "utility",
+    "valarray",
+    "variant",
+    "vector",
+    "version",
+    # C++ <c*> wrappers
+    "cassert",
+    "cctype",
+    "cerrno",
+    "cfenv",
+    "cfloat",
+    "cinttypes",
+    "climits",
+    "clocale",
+    "cmath",
+    "csetjmp",
+    "csignal",
+    "cstdarg",
+    "cstddef",
+    "cstdint",
+    "cstdio",
+    "cstdlib",
+    "cstring",
+    "ctime",
+    "cuchar",
+    "cwchar",
+    "cwctype",
+    # Standard C headers
+    "assert.h",
+    "complex.h",
+    "ctype.h",
+    "errno.h",
+    "fenv.h",
+    "float.h",
+    "inttypes.h",
+    "iso646.h",
+    "limits.h",
+    "locale.h",
+    "math.h",
+    "setjmp.h",
+    "signal.h",
+    "stdalign.h",
+    "stdarg.h",
+    "stdatomic.h",
+    "stdbit.h",
+    "stdbool.h",
+    "stdckdint.h",
+    "stddef.h",
+    "stdint.h",
+    "stdio.h",
+    "stdlib.h",
+    "stdnoreturn.h",
+    "string.h",
+    "tgmath.h",
+    "threads.h",
+    "time.h",
+    "uchar.h",
+    "wchar.h",
+    "wctype.h",
+}
 
 # 目录规则：只用于 `--write` 给新头文件一个**默认**等级；已登记条目永不自动改写。
 INTERNAL_MARKERS = ("/detail/", "/internal/")
@@ -99,23 +297,121 @@ def render_manifest(source: pathlib.Path, headers: dict[str, dict[str, str]]) ->
     return "\n".join(lines).rstrip() + "\n"
 
 
-def resolve_include(includer: str, spec: str) -> str | None:
-    """把 #include 的路径解析成仓库相对路径；无法映射到框架头时返回 None。"""
-    if spec.startswith("nandina/"):
-        return spec
-    if spec.startswith("<") or ":" in spec:
+def normalize_rel_posix(raw_path: str) -> str | None:
+    """规范化相对 POSIX 路径（处理 `\\`、`//`、`.`、`..`）；若向上越出根则返回 None。"""
+    cleaned = raw_path.replace("\\", "/")
+    if not cleaned or cleaned.startswith("/") or ":" in cleaned:
         return None
-    # 相对路径：相对于当前文件所在目录规范化
-    candidate = pathlib.PurePosixPath(includer).parent / spec
     parts: list[str] = []
-    for part in candidate.parts:
+    for part in cleaned.split("/"):
+        if not part or part == ".":
+            continue
         if part == "..":
-            if parts:
-                parts.pop()
-        elif part != ".":
+            if not parts:
+                return None
+            parts.pop()
+        else:
             parts.append(part)
-    resolved = "/".join(parts)
-    return resolved if resolved.startswith("nandina/") else None
+    return "/".join(parts) if parts else None
+
+
+def resolve_include(
+    source: pathlib.Path,
+    headers: dict[str, dict[str, str]],
+    includer: str,
+    delimiter: str,
+    spec: str,
+) -> str | None:
+    """把 #include 解析成规范化的 `nandina/...` 仓库相对路径；非框架头返回 None。"""
+    normalized_spec = normalize_rel_posix(spec)
+    if normalized_spec is not None and normalized_spec.startswith("nandina/"):
+        return normalized_spec
+
+    if delimiter == '"':
+        includer_parent = pathlib.PurePosixPath(includer).parent.as_posix()
+        rel_joined = normalize_rel_posix(f"{includer_parent}/{spec.replace('\\', '/')}")
+        if rel_joined is not None and rel_joined.startswith("nandina/"):
+            if rel_joined in headers or (source / rel_joined).is_file():
+                return rel_joined
+            # 若未走 `-I../nandina` 模块根前缀（首段不是已知模块名），仍按相对路径返回以供诊断
+            if normalized_spec is None or normalized_spec.split("/", 1)[0] not in ALLOWED_MODULE_DEPS:
+                return rel_joined
+
+    # Meson 构建对库内 TU 传入 `-I../nandina`，允许 `"text/..."` 或 `<text/...>` 直指模块根。
+    if normalized_spec is not None and "/" in normalized_spec:
+        first_seg = normalized_spec.split("/", 1)[0]
+        mod_candidate = f"nandina/{normalized_spec}"
+        if first_seg in ALLOWED_MODULE_DEPS and (
+            mod_candidate in headers
+            or (source / mod_candidate).is_file()
+            or delimiter == '"'
+            or first_seg not in STANDARD_HEADERS
+        ):
+            return mod_candidate
+
+    return None
+
+
+def module_of(relative: str) -> str | None:
+    parts = relative.split("/")
+    if len(parts) >= 3 and parts[0] == "nandina":
+        return parts[1]
+    return None
+
+
+def check_module_and_third_party_rules(
+    source: pathlib.Path, headers: dict[str, dict[str, str]]
+) -> list[str]:
+    problems: list[str] = []
+    root = source / "nandina"
+    source_files = sorted(
+        {
+            path.relative_to(source).as_posix()
+            for pattern in SOURCE_GLOBS
+            for path in root.glob(pattern)
+            if path.is_file()
+        }
+    )
+    for relative in source_files:
+        src_module = module_of(relative)
+        if src_module is None:
+            continue
+        if src_module not in ALLOWED_MODULE_DEPS:
+            problems.append(f"unknown framework module directory in {relative}: {src_module}")
+            continue
+        text = (source / relative).read_text(encoding="utf-8", errors="replace")
+        entry = headers.get(relative)
+        check_public_third_party = entry is not None and entry["level"] in {"public", "experimental"}
+        allowed_third_party = ALLOWED_PUBLIC_THIRD_PARTY_INCLUDES.get(relative, set())
+
+        for delimiter, spec in INCLUDE_RE.findall(text):
+            normalized_spec = normalize_rel_posix(spec)
+            target = resolve_include(source, headers, relative, delimiter, spec)
+            is_known_framework_header = target is not None and (
+                target in headers or (source / target).is_file()
+            )
+
+            if check_public_third_party and not is_known_framework_header:
+                is_std = delimiter == "<" and normalized_spec in STANDARD_HEADERS
+                is_allowed_tp = normalized_spec is not None and normalized_spec in allowed_third_party
+                if not is_std and not is_allowed_tp:
+                    close_delim = ">" if delimiter == "<" else '"'
+                    problems.append(
+                        f"{entry['level']} header includes a third-party header: "
+                        f"{relative} -> {delimiter}{spec}{close_delim}"
+                    )
+
+            if target is None:
+                continue
+            dst_module = module_of(target)
+            if dst_module is None or dst_module == src_module:
+                continue
+            if dst_module not in ALLOWED_MODULE_DEPS[src_module]:
+                problems.append(
+                    f"disallowed module dependency: {relative} ({src_module}) -> "
+                    f"{target} ({dst_module})"
+                )
+    return problems
 
 
 def command_tokens(entry: dict) -> list[str]:
@@ -288,14 +584,17 @@ def main() -> int:
         if entry is None or entry["level"] == "internal":
             continue
         text = (source / relative).read_text(encoding="utf-8", errors="replace")
-        for _, spec in INCLUDE_RE.findall(text):
-            target = resolve_include(relative, spec)
+        for delimiter, spec in INCLUDE_RE.findall(text):
+            target = resolve_include(source, headers, relative, delimiter, spec)
             if target is None or target not in headers:
                 continue
             if headers[target]["level"] == "internal":
                 problems.append(
                     f"{entry['level']} header includes an internal header: {relative} -> {target}"
                 )
+
+    # 门禁 2b：单向模块依赖 DAG 与公开头第三方头文件隔离（docs/references/module_dependency.md）
+    problems.extend(check_module_and_third_party_rules(source, headers))
 
     # 门禁 3：独立可包含
     if not options.skip_compile:

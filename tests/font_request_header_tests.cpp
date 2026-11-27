@@ -115,3 +115,29 @@ TEST_CASE(
     REQUIRE(italic < oblique);
     REQUIRE(oblique > normal);
 }
+
+TEST_CASE(
+    "declarative font family descriptors stay pure theme values without engine headers",
+    "[theme][font-request][header]"
+) {
+    const theme::FontFamilyDeclaration declaration {
+        .family = resource::ResourceKey("families/ui"),
+        .faces =
+            {
+                theme::FontFaceDeclaration {
+                    .resource = resource::ResourceKey("fonts/ui/semibold"),
+                    .face_index = 1U,
+                    .weight = 600,
+                    .slant = theme::FontSlant::italic,
+                },
+            },
+        .fallbacks = {resource::ResourceKey("families/fallback")},
+        .is_default = true,
+    };
+    const auto copy = declaration;
+    CHECK(copy == declaration);
+    CHECK(copy.faces.front().weight == 600);
+    CHECK(copy.faces.front().face_index == 1U);
+    CHECK(copy.faces.front().slant == theme::FontSlant::italic);
+    CHECK(copy.is_default);
+}

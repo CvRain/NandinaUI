@@ -38,8 +38,10 @@ namespace nandina::widget::internal
     } // namespace
 
     DialogPanel::DialogPanel() {
-        style_ =
-            theme::resolve_dialog(theme::default_design_system(), theme::ColorAppearance::light);
+        style_ = theme::resolve_dialog(
+            *theme::default_design_system_shared(),
+            theme::ColorAppearance::light
+        );
     }
 
     auto DialogPanel::set_header(std::shared_ptr<scene::NanControl> header) -> scene::NanControl& {

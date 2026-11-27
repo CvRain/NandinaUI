@@ -9,12 +9,12 @@
 #include "hover_card.hpp"
 
 #include "primitives/box_painter.hpp"
-#include "semantics/semantics.hpp"
 
 #include "../render/draw_context.hpp"
 #include "../scene/input_event.hpp"
 #include "../scene/overlay_host.hpp"
 #include "../scene/scene_tree.hpp"
+#include "../semantics/semantics.hpp"
 #include "../theme/theme_manager.hpp"
 
 #include <algorithm>

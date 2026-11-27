@@ -4,8 +4,6 @@
 #include "../foundation/geometry.hpp"
 #include "../scene/node2d.hpp"
 
-#include <box2d/box2d.h>
-
 #include <cstddef>
 #include <cstdint>
 #include <functional>
@@ -107,10 +105,10 @@ namespace nandina::physics2d
         void destroy_shape(PhysicsShape2D& shape);
 
     private:
-        PhysicsBody2D(PhysicsWorld2D& world, b2BodyId id, PhysicsBodyType type);
+        PhysicsBody2D(PhysicsWorld2D& world, std::uint64_t raw_id, PhysicsBodyType type);
 
         PhysicsWorld2D* world_;
-        b2BodyId id_ = b2_nullBodyId;
+        std::uint64_t raw_id_ = 0;
         PhysicsBodyType type_;
         std::weak_ptr<scene::NanNode2D> visual_;
         std::vector<std::shared_ptr<PhysicsShape2D>> shapes_;
@@ -136,14 +134,14 @@ namespace nandina::physics2d
         PhysicsShape2D(
             PhysicsWorld2D& world,
             PhysicsBody2D& body,
-            b2ShapeId id,
+            std::uint64_t raw_id,
             PhysicsShapeType type,
             bool sensor
         );
 
         PhysicsWorld2D* world_;
         PhysicsBody2D* body_;
-        b2ShapeId id_ = b2_nullShapeId;
+        std::uint64_t raw_id_ = 0;
         PhysicsShapeType type_;
         bool sensor_;
         bool destroy_pending_ = false;
@@ -178,9 +176,8 @@ namespace nandina::physics2d
     private:
         friend class PhysicsBody2D;
 
-        [[nodiscard]] auto to_b2(foundation::NanPoint value) const -> b2Vec2;
-        [[nodiscard]] auto from_b2(b2Vec2 value) const -> foundation::NanPoint;
-        [[nodiscard]] auto find_shape(b2ShapeId id) const -> std::shared_ptr<PhysicsShape2D>;
+        [[nodiscard]] auto find_shape(std::uint64_t raw_shape_id) const
+            -> std::shared_ptr<PhysicsShape2D>;
         void collect_events();
         void flush_pending_destroys();
         void sync_scene_to_physics();
@@ -188,7 +185,7 @@ namespace nandina::physics2d
         void destroy_world();
 
         PhysicsWorldConfig config_;
-        b2WorldId world_id_ = b2_nullWorldId;
+        std::uint32_t raw_world_id_ = 0;
         std::vector<std::shared_ptr<PhysicsBody2D>> bodies_;
         float accumulator_ = 0.0F;
         std::size_t total_steps_ = 0;

@@ -756,8 +756,7 @@ namespace nandina::theme
         }
     } // namespace
 
-    auto StyleDocument::apply(ThemeManager& manager, text::FontFamilyRegistry* fonts) const
-        -> std::expected<void, std::string> {
+    auto StyleDocument::apply(ThemeManager& manager) const -> std::expected<void, std::string> {
         manager.require_idle();
         if (!style) {
             return std::unexpected("styles document has null style rules");
@@ -924,30 +923,6 @@ namespace nandina::theme
             return std::unexpected(describe(result.error()));
         }
         manager.commit_catalog(std::move(staged), false, std::nullopt, style);
-        if (fonts == nullptr) {
-            return {};
-        }
-        for (const auto& declaration: font_families) {
-            if (auto result = fonts->register_family(declaration.family, declaration.faces);
-                !result)
-            {
-                return std::unexpected(result.error().message);
-            }
-        }
-        for (const auto& declaration: font_families) {
-            if (!declaration.fallbacks.empty()) {
-                if (auto result = fonts->set_fallbacks(declaration.family, declaration.fallbacks);
-                    !result)
-                {
-                    return std::unexpected(result.error().message);
-                }
-            }
-            if (declaration.is_default) {
-                if (auto result = fonts->set_default_family(declaration.family); !result) {
-                    return std::unexpected(result.error().message);
-                }
-            }
-        }
         return {};
     }
 

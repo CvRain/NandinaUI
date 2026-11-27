@@ -3956,8 +3956,8 @@ namespace nandina::theme
      *
      * @return 与遗留 default_theme() 语义对齐的默认快照
      */
-    auto default_design_system() -> DesignSystem {
-        static const DesignSystem kDefault = DesignSystem {
+    auto default_design_system_shared() -> const std::shared_ptr<const DesignSystem>& {
+        static const auto kDefault = std::make_shared<const DesignSystem>(DesignSystem {
             .tokens = NanTokens {},
             // 框架默认亮/暗两套语义色（Skeleton 参考，见 phase7 文档 Step 2）：
             // 品牌色两模式同值，明暗差异集中在中性色。
@@ -4508,8 +4508,12 @@ namespace nandina::theme
                     .rules = {},
                 },
             },
-        };
+        });
         return kDefault;
+    }
+
+    auto default_design_system() -> DesignSystem {
+        return *default_design_system_shared();
     }
 
     /**

@@ -21,7 +21,7 @@ namespace nandina::theme
         const ColorAppearance appearance,
         const PaletteVariantPolicy policy
     ) -> ThemeSchemeContent {
-        const auto template_system = default_design_system();
+        const auto& template_system = *default_design_system_shared();
         return {
             template_system.tokens,
             make_color_scheme(reference, appearance, policy),
@@ -33,7 +33,7 @@ namespace nandina::theme
 
     auto ThemeSchemeContent::from_semantic_colors(const SemanticColorSpec& spec)
         -> ThemeSchemeContent {
-        const auto template_system = default_design_system();
+        const auto& template_system = *default_design_system_shared();
         return {
             template_system.tokens,
             NanColorScheme(spec),

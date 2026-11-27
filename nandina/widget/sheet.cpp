@@ -69,7 +69,7 @@ namespace nandina::widget
         public:
             SheetPanel() {
                 style_ = theme::resolve_dialog(
-                    theme::default_design_system(),
+                    *theme::default_design_system_shared(),
                     theme::ColorAppearance::light
                 );
                 style_.panel.radius = 0.0F;

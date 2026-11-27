@@ -100,7 +100,7 @@ namespace nandina::theme
 
     ThemeManager::ThemeManager(): observers_(std::make_shared<ObserverState>()) {
         observers_->manager = this;
-        const auto system = default_design_system();
+        const auto& system = *default_design_system_shared();
         const auto light = ThemeSchemeId::parse("nandina:default/light").value();
         const auto dark = ThemeSchemeId::parse("nandina:default/dark").value();
         const auto family = ThemeFamilyId::parse("nandina:default").value();

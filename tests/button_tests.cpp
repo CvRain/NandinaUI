@@ -5,6 +5,7 @@
 
 #include <nandina/render/render_device.hpp>
 #include <nandina/scene/scene_tree.hpp>
+#include <nandina/text/font_family.hpp>
 #include <nandina/theme/nan_style.hpp>
 #include <nandina/theme/style_document.hpp>
 #include <nandina/theme/theme_manager.hpp>
@@ -445,9 +446,15 @@ faces = [{ resource = "fonts/fallback-ui/regular", weight = 400 }]
 
     theme_test::Manager manager;
     text::FontFamilyRegistry fonts;
-    const auto applied = document->apply(manager, &fonts);
+    const auto applied = document->apply(manager);
     REQUIRE(applied.has_value());
+    const auto fonts_applied = text::apply_font_declarations(fonts, document->font_families);
+    REQUIRE(fonts_applied.has_value());
     REQUIRE(manager.active_name() == "dark");
+    CHECK(theme::default_design_system_shared() != nullptr);
+    CHECK(
+        theme::default_design_system_shared().get() == theme::default_design_system_shared().get()
+    );
 
     const auto resolved = theme::resolve_button(
         manager.design_system(),

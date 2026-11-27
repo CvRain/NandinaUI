@@ -8,6 +8,7 @@
 #include <map>
 #include <set>
 #include <shared_mutex>
+#include <span>
 
 namespace nandina::text
 {
@@ -77,5 +78,9 @@ namespace nandina::text
         resource::ResourceKey family,
         resource::ResourceKey font
     ) -> FontResult<bool>;
+    [[nodiscard]] auto apply_font_declarations(
+        FontFamilyRegistry& registry,
+        std::span<const theme::FontFamilyDeclaration> declarations
+    ) -> FontResult<void>;
 } // namespace nandina::text
 #endif

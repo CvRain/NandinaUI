@@ -182,7 +182,16 @@ namespace nandina::app
 
     auto NanApplication::apply_styles(const theme::StyleDocument& document)
         -> std::expected<void, std::string> {
-        return document.apply(theme_manager_, &font_families_);
+        if (auto applied = document.apply(theme_manager_); !applied) {
+            return applied;
+        }
+        if (auto fonts_applied =
+                text::apply_font_declarations(font_families_, document.font_families);
+            !fonts_applied)
+        {
+            return std::unexpected(fonts_applied.error().message);
+        }
+        return {};
     }
 
     auto NanApplication::load_styles(const std::filesystem::path& path)

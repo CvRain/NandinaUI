@@ -2450,9 +2450,15 @@ namespace nandina::theme
 
     /**
      * 框架默认设计系统。品牌主题从本函数的拷贝开始修改字段，再通过
-     * ThemeManager::apply() 原子提交。
+     * ThemeManager::apply() 原子提交；只读消费请优先用 `default_design_system_shared()`。
      */
     [[nodiscard]] auto default_design_system() -> DesignSystem;
+
+    /**
+     * 框架默认设计系统的进程内唯一不可变共享快照（首次初始化后零拷贝只读共享）。
+     * 适合内部面板默认态、只读模板解析或不需要修改字段的消费点。
+     */
+    [[nodiscard]] auto default_design_system_shared() -> const std::shared_ptr<const DesignSystem>&;
 
     /**
      * 从遗留 NanTheme（tokens + 单调色板）构建 DesignSystem 快照，配方沿用框架默认。

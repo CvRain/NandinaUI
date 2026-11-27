@@ -111,5 +111,127 @@ class CompileFlagsTests(unittest.TestCase):
             headers.compile_flags(self.build / "absent")
 
 
+class ModuleDependencyAndThirdPartyTests(unittest.TestCase):
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory(prefix="nandina-module-deps-")
+        self.root = pathlib.Path(self.temporary.name).resolve()
+
+    def tearDown(self):
+        self.temporary.cleanup()
+
+    def write_file(self, relative: str, content: str) -> None:
+        target = self.root / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(content, encoding="utf-8")
+
+    def test_rejects_upward_and_cyclic_module_dependencies(self):
+        self.write_file("nandina/foundation/geometry.hpp", "#pragma once\n")
+        self.write_file("nandina/text/font_family.hpp", "#pragma once\n")
+        self.write_file("nandina/widget/button.hpp", "#pragma once\n")
+        self.write_file("nandina/physics2d/physics_world2d.hpp", "#pragma once\n")
+        self.write_file(
+            "nandina/theme/style_document.hpp",
+            '#include "../text/font_family.hpp"\n',
+        )
+        self.write_file(
+            "nandina/theme/style_document_root_inc.cpp",
+            '#include "text/font_family.hpp"\n'
+            "#include <nandina/theme/../text/font_family.hpp>\n"
+            '#include "..\\\\text\\\\font_family.hpp"\n',
+        )
+        self.write_file(
+            "nandina/scene/bad_bridge.cpp",
+            '#include "../widget/button.hpp"\n#include <nandina/physics2d/physics_world2d.hpp>\n',
+        )
+        self.write_file(
+            "nandina/reactive/bad_signal.hpp",
+            '#include "../foundation/geometry.hpp"\n',
+        )
+        manifest = {
+            "nandina/foundation/geometry.hpp": {"level": "experimental", "reason": "", "requires": ""},
+            "nandina/text/font_family.hpp": {"level": "experimental", "reason": "", "requires": ""},
+            "nandina/widget/button.hpp": {"level": "experimental", "reason": "", "requires": ""},
+            "nandina/physics2d/physics_world2d.hpp": {
+                "level": "experimental",
+                "reason": "",
+                "requires": "physics2d",
+            },
+            "nandina/theme/style_document.hpp": {
+                "level": "experimental",
+                "reason": "",
+                "requires": "",
+            },
+            "nandina/reactive/bad_signal.hpp": {
+                "level": "experimental",
+                "reason": "",
+                "requires": "",
+            },
+        }
+        problems = headers.check_module_and_third_party_rules(self.root, manifest)
+        joined = "\n".join(problems)
+        self.assertIn("nandina/theme/style_document.hpp (theme) -> nandina/text/font_family.hpp (text)", joined)
+        self.assertEqual(
+            problems.count(
+                "disallowed module dependency: "
+                "nandina/theme/style_document_root_inc.cpp (theme) -> "
+                "nandina/text/font_family.hpp (text)"
+            ),
+            3,
+        )
+        self.assertIn("nandina/scene/bad_bridge.cpp (scene) -> nandina/widget/button.hpp (widget)", joined)
+        self.assertIn(
+            "nandina/scene/bad_bridge.cpp (scene) -> nandina/physics2d/physics_world2d.hpp (physics2d)",
+            joined,
+        )
+        self.assertIn(
+            "nandina/reactive/bad_signal.hpp (reactive) -> nandina/foundation/geometry.hpp (foundation)",
+            joined,
+        )
+
+    def test_rejects_third_party_includes_in_public_headers_except_json_wrapper(self):
+        self.write_file("nandina/scene/node2d.hpp", "#pragma once\n")
+        self.write_file("nandina/foundation/json.hpp", "#include <nlohmann/json.hpp>\n#include <vector>\n")
+        self.write_file(
+            "nandina/physics2d/physics_world2d.hpp",
+            '#include "../scene/node2d.hpp"\n'
+            "#include <box2d/box2d.h>\n"
+            '#include "SDL3/SDL.h"\n'
+            '#include "../../third_party/stb/stb_image.h"\n'
+            "#include <eigen_custom>\n",
+        )
+        self.write_file(
+            "nandina/app/detail/sdl_platform_window.hpp",
+            "#include <SDL3/SDL.h>\n",
+        )
+        manifest = {
+            "nandina/scene/node2d.hpp": {"level": "experimental", "reason": "", "requires": ""},
+            "nandina/foundation/json.hpp": {"level": "experimental", "reason": "", "requires": ""},
+            "nandina/physics2d/physics_world2d.hpp": {
+                "level": "experimental",
+                "reason": "",
+                "requires": "physics2d",
+            },
+            "nandina/app/detail/sdl_platform_window.hpp": {
+                "level": "internal",
+                "reason": "",
+                "requires": "",
+            },
+        }
+        problems = headers.check_module_and_third_party_rules(self.root, manifest)
+        self.assertEqual(
+            problems,
+            [
+                "experimental header includes a third-party header: "
+                "nandina/physics2d/physics_world2d.hpp -> <box2d/box2d.h>",
+                "experimental header includes a third-party header: "
+                'nandina/physics2d/physics_world2d.hpp -> "SDL3/SDL.h"',
+                "experimental header includes a third-party header: "
+                'nandina/physics2d/physics_world2d.hpp -> "../../third_party/stb/stb_image.h"',
+                "experimental header includes a third-party header: "
+                "nandina/physics2d/physics_world2d.hpp -> <eigen_custom>",
+            ],
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
