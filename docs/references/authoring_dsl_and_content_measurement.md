@@ -1,8 +1,8 @@
 # 作者 DSL、文本能力与内容测量
 
-> 状态：**D6 设计方向已接受；盒内对齐、文本作者/绑定、视觉表面与布局工厂子项简写子批已定形（§7、§§16–19），其余详细 API 与测量契约仍待审阅。**
-> §§1–15 保留设计输入；其中尚未在 §7 或 §§16–19 定形的提案不能当作可编译 API。§7 与
-> §§16–19 单独记录已定形入口。
+> 状态：**D6 设计方向已接受；盒内对齐、文本作者/绑定、视觉表面、布局工厂子项简写、AspectRatio/Resizable 容器与文本逐字段覆盖/清除契约已定形（§7、§§16–21），其余跨组件 part 与完整测量细节仍按需推进。**
+> §§1–15 保留设计输入；其中尚未在 §7 或 §§16–21 定形的提案不能当作可编译 API。§7 与
+> §§16–21 单独记录已定形入口。
 > 现有接口与已知边界以源码和组件文档为准。本设计不要求长期兼容旧 DSL；改变公共接口时，
 > 库内示例、测试和使用文档应同步迁移。
 >
@@ -580,3 +580,25 @@ home/label/anchors 的 CPU/SDF 六张页面 golden 与各自已批准基线逐�
   - 内部分隔条节点与焦点/命中隔离：内部分隔条 `Handle` 作为直接子节点恒居于 `[first_child, handle, second_child]` 中间且 `z_index_hint() == 1`。焦点位于组件子树内时，捕获阶段 Tab / Shift+Tab 调用树级上一/下一焦点遍历，严格按第一栏 → 分隔条 → 第二栏流转，并在边界继续走到组件外，不形成额外焦点陷阱。点击任一分栏内的非聚焦控件不会通过 `_find_focus_target` 误聚焦分隔条；分隔条暴露 `semantics::Role::slider`（支持 `focus`、`increment`、`decrement`、`set_value`）。
   - 交互、主题与事件保活：支持左键按住拖拽（记录按下点偏移，点击不跳变）、双击分隔条重置 `default_ratio()`（`reset_on_double_click()` 默认 `true`）、键盘方向键（水平 `Left`/`Right`，垂直 `Up`/`Down`，步长 `keyboard_step()` 默认 `0.05F`）与 `Home`/`End`。程序化 `set_ratio()` / `reset_ratio()` 静默；用户交互改变 `effective_ratio()` 时以 `weak_from_this().lock()` 保活触发 `set_on_ratio_changed()` 与 `ratio_changed()`。不新增独立配方，直接消费主题语义色（`border`、`surface_variant`、`accent`、`on_surface_variant`、`primary`、`ring`）。
 - **验证**：`aspect-ratio` 4 用例 / 53 断言 PASS，`resizable` 7 用例 / 116 断言 PASS；红先：`AspectRatio` 对无定义的 `stretch`/`space_between` 对齐静默居中、在 `resolve_child_rect` 令 `target_h = target_w`、在 `Resizable::compute_split_geometry` 移除 `min_first_extent_` 钳制，以及交叉轴无界时恢复 loose 测量，均使对应断言先红；恢复后全矩阵通过。窄容器回退另锁定 100:120 最小权重在 110 DIP 可用空间下得到 50/60。SDK consumer 静态/共享 SDL3 均断言 `aspect-ratio-api=1` 与 `resizable-api=1`。
+
+## 21. P4.1 文本派生样式、逐字段显式覆盖与分层清除契约（2026-11-27）
+
+收口 §2.1 与 §14 第 3 项留下的“`Text::set_style(TextStyle)` 将派生样式与实例显式覆盖混为一态、字体子字段互相锁死、显式覆盖不可分层清除”问题：
+
+- **四层优先级与单一调和管线（`Text::resolve_component_style_fallbacks` + `reconcile_style`）**：
+  1. **实例显式覆盖（`Text` / `Label`）**：`set_color`、`set_font_size`、`set_line_height(> 0)`、`set_font` / `set_font_family` / `set_font_weight` / `set_font_slant`、`set_overflow` / `set_max_lines` / `set_align` / `set_vertical_align` 及整份快照覆盖 `set_style(TextStyle)`；
+  2. **继承样式上下文（`StyleContext`）**：`text_color_from_context`、`font_size_from_context`、`font_from_context`；
+  3. **组件语义令牌（`Label`）**：`color_token`、`text_size`、`leading`、`typography_role`；
+  4. **组件/原语基线**：`Label` 默认语义角色 `TypographyRole::body`（`16 px`、`1.5` 行高、`400` 字重、`normal` 斜体、`on_surface` 色）或 `primitives::Text` 的 `derived_style_` / `TextStyle{}` 初始值。
+  - 原先 `Label` 在角色切换/主题更新时分三次独立重整形（`apply_label_font_size` → `apply_leading` → `apply_role_font_style`）收敛为单次 `reconcile_style` 提交；`Text` 旧受保护分片助手 `apply_component_*` / `font_request_is_explicit` 同步退役。
+- **派生样式基线 vs 显式整份快照**：
+  - `Text::apply_derived_style(TextStyle)` / `clear_derived_style()` / `has_derived_style()` 为 `primitives::Text` 部件设置或清除派生基线，**不置位任何 `*_explicit_` 标志**；当前生效的实例逐字段覆盖与父级 `StyleContext` 继续优先，未显式覆盖的盒子字段（`overflow` / `max_lines` / `align` / `vertical_align`）随 `clear_derived_style()` 恢复 `TextStyle{}` 默认。
+  - `Text::set_style(TextStyle)` 保持作者整份显式快照语义（同步校验 `line_height >= 0` 有限值），置位全部实例显式标志。
+- **字体三子字段正交拆分与逐字段查询/清除**：
+  - 原单一 `font_explicit_` 拆分为独立的 `font_family_explicit_`、`font_weight_explicit_`、`font_slant_explicit_`：仅设置 `set_font_family` 或 `set_font_slant` 不再锁死 `TypographyRole` 或 `StyleContext` 的 `weight`，`clear_font_family()` 解除族覆盖并回退到继承 `StyleContext::font.family` / `derived_style_`（不再反向置位 `font_explicit_ = true`）。
+  - `Text`（及公有继承它的 `Label`）公开只读查询 `has_color_override()`、`has_font_size_override()`、`has_line_height_override()`、`has_font_override()`、`has_font_family_override()`、`has_font_weight_override()`、`has_font_slant_override()`、`has_overflow_override()`、`has_max_lines_override()`、`has_align_override()`、`has_vertical_align_override()`，以及逐项清除入口 `clear_color()`、`clear_font_size()`、`clear_line_height()`、`clear_font()`、`clear_font_family()`、`clear_font_weight()`、`clear_font_slant()`、`clear_overflow()`、`clear_max_lines()`、`clear_align()`、`clear_vertical_align()` 与批量样式覆盖清除 `clear_style_overrides()`（保留盒子配置与 `Label` 语义令牌）。
+  - `Label` 同步补齐语义令牌清除入口 `clear_color_token()`、`clear_text_size()`、`clear_leading()`、`clear_typography_role()`，统一 `set_text_size()` 在离树与入树/主题切换后均立即按契约回退后端默认行高 `0`（`clear_text_size()` 恢复 `body` 默认 `1.5` 行高），同时修复 `label->property(visual::font_size_t{}).set(px)` 旁路 `Label` 行高重算的遗漏。
+- **失效边界与异常安全**：
+  - `clear_color()` / `clear_color_token()` 仅标 `paint` 脏，零字体解析、零重整形、零布局失效；无覆盖时调用任一 `clear_*()` 为纯空操作。
+  - 当挂载 `FontPipelineCache` 且字体解析失败抛 `std::runtime_error` 时，在修改 `style_`、表现层端点或 `*_explicit_` / `derived_style_` 状态前完成预解析与回滚，满足强异常安全保证。
+- **验证**：`widget_tests` 新增 `[override-reset]` 3 用例（覆盖子字段正交继承、`apply_derived_style` / 盒子覆盖保留与回退、逐层清除栈、`clear_color` 纯绘制不重排及 `visual::font_size` 端点同步），`font_resource_tests` 新增 `[override-reset]` 1 用例（覆盖 `FontPipelineCache` 解析失败时的强异常安全回滚），`authoring_tests` 扩展 `[authoring][label-contract]` 验证仅包含 `<nandina/widget/label.hpp>` 即可完成覆盖查询与清除。红先：未打补丁 `HEAD` 上运行子字段正交与 `clear_font_family` / `set_text_size` 主题回归 5 断言失败（退出 42），修复后全矩阵与 Linux 14 条 CPU+SDF 页面 golden（0 差异）全部通过。

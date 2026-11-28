@@ -18,6 +18,11 @@
 
 ## 2. 三档分类
 
+2026-11-27 D6 `Text` / `Label` 派生样式、逐字段显式覆盖与分层清除契约（experimental 增量与内部受保护钩子收敛，头文件总数不变，
+仍为 220 = 202 experimental + 18 internal）：
+- `nandina/widget/primitives/text.hpp`（experimental）：新增派生样式基线入口 `apply_derived_style(text::TextStyle)` / `clear_derived_style()` / `has_derived_style()`（不置位显式覆盖标志），拆分字体三子字段覆盖状态（`family` / `weight` / `slant` 正交），新增 `has_*_override()` 查询、`clear_color()` / `clear_font_size()` / `clear_line_height()` / `clear_font()` / `clear_font_weight()` / `clear_font_slant()` / `clear_overflow()` / `clear_max_lines()` / `clear_align()` / `clear_vertical_align()` / `clear_style_overrides()`，修复 `clear_font_family()` 误锁死继承字体的行为，并在字体管线解析失败时提供强异常安全回滚；原无外部调用方的受保护分片助手 `apply_component_color/font_size/font_weight/font_slant` 与 `font_request_is_explicit` 由单一虚调和钩子 `resolve_component_style_fallbacks()` + `reconcile_style()` 替代。
+- `nandina/widget/label.hpp`（experimental）：继承全部 `Text` 逐字段查询/清除接口，新增组件语义令牌清除入口 `clear_color_token()` / `clear_text_size()` / `clear_leading()` / `clear_typography_role()`，统一 `set_text_size()` 离树与入树均立即重算默认行高（`0`，`clear_text_size()` 恢复 `body` `1.5`），并使 `property(visual::font_size_t{}).set(...)` 同步触发 `Label` 行高回退调和。14 条 Linux CPU+SDF 页面 golden 0 像素差异。契约见 [作者 DSL 与内容测量 §21](authoring_dsl_and_content_measurement.md#21-p41-文本派生样式逐字段显式覆盖与分层清除契约2026-11-27)。
+
 2026-11-27 模块单向依赖清债、Box2D 公开头隔离与默认快照共享（experimental 收口，头文件总数不变，
 仍为 220 = 202 experimental + 18 internal）：
 - `nandina/theme/font_request.hpp`、`nandina/theme/style_document.hpp`、`nandina/text/font_family.hpp`（experimental）：
@@ -118,9 +123,7 @@ OS 来源，宿主可注入自己的实现。持久化归应用，框架不写�
 2026-11-11 P4.6 Step 2b role 表主题化与 Label 默认 body（experimental，默认行为变更）：
 `theme::NanTypeScale` 新增 `roles`（7 个 `TypographyRoleStyle`，C++ 主题可覆盖）；新增
 `typography_role_style(const NanTypeScale&, TypographyRole)` 重载，越界 role 回退 body。
-`Label` 未显式设置 role 时默认 `body`：base 16 px + normal 1.5 leading；显式 `set_font_size`/
-`set_text_size`/继承字号保留后端默认行高（除非显式 leading），`set_font_size` 会重新解析
-leading。新增 showcase Typography 展示页（`content_and_display/typography`）与 page_probe
+`Label` 未显式设置 role 时默认 `body`：base 16 px + normal 1.5 leading；显式 `set_font_size`/`set_text_size`/继承字号保留后端默认行高（除非显式 leading 或 role），`set_font_size`/`set_text_size` 会重新解析 leading。新增 showcase Typography 展示页（`content_and_display/typography`）与 page_probe
 页面；中文版双平台 8 条 golden 已于 2026-11-11 批准。2026-11-12：`ScalarToken` 新增语义
 role 尺寸值 `typography_role_display…caption`，默认组件配方改用 role 尺寸 token
 （视觉不变；C++ 覆盖 `NanTypeScale::roles` 会改变组件字号），styles.toml 支持

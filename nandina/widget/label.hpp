@@ -36,33 +36,37 @@ namespace nandina::widget
         ) -> std::shared_ptr<Label>;
 
         void set_color_token(theme::ColorToken token);
+        void clear_color_token();
         [[nodiscard]] auto color_token() const noexcept -> theme::ColorToken;
 
         /// Tailwind-style size step resolved through the active theme's `NanTypeScale`
         /// (root base × ratio). Explicit `set_font_size()` and an inherited style-context font
         /// size still take precedence over this component-level token.
         void set_text_size(theme::TextSize size);
+        void clear_text_size();
         [[nodiscard]] auto text_size() const noexcept -> std::optional<theme::TextSize>;
 
         /// Absolute logical-px font size (inherited from Text). Label re-evaluates its leading:
-        /// an explicit size falls back to the backend default unless a leading token or numeric
-        /// line height is set.
+        /// an explicit size falls back to the backend default unless a leading token, semantic
+        /// typography role, or numeric line height is set.
         void set_font_size(float size);
 
         /// Leading step resolved through the theme scale, applied as a line-height multiplier.
         /// A later explicit `set_line_height()` overrides it; theme changes re-resolve it.
         void set_leading(theme::Leading leading);
+        void clear_leading();
         [[nodiscard]] auto leading() const noexcept -> std::optional<theme::Leading>;
-        /// Numeric line-height multiplier; `0` restores the backend default. Overrides the
-        /// leading token.
+        /// Numeric line-height multiplier; `0` clears the numeric override and restores the
+        /// leading token / role / body default. Overrides the leading token when positive.
         void set_line_height(float factor);
         [[nodiscard]] auto line_height() const noexcept -> float;
 
         /// Semantic typography role (display/heading/title/subtitle/body/label/caption). The role
-        /// supplies size + leading + weight/slant defaults; explicit size/leading setters override
-        /// the corresponding field, and color stays with the component color token. Role metrics
-        /// resolve through the active theme scale (root base/ratios/leading).
+        /// supplies size + leading + weight/slant defaults; explicit size/leading/font setters
+        /// override the corresponding field, and color stays with the component color token. Role
+        /// metrics resolve through the active theme scale (root base/ratios/leading/roles).
         void set_typography_role(theme::TypographyRole role);
+        void clear_typography_role();
         [[nodiscard]] auto typography_role() const noexcept -> std::optional<theme::TypographyRole>;
 
         /// Bind immediately. The source must outlive this binding; tree exit unbinds it.
@@ -90,27 +94,18 @@ namespace nandina::widget
         void on_exit_tree() override;
         void on_style_context_changed(const theme::ResolvedStyleContext& context) override;
         void on_theme_changed(const theme::ThemeManager& manager) override;
+        void resolve_component_style_fallbacks(
+            const theme::ResolvedStyleContext& context,
+            text::TextStyle& fallback
+        ) const override;
 
     private:
-        void apply_color_token();
-        /// Component default size: explicit override > inherited context > `text_size()` token
-        /// > `typography.label_lg`. Re-run on theme/style-context changes so token steps follow
-        /// a theme's scale without freezing the resolved pixel value.
-        void apply_label_font_size();
-        /// Re-resolve the leading token unless a numeric line height was set.
-        void apply_leading();
-        /// Apply the role's weight/slant unless an explicit font request or inherited font
-        /// context is in charge.
-        void apply_role_font_style();
-
         reactive::EffectScope scope_;
         theme::NanTheme theme_;
         theme::ColorToken color_token_ = theme::ColorToken::on_surface;
         std::optional<theme::TextSize> text_size_;
         std::optional<theme::Leading> leading_;
         std::optional<theme::TypographyRole> typography_role_;
-        /// A numeric `set_line_height()` wins over the leading token until reset to 0.
-        bool line_height_explicit_ = false;
     };
 
 } // namespace nandina::widget

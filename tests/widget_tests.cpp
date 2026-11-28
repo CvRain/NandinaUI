@@ -1188,7 +1188,7 @@ TEST_CASE(
     label->set_text_size(theme::TextSize::xl_3);
     REQUIRE(label->font_size() == Catch::Approx(30.0F));
 
-    REQUIRE(label->line_height() == Catch::Approx(1.5F)); // body default persists
+    REQUIRE(label->line_height() == Catch::Approx(0.0F)); // explicit text_size uses backend default
     label->set_leading(theme::Leading::normal);
     REQUIRE(label->leading().has_value());
     REQUIRE(label->line_height() == Catch::Approx(1.5F));
@@ -3860,4 +3860,319 @@ TEST_CASE(
     REQUIRE(field.placeholder_text().style().line_height == Catch::Approx(1.25F));
     REQUIRE(field.placeholder_text().style().font.weight == 500);
     REQUIRE(field.placeholder_text().style().font_size == Catch::Approx(14.0F));
+}
+
+TEST_CASE(
+    "Sub-field font overrides and clear_font_family keep orthogonal inheritance and role metrics",
+    "[widget][label][override-reset]"
+) {
+    reactive::Graph graph;
+    theme_test::Manager manager;
+    scene::NanSceneTree tree;
+    tree.set_theme_manager(manager);
+
+    auto root = std::make_shared<scene::NanControl>();
+    auto label = widget::Label::create(graph, "orthogonal");
+    root->add_child(label);
+    tree.set_root(root);
+
+    // 1. Overriding only font family or slant must NOT block TypographyRole font weight.
+    label->set_font_family(resource::ResourceKey("fonts/mono"));
+    label->set_font_slant(theme::FontSlant::italic);
+    label->set_typography_role(theme::TypographyRole::heading);
+    CHECK(label->font().family == resource::ResourceKey("fonts/mono"));
+    CHECK(label->font().slant == theme::FontSlant::italic);
+    CHECK(label->font().weight == 600);
+
+    // 2. clear_font_family() must restore inherited StyleContext family instead of locking it out.
+    theme::StyleContext context;
+    theme::FontRequest inherited_font;
+    inherited_font.family = resource::ResourceKey("fonts/context-sans");
+    inherited_font.weight = 500;
+    context.font = theme::StyleValue<theme::FontRequest>::explicit_value(inherited_font);
+    root->set_style_context(context);
+
+    CHECK(label->font().family == resource::ResourceKey("fonts/mono"));
+    label->clear_font_family();
+    CHECK(label->font().family == resource::ResourceKey("fonts/context-sans"));
+    CHECK(label->font().weight == 500);
+    CHECK(label->font().slant == theme::FontSlant::italic);
+
+    // 3. Label::set_text_size() immediately reconciles to backend default leading (0.0F) both
+    // detached and in-tree, and clear_text_size() restores body normal leading (1.5F).
+    root->clear_style_context();
+    auto scaled_label = widget::Label::create(graph, "scaled");
+    scaled_label->set_text_size(theme::TextSize::xl_2);
+    CHECK(scaled_label->line_height() == Catch::Approx(0.0F));
+    root->add_child(scaled_label);
+    CHECK(scaled_label->line_height() == Catch::Approx(0.0F));
+
+    auto next_theme = theme::default_theme();
+    next_theme.tokens.typography.scale.root_base = 18.0F;
+    manager.set_theme(next_theme);
+    CHECK(scaled_label->font_size() == Catch::Approx(27.0F));
+    CHECK(scaled_label->line_height() == Catch::Approx(0.0F));
+    scaled_label->clear_text_size();
+    CHECK(scaled_label->font_size() == Catch::Approx(18.0F));
+    CHECK(scaled_label->line_height() == Catch::Approx(1.5F));
+}
+
+TEST_CASE(
+    "Text apply_derived_style keeps fields non-explicit while honoring per-field overrides and resets",
+    "[widget][text][override-reset]"
+) {
+    FixedTextLayoutBackend backend;
+    auto root = std::make_shared<scene::NanControl>();
+    auto value = std::make_shared<widget::primitives::Text>("derived", backend);
+    root->add_child(value);
+    scene::NanSceneTree tree;
+    tree.set_root(root);
+
+    text::TextStyle derived {
+        .color = opaque_color(0.25F),
+        .font_size = 18.0F,
+        .line_height = 1.4F,
+        .font =
+            theme::FontRequest {
+                .family = resource::ResourceKey("fonts/derived"),
+                .weight = 500,
+                .slant = theme::FontSlant::normal,
+            },
+        .overflow = text::TextOverflow::wrap,
+        .max_lines = 4,
+        .align = theme::TextAlign::center,
+        .vertical_align = text::TextVerticalAlign::center,
+    };
+    value->apply_derived_style(derived);
+    REQUIRE(value->has_derived_style());
+    REQUIRE_FALSE(value->has_color_override());
+    REQUIRE_FALSE(value->has_font_size_override());
+    REQUIRE_FALSE(value->has_line_height_override());
+    REQUIRE_FALSE(value->has_font_override());
+    CHECK(value->font_size() == Catch::Approx(18.0F));
+    CHECK(value->line_height() == Catch::Approx(1.4F));
+    CHECK(value->font().family == resource::ResourceKey("fonts/derived"));
+    CHECK(value->font().weight == 500);
+    CHECK(value->overflow() == text::TextOverflow::wrap);
+    CHECK(value->max_lines() == 4);
+    CHECK(value->align() == theme::TextAlign::center);
+
+    // StyleContext still overrides derived_style_ because derived_style_ is not explicit.
+    theme::StyleContext context;
+    context.font_size = theme::StyleValue<float>::explicit_value(22.0F);
+    context.text_color =
+        theme::StyleValue<foundation::NanColor>::explicit_value(opaque_color(0.6F));
+    root->set_style_context(context);
+    CHECK(value->font_size() == Catch::Approx(22.0F));
+    CHECK(value->color().oklch().light == Catch::Approx(0.6F));
+
+    // Instance per-field overrides beat both StyleContext and later apply_derived_style() calls.
+    value->set_color(opaque_color(0.9F));
+    value->set_font_size(26.0F);
+    value->set_line_height(1.8F);
+    value->set_font_weight(700);
+    value->set_font_slant(theme::FontSlant::italic);
+    REQUIRE(value->has_color_override());
+    REQUIRE(value->has_font_size_override());
+    REQUIRE(value->has_line_height_override());
+    REQUIRE(value->has_font_override());
+    REQUIRE_FALSE(value->has_font_family_override());
+    REQUIRE(value->has_font_weight_override());
+    REQUIRE(value->has_font_slant_override());
+
+    derived.font_size = 15.0F;
+    derived.line_height = 1.25F;
+    derived.font.weight = 400;
+    value->set_align(theme::TextAlign::end);
+    value->set_max_lines(2);
+    REQUIRE(value->has_align_override());
+    REQUIRE(value->has_max_lines_override());
+    value->apply_derived_style(derived);
+    CHECK(value->color().oklch().light == Catch::Approx(0.9F));
+    CHECK(value->font_size() == Catch::Approx(26.0F));
+    CHECK(value->line_height() == Catch::Approx(1.8F));
+    CHECK(value->font().weight == 700);
+    CHECK(value->font().slant == theme::FontSlant::italic);
+    CHECK(value->align() == theme::TextAlign::end); // explicit box override preserved
+    CHECK(value->max_lines() == 2);
+
+    value->clear_align();
+    value->clear_max_lines();
+    CHECK_FALSE(value->has_align_override());
+    CHECK_FALSE(value->has_max_lines_override());
+    CHECK(value->align() == theme::TextAlign::center); // derived_style_ restored
+    CHECK(value->max_lines() == 4);
+
+    // Clearing only color must be paint-only: zero reshape and zero layout invalidation.
+    (void)tree.layout_root(foundation::NanSize(200, 80));
+    const auto calls_before_color_clear = backend.calls;
+    value->clear_color();
+    CHECK_FALSE(value->has_color_override());
+    CHECK(value->color().oklch().light == Catch::Approx(0.6F));
+    CHECK_FALSE(value->layout_dirty());
+    CHECK(backend.calls == calls_before_color_clear);
+
+    // Per-field clears restore StyleContext / derived_style_ step by step.
+    value->clear_font_size();
+    CHECK_FALSE(value->has_font_size_override());
+    CHECK(value->font_size() == Catch::Approx(22.0F)); // StyleContext wins over derived 15.0F
+
+    root->clear_style_context();
+    CHECK(value->font_size() == Catch::Approx(15.0F)); // derived_style_ now visible
+    CHECK(value->color().oklch().light == Catch::Approx(0.25F));
+
+    value->clear_line_height();
+    CHECK_FALSE(value->has_line_height_override());
+    CHECK(value->line_height() == Catch::Approx(1.25F));
+
+    value->clear_font_weight();
+    CHECK_FALSE(value->has_font_weight_override());
+    CHECK(value->has_font_slant_override());
+    CHECK(value->font().weight == 400);
+    CHECK(value->font().slant == theme::FontSlant::italic);
+
+    value->clear_font();
+    CHECK_FALSE(value->has_font_override());
+    CHECK(value->font().slant == theme::FontSlant::normal);
+    CHECK(value->font().family == resource::ResourceKey("fonts/derived"));
+
+    // Full set_style() marks overrides explicit; clear_style_overrides() + clear_derived_style()
+    // restores initial defaults while preserving box overflow/max_lines/alignment.
+    auto snapshot = value->style();
+    snapshot.font_size = 30.0F;
+    snapshot.line_height = 0.0F;
+    snapshot.font.weight = 800;
+    value->set_style(snapshot);
+    REQUIRE(value->has_font_size_override());
+    REQUIRE(value->has_line_height_override());
+    REQUIRE(value->has_font_weight_override());
+
+    value->clear_style_overrides();
+    CHECK_FALSE(value->has_color_override());
+    CHECK_FALSE(value->has_font_size_override());
+    CHECK_FALSE(value->has_line_height_override());
+    CHECK_FALSE(value->has_font_override());
+    CHECK(value->font_size() == Catch::Approx(15.0F));
+    CHECK(value->line_height() == Catch::Approx(1.25F));
+    CHECK(value->overflow() == text::TextOverflow::wrap);
+    CHECK(value->max_lines() == 4);
+
+    // Clear box overrides set by set_style(snapshot) so clear_derived_style() unwinds to
+    // TextStyle{} box defaults (ellipsis / 1 / start / top).
+    value->clear_overflow();
+    value->clear_max_lines();
+    value->clear_align();
+    value->clear_vertical_align();
+    value->clear_derived_style();
+    CHECK_FALSE(value->has_derived_style());
+    CHECK(value->font_size() == Catch::Approx(16.0F));
+    CHECK(value->line_height() == Catch::Approx(0.0F));
+    CHECK_FALSE(value->font().family.has_value());
+    CHECK(value->overflow() == text::TextOverflow::ellipsis);
+    CHECK(value->max_lines() == 1);
+    CHECK(value->align() == theme::TextAlign::start);
+    CHECK(value->vertical_align() == text::TextVerticalAlign::top);
+
+    // Invalid inputs throw without poisoning explicit flags.
+    auto bad_style = value->style();
+    bad_style.line_height = -0.5F;
+    REQUIRE_THROWS_AS(value->set_style(bad_style), std::invalid_argument);
+    REQUIRE_THROWS_AS(value->apply_derived_style(bad_style), std::invalid_argument);
+    CHECK_FALSE(value->has_line_height_override());
+    REQUIRE_THROWS_AS(value->set_font_weight(0), std::invalid_argument);
+    CHECK_FALSE(value->has_font_weight_override());
+}
+
+TEST_CASE(
+    "Label per-field and semantic token clears unwind cleanly across priority tiers",
+    "[widget][label][override-reset]"
+) {
+    reactive::Graph graph;
+    theme_test::Manager manager;
+    auto custom = theme::default_theme();
+    custom.palette.on_surface = theme::nan_color(0.22F, 0.02F, 220.0F);
+    custom.palette.muted_foreground = theme::nan_color(0.52F, 0.02F, 220.0F);
+    manager.set_theme(custom);
+
+    scene::NanSceneTree tree;
+    tree.set_theme_manager(manager);
+    auto label = widget::Label::create(graph, "priority", custom);
+    tree.set_root(label);
+
+    // Layer semantic tokens + instance explicit overrides simultaneously.
+    label->set_typography_role(theme::TypographyRole::heading); // 24px, 1.375, weight 600
+    label->set_text_size(theme::TextSize::sm); // 14px
+    label->set_leading(theme::Leading::loose); // 2.0
+    label->set_color_token(theme::ColorToken::muted_foreground);
+    label->set_color(theme::nan_color(0.85F, 0.1F, 30.0F));
+    label->set_font_size(29.0F);
+    label->set_line_height(1.9F);
+    label->set_font_weight(800);
+    label->set_font_slant(theme::FontSlant::oblique);
+
+    CHECK(label->color().oklch().light == Catch::Approx(0.85F));
+    CHECK(label->font_size() == Catch::Approx(29.0F));
+    CHECK(label->line_height() == Catch::Approx(1.9F));
+    CHECK(label->font().weight == 800);
+    CHECK(label->font().slant == theme::FontSlant::oblique);
+
+    // Unwind instance overrides one by one -> reveals semantic tokens underneath.
+    label->clear_color();
+    CHECK(label->color().oklch().light == Catch::Approx(0.52F)); // muted_foreground
+
+    label->clear_font_size();
+    CHECK(label->font_size() == Catch::Approx(14.0F)); // TextSize::sm
+
+    label->clear_line_height();
+    CHECK(label->line_height() == Catch::Approx(2.0F)); // Leading::loose
+
+    label->clear_font_weight();
+    CHECK(label->font().weight == 600); // heading role weight restored
+    CHECK(label->font().slant == theme::FontSlant::oblique);
+
+    label->clear_font_slant();
+    CHECK(label->font().slant == theme::FontSlant::normal);
+
+    // Unwind semantic tokens one by one -> reveals TypographyRole::heading, then body default.
+    label->clear_text_size();
+    CHECK_FALSE(label->text_size().has_value());
+    CHECK(label->font_size() == Catch::Approx(24.0F)); // heading size
+
+    label->clear_leading();
+    CHECK_FALSE(label->leading().has_value());
+    CHECK(label->line_height() == Catch::Approx(1.375F)); // heading snug leading
+
+    label->clear_typography_role();
+    CHECK_FALSE(label->typography_role().has_value());
+    CHECK(label->font_size() == Catch::Approx(16.0F)); // body base size
+    CHECK(label->line_height() == Catch::Approx(1.5F)); // body normal leading
+    CHECK(label->font().weight == 400); // body normal weight
+
+    label->clear_color_token();
+    CHECK(label->color_token() == theme::ColorToken::on_surface);
+    CHECK(label->color().oklch().light == Catch::Approx(0.22F));
+
+    // Bulk clear_style_overrides() clears instance overrides while preserving semantic tokens.
+    label->set_typography_role(theme::TypographyRole::title); // 20px, 1.375, weight 600
+    label->set_color_token(theme::ColorToken::muted_foreground);
+    label->set_color(theme::nan_color(0.75F, 0.1F, 30.0F));
+    label->set_font_size(31.0F);
+    label->set_font_weight(300);
+    label->clear_style_overrides();
+    CHECK(label->typography_role() == theme::TypographyRole::title);
+    CHECK(label->color_token() == theme::ColorToken::muted_foreground);
+    CHECK(label->color().oklch().light == Catch::Approx(0.52F));
+    CHECK(label->font_size() == Catch::Approx(20.0F));
+    CHECK(label->line_height() == Catch::Approx(1.375F));
+    CHECK(label->font().weight == 600);
+
+    // Visual font_size property endpoint updates Label fallback leading identically to set_font_size.
+    auto prop_label = widget::Label::create(graph, "prop", custom);
+    CHECK(prop_label->line_height() == Catch::Approx(1.5F));
+    prop_label->property(widget::visual::font_size_t {}).set(24.0F);
+    CHECK(prop_label->has_font_size_override());
+    CHECK(prop_label->font_size() == Catch::Approx(24.0F));
+    CHECK(prop_label->line_height() == Catch::Approx(0.0F));
+    prop_label->clear_font_size();
+    CHECK(prop_label->line_height() == Catch::Approx(1.5F));
 }

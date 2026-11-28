@@ -18,14 +18,14 @@
 | 能力 | 当前入口 | 行为 |
 | --- | --- | --- |
 | 文本 | `set_text()` / `text()`、`bind_text(source)`、builder `.text()` / `.bind_text()` | 直接写入解除旧绑定（同值也解除）；重新绑定替代旧源；source 活到解绑/作用域清理 |
-| 字体 | `set_font()`、`set_font_family/weight/slant()`；builder `.font/font_family/font_weight/font_slant` | 使用 framework FontRequest；改变字体重新解析、测量。缺对应 face 时 **P4.7 合成回退**生效：500/600/700+ 分级合成加粗、italic/oblique 约 12° 倾斜，advance 同步；真实多 face 优先。见 [合成字重/斜体回退](../references/font_synthesis.md) |
-| 字号 | `set_font_size()`、builder `.font_size()` | 逻辑字号；必须有限且为正 |
-| 排版尺度 | `set_text_size(theme::TextSize)`、`set_leading(theme::Leading)`、`set_line_height(float)`；builder `.text_size()` / `.leading()` / `.line_height()` | Tailwind 兼容 13 档，经主题 `NanTypeScale`（root base × ratio）解析；显式字号 > 继承 style context > 尺度 token > role 字号 > 组件默认（**body role：16 px / 1.5**）；行高数值覆盖优先于 leading token，`0` 恢复 token/role/默认。显式字号/`text_size`/继承字号会保留后端默认行高，除非显式 leading。见 [排版尺度与单位](../references/typography_scale.md) |
-| 语义 role | `set_typography_role(theme::TypographyRole)`；builder `.typography_role()` | display/heading/title/subtitle/body/label/caption 提供字号+行高+字重/斜体默认值；颜色仍由颜色 token 决定。显式尺寸/行高/字重覆盖对应 role 字段；role 表经主题 `NanTypeScale::roles` 覆盖（Step 2b），Label 未设置 role 时默认 body。见 [排版尺度与单位](../references/typography_scale.md) |
-| 颜色 | `set_color_token()`、builder `.color_token()`；继承的 `set_color()` | 颜色只影响绘制；token 跟随主题，显式颜色遵守实例覆盖 |
-| 水平对齐 | `set_align()` / `align()`、builder `.text_align()` | start / center / end，默认 start；每行在指派宽度内摆放 |
-| 垂直对齐 | `set_vertical_align()` / `vertical_align()`、builder `.text_vertical_align()` | top / center / bottom，默认 top；整个文本块在指派高度内摆放 |
-| 换行/溢出 | `set_overflow(text::TextOverflow)`、`set_max_lines()`；builder `.text_overflow()` / `.max_lines()` | 当前仍共用 clip / ellipsis / wrap / scale 枚举；最大行数至少 1 |
+| 字体 | `set_font()`、`set_font_family/weight/slant()`、`clear_font()`、`clear_font_family/weight/slant()`、`has_font_*_override()`；builder `.font/font_family/font_weight/font_slant` | 使用 framework FontRequest，family/weight/slant 三个子字段独立覆盖与清除；改变字体重新解析、测量。缺对应 face 时 **P4.7 合成回退**生效：500/600/700+ 分级合成加粗、italic/oblique 约 12° 倾斜，advance 同步；真实多 face 优先。见 [合成字重/斜体回退](../references/font_synthesis.md) |
+| 字号 | `set_font_size()`、`clear_font_size()`、`has_font_size_override()`、builder `.font_size()` | 逻辑字号；必须有限且为正；`clear_font_size()` 恢复继承字号 / `text_size` / `typography_role` / `body` 默认 |
+| 排版尺度 | `set_text_size(theme::TextSize)`、`clear_text_size()`、`set_leading(theme::Leading)`、`clear_leading()`、`set_line_height(float)`、`clear_line_height()`；builder `.text_size()` / `.leading()` / `.line_height()` | Tailwind 兼容 13 档，经主题 `NanTypeScale`（root base × ratio）解析；显式字号 > 继承 style context > 尺度 token > role 字号 > 组件默认（**body role：16 px / 1.5**）；行高数值覆盖优先于 leading token，`0` 或 `clear_line_height()` 恢复 token/role/默认。显式字号/`text_size`/继承字号会保留后端默认行高，除非显式 leading/role。见 [排版尺度与单位](../references/typography_scale.md) |
+| 语义 role | `set_typography_role(theme::TypographyRole)`、`clear_typography_role()`；builder `.typography_role()` | display/heading/title/subtitle/body/label/caption 提供字号+行高+字重/斜体默认值；颜色仍由颜色 token 决定。显式尺寸/行高/字重/斜体逐字段覆盖对应 role 字段；role 表经主题 `NanTypeScale::roles` 覆盖（Step 2b），`clear_typography_role()` 或未设置 role 时默认 body。见 [排版尺度与单位](../references/typography_scale.md) |
+| 颜色 | `set_color_token()`、`clear_color_token()`、builder `.color_token()`；继承的 `set_color()` / `clear_color()` / `has_color_override()` | 颜色只影响绘制（清除显式色值同样不重排）；token 跟随主题，`clear_color()` 恢复继承色或当前 `color_token`，`clear_style_overrides()` 一次清除全部实例显式样式覆盖 |
+| 水平对齐 | `set_align()` / `clear_align()` / `align()`、builder `.text_align()` | start / center / end，默认 start；每行在指派宽度内摆放 |
+| 垂直对齐 | `set_vertical_align()` / `clear_vertical_align()` / `vertical_align()`、builder `.text_vertical_align()` | top / center / bottom，默认 top；整个文本块在指派高度内摆放 |
+| 换行/溢出 | `set_overflow(text::TextOverflow)` / `clear_overflow()`、`set_max_lines()` / `clear_max_lines()`；builder `.text_overflow()` / `.max_lines()` | 当前仍共用 clip / ellipsis / wrap / scale 枚举；最大行数至少 1 |
 | 测量输出 | `measured_text_width/height()`、`layout_result()`、`line_count()` / `overflowed()` | 当前布局的逻辑内容尺寸、行列表与 overflowed；不是指派盒子的尺寸 |
 
 ## 盒内对齐
@@ -61,4 +61,4 @@
 <!-- TODO: 补维护者的真实窗口使用体验与后续完整 P4.1 验收记录。 -->
 
 - 自动回归：两轴偏移、clip、viewport/DPI、缓存、有限宽度自然行高与真实 Label 页/ComponentInfoTable。
-- P4.1a 的实现与验证记录见 D6 §16；文本绑定契约见 D6 §17；逐字段样式 reset、独立 wrap 与完整作者体验验收仍由 P4.1 后续批次定形。
+- P4.1a 的实现与验证记录见 D6 §16；文本绑定契约见 D6 §17；派生样式与逐字段样式覆盖/清除契约见 [D6 §21](../references/authoring_dsl_and_content_measurement.md#21-p41-文本派生样式逐字段显式覆盖与分层清除契约2026-11-27)；独立 wrap 与完整作者体验验收仍按后续批次推进。

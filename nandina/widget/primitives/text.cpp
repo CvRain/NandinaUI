@@ -31,6 +31,19 @@ namespace nandina::widget::primitives
             return left.min_width == right.min_width && left.max_width == right.max_width
                 && left.min_height == right.min_height && left.max_height == right.max_height;
         }
+
+        void validate_text_style(text::TextStyle& style) {
+            style.max_lines = std::max(1, style.max_lines);
+            if (!std::isfinite(style.font_size) || style.font_size <= 0.0F) {
+                throw std::invalid_argument("Text font size must be finite and positive");
+            }
+            if (!std::isfinite(style.line_height) || style.line_height < 0.0F) {
+                throw std::invalid_argument("Text line height must be finite and non-negative");
+            }
+            if (style.font.weight < 1 || style.font.weight > 1000) {
+                throw std::invalid_argument("Text font weight must be between 1 and 1000");
+            }
+        }
     } // namespace
 
     void TextColorProperty::set(foundation::NanColor color) {
@@ -104,33 +117,63 @@ namespace nandina::widget::primitives
     }
 
     void Text::set_style(text::TextStyle style) {
-        style.max_lines = std::max(1, style.max_lines);
-        if (!std::isfinite(style.font_size) || style.font_size <= 0.0F) {
-            throw std::invalid_argument("Text font size must be finite and positive");
-        }
-        if (style.font.weight < 1 || style.font.weight > 1000) {
-            throw std::invalid_argument("Text font weight must be between 1 and 1000");
-        }
-        const bool metrics_changed = !same_layout_style(style_, style);
-        const bool font_changed = style_.font != style.font;
-        style_ = style;
-        color_presentation_.set(style_.color);
-        font_size_presentation_.set(style_.font_size);
+        validate_text_style(style);
+        const auto before = style_;
+        auto saved = capture_override_state();
         color_explicit_ = true;
         font_size_explicit_ = true;
-        font_explicit_ = true;
-        if (font_changed) {
-            resolve_font();
+        line_height_explicit_ = true;
+        font_family_explicit_ = true;
+        font_weight_explicit_ = true;
+        font_slant_explicit_ = true;
+        overflow_explicit_ = true;
+        max_lines_explicit_ = true;
+        align_explicit_ = true;
+        vertical_align_explicit_ = true;
+        try {
+            commit_reconciled_style(before, std::move(style), true, true);
         }
-        if (metrics_changed) {
-            mark_layout_dirty();
-            update_metrics(last_layout_constraints());
+        catch (...) {
+            restore_override_state(std::move(saved));
+            throw;
         }
-        else {
-            // A full style snapshot still declares explicit overrides, but changing only
-            // paint fields must not discard the assigned size or reshape the text.
+        if (same_layout_style(before, style_)) {
+            // A full style snapshot declares explicit overrides; keep historical paint-dirty
+            // contract even when only paint fields (or override flags) were updated.
             mark_dirty(scene::DirtyFlags::paint);
         }
+    }
+
+    void Text::apply_derived_style(text::TextStyle style) {
+        validate_text_style(style);
+        auto saved = capture_override_state();
+        derived_style_ = std::move(style);
+        try {
+            reconcile_style(resolved_style_context());
+        }
+        catch (...) {
+            restore_override_state(std::move(saved));
+            throw;
+        }
+    }
+
+    void Text::clear_derived_style() {
+        if (!derived_style_.has_value()) {
+            return;
+        }
+        auto saved = capture_override_state();
+        derived_style_.reset();
+        try {
+            reconcile_style(resolved_style_context());
+        }
+        catch (...) {
+            restore_override_state(std::move(saved));
+            throw;
+        }
+    }
+
+    auto Text::has_derived_style() const noexcept -> bool {
+        return derived_style_.has_value();
     }
 
     auto Text::style() const -> const text::TextStyle& {
@@ -143,18 +186,48 @@ namespace nandina::widget::primitives
         color_explicit_ = true;
     }
 
+    void Text::clear_color() {
+        if (!color_explicit_) {
+            return;
+        }
+        color_explicit_ = false;
+        reconcile_style(resolved_style_context());
+    }
+
+    auto Text::has_color_override() const noexcept -> bool {
+        return color_explicit_;
+    }
+
     auto Text::color() const -> foundation::NanColor {
         return style_.color;
     }
 
-    void Text::set_font_size(float size) {
+    void Text::set_font_size(const float size) {
         if (!std::isfinite(size) || size <= 0.0F) {
             throw std::invalid_argument("Text font size must be finite and positive");
         }
-        style_.font_size = size;
-        font_size_presentation_.set(size);
+        const auto before = style_;
         font_size_explicit_ = true;
-        update_metrics(last_layout_constraints());
+        auto next = style_;
+        next.font_size = size;
+        if (!line_height_explicit_) {
+            text::TextStyle fallback;
+            resolve_component_style_fallbacks(resolved_style_context(), fallback);
+            next.line_height = fallback.line_height;
+        }
+        commit_reconciled_style(before, std::move(next), false, true);
+    }
+
+    void Text::clear_font_size() {
+        if (!font_size_explicit_) {
+            return;
+        }
+        font_size_explicit_ = false;
+        reconcile_style(resolved_style_context());
+    }
+
+    auto Text::has_font_size_override() const noexcept -> bool {
+        return font_size_explicit_;
     }
 
     auto Text::font_size() const -> float {
@@ -165,12 +238,30 @@ namespace nandina::widget::primitives
         if (!std::isfinite(factor) || factor < 0.0F) {
             throw std::invalid_argument("Text line height must be finite and non-negative");
         }
+        if (factor == 0.0F) {
+            clear_line_height();
+            return;
+        }
+        const auto before = style_;
+        line_height_explicit_ = true;
         if (style_.line_height == factor) {
             return;
         }
-        style_.line_height = factor;
-        mark_layout_dirty();
-        update_metrics(last_layout_constraints());
+        auto next = style_;
+        next.line_height = factor;
+        commit_reconciled_style(before, std::move(next));
+    }
+
+    void Text::clear_line_height() {
+        if (!line_height_explicit_) {
+            return;
+        }
+        line_height_explicit_ = false;
+        reconcile_style(resolved_style_context());
+    }
+
+    auto Text::has_line_height_override() const noexcept -> bool {
+        return line_height_explicit_;
     }
 
     auto Text::line_height() const -> float {
@@ -193,58 +284,233 @@ namespace nandina::widget::primitives
         if (request.weight < 1 || request.weight > 1000) {
             throw std::invalid_argument("Text font weight must be between 1 and 1000");
         }
-        font_explicit_ = true;
+        const auto before = style_;
+        auto saved = capture_override_state();
+        font_family_explicit_ = true;
+        font_weight_explicit_ = true;
+        font_slant_explicit_ = true;
         if (style_.font == request) {
             return;
         }
-        style_.font = std::move(request);
-        mark_layout_dirty();
-        resolve_font();
-        update_metrics(last_layout_constraints());
+        auto next = style_;
+        next.font = std::move(request);
+        try {
+            commit_reconciled_style(before, std::move(next));
+        }
+        catch (...) {
+            restore_override_state(std::move(saved));
+            throw;
+        }
+    }
+
+    void Text::clear_font() {
+        if (!has_font_override()) {
+            return;
+        }
+        auto saved = capture_override_state();
+        font_family_explicit_ = false;
+        font_weight_explicit_ = false;
+        font_slant_explicit_ = false;
+        try {
+            reconcile_style(resolved_style_context());
+        }
+        catch (...) {
+            restore_override_state(std::move(saved));
+            throw;
+        }
     }
 
     void Text::set_font_family(resource::ResourceKey family) {
-        auto request = style_.font;
-        request.family = std::move(family);
-        set_font(std::move(request));
+        const auto before = style_;
+        auto saved = capture_override_state();
+        font_family_explicit_ = true;
+        if (style_.font.family == family) {
+            return;
+        }
+        auto next = style_;
+        next.font.family = std::move(family);
+        try {
+            commit_reconciled_style(before, std::move(next));
+        }
+        catch (...) {
+            restore_override_state(std::move(saved));
+            throw;
+        }
     }
 
     void Text::clear_font_family() {
-        auto request = style_.font;
-        request.family.reset();
-        set_font(std::move(request));
+        if (!font_family_explicit_) {
+            return;
+        }
+        auto saved = capture_override_state();
+        font_family_explicit_ = false;
+        try {
+            reconcile_style(resolved_style_context());
+        }
+        catch (...) {
+            restore_override_state(std::move(saved));
+            throw;
+        }
     }
 
     void Text::set_font_weight(const int weight) {
-        auto request = style_.font;
-        request.weight = weight;
-        set_font(std::move(request));
+        if (weight < 1 || weight > 1000) {
+            throw std::invalid_argument("Text font weight must be between 1 and 1000");
+        }
+        const auto before = style_;
+        auto saved = capture_override_state();
+        font_weight_explicit_ = true;
+        if (style_.font.weight == weight) {
+            return;
+        }
+        auto next = style_;
+        next.font.weight = weight;
+        try {
+            commit_reconciled_style(before, std::move(next));
+        }
+        catch (...) {
+            restore_override_state(std::move(saved));
+            throw;
+        }
+    }
+
+    void Text::clear_font_weight() {
+        if (!font_weight_explicit_) {
+            return;
+        }
+        auto saved = capture_override_state();
+        font_weight_explicit_ = false;
+        try {
+            reconcile_style(resolved_style_context());
+        }
+        catch (...) {
+            restore_override_state(std::move(saved));
+            throw;
+        }
     }
 
     void Text::set_font_slant(const theme::FontSlant slant) {
-        auto request = style_.font;
-        request.slant = slant;
-        set_font(std::move(request));
+        const auto before = style_;
+        auto saved = capture_override_state();
+        font_slant_explicit_ = true;
+        if (style_.font.slant == slant) {
+            return;
+        }
+        auto next = style_;
+        next.font.slant = slant;
+        try {
+            commit_reconciled_style(before, std::move(next));
+        }
+        catch (...) {
+            restore_override_state(std::move(saved));
+            throw;
+        }
+    }
+
+    void Text::clear_font_slant() {
+        if (!font_slant_explicit_) {
+            return;
+        }
+        auto saved = capture_override_state();
+        font_slant_explicit_ = false;
+        try {
+            reconcile_style(resolved_style_context());
+        }
+        catch (...) {
+            restore_override_state(std::move(saved));
+            throw;
+        }
+    }
+
+    auto Text::has_font_override() const noexcept -> bool {
+        return font_family_explicit_ || font_weight_explicit_ || font_slant_explicit_;
+    }
+
+    auto Text::has_font_family_override() const noexcept -> bool {
+        return font_family_explicit_;
+    }
+
+    auto Text::has_font_weight_override() const noexcept -> bool {
+        return font_weight_explicit_;
+    }
+
+    auto Text::has_font_slant_override() const noexcept -> bool {
+        return font_slant_explicit_;
     }
 
     auto Text::font() const -> const theme::FontRequest& {
         return style_.font;
     }
 
-    void Text::set_overflow(text::TextOverflow overflow) {
+    void Text::clear_style_overrides() {
+        if (!color_explicit_ && !font_size_explicit_ && !line_height_explicit_
+            && !has_font_override())
+        {
+            return;
+        }
+        auto saved = capture_override_state();
+        color_explicit_ = false;
+        font_size_explicit_ = false;
+        line_height_explicit_ = false;
+        font_family_explicit_ = false;
+        font_weight_explicit_ = false;
+        font_slant_explicit_ = false;
+        try {
+            reconcile_style(resolved_style_context());
+        }
+        catch (...) {
+            restore_override_state(std::move(saved));
+            throw;
+        }
+    }
+
+    void Text::set_overflow(const text::TextOverflow overflow) {
+        overflow_explicit_ = true;
+        if (style_.overflow == overflow) {
+            return;
+        }
         style_.overflow = overflow;
         mark_layout_dirty();
         update_metrics(last_layout_constraints());
+    }
+
+    void Text::clear_overflow() {
+        if (!overflow_explicit_) {
+            return;
+        }
+        overflow_explicit_ = false;
+        reconcile_style(resolved_style_context());
+    }
+
+    auto Text::has_overflow_override() const noexcept -> bool {
+        return overflow_explicit_;
     }
 
     auto Text::overflow() const -> text::TextOverflow {
         return style_.overflow;
     }
 
-    void Text::set_max_lines(int lines) {
-        style_.max_lines = std::max(1, lines);
+    void Text::set_max_lines(const int lines) {
+        const int clamped = std::max(1, lines);
+        max_lines_explicit_ = true;
+        if (style_.max_lines == clamped) {
+            return;
+        }
+        style_.max_lines = clamped;
         mark_layout_dirty();
         update_metrics(last_layout_constraints());
+    }
+
+    void Text::clear_max_lines() {
+        if (!max_lines_explicit_) {
+            return;
+        }
+        max_lines_explicit_ = false;
+        reconcile_style(resolved_style_context());
+    }
+
+    auto Text::has_max_lines_override() const noexcept -> bool {
+        return max_lines_explicit_;
     }
 
     auto Text::max_lines() const -> int {
@@ -316,35 +582,19 @@ namespace nandina::widget::primitives
     }
 
     void Text::apply_font_context(text::FontPipelineCache& context) {
+        auto* previous = font_context_;
         font_context_ = &context;
-        resolve_font();
+        try {
+            resolve_font();
+        }
+        catch (...) {
+            font_context_ = previous;
+            throw;
+        }
     }
 
     void Text::on_style_context_changed(const theme::ResolvedStyleContext& context) {
-        bool metrics_changed = false;
-        bool font_changed = false;
-
-        if (!color_explicit_) {
-            style_.color = context.text_color;
-            color_presentation_.set(style_.color);
-        }
-        if (!font_size_explicit_ && style_.font_size != context.font_size) {
-            style_.font_size = context.font_size;
-            font_size_presentation_.set(style_.font_size);
-            metrics_changed = true;
-        }
-        if (!font_explicit_ && style_.font != context.font) {
-            style_.font = context.font;
-            font_changed = true;
-        }
-
-        if (font_changed) {
-            resolve_font();
-        }
-        if (metrics_changed || font_changed) {
-            mark_layout_dirty();
-            update_metrics(last_layout_constraints());
-        }
+        reconcile_style(context);
     }
 
     void Text::set_layout_backend(const text::ITextLayoutBackend& backend) {
@@ -372,6 +622,7 @@ namespace nandina::widget::primitives
     }
 
     void Text::set_align(const theme::TextAlign align) {
+        align_explicit_ = true;
         if (style_.align == align) {
             return;
         }
@@ -380,16 +631,41 @@ namespace nandina::widget::primitives
         mark_dirty(scene::DirtyFlags::paint);
     }
 
+    void Text::clear_align() {
+        if (!align_explicit_) {
+            return;
+        }
+        align_explicit_ = false;
+        reconcile_style(resolved_style_context());
+    }
+
+    auto Text::has_align_override() const noexcept -> bool {
+        return align_explicit_;
+    }
+
     auto Text::align() const -> theme::TextAlign {
         return style_.align;
     }
 
     void Text::set_vertical_align(const text::TextVerticalAlign align) {
+        vertical_align_explicit_ = true;
         if (style_.vertical_align == align) {
             return;
         }
         style_.vertical_align = align;
         mark_dirty(scene::DirtyFlags::paint);
+    }
+
+    void Text::clear_vertical_align() {
+        if (!vertical_align_explicit_) {
+            return;
+        }
+        vertical_align_explicit_ = false;
+        reconcile_style(resolved_style_context());
+    }
+
+    auto Text::has_vertical_align_override() const noexcept -> bool {
+        return vertical_align_explicit_;
     }
 
     auto Text::vertical_align() const -> text::TextVerticalAlign {
@@ -500,10 +776,142 @@ namespace nandina::widget::primitives
         };
     }
 
-    void Text::apply_component_color(foundation::NanColor color) {
+    void Text::resolve_component_style_fallbacks(
+        const theme::ResolvedStyleContext& context,
+        text::TextStyle& fallback
+    ) const {
+        fallback = derived_style_.value_or(text::TextStyle {});
+        if (context.text_color_from_context || !derived_style_.has_value()) {
+            fallback.color = context.text_color;
+        }
+        if (context.font_size_from_context || !derived_style_.has_value()) {
+            fallback.font_size = context.font_size;
+        }
+        if (context.font_from_context || !derived_style_.has_value()) {
+            fallback.font = context.font;
+        }
+    }
+
+    auto Text::capture_override_state() const -> OverrideStateSnapshot {
+        return {
+            .derived_style = derived_style_,
+            .color = color_explicit_,
+            .font_size = font_size_explicit_,
+            .line_height = line_height_explicit_,
+            .font_family = font_family_explicit_,
+            .font_weight = font_weight_explicit_,
+            .font_slant = font_slant_explicit_,
+            .overflow = overflow_explicit_,
+            .max_lines = max_lines_explicit_,
+            .align = align_explicit_,
+            .vertical_align = vertical_align_explicit_,
+        };
+    }
+
+    void Text::restore_override_state(OverrideStateSnapshot snapshot) noexcept {
+        derived_style_ = std::move(snapshot.derived_style);
+        color_explicit_ = snapshot.color;
+        font_size_explicit_ = snapshot.font_size;
+        line_height_explicit_ = snapshot.line_height;
+        font_family_explicit_ = snapshot.font_family;
+        font_weight_explicit_ = snapshot.font_weight;
+        font_slant_explicit_ = snapshot.font_slant;
+        overflow_explicit_ = snapshot.overflow;
+        max_lines_explicit_ = snapshot.max_lines;
+        align_explicit_ = snapshot.align;
+        vertical_align_explicit_ = snapshot.vertical_align;
+    }
+
+    void Text::reconcile_style(const theme::ResolvedStyleContext& context) {
+        const auto before = style_;
+        text::TextStyle fallback;
+        resolve_component_style_fallbacks(context, fallback);
+
+        auto next = style_;
         if (!color_explicit_) {
-            style_.color = color;
-            color_presentation_.set(std::move(color));
+            next.color = fallback.color;
+        }
+        if (!font_size_explicit_) {
+            next.font_size = fallback.font_size;
+        }
+        if (!line_height_explicit_) {
+            next.line_height = fallback.line_height;
+        }
+        if (!font_family_explicit_) {
+            next.font.family = fallback.font.family;
+        }
+        if (!font_weight_explicit_) {
+            next.font.weight = fallback.font.weight;
+        }
+        if (!font_slant_explicit_) {
+            next.font.slant = fallback.font.slant;
+        }
+        if (!overflow_explicit_) {
+            next.overflow = fallback.overflow;
+        }
+        if (!max_lines_explicit_) {
+            next.max_lines = fallback.max_lines;
+        }
+        if (!align_explicit_) {
+            next.align = fallback.align;
+        }
+        if (!vertical_align_explicit_) {
+            next.vertical_align = fallback.vertical_align;
+        }
+        commit_reconciled_style(before, std::move(next));
+    }
+
+    void Text::commit_reconciled_style(
+        const text::TextStyle& before,
+        text::TextStyle next,
+        const bool force_color_presentation,
+        const bool force_font_size_presentation
+    ) {
+        const bool color_changed = !(before.color == next.color);
+        const bool font_size_changed = before.font_size != next.font_size;
+        const bool font_changed = before.font != next.font;
+        const bool metrics_changed = !same_layout_style(before, next);
+        const bool paint_only_changed = color_changed || before.align != next.align
+            || before.vertical_align != next.vertical_align;
+
+        std::shared_ptr<text::FontPipeline> next_font_pipeline;
+        if (font_changed && !pipeline_explicit_ && font_context_ != nullptr) {
+            auto pipeline = font_context_->get(next.font);
+            if (!pipeline) {
+                throw std::runtime_error("Text cannot resolve font: " + pipeline.error().message);
+            }
+            next_font_pipeline = std::move(*pipeline);
+        }
+
+        const float before_presentation_font_size = *font_size_presentation_.value();
+        style_ = std::move(next);
+        if (force_color_presentation || color_changed
+            || (color_presentation_.target() != nullptr
+                && !(*color_presentation_.target() == style_.color)))
+        {
+            color_presentation_.set(style_.color);
+        }
+        if (force_font_size_presentation || font_size_changed
+            || (font_size_presentation_.target() != nullptr
+                && *font_size_presentation_.target() != style_.font_size))
+        {
+            font_size_presentation_.set(style_.font_size);
+        }
+        if (next_font_pipeline != nullptr) {
+            resolved_font_pipeline_ = std::move(next_font_pipeline);
+            const auto resolved = resolved_font_pipeline_->pipeline();
+            backend_ = resolved.backend;
+            renderer_ = resolved.renderer;
+            clear_metrics_cache();
+        }
+        if (metrics_changed || font_changed
+            || *font_size_presentation_.value() != before_presentation_font_size)
+        {
+            mark_layout_dirty();
+            update_metrics(last_layout_constraints());
+        }
+        else if (paint_only_changed) {
+            mark_dirty(scene::DirtyFlags::paint);
         }
     }
 
@@ -511,37 +919,8 @@ namespace nandina::widget::primitives
         color_explicit_ = false;
     }
 
-    void Text::apply_component_font_size(const float size) {
-        if (font_size_explicit_ || style_.font_size == size) {
-            return;
-        }
-        style_.font_size = size;
-        font_size_presentation_.set(size);
-        update_metrics(last_layout_constraints());
-    }
-
-    void Text::apply_component_font_weight(const int weight) {
-        if (font_explicit_ || weight < 1 || weight > 1000 || style_.font.weight == weight) {
-            return;
-        }
-        style_.font.weight = weight;
-        mark_layout_dirty();
-        resolve_font();
-        update_metrics(last_layout_constraints());
-    }
-
-    void Text::apply_component_font_slant(const theme::FontSlant slant) {
-        if (font_explicit_ || style_.font.slant == slant) {
-            return;
-        }
-        style_.font.slant = slant;
-        mark_layout_dirty();
-        resolve_font();
-        update_metrics(last_layout_constraints());
-    }
-
-    auto Text::font_request_is_explicit() const noexcept -> bool {
-        return font_explicit_;
+    void Text::clear_explicit_line_height() noexcept {
+        line_height_explicit_ = false;
     }
 
     auto Text::font_size_is_explicit() const noexcept -> bool {

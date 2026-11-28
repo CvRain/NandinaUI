@@ -1033,6 +1033,19 @@ TEST_CASE(
     REQUIRE(label->line_count() == 2);
     REQUIRE(label->overflowed());
     REQUIRE_THROWS_AS(ui.make<widget::Label>().font_weight(0), std::invalid_argument);
+
+    // Clearing explicit overrides needs only <nandina/widget/label.hpp> / authoring surface.
+    label->clear_font_family();
+    label->clear_font_weight();
+    label->clear_font_slant();
+    label->clear_font_size();
+    REQUIRE_FALSE(label->has_font_override());
+    REQUIRE_FALSE(label->has_font_size_override());
+    REQUIRE_FALSE(label->font().family.has_value());
+    REQUIRE(label->font().weight == 400);
+    REQUIRE(label->font().slant == theme::FontSlant::normal);
+    REQUIRE(label->font_size() == Catch::Approx(16.0F));
+    REQUIRE(label->line_height() == Catch::Approx(1.5F));
 }
 
 namespace

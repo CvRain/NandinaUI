@@ -1,3 +1,4 @@
+#include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
 #include <nandina/resource/backends/builtin_backend.hpp>
@@ -644,4 +645,49 @@ TEST_CASE("font resolution still fails without any default family", "[resource][
 
     REQUIRE_FALSE(resolved.has_value());
     REQUIRE(resolved.error().code == text::FontErrorCode::unknown_family);
+}
+
+TEST_CASE(
+    "Text failed font resolution rolls back override flags and preserves style state",
+    "[resource][font][override-reset]"
+) {
+    TextureDevice dev;
+    resource::ResourceManager empty_resources;
+    text::FontLoader empty_loader(empty_resources);
+    text::FontFamilyRegistry empty_families;
+    text::FontPipelineCache empty_font_cache(dev, empty_loader, empty_families);
+
+    widget::primitives::Text guarded("guarded");
+    REQUIRE_THROWS_AS(guarded.apply_font_context(empty_font_cache), std::runtime_error);
+
+    resource::ResourceManager builtin_resources;
+    (void)builtin_resources.mount(resource::BuiltinBackend::create(), -1000);
+    text::FontLoader builtin_loader(builtin_resources);
+    text::FontFamilyRegistry named_only_families;
+    REQUIRE(named_only_families
+                .register_family(
+                    resource::ResourceKey("families/known"),
+                    {{.resource =
+                          resource::ResourceKey(std::string(resource::builtin_default_font_key))}}
+                )
+                .has_value());
+    text::FontPipelineCache named_only_cache(dev, builtin_loader, named_only_families);
+
+    widget::primitives::Text strict_font("strict");
+    strict_font.set_font_family(resource::ResourceKey("families/known"));
+    strict_font.apply_font_context(named_only_cache);
+    const float prior_size = strict_font.font_size();
+
+    text::TextStyle unresolvable = strict_font.style();
+    unresolvable.font_size = 44.0F;
+    unresolvable.font.family = resource::ResourceKey("families/missing");
+    REQUIRE_THROWS_AS(strict_font.set_style(unresolvable), std::runtime_error);
+    CHECK(strict_font.font_size() == Catch::Approx(prior_size));
+    CHECK(strict_font.laid_out_font_size() == Catch::Approx(prior_size));
+    CHECK_FALSE(strict_font.has_font_size_override());
+    CHECK(strict_font.font().family == resource::ResourceKey("families/known"));
+
+    REQUIRE_THROWS_AS(strict_font.clear_font_family(), std::runtime_error);
+    CHECK(strict_font.has_font_family_override());
+    CHECK(strict_font.font().family == resource::ResourceKey("families/known"));
 }

@@ -16,9 +16,7 @@ namespace nandina::widget
         primitives::Text(std::move(text)),
         scope_(graph),
         theme_(std::move(theme)) {
-        apply_color_token();
-        apply_label_font_size();
-        apply_leading();
+        reconcile_style(resolved_style_context());
     }
 
     auto Label::create(reactive::Graph& graph, std::string text, theme::NanTheme theme)
@@ -29,11 +27,15 @@ namespace nandina::widget
     void Label::set_color_token(const theme::ColorToken token) {
         color_token_ = token;
         clear_explicit_color();
-        const auto& context = resolved_style_context();
-        primitives::Text::on_style_context_changed(context);
-        if (!context.text_color_from_context) {
-            apply_color_token();
+        reconcile_style(resolved_style_context());
+    }
+
+    void Label::clear_color_token() {
+        if (color_token_ == theme::ColorToken::on_surface) {
+            return;
         }
+        color_token_ = theme::ColorToken::on_surface;
+        reconcile_style(resolved_style_context());
     }
 
     auto Label::color_token() const noexcept -> theme::ColorToken {
@@ -56,32 +58,31 @@ namespace nandina::widget
 
     void Label::on_theme_changed(const theme::ThemeManager& manager) {
         theme_ = manager.theme();
-        if (!resolved_style_context().text_color_from_context) {
-            apply_color_token();
-        }
-        apply_label_font_size();
-        apply_leading();
-        apply_role_font_style();
+        reconcile_style(resolved_style_context());
     }
 
     void Label::on_style_context_changed(const theme::ResolvedStyleContext& context) {
         primitives::Text::on_style_context_changed(context);
-        if (!context.text_color_from_context) {
-            apply_color_token();
-        }
-        apply_label_font_size();
-        apply_leading();
-        apply_role_font_style();
     }
 
     void Label::set_font_size(const float size) {
         primitives::Text::set_font_size(size);
-        apply_leading();
     }
 
     void Label::set_text_size(const theme::TextSize size) {
+        if (text_size_ == size) {
+            return;
+        }
         text_size_ = size;
-        apply_label_font_size();
+        reconcile_style(resolved_style_context());
+    }
+
+    void Label::clear_text_size() {
+        if (!text_size_.has_value()) {
+            return;
+        }
+        text_size_.reset();
+        reconcile_style(resolved_style_context());
     }
 
     auto Label::text_size() const noexcept -> std::optional<theme::TextSize> {
@@ -90,8 +91,16 @@ namespace nandina::widget
 
     void Label::set_leading(const theme::Leading leading) {
         leading_ = leading;
-        line_height_explicit_ = false;
-        apply_leading();
+        clear_explicit_line_height();
+        reconcile_style(resolved_style_context());
+    }
+
+    void Label::clear_leading() {
+        if (!leading_.has_value()) {
+            return;
+        }
+        leading_.reset();
+        reconcile_style(resolved_style_context());
     }
 
     auto Label::leading() const noexcept -> std::optional<theme::Leading> {
@@ -102,12 +111,7 @@ namespace nandina::widget
         if (!std::isfinite(factor) || factor < 0.0F) {
             throw std::invalid_argument("Label line height must be finite and non-negative");
         }
-        line_height_explicit_ = factor > 0.0F;
         primitives::Text::set_line_height(factor);
-        if (!line_height_explicit_) {
-            // 0 clears the numeric override; a leading token (if any) becomes authoritative again.
-            apply_leading();
-        }
     }
 
     auto Label::line_height() const noexcept -> float {
@@ -115,101 +119,82 @@ namespace nandina::widget
     }
 
     void Label::set_typography_role(const theme::TypographyRole role) {
+        if (typography_role_ == role) {
+            return;
+        }
         typography_role_ = role;
-        apply_label_font_size();
-        apply_leading();
-        apply_role_font_style();
+        reconcile_style(resolved_style_context());
+    }
+
+    void Label::clear_typography_role() {
+        if (!typography_role_.has_value()) {
+            return;
+        }
+        typography_role_.reset();
+        reconcile_style(resolved_style_context());
     }
 
     auto Label::typography_role() const noexcept -> std::optional<theme::TypographyRole> {
         return typography_role_;
     }
 
-    void Label::apply_label_font_size() {
-        const auto& context = resolved_style_context();
-        if (context.font_size_from_context) {
-            return;
-        }
-        if (text_size_.has_value()) {
-            apply_component_font_size(
-                theme::text_size_px(theme_.tokens.typography.scale, *text_size_)
-            );
-            return;
-        }
-        if (typography_role_.has_value()) {
-            apply_component_font_size(
-                theme::text_size_px(
-                    theme_.tokens.typography.scale,
-                    theme::typography_role_style(theme_.tokens.typography.scale, *typography_role_)
-                        .size
-                )
-            );
-            return;
-        }
-        const auto body = theme::typography_role_style(
-            theme_.tokens.typography.scale,
-            theme::TypographyRole::body
-        );
-        apply_component_font_size(theme::text_size_px(theme_.tokens.typography.scale, body.size));
-    }
+    void Label::resolve_component_style_fallbacks(
+        const theme::ResolvedStyleContext& context,
+        text::TextStyle& fallback
+    ) const {
+        primitives::Text::resolve_component_style_fallbacks(context, fallback);
+        const auto& scale = theme_.tokens.typography.scale;
 
-    void Label::apply_leading() {
-        if (line_height_explicit_) {
-            return;
+        if (!context.text_color_from_context) {
+            fallback.color =
+                theme::resolve_theme_color(theme_, theme::ThemeColor::token(color_token_));
         }
+
+        if (!context.font_size_from_context) {
+            if (text_size_.has_value()) {
+                fallback.font_size = theme::text_size_px(scale, *text_size_);
+            }
+            else if (typography_role_.has_value()) {
+                fallback.font_size = theme::text_size_px(
+                    scale,
+                    theme::typography_role_style(scale, *typography_role_).size
+                );
+            }
+            else {
+                const auto body = theme::typography_role_style(scale, theme::TypographyRole::body);
+                fallback.font_size = theme::text_size_px(scale, body.size);
+            }
+        }
+
         if (leading_.has_value()) {
-            primitives::Text::set_line_height(
-                theme::leading_factor(theme_.tokens.typography.scale, *leading_)
-            );
-            return;
+            fallback.line_height = theme::leading_factor(scale, *leading_);
         }
-        if (typography_role_.has_value()) {
-            primitives::Text::set_line_height(
-                theme::leading_factor(
-                    theme_.tokens.typography.scale,
-                    theme::typography_role_style(theme_.tokens.typography.scale, *typography_role_)
-                        .leading
-                )
+        else if (typography_role_.has_value()) {
+            fallback.line_height = theme::leading_factor(
+                scale,
+                theme::typography_role_style(scale, *typography_role_).leading
             );
-            return;
         }
-        // Step 2b body default: an unstyled Label is body text (base size + normal leading,
-        // 1.5 by default for CJK). Explicit/inherited sizes keep the previous backend-default
-        // leading unless the author chooses a token.
-        const auto& context = resolved_style_context();
-        const bool has_explicit_size =
-            text_size_.has_value() || font_size_is_explicit() || context.font_size_from_context;
-        if (!has_explicit_size) {
-            const auto body = theme::typography_role_style(
-                theme_.tokens.typography.scale,
-                theme::TypographyRole::body
-            );
-            primitives::Text::set_line_height(
-                theme::leading_factor(theme_.tokens.typography.scale, body.leading)
-            );
-            return;
+        else if (
+            !text_size_.has_value() && !font_size_is_explicit() && !context.font_size_from_context
+        )
+        {
+            // Step 2b body default: an unstyled Label is body text (base size + normal leading,
+            // 1.5 by default for CJK). Explicit/inherited/`set_text_size` sizes keep the backend
+            // default leading unless the author chooses a leading token or semantic role.
+            const auto body = theme::typography_role_style(scale, theme::TypographyRole::body);
+            fallback.line_height = theme::leading_factor(scale, body.leading);
         }
-        // No leading source: restore the backend default (no-op when already 0).
-        primitives::Text::set_line_height(0.0F);
-    }
+        else {
+            fallback.line_height = 0.0F;
+        }
 
-    void Label::apply_role_font_style() {
-        if (!typography_role_.has_value() || font_request_is_explicit()) {
-            return;
+        if (!context.font_from_context) {
+            const auto role = typography_role_.value_or(theme::TypographyRole::body);
+            const auto role_style = theme::typography_role_style(scale, role);
+            fallback.font.weight = role_style.font_weight;
+            fallback.font.slant = role_style.slant;
         }
-        if (resolved_style_context().font_from_context) {
-            return;
-        }
-        const auto role_style =
-            theme::typography_role_style(theme_.tokens.typography.scale, *typography_role_);
-        apply_component_font_weight(role_style.font_weight);
-        apply_component_font_slant(role_style.slant);
-    }
-
-    void Label::apply_color_token() {
-        apply_component_color(
-            theme::resolve_theme_color(theme_, theme::ThemeColor::token(color_token_))
-        );
     }
 
 } // namespace nandina::widget

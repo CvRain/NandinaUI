@@ -13,6 +13,7 @@
 
 #include <array>
 #include <memory>
+#include <optional>
 #include <string>
 #include <string_view>
 
@@ -68,31 +69,61 @@ namespace nandina::widget::primitives
         [[nodiscard]] auto text_property() const -> reactive::ReadProperty<std::string>;
 
         void set_style(text::TextStyle style);
+        /// Apply a derived style baseline for `primitives::Text` parts without marking fields as
+        /// explicit instance overrides. Active per-field instance overrides and inherited
+        /// `StyleContext` fields still take precedence until cleared (`widget::Label` resolves its
+        /// own semantic theme/role baseline over `derived_style_`).
+        void apply_derived_style(text::TextStyle style);
+        void clear_derived_style();
+        [[nodiscard]] auto has_derived_style() const noexcept -> bool;
         [[nodiscard]] auto style() const -> const text::TextStyle&;
 
         void set_color(foundation::NanColor color);
+        void clear_color();
+        [[nodiscard]] auto has_color_override() const noexcept -> bool;
         [[nodiscard]] auto color() const -> foundation::NanColor;
 
         void set_font_size(float size);
+        void clear_font_size();
+        [[nodiscard]] auto has_font_size_override() const noexcept -> bool;
         [[nodiscard]] auto font_size() const -> float;
-        /// Line-height multiplier of `font_size`; `0` keeps the backend/font-metric default.
-        /// A positive value overrides it (themes resolve `theme::Leading` to this factor).
+        /// Line-height multiplier of `font_size`; `0` clears the numeric override and restores
+        /// the component/derived/backend fallback. A positive value overrides it.
         void set_line_height(float factor);
+        void clear_line_height();
+        [[nodiscard]] auto has_line_height_override() const noexcept -> bool;
         [[nodiscard]] auto line_height() const -> float;
         [[nodiscard]] auto visual_part(visual::label_t) noexcept -> Text&;
         [[nodiscard]] auto property(visual::color_t) noexcept -> TextColorProperty;
         [[nodiscard]] auto property(visual::font_size_t) noexcept -> TextFontSizeProperty;
         void set_font(theme::FontRequest request);
+        void clear_font();
         void set_font_family(resource::ResourceKey family);
         void clear_font_family();
         void set_font_weight(int weight);
+        void clear_font_weight();
         void set_font_slant(theme::FontSlant slant);
+        void clear_font_slant();
+        [[nodiscard]] auto has_font_override() const noexcept -> bool;
+        [[nodiscard]] auto has_font_family_override() const noexcept -> bool;
+        [[nodiscard]] auto has_font_weight_override() const noexcept -> bool;
+        [[nodiscard]] auto has_font_slant_override() const noexcept -> bool;
         [[nodiscard]] auto font() const -> const theme::FontRequest&;
 
+        /// Clear all instance explicit style overrides (`color`, `font_size`, `line_height`,
+        /// `font` family/weight/slant) and re-resolve against `StyleContext` and component
+        /// fallbacks in a single pass. Box configuration (`overflow`, `max_lines`, `align`,
+        /// `vertical_align`) and semantic component tokens are preserved.
+        void clear_style_overrides();
+
         void set_overflow(text::TextOverflow overflow);
+        void clear_overflow();
+        [[nodiscard]] auto has_overflow_override() const noexcept -> bool;
         [[nodiscard]] auto overflow() const -> text::TextOverflow;
 
         void set_max_lines(int lines);
+        void clear_max_lines();
+        [[nodiscard]] auto has_max_lines_override() const noexcept -> bool;
         [[nodiscard]] auto max_lines() const -> int;
 
         /// 设置文本在其**被指派矩形**内的水平对齐；见 `text::text_align_offset()`。
@@ -100,10 +131,14 @@ namespace nandina::widget::primitives
         /// 只有盒子比文本宽时才有视觉效果 —— 收缩包裹的文本三种取值结果相同。
         /// 绘制入口是 `draw_in()`；`draw_at()` 没有盒子，因此不对齐。
         void set_align(theme::TextAlign align);
+        void clear_align();
+        [[nodiscard]] auto has_align_override() const noexcept -> bool;
         [[nodiscard]] auto align() const -> theme::TextAlign;
 
         /// Place the natural text block inside its assigned height. Paint-only; draw_at ignores it.
         void set_vertical_align(text::TextVerticalAlign align);
+        void clear_vertical_align();
+        [[nodiscard]] auto has_vertical_align_override() const noexcept -> bool;
         [[nodiscard]] auto vertical_align() const -> text::TextVerticalAlign;
 
         [[nodiscard]] auto measured_text_width() const -> float;
@@ -146,19 +181,39 @@ namespace nandina::widget::primitives
         [[nodiscard]] auto on_measure(foundation::NanLayoutConstraints constraints)
             -> foundation::NanSize override;
         [[nodiscard]] auto semantics_properties() const -> semantics::Properties override;
-        void apply_component_color(foundation::NanColor color);
-        void apply_component_font_size(float size);
-        /// Component-level role defaults: apply weight/slant without marking the font request as
-        /// an explicit author override, so explicit `set_font_weight()` still wins and theme
-        /// changes can re-apply the role.
-        void apply_component_font_weight(int weight);
-        void apply_component_font_slant(theme::FontSlant slant);
-        [[nodiscard]] auto font_request_is_explicit() const noexcept -> bool;
+        virtual void resolve_component_style_fallbacks(
+            const theme::ResolvedStyleContext& context,
+            text::TextStyle& fallback
+        ) const;
+        void reconcile_style(const theme::ResolvedStyleContext& context);
         /// True when `set_font_size()` was called; component defaults must not override it.
         [[nodiscard]] auto font_size_is_explicit() const noexcept -> bool;
         void clear_explicit_color() noexcept;
+        void clear_explicit_line_height() noexcept;
 
     private:
+        struct OverrideStateSnapshot {
+            std::optional<text::TextStyle> derived_style;
+            bool color = false;
+            bool font_size = false;
+            bool line_height = false;
+            bool font_family = false;
+            bool font_weight = false;
+            bool font_slant = false;
+            bool overflow = false;
+            bool max_lines = false;
+            bool align = false;
+            bool vertical_align = false;
+        };
+
+        [[nodiscard]] auto capture_override_state() const -> OverrideStateSnapshot;
+        void restore_override_state(OverrideStateSnapshot snapshot) noexcept;
+        void commit_reconciled_style(
+            const text::TextStyle& before,
+            text::TextStyle next,
+            bool force_color_presentation = false,
+            bool force_font_size_presentation = false
+        );
         void draw_text_box(render::DrawContext& ctx, foundation::NanRect rect, bool align_to_box);
         void apply_text(const std::string& text);
         void update_metrics(
@@ -222,6 +277,7 @@ namespace nandina::widget::primitives
 
         reactive::Property<std::string> text_;
         text::TextStyle style_ {};
+        std::optional<text::TextStyle> derived_style_;
         scene::PropertyEndpoint<foundation::NanColor> color_presentation_;
         scene::PropertyEndpoint<float> font_size_presentation_;
         text::TextLayoutResult layout_ {};
@@ -230,7 +286,14 @@ namespace nandina::widget::primitives
         bool pipeline_explicit_ = false;
         bool color_explicit_ = false;
         bool font_size_explicit_ = false;
-        bool font_explicit_ = false;
+        bool line_height_explicit_ = false;
+        bool font_family_explicit_ = false;
+        bool font_weight_explicit_ = false;
+        bool font_slant_explicit_ = false;
+        bool overflow_explicit_ = false;
+        bool max_lines_explicit_ = false;
+        bool align_explicit_ = false;
+        bool vertical_align_explicit_ = false;
         text::FontPipelineCache* font_context_ = nullptr;
         std::shared_ptr<text::FontPipeline> resolved_font_pipeline_;
     };

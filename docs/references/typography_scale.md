@@ -159,7 +159,7 @@ label->set_font_size(28.0F);
   未覆盖的 role 保持 canonical 表。role 的 weight/slant 自 P4.7 起可见（合成回退）。
 - **Label 默认 role = body**：没有显式字号/`text_size`/继承字号时，Label 使用 16 px + normal
   1.5 leading；`set_font_size()`、`set_text_size()` 或 StyleContext 字号会保留后端默认行高，
-  除非作者显式给 leading/line-height。现有页面 golden 不受影响（showcase 文本大多显式指定
+  除非作者显式给 leading/role/line-height。现有页面 golden 不受影响（showcase 文本大多显式指定
   字号）；Typography 展示页演示了这条默认。
 - **组件配方消费 role 尺寸与度量（2026-11-12 收口）**：默认 `Button`/`TextField`/`TextArea`/
   `Alert`/`EmptyState`/`Dialog`/`Tabs`/`Tooltip`/菜单与选择器族等配方改用
